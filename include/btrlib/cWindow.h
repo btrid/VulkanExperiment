@@ -68,7 +68,7 @@ private:
 	std::shared_ptr<Private> m_private;
 
 	vk::SurfaceKHR m_surface;
-	cKeybordInput mKeybord;
+	cKeybordInput m_keybord;
 	Swapchain m_swapchain;
 	CreateInfo m_descriptor;
 
@@ -162,7 +162,7 @@ public:
 				{
 				case WM_KEYDOWN:
 				{
-					auto& p = mKeybord.mData[msg.wParam];
+					auto& p = m_keybord.mData[msg.wParam];
 					p.key = (char)msg.wParam;
 					p.state = (unsigned)msg.lParam;
 					u32 repeat = msg.lParam & 0xf;
@@ -173,7 +173,7 @@ public:
 
 				case WM_KEYUP:
 				{
-					auto& p = mKeybord.mData[msg.wParam];
+					auto& p = m_keybord.mData[msg.wParam];
 					p.key = (char)msg.wParam;
 					p.state = (unsigned)msg.lParam;
 					u32 repeat = msg.lParam & 0xf;
