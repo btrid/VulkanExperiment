@@ -1,5 +1,5 @@
 #pragma once
-/*
+
 struct SingletonStorageStatic
 {
 	template<typename T>
@@ -19,30 +19,33 @@ struct SingletonStorageThreadLocal
 		return instance;
 	}
 };
-*/
 template <
-	typename T
+	typename T,
+	typename Storage
 >
-class Singleton
+class Singleton_t
 {
 public:
+	struct U : public T {};
+public:
 	static T& Order() {
-		static T instance;
-		return instance;
+// 		static T instance;
+//		return instance;
+		return Storage::Get<U>();
 	}
 
 protected:
-	Singleton() = default;
-	~Singleton() = default;
+	Singleton_t() = default;
+	~Singleton_t() = default;
 private:
-	Singleton(const Singleton& rhv) = delete;
-	Singleton(Singleton &&) = delete;
-	const Singleton& operator = (const Singleton& single) = delete;
-	Singleton& operator=(Singleton &&) = delete;
+	Singleton_t(const Singleton_t& rhv) = delete;
+	Singleton_t(Singleton_t &&) = delete;
+	const Singleton_t& operator = (const Singleton_t& single) = delete;
+	Singleton_t& operator=(Singleton_t &&) = delete;
 public:
 };
 
-//template<typename T> using Singleton = Singleton_t<T/*, SingletonStorageStatic*/>;
-//template<typename T> using SingletonTLS = Singleton_t<T/*, SingletonStorageThreadLocal*/>;
+template<typename T> using Singleton = Singleton_t<T, SingletonStorageStatic>;
+template<typename T> using SingletonTLS = Singleton_t<T, SingletonStorageThreadLocal>;
 //#define SingletonTLS Singleton
 

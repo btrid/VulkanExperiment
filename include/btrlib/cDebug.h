@@ -7,13 +7,16 @@ struct cDebug {
 	{
 		static auto dbgfnc = [](VkDebugReportFlagsEXT flag, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* userData) -> VkBool32
 		{
-			OutputDebugStringA("------------------------callback------------------------\n");
 			char buf[1024] = {};
 			sprintf_s(buf, "%s %s %s\n  %s\n",
 				vk::to_string(vk::DebugReportFlagBitsEXT(flag)).c_str(), vk::to_string(vk::DebugReportObjectTypeEXT(objectType)).c_str(), pLayerPrefix, pMessage);
-			OutputDebugStringA(buf);
+//			OutputDebugStringA("------------------------callback------------------------\n");
+//			OutputDebugStringA(buf);
 			printf("------------------------callback------------------------\n");
 			printf(buf);
+			if (vk::DebugReportFlagBitsEXT(flag) == vk::DebugReportFlagBitsEXT::eError) {
+				return static_cast<VkBool32>(vk::Result::eSuccess);
+			}
 			return static_cast<VkBool32>(vk::Result::eSuccess);
 		};
 		vk::DebugReportCallbackCreateInfoEXT debugInfo =

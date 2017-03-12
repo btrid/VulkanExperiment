@@ -1,0 +1,73 @@
+#version 430
+
+#pragma optionNV (unroll none)
+//#pragma optionNV (unroll all)
+#pragma optionNV (inline all)
+//#pragma optionNV(fastmath on)
+//#pragma optionNV(fastprecision on)
+//#pragma optionNV(ifcvt all)
+//#pragma optionNV(strict on)
+
+//#extension GL_ARB_shading_language_include : require
+//#include </Math.glsl>
+//#include </MultiModel.glsl>
+
+struct ModelInfo
+{
+	uint instanceMaxNum;
+	int instanceNum;
+	int nodeNum;
+	int boneNum;
+	int meshNum;
+	vec4 AABB;
+	mat4 invGlobalMatrix;
+};
+
+struct Node
+{
+	int nodeNo;
+	int parent;
+	int boneIndex;
+	int _p1;
+
+};
+layout (local_size_x = 128, local_size_y = 1) in;
+
+
+layout(std140, binding=0) uniform ModelInfoBuffer {
+	ModelInfo modelInfo;
+};
+
+layout(std430, binding=0) readonly restrict buffer WorldTransform {
+	mat4 worlds[];
+};
+
+layout(std430, binding=1) readonly restrict buffer NodeBuffer {
+	Node nodes[];
+};
+
+layout(std430, binding=2) readonly restrict buffer NodeLocalTransformBuffer {
+//	NodeLocalTransform nodeLocalTransforms[];
+	mat3x4 nodeLocalTransforms[];
+};
+layout(std430, binding=3) restrict buffer NodeGlobalTransformBuffer {
+//	NodeGlobalTransform nodeGlobalTransforms[];
+//	mat3x4 nodeGlobalTransforms[];
+	mat4 nodeGlobalTransforms[];
+};
+
+void main() 
+{
+	int root_index = int(gl_GlobalInvocationID.x) * modelInfo.nodeNum;
+	if(root_index >= modelInfo.instanceMaxNum * modelInfo.nodeNum){ return; }
+
+//	nodeGlobalTransforms[root_index] = mat3x4(transpose(worlds[gl_GlobalInvocationID.x]) * mat4(nodeLocalTransforms[root_index].local));
+	nodeGlobalTransforms[root_index] = worlds[gl_GlobalInvocationID.x] * mat4(transpose(nodeLocalTransforms[root_index]));
+	for(int i=1; i <modelInfo.nodeNum; i++)
+	{
+//		mat4 g = mat4(nodeGlobalTransforms[root_index + nodes[i].parent]) * mat4(nodeLocalTransforms[root_index + i]);
+//		nodeGlobalTransforms[root_index+i] = mat3x4(g);
+		mat4 g = nodeGlobalTransforms[root_index + nodes[i].parent] * mat4(transpose(nodeLocalTransforms[root_index + i]));
+		nodeGlobalTransforms[root_index+i] = g;
+	}
+}

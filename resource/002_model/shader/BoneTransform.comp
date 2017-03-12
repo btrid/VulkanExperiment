@@ -1,0 +1,65 @@
+#version 450
+
+#pragma optionNV (unroll none)
+
+layout (local_size_x = 256, local_size_y = 1) in;
+
+struct ModelInfo
+{
+	int instanceMaxNum;
+	int instanceNum;
+	int nodeNum;
+	uint boneNum;
+	int meshNum;
+	vec4 AABB;
+	mat4 invGlobalMatrix;
+};
+
+struct BoneInfo
+{
+	int nodeIndex;
+	int _p1;
+	int _p2;
+	int _p3;
+
+	mat4 boneOffset;
+};
+
+
+layout(std140, binding=0) uniform ModelInfoUniform {
+	ModelInfo modelInfo;
+};
+
+layout(std140, binding=0) readonly restrict buffer NodeGlobalTransformBuffer {
+//	NodeGlobalTransform nodeGlobalTransforms[];
+//	mat3x4 nodeGlobalTransforms[];
+	mat4 nodeGlobalTransforms[];
+};
+
+layout(std140, binding=1) readonly restrict buffer BoneInfoBuffer {
+	BoneInfo boneInfo[];
+};
+
+layout(std430, binding=2) readonly restrict buffer BoneMapBuffer {
+	uint boneMap[];
+};
+
+layout(std430, binding=3) restrict buffer BoneTransformBuffer {
+	mat4 bones[];
+};
+
+void main()
+{
+	if(gl_GlobalInvocationID.x >= modelInfo.boneNum * modelInfo.instanceNum){ return; }
+	mat4 inv = modelInfo.invGlobalMatrix;
+	uint index = gl_GlobalInvocationID.x;
+
+	uint boneInfoIndex = index % modelInfo.boneNum;
+	uint nodeIndexOffset = boneMap[index / modelInfo.boneNum] * modelInfo.nodeNum;
+	bones[index] 
+		= inv
+		* nodeGlobalTransforms[nodeIndexOffset + boneInfo[boneInfoIndex].nodeIndex]
+		* boneInfo[boneInfoIndex].boneOffset;
+
+
+}

@@ -1,0 +1,38 @@
+#pragma once
+#include <btrlib/cModel.h>
+#include <002_model/cModelRenderer.h>
+
+struct cModelRenderer;
+class ModelRender : public cModel
+{
+	std::vector<vk::DescriptorSet> m_draw_descriptor_set;
+	std::vector<vk::DescriptorSet> m_compute_descriptor_set;
+public:
+	void setup(cModelRenderer& renderer);
+	void draw(cModelRenderer& renderer, vk::CommandBuffer& cmd);
+
+protected:
+private:
+};
+
+struct cModelRenderer : public cModelRenderer_t<ModelRender>
+{
+	std::vector<ModelRender*> m_model;
+	void addModel(ModelRender* model)
+	{
+		m_model.emplace_back(model);
+		m_model.back()->setup(*this);
+	}
+	void draw(vk::CommandBuffer cmd)
+	{
+//		auto cmd = sThreadData::Order().allocateCmdOnetime(m_gpu.getDevice(vk::QueueFlagBits::eGraphics)[0]);
+		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_draw_pipeline.m_pipeline);
+		// draw
+		for (auto& render : m_model)
+		{
+			render->draw(*this, cmd);
+		}
+
+	}
+
+};

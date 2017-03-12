@@ -11,7 +11,7 @@ std::vector<uint32_t> getSupportSurfaceQueue(vk::PhysicalDevice gpu, vk::Surface
 	for (size_t i = 0; i < queueProp.size(); i++)
 	{
 		if (gpu.getSurfaceSupportKHR((uint32_t)i, surface)) {
-			queueIndexList.emplace_back(i);
+			queueIndexList.emplace_back((uint32_t)i);
 		}
 	}
 

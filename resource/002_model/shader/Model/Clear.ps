@@ -1,0 +1,32 @@
+#version 450
+
+#pragma optionNV (unroll none)
+#pragma optionNV (inline all)
+#pragma optionNV(fastmath on)
+//#pragma optionNV(fastprecision on)
+//#pragma optionNV(ifcvt all)
+#pragma optionNV(strict on)
+
+#extension GL_ARB_shading_language_include : require
+#include </MultiModel.glsl>
+
+layout (local_size_x = 256, local_size_y = 1) in;
+
+layout(std430, binding=0) restrict buffer ModelInfoBuffer {
+	ModelInfo modelInfo;
+};
+
+layout(std430, binding=1) restrict buffer MeshBuffer {
+	Mesh meshs[];
+};
+
+
+void main()
+{
+	uint index = gl_GlobalInvocationID.x;
+	if(index >= modelInfo.meshNum){
+		return;
+	}
+	modelInfo.instanceNum = 0;
+	meshs[index].instanceCount =  0;
+}

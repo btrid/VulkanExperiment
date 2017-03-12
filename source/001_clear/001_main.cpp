@@ -3,8 +3,6 @@
 #include <string>
 #include <vector>
 #include <utility>
-#include <cstdio>
-#include <map>
 #include <array>
 #include <unordered_set>
 #include <vector>
@@ -13,14 +11,7 @@
 #include <future>
 #include <chrono>
 #include <memory>
-#include <locale>
-#include <codecvt>
-#include <algorithm>
-#include <xutility>
 #include <filesystem>
-#include <iostream>
-#include <fstream>
-#include <iterator>
 #include <btrlib/Singleton.h>
 #include <btrlib/sValidationLayer.h>
 #include <btrlib/cWindow.h>
@@ -28,6 +19,7 @@
 #include <btrlib/ThreadPool.h>
 #include <btrlib/cDebug.h>
 #include <btrlib/sVulkan.h>
+#include <btrlib/cStopWatch.h>
 
 #pragma comment(lib, "vulkan-1.lib")
 #pragma comment(lib, "btrlib.lib")
@@ -50,10 +42,12 @@ int main()
 	windowInfo.window_name = L"Vulkan Test";
 	windowInfo.class_name = L"VulkanMainWindow";
 
+	auto aaa = sVulkan::Order().getGPU(0);
 	window.setup(windowInfo);
 
 	cGPU& gpu = sVulkan::Order().getGPU(0);
 	cDevice device = gpu.getDevice(vk::QueueFlagBits::eGraphics)[0];
+	cDevice other_device = gpu.getDevice(vk::QueueFlagBits::eTransfer)[0];
 	vk::Queue queue = device->getQueue(device.getQueueFamilyIndex(), 0);
 
 
@@ -62,8 +56,7 @@ int main()
 	{
 		vk::CommandPoolCreateInfo poolInfo = vk::CommandPoolCreateInfo()
 			.setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer)
-			.setQueueFamilyIndex(0);
-
+			.setQueueFamilyIndex(device.getQueueFamilyIndex());
 		cmd_pool = device->createCommandPool(poolInfo);
 	}
 
@@ -179,8 +172,7 @@ int main()
 		}
 
 		window.update();
-		std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
+		sVulkan::Order().swap();
 	}
 
 	return 0;

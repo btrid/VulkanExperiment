@@ -1,7 +1,12 @@
 #include <btrlib/cWindow.h>
 #include <btrlib/ThreadPool.h>
 
+#include <filesystem>
+#include <vector>
+#include <iostream>
+#include <fstream>
 sVulkan::sVulkan()
+	: m_current_frame(0)
 {
 	{
 		vk::ApplicationInfo appInfo = { "Vulkan Test", 1, "EngineName", 0, VK_API_VERSION_1_0 };
@@ -63,6 +68,46 @@ sVulkan::sVulkan()
 
 		}
 	}
+
+	auto init_thread_data_func = [=](int index)
+	{
+		SetThreadIdealProcessor(::GetCurrentThread(), index);
+		auto& data = sThreadData::Order();
+		data.m_thread_index = index;
+		data.m_gpu = m_gpu[0];
+
+		data.m_device[sThreadData::DEVICE_GRAPHICS] = data.m_gpu.getDevice(vk::QueueFlagBits::eGraphics)[0];
+		data.m_device[sThreadData::DEVICE_COMPUTE] = data.m_gpu.getDevice(vk::QueueFlagBits::eCompute)[0];
+		data.m_device[sThreadData::DEVICE_TRANSFAR] = data.m_gpu.getDevice(vk::QueueFlagBits::eTransfer)[0];
+
+		data.m_cmd_pool_onetime.resize(data.m_gpu.m_device_list.size());
+		for (int family = 0; family < data.m_cmd_pool_onetime.size(); family++)
+		{
+			auto& cmd_pool_per_device = data.m_cmd_pool_onetime[family];
+			for (auto& cmd_pool_per_frame : cmd_pool_per_device)
+			{
+				vk::CommandPoolCreateInfo cmd_pool_info = vk::CommandPoolCreateInfo()
+				.setQueueFamilyIndex(family)
+				.setFlags(vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
+				cmd_pool_per_frame = data.m_gpu.getDeviceByFamilyIndex(family)->createCommandPool(cmd_pool_info);
+			}
+		}
+
+		data.m_cmd_pool_onetime.resize(data.m_gpu.m_device_list.size());
+		for (int family = 0; family < data.m_cmd_pool_onetime.size(); family++)
+		{
+			auto& cmd_pool_per_device = data.m_cmd_pool_onetime[family];
+			for (auto& cmd_pool_per_frame : cmd_pool_per_device)
+			{
+				vk::CommandPoolCreateInfo cmd_pool_info = vk::CommandPoolCreateInfo()
+					.setQueueFamilyIndex(family);
+
+				cmd_pool_per_frame = data.m_gpu.getDeviceByFamilyIndex(family)->createCommandPool(cmd_pool_info);
+			}
+		}
+	};
+
+	m_thread_pool.start(std::thread::hardware_concurrency()-1, init_thread_data_func);
 }
 
 std::vector<uint32_t> cGPU::getQueueFamilyIndexList(vk::QueueFlags flag, const std::vector<uint32_t>& useIndex)
@@ -78,7 +123,7 @@ std::vector<uint32_t> cGPU::getQueueFamilyIndexList(vk::QueueFlags flag, const s
 		}
 
 		if ((queueProperty[i].queueFlags & flag) != vk::QueueFlagBits()) {
-			queueIndexList.emplace_back(i);
+			queueIndexList.emplace_back((uint32_t)i);
 		}
 	}
 
@@ -105,14 +150,10 @@ int cGPU::getMemoryTypeIndex(const vk::MemoryRequirements& request, vk::MemoryPr
 	auto typeBits = static_cast<std::int32_t>(request.memoryTypeBits);
 	for (uint32_t i = 0; i < prop.memoryTypeCount; i++)
 	{
-		if ((typeBits & 1) == 1)
+		if ((prop.memoryTypes[i].propertyFlags & flag) == flag)
 		{
-			if ((prop.memoryTypes[i].propertyFlags & flag) == flag)
-			{
-				return static_cast<int>(i);
-			}
+			return static_cast<int>(i);
 		}
-		typeBits >>= 1;
 	}
 	assert(false);
 	return -1;
@@ -148,6 +189,7 @@ std::vector<cDevice> cGPU::getDevice(vk::QueueFlags flag) const
 cDevice cGPU::getDeviceByFamilyIndex(uint32_t index) const
 {
 	cDevice device;
+	device.m_gpu = m_handle;
 	device.m_handle = m_device_list[index];
 	device.m_family_index = index;
 	return device;
@@ -171,3 +213,28 @@ vk::Format cGPU::getSupportedDepthFormat(const std::vector<vk::Format>& depthFor
 // {
 // 
 // }
+void sVulkan::swap()
+{
+	m_current_frame = ++m_current_frame % FRAME_MAX;
+	GPUResource::Manager::Order().swap(m_current_frame);
+}
+vk::ShaderModule loadShader(const vk::Device& device, const std::string& filename)
+{
+	std::experimental::filesystem::path filepath(filename);
+	std::ifstream file(filepath, std::ios_base::ate | std::ios::binary);
+	if (!file.is_open()) {
+		assert(false);
+		return vk::ShaderModule();
+	}
+
+	size_t file_size = (size_t)file.tellg();
+	file.seekg(0);
+
+	std::vector<char> buffer(file_size);
+	file.read(buffer.data(), buffer.size());
+
+	vk::ShaderModuleCreateInfo shaderInfo = vk::ShaderModuleCreateInfo()
+		.setPCode(reinterpret_cast<const uint32_t*>(buffer.data()))
+		.setCodeSize(buffer.size());
+	return device.createShaderModule(shaderInfo);
+}

@@ -1,0 +1,61 @@
+#version 450
+
+#pragma optionNV (unroll none)
+
+struct ModelInfo
+{
+	int instanceMaxNum;
+	int instanceNum;
+	int nodeNum;
+	int boneNum;
+	int meshNum;
+	vec4 AABB;
+	mat4 invGlobalMatrix;
+};
+struct AnimationInfo
+{
+	float maxTime;
+	float ticksPerSecond;
+	int numInfo;
+	int offsetInfo;
+};
+
+struct PlayingAnimation
+{
+	int   playingAnimationNo;
+	float time;
+	int	  currentDataIndex;
+	int   isLoop;
+};
+
+layout (local_size_x = 512, local_size_y = 1) in;
+
+
+layout(std140, binding=0) uniform ModelInfoBuffer {
+	ModelInfo modelInfo;
+};
+
+layout(std140, binding=0) readonly restrict buffer AnimationInfoBuffer {
+	AnimationInfo animInfo[];
+};
+layout(std140, binding=1) restrict buffer PlayingAnimationBuffer {
+	PlayingAnimation playingMotion[];
+};
+
+
+void main()
+{
+	uint index = gl_GlobalInvocationID.x;
+	if(index >= modelInfo.instanceMaxNum){ return; }
+
+	AnimationInfo aInfo = animInfo[playingMotion[index].playingAnimationNo];
+	PlayingAnimation pm = playingMotion[index];
+
+	float time = pm.isLoop != 0? mod(pm.time, aInfo.maxTime) : pm.time;
+	playingMotion[index].time = time;
+
+	// MotionUpdate.psのMotionWorkの更新のため、1FだけtimeがmaxTimeを超えるようにしている
+//	playingMotion[index].time += 60. + float(index)*0.01;
+	playingMotion[index].time += 0.016 + float(index)*0.00001;
+}
+

@@ -51,49 +51,47 @@ public:
 
 	enum { THREAD_NUM = thread_num, };
 private:
-	std::array<std::thread, THREAD_NUM> mThread;
-	std::queue<Job> mJobs;
-	std::mutex mJobMutex;
-	std::condition_variable_any mJobCondition;
+	std::array<std::thread, THREAD_NUM> m_thread;
+	std::queue<Job> m_jobs;
+	std::mutex m_job_mutex;
+	std::condition_variable_any m_job_condition;
 
-	std::atomic<int> mProcessJobCount;
-	std::condition_variable_any mJobFinished;
+	std::atomic<int> m_process_job_count;
+	std::condition_variable_any m_is_finished;
 
-	std::atomic_bool mTerminate;
+	std::atomic_bool m_is_terminate;
 	struct ThreadLocal : public ThreadData {
-		int mThreadIndex;
-		std::thread::id mThreadID;
+		int m_thread_index;
+		std::thread::id m_thread_ID;
 
 		ThreadLocal()
-			: mThreadIndex(-1)
-			, mThreadID(std::this_thread::get_id())
+			: m_thread_index(-1)
+			, m_thread_ID(std::this_thread::get_id())
 		{
 
 		}
 	};
 	using ThreadLocalList = std::array<ThreadLocal, thread_num + 1>;
-	ThreadLocalList mThreadLocal;
+	ThreadLocalList m_thread_local_storage;
 public:
 	ThreadPool_t()
-		: mProcessJobCount(0)
-		, mTerminate(false)
+		: m_process_job_count(0)
+		, m_is_terminate(false)
 	{
 		int num = THREAD_NUM;
 		for (int i = 0; i < num; i++) {
-			mThread[i] = std::thread([&, i]()
+			m_thread[i] = std::thread([&, i]()
 			{
 				// ThreadLocalの初期化
-				// 				this->getThreadLocal().mThreadIndex = i + 1;
-				// 				this->getThreadLocal().mThreadID = std::this_thread::get_id();
-				this->getThreadLocalList()[i + 1].mThreadIndex = i + 1;
-				this->getThreadLocalList()[i + 1].mThreadID = std::this_thread::get_id();
+				this->getThreadLocalList()[i + 1].m_thread_index = i + 1;
+				this->getThreadLocalList()[i + 1].m_thread_ID = std::this_thread::get_id();
 
 				this->work();
 			});
-			SetThreadIdealProcessor(mThread[i].native_handle(), i + 1);
+			SetThreadIdealProcessor(m_thread[i].native_handle(), i + 1);
 		}
-		getThreadLocalList()[0].mThreadIndex = 0;
-		getThreadLocalList()[0].mThreadID = std::this_thread::get_id();
+		getThreadLocalList()[0].m_thread_index = 0;
+		getThreadLocalList()[0].m_thread_ID = std::this_thread::get_id();
 		SetThreadIdealProcessor(::GetCurrentThread(), 0);
 
 		// 初期化完了を待つ
@@ -102,9 +100,9 @@ public:
 
 	~ThreadPool_t()
 	{
-		mTerminate.store(true);
-		mJobCondition.notify_all();
-		for (auto& t : mThread) {
+		m_is_terminate.store(true);
+		m_job_condition.notify_all();
+		for (auto& t : m_thread) {
 			t.join();
 		}
 		wait();
@@ -114,28 +112,40 @@ public:
 	void enque(const Job& job)
 	{
 		// 終了準備中に追加しようとした
-		assert(!mTerminate.load());
+		assert(!m_is_terminate.load());
 
 		{
-			std::lock_guard<std::mutex> lk(mJobMutex);
-			mJobs.push(job);
+			std::lock_guard<std::mutex> lk(m_job_mutex);
+			m_jobs.push(job);
 		}
-		mJobCondition.notify_one();
+		m_job_condition.notify_one();
+	}
+
+	void enque(Job&& job)
+	{
+		// 終了準備中に追加しようとした
+		assert(!m_is_terminate.load());
+
+		{
+			std::lock_guard<std::mutex> lk(m_job_mutex);
+			m_jobs.push(std::move(job));
+		}
+		m_job_condition.notify_one();
 	}
 
 	void wait()
 	{
 		// スレッドとワークが全部終わるまで待つ
 		// unk実装
-		std::unique_lock<std::mutex> lock(mJobMutex);
+		std::unique_lock<std::mutex> lock(m_job_mutex);
 		auto wait_time = std::chrono::milliseconds(1000);
 		while (true)
 		{
-			switch (mJobFinished.wait_for(lock, wait_time, [&]() { return mJobs.empty() && (mProcessJobCount == 0); }))
+			switch (m_is_finished.wait_for(lock, wait_time, [&]() { return m_jobs.empty() && (m_process_job_count == 0); }))
 			{
 			case std::cv_status::timeout:
 			case std::cv_status::no_timeout:
-				if (mJobs.empty() && (mProcessJobCount == 0))
+				if (m_jobs.empty() && (m_process_job_count == 0))
 				{
 					return;
 				}
@@ -145,25 +155,25 @@ public:
 	}
 
 	bool isMainThread()const {
-		return getThreadLocal().mThreadIndex == 0;
+		return getThreadLocal().m_thread_index == 0;
 	}
 
 	ThreadLocalList& getThreadLocalList()
 	{
-		return mThreadLocal;
+		return m_thread_local_storage;
 	}
 	const ThreadLocal& getThreadLocal()const
 	{
 		auto id = std::this_thread::get_id();
-		for (auto& tls : mThreadLocal)
+		for (auto& tls : m_thread_local_storage)
 		{
-			if (tls.mThreadID == id) {
+			if (tls.m_thread_ID == id) {
 				return tls;
 			}
 		}
 
 		assert(0);
-		return mThreadLocal[0];
+		return m_thread_local_storage[0];
 	}
 	ThreadLocal& getThreadLocal()
 	{
@@ -174,15 +184,15 @@ public:
 private:
 	bool pop(Job& job)
 	{
-		std::unique_lock<std::mutex> lock(mJobMutex);
-		mJobCondition.wait(lock, [this]() { return !mJobs.empty() || mTerminate.load(); });
-		if (mJobs.empty() && mTerminate.load())
+		std::unique_lock<std::mutex> lock(m_job_mutex);
+		m_job_condition.wait(lock, [this]() { return !m_jobs.empty() || m_is_terminate.load(); });
+		if (m_jobs.empty() && m_is_terminate.load())
 		{
 			return false;
 		}
-		mProcessJobCount++;
-		job = mJobs.front();
-		mJobs.pop();
+		m_process_job_count++;
+		job = m_jobs.front();
+		m_jobs.pop();
 		return true;
 	}
 
@@ -193,8 +203,8 @@ private:
 		for (; pop(job);)
 		{
 			worker(std::forward<Job>(job));
-			mProcessJobCount--;
-			mJobFinished.notify_one();
+			m_process_job_count--;
+			m_is_finished.notify_one();
 		}
 	}
 

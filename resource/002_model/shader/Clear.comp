@@ -1,0 +1,51 @@
+#version 450
+
+#pragma optionNV (unroll none)
+#pragma optionNV (inline all)
+#pragma optionNV(fastmath on)
+//#pragma optionNV(fastprecision on)
+//#pragma optionNV(ifcvt all)
+#pragma optionNV(strict on)
+
+layout (local_size_x = 256, local_size_y = 1) in;
+
+struct ModelInfo
+{
+	int instanceMaxNum;
+	int instanceNum;
+	int nodeNum;
+	int boneNum;
+	int meshNum;
+	vec4 AABB;
+	mat4 invGlobalMatrix;
+};
+layout(std430, binding=0) restrict buffer ModelInfoBuffer {
+	ModelInfo modelInfo;
+};
+
+
+struct Mesh {
+	uint  count;
+	uint  instanceCount;
+	uint  firstIndex;
+	uint  baseVertex;
+	uint  baseInstance;
+	int numElement;
+	int numVertex;
+	int nodeIndex;
+	vec4 AABB;
+};
+layout(std430, binding=1) restrict buffer MeshBuffer {
+	Mesh meshs[];
+};
+
+
+void main()
+{
+	uint index = gl_GlobalInvocationID.x;
+	if(index >= modelInfo.meshNum){
+		return;
+	}
+	modelInfo.instanceNum = 0;
+	meshs[index].instanceCount =  0;
+}

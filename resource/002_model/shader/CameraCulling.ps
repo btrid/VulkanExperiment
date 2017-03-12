@@ -1,0 +1,70 @@
+#version 450
+
+#pragma optionNV (unroll none)
+
+#extension GL_GOOGLE_include_directive : enable
+//#extension GL_ARB_shading_language_include : require
+//#include </CameraCulling.glsl>
+//#include </MultiModel.glsl>
+
+layout (local_size_x = 256, local_size_y = 1) in;
+
+layout(std140, binding=0) uniform FrustomUniform {
+	Frustom frustom;
+};
+
+layout(std430, binding=0) readonly restrict buffer WorldTransform {
+	mat4 worlds[];
+};
+
+layout(std430, binding=1) readonly restrict buffer NodeBuffer {
+	Node nodes[];
+};
+
+layout(std430, binding=2) readonly restrict buffer BoneInfoBuffer {
+	BoneInfo boneInfo[];
+};
+
+layout(std430, binding=3) restrict buffer BoneMapBuffer {
+	uint boneMap[];
+};
+
+layout(std430, binding=4) coherent restrict buffer MeshBuffer {
+	Mesh meshs[];
+};
+layout(std430, binding=5) coherent /*restrict*/ buffer ModelInfoBuffer {
+	ModelInfo modelInfo;
+};
+
+
+void main()
+{
+	if(gl_GlobalInvocationID.x >= modelInfo.instanceMaxNum){ return; }
+	uint srcIndex = gl_GlobalInvocationID.x;
+
+	// カリングされるなら何もしない
+	vec4 aabb = worlds[srcIndex] * vec4(modelInfo.AABB.xyz, 1.);
+	aabb.w = modelInfo.AABB.w;
+	if(isCulling(frustom, aabb)) { 
+//		return ;
+	} 
+
+	// instanceのincrement
+	// @Todo メッシュ単位のカリング
+	uint index = atomicAdd(modelInfo.instanceNum, 1);
+	boneMap[index] = srcIndex;
+	for(int i=0; i<modelInfo.meshNum; i++) {
+		atomicAdd(meshs[i].instanceCount, 1);
+	}
+/*
+	uint nodeIndexOffset = srcIndex * modelInfo.nodeNum;
+	uint boneIndexOffset = index * modelInfo.boneNum;
+	for(int i=0; i <modelInfo.boneNum; i++) 
+	{
+		bones[boneIndexOffset + i] 
+			= modelInfo.invGlobalMatrix 
+			* nodeTransforms[nodeIndexOffset + boneInfo[i].nodeIndex].global 
+			* boneInfo[i].boneOffset;
+	}
+*/
+}

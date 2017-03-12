@@ -16,7 +16,6 @@ struct cKeybordInput {
 	std::unordered_map<WPARAM, Param> mData;
 };
 
-using ThreadPool = ThreadPool_t<ThreadWorker, ThreadJob, _dummy, 7>;
 class cWindow
 {
 public:
@@ -119,8 +118,7 @@ public:
 		wcex.cbClsExtra = 0;
 		wcex.cbWndExtra = 0;
 		wcex.hInstance = GetModuleHandle(nullptr);
-		wcex.lpszClassName = m_descriptor.class_name.data();
-
+		wcex.lpszClassName = m_descriptor.class_name.c_str();
 		if (!RegisterClassExW(&wcex)) {
 			assert(false);
 			return;
@@ -130,7 +128,7 @@ public:
 		DWORD dwStyle = WS_OVERLAPPEDWINDOW | WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
 		RECT rect{ 0, 0, (LONG)m_descriptor.size.width, (LONG)m_descriptor.size.height };
 		AdjustWindowRectEx(&rect, dwStyle, false, dwExStyle);
-		m_private->m_window = CreateWindowExW(dwExStyle, m_descriptor.class_name.data(), m_descriptor.window_name.data(), dwStyle,
+		m_private->m_window = CreateWindowExW(dwExStyle, m_descriptor.class_name.c_str(), m_descriptor.window_name.c_str(), dwStyle,
 			CW_USEDEFAULT, CW_USEDEFAULT, rect.right - rect.left, rect.bottom - rect.top, nullptr, nullptr, GetModuleHandle(nullptr), nullptr);
 
 		assert(m_private->m_window);

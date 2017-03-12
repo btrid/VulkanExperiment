@@ -20,9 +20,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{6AB61332-963C-4D53-B5FF-04B3A9689E23}</ProjectGuid>
-    <RootNamespace>btrlib</RootNamespace>
+    <ProjectGuid>{F976A1FD-91A8-4AE6-9214-B70826CD1420}</ProjectGuid>
+    <RootNamespace>My002_model</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+    <ProjectName>002_model</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -39,17 +40,17 @@
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v140</PlatformToolset>
-    <CharacterSet>Unicode</CharacterSet>
+    <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v140</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>Unicode</CharacterSet>
+    <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -58,22 +59,22 @@
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\PropertyLib.props" />
+    <Import Project="..\PropertyApp.props" />
     <Import Project="..\Property.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\PropertyLib.props" />
+    <Import Project="..\PropertyApp.props" />
     <Import Project="..\Property.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\PropertyLib.props" />
+    <Import Project="..\PropertyApp.props" />
     <Import Project="..\Property.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\PropertyLib.props" />
+    <Import Project="..\PropertyApp.props" />
     <Import Project="..\Property.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
@@ -119,30 +120,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\include\btrlib\cCamera.h" />
-    <ClInclude Include="..\..\include\btrlib\cDebug.h" />
-    <ClInclude Include="..\..\include\btrlib\cStopWatch.h" />
-    <ClInclude Include="..\..\include\btrlib\cThreadPool.h" />
-    <ClInclude Include="..\..\include\btrlib\sDebug.h" />
-    <ClInclude Include="..\..\include\btrlib\cModel.h" />
-    <ClInclude Include="..\..\include\btrlib\cWindow.h" />
-    <ClInclude Include="..\..\include\btrlib\Define.h" />
-    <ClInclude Include="..\..\include\btrlib\DefineMath.h" />
-    <ClInclude Include="..\..\include\btrlib\Singleton.h" />
-    <ClInclude Include="..\..\include\btrlib\sValidationLayer.h" />
-    <ClInclude Include="..\..\include\btrlib\sVulkan.h" />
-    <ClInclude Include="..\..\include\btrlib\ThreadPool.h" />
+    <ClCompile Include="..\..\source\002_model\cModelRender.cpp" />
+    <ClCompile Include="..\..\source\002_model\main_002.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\source\btrlib\cCamera.cpp" />
-    <ClCompile Include="..\..\source\btrlib\cModel.cpp" />
-    <ClCompile Include="..\..\source\btrlib\cWindow.cpp" />
-    <ClCompile Include="..\..\source\btrlib\Define.cpp" />
-    <ClCompile Include="..\..\source\btrlib\sVulkan.cpp" />
-    <ClCompile Include="..\..\source\btrlib\ThreadPool.cpp" />
-  </ItemGroup>
-  <ItemGroup>
+    <None Include="..\..\include\002_model\cModelRenderer.inl" />
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\include\002_model\cModelRender.h" />
+    <ClInclude Include="..\..\include\002_model\cModelRenderer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
