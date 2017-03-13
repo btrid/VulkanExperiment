@@ -64,7 +64,6 @@ protected:
 // 	std::list<std::future<std::unique_ptr<T>>> m_loading_model;
 // 	std::vector<std::unique_ptr<T>> m_render;
 	cGPU	m_gpu;
-	cCamera* m_camera;
 
 	cModelDrawPipeline m_draw_pipeline;
 	cModelComputePipeline m_compute_pipeline;

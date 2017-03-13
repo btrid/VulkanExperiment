@@ -3,15 +3,6 @@
 
 #include <btrlib/Define.h>
 
-//namespace detail
-//{
-
-
-//}
-
-
-//namespace btr {
-
 template<typename T>
 void cModelRenderer_t<T>::cModelDrawPipeline::setup(vk::RenderPass render_pass)
 {
@@ -510,14 +501,6 @@ void cModelRenderer_t<T>::cModelComputePipeline::setup()
 		m_descriptor_pool = device->createDescriptorPool(poolInfo);
 	}
 
-// 	// DescriptorSet Allocate
-// 	{
-// 		vk::DescriptorSetAllocateInfo allocInfo = vk::DescriptorSetAllocateInfo()
-// 			.setDescriptorPool(m_descriptor_pool)
-// 			.setDescriptorSetCount(m_descriptor_set_layout.size())
-// 			.setPSetLayouts(m_descriptor_set_layout.data());
-// 		m_descriptor_set = device->allocateDescriptorSets(allocInfo);
-// 	}
 
 	// pipeline cache
 	{
@@ -632,23 +615,6 @@ template<typename T>
 void cModelRenderer_t<T>::setup(vk::RenderPass render_pass)
 {
 	m_gpu = sThreadData::Order().m_gpu;
-	m_camera = cCamera::sCamera::Order().getCameraList()[0];
 	m_draw_pipeline.setup(render_pass);
 //	m_compute_pipeline.setup();
 }
-
-// template<typename T>
-// void cModelRenderer_t<T>::draw()
-// {
-// 	auto cmd = sThreadData::Order().allocateCmdOnetime(m_gpu.getDevice(vk::QueueFlagBits::eGraphics)[0]);
-// 	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_draw_pipeline.m_pipeline);
-// //	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_draw_pipeline.m_pipeline_layout, 0, m_draw_pipeline.m_descriptor_set_layout.size(), mPipeline.mDescriptorSet.data(), 0, 0);
-// 	// draw
-// 	for (auto& render : m_render)
-// 	{
-// 		render->draw(cmd);
-// 	}
-// 
-// }
-
-//}

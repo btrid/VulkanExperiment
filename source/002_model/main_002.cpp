@@ -116,6 +116,77 @@ int main()
 		queue.submit({ setup_submit_info }, vk::Fence());
 		queue.waitIdle();
 	}
+
+	std::vector<vk::CommandBuffer> render_to_present_cmd;
+	{
+		// present barrier cmd
+		vk::CommandBufferAllocateInfo cmd_info = vk::CommandBufferAllocateInfo()
+			.setCommandPool(cmd_pool)
+			.setLevel(vk::CommandBufferLevel::ePrimary)
+			.setCommandBufferCount((uint32_t)window.getSwapchain().m_backbuffer_image.size());
+		render_to_present_cmd = device->allocateCommandBuffers(cmd_info);
+
+		for (size_t i = 0; i < render_to_present_cmd.size(); i++)
+		{
+			auto& cmd = render_to_present_cmd[i];
+			vk::CommandBufferBeginInfo cmd_begin_info = vk::CommandBufferBeginInfo()
+				.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
+			cmd.begin(cmd_begin_info);
+
+			vk::ImageMemoryBarrier present_barrier;
+			present_barrier.setSrcAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+			present_barrier.setDstAccessMask(vk::AccessFlagBits::eMemoryRead);
+			present_barrier.setOldLayout(vk::ImageLayout::eColorAttachmentOptimal);
+			present_barrier.setNewLayout(vk::ImageLayout::ePresentSrcKHR);
+			present_barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+			present_barrier.setImage(window.getSwapchain().m_backbuffer_image[i]);
+
+			cmd.pipelineBarrier(
+				vk::PipelineStageFlagBits::eTopOfPipe,
+				vk::PipelineStageFlagBits::eBottomOfPipe,
+				vk::DependencyFlags(),
+				0, nullptr, // No memory barriers,
+				0, nullptr, // No buffer barriers,
+				1, &present_barrier);
+
+			cmd.end();
+		}
+	}
+
+
+	vk::SemaphoreCreateInfo semaphoreInfo = vk::SemaphoreCreateInfo();
+	vk::Semaphore swapbuffer_semaphore = device->createSemaphore(semaphoreInfo);
+	vk::Semaphore cmdsubmit_semaphore = device->createSemaphore(semaphoreInfo);
+
+	std::shared_ptr<std::promise<std::unique_ptr<ModelRender>>> task = std::make_shared<std::promise<std::unique_ptr<ModelRender>>>();
+	auto modelFuture = task->get_future();
+	{
+		cThreadJob job;
+		auto load = [task]()
+		{
+			auto model = std::make_unique<ModelRender>();
+			model->load(btr::getResourcePath() + "tiny.x");
+			task->set_value(std::move(model));
+		};
+		job.mFinish = load;
+		sVulkan::Order().getThreadPool().enque(std::move(job));
+	}
+
+	while (modelFuture.valid() && modelFuture.wait_for(std::chrono::milliseconds(10)) != std::future_status::ready) {
+		printf("wait...\n");
+	}
+
+	auto model = modelFuture.get();
+
+	auto* camera = cCamera::sCamera::Order().create();
+	camera->mPosition = glm::vec3(0.f, 0.f, -200.f);
+	camera->mUp = glm::vec3(0.f, 1.f, 0.f);
+	camera->mWidth = 640;
+	camera->mHeight = 480;
+	camera->mFar = 1000.f;
+	camera->mNear = 0.01f;
+
+
 	vk::RenderPass render_pass;
 	// レンダーパス
 	{
@@ -173,81 +244,6 @@ int main()
 			framebuffer[i] = device->createFramebuffer(framebuffer_info);
 		}
 	}
-
-	std::vector<vk::CommandBuffer> render_to_present_cmd;
-	{
-		// present barrier cmd
-		vk::CommandBufferAllocateInfo cmd_info = vk::CommandBufferAllocateInfo()
-			.setCommandPool(cmd_pool)
-			.setLevel(vk::CommandBufferLevel::ePrimary)
-			.setCommandBufferCount((uint32_t)window.getSwapchain().m_backbuffer_image.size());
-		render_to_present_cmd = device->allocateCommandBuffers(cmd_info);
-
-		for (size_t i = 0; i < render_to_present_cmd.size(); i++)
-		{
-			auto& cmd = render_to_present_cmd[i];
-			vk::CommandBufferBeginInfo cmd_begin_info = vk::CommandBufferBeginInfo()
-				.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
-			cmd.begin(cmd_begin_info);
-
-			vk::ImageMemoryBarrier present_barrier;
-			present_barrier.setSrcAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
-			present_barrier.setDstAccessMask(vk::AccessFlagBits::eMemoryRead);
-			present_barrier.setOldLayout(vk::ImageLayout::eColorAttachmentOptimal);
-			present_barrier.setNewLayout(vk::ImageLayout::ePresentSrcKHR);
-			present_barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-			present_barrier.setImage(window.getSwapchain().m_backbuffer_image[i]);
-
-			cmd.pipelineBarrier(
-				vk::PipelineStageFlagBits::eTopOfPipe,
-				vk::PipelineStageFlagBits::eBottomOfPipe,
-				vk::DependencyFlags(),
-				0, nullptr, // No memory barriers,
-				0, nullptr, // No buffer barriers,
-				1, &present_barrier);
-
-			cmd.end();
-		}
-	}
-
-
-	vk::SemaphoreCreateInfo semaphoreInfo = vk::SemaphoreCreateInfo();
-	vk::Semaphore swapbuffer_semaphore = device->createSemaphore(semaphoreInfo);
-	vk::Semaphore cmdsubmit_semaphore = device->createSemaphore(semaphoreInfo);
-
-#if 1
-	std::shared_ptr<std::promise<std::unique_ptr<ModelRender>>> task = std::make_shared<std::promise<std::unique_ptr<ModelRender>>>();
-	auto modelFuture = task->get_future();
-	{
-		cThreadJob job;
-		auto load = [task]()
-		{
-			auto model = std::make_unique<ModelRender>();
-			model->load(btr::getResourcePath() + "tiny.x");
-			task->set_value(std::move(model));
-		};
-		job.mFinish = load;
-		sVulkan::Order().getThreadPool().enque(std::move(job));
-	}
-
-	while (modelFuture.valid() && modelFuture.wait_for(std::chrono::milliseconds(10)) != std::future_status::ready) {
-		printf("wait...\n");
-	}
-
-	auto model = modelFuture.get();
-#else
-	std::unique_ptr<cModel> model = std::make_unique<cModel>();
-	model->load(btr::getResourcePath() + "002_model\\" + "tiny.x");
-#endif
-	auto* camera = cCamera::sCamera::Order().create();
-	camera->mPosition = glm::vec3(0.f, 0.f, -200.f);
-	camera->mUp = glm::vec3(0.f, 1.f, 0.f);
-	camera->mWidth = 640;
-	camera->mHeight = 480;
-	camera->mFar = 1000.f;
-	camera->mNear = 0.01f;
-
-
 	cModelRenderer renderer;
 	renderer.setup(render_pass);
 	renderer.addModel(model.get());
