@@ -32,14 +32,9 @@ public:
 private:
 	struct Swapchain 
 	{
-		struct BackBuffer 
-		{
-			vk::Image image;
-			vk::ImageView view;
-		};
 		vk::SwapchainKHR m_swapchain_handle;
+		std::vector<vk::Image> m_backbuffer_image;
 		vk::SurfaceFormatKHR m_surface_format;
-		std::vector<BackBuffer> m_backbuffer;
 		cDevice m_use_device;
 		uint32_t m_backbuffer_index;
 
@@ -52,7 +47,7 @@ private:
 
 		void setup(const CreateInfo& descriptor, vk::SurfaceKHR surface);
 		uint32_t swap(vk::Semaphore& semaphore);
-
+		size_t getSwapchainNum()const { return m_backbuffer_image.size(); }
 	};
 
 	class Private

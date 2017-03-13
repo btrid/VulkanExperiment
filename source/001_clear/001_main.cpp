@@ -66,7 +66,7 @@ int main()
 		vk::CommandBufferAllocateInfo cmd_info = vk::CommandBufferAllocateInfo()
 			.setCommandPool(cmd_pool)
 			.setLevel(vk::CommandBufferLevel::ePrimary)
-			.setCommandBufferCount((uint32_t)window.getSwapchain().m_backbuffer.size());
+			.setCommandBufferCount((uint32_t)window.getSwapchain().m_backbuffer_image.size());
 		present_cmd = device->allocateCommandBuffers(cmd_info);
 
 		for (size_t i = 0; i < present_cmd.size(); i++)
@@ -84,7 +84,7 @@ int main()
 				.setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
 				.setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
 				.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 })
-				.setImage(window.getSwapchain().m_backbuffer[i].image);
+				.setImage(window.getSwapchain().m_backbuffer_image[i].image);
 
 			cmd.pipelineBarrier(
 				vk::PipelineStageFlagBits::eTransfer,
@@ -104,7 +104,7 @@ int main()
 		vk::CommandBufferAllocateInfo cmd_info = vk::CommandBufferAllocateInfo()
 			.setCommandPool(cmd_pool)
 			.setLevel(vk::CommandBufferLevel::ePrimary)
-			.setCommandBufferCount((uint32_t)window.getSwapchain().m_backbuffer.size());
+			.setCommandBufferCount((uint32_t)window.getSwapchain().m_backbuffer_image.size());
 		clear_cmd = device->allocateCommandBuffers(cmd_info);
 		for (size_t i = 0; i < clear_cmd.size(); i++)
 		{
@@ -115,7 +115,7 @@ int main()
 
 			vk::ClearColorValue color = vk::ClearColorValue().setFloat32({ 0.2f, 0.2f, 0.8f, 1.f });
 			vk::ImageSubresourceRange range = vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
-			cmd.clearColorImage(window.getSwapchain().m_backbuffer[i].image, vk::ImageLayout::eTransferDstOptimal, color, range);
+			cmd.clearColorImage(window.getSwapchain().m_backbuffer_image[i].image, vk::ImageLayout::eTransferDstOptimal, color, range);
 
 			vk::ImageMemoryBarrier clear_barrier = vk::ImageMemoryBarrier()
 				.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite)
@@ -125,7 +125,7 @@ int main()
 				.setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
 				.setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
 				.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 })
-				.setImage(window.getSwapchain().m_backbuffer[i].image);
+				.setImage(window.getSwapchain().m_backbuffer_image[i].image);
 			cmd.pipelineBarrier(
 				vk::PipelineStageFlagBits::eTransfer,
 				vk::PipelineStageFlagBits::eBottomOfPipe,

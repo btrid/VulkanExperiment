@@ -111,10 +111,6 @@ private:
 
 struct sThreadData : public SingletonTLS<sThreadData>
 {
-	sThreadData()
-	{
-		printf("%p\n", this);
-	}
 	friend SingletonTLS<sThreadData>;
 	cGPU m_gpu;
 	int m_thread_index;
