@@ -127,8 +127,8 @@ struct CameraGPU
 {
 	void setup(const cCamera& camera) 
 	{
-		mView = glm::lookAt(camera.mPosition, camera.mTarget, camera.mUp);
 		mProjection = glm::perspective(camera.mFov, camera.getAspect(), camera.mNear, camera.mFar);
+		mView = glm::lookAt(camera.mPosition, camera.mTarget, camera.mUp);
 	}
 	glm::mat4 mProjection;
 	glm::mat4 mView;

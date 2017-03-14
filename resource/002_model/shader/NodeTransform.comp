@@ -9,28 +9,10 @@
 //#pragma optionNV(strict on)
 
 //#extension GL_ARB_shading_language_include : require
-//#include </Math.glsl>
-//#include </MultiModel.glsl>
+#extension GL_GOOGLE_cpp_style_line_directive : require
+#include </Math.glsl>
+#include </MultiModel.glsl>
 
-struct ModelInfo
-{
-	uint instanceMaxNum;
-	int instanceNum;
-	int nodeNum;
-	int boneNum;
-	int meshNum;
-	vec4 AABB;
-	mat4 invGlobalMatrix;
-};
-
-struct Node
-{
-	int nodeNo;
-	int parent;
-	int boneIndex;
-	int _p1;
-
-};
 layout (local_size_x = 128, local_size_y = 1) in;
 
 

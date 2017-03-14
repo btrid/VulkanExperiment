@@ -53,6 +53,11 @@ void cModelRenderer_t<T>::cModelDrawPipeline::setup(vk::RenderPass render_pass)
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setBinding(2),
 			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(vk::ShaderStageFlagBits::eVertex)
+			.setDescriptorCount(1)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setBinding(3),
+			vk::DescriptorSetLayoutBinding()
 			.setStageFlags(vk::ShaderStageFlagBits::eFragment)
 			.setDescriptorCount(1)
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
@@ -188,12 +193,11 @@ void cModelRenderer_t<T>::cModelDrawPipeline::setup(vk::RenderPass render_pass)
 				.setLocation(4)
 				.setFormat(vk::Format::eR32G32B32A32Sfloat)
 				.setOffset(64),
-				/*		vk::VertexInputAttributeDescription()
-				.binding(0)
-				.location(5)
-				.format(vk::Format::eR32Sint)
-				.offset(80),
-				*/ 
+				vk::VertexInputAttributeDescription()
+				.setBinding(0)
+				.setLocation(5)
+				.setFormat(vk::Format::eR32Sint)
+				.setOffset(80),
 			};
 			vk::PipelineVertexInputStateCreateInfo vertex_input_info;
 			vertex_input_info.setVertexBindingDescriptionCount(vertex_input_binding.size());

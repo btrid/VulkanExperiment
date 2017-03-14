@@ -322,7 +322,7 @@ public:
 		glm::vec4 mTexcoord0;
 		int			boneID_[BONE_NUM];
 		float		weight_[BONE_NUM];
-		//		unsigned	mMaterialIndex;
+		unsigned	mMaterialIndex;
 		Vertex()
 		{
 			for (size_t i = 0; i < BONE_NUM; i++) {

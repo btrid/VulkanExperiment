@@ -2,48 +2,26 @@
 
 #pragma optionNV (unroll none)
 
-struct ModelInfo
-{
-	int instanceMaxNum;
-	int instanceNum;
-	int nodeNum;
-	int boneNum;
-	int meshNum;
-	vec4 AABB;
-	mat4 invGlobalMatrix;
-};
-struct AnimationInfo
-{
-	float maxTime;
-	float ticksPerSecond;
-	int numInfo;
-	int offsetInfo;
-};
+//#extension GL_ARB_shading_language_include : require
+#extension GL_GOOGLE_cpp_style_line_directive : require
 
-struct PlayingAnimation
-{
-	int   playingAnimationNo;
-	float time;
-	int	  currentDataIndex;
-	int   isLoop;
-};
+#include </MultiModel.glsl>
 
 layout (local_size_x = 512, local_size_y = 1) in;
-
 
 layout(std140, binding=0) uniform ModelInfoBuffer {
 	ModelInfo modelInfo;
 };
 
-layout(std140, binding=0) readonly restrict buffer AnimationInfoBuffer {
+layout(std430, binding=0) readonly restrict buffer AnimationInfoBuffer {
 	AnimationInfo animInfo[];
 };
-layout(std140, binding=1) restrict buffer PlayingAnimationBuffer {
+layout(std430, binding=1) restrict buffer PlayingAnimationBuffer {
 	PlayingAnimation playingMotion[];
 };
 
 
-void main()
+void main() 
 {
 	uint index = gl_GlobalInvocationID.x;
 	if(index >= modelInfo.instanceMaxNum){ return; }

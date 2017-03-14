@@ -30,7 +30,7 @@ void ModelRender::setup(cModelRenderer&  renderer)
 			};
 
 			std::vector<vk::DescriptorBufferInfo> storagemBufferInfo = {
-				//		model->mPrivate->getBuffer(Private::ModelBuffer::VS_MATERIAL).mBufferInfo,
+				mPrivate->getBuffer(Private::ModelBuffer::VS_MATERIAL).mBufferInfo,
 				mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM).mBufferInfo,
 			};
 			std::vector<vk::DescriptorBufferInfo> fStoragemBufferInfo = {

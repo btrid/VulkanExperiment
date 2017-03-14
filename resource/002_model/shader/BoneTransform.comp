@@ -2,41 +2,24 @@
 
 #pragma optionNV (unroll none)
 
+//#extension GL_ARB_shading_language_include : require
+#extension GL_GOOGLE_cpp_style_line_directive : require
+#include </MultiModel.glsl>
+
 layout (local_size_x = 256, local_size_y = 1) in;
-
-struct ModelInfo
-{
-	int instanceMaxNum;
-	int instanceNum;
-	int nodeNum;
-	uint boneNum;
-	int meshNum;
-	vec4 AABB;
-	mat4 invGlobalMatrix;
-};
-
-struct BoneInfo
-{
-	int nodeIndex;
-	int _p1;
-	int _p2;
-	int _p3;
-
-	mat4 boneOffset;
-};
 
 
 layout(std140, binding=0) uniform ModelInfoUniform {
 	ModelInfo modelInfo;
 };
 
-layout(std140, binding=0) readonly restrict buffer NodeGlobalTransformBuffer {
+layout(std430, binding=0) readonly restrict buffer NodeGlobalTransformBuffer {
 //	NodeGlobalTransform nodeGlobalTransforms[];
 //	mat3x4 nodeGlobalTransforms[];
 	mat4 nodeGlobalTransforms[];
 };
 
-layout(std140, binding=1) readonly restrict buffer BoneInfoBuffer {
+layout(std430, binding=1) readonly restrict buffer BoneInfoBuffer {
 	BoneInfo boneInfo[];
 };
 
@@ -58,8 +41,24 @@ void main()
 	uint nodeIndexOffset = boneMap[index / modelInfo.boneNum] * modelInfo.nodeNum;
 	bones[index] 
 		= inv
+//		* nodeGlobalTransforms[nodeIndexOffset + boneInfo[boneInfoIndex].nodeIndex]
+//		* mat4(transpose(nodeGlobalTransforms[nodeIndexOffset + boneInfo[boneInfoIndex].nodeIndex]))
 		* nodeGlobalTransforms[nodeIndexOffset + boneInfo[boneInfoIndex].nodeIndex]
+//		* transpose(mat4(nodeGlobalTransforms[nodeIndexOffset + boneInfo[boneInfoIndex].nodeIndex].global))
 		* boneInfo[boneInfoIndex].boneOffset;
 
+//	bones[index] = mat4(1.);
+
+/*
+	uint nodeIndexOffset = srcIndex * modelInfo.nodeNum;
+	uint boneIndexOffset = index * modelInfo.boneNum;
+	for(int i=0; i <modelInfo.boneNum; i++) 
+	{
+		bones[boneIndexOffset + i] 
+			= modelInfo.invGlobalMatrix 
+			* nodeTransforms[nodeIndexOffset + boneInfo[i].nodeIndex].global 
+			* boneInfo[i].boneOffset;
+	}
+*/
 
 }

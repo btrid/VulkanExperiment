@@ -481,7 +481,7 @@ void cModel::load(const std::string& filename)
 			if (mesh->HasTextureCoords(0)) {
 				_vertex[i].mTexcoord0 = glm::vec4(mesh->mTextureCoords[0][i].x, mesh->mTextureCoords[0][i].y, mesh->mTextureCoords[0][i].z, 0.f);
 			}
-			//			_vertex[i].mMaterialIndex = mesh->mMaterialIndex;
+			_vertex[i].mMaterialIndex = mesh->mMaterialIndex;
 		}
 
 		// SkinMesh
@@ -611,12 +611,12 @@ void cModel::load(const std::string& filename)
 					.setLocation(4)
 					.setFormat(vk::Format::eR32G32B32A32Sfloat)
 					.setOffset(64),
-					/*		vk::VertexInputAttributeDescription()
-					.binding(0)
-					.location(5)
-					.format(vk::Format::eR32Sint)
-					.offset(80),
-					*/ };
+					vk::VertexInputAttributeDescription()
+					.setBinding(0)
+					.setLocation(5)
+					.setFormat(vk::Format::eR32Sint)
+					.setOffset(80),
+				};
 				mesh.mVertexInfo = vk::PipelineVertexInputStateCreateInfo()
 					.setVertexBindingDescriptionCount(mesh.mBinding.size())
 					.setPVertexBindingDescriptions(mesh.mBinding.data())
@@ -671,16 +671,6 @@ void cModel::load(const std::string& filename)
 	}
 
 
-#if 0
-	// マテリアルインデックス
-	//				glNamedBufferStorage(mPrivate->getMaterialIndexBO(), _materialIndex.size() * sizeof(std::int32_t)*4, _materialIndex.data(), StorageFlag::MAP_WRITE_BIT | StorageFlag::MAP_READ_BIT );
-	glVertexArrayVertexBuffer(mPrivate->vao_, 1, mPrivate->getMaterialIndexBO(), 0, sizeof(int));
-	glVertexArrayBindingDivisor(mPrivate->vao_, 1, 1);
-	glEnableVertexArrayAttrib(mPrivate->vao_, 5);
-	glVertexArrayAttribBinding(mPrivate->vao_, 5, 1);
-	glVertexArrayAttribIFormat(mPrivate->vao_, 5, 1, GL_INT, 0);
-#endif
-
 	/*	for (unsigned num_vertex = 0; num_vertex < _vertexSize.size(); num_vertex++)
 	{
 	AABB aabb;
@@ -708,7 +698,6 @@ void cModel::load(const std::string& filename)
 			//			vsmb[i].normalTex_ = material[i].ormalTex_.makeBindless();
 			//			vsmb[i].heightTex_ = material[i].heightTex_.makeBindless();
 		}
-		//		glNamedBufferStorage(private_->getVSMaterialBO(), sizeof(VSMaterialBuffer) * vsmb.size(), vsmb.data(), 0);
 		auto size = vector_sizeof(vsmb);
 		auto& buffer = mPrivate->getBuffer(Private::ModelBuffer::VS_MATERIAL);
 		vk::BufferCreateInfo bufferInfo = vk::BufferCreateInfo()
@@ -722,6 +711,7 @@ void cModel::load(const std::string& filename)
 			.setAllocationSize(memoryRequest.size)
 			.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memoryRequest, vk::MemoryPropertyFlagBits::eHostVisible));
 		buffer.mMemory = device->allocateMemory(memAlloc);
+		device->bindBufferMemory(buffer.mBuffer, buffer.mMemory, 0);
 
 		buffer.mBufferInfo.setBuffer(buffer.mBuffer);
 		buffer.mBufferInfo.setOffset(0);

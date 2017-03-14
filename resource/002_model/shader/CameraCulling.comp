@@ -2,16 +2,13 @@
 
 #pragma optionNV (unroll none)
 
+//#extension GL_ARB_shading_language_include : require
+#extension GL_GOOGLE_cpp_style_line_directive : require
+#include </CameraCulling.glsl>
+#include </MultiModel.glsl>
 
 layout (local_size_x = 256, local_size_y = 1) in;
 
-struct Plane{
-	vec3 normal;
-	float dot;
-};
-struct Frustom{
-	Plane p[6];
-};
 layout(std140, binding=0) uniform FrustomUniform {
 	Frustom frustom;
 };
@@ -20,27 +17,10 @@ layout(std430, binding=0) readonly restrict buffer WorldTransform {
 	mat4 worlds[];
 };
 
-struct Node
-{
-	int nodeNo;
-	int parent;
-	int boneIndex;
-	int _p1;
-
-};
 layout(std430, binding=1) readonly restrict buffer NodeBuffer {
 	Node nodes[];
 };
 
-struct BoneInfo
-{
-	int nodeIndex;
-	int _p1;
-	int _p2;
-	int _p3;
-
-	mat4 boneOffset;
-};
 layout(std430, binding=2) readonly restrict buffer BoneInfoBuffer {
 	BoneInfo boneInfo[];
 };
@@ -49,46 +29,13 @@ layout(std430, binding=3) restrict buffer BoneMapBuffer {
 	uint boneMap[];
 };
 
-struct Mesh {
-	uint  count;
-	uint  instanceCount;
-	uint  firstIndex;
-	uint  baseVertex;
-	uint  baseInstance;
-	int numElement;
-	int numVertex;
-	int nodeIndex;
-	vec4 AABB;
-};
 layout(std430, binding=4) coherent restrict buffer MeshBuffer {
 	Mesh meshs[];
-};
-
-struct ModelInfo
-{
-	int instanceMaxNum;
-	int instanceNum;
-	int nodeNum;
-	int boneNum;
-	int meshNum;
-	vec4 AABB;
-	mat4 invGlobalMatrix;
 };
 layout(std430, binding=5) coherent /*restrict*/ buffer ModelInfoBuffer {
 	ModelInfo modelInfo;
 };
 
-bool isCulling(in Frustom frustom, in vec4 AABB)
-{
-	for (int i = 0; i < 6; i++)
-	{
-		float dist = dot(AABB.xyz, frustom.p[i].normal) - frustom.p[i].dot;
-		if (dist < -abs(AABB.w)) {
-			return true;
-		}
-	}
-	return false;
-}
 
 void main()
 {
