@@ -30,7 +30,14 @@ struct cModelRenderer_t
 		vk::Pipeline m_pipeline;
 		vk::PipelineLayout m_pipeline_layout;
 		vk::DescriptorPool m_descriptor_pool;
-		vk::DescriptorSetLayout m_descriptor_set_layout;
+		vk::DescriptorSet m_draw_descriptor_set_per_scene;
+		enum {
+			DESCRIPTOR_SET_LAYOUT_PER_MODEL,
+			DESCRIPTOR_SET_LAYOUT_PER_MESH,
+			DESCRIPTOR_SET_LAYOUT_PER_SCENE,
+			DESCRIPTOR_SET_LAYOUT_MAX,
+		};
+		std::array<vk::DescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_MAX> m_descriptor_set_layout;
 
 		UniformBuffer	m_camera_uniform;
 		void setup(vk::RenderPass render_pass);

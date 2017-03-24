@@ -18,27 +18,29 @@ layout(location = 1)in vec4 inNormal;
 layout(location = 2)in vec4 inTexcoord;
 layout(location = 3)in ivec4 inBoneID;
 layout(location = 4)in vec4 inWeight;
-layout(location = 5)in int inMaterialIndex;
+//layout(location = 5)in int inMaterialIndex;
 
 
 out gl_PerVertex{
 	vec4 gl_Position;
 };
 
-out Vertex{
-	flat int MaterialIndex;
+struct Vertex
+{
+//	flat int MaterialIndex;
 	vec3 Position;
 	vec3 Normal;
 	vec3 Texcoord;
-}VSOut;
+};
+layout(location = 0) out Vertex VSOut;
 
-layout(std140, binding=0) uniform CameraUniform
+layout(std140, set=2, binding=0) uniform CameraUniform
 {
 	mat4 uProjection;
 	mat4 uView;
 };
 
-layout(std140, binding=1) uniform ModelInfoUniform
+layout(std140, set=0, binding=0) uniform ModelInfoUniform
 {
 	ModelInfo modelInfo;
 };
@@ -48,12 +50,12 @@ struct VSMaterial {
 	uvec2	HeightTex;
 };
 
-layout(std430, binding=2) readonly buffer VSMaterialBuffer
+layout(std430, set=0, binding=1) readonly buffer VSMaterialBuffer
 {
 	VSMaterial vsMaterial[];
 };
 
-layout(std430, binding=3)readonly restrict buffer BoneTransformBuffer {
+layout(std430, set=0, binding=2)readonly restrict buffer BoneTransformBuffer {
 	mat4 bones[];
 };
 
@@ -82,7 +84,7 @@ mat4 skinning()
 void main()
 {
 	VSOut.Texcoord = inTexcoord.xyz;
-	VSMaterial m = vsMaterial[inMaterialIndex];
+//	VSMaterial m = vsMaterial[inMaterialIndex];
 
 	vec4 offset = vec4(0.);
 //	if(m.HeightTex != 0) {
@@ -97,5 +99,5 @@ void main()
 
 	VSOut.Normal = /*m.NormalTex != 0 ? texture(sampler2D(m.NormalTex), VSOut.Texcoord.xy).xyz : */inNormal.xyz;
 
-	VSOut.MaterialIndex = inMaterialIndex;
+//	VSOut.MaterialIndex = inMaterialIndex;
 }

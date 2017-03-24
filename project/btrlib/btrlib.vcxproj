@@ -1,5 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\..\packages\libFreeImage.1.0.0\build\native\libFreeImage.props" Condition="Exists('..\..\packages\libFreeImage.1.0.0\build\native\libFreeImage.props')" />
   <Import Project="..\..\packages\GLMathematics.0.9.5.4\build\native\GLMathematics.props" Condition="Exists('..\..\packages\GLMathematics.0.9.5.4\build\native\GLMathematics.props')" />
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -41,13 +42,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -123,6 +124,7 @@
     <ClInclude Include="..\..\include\btrlib\cDebug.h" />
     <ClInclude Include="..\..\include\btrlib\cStopWatch.h" />
     <ClInclude Include="..\..\include\btrlib\cThreadPool.h" />
+    <ClInclude Include="..\..\include\btrlib\rTexture.h" />
     <ClInclude Include="..\..\include\btrlib\sDebug.h" />
     <ClInclude Include="..\..\include\btrlib\cModel.h" />
     <ClInclude Include="..\..\include\btrlib\cWindow.h" />
@@ -138,6 +140,7 @@
     <ClCompile Include="..\..\source\btrlib\cModel.cpp" />
     <ClCompile Include="..\..\source\btrlib\cWindow.cpp" />
     <ClCompile Include="..\..\source\btrlib\Define.cpp" />
+    <ClCompile Include="..\..\source\btrlib\rTexture.cpp" />
     <ClCompile Include="..\..\source\btrlib\sVulkan.cpp" />
     <ClCompile Include="..\..\source\btrlib\ThreadPool.cpp" />
   </ItemGroup>
@@ -148,6 +151,7 @@
   <ImportGroup Label="ExtensionTargets">
     <Import Project="..\..\packages\assimp.v140.redist.3.2\build\native\assimp.v140.redist.targets" Condition="Exists('..\..\packages\assimp.v140.redist.3.2\build\native\assimp.v140.redist.targets')" />
     <Import Project="..\..\packages\assimp.v140.3.2\build\native\assimp.v140.targets" Condition="Exists('..\..\packages\assimp.v140.3.2\build\native\assimp.v140.targets')" />
+    <Import Project="..\..\packages\libFreeImage.1.0.0\build\native\libFreeImage.targets" Condition="Exists('..\..\packages\libFreeImage.1.0.0\build\native\libFreeImage.targets')" />
   </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
@@ -156,5 +160,7 @@
     <Error Condition="!Exists('..\..\packages\GLMathematics.0.9.5.4\build\native\GLMathematics.props')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\GLMathematics.0.9.5.4\build\native\GLMathematics.props'))" />
     <Error Condition="!Exists('..\..\packages\assimp.v140.redist.3.2\build\native\assimp.v140.redist.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\assimp.v140.redist.3.2\build\native\assimp.v140.redist.targets'))" />
     <Error Condition="!Exists('..\..\packages\assimp.v140.3.2\build\native\assimp.v140.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\assimp.v140.3.2\build\native\assimp.v140.targets'))" />
+    <Error Condition="!Exists('..\..\packages\libFreeImage.1.0.0\build\native\libFreeImage.props')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\libFreeImage.1.0.0\build\native\libFreeImage.props'))" />
+    <Error Condition="!Exists('..\..\packages\libFreeImage.1.0.0\build\native\libFreeImage.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\libFreeImage.1.0.0\build\native\libFreeImage.targets'))" />
   </Target>
 </Project>

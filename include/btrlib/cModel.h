@@ -10,6 +10,7 @@
 #include <btrlib/Define.h>
 #include <btrlib/sVulkan.h>
 #include <btrlib/ThreadPool.h>
+#include <btrlib/rTexture.h>
 struct cMeshGPU {
 	vk::Buffer mBuffer;
 	vk::DeviceMemory mMemory;
@@ -317,32 +318,41 @@ public:
 		enum {
 			BONE_NUM = 4,
 		};
-		glm::vec4 mPosition;
-		glm::vec4 mNormal;
-		glm::vec4 mTexcoord0;
-		int			boneID_[BONE_NUM];
-		float		weight_[BONE_NUM];
-		unsigned	mMaterialIndex;
+		glm::vec4 m_position;
+		glm::vec4 m_normal;
+		glm::vec4 m_texcoord0;
+		int			m_bone_ID[BONE_NUM];
+		float		m_weight[BONE_NUM];
 		Vertex()
 		{
 			for (size_t i = 0; i < BONE_NUM; i++) {
-				boneID_[i] = -1;
-				weight_[i] = 0.f;
+				m_bone_ID[i] = -1;
+				m_weight[i] = 0.f;
 			}
 		}
 	};
 
+	struct Texture
+	{
+		vk::Fence m_fence;
+
+		vk::Image m_image;
+		vk::ImageView m_image_view;
+		vk::DeviceMemory m_memory;
+
+		vk::Sampler m_sampler;
+	};
 	struct Material {
 		glm::vec4		mAmbient;
 		glm::vec4		mDiffuse;
 		glm::vec4		mSpecular;
-		/*	Texture			mDiffuseTex;
+		Texture			mDiffuseTex;
 		Texture			mAmbientTex;
 		Texture			mNormalTex;
 		Texture			mSpecularTex;
 		Texture			mHeightTex;
 		Texture			mReflectionTex;
-		*/	float			mShininess;
+		float			mShininess;
 		glm::vec4		mEmissive;
 	};
 
@@ -422,7 +432,7 @@ public:
 
 	struct Mesh
 	{
-		vk::DrawIndexedIndirectCommand mCmd;
+		vk::DrawIndexedIndirectCommand m_draw_cmd;
 		s32 mNumIndex;
 		s32 mNumVertex;
 		s32 mNodeIndex;	//!< 
@@ -437,7 +447,7 @@ public:
 		Mesh(const vk::DrawIndexedIndirectCommand& cmd)
 			: Mesh()
 		{
-			mCmd = cmd;
+			m_draw_cmd = cmd;
 		}
 
 		void set(const std::vector<glm::vec3>& v, const std::vector<unsigned>& i);
@@ -536,6 +546,9 @@ public:
 		std::vector<int> mIndexNum;
 		std::vector<int> mVertexNum;
 		int				mMeshNum;
+
+		std::vector<Material>	m_material;
+		std::vector<int>		m_material_index;
 
 
 		cMeshGPU mMesh;

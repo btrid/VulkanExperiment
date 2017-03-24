@@ -105,6 +105,15 @@ sVulkan::sVulkan()
 				cmd_pool_per_frame = data.m_gpu.getDeviceByFamilyIndex(family)->createCommandPool(cmd_pool_info);
 			}
 		}
+
+		data.m_cmd_pool_tempolary.resize(data.m_gpu.m_device_list.size());
+		for (int family = 0; family < data.m_cmd_pool_onetime.size(); family++)
+		{
+			vk::CommandPoolCreateInfo cmd_pool_info;
+			cmd_pool_info.queueFamilyIndex = family;
+			cmd_pool_info.flags = vk::CommandPoolCreateFlagBits::eTransient;
+			data.m_cmd_pool_tempolary[family] = data.m_gpu.getDeviceByFamilyIndex(family)->createCommandPool(cmd_pool_info);
+		}
 	};
 
 	m_thread_pool.start(std::thread::hardware_concurrency()-1, init_thread_data_func);
@@ -147,9 +156,14 @@ std::vector<uint32_t> cGPU::getQueueFamilyIndexList(vk::QueueFlags flag) const
 int cGPU::getMemoryTypeIndex(const vk::MemoryRequirements& request, vk::MemoryPropertyFlags flag) const
 {
 	auto& prop = getHandle().getMemoryProperties();
-	auto typeBits = static_cast<std::int32_t>(request.memoryTypeBits);
+	auto memory_type_bits = static_cast<std::int32_t>(request.memoryTypeBits);
 	for (uint32_t i = 0; i < prop.memoryTypeCount; i++)
 	{
+		auto bit  = memory_type_bits >> i;
+		if ((bit & 1) == 0) {
+			continue;
+		}
+
 		if ((prop.memoryTypes[i].propertyFlags & flag) == flag)
 		{
 			return static_cast<int>(i);
@@ -192,6 +206,7 @@ cDevice cGPU::getDeviceByFamilyIndex(uint32_t index) const
 	device.m_gpu = m_handle;
 	device.m_handle = m_device_list[index];
 	device.m_family_index = index;
+	device.m_queue_num = getHandle().getQueueFamilyProperties()[index].queueCount;
 	return device;
 }
 
@@ -209,10 +224,6 @@ vk::Format cGPU::getSupportedDepthFormat(const std::vector<vk::Format>& depthFor
 	return vk::Format::eUndefined;
 }
 
-// vk::SurfaceFormatKHR cGPU::Helper::getSurfaceFormat(vk::PhysicalDevice gpu, vk::SurfaceKHR surface, std::vector<vk::SurfaceFormatKHR> search)
-// {
-// 
-// }
 void sVulkan::swap()
 {
 	m_current_frame = ++m_current_frame % FRAME_MAX;

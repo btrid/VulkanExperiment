@@ -31,6 +31,7 @@ public:
 
 
 	uint32_t getQueueFamilyIndex()const { return m_family_index; }
+	uint32_t getQueueNum()const { return m_queue_num; }
 	const vk::Device& getHandle()const { return m_handle; }
 	const vk::PhysicalDevice& getGPU()const { return m_gpu; }
 
@@ -38,6 +39,7 @@ private:
 	vk::PhysicalDevice m_gpu;
 	vk::Device m_handle;
 	uint32_t m_family_index;
+	uint32_t m_queue_num;
 
 };
 
@@ -123,24 +125,33 @@ struct sThreadData : public SingletonTLS<sThreadData>
 	};
 	cDevice m_device[DEVICE_MAX];
 
-
+	std::vector<vk::CommandPool>	m_cmd_pool_tempolary;
 	std::vector<std::array<vk::CommandPool, sVulkan::FRAME_MAX>>	m_cmd_pool_onetime;
 	std::vector<std::array<vk::CommandPool, sVulkan::FRAME_MAX>>	m_cmd_pool_compiled;
 
 public:
-	vk::CommandPool getCmdPoolOnetime(int device_family_index)const { return m_cmd_pool_onetime[device_family_index][sVulkan::Order().getCurrentFrame()]; }
+	std::array<vk::CommandPool, sVulkan::FRAME_MAX> getCmdPoolOnetime(int device_family_index)const { return m_cmd_pool_onetime[device_family_index]; }
 	std::array<vk::CommandPool, sVulkan::FRAME_MAX> getCmdPoolCompiled(int device_family_index)const { return m_cmd_pool_onetime[device_family_index]; }
+	vk::CommandPool getCmdPoolTempolary(int device_family_index)const { return m_cmd_pool_tempolary[device_family_index]; }
 
-	vk::CommandBuffer allocateCmdOnetime(const cDevice& device)const 
+	vk::CommandBuffer allocateCmdOnetime(const cDevice& device)const
 	{
-		auto pool = sThreadData::Order().getCmdPoolOnetime(device.getQueueFamilyIndex());
+		auto pool = sThreadData::Order().getCmdPoolOnetime(device.getQueueFamilyIndex())[sVulkan::Order().getCurrentFrame()];
 		vk::CommandBufferAllocateInfo cmd_info;
 		cmd_info.setCommandPool(pool);
 		cmd_info.setLevel(vk::CommandBufferLevel::ePrimary);
 		cmd_info.setCommandBufferCount(1);
 		return device->allocateCommandBuffers(cmd_info)[0];
-
 	}
+// 	vk::CommandBuffer allocateCmdTempolary(const cDevice& device)const
+// 	{
+// 		auto pool = sThreadData::Order().getCmdPoolTempolary(device.getQueueFamilyIndex());
+// 		vk::CommandBufferAllocateInfo cmd_info;
+// 		cmd_info.setCommandPool(pool);
+// 		cmd_info.setLevel(vk::CommandBufferLevel::ePrimary);
+// 		cmd_info.setCommandBufferCount(1);
+// 		return device->allocateCommandBuffers(cmd_info)[0];
+// 	}
 
 };
 

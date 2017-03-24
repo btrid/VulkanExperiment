@@ -16,16 +16,17 @@ void ModelRender::setup(cModelRenderer&  renderer)
 		}
 
 		auto pipeline = renderer.getDrawPipeline();
-		vk::DescriptorSetAllocateInfo allocInfo = vk::DescriptorSetAllocateInfo()
-			.setDescriptorPool(pipeline.m_descriptor_pool)
-			.setDescriptorSetCount(1)
-			.setPSetLayouts(&pipeline.m_descriptor_set_layout);
-		m_draw_descriptor_set = graphics_device->allocateDescriptorSets(allocInfo);
 
 		// update desctiptor
 		{
+			// モデルごとのDescriptorの設定
+			vk::DescriptorSetAllocateInfo alloc_info = vk::DescriptorSetAllocateInfo()
+				.setDescriptorPool(pipeline.m_descriptor_pool)
+				.setDescriptorSetCount(1)
+				.setPSetLayouts(&pipeline.m_descriptor_set_layout[cModelRenderer::cModelDrawPipeline::DESCRIPTOR_SET_LAYOUT_PER_MODEL]);
+			m_draw_descriptor_set_per_model = graphics_device->allocateDescriptorSets(alloc_info)[0];
+
 			std::vector<vk::DescriptorBufferInfo> uniformBufferInfo = {
-				pipeline.m_camera_uniform.mBufferInfo,
 				mPrivate->getBuffer(Private::ModelBuffer::MODEL_INFO).mBufferInfo,
 			};
 
@@ -36,41 +37,66 @@ void ModelRender::setup(cModelRenderer&  renderer)
 			std::vector<vk::DescriptorBufferInfo> fStoragemBufferInfo = {
 				mPrivate->getBuffer(Private::ModelBuffer::MATERIAL).mBufferInfo,
 			};
-
-			std::vector<vk::WriteDescriptorSet> drawWriteDescriptorSets =
+			std::vector<vk::DescriptorImageInfo> color_image_info = {
+				vk::DescriptorImageInfo(mPrivate->m_material[0].mDiffuseTex.m_sampler, mPrivate->m_material[0].mDiffuseTex.m_image_view, vk::ImageLayout::eShaderReadOnlyOptimal),
+			};
+			std::vector<vk::WriteDescriptorSet> write_descriptor_set =
 			{
 				vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 				.setDescriptorCount(uniformBufferInfo.size())
 				.setPBufferInfo(uniformBufferInfo.data())
 				.setDstBinding(0)
-				.setDstSet(m_draw_descriptor_set[0]),
+				.setDstSet(m_draw_descriptor_set_per_model),
 				vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 				.setDescriptorCount(storagemBufferInfo.size())
 				.setPBufferInfo(storagemBufferInfo.data())
-				.setDstBinding(2)
-				.setDstSet(m_draw_descriptor_set[0]),
+				.setDstBinding(1)
+				.setDstSet(m_draw_descriptor_set_per_model),
 				vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 				.setDescriptorCount(fStoragemBufferInfo.size())
 				.setPBufferInfo(fStoragemBufferInfo.data())
 				.setDstBinding(16)
-				.setDstSet(m_draw_descriptor_set[0]),
+				.setDstSet(m_draw_descriptor_set_per_model),
 			};
 
-			graphics_device->updateDescriptorSets(drawWriteDescriptorSets, {});
+			graphics_device->updateDescriptorSets(write_descriptor_set, {});
+		}
+		{
+			// meshごとの更新
+			vk::DescriptorSetAllocateInfo allocInfo;
+			allocInfo.descriptorPool = pipeline.m_descriptor_pool;
+			allocInfo.descriptorSetCount = mPrivate->mMeshNum;
+			allocInfo.pSetLayouts = &pipeline.m_descriptor_set_layout[cModelRenderer::cModelDrawPipeline::DESCRIPTOR_SET_LAYOUT_PER_MESH];
+			m_draw_descriptor_set_per_mesh = graphics_device->allocateDescriptorSets(allocInfo);
+			for (size_t i = 0; i < m_draw_descriptor_set_per_mesh.size(); i++)
+			{
+				auto& material = mPrivate->m_material[mPrivate->m_material_index[i]];
+				material.mDiffuseTex.m_image_view;
+
+				std::vector<vk::DescriptorImageInfo> color_image_info = {
+					vk::DescriptorImageInfo(material.mDiffuseTex.m_sampler, material.mDiffuseTex.m_image_view, vk::ImageLayout::eShaderReadOnlyOptimal),
+				};
+				std::vector<vk::WriteDescriptorSet> drawWriteDescriptorSets =
+				{
+					vk::WriteDescriptorSet()
+					.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+					.setDescriptorCount(color_image_info.size())
+					.setPImageInfo(color_image_info.data())
+					.setDstBinding(32)
+					.setDstSet(m_draw_descriptor_set_per_mesh[i]),
+				};
+				graphics_device->updateDescriptorSets(drawWriteDescriptorSets, {});
+			}
 
 		}
 
-		vk::DeviceSize size(0);
-// 		m_cmd_graphics[0].bindDescriptorSets(vk::PipelineBindPoint::eGraphics, renderer.getDrawPipeline().m_pipeline_layout, 0, m_draw_descriptor_set, nullptr);
-// 		m_cmd_graphics[0].bindVertexBuffers(0, { mPrivate->mMesh.mBuffer }, { size });
-// 		m_cmd_graphics[0].bindIndexBuffer(mPrivate->mMesh.mBuffer, vk::DeviceSize(mPrivate->mMesh.mBufferSize[0]), vk::IndexType::eUint32);
-// 		m_cmd_graphics[0].drawIndexedIndirect(mPrivate->mMesh.mBufferIndirect, vk::DeviceSize(0), mPrivate->mMesh.mIndirectCount, sizeof(cModel::Mesh));
 
 	}
 
+	// todo compute
 	return;
 	//vk::CommandBuffer cModel::buildExecuteCmd()
 	{
@@ -85,10 +111,10 @@ void ModelRender::setup(cModelRenderer&  renderer)
 		}
 
 		auto pipeline = renderer.getDrawPipeline();
-		vk::DescriptorSetAllocateInfo allocInfo = vk::DescriptorSetAllocateInfo()
-			.setDescriptorPool(pipeline.m_descriptor_pool)
-			.setDescriptorSetCount(7)
-			.setPSetLayouts(&pipeline.m_descriptor_set_layout);
+		vk::DescriptorSetAllocateInfo allocInfo;
+		allocInfo.setDescriptorPool(pipeline.m_descriptor_pool);
+		allocInfo.setDescriptorSetCount(7);
+		allocInfo.setPSetLayouts(&pipeline.m_descriptor_set_layout[0]);
 		m_compute_descriptor_set = compute_device->allocateDescriptorSets(allocInfo);
 
 		std::vector<vk::WriteDescriptorSet> compute_write_descriptor;
@@ -287,9 +313,15 @@ void ModelRender::setup(cModelRenderer&  renderer)
 
 void ModelRender::draw(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 {
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, renderer.getDrawPipeline().m_pipeline_layout, 0, m_draw_descriptor_set, {});
+
 	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, renderer.getDrawPipeline().m_pipeline);
-	cmd.bindVertexBuffers(0, { mPrivate->mMesh.mBuffer }, { vk::DeviceSize() });
-	cmd.bindIndexBuffer(mPrivate->mMesh.mBuffer, vk::DeviceSize(mPrivate->mMesh.mBufferSize[0]), vk::IndexType::eUint32);
-	cmd.drawIndexedIndirect(mPrivate->mMesh.mBufferIndirect, vk::DeviceSize(0), mPrivate->mMesh.mIndirectCount, sizeof(cModel::Mesh));
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, renderer.getDrawPipeline().m_pipeline_layout, 2, renderer.getDrawPipeline().m_draw_descriptor_set_per_scene, {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, renderer.getDrawPipeline().m_pipeline_layout, 0, m_draw_descriptor_set_per_model, {});
+	for (auto i : mPrivate->m_material_index)
+	{
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, renderer.getDrawPipeline().m_pipeline_layout, 1, m_draw_descriptor_set_per_mesh[i], {});
+		cmd.bindVertexBuffers(0, { mPrivate->mMesh.mBuffer }, { vk::DeviceSize() });
+		cmd.bindIndexBuffer(mPrivate->mMesh.mBuffer, vk::DeviceSize(mPrivate->mMesh.mBufferSize[0]), vk::IndexType::eUint32);
+		cmd.drawIndexedIndirect(mPrivate->mMesh.mBufferIndirect, vk::DeviceSize(0), mPrivate->mMesh.mIndirectCount, sizeof(cModel::Mesh));
+	}
 }

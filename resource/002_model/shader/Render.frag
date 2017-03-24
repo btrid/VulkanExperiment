@@ -3,23 +3,28 @@
 //#extension GL_ARB_bindless_texture : require
 //#extension GL_NV_gpu_shader5 : require
 //#extension GL_ARB_shading_language_include : require
+//#extension GL_KHR_vulkan_glsl : require
 #extension GL_GOOGLE_cpp_style_line_directive : require
 
 #include </MultiModel.glsl>
 
-in Vertex{
-	flat int MaterialIndex;
+struct Vertex
+{
+//	flat int MaterialIndex;
 	vec3 Position;
 	vec3 Normal;
 	vec3 Texcoord;
-}FSIn;
+};
+layout(location = 0) in Vertex FSIn;
+
+layout (set = 1, binding = 32) uniform sampler2D tDiffuse;
 
 layout(std140, binding=16) restrict buffer MaterialBuffer {
 	Material materials[];
 };
 
 layout(location=0) out vec4 FragColor;
-layout(location=1) out vec4 OutNormal;
+//layout(location=1) out vec4 OutNormal;
 
 
 vec4 LightPosition = vec4(10000.);
@@ -40,7 +45,8 @@ vec3 getColor()
 	vec3 diffuse = LightDiffuse * (m.DiffuseTex != 0? texture(sampler2D(m.DiffuseTex), FSIn.Texcoord.xy).xyz : m.Diffuse.xyz) * (sDotN + 0.5);
 	return ambient + diffuse + spec;
 */
-	return vec3(1.);
+	vec3 diffuse = texture(tDiffuse, FSIn.Texcoord.xy).xyz;
+	return diffuse;
 }
 
 void main()

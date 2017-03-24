@@ -15,7 +15,6 @@
 #include <btrlib/Singleton.h>
 #include <btrlib/sValidationLayer.h>
 #include <btrlib/cWindow.h>
-//#include "Camera.h"
 #include <btrlib/cThreadPool.h>
 #include <btrlib/cDebug.h>
 #include <btrlib/sVulkan.h>
@@ -24,6 +23,7 @@
 #include <002_model/cModelRender.h>
 #pragma comment(lib, "vulkan-1.lib")
 #pragma comment(lib, "btrlib.lib")
+#pragma comment(lib, "FreeImage.lib")
 
 
 
@@ -86,9 +86,9 @@ int main()
 			vk::ImageMemoryBarrier barrier = vk::ImageMemoryBarrier()
 				.setImage(window.getSwapchain().m_backbuffer_image[i])
 				.setSubresourceRange(subresourceRange)
-				.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite)
+				.setDstAccessMask(vk::AccessFlagBits::eMemoryRead)
 				.setOldLayout(vk::ImageLayout::eUndefined)
-				.setNewLayout(vk::ImageLayout::eColorAttachmentOptimal)
+				.setNewLayout(vk::ImageLayout::ePresentSrcKHR)
 				.setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
 				.setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
 				;
@@ -179,7 +179,8 @@ int main()
 	auto model = modelFuture.get();
 
 	auto* camera = cCamera::sCamera::Order().create();
-	camera->mPosition = glm::vec3(0.f, 0.f, -200.f);
+	camera->mPosition = glm::vec3(0.f, -100.f, -800.f);
+	camera->mTarget = glm::vec3(0.f, -100.f, 0.f);
 	camera->mUp = glm::vec3(0.f, 1.f, 0.f);
 	camera->mWidth = 640;
 	camera->mHeight = 480;
@@ -248,16 +249,30 @@ int main()
 	renderer.setup(render_pass);
 	renderer.addModel(model.get());
 
+	auto pool_list = sThreadData::Order().getCmdPoolOnetime(device.getQueueFamilyIndex());
+	std::vector<vk::CommandBuffer> render_cmds(3);
+	for (int i = 0; i < 3; i++)
+	{
+		vk::CommandBufferAllocateInfo cmd_info = vk::CommandBufferAllocateInfo()
+			.setCommandPool(pool_list[i])
+			.setLevel(vk::CommandBufferLevel::ePrimary)
+			.setCommandBufferCount(1);
+		render_cmds[i] = device->allocateCommandBuffers(cmd_info)[0];
+	}
+	vk::FenceCreateInfo fence_info;
+	fence_info.setFlags(vk::FenceCreateFlagBits::eSignaled);
+	std::vector<vk::Fence> fence_list;
+	fence_list.emplace_back(device->createFence(fence_info));
+	fence_list.emplace_back(device->createFence(fence_info));
+	fence_list.emplace_back(device->createFence(fence_info));
 	while (true)
 	{
 		uint32_t backbuffer_index = window.getSwapchain().swap(swapbuffer_semaphore);
 		{
-			auto pool = sThreadData::Order().getCmdPoolOnetime(device.getQueueFamilyIndex());
-			vk::CommandBufferAllocateInfo cmd_info = vk::CommandBufferAllocateInfo()
-				.setCommandPool(pool)
-				.setLevel(vk::CommandBufferLevel::ePrimary)
-				.setCommandBufferCount(1);
-			auto render_cmd = device->allocateCommandBuffers(cmd_info)[0];
+			auto render_cmd = render_cmds[backbuffer_index];
+			device->waitForFences(1, &fence_list[backbuffer_index], true, 0xffffffffu);
+			device->resetFences({ fence_list[backbuffer_index] });
+			device->resetCommandPool(pool_list[backbuffer_index], vk::CommandPoolResetFlagBits::eReleaseResources);
 
 			// begin cmd 
 			vk::CommandBufferBeginInfo begin_info;
@@ -282,7 +297,7 @@ int main()
 
 			// begin cmd render pass
 			std::vector<vk::ClearValue> clearValue = {
-				vk::ClearValue().setColor(vk::ClearColorValue(std::array<float, 4>{0.7f, 0.7f, 0.7f, 1.f})),
+				vk::ClearValue().setColor(vk::ClearColorValue(std::array<float, 4>{0.3f, 0.3f, 0.8f, 1.f})),
 			};
 			vk::RenderPassBeginInfo begin_render_Info = vk::RenderPassBeginInfo()
 				.setRenderPass(render_pass)
@@ -291,7 +306,6 @@ int main()
 				.setPClearValues(clearValue.data())
 				.setFramebuffer(framebuffer[backbuffer_index]);
 			render_cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
-
 			// draw
 			renderer.draw(render_cmd);
 			render_cmd.endRenderPass();
@@ -312,15 +326,13 @@ int main()
 				0, nullptr, // No buffer barriers,
 				1, &render_to_present_barrier);
 
+			render_cmd.end();
 			std::vector<vk::CommandBuffer> cmds = {
 				render_cmd,
-//				present_cmd[backbuffer_index],
-//				clear_cmd[backbuffer_index],
 			};
 
-			render_cmd.end();
 
-			vk::PipelineStageFlags waitPipeline = vk::PipelineStageFlagBits::eTransfer;
+			vk::PipelineStageFlags waitPipeline = vk::PipelineStageFlagBits::eAllGraphics;
 			std::vector<vk::SubmitInfo> submitInfo =
 			{
 				vk::SubmitInfo()
@@ -332,7 +344,7 @@ int main()
 				.setSignalSemaphoreCount(1)
 				.setPSignalSemaphores(&cmdsubmit_semaphore)
 			};
-			queue.submit(submitInfo, vk::Fence());
+			queue.submit(submitInfo, fence_list[backbuffer_index]);
 			vk::PresentInfoKHR present_info = vk::PresentInfoKHR()
 				.setWaitSemaphoreCount(1)
 				.setPWaitSemaphores(&cmdsubmit_semaphore)

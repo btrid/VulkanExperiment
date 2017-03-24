@@ -28,7 +28,7 @@
 	/*aiProcess_GenUVCoords                   | */ \
 	aiProcess_SortByPType                   |  \
 	aiProcess_FindDegenerates               |  \
-	aiProcess_FlipUVs						|  \
+	/*aiProcess_FlipUVs						| */ \
 	0 )
 
 namespace {
@@ -93,10 +93,133 @@ namespace {
 		return count;
 	}
 
+	cModel::Texture loadTexture(const std::string& filename, vk::CommandBuffer& cmd)
+	{
+
+		auto device = sThreadData::Order().m_device[sThreadData::DEVICE_GRAPHICS];
+
+		auto texture_data = rTexture::LoadTexture(filename);
+		vk::ImageCreateInfo image_info;
+		image_info.imageType = vk::ImageType::e2D;
+		image_info.format = vk::Format::eR32G32B32A32Sfloat;
+		image_info.mipLevels = 1;
+		image_info.arrayLayers = 1;
+		image_info.samples = vk::SampleCountFlagBits::e1;
+//		image_info.tiling = vk::ImageTiling::eOptimal;
+		image_info.tiling = vk::ImageTiling::eLinear;
+		image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
+		image_info.sharingMode = vk::SharingMode::eExclusive;
+		image_info.initialLayout = vk::ImageLayout::eUndefined;
+		image_info.extent = { texture_data.m_size.x, texture_data.m_size.y, 1 };
+		vk::Image image = device->createImage(image_info);
+
+		vk::MemoryRequirements memory_request = device->getImageMemoryRequirements(image);
+		vk::MemoryAllocateInfo memory_alloc_info;
+		memory_alloc_info.allocationSize = memory_request.size;
+		memory_alloc_info.memoryTypeIndex = sThreadData::Order().m_gpu.getMemoryTypeIndex(memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+		vk::DeviceMemory memory = device->allocateMemory(memory_alloc_info);
+		device->bindImageMemory(image, memory, 0);
+
+		vk::BufferCreateInfo staging_info;
+		staging_info.usage = vk::BufferUsageFlagBits::eTransferSrc;
+		staging_info.size = texture_data.getBufferSize();
+		staging_info.sharingMode = vk::SharingMode::eExclusive;
+		vk::Buffer staging_buffer = device->createBuffer(staging_info);
+
+		vk::MemoryRequirements staging_memory_request = device->getBufferMemoryRequirements(staging_buffer);
+		vk::MemoryAllocateInfo staging_memory_alloc_info;
+		staging_memory_alloc_info.allocationSize = staging_memory_request.size;
+		staging_memory_alloc_info.memoryTypeIndex = sThreadData::Order().m_gpu.getMemoryTypeIndex(staging_memory_request, vk::MemoryPropertyFlagBits::eHostVisible);
+
+		vk::DeviceMemory staging_memory = device->allocateMemory(staging_memory_alloc_info);
+		device->bindBufferMemory(staging_buffer, staging_memory, 0);
+
+		auto* map = device->mapMemory(staging_memory, 0, texture_data.getBufferSize(), vk::MemoryMapFlags());
+		memcpy(map, texture_data.m_data.data(), texture_data.getBufferSize());
+		device->unmapMemory(staging_memory);
+
+		vk::SamplerCreateInfo sampler_info;
+		sampler_info.magFilter = vk::Filter::eNearest;
+		sampler_info.minFilter = vk::Filter::eNearest;
+		sampler_info.mipmapMode = vk::SamplerMipmapMode::eLinear;
+		sampler_info.addressModeU = vk::SamplerAddressMode::eClampToEdge;
+		sampler_info.addressModeV = vk::SamplerAddressMode::eClampToEdge;
+		sampler_info.addressModeW = vk::SamplerAddressMode::eClampToEdge;
+		sampler_info.mipLodBias = 0.0f;
+		sampler_info.compareOp = vk::CompareOp::eNever;
+		sampler_info.minLod = 0.0f;
+		sampler_info.maxLod = 0.f;
+		sampler_info.maxAnisotropy = 1.0;
+		sampler_info.anisotropyEnable = VK_FALSE;
+		sampler_info.borderColor = vk::BorderColor::eFloatOpaqueWhite;
+//		sampler_info.unnormalizedCoordinates
+		vk::Sampler sampler = device->createSampler(sampler_info);
+
+		cModel::Texture texture;
+		texture.m_image = image;
+		texture.m_memory = memory;
+		texture.m_sampler = sampler;
+
+// 		vk::FenceCreateInfo fence_info;
+// 		fence_info.setFlags(vk::FenceCreateFlagBits::eSignaled);
+// 		texture.m_fence = device->createFence(fence_info);
+
+		vk::BufferImageCopy copy;
+		copy.bufferOffset = 0;
+		copy.imageExtent = {texture_data.m_size.x, texture_data.m_size.y, texture_data.m_size.z};
+		copy.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+		copy.imageSubresource.baseArrayLayer = 0;
+		copy.imageSubresource.layerCount = 1;
+		copy.imageSubresource.mipLevel = 0;
+
+		vk::ImageMemoryBarrier to_copy_barrier;
+		to_copy_barrier.dstQueueFamilyIndex = device.getQueueFamilyIndex();
+		to_copy_barrier.image = image;
+		to_copy_barrier.oldLayout = vk::ImageLayout::eUndefined;
+		to_copy_barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
+		to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+		to_copy_barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+		to_copy_barrier.subresourceRange.baseArrayLayer = 0;
+		to_copy_barrier.subresourceRange.baseMipLevel = 0;
+		to_copy_barrier.subresourceRange.layerCount = 1;
+		to_copy_barrier.subresourceRange.levelCount = 1;
+
+		vk::ImageMemoryBarrier to_color_barrier;
+		to_color_barrier.dstQueueFamilyIndex = device.getQueueFamilyIndex();
+		to_color_barrier.image = image;
+		to_color_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
+		to_color_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+		to_color_barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+		to_color_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+		to_color_barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+		to_color_barrier.subresourceRange.baseArrayLayer = 0;
+		to_color_barrier.subresourceRange.baseMipLevel = 0;
+		to_color_barrier.subresourceRange.layerCount = 1;
+		to_color_barrier.subresourceRange.levelCount = 1;
+
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
+		cmd.copyBufferToImage(staging_buffer, image, vk::ImageLayout::eTransferDstOptimal, { copy });
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_color_barrier });
+
+		vk::ImageViewCreateInfo view_info;
+		view_info.viewType = vk::ImageViewType::e2D;
+		view_info.components.r = vk::ComponentSwizzle::eR;
+		view_info.components.g = vk::ComponentSwizzle::eG;
+		view_info.components.b = vk::ComponentSwizzle::eB;
+		view_info.components.a = vk::ComponentSwizzle::eA;
+		view_info.flags = vk::ImageViewCreateFlags();
+		view_info.format = vk::Format::eR32G32B32A32Sfloat;
+		view_info.image = image;
+		view_info.subresourceRange = to_color_barrier.subresourceRange;
+		texture.m_image_view = device->createImageView(view_info);
+		return std::move(texture);
+	}
+
 }
 
 
-std::vector<cModel::Material> loadMaterial(const aiScene* scene, const std::string& filename)
+std::vector<cModel::Material> loadMaterial(const aiScene* scene, const std::string& filename, vk::CommandBuffer cmd)
 {
 	std::string path = std::tr2::sys::path(filename).remove_filename().string();
 	std::vector<cModel::Material> material(scene->mNumMaterials);
@@ -120,27 +243,23 @@ std::vector<cModel::Material> loadMaterial(const aiScene* scene, const std::stri
 		aiTextureMapMode mapmode[3];
 		aiTextureMapping mapping;
 		unsigned uvIndex;
-		aiReturn isSuccess = aiMat->GetTexture(aiTextureType_DIFFUSE, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode);
-		/*			if (aiMat->GetTexture(aiTextureType_DIFFUSE, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode) == AI_SUCCESS) {
-		mat.mDiffuseTex.load(path + "/" + str.C_Str());
+		if (aiMat->GetTexture(aiTextureType_DIFFUSE, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode) == AI_SUCCESS) {
+			mat.mDiffuseTex = loadTexture(path + "/" + str.C_Str(), cmd);
 		}
-		isSuccess = aiMat->GetTexture(aiTextureType_AMBIENT, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode);
-		if (isSuccess == AI_SUCCESS) {
-		mat.mAmbientTex.load(path + "/" + str.C_Str());
+		if (aiMat->GetTexture(aiTextureType_AMBIENT, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode)) {
+			mat.mAmbientTex = loadTexture(path + "/" + str.C_Str(), cmd);
 		}
-		isSuccess = aiMat->GetTexture(aiTextureType_SPECULAR, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode);
-		if (isSuccess == AI_SUCCESS) {
-		mat.mSpecularTex.load(path + "/" + str.C_Str());
+		if (aiMat->GetTexture(aiTextureType_SPECULAR, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode)) {
+			mat.mSpecularTex = loadTexture(path + "/" + str.C_Str(), cmd);
 		}
 
 		if (aiMat->GetTexture(aiTextureType_NORMALS, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode)) {
-		mat.mNormalTex.load(path + "/" + str.C_Str());
+			mat.mNormalTex = loadTexture(path + "/" + str.C_Str(), cmd);
 		}
 
 		if (aiMat->GetTexture(aiTextureType_HEIGHT, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode)) {
-		mat.mHeightTex.load(path + "/" + str.C_Str());
+			mat.mHeightTex = loadTexture(path + "/" + str.C_Str(), cmd);
 		}
-		*/
 	}
 
 	return std::move(material);
@@ -154,11 +273,11 @@ void _loadNodeRecurcive(aiNode* ainode, RootNode& root, int parent)
 	node.mTransformation = AI_TO(ainode->mTransformation);
 	node.mParent = parent;
 	if (parent >= 0) {
-		root.mNodeList[parent].mChildren.push_back(nodeIndex);
+		root.mNodeList[parent].mChildren.push_back((u32)nodeIndex);
 	}
 	root.mNodeList.push_back(node);
 
-	for (size_t i = 0; i < ainode->mNumChildren; i++) {
+	for (u32 i = 0; i < ainode->mNumChildren; i++) {
 		_loadNodeRecurcive(ainode->mChildren[i], root, nodeIndex);
 	}
 }
@@ -178,7 +297,7 @@ void loadNodeBufferRecurcive(aiNode* ainode, std::vector<cModel::NodeInfo>& node
 
 	nodeBuffer.emplace_back();
 	auto& node = nodeBuffer.back();
-	node.mNodeNo = nodeBuffer.size() - 1;
+	node.mNodeNo = (s32)nodeBuffer.size() - 1;
 	node.mParent = parentIndex;
 	node.mNodeName = std::hash<std::string>()(ainode->mName.C_Str());
 	for (size_t i = 0; i < ainode->mNumChildren; i++) {
@@ -418,8 +537,6 @@ void cModel::load(const std::string& filename)
 {
 	mPrivate->mFilename = filename;
 
-	auto s = std::chrono::system_clock::now();
-
 	Assimp::Importer importer;
 	const aiScene* scene = importer.ReadFile(filename, OREORE_PRESET);
 	if (!scene) {
@@ -427,9 +544,22 @@ void cModel::load(const std::string& filename)
 		return;
 	}
 
+	auto s = std::chrono::system_clock::now();
+
+	auto device = sThreadData::Order().m_device[sThreadData::DEVICE_GRAPHICS];
+	auto pool = sThreadData::Order().getCmdPoolTempolary(device.getQueueFamilyIndex());
+	vk::CommandBufferAllocateInfo cmd_info;
+	cmd_info.setCommandPool(pool);
+	cmd_info.setLevel(vk::CommandBufferLevel::ePrimary);
+	cmd_info.setCommandBufferCount(1);
+	auto cmd = device->allocateCommandBuffers(cmd_info)[0];
+	vk::CommandBufferBeginInfo begin_info;
+	begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
+	cmd.begin(begin_info);
+
 	// èâä˙âª
 	mPrivate->mMeshNum = scene->mNumMeshes;
-	std::vector<Material> material = loadMaterial(scene, filename);
+	mPrivate->m_material = loadMaterial(scene, filename, cmd);
 
 	mPrivate->mNodeRoot = loadNode(scene);
 	mPrivate->m_animation_buffer = loadMotion(scene, mPrivate->mNodeRoot);
@@ -438,11 +568,12 @@ void cModel::load(const std::string& filename)
 
 	std::vector<Bone>& boneList = mPrivate->mBone;
 
+	mPrivate->m_material_index.resize(scene->mNumMeshes);
 	unsigned numIndex = 0;
 	unsigned numVertex = 0;
 	std::vector<int> vertexSize(scene->mNumMeshes);
 	std::vector<int> indexSize(scene->mNumMeshes);
-	std::vector<int> materialIndex(scene->mNumMeshes);
+	std::vector<int>& materialIndex = mPrivate->m_material_index;
 	for (size_t i = 0; i < scene->mNumMeshes; i++)
 	{
 		numVertex += scene->mMeshes[i]->mNumVertices;
@@ -464,7 +595,7 @@ void cModel::load(const std::string& filename)
 		// ELEMENT_ARRAY_BUFFER
 		// éOäpÉÅÉbÉVÉÖÇ∆ÇµÇƒì«Ç›çûÇﬁ
 		auto offset = vertex.size();
-		for (size_t n = 0; n < mesh->mNumFaces; n++) {
+		for (u32 n = 0; n < mesh->mNumFaces; n++) {
 			index.push_back(mesh->mFaces[n].mIndices[0] + offset);
 			index.push_back(mesh->mFaces[n].mIndices[1] + offset);
 			index.push_back(mesh->mFaces[n].mIndices[2] + offset);
@@ -472,17 +603,20 @@ void cModel::load(const std::string& filename)
 
 		// ARRAY_BUFFER
 		std::vector<Vertex> _vertex(mesh->mNumVertices);
-		for (size_t i = 0; i < mesh->mNumVertices; i++)
-		{
-			_vertex[i].mPosition = glm::vec4(mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z, 1.f);
-			if (mesh->HasNormals()) {
-				_vertex[i].mNormal = glm::vec4(mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z, 0.f);
-			}
-			if (mesh->HasTextureCoords(0)) {
-				_vertex[i].mTexcoord0 = glm::vec4(mesh->mTextureCoords[0][i].x, mesh->mTextureCoords[0][i].y, mesh->mTextureCoords[0][i].z, 0.f);
-			}
-			_vertex[i].mMaterialIndex = mesh->mMaterialIndex;
+		for (size_t v = 0; v < mesh->mNumVertices; v++){
+			_vertex[v].m_position = glm::vec4(mesh->mVertices[v].x, mesh->mVertices[v].y, mesh->mVertices[v].z, 1.f);
 		}
+		if (mesh->HasNormals()) {
+			for (size_t v = 0; v < mesh->mNumVertices; v++) {
+				_vertex[v].m_normal = glm::vec4(mesh->mNormals[v].x, mesh->mNormals[v].y, mesh->mNormals[v].z, 0.f);
+			}
+		}
+		if (mesh->HasTextureCoords(0)) {
+			for (size_t v = 0; v < mesh->mNumVertices; v++) {
+				_vertex[v].m_texcoord0 = glm::vec4(mesh->mTextureCoords[0][v].x, mesh->mTextureCoords[0][v].y, mesh->mTextureCoords[0][v].z, 0.f);
+			}
+		}
+//		_vertex[i].mMaterialIndex = mesh->mMaterialIndex;
 
 		// SkinMesh
 		if (mesh->HasBones())
@@ -515,9 +649,9 @@ void cModel::load(const std::string& filename)
 					Vertex& v = _vertex[weight.mVertexId];
 
 					for (size_t o = 0; o < Vertex::BONE_NUM; o++) {
-						if (v.boneID_[o] == -1) {
-							v.boneID_[o] = index;
-							v.weight_[o] = weight.mWeight;
+						if (v.m_bone_ID[o] == -1) {
+							v.m_bone_ID[o] = index;
+							v.m_weight[o] = weight.mWeight;
 							break;
 						}
 					}
@@ -529,7 +663,6 @@ void cModel::load(const std::string& filename)
 
 
 	const cGPU& gpu = sThreadData::Order().m_gpu;
-	auto device = sThreadData::Order().m_device[sThreadData::DEVICE_GRAPHICS];
 	auto familyIndex = device.getQueueFamilyIndex();
 
 	{
@@ -611,11 +744,11 @@ void cModel::load(const std::string& filename)
 					.setLocation(4)
 					.setFormat(vk::Format::eR32G32B32A32Sfloat)
 					.setOffset(64),
-					vk::VertexInputAttributeDescription()
-					.setBinding(0)
-					.setLocation(5)
-					.setFormat(vk::Format::eR32Sint)
-					.setOffset(80),
+// 					vk::VertexInputAttributeDescription()
+// 					.setBinding(0)
+// 					.setLocation(5)
+// 					.setFormat(vk::Format::eR32Sint)
+// 					.setOffset(80),
 				};
 				mesh.mVertexInfo = vk::PipelineVertexInputStateCreateInfo()
 					.setVertexBindingDescriptionCount(mesh.mBinding.size())
@@ -628,14 +761,16 @@ void cModel::load(const std::string& filename)
 
 		// indirect
 		{
-			std::vector<Mesh> indirect =
-			{
-				Mesh(
-					vk::DrawIndexedIndirectCommand()
-					.setIndexCount((uint32_t)index.size())
-					.setInstanceCount(1u)
-				),
-			};
+			std::vector<Mesh> indirect(indexSize.size());
+			int offset = 0;
+			for (size_t i = 0; i < indirect.size(); i++) {
+				indirect[i].m_draw_cmd.indexCount = indexSize[i];
+				indirect[i].m_draw_cmd.firstIndex = offset;
+				indirect[i].m_draw_cmd.instanceCount = 1;
+				indirect[i].m_draw_cmd.vertexOffset = 0;
+				indirect[i].m_draw_cmd.firstInstance = 0;
+				offset += indexSize[i];
+			}
 			mesh.mIndirectCount = indirect.size();
 			mesh.mBufferSize[2] = vector_sizeof(indirect);
 			s32 bufferSize = mesh.mBufferSize[2];
@@ -692,7 +827,7 @@ void cModel::load(const std::string& filename)
 
 	// vertex shader material
 	{
-		std::vector<VSMaterialBuffer> vsmb(material.size());
+		std::vector<VSMaterialBuffer> vsmb(mPrivate->m_material.size());
 		for (size_t i = 0; i < vsmb.size(); i++)
 		{
 			//			vsmb[i].normalTex_ = material[i].ormalTex_.makeBindless();
@@ -720,14 +855,14 @@ void cModel::load(const std::string& filename)
 
 	// material
 	{
-		std::vector<MaterialBuffer> mb(material.size());
+		std::vector<MaterialBuffer> mb(mPrivate->m_material.size());
 		for (size_t i = 0; i < mb.size(); i++)
 		{
-			mb[i].mAmbient = material[i].mAmbient;
-			mb[i].mDiffuse = material[i].mDiffuse;
-			mb[i].mEmissive = material[i].mEmissive;
-			mb[i].mShininess = material[i].mShininess;
-			mb[i].mSpecular = material[i].mSpecular;
+			mb[i].mAmbient = mPrivate->m_material[i].mAmbient;
+			mb[i].mDiffuse = mPrivate->m_material[i].mDiffuse;
+			mb[i].mEmissive = mPrivate->m_material[i].mEmissive;
+			mb[i].mShininess = mPrivate->m_material[i].mShininess;
+			mb[i].mSpecular = mPrivate->m_material[i].mSpecular;
 			//			mb[i].mAmbientTex = material[i].mAmbientTex.makeBindless();
 			//			mb[i].mDiffuseTex = material[i].mDiffuseTex.makeBindless();
 			//			mb[i].mNormalTex = material[i].mNormalTex.makeBindless();
@@ -945,12 +1080,12 @@ void cModel::load(const std::string& filename)
 		glm::vec3 min(10e10f);
 		for (auto& v : vertex)
 		{
-			max.x = glm::max(max.x, v.mPosition.x);
-			max.y = glm::max(max.y, v.mPosition.y);
-			max.z = glm::max(max.z, v.mPosition.z);
-			min.x = glm::min(min.x, v.mPosition.x);
-			min.y = glm::min(min.y, v.mPosition.y);
-			min.z = glm::min(min.z, v.mPosition.z);
+			max.x = glm::max(max.x, v.m_position.x);
+			max.y = glm::max(max.y, v.m_position.y);
+			max.z = glm::max(max.z, v.m_position.z);
+			min.x = glm::min(min.x, v.m_position.x);
+			min.y = glm::min(min.y, v.m_position.y);
+			min.z = glm::min(min.z, v.m_position.z);
 		}
 
 		mi.mAabb = glm::vec4((max - min).xyz, glm::length((max - min) / 2.f));
@@ -1075,7 +1210,7 @@ void cModel::load(const std::string& filename)
 			[](decltype(world)::value_type& m)
 		{
 			m = glm::transpose(glm::mat4x3(glm::translate(glm::mat4(1.f), glm::ballRand(3000.f))));
-					m = glm::translate(glm::mat4(1.f), glm::ballRand(3000.f));
+			m = glm::translate(glm::mat4(1.f), glm::ballRand(3000.f));
 		}
 		);
 		size_t size = vector_sizeof(world);
@@ -1169,6 +1304,16 @@ void cModel::load(const std::string& filename)
 		}
 	}
 
+	cmd.end();
+	auto queue = device->getQueue(device.getQueueFamilyIndex(), device.getQueueNum()-1);
+	vk::SubmitInfo submit_info;
+	submit_info.commandBufferCount = 1;
+	submit_info.pCommandBuffers = &cmd;
+
+// 	vk::FenceCreateInfo fence_info;
+// 	mPrivate->m_fence = device->createFence(fence_info);
+
+	queue.submit(submit_info, vk::Fence());
 	auto e = std::chrono::system_clock::now();
 	auto t = std::chrono::duration_cast<std::chrono::microseconds>(e - s);
 	sDebug::Order().print(sDebug::FLAG_LOG | sDebug::SOURCE_MODEL, "[Load Complete %6.2fs] %s NodeNum = %d BoneNum = %d \n", t.count() / 1000.f / 1000.f, filename.c_str(), NodeNum, BoneNum);

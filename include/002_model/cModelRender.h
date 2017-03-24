@@ -5,7 +5,8 @@
 struct cModelRenderer;
 class ModelRender : public cModel
 {
-	std::vector<vk::DescriptorSet> m_draw_descriptor_set;
+	vk::DescriptorSet m_draw_descriptor_set_per_model;
+	std::vector<vk::DescriptorSet> m_draw_descriptor_set_per_mesh;
 	std::vector<vk::DescriptorSet> m_compute_descriptor_set;
 public:
 	void setup(cModelRenderer& renderer);

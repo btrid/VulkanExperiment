@@ -35,67 +35,76 @@ void cModelRenderer_t<T>::cModelDrawPipeline::setup(vk::RenderPass render_pass)
 
 	// DescriptorSetLayout
 	{
-		std::vector<vk::DescriptorSetLayoutBinding> bindings =
 		{
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eVertex)
-			.setDescriptorCount(1)
-			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-			.setBinding(0),
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eVertex)
-			.setDescriptorCount(1)
-			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-			.setBinding(1),
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eVertex)
-			.setDescriptorCount(1)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setBinding(2),
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eVertex)
-			.setDescriptorCount(1)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setBinding(3),
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eFragment)
-			.setDescriptorCount(1)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setBinding(16),
-		};
+			std::vector<vk::DescriptorSetLayoutBinding> bindings =
+			{
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(vk::ShaderStageFlagBits::eVertex)
+				.setDescriptorCount(1)
+				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+				.setBinding(0),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(vk::ShaderStageFlagBits::eVertex)
+				.setDescriptorCount(1)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setBinding(1),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(vk::ShaderStageFlagBits::eVertex)
+				.setDescriptorCount(1)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setBinding(2),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(vk::ShaderStageFlagBits::eFragment)
+				.setDescriptorCount(1)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setBinding(16),
+			};
 
-		vk::DescriptorSetLayoutCreateInfo descriptor_layout_info = vk::DescriptorSetLayoutCreateInfo()
-			.setBindingCount(bindings.size())
-			.setPBindings(bindings.data());
-		m_descriptor_set_layout = device->createDescriptorSetLayout(descriptor_layout_info);
+			vk::DescriptorSetLayoutCreateInfo descriptor_layout_info = vk::DescriptorSetLayoutCreateInfo()
+				.setBindingCount(bindings.size())
+				.setPBindings(bindings.data());
+			m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_PER_MODEL] = device->createDescriptorSetLayout(descriptor_layout_info);
+
+		}
+		{
+			std::vector<vk::DescriptorSetLayoutBinding> bindings =
+			{
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(vk::ShaderStageFlagBits::eFragment)
+				.setDescriptorCount(1)
+				.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+				.setBinding(32),
+			};
+
+			vk::DescriptorSetLayoutCreateInfo descriptor_layout_info = vk::DescriptorSetLayoutCreateInfo()
+				.setBindingCount(bindings.size())
+				.setPBindings(bindings.data());
+			m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_PER_MESH] = device->createDescriptorSetLayout(descriptor_layout_info);
+
+		}
+		{
+			std::vector<vk::DescriptorSetLayoutBinding> bindings =
+			{
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(vk::ShaderStageFlagBits::eVertex)
+				.setDescriptorCount(1)
+				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+				.setBinding(0),
+			};
+
+			vk::DescriptorSetLayoutCreateInfo descriptor_layout_info = vk::DescriptorSetLayoutCreateInfo()
+				.setBindingCount(bindings.size())
+				.setPBindings(bindings.data());
+			m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_PER_SCENE] = device->createDescriptorSetLayout(descriptor_layout_info);
+
+		}
 	}
 	// PipelineLayout
 	{
 		vk::PipelineLayoutCreateInfo pipelinelayout_info;
-		pipelinelayout_info.setSetLayoutCount(1);
-		pipelinelayout_info.setPSetLayouts(&m_descriptor_set_layout);
-//		pipelinelayout_info.
+		pipelinelayout_info.setSetLayoutCount(m_descriptor_set_layout.size());
+		pipelinelayout_info.setPSetLayouts(m_descriptor_set_layout.data());
 		m_pipeline_layout = device->createPipelineLayout(pipelinelayout_info);
-	}
-
-	// DescriptorPool
-	{
-		std::vector<vk::DescriptorPoolSize> poolSize =
-		{
-			vk::DescriptorPoolSize()
-			.setType(vk::DescriptorType::eUniformBuffer)
-			.setDescriptorCount(10),
-			vk::DescriptorPoolSize()
-			.setType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(3),
-		};
-
-		vk::DescriptorPoolCreateInfo poolInfo = vk::DescriptorPoolCreateInfo()
-			.setMaxSets(1)
-			.setPoolSizeCount(poolSize.size())
-			.setPPoolSizes(poolSize.data());
-
-		m_descriptor_pool = device->createDescriptorPool(poolInfo);
 	}
 
 	vk::Extent3D size;
@@ -193,11 +202,6 @@ void cModelRenderer_t<T>::cModelDrawPipeline::setup(vk::RenderPass render_pass)
 				.setLocation(4)
 				.setFormat(vk::Format::eR32G32B32A32Sfloat)
 				.setOffset(64),
-				vk::VertexInputAttributeDescription()
-				.setBinding(0)
-				.setLocation(5)
-				.setFormat(vk::Format::eR32Sint)
-				.setOffset(80),
 			};
 			vk::PipelineVertexInputStateCreateInfo vertex_input_info;
 			vertex_input_info.setVertexBindingDescriptionCount(vertex_input_binding.size());
@@ -225,39 +229,89 @@ void cModelRenderer_t<T>::cModelDrawPipeline::setup(vk::RenderPass render_pass)
 		}
 
 	}
-	// camera
-	auto* m_camera = cCamera::sCamera::Order().getCameraList()[0];
-	CameraGPU camera_gpu;
-	camera_gpu.setup(*m_camera);
+
+	// DescriptorPool
 	{
-		uint32_t uniformSize = sizeof(CameraGPU);
-		auto graphicsQueue = gpu.getQueueFamilyIndexList(vk::QueueFlagBits::eGraphics);
-		vk::BufferCreateInfo buffer_info;
-		buffer_info.setQueueFamilyIndexCount(graphicsQueue.size());
-		buffer_info.setPQueueFamilyIndices(graphicsQueue.data());
-		buffer_info.setUsage(vk::BufferUsageFlagBits::eUniformBuffer);
-		buffer_info.setSize(uniformSize);
-		m_camera_uniform.mBuffer = device->createBuffer(buffer_info);
-
-		vk::MemoryRequirements memoryRequest = device->getBufferMemoryRequirements(m_camera_uniform.mBuffer);
-		vk::MemoryAllocateInfo memAlloc = vk::MemoryAllocateInfo()
-			.setAllocationSize(memoryRequest.size)
-			.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memoryRequest, vk::MemoryPropertyFlagBits::eHostVisible));
-		m_camera_uniform.mMemory = device->allocateMemory(memAlloc);
-
-		char* mem = reinterpret_cast<char*>(device->mapMemory(m_camera_uniform.mMemory, 0, memoryRequest.size, vk::MemoryMapFlags()));
+		std::vector<vk::DescriptorPoolSize> poolSize =
 		{
-			memcpy_s(mem, uniformSize, &camera_gpu, uniformSize);
-		}
-		device->unmapMemory(m_camera_uniform.mMemory);
-		device->bindBufferMemory(m_camera_uniform.mBuffer, m_camera_uniform.mMemory, 0);
+			vk::DescriptorPoolSize()
+			.setType(vk::DescriptorType::eUniformBuffer)
+			.setDescriptorCount(10),
+			vk::DescriptorPoolSize()
+			.setType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(3),
+			vk::DescriptorPoolSize()
+			.setType(vk::DescriptorType::eCombinedImageSampler)
+			.setDescriptorCount(1),
+		};
 
-		m_camera_uniform.mBufferInfo
-			.setOffset(0)
-			.setRange(vk::DeviceSize(uniformSize))
-			.setBuffer(m_camera_uniform.mBuffer);
+		vk::DescriptorPoolCreateInfo poolInfo = vk::DescriptorPoolCreateInfo()
+			.setMaxSets(3)
+			.setPoolSizeCount(poolSize.size())
+			.setPPoolSizes(poolSize.data());
+
+		m_descriptor_pool = device->createDescriptorPool(poolInfo);
+	}
+	{
+		// camera
+		auto* m_camera = cCamera::sCamera::Order().getCameraList()[0];
+		CameraGPU camera_gpu;
+		camera_gpu.setup(*m_camera);
+		{
+			uint32_t uniformSize = sizeof(CameraGPU);
+			auto graphicsQueue = gpu.getQueueFamilyIndexList(vk::QueueFlagBits::eGraphics);
+			vk::BufferCreateInfo buffer_info;
+			buffer_info.setQueueFamilyIndexCount(graphicsQueue.size());
+			buffer_info.setPQueueFamilyIndices(graphicsQueue.data());
+			buffer_info.setUsage(vk::BufferUsageFlagBits::eUniformBuffer);
+			buffer_info.setSize(uniformSize);
+			m_camera_uniform.mBuffer = device->createBuffer(buffer_info);
+
+			vk::MemoryRequirements memoryRequest = device->getBufferMemoryRequirements(m_camera_uniform.mBuffer);
+			vk::MemoryAllocateInfo memAlloc = vk::MemoryAllocateInfo()
+				.setAllocationSize(memoryRequest.size)
+				.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memoryRequest, vk::MemoryPropertyFlagBits::eHostVisible));
+			m_camera_uniform.mMemory = device->allocateMemory(memAlloc);
+
+			char* mem = reinterpret_cast<char*>(device->mapMemory(m_camera_uniform.mMemory, 0, memoryRequest.size, vk::MemoryMapFlags()));
+			{
+				memcpy_s(mem, uniformSize, &camera_gpu, uniformSize);
+			}
+			device->unmapMemory(m_camera_uniform.mMemory);
+			device->bindBufferMemory(m_camera_uniform.mBuffer, m_camera_uniform.mMemory, 0);
+
+			m_camera_uniform.mBufferInfo
+				.setOffset(0)
+				.setRange(vk::DeviceSize(uniformSize))
+				.setBuffer(m_camera_uniform.mBuffer);
+
+		}
+
+		{
+			// ƒ‚ƒfƒ‹‚²‚Æ‚ÌDescriptor‚ÌÝ’è
+			vk::DescriptorSetAllocateInfo alloc_info = vk::DescriptorSetAllocateInfo()
+				.setDescriptorPool(m_descriptor_pool)
+				.setDescriptorSetCount(1)
+				.setPSetLayouts(&m_descriptor_set_layout[cModelRenderer::cModelDrawPipeline::DESCRIPTOR_SET_LAYOUT_PER_SCENE]);
+			m_draw_descriptor_set_per_scene = device->allocateDescriptorSets(alloc_info)[0];
+
+			std::vector<vk::DescriptorBufferInfo> uniformBufferInfo = {
+				m_camera_uniform.mBufferInfo,
+			};
+			std::vector<vk::WriteDescriptorSet> write_descriptor_set =
+			{
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+				.setDescriptorCount(uniformBufferInfo.size())
+				.setPBufferInfo(uniformBufferInfo.data())
+				.setDstBinding(0)
+				.setDstSet(m_draw_descriptor_set_per_scene),
+			};
+			device->updateDescriptorSets(write_descriptor_set, {});
+		}
 
 	}
+
 }
 template<typename T>
 void cModelRenderer_t<T>::cModelComputePipeline::setup()
