@@ -59,7 +59,7 @@ struct cModelRenderer_t
 		vk::DescriptorPool m_descriptor_pool;
 		vk::PipelineCache m_cache;
 		std::vector<vk::Pipeline> m_pipeline;
-		std::vector<vk::PipelineLayout> m_layout;
+		std::vector<vk::PipelineLayout> m_pipeline_layout;
 		std::vector<vk::DescriptorSetLayout> m_descriptor_set_layout;
 
 		void setup();

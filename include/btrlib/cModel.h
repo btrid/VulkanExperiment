@@ -488,7 +488,7 @@ public:
 		glm::mat4	globalAnimated_;
 	};
 	struct NodeLocalTransformBuffer {
-		glm::mat3x4	localAnimated_;		//!< parentMatrix,World‚ð‚©‚¯‚Ä‚¢‚È‚¢s—ñ
+		glm::mat4	localAnimated_;		//!< parentMatrix,World‚ð‚©‚¯‚Ä‚¢‚È‚¢s—ñ
 	};
 	struct NodeGlobalTransformBuffer {
 		//	glm::mat3x4	globalAnimated_;

@@ -10,6 +10,7 @@ class ModelRender : public cModel
 	std::vector<vk::DescriptorSet> m_compute_descriptor_set;
 public:
 	void setup(cModelRenderer& renderer);
+	void execute(cModelRenderer& renderer, vk::CommandBuffer& cmd);
 	void draw(cModelRenderer& renderer, vk::CommandBuffer& cmd);
 
 protected:
@@ -23,6 +24,14 @@ struct cModelRenderer : public cModelRenderer_t<ModelRender>
 	{
 		m_model.emplace_back(model);
 		m_model.back()->setup(*this);
+	}
+	void execute(vk::CommandBuffer cmd)
+	{
+		for (auto& render : m_model)
+		{
+			render->execute(*this, cmd);
+		}
+
 	}
 	void draw(vk::CommandBuffer cmd)
 	{

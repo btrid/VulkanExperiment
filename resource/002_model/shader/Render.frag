@@ -55,6 +55,6 @@ void main()
 //	color[i].rgba.rgb = getColor();
 //	color[i].rgba.rgb = vec3(1.);
 //	color[i].rgba.a = 1.;
-	FragColor.xyz = getColor();
+	FragColor.rgb = getColor();
 	FragColor.a = 1.;
 }

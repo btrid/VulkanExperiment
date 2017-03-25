@@ -20,19 +20,19 @@ layout(std140, binding=0) uniform ModelInfoBuffer {
 	ModelInfo modelInfo;
 };
 
-layout(std430, binding=0) readonly restrict buffer WorldTransform {
+layout(std430, binding=8) readonly restrict buffer WorldTransform {
 	mat4 worlds[];
 };
 
-layout(std430, binding=1) readonly restrict buffer NodeBuffer {
+layout(std430, binding=9) readonly restrict buffer NodeBuffer {
 	Node nodes[];
 };
 
-layout(std430, binding=2) readonly restrict buffer NodeLocalTransformBuffer {
+layout(std430, binding=10) readonly restrict buffer NodeLocalTransformBuffer {
 //	NodeLocalTransform nodeLocalTransforms[];
-	mat3x4 nodeLocalTransforms[];
+	mat4 nodeLocalTransforms[];
 };
-layout(std430, binding=3) restrict buffer NodeGlobalTransformBuffer {
+layout(std430, binding=11) restrict buffer NodeGlobalTransformBuffer {
 //	NodeGlobalTransform nodeGlobalTransforms[];
 //	mat3x4 nodeGlobalTransforms[];
 	mat4 nodeGlobalTransforms[];
@@ -43,13 +43,10 @@ void main()
 	int root_index = int(gl_GlobalInvocationID.x) * modelInfo.nodeNum;
 	if(root_index >= modelInfo.instanceMaxNum * modelInfo.nodeNum){ return; }
 
-//	nodeGlobalTransforms[root_index] = mat3x4(transpose(worlds[gl_GlobalInvocationID.x]) * mat4(nodeLocalTransforms[root_index].local));
-	nodeGlobalTransforms[root_index] = worlds[gl_GlobalInvocationID.x] * mat4(transpose(nodeLocalTransforms[root_index]));
+	nodeGlobalTransforms[root_index] = worlds[gl_GlobalInvocationID.x] * nodeLocalTransforms[root_index];
 	for(int i=1; i <modelInfo.nodeNum; i++)
 	{
-//		mat4 g = mat4(nodeGlobalTransforms[root_index + nodes[i].parent]) * mat4(nodeLocalTransforms[root_index + i]);
-//		nodeGlobalTransforms[root_index+i] = mat3x4(g);
-		mat4 g = nodeGlobalTransforms[root_index + nodes[i].parent] * mat4(transpose(nodeLocalTransforms[root_index + i]));
+		mat4 g = nodeGlobalTransforms[root_index + nodes[i].parent] * nodeLocalTransforms[root_index + i];
 		nodeGlobalTransforms[root_index+i] = g;
 	}
 }

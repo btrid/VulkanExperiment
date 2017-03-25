@@ -13,10 +13,10 @@ layout(std140, binding=0) uniform ModelInfoBuffer {
 	ModelInfo modelInfo;
 };
 
-layout(std430, binding=0) readonly restrict buffer AnimationInfoBuffer {
+layout(std430, binding=8) readonly restrict buffer AnimationInfoBuffer {
 	AnimationInfo animInfo[];
 };
-layout(std430, binding=1) restrict buffer PlayingAnimationBuffer {
+layout(std430, binding=9) restrict buffer PlayingAnimationBuffer {
 	PlayingAnimation playingMotion[];
 };
 
@@ -33,7 +33,7 @@ void main()
 	playingMotion[index].time = time;
 
 	// MotionUpdate.psのMotionWorkの更新のため、1FだけtimeがmaxTimeを超えるようにしている
-//	playingMotion[index].time += 60. + float(index)*0.01;
-	playingMotion[index].time += 0.016 + float(index)*0.00001;
+	playingMotion[index].time += 60. + float(index)*0.01;
+//	playingMotion[index].time += 0.016 + float(index)*0.00001;
 }
 

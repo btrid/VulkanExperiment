@@ -35,11 +35,26 @@ public:
 	const vk::Device& getHandle()const { return m_handle; }
 	const vk::PhysicalDevice& getGPU()const { return m_gpu; }
 
+	void DebugMarkerSetObjectTag(vk::DebugMarkerObjectTagInfoEXT* pTagInfo)const 
+	{ m_vk_debug_marker_set_object_tag(m_handle, (VkDebugMarkerObjectTagInfoEXT*)pTagInfo); }
+	void DebugMarkerSetObjectName(vk::DebugMarkerObjectNameInfoEXT* pTagInfo)const 
+	{ m_vk_debug_marker_set_object_name(m_handle, (VkDebugMarkerObjectNameInfoEXT*)pTagInfo); }
+	void CmdDebugMarkerBegin(vk::CommandBuffer cmd, vk::DebugMarkerMarkerInfoEXT* pTagInfo)const 
+	{ m_vk_cmd_debug_marker_begin(cmd, (VkDebugMarkerMarkerInfoEXT*)pTagInfo); }
+	void CmdDebugMarkerEnd(vk::CommandBuffer cmd)const
+	{ m_vk_cmd_debug_marker_end(cmd);}
+	void CmdDebugMarkerInsert(vk::CommandBuffer cmd, vk::DebugMarkerMarkerInfoEXT* pTagInfo)const
+	{ m_vk_cmd_debug_marker_insert(cmd, (VkDebugMarkerMarkerInfoEXT*)pTagInfo); }
 private:
 	vk::PhysicalDevice m_gpu;
 	vk::Device m_handle;
 	uint32_t m_family_index;
 	uint32_t m_queue_num;
+	PFN_vkDebugMarkerSetObjectTagEXT m_vk_debug_marker_set_object_tag;
+	PFN_vkDebugMarkerSetObjectNameEXT m_vk_debug_marker_set_object_name;
+	PFN_vkCmdDebugMarkerBeginEXT m_vk_cmd_debug_marker_begin;
+	PFN_vkCmdDebugMarkerEndEXT m_vk_cmd_debug_marker_end;
+	PFN_vkCmdDebugMarkerInsertEXT m_vk_cmd_debug_marker_insert;
 
 };
 
@@ -61,10 +76,20 @@ public:
 
 	std::vector<cDevice> getDevice(vk::QueueFlags flag) const;
 	cDevice getDeviceByFamilyIndex(uint32_t index) const;
+private:
 
+	struct Device
+	{
+		vk::Device m_device;
+		PFN_vkDebugMarkerSetObjectTagEXT m_vk_debug_marker_set_object_tag;
+		PFN_vkDebugMarkerSetObjectNameEXT m_vk_debug_marker_set_object_name;
+		PFN_vkCmdDebugMarkerBeginEXT m_vk_cmd_debug_marker_begin;
+		PFN_vkCmdDebugMarkerEndEXT m_vk_cmd_debug_marker_end;
+		PFN_vkCmdDebugMarkerInsertEXT m_vk_cmd_debug_marker_insert;
+	};
 	vk::PhysicalDevice m_handle;
-	std::vector<vk::Device> m_device_list;
-
+	std::vector<Device> m_device_list;
+public:
 	struct Helper
 	{
 		static int getMemoryTypeIndex(const vk::PhysicalDevice& gpu, const vk::MemoryRequirements& request, vk::MemoryPropertyFlags flag)

@@ -28,11 +28,11 @@ sVulkan::sVulkan()
 			auto& gpu = m_gpu.back();
 			gpu.m_handle = pd;
 
-			auto queueFamilyProperty = gpu->getQueueFamilyProperties();
 			std::vector<const char*> extensionName = {
 				VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+//				VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
 			};
-
+			auto queueFamilyProperty = gpu->getQueueFamilyProperties();
 			gpu.m_device_list.reserve(queueFamilyProperty.size());
 			// デバイス
 			for (size_t i = 0; i < queueFamilyProperty.size(); i++) {
@@ -63,7 +63,14 @@ sVulkan::sVulkan()
 					;
 
 				auto device = gpu->createDevice(deviceInfo, nullptr);
-				gpu.m_device_list.emplace_back(std::move(device));
+				cGPU::Device device_holder;
+				device_holder.m_device = device;
+				device_holder.m_vk_debug_marker_set_object_tag = (PFN_vkDebugMarkerSetObjectTagEXT)device.getProcAddr("vkDebugMarkerSetObjectTagEXT");
+				device_holder.m_vk_debug_marker_set_object_name = (PFN_vkDebugMarkerSetObjectNameEXT)device.getProcAddr("vkDebugMarkerSetObjectNameEXT");
+				device_holder.m_vk_cmd_debug_marker_begin = (PFN_vkCmdDebugMarkerBeginEXT)device.getProcAddr("vkCmdDebugMarkerBeginEXT");
+				device_holder.m_vk_cmd_debug_marker_end = (PFN_vkCmdDebugMarkerEndEXT)device.getProcAddr("vkCmdDebugMarkerEndEXT");
+				device_holder.m_vk_cmd_debug_marker_insert = (PFN_vkCmdDebugMarkerInsertEXT)device.getProcAddr("vkCmdDebugMarkerInsertEXT");
+				gpu.m_device_list.emplace_back(std::move(device_holder));
 			}
 
 		}
@@ -145,7 +152,7 @@ std::vector<uint32_t> cGPU::getQueueFamilyIndexList(vk::QueueFlags flag) const
 	std::vector<uint32_t> index;
 	auto queueProp = getHandle().getQueueFamilyProperties();
 	for (size_t i = 0; i < queueProp.size(); i++) {
-		if ((queueProp[i].queueFlags & flag) == flag) {
+		if ((queueProp[i].queueFlags & flag) != vk::QueueFlags()) {
 			index.emplace_back((uint32_t)i);
 		}
 	}
@@ -204,7 +211,12 @@ cDevice cGPU::getDeviceByFamilyIndex(uint32_t index) const
 {
 	cDevice device;
 	device.m_gpu = m_handle;
-	device.m_handle = m_device_list[index];
+	device.m_handle = m_device_list[index].m_device;
+	device.m_vk_debug_marker_set_object_tag = m_device_list[index].m_vk_debug_marker_set_object_tag;
+	device.m_vk_debug_marker_set_object_name = m_device_list[index].m_vk_debug_marker_set_object_name;
+	device.m_vk_cmd_debug_marker_begin = m_device_list[index].m_vk_cmd_debug_marker_begin;
+	device.m_vk_cmd_debug_marker_end = m_device_list[index].m_vk_cmd_debug_marker_end;
+	device.m_vk_cmd_debug_marker_insert = m_device_list[index].m_vk_cmd_debug_marker_insert;
 	device.m_family_index = index;
 	device.m_queue_num = getHandle().getQueueFamilyProperties()[index].queueCount;
 	return device;

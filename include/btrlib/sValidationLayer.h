@@ -32,6 +32,7 @@ protected:
 //			"VK_LAYER_LUNARG_api_dump",
 		};
 		mExtensionName.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+//		mExtensionName.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
 		mExtensionName.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 		mExtensionName.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 	}

@@ -31,7 +31,7 @@ void ModelRender::setup(cModelRenderer&  renderer)
 			};
 
 			std::vector<vk::DescriptorBufferInfo> storagemBufferInfo = {
-				mPrivate->getBuffer(Private::ModelBuffer::VS_MATERIAL).mBufferInfo,
+//				mPrivate->getBuffer(Private::ModelBuffer::VS_MATERIAL).mBufferInfo,
 				mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM).mBufferInfo,
 			};
 			std::vector<vk::DescriptorBufferInfo> fStoragemBufferInfo = {
@@ -96,8 +96,6 @@ void ModelRender::setup(cModelRenderer&  renderer)
 
 	}
 
-	// todo compute
-	return;
 	//vk::CommandBuffer cModel::buildExecuteCmd()
 	{
 		cDevice compute_device = sThreadData::Order().m_device[sThreadData::DEVICE_COMPUTE];
@@ -110,11 +108,11 @@ void ModelRender::setup(cModelRenderer&  renderer)
 			m_cmd_compute = compute_device->allocateCommandBuffers(cmd_alloc_info);
 		}
 
-		auto pipeline = renderer.getDrawPipeline();
+		auto pipeline = renderer.getComputePipeline();
 		vk::DescriptorSetAllocateInfo allocInfo;
 		allocInfo.setDescriptorPool(pipeline.m_descriptor_pool);
-		allocInfo.setDescriptorSetCount(7);
-		allocInfo.setPSetLayouts(&pipeline.m_descriptor_set_layout[0]);
+		allocInfo.setDescriptorSetCount(pipeline.m_descriptor_set_layout.size());
+		allocInfo.setPSetLayouts(pipeline.m_descriptor_set_layout.data());
 		m_compute_descriptor_set = compute_device->allocateDescriptorSets(allocInfo);
 
 		std::vector<vk::WriteDescriptorSet> compute_write_descriptor;
@@ -133,28 +131,29 @@ void ModelRender::setup(cModelRenderer&  renderer)
 				.setPBufferInfo(storages.data())
 				.setDstBinding(8)
 				.setDstSet(m_compute_descriptor_set[0]);
-			compute_write_descriptor.emplace_back(desc);
+//			compute_write_descriptor.emplace_back(desc);
+			compute_device->updateDescriptorSets(desc, {});
 
 		}
 		// AnimationUpdate
 		{
 			std::vector<vk::DescriptorBufferInfo> uniforms =
 			{
-				mPrivate->getMotionBuffer(cAnimation::ANIMATION_INFO).mBufferInfo,
-				mPrivate->getBuffer(Private::ModelBuffer::PLAYING_ANIMATION).mBufferInfo,
+				mPrivate->getBuffer(Private::ModelBuffer::MODEL_INFO).mBufferInfo,
 			};
 			desc = vk::WriteDescriptorSet()
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 				.setDescriptorCount(uniforms.size())
 				.setPBufferInfo(uniforms.data())
 				.setDstBinding(0)
 				.setDstSet(m_compute_descriptor_set[1]);
-			compute_write_descriptor.emplace_back(desc);
+			//			compute_write_descriptor.emplace_back(desc);
+			compute_device->updateDescriptorSets(desc, {});
 
 			std::vector<vk::DescriptorBufferInfo> storages =
 			{
-				mPrivate->getBuffer(Private::ModelBuffer::MODEL_INFO).mBufferInfo,
-				mPrivate->mMesh.mIndirectInfo,
+				mPrivate->getMotionBuffer(cAnimation::ANIMATION_INFO).mBufferInfo,
+				mPrivate->getBuffer(Private::ModelBuffer::PLAYING_ANIMATION).mBufferInfo,
 			};
 			desc = vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
@@ -162,7 +161,8 @@ void ModelRender::setup(cModelRenderer&  renderer)
 				.setPBufferInfo(storages.data())
 				.setDstBinding(8)
 				.setDstSet(m_compute_descriptor_set[1]);
-			compute_write_descriptor.emplace_back(desc);
+			compute_device->updateDescriptorSets(desc, {});
+
 		}
 		// MotionUpdate
 		{
@@ -176,7 +176,8 @@ void ModelRender::setup(cModelRenderer&  renderer)
 				.setPBufferInfo(uniforms.data())
 				.setDstBinding(0)
 				.setDstSet(m_compute_descriptor_set[2]);
-			compute_write_descriptor.emplace_back(desc);
+//			compute_write_descriptor.emplace_back(desc);
+			compute_device->updateDescriptorSets(desc, {});
 
 			std::vector<vk::DescriptorBufferInfo> storages =
 			{
@@ -195,7 +196,8 @@ void ModelRender::setup(cModelRenderer&  renderer)
 				.setPBufferInfo(storages.data())
 				.setDstBinding(8)
 				.setDstSet(m_compute_descriptor_set[2]);
-			compute_write_descriptor.emplace_back(desc);
+//			compute_write_descriptor.emplace_back(desc);
+			compute_device->updateDescriptorSets(desc, {});
 		}
 
 		// NodeTransform
@@ -210,7 +212,8 @@ void ModelRender::setup(cModelRenderer&  renderer)
 				.setPBufferInfo(uniforms.data())
 				.setDstBinding(0)
 				.setDstSet(m_compute_descriptor_set[3]);
-			compute_write_descriptor.emplace_back(desc);
+//			compute_write_descriptor.emplace_back(desc);
+			compute_device->updateDescriptorSets(desc, {});
 
 			std::vector<vk::DescriptorBufferInfo> storages =
 			{
@@ -225,7 +228,8 @@ void ModelRender::setup(cModelRenderer&  renderer)
 				.setPBufferInfo(storages.data())
 				.setDstBinding(8)
 				.setDstSet(m_compute_descriptor_set[3]);
-			compute_write_descriptor.emplace_back(desc);
+//			compute_write_descriptor.emplace_back(desc);
+			compute_device->updateDescriptorSets(desc, {});
 		}
 
 		// CameraCulling			
@@ -246,7 +250,8 @@ void ModelRender::setup(cModelRenderer&  renderer)
 				.setPBufferInfo(storages.data())
 				.setDstBinding(8)
 				.setDstSet(m_compute_descriptor_set[4]);
-			compute_write_descriptor.emplace_back(desc);
+//			compute_write_descriptor.emplace_back(desc);
+			compute_device->updateDescriptorSets(desc, {});
 		}
 
 		// BoneTransform
@@ -261,7 +266,8 @@ void ModelRender::setup(cModelRenderer&  renderer)
 				.setPBufferInfo(uniforms.data())
 				.setDstBinding(0)
 				.setDstSet(m_compute_descriptor_set[5]);
-			compute_write_descriptor.emplace_back(desc);
+//			compute_write_descriptor.emplace_back(desc);
+			compute_device->updateDescriptorSets(desc, {});
 
 			std::vector<vk::DescriptorBufferInfo> storages =
 			{
@@ -275,10 +281,11 @@ void ModelRender::setup(cModelRenderer&  renderer)
 				.setDescriptorCount(storages.size())
 				.setPBufferInfo(storages.data())
 				.setDstBinding(8)
-				.setDstSet(m_compute_descriptor_set[6]);
-			compute_write_descriptor.emplace_back(desc);
+				.setDstSet(m_compute_descriptor_set[5]);
+//			compute_write_descriptor.emplace_back(desc);
+			compute_device->updateDescriptorSets(desc, {});
 		}
-		compute_device->updateDescriptorSets(compute_write_descriptor, {});
+//		compute_device->updateDescriptorSets(compute_write_descriptor, {});
 
 // 		for (size_t i = 0; i < renderer.getComputePipeline().m_layout.size(); i++)
 // 		{
@@ -305,14 +312,58 @@ void ModelRender::setup(cModelRenderer&  renderer)
 			.setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
 			.setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED),
 		};
-
-// 		m_cmd_compute[1].pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands,
-// 			vk::DependencyFlags(), {}, barrier, {});
 	}
+}
+void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
+{
+// 	std::vector<vk::BufferMemoryBarrier> to_compute_barrier =
+// 	{
+// 		vk::BufferMemoryBarrier()
+// 		.setSrcAccessMask(vk::AccessFlagBits::eIndirectCommandRead)
+// 		.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
+// 		.setBuffer(mPrivate->mMesh.mIndirectInfo.buffer)
+// 		.setSize(mPrivate->mMesh.mIndirectInfo.range),
+// 		vk::BufferMemoryBarrier()
+// 		.setSrcAccessMask(vk::AccessFlagBits::eShaderRead)
+// 		.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
+// 		.setBuffer(mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM).mBuffer)
+// 		.setSize(mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM).mBufferInfo.range)
+// 	};
+// 
+// 	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands,
+// 		vk::DependencyFlags(), {}, to_compute_barrier, {});
+
+	auto pipeline = renderer.getComputePipeline();
+	for (size_t i = 0; i < pipeline.m_pipeline_layout.size(); i++)
+//	for (size_t i = 0; i <5; i++)
+	{
+	 	cmd.bindPipeline(vk::PipelineBindPoint::eCompute, pipeline.m_pipeline[i]);
+	 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipeline.m_pipeline_layout[i], 0, m_compute_descriptor_set[i], {});
+		cmd.dispatch(256, 1, 1);
+	}
+
+	std::vector<vk::BufferMemoryBarrier> barrier =
+	{
+		vk::BufferMemoryBarrier()
+		.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
+		.setDstAccessMask(vk::AccessFlagBits::eIndirectCommandRead)
+		.setBuffer(mPrivate->mMesh.mIndirectInfo.buffer)
+		.setSize(mPrivate->mMesh.mIndirectInfo.range),
+		vk::BufferMemoryBarrier()
+		.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
+		.setDstAccessMask(vk::AccessFlagBits::eShaderRead)
+		.setBuffer(mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM).mBuffer)
+		.setSize(mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM).mBufferInfo.range)
+	};
+
+	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands,
+		vk::DependencyFlags(), {}, barrier, {});
+
 }
 
 void ModelRender::draw(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 {
+//	cmd.fillBuffer(mPrivate->getBuffer())
 
 	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, renderer.getDrawPipeline().m_pipeline);
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, renderer.getDrawPipeline().m_pipeline_layout, 2, renderer.getDrawPipeline().m_draw_descriptor_set_per_scene, {});

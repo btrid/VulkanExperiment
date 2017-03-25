@@ -179,13 +179,13 @@ int main()
 	auto model = modelFuture.get();
 
 	auto* camera = cCamera::sCamera::Order().create();
-	camera->mPosition = glm::vec3(0.f, -100.f, -800.f);
+	camera->mPosition = glm::vec3(0.f, -500.f, -800.f);
 	camera->mTarget = glm::vec3(0.f, -100.f, 0.f);
-	camera->mUp = glm::vec3(0.f, 1.f, 0.f);
+	camera->mUp = glm::vec3(0.f, -1.f, 0.f);
 	camera->mWidth = 640;
 	camera->mHeight = 480;
-	camera->mFar = 1000.f;
-	camera->mNear = 0.01f;
+	camera->mFar = 10000.f;
+	camera->mNear = 0.0f;
 
 
 	vk::RenderPass render_pass;
@@ -278,6 +278,8 @@ int main()
 			vk::CommandBufferBeginInfo begin_info;
 			begin_info.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 			render_cmd.begin(begin_info);
+
+			renderer.execute(render_cmd);
 
 			vk::ImageMemoryBarrier present_to_render_barrier;
 			present_to_render_barrier.setSrcAccessMask(vk::AccessFlagBits::eMemoryRead);

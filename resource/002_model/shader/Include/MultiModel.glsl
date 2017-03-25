@@ -26,10 +26,12 @@ struct Mesh {
 	uint  instanceCount;
 	uint  firstIndex;
 	uint  baseVertex;
+
 	uint  baseInstance;
 	int numElement;
 	int numVertex;
 	int nodeIndex;
+
 	vec4 AABB;
 };
 
@@ -66,7 +68,11 @@ struct ModelInfo
 	int instanceNum;
 	int nodeNum;
 	int boneNum;
+
 	int meshNum;
+	int _p1;
+	int _p2;
+	int _p3;
 	vec4 AABB;
 	mat4 invGlobalMatrix;
 };

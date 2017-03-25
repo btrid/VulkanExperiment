@@ -47,7 +47,7 @@ void main()
 	if(isCulling(frustom, aabb)) { 
 //		return ;
 	} 
-
+	
 	// instanceのincrement
 	// @Todo メッシュ単位のカリング
 	uint index = atomicAdd(modelInfo.instanceNum, 1);

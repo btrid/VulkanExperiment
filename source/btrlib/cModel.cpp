@@ -331,11 +331,11 @@ cAnimation loadMotion(const aiScene* scene, const RootNode& root)
 		return anim_buffer;
 	}
 	const cGPU& gpu = sThreadData::Order().m_gpu;
-	auto devices = gpu.getDevice(vk::QueueFlagBits::eTransfer);
-	auto familyIndex = gpu.getQueueFamilyIndexList(vk::QueueFlagBits::eTransfer);
+	auto devices = gpu.getDevice(vk::QueueFlagBits::eGraphics | vk::QueueFlagBits::eCompute);
+	auto share_family_index = gpu.getQueueFamilyIndexList(vk::QueueFlagBits::eGraphics | vk::QueueFlagBits::eCompute);
 	auto device = devices[0];
 
-	std::vector<cModel::AnimationInfo> animationInfoList;
+	std::vector<cModel::AnimationInfo> animation_info_list;
 	std::vector<cModel::MotionInfo> motionInfoList;
 	std::vector<cModel::MotionTimeBuffer> motionTimeBufferList;
 	std::vector<cModel::MotionDataBuffer> motionDataBufferList;
@@ -353,7 +353,7 @@ cAnimation loadMotion(const aiScene* scene, const RootNode& root)
 		channnelCount += anim->mNumMeshChannels;
 		motionInfoList.reserve(anim->mNumChannels);
 	}
-	animationInfoList.reserve(scene->mNumAnimations);
+	animation_info_list.reserve(scene->mNumAnimations);
 	motionInfoList.reserve(channnelCount);
 	motionTimeBufferList.reserve(dataCount);
 	motionDataBufferList.reserve(dataCount);
@@ -392,20 +392,22 @@ cAnimation loadMotion(const aiScene* scene, const RootNode& root)
 		animation.maxTime_ = (float)anim->mDuration;
 		animation.ticksPerSecond_ = (float)anim->mTicksPerSecond;
 		animation.numInfo_ = anim->mNumChannels;
-		animation.offsetInfo_ = animationInfoList.empty() ? 0 : animationInfoList.back().offsetInfo_ + animationInfoList.back().numInfo_;
-		animationInfoList.push_back(animation);
+		animation.offsetInfo_ = animation_info_list.empty() ? 0 : animation_info_list.back().offsetInfo_ + animation_info_list.back().numInfo_;
+		animation_info_list.push_back(animation);
 
 	}
 
 	// AnimeInfo
 	{
-		auto size = vector_sizeof(animationInfoList);
-		vk::BufferCreateInfo bufferInfo = vk::BufferCreateInfo()
-			.setUsage(vk::BufferUsageFlagBits::eUniformBuffer)
-			.setSize(size)
-			.setSharingMode(vk::SharingMode::eExclusive);
+		auto size = vector_sizeof(animation_info_list);
+		vk::BufferCreateInfo buffer_info;
+		buffer_info.usage = vk::BufferUsageFlagBits::eStorageBuffer;
+		buffer_info.size = size;
+// 		buffer_info.sharingMode = vk::SharingMode::eConcurrent;
+// 		buffer_info.pQueueFamilyIndices = share_family_index.data();
+// 		buffer_info.queueFamilyIndexCount = share_family_index.size();
 		auto& buffer = anim_buffer.mMotionBuffer[cAnimation::ANIMATION_INFO];
-		buffer.mBuffer = device->createBuffer(bufferInfo);
+		buffer.mBuffer = device->createBuffer(buffer_info);
 
 		vk::MemoryRequirements memoryRequest = device->getBufferMemoryRequirements(buffer.mBuffer);
 		vk::MemoryAllocateInfo memoryAlloc = vk::MemoryAllocateInfo()
@@ -413,9 +415,9 @@ cAnimation loadMotion(const aiScene* scene, const RootNode& root)
 			.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memoryRequest, vk::MemoryPropertyFlagBits::eHostVisible));
 		buffer.mMemory = device->allocateMemory(memoryAlloc);
 
-		char* mem = reinterpret_cast<char*>(device->mapMemory(buffer.mMemory, 0, memoryRequest.size, vk::MemoryMapFlags()));
+		char* mem = reinterpret_cast<char*>(device->mapMemory(buffer.mMemory, 0, size, vk::MemoryMapFlags()));
 		{
-			memcpy_s(mem, size, animationInfoList.data(), size);
+			memcpy_s(mem, size, animation_info_list.data(), size);
 		}
 		device->unmapMemory(buffer.mMemory);
 		device->bindBufferMemory(buffer.mBuffer, buffer.mMemory, 0);
@@ -424,6 +426,11 @@ cAnimation loadMotion(const aiScene* scene, const RootNode& root)
 		buffer.mBufferInfo.setOffset(0);
 		buffer.mBufferInfo.setRange(size);
 
+// 		vk::DebugMarkerObjectNameInfoEXT debug_info;
+// 		debug_info.object = (uint64_t)(VkBuffer)buffer.mBuffer;
+// 		debug_info.objectType = vk::DebugReportObjectTypeEXT::eBuffer;
+// 		debug_info.pObjectName = "hogeee";
+// 		device->debugMarkerSetObjectNameEXT(&debug_info);
 	}
 
 	// MotionInfo
@@ -458,7 +465,7 @@ cAnimation loadMotion(const aiScene* scene, const RootNode& root)
 	{
 		auto size = vector_sizeof(motionTimeBufferList);
 		vk::BufferCreateInfo bufferInfo = vk::BufferCreateInfo()
-			.setUsage(vk::BufferUsageFlagBits::eUniformBuffer)
+			.setUsage(vk::BufferUsageFlagBits::eStorageBuffer)
 			.setSize(size)
 			.setSharingMode(vk::SharingMode::eExclusive);
 		auto& buffer = anim_buffer.mMotionBuffer[cAnimation::MOTION_DATA_TIME];
@@ -901,7 +908,7 @@ void cModel::load(const std::string& filename)
 	{
 		size_t size = vector_sizeof(nodeInfo);
 		vk::BufferCreateInfo bufferInfo = vk::BufferCreateInfo()
-			.setUsage(vk::BufferUsageFlagBits::eUniformBuffer)
+			.setUsage(vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eStorageBuffer)
 // 			.setQueueFamilyIndexCount(1)
 // 			.setPQueueFamilyIndices(&device.getQueueFamilyIndex())
 			.setSize(size)
@@ -1011,7 +1018,7 @@ void cModel::load(const std::string& filename)
 		size_t size = vector_sizeof(pa);
 
 		vk::BufferCreateInfo bufferInfo;
-		bufferInfo.setUsage(vk::BufferUsageFlagBits::eUniformBuffer);
+		bufferInfo.setUsage(vk::BufferUsageFlagBits::eStorageBuffer);
 		bufferInfo.setSize(size);
 		bufferInfo.setSharingMode(vk::SharingMode::eExclusive);
 
@@ -1035,6 +1042,12 @@ void cModel::load(const std::string& filename)
 		buffer.mBufferInfo.setOffset(0);
 		buffer.mBufferInfo.setRange(size);
 
+// 		vk::DebugMarkerObjectNameInfoEXT debug_info;
+// 		debug_info.object = (uint64_t)(VkBuffer)buffer.mBuffer;
+// 		debug_info.objectType = vk::DebugReportObjectTypeEXT::eBuffer;
+// 		debug_info.pObjectName = "PlayingAnimation";
+// 		device.DebugMarkerSetObjectName(&debug_info);
+
 	}
 
 	// MotionWork
@@ -1042,7 +1055,7 @@ void cModel::load(const std::string& filename)
 		std::vector<MotionWork> mw(mPrivate->mNodeRoot.mNodeList.size()*instanceNum);
 		size_t size = vector_sizeof(mw);
 		vk::BufferCreateInfo bufferInfo = vk::BufferCreateInfo()
-			.setUsage(vk::BufferUsageFlagBits::eUniformBuffer)
+			.setUsage(vk::BufferUsageFlagBits::eStorageBuffer)
 			.setSize(size)
 			.setSharingMode(vk::SharingMode::eExclusive);
 
@@ -1093,8 +1106,6 @@ void cModel::load(const std::string& filename)
 
 		vk::BufferCreateInfo bufferInfo = vk::BufferCreateInfo()
 			.setUsage(vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst)
-// 			.setQueueFamilyIndexCount(1)
-// 			.setPQueueFamilyIndices(&device.getQueueFamilyIndex())
 			.setSize(sizeof(mi))
 			.setSharingMode(vk::SharingMode::eExclusive);
 
@@ -1106,6 +1117,11 @@ void cModel::load(const std::string& filename)
 			.setAllocationSize(memoryRequest.size)
 			.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memoryRequest, vk::MemoryPropertyFlagBits::eHostVisible));
 		buffer.mMemory = device->allocateMemory(memAlloc);
+		char* mem = reinterpret_cast<char*>(device->mapMemory(buffer.mMemory, 0, sizeof(mi), vk::MemoryMapFlags()));
+		{
+			memcpy_s(mem, sizeof(mi), &mi, sizeof(mi));
+		}
+		device->unmapMemory(buffer.mMemory);
 		device->bindBufferMemory(buffer.mBuffer, buffer.mMemory, 0);
 
 		buffer.mBufferInfo.setBuffer(buffer.mBuffer);
@@ -1116,9 +1132,7 @@ void cModel::load(const std::string& filename)
 	//BoneMap
 	{
 		vk::BufferCreateInfo bufferInfo = vk::BufferCreateInfo()
-			.setUsage(vk::BufferUsageFlagBits::eUniformBuffer)
-// 			.setQueueFamilyIndexCount(1)
-// 			.setPQueueFamilyIndices(&device.getQueueFamilyIndex())
+			.setUsage(vk::BufferUsageFlagBits::eStorageBuffer)
 			.setSize(instanceNum * sizeof(s32))
 			.setSharingMode(vk::SharingMode::eExclusive);
 		auto& buffer = mPrivate->getBuffer(Private::ModelBuffer::BONE_MAP);
@@ -1140,11 +1154,11 @@ void cModel::load(const std::string& filename)
 	//	NodeLocalTransformBuffer
 	{
 		std::vector<NodeLocalTransformBuffer> nt(mPrivate->mNodeRoot.mNodeList.size() * instanceNum);
-		std::for_each(nt.begin(), nt.end(), [](NodeLocalTransformBuffer& v) { v.localAnimated_ = glm::mat3x4(1.f);  });
+		std::for_each(nt.begin(), nt.end(), [](NodeLocalTransformBuffer& v) { v.localAnimated_ = glm::mat4(1.f);  });
 		size_t size = vector_sizeof(nt);
 
 		vk::BufferCreateInfo bufferInfo = vk::BufferCreateInfo()
-			.setUsage(vk::BufferUsageFlagBits::eUniformBuffer)
+			.setUsage(vk::BufferUsageFlagBits::eStorageBuffer)
 // 			.setQueueFamilyIndexCount(1)
 // 			.setPQueueFamilyIndices(&device.getQueueFamilyIndex())
 			.setSize(size)
@@ -1178,7 +1192,7 @@ void cModel::load(const std::string& filename)
 		size_t size = vector_sizeof(nt);
 
 		vk::BufferCreateInfo bufferInfo = vk::BufferCreateInfo()
-			.setUsage(vk::BufferUsageFlagBits::eUniformBuffer)
+			.setUsage(vk::BufferUsageFlagBits::eStorageBuffer)
 // 			.setQueueFamilyIndexCount(familyIndex.size())
 // 			.setPQueueFamilyIndices(familyIndex.data())
 			.setSize(size)
@@ -1206,19 +1220,17 @@ void cModel::load(const std::string& filename)
 	// world
 	{
 		std::vector<glm::mat4> world(instanceNum);
-		std::for_each(world.begin(), world.end(),
-			[](decltype(world)::value_type& m)
-		{
-			m = glm::transpose(glm::mat4x3(glm::translate(glm::mat4(1.f), glm::ballRand(3000.f))));
-			m = glm::translate(glm::mat4(1.f), glm::ballRand(3000.f));
-		}
-		);
+// 		std::for_each(world.begin(), world.end(),
+// 			[](decltype(world)::value_type& m)
+// 		{
+// 			m = glm::transpose(glm::mat4(glm::translate(glm::mat4(1.f), glm::ballRand(3000.f))));
+// 			m = glm::translate(glm::mat4(1.f), glm::ballRand(3000.f));
+// 		}
+// 		);
 		size_t size = vector_sizeof(world);
 
 		vk::BufferCreateInfo bufferInfo = vk::BufferCreateInfo()
-			.setUsage(vk::BufferUsageFlagBits::eUniformBuffer)
-// 			.setQueueFamilyIndexCount(1)
-// 			.setPQueueFamilyIndices(&device.getQueueFamilyIndex())
+			.setUsage(vk::BufferUsageFlagBits::eStorageBuffer)
 			.setSize(size)
 			.setSharingMode(vk::SharingMode::eExclusive);
 		auto& buffer = mPrivate->getBuffer(Private::ModelBuffer::WORLD);
@@ -1329,29 +1341,3 @@ const cMeshGPU& cModel::getMesh() const
 {
 	return mPrivate->mMesh; 
 }
-
-// void cModel::execute()
-// {
-// 	{
-// 		auto b = mPrivate->getBuffer(Private::ModelBuffer::BONE_INFO);
-// 		vk::MemoryRequirements memoryRequest = mPrivate->mDevice->getBufferMemoryRequirements(b.mBuffer);
-// 		auto* mem = reinterpret_cast<BoneInfo*>(mPrivate->mDevice->mapMemory(b.mMemory, 0, memoryRequest.size, vk::MemoryMapFlags()));
-// 		//		printf("%d\n", mem->mInstanceNum);
-// 		mPrivate->mDevice->unmapMemory(b.mMemory);
-// 	}
-// 	{
-// 		auto b = mPrivate->getBuffer(Private::ModelBuffer::NODE_GLOBAL_TRANSFORM);
-// 		vk::MemoryRequirements memoryRequest = mPrivate->mDevice->getBufferMemoryRequirements(b.mBuffer);
-// 		auto* mem = reinterpret_cast<NodeGlobalTransformBuffer*>(mPrivate->mDevice->mapMemory(b.mMemory, 0, memoryRequest.size, vk::MemoryMapFlags()));
-// 		//		printf("%d\n", mem->mInstanceNum);
-// 		mPrivate->mDevice->unmapMemory(b.mMemory);
-// 	}
-// 	{
-// 		auto b = mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM);
-// 		vk::MemoryRequirements memoryRequest = mPrivate->mDevice->getBufferMemoryRequirements(b.mBuffer);
-// 		auto* mem = reinterpret_cast<BoneTransformBuffer*>(mPrivate->mDevice->mapMemory(b.mMemory, 0, memoryRequest.size, vk::MemoryMapFlags()));
-// 		//		printf("%d\n", mem->mInstanceNum);
-// 		mPrivate->mDevice->unmapMemory(b.mMemory);
-// 	}
-//
-//}
