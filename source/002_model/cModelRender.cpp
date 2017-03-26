@@ -316,30 +316,43 @@ void ModelRender::setup(cModelRenderer&  renderer)
 }
 void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 {
-// 	std::vector<vk::BufferMemoryBarrier> to_compute_barrier =
-// 	{
-// 		vk::BufferMemoryBarrier()
-// 		.setSrcAccessMask(vk::AccessFlagBits::eIndirectCommandRead)
-// 		.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
-// 		.setBuffer(mPrivate->mMesh.mIndirectInfo.buffer)
-// 		.setSize(mPrivate->mMesh.mIndirectInfo.range),
-// 		vk::BufferMemoryBarrier()
-// 		.setSrcAccessMask(vk::AccessFlagBits::eShaderRead)
-// 		.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
-// 		.setBuffer(mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM).mBuffer)
-// 		.setSize(mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM).mBufferInfo.range)
-// 	};
-// 
-// 	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands,
-// 		vk::DependencyFlags(), {}, to_compute_barrier, {});
+	std::vector<vk::BufferMemoryBarrier> to_compute_barrier =
+	{
+		vk::BufferMemoryBarrier()
+		.setSrcAccessMask(vk::AccessFlagBits::eIndirectCommandRead)
+		.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
+		.setBuffer(mPrivate->mMesh.mIndirectInfo.buffer)
+		.setSize(mPrivate->mMesh.mIndirectInfo.range),
+		vk::BufferMemoryBarrier()
+		.setSrcAccessMask(vk::AccessFlagBits::eShaderRead)
+		.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
+		.setBuffer(mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM).mBuffer)
+		.setSize(mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM).mBufferInfo.range)
+	};
+
+	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands,
+		vk::DependencyFlags(), {}, to_compute_barrier, {});
 
 	auto pipeline = renderer.getComputePipeline();
 	for (size_t i = 0; i < pipeline.m_pipeline_layout.size(); i++)
-//	for (size_t i = 0; i <5; i++)
 	{
 	 	cmd.bindPipeline(vk::PipelineBindPoint::eCompute, pipeline.m_pipeline[i]);
 	 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipeline.m_pipeline_layout[i], 0, m_compute_descriptor_set[i], {});
 		cmd.dispatch(256, 1, 1);
+
+		if (i == 4) {
+			std::vector<vk::BufferMemoryBarrier> barrier =
+			{
+				vk::BufferMemoryBarrier()
+				.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
+				.setDstAccessMask(vk::AccessFlagBits::eShaderRead)
+				.setBuffer(mPrivate->getBuffer(cModel::Private::ModelBuffer::MODEL_INFO).mBuffer)
+				.setSize(mPrivate->getBuffer(cModel::Private::ModelBuffer::MODEL_INFO).mBufferInfo.range),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
+				vk::DependencyFlags(), {}, barrier, {});
+
+		}
 	}
 
 	std::vector<vk::BufferMemoryBarrier> barrier =

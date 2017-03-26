@@ -28,7 +28,6 @@ void main()
 	if(index >= modelInfo.meshNum){
 		return;
 	}
-	return;
 	modelInfo.instanceNum = 0;
 	meshs[index].instanceCount =  0;
 }
