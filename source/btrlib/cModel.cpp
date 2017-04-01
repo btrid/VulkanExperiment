@@ -16,22 +16,31 @@
 #include <assimp/scene.h>
 #include <assimp/material.h>
 
+#if 0
 #define OREORE_PRESET ( \
-	/*aiProcess_CalcTangentSpace				| */ \
-	/*aiProcess_GenSmoothNormals				| */ \
-	aiProcess_JoinIdenticalVertices			|  \
-	aiProcess_ImproveCacheLocality			|  \
-	aiProcess_LimitBoneWeights				|  \
-	aiProcess_RemoveRedundantMaterials      |  \
-	aiProcess_SplitLargeMeshes				|  \
-	aiProcess_Triangulate					|  \
-	/*aiProcess_GenUVCoords                   | */ \
-	aiProcess_SortByPType                   |  \
-	aiProcess_FindDegenerates               |  \
-	/*aiProcess_FlipUVs						| */ \
-	0 )
-
+/*aiProcess_CalcTangentSpace				| */ \
+/*aiProcess_GenSmoothNormals				| */ \
+aiProcess_JoinIdenticalVertices | \
+aiProcess_ImproveCacheLocality | \
+aiProcess_LimitBoneWeights | \
+aiProcess_RemoveRedundantMaterials | \
+aiProcess_SplitLargeMeshes | \
+aiProcess_Triangulate | \
+/*aiProcess_GenUVCoords                   | */ \
+aiProcess_SortByPType | \
+aiProcess_FindDegenerates | \
+/*aiProcess_FlipUVs						| */ \
+0 )
+#endif
 namespace {
+	int OREORE_PRESET = 0
+		| aiProcess_JoinIdenticalVertices
+		| aiProcess_ImproveCacheLocality
+		| aiProcess_LimitBoneWeights
+		| aiProcess_RemoveRedundantMaterials
+		| aiProcess_SplitLargeMeshes
+		| aiProcess_Triangulate
+		;
 	glm::mat4 AI_TO(aiMatrix4x4& from)
 	{
 		glm::mat4 to;
@@ -667,7 +676,7 @@ void cModel::load(const std::string& filename)
 		}
 		vertex.insert(vertex.end(), _vertex.begin(), _vertex.end());
 	}
-
+	importer.FreeScene();
 
 	const cGPU& gpu = sThreadData::Order().m_gpu;
 	auto familyIndex = device.getQueueFamilyIndex();
@@ -792,7 +801,7 @@ void cModel::load(const std::string& filename)
 
 				vk::MemoryAllocateInfo memAlloc = vk::MemoryAllocateInfo()
 					.setAllocationSize(memoryRequest.size)
-					.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memoryRequest, vk::MemoryPropertyFlagBits::/*eDeviceLocal*/eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent));
+					.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memoryRequest, vk::MemoryPropertyFlagBits::eHostVisible));
 				mesh.mMemoryIndirect = device->allocateMemory(memAlloc);
 
 				auto* mem = reinterpret_cast<Mesh*>(device->mapMemory(mesh.mMemoryIndirect, 0, memoryRequest.size, vk::MemoryMapFlags()));
@@ -812,25 +821,6 @@ void cModel::load(const std::string& filename)
 		}
 	}
 
-
-	/*	for (unsigned num_vertex = 0; num_vertex < _vertexSize.size(); num_vertex++)
-	{
-	AABB aabb;
-	for (int vi = 0; vi < _vertexSize[num_vertex]; vi++)
-	{
-	aabb.max_.x = glm::max(aabb.max_.x, _vertex[vi].mPosition.x);
-	aabb.max_.y = glm::max(aabb.max_.y, _vertex[vi].mPosition.y);
-	aabb.max_.z = glm::max(aabb.max_.z, _vertex[vi].mPosition.z);
-	aabb.min_.x = glm::min(aabb.min_.x, _vertex[vi].mPosition.x);
-	aabb.min_.y = glm::min(aabb.min_.y, _vertex[vi].mPosition.y);
-	aabb.min_.z = glm::min(aabb.min_.z, _vertex[vi].mPosition.z);
-	}
-	command[num_vertex].AABB_ = glm::vec4((aabb.max_ - aabb.min_) / 2.f, glm::length((aabb.max_ - aabb.min_) / 2.f));
-	command[num_vertex].numElement_ = _indexSize[num_vertex];
-	command[num_vertex].numVertex_ = _vertexSize[num_vertex];
-	}
-	*/
-	//	mPrivate->setNodeIndex(command, scene->mRootNode);
 
 	// vertex shader material
 	{
@@ -1102,7 +1092,7 @@ void cModel::load(const std::string& filename)
 		}
 
 		mi.mAabb = glm::vec4((max - min).xyz, glm::length((max - min) / 2.f));
-		mi.mInvGlobalMatrix = AI_TO(scene->mRootNode->mTransformation.Inverse());
+		mi.mInvGlobalMatrix = glm::inverse(mPrivate->mNodeRoot.getRootNode()->mTransformation);
 
 		vk::BufferCreateInfo bufferInfo = vk::BufferCreateInfo()
 			.setUsage(vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst)

@@ -316,7 +316,7 @@ void ModelRender::setup(cModelRenderer&  renderer)
 }
 void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 {
-	std::vector<vk::BufferMemoryBarrier> to_compute_barrier =
+	std::vector<vk::BufferMemoryBarrier> to_clear_barrier =
 	{
 		vk::BufferMemoryBarrier()
 		.setSrcAccessMask(vk::AccessFlagBits::eIndirectCommandRead)
@@ -331,7 +331,7 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 	};
 
 	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands,
-		vk::DependencyFlags(), {}, to_compute_barrier, {});
+		vk::DependencyFlags(), {}, to_clear_barrier, {});
 
 	auto pipeline = renderer.getComputePipeline();
 	for (size_t i = 0; i < pipeline.m_pipeline_layout.size(); i++)
@@ -340,7 +340,9 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 	 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipeline.m_pipeline_layout[i], 0, m_compute_descriptor_set[i], {});
 		cmd.dispatch(256, 1, 1);
 
-		if (i == 4) {
+		if (i == 4) 
+		{
+			// 
 			std::vector<vk::BufferMemoryBarrier> barrier =
 			{
 				vk::BufferMemoryBarrier()
@@ -355,13 +357,8 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 		}
 	}
 
-	std::vector<vk::BufferMemoryBarrier> barrier =
+	std::vector<vk::BufferMemoryBarrier> to_draw_barrier =
 	{
-		vk::BufferMemoryBarrier()
-		.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
-		.setDstAccessMask(vk::AccessFlagBits::eIndirectCommandRead)
-		.setBuffer(mPrivate->mMesh.mIndirectInfo.buffer)
-		.setSize(mPrivate->mMesh.mIndirectInfo.range),
 		vk::BufferMemoryBarrier()
 		.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
 		.setDstAccessMask(vk::AccessFlagBits::eShaderRead)
@@ -370,7 +367,7 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 	};
 
 	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands,
-		vk::DependencyFlags(), {}, barrier, {});
+		vk::DependencyFlags(), {}, to_draw_barrier, {});
 
 }
 

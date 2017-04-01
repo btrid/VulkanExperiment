@@ -341,7 +341,6 @@ void cModelRenderer_t<T>::cModelComputePipeline::setup()
 		}
 	}
 
-//	vkCmdClearAttachments()
 	// Create compute pipeline
 	std::vector<std::vector<vk::DescriptorSetLayoutBinding>> bindings =
 	{

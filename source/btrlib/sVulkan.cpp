@@ -76,11 +76,11 @@ sVulkan::sVulkan()
 		}
 	}
 
-	auto init_thread_data_func = [=](int index)
+	auto init_thread_data_func = [=](const cThreadPool::InitParam& param)
 	{
-		SetThreadIdealProcessor(::GetCurrentThread(), index);
+		SetThreadIdealProcessor(::GetCurrentThread(), param.m_index);
 		auto& data = sThreadData::Order();
-		data.m_thread_index = index;
+		data.m_thread_index = param.m_index;
 		data.m_gpu = m_gpu[0];
 
 		data.m_device[sThreadData::DEVICE_GRAPHICS] = data.m_gpu.getDevice(vk::QueueFlagBits::eGraphics)[0];

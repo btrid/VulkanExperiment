@@ -125,6 +125,7 @@ public:
 	cGPU& getGPU(int index) { return m_gpu[index]; }
 	void swap();
 	int getCurrentFrame()const { return m_current_frame; }
+	int getPrevFrame()const { return (m_current_frame == 0 ? FRAME_MAX : m_current_frame)-1; }
 
 public:
 	cThreadPool& getThreadPool() { return m_thread_pool; }
@@ -134,6 +135,29 @@ private:
 
 	int m_current_frame;
 	cThreadPool m_thread_pool;
+public:
+	std::mutex m_post_swap_function_mutex;
+	std::vector<std::vector<std::function<void()>>> m_post_swap_function;
+	void queueJobPostSwap(std::function<void()>&& job) {
+		std::lock_guard<std::mutex> lk(m_post_swap_function_mutex);
+		m_post_swap_function[sVulkan::Order().getCurrentFrame()].emplace_back(std::move(job));
+	}
+
+	void pushJobPostSwap()
+	{
+		std::vector<std::function<void()>> jobs;
+		{
+			std::lock_guard<std::mutex> lk(m_post_swap_function_mutex);
+			jobs = std::move(m_post_swap_function[sVulkan::Order().getPrevFrame()]);
+		}
+		for (auto&& j : jobs)
+		{
+			cThreadJob job;
+			job.mFinish = std::move(j);
+			m_thread_pool.enque(std::move(job));
+		}
+	}
+
 };
 
 struct sThreadData : public SingletonTLS<sThreadData>
@@ -153,6 +177,7 @@ struct sThreadData : public SingletonTLS<sThreadData>
 	std::vector<vk::CommandPool>	m_cmd_pool_tempolary;
 	std::vector<std::array<vk::CommandPool, sVulkan::FRAME_MAX>>	m_cmd_pool_onetime;
 	std::vector<std::array<vk::CommandPool, sVulkan::FRAME_MAX>>	m_cmd_pool_compiled;
+
 
 public:
 	std::array<vk::CommandPool, sVulkan::FRAME_MAX> getCmdPoolOnetime(int device_family_index)const { return m_cmd_pool_onetime[device_family_index]; }
@@ -230,6 +255,7 @@ protected:
 
 	virtual bool isEnd() const = 0;
 private:
+
 
 public:
 };

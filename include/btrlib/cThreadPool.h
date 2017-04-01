@@ -45,28 +45,39 @@ private:
 
 	std::atomic_bool m_is_terminate;
 public:
+
+	struct InitParam
+	{
+		int m_index;
+	};
+
 	cThreadPool()
 		: m_process_job_count(0)
 		, m_is_terminate(false)
 	{}
-	void start(int num, const std::function<void(int)>& initialize = nullptr)
+	void start(int num, const std::function<void(const InitParam&)>& initialize = nullptr)
 	{
 		// 二度スタート禁止。todo:reset todo:wait
 		assert(m_thread.empty());
 		m_thread.clear();
 		m_thread.resize(num);
 
-		for (int i = 0; i < num; i++) {
+		for (int i = 0; i < num; i++) 
+		{
 			m_thread[i] = std::thread([&, i]()
 			{
 				if (initialize) {
-					initialize(i+1);
+					InitParam param;
+					param.m_index = i+1;
+					initialize(param);
 				}
 				this->work();
 			});
 		}
 		if (initialize) {
-			initialize(0);
+			InitParam param;
+			param.m_index = 0;
+			initialize(param);
 		}
 		// 初期化完了を待つ
 		wait();
