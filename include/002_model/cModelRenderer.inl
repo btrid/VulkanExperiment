@@ -6,7 +6,7 @@
 template<typename T>
 void cModelRenderer_t<T>::cModelDrawPipeline::setup(vk::RenderPass render_pass)
 {
-	const cGPU& gpu = sThreadData::Order().m_gpu;
+	const cGPU& gpu = sThreadLocal::Order().m_gpu;
 
 	auto device = gpu.getDevice(vk::QueueFlagBits::eGraphics)[0];
 	// setup shader
@@ -316,7 +316,7 @@ void cModelRenderer_t<T>::cModelDrawPipeline::setup(vk::RenderPass render_pass)
 template<typename T>
 void cModelRenderer_t<T>::cModelComputePipeline::setup()
 {
-	const auto& gpu = sThreadData::Order().m_gpu;
+	const auto& gpu = sThreadLocal::Order().m_gpu;
 	auto device = gpu.getDevice(vk::QueueFlagBits::eGraphics)[0];
 	auto computeQueues = gpu.getQueueFamilyIndexList(vk::QueueFlagBits::eCompute);
 
@@ -672,7 +672,7 @@ void cModelRenderer_t<T>::execute(cThreadPool& threadpool)
 template<typename T>
 void cModelRenderer_t<T>::setup(vk::RenderPass render_pass)
 {
-	m_gpu = sThreadData::Order().m_gpu;
+	m_gpu = sThreadLocal::Order().m_gpu;
 	m_draw_pipeline.setup(render_pass);
 	m_compute_pipeline.setup();
 }

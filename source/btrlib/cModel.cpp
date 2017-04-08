@@ -7,7 +7,7 @@
 #include <atomic>
 
 #include <btrlib/cModel.h>
-#include <btrlib/sVulkan.h>
+#include <btrlib/sGlobal.h>
 #include <btrlib/ThreadPool.h>
 #include <btrlib/sDebug.h>
 
@@ -16,22 +16,6 @@
 #include <assimp/scene.h>
 #include <assimp/material.h>
 
-#if 0
-#define OREORE_PRESET ( \
-/*aiProcess_CalcTangentSpace				| */ \
-/*aiProcess_GenSmoothNormals				| */ \
-aiProcess_JoinIdenticalVertices | \
-aiProcess_ImproveCacheLocality | \
-aiProcess_LimitBoneWeights | \
-aiProcess_RemoveRedundantMaterials | \
-aiProcess_SplitLargeMeshes | \
-aiProcess_Triangulate | \
-/*aiProcess_GenUVCoords                   | */ \
-aiProcess_SortByPType | \
-aiProcess_FindDegenerates | \
-/*aiProcess_FlipUVs						| */ \
-0 )
-#endif
 namespace {
 	int OREORE_PRESET = 0
 		| aiProcess_JoinIdenticalVertices
@@ -105,7 +89,7 @@ namespace {
 	cModel::Texture loadTexture(const std::string& filename, vk::CommandBuffer& cmd)
 	{
 
-		auto device = sThreadData::Order().m_device[sThreadData::DEVICE_GRAPHICS];
+		auto device = sThreadLocal::Order().m_device[sThreadLocal::DEVICE_GRAPHICS];
 
 		auto texture_data = rTexture::LoadTexture(filename);
 		vk::ImageCreateInfo image_info;
@@ -125,7 +109,7 @@ namespace {
 		vk::MemoryRequirements memory_request = device->getImageMemoryRequirements(image);
 		vk::MemoryAllocateInfo memory_alloc_info;
 		memory_alloc_info.allocationSize = memory_request.size;
-		memory_alloc_info.memoryTypeIndex = sThreadData::Order().m_gpu.getMemoryTypeIndex(memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+		memory_alloc_info.memoryTypeIndex = sThreadLocal::Order().m_gpu.getMemoryTypeIndex(memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
 		vk::DeviceMemory memory = device->allocateMemory(memory_alloc_info);
 		device->bindImageMemory(image, memory, 0);
@@ -139,7 +123,7 @@ namespace {
 		vk::MemoryRequirements staging_memory_request = device->getBufferMemoryRequirements(staging_buffer);
 		vk::MemoryAllocateInfo staging_memory_alloc_info;
 		staging_memory_alloc_info.allocationSize = staging_memory_request.size;
-		staging_memory_alloc_info.memoryTypeIndex = sThreadData::Order().m_gpu.getMemoryTypeIndex(staging_memory_request, vk::MemoryPropertyFlagBits::eHostVisible);
+		staging_memory_alloc_info.memoryTypeIndex = sThreadLocal::Order().m_gpu.getMemoryTypeIndex(staging_memory_request, vk::MemoryPropertyFlagBits::eHostVisible);
 
 		vk::DeviceMemory staging_memory = device->allocateMemory(staging_memory_alloc_info);
 		device->bindBufferMemory(staging_buffer, staging_memory, 0);
@@ -339,7 +323,7 @@ cAnimation loadMotion(const aiScene* scene, const RootNode& root)
 	if (!scene->HasAnimations()) {
 		return anim_buffer;
 	}
-	const cGPU& gpu = sThreadData::Order().m_gpu;
+	const cGPU& gpu = sThreadLocal::Order().m_gpu;
 	auto devices = gpu.getDevice(vk::QueueFlagBits::eGraphics | vk::QueueFlagBits::eCompute);
 	auto share_family_index = gpu.getQueueFamilyIndexList(vk::QueueFlagBits::eGraphics | vk::QueueFlagBits::eCompute);
 	auto device = devices[0];
@@ -408,123 +392,25 @@ cAnimation loadMotion(const aiScene* scene, const RootNode& root)
 
 	// AnimeInfo
 	{
-		auto size = vector_sizeof(animation_info_list);
-		vk::BufferCreateInfo buffer_info;
-		buffer_info.usage = vk::BufferUsageFlagBits::eStorageBuffer;
-		buffer_info.size = size;
-// 		buffer_info.sharingMode = vk::SharingMode::eConcurrent;
-// 		buffer_info.pQueueFamilyIndices = share_family_index.data();
-// 		buffer_info.queueFamilyIndexCount = share_family_index.size();
 		auto& buffer = anim_buffer.mMotionBuffer[cAnimation::ANIMATION_INFO];
-		buffer.mBuffer = device->createBuffer(buffer_info);
-
-		vk::MemoryRequirements memoryRequest = device->getBufferMemoryRequirements(buffer.mBuffer);
-		vk::MemoryAllocateInfo memoryAlloc = vk::MemoryAllocateInfo()
-			.setAllocationSize(memoryRequest.size)
-			.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memoryRequest, vk::MemoryPropertyFlagBits::eHostVisible));
-		buffer.mMemory = device->allocateMemory(memoryAlloc);
-
-		char* mem = reinterpret_cast<char*>(device->mapMemory(buffer.mMemory, 0, size, vk::MemoryMapFlags()));
-		{
-			memcpy_s(mem, size, animation_info_list.data(), size);
-		}
-		device->unmapMemory(buffer.mMemory);
-		device->bindBufferMemory(buffer.mBuffer, buffer.mMemory, 0);
-
-		buffer.mBufferInfo.setBuffer(buffer.mBuffer);
-		buffer.mBufferInfo.setOffset(0);
-		buffer.mBufferInfo.setRange(size);
-
-// 		vk::DebugMarkerObjectNameInfoEXT debug_info;
-// 		debug_info.object = (uint64_t)(VkBuffer)buffer.mBuffer;
-// 		debug_info.objectType = vk::DebugReportObjectTypeEXT::eBuffer;
-// 		debug_info.pObjectName = "hogeee";
-// 		device->debugMarkerSetObjectNameEXT(&debug_info);
+		buffer.create(gpu, device, animation_info_list, vk::BufferUsageFlagBits::eStorageBuffer);
 	}
 
 	// MotionInfo
 	{
-		auto size = vector_sizeof(motionInfoList);
-		vk::BufferCreateInfo bufferInfo = vk::BufferCreateInfo()
-			.setUsage(vk::BufferUsageFlagBits::eStorageBuffer)
-			.setSize(size)
-			.setSharingMode(vk::SharingMode::eExclusive);
 		auto& buffer = anim_buffer.mMotionBuffer[cAnimation::MOTION_INFO];
-		buffer.mBuffer = device->createBuffer(bufferInfo);
-
-		vk::MemoryRequirements memoryRequest = device->getBufferMemoryRequirements(buffer.mBuffer);
-		vk::MemoryAllocateInfo memoryAlloc = vk::MemoryAllocateInfo()
-			.setAllocationSize(memoryRequest.size)
-			.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memoryRequest, vk::MemoryPropertyFlagBits::eHostVisible));
-		buffer.mMemory = device->allocateMemory(memoryAlloc);
-
-		char* mem = reinterpret_cast<char*>(device->mapMemory(buffer.mMemory, 0, memoryRequest.size, vk::MemoryMapFlags()));
-		{
-			memcpy_s(mem, size, motionInfoList.data(), size);
-		}
-		device->unmapMemory(buffer.mMemory);
-		device->bindBufferMemory(buffer.mBuffer, buffer.mMemory, 0);
-
-		buffer.mBufferInfo.setBuffer(buffer.mBuffer);
-		buffer.mBufferInfo.setOffset(0);
-		buffer.mBufferInfo.setRange(size);
+		buffer.create(gpu, device, motionInfoList, vk::BufferUsageFlagBits::eStorageBuffer);
 	}
 
 	// MotionTime
 	{
-		auto size = vector_sizeof(motionTimeBufferList);
-		vk::BufferCreateInfo bufferInfo = vk::BufferCreateInfo()
-			.setUsage(vk::BufferUsageFlagBits::eStorageBuffer)
-			.setSize(size)
-			.setSharingMode(vk::SharingMode::eExclusive);
 		auto& buffer = anim_buffer.mMotionBuffer[cAnimation::MOTION_DATA_TIME];
-		buffer.mBuffer = device->createBuffer(bufferInfo);
-
-		vk::MemoryRequirements memoryRequest = device->getBufferMemoryRequirements(buffer.mBuffer);
-		vk::MemoryAllocateInfo memoryAlloc = vk::MemoryAllocateInfo()
-			.setAllocationSize(memoryRequest.size)
-			.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memoryRequest, vk::MemoryPropertyFlagBits::eHostVisible));
-		buffer.mMemory = device->allocateMemory(memoryAlloc);
-
-		char* mem = reinterpret_cast<char*>(device->mapMemory(buffer.mMemory, 0, memoryRequest.size, vk::MemoryMapFlags()));
-		{
-			memcpy_s(mem, size, motionTimeBufferList.data(), size);
-		}
-		device->unmapMemory(buffer.mMemory);
-		device->bindBufferMemory(buffer.mBuffer, buffer.mMemory, 0);
-
-		buffer.mBufferInfo.setBuffer(buffer.mBuffer);
-		buffer.mBufferInfo.setOffset(0);
-		buffer.mBufferInfo.setRange(size);
-
+		buffer.create(gpu, device, motionTimeBufferList, vk::BufferUsageFlagBits::eStorageBuffer);
 	}
 	// MotionInfo
 	{
-		auto size = vector_sizeof(motionDataBufferList);
-		vk::BufferCreateInfo bufferInfo = vk::BufferCreateInfo()
-			.setUsage(vk::BufferUsageFlagBits::eStorageBuffer)
-			.setSize(size)
-			.setSharingMode(vk::SharingMode::eExclusive);
 		auto& buffer = anim_buffer.mMotionBuffer[cAnimation::MOTION_DATA_SRT];
-		buffer.mBuffer = device->createBuffer(bufferInfo);
-
-		vk::MemoryRequirements memoryRequest = device->getBufferMemoryRequirements(buffer.mBuffer);
-		vk::MemoryAllocateInfo memoryAlloc = vk::MemoryAllocateInfo()
-			.setAllocationSize(memoryRequest.size)
-			.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memoryRequest, vk::MemoryPropertyFlagBits::eHostVisible));
-		buffer.mMemory = device->allocateMemory(memoryAlloc);
-
-		char* mem = reinterpret_cast<char*>(device->mapMemory(buffer.mMemory, 0, memoryRequest.size, vk::MemoryMapFlags()));
-		{
-			memcpy_s(mem, size, motionDataBufferList.data(), size);
-		}
-		device->unmapMemory(buffer.mMemory);
-		device->bindBufferMemory(buffer.mBuffer, buffer.mMemory, 0);
-
-		buffer.mBufferInfo.setBuffer(buffer.mBuffer);
-		buffer.mBufferInfo.setOffset(0);
-		buffer.mBufferInfo.setRange(size);
-
+		buffer.create(gpu, device, motionDataBufferList, vk::BufferUsageFlagBits::eStorageBuffer);
 	}
 
 	return anim_buffer;
@@ -562,10 +448,10 @@ void cModel::load(const std::string& filename)
 
 	auto s = std::chrono::system_clock::now();
 
-	auto device = sThreadData::Order().m_device[sThreadData::DEVICE_GRAPHICS];
-	auto pool = sThreadData::Order().getCmdPoolTempolary(device.getQueueFamilyIndex());
+	auto device = sThreadLocal::Order().m_device[sThreadLocal::DEVICE_GRAPHICS];
+	auto cmd_pool = sGlobal::Order().getCmdPoolTempolary(device.getQueueFamilyIndex());
 	vk::CommandBufferAllocateInfo cmd_info;
-	cmd_info.setCommandPool(pool);
+	cmd_info.setCommandPool(cmd_pool);
 	cmd_info.setLevel(vk::CommandBufferLevel::ePrimary);
 	cmd_info.setCommandBufferCount(1);
 	auto cmd = device->allocateCommandBuffers(cmd_info)[0];
@@ -678,7 +564,7 @@ void cModel::load(const std::string& filename)
 	}
 	importer.FreeScene();
 
-	const cGPU& gpu = sThreadData::Order().m_gpu;
+	const cGPU& gpu = sThreadLocal::Order().m_gpu;
 	auto familyIndex = device.getQueueFamilyIndex();
 
 	{
@@ -717,62 +603,6 @@ void cModel::load(const std::string& filename)
 			}
 			device->unmapMemory(mesh.mMemory);
 			device->bindBufferMemory(mesh.mBuffer, mesh.mMemory, 0);
-
-			{
-
-				// ’¸“_‚ÌÝ’è
-				mesh.mBinding =
-				{
-					vk::VertexInputBindingDescription()
-					.setBinding(0)
-					.setInputRate(vk::VertexInputRate::eVertex)
-					.setStride(sizeof(Vertex))
-				};
-
-				mesh.mAttribute =
-				{
-					// pos
-					vk::VertexInputAttributeDescription()
-					.setBinding(0)
-					.setLocation(0)
-					.setFormat(vk::Format::eR32G32B32A32Sfloat)
-					.setOffset(0),
-					// normal
-					vk::VertexInputAttributeDescription()
-					.setBinding(0)
-					.setLocation(1)
-					.setFormat(vk::Format::eR32G32B32A32Sfloat)
-					.setOffset(16),
-					// texcoord
-					vk::VertexInputAttributeDescription()
-					.setBinding(0)
-					.setLocation(2)
-					.setFormat(vk::Format::eR32G32B32A32Sfloat)
-					.setOffset(32),
-					// boneID
-					vk::VertexInputAttributeDescription()
-					.setBinding(0)
-					.setLocation(3)
-					.setFormat(vk::Format::eR32G32B32A32Sint)
-					.setOffset(48),
-					vk::VertexInputAttributeDescription()
-					.setBinding(0)
-					.setLocation(4)
-					.setFormat(vk::Format::eR32G32B32A32Sfloat)
-					.setOffset(64),
-// 					vk::VertexInputAttributeDescription()
-// 					.setBinding(0)
-// 					.setLocation(5)
-// 					.setFormat(vk::Format::eR32Sint)
-// 					.setOffset(80),
-				};
-				mesh.mVertexInfo = vk::PipelineVertexInputStateCreateInfo()
-					.setVertexBindingDescriptionCount(mesh.mBinding.size())
-					.setPVertexBindingDescriptions(mesh.mBinding.data())
-					.setVertexAttributeDescriptionCount(mesh.mAttribute.size())
-					.setPVertexAttributeDescriptions(mesh.mAttribute.data());
-
-			}
 		}
 
 		// indirect
@@ -809,7 +639,6 @@ void cModel::load(const std::string& filename)
 					memcpy_s(mem, bufferSize, indirect.data(), bufferSize);
 				}
 				device->unmapMemory(mesh.mMemoryIndirect);
-
 				device->bindBufferMemory(mesh.mBufferIndirect, mesh.mMemoryIndirect, 0);
 
 				mesh.mIndirectInfo.setBuffer(mesh.mBufferIndirect);
@@ -825,29 +654,8 @@ void cModel::load(const std::string& filename)
 	// vertex shader material
 	{
 		std::vector<VSMaterialBuffer> vsmb(mPrivate->m_material.size());
-		for (size_t i = 0; i < vsmb.size(); i++)
-		{
-			//			vsmb[i].normalTex_ = material[i].ormalTex_.makeBindless();
-			//			vsmb[i].heightTex_ = material[i].heightTex_.makeBindless();
-		}
-		auto size = vector_sizeof(vsmb);
 		auto& buffer = mPrivate->getBuffer(Private::ModelBuffer::VS_MATERIAL);
-		vk::BufferCreateInfo bufferInfo = vk::BufferCreateInfo()
-			.setUsage(vk::BufferUsageFlagBits::eStorageBuffer)
-			.setSize(size)
-			.setSharingMode(vk::SharingMode::eExclusive);
-
-		buffer.mBuffer = device->createBuffer(bufferInfo);
-		vk::MemoryRequirements memoryRequest = device->getBufferMemoryRequirements(buffer.mBuffer);
-		vk::MemoryAllocateInfo memAlloc = vk::MemoryAllocateInfo()
-			.setAllocationSize(memoryRequest.size)
-			.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memoryRequest, vk::MemoryPropertyFlagBits::eHostVisible));
-		buffer.mMemory = device->allocateMemory(memAlloc);
-		device->bindBufferMemory(buffer.mBuffer, buffer.mMemory, 0);
-
-		buffer.mBufferInfo.setBuffer(buffer.mBuffer);
-		buffer.mBufferInfo.setOffset(0);
-		buffer.mBufferInfo.setRange(size);
+		buffer.create(gpu, device, vsmb, vk::BufferUsageFlagBits::eStorageBuffer);
 	}
 
 	// material
@@ -866,62 +674,14 @@ void cModel::load(const std::string& filename)
 			//			mb[i].mHeightTex = material[i].mHeightTex.makeBindless();
 			//			mb[i].mSpecularTex = material[i].mSpecularTex.makeBindless();
 		}
-		size_t size = vector_sizeof(mb);
-
-		vk::BufferCreateInfo bufferInfo = vk::BufferCreateInfo()
-			.setUsage(vk::BufferUsageFlagBits::eStorageBuffer)
-			.setSize(size)
-			.setSharingMode(vk::SharingMode::eExclusive);
-
 		auto& buffer = mPrivate->getBuffer(Private::ModelBuffer::MATERIAL);
-		buffer.mBuffer = device->createBuffer(bufferInfo);
-
-		vk::MemoryRequirements memoryRequest = device->getBufferMemoryRequirements(buffer.mBuffer);
-		vk::MemoryAllocateInfo memAlloc = vk::MemoryAllocateInfo()
-			.setAllocationSize(memoryRequest.size)
-			.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memoryRequest, vk::MemoryPropertyFlagBits::eHostVisible));
-		buffer.mMemory = device->allocateMemory(memAlloc);
-
-		char* mem = reinterpret_cast<char*>(device->mapMemory(buffer.mMemory, 0, memoryRequest.size, vk::MemoryMapFlags()));
-		{
-			memcpy_s(mem, size, mb.data(), size);
-		}
-		device->unmapMemory(buffer.mMemory);
-		device->bindBufferMemory(buffer.mBuffer, buffer.mMemory, 0);
-
-		buffer.mBufferInfo.setBuffer(buffer.mBuffer);
-		buffer.mBufferInfo.setOffset(0);
-		buffer.mBufferInfo.setRange(size);
+		buffer.create(gpu, device, mb, vk::BufferUsageFlagBits::eStorageBuffer);
 	}
 
 	// node info
 	{
-		size_t size = vector_sizeof(nodeInfo);
-		vk::BufferCreateInfo bufferInfo = vk::BufferCreateInfo()
-			.setUsage(vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eStorageBuffer)
-// 			.setQueueFamilyIndexCount(1)
-// 			.setPQueueFamilyIndices(&device.getQueueFamilyIndex())
-			.setSize(size)
-			.setSharingMode(vk::SharingMode::eExclusive);
 		auto& buffer = mPrivate->getBuffer(Private::ModelBuffer::NODE_INFO);
-		buffer.mBuffer = device->createBuffer(bufferInfo);
-
-		vk::MemoryRequirements memoryRequest = device->getBufferMemoryRequirements(buffer.mBuffer);
-		vk::MemoryAllocateInfo memAlloc = vk::MemoryAllocateInfo()
-			.setAllocationSize(memoryRequest.size)
-			.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memoryRequest, vk::MemoryPropertyFlagBits::eHostVisible));
-		buffer.mMemory = device->allocateMemory(memAlloc);
-
-		char* mem = reinterpret_cast<char*>(device->mapMemory(buffer.mMemory, 0, memoryRequest.size, vk::MemoryMapFlags()));
-		{
-			memcpy_s(mem, size, nodeInfo.data(), size);
-		}
-		device->unmapMemory(buffer.mMemory);
-		device->bindBufferMemory(buffer.mBuffer, buffer.mMemory, 0);
-
-		buffer.mBufferInfo.setBuffer(buffer.mBuffer);
-		buffer.mBufferInfo.setOffset(0);
-		buffer.mBufferInfo.setRange(size);
+		buffer.create(gpu, device, nodeInfo, vk::BufferUsageFlagBits::eStorageBuffer);
 	}
 
 	int instanceNum = 1;
@@ -935,61 +695,15 @@ void cModel::load(const std::string& filename)
 				bo[i].mNodeIndex = mPrivate->mBone[i].mNodeIndex;
 			}
 			size_t size = vector_sizeof(bo);
-			vk::BufferCreateInfo boneBufferInfo = vk::BufferCreateInfo()
-				.setUsage(vk::BufferUsageFlagBits::eStorageBuffer)
-				.setSize(size)
-				.setSharingMode(vk::SharingMode::eExclusive);
-
 			auto& buffer = mPrivate->getBuffer(Private::ModelBuffer::BONE_INFO);
-			buffer.mBuffer = device->createBuffer(boneBufferInfo);
-
-			vk::MemoryRequirements memoryRequest = device->getBufferMemoryRequirements(buffer.mBuffer);
-			vk::MemoryAllocateInfo memAlloc = vk::MemoryAllocateInfo()
-				.setAllocationSize(memoryRequest.size)
-				.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memoryRequest, vk::MemoryPropertyFlagBits::eHostVisible));
-			buffer.mMemory = device->allocateMemory(memAlloc);
-
-			char* mem = reinterpret_cast<char*>(device->mapMemory(buffer.mMemory, 0, memoryRequest.size, vk::MemoryMapFlags()));
-			{
-				memcpy_s(mem, size, bo.data(), size);
-			}
-			device->unmapMemory(buffer.mMemory);
-			device->bindBufferMemory(buffer.mBuffer, buffer.mMemory, 0);
-
-			buffer.mBufferInfo.setBuffer(buffer.mBuffer);
-			buffer.mBufferInfo.setOffset(0);
-			buffer.mBufferInfo.setRange(size);
+			buffer.create(gpu, device, bo, vk::BufferUsageFlagBits::eStorageBuffer);
 		}
 
 		// BoneTransform
 		{
 			std::vector<BoneTransformBuffer> bt(mPrivate->mBone.size() * instanceNum);
-			size_t size = vector_sizeof(bt);
-			vk::BufferCreateInfo boneBufferInfo = vk::BufferCreateInfo()
-				.setUsage(vk::BufferUsageFlagBits::eStorageBuffer)
-				.setSize(vector_sizeof(bt))
-				.setSharingMode(vk::SharingMode::eExclusive);
-
 			auto& buffer = mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM);
-			buffer.mBuffer = device->createBuffer(boneBufferInfo);
-
-			vk::MemoryRequirements memoryRequest = device->getBufferMemoryRequirements(buffer.mBuffer);
-			vk::MemoryAllocateInfo memAlloc = vk::MemoryAllocateInfo()
-				.setAllocationSize(memoryRequest.size)
-				.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memoryRequest, vk::MemoryPropertyFlagBits::eHostVisible));
-			buffer.mMemory = device->allocateMemory(memAlloc);
-
-			char* mem = reinterpret_cast<char*>(device->mapMemory(buffer.mMemory, 0, memoryRequest.size, vk::MemoryMapFlags()));
-			{
-				memcpy_s(mem, size, bt.data(), size);
-			}
-			device->unmapMemory(buffer.mMemory);
-			device->bindBufferMemory(buffer.mBuffer, buffer.mMemory, 0);
-
-			buffer.mBufferInfo.setBuffer(buffer.mBuffer);
-			buffer.mBufferInfo.setOffset(0);
-			buffer.mBufferInfo.setRange(size);
-
+			buffer.create(gpu, device, bt, vk::BufferUsageFlagBits::eStorageBuffer);
 		}
 	}
 
@@ -1005,32 +719,9 @@ void cModel::load(const std::string& filename)
 			pa[i].time = (float)(std::rand() % 200);
 			pa[i].currentMotionInfoIndex = 0;
 		}
-		size_t size = vector_sizeof(pa);
-
-		vk::BufferCreateInfo bufferInfo;
-		bufferInfo.setUsage(vk::BufferUsageFlagBits::eStorageBuffer);
-		bufferInfo.setSize(size);
-		bufferInfo.setSharingMode(vk::SharingMode::eExclusive);
 
 		auto& buffer = mPrivate->getBuffer(Private::ModelBuffer::PLAYING_ANIMATION);
-		buffer.mBuffer = device->createBuffer(bufferInfo);
-
-		vk::MemoryRequirements memoryRequest = device->getBufferMemoryRequirements(buffer.mBuffer);
-		vk::MemoryAllocateInfo memAlloc = vk::MemoryAllocateInfo()
-			.setAllocationSize(memoryRequest.size)
-			.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memoryRequest, vk::MemoryPropertyFlagBits::eHostVisible));
-		buffer.mMemory = device->allocateMemory(memAlloc);
-
-		char* mem = reinterpret_cast<char*>(device->mapMemory(buffer.mMemory, 0, memoryRequest.size, vk::MemoryMapFlags()));
-		{
-			memcpy_s(mem, size, pa.data(), size);
-		}
-		device->unmapMemory(buffer.mMemory);
-		device->bindBufferMemory(buffer.mBuffer, buffer.mMemory, 0);
-
-		buffer.mBufferInfo.setBuffer(buffer.mBuffer);
-		buffer.mBufferInfo.setOffset(0);
-		buffer.mBufferInfo.setRange(size);
+		buffer.create(gpu, device, pa, vk::BufferUsageFlagBits::eStorageBuffer);
 
 // 		vk::DebugMarkerObjectNameInfoEXT debug_info;
 // 		debug_info.object = (uint64_t)(VkBuffer)buffer.mBuffer;
@@ -1043,42 +734,20 @@ void cModel::load(const std::string& filename)
 	// MotionWork
 	{
 		std::vector<MotionWork> mw(mPrivate->mNodeRoot.mNodeList.size()*instanceNum);
-		size_t size = vector_sizeof(mw);
-		vk::BufferCreateInfo bufferInfo = vk::BufferCreateInfo()
-			.setUsage(vk::BufferUsageFlagBits::eStorageBuffer)
-			.setSize(size)
-			.setSharingMode(vk::SharingMode::eExclusive);
-
 		auto& buffer = mPrivate->getBuffer(Private::ModelBuffer::MOTION_WORK);
-		buffer.mBuffer = device->createBuffer(bufferInfo);
+		buffer.create(gpu, device, mw, vk::BufferUsageFlagBits::eStorageBuffer);
 
-		vk::MemoryRequirements memoryRequest = device->getBufferMemoryRequirements(buffer.mBuffer);
-		vk::MemoryAllocateInfo memAlloc = vk::MemoryAllocateInfo()
-			.setAllocationSize(memoryRequest.size)
-			.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memoryRequest, vk::MemoryPropertyFlagBits::eHostVisible));
-		buffer.mMemory = device->allocateMemory(memAlloc);
-
-		char* mem = reinterpret_cast<char*>(device->mapMemory(buffer.mMemory, 0, memoryRequest.size, vk::MemoryMapFlags()));
-		{
-			memcpy_s(mem, size, mw.data(), size);
-		}
-		device->unmapMemory(buffer.mMemory);
-		device->bindBufferMemory(buffer.mBuffer, buffer.mMemory, 0);
-
-		buffer.mBufferInfo.setBuffer(buffer.mBuffer);
-		buffer.mBufferInfo.setOffset(0);
-		buffer.mBufferInfo.setRange(size);
 	}
 
 
 	// ModelInfo
 	{
-		ModelInfo mi;
-		mi.mInstanceMaxNum = instanceNum;
-		mi.mInstanceNum = instanceNum;
-		mi.mNodeNum = mPrivate->mNodeRoot.mNodeList.size();
-		mi.mBoneNum = mPrivate->mBone.size();
-		mi.mMeshNum = mPrivate->mMeshNum;
+		std::vector<ModelInfo> mi(1);
+		mi[0].mInstanceMaxNum = instanceNum;
+		mi[0].mInstanceNum = instanceNum;
+		mi[0].mNodeNum = mPrivate->mNodeRoot.mNodeList.size();
+		mi[0].mBoneNum = mPrivate->mBone.size();
+		mi[0].mMeshNum = mPrivate->mMeshNum;
 		glm::vec3 max(-10e10f);
 		glm::vec3 min(10e10f);
 		for (auto& v : vertex)
@@ -1090,33 +759,11 @@ void cModel::load(const std::string& filename)
 			min.y = glm::min(min.y, v.m_position.y);
 			min.z = glm::min(min.z, v.m_position.z);
 		}
-
-		mi.mAabb = glm::vec4((max - min).xyz, glm::length((max - min) / 2.f));
-		mi.mInvGlobalMatrix = glm::inverse(mPrivate->mNodeRoot.getRootNode()->mTransformation);
-
-		vk::BufferCreateInfo bufferInfo = vk::BufferCreateInfo()
-			.setUsage(vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst)
-			.setSize(sizeof(mi))
-			.setSharingMode(vk::SharingMode::eExclusive);
+		mi[0].mAabb = glm::vec4((max - min).xyz, glm::length((max - min) / 2.f));
+		mi[0].mInvGlobalMatrix = glm::inverse(mPrivate->mNodeRoot.getRootNode()->mTransformation);
 
 		auto& buffer = mPrivate->getBuffer(Private::ModelBuffer::MODEL_INFO);
-		buffer.mBuffer = device->createBuffer(bufferInfo);
-
-		vk::MemoryRequirements memoryRequest = device->getBufferMemoryRequirements(buffer.mBuffer);
-		vk::MemoryAllocateInfo memAlloc = vk::MemoryAllocateInfo()
-			.setAllocationSize(memoryRequest.size)
-			.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memoryRequest, vk::MemoryPropertyFlagBits::eHostVisible));
-		buffer.mMemory = device->allocateMemory(memAlloc);
-		char* mem = reinterpret_cast<char*>(device->mapMemory(buffer.mMemory, 0, sizeof(mi), vk::MemoryMapFlags()));
-		{
-			memcpy_s(mem, sizeof(mi), &mi, sizeof(mi));
-		}
-		device->unmapMemory(buffer.mMemory);
-		device->bindBufferMemory(buffer.mBuffer, buffer.mMemory, 0);
-
-		buffer.mBufferInfo.setBuffer(buffer.mBuffer);
-		buffer.mBufferInfo.setOffset(0);
-		buffer.mBufferInfo.setRange(sizeof(mi));
+		buffer.create(gpu, device, mi, vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eStorageBuffer);
 	}
 
 	//BoneMap
@@ -1131,8 +778,7 @@ void cModel::load(const std::string& filename)
 		vk::MemoryRequirements memoryRequest = device->getBufferMemoryRequirements(buffer.mBuffer);
 		vk::MemoryAllocateInfo memAlloc = vk::MemoryAllocateInfo()
 			.setAllocationSize(memoryRequest.size)
-			//			.memoryTypeIndex(gpu.getMemoryTypeIndex(memoryRequest, vk::MemoryPropertyFlagBits::eDeviceLocal));
-			.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memoryRequest, vk::MemoryPropertyFlagBits::eHostVisible));
+			.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memoryRequest, vk::MemoryPropertyFlagBits::eDeviceLocal));
 		buffer.mMemory = device->allocateMemory(memAlloc);
 		device->bindBufferMemory(buffer.mBuffer, buffer.mMemory, 0);
 
@@ -1145,33 +791,9 @@ void cModel::load(const std::string& filename)
 	{
 		std::vector<NodeLocalTransformBuffer> nt(mPrivate->mNodeRoot.mNodeList.size() * instanceNum);
 		std::for_each(nt.begin(), nt.end(), [](NodeLocalTransformBuffer& v) { v.localAnimated_ = glm::mat4(1.f);  });
-		size_t size = vector_sizeof(nt);
 
-		vk::BufferCreateInfo bufferInfo = vk::BufferCreateInfo()
-			.setUsage(vk::BufferUsageFlagBits::eStorageBuffer)
-// 			.setQueueFamilyIndexCount(1)
-// 			.setPQueueFamilyIndices(&device.getQueueFamilyIndex())
-			.setSize(size)
-			.setSharingMode(vk::SharingMode::eExclusive);
 		auto& buffer = mPrivate->getBuffer(Private::ModelBuffer::NODE_LOCAL_TRANSFORM);
-		buffer.mBuffer = device->createBuffer(bufferInfo);
-
-		vk::MemoryRequirements memoryRequest = device->getBufferMemoryRequirements(buffer.mBuffer);
-		vk::MemoryAllocateInfo memAlloc = vk::MemoryAllocateInfo()
-			.setAllocationSize(memoryRequest.size)
-			.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memoryRequest, vk::MemoryPropertyFlagBits::eHostVisible));
-		buffer.mMemory = device->allocateMemory(memAlloc);
-
-		char* mem = reinterpret_cast<char*>(device->mapMemory(buffer.mMemory, 0, memoryRequest.size, vk::MemoryMapFlags()));
-		{
-			memcpy_s(mem, size, nt.data(), size);
-		}
-		device->unmapMemory(buffer.mMemory);
-		device->bindBufferMemory(buffer.mBuffer, buffer.mMemory, 0);
-
-		buffer.mBufferInfo.setBuffer(buffer.mBuffer);
-		buffer.mBufferInfo.setOffset(0);
-		buffer.mBufferInfo.setRange(size);
+		buffer.create(gpu, device, nt, vk::BufferUsageFlagBits::eStorageBuffer);
 	}
 
 
@@ -1179,77 +801,22 @@ void cModel::load(const std::string& filename)
 	{
 		std::vector<NodeGlobalTransformBuffer> nt(mPrivate->mNodeRoot.mNodeList.size() * instanceNum);
 		std::for_each(nt.begin(), nt.end(), [](NodeGlobalTransformBuffer& v) { v.globalAnimated_ = glm::mat4(1.f);  });
-		size_t size = vector_sizeof(nt);
 
-		vk::BufferCreateInfo bufferInfo = vk::BufferCreateInfo()
-			.setUsage(vk::BufferUsageFlagBits::eStorageBuffer)
-// 			.setQueueFamilyIndexCount(familyIndex.size())
-// 			.setPQueueFamilyIndices(familyIndex.data())
-			.setSize(size)
-			.setSharingMode(vk::SharingMode::eExclusive);
 		auto& buffer = mPrivate->getBuffer(Private::ModelBuffer::NODE_GLOBAL_TRANSFORM);
-		buffer.mBuffer = device->createBuffer(bufferInfo);
-
-		vk::MemoryRequirements memoryRequest = device->getBufferMemoryRequirements(buffer.mBuffer);
-		vk::MemoryAllocateInfo memAlloc = vk::MemoryAllocateInfo()
-			.setAllocationSize(memoryRequest.size)
-			.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memoryRequest, vk::MemoryPropertyFlagBits::eHostVisible));
-		buffer.mMemory = device->allocateMemory(memAlloc);
-
-		char* mem = reinterpret_cast<char*>(device->mapMemory(buffer.mMemory, 0, memoryRequest.size, vk::MemoryMapFlags()));
-		{
-			memcpy_s(mem, size, nt.data(), size);
-		}
-		device->unmapMemory(buffer.mMemory);
-		device->bindBufferMemory(buffer.mBuffer, buffer.mMemory, 0);
-
-		buffer.mBufferInfo.setBuffer(buffer.mBuffer);
-		buffer.mBufferInfo.setOffset(0);
-		buffer.mBufferInfo.setRange(size);
+		buffer.create(gpu, device, nt, vk::BufferUsageFlagBits::eStorageBuffer);
 	}
 	// world
 	{
 		std::vector<glm::mat4> world(instanceNum);
-// 		std::for_each(world.begin(), world.end(),
-// 			[](decltype(world)::value_type& m)
-// 		{
-// 			m = glm::transpose(glm::mat4(glm::translate(glm::mat4(1.f), glm::ballRand(3000.f))));
-// 			m = glm::translate(glm::mat4(1.f), glm::ballRand(3000.f));
-// 		}
-// 		);
-		size_t size = vector_sizeof(world);
 
-		vk::BufferCreateInfo bufferInfo = vk::BufferCreateInfo()
-			.setUsage(vk::BufferUsageFlagBits::eStorageBuffer)
-			.setSize(size)
-			.setSharingMode(vk::SharingMode::eExclusive);
 		auto& buffer = mPrivate->getBuffer(Private::ModelBuffer::WORLD);
-		buffer.mBuffer = device->createBuffer(bufferInfo);
+		buffer.create(gpu, device, world, vk::BufferUsageFlagBits::eStorageBuffer);
 
-		vk::MemoryRequirements memoryRequest = device->getBufferMemoryRequirements(buffer.mBuffer);
-		vk::MemoryAllocateInfo memAlloc = vk::MemoryAllocateInfo()
-			.setAllocationSize(memoryRequest.size)
-			.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memoryRequest, vk::MemoryPropertyFlagBits::eHostVisible));
-		buffer.mMemory = device->allocateMemory(memAlloc);
-
-		char* mem = reinterpret_cast<char*>(device->mapMemory(buffer.mMemory, 0, memoryRequest.size, vk::MemoryMapFlags()));
-		{
-			memcpy_s(mem, size, world.data(), size);
-		}
-		device->unmapMemory(buffer.mMemory);
-		device->bindBufferMemory(buffer.mBuffer, buffer.mMemory, 0);
-
-		buffer.mBufferInfo.setBuffer(buffer.mBuffer);
-		buffer.mBufferInfo.setOffset(0);
-		buffer.mBufferInfo.setRange(size);
 	}
 
 
 	mPrivate->mVertexNum = std::move(vertexSize);
 	mPrivate->mIndexNum = std::move(indexSize);
-
-//	m_cmd[0].end();
-
 
 	auto NodeNum = mPrivate->mNodeRoot.mNodeList.size();
 	auto BoneNum = mPrivate->mBone.size();
@@ -1294,7 +861,7 @@ void cModel::load(const std::string& filename)
 	}
 
 	{
-		auto cmd_pool = sThreadData::Order().getCmdPoolCompiled(device.getQueueFamilyIndex())[0];
+		auto cmd_pool = sThreadLocal::Order().getCmdPoolCompiled(device.getQueueFamilyIndex())[0];
 		//		for (size_t i = 0; i < cmd_pool.size(); i++)
 		{
 			// present barrier cmd
@@ -1312,10 +879,17 @@ void cModel::load(const std::string& filename)
 	submit_info.commandBufferCount = 1;
 	submit_info.pCommandBuffers = &cmd;
 
-// 	vk::FenceCreateInfo fence_info;
-// 	mPrivate->m_fence = device->createFence(fence_info);
+	vk::FenceCreateInfo fence_info;
+	vk::Fence fence = device->createFence(fence_info);
 
-	queue.submit(submit_info, vk::Fence());
+	queue.submit(submit_info, fence);
+	std::unique_ptr<Deleter> deleter = std::make_unique<Deleter>();
+	deleter->pool = cmd_pool;
+	deleter->cmd.push_back(cmd);
+	deleter->device = device.getHandle();
+	deleter->fence = fence;
+	sGlobal::Order().destroyResource(std::move(deleter));
+
 	auto e = std::chrono::system_clock::now();
 	auto t = std::chrono::duration_cast<std::chrono::microseconds>(e - s);
 	sDebug::Order().print(sDebug::FLAG_LOG | sDebug::SOURCE_MODEL, "[Load Complete %6.2fs] %s NodeNum = %d BoneNum = %d \n", t.count() / 1000.f / 1000.f, filename.c_str(), NodeNum, BoneNum);

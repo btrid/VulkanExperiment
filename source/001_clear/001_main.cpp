@@ -18,7 +18,7 @@
 //#include "Camera.h"
 #include <btrlib/ThreadPool.h>
 #include <btrlib/cDebug.h>
-#include <btrlib/sVulkan.h>
+#include <btrlib/sGlobal.h>
 #include <btrlib/cStopWatch.h>
 
 #pragma comment(lib, "vulkan-1.lib")

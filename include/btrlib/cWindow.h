@@ -6,7 +6,7 @@
 #include <unordered_map>
 
 #include <btrlib/Singleton.h>
-#include <btrlib/sVulkan.h>
+#include <btrlib/sGlobal.h>
 #include <btrlib/ThreadPool.h>
 struct cKeybordInput {
 	struct Param {
@@ -135,7 +135,7 @@ public:
 		vk::Win32SurfaceCreateInfoKHR surfaceInfo = vk::Win32SurfaceCreateInfoKHR()
 			.setHinstance(GetModuleHandle(nullptr))
 			.setHwnd(m_private->m_window);
-		m_surface = sVulkan::Order().getVKInstance().createWin32SurfaceKHR(surfaceInfo);
+		m_surface = sGlobal::Order().getVKInstance().createWin32SurfaceKHR(surfaceInfo);
 
 		m_swapchain.setup(descriptor, m_surface);
 	}

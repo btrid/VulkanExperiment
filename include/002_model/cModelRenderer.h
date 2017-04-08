@@ -3,7 +3,7 @@
 #include <vector>
 #include <list>
 #include <btrlib/Define.h>
-#include <btrlib/sVulkan.h>
+#include <btrlib/sGlobal.h>
 #include <btrlib/cCamera.h>
 
 template<typename T>

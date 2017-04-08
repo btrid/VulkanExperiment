@@ -8,14 +8,12 @@
 #include <future>
 
 #include <btrlib/Define.h>
-#include <btrlib/sVulkan.h>
+#include <btrlib/sGlobal.h>
 #include <btrlib/ThreadPool.h>
 #include <btrlib/rTexture.h>
 struct cMeshGPU {
 	vk::Buffer mBuffer;
 	vk::DeviceMemory mMemory;
-	std::vector<vk::VertexInputBindingDescription> mBinding;
-	std::vector<vk::VertexInputAttributeDescription> mAttribute;
 
 	vk::IndexType mIndexType;
 	int mIndirectCount;
@@ -24,8 +22,7 @@ struct cMeshGPU {
 	vk::Buffer mBufferIndirect;
 	vk::DeviceMemory mMemoryIndirect;
 	vk::DescriptorBufferInfo mIndirectInfo;
-	// çÌèúó\íË
-	vk::PipelineVertexInputStateCreateInfo mVertexInfo;
+
 };
 
 class  BufferBase : public GPUResource
@@ -111,7 +108,7 @@ protected:
 };
 struct StagingBuffer : public BufferBase
 {
-	void allocate(const cDevice& device, vk::DeviceSize size, vk::BufferUsageFlags usage)
+	void allocate(const cDevice& device, vk::DeviceSize size, vk::BufferUsageFlags usage = vk::BufferUsageFlagBits::eTransferSrc)
 	{
 		vk::BufferCreateInfo buffer_info = vk::BufferCreateInfo()
 			.setUsage(usage)
@@ -125,7 +122,7 @@ struct StagingBuffer : public BufferBase
 	}
 
 	template<typename T>
-	void insert(const std::vector<T>& data, vk::DeviceSize offset)
+	void update(const std::vector<T>& data, vk::DeviceSize offset)
 	{
 		void* mem = m_device->mapMemory(m_memory, 0, m_memory_request.size, vk::MemoryMapFlags());
 		{
@@ -134,6 +131,11 @@ struct StagingBuffer : public BufferBase
 		}
 		m_device->unmapMemory(m_memory);
 	}
+
+// 	void copyToBuffer(vk::Buffer dst, vk::CommandBuffer cmd)
+// 	{
+// 		cmd.copyBuffer(m_buffer, dst, )
+// 	}
 
 
 	std::unique_ptr<std::vector<char*>> get()const
@@ -175,7 +177,7 @@ struct DataResourceBuffer : public BufferBase
 		StagingBuffer* staging = GPUResource::Manager::Order().create<StagingBuffer>();
 		auto size = vector_sizeof(src);
 		staging->allocate(m_device, size, vk::BufferUsageFlagBits::eTransferSrc);
-		staging->insert(src, 0);
+		staging->update(src, 0);
 
 		vk::BufferCopy copy_info = vk::BufferCopy()
 			.setDstOffset(offset)
@@ -573,12 +575,6 @@ public:
 			// @ ToDo bufferÇÃdelete
 			;
 		}
-
-		const vk::PipelineVertexInputStateCreateInfo& getPipelineVertexInput()const {
-			return mMesh.mVertexInfo;
-		}
-
-
 	};
 	std::shared_ptr<Private> mPrivate;
 

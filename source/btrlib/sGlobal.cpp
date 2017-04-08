@@ -5,16 +5,17 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
-sVulkan::sVulkan()
+
+sGlobal::sGlobal()
 	: m_current_frame(0)
 {
 	{
 		vk::ApplicationInfo appInfo = { "Vulkan Test", 1, "EngineName", 0, VK_API_VERSION_1_0 };
 		vk::InstanceCreateInfo instanceInfo = {};
 		instanceInfo.setPApplicationInfo(&appInfo);
-		instanceInfo.setEnabledExtensionCount(btr::sValidationLayer::Order().getExtensionName().size());
+		instanceInfo.setEnabledExtensionCount((uint32_t)btr::sValidationLayer::Order().getExtensionName().size());
 		instanceInfo.setPpEnabledExtensionNames(btr::sValidationLayer::Order().getExtensionName().data());
-		instanceInfo.setEnabledLayerCount(btr::sValidationLayer::Order().getLayerName().size());
+		instanceInfo.setEnabledLayerCount((uint32_t)btr::sValidationLayer::Order().getLayerName().size());
 		instanceInfo.setPpEnabledLayerNames(btr::sValidationLayer::Order().getLayerName().data());
 		m_instance = vk::createInstance(instanceInfo);
 	}
@@ -32,6 +33,8 @@ sVulkan::sVulkan()
 				VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 //				VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
 			};
+//			auto extension_prop = gpu->enumerateDeviceExtensionProperties();
+
 			auto queueFamilyProperty = gpu->getQueueFamilyProperties();
 			gpu.m_device_list.reserve(queueFamilyProperty.size());
 			// デバイス
@@ -45,9 +48,9 @@ sVulkan::sVulkan()
 				std::vector<vk::DeviceQueueCreateInfo> queueInfo =
 				{
 					vk::DeviceQueueCreateInfo()
-					.setQueueCount(queuePriority.size())
+					.setQueueCount((uint32_t)queuePriority.size())
 					.setPQueuePriorities(queuePriority.data())
-					.setQueueFamilyIndex(i),
+					.setQueueFamilyIndex((uint32_t)i),
 				};
 
 				vk::PhysicalDeviceFeatures f = vk::PhysicalDeviceFeatures()
@@ -55,10 +58,10 @@ sVulkan::sVulkan()
 				std::vector<vk::PhysicalDeviceFeatures> features(prop.queueCount, f);
 
 				vk::DeviceCreateInfo deviceInfo = vk::DeviceCreateInfo()
-					.setQueueCreateInfoCount(queueInfo.size())
+					.setQueueCreateInfoCount((uint32_t)queueInfo.size())
 					.setPQueueCreateInfos(queueInfo.data())
 					.setPEnabledFeatures(features.data())
-					.setEnabledExtensionCount(extensionName.size())
+					.setEnabledExtensionCount((uint32_t)extensionName.size())
 					.setPpEnabledExtensionNames(extensionName.data())
 					;
 
@@ -79,13 +82,13 @@ sVulkan::sVulkan()
 	auto init_thread_data_func = [=](const cThreadPool::InitParam& param)
 	{
 		SetThreadIdealProcessor(::GetCurrentThread(), param.m_index);
-		auto& data = sThreadData::Order();
+		auto& data = sThreadLocal::Order();
 		data.m_thread_index = param.m_index;
 		data.m_gpu = m_gpu[0];
 
-		data.m_device[sThreadData::DEVICE_GRAPHICS] = data.m_gpu.getDevice(vk::QueueFlagBits::eGraphics)[0];
-		data.m_device[sThreadData::DEVICE_COMPUTE] = data.m_gpu.getDevice(vk::QueueFlagBits::eCompute)[0];
-		data.m_device[sThreadData::DEVICE_TRANSFAR] = data.m_gpu.getDevice(vk::QueueFlagBits::eTransfer)[0];
+		data.m_device[sThreadLocal::DEVICE_GRAPHICS] = data.m_gpu.getDevice(vk::QueueFlagBits::eGraphics)[0];
+		data.m_device[sThreadLocal::DEVICE_COMPUTE] = data.m_gpu.getDevice(vk::QueueFlagBits::eCompute)[0];
+		data.m_device[sThreadLocal::DEVICE_TRANSFAR] = data.m_gpu.getDevice(vk::QueueFlagBits::eTransfer)[0];
 
 		data.m_cmd_pool_onetime.resize(data.m_gpu.m_device_list.size());
 		for (int family = 0; family < data.m_cmd_pool_onetime.size(); family++)
@@ -113,17 +116,35 @@ sVulkan::sVulkan()
 			}
 		}
 
-		data.m_cmd_pool_tempolary.resize(data.m_gpu.m_device_list.size());
-		for (int family = 0; family < data.m_cmd_pool_onetime.size(); family++)
-		{
-			vk::CommandPoolCreateInfo cmd_pool_info;
-			cmd_pool_info.queueFamilyIndex = family;
-			cmd_pool_info.flags = vk::CommandPoolCreateFlagBits::eTransient;
-			data.m_cmd_pool_tempolary[family] = data.m_gpu.getDeviceByFamilyIndex(family)->createCommandPool(cmd_pool_info);
-		}
+// 		data.m_cmd_pool_tempolary.resize(data.m_gpu.m_device_list.size());
+// 		for (size_t family = 0; family < data.m_cmd_pool_tempolary.size(); family++)
+// 		{
+// 			vk::CommandPoolCreateInfo cmd_pool_info;
+// 			cmd_pool_info.queueFamilyIndex = (uint32_t)family;
+// 			cmd_pool_info.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
+// 			data.m_cmd_pool_tempolary[family] = data.m_gpu.getDeviceByFamilyIndex(family)->createCommandPool(cmd_pool_info);
+// 			for (int frame = 0; frame < FRAME_MAX; frame++)
+// 			{
+// 				vk::CommandBufferAllocateInfo cmd_buffer_info;
+// 				cmd_buffer_info.commandBufferCount = 100;
+// 				cmd_buffer_info.commandPool = data.m_cmd_pool_tempolary[family];
+// 				cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
+// 				data.m_cmd_tempolary[frame] = data.m_gpu.getDeviceByFamilyIndex(family)->allocateCommandBuffers(cmd_buffer_info);
+// 			}
+// 		}
 	};
 
 	m_thread_pool.start(std::thread::hardware_concurrency()-1, init_thread_data_func);
+
+	m_cmd_pool_tempolary.resize(m_gpu[0].m_device_list.size());
+	for (size_t family = 0; family < m_cmd_pool_tempolary.size(); family++)
+	{
+		vk::CommandPoolCreateInfo cmd_pool_info;
+		cmd_pool_info.queueFamilyIndex = (uint32_t)family;
+		cmd_pool_info.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
+		m_cmd_pool_tempolary[family] = m_gpu[0].getDeviceByFamilyIndex(family)->createCommandPool(cmd_pool_info);
+	}
+
 }
 
 std::vector<uint32_t> cGPU::getQueueFamilyIndexList(vk::QueueFlags flag, const std::vector<uint32_t>& useIndex)
@@ -236,9 +257,20 @@ vk::Format cGPU::getSupportedDepthFormat(const std::vector<vk::Format>& depthFor
 	return vk::Format::eUndefined;
 }
 
-void sVulkan::swap()
+void sGlobal::swap()
 {
+	auto prev = m_current_frame;
 	m_current_frame = ++m_current_frame % FRAME_MAX;
+	auto& deletelist = m_cmd_delete[m_current_frame];
+	for (auto it = deletelist.begin(); it != deletelist.end();)
+	{
+		if ((*it)->isReady()) {
+			it = deletelist.erase(it);
+		}
+		else {
+			it++;
+		}
+	}
 	GPUResource::Manager::Order().swap(m_current_frame);
 }
 vk::ShaderModule loadShader(const vk::Device& device, const std::string& filename)

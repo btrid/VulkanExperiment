@@ -17,7 +17,7 @@
 #include <btrlib/cWindow.h>
 #include <btrlib/cThreadPool.h>
 #include <btrlib/cDebug.h>
-#include <btrlib/sVulkan.h>
+#include <btrlib/sGlobal.h>
 
 #include <002_model/cModelRenderer.h>
 #include <002_model/cModelRender.h>
@@ -31,7 +31,7 @@ int main()
 {
 	btr::setResourcePath("..\\..\\resource\\002_model\\");
 	sWindow& w = sWindow::Order();
-	vk::Instance instance = sVulkan::Order().getVKInstance();
+	vk::Instance instance = sGlobal::Order().getVKInstance();
 
 #if _DEBUG
 	cDebug debug(instance);
@@ -40,7 +40,7 @@ int main()
 	cWindow window;
 	cWindow::CreateInfo windowInfo;
 	windowInfo.surface_format_request = vk::SurfaceFormatKHR{ vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear };
-	windowInfo.gpu = sVulkan::Order().getGPU(0);
+	windowInfo.gpu = sGlobal::Order().getGPU(0);
 	windowInfo.size = vk::Extent2D(640, 480);
 	windowInfo.window_name = L"Vulkan Test";
 	windowInfo.class_name = L"VulkanMainWindow";
@@ -48,7 +48,7 @@ int main()
 	window.setup(windowInfo);
 
 
-	cGPU& gpu = sVulkan::Order().getGPU(0);
+	cGPU& gpu = sGlobal::Order().getGPU(0);
 	cDevice device = gpu.getDevice(vk::QueueFlagBits::eGraphics)[0];
 	vk::Queue queue = device->getQueue(device.getQueueFamilyIndex(), 0);
 
@@ -169,7 +169,7 @@ int main()
 			task->set_value(std::move(model));
 		};
 		job.mFinish = load;
-		sVulkan::Order().getThreadPool().enque(std::move(job));
+		sGlobal::Order().getThreadPool().enque(std::move(job));
 	}
 
 	while (modelFuture.valid() && modelFuture.wait_for(std::chrono::milliseconds(10)) != std::future_status::ready) {
@@ -249,7 +249,7 @@ int main()
 	renderer.setup(render_pass);
 	renderer.addModel(model.get());
 
-	auto pool_list = sThreadData::Order().getCmdPoolOnetime(device.getQueueFamilyIndex());
+	auto pool_list = sThreadLocal::Order().getCmdPoolOnetime(device.getQueueFamilyIndex());
 	std::vector<vk::CommandBuffer> render_cmds(3);
 	for (int i = 0; i < 3; i++)
 	{
@@ -357,7 +357,7 @@ int main()
 		}
 
 		window.update();
-		sVulkan::Order().swap();
+		sGlobal::Order().swap();
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
 	}

@@ -5,9 +5,9 @@ void ModelRender::setup(cModelRenderer&  renderer)
 {
 	// setup graphics cmdbuffer 
 	{
-		cDevice graphics_device = sThreadData::Order().m_device[sThreadData::DEVICE_GRAPHICS];
+		cDevice graphics_device = sThreadLocal::Order().m_device[sThreadLocal::DEVICE_GRAPHICS];
 		{
-			auto& graphics_cmd_pool = sThreadData::Order().getCmdPoolCompiled(graphics_device.getQueueFamilyIndex());
+			auto& graphics_cmd_pool = sThreadLocal::Order().getCmdPoolCompiled(graphics_device.getQueueFamilyIndex());
 			vk::CommandBufferAllocateInfo cmd_alloc_info;
 			cmd_alloc_info.setCommandBufferCount(1);
 			cmd_alloc_info.setCommandPool(graphics_cmd_pool[0]);
@@ -98,9 +98,9 @@ void ModelRender::setup(cModelRenderer&  renderer)
 
 	//vk::CommandBuffer cModel::buildExecuteCmd()
 	{
-		cDevice compute_device = sThreadData::Order().m_device[sThreadData::DEVICE_COMPUTE];
+		cDevice compute_device = sThreadLocal::Order().m_device[sThreadLocal::DEVICE_COMPUTE];
 		{
-			auto& compute_cmd_pool = sThreadData::Order().getCmdPoolCompiled(compute_device.getQueueFamilyIndex());
+			auto& compute_cmd_pool = sThreadLocal::Order().getCmdPoolCompiled(compute_device.getQueueFamilyIndex());
 			vk::CommandBufferAllocateInfo cmd_alloc_info;
 			cmd_alloc_info.setCommandBufferCount(1);
 			cmd_alloc_info.setCommandPool(compute_cmd_pool[0]);
