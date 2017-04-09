@@ -25,8 +25,6 @@
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "FreeImage.lib")
 
-
-
 int main()
 {
 	btr::setResourcePath("..\\..\\resource\\002_model\\");

@@ -416,16 +416,6 @@ void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& r
 cModel::cModel()
 	: mPrivate(std::make_shared<Private>())
 {
-	{
-		//		Frustom frustom;
-		//		frustom.setCamera(Renderer::order()->camera());
-
-		//		glCreateBuffers(1, &frustomBO_);
-		//		glNamedBufferStorage(frustomBO_, sizeof(Plane) * 6, frustom.getPlane().data(), GL_MAP_READ_BIT | GL_MAP_WRITE_BIT | GL_MAP_COHERENT_BIT | GL_MAP_PERSISTENT_BIT);
-
-	}
-
-
 }
 cModel::~cModel()
 {}
@@ -664,11 +654,6 @@ void cModel::load(const std::string& filename)
 			mb[i].mEmissive = mPrivate->m_material[i].mEmissive;
 			mb[i].mShininess = mPrivate->m_material[i].mShininess;
 			mb[i].mSpecular = mPrivate->m_material[i].mSpecular;
-			//			mb[i].mAmbientTex = material[i].mAmbientTex.makeBindless();
-			//			mb[i].mDiffuseTex = material[i].mDiffuseTex.makeBindless();
-			//			mb[i].mNormalTex = material[i].mNormalTex.makeBindless();
-			//			mb[i].mHeightTex = material[i].mHeightTex.makeBindless();
-			//			mb[i].mSpecularTex = material[i].mSpecularTex.makeBindless();
 		}
 		auto& buffer = mPrivate->getBuffer(Private::ModelBuffer::MATERIAL);
 		buffer.create(gpu, device, mb, vk::BufferUsageFlagBits::eStorageBuffer);

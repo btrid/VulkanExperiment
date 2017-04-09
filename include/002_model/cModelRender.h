@@ -35,7 +35,6 @@ struct cModelRenderer : public cModelRenderer_t<ModelRender>
 	}
 	void draw(vk::CommandBuffer cmd)
 	{
-//		auto cmd = sThreadLocal::Order().allocateCmdOnetime(m_gpu.getDevice(vk::QueueFlagBits::eGraphics)[0]);
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_draw_pipeline.m_pipeline);
 		// draw
 		for (auto& render : m_model)

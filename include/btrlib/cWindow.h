@@ -15,6 +15,9 @@ struct cKeybordInput {
 	};
 	std::unordered_map<WPARAM, Param> mData;
 };
+struct cMouse 
+{
+};
 
 class cWindow
 {
@@ -63,6 +66,7 @@ private:
 
 	vk::SurfaceKHR m_surface;
 	cKeybordInput m_keybord;
+	cMouse m_mouse;
 	Swapchain m_swapchain;
 	CreateInfo m_descriptor;
 
@@ -178,7 +182,6 @@ public:
 				default:
 					break;
 				}
-				// ì‚Á‚½ƒXƒŒƒbƒh‚Å‚µ‚©“®‚©‚È‚¢
 				DispatchMessage(&msg);
 			}
 		}
