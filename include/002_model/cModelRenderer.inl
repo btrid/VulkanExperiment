@@ -1,7 +1,6 @@
 
-
-
 #include <btrlib/Define.h>
+#include <btrlib/Shape.h>
 
 template<typename T>
 void cModelRenderer_t<T>::cModelDrawPipeline::setup(vk::RenderPass render_pass)
@@ -255,61 +254,43 @@ void cModelRenderer_t<T>::cModelDrawPipeline::setup(vk::RenderPass render_pass)
 	{
 		// camera
 		auto* m_camera = cCamera::sCamera::Order().getCameraList()[0];
-		CameraGPU camera_gpu;
-		camera_gpu.setup(*m_camera);
 		{
-			uint32_t uniformSize = sizeof(CameraGPU);
-			auto graphicsQueue = gpu.getQueueFamilyIndexList(vk::QueueFlagBits::eGraphics);
-			vk::BufferCreateInfo buffer_info;
-			buffer_info.setQueueFamilyIndexCount(graphicsQueue.size());
-			buffer_info.setPQueueFamilyIndices(graphicsQueue.data());
-			buffer_info.setUsage(vk::BufferUsageFlagBits::eUniformBuffer);
-			buffer_info.setSize(uniformSize);
-			m_camera_uniform.mBuffer = device->createBuffer(buffer_info);
-
-			vk::MemoryRequirements memoryRequest = device->getBufferMemoryRequirements(m_camera_uniform.mBuffer);
-			vk::MemoryAllocateInfo memAlloc = vk::MemoryAllocateInfo()
-				.setAllocationSize(memoryRequest.size)
-				.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memoryRequest, vk::MemoryPropertyFlagBits::eHostVisible));
-			m_camera_uniform.mMemory = device->allocateMemory(memAlloc);
-
-			char* mem = reinterpret_cast<char*>(device->mapMemory(m_camera_uniform.mMemory, 0, memoryRequest.size, vk::MemoryMapFlags()));
-			{
-				memcpy_s(mem, uniformSize, &camera_gpu, uniformSize);
-			}
-			device->unmapMemory(m_camera_uniform.mMemory);
-			device->bindBufferMemory(m_camera_uniform.mBuffer, m_camera_uniform.mMemory, 0);
-
-			m_camera_uniform.mBufferInfo
-				.setOffset(0)
-				.setRange(vk::DeviceSize(uniformSize))
-				.setBuffer(m_camera_uniform.mBuffer);
-
+			CameraGPU camera_gpu;
+			camera_gpu.setup(*m_camera);
+			m_camera_uniform.create(gpu, device, sizeof(CameraGPU), vk::BufferUsageFlagBits::eUniformBuffer);
+			m_camera_uniform.update((void*)&camera_gpu, sizeof(CameraGPU), 0);
 		}
-
 		{
-			// ƒ‚ƒfƒ‹‚²‚Æ‚ÌDescriptor‚ÌÝ’è
-			vk::DescriptorSetAllocateInfo alloc_info = vk::DescriptorSetAllocateInfo()
-				.setDescriptorPool(m_descriptor_pool)
-				.setDescriptorSetCount(1)
-				.setPSetLayouts(&m_descriptor_set_layout[cModelRenderer::cModelDrawPipeline::DESCRIPTOR_SET_LAYOUT_PER_SCENE]);
-			m_draw_descriptor_set_per_scene = device->allocateDescriptorSets(alloc_info)[0];
+			Frustom frustom;
+			frustom.setCamera(*m_camera);
+			auto planes = frustom.getPlane();
 
-			std::vector<vk::DescriptorBufferInfo> uniformBufferInfo = {
-				m_camera_uniform.mBufferInfo,
-			};
-			std::vector<vk::WriteDescriptorSet> write_descriptor_set =
-			{
-				vk::WriteDescriptorSet()
-				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-				.setDescriptorCount(uniformBufferInfo.size())
-				.setPBufferInfo(uniformBufferInfo.data())
-				.setDstBinding(0)
-				.setDstSet(m_draw_descriptor_set_per_scene),
-			};
-			device->updateDescriptorSets(write_descriptor_set, {});
+			m_camera_frustom.create(gpu, device, vector_sizeof(planes), vk::BufferUsageFlagBits::eUniformBuffer);
+			m_camera_frustom.update((void*)planes.data(), vector_sizeof(planes), 0);
 		}
+	}
 
+	{
+		// ƒ‚ƒfƒ‹‚²‚Æ‚ÌDescriptor‚ÌÝ’è
+		vk::DescriptorSetAllocateInfo alloc_info = vk::DescriptorSetAllocateInfo()
+			.setDescriptorPool(m_descriptor_pool)
+			.setDescriptorSetCount(1)
+			.setPSetLayouts(&m_descriptor_set_layout[cModelRenderer::cModelDrawPipeline::DESCRIPTOR_SET_LAYOUT_PER_SCENE]);
+		m_draw_descriptor_set_per_scene = device->allocateDescriptorSets(alloc_info)[0];
+
+		std::vector<vk::DescriptorBufferInfo> uniformBufferInfo = {
+			m_camera_uniform.m_buffer_info,
+		};
+		std::vector<vk::WriteDescriptorSet> write_descriptor_set =
+		{
+			vk::WriteDescriptorSet()
+			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+			.setDescriptorCount(uniformBufferInfo.size())
+			.setPBufferInfo(uniformBufferInfo.data())
+			.setDstBinding(0)
+			.setDstSet(m_draw_descriptor_set_per_scene),
+		};
+		device->updateDescriptorSets(write_descriptor_set, {});
 	}
 
 }

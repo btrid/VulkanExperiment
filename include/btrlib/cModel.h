@@ -16,8 +16,8 @@ struct cMeshGPU {
 	vk::DeviceMemory mMemory;
 
 	vk::IndexType mIndexType;
-	int mIndirectCount;
-	int mBufferSize[3];
+	int32_t mIndirectCount;
+	int32_t mBufferSize[3];
 
 	vk::Buffer mBufferIndirect;
 	vk::DeviceMemory mMemoryIndirect;
@@ -309,7 +309,16 @@ struct cAnimation
 		MOTION_DATA_SRT,
 		NUM,
 	};
-	std::array<UniformBuffer, MotionBuffer::NUM> mMotionBuffer;
+	std::array<ConstantBuffer, MotionBuffer::NUM> mMotionBuffer;
+
+	cAnimation() = default;
+
+	cAnimation(const cAnimation&) = delete;
+	cAnimation& operator=(const cAnimation&) = delete;
+
+	cAnimation(cAnimation &&)noexcept = default;
+	cAnimation& operator=(cAnimation&&)noexcept = default;
+
 };
 class cModel
 {
@@ -471,10 +480,10 @@ public:
 			SUBMESH_NUM = 999,
 			CHILD_NUM = 999,
 		};
-		int			mNodeNo;
-		int			mParent;
-		int			mBoneIndex;
-		int			mNodeName;
+		int32_t		mNodeNo;
+		int32_t		mParent;
+		int32_t		mBoneIndex;
+		int32_t		mNodeName;
 
 		NodeInfo()
 			: mNodeNo(-1)
@@ -541,7 +550,7 @@ public:
 		};
 
 
-		std::array<UniformBuffer, static_cast<s32>(ModelBuffer::NUM)> mUniformBuffer;
+		std::array<ConstantBuffer, static_cast<s32>(ModelBuffer::NUM)> mUniformBuffer;
 		cAnimation m_animation_buffer;
 
 		std::string mFilename;
@@ -561,11 +570,11 @@ public:
 		vk::DeviceMemory m_compute_indirect_memory;
 		vk::DescriptorBufferInfo m_compute_indirect_buffer_info;
 
-		const UniformBuffer& getBuffer(ModelBuffer buffer)const { return mUniformBuffer[static_cast<s32>(buffer)]; }
-		UniformBuffer& getBuffer(ModelBuffer buffer) { return mUniformBuffer[static_cast<s32>(buffer)]; }
+		const ConstantBuffer& getBuffer(ModelBuffer buffer)const { return mUniformBuffer[static_cast<s32>(buffer)]; }
+		ConstantBuffer& getBuffer(ModelBuffer buffer) { return mUniformBuffer[static_cast<s32>(buffer)]; }
 
-		const UniformBuffer& getMotionBuffer(cAnimation::MotionBuffer buffer)const { return m_animation_buffer.mMotionBuffer[buffer]; }
-		UniformBuffer& getMotionBuffer(cAnimation::MotionBuffer buffer) { return m_animation_buffer.mMotionBuffer[buffer]; }
+		const ConstantBuffer& getMotionBuffer(cAnimation::MotionBuffer buffer)const { return m_animation_buffer.mMotionBuffer[buffer]; }
+		ConstantBuffer& getMotionBuffer(cAnimation::MotionBuffer buffer) { return m_animation_buffer.mMotionBuffer[buffer]; }
 
 		Private()
 		{

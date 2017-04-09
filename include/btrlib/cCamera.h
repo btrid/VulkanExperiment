@@ -42,6 +42,12 @@ public:
 	int mWidth;
 
 	float getAspect()const { return (float)mWidth / mHeight; }
+	float getFov()const { return mFov; }
+	float getNear()const { return mNear; }
+	float getFar()const { return mFar; }
+	glm::vec3 getPosition()const { return mPosition; }
+	glm::vec3 getTarget()const { return mTarget; }
+	glm::vec3 getUp()const { return mUp; }
 public:
 
 	void control(float deltaTime)

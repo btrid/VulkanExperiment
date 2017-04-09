@@ -130,6 +130,7 @@
     <ClInclude Include="..\..\include\btrlib\cWindow.h" />
     <ClInclude Include="..\..\include\btrlib\Define.h" />
     <ClInclude Include="..\..\include\btrlib\DefineMath.h" />
+    <ClInclude Include="..\..\include\btrlib\Shape.h" />
     <ClInclude Include="..\..\include\btrlib\Singleton.h" />
     <ClInclude Include="..\..\include\btrlib\sValidationLayer.h" />
     <ClInclude Include="..\..\include\btrlib\sGlobal.h" />
@@ -142,6 +143,7 @@
     <ClCompile Include="..\..\source\btrlib\Define.cpp" />
     <ClCompile Include="..\..\source\btrlib\rTexture.cpp" />
     <ClCompile Include="..\..\source\btrlib\sGlobal.cpp" />
+    <ClCompile Include="..\..\source\btrlib\Shape.cpp" />
     <ClCompile Include="..\..\source\btrlib\ThreadPool.cpp" />
   </ItemGroup>
   <ItemGroup>

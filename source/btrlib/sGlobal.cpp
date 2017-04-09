@@ -142,7 +142,7 @@ sGlobal::sGlobal()
 		vk::CommandPoolCreateInfo cmd_pool_info;
 		cmd_pool_info.queueFamilyIndex = (uint32_t)family;
 		cmd_pool_info.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
-		m_cmd_pool_tempolary[family] = m_gpu[0].getDeviceByFamilyIndex(family)->createCommandPool(cmd_pool_info);
+		m_cmd_pool_tempolary[family] = m_gpu[0].getDeviceByFamilyIndex((uint32_t)family)->createCommandPool(cmd_pool_info);
 	}
 
 }

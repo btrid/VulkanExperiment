@@ -260,17 +260,17 @@ std::vector<cModel::Material> loadMaterial(const aiScene* scene, const std::stri
 
 void _loadNodeRecurcive(aiNode* ainode, RootNode& root, int parent)
 {
-	auto nodeIndex = root.mNodeList.size();
+	auto nodeIndex = (s32)root.mNodeList.size();
 	Node node;
 	node.mName = ainode->mName.C_Str();
 	node.mTransformation = AI_TO(ainode->mTransformation);
 	node.mParent = parent;
 	if (parent >= 0) {
-		root.mNodeList[parent].mChildren.push_back((u32)nodeIndex);
+		root.mNodeList[parent].mChildren.push_back(nodeIndex);
 	}
 	root.mNodeList.push_back(node);
 
-	for (u32 i = 0; i < ainode->mNumChildren; i++) {
+	for (s32 i = 0; i < (int)ainode->mNumChildren; i++) {
 		_loadNodeRecurcive(ainode->mChildren[i], root, nodeIndex);
 	}
 }
@@ -292,7 +292,7 @@ void loadNodeBufferRecurcive(aiNode* ainode, std::vector<cModel::NodeInfo>& node
 	auto& node = nodeBuffer.back();
 	node.mNodeNo = (s32)nodeBuffer.size() - 1;
 	node.mParent = parentIndex;
-	node.mNodeName = std::hash<std::string>()(ainode->mName.C_Str());
+//	node.mNodeName = std::hash<std::string>()(ainode->mName.C_Str());
 	for (size_t i = 0; i < ainode->mNumChildren; i++) {
 		loadNodeBufferRecurcive(ainode->mChildren[i], nodeBuffer, node.mNodeNo);
 	}
@@ -307,9 +307,9 @@ std::vector<cModel::NodeInfo> loadNodeInfo(aiNode* ainode)
 	nodeBuffer.reserve(countAiNode(ainode));
 	nodeBuffer.emplace_back();
 	auto& node = nodeBuffer.back();
-	node.mNodeNo = nodeBuffer.size() - 1;
+	node.mNodeNo = (int32_t)nodeBuffer.size() - 1;
 	node.mParent = -1;
-	node.mNodeName = std::hash<std::string>()(ainode->mName.C_Str());
+//	node.mNodeName = std::hash<std::string>()(ainode->mName.C_Str());
 	for (size_t i = 0; i < ainode->mNumChildren; i++) {
 		loadNodeBufferRecurcive(ainode->mChildren[i], nodeBuffer, node.mNodeNo);
 	}
@@ -317,11 +317,10 @@ std::vector<cModel::NodeInfo> loadNodeInfo(aiNode* ainode)
 	return nodeBuffer;
 }
 
-cAnimation loadMotion(const aiScene* scene, const RootNode& root)
+void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& root)
 {
-	cAnimation anim_buffer;
 	if (!scene->HasAnimations()) {
-		return anim_buffer;
+		return;
 	}
 	const cGPU& gpu = sThreadLocal::Order().m_gpu;
 	auto devices = gpu.getDevice(vk::QueueFlagBits::eGraphics | vk::QueueFlagBits::eCompute);
@@ -365,7 +364,6 @@ cAnimation loadMotion(const aiScene* scene, const RootNode& root)
 			motionInfoList.push_back(info);
 
 			assert(aiAnim->mNumPositionKeys == aiAnim->mNumRotationKeys && aiAnim->mNumPositionKeys == aiAnim->mNumScalingKeys); // pos, rot, scaleは同じ数の場合のみGPUの計算に対応してる
-																																 // MotionBuffer
 			for (size_t n = 0; n < aiAnim->mNumPositionKeys; n++)
 			{
 				cModel::MotionDataBuffer d;
@@ -412,8 +410,6 @@ cAnimation loadMotion(const aiScene* scene, const RootNode& root)
 		auto& buffer = anim_buffer.mMotionBuffer[cAnimation::MOTION_DATA_SRT];
 		buffer.create(gpu, device, motionDataBufferList, vk::BufferUsageFlagBits::eStorageBuffer);
 	}
-
-	return anim_buffer;
 }
 
 
@@ -464,7 +460,7 @@ void cModel::load(const std::string& filename)
 	mPrivate->m_material = loadMaterial(scene, filename, cmd);
 
 	mPrivate->mNodeRoot = loadNode(scene);
-	mPrivate->m_animation_buffer = loadMotion(scene, mPrivate->mNodeRoot);
+	loadMotion(mPrivate->m_animation_buffer, scene, mPrivate->mNodeRoot);
 
 	std::vector<NodeInfo> nodeInfo = loadNodeInfo(scene->mRootNode);
 
@@ -496,7 +492,7 @@ void cModel::load(const std::string& filename)
 
 		// ELEMENT_ARRAY_BUFFER
 		// 三角メッシュとして読み込む
-		auto offset = vertex.size();
+		auto offset = (u32)vertex.size();
 		for (u32 n = 0; n < mesh->mNumFaces; n++) {
 			index.push_back(mesh->mFaces[n].mIndices[0] + offset);
 			index.push_back(mesh->mFaces[n].mIndices[1] + offset);
@@ -529,7 +525,7 @@ void cModel::load(const std::string& filename)
 				int index = -1;
 				for (size_t k = 0; k < boneList.size(); k++) {
 					if (boneList[k].mName.compare(mesh->mBones[b]->mName.C_Str()) == 0) {
-						index = k;
+						index = (int)k;
 						break;
 					}
 
@@ -541,7 +537,7 @@ void cModel::load(const std::string& filename)
 					bone.mOffset = glm::transpose(aiTo(mesh->mBones[b]->mOffsetMatrix));
 					bone.mNodeIndex = mPrivate->mNodeRoot.getNodeIndexByName(mesh->mBones[b]->mName.C_Str());
 					boneList.emplace_back(bone);
-					index = boneList.size() - 1;
+					index = (int)boneList.size() - 1;
 					nodeInfo[bone.mNodeIndex].mBoneIndex = index;
 				}
 
@@ -617,8 +613,8 @@ void cModel::load(const std::string& filename)
 				indirect[i].m_draw_cmd.firstInstance = 0;
 				offset += indexSize[i];
 			}
-			mesh.mIndirectCount = indirect.size();
-			mesh.mBufferSize[2] = vector_sizeof(indirect);
+			mesh.mIndirectCount = (int32_t)indirect.size();
+			mesh.mBufferSize[2] = (int32_t)vector_sizeof(indirect);
 			s32 bufferSize = mesh.mBufferSize[2];
 			{
 				vk::BufferCreateInfo bufferInfo = vk::BufferCreateInfo()
@@ -773,18 +769,18 @@ void cModel::load(const std::string& filename)
 			.setSize(instanceNum * sizeof(s32))
 			.setSharingMode(vk::SharingMode::eExclusive);
 		auto& buffer = mPrivate->getBuffer(Private::ModelBuffer::BONE_MAP);
-		buffer.mBuffer = device->createBuffer(bufferInfo);
+		buffer.m_buffer = device->createBuffer(bufferInfo);
 
-		vk::MemoryRequirements memoryRequest = device->getBufferMemoryRequirements(buffer.mBuffer);
+		vk::MemoryRequirements memoryRequest = device->getBufferMemoryRequirements(buffer.m_buffer);
 		vk::MemoryAllocateInfo memAlloc = vk::MemoryAllocateInfo()
 			.setAllocationSize(memoryRequest.size)
 			.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memoryRequest, vk::MemoryPropertyFlagBits::eDeviceLocal));
-		buffer.mMemory = device->allocateMemory(memAlloc);
-		device->bindBufferMemory(buffer.mBuffer, buffer.mMemory, 0);
+		buffer.m_memory = device->allocateMemory(memAlloc);
+		device->bindBufferMemory(buffer.m_buffer, buffer.m_memory, 0);
 
-		buffer.mBufferInfo.setBuffer(buffer.mBuffer);
-		buffer.mBufferInfo.setOffset(0);
-		buffer.mBufferInfo.setRange(instanceNum * sizeof(s32));
+		buffer.m_buffer_info.setBuffer(buffer.m_buffer);
+		buffer.m_buffer_info.setOffset(0);
+		buffer.m_buffer_info.setRange(instanceNum * sizeof(s32));
 	}
 
 	//	NodeLocalTransformBuffer
