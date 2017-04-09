@@ -566,8 +566,8 @@ void cModel::load(const std::string& filename)
 	{
 		cMeshGPU& mesh = mPrivate->mMesh;
 		mesh.mIndexType = vk::IndexType::eUint32;
-		mesh.mBufferSize[0] = vector_sizeof(vertex);
-		mesh.mBufferSize[1] = vector_sizeof(index);
+		mesh.mBufferSize[0] = (int32_t)vector_sizeof(vertex);
+		mesh.mBufferSize[1] = (int32_t)vector_sizeof(index);
 
 		{
 			int bufferSize
@@ -764,23 +764,8 @@ void cModel::load(const std::string& filename)
 
 	//BoneMap
 	{
-		vk::BufferCreateInfo bufferInfo = vk::BufferCreateInfo()
-			.setUsage(vk::BufferUsageFlagBits::eStorageBuffer)
-			.setSize(instanceNum * sizeof(s32))
-			.setSharingMode(vk::SharingMode::eExclusive);
 		auto& buffer = mPrivate->getBuffer(Private::ModelBuffer::BONE_MAP);
-		buffer.m_buffer = device->createBuffer(bufferInfo);
-
-		vk::MemoryRequirements memoryRequest = device->getBufferMemoryRequirements(buffer.m_buffer);
-		vk::MemoryAllocateInfo memAlloc = vk::MemoryAllocateInfo()
-			.setAllocationSize(memoryRequest.size)
-			.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memoryRequest, vk::MemoryPropertyFlagBits::eDeviceLocal));
-		buffer.m_memory = device->allocateMemory(memAlloc);
-		device->bindBufferMemory(buffer.m_buffer, buffer.m_memory, 0);
-
-		buffer.m_buffer_info.setBuffer(buffer.m_buffer);
-		buffer.m_buffer_info.setOffset(0);
-		buffer.m_buffer_info.setRange(instanceNum * sizeof(s32));
+		buffer.create(gpu, device, instanceNum * sizeof(s32), vk::BufferUsageFlagBits::eStorageBuffer);
 	}
 
 	//	NodeLocalTransformBuffer

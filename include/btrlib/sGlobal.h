@@ -316,6 +316,7 @@ public:
 */
 struct ConstantBuffer
 {
+private:
 	vk::Buffer m_buffer;
 	vk::DeviceMemory m_memory;
 	vk::DescriptorBufferInfo m_buffer_info;
@@ -356,6 +357,7 @@ struct ConstantBuffer
 	ConstantBuffer(ConstantBuffer &&)noexcept = default;
 	ConstantBuffer& operator=(ConstantBuffer&&)noexcept = default;
 
+public:
 	ConstantBuffer()
 		: m_private(std::make_shared<Private>())
 	{}
@@ -365,6 +367,8 @@ struct ConstantBuffer
 		int a = 0;
 		a++;
 	}
+	vk::Buffer getBuffer()const { return m_buffer; }
+	vk::DescriptorBufferInfo getBufferInfo()const { return m_buffer_info; }
 
 private:
 	void create(const cGPU& gpu, const cDevice& device)

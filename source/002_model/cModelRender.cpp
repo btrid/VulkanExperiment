@@ -27,15 +27,15 @@ void ModelRender::setup(cModelRenderer&  renderer)
 			m_draw_descriptor_set_per_model = graphics_device->allocateDescriptorSets(alloc_info)[0];
 
 			std::vector<vk::DescriptorBufferInfo> uniformBufferInfo = {
-				mPrivate->getBuffer(Private::ModelBuffer::MODEL_INFO).m_buffer_info,
+				mPrivate->getBuffer(Private::ModelBuffer::MODEL_INFO).getBufferInfo(),
 			};
 
 			std::vector<vk::DescriptorBufferInfo> storagemBufferInfo = {
-//				mPrivate->getBuffer(Private::ModelBuffer::VS_MATERIAL).m_buffer_info,
-				mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM).m_buffer_info,
+//				mPrivate->getBuffer(Private::ModelBuffer::VS_MATERIAL).getBufferInfo(),
+				mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM).getBufferInfo(),
 			};
 			std::vector<vk::DescriptorBufferInfo> fStoragemBufferInfo = {
-				mPrivate->getBuffer(Private::ModelBuffer::MATERIAL).m_buffer_info,
+				mPrivate->getBuffer(Private::ModelBuffer::MATERIAL).getBufferInfo(),
 			};
 			std::vector<vk::DescriptorImageInfo> color_image_info = {
 				vk::DescriptorImageInfo(mPrivate->m_material[0].mDiffuseTex.m_sampler, mPrivate->m_material[0].mDiffuseTex.m_image_view, vk::ImageLayout::eShaderReadOnlyOptimal),
@@ -121,7 +121,7 @@ void ModelRender::setup(cModelRenderer&  renderer)
 		{
 			std::vector<vk::DescriptorBufferInfo> storages =
 			{
-				mPrivate->getBuffer(Private::ModelBuffer::MODEL_INFO).m_buffer_info,
+				mPrivate->getBuffer(Private::ModelBuffer::MODEL_INFO).getBufferInfo(),
 				mPrivate->mMesh.mIndirectInfo,
 			};
 
@@ -139,7 +139,7 @@ void ModelRender::setup(cModelRenderer&  renderer)
 		{
 			std::vector<vk::DescriptorBufferInfo> uniforms =
 			{
-				mPrivate->getBuffer(Private::ModelBuffer::MODEL_INFO).m_buffer_info,
+				mPrivate->getBuffer(Private::ModelBuffer::MODEL_INFO).getBufferInfo(),
 			};
 			desc = vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
@@ -152,8 +152,8 @@ void ModelRender::setup(cModelRenderer&  renderer)
 
 			std::vector<vk::DescriptorBufferInfo> storages =
 			{
-				mPrivate->getMotionBuffer(cAnimation::ANIMATION_INFO).m_buffer_info,
-				mPrivate->getBuffer(Private::ModelBuffer::PLAYING_ANIMATION).m_buffer_info,
+				mPrivate->getMotionBuffer(cAnimation::ANIMATION_INFO).getBufferInfo(),
+				mPrivate->getBuffer(Private::ModelBuffer::PLAYING_ANIMATION).getBufferInfo(),
 			};
 			desc = vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
@@ -168,7 +168,7 @@ void ModelRender::setup(cModelRenderer&  renderer)
 		{
 			std::vector<vk::DescriptorBufferInfo> uniforms =
 			{
-				mPrivate->getBuffer(Private::ModelBuffer::MODEL_INFO).m_buffer_info,
+				mPrivate->getBuffer(Private::ModelBuffer::MODEL_INFO).getBufferInfo(),
 			};
 			desc = vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
@@ -181,14 +181,14 @@ void ModelRender::setup(cModelRenderer&  renderer)
 
 			std::vector<vk::DescriptorBufferInfo> storages =
 			{
-				mPrivate->getMotionBuffer(cAnimation::ANIMATION_INFO).m_buffer_info,
-				mPrivate->getMotionBuffer(cAnimation::MOTION_INFO).m_buffer_info,
-				mPrivate->getMotionBuffer(cAnimation::MOTION_DATA_TIME).m_buffer_info,
-				mPrivate->getMotionBuffer(cAnimation::MOTION_DATA_SRT).m_buffer_info,
-				mPrivate->getBuffer(Private::ModelBuffer::PLAYING_ANIMATION).m_buffer_info,
-				mPrivate->getBuffer(Private::ModelBuffer::NODE_INFO).m_buffer_info,
-				mPrivate->getBuffer(Private::ModelBuffer::NODE_LOCAL_TRANSFORM).m_buffer_info,
-				mPrivate->getBuffer(Private::ModelBuffer::MOTION_WORK).m_buffer_info,
+				mPrivate->getMotionBuffer(cAnimation::ANIMATION_INFO).getBufferInfo(),
+				mPrivate->getMotionBuffer(cAnimation::MOTION_INFO).getBufferInfo(),
+				mPrivate->getMotionBuffer(cAnimation::MOTION_DATA_TIME).getBufferInfo(),
+				mPrivate->getMotionBuffer(cAnimation::MOTION_DATA_SRT).getBufferInfo(),
+				mPrivate->getBuffer(Private::ModelBuffer::PLAYING_ANIMATION).getBufferInfo(),
+				mPrivate->getBuffer(Private::ModelBuffer::NODE_INFO).getBufferInfo(),
+				mPrivate->getBuffer(Private::ModelBuffer::NODE_LOCAL_TRANSFORM).getBufferInfo(),
+				mPrivate->getBuffer(Private::ModelBuffer::MOTION_WORK).getBufferInfo(),
 			};
 			desc = vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
@@ -204,7 +204,7 @@ void ModelRender::setup(cModelRenderer&  renderer)
 		{
 			std::vector<vk::DescriptorBufferInfo> uniforms =
 			{
-				mPrivate->getBuffer(Private::ModelBuffer::MODEL_INFO).m_buffer_info,
+				mPrivate->getBuffer(Private::ModelBuffer::MODEL_INFO).getBufferInfo(),
 			};
 			desc = vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
@@ -217,10 +217,10 @@ void ModelRender::setup(cModelRenderer&  renderer)
 
 			std::vector<vk::DescriptorBufferInfo> storages =
 			{
-				mPrivate->getBuffer(Private::ModelBuffer::WORLD).m_buffer_info,
-				mPrivate->getBuffer(Private::ModelBuffer::NODE_INFO).m_buffer_info,
-				mPrivate->getBuffer(Private::ModelBuffer::NODE_LOCAL_TRANSFORM).m_buffer_info,
-				mPrivate->getBuffer(Private::ModelBuffer::NODE_GLOBAL_TRANSFORM).m_buffer_info,
+				mPrivate->getBuffer(Private::ModelBuffer::WORLD).getBufferInfo(),
+				mPrivate->getBuffer(Private::ModelBuffer::NODE_INFO).getBufferInfo(),
+				mPrivate->getBuffer(Private::ModelBuffer::NODE_LOCAL_TRANSFORM).getBufferInfo(),
+				mPrivate->getBuffer(Private::ModelBuffer::NODE_GLOBAL_TRANSFORM).getBufferInfo(),
 			};
 			desc = vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
@@ -237,12 +237,12 @@ void ModelRender::setup(cModelRenderer&  renderer)
 			std::vector<vk::DescriptorBufferInfo> uniforms = {};
 			std::vector<vk::DescriptorBufferInfo> storages =
 			{
-				mPrivate->getBuffer(Private::ModelBuffer::WORLD).m_buffer_info,
-				mPrivate->getBuffer(Private::ModelBuffer::NODE_INFO).m_buffer_info,
-				mPrivate->getBuffer(Private::ModelBuffer::BONE_INFO).m_buffer_info,
-				mPrivate->getBuffer(Private::ModelBuffer::BONE_MAP).m_buffer_info,
+				mPrivate->getBuffer(Private::ModelBuffer::WORLD).getBufferInfo(),
+				mPrivate->getBuffer(Private::ModelBuffer::NODE_INFO).getBufferInfo(),
+				mPrivate->getBuffer(Private::ModelBuffer::BONE_INFO).getBufferInfo(),
+				mPrivate->getBuffer(Private::ModelBuffer::BONE_MAP).getBufferInfo(),
 				mPrivate->mMesh.mIndirectInfo,
-				mPrivate->getBuffer(Private::ModelBuffer::MODEL_INFO).m_buffer_info,
+				mPrivate->getBuffer(Private::ModelBuffer::MODEL_INFO).getBufferInfo(),
 			};
 			desc = vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
@@ -258,7 +258,7 @@ void ModelRender::setup(cModelRenderer&  renderer)
 		{
 			std::vector<vk::DescriptorBufferInfo> uniforms =
 			{
-				mPrivate->getBuffer(Private::ModelBuffer::MODEL_INFO).m_buffer_info,
+				mPrivate->getBuffer(Private::ModelBuffer::MODEL_INFO).getBufferInfo(),
 			};
 			desc = vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
@@ -271,10 +271,10 @@ void ModelRender::setup(cModelRenderer&  renderer)
 
 			std::vector<vk::DescriptorBufferInfo> storages =
 			{
-				mPrivate->getBuffer(Private::ModelBuffer::NODE_GLOBAL_TRANSFORM).m_buffer_info,
-				mPrivate->getBuffer(Private::ModelBuffer::BONE_INFO).m_buffer_info,
-				mPrivate->getBuffer(Private::ModelBuffer::BONE_MAP).m_buffer_info,
-				mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM).m_buffer_info,
+				mPrivate->getBuffer(Private::ModelBuffer::NODE_GLOBAL_TRANSFORM).getBufferInfo(),
+				mPrivate->getBuffer(Private::ModelBuffer::BONE_INFO).getBufferInfo(),
+				mPrivate->getBuffer(Private::ModelBuffer::BONE_MAP).getBufferInfo(),
+				mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM).getBufferInfo(),
 			};
 			desc = vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
@@ -307,8 +307,8 @@ void ModelRender::setup(cModelRenderer&  renderer)
 			vk::BufferMemoryBarrier()
 			.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
 			.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eMemoryRead)
-			.setBuffer(mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM).m_buffer)
-			.setSize(mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM).m_buffer_info.range)
+			.setBuffer(mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM).getBuffer())
+			.setSize(mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM).getBufferInfo().range)
 			.setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
 			.setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED),
 		};
@@ -326,8 +326,8 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 		vk::BufferMemoryBarrier()
 		.setSrcAccessMask(vk::AccessFlagBits::eShaderRead)
 		.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
-		.setBuffer(mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM).m_buffer)
-		.setSize(mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM).m_buffer_info.range)
+		.setBuffer(mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM).getBuffer())
+		.setSize(mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM).getBufferInfo().range)
 	};
 
 	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands,
@@ -348,8 +348,8 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 				vk::BufferMemoryBarrier()
 				.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
 				.setDstAccessMask(vk::AccessFlagBits::eShaderRead)
-				.setBuffer(mPrivate->getBuffer(cModel::Private::ModelBuffer::MODEL_INFO).m_buffer)
-				.setSize(mPrivate->getBuffer(cModel::Private::ModelBuffer::MODEL_INFO).m_buffer_info.range),
+				.setBuffer(mPrivate->getBuffer(cModel::Private::ModelBuffer::MODEL_INFO).getBuffer())
+				.setSize(mPrivate->getBuffer(cModel::Private::ModelBuffer::MODEL_INFO).getBufferInfo().range),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
 				vk::DependencyFlags(), {}, barrier, {});
@@ -362,8 +362,8 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 		vk::BufferMemoryBarrier()
 		.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
 		.setDstAccessMask(vk::AccessFlagBits::eShaderRead)
-		.setBuffer(mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM).m_buffer)
-		.setSize(mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM).m_buffer_info.range)
+		.setBuffer(mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM).getBuffer())
+		.setSize(mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM).getBufferInfo().range)
 	};
 
 	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands,

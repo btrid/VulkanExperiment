@@ -279,7 +279,7 @@ void cModelRenderer_t<T>::cModelDrawPipeline::setup(vk::RenderPass render_pass)
 		m_draw_descriptor_set_per_scene = device->allocateDescriptorSets(alloc_info)[0];
 
 		std::vector<vk::DescriptorBufferInfo> uniformBufferInfo = {
-			m_camera_uniform.m_buffer_info,
+			m_camera_uniform.getBufferInfo(),
 		};
 		std::vector<vk::WriteDescriptorSet> write_descriptor_set =
 		{
