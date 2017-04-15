@@ -271,62 +271,6 @@ public:
 
 };
 
-
-class GPUResource
-{
-public:
-	class Manager : public Singleton<Manager>
-	{
-	protected:
-		Manager()
-		{}
-		friend Singleton<Manager>;
-		std::array<std::vector<GPUResource*>, 3> deffered;
-
-		std::mutex deffered_mutex;
-	public:
-		template<typename T, typename... Arg>
-		T* create(Arg... arg)
-		{
-			return new T(arg...);
-		}
-
-		template<typename T>
-		void destroy(T* resource)
-		{
-			std::unique_lock<std::mutex> lock(deffered_mutex);
-			deffered[sGlobal::Order().getCurrentFrame()].push_back(resource);
-		}
-
-		void swap(int frame)
-		{
-			frame = ++frame % 3;
-			auto& l = deffered[frame];
-			for (auto it : l)
-			{
-				delete it;
-			}
-			l.clear();
-		}
-	};
-protected:
-	GPUResource() = default;
-	virtual ~GPUResource() = default;
-// 	GPUResource(const GPUResource&) = delete;
-// 	GPUResource& operator=(const GPUResource&) = delete;
-
-	GPUResource(GPUResource&&) = default;
-	GPUResource& operator = (GPUResource&&) = default;
-protected:
-
-	virtual bool isEnd() const = 0;
-private:
-
-
-public:
-};
-
-
 template<typename T>
 struct UniformBuffer
 {
@@ -523,11 +467,8 @@ private:
 
 		~Private()
 		{
-//			if (m_cmd_pool)
 			{
 				std::unique_ptr<Deleter> deleter = std::make_unique<Deleter>();
-//				deleter->pool = m_cmd_pool;
-//				deleter->cmd.emplace_back(std::move(m_cmd));
 				deleter->device = m_device;
 				deleter->buffer = { m_buffer };
 				deleter->memory = { m_memory };

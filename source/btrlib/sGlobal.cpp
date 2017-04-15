@@ -268,7 +268,6 @@ void sGlobal::swap()
 			it++;
 		}
 	}
-	GPUResource::Manager::Order().swap(m_current_frame);
 }
 vk::ShaderModule loadShader(const vk::Device& device, const std::string& filename)
 {

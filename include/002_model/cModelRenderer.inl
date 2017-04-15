@@ -122,7 +122,7 @@ void cModelRenderer_t<T>::cModelDrawPipeline::setup(vk::RenderPass render_pass)
 				.setTopology(vk::PrimitiveTopology::eTriangleList);
 
 			// viewport
-			vk::Viewport viewport = vk::Viewport(0.f, 0.f, size.width, size.height, 0.f, 1.f);
+			vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)size.width, (float)size.height, 0.f, 1.f);
 			std::vector<vk::Rect2D> scissor = {
 				vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(size.width, size.height))
 			};
