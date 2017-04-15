@@ -32,6 +32,12 @@ struct cModelRenderer : public cModelRenderer_t<ModelRender>
 			CameraGPU camera_gpu;
 			camera_gpu.setup(*m_camera);
 			m_draw_pipeline.m_camera_uniform.update(camera_gpu);
+
+			Frustom frustom;
+			frustom.setup(*m_camera);
+			auto planes = frustom.getPlane();
+			m_draw_pipeline.m_camera_frustom.update(planes);
+
 		}
 
 		for (auto& render : m_model)

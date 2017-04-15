@@ -38,7 +38,7 @@ public:
 	Frustom()
 	{}
 
-	void setCamera(const cCamera& camera)
+	void setup(const cCamera& camera)
 	{
 		setProjection(camera.getFov(), camera.getAspect(), camera.getNear(), camera.getFar());
 		setView(camera.getPosition(), camera.getTarget(), camera.getUp());
@@ -145,7 +145,7 @@ struct cModelRenderer_t
 		std::array<vk::DescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_MAX> m_descriptor_set_layout;
 
 		UniformBuffer<CameraGPU>	m_camera_uniform;
-		ConstantBuffer	m_camera_frustom;
+		UniformBuffer<std::array<Plane, 6>>	m_camera_frustom;
 		void setup(vk::RenderPass render_pass);
 	};
 	struct cModelComputePipeline {

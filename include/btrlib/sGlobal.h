@@ -119,18 +119,12 @@ struct Deleter {
 	vk::CommandPool pool;
 	std::vector<vk::CommandBuffer> cmd;
 
-//	vk::Fence fence;
 	std::vector<vk::Fence> fence;
 	std::vector<vk::Buffer> buffer;
 	std::vector<vk::DeviceMemory> memory;
 
 	~Deleter() 
 	{
-// 		if (fence)
-// 		{
-// 			device.destroyFence(fence);
-// 			fence = vk::Fence();
-// 		}
 		if (!fence.empty())
 		{
 			for (auto& f : fence) {
@@ -143,10 +137,6 @@ struct Deleter {
 			device.freeCommandBuffers(pool, cmd);
 			cmd.clear();
 		}
-// 		if (buffer) {
-// 			device.destroyBuffer(buffer);
-// 			buffer = vk::Buffer();
-// 		}
 		if (!buffer.empty()) {
 			for (auto& b : buffer)
 			{
@@ -154,11 +144,6 @@ struct Deleter {
 			}
 			buffer.clear();
 		}
-// 		if (memory)
-// 		{
-// 			device.freeMemory(memory);
-// 			memory = vk::DeviceMemory();
-// 		}
 		if (!memory.empty()) {
 			for (auto& m : memory)
 			{
@@ -169,10 +154,9 @@ struct Deleter {
 	};
 	bool isReady()const
 	{
-//		return !fence || device.getFenceStatus(fence) == vk::Result::eSuccess;
 		for (auto& f : fence)
 		{
-			// todo : device lost
+			// todo : device lost?
 			if (device.getFenceStatus(f) != vk::Result::eSuccess) {
 				return false;
 			}
@@ -518,39 +502,36 @@ public:
 };
 
 /**
-
+	
 */
 struct ConstantBuffer
 {
 private:
-	vk::Buffer m_buffer;
-	vk::DeviceMemory m_memory;
-	vk::DescriptorBufferInfo m_buffer_info;
 
 	vk::PhysicalDevice m_gpu;
 	uint32_t m_family_index;
 	vk::Queue m_queue;
 
+	vk::DescriptorBufferInfo m_buffer_info;
+
 	struct Private
 	{
 		vk::Device m_device;
 
-		vk::CommandPool m_cmd_pool;
-		vk::CommandBuffer m_cmd;
+		vk::Buffer m_buffer;
+		vk::DeviceMemory m_memory;
 
 		~Private()
 		{
-			if (m_cmd_pool)
+//			if (m_cmd_pool)
 			{
 				std::unique_ptr<Deleter> deleter = std::make_unique<Deleter>();
-				deleter->pool = m_cmd_pool;
-				deleter->cmd.push_back(m_cmd);
+//				deleter->pool = m_cmd_pool;
+//				deleter->cmd.emplace_back(std::move(m_cmd));
 				deleter->device = m_device;
+				deleter->buffer = { m_buffer };
+				deleter->memory = { m_memory };
 				sGlobal::Order().destroyResource(std::move(deleter));
-
-				m_cmd_pool = vk::CommandPool();
-				m_cmd = vk::CommandBuffer();
-
 			}
 		}
 	};
@@ -573,7 +554,7 @@ public:
 		int a = 0;
 		a++;
 	}
-	vk::Buffer getBuffer()const { return m_buffer; }
+	vk::Buffer getBuffer()const { return m_buffer_info.buffer; }
 	vk::DescriptorBufferInfo getBufferInfo()const { return m_buffer_info; }
 
 private:
@@ -584,75 +565,7 @@ private:
 		m_family_index = device.getQueueFamilyIndex();
 		m_queue = device->getQueue(device.getQueueFamilyIndex(), device.getQueueNum() - 1);
 
-		{
-			// コマンドバッファの準備
-			m_private->m_cmd_pool = sGlobal::Order().getCmdPoolTempolary(m_family_index);
-			vk::CommandBufferAllocateInfo cmd_buffer_info;
-			cmd_buffer_info.commandBufferCount = 1;
-			cmd_buffer_info.commandPool = m_private->m_cmd_pool;
-			cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
-			m_private->m_cmd = m_private->m_device.allocateCommandBuffers(cmd_buffer_info)[0];
-		}
 	}
-public:
-	template<typename T>
-	void create(const cGPU& gpu, const cDevice& device, const std::vector<T>& data, vk::BufferUsageFlags flag)
-	{
-		create(gpu, device);
-
-		auto data_size = vector_sizeof(data);
-		{
-			// device_localなバッファの作成
-			vk::BufferCreateInfo buffer_info;
-			buffer_info.usage = flag | vk::BufferUsageFlagBits::eTransferDst;
-			buffer_info.size = data_size;
-
-			m_buffer = device->createBuffer(buffer_info);
-
-			vk::MemoryRequirements memory_request = device->getBufferMemoryRequirements(m_buffer);
-			vk::MemoryAllocateInfo memory_alloc;
-			memory_alloc.setAllocationSize(memory_request.size);
-			memory_alloc.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal));
-			m_memory = device->allocateMemory(memory_alloc);
-
-			device->bindBufferMemory(m_buffer, m_memory, 0);
-
-			m_buffer_info.setBuffer(m_buffer);
-			m_buffer_info.setOffset(0);
-			m_buffer_info.setRange(data_size);
-		}
-
-		{
-			update((void*)data.data(), data_size, 0);
-		}
-	}
-
-	void create(const cGPU& gpu, const cDevice& device, size_t data_size, vk::BufferUsageFlags flag)
-	{
-		create(gpu, device);
-
-		{
-			// device_localなバッファの作成
-			vk::BufferCreateInfo buffer_info;
-			buffer_info.usage = flag | vk::BufferUsageFlagBits::eTransferDst;
-			buffer_info.size = data_size;
-
-			m_buffer = device->createBuffer(buffer_info);
-
-			vk::MemoryRequirements memory_request = device->getBufferMemoryRequirements(m_buffer);
-			vk::MemoryAllocateInfo memory_alloc;
-			memory_alloc.setAllocationSize(memory_request.size);
-			memory_alloc.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal));
-			m_memory = device->allocateMemory(memory_alloc);
-
-			device->bindBufferMemory(m_buffer, m_memory, 0);
-
-			m_buffer_info.setBuffer(m_buffer);
-			m_buffer_info.setOffset(0);
-			m_buffer_info.setRange(data_size);
-		}
-	}
-
 	void update(void* data, size_t data_size, size_t offset)
 	{
 		vk::BufferCreateInfo staging_buffer_info;
@@ -673,19 +586,31 @@ public:
 		m_private->m_device.unmapMemory(staging_memory);
 		m_private->m_device.bindBufferMemory(staging_buffer, staging_memory, 0);
 
-		m_private->m_cmd.reset(vk::CommandBufferResetFlags());
+		vk::CommandPool cmd_pool;
+		std::vector<vk::CommandBuffer> cmd;
+		{
+			// コマンドバッファの準備
+			cmd_pool = sGlobal::Order().getCmdPoolTempolary(m_family_index);
+			vk::CommandBufferAllocateInfo cmd_buffer_info;
+			cmd_buffer_info.commandBufferCount = 1;
+			cmd_buffer_info.commandPool = cmd_pool;
+			cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
+			cmd = m_private->m_device.allocateCommandBuffers(cmd_buffer_info);
+
+		}
+		cmd[0].reset(vk::CommandBufferResetFlags());
 		vk::CommandBufferBeginInfo begin_info;
 		begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit | vk::CommandBufferUsageFlagBits::eSimultaneousUse;
-		m_private->m_cmd.begin(begin_info);
+		cmd[0].begin(begin_info);
 		vk::BufferCopy copy_info;
 		copy_info.size = data_size;
 		copy_info.srcOffset = 0;
 		copy_info.dstOffset = 0;
-		m_private->m_cmd.copyBuffer(staging_buffer, m_buffer, copy_info);
-		m_private->m_cmd.end();
+		cmd[0].copyBuffer(staging_buffer, m_private->m_buffer, copy_info);
+		cmd[0].end();
 		vk::SubmitInfo submit_info;
-		submit_info.commandBufferCount = 1;
-		submit_info.pCommandBuffers = &m_private->m_cmd;
+		submit_info.commandBufferCount = (uint32_t)cmd.size();
+		submit_info.pCommandBuffers = cmd.data();
 
 		vk::FenceCreateInfo fence_info;
 		vk::Fence fence = m_private->m_device.createFence(fence_info);
@@ -693,14 +618,55 @@ public:
 
 		{
 			std::unique_ptr<Deleter> deleter = std::make_unique<Deleter>();
+			deleter->pool = cmd_pool;
+			deleter->cmd = std::move(cmd);
 			deleter->device = m_private->m_device;
 			deleter->buffer = { staging_buffer };
-			deleter->memory = { staging_memory};
+			deleter->memory = { staging_memory };
 			deleter->fence.push_back(fence);
 			sGlobal::Order().destroyResource(std::move(deleter));
 		}
 
 	}
+
+public:
+	template<typename T>
+	void create(const cGPU& gpu, const cDevice& device, const std::vector<T>& data, vk::BufferUsageFlags flag)
+	{
+		create(gpu, device);
+		auto data_size = vector_sizeof(data);
+		create(gpu, device, data_size, flag);
+		{
+			update((void*)data.data(), data_size, 0);
+		}
+	}
+
+	void create(const cGPU& gpu, const cDevice& device, size_t data_size, vk::BufferUsageFlags flag)
+	{
+		create(gpu, device);
+
+		{
+			// device_localなバッファの作成
+			vk::BufferCreateInfo buffer_info;
+			buffer_info.usage = flag | vk::BufferUsageFlagBits::eTransferDst;
+			buffer_info.size = data_size;
+
+			m_private->m_buffer = device->createBuffer(buffer_info);
+
+			vk::MemoryRequirements memory_request = device->getBufferMemoryRequirements(m_private->m_buffer);
+			vk::MemoryAllocateInfo memory_alloc;
+			memory_alloc.setAllocationSize(memory_request.size);
+			memory_alloc.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal));
+			m_private->m_memory = device->allocateMemory(memory_alloc);
+
+			device->bindBufferMemory(m_private->m_buffer, m_private->m_memory, 0);
+
+			m_buffer_info.setBuffer(m_private->m_buffer);
+			m_buffer_info.setOffset(0);
+			m_buffer_info.setRange(data_size);
+		}
+	}
+
 };
 
 vk::ShaderModule loadShader(const vk::Device& device, const std::string& filename);

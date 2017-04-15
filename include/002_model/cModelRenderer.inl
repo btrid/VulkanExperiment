@@ -253,20 +253,9 @@ void cModelRenderer_t<T>::cModelDrawPipeline::setup(vk::RenderPass render_pass)
 	}
 	{
 		// camera
-		auto* m_camera = cCamera::sCamera::Order().getCameraList()[0];
 		{
-			CameraGPU camera_gpu;
-			camera_gpu.setup(*m_camera);
 			m_camera_uniform.create(gpu, device, vk::BufferUsageFlagBits::eUniformBuffer);
-//			m_camera_uniform.update((void*)&camera_gpu, sizeof(CameraGPU), 0);
-		}
-		{
-			Frustom frustom;
-			frustom.setCamera(*m_camera);
-			auto planes = frustom.getPlane();
-
-			m_camera_frustom.create(gpu, device, vector_sizeof(planes), vk::BufferUsageFlagBits::eUniformBuffer);
-			m_camera_frustom.update((void*)planes.data(), vector_sizeof(planes), 0);
+			m_camera_frustom.create(gpu, device, vk::BufferUsageFlagBits::eUniformBuffer);
 		}
 	}
 

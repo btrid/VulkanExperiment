@@ -265,6 +265,7 @@ int main()
 	fence_list.emplace_back(device->createFence(fence_info));
 	while (true)
 	{
+
 		auto* m_camera = cCamera::sCamera::Order().getCameraList()[0];
 		m_camera->control(window.getInput(), 0.16f);
 
