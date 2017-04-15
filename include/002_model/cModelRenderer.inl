@@ -129,7 +129,7 @@ void cModelRenderer_t<T>::cModelDrawPipeline::setup(vk::RenderPass render_pass)
 			vk::PipelineViewportStateCreateInfo viewportInfo;
 			viewportInfo.setViewportCount(1);
 			viewportInfo.setPViewports(&viewport);
-			viewportInfo.setScissorCount(scissor.size());
+			viewportInfo.setScissorCount((uint32_t)scissor.size());
 			viewportInfo.setPScissors(scissor.data());
 
 			// ラスタライズ

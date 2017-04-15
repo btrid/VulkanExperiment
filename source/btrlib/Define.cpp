@@ -1,5 +1,6 @@
 #include <btrlib/Define.h>
-namespace btr {
+namespace btr 
+{
 	static std::string s_path = "..\\..\\resource\\";
 	std::string getResourcePath()
 	{

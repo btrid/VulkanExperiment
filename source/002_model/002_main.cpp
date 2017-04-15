@@ -276,7 +276,7 @@ int main()
 			device->resetFences({ fence_list[backbuffer_index] });
 			device->resetCommandPool(pool_list[backbuffer_index], vk::CommandPoolResetFlagBits::eReleaseResources);
 
-			// begin cmd 
+			// begin cmd
 			vk::CommandBufferBeginInfo begin_info;
 			begin_info.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 			render_cmd.begin(begin_info);
@@ -292,7 +292,7 @@ int main()
 			present_to_render_barrier.setImage(window.getSwapchain().m_backbuffer_image[backbuffer_index]);
 
 			render_cmd.pipelineBarrier(
-				vk::PipelineStageFlagBits::eAllCommands,
+				vk::PipelineStageFlagBits::eTransfer,
 				vk::PipelineStageFlagBits::eTopOfPipe,
 				vk::DependencyFlags(),
 				0, nullptr, // No memory barriers,
@@ -321,10 +321,9 @@ int main()
 			render_to_present_barrier.setNewLayout(vk::ImageLayout::ePresentSrcKHR);
 			render_to_present_barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
 			render_to_present_barrier.setImage(window.getSwapchain().m_backbuffer_image[backbuffer_index]);
-
 			render_cmd.pipelineBarrier(
-				vk::PipelineStageFlagBits::eAllCommands,
-				vk::PipelineStageFlagBits::eTopOfPipe,
+				vk::PipelineStageFlagBits::eBottomOfPipe,
+				vk::PipelineStageFlagBits::eTransfer,
 				vk::DependencyFlags(),
 				0, nullptr, // No memory barriers,
 				0, nullptr, // No buffer barriers,
