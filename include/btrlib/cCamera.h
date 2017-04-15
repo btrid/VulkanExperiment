@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <btrlib/DefineMath.h>
 #include <btrlib/Singleton.h>
+#include <btrlib/cInput.h>
 class cCamera
 {
 public:
@@ -11,97 +12,96 @@ public:
 	friend sCamera;
 protected:
 	cCamera()
-		: mDistance(350.f)
-		, mUp(0.f, 1.f, 0.f)
-		, mAngleY(0.f)
-		, mAngleX(0.f)
-		, mNear(0.1f)
-		, mFar(1000.f)
-		, mFov(glm::radians(40.f))
-		, mHeight(480)
-		, mWidth(640)
+		: m_distance(350.f)
+		, m_up(0.f, 1.f, 0.f)
+		, m_angle_y(0.f)
+		, m_angle_x(0.f)
+		, m_near(0.1f)
+		, m_far(1000.f)
+		, m_fov(glm::radians(40.f))
+		, m_height(480)
+		, m_width(640)
 	{
 	}
 
 	~cCamera() {}
 public:
-	glm::vec3 mPosition;
-	glm::quat mRotation;
+	glm::vec3 m_position;
+	glm::quat m_rotation;
 
-	float mDistance;
-	glm::vec3 mTarget;
-	glm::vec3 mUp;
-	float mAngleX;
-	float mAngleY;
-	glm::mat4 mProjection;
-	glm::mat4 mView;
-	float mNear;
-	float mFar;
-	float mFov;
-	int mHeight;
-	int mWidth;
+	float m_distance;
+	glm::vec3 m_target;
+	glm::vec3 m_up;
+	float m_angle_x;
+	float m_angle_y;
+	glm::mat4 m_projection;
+	glm::mat4 m_view;
+	float m_near;
+	float m_far;
+	float m_fov;
+	int m_height;
+	int m_width;
 
-	float getAspect()const { return (float)mWidth / mHeight; }
-	float getFov()const { return mFov; }
-	float getNear()const { return mNear; }
-	float getFar()const { return mFar; }
-	glm::vec3 getPosition()const { return mPosition; }
-	glm::vec3 getTarget()const { return mTarget; }
-	glm::vec3 getUp()const { return mUp; }
+	float getAspect()const { return (float)m_width / m_height; }
+	float getFov()const { return m_fov; }
+	float getNear()const { return m_near; }
+	float getFar()const { return m_far; }
+	glm::vec3 getPosition()const { return m_position; }
+	glm::vec3 getTarget()const { return m_target; }
+	glm::vec3 getUp()const { return m_up; }
 public:
 
-	void control(float deltaTime)
+	void control(const cInput& input, float deltaTime)
 	{
-		// todo mouse
-/*		float distance = glm::length(target_ - position_);
+		float distance = glm::length(m_target - m_position);
 		{
-			if (Mouse::Order()->getWheelScroll().y != 0.f) {
-				glm::vec3 dir = glm::normalize(position_ - target_);
-				distance += -Mouse::Order()->getWheelScroll().y * distance / 10.f + 1.f;
+			if (input.m_mouse.getWheel() != 0) {
+				glm::vec3 dir = glm::normalize(m_position - m_target);
+				distance += -input.m_mouse.getWheel() * distance / 10.f + 1.f;
 				distance = glm::max(distance, 1.f);
-				position_ = target_ + dir * distance;
+				m_position = m_target + dir * distance;
 
 			}
 		}
-		if (Mouse::Order()->isHold(MouseButton::LEFT))
-		{
-			// XZ•½–Ê‚ÌˆÚ“®
-			auto f = glm::normalize(target_ - position_);
-			auto s = glm::normalize(glm::cross(up_, f));
-			auto move = Mouse::Order()->getMove();
-			position_ += (s*move.x + f*move.y) * distance / 100.f;
-			target_ += (s*move.x + f*move.y) * distance / 100.f;
-
-		}
-		else if (Mouse::Order()->isHold(MouseButton::MIDDLE))
-		{
-			// XY•½–Ê‚ÌˆÚ“®
-			auto f = glm::normalize(target_ - position_);
-			auto s = glm::normalize(glm::cross(up_, f));
-			auto move = Mouse::Order()->getMove();
-			position_ += (s*move.x + up_*move.y) * distance / 100.f;
-			target_ += (s*move.x + up_*move.y) * distance / 100.f;
-		}
-		else if (Mouse::Order()->isHold(MouseButton::RIGHT))
+// 		if (input.m_mouse.isHold(cMouse::BUTTON_LEFT))
+// 		{
+// 			// XZ•½–Ê‚ÌˆÚ“®
+// 			auto f = glm::normalize(m_target - m_position);
+// 			auto s = glm::normalize(glm::cross(m_up, f));
+// 			auto move = input.m_mouse.getMove();
+// 			m_position += (s*move.x + f*move.y) * distance / 100.f;
+// 			m_target += (s*move.x + f*move.y) * distance / 100.f;
+// 
+// 		}
+// 		else if (input.m_mouse.isHold(cMouse::BUTTON_MIDDLE))
+// 		{
+// 			// XY•½–Ê‚ÌˆÚ“®
+// 			auto f = glm::normalize(m_target - m_position);
+// 			auto s = glm::normalize(glm::cross(m_up, f));
+// 			auto move = input.m_mouse.getMove();
+// 			m_position += (s*move.x + m_up*move.y) * distance / 100.f;
+// 			m_target += (s*move.x + m_up*move.y) * distance / 100.f;
+// 		}
+/*		else*/ if (input.m_mouse.isHold(cMouse::BUTTON_RIGHT))
 		{
 			// ‰ñ“]ˆÚ“®
-			glm::vec3 f = glm::normalize(target_ - position_);
-			glm::vec3 s = glm::normalize(glm::cross(f, up_));
+			glm::vec3 f = glm::normalize(m_target - m_position);
+			glm::vec3 s = glm::normalize(glm::cross(f, m_up));
 			glm::vec3 u = glm::normalize(glm::cross(s, f));
 
-			auto move = Mouse::Order()->getMove();
-			if (KeyBoard::Order()->isHold(KeyBoard::CTRL_LEFT)) { move.y = 0.f; }
+			auto move = input.m_mouse.getMove();
+			if (input.m_keyboard.isHold('A')) { move.y = 0; }
 			glm::vec3 d = s*glm::radians(move.x / 2.f) + u*glm::radians(move.y / 2.f);
 
-			position_ += d*distance;
-			f = glm::normalize(position_ - target_);
-			position_ = target_ + f*distance;
-			s = glm::normalize(glm::cross(f, up_));
-			up_ = glm::normalize(glm::cross(s, f));
+			m_position += d*distance;
+			f = glm::normalize(m_position - m_target);
+			m_position = m_target + f*distance;
+			s = glm::normalize(glm::cross(f, m_up));
+			m_up = glm::normalize(glm::cross(s, f));
 		}
 
-		view_ = glm::lookAt(position_, target_, up_);
-*/
+		m_view = glm::lookAt(m_position, m_target, m_up);
+
 	}
 
 public:
@@ -133,8 +133,8 @@ struct CameraGPU
 {
 	void setup(const cCamera& camera) 
 	{
-		mProjection = glm::perspective(camera.mFov, camera.getAspect(), camera.mNear, camera.mFar);
-		mView = glm::lookAt(camera.mPosition, camera.mTarget, camera.mUp);
+		mProjection = glm::perspective(camera.m_fov, camera.getAspect(), camera.m_near, camera.m_far);
+		mView = glm::lookAt(camera.m_position, camera.m_target, camera.m_up);
 	}
 	glm::mat4 mProjection;
 	glm::mat4 mView;

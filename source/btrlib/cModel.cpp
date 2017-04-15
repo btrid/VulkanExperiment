@@ -726,8 +726,8 @@ void cModel::load(const std::string& filename)
 		std::vector<ModelInfo> mi(1);
 		mi[0].mInstanceMaxNum = instanceNum;
 		mi[0].mInstanceNum = instanceNum;
-		mi[0].mNodeNum = mPrivate->mNodeRoot.mNodeList.size();
-		mi[0].mBoneNum = mPrivate->mBone.size();
+		mi[0].mNodeNum = (s32)mPrivate->mNodeRoot.mNodeList.size();
+		mi[0].mBoneNum = (s32)mPrivate->mBone.size();
 		mi[0].mMeshNum = mPrivate->mMeshNum;
 		glm::vec3 max(-10e10f);
 		glm::vec3 min(10e10f);
@@ -826,19 +826,6 @@ void cModel::load(const std::string& filename)
 			.setRange(memoryRequest.size);
 	}
 
-	{
-		auto cmd_pool = sThreadLocal::Order().getCmdPoolCompiled(device.getQueueFamilyIndex())[0];
-		//		for (size_t i = 0; i < cmd_pool.size(); i++)
-		{
-			// present barrier cmd
-			vk::CommandBufferAllocateInfo cmd_info = vk::CommandBufferAllocateInfo()
-				.setCommandPool(cmd_pool)
-				.setLevel(vk::CommandBufferLevel::ePrimary)
-				.setCommandBufferCount(2);
-			m_cmd_graphics = device->allocateCommandBuffers(cmd_info);
-		}
-	}
-
 	cmd.end();
 	auto queue = device->getQueue(device.getQueueFamilyIndex(), device.getQueueNum()-1);
 	vk::SubmitInfo submit_info;
@@ -853,7 +840,7 @@ void cModel::load(const std::string& filename)
 	deleter->pool = cmd_pool;
 	deleter->cmd.push_back(cmd);
 	deleter->device = device.getHandle();
-	deleter->fence = fence;
+	deleter->fence = { fence };
 	sGlobal::Order().destroyResource(std::move(deleter));
 
 	auto e = std::chrono::system_clock::now();

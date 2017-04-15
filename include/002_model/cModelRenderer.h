@@ -135,7 +135,8 @@ struct cModelRenderer_t
 		vk::PipelineLayout m_pipeline_layout;
 		vk::DescriptorPool m_descriptor_pool;
 		vk::DescriptorSet m_draw_descriptor_set_per_scene;
-		enum {
+		enum 
+		{
 			DESCRIPTOR_SET_LAYOUT_PER_MODEL,
 			DESCRIPTOR_SET_LAYOUT_PER_MESH,
 			DESCRIPTOR_SET_LAYOUT_PER_SCENE,
@@ -143,7 +144,8 @@ struct cModelRenderer_t
 		};
 		std::array<vk::DescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_MAX> m_descriptor_set_layout;
 
-		ConstantBuffer	m_camera_uniform;
+//		ConstantBuffer	m_camera_uniform;
+		UniformBuffer<CameraGPU>	m_camera_uniform;
 		ConstantBuffer	m_camera_frustom;
 		void setup(vk::RenderPass render_pass);
 	};
@@ -173,8 +175,6 @@ struct cModelRenderer_t
 
 protected:
 	using RenderPtr = std::unique_ptr<T>;
-// 	std::list<std::future<std::unique_ptr<T>>> m_loading_model;
-// 	std::vector<std::unique_ptr<T>> m_render;
 	cGPU	m_gpu;
 
 	cModelDrawPipeline m_draw_pipeline;
@@ -185,7 +185,6 @@ public:
 	void execute(cThreadPool& threadpool);
 
 public:
-	vk::CommandPool getCmdPool()const { return m_cmd_pool; }
 
 	cModelDrawPipeline& getDrawPipeline() { return m_draw_pipeline; }
 	cModelComputePipeline& getComputePipeline() { return m_compute_pipeline; }

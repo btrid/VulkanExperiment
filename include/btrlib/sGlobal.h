@@ -10,6 +10,7 @@
 #include <btrlib/Singleton.h>
 #include <btrlib/sValidationLayer.h>
 #include <btrlib/cThreadPool.h>
+#include <btrlib/sDebug.h>
 
 class sShaderModule : public Singleton<sShaderModule>
 {
@@ -118,34 +119,65 @@ struct Deleter {
 	vk::CommandPool pool;
 	std::vector<vk::CommandBuffer> cmd;
 
-	vk::Fence fence;
-	vk::Buffer buffer;
-	vk::DeviceMemory memory;
+//	vk::Fence fence;
+	std::vector<vk::Fence> fence;
+	std::vector<vk::Buffer> buffer;
+	std::vector<vk::DeviceMemory> memory;
 
-	~Deleter() {
-		if (fence)
+	~Deleter() 
+	{
+// 		if (fence)
+// 		{
+// 			device.destroyFence(fence);
+// 			fence = vk::Fence();
+// 		}
+		if (!fence.empty())
 		{
-			device.destroyFence(fence);
-			fence = vk::Fence();
+			for (auto& f : fence) {
+				device.destroyFence(f);
+			}
+			fence.clear();
 		}
 		if (!cmd.empty())
 		{
 			device.freeCommandBuffers(pool, cmd);
 			cmd.clear();
 		}
-		if (buffer) {
-			device.destroyBuffer(buffer);
-			buffer = vk::Buffer();
+// 		if (buffer) {
+// 			device.destroyBuffer(buffer);
+// 			buffer = vk::Buffer();
+// 		}
+		if (!buffer.empty()) {
+			for (auto& b : buffer)
+			{
+				device.destroyBuffer(b);
+			}
+			buffer.clear();
 		}
-		if (memory)
-		{
-			device.freeMemory(memory);
-			memory = vk::DeviceMemory();
+// 		if (memory)
+// 		{
+// 			device.freeMemory(memory);
+// 			memory = vk::DeviceMemory();
+// 		}
+		if (!memory.empty()) {
+			for (auto& m : memory)
+			{
+				device.freeMemory(m);
+			}
+			memory.clear();
 		}
 	};
 	bool isReady()const
 	{
-		return !fence || device.getFenceStatus(fence) == vk::Result::eSuccess;
+//		return !fence || device.getFenceStatus(fence) == vk::Result::eSuccess;
+		for (auto& f : fence)
+		{
+			// todo : device lost
+			if (device.getFenceStatus(f) != vk::Result::eSuccess) {
+				return false;
+			}
+		}
+		return true;
 	}
 };
 
@@ -166,8 +198,8 @@ public:
 	vk::Instance& getVKInstance() { return m_instance; }
 	cGPU& getGPU(int index) { return m_gpu[index]; }
 	void swap();
-	int getCurrentFrame()const { return m_current_frame; }
-	int getPrevFrame()const { return (m_current_frame == 0 ? FRAME_MAX : m_current_frame)-1; }
+	int32_t getCurrentFrame()const { return m_current_frame; }
+	int32_t getPrevFrame()const { return (m_current_frame == 0 ? FRAME_MAX : m_current_frame)-1; }
 
 public:
 	cThreadPool& getThreadPool() { return m_thread_pool; }
@@ -175,7 +207,7 @@ private:
 	vk::Instance m_instance;
 	std::vector<cGPU> m_gpu;
 
-	int m_current_frame;
+	int32_t m_current_frame;
 	cThreadPool m_thread_pool;
 
 	std::vector<vk::CommandPool>	m_cmd_pool_tempolary;
@@ -237,11 +269,11 @@ struct sThreadLocal : public SingletonTLS<sThreadLocal>
 	std::vector<vk::CommandPool>	m_cmd_pool_tempolary;
 	std::vector<std::vector<vk::CommandBuffer>>	m_cmd_tempolary;
 	std::vector<std::array<vk::CommandPool, sGlobal::FRAME_MAX>>	m_cmd_pool_onetime;
-	std::vector<std::array<vk::CommandPool, sGlobal::FRAME_MAX>>	m_cmd_pool_compiled;
+	std::vector<vk::CommandPool>	m_cmd_pool_compiled;
 
 public:
 	std::array<vk::CommandPool, sGlobal::FRAME_MAX> getCmdPoolOnetime(int device_family_index)const { return m_cmd_pool_onetime[device_family_index]; }
-	std::array<vk::CommandPool, sGlobal::FRAME_MAX> getCmdPoolCompiled(int device_family_index)const { return m_cmd_pool_onetime[device_family_index]; }
+	vk::CommandPool getCmdPoolCompiled(int device_family_index)const { return m_cmd_pool_compiled[device_family_index]; }
 	vk::CommandPool getCmdPoolTempolary(uint32_t device_family_index)const { return m_cmd_pool_tempolary[device_family_index]; }
 	vk::CommandBuffer getCmdTempolary(uint32_t device_family_index)const 
 	{
@@ -310,6 +342,173 @@ private:
 public:
 };
 
+
+template<typename T>
+struct UniformBuffer
+{
+private:
+	vk::PhysicalDevice m_gpu;
+	uint32_t m_family_index;
+	vk::Queue m_queue;
+
+	vk::DescriptorBufferInfo m_buffer_info;
+	vk::DescriptorBufferInfo m_staging_buffer_info;
+
+	struct Private
+	{
+		vk::Device m_device;
+
+		vk::CommandPool m_cmd_pool;
+		std::vector<vk::CommandBuffer> m_cmd;
+		std::vector<vk::Fence>	m_fence;
+
+		vk::Buffer m_buffer;
+		vk::DeviceMemory m_memory;
+
+		vk::Buffer m_staging_buffer;
+		vk::DeviceMemory m_staging_memory;
+		~Private()
+		{
+			if (m_cmd_pool)
+			{
+				std::unique_ptr<Deleter> deleter = std::make_unique<Deleter>();
+				deleter->pool = m_cmd_pool;
+				deleter->cmd = std::move(m_cmd);
+				deleter->device = m_device;
+				deleter->fence = std::move(m_fence);
+
+				deleter->buffer = { m_buffer, m_staging_buffer };
+				deleter->memory = { m_memory, m_staging_memory };
+				sGlobal::Order().destroyResource(std::move(deleter));
+
+			}
+		}
+	};
+	std::shared_ptr<Private> m_private;
+
+
+	UniformBuffer(const UniformBuffer&) = delete;
+	UniformBuffer& operator=(const UniformBuffer&) = delete;
+
+	UniformBuffer(UniformBuffer &&)noexcept = default;
+	UniformBuffer& operator=(UniformBuffer&&)noexcept = default;
+
+public:
+	UniformBuffer()
+		: m_private(std::make_shared<Private>())
+	{}
+
+	~UniformBuffer()
+	{
+	}
+	vk::Buffer getBuffer()const { return m_buffer_info.buffer; }
+	vk::DescriptorBufferInfo getBufferInfo()const { return m_buffer_info; }
+
+private:
+	void create(const cGPU& gpu, const cDevice& device)
+	{
+		m_gpu = gpu.getHandle();
+		m_private->m_device = device.getHandle();
+		m_family_index = device.getQueueFamilyIndex();
+		m_queue = device->getQueue(device.getQueueFamilyIndex(), device.getQueueNum() - 1);
+
+		{
+			// コマンドバッファの準備
+			m_private->m_cmd_pool = sThreadLocal::Order().getCmdPoolCompiled(m_family_index);
+			vk::CommandBufferAllocateInfo cmd_buffer_info;
+			cmd_buffer_info.commandBufferCount = sGlobal::FRAME_MAX;
+			cmd_buffer_info.commandPool = m_private->m_cmd_pool;
+			cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
+			m_private->m_cmd = m_private->m_device.allocateCommandBuffers(cmd_buffer_info);
+
+			vk::FenceCreateInfo fence_info;
+			fence_info.setFlags(vk::FenceCreateFlagBits::eSignaled);
+			m_private->m_fence.reserve(sGlobal::FRAME_MAX);
+			for (int i = 0; i < sGlobal::FRAME_MAX; i++)
+			{
+				m_private->m_fence.emplace_back(m_private->m_device.createFence(fence_info));
+			}
+		}
+	}
+public:
+
+	void create(const cGPU& gpu, const cDevice& device, size_t data_size, vk::BufferUsageFlags flag)
+	{
+		create(gpu, device);
+
+		{
+			// device_localなバッファの作成
+			vk::BufferCreateInfo buffer_info;
+			buffer_info.usage = flag | vk::BufferUsageFlagBits::eTransferDst;
+			buffer_info.size = data_size;
+
+			m_private->m_buffer = device->createBuffer(buffer_info);
+
+			vk::MemoryRequirements memory_request = device->getBufferMemoryRequirements(m_private->m_buffer);
+			vk::MemoryAllocateInfo memory_alloc;
+			memory_alloc.setAllocationSize(memory_request.size);
+			memory_alloc.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal));
+			m_private->m_memory = device->allocateMemory(memory_alloc);
+
+			device->bindBufferMemory(m_private->m_buffer, m_private->m_memory, 0);
+
+			m_buffer_info.setBuffer(m_private->m_buffer);
+			m_buffer_info.setOffset(0);
+			m_buffer_info.setRange(data_size);
+		}
+		{
+			// host_visibleなバッファの作成
+			vk::BufferCreateInfo buffer_info;
+			buffer_info.usage = vk::BufferUsageFlagBits::eTransferSrc;
+			buffer_info.size = data_size * sGlobal::FRAME_MAX;
+
+			m_private->m_staging_buffer = device->createBuffer(buffer_info);
+
+			vk::MemoryRequirements memory_request = device->getBufferMemoryRequirements(m_private->m_staging_buffer);
+			vk::MemoryAllocateInfo memory_alloc;
+			memory_alloc.setAllocationSize(memory_request.size);
+			memory_alloc.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memory_request, vk::MemoryPropertyFlagBits::eHostVisible));
+			m_private->m_staging_memory = device->allocateMemory(memory_alloc);
+
+			device->bindBufferMemory(m_private->m_staging_buffer, m_private->m_staging_memory, 0);
+
+			m_staging_buffer_info.setBuffer(m_private->m_staging_buffer);
+			m_staging_buffer_info.setOffset(0);
+			m_staging_buffer_info.setRange(data_size);
+		}
+	}
+
+	void update(const T& data)
+	{
+		auto frame = sGlobal::Order().getCurrentFrame();
+		auto data_size = sizeof(T);
+		char* mem = reinterpret_cast<char*>(m_private->m_device.mapMemory(m_private->m_staging_memory, data_size*frame, data_size, vk::MemoryMapFlags()));
+		{
+			memcpy_s(mem, data_size, &data, data_size);
+		}
+		m_private->m_device.unmapMemory(m_private->m_staging_memory);
+
+		sDebug::Order().waitFence(m_private->m_device, m_private->m_fence[frame]);
+		m_private->m_device.resetFences(m_private->m_fence[frame]);
+
+		auto& cmd = m_private->m_cmd[frame];
+		cmd.reset(vk::CommandBufferResetFlags());
+		vk::CommandBufferBeginInfo begin_info;
+		cmd.begin(begin_info);
+		vk::BufferCopy copy_info;
+		copy_info.size = data_size;
+		copy_info.srcOffset = data_size*frame;
+		copy_info.dstOffset = 0;
+		cmd.copyBuffer(m_private->m_staging_buffer, m_private->m_buffer, copy_info);
+		cmd.end();
+
+		vk::SubmitInfo submit_info;
+		submit_info.commandBufferCount = 1;
+		submit_info.pCommandBuffers = &cmd;
+
+		m_queue.submit(submit_info, m_private->m_fence[frame]);
+	}
+};
 
 /**
 
@@ -488,9 +687,9 @@ public:
 		{
 			std::unique_ptr<Deleter> deleter = std::make_unique<Deleter>();
 			deleter->device = m_private->m_device;
-			deleter->buffer = staging_buffer;
-			deleter->memory = staging_memory;
-			deleter->fence = fence;
+			deleter->buffer = { staging_buffer };
+			deleter->memory = { staging_memory};
+			deleter->fence.push_back(fence);
 			sGlobal::Order().destroyResource(std::move(deleter));
 		}
 

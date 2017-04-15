@@ -18,7 +18,7 @@
     <ClCompile Include="..\..\source\002_model\cModelRender.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\source\002_model\main_002.cpp">
+    <ClCompile Include="..\..\source\002_model\002_main.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

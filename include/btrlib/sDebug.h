@@ -4,9 +4,15 @@
 #include <functional>
 #include <string>
 #include <sstream>
+#include <cassert>
 #include <btrlib/Singleton.h>
 
 
+
+namespace vk {
+	class Device;
+	class Fence;
+}
 class sDebug : public Singleton<sDebug>
 {
 	friend Singleton<sDebug>;
@@ -28,7 +34,7 @@ public:
 	};
 
 	template<typename... Arg>
-	void print(int flag, const char* msg, Arg... arg)
+	void print(int flag, const char* msg, Arg... arg)const
 	{
 		char hoge[256];
 		sprintf_s(hoge, msg, arg...);
@@ -36,6 +42,9 @@ public:
 
 		assert((flag & ACTION_ASSERTION) == 0);
 	}
+
+	//! どうしても待つ必要がある場合に呼ぶ。これを呼び出すのは設計ミスな気がする。
+	void waitFence(const vk::Device& device, const vk::Fence& fence)const;
 };
 
 template<typename... Arg>

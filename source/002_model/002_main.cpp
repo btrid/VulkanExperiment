@@ -177,13 +177,13 @@ int main()
 	auto model = modelFuture.get();
 
 	auto* camera = cCamera::sCamera::Order().create();
-	camera->mPosition = glm::vec3(0.f, -500.f, -800.f);
-	camera->mTarget = glm::vec3(0.f, -100.f, 0.f);
-	camera->mUp = glm::vec3(0.f, -1.f, 0.f);
-	camera->mWidth = 640;
-	camera->mHeight = 480;
-	camera->mFar = 10000.f;
-	camera->mNear = 0.0f;
+	camera->m_position = glm::vec3(0.f, -500.f, -800.f);
+	camera->m_target = glm::vec3(0.f, -100.f, 0.f);
+	camera->m_up = glm::vec3(0.f, -1.f, 0.f);
+	camera->m_width = 640;
+	camera->m_height = 480;
+	camera->m_far = 10000.f;
+	camera->m_near = 0.0f;
 
 
 	vk::RenderPass render_pass;
@@ -265,6 +265,9 @@ int main()
 	fence_list.emplace_back(device->createFence(fence_info));
 	while (true)
 	{
+		auto* m_camera = cCamera::sCamera::Order().getCameraList()[0];
+		m_camera->control(window.getInput(), 0.16f);
+
 		uint32_t backbuffer_index = window.getSwapchain().swap(swapbuffer_semaphore);
 		{
 			auto render_cmd = render_cmds[backbuffer_index];
@@ -354,7 +357,7 @@ int main()
 			queue.presentKHR(present_info);
 		}
 
-		window.update();
+		window.update(sGlobal::Order().getThreadPool());
 		sGlobal::Order().swap();
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 

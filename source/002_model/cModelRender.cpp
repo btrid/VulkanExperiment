@@ -6,14 +6,6 @@ void ModelRender::setup(cModelRenderer&  renderer)
 	// setup graphics cmdbuffer 
 	{
 		cDevice graphics_device = sThreadLocal::Order().m_device[sThreadLocal::DEVICE_GRAPHICS];
-		{
-			auto& graphics_cmd_pool = sThreadLocal::Order().getCmdPoolCompiled(graphics_device.getQueueFamilyIndex());
-			vk::CommandBufferAllocateInfo cmd_alloc_info;
-			cmd_alloc_info.setCommandBufferCount(1);
-			cmd_alloc_info.setCommandPool(graphics_cmd_pool[0]);
-			cmd_alloc_info.setLevel(vk::CommandBufferLevel::ePrimary);
-			m_cmd_graphics = graphics_device->allocateCommandBuffers(cmd_alloc_info);
-		}
 
 		auto& pipeline = renderer.getDrawPipeline();
 
@@ -99,14 +91,6 @@ void ModelRender::setup(cModelRenderer&  renderer)
 	//vk::CommandBuffer cModel::buildExecuteCmd()
 	{
 		cDevice compute_device = sThreadLocal::Order().m_device[sThreadLocal::DEVICE_COMPUTE];
-		{
-			auto& compute_cmd_pool = sThreadLocal::Order().getCmdPoolCompiled(compute_device.getQueueFamilyIndex());
-			vk::CommandBufferAllocateInfo cmd_alloc_info;
-			cmd_alloc_info.setCommandBufferCount(1);
-			cmd_alloc_info.setCommandPool(compute_cmd_pool[0]);
-			cmd_alloc_info.setLevel(vk::CommandBufferLevel::ePrimary);
-			m_cmd_compute = compute_device->allocateCommandBuffers(cmd_alloc_info);
-		}
 
 		auto& pipeline = renderer.getComputePipeline();
 		vk::DescriptorSetAllocateInfo allocInfo;
@@ -356,7 +340,6 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 
 		}
 	}
-
 	std::vector<vk::BufferMemoryBarrier> to_draw_barrier =
 	{
 		vk::BufferMemoryBarrier()
@@ -373,7 +356,6 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 
 void ModelRender::draw(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 {
-//	cmd.fillBuffer(mPrivate->getBuffer())
 
 	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, renderer.getDrawPipeline().m_pipeline);
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, renderer.getDrawPipeline().m_pipeline_layout, 2, renderer.getDrawPipeline().m_draw_descriptor_set_per_scene, {});

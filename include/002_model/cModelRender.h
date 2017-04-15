@@ -27,6 +27,12 @@ struct cModelRenderer : public cModelRenderer_t<ModelRender>
 	}
 	void execute(vk::CommandBuffer cmd)
 	{
+		auto* m_camera = cCamera::sCamera::Order().getCameraList()[0];
+		{
+			CameraGPU camera_gpu;
+			camera_gpu.setup(*m_camera);
+			m_draw_pipeline.m_camera_uniform.update(camera_gpu);
+		}
 		for (auto& render : m_model)
 		{
 			render->execute(*this, cmd);

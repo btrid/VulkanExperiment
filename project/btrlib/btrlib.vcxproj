@@ -30,14 +30,14 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>MultiByte</CharacterSet>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
@@ -122,6 +122,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\include\btrlib\cCamera.h" />
     <ClInclude Include="..\..\include\btrlib\cDebug.h" />
+    <ClInclude Include="..\..\include\btrlib\cInput.h" />
     <ClInclude Include="..\..\include\btrlib\cStopWatch.h" />
     <ClInclude Include="..\..\include\btrlib\cThreadPool.h" />
     <ClInclude Include="..\..\include\btrlib\rTexture.h" />
@@ -142,6 +143,7 @@
     <ClCompile Include="..\..\source\btrlib\cWindow.cpp" />
     <ClCompile Include="..\..\source\btrlib\Define.cpp" />
     <ClCompile Include="..\..\source\btrlib\rTexture.cpp" />
+    <ClCompile Include="..\..\source\btrlib\sDebug.cpp" />
     <ClCompile Include="..\..\source\btrlib\sGlobal.cpp" />
     <ClCompile Include="..\..\source\btrlib\Shape.cpp" />
     <ClCompile Include="..\..\source\btrlib\ThreadPool.cpp" />

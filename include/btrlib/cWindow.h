@@ -1,6 +1,6 @@
 #pragma once
 #include "Define.h"
-
+#include <windowsx.h>
 #include <vector>
 #include <memory>
 #include <unordered_map>
@@ -8,16 +8,7 @@
 #include <btrlib/Singleton.h>
 #include <btrlib/sGlobal.h>
 #include <btrlib/ThreadPool.h>
-struct cKeybordInput {
-	struct Param {
-		char key;
-		unsigned state;
-	};
-	std::unordered_map<WPARAM, Param> mData;
-};
-struct cMouse 
-{
-};
+#include <btrlib/cInput.h>
 
 class cWindow
 {
@@ -65,8 +56,7 @@ private:
 	std::shared_ptr<Private> m_private;
 
 	vk::SurfaceKHR m_surface;
-	cKeybordInput m_keybord;
-	cMouse m_mouse;
+	cInput m_input;
 	Swapchain m_swapchain;
 	CreateInfo m_descriptor;
 
@@ -144,61 +134,132 @@ public:
 		m_swapchain.setup(descriptor, m_surface);
 	}
 
-	void update()
+	void update(cThreadPool& pool)
 	{
 		MSG msg;
-		std::vector<MSG> msgList;
+//		std::vector<MSG> msgList;
+		auto old = m_input.m_mouse;
+		m_input.m_mouse.wheel = 0;
 		while (PeekMessage(&msg, m_private->m_window, 0, 0, PM_REMOVE))
 		{
-			msgList.push_back(msg);
-
-			//if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+//			msgList.push_back(msg);			
+//			for (auto&& msg : msgList)
 			{
-//				TranslateMessage(&msg);
 				switch (msg.message)
 				{
 				case WM_KEYDOWN:
 				{
-					auto& p = m_keybord.mData[msg.wParam];
+					auto& p = m_input.m_keyboard.mData[msg.wParam];
 					p.key = (char)msg.wParam;
-					p.state = (unsigned)msg.lParam;
-					u32 repeat = msg.lParam & 0xf;
 					bool isPrevPress = (msg.lParam & (1 << 30)) != 0;
-					repeat++;
+					p.state = isPrevPress ? cKeyboard::STATE_HOLD : cKeyboard::STATE_ON;
 				}
 				break;
 
 				case WM_KEYUP:
 				{
-					auto& p = m_keybord.mData[msg.wParam];
+					auto& p = m_input.m_keyboard.mData[msg.wParam];
 					p.key = (char)msg.wParam;
-					p.state = (unsigned)msg.lParam;
-					u32 repeat = msg.lParam & 0xf;
-					bool isPrevPress = (msg.lParam & (1 << 30)) != 0;
-					repeat++;
+					p.state = cKeyboard::STATE_OFF;
 				}
 				break;
-
-				default:
-					break;
+				case WM_MOUSEWHEEL:
+				{
+					m_input.m_mouse.wheel = GET_WHEEL_DELTA_WPARAM(msg.wParam) / WHEEL_DELTA;
 				}
-				DispatchMessage(&msg);
+				case WM_LBUTTONDOWN:
+				case WM_LBUTTONUP:
+				case WM_MBUTTONDOWN:
+				case WM_MBUTTONUP:
+				case WM_RBUTTONDOWN:
+				case WM_RBUTTONUP:
+				case WM_XBUTTONDOWN:
+				case WM_XBUTTONUP:
+				{
+					int xPos = GET_X_LPARAM(msg.lParam);
+					int yPos = GET_Y_LPARAM(msg.lParam);
+					switch (msg.message)
+					{
+					case WM_LBUTTONDOWN:
+						m_input.m_mouse.m_param[cMouse::BUTTON_LEFT].state |= cMouse::STATE_ON;
+						m_input.m_mouse.m_param[cMouse::BUTTON_LEFT].x = xPos;
+						m_input.m_mouse.m_param[cMouse::BUTTON_LEFT].y = yPos;
+						break;
+					case WM_LBUTTONUP:
+						m_input.m_mouse.m_param[cMouse::BUTTON_LEFT].state = cMouse::STATE_OFF;
+						m_input.m_mouse.m_param[cMouse::BUTTON_LEFT].x = -1;
+						m_input.m_mouse.m_param[cMouse::BUTTON_LEFT].y = -1;
+						break;
+					case WM_MBUTTONDOWN:
+						m_input.m_mouse.m_param[cMouse::BUTTON_MIDDLE].state |= cMouse::STATE_ON;
+						m_input.m_mouse.m_param[cMouse::BUTTON_MIDDLE].x = xPos;
+						m_input.m_mouse.m_param[cMouse::BUTTON_MIDDLE].y = yPos;
+						break;
+					case WM_MBUTTONUP:
+						m_input.m_mouse.m_param[cMouse::BUTTON_MIDDLE].state = cMouse::STATE_OFF;
+						m_input.m_mouse.m_param[cMouse::BUTTON_MIDDLE].x = -1;
+						m_input.m_mouse.m_param[cMouse::BUTTON_MIDDLE].y = -1;
+						break;
+					case WM_RBUTTONDOWN:
+						m_input.m_mouse.m_param[cMouse::BUTTON_RIGHT].state |= cMouse::STATE_ON;
+						m_input.m_mouse.m_param[cMouse::BUTTON_RIGHT].x = xPos;
+						m_input.m_mouse.m_param[cMouse::BUTTON_RIGHT].y = yPos;
+						break;
+					case WM_RBUTTONUP:
+						m_input.m_mouse.m_param[cMouse::BUTTON_RIGHT].state = cMouse::STATE_OFF;
+						m_input.m_mouse.m_param[cMouse::BUTTON_RIGHT].x = -1;
+						m_input.m_mouse.m_param[cMouse::BUTTON_RIGHT].y = -1;
+						break;
+					case WM_XBUTTONDOWN:
+					case WM_XBUTTONUP:
+						break;
+					}
+				}
+				break;
+				case WM_MOUSEMOVE:
+				{
+					int xPos = GET_X_LPARAM(msg.lParam);
+					int yPos = GET_Y_LPARAM(msg.lParam);
+					m_input.m_mouse.xy = glm::ivec2(xPos, yPos);
+				}
+				break;
+				}
+			}
+
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}		
+// 		if (msgList.empty()) {
+// 			return;
+// 		}
+// 		cThreadJob job;
+// 		job.mJob.emplace_back([=]() 
+// 		{
+// 		});
+// 
+// 		job.mFinish = [&]() {
+// 			// @Todo キーボードの更新など？
+// 		};
+		for (int i = 0; i < cMouse::BUTTON_NUM; i++)
+		{
+			auto& param = m_input.m_mouse.m_param[i];
+			auto& param_old = old.m_param[i];
+			
+			if (btr::isOn(param_old.state, cMouse::STATE_ON))
+			{
+				// ONは押したタイミングだけ立つ
+				btr::setOff(param.state, cMouse::STATE_ON);
+			}
+			if (btr::isOn(param.state, cMouse::STATE_ON) || btr::isOn(param_old.state, cMouse::STATE_HOLD))
+			{
+				param.state |= cMouse::STATE_HOLD;
+			}
+			if (btr::isOn(param_old.state, cMouse::STATE_OFF))
+			{
+				param.state = 0;
 			}
 		}
-		
-		ThreadJob job;
-		job.mJob.emplace_back([=]() 
-		{
-			for (auto&& msg : msgList)
-			{
-				DispatchMessage(&msg);
-			}
-		});
-
-		job.mFinish = [&]() {
-			// @Todo キーボードの更新など？
-		};
-//		btr::ThreadPool::Order().enque(job);
+		m_input.m_mouse.xy_old = old.xy;
 
 	}
 public:
@@ -207,6 +268,7 @@ public:
 	const Swapchain& getSwapchain()const { return m_swapchain; }
 	Swapchain& getSwapchain() { return m_swapchain; }
 	vk::SurfaceKHR getSurface()const { return m_surface; }
+	const cInput& getInput()const { return m_input; }
 };
 
 class sWindow : public Singleton<sWindow>

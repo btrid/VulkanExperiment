@@ -258,7 +258,7 @@ void cModelRenderer_t<T>::cModelDrawPipeline::setup(vk::RenderPass render_pass)
 			CameraGPU camera_gpu;
 			camera_gpu.setup(*m_camera);
 			m_camera_uniform.create(gpu, device, sizeof(CameraGPU), vk::BufferUsageFlagBits::eUniformBuffer);
-			m_camera_uniform.update((void*)&camera_gpu, sizeof(CameraGPU), 0);
+//			m_camera_uniform.update((void*)&camera_gpu, sizeof(CameraGPU), 0);
 		}
 		{
 			Frustom frustom;

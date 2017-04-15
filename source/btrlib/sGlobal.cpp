@@ -103,17 +103,14 @@ sGlobal::sGlobal()
 			}
 		}
 
-		data.m_cmd_pool_onetime.resize(data.m_gpu.m_device_list.size());
-		for (int family = 0; family < data.m_cmd_pool_onetime.size(); family++)
+		data.m_cmd_pool_compiled.resize(data.m_gpu.m_device_list.size());
+		for (int family = 0; family < data.m_cmd_pool_compiled.size(); family++)
 		{
-			auto& cmd_pool_per_device = data.m_cmd_pool_onetime[family];
-			for (auto& cmd_pool_per_frame : cmd_pool_per_device)
-			{
-				vk::CommandPoolCreateInfo cmd_pool_info = vk::CommandPoolCreateInfo()
-					.setQueueFamilyIndex(family);
-
-				cmd_pool_per_frame = data.m_gpu.getDeviceByFamilyIndex(family)->createCommandPool(cmd_pool_info);
-			}
+			auto& cmd_pool_per_device = data.m_cmd_pool_compiled[family];
+			vk::CommandPoolCreateInfo cmd_pool_info;
+			cmd_pool_info.setQueueFamilyIndex(family);
+			cmd_pool_info.setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
+			cmd_pool_per_device = data.m_gpu.getDeviceByFamilyIndex(family)->createCommandPool(cmd_pool_info);
 		}
 
 // 		data.m_cmd_pool_tempolary.resize(data.m_gpu.m_device_list.size());

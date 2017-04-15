@@ -373,7 +373,5 @@ public:
 	const std::string& getFilename()const;
 	const cMeshGPU& getMesh()const;
 
-	std::vector<vk::CommandBuffer> m_cmd_graphics;
-	std::vector<vk::CommandBuffer> m_cmd_compute;
 };
 

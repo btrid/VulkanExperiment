@@ -12,3 +12,26 @@ using u16 = std::uint16_t;
 using s16 = std::int16_t;
 using u8 = std::uint8_t;
 using s8 = std::int8_t;
+
+namespace btr 
+{
+template<typename A, typename B>
+bool isOn(A bit, B test) {
+	return (bit & test) == test;
+}
+template<typename A, typename B>
+bool isOff(A bit, B test) {
+	return (bit & test) == 0;
+}
+
+template<typename A, typename B>
+void setOn(A& bit, B test) {
+	bit |= test;
+}
+
+template<typename A, typename B>
+void setOff(A& bit, B test) {
+	bit &= ~test;
+}
+
+}
