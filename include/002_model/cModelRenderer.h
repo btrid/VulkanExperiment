@@ -144,7 +144,6 @@ struct cModelRenderer_t
 		};
 		std::array<vk::DescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_MAX> m_descriptor_set_layout;
 
-//		ConstantBuffer	m_camera_uniform;
 		UniformBuffer<CameraGPU>	m_camera_uniform;
 		ConstantBuffer	m_camera_frustom;
 		void setup(vk::RenderPass render_pass);

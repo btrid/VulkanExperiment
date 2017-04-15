@@ -203,9 +203,9 @@ void cModelRenderer_t<T>::cModelDrawPipeline::setup(vk::RenderPass render_pass)
 				.setOffset(64),
 			};
 			vk::PipelineVertexInputStateCreateInfo vertex_input_info;
-			vertex_input_info.setVertexBindingDescriptionCount(vertex_input_binding.size());
+			vertex_input_info.setVertexBindingDescriptionCount((uint32_t)vertex_input_binding.size());
 			vertex_input_info.setPVertexBindingDescriptions(vertex_input_binding.data());
-			vertex_input_info.setVertexAttributeDescriptionCount(vertex_input_attribute.size());
+			vertex_input_info.setVertexAttributeDescriptionCount((uint32_t)vertex_input_attribute.size());
 			vertex_input_info.setPVertexAttributeDescriptions(vertex_input_attribute.data());
 
 			std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =
@@ -257,7 +257,7 @@ void cModelRenderer_t<T>::cModelDrawPipeline::setup(vk::RenderPass render_pass)
 		{
 			CameraGPU camera_gpu;
 			camera_gpu.setup(*m_camera);
-			m_camera_uniform.create(gpu, device, sizeof(CameraGPU), vk::BufferUsageFlagBits::eUniformBuffer);
+			m_camera_uniform.create(gpu, device, vk::BufferUsageFlagBits::eUniformBuffer);
 //			m_camera_uniform.update((void*)&camera_gpu, sizeof(CameraGPU), 0);
 		}
 		{

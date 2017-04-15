@@ -33,6 +33,7 @@ struct cModelRenderer : public cModelRenderer_t<ModelRender>
 			camera_gpu.setup(*m_camera);
 			m_draw_pipeline.m_camera_uniform.update(camera_gpu);
 		}
+
 		for (auto& render : m_model)
 		{
 			render->execute(*this, cmd);

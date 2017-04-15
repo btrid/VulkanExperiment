@@ -432,10 +432,11 @@ private:
 	}
 public:
 
-	void create(const cGPU& gpu, const cDevice& device, size_t data_size, vk::BufferUsageFlags flag)
+	void create(const cGPU& gpu, const cDevice& device, vk::BufferUsageFlags flag)
 	{
 		create(gpu, device);
 
+		size_t data_size = sizeof(T);
 		{
 			// device_localなバッファの作成
 			vk::BufferCreateInfo buffer_info;
@@ -476,6 +477,23 @@ public:
 			m_staging_buffer_info.setOffset(0);
 			m_staging_buffer_info.setRange(data_size);
 		}
+		{
+			// cmd を作っとく
+			for (size_t i = 0; i < m_private->m_cmd.size(); i++)
+			{
+				auto& cmd = m_private->m_cmd[i];
+				cmd.reset(vk::CommandBufferResetFlags());
+				vk::CommandBufferBeginInfo begin_info;
+				cmd.begin(begin_info);
+				vk::BufferCopy copy_info;
+				copy_info.size = data_size;
+				copy_info.srcOffset = data_size*i;
+				copy_info.dstOffset = 0;
+				cmd.copyBuffer(m_private->m_staging_buffer, m_private->m_buffer, copy_info);
+				cmd.end();
+			}
+		}
+
 	}
 
 	void update(const T& data)
@@ -491,20 +509,9 @@ public:
 		sDebug::Order().waitFence(m_private->m_device, m_private->m_fence[frame]);
 		m_private->m_device.resetFences(m_private->m_fence[frame]);
 
-		auto& cmd = m_private->m_cmd[frame];
-		cmd.reset(vk::CommandBufferResetFlags());
-		vk::CommandBufferBeginInfo begin_info;
-		cmd.begin(begin_info);
-		vk::BufferCopy copy_info;
-		copy_info.size = data_size;
-		copy_info.srcOffset = data_size*frame;
-		copy_info.dstOffset = 0;
-		cmd.copyBuffer(m_private->m_staging_buffer, m_private->m_buffer, copy_info);
-		cmd.end();
-
 		vk::SubmitInfo submit_info;
 		submit_info.commandBufferCount = 1;
-		submit_info.pCommandBuffers = &cmd;
+		submit_info.pCommandBuffers = &m_private->m_cmd[frame];
 
 		m_queue.submit(submit_info, m_private->m_fence[frame]);
 	}
