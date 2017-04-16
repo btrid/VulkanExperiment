@@ -297,6 +297,11 @@ public:
 
 };
 
+/**
+*	@brief	マイフレーム更新されることが前提なバッファ
+*			GPUの更新 OK?
+*			CPUの更新 OK
+*/
 template<typename T>
 struct UniformBuffer
 {
@@ -472,8 +477,10 @@ public:
 };
 
 /**
-	
-*/
+ *	@brief	作成時にデータがコミットするバッファ
+ *			GPUの更新 OK
+ *			CPUの更新 NG
+ */
 struct ConstantBuffer
 {
 private:
@@ -517,11 +524,6 @@ public:
 		: m_private(std::make_shared<Private>())
 	{}
 
-	~ConstantBuffer()
-	{
-		int a = 0;
-		a++;
-	}
 	vk::Buffer getBuffer()const { return m_buffer_info.buffer; }
 	vk::DeviceSize getBufferSize()const { return m_buffer_info.range; }
 	vk::DescriptorBufferInfo getBufferInfo()const { return m_buffer_info; }

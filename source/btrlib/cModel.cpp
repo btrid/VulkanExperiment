@@ -1,10 +1,7 @@
 #include <btrlib/Define.h>
-#include <string>
-#include <vector>
 #include <chrono>
 #include <filesystem>
 #include <algorithm>
-#include <atomic>
 
 #include <btrlib/cModel.h>
 #include <btrlib/sGlobal.h>
@@ -17,14 +14,6 @@
 #include <assimp/material.h>
 
 namespace {
-	int OREORE_PRESET = 0
-		| aiProcess_JoinIdenticalVertices
-		| aiProcess_ImproveCacheLocality
-		| aiProcess_LimitBoneWeights
-		| aiProcess_RemoveRedundantMaterials
-		| aiProcess_SplitLargeMeshes
-		| aiProcess_Triangulate
-		;
 	glm::mat4 AI_TO(aiMatrix4x4& from)
 	{
 		glm::mat4 to;
@@ -87,8 +76,22 @@ namespace {
 	}
 
 }
+ResourceTexture::Manager ResourceTexture::s_manager;
 void ResourceTexture::load(const cGPU& gpu, const cDevice& device, cThreadPool& thread_pool, const std::string& filename)
 {
+	{
+		std::lock_guard<std::mutex> lock(s_manager.m_mutex);
+		auto it = s_manager.m_resource_list.find(filename);
+		if (it != s_manager.m_resource_list.end()) {
+			m_private = it->second.lock();
+			return;
+		}
+
+		m_private = std::make_shared<Private>();
+		s_manager.m_resource_list[filename] = m_private;
+	}
+
+	m_private->m_filename = filename;
 	m_gpu = gpu;
 	m_private->m_device = device;
 
@@ -452,16 +455,24 @@ cModel::~cModel()
 
 void cModel::load(const std::string& filename)
 {
+	auto s = std::chrono::system_clock::now();
 	mPrivate->mFilename = filename;
 
 	Assimp::Importer importer;
+
+	int OREORE_PRESET = 0
+		| aiProcess_JoinIdenticalVertices
+		| aiProcess_ImproveCacheLocality
+		| aiProcess_LimitBoneWeights
+		| aiProcess_RemoveRedundantMaterials
+		| aiProcess_SplitLargeMeshes
+		| aiProcess_Triangulate
+		;
 	const aiScene* scene = importer.ReadFile(filename, OREORE_PRESET);
 	if (!scene) {
 		sDebug::Order().print(sDebug::FLAG_ERROR | sDebug::ACTION_ASSERTION,"can't file load in cModel::load : %s : %s\n", filename.c_str(), importer.GetErrorString());
 		return;
 	}
-
-	auto s = std::chrono::system_clock::now();
 
 	auto device = sThreadLocal::Order().m_device[sThreadLocal::DEVICE_GRAPHICS];
 	auto cmd_pool = sGlobal::Order().getCmdPoolTempolary(device.getQueueFamilyIndex());
@@ -760,44 +771,19 @@ void cModel::load(const std::string& filename)
 	auto BoneNum = mPrivate->mBone.size();
 	auto MeshNum = mPrivate->mMeshNum;
 
-// 	if(0)
-// 	{
-// 		std::vector<glm::ivec3> group =
-// 		{
-// 			glm::ivec3(1000 / 256 + 1, 1, 1),
-// 			glm::ivec3(256, 1, 1),
-// 			glm::ivec3(256, 1, 1),
-// 			glm::ivec3(256, 1, 1),
-// 			glm::ivec3(256, 1, 1),
-// 			glm::ivec3(256, 1, 1),
-// 		};
-// 		size_t size = vector_sizeof(group);
-// 
-// 		vk::BufferCreateInfo buffer_info = vk::BufferCreateInfo()
-// 			.setUsage(vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer)
-// // 			.setQueueFamilyIndexCount(1)
-// // 			.setPQueueFamilyIndices(&device.getQueueFamilyIndex())
-// 			.setSize(size)
-// 			.setSharingMode(vk::SharingMode::eExclusive);
-// 
-// 		mPrivate->m_compute_indirect_buffer = device->createBuffer(buffer_info);
-// 		vk::MemoryRequirements memoryRequest = device->getBufferMemoryRequirements(mPrivate->m_compute_indirect_buffer);
-// 		vk::MemoryAllocateInfo memoryAlloc = vk::MemoryAllocateInfo()
-// 			.setAllocationSize(memoryRequest.size)
-// 			.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memoryRequest, vk::MemoryPropertyFlagBits::eHostVisible));
-// 		mPrivate->m_compute_indirect_memory = device->allocateMemory(memoryAlloc);
-// 
-// 		char* mem = reinterpret_cast<char*>(device->mapMemory(mPrivate->m_compute_indirect_memory, 0, memoryRequest.size, vk::MemoryMapFlags()));
-// 		{
-// 			memcpy_s(mem, size, group.data(), size);
-// 		}
-// 		device->unmapMemory(mPrivate->m_compute_indirect_memory);
-// 		device->bindBufferMemory(mPrivate->m_compute_indirect_buffer, mPrivate->m_compute_indirect_memory, 0);
-// 		mPrivate->m_compute_indirect_buffer_info
-// 			.setBuffer(mPrivate->m_compute_indirect_buffer)
-// 			.setOffset(0)
-// 			.setRange(memoryRequest.size);
-// 	}
+	{
+		std::vector<glm::ivec3> group =
+		{
+			glm::ivec3(1000 / 256 + 1, 1, 1),
+			glm::ivec3(256, 1, 1),
+			glm::ivec3(256, 1, 1),
+			glm::ivec3(256, 1, 1),
+			glm::ivec3(256, 1, 1),
+			glm::ivec3(256, 1, 1),
+		};
+
+		mPrivate->m_compute_indirect_buffer.create(gpu, device, group, vk::BufferUsageFlagBits::eIndirectBuffer);
+	}
 
 	cmd.end();
 	auto queue = device->getQueue(device.getQueueFamilyIndex(), device.getQueueNum()-1);

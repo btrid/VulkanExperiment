@@ -4,6 +4,7 @@
 #include <vector>
 #include <memory>
 #include <thread>
+#include <unordered_map>
 #include <mutex>
 #include <future>
 
@@ -42,9 +43,6 @@ class RootNode
 {
 
 public:
-// 	~RootNode() {
-// 		int a = 0;
-// 	}
 	std::vector<Node>	mNodeList;
 
 	const Node* getRootNode()const { return mNodeList.empty() ? nullptr : &mNodeList[0]; }
@@ -95,6 +93,7 @@ struct ResourceTexture
 	cGPU m_gpu;
 	struct Private 
 	{
+		std::string m_filename;
 		cDevice m_device;
 		vk::FenceShared m_fence_shared;
 		vk::Image m_image;
@@ -117,22 +116,31 @@ struct ResourceTexture
 
 				m_device->destroyImageView(m_image_view);
 			}
+
+			{
+				std::lock_guard<std::mutex> lock(s_manager.m_mutex);
+				s_manager.m_resource_list.erase(m_filename);
+			}
 		}
 	};
 
 	std::shared_ptr<Private> m_private;
-	ResourceTexture()
-		: m_private(std::make_shared<Private>())
-	{}
 
 	void load(const cGPU& gpu, const cDevice& device, cThreadPool& thread_pool, const std::string& filename);
-	vk::ImageView getImageView()const { return m_private->m_image_view; }
-	vk::Sampler getSampler()const { return m_private->m_sampler; }
+	vk::ImageView getImageView()const { return m_private ? m_private->m_image_view : vk::ImageView(); }
+	vk::Sampler getSampler()const { return m_private ? m_private->m_sampler : vk::Sampler(); }
 
 	bool isReady()const 
 	{
-		return m_private->m_device.getHandle() ? m_private->m_device->getFenceStatus(*m_private->m_fence_shared) == vk::Result::eSuccess : true;
+		return m_private ? m_private->m_device->getFenceStatus(*m_private->m_fence_shared) == vk::Result::eSuccess : true;
 	}
+
+	struct Manager
+	{
+		std::unordered_map<std::string, std::weak_ptr<Private>> m_resource_list;
+		std::mutex m_mutex;
+	};
+	static Manager s_manager;
 };
 
 class cModel
@@ -371,9 +379,7 @@ public:
 		RootNode mNodeRoot;
 		std::vector<Bone> mBone;
 
-// 		vk::Buffer m_compute_indirect_buffer;
-// 		vk::DeviceMemory m_compute_indirect_memory;
-// 		vk::DescriptorBufferInfo m_compute_indirect_buffer_info;
+		ConstantBuffer m_compute_indirect_buffer;
 
 		const ConstantBuffer& getBuffer(ModelBuffer buffer)const { return mUniformBuffer[static_cast<s32>(buffer)]; }
 		ConstantBuffer& getBuffer(ModelBuffer buffer) { return mUniformBuffer[static_cast<s32>(buffer)]; }

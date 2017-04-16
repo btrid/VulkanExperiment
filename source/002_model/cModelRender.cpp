@@ -308,7 +308,7 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 	{
 	 	cmd.bindPipeline(vk::PipelineBindPoint::eCompute, pipeline.m_pipeline[i]);
 	 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipeline.m_pipeline_layout[i], 0, m_compute_descriptor_set[i], {});
-		cmd.dispatch(256, 1, 1);
+		cmd.dispatchIndirect(mPrivate->m_compute_indirect_buffer.getBuffer(), i * 12);
 
 		if (i == 4) 
 		{
