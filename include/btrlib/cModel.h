@@ -12,17 +12,12 @@
 #include <btrlib/ThreadPool.h>
 #include <btrlib/rTexture.h>
 struct cMeshGPU {
-	vk::Buffer mBuffer;
-	vk::DeviceMemory mMemory;
+	ConstantBuffer m_vertex_buffer;
+	ConstantBuffer m_index_buffer;
+	ConstantBuffer m_indirect_buffer;
 
 	vk::IndexType mIndexType;
 	int32_t mIndirectCount;
-	int32_t mBufferSize[3];
-
-	vk::Buffer mBufferIndirect;
-	vk::DeviceMemory mMemoryIndirect;
-	vk::DescriptorBufferInfo mIndirectInfo;
-
 };
 
 struct Descripter
@@ -94,6 +89,52 @@ struct cAnimation
 	cAnimation& operator=(cAnimation&&)noexcept = default;
 
 };
+
+struct ResourceTexture
+{
+	cGPU m_gpu;
+	struct Private 
+	{
+		cDevice m_device;
+		vk::FenceShared m_fence_shared;
+		vk::Image m_image;
+		vk::ImageView m_image_view;
+		vk::DeviceMemory m_memory;
+
+		vk::Sampler m_sampler;
+
+		~Private()
+		{
+			if (m_image)
+			{
+				std::unique_ptr<Deleter> deleter = std::make_unique<Deleter>();
+				deleter->device = m_device.getHandle();
+				deleter->image = { m_image };
+				deleter->sampler = { m_sampler };
+				deleter->memory = { m_memory };
+				deleter->fence_shared = { m_fence_shared };
+				sGlobal::Order().destroyResource(std::move(deleter));
+
+				m_device->destroyImageView(m_image_view);
+			}
+		}
+	};
+
+	std::shared_ptr<Private> m_private;
+	ResourceTexture()
+		: m_private(std::make_shared<Private>())
+	{}
+
+	void load(const cGPU& gpu, const cDevice& device, cThreadPool& thread_pool, const std::string& filename);
+	vk::ImageView getImageView()const { return m_private->m_image_view; }
+	vk::Sampler getSampler()const { return m_private->m_sampler; }
+
+	bool isReady()const 
+	{
+		return m_private->m_device.getHandle() ? m_private->m_device->getFenceStatus(*m_private->m_fence_shared) == vk::Result::eSuccess : true;
+	}
+};
+
 class cModel
 {
 protected:
@@ -117,26 +158,16 @@ public:
 		}
 	};
 
-	struct Texture
-	{
-		vk::Fence m_fence;
-
-		vk::Image m_image;
-		vk::ImageView m_image_view;
-		vk::DeviceMemory m_memory;
-
-		vk::Sampler m_sampler;
-	};
 	struct Material {
 		glm::vec4		mAmbient;
 		glm::vec4		mDiffuse;
 		glm::vec4		mSpecular;
-		Texture			mDiffuseTex;
-		Texture			mAmbientTex;
-		Texture			mNormalTex;
-		Texture			mSpecularTex;
-		Texture			mHeightTex;
-		Texture			mReflectionTex;
+		ResourceTexture	mDiffuseTex;
+		ResourceTexture	mAmbientTex;
+		ResourceTexture	mNormalTex;
+		ResourceTexture	mSpecularTex;
+		ResourceTexture	mHeightTex;
+		ResourceTexture	mReflectionTex;
 		float			mShininess;
 		glm::vec4		mEmissive;
 	};
@@ -340,9 +371,9 @@ public:
 		RootNode mNodeRoot;
 		std::vector<Bone> mBone;
 
-		vk::Buffer m_compute_indirect_buffer;
-		vk::DeviceMemory m_compute_indirect_memory;
-		vk::DescriptorBufferInfo m_compute_indirect_buffer_info;
+// 		vk::Buffer m_compute_indirect_buffer;
+// 		vk::DeviceMemory m_compute_indirect_memory;
+// 		vk::DescriptorBufferInfo m_compute_indirect_buffer_info;
 
 		const ConstantBuffer& getBuffer(ModelBuffer buffer)const { return mUniformBuffer[static_cast<s32>(buffer)]; }
 		ConstantBuffer& getBuffer(ModelBuffer buffer) { return mUniformBuffer[static_cast<s32>(buffer)]; }

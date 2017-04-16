@@ -265,9 +265,11 @@ int main()
 	fence_list.emplace_back(device->createFence(fence_info));
 	while (true)
 	{
+// 		auto mmm = std::make_unique<ModelRender>();
+// 		mmm->load(btr::getResourcePath() + "tiny.x");
 
 		auto* m_camera = cCamera::sCamera::Order().getCameraList()[0];
-		m_camera->control(window.getInput(), 0.16f);
+		m_camera->control(window.getInput(), 0.016f);
 
 		uint32_t backbuffer_index = window.getSwapchain().swap(swapbuffer_semaphore);
 		{
@@ -358,6 +360,7 @@ int main()
 		}
 
 		window.update(sGlobal::Order().getThreadPool());
+//		sGlobal::Order().getThreadPool().wait();
 		sGlobal::Order().swap();
 
 	}

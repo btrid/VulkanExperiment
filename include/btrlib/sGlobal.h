@@ -12,6 +12,21 @@
 #include <btrlib/cThreadPool.h>
 #include <btrlib/sDebug.h>
 
+namespace vk
+{
+
+struct FenceShared
+{
+	std::shared_ptr<vk::Fence> m_fence;
+	void create(vk::Device device, const vk::FenceCreateInfo& fence_info);
+
+	vk::Fence getHandle()const { return m_fence ? *m_fence : vk::Fence(); }
+	operator VkFence() const { return getHandle(); }
+	vk::Fence operator*() const { return getHandle(); }
+};
+
+}
+
 class sShaderModule : public Singleton<sShaderModule>
 {
 	friend Singleton<sShaderModule>;
@@ -34,6 +49,7 @@ public:
 	uint32_t getQueueFamilyIndex()const { return m_family_index; }
 	uint32_t getQueueNum()const { return m_queue_num; }
 	const vk::Device& getHandle()const { return m_handle; }
+	const vk::Device& operator*()const { return m_handle; }
 	const vk::PhysicalDevice& getGPU()const { return m_gpu; }
 
 	void DebugMarkerSetObjectTag(vk::DebugMarkerObjectTagInfoEXT* pTagInfo)const 
@@ -120,36 +136,38 @@ struct Deleter {
 	std::vector<vk::CommandBuffer> cmd;
 
 	std::vector<vk::Fence> fence;
+	std::vector<vk::FenceShared> fence_shared;
 	std::vector<vk::Buffer> buffer;
+	std::vector<vk::Image> image;
 	std::vector<vk::DeviceMemory> memory;
+	std::vector<vk::Sampler> sampler;
 
 	~Deleter() 
 	{
-		if (!fence.empty())
-		{
-			for (auto& f : fence) {
-				device.destroyFence(f);
-			}
-			fence.clear();
+		for (auto& f : fence) {
+			device.destroyFence(f);
 		}
+
 		if (!cmd.empty())
 		{
 			device.freeCommandBuffers(pool, cmd);
-			cmd.clear();
 		}
-		if (!buffer.empty()) {
-			for (auto& b : buffer)
-			{
-				device.destroyBuffer(b);
-			}
-			buffer.clear();
+
+		for (auto& b : buffer)
+		{
+			device.destroyBuffer(b);
 		}
-		if (!memory.empty()) {
-			for (auto& m : memory)
-			{
-				device.freeMemory(m);
-			}
-			memory.clear();
+		for (auto& i : image)
+		{
+			device.destroyImage(i);
+		}
+		for (auto& m : memory)
+		{
+			device.freeMemory(m);
+		}
+		for (auto& s : sampler)
+		{
+			device.destroySampler(s);
 		}
 	};
 	bool isReady()const
@@ -158,6 +176,13 @@ struct Deleter {
 		{
 			// todo : device lost?
 			if (device.getFenceStatus(f) != vk::Result::eSuccess) {
+				return false;
+			}
+		}
+		for (auto& f : fence_shared)
+		{
+			// todo : device lost?
+			if (device.getFenceStatus(f.getHandle()) != vk::Result::eSuccess) {
 				return false;
 			}
 		}
@@ -231,6 +256,7 @@ public:
 	}
 
 	void destroyResource(std::unique_ptr<Deleter>&& deleter) {
+		assert(deleter->device);
 		m_cmd_delete[getCurrentFrame()].emplace_back(std::move(deleter));
 	}
 
@@ -467,6 +493,7 @@ private:
 
 		~Private()
 		{
+			if (m_device)
 			{
 				std::unique_ptr<Deleter> deleter = std::make_unique<Deleter>();
 				deleter->device = m_device;
@@ -496,6 +523,7 @@ public:
 		a++;
 	}
 	vk::Buffer getBuffer()const { return m_buffer_info.buffer; }
+	vk::DeviceSize getBufferSize()const { return m_buffer_info.range; }
 	vk::DescriptorBufferInfo getBufferInfo()const { return m_buffer_info; }
 
 private:
@@ -609,5 +637,6 @@ public:
 	}
 
 };
+
 
 vk::ShaderModule loadShader(const vk::Device& device, const std::string& filename);

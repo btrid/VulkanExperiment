@@ -86,85 +86,86 @@ namespace {
 		return count;
 	}
 
-	cModel::Texture loadTexture(const std::string& filename, vk::CommandBuffer& cmd)
+}
+void ResourceTexture::load(const cGPU& gpu, const cDevice& device, cThreadPool& thread_pool, const std::string& filename)
+{
+	m_gpu = gpu;
+	m_private->m_device = device;
+
+	auto texture_data = rTexture::LoadTexture(filename);
+	vk::ImageCreateInfo image_info;
+	image_info.imageType = vk::ImageType::e2D;
+	image_info.format = vk::Format::eR32G32B32A32Sfloat;
+	image_info.mipLevels = 1;
+	image_info.arrayLayers = 1;
+	image_info.samples = vk::SampleCountFlagBits::e1;
+	image_info.tiling = vk::ImageTiling::eLinear;
+	image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
+	image_info.sharingMode = vk::SharingMode::eExclusive;
+	image_info.initialLayout = vk::ImageLayout::eUndefined;
+	image_info.extent = { texture_data.m_size.x, texture_data.m_size.y, 1 };
+	vk::Image image = device->createImage(image_info);
+
+	vk::MemoryRequirements memory_request = device->getImageMemoryRequirements(image);
+	vk::MemoryAllocateInfo memory_alloc_info;
+	memory_alloc_info.allocationSize = memory_request.size;
+	memory_alloc_info.memoryTypeIndex = gpu.getMemoryTypeIndex(memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+	vk::DeviceMemory memory = device->allocateMemory(memory_alloc_info);
+	device->bindImageMemory(image, memory, 0);
+
+	vk::BufferCreateInfo staging_info;
+	staging_info.usage = vk::BufferUsageFlagBits::eTransferSrc;
+	staging_info.size = texture_data.getBufferSize();
+	staging_info.sharingMode = vk::SharingMode::eExclusive;
+	vk::Buffer staging_buffer = device->createBuffer(staging_info);
+
+	vk::MemoryRequirements staging_memory_request = device->getBufferMemoryRequirements(staging_buffer);
+	vk::MemoryAllocateInfo staging_memory_alloc_info;
+	staging_memory_alloc_info.allocationSize = staging_memory_request.size;
+	staging_memory_alloc_info.memoryTypeIndex = gpu.getMemoryTypeIndex(staging_memory_request, vk::MemoryPropertyFlagBits::eHostVisible);
+
+	vk::DeviceMemory staging_memory = device->allocateMemory(staging_memory_alloc_info);
+	device->bindBufferMemory(staging_buffer, staging_memory, 0);
+
+	auto* map = device->mapMemory(staging_memory, 0, texture_data.getBufferSize(), vk::MemoryMapFlags());
+	memcpy(map, texture_data.m_data.data(), texture_data.getBufferSize());
+	device->unmapMemory(staging_memory);
+
+	vk::ImageSubresourceRange subresourceRange;
+	subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+	subresourceRange.baseArrayLayer = 0;
+	subresourceRange.baseMipLevel = 0;
+	subresourceRange.layerCount = 1;
+	subresourceRange.levelCount = 1;
+
+	vk::FenceCreateInfo fence_info;
+	vk::FenceShared fence_shared;
+	fence_shared.create(*device, fence_info);
+
 	{
+		// staging_bufferからimageへコピー
+		// コマンドバッファの準備
+		vk::CommandPool cmd_pool = sGlobal::Order().getCmdPoolTempolary(device.getQueueFamilyIndex());
+		vk::CommandBufferAllocateInfo cmd_buffer_info;
+		cmd_buffer_info.commandBufferCount = 1;
+		cmd_buffer_info.commandPool = cmd_pool;
+		cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
+		auto cmd = device->allocateCommandBuffers(cmd_buffer_info);
 
-		auto device = sThreadLocal::Order().m_device[sThreadLocal::DEVICE_GRAPHICS];
-
-		auto texture_data = rTexture::LoadTexture(filename);
-		vk::ImageCreateInfo image_info;
-		image_info.imageType = vk::ImageType::e2D;
-		image_info.format = vk::Format::eR32G32B32A32Sfloat;
-		image_info.mipLevels = 1;
-		image_info.arrayLayers = 1;
-		image_info.samples = vk::SampleCountFlagBits::e1;
-//		image_info.tiling = vk::ImageTiling::eOptimal;
-		image_info.tiling = vk::ImageTiling::eLinear;
-		image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
-		image_info.sharingMode = vk::SharingMode::eExclusive;
-		image_info.initialLayout = vk::ImageLayout::eUndefined;
-		image_info.extent = { texture_data.m_size.x, texture_data.m_size.y, 1 };
-		vk::Image image = device->createImage(image_info);
-
-		vk::MemoryRequirements memory_request = device->getImageMemoryRequirements(image);
-		vk::MemoryAllocateInfo memory_alloc_info;
-		memory_alloc_info.allocationSize = memory_request.size;
-		memory_alloc_info.memoryTypeIndex = sThreadLocal::Order().m_gpu.getMemoryTypeIndex(memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
-
-		vk::DeviceMemory memory = device->allocateMemory(memory_alloc_info);
-		device->bindImageMemory(image, memory, 0);
-
-		vk::BufferCreateInfo staging_info;
-		staging_info.usage = vk::BufferUsageFlagBits::eTransferSrc;
-		staging_info.size = texture_data.getBufferSize();
-		staging_info.sharingMode = vk::SharingMode::eExclusive;
-		vk::Buffer staging_buffer = device->createBuffer(staging_info);
-
-		vk::MemoryRequirements staging_memory_request = device->getBufferMemoryRequirements(staging_buffer);
-		vk::MemoryAllocateInfo staging_memory_alloc_info;
-		staging_memory_alloc_info.allocationSize = staging_memory_request.size;
-		staging_memory_alloc_info.memoryTypeIndex = sThreadLocal::Order().m_gpu.getMemoryTypeIndex(staging_memory_request, vk::MemoryPropertyFlagBits::eHostVisible);
-
-		vk::DeviceMemory staging_memory = device->allocateMemory(staging_memory_alloc_info);
-		device->bindBufferMemory(staging_buffer, staging_memory, 0);
-
-		auto* map = device->mapMemory(staging_memory, 0, texture_data.getBufferSize(), vk::MemoryMapFlags());
-		memcpy(map, texture_data.m_data.data(), texture_data.getBufferSize());
-		device->unmapMemory(staging_memory);
-
-		vk::SamplerCreateInfo sampler_info;
-		sampler_info.magFilter = vk::Filter::eNearest;
-		sampler_info.minFilter = vk::Filter::eNearest;
-		sampler_info.mipmapMode = vk::SamplerMipmapMode::eLinear;
-		sampler_info.addressModeU = vk::SamplerAddressMode::eClampToEdge;
-		sampler_info.addressModeV = vk::SamplerAddressMode::eClampToEdge;
-		sampler_info.addressModeW = vk::SamplerAddressMode::eClampToEdge;
-		sampler_info.mipLodBias = 0.0f;
-		sampler_info.compareOp = vk::CompareOp::eNever;
-		sampler_info.minLod = 0.0f;
-		sampler_info.maxLod = 0.f;
-		sampler_info.maxAnisotropy = 1.0;
-		sampler_info.anisotropyEnable = VK_FALSE;
-		sampler_info.borderColor = vk::BorderColor::eFloatOpaqueWhite;
-//		sampler_info.unnormalizedCoordinates
-		vk::Sampler sampler = device->createSampler(sampler_info);
-
-		cModel::Texture texture;
-		texture.m_image = image;
-		texture.m_memory = memory;
-		texture.m_sampler = sampler;
-
-// 		vk::FenceCreateInfo fence_info;
-// 		fence_info.setFlags(vk::FenceCreateFlagBits::eSignaled);
-// 		texture.m_fence = device->createFence(fence_info);
+		cmd[0].reset(vk::CommandBufferResetFlags());
+		vk::CommandBufferBeginInfo begin_info;
+		begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit | vk::CommandBufferUsageFlagBits::eSimultaneousUse;
+		cmd[0].begin(begin_info);
 
 		vk::BufferImageCopy copy;
 		copy.bufferOffset = 0;
-		copy.imageExtent = {texture_data.m_size.x, texture_data.m_size.y, texture_data.m_size.z};
+		copy.imageExtent = { texture_data.m_size.x, texture_data.m_size.y, texture_data.m_size.z };
 		copy.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
 		copy.imageSubresource.baseArrayLayer = 0;
 		copy.imageSubresource.layerCount = 1;
 		copy.imageSubresource.mipLevel = 0;
+
 
 		vk::ImageMemoryBarrier to_copy_barrier;
 		to_copy_barrier.dstQueueFamilyIndex = device.getQueueFamilyIndex();
@@ -172,11 +173,7 @@ namespace {
 		to_copy_barrier.oldLayout = vk::ImageLayout::eUndefined;
 		to_copy_barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
 		to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
-		to_copy_barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-		to_copy_barrier.subresourceRange.baseArrayLayer = 0;
-		to_copy_barrier.subresourceRange.baseMipLevel = 0;
-		to_copy_barrier.subresourceRange.layerCount = 1;
-		to_copy_barrier.subresourceRange.levelCount = 1;
+		to_copy_barrier.subresourceRange = subresourceRange;
 
 		vk::ImageMemoryBarrier to_color_barrier;
 		to_color_barrier.dstQueueFamilyIndex = device.getQueueFamilyIndex();
@@ -185,35 +182,67 @@ namespace {
 		to_color_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 		to_color_barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
 		to_color_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-		to_color_barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-		to_color_barrier.subresourceRange.baseArrayLayer = 0;
-		to_color_barrier.subresourceRange.baseMipLevel = 0;
-		to_color_barrier.subresourceRange.layerCount = 1;
-		to_color_barrier.subresourceRange.levelCount = 1;
+		to_color_barrier.subresourceRange = subresourceRange;
 
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
-		cmd.copyBufferToImage(staging_buffer, image, vk::ImageLayout::eTransferDstOptimal, { copy });
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_color_barrier });
+		cmd[0].pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
+		cmd[0].copyBufferToImage(staging_buffer, image, vk::ImageLayout::eTransferDstOptimal, { copy });
+		cmd[0].pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_color_barrier });
+		cmd[0].end();
+		vk::SubmitInfo submit_info;
+		submit_info.commandBufferCount = (uint32_t)cmd.size();
+		submit_info.pCommandBuffers = cmd.data();
 
-		vk::ImageViewCreateInfo view_info;
-		view_info.viewType = vk::ImageViewType::e2D;
-		view_info.components.r = vk::ComponentSwizzle::eR;
-		view_info.components.g = vk::ComponentSwizzle::eG;
-		view_info.components.b = vk::ComponentSwizzle::eB;
-		view_info.components.a = vk::ComponentSwizzle::eA;
-		view_info.flags = vk::ImageViewCreateFlags();
-		view_info.format = vk::Format::eR32G32B32A32Sfloat;
-		view_info.image = image;
-		view_info.subresourceRange = to_color_barrier.subresourceRange;
-		texture.m_image_view = device->createImageView(view_info);
-		return std::move(texture);
+		auto queue = device->getQueue(device.getQueueFamilyIndex(), device.getQueueNum() - 1);
+		queue.submit(submit_info, *fence_shared);
+
+		auto deleter = std::make_unique<Deleter>();
+		deleter->device = device.getHandle();
+		deleter->buffer = { staging_buffer };
+		deleter->memory = { staging_memory };
+		deleter->pool = cmd_pool;
+		deleter->cmd = std::move(cmd);
+		deleter->fence_shared = { fence_shared };
+		sGlobal::Order().destroyResource(std::move(deleter));
+
 	}
 
+	vk::ImageViewCreateInfo view_info;
+	view_info.viewType = vk::ImageViewType::e2D;
+	view_info.components.r = vk::ComponentSwizzle::eR;
+	view_info.components.g = vk::ComponentSwizzle::eG;
+	view_info.components.b = vk::ComponentSwizzle::eB;
+	view_info.components.a = vk::ComponentSwizzle::eA;
+	view_info.flags = vk::ImageViewCreateFlags();
+	view_info.format = vk::Format::eR32G32B32A32Sfloat;
+	view_info.image = image;
+	view_info.subresourceRange = subresourceRange;
+
+	vk::SamplerCreateInfo sampler_info;
+	sampler_info.magFilter = vk::Filter::eNearest;
+	sampler_info.minFilter = vk::Filter::eNearest;
+	sampler_info.mipmapMode = vk::SamplerMipmapMode::eLinear;
+	sampler_info.addressModeU = vk::SamplerAddressMode::eClampToEdge;
+	sampler_info.addressModeV = vk::SamplerAddressMode::eClampToEdge;
+	sampler_info.addressModeW = vk::SamplerAddressMode::eClampToEdge;
+	sampler_info.mipLodBias = 0.0f;
+	sampler_info.compareOp = vk::CompareOp::eNever;
+	sampler_info.minLod = 0.0f;
+	sampler_info.maxLod = 0.f;
+	sampler_info.maxAnisotropy = 1.0;
+	sampler_info.anisotropyEnable = VK_FALSE;
+	sampler_info.borderColor = vk::BorderColor::eFloatOpaqueWhite;
+
+	m_private->m_image = image;
+	m_private->m_memory = memory;
+	m_private->m_image_view = device->createImageView(view_info);
+	m_private->m_sampler = device->createSampler(sampler_info);
+	m_private->m_fence_shared = fence_shared;
 }
 
 
 std::vector<cModel::Material> loadMaterial(const aiScene* scene, const std::string& filename, vk::CommandBuffer cmd)
 {
+	auto device = sThreadLocal::Order().m_device[sThreadLocal::DEVICE_GRAPHICS];
 	std::string path = std::tr2::sys::path(filename).remove_filename().string();
 	std::vector<cModel::Material> material(scene->mNumMaterials);
 	for (size_t i = 0; i < scene->mNumMaterials; i++)
@@ -237,21 +266,21 @@ std::vector<cModel::Material> loadMaterial(const aiScene* scene, const std::stri
 		aiTextureMapping mapping;
 		unsigned uvIndex;
 		if (aiMat->GetTexture(aiTextureType_DIFFUSE, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode) == AI_SUCCESS) {
-			mat.mDiffuseTex = loadTexture(path + "/" + str.C_Str(), cmd);
+			mat.mDiffuseTex.load(sThreadLocal::Order().m_gpu, device, sGlobal::Order().getThreadPool(), path + "/" + str.C_Str());
 		}
 		if (aiMat->GetTexture(aiTextureType_AMBIENT, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode)) {
-			mat.mAmbientTex = loadTexture(path + "/" + str.C_Str(), cmd);
+			mat.mAmbientTex.load(sThreadLocal::Order().m_gpu, device, sGlobal::Order().getThreadPool(), path + "/" + str.C_Str());
 		}
 		if (aiMat->GetTexture(aiTextureType_SPECULAR, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode)) {
-			mat.mSpecularTex = loadTexture(path + "/" + str.C_Str(), cmd);
+			mat.mSpecularTex.load(sThreadLocal::Order().m_gpu, device, sGlobal::Order().getThreadPool(), path + "/" + str.C_Str());
 		}
 
 		if (aiMat->GetTexture(aiTextureType_NORMALS, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode)) {
-			mat.mNormalTex = loadTexture(path + "/" + str.C_Str(), cmd);
+			mat.mNormalTex.load(sThreadLocal::Order().m_gpu, device, sGlobal::Order().getThreadPool(), path + "/" + str.C_Str());
 		}
 
 		if (aiMat->GetTexture(aiTextureType_HEIGHT, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode)) {
-			mat.mHeightTex = loadTexture(path + "/" + str.C_Str(), cmd);
+			mat.mHeightTex.load(sThreadLocal::Order().m_gpu, device, sGlobal::Order().getThreadPool(), path + "/" + str.C_Str());
 		}
 	}
 
@@ -556,39 +585,10 @@ void cModel::load(const std::string& filename)
 	{
 		cMeshGPU& mesh = mPrivate->mMesh;
 		mesh.mIndexType = vk::IndexType::eUint32;
-		mesh.mBufferSize[0] = (int32_t)vector_sizeof(vertex);
-		mesh.mBufferSize[1] = (int32_t)vector_sizeof(index);
 
 		{
-			int bufferSize
-				= mesh.mBufferSize[0]
-				+ mesh.mBufferSize[1];
-			vk::BufferCreateInfo bufferInfo = vk::BufferCreateInfo()
-				.setUsage(vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer /*| vk::BufferUsageFlagBits::eTransferDst*/)
-				.setSize(bufferSize);
-
-			mesh.mBuffer = device->createBuffer(bufferInfo);
-
-			vk::MemoryRequirements memoryRequest = device->getBufferMemoryRequirements(mesh.mBuffer);
-
-			vk::MemoryAllocateInfo memAlloc = vk::MemoryAllocateInfo()
-				.setAllocationSize(memoryRequest.size)
-				.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memoryRequest, /*vk::MemoryPropertyFlagBits::eDeviceLocal*/ vk::MemoryPropertyFlagBits::eHostVisible));
-			mesh.mMemory = device->allocateMemory(memAlloc);
-
-			char* mem = reinterpret_cast<char*>(device->mapMemory(mesh.mMemory, 0, memoryRequest.size, vk::MemoryMapFlags()));
-			{
-				int offset = 0;
-				int size = mesh.mBufferSize[0];
-				memcpy_s(mem + offset, size, vertex.data(), size);
-
-				offset += size;
-				size = mesh.mBufferSize[1];
-				memcpy_s(mem + offset, size, index.data(), size);
-
-			}
-			device->unmapMemory(mesh.mMemory);
-			device->bindBufferMemory(mesh.mBuffer, mesh.mMemory, 0);
+			mesh.m_vertex_buffer.create(gpu, device, vertex, vk::BufferUsageFlagBits::eVertexBuffer);
+			mesh.m_index_buffer.create(gpu, device, index, vk::BufferUsageFlagBits::eIndexBuffer);
 		}
 
 		// indirect
@@ -604,35 +604,7 @@ void cModel::load(const std::string& filename)
 				offset += indexSize[i];
 			}
 			mesh.mIndirectCount = (int32_t)indirect.size();
-			mesh.mBufferSize[2] = (int32_t)vector_sizeof(indirect);
-			s32 bufferSize = mesh.mBufferSize[2];
-			{
-				vk::BufferCreateInfo bufferInfo = vk::BufferCreateInfo()
-					.setUsage(vk::BufferUsageFlagBits::eIndirectBuffer
-						| vk::BufferUsageFlagBits::eStorageBuffer
-						| vk::BufferUsageFlagBits::eTransferDst)
-					.setSize(bufferSize);
-					mesh.mBufferIndirect = device->createBuffer(bufferInfo);
-				vk::MemoryRequirements memoryRequest = device->getBufferMemoryRequirements(mesh.mBufferIndirect);
-
-				vk::MemoryAllocateInfo memAlloc = vk::MemoryAllocateInfo()
-					.setAllocationSize(memoryRequest.size)
-					.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memoryRequest, vk::MemoryPropertyFlagBits::eHostVisible));
-				mesh.mMemoryIndirect = device->allocateMemory(memAlloc);
-
-				auto* mem = reinterpret_cast<Mesh*>(device->mapMemory(mesh.mMemoryIndirect, 0, memoryRequest.size, vk::MemoryMapFlags()));
-				{
-					memcpy_s(mem, bufferSize, indirect.data(), bufferSize);
-				}
-				device->unmapMemory(mesh.mMemoryIndirect);
-				device->bindBufferMemory(mesh.mBufferIndirect, mesh.mMemoryIndirect, 0);
-
-				mesh.mIndirectInfo.setBuffer(mesh.mBufferIndirect);
-				mesh.mIndirectInfo.setOffset(0);
-				mesh.mIndirectInfo.setRange(mesh.mBufferSize[2]);
-
-			}
-
+			mesh.m_indirect_buffer.create(gpu, device, indirect, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer);
 		}
 	}
 
@@ -788,43 +760,44 @@ void cModel::load(const std::string& filename)
 	auto BoneNum = mPrivate->mBone.size();
 	auto MeshNum = mPrivate->mMeshNum;
 
-	{
-		std::vector<glm::ivec3> group =
-		{
-			glm::ivec3(1000 / 256 + 1, 1, 1),
-			glm::ivec3(256, 1, 1),
-			glm::ivec3(256, 1, 1),
-			glm::ivec3(256, 1, 1),
-			glm::ivec3(256, 1, 1),
-			glm::ivec3(256, 1, 1),
-		};
-		size_t size = vector_sizeof(group);
-
-		vk::BufferCreateInfo buffer_info = vk::BufferCreateInfo()
-			.setUsage(vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer)
-// 			.setQueueFamilyIndexCount(1)
-// 			.setPQueueFamilyIndices(&device.getQueueFamilyIndex())
-			.setSize(size)
-			.setSharingMode(vk::SharingMode::eExclusive);
-
-		mPrivate->m_compute_indirect_buffer = device->createBuffer(buffer_info);
-		vk::MemoryRequirements memoryRequest = device->getBufferMemoryRequirements(mPrivate->m_compute_indirect_buffer);
-		vk::MemoryAllocateInfo memoryAlloc = vk::MemoryAllocateInfo()
-			.setAllocationSize(memoryRequest.size)
-			.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memoryRequest, vk::MemoryPropertyFlagBits::eHostVisible));
-		mPrivate->m_compute_indirect_memory = device->allocateMemory(memoryAlloc);
-
-		char* mem = reinterpret_cast<char*>(device->mapMemory(mPrivate->m_compute_indirect_memory, 0, memoryRequest.size, vk::MemoryMapFlags()));
-		{
-			memcpy_s(mem, size, group.data(), size);
-		}
-		device->unmapMemory(mPrivate->m_compute_indirect_memory);
-		device->bindBufferMemory(mPrivate->m_compute_indirect_buffer, mPrivate->m_compute_indirect_memory, 0);
-		mPrivate->m_compute_indirect_buffer_info
-			.setBuffer(mPrivate->m_compute_indirect_buffer)
-			.setOffset(0)
-			.setRange(memoryRequest.size);
-	}
+// 	if(0)
+// 	{
+// 		std::vector<glm::ivec3> group =
+// 		{
+// 			glm::ivec3(1000 / 256 + 1, 1, 1),
+// 			glm::ivec3(256, 1, 1),
+// 			glm::ivec3(256, 1, 1),
+// 			glm::ivec3(256, 1, 1),
+// 			glm::ivec3(256, 1, 1),
+// 			glm::ivec3(256, 1, 1),
+// 		};
+// 		size_t size = vector_sizeof(group);
+// 
+// 		vk::BufferCreateInfo buffer_info = vk::BufferCreateInfo()
+// 			.setUsage(vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer)
+// // 			.setQueueFamilyIndexCount(1)
+// // 			.setPQueueFamilyIndices(&device.getQueueFamilyIndex())
+// 			.setSize(size)
+// 			.setSharingMode(vk::SharingMode::eExclusive);
+// 
+// 		mPrivate->m_compute_indirect_buffer = device->createBuffer(buffer_info);
+// 		vk::MemoryRequirements memoryRequest = device->getBufferMemoryRequirements(mPrivate->m_compute_indirect_buffer);
+// 		vk::MemoryAllocateInfo memoryAlloc = vk::MemoryAllocateInfo()
+// 			.setAllocationSize(memoryRequest.size)
+// 			.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memoryRequest, vk::MemoryPropertyFlagBits::eHostVisible));
+// 		mPrivate->m_compute_indirect_memory = device->allocateMemory(memoryAlloc);
+// 
+// 		char* mem = reinterpret_cast<char*>(device->mapMemory(mPrivate->m_compute_indirect_memory, 0, memoryRequest.size, vk::MemoryMapFlags()));
+// 		{
+// 			memcpy_s(mem, size, group.data(), size);
+// 		}
+// 		device->unmapMemory(mPrivate->m_compute_indirect_memory);
+// 		device->bindBufferMemory(mPrivate->m_compute_indirect_buffer, mPrivate->m_compute_indirect_memory, 0);
+// 		mPrivate->m_compute_indirect_buffer_info
+// 			.setBuffer(mPrivate->m_compute_indirect_buffer)
+// 			.setOffset(0)
+// 			.setRange(memoryRequest.size);
+// 	}
 
 	cmd.end();
 	auto queue = device->getQueue(device.getQueueFamilyIndex(), device.getQueueNum()-1);

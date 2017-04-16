@@ -256,9 +256,9 @@ vk::Format cGPU::getSupportedDepthFormat(const std::vector<vk::Format>& depthFor
 
 void sGlobal::swap()
 {
-	auto prev = m_current_frame;
 	m_current_frame = ++m_current_frame % FRAME_MAX;
-	auto& deletelist = m_cmd_delete[m_current_frame];
+	auto next = (m_current_frame+1) % FRAME_MAX;
+	auto& deletelist = m_cmd_delete[next];
 	for (auto it = deletelist.begin(); it != deletelist.end();)
 	{
 		if ((*it)->isReady()) {
@@ -288,4 +288,18 @@ vk::ShaderModule loadShader(const vk::Device& device, const std::string& filenam
 		.setPCode(reinterpret_cast<const uint32_t*>(buffer.data()))
 		.setCodeSize(buffer.size());
 	return device.createShaderModule(shaderInfo);
+}
+
+void vk::FenceShared::create(vk::Device device, const vk::FenceCreateInfo& fence_info)
+{
+	auto deleter = [=](vk::Fence* fence)
+	{
+		auto deleter = std::make_unique<Deleter>();
+		deleter->device = device;
+		deleter->fence = { *fence };
+		sGlobal::Order().destroyResource(std::move(deleter));
+		delete fence;
+	};
+	m_fence = std::shared_ptr<vk::Fence>(new vk::Fence(), deleter);
+	*m_fence = device.createFence(fence_info);
 }
