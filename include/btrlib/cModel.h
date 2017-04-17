@@ -12,6 +12,14 @@
 #include <btrlib/sGlobal.h>
 #include <btrlib/ThreadPool.h>
 #include <btrlib/rTexture.h>
+
+template<typename T>
+struct Manager
+{
+	std::unordered_map<std::string, std::weak_ptr<T>> m_resource_list;
+	std::mutex m_mutex;
+};
+
 struct cMeshGPU {
 	ConstantBuffer m_vertex_buffer;
 	ConstantBuffer m_index_buffer;
@@ -139,8 +147,11 @@ struct ResourceTexture
 	{
 		std::unordered_map<std::string, std::weak_ptr<Private>> m_resource_list;
 		std::mutex m_mutex;
+
+		std::shared_ptr<Private> get(const std::string& filename);
 	};
 	static Manager s_manager;
+
 };
 
 class cModel
@@ -337,7 +348,7 @@ public:
 	};
 
 
-	class Private
+	class Resource
 	{
 		friend cModel;
 	public:
@@ -366,7 +377,7 @@ public:
 		std::array<ConstantBuffer, static_cast<s32>(ModelBuffer::NUM)> mUniformBuffer;
 		cAnimation m_animation_buffer;
 
-		std::string mFilename;
+		std::string m_filename;
 		std::vector<int> mIndexNum;
 		std::vector<int> mVertexNum;
 		int				mMeshNum;
@@ -387,19 +398,28 @@ public:
 		const ConstantBuffer& getMotionBuffer(cAnimation::MotionBuffer buffer)const { return m_animation_buffer.mMotionBuffer[buffer]; }
 		ConstantBuffer& getMotionBuffer(cAnimation::MotionBuffer buffer) { return m_animation_buffer.mMotionBuffer[buffer]; }
 
-		Private()
+		Resource()
 		{
 
 		}
-		~Private() {
-			// @ ToDo buffer‚Ìdelete
-			;
+		~Resource() 
+		{
+			if (!m_filename.empty())
+			{
+				std::lock_guard<std::mutex> lock(s_manager.m_mutex);
+				s_manager.m_resource_list.erase(m_filename);
+			}
 		}
 	};
-	std::shared_ptr<Private> mPrivate;
+	std::shared_ptr<Resource> m_resource;
 
-	// @ToDo ‚Ç‚Á‚©‚ÖˆÚ“®
-	unsigned frustomBO_;
+	struct InstanceParam
+	{
+		int m_insetance_no;
+		glm::mat4 m_world;
+	};
+	std::shared_ptr<InstanceParam> m_instance;
+	static Manager<Resource> s_manager;
 
 public:
 	cModel();
@@ -407,8 +427,8 @@ public:
 
 	void load(const std::string& filename);
 
-	const std::string& getFilename()const;
-	const cMeshGPU& getMesh()const;
+	std::string getFilename()const;
+	const cMeshGPU* getMesh()const;
 
 };
 

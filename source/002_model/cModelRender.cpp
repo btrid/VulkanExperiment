@@ -19,15 +19,15 @@ void ModelRender::setup(cModelRenderer&  renderer)
 			m_draw_descriptor_set_per_model = graphics_device->allocateDescriptorSets(alloc_info)[0];
 
 			std::vector<vk::DescriptorBufferInfo> uniformBufferInfo = {
-				mPrivate->getBuffer(Private::ModelBuffer::MODEL_INFO).getBufferInfo(),
+				m_resource->getBuffer(Resource::ModelBuffer::MODEL_INFO).getBufferInfo(),
 			};
 
 			std::vector<vk::DescriptorBufferInfo> storagemBufferInfo = {
-//				mPrivate->getBuffer(Private::ModelBuffer::VS_MATERIAL).getBufferInfo(),
-				mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM).getBufferInfo(),
+//				m_resource->getBuffer(Resource::ModelBuffer::VS_MATERIAL).getBufferInfo(),
+				m_resource->getBuffer(Resource::ModelBuffer::BONE_TRANSFORM).getBufferInfo(),
 			};
 			std::vector<vk::DescriptorBufferInfo> fStoragemBufferInfo = {
-				mPrivate->getBuffer(Private::ModelBuffer::MATERIAL).getBufferInfo(),
+				m_resource->getBuffer(Resource::ModelBuffer::MATERIAL).getBufferInfo(),
 			};
 			std::vector<vk::WriteDescriptorSet> write_descriptor_set =
 			{
@@ -57,12 +57,12 @@ void ModelRender::setup(cModelRenderer&  renderer)
 			// meshごとの更新
 			vk::DescriptorSetAllocateInfo allocInfo;
 			allocInfo.descriptorPool = pipeline.m_descriptor_pool;
-			allocInfo.descriptorSetCount = mPrivate->mMeshNum;
+			allocInfo.descriptorSetCount = m_resource->mMeshNum;
 			allocInfo.pSetLayouts = &pipeline.m_descriptor_set_layout[cModelRenderer::cModelDrawPipeline::DESCRIPTOR_SET_LAYOUT_PER_MESH];
 			m_draw_descriptor_set_per_mesh = graphics_device->allocateDescriptorSets(allocInfo);
 			for (size_t i = 0; i < m_draw_descriptor_set_per_mesh.size(); i++)
 			{
-				auto& material = mPrivate->m_material[mPrivate->m_material_index[i]];
+				auto& material = m_resource->m_material[m_resource->m_material_index[i]];
 
 				std::vector<vk::DescriptorImageInfo> color_image_info = {
 					vk::DescriptorImageInfo(material.mDiffuseTex.getSampler(), material.mDiffuseTex.getImageView(), vk::ImageLayout::eShaderReadOnlyOptimal),
@@ -100,8 +100,8 @@ void ModelRender::setup(cModelRenderer&  renderer)
 		{
 			std::vector<vk::DescriptorBufferInfo> storages =
 			{
-				mPrivate->getBuffer(Private::ModelBuffer::MODEL_INFO).getBufferInfo(),
-				mPrivate->mMesh.m_indirect_buffer.getBufferInfo(),
+				m_resource->getBuffer(Resource::ModelBuffer::MODEL_INFO).getBufferInfo(),
+				m_resource->mMesh.m_indirect_buffer.getBufferInfo(),
 			};
 
 			desc = vk::WriteDescriptorSet()
@@ -117,7 +117,7 @@ void ModelRender::setup(cModelRenderer&  renderer)
 		{
 			std::vector<vk::DescriptorBufferInfo> uniforms =
 			{
-				mPrivate->getBuffer(Private::ModelBuffer::MODEL_INFO).getBufferInfo(),
+				m_resource->getBuffer(Resource::ModelBuffer::MODEL_INFO).getBufferInfo(),
 			};
 			desc = vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
@@ -129,8 +129,8 @@ void ModelRender::setup(cModelRenderer&  renderer)
 
 			std::vector<vk::DescriptorBufferInfo> storages =
 			{
-				mPrivate->getMotionBuffer(cAnimation::ANIMATION_INFO).getBufferInfo(),
-				mPrivate->getBuffer(Private::ModelBuffer::PLAYING_ANIMATION).getBufferInfo(),
+				m_resource->getMotionBuffer(cAnimation::ANIMATION_INFO).getBufferInfo(),
+				m_resource->getBuffer(Resource::ModelBuffer::PLAYING_ANIMATION).getBufferInfo(),
 			};
 			desc = vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
@@ -145,7 +145,7 @@ void ModelRender::setup(cModelRenderer&  renderer)
 		{
 			std::vector<vk::DescriptorBufferInfo> uniforms =
 			{
-				mPrivate->getBuffer(Private::ModelBuffer::MODEL_INFO).getBufferInfo(),
+				m_resource->getBuffer(Resource::ModelBuffer::MODEL_INFO).getBufferInfo(),
 			};
 			desc = vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
@@ -157,14 +157,14 @@ void ModelRender::setup(cModelRenderer&  renderer)
 
 			std::vector<vk::DescriptorBufferInfo> storages =
 			{
-				mPrivate->getMotionBuffer(cAnimation::ANIMATION_INFO).getBufferInfo(),
-				mPrivate->getMotionBuffer(cAnimation::MOTION_INFO).getBufferInfo(),
-				mPrivate->getMotionBuffer(cAnimation::MOTION_DATA_TIME).getBufferInfo(),
-				mPrivate->getMotionBuffer(cAnimation::MOTION_DATA_SRT).getBufferInfo(),
-				mPrivate->getBuffer(Private::ModelBuffer::PLAYING_ANIMATION).getBufferInfo(),
-				mPrivate->getBuffer(Private::ModelBuffer::NODE_INFO).getBufferInfo(),
-				mPrivate->getBuffer(Private::ModelBuffer::NODE_LOCAL_TRANSFORM).getBufferInfo(),
-				mPrivate->getBuffer(Private::ModelBuffer::MOTION_WORK).getBufferInfo(),
+				m_resource->getMotionBuffer(cAnimation::ANIMATION_INFO).getBufferInfo(),
+				m_resource->getMotionBuffer(cAnimation::MOTION_INFO).getBufferInfo(),
+				m_resource->getMotionBuffer(cAnimation::MOTION_DATA_TIME).getBufferInfo(),
+				m_resource->getMotionBuffer(cAnimation::MOTION_DATA_SRT).getBufferInfo(),
+				m_resource->getBuffer(Resource::ModelBuffer::PLAYING_ANIMATION).getBufferInfo(),
+				m_resource->getBuffer(Resource::ModelBuffer::NODE_INFO).getBufferInfo(),
+				m_resource->getBuffer(Resource::ModelBuffer::NODE_LOCAL_TRANSFORM).getBufferInfo(),
+				m_resource->getBuffer(Resource::ModelBuffer::MOTION_WORK).getBufferInfo(),
 			};
 			desc = vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
@@ -179,7 +179,7 @@ void ModelRender::setup(cModelRenderer&  renderer)
 		{
 			std::vector<vk::DescriptorBufferInfo> uniforms =
 			{
-				mPrivate->getBuffer(Private::ModelBuffer::MODEL_INFO).getBufferInfo(),
+				m_resource->getBuffer(Resource::ModelBuffer::MODEL_INFO).getBufferInfo(),
 			};
 			desc = vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
@@ -191,10 +191,10 @@ void ModelRender::setup(cModelRenderer&  renderer)
 
 			std::vector<vk::DescriptorBufferInfo> storages =
 			{
-				mPrivate->getBuffer(Private::ModelBuffer::WORLD).getBufferInfo(),
-				mPrivate->getBuffer(Private::ModelBuffer::NODE_INFO).getBufferInfo(),
-				mPrivate->getBuffer(Private::ModelBuffer::NODE_LOCAL_TRANSFORM).getBufferInfo(),
-				mPrivate->getBuffer(Private::ModelBuffer::NODE_GLOBAL_TRANSFORM).getBufferInfo(),
+				m_resource->getBuffer(Resource::ModelBuffer::WORLD).getBufferInfo(),
+				m_resource->getBuffer(Resource::ModelBuffer::NODE_INFO).getBufferInfo(),
+				m_resource->getBuffer(Resource::ModelBuffer::NODE_LOCAL_TRANSFORM).getBufferInfo(),
+				m_resource->getBuffer(Resource::ModelBuffer::NODE_GLOBAL_TRANSFORM).getBufferInfo(),
 			};
 			desc = vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
@@ -210,12 +210,12 @@ void ModelRender::setup(cModelRenderer&  renderer)
 			std::vector<vk::DescriptorBufferInfo> uniforms = {};
 			std::vector<vk::DescriptorBufferInfo> storages =
 			{
-				mPrivate->getBuffer(Private::ModelBuffer::WORLD).getBufferInfo(),
-				mPrivate->getBuffer(Private::ModelBuffer::NODE_INFO).getBufferInfo(),
-				mPrivate->getBuffer(Private::ModelBuffer::BONE_INFO).getBufferInfo(),
-				mPrivate->getBuffer(Private::ModelBuffer::BONE_MAP).getBufferInfo(),
-				mPrivate->mMesh.m_indirect_buffer.getBufferInfo(),
-				mPrivate->getBuffer(Private::ModelBuffer::MODEL_INFO).getBufferInfo(),
+				m_resource->getBuffer(Resource::ModelBuffer::WORLD).getBufferInfo(),
+				m_resource->getBuffer(Resource::ModelBuffer::NODE_INFO).getBufferInfo(),
+				m_resource->getBuffer(Resource::ModelBuffer::BONE_INFO).getBufferInfo(),
+				m_resource->getBuffer(Resource::ModelBuffer::BONE_MAP).getBufferInfo(),
+				m_resource->mMesh.m_indirect_buffer.getBufferInfo(),
+				m_resource->getBuffer(Resource::ModelBuffer::MODEL_INFO).getBufferInfo(),
 			};
 			desc = vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
@@ -230,7 +230,7 @@ void ModelRender::setup(cModelRenderer&  renderer)
 		{
 			std::vector<vk::DescriptorBufferInfo> uniforms =
 			{
-				mPrivate->getBuffer(Private::ModelBuffer::MODEL_INFO).getBufferInfo(),
+				m_resource->getBuffer(Resource::ModelBuffer::MODEL_INFO).getBufferInfo(),
 			};
 			desc = vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
@@ -242,10 +242,10 @@ void ModelRender::setup(cModelRenderer&  renderer)
 
 			std::vector<vk::DescriptorBufferInfo> storages =
 			{
-				mPrivate->getBuffer(Private::ModelBuffer::NODE_GLOBAL_TRANSFORM).getBufferInfo(),
-				mPrivate->getBuffer(Private::ModelBuffer::BONE_INFO).getBufferInfo(),
-				mPrivate->getBuffer(Private::ModelBuffer::BONE_MAP).getBufferInfo(),
-				mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM).getBufferInfo(),
+				m_resource->getBuffer(Resource::ModelBuffer::NODE_GLOBAL_TRANSFORM).getBufferInfo(),
+				m_resource->getBuffer(Resource::ModelBuffer::BONE_INFO).getBufferInfo(),
+				m_resource->getBuffer(Resource::ModelBuffer::BONE_MAP).getBufferInfo(),
+				m_resource->getBuffer(Resource::ModelBuffer::BONE_TRANSFORM).getBufferInfo(),
 			};
 			desc = vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
@@ -270,15 +270,15 @@ void ModelRender::setup(cModelRenderer&  renderer)
 			vk::BufferMemoryBarrier()
 			.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
 			.setDstAccessMask(vk::AccessFlagBits::eIndirectCommandRead | vk::AccessFlagBits::eMemoryRead)
-			.setBuffer(mPrivate->mMesh.m_indirect_buffer.getBuffer())
-			.setSize(mPrivate->mMesh.m_indirect_buffer.getBufferSize())
+			.setBuffer(m_resource->mMesh.m_indirect_buffer.getBuffer())
+			.setSize(m_resource->mMesh.m_indirect_buffer.getBufferSize())
 			.setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
 			.setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED),
 			vk::BufferMemoryBarrier()
 			.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
 			.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eMemoryRead)
-			.setBuffer(mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM).getBuffer())
-			.setSize(mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM).getBufferInfo().range)
+			.setBuffer(m_resource->getBuffer(Resource::ModelBuffer::BONE_TRANSFORM).getBuffer())
+			.setSize(m_resource->getBuffer(Resource::ModelBuffer::BONE_TRANSFORM).getBufferInfo().range)
 			.setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
 			.setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED),
 		};
@@ -291,13 +291,13 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 		vk::BufferMemoryBarrier()
 		.setSrcAccessMask(vk::AccessFlagBits::eIndirectCommandRead)
 		.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
-		.setBuffer(mPrivate->mMesh.m_indirect_buffer.getBuffer())
-		.setSize(mPrivate->mMesh.m_indirect_buffer.getBufferSize()),
+		.setBuffer(m_resource->mMesh.m_indirect_buffer.getBuffer())
+		.setSize(m_resource->mMesh.m_indirect_buffer.getBufferSize()),
 		vk::BufferMemoryBarrier()
 		.setSrcAccessMask(vk::AccessFlagBits::eShaderRead)
 		.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
-		.setBuffer(mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM).getBuffer())
-		.setSize(mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM).getBufferSize())
+		.setBuffer(m_resource->getBuffer(Resource::ModelBuffer::BONE_TRANSFORM).getBuffer())
+		.setSize(m_resource->getBuffer(Resource::ModelBuffer::BONE_TRANSFORM).getBufferSize())
 	};
 
 	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands,
@@ -308,7 +308,7 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 	{
 	 	cmd.bindPipeline(vk::PipelineBindPoint::eCompute, pipeline.m_pipeline[i]);
 	 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipeline.m_pipeline_layout[i], 0, m_compute_descriptor_set[i], {});
-		cmd.dispatchIndirect(mPrivate->m_compute_indirect_buffer.getBuffer(), i * 12);
+		cmd.dispatchIndirect(m_resource->m_compute_indirect_buffer.getBuffer(), i * 12);
 
 		if (i == 4) 
 		{
@@ -318,8 +318,8 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 				vk::BufferMemoryBarrier()
 				.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
 				.setDstAccessMask(vk::AccessFlagBits::eShaderRead)
-				.setBuffer(mPrivate->getBuffer(cModel::Private::ModelBuffer::MODEL_INFO).getBuffer())
-				.setSize(mPrivate->getBuffer(cModel::Private::ModelBuffer::MODEL_INFO).getBufferInfo().range),
+				.setBuffer(m_resource->getBuffer(cModel::Resource::ModelBuffer::MODEL_INFO).getBuffer())
+				.setSize(m_resource->getBuffer(cModel::Resource::ModelBuffer::MODEL_INFO).getBufferInfo().range),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
 				vk::DependencyFlags(), {}, barrier, {});
@@ -331,8 +331,8 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 		vk::BufferMemoryBarrier()
 		.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
 		.setDstAccessMask(vk::AccessFlagBits::eShaderRead)
-		.setBuffer(mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM).getBuffer())
-		.setSize(mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM).getBufferInfo().range)
+		.setBuffer(m_resource->getBuffer(Resource::ModelBuffer::BONE_TRANSFORM).getBuffer())
+		.setSize(m_resource->getBuffer(Resource::ModelBuffer::BONE_TRANSFORM).getBufferInfo().range)
 	};
 
 	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands,
@@ -346,11 +346,11 @@ void ModelRender::draw(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, renderer.getDrawPipeline().m_pipeline);
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, renderer.getDrawPipeline().m_pipeline_layout, 2, renderer.getDrawPipeline().m_draw_descriptor_set_per_scene, {});
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, renderer.getDrawPipeline().m_pipeline_layout, 0, m_draw_descriptor_set_per_model, {});
-	for (auto i : mPrivate->m_material_index)
+	for (auto i : m_resource->m_material_index)
 	{
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, renderer.getDrawPipeline().m_pipeline_layout, 1, m_draw_descriptor_set_per_mesh[i], {});
-		cmd.bindVertexBuffers(0, { mPrivate->mMesh.m_vertex_buffer.getBuffer() }, { vk::DeviceSize() });
-		cmd.bindIndexBuffer(mPrivate->mMesh.m_index_buffer.getBuffer(), vk::DeviceSize(0), mPrivate->mMesh.mIndexType);
-		cmd.drawIndexedIndirect(mPrivate->mMesh.m_indirect_buffer.getBuffer(), vk::DeviceSize(0), mPrivate->mMesh.mIndirectCount, sizeof(cModel::Mesh));
+		cmd.bindVertexBuffers(0, { m_resource->mMesh.m_vertex_buffer.getBuffer() }, { vk::DeviceSize() });
+		cmd.bindIndexBuffer(m_resource->mMesh.m_index_buffer.getBuffer(), vk::DeviceSize(0), m_resource->mMesh.mIndexType);
+		cmd.drawIndexedIndirect(m_resource->mMesh.m_indirect_buffer.getBuffer(), vk::DeviceSize(0), m_resource->mMesh.mIndirectCount, sizeof(cModel::Mesh));
 	}
 }

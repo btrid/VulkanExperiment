@@ -7,6 +7,7 @@
 #include <btrlib/sGlobal.h>
 #include <btrlib/ThreadPool.h>
 #include <btrlib/sDebug.h>
+#include <btrlib/cStopWatch.h>
 
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
@@ -77,6 +78,7 @@ namespace {
 
 }
 ResourceTexture::Manager ResourceTexture::s_manager;
+Manager<cModel::Resource> cModel::s_manager;
 void ResourceTexture::load(const cGPU& gpu, const cDevice& device, cThreadPool& thread_pool, const std::string& filename)
 {
 	{
@@ -446,7 +448,6 @@ void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& r
 
 
 cModel::cModel()
-	: mPrivate(std::make_shared<Private>())
 {
 }
 cModel::~cModel()
@@ -455,10 +456,20 @@ cModel::~cModel()
 
 void cModel::load(const std::string& filename)
 {
-	auto s = std::chrono::system_clock::now();
-	mPrivate->mFilename = filename;
+	{
+		std::lock_guard<std::mutex> lock(s_manager.m_mutex);
+		auto it = s_manager.m_resource_list.find(filename);
+		if (it != s_manager.m_resource_list.end()) {
+			m_resource = it->second.lock();
+			return;
+		}
 
-	Assimp::Importer importer;
+		m_resource = std::make_shared<Resource>();
+		s_manager.m_resource_list[filename] = m_resource;
+	}
+	auto s = std::chrono::system_clock::now();
+	m_resource->m_filename = filename;
+
 
 	int OREORE_PRESET = 0
 		| aiProcess_JoinIdenticalVertices
@@ -468,11 +479,14 @@ void cModel::load(const std::string& filename)
 		| aiProcess_SplitLargeMeshes
 		| aiProcess_Triangulate
 		;
+	cStopWatch timer;
+	Assimp::Importer importer;
 	const aiScene* scene = importer.ReadFile(filename, OREORE_PRESET);
 	if (!scene) {
 		sDebug::Order().print(sDebug::FLAG_ERROR | sDebug::ACTION_ASSERTION,"can't file load in cModel::load : %s : %s\n", filename.c_str(), importer.GetErrorString());
 		return;
 	}
+	sDebug::Order().print(sDebug::FLAG_LOG | sDebug::SOURCE_MODEL, "[Load Model %6.2fs] %s \n", timer.getElapsedTimeAsSeconds(), filename.c_str());
 
 	auto device = sThreadLocal::Order().m_device[sThreadLocal::DEVICE_GRAPHICS];
 	auto cmd_pool = sGlobal::Order().getCmdPoolTempolary(device.getQueueFamilyIndex());
@@ -486,22 +500,22 @@ void cModel::load(const std::string& filename)
 	cmd.begin(begin_info);
 
 	// ‰Šú‰»
-	mPrivate->mMeshNum = scene->mNumMeshes;
-	mPrivate->m_material = loadMaterial(scene, filename, cmd);
+	m_resource->mMeshNum = scene->mNumMeshes;
+	m_resource->m_material = loadMaterial(scene, filename, cmd);
 
-	mPrivate->mNodeRoot = loadNode(scene);
-	loadMotion(mPrivate->m_animation_buffer, scene, mPrivate->mNodeRoot);
+	m_resource->mNodeRoot = loadNode(scene);
+	loadMotion(m_resource->m_animation_buffer, scene, m_resource->mNodeRoot);
 
 	std::vector<NodeInfo> nodeInfo = loadNodeInfo(scene->mRootNode);
 
-	std::vector<Bone>& boneList = mPrivate->mBone;
+	std::vector<Bone>& boneList = m_resource->mBone;
 
-	mPrivate->m_material_index.resize(scene->mNumMeshes);
+	m_resource->m_material_index.resize(scene->mNumMeshes);
 	unsigned numIndex = 0;
 	unsigned numVertex = 0;
 	std::vector<int> vertexSize(scene->mNumMeshes);
 	std::vector<int> indexSize(scene->mNumMeshes);
-	std::vector<int>& materialIndex = mPrivate->m_material_index;
+	std::vector<int>& materialIndex = m_resource->m_material_index;
 	for (size_t i = 0; i < scene->mNumMeshes; i++)
 	{
 		numVertex += scene->mMeshes[i]->mNumVertices;
@@ -565,7 +579,7 @@ void cModel::load(const std::string& filename)
 					Bone bone;
 					bone.mName = mesh->mBones[b]->mName.C_Str();
 					bone.mOffset = glm::transpose(aiTo(mesh->mBones[b]->mOffsetMatrix));
-					bone.mNodeIndex = mPrivate->mNodeRoot.getNodeIndexByName(mesh->mBones[b]->mName.C_Str());
+					bone.mNodeIndex = m_resource->mNodeRoot.getNodeIndexByName(mesh->mBones[b]->mName.C_Str());
 					boneList.emplace_back(bone);
 					index = (int)boneList.size() - 1;
 					nodeInfo[bone.mNodeIndex].mBoneIndex = index;
@@ -594,7 +608,7 @@ void cModel::load(const std::string& filename)
 	auto familyIndex = device.getQueueFamilyIndex();
 
 	{
-		cMeshGPU& mesh = mPrivate->mMesh;
+		cMeshGPU& mesh = m_resource->mMesh;
 		mesh.mIndexType = vk::IndexType::eUint32;
 
 		{
@@ -622,51 +636,51 @@ void cModel::load(const std::string& filename)
 
 	// vertex shader material
 	{
-		std::vector<VSMaterialBuffer> vsmb(mPrivate->m_material.size());
-		auto& buffer = mPrivate->getBuffer(Private::ModelBuffer::VS_MATERIAL);
+		std::vector<VSMaterialBuffer> vsmb(m_resource->m_material.size());
+		auto& buffer = m_resource->getBuffer(Resource::ModelBuffer::VS_MATERIAL);
 		buffer.create(gpu, device, vsmb, vk::BufferUsageFlagBits::eStorageBuffer);
 	}
 
 	// material
 	{
-		std::vector<MaterialBuffer> mb(mPrivate->m_material.size());
+		std::vector<MaterialBuffer> mb(m_resource->m_material.size());
 		for (size_t i = 0; i < mb.size(); i++)
 		{
-			mb[i].mAmbient = mPrivate->m_material[i].mAmbient;
-			mb[i].mDiffuse = mPrivate->m_material[i].mDiffuse;
-			mb[i].mEmissive = mPrivate->m_material[i].mEmissive;
-			mb[i].mShininess = mPrivate->m_material[i].mShininess;
-			mb[i].mSpecular = mPrivate->m_material[i].mSpecular;
+			mb[i].mAmbient = m_resource->m_material[i].mAmbient;
+			mb[i].mDiffuse = m_resource->m_material[i].mDiffuse;
+			mb[i].mEmissive = m_resource->m_material[i].mEmissive;
+			mb[i].mShininess = m_resource->m_material[i].mShininess;
+			mb[i].mSpecular = m_resource->m_material[i].mSpecular;
 		}
-		auto& buffer = mPrivate->getBuffer(Private::ModelBuffer::MATERIAL);
+		auto& buffer = m_resource->getBuffer(Resource::ModelBuffer::MATERIAL);
 		buffer.create(gpu, device, mb, vk::BufferUsageFlagBits::eStorageBuffer);
 	}
 
 	// node info
 	{
-		auto& buffer = mPrivate->getBuffer(Private::ModelBuffer::NODE_INFO);
+		auto& buffer = m_resource->getBuffer(Resource::ModelBuffer::NODE_INFO);
 		buffer.create(gpu, device, nodeInfo, vk::BufferUsageFlagBits::eStorageBuffer);
 	}
 
 	int instanceNum = 1;
-	if (!mPrivate->mBone.empty())
+	if (!m_resource->mBone.empty())
 	{
 		// BoneInfo
 		{
-			std::vector<BoneInfo> bo(mPrivate->mBone.size());
-			for (size_t i = 0; i < mPrivate->mBone.size(); i++) {
-				bo[i].mBoneOffset = mPrivate->mBone[i].mOffset;
-				bo[i].mNodeIndex = mPrivate->mBone[i].mNodeIndex;
+			std::vector<BoneInfo> bo(m_resource->mBone.size());
+			for (size_t i = 0; i < m_resource->mBone.size(); i++) {
+				bo[i].mBoneOffset = m_resource->mBone[i].mOffset;
+				bo[i].mNodeIndex = m_resource->mBone[i].mNodeIndex;
 			}
 			size_t size = vector_sizeof(bo);
-			auto& buffer = mPrivate->getBuffer(Private::ModelBuffer::BONE_INFO);
+			auto& buffer = m_resource->getBuffer(Resource::ModelBuffer::BONE_INFO);
 			buffer.create(gpu, device, bo, vk::BufferUsageFlagBits::eStorageBuffer);
 		}
 
 		// BoneTransform
 		{
-			std::vector<BoneTransformBuffer> bt(mPrivate->mBone.size() * instanceNum);
-			auto& buffer = mPrivate->getBuffer(Private::ModelBuffer::BONE_TRANSFORM);
+			std::vector<BoneTransformBuffer> bt(m_resource->mBone.size() * instanceNum);
+			auto& buffer = m_resource->getBuffer(Resource::ModelBuffer::BONE_TRANSFORM);
 			buffer.create(gpu, device, bt, vk::BufferUsageFlagBits::eStorageBuffer);
 		}
 	}
@@ -684,7 +698,7 @@ void cModel::load(const std::string& filename)
 			pa[i].currentMotionInfoIndex = 0;
 		}
 
-		auto& buffer = mPrivate->getBuffer(Private::ModelBuffer::PLAYING_ANIMATION);
+		auto& buffer = m_resource->getBuffer(Resource::ModelBuffer::PLAYING_ANIMATION);
 		buffer.create(gpu, device, pa, vk::BufferUsageFlagBits::eStorageBuffer);
 
 // 		vk::DebugMarkerObjectNameInfoEXT debug_info;
@@ -697,8 +711,8 @@ void cModel::load(const std::string& filename)
 
 	// MotionWork
 	{
-		std::vector<MotionWork> mw(mPrivate->mNodeRoot.mNodeList.size()*instanceNum);
-		auto& buffer = mPrivate->getBuffer(Private::ModelBuffer::MOTION_WORK);
+		std::vector<MotionWork> mw(m_resource->mNodeRoot.mNodeList.size()*instanceNum);
+		auto& buffer = m_resource->getBuffer(Resource::ModelBuffer::MOTION_WORK);
 		buffer.create(gpu, device, mw, vk::BufferUsageFlagBits::eStorageBuffer);
 
 	}
@@ -709,9 +723,9 @@ void cModel::load(const std::string& filename)
 		std::vector<ModelInfo> mi(1);
 		mi[0].mInstanceMaxNum = instanceNum;
 		mi[0].mInstanceNum = instanceNum;
-		mi[0].mNodeNum = (s32)mPrivate->mNodeRoot.mNodeList.size();
-		mi[0].mBoneNum = (s32)mPrivate->mBone.size();
-		mi[0].mMeshNum = mPrivate->mMeshNum;
+		mi[0].mNodeNum = (s32)m_resource->mNodeRoot.mNodeList.size();
+		mi[0].mBoneNum = (s32)m_resource->mBone.size();
+		mi[0].mMeshNum = m_resource->mMeshNum;
 		glm::vec3 max(-10e10f);
 		glm::vec3 min(10e10f);
 		for (auto& v : vertex)
@@ -724,52 +738,52 @@ void cModel::load(const std::string& filename)
 			min.z = glm::min(min.z, v.m_position.z);
 		}
 		mi[0].mAabb = glm::vec4((max - min).xyz, glm::length((max - min) / 2.f));
-		mi[0].mInvGlobalMatrix = glm::inverse(mPrivate->mNodeRoot.getRootNode()->mTransformation);
+		mi[0].mInvGlobalMatrix = glm::inverse(m_resource->mNodeRoot.getRootNode()->mTransformation);
 
-		auto& buffer = mPrivate->getBuffer(Private::ModelBuffer::MODEL_INFO);
+		auto& buffer = m_resource->getBuffer(Resource::ModelBuffer::MODEL_INFO);
 		buffer.create(gpu, device, mi, vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eStorageBuffer);
 	}
 
 	//BoneMap
 	{
-		auto& buffer = mPrivate->getBuffer(Private::ModelBuffer::BONE_MAP);
+		auto& buffer = m_resource->getBuffer(Resource::ModelBuffer::BONE_MAP);
 		buffer.create(gpu, device, instanceNum * sizeof(s32), vk::BufferUsageFlagBits::eStorageBuffer);
 	}
 
 	//	NodeLocalTransformBuffer
 	{
-		std::vector<NodeLocalTransformBuffer> nt(mPrivate->mNodeRoot.mNodeList.size() * instanceNum);
+		std::vector<NodeLocalTransformBuffer> nt(m_resource->mNodeRoot.mNodeList.size() * instanceNum);
 		std::for_each(nt.begin(), nt.end(), [](NodeLocalTransformBuffer& v) { v.localAnimated_ = glm::mat4(1.f);  });
 
-		auto& buffer = mPrivate->getBuffer(Private::ModelBuffer::NODE_LOCAL_TRANSFORM);
+		auto& buffer = m_resource->getBuffer(Resource::ModelBuffer::NODE_LOCAL_TRANSFORM);
 		buffer.create(gpu, device, nt, vk::BufferUsageFlagBits::eStorageBuffer);
 	}
 
 
 	//	NodeGlobalTransformBuffer
 	{
-		std::vector<NodeGlobalTransformBuffer> nt(mPrivate->mNodeRoot.mNodeList.size() * instanceNum);
+		std::vector<NodeGlobalTransformBuffer> nt(m_resource->mNodeRoot.mNodeList.size() * instanceNum);
 		std::for_each(nt.begin(), nt.end(), [](NodeGlobalTransformBuffer& v) { v.globalAnimated_ = glm::mat4(1.f);  });
 
-		auto& buffer = mPrivate->getBuffer(Private::ModelBuffer::NODE_GLOBAL_TRANSFORM);
+		auto& buffer = m_resource->getBuffer(Resource::ModelBuffer::NODE_GLOBAL_TRANSFORM);
 		buffer.create(gpu, device, nt, vk::BufferUsageFlagBits::eStorageBuffer);
 	}
 	// world
 	{
 		std::vector<glm::mat4> world(instanceNum);
 
-		auto& buffer = mPrivate->getBuffer(Private::ModelBuffer::WORLD);
+		auto& buffer = m_resource->getBuffer(Resource::ModelBuffer::WORLD);
 		buffer.create(gpu, device, world, vk::BufferUsageFlagBits::eStorageBuffer);
 
 	}
 
 
-	mPrivate->mVertexNum = std::move(vertexSize);
-	mPrivate->mIndexNum = std::move(indexSize);
+	m_resource->mVertexNum = std::move(vertexSize);
+	m_resource->mIndexNum = std::move(indexSize);
 
-	auto NodeNum = mPrivate->mNodeRoot.mNodeList.size();
-	auto BoneNum = mPrivate->mBone.size();
-	auto MeshNum = mPrivate->mMeshNum;
+	auto NodeNum = m_resource->mNodeRoot.mNodeList.size();
+	auto BoneNum = m_resource->mBone.size();
+	auto MeshNum = m_resource->mMeshNum;
 
 	{
 		std::vector<glm::ivec3> group =
@@ -782,7 +796,7 @@ void cModel::load(const std::string& filename)
 			glm::ivec3(256, 1, 1),
 		};
 
-		mPrivate->m_compute_indirect_buffer.create(gpu, device, group, vk::BufferUsageFlagBits::eIndirectBuffer);
+		m_resource->m_compute_indirect_buffer.create(gpu, device, group, vk::BufferUsageFlagBits::eIndirectBuffer);
 	}
 
 	cmd.end();
@@ -809,11 +823,11 @@ void cModel::load(const std::string& filename)
 }
 
 
-const std::string& cModel::getFilename() const
+std::string cModel::getFilename() const
 {
-	return mPrivate->mFilename;
+	return m_resource ? m_resource->m_filename : "";
 }
-const cMeshGPU& cModel::getMesh() const
+const cMeshGPU* cModel::getMesh() const
 {
-	return mPrivate->mMesh; 
+	return m_resource ? &m_resource->mMesh : nullptr;
 }
