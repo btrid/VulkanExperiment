@@ -150,11 +150,6 @@ int main()
 			cmd.end();
 		}
 	}
-	{
-		auto model2 = std::make_unique<ModelRender>();
-		model2->load(btr::getResourcePath() + "tiny.x");
-	}
-
 
 	vk::SemaphoreCreateInfo semaphoreInfo = vk::SemaphoreCreateInfo();
 	vk::Semaphore swapbuffer_semaphore = device->createSemaphore(semaphoreInfo);
