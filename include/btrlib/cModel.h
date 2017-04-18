@@ -12,13 +12,7 @@
 #include <btrlib/sGlobal.h>
 #include <btrlib/ThreadPool.h>
 #include <btrlib/rTexture.h>
-
-template<typename T>
-struct Manager
-{
-	std::unordered_map<std::string, std::weak_ptr<T>> m_resource_list;
-	std::mutex m_mutex;
-};
+#include <btrlib/ResourceManager.h>
 
 struct cMeshGPU {
 	ConstantBuffer m_vertex_buffer;
@@ -99,7 +93,7 @@ struct cAnimation
 struct ResourceTexture
 {
 	cGPU m_gpu;
-	struct Private 
+	struct Resource 
 	{
 		std::string m_filename;
 		cDevice m_device;
@@ -110,7 +104,7 @@ struct ResourceTexture
 
 		vk::Sampler m_sampler;
 
-		~Private()
+		~Resource()
 		{
 			if (m_image)
 			{
@@ -124,15 +118,10 @@ struct ResourceTexture
 
 				m_device->destroyImageView(m_image_view);
 			}
-
-			{
-				std::lock_guard<std::mutex> lock(s_manager.m_mutex);
-				s_manager.m_resource_list.erase(m_filename);
-			}
 		}
 	};
 
-	std::shared_ptr<Private> m_private;
+	std::shared_ptr<Resource> m_private;
 
 	void load(const cGPU& gpu, const cDevice& device, cThreadPool& thread_pool, const std::string& filename);
 	vk::ImageView getImageView()const { return m_private ? m_private->m_image_view : vk::ImageView(); }
@@ -143,14 +132,7 @@ struct ResourceTexture
 		return m_private ? m_private->m_device->getFenceStatus(*m_private->m_fence_shared) == vk::Result::eSuccess : true;
 	}
 
-	struct Manager
-	{
-		std::unordered_map<std::string, std::weak_ptr<Private>> m_resource_list;
-		std::mutex m_mutex;
-
-		std::shared_ptr<Private> get(const std::string& filename);
-	};
-	static Manager s_manager;
+	static ResourceManager<Resource> s_manager;
 
 };
 
@@ -404,11 +386,6 @@ public:
 		}
 		~Resource() 
 		{
-			if (!m_filename.empty())
-			{
-				std::lock_guard<std::mutex> lock(s_manager.m_mutex);
-				s_manager.m_resource_list.erase(m_filename);
-			}
 		}
 	};
 	std::shared_ptr<Resource> m_resource;
@@ -419,7 +396,7 @@ public:
 		glm::mat4 m_world;
 	};
 	std::shared_ptr<InstanceParam> m_instance;
-	static Manager<Resource> s_manager;
+	static ResourceManager<Resource> s_manager;
 
 public:
 	cModel();

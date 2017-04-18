@@ -77,23 +77,13 @@ namespace {
 	}
 
 }
-ResourceTexture::Manager ResourceTexture::s_manager;
-Manager<cModel::Resource> cModel::s_manager;
+ResourceManager<ResourceTexture::Resource> ResourceTexture::s_manager;
+ResourceManager<cModel::Resource> cModel::s_manager;
 void ResourceTexture::load(const cGPU& gpu, const cDevice& device, cThreadPool& thread_pool, const std::string& filename)
 {
-	{
-		std::lock_guard<std::mutex> lock(s_manager.m_mutex);
-		auto it = s_manager.m_resource_list.find(filename);
-		if (it != s_manager.m_resource_list.end()) {
-			m_private = it->second.lock();
-			return;
-		}
-
-		m_private = std::make_shared<Private>();
-		s_manager.m_resource_list[filename] = m_private;
+	if (s_manager.manage(m_private, filename)) {
+		return;
 	}
-
-	m_private->m_filename = filename;
 	m_gpu = gpu;
 	m_private->m_device = device;
 
@@ -456,19 +446,10 @@ cModel::~cModel()
 
 void cModel::load(const std::string& filename)
 {
-	{
-		std::lock_guard<std::mutex> lock(s_manager.m_mutex);
-		auto it = s_manager.m_resource_list.find(filename);
-		if (it != s_manager.m_resource_list.end()) {
-			m_resource = it->second.lock();
-			return;
-		}
-
-		m_resource = std::make_shared<Resource>();
-		s_manager.m_resource_list[filename] = m_resource;
+	if (s_manager.manage(m_resource, filename)) {
+		return;
 	}
 	auto s = std::chrono::system_clock::now();
-	m_resource->m_filename = filename;
 
 
 	int OREORE_PRESET = 0

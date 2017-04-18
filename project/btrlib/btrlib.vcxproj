@@ -120,11 +120,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\include\btrlib\cAudio.h" />
     <ClInclude Include="..\..\include\btrlib\cCamera.h" />
     <ClInclude Include="..\..\include\btrlib\cDebug.h" />
     <ClInclude Include="..\..\include\btrlib\cInput.h" />
     <ClInclude Include="..\..\include\btrlib\cStopWatch.h" />
     <ClInclude Include="..\..\include\btrlib\cThreadPool.h" />
+    <ClInclude Include="..\..\include\btrlib\ResourceManager.h" />
     <ClInclude Include="..\..\include\btrlib\rTexture.h" />
     <ClInclude Include="..\..\include\btrlib\sDebug.h" />
     <ClInclude Include="..\..\include\btrlib\cModel.h" />
@@ -138,6 +140,7 @@
     <ClInclude Include="..\..\include\btrlib\ThreadPool.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\source\btrlib\cAudio.cpp" />
     <ClCompile Include="..\..\source\btrlib\cCamera.cpp" />
     <ClCompile Include="..\..\source\btrlib\cModel.cpp" />
     <ClCompile Include="..\..\source\btrlib\cWindow.cpp" />
@@ -156,6 +159,8 @@
     <Import Project="..\..\packages\assimp.v140.redist.3.2\build\native\assimp.v140.redist.targets" Condition="Exists('..\..\packages\assimp.v140.redist.3.2\build\native\assimp.v140.redist.targets')" />
     <Import Project="..\..\packages\assimp.v140.3.2\build\native\assimp.v140.targets" Condition="Exists('..\..\packages\assimp.v140.3.2\build\native\assimp.v140.targets')" />
     <Import Project="..\..\packages\libFreeImage.1.0.0\build\native\libFreeImage.targets" Condition="Exists('..\..\packages\libFreeImage.1.0.0\build\native\libFreeImage.targets')" />
+    <Import Project="..\..\packages\ogg-msvc14-x64.1.3.2.7783\build\native\ogg-msvc14-x64.targets" Condition="Exists('..\..\packages\ogg-msvc14-x64.1.3.2.7783\build\native\ogg-msvc14-x64.targets')" />
+    <Import Project="..\..\packages\vorbis-msvc14-x64.1.3.5.7783\build\native\vorbis-msvc14-x64.targets" Condition="Exists('..\..\packages\vorbis-msvc14-x64.1.3.5.7783\build\native\vorbis-msvc14-x64.targets')" />
   </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
@@ -166,5 +171,7 @@
     <Error Condition="!Exists('..\..\packages\assimp.v140.3.2\build\native\assimp.v140.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\assimp.v140.3.2\build\native\assimp.v140.targets'))" />
     <Error Condition="!Exists('..\..\packages\libFreeImage.1.0.0\build\native\libFreeImage.props')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\libFreeImage.1.0.0\build\native\libFreeImage.props'))" />
     <Error Condition="!Exists('..\..\packages\libFreeImage.1.0.0\build\native\libFreeImage.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\libFreeImage.1.0.0\build\native\libFreeImage.targets'))" />
+    <Error Condition="!Exists('..\..\packages\ogg-msvc14-x64.1.3.2.7783\build\native\ogg-msvc14-x64.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\ogg-msvc14-x64.1.3.2.7783\build\native\ogg-msvc14-x64.targets'))" />
+    <Error Condition="!Exists('..\..\packages\vorbis-msvc14-x64.1.3.5.7783\build\native\vorbis-msvc14-x64.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\vorbis-msvc14-x64.1.3.5.7783\build\native\vorbis-msvc14-x64.targets'))" />
   </Target>
 </Project>
