@@ -329,12 +329,12 @@ public:
 		}
 	};
 
-
-	class Resource
+public:
+	struct Resource
 	{
 		friend cModel;
 	public:
-		enum class ModelBuffer : s32
+		enum class ModelConstantBuffer : s32
 		{
 			VERTEX_INDEX_INDIRECT,
 			INDIRECT,
@@ -343,7 +343,6 @@ public:
 			VS_MATERIAL,	// vertex stage material
 			PLAYING_ANIMATION,
 			MOTION_WORK,			//!< ƒm[ƒh‚ªMotion‚ÌIndex‚ð
-			MODEL_INFO,
 			NODE_INFO,
 			//		MESH,
 			NODE_LOCAL_TRANSFORM,
@@ -351,15 +350,22 @@ public:
 			BONE_INFO,
 			BONE_TRANSFORM,
 			BONE_MAP,	//!< instancing‚ÌÛ‚ÌBone‚ÌŽQÆæ
+			NUM,
+		};
+
+		enum class ModelStorageBuffer : s32
+		{
+			MODEL_INFO,
 			WORLD,
 			NUM,
 		};
 
-
-		std::array<ConstantBuffer, static_cast<s32>(ModelBuffer::NUM)> mUniformBuffer;
+		std::array<ConstantBuffer, static_cast<s32>(ModelConstantBuffer::NUM)> m_constant_buffer;
+		std::array<StorageBuffer, static_cast<s32>(ModelStorageBuffer::NUM)> m_storage_buffer;
 		cAnimation m_animation_buffer;
 
 		std::string m_filename;
+		ModelInfo m_model_info;
 		std::vector<int> mIndexNum;
 		std::vector<int> mVertexNum;
 		int				mMeshNum;
@@ -374,8 +380,10 @@ public:
 
 		ConstantBuffer m_compute_indirect_buffer;
 
-		const ConstantBuffer& getBuffer(ModelBuffer buffer)const { return mUniformBuffer[static_cast<s32>(buffer)]; }
-		ConstantBuffer& getBuffer(ModelBuffer buffer) { return mUniformBuffer[static_cast<s32>(buffer)]; }
+		const StorageBuffer& getBuffer(ModelStorageBuffer buffer)const { return m_storage_buffer[static_cast<s32>(buffer)]; }
+		StorageBuffer& getBuffer(ModelStorageBuffer buffer) { return m_storage_buffer[static_cast<s32>(buffer)]; }
+		const ConstantBuffer& getBuffer(ModelConstantBuffer buffer)const { return m_constant_buffer[static_cast<s32>(buffer)]; }
+		ConstantBuffer& getBuffer(ModelConstantBuffer buffer) { return m_constant_buffer[static_cast<s32>(buffer)]; }
 
 		const ConstantBuffer& getMotionBuffer(cAnimation::MotionBuffer buffer)const { return m_animation_buffer.mMotionBuffer[buffer]; }
 		ConstantBuffer& getMotionBuffer(cAnimation::MotionBuffer buffer) { return m_animation_buffer.mMotionBuffer[buffer]; }
@@ -390,12 +398,11 @@ public:
 	};
 	std::shared_ptr<Resource> m_resource;
 
-	struct InstanceParam
+	struct Instance
 	{
-		int m_insetance_no;
 		glm::mat4 m_world;
 	};
-	std::shared_ptr<InstanceParam> m_instance;
+	std::unique_ptr<Instance> m_instance;
 	static ResourceManager<Resource> s_manager;
 
 public:
@@ -406,6 +413,7 @@ public:
 
 	std::string getFilename()const;
 	const cMeshGPU* getMesh()const;
-
+	std::shared_ptr<Resource> getResource()const { return m_resource; }
+	std::unique_ptr<Instance>& getInstance() { return m_instance; }
 };
 

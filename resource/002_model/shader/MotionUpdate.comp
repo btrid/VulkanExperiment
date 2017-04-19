@@ -7,7 +7,7 @@
 #include </Math.glsl>
 #include </MultiModel.glsl>
 
-layout (local_size_x = 512, local_size_y = 1) in;
+layout (local_size_x = 1024, local_size_y = 1) in;
 
 layout(std140, binding=0) uniform ModelInfoUniform {
 	ModelInfo modelInfo;
@@ -50,7 +50,9 @@ void main()
 	uint index = gl_GlobalInvocationID.x;
 	if(index >= modelInfo.nodeNum * modelInfo.instanceMaxNum){ return; }
 
-	AnimationInfo aInfo = animInfo[playingMotion[index].playingAnimationNo];
+	uint modelIndex = index / modelInfo.nodeNum;
+	PlayingAnimation pm = playingMotion[modelIndex];
+	AnimationInfo aInfo = animInfo[pm.playingAnimationNo];
 	int motionInfoIndex = aInfo.offsetInfo;
 
 	uint nodeIndex = index%modelInfo.nodeNum;
@@ -68,8 +70,6 @@ void main()
 		}
 	}
 	if(!isFind) { return ;}
-
-	PlayingAnimation pm = playingMotion[index / modelInfo.nodeNum];
 
 	// モーションがloopしていたらindexを0にする
 	mw.motionDataIndex = ((pm.isLoop != 0 && pm.time >= aInfo.maxTime) ? 0 : mw.motionDataIndex);

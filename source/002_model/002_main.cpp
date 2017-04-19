@@ -18,6 +18,7 @@
 #include <btrlib/cThreadPool.h>
 #include <btrlib/cDebug.h>
 #include <btrlib/sGlobal.h>
+#include <btrlib/cStopWatch.h>
 
 #include <002_model/cModelRenderer.h>
 #include <002_model/cModelRender.h>
@@ -155,13 +156,13 @@ int main()
 	vk::Semaphore swapbuffer_semaphore = device->createSemaphore(semaphoreInfo);
 	vk::Semaphore cmdsubmit_semaphore = device->createSemaphore(semaphoreInfo);
 
-	std::shared_ptr<std::promise<std::unique_ptr<ModelRender>>> task = std::make_shared<std::promise<std::unique_ptr<ModelRender>>>();
+	auto task = std::make_shared<std::promise<std::unique_ptr<cModel>>>();
 	auto modelFuture = task->get_future();
 	{
 		cThreadJob job;
 		auto load = [task]()
 		{
-			auto model = std::make_unique<ModelRender>();
+			auto model = std::make_unique<cModel>();
 			model->load(btr::getResourcePath() + "tiny.x");
 			task->set_value(std::move(model));
 		};
@@ -242,12 +243,28 @@ int main()
 			framebuffer[i] = device->createFramebuffer(framebuffer_info);
 		}
 	}
+
+	ModelRender render;
+	render.setup(model->getResource());
+
 	cModelRenderer renderer;
 	renderer.setup(render_pass);
-	renderer.addModel(model.get());
-// 	auto model2 = std::make_unique<ModelRender>();
-// 	model2->load(btr::getResourcePath() + "tiny.x");
-// 	renderer.addModel(model2.get());
+	renderer.addModel(&render);
+
+//	render.addModel(model.get());
+
+	model->getInstance()->m_world = glm::translate(glm::vec3(0.f));
+	std::vector<std::unique_ptr<cModel>> models;
+	models.reserve(1000);
+	for (int i = 0; i < 1000; i++)
+	{
+		auto m = std::make_unique<cModel>();
+		m->load(btr::getResourcePath() + "tiny.x");
+		render.addModel(m.get());
+		m->getInstance()->m_world = glm::translate(glm::ballRand(2999.f));
+		models.push_back(std::move(m));
+	}
+
 
 	auto pool_list = sThreadLocal::Order().getCmdPoolOnetime(device.getQueueFamilyIndex());
 	std::vector<vk::CommandBuffer> render_cmds(3);
@@ -267,7 +284,7 @@ int main()
 	fence_list.emplace_back(device->createFence(fence_info));
 	while (true)
 	{
-
+		cStopWatch time;
 		auto* m_camera = cCamera::sCamera::Order().getCameraList()[0];
 		m_camera->control(window.getInput(), 0.016f);
 
@@ -362,7 +379,7 @@ int main()
 		window.update(sGlobal::Order().getThreadPool());
 //		sGlobal::Order().getThreadPool().wait();
 		sGlobal::Order().swap();
-
+		printf("%6.3fs\n", time.getElapsedTimeAsSeconds());
 	}
 
 	return 0;

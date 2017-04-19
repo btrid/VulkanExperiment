@@ -162,12 +162,13 @@ void cModelRenderer_t<T>::cModelDrawPipeline::setup(vk::RenderPass render_pass)
 			blend_info.setAttachmentCount(blend_state.size());
 			blend_info.setPAttachments(blend_state.data());
 
+			// todo
 			std::vector<vk::VertexInputBindingDescription> vertex_input_binding =
 			{
 				vk::VertexInputBindingDescription()
 				.setBinding(0)
 				.setInputRate(vk::VertexInputRate::eVertex)
-				.setStride(sizeof(T::Vertex))
+				.setStride(sizeof(cModel::Vertex))
 			};
 
 			std::vector<vk::VertexInputAttributeDescription> vertex_input_attribute =

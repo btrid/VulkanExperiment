@@ -5,6 +5,7 @@
 #include <fstream>
 #include <filesystem>
 #include <mutex>
+#include <climits>
 
 #include <btrlib/Define.h>
 #include <btrlib/Singleton.h>
@@ -298,6 +299,189 @@ public:
 };
 
 /**
+ *	@brief	マイフレーム細かく更新されることが前提なバッファ
+ *			GPUの更新 OK?
+ *			CPUの更新 OK
+ */
+struct StorageBuffer
+{
+private:
+	vk::PhysicalDevice m_gpu;
+	uint32_t m_family_index;
+	vk::Queue m_queue;
+
+	vk::DescriptorBufferInfo m_buffer_info;
+
+	size_t update_begin;
+	size_t update_end;
+	struct Private
+	{
+		vk::Device m_device;
+
+		vk::CommandPool m_cmd_pool;
+		std::vector<vk::CommandBuffer> m_cmd;
+		std::vector<vk::Fence>	m_fence;
+
+		vk::Buffer m_buffer;
+		vk::DeviceMemory m_memory;
+
+		vk::Buffer m_staging_buffer;
+		vk::DeviceMemory m_staging_memory;
+		char* m_staging_data;
+		~Private()
+		{
+			if (m_cmd_pool)
+			{
+				m_device.unmapMemory(m_staging_memory);
+
+				std::unique_ptr<Deleter> deleter = std::make_unique<Deleter>();
+				deleter->pool = m_cmd_pool;
+				deleter->cmd = std::move(m_cmd);
+				deleter->device = m_device;
+				deleter->fence = std::move(m_fence);
+
+				deleter->buffer = { m_buffer, m_staging_buffer };
+				deleter->memory = { m_memory, m_staging_memory };
+				sGlobal::Order().destroyResource(std::move(deleter));
+
+			}
+		}
+	};
+	std::shared_ptr<Private> m_private;
+	StorageBuffer(const StorageBuffer&) = delete;
+	StorageBuffer& operator=(const StorageBuffer&) = delete;
+
+	StorageBuffer(StorageBuffer &&)noexcept = default;
+	StorageBuffer& operator=(StorageBuffer&&)noexcept = default;
+
+public:
+	StorageBuffer()
+		: m_private(std::make_shared<Private>())
+	{}
+
+	~StorageBuffer()
+	{
+	}
+	vk::Buffer getBuffer()const { return m_buffer_info.buffer; }
+	vk::DescriptorBufferInfo getBufferInfo()const { return m_buffer_info; }
+
+private:
+	void create(const cGPU& gpu, const cDevice& device)
+	{
+		m_gpu = gpu.getHandle();
+		m_private->m_device = device.getHandle();
+		m_family_index = device.getQueueFamilyIndex();
+		m_queue = device->getQueue(device.getQueueFamilyIndex(), device.getQueueNum() - 1);
+
+		{
+			// コマンドバッファの準備
+			m_private->m_cmd_pool = sThreadLocal::Order().getCmdPoolCompiled(m_family_index);
+			vk::CommandBufferAllocateInfo cmd_buffer_info;
+			cmd_buffer_info.commandBufferCount = sGlobal::FRAME_MAX;
+			cmd_buffer_info.commandPool = m_private->m_cmd_pool;
+			cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
+			m_private->m_cmd = m_private->m_device.allocateCommandBuffers(cmd_buffer_info);
+
+			vk::FenceCreateInfo fence_info;
+			fence_info.setFlags(vk::FenceCreateFlagBits::eSignaled);
+			m_private->m_fence.reserve(sGlobal::FRAME_MAX);
+			for (int i = 0; i < sGlobal::FRAME_MAX; i++)
+			{
+				m_private->m_fence.emplace_back(m_private->m_device.createFence(fence_info));
+			}
+		}
+
+		update_begin = std::numeric_limits<decltype(update_begin)>::max();
+		update_end = 0;
+	}
+public:
+	void create(const cGPU& gpu, const cDevice& device, size_t data_size, vk::BufferUsageFlags flag)
+	{
+		create(gpu, device);
+		{
+			// device_localなバッファの作成
+			vk::BufferCreateInfo buffer_info;
+			buffer_info.usage = flag | vk::BufferUsageFlagBits::eTransferDst;
+			buffer_info.size = data_size;
+
+			m_private->m_buffer = device->createBuffer(buffer_info);
+
+			vk::MemoryRequirements memory_request = device->getBufferMemoryRequirements(m_private->m_buffer);
+			vk::MemoryAllocateInfo memory_alloc;
+			memory_alloc.setAllocationSize(memory_request.size);
+			memory_alloc.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal));
+			m_private->m_memory = device->allocateMemory(memory_alloc);
+
+			device->bindBufferMemory(m_private->m_buffer, m_private->m_memory, 0);
+
+			m_buffer_info.setBuffer(m_private->m_buffer);
+			m_buffer_info.setOffset(0);
+			m_buffer_info.setRange(data_size);
+		}
+		{
+			// host_visibleなバッファの作成
+			vk::BufferCreateInfo buffer_info;
+			buffer_info.usage = vk::BufferUsageFlagBits::eTransferSrc;
+			buffer_info.size = data_size/* * sGlobal::FRAME_MAX*/;
+
+			m_private->m_staging_buffer = device->createBuffer(buffer_info);
+
+			vk::MemoryRequirements memory_request = device->getBufferMemoryRequirements(m_private->m_staging_buffer);
+			vk::MemoryAllocateInfo memory_alloc;
+			memory_alloc.setAllocationSize(memory_request.size);
+			memory_alloc.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memory_request, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent));
+			m_private->m_staging_memory = device->allocateMemory(memory_alloc);
+			m_private->m_staging_data = (char*)m_private->m_device.mapMemory(m_private->m_staging_memory, 0, buffer_info.size, vk::MemoryMapFlags());
+
+			device->bindBufferMemory(m_private->m_staging_buffer, m_private->m_staging_memory, 0);
+		}
+	}
+
+	void subupdate(void* data, size_t data_size, size_t offset)
+	{
+//		auto frame = sGlobal::Order().getCurrentFrame();
+		auto frame = 0;
+		auto frame_offset = frame * m_buffer_info.range;
+		memcpy_s(m_private->m_staging_data + frame_offset + offset, data_size, data, data_size);
+		update_begin = glm::min(update_begin, offset);
+		update_end = glm::max(update_end, offset+data_size);
+	}
+
+	void copyTo()
+	{
+		auto frame = sGlobal::Order().getCurrentFrame();
+		sDebug::Order().waitFence(m_private->m_device, m_private->m_fence[frame]);
+		m_private->m_device.resetFences(m_private->m_fence[frame]);
+
+// 		vk::MappedMemoryRange range;
+// 		range.memory = m_private->m_staging_memory;
+// 		range.offset = update_begin;
+// 		range.size = update_end - update_begin;
+// 		m_private->m_device.flushMappedMemoryRanges(range);
+
+		auto& cmd = m_private->m_cmd[frame];
+		cmd.reset(vk::CommandBufferResetFlags());
+		vk::CommandBufferBeginInfo begin_info;
+		cmd.begin(begin_info);
+
+		vk::BufferCopy copy_info;
+		copy_info.size = update_end - update_begin;
+		copy_info.srcOffset = update_begin;
+		copy_info.dstOffset = update_begin;
+		cmd.copyBuffer(m_private->m_staging_buffer, m_private->m_buffer, copy_info);
+		cmd.end();
+
+		vk::SubmitInfo submit_info;
+		submit_info.commandBufferCount = 1;
+		submit_info.pCommandBuffers = &cmd;
+
+		m_queue.submit(submit_info, m_private->m_fence[frame]);
+		update_begin = std::numeric_limits<decltype(update_begin)>::max();
+		update_end = 0;
+	}
+};
+
+/**
 *	@brief	マイフレーム更新されることが前提なバッファ
 *			GPUの更新 OK?
 *			CPUの更新 OK
@@ -311,7 +495,6 @@ private:
 	vk::Queue m_queue;
 
 	vk::DescriptorBufferInfo m_buffer_info;
-	vk::DescriptorBufferInfo m_staging_buffer_info;
 
 	struct Private
 	{
@@ -431,10 +614,6 @@ public:
 			m_private->m_staging_memory = device->allocateMemory(memory_alloc);
 
 			device->bindBufferMemory(m_private->m_staging_buffer, m_private->m_staging_memory, 0);
-
-			m_staging_buffer_info.setBuffer(m_private->m_staging_buffer);
-			m_staging_buffer_info.setOffset(0);
-			m_staging_buffer_info.setRange(data_size);
 		}
 		{
 			// cmd を作っとく

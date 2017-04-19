@@ -446,6 +446,7 @@ cModel::~cModel()
 
 void cModel::load(const std::string& filename)
 {
+	m_instance = std::make_unique<Instance>();
 	if (s_manager.manage(m_resource, filename)) {
 		return;
 	}
@@ -604,7 +605,7 @@ void cModel::load(const std::string& filename)
 			for (size_t i = 0; i < indirect.size(); i++) {
 				indirect[i].m_draw_cmd.indexCount = indexSize[i];
 				indirect[i].m_draw_cmd.firstIndex = offset;
-				indirect[i].m_draw_cmd.instanceCount = 1;
+				indirect[i].m_draw_cmd.instanceCount = 0;
 				indirect[i].m_draw_cmd.vertexOffset = 0;
 				indirect[i].m_draw_cmd.firstInstance = 0;
 				offset += indexSize[i];
@@ -618,7 +619,7 @@ void cModel::load(const std::string& filename)
 	// vertex shader material
 	{
 		std::vector<VSMaterialBuffer> vsmb(m_resource->m_material.size());
-		auto& buffer = m_resource->getBuffer(Resource::ModelBuffer::VS_MATERIAL);
+		auto& buffer = m_resource->getBuffer(Resource::ModelConstantBuffer::VS_MATERIAL);
 		buffer.create(gpu, device, vsmb, vk::BufferUsageFlagBits::eStorageBuffer);
 	}
 
@@ -633,17 +634,17 @@ void cModel::load(const std::string& filename)
 			mb[i].mShininess = m_resource->m_material[i].mShininess;
 			mb[i].mSpecular = m_resource->m_material[i].mSpecular;
 		}
-		auto& buffer = m_resource->getBuffer(Resource::ModelBuffer::MATERIAL);
+		auto& buffer = m_resource->getBuffer(Resource::ModelConstantBuffer::MATERIAL);
 		buffer.create(gpu, device, mb, vk::BufferUsageFlagBits::eStorageBuffer);
 	}
 
 	// node info
 	{
-		auto& buffer = m_resource->getBuffer(Resource::ModelBuffer::NODE_INFO);
+		auto& buffer = m_resource->getBuffer(Resource::ModelConstantBuffer::NODE_INFO);
 		buffer.create(gpu, device, nodeInfo, vk::BufferUsageFlagBits::eStorageBuffer);
 	}
 
-	int instanceNum = 1;
+	int instanceNum = 1000;
 	if (!m_resource->mBone.empty())
 	{
 		// BoneInfo
@@ -654,14 +655,14 @@ void cModel::load(const std::string& filename)
 				bo[i].mNodeIndex = m_resource->mBone[i].mNodeIndex;
 			}
 			size_t size = vector_sizeof(bo);
-			auto& buffer = m_resource->getBuffer(Resource::ModelBuffer::BONE_INFO);
+			auto& buffer = m_resource->getBuffer(Resource::ModelConstantBuffer::BONE_INFO);
 			buffer.create(gpu, device, bo, vk::BufferUsageFlagBits::eStorageBuffer);
 		}
 
 		// BoneTransform
 		{
 			std::vector<BoneTransformBuffer> bt(m_resource->mBone.size() * instanceNum);
-			auto& buffer = m_resource->getBuffer(Resource::ModelBuffer::BONE_TRANSFORM);
+			auto& buffer = m_resource->getBuffer(Resource::ModelConstantBuffer::BONE_TRANSFORM);
 			buffer.create(gpu, device, bt, vk::BufferUsageFlagBits::eStorageBuffer);
 		}
 	}
@@ -679,21 +680,14 @@ void cModel::load(const std::string& filename)
 			pa[i].currentMotionInfoIndex = 0;
 		}
 
-		auto& buffer = m_resource->getBuffer(Resource::ModelBuffer::PLAYING_ANIMATION);
+		auto& buffer = m_resource->getBuffer(Resource::ModelConstantBuffer::PLAYING_ANIMATION);
 		buffer.create(gpu, device, pa, vk::BufferUsageFlagBits::eStorageBuffer);
-
-// 		vk::DebugMarkerObjectNameInfoEXT debug_info;
-// 		debug_info.object = (uint64_t)(VkBuffer)buffer.mBuffer;
-// 		debug_info.objectType = vk::DebugReportObjectTypeEXT::eBuffer;
-// 		debug_info.pObjectName = "PlayingAnimation";
-// 		device.DebugMarkerSetObjectName(&debug_info);
-
 	}
 
 	// MotionWork
 	{
 		std::vector<MotionWork> mw(m_resource->mNodeRoot.mNodeList.size()*instanceNum);
-		auto& buffer = m_resource->getBuffer(Resource::ModelBuffer::MOTION_WORK);
+		auto& buffer = m_resource->getBuffer(Resource::ModelConstantBuffer::MOTION_WORK);
 		buffer.create(gpu, device, mw, vk::BufferUsageFlagBits::eStorageBuffer);
 
 	}
@@ -701,12 +695,12 @@ void cModel::load(const std::string& filename)
 
 	// ModelInfo
 	{
-		std::vector<ModelInfo> mi(1);
-		mi[0].mInstanceMaxNum = instanceNum;
-		mi[0].mInstanceNum = instanceNum;
-		mi[0].mNodeNum = (s32)m_resource->mNodeRoot.mNodeList.size();
-		mi[0].mBoneNum = (s32)m_resource->mBone.size();
-		mi[0].mMeshNum = m_resource->mMeshNum;
+		ModelInfo mi;
+		mi.mInstanceMaxNum = instanceNum;
+		mi.mInstanceNum = 0;
+		mi.mNodeNum = (s32)m_resource->mNodeRoot.mNodeList.size();
+		mi.mBoneNum = (s32)m_resource->mBone.size();
+		mi.mMeshNum = m_resource->mMeshNum;
 		glm::vec3 max(-10e10f);
 		glm::vec3 min(10e10f);
 		for (auto& v : vertex)
@@ -718,16 +712,19 @@ void cModel::load(const std::string& filename)
 			min.y = glm::min(min.y, v.m_position.y);
 			min.z = glm::min(min.z, v.m_position.z);
 		}
-		mi[0].mAabb = glm::vec4((max - min).xyz, glm::length((max - min) / 2.f));
-		mi[0].mInvGlobalMatrix = glm::inverse(m_resource->mNodeRoot.getRootNode()->mTransformation);
+		mi.mAabb = glm::vec4((max - min).xyz, glm::length((max - min) / 2.f));
+		mi.mInvGlobalMatrix = glm::inverse(m_resource->mNodeRoot.getRootNode()->mTransformation);
 
-		auto& buffer = m_resource->getBuffer(Resource::ModelBuffer::MODEL_INFO);
-		buffer.create(gpu, device, mi, vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eStorageBuffer);
+		auto& buffer = m_resource->getBuffer(Resource::ModelStorageBuffer::MODEL_INFO);
+		buffer.create(gpu, device, sizeof(mi), vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eStorageBuffer);
+		buffer.subupdate(&mi, sizeof(mi), 0);
+		buffer.copyTo();
+		m_resource->m_model_info = mi;
 	}
 
 	//BoneMap
 	{
-		auto& buffer = m_resource->getBuffer(Resource::ModelBuffer::BONE_MAP);
+		auto& buffer = m_resource->getBuffer(Resource::ModelConstantBuffer::BONE_MAP);
 		buffer.create(gpu, device, instanceNum * sizeof(s32), vk::BufferUsageFlagBits::eStorageBuffer);
 	}
 
@@ -736,7 +733,7 @@ void cModel::load(const std::string& filename)
 		std::vector<NodeLocalTransformBuffer> nt(m_resource->mNodeRoot.mNodeList.size() * instanceNum);
 		std::for_each(nt.begin(), nt.end(), [](NodeLocalTransformBuffer& v) { v.localAnimated_ = glm::mat4(1.f);  });
 
-		auto& buffer = m_resource->getBuffer(Resource::ModelBuffer::NODE_LOCAL_TRANSFORM);
+		auto& buffer = m_resource->getBuffer(Resource::ModelConstantBuffer::NODE_LOCAL_TRANSFORM);
 		buffer.create(gpu, device, nt, vk::BufferUsageFlagBits::eStorageBuffer);
 	}
 
@@ -746,16 +743,13 @@ void cModel::load(const std::string& filename)
 		std::vector<NodeGlobalTransformBuffer> nt(m_resource->mNodeRoot.mNodeList.size() * instanceNum);
 		std::for_each(nt.begin(), nt.end(), [](NodeGlobalTransformBuffer& v) { v.globalAnimated_ = glm::mat4(1.f);  });
 
-		auto& buffer = m_resource->getBuffer(Resource::ModelBuffer::NODE_GLOBAL_TRANSFORM);
+		auto& buffer = m_resource->getBuffer(Resource::ModelConstantBuffer::NODE_GLOBAL_TRANSFORM);
 		buffer.create(gpu, device, nt, vk::BufferUsageFlagBits::eStorageBuffer);
 	}
 	// world
 	{
-		std::vector<glm::mat4> world(instanceNum);
-
-		auto& buffer = m_resource->getBuffer(Resource::ModelBuffer::WORLD);
-		buffer.create(gpu, device, world, vk::BufferUsageFlagBits::eStorageBuffer);
-
+		auto& buffer = m_resource->getBuffer(Resource::ModelStorageBuffer::WORLD);
+		buffer.create(gpu, device, sizeof(glm::mat4)*instanceNum, vk::BufferUsageFlagBits::eStorageBuffer);
 	}
 
 
@@ -767,14 +761,16 @@ void cModel::load(const std::string& filename)
 	auto MeshNum = m_resource->mMeshNum;
 
 	{
+		int32_t local_size_x = 1024;
+		// shaderÇÃlocal_size_xÇ∆çáÇÌÇπÇÈ
 		std::vector<glm::ivec3> group =
 		{
-			glm::ivec3(1000 / 256 + 1, 1, 1),
-			glm::ivec3(256, 1, 1),
-			glm::ivec3(256, 1, 1),
-			glm::ivec3(256, 1, 1),
-			glm::ivec3(256, 1, 1),
-			glm::ivec3(256, 1, 1),
+			glm::ivec3(1, 1, 1),
+			glm::ivec3((instanceNum + local_size_x - 1) / local_size_x, 1, 1),
+			glm::ivec3((instanceNum*m_resource->m_model_info.mNodeNum + local_size_x-1)/local_size_x, 1, 1),
+			glm::ivec3((instanceNum + local_size_x - 1) / local_size_x, 1, 1),
+			glm::ivec3((instanceNum + local_size_x - 1)/local_size_x, 1, 1),
+			glm::ivec3((instanceNum*m_resource->m_model_info.mBoneNum + local_size_x - 1) / local_size_x, 1, 1),
 		};
 
 		m_resource->m_compute_indirect_buffer.create(gpu, device, group, vk::BufferUsageFlagBits::eIndirectBuffer);

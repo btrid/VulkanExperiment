@@ -3,12 +3,18 @@
 #include <002_model/cModelRenderer.h>
 
 struct cModelRenderer;
-class ModelRender : public cModel
+class ModelRender
 {
+	std::shared_ptr<cModel::Resource> m_resource;
+	std::vector<cModel*> m_model;
+
 	vk::DescriptorSet m_draw_descriptor_set_per_model;
 	std::vector<vk::DescriptorSet> m_draw_descriptor_set_per_mesh;
 	std::vector<vk::DescriptorSet> m_compute_descriptor_set;
 public:
+	void setup(std::shared_ptr<cModel::Resource> resource) { m_resource = resource; }
+	void addModel(cModel* model) { m_model.push_back(model); }
+
 	void setup(cModelRenderer& renderer);
 	void execute(cModelRenderer& renderer, vk::CommandBuffer& cmd);
 	void draw(cModelRenderer& renderer, vk::CommandBuffer& cmd);
