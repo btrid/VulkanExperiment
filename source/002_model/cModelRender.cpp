@@ -269,9 +269,9 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 		m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::WORLD).subupdate(world.data(), vector_sizeof(world), 0);
 		m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::WORLD).copyTo();
 
-// 		int32_t instance_num = m_model.size();
-// 		m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::MODEL_INFO).subupdate(&instance_num, 4, 4);
-// 		m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::MODEL_INFO).copyTo();
+		int32_t instance_num = m_model.size();
+		m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::MODEL_INFO).subupdate(&instance_num, offsetof(cModel::ModelInfo, mInstanceAliveNum), 4);
+		m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::MODEL_INFO).copyTo();
 	}
 
 	std::vector<vk::BufferMemoryBarrier> to_clear_barrier =

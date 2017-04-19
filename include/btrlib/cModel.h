@@ -271,12 +271,13 @@ public:
 	};
 	struct ModelInfo {
 		s32 mInstanceMaxNum;
+		s32 mInstanceAliveNum;
 		s32 mInstanceNum;
 		s32 mNodeNum;
-		s32 mBoneNum;
 
+		s32 mBoneNum;
 		s32 mMeshNum;
-		s32 _p[3];
+		s32 _p[2];
 
 		glm::vec4 mAabb;
 		glm::mat4 mInvGlobalMatrix;

@@ -41,7 +41,7 @@ layout(std430, binding=11) restrict buffer NodeGlobalTransformBuffer {
 void main() 
 {
 	int root_index = int(gl_GlobalInvocationID.x) * modelInfo.nodeNum;
-	if(root_index >= modelInfo.instanceMaxNum * modelInfo.nodeNum){ return; }
+	if(root_index >= modelInfo.instanceAliveNum * modelInfo.nodeNum){ return; }
 
 	nodeGlobalTransforms[root_index] = worlds[gl_GlobalInvocationID.x] * nodeLocalTransforms[root_index];
 	for(int i=1; i <modelInfo.nodeNum; i++)

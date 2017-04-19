@@ -65,14 +65,14 @@ struct NodeGlobalTransform
 struct ModelInfo
 {
 	int instanceMaxNum;
+	int instanceAliveNum;
 	int instanceNum;
 	int nodeNum;
-	int boneNum;
 
+	int boneNum;
 	int meshNum;
 	int _p1;
 	int _p2;
-	int _p3;
 	vec4 AABB;
 	mat4 invGlobalMatrix;
 };

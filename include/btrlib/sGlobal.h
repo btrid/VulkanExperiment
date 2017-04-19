@@ -28,12 +28,6 @@ struct FenceShared
 
 }
 
-class sShaderModule : public Singleton<sShaderModule>
-{
-	friend Singleton<sShaderModule>;
-
-};
-
 /// Logical Device
 class cDevice
 {
@@ -248,15 +242,10 @@ public:
 	vk::CommandPool getCmdPoolTempolary(uint32_t device_family_index)const
 	{
 		return m_cmd_pool_tempolary[device_family_index];
-// 		vk::CommandBufferAllocateInfo cmd_buffer_info;
-// 		cmd_buffer_info.commandBufferCount = 1;
-// 		cmd_buffer_info.commandPool = m_cmd_pool_tempolary[device_family_index];
-// 		cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
-// 		auto cmd = m_gpu[0].getDeviceByFamilyIndex(device_family_index)->allocateCommandBuffers(cmd_buffer_info)[0];
-// 		return cmd;
 	}
 
 	void destroyResource(std::unique_ptr<Deleter>&& deleter) {
+		// @todo thread-safe‘Î‰ž
 		assert(deleter->device);
 		m_cmd_delete[getCurrentFrame()].emplace_back(std::move(deleter));
 	}
@@ -818,6 +807,5 @@ public:
 	}
 
 };
-
 
 vk::ShaderModule loadShader(const vk::Device& device, const std::string& filename);

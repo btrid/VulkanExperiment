@@ -697,6 +697,7 @@ void cModel::load(const std::string& filename)
 	{
 		ModelInfo mi;
 		mi.mInstanceMaxNum = instanceNum;
+		mi.mInstanceAliveNum = 0;
 		mi.mInstanceNum = 0;
 		mi.mNodeNum = (s32)m_resource->mNodeRoot.mNodeList.size();
 		mi.mBoneNum = (s32)m_resource->mBone.size();
