@@ -49,7 +49,7 @@ int main()
 
 	cGPU& gpu = sGlobal::Order().getGPU(0);
 	cDevice device = gpu.getDevice(vk::QueueFlagBits::eGraphics)[0];
-	vk::Queue queue = device->getQueue(device.getQueueFamilyIndex(), 0);
+	vk::Queue queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), 0);
 
 	// setup用コマンドバッファ
 	vk::CommandPool setup_cmd_pool;
@@ -57,7 +57,7 @@ int main()
 	{
 		vk::CommandPoolCreateInfo poolInfo = vk::CommandPoolCreateInfo()
 			.setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer)
-			.setQueueFamilyIndex(device.getQueueFamilyIndex());
+			.setQueueFamilyIndex(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
 
 		cmd_pool = device->createCommandPool(poolInfo);
 		setup_cmd_pool = device->createCommandPool(poolInfo);
@@ -266,7 +266,7 @@ int main()
 	}
 
 
-	auto pool_list = sThreadLocal::Order().getCmdPoolOnetime(device.getQueueFamilyIndex());
+	auto pool_list = sThreadLocal::Order().getCmdPoolOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
 	std::vector<vk::CommandBuffer> render_cmds(3);
 	for (int i = 0; i < 3; i++)
 	{

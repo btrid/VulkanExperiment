@@ -88,11 +88,11 @@ void ModelRender::setup(cModelRenderer&  renderer)
 		cDevice compute_device = sThreadLocal::Order().m_device[sThreadLocal::DEVICE_COMPUTE];
 
 		auto& pipeline = renderer.getComputePipeline();
-		vk::DescriptorSetAllocateInfo allocInfo;
-		allocInfo.setDescriptorPool(pipeline.m_descriptor_pool);
-		allocInfo.setDescriptorSetCount(pipeline.m_descriptor_set_layout.size());
-		allocInfo.setPSetLayouts(pipeline.m_descriptor_set_layout.data());
-		m_compute_descriptor_set = compute_device->allocateDescriptorSets(allocInfo);
+		vk::DescriptorSetAllocateInfo descriptor_set_alloc_info;
+		descriptor_set_alloc_info.setDescriptorPool(pipeline.m_descriptor_pool);
+		descriptor_set_alloc_info.setDescriptorSetCount(pipeline.m_descriptor_set_layout.size());
+		descriptor_set_alloc_info.setPSetLayouts(pipeline.m_descriptor_set_layout.data());
+		m_compute_descriptor_set = compute_device->allocateDescriptorSets(descriptor_set_alloc_info);
 
 		vk::WriteDescriptorSet desc;
 		// Clear

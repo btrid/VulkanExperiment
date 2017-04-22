@@ -41,8 +41,27 @@ public:
 	const vk::Device*	operator->()const	{ return &m_handle; }
 
 
-	uint32_t getQueueFamilyIndex()const { return m_family_index; }
-	uint32_t getQueueNum()const { return m_queue_num; }
+	const std::vector<uint32_t>& getQueueFamilyIndex()const { return m_family_index; }
+	uint32_t getQueueFamilyIndex(vk::QueueFlags reqest_queue)const 
+	{
+//		std::vector<uint32_t> index;
+		auto queueProp = m_gpu.getQueueFamilyProperties();
+		for (size_t i = 0; i < queueProp.size(); i++) {
+			if (btr::isOn(queueProp[i].queueFlags, reqest_queue)) 
+			{
+				if (std::find(m_family_index.begin(), m_family_index.end(), i) != m_family_index.end())
+				{
+					return (uint32_t)i;
+				}
+			}
+		}
+		return (uint32_t)-1;
+	}
+	uint32_t getQueueNum(uint32_t family_index)const { return m_queue_info[family_index].size(); }
+	uint32_t getQueueNum(vk::QueueFlags reqest_queue)const
+	{ 
+		return m_queue_info[getQueueFamilyIndex(reqest_queue)].size(); 
+	}
 	const vk::Device& getHandle()const { return m_handle; }
 	const vk::Device& operator*()const { return m_handle; }
 	const vk::PhysicalDevice& getGPU()const { return m_gpu; }
@@ -60,8 +79,8 @@ public:
 private:
 	vk::PhysicalDevice m_gpu;
 	vk::Device m_handle;
-	uint32_t m_family_index;
-	uint32_t m_queue_num;
+	std::vector<uint32_t> m_family_index;
+	std::vector<std::vector<float>> m_queue_info;
 	PFN_vkDebugMarkerSetObjectTagEXT m_vk_debug_marker_set_object_tag;
 	PFN_vkDebugMarkerSetObjectNameEXT m_vk_debug_marker_set_object_name;
 	PFN_vkCmdDebugMarkerBeginEXT m_vk_cmd_debug_marker_begin;
@@ -93,6 +112,8 @@ private:
 	struct Device
 	{
 		vk::Device m_device;
+		std::vector<uint32_t> m_family_index;
+		std::vector<std::vector<float>> m_queue;
 		PFN_vkDebugMarkerSetObjectTagEXT m_vk_debug_marker_set_object_tag;
 		PFN_vkDebugMarkerSetObjectNameEXT m_vk_debug_marker_set_object_name;
 		PFN_vkCmdDebugMarkerBeginEXT m_vk_cmd_debug_marker_begin;
@@ -359,8 +380,8 @@ private:
 	{
 		m_gpu = gpu.getHandle();
 		m_private->m_device = device.getHandle();
-		m_family_index = device.getQueueFamilyIndex();
-		m_queue = device->getQueue(device.getQueueFamilyIndex(), device.getQueueNum() - 1);
+		m_family_index = device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
+		m_queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), device.getQueueNum(vk::QueueFlagBits::eGraphics) - 1);
 
 		{
 			// コマンドバッファの準備
@@ -392,6 +413,10 @@ public:
 			vk::BufferCreateInfo buffer_info;
 			buffer_info.usage = flag | vk::BufferUsageFlagBits::eTransferDst;
 			buffer_info.size = data_size;
+			auto queue_family = gpu.getQueueFamilyIndexList(vk::QueueFlagBits::eGraphics | vk::QueueFlagBits::eCompute);
+			buffer_info.queueFamilyIndexCount = (uint32_t)queue_family.size();
+			buffer_info.pQueueFamilyIndices = queue_family.data();
+			buffer_info.sharingMode = vk::SharingMode::eConcurrent;
 
 			m_private->m_buffer = device->createBuffer(buffer_info);
 
@@ -540,8 +565,8 @@ private:
 	{
 		m_gpu = gpu.getHandle();
 		m_private->m_device = device.getHandle();
-		m_family_index = device.getQueueFamilyIndex();
-		m_queue = device->getQueue(device.getQueueFamilyIndex(), device.getQueueNum() - 1);
+		m_family_index = device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
+		m_queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), device.getQueueNum(vk::QueueFlagBits::eGraphics) - 1);
 
 		{
 			// コマンドバッファの準備
@@ -573,7 +598,10 @@ public:
 			vk::BufferCreateInfo buffer_info;
 			buffer_info.usage = flag | vk::BufferUsageFlagBits::eTransferDst;
 			buffer_info.size = data_size;
-
+			auto queue_family = gpu.getQueueFamilyIndexList(vk::QueueFlagBits::eGraphics | vk::QueueFlagBits::eCompute);
+			buffer_info.queueFamilyIndexCount = queue_family.size();
+			buffer_info.pQueueFamilyIndices = queue_family.data();
+			buffer_info.sharingMode = vk::SharingMode::eConcurrent;
 			m_private->m_buffer = device->createBuffer(buffer_info);
 
 			vk::MemoryRequirements memory_request = device->getBufferMemoryRequirements(m_private->m_buffer);
@@ -701,8 +729,8 @@ private:
 	{
 		m_gpu = gpu.getHandle();
 		m_private->m_device = device.getHandle();
-		m_family_index = device.getQueueFamilyIndex();
-		m_queue = device->getQueue(device.getQueueFamilyIndex(), device.getQueueNum() - 1);
+		m_family_index = device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
+		m_queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), device.getQueueNum(vk::QueueFlagBits::eGraphics) - 1);
 
 	}
 	void update(void* data, size_t data_size, size_t offset)
@@ -789,6 +817,9 @@ public:
 			vk::BufferCreateInfo buffer_info;
 			buffer_info.usage = flag | vk::BufferUsageFlagBits::eTransferDst;
 			buffer_info.size = data_size;
+			buffer_info.queueFamilyIndexCount = device.getQueueFamilyIndex().size();
+			buffer_info.pQueueFamilyIndices = device.getQueueFamilyIndex().data();
+			buffer_info.sharingMode = vk::SharingMode::eConcurrent;
 
 			m_private->m_buffer = device->createBuffer(buffer_info);
 

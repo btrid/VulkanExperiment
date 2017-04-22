@@ -31,50 +31,56 @@ sGlobal::sGlobal()
 
 			std::vector<const char*> extensionName = {
 				VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-//				VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
 			};
-//			auto extension_prop = gpu->enumerateDeviceExtensionProperties();
 
+			auto gpu_propaty = gpu->getProperties();
+			auto gpu_feature = gpu->getFeatures();
 			auto queueFamilyProperty = gpu->getQueueFamilyProperties();
 			gpu.m_device_list.reserve(queueFamilyProperty.size());
-			// デバイス
-			for (size_t i = 0; i < queueFamilyProperty.size(); i++) {
-				auto& prop = queueFamilyProperty[i];
-				std::vector<float> queuePriority(prop.queueCount, 0.f);
-				for (size_t i = 0; i < prop.queueCount; i++){
-					queuePriority[i] = 1.f / prop.queueCount * i;
-				}
 
-				std::vector<vk::DeviceQueueCreateInfo> queueInfo =
+			std::vector<std::vector<float>> queue_priority(queueFamilyProperty.size());
+			for (size_t i = 0; i < queueFamilyProperty.size(); i++) 
+			{
+				auto& queue_property = queueFamilyProperty[i];
+				auto& priority = queue_priority[i];
+				priority.resize(1);
+				for (size_t q = 1; q < priority.size(); q++)
 				{
-					vk::DeviceQueueCreateInfo()
-					.setQueueCount((uint32_t)queuePriority.size())
-					.setPQueuePriorities(queuePriority.data())
-					.setQueueFamilyIndex((uint32_t)i),
-				};
+					priority[q] = 1.f / (priority.size() - 1) * q;
+				}
+ 			}
 
-				vk::PhysicalDeviceFeatures f = vk::PhysicalDeviceFeatures()
-					.setMultiDrawIndirect(VK_TRUE);
-				std::vector<vk::PhysicalDeviceFeatures> features(prop.queueCount, f);
-
-				vk::DeviceCreateInfo deviceInfo = vk::DeviceCreateInfo()
-					.setQueueCreateInfoCount((uint32_t)queueInfo.size())
-					.setPQueueCreateInfos(queueInfo.data())
-					.setPEnabledFeatures(features.data())
-					.setEnabledExtensionCount((uint32_t)extensionName.size())
-					.setPpEnabledExtensionNames(extensionName.data())
-					;
-
-				auto device = gpu->createDevice(deviceInfo, nullptr);
-				cGPU::Device device_holder;
-				device_holder.m_device = device;
-				device_holder.m_vk_debug_marker_set_object_tag = (PFN_vkDebugMarkerSetObjectTagEXT)device.getProcAddr("vkDebugMarkerSetObjectTagEXT");
-				device_holder.m_vk_debug_marker_set_object_name = (PFN_vkDebugMarkerSetObjectNameEXT)device.getProcAddr("vkDebugMarkerSetObjectNameEXT");
-				device_holder.m_vk_cmd_debug_marker_begin = (PFN_vkCmdDebugMarkerBeginEXT)device.getProcAddr("vkCmdDebugMarkerBeginEXT");
-				device_holder.m_vk_cmd_debug_marker_end = (PFN_vkCmdDebugMarkerEndEXT)device.getProcAddr("vkCmdDebugMarkerEndEXT");
-				device_holder.m_vk_cmd_debug_marker_insert = (PFN_vkCmdDebugMarkerInsertEXT)device.getProcAddr("vkCmdDebugMarkerInsertEXT");
-				gpu.m_device_list.emplace_back(std::move(device_holder));
+			// デバイス
+			std::vector<vk::DeviceQueueCreateInfo> queue_info(queueFamilyProperty.size());
+			std::vector<uint32_t> family_index;
+			for (size_t i = 0; i < queueFamilyProperty.size(); i++)
+			{
+				queue_info[i].queueCount = queue_priority[i].size();
+				queue_info[i].pQueuePriorities = queue_priority[i].data();
+				queue_info[i].queueFamilyIndex = (uint32_t)i;
+				family_index.push_back(i);
 			}
+
+ 			vk::PhysicalDeviceFeatures feature;
+
+			vk::DeviceCreateInfo deviceInfo = vk::DeviceCreateInfo()
+				.setQueueCreateInfoCount((uint32_t)queue_info.size())
+				.setPQueueCreateInfos(queue_info.data())
+				.setPEnabledFeatures(nullptr)
+				.setEnabledExtensionCount((uint32_t)extensionName.size())
+				.setPpEnabledExtensionNames(extensionName.data())
+				;
+			auto device = gpu->createDevice(deviceInfo, nullptr);
+			cGPU::Device device_holder;
+			device_holder.m_device = device;
+			device_holder.m_queue = queue_priority;
+			device_holder.m_family_index = family_index;
+			device_holder.m_vk_debug_marker_set_object_tag = (PFN_vkDebugMarkerSetObjectTagEXT)device.getProcAddr("vkDebugMarkerSetObjectTagEXT");
+			device_holder.m_vk_debug_marker_set_object_name = (PFN_vkDebugMarkerSetObjectNameEXT)device.getProcAddr("vkDebugMarkerSetObjectNameEXT");
+			device_holder.m_vk_cmd_debug_marker_begin = (PFN_vkCmdDebugMarkerBeginEXT)device.getProcAddr("vkCmdDebugMarkerBeginEXT");
+			device_holder.m_vk_cmd_debug_marker_end = (PFN_vkCmdDebugMarkerEndEXT)device.getProcAddr("vkCmdDebugMarkerEndEXT");
+			device_holder.m_vk_cmd_debug_marker_insert = (PFN_vkCmdDebugMarkerInsertEXT)device.getProcAddr("vkCmdDebugMarkerInsertEXT");
+			gpu.m_device_list.emplace_back(std::move(device_holder));
 
 		}
 	}
@@ -112,23 +118,6 @@ sGlobal::sGlobal()
 			cmd_pool_info.setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
 			cmd_pool_per_device = data.m_gpu.getDeviceByFamilyIndex(family)->createCommandPool(cmd_pool_info);
 		}
-
-// 		data.m_cmd_pool_tempolary.resize(data.m_gpu.m_device_list.size());
-// 		for (size_t family = 0; family < data.m_cmd_pool_tempolary.size(); family++)
-// 		{
-// 			vk::CommandPoolCreateInfo cmd_pool_info;
-// 			cmd_pool_info.queueFamilyIndex = (uint32_t)family;
-// 			cmd_pool_info.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
-// 			data.m_cmd_pool_tempolary[family] = data.m_gpu.getDeviceByFamilyIndex(family)->createCommandPool(cmd_pool_info);
-// 			for (int frame = 0; frame < FRAME_MAX; frame++)
-// 			{
-// 				vk::CommandBufferAllocateInfo cmd_buffer_info;
-// 				cmd_buffer_info.commandBufferCount = 100;
-// 				cmd_buffer_info.commandPool = data.m_cmd_pool_tempolary[family];
-// 				cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
-// 				data.m_cmd_tempolary[frame] = data.m_gpu.getDeviceByFamilyIndex(family)->allocateCommandBuffers(cmd_buffer_info);
-// 			}
-// 		}
 	};
 
 	m_thread_pool.start(std::thread::hardware_concurrency()-1, init_thread_data_func);
@@ -200,43 +189,46 @@ int cGPU::getMemoryTypeIndex(const vk::MemoryRequirements& request, vk::MemoryPr
 
 std::vector<cDevice> cGPU::getDevice(vk::QueueFlags flag) const
 {
-	std::vector<uint32_t> index;
-	auto queueProp = m_handle.getQueueFamilyProperties();
-	// 専用のDeviceをまず入れる
-	for (size_t i = 0; i < queueProp.size(); i++) {
-		if (queueProp[i].queueFlags == flag) {
-			index.emplace_back((uint32_t)i);
-		}
-	}
-	// 汎用のデバイス
-	for (size_t i = 0; i < queueProp.size(); i++) {
-		if ((queueProp[i].queueFlags | flag) == queueProp[i].queueFlags
-			&& (queueProp[i].queueFlags != flag)) 
-		{
-			index.emplace_back((uint32_t)i);
-		}
-	}
+	return { getDeviceByFamilyIndex(0) };
 
-	std::vector<cDevice> device;
-	device.reserve(index.size());
-	for (auto&& i : index)
-	{
-		device.emplace_back(getDeviceByFamilyIndex(i));
-	}
-	return device;
+// 	std::vector<uint32_t> index;
+// 	auto queueProp = m_handle.getQueueFamilyProperties();
+// 	// 専用のDeviceをまず入れる
+// 	for (size_t i = 0; i < queueProp.size(); i++) {
+// 		if (queueProp[i].queueFlags == flag) {
+// 			index.emplace_back((uint32_t)i);
+// 		}
+// 	}
+// 	// 汎用のデバイス
+// 	for (size_t i = 0; i < queueProp.size(); i++) {
+// 		if ((queueProp[i].queueFlags | flag) == queueProp[i].queueFlags
+// 			&& (queueProp[i].queueFlags != flag)) 
+// 		{
+// 			index.emplace_back((uint32_t)i);
+// 		}
+// 	}
+// 
+// 	std::vector<cDevice> device;
+// 	device.reserve(index.size());
+// 	for (auto&& i : index)
+// 	{
+// 		device.emplace_back(getDeviceByFamilyIndex(i));
+// 	}
+// 	return device;
 }
 cDevice cGPU::getDeviceByFamilyIndex(uint32_t index) const
 {
+	auto& d = m_device_list[index];
 	cDevice device;
 	device.m_gpu = m_handle;
 	device.m_handle = m_device_list[index].m_device;
+	device.m_family_index = d.m_family_index;
+	device.m_queue_info = d.m_queue;
 	device.m_vk_debug_marker_set_object_tag = m_device_list[index].m_vk_debug_marker_set_object_tag;
 	device.m_vk_debug_marker_set_object_name = m_device_list[index].m_vk_debug_marker_set_object_name;
 	device.m_vk_cmd_debug_marker_begin = m_device_list[index].m_vk_cmd_debug_marker_begin;
 	device.m_vk_cmd_debug_marker_end = m_device_list[index].m_vk_cmd_debug_marker_end;
 	device.m_vk_cmd_debug_marker_insert = m_device_list[index].m_vk_cmd_debug_marker_insert;
-	device.m_family_index = index;
-	device.m_queue_num = getHandle().getQueueFamilyProperties()[index].queueCount;
 	return device;
 }
 

@@ -141,7 +141,7 @@ void ResourceTexture::load(const cGPU& gpu, const cDevice& device, cThreadPool& 
 	{
 		// staging_bufferからimageへコピー
 		// コマンドバッファの準備
-		vk::CommandPool cmd_pool = sGlobal::Order().getCmdPoolTempolary(device.getQueueFamilyIndex());
+		vk::CommandPool cmd_pool = sGlobal::Order().getCmdPoolTempolary(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
 		vk::CommandBufferAllocateInfo cmd_buffer_info;
 		cmd_buffer_info.commandBufferCount = 1;
 		cmd_buffer_info.commandPool = cmd_pool;
@@ -163,7 +163,7 @@ void ResourceTexture::load(const cGPU& gpu, const cDevice& device, cThreadPool& 
 
 
 		vk::ImageMemoryBarrier to_copy_barrier;
-		to_copy_barrier.dstQueueFamilyIndex = device.getQueueFamilyIndex();
+		to_copy_barrier.dstQueueFamilyIndex = device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
 		to_copy_barrier.image = image;
 		to_copy_barrier.oldLayout = vk::ImageLayout::eUndefined;
 		to_copy_barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
@@ -171,7 +171,7 @@ void ResourceTexture::load(const cGPU& gpu, const cDevice& device, cThreadPool& 
 		to_copy_barrier.subresourceRange = subresourceRange;
 
 		vk::ImageMemoryBarrier to_color_barrier;
-		to_color_barrier.dstQueueFamilyIndex = device.getQueueFamilyIndex();
+		to_color_barrier.dstQueueFamilyIndex = device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
 		to_color_barrier.image = image;
 		to_color_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
 		to_color_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
@@ -187,7 +187,7 @@ void ResourceTexture::load(const cGPU& gpu, const cDevice& device, cThreadPool& 
 		submit_info.commandBufferCount = (uint32_t)cmd.size();
 		submit_info.pCommandBuffers = cmd.data();
 
-		auto queue = device->getQueue(device.getQueueFamilyIndex(), device.getQueueNum() - 1);
+		auto queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), device.getQueueNum(vk::QueueFlagBits::eGraphics) - 1);
 		queue.submit(submit_info, *fence_shared);
 
 		auto deleter = std::make_unique<Deleter>();
@@ -471,7 +471,7 @@ void cModel::load(const std::string& filename)
 	sDebug::Order().print(sDebug::FLAG_LOG | sDebug::SOURCE_MODEL, "[Load Model %6.2fs] %s \n", timer.getElapsedTimeAsSeconds(), filename.c_str());
 
 	auto device = sThreadLocal::Order().m_device[sThreadLocal::DEVICE_GRAPHICS];
-	auto cmd_pool = sGlobal::Order().getCmdPoolTempolary(device.getQueueFamilyIndex());
+	auto cmd_pool = sGlobal::Order().getCmdPoolTempolary(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
 	vk::CommandBufferAllocateInfo cmd_info;
 	cmd_info.setCommandPool(cmd_pool);
 	cmd_info.setLevel(vk::CommandBufferLevel::ePrimary);
@@ -590,10 +590,11 @@ void cModel::load(const std::string& filename)
 	auto familyIndex = device.getQueueFamilyIndex();
 
 	{
-		cMeshGPU& mesh = m_resource->mMesh;
+		cMeshResource& mesh = m_resource->mMesh;
 		mesh.mIndexType = vk::IndexType::eUint32;
 
 		{
+//			mesh.
 			mesh.m_vertex_buffer.create(gpu, device, vertex, vk::BufferUsageFlagBits::eVertexBuffer);
 			mesh.m_index_buffer.create(gpu, device, index, vk::BufferUsageFlagBits::eIndexBuffer);
 		}
@@ -778,7 +779,7 @@ void cModel::load(const std::string& filename)
 	}
 
 	cmd.end();
-	auto queue = device->getQueue(device.getQueueFamilyIndex(), device.getQueueNum()-1);
+	auto queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), device.getQueueNum(vk::QueueFlagBits::eGraphics)-1);
 	vk::SubmitInfo submit_info;
 	submit_info.commandBufferCount = 1;
 	submit_info.pCommandBuffers = &cmd;
@@ -805,7 +806,7 @@ std::string cModel::getFilename() const
 {
 	return m_resource ? m_resource->m_filename : "";
 }
-const cMeshGPU* cModel::getMesh() const
+const cMeshResource* cModel::getMesh() const
 {
 	return m_resource ? &m_resource->mMesh : nullptr;
 }

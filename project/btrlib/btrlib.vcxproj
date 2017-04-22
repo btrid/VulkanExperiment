@@ -126,6 +126,7 @@
     <ClInclude Include="..\..\include\btrlib\cInput.h" />
     <ClInclude Include="..\..\include\btrlib\cStopWatch.h" />
     <ClInclude Include="..\..\include\btrlib\cThreadPool.h" />
+    <ClInclude Include="..\..\include\btrlib\Memory.h" />
     <ClInclude Include="..\..\include\btrlib\ResourceManager.h" />
     <ClInclude Include="..\..\include\btrlib\rTexture.h" />
     <ClInclude Include="..\..\include\btrlib\sDebug.h" />

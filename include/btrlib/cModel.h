@@ -14,13 +14,160 @@
 #include <btrlib/rTexture.h>
 #include <btrlib/ResourceManager.h>
 
-struct cMeshGPU {
+
+struct VertexBuffer
+{
+	struct FreeZone
+	{
+		vk::DeviceSize m_start;
+		vk::DeviceSize m_end;
+	};
+	struct Resource
+	{
+		vk::Device m_device;
+		vk::DeviceMemory m_memory;
+		vk::DeviceSize m_allocate_size;
+		std::vector<FreeZone> m_free_zone;
+
+		vk::MemoryRequirements m_memory_request;
+		vk::MemoryAllocateInfo m_memory_alloc;
+
+	};
+	std::shared_ptr<Resource> m_resource;
+	vk::PhysicalDevice m_gpu;
+	void setup(const cGPU& gpu, const cDevice& device, vk::DeviceSize size)
+	{
+		m_resource = std::make_shared<Resource>();
+		m_gpu = gpu.getHandle();
+
+		vk::MemoryAllocateInfo memory_alloc;
+		memory_alloc.setAllocationSize(size);
+		// 		memory_alloc.setMemoryTypeIndex(cGPU::Helper::getMemoryTypeIndex(m_gpu, memory_request, vk::MemoryPropertyFlagBits::eHostVisible));
+		// 		auto staging_memory = m_private->m_device.allocateMemory(staging_memory_alloc);
+
+
+	}
+
+};
+struct cMeshResource 
+{
+
 	ConstantBuffer m_vertex_buffer;
 	ConstantBuffer m_index_buffer;
 	ConstantBuffer m_indirect_buffer;
 
 	vk::IndexType mIndexType;
 	int32_t mIndirectCount;
+
+	vk::DeviceMemory m_memory;
+	vk::Buffer m_buffer;
+	std::array<vk::DescriptorBufferInfo, 3> m_buffer_info;
+
+
+	template<typename... Args>
+	void setup(vk::PhysicalDevice gpu, const cDevice& device, vk::BufferUsageFlags flag, Args... data)
+	{
+		{
+			vk::BufferCreateInfo buffer_info;
+			buffer_info.usage = flag | vk::BufferUsageFlagBits::eTransferDst;
+			buffer_info.size = 
+			m_buffer = device->createBuffer(buffer_info);
+
+		}
+		m_buffer_info[0].range = vector_sizeof(vertex);
+		m_buffer_info[1].offset = m_buffer_info[0].range;
+		m_buffer_info[1].range = vector_sizeof(index);
+		m_buffer_info[2].offset = m_buffer_info[1].range;
+		m_buffer_info[2].range = vector_sizeof(indirect);
+		{
+			vk::BufferCreateInfo buffer_info;
+			buffer_info.usage = vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst;
+			buffer_info.size = m_buffer_info[0].range;
+			m_vertex_buffer = device->createBuffer(buffer_info);
+
+			buffer_info.usage = vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst;
+			buffer_info.size = m_buffer_info[0].range;
+			m_index_buffer = device->createBuffer(buffer_info);
+
+			buffer_info.usage = vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst;
+			buffer_info.size = m_buffer_info[0].range;
+			m_vertex_buffer = device->createBuffer(buffer_info);
+
+		}
+
+		int data_size = m_buffer_info[2].offset + m_buffer_info[2].range;
+
+		vk::BufferCreateInfo staging_buffer_info;
+		staging_buffer_info.usage = vk::BufferUsageFlagBits::eTransferSrc;
+		staging_buffer_info.size = data_size;
+		auto staging_buffer = m_private->m_device.createBuffer(staging_buffer_info);
+
+		vk::MemoryRequirements staging_memory_request = m_private->m_device.getBufferMemoryRequirements(staging_buffer);
+		vk::MemoryAllocateInfo staging_memory_alloc;
+		staging_memory_alloc.setAllocationSize(staging_memory_request.size);
+		staging_memory_alloc.setMemoryTypeIndex(cGPU::Helper::getMemoryTypeIndex(m_gpu, staging_memory_request, vk::MemoryPropertyFlagBits::eHostVisible));
+		auto staging_memory = m_private->m_device.allocateMemory(staging_memory_alloc);
+
+		vk::CommandPool cmd_pool;
+		std::vector<vk::CommandBuffer> cmd;
+		{
+			// コマンドバッファの準備
+			cmd_pool = sGlobal::Order().getCmdPoolTempolary(m_family_index);
+			vk::CommandBufferAllocateInfo cmd_buffer_info;
+			cmd_buffer_info.commandBufferCount = 1;
+			cmd_buffer_info.commandPool = cmd_pool;
+			cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
+			cmd = m_private->m_device.allocateCommandBuffers(cmd_buffer_info);
+
+		}
+		cmd[0].reset(vk::CommandBufferResetFlags());
+		vk::CommandBufferBeginInfo begin_info;
+		begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit | vk::CommandBufferUsageFlagBits::eSimultaneousUse;
+		cmd[0].begin(begin_info);
+
+		char* mem = reinterpret_cast<char*>(m_private->m_device.mapMemory(staging_memory, 0, data_size, vk::MemoryMapFlags()));
+		{
+			vk::DeviceSize offset = 0;
+			void* data[] = {vertex.data(), index.data(), indirect.data()};
+			for (size_t i = 0; i < m_buffer_info.size(); i++)
+			{
+				auto& buffer_info = m_buffer_info[i];
+				memcpy_s(mem+offset, m_buffer_info.range, data[i], m_buffer_info.range);
+
+				vk::BufferCopy copy_info;
+				copy_info.size = buffer_info.range;
+				copy_info.srcOffset = offset;
+				copy_info.dstOffset = offset;
+				cmd[0].copyBuffer(staging_buffer, buffer_info.buffer, copy_info);
+
+				offset += m_buffer_info.range;
+			}
+		}
+
+
+
+		cmd[0].end();
+		vk::SubmitInfo submit_info;
+		submit_info.commandBufferCount = (uint32_t)cmd.size();
+		submit_info.pCommandBuffers = cmd.data();
+
+		vk::FenceCreateInfo fence_info;
+		vk::Fence fence = m_private->m_device.createFence(fence_info);
+		m_queue.submit(submit_info, fence);
+
+		{
+			std::unique_ptr<Deleter> deleter = std::make_unique<Deleter>();
+			deleter->pool = cmd_pool;
+			deleter->cmd = std::move(cmd);
+			deleter->device = m_private->m_device;
+			deleter->buffer = { staging_buffer };
+			deleter->memory = { staging_memory };
+			deleter->fence.push_back(fence);
+			sGlobal::Order().destroyResource(std::move(deleter));
+		}
+
+	}
+
 };
 
 struct Descripter
@@ -375,7 +522,7 @@ public:
 		std::vector<int>		m_material_index;
 
 
-		cMeshGPU mMesh;
+		cMeshResource mMesh;
 		RootNode mNodeRoot;
 		std::vector<Bone> mBone;
 
@@ -413,7 +560,7 @@ public:
 	void load(const std::string& filename);
 
 	std::string getFilename()const;
-	const cMeshGPU* getMesh()const;
+	const cMeshResource* getMesh()const;
 	std::shared_ptr<Resource> getResource()const { return m_resource; }
 	std::unique_ptr<Instance>& getInstance() { return m_instance; }
 };

@@ -262,10 +262,10 @@ void cModelRenderer_t<T>::cModelDrawPipeline::setup(vk::RenderPass render_pass)
 
 	{
 		// ƒ‚ƒfƒ‹‚²‚Æ‚ÌDescriptor‚ÌÝ’è
-		vk::DescriptorSetAllocateInfo alloc_info = vk::DescriptorSetAllocateInfo()
-			.setDescriptorPool(m_descriptor_pool)
-			.setDescriptorSetCount(1)
-			.setPSetLayouts(&m_descriptor_set_layout[cModelRenderer::cModelDrawPipeline::DESCRIPTOR_SET_LAYOUT_PER_SCENE]);
+		vk::DescriptorSetAllocateInfo alloc_info;
+		alloc_info.descriptorPool = m_descriptor_pool;
+		alloc_info.descriptorSetCount = 1;
+		alloc_info.pSetLayouts = &m_descriptor_set_layout[cModelRenderer::cModelDrawPipeline::DESCRIPTOR_SET_LAYOUT_PER_SCENE];
 		m_draw_descriptor_set_per_scene = device->allocateDescriptorSets(alloc_info)[0];
 
 		std::vector<vk::DescriptorBufferInfo> uniformBufferInfo = {
@@ -288,8 +288,7 @@ template<typename T>
 void cModelRenderer_t<T>::cModelComputePipeline::setup()
 {
 	const auto& gpu = sThreadLocal::Order().m_gpu;
-	auto device = gpu.getDevice(vk::QueueFlagBits::eGraphics)[0];
-	auto computeQueues = gpu.getQueueFamilyIndexList(vk::QueueFlagBits::eCompute);
+	auto device = gpu.getDevice(vk::QueueFlagBits::eCompute)[0];
 
 	// setup shader
 	{
@@ -522,12 +521,12 @@ void cModelRenderer_t<T>::cModelComputePipeline::setup()
 				descriptor_pool_size.emplace_back(buffer.descriptorType, buffer.descriptorCount);
 			}
 		}
-		vk::DescriptorPoolCreateInfo poolInfo = vk::DescriptorPoolCreateInfo()
-			.setMaxSets(bindings.size())
-			.setPoolSizeCount(descriptor_pool_size.size())
-			.setPPoolSizes(descriptor_pool_size.data());
+		vk::DescriptorPoolCreateInfo descriptor_pool_info;
+		descriptor_pool_info.maxSets = bindings.size();
+		descriptor_pool_info.poolSizeCount = descriptor_pool_size.size();
+		descriptor_pool_info.pPoolSizes = descriptor_pool_size.data();
 
-		m_descriptor_pool = device->createDescriptorPool(poolInfo);
+		m_descriptor_pool = device->createDescriptorPool(descriptor_pool_info);
 	}
 
 
