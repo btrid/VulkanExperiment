@@ -338,6 +338,7 @@ private:
 		vk::Buffer m_staging_buffer;
 		vk::DeviceMemory m_staging_memory;
 		char* m_staging_data;
+
 		~Private()
 		{
 			if (m_cmd_pool)
@@ -414,9 +415,12 @@ public:
 			buffer_info.usage = flag | vk::BufferUsageFlagBits::eTransferDst;
 			buffer_info.size = data_size;
 			auto queue_family = gpu.getQueueFamilyIndexList(vk::QueueFlagBits::eGraphics | vk::QueueFlagBits::eCompute);
-			buffer_info.queueFamilyIndexCount = (uint32_t)queue_family.size();
-			buffer_info.pQueueFamilyIndices = queue_family.data();
-			buffer_info.sharingMode = vk::SharingMode::eConcurrent;
+			if (queue_family.size() != 1)
+			{
+				buffer_info.queueFamilyIndexCount = (uint32_t)queue_family.size();
+				buffer_info.pQueueFamilyIndices = queue_family.data();
+				buffer_info.sharingMode = vk::SharingMode::eConcurrent;
+			}
 
 			m_private->m_buffer = device->createBuffer(buffer_info);
 
@@ -599,9 +603,12 @@ public:
 			buffer_info.usage = flag | vk::BufferUsageFlagBits::eTransferDst;
 			buffer_info.size = data_size;
 			auto queue_family = gpu.getQueueFamilyIndexList(vk::QueueFlagBits::eGraphics | vk::QueueFlagBits::eCompute);
-			buffer_info.queueFamilyIndexCount = queue_family.size();
-			buffer_info.pQueueFamilyIndices = queue_family.data();
-			buffer_info.sharingMode = vk::SharingMode::eConcurrent;
+			if (queue_family.size() != 1)
+			{
+				buffer_info.queueFamilyIndexCount = (uint32_t)queue_family.size();
+				buffer_info.pQueueFamilyIndices = queue_family.data();
+				buffer_info.sharingMode = vk::SharingMode::eConcurrent;
+			}
 			m_private->m_buffer = device->createBuffer(buffer_info);
 
 			vk::MemoryRequirements memory_request = device->getBufferMemoryRequirements(m_private->m_buffer);
@@ -817,9 +824,13 @@ public:
 			vk::BufferCreateInfo buffer_info;
 			buffer_info.usage = flag | vk::BufferUsageFlagBits::eTransferDst;
 			buffer_info.size = data_size;
-			buffer_info.queueFamilyIndexCount = device.getQueueFamilyIndex().size();
-			buffer_info.pQueueFamilyIndices = device.getQueueFamilyIndex().data();
-			buffer_info.sharingMode = vk::SharingMode::eConcurrent;
+			auto queue_family = gpu.getQueueFamilyIndexList(vk::QueueFlagBits::eGraphics | vk::QueueFlagBits::eCompute);
+			if (queue_family.size() != 1)
+			{
+				buffer_info.queueFamilyIndexCount = (uint32_t)queue_family.size();
+				buffer_info.pQueueFamilyIndices = queue_family.data();
+				buffer_info.sharingMode = vk::SharingMode::eConcurrent;
+			}
 
 			m_private->m_buffer = device->createBuffer(buffer_info);
 
