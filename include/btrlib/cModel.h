@@ -109,27 +109,20 @@ struct VertexBuffer
 		std::vector<Zone> m_free_zone;
 		std::vector<Zone> m_active_zone;
 
+		std::mutex m_mutex;
 		void setup(vk::DeviceSize size)
 		{
 			assert(m_free_zone.empty());
-
 			Zone zone;
 			zone.m_start = 0;
 			zone.m_end = size;
+
+			std::lock_guard<std::mutex> lock(m_mutex);
 			m_free_zone.push_back(zone);
-		}
-		void sort()
-		{
-			std::sort(m_free_zone.begin(), m_free_zone.end(), [](Zone& a, Zone& b) { return a.m_start < b.m_start; });
-			for (size_t i = m_free_zone.size()-1; i > 0; i--)
-			{
-				if (m_free_zone[i - 1].tryMarge(m_free_zone[i])) {
-					m_free_zone.erase(m_free_zone.begin()+i);
-				}
-			}
 		}
 		Zone alloc(vk::DeviceSize size) 
 		{
+			std::lock_guard<std::mutex> lock(m_mutex);
 			for (auto& zone : m_free_zone)
 			{
 				if (zone.range() >= size) 
@@ -156,6 +149,7 @@ struct VertexBuffer
 		{
 			assert(zone.isValid());
 
+			std::lock_guard<std::mutex> lock(m_mutex);
 			{
 				// activeÇ©ÇÁçÌèú
 				auto it = std::find_if(m_active_zone.begin(), m_active_zone.end(), [&](Zone& active) { return active.m_start == zone.m_start; });
@@ -176,6 +170,17 @@ struct VertexBuffer
 			}
 
 		}
+	private:
+		void sort()
+		{
+			std::sort(m_free_zone.begin(), m_free_zone.end(), [](Zone& a, Zone& b) { return a.m_start < b.m_start; });
+			for (size_t i = m_free_zone.size() - 1; i > 0; i--)
+			{
+				if (m_free_zone[i - 1].tryMarge(m_free_zone[i])) {
+					m_free_zone.erase(m_free_zone.begin() + i);
+				}
+			}
+		}
 	};
 	struct Resource
 	{
@@ -188,9 +193,6 @@ struct VertexBuffer
 
 		vk::MemoryRequirements m_memory_request;
 		vk::MemoryAllocateInfo m_memory_alloc;
-
-		vk::CommandPool m_cmd_pool;
-		std::vector<vk::Fence>	m_fence;
 
 		vk::Buffer m_staging_buffer;
 		vk::DeviceMemory m_staging_memory;
@@ -208,7 +210,6 @@ struct VertexBuffer
 		struct Resource
 		{
 			cDevice m_device;
-
 			Zone m_zone;
 
 			vk::Buffer m_staging_buffer_ref;
@@ -397,8 +398,6 @@ struct VertexBuffer
 struct cMeshResource 
 {
 
-// 	ConstantBuffer m_vertex_buffer;
-// 	ConstantBuffer m_index_buffer;
 	ConstantBuffer m_indirect_buffer;
 
 	VertexBuffer::AllocateBuffer m_vertex_buffer_ex;
