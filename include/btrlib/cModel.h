@@ -14,48 +14,396 @@
 #include <btrlib/rTexture.h>
 #include <btrlib/ResourceManager.h>
 
+struct TmpCmd
+{
+	vk::CommandPool m_cmd_pool;
+	std::vector<vk::CommandBuffer> m_cmd;
+	vk::FenceShared m_fence;
+	cDevice m_device;
 
+	vk::CommandBuffer getCmd()const { return m_cmd[0]; }
+	vk::FenceShared getFence()const { return m_fence; }
+	TmpCmd(const cDevice& device)
+	{
+		m_device = device;
+		{
+			// コマンドバッファの準備
+			m_cmd_pool = sGlobal::Order().getCmdPoolTempolary(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
+			vk::CommandBufferAllocateInfo cmd_buffer_info;
+			cmd_buffer_info.commandBufferCount = 1;
+			cmd_buffer_info.commandPool = m_cmd_pool;
+			cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
+			m_cmd = device->allocateCommandBuffers(cmd_buffer_info);
+
+			// fence
+			vk::FenceCreateInfo fence_info;
+			m_fence.create(device.getHandle(), fence_info);
+		}
+		m_cmd[0].reset(vk::CommandBufferResetFlags());
+		vk::CommandBufferBeginInfo begin_info;
+		begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit | vk::CommandBufferUsageFlagBits::eSimultaneousUse;
+		m_cmd[0].begin(begin_info);
+	}
+	~TmpCmd()
+	{
+		m_cmd[0].end();
+		vk::SubmitInfo submit_info;
+		submit_info.commandBufferCount = (uint32_t)m_cmd.size();
+		submit_info.pCommandBuffers = m_cmd.data();
+
+		m_device->getQueue(m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), m_device.getQueueNum(vk::QueueFlagBits::eGraphics) - 1).submit(submit_info, m_fence.getHandle());
+
+		{
+			std::unique_ptr<Deleter> deleter = std::make_unique<Deleter>();
+			deleter->pool = m_cmd_pool;
+			deleter->cmd = std::move(m_cmd);
+			deleter->device = m_device.getHandle();
+			deleter->fence_shared.push_back(m_fence);
+			sGlobal::Order().destroyResource(std::move(deleter));
+		}
+	}
+};
 struct VertexBuffer
 {
-	struct FreeZone
+	struct Zone
 	{
 		vk::DeviceSize m_start;
 		vk::DeviceSize m_end;
+
+		Zone()
+			: m_start(0llu)
+			, m_end(0llu)
+		{}
+
+		Zone split(vk::DeviceSize size)
+		{
+			Zone newZone;
+			newZone.m_start = m_start;
+			newZone.m_end = m_start + size;
+
+			m_start += size;
+
+			return newZone;
+		}
+		void marge(const Zone& zone)
+		{
+			assert(m_start == zone.m_end);
+			m_start = zone.m_start;
+		}
+
+		bool tryMarge(const Zone zone)
+		{
+			if (m_start != zone.m_end)
+			{
+				return false;
+			}
+			marge(zone);
+			return true;
+		}
+
+		vk::DeviceSize range()const { return m_end - m_start; }
+		bool isValid()const { return m_end != 0llu; }
+	};
+	struct FreeZone
+	{
+		std::vector<Zone> m_free_zone;
+		std::vector<Zone> m_active_zone;
+
+		void setup(vk::DeviceSize size)
+		{
+			assert(m_free_zone.empty());
+
+			Zone zone;
+			zone.m_start = 0;
+			zone.m_end = size;
+			m_free_zone.push_back(zone);
+		}
+		void sort()
+		{
+			std::sort(m_free_zone.begin(), m_free_zone.end(), [](Zone& a, Zone& b) { return a.m_start < b.m_start; });
+			for (size_t i = m_free_zone.size()-1; i > 0; i--)
+			{
+				if (m_free_zone[i - 1].tryMarge(m_free_zone[i])) {
+					m_free_zone.erase(m_free_zone.begin()+i);
+				}
+			}
+		}
+		Zone alloc(vk::DeviceSize size) 
+		{
+			for (auto& zone : m_free_zone)
+			{
+				if (zone.range() >= size) 
+				{
+					m_active_zone.emplace_back(zone.split(size));
+					return m_active_zone.back();
+				}
+			}
+
+			// sortしてもう一度
+			sort();
+			for (auto& zone : m_free_zone)
+			{
+				if (zone.range() >= size)
+				{
+					m_active_zone.emplace_back(zone.split(size));
+					return m_active_zone.back();
+				}
+			}
+			return Zone();
+		}
+
+		void free(const Zone& zone) 
+		{
+			assert(zone.isValid());
+
+			{
+				// activeから削除
+				auto it = std::find_if(m_active_zone.begin(), m_active_zone.end(), [&](Zone& active) { return active.m_start == zone.m_start; });
+				m_active_zone.erase(it);
+			}
+
+			{
+				// freeにマージ
+				for (auto& zone : m_free_zone)
+				{
+					if (zone.tryMarge(zone)) {
+						return;
+					}
+				}
+
+				// できなければ、新しい領域として追加
+				m_free_zone.emplace_back(zone);
+			}
+
+		}
 	};
 	struct Resource
 	{
-		vk::Device m_device;
+		cDevice m_device;
+		vk::Buffer m_buffer;
+
 		vk::DeviceMemory m_memory;
 		vk::DeviceSize m_allocate_size;
-		std::vector<FreeZone> m_free_zone;
+		FreeZone m_free_zone;
 
 		vk::MemoryRequirements m_memory_request;
 		vk::MemoryAllocateInfo m_memory_alloc;
 
+		vk::CommandPool m_cmd_pool;
+		std::vector<vk::Fence>	m_fence;
+
+		vk::Buffer m_staging_buffer;
+		vk::DeviceMemory m_staging_memory;
+		char* m_staging_data;
+
+		~Resource()
+		{
+			m_device->unmapMemory(m_staging_memory);
+		}
 	};
+
+	struct AllocateBuffer
+	{
+		vk::DescriptorBufferInfo m_buffer_info;
+		struct Resource
+		{
+			cDevice m_device;
+
+			Zone m_zone;
+
+			vk::Buffer m_staging_buffer_ref;
+			char* m_staging_ptr;
+		};
+
+		std::shared_ptr<Resource> m_resource;
+
+		template<typename T>
+		void update(const std::vector<T>& data, vk::DeviceSize offset)
+		{
+			size_t data_size = vector_sizeof(data);
+			memcpy_s(m_resource->m_staging_ptr + offset, data_size, data.data(), data_size);
+
+			vk::BufferCopy copy_info;
+			copy_info.size = data_size;
+			copy_info.srcOffset = m_resource->m_zone.m_start + offset;
+			copy_info.dstOffset = m_resource->m_zone.m_start + offset;
+
+			TmpCmd tmpcmd(m_resource->m_device);
+			auto cmd = tmpcmd.getCmd();
+			cmd.copyBuffer(m_resource->m_staging_buffer_ref, m_buffer_info.buffer, copy_info);
+		}
+		vk::DescriptorBufferInfo getBufferInfo()const { return m_buffer_info; }
+		vk::Buffer getBuffer()const { return m_buffer_info.buffer; }
+	};
+
 	std::shared_ptr<Resource> m_resource;
 	vk::PhysicalDevice m_gpu;
-	void setup(const cGPU& gpu, const cDevice& device, vk::DeviceSize size)
+
+	AllocateBuffer allocate(vk::DeviceSize size)
+	{
+		auto zone = m_resource->m_free_zone.alloc(size);
+		AllocateBuffer alloc;
+		auto deleter = [&](AllocateBuffer::Resource* ptr)
+		{
+			m_resource->m_free_zone.free(ptr->m_zone);
+// 			std::unique_ptr<Deleter> deleter = std::make_unique<Deleter>();
+// 			deleter->device = m_resource->m_device.getHandle();
+// 			sGlobal::Order().destroyResource(std::move(deleter));
+			delete ptr;
+		};
+ 		alloc.m_resource = std::shared_ptr<AllocateBuffer::Resource>(new AllocateBuffer::Resource, deleter);
+//		alloc.m_resource = std::make_shared<AllocateBuffer::Resource>();
+		alloc.m_resource->m_device = m_resource->m_device;
+		alloc.m_resource->m_zone = zone;
+		alloc.m_buffer_info.buffer = m_resource->m_buffer;
+		alloc.m_buffer_info.offset = alloc.m_resource->m_zone.m_start;
+		alloc.m_buffer_info.range = size;
+		alloc.m_resource->m_staging_buffer_ref = m_resource->m_staging_buffer;
+		alloc.m_resource->m_staging_ptr = m_resource->m_staging_data + alloc.m_resource->m_zone.m_start;
+		return alloc;
+	}
+
+	VertexBuffer(const cDevice& device, vk::DeviceSize size)
+	{
+		setup(device, size);
+	}
+	void setup(const cDevice& device, vk::DeviceSize size)
 	{
 		m_resource = std::make_shared<Resource>();
-		m_gpu = gpu.getHandle();
+		m_gpu = device.getGPU();
+		m_resource->m_device = device;
 
+		m_resource->m_free_zone.setup(size);
+		vk::BufferCreateInfo buffer_info;
+		buffer_info.usage = vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst;
+		buffer_info.size = size;
+//		buffer_info.flags = vk::BufferCreateFlagBits::eSparseBinding;
+		m_resource->m_buffer = device->createBuffer(buffer_info);
+
+		vk::MemoryRequirements memory_request = m_resource->m_device->getBufferMemoryRequirements(m_resource->m_buffer);
 		vk::MemoryAllocateInfo memory_alloc;
-		memory_alloc.setAllocationSize(size);
-		// 		memory_alloc.setMemoryTypeIndex(cGPU::Helper::getMemoryTypeIndex(m_gpu, memory_request, vk::MemoryPropertyFlagBits::eHostVisible));
-		// 		auto staging_memory = m_private->m_device.allocateMemory(staging_memory_alloc);
+		memory_alloc.setAllocationSize(memory_request.size);
+		memory_alloc.setMemoryTypeIndex(cGPU::Helper::getMemoryTypeIndex(m_gpu, memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal));
+		m_resource->m_memory = m_resource->m_device->allocateMemory(memory_alloc);
+		m_resource->m_memory_alloc = memory_alloc;
+		m_resource->m_memory_request = memory_request;
+		device->bindBufferMemory(m_resource->m_buffer, m_resource->m_memory, 0);
 
+		{
+			// host_visibleなバッファの作成
+			vk::BufferCreateInfo buffer_info;
+			buffer_info.usage = vk::BufferUsageFlagBits::eTransferSrc;
+			buffer_info.size = size;
+
+			m_resource->m_staging_buffer = device->createBuffer(buffer_info);
+
+			vk::MemoryRequirements memory_request = device->getBufferMemoryRequirements(m_resource->m_staging_buffer);
+			vk::MemoryAllocateInfo memory_alloc;
+			memory_alloc.setAllocationSize(memory_request.size);
+			memory_alloc.setMemoryTypeIndex(cGPU::Helper::getMemoryTypeIndex(device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent));
+			m_resource->m_staging_memory = device->allocateMemory(memory_alloc);
+			m_resource->m_staging_data = (char*)device->mapMemory(m_resource->m_staging_memory, 0, buffer_info.size, vk::MemoryMapFlags());
+
+			device->bindBufferMemory(m_resource->m_staging_buffer, m_resource->m_staging_memory, 0);
+		}
 
 	}
 
+#if 0
+	void setup(const cDevice& device, vk::DeviceSize size)
+	{
+		m_resource = std::make_shared<Resource>();
+		m_gpu = device.getGPU();
+		m_resource->m_device = device;
+
+		vk::BufferCreateInfo buffer_info;
+		buffer_info.usage = vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst;
+		buffer_info.size = size;
+		buffer_info.flags = vk::BufferCreateFlagBits::eSparseBinding;
+		m_resource->m_buffer = device->createBuffer(buffer_info);
+
+		vk::MemoryRequirements memory_request = m_resource->m_device->getBufferMemoryRequirements(m_resource->m_buffer);
+		vk::MemoryAllocateInfo memory_alloc;
+		memory_alloc.setAllocationSize(memory_request.size);
+		memory_alloc.setMemoryTypeIndex(cGPU::Helper::getMemoryTypeIndex(m_gpu, memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal));
+		m_resource->m_memory = m_resource->m_device->allocateMemory(memory_alloc);
+		m_resource->m_memory_alloc = memory_alloc;
+		m_resource->m_memory_request = memory_request;
+		device->bindBufferMemory(m_resource->m_buffer, m_resource->m_memory, 0);
+
+		//		vk::BufferCreateInfo buffer_info;
+		std::vector<vk::Buffer> buffers(10);
+		std::vector<vk::DeviceMemory> memories(10);
+		std::vector<vk::SparseMemoryBind> sparse_memory_bind(10);
+		std::vector<vk::SparseBufferMemoryBindInfo> sparse_bind(10);
+		for (int i = 0; i < 10; i++)
+		{
+			buffer_info.usage = vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst;
+			buffer_info.size = 1024;
+			buffer_info.flags = vk::BufferCreateFlagBits::eSparseBinding;
+			buffers[i] = (device->createBuffer(buffer_info));
+			auto request = m_resource->m_device->getBufferMemoryRequirements(buffers[i]);
+			vk::MemoryAllocateInfo alloc;
+			alloc.setAllocationSize(request.size);
+			alloc.setMemoryTypeIndex(cGPU::Helper::getMemoryTypeIndex(m_gpu, memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal));
+			memories[i] = m_resource->m_device->allocateMemory(alloc);
+			device->bindBufferMemory(buffers[i], memories[i], 0);
+
+			sparse_memory_bind[i].memory = memories[i];
+			sparse_memory_bind[i].memoryOffset = 0;
+			sparse_memory_bind[i].size = memory_request.alignment;
+			sparse_memory_bind[i].resourceOffset = 0;
+
+			sparse_bind[i].buffer = m_resource->m_buffer;
+			sparse_bind[i].bindCount = 1;
+			sparse_bind[i].pBinds = &sparse_memory_bind[i];
+		}
+
+		bind(sparse_bind);
+
+		for (int i = 0; i < 10; i++)
+		{
+// 			sparse_memory_bind[i].memory = m_resource->m_memory;
+			sparse_memory_bind[i].memoryOffset = 0;
+			sparse_memory_bind[i].size = 0;
+			sparse_memory_bind[i].resourceOffset = 0;
+
+			sparse_bind[i].buffer = buffers[i];
+			sparse_bind[i].bindCount = 1;
+			sparse_bind[i].pBinds = &sparse_memory_bind[i];
+		}
+		bind(sparse_bind);
+	}
+
+	void bind(const std::vector<vk::SparseBufferMemoryBindInfo>& sparse_bind)
+	{
+// 		vk::SparseBufferMemoryBindInfo sparse_bind;
+// 		sparse_bind.buffer = m_resource->m_buffer;
+// 		sparse_bind.bindCount = sparse_bind_info.size();
+// 		sparse_bind.pBinds = sparse_bind_info.data();
+
+		vk::BindSparseInfo bind_sparse_info;
+		bind_sparse_info.bufferBindCount = sparse_bind.size();
+		bind_sparse_info.pBufferBinds = sparse_bind.data();
+		auto queue = m_resource->m_device->getQueue(m_resource->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eSparseBinding), m_resource->m_device.getQueueNum(vk::QueueFlagBits::eSparseBinding) - 1);
+		queue.bindSparse(bind_sparse_info, vk::Fence());
+		queue.waitIdle();
+		int a = 0;
+		a++;
+	}
+	vk::DeviceMemory getSparseMemory()const { return m_resource->m_memory; }
+#endif
 };
 struct cMeshResource 
 {
 
-	ConstantBuffer m_vertex_buffer;
-	ConstantBuffer m_index_buffer;
+// 	ConstantBuffer m_vertex_buffer;
+// 	ConstantBuffer m_index_buffer;
 	ConstantBuffer m_indirect_buffer;
 
+	VertexBuffer::AllocateBuffer m_vertex_buffer_ex;
+	VertexBuffer::AllocateBuffer m_index_buffer_ex;
+	VertexBuffer::AllocateBuffer m_indirect_buffer_ex;
 	vk::IndexType mIndexType;
 	int32_t mIndirectCount;
 

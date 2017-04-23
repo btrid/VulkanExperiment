@@ -61,7 +61,7 @@ sGlobal::sGlobal()
 				family_index.push_back(i);
 			}
 
- 			vk::PhysicalDeviceFeatures feature;
+ 			vk::PhysicalDeviceFeatures feature = gpu_feature;
 
 			vk::DeviceCreateInfo deviceInfo = vk::DeviceCreateInfo()
 				.setQueueCreateInfoCount((uint32_t)queue_info.size())
@@ -190,31 +190,6 @@ int cGPU::getMemoryTypeIndex(const vk::MemoryRequirements& request, vk::MemoryPr
 std::vector<cDevice> cGPU::getDevice(vk::QueueFlags flag) const
 {
 	return { getDeviceByFamilyIndex(0) };
-
-// 	std::vector<uint32_t> index;
-// 	auto queueProp = m_handle.getQueueFamilyProperties();
-// 	// 専用のDeviceをまず入れる
-// 	for (size_t i = 0; i < queueProp.size(); i++) {
-// 		if (queueProp[i].queueFlags == flag) {
-// 			index.emplace_back((uint32_t)i);
-// 		}
-// 	}
-// 	// 汎用のデバイス
-// 	for (size_t i = 0; i < queueProp.size(); i++) {
-// 		if ((queueProp[i].queueFlags | flag) == queueProp[i].queueFlags
-// 			&& (queueProp[i].queueFlags != flag)) 
-// 		{
-// 			index.emplace_back((uint32_t)i);
-// 		}
-// 	}
-// 
-// 	std::vector<cDevice> device;
-// 	device.reserve(index.size());
-// 	for (auto&& i : index)
-// 	{
-// 		device.emplace_back(getDeviceByFamilyIndex(i));
-// 	}
-// 	return device;
 }
 cDevice cGPU::getDeviceByFamilyIndex(uint32_t index) const
 {

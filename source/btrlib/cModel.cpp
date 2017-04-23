@@ -446,6 +446,7 @@ cModel::~cModel()
 
 void cModel::load(const std::string& filename)
 {
+
 	m_instance = std::make_unique<Instance>();
 	if (s_manager.manage(m_resource, filename)) {
 		return;
@@ -471,6 +472,10 @@ void cModel::load(const std::string& filename)
 	sDebug::Order().print(sDebug::FLAG_LOG | sDebug::SOURCE_MODEL, "[Load Model %6.2fs] %s \n", timer.getElapsedTimeAsSeconds(), filename.c_str());
 
 	auto device = sThreadLocal::Order().m_device[sThreadLocal::DEVICE_GRAPHICS];
+
+	static VertexBuffer s_vertex_buffer(device, 128 * 65536);
+
+
 	auto cmd_pool = sGlobal::Order().getCmdPoolTempolary(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
 	vk::CommandBufferAllocateInfo cmd_info;
 	cmd_info.setCommandPool(cmd_pool);
@@ -594,9 +599,14 @@ void cModel::load(const std::string& filename)
 		mesh.mIndexType = vk::IndexType::eUint32;
 
 		{
-//			mesh.
-			mesh.m_vertex_buffer.create(gpu, device, vertex, vk::BufferUsageFlagBits::eVertexBuffer);
-			mesh.m_index_buffer.create(gpu, device, index, vk::BufferUsageFlagBits::eIndexBuffer);
+			mesh.m_vertex_buffer_ex = s_vertex_buffer.allocate(vector_sizeof(vertex));
+			mesh.m_vertex_buffer_ex.update(vertex, 0);
+			mesh.m_index_buffer_ex = s_vertex_buffer.allocate(vector_sizeof(index));
+			mesh.m_index_buffer_ex.update(index, 0);
+// 			mesh.m_vertex_buffer_ex = s_vertex_buffer.allocate(vector_sizeof(indirext));
+// 			mesh.m_vertex_buffer_ex.update(vertex, 0);
+// 			mesh.m_vertex_buffer.create(gpu, device, vertex, vk::BufferUsageFlagBits::eVertexBuffer);
+// 			mesh.m_index_buffer.create(gpu, device, index, vk::BufferUsageFlagBits::eIndexBuffer);
 		}
 
 		// indirect

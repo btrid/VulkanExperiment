@@ -57,10 +57,10 @@ public:
 		}
 		return (uint32_t)-1;
 	}
-	uint32_t getQueueNum(uint32_t family_index)const { return m_queue_info[family_index].size(); }
+	uint32_t getQueueNum(uint32_t family_index)const { return (uint32_t)m_queue_info[family_index].size(); }
 	uint32_t getQueueNum(vk::QueueFlags reqest_queue)const
 	{ 
-		return m_queue_info[getQueueFamilyIndex(reqest_queue)].size(); 
+		return (uint32_t)m_queue_info[getQueueFamilyIndex(reqest_queue)].size();
 	}
 	const vk::Device& getHandle()const { return m_handle; }
 	const vk::Device& operator*()const { return m_handle; }
@@ -105,7 +105,9 @@ public:
 	int getMemoryTypeIndex(const vk::MemoryRequirements& request, vk::MemoryPropertyFlags flag)const;
 	vk::Format getSupportedDepthFormat(const std::vector<vk::Format>& depthFormat)const;
 
+	// @deplicated
 	std::vector<cDevice> getDevice(vk::QueueFlags flag) const;
+	// @deplicated
 	cDevice getDeviceByFamilyIndex(uint32_t index) const;
 private:
 

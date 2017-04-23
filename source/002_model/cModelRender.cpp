@@ -342,8 +342,8 @@ void ModelRender::draw(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 	for (auto i : m_resource->m_material_index)
 	{
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, renderer.getDrawPipeline().m_pipeline_layout, 1, m_draw_descriptor_set_per_mesh[i], {});
-		cmd.bindVertexBuffers(0, { m_resource->mMesh.m_vertex_buffer.getBuffer() }, { vk::DeviceSize() });
-		cmd.bindIndexBuffer(m_resource->mMesh.m_index_buffer.getBuffer(), vk::DeviceSize(0), m_resource->mMesh.mIndexType);
-		cmd.drawIndexedIndirect(m_resource->mMesh.m_indirect_buffer.getBuffer(), vk::DeviceSize(0), m_resource->mMesh.mIndirectCount, sizeof(cModel::Mesh));
+ 		cmd.bindVertexBuffers(0, { m_resource->mMesh.m_vertex_buffer_ex.getBuffer() }, { m_resource->mMesh.m_vertex_buffer_ex.getBufferInfo().offset });
+ 		cmd.bindIndexBuffer(m_resource->mMesh.m_index_buffer_ex.getBuffer(), m_resource->mMesh.m_index_buffer_ex.getBufferInfo().offset, m_resource->mMesh.mIndexType);
+ 		cmd.drawIndexedIndirect(m_resource->mMesh.m_indirect_buffer.getBuffer(), vk::DeviceSize(0), m_resource->mMesh.mIndirectCount, sizeof(cModel::Mesh));
 	}
 }
