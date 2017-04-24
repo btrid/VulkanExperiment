@@ -5,8 +5,10 @@
 //#extension GL_ARB_shading_language_include : require
 //#extension GL_KHR_vulkan_glsl : require
 #extension GL_GOOGLE_cpp_style_line_directive : require
-
+#extension GL_ARB_shader_image_load_store : require
 #include </MultiModel.glsl>
+
+layout(early_fragment_tests) in;
 
 struct Vertex
 {

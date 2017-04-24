@@ -603,8 +603,6 @@ void cModel::load(const std::string& filename)
 			mesh.m_vertex_buffer_ex.update(vertex, 0);
 			mesh.m_index_buffer_ex = s_vertex_buffer.allocate(vector_sizeof(index));
 			mesh.m_index_buffer_ex.update(index, 0);
-// 			mesh.m_vertex_buffer.create(gpu, device, vertex, vk::BufferUsageFlagBits::eVertexBuffer);
-// 			mesh.m_index_buffer.create(gpu, device, index, vk::BufferUsageFlagBits::eIndexBuffer);
 		}
 
 		// indirect

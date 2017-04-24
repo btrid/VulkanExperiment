@@ -28,7 +28,7 @@ int main()
 {
 
 	sWindow& w = sWindow::Order();
-	vk::Instance instance = sVulkan::Order().getVKInstance();
+	vk::Instance instance = sGlobal::Order().getVKInstance();
 
 #if _DEBUG
 	cDebug debug(instance);
@@ -37,18 +37,17 @@ int main()
  	cWindow window;
 	cWindow::CreateInfo windowInfo;
 	windowInfo.surface_format_request = vk::SurfaceFormatKHR{ vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear};
-	windowInfo.gpu = sVulkan::Order().getGPU(0);
+	windowInfo.gpu = sGlobal::Order().getGPU(0);
 	windowInfo.size = vk::Extent2D(640, 480);
 	windowInfo.window_name = L"Vulkan Test";
 	windowInfo.class_name = L"VulkanMainWindow";
 
-	auto aaa = sVulkan::Order().getGPU(0);
 	window.setup(windowInfo);
 
-	cGPU& gpu = sVulkan::Order().getGPU(0);
+	cGPU& gpu = sGlobal::Order().getGPU(0);
 	cDevice device = gpu.getDevice(vk::QueueFlagBits::eGraphics)[0];
 	cDevice other_device = gpu.getDevice(vk::QueueFlagBits::eTransfer)[0];
-	vk::Queue queue = device->getQueue(device.getQueueFamilyIndex(), 0);
+	vk::Queue queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), 0);
 
 
 	// setup用コマンドバッファ
@@ -56,7 +55,7 @@ int main()
 	{
 		vk::CommandPoolCreateInfo poolInfo = vk::CommandPoolCreateInfo()
 			.setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer)
-			.setQueueFamilyIndex(device.getQueueFamilyIndex());
+			.setQueueFamilyIndex(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
 		cmd_pool = device->createCommandPool(poolInfo);
 	}
 
@@ -84,7 +83,7 @@ int main()
 				.setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
 				.setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
 				.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 })
-				.setImage(window.getSwapchain().m_backbuffer_image[i].image);
+				.setImage(window.getSwapchain().m_backbuffer_image[i]);
 
 			cmd.pipelineBarrier(
 				vk::PipelineStageFlagBits::eTransfer,
@@ -115,7 +114,7 @@ int main()
 
 			vk::ClearColorValue color = vk::ClearColorValue().setFloat32({ 0.2f, 0.2f, 0.8f, 1.f });
 			vk::ImageSubresourceRange range = vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
-			cmd.clearColorImage(window.getSwapchain().m_backbuffer_image[i].image, vk::ImageLayout::eTransferDstOptimal, color, range);
+			cmd.clearColorImage(window.getSwapchain().m_backbuffer_image[i], vk::ImageLayout::eTransferDstOptimal, color, range);
 
 			vk::ImageMemoryBarrier clear_barrier = vk::ImageMemoryBarrier()
 				.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite)
@@ -125,7 +124,7 @@ int main()
 				.setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
 				.setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
 				.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 })
-				.setImage(window.getSwapchain().m_backbuffer_image[i].image);
+				.setImage(window.getSwapchain().m_backbuffer_image[i]);
 			cmd.pipelineBarrier(
 				vk::PipelineStageFlagBits::eTransfer,
 				vk::PipelineStageFlagBits::eBottomOfPipe,
@@ -171,8 +170,8 @@ int main()
 				queue.presentKHR(present_info);
 		}
 
-		window.update();
-		sVulkan::Order().swap();
+		window.update(sGlobal::Order().getThreadPool());
+		sGlobal::Order().swap();
 	}
 
 	return 0;

@@ -148,6 +148,7 @@ void cModelRenderer_t<T>::cModelDrawPipeline::setup(vk::RenderPass render_pass)
 			depth_stencil_info.setDepthWriteEnable(VK_TRUE);
 			depth_stencil_info.setDepthCompareOp(vk::CompareOp::eLessOrEqual);
 			depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
+			depth_stencil_info.setStencilTestEnable(VK_FALSE);
 
 			// ƒuƒŒƒ“ƒh
 			std::vector<vk::PipelineColorBlendAttachmentState> blend_state = {

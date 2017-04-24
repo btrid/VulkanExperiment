@@ -84,11 +84,9 @@ void main()
 //	if(m.HeightTex != 0) {
 //		offset = texture(sampler2D(m.HeightTex), VSOut.Texcoord.xy)*2.;
 //	}
-	mat4 skin = skinning();
-	vec4 pos = skin * vec4(vec4(inPosition + offset).xyz, 1.0);
-//	pos.xyz *= 5000.;
-//	pos.xyz += vec3(1.) * gl_InstanceIndex ;
-	gl_Position = uProjection * uView * pos;
+	vec4 pos = vec4(vec4(inPosition + offset).xyz, 1.0);
+	pos = skinning() * pos;
+	gl_Position = uProjection * uView * vec4(pos.xyz, 1.0);
 
 	VSOut.Normal = /*m.NormalTex != 0 ? texture(sampler2D(m.NormalTex), VSOut.Texcoord.xy).xyz : */inNormal.xyz;
 
