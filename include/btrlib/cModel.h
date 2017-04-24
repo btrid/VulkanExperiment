@@ -276,7 +276,7 @@ struct VertexBuffer
 
 		m_resource->m_free_zone.setup(size);
 		vk::BufferCreateInfo buffer_info;
-		buffer_info.usage = vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst;
+		buffer_info.usage = vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst;
 		buffer_info.size = size;
 //		buffer_info.flags = vk::BufferCreateFlagBits::eSparseBinding;
 		m_resource->m_buffer = device->createBuffer(buffer_info);
