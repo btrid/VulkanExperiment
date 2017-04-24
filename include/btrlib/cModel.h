@@ -158,9 +158,9 @@ struct VertexBuffer
 
 			{
 				// freeÇ…É}Å[ÉW
-				for (auto& zone : m_free_zone)
+				for (auto& free_zone : m_free_zone)
 				{
-					if (zone.tryMarge(zone)) {
+					if (free_zone.tryMarge(zone)) {
 						return;
 					}
 				}

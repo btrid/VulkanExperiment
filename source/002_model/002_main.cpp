@@ -318,8 +318,6 @@ int main()
 	renderer.setup(render_pass);
 	renderer.addModel(&render);
 
-//	render.addModel(model.get());
-
 	model->getInstance()->m_world = glm::translate(glm::vec3(0.f));
 	std::vector<std::unique_ptr<cModel>> models;
 	models.reserve(1000);
@@ -331,7 +329,6 @@ int main()
 		m->getInstance()->m_world = glm::translate(glm::ballRand(2999.f));
 		models.push_back(std::move(m));
 	}
-
 
 	auto pool_list = sThreadLocal::Order().getCmdPoolOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
 	std::vector<vk::CommandBuffer> render_cmds(sGlobal::FRAME_MAX);
@@ -351,6 +348,8 @@ int main()
 	fence_list.emplace_back(device->createFence(fence_info));
 	while (true)
 	{
+// 		auto m2 = std::make_unique<cModel>();
+// 		m2->load(btr::getResourcePath() + "tiny2.x");
 
 		cStopWatch time;
 		auto* m_camera = cCamera::sCamera::Order().getCameraList()[0];
