@@ -359,7 +359,7 @@ int main()
 		uint32_t backbuffer_index = window.getSwapchain().swap(swapbuffer_semaphore);
 		{
 			auto render_cmd = render_cmds[backbuffer_index];
-			device->waitForFences(1, &fence_list[backbuffer_index], true, 0xffffffffu);
+			sDebug::Order().waitFence(device.getHandle(), fence_list[backbuffer_index]);
 			device->resetFences({ fence_list[backbuffer_index] });
 			device->resetCommandPool(pool_list[backbuffer_index], vk::CommandPoolResetFlagBits::eReleaseResources);
 

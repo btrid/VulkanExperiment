@@ -240,28 +240,6 @@ private:
 	std::vector<vk::CommandPool>	m_cmd_pool_tempolary;
 	std::array<std::vector<std::unique_ptr<Deleter>>, FRAME_MAX> m_cmd_delete;
 public:
-	std::mutex m_post_swap_function_mutex;
-	std::vector<std::vector<std::function<void()>>> m_post_swap_function;
-	void queueJobPostSwap(std::function<void()>&& job) {
-		std::lock_guard<std::mutex> lk(m_post_swap_function_mutex);
-		m_post_swap_function[sGlobal::Order().getCurrentFrame()].emplace_back(std::move(job));
-	}
-
-	void pushJobPostSwap()
-	{
-		std::vector<std::function<void()>> jobs;
-		{
-			std::lock_guard<std::mutex> lk(m_post_swap_function_mutex);
-			jobs = std::move(m_post_swap_function[sGlobal::Order().getPrevFrame()]);
-		}
-		for (auto&& j : jobs)
-		{
-			cThreadJob job;
-			job.mFinish = std::move(j);
-			m_thread_pool.enque(std::move(job));
-		}
-	}
-
 	vk::CommandPool getCmdPoolTempolary(uint32_t device_family_index)const
 	{
 		return m_cmd_pool_tempolary[device_family_index];
