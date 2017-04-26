@@ -38,33 +38,7 @@ namespace {
 		to[3].z = from.d3;
 		to[3].w = from.d4;
 
-		return std::move(glm::transpose(to));
-	}
-	glm::mat4 aiTo(aiMatrix4x4& from)
-	{
-		glm::mat4 to;
-		to[0].x = from.a1;
-		to[0].y = from.a2;
-		to[0].z = from.a3;
-		to[0].w = from.a4;
-
-		to[1].x = from.b1;
-		to[1].y = from.b2;
-		to[1].z = from.b3;
-		to[1].w = from.b4;
-
-		to[2].x = from.c1;
-		to[2].y = from.c2;
-		to[2].z = from.c3;
-		to[2].w = from.c4;
-
-		to[3].x = from.d1;
-		to[3].y = from.d2;
-		to[3].z = from.d3;
-		to[3].w = from.d4;
-
-
-		return std::move(to);
+		return glm::transpose(to);
 	}
 
 	int countAiNode(aiNode* ainode)
@@ -77,14 +51,265 @@ namespace {
 	}
 
 }
+/**
+ *	使い捨てのステージングバッファ
+ */
+struct TmpStagingBuffer
+{
+	cDevice m_device;
+	vk::DeviceSize m_size;
+
+	vk::Buffer m_staging_buffer;
+	char* m_staging_data_ptr;
+
+	vk::DeviceMemory m_staging_memory;
+
+	vk::Fence m_fence;
+
+	TmpStagingBuffer(const cDevice& device, vk::DeviceSize size)
+	{
+		m_device = device;
+		m_size = size;
+		vk::BufferCreateInfo staging_info;
+		staging_info.usage = vk::BufferUsageFlagBits::eTransferSrc;
+		staging_info.size = size;
+		staging_info.sharingMode = vk::SharingMode::eExclusive;
+		m_staging_buffer = device->createBuffer(staging_info);
+
+		vk::MemoryRequirements staging_memory_request = device->getBufferMemoryRequirements(m_staging_buffer);
+		vk::MemoryAllocateInfo staging_memory_alloc_info;
+		staging_memory_alloc_info.allocationSize = staging_memory_request.size;
+		staging_memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(device.getGPU(), staging_memory_request, vk::MemoryPropertyFlagBits::eHostVisible| vk::MemoryPropertyFlagBits::eHostCoherent);
+
+		m_staging_memory = device->allocateMemory(staging_memory_alloc_info);
+		device->bindBufferMemory(m_staging_buffer, m_staging_memory, 0);
+
+		m_staging_data_ptr = static_cast<char*>(device->mapMemory(m_staging_memory, 0, size, vk::MemoryMapFlags()));
+	}
+
+	void update(vk::Buffer dest)
+	{
+		vk::BufferCopy copy_info;
+		copy_info.size = m_size;
+		copy_info.srcOffset = 0;
+		copy_info.dstOffset = 0;
+		TmpCmd tmpcmd(m_device);
+		auto cmd = tmpcmd.getCmd();
+		cmd.copyBuffer(m_staging_buffer, dest, copy_info);
+	}
+	~TmpStagingBuffer()
+	{
+		m_device->unmapMemory(m_staging_memory);
+		{
+			std::unique_ptr<Deleter> deleter = std::make_unique<Deleter>();
+			deleter->device = m_device.getHandle();
+			deleter->buffer = { m_staging_buffer };
+			deleter->memory = { m_staging_memory };
+			deleter->fence.push_back(m_fence);
+			sGlobal::Order().destroyResource(std::move(deleter));
+		}
+
+	}
+};
+MotionTexture create(const cDevice& device, const aiAnimation* anim, const RootNode& root)
+{
+	uint32_t SIZE = 256;
+
+	vk::ImageCreateInfo image_info;
+	image_info.imageType = vk::ImageType::e1D;
+	image_info.format = vk::Format::eR32G32B32A32Sfloat;
+	image_info.mipLevels = 1;
+	image_info.arrayLayers = (uint32_t)root.mNodeList.size() * 2u;
+//	image_info.arrayLayers = 1u;
+	image_info.samples = vk::SampleCountFlagBits::e1;
+	image_info.tiling = vk::ImageTiling::eOptimal;
+	image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
+	image_info.sharingMode = vk::SharingMode::eExclusive;
+	image_info.initialLayout = vk::ImageLayout::eUndefined;
+	image_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
+	image_info.extent = { SIZE, 1u, 1u };
+
+	auto image_prop = device.getGPU().getImageFormatProperties(image_info.format, image_info.imageType, image_info.tiling, image_info.usage, image_info.flags);
+
+	vk::Image image = device->createImage(image_info);
+
+
+	TmpStagingBuffer staging_buffer(device, image_info.arrayLayers * anim->mNumChannels * SIZE * sizeof(glm::vec4));
+	auto* data = reinterpret_cast<glm::vec4*>(staging_buffer.m_staging_data_ptr);
+
+	for (size_t i = 0; i < anim->mNumChannels; i++)
+	{
+		aiNodeAnim* aiAnim = anim->mChannels[i];
+		auto no = root.getNodeIndexByName(aiAnim->mNodeName.C_Str());
+//		info.numData_ = aiAnim->mNumPositionKeys;
+//		info.offsetData_ = motionInfoList.empty() ? 0 : motionInfoList.back().offsetData_ + motionInfoList.back().numData_;
+//		motionInfoList.push_back(info);
+		auto* pos_scale = data + no * 2 * SIZE;
+		auto* quat = reinterpret_cast<glm::quat*>(pos_scale + SIZE);
+//		assert(aiAnim->mNumPositionKeys == aiAnim->mNumRotationKeys && aiAnim->mNumPositionKeys == aiAnim->mNumScalingKeys); // pos, rot, scaleは同じ数の場合のみGPUの計算に対応してる
+
+//		aiAnim->mPositionKeys
+		float time_max = anim->mDuration;// / anim->mTicksPerSecond;
+		float time_per = time_max / SIZE;
+		float time = 0.;
+		int count = 0;
+		for (size_t n = 0; n < aiAnim->mNumScalingKeys - 1;)
+		{
+			// 配列外アクセス
+			assert(count < SIZE);
+
+			auto& current = aiAnim->mScalingKeys[n];
+ 			auto& next = aiAnim->mScalingKeys[n + 1];
+			float current_value = current.mValue.x + current.mValue.y + current.mValue.z;
+			float next_value = next.mValue.x + next.mValue.y + next.mValue.z;
+			current_value /= 3.f;
+			next_value /= 3.f;
+			auto rate = (float)(next.mTime - time) / (float)(next.mTime - current.mTime);
+			auto value = glm::lerp<float>(current_value, next_value, rate);
+			pos_scale[count].w = value;
+			time += time_per;
+
+			count++;
+			if (time >= next.mTime)
+			{
+				n++;
+			}
+		}
+		time = 0.;
+		count = 0;
+		for (size_t n = 0; n < aiAnim->mNumPositionKeys - 1;)
+		{
+			// 配列外アクセス
+			assert(count < SIZE);
+
+			auto& current = aiAnim->mPositionKeys[n];
+			auto& next = aiAnim->mPositionKeys[n + 1];
+			auto current_value = glm::vec3(current.mValue.x, current.mValue.y, current.mValue.z);
+			auto next_value = glm::vec3(next.mValue.x, next.mValue.y, next.mValue.z);
+			auto rate = (float)(next.mTime - time) / (float)(next.mTime - current.mTime);
+			auto value = glm::lerp<float>(current_value, next_value, rate);
+			pos_scale[count].x = value.x;
+			pos_scale[count].y = value.y;
+			pos_scale[count].z = value.z;
+			time += time_per;
+
+			count++;
+			if (time >= next.mTime)
+			{
+				n++;
+			}
+		}
+		time = 0.;
+		count = 0;
+		for (size_t n = 0; n < aiAnim->mNumRotationKeys - 1;)
+		{
+			// 配列外アクセス
+			assert(count < SIZE);
+
+			auto& current = aiAnim->mRotationKeys[n];
+			auto& next = aiAnim->mRotationKeys[n + 1];
+			auto current_value = glm::quat(current.mValue.w, current.mValue.x, current.mValue.y, current.mValue.z);
+			auto next_value = glm::quat(next.mValue.w, next.mValue.x, next.mValue.y, next.mValue.z);
+			auto rate = (float)(next.mTime - time) / (float)(next.mTime - current.mTime);
+			auto value = glm::lerp<float>(current_value, next_value, rate);
+			quat[count] = value;
+
+			time += time_per;
+
+			count++;
+			if (time >= next.mTime)
+			{
+				n++;
+			}
+		}
+	}
+
+	vk::MemoryRequirements memory_request = device->getImageMemoryRequirements(image);
+	vk::MemoryAllocateInfo memory_alloc_info;
+	memory_alloc_info.allocationSize = memory_request.size;
+	memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+	vk::DeviceMemory memory = device->allocateMemory(memory_alloc_info);
+	device->bindImageMemory(image, memory, 0);
+
+	vk::ImageSubresourceRange subresourceRange;
+	subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+	subresourceRange.baseArrayLayer = 0;
+	subresourceRange.baseMipLevel = 0;
+	subresourceRange.layerCount = image_info.arrayLayers;
+	subresourceRange.levelCount = 1;
+
+	vk::BufferImageCopy copy;
+	copy.bufferOffset = 0;
+	copy.imageExtent = { SIZE, 1u, 1u };
+	copy.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+	copy.imageSubresource.baseArrayLayer = 0;
+	copy.imageSubresource.layerCount = image_info.arrayLayers;
+	copy.imageSubresource.mipLevel = 0;
+
+	vk::ImageMemoryBarrier to_copy_barrier;
+	to_copy_barrier.dstQueueFamilyIndex = device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
+	to_copy_barrier.image = image;
+	to_copy_barrier.oldLayout = vk::ImageLayout::eUndefined;
+	to_copy_barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
+	to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+	to_copy_barrier.subresourceRange = subresourceRange;
+
+	vk::ImageMemoryBarrier to_shader_read_barrier;
+	to_shader_read_barrier.dstQueueFamilyIndex = device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
+	to_shader_read_barrier.image = image;
+	to_shader_read_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
+	to_shader_read_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+	to_shader_read_barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+	to_shader_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+	to_shader_read_barrier.subresourceRange = subresourceRange;
+
+	TmpCmd tmpcmd(device);
+	tmpcmd.getCmd().pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
+	tmpcmd.getCmd().copyBufferToImage(staging_buffer.m_staging_buffer, image, vk::ImageLayout::eTransferDstOptimal, { copy });
+	tmpcmd.getCmd().pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
+
+	MotionTexture tex;
+	tex.m_private = std::make_shared<MotionTexture::Resource>();
+	tex.m_private->m_device = device;
+	tex.m_private->m_image = image;
+	vk::ImageView image_view;
+	vk::ImageViewCreateInfo view_info;
+	view_info.viewType = vk::ImageViewType::e1DArray;
+	view_info.components.r = vk::ComponentSwizzle::eR;
+	view_info.components.g = vk::ComponentSwizzle::eG;
+	view_info.components.b = vk::ComponentSwizzle::eB;
+	view_info.components.a = vk::ComponentSwizzle::eA;
+	view_info.flags = vk::ImageViewCreateFlags();
+	view_info.format = vk::Format::eR32G32B32A32Sfloat;
+	view_info.image = image;
+	view_info.subresourceRange = subresourceRange;
+
+	tex.m_private->m_image_view = device->createImageView(view_info);
+	tex.m_private->m_memory = memory;
+	tex.m_private->m_fence_shared = tmpcmd.getFence();
+	staging_buffer.m_fence = tmpcmd.getFence();
+//	tmpcmd.getCmd().copyBufferToImage(staging_buffer.m_staging_buffer, image, vk::ImageLayout::eUndefined)
+//	staging_buffer.m_staging_buffer
+//	staging_buffer.;
+// 	cModel::AnimationInfo animation;
+// 	animation.maxTime_ = (float)anim->mDuration;
+// 	animation.ticksPerSecond_ = (float)anim->mTicksPerSecond;
+// 	animation.numInfo_ = anim->mNumChannels;
+// 	animation.offsetInfo_ = animation_info_list.empty() ? 0 : animation_info_list.back().offsetInfo_ + animation_info_list.back().numInfo_;
+// 	animation_info_list.push_back(animation);
+
+	return tex;
+}
+
+
 ResourceManager<ResourceTexture::Resource> ResourceTexture::s_manager;
 ResourceManager<cModel::Resource> cModel::s_manager;
-void ResourceTexture::load(const cGPU& gpu, const cDevice& device, cThreadPool& thread_pool, const std::string& filename)
+void ResourceTexture::load(const cDevice& device, cThreadPool& thread_pool, const std::string& filename)
 {
 	if (s_manager.manage(m_private, filename)) {
 		return;
 	}
-	m_gpu = gpu;
 	m_private->m_device = device;
 
 	auto texture_data = rTexture::LoadTexture(filename);
@@ -99,12 +324,13 @@ void ResourceTexture::load(const cGPU& gpu, const cDevice& device, cThreadPool& 
 	image_info.sharingMode = vk::SharingMode::eExclusive;
 	image_info.initialLayout = vk::ImageLayout::eUndefined;
 	image_info.extent = { texture_data.m_size.x, texture_data.m_size.y, 1 };
+	image_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
 	vk::Image image = device->createImage(image_info);
 
 	vk::MemoryRequirements memory_request = device->getImageMemoryRequirements(image);
 	vk::MemoryAllocateInfo memory_alloc_info;
 	memory_alloc_info.allocationSize = memory_request.size;
-	memory_alloc_info.memoryTypeIndex = gpu.getMemoryTypeIndex(memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+	memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
 	vk::DeviceMemory memory = device->allocateMemory(memory_alloc_info);
 	device->bindImageMemory(image, memory, 0);
@@ -118,7 +344,7 @@ void ResourceTexture::load(const cGPU& gpu, const cDevice& device, cThreadPool& 
 	vk::MemoryRequirements staging_memory_request = device->getBufferMemoryRequirements(staging_buffer);
 	vk::MemoryAllocateInfo staging_memory_alloc_info;
 	staging_memory_alloc_info.allocationSize = staging_memory_request.size;
-	staging_memory_alloc_info.memoryTypeIndex = gpu.getMemoryTypeIndex(staging_memory_request, vk::MemoryPropertyFlagBits::eHostVisible);
+	staging_memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(device.getGPU(), staging_memory_request, vk::MemoryPropertyFlagBits::eHostVisible);
 
 	vk::DeviceMemory staging_memory = device->allocateMemory(staging_memory_alloc_info);
 	device->bindBufferMemory(staging_buffer, staging_memory, 0);
@@ -170,18 +396,18 @@ void ResourceTexture::load(const cGPU& gpu, const cDevice& device, cThreadPool& 
 		to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
 		to_copy_barrier.subresourceRange = subresourceRange;
 
-		vk::ImageMemoryBarrier to_color_barrier;
-		to_color_barrier.dstQueueFamilyIndex = device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
-		to_color_barrier.image = image;
-		to_color_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
-		to_color_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-		to_color_barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-		to_color_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-		to_color_barrier.subresourceRange = subresourceRange;
+		vk::ImageMemoryBarrier to_shader_read_barrier;
+		to_shader_read_barrier.dstQueueFamilyIndex = device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
+		to_shader_read_barrier.image = image;
+		to_shader_read_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
+		to_shader_read_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+		to_shader_read_barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+		to_shader_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+		to_shader_read_barrier.subresourceRange = subresourceRange;
 
 		cmd[0].pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
 		cmd[0].copyBufferToImage(staging_buffer, image, vk::ImageLayout::eTransferDstOptimal, { copy });
-		cmd[0].pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_color_barrier });
+		cmd[0].pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
 		cmd[0].end();
 		vk::SubmitInfo submit_info;
 		submit_info.commandBufferCount = (uint32_t)cmd.size();
@@ -261,21 +487,21 @@ std::vector<cModel::Material> loadMaterial(const aiScene* scene, const std::stri
 		aiTextureMapping mapping;
 		unsigned uvIndex;
 		if (aiMat->GetTexture(aiTextureType_DIFFUSE, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode) == AI_SUCCESS) {
-			mat.mDiffuseTex.load(sThreadLocal::Order().m_gpu, device, sGlobal::Order().getThreadPool(), path + "/" + str.C_Str());
+			mat.mDiffuseTex.load(device, sGlobal::Order().getThreadPool(), path + "/" + str.C_Str());
 		}
 		if (aiMat->GetTexture(aiTextureType_AMBIENT, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode)) {
-			mat.mAmbientTex.load(sThreadLocal::Order().m_gpu, device, sGlobal::Order().getThreadPool(), path + "/" + str.C_Str());
+			mat.mAmbientTex.load(device, sGlobal::Order().getThreadPool(), path + "/" + str.C_Str());
 		}
 		if (aiMat->GetTexture(aiTextureType_SPECULAR, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode)) {
-			mat.mSpecularTex.load(sThreadLocal::Order().m_gpu, device, sGlobal::Order().getThreadPool(), path + "/" + str.C_Str());
+			mat.mSpecularTex.load(device, sGlobal::Order().getThreadPool(), path + "/" + str.C_Str());
 		}
 
 		if (aiMat->GetTexture(aiTextureType_NORMALS, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode)) {
-			mat.mNormalTex.load(sThreadLocal::Order().m_gpu, device, sGlobal::Order().getThreadPool(), path + "/" + str.C_Str());
+			mat.mNormalTex.load(device, sGlobal::Order().getThreadPool(), path + "/" + str.C_Str());
 		}
 
 		if (aiMat->GetTexture(aiTextureType_HEIGHT, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode)) {
-			mat.mHeightTex.load(sThreadLocal::Order().m_gpu, device, sGlobal::Order().getThreadPool(), path + "/" + str.C_Str());
+			mat.mHeightTex.load(device, sGlobal::Order().getThreadPool(), path + "/" + str.C_Str());
 		}
 	}
 
@@ -376,7 +602,10 @@ void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& r
 
 	for (size_t j = 0; j < scene->mNumAnimations; j++)
 	{
-		aiAnimation* anim = scene->mAnimations[j];
+		aiAnimation* anim = scene->mAnimations[j]; 
+		{
+			anim_buffer.m_motion_texture = create(device, anim, root);
+		}
 
 		for (size_t i = 0; i < anim->mNumChannels; i++)
 		{
@@ -434,6 +663,7 @@ void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& r
 		auto& buffer = anim_buffer.mMotionBuffer[cAnimation::MOTION_DATA_SRT];
 		buffer.create(gpu, device, motionDataBufferList, vk::BufferUsageFlagBits::eStorageBuffer);
 	}
+
 }
 
 
@@ -565,7 +795,7 @@ void cModel::load(const std::string& filename)
 					// 新しいボーンの登録
 					Bone bone;
 					bone.mName = mesh->mBones[b]->mName.C_Str();
-					bone.mOffset = glm::transpose(aiTo(mesh->mBones[b]->mOffsetMatrix));
+					bone.mOffset = AI_TO(mesh->mBones[b]->mOffsetMatrix);
 					bone.mNodeIndex = m_resource->mNodeRoot.getNodeIndexByName(mesh->mBones[b]->mName.C_Str());
 					boneList.emplace_back(bone);
 					index = (int)boneList.size() - 1;

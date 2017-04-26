@@ -441,7 +441,6 @@ int main()
 		}
 
 		window.update(sGlobal::Order().getThreadPool());
-//		sGlobal::Order().getThreadPool().wait();
 		sGlobal::Order().swap();
 		printf("%6.3fs\n", time.getElapsedTimeAsSeconds());
 	}

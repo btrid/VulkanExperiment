@@ -28,7 +28,6 @@ sGlobal::sGlobal()
 			m_gpu.emplace_back();
 			auto& gpu = m_gpu.back();
 			gpu.m_handle = pd;
-
 			std::vector<const char*> extensionName = {
 				VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 			};
@@ -55,10 +54,10 @@ sGlobal::sGlobal()
 			std::vector<uint32_t> family_index;
 			for (size_t i = 0; i < queueFamilyProperty.size(); i++)
 			{
-				queue_info[i].queueCount = queue_priority[i].size();
+				queue_info[i].queueCount = (uint32_t)queue_priority[i].size();
 				queue_info[i].pQueuePriorities = queue_priority[i].data();
 				queue_info[i].queueFamilyIndex = (uint32_t)i;
-				family_index.push_back(i);
+				family_index.push_back((uint32_t)i);
 			}
 
  			vk::PhysicalDeviceFeatures feature = gpu_feature;

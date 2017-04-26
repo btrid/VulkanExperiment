@@ -248,6 +248,12 @@ public:
 	void destroyResource(std::unique_ptr<Deleter>&& deleter) {
 		// @todo thread-safe‘Î‰ž
 		assert(deleter->device);
+		for (auto& fence : deleter->fence) {
+			assert(fence);
+		}
+		for (auto& fence : deleter->fence_shared){
+			assert(fence.getHandle());
+		}
 		m_cmd_delete[getCurrentFrame()].emplace_back(std::move(deleter));
 	}
 

@@ -228,7 +228,6 @@ struct VertexBuffer
 			copy_info.size = data_size;
 			copy_info.srcOffset = m_resource->m_zone.m_start + offset;
 			copy_info.dstOffset = m_resource->m_zone.m_start + offset;
-
 			TmpCmd tmpcmd(m_resource->m_device);
 			auto cmd = tmpcmd.getCmd();
 			cmd.copyBuffer(m_resource->m_staging_buffer_ref, m_buffer_info.buffer, copy_info);
@@ -562,6 +561,48 @@ public:
 	}
 
 };
+
+/**
+ * animationデータを格納したテクスチャ
+ */
+struct MotionTexture
+{
+	struct Resource
+	{
+		cDevice m_device;
+		vk::FenceShared m_fence_shared;
+		vk::Image m_image;
+		vk::ImageView m_image_view;
+		vk::DeviceMemory m_memory;
+
+		~Resource()
+		{
+			if (m_image)
+			{
+				std::unique_ptr<Deleter> deleter = std::make_unique<Deleter>();
+				deleter->device = m_device.getHandle();
+				deleter->image = { m_image };
+//				deleter->sampler = { m_sampler };
+				deleter->memory = { m_memory };
+				deleter->fence_shared = { m_fence_shared };
+				sGlobal::Order().destroyResource(std::move(deleter));
+
+				m_device->destroyImageView(m_image_view);
+			}
+		}
+	};
+
+	std::shared_ptr<Resource> m_private;
+
+//	void create(const cDevice& device, );
+	vk::ImageView getImageView()const { return m_private ? m_private->m_image_view : vk::ImageView(); }
+
+	bool isReady()const
+	{
+		return m_private ? m_private->m_device->getFenceStatus(*m_private->m_fence_shared) == vk::Result::eSuccess : true;
+	}
+};
+
 struct cAnimation
 {
 	enum MotionBuffer : s32
@@ -582,11 +623,11 @@ struct cAnimation
 	cAnimation(cAnimation &&)noexcept = default;
 	cAnimation& operator=(cAnimation&&)noexcept = default;
 
+	MotionTexture m_motion_texture;
 };
 
 struct ResourceTexture
 {
-	cGPU m_gpu;
 	struct Resource 
 	{
 		std::string m_filename;
@@ -617,7 +658,7 @@ struct ResourceTexture
 
 	std::shared_ptr<Resource> m_private;
 
-	void load(const cGPU& gpu, const cDevice& device, cThreadPool& thread_pool, const std::string& filename);
+	void load(const cDevice& device, cThreadPool& thread_pool, const std::string& filename);
 	vk::ImageView getImageView()const { return m_private ? m_private->m_image_view : vk::ImageView(); }
 	vk::Sampler getSampler()const { return m_private ? m_private->m_sampler : vk::Sampler(); }
 
