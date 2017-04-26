@@ -592,14 +592,14 @@ struct MotionTexture
 		}
 	};
 
-	std::shared_ptr<Resource> m_private;
+	std::shared_ptr<Resource> m_resource;
 
 //	void create(const cDevice& device, );
-	vk::ImageView getImageView()const { return m_private ? m_private->m_image_view : vk::ImageView(); }
+	vk::ImageView getImageView()const { return m_resource ? m_resource->m_image_view : vk::ImageView(); }
 
 	bool isReady()const
 	{
-		return m_private ? m_private->m_device->getFenceStatus(*m_private->m_fence_shared) == vk::Result::eSuccess : true;
+		return m_resource ? m_resource->m_device->getFenceStatus(*m_resource->m_fence_shared) == vk::Result::eSuccess : true;
 	}
 };
 
@@ -776,26 +776,23 @@ public:
 
 		s32 mBoneNum;
 		s32 mMeshNum;
-		s32 _p[2];
+		s32 m_node_depth_max;
+		s32 _p[1];
 
 		glm::vec4 mAabb;
 		glm::mat4 mInvGlobalMatrix;
 	};
 	struct NodeInfo {
-		enum {
-			SUBMESH_NUM = 999,
-			CHILD_NUM = 999,
-		};
 		int32_t		mNodeNo;
 		int32_t		mParent;
 		int32_t		mBoneIndex;
-		int32_t		mNodeName;
+		int32_t		m_depth;	//!< RootNode‚©‚ç‚Ì[‚³
 
 		NodeInfo()
 			: mNodeNo(-1)
 			, mParent(-1)
 			, mBoneIndex(-1)
-			, mNodeName(0)
+			, m_depth(0)
 		{
 		}
 	};

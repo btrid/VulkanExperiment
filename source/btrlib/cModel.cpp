@@ -267,9 +267,9 @@ MotionTexture create(const cDevice& device, const aiAnimation* anim, const RootN
 	tmpcmd.getCmd().pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
 
 	MotionTexture tex;
-	tex.m_private = std::make_shared<MotionTexture::Resource>();
-	tex.m_private->m_device = device;
-	tex.m_private->m_image = image;
+	tex.m_resource = std::make_shared<MotionTexture::Resource>();
+	tex.m_resource->m_device = device;
+	tex.m_resource->m_image = image;
 
 	vk::ImageViewCreateInfo view_info;
 	view_info.viewType = vk::ImageViewType::e1DArray;
@@ -282,9 +282,9 @@ MotionTexture create(const cDevice& device, const aiAnimation* anim, const RootN
 	view_info.image = image;
 	view_info.subresourceRange = subresourceRange;
 
-	tex.m_private->m_image_view = device->createImageView(view_info);
-	tex.m_private->m_memory = memory;
-	tex.m_private->m_fence_shared = tmpcmd.getFence();
+	tex.m_resource->m_image_view = device->createImageView(view_info);
+	tex.m_resource->m_memory = memory;
+	tex.m_resource->m_fence_shared = tmpcmd.getFence();
 	staging_buffer.m_fence = tmpcmd.getFence();
 
 	vk::SamplerCreateInfo sampler_info;
@@ -302,7 +302,7 @@ MotionTexture create(const cDevice& device, const aiAnimation* anim, const RootN
 	sampler_info.anisotropyEnable = VK_FALSE;
 	sampler_info.borderColor = vk::BorderColor::eFloatOpaqueWhite;
 
-	tex.m_private->m_sampler = device->createSampler(sampler_info);
+	tex.m_resource->m_sampler = device->createSampler(sampler_info);
 	return tex;
 }
 
@@ -539,14 +539,11 @@ RootNode loadNode(const aiScene* scene)
 
 void loadNodeBufferRecurcive(aiNode* ainode, std::vector<cModel::NodeInfo>& nodeBuffer, int parentIndex)
 {
-	assert(cModel::NodeInfo::SUBMESH_NUM >= ainode->mNumMeshes); // メッシュを保存しておく容量が足りない
-	assert(cModel::NodeInfo::CHILD_NUM >= ainode->mNumChildren); // 子供を保存しておく容量が足りない
-
 	nodeBuffer.emplace_back();
 	auto& node = nodeBuffer.back();
 	node.mNodeNo = (s32)nodeBuffer.size() - 1;
 	node.mParent = parentIndex;
-//	node.mNodeName = std::hash<std::string>()(ainode->mName.C_Str());
+	node.m_depth = nodeBuffer[parentIndex].m_depth + 1;
 	for (size_t i = 0; i < ainode->mNumChildren; i++) {
 		loadNodeBufferRecurcive(ainode->mChildren[i], nodeBuffer, node.mNodeNo);
 	}
@@ -554,16 +551,13 @@ void loadNodeBufferRecurcive(aiNode* ainode, std::vector<cModel::NodeInfo>& node
 
 std::vector<cModel::NodeInfo> loadNodeInfo(aiNode* ainode)
 {
-	assert(cModel::NodeInfo::SUBMESH_NUM >= ainode->mNumMeshes); // メッシュを保存しておく容量が足りない
-	assert(cModel::NodeInfo::CHILD_NUM >= ainode->mNumChildren); // 子供を保存しておく容量が足りない
-
 	std::vector<cModel::NodeInfo> nodeBuffer;
 	nodeBuffer.reserve(countAiNode(ainode));
 	nodeBuffer.emplace_back();
 	auto& node = nodeBuffer.back();
 	node.mNodeNo = (int32_t)nodeBuffer.size() - 1;
 	node.mParent = -1;
-//	node.mNodeName = std::hash<std::string>()(ainode->mName.C_Str());
+	node.m_depth = 0;
 	for (size_t i = 0; i < ainode->mNumChildren; i++) {
 		loadNodeBufferRecurcive(ainode->mChildren[i], nodeBuffer, node.mNodeNo);
 	}
@@ -872,6 +866,10 @@ void cModel::load(const std::string& filename)
 		mi.mNodeNum = (s32)m_resource->mNodeRoot.mNodeList.size();
 		mi.mBoneNum = (s32)m_resource->mBone.size();
 		mi.mMeshNum = m_resource->mMeshNum;
+		mi.m_node_depth_max = 0;
+		for (auto& n : nodeInfo) {
+			mi.m_node_depth_max = std::max(n.m_depth, mi.m_node_depth_max);
+		}
 		glm::vec3 max(-10e10f);
 		glm::vec3 min(10e10f);
 		for (auto& v : vertex)
@@ -939,7 +937,7 @@ void cModel::load(const std::string& filename)
 			glm::ivec3(1, 1, 1),
 			glm::ivec3((instanceNum + local_size_x - 1) / local_size_x, 1, 1),
 			glm::ivec3((instanceNum*m_resource->m_model_info.mNodeNum + local_size_x-1)/local_size_x, 1, 1),
-			glm::ivec3((instanceNum + local_size_x - 1) / local_size_x, 1, 1),
+			glm::ivec3((instanceNum*m_resource->m_model_info.mNodeNum + local_size_x - 1) / local_size_x, 1, 1),
 			glm::ivec3((instanceNum + local_size_x - 1)/local_size_x, 1, 1),
 			glm::ivec3((instanceNum*m_resource->m_model_info.mBoneNum + local_size_x - 1) / local_size_x, 1, 1),
 		};

@@ -57,7 +57,7 @@ public:
 		{
 			if (input.m_mouse.getWheel() != 0) {
 				glm::vec3 dir = glm::normalize(m_position - m_target);
-				distance += -input.m_mouse.getWheel() * distance * deltaTime;
+				distance += -input.m_mouse.getWheel() * distance * deltaTime*5.f;
 				distance = glm::max(distance, 1.f);
 				m_position = m_target + dir * distance;
 

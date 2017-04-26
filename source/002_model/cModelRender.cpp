@@ -172,7 +172,7 @@ void ModelRender::setup(cModelRenderer&  renderer)
 			{
 				vk::DescriptorImageInfo()
 				.setImageView(m_resource->getAnimation().m_motion_texture.getImageView())
-				.setSampler(m_resource->getAnimation().m_motion_texture.m_private->m_sampler)
+				.setSampler(m_resource->getAnimation().m_motion_texture.m_resource->m_sampler)
 				.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
 			};
 			desc = vk::WriteDescriptorSet()

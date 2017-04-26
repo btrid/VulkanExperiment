@@ -40,17 +40,7 @@ struct Node
 	int nodeNo;
 	int parent;
 	int boneIndex;
-/*	int meshIndex1;
-	int meshIndex2;
-	int meshIndex3;
-	int child1;
-	int child2;
-	int child3;
-	int child4;
-	int child5;
-	int child6;
-*/
-	int _p1;
+	int depth;
 
 };
 
@@ -71,7 +61,7 @@ struct ModelInfo
 
 	int boneNum;
 	int meshNum;
-	int _p1;
+	int node_depth_max;
 	int _p2;
 	vec4 AABB;
 	mat4 invGlobalMatrix;
@@ -105,13 +95,4 @@ struct PlayingAnimation
 	float time;
 	int	  currentDataIndex;
 	int   isLoop;
-};
-
-
-struct MotionWork
-{
-	int motionInfoIndex;
-	int motionDataIndex;
-	int _p1;
-	int _p2;
 };
