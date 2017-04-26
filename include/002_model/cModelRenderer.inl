@@ -373,30 +373,10 @@ void cModelRenderer_t<T>::cModelComputePipeline::setup()
 				.setBinding(10),
 				vk::DescriptorSetLayoutBinding()
 				.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
 				.setDescriptorCount(1)
-				.setBinding(11),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(12),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(13),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(14),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(15),
-		},
+				.setBinding(32),
+			},
 			// NodeTransform
 			std::vector<vk::DescriptorSetLayoutBinding>
 			{

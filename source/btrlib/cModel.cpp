@@ -141,87 +141,84 @@ MotionTexture create(const cDevice& device, const aiAnimation* anim, const RootN
 	{
 		aiNodeAnim* aiAnim = anim->mChannels[i];
 		auto no = root.getNodeIndexByName(aiAnim->mNodeName.C_Str());
-//		info.numData_ = aiAnim->mNumPositionKeys;
-//		info.offsetData_ = motionInfoList.empty() ? 0 : motionInfoList.back().offsetData_ + motionInfoList.back().numData_;
-//		motionInfoList.push_back(info);
 		auto* pos_scale = data + no * 2 * SIZE;
 		auto* quat = reinterpret_cast<glm::quat*>(pos_scale + SIZE);
-//		assert(aiAnim->mNumPositionKeys == aiAnim->mNumRotationKeys && aiAnim->mNumPositionKeys == aiAnim->mNumScalingKeys); // pos, rot, scaleは同じ数の場合のみGPUの計算に対応してる
 
-//		aiAnim->mPositionKeys
 		float time_max = anim->mDuration;// / anim->mTicksPerSecond;
 		float time_per = time_max / SIZE;
 		float time = 0.;
 		int count = 0;
 		for (size_t n = 0; n < aiAnim->mNumScalingKeys - 1;)
 		{
-			// 配列外アクセス
-			assert(count < SIZE);
-
 			auto& current = aiAnim->mScalingKeys[n];
  			auto& next = aiAnim->mScalingKeys[n + 1];
+
+			if (time >= next.mTime)
+			{
+				n++;
+				continue;
+			}
+			// 配列外アクセス
+			assert(count < SIZE);
 			float current_value = current.mValue.x + current.mValue.y + current.mValue.z;
 			float next_value = next.mValue.x + next.mValue.y + next.mValue.z;
 			current_value /= 3.f;
 			next_value /= 3.f;
-			auto rate = (float)(next.mTime - time) / (float)(next.mTime - current.mTime);
+			auto rate = 1.f - (float)(next.mTime - time) / (float)(next.mTime - current.mTime);
 			auto value = glm::lerp<float>(current_value, next_value, rate);
 			pos_scale[count].w = value;
-			time += time_per;
-
 			count++;
-			if (time >= next.mTime)
-			{
-				n++;
-			}
+			time += time_per;
 		}
+		assert(count == SIZE);
 		time = 0.;
 		count = 0;
 		for (size_t n = 0; n < aiAnim->mNumPositionKeys - 1;)
 		{
-			// 配列外アクセス
-			assert(count < SIZE);
-
 			auto& current = aiAnim->mPositionKeys[n];
 			auto& next = aiAnim->mPositionKeys[n + 1];
+
+			if (time >= next.mTime)
+			{
+				n++;
+				continue;
+			}
+			// 配列外アクセス
+			assert(count < SIZE);
 			auto current_value = glm::vec3(current.mValue.x, current.mValue.y, current.mValue.z);
 			auto next_value = glm::vec3(next.mValue.x, next.mValue.y, next.mValue.z);
-			auto rate = (float)(next.mTime - time) / (float)(next.mTime - current.mTime);
+			auto rate = 1.f - (float)(next.mTime - time) / (float)(next.mTime - current.mTime);
 			auto value = glm::lerp<float>(current_value, next_value, rate);
 			pos_scale[count].x = value.x;
 			pos_scale[count].y = value.y;
 			pos_scale[count].z = value.z;
-			time += time_per;
-
 			count++;
-			if (time >= next.mTime)
-			{
-				n++;
-			}
+			time += time_per;
 		}
+		assert(count == SIZE);
 		time = 0.;
 		count = 0;
 		for (size_t n = 0; n < aiAnim->mNumRotationKeys - 1;)
 		{
-			// 配列外アクセス
-			assert(count < SIZE);
-
 			auto& current = aiAnim->mRotationKeys[n];
 			auto& next = aiAnim->mRotationKeys[n + 1];
-			auto current_value = glm::quat(current.mValue.w, current.mValue.x, current.mValue.y, current.mValue.z);
-			auto next_value = glm::quat(next.mValue.w, next.mValue.x, next.mValue.y, next.mValue.z);
-			auto rate = (float)(next.mTime - time) / (float)(next.mTime - current.mTime);
-			auto value = glm::lerp<float>(current_value, next_value, rate);
-			quat[count] = value;
 
-			time += time_per;
-
-			count++;
 			if (time >= next.mTime)
 			{
 				n++;
+				continue;
 			}
+			// 配列外アクセス
+			assert(count < SIZE);
+			auto current_value = glm::quat(current.mValue.w, current.mValue.x, current.mValue.y, current.mValue.z);
+			auto next_value = glm::quat(next.mValue.w, next.mValue.x, next.mValue.y, next.mValue.z);
+			auto rate = 1.f - (float)(next.mTime - time) / (float)(next.mTime - current.mTime);
+			auto value = glm::slerp<float>(current_value, next_value, rate);
+			quat[count] = value;
+			count++;
+			time += time_per;
 		}
+		assert(count == SIZE);
 	}
 
 	vk::MemoryRequirements memory_request = device->getImageMemoryRequirements(image);
@@ -273,7 +270,7 @@ MotionTexture create(const cDevice& device, const aiAnimation* anim, const RootN
 	tex.m_private = std::make_shared<MotionTexture::Resource>();
 	tex.m_private->m_device = device;
 	tex.m_private->m_image = image;
-	vk::ImageView image_view;
+
 	vk::ImageViewCreateInfo view_info;
 	view_info.viewType = vk::ImageViewType::e1DArray;
 	view_info.components.r = vk::ComponentSwizzle::eR;
@@ -289,16 +286,23 @@ MotionTexture create(const cDevice& device, const aiAnimation* anim, const RootN
 	tex.m_private->m_memory = memory;
 	tex.m_private->m_fence_shared = tmpcmd.getFence();
 	staging_buffer.m_fence = tmpcmd.getFence();
-//	tmpcmd.getCmd().copyBufferToImage(staging_buffer.m_staging_buffer, image, vk::ImageLayout::eUndefined)
-//	staging_buffer.m_staging_buffer
-//	staging_buffer.;
-// 	cModel::AnimationInfo animation;
-// 	animation.maxTime_ = (float)anim->mDuration;
-// 	animation.ticksPerSecond_ = (float)anim->mTicksPerSecond;
-// 	animation.numInfo_ = anim->mNumChannels;
-// 	animation.offsetInfo_ = animation_info_list.empty() ? 0 : animation_info_list.back().offsetInfo_ + animation_info_list.back().numInfo_;
-// 	animation_info_list.push_back(animation);
 
+	vk::SamplerCreateInfo sampler_info;
+	sampler_info.magFilter = vk::Filter::eNearest;
+	sampler_info.minFilter = vk::Filter::eNearest;
+	sampler_info.mipmapMode = vk::SamplerMipmapMode::eLinear;
+	sampler_info.addressModeU = vk::SamplerAddressMode::eRepeat;//
+	sampler_info.addressModeV = vk::SamplerAddressMode::eClampToEdge;
+	sampler_info.addressModeW = vk::SamplerAddressMode::eClampToEdge;
+	sampler_info.mipLodBias = 0.0f;
+	sampler_info.compareOp = vk::CompareOp::eNever;
+	sampler_info.minLod = 0.0f;
+	sampler_info.maxLod = 0.f;
+	sampler_info.maxAnisotropy = 1.0;
+	sampler_info.anisotropyEnable = VK_FALSE;
+	sampler_info.borderColor = vk::BorderColor::eFloatOpaqueWhite;
+
+	tex.m_private->m_sampler = device->createSampler(sampler_info);
 	return tex;
 }
 
@@ -578,27 +582,7 @@ void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& r
 	auto device = devices[0];
 
 	std::vector<cModel::AnimationInfo> animation_info_list;
-	std::vector<cModel::MotionInfo> motionInfoList;
-	std::vector<cModel::MotionTimeBuffer> motionTimeBufferList;
-	std::vector<cModel::MotionDataBuffer> motionDataBufferList;
-
-	int dataCount = 0;
-	int channnelCount = 0;
-	for (size_t i = 0; i < scene->mNumAnimations; i++)
-	{
-		aiAnimation* anim = scene->mAnimations[i];
-		for (size_t j = 0; j < anim->mNumChannels; j++)
-		{
-			aiNodeAnim* aiAnim = anim->mChannels[i];
-			dataCount += aiAnim->mNumRotationKeys;
-		}
-		channnelCount += anim->mNumMeshChannels;
-		motionInfoList.reserve(anim->mNumChannels);
-	}
 	animation_info_list.reserve(scene->mNumAnimations);
-	motionInfoList.reserve(channnelCount);
-	motionTimeBufferList.reserve(dataCount);
-	motionDataBufferList.reserve(dataCount);
 
 	for (size_t j = 0; j < scene->mNumAnimations; j++)
 	{
@@ -607,31 +591,6 @@ void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& r
 			anim_buffer.m_motion_texture = create(device, anim, root);
 		}
 
-		for (size_t i = 0; i < anim->mNumChannels; i++)
-		{
-			aiNodeAnim* aiAnim = anim->mChannels[i];
-			cModel::MotionInfo info;
-			info.mNodeNo = root.getNodeIndexByName(aiAnim->mNodeName.C_Str());
-			info.numData_ = aiAnim->mNumPositionKeys;
-			info.offsetData_ = motionInfoList.empty() ? 0 : motionInfoList.back().offsetData_ + motionInfoList.back().numData_;
-			motionInfoList.push_back(info);
-
-			assert(aiAnim->mNumPositionKeys == aiAnim->mNumRotationKeys && aiAnim->mNumPositionKeys == aiAnim->mNumScalingKeys); // pos, rot, scaleは同じ数の場合のみGPUの計算に対応してる
-			for (size_t n = 0; n < aiAnim->mNumPositionKeys; n++)
-			{
-				cModel::MotionDataBuffer d;
-				float scale = aiAnim->mScalingKeys[n].mValue.x + aiAnim->mScalingKeys[n].mValue.y + aiAnim->mScalingKeys[n].mValue.z;
-				scale /= 3.f; // 足して3で割る
-				d.posAndScale_ = glm::vec4(aiAnim->mPositionKeys[n].mValue.x, aiAnim->mPositionKeys[n].mValue.y, aiAnim->mPositionKeys[n].mValue.z, scale);
-				d.rot_ = glm::quat(aiAnim->mRotationKeys[n].mValue.w, aiAnim->mRotationKeys[n].mValue.x, aiAnim->mRotationKeys[n].mValue.y, aiAnim->mRotationKeys[n].mValue.z);
-				motionDataBufferList.push_back(d);
-
-				cModel::MotionTimeBuffer t;
-				t.time_ = (float)aiAnim->mRotationKeys[n].mTime;
-				motionTimeBufferList.push_back(t);
-			}
-
-		}
 		cModel::AnimationInfo animation;
 		animation.maxTime_ = (float)anim->mDuration;
 		animation.ticksPerSecond_ = (float)anim->mTicksPerSecond;
@@ -645,23 +604,6 @@ void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& r
 	{
 		auto& buffer = anim_buffer.mMotionBuffer[cAnimation::ANIMATION_INFO];
 		buffer.create(gpu, device, animation_info_list, vk::BufferUsageFlagBits::eStorageBuffer);
-	}
-
-	// MotionInfo
-	{
-		auto& buffer = anim_buffer.mMotionBuffer[cAnimation::MOTION_INFO];
-		buffer.create(gpu, device, motionInfoList, vk::BufferUsageFlagBits::eStorageBuffer);
-	}
-
-	// MotionTime
-	{
-		auto& buffer = anim_buffer.mMotionBuffer[cAnimation::MOTION_DATA_TIME];
-		buffer.create(gpu, device, motionTimeBufferList, vk::BufferUsageFlagBits::eStorageBuffer);
-	}
-	// MotionInfo
-	{
-		auto& buffer = anim_buffer.mMotionBuffer[cAnimation::MOTION_DATA_SRT];
-		buffer.create(gpu, device, motionDataBufferList, vk::BufferUsageFlagBits::eStorageBuffer);
 	}
 
 }
@@ -920,15 +862,6 @@ void cModel::load(const std::string& filename)
 		auto& buffer = m_resource->getBuffer(Resource::ModelConstantBuffer::PLAYING_ANIMATION);
 		buffer.create(gpu, device, pa, vk::BufferUsageFlagBits::eStorageBuffer);
 	}
-
-	// MotionWork
-	{
-		std::vector<MotionWork> mw(m_resource->mNodeRoot.mNodeList.size()*instanceNum);
-		auto& buffer = m_resource->getBuffer(Resource::ModelConstantBuffer::MOTION_WORK);
-		buffer.create(gpu, device, mw, vk::BufferUsageFlagBits::eStorageBuffer);
-
-	}
-
 
 	// ModelInfo
 	{

@@ -29,10 +29,11 @@ void main()
 	AnimationInfo aInfo = animInfo[playingMotion[index].playingAnimationNo];
 	PlayingAnimation pm = playingMotion[index];
 
-	float time = pm.isLoop != 0? mod(pm.time, aInfo.maxTime) : pm.time;
-	playingMotion[index].time = time;
+//	float time = pm.isLoop != 0? mod(pm.time, aInfo.maxTime) : pm.time;
+//	playingMotion[index].time = time;
 
 	// MotionUpdate.psのMotionWorkの更新のため、1FだけtimeがmaxTimeを超えるようにしている
+	// tiny.xは60.かける。それ以外はコメントアウトされた下の行を使う
 	playingMotion[index].time += 60. + float(index)*0.01;
 //	playingMotion[index].time += 0.016 + float(index)*0.00001;
 }
