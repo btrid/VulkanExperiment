@@ -574,7 +574,7 @@ struct MotionTexture
 		vk::Image m_image;
 		vk::ImageView m_image_view;
 		vk::DeviceMemory m_memory;
-		vk::Sampler m_sampler;
+
 		~Resource()
 		{
 			if (m_image)
@@ -608,6 +608,9 @@ struct cAnimation
 	enum MotionBuffer : s32
 	{
 		ANIMATION_INFO,
+		MOTION_INFO,
+		MOTION_DATA_TIME,
+		MOTION_DATA_SRT,
 		NUM,
 	};
 	std::array<ConstantBuffer, MotionBuffer::NUM> mMotionBuffer;
@@ -738,12 +741,45 @@ public:
 		int		currentMotionInfoIndex;	//!< 今再生しているモーションデータのインデックス
 		int		isLoop;				//!<
 	};
+	struct MotionInfo
+	{
+		unsigned mNodeNo;
+		int offsetData_;
+		int numData_;
+		int _p;
+	};
+	struct MotionBuffer
+	{
+		float time_;
+		float _p1, _p2, _p3;
+		glm::vec3 pos_;
+		float _pp;
+		glm::vec3 scale_;
+		float _pp2;
+		glm::quat rot_;
+	};
+
+	struct MotionTimeBuffer {
+		float time_;
+	};
+	struct MotionDataBuffer
+	{
+		glm::vec4 posAndScale_;	//!< xyz : pos, w : scale
+		glm::quat rot_;
+	};
 
 	struct BoneInfo
 	{
 		s32 mNodeIndex;
 		s32 _p[3];
 		glm::mat4 mBoneOffset;
+	};
+
+	struct MotionWork
+	{
+		s32 motionInfoIndex;	//!< MotionInfoの場所を計算して保存しておく
+		s32 motionBufferIndex;	//!< MotionBufferの場所を計算して保存しておく（毎回０から捜査するのは遅いから）
+		s32 _p[2];
 	};
 
 	struct Mesh
@@ -842,7 +878,9 @@ public:
 			MATERIAL,
 			VS_MATERIAL,	// vertex stage material
 			PLAYING_ANIMATION,
+			MOTION_WORK,			//!< ノードがMotionのIndexを
 			NODE_INFO,
+			//		MESH,
 			NODE_LOCAL_TRANSFORM,
 			NODE_GLOBAL_TRANSFORM,
 			BONE_INFO,
@@ -885,8 +923,6 @@ public:
 
 		const ConstantBuffer& getMotionBuffer(cAnimation::MotionBuffer buffer)const { return m_animation_buffer.mMotionBuffer[buffer]; }
 		ConstantBuffer& getMotionBuffer(cAnimation::MotionBuffer buffer) { return m_animation_buffer.mMotionBuffer[buffer]; }
-
-		cAnimation& getAnimation() { return m_animation_buffer; }
 
 		Resource()
 		{

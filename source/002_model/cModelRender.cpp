@@ -157,29 +157,19 @@ void ModelRender::setup(cModelRenderer&  renderer)
 			std::vector<vk::DescriptorBufferInfo> storages =
 			{
 				m_resource->getMotionBuffer(cAnimation::ANIMATION_INFO).getBufferInfo(),
+				m_resource->getMotionBuffer(cAnimation::MOTION_INFO).getBufferInfo(),
+				m_resource->getMotionBuffer(cAnimation::MOTION_DATA_TIME).getBufferInfo(),
+				m_resource->getMotionBuffer(cAnimation::MOTION_DATA_SRT).getBufferInfo(),
 				m_resource->getBuffer(cModel::Resource::ModelConstantBuffer::PLAYING_ANIMATION).getBufferInfo(),
+				m_resource->getBuffer(cModel::Resource::ModelConstantBuffer::NODE_INFO).getBufferInfo(),
 				m_resource->getBuffer(cModel::Resource::ModelConstantBuffer::NODE_LOCAL_TRANSFORM).getBufferInfo(),
+				m_resource->getBuffer(cModel::Resource::ModelConstantBuffer::MOTION_WORK).getBufferInfo(),
 			};
 			desc = vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 				.setDescriptorCount(storages.size())
 				.setPBufferInfo(storages.data())
 				.setDstBinding(8)
-				.setDstSet(m_compute_descriptor_set[2]);
-			compute_device->updateDescriptorSets(desc, {});
-
-			std::vector<vk::DescriptorImageInfo> images =
-			{
-				vk::DescriptorImageInfo()
-				.setImageView(m_resource->getAnimation().m_motion_texture.getImageView())
-				.setSampler(m_resource->getAnimation().m_motion_texture.m_private->m_sampler)
-				.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
-			};
-			desc = vk::WriteDescriptorSet()
-				.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-				.setDescriptorCount(images.size())
-				.setPImageInfo(images.data())
-				.setDstBinding(32)
 				.setDstSet(m_compute_descriptor_set[2]);
 			compute_device->updateDescriptorSets(desc, {});
 		}

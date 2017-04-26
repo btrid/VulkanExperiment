@@ -2,21 +2,20 @@
 
 #pragma optionNV (unroll none)
 
-//#extension GL_ARB_shading_language_include : require
-#extension GL_GOOGLE_cpp_style_line_directive : require
+#extension GL_ARB_shading_language_include : require
 
 #include </MultiModel.glsl>
 
-layout (local_size_x = 1024, local_size_y = 1) in;
+layout (local_size_x = 512, local_size_y = 1) in;
 
 layout(std140, binding=0) uniform ModelInfoBuffer {
 	ModelInfo modelInfo;
 };
 
-layout(std430, binding=8) readonly restrict buffer AnimationInfoBuffer {
+layout(std430, binding=0) readonly restrict buffer AnimationInfoBuffer {
 	AnimationInfo animInfo[];
 };
-layout(std430, binding=9) restrict buffer PlayingAnimationBuffer {
+layout(std430, binding=1) restrict buffer PlayingAnimationBuffer {
 	PlayingAnimation playingMotion[];
 };
 
@@ -24,7 +23,7 @@ layout(std430, binding=9) restrict buffer PlayingAnimationBuffer {
 void main() 
 {
 	uint index = gl_GlobalInvocationID.x;
-	if(index >= modelInfo.instanceAliveNum){ return; }
+	if(index >= modelInfo.instanceMaxNum){ return; }
 
 	AnimationInfo aInfo = animInfo[playingMotion[index].playingAnimationNo];
 	PlayingAnimation pm = playingMotion[index];
@@ -33,7 +32,7 @@ void main()
 	playingMotion[index].time = time;
 
 	// MotionUpdate.psのMotionWorkの更新のため、1FだけtimeがmaxTimeを超えるようにしている
-	playingMotion[index].time += 60. + float(index)*0.01;
-//	playingMotion[index].time += 0.016 + float(index)*0.00001;
+//	playingMotion[index].time += 60. + float(index)*0.01;
+	playingMotion[index].time += 0.016 + float(index)*0.00001;
 }
 

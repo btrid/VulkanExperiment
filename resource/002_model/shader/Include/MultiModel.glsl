@@ -107,6 +107,35 @@ struct PlayingAnimation
 	int   isLoop;
 };
 
+struct MotionData
+{
+	float time;
+	float _p1;
+	float _p2;
+	float _p3;
+	vec3 pos;
+	float _p4;
+	vec3 scale;
+	float _p5;
+	vec4 rot;
+};
+
+struct MotionTimeData{
+	float time;
+};
+
+struct MotionSTRData{
+	vec4 posAndScale;
+	vec4 rot;
+
+};
+struct MotionInfo
+{
+	uint nodeNo;
+	int offsetData;
+	int numData;
+	int _p1;
+};
 
 struct MotionWork
 {
