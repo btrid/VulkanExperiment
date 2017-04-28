@@ -25,22 +25,9 @@ struct Init
 };
 rTexture::Data rTexture::LoadTexture(const std::string& file, const LoadParam& param /*= LoadParam()*/)
 {
-// 	rTexture::Data d;
-// 	d.m_data.resize(3);
-// 	d.m_data[0] = glm::vec4(0.f, 0.f, 1.f, 1.f);
-// 	d.m_data[1] = glm::vec4(999.f, 0.f, 0.f, 1.f);
-// 	d.m_data[2] = glm::vec4(99.f, 0.f, 0.f, 1.f);
-// 	d.m_size = glm::ivec3(3, 1, 1);
-// 	return d;
 	static Init init;
 
 	FREE_IMAGE_FORMAT format = FreeImage_GetFileType(file.c_str());
-
-	if (format == -1)
-	{
-		printf("Could not find image: %s\n", file.c_str());
-		return rTexture::Data();
-	}
 
 	// Found image, but couldn't determine the file format? Try again...
 	if (format == FIF_UNKNOWN)

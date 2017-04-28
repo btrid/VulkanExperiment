@@ -625,6 +625,8 @@ void cModel::load(const std::string& filename)
 		| aiProcess_LimitBoneWeights
 		| aiProcess_RemoveRedundantMaterials
 		| aiProcess_SplitLargeMeshes
+		| aiProcess_SortByPType
+//		| aiProcess_OptimizeMeshes
 		| aiProcess_Triangulate
 		;
 	cStopWatch timer;

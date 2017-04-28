@@ -19,6 +19,8 @@ protected:
 
 		mLayerName =
 		{
+#if _DEBUG
+
 			"VK_LAYER_LUNARG_standard_validation"
 // 			"VK_LAYER_LUNARG_monitor",
 // 			"VK_LAYER_GOOGLE_unique_objects",
@@ -30,9 +32,12 @@ protected:
 // 			"VK_LAYER_LUNARG_swapchain",
 // 			"VK_LAYER_GOOGLE_threading",
 //			"VK_LAYER_LUNARG_api_dump",
+#endif
 		};
+#if _DEBUG
 		mExtensionName.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-//		mExtensionName.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+#endif
+		//		mExtensionName.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
 		mExtensionName.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 		mExtensionName.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 	}

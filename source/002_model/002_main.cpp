@@ -365,8 +365,6 @@ int main()
 			begin_info.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 			render_cmd.begin(begin_info);
 
-			renderer.execute(render_cmd);
-
 			vk::ImageMemoryBarrier present_to_render_barrier;
 			present_to_render_barrier.setSrcAccessMask(vk::AccessFlagBits::eMemoryRead);
 			present_to_render_barrier.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
@@ -377,9 +375,11 @@ int main()
 
 			render_cmd.pipelineBarrier(
 				vk::PipelineStageFlagBits::eTransfer,
-				vk::PipelineStageFlagBits::eTopOfPipe,
+				vk::PipelineStageFlagBits::eFragmentShader,
 				vk::DependencyFlags(),
 				nullptr, nullptr, present_to_render_barrier);
+
+			renderer.execute(render_cmd);
 
 			// begin cmd render pass
 			std::vector<vk::ClearValue> clearValue = {
@@ -405,7 +405,7 @@ int main()
 			render_to_present_barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
 			render_to_present_barrier.setImage(window.getSwapchain().m_backbuffer_image[backbuffer_index]);
 			render_cmd.pipelineBarrier(
-				vk::PipelineStageFlagBits::eBottomOfPipe,
+				vk::PipelineStageFlagBits::eFragmentShader,
 				vk::PipelineStageFlagBits::eTransfer,
 				vk::DependencyFlags(),
 				nullptr, nullptr, render_to_present_barrier);
@@ -414,7 +414,6 @@ int main()
 			std::vector<vk::CommandBuffer> cmds = {
 				render_cmd,
 			};
-
 
 			vk::PipelineStageFlags waitPipeline = vk::PipelineStageFlagBits::eAllGraphics;
 			std::vector<vk::SubmitInfo> submitInfo =
