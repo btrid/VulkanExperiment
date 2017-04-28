@@ -256,9 +256,8 @@ void cModelRenderer_t<T>::cModelDrawPipeline::setup(vk::RenderPass render_pass)
 	{
 		// camera
 		{
-			m_camera_uniform.create(gpu, device, vk::BufferUsageFlagBits::eUniformBuffer);
-			m_camera_frustom.create(gpu, device, vk::BufferUsageFlagBits::eUniformBuffer);
-		}
+ 			m_camera_uniform.create(gpu, device, vk::BufferUsageFlagBits::eUniformBuffer);
+ 		}
 	}
 
 	{
@@ -310,6 +309,10 @@ void cModelRenderer_t<T>::cModelComputePipeline::setup()
 			m_stage_info[i].setModule(m_shader_list[i]);
 			m_stage_info[i].setPName("main");
 		}
+	}
+
+	{
+		m_camera_frustom.create(gpu, device, vk::BufferUsageFlagBits::eUniformBuffer);
 	}
 
 	// Create compute pipeline

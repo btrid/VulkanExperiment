@@ -113,12 +113,6 @@ public:
 template<typename T>
 struct cModelRenderer_t
 {
-	struct Image
-	{
-		vk::Image image;
-		vk::ImageView view;
-		vk::Format format;
-	};
 
 	struct cModelDrawPipeline 
 	{
@@ -145,7 +139,6 @@ struct cModelRenderer_t
 		std::array<vk::DescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_MAX> m_descriptor_set_layout;
 
 		UniformBuffer<CameraGPU>	m_camera_uniform;
-		UniformBuffer<std::array<Plane, 6>>	m_camera_frustom;
 		void setup(vk::RenderPass render_pass);
 	};
 	struct cModelComputePipeline {
@@ -167,6 +160,8 @@ struct cModelRenderer_t
 		std::vector<vk::Pipeline> m_pipeline;
 		std::vector<vk::PipelineLayout> m_pipeline_layout;
 		std::vector<vk::DescriptorSetLayout> m_descriptor_set_layout;
+
+		UniformBuffer<std::array<Plane, 6>>	m_camera_frustom;
 
 		void setup();
 	};

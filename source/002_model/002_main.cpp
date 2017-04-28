@@ -19,6 +19,7 @@
 #include <btrlib/cDebug.h>
 #include <btrlib/sGlobal.h>
 #include <btrlib/cStopWatch.h>
+#include <btrlib/BufferMemory.h>
 
 #include <002_model/cModelRenderer.h>
 #include <002_model/cModelRender.h>
@@ -348,9 +349,6 @@ int main()
 	fence_list.emplace_back(device->createFence(fence_info));
 	while (true)
 	{
-// 		auto m2 = std::make_unique<cModel>();
-// 		m2->load(btr::getResourcePath() + "tiny2.x");
-
 		cStopWatch time;
 		auto* m_camera = cCamera::sCamera::Order().getCameraList()[0];
 		m_camera->control(window.getInput(), 0.016f);

@@ -69,7 +69,7 @@
     <ClInclude Include="..\..\include\btrlib\ResourceManager.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\btrlib\Memory.h">
+    <ClInclude Include="..\..\include\btrlib\BufferMemory.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>

@@ -42,7 +42,7 @@ struct cModelRenderer : public cModelRenderer_t<ModelRender>
 			Frustom frustom;
 			frustom.setup(*m_camera);
 			auto planes = frustom.getPlane();
-			m_draw_pipeline.m_camera_frustom.update(planes);
+			m_compute_pipeline.m_camera_frustom.update(planes);
 
 		}
 

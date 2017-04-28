@@ -216,7 +216,17 @@ void ModelRender::setup(cModelRenderer&  renderer)
 
 		// CameraCulling			
 		{
-			std::vector<vk::DescriptorBufferInfo> uniforms = {};
+			std::vector<vk::DescriptorBufferInfo> uniforms = {
+				pipeline.m_camera_frustom.getBufferInfo(),
+			};
+			desc = vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+				.setDescriptorCount(uniforms.size())
+				.setPBufferInfo(uniforms.data())
+				.setDstBinding(0)
+				.setDstSet(m_compute_descriptor_set[4]);
+			compute_device->updateDescriptorSets(desc, {});
+
 			std::vector<vk::DescriptorBufferInfo> storages =
 			{
 				m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::WORLD).getBufferInfo(),

@@ -660,7 +660,6 @@ public:
 		vk::SubmitInfo submit_info;
 		submit_info.commandBufferCount = 1;
 		submit_info.pCommandBuffers = &m_private->m_cmd[frame];
-
 		m_queue.submit(submit_info, m_private->m_fence[frame]);
 	}
 };
