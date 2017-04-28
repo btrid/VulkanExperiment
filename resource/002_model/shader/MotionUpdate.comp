@@ -1,6 +1,8 @@
 #version 450
 
-#pragma optionNV (unroll none)
+#pragma optionNV (unroll all)
+#pragma optionNV (inline all)
+
 
 //#extension GL_ARB_shading_language_include : require
 #extension GL_GOOGLE_cpp_style_line_directive : require
@@ -40,7 +42,7 @@ void main()
 
 	mat4 local = mat4(1.);
 	vec4 xyzs = texture(tMotionData, vec2(pm.time / aInfo.maxTime, nodeIndex*2));
-	vec4 rot = texture(tMotionData, vec2(pm.time / aInfo.maxTime, nodeIndex*2+1.0));
+	vec4 rot = texture(tMotionData, vec2(pm.time / aInfo.maxTime, nodeIndex*2+1));
 	local = scaling(local, vec3(xyzs.w)) * translate(mat4(1.), xyzs.xyz) * mat4(quatToMat3(rot));
 	nodeLocalTransforms[index] = local;
 

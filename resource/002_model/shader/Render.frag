@@ -1,4 +1,6 @@
 #version 450
+#pragma optionNV (unroll all)
+#pragma optionNV (inline all)
 
 //#extension GL_ARB_bindless_texture : require
 //#extension GL_NV_gpu_shader5 : require
