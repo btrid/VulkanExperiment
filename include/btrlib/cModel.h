@@ -572,8 +572,8 @@ public:
 		enum {
 			BONE_NUM = 4,
 		};
-		glm::vec4	m_position;
-		glm::vec4	m_normal;
+		glm::vec3	m_position;
+		glm::vec3	m_normal;
 		s8x4		m_texcoord0;
 		glm::u8vec4	m_bone_ID;	//!< 
 		u8x4		m_weight;

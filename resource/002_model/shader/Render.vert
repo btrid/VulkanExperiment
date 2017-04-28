@@ -16,8 +16,8 @@
 #include </Math.glsl>
 #include </MultiModel.glsl>
 
-layout(location = 0)in vec4 inPosition;
-layout(location = 1)in vec4 inNormal;
+layout(location = 0)in vec3 inPosition;
+layout(location = 1)in vec3 inNormal;
 layout(location = 2)in vec4 inTexcoord;
 layout(location = 3)in uvec4 inBoneID;
 layout(location = 4)in vec4 inWeight;
@@ -83,11 +83,11 @@ void main()
 	VSOut.Texcoord = inTexcoord.xyz;
 //	VSMaterial m = vsMaterial[inMaterialIndex];
 
-	vec4 offset = vec4(0.);
+	vec3 offset = vec3(0.);
 //	if(m.HeightTex != 0) {
 //		offset = texture(sampler2D(m.HeightTex), VSOut.Texcoord.xy)*2.;
 //	}
-	vec4 pos = vec4(vec4(inPosition + offset).xyz, 1.0);
+	vec4 pos = vec4((inPosition + offset).xyz, 1.0);
 	pos = skinning() * pos;
 	gl_Position = uProjection * uView * vec4(pos.xyz, 1.0);
 

@@ -698,11 +698,11 @@ void cModel::load(const std::string& filename)
 		// ARRAY_BUFFER
 		std::vector<Vertex> _vertex(mesh->mNumVertices);
 		for (size_t v = 0; v < mesh->mNumVertices; v++){
-			_vertex[v].m_position = glm::vec4(mesh->mVertices[v].x, mesh->mVertices[v].y, mesh->mVertices[v].z, 1.f);
+			_vertex[v].m_position = glm::vec3(mesh->mVertices[v].x, mesh->mVertices[v].y, mesh->mVertices[v].z);
 		}
 		if (mesh->HasNormals()) {
 			for (size_t v = 0; v < mesh->mNumVertices; v++) {
-				_vertex[v].m_normal = glm::vec4(mesh->mNormals[v].x, mesh->mNormals[v].y, mesh->mNormals[v].z, 0.f);
+				_vertex[v].m_normal = glm::vec3(mesh->mNormals[v].x, mesh->mNormals[v].y, mesh->mNormals[v].z);
 			}
 		}
 		if (mesh->HasTextureCoords(0)) {

@@ -178,31 +178,31 @@ void cModelRenderer_t<T>::cModelDrawPipeline::setup(vk::RenderPass render_pass)
 				vk::VertexInputAttributeDescription()
 				.setBinding(0)
 				.setLocation(0)
-				.setFormat(vk::Format::eR32G32B32A32Sfloat)
+				.setFormat(vk::Format::eR32G32B32Sfloat)
 				.setOffset(0),
 				// normal
 				vk::VertexInputAttributeDescription()
 				.setBinding(0)
 				.setLocation(1)
-				.setFormat(vk::Format::eR32G32B32A32Sfloat)
-				.setOffset(16),
+				.setFormat(vk::Format::eR32G32B32Sfloat)
+				.setOffset(12),
 				// texcoord
 				vk::VertexInputAttributeDescription()
 				.setBinding(0)
 				.setLocation(2)
 				.setFormat(vk::Format::eR8G8B8A8Snorm)
-				.setOffset(32),
+				.setOffset(24),
 				// boneID
 				vk::VertexInputAttributeDescription()
 				.setBinding(0)
 				.setLocation(3)
 				.setFormat(vk::Format::eR8G8B8A8Uint)
-				.setOffset(36),
+				.setOffset(28),
 				vk::VertexInputAttributeDescription()
 				.setBinding(0)
 				.setLocation(4)
 				.setFormat(vk::Format::eR8G8B8A8Unorm)
-				.setOffset(40),
+				.setOffset(32),
 			};
 			vk::PipelineVertexInputStateCreateInfo vertex_input_info;
 			vertex_input_info.setVertexBindingDescriptionCount((uint32_t)vertex_input_binding.size());
