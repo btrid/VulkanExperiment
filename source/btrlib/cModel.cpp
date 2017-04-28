@@ -508,8 +508,7 @@ std::vector<cModel::Material> loadMaterial(const aiScene* scene, const std::stri
 			mat.mHeightTex.load(device, sGlobal::Order().getThreadPool(), path + "/" + str.C_Str());
 		}
 	}
-
-	return std::move(material);
+	return material;
 }
 
 void _loadNodeRecurcive(aiNode* ainode, RootNode& root, int parent)
@@ -708,7 +707,10 @@ void cModel::load(const std::string& filename)
 		}
 		if (mesh->HasTextureCoords(0)) {
 			for (size_t v = 0; v < mesh->mNumVertices; v++) {
-				_vertex[v].m_texcoord0 = glm::vec4(mesh->mTextureCoords[0][v].x, mesh->mTextureCoords[0][v].y, mesh->mTextureCoords[0][v].z, 0.f);
+				_vertex[v].m_texcoord0[0] = glm::packSnorm1x8(mesh->mTextureCoords[0][v].x);
+				_vertex[v].m_texcoord0[1] = glm::packSnorm1x8(mesh->mTextureCoords[0][v].y);
+				_vertex[v].m_texcoord0[2] = glm::packSnorm1x8(mesh->mTextureCoords[0][v].z);
+				_vertex[v].m_texcoord0[3] = glm::packSnorm1x8(0.f);
 			}
 		}
 //		_vertex[i].mMaterialIndex = mesh->mMaterialIndex;
@@ -735,6 +737,7 @@ void cModel::load(const std::string& filename)
 					bone.mNodeIndex = m_resource->mNodeRoot.getNodeIndexByName(mesh->mBones[b]->mName.C_Str());
 					boneList.emplace_back(bone);
 					index = (int)boneList.size() - 1;
+					assert(index < 255);
 					nodeInfo[bone.mNodeIndex].mBoneIndex = index;
 				}
 
@@ -742,11 +745,10 @@ void cModel::load(const std::string& filename)
 				{
 					aiVertexWeight& weight = mesh->mBones[b]->mWeights[i];
 					Vertex& v = _vertex[weight.mVertexId];
-
 					for (size_t o = 0; o < Vertex::BONE_NUM; o++) {
-						if (v.m_bone_ID[o] == -1) {
-							v.m_bone_ID[o] = index;
-							v.m_weight[o] = weight.mWeight;
+						if (v.m_bone_ID[o] == 0xff) {
+							v.m_bone_ID[o] = (u8)index;
+							v.m_weight[o] = glm::packUnorm1x8(weight.mWeight);
 							break;
 						}
 					}
@@ -762,13 +764,29 @@ void cModel::load(const std::string& filename)
 
 	{
 		cMeshResource& mesh = m_resource->mMesh;
-		mesh.mIndexType = vk::IndexType::eUint32;
 
 		{
 			mesh.m_vertex_buffer_ex = s_vertex_buffer.allocate(vector_sizeof(vertex));
 			mesh.m_vertex_buffer_ex.update(vertex, 0);
-			mesh.m_index_buffer_ex = s_vertex_buffer.allocate(vector_sizeof(index));
-			mesh.m_index_buffer_ex.update(index, 0);
+
+			if (vertex.size() < std::numeric_limits<uint16_t>::max())
+			{
+				// uint16Ç≈è\ï™
+				std::vector<uint16_t> index16(index.size());
+				for (size_t ii = 0; ii < index16.size(); ii++)
+				{
+					index16[ii] = (uint16_t)index[ii];
+				}
+				mesh.mIndexType = vk::IndexType::eUint16;
+				mesh.m_index_buffer_ex = s_vertex_buffer.allocate(vector_sizeof(index16));
+				mesh.m_index_buffer_ex.update(index16, 0);
+			}
+			else 
+			{
+				mesh.mIndexType = vk::IndexType::eUint32;
+				mesh.m_index_buffer_ex = s_vertex_buffer.allocate(vector_sizeof(index));
+				mesh.m_index_buffer_ex.update(index, 0);
+			}
 		}
 
 		// indirect

@@ -15,7 +15,10 @@ using s16 = std::int16_t;
 using u8 = std::uint8_t;
 using s8 = std::int8_t;
 
-namespace btr 
+using f16x2 = uint16_t;
+using s8x4 = glm::i8vec4;
+using u8x4 = glm::u8vec4;
+namespace btr
 {
 template<typename A, typename B>
 bool isOn(A bit, B test) {
