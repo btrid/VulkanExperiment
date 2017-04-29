@@ -16,7 +16,7 @@ void cModelRenderer_t<T>::cModelDrawPipeline::setup(vk::RenderPass render_pass)
 		};
 		static_assert(array_length(name) == SHADER_NUM, "not equal shader num");
 
-		std::string path = btr::getResourcePath() + "shader\\";
+		std::string path = btr::getResourcePath() + "shader\\binary\\";
 		for (size_t i = 0; i < SHADER_NUM; i++) {
 			m_shader_list[i] = loadShader(device.getHandle(), path + name[i]);
 		}
@@ -302,7 +302,7 @@ void cModelRenderer_t<T>::cModelComputePipeline::setup()
 		};
 		static_assert(array_length(name) == SHADER_NUM, "not equal shader num");
 
-		std::string path = btr::getResourcePath() + "shader\\";
+		std::string path = btr::getResourcePath() + "shader\\binary\\";
 		for (size_t i = 0; i < SHADER_NUM; i++) {
 			m_shader_list[i] = loadShader(device.getHandle(), path + name[i]);
 			m_stage_info[i].setStage(vk::ShaderStageFlagBits::eCompute);
