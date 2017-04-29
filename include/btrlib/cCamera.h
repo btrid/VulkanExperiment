@@ -73,16 +73,16 @@ public:
 // 			m_target += (s*move.x + f*move.y) * distance / 100.f;
 // 
 // 		}
-// 		else if (input.m_mouse.isHold(cMouse::BUTTON_MIDDLE))
-// 		{
-// 			// XY•½–Ê‚ÌˆÚ“®
-// 			auto f = glm::normalize(m_target - m_position);
-// 			auto s = glm::normalize(glm::cross(m_up, f));
-// 			auto move = input.m_mouse.getMove();
-// 			m_position += (s*move.x + m_up*move.y) * distance / 100.f;
-// 			m_target += (s*move.x + m_up*move.y) * distance / 100.f;
-// 		}
-/*		else*/ if (input.m_mouse.isHold(cMouse::BUTTON_RIGHT))
+		if (input.m_mouse.isHold(cMouse::BUTTON_LEFT))
+		{
+			// XY•½–Ê‚ÌˆÚ“®
+			auto f = glm::normalize(m_target - m_position);
+			auto s = glm::normalize(glm::cross(m_up, f));
+			auto move = input.m_mouse.getMove();
+			m_position += (s*move.x + m_up*move.y);// * distance / 100.f;
+			m_target += (s*move.x + m_up*move.y);// * distance / 100.f;
+		}
+		else if (input.m_mouse.isHold(cMouse::BUTTON_RIGHT))
 		{
 			// ‰ñ“]ˆÚ“®
 			glm::vec3 f = glm::normalize(m_target - m_position);

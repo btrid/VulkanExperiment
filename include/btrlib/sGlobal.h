@@ -236,9 +236,10 @@ private:
 
 	int32_t m_current_frame;
 	cThreadPool m_thread_pool;
-
 	std::vector<vk::CommandPool>	m_cmd_pool_tempolary;
 	std::array<std::vector<std::unique_ptr<Deleter>>, FRAME_MAX> m_cmd_delete;
+
+	float m_deltatime;
 public:
 	vk::CommandPool getCmdPoolTempolary(uint32_t device_family_index)const
 	{
@@ -257,6 +258,7 @@ public:
 		m_cmd_delete[getCurrentFrame()].emplace_back(std::move(deleter));
 	}
 
+	float getDeltaTime()const { return m_deltatime; }
 };
 
 struct sThreadLocal : public SingletonTLS<sThreadLocal>

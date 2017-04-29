@@ -111,6 +111,10 @@ struct TmpStagingBuffer
 
 	}
 };
+
+/**
+ *	モーションのデータを一枚の1DArrayに格納
+ */
 MotionTexture create(const cDevice& device, const aiAnimation* anim, const RootNode& root)
 {
 	uint32_t SIZE = 256;
@@ -120,7 +124,6 @@ MotionTexture create(const cDevice& device, const aiAnimation* anim, const RootN
 	image_info.format = vk::Format::eR32G32B32A32Sfloat;
 	image_info.mipLevels = 1;
 	image_info.arrayLayers = (uint32_t)root.mNodeList.size() * 2u;
-//	image_info.arrayLayers = 1u;
 	image_info.samples = vk::SampleCountFlagBits::e1;
 	image_info.tiling = vk::ImageTiling::eOptimal;
 	image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
@@ -158,8 +161,6 @@ MotionTexture create(const cDevice& device, const aiAnimation* anim, const RootN
 				n++;
 				continue;
 			}
-			// 配列外アクセス
-			assert(count < SIZE);
 			float current_value = current.mValue.x + current.mValue.y + current.mValue.z;
 			float next_value = next.mValue.x + next.mValue.y + next.mValue.z;
 			current_value /= 3.f;
@@ -183,8 +184,6 @@ MotionTexture create(const cDevice& device, const aiAnimation* anim, const RootN
 				n++;
 				continue;
 			}
-			// 配列外アクセス
-			assert(count < SIZE);
 			auto current_value = glm::vec3(current.mValue.x, current.mValue.y, current.mValue.z);
 			auto next_value = glm::vec3(next.mValue.x, next.mValue.y, next.mValue.z);
 			auto rate = 1.f - (float)(next.mTime - time) / (float)(next.mTime - current.mTime);
@@ -208,8 +207,6 @@ MotionTexture create(const cDevice& device, const aiAnimation* anim, const RootN
 				n++;
 				continue;
 			}
-			// 配列外アクセス
-			assert(count < SIZE);
 			auto current_value = glm::quat(current.mValue.w, current.mValue.x, current.mValue.y, current.mValue.z);
 			auto next_value = glm::quat(next.mValue.w, next.mValue.x, next.mValue.y, next.mValue.z);
 			auto rate = 1.f - (float)(next.mTime - time) / (float)(next.mTime - current.mTime);

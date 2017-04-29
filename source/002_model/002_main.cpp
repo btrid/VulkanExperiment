@@ -20,7 +20,7 @@
 #include <btrlib/sGlobal.h>
 #include <btrlib/cStopWatch.h>
 #include <btrlib/BufferMemory.h>
-
+#include <btrlib/Light.h>
 #include <002_model/cModelRenderer.h>
 #include <002_model/cModelRender.h>
 #pragma comment(lib, "vulkan-1.lib")
@@ -319,7 +319,6 @@ int main()
 	renderer.setup(render_pass);
 	renderer.addModel(&render);
 
-	model->getInstance()->m_world = glm::translate(glm::vec3(0.f));
 	std::vector<std::unique_ptr<cModel>> models;
 	models.reserve(1000);
 	for (int i = 0; i < 1000; i++)
@@ -347,6 +346,11 @@ int main()
 	fence_list.emplace_back(device->createFence(fence_info));
 	fence_list.emplace_back(device->createFence(fence_info));
 	fence_list.emplace_back(device->createFence(fence_info));
+
+	for (int i = 0; i < 1000; i++)
+	{
+		renderer.getLight().add(std::move(std::make_unique<LightSample>()));
+	}
 	while (true)
 	{
 		cStopWatch time;

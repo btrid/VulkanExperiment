@@ -582,48 +582,6 @@ cModelRenderer_t<T>::cModelRenderer_t()
 }
 
 template<typename T>
-void cModelRenderer_t<T>::execute(cThreadPool& threadpool)
-{
-	for (auto it = m_loading_model.begin(); it != m_loading_model.end();)
-	{
-		if (std::future_status::ready == it->wait_for(std::chrono::seconds(0)))
-		{
-			std::unique_ptr<T> render = it->get();
-			m_gpu.getDevice(0)[0]->getQueue(0, 0).submit() render->setup();
-			m_render.emplace_back();
-			it = m_loading_model.erase(it);
-		}
-		else {
-			it++;
-		}
-	}
-	for (auto*& render : m_render)
-	{
-		std::shared_ptr<std::promise<cModel>> task = std::make_shared<std::promise<cModel>>();
-		std::shared_future<cModel> modelFuture = task->get_future().share();
-		{
-			cThreadJob job;
-			auto load = [=]() {
-				cModel model;
-				model.load(m_gpu, btr::getResourcePath() + "002_model\\" + "tiny.x");
-				task->set_value(model);
-			};
-			job.mJob.push_back(load);
-
-			auto finish = [=]() {
-				printf("load file %s.\n", modelFuture.get().getFilename().c_str());
-			};
-			job.mFinish = finish;
-		}
-
-		while (modelFuture.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready) {
-			printf("wait...\n");
-		}
-	}
-	threadpool.enque()
-}
-
-template<typename T>
 void cModelRenderer_t<T>::setup(vk::RenderPass render_pass)
 {
 	m_gpu = sThreadLocal::Order().m_gpu;

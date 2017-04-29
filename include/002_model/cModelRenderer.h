@@ -176,7 +176,6 @@ protected:
 public:
 	cModelRenderer_t();
 	void setup(vk::RenderPass render_pass);
-	void execute(cThreadPool& threadpool);
 
 public:
 
@@ -185,5 +184,5 @@ public:
 };
 
 
-#include "002_model/cModelRenderer.inl"
+#include <002_model/cModelRenderer.inl>
 

@@ -129,7 +129,7 @@ private:
 		}
 	}
 };
-struct AllocateBuffer
+struct AllocatedMemory
 {
 	vk::DescriptorBufferInfo m_buffer_info;
 	struct Resource
@@ -183,18 +183,18 @@ struct BufferMemory
 		device->bindBufferMemory(m_resource->m_buffer, m_resource->m_memory, 0);
 	}
 
-	AllocateBuffer allocateBuffer(vk::DeviceSize size)
+	AllocatedMemory allocateMemory(vk::DeviceSize size)
 	{
 		auto zone = m_resource->m_free_zone.alloc(size);
 		assert(zone.isValid());
 
-		AllocateBuffer alloc;
-		auto deleter = [&](AllocateBuffer::Resource* ptr)
+		AllocatedMemory alloc;
+		auto deleter = [&](AllocatedMemory::Resource* ptr)
 		{
 			m_resource->m_free_zone.free(ptr->m_zone);
 			delete ptr;
 		};
-		alloc.m_resource = std::shared_ptr<AllocateBuffer::Resource>(new AllocateBuffer::Resource, deleter);
+		alloc.m_resource = std::shared_ptr<AllocatedMemory::Resource>(new AllocatedMemory::Resource, deleter);
 		alloc.m_resource->m_zone = zone;
 		alloc.m_buffer_info.buffer = m_resource->m_buffer;
 		alloc.m_buffer_info.offset = alloc.m_resource->m_zone.m_start;
@@ -208,7 +208,7 @@ struct BufferMemory
 template<typename T>
 struct UniformBufferEx
 {
-	AllocateBuffer m_buffer;
+	AllocatedMemory m_buffer;
 	size_t update_begin;
 	size_t update_end;
 
