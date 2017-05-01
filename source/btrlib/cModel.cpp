@@ -625,6 +625,7 @@ void cModel::load(const std::string& filename)
 		| aiProcess_SortByPType
 //		| aiProcess_OptimizeMeshes
 		| aiProcess_Triangulate
+//		| aiProcess_MakeLeftHanded
 		;
 	cStopWatch timer;
 	Assimp::Importer importer;

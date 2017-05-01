@@ -553,9 +553,9 @@ public:
 	vk::DescriptorBufferInfo getBufferInfo()const { return m_buffer_info; }
 
 private:
-	void create(const cGPU& gpu, const cDevice& device)
+	void create(const cDevice& device)
 	{
-		m_gpu = gpu.getHandle();
+		m_gpu = device.getGPU();
 		m_private->m_device = device.getHandle();
 		m_family_index = device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
 		m_queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), device.getQueueNum(vk::QueueFlagBits::eGraphics) - 1);
@@ -580,9 +580,9 @@ private:
 	}
 public:
 
-	void create(const cGPU& gpu, const cDevice& device, vk::BufferUsageFlags flag)
+	void create(const cDevice& device, vk::BufferUsageFlags flag)
 	{
-		create(gpu, device);
+		create(device);
 
 		size_t data_size = sizeof(T);
 		{
@@ -590,7 +590,7 @@ public:
 			vk::BufferCreateInfo buffer_info;
 			buffer_info.usage = flag | vk::BufferUsageFlagBits::eTransferDst;
 			buffer_info.size = data_size;
-			auto queue_family = gpu.getQueueFamilyIndexList(vk::QueueFlagBits::eGraphics | vk::QueueFlagBits::eCompute);
+			auto queue_family = device.getQueueFamilyIndex();
 			if (queue_family.size() != 1)
 			{
 				buffer_info.queueFamilyIndexCount = (uint32_t)queue_family.size();
@@ -602,7 +602,7 @@ public:
 			vk::MemoryRequirements memory_request = device->getBufferMemoryRequirements(m_private->m_buffer);
 			vk::MemoryAllocateInfo memory_alloc;
 			memory_alloc.setAllocationSize(memory_request.size);
-			memory_alloc.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal));
+			memory_alloc.setMemoryTypeIndex(cGPU::Helper::getMemoryTypeIndex(device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal));
 			m_private->m_memory = device->allocateMemory(memory_alloc);
 
 			device->bindBufferMemory(m_private->m_buffer, m_private->m_memory, 0);
@@ -622,7 +622,7 @@ public:
 			vk::MemoryRequirements memory_request = device->getBufferMemoryRequirements(m_private->m_staging_buffer);
 			vk::MemoryAllocateInfo memory_alloc;
 			memory_alloc.setAllocationSize(memory_request.size);
-			memory_alloc.setMemoryTypeIndex(gpu.getMemoryTypeIndex(memory_request, vk::MemoryPropertyFlagBits::eHostVisible));
+			memory_alloc.setMemoryTypeIndex(cGPU::Helper::getMemoryTypeIndex(device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eHostVisible));
 			m_private->m_staging_memory = device->allocateMemory(memory_alloc);
 
 			device->bindBufferMemory(m_private->m_staging_buffer, m_private->m_staging_memory, 0);
@@ -663,6 +663,23 @@ public:
 		submit_info.commandBufferCount = 1;
 		submit_info.pCommandBuffers = &m_private->m_cmd[frame];
 		m_queue.submit(submit_info, m_private->m_fence[frame]);
+	}
+	void update(const T& data, vk::CommandBuffer cmd)
+	{
+		auto frame = sGlobal::Order().getCurrentFrame();
+		auto data_size = sizeof(T);
+		char* mem = reinterpret_cast<char*>(m_private->m_device.mapMemory(m_private->m_staging_memory, data_size*frame, data_size, vk::MemoryMapFlags()));
+		{
+			memcpy_s(mem, data_size, &data, data_size);
+		}
+		m_private->m_device.unmapMemory(m_private->m_staging_memory);
+
+		vk::BufferCopy copy_info;
+		copy_info.size = data_size;
+		copy_info.srcOffset = data_size*frame;
+		copy_info.dstOffset = 0;
+		cmd.copyBuffer(m_private->m_staging_buffer, m_private->m_buffer, copy_info);
+
 	}
 };
 

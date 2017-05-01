@@ -51,15 +51,17 @@ struct FreeZone
 	std::vector<Zone> m_free_zone;
 	std::vector<Zone> m_active_zone;
 
+	vk::DeviceSize m_align;
 	std::mutex m_mutex;
 	~FreeZone()
 	{
 		assert(m_active_zone.empty());
 	}
-	void setup(vk::DeviceSize size)
+	void setup(vk::DeviceSize size, vk::DeviceSize align)
 	{
 		assert(m_free_zone.empty());
 
+		m_align = align;
 		Zone zone;
 		zone.m_start = 0;
 		zone.m_end = size;
@@ -69,6 +71,7 @@ struct FreeZone
 	}
 	Zone alloc(vk::DeviceSize size)
 	{
+		size = btr::align(size, m_align);
 		std::lock_guard<std::mutex> lock(m_mutex);
 		for (auto& zone : m_free_zone)
 		{
@@ -135,11 +138,17 @@ struct AllocatedMemory
 	struct Resource
 	{
 		Zone m_zone;
+		vk::DeviceMemory m_memory_ref;
+		void* m_mapped_memory;
 	};
 
 	std::shared_ptr<Resource> m_resource;
 	vk::DescriptorBufferInfo getBufferInfo()const { return m_buffer_info; }
 	vk::Buffer getBuffer()const { return m_buffer_info.buffer; }
+	vk::DeviceSize getSize()const { return m_buffer_info.range; }
+	vk::DeviceSize getOffset()const { return m_buffer_info.offset; }
+	vk::DeviceMemory getDeviceMemory()const { return m_resource->m_memory_ref; }
+	void* getMappedPtr()const { return m_resource->m_mapped_memory; }
 };
 struct BufferMemory
 {
@@ -154,33 +163,61 @@ struct BufferMemory
 
 		vk::MemoryRequirements m_memory_request;
 		vk::MemoryAllocateInfo m_memory_alloc;
+		vk::MemoryType m_memory_type;
 
+		void* m_mapped_memory;
 		~Resource()
 		{
 		}
 	};
 	std::shared_ptr<Resource> m_resource;
 
-	void setup(const cDevice& device, vk::BufferUsageFlags flag, vk::DeviceSize size)
+	bool isValid()const { return m_resource.get(); }
+
+	void setup(const cDevice& device, vk::BufferUsageFlags flag, vk::MemoryPropertyFlags memory_type, vk::DeviceSize size)
 	{
-		m_resource = std::make_shared<Resource>();
+		auto resource = std::make_shared<Resource>();
 		device.getGPU();
-		m_resource->m_device = device;
+		resource->m_device = device;
 
-		m_resource->m_free_zone.setup(size);
+		auto limits = device.getGPU().getProperties().limits;
+		vk::DeviceSize align = 16;
+		if (btr::isOn(flag, vk::BufferUsageFlagBits::eStorageBuffer)) {
+			align = std::max(align, limits.minStorageBufferOffsetAlignment);
+		}
+		if (btr::isOn(flag, vk::BufferUsageFlagBits::eUniformBuffer)) {
+			align = std::max(align, limits.minUniformBufferOffsetAlignment);
+		}
+		resource->m_free_zone.setup(size, align);
 		vk::BufferCreateInfo buffer_info;
-		buffer_info.usage = flag | vk::BufferUsageFlagBits::eTransferDst;
+		buffer_info.usage = flag;
 		buffer_info.size = size;
-		m_resource->m_buffer = device->createBuffer(buffer_info);
+		resource->m_buffer = device->createBuffer(buffer_info);
 
-		vk::MemoryRequirements memory_request = m_resource->m_device->getBufferMemoryRequirements(m_resource->m_buffer);
+		vk::MemoryRequirements memory_request = resource->m_device->getBufferMemoryRequirements(resource->m_buffer);
 		vk::MemoryAllocateInfo memory_alloc;
 		memory_alloc.setAllocationSize(memory_request.size);
-		memory_alloc.setMemoryTypeIndex(cGPU::Helper::getMemoryTypeIndex(device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal));
-		m_resource->m_memory = device->allocateMemory(memory_alloc);
-		m_resource->m_memory_alloc = memory_alloc;
-		m_resource->m_memory_request = memory_request;
-		device->bindBufferMemory(m_resource->m_buffer, m_resource->m_memory, 0);
+		memory_alloc.setMemoryTypeIndex(cGPU::Helper::getMemoryTypeIndex(device.getGPU(), memory_request, memory_type));
+		resource->m_memory = device->allocateMemory(memory_alloc);
+		device->bindBufferMemory(resource->m_buffer, resource->m_memory, 0);
+
+		resource->m_memory_alloc = memory_alloc;
+		resource->m_memory_request = memory_request;
+		auto memory_prop = device.getGPU().getMemoryProperties();
+		resource->m_memory_type = memory_prop.memoryTypes[memory_alloc.memoryTypeIndex];
+
+		resource->m_mapped_memory = nullptr;
+		if (btr::isOn(resource->m_memory_type.propertyFlags, vk::MemoryPropertyFlagBits::eHostCoherent) )
+		{
+			resource->m_mapped_memory = device->mapMemory(resource->m_memory, 0, size);
+		}
+		m_resource = std::move(resource);
+	}
+
+	// @deprecaterd
+	void setup(const cDevice& device, vk::BufferUsageFlags flag, vk::DeviceSize size)
+	{
+		setup(device, flag, vk::MemoryPropertyFlagBits::eDeviceLocal, size);
 	}
 
 	AllocatedMemory allocateMemory(vk::DeviceSize size)
@@ -196,9 +233,16 @@ struct BufferMemory
 		};
 		alloc.m_resource = std::shared_ptr<AllocatedMemory::Resource>(new AllocatedMemory::Resource, deleter);
 		alloc.m_resource->m_zone = zone;
+		alloc.m_resource->m_memory_ref = m_resource->m_memory;
 		alloc.m_buffer_info.buffer = m_resource->m_buffer;
 		alloc.m_buffer_info.offset = alloc.m_resource->m_zone.m_start;
 		alloc.m_buffer_info.range = size;
+
+		alloc.m_resource->m_mapped_memory = nullptr;
+		if (m_resource->m_mapped_memory)
+		{
+			alloc.m_resource->m_mapped_memory = (char*)m_resource->m_mapped_memory + alloc.m_resource->m_zone.m_start;
+		}
 		return alloc;
 	}
 	cDevice getDevice()const { return m_resource->m_device; }

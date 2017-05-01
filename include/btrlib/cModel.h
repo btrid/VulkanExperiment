@@ -13,6 +13,7 @@
 #include <btrlib/ThreadPool.h>
 #include <btrlib/rTexture.h>
 #include <btrlib/ResourceManager.h>
+#include <btrlib/BufferMemory.h>
 
 struct TmpCmd
 {
@@ -749,8 +750,11 @@ public:
 			NUM,
 		};
 
+		btr::BufferMemory m_storage_memory;
+		btr::BufferMemory m_uniform_memory;
 		std::array<ConstantBuffer, static_cast<s32>(ModelConstantBuffer::NUM)> m_constant_buffer;
 		std::array<StorageBuffer, static_cast<s32>(ModelStorageBuffer::NUM)> m_storage_buffer;
+//		std::array<btr::AllocatedMemory, static_cast<s32>(ModelStorageBuffer::NUM)> m_storage_buffer;
 		cAnimation m_animation_buffer;
 
 		std::string m_filename;
@@ -771,6 +775,8 @@ public:
 
 		const StorageBuffer& getBuffer(ModelStorageBuffer buffer)const { return m_storage_buffer[static_cast<s32>(buffer)]; }
 		StorageBuffer& getBuffer(ModelStorageBuffer buffer) { return m_storage_buffer[static_cast<s32>(buffer)]; }
+// 		const btr::AllocatedMemory& getBuffer(ModelStorageBuffer buffer)const { return m_storage_buffer[static_cast<s32>(buffer)]; }
+// 		btr::AllocatedMemory& getBuffer(ModelStorageBuffer buffer) { return m_storage_buffer[static_cast<s32>(buffer)]; }
 		const ConstantBuffer& getBuffer(ModelConstantBuffer buffer)const { return m_constant_buffer[static_cast<s32>(buffer)]; }
 		ConstantBuffer& getBuffer(ModelConstantBuffer buffer) { return m_constant_buffer[static_cast<s32>(buffer)]; }
 

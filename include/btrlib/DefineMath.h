@@ -39,4 +39,11 @@ void setOff(A& bit, B test) {
 	bit &= ~test;
 }
 
+//!	align(4, 32) -> 32
+template<typename T>
+T align(T value, T align_num)
+{
+	return (value + (align_num-1)) & ~(align_num -1);
+}
+
 }

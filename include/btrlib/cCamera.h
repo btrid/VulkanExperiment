@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <btrlib/DefineMath.h>
 #include <btrlib/Singleton.h>
+#include <btrlib/Shape.h>
 #include <btrlib/cInput.h>
 class cCamera
 {
@@ -140,3 +141,105 @@ struct CameraGPU
 	glm::mat4 mView;
 };
 
+class Frustom {
+
+public:
+	glm::vec3 ltn_;	//!< nearTopLeft
+	glm::vec3 rtn_;
+	glm::vec3 lbn_;
+	glm::vec3 rbn_;
+	glm::vec3 ltf_;	//!< nearTopLeft
+	glm::vec3 rtf_;
+	glm::vec3 lbf_;
+	glm::vec3 rbf_;
+
+	float nearD_, farD_, ratio_, angle_, tang_;
+	float nw_, nh_, fw_, fh_;
+
+	enum {
+		PLANE_TOP,
+		PLANE_BOTTOM,
+		PLANE_RIGHT,
+		PLANE_LEFT,
+		PLANE_NEAR,
+		PLANE_FAR,
+		PLANE_NUM,
+	};
+	std::array<Plane, 6> plane_;
+public:
+
+	std::array<Plane, 6>& getPlane() { return plane_; }
+	Frustom()
+	{}
+
+	void setup(const cCamera& camera)
+	{
+		setProjection(camera.getFov(), camera.getAspect(), camera.getNear(), camera.getFar());
+		setView(camera.getPosition(), camera.getTarget(), camera.getUp());
+	}
+	void setProjection(float angle, float ratio, float nearD, float farD)
+	{
+		// store the information
+		ratio_ = ratio;
+		angle_ = angle;
+		nearD_ = nearD;
+		farD_ = farD;
+
+		// compute width and height of the near and far plane sections
+		tang_ = tan(angle * 0.5f);
+		nh_ = nearD * tang_;
+		nw_ = nh_ * ratio;
+		fh_ = farD  * tang_;
+		fw_ = fh_ * ratio;
+	}
+	void setView(const glm::vec3 &p, const glm::vec3 &l, const glm::vec3 &u) {
+
+		glm::vec3 Z = glm::normalize(p - l);
+		glm::vec3 X = glm::normalize(glm::cross(u, Z));
+		glm::vec3 Y = glm::normalize(glm::cross(Z, X));
+
+		glm::vec3 nc = p - Z * nearD_;
+		glm::vec3 fc = p - Z * farD_;
+
+		// compute the 4 corners of the frustum on the near plane
+		ltn_ = nc + Y * nh_ - X * nw_;
+		rtn_ = nc + Y * nh_ + X * nw_;
+		lbn_ = nc - Y * nh_ - X * nw_;
+		rbn_ = nc - Y * nh_ + X * nw_;
+
+		// compute the 4 corners of the frustum on the far plane
+		ltf_ = fc + Y * fh_ - X * fw_;
+		rtf_ = fc + Y * fh_ + X * fw_;
+		lbf_ = fc - Y * fh_ - X * fw_;
+		rbf_ = fc - Y * fh_ + X * fw_;
+
+		// compute the six planes
+		// the function set3Points assumes that the points
+		// are given in counter clockwise order
+		plane_[PLANE_TOP] = Plane(rtn_, ltn_, ltf_);
+		plane_[PLANE_BOTTOM] = Plane(lbn_, rbn_, rbf_);
+		plane_[PLANE_LEFT] = Plane(ltn_, lbn_, lbf_);
+		plane_[PLANE_RIGHT] = Plane(rbn_, rtn_, rbf_);
+		plane_[PLANE_NEAR] = Plane(ltn_, rtn_, rbn_);
+		plane_[PLANE_FAR] = Plane(rtf_, ltf_, lbf_);
+	}
+
+	bool isInFrustom(const glm::vec3& p) {
+		for (int i = 0; i < PLANE_NUM; i++) {
+			if (plane_[i].getDistance(p) < 0.f) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+	bool isInFrustom(const glm::vec3& p, float radius)
+	{
+		for (int i = 0; i < PLANE_NUM; i++) {
+			if (plane_[i].getDistance(p) < radius) {
+				return false;
+			}
+		}
+		return true;
+	}
+};

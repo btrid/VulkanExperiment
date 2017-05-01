@@ -52,7 +52,7 @@ struct LightSample : public btr::Light
 
 struct cModelRenderer : public cModelRenderer_t<ModelRender>
 {
-	btr::Light::Manager m_light_manager;
+	btr::Light::FowardPlusPipeline m_light_manager;
 	btr::BufferMemory m_light_memory;
 	std::vector<ModelRender*> m_model;
 
@@ -61,8 +61,8 @@ struct cModelRenderer : public cModelRenderer_t<ModelRender>
 		const cGPU& gpu = sThreadLocal::Order().m_gpu;
 		auto device = gpu.getDevice(vk::QueueFlagBits::eGraphics)[0];
 
-		m_light_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer, sizeof(btr::LightParam) * 1024);
-		m_light_manager.setup(m_light_memory, 1024);
+		m_light_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, 1000*1000*20);
+		m_light_manager.setup(device, m_light_memory, 1024);
 	}
 	void addModel(ModelRender* model)
 	{
@@ -102,7 +102,7 @@ struct cModelRenderer : public cModelRenderer_t<ModelRender>
 
 	}
 
-	btr::Light::Manager& getLight() {
+	btr::Light::FowardPlusPipeline& getLight() {
 		return m_light_manager;
 	}
 };
