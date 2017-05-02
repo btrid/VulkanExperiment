@@ -293,12 +293,12 @@ void cModelRenderer_t<T>::cModelComputePipeline::setup()
 	// setup shader
 	{
 		const char* name[] = {
-			"Clear.comp.spv",
-			"AnimationUpdate.comp.spv",
-			"MotionUpdate.comp.spv",
-			"NodeTransform.comp.spv",
-			"CameraCulling.comp.spv",
-			"BoneTransform.comp.spv",
+			"001_Clear.comp.spv",
+			"002_AnimationUpdate.comp.spv",
+			"003_MotionUpdate.comp.spv",
+			"004_NodeTransform.comp.spv",
+			"005_CameraCulling.comp.spv",
+			"006_BoneTransform.comp.spv",
 		};
 		static_assert(array_length(name) == SHADER_NUM, "not equal shader num");
 

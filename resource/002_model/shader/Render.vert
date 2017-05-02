@@ -48,16 +48,6 @@ layout(std140, set=0, binding=0) uniform ModelInfoUniform
 	ModelInfo modelInfo;
 };
 
-struct VSMaterial {
-	uvec2	NormalTex;
-	uvec2	HeightTex;
-};
-
-//layout(std430, set=0, binding=1) readonly buffer VSMaterialBuffer
-//{
-//	VSMaterial vsMaterial[];
-//};
-
 layout(std430, set=0, binding=1)readonly restrict buffer BoneTransformBuffer {
 	mat4 bones[];
 };
@@ -68,7 +58,7 @@ mat4 skinning()
 	mat4 transMat = mat4(0.0);
 	for(int i=0; i<4; i++)
 	{
-		if(inBoneID[i] >= 0) 
+		if(inBoneID[i] != 255) 
 		{
 			transMat += inWeight[i] * bones[modelInfo.boneNum * int(gl_InstanceIndex) + inBoneID[i]];
 		}
@@ -81,13 +71,7 @@ mat4 skinning()
 void main()
 {
 	VSOut.Texcoord = inTexcoord.xyz;
-//	VSMaterial m = vsMaterial[inMaterialIndex];
-
-	vec3 offset = vec3(0.);
-//	if(m.HeightTex != 0) {
-//		offset = texture(sampler2D(m.HeightTex), VSOut.Texcoord.xy)*2.;
-//	}
-	vec4 pos = vec4((inPosition + offset).xyz, 1.0);
+	vec4 pos = vec4((inPosition).xyz, 1.0);
 	pos = skinning() * pos;
 	gl_Position = uProjection * uView * vec4(pos.xyz, 1.0);
 

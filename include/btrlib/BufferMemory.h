@@ -141,14 +141,15 @@ struct AllocatedMemory
 		vk::DeviceMemory m_memory_ref;
 		void* m_mapped_memory;
 	};
-
 	std::shared_ptr<Resource> m_resource;
+public:
 	vk::DescriptorBufferInfo getBufferInfo()const { return m_buffer_info; }
 	vk::Buffer getBuffer()const { return m_buffer_info.buffer; }
 	vk::DeviceSize getSize()const { return m_buffer_info.range; }
 	vk::DeviceSize getOffset()const { return m_buffer_info.offset; }
 	vk::DeviceMemory getDeviceMemory()const { return m_resource->m_memory_ref; }
 	void* getMappedPtr()const { return m_resource->m_mapped_memory; }
+	template<typename T> T* getMappedPtr(size_t offset_num)const { return static_cast<T*>(m_resource->m_mapped_memory)+offset_num; }
 };
 struct BufferMemory
 {
@@ -180,15 +181,6 @@ struct BufferMemory
 		device.getGPU();
 		resource->m_device = device;
 
-		auto limits = device.getGPU().getProperties().limits;
-		vk::DeviceSize align = 16;
-		if (btr::isOn(flag, vk::BufferUsageFlagBits::eStorageBuffer)) {
-			align = std::max(align, limits.minStorageBufferOffsetAlignment);
-		}
-		if (btr::isOn(flag, vk::BufferUsageFlagBits::eUniformBuffer)) {
-			align = std::max(align, limits.minUniformBufferOffsetAlignment);
-		}
-		resource->m_free_zone.setup(size, align);
 		vk::BufferCreateInfo buffer_info;
 		buffer_info.usage = flag;
 		buffer_info.size = size;
@@ -200,6 +192,8 @@ struct BufferMemory
 		memory_alloc.setMemoryTypeIndex(cGPU::Helper::getMemoryTypeIndex(device.getGPU(), memory_request, memory_type));
 		resource->m_memory = device->allocateMemory(memory_alloc);
 		device->bindBufferMemory(resource->m_buffer, resource->m_memory, 0);
+
+		resource->m_free_zone.setup(size, memory_request.alignment);
 
 		resource->m_memory_alloc = memory_alloc;
 		resource->m_memory_request = memory_request;

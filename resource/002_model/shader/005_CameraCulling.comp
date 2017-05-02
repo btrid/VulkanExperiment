@@ -54,7 +54,6 @@ void main()
 	{ 
 		return;
 	} 
-
 	// instanceのincrement
 	// @Todo メッシュ単位のカリング
 	uint index = atomicAdd(modelInfo.instanceNum, 1);
@@ -62,5 +61,6 @@ void main()
 	for(int i=0; i<modelInfo.meshNum; i++) {
 		atomicAdd(meshs[i].instanceCount, 1);
 	}
+
 
 }

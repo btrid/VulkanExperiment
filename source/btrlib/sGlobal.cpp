@@ -35,6 +35,13 @@ sGlobal::sGlobal()
 
 			auto gpu_propaty = gpu->getProperties();
 			auto gpu_feature = gpu->getFeatures();
+// 			auto memory_prop = gpu->getMemoryProperties();
+// 			for (uint32_t i = 0; i < memory_prop.memoryTypeCount; i++)
+// 			{
+// 				auto memory_type = memory_prop.memoryTypes[i];
+// 				auto memory_heap = memory_prop.memoryHeaps[memory_type.heapIndex];
+// 				printf("[%2d]%s %s size = %lld\n", i, vk::to_string(memory_type.propertyFlags).c_str(), vk::to_string(memory_heap.flags).c_str(), memory_heap.size);
+// 			}
 			auto queueFamilyProperty = gpu->getQueueFamilyProperties();
 			gpu.m_device_list.reserve(queueFamilyProperty.size());
 

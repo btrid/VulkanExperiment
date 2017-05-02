@@ -43,10 +43,7 @@ void main()
 	uint nodeIndexOffset = boneMap[index / modelInfo.boneNum] * modelInfo.nodeNum;
 	bones[index] 
 		= inv
-//		* nodeGlobalTransforms[nodeIndexOffset + boneInfo[boneInfoIndex].nodeIndex]
-//		* mat4(transpose(nodeGlobalTransforms[nodeIndexOffset + boneInfo[boneInfoIndex].nodeIndex]))
 		* nodeGlobalTransforms[nodeIndexOffset + boneInfo[boneInfoIndex].nodeIndex]
-//		* transpose(mat4(nodeGlobalTransforms[nodeIndexOffset + boneInfo[boneInfoIndex].nodeIndex].global))
 		* boneInfo[boneInfoIndex].boneOffset;
 
 }

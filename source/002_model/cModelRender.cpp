@@ -22,11 +22,10 @@ void ModelRender::setup(cModelRenderer&  renderer)
 			};
 
 			std::vector<vk::DescriptorBufferInfo> storagemBufferInfo = {
-//				m_resource->getBuffer(cModel::Resource::ModelBuffer::VS_MATERIAL).getBufferInfo(),
-				m_resource->getBuffer(cModel::Resource::ModelConstantBuffer::BONE_TRANSFORM).getBufferInfo(),
+				m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::BONE_TRANSFORM).getBufferInfo(),
 			};
 			std::vector<vk::DescriptorBufferInfo> fStoragemBufferInfo = {
-				m_resource->getBuffer(cModel::Resource::ModelConstantBuffer::MATERIAL).getBufferInfo(),
+				m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::MATERIAL).getBufferInfo(),
 			};
 			std::vector<vk::WriteDescriptorSet> write_descriptor_set =
 			{
@@ -129,7 +128,7 @@ void ModelRender::setup(cModelRenderer&  renderer)
 			std::vector<vk::DescriptorBufferInfo> storages =
 			{
 				m_resource->getMotionBuffer(cAnimation::ANIMATION_INFO).getBufferInfo(),
-				m_resource->getBuffer(cModel::Resource::ModelConstantBuffer::PLAYING_ANIMATION).getBufferInfo(),
+				m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::PLAYING_ANIMATION).getBufferInfo(),
 			};
 			desc = vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
@@ -157,8 +156,8 @@ void ModelRender::setup(cModelRenderer&  renderer)
 			std::vector<vk::DescriptorBufferInfo> storages =
 			{
 				m_resource->getMotionBuffer(cAnimation::ANIMATION_INFO).getBufferInfo(),
-				m_resource->getBuffer(cModel::Resource::ModelConstantBuffer::PLAYING_ANIMATION).getBufferInfo(),
-				m_resource->getBuffer(cModel::Resource::ModelConstantBuffer::NODE_LOCAL_TRANSFORM).getBufferInfo(),
+				m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::PLAYING_ANIMATION).getBufferInfo(),
+				m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::NODE_LOCAL_TRANSFORM).getBufferInfo(),
 			};
 			desc = vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
@@ -201,9 +200,9 @@ void ModelRender::setup(cModelRenderer&  renderer)
 			std::vector<vk::DescriptorBufferInfo> storages =
 			{
 				m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::WORLD).getBufferInfo(),
-				m_resource->getBuffer(cModel::Resource::ModelConstantBuffer::NODE_INFO).getBufferInfo(),
-				m_resource->getBuffer(cModel::Resource::ModelConstantBuffer::NODE_LOCAL_TRANSFORM).getBufferInfo(),
-				m_resource->getBuffer(cModel::Resource::ModelConstantBuffer::NODE_GLOBAL_TRANSFORM).getBufferInfo(),
+				m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::NODE_INFO).getBufferInfo(),
+				m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::NODE_LOCAL_TRANSFORM).getBufferInfo(),
+				m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::NODE_GLOBAL_TRANSFORM).getBufferInfo(),
 			};
 			desc = vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
@@ -230,9 +229,9 @@ void ModelRender::setup(cModelRenderer&  renderer)
 			std::vector<vk::DescriptorBufferInfo> storages =
 			{
 				m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::WORLD).getBufferInfo(),
-				m_resource->getBuffer(cModel::Resource::ModelConstantBuffer::NODE_INFO).getBufferInfo(),
-				m_resource->getBuffer(cModel::Resource::ModelConstantBuffer::BONE_INFO).getBufferInfo(),
-				m_resource->getBuffer(cModel::Resource::ModelConstantBuffer::BONE_MAP).getBufferInfo(),
+				m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::NODE_INFO).getBufferInfo(),
+				m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::BONE_INFO).getBufferInfo(),
+				m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::BONE_MAP).getBufferInfo(),
 				m_resource->mMesh.m_indirect_buffer.getBufferInfo(),
 				m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::MODEL_INFO).getBufferInfo(),
 			};
@@ -261,10 +260,10 @@ void ModelRender::setup(cModelRenderer&  renderer)
 
 			std::vector<vk::DescriptorBufferInfo> storages =
 			{
-				m_resource->getBuffer(cModel::Resource::ModelConstantBuffer::NODE_GLOBAL_TRANSFORM).getBufferInfo(),
-				m_resource->getBuffer(cModel::Resource::ModelConstantBuffer::BONE_INFO).getBufferInfo(),
-				m_resource->getBuffer(cModel::Resource::ModelConstantBuffer::BONE_MAP).getBufferInfo(),
-				m_resource->getBuffer(cModel::Resource::ModelConstantBuffer::BONE_TRANSFORM).getBufferInfo(),
+				m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::NODE_GLOBAL_TRANSFORM).getBufferInfo(),
+				m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::BONE_INFO).getBufferInfo(),
+				m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::BONE_MAP).getBufferInfo(),
+				m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::BONE_TRANSFORM).getBufferInfo(),
 			};
 			desc = vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
@@ -280,18 +279,72 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 {
 	// bufferの更新
 	{
-		std::vector<glm::mat4> world;
-		world.reserve(m_model.size());
-		for (auto& m : m_model)
+		// world
 		{
-			world.push_back(m->getInstance()->m_world);
-		}
-		m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::WORLD).subupdate(world.data(), vector_sizeof(world), 0);
-		m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::WORLD).copyTo();
+			auto& staging = m_resource->m_world_staging_buffer;
+			auto* world_ptr = static_cast<glm::mat4*>(staging.getMappedPtr()) + m_resource->m_model_info.mInstanceMaxNum*sGlobal::Order().getCurrentFrame();
+			for (auto& m : m_model)
+			{
+				*world_ptr = m->getInstance()->m_world;
+				world_ptr++;
+			}
+			auto& buffer = m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::WORLD);
 
-		int32_t instance_num = m_model.size();
-		m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::MODEL_INFO).subupdate(&instance_num, offsetof(cModel::ModelInfo, mInstanceAliveNum), 4);
-		m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::MODEL_INFO).copyTo();
+			vk::BufferMemoryBarrier to_copy_barrier;
+			to_copy_barrier.setBuffer(buffer.getBuffer());
+			to_copy_barrier.setOffset(buffer.getOffset());
+			to_copy_barrier.setSize(buffer.getSize());
+			to_copy_barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
+			to_copy_barrier.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, { to_copy_barrier }, {});
+
+			vk::BufferCopy copy_info;
+			copy_info.setSize(m_model.size() * sizeof(glm::mat4));
+			copy_info.setSrcOffset(staging.getOffset() + sizeof(glm::mat4) * m_resource->m_model_info.mInstanceMaxNum* sGlobal::Order().getCurrentFrame());
+			copy_info.setDstOffset(buffer.getOffset());
+			cmd.copyBuffer(staging.getBuffer(), buffer.getBuffer(), copy_info);
+
+			vk::BufferMemoryBarrier to_shader_read_barrier;
+			to_shader_read_barrier.setBuffer(buffer.getBuffer());
+			to_shader_read_barrier.setOffset(buffer.getOffset());
+			to_shader_read_barrier.setSize(copy_info.size);
+			to_shader_read_barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+			to_shader_read_barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, { to_shader_read_barrier }, {});
+		}
+		{
+			// instance num
+			auto& buffer = m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::MODEL_INFO);
+			auto& staging = m_resource->m_model_info_staging_buffer;
+			auto* model_info_ptr = staging.getMappedPtr<cModel::ModelInfo>(sGlobal::Order().getCurrentFrame());
+			int32_t instance_num = m_model.size();
+			model_info_ptr[0] = m_resource->m_model_info;
+			model_info_ptr[0].mInstanceAliveNum = instance_num;
+			model_info_ptr[0].mInstanceNum = 0;
+
+			vk::BufferMemoryBarrier to_copy_barrier;
+			to_copy_barrier.setBuffer(buffer.getBuffer());
+			to_copy_barrier.setOffset(buffer.getOffset());
+			to_copy_barrier.setSize(sizeof(cModel::ModelInfo));
+			to_copy_barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
+			to_copy_barrier.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, { to_copy_barrier }, {});
+
+			vk::BufferCopy copy_info;
+			copy_info.setSize(sizeof(cModel::ModelInfo));
+			copy_info.setSrcOffset(staging.getOffset() + sizeof(cModel::ModelInfo) * sGlobal::Order().getCurrentFrame());
+			copy_info.setDstOffset(buffer.getOffset());
+			cmd.copyBuffer(staging.getBuffer(), buffer.getBuffer(), copy_info);
+
+			vk::BufferMemoryBarrier to_shader_read_barrier;
+			to_shader_read_barrier.setBuffer(buffer.getBuffer());
+			to_shader_read_barrier.setOffset(buffer.getOffset());
+			to_shader_read_barrier.setSize(sizeof(cModel::ModelInfo));
+			to_shader_read_barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+			to_shader_read_barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, { to_shader_read_barrier }, {});
+		}
+
 	}
 
 	std::vector<vk::BufferMemoryBarrier> to_clear_barrier =
@@ -300,12 +353,14 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 		.setSrcAccessMask(vk::AccessFlagBits::eIndirectCommandRead)
 		.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
 		.setBuffer(m_resource->mMesh.m_indirect_buffer.getBuffer())
-		.setSize(m_resource->mMesh.m_indirect_buffer.getBufferSize()),
+		.setSize(m_resource->mMesh.m_indirect_buffer.getBufferSize())
+		.setOffset(m_resource->mMesh.m_indirect_buffer.getBufferInfo().offset),
 		vk::BufferMemoryBarrier()
 		.setSrcAccessMask(vk::AccessFlagBits::eShaderRead)
 		.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
-		.setBuffer(m_resource->getBuffer(cModel::Resource::ModelConstantBuffer::BONE_TRANSFORM).getBuffer())
-		.setSize(m_resource->getBuffer(cModel::Resource::ModelConstantBuffer::BONE_TRANSFORM).getBufferSize())
+		.setBuffer(m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::BONE_TRANSFORM).getBuffer())
+		.setSize(m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::BONE_TRANSFORM).getSize())
+		.setOffset(m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::BONE_TRANSFORM).getOffset())
 	};
 
 	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands,
@@ -314,11 +369,55 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 	auto& pipeline = renderer.getComputePipeline();
 	for (size_t i = 0; i < pipeline.m_pipeline_layout.size(); i++)
 	{
+
+// 		if (i == 4)
+// 		{
+// 			// 
+// 			std::vector<vk::BufferMemoryBarrier> barrier =
+// 			{
+// 				vk::BufferMemoryBarrier()
+// 				.setSrcAccessMask(vk::AccessFlagBits::eShaderRead)
+// 				.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
+// 				.setBuffer(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::MODEL_INFO).getBuffer())
+// 				.setOffset(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::MODEL_INFO).getOffset())
+// 				.setSize(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::MODEL_INFO).getSize()),
+// 				vk::BufferMemoryBarrier()
+// 				.setSrcAccessMask(vk::AccessFlagBits::eShaderRead)
+// 				.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
+// 				.setBuffer(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::BONE_MAP).getBuffer())
+// 				.setOffset(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::BONE_MAP).getOffset())
+// 				.setSize(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::BONE_MAP).getSize()),
+// 				vk::BufferMemoryBarrier()
+// 				.setSrcAccessMask(vk::AccessFlagBits::eShaderRead)
+// 				.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
+// 				.setBuffer(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::BONE_TRANSFORM).getBuffer())
+// 				.setOffset(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::BONE_TRANSFORM).getOffset())
+// 				.setSize(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::BONE_TRANSFORM).getSize()),
+// 			};
+// 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
+// 				vk::DependencyFlags(), {}, barrier, {});
+//
+	//	}
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, pipeline.m_pipeline[i]);
 	 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipeline.m_pipeline_layout[i], 0, m_compute_descriptor_set[i], {});
-		cmd.dispatchIndirect(m_resource->m_compute_indirect_buffer.getBuffer(), i * 12);
+		cmd.dispatchIndirect(m_resource->m_compute_indirect_buffer.getBuffer(), m_resource->m_compute_indirect_buffer.getBufferInfo().offset + i* 12);
 
-		if (i == 4) 
+
+// 		if (i == 3)
+// 		{ 
+// 			std::vector<vk::BufferMemoryBarrier> barrier =
+// 			{
+// 				vk::BufferMemoryBarrier()
+// 				.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
+// 				.setDstAccessMask(vk::AccessFlagBits::eShaderRead)
+// 				.setBuffer(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::NODE_LOCAL_TRANSFORM).getBuffer())
+// 				.setOffset(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::NODE_LOCAL_TRANSFORM).getOffset())
+// 				.setSize(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::NODE_LOCAL_TRANSFORM).getSize()),
+// 			};
+// 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
+// 				vk::DependencyFlags(), {}, barrier, {});
+//  		}
+		if (i == 4)
 		{
 			// 
 			std::vector<vk::BufferMemoryBarrier> barrier =
@@ -327,11 +426,23 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 				.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
 				.setDstAccessMask(vk::AccessFlagBits::eShaderRead)
 				.setBuffer(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::MODEL_INFO).getBuffer())
-				.setSize(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::MODEL_INFO).getBufferInfo().range),
+				.setOffset(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::MODEL_INFO).getOffset())
+				.setSize(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::MODEL_INFO).getSize()),
+				vk::BufferMemoryBarrier()
+				.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
+				.setDstAccessMask(vk::AccessFlagBits::eShaderRead)
+				.setBuffer(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::BONE_MAP).getBuffer())
+				.setOffset(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::BONE_MAP).getOffset())
+				.setSize(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::BONE_MAP).getSize()),
+// 				vk::BufferMemoryBarrier()
+// 				.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
+// 				.setDstAccessMask(vk::AccessFlagBits::eShaderRead)
+// 				.setBuffer(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::NODE_GLOBAL_TRANSFORM).getBuffer())
+// 				.setOffset(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::NODE_GLOBAL_TRANSFORM).getOffset())
+// 				.setSize(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::NODE_GLOBAL_TRANSFORM).getSize()),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
 				vk::DependencyFlags(), {}, barrier, {});
-
 		}
 	}
 	std::vector<vk::BufferMemoryBarrier> to_draw_barrier =
@@ -339,12 +450,14 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 		vk::BufferMemoryBarrier()
 		.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
 		.setDstAccessMask(vk::AccessFlagBits::eShaderRead)
-		.setBuffer(m_resource->getBuffer(cModel::Resource::ModelConstantBuffer::BONE_TRANSFORM).getBuffer())
-		.setSize(m_resource->getBuffer(cModel::Resource::ModelConstantBuffer::BONE_TRANSFORM).getBufferInfo().range),
+		.setBuffer(m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::BONE_TRANSFORM).getBuffer())
+		.setOffset(m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::BONE_TRANSFORM).getOffset())
+		.setSize(m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::BONE_TRANSFORM).getSize()),
 		vk::BufferMemoryBarrier()
 		.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
 		.setDstAccessMask(vk::AccessFlagBits::eIndirectCommandRead)
 		.setBuffer(m_resource->mMesh.m_indirect_buffer.getBuffer())
+		.setOffset(m_resource->mMesh.m_indirect_buffer.getBufferInfo().offset)
 		.setSize(m_resource->mMesh.m_indirect_buffer.getBufferSize())
 	};
 
@@ -362,8 +475,8 @@ void ModelRender::draw(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 	for (auto i : m_resource->m_material_index)
 	{
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, renderer.getDrawPipeline().m_pipeline_layout, 1, m_draw_descriptor_set_per_mesh[i], {});
- 		cmd.bindVertexBuffers(0, { m_resource->mMesh.m_vertex_buffer_ex.getBuffer() }, { m_resource->mMesh.m_vertex_buffer_ex.getBufferInfo().offset });
- 		cmd.bindIndexBuffer(m_resource->mMesh.m_index_buffer_ex.getBuffer(), m_resource->mMesh.m_index_buffer_ex.getBufferInfo().offset, m_resource->mMesh.mIndexType);
- 		cmd.drawIndexedIndirect(m_resource->mMesh.m_indirect_buffer.getBuffer(), vk::DeviceSize(0), m_resource->mMesh.mIndirectCount, sizeof(cModel::Mesh));
+ 		cmd.bindVertexBuffers(0, { m_resource->mMesh.m_vertex_buffer_ex.getBuffer() }, { m_resource->mMesh.m_vertex_buffer_ex.getOffset() });
+ 		cmd.bindIndexBuffer(m_resource->mMesh.m_index_buffer_ex.getBuffer(), m_resource->mMesh.m_index_buffer_ex.getOffset(), m_resource->mMesh.mIndexType);
+ 		cmd.drawIndexedIndirect(m_resource->mMesh.m_indirect_buffer.getBuffer(), m_resource->mMesh.m_indirect_buffer.getBufferInfo().offset, m_resource->mMesh.mIndirectCount, sizeof(cModel::Mesh));
 	}
 }
