@@ -149,7 +149,7 @@ public:
 	vk::DeviceSize getOffset()const { return m_buffer_info.offset; }
 	vk::DeviceMemory getDeviceMemory()const { return m_resource->m_memory_ref; }
 	void* getMappedPtr()const { return m_resource->m_mapped_memory; }
-	template<typename T> T* getMappedPtr(size_t offset_num)const { return static_cast<T*>(m_resource->m_mapped_memory)+offset_num; }
+	template<typename T> T* getMappedPtr(size_t offset_num = 0)const { return static_cast<T*>(m_resource->m_mapped_memory)+offset_num; }
 };
 struct BufferMemory
 {
@@ -167,6 +167,8 @@ struct BufferMemory
 		vk::MemoryType m_memory_type;
 
 		void* m_mapped_memory;
+
+		std::string m_name;
 		~Resource()
 		{
 		}
@@ -175,6 +177,7 @@ struct BufferMemory
 
 	bool isValid()const { return m_resource.get(); }
 
+	void setName(const std::string& name) { m_resource->m_name = name; }
 	void setup(const cDevice& device, vk::BufferUsageFlags flag, vk::MemoryPropertyFlags memory_type, vk::DeviceSize size)
 	{
 		auto resource = std::make_shared<Resource>();
@@ -214,9 +217,32 @@ struct BufferMemory
 		setup(device, flag, vk::MemoryPropertyFlagBits::eDeviceLocal, size);
 	}
 
+	enum class AttributeFlagBits : uint32_t
+	{
+		SHORT_LIVE_BIT = 1<<0,
+		MEMORY_UPDATE_ALL_PER_FRAME_BIT = 1 << 1,
+		MEMORY_CONSTANT = 1 << 2,
+	};
+	using AttributeFlags = vk::Flags<AttributeFlagBits, uint32_t>;
+	struct Argument
+	{
+		vk::DeviceSize size;
+		AttributeFlags attribute;
+		Argument()
+			: size(0)
+			, attribute(AttributeFlags())
+		{}
+	};
 	AllocatedMemory allocateMemory(vk::DeviceSize size)
 	{
-		auto zone = m_resource->m_free_zone.alloc(size);
+		Argument arg;
+		arg.size = size;
+		arg.attribute = AttributeFlags();
+		return allocateMemory(arg);
+	}
+	AllocatedMemory allocateMemory(Argument arg)
+	{
+		auto zone = m_resource->m_free_zone.alloc(arg.size);
 		assert(zone.isValid());
 
 		AllocatedMemory alloc;
@@ -230,7 +256,7 @@ struct BufferMemory
 		alloc.m_resource->m_memory_ref = m_resource->m_memory;
 		alloc.m_buffer_info.buffer = m_resource->m_buffer;
 		alloc.m_buffer_info.offset = alloc.m_resource->m_zone.m_start;
-		alloc.m_buffer_info.range = size;
+		alloc.m_buffer_info.range = arg.size;
 
 		alloc.m_resource->m_mapped_memory = nullptr;
 		if (m_resource->m_mapped_memory)

@@ -99,7 +99,7 @@ void ModelRender::setup(cModelRenderer&  renderer)
 			std::vector<vk::DescriptorBufferInfo> storages =
 			{
 				m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::MODEL_INFO).getBufferInfo(),
-				m_resource->mMesh.m_indirect_buffer.getBufferInfo(),
+				m_resource->mMesh.m_indirect_buffer_ex.getBufferInfo(),
 			};
 
 			desc = vk::WriteDescriptorSet()
@@ -232,7 +232,7 @@ void ModelRender::setup(cModelRenderer&  renderer)
 				m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::NODE_INFO).getBufferInfo(),
 				m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::BONE_INFO).getBufferInfo(),
 				m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::BONE_MAP).getBufferInfo(),
-				m_resource->mMesh.m_indirect_buffer.getBufferInfo(),
+				m_resource->mMesh.m_indirect_buffer_ex.getBufferInfo(),
 				m_resource->getBuffer(cModel::Resource::ModelStorageBuffer::MODEL_INFO).getBufferInfo(),
 			};
 			desc = vk::WriteDescriptorSet()
@@ -352,9 +352,9 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 		vk::BufferMemoryBarrier()
 		.setSrcAccessMask(vk::AccessFlagBits::eIndirectCommandRead)
 		.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
-		.setBuffer(m_resource->mMesh.m_indirect_buffer.getBuffer())
-		.setSize(m_resource->mMesh.m_indirect_buffer.getBufferSize())
-		.setOffset(m_resource->mMesh.m_indirect_buffer.getBufferInfo().offset),
+		.setBuffer(m_resource->mMesh.m_indirect_buffer_ex.getBuffer())
+		.setSize(m_resource->mMesh.m_indirect_buffer_ex.getSize())
+		.setOffset(m_resource->mMesh.m_indirect_buffer_ex.getOffset()),
 		vk::BufferMemoryBarrier()
 		.setSrcAccessMask(vk::AccessFlagBits::eShaderRead)
 		.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
@@ -456,9 +456,9 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 		vk::BufferMemoryBarrier()
 		.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
 		.setDstAccessMask(vk::AccessFlagBits::eIndirectCommandRead)
-		.setBuffer(m_resource->mMesh.m_indirect_buffer.getBuffer())
-		.setOffset(m_resource->mMesh.m_indirect_buffer.getBufferInfo().offset)
-		.setSize(m_resource->mMesh.m_indirect_buffer.getBufferSize())
+		.setBuffer(m_resource->mMesh.m_indirect_buffer_ex.getBuffer())
+		.setOffset(m_resource->mMesh.m_indirect_buffer_ex.getOffset())
+		.setSize(m_resource->mMesh.m_indirect_buffer_ex.getSize())
 	};
 
 	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands,
@@ -477,6 +477,6 @@ void ModelRender::draw(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, renderer.getDrawPipeline().m_pipeline_layout, 1, m_draw_descriptor_set_per_mesh[i], {});
  		cmd.bindVertexBuffers(0, { m_resource->mMesh.m_vertex_buffer_ex.getBuffer() }, { m_resource->mMesh.m_vertex_buffer_ex.getOffset() });
  		cmd.bindIndexBuffer(m_resource->mMesh.m_index_buffer_ex.getBuffer(), m_resource->mMesh.m_index_buffer_ex.getOffset(), m_resource->mMesh.mIndexType);
- 		cmd.drawIndexedIndirect(m_resource->mMesh.m_indirect_buffer.getBuffer(), m_resource->mMesh.m_indirect_buffer.getBufferInfo().offset, m_resource->mMesh.mIndirectCount, sizeof(cModel::Mesh));
+ 		cmd.drawIndexedIndirect(m_resource->mMesh.m_indirect_buffer_ex.getBuffer(), m_resource->mMesh.m_indirect_buffer_ex.getOffset(), m_resource->mMesh.mIndirectCount, sizeof(cModel::Mesh));
 	}
 }

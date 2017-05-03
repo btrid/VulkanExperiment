@@ -67,12 +67,10 @@ struct TmpCmd
 };
 struct cMeshResource 
 {
-	ConstantBuffer m_indirect_buffer;
-	vk::IndexType mIndexType;
-
 	btr::AllocatedMemory m_vertex_buffer_ex;
 	btr::AllocatedMemory m_index_buffer_ex;
 	btr::AllocatedMemory m_indirect_buffer_ex;
+	vk::IndexType mIndexType;
 	int32_t mIndirectCount;
 
 };
@@ -172,7 +170,7 @@ struct cAnimation
 		ANIMATION_INFO,
 		NUM,
 	};
-	std::array<ConstantBuffer, MotionBuffer::NUM> mMotionBuffer;
+	std::array<btr::AllocatedMemory, MotionBuffer::NUM> mMotionBuffer;
 
 	cAnimation() = default;
 
@@ -401,7 +399,6 @@ public:
 			NODE_INFO,
 			BONE_INFO,
 			PLAYING_ANIMATION,
-			INDIRECT,
 			MATERIAL_INDEX,
 			MATERIAL,
 			VS_MATERIAL,	// vertex stage material
@@ -437,13 +434,13 @@ public:
 		RootNode mNodeRoot;
 		std::vector<Bone> mBone;
 
-		ConstantBuffer m_compute_indirect_buffer;
+		btr::AllocatedMemory m_compute_indirect_buffer;
 
 		const btr::AllocatedMemory& getBuffer(ModelStorageBuffer buffer)const { return m_storage_buffer[static_cast<s32>(buffer)]; }
 		btr::AllocatedMemory& getBuffer(ModelStorageBuffer buffer) { return m_storage_buffer[static_cast<s32>(buffer)]; }
 
-		const ConstantBuffer& getMotionBuffer(cAnimation::MotionBuffer buffer)const { return m_animation_buffer.mMotionBuffer[buffer]; }
-		ConstantBuffer& getMotionBuffer(cAnimation::MotionBuffer buffer) { return m_animation_buffer.mMotionBuffer[buffer]; }
+		const btr::AllocatedMemory& getMotionBuffer(cAnimation::MotionBuffer buffer)const { return m_animation_buffer.mMotionBuffer[buffer]; }
+		btr::AllocatedMemory& getMotionBuffer(cAnimation::MotionBuffer buffer) { return m_animation_buffer.mMotionBuffer[buffer]; }
 
 		cAnimation& getAnimation() { return m_animation_buffer; }
 
@@ -462,6 +459,19 @@ public:
 		glm::mat4 m_world;
 	};
 	std::unique_ptr<Instance> m_instance;
+
+	struct Loader
+	{
+		cDevice m_device;
+		btr::BufferMemory m_vertex_memory;
+		btr::BufferMemory m_storage_memory;
+		btr::BufferMemory m_storage_uniform_memory;
+		btr::BufferMemory m_staging_memory;
+		std::vector<btr::AllocatedMemory> m_staging_memory_holder;
+
+		vk::CommandBuffer m_cmd;
+	};
+	std::unique_ptr<Loader> m_loader;
 	static ResourceManager<Resource> s_manager;
 
 public:

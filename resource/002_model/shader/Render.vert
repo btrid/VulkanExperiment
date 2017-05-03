@@ -31,8 +31,8 @@ out gl_PerVertex{
 struct Vertex
 {
 //	flat int MaterialIndex;
-	vec3 Position;
-	vec3 Normal;
+//	vec3 Position;
+//	vec3 Normal;
 	vec3 Texcoord;
 };
 layout(location = 0) out Vertex VSOut;
@@ -75,6 +75,6 @@ void main()
 	pos = skinning() * pos;
 	gl_Position = uProjection * uView * vec4(pos.xyz, 1.0);
 
-	VSOut.Normal = /*m.NormalTex != 0 ? texture(sampler2D(m.NormalTex), VSOut.Texcoord.xy).xyz : */inNormal.xyz;
+//	VSOut.Normal = /*m.NormalTex != 0 ? texture(sampler2D(m.NormalTex), VSOut.Texcoord.xy).xyz : */inNormal.xyz;
 
 }

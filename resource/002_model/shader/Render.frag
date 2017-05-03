@@ -15,8 +15,8 @@ layout(early_fragment_tests) in;
 struct Vertex
 {
 //	flat int MaterialIndex;
-	vec3 Position;
-	vec3 Normal;
+//	vec3 Position;
+//	vec3 Normal;
 	vec3 Texcoord;
 };
 layout(location = 0) in Vertex FSIn;

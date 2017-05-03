@@ -561,39 +561,54 @@ std::vector<cModel::NodeInfo> loadNodeInfo(aiNode* ainode)
 	return nodeBuffer;
 }
 
-void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& root)
+void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& root, cModel::Loader* loader)
 {
 	if (!scene->HasAnimations()) {
 		return;
 	}
-	const cGPU& gpu = sThreadLocal::Order().m_gpu;
-	auto devices = gpu.getDevice(vk::QueueFlagBits::eGraphics | vk::QueueFlagBits::eCompute);
-	auto share_family_index = gpu.getQueueFamilyIndexList(vk::QueueFlagBits::eGraphics | vk::QueueFlagBits::eCompute);
-	auto device = devices[0];
 
-	std::vector<cModel::AnimationInfo> animation_info_list;
-	animation_info_list.reserve(scene->mNumAnimations);
-
-	for (size_t j = 0; j < scene->mNumAnimations; j++)
+	btr::BufferMemory::Argument staging_arg;
+	staging_arg.size = sizeof(cModel::AnimationInfo) * scene->mNumAnimations;
+//	staging_arg.attribute = btr::BufferMemory::AttributeFlagBits::MEMORY_CONSTANT;
+	auto staging = loader->m_staging_memory.allocateMemory(staging_arg);
+	auto* staging_ptr = staging.getMappedPtr<cModel::AnimationInfo>();
+	for (size_t i = 0; i < scene->mNumAnimations; i++)
 	{
-		aiAnimation* anim = scene->mAnimations[j]; 
+		aiAnimation* anim = scene->mAnimations[i]; 
 		{
-			anim_buffer.m_motion_texture = create(device, anim, root);
+			anim_buffer.m_motion_texture = create(loader->m_device, anim, root);
 		}
 
-		cModel::AnimationInfo animation;
+		cModel::AnimationInfo& animation = staging_ptr[i];
 		animation.maxTime_ = (float)anim->mDuration;
 		animation.ticksPerSecond_ = (float)anim->mTicksPerSecond;
-		animation.numInfo_ = anim->mNumChannels;
-		animation.offsetInfo_ = animation_info_list.empty() ? 0 : animation_info_list.back().offsetInfo_ + animation_info_list.back().numInfo_;
-		animation_info_list.push_back(animation);
 
 	}
 
 	// AnimeInfo
 	{
 		auto& buffer = anim_buffer.mMotionBuffer[cAnimation::ANIMATION_INFO];
-		buffer.create(gpu, device, animation_info_list, vk::BufferUsageFlagBits::eStorageBuffer);
+		btr::BufferMemory::Argument arg;
+		arg.size = sizeof(cModel::AnimationInfo) * scene->mNumAnimations;
+//		arg.attribute = btr::BufferMemory::AttributeFlagBits::MEMORY_CONSTANT;
+		buffer = loader->m_storage_uniform_memory.allocateMemory(arg);
+
+		vk::BufferCopy copy_info;
+		copy_info.setSize(staging.getSize());
+		copy_info.setSrcOffset(staging.getOffset());
+		copy_info.setDstOffset(buffer.getOffset());
+		loader->m_cmd.copyBuffer(staging.getBuffer(), buffer.getBuffer(), copy_info);
+
+		vk::BufferMemoryBarrier barrier;
+		barrier.setBuffer(buffer.getBuffer());
+		barrier.setOffset(buffer.getOffset());
+		barrier.setSize(buffer.getSize());
+		barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+		loader->m_cmd.pipelineBarrier(
+			vk::PipelineStageFlagBits::eTransfer,
+			vk::PipelineStageFlagBits::eVertexInput,
+			vk::DependencyFlags(),
+			{}, { barrier }, {});
 	}
 
 }
@@ -615,11 +630,6 @@ void cModel::load(const std::string& filename)
 	}
 	auto s = std::chrono::system_clock::now();
 
-	struct Loader
-	{
-	};
-	std::unique_ptr<Loader> m_loader = std::make_unique<Loader>();
-
 	int OREORE_PRESET = 0
 		| aiProcess_JoinIdenticalVertices
 		| aiProcess_ImproveCacheLocality
@@ -640,20 +650,24 @@ void cModel::load(const std::string& filename)
 	}
 	sDebug::Order().print(sDebug::FLAG_LOG | sDebug::SOURCE_MODEL, "[Load Model %6.2fs] %s \n", timer.getElapsedTimeAsSeconds(), filename.c_str());
 
-	auto device = sThreadLocal::Order().m_device[sThreadLocal::DEVICE_GRAPHICS];
-	static btr::BufferMemory s_vertex_memory;
-	static std::once_flag s_flag;
-	std::call_once(s_flag, [&]() { s_vertex_memory.setup(device, vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal, 128 * 65536); });
-	static btr::BufferMemory s_storage_memory;
-	static std::once_flag s_flag_storage;
-	std::call_once(s_flag_storage, [&]() { s_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal, 1024 * 1024* 20); });
-	static btr::BufferMemory s_storage_uniform_memory;
-	static std::once_flag s_flag_storage_uniform;
-	std::call_once(s_flag_storage_uniform, [&]() { s_storage_uniform_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal, 256); });
-	static btr::BufferMemory s_staging_memory;
-	static std::once_flag s_flag_staging;
-	std::call_once(s_flag_staging, [&]() { s_staging_memory.setup(device, vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached, 1024 * 1024* 20); });
 
+	auto device = sThreadLocal::Order().m_device[sThreadLocal::DEVICE_GRAPHICS];
+	m_loader = std::make_unique<Loader>();
+	m_loader->m_device = device;
+	m_loader->m_vertex_memory.setup(device, vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal, 128 * 65536);
+	m_loader->m_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal, 1024 * 1024 * 20);
+	m_loader->m_storage_uniform_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal, 8192);
+	m_loader->m_staging_memory.setup(device, vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached, 1024 * 1024 * 20);
+
+	btr::BufferMemory s_vertex_memory = m_loader->m_vertex_memory;
+	btr::BufferMemory s_storage_memory = m_loader->m_storage_memory;
+	btr::BufferMemory s_storage_uniform_memory = m_loader->m_storage_uniform_memory;
+	btr::BufferMemory s_staging_memory = m_loader->m_staging_memory;
+
+	s_vertex_memory.setName("Model Vertex Memory");
+	s_storage_memory.setName("Model Storage Memory");
+	s_storage_uniform_memory.setName("Model Uniform Memory");
+	s_staging_memory.setName("Model Staging Memory");
 	int instanceNum = 1000;
 	{
 		// staging buffer
@@ -672,12 +686,13 @@ void cModel::load(const std::string& filename)
 	begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
 	cmd.begin(begin_info);
 
+	m_loader->m_cmd = cmd;
 	// èâä˙âª
 	m_resource->mMeshNum = scene->mNumMeshes;
 	m_resource->m_material = loadMaterial(scene, filename, cmd);
 
 	m_resource->mNodeRoot = loadNode(scene);
-	loadMotion(m_resource->m_animation_buffer, scene, m_resource->mNodeRoot);
+	loadMotion(m_resource->m_animation_buffer, scene, m_resource->mNodeRoot, m_loader.get());
 
 	std::vector<NodeInfo> nodeInfo = loadNodeInfo(scene->mRootNode);
 
@@ -705,6 +720,8 @@ void cModel::load(const std::string& filename)
 	Vertex* vertex = static_cast<Vertex*>(staging_vertex.getMappedPtr());
 	memset(vertex, -1, staging_vertex.getSize());
 	size_t v_count = 0;
+	m_loader->m_staging_memory_holder.push_back(staging_vertex);
+	m_loader->m_staging_memory_holder.push_back(staging_index);
 	for (size_t i = 0; i < scene->mNumMeshes; i++)
 	{
 		aiMesh* mesh = scene->mMeshes[i];
@@ -795,42 +812,16 @@ void cModel::load(const std::string& filename)
 		{
 			mesh.m_vertex_buffer_ex = s_vertex_memory.allocateMemory(staging_vertex.getSize());
 			mesh.m_index_buffer_ex = s_vertex_memory.allocateMemory(staging_index.getSize());
-			vk::BufferCopy copy_info;
-			copy_info.setSize(staging_vertex.getSize());
-			copy_info.setSrcOffset(staging_vertex.getOffset());
-			copy_info.setDstOffset(mesh.m_vertex_buffer_ex.getOffset());
-			cmd.copyBuffer(staging_vertex.getBuffer(), mesh.m_vertex_buffer_ex.getBuffer(), copy_info);
 
-			vk::BufferMemoryBarrier vertex_barrier;
-			vertex_barrier.setBuffer(mesh.m_vertex_buffer_ex.getBuffer());
-			vertex_barrier.setOffset(mesh.m_vertex_buffer_ex.getOffset());
-			vertex_barrier.setSize(mesh.m_vertex_buffer_ex.getSize());
-			vertex_barrier.setDstAccessMask(vk::AccessFlagBits::eVertexAttributeRead);
+			btr::BufferMemory::Argument arg;
+			arg.size = sizeof(Mesh) * indexSize.size();
+			arg.attribute = btr::BufferMemory::AttributeFlags();
+			mesh.m_indirect_buffer_ex = s_vertex_memory.allocateMemory(arg);
 
-			copy_info.setSize(staging_index.getSize());
-			copy_info.setSrcOffset(staging_index.getOffset());
-			copy_info.setDstOffset(mesh.m_index_buffer_ex.getOffset());
-			cmd.copyBuffer(staging_index.getBuffer(), mesh.m_index_buffer_ex.getBuffer(), copy_info);
-
-			vk::BufferMemoryBarrier index_barrier;
-			index_barrier.setBuffer(mesh.m_index_buffer_ex.getBuffer());
-			index_barrier.setOffset(mesh.m_index_buffer_ex.getOffset());
-			index_barrier.setSize(mesh.m_index_buffer_ex.getSize());
-			index_barrier.setDstAccessMask(vk::AccessFlagBits::eIndexRead);
-			cmd.pipelineBarrier(
-				vk::PipelineStageFlagBits::eTransfer,
-				vk::PipelineStageFlagBits::eVertexInput,
-				vk::DependencyFlags(),
-				{}, { vertex_barrier, index_barrier }, {});
-
-			mesh.mIndexType = index_type;
-		}
-
-		// indirect
-		{
-			std::vector<Mesh> indirect(indexSize.size());
+			auto staging_indirect = s_staging_memory.allocateMemory(arg);
+			auto* indirect = staging_indirect.getMappedPtr<Mesh>(0);
 			int offset = 0;
-			for (size_t i = 0; i < indirect.size(); i++) {
+			for (size_t i = 0; i < indexSize.size(); i++) {
 				indirect[i].m_draw_cmd.indexCount = indexSize[i];
 				indirect[i].m_draw_cmd.firstIndex = offset;
 				indirect[i].m_draw_cmd.instanceCount = 1000;
@@ -838,14 +829,57 @@ void cModel::load(const std::string& filename)
 				indirect[i].m_draw_cmd.firstInstance = 0;
 				offset += indexSize[i];
 			}
-			mesh.mIndirectCount = (int32_t)indirect.size();
-			mesh.m_indirect_buffer.create(gpu, device, indirect, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer);
+			m_loader->m_staging_memory_holder.push_back(staging_indirect);
+			vk::BufferCopy copy_info;
+			copy_info.setSize(staging_vertex.getSize());
+			copy_info.setSrcOffset(staging_vertex.getOffset());
+			copy_info.setDstOffset(mesh.m_vertex_buffer_ex.getOffset());
+			cmd.copyBuffer(staging_vertex.getBuffer(), mesh.m_vertex_buffer_ex.getBuffer(), copy_info);
+
+			copy_info.setSize(staging_index.getSize());
+			copy_info.setSrcOffset(staging_index.getOffset());
+			copy_info.setDstOffset(mesh.m_index_buffer_ex.getOffset());
+			cmd.copyBuffer(staging_index.getBuffer(), mesh.m_index_buffer_ex.getBuffer(), copy_info);
+
+			copy_info.setSize(staging_indirect.getSize());
+			copy_info.setSrcOffset(staging_indirect.getOffset());
+			copy_info.setDstOffset(mesh.m_indirect_buffer_ex.getOffset());
+			cmd.copyBuffer(staging_indirect.getBuffer(), mesh.m_indirect_buffer_ex.getBuffer(), copy_info);
+
+			vk::BufferMemoryBarrier vertex_barrier;
+			vertex_barrier.setBuffer(mesh.m_vertex_buffer_ex.getBuffer());
+			vertex_barrier.setOffset(mesh.m_vertex_buffer_ex.getOffset());
+			vertex_barrier.setSize(mesh.m_vertex_buffer_ex.getSize());
+			vertex_barrier.setDstAccessMask(vk::AccessFlagBits::eVertexAttributeRead);
+			vk::BufferMemoryBarrier index_barrier;
+			index_barrier.setBuffer(mesh.m_index_buffer_ex.getBuffer());
+			index_barrier.setOffset(mesh.m_index_buffer_ex.getOffset());
+			index_barrier.setSize(mesh.m_index_buffer_ex.getSize());
+			index_barrier.setDstAccessMask(vk::AccessFlagBits::eIndexRead);
+			vk::BufferMemoryBarrier indirect_barrier;
+			indirect_barrier.setBuffer(mesh.m_indirect_buffer_ex.getBuffer());
+			indirect_barrier.setOffset(mesh.m_indirect_buffer_ex.getOffset());
+			indirect_barrier.setSize(mesh.m_indirect_buffer_ex.getSize());
+			indirect_barrier.setDstAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
+			cmd.pipelineBarrier(
+				vk::PipelineStageFlagBits::eTransfer,
+				vk::PipelineStageFlagBits::eVertexInput,
+				vk::DependencyFlags(),
+				{}, { vertex_barrier, index_barrier}, {});
+			cmd.pipelineBarrier(
+				vk::PipelineStageFlagBits::eTransfer,
+				vk::PipelineStageFlagBits::eTopOfPipe,
+				vk::DependencyFlags(),
+				{}, { indirect_barrier }, {});
+
+			mesh.mIndexType = index_type;
+			mesh.mIndirectCount = (int32_t)indexSize.size();
 		}
 	}
 
 	// material
-	auto staging_material = s_staging_memory.allocateMemory(m_resource->m_material.size() * sizeof(MaterialBuffer));
 	{
+		auto staging_material = s_staging_memory.allocateMemory(m_resource->m_material.size() * sizeof(MaterialBuffer));
 		auto* mb = static_cast<MaterialBuffer*>(staging_material.getMappedPtr());
 		for (size_t i = 0; i < m_resource->m_material.size(); i++)
 		{
@@ -864,29 +898,32 @@ void cModel::load(const std::string& filename)
 		copy_info.setSrcOffset(staging_material.getOffset());
 		copy_info.setDstOffset(buffer.getOffset());
 		cmd.copyBuffer(staging_material.getBuffer(), buffer.getBuffer(), copy_info);
+
+		m_loader->m_staging_memory_holder.push_back(staging_material);
 	}
 
 	// node info
-	auto staging_node_info = s_staging_memory.allocateMemory(vector_sizeof(nodeInfo));
 	{
+		auto staging_node_info_buffer = s_staging_memory.allocateMemory(vector_sizeof(nodeInfo));
 		auto& buffer = m_resource->getBuffer(Resource::ModelStorageBuffer::NODE_INFO);
 		buffer = s_storage_memory.allocateMemory(vector_sizeof(nodeInfo));
 
-		memcpy_s(staging_node_info.getMappedPtr(), vector_sizeof(nodeInfo), nodeInfo.data(), vector_sizeof(nodeInfo));
+		memcpy_s(staging_node_info_buffer.getMappedPtr(), vector_sizeof(nodeInfo), nodeInfo.data(), vector_sizeof(nodeInfo));
 
 		vk::BufferCopy copy_info;
 		copy_info.setSize(vector_sizeof(nodeInfo));
-		copy_info.setSrcOffset(staging_node_info.getOffset());
+		copy_info.setSrcOffset(staging_node_info_buffer.getOffset());
 		copy_info.setDstOffset(buffer.getOffset());
-		cmd.copyBuffer(staging_node_info.getBuffer(), buffer.getBuffer(), copy_info);
+		cmd.copyBuffer(staging_node_info_buffer.getBuffer(), buffer.getBuffer(), copy_info);
+
+		m_loader->m_staging_memory_holder.push_back(staging_node_info_buffer);
 	}
 
-	btr::AllocatedMemory staging_bone_info;
 	if (!m_resource->mBone.empty())
 	{
 		// BoneInfo
 		{
-			staging_bone_info = s_staging_memory.allocateMemory(m_resource->mBone.size() * sizeof(BoneInfo));
+			btr::AllocatedMemory staging_bone_info = s_staging_memory.allocateMemory(m_resource->mBone.size() * sizeof(BoneInfo));
 			auto* bo = static_cast<BoneInfo*>(staging_bone_info.getMappedPtr());
 			for (size_t i = 0; i < m_resource->mBone.size(); i++) {
 				bo[i].mBoneOffset = m_resource->mBone[i].mOffset;
@@ -900,6 +937,8 @@ void cModel::load(const std::string& filename)
 			copy_info.setSrcOffset(staging_bone_info.getOffset());
 			copy_info.setDstOffset(buffer.getOffset());
 			cmd.copyBuffer(staging_bone_info.getBuffer(), buffer.getBuffer(), copy_info);
+
+			m_loader->m_staging_memory_holder.push_back(staging_bone_info);
 		}
 
 		// BoneTransform
@@ -910,8 +949,8 @@ void cModel::load(const std::string& filename)
 	}
 
 	// PlayingAnimation
-	auto staging_playing_animation = s_staging_memory.allocateMemory(instanceNum * sizeof(PlayingAnimation));
 	{
+		auto staging_playing_animation = s_staging_memory.allocateMemory(instanceNum * sizeof(PlayingAnimation));
 		auto* pa = static_cast<PlayingAnimation*>(staging_playing_animation.getMappedPtr());
 		for (int i = 0; i < instanceNum; i++)
 		{
@@ -929,11 +968,12 @@ void cModel::load(const std::string& filename)
 		copy_info.setSrcOffset(staging_playing_animation.getOffset());
 		copy_info.setDstOffset(buffer.getOffset());
 		cmd.copyBuffer(staging_playing_animation.getBuffer(), buffer.getBuffer(), copy_info);
+		m_loader->m_staging_memory_holder.push_back(staging_playing_animation);
 	}
 
 	// ModelInfo
-	auto staging_model_info = s_staging_memory.allocateMemory(sizeof(ModelInfo));
 	{
+		auto staging_model_info = s_staging_memory.allocateMemory(sizeof(ModelInfo));
 		auto& mi = *static_cast<ModelInfo*>(staging_model_info.getMappedPtr());
 		mi.mInstanceMaxNum = instanceNum;
 		mi.mInstanceAliveNum = 1000;
@@ -969,6 +1009,7 @@ void cModel::load(const std::string& filename)
 		copy_info.setDstOffset(buffer.getOffset());
 		cmd.copyBuffer(staging_model_info.getBuffer(), buffer.getBuffer(), copy_info);
 
+		m_loader->m_staging_memory_holder.push_back(staging_model_info);
 		m_resource->m_model_info = mi;
 	}
 
@@ -1005,6 +1046,12 @@ void cModel::load(const std::string& filename)
 	auto MeshNum = m_resource->mMeshNum;
 
 	{
+		// todo rendererÇ…à⁄ìÆ
+		auto& buffer = m_resource->m_compute_indirect_buffer;
+		buffer = s_vertex_memory.allocateMemory(sizeof(glm::ivec3) * 6);
+
+		auto staging_compute = s_staging_memory.allocateMemory(sizeof(glm::ivec3) * 6);
+		auto* group_ptr = static_cast<glm::ivec3*>(staging_compute.getMappedPtr());
 		int32_t local_size_x = 1024;
 		// shaderÇÃlocal_size_xÇ∆çáÇÌÇπÇÈ
 		std::vector<glm::ivec3> group =
@@ -1016,8 +1063,24 @@ void cModel::load(const std::string& filename)
 			glm::ivec3((instanceNum + local_size_x - 1)/local_size_x, 1, 1),
 			glm::ivec3((instanceNum*m_resource->m_model_info.mBoneNum + local_size_x - 1) / local_size_x, 1, 1),
 		};
+		memcpy_s(group_ptr, sizeof(glm::ivec3) * 6, group.data(), sizeof(glm::ivec3) * 6);
 
-		m_resource->m_compute_indirect_buffer.create(gpu, device, group, vk::BufferUsageFlagBits::eIndirectBuffer);
+		vk::BufferCopy copy_info;
+		copy_info.setSize(staging_compute.getSize());
+		copy_info.setSrcOffset(staging_compute.getOffset());
+		copy_info.setDstOffset(m_resource->m_compute_indirect_buffer.getOffset());
+		cmd.copyBuffer(staging_compute.getBuffer(), m_resource->m_compute_indirect_buffer.getBuffer(), copy_info);
+
+		vk::BufferMemoryBarrier dispatch_indirect_barrier;
+		dispatch_indirect_barrier.setBuffer(m_resource->m_compute_indirect_buffer.getBuffer());
+		dispatch_indirect_barrier.setOffset(m_resource->m_compute_indirect_buffer.getOffset());
+		dispatch_indirect_barrier.setSize(m_resource->m_compute_indirect_buffer.getSize());
+		dispatch_indirect_barrier.setDstAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
+		cmd.pipelineBarrier(
+			vk::PipelineStageFlagBits::eTransfer,
+			vk::PipelineStageFlagBits::eComputeShader,
+			vk::DependencyFlags(),
+			{}, { dispatch_indirect_barrier}, {});
 	}
 
 	cmd.end();
