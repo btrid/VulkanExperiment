@@ -9,5 +9,6 @@ glslc.exe -w -I Include -x glsl -fshader-stage=compute	-o binary\\005_CameraCull
 glslc.exe -w -I Include -x glsl -fshader-stage=compute	-o binary\\006_BoneTransform.comp.spv 006_BoneTransform.comp
 glslc.exe -w -I Include -x glsl -fshader-stage=vertex	-o binary\\Render.vert.spv Render.vert
 glslc.exe -w -I Include -x glsl -fshader-stage=fragment	-o binary\\Render.frag.spv Render.frag
+glslc.exe -w -I Include -x glsl -fshader-stage=fragment	-o binary\\RenderFowardPlus.frag.spv RenderFowardPlus.frag
 
 

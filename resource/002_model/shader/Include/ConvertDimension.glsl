@@ -13,13 +13,13 @@ uint convert3DTo1D(in uvec3 i, in uvec3 size){
 }
 
 
-uvec3 convert1DTo2D(in uint i, in uvec2 size)
+uvec2 convert1DTo2D(in uint i, in uvec2 size)
 {
 	uint x = i % size.x;
     uint y = i / size.x;
 
     return uvec2(x, y);
 }
-uint convert2DTo1D(in uvec3 i, in uvec3 size){
+uint convert2DTo1D(in uvec2 i, in uvec2 size){
 	return i.x + i.y*size.x;
 }

@@ -72,9 +72,6 @@
     <ClInclude Include="..\..\include\btrlib\BufferMemory.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\btrlib\Light.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\btrlib\cWindow.cpp">
@@ -105,9 +102,6 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="..\..\source\btrlib\cAudio.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\source\btrlib\Light.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

@@ -65,3 +65,4 @@ bool isCulling2(in Frustom2 frustom, in vec4 sphere)
 	return false;
 }
 
+#define INVALID_LIGHT_INDEX uint(0xFFFFFFFF)

@@ -71,11 +71,12 @@ mat4 skinning()
 void main()
 {
 	vec4 pos = vec4((inPosition).xyz, 1.0);
-	pos = skinning() * pos;
+	mat4 skinningMat = skinning();
+	pos = skinningMat * pos;
 	gl_Position = uProjection * uView * vec4(pos.xyz, 1.0);
 
 	VSOut.Position = pos.xyz;
-	VSOut.Normal = inNormal.xyz;
+	VSOut.Normal = mat3(skinningMat) * /*mat3(transpose(inverse(uView))) **/ inNormal.xyz;
 	VSOut.Texcoord = inTexcoord.xyz;
 
 }

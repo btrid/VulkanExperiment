@@ -20,8 +20,7 @@
 #include <btrlib/sGlobal.h>
 #include <btrlib/cStopWatch.h>
 #include <btrlib/BufferMemory.h>
-#include <btrlib/Light.h>
-#include <002_model/cModelRenderer.h>
+#include <002_model/cModelPipeline.h>
 #include <002_model/cModelRender.h>
 #pragma comment(lib, "vulkan-1.lib")
 #pragma comment(lib, "btrlib.lib")

@@ -121,17 +121,18 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\source\002_model\cLightPipeline.cpp" />
+    <ClCompile Include="..\..\source\002_model\cModelPipeline.cpp" />
     <ClCompile Include="..\..\source\002_model\cModelRender.cpp" />
     <ClCompile Include="..\..\source\002_model\002_main.cpp" />
-    <ClCompile Include="..\..\source\002_model\cModelRenderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\include\002_model\cModelDrawFowardPlus.h" />
+    <ClInclude Include="..\..\include\002_model\cLightPipeline.h" />
+    <ClInclude Include="..\..\include\002_model\cModelPipeline.h" />
     <ClInclude Include="..\..\include\002_model\cModelRender.h" />
-    <ClInclude Include="..\..\include\002_model\cModelRenderer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

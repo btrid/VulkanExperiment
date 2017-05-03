@@ -1,5 +1,5 @@
 #version 450
-#pragma optionNV (unroll all)
+#pragma optionNV (unroll none)
 #pragma optionNV (inline all)
 
 //#extension GL_ARB_bindless_texture : require
@@ -13,7 +13,7 @@
 #include </ConvertDimension.glsl>
 
 layout(early_fragment_tests) in;
-layout(origin_upper_left) in vec4 gl_FragCoord;
+/*layout(origin_upper_left)*/ in vec4 gl_FragCoord;
 
 struct Vertex
 {
@@ -29,13 +29,17 @@ layout (set = 1, binding = 32) uniform sampler2D tDiffuse;
 layout(std140, binding=16) restrict buffer MaterialBuffer {
 	Material materials[];
 };
-layout(std140, binding=17) restrict buffer LightLLHeadBuffer {
+
+layout(std140, set=3, binding=0) uniform LightInfoUniform {
+	LightInfo u_light_info;
+};
+layout(std140, set=3, binding=1) restrict buffer LightLLHeadBuffer {
 	uint b_lightLL_head[];
 };
-layout(std140, binding=18) restrict buffer LightLLBuffer {
+layout(std140, set=3, binding=2) restrict buffer LightLLBuffer {
 	LightLL b_lightLL[];
 };
-layout(std140, binding=19) restrict buffer LightBuffer {
+layout(std140, set=3, binding=3) restrict buffer LightBuffer {
 	LightParam b_light[];
 };
 
@@ -45,19 +49,29 @@ layout(location=0) out vec4 FragColor;
 vec3 getColor(in Vertex v)
 {
 //	Material m = materials[FSIn.MaterialIndex];
-	gl_FragCoord
-	for(uint i = )
+	uvec2 tile_index = uvec2(gl_FragCoord.xy / u_light_info.m_tile_size);
+	uint tile_index_1D = convert2DTo1D(tile_index, u_light_info.m_tile_num);
+	tile_index_1D = 0;
 	vec3 pos = v.Position;
 	vec3 norm = v.Normal;
-	vec3 s = normalize(LightPosition.xyz - pos);
-	vec3 v = normalize(-pos.xyz);
-	vec3 r = reflect( -s, norm );
-	vec3 ambient = LightAmbient * (m.AmbientTex != 0 ? texture(sampler2D(m.AmbientTex), FSIn.Texcoord.xy).xyz : m.Ambient.xyz);
-	float sDotN = max( dot(s,norm), 0.0 );
-	vec3 diffuse = LightDiffuse * (m.DiffuseTex != 0? texture(sampler2D(m.DiffuseTex), FSIn.Texcoord.xy).xyz : m.Diffuse.xyz) * (sDotN + 0.5);
+	vec3 albedo = texture(tDiffuse, FSIn.Texcoord.xy).xyz;
+	vec3 diffuse = vec3(0.);
 
-	vec3 diffuse = texture(tDiffuse, FSIn.Texcoord.xy).xyz;
-	return diffuse;
+	uint i = b_lightLL_head[tile_index_1D];
+	while(i != INVALID_LIGHT_INDEX)
+	{
+		LightLL ll = b_lightLL[i];
+		LightParam light = b_light[ll.light_index];
+		vec3 dir = normalize(light.m_position.xyz - pos);
+
+		float d = max( dot(dir,norm), 0.0 );
+		diffuse += light.m_emission.xyz * albedo * min(d + 0.2, 1.);
+		i = ll.next;
+	}
+
+//	return vec3(i / INVALID_LIGHT_INDEX);
+	vec3 ambient = albedo * vec3(0.1);
+	return diffuse + ambient;
 }
 
 void main()
@@ -66,6 +80,6 @@ void main()
 //	color[i].rgba.rgb = getColor();
 //	color[i].rgba.rgb = vec3(1.);
 //	color[i].rgba.a = 1.;
-	FragColor.rgb = getColor();
+	FragColor.rgb = getColor(FSIn);
 	FragColor.a = 1.;
 }

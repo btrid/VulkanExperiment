@@ -2,8 +2,8 @@
 #include <btrlib/cModel.h>
 #include <btrlib/Light.h>
 #include <btrlib/BufferMemory.h>
-#include <002_model/cModelRenderer.h>
-
+#include <002_model/cModelPipeline.h>
+#include <002_model/cLightPipeline.h>
 struct cModelRenderer;
 class ModelRender
 {
@@ -25,46 +25,61 @@ protected:
 private:
 };
 
-struct LightSample : public btr::Light
+struct LightSample : public Light
 {
-	btr::LightParam m_param;
+	LightParam m_param;
 	int life;
 
 	LightSample()
 	{
-		m_param.m_position = glm::vec4(glm::ballRand(3000.f), 1.f);
-		m_param.m_emission = glm::vec4(glm::normalize(glm::abs(glm::ballRand(1.f)) + glm::vec3(0.f, 0.f, 0.01f)), 1.f);
-
 		life = std::rand() % 50 + 30;
+		m_param.m_position = glm::vec4(glm::ballRand(3000.f), 1.f);
+		m_param.m_emission = glm::vec4(glm::abs(glm::ballRand(1.f)) + glm::vec3(0.f, 0.f, 0.01f), 1.f);
+
 	}
 	virtual bool update() override
 	{
-		life--;
+//		life--;
 		return life >= 0;
 	}
 
-	virtual btr::LightParam getParam()const override
+	virtual LightParam getParam()const override
 	{
 		return m_param;
 	}
 
 };
 
-struct cModelRenderer : public cModelRenderer_t
+struct cModelRenderer
 {
-	btr::Light::FowardPlusPipeline m_light_manager;
+	cDevice m_device;
+	cFowardPlusPipeline m_light_pipeline;
+	cModelDrawPipeline m_draw_pipeline;
+	cModelComputePipeline m_compute_pipeline;
 	std::vector<ModelRender*> m_model;
 
+public:
+	btr::BufferMemory m_storage_memory;
+	btr::BufferMemory m_uniform_memory;
+	btr::BufferMemory m_staging_memory;
+	vk::RenderPass m_render_pass;
 	cModelRenderer()
 	{
 		const cGPU& gpu = sThreadLocal::Order().m_gpu;
 		auto device = gpu.getDevice(vk::QueueFlagBits::eGraphics)[0];
+		m_device = device;
 
 		m_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, 1000*1000*20);
 		m_uniform_memory.setup(device, vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, 65535);
 		m_staging_memory.setup(device, vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached, 65535);
-		m_light_manager.setup(device, m_storage_memory, 1024);
 
+	}
+	void setup(vk::RenderPass render_pass)
+	{
+		m_render_pass = render_pass;
+		m_light_pipeline.setup(*this);
+		m_draw_pipeline.setup(*this);
+		m_compute_pipeline.setup(*this);
 	}
 	void addModel(ModelRender* model)
 	{
@@ -73,20 +88,21 @@ struct cModelRenderer : public cModelRenderer_t
 	}
 	void execute(vk::CommandBuffer cmd)
 	{
-		m_light_manager.execute(cmd);
-
 		{
 			auto* camera = cCamera::sCamera::Order().getCameraList()[0];
 			CameraGPU cameraGPU;
 			cameraGPU.setup(*camera);
 			m_draw_pipeline.m_camera.subupdate(cameraGPU);
 			m_draw_pipeline.m_camera.update(cmd);
-// 
+			// 
 			Frustom frustom;
 			frustom.setup(*camera);
 			m_compute_pipeline.m_camera_frustom.subupdate(frustom.getPlane());
 			m_compute_pipeline.m_camera_frustom.update(cmd);
 		}
+
+		m_light_pipeline.execute(cmd);
+
 
 		for (auto& render : m_model)
 		{
@@ -105,7 +121,9 @@ struct cModelRenderer : public cModelRenderer_t
 
 	}
 
-	btr::Light::FowardPlusPipeline& getLight() {
-		return m_light_manager;
+	cModelDrawPipeline& getDrawPipeline() { return m_draw_pipeline; }
+	cModelComputePipeline& getComputePipeline() { return m_compute_pipeline; }
+	cFowardPlusPipeline& getLight() {
+		return m_light_pipeline;
 	}
 };

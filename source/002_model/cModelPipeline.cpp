@@ -1,9 +1,10 @@
 
+#include <002_model/cModelPipeline.h>
 #include <002_model/cModelRender.h>
 #include <btrlib/Define.h>
 #include <btrlib/Shape.h>
 #include <btrlib/cModel.h>
-void cModelRenderer_t::cModelDrawPipeline::setup(cModelRenderer_t& renderer)
+void cModelDrawPipeline::setup(cModelRenderer& renderer)
 {
 	const cGPU& gpu = sThreadLocal::Order().m_gpu;
 
@@ -12,7 +13,7 @@ void cModelRenderer_t::cModelDrawPipeline::setup(cModelRenderer_t& renderer)
 	{
 		const char* name[] = {
 			"Render.vert.spv",
-			"Render.frag.spv",
+			"RenderFowardPlus.frag.spv",
 		};
 		static_assert(array_length(name) == SHADER_NUM, "not equal shader num");
 
@@ -90,7 +91,36 @@ void cModelRenderer_t::cModelDrawPipeline::setup(cModelRenderer_t& renderer)
 				.setBindingCount(bindings.size())
 				.setPBindings(bindings.data());
 			m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_PER_SCENE] = device->createDescriptorSetLayout(descriptor_layout_info);
+		}
+		{
+			std::vector<vk::DescriptorSetLayoutBinding> bindings =
+			{
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(vk::ShaderStageFlagBits::eFragment)
+				.setDescriptorCount(1)
+				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+				.setBinding(0),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(vk::ShaderStageFlagBits::eFragment)
+				.setDescriptorCount(1)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setBinding(1),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(vk::ShaderStageFlagBits::eFragment)
+				.setDescriptorCount(1)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setBinding(2),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(vk::ShaderStageFlagBits::eFragment)
+				.setDescriptorCount(1)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setBinding(3),
+			};
 
+			vk::DescriptorSetLayoutCreateInfo descriptor_layout_info = vk::DescriptorSetLayoutCreateInfo()
+				.setBindingCount(bindings.size())
+				.setPBindings(bindings.data());
+			m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_LIGHT] = device->createDescriptorSetLayout(descriptor_layout_info);
 		}
 	}
 	// PipelineLayout
@@ -235,14 +265,14 @@ void cModelRenderer_t::cModelDrawPipeline::setup(cModelRenderer_t& renderer)
 			.setDescriptorCount(10),
 			vk::DescriptorPoolSize()
 			.setType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(3),
+			.setDescriptorCount(10),
 			vk::DescriptorPoolSize()
 			.setType(vk::DescriptorType::eCombinedImageSampler)
 			.setDescriptorCount(1),
 		};
 
 		vk::DescriptorPoolCreateInfo poolInfo = vk::DescriptorPoolCreateInfo()
-			.setMaxSets(3)
+			.setMaxSets(DESCRIPTOR_SET_LAYOUT_MAX)
 			.setPoolSizeCount(poolSize.size())
 			.setPPoolSizes(poolSize.data());
 
@@ -250,9 +280,7 @@ void cModelRenderer_t::cModelDrawPipeline::setup(cModelRenderer_t& renderer)
 	}
 	{
 		// camera
-		{
-			m_camera.setup(renderer.m_uniform_memory, renderer.m_staging_memory);
- 		}
+		m_camera.setup(renderer.m_uniform_memory, renderer.m_staging_memory);
 	}
 
 	{
@@ -261,7 +289,7 @@ void cModelRenderer_t::cModelDrawPipeline::setup(cModelRenderer_t& renderer)
 		alloc_info.descriptorPool = m_descriptor_pool;
 		alloc_info.descriptorSetCount = 1;
 		alloc_info.pSetLayouts = &m_descriptor_set_layout[cModelDrawPipeline::DESCRIPTOR_SET_LAYOUT_PER_SCENE];
-		m_draw_descriptor_set_per_scene = device->allocateDescriptorSets(alloc_info)[0];
+		m_descriptor_set_per_scene = device->allocateDescriptorSets(alloc_info)[0];
 
 		std::vector<vk::DescriptorBufferInfo> uniformBufferInfo = {
 			m_camera.getBufferInfo(),
@@ -273,13 +301,46 @@ void cModelRenderer_t::cModelDrawPipeline::setup(cModelRenderer_t& renderer)
 			.setDescriptorCount(uniformBufferInfo.size())
 			.setPBufferInfo(uniformBufferInfo.data())
 			.setDstBinding(0)
-			.setDstSet(m_draw_descriptor_set_per_scene),
+			.setDstSet(m_descriptor_set_per_scene),
+		};
+		device->updateDescriptorSets(write_descriptor_set, {});
+	}
+	{
+		// ƒ‰ƒCƒg‚ÌDescriptor‚ÌÝ’è
+		vk::DescriptorSetAllocateInfo alloc_info;
+		alloc_info.descriptorPool = m_descriptor_pool;
+		alloc_info.descriptorSetCount = 1;
+		alloc_info.pSetLayouts = &m_descriptor_set_layout[cModelDrawPipeline::DESCRIPTOR_SET_LAYOUT_LIGHT];
+		m_descriptor_light = device->allocateDescriptorSets(alloc_info)[0];
+
+		std::vector<vk::DescriptorBufferInfo> uniformBufferInfo = {
+			renderer.getLight().getLightInfoBufferInfo(),
+		};
+		std::vector<vk::DescriptorBufferInfo> storageBufferInfo = {
+			renderer.getLight().getLightLLHeadBufferInfo(),
+			renderer.getLight().getLightLLBufferInfo(),
+			renderer.getLight().getLightBufferInfo(),
+		};
+		std::vector<vk::WriteDescriptorSet> write_descriptor_set =
+		{
+			vk::WriteDescriptorSet()
+			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+			.setDescriptorCount(uniformBufferInfo.size())
+			.setPBufferInfo(uniformBufferInfo.data())
+			.setDstBinding(0)
+			.setDstSet(m_descriptor_light),
+			vk::WriteDescriptorSet()
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(storageBufferInfo.size())
+			.setPBufferInfo(storageBufferInfo.data())
+			.setDstBinding(1)
+			.setDstSet(m_descriptor_light),
 		};
 		device->updateDescriptorSets(write_descriptor_set, {});
 	}
 
 }
-void cModelRenderer_t::cModelComputePipeline::setup(cModelRenderer_t& renderer)
+void cModelComputePipeline::setup(cModelRenderer& renderer)
 {
 	const auto& gpu = sThreadLocal::Order().m_gpu;
 	auto device = gpu.getDevice(vk::QueueFlagBits::eCompute)[0];
@@ -566,17 +627,4 @@ void cModelRenderer_t::cModelComputePipeline::setup(cModelRenderer_t& renderer)
 		m_pipeline.insert(m_pipeline.end(), p.begin(), p.end());
 	}
 
-}
-
-
-cModelRenderer_t::cModelRenderer_t()
-{
-
-}
-
-void cModelRenderer_t::setup(vk::RenderPass render_pass)
-{
-	m_render_pass = render_pass;
-	m_draw_pipeline.setup(*this);
-	m_compute_pipeline.setup(*this);
 }

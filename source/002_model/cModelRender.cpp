@@ -1,5 +1,5 @@
 ﻿#include <002_model/cModelRender.h>
-#include <002_model/cModelRenderer.h>
+#include <002_model/cModelPipeline.h>
 
 void ModelRender::setup(cModelRenderer&  renderer)
 {
@@ -14,7 +14,7 @@ void ModelRender::setup(cModelRenderer&  renderer)
 			vk::DescriptorSetAllocateInfo alloc_info = vk::DescriptorSetAllocateInfo()
 				.setDescriptorPool(pipeline.m_descriptor_pool)
 				.setDescriptorSetCount(1)
-				.setPSetLayouts(&pipeline.m_descriptor_set_layout[cModelRenderer::cModelDrawPipeline::DESCRIPTOR_SET_LAYOUT_PER_MODEL]);
+				.setPSetLayouts(&pipeline.m_descriptor_set_layout[cModelDrawPipeline::DESCRIPTOR_SET_LAYOUT_PER_MODEL]);
 			m_draw_descriptor_set_per_model = graphics_device->allocateDescriptorSets(alloc_info)[0];
 
 			std::vector<vk::DescriptorBufferInfo> uniformBufferInfo = {
@@ -56,7 +56,7 @@ void ModelRender::setup(cModelRenderer&  renderer)
 			vk::DescriptorSetAllocateInfo allocInfo;
 			allocInfo.descriptorPool = pipeline.m_descriptor_pool;
 			allocInfo.descriptorSetCount = m_resource->mMeshNum;
-			allocInfo.pSetLayouts = &pipeline.m_descriptor_set_layout[cModelRenderer::cModelDrawPipeline::DESCRIPTOR_SET_LAYOUT_PER_MESH];
+			allocInfo.pSetLayouts = &pipeline.m_descriptor_set_layout[cModelDrawPipeline::DESCRIPTOR_SET_LAYOUT_PER_MESH];
 			m_draw_descriptor_set_per_mesh = graphics_device->allocateDescriptorSets(allocInfo);
 			for (size_t i = 0; i < m_draw_descriptor_set_per_mesh.size(); i++)
 			{
@@ -370,53 +370,53 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 	for (size_t i = 0; i < pipeline.m_pipeline_layout.size(); i++)
 	{
 
-// 		if (i == 4)
-// 		{
-// 			// 
-// 			std::vector<vk::BufferMemoryBarrier> barrier =
-// 			{
-// 				vk::BufferMemoryBarrier()
-// 				.setSrcAccessMask(vk::AccessFlagBits::eShaderRead)
-// 				.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
-// 				.setBuffer(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::MODEL_INFO).getBuffer())
-// 				.setOffset(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::MODEL_INFO).getOffset())
-// 				.setSize(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::MODEL_INFO).getSize()),
-// 				vk::BufferMemoryBarrier()
-// 				.setSrcAccessMask(vk::AccessFlagBits::eShaderRead)
-// 				.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
-// 				.setBuffer(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::BONE_MAP).getBuffer())
-// 				.setOffset(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::BONE_MAP).getOffset())
-// 				.setSize(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::BONE_MAP).getSize()),
-// 				vk::BufferMemoryBarrier()
-// 				.setSrcAccessMask(vk::AccessFlagBits::eShaderRead)
-// 				.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
-// 				.setBuffer(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::BONE_TRANSFORM).getBuffer())
-// 				.setOffset(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::BONE_TRANSFORM).getOffset())
-// 				.setSize(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::BONE_TRANSFORM).getSize()),
-// 			};
-// 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
-// 				vk::DependencyFlags(), {}, barrier, {});
-//
-	//	}
+		if (i == 4)
+		{
+			// 
+			std::vector<vk::BufferMemoryBarrier> barrier =
+			{
+				vk::BufferMemoryBarrier()
+				.setSrcAccessMask(vk::AccessFlagBits::eShaderRead)
+				.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
+				.setBuffer(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::MODEL_INFO).getBuffer())
+				.setOffset(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::MODEL_INFO).getOffset())
+				.setSize(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::MODEL_INFO).getSize()),
+				vk::BufferMemoryBarrier()
+				.setSrcAccessMask(vk::AccessFlagBits::eShaderRead)
+				.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
+				.setBuffer(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::BONE_MAP).getBuffer())
+				.setOffset(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::BONE_MAP).getOffset())
+				.setSize(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::BONE_MAP).getSize()),
+				vk::BufferMemoryBarrier()
+				.setSrcAccessMask(vk::AccessFlagBits::eShaderRead)
+				.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
+				.setBuffer(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::BONE_TRANSFORM).getBuffer())
+				.setOffset(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::BONE_TRANSFORM).getOffset())
+				.setSize(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::BONE_TRANSFORM).getSize()),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
+				vk::DependencyFlags(), {}, barrier, {});
+
+		}
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, pipeline.m_pipeline[i]);
 	 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipeline.m_pipeline_layout[i], 0, m_compute_descriptor_set[i], {});
 		cmd.dispatchIndirect(m_resource->m_compute_indirect_buffer.getBuffer(), m_resource->m_compute_indirect_buffer.getBufferInfo().offset + i* 12);
 
 
-// 		if (i == 3)
-// 		{ 
-// 			std::vector<vk::BufferMemoryBarrier> barrier =
-// 			{
-// 				vk::BufferMemoryBarrier()
-// 				.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
-// 				.setDstAccessMask(vk::AccessFlagBits::eShaderRead)
-// 				.setBuffer(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::NODE_LOCAL_TRANSFORM).getBuffer())
-// 				.setOffset(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::NODE_LOCAL_TRANSFORM).getOffset())
-// 				.setSize(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::NODE_LOCAL_TRANSFORM).getSize()),
-// 			};
-// 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
-// 				vk::DependencyFlags(), {}, barrier, {});
-//  		}
+		if (i == 3)
+		{ 
+			std::vector<vk::BufferMemoryBarrier> barrier =
+			{
+				vk::BufferMemoryBarrier()
+				.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
+				.setDstAccessMask(vk::AccessFlagBits::eShaderRead)
+				.setBuffer(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::NODE_LOCAL_TRANSFORM).getBuffer())
+				.setOffset(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::NODE_LOCAL_TRANSFORM).getOffset())
+				.setSize(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::NODE_LOCAL_TRANSFORM).getSize()),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
+				vk::DependencyFlags(), {}, barrier, {});
+ 		}
 		if (i == 4)
 		{
 			// 
@@ -434,12 +434,12 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 				.setBuffer(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::BONE_MAP).getBuffer())
 				.setOffset(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::BONE_MAP).getOffset())
 				.setSize(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::BONE_MAP).getSize()),
-// 				vk::BufferMemoryBarrier()
-// 				.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
-// 				.setDstAccessMask(vk::AccessFlagBits::eShaderRead)
-// 				.setBuffer(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::NODE_GLOBAL_TRANSFORM).getBuffer())
-// 				.setOffset(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::NODE_GLOBAL_TRANSFORM).getOffset())
-// 				.setSize(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::NODE_GLOBAL_TRANSFORM).getSize()),
+				vk::BufferMemoryBarrier()
+				.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
+				.setDstAccessMask(vk::AccessFlagBits::eShaderRead)
+				.setBuffer(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::NODE_GLOBAL_TRANSFORM).getBuffer())
+				.setOffset(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::NODE_GLOBAL_TRANSFORM).getOffset())
+				.setSize(m_resource->getBuffer(cModel::cModel::Resource::ModelStorageBuffer::NODE_GLOBAL_TRANSFORM).getSize()),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
 				vk::DependencyFlags(), {}, barrier, {});
@@ -470,8 +470,9 @@ void ModelRender::draw(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 {
 
 	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, renderer.getDrawPipeline().m_pipeline);
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, renderer.getDrawPipeline().m_pipeline_layout, 2, renderer.getDrawPipeline().m_draw_descriptor_set_per_scene, {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, renderer.getDrawPipeline().m_pipeline_layout, 2, renderer.getDrawPipeline().m_descriptor_set_per_scene, {});
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, renderer.getDrawPipeline().m_pipeline_layout, 0, m_draw_descriptor_set_per_model, {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, renderer.getDrawPipeline().m_pipeline_layout, 3, renderer.getDrawPipeline().m_descriptor_light, {});
 	for (auto i : m_resource->m_material_index)
 	{
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, renderer.getDrawPipeline().m_pipeline_layout, 1, m_draw_descriptor_set_per_mesh[i], {});
