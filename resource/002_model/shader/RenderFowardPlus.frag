@@ -9,8 +9,11 @@
 #extension GL_GOOGLE_cpp_style_line_directive : require
 #extension GL_ARB_shader_image_load_store : require
 #include </MultiModel.glsl>
+#include </Light.glsl>
+#include </ConvertDimension.glsl>
 
 layout(early_fragment_tests) in;
+layout(origin_upper_left) in vec4 gl_FragCoord;
 
 struct Vertex
 {
@@ -26,29 +29,33 @@ layout (set = 1, binding = 32) uniform sampler2D tDiffuse;
 layout(std140, binding=16) restrict buffer MaterialBuffer {
 	Material materials[];
 };
+layout(std140, binding=17) restrict buffer LightLLHeadBuffer {
+	uint b_lightLL_head[];
+};
+layout(std140, binding=18) restrict buffer LightLLBuffer {
+	LightLL b_lightLL[];
+};
+layout(std140, binding=19) restrict buffer LightBuffer {
+	LightParam b_light[];
+};
 
 layout(location=0) out vec4 FragColor;
 //layout(location=1) out vec4 OutNormal;
 
-
-vec4 LightPosition = vec4(10000.);
-vec3 LightDiffuse = vec3(1.);
-vec3 LightAmbient = vec3(0.5);
-vec3 LightSpecular = vec3(0.5);
-
-vec3 getColor()
+vec3 getColor(in Vertex v)
 {
-/*	Material m = materials[FSIn.MaterialIndex];
-	vec3 pos = FSIn.Position;
-	vec3 norm = FSIn.Normal;
+//	Material m = materials[FSIn.MaterialIndex];
+	gl_FragCoord
+	for(uint i = )
+	vec3 pos = v.Position;
+	vec3 norm = v.Normal;
 	vec3 s = normalize(LightPosition.xyz - pos);
 	vec3 v = normalize(-pos.xyz);
 	vec3 r = reflect( -s, norm );
 	vec3 ambient = LightAmbient * (m.AmbientTex != 0 ? texture(sampler2D(m.AmbientTex), FSIn.Texcoord.xy).xyz : m.Ambient.xyz);
 	float sDotN = max( dot(s,norm), 0.0 );
 	vec3 diffuse = LightDiffuse * (m.DiffuseTex != 0? texture(sampler2D(m.DiffuseTex), FSIn.Texcoord.xy).xyz : m.Diffuse.xyz) * (sDotN + 0.5);
-	return ambient + diffuse + spec;
-*/
+
 	vec3 diffuse = texture(tDiffuse, FSIn.Texcoord.xy).xyz;
 	return diffuse;
 }

@@ -166,6 +166,7 @@ struct BufferMemory
 		vk::MemoryAllocateInfo m_memory_alloc;
 		vk::MemoryType m_memory_type;
 
+		vk::BufferCreateInfo m_bufer_info;
 		void* m_mapped_memory;
 
 		std::string m_name;
@@ -176,18 +177,19 @@ struct BufferMemory
 	std::shared_ptr<Resource> m_resource;
 
 	bool isValid()const { return m_resource.get(); }
-
 	void setName(const std::string& name) { m_resource->m_name = name; }
 	void setup(const cDevice& device, vk::BufferUsageFlags flag, vk::MemoryPropertyFlags memory_type, vk::DeviceSize size)
 	{
+		assert(!m_resource);
+
 		auto resource = std::make_shared<Resource>();
-		device.getGPU();
 		resource->m_device = device;
 
 		vk::BufferCreateInfo buffer_info;
 		buffer_info.usage = flag;
 		buffer_info.size = size;
 		resource->m_buffer = device->createBuffer(buffer_info);
+		resource->m_bufer_info = buffer_info;
 
 		vk::MemoryRequirements memory_request = resource->m_device->getBufferMemoryRequirements(resource->m_buffer);
 		vk::MemoryAllocateInfo memory_alloc;
@@ -266,82 +268,66 @@ struct BufferMemory
 		return alloc;
 	}
 	cDevice getDevice()const { return m_resource->m_device; }
+	vk::BufferCreateInfo getBufferCreateInfo()const { return m_resource->m_bufer_info; }
 
 };
 
 template<typename T>
-struct UniformBufferEx
+struct UpdateBuffer
 {
-	AllocatedMemory m_buffer;
-	size_t update_begin;
-	size_t update_end;
-
-	struct Resource
+	AllocatedMemory m_device_memory;
+	AllocatedMemory m_staging_memory;
+	vk::DeviceSize m_begin;
+	vk::DeviceSize m_end;
+	uint32_t m_frame;
+	void setup(btr::BufferMemory device_memory, btr::BufferMemory staging_memory)
 	{
-		vk::Device m_device;
-		vk::Buffer m_staging_buffer;
-		vk::DeviceMemory m_staging_memory;
-		char* m_staging_data;
-
-		~Resource()
-		{
-			m_device.unmapMemory(m_staging_memory);
-
-		}
-	};
-	std::shared_ptr<Resource> m_resource;
-	void setup(BufferMemory& memory) 
-	{
-		auto size = sizeof(T);
-		m_buffer = memory.allocateBuffer(size);
-		m_resource = std::make_shared<Resource>();
-
-		{
-			// host_visibleなバッファの作成
-			vk::BufferCreateInfo buffer_info;
-			buffer_info.usage = vk::BufferUsageFlagBits::eTransferSrc;
-			buffer_info.size = size;
-
-			m_resource->m_staging_buffer = memory.getDevice()->createBuffer(buffer_info);
-			m_resource->m_device = memory.getDevice().getHandle();
-			vk::MemoryRequirements memory_request = memory.getDevice()->getBufferMemoryRequirements(m_resource->m_staging_buffer);
-			vk::MemoryAllocateInfo memory_alloc;
-			memory_alloc.setAllocationSize(memory_request.size);
-			memory_alloc.setMemoryTypeIndex(cGPU::Helper::getMemoryTypeIndex(memory.getDevice().getGPU(), memory_request, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent));
-			m_resource->m_staging_memory = memory.getDevice()->allocateMemory(memory_alloc);
-
-			m_resource->m_staging_data = (char*)memory.getDevice()->mapMemory(m_resource->m_staging_memory, 0, buffer_info.size, vk::MemoryMapFlags());
-
-			memory.getDevice()->bindBufferMemory(m_resource->m_staging_buffer, m_resource->m_staging_memory, 0);
-
-			update_end = 0;
-			update_begin = std::numeric_limits<size_t>::max();
-		}
+		assert(device_memory.isValid());
+		assert(btr::isOn(device_memory.getBufferCreateInfo().usage, vk::BufferUsageFlagBits::eTransferDst));
+		assert(staging_memory.isValid());
+		assert(btr::isOn(staging_memory.getBufferCreateInfo().usage, vk::BufferUsageFlagBits::eTransferSrc));
+		m_device_memory = device_memory.allocateMemory(sizeof(T));
+		m_staging_memory = staging_memory.allocateMemory(sizeof(T)*sGlobal::FRAME_MAX);
+		m_begin = ~vk::DeviceSize(0);
+		m_end = vk::DeviceSize(0);
+		m_frame = 0;
 	}
 
 	void subupdate(const T& data)
 	{
-		subupdate(data, sizeof(T), 0);
+		auto* ptr = m_staging_memory.getMappedPtr<T>(m_frame);
+		*ptr = data;
+		m_begin = 0;
+		m_end = sizeof(T);
 	}
 	void subupdate(void* data, vk::DeviceSize data_size, vk::DeviceSize offset)
 	{
-		memcpy_s(m_resource->m_staging_data + offset, data_size, data, data_size);
-		update_begin = glm::min(update_begin, offset);
-		update_end = glm::max(update_end, offset + data_size);
+		auto* ptr = m_staging_memory.getMappedPtr<T>(m_frame);
+		memcpy_s(ptr + offset, data_size, data, data_size);
+		m_begin = std::min(offset, m_begin);
+		m_end = std::max(m_begin + data_size, m_end);
 	}
-	void buildCmd(vk::CommandBuffer cmd)
+	void update(vk::CommandBuffer cmd)
 	{
-		if (update_end < update_begin)
-		{
+		if (m_end < m_begin) {
 			return;
 		}
+		vk::BufferCopy copy_info;
+		copy_info.setSize(m_end - m_begin);
+		copy_info.setSrcOffset(m_staging_memory.getOffset() + sizeof(T)*m_frame + m_begin);
+		copy_info.setDstOffset(m_device_memory.getOffset() + m_begin);
+		cmd.copyBuffer(m_staging_memory.getBuffer(), m_device_memory.getBuffer(), copy_info);
 
-		vk::BufferCopy copy;
-		copy.size = update_end - update_begin;
-		copy.dstOffset = update_begin;
-		copy.srcOffset = update_begin;
-		cmd.copyBuffer(m_resource->m_staging_buffer, m_buffer.getBuffer(), copy);
+		m_begin = ~vk::DeviceSize(0);
+		m_end = vk::DeviceSize(0);
+		m_frame = (m_frame + 1) % sGlobal::FRAME_MAX;
+
 	}
+//	T* getPtr() { return m_staging_memory.getMappedPtr<T>(m_frame); }
+
+	vk::DescriptorBufferInfo getBufferInfo()const { return m_device_memory.getBufferInfo(); }
+	AllocatedMemory getDeviceMemory()const { return m_device_memory; }
+	vk::DeviceMemory getMemory()const { return m_staging_memory.getDeviceMemory(); }
 };
 
 }

@@ -50,10 +50,9 @@ struct LightSample : public btr::Light
 
 };
 
-struct cModelRenderer : public cModelRenderer_t<ModelRender>
+struct cModelRenderer : public cModelRenderer_t
 {
 	btr::Light::FowardPlusPipeline m_light_manager;
-	btr::BufferMemory m_light_memory;
 	std::vector<ModelRender*> m_model;
 
 	cModelRenderer()
@@ -61,8 +60,11 @@ struct cModelRenderer : public cModelRenderer_t<ModelRender>
 		const cGPU& gpu = sThreadLocal::Order().m_gpu;
 		auto device = gpu.getDevice(vk::QueueFlagBits::eGraphics)[0];
 
-		m_light_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, 1000*1000*20);
-		m_light_manager.setup(device, m_light_memory, 1024);
+		m_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, 1000*1000*20);
+		m_uniform_memory.setup(device, vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, 65535);
+		m_staging_memory.setup(device, vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached, 65535);
+		m_light_manager.setup(device, m_storage_memory, 1024);
+
 	}
 	void addModel(ModelRender* model)
 	{
@@ -73,16 +75,17 @@ struct cModelRenderer : public cModelRenderer_t<ModelRender>
 	{
 		m_light_manager.execute(cmd);
 
-		auto* m_camera = cCamera::sCamera::Order().getCameraList()[0];
 		{
-			CameraGPU camera_gpu;
-			camera_gpu.setup(*m_camera);
-			m_draw_pipeline.m_camera_uniform.update(camera_gpu);
-
+			auto* camera = cCamera::sCamera::Order().getCameraList()[0];
+			CameraGPU cameraGPU;
+			cameraGPU.setup(*camera);
+			m_draw_pipeline.m_camera.subupdate(cameraGPU);
+			m_draw_pipeline.m_camera.update(cmd);
+// 
 			Frustom frustom;
-			frustom.setup(*m_camera);
-			auto planes = frustom.getPlane();
-			m_compute_pipeline.m_camera_frustom.update(planes);
+			frustom.setup(*camera);
+			m_compute_pipeline.m_camera_frustom.subupdate(frustom.getPlane());
+			m_compute_pipeline.m_camera_frustom.update(cmd);
 		}
 
 		for (auto& render : m_model)

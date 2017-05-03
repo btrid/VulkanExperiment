@@ -13,24 +13,19 @@ namespace btr
 
 struct StagingBuffer
 {
-	AllocatedMemory m_memory;
-	struct Private
-	{
-//		char* m_staging_data;
-	};
-	std::unique_ptr<Private> m_private;
+	AllocatedMemory m_device_memory;
+	AllocatedMemory m_staging_memory;
 	void setup(btr::BufferMemory staging_memory, vk::DeviceSize size)
 	{
-		m_private = std::make_unique<Private>();
-		m_memory = staging_memory.allocateMemory(size);
+		m_staging_memory = staging_memory.allocateMemory(size);
 	}
 
 	template<typename T>
-	T* getPtr(vk::DeviceSize offset) { return reinterpret_cast<T*>(m_memory.getMappedPtr()) + offset; }
-	vk::DeviceSize getOffset()const { return m_memory.getOffset(); }
-	vk::DeviceSize getSize()const { return m_memory.getSize(); }
-	vk::Buffer getBuffer()const { return m_memory.getBuffer(); }
-	vk::DeviceMemory getMemory()const { return m_memory.getDeviceMemory(); }
+	T* getPtr(vk::DeviceSize offset) { return reinterpret_cast<T*>(m_staging_memory.getMappedPtr()) + offset; }
+	vk::DeviceSize getOffset()const { return m_staging_memory.getOffset(); }
+	vk::DeviceSize getSize()const { return m_staging_memory.getSize(); }
+	vk::Buffer getBuffer()const { return m_staging_memory.getBuffer(); }
+	vk::DeviceMemory getMemory()const { return m_staging_memory.getDeviceMemory(); }
 };
 struct LightParam {
 	glm::vec4 m_position;
@@ -102,9 +97,10 @@ struct Light
 		{
 			cDevice m_device;
 			LightInfo m_light_info;
-			UniformBuffer<LightInfo> m_light_info_gpu;
-			UniformBuffer<FrustomPoint> m_frustom_point;
+			UpdateBuffer<LightInfo> m_light_info_gpu;
+			UpdateBuffer<FrustomPoint> m_frustom_point;
 
+			btr::BufferMemory m_uniform_memory;
 			btr::BufferMemory m_storage_memory;
 			AllocatedMemory m_light;
 			AllocatedMemory m_lightLL_head;
@@ -141,7 +137,6 @@ struct Light
 				glm::uvec2 resolution_size(640, 480);
 				glm::uvec2 tile_size(32, 32);
 				glm::uvec2 tile_num(resolution_size / tile_size);
-				m_light_info_gpu.create(device, vk::BufferUsageFlagBits::eUniformBuffer);
 				m_light_info.m_resolution = resolution_size;
 				m_light_info.m_tile_size = tile_size;
 				m_light_info.m_tile_num = tile_num;
@@ -157,12 +152,15 @@ struct Light
 					m_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, size);
 				}
 
+				m_uniform_memory.setup(device, vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, 1024);
+
+
 				// ƒƒ‚ƒŠ‚ÌŠm•Û‚Æ‚©
 				{
 					m_light = storage_memory.allocateMemory(sizeof(LightParam) * light_num);
 					m_lightLL_head = storage_memory.allocateMemory(sizeof(uint32_t) * light_num);
 					m_lightLL_next = storage_memory.allocateMemory(sizeof(uint32_t) * light_num * 10);
-					m_light_counter = storage_memory.allocateMemory(sizeof(uint32_t)*4);
+					m_light_counter = storage_memory.allocateMemory(sizeof(uint32_t));
 					m_frustom = storage_memory.allocateMemory(tile_num.x * tile_num.y * sizeof(Frustom2));
 
 					vk::DeviceSize alloc_size = m_light.getSize()*sGlobal::FRAME_MAX;
@@ -170,11 +168,12 @@ struct Light
 					alloc_size += m_frustom.getSize() * sGlobal::FRAME_MAX;
 					m_staging_memory.setup(m_device, vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible /*| vk::MemoryPropertyFlagBits::eHostCoherent*/, alloc_size);
 
-					m_light_cpu.setup(m_staging_memory, m_light.getSize()*sGlobal::FRAME_MAX);
 
-					m_frustom_point.create(device, vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst);
 				}
 
+				m_light_cpu.setup(m_staging_memory, m_light.getSize()*sGlobal::FRAME_MAX);
+				m_light_info_gpu.setup(m_uniform_memory, m_staging_memory);
+				m_frustom_point.setup(m_uniform_memory, m_staging_memory);
 
 				// setup shader
 				{
@@ -191,19 +190,6 @@ struct Light
 						m_shader_info[i].setStage(vk::ShaderStageFlagBits::eCompute);
 						m_shader_info[i].setPName("main");
 					}
-
-					// 				const char* name[] = {
-					// 					"LightRender.vert.spv",
-					// 					"LightRender.frag.spv",
-					// 				};
-					// 				std::string path = btr::getResourcePath() + "shader\\binary\\";
-					// 				m_shader_info_debug[0].setModule(loadShader(m_device.getHandle(), path + name[0]));
-					// 				m_shader_info_debug[0].setStage(vk::ShaderStageFlagBits::eVertex);
-					// 				m_shader_info_debug[0].setPName("main");
-					// 				m_shader_info_debug[1].setModule(loadShader(m_device.getHandle(), path + name[1]));
-					// 				m_shader_info_debug[1].setStage(vk::ShaderStageFlagBits::eFragment);
-					// 				m_shader_info_debug[1].setPName("main");
-
 				}
 
 				{
@@ -415,7 +401,7 @@ struct Light
 
 				vk::BufferMemoryBarrier to_copy_barrier;
 				to_copy_barrier.dstQueueFamilyIndex = m_private->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
-				to_copy_barrier.buffer = m_private->m_frustom_point.getBuffer();
+				to_copy_barrier.buffer = m_private->m_frustom_point.getBufferInfo().buffer;
 				to_copy_barrier.setOffset(m_private->m_frustom_point.getBufferInfo().offset);
 				to_copy_barrier.setSize(m_private->m_frustom_point.getBufferInfo().range);
 				to_copy_barrier.srcAccessMask = vk::AccessFlagBits::eShaderRead;
@@ -423,13 +409,14 @@ struct Light
 
 				vk::BufferMemoryBarrier to_shader_read_barrier;
 				to_shader_read_barrier.dstQueueFamilyIndex = m_private->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
-				to_shader_read_barrier.buffer = m_private->m_frustom_point.getBuffer();
+				to_shader_read_barrier.buffer = m_private->m_frustom_point.getBufferInfo().buffer;
 				to_shader_read_barrier.setOffset(m_private->m_frustom_point.getBufferInfo().offset);
 				to_shader_read_barrier.setSize(m_private->m_frustom_point.getBufferInfo().range);
 				to_shader_read_barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
 				to_shader_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 
-				m_private->m_frustom_point.update(frustom_point, cmd);
+				m_private->m_frustom_point.subupdate(frustom_point);
+				m_private->m_frustom_point.update(cmd);
 			}
 			{
 				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_private->m_pipeline[COMPUTE_MAKE_FRUSTOM]);
@@ -466,7 +453,7 @@ struct Light
 				{
 					vk::BufferMemoryBarrier to_copy_barrier;
 					to_copy_barrier.dstQueueFamilyIndex = m_private->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
-					to_copy_barrier.buffer = m_private->m_light_info_gpu.getBuffer();
+					to_copy_barrier.buffer = m_private->m_light_info_gpu.getBufferInfo().buffer;
 					to_copy_barrier.setOffset(m_private->m_light_info_gpu.getBufferInfo().offset);
 					to_copy_barrier.setSize(m_private->m_light_info_gpu.getBufferInfo().range);
 					to_copy_barrier.srcAccessMask = vk::AccessFlagBits::eShaderRead;
@@ -474,7 +461,7 @@ struct Light
 
 					vk::BufferMemoryBarrier to_shader_read_barrier;
 					to_shader_read_barrier.dstQueueFamilyIndex = m_private->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
-					to_shader_read_barrier.buffer = m_private->m_light_info_gpu.getBuffer();
+					to_shader_read_barrier.buffer = m_private->m_light_info_gpu.getBufferInfo().buffer;
 					to_shader_read_barrier.setOffset(m_private->m_light_info_gpu.getBufferInfo().offset);
 					to_shader_read_barrier.setSize(m_private->m_light_info_gpu.getBufferInfo().range);
 					to_shader_read_barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
@@ -482,7 +469,8 @@ struct Light
 
 					m_private->m_light_info.m_active_light_num = index;
 					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, { to_copy_barrier }, {});
-					m_private->m_light_info_gpu.update(m_private->m_light_info, cmd);
+					m_private->m_light_info_gpu.subupdate(m_private->m_light_info);
+					m_private->m_light_info_gpu.update(cmd);
 					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, { to_shader_read_barrier }, {});
 				}
 

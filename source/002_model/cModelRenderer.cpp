@@ -1,9 +1,9 @@
 
+#include <002_model/cModelRender.h>
 #include <btrlib/Define.h>
 #include <btrlib/Shape.h>
-
-template<typename T>
-void cModelRenderer_t<T>::cModelDrawPipeline::setup(vk::RenderPass render_pass)
+#include <btrlib/cModel.h>
+void cModelRenderer_t::cModelDrawPipeline::setup(cModelRenderer_t& renderer)
 {
 	const cGPU& gpu = sThreadLocal::Order().m_gpu;
 
@@ -47,11 +47,6 @@ void cModelRenderer_t<T>::cModelDrawPipeline::setup(vk::RenderPass render_pass)
 				.setDescriptorCount(1)
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 				.setBinding(1),
-// 				vk::DescriptorSetLayoutBinding()
-// 				.setStageFlags(vk::ShaderStageFlagBits::eVertex)
-// 				.setDescriptorCount(1)
-// 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-// 				.setBinding(2),
 				vk::DescriptorSetLayoutBinding()
 				.setStageFlags(vk::ShaderStageFlagBits::eFragment)
 				.setDescriptorCount(1)
@@ -221,7 +216,7 @@ void cModelRenderer_t<T>::cModelDrawPipeline::setup(vk::RenderPass render_pass)
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
 				.setLayout(m_pipeline_layout)
-				.setRenderPass(render_pass)
+				.setRenderPass(renderer.m_render_pass)
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
@@ -256,7 +251,7 @@ void cModelRenderer_t<T>::cModelDrawPipeline::setup(vk::RenderPass render_pass)
 	{
 		// camera
 		{
- 			m_camera_uniform.create( device, vk::BufferUsageFlagBits::eUniformBuffer);
+			m_camera.setup(renderer.m_uniform_memory, renderer.m_staging_memory);
  		}
 	}
 
@@ -265,11 +260,11 @@ void cModelRenderer_t<T>::cModelDrawPipeline::setup(vk::RenderPass render_pass)
 		vk::DescriptorSetAllocateInfo alloc_info;
 		alloc_info.descriptorPool = m_descriptor_pool;
 		alloc_info.descriptorSetCount = 1;
-		alloc_info.pSetLayouts = &m_descriptor_set_layout[cModelRenderer::cModelDrawPipeline::DESCRIPTOR_SET_LAYOUT_PER_SCENE];
+		alloc_info.pSetLayouts = &m_descriptor_set_layout[cModelDrawPipeline::DESCRIPTOR_SET_LAYOUT_PER_SCENE];
 		m_draw_descriptor_set_per_scene = device->allocateDescriptorSets(alloc_info)[0];
 
 		std::vector<vk::DescriptorBufferInfo> uniformBufferInfo = {
-			m_camera_uniform.getBufferInfo(),
+			m_camera.getBufferInfo(),
 		};
 		std::vector<vk::WriteDescriptorSet> write_descriptor_set =
 		{
@@ -284,8 +279,7 @@ void cModelRenderer_t<T>::cModelDrawPipeline::setup(vk::RenderPass render_pass)
 	}
 
 }
-template<typename T>
-void cModelRenderer_t<T>::cModelComputePipeline::setup()
+void cModelRenderer_t::cModelComputePipeline::setup(cModelRenderer_t& renderer)
 {
 	const auto& gpu = sThreadLocal::Order().m_gpu;
 	auto device = gpu.getDevice(vk::QueueFlagBits::eCompute)[0];
@@ -312,7 +306,7 @@ void cModelRenderer_t<T>::cModelComputePipeline::setup()
 	}
 
 	{
-		m_camera_frustom.create(device, vk::BufferUsageFlagBits::eUniformBuffer);
+		m_camera_frustom.setup(renderer.m_uniform_memory, renderer.m_staging_memory);
 	}
 
 	// Create compute pipeline
@@ -575,16 +569,14 @@ void cModelRenderer_t<T>::cModelComputePipeline::setup()
 }
 
 
-template<typename T>
-cModelRenderer_t<T>::cModelRenderer_t()
+cModelRenderer_t::cModelRenderer_t()
 {
 
 }
 
-template<typename T>
-void cModelRenderer_t<T>::setup(vk::RenderPass render_pass)
+void cModelRenderer_t::setup(vk::RenderPass render_pass)
 {
-	m_gpu = sThreadLocal::Order().m_gpu;
-	m_draw_pipeline.setup(render_pass);
-	m_compute_pipeline.setup();
+	m_render_pass = render_pass;
+	m_draw_pipeline.setup(*this);
+	m_compute_pipeline.setup(*this);
 }

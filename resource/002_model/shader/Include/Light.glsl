@@ -14,6 +14,11 @@ struct LightParam
 	vec4 m_position;
 	vec4 m_emission;
 };
+struct LightLL
+{
+	uint next;
+	uint light_index;
+};
 
 struct Plane
 {

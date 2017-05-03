@@ -25,9 +25,9 @@ layout(std430, binding=10) restrict buffer LLHeadBuffer {
 	uint b_LLhead[];
 };
 layout(std430, binding=11) writeonly restrict buffer LLBuffer {
-	uint b_LLnext[];
+	LightLL b_light_LL[];
 };
-layout(std430, binding=12) restrict buffer LightCounter {
+layout(std430, binding=12) coherent restrict buffer LightCounter {
 	uint b_light_count;
 };
 
@@ -39,16 +39,16 @@ void main()
 	uint index1D = index.x + index.y * u_light_info.m_tile_num.x;
 
 	Frustom2 f = b_tiled_frustom[index.x + index.y * u_light_info.m_tile_num.x];
-	uint light_index = uint(-1);
+	b_LLhead[index1D] = uint(-1);
 	for(uint i = 0; i < u_light_info.m_active_light_num; i++)
 	{
 		if(isCulling2(f, b_light[i].m_position))
 		{
 			continue;
 		}
-		light_index = atomicAdd(b_light_count, 1);
-		uint old = b_LLhead[index1D];
-		b_LLnext[light_index] = old;
+		uint light_index = atomicAdd(b_light_count, 1);
+		b_light_LL[light_index].next = b_LLhead[index1D];
+		b_light_LL[light_index].light_index = i;
+		b_LLhead[index1D] = light_index;
 	}
-	b_LLhead[index1D] = light_index;
 }

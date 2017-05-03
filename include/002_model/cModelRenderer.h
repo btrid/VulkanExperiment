@@ -6,15 +6,18 @@
 #include <btrlib/sGlobal.h>
 #include <btrlib/cCamera.h>
 #include <btrlib/Shape.h>
+#include <btrlib/BufferMemory.h>
 
 
-template<typename T>
 struct cModelRenderer_t
 {
-
-	struct cModelDrawPipeline 
+	struct iPipeline
 	{
-		enum 
+		virtual void setup(cModelRenderer_t& renderer);
+	};
+	struct cModelDrawPipeline
+	{
+		enum
 		{
 			SHADER_RENDER_VERT,
 			SHADER_RENDER_FRAG,
@@ -27,7 +30,7 @@ struct cModelRenderer_t
 		vk::PipelineLayout m_pipeline_layout;
 		vk::DescriptorPool m_descriptor_pool;
 		vk::DescriptorSet m_draw_descriptor_set_per_scene;
-		enum 
+		enum
 		{
 			DESCRIPTOR_SET_LAYOUT_PER_MODEL,
 			DESCRIPTOR_SET_LAYOUT_PER_MESH,
@@ -36,10 +39,11 @@ struct cModelRenderer_t
 		};
 		std::array<vk::DescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_MAX> m_descriptor_set_layout;
 
-		UniformBuffer<CameraGPU>	m_camera_uniform;
-		void setup(vk::RenderPass render_pass);
+		btr::UpdateBuffer<CameraGPU> m_camera;
+		void setup(cModelRenderer_t& renderer);
 	};
-	struct cModelComputePipeline {
+	struct cModelComputePipeline
+	{
 
 		enum {
 			SHADER_COMPUTE_CLEAR,
@@ -59,22 +63,22 @@ struct cModelRenderer_t
 		std::vector<vk::PipelineLayout> m_pipeline_layout;
 		std::vector<vk::DescriptorSetLayout> m_descriptor_set_layout;
 
-		UniformBuffer<std::array<Plane, 6>>	m_camera_frustom;
+		btr::UpdateBuffer<std::array<Plane, 6>>	m_camera_frustom;
 
-		void setup();
+		void setup(cModelRenderer_t& renderer);
 	};
 
-
 protected:
-	using RenderPtr = std::unique_ptr<T>;
-	cGPU	m_gpu;
-
 	cModelDrawPipeline m_draw_pipeline;
 	cModelComputePipeline m_compute_pipeline;
 public:
 	cModelRenderer_t();
 	void setup(vk::RenderPass render_pass);
-
+public:
+	btr::BufferMemory m_storage_memory;
+	btr::BufferMemory m_uniform_memory;
+	btr::BufferMemory m_staging_memory;
+	vk::RenderPass m_render_pass;
 public:
 
 	cModelDrawPipeline& getDrawPipeline() { return m_draw_pipeline; }
@@ -82,5 +86,4 @@ public:
 };
 
 
-#include <002_model/cModelRenderer.inl>
 
