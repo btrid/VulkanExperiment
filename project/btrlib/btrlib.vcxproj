@@ -76,6 +76,7 @@
     <ClInclude Include="..\..\include\btrlib\cStopWatch.h" />
     <ClInclude Include="..\..\include\btrlib\cThreadPool.h" />
     <ClInclude Include="..\..\include\btrlib\BufferMemory.h" />
+    <ClInclude Include="..\..\include\btrlib\GPU.h" />
     <ClInclude Include="..\..\include\btrlib\ResourceManager.h" />
     <ClInclude Include="..\..\include\btrlib\rTexture.h" />
     <ClInclude Include="..\..\include\btrlib\sDebug.h" />
@@ -87,7 +88,6 @@
     <ClInclude Include="..\..\include\btrlib\Singleton.h" />
     <ClInclude Include="..\..\include\btrlib\sValidationLayer.h" />
     <ClInclude Include="..\..\include\btrlib\sGlobal.h" />
-    <ClInclude Include="..\..\include\btrlib\ThreadPool.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\btrlib\cAudio.cpp" />
@@ -95,11 +95,11 @@
     <ClCompile Include="..\..\source\btrlib\cModel.cpp" />
     <ClCompile Include="..\..\source\btrlib\cWindow.cpp" />
     <ClCompile Include="..\..\source\btrlib\Define.cpp" />
+    <ClCompile Include="..\..\source\btrlib\GPU.cpp" />
     <ClCompile Include="..\..\source\btrlib\rTexture.cpp" />
     <ClCompile Include="..\..\source\btrlib\sDebug.cpp" />
     <ClCompile Include="..\..\source\btrlib\sGlobal.cpp" />
     <ClCompile Include="..\..\source\btrlib\Shape.cpp" />
-    <ClCompile Include="..\..\source\btrlib\ThreadPool.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

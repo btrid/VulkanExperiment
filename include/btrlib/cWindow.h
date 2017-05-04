@@ -7,7 +7,6 @@
 
 #include <btrlib/Singleton.h>
 #include <btrlib/sGlobal.h>
-#include <btrlib/ThreadPool.h>
 #include <btrlib/cInput.h>
 
 class cWindow

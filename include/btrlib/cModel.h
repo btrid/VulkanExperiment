@@ -10,7 +10,6 @@
 
 #include <btrlib/Define.h>
 #include <btrlib/sGlobal.h>
-#include <btrlib/ThreadPool.h>
 #include <btrlib/Singleton.h>
 #include <btrlib/rTexture.h>
 #include <btrlib/ResourceManager.h>

@@ -5,7 +5,6 @@
 
 #include <btrlib/cModel.h>
 #include <btrlib/sGlobal.h>
-#include <btrlib/ThreadPool.h>
 #include <btrlib/sDebug.h>
 #include <btrlib/cStopWatch.h>
 
@@ -719,7 +718,7 @@ void cModel::load(const std::string& filename)
 	auto* index = static_cast<char*>(staging_index.getMappedPtr());
 	Vertex* vertex = static_cast<Vertex*>(staging_vertex.getMappedPtr());
 	memset(vertex, -1, staging_vertex.getSize());
-	size_t v_count = 0;
+	uint32_t v_count = 0;
 	m_loader->m_staging_memory_holder.push_back(staging_vertex);
 	m_loader->m_staging_memory_holder.push_back(staging_index);
 	for (size_t i = 0; i < scene->mNumMeshes; i++)
@@ -729,14 +728,12 @@ void cModel::load(const std::string& filename)
 
 		// ELEMENT_ARRAY_BUFFER
 		// OŠpƒƒbƒVƒ…‚Æ‚µ‚Ä“Ç‚İ‚Ş
-		auto offset = v_count;
-//		template<typename T> auto a = []() {};
 		for (u32 n = 0; n < mesh->mNumFaces; n++) {
-			(*(uint32_t*)index) = mesh->mFaces[n].mIndices[0] + offset;
+			(*(uint32_t*)index) = mesh->mFaces[n].mIndices[0] + v_count;
 			index += index_stride;
-			(*(uint32_t*)index) = mesh->mFaces[n].mIndices[1] + offset;
+			(*(uint32_t*)index) = mesh->mFaces[n].mIndices[1] + v_count;
 			index += index_stride;
-			(*(uint32_t*)index) = mesh->mFaces[n].mIndices[2] + offset;
+			(*(uint32_t*)index) = mesh->mFaces[n].mIndices[2] + v_count;
 			index += index_stride;
 		}
 
