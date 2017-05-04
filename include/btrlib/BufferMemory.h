@@ -191,8 +191,8 @@ struct BufferMemory
 	void setup(const cDevice& device, vk::BufferUsageFlags flag, vk::MemoryPropertyFlags memory_type, vk::DeviceSize size)
 	{
 		assert(!m_resource);
-		btr::setOff(memory_type, vk::MemoryPropertyFlagBits::eDeviceLocal);
-		memory_type |= vk::MemoryPropertyFlagBits::eHostVisible;
+// 		btr::setOff(memory_type, vk::MemoryPropertyFlagBits::eDeviceLocal);
+// 		memory_type |= vk::MemoryPropertyFlagBits::eHostVisible;
 
 		auto resource = std::make_shared<Resource>();
 		resource->m_device = device;
