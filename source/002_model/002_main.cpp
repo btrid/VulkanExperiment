@@ -25,7 +25,6 @@
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "FreeImage.lib")
 #pragma comment(lib, "vulkan-1.lib")
-//#pragma comment(lib, "C:/VulkanSDK/1.0.42.2/Lib/vulkan-1.lib")
 
 int main()
 {
@@ -116,75 +115,6 @@ int main()
 		queue.submit({ setup_submit_info }, vk::Fence());
 		queue.waitIdle();
 	}
-
-	std::vector<vk::CommandBuffer> render_to_present_cmd;
-	{
-		// present barrier cmd
-		vk::CommandBufferAllocateInfo cmd_info = vk::CommandBufferAllocateInfo()
-			.setCommandPool(cmd_pool)
-			.setLevel(vk::CommandBufferLevel::ePrimary)
-			.setCommandBufferCount((uint32_t)window.getSwapchain().m_backbuffer_image.size());
-		render_to_present_cmd = device->allocateCommandBuffers(cmd_info);
-
-		for (size_t i = 0; i < render_to_present_cmd.size(); i++)
-		{
-			auto& cmd = render_to_present_cmd[i];
-			vk::CommandBufferBeginInfo cmd_begin_info = vk::CommandBufferBeginInfo()
-				.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
-			cmd.begin(cmd_begin_info);
-
-			vk::ImageMemoryBarrier present_barrier;
-			present_barrier.setSrcAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
-			present_barrier.setDstAccessMask(vk::AccessFlagBits::eMemoryRead);
-			present_barrier.setOldLayout(vk::ImageLayout::eColorAttachmentOptimal);
-			present_barrier.setNewLayout(vk::ImageLayout::ePresentSrcKHR);
-			present_barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-			present_barrier.setImage(window.getSwapchain().m_backbuffer_image[i]);
-
-			cmd.pipelineBarrier(
-				vk::PipelineStageFlagBits::eTopOfPipe,
-				vk::PipelineStageFlagBits::eBottomOfPipe,
-				vk::DependencyFlags(),
-				0, nullptr, // No memory barriers,
-				0, nullptr, // No buffer barriers,
-				1, &present_barrier);
-
-			cmd.end();
-		}
-	}
-
-	vk::SemaphoreCreateInfo semaphoreInfo = vk::SemaphoreCreateInfo();
-	vk::Semaphore swapbuffer_semaphore = device->createSemaphore(semaphoreInfo);
-	vk::Semaphore cmdsubmit_semaphore = device->createSemaphore(semaphoreInfo);
-
-	auto task = std::make_shared<std::promise<std::unique_ptr<cModel>>>();
-	auto modelFuture = task->get_future();
-	{
-		cThreadJob job;
-		auto load = [task]()
-		{
-			auto model = std::make_unique<cModel>();
-			model->load(btr::getResourcePath() + "tiny.x");
-			task->set_value(std::move(model));
-		};
-		job.mFinish = load;
-		sGlobal::Order().getThreadPool().enque(std::move(job));
-	}
-
-	while (modelFuture.valid() && modelFuture.wait_for(std::chrono::milliseconds(10)) != std::future_status::ready) {
-		printf("wait...\n");
-	}
-
-	auto model = modelFuture.get();
-
-	auto* camera = cCamera::sCamera::Order().create();
-	camera->m_position = glm::vec3(0.f, -500.f, -800.f);
-	camera->m_target = glm::vec3(0.f, -100.f, 0.f);
-	camera->m_up = glm::vec3(0.f, -1.f, 0.f);
-	camera->m_width = 640;
-	camera->m_height = 480;
-	camera->m_far = 100000.f;
-	camera->m_near = 0.01f;
 
 	vk::RenderPass render_pass;
 	// レンダーパス
@@ -312,6 +242,34 @@ int main()
 		}
 	}
 
+	auto task = std::make_shared<std::promise<std::unique_ptr<cModel>>>();
+	auto modelFuture = task->get_future();
+	{
+		cThreadJob job;
+		auto load = [task]()
+		{
+			auto model = std::make_unique<cModel>();
+			model->load(btr::getResourcePath() + "tiny.x");
+			task->set_value(std::move(model));
+		};
+		job.mFinish = load;
+		sGlobal::Order().getThreadPool().enque(std::move(job));
+	}
+
+	while (modelFuture.valid() && modelFuture.wait_for(std::chrono::milliseconds(10)) != std::future_status::ready) {
+		printf("wait...\n");
+	}
+
+	auto model = modelFuture.get();
+
+	auto* camera = cCamera::sCamera::Order().create();
+	camera->m_position = glm::vec3(0.f, -500.f, -800.f);
+	camera->m_target = glm::vec3(0.f, -100.f, 0.f);
+	camera->m_up = glm::vec3(0.f, -1.f, 0.f);
+	camera->m_width = 640;
+	camera->m_height = 480;
+	camera->m_far = 100000.f;
+	camera->m_near = 0.01f;
 	ModelRender render;
 	render.setup(model->getResource());
 
@@ -340,6 +298,12 @@ int main()
 			.setCommandBufferCount(1);
 		render_cmds[i] = device->allocateCommandBuffers(cmd_info)[0];
 	}
+
+	for (int i = 0; i < 30; i++)
+	{
+		renderer.getLight().add(std::move(std::make_unique<LightSample>()));
+	}
+
 	vk::FenceCreateInfo fence_info;
 	fence_info.setFlags(vk::FenceCreateFlagBits::eSignaled);
 	std::vector<vk::Fence> fence_list;
@@ -347,10 +311,9 @@ int main()
 	fence_list.emplace_back(device->createFence(fence_info));
 	fence_list.emplace_back(device->createFence(fence_info));
 
-	for (int i = 0; i < 30; i++)
-	{
-		renderer.getLight().add(std::move(std::make_unique<LightSample>()));
-	}
+	vk::SemaphoreCreateInfo semaphoreInfo = vk::SemaphoreCreateInfo();
+	vk::Semaphore swapbuffer_semaphore = device->createSemaphore(semaphoreInfo);
+	vk::Semaphore cmdsubmit_semaphore = device->createSemaphore(semaphoreInfo);
 	while (true)
 	{
 		cStopWatch time;
