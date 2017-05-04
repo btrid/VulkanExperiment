@@ -57,7 +57,7 @@ vec3 getColor(in Vertex v)
 	vec3 albedo = texture(tDiffuse, FSIn.Texcoord.xy).xyz;
 	vec3 diffuse = vec3(0.);
 
-	uint i = b_lightLL_head[tile_index_1D];
+	uint i = 0;
 	while(i != INVALID_LIGHT_INDEX)
 	{
 		LightLL ll = b_lightLL[i];

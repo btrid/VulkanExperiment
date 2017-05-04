@@ -213,11 +213,6 @@ struct BufferMemory
 		m_resource = std::move(resource);
 	}
 
-	// @deprecaterd
-	void setup(const cDevice& device, vk::BufferUsageFlags flag, vk::DeviceSize size)
-	{
-		setup(device, flag, vk::MemoryPropertyFlagBits::eDeviceLocal, size);
-	}
 
 	enum class AttributeFlagBits : uint32_t
 	{
@@ -305,7 +300,7 @@ struct UpdateBuffer
 		auto* ptr = m_staging_memory.getMappedPtr<T>(m_frame);
 		memcpy_s(ptr + offset, data_size, data, data_size);
 		m_begin = std::min(offset, m_begin);
-		m_end = std::max(m_begin + data_size, m_end);
+		m_end = std::max(offset + data_size, m_end);
 	}
 	void update(vk::CommandBuffer cmd)
 	{

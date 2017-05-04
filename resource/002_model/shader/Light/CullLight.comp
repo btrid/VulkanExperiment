@@ -1,6 +1,6 @@
 #version 450
 
-//#pragma optionNV (unroll all)
+#pragma optionNV (unroll none)
 //#pragma optionNV (inline all)
 
 
@@ -8,6 +8,7 @@
 #extension GL_GOOGLE_cpp_style_line_directive : require
 
 #include </Light.glsl>
+#include </CameraCulling.glsl>
 
 layout (local_size_x = 32, local_size_y = 32) in;
 
@@ -44,8 +45,9 @@ void main()
 	{
 		if(isCulling2(f, b_light[i].m_position))
 		{
-			continue;
+//			continue;
 		}
+//		uint light_index = b_light_count++;
 		uint light_index = atomicAdd(b_light_count, 1);
 		b_light_LL[light_index].next = head;
 		b_light_LL[light_index].light_index = i;

@@ -182,7 +182,7 @@ int main()
 	camera->m_up = glm::vec3(0.f, -1.f, 0.f);
 	camera->m_width = 640;
 	camera->m_height = 480;
-	camera->m_far = 1000000.f;
+	camera->m_far = 10000.f;
 	camera->m_near = 0.01f;
 
 	vk::RenderPass render_pass;
@@ -346,7 +346,7 @@ int main()
 	fence_list.emplace_back(device->createFence(fence_info));
 	fence_list.emplace_back(device->createFence(fence_info));
 
-	for (int i = 0; i < 1000; i++)
+	for (int i = 0; i < 200; i++)
 	{
 		renderer.getLight().add(std::move(std::make_unique<LightSample>()));
 	}

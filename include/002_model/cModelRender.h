@@ -33,8 +33,8 @@ struct LightSample : public Light
 	LightSample()
 	{
 		life = std::rand() % 50 + 30;
-		m_param.m_position = glm::vec4(glm::ballRand(3000.f), 1.f);
-		m_param.m_emission = glm::vec4(glm::abs(glm::ballRand(1.f)) + glm::vec3(0.f, 0.f, 0.01f), 1.f);
+		m_param.m_position = glm::vec4(glm::ballRand(5000.f), std::rand() % 100 + 55.f);
+		m_param.m_emission = glm::vec4(glm::normalize(glm::abs(glm::ballRand(1.f)) + glm::vec3(0.f, 0.f, 0.01f)), 1.f);
 
 	}
 	virtual bool update() override
@@ -69,8 +69,8 @@ public:
 		auto device = gpu.getDevice(vk::QueueFlagBits::eGraphics)[0];
 		m_device = device;
 
-		m_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, 1000*1000*20);
-		m_uniform_memory.setup(device, vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, 65535);
+		m_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal, 1000*1000*20);
+		m_uniform_memory.setup(device, vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal, 65535);
 		m_staging_memory.setup(device, vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached, 65535);
 
 	}

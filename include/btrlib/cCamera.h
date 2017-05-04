@@ -222,6 +222,7 @@ public:
 		plane_[PLANE_RIGHT] = Plane(rbn_, rtn_, rbf_);
 		plane_[PLANE_NEAR] = Plane(ltn_, rtn_, rbn_);
 		plane_[PLANE_FAR] = Plane(rtf_, ltf_, lbf_);
+
 	}
 
 	bool isInFrustom(const glm::vec3& p) {

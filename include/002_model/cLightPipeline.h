@@ -42,6 +42,32 @@ struct FrustomPoint
 	glm::vec4 rtf;
 	glm::vec4 lbf;
 	glm::vec4 rbf;
+
+// 		glm::vec2 tile_num(32, 32);
+// 		for (int y = 0; y < 32; y++)
+// 		{
+// 			for (int x = 0; x < 32; x++)
+// 			{
+// 				glm::vec3 index(x, y, 0);
+// 				glm::vec3 n_per_size = glm::vec3(glm::vec2(1.) / tile_num, 0.) * (rbn_ - ltn_);
+// 				glm::vec3 f_per_size = glm::vec3(glm::vec2(1.) / tile_num, 0.) * (rbf_ - ltf_);
+// 				glm::vec3 ltn = ltn_ + index*n_per_size;
+// 				glm::vec3 lbn = ltn_ + (index + glm::vec3(0, 1, 0))*n_per_size;
+// 				glm::vec3 rtn = ltn_ + (index + glm::vec3(1, 0, 0))*n_per_size;
+// 				glm::vec3 rbn = ltn_ + (index + glm::vec3(1, 1, 0))*n_per_size;
+// 				glm::vec3 ltf = ltf_ + index*f_per_size;
+// 				glm::vec3 lbf = ltf_ + (index + glm::vec3(0, 1, 0))*f_per_size;
+// 				glm::vec3 rtf = ltf_ + (index + glm::vec3(1, 0, 0))*f_per_size;
+// 				glm::vec3 rbf = ltf_ + (index + glm::vec3(1, 1, 0))*f_per_size;
+// 				printf("[x, y]=[%2d, %2d]\n", x, y);
+// 				printf("ltn = %7.1f, %7.1f, %7.1f\n", ltn.x, ltn.y, ltn.z);
+// 				printf("ltf = %7.1f, %7.1f, %7.1f\n", ltf.x, ltf.y, ltf.z);
+// 				printf("rbn = %7.1f, %7.1f, %7.1f\n", rbn.x, rbn.y, rbn.z);
+// 				printf("rbf = %7.1f, %7.1f, %7.1f\n", rbf.x, rbf.y, rbf.z);
+// 			}
+// 		}
+// 
+
 };
 
 struct ComputePipeline
@@ -187,7 +213,7 @@ struct cFowardPlusPipeline
 			frustom_point.rbf = glm::vec4(frustom.rbf_, 1.f);
 
 			vk::BufferMemoryBarrier to_copy_barrier;
-			to_copy_barrier.dstQueueFamilyIndex = m_private->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
+			to_copy_barrier.dstQueueFamilyIndex = m_private->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eCompute);
 			to_copy_barrier.buffer = m_private->m_frustom_point.getBufferInfo().buffer;
 			to_copy_barrier.setOffset(m_private->m_frustom_point.getBufferInfo().offset);
 			to_copy_barrier.setSize(m_private->m_frustom_point.getBufferInfo().range);
@@ -199,7 +225,7 @@ struct cFowardPlusPipeline
 			m_private->m_frustom_point.update(cmd);
 
 			vk::BufferMemoryBarrier to_shader_read_barrier;
-			to_shader_read_barrier.dstQueueFamilyIndex = m_private->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
+			to_shader_read_barrier.dstQueueFamilyIndex = m_private->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eCompute);
 			to_shader_read_barrier.buffer = m_private->m_frustom_point.getBufferInfo().buffer;
 			to_shader_read_barrier.setOffset(m_private->m_frustom_point.getBufferInfo().offset);
 			to_shader_read_barrier.setSize(m_private->m_frustom_point.getBufferInfo().range);
@@ -208,9 +234,25 @@ struct cFowardPlusPipeline
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, { to_shader_read_barrier }, {});
 		}
 		{
+			vk::BufferMemoryBarrier to_write_barrier;
+			to_write_barrier.buffer = m_private->m_tiled_frustom.getBufferInfo().buffer;
+			to_write_barrier.setOffset(m_private->m_tiled_frustom.getBufferInfo().offset);
+			to_write_barrier.setSize(m_private->m_tiled_frustom.getBufferInfo().range);
+			to_write_barrier.srcAccessMask = vk::AccessFlagBits::eShaderRead;
+			to_write_barrier.dstAccessMask = vk::AccessFlagBits::eShaderWrite;
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, { to_write_barrier }, {});
+
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_private->m_pipeline[COMPUTE_MAKE_FRUSTOM]);
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_private->m_pipeline_layout[COMPUTE_MAKE_FRUSTOM], 0, m_private->m_compute_descriptor_set[COMPUTE_MAKE_FRUSTOM], {});
 			cmd.dispatch(20, 20, 1);
+
+			vk::BufferMemoryBarrier to_read_barrier;
+			to_read_barrier.buffer = m_private->m_tiled_frustom.getBufferInfo().buffer;
+			to_read_barrier.setOffset(m_private->m_tiled_frustom.getBufferInfo().offset);
+			to_read_barrier.setSize(m_private->m_tiled_frustom.getBufferInfo().range);
+			to_read_barrier.srcAccessMask = vk::AccessFlagBits::eShaderWrite;
+			to_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, { to_read_barrier }, {});
 		}
 
 		// light‚ÌXV
@@ -291,16 +333,8 @@ struct cFowardPlusPipeline
 		{
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_private->m_pipeline[COMPUTE_CULL_LIGHT]);
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_private->m_pipeline_layout[COMPUTE_CULL_LIGHT], 0, m_private->m_compute_descriptor_set[COMPUTE_CULL_LIGHT], {});
-			cmd.dispatch(20, 20, 1);
+			cmd.dispatch(30, 30, 1);
 
-/*			vk::BufferMemoryBarrier to_copy_barrier;
-			to_copy_barrier.dstQueueFamilyIndex = m_private->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
-			to_copy_barrier.buffer = m_private->m_light.getBuffer();
-			to_copy_barrier.setOffset(m_private->m_light.getOffset());
-			to_copy_barrier.setSize(copy_info.size);
-			to_copy_barrier.srcAccessMask = vk::AccessFlagBits::eShaderRead;
-			to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
-*/
 			vk::BufferMemoryBarrier to_shader_read_barrier;
 			to_shader_read_barrier.dstQueueFamilyIndex = m_private->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
 			to_shader_read_barrier.buffer = m_private->m_lightLL_head.getBuffer();

@@ -149,10 +149,10 @@ struct Light
 					size += sizeof(uint32_t) * light_num * 10;
 					size += tile_num.x * tile_num.y * sizeof(Frustom2);
 					size += sizeof(uint32_t) * 4;
-					m_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, size);
+					m_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal, size);
 				}
 
-				m_uniform_memory.setup(device, vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, 1024);
+				m_uniform_memory.setup(device, vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal, 1024);
 
 
 				// ÉÅÉÇÉäÇÃämï€Ç∆Ç©
