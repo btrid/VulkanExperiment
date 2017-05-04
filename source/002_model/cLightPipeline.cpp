@@ -19,7 +19,6 @@ void cFowardPlusPipeline::Private::setup(cModelRenderer& renderer)
 		vk::DeviceSize size = sizeof(LightParam) * m_light_num;
 		size += sizeof(uint32_t) * tile_num_all;
 		size += sizeof(glm::uvec2) * tile_num_all * m_light_num;
-		size += tile_num.x * tile_num.y * sizeof(Frustom2);
 		size += sizeof(uint32_t) * 4;
 		size += 65000;
 		m_storage_memory.setup(m_device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal, size);
@@ -34,11 +33,9 @@ void cFowardPlusPipeline::Private::setup(cModelRenderer& renderer)
 		m_lightLL_head = m_storage_memory.allocateMemory(sizeof(uint32_t) * tile_num_all);
 		m_lightLL = m_storage_memory.allocateMemory(sizeof(LightLL) * tile_num_all * m_light_num);
 		m_light_counter = m_storage_memory.allocateMemory(sizeof(uint32_t));
-		m_tiled_frustom = m_storage_memory.allocateMemory(tile_num.x * tile_num.y * sizeof(Frustom2));
 
 		vk::DeviceSize alloc_size = m_light.getSize()*sGlobal::FRAME_MAX;
 		alloc_size += m_lightLL_head.getSize();
-		alloc_size += m_tiled_frustom.getSize() * sGlobal::FRAME_MAX;
 		alloc_size += 65000;
 		m_staging_memory.setup(m_device, vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached, alloc_size);
 	}
@@ -50,7 +47,6 @@ void cFowardPlusPipeline::Private::setup(cModelRenderer& renderer)
 	// setup shader
 	{
 		const char* name[] = {
-			"MakeFrustom.comp.spv",
 //			"MakeLight.comp.spv",
 			"CullLight.comp.spv",
 		};
@@ -80,20 +76,6 @@ void cFowardPlusPipeline::Private::setup(cModelRenderer& renderer)
 			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 			.setDescriptorCount(1)
 			.setBinding(1),
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(1)
-			.setBinding(8),
-		};
-		bindings.push_back(binding);
-		binding =
-		{
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-			.setDescriptorCount(1)
-			.setBinding(0),
 			vk::DescriptorSetLayoutBinding()
 			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
@@ -165,9 +147,6 @@ void cFowardPlusPipeline::Private::setup(cModelRenderer& renderer)
 			vk::ComputePipelineCreateInfo()
 			.setStage(m_shader_info[0])
 			.setLayout(m_pipeline_layout[0]),
-			vk::ComputePipelineCreateInfo()
-			.setStage(m_shader_info[1])
-			.setLayout(m_pipeline_layout[1]),
 		};
 
 		auto p = m_device->createComputePipelines(m_cache, compute_pipeline_info);
@@ -181,7 +160,7 @@ void cFowardPlusPipeline::Private::setup(cModelRenderer& renderer)
 	descriptor_set_alloc_info.setPSetLayouts(m_descriptor_set_layout.data());
 	m_compute_descriptor_set = m_device->allocateDescriptorSets(descriptor_set_alloc_info);
 
-	// MakeFrustom
+	// LightCulling
 	{
 		std::vector<vk::DescriptorBufferInfo> uniforms =
 		{
@@ -190,32 +169,6 @@ void cFowardPlusPipeline::Private::setup(cModelRenderer& renderer)
 		};
 		std::vector<vk::DescriptorBufferInfo> storages =
 		{
-			m_tiled_frustom.getBufferInfo(),
-		};
-
-		vk::WriteDescriptorSet desc;
-		desc.setDescriptorType(vk::DescriptorType::eUniformBuffer);
-		desc.setDescriptorCount(uniforms.size());
-		desc.setPBufferInfo(uniforms.data());
-		desc.setDstBinding(0);
-		desc.setDstSet(m_compute_descriptor_set[COMPUTE_MAKE_FRUSTOM]);
-		m_device->updateDescriptorSets(desc, {});
-		desc.setDescriptorType(vk::DescriptorType::eStorageBuffer);
-		desc.setDescriptorCount(storages.size());
-		desc.setPBufferInfo(storages.data());
-		desc.setDstBinding(8);
-		desc.setDstSet(m_compute_descriptor_set[COMPUTE_MAKE_FRUSTOM]);
-		m_device->updateDescriptorSets(desc, {});
-	}
-	// LightCulling
-	{
-		std::vector<vk::DescriptorBufferInfo> uniforms =
-		{
-			m_light_info_gpu.getBufferInfo(),
-		};
-		std::vector<vk::DescriptorBufferInfo> storages =
-		{
-			m_tiled_frustom.getBufferInfo(),
 			m_light.getBufferInfo(),
 			m_lightLL_head.getBufferInfo(),
 			m_lightLL.getBufferInfo(),

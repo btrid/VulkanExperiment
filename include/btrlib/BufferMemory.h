@@ -333,7 +333,8 @@ struct UpdateBuffer
 //	T* getPtr() { return m_staging_memory.getMappedPtr<T>(m_frame); }
 
 	vk::DescriptorBufferInfo getBufferInfo()const { return m_device_memory.getBufferInfo(); }
-	AllocatedMemory getDeviceMemory()const { return m_device_memory; }
+	AllocatedMemory& getAllocateMemory() { return m_device_memory; }
+	const AllocatedMemory& getAllocateMemory()const { return m_device_memory; }
 	vk::DeviceMemory getMemory()const { return m_staging_memory.getDeviceMemory(); }
 };
 

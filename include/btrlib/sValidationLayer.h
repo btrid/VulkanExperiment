@@ -21,7 +21,7 @@ protected:
 		{
 #if _DEBUG
 
-			"VK_LAYER_LUNARG_standard_validation"
+//			"VK_LAYER_LUNARG_standard_validation"
 // 			"VK_LAYER_LUNARG_monitor",
 // 			"VK_LAYER_GOOGLE_unique_objects",
 //			"VK_LAYER_LUNARG_core_validation",

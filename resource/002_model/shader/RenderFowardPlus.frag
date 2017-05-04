@@ -63,7 +63,7 @@ vec3 getColor(in Vertex v)
 
 		float d = max(dot(dir, norm), 0.);
 		float dist = distance(pos, light.m_position.xyz);
-		diffuse += (light.m_position.w /pow(dist, 1.5)) * light.m_emission.xyz * albedo * min(d+0.01, 1.);
+		diffuse += (light.m_position.w /pow(dist, 1.2)) * light.m_emission.xyz * albedo * min(d+0.01, 1.);
 		i = ll.next;
 	}
 

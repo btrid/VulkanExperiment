@@ -22,9 +22,10 @@
 #include <btrlib/BufferMemory.h>
 #include <002_model/cModelPipeline.h>
 #include <002_model/cModelRender.h>
-#pragma comment(lib, "vulkan-1.lib")
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "FreeImage.lib")
+#pragma comment(lib, "vulkan-1.lib")
+//#pragma comment(lib, "C:/VulkanSDK/1.0.42.2/Lib/vulkan-1.lib")
 
 int main()
 {
@@ -182,7 +183,7 @@ int main()
 	camera->m_up = glm::vec3(0.f, -1.f, 0.f);
 	camera->m_width = 640;
 	camera->m_height = 480;
-	camera->m_far = 10000.f;
+	camera->m_far = 100000.f;
 	camera->m_near = 0.01f;
 
 	vk::RenderPass render_pass;
@@ -346,7 +347,7 @@ int main()
 	fence_list.emplace_back(device->createFence(fence_info));
 	fence_list.emplace_back(device->createFence(fence_info));
 
-	for (int i = 0; i < 500; i++)
+	for (int i = 0; i < 30; i++)
 	{
 		renderer.getLight().add(std::move(std::make_unique<LightSample>()));
 	}
