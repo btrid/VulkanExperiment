@@ -15,55 +15,6 @@
 #include <btrlib/ResourceManager.h>
 #include <btrlib/BufferMemory.h>
 
-struct TmpCmd
-{
-	vk::CommandPool m_cmd_pool;
-	std::vector<vk::CommandBuffer> m_cmd;
-	vk::FenceShared m_fence;
-	cDevice m_device;
-
-	vk::CommandBuffer getCmd()const { return m_cmd[0]; }
-	vk::FenceShared getFence()const { return m_fence; }
-	TmpCmd(const cDevice& device)
-	{
-		m_device = device;
-		{
-			// コマンドバッファの準備
-			m_cmd_pool = sGlobal::Order().getCmdPoolTempolary(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
-			vk::CommandBufferAllocateInfo cmd_buffer_info;
-			cmd_buffer_info.commandBufferCount = 1;
-			cmd_buffer_info.commandPool = m_cmd_pool;
-			cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
-			m_cmd = device->allocateCommandBuffers(cmd_buffer_info);
-
-			// fence
-			vk::FenceCreateInfo fence_info;
-			m_fence.create(device.getHandle(), fence_info);
-		}
-		m_cmd[0].reset(vk::CommandBufferResetFlags());
-		vk::CommandBufferBeginInfo begin_info;
-		begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit | vk::CommandBufferUsageFlagBits::eSimultaneousUse;
-		m_cmd[0].begin(begin_info);
-	}
-	~TmpCmd()
-	{
-		m_cmd[0].end();
-		vk::SubmitInfo submit_info;
-		submit_info.commandBufferCount = (uint32_t)m_cmd.size();
-		submit_info.pCommandBuffers = m_cmd.data();
-
-		m_device->getQueue(m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), m_device.getQueueNum(vk::QueueFlagBits::eGraphics) - 1).submit(submit_info, m_fence.getHandle());
-
-		{
-			std::unique_ptr<Deleter> deleter = std::make_unique<Deleter>();
-			deleter->pool = m_cmd_pool;
-			deleter->cmd = std::move(m_cmd);
-			deleter->device = m_device.getHandle();
-			deleter->fence_shared.push_back(m_fence);
-			sGlobal::Order().destroyResource(std::move(deleter));
-		}
-	}
-};
 struct cMeshResource 
 {
 	btr::AllocatedMemory m_vertex_buffer_ex;
