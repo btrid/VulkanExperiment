@@ -34,7 +34,7 @@ bool isCulling2(in Frustom2 frustom, in vec4 AABB)
 	for (int i = 0; i < 4; i++)
 	{
 		float dist = dot(AABB.xyz, frustom.p[i].normal) - frustom.p[i].n;
-		if (dist < -abs(AABB.w)) {
+		if (dist < -abs(AABB.w*2.)) {
 			return true;
 		}
 	}

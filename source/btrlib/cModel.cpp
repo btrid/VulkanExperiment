@@ -997,7 +997,7 @@ void cModel::load(const std::string& filename)
 			min.y = glm::min(min.y, v.m_position.y);
 			min.z = glm::min(min.z, v.m_position.z);
 		}
-		mi.mAabb = glm::vec4((max - min).xyz, glm::length((max - min) / 2.f));
+		mi.mAabb = glm::vec4((max - min).xyz, glm::length((max - min)));
 		mi.mInvGlobalMatrix = glm::inverse(m_resource->mNodeRoot.getRootNode()->mTransformation);
 
 		auto& buffer = m_resource->getBuffer(Resource::ModelStorageBuffer::MODEL_INFO);

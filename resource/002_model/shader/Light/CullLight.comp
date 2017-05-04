@@ -35,19 +35,16 @@ layout(std430, binding=12) coherent restrict buffer LightCounter {
 
 void main()
 {
-	uvec3 index = uvec3(gl_GlobalInvocationID.xy, 0);
-	if(any(greaterThan(index.xy, u_light_info.m_tile_num))) { return; }
+	uvec2 index = gl_GlobalInvocationID.xy;
+	if(any(greaterThanEqual(index.xy, u_light_info.m_tile_num))) { return; }
 	uint index1D = index.x + index.y * u_light_info.m_tile_num.x;
-
 	Frustom2 f = b_tiled_frustom[index1D];
 	uint head = INVALID_LIGHT_INDEX;
 	for(uint i = 0; i < u_light_info.m_active_light_num; i++)
 	{
-		if(isCulling2(f, b_light[i].m_position))
-		{
-//			continue;
+		if(isCulling2(f, b_light[i].m_position)) {
+			continue;
 		}
-//		uint light_index = b_light_count++;
 		uint light_index = atomicAdd(b_light_count, 1);
 		b_light_LL[light_index].next = head;
 		b_light_LL[light_index].light_index = i;

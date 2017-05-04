@@ -95,6 +95,11 @@ struct Frustom2
 {
 	Plane p[4];
 };
+struct LightLL
+{
+	uint32_t next;
+	uint32_t light_index;
+};
 
 
 struct cFowardPlusPipeline
@@ -244,7 +249,7 @@ struct cFowardPlusPipeline
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_private->m_pipeline[COMPUTE_MAKE_FRUSTOM]);
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_private->m_pipeline_layout[COMPUTE_MAKE_FRUSTOM], 0, m_private->m_compute_descriptor_set[COMPUTE_MAKE_FRUSTOM], {});
-			cmd.dispatch(20, 20, 1);
+			cmd.dispatch(1, 1, 1);
 
 			vk::BufferMemoryBarrier to_read_barrier;
 			to_read_barrier.buffer = m_private->m_tiled_frustom.getBufferInfo().buffer;
@@ -309,21 +314,10 @@ struct cFowardPlusPipeline
 			copy_info.srcOffset = m_private->m_light_cpu.getOffset() + frame_offset * sizeof(LightParam);
 			copy_info.dstOffset = m_private->m_light.getOffset();
 
-			vk::BufferMemoryBarrier to_copy_barrier;
-			to_copy_barrier.dstQueueFamilyIndex = m_private->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
-			to_copy_barrier.buffer = m_private->m_light.getBuffer();
-			to_copy_barrier.setOffset(m_private->m_light.getOffset());
+			auto to_copy_barrier = m_private->m_light.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
 			to_copy_barrier.setSize(copy_info.size);
-			to_copy_barrier.srcAccessMask = vk::AccessFlagBits::eShaderRead;
-			to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
-
-			vk::BufferMemoryBarrier to_shader_read_barrier;
-			to_shader_read_barrier.dstQueueFamilyIndex = m_private->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
-			to_shader_read_barrier.buffer = m_private->m_light.getBuffer();
-			to_shader_read_barrier.setOffset(m_private->m_light.getOffset());
+			auto to_shader_read_barrier = m_private->m_light.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
 			to_shader_read_barrier.setSize(copy_info.size);
-			to_shader_read_barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-			to_shader_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, { to_copy_barrier }, {});
 			cmd.copyBuffer(m_private->m_light_cpu.getBuffer(), m_private->m_light.getBuffer(), copy_info);
@@ -331,25 +325,25 @@ struct cFowardPlusPipeline
 		}
 
 		{
+
+			{
+				std::vector<vk::BufferMemoryBarrier> barrier = {
+					m_private->m_lightLL_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
+					m_private->m_lightLL.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead)
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, barrier, {});
+			}
+
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_private->m_pipeline[COMPUTE_CULL_LIGHT]);
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_private->m_pipeline_layout[COMPUTE_CULL_LIGHT], 0, m_private->m_compute_descriptor_set[COMPUTE_CULL_LIGHT], {});
-			cmd.dispatch(30, 30, 1);
-
-			vk::BufferMemoryBarrier to_shader_read_barrier;
-			to_shader_read_barrier.dstQueueFamilyIndex = m_private->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
-			to_shader_read_barrier.buffer = m_private->m_lightLL_head.getBuffer();
-			to_shader_read_barrier.setOffset(m_private->m_lightLL_head.getOffset());
-			to_shader_read_barrier.setSize(m_private->m_lightLL_head.getSize());
-			to_shader_read_barrier.srcAccessMask = vk::AccessFlagBits::eShaderWrite;
-			to_shader_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-			vk::BufferMemoryBarrier to_shader_read_barrier2;
-			to_shader_read_barrier2.dstQueueFamilyIndex = m_private->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
-			to_shader_read_barrier2.buffer = m_private->m_lightLL.getBuffer();
-			to_shader_read_barrier2.setOffset(m_private->m_lightLL.getOffset());
-			to_shader_read_barrier2.setSize(m_private->m_lightLL.getSize());
-			to_shader_read_barrier2.srcAccessMask = vk::AccessFlagBits::eShaderWrite;
-			to_shader_read_barrier2.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), {}, { to_shader_read_barrier, to_shader_read_barrier2 }, {});
+			cmd.dispatch(1, 1, 1);
+			{
+				std::vector<vk::BufferMemoryBarrier> barrier = {
+					m_private->m_lightLL_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite),
+					m_private->m_lightLL.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite)
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), {}, barrier, {});
+			}
 		}
 
 	}

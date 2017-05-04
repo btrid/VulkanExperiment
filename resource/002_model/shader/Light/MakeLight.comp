@@ -26,7 +26,7 @@ layout(std430, binding=8) writeonly restrict buffer TiledFrustomBuffer {
 void main()
 {
 	uvec3 index = uvec3(gl_GlobalInvocationID.xy, 0);
-	if(any(greaterThan(index.xy, u_light_info.m_tile_num))) { return; }
+	if(any(greaterThanEqual(index.xy, u_light_info.m_tile_num))) { return; }
 
 	vec3 per_size = vec3(vec2(1.) / u_light_info.m_tile_num, 0.);
 //	plane_[PLANE_TOP] = Plane(rtn_, ltn_, ltf_);

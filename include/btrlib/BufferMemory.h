@@ -135,6 +135,7 @@ private:
 struct AllocatedMemory
 {
 	vk::DescriptorBufferInfo m_buffer_info;
+	vk::BufferMemoryBarrier m_memory_barrier;
 	struct Resource
 	{
 		Zone m_zone;
@@ -150,6 +151,15 @@ public:
 	vk::DeviceMemory getDeviceMemory()const { return m_resource->m_memory_ref; }
 	void* getMappedPtr()const { return m_resource->m_mapped_memory; }
 	template<typename T> T* getMappedPtr(size_t offset_num = 0)const { return static_cast<T*>(m_resource->m_mapped_memory)+offset_num; }
+
+	const vk::BufferMemoryBarrier& makeMemoryBarrier(vk::AccessFlags srcAccessMask) {
+		m_memory_barrier.buffer = m_buffer_info.buffer;
+		m_memory_barrier.size = m_buffer_info.range;
+		m_memory_barrier.offset = m_buffer_info.offset;
+		m_memory_barrier.dstAccessMask = m_memory_barrier.srcAccessMask;
+		m_memory_barrier.srcAccessMask = srcAccessMask;
+		return m_memory_barrier;
+	}
 };
 struct BufferMemory
 {
@@ -181,6 +191,8 @@ struct BufferMemory
 	void setup(const cDevice& device, vk::BufferUsageFlags flag, vk::MemoryPropertyFlags memory_type, vk::DeviceSize size)
 	{
 		assert(!m_resource);
+		btr::setOff(memory_type, vk::MemoryPropertyFlagBits::eDeviceLocal);
+		memory_type |= vk::MemoryPropertyFlagBits::eHostVisible;
 
 		auto resource = std::make_shared<Resource>();
 		resource->m_device = device;

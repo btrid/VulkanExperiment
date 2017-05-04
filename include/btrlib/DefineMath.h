@@ -14,6 +14,7 @@ using u16 = std::uint16_t;
 using s16 = std::int16_t;
 using u8 = std::uint8_t;
 using s8 = std::int8_t;
+using uint = std::uint32_t;
 
 using f16x2 = uint16_t;
 using s8x4 = glm::i8vec4;

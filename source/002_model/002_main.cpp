@@ -346,7 +346,7 @@ int main()
 	fence_list.emplace_back(device->createFence(fence_info));
 	fence_list.emplace_back(device->createFence(fence_info));
 
-	for (int i = 0; i < 200; i++)
+	for (int i = 0; i < 500; i++)
 	{
 		renderer.getLight().add(std::move(std::make_unique<LightSample>()));
 	}
@@ -431,6 +431,7 @@ int main()
 				.setPSignalSemaphores(&cmdsubmit_semaphore)
 			};
 			queue.submit(submitInfo, fence_list[backbuffer_index]);
+
 			vk::PresentInfoKHR present_info = vk::PresentInfoKHR()
 				.setWaitSemaphoreCount(1)
 				.setPWaitSemaphores(&cmdsubmit_semaphore)

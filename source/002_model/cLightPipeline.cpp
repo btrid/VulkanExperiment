@@ -21,23 +21,25 @@ void cFowardPlusPipeline::Private::setup(cModelRenderer& renderer)
 		size += sizeof(glm::uvec2) * tile_num_all * m_light_num;
 		size += tile_num.x * tile_num.y * sizeof(Frustom2);
 		size += sizeof(uint32_t) * 4;
+		size += 65000;
 		m_storage_memory.setup(m_device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal, size);
 	}
 
-	m_uniform_memory.setup(m_device, vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal, 1024);
+	m_uniform_memory.setup(m_device, vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal, 1024*4);
 
 
 	// ÉÅÉÇÉäÇÃämï€Ç∆Ç©
 	{
 		m_light = m_storage_memory.allocateMemory(sizeof(LightParam) * m_light_num);
 		m_lightLL_head = m_storage_memory.allocateMemory(sizeof(uint32_t) * tile_num_all);
-		m_lightLL = m_storage_memory.allocateMemory(sizeof(glm::uvec2) * tile_num_all * m_light_num);
+		m_lightLL = m_storage_memory.allocateMemory(sizeof(LightLL) * tile_num_all * m_light_num);
 		m_light_counter = m_storage_memory.allocateMemory(sizeof(uint32_t));
 		m_tiled_frustom = m_storage_memory.allocateMemory(tile_num.x * tile_num.y * sizeof(Frustom2));
 
 		vk::DeviceSize alloc_size = m_light.getSize()*sGlobal::FRAME_MAX;
 		alloc_size += m_lightLL_head.getSize();
 		alloc_size += m_tiled_frustom.getSize() * sGlobal::FRAME_MAX;
+		alloc_size += 65000;
 		m_staging_memory.setup(m_device, vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached, alloc_size);
 	}
 

@@ -33,7 +33,7 @@ struct LightSample : public Light
 	LightSample()
 	{
 		life = std::rand() % 50 + 30;
-		m_param.m_position = glm::vec4(glm::ballRand(5000.f), std::rand() % 100 + 55.f);
+		m_param.m_position = glm::vec4(glm::ballRand(3000.f), std::rand() % 50 + 500.f);
 		m_param.m_emission = glm::vec4(glm::normalize(glm::abs(glm::ballRand(1.f)) + glm::vec3(0.f, 0.f, 0.01f)), 1.f);
 
 	}
