@@ -5,6 +5,9 @@
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "vulkan-1.lib")
 
+namespace app
+{
+
 App::App()
 {
 	sWindow& w = sWindow::Order();
@@ -110,7 +113,7 @@ App::App()
 		subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
 		subpass.setInputAttachmentCount(0);
 		subpass.setPInputAttachments(nullptr);
-		subpass.setColorAttachmentCount(colorRef.size());
+		subpass.setColorAttachmentCount((uint32_t)colorRef.size());
 		subpass.setPColorAttachments(colorRef.data());
 		subpass.setPDepthStencilAttachment(&depth_ref);
 		// render pass
@@ -219,3 +222,4 @@ App::App()
 	}
 }
 
+}

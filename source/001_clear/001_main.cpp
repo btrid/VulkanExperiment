@@ -16,7 +16,7 @@
 #include <btrlib/sValidationLayer.h>
 #include <btrlib/cWindow.h>
 //#include "Camera.h"
-#include <btrlib/ThreadPool.h>
+#include <btrlib/cThreadPool.h>
 #include <btrlib/cDebug.h>
 #include <btrlib/sGlobal.h>
 #include <btrlib/cStopWatch.h>

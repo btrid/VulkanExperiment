@@ -566,7 +566,7 @@ void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& r
 		return;
 	}
 
-	btr::BufferMemory::Argument staging_arg;
+	btr::BufferMemory::Descriptor staging_arg;
 	staging_arg.size = sizeof(cModel::AnimationInfo) * scene->mNumAnimations;
 //	staging_arg.attribute = btr::BufferMemory::AttributeFlagBits::MEMORY_CONSTANT;
 	auto staging = loader->m_staging_memory.allocateMemory(staging_arg);
@@ -587,7 +587,7 @@ void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& r
 	// AnimeInfo
 	{
 		auto& buffer = anim_buffer.mMotionBuffer[cAnimation::ANIMATION_INFO];
-		btr::BufferMemory::Argument arg;
+		btr::BufferMemory::Descriptor arg;
 		arg.size = sizeof(cModel::AnimationInfo) * scene->mNumAnimations;
 //		arg.attribute = btr::BufferMemory::AttributeFlagBits::MEMORY_CONSTANT;
 		buffer = loader->m_storage_uniform_memory.allocateMemory(arg);
@@ -810,7 +810,7 @@ void cModel::load(const std::string& filename)
 			mesh.m_vertex_buffer_ex = s_vertex_memory.allocateMemory(staging_vertex.getSize());
 			mesh.m_index_buffer_ex = s_vertex_memory.allocateMemory(staging_index.getSize());
 
-			btr::BufferMemory::Argument arg;
+			btr::BufferMemory::Descriptor arg;
 			arg.size = sizeof(Mesh) * indexSize.size();
 			arg.attribute = btr::BufferMemory::AttributeFlags();
 			mesh.m_indirect_buffer_ex = s_vertex_memory.allocateMemory(arg);

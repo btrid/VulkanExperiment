@@ -144,6 +144,7 @@ struct AllocatedMemory
 	};
 	std::shared_ptr<Resource> m_resource;
 public:
+	bool isValid()const { return !!m_resource; }
 	vk::DescriptorBufferInfo getBufferInfo()const { return m_buffer_info; }
 	vk::Buffer getBuffer()const { return m_buffer_info.buffer; }
 	vk::DeviceSize getSize()const { return m_buffer_info.range; }
@@ -176,7 +177,7 @@ struct BufferMemory
 		vk::MemoryAllocateInfo m_memory_alloc;
 		vk::MemoryType m_memory_type;
 
-		vk::BufferCreateInfo m_bufer_info;
+		vk::BufferCreateInfo m_buffer_info;
 		void* m_mapped_memory;
 
 		std::string m_name;
@@ -201,7 +202,7 @@ struct BufferMemory
 		buffer_info.usage = flag;
 		buffer_info.size = size;
 		resource->m_buffer = device->createBuffer(buffer_info);
-		resource->m_bufer_info = buffer_info;
+		resource->m_buffer_info = buffer_info;
 
 		vk::MemoryRequirements memory_request = resource->m_device->getBufferMemoryRequirements(resource->m_buffer);
 		vk::MemoryAllocateInfo memory_alloc;
@@ -233,23 +234,23 @@ struct BufferMemory
 		MEMORY_CONSTANT = 1 << 2,
 	};
 	using AttributeFlags = vk::Flags<AttributeFlagBits, uint32_t>;
-	struct Argument
+	struct Descriptor
 	{
 		vk::DeviceSize size;
 		AttributeFlags attribute;
-		Argument()
+		Descriptor()
 			: size(0)
 			, attribute(AttributeFlags())
 		{}
 	};
 	AllocatedMemory allocateMemory(vk::DeviceSize size)
 	{
-		Argument arg;
+		Descriptor arg;
 		arg.size = size;
 		arg.attribute = AttributeFlags();
 		return allocateMemory(arg);
 	}
-	AllocatedMemory allocateMemory(Argument arg)
+	AllocatedMemory allocateMemory(Descriptor arg)
 	{
 		auto zone = m_resource->m_free_zone.alloc(arg.size);
 		assert(zone.isValid());
@@ -275,10 +276,16 @@ struct BufferMemory
 		return alloc;
 	}
 	cDevice getDevice()const { return m_resource->m_device; }
-	vk::BufferCreateInfo getBufferCreateInfo()const { return m_resource->m_bufer_info; }
+	const vk::BufferCreateInfo& getBufferCreateInfo()const { return m_resource->m_buffer_info; }
 
 };
 
+struct UpdateBufferDescriptor
+{
+	btr::BufferMemory device_memory;
+	btr::BufferMemory staging_memory;
+	uint32_t frame_max;
+};
 template<typename T>
 struct UpdateBuffer
 {
@@ -287,17 +294,45 @@ struct UpdateBuffer
 	vk::DeviceSize m_begin;
 	vk::DeviceSize m_end;
 	uint32_t m_frame;
-	void setup(btr::BufferMemory device_memory, btr::BufferMemory staging_memory)
+	uint32_t m_frame_max;
+
+	// @deprecated
+	void setup(btr::BufferMemory& device_memory, btr::BufferMemory& staging_memory)
 	{
-		assert(device_memory.isValid());
-		assert(btr::isOn(device_memory.getBufferCreateInfo().usage, vk::BufferUsageFlagBits::eTransferDst));
-		assert(staging_memory.isValid());
-		assert(btr::isOn(staging_memory.getBufferCreateInfo().usage, vk::BufferUsageFlagBits::eTransferSrc));
-		m_device_memory = device_memory.allocateMemory(sizeof(T));
-		m_staging_memory = staging_memory.allocateMemory(sizeof(T)*sGlobal::FRAME_MAX);
+		UpdateBufferDescriptor desc;
+		desc.device_memory = device_memory;
+		desc.staging_memory = staging_memory;
+		desc.frame_max = sGlobal::FRAME_MAX;
+
+		setup(desc);
+	}
+
+	void setup(UpdateBufferDescriptor& desc)
+	{
+		assert(!m_device_memory.isValid());
+		assert(desc.device_memory.isValid());
+		assert(btr::isOn(desc.device_memory.getBufferCreateInfo().usage, vk::BufferUsageFlagBits::eTransferDst));
+
+		m_device_memory = desc.device_memory.allocateMemory(sizeof(T));
+		if (desc.staging_memory.isValid()) {
+	 		assert(btr::isOn(desc.staging_memory.getBufferCreateInfo().usage, vk::BufferUsageFlagBits::eTransferSrc));
+			m_staging_memory = desc.staging_memory.allocateMemory(sizeof(T)*desc.frame_max);
+		}
 		m_begin = ~vk::DeviceSize(0);
 		m_end = vk::DeviceSize(0);
 		m_frame = 0;
+		m_frame_max = desc.frame_max;
+	}
+
+	void setStagingMemory(btr::BufferMemory& staging_memory)
+	{
+		// çXêVíÜÇ¡Ç€Ç¢
+		assert(m_begin == ~vk::DeviceSize(0));
+		m_staging_memory = AllocatedMemory();
+		if (staging_memory.isValid())
+		{
+			m_staging_memory = staging_memory.allocateMemory(sizeof(T)*m_frame_max);
+		}
 	}
 
 	void subupdate(const T& data)
@@ -327,7 +362,7 @@ struct UpdateBuffer
 
 		m_begin = ~vk::DeviceSize(0);
 		m_end = vk::DeviceSize(0);
-		m_frame = (m_frame + 1) % sGlobal::FRAME_MAX;
+		m_frame = (m_frame + 1) % m_frame_max;
 
 	}
 //	T* getPtr() { return m_staging_memory.getMappedPtr<T>(m_frame); }

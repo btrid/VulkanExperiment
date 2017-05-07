@@ -13,28 +13,27 @@
 #include <memory>
 #include <filesystem>
 #include <btrlib/Define.h>
-#include <btrlib/Singleton.h>
-#include <btrlib/sValidationLayer.h>
 #include <btrlib/cWindow.h>
-#include <btrlib/cThreadPool.h>
 #include <btrlib/cCamera.h>
 #include <btrlib/sGlobal.h>
 #include <btrlib/GPU.h>
 #include <btrlib/cStopWatch.h>
 #include <btrlib/BufferMemory.h>
-
+#include <003_particle/ParticlePipeline.h>
 #include <applib/App.h>
 
 //#pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
 //#pragma comment(lib, "FreeImage.lib")
+//#pragma comment(lib, "C:\\VulkanSDK\\1.0.42.2\\lib\\vulkan-1.lib")
 #pragma comment(lib, "vulkan-1.lib")
+
 
 int main()
 {
 	btr::setResourcePath("..\\..\\resource\\003_particle\\");
 
-	App app;
+	app::App app;
 
 	auto* camera = cCamera::sCamera::Order().create();
 	camera->m_position = glm::vec3(0.f, -500.f, -800.f);
@@ -44,6 +43,7 @@ int main()
 	camera->m_height = 480;
 	camera->m_far = 100000.f;
 	camera->m_near = 0.01f;
+
 	auto device = sThreadLocal::Order().m_device[0];
 	auto pool_list = sThreadLocal::Order().getCmdPoolOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
 	std::vector<vk::CommandBuffer> render_cmds(sGlobal::FRAME_MAX);
@@ -68,6 +68,44 @@ int main()
 	vk::Semaphore swapbuffer_semaphore = device->createSemaphore(semaphoreInfo);
 	vk::Semaphore cmdsubmit_semaphore = device->createSemaphore(semaphoreInfo);
 	vk::Queue queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), 0);
+
+
+	std::unique_ptr<Loader> loader = std::make_unique<Loader>();
+	loader->m_device = device;
+	loader->m_render_pass = app.m_render_pass;
+	loader->m_uniform_memory.setup(device, vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached, 1024 * 20);
+	loader->m_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached, 1024 * 1024 * 20);
+	loader->m_staging_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached, 1024 * 1024 * 20);
+
+	cParticlePipeline pipeline;
+	{
+		vk::CommandBufferBeginInfo begin_info;
+		begin_info.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+		render_cmds[0].begin(begin_info);
+		loader->m_cmd = render_cmds[0];
+		pipeline.setup(*loader);
+		render_cmds[0].end();
+		std::vector<vk::CommandBuffer> cmds = {
+			render_cmds[0],
+		};
+
+		vk::PipelineStageFlags waitPipeline = vk::PipelineStageFlagBits::eAllGraphics;
+		std::vector<vk::SubmitInfo> submitInfo =
+		{
+			vk::SubmitInfo()
+			.setCommandBufferCount((uint32_t)cmds.size())
+			.setPCommandBuffers(cmds.data())
+//			.setWaitSemaphoreCount(1)
+// 			.setPWaitSemaphores(&swapbuffer_semaphore)
+// 			.setPWaitDstStageMask(&waitPipeline)
+// 			.setSignalSemaphoreCount(1)
+// 			.setPSignalSemaphores(&cmdsubmit_semaphore)
+		};
+		queue.submit(submitInfo, vk::Fence());
+		queue.waitIdle();
+
+	}
+
 	while (true)
 	{
 		cStopWatch time;
@@ -100,6 +138,7 @@ int main()
 				vk::DependencyFlags(),
 				nullptr, nullptr, present_to_render_barrier);
 
+			pipeline.execute(render_cmd);
 			// begin cmd render pass
 			std::vector<vk::ClearValue> clearValue = {
 				vk::ClearValue().setColor(vk::ClearColorValue(std::array<float, 4>{0.3f, 0.3f, 0.8f, 1.f})),
@@ -113,6 +152,7 @@ int main()
 				.setFramebuffer(app.m_framebuffer[backbuffer_index]);
 			render_cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 			// draw
+			pipeline.draw(render_cmd);
 
 			render_cmd.endRenderPass();
 

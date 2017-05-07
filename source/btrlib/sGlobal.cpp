@@ -125,6 +125,8 @@ sGlobal::sGlobal()
 			cmd_pool_info.setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
 			cmd_pool_per_device = data.m_gpu.getDeviceByFamilyIndex(family)->createCommandPool(cmd_pool_info);
 		}
+
+//		this->m_threads[param.m_index] = &data;
 	};
 
 	m_thread_pool.start(std::thread::hardware_concurrency()-1, init_thread_data_func);

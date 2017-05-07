@@ -122,6 +122,7 @@ private:
 	cThreadPool m_thread_pool;
 	std::vector<vk::CommandPool>	m_cmd_pool_tempolary;
 	std::array<std::vector<std::unique_ptr<Deleter>>, FRAME_MAX> m_cmd_delete;
+//	std::array<sThreadLocal*, 8> m_threads;
 
 	float m_deltatime;
 public:

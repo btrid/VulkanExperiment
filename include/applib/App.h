@@ -1,6 +1,9 @@
 #pragma once
 #include <btrlib/Define.h>
 #include <btrlib/cWindow.h>
+namespace app
+{
+
 struct App
 {
 	cWindow m_window;
@@ -8,3 +11,5 @@ struct App
 	std::vector<vk::Framebuffer> m_framebuffer;
 	App();
 };
+
+}
