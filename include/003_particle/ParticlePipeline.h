@@ -29,7 +29,7 @@ enum class ParticleFlag : uint32_t
 struct ParticleData
 {
 	glm::vec4 m_pos;	//!< xyz:pos w:scale
-	glm::vec4 m_vec;	//!< xyz:dir w:not use
+	glm::vec4 m_vel;	//!< xyz:dir w:not use
 	uint32_t m_type;
 	uint32_t m_flag;
 	float m_life;
@@ -58,6 +58,8 @@ struct Pipeline
 	vk::Pipeline m_pipeline;
 	vk::PipelineLayout m_pipeline_layout;
 };
+
+glm::uvec3 calcDipatch(const glm::uvec3& num, const glm::uvec3& local_size);
 struct cParticlePipeline
 {
 	struct Private 
@@ -82,11 +84,14 @@ struct cParticlePipeline
 
 		btr::AllocatedMemory m_particle;
 		btr::AllocatedMemory m_particle_info;
-		btr::AllocatedMemory m_particle_emit;
+		btr::UpdateBuffer<std::array<ParticleData, 1024>> m_particle_emit;
+//		btr::AllocatedMemory m_particle_emit;
 		btr::AllocatedMemory m_particle_counter;
 		btr::UpdateBuffer<CameraGPU> m_camera;
 		CircleIndex<uint32_t, 2> m_circle_index;
 
+		vk::DescriptorBufferInfo m_particle_counter_info;
+		btr::AllocatedMemory m_particle_draw_indiret_info;
 		vk::PipelineCache m_cache;
 		vk::DescriptorPool m_descriptor_pool;
 		std::array<vk::DescriptorSetLayout, PIPELINE_LAYOUT_NUM> m_descriptor_set_layout;
@@ -108,15 +113,29 @@ struct cParticlePipeline
 			m_info.m_emit_max_num = 1024;
 
 			{
+				{
+					btr::BufferMemory::Descriptor data_desc;
+					data_desc.size = sizeof(ParticleData) * m_info.m_max_num;
+					m_particle = loader.m_storage_memory.allocateMemory(data_desc);
+					std::vector<ParticleData> p(m_info.m_max_num);
+//					loader.m_cmd.updateBuffer(m_particle.getBuffer(), m_particle.getOffset(), vector_sizeof(p), p.data());
+					loader.m_cmd.fillBuffer(m_particle.getBuffer(), m_particle.getOffset(), m_particle.getSize(), 0u);
+				}
+
+				{
+					btr::UpdateBufferDescriptor emit_desc;
+					emit_desc.device_memory = loader.m_storage_memory;
+					emit_desc.staging_memory = loader.m_staging_memory;
+					emit_desc.frame_max = sGlobal::FRAME_MAX;
+					m_particle_emit.setup(emit_desc);
+				}
+
 				btr::BufferMemory::Descriptor desc;
-				desc.size = sizeof(ParticleData) * m_info.m_max_num;
-				m_particle = loader.m_storage_memory.allocateMemory(desc);
-
-				desc.size = sizeof(ParticleData) * m_info.m_emit_max_num;
-				m_particle_emit = loader.m_staging_memory.allocateMemory(desc);
-
-				desc.size = 16;
+				desc.size = sizeof(vk::DrawIndirectCommand);
 				m_particle_counter = loader.m_storage_memory.allocateMemory(desc);
+				loader.m_cmd.updateBuffer<vk::DrawIndirectCommand>(m_particle_counter.getBuffer(), m_particle_counter.getOffset(), vk::DrawIndirectCommand(1, 1, 0, 0));
+				auto count_barrier = m_particle_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
+				loader.m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { count_barrier }, {});
 
 				m_particle_info = loader.m_uniform_memory.allocateMemory(sizeof(ParticleInfo));
 				loader.m_cmd.updateBuffer<ParticleInfo>(m_particle_info.getBuffer(), m_particle_info.getOffset(), { m_info });
@@ -242,7 +261,7 @@ struct cParticlePipeline
 					std::vector<vk::PushConstantRange> push_constants = {
 						vk::PushConstantRange()
 						.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-						.setSize(12),
+						.setSize(8),
 					};
 					vk::PipelineLayoutCreateInfo pipeline_layout_info;
 					pipeline_layout_info.setSetLayoutCount(layouts.size());
@@ -360,7 +379,7 @@ struct cParticlePipeline
 					// assembly
 					vk::PipelineInputAssemblyStateCreateInfo assembly_info = vk::PipelineInputAssemblyStateCreateInfo()
 						.setPrimitiveRestartEnable(VK_FALSE)
-						.setTopology(vk::PrimitiveTopology::eTriangleList);
+						.setTopology(vk::PrimitiveTopology::ePointList);
 
 					// viewport
 					vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)size.width, (float)size.height, 0.f, 1.f);
@@ -430,43 +449,119 @@ struct cParticlePipeline
 		void execute(vk::CommandBuffer cmd)
 		{
 			{
+				// transfer
+				std::vector<vk::BufferMemoryBarrier> to_transfer = { 
+					m_particle_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite),
+					m_camera.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite),
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
+
+				cmd.updateBuffer<vk::DrawIndirectCommand>(m_particle_counter.getBuffer(), m_particle_counter.getOffset(), vk::DrawIndirectCommand(0, 1, 0, 0));
+
 				auto* camera = cCamera::sCamera::Order().getCameraList()[0];
 				CameraGPU camera_GPU;
 				camera_GPU.setup(*camera);
 				m_camera.subupdate(camera_GPU);
 				m_camera.update(cmd);
 
-				auto barrier = m_camera.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexShader, {}, {}, { barrier }, {});
+				std::vector<vk::BufferMemoryBarrier> to_update_barrier = {
+					m_particle_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_update_barrier }, {});
+
+				std::vector<vk::BufferMemoryBarrier> to_draw_barrier = {
+					m_camera.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexShader, {}, {}, { to_draw_barrier }, {});
 			}
-			struct UpdateConstantBlock
-			{
-				float m_deltatime;
-				uint m_src_offset;
-				uint m_dst_offset;
-			};
 
 			m_circle_index++;
-
-			UpdateConstantBlock block;
-			block.m_deltatime = sGlobal::Order().getDeltaTime();
-			block.m_src_offset = m_circle_index.get() == 0 ? m_particle.getSize() / 2 : 0;
-			block.m_dst_offset = m_circle_index.get() == 1 ? m_particle.getSize() / 2 : 0;
-			cmd.pushConstants<UpdateConstantBlock>(m_pipeline_layout[COMPUTE_UPDATE], vk::ShaderStageFlagBits::eCompute, 0, block);
-	
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_compute_pipeline[COMPUTE_UPDATE]);
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[COMPUTE_PIPELINE_LAYOUT_UPDATE], 0, m_descriptor_set[COMPUTE_PIPELINE_LAYOUT_UPDATE], {});
-			cmd.dispatch(8192, 1, 1);
-
-			auto particle_barrier = m_particle.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
-			particle_barrier.offset += block.m_dst_offset;
-			particle_barrier.size /= 2;
-			std::vector<vk::BufferMemoryBarrier> to_draw_barrier =
+			uint src_offset = m_circle_index.get() == 1 ? (m_particle.getSize()/sizeof(ParticleData) / 2) : 0;
+			uint dst_offset = m_circle_index.get() == 0 ? (m_particle.getSize() / sizeof(ParticleData) / 2) : 0;
 			{
-				particle_barrier,
-				m_particle_counter.makeMemoryBarrier(vk::AccessFlagBits::eIndirectCommandRead),
-			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eVertexShader, {}, {}, to_draw_barrier, {});
+				// update
+				struct UpdateConstantBlock
+				{
+					float m_deltatime;
+					uint m_src_offset;
+					uint m_dst_offset;
+				};
+				UpdateConstantBlock block;
+				block.m_deltatime = sGlobal::Order().getDeltaTime();
+				block.m_src_offset = src_offset;
+				block.m_dst_offset = dst_offset;
+				cmd.pushConstants<UpdateConstantBlock>(m_pipeline_layout[COMPUTE_UPDATE], vk::ShaderStageFlagBits::eCompute, 0, block);
+
+				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_compute_pipeline[COMPUTE_UPDATE]);
+				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[COMPUTE_PIPELINE_LAYOUT_UPDATE], 0, m_descriptor_set[COMPUTE_PIPELINE_LAYOUT_UPDATE], {});
+				auto groups = calcDipatch(glm::uvec3(8192 / 2, 1, 1), glm::uvec3(1024, 1, 1));
+				cmd.dispatch(groups.x, groups.y, groups.z);
+
+			}
+
+
+			{
+				static int count;
+				count++;
+				count %= 3000;
+				if (count == 0 )
+				{
+					auto particle_barrier = m_particle.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite);
+//					particle_barrier.offset += dst_offset* sizeof(ParticleData);
+//					particle_barrier.size /= 2;
+					std::vector<vk::BufferMemoryBarrier> to_emit_barrier =
+					{
+						particle_barrier,
+						m_particle_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
+					};
+					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_emit_barrier, {});
+
+					// emit
+					std::array<ParticleData, 200> data;
+					for (auto& p : data)
+					{
+						p.m_pos = glm::vec4(glm::ballRand(500.f), 5.f);
+						p.m_vel = glm::vec4(glm::ballRand(10.f), 0.f);
+						p.m_life = std::rand() % 50 + 240;
+					}
+					m_particle_emit.subupdate(data.data(), vector_sizeof(data), 0);
+
+					auto to_transfer = m_particle_emit.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite);
+					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
+					m_particle_emit.update(cmd);
+					auto to_read = m_particle_emit.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
+					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
+
+					struct EmitConstantBlock
+					{
+						uint m_emit_num;
+						uint m_offset;
+					};
+					EmitConstantBlock block;
+					block.m_emit_num = data.size();
+					block.m_offset = dst_offset;
+					cmd.pushConstants<EmitConstantBlock>(m_pipeline_layout[COMPUTE_EMIT], vk::ShaderStageFlagBits::eCompute, 0, block);
+					cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_compute_pipeline[COMPUTE_EMIT]);
+					cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[COMPUTE_PIPELINE_LAYOUT_EMIT], 0, m_descriptor_set[COMPUTE_PIPELINE_LAYOUT_UPDATE], {});
+					cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[COMPUTE_PIPELINE_LAYOUT_EMIT], 1, m_descriptor_set[COMPUTE_PIPELINE_LAYOUT_EMIT], {});
+					auto groups = calcDipatch(glm::uvec3(block.m_emit_num, 1, 1), glm::uvec3(1024, 1, 1));
+					cmd.dispatch(groups.x, groups.y, groups.z);
+
+				}
+
+				struct DrawConstantBlock
+				{
+					uint m_src_offset;
+				};
+				DrawConstantBlock block;
+				block.m_src_offset = dst_offset;
+				cmd.pushConstants<DrawConstantBlock>(m_pipeline_layout[GRAPHICS_PIPELINE_LAYOUT_DRAW], vk::ShaderStageFlagBits::eVertex, 0, block);
+				auto particle_barrier = m_particle.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eVertexShader, {}, {}, particle_barrier, {});
+
+				auto to_draw = m_particle_counter.makeMemoryBarrier(vk::AccessFlagBits::eIndirectCommandRead);
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, {}, {}, { to_draw }, {});
+			}
 
 		}
 

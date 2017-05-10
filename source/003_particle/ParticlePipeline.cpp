@@ -20,3 +20,13 @@ vk::DescriptorPool createPool(vk::Device device, const std::vector<std::vector<v
 	return device.createDescriptorPool(pool_info);
 
 }
+
+glm::uvec3 calcDipatch(const glm::uvec3& num, const glm::uvec3& local_size)
+{
+	glm::uvec3 ret;
+	for (int i = 0; i < 3; i++)
+	{
+		ret[i] = num[i] + (local_size[i] - 1) / local_size[i];
+	}
+	return ret;
+}

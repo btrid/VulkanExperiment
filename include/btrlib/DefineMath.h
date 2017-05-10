@@ -41,6 +41,7 @@ void setOff(A& bit, B test) {
 }
 
 //!	align(4, 32) -> 32
+//!	align(33, 32) -> 64
 template<typename T>
 T align(T value, T align_num)
 {

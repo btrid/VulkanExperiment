@@ -153,12 +153,12 @@ public:
 	void* getMappedPtr()const { return m_resource->m_mapped_memory; }
 	template<typename T> T* getMappedPtr(size_t offset_num = 0)const { return static_cast<T*>(m_resource->m_mapped_memory)+offset_num; }
 
-	const vk::BufferMemoryBarrier& makeMemoryBarrier(vk::AccessFlags srcAccessMask) {
+	const vk::BufferMemoryBarrier& makeMemoryBarrier(vk::AccessFlags dstAccessMask) {
 		m_memory_barrier.buffer = m_buffer_info.buffer;
 		m_memory_barrier.size = m_buffer_info.range;
 		m_memory_barrier.offset = m_buffer_info.offset;
-		m_memory_barrier.dstAccessMask = m_memory_barrier.srcAccessMask;
-		m_memory_barrier.srcAccessMask = srcAccessMask;
+		m_memory_barrier.dstAccessMask = dstAccessMask;
+		m_memory_barrier.srcAccessMask = m_memory_barrier.dstAccessMask;
 		return m_memory_barrier;
 	}
 };
@@ -349,9 +349,16 @@ struct UpdateBuffer
 		m_begin = std::min(offset, m_begin);
 		m_end = std::max(offset + data_size, m_end);
 	}
+
+	bool isUpdate()const {
+		return m_end < m_begin;
+	}
+
 	void update(vk::CommandBuffer cmd)
 	{
-		if (m_end < m_begin) {
+		if (isUpdate()) {
+			assert(isUpdate());
+//			return vk::DescriptorBufferInfo();
 			return;
 		}
 		vk::BufferCopy copy_info;
@@ -364,6 +371,10 @@ struct UpdateBuffer
 		m_end = vk::DeviceSize(0);
 		m_frame = (m_frame + 1) % m_frame_max;
 
+// 		vk::DescriptorBufferInfo info = getBufferInfo();
+// 		info.setOffset(copy_info.srcOffset);
+// 		info.setRange(copy_info.size);
+// 		return info;
 	}
 //	T* getPtr() { return m_staging_memory.getMappedPtr<T>(m_frame); }
 

@@ -17,6 +17,7 @@
 #include <Particle.glsl>
 out gl_PerVertex{
 	vec4 gl_Position;
+	float gl_PointSize;
 };
 /*
 layout(std140, set=0, binding=0) uniform ParticleInfoUniform 
@@ -37,13 +38,13 @@ layout(std140, set=1, binding=0) uniform CameraUniform
 
 layout(push_constant) uniform UpdateConstantBlock
 {
-	uint m_src_offset;
+	uint m_offset;
 } constant;
 
 void main()
 {
-	ParticleData p = b_particle[gl_InstanceIndex + constant.m_src_offset];
+	ParticleData p = b_particle[gl_VertexIndex + constant.m_offset];
 	vec4 pos = vec4(p.m_pos.xyz, 1.0);
-	gl_Position = uProjection * uView * vec4(pos.xyz, 1.0);
-
+	gl_Position = uProjection * uView * pos;
+	gl_PointSize = p.m_pos.w/ pos.w;
 }
