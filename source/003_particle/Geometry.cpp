@@ -221,16 +221,19 @@ std::tuple<std::vector<glm::vec3>, std::vector<glm::vec3>> Geometry::createOrtho
 
 Geometry Geometry::MakeGeometry(Loader& loader, const void* vertex, size_t vertex_size, const void* index, size_t index_size, vk::IndexType index_type, const std::vector<vk::VertexInputAttributeDescription>& vertex_attr, const std::vector<vk::VertexInputBindingDescription>& vertex_bind)
 {
-// 	auto resource = std::make_unique<Resource>();
-// 	resource->m_vertex_binding = vertex_bind;
-// 	resource->m_vertex_attribute = vertex_attr;
-// 	resource->m_index_type = index_type;
-// 	{
-// 		btr::BufferMemory::Descriptor vertex_desc;
-// 		vertex_desc.size = vertex_size;
-// 		resource->m_vertex = loader.m_vertex_memory.allocateMemory(vertex_desc);
-// 		//			resource->m_vertex.
-// 	}
+	auto resource = std::make_unique<Resource>();
+	resource->m_vertex_binding = vertex_bind;
+	resource->m_vertex_attribute = vertex_attr;
+	resource->m_index_type = index_type;
+	{
+		btr::BufferMemory::Descriptor vertex_desc;
+		vertex_desc.size = vertex_size;
+		resource->m_vertex = loader.m_vertex_memory.allocateMemory(vertex_desc);
+
+		vertex_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+
+//		resource->m_vertex.
+	}
 
 	Geometry geo;
 	return geo;

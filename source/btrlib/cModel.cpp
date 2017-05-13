@@ -146,7 +146,7 @@ MotionTexture create(const cDevice& device, const aiAnimation* anim, const RootN
 		auto* pos_scale = data + no * 2 * SIZE;
 		auto* quat = reinterpret_cast<glm::quat*>(pos_scale + SIZE);
 
-		float time_max = anim->mDuration;// / anim->mTicksPerSecond;
+		float time_max = (float)anim->mDuration;// / anim->mTicksPerSecond;
 		float time_per = time_max / SIZE;
 		float time = 0.;
 		int count = 0;

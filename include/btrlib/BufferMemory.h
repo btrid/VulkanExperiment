@@ -13,6 +13,7 @@ struct Zone
 	vk::DeviceSize m_end;
 	uint32_t m_is_reverse_alloc : 1;
 	uint32_t _flag : 31;
+	GameFrame m_wait_frame;	//!< 遅延削除のために数フレーム待つ
 	Zone()
 		: m_start(0llu)
 		, m_end(0llu)
@@ -49,6 +50,8 @@ struct Zone
 		{
 			m_end = zone.m_end;
 		}
+		assert(isValid());
+		assert(range() != 0);
 	}
 
 	bool tryMarge(const Zone zone)
@@ -64,23 +67,34 @@ struct Zone
 	vk::DeviceSize range()const { return m_end - m_start; }
 	bool isValid()const { return m_end != 0llu; }
 };
-struct FreeZone
+
+/**
+ * GPUメモリプール
+ * オレオレ実装
+ * メモリ使用率重視なので、速度重視のものも必要かもしれない
+ */
+struct GPUMemoryAllocater
 {
+	struct DelayedFree {
+		std::vector<Zone> m_list;
+		std::mutex m_mutex;
+	};
 	std::vector<Zone> m_free_zone;
 	std::vector<Zone> m_active_zone;
+	DelayedFree m_delayed_active;
+	vk::DeviceSize m_align;		//!< メモリのアラインメント
+	GameFrame m_last_gc;		//!< 最後に実行したgcのフレーム
 
-	vk::DeviceSize m_align;
 	std::mutex m_free_zone_mutex;
-	~FreeZone()
+
+	~GPUMemoryAllocater()
 	{
 		assert(m_active_zone.empty());
-		// gcが走らなければsizeは1以外のこともある
-//		assert(m_free_zone.size() == 1);
 	}
 	void setup(vk::DeviceSize size, vk::DeviceSize align)
 	{
 		assert(m_free_zone.empty());
-
+		m_last_gc = sGlobal::Order().getGameFrame();
 		m_align = align;
 		Zone zone;
 		zone.m_start = 0;
@@ -96,6 +110,11 @@ struct FreeZone
 			return allocReverse(size);
 		}
 
+		if (sGlobal::Order().isElapsed(m_last_gc, 1u))
+		{
+			gc_impl();
+		}
+
 		size = btr::align(size, m_align);
 		std::lock_guard<std::mutex> lock(m_free_zone_mutex);
 		for (auto& zone : m_free_zone)
@@ -103,17 +122,7 @@ struct FreeZone
 			if (zone.range() >= size)
 			{
 				m_active_zone.emplace_back(zone.split(size));
-				return m_active_zone.back();
-			}
-		}
-
-		// sortしてもう一度
-		gc_impl();
-		for (auto& zone : m_free_zone)
-		{
-			if (zone.range() >= size)
-			{
-				m_active_zone.emplace_back(zone.split(size));
+				assert(m_active_zone.back().range() != 0);
 				return m_active_zone.back();
 			}
 		}
@@ -121,6 +130,10 @@ struct FreeZone
 	}
 	Zone allocReverse(vk::DeviceSize size)
 	{
+		if (sGlobal::Order().isElapsed(m_last_gc, 1u))
+		{
+			gc_impl();
+		}
 		size = btr::align(size, m_align);
 		std::lock_guard<std::mutex> lock(m_free_zone_mutex);
 		for (auto it = m_free_zone.rbegin(); it != m_free_zone.rend(); it++)
@@ -129,18 +142,7 @@ struct FreeZone
 			if (zone.range() >= size)
 			{
 				m_active_zone.emplace_back(zone.splitReverse(size));
-				return m_active_zone.back();
-			}
-		}
-
-		// sortしてもう一度
-		gc_impl();
-		for (auto it = m_free_zone.rbegin(); it != m_free_zone.rend(); it++)
-		{
-			auto& zone = *it;
-			if (zone.range() >= size)
-			{
-				m_active_zone.emplace_back(zone.splitReverse(size));
+				assert(m_active_zone.back().range() != 0);
 				return m_active_zone.back();
 			}
 		}
@@ -148,15 +150,45 @@ struct FreeZone
 
 	}
 
-	void free(const Zone& zone)
+	void delayedFree(Zone zone)
 	{
 		assert(zone.isValid());
+		zone.m_wait_frame = sGlobal::Order().getGameFrame();
 
+		auto it = std::find_if(m_active_zone.begin(), m_active_zone.end(), [&](Zone& active) { return active.m_start == zone.m_start; });
+//		if (it != m_active_zone.end()) 
+		{
+			m_active_zone.erase(it);
+		}
+
+		auto& list = m_delayed_active;
+		std::lock_guard<std::mutex> lock(list.m_mutex);
+		list.m_list.push_back(zone);
+
+	}
+	void free(const Zone& zone)
+	{
 		std::lock_guard<std::mutex> lock(m_free_zone_mutex);
+		free_impl(zone);
+
+	}
+
+	void gc()
+	{
+		std::lock_guard<std::mutex> lock(m_free_zone_mutex);
+		gc_impl();
+	}
+private:
+	void free_impl(const Zone& zone)
+	{
+		assert(zone.isValid());
+		assert(zone.range() != 0);
 		{
 			// activeから削除
 			auto it = std::find_if(m_active_zone.begin(), m_active_zone.end(), [&](Zone& active) { return active.m_start == zone.m_start; });
-			m_active_zone.erase(it);
+			if (it != m_active_zone.end()) {
+				m_active_zone.erase(it);
+			}
 		}
 
 		{
@@ -172,15 +204,25 @@ struct FreeZone
 		}
 
 	}
-
-	void gc()
-	{
-		std::lock_guard<std::mutex> lock(m_free_zone_mutex);
-		gc_impl();
-	}
-private:
 	void gc_impl()
 	{
+		{
+			auto& list = m_delayed_active;
+			std::lock_guard<std::mutex> lock(list.m_mutex);
+			for (auto it = list.m_list.begin(); it != list.m_list.end();)
+			{
+				if (sGlobal::Order().isElapsed(it->m_wait_frame))
+				{
+					// cmdが発行されたので削除
+					free_impl(*it);
+					it = list.m_list.erase(it);
+				}
+				else {
+					it++;
+				}
+			}
+		}
+
 		std::sort(m_free_zone.begin(), m_free_zone.end(), [](Zone& a, Zone& b) { return a.m_start < b.m_start; });
 		for (size_t i = m_free_zone.size() - 1; i > 0; i--)
 		{
@@ -188,6 +230,7 @@ private:
 				m_free_zone.erase(m_free_zone.begin() + i);
 			}
 		}
+		m_last_gc = sGlobal::Order().getGameFrame();
 	}
 };
 struct AllocatedMemory
@@ -228,7 +271,7 @@ struct BufferMemory
 		vk::Buffer m_buffer;
 
 		vk::DeviceMemory m_memory;
-		FreeZone m_free_zone;
+		GPUMemoryAllocater m_free_zone;
 
 		vk::MemoryRequirements m_memory_request;
 		vk::MemoryAllocateInfo m_memory_alloc;
@@ -288,9 +331,6 @@ struct BufferMemory
 	enum class AttributeFlagBits : uint32_t
 	{
 		SHORT_LIVE_BIT = 1<<0,
-		MEMORY_UPDATE_ALL_PER_FRAME_BIT = 1 << 1,
-		MEMORY_CONSTANT = 1 << 2,
-		IMMIDIATE_DELETE = 1<<3,
 	};
 	using AttributeFlags = vk::Flags<AttributeFlagBits, uint32_t>;
 	struct Descriptor
@@ -312,14 +352,25 @@ struct BufferMemory
 	AllocatedMemory allocateMemory(Descriptor arg)
 	{
 //		sDebug::Order().print()
+		// size0はおかしいよね
 		assert(arg.size != 0);
+
 		auto zone = m_resource->m_free_zone.alloc(arg.size, btr::isOn(arg.attribute, AttributeFlagBits::SHORT_LIVE_BIT));
+
+		// allocできた？
 		assert(zone.isValid());
 
 		AllocatedMemory alloc;
 		auto deleter = [&](AllocatedMemory::Resource* ptr)
 		{
-			m_resource->m_free_zone.free(ptr->m_zone);
+			if (btr::isOn(m_resource->m_memory_type.propertyFlags, vk::MemoryPropertyFlagBits::eHostCoherent)) {
+				// cpuからアクセスかつcmdでコピーする場合、cmdが実行されてから書き換えないと送信先でデータがおかしくなるので、
+				// 遅延して解放を行う。見直しの必要がありそう。
+				m_resource->m_free_zone.delayedFree(ptr->m_zone);
+			}
+			else {
+				m_resource->m_free_zone.free(ptr->m_zone);
+			}
 			delete ptr;
 		};
 		alloc.m_resource = std::shared_ptr<AllocatedMemory::Resource>(new AllocatedMemory::Resource, deleter);

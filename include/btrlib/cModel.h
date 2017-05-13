@@ -198,12 +198,6 @@ public:
 		s8x4		m_texcoord0;
 		glm::u8vec4	m_bone_ID;	//!< 
 		u8x4		m_weight;
-		Vertex()
-		{
-			for (size_t i = 0; i < BONE_NUM; i++) {
-				m_bone_ID[i] = 0xffu;
-			}
-		}
 	};
 
 	struct Material {

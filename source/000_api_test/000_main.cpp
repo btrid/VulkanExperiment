@@ -31,7 +31,6 @@ void memoryAllocater()
 	// メモリを何度もアロケートしてその結果を見る
 	sGlobal::Order();
 	auto device = sThreadLocal::Order().m_device[0];
-	auto pool_list = sThreadLocal::Order().getCmdPoolOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
 
 	btr::BufferMemory staging_memory;
 	staging_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached, 1024 * 1024 * 20);
@@ -79,11 +78,12 @@ void memoryAllocater()
 				it++;
 			}
 		}
-		staging_memory.gc();
 	}
-
-	// 結果
 	memory_list.clear();
+	sGlobal::Order().swap();
+	sGlobal::Order().swap();
+	sGlobal::Order().swap();
+	// 結果
 	staging_memory.gc();
 	count++;
 }
