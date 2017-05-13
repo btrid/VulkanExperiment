@@ -5,16 +5,8 @@
 #include <btrlib/BufferMemory.h>
 #include <btrlib/cCamera.h>
 
-struct Loader
-{
-	cDevice m_device;
-	vk::RenderPass m_render_pass;
-	btr::BufferMemory m_uniform_memory;
-	btr::BufferMemory m_storage_memory;
-	btr::BufferMemory m_staging_memory;
-
-	vk::CommandBuffer m_cmd;
-};
+#include <003_particle/MazeGenerator.h>
+#include <003_particle/Geometry.h>
 
 struct ParticleInfo
 {
@@ -104,11 +96,17 @@ struct cParticlePipeline
 		std::vector<vk::Pipeline> m_graphics_pipeline;
 		std::array<vk::PipelineShaderStageCreateInfo, 2> m_graphics_shader_info;
 
-
 		ParticleInfo m_info;
+
+		MazeGenerator m_maze;
 
 		void setup(Loader& loader)
 		{
+			{
+//				m_maze.generate(1023, 1023);
+//				auto geometry = m_maze.makeGeometry();
+			}
+
 			m_info.m_max_num = 8192;
 			m_info.m_emit_max_num = 1024;
 
@@ -423,13 +421,48 @@ struct cParticlePipeline
 					blend_info.setAttachmentCount(blend_state.size());
 					blend_info.setPAttachments(blend_state.data());
 
-					vk::PipelineVertexInputStateCreateInfo vertex_input_info;
+					vk::PipelineVertexInputStateCreateInfo vertex_input_info[2];
+					std::vector<vk::VertexInputBindingDescription> vertex_input_binding =
+					{
+						vk::VertexInputBindingDescription()
+						.setBinding(0)
+						.setInputRate(vk::VertexInputRate::eVertex)
+						.setStride(sizeof(glm::vec3))
+					};
+
+					std::vector<vk::VertexInputAttributeDescription> vertex_input_attribute =
+					{
+						// pos
+						vk::VertexInputAttributeDescription()
+						.setBinding(0)
+						.setLocation(0)
+						.setFormat(vk::Format::eR32G32B32Sfloat)
+						.setOffset(0),
+					};
+
+					vertex_input_info[1].setVertexBindingDescriptionCount(vertex_input_binding.size());
+					vertex_input_info[1].setPVertexBindingDescriptions(vertex_input_binding.data());
+					vertex_input_info[1].setVertexAttributeDescriptionCount(vertex_input_attribute.size());
+					vertex_input_info[1].setPVertexAttributeDescriptions(vertex_input_attribute.data());
+
 					std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =
 					{
 						vk::GraphicsPipelineCreateInfo()
 						.setStageCount(m_graphics_shader_info.size())
 						.setPStages(m_graphics_shader_info.data())
-						.setPVertexInputState(&vertex_input_info)
+						.setPVertexInputState(&vertex_input_info[0])
+						.setPInputAssemblyState(&assembly_info)
+						.setPViewportState(&viewportInfo)
+						.setPRasterizationState(&rasterization_info)
+						.setPMultisampleState(&sample_info)
+						.setLayout(m_pipeline_layout[GRAPHICS_PIPELINE_LAYOUT_DRAW])
+						.setRenderPass(loader.m_render_pass)
+						.setPDepthStencilState(&depth_stencil_info)
+						.setPColorBlendState(&blend_info),
+						vk::GraphicsPipelineCreateInfo()
+						.setStageCount(m_graphics_shader_info.size())
+						.setPStages(m_graphics_shader_info.data())
+						.setPVertexInputState(&vertex_input_info[1])
 						.setPInputAssemblyState(&assembly_info)
 						.setPViewportState(&viewportInfo)
 						.setPRasterizationState(&rasterization_info)
@@ -439,8 +472,7 @@ struct cParticlePipeline
 						.setPDepthStencilState(&depth_stencil_info)
 						.setPColorBlendState(&blend_info),
 					};
-					auto pipelines = loader.m_device->createGraphicsPipelines(m_cache, graphics_pipeline_info);
-					m_graphics_pipeline = pipelines;
+					m_graphics_pipeline = loader.m_device->createGraphicsPipelines(m_cache, graphics_pipeline_info);
 
 				}
 			}
@@ -567,6 +599,8 @@ struct cParticlePipeline
 
 		void draw(vk::CommandBuffer cmd)
 		{
+			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_graphics_pipeline[1]);
+
 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_graphics_pipeline[0]);
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[GRAPHICS_PIPELINE_LAYOUT_DRAW], 0, m_descriptor_set[COMPUTE_PIPELINE_LAYOUT_UPDATE], {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[GRAPHICS_PIPELINE_LAYOUT_DRAW], 1, m_descriptor_set[GRAPHICS_PIPELINE_LAYOUT_DRAW], {});

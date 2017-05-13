@@ -11,10 +11,14 @@ struct Zone
 {
 	vk::DeviceSize m_start;
 	vk::DeviceSize m_end;
-
+	uint32_t m_is_reverse_alloc : 1;
+	uint32_t _flag : 31;
+	GameFrame m_frame_counter;
 	Zone()
 		: m_start(0llu)
 		, m_end(0llu)
+		, m_is_reverse_alloc(0)
+		, m_frame_counter(0u)
 	{}
 
 	Zone split(vk::DeviceSize size)
@@ -22,9 +26,20 @@ struct Zone
 		Zone newZone;
 		newZone.m_start = m_start;
 		newZone.m_end = m_start + size;
-
+		newZone.m_frame_counter = 0;
+		newZone.m_is_reverse_alloc = 0;
 		m_start += size;
 
+		return newZone;
+	}
+	Zone splitReverse(vk::DeviceSize size)
+	{
+		Zone newZone;
+		newZone.m_end = m_end;
+		newZone.m_start = m_end - size;
+		newZone.m_frame_counter = 0;
+		newZone.m_is_reverse_alloc = 1;
+		m_end -= size;
 		return newZone;
 	}
 	void marge(const Zone& zone)
@@ -48,11 +63,13 @@ struct Zone
 };
 struct FreeZone
 {
+	std::vector<Zone> m_delay_free_zone;
 	std::vector<Zone> m_free_zone;
 	std::vector<Zone> m_active_zone;
 
 	vk::DeviceSize m_align;
-	std::mutex m_mutex;
+	std::mutex m_delay_free_zone_mutex;
+	std::mutex m_free_zone_mutex;
 	~FreeZone()
 	{
 		assert(m_active_zone.empty());
@@ -66,13 +83,18 @@ struct FreeZone
 		zone.m_start = 0;
 		zone.m_end = size;
 
-		std::lock_guard<std::mutex> lock(m_mutex);
+		std::lock_guard<std::mutex> lock(m_free_zone_mutex);
 		m_free_zone.push_back(zone);
 	}
-	Zone alloc(vk::DeviceSize size)
+	Zone alloc(vk::DeviceSize size, bool is_reverse)
 	{
+		if (is_reverse)
+		{
+			return allocReverse(size);
+		}
+
 		size = btr::align(size, m_align);
-		std::lock_guard<std::mutex> lock(m_mutex);
+		std::lock_guard<std::mutex> lock(m_free_zone_mutex);
 		for (auto& zone : m_free_zone)
 		{
 			if (zone.range() >= size)
@@ -94,12 +116,40 @@ struct FreeZone
 		}
 		return Zone();
 	}
+	Zone allocReverse(vk::DeviceSize size)
+	{
+		size = btr::align(size, m_align);
+		std::lock_guard<std::mutex> lock(m_free_zone_mutex);
+		for (auto it = m_free_zone.rbegin(); it != m_free_zone.rend(); it++)
+		{
+			auto& zone = *it;
+			if (zone.range() >= size)
+			{
+				m_active_zone.emplace_back(zone.splitReverse(size));
+				return m_active_zone.back();
+			}
+		}
+
+		// sortしてもう一度
+		sort();
+		for (auto it = m_free_zone.rbegin(); it != m_free_zone.rend(); it++)
+		{
+			auto& zone = *it;
+			if (zone.range() >= size)
+			{
+				m_active_zone.emplace_back(zone.splitReverse(size));
+				return m_active_zone.back();
+			}
+		}
+		return Zone();
+
+	}
 
 	void free(const Zone& zone)
 	{
 		assert(zone.isValid());
 
-		std::lock_guard<std::mutex> lock(m_mutex);
+		std::lock_guard<std::mutex> lock(m_free_zone_mutex);
 		{
 			// activeから削除
 			auto it = std::find_if(m_active_zone.begin(), m_active_zone.end(), [&](Zone& active) { return active.m_start == zone.m_start; });
@@ -119,10 +169,15 @@ struct FreeZone
 			m_free_zone.emplace_back(zone);
 		}
 
+// 		std::lock_guard<std::mutex> lock(m_delay_free_zone_mutex);
+// 		m_delay_free_zone.push_back(zone);
+// 		m_delay_free_zone.back().m_frame_counter = sGlobal::Order().getGameFrame();
 	}
+
 private:
 	void sort()
 	{
+		gc_impl();
 		std::sort(m_free_zone.begin(), m_free_zone.end(), [](Zone& a, Zone& b) { return a.m_start < b.m_start; });
 		for (size_t i = m_free_zone.size() - 1; i > 0; i--)
 		{
@@ -130,6 +185,37 @@ private:
 				m_free_zone.erase(m_free_zone.begin() + i);
 			}
 		}
+	}
+	void gc_impl()
+	{
+		std::lock_guard<std::mutex> lk1(m_delay_free_zone_mutex);
+		for (auto it = m_delay_free_zone.begin(); it != m_delay_free_zone.end();)
+		{
+			auto& delay_free_zone = *it;
+			if (sGlobal::Order().isElapsed(delay_free_zone.m_frame_counter, sGlobal::FRAME_MAX))
+			{
+				// activeから削除
+				auto it = std::find_if(m_active_zone.begin(), m_active_zone.end(), [&](Zone& active) { return active.m_start == delay_free_zone.m_start; });
+				m_active_zone.erase(it);
+
+				// freeにマージ
+				for (auto& free_zone : m_free_zone)
+				{
+					if (free_zone.tryMarge(delay_free_zone)) {
+						break;
+					}
+				}
+
+				// できなければ、新しい領域として追加
+				m_free_zone.emplace_back(delay_free_zone);
+				it = m_delay_free_zone.erase(it);
+			}
+			else
+			{
+				it++;
+			}
+		}
+
 	}
 };
 struct AllocatedMemory
@@ -232,6 +318,7 @@ struct BufferMemory
 		SHORT_LIVE_BIT = 1<<0,
 		MEMORY_UPDATE_ALL_PER_FRAME_BIT = 1 << 1,
 		MEMORY_CONSTANT = 1 << 2,
+		IMMIDIATE_DELETE = 1<<3,
 	};
 	using AttributeFlags = vk::Flags<AttributeFlagBits, uint32_t>;
 	struct Descriptor
@@ -252,7 +339,7 @@ struct BufferMemory
 	}
 	AllocatedMemory allocateMemory(Descriptor arg)
 	{
-		auto zone = m_resource->m_free_zone.alloc(arg.size);
+		auto zone = m_resource->m_free_zone.alloc(arg.size, btr::isOn(arg.attribute, AttributeFlagBits::SHORT_LIVE_BIT));
 		assert(zone.isValid());
 
 		AllocatedMemory alloc;

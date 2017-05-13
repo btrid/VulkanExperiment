@@ -13,7 +13,7 @@
 #include <btrlib/cThreadPool.h>
 #include <btrlib/sDebug.h>
 
-
+using GameFrame = uint32_t;
 namespace vk
 {
 
@@ -109,8 +109,17 @@ public:
 	vk::Instance& getVKInstance() { return m_instance; }
 	cGPU& getGPU(int index) { return m_gpu[index]; }
 	void swap();
-	int32_t getCurrentFrame()const { return m_current_frame; }
-	int32_t getPrevFrame()const { return (m_current_frame == 0 ? FRAME_MAX : m_current_frame)-1; }
+	uint32_t getCurrentFrame()const { return m_current_frame; }
+	uint32_t getPrevFrame()const { return (m_current_frame == 0 ? FRAME_MAX : m_current_frame)-1; }
+	uint32_t getGameFrame()const { return m_game_frame; }
+	bool isElapsed(GameFrame time, GameFrame offset) 
+	{
+		uint64_t game_frame = (uint64_t)m_game_frame;
+		if (game_frame < time) {
+			game_frame += std::numeric_limits<decltype(m_game_frame)>::max() / FRAME_MAX*FRAME_MAX;
+		}
+		return game_frame - time >= offset;
+	}
 
 public:
 	cThreadPool& getThreadPool() { return m_thread_pool; }
@@ -118,7 +127,8 @@ private:
 	vk::Instance m_instance;
 	std::vector<cGPU> m_gpu;
 
-	int32_t m_current_frame;
+	GameFrame m_current_frame;
+	GameFrame m_game_frame;
 	cThreadPool m_thread_pool;
 	std::vector<vk::CommandPool>	m_cmd_pool_tempolary;
 	std::array<std::vector<std::unique_ptr<Deleter>>, FRAME_MAX> m_cmd_delete;
