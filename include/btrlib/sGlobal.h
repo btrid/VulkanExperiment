@@ -112,7 +112,7 @@ public:
 	uint32_t getCurrentFrame()const { return m_current_frame; }
 	uint32_t getPrevFrame()const { return (m_current_frame == 0 ? FRAME_MAX : m_current_frame)-1; }
 	uint32_t getGameFrame()const { return m_game_frame; }
-	bool isElapsed(GameFrame time, GameFrame offset) 
+	bool isElapsed(GameFrame time, GameFrame offset = FRAME_MAX) 
 	{
 		uint64_t game_frame = (uint64_t)m_game_frame;
 		if (game_frame < time) {

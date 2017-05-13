@@ -13,12 +13,10 @@ struct Zone
 	vk::DeviceSize m_end;
 	uint32_t m_is_reverse_alloc : 1;
 	uint32_t _flag : 31;
-	GameFrame m_frame_counter;
 	Zone()
 		: m_start(0llu)
 		, m_end(0llu)
-		, m_is_reverse_alloc(0)
-		, m_frame_counter(0u)
+		, m_is_reverse_alloc(0u)
 	{}
 
 	Zone split(vk::DeviceSize size)
@@ -26,7 +24,6 @@ struct Zone
 		Zone newZone;
 		newZone.m_start = m_start;
 		newZone.m_end = m_start + size;
-		newZone.m_frame_counter = 0;
 		newZone.m_is_reverse_alloc = 0;
 		m_start += size;
 
@@ -37,20 +34,26 @@ struct Zone
 		Zone newZone;
 		newZone.m_end = m_end;
 		newZone.m_start = m_end - size;
-		newZone.m_frame_counter = 0;
 		newZone.m_is_reverse_alloc = 1;
 		m_end -= size;
 		return newZone;
 	}
 	void marge(const Zone& zone)
 	{
-		assert(m_start == zone.m_end);
-		m_start = zone.m_start;
+		assert(m_start == zone.m_end || m_end == zone.m_start);
+		if (m_start == zone.m_end)
+		{
+			m_start = zone.m_start;
+		}
+		else 
+		{
+			m_end = zone.m_end;
+		}
 	}
 
 	bool tryMarge(const Zone zone)
 	{
-		if (m_start != zone.m_end)
+		if (m_start != zone.m_end && m_end != zone.m_start)
 		{
 			return false;
 		}
@@ -63,16 +66,16 @@ struct Zone
 };
 struct FreeZone
 {
-	std::vector<Zone> m_delay_free_zone;
 	std::vector<Zone> m_free_zone;
 	std::vector<Zone> m_active_zone;
 
 	vk::DeviceSize m_align;
-	std::mutex m_delay_free_zone_mutex;
 	std::mutex m_free_zone_mutex;
 	~FreeZone()
 	{
 		assert(m_active_zone.empty());
+		// gcが走らなければsizeは1以外のこともある
+//		assert(m_free_zone.size() == 1);
 	}
 	void setup(vk::DeviceSize size, vk::DeviceSize align)
 	{
@@ -105,7 +108,7 @@ struct FreeZone
 		}
 
 		// sortしてもう一度
-		sort();
+		gc_impl();
 		for (auto& zone : m_free_zone)
 		{
 			if (zone.range() >= size)
@@ -131,7 +134,7 @@ struct FreeZone
 		}
 
 		// sortしてもう一度
-		sort();
+		gc_impl();
 		for (auto it = m_free_zone.rbegin(); it != m_free_zone.rend(); it++)
 		{
 			auto& zone = *it;
@@ -164,20 +167,20 @@ struct FreeZone
 					return;
 				}
 			}
-
 			// できなければ、新しい領域として追加
 			m_free_zone.emplace_back(zone);
 		}
 
-// 		std::lock_guard<std::mutex> lock(m_delay_free_zone_mutex);
-// 		m_delay_free_zone.push_back(zone);
-// 		m_delay_free_zone.back().m_frame_counter = sGlobal::Order().getGameFrame();
 	}
 
-private:
-	void sort()
+	void gc()
 	{
+		std::lock_guard<std::mutex> lock(m_free_zone_mutex);
 		gc_impl();
+	}
+private:
+	void gc_impl()
+	{
 		std::sort(m_free_zone.begin(), m_free_zone.end(), [](Zone& a, Zone& b) { return a.m_start < b.m_start; });
 		for (size_t i = m_free_zone.size() - 1; i > 0; i--)
 		{
@@ -185,37 +188,6 @@ private:
 				m_free_zone.erase(m_free_zone.begin() + i);
 			}
 		}
-	}
-	void gc_impl()
-	{
-		std::lock_guard<std::mutex> lk1(m_delay_free_zone_mutex);
-		for (auto it = m_delay_free_zone.begin(); it != m_delay_free_zone.end();)
-		{
-			auto& delay_free_zone = *it;
-			if (sGlobal::Order().isElapsed(delay_free_zone.m_frame_counter, sGlobal::FRAME_MAX))
-			{
-				// activeから削除
-				auto it = std::find_if(m_active_zone.begin(), m_active_zone.end(), [&](Zone& active) { return active.m_start == delay_free_zone.m_start; });
-				m_active_zone.erase(it);
-
-				// freeにマージ
-				for (auto& free_zone : m_free_zone)
-				{
-					if (free_zone.tryMarge(delay_free_zone)) {
-						break;
-					}
-				}
-
-				// できなければ、新しい領域として追加
-				m_free_zone.emplace_back(delay_free_zone);
-				it = m_delay_free_zone.erase(it);
-			}
-			else
-			{
-				it++;
-			}
-		}
-
 	}
 };
 struct AllocatedMemory
@@ -256,7 +228,6 @@ struct BufferMemory
 		vk::Buffer m_buffer;
 
 		vk::DeviceMemory m_memory;
-		vk::DeviceSize m_allocate_size;
 		FreeZone m_free_zone;
 
 		vk::MemoryRequirements m_memory_request;
@@ -273,6 +244,7 @@ struct BufferMemory
 	};
 	std::shared_ptr<Resource> m_resource;
 
+	void gc() { m_resource->m_free_zone.gc(); }
 	bool isValid()const { return m_resource.get(); }
 	void setName(const std::string& name) { m_resource->m_name = name; }
 	void setup(const cDevice& device, vk::BufferUsageFlags flag, vk::MemoryPropertyFlags memory_type, vk::DeviceSize size)
@@ -339,6 +311,8 @@ struct BufferMemory
 	}
 	AllocatedMemory allocateMemory(Descriptor arg)
 	{
+//		sDebug::Order().print()
+		assert(arg.size != 0);
 		auto zone = m_resource->m_free_zone.alloc(arg.size, btr::isOn(arg.attribute, AttributeFlagBits::SHORT_LIVE_BIT));
 		assert(zone.isValid());
 
