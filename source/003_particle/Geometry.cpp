@@ -289,7 +289,10 @@ void Geometry::Optimaize(std::tuple<std::vector<glm::vec3>, std::vector<glm::uve
 	auto& vertex = std::get<0>(_vertex);
 	auto& index = std::get<1>(_vertex);
 	std::vector<uint32_t> delete_vertex_list(vertex.size());
-	auto mask = glm::u64vec3((1ull << 22ull) - 1, (1ull << 42ull) - 1, std::numeric_limits<uint64_t>::max());
+
+	glm::u64vec3 mask_size(22ull, 20ull, 22ull);
+	assert(mask_size.x + mask_size.y + mask_size.z == 64);
+	auto mask = glm::u64vec3((1ull << mask_size.x) - 1, (1ull << (mask_size.x+mask_size.y)) - 1, std::numeric_limits<uint64_t>::max());
 	mask.z -= mask.y;
 	mask.y -= mask.x;
 	assert((mask.x | mask.y | mask.z) == std::numeric_limits<uint64_t>::max() && (mask.x & mask.y & mask.z) == 0llu);
@@ -300,8 +303,13 @@ void Geometry::Optimaize(std::tuple<std::vector<glm::vec3>, std::vector<glm::uve
 		auto& idx = index[i];
 		for (int ii = 0; ii < 3; ii++)
 		{
-			auto cache_index = glm::u64vec3(tmp[idx[ii]] * 10000.f);
-			auto cache_hash = cache_index.x & mask.x | (cache_index.y<<22) & mask.y | (cache_index.z<<42) & mask.z;
+			auto cache_vertex = tmp[idx[ii]] * 10000.f;
+			auto cache_index = glm::u64vec3(cache_vertex);
+
+			// ハッシュの値を超えてしまっていないかチェック。maskの範囲を変えるか、倍率を変える
+			assert(glm::all(glm::lessThan(cache_index, glm::u64vec3(1ull) << mask_size)));
+
+			auto cache_hash = cache_index.x & mask.x | (cache_index.y << mask_size.x) & mask.y | (cache_index.z<< (mask_size.x+ mask_size.y)) & mask.z;
 			auto result = vertex_cache.try_emplace(cache_hash, (uint32_t)idx[ii]);
 
 			if (result.second){
