@@ -292,6 +292,7 @@ void Geometry::Optimaize(std::tuple<std::vector<glm::vec3>, std::vector<glm::uve
 	auto mask = glm::u64vec3((1ull << 22ull) - 1, (1ull << 42ull) - 1, std::numeric_limits<uint64_t>::max());
 	mask.z -= mask.y;
 	mask.y -= mask.x;
+	assert((mask.x | mask.y | mask.z) == std::numeric_limits<uint64_t>::max() && (mask.x & mask.y & mask.z) == 0llu);
 
 	// 重複頂点を探し、使われているVertexにマークを付ける
 	for (size_t i = 0; i < index.size(); i ++)
@@ -317,10 +318,7 @@ void Geometry::Optimaize(std::tuple<std::vector<glm::vec3>, std::vector<glm::uve
 			if (!glm::any(glm::isinf(vertex.data()[idx[ii]])))
 			{
 				vertex.data()[idx[ii]] = glm::vec3(std::numeric_limits<float>::infinity());
-				for (size_t delete_index = idx[ii]; delete_index < delete_vertex_list.size(); delete_index++) {
-					delete_vertex_list.data()[delete_index]++;
-				}
-
+				delete_vertex_list.data()[idx[ii]]++;
 			}
 			idx[ii] = result.first->second;
 		}
@@ -330,6 +328,14 @@ void Geometry::Optimaize(std::tuple<std::vector<glm::vec3>, std::vector<glm::uve
 	auto it = std::remove_if(vertex.begin(), vertex.end(), [](glm::vec3& v) { return glm::any(glm::isinf(v)); });
 	vertex.erase(it, vertex.end());
 
+	// vertexを抜いた分のindexの整理
+	auto offset = 0;
+	for (auto& d : delete_vertex_list)
+	{
+		auto o = d;
+		d += offset;
+		offset += o;
+	}
 	for (size_t idx = 0; idx < index.size(); idx++)
 	{
 		auto& idx_v = index.data()[idx];
