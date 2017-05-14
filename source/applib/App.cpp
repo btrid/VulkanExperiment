@@ -208,7 +208,7 @@ App::App()
 
 		vk::FramebufferCreateInfo framebuffer_info;
 		framebuffer_info.setRenderPass(m_render_pass);
-		framebuffer_info.setAttachmentCount(view.size());
+		framebuffer_info.setAttachmentCount((uint32_t)view.size());
 		framebuffer_info.setPAttachments(view.data());
 		framebuffer_info.setWidth(m_window.getClientSize().x);
 		framebuffer_info.setHeight(m_window.getClientSize().y);

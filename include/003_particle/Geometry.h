@@ -23,10 +23,10 @@ struct Geometry
 	{
 		btr::AllocatedMemory m_vertex;
 		btr::AllocatedMemory m_index;
+		btr::AllocatedMemory m_indirect;
 		vk::IndexType m_index_type;
 		std::vector<vk::VertexInputAttributeDescription> m_vertex_attribute;
 		std::vector<vk::VertexInputBindingDescription> m_vertex_binding;
-
 	};
 	std::unique_ptr<Resource> m_resource;
 	static std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> MakeBox();

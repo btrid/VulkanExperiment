@@ -64,17 +64,16 @@ public:
 
 			}
 		}
-// 		if (input.m_mouse.isHold(cMouse::BUTTON_LEFT))
-// 		{
-// 			// XZ•½–Ê‚ÌˆÚ“®
-// 			auto f = glm::normalize(m_target - m_position);
-// 			auto s = glm::normalize(glm::cross(m_up, f));
-// 			auto move = input.m_mouse.getMove();
-// 			m_position += (s*move.x + f*move.y) * distance / 100.f;
-// 			m_target += (s*move.x + f*move.y) * distance / 100.f;
-// 
-// 		}
-		if (input.m_mouse.isHold(cMouse::BUTTON_LEFT))
+		if (input.m_mouse.isHold(cMouse::BUTTON_MIDDLE))
+		{
+			// XZ•½–Ê‚ÌˆÚ“®
+			auto f = glm::normalize(m_target - m_position);
+			auto s = glm::normalize(glm::cross(m_up, f));
+			auto move = input.m_mouse.getMove();
+			m_position += (s*move.x + f*move.y);
+			m_target += (s*move.x + f*move.y);
+
+		}else if (input.m_mouse.isHold(cMouse::BUTTON_LEFT))
 		{
 			// XY•½–Ê‚ÌˆÚ“®
 			auto f = glm::normalize(m_target - m_position);
@@ -90,15 +89,13 @@ public:
 			glm::vec3 s = glm::normalize(glm::cross(f, m_up));
 			glm::vec3 u = glm::normalize(glm::cross(s, f));
 
-			auto move = input.m_mouse.getMove();
-			if (input.m_keyboard.isHold('A')) { move.y = 0; }
-			glm::vec3 d = s*glm::radians(move.x / 2.f) + u*glm::radians(move.y / 2.f);
-
-			m_position += d*distance;
-			f = glm::normalize(m_position - m_target);
-			m_position = m_target + f*distance;
-			s = glm::normalize(glm::cross(f, m_up));
-			m_up = glm::normalize(glm::cross(s, f));
+			auto move = glm::vec2(input.m_mouse.getMove());
+			if (!glm::epsilonEqual(glm::dot(move, move), 0.f, FLT_EPSILON))
+			{
+				glm::quat rot = glm::angleAxis(glm::radians(1.0f), glm::normalize(move.y*s + move.x*u));
+				f = glm::normalize(rot * f);
+				m_target = m_position + f*distance;
+			}
 		}
 
 		m_view = glm::lookAt(m_position, m_target, m_up);

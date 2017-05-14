@@ -226,15 +226,61 @@ Geometry Geometry::MakeGeometry(Loader& loader, const void* vertex, size_t verte
 	resource->m_vertex_attribute = vertex_attr;
 	resource->m_index_type = index_type;
 	{
-		btr::BufferMemory::Descriptor vertex_desc;
-		vertex_desc.size = vertex_size;
-		resource->m_vertex = loader.m_vertex_memory.allocateMemory(vertex_desc);
+		{
+			btr::BufferMemory::Descriptor vertex_desc;
+			vertex_desc.size = vertex_size;
+			resource->m_vertex = loader.m_vertex_memory.allocateMemory(vertex_desc);
 
-		vertex_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			vertex_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			auto staging = loader.m_staging_memory.allocateMemory(vertex_desc);
+			std::memcpy(staging.getMappedPtr(), vertex, vertex_size);
 
-//		resource->m_vertex.
+			vk::BufferCopy vertex_copy;
+			vertex_copy.setSize(vertex_size);
+			vertex_copy.setSrcOffset(staging.getBufferInfo().offset);
+			vertex_copy.setDstOffset(resource->m_vertex.getBufferInfo().offset);
+			loader.m_cmd.copyBuffer(staging.getBuffer(), resource->m_vertex.getBuffer(), vertex_copy);
+		}
+		{
+			btr::BufferMemory::Descriptor index_desc;
+			index_desc.size = index_size;
+			resource->m_index = loader.m_vertex_memory.allocateMemory(index_desc);
+
+			index_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			auto staging = loader.m_staging_memory.allocateMemory(index_desc);
+			std::memcpy(staging.getMappedPtr(), index, index_size);
+
+			vk::BufferCopy index_copy;
+			index_copy.setSize(index_size);
+			index_copy.setSrcOffset(staging.getBufferInfo().offset);
+			index_copy.setDstOffset(resource->m_index.getBufferInfo().offset);
+			loader.m_cmd.copyBuffer(staging.getBuffer(), resource->m_index.getBuffer(), index_copy);
+		}
+
+		{
+			btr::BufferMemory::Descriptor indirect_desc;
+			indirect_desc.size = sizeof(vk::DrawIndexedIndirectCommand);
+			resource->m_indirect = loader.m_vertex_memory.allocateMemory(indirect_desc);
+
+			indirect_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			auto staging = loader.m_staging_memory.allocateMemory(indirect_desc);
+			auto* ptr = staging.getMappedPtr<vk::DrawIndexedIndirectCommand>();
+			ptr->setFirstInstance(0);
+			ptr->setFirstIndex(0);
+			ptr->setInstanceCount(1);
+			ptr->setIndexCount(index_size / (index_type == vk::IndexType::eUint32 ? sizeof(glm::uvec3) : sizeof(glm::u16vec3)));
+			ptr->setVertexOffset(0);
+
+			vk::BufferCopy indirect_copy;
+			indirect_copy.setSize(indirect_desc.size);
+			indirect_copy.setSrcOffset(staging.getBufferInfo().offset);
+			indirect_copy.setDstOffset(resource->m_indirect.getBufferInfo().offset);
+			loader.m_cmd.copyBuffer(staging.getBuffer(), resource->m_indirect.getBuffer(), indirect_copy);
+
+		}
 	}
 
 	Geometry geo;
-	return geo;
+	geo.m_resource = std::move(resource);
+	return std::move(geo);
 }

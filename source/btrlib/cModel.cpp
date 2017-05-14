@@ -763,7 +763,7 @@ void cModel::load(const std::string& filename)
 			for (size_t b = 0; b < mesh->mNumBones; b++)
 			{
 				// BoneがMeshからしか参照できないので全部展開する
-				int index = -1;
+				u8 index = 0xffui8;
 				for (size_t k = 0; k < boneList.size(); k++) {
 					if (boneList[k].mName.compare(mesh->mBones[b]->mName.C_Str()) == 0) {
 						index = (int)k;
@@ -771,7 +771,7 @@ void cModel::load(const std::string& filename)
 					}
 
 				}
-				if (index == -1) {
+				if (index == 0xffui8) {
 					// 新しいボーンの登録
 					Bone bone;
 					bone.mName = mesh->mBones[b]->mName.C_Str();
@@ -779,7 +779,7 @@ void cModel::load(const std::string& filename)
 					bone.mNodeIndex = m_resource->mNodeRoot.getNodeIndexByName(mesh->mBones[b]->mName.C_Str());
 					boneList.emplace_back(bone);
 					index = (int)boneList.size() - 1;
-					assert(index < 255);
+					assert(index < 0xffui8);
 					nodeInfo[bone.mNodeIndex].mBoneIndex = index;
 				}
 
@@ -787,9 +787,9 @@ void cModel::load(const std::string& filename)
 				{
 					aiVertexWeight& weight = mesh->mBones[b]->mWeights[i];
 					Vertex& v = _vertex[weight.mVertexId];
-					for (size_t o = 0; o < Vertex::BONE_NUM; o++) {
-						if (v.m_bone_ID[o] == 0xffu) {
-							v.m_bone_ID[o] = (u8)index;
+					for (glm::length_t o = 0; o < Vertex::BONE_NUM; o++) {
+						if (v.m_bone_ID[o] == 0xffui8) {
+							v.m_bone_ID[o] = index;
 							v.m_weight[o] = glm::packUnorm1x8(weight.mWeight);
 							break;
 						}

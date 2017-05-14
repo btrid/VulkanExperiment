@@ -74,7 +74,7 @@ sGlobal::sGlobal()
 			vk::DeviceCreateInfo deviceInfo = vk::DeviceCreateInfo()
 				.setQueueCreateInfoCount((uint32_t)queue_info.size())
 				.setPQueueCreateInfos(queue_info.data())
-				.setPEnabledFeatures(nullptr)
+				.setPEnabledFeatures(&feature)
 				.setEnabledExtensionCount((uint32_t)extensionName.size())
 				.setPpEnabledExtensionNames(extensionName.data())
 				;
