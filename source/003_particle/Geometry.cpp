@@ -288,12 +288,11 @@ void Geometry::Optimaize(std::tuple<std::vector<glm::vec3>, std::vector<glm::uve
 	auto tmp = std::get<0>(_vertex);
 	auto& vertex = std::get<0>(_vertex);
 	auto& index = std::get<1>(_vertex);
-//	std::vector<bool> delete_vertex_list(vertex.size(), false);
-	std::set<uint32_t> delete_vertex_list;
+	std::vector<uint32_t> delete_vertex_list(vertex.size());
 	auto mask = glm::u64vec3((1ull << 22ull) - 1, (1ull << 42ull) - 1, std::numeric_limits<uint64_t>::max());
 	mask.z -= mask.y;
 	mask.y -= mask.x;
-	int sub = 0;
+
 	// 重複頂点を探し、使われているVertexにマークを付ける
 	for (size_t i = 0; i < index.size(); i ++)
 	{
@@ -315,9 +314,14 @@ void Geometry::Optimaize(std::tuple<std::vector<glm::vec3>, std::vector<glm::uve
 				continue;
 			}
 			// infにしておく
-			vertex[idx[ii]] = glm::vec3(std::numeric_limits<float>::infinity());
+			if (!glm::any(glm::isinf(vertex.data()[idx[ii]])))
+			{
+				vertex.data()[idx[ii]] = glm::vec3(std::numeric_limits<float>::infinity());
+				for (size_t delete_index = idx[ii]; delete_index < delete_vertex_list.size(); delete_index++) {
+					delete_vertex_list.data()[delete_index]++;
+				}
 
-			delete_vertex_list.insert(idx[ii]);
+			}
 			idx[ii] = result.first->second;
 		}
 	}
@@ -325,21 +329,13 @@ void Geometry::Optimaize(std::tuple<std::vector<glm::vec3>, std::vector<glm::uve
 	// infは削除
 	auto it = std::remove_if(vertex.begin(), vertex.end(), [](glm::vec3& v) { return glm::any(glm::isinf(v)); });
 	vertex.erase(it, vertex.end());
-	auto tmp_index = std::get<1>(_vertex);
 
-	for (auto it : delete_vertex_list)
+	for (size_t idx = 0; idx < index.size(); idx++)
 	{
-		for (size_t idx = 0; idx < tmp_index.size(); idx++)
+		auto& idx_v = index.data()[idx];
+		for (int ii = 0; ii < 3; ii++)
 		{
-//			auto& idx_v = tmp_index[idx];
-			auto& idx_v = tmp_index.data()[idx];
-			for (int ii = 0; ii < 3; ii++)
-			{
-				if (idx_v[ii] >= it) {
-//					index[idx][ii]--;
-					index.data()[idx][ii]--;
-				}
-			}
+			idx_v[ii] -= delete_vertex_list[idx_v[ii]];
 		}
 	}
 }
