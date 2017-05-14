@@ -1,5 +1,6 @@
 #include <003_particle/Geometry.h>
 #include <unordered_map>
+#include <set>
 std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> Geometry::MakeBox()
 {
 	std::vector<glm::vec3> v = 
@@ -151,9 +152,6 @@ std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> Geometry::MakeSphere
 			// refine triangles
 			for (int i = 0; i < recursionLevel; i++)
 			{
-				//			vertex.clear();
-				//			middlePointIndexCache.clear();
-				//			index = 0;
 				std::vector<glm::uvec3> face2;
 				for (auto& f : face)
 				{
@@ -268,7 +266,7 @@ Geometry Geometry::MakeGeometry(Loader& loader, const void* vertex, size_t verte
 			ptr->setFirstInstance(0);
 			ptr->setFirstIndex(0);
 			ptr->setInstanceCount(1);
-			ptr->setIndexCount(index_size / (index_type == vk::IndexType::eUint32 ? sizeof(glm::uvec3) : sizeof(glm::u16vec3)));
+			ptr->setIndexCount(index_size / (index_type == vk::IndexType::eUint32 ? sizeof(uint32_t) : sizeof(uint16_t)));
 			ptr->setVertexOffset(0);
 
 			vk::BufferCopy indirect_copy;
@@ -279,8 +277,69 @@ Geometry Geometry::MakeGeometry(Loader& loader, const void* vertex, size_t verte
 
 		}
 	}
-
 	Geometry geo;
 	geo.m_resource = std::move(resource);
 	return std::move(geo);
+}
+
+void Geometry::Optimaize(std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>>& _vertex)
+{
+	std::unordered_map<uint64_t, uint32_t> vertex_cache;
+	auto tmp = std::get<0>(_vertex);
+	auto& vertex = std::get<0>(_vertex);
+	auto& index = std::get<1>(_vertex);
+//	std::vector<bool> delete_vertex_list(vertex.size(), false);
+	std::set<uint32_t> delete_vertex_list;
+	auto mask = glm::u64vec3((1ull << 22ull) - 1, (1ull << 42ull) - 1, std::numeric_limits<uint64_t>::max());
+	mask.z -= mask.y;
+	mask.y -= mask.x;
+	int sub = 0;
+	// 重複頂点を探し、使われているVertexにマークを付ける
+	for (size_t i = 0; i < index.size(); i ++)
+	{
+		auto& idx = index[i];
+		for (int ii = 0; ii < 3; ii++)
+		{
+			auto cache_index = glm::u64vec3(tmp[idx[ii]] * 10000.f);
+			auto cache_hash = cache_index.x & mask.x | (cache_index.y<<22) & mask.y | (cache_index.z<<42) & mask.z;
+			auto result = vertex_cache.try_emplace(cache_hash, (uint32_t)idx[ii]);
+
+			if (result.second){
+				// 挿入成功したので問題なし
+				continue;
+			}
+
+			if (idx[ii] == result.first->second)
+			{
+				//同じ頂点なのでOK
+				continue;
+			}
+			// infにしておく
+			vertex[idx[ii]] = glm::vec3(std::numeric_limits<float>::infinity());
+
+			delete_vertex_list.insert(idx[ii]);
+			idx[ii] = result.first->second;
+		}
+	}
+
+	// infは削除
+	auto it = std::remove_if(vertex.begin(), vertex.end(), [](glm::vec3& v) { return glm::any(glm::isinf(v)); });
+	vertex.erase(it, vertex.end());
+	auto tmp_index = std::get<1>(_vertex);
+
+	for (auto it : delete_vertex_list)
+	{
+		for (size_t idx = 0; idx < tmp_index.size(); idx++)
+		{
+//			auto& idx_v = tmp_index[idx];
+			auto& idx_v = tmp_index.data()[idx];
+			for (int ii = 0; ii < 3; ii++)
+			{
+				if (idx_v[ii] >= it) {
+//					index[idx][ii]--;
+					index.data()[idx][ii]--;
+				}
+			}
+		}
+	}
 }

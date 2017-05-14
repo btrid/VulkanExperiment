@@ -36,8 +36,8 @@ int main()
 	app::App app;
 
 	auto* camera = cCamera::sCamera::Order().create();
-	camera->m_position = glm::vec3(0.f, -500.f, -800.f);
-	camera->m_target = glm::vec3(0.f, -100.f, 0.f);
+	camera->m_position = glm::vec3(100.f, 50.f, 100.f);
+	camera->m_target = glm::vec3(100.f, 0.f, 101.f);
 	camera->m_up = glm::vec3(0.f, -1.f, 0.f);
 	camera->m_width = 640;
 	camera->m_height = 480;

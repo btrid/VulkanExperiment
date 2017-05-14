@@ -89,6 +89,10 @@ void memoryAllocater()
 }
 int main()
 {
+	auto mask = glm::u64vec3((1ull << 22ull) - 1, (1ull << 42ull) - 1, std::numeric_limits<uint64_t>::max());
+	mask.z -= mask.y;
+	mask.y -= mask.x;
+
 	btr::setResourcePath("..\\..\\resource\\000_api_test\\");
 	memoryAllocater();
 

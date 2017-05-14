@@ -117,8 +117,9 @@ struct cParticlePipeline
 		void setup(Loader& loader)
 		{
 			{
-				m_maze.generate(255, 255);
+				m_maze.generate(63, 63);
 				auto geometry = m_maze.makeGeometry();
+				Geometry::Optimaize(geometry);
 				std::vector<vk::VertexInputAttributeDescription> vertex_attr(1);
 				vertex_attr[0].setOffset(0);
 				vertex_attr[0].setBinding(0);
