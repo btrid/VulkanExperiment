@@ -8,12 +8,6 @@
 struct KDTreeTriangle
 {
 	using BBox = std::array<glm::vec3, 2>;
-	struct MyStruct
-	{
-		std::vector<glm::vec3>* m_vertex;
-		glm::vec3 operator()(const uint32_t& i)const { return (*m_vertex)[i]; }
-	};
-	using DataAccessor = MyStruct;
 
 	struct TriangleMesh
 	{
@@ -49,16 +43,9 @@ struct KDTreeTriangle
 		KDNodeRoot()
 			: mNode(nullptr)
 		{}
-		// 		~KDNodeRoot()
-		// 		{
-		// 			mNode.reset();
-		// 		}
 	};
 
 	KDNodeRoot m_root_node;
-//	DataAccessor m_accessor;
-//	std::vector<glm::vec3>* m_vertex_list;
-//	std::vector<glm::uvec3>* m_index_list;
 	std::vector<TriangleMesh> m_triangle;
 	BBox m_bbox;
 
