@@ -1,4 +1,5 @@
 #include <003_particle/Geometry.h>
+#include <003_particle/KDTree.h>
 #include <unordered_map>
 #include <set>
 std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> Geometry::MakeBox()
@@ -295,14 +296,13 @@ void Geometry::OptimaizeDuplicateVertex(std::tuple<std::vector<glm::vec3>, std::
 	mask.z -= mask.y;
 	mask.y -= mask.x;
 	assert((mask.x | mask.y | mask.z) == std::numeric_limits<uint64_t>::max() && (mask.x & mask.y & mask.z) == 0llu);
-	float duplicate_distance = desc.m_duplicate_distance;
 	// 重複頂点を探し、使われているVertexにマークを付ける
 	for (size_t i = 0; i < index.size(); i ++)
 	{
 		auto& idx = index[i];
 		for (int ii = 0; ii < 3; ii++)
 		{
-			auto cache_vertex = tmp[idx[ii]] * duplicate_distance;
+			auto cache_vertex = tmp[idx[ii]] * desc.m_duplicate_distance;
 			auto cache_index = glm::u64vec3(cache_vertex);
 
 			// ハッシュの値を超えてしまっていないかチェック。maskの範囲を変えるか、倍率を変える
@@ -336,19 +336,26 @@ void Geometry::OptimaizeDuplicateVertex(std::tuple<std::vector<glm::vec3>, std::
 	vertex.erase(it, vertex.end());
 
 	// vertexを抜いた分のindexの整理
-	auto offset = 0;
-	for (auto& d : delete_vertex_list)
 	{
-		auto o = d;
-		d += offset;
-		offset += o;
-	}
-	for (size_t idx = 0; idx < index.size(); idx++)
-	{
-		auto& idx_v = index.data()[idx];
-		for (int ii = 0; ii < 3; ii++)
+		auto offset = 0;
+		for (auto& d : delete_vertex_list)
 		{
-			idx_v[ii] -= delete_vertex_list[idx_v[ii]];
+			auto o = d;
+			d += offset;
+			offset += o;
+		}
+		for (size_t idx = 0; idx < index.size(); idx++)
+		{
+			auto& idx_v = index.data()[idx];
+			for (int ii = 0; ii < 3; ii++)
+			{
+				idx_v[ii] -= delete_vertex_list[idx_v[ii]];
+			}
 		}
 	}
+}
+
+void Geometry::OptimaizeConnectTriangle(std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>>& vertex)
+{
+
 }

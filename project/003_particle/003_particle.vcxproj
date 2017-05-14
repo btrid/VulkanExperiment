@@ -79,6 +79,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\003_particle\Geometry.h" />
+    <ClInclude Include="..\..\include\003_particle\KDTree.h" />
     <ClInclude Include="..\..\include\003_particle\MazeGenerator.h" />
     <ClInclude Include="..\..\include\003_particle\ParticlePipeline.h" />
   </ItemGroup>

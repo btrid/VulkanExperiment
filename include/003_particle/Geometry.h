@@ -44,6 +44,7 @@ struct Geometry
 		{}
 	};
 	static void OptimaizeDuplicateVertex(std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>>& vertex, const OptimaizeDuplicateVertexDescriptor& desc);
+	static void OptimaizeConnectTriangle(std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>>& vertex);
 
 	static Geometry MakeGeometry(
 		Loader& loader,
