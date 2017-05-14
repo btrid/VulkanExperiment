@@ -16,7 +16,7 @@ vk::DescriptorPool createPool(vk::Device device, const std::vector<std::vector<v
 	pool_info.setPoolSizeCount(pool_size.size());
 	pool_info.setPPoolSizes(pool_size.data());
 	//				pool_info.setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet)
-	pool_info.setMaxSets(bindings.size());
+	pool_info.setMaxSets((uint32_t)bindings.size());
 	return device.createDescriptorPool(pool_info);
 
 }

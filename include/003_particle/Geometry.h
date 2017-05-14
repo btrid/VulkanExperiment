@@ -34,7 +34,16 @@ struct Geometry
 	static std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> MakeSphere(uint32_t quarity = 1);
 	static std::vector<glm::vec3> CalcNormal(const std::vector<glm::vec3>& vertex, const std::vector<glm::uvec3>& element);
 	static std::tuple<std::vector<glm::vec3>, std::vector<glm::vec3>> createOrthoNormalBasis(const std::vector<glm::vec3>& normal);
-	static void Optimaize(std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>>& vertex);
+
+	struct OptimaizeDuplicateVertexDescriptor {
+		glm::u64vec3 m_mask_size;
+		float m_duplicate_distance;
+		OptimaizeDuplicateVertexDescriptor()
+			: m_mask_size(24ull, 16ull, 24ull)
+			, m_duplicate_distance(1000.f)
+		{}
+	};
+	static void OptimaizeDuplicateVertex(std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>>& vertex, const OptimaizeDuplicateVertexDescriptor& desc);
 
 	static Geometry MakeGeometry(
 		Loader& loader,

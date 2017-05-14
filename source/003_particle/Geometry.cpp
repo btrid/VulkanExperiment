@@ -282,7 +282,7 @@ Geometry Geometry::MakeGeometry(Loader& loader, const void* vertex, size_t verte
 	return std::move(geo);
 }
 
-void Geometry::Optimaize(std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>>& _vertex)
+void Geometry::OptimaizeDuplicateVertex(std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>>& _vertex, const OptimaizeDuplicateVertexDescriptor& desc)
 {
 	std::unordered_map<uint64_t, uint32_t> vertex_cache;
 	auto tmp = std::get<0>(_vertex);
@@ -290,26 +290,25 @@ void Geometry::Optimaize(std::tuple<std::vector<glm::vec3>, std::vector<glm::uve
 	auto& index = std::get<1>(_vertex);
 	std::vector<uint32_t> delete_vertex_list(vertex.size());
 
-	glm::u64vec3 mask_size(22ull, 20ull, 22ull);
-	assert(mask_size.x + mask_size.y + mask_size.z == 64);
-	auto mask = glm::u64vec3((1ull << mask_size.x) - 1, (1ull << (mask_size.x+mask_size.y)) - 1, std::numeric_limits<uint64_t>::max());
+	assert(desc.m_mask_size.x + desc.m_mask_size.y + desc.m_mask_size.z <= 64);
+	auto mask = glm::u64vec3((1ull << desc.m_mask_size.x) - 1, (1ull << (desc.m_mask_size.x+ desc.m_mask_size.y)) - 1, std::numeric_limits<uint64_t>::max());
 	mask.z -= mask.y;
 	mask.y -= mask.x;
 	assert((mask.x | mask.y | mask.z) == std::numeric_limits<uint64_t>::max() && (mask.x & mask.y & mask.z) == 0llu);
-
+	float duplicate_distance = desc.m_duplicate_distance;
 	// 重複頂点を探し、使われているVertexにマークを付ける
 	for (size_t i = 0; i < index.size(); i ++)
 	{
 		auto& idx = index[i];
 		for (int ii = 0; ii < 3; ii++)
 		{
-			auto cache_vertex = tmp[idx[ii]] * 10000.f;
+			auto cache_vertex = tmp[idx[ii]] * duplicate_distance;
 			auto cache_index = glm::u64vec3(cache_vertex);
 
 			// ハッシュの値を超えてしまっていないかチェック。maskの範囲を変えるか、倍率を変える
-			assert(glm::all(glm::lessThan(cache_index, glm::u64vec3(1ull) << mask_size)));
+			assert(glm::all(glm::lessThan(cache_index, glm::u64vec3(1ull) << desc.m_mask_size)));
 
-			auto cache_hash = cache_index.x & mask.x | (cache_index.y << mask_size.x) & mask.y | (cache_index.z<< (mask_size.x+ mask_size.y)) & mask.z;
+			auto cache_hash = cache_index.x & mask.x | (cache_index.y << desc.m_mask_size.x) & mask.y | (cache_index.z<< (desc.m_mask_size.x+ desc.m_mask_size.y)) & mask.z;
 			auto result = vertex_cache.try_emplace(cache_hash, (uint32_t)idx[ii]);
 
 			if (result.second){
