@@ -24,8 +24,8 @@ std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> MazeGenerator::makeG
 				index.push_back(glm::uvec3(offset + 1, offset + 3, offset + 2));
 			}
 
-			int right = field_.dataSafe(y, + x + 1);
-			int under = field_.dataSafe(y + 1, x);
+			int right = field_.dataSafe(x + 1, y);
+			int under = field_.dataSafe(x, y + 1);
 
 			switch (current)
 			{
@@ -40,10 +40,10 @@ std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> MazeGenerator::makeG
 				default:
 				{
 					auto offset = vertex.size();
-					vertex.push_back(glm::vec3(x, 0, y)*size);
-					vertex.push_back(glm::vec3(x, 0, y + 1)*size);
-					vertex.push_back(glm::vec3(x, 1, y)*size);
-					vertex.push_back(glm::vec3(x, 1, y + 1)*size);
+					vertex.push_back(glm::vec3(x+1, 0, y)*size);
+					vertex.push_back(glm::vec3(x+1, 0, y + 1)*size);
+					vertex.push_back(glm::vec3(x+1, 1, y)*size);
+					vertex.push_back(glm::vec3(x+1, 1, y + 1)*size);
 					index.push_back(glm::uvec3(offset, offset + 1, offset + 2));
 					index.push_back(glm::uvec3(offset + 1, offset + 3, offset + 2));
 				}
@@ -57,10 +57,10 @@ std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> MazeGenerator::makeG
 				default:
 				{
 					auto offset = vertex.size();
-					vertex.push_back(glm::vec3(x, 0, y)*size);
-					vertex.push_back(glm::vec3(x, 1, y)*size);
-					vertex.push_back(glm::vec3(x+1, 0, y)*size);
-					vertex.push_back(glm::vec3(x+1, 1, y)*size);
+					vertex.push_back(glm::vec3(x, 0, y+1)*size);
+					vertex.push_back(glm::vec3(x, 1, y+1)*size);
+					vertex.push_back(glm::vec3(x+1, 0, y+1)*size);
+					vertex.push_back(glm::vec3(x+1, 1, y+1)*size);
 					index.push_back(glm::uvec3(offset, offset + 1, offset + 2));
 					index.push_back(glm::uvec3(offset + 1, offset + 3, offset + 2));
 				}
@@ -76,10 +76,10 @@ std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> MazeGenerator::makeG
 				case MazeGenerator::CELL_TYPE_WALL:
 				{
 					auto offset = vertex.size();
-					vertex.push_back(glm::vec3(x, 0, y)*size);
-					vertex.push_back(glm::vec3(x, 0, y + 1)*size);
-					vertex.push_back(glm::vec3(x, 1, y)*size);
-					vertex.push_back(glm::vec3(x, 1, y + 1)*size);
+					vertex.push_back(glm::vec3(x+1, 0, y)*size);
+					vertex.push_back(glm::vec3(x+1, 0, y + 1)*size);
+					vertex.push_back(glm::vec3(x+1, 1, y)*size);
+					vertex.push_back(glm::vec3(x+1, 1, y + 1)*size);
 					index.push_back(glm::uvec3(offset, offset + 1, offset + 2));
 					index.push_back(glm::uvec3(offset + 1, offset + 3, offset + 2));
 				}
@@ -91,10 +91,10 @@ std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> MazeGenerator::makeG
 				case MazeGenerator::CELL_TYPE_WALL:
 				{
 					auto offset = vertex.size();
-					vertex.push_back(glm::vec3(x, 0, y)*size);
-					vertex.push_back(glm::vec3(x, 1, y)*size);
-					vertex.push_back(glm::vec3(x + 1, 0, y)*size);
-					vertex.push_back(glm::vec3(x + 1, 1, y)*size);
+					vertex.push_back(glm::vec3(x, 0, y+1)*size);
+					vertex.push_back(glm::vec3(x, 1, y+1)*size);
+					vertex.push_back(glm::vec3(x + 1, 0, y+1)*size);
+					vertex.push_back(glm::vec3(x + 1, 1, y+1)*size);
 					index.push_back(glm::uvec3(offset, offset + 1, offset + 2));
 					index.push_back(glm::uvec3(offset + 1, offset + 3, offset + 2));
 				}
