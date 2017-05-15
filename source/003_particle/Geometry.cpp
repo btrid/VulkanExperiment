@@ -1,5 +1,5 @@
 #include <003_particle/Geometry.h>
-#include <003_particle/KDTree.h>
+#include <003_particle/KDTreeTriangle.h>
 #include <unordered_map>
 #include <set>
 std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> Geometry::MakeBox()
@@ -285,6 +285,8 @@ Geometry Geometry::MakeGeometry(Loader& loader, const void* vertex, size_t verte
 
 void Geometry::OptimaizeDuplicateVertex(std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>>& _vertex, const OptimaizeDuplicateVertexDescriptor& desc)
 {
+	// 0.011と0.019は除去できるが、0.019と0.21は除去できないのでよくない関数。
+	// マイナスの頂点があるとだめなので、minをとって足す必要がある。
 	std::unordered_map<uint64_t, uint32_t> vertex_cache;
 	auto tmp = std::get<0>(_vertex);
 	auto& vertex = std::get<0>(_vertex);

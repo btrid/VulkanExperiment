@@ -9,11 +9,22 @@ std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> MazeGenerator::makeG
 	int num = 0;
 	printf("make maze geometry\n");
 	glm::vec3 size(3.f, 1.f, 3.f);
+
+	// è∞
+	auto offset = vertex.size();
+	vertex.push_back(glm::vec3(0, 0, 0)*size);
+	vertex.push_back(glm::vec3(0, 0, getSizeY())*size);
+	vertex.push_back(glm::vec3(getSizeX(), 0, 0)*size);
+	vertex.push_back(glm::vec3(getSizeX(), 0, getSizeY())*size);
+	index.push_back(glm::uvec3(offset, offset + 1, offset + 2));
+	index.push_back(glm::uvec3(offset + 1, offset + 3, offset + 2));
 	for (size_t y = 0; y < getSizeY(); y++)
 	{
 		for (size_t x = 0; x < getSizeX(); x++)
 		{
 			int current = data[y * getSizeX() + x];
+			if (current == MazeGenerator::CELL_TYPE_ABS_WALL
+				|| current == MazeGenerator::CELL_TYPE_WALL)
 			{
 				auto offset = vertex.size();
 				vertex.push_back(glm::vec3(x, current, y)*size);

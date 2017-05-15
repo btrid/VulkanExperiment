@@ -41,7 +41,7 @@
     <ClInclude Include="..\..\include\003_particle\MazeGenerator.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\003_particle\KDTree.h">
+    <ClInclude Include="..\..\include\003_particle\KDTreeTriangle.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>
