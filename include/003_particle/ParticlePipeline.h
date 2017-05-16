@@ -121,6 +121,8 @@ struct cParticlePipeline
 				auto geometry = m_maze.makeGeometry();
 				Geometry::OptimaizeDuplicateVertexDescriptor opti_desc;
 				Geometry::OptimaizeDuplicateVertex(geometry, opti_desc);
+				auto map = m_maze.makeMapData();
+
 				std::vector<vk::VertexInputAttributeDescription> vertex_attr(1);
 				vertex_attr[0].setOffset(0);
 				vertex_attr[0].setBinding(0);

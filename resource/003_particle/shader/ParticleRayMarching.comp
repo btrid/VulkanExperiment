@@ -1,0 +1,48 @@
+#version 450
+
+#pragma optionNV (unroll none)
+#pragma optionNV (inline all)
+#pragma optionNV(fastmath on)
+#pragma optionNV(strict on)
+
+#extension GL_GOOGLE_cpp_style_line_directive : require
+#include </Particle.glsl>
+
+layout (local_size_x = 1024, local_size_y = 1) in;
+
+layout(std140, set=0, binding=0) uniform ParticleInfoUniform {
+	ParticleInfo u_particle_info;
+};
+
+layout(std430, set=0, binding=1) restrict buffer ParticleDataBuffer {
+	ParticleData b_particle[];
+};
+layout(std430, set=0, binding=2) restrict buffer CounterBuffer {
+	DrawIndirectCommand b_draw_cmd;
+};
+
+
+layout(push_constant) uniform UpdateConstantBlock
+{
+	float m_deltatime;
+	uint m_src_offset;
+	uint m_dst_offset;
+} constant;
+
+void main()
+{
+	uint index = gl_GlobalInvocationID.x;
+	if(index >= u_particle_info.m_max_num){
+		return;
+	}
+
+	ParticleData p = b_particle[constant.m_src_offset + index];
+	b_particle[constant.m_src_offset + index].m_life = -1.;
+	p.m_life -= constant.m_deltatime;
+	if(p.m_life <= 0.){
+		return;
+	}
+	p.m_pos += p.m_vel * constant.m_deltatime;
+	uint dst_index = atomicAdd(b_draw_cmd.vertexCount, 1);
+	b_particle[constant.m_dst_offset + dst_index] = p;
+}

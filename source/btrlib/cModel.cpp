@@ -50,71 +50,11 @@ namespace {
 	}
 
 }
-/**
- *	使い捨てのステージングバッファ
- */
-struct TmpStagingBuffer
-{
-	cDevice m_device;
-	vk::DeviceSize m_size;
-
-	vk::Buffer m_staging_buffer;
-	char* m_staging_data_ptr;
-
-	vk::DeviceMemory m_staging_memory;
-
-	vk::Fence m_fence;
-
-	TmpStagingBuffer(const cDevice& device, vk::DeviceSize size)
-	{
-		m_device = device;
-		m_size = size;
-		vk::BufferCreateInfo staging_info;
-		staging_info.usage = vk::BufferUsageFlagBits::eTransferSrc;
-		staging_info.size = size;
-		staging_info.sharingMode = vk::SharingMode::eExclusive;
-		m_staging_buffer = device->createBuffer(staging_info);
-
-		vk::MemoryRequirements staging_memory_request = device->getBufferMemoryRequirements(m_staging_buffer);
-		vk::MemoryAllocateInfo staging_memory_alloc_info;
-		staging_memory_alloc_info.allocationSize = staging_memory_request.size;
-		staging_memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(device.getGPU(), staging_memory_request, vk::MemoryPropertyFlagBits::eHostVisible| vk::MemoryPropertyFlagBits::eHostCoherent);
-
-		m_staging_memory = device->allocateMemory(staging_memory_alloc_info);
-		device->bindBufferMemory(m_staging_buffer, m_staging_memory, 0);
-
-		m_staging_data_ptr = static_cast<char*>(device->mapMemory(m_staging_memory, 0, size, vk::MemoryMapFlags()));
-	}
-
-	void update(vk::Buffer dest)
-	{
-		vk::BufferCopy copy_info;
-		copy_info.size = m_size;
-		copy_info.srcOffset = 0;
-		copy_info.dstOffset = 0;
-		TmpCmd tmpcmd(m_device);
-		auto cmd = tmpcmd.getCmd();
-		cmd.copyBuffer(m_staging_buffer, dest, copy_info);
-	}
-	~TmpStagingBuffer()
-	{
-		m_device->unmapMemory(m_staging_memory);
-		{
-			std::unique_ptr<Deleter> deleter = std::make_unique<Deleter>();
-			deleter->device = m_device.getHandle();
-			deleter->buffer = { m_staging_buffer };
-			deleter->memory = { m_staging_memory };
-			deleter->fence.push_back(m_fence);
-			sGlobal::Order().destroyResource(std::move(deleter));
-		}
-
-	}
-};
 
 /**
  *	モーションのデータを一枚の1DArrayに格納
  */
-MotionTexture create(const cDevice& device, const aiAnimation* anim, const RootNode& root)
+MotionTexture create(ModelLoader* loader, const aiAnimation* anim, const RootNode& root)
 {
 	uint32_t SIZE = 256;
 
@@ -131,13 +71,15 @@ MotionTexture create(const cDevice& device, const aiAnimation* anim, const RootN
 	image_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
 	image_info.extent = { SIZE, 1u, 1u };
 
-	auto image_prop = device.getGPU().getImageFormatProperties(image_info.format, image_info.imageType, image_info.tiling, image_info.usage, image_info.flags);
+	auto image_prop = loader->m_device.getGPU().getImageFormatProperties(image_info.format, image_info.imageType, image_info.tiling, image_info.usage, image_info.flags);
+	vk::Image image = loader->m_device->createImage(image_info);
 
-	vk::Image image = device->createImage(image_info);
-
-
-	TmpStagingBuffer staging_buffer(device, image_info.arrayLayers * anim->mNumChannels * SIZE * sizeof(glm::vec4));
-	auto* data = reinterpret_cast<glm::vec4*>(staging_buffer.m_staging_data_ptr);
+	
+	btr::BufferMemory::Descriptor staging_desc;
+	staging_desc.size = image_info.arrayLayers * anim->mNumChannels * SIZE * sizeof(glm::vec4);
+	staging_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+	auto staging_buffer = loader->m_staging_memory.allocateMemory(staging_desc);
+	auto* data = staging_buffer.getMappedPtr<glm::vec4>();
 
 	for (size_t i = 0; i < anim->mNumChannels; i++)
 	{
@@ -217,13 +159,13 @@ MotionTexture create(const cDevice& device, const aiAnimation* anim, const RootN
 		assert(count == SIZE);
 	}
 
-	vk::MemoryRequirements memory_request = device->getImageMemoryRequirements(image);
+	vk::MemoryRequirements memory_request = loader->m_device->getImageMemoryRequirements(image);
 	vk::MemoryAllocateInfo memory_alloc_info;
 	memory_alloc_info.allocationSize = memory_request.size;
-	memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+	memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(loader->m_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-	vk::DeviceMemory memory = device->allocateMemory(memory_alloc_info);
-	device->bindImageMemory(image, memory, 0);
+	vk::DeviceMemory image_memory = loader->m_device->allocateMemory(memory_alloc_info);
+	loader->m_device->bindImageMemory(image, image_memory, 0);
 
 	vk::ImageSubresourceRange subresourceRange;
 	subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
@@ -233,7 +175,7 @@ MotionTexture create(const cDevice& device, const aiAnimation* anim, const RootN
 	subresourceRange.levelCount = 1;
 
 	vk::BufferImageCopy copy;
-	copy.bufferOffset = 0;
+	copy.bufferOffset = staging_buffer.getOffset();
 	copy.imageExtent = { SIZE, 1u, 1u };
 	copy.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
 	copy.imageSubresource.baseArrayLayer = 0;
@@ -241,7 +183,7 @@ MotionTexture create(const cDevice& device, const aiAnimation* anim, const RootN
 	copy.imageSubresource.mipLevel = 0;
 
 	vk::ImageMemoryBarrier to_copy_barrier;
-	to_copy_barrier.dstQueueFamilyIndex = device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
+	to_copy_barrier.dstQueueFamilyIndex = loader->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
 	to_copy_barrier.image = image;
 	to_copy_barrier.oldLayout = vk::ImageLayout::eUndefined;
 	to_copy_barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
@@ -249,7 +191,7 @@ MotionTexture create(const cDevice& device, const aiAnimation* anim, const RootN
 	to_copy_barrier.subresourceRange = subresourceRange;
 
 	vk::ImageMemoryBarrier to_shader_read_barrier;
-	to_shader_read_barrier.dstQueueFamilyIndex = device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
+	to_shader_read_barrier.dstQueueFamilyIndex = loader->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
 	to_shader_read_barrier.image = image;
 	to_shader_read_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
 	to_shader_read_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
@@ -257,14 +199,13 @@ MotionTexture create(const cDevice& device, const aiAnimation* anim, const RootN
 	to_shader_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 	to_shader_read_barrier.subresourceRange = subresourceRange;
 
-	TmpCmd tmpcmd(device);
-	tmpcmd.getCmd().pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
-	tmpcmd.getCmd().copyBufferToImage(staging_buffer.m_staging_buffer, image, vk::ImageLayout::eTransferDstOptimal, { copy });
-	tmpcmd.getCmd().pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
+	loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
+	loader->m_cmd.copyBufferToImage(staging_buffer.getBuffer(), image, vk::ImageLayout::eTransferDstOptimal, { copy });
+	loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
 
 	MotionTexture tex;
 	tex.m_resource = std::make_shared<MotionTexture::Resource>();
-	tex.m_resource->m_device = device;
+	tex.m_resource->m_device = loader->m_device;
 	tex.m_resource->m_image = image;
 
 	vk::ImageViewCreateInfo view_info;
@@ -278,10 +219,8 @@ MotionTexture create(const cDevice& device, const aiAnimation* anim, const RootN
 	view_info.image = image;
 	view_info.subresourceRange = subresourceRange;
 
-	tex.m_resource->m_image_view = device->createImageView(view_info);
-	tex.m_resource->m_memory = memory;
-	tex.m_resource->m_fence_shared = tmpcmd.getFence();
-	staging_buffer.m_fence = tmpcmd.getFence();
+	tex.m_resource->m_image_view = loader->m_device->createImageView(view_info);
+	tex.m_resource->m_memory = image_memory;
 
 	vk::SamplerCreateInfo sampler_info;
 	sampler_info.magFilter = vk::Filter::eNearest;
@@ -298,19 +237,19 @@ MotionTexture create(const cDevice& device, const aiAnimation* anim, const RootN
 	sampler_info.anisotropyEnable = VK_FALSE;
 	sampler_info.borderColor = vk::BorderColor::eFloatOpaqueWhite;
 
-	tex.m_resource->m_sampler = device->createSampler(sampler_info);
+	tex.m_resource->m_sampler = loader->m_device->createSampler(sampler_info);
 	return tex;
 }
 
 
 ResourceManager<ResourceTexture::Resource> ResourceTexture::s_manager;
 ResourceManager<cModel::Resource> cModel::s_manager;
-void ResourceTexture::load(const cDevice& device, cThreadPool& thread_pool, const std::string& filename)
+void ResourceTexture::load(ModelLoader* loader, cThreadPool& thread_pool, const std::string& filename)
 {
 	if (s_manager.manage(m_private, filename)) {
 		return;
 	}
-	m_private->m_device = device;
+	m_private->m_device = loader->m_device;
 
 	auto texture_data = rTexture::LoadTexture(filename);
 	vk::ImageCreateInfo image_info;
@@ -325,33 +264,21 @@ void ResourceTexture::load(const cDevice& device, cThreadPool& thread_pool, cons
 	image_info.initialLayout = vk::ImageLayout::eUndefined;
 	image_info.extent = { texture_data.m_size.x, texture_data.m_size.y, 1 };
 	image_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
-	vk::Image image = device->createImage(image_info);
+	vk::Image image = loader->m_device->createImage(image_info);
 
-	vk::MemoryRequirements memory_request = device->getImageMemoryRequirements(image);
+	vk::MemoryRequirements memory_request = loader->m_device->getImageMemoryRequirements(image);
 	vk::MemoryAllocateInfo memory_alloc_info;
 	memory_alloc_info.allocationSize = memory_request.size;
-	memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+	memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(loader->m_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-	vk::DeviceMemory memory = device->allocateMemory(memory_alloc_info);
-	device->bindImageMemory(image, memory, 0);
+	vk::DeviceMemory image_memory = loader->m_device->allocateMemory(memory_alloc_info);
+	loader->m_device->bindImageMemory(image, image_memory, 0);
 
-	vk::BufferCreateInfo staging_info;
-	staging_info.usage = vk::BufferUsageFlagBits::eTransferSrc;
-	staging_info.size = texture_data.getBufferSize();
-	staging_info.sharingMode = vk::SharingMode::eExclusive;
-	vk::Buffer staging_buffer = device->createBuffer(staging_info);
-
-	vk::MemoryRequirements staging_memory_request = device->getBufferMemoryRequirements(staging_buffer);
-	vk::MemoryAllocateInfo staging_memory_alloc_info;
-	staging_memory_alloc_info.allocationSize = staging_memory_request.size;
-	staging_memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(device.getGPU(), staging_memory_request, vk::MemoryPropertyFlagBits::eHostVisible);
-
-	vk::DeviceMemory staging_memory = device->allocateMemory(staging_memory_alloc_info);
-	device->bindBufferMemory(staging_buffer, staging_memory, 0);
-
-	auto* map = device->mapMemory(staging_memory, 0, texture_data.getBufferSize(), vk::MemoryMapFlags());
-	memcpy(map, texture_data.m_data.data(), texture_data.getBufferSize());
-	device->unmapMemory(staging_memory);
+	btr::BufferMemory::Descriptor staging_desc;
+	staging_desc.size = texture_data.getBufferSize();
+	staging_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+	auto staging_buffer = loader->m_staging_memory.allocateMemory(staging_desc);	
+	memcpy(staging_buffer.getMappedPtr(), texture_data.m_data.data(), texture_data.getBufferSize());
 
 	vk::ImageSubresourceRange subresourceRange;
 	subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
@@ -360,36 +287,19 @@ void ResourceTexture::load(const cDevice& device, cThreadPool& thread_pool, cons
 	subresourceRange.layerCount = 1;
 	subresourceRange.levelCount = 1;
 
-	vk::FenceCreateInfo fence_info;
-	vk::FenceShared fence_shared;
-	fence_shared.create(*device, fence_info);
-
 	{
 		// staging_bufferからimageへコピー
-		// コマンドバッファの準備
-		vk::CommandPool cmd_pool = sGlobal::Order().getCmdPoolTempolary(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
-		vk::CommandBufferAllocateInfo cmd_buffer_info;
-		cmd_buffer_info.commandBufferCount = 1;
-		cmd_buffer_info.commandPool = cmd_pool;
-		cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
-		auto cmd = device->allocateCommandBuffers(cmd_buffer_info);
-
-		cmd[0].reset(vk::CommandBufferResetFlags());
-		vk::CommandBufferBeginInfo begin_info;
-		begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit | vk::CommandBufferUsageFlagBits::eSimultaneousUse;
-		cmd[0].begin(begin_info);
 
 		vk::BufferImageCopy copy;
-		copy.bufferOffset = 0;
+		copy.bufferOffset = staging_buffer.getOffset();
 		copy.imageExtent = { texture_data.m_size.x, texture_data.m_size.y, texture_data.m_size.z };
 		copy.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
 		copy.imageSubresource.baseArrayLayer = 0;
 		copy.imageSubresource.layerCount = 1;
 		copy.imageSubresource.mipLevel = 0;
 
-
 		vk::ImageMemoryBarrier to_copy_barrier;
-		to_copy_barrier.dstQueueFamilyIndex = device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
+		to_copy_barrier.dstQueueFamilyIndex = loader->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
 		to_copy_barrier.image = image;
 		to_copy_barrier.oldLayout = vk::ImageLayout::eUndefined;
 		to_copy_barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
@@ -397,7 +307,7 @@ void ResourceTexture::load(const cDevice& device, cThreadPool& thread_pool, cons
 		to_copy_barrier.subresourceRange = subresourceRange;
 
 		vk::ImageMemoryBarrier to_shader_read_barrier;
-		to_shader_read_barrier.dstQueueFamilyIndex = device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
+		to_shader_read_barrier.dstQueueFamilyIndex = loader->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
 		to_shader_read_barrier.image = image;
 		to_shader_read_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
 		to_shader_read_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
@@ -405,25 +315,9 @@ void ResourceTexture::load(const cDevice& device, cThreadPool& thread_pool, cons
 		to_shader_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 		to_shader_read_barrier.subresourceRange = subresourceRange;
 
-		cmd[0].pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
-		cmd[0].copyBufferToImage(staging_buffer, image, vk::ImageLayout::eTransferDstOptimal, { copy });
-		cmd[0].pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
-		cmd[0].end();
-		vk::SubmitInfo submit_info;
-		submit_info.commandBufferCount = (uint32_t)cmd.size();
-		submit_info.pCommandBuffers = cmd.data();
-
-		auto queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), device.getQueueNum(vk::QueueFlagBits::eGraphics) - 1);
-		queue.submit(submit_info, *fence_shared);
-
-		auto deleter = std::make_unique<Deleter>();
-		deleter->device = device.getHandle();
-		deleter->buffer = { staging_buffer };
-		deleter->memory = { staging_memory };
-		deleter->pool = cmd_pool;
-		deleter->cmd = std::move(cmd);
-		deleter->fence_shared = { fence_shared };
-		sGlobal::Order().destroyResource(std::move(deleter));
+		loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
+		loader->m_cmd.copyBufferToImage(staging_buffer.getBuffer(), image, vk::ImageLayout::eTransferDstOptimal, { copy });
+		loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
 
 	}
 
@@ -454,16 +348,14 @@ void ResourceTexture::load(const cDevice& device, cThreadPool& thread_pool, cons
 	sampler_info.borderColor = vk::BorderColor::eFloatOpaqueWhite;
 
 	m_private->m_image = image;
-	m_private->m_memory = memory;
-	m_private->m_image_view = device->createImageView(view_info);
-	m_private->m_sampler = device->createSampler(sampler_info);
-	m_private->m_fence_shared = fence_shared;
+	m_private->m_memory = image_memory;
+	m_private->m_image_view = loader->m_device->createImageView(view_info);
+	m_private->m_sampler = loader->m_device->createSampler(sampler_info);
 }
 
 
-std::vector<cModel::Material> loadMaterial(const aiScene* scene, const std::string& filename, vk::CommandBuffer cmd)
+std::vector<cModel::Material> loadMaterial(const aiScene* scene, const std::string& filename, ModelLoader* loader)
 {
-	auto device = sThreadLocal::Order().m_device[sThreadLocal::DEVICE_GRAPHICS];
 	std::string path = std::tr2::sys::path(filename).remove_filename().string();
 	std::vector<cModel::Material> material(scene->mNumMaterials);
 	for (size_t i = 0; i < scene->mNumMaterials; i++)
@@ -487,21 +379,21 @@ std::vector<cModel::Material> loadMaterial(const aiScene* scene, const std::stri
 		aiTextureMapping mapping;
 		unsigned uvIndex;
 		if (aiMat->GetTexture(aiTextureType_DIFFUSE, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode) == AI_SUCCESS) {
-			mat.mDiffuseTex.load(device, sGlobal::Order().getThreadPool(), path + "/" + str.C_Str());
+			mat.mDiffuseTex.load(loader, sGlobal::Order().getThreadPool(), path + "/" + str.C_Str());
 		}
 		if (aiMat->GetTexture(aiTextureType_AMBIENT, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode)) {
-			mat.mAmbientTex.load(device, sGlobal::Order().getThreadPool(), path + "/" + str.C_Str());
+			mat.mAmbientTex.load(loader, sGlobal::Order().getThreadPool(), path + "/" + str.C_Str());
 		}
 		if (aiMat->GetTexture(aiTextureType_SPECULAR, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode)) {
-			mat.mSpecularTex.load(device, sGlobal::Order().getThreadPool(), path + "/" + str.C_Str());
+			mat.mSpecularTex.load(loader, sGlobal::Order().getThreadPool(), path + "/" + str.C_Str());
 		}
 
 		if (aiMat->GetTexture(aiTextureType_NORMALS, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode)) {
-			mat.mNormalTex.load(device, sGlobal::Order().getThreadPool(), path + "/" + str.C_Str());
+			mat.mNormalTex.load(loader, sGlobal::Order().getThreadPool(), path + "/" + str.C_Str());
 		}
 
 		if (aiMat->GetTexture(aiTextureType_HEIGHT, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode)) {
-			mat.mHeightTex.load(device, sGlobal::Order().getThreadPool(), path + "/" + str.C_Str());
+			mat.mHeightTex.load(loader, sGlobal::Order().getThreadPool(), path + "/" + str.C_Str());
 		}
 	}
 	return material;
@@ -560,27 +452,28 @@ std::vector<cModel::NodeInfo> loadNodeInfo(aiNode* ainode)
 	return nodeBuffer;
 }
 
-void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& root, cModel::Loader* loader)
+void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& root, ModelLoader* loader)
 {
 	if (!scene->HasAnimations()) {
 		return;
 	}
 
-	btr::BufferMemory::Descriptor staging_arg;
-	staging_arg.size = sizeof(cModel::AnimationInfo) * scene->mNumAnimations;
-//	staging_arg.attribute = btr::BufferMemory::AttributeFlagBits::MEMORY_CONSTANT;
-	auto staging = loader->m_staging_memory.allocateMemory(staging_arg);
+	btr::BufferMemory::Descriptor staging_desc;
+	staging_desc.size = sizeof(cModel::AnimationInfo) * scene->mNumAnimations;
+	staging_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+	auto staging = loader->m_staging_memory.allocateMemory(staging_desc);
 	auto* staging_ptr = staging.getMappedPtr<cModel::AnimationInfo>();
 	for (size_t i = 0; i < scene->mNumAnimations; i++)
 	{
 		aiAnimation* anim = scene->mAnimations[i]; 
 		{
-			anim_buffer.m_motion_texture = create(loader->m_device, anim, root);
+			anim_buffer.m_motion_texture = create(loader, anim, root);
 		}
 
 		cModel::AnimationInfo& animation = staging_ptr[i];
 		animation.maxTime_ = (float)anim->mDuration;
 		animation.ticksPerSecond_ = (float)anim->mTicksPerSecond;
+
 
 	}
 
@@ -651,27 +544,22 @@ void cModel::load(const std::string& filename)
 
 
 	auto device = sThreadLocal::Order().m_device[sThreadLocal::DEVICE_GRAPHICS];
-	m_loader = std::make_unique<Loader>();
+	m_loader = std::make_unique<ModelLoader>();
 	m_loader->m_device = device;
 	m_loader->m_vertex_memory.setup(device, vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal, 128 * 65536);
 	m_loader->m_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal, 1024 * 1024 * 20);
 	m_loader->m_storage_uniform_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal, 8192);
 	m_loader->m_staging_memory.setup(device, vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached, 1024 * 1024 * 20);
 
-	btr::BufferMemory s_vertex_memory = m_loader->m_vertex_memory;
-	btr::BufferMemory s_storage_memory = m_loader->m_storage_memory;
-	btr::BufferMemory s_storage_uniform_memory = m_loader->m_storage_uniform_memory;
-	btr::BufferMemory s_staging_memory = m_loader->m_staging_memory;
-
-	s_vertex_memory.setName("Model Vertex Memory");
-	s_storage_memory.setName("Model Storage Memory");
-	s_storage_uniform_memory.setName("Model Uniform Memory");
-	s_staging_memory.setName("Model Staging Memory");
+	m_loader->m_vertex_memory.setName("Model Vertex Memory");
+	m_loader->m_storage_memory.setName("Model Storage Memory");
+	m_loader->m_storage_uniform_memory.setName("Model Uniform Memory");
+	m_loader->m_staging_memory.setName("Model Staging Memory");
 	int instanceNum = 1000;
 	{
 		// staging buffer
-		m_resource->m_world_staging_buffer = s_staging_memory.allocateMemory(instanceNum * sizeof(glm::mat4) * sGlobal::FRAME_MAX);
-		m_resource->m_model_info_staging_buffer = s_staging_memory.allocateMemory(sizeof(ModelInfo) * sGlobal::FRAME_MAX);
+		m_resource->m_world_staging_buffer = m_loader->m_staging_memory.allocateMemory(instanceNum * sizeof(glm::mat4) * sGlobal::FRAME_MAX);
+		m_resource->m_model_info_staging_buffer = m_loader->m_staging_memory.allocateMemory(sizeof(ModelInfo) * sGlobal::FRAME_MAX);
 
 	}
 
@@ -688,7 +576,7 @@ void cModel::load(const std::string& filename)
 	m_loader->m_cmd = cmd;
 	// 初期化
 	m_resource->mMeshNum = scene->mNumMeshes;
-	m_resource->m_material = loadMaterial(scene, filename, cmd);
+	m_resource->m_material = loadMaterial(scene, filename, m_loader.get());
 
 	m_resource->mNodeRoot = loadNode(scene);
 	loadMotion(m_resource->m_animation_buffer, scene, m_resource->mNodeRoot, m_loader.get());
@@ -711,16 +599,22 @@ void cModel::load(const std::string& filename)
 		indexSize[i] = scene->mMeshes[i]->mNumFaces * 3;
 	}
 
-	auto staging_vertex = s_staging_memory.allocateMemory(sizeof(Vertex) * numVertex);
+	btr::BufferMemory::Descriptor staging_vertex_desc;
+	staging_vertex_desc.size = sizeof(Vertex) * numVertex;
+	staging_vertex_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+	auto staging_vertex = m_loader->m_staging_memory.allocateMemory(staging_vertex_desc);
+
 	auto index_type = numVertex < std::numeric_limits<uint16_t>::max() ? vk::IndexType::eUint16 : vk::IndexType::eUint32;
-	auto staging_index = s_staging_memory.allocateMemory((index_type == vk::IndexType::eUint16 ? sizeof(uint16_t) : sizeof(uint32_t)) * numIndex);
+
+	btr::BufferMemory::Descriptor staging_index_desc;
+	staging_index_desc.size = (index_type == vk::IndexType::eUint16 ? sizeof(uint16_t) : sizeof(uint32_t)) * numIndex;
+	staging_index_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+	auto staging_index = m_loader->m_staging_memory.allocateMemory(staging_index_desc);
 	auto index_stride = (index_type == vk::IndexType::eUint16 ? sizeof(uint16_t) : sizeof(uint32_t));
 	auto* index = static_cast<char*>(staging_index.getMappedPtr());
 	Vertex* vertex = static_cast<Vertex*>(staging_vertex.getMappedPtr());
 	memset(vertex, -1, staging_vertex.getSize());
 	uint32_t v_count = 0;
-	m_loader->m_staging_memory_holder.push_back(staging_vertex);
-	m_loader->m_staging_memory_holder.push_back(staging_index);
 	for (size_t i = 0; i < scene->mNumMeshes; i++)
 	{
 		aiMesh* mesh = scene->mMeshes[i];
@@ -807,15 +701,15 @@ void cModel::load(const std::string& filename)
 		cMeshResource& mesh = m_resource->mMesh;
 
 		{
-			mesh.m_vertex_buffer_ex = s_vertex_memory.allocateMemory(staging_vertex.getSize());
-			mesh.m_index_buffer_ex = s_vertex_memory.allocateMemory(staging_index.getSize());
+			mesh.m_vertex_buffer_ex = m_loader->m_vertex_memory.allocateMemory(staging_vertex.getSize());
+			mesh.m_index_buffer_ex = m_loader->m_vertex_memory.allocateMemory(staging_index.getSize());
 
-			btr::BufferMemory::Descriptor arg;
-			arg.size = sizeof(Mesh) * indexSize.size();
-			arg.attribute = btr::BufferMemory::AttributeFlags();
-			mesh.m_indirect_buffer_ex = s_vertex_memory.allocateMemory(arg);
+			btr::BufferMemory::Descriptor indirect_desc;
+			indirect_desc.size = sizeof(Mesh) * indexSize.size();
+			mesh.m_indirect_buffer_ex = m_loader->m_vertex_memory.allocateMemory(indirect_desc);
 
-			auto staging_indirect = s_staging_memory.allocateMemory(arg);
+			indirect_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			auto staging_indirect = m_loader->m_staging_memory.allocateMemory(indirect_desc);
 			auto* indirect = staging_indirect.getMappedPtr<Mesh>(0);
 			int offset = 0;
 			for (size_t i = 0; i < indexSize.size(); i++) {
@@ -826,7 +720,6 @@ void cModel::load(const std::string& filename)
 				indirect[i].m_draw_cmd.firstInstance = 0;
 				offset += indexSize[i];
 			}
-			m_loader->m_staging_memory_holder.push_back(staging_indirect);
 			vk::BufferCopy copy_info;
 			copy_info.setSize(staging_vertex.getSize());
 			copy_info.setSrcOffset(staging_vertex.getOffset());
@@ -876,7 +769,10 @@ void cModel::load(const std::string& filename)
 
 	// material
 	{
-		auto staging_material = s_staging_memory.allocateMemory(m_resource->m_material.size() * sizeof(MaterialBuffer));
+		btr::BufferMemory::Descriptor staging_desc;
+		staging_desc.size = m_resource->m_material.size() * sizeof(MaterialBuffer);
+		staging_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+		auto staging_material = m_loader->m_staging_memory.allocateMemory(staging_desc);
 		auto* mb = static_cast<MaterialBuffer*>(staging_material.getMappedPtr());
 		for (size_t i = 0; i < m_resource->m_material.size(); i++)
 		{
@@ -888,7 +784,7 @@ void cModel::load(const std::string& filename)
 		}
 
 		auto& buffer = m_resource->getBuffer(Resource::ModelStorageBuffer::MATERIAL);
-		buffer = s_storage_memory.allocateMemory(m_resource->m_material.size() * sizeof(MaterialBuffer));
+		buffer = m_loader->m_storage_memory.allocateMemory(m_resource->m_material.size() * sizeof(MaterialBuffer));
 
 		vk::BufferCopy copy_info;
 		copy_info.setSize(staging_material.getSize());
@@ -896,58 +792,64 @@ void cModel::load(const std::string& filename)
 		copy_info.setDstOffset(buffer.getOffset());
 		cmd.copyBuffer(staging_material.getBuffer(), buffer.getBuffer(), copy_info);
 
-		m_loader->m_staging_memory_holder.push_back(staging_material);
 	}
 
 	// node info
 	{
-		auto staging_node_info_buffer = s_staging_memory.allocateMemory(vector_sizeof(nodeInfo));
+		btr::BufferMemory::Descriptor staging_desc;
+		staging_desc.size = vector_sizeof(nodeInfo);
+		staging_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+		auto staging_node_info_buffer = m_loader->m_staging_memory.allocateMemory(staging_desc);
 		auto& buffer = m_resource->getBuffer(Resource::ModelStorageBuffer::NODE_INFO);
-		buffer = s_storage_memory.allocateMemory(vector_sizeof(nodeInfo));
+		buffer = m_loader->m_storage_memory.allocateMemory(staging_desc.size);
 
-		memcpy_s(staging_node_info_buffer.getMappedPtr(), vector_sizeof(nodeInfo), nodeInfo.data(), vector_sizeof(nodeInfo));
+		memcpy_s(staging_node_info_buffer.getMappedPtr(), staging_desc.size, nodeInfo.data(), staging_desc.size);
 
 		vk::BufferCopy copy_info;
-		copy_info.setSize(vector_sizeof(nodeInfo));
+		copy_info.setSize(staging_desc.size);
 		copy_info.setSrcOffset(staging_node_info_buffer.getOffset());
 		copy_info.setDstOffset(buffer.getOffset());
 		cmd.copyBuffer(staging_node_info_buffer.getBuffer(), buffer.getBuffer(), copy_info);
 
-		m_loader->m_staging_memory_holder.push_back(staging_node_info_buffer);
 	}
 
 	if (!m_resource->mBone.empty())
 	{
 		// BoneInfo
 		{
-			btr::AllocatedMemory staging_bone_info = s_staging_memory.allocateMemory(m_resource->mBone.size() * sizeof(BoneInfo));
+			btr::BufferMemory::Descriptor staging_desc;
+			staging_desc.size = m_resource->mBone.size() * sizeof(BoneInfo);
+			staging_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			btr::AllocatedMemory staging_bone_info = m_loader->m_staging_memory.allocateMemory(staging_desc);
 			auto* bo = static_cast<BoneInfo*>(staging_bone_info.getMappedPtr());
 			for (size_t i = 0; i < m_resource->mBone.size(); i++) {
 				bo[i].mBoneOffset = m_resource->mBone[i].mOffset;
 				bo[i].mNodeIndex = m_resource->mBone[i].mNodeIndex;
 			}
 			auto& buffer = m_resource->getBuffer(Resource::ModelStorageBuffer::BONE_INFO);
-			buffer = s_storage_memory.allocateMemory(m_resource->mBone.size() * sizeof(BoneInfo));
+			buffer = m_loader->m_storage_memory.allocateMemory(m_resource->mBone.size() * sizeof(BoneInfo));
 
 			vk::BufferCopy copy_info;
 			copy_info.setSize(staging_bone_info.getSize());
 			copy_info.setSrcOffset(staging_bone_info.getOffset());
 			copy_info.setDstOffset(buffer.getOffset());
 			cmd.copyBuffer(staging_bone_info.getBuffer(), buffer.getBuffer(), copy_info);
-
-			m_loader->m_staging_memory_holder.push_back(staging_bone_info);
 		}
 
 		// BoneTransform
 		{
 			auto& buffer = m_resource->getBuffer(Resource::ModelStorageBuffer::BONE_TRANSFORM);
-			buffer = s_storage_memory.allocateMemory(m_resource->mBone.size() * instanceNum * sizeof(BoneTransformBuffer));
+			buffer = m_loader->m_storage_memory.allocateMemory(m_resource->mBone.size() * instanceNum * sizeof(BoneTransformBuffer));
 		}
 	}
 
 	// PlayingAnimation
 	{
-		auto staging_playing_animation = s_staging_memory.allocateMemory(instanceNum * sizeof(PlayingAnimation));
+		btr::BufferMemory::Descriptor staging_desc;
+		staging_desc.size = instanceNum * sizeof(PlayingAnimation);
+		staging_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+		auto staging_playing_animation = m_loader->m_staging_memory.allocateMemory(staging_desc);
+
 		auto* pa = static_cast<PlayingAnimation*>(staging_playing_animation.getMappedPtr());
 		for (int i = 0; i < instanceNum; i++)
 		{
@@ -958,19 +860,22 @@ void cModel::load(const std::string& filename)
 		}
 
 		auto& buffer = m_resource->getBuffer(Resource::ModelStorageBuffer::PLAYING_ANIMATION);
-		buffer = s_storage_memory.allocateMemory(instanceNum * sizeof(PlayingAnimation));
+		buffer = m_loader->m_storage_memory.allocateMemory(instanceNum * sizeof(PlayingAnimation));
 
 		vk::BufferCopy copy_info;
 		copy_info.setSize(staging_playing_animation.getSize());
 		copy_info.setSrcOffset(staging_playing_animation.getOffset());
 		copy_info.setDstOffset(buffer.getOffset());
 		cmd.copyBuffer(staging_playing_animation.getBuffer(), buffer.getBuffer(), copy_info);
-		m_loader->m_staging_memory_holder.push_back(staging_playing_animation);
 	}
 
 	// ModelInfo
 	{
-		auto staging_model_info = s_staging_memory.allocateMemory(sizeof(ModelInfo));
+		btr::BufferMemory::Descriptor staging_desc;
+		staging_desc.size = sizeof(ModelInfo);
+		staging_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+		auto staging_model_info = m_loader->m_staging_memory.allocateMemory(staging_desc);
+
 		auto& mi = *static_cast<ModelInfo*>(staging_model_info.getMappedPtr());
 		mi.mInstanceMaxNum = instanceNum;
 		mi.mInstanceAliveNum = 1000;
@@ -998,7 +903,7 @@ void cModel::load(const std::string& filename)
 		mi.mInvGlobalMatrix = glm::inverse(m_resource->mNodeRoot.getRootNode()->mTransformation);
 
 		auto& buffer = m_resource->getBuffer(Resource::ModelStorageBuffer::MODEL_INFO);
-		buffer = s_storage_uniform_memory.allocateMemory(sizeof(ModelInfo));
+		buffer = m_loader->m_storage_uniform_memory.allocateMemory(sizeof(ModelInfo));
 
 		vk::BufferCopy copy_info;
 		copy_info.setSize(staging_model_info.getSize());
@@ -1006,32 +911,31 @@ void cModel::load(const std::string& filename)
 		copy_info.setDstOffset(buffer.getOffset());
 		cmd.copyBuffer(staging_model_info.getBuffer(), buffer.getBuffer(), copy_info);
 
-		m_loader->m_staging_memory_holder.push_back(staging_model_info);
 		m_resource->m_model_info = mi;
 	}
 
 	//BoneMap
 	{
 		auto& buffer = m_resource->getBuffer(Resource::ModelStorageBuffer::BONE_MAP);
-		buffer = s_storage_memory.allocateMemory(instanceNum * sizeof(s32));
+		buffer = m_loader->m_storage_memory.allocateMemory(instanceNum * sizeof(s32));
 	}
 
 	//	NodeLocalTransformBuffer
 	{
 		auto& buffer = m_resource->getBuffer(Resource::ModelStorageBuffer::NODE_LOCAL_TRANSFORM);
-		buffer = s_storage_memory.allocateMemory(m_resource->mNodeRoot.mNodeList.size() * instanceNum * sizeof(NodeLocalTransformBuffer));
+		buffer = m_loader->m_storage_memory.allocateMemory(m_resource->mNodeRoot.mNodeList.size() * instanceNum * sizeof(NodeLocalTransformBuffer));
 	}
 
 
 	//	NodeGlobalTransformBuffer
 	{
 		auto& buffer = m_resource->getBuffer(Resource::ModelStorageBuffer::NODE_GLOBAL_TRANSFORM);
-		buffer = s_storage_memory.allocateMemory(m_resource->mNodeRoot.mNodeList.size() * instanceNum * sizeof(NodeGlobalTransformBuffer));
+		buffer = m_loader->m_storage_memory.allocateMemory(m_resource->mNodeRoot.mNodeList.size() * instanceNum * sizeof(NodeGlobalTransformBuffer));
 	}
 	// world
 	{
 		auto& buffer = m_resource->getBuffer(Resource::ModelStorageBuffer::WORLD);
-		buffer = s_storage_memory.allocateMemory(instanceNum * sizeof(glm::mat4));
+		buffer = m_loader->m_storage_memory.allocateMemory(instanceNum * sizeof(glm::mat4));
 
 	}
 
@@ -1045,9 +949,9 @@ void cModel::load(const std::string& filename)
 	{
 		// todo rendererに移動
 		auto& buffer = m_resource->m_compute_indirect_buffer;
-		buffer = s_vertex_memory.allocateMemory(sizeof(glm::ivec3) * 6);
+		buffer = m_loader->m_vertex_memory.allocateMemory(sizeof(glm::ivec3) * 6);
 
-		auto staging_compute = s_staging_memory.allocateMemory(sizeof(glm::ivec3) * 6);
+		auto staging_compute = m_loader->m_staging_memory.allocateMemory(sizeof(glm::ivec3) * 6);
 		auto* group_ptr = static_cast<glm::ivec3*>(staging_compute.getMappedPtr());
 		int32_t local_size_x = 1024;
 		// shaderのlocal_size_xと合わせる

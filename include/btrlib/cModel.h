@@ -15,6 +15,17 @@
 #include <btrlib/ResourceManager.h>
 #include <btrlib/BufferMemory.h>
 
+struct ModelLoader
+{
+	cDevice m_device;
+	btr::BufferMemory m_vertex_memory;
+	btr::BufferMemory m_storage_memory;
+	btr::BufferMemory m_storage_uniform_memory;
+	btr::BufferMemory m_staging_memory;
+
+	vk::CommandBuffer m_cmd;
+};
+
 struct cMeshResource 
 {
 	btr::AllocatedMemory m_vertex_buffer_ex;
@@ -139,7 +150,6 @@ struct ResourceTexture
 	{
 		std::string m_filename;
 		cDevice m_device;
-		vk::FenceShared m_fence_shared;
 		vk::Image m_image;
 		vk::ImageView m_image_view;
 		vk::DeviceMemory m_memory;
@@ -150,13 +160,13 @@ struct ResourceTexture
 		{
 			if (m_image)
 			{
-				std::unique_ptr<Deleter> deleter = std::make_unique<Deleter>();
-				deleter->device = m_device.getHandle();
-				deleter->image = { m_image };
-				deleter->sampler = { m_sampler };
-				deleter->memory = { m_memory };
-				deleter->fence_shared = { m_fence_shared };
-				sGlobal::Order().destroyResource(std::move(deleter));
+// 				std::unique_ptr<Deleter> deleter = std::make_unique<Deleter>();
+// 				deleter->device = m_device.getHandle();
+// 				deleter->image = { m_image };
+// 				deleter->sampler = { m_sampler };
+// 				deleter->memory = { m_memory };
+// 				deleter->fence_shared = { m_fence_shared };
+// 				sGlobal::Order().destroyResource(std::move(deleter));
 
 				m_device->destroyImageView(m_image_view);
 			}
@@ -165,13 +175,14 @@ struct ResourceTexture
 
 	std::shared_ptr<Resource> m_private;
 
-	void load(const cDevice& device, cThreadPool& thread_pool, const std::string& filename);
+	void load(ModelLoader* loader, cThreadPool& thread_pool, const std::string& filename);
 	vk::ImageView getImageView()const { return m_private ? m_private->m_image_view : vk::ImageView(); }
 	vk::Sampler getSampler()const { return m_private ? m_private->m_sampler : vk::Sampler(); }
 
 	bool isReady()const 
 	{
-		return m_private ? m_private->m_device->getFenceStatus(*m_private->m_fence_shared) == vk::Result::eSuccess : true;
+//		return m_private ? m_private->m_device->getFenceStatus(*m_private->m_fence_shared) == vk::Result::eSuccess : true;
+		return true;
 	}
 
 	static ResourceManager<Resource> s_manager;
@@ -404,18 +415,7 @@ public:
 	};
 	std::unique_ptr<Instance> m_instance;
 
-	struct Loader
-	{
-		cDevice m_device;
-		btr::BufferMemory m_vertex_memory;
-		btr::BufferMemory m_storage_memory;
-		btr::BufferMemory m_storage_uniform_memory;
-		btr::BufferMemory m_staging_memory;
-		std::vector<btr::AllocatedMemory> m_staging_memory_holder;
-
-		vk::CommandBuffer m_cmd;
-	};
-	std::unique_ptr<Loader> m_loader;
+	std::unique_ptr<ModelLoader> m_loader;
 	static ResourceManager<Resource> s_manager;
 
 public:

@@ -1,14 +1,14 @@
 #include <003_particle/MazeGenerator.h>
 //#include <random>
 
-std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> MazeGenerator::makeGeometry()
+std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> MazeGenerator::makeGeometry()const
 {
 	std::vector<glm::vec3> vertex;
 	std::vector<glm::uvec3> index;
-	auto& data = getData();
+	auto& data = field_.map_;
 	int num = 0;
 	printf("make maze geometry\n");
-	glm::vec3 size(3.f, 1.f, 3.f);
+	glm::vec3 size(3.f, 3.f, 3.f);
 
 	// è∞
 	auto offset = vertex.size();
@@ -119,3 +119,15 @@ std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> MazeGenerator::makeG
 	return std::tie(vertex, index);
 }
 
+std::vector<uint8_t> MazeGenerator::makeMapData()const
+{
+	std::vector<uint8_t> data(getSizeX()*getSizeY());
+	for (auto y = 0; y < getSizeX(); y++)
+	{
+		for (auto x = 0; x < getSizeX(); x++)
+		{
+			data[x+y*getSizeX()] = (uint8_t)field_.map_[x + y*getSizeX()];
+		}
+	}
+	return data;
+}
