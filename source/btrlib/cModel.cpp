@@ -60,9 +60,9 @@ MotionTexture create(ModelLoader* loader, const aiAnimation* anim, const RootNod
 
 	vk::ImageCreateInfo image_info;
 	image_info.imageType = vk::ImageType::e1D;
-	image_info.format = vk::Format::eR32G32B32A32Sfloat;
+	image_info.format = vk::Format::eR16G16B16A16Sfloat;
 	image_info.mipLevels = 1;
-	image_info.arrayLayers = (uint32_t)root.mNodeList.size() * 2u;
+	image_info.arrayLayers = (uint32_t)root.mNodeList.size() * 3u;
 	image_info.samples = vk::SampleCountFlagBits::e1;
 	image_info.tiling = vk::ImageTiling::eOptimal;
 	image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
@@ -76,17 +76,18 @@ MotionTexture create(ModelLoader* loader, const aiAnimation* anim, const RootNod
 
 	
 	btr::BufferMemory::Descriptor staging_desc;
-	staging_desc.size = image_info.arrayLayers * anim->mNumChannels * SIZE * sizeof(glm::vec4);
+	staging_desc.size = image_info.arrayLayers * anim->mNumChannels * SIZE * sizeof(glm::u16vec4);
 	staging_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 	auto staging_buffer = loader->m_staging_memory.allocateMemory(staging_desc);
-	auto* data = staging_buffer.getMappedPtr<glm::vec4>();
+	auto* data = staging_buffer.getMappedPtr<glm::u16vec4>();
 
 	for (size_t i = 0; i < anim->mNumChannels; i++)
 	{
 		aiNodeAnim* aiAnim = anim->mChannels[i];
 		auto no = root.getNodeIndexByName(aiAnim->mNodeName.C_Str());
-		auto* pos_scale = data + no * 2 * SIZE;
-		auto* quat = reinterpret_cast<glm::quat*>(pos_scale + SIZE);
+		auto* pos = reinterpret_cast<uint64_t*>(data + no * 3 * SIZE);
+		auto* quat = reinterpret_cast<uint64_t*>(pos + SIZE);
+		auto* scale = reinterpret_cast<uint64_t*>(quat + SIZE);
 
 		float time_max = (float)anim->mDuration;// / anim->mTicksPerSecond;
 		float time_per = time_max / SIZE;
@@ -102,13 +103,11 @@ MotionTexture create(ModelLoader* loader, const aiAnimation* anim, const RootNod
 				n++;
 				continue;
 			}
-			float current_value = current.mValue.x + current.mValue.y + current.mValue.z;
-			float next_value = next.mValue.x + next.mValue.y + next.mValue.z;
-			current_value /= 3.f;
-			next_value /= 3.f;
+			auto current_value = glm::vec4(current.mValue.x, current.mValue.y, current.mValue.z, 0.f);
+			auto next_value = glm::vec4(next.mValue.x, next.mValue.y, next.mValue.z, 0.f);
 			auto rate = 1.f - (float)(next.mTime - time) / (float)(next.mTime - current.mTime);
-			auto value = glm::lerp<float>(current_value, next_value, rate);
-			pos_scale[count].w = value;
+			auto value = glm::lerp(current_value, next_value, rate);
+			scale[count] = glm::packHalf4x16(value);
 			count++;
 			time += time_per;
 		}
@@ -129,9 +128,7 @@ MotionTexture create(ModelLoader* loader, const aiAnimation* anim, const RootNod
 			auto next_value = glm::vec3(next.mValue.x, next.mValue.y, next.mValue.z);
 			auto rate = 1.f - (float)(next.mTime - time) / (float)(next.mTime - current.mTime);
 			auto value = glm::lerp<float>(current_value, next_value, rate);
-			pos_scale[count].x = value.x;
-			pos_scale[count].y = value.y;
-			pos_scale[count].z = value.z;
+			pos[count] = glm::packHalf4x16(glm::vec4(value, 0.f));
 			count++;
 			time += time_per;
 		}
@@ -152,7 +149,7 @@ MotionTexture create(ModelLoader* loader, const aiAnimation* anim, const RootNod
 			auto next_value = glm::quat(next.mValue.w, next.mValue.x, next.mValue.y, next.mValue.z);
 			auto rate = 1.f - (float)(next.mTime - time) / (float)(next.mTime - current.mTime);
 			auto value = glm::slerp<float>(current_value, next_value, rate);
-			quat[count] = value;
+			quat[count] = glm::packHalf4x16(glm::vec4(value.x, value.y, value.z, value.w));
 			count++;
 			time += time_per;
 		}
@@ -215,7 +212,7 @@ MotionTexture create(ModelLoader* loader, const aiAnimation* anim, const RootNod
 	view_info.components.b = vk::ComponentSwizzle::eB;
 	view_info.components.a = vk::ComponentSwizzle::eA;
 	view_info.flags = vk::ImageViewCreateFlags();
-	view_info.format = vk::Format::eR32G32B32A32Sfloat;
+	view_info.format = image_info.format;
 	view_info.image = image;
 	view_info.subresourceRange = subresourceRange;
 
