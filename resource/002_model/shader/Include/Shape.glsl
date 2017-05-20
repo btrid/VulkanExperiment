@@ -68,7 +68,7 @@ float getDistanceTrianglePoint(in Triangle tri, in vec3 p)
 
 vec3 getNormalTriangle(in Triangle tri)
 {
-	return cross(normalize(tri.b - tri.a), glm::normalize(tri.c - tri.a));
+	return cross(normalize(tri.b - tri.a), normalize(tri.c - tri.a));
 }
 
 vec3 getCenterTriangle(in Triangle tri)

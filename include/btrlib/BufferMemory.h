@@ -337,6 +337,7 @@ struct BufferMemory
 	{
 		vk::DeviceSize size;
 		AttributeFlags attribute;
+//		bool is_short_life;
 		Descriptor()
 			: size(0)
 			, attribute(AttributeFlags())

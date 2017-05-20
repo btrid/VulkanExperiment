@@ -73,7 +73,6 @@ MotionTexture create(ModelLoader* loader, const aiAnimation* anim, const RootNod
 
 	auto image_prop = loader->m_device.getGPU().getImageFormatProperties(image_info.format, image_info.imageType, image_info.tiling, image_info.usage, image_info.flags);
 	vk::Image image = loader->m_device->createImage(image_info);
-
 	
 	btr::BufferMemory::Descriptor staging_desc;
 	staging_desc.size = image_info.arrayLayers * anim->mNumChannels * SIZE * sizeof(glm::u16vec4);

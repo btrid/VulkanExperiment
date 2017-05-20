@@ -28,6 +28,7 @@ struct ParticleData
 	uint32_t _p;
 };
 
+
 vk::DescriptorPool createPool(vk::Device device, const std::vector<std::vector<vk::DescriptorSetLayoutBinding>>& bindings);
 
 template<typename T, size_t Size>
@@ -52,6 +53,427 @@ struct Pipeline
 };
 
 glm::uvec3 calcDipatch(const glm::uvec3& num, const glm::uvec3& local_size);
+struct cTriangleLL
+{
+	struct BrickParam
+	{
+		uint32_t m_cell_edge_num;		//!< 1d
+		uint32_t m_cell_cube_num;	//!< 3d
+		uint32_t m_subcell_edge_num;	//!< セル内のセルの数
+		uint32_t m_subcell_cube_num;	//!< 3d
+
+		uint32_t m_edge_num;		//!< 1d
+		uint32_t m_cube_num;	//!< 3d
+		uint32_t p_[2];
+
+		glm::vec4 m_area_min;
+		glm::vec4 m_area_max;
+
+		// 事前計算
+		glm::vec4 m_cell_size;
+		glm::vec4 m_subcell_size;
+
+	};
+
+	struct TriangleLL
+	{
+		std::int32_t next;
+		std::int32_t drawID;
+		std::int32_t instanceID;
+		std::int32_t _p1;
+
+		std::int32_t index[3];
+		std::int32_t _p2;
+	};
+
+	vk::RenderPass m_render_pass;
+	vk::Framebuffer m_framebuffer;
+
+	vk::DescriptorPool m_descriptor_pool;
+	vk::DescriptorSetLayout m_descriptor_set_layout;
+	vk::DescriptorSet m_descriptor_set;
+	vk::PipelineLayout m_pipeline_layout;
+	vk::Pipeline m_pipeline;
+
+	BrickParam	m_brick_info;
+	btr::AllocatedMemory m_triangle_info;
+	btr::AllocatedMemory m_triangleLL_head;
+	btr::AllocatedMemory m_triangleLL;
+	btr::AllocatedMemory m_triangleLL_count;
+
+	vk::Image m_brick_image;
+	vk::ImageView m_brick_image_view;
+	vk::DeviceMemory m_brick_image_memory;
+	enum {
+		MAKE_TRIANGLELL_VERT,
+		MAKE_TRIANGLELL_GEOM,
+		MAKE_TRIANGLELL_FRAG,
+		MAKE_TRIANGLELL_NUM,
+	};
+	std::array<vk::PipelineShaderStageCreateInfo, MAKE_TRIANGLELL_NUM> m_make_triangleLL_shader_info;
+
+	void setup(Loader& loader)
+	{
+		{
+			// メモリ確保
+			{
+				// info
+				btr::BufferMemory::Descriptor desc;
+				desc.size = sizeof(BrickParam);
+				m_triangle_info = loader.m_uniform_memory.allocateMemory(desc);
+
+				desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+				auto staging_buffer = loader.m_staging_memory.allocateMemory(desc);
+				BrickParam& info = *staging_buffer.getMappedPtr<BrickParam>();
+
+				info.m_cell_edge_num = 32;
+				info.m_cell_cube_num = info.m_cell_edge_num*info.m_cell_edge_num*info.m_cell_edge_num;
+				info.m_subcell_edge_num = 4;
+				info.m_subcell_cube_num = info.m_subcell_edge_num*info.m_subcell_edge_num*info.m_subcell_edge_num;
+				info.m_edge_num = info.m_cell_edge_num* info.m_subcell_edge_num;
+				info.m_cube_num = info.m_edge_num*info.m_edge_num*info.m_edge_num;
+				info.m_area_min = glm::vec4(0.f);
+				info.m_area_max = glm::vec4(1000.f);
+				info.m_cell_size = (info.m_area_max- info.m_area_min)/ info.m_cell_edge_num;
+				info.m_subcell_size = info.m_cell_size / info.m_subcell_edge_num;
+
+				m_brick_info = info;
+
+				vk::BufferCopy copy;
+				copy.setSize(desc.size);
+				copy.setSrcOffset(staging_buffer.getBufferInfo().offset);
+				copy.setDstOffset(m_triangle_info.getBufferInfo().offset);
+				loader.m_cmd.copyBuffer(staging_buffer.getBufferInfo().buffer, m_triangle_info.getBufferInfo().buffer, copy);
+			}
+
+			{
+				// head
+				btr::BufferMemory::Descriptor desc;
+				desc.size = sizeof(uint32_t)*m_brick_info.m_subcell_cube_num;
+				m_triangleLL_head = loader.m_storage_memory.allocateMemory(desc);
+			}
+			{
+				// link list
+				btr::BufferMemory::Descriptor desc;
+				desc.size = sizeof(TriangleLL)*1000;
+				m_triangleLL = loader.m_storage_memory.allocateMemory(desc);
+			}
+			{
+				// triangle counter
+				btr::BufferMemory::Descriptor desc;
+				desc.size = sizeof(uint32_t);
+				m_triangleLL_count = loader.m_storage_memory.allocateMemory(desc);
+			}
+
+			{
+				vk::ImageCreateInfo image_info;
+				image_info.imageType = vk::ImageType::e3D;
+				image_info.format = vk::Format::eR8G8B8A8Uint;
+				image_info.mipLevels = 1;
+				image_info.arrayLayers = 1;
+				image_info.samples = vk::SampleCountFlagBits::e1;
+				image_info.tiling = vk::ImageTiling::eOptimal;
+				image_info.usage = vk::ImageUsageFlagBits::eStorage;
+				image_info.sharingMode = vk::SharingMode::eExclusive;
+				image_info.initialLayout = vk::ImageLayout::eUndefined;
+				image_info.extent = { m_brick_info.m_edge_num, m_brick_info.m_edge_num, m_brick_info.m_edge_num };
+				image_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
+				m_brick_image = loader.m_device->createImage(image_info);
+
+				vk::MemoryRequirements memory_request = loader.m_device->getImageMemoryRequirements(m_brick_image);
+				vk::MemoryAllocateInfo memory_alloc_info;
+				memory_alloc_info.allocationSize = memory_request.size;
+				memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(loader.m_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+				m_brick_image_memory = loader.m_device->allocateMemory(memory_alloc_info);
+				loader.m_device->bindImageMemory(m_brick_image, m_brick_image_memory, 0);
+
+				vk::ImageSubresourceRange subresourceRange;
+				subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+				subresourceRange.baseArrayLayer = 0;
+				subresourceRange.baseMipLevel = 0;
+				subresourceRange.layerCount = 1;
+				subresourceRange.levelCount = 1;
+
+				vk::ImageViewCreateInfo view_info;
+				view_info.viewType = vk::ImageViewType::e3D;
+				view_info.components.r = vk::ComponentSwizzle::eR;
+				view_info.components.g = vk::ComponentSwizzle::eG;
+				view_info.components.b = vk::ComponentSwizzle::eB;
+				view_info.components.a = vk::ComponentSwizzle::eA;
+				view_info.flags = vk::ImageViewCreateFlags();
+				view_info.format = image_info.format;
+				view_info.image = m_brick_image;
+				view_info.subresourceRange = subresourceRange;
+				m_brick_image_view = loader.m_device->createImageView(view_info);
+
+				{
+
+					vk::ImageMemoryBarrier to_shader_read_barrier;
+					to_shader_read_barrier.dstQueueFamilyIndex = loader.m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
+					to_shader_read_barrier.image = m_brick_image;
+					to_shader_read_barrier.oldLayout = vk::ImageLayout::eUndefined;
+					to_shader_read_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+					to_shader_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+					to_shader_read_barrier.subresourceRange = subresourceRange;
+
+					loader.m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
+
+				}
+
+			}
+		}
+
+		{
+			struct ShaderDesc {
+				const char* name;
+				vk::ShaderStageFlagBits stage;
+			} shader_desc[] =
+			{
+				{ "MakeTriangleLL.vert.spv", vk::ShaderStageFlagBits::eVertex },
+				{ "MakeTriangleLL.geom.spv", vk::ShaderStageFlagBits::eGeometry },
+				{ "MakeTriangleLL.frag.spv", vk::ShaderStageFlagBits::eFragment },
+			};
+//			static_assert(array_length(shader_desc) == COMPUTE_NUM, "not equal shader num");
+			std::string path = btr::getResourcePath() + "shader\\binary\\";
+			for (size_t i = 0; i < sizeof(shader_desc) / sizeof(shader_desc[0]); i++)
+			{
+				m_make_triangleLL_shader_info[i].setModule(loadShader(loader.m_device.getHandle(), path + shader_desc[i].name));
+				m_make_triangleLL_shader_info[i].setStage(shader_desc[i].stage);
+				m_make_triangleLL_shader_info[i].setPName("main");
+			}
+		}
+
+		{
+			std::vector<vk::DescriptorSetLayoutBinding> bindings =
+			{
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment)
+				.setDescriptorCount(1)
+				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+				.setBinding(0),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(vk::ShaderStageFlagBits::eFragment)
+				.setDescriptorCount(1)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setBinding(1),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(vk::ShaderStageFlagBits::eFragment)
+				.setDescriptorCount(1)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setBinding(2),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(vk::ShaderStageFlagBits::eFragment)
+				.setDescriptorCount(1)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setBinding(3),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(vk::ShaderStageFlagBits::eFragment)
+				.setDescriptorCount(1)
+				.setDescriptorType(vk::DescriptorType::eStorageImage)
+				.setBinding(16),
+			};
+			auto descriptor_set_layout_info = vk::DescriptorSetLayoutCreateInfo()
+				.setBindingCount(bindings.size())
+				.setPBindings(bindings.data());
+			m_descriptor_set_layout = loader.m_device->createDescriptorSetLayout(descriptor_set_layout_info);
+
+			m_descriptor_pool = createPool(loader.m_device.getHandle(), { bindings });
+
+			vk::DescriptorSetAllocateInfo alloc_info;
+			alloc_info.descriptorPool = m_descriptor_pool;
+			alloc_info.descriptorSetCount = 1, m_descriptor_set_layout;
+			alloc_info.pSetLayouts = &m_descriptor_set_layout;
+			m_descriptor_set = loader.m_device->allocateDescriptorSets(alloc_info)[0];
+
+		}
+
+		{
+			{
+				std::vector<vk::DescriptorSetLayout> layouts = {
+					m_descriptor_set_layout,
+				};
+// 				std::vector<vk::PushConstantRange> push_constants = {
+// 					vk::PushConstantRange()
+// 					.setStageFlags(vk::ShaderStageFlagBits::eCompute)
+// 					.setSize(12),
+// 				};
+				vk::PipelineLayoutCreateInfo pipeline_layout_info;
+				pipeline_layout_info.setSetLayoutCount(layouts.size());
+				pipeline_layout_info.setPSetLayouts(layouts.data());
+// 				pipeline_layout_info.setPushConstantRangeCount(push_constants.size());
+// 				pipeline_layout_info.setPPushConstantRanges(push_constants.data());
+				m_pipeline_layout = loader.m_device->createPipelineLayout(pipeline_layout_info);
+			}
+
+			{
+
+				std::vector<vk::DescriptorBufferInfo> uniforms = {
+					m_triangle_info.getBufferInfo(),
+				};
+				std::vector<vk::DescriptorBufferInfo> storages = {
+					m_triangleLL_head.getBufferInfo(),
+					m_triangleLL.getBufferInfo(),
+					m_triangleLL_count.getBufferInfo(),
+				};
+				std::vector<vk::DescriptorImageInfo> images = {
+					vk::DescriptorImageInfo()
+					.setImageView(m_brick_image_view)
+					.setImageLayout(vk::ImageLayout::eGeneral),
+				};
+				std::vector<vk::WriteDescriptorSet> write_desc =
+				{
+					vk::WriteDescriptorSet()
+					.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+					.setDescriptorCount(uniforms.size())
+					.setPBufferInfo(uniforms.data())
+					.setDstBinding(0)
+					.setDstSet(m_descriptor_set),
+					vk::WriteDescriptorSet()
+					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+					.setDescriptorCount(storages.size())
+					.setPBufferInfo(storages.data())
+					.setDstBinding(1)
+					.setDstSet(m_descriptor_set),
+					vk::WriteDescriptorSet()
+					.setDescriptorType(vk::DescriptorType::eStorageImage)
+					.setDescriptorCount(images.size())
+					.setPImageInfo(images.data())
+					.setDstBinding(16)
+					.setDstSet(m_descriptor_set),
+				};
+				loader.m_device->updateDescriptorSets(write_desc, {});
+			}
+
+		}
+		{
+			vk::SubpassDescription subpass;
+			subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+			vk::RenderPassCreateInfo renderpass_info = vk::RenderPassCreateInfo();
+			renderpass_info.setSubpassCount(1);
+			renderpass_info.setPSubpasses(&subpass);
+			m_render_pass = loader.m_device->createRenderPass(renderpass_info);
+
+
+			vk::FramebufferCreateInfo framebuffer_info;
+			framebuffer_info.setRenderPass(m_render_pass);
+			framebuffer_info.setHeight(m_brick_info.m_edge_num);
+			framebuffer_info.setWidth(m_brick_info.m_edge_num);
+			m_framebuffer = loader.m_device->createFramebuffer(framebuffer_info);
+
+		}
+		// pipeline
+		{
+			// assembly
+			auto assembly_info = vk::PipelineInputAssemblyStateCreateInfo();
+			assembly_info.setPrimitiveRestartEnable(VK_FALSE);
+			assembly_info.setTopology(vk::PrimitiveTopology::eTriangleList);
+
+			// viewport
+			vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)m_brick_info.m_edge_num, (float)m_brick_info.m_edge_num, 0.f, 1.f);
+			std::vector<vk::Rect2D> scissor = {
+				vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(viewport.width, viewport.height))
+			};
+			vk::PipelineViewportStateCreateInfo viewportInfo;
+			viewportInfo.setViewportCount(1);
+			viewportInfo.setPViewports(&viewport);
+			viewportInfo.setScissorCount((uint32_t)scissor.size());
+			viewportInfo.setPScissors(scissor.data());
+
+			// ラスタライズ
+			vk::PipelineRasterizationStateCreateInfo rasterization_info;
+			rasterization_info.setPolygonMode(vk::PolygonMode::eFill);
+			rasterization_info.setFrontFace(vk::FrontFace::eCounterClockwise);
+			rasterization_info.setCullMode(vk::CullModeFlagBits::eNone);
+			rasterization_info.setLineWidth(1.f);
+			// サンプリング
+			vk::PipelineMultisampleStateCreateInfo sample_info;
+			sample_info.setRasterizationSamples(vk::SampleCountFlagBits::e1);
+
+			// デプスステンシル
+			vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
+			depth_stencil_info.setDepthTestEnable(VK_TRUE);
+			depth_stencil_info.setDepthWriteEnable(VK_TRUE);
+			depth_stencil_info.setDepthCompareOp(vk::CompareOp::eLessOrEqual);
+			depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
+			depth_stencil_info.setStencilTestEnable(VK_FALSE);
+
+			// ブレンド
+			vk::PipelineColorBlendStateCreateInfo blend_info;
+
+			// vertex input
+			std::vector<vk::VertexInputBindingDescription> vertex_input_binding =
+			{
+				vk::VertexInputBindingDescription()
+				.setBinding(0)
+				.setInputRate(vk::VertexInputRate::eVertex)
+				.setStride(sizeof(glm::vec3))
+			};
+			std::vector<vk::VertexInputAttributeDescription> vertex_input_attribute =
+			{
+				// pos
+				vk::VertexInputAttributeDescription()
+				.setBinding(0)
+				.setLocation(0)
+				.setFormat(vk::Format::eR32G32B32Sfloat)
+				.setOffset(0),
+			};
+			vk::PipelineVertexInputStateCreateInfo vertex_input_info;
+			vertex_input_info.setVertexBindingDescriptionCount(vertex_input_binding.size());
+			vertex_input_info.setPVertexBindingDescriptions(vertex_input_binding.data());
+			vertex_input_info.setVertexAttributeDescriptionCount(vertex_input_attribute.size());
+			vertex_input_info.setPVertexAttributeDescriptions(vertex_input_attribute.data());
+
+			std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =
+			{
+				vk::GraphicsPipelineCreateInfo()
+				.setStageCount(m_make_triangleLL_shader_info.size())
+				.setPStages(m_make_triangleLL_shader_info.data())
+				.setPVertexInputState(&vertex_input_info)
+				.setPInputAssemblyState(&assembly_info)
+				.setPViewportState(&viewportInfo)
+				.setPRasterizationState(&rasterization_info)
+				.setPMultisampleState(&sample_info)
+				.setLayout(m_pipeline_layout)
+				.setRenderPass(m_render_pass)
+				.setPDepthStencilState(&depth_stencil_info)
+				.setPColorBlendState(&blend_info),
+			};
+			m_pipeline = loader.m_device->createGraphicsPipelines(vk::PipelineCache(), graphics_pipeline_info)[0];
+		}
+	}
+	void execute(vk::CommandBuffer cmd, const vk::DescriptorBufferInfo& vertex, const vk::DescriptorBufferInfo& index, const vk::DescriptorBufferInfo indirect, vk::IndexType index_type)
+	{
+		// transfer
+		{
+			cmd.fillBuffer(m_triangleLL_count.getBufferInfo().buffer, m_triangleLL_count.getBufferInfo().offset, m_triangleLL_count.getBufferInfo().range, 0);
+		}
+		{
+
+			vk::RenderPassBeginInfo begin_render_Info;
+			begin_render_Info.setRenderPass(m_render_pass);
+			begin_render_Info.setFramebuffer(m_framebuffer);
+			begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(m_brick_info.m_edge_num, m_brick_info.m_edge_num)));
+			cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline);
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout, 0, m_descriptor_set, {});
+
+			cmd.bindVertexBuffers(0, { vertex.buffer }, { vertex.offset });
+			cmd.bindIndexBuffer(index.buffer, index.offset, index_type);
+			cmd.drawIndexedIndirect(indirect.buffer, indirect.offset, 1, sizeof(vk::DrawIndexedIndirectCommand));
+
+			cmd.endRenderPass();
+
+		}
+
+	}
+	void draw(vk::CommandBuffer cmd)
+	{
+	}
+
+};
+
 struct cParticlePipeline
 {
 	struct Private 
@@ -86,7 +508,6 @@ struct cParticlePipeline
 			PIPELINE_DESCRIPTOR_SET_LAYOUT_NUM,
 		};
 
-
 		btr::AllocatedMemory m_particle;
 		btr::AllocatedMemory m_particle_info;
 		btr::UpdateBuffer<std::array<ParticleData, 1024>> m_particle_emit;
@@ -101,7 +522,7 @@ struct cParticlePipeline
 		vk::DescriptorPool m_descriptor_pool;
 		std::array<vk::DescriptorSetLayout, PIPELINE_DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
 		std::array<vk::DescriptorSet, PIPELINE_DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set;
-		std::array <vk::PipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
+		std::array<vk::PipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
 
 		std::vector<vk::Pipeline> m_compute_pipeline;
 		std::array<vk::PipelineShaderStageCreateInfo, COMPUTE_NUM> m_compute_shader_info;
@@ -114,6 +535,8 @@ struct cParticlePipeline
 		MazeGenerator m_maze;
 		Geometry m_maze_geometry;
 
+		cTriangleLL m_make_triangleLL;
+
 		void setup(Loader& loader)
 		{
 			{
@@ -122,6 +545,7 @@ struct cParticlePipeline
 				Geometry::OptimaizeDuplicateVertexDescriptor opti_desc;
 				Geometry::OptimaizeDuplicateVertex(geometry, opti_desc);
 				auto map = m_maze.makeMapData();
+				
 
 				std::vector<vk::VertexInputAttributeDescription> vertex_attr(1);
 				vertex_attr[0].setOffset(0);
@@ -153,7 +577,6 @@ struct cParticlePipeline
 					data_desc.size = sizeof(ParticleData) * m_info.m_max_num;
 					m_particle = loader.m_storage_memory.allocateMemory(data_desc);
 					std::vector<ParticleData> p(m_info.m_max_num);
-//					loader.m_cmd.updateBuffer(m_particle.getBuffer(), m_particle.getOffset(), vector_sizeof(p), p.data());
 					loader.m_cmd.fillBuffer(m_particle.getBuffer(), m_particle.getOffset(), m_particle.getSize(), 0u);
 				}
 
@@ -536,10 +959,13 @@ struct cParticlePipeline
 
 				}
 			}
+
+			m_make_triangleLL.setup(loader);
 		}
 
 		void execute(vk::CommandBuffer cmd)
 		{
+			m_make_triangleLL.execute(cmd, m_maze_geometry.m_resource->m_vertex.getBufferInfo(), m_maze_geometry.m_resource->m_index.getBufferInfo(), m_maze_geometry.m_resource->m_indirect.getBufferInfo(), m_maze_geometry.m_resource->m_index_type);
 			{
 				// transfer
 				std::vector<vk::BufferMemoryBarrier> to_transfer = { 
@@ -657,6 +1083,7 @@ struct cParticlePipeline
 
 		void draw(vk::CommandBuffer cmd)
 		{
+			m_make_triangleLL.draw(cmd);
 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_graphics_pipeline[1]);
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[GRAPHICS_PIPELINE_LAYOUT_FLOOR_DRAW], 0, m_descriptor_set[GRAPHICS_DESCRIPTOR_SET_LAYOUT_DRAW_CAMERA], {});
 			cmd.bindVertexBuffers(0, { m_maze_geometry.m_resource->m_vertex.getBuffer() }, { m_maze_geometry.m_resource->m_vertex.getOffset() });

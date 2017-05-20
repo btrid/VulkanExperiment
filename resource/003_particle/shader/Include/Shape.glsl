@@ -1,9 +1,32 @@
+
+struct Ray
+{
+	vec3 p;
+	vec3 d;
+};
+
+Ray MakeRay(in vec3 p, in vec3 d)
+{
+	Ray r;
+	r.p = p;
+	r.d = d;
+	return r;
+}
+
 struct Triangle
 {
 	vec3 a;
 	vec3 b;
 	vec3 c;
 };
+Triangle MakeTriangle(in vec3 a, in vec3 b, in vec3 c)
+{
+	Triangle t;
+	t.a = a;
+	t.b = b;
+	t.c = c;
+	return t;
+}
 vec3 getClosestTrianglePoint(in Triangle tri, in vec3 p)
 {
 	vec3 ab = tri.b - tri.a;
@@ -68,10 +91,73 @@ float getDistanceTrianglePoint(in Triangle tri, in vec3 p)
 
 vec3 getNormalTriangle(in Triangle tri)
 {
-	return cross(normalize(tri.b - tri.a), glm::normalize(tri.c - tri.a));
+	return cross(normalize(tri.b - tri.a), normalize(tri.c - tri.a));
 }
 
 vec3 getCenterTriangle(in Triangle tri)
 {
 	return (tri.a + tri.b + tri.c) / 3.;
+}
+
+struct Hit
+{
+	int IsHit;
+	vec3 Weight;
+	float Distance;
+	vec3 HitPoint;
+};
+
+Hit MakeHit()
+{
+	Hit h;
+	h.IsHit = 0;
+	h.Distance = 99999.;
+	return h;
+}
+
+Hit intersect(in Triangle tri, in Ray r)
+{
+	// p191
+	// 縮退3角形はそもそも面積がないので自分でチェックして
+	// assert(!isDegenerate());
+
+	Hit hit = MakeHit();
+	vec3 ab = tri.b - tri.a;
+	vec3 ac = tri.c - tri.a;
+	vec3 qp = -r.d;// p - q
+
+	vec3 n = cross(ab, ac);
+
+	float d = dot(qp, n);
+	if (d < 0.){
+		// 平行か逆向き
+		return hit;
+	}
+
+	vec3 ap = r.p - tri.a;
+	float t = dot(ap, n);
+	if (t < 0.){ 
+		// 向きが後ろ向き
+		return hit;
+	}
+	vec3 e = cross(qp, ap);
+	float v = dot(ac, e);
+	if (v <= 0. || v >= d){
+		return hit;
+	}
+	float w = -dot(ab, e);
+	if (w <= 0. || v + w >= d){
+		return hit;
+	}
+
+	float ood = 1. / d;
+	t *= ood;
+	v *= ood;
+	w *= ood;
+	float u = 1.- v - w;
+	hit.IsHit = 1;
+	hit.Weight = vec3(u, v, w);
+	hit.Distance = t;
+	hit.HitPoint = tri.a*u + tri.b*v + tri.c*w;
+	return hit;
 }
