@@ -43,13 +43,13 @@ in Transform{
 void main()
 {
 	BrickParam param = uParam;
-	ivec3 indexMap0 = getIndexBrick0(param, transform.Position);
-	if(isInRange(indexMap0, uvec3(uParam.m_cell_num)))
+	uvec3 indexMap0 = getIndexBrick0(param, transform.Position);
+	if(isInRange(indexMap0, uParam.m_cell_num.xyz))
 	{
-		imageStore(tBrickMap0, indexMap0, uvec4(1));
+		imageStore(tBrickMap0, ivec3(indexMap0), uvec4(1));
 		uint tIndex = atomicAdd(b_triangle_count, 1);
 
-		ivec3 indexMap1 = getIndexBrick1(param, transform.Position.xyz);
+		uvec3 indexMap1 = getIndexBrick1(param, transform.Position.xyz);
 		uint old = atomicExchange(bTriangleLLHead[getTiledIndexBrick1(param, indexMap1)], tIndex);
 		TriangleLL t;
 		t.next = old;

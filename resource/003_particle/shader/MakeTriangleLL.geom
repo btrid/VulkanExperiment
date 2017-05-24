@@ -178,6 +178,7 @@ void main()
 		p[1] = tMin.xyw + tMax.wwz;
 		p[2] = tMin.wwz + tMax.xyw;
 		p[3] = tMin.www + tMax.xyz;
+		gl_ViewportIndex = 0;
 	}
 	else if(abs(y) > abs(z))
 	{
@@ -190,6 +191,7 @@ void main()
 		p[1] = tMin.xyw + tMax.wwz;
 		p[2] = tMin.wwz + tMax.xyw;
 		p[3] = tMin.www + tMax.xyz;
+		gl_ViewportIndex = 1;
 	}
 	else
 	{
@@ -200,6 +202,7 @@ void main()
 		p[1] = tMin.xyz + tMax.www;
 		p[2] = tMin.www + tMax.xyz;
 		p[3] = tMin.wyz + tMax.xww;
+		gl_ViewportIndex = 2;
 	}
 	mat4 view = lookat(eye, center, up);
 

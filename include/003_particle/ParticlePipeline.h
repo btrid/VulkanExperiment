@@ -52,19 +52,15 @@ struct Pipeline
 	vk::DescriptorSetLayout m_descriptor_set_layout;
 };
 
-glm::uvec3 calcDipatch(const glm::uvec3& num, const glm::uvec3& local_size);
+glm::uvec3 calcDipatchGroups(const glm::uvec3& num, const glm::uvec3& local_size);
 struct cTriangleLL
 {
 	struct BrickParam
 	{
-		uint32_t m_cell_edge_num;		//!< 1d
-		uint32_t m_cell_cube_num;	//!< 3d
-		uint32_t m_subcell_edge_num;	//!< セル内のセルの数
-		uint32_t m_subcell_cube_num;	//!< 3d
+		glm::uvec4	m_cell_num;	//!< xyz:1d w:x*y*z 
+		glm::uvec4	m_subcell_num;	//!< セル内のセルの数
 
-		uint32_t m_edge_num;		//!< 1d
-		uint32_t m_cube_num;	//!< 3d
-		uint32_t p_[2];
+		glm::uvec4 m_total_num;		//!< 1d
 
 		glm::vec4 m_area_min;
 		glm::vec4 m_area_max;
@@ -111,6 +107,7 @@ struct cTriangleLL
 		MAKE_TRIANGLELL_NUM,
 	};
 	std::array<vk::PipelineShaderStageCreateInfo, MAKE_TRIANGLELL_NUM> m_make_triangleLL_shader_info;
+	std::array<vk::PipelineShaderStageCreateInfo, 2> m_debug_draw_triangleLL_shader_info;
 
 	void setup(Loader& loader)
 	{
@@ -124,20 +121,21 @@ struct cTriangleLL
 
 				desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 				auto staging_buffer = loader.m_staging_memory.allocateMemory(desc);
-				BrickParam& info = *staging_buffer.getMappedPtr<BrickParam>();
+				BrickParam& param = *staging_buffer.getMappedPtr<BrickParam>();
 
-				info.m_cell_edge_num = 32;
-				info.m_cell_cube_num = info.m_cell_edge_num*info.m_cell_edge_num*info.m_cell_edge_num;
-				info.m_subcell_edge_num = 4;
-				info.m_subcell_cube_num = info.m_subcell_edge_num*info.m_subcell_edge_num*info.m_subcell_edge_num;
-				info.m_edge_num = info.m_cell_edge_num* info.m_subcell_edge_num;
-				info.m_cube_num = info.m_edge_num*info.m_edge_num*info.m_edge_num;
-				info.m_area_min = glm::vec4(0.f);
-				info.m_area_max = glm::vec4(1000.f);
-				info.m_cell_size = (info.m_area_max- info.m_area_min)/ info.m_cell_edge_num;
-				info.m_subcell_size = info.m_cell_size / info.m_subcell_edge_num;
+				param.m_cell_num = glm::uvec4(32, 8, 32, 32 * 8 * 32);
+				param.m_subcell_num = glm::uvec4(4, 2, 4, 4 * 2 * 4);
+// 				param.m_cell_num = glm::uvec4(64, 64, 64, 64 * 64 * 64);
+// 				param.m_subcell_num = glm::uvec4(4, 4, 4, 4 * 4 * 4);
 
-				m_brick_info = info;
+
+				param.m_total_num = param.m_cell_num*param.m_subcell_num;
+				param.m_area_min = glm::vec4(-1000.f);
+				param.m_area_max = glm::vec4(1000.f);
+				param.m_cell_size = (param.m_area_max - param.m_area_min) / glm::vec4(param.m_cell_num);
+				param.m_subcell_size = param.m_cell_size / glm::vec4(param.m_subcell_num);
+
+				m_brick_info = param;
 
 				vk::BufferCopy copy;
 				copy.setSize(desc.size);
@@ -149,7 +147,7 @@ struct cTriangleLL
 			{
 				// head
 				btr::BufferMemory::Descriptor desc;
-				desc.size = sizeof(uint32_t)*m_brick_info.m_subcell_cube_num;
+				desc.size = sizeof(uint32_t)*m_brick_info.m_total_num.w;
 				m_triangleLL_head = loader.m_storage_memory.allocateMemory(desc);
 			}
 			{
@@ -176,7 +174,7 @@ struct cTriangleLL
 				image_info.usage = vk::ImageUsageFlagBits::eStorage;
 				image_info.sharingMode = vk::SharingMode::eExclusive;
 				image_info.initialLayout = vk::ImageLayout::eUndefined;
-				image_info.extent = { m_brick_info.m_edge_num, m_brick_info.m_edge_num, m_brick_info.m_edge_num };
+				image_info.extent = { m_brick_info.m_cell_num.x, m_brick_info.m_cell_num.y, m_brick_info.m_cell_num.z };
 				image_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
 				m_brick_image = loader.m_device->createImage(image_info);
 
@@ -357,8 +355,8 @@ struct cTriangleLL
 
 			vk::FramebufferCreateInfo framebuffer_info;
 			framebuffer_info.setRenderPass(m_render_pass);
-			framebuffer_info.setHeight(m_brick_info.m_edge_num);
-			framebuffer_info.setWidth(m_brick_info.m_edge_num);
+			framebuffer_info.setHeight(256);
+			framebuffer_info.setWidth(256);
 			m_framebuffer = loader.m_device->createFramebuffer(framebuffer_info);
 
 		}
@@ -370,22 +368,40 @@ struct cTriangleLL
 			assembly_info.setTopology(vk::PrimitiveTopology::eTriangleList);
 
 			// viewport
-			vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)m_brick_info.m_edge_num, (float)m_brick_info.m_edge_num, 0.f, 1.f);
+			vk::Viewport viewport[3];
+			viewport[0] = vk::Viewport(0.f, 0.f, (float)m_brick_info.m_total_num.z, (float)m_brick_info.m_total_num.y, 0.f, 1.f);
+			viewport[1] = vk::Viewport(0.f, 0.f, (float)m_brick_info.m_total_num.x, (float)m_brick_info.m_total_num.z, 0.f, 1.f);
+			viewport[2] = vk::Viewport(0.f, 0.f, (float)m_brick_info.m_total_num.x, (float)m_brick_info.m_total_num.y, 0.f, 1.f);
 			std::vector<vk::Rect2D> scissor = {
-				vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(viewport.width, viewport.height))
+				vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(viewport[0].width, viewport[0].height)),
+				vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(viewport[1].width, viewport[1].height)),
+				vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(viewport[2].width, viewport[2].height)),
 			};
-			vk::PipelineViewportStateCreateInfo viewportInfo;
-			viewportInfo.setViewportCount(1);
-			viewportInfo.setPViewports(&viewport);
-			viewportInfo.setScissorCount((uint32_t)scissor.size());
-			viewportInfo.setPScissors(scissor.data());
+			vk::Viewport viewport_d;
+			viewport_d = vk::Viewport(0.f, 0.f, 640.f, 480.f, 0.f, 1.f);
+			std::vector<vk::Rect2D> scissor_d = {
+				vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(viewport_d.width, viewport_d.height)),
+			};
+			vk::PipelineViewportStateCreateInfo viewportInfo[2];
+			viewportInfo[0].setViewportCount(3);
+			viewportInfo[0].setPViewports(viewport);
+			viewportInfo[0].setScissorCount((uint32_t)scissor.size());
+			viewportInfo[0].setPScissors(scissor.data());
+			viewportInfo[0].setViewportCount(1);
+			viewportInfo[0].setPViewports(&viewport_d);
+			viewportInfo[0].setScissorCount((uint32_t)scissor_d.size());
+			viewportInfo[0].setPScissors(scissor_d.data());
 
 			// ラスタライズ
-			vk::PipelineRasterizationStateCreateInfo rasterization_info;
-			rasterization_info.setPolygonMode(vk::PolygonMode::eFill);
-			rasterization_info.setFrontFace(vk::FrontFace::eCounterClockwise);
-			rasterization_info.setCullMode(vk::CullModeFlagBits::eNone);
-			rasterization_info.setLineWidth(1.f);
+			vk::PipelineRasterizationStateCreateInfo rasterization_info[2];
+			rasterization_info[0].setPolygonMode(vk::PolygonMode::eFill);
+			rasterization_info[0].setFrontFace(vk::FrontFace::eCounterClockwise);
+			rasterization_info[0].setCullMode(vk::CullModeFlagBits::eNone);
+			rasterization_info[0].setLineWidth(1.f);
+			rasterization_info[1].setPolygonMode(vk::PolygonMode::eLine);
+			rasterization_info[1].setFrontFace(vk::FrontFace::eCounterClockwise);
+			rasterization_info[1].setCullMode(vk::CullModeFlagBits::eNone);
+			rasterization_info[1].setLineWidth(1.f);
 			// サンプリング
 			vk::PipelineMultisampleStateCreateInfo sample_info;
 			sample_info.setRasterizationSamples(vk::SampleCountFlagBits::e1);
@@ -431,13 +447,25 @@ struct cTriangleLL
 				.setPStages(m_make_triangleLL_shader_info.data())
 				.setPVertexInputState(&vertex_input_info)
 				.setPInputAssemblyState(&assembly_info)
-				.setPViewportState(&viewportInfo)
-				.setPRasterizationState(&rasterization_info)
+				.setPViewportState(&viewportInfo[0])
+				.setPRasterizationState(&rasterization_info[0])
 				.setPMultisampleState(&sample_info)
 				.setLayout(m_pipeline_layout)
 				.setRenderPass(m_render_pass)
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
+// 				vk::GraphicsPipelineCreateInfo()
+// 				.setStageCount(m_make_triangleLL_shader_info.size())
+// 				.setPStages(m_make_triangleLL_shader_info.data())
+// 				.setPVertexInputState(&vertex_input_info)
+// 				.setPInputAssemblyState(&assembly_info)
+// 				.setPViewportState(&viewportInfo[1])
+// 				.setPRasterizationState(&rasterization_info[1])
+// 				.setPMultisampleState(&sample_info)
+// 				.setLayout(m_pipeline_layout)
+// 				.setRenderPass(m_render_pass)
+// 				.setPDepthStencilState(&depth_stencil_info)
+// 				.setPColorBlendState(&blend_info),
 			};
 			m_pipeline = loader.m_device->createGraphicsPipelines(vk::PipelineCache(), graphics_pipeline_info)[0];
 		}
@@ -453,7 +481,7 @@ struct cTriangleLL
 			vk::RenderPassBeginInfo begin_render_Info;
 			begin_render_Info.setRenderPass(m_render_pass);
 			begin_render_Info.setFramebuffer(m_framebuffer);
-			begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(m_brick_info.m_edge_num, m_brick_info.m_edge_num)));
+			begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(256, 256)));
 			cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline);
@@ -1012,7 +1040,7 @@ struct cParticlePipeline
 
 				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_compute_pipeline[COMPUTE_UPDATE]);
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[COMPUTE_PIPELINE_LAYOUT_UPDATE], 0, m_descriptor_set[COMPUTE_DESCRIPTOR_SET_LAYOUT_UPDATE], {});
-				auto groups = calcDipatch(glm::uvec3(8192 / 2, 1, 1), glm::uvec3(1024, 1, 1));
+				auto groups = calcDipatchGroups(glm::uvec3(8192 / 2, 1, 1), glm::uvec3(1024, 1, 1));
 				cmd.dispatch(groups.x, groups.y, groups.z);
 
 			}
@@ -1022,7 +1050,7 @@ struct cParticlePipeline
 				static int count;
 				count++;
 				count %= 3000;
-				if (count == 0 )
+				if (count == 1 )
 				{
 					auto particle_barrier = m_particle.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite);
 					std::vector<vk::BufferMemoryBarrier> to_emit_barrier =
@@ -1060,7 +1088,7 @@ struct cParticlePipeline
 					cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_compute_pipeline[COMPUTE_EMIT]);
 					cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[COMPUTE_PIPELINE_LAYOUT_EMIT], 0, m_descriptor_set[COMPUTE_DESCRIPTOR_SET_LAYOUT_UPDATE], {});
 					cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[COMPUTE_PIPELINE_LAYOUT_EMIT], 1, m_descriptor_set[COMPUTE_DESCRIPTOR_SET_LAYOUT_EMIT], {});
-					auto groups = calcDipatch(glm::uvec3(block.m_emit_num, 1, 1), glm::uvec3(1024, 1, 1));
+					auto groups = calcDipatchGroups(glm::uvec3(block.m_emit_num, 1, 1), glm::uvec3(1024, 1, 1));
 					cmd.dispatch(groups.x, groups.y, groups.z);
 
 				}

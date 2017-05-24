@@ -21,7 +21,7 @@ vk::DescriptorPool createPool(vk::Device device, const std::vector<std::vector<v
 
 }
 
-glm::uvec3 calcDipatch(const glm::uvec3& num, const glm::uvec3& local_size)
+glm::uvec3 calcDipatchGroups(const glm::uvec3& num, const glm::uvec3& local_size)
 {
 	glm::uvec3 ret;
 	for (int i = 0; i < 3; i++)
