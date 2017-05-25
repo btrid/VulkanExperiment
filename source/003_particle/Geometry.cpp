@@ -2,18 +2,18 @@
 #include <003_particle/KDTreeTriangle.h>
 #include <unordered_map>
 #include <set>
-std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> Geometry::MakeBox()
+std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> Geometry::MakeBox(float edge /*= 1.f*/)
 {
 	std::vector<glm::vec3> v = 
 	{
-		{-1.f,  1.f,  1.f},
-		{ 1.f,  1.f,  1.f},
-		{-1.f, -1.f,  1.f},
-		{ 1.f, -1.f,  1.f},
-		{-1.f,  1.f, -1.f},
-		{ 1.f,  1.f, -1.f},
-		{-1.f, -1.f, -1.f},
-		{ 1.f, -1.f, -1.f},
+		{-edge,  edge,  edge},
+		{ edge,  edge,  edge},
+		{-edge, -edge,  edge},
+		{ edge, -edge,  edge},
+		{-edge,  edge, -edge},
+		{ edge,  edge, -edge},
+		{-edge, -edge, -edge},
+		{ edge, -edge, -edge},
 	};
 
 	std::vector<glm::uvec3> i =

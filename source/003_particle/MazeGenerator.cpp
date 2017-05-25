@@ -8,7 +8,7 @@ std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> MazeGenerator::makeG
 	auto& data = field_.map_;
 	int num = 0;
 	printf("make maze geometry\n");
-	glm::vec3 size(3.f, 3.f, 3.f);
+	glm::vec3 size(5.f, 5.f, 5.f);
 
 	// è∞
 	auto offset = vertex.size();

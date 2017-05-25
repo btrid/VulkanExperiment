@@ -83,7 +83,7 @@ ivec3 marchCell(in BrickParam param, inout vec3 pos, in ivec3 cell, in vec3 dir,
 	return next;
 }
 
-MarchResult marching(in BrickParam param, in Ray ray, in readonly uimage3D t_brick_map, float progress)
+MarchResult marching(in BrickParam param, in Ray ray, in readonly uimage3D t_brick_map, float progress_distance)
 {
 	MarchResult result;
 	result.HitResult = MakeHit(); 
@@ -91,9 +91,9 @@ MarchResult marching(in BrickParam param, in Ray ray, in readonly uimage3D t_bri
 	{
 		// そもそもVoxelにヒットするかチェック
 		Hit start = marchToAABB(ray, param.areaMin, param.areaMax);
-		if(start.IsHit == 0 ){
-			return result;
-		}
+//		if(start.IsHit == 0 ){
+//			return result;
+//		}
 		ray.p = start.HitPoint + ray.d*0.0001;
 	}
 
@@ -122,9 +122,12 @@ MarchResult marching(in BrickParam param, in Ray ray, in readonly uimage3D t_bri
 			TriangleMesh near;
 			for(uint triIndex = bTriangleLLHead[getTiledIndexBrick1(param, index1)]; triIndex != 0xFFFFFFFF; triIndex = bTriangleLL[triIndex].next)
 			{
-				Vertex a = bVertex[bTriangleLL[triIndex].index[0]];
-				Vertex b = bVertex[bTriangleLL[triIndex].index[1]];
-				Vertex c = bVertex[bTriangleLL[triIndex].index[2]];
+				TriangleLL triangle_LL = bTriangleLL[triIndex];
+				triIndex = triangle_LL.next;
+
+				Vertex a = bVertex[triangle_LL.index[0]];
+				Vertex b = bVertex[triangle_LL.index[1]];
+				Vertex c = bVertex[triangle_LL.index[2]];
 				Triangle t = MakeTriangle(a.Position, b.Position, c.Position);
 				t = scaleTriangle(t, 0.05); // 計算誤差でポリゴンの間が当たらないことがあるので大きくする
 				Hit hit = intersect(t, ray);

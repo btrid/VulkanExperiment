@@ -21,6 +21,22 @@ layout(std430, set=0, binding=2) restrict buffer CounterBuffer {
 	DrawIndirectCommand b_draw_cmd;
 };
 
+layout(set=1, binding=0, r8ui) uniform writeonly uimage3D tBrickMap0;
+
+layout(std140, set=1, binding = 1) uniform BrickUniform
+{
+	BrickParam uParam;
+};
+layout(std430, set=1, binding = 2) restrict buffer TriangleLLHeadBuffer{
+	uint bTriangleLLHead[];
+};
+layout(std430, set=2, binding=3) writeonly restrict buffer TriangleLLBuffer {
+	TriangleLL bTriangleLL[];
+};
+layout(std430, set=3, binding=4) restrict buffer TriangleCountBuffer {
+	uint b_triangle_count;
+};
+
 
 layout(push_constant) uniform UpdateConstantBlock
 {

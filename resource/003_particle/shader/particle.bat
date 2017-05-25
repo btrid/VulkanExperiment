@@ -11,4 +11,6 @@ glslc.exe -w -I Include -x glsl -fshader-stage=geometry	-o binary\\FloorRender.g
 glslc.exe -w -I Include -x glsl -fshader-stage=vertex	-o binary\\MakeTriangleLL.vert.spv MakeTriangleLL.vert
 glslc.exe -w -I Include -x glsl -fshader-stage=fragment	-o binary\\MakeTriangleLL.frag.spv MakeTriangleLL.frag
 glslc.exe -w -I Include -x glsl -fshader-stage=geometry	-o binary\\MakeTriangleLL.geom.spv MakeTriangleLL.geom
+glslc.exe -w -I Include -x glsl -fshader-stage=vertex	-o binary\\RenderBrick.vert.spv RenderBrick.vert
+glslc.exe -w -I Include -x glsl -fshader-stage=fragment	-o binary\\RenderBrick.frag.spv RenderBrick.frag
 

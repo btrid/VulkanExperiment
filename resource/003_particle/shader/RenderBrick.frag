@@ -6,28 +6,27 @@
 //#pragma optionNV(fastprecision on)
 //#pragma optionNV(ifcvt all)
 #pragma optionNV(strict on)
-#extension GL_ARB_shader_draw_parameters : require
-#extension GL_ARB_bindless_texture : require
-#extension GL_ARB_shading_language_include : require
+
+#extension GL_GOOGLE_cpp_style_line_directive : require
 
 #include </convertDimension.glsl>
 #include </Shape.glsl>
-#include </Brick.glsl>
+#include </TriangleLL.glsl>
 #include </PM.glsl>
 
 in Transform{
 	flat int Visible;
 }FSIn;
 
-layout(early_fragment_tests) in;
+//layout(early_fragment_tests) in;
 layout(location = 0) out vec4 FragColor;
 
 void main()
 {	
-	if(FSIn.Visible == 0){
-		discard;
-		return;
-	}
+//	if(FSIn.Visible == 0){
+//		discard;
+//		return;
+//	}
 
-	FragColor = vec4(1.);
+	FragColor = vec4(1., 1., 1., FSIn.Visible == 0 ? 0. : 1.);
 }
