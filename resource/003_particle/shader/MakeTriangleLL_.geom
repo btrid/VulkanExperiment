@@ -215,12 +215,6 @@ void main()
 	vec3 areaMin = uParam.m_area_min.xyz;
 	vec3 areaMax = uParam.m_area_max.xyz;
 	vec3 size = (areaMax - areaMin);
-	vec3 center = size/2. + areaMin;
-	vec3 ortho_min = size/2.;
-	vec3 ortho_max = -size/2.;
-	vec3 eye = center;
-	vec3 up = vec3(0., 1., 0.);
-	mat4 projection;
 
 
 	vec3 out_min, out_max;
@@ -229,41 +223,34 @@ void main()
 	vec4 tMax = vec4(out_max, 0.);
 	vec3 p[4];
 
+	int type = 0;
 	if(abs(x) > abs(y) && abs(x) > abs(z)){
-		eye.x = areaMin.x;
-		projection = orthoLH(ortho_min.z, ortho_max.z, ortho_min.y, ortho_max.y, 0.01, size.x);
-
 		p[0] = tMin.xyz + tMax.www;
 		p[1] = tMin.xyw + tMax.wwz;
 		p[2] = tMin.wwz + tMax.xyw;
 		p[3] = tMin.www + tMax.xyz;
-		gl_ViewportIndex = 0;
+		type = 0;
 	}
 	else if(abs(y) > abs(z))
 	{
-		eye.y = areaMax.y;
-		up = normalize(vec3(0., 0., 1.));
-		projection = orthoLH(ortho_min.x, ortho_max.x, ortho_min.z, ortho_max.z, 0.01, size.y);
-
 		p[0] = tMin.xyz + tMax.www;
 		p[1] = tMin.xyw + tMax.wwz;
 		p[2] = tMin.wwz + tMax.xyw;
 		p[3] = tMin.www + tMax.xyz;
-		gl_ViewportIndex = 1;
+		type = 1;
 	}
 	else
 	{
-		eye.z = areaMin.z;
-		projection = orthoLH(ortho_min.x, ortho_max.x, ortho_min.y, ortho_max.y, 0.01, size.z);
-
 		p[0] = tMin.xww + tMax.wyz;
 		p[1] = tMin.xyz + tMax.www;
 		p[2] = tMin.www + tMax.xyz;
 		p[3] = tMin.wyz + tMax.xww;
-		gl_ViewportIndex = 2;
+		type = 2;
 	}
-	mat4 view = lookatLH(eye, center, up);
-
+	mat4 projection = u_projection.ortho[type];
+	mat4 view = u_projection.view[type];
+	gl_ViewportIndex = type;
+	
 	transform.VertexID[0] = In[0].VertexID;
 	transform.VertexID[1] = In[1].VertexID;
 	transform.VertexID[2] = In[2].VertexID;

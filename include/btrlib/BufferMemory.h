@@ -398,6 +398,11 @@ struct UpdateBufferDescriptor
 	btr::BufferMemory device_memory;
 	btr::BufferMemory staging_memory;
 	uint32_t frame_max;
+
+	UpdateBufferDescriptor()
+	{
+		frame_max = sGlobal::FRAME_MAX;
+	}
 };
 template<typename T>
 struct UpdateBuffer

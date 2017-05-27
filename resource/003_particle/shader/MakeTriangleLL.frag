@@ -20,13 +20,13 @@ layout(std140, set=0, binding = 0) uniform BrickUniform
 {
 	BrickParam uParam;
 };
-layout(std430, set=0, binding = 1) restrict buffer TriangleLLHeadBuffer{
+layout(std430, set=0, binding = 2) restrict buffer TriangleLLHeadBuffer{
 	uint bTriangleLLHead[];
 };
-layout(std430, set=0, binding=2) writeonly restrict buffer TriangleLLBuffer {
+layout(std430, set=0, binding=3) writeonly restrict buffer TriangleLLBuffer {
 	TriangleLL bTriangleLL[];
 };
-layout(std430, set=0, binding=3) restrict buffer TriangleCountBuffer {
+layout(std430, set=0, binding=4) restrict buffer TriangleCountBuffer {
 	uint b_triangle_count;
 };
 

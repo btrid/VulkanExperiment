@@ -298,7 +298,6 @@ struct cTriangleLL
 			auto pv = camera.mProjection * camera.mView;
 			cmd.pushConstants<glm::mat4>(m_pipeline_layout, vk::ShaderStageFlagBits::eVertex, 0, pv);
 
-//			cmd.drawIndexed(m_index_count, m_brick_info.m_total_num.w, 0, 0, 0);
 			cmd.drawIndexed(m_index_count, m_brick_info.m_total_num.w+1, 0, 0, 0);
 
 		}
@@ -315,6 +314,10 @@ struct cTriangleLL
 		std::int32_t _p2;
 	};
 
+	struct TriangleProjection{
+		glm::mat4 ortho[3];
+		glm::mat4 view[3];
+	};
 	vk::RenderPass m_render_pass;
 	vk::Framebuffer m_framebuffer;
 
@@ -329,7 +332,7 @@ struct cTriangleLL
 	btr::AllocatedMemory m_triangleLL_head;
 	btr::AllocatedMemory m_triangleLL;
 	btr::AllocatedMemory m_triangleLL_count;
-
+	btr::UpdateBuffer<TriangleProjection> m_triangle_projection;
 	vk::Image m_brick_image;
 	vk::ImageView m_brick_image_view;
 	vk::DeviceMemory m_brick_image_memory;
@@ -359,12 +362,10 @@ struct cTriangleLL
 
 				param.m_cell_num = glm::uvec4(32, 4, 32, 32 * 4 * 32);
 				param.m_subcell_num = glm::uvec4(4, 2, 4, 4 * 2 * 4);
-// 				param.m_cell_num = glm::uvec4(64, 64, 64, 64 * 64 * 64);
-// 				param.m_subcell_num = glm::uvec4(4, 4, 4, 4 * 4 * 4);
 
 				param.m_total_num = param.m_cell_num*param.m_subcell_num;
 				param.m_area_min = glm::vec4(0.f);
-				param.m_area_max = glm::vec4(1200.f);
+				param.m_area_max = glm::vec4(100.f);
 				param.m_cell_size = (param.m_area_max - param.m_area_min) / glm::vec4(param.m_cell_num);
 				param.m_subcell_size = param.m_cell_size / glm::vec4(param.m_subcell_num);
 
@@ -396,6 +397,13 @@ struct cTriangleLL
 				m_triangleLL_count = loader.m_storage_memory.allocateMemory(desc);
 			}
 
+			{
+				btr::UpdateBufferDescriptor desc;
+				desc.device_memory = loader.m_uniform_memory;
+				desc.staging_memory = loader.m_staging_memory;
+				desc.frame_max = sGlobal::FRAME_MAX;
+				m_triangle_projection.setup(desc);
+			}
 			{
 				vk::ImageCreateInfo image_info;
 				image_info.imageType = vk::ImageType::e3D;
@@ -484,9 +492,9 @@ struct cTriangleLL
 				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 				.setBinding(0),
 				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(vk::ShaderStageFlagBits::eFragment)
+				.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment)
 				.setDescriptorCount(1)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 				.setBinding(1),
 				vk::DescriptorSetLayoutBinding()
 				.setStageFlags(vk::ShaderStageFlagBits::eFragment)
@@ -498,6 +506,11 @@ struct cTriangleLL
 				.setDescriptorCount(1)
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 				.setBinding(3),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(vk::ShaderStageFlagBits::eFragment)
+				.setDescriptorCount(1)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setBinding(4),
 				vk::DescriptorSetLayoutBinding()
 				.setStageFlags(vk::ShaderStageFlagBits::eFragment)
 				.setDescriptorCount(1)
@@ -524,16 +537,9 @@ struct cTriangleLL
 				std::vector<vk::DescriptorSetLayout> layouts = {
 					m_descriptor_set_layout,
 				};
-// 				std::vector<vk::PushConstantRange> push_constants = {
-// 					vk::PushConstantRange()
-// 					.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-// 					.setSize(12),
-// 				};
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
 				pipeline_layout_info.setSetLayoutCount(layouts.size());
 				pipeline_layout_info.setPSetLayouts(layouts.data());
-// 				pipeline_layout_info.setPushConstantRangeCount(push_constants.size());
-// 				pipeline_layout_info.setPPushConstantRanges(push_constants.data());
 				m_pipeline_layout = loader.m_device->createPipelineLayout(pipeline_layout_info);
 			}
 
@@ -541,6 +547,7 @@ struct cTriangleLL
 
 				std::vector<vk::DescriptorBufferInfo> uniforms = {
 					m_triangle_info.getBufferInfo(),
+					m_triangle_projection.getBufferInfo(),
 				};
 				std::vector<vk::DescriptorBufferInfo> storages = {
 					m_triangleLL_head.getBufferInfo(),
@@ -564,7 +571,7 @@ struct cTriangleLL
 					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 					.setDescriptorCount(storages.size())
 					.setPBufferInfo(storages.data())
-					.setDstBinding(1)
+					.setDstBinding(2)
 					.setDstSet(m_descriptor_set),
 					vk::WriteDescriptorSet()
 					.setDescriptorType(vk::DescriptorType::eStorageImage)
@@ -679,35 +686,66 @@ struct cTriangleLL
 	}
 	void execute(vk::CommandBuffer cmd, const vk::DescriptorBufferInfo& vertex, const vk::DescriptorBufferInfo& index, const vk::DescriptorBufferInfo indirect, vk::IndexType index_type)
 	{
-		// transfer
-		vk::ImageSubresourceRange brick_image_subresource_range = vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
 		{
-			sGlobal::Order().getGPU(0).getDevice(vk::QueueFlagBits::eGraphics)[0]->waitIdle();
-			std::vector<vk::BufferMemoryBarrier> to_transfer = {
-				m_triangleLL_count.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite),
-				m_triangleLL_head.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite),
-			};
-			vk::ImageMemoryBarrier to_transfer_image = {
-				vk::ImageMemoryBarrier(vk::AccessFlagBits::eShaderWrite| vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite, vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferDstOptimal)
-				.setImage(m_brick_image)
-				.setSubresourceRange(brick_image_subresource_range),
-			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, to_transfer, to_transfer_image);
+			// transfer
+			vk::ImageSubresourceRange brick_image_subresource_range = vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
+			{
+				std::vector<vk::BufferMemoryBarrier> to_transfer = {
+					m_triangleLL_count.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite),
+					m_triangleLL_head.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite),
+				};
+				vk::ImageMemoryBarrier to_transfer_image = {
+					vk::ImageMemoryBarrier(vk::AccessFlagBits::eShaderWrite | vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite, vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferDstOptimal)
+					.setImage(m_brick_image)
+					.setSubresourceRange(brick_image_subresource_range),
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, to_transfer, to_transfer_image);
+			}
 
 			cmd.fillBuffer(m_triangleLL_count.getBufferInfo().buffer, m_triangleLL_count.getBufferInfo().offset, m_triangleLL_count.getBufferInfo().range, 0);
 			cmd.fillBuffer(m_triangleLL_head.getBufferInfo().buffer, m_triangleLL_head.getBufferInfo().offset, m_triangleLL_head.getBufferInfo().range, -1);
 			cmd.clearColorImage(m_brick_image, vk::ImageLayout::eTransferDstOptimal, vk::ClearColorValue(std::array<uint32_t, 4>{0}), brick_image_subresource_range);
 
-			std::vector<vk::BufferMemoryBarrier> to_shader = {
-				m_triangleLL_count.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
-				m_triangleLL_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
-			};
-			vk::ImageMemoryBarrier to_shader_image = {
-				vk::ImageMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderWrite | vk::AccessFlagBits::eShaderRead, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eGeneral)
-				.setImage(m_brick_image)
-				.setSubresourceRange(brick_image_subresource_range),
-			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), {}, to_shader, to_shader_image);
+			{
+				std::vector<vk::BufferMemoryBarrier> to_shader = {
+					m_triangleLL_count.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+					m_triangleLL_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+				};
+				vk::ImageMemoryBarrier to_shader_image = {
+					vk::ImageMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderWrite | vk::AccessFlagBits::eShaderRead, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eGeneral)
+					.setImage(m_brick_image)
+					.setSubresourceRange(brick_image_subresource_range),
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), {}, to_shader, to_shader_image);
+			}
+
+			{
+				TriangleProjection projection;
+				glm::vec3 areaMin = m_brick_info.m_area_min.xyz;
+				glm::vec3 areaMax = m_brick_info.m_area_max.xyz;
+				glm::vec3 size = (areaMax - areaMin);
+				glm::vec3 center = size / 2. + areaMin;
+				glm::vec3 ortho_min = size / 2.;
+				glm::vec3 ortho_max = -size / 2.;
+				projection.ortho[0] = glm::ortho(ortho_min.z, ortho_max.z, ortho_min.y, ortho_max.y, 0.01f, size.x);
+				projection.ortho[1] = glm::ortho(ortho_min.x, ortho_max.x, ortho_min.z, ortho_max.z, 0.01f, size.y);
+				projection.ortho[2] = glm::ortho(ortho_min.x, ortho_max.x, ortho_min.y, ortho_max.y, 0.01f, size.z);
+				glm::vec3 eye = center;
+				eye.x = areaMin.x;
+				projection.view[0] = glm::lookAt(eye, center, glm::vec3(0., 1., 0.));
+				eye = center;
+				eye.y = areaMax.y;
+				projection.view[1] = glm::lookAt(eye, center, glm::vec3(0., 0., 1.));
+				eye = center;
+				eye.z = areaMin.z;
+				projection.view[2] = glm::lookAt(eye, center, glm::vec3(0., 1., 0.));
+				m_triangle_projection.subupdate(projection);
+
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eGeometryShader, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, { m_triangle_projection.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite) }, {});
+				m_triangle_projection.update(cmd);
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), {}, { m_triangle_projection.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead) }, {});
+
+			}
 		}
 		{
 
@@ -810,7 +848,7 @@ struct cParticlePipeline
 		{
 			{
 //				m_maze.generate(31, 31);
-				m_maze.generate(127, 127);
+				m_maze.generate(511, 511);
 				auto geometry = m_maze.makeGeometry();
 				Geometry::OptimaizeDuplicateVertexDescriptor opti_desc;
 //				Geometry::OptimaizeDuplicateVertex(geometry, opti_desc);
