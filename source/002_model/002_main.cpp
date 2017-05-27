@@ -68,10 +68,10 @@ int main()
 	setup_cmd_info.setLevel(vk::CommandBufferLevel::ePrimary);
 	setup_cmd_info.setCommandBufferCount(1);
 	auto setup_cmd = device->allocateCommandBuffers(setup_cmd_info)[0];
+	vk::CommandBufferBeginInfo cmd_begin_info;
+	cmd_begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
+	setup_cmd.begin(cmd_begin_info);
 	{
-		vk::CommandBufferBeginInfo cmd_begin_info;
-		cmd_begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
-		setup_cmd.begin(cmd_begin_info);
 		for (uint32_t i = 0; i < window.getSwapchain().getSwapchainNum(); i++)
 		{
 			auto subresourceRange = vk::ImageSubresourceRange()
@@ -107,13 +107,6 @@ int main()
 			backbuffer_view[i] = device->createImageView(backbuffer_view_info);
 
 		}
-		setup_cmd.end();
-
-		vk::SubmitInfo setup_submit_info;
-		setup_submit_info.setCommandBufferCount(1);
-		setup_submit_info.setPCommandBuffers(&setup_cmd);
-		queue.submit({ setup_submit_info }, vk::Fence());
-		queue.waitIdle();
 	}
 
 	vk::RenderPass render_pass;
@@ -215,13 +208,7 @@ int main()
 		to_render_barrier.setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED);
 		to_render_barrier.setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED);
 
-		vk::FenceShared fence;
-		{
-			TmpCmd tmpcmd(device);
-			tmpcmd.getCmd().pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::DependencyFlags(), 0, nullptr, 0, nullptr, 1, &to_render_barrier);
-			fence = tmpcmd.getFence();
-		}
-		device->waitIdle();
+		setup_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::DependencyFlags(), 0, nullptr, 0, nullptr, 1, &to_render_barrier);
 	}
 	std::vector<vk::Framebuffer> framebuffer(backbuffer_view.size());
 	{
@@ -241,6 +228,13 @@ int main()
 			framebuffer[i] = device->createFramebuffer(framebuffer_info);
 		}
 	}
+	setup_cmd.end();
+
+	vk::SubmitInfo setup_submit_info;
+	setup_submit_info.setCommandBufferCount(1);
+	setup_submit_info.setPCommandBuffers(&setup_cmd);
+	queue.submit({ setup_submit_info }, vk::Fence());
+	queue.waitIdle();
 
 	auto task = std::make_shared<std::promise<std::unique_ptr<cModel>>>();
 	auto modelFuture = task->get_future();

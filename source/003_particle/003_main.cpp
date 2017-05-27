@@ -36,12 +36,12 @@ int main()
 	app::App app;
 
 	auto* camera = cCamera::sCamera::Order().create();
-	camera->m_position = glm::vec3(0.f, 30.f, -50.f);
-	camera->m_target = glm::vec3(0.f, 0.f, 101.f);
+	camera->m_position = glm::vec3(50.f, 100.f, -50.f);
+	camera->m_target = glm::vec3(50.f, 20.f, 101.f);
 	camera->m_up = glm::vec3(0.f, -1.f, 0.f);
 	camera->m_width = 640;
 	camera->m_height = 480;
-	camera->m_far = 1000.f;
+	camera->m_far = 5000.f;
 	camera->m_near = 0.01f;
 
 	auto device = sThreadLocal::Order().m_device[0];
@@ -73,10 +73,14 @@ int main()
 	std::unique_ptr<Loader> loader = std::make_unique<Loader>();
 	loader->m_device = device;
 	loader->m_render_pass = app.m_render_pass;
-	loader->m_vertex_memory.setup(device, vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached, 1000*1000 * 100);
-	loader->m_uniform_memory.setup(device, vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached, 1000 * 20);
-	loader->m_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached, 1000 * 1000 * 200);
-	loader->m_staging_memory.setup(device, vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached, 1000 * 1000 * 100);
+
+	vk::MemoryPropertyFlags host_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
+	vk::MemoryPropertyFlags device_memory = vk::MemoryPropertyFlagBits::eDeviceLocal;
+//	device_memory = host_memory; // debug
+	loader->m_vertex_memory.setup(device, vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000*1000 * 100);
+	loader->m_uniform_memory.setup(device, vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 20);
+	loader->m_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 1000 * 200);
+	loader->m_staging_memory.setup(device, vk::BufferUsageFlagBits::eTransferSrc, host_memory, 1000 * 1000 * 100);
 
 	cParticlePipeline pipeline;
 	{

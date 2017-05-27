@@ -95,6 +95,8 @@ public:
 				glm::quat rot = glm::angleAxis(glm::radians(1.0f), glm::normalize(move.y*s + move.x*u));
 				f = glm::normalize(rot * f);
 				m_target = m_position + f*distance;
+				s = glm::normalize(glm::cross(m_up, f));
+				m_up = glm::normalize(glm::cross(f, s));
 			}
 		}
 

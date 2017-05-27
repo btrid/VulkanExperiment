@@ -44,18 +44,22 @@ layout(push_constant) uniform UpdateConstantBlock
 void main()
 {
 	BrickParam param = uParam;
+	vec3 pos;
 	if(gl_InstanceIndex < param.m_total_num.w)
 	{
 		uvec3 index = convert1DTo3D(gl_InstanceIndex, param.m_total_num.xyz);
 		uint i = bTriangleLLHead[getTiledIndexBrick1(param, index)];
+
 		Out.Visible = ((i != 0xFFFFFFFF) ? 1 : 0);
 
 		vec3 size = getCellSize1(param);
-		gl_Position = constant.PV * vec4((inPosition+vec3(index))*size+param.m_area_min.xyz, 1.0);
-
-	}else{
-		Out.Visible = 1;
-		gl_Position = constant.PV * vec4(inPosition*(param.m_area_max-param.m_area_min).xyz, 1.0);
+		pos = (inPosition+vec3(index))*size+param.m_area_min.xyz;
 	}
+	else
+	{
+		Out.Visible = 1;
+		pos = inPosition*(param.m_area_max-param.m_area_min).xyz + (param.m_area_max-param.m_area_min).xyz*0.5 + param.m_area_min.xyz;
+	}
+	gl_Position = constant.PV * vec4(pos, 1.0);
 
 }

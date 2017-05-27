@@ -6,6 +6,10 @@
 //#pragma optionNV(ifcvt all)
 #pragma optionNV(strict on)
 
+#ifdef VULKAN
+#define DEPTH_ZERO_TO_ONE
+#endif
+
 #extension GL_GOOGLE_cpp_style_line_directive : require
 #extension GL_ARB_shader_draw_parameters : require
 
@@ -44,7 +48,7 @@ out Transform{
 	flat int VertexID[3];
 }transform;
 
-layout(std140, binding = 0) uniform BrickUniform
+layout(std140, set=0, binding = 0) uniform BrickUniform
 {
 	BrickParam uParam;
 };
@@ -73,7 +77,7 @@ vec3 rotate(vec4 q, vec3 v)
 	return v + uv + uuv;
 }
 
-mat4 ortho(float l, float r, float b, float t, float n, float f)
+mat4 orthoRH(float l, float r, float b, float t, float n, float f)
 {
 	mat4 o = mat4(1.);
 	o[0][0] = 2. / (r - l);
@@ -84,9 +88,9 @@ mat4 ortho(float l, float r, float b, float t, float n, float f)
 	o[3][2] = - (f + n) / (f - n);
 	return o;
 }
-mat4 orthoVec(in vec3 min, in vec3 max)
+mat4 orthoVecRH(in vec3 min, in vec3 max)
 {
-	return ortho(min.x, max.x, min.y, max.y, min.z, max.z);
+	return orthoRH(min.x, max.x, min.y, max.y, min.z, max.z);
 }
 
 mat4 perspectiveFovRH(in float fov, in float width, in float height, in float zNear, in float zFar)
@@ -103,8 +107,7 @@ mat4 perspectiveFovRH(in float fov, in float width, in float height, in float zN
 	Result[3][2] = - (2. * zFar * zNear) / (zFar - zNear);
 	return Result;
 }
-
-mat4 lookat(vec3 eye, vec3 target, vec3 up)
+mat4 lookatRH(vec3 eye, vec3 target, vec3 up)
 {
 	vec3 f = normalize(target - eye);
 	vec3 s = normalize(cross(f, up)); 
@@ -125,8 +128,52 @@ mat4 lookat(vec3 eye, vec3 target, vec3 up)
 	view[3][2] = dot(f, eye);
 
 	return view;
+}
+
+mat4 orthoLH(float l, float r, float b, float t, float n, float f)
+{
+	mat4 o = mat4(1.);
+	o[0][0] = 2. / (r - l);
+	o[1][1] = 2. / (t - b);
+	o[3][0] = - (r + l) / (r - l);
+	o[3][1] = - (t + b) / (t - b);
+
+//#ifdef DEPTH_ZERO_TO_ONE
+	o[2][2] = 1. / (f - n);
+	o[3][2] = - n / (f - n);
+//#else 
+//	o[2][2] = 2. / (f - n);
+//	o[3][2] = - (f + n) / (f - n);
+//#endif
+	return o;
+}
+mat4 orthoVecLH(in vec3 min, in vec3 max)
+{
+	return orthoLH(min.x, max.x, min.y, max.y, min.z, max.z);
+}
+mat4 lookatLH(vec3 eye, vec3 target, vec3 up)
+{
+	vec3 f = normalize(target - eye);
+	vec3 s = normalize(cross(up, f)); 
+	vec3 u = normalize(cross(f, s));
+
+	mat4 view = mat4(1.);
+	view[0][0] = s.x;
+	view[1][0] = s.y;
+	view[2][0] = s.z;
+	view[0][1] = u.x;
+	view[1][1] = u.y;
+	view[2][1] = u.z;
+	view[0][2] = f.x;
+	view[1][2] = f.y;
+	view[2][2] = f.z;
+	view[3][0] =-dot(s, eye);
+	view[3][1] =-dot(u, eye);
+	view[3][2] =-dot(f, eye);
+	return view;
 
 }
+
 
 void ToCellAABB(in vec3 a, in vec3 b, in vec3 c, in vec3 cellSize, out vec3 _min, out vec3 _max)
 {
@@ -149,6 +196,7 @@ void ToCellAABB(in vec3 a, in vec3 b, in vec3 c, in vec3 cellSize, out vec3 _min
 
 void main() 
 {
+	
 	vec3 n = normalize(cross(In[1].Position-In[0].Position, In[2].Position-In[0].Position));
 	float x = dot(n, vec3(1., 0., 0.));
 	float y = dot(n, vec3(0., 1., 0.));
@@ -158,21 +206,22 @@ void main()
 	vec3 areaMax = uParam.m_area_max.xyz;
 	vec3 size = (areaMax - areaMin);
 	vec3 center = size/2. + areaMin;
+	vec3 ortho_min = size/2.;
+	vec3 ortho_max = -size/2.;
 	vec3 eye = center;
 	vec3 up = vec3(0., 1., 0.);
 	mat4 projection;
 
 
-	vec3 _min, _max;
-	ToCellAABB(In[0].Position, In[1].Position, In[2].Position, size/vec3(uParam.m_cell_size), _min, _max);
-	vec4 tMin = vec4(_min, 0.);
-	vec4 tMax = vec4(_max, 0.);
+	vec3 out_min, out_max;
+	ToCellAABB(In[0].Position, In[1].Position, In[2].Position, size/uParam.m_cell_size.xyz, out_min, out_max);
+	vec4 tMin = vec4(out_min, 0.);
+	vec4 tMax = vec4(out_max, 0.);
 	vec3 p[4];
 
 	if(abs(x) > abs(y) && abs(x) > abs(z)){
-//		eye.x = x > 0 ? areaMax.x : areaMin.x;
 		eye.x = areaMin.x;
-		projection = ortho(areaMin.z, areaMax.z, areaMin.y, areaMax.y, 0, size.x);
+		projection = orthoLH(ortho_min.z, ortho_max.z, ortho_min.y, ortho_max.y, 0.01, size.x);
 
 		p[0] = tMin.xyz + tMax.www;
 		p[1] = tMin.xyw + tMax.wwz;
@@ -182,10 +231,9 @@ void main()
 	}
 	else if(abs(y) > abs(z))
 	{
-//		eye.y = y > 0 ? areaMax.y : areaMin.y;
 		eye.y = areaMax.y;
 		up = normalize(vec3(0., 0., 1.));
-		projection = ortho(areaMin.x, areaMax.x, areaMin.z, areaMax.z, 0, size.y);
+		projection = orthoLH(ortho_min.x, ortho_max.x, ortho_min.z, ortho_max.z, 0.01, size.y);
 
 		p[0] = tMin.xyz + tMax.www;
 		p[1] = tMin.xyw + tMax.wwz;
@@ -196,7 +244,7 @@ void main()
 	else
 	{
 		eye.z = areaMin.z;
-		projection = ortho(areaMin.x, areaMax.x, areaMin.y, areaMax.y, 0, size.z);
+		projection = orthoLH(ortho_min.x, ortho_max.x, ortho_min.y, ortho_max.y, 0.01, size.z);
 
 		p[0] = tMin.xww + tMax.wyz;
 		p[1] = tMin.xyz + tMax.www;
@@ -204,7 +252,7 @@ void main()
 		p[3] = tMin.wyz + tMax.xww;
 		gl_ViewportIndex = 2;
 	}
-	mat4 view = lookat(eye, center, up);
+	mat4 view = lookatLH(eye, center, up);
 
 	transform.VertexID[0] = In[0].VertexID;
 	transform.VertexID[1] = In[1].VertexID;

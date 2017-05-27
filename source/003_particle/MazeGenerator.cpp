@@ -8,7 +8,7 @@ std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> MazeGenerator::makeG
 	auto& data = field_.map_;
 	int num = 0;
 	printf("make maze geometry\n");
-	glm::vec3 size(5.f, 5.f, 5.f);
+	glm::vec3 size(5.f, 20.f, 5.f);
 
 	// è∞
 	auto offset = vertex.size();
@@ -16,8 +16,18 @@ std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> MazeGenerator::makeG
 	vertex.push_back(glm::vec3(0, 0, getSizeY())*size);
 	vertex.push_back(glm::vec3(getSizeX(), 0, 0)*size);
 	vertex.push_back(glm::vec3(getSizeX(), 0, getSizeY())*size);
+// 	vertex.push_back(glm::vec3(-200.f, 0.f, -200.f));
+// 	vertex.push_back(glm::vec3(-200.f, 0.f, 200.f));
+// 	vertex.push_back(glm::vec3(200.f, 0.f, -200.f));
+// 	vertex.push_back(glm::vec3(200.f, 0.f, 200.f));
+// 	vertex.push_back(glm::vec3(10.f));
+// 	vertex.push_back(glm::vec3(10.f, 90.f, 10.f));
+// 	vertex.push_back(glm::vec3(90.f, 10.f, 10.f));
+// 	vertex.push_back(glm::vec3(90.f, 90.f, 10.f));
 	index.push_back(glm::uvec3(offset, offset + 1, offset + 2));
 	index.push_back(glm::uvec3(offset + 1, offset + 3, offset + 2));
+//	return std::tie(vertex, index);
+
 	for (size_t y = 0; y < getSizeY(); y++)
 	{
 		for (size_t x = 0; x < getSizeX(); x++)

@@ -5,8 +5,10 @@
 #include <btrlib/BufferMemory.h>
 #include <btrlib/cCamera.h>
 
+#include <applib/App.h>
 #include <003_particle/MazeGenerator.h>
 #include <003_particle/Geometry.h>
+#include <003_particle/CircleIndex.h>
 
 struct ParticleInfo
 {
@@ -14,10 +16,6 @@ struct ParticleInfo
 	uint32_t m_emit_max_num;
 };
 
-enum class ParticleFlag : uint32_t
-{
-	e_
-};
 struct ParticleData
 {
 	glm::vec4 m_pos;	//!< xyz:pos w:scale
@@ -29,30 +27,6 @@ struct ParticleData
 };
 
 
-vk::DescriptorPool createPool(vk::Device device, const std::vector<std::vector<vk::DescriptorSetLayoutBinding>>& bindings);
-
-template<typename T, size_t Size>
-struct CircleIndex
-{
-	T m_circle_index;
-	CircleIndex() :m_circle_index(){}
-
-	T operator++(int) { T i = m_circle_index; this->operator++(); return i; }
-	T operator++() { m_circle_index = (m_circle_index + 1) % Size; return m_circle_index; }
-	T operator--(int) { T i = m_circle_index; this->operator--(); return i; }
-	T operator--() { m_circle_index = (m_circle_index == 0) ? Size - 1 : m_circle_index-1; return m_circle_index; }
-	T operator()()const { return m_circle_index; }
-
-	T get()const { return m_circle_index; }
-};
-
-struct Pipeline
-{
-	vk::Pipeline m_pipeline;
-	vk::DescriptorSetLayout m_descriptor_set_layout;
-};
-
-glm::uvec3 calcDipatchGroups(const glm::uvec3& num, const glm::uvec3& local_size);
 struct cTriangleLL
 {
 	struct BrickParam
@@ -92,7 +66,7 @@ struct cTriangleLL
 				// メモリ確保
 				std::vector<glm::vec3> v;
 				std::vector<glm::uvec3> i;
-				std::tie(v, i) = Geometry::MakeBox(1.f);
+				std::tie(v, i) = Geometry::MakeBox(0.5f);
 				m_index_count = i.size()*3;
 				{
 					btr::BufferMemory::Descriptor desc;
@@ -230,7 +204,7 @@ struct cTriangleLL
 
 				// viewport
 				vk::Viewport viewport[1];
-				viewport[0] = vk::Viewport(0.f, 0.f, (float)640, (float)480, 0.f, 1.f);
+				viewport[0] = vk::Viewport(0.f, 0.f, 640.f, 480.f, 0.f, 1.f);
 				std::vector<vk::Rect2D> scissor = {
 					vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(viewport[0].width, viewport[0].height)),
 				};
@@ -245,7 +219,7 @@ struct cTriangleLL
 				rasterization_info.setPolygonMode(vk::PolygonMode::eLine);
 				rasterization_info.setFrontFace(vk::FrontFace::eCounterClockwise);
 				rasterization_info.setCullMode(vk::CullModeFlagBits::eNone);
-				rasterization_info.setLineWidth(0.5f);
+				rasterization_info.setLineWidth(1.f);
 				// サンプリング
 				vk::PipelineMultisampleStateCreateInfo sample_info;
 				sample_info.setRasterizationSamples(vk::SampleCountFlagBits::e1);
@@ -313,6 +287,7 @@ struct cTriangleLL
 
 		void draw(vk::CommandBuffer cmd)
 		{
+
 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline);
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout, 0, m_descriptor_set, {});
 			cmd.bindVertexBuffers(0, { m_vertex.getBufferInfo().buffer }, { m_vertex.getBufferInfo().offset });
@@ -323,8 +298,9 @@ struct cTriangleLL
 			auto pv = camera.mProjection * camera.mView;
 			cmd.pushConstants<glm::mat4>(m_pipeline_layout, vk::ShaderStageFlagBits::eVertex, 0, pv);
 
-//			cmd.drawIndexed(m_index_count, /*m_brick_info.m_total_num.w+*/1, 0, 0, 0);
+//			cmd.drawIndexed(m_index_count, m_brick_info.m_total_num.w, 0, 0, 0);
 			cmd.drawIndexed(m_index_count, m_brick_info.m_total_num.w+1, 0, 0, 0);
+
 		}
 	};
 
@@ -381,15 +357,14 @@ struct cTriangleLL
 				auto staging_buffer = loader.m_staging_memory.allocateMemory(desc);
 				BrickParam& param = *staging_buffer.getMappedPtr<BrickParam>();
 
-				param.m_cell_num = glm::uvec4(16, 8, 16, 16 * 8 * 16);
-				param.m_subcell_num = glm::uvec4(4, 4, 4, 4 * 4 * 4);
+				param.m_cell_num = glm::uvec4(32, 4, 32, 32 * 4 * 32);
+				param.m_subcell_num = glm::uvec4(4, 2, 4, 4 * 2 * 4);
 // 				param.m_cell_num = glm::uvec4(64, 64, 64, 64 * 64 * 64);
 // 				param.m_subcell_num = glm::uvec4(4, 4, 4, 4 * 4 * 4);
 
-
 				param.m_total_num = param.m_cell_num*param.m_subcell_num;
-				param.m_area_min = glm::vec4(0.f, -50.f, 0.f, 0.f);
-				param.m_area_max = glm::vec4(4000.f, 50.f, 4000.f, 0.f);
+				param.m_area_min = glm::vec4(0.f);
+				param.m_area_max = glm::vec4(1200.f);
 				param.m_cell_size = (param.m_area_max - param.m_area_min) / glm::vec4(param.m_cell_num);
 				param.m_subcell_size = param.m_cell_size / glm::vec4(param.m_subcell_num);
 
@@ -411,7 +386,7 @@ struct cTriangleLL
 			{
 				// link list
 				btr::BufferMemory::Descriptor desc;
-				desc.size = sizeof(TriangleLL)*1000;
+				desc.size = sizeof(TriangleLL)*1000*1000;
 				m_triangleLL = loader.m_storage_memory.allocateMemory(desc);
 			}
 			{
@@ -429,7 +404,7 @@ struct cTriangleLL
 				image_info.arrayLayers = 1;
 				image_info.samples = vk::SampleCountFlagBits::e1;
 				image_info.tiling = vk::ImageTiling::eOptimal;
-				image_info.usage = vk::ImageUsageFlagBits::eStorage;
+				image_info.usage = vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eTransferDst;
 				image_info.sharingMode = vk::SharingMode::eExclusive;
 				image_info.initialLayout = vk::ImageLayout::eUndefined;
 				image_info.extent = { m_brick_info.m_cell_num.x, m_brick_info.m_cell_num.y, m_brick_info.m_cell_num.z };
@@ -469,7 +444,7 @@ struct cTriangleLL
 					to_shader_read_barrier.dstQueueFamilyIndex = loader.m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
 					to_shader_read_barrier.image = m_brick_image;
 					to_shader_read_barrier.oldLayout = vk::ImageLayout::eUndefined;
-					to_shader_read_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+					to_shader_read_barrier.newLayout = vk::ImageLayout::eGeneral;
 					to_shader_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 					to_shader_read_barrier.subresourceRange = subresourceRange;
 
@@ -605,6 +580,7 @@ struct cTriangleLL
 		{
 			vk::SubpassDescription subpass;
 			subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+
 			vk::RenderPassCreateInfo renderpass_info = vk::RenderPassCreateInfo();
 			renderpass_info.setSubpassCount(1);
 			renderpass_info.setPSubpasses(&subpass);
@@ -613,10 +589,9 @@ struct cTriangleLL
 
 			vk::FramebufferCreateInfo framebuffer_info;
 			framebuffer_info.setRenderPass(m_render_pass);
-			framebuffer_info.setHeight(256);
-			framebuffer_info.setWidth(256);
+			framebuffer_info.setHeight(128);
+			framebuffer_info.setWidth(128);
 			m_framebuffer = loader.m_device->createFramebuffer(framebuffer_info);
-
 		}
 		// pipeline
 		{
@@ -635,42 +610,26 @@ struct cTriangleLL
 				vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(viewport[1].width, viewport[1].height)),
 				vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(viewport[2].width, viewport[2].height)),
 			};
-			vk::Viewport viewport_d;
-			viewport_d = vk::Viewport(0.f, 0.f, 640.f, 480.f, 0.f, 1.f);
-			std::vector<vk::Rect2D> scissor_d = {
-				vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(viewport_d.width, viewport_d.height)),
-			};
-			vk::PipelineViewportStateCreateInfo viewportInfo[2];
-			viewportInfo[0].setViewportCount(3);
-			viewportInfo[0].setPViewports(viewport);
-			viewportInfo[0].setScissorCount((uint32_t)scissor.size());
-			viewportInfo[0].setPScissors(scissor.data());
-			viewportInfo[0].setViewportCount(1);
-			viewportInfo[0].setPViewports(&viewport_d);
-			viewportInfo[0].setScissorCount((uint32_t)scissor_d.size());
-			viewportInfo[0].setPScissors(scissor_d.data());
+			vk::PipelineViewportStateCreateInfo viewport_info[1];
+			viewport_info[0].setViewportCount(3);
+			viewport_info[0].setPViewports(viewport);
+			viewport_info[0].setScissorCount((uint32_t)scissor.size());
+			viewport_info[0].setPScissors(scissor.data());
 
 			// ラスタライズ
-			vk::PipelineRasterizationStateCreateInfo rasterization_info[2];
+			vk::PipelineRasterizationStateCreateInfo rasterization_info[1];
 			rasterization_info[0].setPolygonMode(vk::PolygonMode::eFill);
 			rasterization_info[0].setFrontFace(vk::FrontFace::eCounterClockwise);
 			rasterization_info[0].setCullMode(vk::CullModeFlagBits::eNone);
 			rasterization_info[0].setLineWidth(1.f);
-			rasterization_info[1].setPolygonMode(vk::PolygonMode::eLine);
-			rasterization_info[1].setFrontFace(vk::FrontFace::eCounterClockwise);
-			rasterization_info[1].setCullMode(vk::CullModeFlagBits::eNone);
-			rasterization_info[1].setLineWidth(1.f);
 			// サンプリング
 			vk::PipelineMultisampleStateCreateInfo sample_info;
 			sample_info.setRasterizationSamples(vk::SampleCountFlagBits::e1);
 
 			// デプスステンシル
 			vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
-			depth_stencil_info.setDepthTestEnable(VK_TRUE);
-			depth_stencil_info.setDepthWriteEnable(VK_TRUE);
-			depth_stencil_info.setDepthCompareOp(vk::CompareOp::eLessOrEqual);
-			depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
-			depth_stencil_info.setStencilTestEnable(VK_FALSE);
+			depth_stencil_info.setDepthTestEnable(VK_FALSE);
+			depth_stencil_info.setDepthWriteEnable(VK_FALSE);
 
 			// ブレンド
 			vk::PipelineColorBlendStateCreateInfo blend_info;
@@ -705,25 +664,13 @@ struct cTriangleLL
 				.setPStages(m_make_triangleLL_shader_info.data())
 				.setPVertexInputState(&vertex_input_info)
 				.setPInputAssemblyState(&assembly_info)
-				.setPViewportState(&viewportInfo[0])
+				.setPViewportState(&viewport_info[0])
 				.setPRasterizationState(&rasterization_info[0])
 				.setPMultisampleState(&sample_info)
 				.setLayout(m_pipeline_layout)
 				.setRenderPass(m_render_pass)
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
-// 				vk::GraphicsPipelineCreateInfo()
-// 				.setStageCount(m_make_triangleLL_shader_info.size())
-// 				.setPStages(m_make_triangleLL_shader_info.data())
-// 				.setPVertexInputState(&vertex_input_info)
-// 				.setPInputAssemblyState(&assembly_info)
-// 				.setPViewportState(&viewportInfo[1])
-// 				.setPRasterizationState(&rasterization_info[1])
-// 				.setPMultisampleState(&sample_info)
-// 				.setLayout(m_pipeline_layout)
-// 				.setRenderPass(m_render_pass)
-// 				.setPDepthStencilState(&depth_stencil_info)
-// 				.setPColorBlendState(&blend_info),
 			};
 			m_pipeline = loader.m_device->createGraphicsPipelines(vk::PipelineCache(), graphics_pipeline_info)[0];
 		}
@@ -733,15 +680,41 @@ struct cTriangleLL
 	void execute(vk::CommandBuffer cmd, const vk::DescriptorBufferInfo& vertex, const vk::DescriptorBufferInfo& index, const vk::DescriptorBufferInfo indirect, vk::IndexType index_type)
 	{
 		// transfer
+		vk::ImageSubresourceRange brick_image_subresource_range = vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1);
 		{
+			sGlobal::Order().getGPU(0).getDevice(vk::QueueFlagBits::eGraphics)[0]->waitIdle();
+			std::vector<vk::BufferMemoryBarrier> to_transfer = {
+				m_triangleLL_count.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite),
+				m_triangleLL_head.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite),
+			};
+			vk::ImageMemoryBarrier to_transfer_image = {
+				vk::ImageMemoryBarrier(vk::AccessFlagBits::eShaderWrite| vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite, vk::ImageLayout::eGeneral, vk::ImageLayout::eTransferDstOptimal)
+				.setImage(m_brick_image)
+				.setSubresourceRange(brick_image_subresource_range),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, to_transfer, to_transfer_image);
+
 			cmd.fillBuffer(m_triangleLL_count.getBufferInfo().buffer, m_triangleLL_count.getBufferInfo().offset, m_triangleLL_count.getBufferInfo().range, 0);
+			cmd.fillBuffer(m_triangleLL_head.getBufferInfo().buffer, m_triangleLL_head.getBufferInfo().offset, m_triangleLL_head.getBufferInfo().range, -1);
+			cmd.clearColorImage(m_brick_image, vk::ImageLayout::eTransferDstOptimal, vk::ClearColorValue(std::array<uint32_t, 4>{0}), brick_image_subresource_range);
+
+			std::vector<vk::BufferMemoryBarrier> to_shader = {
+				m_triangleLL_count.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+				m_triangleLL_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+			};
+			vk::ImageMemoryBarrier to_shader_image = {
+				vk::ImageMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderWrite | vk::AccessFlagBits::eShaderRead, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eGeneral)
+				.setImage(m_brick_image)
+				.setSubresourceRange(brick_image_subresource_range),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), {}, to_shader, to_shader_image);
 		}
 		{
 
 			vk::RenderPassBeginInfo begin_render_Info;
 			begin_render_Info.setRenderPass(m_render_pass);
 			begin_render_Info.setFramebuffer(m_framebuffer);
-			begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(256, 256)));
+			begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(128, 128)));
 			cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline);
@@ -752,6 +725,13 @@ struct cTriangleLL
 			cmd.drawIndexedIndirect(indirect.buffer, indirect.offset, 1, sizeof(vk::DrawIndexedIndirectCommand));
 
 			cmd.endRenderPass();
+
+			{
+				std::vector<vk::BufferMemoryBarrier> to_shader_read = {
+					/*m_parent->*/m_triangleLL_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eVertexShader, vk::DependencyFlags(), {}, to_shader_read, {});
+			}
 
 		}
 
@@ -829,10 +809,11 @@ struct cParticlePipeline
 		void setup(Loader& loader)
 		{
 			{
-				m_maze.generate(31, 31);
+//				m_maze.generate(31, 31);
+				m_maze.generate(127, 127);
 				auto geometry = m_maze.makeGeometry();
 				Geometry::OptimaizeDuplicateVertexDescriptor opti_desc;
-				Geometry::OptimaizeDuplicateVertex(geometry, opti_desc);
+//				Geometry::OptimaizeDuplicateVertex(geometry, opti_desc);
 				auto map = m_maze.makeMapData();
 				
 
@@ -1164,7 +1145,6 @@ struct cParticlePipeline
 					// ラスタライズ
 					vk::PipelineRasterizationStateCreateInfo rasterization_info;
 					rasterization_info.setPolygonMode(vk::PolygonMode::eFill);
-//					rasterization_info.setCullMode(vk::CullModeFlagBits::eBack);
 					rasterization_info.setFrontFace(vk::FrontFace::eCounterClockwise);
 					rasterization_info.setCullMode(vk::CullModeFlagBits::eNone);
 					rasterization_info.setLineWidth(1.f);
@@ -1301,7 +1281,7 @@ struct cParticlePipeline
 
 				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_compute_pipeline[COMPUTE_UPDATE]);
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[COMPUTE_PIPELINE_LAYOUT_UPDATE], 0, m_descriptor_set[COMPUTE_DESCRIPTOR_SET_LAYOUT_UPDATE], {});
-				auto groups = calcDipatchGroups(glm::uvec3(8192 / 2, 1, 1), glm::uvec3(1024, 1, 1));
+				auto groups = app::calcDipatchGroups(glm::uvec3(8192 / 2, 1, 1), glm::uvec3(1024, 1, 1));
 				cmd.dispatch(groups.x, groups.y, groups.z);
 
 			}
@@ -1349,7 +1329,7 @@ struct cParticlePipeline
 					cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_compute_pipeline[COMPUTE_EMIT]);
 					cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[COMPUTE_PIPELINE_LAYOUT_EMIT], 0, m_descriptor_set[COMPUTE_DESCRIPTOR_SET_LAYOUT_UPDATE], {});
 					cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[COMPUTE_PIPELINE_LAYOUT_EMIT], 1, m_descriptor_set[COMPUTE_DESCRIPTOR_SET_LAYOUT_EMIT], {});
-					auto groups = calcDipatchGroups(glm::uvec3(block.m_emit_num, 1, 1), glm::uvec3(1024, 1, 1));
+					auto groups = app::calcDipatchGroups(glm::uvec3(block.m_emit_num, 1, 1), glm::uvec3(1024, 1, 1));
 					cmd.dispatch(groups.x, groups.y, groups.z);
 
 				}

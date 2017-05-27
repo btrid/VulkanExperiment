@@ -23,10 +23,10 @@ layout(location = 0) out vec4 FragColor;
 
 void main()
 {	
-//	if(FSIn.Visible == 0){
-//		discard;
-//		return;
-//	}
+	if(FSIn.Visible == 0){
+		discard;
+		return;
+	}
 
-	FragColor = vec4(1., 1., 1., FSIn.Visible == 0 ? 0. : 1.);
+	FragColor = vec4(vec3(1.), (FSIn.Visible == 0 ? 0. : 1.));
 }

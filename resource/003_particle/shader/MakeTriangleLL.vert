@@ -20,8 +20,8 @@ out Vertex{
 
 void main()
 {
-	gl_Position = vec4(inPosition, 1.0);
-	Out.Position = gl_Position.xyz;
+	gl_Position = vec4(0.5, 0.5, 0.5, 1.0);
+	Out.Position = inPosition.xyz;
 //	Out.DrawID = gl_DrawIDARB;
 	Out.DrawID = 0;
 	Out.InstanceID = gl_InstanceIndex;
