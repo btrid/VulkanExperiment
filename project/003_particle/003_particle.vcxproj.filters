@@ -47,5 +47,8 @@
     <ClInclude Include="..\..\include\003_particle\CircleIndex.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\003_particle\cTriangleLL.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

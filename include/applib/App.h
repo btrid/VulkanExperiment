@@ -12,6 +12,7 @@ struct App
 	App();
 };
 
+
 glm::uvec3 calcDipatchGroups(const glm::uvec3& num, const glm::uvec3& local_size);
 
 }

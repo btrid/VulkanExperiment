@@ -19,8 +19,11 @@
 #include <btrlib/GPU.h>
 #include <btrlib/cStopWatch.h>
 #include <btrlib/BufferMemory.h>
-#include <003_particle/ParticlePipeline.h>
+
 #include <applib/App.h>
+#include <applib/Loader.h>
+
+#include <003_particle/ParticlePipeline.h>
 
 //#pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
@@ -70,7 +73,7 @@ int main()
 	vk::Queue queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), 0);
 
 
-	std::unique_ptr<Loader> loader = std::make_unique<Loader>();
+	std::unique_ptr<app::Loader> loader = std::make_unique<app::Loader>();
 	loader->m_device = device;
 	loader->m_render_pass = app.m_render_pass;
 

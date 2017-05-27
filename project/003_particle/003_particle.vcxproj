@@ -79,6 +79,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\003_particle\CircleIndex.h" />
+    <ClInclude Include="..\..\include\003_particle\cTriangleLL.h" />
     <ClInclude Include="..\..\include\003_particle\Geometry.h" />
     <ClInclude Include="..\..\include\003_particle\KDTreeTriangle.h" />
     <ClInclude Include="..\..\include\003_particle\MazeGenerator.h" />
