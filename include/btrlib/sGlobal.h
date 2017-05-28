@@ -12,6 +12,7 @@
 #include <btrlib/Singleton.h>
 #include <btrlib/cThreadPool.h>
 #include <btrlib/sDebug.h>
+#include <btrlib/cStopWatch.h>
 
 using GameFrame = uint32_t;
 namespace vk
@@ -134,6 +135,7 @@ private:
 	std::array<std::vector<std::unique_ptr<Deleter>>, FRAME_MAX> m_cmd_delete;
 //	std::array<sThreadLocal*, 8> m_threads;
 
+	cStopWatch m_timer;
 	float m_deltatime;
 public:
 	vk::CommandPool getCmdPoolTempolary(uint32_t device_family_index)const

@@ -160,6 +160,8 @@ void sGlobal::swap()
 			it++;
 		}
 	}
+	m_deltatime = m_timer.getElapsedTimeAsSeconds();
+	m_deltatime = glm::min(m_deltatime, 0.02f);
 }
 vk::ShaderModule loadShader(const vk::Device& device, const std::string& filename)
 {

@@ -7,6 +7,7 @@
 
 #extension GL_GOOGLE_cpp_style_line_directive : require
 #include </Particle.glsl>
+#define FLT_EPSIRON (0.001)
 
 layout (local_size_x = 1024, local_size_y = 1) in;
 
@@ -38,17 +39,19 @@ layout(push_constant) uniform UpdateConstantBlock
 	uint m_dst_offset;
 } constant;
 
-#define FLT_EPSIRON (0.001)
+#if 1
 ivec3 marchDistance(inout vec3 pos, inout float progress, in vec3 dir, in vec3 cell_size)
 {
+//	progress = 0.;
+//	return ivec3(0);
 	vec3 p = mod(pos, cell_size);
 	float x = dir.x < 0. ? p.x : (cell_size.x- p.x);
 	float z = dir.z < 0. ? p.z : (cell_size.z- p.z);
 	vec3 dist = vec3(99.);
 #if 1
 	// 0除算回避版。不要？
-	dist.x = abs(dir.x) < FLT_EPSIRON ? 99.9 : abs(x / dir.x);
-	dist.z = abs(dir.z) < FLT_EPSIRON ? 99.9 : abs(z / dir.z);
+	dist.x = abs(dir.x) < FLT_EPSIRON ? 99999.9 : abs(x / dir.x);
+	dist.z = abs(dir.z) < FLT_EPSIRON ? 99999.9 : abs(z / dir.z);
 #else
 	dist = abs(vec3(x, y, z) / dir);
 #endif
@@ -59,7 +62,7 @@ ivec3 marchDistance(inout vec3 pos, inout float progress, in vec3 dir, in vec3 c
 	float minProgLength = min(progLength, progress);
 	ivec3 next = ivec3(0);
 	progress -= minProgLength;
-	if(progress > FLT_EPSIRON)
+	if(progress >= FLT_EPSIRON)
 	{
 		if(dist.x < dist.z){
 			next.x = dir.x < 0. ? -1 : 1;
@@ -71,14 +74,43 @@ ivec3 marchDistance(inout vec3 pos, inout float progress, in vec3 dir, in vec3 c
 	}
 
 	prog = prog * (minProgLength / progLength);
+//	progress = 0.;
 	pos += prog + vec3(next)*FLT_EPSIRON; // ちょっとずれちゃうけど・・・
 	return next;
 }
+#else
 
-#if 0
-ivec3 calcMapIndex(in vec3 pos, in float size, in vec3 cell_size)
+ivec3 marchDistance(inout vec3 pos, inout float progress, in vec3 dir, in vec3 cell_size)
 {
+	vec3 p = mod(pos, cell_size);
+	float x = dir.x < 0. ? p.x : (cell_size.x- p.x);
+	float z = dir.z < 0. ? p.z : (cell_size.z- p.z);
+//	vec3 dist = vec3(x, 0, z) / (abs(dir));
+	vec3 dist = vec3(0.);
+	dist.x = abs(dir.x) < FLT_EPSIRON ? 99999.9 : abs(x / dir.x);
+	dist.z = abs(dir.z) < FLT_EPSIRON ? 99999.9 : abs(z / dir.z);
 
+	float near_rate = min(dist.x, dist.z);
+	float near_dist = dist.x < dist.z ? x : z;
+	
+	if(near_dist <= progress)
+	{
+		pos += dir * progress;
+		progress = 0.;
+		return ivec3(0);
+	}
+	progress -= near_dist;
+	ivec3 next = ivec3(0);
+	if(dist.x < dist.z)
+	{
+		next.x = dir.x < 0. ? -1 : 1;
+	}
+	else
+	{
+		next.z = dir.z < 0. ? -1 : 1;
+	}
+	pos += dir*near_dist + vec3(next)*FLT_EPSIRON; // ちょっとずれちゃうけど・・・
+	return next;
 }
 #endif
 void main()
@@ -97,78 +129,26 @@ void main()
 #if 0
 	p.m_pos.xyz += p.m_vel.xyz * p.m_vel.w * constant.m_deltatime;
 #else
-	MapInfo map_info = u_map_info;
 	float progress = p.m_vel.w * constant.m_deltatime;
-	vec3 cell_size = map_info.cell_size;
-	float particle_size = p.m_pos.w*0.5; 
-
 	ivec3 map_index = ivec3(p.m_pos.xyz / u_map_info.cell_size);
-	{
-		vec3 cell_p = mod(p.m_pos.xyz, map_info.cell_size);
-		map_index.x = (cell_p.x <= particle_size) ? map_index.x - 1 : (cell_p.x >= (cell_size.x - particle_size)) ? map_index.x + 1 : map_index.x;
-		map_index.z = (cell_p.z <= particle_size) ? map_index.z - 1 : (cell_p.z >= (cell_size.z - particle_size)) ? map_index.z + 1 : map_index.z;
-	}
-
+	MapInfo map_info = u_map_info;
 	for(;;)
 	{
-
-		vec3 dir = p.m_vel.xyz;
 		ivec3 prev_index = map_index;
-
-
-		vec3 cell_p = mod(p.m_pos.xyz, map_info.cell_size);
-		float x = dir.x < 0. ? cell_p.x : (map_info.cell_size.x- cell_p.x);
-		float z = dir.z < 0. ? cell_p.z : (map_info.cell_size.z- cell_p.z);
-		x = (x <= particle_size ? cell_size.x + x : x) - particle_size;
-		z = (z <= particle_size ? cell_size.z + z : z) - particle_size;
-
-		vec3 dist = vec3(99.);
-		dist.x = abs(dir.x) < FLT_EPSIRON ? 99.9 : abs(x / dir.x);
-		dist.z = abs(dir.z) < FLT_EPSIRON ? 99.9 : abs(z / dir.z);
-		float rate = min(dist.x, dist.z);
-		rate = abs(dir.x) < FLT_EPSIRON ? dist.z : rate;
-		rate = abs(dir.z) < FLT_EPSIRON ? dist.x : rate;
-
-		vec3 prog = dir * rate;
-		float progLength = length(dir * rate);
-		if(progress < progLength)
-		{
-			p.m_pos.xyz += dir * progress;
+		map_index = marchDistance(p.m_pos.xyz, progress, p.m_vel.xyz, map_info.cell_size) + map_index;
+		if(progress < FLT_EPSIRON) {
 			break;
 		}
-		progress -= progLength;
-
-		ivec3 next = ivec3(0);
-		if(dist.x < dist.z){
-			next.x = dir.x < 0. ? -1 : 1;
-		}
-		else
-		{
-			next.z = dir.z < 0. ? -1 : 1;
-		}
-
-		vec3 next_pos = p.m_pos.xyz + prog + vec3(next);
-		ivec3 _map_index = ivec3(p.m_pos.xyz / u_map_info.cell_size);
-		ivec3 next_map_index = ivec3(next_pos / u_map_info.cell_size);
-		if(all(equal(_map_index.xz, next_map_index.xz)))
-		{
-//			計算誤差により死亡
-//			while(true);
-			return;
-
-		}
-
-		uint map = imageLoad(t_map, (map_index + next).xz ).x;
-		if(map == 1) 
-		{
-			vec3 wall = vec3(next);
+		uint map = imageLoad(t_map, map_index.xz).x;
+		if(map == 1) {
+			vec3 wall = vec3(map_index-prev_index);
 			p.m_vel.xyz = reflect(p.m_vel.xyz, wall);
-			next_pos = p.m_pos.xyz;
-		}else{
-			map_index += next;
+			p.m_pos.xyz -= wall*FLT_EPSIRON;
+			map_index = ivec3(p.m_pos.xyz / u_map_info.cell_size);
+//			if(any(notEqual(map_index.xz, prev_index.xz))){
+//				while(true);
+//			}
 		}
-		p.m_pos.xyz = next_pos;
-		map_index = ivec3(p.m_pos.xyz / u_map_info.cell_size);
 	}
 #endif
 	uint dst_index = atomicAdd(b_draw_cmd.vertexCount, 1);

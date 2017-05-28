@@ -298,7 +298,7 @@ public:
 	int getSizeX()const{ return field_.x_; }
 	int getSizeY()const{ return field_.y_; }
 
-	std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> makeGeometry()const;
+	std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> makeGeometry(const glm::vec3& size)const;
 	std::vector<uint8_t> makeMapData()const;
 };
 
