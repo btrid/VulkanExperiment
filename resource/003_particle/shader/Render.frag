@@ -10,8 +10,12 @@ layout(early_fragment_tests) in;
 
 layout(location=0) out vec4 FragColor;
 
+in FSIN{
+	float life;
+}FSIn;
+
 void main()
 {
-	FragColor.rgb = vec3(1.);
+	FragColor.rgb = vec3(FSIn.life);
 	FragColor.a = 1.;
 }

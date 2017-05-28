@@ -19,6 +19,10 @@ out gl_PerVertex{
 	vec4 gl_Position;
 	float gl_PointSize;
 };
+out VSOUT{
+	float life;
+}VSOut;
+
 /*
 layout(std140, set=0, binding=0) uniform ParticleInfoUniform 
 {
@@ -47,4 +51,5 @@ void main()
 	vec4 pos = vec4(p.m_pos.xyz + vec3(0., 0.1, 0.), 1.0);
 	gl_Position = uProjection * uView * pos;
 	gl_PointSize = 3000./ gl_Position.w;
+	VSOut.life = 0.2;
 }

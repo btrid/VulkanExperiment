@@ -22,13 +22,12 @@ struct ParticleData
 {
 	glm::vec4 m_pos;	//!< xyz:pos w:scale
 	glm::vec4 m_vel;	//!< xyz:dir w:not use
+	glm::ivec4 m_map_index;
 	uint32_t m_type;
 	uint32_t m_flag;
 	float m_life;
 	uint32_t _p;
 };
-
-
 
 struct cParticlePipeline
 {
@@ -99,9 +98,10 @@ struct cParticlePipeline
 		vk::DeviceMemory m_map_image_memory;
 		btr::AllocatedMemory m_map_info;
 
+		glm::vec3 cell_size;
 		void setup(app::Loader& loader)
 		{
-			glm::vec3 cell_size(10.f, 1.f, 10.f);
+			cell_size = glm::vec3(10.f, 1.f, 10.f);
 			{
 				m_maze.generate(63, 63);
 //				m_maze.generate(511, 511);
@@ -745,6 +745,15 @@ struct cParticlePipeline
 						p.m_pos = glm::vec4(std::rand()%20+50.f, 0.f, std::rand() % 20 + 50.f, 1.f);
 						p.m_vel = glm::vec4(glm::normalize(glm::vec3(std::rand() % 50-25, 0.f, std::rand() % 50-25 + 0.5f)), std::rand()%50 + 15.5f);
 						p.m_life = std::rand() % 50 + 240;
+
+						glm::ivec3 map_index = glm::ivec3(p.m_pos.xyz / cell_size);
+						{
+							float particle_size = 0.f;
+							glm::vec3 cell_p = glm::mod(p.m_pos.xyz(), glm::vec3(cell_size));
+							map_index.x = (cell_p.x <= particle_size) ? map_index.x - 1 : (cell_p.x >= (cell_size.x - particle_size)) ? map_index.x + 1 : map_index.x;
+							map_index.z = (cell_p.z <= particle_size) ? map_index.z - 1 : (cell_p.z >= (cell_size.z - particle_size)) ? map_index.z + 1 : map_index.z;
+							p.m_map_index = glm::ivec4(map_index, 0);
+						}
 					}
 					m_particle_emit.subupdate(data.data(), vector_sizeof(data), 0);
 

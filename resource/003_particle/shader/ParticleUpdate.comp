@@ -100,23 +100,25 @@ void main()
 	MapInfo map_info = u_map_info;
 	float progress = p.m_vel.w * constant.m_deltatime;
 	vec3 cell_size = map_info.cell_size;
-	float particle_size = p.m_pos.w*0.5; 
+//	float particle_size = p.m_pos.w*0.5; 
+	float particle_size = 0.; 
 
-	ivec3 map_index = ivec3(p.m_pos.xyz / u_map_info.cell_size);
-	{
-		vec3 cell_p = mod(p.m_pos.xyz, map_info.cell_size);
-		map_index.x = (cell_p.x <= particle_size) ? map_index.x - 1 : (cell_p.x >= (cell_size.x - particle_size)) ? map_index.x + 1 : map_index.x;
-		map_index.z = (cell_p.z <= particle_size) ? map_index.z - 1 : (cell_p.z >= (cell_size.z - particle_size)) ? map_index.z + 1 : map_index.z;
-	}
-
+//	ivec3 map_index = ivec3(p.m_pos.xyz / u_map_info.cell_size);
+//	{
+//		vec3 cell_p = mod(p.m_pos.xyz, map_info.cell_size);
+//		map_index.x = (cell_p.x <= particle_size) ? map_index.x - 1 : (cell_p.x >= (cell_size.x - particle_size)) ? map_index.x + 1 : map_index.x;
+//		map_index.z = (cell_p.z <= particle_size) ? map_index.z - 1 : (cell_p.z >= (cell_size.z - particle_size)) ? map_index.z + 1 : map_index.z;
+//	}
+	ivec3 map_index = p.m_map_index.xyz;
 	for(;;)
 	{
 
 		vec3 dir = p.m_vel.xyz;
 		ivec3 prev_index = map_index;
 
-
-		vec3 cell_p = mod(p.m_pos.xyz, map_info.cell_size);
+		vec3 cell_origin = map_index*cell_size;
+		vec3 cell_p = p.m_pos.xyz - cell_origin;
+//		vec3 cell_p = mod(p.m_pos.xyz, map_info.cell_size);
 		float x = dir.x < 0. ? cell_p.x : (map_info.cell_size.x- cell_p.x);
 		float z = dir.z < 0. ? cell_p.z : (map_info.cell_size.z- cell_p.z);
 		x = (x <= particle_size ? cell_size.x + x : x) - particle_size;
@@ -133,7 +135,9 @@ void main()
 		float progLength = length(dir * rate);
 		if(progress < progLength)
 		{
+			// 移動完了
 			p.m_pos.xyz += dir * progress;
+			p.m_pos.xyz = clamp(p.m_pos.xyz, (map_index * cell_size)+particle_size+0.01, (map_index+ivec3(1, 0, 1)) * cell_size-particle_size-0.01);
 			break;
 		}
 		progress -= progLength;
@@ -148,29 +152,19 @@ void main()
 		}
 
 		vec3 next_pos = p.m_pos.xyz + prog + vec3(next);
-		ivec3 _map_index = ivec3(p.m_pos.xyz / u_map_info.cell_size);
-		ivec3 next_map_index = ivec3(next_pos / u_map_info.cell_size);
-		if(all(equal(_map_index.xz, next_map_index.xz)))
-		{
-//			計算誤差により死亡
-//			while(true);
-			return;
-
-		}
-
 		uint map = imageLoad(t_map, (map_index + next).xz ).x;
 		if(map == 1) 
 		{
 			vec3 wall = vec3(next);
 			p.m_vel.xyz = reflect(p.m_vel.xyz, wall);
-			next_pos = p.m_pos.xyz;
 		}else{
 			map_index += next;
 		}
 		p.m_pos.xyz = next_pos;
-		map_index = ivec3(p.m_pos.xyz / u_map_info.cell_size);
+		p.m_pos.xyz = clamp(p.m_pos.xyz, (map_index * cell_size)+particle_size+0.01, (map_index+ivec3(1, 0, 1)) * cell_size-particle_size-0.01);
 	}
 #endif
 	uint dst_index = atomicAdd(b_draw_cmd.vertexCount, 1);
+	p.m_map_index.xyz = map_index;
 	b_particle[constant.m_dst_offset + dst_index] = p;
 }
