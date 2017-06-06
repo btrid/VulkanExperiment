@@ -37,6 +37,17 @@ int main()
 	btr::setResourcePath("..\\..\\resource\\003_particle\\");
 
 	app::App app;
+// 	{
+// 		glm::vec3 dir = glm::normalize(glm::vec3(0.f, 1.f, 1.f));
+// 		glm::vec3 to = glm::normalize(glm::vec3(1.f, 0.f, 1.f));
+// 		while (true)
+// 		{
+// 			glm::vec3 rotateAxis = glm::normalize(glm::cross(dir, to));
+// 			float degree = glm::degrees(glm::angle(dir, to));
+// 			glm::quat rot = glm::angleAxis(glm::radians(10.f), rotateAxis);
+// 			dir = glm::normalize(glm::rotate(rot, dir));
+// 		}
+// 	}
 
 	auto* camera = cCamera::sCamera::Order().create();
 	camera->m_position = glm::vec3(50.f, 100.f, -50.f);
@@ -84,6 +95,7 @@ int main()
 	loader->m_uniform_memory.setup(device, vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 20);
 	loader->m_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 1000 * 200);
 	loader->m_staging_memory.setup(device, vk::BufferUsageFlagBits::eTransferSrc, host_memory, 1000 * 1000 * 100);
+
 
 	cParticlePipeline pipeline;
 	{

@@ -15,11 +15,3 @@ struct ParticleData
 	float m_life;
 	uint _p;
 };
-
-struct DrawIndirectCommand
-{
-    uint vertexCount;
-    uint instanceCount;
-    uint firstVertex;
-    uint firstInstance;
-};

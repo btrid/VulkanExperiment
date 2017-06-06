@@ -1,0 +1,153 @@
+#version 450
+
+//#pragma optionNV (unroll none)
+#pragma optionNV (inline all)
+//#pragma optionNV(fastmath on)
+//#pragma optionNV(strict on)
+
+#extension GL_GOOGLE_cpp_style_line_directive : require
+#include </Common.glsl>
+
+#define SETPOINT_UPDATE 0
+#include </Boid.glsl>
+
+layout (local_size_x = 1024, local_size_y = 1) in;
+
+
+layout(set=1, binding=0, r8ui) uniform readonly uimage2D t_map;
+layout(std140, set=1, binding=1) uniform MapInfoUniform {
+	MapInfo u_map_info;
+};
+
+
+layout(push_constant) uniform UpdateConstantBlock
+{
+	float m_deltatime;
+	uint m_src_offset;
+	uint m_dst_offset;
+} constant;
+
+void main()
+{
+	uint index = gl_GlobalInvocationID.x;
+	if(index >= u_boid_info.m_soldier_max){
+		return;
+	}
+
+	SoldierData soldier = b_soldier[constant.m_src_offset + index];
+	b_soldier[constant.m_src_offset + index].m_life = -1.;
+//	soldier.m_life -= constant.m_deltatime;
+	if(soldier.m_life <= 0.){
+		return;
+	}
+	MapInfo map_info = u_map_info;
+	float progress = soldier.m_vel.w * constant.m_deltatime;
+	vec3 cell_size = map_info.cell_size;
+//	float particle_size = soldier.m_pos.w;
+	float particle_size = 0.;
+
+
+//	if(false)
+	{
+		// rotate
+		// 速い場合は減速する
+		SoldierInfo info = u_soldier_info[soldier.m_type];
+		info.m_move_speed;
+//		float turn_power = 1. - pow(vel / info.m_move_speed, 2.);
+
+		ivec2 next = ivec2(-1, 0);
+		{
+			uint next_distance = imageLoad(t_astar, ivec3(soldier.m_map_index.xz + ivec2(-1, 0), soldier.m_brain_index)).x;
+			next = ivec2(-1, 0);
+		
+			uint n = imageLoad(t_astar, ivec3(soldier.m_map_index.xz + ivec2(1, 0),  soldier.m_brain_index)).x;
+			if(n < next_distance )
+			{
+				next_distance = n;
+				next = ivec2(1, 0);
+			}
+			n = imageLoad(t_astar, ivec3(soldier.m_map_index.xz + ivec2(0, -1),  soldier.m_brain_index)).x;
+			if(n < next_distance )
+			{
+				next_distance = n;
+				next = ivec2(0,-1);
+			}
+			n = imageLoad(t_astar, ivec3(soldier.m_map_index.xz + ivec2(0, 1),  soldier.m_brain_index)).x;
+			if(n < next_distance )
+			{
+				next_distance = n;
+				next = ivec2(0,1);
+			}
+		}
+		next += soldier.m_map_index.xz;
+		vec3 target = vec3(next.x+0.5, 0., next.y+0.5) * map_info.cell_size + vec3(0.);
+		vec3 target_dir = normalize(target - soldier.m_pos.xyz);
+		vec3 dir = normalize(soldier.m_vel.xyz);
+		vec3 rotate_axis = normalize(cross(dir, target_dir));
+		float target_angle = calcAngle(target_dir, dir);
+		float angle = min(info.m_turn_speed, target_angle) * constant.m_deltatime;// * turn_power;
+		quat rot = angleAxis(angle, rotate_axis);
+		dir = normalize(rotateQuatVec3(rot, dir));
+//		dir = target_dir;
+
+//		1. - pow(1. - max(target_angle / info.m_turn_speed, 1.), constant.m_deltatime);
+		soldier.m_vel.xyz = dir;
+	}
+	ivec3 map_index = soldier.m_map_index.xyz;
+	for(;;)
+//	if(false)
+	{
+
+		vec3 dir = soldier.m_vel.xyz;
+
+		vec3 cell_origin = map_index*cell_size;
+		vec3 cell_p = soldier.m_pos.xyz - cell_origin;
+		float x = dir.x < 0. ? cell_p.x : (map_info.cell_size.x- cell_p.x);
+		float z = dir.z < 0. ? cell_p.z : (map_info.cell_size.z- cell_p.z);
+		x = (x <= particle_size ? cell_size.x + x : x) - particle_size;
+		z = (z <= particle_size ? cell_size.z + z : z) - particle_size;
+
+		vec3 dist = vec3(9999.);
+		dist.x = abs(dir.x) < FLT_EPSIRON ? 9999.9 : abs(x / dir.x);
+		dist.z = abs(dir.z) < FLT_EPSIRON ? 9999.9 : abs(z / dir.z);
+		float rate = min(dist.x, dist.z);
+		rate = abs(dir.x) < FLT_EPSIRON ? dist.z : rate;
+		rate = abs(dir.z) < FLT_EPSIRON ? dist.x : rate;
+
+		vec3 prog = dir * rate;
+		float progLength = length(dir * rate);
+		if(progress < progLength)
+		{
+			// 移動完了
+			soldier.m_pos.xyz += dir * progress;
+			soldier.m_pos.xyz = clamp(soldier.m_pos.xyz, (map_index * cell_size)+particle_size+FLT_EPSIRON, (map_index+ivec3(1, 0, 1)) * cell_size-particle_size-FLT_EPSIRON);
+			break;
+		}
+		progress -= progLength;
+
+		ivec3 next = ivec3(0);
+		if(dist.x < dist.z){
+			next.x = dir.x < 0. ? -1 : 1;
+		}
+		else
+		{
+			next.z = dir.z < 0. ? -1 : 1;
+		}
+
+		vec3 next_pos = soldier.m_pos.xyz + prog + vec3(next)*FLT_EPSIRON;
+		uint map = imageLoad(t_map, (map_index + next).xz ).x;
+		if(map == 1) 
+		{
+			// 壁にぶつかったので押し戻す
+			next_pos = soldier.m_pos.xyz + prog - vec3(next)*FLT_EPSIRON;
+		}else{
+			map_index += next;
+		}
+		soldier.m_pos.xyz = next_pos;
+		soldier.m_pos.xyz = clamp(soldier.m_pos.xyz, (map_index * cell_size)+particle_size+FLT_EPSIRON, (map_index+ivec3(1, 0, 1)) * cell_size-particle_size-FLT_EPSIRON);
+	}
+
+	uint dst_index = atomicAdd(b_draw_cmd[0].vertexCount, 1);
+	soldier.m_map_index.xyz = map_index;
+	b_soldier[constant.m_dst_offset + dst_index] = soldier;
+}

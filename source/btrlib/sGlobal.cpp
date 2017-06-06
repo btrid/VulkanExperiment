@@ -205,6 +205,47 @@ vk::DescriptorPool createPool(vk::Device device, const std::vector<std::vector<v
 
 }
 
+std::unique_ptr<Descriptor> createDescriptor(vk::Device device, const std::vector<std::vector<vk::DescriptorSetLayoutBinding>>& bindings)
+{
+	std::unique_ptr<Descriptor> descriptor = std::make_unique<Descriptor>();
+	descriptor->m_descriptor_pool = createPool(device, bindings);
+	descriptor->m_descriptor_set_layout.resize(bindings.size());
+	for (size_t i = 0; i < bindings.size(); i++)
+	{
+		vk::DescriptorSetLayoutCreateInfo descriptor_set_layout_info = vk::DescriptorSetLayoutCreateInfo()
+			.setBindingCount((uint32_t)bindings[i].size())
+			.setPBindings(bindings[i].data());
+		descriptor->m_descriptor_set_layout[i] = device.createDescriptorSetLayout(descriptor_set_layout_info);
+	}
+
+	vk::DescriptorSetAllocateInfo alloc_info;
+	alloc_info.descriptorPool = descriptor->m_descriptor_pool;
+	alloc_info.descriptorSetCount = (uint32_t)descriptor->m_descriptor_set_layout.size();
+	alloc_info.pSetLayouts = descriptor->m_descriptor_set_layout.data();
+	descriptor->m_descriptor_set = device.allocateDescriptorSets(alloc_info);
+	return std::move(descriptor);
+}
+
+std::unique_ptr<Descriptor> createDescriptor(vk::Device device, vk::DescriptorPool pool, const std::vector<std::vector<vk::DescriptorSetLayoutBinding>>& bindings)
+{
+	std::unique_ptr<Descriptor> descriptor = std::make_unique<Descriptor>();
+	descriptor->m_descriptor_pool = pool;
+	descriptor->m_descriptor_set_layout.resize(bindings.size());
+	for (size_t i = 0; i < bindings.size(); i++)
+	{
+		vk::DescriptorSetLayoutCreateInfo descriptor_set_layout_info = vk::DescriptorSetLayoutCreateInfo()
+			.setBindingCount((uint32_t)bindings[i].size())
+			.setPBindings(bindings[i].data());
+		descriptor->m_descriptor_set_layout[i] = device.createDescriptorSetLayout(descriptor_set_layout_info);
+	}
+
+	vk::DescriptorSetAllocateInfo alloc_info;
+	alloc_info.descriptorPool = descriptor->m_descriptor_pool;
+	alloc_info.descriptorSetCount = (uint32_t)descriptor->m_descriptor_set_layout.size();
+	alloc_info.pSetLayouts = descriptor->m_descriptor_set_layout.data();
+	descriptor->m_descriptor_set = device.allocateDescriptorSets(alloc_info);
+	return std::move(descriptor);
+}
 
 void vk::FenceShared::create(vk::Device device, const vk::FenceCreateInfo& fence_info)
 {

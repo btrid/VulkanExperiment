@@ -171,7 +171,7 @@ MotionTexture create(ModelLoader* loader, const aiAnimation* anim, const RootNod
 	subresourceRange.levelCount = 1;
 
 	vk::BufferImageCopy copy;
-	copy.bufferOffset = staging_buffer.getOffset();
+	copy.bufferOffset = staging_buffer.getBufferInfo().offset;
 	copy.imageExtent = { SIZE, 1u, 1u };
 	copy.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
 	copy.imageSubresource.baseArrayLayer = 0;
@@ -196,7 +196,7 @@ MotionTexture create(ModelLoader* loader, const aiAnimation* anim, const RootNod
 	to_shader_read_barrier.subresourceRange = subresourceRange;
 
 	loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
-	loader->m_cmd.copyBufferToImage(staging_buffer.getBuffer(), image, vk::ImageLayout::eTransferDstOptimal, { copy });
+	loader->m_cmd.copyBufferToImage(staging_buffer.getBufferInfo().buffer, image, vk::ImageLayout::eTransferDstOptimal, { copy });
 	loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
 
 	MotionTexture tex;
@@ -287,7 +287,7 @@ void ResourceTexture::load(ModelLoader* loader, cThreadPool& thread_pool, const 
 		// staging_buffer‚©‚çimage‚ÖƒRƒs[
 
 		vk::BufferImageCopy copy;
-		copy.bufferOffset = staging_buffer.getOffset();
+		copy.bufferOffset = staging_buffer.getBufferInfo().offset;
 		copy.imageExtent = { texture_data.m_size.x, texture_data.m_size.y, texture_data.m_size.z };
 		copy.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
 		copy.imageSubresource.baseArrayLayer = 0;
@@ -312,7 +312,7 @@ void ResourceTexture::load(ModelLoader* loader, cThreadPool& thread_pool, const 
 		to_shader_read_barrier.subresourceRange = subresourceRange;
 
 		loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
-		loader->m_cmd.copyBufferToImage(staging_buffer.getBuffer(), image, vk::ImageLayout::eTransferDstOptimal, { copy });
+		loader->m_cmd.copyBufferToImage(staging_buffer.getBufferInfo().buffer, image, vk::ImageLayout::eTransferDstOptimal, { copy });
 		loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
 
 	}
@@ -482,15 +482,15 @@ void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& r
 		buffer = loader->m_storage_uniform_memory.allocateMemory(arg);
 
 		vk::BufferCopy copy_info;
-		copy_info.setSize(staging.getSize());
-		copy_info.setSrcOffset(staging.getOffset());
-		copy_info.setDstOffset(buffer.getOffset());
-		loader->m_cmd.copyBuffer(staging.getBuffer(), buffer.getBuffer(), copy_info);
+		copy_info.setSize(staging.getBufferInfo().range);
+		copy_info.setSrcOffset(staging.getBufferInfo().offset);
+		copy_info.setDstOffset(buffer.getBufferInfo().offset);
+		loader->m_cmd.copyBuffer(staging.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
 
 		vk::BufferMemoryBarrier barrier;
-		barrier.setBuffer(buffer.getBuffer());
-		barrier.setOffset(buffer.getOffset());
-		barrier.setSize(buffer.getSize());
+		barrier.setBuffer(buffer.getBufferInfo().buffer);
+		barrier.setOffset(buffer.getBufferInfo().offset);
+		barrier.setSize(buffer.getBufferInfo().range);
 		barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
 		loader->m_cmd.pipelineBarrier(
 			vk::PipelineStageFlagBits::eTransfer,
@@ -609,7 +609,7 @@ void cModel::load(const std::string& filename)
 	auto index_stride = (index_type == vk::IndexType::eUint16 ? sizeof(uint16_t) : sizeof(uint32_t));
 	auto* index = static_cast<char*>(staging_index.getMappedPtr());
 	Vertex* vertex = static_cast<Vertex*>(staging_vertex.getMappedPtr());
-	memset(vertex, -1, staging_vertex.getSize());
+	memset(vertex, -1, staging_vertex.getBufferInfo().range);
 	uint32_t v_count = 0;
 	for (size_t i = 0; i < scene->mNumMeshes; i++)
 	{
@@ -697,8 +697,8 @@ void cModel::load(const std::string& filename)
 		cMeshResource& mesh = m_resource->mMesh;
 
 		{
-			mesh.m_vertex_buffer_ex = m_loader->m_vertex_memory.allocateMemory(staging_vertex.getSize());
-			mesh.m_index_buffer_ex = m_loader->m_vertex_memory.allocateMemory(staging_index.getSize());
+			mesh.m_vertex_buffer_ex = m_loader->m_vertex_memory.allocateMemory(staging_vertex.getBufferInfo().range);
+			mesh.m_index_buffer_ex = m_loader->m_vertex_memory.allocateMemory(staging_index.getBufferInfo().range);
 
 			btr::BufferMemory::Descriptor indirect_desc;
 			indirect_desc.size = sizeof(Mesh) * indexSize.size();
@@ -717,35 +717,35 @@ void cModel::load(const std::string& filename)
 				offset += indexSize[i];
 			}
 			vk::BufferCopy copy_info;
-			copy_info.setSize(staging_vertex.getSize());
-			copy_info.setSrcOffset(staging_vertex.getOffset());
-			copy_info.setDstOffset(mesh.m_vertex_buffer_ex.getOffset());
-			cmd.copyBuffer(staging_vertex.getBuffer(), mesh.m_vertex_buffer_ex.getBuffer(), copy_info);
+			copy_info.setSize(staging_vertex.getBufferInfo().range);
+			copy_info.setSrcOffset(staging_vertex.getBufferInfo().offset);
+			copy_info.setDstOffset(mesh.m_vertex_buffer_ex.getBufferInfo().offset);
+			cmd.copyBuffer(staging_vertex.getBufferInfo().buffer, mesh.m_vertex_buffer_ex.getBufferInfo().buffer, copy_info);
 
-			copy_info.setSize(staging_index.getSize());
-			copy_info.setSrcOffset(staging_index.getOffset());
-			copy_info.setDstOffset(mesh.m_index_buffer_ex.getOffset());
-			cmd.copyBuffer(staging_index.getBuffer(), mesh.m_index_buffer_ex.getBuffer(), copy_info);
+			copy_info.setSize(staging_index.getBufferInfo().range);
+			copy_info.setSrcOffset(staging_index.getBufferInfo().offset);
+			copy_info.setDstOffset(mesh.m_index_buffer_ex.getBufferInfo().offset);
+			cmd.copyBuffer(staging_index.getBufferInfo().buffer, mesh.m_index_buffer_ex.getBufferInfo().buffer, copy_info);
 
-			copy_info.setSize(staging_indirect.getSize());
-			copy_info.setSrcOffset(staging_indirect.getOffset());
-			copy_info.setDstOffset(mesh.m_indirect_buffer_ex.getOffset());
-			cmd.copyBuffer(staging_indirect.getBuffer(), mesh.m_indirect_buffer_ex.getBuffer(), copy_info);
+			copy_info.setSize(staging_indirect.getBufferInfo().range);
+			copy_info.setSrcOffset(staging_indirect.getBufferInfo().offset);
+			copy_info.setDstOffset(mesh.m_indirect_buffer_ex.getBufferInfo().offset);
+			cmd.copyBuffer(staging_indirect.getBufferInfo().buffer, mesh.m_indirect_buffer_ex.getBufferInfo().buffer, copy_info);
 
 			vk::BufferMemoryBarrier vertex_barrier;
-			vertex_barrier.setBuffer(mesh.m_vertex_buffer_ex.getBuffer());
-			vertex_barrier.setOffset(mesh.m_vertex_buffer_ex.getOffset());
-			vertex_barrier.setSize(mesh.m_vertex_buffer_ex.getSize());
+			vertex_barrier.setBuffer(mesh.m_vertex_buffer_ex.getBufferInfo().buffer);
+			vertex_barrier.setOffset(mesh.m_vertex_buffer_ex.getBufferInfo().offset);
+			vertex_barrier.setSize(mesh.m_vertex_buffer_ex.getBufferInfo().range);
 			vertex_barrier.setDstAccessMask(vk::AccessFlagBits::eVertexAttributeRead);
 			vk::BufferMemoryBarrier index_barrier;
-			index_barrier.setBuffer(mesh.m_index_buffer_ex.getBuffer());
-			index_barrier.setOffset(mesh.m_index_buffer_ex.getOffset());
-			index_barrier.setSize(mesh.m_index_buffer_ex.getSize());
+			index_barrier.setBuffer(mesh.m_index_buffer_ex.getBufferInfo().buffer);
+			index_barrier.setOffset(mesh.m_index_buffer_ex.getBufferInfo().offset);
+			index_barrier.setSize(mesh.m_index_buffer_ex.getBufferInfo().range);
 			index_barrier.setDstAccessMask(vk::AccessFlagBits::eIndexRead);
 			vk::BufferMemoryBarrier indirect_barrier;
-			indirect_barrier.setBuffer(mesh.m_indirect_buffer_ex.getBuffer());
-			indirect_barrier.setOffset(mesh.m_indirect_buffer_ex.getOffset());
-			indirect_barrier.setSize(mesh.m_indirect_buffer_ex.getSize());
+			indirect_barrier.setBuffer(mesh.m_indirect_buffer_ex.getBufferInfo().buffer);
+			indirect_barrier.setOffset(mesh.m_indirect_buffer_ex.getBufferInfo().offset);
+			indirect_barrier.setSize(mesh.m_indirect_buffer_ex.getBufferInfo().range);
 			indirect_barrier.setDstAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
 			cmd.pipelineBarrier(
 				vk::PipelineStageFlagBits::eTransfer,
@@ -783,10 +783,10 @@ void cModel::load(const std::string& filename)
 		buffer = m_loader->m_storage_memory.allocateMemory(m_resource->m_material.size() * sizeof(MaterialBuffer));
 
 		vk::BufferCopy copy_info;
-		copy_info.setSize(staging_material.getSize());
-		copy_info.setSrcOffset(staging_material.getOffset());
-		copy_info.setDstOffset(buffer.getOffset());
-		cmd.copyBuffer(staging_material.getBuffer(), buffer.getBuffer(), copy_info);
+		copy_info.setSize(staging_material.getBufferInfo().range);
+		copy_info.setSrcOffset(staging_material.getBufferInfo().offset);
+		copy_info.setDstOffset(buffer.getBufferInfo().offset);
+		cmd.copyBuffer(staging_material.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
 
 	}
 
@@ -803,9 +803,9 @@ void cModel::load(const std::string& filename)
 
 		vk::BufferCopy copy_info;
 		copy_info.setSize(staging_desc.size);
-		copy_info.setSrcOffset(staging_node_info_buffer.getOffset());
-		copy_info.setDstOffset(buffer.getOffset());
-		cmd.copyBuffer(staging_node_info_buffer.getBuffer(), buffer.getBuffer(), copy_info);
+		copy_info.setSrcOffset(staging_node_info_buffer.getBufferInfo().offset);
+		copy_info.setDstOffset(buffer.getBufferInfo().offset);
+		cmd.copyBuffer(staging_node_info_buffer.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
 
 	}
 
@@ -826,10 +826,10 @@ void cModel::load(const std::string& filename)
 			buffer = m_loader->m_storage_memory.allocateMemory(m_resource->mBone.size() * sizeof(BoneInfo));
 
 			vk::BufferCopy copy_info;
-			copy_info.setSize(staging_bone_info.getSize());
-			copy_info.setSrcOffset(staging_bone_info.getOffset());
-			copy_info.setDstOffset(buffer.getOffset());
-			cmd.copyBuffer(staging_bone_info.getBuffer(), buffer.getBuffer(), copy_info);
+			copy_info.setSize(staging_bone_info.getBufferInfo().range);
+			copy_info.setSrcOffset(staging_bone_info.getBufferInfo().offset);
+			copy_info.setDstOffset(buffer.getBufferInfo().offset);
+			cmd.copyBuffer(staging_bone_info.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
 		}
 
 		// BoneTransform
@@ -859,10 +859,10 @@ void cModel::load(const std::string& filename)
 		buffer = m_loader->m_storage_memory.allocateMemory(instanceNum * sizeof(PlayingAnimation));
 
 		vk::BufferCopy copy_info;
-		copy_info.setSize(staging_playing_animation.getSize());
-		copy_info.setSrcOffset(staging_playing_animation.getOffset());
-		copy_info.setDstOffset(buffer.getOffset());
-		cmd.copyBuffer(staging_playing_animation.getBuffer(), buffer.getBuffer(), copy_info);
+		copy_info.setSize(staging_playing_animation.getBufferInfo().range);
+		copy_info.setSrcOffset(staging_playing_animation.getBufferInfo().offset);
+		copy_info.setDstOffset(buffer.getBufferInfo().offset);
+		cmd.copyBuffer(staging_playing_animation.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
 	}
 
 	// ModelInfo
@@ -902,10 +902,10 @@ void cModel::load(const std::string& filename)
 		buffer = m_loader->m_storage_uniform_memory.allocateMemory(sizeof(ModelInfo));
 
 		vk::BufferCopy copy_info;
-		copy_info.setSize(staging_model_info.getSize());
-		copy_info.setSrcOffset(staging_model_info.getOffset());
-		copy_info.setDstOffset(buffer.getOffset());
-		cmd.copyBuffer(staging_model_info.getBuffer(), buffer.getBuffer(), copy_info);
+		copy_info.setSize(staging_model_info.getBufferInfo().range);
+		copy_info.setSrcOffset(staging_model_info.getBufferInfo().offset);
+		copy_info.setDstOffset(buffer.getBufferInfo().offset);
+		cmd.copyBuffer(staging_model_info.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
 
 		m_resource->m_model_info = mi;
 	}
@@ -963,15 +963,15 @@ void cModel::load(const std::string& filename)
 		memcpy_s(group_ptr, sizeof(glm::ivec3) * 6, group.data(), sizeof(glm::ivec3) * 6);
 
 		vk::BufferCopy copy_info;
-		copy_info.setSize(staging_compute.getSize());
-		copy_info.setSrcOffset(staging_compute.getOffset());
-		copy_info.setDstOffset(m_resource->m_compute_indirect_buffer.getOffset());
-		cmd.copyBuffer(staging_compute.getBuffer(), m_resource->m_compute_indirect_buffer.getBuffer(), copy_info);
+		copy_info.setSize(staging_compute.getBufferInfo().range);
+		copy_info.setSrcOffset(staging_compute.getBufferInfo().offset);
+		copy_info.setDstOffset(m_resource->m_compute_indirect_buffer.getBufferInfo().offset);
+		cmd.copyBuffer(staging_compute.getBufferInfo().buffer, m_resource->m_compute_indirect_buffer.getBufferInfo().buffer, copy_info);
 
 		vk::BufferMemoryBarrier dispatch_indirect_barrier;
-		dispatch_indirect_barrier.setBuffer(m_resource->m_compute_indirect_buffer.getBuffer());
-		dispatch_indirect_barrier.setOffset(m_resource->m_compute_indirect_buffer.getOffset());
-		dispatch_indirect_barrier.setSize(m_resource->m_compute_indirect_buffer.getSize());
+		dispatch_indirect_barrier.setBuffer(m_resource->m_compute_indirect_buffer.getBufferInfo().buffer);
+		dispatch_indirect_barrier.setOffset(m_resource->m_compute_indirect_buffer.getBufferInfo().offset);
+		dispatch_indirect_barrier.setSize(m_resource->m_compute_indirect_buffer.getBufferInfo().range);
 		dispatch_indirect_barrier.setDstAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
 		cmd.pipelineBarrier(
 			vk::PipelineStageFlagBits::eTransfer,

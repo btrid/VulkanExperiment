@@ -12,6 +12,8 @@
 #extension GL_ARB_shading_language_include : require
 #endif
 
+#define SETPOINT_CAMERA 0
+#include <Common.glsl>
 layout(location = 0)in vec3 inPosition;
 
 out gl_PerVertex{
@@ -22,12 +24,6 @@ out VertexOut
 {
 	vec3 Vertex;
 }Out;
-layout(std140, set=0, binding=0) uniform CameraUniform
-{
-	mat4 uProjection;
-	mat4 uView;
-};
-
 void main()
 {
 	vec4 pos = vec4(inPosition.xyz, 1.0);

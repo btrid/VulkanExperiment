@@ -12,7 +12,6 @@
 #include </convertDimension.glsl>
 #include </Shape.glsl>
 #include </TriangleLL.glsl>
-#include </PM.glsl>
 
 in Transform{
 	flat int Visible;

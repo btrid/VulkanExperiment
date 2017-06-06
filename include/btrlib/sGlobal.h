@@ -194,4 +194,18 @@ public:
 };
 
 vk::ShaderModule loadShader(const vk::Device& device, const std::string& filename);
+
+struct Descriptor
+{
+	struct Set {
+		vk::DescriptorSetLayout m_descriptor_set_layout;
+		vk::DescriptorSet m_descriptor_set;
+	};
+	vk::DescriptorPool m_descriptor_pool;
+	std::vector<vk::DescriptorSetLayout> m_descriptor_set_layout;
+	std::vector<vk::DescriptorSet> m_descriptor_set;
+
+};
+std::unique_ptr<Descriptor> createDescriptor(vk::Device device, const std::vector<std::vector<vk::DescriptorSetLayoutBinding>>& bindings);
+std::unique_ptr<Descriptor> createDescriptor(vk::Device device, vk::DescriptorPool pool, const std::vector<std::vector<vk::DescriptorSetLayoutBinding>>& bindings);
 vk::DescriptorPool createPool(vk::Device device, const std::vector<std::vector<vk::DescriptorSetLayoutBinding>>& bindings);

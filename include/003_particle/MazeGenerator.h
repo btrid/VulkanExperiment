@@ -15,19 +15,18 @@ public:
 		CELL_TYPE_WALL = 1,		///< 壁
 	};
 
-	enum {
-		GROUP_X = 16,
-		GROUP_Y = 16,
-		GROUP_SIZE = GROUP_X*GROUP_Y,
-	};
-
 	struct Map{
 		int x_;
 		int y_;
 		std::vector<int> map_;
 
 
-		int& data(int x, int y){
+		int& data(int x, int y) {
+			assert(x >= 0 && x < x_);
+			assert(y >= 0 && y < y_);
+			return map_[y*x_ + x];
+		}
+		const int& data(int x, int y)const {
 			assert(x >= 0 && x < x_);
 			assert(y >= 0 && y < y_);
 			return map_[y*x_ + x];
@@ -68,13 +67,17 @@ public:
 
 		for (int x = 1; x < field_.x_ - 1; x++)
 		{
+			field_.data(x, 0) = CELL_TYPE_WALL;
 			field_.data(x, 1) = CELL_TYPE_WALL;
 			field_.data(x, field_.y_ - 2) = CELL_TYPE_WALL;
+			field_.data(x, field_.y_ - 1) = CELL_TYPE_WALL;
 		}
 		for (int y = 1; y < field_.y_ - 1; y++)
 		{
+			field_.data(0, y) = CELL_TYPE_WALL;
 			field_.data(1, y) = CELL_TYPE_WALL;
 			field_.data(field_.x_ - 2, y) = CELL_TYPE_WALL;
+			field_.data(field_.x_ - 1, y) = CELL_TYPE_WALL;
 		}
 
 		for (int y = 3; y < field_.y_ - 3; y += 2)
@@ -160,11 +163,75 @@ public:
 		}
 
 	}
+	std::vector<uint32_t> solveEx(int sx, int sy)const
+	{
+		const int SIZE_X = field_.x_;
+		const int SIZE_Y = field_.y_;
+		Node start = Node{ sx, sy, 0, -1 };
+		List open;
+		open.push_back(start);
+		std::vector<CloseNode> close(SIZE_X * SIZE_Y);
+
+		std::vector<uint32_t> result(SIZE_X*SIZE_Y, -1);
+		while (!open.empty())
+		{
+			Node n = open[0];
+			open.pop_front();
+
+			result[n.x + n.y * SIZE_X] = n.cost;
+
+			bool is_left_end = n.x == 0;
+			bool is_right_end = n.x == SIZE_X;
+			bool is_donw_end = n.y == 0;
+			bool is_up_end = n.y == SIZE_Y;
+			// 右
+			if (!is_right_end)
+			{
+				_setNode(n.x + 1, n.y, calcNodeIndex(n.x, n.y), n.cost + 1, open, close);
+			}
+			// 左
+			if (n.x > 0)
+			{
+				_setNode(n.x - 1, n.y, calcNodeIndex(n.x, n.y), n.cost + 1, open, close);
+			}
+			// 下
+			if (n.y < SIZE_Y - 1)
+			{
+				_setNode(n.x, n.y + 1, calcNodeIndex(n.x, n.y), n.cost + 1, open, close);
+			}
+			// 上
+			if (n.y > 0)
+			{
+				_setNode(n.x, n.y - 1, calcNodeIndex(n.x, n.y), n.cost + 1, open, close);
+			}
+// 			// 左上
+// 			if (n.x > 0 && n.y > 0)
+// 			{
+// 				_setNode(n.x - 1, n.y - 1, calcNodeIndex(n.x, n.y), n.cost + 1, open, close);
+// 			}
+// 			// 左下
+// 			if (n.x > 0 && n.y < SIZE_Y - 1)
+// 			{
+// 				_setNode(n.x - 1, n.y + 1, calcNodeIndex(n.x, n.y), n.cost + 1, open, close);
+// 			}
+// 			// 右下
+// 			if (n.x < SIZE_X - 1 && n.y < SIZE_Y - 1)
+// 			{
+// 				_setNode(n.x + 1, n.y-1, calcNodeIndex(n.x, n.y), n.cost + 1, open, close);
+// 			}
+// 			// 右上
+// 			if (n.x < SIZE_X - 1 && n.y > 0)
+// 			{
+// 				_setNode(n.x+1, n.y +1, calcNodeIndex(n.x, n.y), n.cost + 1, open, close);
+// 			}
+		}
+
+		return std::move(result);
+	}
 	void solve()
 	{
 		List open;
 		std::vector<CloseNode> close(getSizeX() * getSizeY());
-//		List close;
 		int x = std::rand() % solver_.x_;
 		int y = std::rand() % solver_.y_;
 		x = x + x % 2 + 1;
@@ -211,7 +278,7 @@ public:
 		}
 
 	}
-	void _setNode(int x, int y, int parent, int cost, List& open, CloseList& close)
+	void _setNode(int x, int y, int parent, int cost, List& open, CloseList& close)const
 	{
 
 		// 通路ならOK
@@ -239,10 +306,11 @@ public:
 			if (cn.cost >= 0 && cost > cn.cost) {
 				break;
 			}
-			else{
+			else
+			{
+				// もっと早くアクセスする方法が見つかったので更新
 				cn.cost = cost;
 				cn.parent = parent;
-				// break;
 			}
 			open.push_back({ x, y, cost, parent });
 
@@ -288,7 +356,7 @@ public:
 	std::vector<int> distance_;
 
 
-	int calcNodeIndex(int x, int y){
+	int calcNodeIndex(int x, int y)const{
 		return y*solver_.x_ + x;
 	}
 

@@ -247,9 +247,6 @@ struct AllocatedMemory
 public:
 	bool isValid()const { return !!m_resource; }
 	vk::DescriptorBufferInfo getBufferInfo()const { return m_buffer_info; }
-	vk::Buffer getBuffer()const { return m_buffer_info.buffer; }
-	vk::DeviceSize getSize()const { return m_buffer_info.range; }
-	vk::DeviceSize getOffset()const { return m_buffer_info.offset; }
 	vk::DeviceMemory getDeviceMemory()const { return m_resource->m_memory_ref; }
 	void* getMappedPtr()const { return m_resource->m_mapped_memory; }
 	template<typename T> T* getMappedPtr(size_t offset_num = 0)const { return static_cast<T*>(m_resource->m_mapped_memory)+offset_num; }
@@ -366,7 +363,7 @@ struct BufferMemory
 		{
 			if (btr::isOn(m_resource->m_memory_type.propertyFlags, vk::MemoryPropertyFlagBits::eHostCoherent)) {
 				// cpuからアクセスかつcmdでコピーする場合、cmdが実行されてから書き換えないと送信先でデータがおかしくなるので、
-				// 遅延して解放を行う。見直しの必要がありそう。
+				// 遅延して解放を行う必要がある？
 				m_resource->m_free_zone.delayedFree(ptr->m_zone);
 			}
 			else {
@@ -481,9 +478,9 @@ struct UpdateBuffer
 		}
 		vk::BufferCopy copy_info;
 		copy_info.setSize(m_end - m_begin);
-		copy_info.setSrcOffset(m_staging_memory.getOffset() + sizeof(T)*m_frame + m_begin);
-		copy_info.setDstOffset(m_device_memory.getOffset() + m_begin);
-		cmd.copyBuffer(m_staging_memory.getBuffer(), m_device_memory.getBuffer(), copy_info);
+		copy_info.setSrcOffset(m_staging_memory.getBufferInfo().offset + sizeof(T)*m_frame + m_begin);
+		copy_info.setDstOffset(m_device_memory.getBufferInfo().offset + m_begin);
+		cmd.copyBuffer(m_staging_memory.getBufferInfo().buffer, m_device_memory.getBufferInfo().buffer, copy_info);
 
 		m_begin = ~vk::DeviceSize(0);
 		m_end = vk::DeviceSize(0);

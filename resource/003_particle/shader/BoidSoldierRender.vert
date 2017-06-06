@@ -16,7 +16,9 @@
 
 #define SETPOINT_CAMERA 1
 #include <Common.glsl>
-#include <Particle.glsl>
+
+#define SETPOINT_UPDATE 0
+#include <Boid.glsl>
 out gl_PerVertex{
 	vec4 gl_Position;
 	float gl_PointSize;
@@ -24,11 +26,6 @@ out gl_PerVertex{
 out VSOUT{
 	float life;
 }VSOut;
-
-layout(std140, set=0, binding=1) buffer ParticleDataBuffer 
-{
-	ParticleData b_particle[];
-};
 
 
 layout(push_constant) uniform UpdateConstantBlock
@@ -38,8 +35,8 @@ layout(push_constant) uniform UpdateConstantBlock
 
 void main()
 {
-	ParticleData p = b_particle[gl_VertexIndex + constant.m_offset];
-	vec4 pos = vec4(p.m_pos.xyz + vec3(0., 0.1, 0.), 1.0);
+	SoldierData s = b_soldier[gl_VertexIndex + constant.m_offset];
+	vec4 pos = vec4(s.m_pos.xyz + vec3(0., 0.1, 0.), 1.0);
 	gl_Position = uProjection * uView * pos;
 	gl_PointSize = 3000./ gl_Position.w;
 	VSOut.life = 0.2;

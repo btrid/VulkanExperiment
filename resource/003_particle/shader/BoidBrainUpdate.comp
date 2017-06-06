@@ -1,0 +1,17 @@
+#version 450
+
+//#pragma optionNV (unroll none)
+#pragma optionNV (inline all)
+//#pragma optionNV(fastmath on)
+//#pragma optionNV(strict on)
+
+#extension GL_GOOGLE_cpp_style_line_directive : require
+#include </Common.glsl>
+#include </Boid.glsl>
+
+layout (local_size_x = 1024, local_size_y = 1) in;
+
+
+void main()
+{
+}
