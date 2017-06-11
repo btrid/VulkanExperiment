@@ -118,7 +118,7 @@ struct Boid
 	struct cParticlePipeline* m_parent;
 	glm::vec3 cell_size;
 	void setup(app::Loader& loader, struct cParticlePipeline& parent);
-	void execute(vk::CommandBuffer cmd);
+	void execute(app::Executer& executer);
 	void draw(vk::CommandBuffer cmd);
 
 };

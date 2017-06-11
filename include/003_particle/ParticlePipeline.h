@@ -43,6 +43,9 @@ struct Pipeline
 	vk::PipelineLayout		m_pipeline_layout;
 };
 
+struct Player
+{
+};
 struct cParticlePipeline
 {
 	struct Private 
@@ -113,8 +116,9 @@ struct cParticlePipeline
 		MapInfo m_map_info_cpu;
 		void setup(app::Loader& loader);
 
-		void execute(vk::CommandBuffer cmd)
+		void execute(app::Executer& executer)
 		{
+			vk::CommandBuffer cmd = executer.m_cmd;
 //			m_make_triangleLL.execute(cmd, m_maze_geometry.m_resource->m_vertex.getBufferInfo(), m_maze_geometry.m_resource->m_index.getBufferInfo(), m_maze_geometry.m_resource->m_indirect.getBufferInfo(), m_maze_geometry.m_resource->m_index_type);
 			{
 				// transfer
@@ -267,10 +271,10 @@ struct cParticlePipeline
 		m_boid.setup(loader, *this);
 	}
 
-	void execute(vk::CommandBuffer cmd) 
+	void execute(app::Executer& executer)
 	{
-		m_private->execute(cmd);
-		m_boid.execute(cmd);
+		m_private->execute(executer);
+		m_boid.execute(executer);
 	}
 
 	void draw(vk::CommandBuffer cmd)

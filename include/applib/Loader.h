@@ -18,5 +18,17 @@ struct Loader
 
 	vk::CommandBuffer m_cmd;
 };
+struct Executer
+{
+	cDevice m_device;
+	vk::CommandBuffer m_cmd;
+
+	btr::BufferMemory m_vertex_memory;
+	btr::BufferMemory m_uniform_memory;
+	btr::BufferMemory m_storage_memory;
+	btr::BufferMemory m_staging_memory;
+
+	cThreadPool* m_thread_pool;
+};
 
 }

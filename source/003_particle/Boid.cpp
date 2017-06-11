@@ -484,13 +484,14 @@ void Boid::setup(app::Loader& loader, cParticlePipeline& parent)
 			};
 			m_graphics_pipeline = loader.m_device->createGraphicsPipelines(m_cache, graphics_pipeline_info);
 		}
-
 	}
+
 
 }
 
-void Boid::execute(vk::CommandBuffer cmd)
+void Boid::execute(app::Executer& executer)
 {
+	auto cmd = executer.m_cmd;
 	m_brain_gpu.swap();
 	m_soldier_gpu.swap();
 	m_soldier_LL_head_gpu.swap();
@@ -561,9 +562,6 @@ void Boid::execute(vk::CommandBuffer cmd)
  			soldier_barrier.buffer = m_soldier_gpu.getDst().buffer;
  			soldier_barrier.size = m_soldier_gpu.getDst().range;
  			soldier_barrier.offset = m_soldier_gpu.getDst().offset;
-//			soldier_barrier.buffer = m_soldier_gpu.getOrg().buffer;
-//			soldier_barrier.size = m_soldier_gpu.getOrg().range;
-//			soldier_barrier.offset = m_soldier_gpu.getOrg().offset;
 			soldier_barrier.srcAccessMask = vk::AccessFlagBits::eShaderWrite;
 			soldier_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead| vk::AccessFlagBits::eShaderWrite;
 

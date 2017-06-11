@@ -37,17 +37,6 @@ int main()
 	btr::setResourcePath("..\\..\\resource\\003_particle\\");
 
 	app::App app;
-// 	{
-// 		glm::vec3 dir = glm::normalize(glm::vec3(0.f, 1.f, 1.f));
-// 		glm::vec3 to = glm::normalize(glm::vec3(1.f, 0.f, 1.f));
-// 		while (true)
-// 		{
-// 			glm::vec3 rotateAxis = glm::normalize(glm::cross(dir, to));
-// 			float degree = glm::degrees(glm::angle(dir, to));
-// 			glm::quat rot = glm::angleAxis(glm::radians(10.f), rotateAxis);
-// 			dir = glm::normalize(glm::rotate(rot, dir));
-// 		}
-// 	}
 
 	auto* camera = cCamera::sCamera::Order().create();
 	camera->m_position = glm::vec3(50.f, 100.f, -50.f);
@@ -96,6 +85,14 @@ int main()
 	loader->m_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 1000 * 200);
 	loader->m_staging_memory.setup(device, vk::BufferUsageFlagBits::eTransferSrc, host_memory, 1000 * 1000 * 100);
 
+	std::unique_ptr<app::Executer> executer = std::make_unique<app::Executer>();
+	executer->m_device = device;
+	executer->m_vertex_memory	= loader->m_vertex_memory;
+	executer->m_uniform_memory	= loader->m_uniform_memory;
+	executer->m_storage_memory	= loader->m_storage_memory;
+	executer->m_staging_memory	= loader->m_staging_memory;
+	cThreadPool& pool = sGlobal::Order().getThreadPool();
+	executer->m_thread_pool = &pool;
 
 	cParticlePipeline pipeline;
 	{
@@ -139,6 +136,7 @@ int main()
 			device->resetFences({ fence_list[backbuffer_index] });
 			device->resetCommandPool(pool_list[backbuffer_index], vk::CommandPoolResetFlagBits::eReleaseResources);
 
+			executer->m_cmd = render_cmd;
 			// begin cmd
 			vk::CommandBufferBeginInfo begin_info;
 			begin_info.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
@@ -158,7 +156,7 @@ int main()
 				vk::DependencyFlags(),
 				nullptr, nullptr, present_to_render_barrier);
 
-			pipeline.execute(render_cmd);
+			pipeline.execute(*executer);
 			// begin cmd render pass
 			std::vector<vk::ClearValue> clearValue = {
 				vk::ClearValue().setColor(vk::ClearColorValue(std::array<float, 4>{0.3f, 0.3f, 0.8f, 1.f})),
