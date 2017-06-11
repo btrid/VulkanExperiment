@@ -89,6 +89,9 @@ void memoryAllocater()
 }
 int main()
 {
+	glm::vec3 a(0.f, 0.f, 1.f);
+	glm::vec3 b = glm::normalize(glm::vec3(1.f, 0.f, 1.f));
+	auto angle = glm::degrees(glm::asin(glm::cross(a, b).y));
 	auto mask = glm::u64vec3((1ull << 22ull) - 1, (1ull << 42ull) - 1, std::numeric_limits<uint64_t>::max());
 	mask.z -= mask.y;
 	mask.y -= mask.x;

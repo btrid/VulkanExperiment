@@ -2,11 +2,12 @@
 
 void cParticlePipeline::Private::setup(app::Loader& loader)
 {
-	cell_size = glm::vec3(10.f, 1.f, 10.f);
+	m_map_info_cpu.m_cell_size = glm::vec4(10.f, 1.f, 10.f, 0.f);
+	m_map_info_cpu.m_cell_num = glm::vec4(127, 127, 0, 0);
 	{
-		m_maze.generate(127, 127);
+		m_maze.generate(m_map_info_cpu.m_cell_num.x, m_map_info_cpu.m_cell_num.y);
 		//				m_maze.generate(511, 511);
-		auto geometry = m_maze.makeGeometry(cell_size);
+		auto geometry = m_maze.makeGeometry(m_map_info_cpu.m_cell_size);
 		Geometry::OptimaizeDuplicateVertexDescriptor opti_desc;
 		//				Geometry::OptimaizeDuplicateVertex(geometry, opti_desc);
 
@@ -125,12 +126,12 @@ void cParticlePipeline::Private::setup(app::Loader& loader)
 
 
 		btr::BufferMemory::Descriptor desc;
-		desc.size = sizeof(glm::vec3);
+		desc.size = sizeof(MapInfo);
 		m_map_info = loader.m_uniform_memory.allocateMemory(desc);
 
 		desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 		auto staging = loader.m_staging_memory.allocateMemory(desc);
-		*staging.getMappedPtr<glm::vec3>() = cell_size;
+		*staging.getMappedPtr<MapInfo>() = m_map_info_cpu;
 
 		vk::BufferCopy vertex_copy;
 		vertex_copy.setSize(desc.size);
@@ -142,15 +143,15 @@ void cParticlePipeline::Private::setup(app::Loader& loader)
 		loader.m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { barrier }, {});
 	}
 
-	m_info.m_max_num = 8192;
-	m_info.m_emit_max_num = 1024;
+	m_particle_info_cpu.m_max_num = 8192;
+	m_particle_info_cpu.m_emit_max_num = 1024;
 
 	{
 		{
 			btr::BufferMemory::Descriptor data_desc;
-			data_desc.size = sizeof(ParticleData) * m_info.m_max_num;
+			data_desc.size = sizeof(ParticleData) * m_particle_info_cpu.m_max_num;
 			m_particle = loader.m_storage_memory.allocateMemory(data_desc);
-			std::vector<ParticleData> p(m_info.m_max_num);
+			std::vector<ParticleData> p(m_particle_info_cpu.m_max_num);
 			loader.m_cmd.fillBuffer(m_particle.getBufferInfo().buffer, m_particle.getBufferInfo().offset, m_particle.getBufferInfo().range, 0u);
 		}
 
@@ -170,7 +171,7 @@ void cParticlePipeline::Private::setup(app::Loader& loader)
 		loader.m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { count_barrier }, {});
 
 		m_particle_info = loader.m_uniform_memory.allocateMemory(sizeof(ParticleInfo));
-		loader.m_cmd.updateBuffer<ParticleInfo>(m_particle_info.getBufferInfo().buffer, m_particle_info.getBufferInfo().offset, { m_info });
+		loader.m_cmd.updateBuffer<ParticleInfo>(m_particle_info.getBufferInfo().buffer, m_particle_info.getBufferInfo().offset, { m_particle_info_cpu });
 		auto barrier = m_particle_info.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
 		loader.m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { barrier }, {});
 

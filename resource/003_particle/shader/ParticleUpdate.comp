@@ -52,7 +52,7 @@ void main()
 
 	MapInfo map_info = u_map_info;
 	float progress = p.m_vel.w * constant.m_deltatime;
-	vec3 cell_size = map_info.cell_size;
+	vec3 cell_size = map_info.cell_size.xyz;
 	float particle_size = 0.5;
 
 	ivec3 map_index = p.m_map_index.xyz;

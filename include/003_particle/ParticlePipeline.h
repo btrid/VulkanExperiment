@@ -18,6 +18,11 @@ struct ParticleInfo
 	uint32_t m_max_num;
 	uint32_t m_emit_max_num;
 };
+struct MapInfo
+{
+	glm::vec4 m_cell_size;
+	glm::ivec4 m_cell_num;
+};
 
 struct ParticleData
 {
@@ -29,6 +34,7 @@ struct ParticleData
 	float m_life;
 	uint32_t _p;
 };
+
 
 struct Pipeline
 {
@@ -93,7 +99,7 @@ struct cParticlePipeline
 		std::vector<vk::Pipeline> m_graphics_pipeline;
 		std::array<vk::PipelineShaderStageCreateInfo, GRAPHICS_SHADER_NUM> m_graphics_shader_info;
 
-		ParticleInfo m_info;
+		ParticleInfo m_particle_info_cpu;
 
 		MazeGenerator m_maze;
 		Geometry m_maze_geometry;
@@ -104,7 +110,7 @@ struct cParticlePipeline
 		vk::DeviceMemory m_map_image_memory;
 		btr::AllocatedMemory m_map_info;
 
-		glm::vec3 cell_size;
+		MapInfo m_map_info_cpu;
 		void setup(app::Loader& loader);
 
 		void execute(vk::CommandBuffer cmd)
@@ -185,12 +191,12 @@ struct cParticlePipeline
 						p.m_vel = glm::vec4(glm::normalize(glm::vec3(std::rand() % 50-25, 0.f, std::rand() % 50-25 + 0.5f)), std::rand()%50 + 15.5f);
 						p.m_life = std::rand() % 50 + 240;
 
-						glm::ivec3 map_index = glm::ivec3(p.m_pos.xyz / cell_size);
+						glm::ivec3 map_index = glm::ivec3(p.m_pos.xyz / m_map_info_cpu.m_cell_size.xyz());
 						{
 							float particle_size = 0.f;
-							glm::vec3 cell_p = glm::mod(p.m_pos.xyz(), glm::vec3(cell_size));
-							map_index.x = (cell_p.x <= particle_size) ? map_index.x - 1 : (cell_p.x >= (cell_size.x - particle_size)) ? map_index.x + 1 : map_index.x;
-							map_index.z = (cell_p.z <= particle_size) ? map_index.z - 1 : (cell_p.z >= (cell_size.z - particle_size)) ? map_index.z + 1 : map_index.z;
+							glm::vec3 cell_p = glm::mod(p.m_pos.xyz(), m_map_info_cpu.m_cell_size.xyz());
+							map_index.x = (cell_p.x <= particle_size) ? map_index.x - 1 : (cell_p.x >= (m_map_info_cpu.m_cell_size.x - particle_size)) ? map_index.x + 1 : map_index.x;
+							map_index.z = (cell_p.z <= particle_size) ? map_index.z - 1 : (cell_p.z >= (m_map_info_cpu.m_cell_size.z - particle_size)) ? map_index.z + 1 : map_index.z;
 							p.m_map_index = glm::ivec4(map_index, 0);
 						}
 					}

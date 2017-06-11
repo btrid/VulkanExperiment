@@ -31,6 +31,8 @@ struct Boid
 		vk::DescriptorBufferInfo getDst()const { return m_buffer_info[m_index.getPrev()]; }
 		uint32_t getSrcOffset()const { return m_index.get() == 1 ? m_buffer_info[0].range : 0; }
 		uint32_t getDstOffset()const { return m_index.get() == 0 ? m_buffer_info[0].range : 0; }
+		uint32_t getSrcIndex()const { return m_index.get(); }
+		uint32_t getDstIndex()const { return m_index.getPrev(); }
 
 	};
 	struct BoidInfo
@@ -61,8 +63,9 @@ struct Boid
 		glm::ivec4 m_map_index;
 		uint m_brain_index;
 		uint m_soldier_type;
-		uint m_flag;
+		uint m_ll_next;
 		float m_life;
+		glm::vec4 m_astar_target;
 	};
 
 	enum : uint32_t
@@ -95,6 +98,7 @@ struct Boid
 	DoubleBuffer m_soldier_gpu;
 	btr::UpdateBuffer<std::array<SoldierData, 1024>> m_soldier_emit_gpu;
 	btr::AllocatedMemory m_soldier_draw_indiret_gpu;
+	DoubleBuffer m_soldier_LL_head_gpu;
 
 
 	std::unique_ptr<Descriptor> m_descriptor;

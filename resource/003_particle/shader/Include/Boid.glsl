@@ -29,8 +29,9 @@ struct SoldierData
 	ivec4 m_map_index;
 	uint m_brain_index;
 	uint m_type;
-	uint m_flag;
+	uint m_ll_next;
 	float m_life;
+	vec4 m_astar_target;
 };
 
 #ifdef SETPOINT_UPDATE
@@ -50,5 +51,8 @@ layout(std430, set=SETPOINT_UPDATE, binding=3) restrict buffer SoldierDataBuffer
 layout(std430, set=SETPOINT_UPDATE, binding=4) restrict buffer CounterBuffer {
 	DrawIndirectCommand b_draw_cmd[];
 };
-layout(set=SETPOINT_UPDATE, binding=5, r32ui) uniform readonly uimage3D t_astar;
+layout(std430, set=SETPOINT_UPDATE, binding=5) restrict coherent buffer SoldierLLHeadBuffer {
+	uint b_soldier_head[];
+};
+layout(set=SETPOINT_UPDATE, binding=6, r32ui) uniform readonly uimage3D t_astar;
 #endif

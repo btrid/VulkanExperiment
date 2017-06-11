@@ -4,7 +4,6 @@
 void Boid::setup(app::Loader& loader, cParticlePipeline& parent)
 {
 	m_parent = &parent;
-	cell_size = glm::vec3(10.f, 1.f, 10.f);
 	{
 		m_boid_info.m_brain_max = 256;
 		m_boid_info.m_soldier_max = 8192;
@@ -33,7 +32,7 @@ void Boid::setup(app::Loader& loader, cParticlePipeline& parent)
 			auto staging = loader.m_staging_memory.allocateMemory(desc);
 			auto* info = staging.getMappedPtr<SoldierInfo>();
 			info[0].m_turn_speed = glm::radians(45.f);
-			info[0].m_move_speed = 1.f;
+			info[0].m_move_speed = 4.f;
 
 			vk::BufferCopy copy;
 			copy.setSize(desc.size);
@@ -59,6 +58,24 @@ void Boid::setup(app::Loader& loader, cParticlePipeline& parent)
 			loader.m_cmd.fillBuffer(soldier_gpu.getBufferInfo().buffer, soldier_gpu.getBufferInfo().offset, soldier_gpu.getBufferInfo().range, 0);
 
 			m_soldier_gpu.setup(soldier_gpu);
+		}
+
+		{
+			btr::BufferMemory::Descriptor desc;
+			desc.size = sizeof(uint32_t) * m_parent->m_private->m_maze.getSizeX()* m_parent->m_private->m_maze.getSizeY()*2;
+			m_soldier_LL_head_gpu.setup(loader.m_storage_memory.allocateMemory(desc));
+			loader.m_cmd.fillBuffer(m_soldier_LL_head_gpu.getOrg().buffer, m_soldier_LL_head_gpu.getOrg().offset, m_soldier_LL_head_gpu.getOrg().range, 0xFFFFFFFF);
+
+			// transfer
+			vk::BufferMemoryBarrier ll_compute;
+			ll_compute.buffer = m_soldier_LL_head_gpu.getOrg().buffer;
+			ll_compute.offset = m_soldier_LL_head_gpu.getOrg().offset;
+			ll_compute.size = m_soldier_LL_head_gpu.getOrg().range;
+			ll_compute.dstAccessMask = vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite ;
+			std::vector<vk::BufferMemoryBarrier> to_compute = {
+				ll_compute,
+			};
+			loader.m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_compute, {});
 		}
 		{
 			btr::UpdateBufferDescriptor emit_desc;
@@ -164,7 +181,6 @@ void Boid::setup(app::Loader& loader, cParticlePipeline& parent)
 			}
 
 			{
-
 				vk::ImageMemoryBarrier to_shader_read;
 				to_shader_read.dstQueueFamilyIndex = loader.m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
 				to_shader_read.image = image;
@@ -217,8 +233,13 @@ void Boid::setup(app::Loader& loader, cParticlePipeline& parent)
 				vk::DescriptorSetLayoutBinding()
 				.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex)
 				.setDescriptorCount(1)
-				.setDescriptorType(vk::DescriptorType::eStorageImage)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 				.setBinding(5),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex)
+				.setDescriptorCount(1)
+				.setDescriptorType(vk::DescriptorType::eStorageImage)
+				.setBinding(6),
 			};
 
 			bindings[DESCRIPTOR_EMIT] =
@@ -242,6 +263,7 @@ void Boid::setup(app::Loader& loader, cParticlePipeline& parent)
 					m_brain_gpu.getOrg(),
 					m_soldier_gpu.getOrg(),
 					m_soldier_draw_indiret_gpu.getBufferInfo(),
+					m_soldier_LL_head_gpu.getOrg(),
 				};
 				std::vector<vk::DescriptorImageInfo> images = {
 					vk::DescriptorImageInfo()
@@ -266,7 +288,7 @@ void Boid::setup(app::Loader& loader, cParticlePipeline& parent)
 					.setDescriptorType(vk::DescriptorType::eStorageImage)
 					.setDescriptorCount(images.size())
 					.setPImageInfo(images.data())
-					.setDstBinding(5)
+					.setDstBinding(6)
 					.setDstSet(m_descriptor->m_descriptor_set[DESCRIPTOR_UPDATE]),
 				};
 				loader.m_device->updateDescriptorSets(write_desc, {});
@@ -330,7 +352,7 @@ void Boid::setup(app::Loader& loader, cParticlePipeline& parent)
 				std::vector<vk::PushConstantRange> push_constants = {
 					vk::PushConstantRange()
 					.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-					.setSize(12),
+					.setSize(16),
 				};
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
 				pipeline_layout_info.setSetLayoutCount(layouts.size());
@@ -469,24 +491,40 @@ void Boid::setup(app::Loader& loader, cParticlePipeline& parent)
 
 void Boid::execute(vk::CommandBuffer cmd)
 {
+	m_brain_gpu.swap();
+	m_soldier_gpu.swap();
+	m_soldier_LL_head_gpu.swap();
 	{
 		// transfer
+		vk::BufferMemoryBarrier ll_to_transfer;
+		ll_to_transfer.buffer = m_soldier_LL_head_gpu.getOrg().buffer;
+		ll_to_transfer.offset = m_soldier_LL_head_gpu.getOrg().offset;
+		ll_to_transfer.size = m_soldier_LL_head_gpu.getOrg().range;
+		ll_to_transfer.srcAccessMask = vk::AccessFlagBits::eShaderWrite | vk::AccessFlagBits::eShaderRead;
+		ll_to_transfer.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
 		std::vector<vk::BufferMemoryBarrier> to_transfer = {
+			ll_to_transfer,
 			m_soldier_draw_indiret_gpu.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
 
 		cmd.updateBuffer<vk::DrawIndirectCommand>(m_soldier_draw_indiret_gpu.getBufferInfo().buffer, m_soldier_draw_indiret_gpu.getBufferInfo().offset, vk::DrawIndirectCommand(0, 1, 0, 0));
+		cmd.fillBuffer(m_soldier_LL_head_gpu.getDst().buffer, m_soldier_LL_head_gpu.getDst().offset, m_soldier_LL_head_gpu.getDst().range, 0xFFFFFFFF);
 
+		vk::BufferMemoryBarrier ll_to_read = ll_to_transfer;
+		ll_to_read.buffer = m_soldier_LL_head_gpu.getOrg().buffer;
+		ll_to_read.offset = m_soldier_LL_head_gpu.getOrg().offset;
+		ll_to_read.size = m_soldier_LL_head_gpu.getOrg().range;
+		ll_to_read.srcAccessMask = ll_to_transfer.dstAccessMask;
+		ll_to_read.dstAccessMask = vk::AccessFlagBits::eShaderWrite | vk::AccessFlagBits::eShaderRead;
 		std::vector<vk::BufferMemoryBarrier> to_update_barrier = {
+			ll_to_read,
 			m_soldier_draw_indiret_gpu.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
 		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_update_barrier }, {});
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_update_barrier, {});
 
 	}
 
-	m_brain_gpu.swap();
-	m_soldier_gpu.swap();
 
 	{
 		auto src_info = m_soldier_gpu.getSrc();
@@ -497,19 +535,20 @@ void Boid::execute(vk::CommandBuffer cmd)
 			float m_deltatime;
 			uint m_src_offset;
 			uint m_dst_offset;
+			uint m_double_buffer_index;
 		};
 		UpdateConstantBlock block;
 		block.m_deltatime = sGlobal::Order().getDeltaTime();
 		block.m_src_offset = m_soldier_gpu.getSrcOffset() / sizeof(SoldierData);
 		block.m_dst_offset = m_soldier_gpu.getDstOffset() / sizeof(SoldierData);
+		block.m_double_buffer_index = m_soldier_LL_head_gpu.getDstIndex();
 		cmd.pushConstants<UpdateConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], vk::ShaderStageFlagBits::eCompute, 0, block);
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_compute_pipeline[PIPELINE_LAYOUT_UPDATE]);
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], 0, { m_descriptor->m_descriptor_set[DESCRIPTOR_UPDATE] }, {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], 1, m_parent->m_private->m_descriptor_set[cParticlePipeline::Private::DESCRIPTOR_MAP_INFO], {});
-		auto groups = app::calcDipatchGroups(glm::uvec3(8192 / 2, 1, 1), glm::uvec3(1024, 1, 1));
+		auto groups = app::calcDipatchGroups(glm::uvec3(m_boid_info.m_soldier_max / 2, 1, 1), glm::uvec3(1024, 1, 1));
 		cmd.dispatch(groups.x, groups.y, groups.z);
-
 	}
 
 
@@ -519,12 +558,12 @@ void Boid::execute(vk::CommandBuffer cmd)
 		if (count == 1)
 		{
 			auto soldier_barrier = vk::BufferMemoryBarrier();
-// 			soldier_barrier.buffer = m_soldier_gpu.getDst().buffer;
-// 			soldier_barrier.size = m_soldier_gpu.getDst().range;
-// 			soldier_barrier.offset = m_soldier_gpu.getDst().offset;
-			soldier_barrier.buffer = m_soldier_gpu.getOrg().buffer;
-			soldier_barrier.size = m_soldier_gpu.getOrg().range;
-			soldier_barrier.offset = m_soldier_gpu.getOrg().offset;
+ 			soldier_barrier.buffer = m_soldier_gpu.getDst().buffer;
+ 			soldier_barrier.size = m_soldier_gpu.getDst().range;
+ 			soldier_barrier.offset = m_soldier_gpu.getDst().offset;
+//			soldier_barrier.buffer = m_soldier_gpu.getOrg().buffer;
+//			soldier_barrier.size = m_soldier_gpu.getOrg().range;
+//			soldier_barrier.offset = m_soldier_gpu.getOrg().offset;
 			soldier_barrier.srcAccessMask = vk::AccessFlagBits::eShaderWrite;
 			soldier_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead| vk::AccessFlagBits::eShaderWrite;
 
@@ -536,20 +575,22 @@ void Boid::execute(vk::CommandBuffer cmd)
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_emit_barrier, {});
 
 			// emit
-			std::array<SoldierData, 1> data;
+			std::array<SoldierData, 300> data;
 			for (auto& p : data)
 			{
-				p.m_pos = glm::vec4(58.f, 0.f, 88.f, 1.f);
+				p.m_pos = glm::vec4(56.f + std::rand() % 50 / 20.f, 0.f, 86.f + std::rand() % 50 / 20.f, 1.f);
 				p.m_vel = glm::vec4(glm::normalize(glm::vec3(std::rand() % 50 - 25, 0.f, std::rand() % 50 - 25 + 0.5f)), 2.5f);
 				p.m_life = 99.f;
 				p.m_soldier_type = 0;
 				p.m_brain_index = 0;
-				glm::ivec3 map_index = glm::ivec3(p.m_pos.xyz / cell_size);
+				p.m_ll_next = 0xFFFFFFFF;
+				p.m_astar_target = p.m_pos;
+				glm::ivec3 map_index = glm::ivec3(p.m_pos.xyz / m_parent->m_private->m_map_info_cpu.m_cell_size.xyz());
 				{
 					float particle_size = p.m_pos.w;
-					glm::vec3 cell_p = glm::mod(p.m_pos.xyz(), glm::vec3(cell_size));
-					map_index.x = (cell_p.x <= particle_size) ? map_index.x - 1 : (cell_p.x >= (cell_size.x - particle_size)) ? map_index.x + 1 : map_index.x;
-					map_index.z = (cell_p.z <= particle_size) ? map_index.z - 1 : (cell_p.z >= (cell_size.z - particle_size)) ? map_index.z + 1 : map_index.z;
+					glm::vec3 cell_p = glm::mod(p.m_pos.xyz(), glm::vec3(m_parent->m_private->m_map_info_cpu.m_cell_size));
+					map_index.x = (cell_p.x <= particle_size) ? map_index.x - 1 : (cell_p.x >= (m_parent->m_private->m_map_info_cpu.m_cell_size.x - particle_size)) ? map_index.x + 1 : map_index.x;
+					map_index.z = (cell_p.z <= particle_size) ? map_index.z - 1 : (cell_p.z >= (m_parent->m_private->m_map_info_cpu.m_cell_size.z - particle_size)) ? map_index.z + 1 : map_index.z;
 					p.m_map_index = glm::ivec4(map_index, 0);
 				}
 			}

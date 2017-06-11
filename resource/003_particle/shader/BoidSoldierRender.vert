@@ -38,6 +38,6 @@ void main()
 	SoldierData s = b_soldier[gl_VertexIndex + constant.m_offset];
 	vec4 pos = vec4(s.m_pos.xyz + vec3(0., 0.1, 0.), 1.0);
 	gl_Position = uProjection * uView * pos;
-	gl_PointSize = 3000./ gl_Position.w;
+	gl_PointSize = 300./ gl_Position.w;
 	VSOut.life = 0.2;
 }
