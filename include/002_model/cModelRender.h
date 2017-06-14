@@ -1,5 +1,5 @@
 #pragma once
-#include <btrlib/cModel.h>
+#include <btrlib/cModelInstancing.h>
 #include <btrlib/Light.h>
 #include <btrlib/BufferMemory.h>
 #include <002_model/cModelPipeline.h>
@@ -7,15 +7,15 @@
 struct cModelRenderer;
 class ModelRender
 {
-	std::shared_ptr<cModel::Resource> m_resource;
-	std::vector<cModel*> m_model;
+	std::shared_ptr<cModelInstancing::Resource> m_resource;
+	std::vector<cModelInstancing*> m_model;
 
 	vk::DescriptorSet m_draw_descriptor_set_per_model;
 	std::vector<vk::DescriptorSet> m_draw_descriptor_set_per_mesh;
 	std::vector<vk::DescriptorSet> m_compute_descriptor_set;
 public:
-	void setup(std::shared_ptr<cModel::Resource> resource) { m_resource = resource; }
-	void addModel(cModel* model) { m_model.push_back(model); }
+	void setup(std::shared_ptr<cModelInstancing::Resource> resource) { m_resource = resource; }
+	void addModel(cModelInstancing* model) { m_model.push_back(model); }
 
 	void setup(cModelRenderer& renderer);
 	void execute(cModelRenderer& renderer, vk::CommandBuffer& cmd);

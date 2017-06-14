@@ -3,7 +3,7 @@
 #include <filesystem>
 #include <algorithm>
 
-#include <btrlib/cModel.h>
+#include <btrlib/cModelInstancing.h>
 #include <btrlib/sGlobal.h>
 #include <btrlib/sDebug.h>
 #include <btrlib/cStopWatch.h>
@@ -239,7 +239,7 @@ MotionTexture create(ModelLoader* loader, const aiAnimation* anim, const RootNod
 
 
 ResourceManager<ResourceTexture::Resource> ResourceTexture::s_manager;
-ResourceManager<cModel::Resource> cModel::s_manager;
+ResourceManager<cModelInstancing::Resource> cModelInstancing::s_manager;
 void ResourceTexture::load(ModelLoader* loader, cThreadPool& thread_pool, const std::string& filename)
 {
 	if (s_manager.manage(m_private, filename)) {
@@ -350,10 +350,10 @@ void ResourceTexture::load(ModelLoader* loader, cThreadPool& thread_pool, const 
 }
 
 
-std::vector<cModel::Material> loadMaterial(const aiScene* scene, const std::string& filename, ModelLoader* loader)
+std::vector<cModelInstancing::Material> loadMaterial(const aiScene* scene, const std::string& filename, ModelLoader* loader)
 {
 	std::string path = std::tr2::sys::path(filename).remove_filename().string();
-	std::vector<cModel::Material> material(scene->mNumMaterials);
+	std::vector<cModelInstancing::Material> material(scene->mNumMaterials);
 	for (size_t i = 0; i < scene->mNumMaterials; i++)
 	{
 		auto* aiMat = scene->mMaterials[i];
@@ -420,7 +420,7 @@ RootNode loadNode(const aiScene* scene)
 	return root;
 }
 
-void loadNodeBufferRecurcive(aiNode* ainode, std::vector<cModel::NodeInfo>& nodeBuffer, int parentIndex)
+void loadNodeBufferRecurcive(aiNode* ainode, std::vector<cModelInstancing::NodeInfo>& nodeBuffer, int parentIndex)
 {
 	nodeBuffer.emplace_back();
 	auto& node = nodeBuffer.back();
@@ -432,9 +432,9 @@ void loadNodeBufferRecurcive(aiNode* ainode, std::vector<cModel::NodeInfo>& node
 	}
 }
 
-std::vector<cModel::NodeInfo> loadNodeInfo(aiNode* ainode)
+std::vector<cModelInstancing::NodeInfo> loadNodeInfo(aiNode* ainode)
 {
-	std::vector<cModel::NodeInfo> nodeBuffer;
+	std::vector<cModelInstancing::NodeInfo> nodeBuffer;
 	nodeBuffer.reserve(countAiNode(ainode));
 	nodeBuffer.emplace_back();
 	auto& node = nodeBuffer.back();
@@ -455,10 +455,10 @@ void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& r
 	}
 
 	btr::BufferMemory::Descriptor staging_desc;
-	staging_desc.size = sizeof(cModel::AnimationInfo) * scene->mNumAnimations;
+	staging_desc.size = sizeof(cModelInstancing::AnimationInfo) * scene->mNumAnimations;
 	staging_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 	auto staging = loader->m_staging_memory.allocateMemory(staging_desc);
-	auto* staging_ptr = staging.getMappedPtr<cModel::AnimationInfo>();
+	auto* staging_ptr = staging.getMappedPtr<cModelInstancing::AnimationInfo>();
 	for (size_t i = 0; i < scene->mNumAnimations; i++)
 	{
 		aiAnimation* anim = scene->mAnimations[i]; 
@@ -466,7 +466,7 @@ void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& r
 			anim_buffer.m_motion_texture = create(loader, anim, root);
 		}
 
-		cModel::AnimationInfo& animation = staging_ptr[i];
+		cModelInstancing::AnimationInfo& animation = staging_ptr[i];
 		animation.maxTime_ = (float)anim->mDuration;
 		animation.ticksPerSecond_ = (float)anim->mTicksPerSecond;
 
@@ -477,7 +477,7 @@ void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& r
 	{
 		auto& buffer = anim_buffer.mMotionBuffer[cAnimation::ANIMATION_INFO];
 		btr::BufferMemory::Descriptor arg;
-		arg.size = sizeof(cModel::AnimationInfo) * scene->mNumAnimations;
+		arg.size = sizeof(cModelInstancing::AnimationInfo) * scene->mNumAnimations;
 //		arg.attribute = btr::BufferMemory::AttributeFlagBits::MEMORY_CONSTANT;
 		buffer = loader->m_storage_uniform_memory.allocateMemory(arg);
 
@@ -502,14 +502,14 @@ void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& r
 }
 
 
-cModel::cModel()
+cModelInstancing::cModelInstancing()
 {
 }
-cModel::~cModel()
+cModelInstancing::~cModelInstancing()
 {}
 
 
-void cModel::load(const std::string& filename)
+void cModelInstancing::load(const std::string& filename)
 {
 
 	m_instance = std::make_unique<Instance>();
@@ -527,7 +527,7 @@ void cModel::load(const std::string& filename)
 		| aiProcess_SortByPType
 //		| aiProcess_OptimizeMeshes
 		| aiProcess_Triangulate
-//		| aiProcess_MakeLeftHanded
+		| aiProcess_MakeLeftHanded
 		;
 	cStopWatch timer;
 	Assimp::Importer importer;
@@ -1005,11 +1005,11 @@ void cModel::load(const std::string& filename)
 }
 
 
-std::string cModel::getFilename() const
+std::string cModelInstancing::getFilename() const
 {
 	return m_resource ? m_resource->m_filename : "";
 }
-const cMeshResource* cModel::getMesh() const
+const cMeshResource* cModelInstancing::getMesh() const
 {
 	return m_resource ? &m_resource->mMesh : nullptr;
 }

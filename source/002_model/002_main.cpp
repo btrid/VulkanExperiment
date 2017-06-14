@@ -236,13 +236,13 @@ int main()
 	queue.submit({ setup_submit_info }, vk::Fence());
 	queue.waitIdle();
 
-	auto task = std::make_shared<std::promise<std::unique_ptr<cModel>>>();
+	auto task = std::make_shared<std::promise<std::unique_ptr<cModelInstancing>>>();
 	auto modelFuture = task->get_future();
 	{
 		cThreadJob job;
 		auto load = [task]()
 		{
-			auto model = std::make_unique<cModel>();
+			auto model = std::make_unique<cModelInstancing>();
 			model->load(btr::getResourcePath() + "tiny.x");
 			task->set_value(std::move(model));
 		};
@@ -271,11 +271,11 @@ int main()
 	renderer.setup(render_pass);
 	renderer.addModel(&render);
 
-	std::vector<std::unique_ptr<cModel>> models;
+	std::vector<std::unique_ptr<cModelInstancing>> models;
 	models.reserve(1000);
 	for (int i = 0; i < 1000; i++)
 	{
-		auto m = std::make_unique<cModel>();
+		auto m = std::make_unique<cModelInstancing>();
 		m->load(btr::getResourcePath() + "tiny.x");
 		render.addModel(m.get());
 		m->getInstance()->m_world = glm::translate(glm::ballRand(2999.f));

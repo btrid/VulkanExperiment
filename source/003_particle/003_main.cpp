@@ -37,7 +37,6 @@ int main()
 	btr::setResourcePath("..\\..\\resource\\003_particle\\");
 
 	app::App app;
-
 	auto* camera = cCamera::sCamera::Order().create();
 	camera->m_position = glm::vec3(50.f, 100.f, -50.f);
 	camera->m_target = glm::vec3(50.f, 20.f, 101.f);
@@ -93,6 +92,7 @@ int main()
 	executer->m_staging_memory	= loader->m_staging_memory;
 	cThreadPool& pool = sGlobal::Order().getThreadPool();
 	executer->m_thread_pool = &pool;
+	executer->m_window = &app.m_window;
 
 	cParticlePipeline pipeline;
 	{

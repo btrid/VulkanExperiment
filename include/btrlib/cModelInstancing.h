@@ -36,13 +36,6 @@ struct cMeshResource
 
 };
 
-struct Descripter
-{
-	vk::DescriptorSetLayout m_descriptor_set_layout;
-	std::vector<vk::DescriptorSet> m_descriptor_set;
-};
-
-
 class Node
 {
 public:
@@ -195,7 +188,7 @@ class sModel : Singleton<sModel>
 
 	btr::BufferMemory m_vertex_index;
 };
-class cModel
+class cModelInstancing
 {
 protected:
 
@@ -345,7 +338,7 @@ public:
 public:
 	struct Resource
 	{
-		friend cModel;
+		friend cModelInstancing;
 	public:
 
 		enum class ModelStorageBuffer : s32
@@ -419,8 +412,8 @@ public:
 	static ResourceManager<Resource> s_manager;
 
 public:
-	cModel();
-	~cModel();
+	cModelInstancing();
+	~cModelInstancing();
 
 	void load(const std::string& filename);
 

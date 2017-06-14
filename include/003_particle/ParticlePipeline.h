@@ -45,6 +45,12 @@ struct Pipeline
 
 struct Player
 {
+	glm::vec3 m_pos; //!< ˆÊ’u
+	glm::vec3 m_dir; //!< Œü‚«
+	glm::vec3 m_inertia;	//!< ˆÚ“®•ûŒü
+	uint32_t m_state;		//!< ó‘Ô
+
+
 };
 struct cParticlePipeline
 {
@@ -114,6 +120,8 @@ struct cParticlePipeline
 		btr::AllocatedMemory m_map_info;
 
 		MapInfo m_map_info_cpu;
+
+		Player m_player;
 		void setup(app::Loader& loader);
 
 		void execute(app::Executer& executer)
@@ -243,6 +251,31 @@ struct cParticlePipeline
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, {}, {}, { to_draw }, {});
 			}
 
+			{
+				const cInput& input = executer.m_window->getInput();
+				auto resolution = glm::ivec2(executer.m_window->getClientSize());
+				auto mouse_n1_to_1 = (glm::vec2(input.m_mouse.xy) / glm::vec2(resolution) -0.5f) * 2.f;
+				if(glm::dot(mouse_n1_to_1, mouse_n1_to_1) >= 0.0001f){
+					m_player.m_dir = glm::normalize(glm::vec3(mouse_n1_to_1.x, 0.f, mouse_n1_to_1.y));
+				}
+
+				m_player.m_inertia *= pow(1.f + sGlobal::Order().getDeltaTime(), 0.95f);
+//				glm::bvec3 is_zero = glm::lessThan(m_player.m_inertia, glm::vec3(0.001f));
+				m_player.m_inertia.x = glm::abs(m_player.m_inertia.x) < 0.001f ? 0.f : m_player.m_inertia.x;
+//				m_player.m_inertia.y = glm::abs(m_player.m_inertia.y) < 0.001f ? 0.f : m_player.m_inertia.y;
+				m_player.m_inertia.z = glm::abs(m_player.m_inertia.z) < 0.001f ? 0.f : m_player.m_inertia.z;
+
+				bool is_left = input.m_keyboard.isHold('a');
+				bool is_right = input.m_keyboard.isHold('w');
+				bool is_front = input.m_keyboard.isHold('d');
+				bool is_back = input.m_keyboard.isHold('s');
+				glm::vec3 inertia = glm::vec3(0.f);
+				inertia.z += is_front * 1.f;
+				inertia.z -= is_back * 1.f;
+				inertia.x += is_right * 1.f;
+				inertia.x -= is_left * 1.f;
+				m_player.m_inertia += inertia;
+			}
 		}
 
 		void draw(vk::CommandBuffer cmd)

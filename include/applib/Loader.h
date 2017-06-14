@@ -3,6 +3,7 @@
 #include <btrlib/Define.h>
 #include <btrlib/GPU.h>
 #include <btrlib/BufferMemory.h>
+#include <btrlib/cWindow.h>
 
 namespace app
 {
@@ -29,6 +30,7 @@ struct Executer
 	btr::BufferMemory m_staging_memory;
 
 	cThreadPool* m_thread_pool;
+	cWindow* m_window;
 };
 
 }

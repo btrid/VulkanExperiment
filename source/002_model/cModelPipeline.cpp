@@ -3,7 +3,7 @@
 #include <002_model/cModelRender.h>
 #include <btrlib/Define.h>
 #include <btrlib/Shape.h>
-#include <btrlib/cModel.h>
+#include <btrlib/cModelInstancing.h>
 void cModelDrawPipeline::setup(cModelRenderer& renderer)
 {
 	const cGPU& gpu = sThreadLocal::Order().m_gpu;
@@ -194,7 +194,7 @@ void cModelDrawPipeline::setup(cModelRenderer& renderer)
 				vk::VertexInputBindingDescription()
 				.setBinding(0)
 				.setInputRate(vk::VertexInputRate::eVertex)
-				.setStride(sizeof(cModel::Vertex))
+				.setStride(sizeof(cModelInstancing::Vertex))
 			};
 
 			std::vector<vk::VertexInputAttributeDescription> vertex_input_attribute =
