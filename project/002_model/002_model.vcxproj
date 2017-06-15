@@ -16,7 +16,7 @@
     <ProjectGuid>{F976A1FD-91A8-4AE6-9214-B70826CD1420}</ProjectGuid>
     <RootNamespace>My002_model</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
-    <ProjectName>002_model</ProjectName>
+    <ProjectName>002_model_instancing</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
