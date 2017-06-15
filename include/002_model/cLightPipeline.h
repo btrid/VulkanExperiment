@@ -8,25 +8,10 @@
 #include <btrlib/cCamera.h>
 #include <btrlib/Shape.h>
 #include <btrlib/BufferMemory.h>
+#include <btrlib/Light.h>
 
 struct cModelRenderer;
 
-struct StagingBuffer
-{
-	btr::AllocatedMemory m_device_memory;
-	btr::AllocatedMemory m_staging_memory;
-	void setup(btr::BufferMemory staging_memory, vk::DeviceSize size)
-	{
-		m_staging_memory = staging_memory.allocateMemory(size);
-	}
-
-	template<typename T>
-	T* getPtr(vk::DeviceSize offset) { return reinterpret_cast<T*>(m_staging_memory.getMappedPtr()) + offset; }
-	vk::DeviceSize getOffset()const { return m_staging_memory.getOffset(); }
-	vk::DeviceSize getSize()const { return m_staging_memory.getSize(); }
-	vk::Buffer getBuffer()const { return m_staging_memory.getBuffer(); }
-	vk::DeviceMemory getMemory()const { return m_staging_memory.getDeviceMemory(); }
-};
 struct LightParam {
 	glm::vec4 m_position;
 	glm::vec4 m_emission;
@@ -42,31 +27,6 @@ struct FrustomPoint
 	glm::vec4 rtf;
 	glm::vec4 lbf;
 	glm::vec4 rbf;
-
-// 		glm::vec2 tile_num(32, 32);
-// 		for (int y = 0; y < 32; y++)
-// 		{
-// 			for (int x = 0; x < 32; x++)
-// 			{
-// 				glm::vec3 index(x, y, 0);
-// 				glm::vec3 n_per_size = glm::vec3(glm::vec2(1.) / tile_num, 0.) * (rbn_ - ltn_);
-// 				glm::vec3 f_per_size = glm::vec3(glm::vec2(1.) / tile_num, 0.) * (rbf_ - ltf_);
-// 				glm::vec3 ltn = ltn_ + index*n_per_size;
-// 				glm::vec3 lbn = ltn_ + (index + glm::vec3(0, 1, 0))*n_per_size;
-// 				glm::vec3 rtn = ltn_ + (index + glm::vec3(1, 0, 0))*n_per_size;
-// 				glm::vec3 rbn = ltn_ + (index + glm::vec3(1, 1, 0))*n_per_size;
-// 				glm::vec3 ltf = ltf_ + index*f_per_size;
-// 				glm::vec3 lbf = ltf_ + (index + glm::vec3(0, 1, 0))*f_per_size;
-// 				glm::vec3 rtf = ltf_ + (index + glm::vec3(1, 0, 0))*f_per_size;
-// 				glm::vec3 rbf = ltf_ + (index + glm::vec3(1, 1, 0))*f_per_size;
-// 				printf("[x, y]=[%2d, %2d]\n", x, y);
-// 				printf("ltn = %7.1f, %7.1f, %7.1f\n", ltn.x, ltn.y, ltn.z);
-// 				printf("ltf = %7.1f, %7.1f, %7.1f\n", ltf.x, ltf.y, ltf.z);
-// 				printf("rbn = %7.1f, %7.1f, %7.1f\n", rbn.x, rbn.y, rbn.z);
-// 				printf("rbf = %7.1f, %7.1f, %7.1f\n", rbf.x, rbf.y, rbf.z);
-// 			}
-// 		}
-// 
 
 };
 
@@ -142,7 +102,7 @@ struct cFowardPlusPipeline
 		btr::AllocatedMemory m_lightLL;
 		btr::AllocatedMemory m_light_counter;
 
-		StagingBuffer m_light_cpu;
+		btr::StagingBuffer m_light_cpu;
 
 		uint32_t m_light_num;
 
@@ -184,7 +144,7 @@ struct cFowardPlusPipeline
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, { to_copy_barrier }, {});
 
 			uint32_t zero = 0;
-			cmd.updateBuffer<uint32_t>(m_private->m_light_counter.getBuffer(), m_private->m_light_counter.getOffset(), { zero });
+			cmd.updateBuffer<uint32_t>(m_private->m_light_counter.getBufferInfo().buffer, m_private->m_light_counter.getBufferInfo().offset, { zero });
 
 			auto to_shader_read_barrier = m_private->m_light_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, { to_shader_read_barrier }, {});
@@ -253,14 +213,14 @@ struct cFowardPlusPipeline
 
 			vk::BufferCopy copy_info;
 			copy_info.size = index * sizeof(LightParam);
-			copy_info.srcOffset = m_private->m_light_cpu.getOffset() + frame_offset * sizeof(LightParam);
-			copy_info.dstOffset = m_private->m_light.getOffset();
+			copy_info.srcOffset = m_private->m_light_cpu.getBufferInfo().offset + frame_offset * sizeof(LightParam);
+			copy_info.dstOffset = m_private->m_light.getBufferInfo().offset;
 
 			auto to_copy_barrier = m_private->m_light.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
 			to_copy_barrier.setSize(copy_info.size);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, { to_copy_barrier }, {});
 
-			cmd.copyBuffer(m_private->m_light_cpu.getBuffer(), m_private->m_light.getBuffer(), copy_info);
+			cmd.copyBuffer(m_private->m_light_cpu.getBufferInfo().buffer, m_private->m_light.getBufferInfo().buffer, copy_info);
 
 			auto to_shader_read_barrier = m_private->m_light.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
 			to_shader_read_barrier.setSize(copy_info.size);

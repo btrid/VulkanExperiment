@@ -22,9 +22,7 @@ struct StagingBuffer
 
 	template<typename T>
 	T* getPtr(vk::DeviceSize offset) { return reinterpret_cast<T*>(m_staging_memory.getMappedPtr()) + offset; }
-	vk::DeviceSize getOffset()const { return m_staging_memory.getOffset(); }
-	vk::DeviceSize getSize()const { return m_staging_memory.getSize(); }
-	vk::Buffer getBuffer()const { return m_staging_memory.getBuffer(); }
+	vk::DescriptorBufferInfo getBufferInfo()const { return m_staging_memory.getBufferInfo(); }
 	vk::DeviceMemory getMemory()const { return m_staging_memory.getDeviceMemory(); }
 };
 struct LightParam {
@@ -109,7 +107,7 @@ struct Light
 			AllocatedMemory m_light_counter;
 
 			btr::BufferMemory m_staging_memory;
-			StagingBuffer m_light_cpu;
+			btr::StagingBuffer m_light_cpu;
 
 			uint32_t m_light_num;
 
@@ -163,15 +161,15 @@ struct Light
 					m_light_counter = storage_memory.allocateMemory(sizeof(uint32_t));
 					m_frustom = storage_memory.allocateMemory(tile_num.x * tile_num.y * sizeof(Frustom2));
 
-					vk::DeviceSize alloc_size = m_light.getSize()*sGlobal::FRAME_MAX;
-					alloc_size += m_lightLL_head.getSize();
-					alloc_size += m_frustom.getSize() * sGlobal::FRAME_MAX;
+					vk::DeviceSize alloc_size = m_light.getBufferInfo().range*sGlobal::FRAME_MAX;
+					alloc_size += m_lightLL_head.getBufferInfo().range;
+					alloc_size += m_frustom.getBufferInfo().range * sGlobal::FRAME_MAX;
 					m_staging_memory.setup(m_device, vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible /*| vk::MemoryPropertyFlagBits::eHostCoherent*/, alloc_size);
 
 
 				}
 
-				m_light_cpu.setup(m_staging_memory, m_light.getSize()*sGlobal::FRAME_MAX);
+				m_light_cpu.setup(m_staging_memory, m_light.getBufferInfo().range*sGlobal::FRAME_MAX);
 				m_light_info_gpu.setup(m_uniform_memory, m_staging_memory);
 				m_frustom_point.setup(m_uniform_memory, m_staging_memory);
 
@@ -384,7 +382,7 @@ struct Light
 		void execute(vk::CommandBuffer cmd)
 		{
 			uint32_t zero = 0;
-			cmd.updateBuffer<uint32_t>(m_private->m_light_counter.getBuffer(), m_private->m_light_counter.getOffset(), { zero });
+			cmd.updateBuffer<uint32_t>(m_private->m_light_counter.getBufferInfo().buffer, m_private->m_light_counter.getBufferInfo().offset, { zero });
 			{
 				auto* camera = cCamera::sCamera::Order().getCameraList()[0];
 				Frustom frustom;
@@ -441,7 +439,7 @@ struct Light
 			{
 				// ライトのデータをdeviceにコピー
 				size_t frame_offset = sGlobal::Order().getCurrentFrame() * m_private->m_light_num;
-//				auto* p = reinterpret_cast<LightParam*>(m_private->m_device->mapMemory(m_private->m_light_cpu.getMemory(), m_private->m_lightLL_head_cpu.getOffset(), m_private->m_lightLL_head_cpu.getSize()));
+//				auto* p = reinterpret_cast<LightParam*>(m_private->m_device->mapMemory(m_private->m_light_cpu.getMemory(), m_private->m_lightLL_head_cpu.getBufferInfo().offset, m_private->m_lightLL_head_cpu.getBufferInfo().range));
 				auto* p = m_private->m_light_cpu.getPtr<LightParam>(0);
 				uint32_t index = 0;
 				for (auto& it : m_private->m_light_list)
@@ -476,27 +474,27 @@ struct Light
 
 				vk::BufferCopy copy_info;
 				copy_info.size = index * sizeof(LightParam);
-				copy_info.srcOffset = m_private->m_light_cpu.getOffset() + frame_offset * sizeof(LightParam);
-				copy_info.dstOffset = m_private->m_light.getOffset();
+				copy_info.srcOffset = m_private->m_light_cpu.getBufferInfo().range + frame_offset * sizeof(LightParam);
+				copy_info.dstOffset = m_private->m_light.getBufferInfo().offset;
 
 				vk::BufferMemoryBarrier to_copy_barrier;
 				to_copy_barrier.dstQueueFamilyIndex = m_private->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
-				to_copy_barrier.buffer = m_private->m_light.getBuffer();
-				to_copy_barrier.setOffset(m_private->m_light.getOffset());
+				to_copy_barrier.buffer = m_private->m_light.getBufferInfo().buffer;
+				to_copy_barrier.setOffset(m_private->m_light.getBufferInfo().offset);
 				to_copy_barrier.setSize(copy_info.size);
 				to_copy_barrier.srcAccessMask = vk::AccessFlagBits::eShaderRead;
 				to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
 
 				vk::BufferMemoryBarrier to_shader_read_barrier;
 				to_shader_read_barrier.dstQueueFamilyIndex = m_private->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
-				to_shader_read_barrier.buffer = m_private->m_light.getBuffer();
-				to_shader_read_barrier.setOffset(m_private->m_light.getOffset());
+				to_shader_read_barrier.buffer = m_private->m_light.getBufferInfo().buffer;
+				to_shader_read_barrier.setOffset(m_private->m_light.getBufferInfo().offset);
 				to_shader_read_barrier.setSize(copy_info.size);
 				to_shader_read_barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
 				to_shader_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, { to_copy_barrier }, {});
-				cmd.copyBuffer(m_private->m_light_cpu.getBuffer(), m_private->m_light.getBuffer(), copy_info);
+				cmd.copyBuffer(m_private->m_light_cpu.getBufferInfo().buffer, m_private->m_light.getBufferInfo().buffer, copy_info);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, { to_shader_read_barrier }, {});
 			}
 

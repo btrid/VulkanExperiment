@@ -291,22 +291,22 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 			auto& buffer = m_resource->getBuffer(cModelInstancing::Resource::ModelStorageBuffer::WORLD);
 
 			vk::BufferMemoryBarrier to_copy_barrier;
-			to_copy_barrier.setBuffer(buffer.getBuffer());
-			to_copy_barrier.setOffset(buffer.getOffset());
-			to_copy_barrier.setSize(buffer.getSize());
+			to_copy_barrier.setBuffer(buffer.getBufferInfo().buffer);
+			to_copy_barrier.setOffset(buffer.getBufferInfo().offset);
+			to_copy_barrier.setSize(buffer.getBufferInfo().range);
 			to_copy_barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
 			to_copy_barrier.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, { to_copy_barrier }, {});
 
 			vk::BufferCopy copy_info;
 			copy_info.setSize(m_model.size() * sizeof(glm::mat4));
-			copy_info.setSrcOffset(staging.getOffset() + sizeof(glm::mat4) * m_resource->m_model_info.mInstanceMaxNum* sGlobal::Order().getCurrentFrame());
-			copy_info.setDstOffset(buffer.getOffset());
-			cmd.copyBuffer(staging.getBuffer(), buffer.getBuffer(), copy_info);
+			copy_info.setSrcOffset(staging.getBufferInfo().offset + sizeof(glm::mat4) * m_resource->m_model_info.mInstanceMaxNum* sGlobal::Order().getCurrentFrame());
+			copy_info.setDstOffset(buffer.getBufferInfo().offset);
+			cmd.copyBuffer(staging.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
 
 			vk::BufferMemoryBarrier to_shader_read_barrier;
-			to_shader_read_barrier.setBuffer(buffer.getBuffer());
-			to_shader_read_barrier.setOffset(buffer.getOffset());
+			to_shader_read_barrier.setBuffer(buffer.getBufferInfo().buffer);
+			to_shader_read_barrier.setOffset(buffer.getBufferInfo().offset);
 			to_shader_read_barrier.setSize(copy_info.size);
 			to_shader_read_barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 			to_shader_read_barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
@@ -323,8 +323,8 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 			model_info_ptr[0].mInstanceNum = 0;
 
 			vk::BufferMemoryBarrier to_copy_barrier;
-			to_copy_barrier.setBuffer(buffer.getBuffer());
-			to_copy_barrier.setOffset(buffer.getOffset());
+			to_copy_barrier.setBuffer(buffer.getBufferInfo().buffer);
+			to_copy_barrier.setOffset(buffer.getBufferInfo().offset);
 			to_copy_barrier.setSize(sizeof(cModelInstancing::ModelInfo));
 			to_copy_barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
 			to_copy_barrier.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
@@ -332,13 +332,13 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 
 			vk::BufferCopy copy_info;
 			copy_info.setSize(sizeof(cModelInstancing::ModelInfo));
-			copy_info.setSrcOffset(staging.getOffset() + sizeof(cModelInstancing::ModelInfo) * sGlobal::Order().getCurrentFrame());
-			copy_info.setDstOffset(buffer.getOffset());
-			cmd.copyBuffer(staging.getBuffer(), buffer.getBuffer(), copy_info);
+			copy_info.setSrcOffset(staging.getBufferInfo().offset + sizeof(cModelInstancing::ModelInfo) * sGlobal::Order().getCurrentFrame());
+			copy_info.setDstOffset(buffer.getBufferInfo().offset);
+			cmd.copyBuffer(staging.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
 
 			vk::BufferMemoryBarrier to_shader_read_barrier;
-			to_shader_read_barrier.setBuffer(buffer.getBuffer());
-			to_shader_read_barrier.setOffset(buffer.getOffset());
+			to_shader_read_barrier.setBuffer(buffer.getBufferInfo().buffer);
+			to_shader_read_barrier.setOffset(buffer.getBufferInfo().offset);
 			to_shader_read_barrier.setSize(sizeof(cModelInstancing::ModelInfo));
 			to_shader_read_barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 			to_shader_read_barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
@@ -352,15 +352,15 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 		vk::BufferMemoryBarrier()
 		.setSrcAccessMask(vk::AccessFlagBits::eIndirectCommandRead)
 		.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
-		.setBuffer(m_resource->mMesh.m_indirect_buffer_ex.getBuffer())
-		.setSize(m_resource->mMesh.m_indirect_buffer_ex.getSize())
-		.setOffset(m_resource->mMesh.m_indirect_buffer_ex.getOffset()),
+		.setBuffer(m_resource->mMesh.m_indirect_buffer_ex.getBufferInfo().buffer)
+		.setSize(m_resource->mMesh.m_indirect_buffer_ex.getBufferInfo().range)
+		.setOffset(m_resource->mMesh.m_indirect_buffer_ex.getBufferInfo().offset),
 		vk::BufferMemoryBarrier()
 		.setSrcAccessMask(vk::AccessFlagBits::eShaderRead)
 		.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
-		.setBuffer(m_resource->getBuffer(cModelInstancing::Resource::ModelStorageBuffer::BONE_TRANSFORM).getBuffer())
-		.setSize(m_resource->getBuffer(cModelInstancing::Resource::ModelStorageBuffer::BONE_TRANSFORM).getSize())
-		.setOffset(m_resource->getBuffer(cModelInstancing::Resource::ModelStorageBuffer::BONE_TRANSFORM).getOffset())
+		.setBuffer(m_resource->getBuffer(cModelInstancing::Resource::ModelStorageBuffer::BONE_TRANSFORM).getBufferInfo().buffer)
+		.setSize(m_resource->getBuffer(cModelInstancing::Resource::ModelStorageBuffer::BONE_TRANSFORM).getBufferInfo().range)
+		.setOffset(m_resource->getBuffer(cModelInstancing::Resource::ModelStorageBuffer::BONE_TRANSFORM).getBufferInfo().offset)
 	};
 
 	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands,
@@ -378,21 +378,21 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 				vk::BufferMemoryBarrier()
 				.setSrcAccessMask(vk::AccessFlagBits::eShaderRead)
 				.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
-				.setBuffer(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::MODEL_INFO).getBuffer())
-				.setOffset(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::MODEL_INFO).getOffset())
-				.setSize(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::MODEL_INFO).getSize()),
+				.setBuffer(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::MODEL_INFO).getBufferInfo().buffer)
+				.setOffset(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::MODEL_INFO).getBufferInfo().offset)
+				.setSize(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::MODEL_INFO).getBufferInfo().range),
 				vk::BufferMemoryBarrier()
 				.setSrcAccessMask(vk::AccessFlagBits::eShaderRead)
 				.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
-				.setBuffer(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::BONE_MAP).getBuffer())
-				.setOffset(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::BONE_MAP).getOffset())
-				.setSize(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::BONE_MAP).getSize()),
+				.setBuffer(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::BONE_MAP).getBufferInfo().buffer)
+				.setOffset(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::BONE_MAP).getBufferInfo().offset)
+				.setSize(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::BONE_MAP).getBufferInfo().range),
 				vk::BufferMemoryBarrier()
 				.setSrcAccessMask(vk::AccessFlagBits::eShaderRead)
 				.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
-				.setBuffer(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::BONE_TRANSFORM).getBuffer())
-				.setOffset(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::BONE_TRANSFORM).getOffset())
-				.setSize(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::BONE_TRANSFORM).getSize()),
+				.setBuffer(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::BONE_TRANSFORM).getBufferInfo().buffer)
+				.setOffset(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::BONE_TRANSFORM).getBufferInfo().offset)
+				.setSize(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::BONE_TRANSFORM).getBufferInfo().range),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
 				vk::DependencyFlags(), {}, barrier, {});
@@ -400,7 +400,7 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 		}
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, pipeline.m_pipeline[i]);
 	 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipeline.m_pipeline_layout[i], 0, m_compute_descriptor_set[i], {});
-		cmd.dispatchIndirect(m_resource->m_compute_indirect_buffer.getBuffer(), m_resource->m_compute_indirect_buffer.getBufferInfo().offset + i* 12);
+		cmd.dispatchIndirect(m_resource->m_compute_indirect_buffer.getBufferInfo().buffer, m_resource->m_compute_indirect_buffer.getBufferInfo().offset + i* 12);
 
 
 		if (i == 3)
@@ -410,9 +410,9 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 				vk::BufferMemoryBarrier()
 				.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
 				.setDstAccessMask(vk::AccessFlagBits::eShaderRead)
-				.setBuffer(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::NODE_LOCAL_TRANSFORM).getBuffer())
-				.setOffset(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::NODE_LOCAL_TRANSFORM).getOffset())
-				.setSize(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::NODE_LOCAL_TRANSFORM).getSize()),
+				.setBuffer(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::NODE_LOCAL_TRANSFORM).getBufferInfo().buffer)
+				.setOffset(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::NODE_LOCAL_TRANSFORM).getBufferInfo().offset)
+				.setSize(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::NODE_LOCAL_TRANSFORM).getBufferInfo().range),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
 				vk::DependencyFlags(), {}, barrier, {});
@@ -425,21 +425,21 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 				vk::BufferMemoryBarrier()
 				.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
 				.setDstAccessMask(vk::AccessFlagBits::eShaderRead)
-				.setBuffer(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::MODEL_INFO).getBuffer())
-				.setOffset(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::MODEL_INFO).getOffset())
-				.setSize(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::MODEL_INFO).getSize()),
+				.setBuffer(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::MODEL_INFO).getBufferInfo().buffer)
+				.setOffset(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::MODEL_INFO).getBufferInfo().offset)
+				.setSize(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::MODEL_INFO).getBufferInfo().range),
 				vk::BufferMemoryBarrier()
 				.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
 				.setDstAccessMask(vk::AccessFlagBits::eShaderRead)
-				.setBuffer(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::BONE_MAP).getBuffer())
-				.setOffset(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::BONE_MAP).getOffset())
-				.setSize(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::BONE_MAP).getSize()),
+				.setBuffer(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::BONE_MAP).getBufferInfo().buffer)
+				.setOffset(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::BONE_MAP).getBufferInfo().offset)
+				.setSize(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::BONE_MAP).getBufferInfo().range),
 				vk::BufferMemoryBarrier()
 				.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
 				.setDstAccessMask(vk::AccessFlagBits::eShaderRead)
-				.setBuffer(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::NODE_GLOBAL_TRANSFORM).getBuffer())
-				.setOffset(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::NODE_GLOBAL_TRANSFORM).getOffset())
-				.setSize(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::NODE_GLOBAL_TRANSFORM).getSize()),
+				.setBuffer(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::NODE_GLOBAL_TRANSFORM).getBufferInfo().buffer)
+				.setOffset(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::NODE_GLOBAL_TRANSFORM).getBufferInfo().offset)
+				.setSize(m_resource->getBuffer(cModelInstancing::cModelInstancing::Resource::ModelStorageBuffer::NODE_GLOBAL_TRANSFORM).getBufferInfo().range),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
 				vk::DependencyFlags(), {}, barrier, {});
@@ -450,15 +450,15 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 		vk::BufferMemoryBarrier()
 		.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
 		.setDstAccessMask(vk::AccessFlagBits::eShaderRead)
-		.setBuffer(m_resource->getBuffer(cModelInstancing::Resource::ModelStorageBuffer::BONE_TRANSFORM).getBuffer())
-		.setOffset(m_resource->getBuffer(cModelInstancing::Resource::ModelStorageBuffer::BONE_TRANSFORM).getOffset())
-		.setSize(m_resource->getBuffer(cModelInstancing::Resource::ModelStorageBuffer::BONE_TRANSFORM).getSize()),
+		.setBuffer(m_resource->getBuffer(cModelInstancing::Resource::ModelStorageBuffer::BONE_TRANSFORM).getBufferInfo().buffer)
+		.setOffset(m_resource->getBuffer(cModelInstancing::Resource::ModelStorageBuffer::BONE_TRANSFORM).getBufferInfo().offset)
+		.setSize(m_resource->getBuffer(cModelInstancing::Resource::ModelStorageBuffer::BONE_TRANSFORM).getBufferInfo().range),
 		vk::BufferMemoryBarrier()
 		.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
 		.setDstAccessMask(vk::AccessFlagBits::eIndirectCommandRead)
-		.setBuffer(m_resource->mMesh.m_indirect_buffer_ex.getBuffer())
-		.setOffset(m_resource->mMesh.m_indirect_buffer_ex.getOffset())
-		.setSize(m_resource->mMesh.m_indirect_buffer_ex.getSize())
+		.setBuffer(m_resource->mMesh.m_indirect_buffer_ex.getBufferInfo().buffer)
+		.setOffset(m_resource->mMesh.m_indirect_buffer_ex.getBufferInfo().offset)
+		.setSize(m_resource->mMesh.m_indirect_buffer_ex.getBufferInfo().range)
 	};
 
 	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands,
@@ -476,8 +476,8 @@ void ModelRender::draw(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 	for (auto i : m_resource->m_material_index)
 	{
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, renderer.getDrawPipeline().m_pipeline_layout, 1, m_draw_descriptor_set_per_mesh[i], {});
- 		cmd.bindVertexBuffers(0, { m_resource->mMesh.m_vertex_buffer_ex.getBuffer() }, { m_resource->mMesh.m_vertex_buffer_ex.getOffset() });
- 		cmd.bindIndexBuffer(m_resource->mMesh.m_index_buffer_ex.getBuffer(), m_resource->mMesh.m_index_buffer_ex.getOffset(), m_resource->mMesh.mIndexType);
- 		cmd.drawIndexedIndirect(m_resource->mMesh.m_indirect_buffer_ex.getBuffer(), m_resource->mMesh.m_indirect_buffer_ex.getOffset(), m_resource->mMesh.mIndirectCount, sizeof(cModelInstancing::Mesh));
+ 		cmd.bindVertexBuffers(0, { m_resource->mMesh.m_vertex_buffer_ex.getBufferInfo().buffer }, { m_resource->mMesh.m_vertex_buffer_ex.getBufferInfo().offset });
+ 		cmd.bindIndexBuffer(m_resource->mMesh.m_index_buffer_ex.getBufferInfo().buffer, m_resource->mMesh.m_index_buffer_ex.getBufferInfo().offset, m_resource->mMesh.mIndexType);
+ 		cmd.drawIndexedIndirect(m_resource->mMesh.m_indirect_buffer_ex.getBufferInfo().buffer, m_resource->mMesh.m_indirect_buffer_ex.getBufferInfo().offset, m_resource->mMesh.mIndirectCount, sizeof(cModelInstancing::Mesh));
 	}
 }

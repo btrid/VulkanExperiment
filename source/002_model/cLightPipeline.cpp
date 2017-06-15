@@ -34,13 +34,13 @@ void cFowardPlusPipeline::Private::setup(cModelRenderer& renderer)
 		m_lightLL = m_storage_memory.allocateMemory(sizeof(LightLL) * tile_num_all * m_light_num);
 		m_light_counter = m_storage_memory.allocateMemory(sizeof(uint32_t));
 
-		vk::DeviceSize alloc_size = m_light.getSize()*sGlobal::FRAME_MAX;
-		alloc_size += m_lightLL_head.getSize();
+		vk::DeviceSize alloc_size = m_light.getBufferInfo().range*sGlobal::FRAME_MAX;
+		alloc_size += m_lightLL_head.getBufferInfo().range;
 		alloc_size += 65000;
 		m_staging_memory.setup(m_device, vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached, alloc_size);
 	}
 
-	m_light_cpu.setup(m_staging_memory, m_light.getSize()*sGlobal::FRAME_MAX);
+	m_light_cpu.setup(m_staging_memory, m_light.getBufferInfo().range*sGlobal::FRAME_MAX);
 	m_light_info_gpu.setup(m_uniform_memory, m_staging_memory);
 	m_frustom_point.setup(m_uniform_memory, m_staging_memory);
 
