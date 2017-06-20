@@ -8,6 +8,8 @@
 //#extension GL_KHR_vulkan_glsl : require
 #extension GL_GOOGLE_cpp_style_line_directive : require
 #extension GL_ARB_shader_image_load_store : require
+
+#define USE_MESH_SET 1
 #include </MultiModel.glsl>
 #include </Light.glsl>
 #include </ConvertDimension.glsl>
@@ -24,11 +26,13 @@ struct Vertex
 };
 layout(location = 0) in Vertex FSIn;
 
-layout (set = 1, binding = 32) uniform sampler2D tDiffuse;
+layout(push_constant) uniform ConstantBlock
+{
+	uint m_material_index;
+} constant;
 
-layout(std140, binding=16) restrict buffer MaterialBuffer {
-	Material materials[];
-};
+
+
 
 layout(std140, set=3, binding=0) uniform LightInfoUniform {
 	LightInfo u_light_info;
@@ -73,6 +77,7 @@ vec3 getColor(in Vertex v)
 
 void main()
 {
-	FragColor.rgb = getColor(FSIn);
+//	FragColor.rgb = getColor(FSIn);
+	FragColor.rgb = vec3(1.);
 	FragColor.a = 1.;
 }

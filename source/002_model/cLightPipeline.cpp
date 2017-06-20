@@ -13,7 +13,6 @@ void cFowardPlusPipeline::Private::setup(cModelRenderer& renderer)
 	m_light_info.m_tile_size = tile_size;
 	m_light_info.m_tile_num = tile_num;
 	auto tile_num_all = tile_num.x*tile_num.y;
-	m_storage_memory = renderer.m_storage_memory;
 	if (!m_storage_memory.isValid())
 	{
 		vk::DeviceSize size = sizeof(LightParam) * m_light_num;

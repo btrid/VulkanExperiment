@@ -131,7 +131,7 @@ public:
 
 struct CameraGPU
 {
-	void setup(const cCamera& camera) 
+	void setup(const cCamera& camera)
 	{
 		mProjection = glm::perspective(camera.m_fov, camera.getAspect(), camera.m_near, camera.m_far);
 		mView = glm::lookAt(camera.m_position, camera.m_target, camera.m_up);
@@ -242,4 +242,19 @@ public:
 		}
 		return true;
 	}
+};
+
+struct CameraGPU2
+{
+	void setup(const cCamera& camera)
+	{
+		m_projection = glm::perspective(camera.m_fov, camera.getAspect(), camera.m_near, camera.m_far);
+		m_view = glm::lookAt(camera.m_position, camera.m_target, camera.m_up);
+		Frustom f;
+		f.setup(camera);
+		m_plane = f.getPlane();
+	}
+	glm::mat4 m_projection;
+	glm::mat4 m_view;
+	std::array<Plane, 6> m_plane;
 };

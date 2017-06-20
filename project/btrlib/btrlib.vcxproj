@@ -83,7 +83,7 @@
     <ClInclude Include="..\..\include\btrlib\ResourceManager.h" />
     <ClInclude Include="..\..\include\btrlib\rTexture.h" />
     <ClInclude Include="..\..\include\btrlib\sDebug.h" />
-    <ClInclude Include="..\..\include\btrlib\cModelInstancing.h" />
+    <ClInclude Include="..\..\include\btrlib\cModel.h" />
     <ClInclude Include="..\..\include\btrlib\cWindow.h" />
     <ClInclude Include="..\..\include\btrlib\Define.h" />
     <ClInclude Include="..\..\include\btrlib\DefineMath.h" />
@@ -95,7 +95,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\source\btrlib\cAudio.cpp" />
     <ClCompile Include="..\..\source\btrlib\cCamera.cpp" />
-    <ClCompile Include="..\..\source\btrlib\cModelInstancing.cpp" />
+    <ClCompile Include="..\..\source\btrlib\cModel.cpp" />
     <ClCompile Include="..\..\source\btrlib\cWindow.cpp" />
     <ClCompile Include="..\..\source\btrlib\Define.cpp" />
     <ClCompile Include="..\..\source\btrlib\GPU.cpp" />

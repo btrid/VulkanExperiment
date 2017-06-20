@@ -3,132 +3,255 @@
 #include <002_model/cModelRender.h>
 #include <btrlib/Define.h>
 #include <btrlib/Shape.h>
-#include <btrlib/cModelInstancing.h>
-void cModelDrawPipeline::setup(cModelRenderer& renderer)
-{
-	const cGPU& gpu = sThreadLocal::Order().m_gpu;
+#include <btrlib/cModel.h>
 
-	auto device = gpu.getDevice(vk::QueueFlagBits::eGraphics)[0];
+void cModelComputePipeline::setup(app::Loader& loader, cModelRenderer& renderer)
+{
+	const auto& gpu = sThreadLocal::Order().m_gpu;
+	auto device = gpu.getDevice(vk::QueueFlagBits::eCompute)[0];
+
 	// setup shader
 	{
-		const char* name[] = {
-			"Render.vert.spv",
-			"RenderFowardPlus.frag.spv",
+		struct
+		{
+			const char* name;
+			vk::ShaderStageFlagBits stage;
+		}shader_info[] =
+		{
+			{ "001_Clear.comp.spv",			vk::ShaderStageFlagBits::eCompute },
+			{ "002_AnimationUpdate.comp.spv",vk::ShaderStageFlagBits::eCompute },
+			{ "003_MotionUpdate.comp.spv",vk::ShaderStageFlagBits::eCompute },
+			{ "004_NodeTransform.comp.spv",vk::ShaderStageFlagBits::eCompute },
+			{ "005_CameraCulling.comp.spv",vk::ShaderStageFlagBits::eCompute },
+			{ "006_BoneTransform.comp.spv",vk::ShaderStageFlagBits::eCompute },
+			{ "Render.vert.spv",vk::ShaderStageFlagBits::eVertex },
+			{ "RenderFowardPlus.frag.spv",vk::ShaderStageFlagBits::eFragment },
 		};
-		static_assert(array_length(name) == SHADER_NUM, "not equal shader num");
+		static_assert(array_length(shader_info) == SHADER_NUM, "not equal shader num");
 
 		std::string path = btr::getResourcePath() + "shader\\binary\\";
 		for (size_t i = 0; i < SHADER_NUM; i++) {
-			m_shader_list[i] = loadShader(device.getHandle(), path + name[i]);
+			m_shader_list[i] = loadShader(device.getHandle(), path + shader_info[i].name);
+			m_stage_info[i].setStage(shader_info[i].stage);
+			m_stage_info[i].setModule(m_shader_list[i]);
+			m_stage_info[i].setPName("main");
 		}
-
-		m_stage_info[0] = vk::PipelineShaderStageCreateInfo()
-			.setStage(vk::ShaderStageFlagBits::eVertex)
-			.setModule(m_shader_list[0])
-			.setPName("main");
-		m_stage_info[1] = vk::PipelineShaderStageCreateInfo()
-			.setStage(vk::ShaderStageFlagBits::eFragment)
-			.setModule(m_shader_list[1])
-			.setPName("main");
+	}
+	{
+		m_camera.setup(loader.m_uniform_memory, loader.m_staging_memory);
 	}
 
-
+	// Create compute pipeline
+	std::vector<std::vector<vk::DescriptorSetLayoutBinding>> bindings(DESCRIPTOR_NUM);
+	bindings[DESCRIPTOR_ANIMATION] = {
+		vk::DescriptorSetLayoutBinding()
+		.setStageFlags(vk::ShaderStageFlagBits::eCompute)
+		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+		.setDescriptorCount(1)
+		.setBinding(0),
+		vk::DescriptorSetLayoutBinding()
+		.setStageFlags(vk::ShaderStageFlagBits::eCompute)
+		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+		.setDescriptorCount(1)
+		.setBinding(1),
+		vk::DescriptorSetLayoutBinding()
+		.setStageFlags(vk::ShaderStageFlagBits::eCompute)
+		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+		.setDescriptorCount(1)
+		.setBinding(2),
+		vk::DescriptorSetLayoutBinding()
+		.setStageFlags(vk::ShaderStageFlagBits::eCompute)
+		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+		.setDescriptorCount(1)
+		.setBinding(3),
+		vk::DescriptorSetLayoutBinding()
+		.setStageFlags(vk::ShaderStageFlagBits::eCompute)
+		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+		.setDescriptorCount(1)
+		.setBinding(4),
+		vk::DescriptorSetLayoutBinding()
+		.setStageFlags(vk::ShaderStageFlagBits::eCompute)
+		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+		.setDescriptorCount(1)
+		.setBinding(5),
+		vk::DescriptorSetLayoutBinding()
+		.setStageFlags(vk::ShaderStageFlagBits::eCompute)
+		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+		.setDescriptorCount(1)
+		.setBinding(6),
+		vk::DescriptorSetLayoutBinding()
+		.setStageFlags(vk::ShaderStageFlagBits::eCompute)
+		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+		.setDescriptorCount(1)
+		.setBinding(7),
+		vk::DescriptorSetLayoutBinding()
+		.setStageFlags(vk::ShaderStageFlagBits::eCompute)
+		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+		.setDescriptorCount(1)
+		.setBinding(8),
+		vk::DescriptorSetLayoutBinding()
+		.setStageFlags(vk::ShaderStageFlagBits::eCompute)
+		.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+		.setDescriptorCount(1)
+		.setBinding(32),
+	};
+	bindings[DESCRIPTOR_MODEL] = {
+		vk::DescriptorSetLayoutBinding()
+		.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
+		.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+		.setDescriptorCount(1)
+		.setBinding(0),
+		vk::DescriptorSetLayoutBinding()
+		.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
+		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+		.setDescriptorCount(1)
+		.setBinding(1),
+		vk::DescriptorSetLayoutBinding()
+		.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
+		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+		.setDescriptorCount(1)
+		.setBinding(2),
+		vk::DescriptorSetLayoutBinding()
+		.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
+		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+		.setDescriptorCount(1)
+		.setBinding(3),
+	};
 	// DescriptorSetLayout
+	bindings[DESCRIPTOR_PER_MESH] =
 	{
-		{
-			std::vector<vk::DescriptorSetLayoutBinding> bindings =
-			{
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(vk::ShaderStageFlagBits::eVertex)
-				.setDescriptorCount(1)
-				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-				.setBinding(0),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(vk::ShaderStageFlagBits::eVertex)
-				.setDescriptorCount(1)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setBinding(1),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(vk::ShaderStageFlagBits::eFragment)
-				.setDescriptorCount(1)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setBinding(16),
-			};
+		vk::DescriptorSetLayoutBinding()
+		.setStageFlags(vk::ShaderStageFlagBits::eFragment)
+		.setDescriptorCount(1)
+		.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+		.setBinding(0),
+	};
 
-			vk::DescriptorSetLayoutCreateInfo descriptor_layout_info = vk::DescriptorSetLayoutCreateInfo()
-				.setBindingCount(bindings.size())
-				.setPBindings(bindings.data());
-			m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_PER_MODEL] = device->createDescriptorSetLayout(descriptor_layout_info);
+	bindings[DESCRIPTOR_SCENE] =
+	{
+		vk::DescriptorSetLayoutBinding()
+		.setStageFlags(vk::ShaderStageFlagBits::eVertex)
+		.setDescriptorCount(1)
+		.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+		.setBinding(0),
+	};
 
-		}
-		{
-			std::vector<vk::DescriptorSetLayoutBinding> bindings =
-			{
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(vk::ShaderStageFlagBits::eFragment)
-				.setDescriptorCount(1)
-				.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-				.setBinding(32),
-			};
 
-			vk::DescriptorSetLayoutCreateInfo descriptor_layout_info = vk::DescriptorSetLayoutCreateInfo()
-				.setBindingCount(bindings.size())
-				.setPBindings(bindings.data());
-			m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_PER_MESH] = device->createDescriptorSetLayout(descriptor_layout_info);
-
-		}
-		{
-			std::vector<vk::DescriptorSetLayoutBinding> bindings =
-			{
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(vk::ShaderStageFlagBits::eVertex)
-				.setDescriptorCount(1)
-				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-				.setBinding(0),
-			};
-
-			vk::DescriptorSetLayoutCreateInfo descriptor_layout_info = vk::DescriptorSetLayoutCreateInfo()
-				.setBindingCount(bindings.size())
-				.setPBindings(bindings.data());
-			m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_PER_SCENE] = device->createDescriptorSetLayout(descriptor_layout_info);
-		}
-		{
-			std::vector<vk::DescriptorSetLayoutBinding> bindings =
-			{
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(vk::ShaderStageFlagBits::eFragment)
-				.setDescriptorCount(1)
-				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-				.setBinding(0),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(vk::ShaderStageFlagBits::eFragment)
-				.setDescriptorCount(1)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setBinding(1),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(vk::ShaderStageFlagBits::eFragment)
-				.setDescriptorCount(1)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setBinding(2),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(vk::ShaderStageFlagBits::eFragment)
-				.setDescriptorCount(1)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setBinding(3),
-			};
-
-			vk::DescriptorSetLayoutCreateInfo descriptor_layout_info = vk::DescriptorSetLayoutCreateInfo()
-				.setBindingCount(bindings.size())
-				.setPBindings(bindings.data());
-			m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_LIGHT] = device->createDescriptorSetLayout(descriptor_layout_info);
-		}
+	bindings[DESCRIPTOR_LIGHT] =
+	{
+		vk::DescriptorSetLayoutBinding()
+		.setStageFlags(vk::ShaderStageFlagBits::eFragment)
+		.setDescriptorCount(1)
+		.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+		.setBinding(0),
+		vk::DescriptorSetLayoutBinding()
+		.setStageFlags(vk::ShaderStageFlagBits::eFragment)
+		.setDescriptorCount(1)
+		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+		.setBinding(1),
+		vk::DescriptorSetLayoutBinding()
+		.setStageFlags(vk::ShaderStageFlagBits::eFragment)
+		.setDescriptorCount(1)
+		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+		.setBinding(2),
+		vk::DescriptorSetLayoutBinding()
+		.setStageFlags(vk::ShaderStageFlagBits::eFragment)
+		.setDescriptorCount(1)
+		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+		.setBinding(3),
+	};
+	for (u32 i = 0; i < bindings.size(); i++)
+	{
+		vk::DescriptorSetLayoutCreateInfo descriptor_layout_info = vk::DescriptorSetLayoutCreateInfo()
+			.setBindingCount(bindings[i].size())
+			.setPBindings(bindings[i].data());
+		m_descriptor_set_layout[i] = device->createDescriptorSetLayout(descriptor_layout_info);
 	}
-	// PipelineLayout
+
 	{
-		vk::PipelineLayoutCreateInfo pipelinelayout_info;
-		pipelinelayout_info.setSetLayoutCount(m_descriptor_set_layout.size());
-		pipelinelayout_info.setPSetLayouts(m_descriptor_set_layout.data());
-		m_pipeline_layout = device->createPipelineLayout(pipelinelayout_info);
+		{
+			vk::DescriptorSetLayout layouts[] = {
+				m_descriptor_set_layout[DESCRIPTOR_MODEL],
+				m_descriptor_set_layout[DESCRIPTOR_ANIMATION],
+			};
+			vk::PipelineLayoutCreateInfo pipeline_layout_info = vk::PipelineLayoutCreateInfo()
+				.setSetLayoutCount(array_length(layouts))
+				.setPSetLayouts(layouts);
+			m_pipeline_layout[PIPELINE_LAYOUT_COMPUTE] = device->createPipelineLayout(pipeline_layout_info);
+		}
+		{
+			vk::DescriptorSetLayout layouts[] = {
+				m_descriptor_set_layout[DESCRIPTOR_MODEL],
+				m_descriptor_set_layout[DESCRIPTOR_PER_MESH],
+				m_descriptor_set_layout[DESCRIPTOR_SCENE],
+				m_descriptor_set_layout[DESCRIPTOR_LIGHT],
+			};
+			vk::PushConstantRange constant_range[] = {
+				vk::PushConstantRange().setOffset(0).setSize(4).setStageFlags(vk::ShaderStageFlagBits::eFragment),
+			};
+			vk::PipelineLayoutCreateInfo pipeline_layout_info;
+			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
+			pipeline_layout_info.setPSetLayouts(layouts);
+			pipeline_layout_info.setPushConstantRangeCount(array_length(constant_range));
+			pipeline_layout_info.setPPushConstantRanges(constant_range);
+
+			m_pipeline_layout[PIPELINE_LAYOUT_RENDER] = device->createPipelineLayout(pipeline_layout_info);
+		}
+
+	}
+
+	// DescriptorPool
+	{
+		std::vector<vk::DescriptorPoolSize> descriptor_pool_size;
+		for (auto& binding : bindings)
+		{
+			for (auto& buffer : binding)
+			{
+				descriptor_pool_size.emplace_back(buffer.descriptorType, buffer.descriptorCount*10);
+			}
+		}
+		vk::DescriptorPoolCreateInfo descriptor_pool_info;
+// 		descriptor_pool_info.maxSets = bindings.size();
+// 		descriptor_pool_info.poolSizeCount = descriptor_pool_size.size();
+// 		descriptor_pool_info.pPoolSizes = descriptor_pool_size.data();
+		descriptor_pool_info.maxSets = 20;
+		descriptor_pool_info.poolSizeCount = descriptor_pool_size.size();
+		descriptor_pool_info.pPoolSizes = descriptor_pool_size.data();
+
+		m_descriptor_pool = device->createDescriptorPool(descriptor_pool_info);
+	}
+
+
+	// pipeline cache
+	{
+		vk::PipelineCacheCreateInfo cacheInfo = vk::PipelineCacheCreateInfo();
+		m_cache = device->createPipelineCache(cacheInfo);
+	}
+	// Create pipeline
+	std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info = {
+		vk::ComputePipelineCreateInfo()
+		.setStage(m_stage_info[SHADER_COMPUTE_CLEAR])
+		.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_COMPUTE]),
+		vk::ComputePipelineCreateInfo()
+		.setStage(m_stage_info[SHADER_COMPUTE_ANIMATION_UPDATE])
+		.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_COMPUTE]),
+		vk::ComputePipelineCreateInfo()
+		.setStage(m_stage_info[SHADER_COMPUTE_MOTION_UPDATE])
+		.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_COMPUTE]),
+		vk::ComputePipelineCreateInfo()
+		.setStage(m_stage_info[SHADER_COMPUTE_NODE_TRANSFORM])
+		.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_COMPUTE]),
+		vk::ComputePipelineCreateInfo()
+		.setStage(m_stage_info[SHADER_COMPUTE_CULLING])
+		.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_COMPUTE]),
+		vk::ComputePipelineCreateInfo()
+		.setStage(m_stage_info[SHADER_COMPUTE_BONE_TRANSFORM])
+		.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_COMPUTE]),
+	};
+
+	for (size_t i = 0; i < compute_pipeline_info.size(); i++) {
+		auto p = device->createComputePipelines(m_cache, { compute_pipeline_info[i] });
+		m_pipeline.insert(m_pipeline.end(), p.begin(), p.end());
 	}
 
 	vk::Extent3D size;
@@ -151,11 +274,11 @@ void cModelDrawPipeline::setup(cModelRenderer& renderer)
 			std::vector<vk::Rect2D> scissor = {
 				vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(size.width, size.height))
 			};
-			vk::PipelineViewportStateCreateInfo viewportInfo;
-			viewportInfo.setViewportCount(1);
-			viewportInfo.setPViewports(&viewport);
-			viewportInfo.setScissorCount((uint32_t)scissor.size());
-			viewportInfo.setPScissors(scissor.data());
+			vk::PipelineViewportStateCreateInfo viewport_info;
+			viewport_info.setViewportCount(1);
+			viewport_info.setPViewports(&viewport);
+			viewport_info.setScissorCount((uint32_t)scissor.size());
+			viewport_info.setPScissors(scissor.data());
 
 			// ラスタライズ
 			vk::PipelineRasterizationStateCreateInfo rasterization_info;
@@ -194,7 +317,7 @@ void cModelDrawPipeline::setup(cModelRenderer& renderer)
 				vk::VertexInputBindingDescription()
 				.setBinding(0)
 				.setInputRate(vk::VertexInputRate::eVertex)
-				.setStride(sizeof(cModelInstancing::Vertex))
+				.setStride(sizeof(cModel::Vertex))
 			};
 
 			std::vector<vk::VertexInputAttributeDescription> vertex_input_attribute =
@@ -235,52 +358,29 @@ void cModelDrawPipeline::setup(cModelRenderer& renderer)
 			vertex_input_info.setVertexAttributeDescriptionCount((uint32_t)vertex_input_attribute.size());
 			vertex_input_info.setPVertexAttributeDescriptions(vertex_input_attribute.data());
 
+			std::array<vk::PipelineShaderStageCreateInfo, 2> stage_info =
+			{
+				m_stage_info[SHADER_RENDER_VERT],
+				m_stage_info[SHADER_RENDER_FRAG],
+			};
 			std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =
 			{
 				vk::GraphicsPipelineCreateInfo()
-				.setStageCount(m_stage_info.size())
-				.setPStages(m_stage_info.data())
+				.setStageCount((uint32_t)stage_info.size())
+				.setPStages(stage_info.data())
 				.setPVertexInputState(&vertex_input_info)
 				.setPInputAssemblyState(&assembly_info)
-				.setPViewportState(&viewportInfo)
+				.setPViewportState(&viewport_info)
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
-				.setLayout(m_pipeline_layout)
-				.setRenderPass(renderer.m_render_pass)
+				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_RENDER])
+				.setRenderPass(loader.m_render_pass)
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			auto pipelines = device->createGraphicsPipelines(pipeline_cache, graphics_pipeline_info);
-			m_pipeline = pipelines[0];
+			m_graphics_pipeline = device->createGraphicsPipelines(pipeline_cache, graphics_pipeline_info)[0];
 		}
 
-	}
-
-	// DescriptorPool
-	{
-		std::vector<vk::DescriptorPoolSize> poolSize =
-		{
-			vk::DescriptorPoolSize()
-			.setType(vk::DescriptorType::eUniformBuffer)
-			.setDescriptorCount(10),
-			vk::DescriptorPoolSize()
-			.setType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(10),
-			vk::DescriptorPoolSize()
-			.setType(vk::DescriptorType::eCombinedImageSampler)
-			.setDescriptorCount(1),
-		};
-
-		vk::DescriptorPoolCreateInfo poolInfo = vk::DescriptorPoolCreateInfo()
-			.setMaxSets(DESCRIPTOR_SET_LAYOUT_MAX)
-			.setPoolSizeCount(poolSize.size())
-			.setPPoolSizes(poolSize.data());
-
-		m_descriptor_pool = device->createDescriptorPool(poolInfo);
-	}
-	{
-		// camera
-		m_camera.setup(renderer.m_uniform_memory, renderer.m_staging_memory);
 	}
 
 	{
@@ -288,8 +388,8 @@ void cModelDrawPipeline::setup(cModelRenderer& renderer)
 		vk::DescriptorSetAllocateInfo alloc_info;
 		alloc_info.descriptorPool = m_descriptor_pool;
 		alloc_info.descriptorSetCount = 1;
-		alloc_info.pSetLayouts = &m_descriptor_set_layout[cModelDrawPipeline::DESCRIPTOR_SET_LAYOUT_PER_SCENE];
-		m_descriptor_set_per_scene = device->allocateDescriptorSets(alloc_info)[0];
+		alloc_info.pSetLayouts = &m_descriptor_set_layout[cModelComputePipeline::DESCRIPTOR_SCENE];
+		m_descriptor_set_scene = device->allocateDescriptorSets(alloc_info)[0];
 
 		std::vector<vk::DescriptorBufferInfo> uniformBufferInfo = {
 			m_camera.getBufferInfo(),
@@ -301,7 +401,7 @@ void cModelDrawPipeline::setup(cModelRenderer& renderer)
 			.setDescriptorCount(uniformBufferInfo.size())
 			.setPBufferInfo(uniformBufferInfo.data())
 			.setDstBinding(0)
-			.setDstSet(m_descriptor_set_per_scene),
+			.setDstSet(m_descriptor_set_scene),
 		};
 		device->updateDescriptorSets(write_descriptor_set, {});
 	}
@@ -310,8 +410,8 @@ void cModelDrawPipeline::setup(cModelRenderer& renderer)
 		vk::DescriptorSetAllocateInfo alloc_info;
 		alloc_info.descriptorPool = m_descriptor_pool;
 		alloc_info.descriptorSetCount = 1;
-		alloc_info.pSetLayouts = &m_descriptor_set_layout[cModelDrawPipeline::DESCRIPTOR_SET_LAYOUT_LIGHT];
-		m_descriptor_light = device->allocateDescriptorSets(alloc_info)[0];
+		alloc_info.pSetLayouts = &m_descriptor_set_layout[cModelComputePipeline::DESCRIPTOR_LIGHT];
+		m_descriptor_set_light = device->allocateDescriptorSets(alloc_info)[0];
 
 		std::vector<vk::DescriptorBufferInfo> uniformBufferInfo = {
 			renderer.getLight().getLightInfoBufferInfo(),
@@ -328,303 +428,14 @@ void cModelDrawPipeline::setup(cModelRenderer& renderer)
 			.setDescriptorCount(uniformBufferInfo.size())
 			.setPBufferInfo(uniformBufferInfo.data())
 			.setDstBinding(0)
-			.setDstSet(m_descriptor_light),
+			.setDstSet(m_descriptor_set_light),
 			vk::WriteDescriptorSet()
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setDescriptorCount(storageBufferInfo.size())
 			.setPBufferInfo(storageBufferInfo.data())
 			.setDstBinding(1)
-			.setDstSet(m_descriptor_light),
+			.setDstSet(m_descriptor_set_light),
 		};
 		device->updateDescriptorSets(write_descriptor_set, {});
 	}
-
-}
-void cModelComputePipeline::setup(cModelRenderer& renderer)
-{
-	const auto& gpu = sThreadLocal::Order().m_gpu;
-	auto device = gpu.getDevice(vk::QueueFlagBits::eCompute)[0];
-
-	// setup shader
-	{
-		const char* name[] = {
-			"001_Clear.comp.spv",
-			"002_AnimationUpdate.comp.spv",
-			"003_MotionUpdate.comp.spv",
-			"004_NodeTransform.comp.spv",
-			"005_CameraCulling.comp.spv",
-			"006_BoneTransform.comp.spv",
-		};
-		static_assert(array_length(name) == SHADER_NUM, "not equal shader num");
-
-		std::string path = btr::getResourcePath() + "shader\\binary\\";
-		for (size_t i = 0; i < SHADER_NUM; i++) {
-			m_shader_list[i] = loadShader(device.getHandle(), path + name[i]);
-			m_stage_info[i].setStage(vk::ShaderStageFlagBits::eCompute);
-			m_stage_info[i].setModule(m_shader_list[i]);
-			m_stage_info[i].setPName("main");
-		}
-	}
-
-	{
-		m_camera_frustom.setup(renderer.m_uniform_memory, renderer.m_staging_memory);
-	}
-
-	// Create compute pipeline
-	std::vector<std::vector<vk::DescriptorSetLayoutBinding>> bindings =
-	{
-		// Clear
-		std::vector<vk::DescriptorSetLayoutBinding>
-		{
-			vk::DescriptorSetLayoutBinding()
-				.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(8),
-			vk::DescriptorSetLayoutBinding()
-				.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(9),
-		},
-		// AnimationUpdate
-		std::vector<vk::DescriptorSetLayoutBinding>
-		{
-			vk::DescriptorSetLayoutBinding()
-				.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-				.setDescriptorCount(1)
-				.setBinding(0),
-			vk::DescriptorSetLayoutBinding()
-				.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(8),
-			vk::DescriptorSetLayoutBinding()
-				.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(9),
-		},
-		// MotionUpdate
-		std::vector<vk::DescriptorSetLayoutBinding>
-		{
-			vk::DescriptorSetLayoutBinding()
-				.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-				.setDescriptorCount(1)
-				.setBinding(0),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(8),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(9),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(10),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-				.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-				.setDescriptorCount(1)
-				.setBinding(32),
-			},
-			// NodeTransform
-			std::vector<vk::DescriptorSetLayoutBinding>
-			{
-				vk::DescriptorSetLayoutBinding()
-					.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-					.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-					.setDescriptorCount(1)
-					.setBinding(0),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(8),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(9),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(10),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(11),
-			},
-				// CameraCulling
-					std::vector<vk::DescriptorSetLayoutBinding>
-				{
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-					.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-					.setDescriptorCount(1)
-					.setBinding(0),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(8),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(9),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(10),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(11),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(12),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(13),
-				},
-					// BoneTransform
-					std::vector<vk::DescriptorSetLayoutBinding>
-				{
-					vk::DescriptorSetLayoutBinding()
-						.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-						.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-						.setDescriptorCount(1)
-						.setBinding(0),
-						vk::DescriptorSetLayoutBinding()
-						.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-						.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-						.setDescriptorCount(1)
-						.setBinding(8),
-						vk::DescriptorSetLayoutBinding()
-						.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-						.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-						.setDescriptorCount(1)
-						.setBinding(9),
-						vk::DescriptorSetLayoutBinding()
-						.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-						.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-						.setDescriptorCount(1)
-						.setBinding(10),
-						vk::DescriptorSetLayoutBinding()
-						.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-						.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-						.setDescriptorCount(1)
-						.setBinding(11),
-				},
-	};
-
-	m_descriptor_set_layout.reserve(bindings.size());
-	m_pipeline_layout.reserve(bindings.size());
-	for (u32 i = 0; i < bindings.size(); i++)
-	{
-		vk::DescriptorSetLayoutCreateInfo descriptor_layout_info = vk::DescriptorSetLayoutCreateInfo()
-			.setBindingCount(bindings[i].size())
-			.setPBindings(bindings[i].data());
-		m_descriptor_set_layout.emplace_back(device->createDescriptorSetLayout(descriptor_layout_info));
-		auto& set_layout = m_descriptor_set_layout.back();
-
-		vk::PipelineLayoutCreateInfo pipelineLayoutInfo = vk::PipelineLayoutCreateInfo()
-			.setSetLayoutCount(1)
-			.setPSetLayouts(&set_layout);
-		m_pipeline_layout.emplace_back(device->createPipelineLayout(pipelineLayoutInfo));
-	}
-
-	// DescriptorPool
-	{
-		std::vector<vk::DescriptorPoolSize> descriptor_pool_size;
-		for (auto& binding : bindings)
-		{
-			for (auto& buffer : binding)
-			{
-				descriptor_pool_size.emplace_back(buffer.descriptorType, buffer.descriptorCount);
-			}
-		}
-		vk::DescriptorPoolCreateInfo descriptor_pool_info;
-		descriptor_pool_info.maxSets = bindings.size();
-		descriptor_pool_info.poolSizeCount = descriptor_pool_size.size();
-		descriptor_pool_info.pPoolSizes = descriptor_pool_size.data();
-
-		m_descriptor_pool = device->createDescriptorPool(descriptor_pool_info);
-	}
-
-
-	// pipeline cache
-	{
-		vk::PipelineCacheCreateInfo cacheInfo = vk::PipelineCacheCreateInfo();
-		m_cache = device->createPipelineCache(cacheInfo);
-	}
-	std::vector<vk::PipelineShaderStageCreateInfo> shader_stage_info = {
-		vk::PipelineShaderStageCreateInfo()
-		.setStage(vk::ShaderStageFlagBits::eCompute)
-		.setModule(m_shader_list[SHADER_COMPUTE_CLEAR])
-		.setPName("main"),
-		vk::PipelineShaderStageCreateInfo()
-		.setStage(vk::ShaderStageFlagBits::eCompute)
-		.setModule(m_shader_list[SHADER_COMPUTE_ANIMATION_UPDATE])
-		.setPName("main"),
-		vk::PipelineShaderStageCreateInfo()
-		.setStage(vk::ShaderStageFlagBits::eCompute)
-		.setModule(m_shader_list[SHADER_COMPUTE_MOTION_UPDATE])
-		.setPName("main"),
-		vk::PipelineShaderStageCreateInfo()
-		.setStage(vk::ShaderStageFlagBits::eCompute)
-		.setModule(m_shader_list[SHADER_COMPUTE_NODE_TRANSFORM])
-		.setPName("main"),
-		vk::PipelineShaderStageCreateInfo()
-		.setStage(vk::ShaderStageFlagBits::eCompute)
-		.setModule(m_shader_list[SHADER_COMPUTE_CULLING])
-		.setPName("main"),
-		vk::PipelineShaderStageCreateInfo()
-		.setStage(vk::ShaderStageFlagBits::eCompute)
-		.setModule(m_shader_list[SHADER_COMPUTE_BONE_TRANSFORM])
-		.setPName("main"),
-	};
-	// Create pipeline
-	std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info = {
-		vk::ComputePipelineCreateInfo()
-		.setStage(shader_stage_info[0])
-		.setLayout(m_pipeline_layout[0]),
-		vk::ComputePipelineCreateInfo()
-		.setStage(shader_stage_info[1])
-		.setLayout(m_pipeline_layout[1]),
-		vk::ComputePipelineCreateInfo()
-		.setStage(shader_stage_info[2])
-		.setLayout(m_pipeline_layout[2]),
-		vk::ComputePipelineCreateInfo()
-		.setStage(shader_stage_info[3])
-		.setLayout(m_pipeline_layout[3]),
-		vk::ComputePipelineCreateInfo()
-		.setStage(shader_stage_info[4])
-		.setLayout(m_pipeline_layout[4]),
-		vk::ComputePipelineCreateInfo()
-		.setStage(shader_stage_info[5])
-		.setLayout(m_pipeline_layout[5]),
-	};
-
-	for (size_t i = 0; i < compute_pipeline_info.size(); i++) {
-		auto p = device->createComputePipelines(m_cache, { compute_pipeline_info[i] });
-		m_pipeline.insert(m_pipeline.end(), p.begin(), p.end());
-	}
-
 }

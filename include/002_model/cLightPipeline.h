@@ -51,10 +51,6 @@ struct Light
 		return LightParam();
 	}
 };
-struct Frustom2
-{
-	Plane p[4];
-};
 struct LightLL
 {
 	uint32_t next;

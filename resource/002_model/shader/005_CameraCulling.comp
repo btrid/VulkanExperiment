@@ -9,57 +9,35 @@
 
 #include </CameraCulling.glsl>
 
+#define USE_MODEL_INFO_SET 0
+#define USE_ANIMATION_INFO_SET 1
 #include </MultiModel.glsl>
 
 layout (local_size_x = 1024, local_size_y = 1) in;
 
-layout(std140, binding=0) uniform FrustomUniform {
-	Frustom uFrustom;
-};
-
-layout(std430, binding=8) readonly restrict buffer WorldTransform {
-	mat4 worlds[];
-};
-
-layout(std430, binding=9) readonly restrict buffer NodeBuffer {
-	Node nodes[];
-};
-
-layout(std430, binding=10) readonly restrict buffer BoneInfoBuffer {
-	BoneInfo boneInfo[];
-};
-
-layout(std430, binding=11) restrict buffer BoneMapBuffer {
-	uint boneMap[];
-};
-
-layout(std430, binding=12) coherent restrict buffer MeshBuffer {
-	Mesh meshs[];
-};
-layout(std430, binding=13) coherent restrict buffer ModelInfoBuffer {
-	ModelInfo modelInfo;
-};
-
-
 void main()
 {
-	if(gl_GlobalInvocationID.x >= modelInfo.instanceAliveNum){ return; }
+	ModelInstancingInfo model_instancing_info = u_model_instancing_info;
+	if(gl_GlobalInvocationID.x >= model_instancing_info.instanceAliveNum){ return; }
 	uint srcIndex = gl_GlobalInvocationID.x;
 
+	ModelInfo model_info = u_model_info;
 	// カリングされるなら何もしない
-	vec4 aabb = worlds[srcIndex] * vec4(modelInfo.AABB.xyz, 1.);
-	aabb.w = modelInfo.AABB.w;
+/*	vec4 aabb = worlds[srcIndex] * vec4(model_info.AABB.xyz, 1.);
+	aabb.w = model_info.AABB.w;
 	Frustom f = uFrustom;
 	if(isCulling(f, aabb)) 
 	{ 
 		return;
 	} 
+*/
 	// instanceのincrement
+
 	// @Todo メッシュ単位のカリング
-	uint index = atomicAdd(modelInfo.instanceNum, 1);
+	uint index = atomicAdd(u_model_instancing_info.instanceNum, 1);
 	boneMap[index] = srcIndex;
-	for(int i=0; i<modelInfo.meshNum; i++) {
-		atomicAdd(meshs[i].instanceCount, 1);
+	for(int i=0; i<model_info.mesh_num; i++) {
+//		atomicAdd(meshs[i].instanceCount, 1);
 	}
 
 

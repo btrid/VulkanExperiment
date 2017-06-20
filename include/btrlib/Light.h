@@ -13,7 +13,6 @@ namespace btr
 
 struct StagingBuffer
 {
-	AllocatedMemory m_device_memory;
 	AllocatedMemory m_staging_memory;
 	void setup(btr::BufferMemory staging_memory, vk::DeviceSize size)
 	{

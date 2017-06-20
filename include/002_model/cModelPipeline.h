@@ -7,37 +7,9 @@
 #include <btrlib/cCamera.h>
 #include <btrlib/Shape.h>
 #include <btrlib/BufferMemory.h>
+#include <applib/Loader.h>
 
 struct cModelRenderer;
-struct cModelDrawPipeline
-{
-	enum
-	{
-		SHADER_RENDER_VERT,
-		SHADER_RENDER_FRAG,
-		SHADER_NUM,
-	};
-	std::array<vk::ShaderModule, SHADER_NUM> m_shader_list;
-	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_stage_info;
-
-	vk::Pipeline m_pipeline;
-	vk::PipelineLayout m_pipeline_layout;
-	vk::DescriptorPool m_descriptor_pool;
-	vk::DescriptorSet m_descriptor_set_per_scene;
-	vk::DescriptorSet m_descriptor_light;
-	enum
-	{
-		DESCRIPTOR_SET_LAYOUT_PER_MODEL,
-		DESCRIPTOR_SET_LAYOUT_PER_MESH,
-		DESCRIPTOR_SET_LAYOUT_PER_SCENE,
-		DESCRIPTOR_SET_LAYOUT_LIGHT,
-		DESCRIPTOR_SET_LAYOUT_MAX,
-	};
-	std::array<vk::DescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_MAX> m_descriptor_set_layout;
-
-	btr::UpdateBuffer<CameraGPU> m_camera;
-	void setup(cModelRenderer& renderer);
-};
 
 struct cModelComputePipeline
 {
@@ -49,7 +21,26 @@ struct cModelComputePipeline
 		SHADER_COMPUTE_NODE_TRANSFORM,
 		SHADER_COMPUTE_CULLING,
 		SHADER_COMPUTE_BONE_TRANSFORM,
+
+		SHADER_RENDER_VERT,
+		SHADER_RENDER_FRAG,
+
 		SHADER_NUM,
+	};
+	enum DescriptorLayout
+	{
+		DESCRIPTOR_MODEL,
+		DESCRIPTOR_ANIMATION,
+		DESCRIPTOR_PER_MESH,
+		DESCRIPTOR_SCENE,
+		DESCRIPTOR_LIGHT,
+		DESCRIPTOR_NUM,
+	};
+	enum PipelineLayout
+	{
+		PIPELINE_LAYOUT_COMPUTE,
+		PIPELINE_LAYOUT_RENDER,
+		PIPELINE_LAYOUT_NUM,
 	};
 	std::array<vk::ShaderModule, SHADER_NUM> m_shader_list;
 	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_stage_info;
@@ -57,10 +48,13 @@ struct cModelComputePipeline
 	vk::DescriptorPool m_descriptor_pool;
 	vk::PipelineCache m_cache;
 	std::vector<vk::Pipeline> m_pipeline;
-	std::vector<vk::PipelineLayout> m_pipeline_layout;
-	std::vector<vk::DescriptorSetLayout> m_descriptor_set_layout;
+	vk::Pipeline m_graphics_pipeline;
+	std::array<vk::PipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
+	std::array<vk::DescriptorSetLayout, DESCRIPTOR_NUM> m_descriptor_set_layout;
+	btr::UpdateBuffer<CameraGPU2> m_camera;
 
-	btr::UpdateBuffer<std::array<Plane, 6>>	m_camera_frustom;
+	vk::DescriptorSet m_descriptor_set_scene;
+	vk::DescriptorSet m_descriptor_set_light;
 
-	void setup(cModelRenderer& renderer);
+	void setup(app::Loader& loader, cModelRenderer& renderer);
 };

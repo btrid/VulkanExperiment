@@ -69,7 +69,7 @@
     <ClInclude Include="..\..\include\btrlib\GPU.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\btrlib\cModelInstancing.h">
+    <ClInclude Include="..\..\include\btrlib\cModel.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>
@@ -101,7 +101,7 @@
     <ClCompile Include="..\..\source\btrlib\GPU.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\source\btrlib\cModelInstancing.cpp">
+    <ClCompile Include="..\..\source\btrlib\cModel.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

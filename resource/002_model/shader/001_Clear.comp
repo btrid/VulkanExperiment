@@ -9,25 +9,18 @@
 
 //#extension GL_ARB_shading_language_include : require
 #extension GL_GOOGLE_cpp_style_line_directive : require
+
+#define USE_MODEL_INFO_SET 0
+#define USE_ANIMATION_INFO_SET 1
 #include </MultiModel.glsl>
 
 layout (local_size_x = 256, local_size_y = 1) in;
 
-layout(std430, binding=8) restrict buffer ModelInfoBuffer {
-	ModelInfo modelInfo;
-};
-
-layout(std430, binding=9) restrict buffer MeshBuffer {
-	Mesh meshs[];
-};
-
-
 void main()
 {
 	uint index = gl_GlobalInvocationID.x;
-	if(index >= modelInfo.meshNum){
+	if(index >= u_model_info.mesh_num){
 		return;
 	}
-	modelInfo.instanceNum = 0;
 	meshs[index].instanceCount =  0;
 }

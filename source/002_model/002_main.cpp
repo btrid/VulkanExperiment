@@ -228,21 +228,14 @@ int main()
 			framebuffer[i] = device->createFramebuffer(framebuffer_info);
 		}
 	}
-	setup_cmd.end();
 
-	vk::SubmitInfo setup_submit_info;
-	setup_submit_info.setCommandBufferCount(1);
-	setup_submit_info.setPCommandBuffers(&setup_cmd);
-	queue.submit({ setup_submit_info }, vk::Fence());
-	queue.waitIdle();
-
-	auto task = std::make_shared<std::promise<std::unique_ptr<cModelInstancing>>>();
+	auto task = std::make_shared<std::promise<std::unique_ptr<cModel>>>();
 	auto modelFuture = task->get_future();
 	{
 		cThreadJob job;
 		auto load = [task]()
 		{
-			auto model = std::make_unique<cModelInstancing>();
+			auto model = std::make_unique<cModel>();
 			model->load(btr::getResourcePath() + "tiny.x");
 			task->set_value(std::move(model));
 		};
@@ -256,6 +249,35 @@ int main()
 
 	auto model = modelFuture.get();
 
+	auto loader = std::make_unique<app::Loader>();
+	loader->m_device = device;
+	auto host_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
+	vk::MemoryPropertyFlags device_memory = vk::MemoryPropertyFlagBits::eDeviceLocal;
+	device_memory = host_memory;
+	loader->m_vertex_memory.setup(device, vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 128 * 65536);
+	loader->m_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1024 * 1024 * 20);
+	loader->m_uniform_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 8192);
+	loader->m_staging_memory.setup(device, vk::BufferUsageFlagBits::eTransferSrc, host_memory, 1024 * 1024 * 20);
+	loader->m_cmd = setup_cmd;
+	loader->m_render_pass = render_pass;
+
+	loader->m_vertex_memory.setName("Model Vertex Memory");
+	loader->m_storage_memory.setName("Model Storage Memory");
+	loader->m_uniform_memory.setName("Model Uniform Memory");
+	loader->m_staging_memory.setName("Model Staging Memory");
+
+	ModelRender render;
+	render.setup(loader.get(), model->getResource(), 1000);
+	setup_cmd.end();
+
+	vk::SubmitInfo setup_submit_info;
+	setup_submit_info.setCommandBufferCount(1);
+	setup_submit_info.setPCommandBuffers(&setup_cmd);
+	queue.submit({ setup_submit_info }, vk::Fence());
+	queue.waitIdle();
+
+
+
 	auto* camera = cCamera::sCamera::Order().create();
 	camera->m_position = glm::vec3(0.f, -500.f, -800.f);
 	camera->m_target = glm::vec3(0.f, -100.f, 0.f);
@@ -264,18 +286,17 @@ int main()
 	camera->m_height = 480;
 	camera->m_far = 100000.f;
 	camera->m_near = 0.01f;
-	ModelRender render;
-	render.setup(model->getResource());
+
 
 	cModelRenderer renderer;
-	renderer.setup(render_pass);
+	renderer.setup(*loader);
 	renderer.addModel(&render);
 
-	std::vector<std::unique_ptr<cModelInstancing>> models;
+	std::vector<std::unique_ptr<cModel>> models;
 	models.reserve(1000);
 	for (int i = 0; i < 1000; i++)
 	{
-		auto m = std::make_unique<cModelInstancing>();
+		auto m = std::make_unique<cModel>();
 		m->load(btr::getResourcePath() + "tiny.x");
 		render.addModel(m.get());
 		m->getInstance()->m_world = glm::translate(glm::ballRand(2999.f));

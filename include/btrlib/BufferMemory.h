@@ -485,18 +485,106 @@ struct UpdateBuffer
 		m_begin = ~vk::DeviceSize(0);
 		m_end = vk::DeviceSize(0);
 		m_frame = (m_frame + 1) % m_frame_max;
-
-// 		vk::DescriptorBufferInfo info = getBufferInfo();
-// 		info.setOffset(copy_info.srcOffset);
-// 		info.setRange(copy_info.size);
-// 		return info;
 	}
-//	T* getPtr() { return m_staging_memory.getMappedPtr<T>(m_frame); }
 
 	vk::DescriptorBufferInfo getBufferInfo()const { return m_device_memory.getBufferInfo(); }
 	AllocatedMemory& getAllocateMemory() { return m_device_memory; }
 	const AllocatedMemory& getAllocateMemory()const { return m_device_memory; }
-	vk::DeviceMemory getMemory()const { return m_staging_memory.getDeviceMemory(); }
+};
+
+struct UpdateBufferExDescriptor
+{
+	btr::BufferMemory device_memory;
+	btr::BufferMemory staging_memory;
+	uint32_t frame_max;
+	uint32_t alloc_size;
+	UpdateBufferExDescriptor()
+	{
+		frame_max = sGlobal::FRAME_MAX;
+		alloc_size = -1;
+	}
+};
+
+struct UpdateBufferEx
+{
+	AllocatedMemory m_device_memory;
+	AllocatedMemory m_staging_memory;
+	vk::DeviceSize m_begin;
+	vk::DeviceSize m_end;
+	uint32_t m_frame;
+	uint32_t m_frame_max;
+	UpdateBufferExDescriptor m_descriptor;
+	void setup(UpdateBufferExDescriptor& desc)
+	{
+		assert(!m_device_memory.isValid());
+		assert(desc.device_memory.isValid());
+		assert(btr::isOn(desc.device_memory.getBufferCreateInfo().usage, vk::BufferUsageFlagBits::eTransferDst));
+
+		m_descriptor = desc;
+		m_device_memory = desc.device_memory.allocateMemory(desc.alloc_size);
+		if (desc.staging_memory.isValid()) {
+			assert(btr::isOn(desc.staging_memory.getBufferCreateInfo().usage, vk::BufferUsageFlagBits::eTransferSrc));
+			m_staging_memory = desc.staging_memory.allocateMemory(desc.alloc_size*desc.frame_max);
+		}
+		m_begin = ~vk::DeviceSize(0);
+		m_end = vk::DeviceSize(0);
+		m_frame = 0;
+		m_frame_max = desc.frame_max;
+	}
+
+	void setStagingMemory(btr::BufferMemory& staging_memory)
+	{
+		// çXêVíÜÇ¡Ç€Ç¢
+		assert(m_begin == ~vk::DeviceSize(0));
+		m_staging_memory = AllocatedMemory();
+		if (staging_memory.isValid())
+		{
+			m_staging_memory = staging_memory.allocateMemory(m_descriptor.alloc_size*m_frame_max);
+		}
+	}
+
+	template<typename T>
+	void subupdate(const T& data)
+	{
+		auto* ptr = m_staging_memory.getMappedPtr<T>(m_frame);
+		*ptr = data;
+		m_begin = 0;
+		m_end = sizeof(T);
+	}
+	void subupdate(void* data, vk::DeviceSize data_size, vk::DeviceSize offset)
+	{
+		char* ptr = static_cast<char*>(m_staging_memory.getMappedPtr()) + m_frame*m_descriptor.alloc_size;
+		memcpy_s(ptr + offset, data_size, data, data_size);
+		m_begin = std::min(offset, m_begin);
+		m_end = std::max(offset + data_size, m_end);
+	}
+
+	bool isUpdate()const {
+		return m_end < m_begin;
+	}
+
+	void update(vk::CommandBuffer cmd)
+	{
+		if (isUpdate()) {
+			assert(isUpdate());
+			//			return vk::DescriptorBufferInfo();
+			return;
+		}
+		vk::BufferCopy copy_info;
+		copy_info.setSize(m_end - m_begin);
+		copy_info.setSrcOffset(m_staging_memory.getBufferInfo().offset + m_descriptor.alloc_size*m_frame + m_begin);
+		copy_info.setDstOffset(m_device_memory.getBufferInfo().offset + m_begin);
+		cmd.copyBuffer(m_staging_memory.getBufferInfo().buffer, m_device_memory.getBufferInfo().buffer, copy_info);
+
+		m_begin = ~vk::DeviceSize(0);
+		m_end = vk::DeviceSize(0);
+		m_frame = (m_frame + 1) % m_frame_max;
+	}
+
+	vk::DescriptorBufferInfo getBufferInfo()const { return m_device_memory.getBufferInfo(); }
+	vk::DescriptorBufferInfo getStagingBufferInfo()const { return m_staging_memory.getBufferInfo(); }
+	AllocatedMemory& getAllocateMemory() { return m_device_memory; }
+	const AllocatedMemory& getAllocateMemory()const { return m_device_memory; }
 };
 
 }

@@ -14,6 +14,9 @@
 #extension GL_ARB_shading_language_include : require
 #endif
 #include </Math.glsl>
+#define USE_MODEL_INFO_SET 0
+//#define USE_MODEL_INFO_SET 0
+#define USE_SCENE_SET 2
 #include </MultiModel.glsl>
 
 layout(location = 0)in vec3 inPosition;
@@ -21,7 +24,6 @@ layout(location = 1)in vec3 inNormal;
 layout(location = 2)in vec4 inTexcoord;
 layout(location = 3)in uvec4 inBoneID;
 layout(location = 4)in vec4 inWeight;
-//layout(location = 5)in int inMaterialIndex;
 
 
 out gl_PerVertex{
@@ -37,30 +39,16 @@ struct Vertex
 };
 layout(location = 0) out Vertex VSOut;
 
-layout(std140, set=2, binding=0) uniform CameraUniform
-{
-	mat4 uProjection;
-	mat4 uView;
-};
-
-layout(std140, set=0, binding=0) uniform ModelInfoUniform
-{
-	ModelInfo modelInfo;
-};
-
-layout(std430, set=0, binding=1)readonly restrict buffer BoneTransformBuffer {
-	mat4 bones[];
-};
-
 
 mat4 skinning()
 {
-	mat4 transMat = mat4(0.0);
+	mat4 transMat = mat4(1.0);
+	return transMat;
 	for(int i=0; i<4; i++)
 	{
 		if(inBoneID[i] != 255) 
 		{
-			transMat += inWeight[i] * bones[modelInfo.boneNum * int(gl_InstanceIndex) + inBoneID[i]];
+			transMat += inWeight[i] * bones[u_model_info.boneNum * int(gl_InstanceIndex) + inBoneID[i]];
 		}
 	}
 
@@ -73,10 +61,11 @@ void main()
 	vec4 pos = vec4((inPosition).xyz, 1.0);
 	mat4 skinningMat = skinning();
 	pos = skinningMat * pos;
-	gl_Position = uProjection * uView * vec4(pos.xyz, 1.0);
+	Camera2 camera = uCamera;
+	gl_Position = camera.uProjection * camera.uView * vec4(pos.xyz, 1.0);
 
 	VSOut.Position = pos.xyz;
 	VSOut.Normal = /*mat3(skinningMat) **/ /*mat3(transpose(inverse(uView))) **/ inNormal.xyz;
 	VSOut.Texcoord = inTexcoord.xyz;
-
+while(true);
 }
