@@ -7,7 +7,7 @@
 #include <btrlib/cCamera.h>
 #include <btrlib/Shape.h>
 #include <btrlib/BufferMemory.h>
-#include <applib/Loader.h>
+#include <btrlib/Loader.h>
 
 struct cModelRenderer;
 
@@ -56,5 +56,5 @@ struct cInstancingModelPipeline
 	vk::DescriptorSet m_descriptor_set_scene;
 	vk::DescriptorSet m_descriptor_set_light;
 
-	void setup(app::Loader& loader, cModelRenderer& renderer);
+	void setup(btr::Loader& loader, cModelRenderer& renderer);
 };

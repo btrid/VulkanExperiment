@@ -1,6 +1,6 @@
 #include <003_particle/ParticlePipeline.h>
 
-void cParticlePipeline::Private::setup(app::Loader& loader)
+void cParticlePipeline::Private::setup(btr::Loader& loader)
 {
 	m_map_info_cpu.m_cell_size = glm::vec4(10.f, 1.f, 10.f, 0.f);
 	m_map_info_cpu.m_cell_num = glm::vec4(127, 127, 0, 0);

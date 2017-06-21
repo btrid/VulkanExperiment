@@ -14,17 +14,7 @@
 #include <btrlib/rTexture.h>
 #include <btrlib/ResourceManager.h>
 #include <btrlib/BufferMemory.h>
-
-struct ModelLoader
-{
-	cDevice m_device;
-	btr::BufferMemory m_vertex_memory;
-	btr::BufferMemory m_storage_memory;
-	btr::BufferMemory m_storage_uniform_memory;
-	btr::BufferMemory m_staging_memory;
-
-	vk::CommandBuffer m_cmd;
-};
+#include <btrlib/Loader.h>
 
 struct cMeshResource 
 {
@@ -138,7 +128,7 @@ struct ResourceTexture
 
 	std::shared_ptr<Resource> m_private;
 
-	void load(ModelLoader* loader, cThreadPool& thread_pool, const std::string& filename);
+	void load(btr::Loader* loader, cThreadPool& thread_pool, const std::string& filename);
 	vk::ImageView getImageView()const { return m_private ? m_private->m_image_view : vk::ImageView(); }
 	vk::Sampler getSampler()const { return m_private ? m_private->m_sampler : vk::Sampler(); }
 
@@ -259,14 +249,13 @@ public:
 	};
 	std::unique_ptr<Instance> m_instance;
 
-	std::unique_ptr<ModelLoader> m_loader;
 	static ResourceManager<Resource> s_manager;
 
 public:
 	cModel();
 	~cModel();
 
-	void load(const std::string& filename);
+	void load(btr::Loader* loader, const std::string& filename);
 	void makeInstancing() { ; }
 	std::string getFilename()const;
 	const cMeshResource* getMesh()const;

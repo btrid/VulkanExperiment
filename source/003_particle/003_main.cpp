@@ -21,7 +21,7 @@
 #include <btrlib/BufferMemory.h>
 
 #include <applib/App.h>
-#include <applib/Loader.h>
+#include <btrlib/Loader.h>
 
 #include <003_particle/ParticlePipeline.h>
 
@@ -72,7 +72,7 @@ int main()
 	vk::Queue queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), 0);
 
 
-	std::unique_ptr<app::Loader> loader = std::make_unique<app::Loader>();
+	std::unique_ptr<btr::Loader> loader = std::make_unique<btr::Loader>();
 	loader->m_device = device;
 	loader->m_render_pass = app.m_render_pass;
 
@@ -84,7 +84,7 @@ int main()
 	loader->m_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 1000 * 200);
 	loader->m_staging_memory.setup(device, vk::BufferUsageFlagBits::eTransferSrc, host_memory, 1000 * 1000 * 100);
 
-	std::unique_ptr<app::Executer> executer = std::make_unique<app::Executer>();
+	std::unique_ptr<btr::Executer> executer = std::make_unique<btr::Executer>();
 	executer->m_device = device;
 	executer->m_vertex_memory	= loader->m_vertex_memory;
 	executer->m_uniform_memory	= loader->m_uniform_memory;

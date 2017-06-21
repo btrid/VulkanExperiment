@@ -5,7 +5,7 @@
 #include <btrlib/Shape.h>
 #include <btrlib/cModel.h>
 
-void cInstancingModelPipeline::setup(app::Loader& loader, cModelRenderer& renderer)
+void cInstancingModelPipeline::setup(btr::Loader& loader, cModelRenderer& renderer)
 {
 	const auto& gpu = sThreadLocal::Order().m_gpu;
 	auto device = gpu.getDevice(vk::QueueFlagBits::eCompute)[0];

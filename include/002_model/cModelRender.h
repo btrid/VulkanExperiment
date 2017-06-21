@@ -3,7 +3,7 @@
 #include <btrlib/cModel.h>
 #include <btrlib/Light.h>
 #include <btrlib/BufferMemory.h>
-#include <applib/Loader.h>
+#include <btrlib/Loader.h>
 #include <002_model/cModelPipeline.h>
 #include <002_model/cLightPipeline.h>
 struct cModelRenderer;
@@ -164,7 +164,7 @@ public:
 	std::unique_ptr<InstancingResource> m_resource_instancing;
 
 public:
-	void setup(app::Loader* loader, std::shared_ptr<cModel::Resource> resource, uint32_t instanceNum);
+	void setup(btr::Loader* loader, std::shared_ptr<cModel::Resource> resource, uint32_t instanceNum);
 	void addModel(cModel* model) { m_model.push_back(model); }
 
 	void setup(cModelRenderer& renderer);
@@ -214,7 +214,7 @@ public:
 		auto device = gpu.getDevice(vk::QueueFlagBits::eGraphics)[0];
 		m_device = device;
 	}
-	void setup(app::Loader& loader)
+	void setup(btr::Loader& loader)
 	{
 		m_light_pipeline.setup(*this);
 		m_compute_pipeline.setup(loader, *this);

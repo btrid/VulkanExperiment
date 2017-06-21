@@ -6,7 +6,7 @@
 #include <btrlib/BufferMemory.h>
 #include <btrlib/cCamera.h>
 
-#include <applib/Loader.h>
+#include <btrlib/Loader.h>
 
 struct cTriangleLL
 {
@@ -39,7 +39,7 @@ struct cTriangleLL
 		btr::AllocatedMemory m_vertex;
 		btr::AllocatedMemory m_index;
 		uint32_t m_index_count;
-		void setup(app::Loader& loader, cTriangleLL* const t)
+		void setup(btr::Loader& loader, cTriangleLL* const t)
 		{
 			m_parent = t;
 			m_brick_info = m_parent->m_brick_info;
@@ -327,7 +327,7 @@ struct cTriangleLL
 	};
 	std::array<vk::PipelineShaderStageCreateInfo, MAKE_TRIANGLELL_NUM> m_make_triangleLL_shader_info;
 
-	void setup(app::Loader& loader)
+	void setup(btr::Loader& loader)
 	{
 		{
 			// ƒƒ‚ƒŠŠm•Û

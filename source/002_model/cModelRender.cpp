@@ -4,7 +4,7 @@
 /**
 *	モーションのデータを一枚の1DArrayに格納
 */
-MotionTexture create(app::Loader* loader, const Motion& motion, const RootNode& root)
+MotionTexture create(btr::Loader* loader, const Motion& motion, const RootNode& root)
 {
 	uint32_t SIZE = 256;
 
@@ -187,7 +187,7 @@ MotionTexture create(app::Loader* loader, const Motion& motion, const RootNode& 
 	return tex;
 }
 
-std::vector<MotionTexture> createMotion(app::Loader* loader, const cAnimation& anim, const RootNode& rootnode)
+std::vector<MotionTexture> createMotion(btr::Loader* loader, const cAnimation& anim, const RootNode& rootnode)
 {
 
 	std::vector<MotionTexture> motion_texture(anim.m_motion.size());
@@ -230,7 +230,7 @@ std::vector<ModelRender::NodeInfo> createNodeInfo(const RootNode& rootnode)
 }
 
 
-void ModelRender::setup(app::Loader* loader, std::shared_ptr<cModel::Resource> resource, uint32_t instanceNum)
+void ModelRender::setup(btr::Loader* loader, std::shared_ptr<cModel::Resource> resource, uint32_t instanceNum)
 {
 	m_resource = resource;
 	m_resource_instancing = std::make_unique<InstancingResource>();

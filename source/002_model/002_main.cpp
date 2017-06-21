@@ -228,28 +228,7 @@ int main()
 			framebuffer[i] = device->createFramebuffer(framebuffer_info);
 		}
 	}
-
-	auto task = std::make_shared<std::promise<std::unique_ptr<cModel>>>();
-	auto modelFuture = task->get_future();
-	{
-		cThreadJob job;
-		auto load = [task]()
-		{
-			auto model = std::make_unique<cModel>();
-			model->load(btr::getResourcePath() + "tiny.x");
-			task->set_value(std::move(model));
-		};
-		job.mFinish = load;
-		sGlobal::Order().getThreadPool().enque(std::move(job));
-	}
-
-	while (modelFuture.valid() && modelFuture.wait_for(std::chrono::milliseconds(10)) != std::future_status::ready) {
-		printf("wait...\n");
-	}
-
-	auto model = modelFuture.get();
-
-	auto loader = std::make_unique<app::Loader>();
+	auto loader = std::make_unique<btr::Loader>();
 	loader->m_device = device;
 	auto host_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
 	vk::MemoryPropertyFlags device_memory = vk::MemoryPropertyFlagBits::eDeviceLocal;
@@ -265,6 +244,27 @@ int main()
 	loader->m_storage_memory.setName("Model Storage Memory");
 	loader->m_uniform_memory.setName("Model Uniform Memory");
 	loader->m_staging_memory.setName("Model Staging Memory");
+
+	auto task = std::make_shared<std::promise<std::unique_ptr<cModel>>>();
+	auto modelFuture = task->get_future();
+	{
+		cThreadJob job;
+		auto load = [task, &loader]()
+		{
+			auto model = std::make_unique<cModel>();
+			model->load(loader.get(), btr::getResourcePath() + "tiny.x");
+			task->set_value(std::move(model));
+		};
+		job.mFinish = load;
+		sGlobal::Order().getThreadPool().enque(std::move(job));
+	}
+
+	while (modelFuture.valid() && modelFuture.wait_for(std::chrono::milliseconds(10)) != std::future_status::ready) {
+		printf("wait...\n");
+	}
+
+	auto model = modelFuture.get();
+
 
 	ModelRender render;
 	render.setup(loader.get(), model->getResource(), 1000);
@@ -297,7 +297,7 @@ int main()
 	for (int i = 0; i < 1000; i++)
 	{
 		auto m = std::make_unique<cModel>();
-		m->load(btr::getResourcePath() + "tiny.x");
+		m->load(loader.get(), btr::getResourcePath() + "tiny.x");
 		render.addModel(m.get());
 		m->getInstance()->m_world = glm::translate(glm::ballRand(2999.f));
 		models.push_back(std::move(m));

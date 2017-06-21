@@ -2,7 +2,7 @@
 
 #include <btrlib/Define.h>
 #include <btrlib/BufferMemory.h>
-#include <applib/Loader.h>
+#include <btrlib/Loader.h>
 
 #include <003_particle/CircleIndex.h>
 struct Boid
@@ -117,8 +117,8 @@ struct Boid
 
 	struct cParticlePipeline* m_parent;
 	glm::vec3 cell_size;
-	void setup(app::Loader& loader, struct cParticlePipeline& parent);
-	void execute(app::Executer& executer);
+	void setup(btr::Loader& loader, struct cParticlePipeline& parent);
+	void execute(btr::Executer& executer);
 	void draw(vk::CommandBuffer cmd);
 
 };

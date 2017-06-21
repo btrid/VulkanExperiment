@@ -1,7 +1,7 @@
 #include <003_particle/Boid.h>
 #include <003_particle/ParticlePipeline.h>
 
-void Boid::setup(app::Loader& loader, cParticlePipeline& parent)
+void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 {
 	m_parent = &parent;
 	{
@@ -489,7 +489,7 @@ void Boid::setup(app::Loader& loader, cParticlePipeline& parent)
 
 }
 
-void Boid::execute(app::Executer& executer)
+void Boid::execute(btr::Executer& executer)
 {
 	auto cmd = executer.m_cmd;
 	m_brain_gpu.swap();

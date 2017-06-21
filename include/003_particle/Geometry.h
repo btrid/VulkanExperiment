@@ -5,7 +5,7 @@
 #include <btrlib/Define.h>
 #include <btrlib/sGlobal.h>
 #include <btrlib/BufferMemory.h>
-#include <applib/Loader.h>
+#include <btrlib/Loader.h>
 
 struct Geometry
 {
@@ -37,7 +37,7 @@ struct Geometry
 	static void OptimaizeConnectTriangle(std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>>& vertex);
 
 	static Geometry MakeGeometry(
-		app::Loader& loader,
+		btr::Loader& loader,
 		const void* vertex,
 		size_t vertex_size,
 		const void* index,

@@ -6,7 +6,7 @@
 #include <btrlib/cCamera.h>
 
 #include <applib/App.h>
-#include <applib/Loader.h>
+#include <btrlib/Loader.h>
 #include <003_particle/MazeGenerator.h>
 #include <003_particle/Geometry.h>
 #include <003_particle/CircleIndex.h>
@@ -122,9 +122,9 @@ struct cParticlePipeline
 		MapInfo m_map_info_cpu;
 
 		Player m_player;
-		void setup(app::Loader& loader);
+		void setup(btr::Loader& loader);
 
-		void execute(app::Executer& executer)
+		void execute(btr::Executer& executer)
 		{
 			vk::CommandBuffer cmd = executer.m_cmd;
 //			m_make_triangleLL.execute(cmd, m_maze_geometry.m_resource->m_vertex.getBufferInfo(), m_maze_geometry.m_resource->m_index.getBufferInfo(), m_maze_geometry.m_resource->m_indirect.getBufferInfo(), m_maze_geometry.m_resource->m_index_type);
@@ -295,7 +295,7 @@ struct cParticlePipeline
 	};
 	std::unique_ptr<Private> m_private;
 
-	void setup(app::Loader& loader)
+	void setup(btr::Loader& loader)
 	{
 		auto p = std::make_unique<Private>();
 		p->setup(loader);
@@ -304,7 +304,7 @@ struct cParticlePipeline
 		m_boid.setup(loader, *this);
 	}
 
-	void execute(app::Executer& executer)
+	void execute(btr::Executer& executer)
 	{
 		m_private->execute(executer);
 		m_boid.execute(executer);

@@ -53,7 +53,7 @@ namespace {
 
 ResourceManager<ResourceTexture::Resource> ResourceTexture::s_manager;
 ResourceManager<cModel::Resource> cModel::s_manager;
-void ResourceTexture::load(ModelLoader* loader, cThreadPool& thread_pool, const std::string& filename)
+void ResourceTexture::load(btr::Loader* loader, cThreadPool& thread_pool, const std::string& filename)
 {
 	if (s_manager.manage(m_private, filename)) {
 		return;
@@ -163,7 +163,7 @@ void ResourceTexture::load(ModelLoader* loader, cThreadPool& thread_pool, const 
 }
 
 
-std::vector<cModel::Material> loadMaterial(const aiScene* scene, const std::string& filename, ModelLoader* loader)
+std::vector<cModel::Material> loadMaterial(const aiScene* scene, const std::string& filename, btr::Loader* loader)
 {
 	std::string path = std::tr2::sys::path(filename).remove_filename().string();
 	std::vector<cModel::Material> material(scene->mNumMaterials);
@@ -233,7 +233,7 @@ RootNode loadNode(const aiScene* scene)
 	return root;
 }
 
-void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& root, ModelLoader* loader)
+void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& root, btr::Loader* loader)
 {
 	if (!scene->HasAnimations()) {
 		return;
@@ -295,7 +295,7 @@ cModel::~cModel()
 {}
 
 
-void cModel::load(const std::string& filename)
+void cModel::load(btr::Loader* loader, const std::string& filename)
 {
 
 	m_instance = std::make_unique<Instance>();
@@ -326,17 +326,6 @@ void cModel::load(const std::string& filename)
 
 
 	auto device = sThreadLocal::Order().m_device[sThreadLocal::DEVICE_GRAPHICS];
-	m_loader = std::make_unique<ModelLoader>();
-	m_loader->m_device = device;
-	m_loader->m_vertex_memory.setup(device, vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal, 128 * 65536);
-	m_loader->m_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal, 1024 * 1024 * 20);
-	m_loader->m_storage_uniform_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, vk::MemoryPropertyFlagBits::eDeviceLocal, 8192);
-	m_loader->m_staging_memory.setup(device, vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached, 1024 * 1024 * 20);
-
-	m_loader->m_vertex_memory.setName("Model Vertex Memory");
-	m_loader->m_storage_memory.setName("Model Storage Memory");
-	m_loader->m_storage_uniform_memory.setName("Model Uniform Memory");
-	m_loader->m_staging_memory.setName("Model Staging Memory");
 
 	auto cmd_pool = sGlobal::Order().getCmdPoolTempolary(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
 	vk::CommandBufferAllocateInfo cmd_info;
@@ -348,11 +337,10 @@ void cModel::load(const std::string& filename)
 	begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
 	cmd.begin(begin_info);
 
-	m_loader->m_cmd = cmd;
 	// ‰Šú‰»
-	m_resource->m_material = loadMaterial(scene, filename, m_loader.get());
+	m_resource->m_material = loadMaterial(scene, filename, loader);
 	m_resource->mNodeRoot = loadNode(scene);
-	loadMotion(m_resource->m_animation, scene, m_resource->mNodeRoot, m_loader.get());
+	loadMotion(m_resource->m_animation, scene, m_resource->mNodeRoot, loader);
 
 	std::vector<Bone>& boneList = m_resource->mBone;
 
@@ -376,14 +364,14 @@ void cModel::load(const std::string& filename)
 	btr::BufferMemory::Descriptor staging_vertex_desc;
 	staging_vertex_desc.size = sizeof(Vertex) * numVertex;
 	staging_vertex_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-	auto staging_vertex = m_loader->m_staging_memory.allocateMemory(staging_vertex_desc);
+	auto staging_vertex = loader->m_staging_memory.allocateMemory(staging_vertex_desc);
 
 	auto index_type = numVertex < std::numeric_limits<uint16_t>::max() ? vk::IndexType::eUint16 : vk::IndexType::eUint32;
 
 	btr::BufferMemory::Descriptor staging_index_desc;
 	staging_index_desc.size = (index_type == vk::IndexType::eUint16 ? sizeof(uint16_t) : sizeof(uint32_t)) * numIndex;
 	staging_index_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-	auto staging_index = m_loader->m_staging_memory.allocateMemory(staging_index_desc);
+	auto staging_index = loader->m_staging_memory.allocateMemory(staging_index_desc);
 	auto index_stride = (index_type == vk::IndexType::eUint16 ? sizeof(uint16_t) : sizeof(uint32_t));
 	auto* index = static_cast<char*>(staging_index.getMappedPtr());
 	Vertex* vertex = static_cast<Vertex*>(staging_vertex.getMappedPtr());
@@ -488,15 +476,15 @@ void cModel::load(const std::string& filename)
 		cMeshResource& mesh = m_resource->m_mesh_resource;
 
 		{
-			mesh.m_vertex_buffer_ex = m_loader->m_vertex_memory.allocateMemory(staging_vertex.getBufferInfo().range);
-			mesh.m_index_buffer_ex = m_loader->m_vertex_memory.allocateMemory(staging_index.getBufferInfo().range);
+			mesh.m_vertex_buffer_ex = loader->m_vertex_memory.allocateMemory(staging_vertex.getBufferInfo().range);
+			mesh.m_index_buffer_ex = loader->m_vertex_memory.allocateMemory(staging_index.getBufferInfo().range);
 
 			btr::BufferMemory::Descriptor indirect_desc;
 			indirect_desc.size = vector_sizeof(m_resource->m_mesh);
-			mesh.m_indirect_buffer_ex = m_loader->m_vertex_memory.allocateMemory(indirect_desc);
+			mesh.m_indirect_buffer_ex = loader->m_vertex_memory.allocateMemory(indirect_desc);
 
 			indirect_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-			auto staging_indirect = m_loader->m_staging_memory.allocateMemory(indirect_desc);
+			auto staging_indirect = loader->m_staging_memory.allocateMemory(indirect_desc);
 			auto* indirect = staging_indirect.getMappedPtr<Mesh>(0);
 			int offset = 0;
 			for (size_t i = 0; i < m_resource->m_mesh.size(); i++) {
