@@ -204,7 +204,7 @@ struct cModelRenderer
 {
 	cDevice m_device;
 	cFowardPlusPipeline m_light_pipeline;
-	cModelComputePipeline m_compute_pipeline;
+	cInstancingModelPipeline m_compute_pipeline;
 	std::vector<ModelRender*> m_model;
 
 public:
@@ -254,7 +254,7 @@ public:
 
 	}
 
-	cModelComputePipeline& getComputePipeline() { return m_compute_pipeline; }
+	cInstancingModelPipeline& getComputePipeline() { return m_compute_pipeline; }
 	cFowardPlusPipeline& getLight() {
 		return m_light_pipeline;
 	}

@@ -5,7 +5,7 @@
 #include <btrlib/Shape.h>
 #include <btrlib/cModel.h>
 
-void cModelComputePipeline::setup(app::Loader& loader, cModelRenderer& renderer)
+void cInstancingModelPipeline::setup(app::Loader& loader, cModelRenderer& renderer)
 {
 	const auto& gpu = sThreadLocal::Order().m_gpu;
 	auto device = gpu.getDevice(vk::QueueFlagBits::eCompute)[0];
@@ -388,7 +388,7 @@ void cModelComputePipeline::setup(app::Loader& loader, cModelRenderer& renderer)
 		vk::DescriptorSetAllocateInfo alloc_info;
 		alloc_info.descriptorPool = m_descriptor_pool;
 		alloc_info.descriptorSetCount = 1;
-		alloc_info.pSetLayouts = &m_descriptor_set_layout[cModelComputePipeline::DESCRIPTOR_SCENE];
+		alloc_info.pSetLayouts = &m_descriptor_set_layout[cInstancingModelPipeline::DESCRIPTOR_SCENE];
 		m_descriptor_set_scene = device->allocateDescriptorSets(alloc_info)[0];
 
 		std::vector<vk::DescriptorBufferInfo> uniformBufferInfo = {
@@ -410,7 +410,7 @@ void cModelComputePipeline::setup(app::Loader& loader, cModelRenderer& renderer)
 		vk::DescriptorSetAllocateInfo alloc_info;
 		alloc_info.descriptorPool = m_descriptor_pool;
 		alloc_info.descriptorSetCount = 1;
-		alloc_info.pSetLayouts = &m_descriptor_set_layout[cModelComputePipeline::DESCRIPTOR_LIGHT];
+		alloc_info.pSetLayouts = &m_descriptor_set_layout[cInstancingModelPipeline::DESCRIPTOR_LIGHT];
 		m_descriptor_set_light = device->allocateDescriptorSets(alloc_info)[0];
 
 		std::vector<vk::DescriptorBufferInfo> uniformBufferInfo = {

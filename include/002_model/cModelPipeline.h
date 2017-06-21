@@ -11,7 +11,7 @@
 
 struct cModelRenderer;
 
-struct cModelComputePipeline
+struct cInstancingModelPipeline
 {
 
 	enum {

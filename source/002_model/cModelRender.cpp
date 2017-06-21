@@ -524,7 +524,7 @@ void ModelRender::setup(cModelRenderer&  renderer)
 			vk::DescriptorSetAllocateInfo allocInfo;
 			allocInfo.descriptorPool = pipeline.m_descriptor_pool;
 			allocInfo.descriptorSetCount = 1;
-			allocInfo.pSetLayouts = &pipeline.m_descriptor_set_layout[cModelComputePipeline::DESCRIPTOR_PER_MESH];
+			allocInfo.pSetLayouts = &pipeline.m_descriptor_set_layout[cInstancingModelPipeline::DESCRIPTOR_PER_MESH];
 			m_draw_descriptor_set_per_mesh = graphics_device->allocateDescriptorSets(allocInfo);
 			for (size_t i = 0; i < m_draw_descriptor_set_per_mesh.size(); i++)
 			{
@@ -574,7 +574,7 @@ void ModelRender::setup(cModelRenderer&  renderer)
 			desc.setDescriptorCount(uniforms.size());
 			desc.setPBufferInfo(uniforms.data());
 			desc.setDstBinding(0);
-			desc.setDstSet(m_descriptor_set[cModelComputePipeline::DESCRIPTOR_MODEL]);
+			desc.setDstSet(m_descriptor_set[cInstancingModelPipeline::DESCRIPTOR_MODEL]);
 			compute_device->updateDescriptorSets(desc, {});
 
 			std::vector<vk::DescriptorBufferInfo> storages =
@@ -588,7 +588,7 @@ void ModelRender::setup(cModelRenderer&  renderer)
 			desc.setDescriptorCount(storages.size());
 			desc.setPBufferInfo(storages.data());
 			desc.setDstBinding(1);
-			desc.setDstSet(m_descriptor_set[cModelComputePipeline::DESCRIPTOR_MODEL]);
+			desc.setDstSet(m_descriptor_set[cInstancingModelPipeline::DESCRIPTOR_MODEL]);
 			compute_device->updateDescriptorSets(desc, {});
 		}
 		// AnimationUpdate
@@ -610,7 +610,7 @@ void ModelRender::setup(cModelRenderer&  renderer)
 			desc.setDescriptorCount(storages.size());
 			desc.setPBufferInfo(storages.data());
 			desc.setDstBinding(0);
-			desc.setDstSet(m_descriptor_set[cModelComputePipeline::DESCRIPTOR_ANIMATION]);
+			desc.setDstSet(m_descriptor_set[cInstancingModelPipeline::DESCRIPTOR_ANIMATION]);
 			compute_device->updateDescriptorSets(desc, {});
 
 			std::vector<vk::DescriptorImageInfo> images =
@@ -625,7 +625,7 @@ void ModelRender::setup(cModelRenderer&  renderer)
 				.setDescriptorCount(images.size())
 				.setPImageInfo(images.data())
 				.setDstBinding(32)
-				.setDstSet(m_descriptor_set[cModelComputePipeline::DESCRIPTOR_ANIMATION]);
+				.setDstSet(m_descriptor_set[cInstancingModelPipeline::DESCRIPTOR_ANIMATION]);
 			compute_device->updateDescriptorSets(desc, {});
 		}
 	}
@@ -753,8 +753,8 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 
 		}
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, pipeline.m_pipeline[i]);
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipeline.m_pipeline_layout[cModelComputePipeline::PIPELINE_LAYOUT_COMPUTE], 0, m_descriptor_set[cModelComputePipeline::DESCRIPTOR_MODEL], {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipeline.m_pipeline_layout[cModelComputePipeline::PIPELINE_LAYOUT_COMPUTE], 1, m_descriptor_set[cModelComputePipeline::DESCRIPTOR_ANIMATION], {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipeline.m_pipeline_layout[cInstancingModelPipeline::PIPELINE_LAYOUT_COMPUTE], 0, m_descriptor_set[cInstancingModelPipeline::DESCRIPTOR_MODEL], {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipeline.m_pipeline_layout[cInstancingModelPipeline::PIPELINE_LAYOUT_COMPUTE], 1, m_descriptor_set[cInstancingModelPipeline::DESCRIPTOR_ANIMATION], {});
 		cmd.dispatchIndirect(m_resource_instancing->m_compute_indirect_buffer.getBufferInfo().buffer, m_resource_instancing->m_compute_indirect_buffer.getBufferInfo().offset + i* 12);
 
 
@@ -815,11 +815,11 @@ void ModelRender::draw(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.m_graphics_pipeline);
 	for (auto m : m_resource->m_mesh)
 	{
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelComputePipeline::PIPELINE_LAYOUT_RENDER], 2, pipeline.m_descriptor_set_scene, {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelComputePipeline::PIPELINE_LAYOUT_RENDER], 0, m_descriptor_set[cModelComputePipeline::DESCRIPTOR_MODEL], {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelComputePipeline::PIPELINE_LAYOUT_RENDER], 3, pipeline.m_descriptor_set_light, {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelComputePipeline::PIPELINE_LAYOUT_RENDER], 1, m_draw_descriptor_set_per_mesh[m.m_material_index], {});
-		cmd.pushConstants<uint32_t>(pipeline.m_pipeline_layout[cModelComputePipeline::PIPELINE_LAYOUT_RENDER], vk::ShaderStageFlagBits::eFragment, 0, m.m_material_index);
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cInstancingModelPipeline::PIPELINE_LAYOUT_RENDER], 2, pipeline.m_descriptor_set_scene, {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cInstancingModelPipeline::PIPELINE_LAYOUT_RENDER], 0, m_descriptor_set[cInstancingModelPipeline::DESCRIPTOR_MODEL], {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cInstancingModelPipeline::PIPELINE_LAYOUT_RENDER], 3, pipeline.m_descriptor_set_light, {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cInstancingModelPipeline::PIPELINE_LAYOUT_RENDER], 1, m_draw_descriptor_set_per_mesh[m.m_material_index], {});
+		cmd.pushConstants<uint32_t>(pipeline.m_pipeline_layout[cInstancingModelPipeline::PIPELINE_LAYOUT_RENDER], vk::ShaderStageFlagBits::eFragment, 0, m.m_material_index);
  		cmd.bindVertexBuffers(0, { m_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().buffer }, { m_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().offset });
  		cmd.bindIndexBuffer(m_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().buffer, m_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().offset, m_resource->m_mesh_resource.mIndexType);
  		cmd.drawIndexedIndirect(m_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().buffer, m_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().offset, m_resource->m_mesh_resource.mIndirectCount, sizeof(cModel::Mesh));
