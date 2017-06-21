@@ -42,8 +42,7 @@ layout(location = 0) out Vertex VSOut;
 
 mat4 skinning()
 {
-	mat4 transMat = mat4(1.0);
-	return transMat;
+	mat4 transMat = mat4(0.0);
 	for(int i=0; i<4; i++)
 	{
 		if(inBoneID[i] != 255) 
@@ -51,8 +50,6 @@ mat4 skinning()
 			transMat += inWeight[i] * bones[u_model_info.boneNum * int(gl_InstanceIndex) + inBoneID[i]];
 		}
 	}
-
-	
 	return transMat;
 }
 
@@ -67,5 +64,4 @@ void main()
 	VSOut.Position = pos.xyz;
 	VSOut.Normal = /*mat3(skinningMat) **/ /*mat3(transpose(inverse(uView))) **/ inNormal.xyz;
 	VSOut.Texcoord = inTexcoord.xyz;
-while(true);
 }

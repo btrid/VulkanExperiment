@@ -52,8 +52,8 @@ MotionTexture create(app::Loader* loader, const Motion& motion, const RootNode& 
 				n++;
 				continue;
 			}
-			auto current_value = glm::vec4(current.m_data.x, current.m_data.y, current.m_data.z, 0.f);
-			auto next_value = glm::vec4(next.m_data.x, next.m_data.y, next.m_data.z, 0.f);
+			auto current_value = glm::vec4(current.m_data.x, current.m_data.y, current.m_data.z, 1.f);
+			auto next_value = glm::vec4(next.m_data.x, next.m_data.y, next.m_data.z, 1.f);
 			auto rate = 1.f - (next.m_time - time) / (next.m_time - current.m_time);
 			auto value = glm::lerp(current_value, next_value, rate);
 			scale[count] = glm::packHalf4x16(value);
@@ -147,7 +147,7 @@ MotionTexture create(app::Loader* loader, const Motion& motion, const RootNode& 
 
 	loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
 	loader->m_cmd.copyBufferToImage(staging_buffer.getBufferInfo().buffer, image, vk::ImageLayout::eTransferDstOptimal, { copy });
-	loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
+	loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
 
 	MotionTexture tex;
 	tex.m_resource = std::make_shared<MotionTexture::Resource>();
@@ -342,31 +342,6 @@ void ModelRender::setup(app::Loader* loader, std::shared_ptr<cModel::Resource> r
 		desc.size = sizeof(ModelInstancingInfo) * sGlobal::FRAME_MAX;
 		m_resource_instancing->m_instancing_info = loader->m_staging_memory.allocateMemory(desc);
 	}
-	// PlayingAnimation
-	{
-		btr::BufferMemory::Descriptor staging_desc;
-		staging_desc.size = instanceNum * sizeof(PlayingAnimation);
-		staging_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-		auto staging_playing_animation = loader->m_staging_memory.allocateMemory(staging_desc);
-
-		auto* pa = static_cast<PlayingAnimation*>(staging_playing_animation.getMappedPtr());
-		for (int i = 0; i < instanceNum; i++)
-		{
-			pa[i].playingAnimationNo = 0;
-			pa[i].isLoop = true;
-			pa[i].time = (float)(std::rand() % 200);
-			pa[i].currentMotionInfoIndex = 0;
-		}
-
-		auto& buffer = m_resource_instancing->getBuffer(ModelStorageBuffer::PLAYING_ANIMATION);
-		buffer = loader->m_storage_memory.allocateMemory(instanceNum * sizeof(PlayingAnimation));
-
-		vk::BufferCopy copy_info;
-		copy_info.setSize(staging_playing_animation.getBufferInfo().range);
-		copy_info.setSrcOffset(staging_playing_animation.getBufferInfo().offset);
-		copy_info.setDstOffset(buffer.getBufferInfo().offset);
-		loader->m_cmd.copyBuffer(staging_playing_animation.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
-	}
 
 	// ModelInfo
 	{
@@ -507,6 +482,32 @@ void ModelRender::setup(app::Loader* loader, std::shared_ptr<cModel::Resource> r
 				vk::DependencyFlags(),
 				{}, { barrier }, {});
 		}
+		// PlayingAnimation
+		{
+			btr::BufferMemory::Descriptor staging_desc;
+			staging_desc.size = instanceNum * sizeof(PlayingAnimation);
+			staging_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			auto staging_playing_animation = loader->m_staging_memory.allocateMemory(staging_desc);
+
+			auto* pa = static_cast<PlayingAnimation*>(staging_playing_animation.getMappedPtr());
+			for (int i = 0; i < instanceNum; i++)
+			{
+				pa[i].playingAnimationNo = 0;
+				pa[i].isLoop = true;
+				pa[i].time = (float)(std::rand() % 200);
+				pa[i].currentMotionInfoIndex = 0;
+			}
+
+			auto& buffer = m_resource_instancing->getBuffer(ModelStorageBuffer::PLAYING_ANIMATION);
+			buffer = loader->m_storage_memory.allocateMemory(instanceNum * sizeof(PlayingAnimation));
+
+			vk::BufferCopy copy_info;
+			copy_info.setSize(staging_playing_animation.getBufferInfo().range);
+			copy_info.setSrcOffset(staging_playing_animation.getBufferInfo().offset);
+			copy_info.setDstOffset(buffer.getBufferInfo().offset);
+			loader->m_cmd.copyBuffer(staging_playing_animation.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
+		}
+
 	}
 
 }
@@ -674,7 +675,7 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 			auto* model_info_ptr = staging.getMappedPtr<ModelInstancingInfo>(sGlobal::Order().getCurrentFrame());
 			model_info_ptr->mInstanceAliveNum = m_model.size();
 			model_info_ptr->mInstanceMaxNum = m_resource_instancing->m_instance_max_num;
-			model_info_ptr->mInstanceNum = 1000;
+			model_info_ptr->mInstanceNum = 0;
 //			staging.subupdate<ModelInstancingInfo>(info);
 
 			vk::BufferMemoryBarrier to_copy_barrier;
@@ -723,7 +724,7 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 
 	auto& pipeline = renderer.getComputePipeline();
 
-	for (size_t i = 0; i < pipeline.m_pipeline_layout.size(); i++)
+	for (size_t i = 0; i < pipeline.m_pipeline.size(); i++)
 	{
 
 		if (i == 4)
@@ -731,25 +732,21 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 			// 
 			std::vector<vk::BufferMemoryBarrier> barrier =
 			{
-				vk::BufferMemoryBarrier()
-				.setSrcAccessMask(vk::AccessFlagBits::eShaderRead)
-				.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
-				.setBuffer(m_resource_instancing->getBuffer(ModelStorageBuffer::MODEL_INSTANCING_INFO).getBufferInfo().buffer)
-				.setOffset(m_resource_instancing->getBuffer(ModelStorageBuffer::MODEL_INSTANCING_INFO).getBufferInfo().offset)
-				.setSize(m_resource_instancing->getBuffer(ModelStorageBuffer::MODEL_INSTANCING_INFO).getBufferInfo().range),
-				vk::BufferMemoryBarrier()
-				.setSrcAccessMask(vk::AccessFlagBits::eShaderRead)
-				.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
-				.setBuffer(m_resource_instancing->getBuffer(ModelStorageBuffer::BONE_MAP).getBufferInfo().buffer)
-				.setOffset(m_resource_instancing->getBuffer(ModelStorageBuffer::BONE_MAP).getBufferInfo().offset)
-				.setSize(m_resource_instancing->getBuffer(ModelStorageBuffer::BONE_MAP).getBufferInfo().range),
-				vk::BufferMemoryBarrier()
-				.setSrcAccessMask(vk::AccessFlagBits::eShaderRead)
-				.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
-				.setBuffer(m_resource_instancing->getBuffer(ModelStorageBuffer::BONE_TRANSFORM).getBufferInfo().buffer)
-				.setOffset(m_resource_instancing->getBuffer(ModelStorageBuffer::BONE_TRANSFORM).getBufferInfo().offset)
-				.setSize(m_resource_instancing->getBuffer(ModelStorageBuffer::BONE_TRANSFORM).getBufferInfo().range),
+				m_resource_instancing->getBuffer(ModelStorageBuffer::MODEL_INSTANCING_INFO).makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+				m_resource_instancing->getBuffer(ModelStorageBuffer::BONE_MAP).makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite),
+				m_resource_instancing->getBuffer(ModelStorageBuffer::NODE_GLOBAL_TRANSFORM).makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite),
 				m_resource->m_mesh_resource.m_indirect_buffer_ex.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
+				vk::DependencyFlags(), {}, barrier, {});
+
+		}
+		if (i == 1)
+		{
+			// 
+			std::vector<vk::BufferMemoryBarrier> barrier =
+			{
+				m_resource_instancing->getBuffer(ModelStorageBuffer::PLAYING_ANIMATION).makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
 				vk::DependencyFlags(), {}, barrier, {});
@@ -775,29 +772,26 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
 				vk::DependencyFlags(), {}, barrier, {});
  		}
+		if (i == 1)
+		{
+			// 
+			std::vector<vk::BufferMemoryBarrier> barrier =
+			{
+				m_resource_instancing->getBuffer(ModelStorageBuffer::PLAYING_ANIMATION).makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
+				vk::DependencyFlags(), {}, barrier, {});
+
+		}
+
 		if (i == 4)
 		{
 			// 
 			std::vector<vk::BufferMemoryBarrier> barrier =
 			{
-				vk::BufferMemoryBarrier()
-				.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
-				.setDstAccessMask(vk::AccessFlagBits::eShaderRead)
-				.setBuffer(m_resource_instancing->getBuffer(ModelStorageBuffer::MODEL_INSTANCING_INFO).getBufferInfo().buffer)
-				.setOffset(m_resource_instancing->getBuffer(ModelStorageBuffer::MODEL_INSTANCING_INFO).getBufferInfo().offset)
-				.setSize(m_resource_instancing->getBuffer(ModelStorageBuffer::MODEL_INSTANCING_INFO).getBufferInfo().range),
-				vk::BufferMemoryBarrier()
-				.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
-				.setDstAccessMask(vk::AccessFlagBits::eShaderRead)
-				.setBuffer(m_resource_instancing->getBuffer(ModelStorageBuffer::BONE_MAP).getBufferInfo().buffer)
-				.setOffset(m_resource_instancing->getBuffer(ModelStorageBuffer::BONE_MAP).getBufferInfo().offset)
-				.setSize(m_resource_instancing->getBuffer(ModelStorageBuffer::BONE_MAP).getBufferInfo().range),
-				vk::BufferMemoryBarrier()
-				.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
-				.setDstAccessMask(vk::AccessFlagBits::eShaderRead)
-				.setBuffer(m_resource_instancing->getBuffer(ModelStorageBuffer::NODE_GLOBAL_TRANSFORM).getBufferInfo().buffer)
-				.setOffset(m_resource_instancing->getBuffer(ModelStorageBuffer::NODE_GLOBAL_TRANSFORM).getBufferInfo().offset)
-				.setSize(m_resource_instancing->getBuffer(ModelStorageBuffer::NODE_GLOBAL_TRANSFORM).getBufferInfo().range),
+				m_resource_instancing->getBuffer(ModelStorageBuffer::MODEL_INSTANCING_INFO).makeMemoryBarrier(vk::AccessFlagBits::eShaderRead| vk::AccessFlagBits::eShaderWrite),
+				m_resource_instancing->getBuffer(ModelStorageBuffer::BONE_MAP).makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
+				m_resource_instancing->getBuffer(ModelStorageBuffer::NODE_GLOBAL_TRANSFORM).makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
 				m_resource->m_mesh_resource.m_indirect_buffer_ex.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
@@ -806,12 +800,7 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 	}
 	std::vector<vk::BufferMemoryBarrier> to_draw_barrier =
 	{
-		vk::BufferMemoryBarrier()
-		.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
-		.setDstAccessMask(vk::AccessFlagBits::eShaderRead)
-		.setBuffer(m_resource_instancing->getBuffer(ModelStorageBuffer::BONE_TRANSFORM).getBufferInfo().buffer)
-		.setOffset(m_resource_instancing->getBuffer(ModelStorageBuffer::BONE_TRANSFORM).getBufferInfo().offset)
-		.setSize(m_resource_instancing->getBuffer(ModelStorageBuffer::BONE_TRANSFORM).getBufferInfo().range),
+		m_resource_instancing->getBuffer(ModelStorageBuffer::BONE_TRANSFORM).makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
 		m_resource->m_mesh_resource.m_indirect_buffer_ex.makeMemoryBarrier(vk::AccessFlagBits::eIndirectCommandRead),
 	};
 
@@ -824,11 +813,11 @@ void ModelRender::draw(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 {
 	auto& pipeline = renderer.getComputePipeline();
 	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.m_graphics_pipeline);
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelComputePipeline::PIPELINE_LAYOUT_RENDER], 2, pipeline.m_descriptor_set_scene, {});
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelComputePipeline::PIPELINE_LAYOUT_RENDER], 0, m_descriptor_set[cModelComputePipeline::DESCRIPTOR_MODEL], {});
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelComputePipeline::PIPELINE_LAYOUT_RENDER], 3, pipeline.m_descriptor_set_light, {});
 	for (auto m : m_resource->m_mesh)
 	{
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelComputePipeline::PIPELINE_LAYOUT_RENDER], 2, pipeline.m_descriptor_set_scene, {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelComputePipeline::PIPELINE_LAYOUT_RENDER], 0, m_descriptor_set[cModelComputePipeline::DESCRIPTOR_MODEL], {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelComputePipeline::PIPELINE_LAYOUT_RENDER], 3, pipeline.m_descriptor_set_light, {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelComputePipeline::PIPELINE_LAYOUT_RENDER], 1, m_draw_descriptor_set_per_mesh[m.m_material_index], {});
 		cmd.pushConstants<uint32_t>(pipeline.m_pipeline_layout[cModelComputePipeline::PIPELINE_LAYOUT_RENDER], vk::ShaderStageFlagBits::eFragment, 0, m.m_material_index);
  		cmd.bindVertexBuffers(0, { m_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().buffer }, { m_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().offset });

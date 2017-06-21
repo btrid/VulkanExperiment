@@ -32,12 +32,14 @@ void main()
 	{
 		nodeGlobalTransforms[root_index] = worlds[model_index] * nodeLocalTransforms[root_index];
 	}
+	memoryBarrier();
 	for(int i=1; i < model_info.node_depth_max; i++)
 	{
 		if(nodes[node_index].depth == i)
 		{
 			mat4 g = nodeGlobalTransforms[root_index + nodes[node_index].parent] * nodeLocalTransforms[root_index + node_index];
 			nodeGlobalTransforms[root_index+node_index] = g;
+			memoryBarrier();
 		}
 	}
 }

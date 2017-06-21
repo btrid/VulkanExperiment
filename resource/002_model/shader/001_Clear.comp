@@ -23,4 +23,5 @@ void main()
 		return;
 	}
 	meshs[index].instanceCount =  0;
+
 }

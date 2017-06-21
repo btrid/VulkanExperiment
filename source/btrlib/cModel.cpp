@@ -254,7 +254,7 @@ void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& r
 			auto no = root.getNodeIndexByName(aiAnim->mNodeName.C_Str());
 			auto& node_motion = motion.m_data[no];
 			node_motion.m_nodename = aiAnim->mNodeName.C_Str();
-
+			node_motion.m_node_index = no;
 			node_motion.m_translate.resize(aiAnim->mNumPositionKeys);
 			for (uint32_t pos_index = 0; pos_index < aiAnim->mNumPositionKeys; pos_index++)
 			{
@@ -392,7 +392,7 @@ void cModel::load(const std::string& filename)
 	for (size_t i = 0; i < scene->mNumMeshes; i++)
 	{
 		aiMesh* mesh = scene->mMeshes[i];
-
+ 
 		// ELEMENT_ARRAY_BUFFER
 		// OŠpƒƒbƒVƒ…‚Æ‚µ‚Ä“Ç‚İ‚Ş
 		for (u32 n = 0; n < mesh->mNumFaces; n++) {
@@ -553,7 +553,6 @@ void cModel::load(const std::string& filename)
 			mesh.mIndirectCount = (int32_t)m_resource->m_mesh.size();
 		}
 	}
-
 
 	cmd.end();
 	auto queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), device.getQueueNum(vk::QueueFlagBits::eGraphics)-1);

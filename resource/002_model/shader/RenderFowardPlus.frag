@@ -77,7 +77,7 @@ vec3 getColor(in Vertex v)
 
 void main()
 {
-//	FragColor.rgb = getColor(FSIn);
-	FragColor.rgb = vec3(1.);
+	FragColor.rgb = getColor(FSIn);
+//	FragColor.rgb = vec3(1.);
 	FragColor.a = 1.;
 }
