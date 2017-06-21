@@ -6,7 +6,7 @@
 #include <btrlib/Loader.h>
 #include <002_model/cModelPipeline.h>
 #include <002_model/cLightPipeline.h>
-struct cModelRenderer;
+struct cModelInstancingRenderer;
 
 /**
 * animationデータを格納したテクスチャ
@@ -47,7 +47,7 @@ struct MotionTexture
 		return m_resource ? m_resource->m_device->getFenceStatus(*m_resource->m_fence_shared) == vk::Result::eSuccess : true;
 	}
 };
-class ModelRender
+class ModelInstancingRender
 {
 public:
 	struct MaterialBuffer {
@@ -167,9 +167,9 @@ public:
 	void setup(btr::Loader* loader, std::shared_ptr<cModel::Resource> resource, uint32_t instanceNum);
 	void addModel(cModel* model) { m_model.push_back(model); }
 
-	void setup(cModelRenderer& renderer);
-	void execute(cModelRenderer& renderer, vk::CommandBuffer& cmd);
-	void draw(cModelRenderer& renderer, vk::CommandBuffer& cmd);
+	void setup(cModelInstancingRenderer& renderer);
+	void execute(cModelInstancingRenderer& renderer, vk::CommandBuffer& cmd);
+	void draw(cModelInstancingRenderer& renderer, vk::CommandBuffer& cmd);
 
 protected:
 private:
@@ -200,15 +200,15 @@ struct LightSample : public Light
 
 };
 
-struct cModelRenderer
+struct cModelInstancingRenderer
 {
 	cDevice m_device;
 	cFowardPlusPipeline m_light_pipeline;
 	cInstancingModelPipeline m_compute_pipeline;
-	std::vector<ModelRender*> m_model;
+	std::vector<ModelInstancingRender*> m_model;
 
 public:
-	cModelRenderer()
+	cModelInstancingRenderer()
 	{
 		const cGPU& gpu = sThreadLocal::Order().m_gpu;
 		auto device = gpu.getDevice(vk::QueueFlagBits::eGraphics)[0];
@@ -219,7 +219,7 @@ public:
 		m_light_pipeline.setup(*this);
 		m_compute_pipeline.setup(loader, *this);
 	}
-	void addModel(ModelRender* model)
+	void addModel(ModelInstancingRender* model)
 	{
 		m_model.emplace_back(model);
 		m_model.back()->setup(*this);

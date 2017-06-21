@@ -1,7 +1,7 @@
 #include <002_model/cLightPipeline.h>
-#include <002_model/cModelRender.h>
+#include <002_model/cModelInstancingRender.h>
 
-void cFowardPlusPipeline::Private::setup(cModelRenderer& renderer)
+void cFowardPlusPipeline::Private::setup(cModelInstancingRenderer& renderer)
 {
 	m_device = renderer.m_device;
 	m_light_num = 1024;

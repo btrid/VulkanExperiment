@@ -21,7 +21,7 @@
 #include <btrlib/cStopWatch.h>
 #include <btrlib/BufferMemory.h>
 #include <002_model/cModelPipeline.h>
-#include <002_model/cModelRender.h>
+#include <002_model/cModelInstancingRender.h>
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "FreeImage.lib")
 #pragma comment(lib, "vulkan-1.lib")
@@ -232,7 +232,7 @@ int main()
 	loader->m_device = device;
 	auto host_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
 	vk::MemoryPropertyFlags device_memory = vk::MemoryPropertyFlagBits::eDeviceLocal;
-	device_memory = host_memory;
+//	device_memory = host_memory;
 	loader->m_vertex_memory.setup(device, vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 128 * 65536);
 	loader->m_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1024 * 1024 * 20);
 	loader->m_uniform_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 8192);
@@ -266,7 +266,7 @@ int main()
 	auto model = modelFuture.get();
 
 
-	ModelRender render;
+	ModelInstancingRender render;
 	render.setup(loader.get(), model->getResource(), 1000);
 	setup_cmd.end();
 
@@ -288,7 +288,7 @@ int main()
 	camera->m_near = 0.01f;
 
 
-	cModelRenderer renderer;
+	cModelInstancingRenderer renderer;
 	renderer.setup(*loader);
 	renderer.addModel(&render);
 

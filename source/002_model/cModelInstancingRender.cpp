@@ -1,4 +1,4 @@
-﻿#include <002_model/cModelRender.h>
+﻿#include <002_model/cModelInstancingRender.h>
 #include <002_model/cModelPipeline.h>
 
 /**
@@ -201,7 +201,7 @@ std::vector<MotionTexture> createMotion(btr::Loader* loader, const cAnimation& a
 	return motion_texture;
 
 }
-void createNodeInfoRecurcive(const RootNode& rootnode, const Node& node, std::vector<ModelRender::NodeInfo>& nodeBuffer, int parentIndex)
+void createNodeInfoRecurcive(const RootNode& rootnode, const Node& node, std::vector<ModelInstancingRender::NodeInfo>& nodeBuffer, int parentIndex)
 {
 	nodeBuffer.emplace_back();
 	auto& n = nodeBuffer.back();
@@ -213,9 +213,9 @@ void createNodeInfoRecurcive(const RootNode& rootnode, const Node& node, std::ve
 	}
 }
 
-std::vector<ModelRender::NodeInfo> createNodeInfo(const RootNode& rootnode)
+std::vector<ModelInstancingRender::NodeInfo> createNodeInfo(const RootNode& rootnode)
 {
-	std::vector<ModelRender::NodeInfo> nodeBuffer;
+	std::vector<ModelInstancingRender::NodeInfo> nodeBuffer;
 	nodeBuffer.reserve(rootnode.mNodeList.size());
 	nodeBuffer.emplace_back();
 	auto& node = nodeBuffer.back();
@@ -230,7 +230,7 @@ std::vector<ModelRender::NodeInfo> createNodeInfo(const RootNode& rootnode)
 }
 
 
-void ModelRender::setup(btr::Loader* loader, std::shared_ptr<cModel::Resource> resource, uint32_t instanceNum)
+void ModelInstancingRender::setup(btr::Loader* loader, std::shared_ptr<cModel::Resource> resource, uint32_t instanceNum)
 {
 	m_resource = resource;
 	m_resource_instancing = std::make_unique<InstancingResource>();
@@ -448,13 +448,13 @@ void ModelRender::setup(btr::Loader* loader, std::shared_ptr<cModel::Resource> r
 		m_resource_instancing->m_motion_texture = createMotion(loader, m_resource->getAnimation(), m_resource->mNodeRoot);
 
 		btr::BufferMemory::Descriptor staging_desc;
-		staging_desc.size = sizeof(ModelRender::AnimationInfo) * anim.m_motion.size();
+		staging_desc.size = sizeof(ModelInstancingRender::AnimationInfo) * anim.m_motion.size();
 		staging_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 		auto staging = loader->m_staging_memory.allocateMemory(staging_desc);
-		auto* staging_ptr = staging.getMappedPtr<ModelRender::AnimationInfo>();
+		auto* staging_ptr = staging.getMappedPtr<ModelInstancingRender::AnimationInfo>();
 		for (size_t i = 0; i < anim.m_motion.size(); i++)
 		{
-			ModelRender::AnimationInfo& animation = staging_ptr[i];
+			ModelInstancingRender::AnimationInfo& animation = staging_ptr[i];
 			animation.duration_ = (float)anim.m_motion[i].m_duration;
 			animation.ticksPerSecond_ = (float)anim.m_motion[i].m_ticks_per_second;
 		}
@@ -462,7 +462,7 @@ void ModelRender::setup(btr::Loader* loader, std::shared_ptr<cModel::Resource> r
 		{
 			auto& buffer = m_resource_instancing->getBuffer(ANIMATION_INFO);
 			btr::BufferMemory::Descriptor arg;
-			arg.size = sizeof(ModelRender::AnimationInfo) * anim.m_motion.size();
+			arg.size = sizeof(ModelInstancingRender::AnimationInfo) * anim.m_motion.size();
 			buffer = loader->m_uniform_memory.allocateMemory(arg);
 
 			vk::BufferCopy copy_info;
@@ -512,7 +512,7 @@ void ModelRender::setup(btr::Loader* loader, std::shared_ptr<cModel::Resource> r
 
 }
 
-void ModelRender::setup(cModelRenderer&  renderer)
+void ModelInstancingRender::setup(cModelInstancingRenderer&  renderer)
 {
 	// setup draw
 	{
@@ -630,7 +630,7 @@ void ModelRender::setup(cModelRenderer&  renderer)
 		}
 	}
 }
-void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
+void ModelInstancingRender::execute(cModelInstancingRenderer& renderer, vk::CommandBuffer& cmd)
 {
 	// bufferの更新
 	{
@@ -809,7 +809,7 @@ void ModelRender::execute(cModelRenderer& renderer, vk::CommandBuffer& cmd)
 
 }
 
-void ModelRender::draw(cModelRenderer& renderer, vk::CommandBuffer& cmd)
+void ModelInstancingRender::draw(cModelInstancingRenderer& renderer, vk::CommandBuffer& cmd)
 {
 	auto& pipeline = renderer.getComputePipeline();
 	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.m_graphics_pipeline);

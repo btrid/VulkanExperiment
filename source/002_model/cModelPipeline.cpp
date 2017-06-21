@@ -1,11 +1,11 @@
 
 #include <002_model/cModelPipeline.h>
-#include <002_model/cModelRender.h>
+#include <002_model/cModelInstancingRender.h>
 #include <btrlib/Define.h>
 #include <btrlib/Shape.h>
 #include <btrlib/cModel.h>
 
-void cInstancingModelPipeline::setup(btr::Loader& loader, cModelRenderer& renderer)
+void cInstancingModelPipeline::setup(btr::Loader& loader, cModelInstancingRenderer& renderer)
 {
 	const auto& gpu = sThreadLocal::Order().m_gpu;
 	auto device = gpu.getDevice(vk::QueueFlagBits::eCompute)[0];

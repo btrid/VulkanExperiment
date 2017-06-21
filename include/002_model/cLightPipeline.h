@@ -10,7 +10,7 @@
 #include <btrlib/BufferMemory.h>
 #include <btrlib/Light.h>
 
-struct cModelRenderer;
+struct cModelInstancingRenderer;
 
 struct LightParam {
 	glm::vec4 m_position;
@@ -118,11 +118,11 @@ struct cFowardPlusPipeline
 
 		std::array<ComputePipeline, COMPUTE_NUM> m_pipeline_ex;
 
-		void setup(cModelRenderer& renderer);
+		void setup(cModelInstancingRenderer& renderer);
 	};
 	std::unique_ptr<Private> m_private;
 
-	void setup(cModelRenderer& renderer)
+	void setup(cModelInstancingRenderer& renderer)
 	{
 		m_private = std::make_unique<Private>();
 		m_private->setup(renderer);

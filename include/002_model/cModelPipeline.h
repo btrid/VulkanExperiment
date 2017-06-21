@@ -9,7 +9,7 @@
 #include <btrlib/BufferMemory.h>
 #include <btrlib/Loader.h>
 
-struct cModelRenderer;
+struct cModelInstancingRenderer;
 
 struct cInstancingModelPipeline
 {
@@ -56,5 +56,5 @@ struct cInstancingModelPipeline
 	vk::DescriptorSet m_descriptor_set_scene;
 	vk::DescriptorSet m_descriptor_set_light;
 
-	void setup(btr::Loader& loader, cModelRenderer& renderer);
+	void setup(btr::Loader& loader, cModelInstancingRenderer& renderer);
 };
