@@ -20,7 +20,7 @@
 #include <btrlib/sGlobal.h>
 #include <btrlib/cStopWatch.h>
 #include <btrlib/BufferMemory.h>
-#include <002_model/cModelPipeline.h>
+#include <002_model/cModelInstancingPipeline.h>
 #include <002_model/cModelInstancingRender.h>
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "FreeImage.lib")

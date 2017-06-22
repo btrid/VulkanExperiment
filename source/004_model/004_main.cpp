@@ -20,14 +20,16 @@
 #include <btrlib/sGlobal.h>
 #include <btrlib/cStopWatch.h>
 #include <btrlib/cModel.h>
+#include <btrlib/cCamera.h>
 #include <btrlib/BufferMemory.h>
+#include <004_model/cModelRender.h>
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "FreeImage.lib")
 #pragma comment(lib, "vulkan-1.lib")
 
 int main()
 {
-	btr::setResourcePath("..\\..\\resource\\004_model\\");
+	btr::setResourcePath("..\\..\\resource\\002_model\\");
 	sWindow& w = sWindow::Order();
 	vk::Instance instance = sGlobal::Order().getVKInstance();
 
@@ -265,15 +267,15 @@ int main()
 	auto model = modelFuture.get();
 
 
-	ModelInstancingRender render;
-	render.setup(loader.get(), model->getResource(), 1000);
-	setup_cmd.end();
-
-	vk::SubmitInfo setup_submit_info;
-	setup_submit_info.setCommandBufferCount(1);
-	setup_submit_info.setPCommandBuffers(&setup_cmd);
-	queue.submit({ setup_submit_info }, vk::Fence());
-	queue.waitIdle();
+// 	ModelInstancingRender render;
+// 	render.setup(loader.get(), model->getResource(), 1000);
+// 	setup_cmd.end();
+// 
+// 	vk::SubmitInfo setup_submit_info;
+// 	setup_submit_info.setCommandBufferCount(1);
+// 	setup_submit_info.setPCommandBuffers(&setup_cmd);
+// 	queue.submit({ setup_submit_info }, vk::Fence());
+// 	queue.waitIdle();
 
 
 
@@ -287,9 +289,9 @@ int main()
 	camera->m_near = 0.01f;
 
 
-	cModelInstancingRenderer renderer;
-	renderer.setup(*loader);
-	renderer.addModel(&render);
+// 	cModelInstancingRenderer renderer;
+// 	renderer.setup(*loader);
+// 	renderer.addModel(&render);
 
 	std::vector<std::unique_ptr<cModel>> models;
 	models.reserve(1000);
@@ -297,7 +299,7 @@ int main()
 	{
 		auto m = std::make_unique<cModel>();
 		m->load(loader.get(), btr::getResourcePath() + "tiny.x");
-		render.addModel(m.get());
+//		render.addModel(m.get());
 		m->getInstance()->m_world = glm::translate(glm::ballRand(2999.f));
 		models.push_back(std::move(m));
 	}
@@ -313,10 +315,10 @@ int main()
 		render_cmds[i] = device->allocateCommandBuffers(cmd_info)[0];
 	}
 
-	for (int i = 0; i < 30; i++)
-	{
-		renderer.getLight().add(std::move(std::make_unique<LightSample>()));
-	}
+// 	for (int i = 0; i < 30; i++)
+// 	{
+// 		renderer.getLight().add(std::move(std::make_unique<LightSample>()));
+// 	}
 
 	vk::FenceCreateInfo fence_info;
 	fence_info.setFlags(vk::FenceCreateFlagBits::eSignaled);
@@ -360,7 +362,7 @@ int main()
 				vk::DependencyFlags(),
 				nullptr, nullptr, present_to_render_barrier);
 
-			renderer.execute(render_cmd);
+//			renderer.execute(render_cmd);
 
 			// begin cmd render pass
 			std::vector<vk::ClearValue> clearValue = {
@@ -375,7 +377,7 @@ int main()
 				.setFramebuffer(framebuffer[backbuffer_index]);
 			render_cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 			// draw
-			renderer.draw(render_cmd);
+//			renderer.draw(render_cmd);
 			render_cmd.endRenderPass();
 
 			vk::ImageMemoryBarrier render_to_present_barrier;

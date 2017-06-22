@@ -4,7 +4,7 @@
 #include <btrlib/Light.h>
 #include <btrlib/BufferMemory.h>
 #include <btrlib/Loader.h>
-#include <002_model/cModelPipeline.h>
+#include <002_model/cModelInstancingPipeline.h>
 #include <002_model/cLightPipeline.h>
 struct cModelInstancingRenderer;
 
@@ -204,7 +204,7 @@ struct cModelInstancingRenderer
 {
 	cDevice m_device;
 	cFowardPlusPipeline m_light_pipeline;
-	cInstancingModelPipeline m_compute_pipeline;
+	cModelInstancingPipeline m_compute_pipeline;
 	std::vector<ModelInstancingRender*> m_model;
 
 public:
@@ -254,7 +254,7 @@ public:
 
 	}
 
-	cInstancingModelPipeline& getComputePipeline() { return m_compute_pipeline; }
+	cModelInstancingPipeline& getComputePipeline() { return m_compute_pipeline; }
 	cFowardPlusPipeline& getLight() {
 		return m_light_pipeline;
 	}

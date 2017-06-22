@@ -18,13 +18,13 @@
     <ClCompile Include="..\..\source\002_model\002_main.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\source\002_model\cModelPipeline.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\source\002_model\cLightPipeline.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="..\..\source\002_model\cModelInstancingRender.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\002_model\cModelInstancingPipeline.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>
@@ -35,10 +35,10 @@
     <ClInclude Include="..\..\include\002_model\cLightPipeline.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\002_model\cModelPipeline.h">
+    <ClInclude Include="..\..\include\002_model\cModelInstancingRender.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\002_model\cModelInstancingRender.h">
+    <ClInclude Include="..\..\include\002_model\cModelInstancingPipeline.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>
