@@ -23,13 +23,15 @@
 #include <btrlib/cCamera.h>
 #include <btrlib/BufferMemory.h>
 #include <004_model/cModelRender.h>
+#include <004_model/cModelRenderPrivate.h>
+#include <004_model/cModelPipeline.h>
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "FreeImage.lib")
 #pragma comment(lib, "vulkan-1.lib")
 
 int main()
 {
-	btr::setResourcePath("..\\..\\resource\\002_model\\");
+	btr::setResourcePath("..\\..\\resource\\004_model\\");
 	sWindow& w = sWindow::Order();
 	vk::Instance instance = sGlobal::Order().getVKInstance();
 
@@ -229,7 +231,7 @@ int main()
 			framebuffer[i] = device->createFramebuffer(framebuffer_info);
 		}
 	}
-	auto loader = std::make_unique<btr::Loader>();
+	auto loader = std::make_shared<btr::Loader>();
 	loader->m_device = device;
 	auto host_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
 	vk::MemoryPropertyFlags device_memory = vk::MemoryPropertyFlagBits::eDeviceLocal;
@@ -267,15 +269,15 @@ int main()
 	auto model = modelFuture.get();
 
 
-// 	ModelInstancingRender render;
-// 	render.setup(loader.get(), model->getResource(), 1000);
-// 	setup_cmd.end();
-// 
-// 	vk::SubmitInfo setup_submit_info;
-// 	setup_submit_info.setCommandBufferCount(1);
-// 	setup_submit_info.setPCommandBuffers(&setup_cmd);
-// 	queue.submit({ setup_submit_info }, vk::Fence());
-// 	queue.waitIdle();
+	cModelRender render;
+	render.setup(loader, model->getResource());
+	setup_cmd.end();
+
+	vk::SubmitInfo setup_submit_info;
+	setup_submit_info.setCommandBufferCount(1);
+	setup_submit_info.setPCommandBuffers(&setup_cmd);
+	queue.submit({ setup_submit_info }, vk::Fence());
+	queue.waitIdle();
 
 
 
@@ -289,21 +291,18 @@ int main()
 	camera->m_near = 0.01f;
 
 
-// 	cModelInstancingRenderer renderer;
-// 	renderer.setup(*loader);
-// 	renderer.addModel(&render);
-
-	std::vector<std::unique_ptr<cModel>> models;
-	models.reserve(1000);
-	for (int i = 0; i < 1000; i++)
+	cModelPipeline renderer;
+	renderer.setup(*loader);
+	renderer.addModel(&render);
 	{
-		auto m = std::make_unique<cModel>();
-		m->load(loader.get(), btr::getResourcePath() + "tiny.x");
-//		render.addModel(m.get());
-		m->getInstance()->m_world = glm::translate(glm::ballRand(2999.f));
-		models.push_back(std::move(m));
+		cModelRender::PlayMotionDescriptor desc;
+		desc.m_data = model->getResource()->getAnimation().m_motion[0];
+		desc.m_is_loop = true;
+		desc.m_play_no = 0;
+		desc.m_start_time = 0.f;
+		render.play(desc);
 	}
-
+ 
 	auto pool_list = sThreadLocal::Order().getCmdPoolOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
 	std::vector<vk::CommandBuffer> render_cmds(sGlobal::FRAME_MAX);
 	for (int i = 0; i < render_cmds.size(); i++)
@@ -315,10 +314,6 @@ int main()
 		render_cmds[i] = device->allocateCommandBuffers(cmd_info)[0];
 	}
 
-// 	for (int i = 0; i < 30; i++)
-// 	{
-// 		renderer.getLight().add(std::move(std::make_unique<LightSample>()));
-// 	}
 
 	vk::FenceCreateInfo fence_info;
 	fence_info.setFlags(vk::FenceCreateFlagBits::eSignaled);
@@ -362,7 +357,9 @@ int main()
 				vk::DependencyFlags(),
 				nullptr, nullptr, present_to_render_barrier);
 
-//			renderer.execute(render_cmd);
+			renderer.execute(render_cmd);
+//			render.getPrivate()->execute(renderer, render_cmd);
+
 
 			// begin cmd render pass
 			std::vector<vk::ClearValue> clearValue = {
@@ -377,7 +374,8 @@ int main()
 				.setFramebuffer(framebuffer[backbuffer_index]);
 			render_cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 			// draw
-//			renderer.draw(render_cmd);
+			renderer.draw(render_cmd);
+//			render.getPrivate()->draw(renderer, render_cmd);
 			render_cmd.endRenderPass();
 
 			vk::ImageMemoryBarrier render_to_present_barrier;

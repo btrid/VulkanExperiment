@@ -194,7 +194,7 @@ std::vector<MotionTexture> createMotion(btr::Loader* loader, const cAnimation& a
 	for (size_t i = 0; i < anim.m_motion.size(); i++)
 	{
 		{
-			motion_texture[i] = create(loader, anim.m_motion[i], rootnode);
+			motion_texture[i] = create(loader, *anim.m_motion[i], rootnode);
 		}
 	}
 
@@ -351,19 +351,7 @@ void ModelInstancingRender::setup(btr::Loader* loader, std::shared_ptr<cModel::R
 		auto staging_model_info = loader->m_staging_memory.allocateMemory(staging_desc);
 
 		auto& mi = *static_cast<cModel::ModelInfo*>(staging_model_info.getMappedPtr());
-		mi.mNodeNum = (s32)m_resource->mNodeRoot.mNodeList.size();
-		mi.mBoneNum = (s32)m_resource->mBone.size();
-		mi.mMeshNum = (s32)m_resource->m_mesh.size();
-		mi.m_node_depth_max = 0;
-		for (auto& n : nodeInfo) {
-			mi.m_node_depth_max = std::max(n.m_depth, mi.m_node_depth_max);
-		}
-		// todo
-		glm::vec3 max(-10e10f);
-		glm::vec3 min(10e10f);
-		mi.mAabb = glm::vec4((max - min).xyz, glm::length((max - min)));
-
-		mi.mInvGlobalMatrix = glm::inverse(m_resource->mNodeRoot.getRootNode()->mTransformation);
+		mi = m_resource->m_model_info;
 
 		auto& buffer = m_resource_instancing->getBuffer(ModelStorageBuffer::MODEL_INFO);
 		buffer = loader->m_uniform_memory.allocateMemory(sizeof(cModel::ModelInfo));
@@ -374,7 +362,6 @@ void ModelInstancingRender::setup(btr::Loader* loader, std::shared_ptr<cModel::R
 		copy_info.setDstOffset(buffer.getBufferInfo().offset);
 		loader->m_cmd.copyBuffer(staging_model_info.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
 
-		m_resource->m_model_info = mi;
 	}
 
 	//ModelInstancingInfo
@@ -455,8 +442,8 @@ void ModelInstancingRender::setup(btr::Loader* loader, std::shared_ptr<cModel::R
 		for (size_t i = 0; i < anim.m_motion.size(); i++)
 		{
 			ModelInstancingRender::AnimationInfo& animation = staging_ptr[i];
-			animation.duration_ = (float)anim.m_motion[i].m_duration;
-			animation.ticksPerSecond_ = (float)anim.m_motion[i].m_ticks_per_second;
+			animation.duration_ = (float)anim.m_motion[i]->m_duration;
+			animation.ticksPerSecond_ = (float)anim.m_motion[i]->m_ticks_per_second;
 		}
 		// AnimeInfo
 		{

@@ -30,11 +30,13 @@ class Node
 {
 public:
 	int					mParent;
+	int					m_bone_index;
 	std::vector<int>	mChildren;
 	std::string			mName;
 	glm::mat4			mTransformation;	///! 
 	Node()
 		: mParent(-1)
+		, m_bone_index(-1)
 	{}
 };
 
@@ -43,6 +45,7 @@ class RootNode
 
 public:
 	std::vector<Node>	mNodeList;
+	uint32_t m_depth_max;
 
 	const Node* getRootNode()const { return mNodeList.empty() ? nullptr : &mNodeList[0]; }
 	Node* getNodeByIndex(int index) { return mNodeList.empty() ? nullptr : &mNodeList[index]; }
@@ -94,7 +97,7 @@ struct Motion
 };
 struct cAnimation
 {
-	std::vector<Motion> m_motion;
+	std::vector<std::shared_ptr<Motion>> m_motion;
 };
 
 struct ResourceTexture
@@ -223,14 +226,6 @@ public:
 		RootNode mNodeRoot;
 		std::vector<Bone> mBone;
 		std::vector<Material>	m_material;
-
-// 		btr::AllocatedMemory m_material_gpu;
-// 		btr::AllocatedMemory m_node_info_gpu;
-// 		btr::AllocatedMemory m_bone_info_gpu;
-// 
-// 		btr::UpdateBufferEx m_world_staging_buffer;
-// 		btr::UpdateBufferEx m_bone_staging_buffer;
-// 		btr::AllocatedMemory m_model_info_staging_buffer;
 
 		cAnimation m_animation;
 

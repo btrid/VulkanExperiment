@@ -26,6 +26,32 @@
 #pragma comment(lib, "FreeImage.lib")
 #pragma comment(lib, "vulkan-1.lib")
 
+struct LightSample : public Light
+{
+	LightParam m_param;
+	int life;
+
+	LightSample()
+	{
+		life = std::rand() % 50 + 30;
+		m_param.m_position = glm::vec4(glm::ballRand(3000.f), std::rand() % 50 + 500.f);
+		m_param.m_emission = glm::vec4(glm::normalize(glm::abs(glm::ballRand(1.f)) + glm::vec3(0.f, 0.f, 0.01f)), 1.f);
+
+	}
+	virtual bool update() override
+	{
+		//		life--;
+		return life >= 0;
+	}
+
+	virtual LightParam getParam()const override
+	{
+		return m_param;
+	}
+
+};
+
+
 int main()
 {
 	btr::setResourcePath("..\\..\\resource\\002_model\\");

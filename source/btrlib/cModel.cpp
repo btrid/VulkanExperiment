@@ -208,7 +208,7 @@ std::vector<cModel::Material> loadMaterial(const aiScene* scene, const std::stri
 	return material;
 }
 
-void _loadNodeRecurcive(aiNode* ainode, RootNode& root, int parent)
+void _loadNodeRecurcive(aiNode* ainode, RootNode& root, int parent, uint32_t depth)
 {
 	auto nodeIndex = (s32)root.mNodeList.size();
 	Node node;
@@ -219,9 +219,9 @@ void _loadNodeRecurcive(aiNode* ainode, RootNode& root, int parent)
 		root.mNodeList[parent].mChildren.push_back(nodeIndex);
 	}
 	root.mNodeList.push_back(node);
-
+	root.m_depth_max = glm::max(root.m_depth_max, depth);
 	for (s32 i = 0; i < (int)ainode->mNumChildren; i++) {
-		_loadNodeRecurcive(ainode->mChildren[i], root, nodeIndex);
+		_loadNodeRecurcive(ainode->mChildren[i], root, nodeIndex, depth+1);
 	}
 }
 RootNode loadNode(const aiScene* scene)
@@ -229,7 +229,7 @@ RootNode loadNode(const aiScene* scene)
 	RootNode root;
 	root.mNodeList.clear();
 	root.mNodeList.reserve(countAiNode(scene->mRootNode));
-	_loadNodeRecurcive(scene->mRootNode, root, -1);
+	_loadNodeRecurcive(scene->mRootNode, root, -1, 0);
 	return root;
 }
 
@@ -238,21 +238,21 @@ void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& r
 	if (!scene->HasAnimations()) {
 		return;
 	}
-
 	anim_buffer.m_motion.resize(scene->mNumAnimations);
 	for (size_t i = 0; i < scene->mNumAnimations; i++)
 	{
 		aiAnimation* anim = scene->mAnimations[i];
-		Motion& motion = anim_buffer.m_motion[i];
-		motion.m_name = anim->mName.C_Str();
-		motion.m_duration = anim->mDuration;
-		motion.m_ticks_per_second = anim->mTicksPerSecond;
-		motion.m_data.resize(anim->mNumChannels);
+		auto& motion = anim_buffer.m_motion[i];
+		motion = std::make_shared<Motion>();
+		motion->m_name = anim->mName.C_Str();
+		motion->m_duration = anim->mDuration;
+		motion->m_ticks_per_second = anim->mTicksPerSecond;
+		motion->m_data.resize(anim->mNumChannels);
 		for (size_t channel_index = 0; channel_index < anim->mNumChannels; channel_index++)
 		{
 			aiNodeAnim* aiAnim = anim->mChannels[channel_index];
 			auto no = root.getNodeIndexByName(aiAnim->mNodeName.C_Str());
-			auto& node_motion = motion.m_data[no];
+			auto& node_motion = motion->m_data[no];
 			node_motion.m_nodename = aiAnim->mNodeName.C_Str();
 			node_motion.m_node_index = no;
 			node_motion.m_translate.resize(aiAnim->mNumPositionKeys);
@@ -313,7 +313,7 @@ void cModel::load(btr::Loader* loader, const std::string& filename)
 		| aiProcess_SortByPType
 //		| aiProcess_OptimizeMeshes
 		| aiProcess_Triangulate
-		| aiProcess_MakeLeftHanded
+//		| aiProcess_MakeLeftHanded
 		;
 	cStopWatch timer;
 	Assimp::Importer importer;
@@ -449,7 +449,8 @@ void cModel::load(btr::Loader* loader, const std::string& filename)
 					boneList.emplace_back(bone);
 					index = (int)boneList.size() - 1;
 					assert(index < 0xffui8);
-//					nodeInfo[bone.mNodeIndex].mBoneIndex = index;
+					assert(m_resource->mNodeRoot.getNodeByIndex(bone.mNodeIndex)->m_bone_index == -1);
+					m_resource->mNodeRoot.getNodeByIndex(bone.mNodeIndex)->m_bone_index = index;
 				}
 
 				for (size_t i = 0; i < mesh->mBones[b]->mNumWeights; i++)
@@ -541,6 +542,17 @@ void cModel::load(btr::Loader* loader, const std::string& filename)
 			mesh.mIndirectCount = (int32_t)m_resource->m_mesh.size();
 		}
 	}
+
+	m_resource->m_model_info.mNodeNum = (s32)m_resource->mNodeRoot.mNodeList.size();
+	m_resource->m_model_info.mBoneNum = (s32)m_resource->mBone.size();
+	m_resource->m_model_info.mMeshNum = (s32)m_resource->m_mesh.size();
+	m_resource->m_model_info.m_node_depth_max = m_resource->mNodeRoot.m_depth_max;
+	// todo
+	glm::vec3 max(-10e10f);
+	glm::vec3 min(10e10f);
+	m_resource->m_model_info.mAabb = glm::vec4((max - min).xyz, glm::length((max - min)));
+
+	m_resource->m_model_info.mInvGlobalMatrix = glm::inverse(m_resource->mNodeRoot.getRootNode()->mTransformation);
 
 	cmd.end();
 	auto queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), device.getQueueNum(vk::QueueFlagBits::eGraphics)-1);

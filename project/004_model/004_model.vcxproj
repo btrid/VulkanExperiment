@@ -71,12 +71,17 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\004_model\004_main.cpp" />
+    <ClCompile Include="..\..\source\004_model\cModelPipeline.cpp" />
+    <ClCompile Include="..\..\source\004_model\cModelRender.cpp" />
+    <ClCompile Include="..\..\source\004_model\cModelRenderPrivate.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\include\004_model\cModelPipeline.h" />
     <ClInclude Include="..\..\include\004_model\cModelRender.h" />
+    <ClInclude Include="..\..\include\004_model\cModelRenderPrivate.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

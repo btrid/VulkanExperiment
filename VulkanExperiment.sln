@@ -33,6 +33,10 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "000_api_test", "project\000
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "004_model", "project\004_model\004_model.vcxproj", "{DCAE31AE-D2C5-445F-B5B7-6900CE7773BC}"
+	ProjectSection(ProjectDependencies) = postProject
+		{6AB61332-963C-4D53-B5FF-04B3A9689E23} = {6AB61332-963C-4D53-B5FF-04B3A9689E23}
+		{C902CBC4-17CF-47BA-B10E-DA6F79032944} = {C902CBC4-17CF-47BA-B10E-DA6F79032944}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
