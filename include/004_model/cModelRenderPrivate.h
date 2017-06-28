@@ -45,7 +45,7 @@ struct cModelRenderPrivate
 				{
 					continue;
 				}
-				work.m_time += dt * 60.f;
+				work.m_time += dt * work.m_motion->m_ticks_per_second;
 			}
 		}
 	};
