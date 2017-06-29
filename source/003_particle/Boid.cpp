@@ -111,7 +111,7 @@ void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 			auto* maze = &m_parent->m_private->m_maze;
 			std::vector<uint32_t> solver = maze->solveEx(100, 100);
 			vk::ImageCreateInfo image_info;
-			image_info.imageType = vk::ImageType::e3D;
+			image_info.imageType = vk::ImageType::e2D;
 			image_info.format = vk::Format::eR32Uint;
 			image_info.mipLevels = 1;
 			image_info.arrayLayers = m_boid_info.m_soldier_info_max;
@@ -136,10 +136,10 @@ void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 			subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
 			subresourceRange.baseArrayLayer = 0;
 			subresourceRange.baseMipLevel = 0;
-			subresourceRange.layerCount = m_boid_info.m_soldier_info_max;
+			subresourceRange.layerCount = m_boid_info.m_soldier_info_max;;
 			subresourceRange.levelCount = 1;
 			vk::ImageViewCreateInfo view_info;
-			view_info.viewType = vk::ImageViewType::e3D;
+			view_info.viewType = vk::ImageViewType::e2DArray;
 			view_info.components.r = vk::ComponentSwizzle::eR;
 			view_info.components.g = vk::ComponentSwizzle::eG;
 			view_info.components.b = vk::ComponentSwizzle::eB;
@@ -203,7 +203,7 @@ void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 		// descriptor
 		{
 			std::vector<std::vector<vk::DescriptorSetLayoutBinding>> bindings(DESCRIPTOR_SET_LAYOUT_NUM);
-			bindings[DESCRIPTOR_UPDATE] =
+			bindings[DESCRIPTOR_SOLDIER_UPDATE] =
 			{
 				vk::DescriptorSetLayoutBinding()
 				.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex)
@@ -242,7 +242,7 @@ void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 				.setBinding(6),
 			};
 
-			bindings[DESCRIPTOR_EMIT] =
+			bindings[DESCRIPTOR_SOLDIER_EMIT] =
 			{
 				vk::DescriptorSetLayoutBinding()
 				.setStageFlags(vk::ShaderStageFlagBits::eCompute)
@@ -277,19 +277,19 @@ void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 					.setDescriptorCount(uniforms.size())
 					.setPBufferInfo(uniforms.data())
 					.setDstBinding(0)
-					.setDstSet(m_descriptor->m_descriptor_set[DESCRIPTOR_UPDATE]),
+					.setDstSet(m_descriptor->m_descriptor_set[DESCRIPTOR_SOLDIER_UPDATE]),
 					vk::WriteDescriptorSet()
 					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 					.setDescriptorCount(storages.size())
 					.setPBufferInfo(storages.data())
 					.setDstBinding(2)
-					.setDstSet(m_descriptor->m_descriptor_set[DESCRIPTOR_UPDATE]),
+					.setDstSet(m_descriptor->m_descriptor_set[DESCRIPTOR_SOLDIER_UPDATE]),
 					vk::WriteDescriptorSet()
 					.setDescriptorType(vk::DescriptorType::eStorageImage)
 					.setDescriptorCount(images.size())
 					.setPImageInfo(images.data())
 					.setDstBinding(6)
-					.setDstSet(m_descriptor->m_descriptor_set[DESCRIPTOR_UPDATE]),
+					.setDstSet(m_descriptor->m_descriptor_set[DESCRIPTOR_SOLDIER_UPDATE]),
 				};
 				loader.m_device->updateDescriptorSets(write_desc, {});
 			}
@@ -305,7 +305,7 @@ void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 					.setDescriptorCount(storages.size())
 					.setPBufferInfo(storages.data())
 					.setDstBinding(0)
-					.setDstSet(m_descriptor->m_descriptor_set[DESCRIPTOR_EMIT]),
+					.setDstSet(m_descriptor->m_descriptor_set[DESCRIPTOR_SOLDIER_EMIT]),
 				};
 				loader.m_device->updateDescriptorSets(write_desc, {});
 			}
@@ -346,7 +346,7 @@ void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 		{
 			{
 				std::vector<vk::DescriptorSetLayout> layouts = {
-					m_descriptor->m_descriptor_set_layout[DESCRIPTOR_UPDATE],
+					m_descriptor->m_descriptor_set_layout[DESCRIPTOR_SOLDIER_UPDATE],
 					m_parent->m_private->m_descriptor_set_layout[cParticlePipeline::Private::DESCRIPTOR_MAP_INFO],
 				};
 				std::vector<vk::PushConstantRange> push_constants = {
@@ -359,12 +359,12 @@ void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 				pipeline_layout_info.setPSetLayouts(layouts.data());
 				pipeline_layout_info.setPushConstantRangeCount(push_constants.size());
 				pipeline_layout_info.setPPushConstantRanges(push_constants.data());
-				m_pipeline_layout[PIPELINE_LAYOUT_UPDATE] = loader.m_device->createPipelineLayout(pipeline_layout_info);
+				m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_UPDATE] = loader.m_device->createPipelineLayout(pipeline_layout_info);
 			}
 			{
 				std::vector<vk::DescriptorSetLayout> layouts = {
-					m_descriptor->m_descriptor_set_layout[DESCRIPTOR_UPDATE],
-					m_descriptor->m_descriptor_set_layout[DESCRIPTOR_EMIT],
+					m_descriptor->m_descriptor_set_layout[DESCRIPTOR_SOLDIER_UPDATE],
+					m_descriptor->m_descriptor_set_layout[DESCRIPTOR_SOLDIER_EMIT],
 				};
 				std::vector<vk::PushConstantRange> push_constants = {
 					vk::PushConstantRange()
@@ -376,11 +376,11 @@ void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 				pipeline_layout_info.setPSetLayouts(layouts.data());
 				pipeline_layout_info.setPushConstantRangeCount(push_constants.size());
 				pipeline_layout_info.setPPushConstantRanges(push_constants.data());
-				m_pipeline_layout[PIPELINE_LAYOUT_EMIT] = loader.m_device->createPipelineLayout(pipeline_layout_info);
+				m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_EMIT] = loader.m_device->createPipelineLayout(pipeline_layout_info);
 			}
 			{
 				std::vector<vk::DescriptorSetLayout> layouts = {
-					m_descriptor->m_descriptor_set_layout[DESCRIPTOR_UPDATE],
+					m_descriptor->m_descriptor_set_layout[DESCRIPTOR_SOLDIER_UPDATE],
 					m_parent->m_private->m_descriptor_set_layout[cParticlePipeline::Private::DESCRIPTOR_DRAW_CAMERA],
 				};
 				std::vector<vk::PushConstantRange> push_constants = {
@@ -464,8 +464,8 @@ void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 
 			std::array<vk::PipelineShaderStageCreateInfo, 2> shader_info
 			{
-				m_shader_info[DRAW_SOLDER_VS],
-				m_shader_info[DRAW_SOLDER_FS],
+				m_shader_info[DRAW_SOLDIER_VS],
+				m_shader_info[DRAW_SOLDIER_FS],
 			};
 			std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =
 			{
@@ -543,11 +543,11 @@ void Boid::execute(btr::Executer& executer)
 		block.m_src_offset = m_soldier_gpu.getSrcOffset() / sizeof(SoldierData);
 		block.m_dst_offset = m_soldier_gpu.getDstOffset() / sizeof(SoldierData);
 		block.m_double_buffer_index = m_soldier_LL_head_gpu.getDstIndex();
-		cmd.pushConstants<UpdateConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], vk::ShaderStageFlagBits::eCompute, 0, block);
+		cmd.pushConstants<UpdateConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_UPDATE], vk::ShaderStageFlagBits::eCompute, 0, block);
 
-		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_compute_pipeline[PIPELINE_LAYOUT_UPDATE]);
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], 0, { m_descriptor->m_descriptor_set[DESCRIPTOR_UPDATE] }, {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], 1, m_parent->m_private->m_descriptor_set[cParticlePipeline::Private::DESCRIPTOR_MAP_INFO], {});
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_compute_pipeline[PIPELINE_LAYOUT_SOLDIER_UPDATE]);
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_UPDATE], 0, { m_descriptor->m_descriptor_set[DESCRIPTOR_SOLDIER_UPDATE] }, {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_UPDATE], 1, m_parent->m_private->m_descriptor_set[cParticlePipeline::Private::DESCRIPTOR_MAP_INFO], {});
 		auto groups = app::calcDipatchGroups(glm::uvec3(m_boid_info.m_soldier_max / 2, 1, 1), glm::uvec3(1024, 1, 1));
 		cmd.dispatch(groups.x, groups.y, groups.z);
 	}
@@ -600,7 +600,7 @@ void Boid::execute(btr::Executer& executer)
 			auto to_read = m_soldier_emit_gpu.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
 
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_compute_pipeline[PIPELINE_LAYOUT_EMIT]);
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_compute_pipeline[PIPELINE_LAYOUT_SOLDIER_EMIT]);
 			struct EmitConstantBlock
 			{
 				uint m_emit_num;
@@ -609,9 +609,9 @@ void Boid::execute(btr::Executer& executer)
 			EmitConstantBlock block;
 			block.m_emit_num = data.size();
 			block.m_offset = m_soldier_gpu.getDstOffset() / sizeof(SoldierData);
-			cmd.pushConstants<EmitConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_EMIT], vk::ShaderStageFlagBits::eCompute, 0, block);
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_EMIT], 0, m_descriptor->m_descriptor_set[DESCRIPTOR_UPDATE], {});
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_EMIT], 1, m_descriptor->m_descriptor_set[DESCRIPTOR_EMIT], {});
+			cmd.pushConstants<EmitConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_EMIT], vk::ShaderStageFlagBits::eCompute, 0, block);
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_EMIT], 0, m_descriptor->m_descriptor_set[DESCRIPTOR_SOLDIER_UPDATE], {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_EMIT], 1, m_descriptor->m_descriptor_set[DESCRIPTOR_SOLDIER_EMIT], {});
 			auto groups = app::calcDipatchGroups(glm::uvec3(block.m_emit_num, 1, 1), glm::uvec3(1024, 1, 1));
 			cmd.dispatch(groups.x, groups.y, groups.z);
 
@@ -642,7 +642,7 @@ void Boid::draw(vk::CommandBuffer cmd)
 
 	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_graphics_pipeline[0]);
 	cmd.pushConstants<DrawConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW], vk::ShaderStageFlagBits::eVertex, 0, block);
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW], 0, m_descriptor->m_descriptor_set[DESCRIPTOR_UPDATE], {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW], 0, m_descriptor->m_descriptor_set[DESCRIPTOR_SOLDIER_UPDATE], {});
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW], 1, m_parent->m_private->m_descriptor_set[cParticlePipeline::Private::DESCRIPTOR_DRAW_CAMERA], {});
 	cmd.drawIndirect(m_soldier_draw_indiret_gpu.getBufferInfo().buffer, m_soldier_draw_indiret_gpu.getBufferInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
 

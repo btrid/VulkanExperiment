@@ -7,6 +7,11 @@ struct cDebug {
 	{
 		static auto dbgfnc = [](VkDebugReportFlagsEXT flag, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* userData) -> VkBool32
 		{
+			if (objectType == VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT && flag == VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT && strcmp(pLayerPrefix, "DS") == 0)
+			{
+				// ïsóvÇ»åxçê
+				return static_cast<VkBool32>(vk::Result::eSuccess);
+			}
 			char buf[2048] = {};
 			sprintf_s(buf, "%s %s %s\n  %s\n",
 				vk::to_string(vk::DebugReportFlagBitsEXT(flag)).c_str(), vk::to_string(vk::DebugReportObjectTypeEXT(objectType)).c_str(), pLayerPrefix, pMessage);
