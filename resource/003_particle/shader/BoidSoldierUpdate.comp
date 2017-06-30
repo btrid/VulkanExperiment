@@ -83,7 +83,7 @@ void main()
 				next = ivec2(0,1);
 			}
 			ivec2 map_next = map_index+next;
-			vec3 offset = map_info.cell_size.xyz * (rand(soldier.m_pos.xz)-0.5)*2.*0.7;
+			vec3 offset = map_info.cell_size.xyz * ((rand(soldier.m_pos.xz)-0.5)*0.7);
 			astar_target = vec3(map_next.x+0.5, 0., map_next.y+0.5) * map_info.cell_size.xyz + vec3(0.) + offset;
 //			astar_target = vec3(map_next.x+0.5, 0., map_next.y+0.5) * map_info.cell_size.xyz;
 			soldier.m_astar_target.xyz = astar_target;
