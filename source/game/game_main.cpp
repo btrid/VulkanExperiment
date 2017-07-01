@@ -1,4 +1,4 @@
-ï»¿#include <btrlib/Define.h>
+#include <btrlib/Define.h>
 #include <cstdlib>
 #include <string>
 #include <vector>
@@ -19,43 +19,17 @@
 #include <btrlib/cDebug.h>
 #include <btrlib/sGlobal.h>
 #include <btrlib/cStopWatch.h>
+#include <btrlib/cModel.h>
+#include <btrlib/cCamera.h>
 #include <btrlib/BufferMemory.h>
-#include <applib/cModelInstancingPipeline.h>
-#include <applib/cModelInstancingRender.h>
+
 #pragma comment(lib, "btrlib.lib")
-#pragma comment(lib, "applib.lib")
 #pragma comment(lib, "FreeImage.lib")
 #pragma comment(lib, "vulkan-1.lib")
 
-struct LightSample : public Light
-{
-	LightParam m_param;
-	int life;
-
-	LightSample()
-	{
-		life = std::rand() % 50 + 30;
-		m_param.m_position = glm::vec4(glm::ballRand(3000.f), std::rand() % 50 + 500.f);
-		m_param.m_emission = glm::vec4(glm::normalize(glm::abs(glm::ballRand(1.f)) + glm::vec3(0.f, 0.f, 0.01f)), 1.f);
-
-	}
-	virtual bool update() override
-	{
-		//		life--;
-		return life >= 0;
-	}
-
-	virtual LightParam getParam()const override
-	{
-		return m_param;
-	}
-
-};
-
-
 int main()
 {
-	btr::setResourcePath("..\\..\\resource\\002_model\\");
+	btr::setResourcePath("..\\..\\resource\\005_dynamic_pipeline\\");
 	sWindow& w = sWindow::Order();
 	vk::Instance instance = sGlobal::Order().getVKInstance();
 
@@ -78,7 +52,7 @@ int main()
 	cDevice device = gpu.getDevice(vk::QueueFlagBits::eGraphics)[0];
 	vk::Queue queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), 0);
 
-	// setupç”¨ã‚³ãƒãƒ³ãƒ‰ãƒãƒƒãƒ•ã‚¡
+	// setup—pƒRƒ}ƒ“ƒhƒoƒbƒtƒ@
 	vk::CommandPool setup_cmd_pool;
 	vk::CommandPool cmd_pool;
 	{
@@ -108,7 +82,7 @@ int main()
 				.setBaseMipLevel(0)
 				.setLevelCount(1);
 
-			// ã°ã‚Šã‚
+			// ‚Î‚è‚ 
 			vk::ImageMemoryBarrier barrier = vk::ImageMemoryBarrier()
 				.setImage(window.getSwapchain().m_backbuffer_image[i])
 				.setSubresourceRange(subresourceRange)
@@ -137,7 +111,7 @@ int main()
 	}
 
 	vk::RenderPass render_pass;
-	// ãƒ¬ãƒ³ãƒ€ãƒ¼ãƒ‘ã‚¹
+	// ƒŒƒ“ƒ_[ƒpƒX
 	{
 		// sub pass
 		std::vector<vk::AttachmentReference> colorRef =
@@ -189,7 +163,7 @@ int main()
 	vk::DeviceMemory depth_memory;
 	vk::ImageView depth_view;
 	{
-		// ã‚¤ãƒ¡ãƒ¼ã‚¸ç”Ÿæˆ
+		// ƒCƒ[ƒW¶¬
 		vk::ImageCreateInfo depth_info;
 		depth_info.format = vk::Format::eD32Sfloat;
 		depth_info.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment;
@@ -204,7 +178,7 @@ int main()
 		depth_info.pQueueFamilyIndices = device.getQueueFamilyIndex().data();
 		depth_image = device->createImage(depth_info);
 
-		// ãƒ¡ãƒ¢ãƒªç¢ºä¿
+		// ƒƒ‚ƒŠŠm•Û
 		auto memory_request = device->getImageMemoryRequirements(depth_image);
 		uint32_t memory_index = cGPU::Helper::getMemoryTypeIndex(device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
@@ -255,11 +229,11 @@ int main()
 			framebuffer[i] = device->createFramebuffer(framebuffer_info);
 		}
 	}
-	auto loader = std::make_unique<btr::Loader>();
+	auto loader = std::make_shared<btr::Loader>();
 	loader->m_device = device;
 	auto host_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
 	vk::MemoryPropertyFlags device_memory = vk::MemoryPropertyFlagBits::eDeviceLocal;
-//	device_memory = host_memory;
+	//	device_memory = host_memory;
 	loader->m_vertex_memory.setup(device, vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 128 * 65536);
 	loader->m_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1024 * 1024 * 20);
 	loader->m_uniform_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 8192);
@@ -293,8 +267,8 @@ int main()
 	auto model = modelFuture.get();
 
 
-	ModelInstancingRender render;
-	render.setup(loader.get(), model->getResource(), 1000);
+	cModelRender render;
+	render.setup(loader, model->getResource());
 	setup_cmd.end();
 
 	vk::SubmitInfo setup_submit_info;
@@ -315,19 +289,16 @@ int main()
 	camera->m_near = 0.01f;
 
 
-	cModelInstancingRenderer renderer;
+	cModelPipeline renderer;
 	renderer.setup(*loader);
 	renderer.addModel(&render);
-
-	std::vector<std::unique_ptr<cModel>> models;
-	models.reserve(1000);
-	for (int i = 0; i < 1000; i++)
 	{
-		auto m = std::make_unique<cModel>();
-		m->load(loader.get(), btr::getResourcePath() + "tiny.x");
-		render.addModel(m.get());
-		m->getInstance()->m_world = glm::translate(glm::ballRand(2999.f));
-		models.push_back(std::move(m));
+		cModelRender::PlayMotionDescriptor desc;
+		desc.m_data = model->getResource()->getAnimation().m_motion[0];
+		desc.m_is_loop = true;
+		desc.m_play_no = 0;
+		desc.m_start_time = 0.f;
+		render.play(desc);
 	}
 
 	auto pool_list = sThreadLocal::Order().getCmdPoolOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
@@ -341,10 +312,6 @@ int main()
 		render_cmds[i] = device->allocateCommandBuffers(cmd_info)[0];
 	}
 
-	for (int i = 0; i < 30; i++)
-	{
-		renderer.getLight().add(std::move(std::make_unique<LightSample>()));
-	}
 
 	vk::FenceCreateInfo fence_info;
 	fence_info.setFlags(vk::FenceCreateFlagBits::eSignaled);
@@ -389,6 +356,8 @@ int main()
 				nullptr, nullptr, present_to_render_barrier);
 
 			renderer.execute(render_cmd);
+			//			render.getPrivate()->execute(renderer, render_cmd);
+
 
 			// begin cmd render pass
 			std::vector<vk::ClearValue> clearValue = {
@@ -404,6 +373,7 @@ int main()
 			render_cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 			// draw
 			renderer.draw(render_cmd);
+			//			render.getPrivate()->draw(renderer, render_cmd);
 			render_cmd.endRenderPass();
 
 			vk::ImageMemoryBarrier render_to_present_barrier;

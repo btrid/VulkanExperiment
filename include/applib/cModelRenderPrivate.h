@@ -68,7 +68,7 @@ struct cModelRenderPrivate
 		{
 			// bone
 			btr::UpdateBufferExDescriptor desc;
-			desc.alloc_size = m_model_resource->mBone.size() * sizeof(glm::mat4);
+			desc.alloc_size = (uint32_t)(m_model_resource->mBone.size() * sizeof(glm::mat4));
 			desc.device_memory = loader->m_storage_memory;
 			desc.staging_memory = loader->m_staging_memory;
 			desc.frame_max = sGlobal::FRAME_MAX;

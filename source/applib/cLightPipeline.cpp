@@ -1,5 +1,5 @@
-#include <002_model/cLightPipeline.h>
-#include <002_model/cModelInstancingRender.h>
+#include <applib/cLightPipeline.h>
+#include <applib/cModelInstancingRender.h>
 
 void cFowardPlusPipeline::Private::setup(cModelInstancingRenderer& renderer)
 {

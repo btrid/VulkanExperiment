@@ -27,7 +27,7 @@ void cModelRenderPrivate::setup(cModelPipeline& pipeline)
 			{
 				vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(storages.size())
+				.setDescriptorCount((uint32_t)storages.size())
 				.setPBufferInfo(storages.data())
 				.setDstBinding(0)
 				.setDstSet(m_draw_descriptor_set_per_model),
@@ -39,7 +39,7 @@ void cModelRenderPrivate::setup(cModelPipeline& pipeline)
 			// mesh‚²‚Æ‚ÌXV
 			vk::DescriptorSetAllocateInfo allocInfo;
 			allocInfo.descriptorPool = pipeline.m_descriptor_pool;
-			allocInfo.descriptorSetCount = m_model_resource->m_material.size();
+			allocInfo.descriptorSetCount = (uint32_t)m_model_resource->m_material.size();
 			allocInfo.pSetLayouts = &pipeline.m_descriptor_set_layout[cModelPipeline::DESCRIPTOR_PER_MESH];
 			m_draw_descriptor_set_per_mesh = graphics_device->allocateDescriptorSets(allocInfo);
 			for (size_t i = 0; i < m_draw_descriptor_set_per_mesh.size(); i++)
@@ -53,7 +53,7 @@ void cModelRenderPrivate::setup(cModelPipeline& pipeline)
 				{
 					vk::WriteDescriptorSet()
 					.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-					.setDescriptorCount(color_image_info.size())
+					.setDescriptorCount((uint32_t)color_image_info.size())
 					.setPImageInfo(color_image_info.data())
 					.setDstBinding(0)
 					.setDstSet(m_draw_descriptor_set_per_mesh[i]),

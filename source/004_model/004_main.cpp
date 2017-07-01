@@ -22,10 +22,10 @@
 #include <btrlib/cModel.h>
 #include <btrlib/cCamera.h>
 #include <btrlib/BufferMemory.h>
-#include <004_model/cModelRender.h>
-#include <004_model/cModelRenderPrivate.h>
-#include <004_model/cModelPipeline.h>
+#include <applib/cModelRender.h>
+#include <applib/cModelPipeline.h>
 #pragma comment(lib, "btrlib.lib")
+#pragma comment(lib, "applib.lib")
 #pragma comment(lib, "FreeImage.lib")
 #pragma comment(lib, "vulkan-1.lib")
 
@@ -375,7 +375,6 @@ int main()
 			render_cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 			// draw
 			renderer.draw(render_cmd);
-//			render.getPrivate()->draw(renderer, render_cmd);
 			render_cmd.endRenderPass();
 
 			vk::ImageMemoryBarrier render_to_present_barrier;

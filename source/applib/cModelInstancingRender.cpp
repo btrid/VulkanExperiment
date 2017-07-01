@@ -1,5 +1,5 @@
-﻿#include <002_model/cModelInstancingRender.h>
-#include <002_model/cModelInstancingPipeline.h>
+﻿#include <applib/cModelInstancingRender.h>
+#include <applib/cModelInstancingPipeline.h>
 
 /**
 *	モーションのデータを一枚の1DArrayに格納

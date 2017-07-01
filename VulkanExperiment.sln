@@ -13,6 +13,7 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "002_model_instancing", "project\002_model\002_model.vcxproj", "{F976A1FD-91A8-4AE6-9214-B70826CD1420}"
 	ProjectSection(ProjectDependencies) = postProject
 		{6AB61332-963C-4D53-B5FF-04B3A9689E23} = {6AB61332-963C-4D53-B5FF-04B3A9689E23}
+		{C902CBC4-17CF-47BA-B10E-DA6F79032944} = {C902CBC4-17CF-47BA-B10E-DA6F79032944}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "003_particle", "project\003_particle\003_particle.vcxproj", "{A01E6241-06AC-44A5-8288-6EFF9DE493D9}"
@@ -37,6 +38,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "004_model", "project\004_mo
 		{6AB61332-963C-4D53-B5FF-04B3A9689E23} = {6AB61332-963C-4D53-B5FF-04B3A9689E23}
 		{C902CBC4-17CF-47BA-B10E-DA6F79032944} = {C902CBC4-17CF-47BA-B10E-DA6F79032944}
 	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "game", "project\game\game.vcxproj", "{656477F4-77A1-4DAE-B30C-90316845F257}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -88,6 +91,12 @@ Global
 		{DCAE31AE-D2C5-445F-B5B7-6900CE7773BC}.Release|x64.ActiveCfg = Release|x64
 		{DCAE31AE-D2C5-445F-B5B7-6900CE7773BC}.Release|x64.Build.0 = Release|x64
 		{DCAE31AE-D2C5-445F-B5B7-6900CE7773BC}.Release|x86.ActiveCfg = Release|x64
+		{656477F4-77A1-4DAE-B30C-90316845F257}.Debug|x64.ActiveCfg = Debug|x64
+		{656477F4-77A1-4DAE-B30C-90316845F257}.Debug|x64.Build.0 = Debug|x64
+		{656477F4-77A1-4DAE-B30C-90316845F257}.Debug|x86.ActiveCfg = Debug|x64
+		{656477F4-77A1-4DAE-B30C-90316845F257}.Release|x64.ActiveCfg = Release|x64
+		{656477F4-77A1-4DAE-B30C-90316845F257}.Release|x64.Build.0 = Release|x64
+		{656477F4-77A1-4DAE-B30C-90316845F257}.Release|x86.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

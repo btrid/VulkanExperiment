@@ -1,7 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="..\..\packages\libFreeImage.1.0.0\build\native\libFreeImage.props" Condition="Exists('..\..\packages\libFreeImage.1.0.0\build\native\libFreeImage.props')" />
-  <Import Project="..\..\packages\GLMathematics.0.9.5.4\build\native\GLMathematics.props" Condition="Exists('..\..\packages\GLMathematics.0.9.5.4\build\native\GLMathematics.props')" />
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
@@ -14,8 +12,8 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
-    <ProjectGuid>{DCAE31AE-D2C5-445F-B5B7-6900CE7773BC}</ProjectGuid>
-    <RootNamespace>My004_model</RootNamespace>
+    <ProjectGuid>{656477F4-77A1-4DAE-B30C-90316845F257}</ProjectGuid>
+    <RootNamespace>game</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -54,7 +52,6 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <MinimalRebuild>false</MinimalRebuild>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -71,25 +68,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\source\004_model\004_main.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
+    <ClCompile Include="game_main.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="..\..\packages\assimp.v140.redist.3.2\build\native\assimp.v140.redist.targets" Condition="Exists('..\..\packages\assimp.v140.redist.3.2\build\native\assimp.v140.redist.targets')" />
-    <Import Project="..\..\packages\assimp.v140.3.2\build\native\assimp.v140.targets" Condition="Exists('..\..\packages\assimp.v140.3.2\build\native\assimp.v140.targets')" />
-    <Import Project="..\..\packages\libFreeImage.1.0.0\build\native\libFreeImage.targets" Condition="Exists('..\..\packages\libFreeImage.1.0.0\build\native\libFreeImage.targets')" />
   </ImportGroup>
-  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
-    <PropertyGroup>
-      <ErrorText>このプロジェクトは、このコンピューター上にない NuGet パッケージを参照しています。それらのパッケージをダウンロードするには、[NuGet パッケージの復元] を使用します。詳細については、http://go.microsoft.com/fwlink/?LinkID=322105 を参照してください。見つからないファイルは {0} です。</ErrorText>
-    </PropertyGroup>
-    <Error Condition="!Exists('..\..\packages\assimp.v140.redist.3.2\build\native\assimp.v140.redist.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\assimp.v140.redist.3.2\build\native\assimp.v140.redist.targets'))" />
-    <Error Condition="!Exists('..\..\packages\assimp.v140.3.2\build\native\assimp.v140.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\assimp.v140.3.2\build\native\assimp.v140.targets'))" />
-    <Error Condition="!Exists('..\..\packages\GLMathematics.0.9.5.4\build\native\GLMathematics.props')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\GLMathematics.0.9.5.4\build\native\GLMathematics.props'))" />
-    <Error Condition="!Exists('..\..\packages\libFreeImage.1.0.0\build\native\libFreeImage.props')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\libFreeImage.1.0.0\build\native\libFreeImage.props'))" />
-    <Error Condition="!Exists('..\..\packages\libFreeImage.1.0.0\build\native\libFreeImage.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\libFreeImage.1.0.0\build\native\libFreeImage.targets'))" />
-  </Target>
 </Project>

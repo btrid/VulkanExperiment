@@ -1,5 +1,5 @@
-#include <004_model/cModelRender.h>
-#include <004_model/cModelRenderPrivate.h>
+#include <applib/cModelRender.h>
+#include <applib/cModelRenderPrivate.h>
 
 cModelRender::cModelRender() = default;
 cModelRender::~cModelRender() = default;

@@ -4,8 +4,8 @@
 #include <btrlib/Light.h>
 #include <btrlib/BufferMemory.h>
 #include <btrlib/Loader.h>
-#include <002_model/cModelInstancingPipeline.h>
-#include <002_model/cLightPipeline.h>
+#include <applib/cModelInstancingPipeline.h>
+#include <applib/cLightPipeline.h>
 struct cModelInstancingRenderer;
 
 /**
