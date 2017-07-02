@@ -243,7 +243,7 @@ void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& r
 	{
 		aiAnimation* anim = scene->mAnimations[i];
 		auto& motion = anim_buffer.m_motion[i];
-		motion = std::make_shared<Motion>();
+		motion = std::make_shared<cMotion>();
 		motion->m_name = anim->mName.C_Str();
 		motion->m_duration = anim->mDuration;
 		motion->m_ticks_per_second = anim->mTicksPerSecond == 0.f ? 60.f : anim->mTicksPerSecond;

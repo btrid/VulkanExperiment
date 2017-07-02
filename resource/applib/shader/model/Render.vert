@@ -70,7 +70,7 @@ void main()
 {
 	vec4 pos = vec4((inPosition).xyz, 1.0);
 	mat4 skinningMat = skinning();
-	pos = skinningMat * constant.m_world * pos;
+	pos = constant.m_world * skinningMat * pos;
 	Camera2 camera = uCamera;
 	gl_Position = camera.uProjection * camera.uView * vec4(pos.xyz, 1.0);
 

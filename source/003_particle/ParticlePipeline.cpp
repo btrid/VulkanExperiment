@@ -2,14 +2,11 @@
 
 void cParticlePipeline::Private::setup(btr::Loader& loader)
 {
-	m_map_info_cpu.m_cell_size = glm::vec4(10.f, 1.f, 10.f, 0.f);
-	m_map_info_cpu.m_cell_num = glm::vec4(127, 127, 0, 0);
 	{
-		m_maze.generate(m_map_info_cpu.m_cell_num.x, m_map_info_cpu.m_cell_num.y);
-		//				m_maze.generate(511, 511);
-		auto geometry = m_maze.makeGeometry(m_map_info_cpu.m_cell_size);
+		m_maze.generate(g_scene->m_map_info_cpu.m_cell_num.x, g_scene->m_map_info_cpu.m_cell_num.y);
+		auto geometry = m_maze.makeGeometry(g_scene->m_map_info_cpu.m_cell_size);
 		Geometry::OptimaizeDuplicateVertexDescriptor opti_desc;
-		//				Geometry::OptimaizeDuplicateVertex(geometry, opti_desc);
+		//Geometry::OptimaizeDuplicateVertex(geometry, opti_desc);
 
 		std::vector<vk::VertexInputAttributeDescription> vertex_attr(1);
 		vertex_attr[0].setOffset(0);
@@ -131,7 +128,7 @@ void cParticlePipeline::Private::setup(btr::Loader& loader)
 
 		desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 		auto staging = loader.m_staging_memory.allocateMemory(desc);
-		*staging.getMappedPtr<MapInfo>() = m_map_info_cpu;
+		*staging.getMappedPtr<MapInfo>() = g_scene->m_map_info_cpu;
 
 		vk::BufferCopy vertex_copy;
 		vertex_copy.setSize(desc.size);
@@ -175,11 +172,6 @@ void cParticlePipeline::Private::setup(btr::Loader& loader)
 		auto barrier = m_particle_info.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
 		loader.m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { barrier }, {});
 
-		btr::UpdateBufferDescriptor update_desc;
-		update_desc.device_memory = loader.m_uniform_memory;
-		update_desc.staging_memory = loader.m_staging_memory;
-		update_desc.frame_max = sGlobal::FRAME_MAX;
-		m_camera.setup(update_desc);
 	}
 
 	{
@@ -189,7 +181,7 @@ void cParticlePipeline::Private::setup(btr::Loader& loader)
 		};
 		static_assert(array_length(name) == COMPUTE_NUM, "not equal shader num");
 
-		std::string path = btr::getResourcePath() + "shader\\binary\\";
+		std::string path = btr::getResourceAppPath() + "shader\\binary\\";
 		for (size_t i = 0; i < COMPUTE_NUM; i++)
 		{
 			m_compute_shader_info[i].setModule(loadShader(loader.m_device.getHandle(), path + name[i]));
@@ -211,7 +203,7 @@ void cParticlePipeline::Private::setup(btr::Loader& loader)
 			{"FloorRender.frag.spv", vk::ShaderStageFlagBits::eFragment },
 		};
 		static_assert(array_length(shader_desc) == GRAPHICS_SHADER_NUM, "not equal shader num");
-		std::string path = btr::getResourcePath() + "shader\\binary\\";
+		std::string path = btr::getResourceAppPath() + "shader\\binary\\";
 		for (uint32_t i = 0; i < GRAPHICS_SHADER_NUM; i++)
 		{
 			m_graphics_shader_info[i].setModule(loadShader(loader.m_device.getHandle(), path + shader_desc[i].name));
@@ -282,10 +274,8 @@ void cParticlePipeline::Private::setup(btr::Loader& loader)
 			m_descriptor_set_layout[i] = loader.m_device->createDescriptorSetLayout(descriptor_set_layout_info);
 		}
 
-		m_descriptor_pool = createPool(loader.m_device.getHandle(), bindings);
-
 		vk::DescriptorSetAllocateInfo alloc_info;
-		alloc_info.descriptorPool = m_descriptor_pool;
+		alloc_info.descriptorPool = loader.m_descriptor_pool;
 		alloc_info.descriptorSetCount = m_descriptor_set_layout.size();
 		alloc_info.pSetLayouts = m_descriptor_set_layout.data();
 		auto descriptor_set = loader.m_device->allocateDescriptorSets(alloc_info);
@@ -424,7 +414,7 @@ void cParticlePipeline::Private::setup(btr::Loader& loader)
 		}
 		{
 			std::vector<vk::DescriptorBufferInfo> uniforms = {
-				m_camera.getBufferInfo(),
+				g_scene->m_camera.getBufferInfo(),
 			};
 			std::vector<vk::WriteDescriptorSet> write_desc =
 			{
@@ -439,11 +429,6 @@ void cParticlePipeline::Private::setup(btr::Loader& loader)
 		}
 	}
 	{
-		// pipeline cache
-		{
-			vk::PipelineCacheCreateInfo cacheInfo = vk::PipelineCacheCreateInfo();
-			m_cache = loader.m_device->createPipelineCache(cacheInfo);
-		}
 		// Create pipeline
 		std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 		{
@@ -454,7 +439,7 @@ void cParticlePipeline::Private::setup(btr::Loader& loader)
 			.setStage(m_compute_shader_info[1])
 			.setLayout(m_pipeline_layout[1]),
 		};
-		m_compute_pipeline = loader.m_device->createComputePipelines(m_cache, compute_pipeline_info);
+		m_compute_pipeline = loader.m_device->createComputePipelines(loader.m_cache, compute_pipeline_info);
 
 		vk::Extent3D size;
 		size.setWidth(640);
@@ -484,17 +469,15 @@ void cParticlePipeline::Private::setup(btr::Loader& loader)
 			viewportInfo.setScissorCount((uint32_t)scissor.size());
 			viewportInfo.setPScissors(scissor.data());
 
-			// ラスタライズ
 			vk::PipelineRasterizationStateCreateInfo rasterization_info;
 			rasterization_info.setPolygonMode(vk::PolygonMode::eFill);
 			rasterization_info.setFrontFace(vk::FrontFace::eCounterClockwise);
 			rasterization_info.setCullMode(vk::CullModeFlagBits::eNone);
 			rasterization_info.setLineWidth(1.f);
-			// サンプリング
+
 			vk::PipelineMultisampleStateCreateInfo sample_info;
 			sample_info.setRasterizationSamples(vk::SampleCountFlagBits::e1);
 
-			// デプスステンシル
 			vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
 			depth_stencil_info.setDepthTestEnable(VK_TRUE);
 			depth_stencil_info.setDepthWriteEnable(VK_TRUE);
@@ -502,7 +485,6 @@ void cParticlePipeline::Private::setup(btr::Loader& loader)
 			depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
 			depth_stencil_info.setStencilTestEnable(VK_FALSE);
 
-			// ブレンド
 			std::vector<vk::PipelineColorBlendAttachmentState> blend_state = {
 				vk::PipelineColorBlendAttachmentState()
 				.setBlendEnable(VK_FALSE)
@@ -526,7 +508,6 @@ void cParticlePipeline::Private::setup(btr::Loader& loader)
 
 			std::vector<vk::VertexInputAttributeDescription> vertex_input_attribute =
 			{
-				// pos
 				vk::VertexInputAttributeDescription()
 				.setBinding(0)
 				.setLocation(0)
@@ -566,10 +547,9 @@ void cParticlePipeline::Private::setup(btr::Loader& loader)
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			m_graphics_pipeline = loader.m_device->createGraphicsPipelines(m_cache, graphics_pipeline_info);
+			m_graphics_pipeline = loader.m_device->createGraphicsPipelines(loader.m_cache, graphics_pipeline_info);
 
 		}
 	}
-	//			m_make_triangleLL.setup(loader);
 }
 

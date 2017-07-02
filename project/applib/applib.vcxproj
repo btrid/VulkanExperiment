@@ -78,6 +78,7 @@
     <ClInclude Include="..\..\include\applib\cModelRenderPrivate.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\..\include\applib\cMotion" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

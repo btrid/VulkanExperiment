@@ -68,7 +68,8 @@ void cModelRenderPrivate::setup(cModelPipeline& pipeline)
 void cModelRenderPrivate::execute(cModelPipeline& renderer, vk::CommandBuffer& cmd)
 {
 	m_playlist.execute();
-	updateNodeTransform(0, m_world);
+//	updateNodeTransform(0, glm::mat4(1.f));
+	updateNodeTransform(0, m_model_transform.calcLocal());
 	updateBoneTransform(0);
 	
 	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, m_bone_buffer.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite), {});
@@ -84,7 +85,7 @@ void cModelRenderPrivate::draw(cModelPipeline& pipeline, vk::CommandBuffer& cmd)
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelPipeline::PIPELINE_LAYOUT_RENDER], 0, m_draw_descriptor_set_per_model, {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelPipeline::PIPELINE_LAYOUT_RENDER], 1, m_draw_descriptor_set_per_mesh[m.m_material_index], {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelPipeline::PIPELINE_LAYOUT_RENDER], 2, pipeline.m_descriptor_set_scene, {});
-		cmd.pushConstants<glm::mat4>(pipeline.m_pipeline_layout[cModelPipeline::PIPELINE_LAYOUT_RENDER], vk::ShaderStageFlagBits::eVertex, 0, m_world);
+		cmd.pushConstants<glm::mat4>(pipeline.m_pipeline_layout[cModelPipeline::PIPELINE_LAYOUT_RENDER], vk::ShaderStageFlagBits::eVertex, 0, m_model_transform.calcGlobal());
 		cmd.pushConstants<uint32_t>(pipeline.m_pipeline_layout[cModelPipeline::PIPELINE_LAYOUT_RENDER], vk::ShaderStageFlagBits::eFragment, 64, m.m_material_index);
 		cmd.bindVertexBuffers(0, { m_model_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().buffer }, { m_model_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().offset });
 		cmd.bindIndexBuffer(m_model_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().buffer, m_model_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().offset, m_model_resource->m_mesh_resource.mIndexType);

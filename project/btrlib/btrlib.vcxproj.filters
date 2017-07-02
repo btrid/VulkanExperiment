@@ -75,6 +75,9 @@
     <ClInclude Include="..\..\include\btrlib\Loader.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\btrlib\cMotion.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\btrlib\cWindow.cpp">

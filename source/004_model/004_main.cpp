@@ -24,7 +24,7 @@
 #include <btrlib/BufferMemory.h>
 #include <applib/cModelRender.h>
 #include <applib/cModelPipeline.h>
-#pragma comment(lib, "btrlib.lib")
+//#pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
 #pragma comment(lib, "FreeImage.lib")
 #pragma comment(lib, "vulkan-1.lib")
@@ -255,7 +255,7 @@ int main()
 		auto load = [task, &loader]()
 		{
 			auto model = std::make_unique<cModel>();
-			model->load(loader.get(), btr::getResourcePath() + "tiny.x");
+			model->load(loader.get(), btr::getResourceAppPath() + "tiny.x");
 			task->set_value(std::move(model));
 		};
 		job.mFinish = load;

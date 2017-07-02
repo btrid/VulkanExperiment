@@ -51,7 +51,7 @@ void cFowardPlusPipeline::Private::setup(cModelInstancingRenderer& renderer)
 		};
 		static_assert(array_length(name) == COMPUTE_NUM, "not equal shader num");
 
-		std::string path = btr::getResourcePath() + "shader\\binary\\";
+		std::string path = btr::getResourceLibPath() + "shader\\binary\\";
 		for (size_t i = 0; i < COMPUTE_NUM; i++) {
 			m_shader_info[i].setModule(loadShader(m_device.getHandle(), path + name[i]));
 			m_shader_info[i].setStage(vk::ShaderStageFlagBits::eCompute);

@@ -19,12 +19,14 @@ void cModelRender::draw(vk::CommandBuffer cmd)
 	m_private->draw(cmd);
 }
 
-void cModelRender::play(const PlayMotionDescriptor& desc)
+ModelTransform& cModelRender::getModelTransform()
 {
-	m_private->m_playlist.m_work[desc.m_play_no].m_motion = desc.m_data;
-	m_private->m_playlist.m_work[desc.m_play_no].m_time = desc.m_start_time;
-	m_private->m_playlist.m_work[desc.m_play_no].m_index = 0;
-	m_private->m_playlist.m_work[desc.m_play_no].m_is_playing = true;
+	return m_private->m_model_transform;
+}
+
+MotionPlayList& cModelRender::getMotionList()
+{
+	return m_private->m_playlist;
 }
 
 std::unique_ptr<cModelRenderPrivate>& cModelRender::getPrivate()

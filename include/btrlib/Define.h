@@ -10,8 +10,10 @@
 
 #include <string>
 namespace btr {
-	std::string getResourcePath();
-	void setResourcePath(const std::string& str);
+	std::string getResourceAppPath();
+	std::string getResourceLibPath();
+	void setResourceAppPath(const std::string& str);
+	void setResourceLibPath(const std::string& str);
 }
 
 template<typename T>

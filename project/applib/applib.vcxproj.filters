@@ -39,6 +39,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="..\..\include\applib\cMotion" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\applib\App.cpp">

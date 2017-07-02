@@ -279,7 +279,7 @@ int main()
 		auto load = [task, &loader]()
 		{
 			auto model = std::make_unique<cModel>();
-			model->load(loader.get(), btr::getResourcePath() + "tiny.x");
+			model->load(loader.get(), btr::getResourceAppPath() + "tiny.x");
 			task->set_value(std::move(model));
 		};
 		job.mFinish = load;
@@ -324,7 +324,7 @@ int main()
 	for (int i = 0; i < 1000; i++)
 	{
 		auto m = std::make_unique<cModel>();
-		m->load(loader.get(), btr::getResourcePath() + "tiny.x");
+		m->load(loader.get(), btr::getResourceAppPath() + "tiny.x");
 		render.addModel(m.get());
 		m->getInstance()->m_world = glm::translate(glm::ballRand(2999.f));
 		models.push_back(std::move(m));

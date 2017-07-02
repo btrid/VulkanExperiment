@@ -91,10 +91,6 @@ public:
 			}
 		}
 
-		solver_.x_ = sizex;
-		solver_.y_ = sizey;
-		solver_.map_.resize(sizex*sizey);
-//		solve();
 	}
 	bool _generateSub(Map& map, short x, short y)
 	{
@@ -167,6 +163,7 @@ public:
 	{
 		const int SIZE_X = field_.x_;
 		const int SIZE_Y = field_.y_;
+		glm::uvec2 size(SIZE_X, SIZE_Y);
 		Node start = Node{ sx, sy, 0, -1 };
 		List open;
 		open.push_back(start);
@@ -187,22 +184,22 @@ public:
 			// ‰E
 			if (!is_right_end)
 			{
-				_setNode(n.x + 1, n.y, calcNodeIndex(n.x, n.y), n.cost + 1, open, close);
+				_setNode(n.x + 1, n.y, calcNodeIndex(n.x, n.y, size), n.cost + 1, open, close);
 			}
 			// ¶
 			if (n.x > 0)
 			{
-				_setNode(n.x - 1, n.y, calcNodeIndex(n.x, n.y), n.cost + 1, open, close);
+				_setNode(n.x - 1, n.y, calcNodeIndex(n.x, n.y, size), n.cost + 1, open, close);
 			}
 			// ‰º
 			if (n.y < SIZE_Y - 1)
 			{
-				_setNode(n.x, n.y + 1, calcNodeIndex(n.x, n.y), n.cost + 1, open, close);
+				_setNode(n.x, n.y + 1, calcNodeIndex(n.x, n.y, size), n.cost + 1, open, close);
 			}
 			// ã
 			if (n.y > 0)
 			{
-				_setNode(n.x, n.y - 1, calcNodeIndex(n.x, n.y), n.cost + 1, open, close);
+				_setNode(n.x, n.y - 1, calcNodeIndex(n.x, n.y, size), n.cost + 1, open, close);
 			}
 // 			// ¶ã
 // 			if (n.x > 0 && n.y > 0)
@@ -227,56 +224,6 @@ public:
 		}
 
 		return std::move(result);
-	}
-	void solve()
-	{
-		List open;
-		std::vector<CloseNode> close(getSizeX() * getSizeY());
-		int x = std::rand() % solver_.x_;
-		int y = std::rand() % solver_.y_;
-		x = x + x % 2 + 1;
-		y = y + y % 2 + 1;
-		start_ = Node{ x, y, 0, -1 };
-		open.push_back(start_);
-		const int SIZE_X = field_.x_;
-		const int SIZE_Y = field_.y_;
-		Node g{ std::rand() % solver_.x_, std::rand() % solver_.y_, std::numeric_limits<int>::max(), -1 };
-		while (!open.empty())
-		{
-			Node n = open[0];
-			open.pop_front();
-
-			solver_.data(n.x, n.y) = n.cost;
-
-			if (n.x == g.x && n.y == g.y && n.cost < g.cost)
-			{
-				// @TodoÅ’Z‚Æ‚ÍŒÀ‚ç‚È‚¢
-				g = n;
-				//				break;
-			}
-
-			// ‰E
-			if (n.x < SIZE_X - 1)
-			{
-				_setNode(n.x + 1, n.y, calcNodeIndex(n.x, n.y), n.cost + 1, open, close);
-			}
-			// ¶
-			if (n.x > 0)
-			{
-				_setNode(n.x - 1, n.y, calcNodeIndex(n.x, n.y), n.cost + 1, open, close);
-			}
-			// ‰º
-			if (n.y < SIZE_Y - 1)
-			{
-				_setNode(n.x, n.y + 1, calcNodeIndex(n.x, n.y), n.cost + 1, open, close);
-			}
-			// ã
-			if (n.y > 0)
-			{
-				_setNode(n.x, n.y - 1, calcNodeIndex(n.x, n.y), n.cost + 1, open, close);
-			}
-		}
-
 	}
 	void _setNode(int x, int y, int parent, int cost, List& open, CloseList& close)const
 	{
@@ -317,14 +264,12 @@ public:
 		} while (false);
 
 	}	
-	void draw(float deltaTime)
-	{
+	int calcNodeIndex(int x, int y, const glm::uvec2& size)const {
+		return y*size.x + x;
 	}
-	Node start_;
-	Node goal_;
+
 
 	Map field_;
-	Map solver_;
 
 	enum DIR : std::int32_t {
 		DIR_NON,
@@ -351,18 +296,7 @@ public:
 
 	float time_ = 0.f;
 
-	Node& getStart(){ return start_; }
-	Node& getGoal(){ return goal_; }
-	std::vector<int> distance_;
-
-
-	int calcNodeIndex(int x, int y)const{
-		return y*solver_.x_ + x;
-	}
-
 	std::vector<int>& getData(){ return field_.map_; }
-	std::vector<int>& getDistance(){ return solver_.map_; }
-
 	int getSizeX()const{ return field_.x_; }
 	int getSizeY()const{ return field_.y_; }
 

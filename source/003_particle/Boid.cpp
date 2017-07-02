@@ -334,7 +334,7 @@ void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 			};
 			static_assert(array_length(shader_info) == SHADER_NUM, "not equal shader num");
 
-			std::string path = btr::getResourcePath() + "shader\\binary\\";
+			std::string path = btr::getResourceAppPath() + "shader\\binary\\";
 			for (size_t i = 0; i < SHADER_NUM; i++)
 			{
 				m_shader_info[i].setModule(loadShader(loader.m_device.getHandle(), path + shader_info[i].name));
@@ -583,12 +583,12 @@ void Boid::execute(btr::Executer& executer)
 				p.m_brain_index = 0;
 				p.m_ll_next = 0xFFFFFFFF;
 				p.m_astar_target = p.m_pos;
-				glm::ivec3 map_index = glm::ivec3(p.m_pos.xyz / m_parent->m_private->m_map_info_cpu.m_cell_size.xyz());
+				glm::ivec3 map_index = glm::ivec3(p.m_pos.xyz / g_scene->m_map_info_cpu.m_cell_size.xyz());
 				{
 					float particle_size = p.m_pos.w;
-					glm::vec3 cell_p = glm::mod(p.m_pos.xyz(), glm::vec3(m_parent->m_private->m_map_info_cpu.m_cell_size));
-					map_index.x = (cell_p.x <= particle_size) ? map_index.x - 1 : (cell_p.x >= (m_parent->m_private->m_map_info_cpu.m_cell_size.x - particle_size)) ? map_index.x + 1 : map_index.x;
-					map_index.z = (cell_p.z <= particle_size) ? map_index.z - 1 : (cell_p.z >= (m_parent->m_private->m_map_info_cpu.m_cell_size.z - particle_size)) ? map_index.z + 1 : map_index.z;
+					glm::vec3 cell_p = glm::mod(p.m_pos.xyz(), glm::vec3(g_scene->m_map_info_cpu.m_cell_size));
+					map_index.x = (cell_p.x <= particle_size) ? map_index.x - 1 : (cell_p.x >= (g_scene->m_map_info_cpu.m_cell_size.x - particle_size)) ? map_index.x + 1 : map_index.x;
+					map_index.z = (cell_p.z <= particle_size) ? map_index.z - 1 : (cell_p.z >= (g_scene->m_map_info_cpu.m_cell_size.z - particle_size)) ? map_index.z + 1 : map_index.z;
 					p.m_map_index = glm::ivec4(map_index, 0);
 				}
 			}

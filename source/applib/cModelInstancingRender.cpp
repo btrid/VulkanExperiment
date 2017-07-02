@@ -4,7 +4,7 @@
 /**
 *	モーションのデータを一枚の1DArrayに格納
 */
-MotionTexture create(btr::Loader* loader, const Motion& motion, const RootNode& root)
+MotionTexture create(btr::Loader* loader, const cMotion& motion, const RootNode& root)
 {
 	uint32_t SIZE = 256;
 
@@ -32,7 +32,7 @@ MotionTexture create(btr::Loader* loader, const Motion& motion, const RootNode& 
 
 	for (size_t i = 0; i < motion.m_data.size(); i++)
 	{
-		const Motion::NodeMotion& node_motion = motion.m_data[i];
+		const cMotion::NodeMotion& node_motion = motion.m_data[i];
 		auto no = node_motion.m_node_index;
 		auto* pos = reinterpret_cast<uint64_t*>(data + no * 3 * SIZE);
 		auto* quat = reinterpret_cast<uint64_t*>(pos + SIZE);
@@ -558,7 +558,7 @@ void ModelInstancingRender::setup(cModelInstancingRenderer&  renderer)
 
 			desc = vk::WriteDescriptorSet();
 			desc.setDescriptorType(vk::DescriptorType::eUniformBuffer);
-			desc.setDescriptorCount(uniforms.size());
+			desc.setDescriptorCount((uint32_t)uniforms.size());
 			desc.setPBufferInfo(uniforms.data());
 			desc.setDstBinding(0);
 			desc.setDstSet(m_descriptor_set[cModelInstancingPipeline::DESCRIPTOR_MODEL]);
@@ -572,7 +572,7 @@ void ModelInstancingRender::setup(cModelInstancingRenderer&  renderer)
 			};
 			desc = vk::WriteDescriptorSet();
 			desc.setDescriptorType(vk::DescriptorType::eStorageBuffer);
-			desc.setDescriptorCount(storages.size());
+			desc.setDescriptorCount((uint32_t)storages.size());
 			desc.setPBufferInfo(storages.data());
 			desc.setDstBinding(1);
 			desc.setDstSet(m_descriptor_set[cModelInstancingPipeline::DESCRIPTOR_MODEL]);
@@ -594,7 +594,7 @@ void ModelInstancingRender::setup(cModelInstancingRenderer&  renderer)
 			};
 			desc = vk::WriteDescriptorSet();
 			desc.setDescriptorType(vk::DescriptorType::eStorageBuffer);
-			desc.setDescriptorCount(storages.size());
+			desc.setDescriptorCount((uint32_t)storages.size());
 			desc.setPBufferInfo(storages.data());
 			desc.setDstBinding(0);
 			desc.setDstSet(m_descriptor_set[cModelInstancingPipeline::DESCRIPTOR_ANIMATION]);
@@ -660,7 +660,7 @@ void ModelInstancingRender::execute(cModelInstancingRenderer& renderer, vk::Comm
 			auto& buffer = m_resource_instancing->getBuffer(ModelStorageBuffer::MODEL_INSTANCING_INFO);
 			auto& staging = m_resource_instancing->m_instancing_info;
 			auto* model_info_ptr = staging.getMappedPtr<ModelInstancingInfo>(sGlobal::Order().getCurrentFrame());
-			model_info_ptr->mInstanceAliveNum = m_model.size();
+			model_info_ptr->mInstanceAliveNum = (int32_t)m_model.size();
 			model_info_ptr->mInstanceMaxNum = m_resource_instancing->m_instance_max_num;
 			model_info_ptr->mInstanceNum = 0;
 //			staging.subupdate<ModelInstancingInfo>(info);

@@ -2,6 +2,8 @@
 
 #include <array>
 #include <unordered_map>
+#include <cstring>
+#include <cctype>
 #include <btrlib/Define.h>
 struct cKeyboard {
 	enum State {
@@ -12,17 +14,18 @@ struct cKeyboard {
 	struct Param {
 		char key;
 		int state;
-
+		int state_old;
 		Param()
 			: key(0)
 			, state(0)
+			, state_old(0)
 		{}
 	};
-	std::unordered_map<WPARAM, Param> mData;
+	std::unordered_map<WPARAM, Param> m_data;
 	bool isHold(char key)const 
 	{ 
-		auto it = mData.find(key);
-		if (it == mData.end()) {
+		auto it = m_data.find((char)std::toupper(key));
+		if (it == m_data.end()) {
 			return false;
 		}
 		return btr::isOn(it->second.state, STATE_HOLD);
@@ -38,8 +41,8 @@ struct cMouse
 	};
 	enum State{
 		STATE_ON = 1 << 0,		//!< 押したフレームのみ立つ
-		STATE_OFF = 1 << 1,		//!< 押している間は立つ
-		STATE_HOLD = 1 << 2,	//!< 離したフレームのみ立つ
+		STATE_OFF = 1 << 1,		//!< 離したフレームのみ立つ
+		STATE_HOLD = 1 << 2,	//!< 押している間は立つ
 	};
 	struct Param {
 		int x, y;

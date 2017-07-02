@@ -29,7 +29,7 @@ void cModelInstancingPipeline::setup(btr::Loader& loader, cModelInstancingRender
 		};
 		static_assert(array_length(shader_info) == SHADER_NUM, "not equal shader num");
 
-		std::string path = btr::getResourcePath() + "shader\\binary\\";
+		std::string path = btr::getResourceLibPath() + "shader\\binary\\";
 		for (size_t i = 0; i < SHADER_NUM; i++) {
 			m_shader_list[i] = loadShader(device.getHandle(), path + shader_info[i].name);
 			m_stage_info[i].setStage(shader_info[i].stage);

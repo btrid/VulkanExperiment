@@ -93,7 +93,7 @@ struct cTriangleLL
 					{ "RenderBrick.vert.spv", vk::ShaderStageFlagBits::eVertex },
 					{ "RenderBrick.frag.spv", vk::ShaderStageFlagBits::eFragment },
 				};
-				std::string path = btr::getResourcePath() + "shader\\binary\\";
+				std::string path = btr::getResourceAppPath() + "shader\\binary\\";
 				for (size_t i = 0; i < sizeof(shader_desc) / sizeof(shader_desc[0]); i++)
 				{
 					m_draw_triangleLL_shader_info[i].setModule(loadShader(loader.m_device.getHandle(), path + shader_desc[i].name));
@@ -455,7 +455,7 @@ struct cTriangleLL
 				{ "MakeTriangleLL.frag.spv", vk::ShaderStageFlagBits::eFragment },
 			};
 			//			static_assert(array_length(shader_desc) == COMPUTE_NUM, "not equal shader num");
-			std::string path = btr::getResourcePath() + "shader\\binary\\";
+			std::string path = btr::getResourceAppPath() + "shader\\binary\\";
 			for (size_t i = 0; i < sizeof(shader_desc) / sizeof(shader_desc[0]); i++)
 			{
 				m_make_triangleLL_shader_info[i].setModule(loadShader(loader.m_device.getHandle(), path + shader_desc[i].name));

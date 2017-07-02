@@ -7,22 +7,13 @@
 
 #include <applib/App.h>
 #include <btrlib/Loader.h>
+#include <003_particle/GameDefine.h>
 #include <003_particle/MazeGenerator.h>
 #include <003_particle/Geometry.h>
 #include <003_particle/CircleIndex.h>
 #include <003_particle/cTriangleLL.h>
 #include <003_particle/Boid.h>
-
-struct ParticleInfo
-{
-	uint32_t m_max_num;
-	uint32_t m_emit_max_num;
-};
-struct MapInfo
-{
-	glm::vec4 m_cell_size;
-	glm::ivec4 m_cell_num;
-};
+#include <003_particle/GameDefine.h>
 
 struct ParticleData
 {
@@ -35,23 +26,6 @@ struct ParticleData
 	uint32_t _p;
 };
 
-
-struct Pipeline
-{
-	std::vector<vk::PipelineShaderStageCreateInfo>	m_shader;
-	vk::Pipeline			m_pipeline;
-	vk::PipelineLayout		m_pipeline_layout;
-};
-
-struct Player
-{
-	glm::vec3 m_pos; //!< ˆÊ’u
-	glm::vec3 m_dir; //!< Œü‚«
-	glm::vec3 m_inertia;	//!< ˆÚ“®•ûŒü
-	uint32_t m_state;		//!< ó‘Ô
-
-
-};
 struct cParticlePipeline
 {
 	struct Private 
@@ -92,12 +66,9 @@ struct cParticlePipeline
 		btr::UpdateBuffer<std::array<ParticleData, 1024>> m_particle_emit;
 //		btr::AllocatedMemory m_particle_emit;
 		btr::AllocatedMemory m_particle_counter;
-		btr::UpdateBuffer<CameraGPU> m_camera;
-		CircleIndex<uint32_t, 2> m_circle_index;
 
 		btr::AllocatedMemory m_particle_draw_indiret_info;
-		vk::PipelineCache m_cache;
-		vk::DescriptorPool m_descriptor_pool;
+
 		std::array<vk::DescriptorSetLayout, DESCRIPTOR_NUM> m_descriptor_set_layout;
 		std::array<vk::DescriptorSet, DESCRIPTOR_NUM> m_descriptor_set;
 		std::array<vk::PipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
@@ -112,52 +83,36 @@ struct cParticlePipeline
 
 		MazeGenerator m_maze;
 		Geometry m_maze_geometry;
-		cTriangleLL m_make_triangleLL;
 
 		vk::Image m_map_image;
 		vk::ImageView m_map_image_view;
 		vk::DeviceMemory m_map_image_memory;
 		btr::AllocatedMemory m_map_info;
 
-		MapInfo m_map_info_cpu;
 
-		Player m_player;
 		void setup(btr::Loader& loader);
 
 		void execute(btr::Executer& executer)
 		{
 			vk::CommandBuffer cmd = executer.m_cmd;
-//			m_make_triangleLL.execute(cmd, m_maze_geometry.m_resource->m_vertex.getBufferInfo(), m_maze_geometry.m_resource->m_index.getBufferInfo(), m_maze_geometry.m_resource->m_indirect.getBufferInfo(), m_maze_geometry.m_resource->m_index_type);
 			{
 				// transfer
 				std::vector<vk::BufferMemoryBarrier> to_transfer = { 
 					m_particle_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite),
-					m_camera.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite),
 				};
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
 
 				cmd.updateBuffer<vk::DrawIndirectCommand>(m_particle_counter.getBufferInfo().buffer, m_particle_counter.getBufferInfo().offset, vk::DrawIndirectCommand(0, 1, 0, 0));
 
-				auto* camera = cCamera::sCamera::Order().getCameraList()[0];
-				CameraGPU camera_GPU;
-				camera_GPU.setup(*camera);
-				m_camera.subupdate(camera_GPU);
-				m_camera.update(cmd);
 
 				std::vector<vk::BufferMemoryBarrier> to_update_barrier = {
 					m_particle_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
 				};
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_update_barrier }, {});
-
-				std::vector<vk::BufferMemoryBarrier> to_draw_barrier = {
-					m_camera.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
-				};
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexShader, {}, {}, { to_draw_barrier }, {});
 			}
 
-			m_circle_index++;
-			uint src_offset = m_circle_index.get() == 1 ? (m_particle.getBufferInfo().range/sizeof(ParticleData) / 2) : 0;
-			uint dst_offset = m_circle_index.get() == 0 ? (m_particle.getBufferInfo().range / sizeof(ParticleData) / 2) : 0;
+			uint src_offset = g_scene->m_circle_index.get() == 1 ? (m_particle.getBufferInfo().range/sizeof(ParticleData) / 2) : 0;
+			uint dst_offset = g_scene->m_circle_index.get() == 0 ? (m_particle.getBufferInfo().range / sizeof(ParticleData) / 2) : 0;
 			{
 				// update
 				struct UpdateConstantBlock
@@ -203,12 +158,12 @@ struct cParticlePipeline
 						p.m_vel = glm::vec4(glm::normalize(glm::vec3(std::rand() % 50-25, 0.f, std::rand() % 50-25 + 0.5f)), std::rand()%50 + 15.5f);
 						p.m_life = std::rand() % 50 + 240;
 
-						glm::ivec3 map_index = glm::ivec3(p.m_pos.xyz / m_map_info_cpu.m_cell_size.xyz());
+						glm::ivec3 map_index = glm::ivec3(p.m_pos.xyz / g_scene->m_map_info_cpu.m_cell_size.xyz());
 						{
 							float particle_size = 0.f;
-							glm::vec3 cell_p = glm::mod(p.m_pos.xyz(), m_map_info_cpu.m_cell_size.xyz());
-							map_index.x = (cell_p.x <= particle_size) ? map_index.x - 1 : (cell_p.x >= (m_map_info_cpu.m_cell_size.x - particle_size)) ? map_index.x + 1 : map_index.x;
-							map_index.z = (cell_p.z <= particle_size) ? map_index.z - 1 : (cell_p.z >= (m_map_info_cpu.m_cell_size.z - particle_size)) ? map_index.z + 1 : map_index.z;
+							glm::vec3 cell_p = glm::mod(p.m_pos.xyz(), g_scene->m_map_info_cpu.m_cell_size.xyz());
+							map_index.x = (cell_p.x <= particle_size) ? map_index.x - 1 : (cell_p.x >= (g_scene->m_map_info_cpu.m_cell_size.x - particle_size)) ? map_index.x + 1 : map_index.x;
+							map_index.z = (cell_p.z <= particle_size) ? map_index.z - 1 : (cell_p.z >= (g_scene->m_map_info_cpu.m_cell_size.z - particle_size)) ? map_index.z + 1 : map_index.z;
 							p.m_map_index = glm::ivec4(map_index, 0);
 						}
 					}
@@ -251,31 +206,6 @@ struct cParticlePipeline
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, {}, {}, { to_draw }, {});
 			}
 
-			{
-				const cInput& input = executer.m_window->getInput();
-				auto resolution = glm::ivec2(executer.m_window->getClientSize());
-				auto mouse_n1_to_1 = (glm::vec2(input.m_mouse.xy) / glm::vec2(resolution) -0.5f) * 2.f;
-				if(glm::dot(mouse_n1_to_1, mouse_n1_to_1) >= 0.0001f){
-					m_player.m_dir = glm::normalize(glm::vec3(mouse_n1_to_1.x, 0.f, mouse_n1_to_1.y));
-				}
-
-				m_player.m_inertia *= pow(1.f + sGlobal::Order().getDeltaTime(), 0.95f);
-//				glm::bvec3 is_zero = glm::lessThan(m_player.m_inertia, glm::vec3(0.001f));
-				m_player.m_inertia.x = glm::abs(m_player.m_inertia.x) < 0.001f ? 0.f : m_player.m_inertia.x;
-//				m_player.m_inertia.y = glm::abs(m_player.m_inertia.y) < 0.001f ? 0.f : m_player.m_inertia.y;
-				m_player.m_inertia.z = glm::abs(m_player.m_inertia.z) < 0.001f ? 0.f : m_player.m_inertia.z;
-
-				bool is_left = input.m_keyboard.isHold('a');
-				bool is_right = input.m_keyboard.isHold('w');
-				bool is_front = input.m_keyboard.isHold('d');
-				bool is_back = input.m_keyboard.isHold('s');
-				glm::vec3 inertia = glm::vec3(0.f);
-				inertia.z += is_front * 1.f;
-				inertia.z -= is_back * 1.f;
-				inertia.x += is_right * 1.f;
-				inertia.x -= is_left * 1.f;
-				m_player.m_inertia += inertia;
-			}
 		}
 
 		void draw(vk::CommandBuffer cmd)

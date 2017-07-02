@@ -2,8 +2,10 @@
 #include <btrlib/Define.h>
 #include <btrlib/BufferMemory.h>
 #include <btrlib/cModel.h>
+#include <applib/cModelRender.h>
 
 struct cModelPipeline;
+
 struct cModelRenderPrivate
 {
 	struct MaterialBuffer {
@@ -19,41 +21,13 @@ struct cModelRenderPrivate
 
 	cModelRenderPrivate();
 	~cModelRenderPrivate();
-	struct MotionPlayList
-	{
-		struct Work
-		{
-			std::shared_ptr<Motion> m_motion;
-			float m_time;		//!< Ä¶ˆÊ’u
-			int m_index;
-			bool m_is_playing;	//!< Ä¶’†H
 
-			Work()
-				: m_time(0.f)
-				, m_is_playing(false)
-
-			{}
-		};
-		std::array<Work, 8> m_work;
-
-		void execute()
-		{
-			float dt = sGlobal::Order().getDeltaTime();
-			for (auto& work : m_work)
-			{
-				if (!work.m_is_playing)
-				{
-					continue;
-				}
-				work.m_time += dt * work.m_motion->m_ticks_per_second;
-			}
-		}
-	};
 	std::shared_ptr<cModel::Resource> m_model_resource;
 	std::vector<glm::mat4> m_node_buffer;
 	btr::UpdateBufferEx m_bone_buffer;
 	MotionPlayList m_playlist;
-	glm::mat4 m_world;
+
+	ModelTransform m_model_transform;
 
 	vk::DescriptorSet m_draw_descriptor_set_per_model;
 	btr::AllocatedMemory m_material;
@@ -134,7 +108,7 @@ struct cModelRenderPrivate
 		auto transformMatrix = parentMat;
 		if (anim)
 		{
-			Motion::NodeMotion* nodeAnim = nullptr;
+			cMotion::NodeMotion* nodeAnim = nullptr;
 			for (auto& a : anim->m_data)
 			{
 				if (a.m_nodename == node->mName)

@@ -1,14 +1,23 @@
 #include <btrlib/Define.h>
 namespace btr 
 {
-	static std::string s_path = "..\\..\\resource\\";
-	std::string getResourcePath()
+	static std::string s_app_path = "..\\..\\resource\\";
+	static std::string s_lib_path = "..\\..\\resource\\applib\\";
+	std::string getResourceAppPath()
 	{
-		return s_path;
+		return s_app_path;
 	}
-	void setResourcePath(const std::string& str)
+	void setResourceAppPath(const std::string& str)
 	{
-		s_path = str;
+		s_app_path = str;
+	}
+	std::string getResourceLibPath()
+	{
+		return s_lib_path;
+	}
+	void setResourceLibPath(const std::string& str)
+	{
+		s_lib_path = str;
 	}
 
 }
