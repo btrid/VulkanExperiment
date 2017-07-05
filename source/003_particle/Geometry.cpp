@@ -218,7 +218,7 @@ std::tuple<std::vector<glm::vec3>, std::vector<glm::vec3>> Geometry::createOrtho
 	return std::tuple<std::vector<glm::vec3>, std::vector<glm::vec3>>(std::move(tangent), std::move(binormal));
 }
 
-Geometry Geometry::MakeGeometry(btr::Loader& loader, const void* vertex, size_t vertex_size, const void* index, size_t index_size, vk::IndexType index_type, const std::vector<vk::VertexInputAttributeDescription>& vertex_attr, const std::vector<vk::VertexInputBindingDescription>& vertex_bind)
+Geometry Geometry::MakeGeometry(std::shared_ptr<btr::Loader>& loader, const void* vertex, size_t vertex_size, const void* index, size_t index_size, vk::IndexType index_type, const std::vector<vk::VertexInputAttributeDescription>& vertex_attr, const std::vector<vk::VertexInputBindingDescription>& vertex_bind)
 {
 	auto resource = std::make_unique<Resource>();
 	resource->m_vertex_binding = vertex_bind;
@@ -228,41 +228,41 @@ Geometry Geometry::MakeGeometry(btr::Loader& loader, const void* vertex, size_t 
 		{
 			btr::BufferMemory::Descriptor vertex_desc;
 			vertex_desc.size = vertex_size;
-			resource->m_vertex = loader.m_vertex_memory.allocateMemory(vertex_desc);
+			resource->m_vertex = loader->m_vertex_memory.allocateMemory(vertex_desc);
 
 			vertex_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-			auto staging = loader.m_staging_memory.allocateMemory(vertex_desc);
+			auto staging = loader->m_staging_memory.allocateMemory(vertex_desc);
 			std::memcpy(staging.getMappedPtr(), vertex, vertex_size);
 
 			vk::BufferCopy vertex_copy;
 			vertex_copy.setSize(vertex_size);
 			vertex_copy.setSrcOffset(staging.getBufferInfo().offset);
 			vertex_copy.setDstOffset(resource->m_vertex.getBufferInfo().offset);
-			loader.m_cmd.copyBuffer(staging.getBufferInfo().buffer, resource->m_vertex.getBufferInfo().buffer, vertex_copy);
+			loader->m_cmd.copyBuffer(staging.getBufferInfo().buffer, resource->m_vertex.getBufferInfo().buffer, vertex_copy);
 		}
 		{
 			btr::BufferMemory::Descriptor index_desc;
 			index_desc.size = index_size;
-			resource->m_index = loader.m_vertex_memory.allocateMemory(index_desc);
+			resource->m_index = loader->m_vertex_memory.allocateMemory(index_desc);
 
 			index_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-			auto staging = loader.m_staging_memory.allocateMemory(index_desc);
+			auto staging = loader->m_staging_memory.allocateMemory(index_desc);
 			std::memcpy(staging.getMappedPtr(), index, index_size);
 
 			vk::BufferCopy index_copy;
 			index_copy.setSize(index_size);
 			index_copy.setSrcOffset(staging.getBufferInfo().offset);
 			index_copy.setDstOffset(resource->m_index.getBufferInfo().offset);
-			loader.m_cmd.copyBuffer(staging.getBufferInfo().buffer, resource->m_index.getBufferInfo().buffer, index_copy);
+			loader->m_cmd.copyBuffer(staging.getBufferInfo().buffer, resource->m_index.getBufferInfo().buffer, index_copy);
 		}
 
 		{
 			btr::BufferMemory::Descriptor indirect_desc;
 			indirect_desc.size = sizeof(vk::DrawIndexedIndirectCommand);
-			resource->m_indirect = loader.m_vertex_memory.allocateMemory(indirect_desc);
+			resource->m_indirect = loader->m_vertex_memory.allocateMemory(indirect_desc);
 
 			indirect_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-			auto staging = loader.m_staging_memory.allocateMemory(indirect_desc);
+			auto staging = loader->m_staging_memory.allocateMemory(indirect_desc);
 			auto* ptr = staging.getMappedPtr<vk::DrawIndexedIndirectCommand>();
 			ptr->setFirstInstance(0);
 			ptr->setFirstIndex(0);
@@ -274,7 +274,7 @@ Geometry Geometry::MakeGeometry(btr::Loader& loader, const void* vertex, size_t 
 			indirect_copy.setSize(indirect_desc.size);
 			indirect_copy.setSrcOffset(staging.getBufferInfo().offset);
 			indirect_copy.setDstOffset(resource->m_indirect.getBufferInfo().offset);
-			loader.m_cmd.copyBuffer(staging.getBufferInfo().buffer, resource->m_indirect.getBufferInfo().buffer, indirect_copy);
+			loader->m_cmd.copyBuffer(staging.getBufferInfo().buffer, resource->m_indirect.getBufferInfo().buffer, indirect_copy);
 
 		}
 	}

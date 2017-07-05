@@ -38,9 +38,6 @@ struct cParticlePipeline
 		enum : uint32_t {
 			GRAPHICS_SHADER_VERTEX_PARTICLE,
 			GRAPHICS_SHADER_FRAGMENT_PARTICLE,
-			GRAPHICS_SHADER_VERTEX_FLOOR,
-			GRAPHICS_SHADER_GEOMETRY_FLOOR,
-			GRAPHICS_SHADER_FRAGMENT_FLOOR,
 			GRAPHICS_SHADER_NUM,
 		};
 
@@ -55,9 +52,7 @@ struct cParticlePipeline
 		enum : uint32_t
 		{
 			DESCRIPTOR_UPDATE,
-			DESCRIPTOR_MAP_INFO,
 			DESCRIPTOR_EMIT,
-			DESCRIPTOR_DRAW_CAMERA,
 			DESCRIPTOR_NUM,
 		};
 
@@ -81,13 +76,6 @@ struct cParticlePipeline
 
 		ParticleInfo m_particle_info_cpu;
 
-		MazeGenerator m_maze;
-		Geometry m_maze_geometry;
-
-		vk::Image m_map_image;
-		vk::ImageView m_map_image_view;
-		vk::DeviceMemory m_map_image_memory;
-		btr::AllocatedMemory m_map_info;
 
 
 		void setup(btr::Loader& loader);
@@ -111,8 +99,8 @@ struct cParticlePipeline
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_update_barrier }, {});
 			}
 
-			uint src_offset = g_scene->m_circle_index.get() == 1 ? (m_particle.getBufferInfo().range/sizeof(ParticleData) / 2) : 0;
-			uint dst_offset = g_scene->m_circle_index.get() == 0 ? (m_particle.getBufferInfo().range / sizeof(ParticleData) / 2) : 0;
+			uint src_offset = sGlobal::Order().getCPUIndex() == 1 ? (m_particle.getBufferInfo().range/sizeof(ParticleData) / 2) : 0;
+			uint dst_offset = sGlobal::Order().getCPUIndex() == 0 ? (m_particle.getBufferInfo().range / sizeof(ParticleData) / 2) : 0;
 			{
 				// update
 				struct UpdateConstantBlock
@@ -129,7 +117,7 @@ struct cParticlePipeline
 
 				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_compute_pipeline[COMPUTE_UPDATE]);
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], 0, m_descriptor_set[DESCRIPTOR_UPDATE], {});
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], 1, m_descriptor_set[DESCRIPTOR_MAP_INFO], {});
+				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], 1, Scene::Order().m_descriptor_set[Scene::DESCRIPTOR_LAYOUT_MAP], {});
 				auto groups = app::calcDipatchGroups(glm::uvec3(8192 / 2, 1, 1), glm::uvec3(1024, 1, 1));
 				cmd.dispatch(groups.x, groups.y, groups.z);
 
@@ -158,12 +146,12 @@ struct cParticlePipeline
 						p.m_vel = glm::vec4(glm::normalize(glm::vec3(std::rand() % 50-25, 0.f, std::rand() % 50-25 + 0.5f)), std::rand()%50 + 15.5f);
 						p.m_life = std::rand() % 50 + 240;
 
-						glm::ivec3 map_index = glm::ivec3(p.m_pos.xyz / g_scene->m_map_info_cpu.m_cell_size.xyz());
+						glm::ivec3 map_index = glm::ivec3(p.m_pos.xyz / Scene::Order().m_map_info_cpu.m_cell_size.xyz());
 						{
 							float particle_size = 0.f;
-							glm::vec3 cell_p = glm::mod(p.m_pos.xyz(), g_scene->m_map_info_cpu.m_cell_size.xyz());
-							map_index.x = (cell_p.x <= particle_size) ? map_index.x - 1 : (cell_p.x >= (g_scene->m_map_info_cpu.m_cell_size.x - particle_size)) ? map_index.x + 1 : map_index.x;
-							map_index.z = (cell_p.z <= particle_size) ? map_index.z - 1 : (cell_p.z >= (g_scene->m_map_info_cpu.m_cell_size.z - particle_size)) ? map_index.z + 1 : map_index.z;
+							glm::vec3 cell_p = glm::mod(p.m_pos.xyz(), Scene::Order().m_map_info_cpu.m_cell_size.xyz());
+							map_index.x = (cell_p.x <= particle_size) ? map_index.x - 1 : (cell_p.x >= (Scene::Order().m_map_info_cpu.m_cell_size.x - particle_size)) ? map_index.x + 1 : map_index.x;
+							map_index.z = (cell_p.z <= particle_size) ? map_index.z - 1 : (cell_p.z >= (Scene::Order().m_map_info_cpu.m_cell_size.z - particle_size)) ? map_index.z + 1 : map_index.z;
 							p.m_map_index = glm::ivec4(map_index, 0);
 						}
 					}
@@ -210,11 +198,11 @@ struct cParticlePipeline
 
 		void draw(vk::CommandBuffer cmd)
 		{
-			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_graphics_pipeline[1]);
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[GRAPHICS_PIPELINE_LAYOUT_FLOOR_DRAW], 0, m_descriptor_set[DESCRIPTOR_DRAW_CAMERA], {});
-			cmd.bindVertexBuffers(0, { m_maze_geometry.m_resource->m_vertex.getBufferInfo().buffer }, { m_maze_geometry.m_resource->m_vertex.getBufferInfo().offset });
-			cmd.bindIndexBuffer(m_maze_geometry.m_resource->m_index.getBufferInfo().buffer, m_maze_geometry.m_resource->m_index.getBufferInfo().offset, m_maze_geometry.m_resource->m_index_type);
-			cmd.drawIndexedIndirect(m_maze_geometry.m_resource->m_indirect.getBufferInfo().buffer, m_maze_geometry.m_resource->m_indirect.getBufferInfo().offset, 1, sizeof(vk::DrawIndexedIndirectCommand));
+// 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_graphics_pipeline[1]);
+// 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[GRAPHICS_PIPELINE_LAYOUT_FLOOR_DRAW], 0, m_descriptor_set[DESCRIPTOR_DRAW_CAMERA], {});
+// 			cmd.bindVertexBuffers(0, { m_maze_geometry.m_resource->m_vertex.getBufferInfo().buffer }, { m_maze_geometry.m_resource->m_vertex.getBufferInfo().offset });
+// 			cmd.bindIndexBuffer(m_maze_geometry.m_resource->m_index.getBufferInfo().buffer, m_maze_geometry.m_resource->m_index.getBufferInfo().offset, m_maze_geometry.m_resource->m_index_type);
+// 			cmd.drawIndexedIndirect(m_maze_geometry.m_resource->m_indirect.getBufferInfo().buffer, m_maze_geometry.m_resource->m_indirect.getBufferInfo().offset, 1, sizeof(vk::DrawIndexedIndirectCommand));
 
 // 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_graphics_pipeline[0]);
 // 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[GRAPHICS_PIPELINE_LAYOUT_PARTICLE_DRAW], 0, m_descriptor_set[DESCRIPTOR_UPDATE], {});

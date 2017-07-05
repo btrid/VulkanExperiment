@@ -1,7 +1,9 @@
 #pragma once
 
+#include <vector>
 #include <array>
 #include <memory>
+#include <btrlib/Singleton.h>
 #include <btrlib/BufferMemory.h>
 #include <btrlib/cCamera.h>
 
@@ -16,22 +18,28 @@
 struct BulletData
 {
 	glm::vec4 m_pos;	//!< xyz:pos w:scale
-	glm::vec4 m_vel;	//!< xyz:dir w:distance
+	glm::vec4 m_vel;	//!< xyz:dir
 	glm::ivec4 m_map_index;
+
 	uint32_t m_type;
 	uint32_t m_flag;
 	float m_life;
-	uint32_t _p;
+	float m_atk;
+	float m_power;
+	float m_1;
+	float m_2;
+	float m_3;
 };
 
 
-struct cBulletSystem
+
+struct sBulletSystem : public Singleton<sBulletSystem>
 {
+	friend sBulletSystem;
 	struct Private 
 	{
 		enum : uint32_t {
 			COMPUTE_UPDATE,
-			COMPUTE_EMIT,
 			COMPUTE_NUM,
 		};
 		enum : uint32_t {
@@ -43,22 +51,18 @@ struct cBulletSystem
 		enum : uint32_t
 		{
 			PIPELINE_LAYOUT_UPDATE,
-			COMPUTE_PIPELINE_LAYOUT_EMIT,
-			GRAPHICS_PIPELINE_LAYOUT_PARTICLE_DRAW,
+			PIPELINE_LAYOUT_PARTICLE_DRAW,
 			PIPELINE_LAYOUT_NUM,
 		};
 		enum : uint32_t
 		{
 			DESCRIPTOR_UPDATE,
-			DESCRIPTOR_MAP_INFO,
-			DESCRIPTOR_EMIT,
-			DESCRIPTOR_DRAW_CAMERA,
 			DESCRIPTOR_NUM,
 		};
 
 		btr::AllocatedMemory m_particle;
 		btr::AllocatedMemory m_particle_info;
-		btr::UpdateBuffer<std::array<BulletData, 1024>> m_particle_emit;
+		std::array<std::vector<BulletData>, 2> m_append_buffer;
 		btr::AllocatedMemory m_particle_counter;
 
 		btr::AllocatedMemory m_particle_draw_indiret_info;
@@ -78,23 +82,52 @@ struct cBulletSystem
 		void execute(btr::Executer& executer)
 		{
 			vk::CommandBuffer cmd = executer.m_cmd;
+
+
+			// エミット
 			{
-				// transfer
-				std::vector<vk::BufferMemoryBarrier> to_transfer = { 
-					m_particle_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite),
-				};
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
+				auto& emit_data = m_append_buffer[sGlobal::Order().getGPUIndex()];
+				if (!emit_data.empty())
+				{
+					auto particle_barrier = m_particle.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite);
+					std::vector<vk::BufferMemoryBarrier> to_emit_barrier =
+					{
+						particle_barrier,
+					};
+					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_emit_barrier, {});
 
-				cmd.updateBuffer<vk::DrawIndirectCommand>(m_particle_counter.getBufferInfo().buffer, m_particle_counter.getBufferInfo().offset, vk::DrawIndirectCommand(0, 1, 0, 0));
+					btr::BufferMemory::Descriptor desc;
+					desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+					desc.size = vector_sizeof(emit_data);
+					auto emit_staging_memory = executer.m_staging_memory.allocateMemory(desc);
 
-				std::vector<vk::BufferMemoryBarrier> to_update_barrier = {
-					m_particle_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
-				};
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_update_barrier }, {});
+					// emit
+					vk::BufferCopy copy_info;
+					copy_info.setSize(desc.size);
+					copy_info.setSrcOffset(emit_staging_memory.getBufferInfo().offset);
+					copy_info.setDstOffset(m_particle.getBufferInfo().offset + sizeof(BulletData)*sGlobal::Order().getGPUIndex());
+					cmd.copyBuffer(emit_staging_memory.getBufferInfo().buffer, m_particle.getBufferInfo().buffer, copy_info);
+
+				}
+
+				{
+					// パーティクル数更新
+					std::vector<vk::BufferMemoryBarrier> to_transfer = {
+						m_particle_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite),
+					};
+					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
+
+					cmd.updateBuffer<vk::DrawIndirectCommand>(m_particle_counter.getBufferInfo().buffer, m_particle_counter.getBufferInfo().offset, vk::DrawIndirectCommand(emit_data.size(), 1, 0, 0));
+
+					std::vector<vk::BufferMemoryBarrier> to_update_barrier = {
+						m_particle_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
+					};
+					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_update_barrier }, {});
+				}
+				emit_data.clear();
 			}
-
-			uint src_offset = g_scene->m_circle_index.get() == 1 ? (m_particle.getBufferInfo().range/sizeof(BulletData) / 2) : 0;
-			uint dst_offset = g_scene->m_circle_index.get() == 0 ? (m_particle.getBufferInfo().range / sizeof(BulletData) / 2) : 0;
+			uint src_offset = sGlobal::Order().getCPUIndex() == 0 ? (m_particle.getBufferInfo().range / sizeof(BulletData) / 2) : 0;
+			uint dst_offset = sGlobal::Order().getCPUIndex() == 1 ? (m_particle.getBufferInfo().range / sizeof(BulletData) / 2) : 0;
 			{
 				// update
 				struct UpdateConstantBlock
@@ -111,63 +144,12 @@ struct cBulletSystem
 
 				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_compute_pipeline[COMPUTE_UPDATE]);
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], 0, m_descriptor_set[DESCRIPTOR_UPDATE], {});
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], 1, m_descriptor_set[DESCRIPTOR_MAP_INFO], {});
+				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], 1, Scene::Order().m_descriptor_set[Scene::DESCRIPTOR_LAYOUT_MAP], {});
 				auto groups = app::calcDipatchGroups(glm::uvec3(8192 / 2, 1, 1), glm::uvec3(1024, 1, 1));
 				cmd.dispatch(groups.x, groups.y, groups.z);
 
 			}
 
-
-			{
-				auto particle_barrier = m_particle.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite);
-				std::vector<vk::BufferMemoryBarrier> to_emit_barrier =
-				{
-					particle_barrier,
-					m_particle_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
-				};
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_emit_barrier, {});
-
-				// emit
-				std::array<BulletData, 200> data;
-				for (auto& p : data)
-				{
-					p.m_pos = glm::vec4(std::rand()%20+50.f, 0.f, std::rand() % 20 + 50.f, 1.f);
-					p.m_vel = glm::vec4(glm::normalize(glm::vec3(std::rand() % 50-25, 0.f, std::rand() % 50-25 + 0.5f)), std::rand()%50 + 15.5f);
-					p.m_life = std::rand() % 50 + 240;
-
-					glm::ivec3 map_index = glm::ivec3(p.m_pos.xyz / g_scene->m_map_info_cpu.m_cell_size.xyz());
-					{
-						float particle_size = 0.f;
-						glm::vec3 cell_p = glm::mod(p.m_pos.xyz(), g_scene->m_map_info_cpu.m_cell_size.xyz());
-						map_index.x = (cell_p.x <= particle_size) ? map_index.x - 1 : (cell_p.x >= (g_scene->m_map_info_cpu.m_cell_size.x - particle_size)) ? map_index.x + 1 : map_index.x;
-						map_index.z = (cell_p.z <= particle_size) ? map_index.z - 1 : (cell_p.z >= (g_scene->m_map_info_cpu.m_cell_size.z - particle_size)) ? map_index.z + 1 : map_index.z;
-						p.m_map_index = glm::ivec4(map_index, 0);
-					}
-				}
-				m_particle_emit.subupdate(data.data(), vector_sizeof(data), 0);
-
-				auto to_transfer = m_particle_emit.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite);
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
-				m_particle_emit.update(cmd);
-				auto to_read = m_particle_emit.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
-
-				struct EmitConstantBlock
-				{
-					uint m_emit_num;
-					uint m_offset;
-				};
-				EmitConstantBlock block;
-				block.m_emit_num = data.size();
-				block.m_offset = dst_offset;
-				cmd.pushConstants<EmitConstantBlock>(m_pipeline_layout[COMPUTE_EMIT], vk::ShaderStageFlagBits::eCompute, 0, block);
-				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_compute_pipeline[COMPUTE_EMIT]);
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[COMPUTE_PIPELINE_LAYOUT_EMIT], 0, m_descriptor_set[DESCRIPTOR_UPDATE], {});
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[COMPUTE_PIPELINE_LAYOUT_EMIT], 1, m_descriptor_set[DESCRIPTOR_EMIT], {});
-				auto groups = app::calcDipatchGroups(glm::uvec3(block.m_emit_num, 1, 1), glm::uvec3(1024, 1, 1));
-				cmd.dispatch(groups.x, groups.y, groups.z);
-
-			}
 			auto particle_barrier = m_particle.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eVertexShader, {}, {}, particle_barrier, {});
 
@@ -179,8 +161,8 @@ struct cBulletSystem
 		void draw(vk::CommandBuffer cmd)
 		{
 // 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_graphics_pipeline[0]);
-// 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[GRAPHICS_PIPELINE_LAYOUT_PARTICLE_DRAW], 0, m_descriptor_set[DESCRIPTOR_UPDATE], {});
-// 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[GRAPHICS_PIPELINE_LAYOUT_PARTICLE_DRAW], 1, m_descriptor_set[DESCRIPTOR_DRAW_CAMERA], {});
+// 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_PARTICLE_DRAW], 0, m_descriptor_set[DESCRIPTOR_UPDATE], {});
+// 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_PARTICLE_DRAW], 1, m_descriptor_set[DESCRIPTOR_DRAW_CAMERA], {});
 // 			cmd.drawIndirect(m_particle_counter.getBufferInfo().buffer, m_particle_counter.getBufferInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
 		}
 
@@ -203,6 +185,12 @@ struct cBulletSystem
 	void draw(vk::CommandBuffer cmd)
 	{
 		m_private->draw(cmd);
+	}
+
+	void shoot(const std::vector<BulletData>& param)
+	{
+		auto& data = m_private->m_append_buffer[sGlobal::Order().getCPUIndex()];
+		data.insert(data.end(), param.begin(), param.end());
 	}
 };
 

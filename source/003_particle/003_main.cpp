@@ -14,6 +14,7 @@
 #include <filesystem>
 #include <btrlib/Define.h>
 #include <btrlib/cWindow.h>
+#include <btrlib/cInput.h>
 #include <btrlib/cCamera.h>
 #include <btrlib/sGlobal.h>
 #include <btrlib/GPU.h>
@@ -26,6 +27,7 @@
 #include <btrlib/Loader.h>
 
 #include <003_particle/ParticlePipeline.h>
+#include <003_particle/BulletPipeline.h>
 #include <003_particle/GameDefine.h>
 
 #pragma comment(lib, "btrlib.lib")
@@ -33,7 +35,15 @@
 #pragma comment(lib, "FreeImage.lib")
 #pragma comment(lib, "vulkan-1.lib")
 
-std::unique_ptr<Scene> g_scene;
+struct Gun{
+
+	virtual ~Gun() = default;
+
+	void shoot()
+	{
+
+	}
+};
 struct Player
 {
 	glm::vec3 m_pos; //!< 位置
@@ -41,6 +51,62 @@ struct Player
 	glm::vec3 m_inertia;	//!< 移動方向
 	uint32_t m_state;		//!< 状態
 
+	Gun m_left;
+	Gun m_right;
+
+
+	void execute(std::shared_ptr<btr::Executer>& executer)
+	{
+		const cInput& input = executer->m_window->getInput();
+		auto resolution = executer->m_window->getClientSize();
+		auto mouse_n1_to_1 = (glm::vec2(input.m_mouse.xy) / glm::vec2(resolution) - 0.5f) * 2.f;
+		if (glm::dot(mouse_n1_to_1, mouse_n1_to_1) >= 0.0001f) {
+			m_dir = glm::normalize(-glm::vec3(mouse_n1_to_1.x, 0.f, mouse_n1_to_1.y));
+		}
+
+		m_inertia *= pow(0.85f, 1.f + sGlobal::Order().getDeltaTime());
+		m_inertia.x = glm::abs(m_inertia.x) < 0.001f ? 0.f : m_inertia.x;
+		m_inertia.z = glm::abs(m_inertia.z) < 0.001f ? 0.f : m_inertia.z;
+
+		bool is_left = input.m_keyboard.isHold('a');
+		bool is_right = input.m_keyboard.isHold('d');
+		bool is_front = input.m_keyboard.isHold('w');
+		bool is_back = input.m_keyboard.isHold('s');
+		glm::vec3 inertia = glm::vec3(0.f);
+		inertia.z += is_front * 1.f;
+		inertia.z -= is_back * 1.f;
+		inertia.x += is_right * 1.f;
+		inertia.x -= is_left * 1.f;
+		m_inertia += inertia;
+		m_inertia = glm::clamp(m_inertia, glm::vec3(-1.f), glm::vec3(1.f));
+		m_pos += m_inertia * 0.01f;
+
+		{
+			std::vector<BulletData> m_bullet;
+			if (input.m_keyboard.isHold('j'))
+			{
+				BulletData b;
+				b.m_life = 200.f;
+				b.m_pos = glm::vec4(m_pos, 5.f);
+				b.m_vel = glm::vec4(m_dir, 1.f) * 20.f;
+				b.m_type = 0;
+				b.m_map_index = Scene::Order().calcMapIndex(b.m_pos);
+				m_bullet.push_back(b);
+			}
+			if (input.m_keyboard.isHold('k'))
+			{
+				BulletData b;
+				b.m_life = 50.f;
+				b.m_pos = glm::vec4(m_pos, 5.f);
+				b.m_vel = glm::vec4(m_dir, 1.f) * 20.f;
+				b.m_type = 0;
+				b.m_map_index = Scene::Order().calcMapIndex(b.m_pos);
+				m_bullet.push_back(b);
+			}
+
+			sBulletSystem::Order().shoot(m_bullet);
+		}
+	}
 };
 
 int main()
@@ -126,8 +192,6 @@ int main()
 	executer->m_thread_pool = &pool;
 	executer->m_window = &app.m_window;
 
-	g_scene = std::make_unique<Scene>();
-	g_scene->setup(loader);
 	cModelPipeline model_pipeline;
 	cModelRender model_render;
 	cModel model;
@@ -140,6 +204,7 @@ int main()
 		begin_info.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 		render_cmds[0].begin(begin_info);
 		loader->m_cmd = render_cmds[0];
+		Scene::Order().setup(loader);
 
 		model.load(loader.get(), "..\\..\\resource\\tiny.x");
 		model_render.setup(loader, model.getResource());
@@ -159,7 +224,7 @@ int main()
 		}
 
 		pipeline.setup(*loader);
-
+		sBulletSystem::Order().setup(*loader);
 
 		render_cmds[0].end();
 		std::vector<vk::CommandBuffer> cmds = {
@@ -203,34 +268,15 @@ int main()
 			{
 				auto* m_camera = cCamera::sCamera::Order().getCameraList()[0];
 				m_camera->control(app.m_window.getInput(), 0.016f);
-				g_scene->execute(executer);
+				Scene::Order().execute(executer);
 
 			}
 			{
-				const cInput& input = app.m_window.getInput();
-				auto resolution = glm::ivec2(app.m_window.getClientSize());
-				auto mouse_n1_to_1 = (glm::vec2(input.m_mouse.xy) / glm::vec2(resolution) - 0.5f) * 2.f;
-				if (glm::dot(mouse_n1_to_1, mouse_n1_to_1) >= 0.0001f) {
-					m_player.m_dir = glm::normalize(-glm::vec3(mouse_n1_to_1.x, 0.f, mouse_n1_to_1.y));
+				m_player.execute(executer);
+				if (executer->m_window->getInput().m_keyboard.isHold('o'))
+				{
+//					bullet_system.execute()
 				}
-
-				m_player.m_inertia *= pow(0.85f, 1.f + sGlobal::Order().getDeltaTime());
-				m_player.m_inertia.x = glm::abs(m_player.m_inertia.x) < 0.001f ? 0.f : m_player.m_inertia.x;
-				m_player.m_inertia.z = glm::abs(m_player.m_inertia.z) < 0.001f ? 0.f : m_player.m_inertia.z;
-
-				bool is_left = input.m_keyboard.isHold('a');
-				bool is_right = input.m_keyboard.isHold('d');
-				bool is_front = input.m_keyboard.isHold('w');
-				bool is_back = input.m_keyboard.isHold('s');
-				glm::vec3 inertia = glm::vec3(0.f);
-				inertia.z += is_front * 1.f;
-				inertia.z -= is_back * 1.f;
-				inertia.x += is_right * 1.f;
-				inertia.x -= is_left * 1.f;
-				m_player.m_inertia += inertia;
-				m_player.m_inertia = glm::clamp(m_player.m_inertia, glm::vec3(-1.f), glm::vec3(1.f));
-				m_player.m_pos += m_player.m_inertia * 0.01f;
-
 				model_render.getModelTransform().m_global = glm::translate(m_player.m_pos) * glm::toMat4(glm::quat(glm::vec3(0.f, 0.f, 1.f), m_player.m_dir));
 			}
 
@@ -265,6 +311,7 @@ int main()
 				.setFramebuffer(app.m_framebuffer[backbuffer_index]);
 			render_cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 			// draw
+			Scene::Order().draw(render_cmd);
 			pipeline.draw(render_cmd);
 			model_pipeline.draw(render_cmd);
 

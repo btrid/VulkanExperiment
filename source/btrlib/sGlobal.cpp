@@ -9,6 +9,7 @@
 sGlobal::sGlobal()
 	: m_current_frame(0)
 	, m_game_frame(0)
+	, m_tick_tock(0)
 {
 	m_deltatime = 0.016f;
 	{
@@ -149,6 +150,7 @@ void sGlobal::swap()
 	m_game_frame++;
 	m_game_frame = m_game_frame % (std::numeric_limits<decltype(m_game_frame)>::max() / FRAME_MAX*FRAME_MAX);
 	m_current_frame = m_game_frame % FRAME_MAX;
+	m_tick_tock = (m_tick_tock + 1) % 2;
 	auto next = (m_current_frame+1) % FRAME_MAX;
 	auto& deletelist = m_cmd_delete[next];
 	for (auto it = deletelist.begin(); it != deletelist.end();)

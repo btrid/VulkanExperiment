@@ -37,7 +37,7 @@ struct Geometry
 	static void OptimaizeConnectTriangle(std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>>& vertex);
 
 	static Geometry MakeGeometry(
-		btr::Loader& loader,
+		std::shared_ptr<btr::Loader>& loader,
 		const void* vertex,
 		size_t vertex_size,
 		const void* index,

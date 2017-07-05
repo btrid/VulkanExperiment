@@ -401,6 +401,7 @@ struct UpdateBufferDescriptor
 		frame_max = sGlobal::FRAME_MAX;
 	}
 };
+
 template<typename T>
 struct UpdateBuffer
 {
@@ -457,7 +458,7 @@ struct UpdateBuffer
 		m_begin = 0;
 		m_end = sizeof(T);
 	}
-	void subupdate(void* data, vk::DeviceSize data_size, vk::DeviceSize offset)
+	void subupdate(const void* data, vk::DeviceSize data_size, vk::DeviceSize offset)
 	{
 		auto* ptr = m_staging_memory.getMappedPtr<T>(m_frame);
 		memcpy_s(ptr + offset, data_size, data, data_size);

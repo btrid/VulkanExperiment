@@ -294,8 +294,6 @@ public:
 	int current()const{ return index_; }
 	int next()const{ return (index_ + 1) % 2; }
 
-	float time_ = 0.f;
-
 	std::vector<int>& getData(){ return field_.map_; }
 	int getSizeX()const{ return field_.x_; }
 	int getSizeY()const{ return field_.y_; }
