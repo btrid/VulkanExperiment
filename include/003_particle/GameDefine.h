@@ -25,7 +25,7 @@ struct Map
 {
 
 };
-struct Scene : public Singleton<Scene>
+struct sScene : public Singleton<sScene>
 {
 
 	enum 
@@ -94,8 +94,8 @@ struct Scene : public Singleton<Scene>
 		}
 
 		{
-			m_maze.generate(Scene::Order().m_map_info_cpu.m_cell_num.x, Scene::Order().m_map_info_cpu.m_cell_num.y);
-			auto geometry = m_maze.makeGeometry(Scene::Order().m_map_info_cpu.m_cell_size);
+			m_maze.generate(sScene::Order().m_map_info_cpu.m_cell_num.x, sScene::Order().m_map_info_cpu.m_cell_num.y);
+			auto geometry = m_maze.makeGeometry(sScene::Order().m_map_info_cpu.m_cell_size);
 			Geometry::OptimaizeDuplicateVertexDescriptor opti_desc;
 
 			std::vector<vk::VertexInputAttributeDescription> vertex_attr(1);
@@ -218,7 +218,7 @@ struct Scene : public Singleton<Scene>
 
 			desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging = loader->m_staging_memory.allocateMemory(desc);
-			*staging.getMappedPtr<MapInfo>() = Scene::Order().m_map_info_cpu;
+			*staging.getMappedPtr<MapInfo>() = sScene::Order().m_map_info_cpu;
 
 			vk::BufferCopy vertex_copy;
 			vertex_copy.setSize(desc.size);

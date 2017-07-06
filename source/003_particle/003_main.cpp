@@ -90,7 +90,7 @@ struct Player
 				b.m_pos = glm::vec4(m_pos, 5.f);
 				b.m_vel = glm::vec4(m_dir, 1.f) * 20.f;
 				b.m_type = 0;
-				b.m_map_index = Scene::Order().calcMapIndex(b.m_pos);
+				b.m_map_index = sScene::Order().calcMapIndex(b.m_pos);
 				m_bullet.push_back(b);
 			}
 			if (input.m_keyboard.isHold('k'))
@@ -100,11 +100,13 @@ struct Player
 				b.m_pos = glm::vec4(m_pos, 5.f);
 				b.m_vel = glm::vec4(m_dir, 1.f) * 20.f;
 				b.m_type = 0;
-				b.m_map_index = Scene::Order().calcMapIndex(b.m_pos);
+				b.m_map_index = sScene::Order().calcMapIndex(b.m_pos);
 				m_bullet.push_back(b);
 			}
-
-			sBulletSystem::Order().shoot(m_bullet);
+			if (!m_bullet.empty())
+			{
+				sBulletSystem::Order().shoot(m_bullet);
+			}
 		}
 	}
 };
@@ -204,7 +206,7 @@ int main()
 		begin_info.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 		render_cmds[0].begin(begin_info);
 		loader->m_cmd = render_cmds[0];
-		Scene::Order().setup(loader);
+		sScene::Order().setup(loader);
 
 		model.load(loader.get(), "..\\..\\resource\\tiny.x");
 		model_render.setup(loader, model.getResource());
@@ -268,7 +270,7 @@ int main()
 			{
 				auto* m_camera = cCamera::sCamera::Order().getCameraList()[0];
 				m_camera->control(app.m_window.getInput(), 0.016f);
-				Scene::Order().execute(executer);
+				sScene::Order().execute(executer);
 
 			}
 			{
@@ -311,7 +313,7 @@ int main()
 				.setFramebuffer(app.m_framebuffer[backbuffer_index]);
 			render_cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 			// draw
-			Scene::Order().draw(render_cmd);
+			sScene::Order().draw(render_cmd);
 			pipeline.draw(render_cmd);
 			model_pipeline.draw(render_cmd);
 

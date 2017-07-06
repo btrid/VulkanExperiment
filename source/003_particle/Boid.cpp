@@ -63,7 +63,7 @@ void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 
 		{
 			btr::BufferMemory::Descriptor desc;
-			desc.size = sizeof(uint32_t) * Scene::Order().m_maze.getSizeX()* Scene::Order().m_maze.getSizeY()*2;
+			desc.size = sizeof(uint32_t) * sScene::Order().m_maze.getSizeX()* sScene::Order().m_maze.getSizeY()*2;
 			m_soldier_LL_head_gpu.setup(loader.m_storage_memory.allocateMemory(desc));
 			loader.m_cmd.fillBuffer(m_soldier_LL_head_gpu.getOrg().buffer, m_soldier_LL_head_gpu.getOrg().offset, m_soldier_LL_head_gpu.getOrg().range, 0xFFFFFFFF);
 
@@ -109,7 +109,7 @@ void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 		}
 
 		{
-			auto* maze = &Scene::Order().m_maze;
+			auto* maze = &sScene::Order().m_maze;
 			std::vector<uint32_t> solver = maze->solveEx(100, 100);
 			vk::ImageCreateInfo image_info;
 			image_info.imageType = vk::ImageType::e2D;
@@ -348,7 +348,7 @@ void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 			{
 				std::vector<vk::DescriptorSetLayout> layouts = {
 					m_descriptor->m_descriptor_set_layout[DESCRIPTOR_SOLDIER_UPDATE],
-					Scene::Order().m_descriptor_set_layout[Scene::DESCRIPTOR_LAYOUT_MAP],
+					sScene::Order().m_descriptor_set_layout[sScene::DESCRIPTOR_LAYOUT_MAP],
 				};
 				std::vector<vk::PushConstantRange> push_constants = {
 					vk::PushConstantRange()
@@ -382,7 +382,7 @@ void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 			{
 				std::vector<vk::DescriptorSetLayout> layouts = {
 					m_descriptor->m_descriptor_set_layout[DESCRIPTOR_SOLDIER_UPDATE],
-					Scene::Order().m_descriptor_set_layout[Scene::DESCRIPTOR_LAYOUT_CAMERA],
+					sScene::Order().m_descriptor_set_layout[sScene::DESCRIPTOR_LAYOUT_CAMERA],
 				};
 				std::vector<vk::PushConstantRange> push_constants = {
 					vk::PushConstantRange()
@@ -548,7 +548,7 @@ void Boid::execute(btr::Executer& executer)
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_compute_pipeline[PIPELINE_LAYOUT_SOLDIER_UPDATE]);
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_UPDATE], 0, { m_descriptor->m_descriptor_set[DESCRIPTOR_SOLDIER_UPDATE] }, {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_UPDATE], 1, Scene::Order().m_descriptor_set[Scene::DESCRIPTOR_LAYOUT_MAP], {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_UPDATE], 1, sScene::Order().m_descriptor_set[sScene::DESCRIPTOR_LAYOUT_MAP], {});
 		auto groups = app::calcDipatchGroups(glm::uvec3(m_boid_info.m_soldier_max / 2, 1, 1), glm::uvec3(1024, 1, 1));
 		cmd.dispatch(groups.x, groups.y, groups.z);
 	}
@@ -584,12 +584,12 @@ void Boid::execute(btr::Executer& executer)
 				p.m_brain_index = 0;
 				p.m_ll_next = 0xFFFFFFFF;
 				p.m_astar_target = p.m_pos;
-				glm::ivec3 map_index = glm::ivec3(p.m_pos.xyz / Scene::Order().m_map_info_cpu.m_cell_size.xyz());
+				glm::ivec3 map_index = glm::ivec3(p.m_pos.xyz / sScene::Order().m_map_info_cpu.m_cell_size.xyz());
 				{
 					float particle_size = p.m_pos.w;
-					glm::vec3 cell_p = glm::mod(p.m_pos.xyz(), glm::vec3(Scene::Order().m_map_info_cpu.m_cell_size));
-					map_index.x = (cell_p.x <= particle_size) ? map_index.x - 1 : (cell_p.x >= (Scene::Order().m_map_info_cpu.m_cell_size.x - particle_size)) ? map_index.x + 1 : map_index.x;
-					map_index.z = (cell_p.z <= particle_size) ? map_index.z - 1 : (cell_p.z >= (Scene::Order().m_map_info_cpu.m_cell_size.z - particle_size)) ? map_index.z + 1 : map_index.z;
+					glm::vec3 cell_p = glm::mod(p.m_pos.xyz(), glm::vec3(sScene::Order().m_map_info_cpu.m_cell_size));
+					map_index.x = (cell_p.x <= particle_size) ? map_index.x - 1 : (cell_p.x >= (sScene::Order().m_map_info_cpu.m_cell_size.x - particle_size)) ? map_index.x + 1 : map_index.x;
+					map_index.z = (cell_p.z <= particle_size) ? map_index.z - 1 : (cell_p.z >= (sScene::Order().m_map_info_cpu.m_cell_size.z - particle_size)) ? map_index.z + 1 : map_index.z;
 					p.m_map_index = glm::ivec4(map_index, 0);
 				}
 			}
@@ -644,7 +644,7 @@ void Boid::draw(vk::CommandBuffer cmd)
 	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_graphics_pipeline[0]);
 	cmd.pushConstants<DrawConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW], vk::ShaderStageFlagBits::eVertex, 0, block);
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW], 0, m_descriptor->m_descriptor_set[DESCRIPTOR_SOLDIER_UPDATE], {});
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW], 1, Scene::Order().m_descriptor_set[Scene::DESCRIPTOR_LAYOUT_CAMERA], {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW], 1, sScene::Order().m_descriptor_set[sScene::DESCRIPTOR_LAYOUT_CAMERA], {});
 	cmd.drawIndirect(m_soldier_draw_indiret_gpu.getBufferInfo().buffer, m_soldier_draw_indiret_gpu.getBufferInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
 
 }

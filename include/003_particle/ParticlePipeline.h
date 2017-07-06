@@ -117,7 +117,7 @@ struct cParticlePipeline
 
 				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_compute_pipeline[COMPUTE_UPDATE]);
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], 0, m_descriptor_set[DESCRIPTOR_UPDATE], {});
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], 1, Scene::Order().m_descriptor_set[Scene::DESCRIPTOR_LAYOUT_MAP], {});
+				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], 1, sScene::Order().m_descriptor_set[sScene::DESCRIPTOR_LAYOUT_MAP], {});
 				auto groups = app::calcDipatchGroups(glm::uvec3(8192 / 2, 1, 1), glm::uvec3(1024, 1, 1));
 				cmd.dispatch(groups.x, groups.y, groups.z);
 
@@ -146,12 +146,12 @@ struct cParticlePipeline
 						p.m_vel = glm::vec4(glm::normalize(glm::vec3(std::rand() % 50-25, 0.f, std::rand() % 50-25 + 0.5f)), std::rand()%50 + 15.5f);
 						p.m_life = std::rand() % 50 + 240;
 
-						glm::ivec3 map_index = glm::ivec3(p.m_pos.xyz / Scene::Order().m_map_info_cpu.m_cell_size.xyz());
+						glm::ivec3 map_index = glm::ivec3(p.m_pos.xyz / sScene::Order().m_map_info_cpu.m_cell_size.xyz());
 						{
 							float particle_size = 0.f;
-							glm::vec3 cell_p = glm::mod(p.m_pos.xyz(), Scene::Order().m_map_info_cpu.m_cell_size.xyz());
-							map_index.x = (cell_p.x <= particle_size) ? map_index.x - 1 : (cell_p.x >= (Scene::Order().m_map_info_cpu.m_cell_size.x - particle_size)) ? map_index.x + 1 : map_index.x;
-							map_index.z = (cell_p.z <= particle_size) ? map_index.z - 1 : (cell_p.z >= (Scene::Order().m_map_info_cpu.m_cell_size.z - particle_size)) ? map_index.z + 1 : map_index.z;
+							glm::vec3 cell_p = glm::mod(p.m_pos.xyz(), sScene::Order().m_map_info_cpu.m_cell_size.xyz());
+							map_index.x = (cell_p.x <= particle_size) ? map_index.x - 1 : (cell_p.x >= (sScene::Order().m_map_info_cpu.m_cell_size.x - particle_size)) ? map_index.x + 1 : map_index.x;
+							map_index.z = (cell_p.z <= particle_size) ? map_index.z - 1 : (cell_p.z >= (sScene::Order().m_map_info_cpu.m_cell_size.z - particle_size)) ? map_index.z + 1 : map_index.z;
 							p.m_map_index = glm::ivec4(map_index, 0);
 						}
 					}

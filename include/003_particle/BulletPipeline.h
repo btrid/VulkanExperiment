@@ -144,7 +144,7 @@ struct sBulletSystem : public Singleton<sBulletSystem>
 
 				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_compute_pipeline[COMPUTE_UPDATE]);
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], 0, m_descriptor_set[DESCRIPTOR_UPDATE], {});
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], 1, Scene::Order().m_descriptor_set[Scene::DESCRIPTOR_LAYOUT_MAP], {});
+				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], 1, sScene::Order().m_descriptor_set[sScene::DESCRIPTOR_LAYOUT_MAP], {});
 				auto groups = app::calcDipatchGroups(glm::uvec3(8192 / 2, 1, 1), glm::uvec3(1024, 1, 1));
 				cmd.dispatch(groups.x, groups.y, groups.z);
 
@@ -160,10 +160,10 @@ struct sBulletSystem : public Singleton<sBulletSystem>
 
 		void draw(vk::CommandBuffer cmd)
 		{
-// 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_graphics_pipeline[0]);
-// 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_PARTICLE_DRAW], 0, m_descriptor_set[DESCRIPTOR_UPDATE], {});
-// 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_PARTICLE_DRAW], 1, m_descriptor_set[DESCRIPTOR_DRAW_CAMERA], {});
-// 			cmd.drawIndirect(m_particle_counter.getBufferInfo().buffer, m_particle_counter.getBufferInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
+			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_graphics_pipeline[0]);
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_PARTICLE_DRAW], 0, m_descriptor_set[DESCRIPTOR_UPDATE], {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_PARTICLE_DRAW], 1, sScene::Order().m_descriptor_set[sScene::DESCRIPTOR_LAYOUT_CAMERA], {});
+			cmd.drawIndirect(m_particle_counter.getBufferInfo().buffer, m_particle_counter.getBufferInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
 		}
 
 	};
