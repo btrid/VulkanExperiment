@@ -459,9 +459,9 @@ struct sScene : public Singleton<sScene>
 	{
 		glm::vec3 cell_p = glm::mod(p.xyz(), m_map_info_cpu.m_cell_size.xyz());
 		glm::ivec4 map_index(p.xyz / m_map_info_cpu.m_cell_size.xyz, 0);
-		map_index.x = (cell_p.x <= p.w) ? map_index.x - 1 : (cell_p.x >= (m_map_info_cpu.m_cell_size.x - p.w)) ? map_index.x + 1 : map_index.x;
+//		map_index.x = (cell_p.x <= p.w) ? map_index.x - 1 : (cell_p.x >= (m_map_info_cpu.m_cell_size.x - p.w)) ? map_index.x + 1 : map_index.x;
 		map_index.y = 0;
-		map_index.z = (cell_p.z <= p.w) ? map_index.z - 1 : (cell_p.z >= (m_map_info_cpu.m_cell_size.z - p.w)) ? map_index.z + 1 : map_index.z;
+//		map_index.z = (cell_p.z <= p.w) ? map_index.z - 1 : (cell_p.z >= (m_map_info_cpu.m_cell_size.z - p.w)) ? map_index.z + 1 : map_index.z;
 		return map_index;
 
 	}

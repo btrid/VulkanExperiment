@@ -44,7 +44,7 @@ void main()
 	MapInfo map_info = u_map_info;
 	float progress = p.m_vel.w * constant.m_deltatime;
 	vec3 cell_size = map_info.cell_size.xyz;
-	float bullet_size = 0.5;
+	float bullet_size = 0.00;
 
 	ivec3 map_index = p.m_map_index.xyz;
 	for(;;)
@@ -56,8 +56,8 @@ void main()
 		vec3 cell_p = p.m_pos.xyz - cell_origin;
 		float x = dir.x < 0. ? cell_p.x : (map_info.cell_size.x- cell_p.x);
 		float z = dir.z < 0. ? cell_p.z : (map_info.cell_size.z- cell_p.z);
-		x = (x <= bullet_size ? cell_size.x + x : x) - bullet_size;
-		z = (z <= bullet_size ? cell_size.z + z : z) - bullet_size;
+//		x = (x <= bullet_size ? cell_size.x + x : x) - bullet_size;
+//		z = (z <= bullet_size ? cell_size.z + z : z) - bullet_size;
 
 		vec3 dist = vec3(99.);
 		dist.x = abs(dir.x) < FLT_EPSIRON ? 99.9 : abs(x / dir.x);
@@ -72,7 +72,6 @@ void main()
 		{
 			// 移動完了
 			p.m_pos.xyz += dir * progress;
-			p.m_pos.xyz = clamp(p.m_pos.xyz, (map_index * cell_size)+bullet_size+FLT_EPSIRON, (map_index+ivec3(1, 0, 1)) * cell_size-bullet_size-FLT_EPSIRON);
 			break;
 		}
 		progress -= progLength;
@@ -91,7 +90,7 @@ void main()
 		if(map == 1) 
 		{
 			// 壁にぶつかったので押し戻す
-			next_pos = p.m_pos.xyz + prog - vec3(next)*FLT_EPSIRON;
+//			next_pos = p.m_pos.xyz + prog - vec3(next)*FLT_EPSIRON;
 
 			vec3 wall = vec3(next);
 			p.m_vel.xyz = reflect(p.m_vel.xyz, wall);
@@ -99,7 +98,6 @@ void main()
 			map_index += next;
 		}
 		p.m_pos.xyz = next_pos;
-		p.m_pos.xyz = clamp(p.m_pos.xyz, (map_index * cell_size)+bullet_size+FLT_EPSIRON, (map_index+ivec3(1, 0, 1)) * cell_size-bullet_size-FLT_EPSIRON);
 	}
 	uint dst_index = atomicAdd(b_draw_cmd.vertexCount, 1);
 	p.m_map_index.xyz = map_index;

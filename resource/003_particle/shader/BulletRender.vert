@@ -37,6 +37,6 @@ void main()
 	BulletData p = b_bullet[gl_VertexIndex + constant.m_offset];
 	vec4 pos = vec4(p.m_pos.xyz + vec3(0., 0.1, 0.), 1.0);
 	gl_Position = uProjection * uView * pos;
-	gl_PointSize = 3000./ gl_Position.w;
+	gl_PointSize = p.m_pos.w / gl_Position.w;
 	VSOut.life = 0.2;
 }
