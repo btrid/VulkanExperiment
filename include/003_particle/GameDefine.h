@@ -455,12 +455,13 @@ struct sScene : public Singleton<sScene>
 		cmd.drawIndexedIndirect(m_maze_geometry.m_resource->m_indirect.getBufferInfo().buffer, m_maze_geometry.m_resource->m_indirect.getBufferInfo().offset, 1, sizeof(vk::DrawIndexedIndirectCommand));
 	}
 
-	glm::ivec4 calcMapIndex(glm::vec4& p)
+	glm::ivec4 calcMapIndex(const glm::vec4& p)
 	{
 		glm::vec3 cell_p = glm::mod(p.xyz(), m_map_info_cpu.m_cell_size.xyz());
-		glm::ivec4 map_index(0);
-		map_index.x = (cell_p.x <= p.w) ? map_index.x - 1 : (cell_p.x >= (m_map_info_cpu.m_cell_size.x - p.x)) ? map_index.x + 1 : map_index.x;
-		map_index.z = (cell_p.z <= p.w) ? map_index.z - 1 : (cell_p.z >= (m_map_info_cpu.m_cell_size.z - p.z)) ? map_index.z + 1 : map_index.z;
+		glm::ivec4 map_index(p.xyz / m_map_info_cpu.m_cell_size.xyz, 0);
+		map_index.x = (cell_p.x <= p.w) ? map_index.x - 1 : (cell_p.x >= (m_map_info_cpu.m_cell_size.x - p.w)) ? map_index.x + 1 : map_index.x;
+		map_index.y = 0;
+		map_index.z = (cell_p.z <= p.w) ? map_index.z - 1 : (cell_p.z >= (m_map_info_cpu.m_cell_size.z - p.w)) ? map_index.z + 1 : map_index.z;
 		return map_index;
 
 	}

@@ -114,7 +114,7 @@ public:
 	uint32_t getPrevFrame()const { return (m_current_frame == 0 ? FRAME_MAX : m_current_frame)-1; }
 	uint32_t getGameFrame()const { return m_game_frame; }
 	uint32_t getCPUIndex()const { return m_tick_tock; }
-	uint32_t getGPUIndex()const { return (m_tick_tock+1 % 2); }
+	uint32_t getGPUIndex()const { return (m_tick_tock+1) % 2; }
 	bool isElapsed(GameFrame time, GameFrame offset = FRAME_MAX)
 	{
 		uint64_t game_frame = (uint64_t)m_game_frame;

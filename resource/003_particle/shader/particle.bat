@@ -19,3 +19,8 @@ glslc.exe -w -I Include -x glsl -fshader-stage=compute	-o binary\\BoidSoldierUpd
 glslc.exe -w -I Include -x glsl -fshader-stage=compute	-o binary\\BoidBrainUpdate.comp.spv BoidBrainUpdate.comp
 glslc.exe -w -I Include -x glsl -fshader-stage=vertex	-o binary\\BoidSoldierRender.vert.spv BoidSoldierRender.vert
 glslc.exe -w -I Include -x glsl -fshader-stage=fragment	-o binary\\BoidSoldierRender.frag.spv BoidSoldierRender.frag
+
+glslc.exe -w -I Include -x glsl -fshader-stage=compute	-o binary\\BulletUpdate.comp.spv BulletUpdate.comp
+glslc.exe -w -I Include -x glsl -fshader-stage=compute	-o binary\\BulletEmit.comp.spv BulletEmit.comp
+glslc.exe -w -I Include -x glsl -fshader-stage=vertex	-o binary\\BulletRender.vert.spv BulletRender.vert
+glslc.exe -w -I Include -x glsl -fshader-stage=fragment	-o binary\\BulletRender.frag.spv BulletRender.frag

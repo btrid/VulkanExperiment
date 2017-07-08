@@ -86,9 +86,9 @@ struct Player
 			if (input.m_keyboard.isHold('j'))
 			{
 				BulletData b;
-				b.m_life = 200.f;
-				b.m_pos = glm::vec4(m_pos, 5.f);
-				b.m_vel = glm::vec4(m_dir, 1.f) * 20.f;
+				b.m_life = 1.f;
+				b.m_pos = glm::vec4(m_pos, 0.1f);
+				b.m_vel = glm::vec4(m_dir, 13.3f);
 				b.m_type = 0;
 				b.m_map_index = sScene::Order().calcMapIndex(b.m_pos);
 				m_bullet.push_back(b);
@@ -96,9 +96,9 @@ struct Player
 			if (input.m_keyboard.isHold('k'))
 			{
 				BulletData b;
-				b.m_life = 50.f;
-				b.m_pos = glm::vec4(m_pos, 5.f);
-				b.m_vel = glm::vec4(m_dir, 1.f) * 20.f;
+				b.m_life = 2.f;
+				b.m_pos = glm::vec4(m_pos, 0.1f);
+				b.m_vel = glm::vec4(m_dir, 13.3f);
 				b.m_type = 0;
 				b.m_map_index = sScene::Order().calcMapIndex(b.m_pos);
 				m_bullet.push_back(b);
@@ -199,7 +199,8 @@ int main()
 	cModel model;
 
 	Player m_player;
-
+	m_player.m_pos.x = 43.f;
+	m_player.m_pos.z = 83.f;
 	cParticlePipeline pipeline;
 	{
 		vk::CommandBufferBeginInfo begin_info;
@@ -297,9 +298,11 @@ int main()
 				vk::DependencyFlags(),
 				nullptr, nullptr, present_to_render_barrier);
 
+			sScene::Order().execute(executer);
 			pipeline.execute(*executer);
 			model_render.execute(executer);
 			model_pipeline.execute(render_cmd);
+			sBulletSystem::Order().execute(executer);
 			// begin cmd render pass
 			std::vector<vk::ClearValue> clearValue = {
 				vk::ClearValue().setColor(vk::ClearColorValue(std::array<float, 4>{0.3f, 0.3f, 0.8f, 1.f})),
@@ -316,6 +319,7 @@ int main()
 			sScene::Order().draw(render_cmd);
 			pipeline.draw(render_cmd);
 			model_pipeline.draw(render_cmd);
+			sBulletSystem::Order().draw(render_cmd);
 
 			render_cmd.endRenderPass();
 

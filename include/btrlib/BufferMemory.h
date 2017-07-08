@@ -387,6 +387,7 @@ struct BufferMemory
 	}
 	cDevice getDevice()const { return m_resource->m_device; }
 	const vk::BufferCreateInfo& getBufferCreateInfo()const { return m_resource->m_buffer_info; }
+	const vk::Buffer& getBuffer()const { return m_resource->m_buffer; }
 
 };
 

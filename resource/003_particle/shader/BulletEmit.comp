@@ -1,0 +1,37 @@
+#version 450
+
+#pragma optionNV (unroll none)
+#pragma optionNV (inline all)
+#pragma optionNV(fastmath on)
+//#pragma optionNV(fastprecision on)
+//#pragma optionNV(ifcvt all)
+#pragma optionNV(strict on)
+
+#extension GL_GOOGLE_cpp_style_line_directive : require
+
+#define SETPOINT_UPDATE 0
+
+#include </Common.glsl>
+#include </Bullet.glsl>
+
+
+
+layout(push_constant) uniform UpdateConstantBlock
+{
+	float m_deltatime;
+	uint m_src_offset;
+	uint m_dst_offset;
+	uint m_emit_num;
+} constant;
+
+void main()
+{
+	uint index = gl_GlobalInvocationID.x;
+	if(index >= constant.m_emit_num){
+		return;
+	}
+
+	uint dst_index = atomicAdd(b_draw_cmd.vertexCount, 1);
+	b_bullet[constant.m_dst_offset + dst_index] = b_bullet_emit[index];
+
+}
