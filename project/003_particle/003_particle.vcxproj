@@ -71,18 +71,17 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\003_particle\003_main.cpp" />
-    <ClCompile Include="..\..\source\003_particle\Boid.cpp" />
     <ClCompile Include="..\..\source\003_particle\BulletPipeline.cpp" />
     <ClCompile Include="..\..\source\003_particle\Collision.cpp" />
     <ClCompile Include="..\..\source\003_particle\Geometry.cpp" />
     <ClCompile Include="..\..\source\003_particle\MazeGenerator.cpp" />
     <ClCompile Include="..\..\source\003_particle\ParticlePipeline.cpp" />
+    <ClCompile Include="..\..\source\003_particle\sBoid.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\include\003_particle\Boid.h" />
     <ClInclude Include="..\..\include\003_particle\BulletPipeline.h" />
     <ClInclude Include="..\..\include\003_particle\CircleIndex.h" />
     <ClInclude Include="..\..\include\003_particle\Collision.h" />
@@ -92,6 +91,7 @@
     <ClInclude Include="..\..\include\003_particle\KDTreeTriangle.h" />
     <ClInclude Include="..\..\include\003_particle\MazeGenerator.h" />
     <ClInclude Include="..\..\include\003_particle\ParticlePipeline.h" />
+    <ClInclude Include="..\..\include\003_particle\sBoid.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

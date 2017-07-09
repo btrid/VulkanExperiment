@@ -28,6 +28,7 @@
 
 #include <003_particle/ParticlePipeline.h>
 #include <003_particle/BulletPipeline.h>
+#include <003_particle/sBoid.h>
 #include <003_particle/GameDefine.h>
 
 #pragma comment(lib, "btrlib.lib")
@@ -226,6 +227,7 @@ int main()
 			transform.m_local_translate = glm::vec3(0.f, 280.f, 0.f);
 		}
 
+		sBoid::Order().setup(loader);
 		pipeline.setup(*loader);
 		sBulletSystem::Order().setup(*loader);
 
@@ -299,6 +301,7 @@ int main()
 				nullptr, nullptr, present_to_render_barrier);
 
 			sScene::Order().execute(executer);
+			sBoid::Order().execute(executer);
 			pipeline.execute(*executer);
 			model_render.execute(executer);
 			model_pipeline.execute(render_cmd);
@@ -317,6 +320,7 @@ int main()
 			render_cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 			// draw
 			sScene::Order().draw(render_cmd);
+			sBoid::Order().draw(render_cmd);
 			pipeline.draw(render_cmd);
 			model_pipeline.draw(render_cmd);
 			sBulletSystem::Order().draw(render_cmd);

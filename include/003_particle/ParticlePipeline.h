@@ -12,7 +12,7 @@
 #include <003_particle/Geometry.h>
 #include <003_particle/CircleIndex.h>
 #include <003_particle/cTriangleLL.h>
-#include <003_particle/Boid.h>
+#include <003_particle/sBoid.h>
 #include <003_particle/GameDefine.h>
 
 struct ParticleData
@@ -219,20 +219,19 @@ struct cParticlePipeline
 		p->setup(loader);
 
 		m_private = std::move(p);
-		m_boid.setup(loader, *this);
+//		m_boid.setup(loader, *this);
 	}
 
 	void execute(btr::Executer& executer)
 	{
 		m_private->execute(executer);
-		m_boid.execute(executer);
+//		m_boid.execute(executer);
 	}
 
 	void draw(vk::CommandBuffer cmd)
 	{
-		m_boid.draw(cmd);
+//		m_boid.draw(cmd);
 		m_private->draw(cmd);
 	}
-	Boid m_boid;
 };
 

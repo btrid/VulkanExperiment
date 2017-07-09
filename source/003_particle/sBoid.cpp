@@ -1,10 +1,9 @@
-#include <003_particle/Boid.h>
+#include <003_particle/sBoid.h>
 #include <003_particle/ParticlePipeline.h>
 #include <003_particle/GameDefine.h>
 
-void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
+void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 {
-	m_parent = &parent;
 	{
 		m_boid_info.m_brain_max = 256;
 		m_boid_info.m_soldier_max = 8192;
@@ -13,24 +12,24 @@ void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 		{
 			btr::BufferMemory::Descriptor desc;
 			desc.size = sizeof(BoidInfo);
-			m_boid_info_gpu = loader.m_uniform_memory.allocateMemory(desc);
+			m_boid_info_gpu = loader->m_uniform_memory.allocateMemory(desc);
 
 			desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-			auto staging = loader.m_staging_memory.allocateMemory(desc);
+			auto staging = loader->m_staging_memory.allocateMemory(desc);
 			*staging.getMappedPtr<BoidInfo>() = m_boid_info;
 			vk::BufferCopy copy;
 			copy.setSize(desc.size);
 			copy.setSrcOffset(staging.getBufferInfo().offset);
 			copy.setDstOffset(m_boid_info_gpu.getBufferInfo().offset);
-			loader.m_cmd.copyBuffer(staging.getBufferInfo().buffer, m_boid_info_gpu.getBufferInfo().buffer, copy);
+			loader->m_cmd.copyBuffer(staging.getBufferInfo().buffer, m_boid_info_gpu.getBufferInfo().buffer, copy);
 		}
 		{
 			btr::BufferMemory::Descriptor desc;
 			desc.size = sizeof(SoldierInfo) * m_boid_info.m_soldier_info_max;
-			m_soldier_info_gpu = loader.m_uniform_memory.allocateMemory(desc);
+			m_soldier_info_gpu = loader->m_uniform_memory.allocateMemory(desc);
 
 			desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-			auto staging = loader.m_staging_memory.allocateMemory(desc);
+			auto staging = loader->m_staging_memory.allocateMemory(desc);
 			auto* info = staging.getMappedPtr<SoldierInfo>();
 			info[0].m_turn_speed = glm::radians(45.f);
 			info[0].m_move_speed = 4.f;
@@ -39,14 +38,14 @@ void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 			copy.setSize(desc.size);
 			copy.setSrcOffset(staging.getBufferInfo().offset);
 			copy.setDstOffset(m_soldier_info_gpu.getBufferInfo().offset);
-			loader.m_cmd.copyBuffer(staging.getBufferInfo().buffer, m_soldier_info_gpu.getBufferInfo().buffer, copy);
+			loader->m_cmd.copyBuffer(staging.getBufferInfo().buffer, m_soldier_info_gpu.getBufferInfo().buffer, copy);
 		}
 		{
 			btr::BufferMemory::Descriptor desc;
 			desc.size = sizeof(BrainData) * m_boid_info.m_brain_max;
-			auto brain_gpu = loader.m_storage_memory.allocateMemory(desc);
+			auto brain_gpu = loader->m_storage_memory.allocateMemory(desc);
 
-			loader.m_cmd.fillBuffer(brain_gpu.getBufferInfo().buffer, brain_gpu.getBufferInfo().offset, brain_gpu.getBufferInfo().range, 0);
+			loader->m_cmd.fillBuffer(brain_gpu.getBufferInfo().buffer, brain_gpu.getBufferInfo().offset, brain_gpu.getBufferInfo().range, 0);
 
 			m_brain_gpu.setup(brain_gpu);
 		}
@@ -54,9 +53,9 @@ void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 		{
 			btr::BufferMemory::Descriptor desc;
 			desc.size = sizeof(SoldierData) * m_boid_info.m_soldier_max;
-			auto soldier_gpu = loader.m_storage_memory.allocateMemory(desc);
+			auto soldier_gpu = loader->m_storage_memory.allocateMemory(desc);
 
-			loader.m_cmd.fillBuffer(soldier_gpu.getBufferInfo().buffer, soldier_gpu.getBufferInfo().offset, soldier_gpu.getBufferInfo().range, 0);
+			loader->m_cmd.fillBuffer(soldier_gpu.getBufferInfo().buffer, soldier_gpu.getBufferInfo().offset, soldier_gpu.getBufferInfo().range, 0);
 
 			m_soldier_gpu.setup(soldier_gpu);
 		}
@@ -64,8 +63,8 @@ void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 		{
 			btr::BufferMemory::Descriptor desc;
 			desc.size = sizeof(uint32_t) * sScene::Order().m_maze.getSizeX()* sScene::Order().m_maze.getSizeY()*2;
-			m_soldier_LL_head_gpu.setup(loader.m_storage_memory.allocateMemory(desc));
-			loader.m_cmd.fillBuffer(m_soldier_LL_head_gpu.getOrg().buffer, m_soldier_LL_head_gpu.getOrg().offset, m_soldier_LL_head_gpu.getOrg().range, 0xFFFFFFFF);
+			m_soldier_LL_head_gpu.setup(loader->m_storage_memory.allocateMemory(desc));
+			loader->m_cmd.fillBuffer(m_soldier_LL_head_gpu.getOrg().buffer, m_soldier_LL_head_gpu.getOrg().offset, m_soldier_LL_head_gpu.getOrg().range, 0xFFFFFFFF);
 
 			// transfer
 			vk::BufferMemoryBarrier ll_compute;
@@ -76,22 +75,22 @@ void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 			std::vector<vk::BufferMemoryBarrier> to_compute = {
 				ll_compute,
 			};
-			loader.m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_compute, {});
+			loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_compute, {});
 		}
 		{
 			btr::UpdateBufferDescriptor emit_desc;
-			emit_desc.device_memory = loader.m_storage_memory;
-			emit_desc.staging_memory = loader.m_staging_memory;
+			emit_desc.device_memory = loader->m_storage_memory;
+			emit_desc.staging_memory = loader->m_staging_memory;
 			emit_desc.frame_max = sGlobal::FRAME_MAX;
 			m_soldier_emit_gpu.setup(emit_desc);
 		}
 		{
 			btr::BufferMemory::Descriptor desc;
 			desc.size = sizeof(vk::DrawIndirectCommand) * 256;
-			m_soldier_draw_indiret_gpu = loader.m_vertex_memory.allocateMemory(desc);
+			m_soldier_draw_indiret_gpu = loader->m_vertex_memory.allocateMemory(desc);
 
 			desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-			auto staging = loader.m_staging_memory.allocateMemory(desc);
+			auto staging = loader->m_staging_memory.allocateMemory(desc);
 			auto* info = staging.getMappedPtr<vk::DrawIndirectCommand>();
 			for (int i = 0; i < 256; i++)
 			{
@@ -105,7 +104,7 @@ void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 			copy.setSize(desc.size);
 			copy.setSrcOffset(staging.getBufferInfo().offset);
 			copy.setDstOffset(m_soldier_draw_indiret_gpu.getBufferInfo().offset);
-			loader.m_cmd.copyBuffer(staging.getBufferInfo().buffer, m_soldier_draw_indiret_gpu.getBufferInfo().buffer, copy);
+			loader->m_cmd.copyBuffer(staging.getBufferInfo().buffer, m_soldier_draw_indiret_gpu.getBufferInfo().buffer, copy);
 		}
 
 		{
@@ -123,15 +122,15 @@ void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 			image_info.initialLayout = vk::ImageLayout::eUndefined;
 			image_info.extent = { (uint32_t)maze->getSizeX(), (uint32_t)maze->getSizeY(), 1 };
 			image_info.flags = vk::ImageCreateFlagBits::e2DArrayCompatibleKHR;
-			auto image = loader.m_device->createImage(image_info);
+			auto image = loader->m_device->createImage(image_info);
 
-			vk::MemoryRequirements memory_request = loader.m_device->getImageMemoryRequirements(image);
+			vk::MemoryRequirements memory_request = loader->m_device->getImageMemoryRequirements(image);
 			vk::MemoryAllocateInfo memory_alloc_info;
 			memory_alloc_info.allocationSize = memory_request.size;
-			memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(loader.m_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+			memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(loader->m_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-			auto image_memory = loader.m_device->allocateMemory(memory_alloc_info);
-			loader.m_device->bindImageMemory(image, image_memory, 0);
+			auto image_memory = loader->m_device->allocateMemory(memory_alloc_info);
+			loader->m_device->bindImageMemory(image, image_memory, 0);
 
 			vk::ImageSubresourceRange subresourceRange;
 			subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
@@ -149,7 +148,7 @@ void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 			view_info.format = image_info.format;
 			view_info.image = image;
 			view_info.subresourceRange = subresourceRange;
-			auto image_view = loader.m_device->createImageView(view_info);
+			auto image_view = loader->m_device->createImageView(view_info);
 
 			{
 
@@ -160,7 +159,7 @@ void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 				to_transfer.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
 				to_transfer.subresourceRange = subresourceRange;
 
-				loader.m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_transfer });
+				loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_transfer });
 			}
 
 			{
@@ -172,18 +171,18 @@ void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 				btr::BufferMemory::Descriptor desc;
 				desc.size = vector_sizeof(solver);
 				desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-				auto staging = loader.m_staging_memory.allocateMemory(desc);
+				auto staging = loader->m_staging_memory.allocateMemory(desc);
 				memcpy(staging.getMappedPtr(), solver.data(), desc.size);
 				vk::BufferImageCopy copy;
 				copy.setBufferOffset(staging.getBufferInfo().offset);
 				copy.setImageSubresource(l);
 				copy.setImageExtent(image_info.extent);
-				loader.m_cmd.copyBufferToImage(staging.getBufferInfo().buffer, image, vk::ImageLayout::eTransferDstOptimal, copy);
+				loader->m_cmd.copyBufferToImage(staging.getBufferInfo().buffer, image, vk::ImageLayout::eTransferDstOptimal, copy);
 			}
 
 			{
 				vk::ImageMemoryBarrier to_shader_read;
-				to_shader_read.dstQueueFamilyIndex = loader.m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
+				to_shader_read.dstQueueFamilyIndex = loader->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
 				to_shader_read.image = image;
 				to_shader_read.oldLayout = vk::ImageLayout::eTransferDstOptimal;
 				to_shader_read.newLayout = vk::ImageLayout::eGeneral;
@@ -191,7 +190,7 @@ void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 				to_shader_read.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 				to_shader_read.subresourceRange = subresourceRange;
 
-				loader.m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, {}, { to_shader_read });
+				loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, {}, { to_shader_read });
 			}
 
 			m_astar_image = image;
@@ -251,7 +250,7 @@ void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 				.setBinding(0),
 			};
-			m_descriptor = createDescriptor(loader.m_device.getHandle(), bindings);
+			m_descriptor = createDescriptor(loader->m_device.getHandle(), bindings);
 
 			// update
 			{
@@ -292,7 +291,7 @@ void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 					.setDstBinding(6)
 					.setDstSet(m_descriptor->m_descriptor_set[DESCRIPTOR_SOLDIER_UPDATE]),
 				};
-				loader.m_device->updateDescriptorSets(write_desc, {});
+				loader->m_device->updateDescriptorSets(write_desc, {});
 			}
 
 			{
@@ -308,7 +307,7 @@ void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 					.setDstBinding(0)
 					.setDstSet(m_descriptor->m_descriptor_set[DESCRIPTOR_SOLDIER_EMIT]),
 				};
-				loader.m_device->updateDescriptorSets(write_desc, {});
+				loader->m_device->updateDescriptorSets(write_desc, {});
 			}
 
 		}
@@ -317,7 +316,7 @@ void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 		{
 			// pipeline cache
 			vk::PipelineCacheCreateInfo cacheInfo = vk::PipelineCacheCreateInfo();
-			m_cache = loader.m_device->createPipelineCache(cacheInfo);
+			m_cache = loader->m_device->createPipelineCache(cacheInfo);
 		}
 
 		{
@@ -338,7 +337,7 @@ void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 			std::string path = btr::getResourceAppPath() + "shader\\binary\\";
 			for (size_t i = 0; i < SHADER_NUM; i++)
 			{
-				m_shader_info[i].setModule(loadShader(loader.m_device.getHandle(), path + shader_info[i].name));
+				m_shader_info[i].setModule(loadShader(loader->m_device.getHandle(), path + shader_info[i].name));
 				m_shader_info[i].setStage(shader_info[i].stage);
 				m_shader_info[i].setPName("main");
 			}
@@ -360,7 +359,7 @@ void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 				pipeline_layout_info.setPSetLayouts(layouts.data());
 				pipeline_layout_info.setPushConstantRangeCount(push_constants.size());
 				pipeline_layout_info.setPPushConstantRanges(push_constants.data());
-				m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_UPDATE] = loader.m_device->createPipelineLayout(pipeline_layout_info);
+				m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_UPDATE] = loader->m_device->createPipelineLayout(pipeline_layout_info);
 			}
 			{
 				std::vector<vk::DescriptorSetLayout> layouts = {
@@ -377,7 +376,7 @@ void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 				pipeline_layout_info.setPSetLayouts(layouts.data());
 				pipeline_layout_info.setPushConstantRangeCount(push_constants.size());
 				pipeline_layout_info.setPPushConstantRanges(push_constants.data());
-				m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_EMIT] = loader.m_device->createPipelineLayout(pipeline_layout_info);
+				m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_EMIT] = loader->m_device->createPipelineLayout(pipeline_layout_info);
 			}
 			{
 				std::vector<vk::DescriptorSetLayout> layouts = {
@@ -394,7 +393,7 @@ void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 				pipeline_layout_info.setPSetLayouts(layouts.data());
 				pipeline_layout_info.setPushConstantRangeCount(push_constants.size());
 				pipeline_layout_info.setPPushConstantRanges(push_constants.data());
-				m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW] = loader.m_device->createPipelineLayout(pipeline_layout_info);
+				m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW] = loader->m_device->createPipelineLayout(pipeline_layout_info);
 			}
 		}
 
@@ -408,7 +407,7 @@ void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 			.setStage(m_shader_info[1])
 			.setLayout(m_pipeline_layout[1]),
 		};
-		m_compute_pipeline = loader.m_device->createComputePipelines(m_cache, compute_pipeline_info);
+		m_compute_pipeline = loader->m_device->createComputePipelines(m_cache, compute_pipeline_info);
 
 		vk::Extent3D size;
 		size.setWidth(640);
@@ -479,20 +478,20 @@ void Boid::setup(btr::Loader& loader, cParticlePipeline& parent)
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
 				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW])
-				.setRenderPass(loader.m_render_pass)
+				.setRenderPass(loader->m_render_pass)
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			m_graphics_pipeline = loader.m_device->createGraphicsPipelines(m_cache, graphics_pipeline_info);
+			m_graphics_pipeline = loader->m_device->createGraphicsPipelines(m_cache, graphics_pipeline_info);
 		}
 	}
 
 
 }
 
-void Boid::execute(btr::Executer& executer)
+void sBoid::execute(std::shared_ptr<btr::Executer>& executer)
 {
-	auto cmd = executer.m_cmd;
+	auto cmd = executer->m_cmd;
 	m_brain_gpu.swap();
 	m_soldier_gpu.swap();
 	m_soldier_LL_head_gpu.swap();
@@ -632,7 +631,7 @@ void Boid::execute(btr::Executer& executer)
 
 }
 
-void Boid::draw(vk::CommandBuffer cmd)
+void sBoid::draw(vk::CommandBuffer cmd)
 {
 	struct DrawConstantBlock
 	{

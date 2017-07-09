@@ -5,8 +5,10 @@
 #include <btrlib/Loader.h>
 
 #include <003_particle/CircleIndex.h>
-struct Boid
+class sBoid : public Singleton<sBoid>
 {
+	friend Singleton<sBoid>;
+
 	struct DoubleBuffer
 	{
 		btr::AllocatedMemory m_buffer;
@@ -115,10 +117,11 @@ struct Boid
 	vk::ImageView m_astar_image_view;
 	vk::DeviceMemory m_astar_image_memory;
 
-	struct cParticlePipeline* m_parent;
 	glm::vec3 cell_size;
-	void setup(btr::Loader& loader, struct cParticlePipeline& parent);
-	void execute(btr::Executer& executer);
+
+public:
+	void setup(std::shared_ptr<btr::Loader>& loader);
+	void execute(std::shared_ptr<btr::Executer>& executer);
 	void draw(vk::CommandBuffer cmd);
 
 };
