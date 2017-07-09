@@ -37,10 +37,9 @@ struct BulletData
 };
 
 
-
 struct sBulletSystem : public Singleton<sBulletSystem>
 {
-	friend sBulletSystem;
+	friend Singleton<sBulletSystem>;
 	struct Private 
 	{
 		enum : uint32_t {
@@ -54,7 +53,6 @@ struct sBulletSystem : public Singleton<sBulletSystem>
 		};
 		enum : uint32_t {
 			GRAPHICS_SHADER_VERTEX_PARTICLE,
-//			GRAPHICS_SHADER_GEOMETRY,
 			GRAPHICS_SHADER_FRAGMENT_PARTICLE,
 			GRAPHICS_SHADER_NUM,
 		};

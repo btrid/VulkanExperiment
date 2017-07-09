@@ -73,6 +73,7 @@
     <ClCompile Include="..\..\source\003_particle\003_main.cpp" />
     <ClCompile Include="..\..\source\003_particle\Boid.cpp" />
     <ClCompile Include="..\..\source\003_particle\BulletPipeline.cpp" />
+    <ClCompile Include="..\..\source\003_particle\Collision.cpp" />
     <ClCompile Include="..\..\source\003_particle\Geometry.cpp" />
     <ClCompile Include="..\..\source\003_particle\MazeGenerator.cpp" />
     <ClCompile Include="..\..\source\003_particle\ParticlePipeline.cpp" />
@@ -84,6 +85,7 @@
     <ClInclude Include="..\..\include\003_particle\Boid.h" />
     <ClInclude Include="..\..\include\003_particle\BulletPipeline.h" />
     <ClInclude Include="..\..\include\003_particle\CircleIndex.h" />
+    <ClInclude Include="..\..\include\003_particle\Collision.h" />
     <ClInclude Include="..\..\include\003_particle\cTriangleLL.h" />
     <ClInclude Include="..\..\include\003_particle\GameDefine.h" />
     <ClInclude Include="..\..\include\003_particle\Geometry.h" />
