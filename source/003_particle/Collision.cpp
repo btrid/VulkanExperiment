@@ -1,5 +1,6 @@
 #include <003_particle/Collision.h>
 #include <003_particle/GameDefine.h>
+#include <003_particle/sBoid.h>
 
 void sCollisionSystem::setup(std::shared_ptr<btr::Loader>& loader)
 {
@@ -66,7 +67,9 @@ void sCollisionSystem::setup(std::shared_ptr<btr::Loader>& loader)
 
 	{
 		{
-			std::vector<vk::DescriptorSetLayout> layouts = {
+			std::vector<vk::DescriptorSetLayout> layouts = 
+			{
+				sBoid::Order().getDescriptorSetLayout(sBoid::DESCRIPTOR_SOLDIER_UPDATE),
 				m_descriptor_set_layout[DESCRIPTOR_UPDATE],
 				sScene::Order().m_descriptor_set_layout[sScene::DESCRIPTOR_LAYOUT_MAP],
 			};

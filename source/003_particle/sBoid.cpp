@@ -199,6 +199,31 @@ void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 		}
 	}
 
+
+	// shader create
+	{
+		struct
+		{
+			const char* name;
+			vk::ShaderStageFlagBits stage;
+		}shader_info[] =
+		{
+			{ "BoidSoldierUpdate.comp.spv",  vk::ShaderStageFlagBits::eCompute },
+			{ "BoidSoldierEmit.comp.spv",  vk::ShaderStageFlagBits::eCompute },
+			{ "BoidSoldierRender.vert.spv",  vk::ShaderStageFlagBits::eVertex },
+			{ "BoidSoldierRender.frag.spv",  vk::ShaderStageFlagBits::eFragment },
+		};
+		static_assert(array_length(shader_info) == SHADER_NUM, "not equal shader num");
+
+		std::string path = btr::getResourceAppPath() + "shader\\binary\\";
+		for (size_t i = 0; i < SHADER_NUM; i++)
+		{
+			m_shader_info[i].setModule(loadShader(loader->m_device.getHandle(), path + shader_info[i].name));
+			m_shader_info[i].setStage(shader_info[i].stage);
+			m_shader_info[i].setPName("main");
+		}
+	}
+
 	{
 		// descriptor
 		{
@@ -250,103 +275,25 @@ void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 				.setBinding(0),
 			};
-			m_descriptor = createDescriptor(loader->m_device.getHandle(), bindings);
-
-			// update
+			for (size_t i = 0; i < DESCRIPTOR_SET_LAYOUT_NUM; i++)
 			{
-
-				std::vector<vk::DescriptorBufferInfo> uniforms = {
-					m_boid_info_gpu.getBufferInfo(),
-					m_soldier_info_gpu.getBufferInfo(),
-				};
-				std::vector<vk::DescriptorBufferInfo> storages = {
-					m_brain_gpu.getOrg(),
-					m_soldier_gpu.getOrg(),
-					m_soldier_draw_indiret_gpu.getBufferInfo(),
-					m_soldier_LL_head_gpu.getOrg(),
-				};
-				std::vector<vk::DescriptorImageInfo> images = {
-					vk::DescriptorImageInfo()
-					.setImageLayout(vk::ImageLayout::eGeneral)
-					.setImageView(m_astar_image_view)
-				};
-				std::vector<vk::WriteDescriptorSet> write_desc =
-				{
-					vk::WriteDescriptorSet()
-					.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-					.setDescriptorCount(uniforms.size())
-					.setPBufferInfo(uniforms.data())
-					.setDstBinding(0)
-					.setDstSet(m_descriptor->m_descriptor_set[DESCRIPTOR_SOLDIER_UPDATE]),
-					vk::WriteDescriptorSet()
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(storages.size())
-					.setPBufferInfo(storages.data())
-					.setDstBinding(2)
-					.setDstSet(m_descriptor->m_descriptor_set[DESCRIPTOR_SOLDIER_UPDATE]),
-					vk::WriteDescriptorSet()
-					.setDescriptorType(vk::DescriptorType::eStorageImage)
-					.setDescriptorCount(images.size())
-					.setPImageInfo(images.data())
-					.setDstBinding(6)
-					.setDstSet(m_descriptor->m_descriptor_set[DESCRIPTOR_SOLDIER_UPDATE]),
-				};
-				loader->m_device->updateDescriptorSets(write_desc, {});
+				vk::DescriptorSetLayoutCreateInfo descriptor_set_layout_info = vk::DescriptorSetLayoutCreateInfo()
+					.setBindingCount(bindings[i].size())
+					.setPBindings(bindings[i].data());
+				m_descriptor_set_layout[i] = loader->m_device->createDescriptorSetLayout(descriptor_set_layout_info);
 			}
-
-			{
-				std::vector<vk::DescriptorBufferInfo> storages = {
-					m_soldier_emit_gpu.getBufferInfo(),
-				};
-				std::vector<vk::WriteDescriptorSet> write_desc =
-				{
-					vk::WriteDescriptorSet()
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(storages.size())
-					.setPBufferInfo(storages.data())
-					.setDstBinding(0)
-					.setDstSet(m_descriptor->m_descriptor_set[DESCRIPTOR_SOLDIER_EMIT]),
-				};
-				loader->m_device->updateDescriptorSets(write_desc, {});
-			}
-
-		}
-
-		// pipeline 
-		{
-			// pipeline cache
-			vk::PipelineCacheCreateInfo cacheInfo = vk::PipelineCacheCreateInfo();
-			m_cache = loader->m_device->createPipelineCache(cacheInfo);
-		}
-
-		{
-			struct  
-			{
-				const char* name;
-				vk::ShaderStageFlagBits stage;
-			}shader_info[] = 
-			{
-				{ "BoidSoldierUpdate.comp.spv",  vk::ShaderStageFlagBits::eCompute },
-				{ "BoidSoldierEmit.comp.spv",  vk::ShaderStageFlagBits::eCompute },
-				{ "BoidSoldierRender.vert.spv",  vk::ShaderStageFlagBits::eVertex },
-				{ "BoidSoldierRender.frag.spv",  vk::ShaderStageFlagBits::eFragment },
-
-			};
-			static_assert(array_length(shader_info) == SHADER_NUM, "not equal shader num");
-
-			std::string path = btr::getResourceAppPath() + "shader\\binary\\";
-			for (size_t i = 0; i < SHADER_NUM; i++)
-			{
-				m_shader_info[i].setModule(loadShader(loader->m_device.getHandle(), path + shader_info[i].name));
-				m_shader_info[i].setStage(shader_info[i].stage);
-				m_shader_info[i].setPName("main");
-			}
+			vk::DescriptorSetAllocateInfo alloc_info;
+			alloc_info.descriptorPool = loader->m_descriptor_pool;
+			alloc_info.descriptorSetCount = m_descriptor_set_layout.size();
+			alloc_info.pSetLayouts = m_descriptor_set_layout.data();
+			auto descriptor_set = loader->m_device->allocateDescriptorSets(alloc_info);
+			std::copy(descriptor_set.begin(), descriptor_set.end(), m_descriptor_set.begin());
 		}
 
 		{
 			{
 				std::vector<vk::DescriptorSetLayout> layouts = {
-					m_descriptor->m_descriptor_set_layout[DESCRIPTOR_SOLDIER_UPDATE],
+					m_descriptor_set_layout[DESCRIPTOR_SOLDIER_UPDATE],
 					sScene::Order().m_descriptor_set_layout[sScene::DESCRIPTOR_LAYOUT_MAP],
 				};
 				std::vector<vk::PushConstantRange> push_constants = {
@@ -363,8 +310,8 @@ void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 			}
 			{
 				std::vector<vk::DescriptorSetLayout> layouts = {
-					m_descriptor->m_descriptor_set_layout[DESCRIPTOR_SOLDIER_UPDATE],
-					m_descriptor->m_descriptor_set_layout[DESCRIPTOR_SOLDIER_EMIT],
+					m_descriptor_set_layout[DESCRIPTOR_SOLDIER_UPDATE],
+					m_descriptor_set_layout[DESCRIPTOR_SOLDIER_EMIT],
 				};
 				std::vector<vk::PushConstantRange> push_constants = {
 					vk::PushConstantRange()
@@ -380,7 +327,7 @@ void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 			}
 			{
 				std::vector<vk::DescriptorSetLayout> layouts = {
-					m_descriptor->m_descriptor_set_layout[DESCRIPTOR_SOLDIER_UPDATE],
+					m_descriptor_set_layout[DESCRIPTOR_SOLDIER_UPDATE],
 					sScene::Order().m_descriptor_set_layout[sScene::DESCRIPTOR_LAYOUT_CAMERA],
 				};
 				std::vector<vk::PushConstantRange> push_constants = {
@@ -397,96 +344,156 @@ void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 			}
 		}
 
-		// Create pipeline
-		std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
+		// update
 		{
-			vk::ComputePipelineCreateInfo()
-			.setStage(m_shader_info[0])
-			.setLayout(m_pipeline_layout[0]),
-			vk::ComputePipelineCreateInfo()
-			.setStage(m_shader_info[1])
-			.setLayout(m_pipeline_layout[1]),
-		};
-		m_compute_pipeline = loader->m_device->createComputePipelines(m_cache, compute_pipeline_info);
 
-		vk::Extent3D size;
-		size.setWidth(640);
-		size.setHeight(480);
-		size.setDepth(1);
-		// pipeline
-		{
-			// assembly
-			vk::PipelineInputAssemblyStateCreateInfo assembly_info;
-			assembly_info.setPrimitiveRestartEnable(VK_FALSE);
-			assembly_info.setTopology(vk::PrimitiveTopology::ePointList);
-
-			// viewport
-			vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)size.width, (float)size.height, 0.f, 1.f);
-			vk::Rect2D scissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(size.width, size.height));
-			vk::PipelineViewportStateCreateInfo viewport_info;
-			viewport_info.setViewportCount(1);
-			viewport_info.setPViewports(&viewport);
-			viewport_info.setScissorCount(1);
-			viewport_info.setPScissors(&scissor);
-
-			// ラスタライズ
-			vk::PipelineRasterizationStateCreateInfo rasterization_info;
-			rasterization_info.setPolygonMode(vk::PolygonMode::eFill);
-			rasterization_info.setFrontFace(vk::FrontFace::eCounterClockwise);
-			rasterization_info.setCullMode(vk::CullModeFlagBits::eNone);
-			rasterization_info.setLineWidth(1.f);
-			// サンプリング
-			vk::PipelineMultisampleStateCreateInfo sample_info;
-			sample_info.setRasterizationSamples(vk::SampleCountFlagBits::e1);
-
-			// デプスステンシル
-			vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
-			depth_stencil_info.setDepthTestEnable(VK_TRUE);
-			depth_stencil_info.setDepthWriteEnable(VK_TRUE);
-			depth_stencil_info.setDepthCompareOp(vk::CompareOp::eLessOrEqual);
-			depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
-			depth_stencil_info.setStencilTestEnable(VK_FALSE);
-
-			// ブレンド
-			std::vector<vk::PipelineColorBlendAttachmentState> blend_state = {
-				vk::PipelineColorBlendAttachmentState()
-				.setBlendEnable(VK_FALSE)
-				.setColorWriteMask(vk::ColorComponentFlagBits::eR
-					| vk::ColorComponentFlagBits::eG
-					| vk::ColorComponentFlagBits::eB
-					| vk::ColorComponentFlagBits::eA)
+			std::vector<vk::DescriptorBufferInfo> uniforms = {
+				m_boid_info_gpu.getBufferInfo(),
+				m_soldier_info_gpu.getBufferInfo(),
 			};
-			vk::PipelineColorBlendStateCreateInfo blend_info;
-			blend_info.setAttachmentCount(blend_state.size());
-			blend_info.setPAttachments(blend_state.data());
-
-			vk::PipelineVertexInputStateCreateInfo vertex_input_info;
-
-			std::array<vk::PipelineShaderStageCreateInfo, 2> shader_info
+			std::vector<vk::DescriptorBufferInfo> storages = {
+				m_brain_gpu.getOrg(),
+				m_soldier_gpu.getOrg(),
+				m_soldier_draw_indiret_gpu.getBufferInfo(),
+				m_soldier_LL_head_gpu.getOrg(),
+			};
+			std::vector<vk::DescriptorImageInfo> images = {
+				vk::DescriptorImageInfo()
+				.setImageLayout(vk::ImageLayout::eGeneral)
+				.setImageView(m_astar_image_view)
+			};
+			std::vector<vk::WriteDescriptorSet> write_desc =
 			{
-				m_shader_info[DRAW_SOLDIER_VS],
-				m_shader_info[DRAW_SOLDIER_FS],
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+				.setDescriptorCount(uniforms.size())
+				.setPBufferInfo(uniforms.data())
+				.setDstBinding(0)
+				.setDstSet(m_descriptor_set[DESCRIPTOR_SOLDIER_UPDATE]),
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(storages.size())
+				.setPBufferInfo(storages.data())
+				.setDstBinding(2)
+				.setDstSet(m_descriptor_set[DESCRIPTOR_SOLDIER_UPDATE]),
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eStorageImage)
+				.setDescriptorCount(images.size())
+				.setPImageInfo(images.data())
+				.setDstBinding(6)
+				.setDstSet(m_descriptor_set[DESCRIPTOR_SOLDIER_UPDATE]),
 			};
-			std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =
-			{
-				vk::GraphicsPipelineCreateInfo()
-				.setStageCount((uint32_t)shader_info.size())
-				.setPStages(shader_info.data())
-				.setPVertexInputState(&vertex_input_info)
-				.setPInputAssemblyState(&assembly_info)
-				.setPViewportState(&viewport_info)
-				.setPRasterizationState(&rasterization_info)
-				.setPMultisampleState(&sample_info)
-				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW])
-				.setRenderPass(loader->m_render_pass)
-				.setPDepthStencilState(&depth_stencil_info)
-				.setPColorBlendState(&blend_info),
-			};
-			m_graphics_pipeline = loader->m_device->createGraphicsPipelines(m_cache, graphics_pipeline_info);
+			loader->m_device->updateDescriptorSets(write_desc, {});
 		}
+
+		{
+			std::vector<vk::DescriptorBufferInfo> storages = {
+				m_soldier_emit_gpu.getBufferInfo(),
+			};
+			std::vector<vk::WriteDescriptorSet> write_desc =
+			{
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(storages.size())
+				.setPBufferInfo(storages.data())
+				.setDstBinding(0)
+				.setDstSet(m_descriptor_set[DESCRIPTOR_SOLDIER_EMIT]),
+			};
+			loader->m_device->updateDescriptorSets(write_desc, {});
+		}
+
 	}
 
+	// Create pipeline
+	std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
+	{
+		vk::ComputePipelineCreateInfo()
+		.setStage(m_shader_info[UPDATE_SOLDIER_CS])
+		.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_UPDATE]),
+		vk::ComputePipelineCreateInfo()
+		.setStage(m_shader_info[EMIT_SOLDIER_CS])
+		.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_EMIT]),
+	};
+	auto compute_pipeline = loader->m_device->createComputePipelines(loader->m_cache, compute_pipeline_info);
+	m_pipeline[PIPELINE_COMPUTE_SOLDIER_UPDATE] = compute_pipeline[0];
+	m_pipeline[PIPELINE_COMPUTE_SOLDIER_EMIT] = compute_pipeline[1];
 
+	vk::Extent3D size;
+	size.setWidth(640);
+	size.setHeight(480);
+	size.setDepth(1);
+	// pipeline
+	{
+		// assembly
+		vk::PipelineInputAssemblyStateCreateInfo assembly_info;
+		assembly_info.setPrimitiveRestartEnable(VK_FALSE);
+		assembly_info.setTopology(vk::PrimitiveTopology::ePointList);
+
+		// viewport
+		vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)size.width, (float)size.height, 0.f, 1.f);
+		vk::Rect2D scissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(size.width, size.height));
+		vk::PipelineViewportStateCreateInfo viewport_info;
+		viewport_info.setViewportCount(1);
+		viewport_info.setPViewports(&viewport);
+		viewport_info.setScissorCount(1);
+		viewport_info.setPScissors(&scissor);
+
+		// ラスタライズ
+		vk::PipelineRasterizationStateCreateInfo rasterization_info;
+		rasterization_info.setPolygonMode(vk::PolygonMode::eFill);
+		rasterization_info.setFrontFace(vk::FrontFace::eCounterClockwise);
+		rasterization_info.setCullMode(vk::CullModeFlagBits::eNone);
+		rasterization_info.setLineWidth(1.f);
+		// サンプリング
+		vk::PipelineMultisampleStateCreateInfo sample_info;
+		sample_info.setRasterizationSamples(vk::SampleCountFlagBits::e1);
+
+		// デプスステンシル
+		vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
+		depth_stencil_info.setDepthTestEnable(VK_TRUE);
+		depth_stencil_info.setDepthWriteEnable(VK_TRUE);
+		depth_stencil_info.setDepthCompareOp(vk::CompareOp::eLessOrEqual);
+		depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
+		depth_stencil_info.setStencilTestEnable(VK_FALSE);
+
+		// ブレンド
+		std::vector<vk::PipelineColorBlendAttachmentState> blend_state = {
+			vk::PipelineColorBlendAttachmentState()
+			.setBlendEnable(VK_FALSE)
+			.setColorWriteMask(vk::ColorComponentFlagBits::eR
+				| vk::ColorComponentFlagBits::eG
+				| vk::ColorComponentFlagBits::eB
+				| vk::ColorComponentFlagBits::eA)
+		};
+		vk::PipelineColorBlendStateCreateInfo blend_info;
+		blend_info.setAttachmentCount(blend_state.size());
+		blend_info.setPAttachments(blend_state.data());
+
+		vk::PipelineVertexInputStateCreateInfo vertex_input_info;
+
+		std::array<vk::PipelineShaderStageCreateInfo, 2> shader_info
+		{
+			m_shader_info[DRAW_SOLDIER_VS],
+			m_shader_info[DRAW_SOLDIER_FS],
+		};
+		std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =
+		{
+			vk::GraphicsPipelineCreateInfo()
+			.setStageCount((uint32_t)shader_info.size())
+			.setPStages(shader_info.data())
+			.setPVertexInputState(&vertex_input_info)
+			.setPInputAssemblyState(&assembly_info)
+			.setPViewportState(&viewport_info)
+			.setPRasterizationState(&rasterization_info)
+			.setPMultisampleState(&sample_info)
+			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW])
+			.setRenderPass(loader->m_render_pass)
+			.setPDepthStencilState(&depth_stencil_info)
+			.setPColorBlendState(&blend_info),
+		};
+		auto graphics_pipeline = loader->m_device->createGraphicsPipelines(loader->m_cache, graphics_pipeline_info);
+		m_pipeline[PIPELINE_GRAPHICS_SOLDIER_DRAW] = graphics_pipeline[0];
+	}
 }
 
 void sBoid::execute(std::shared_ptr<btr::Executer>& executer)
@@ -545,8 +552,8 @@ void sBoid::execute(std::shared_ptr<btr::Executer>& executer)
 		block.m_double_buffer_index = m_soldier_LL_head_gpu.getDstIndex();
 		cmd.pushConstants<UpdateConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_UPDATE], vk::ShaderStageFlagBits::eCompute, 0, block);
 
-		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_compute_pipeline[PIPELINE_LAYOUT_SOLDIER_UPDATE]);
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_UPDATE], 0, { m_descriptor->m_descriptor_set[DESCRIPTOR_SOLDIER_UPDATE] }, {});
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COMPUTE_SOLDIER_UPDATE]);
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_UPDATE], 0, { m_descriptor_set[DESCRIPTOR_SOLDIER_UPDATE] }, {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_UPDATE], 1, sScene::Order().m_descriptor_set[sScene::DESCRIPTOR_LAYOUT_MAP], {});
 		auto groups = app::calcDipatchGroups(glm::uvec3(m_boid_info.m_soldier_max / 2, 1, 1), glm::uvec3(1024, 1, 1));
 		cmd.dispatch(groups.x, groups.y, groups.z);
@@ -600,7 +607,7 @@ void sBoid::execute(std::shared_ptr<btr::Executer>& executer)
 			auto to_read = m_soldier_emit_gpu.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
 
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_compute_pipeline[PIPELINE_LAYOUT_SOLDIER_EMIT]);
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COMPUTE_SOLDIER_EMIT]);
 			struct EmitConstantBlock
 			{
 				uint m_emit_num;
@@ -610,8 +617,8 @@ void sBoid::execute(std::shared_ptr<btr::Executer>& executer)
 			block.m_emit_num = data.size();
 			block.m_offset = m_soldier_gpu.getDstOffset() / sizeof(SoldierData);
 			cmd.pushConstants<EmitConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_EMIT], vk::ShaderStageFlagBits::eCompute, 0, block);
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_EMIT], 0, m_descriptor->m_descriptor_set[DESCRIPTOR_SOLDIER_UPDATE], {});
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_EMIT], 1, m_descriptor->m_descriptor_set[DESCRIPTOR_SOLDIER_EMIT], {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_EMIT], 0, m_descriptor_set[DESCRIPTOR_SOLDIER_UPDATE], {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_EMIT], 1, m_descriptor_set[DESCRIPTOR_SOLDIER_EMIT], {});
 			auto groups = app::calcDipatchGroups(glm::uvec3(block.m_emit_num, 1, 1), glm::uvec3(1024, 1, 1));
 			cmd.dispatch(groups.x, groups.y, groups.z);
 
@@ -640,9 +647,9 @@ void sBoid::draw(vk::CommandBuffer cmd)
 	DrawConstantBlock block;
 	block.m_src_offset = m_soldier_gpu.getDstOffset() / sizeof(SoldierData);
 
-	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_graphics_pipeline[0]);
+	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_GRAPHICS_SOLDIER_DRAW]);
 	cmd.pushConstants<DrawConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW], vk::ShaderStageFlagBits::eVertex, 0, block);
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW], 0, m_descriptor->m_descriptor_set[DESCRIPTOR_SOLDIER_UPDATE], {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW], 0, m_descriptor_set[DESCRIPTOR_SOLDIER_UPDATE], {});
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW], 1, sScene::Order().m_descriptor_set[sScene::DESCRIPTOR_LAYOUT_CAMERA], {});
 	cmd.drawIndirect(m_soldier_draw_indiret_gpu.getBufferInfo().buffer, m_soldier_draw_indiret_gpu.getBufferInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
 

@@ -69,7 +69,7 @@ class sBoid : public Singleton<sBoid>
 		float m_life;
 		glm::vec4 m_astar_target;
 	};
-
+public:
 	enum : uint32_t
 	{
 		//		COMPUTE_UPDATE_BRAIN,
@@ -79,20 +79,27 @@ class sBoid : public Singleton<sBoid>
 		DRAW_SOLDIER_FS,
 		SHADER_NUM,
 	};
-	enum : uint32_t
+	enum Pipeline : uint32_t
+	{
+		PIPELINE_COMPUTE_SOLDIER_UPDATE,
+		PIPELINE_COMPUTE_SOLDIER_EMIT,
+		PIPELINE_GRAPHICS_SOLDIER_DRAW,
+		PIPELINE_NUM,
+	};
+	enum PipelineLayout : uint32_t
 	{
 		PIPELINE_LAYOUT_SOLDIER_UPDATE,
 		PIPELINE_LAYOUT_SOLDIER_EMIT,
 		PIPELINE_LAYOUT_SOLDIER_DRAW,
 		PIPELINE_LAYOUT_NUM,
 	};
-	enum : uint32_t
+	enum DescriptorSetLayout : uint32_t
 	{
 		DESCRIPTOR_SOLDIER_UPDATE,
 		DESCRIPTOR_SOLDIER_EMIT,
 		DESCRIPTOR_SET_LAYOUT_NUM,
 	};
-
+private:
 	BoidInfo m_boid_info;
 	btr::AllocatedMemory m_boid_info_gpu;
 	btr::AllocatedMemory m_soldier_info_gpu;
@@ -103,12 +110,12 @@ class sBoid : public Singleton<sBoid>
 	DoubleBuffer m_soldier_LL_head_gpu;
 
 
-	std::unique_ptr<Descriptor> m_descriptor;
-
-	vk::PipelineCache m_cache;
-	std::vector<vk::Pipeline> m_compute_pipeline;
+	std::array<vk::Pipeline, PIPELINE_NUM> m_pipeline;
 	std::array<vk::PipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
 	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_shader_info;
+	std::array<vk::DescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
+	std::array<vk::DescriptorSet, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set;
+
 
 	std::vector<vk::Pipeline> m_graphics_pipeline;
 
@@ -124,4 +131,6 @@ public:
 	void execute(std::shared_ptr<btr::Executer>& executer);
 	void draw(vk::CommandBuffer cmd);
 
+	vk::PipelineLayout getPipelineLayout(PipelineLayout layout)const { return m_pipeline_layout[layout]; }
+	vk::DescriptorSetLayout getDescriptorSetLayout(DescriptorSetLayout desctiptor)const { return m_descriptor_set_layout[desctiptor]; }
 };
