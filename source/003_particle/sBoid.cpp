@@ -408,10 +408,10 @@ void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 	std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 	{
 		vk::ComputePipelineCreateInfo()
-		.setStage(m_shader_info[UPDATE_SOLDIER_CS])
+		.setStage(m_shader_info[SHADER_COMPUTE_UPDATE_SOLDIER])
 		.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_UPDATE]),
 		vk::ComputePipelineCreateInfo()
-		.setStage(m_shader_info[EMIT_SOLDIER_CS])
+		.setStage(m_shader_info[SHADER_COMPUTE_EMIT_SOLDIER])
 		.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_EMIT]),
 	};
 	auto compute_pipeline = loader->m_device->createComputePipelines(loader->m_cache, compute_pipeline_info);
@@ -473,8 +473,8 @@ void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 
 		std::array<vk::PipelineShaderStageCreateInfo, 2> shader_info
 		{
-			m_shader_info[DRAW_SOLDIER_VS],
-			m_shader_info[DRAW_SOLDIER_FS],
+			m_shader_info[SHADER_VERTEX_DRAW_SOLDIER],
+			m_shader_info[SHADER_FRAGMENT_DRAW_SOLDIER],
 		};
 		std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =
 		{
