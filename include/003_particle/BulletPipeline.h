@@ -43,18 +43,17 @@ struct sBulletSystem : public Singleton<sBulletSystem>
 	struct Private 
 	{
 		enum : uint32_t {
-			COMPUTE_UPDATE,
-			COMPUTE_EMIT,
-			COMPUTE_NUM,
+			PIPELINE_COMPUTE_UPDATE,
+			PIPELINE_COMPUTE_EMIT,
+			PIPELINE_GRAPHICS_RENDER,
+			PIPELINE_NUM
 		};
 		enum : uint32_t {
-			GRAPHICS_RENDER,
-			GRAPHICS_NUM,
-		};
-		enum : uint32_t {
-			GRAPHICS_SHADER_VERTEX_PARTICLE,
-			GRAPHICS_SHADER_FRAGMENT_PARTICLE,
-			GRAPHICS_SHADER_NUM,
+			SHADER_COMPUTE_UPDATE,
+			SHADER_COMPUTE_EMIT,
+			SHADER_VERTEX_PARTICLE,
+			SHADER_FRAGMENT_PARTICLE,
+			SHADER_NUM,
 		};
 
 		enum : uint32_t
@@ -80,11 +79,8 @@ struct sBulletSystem : public Singleton<sBulletSystem>
 		std::array<vk::DescriptorSet, DESCRIPTOR_NUM> m_descriptor_set;
 		std::array<vk::PipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
 
-		std::vector<vk::Pipeline> m_compute_pipeline;
-		std::array<vk::PipelineShaderStageCreateInfo, COMPUTE_NUM> m_compute_shader_info;
-
-		std::vector<vk::Pipeline> m_graphics_pipeline;
-		std::array<vk::PipelineShaderStageCreateInfo, GRAPHICS_SHADER_NUM> m_graphics_shader_info;
+		std::array<vk::Pipeline, PIPELINE_NUM> m_pipeline;
+		std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_shader_info;
 
 		BulletInfo m_bullet_info_cpu;
 		void setup(btr::Loader& loader);
@@ -126,9 +122,10 @@ struct sBulletSystem : public Singleton<sBulletSystem>
 				block.m_dst_offset = dst_offset;
 				block.m_emit_num = data.size();
 				cmd.pushConstants<UpdateConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], vk::ShaderStageFlagBits::eCompute, 0, block);
-				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_compute_pipeline[PIPELINE_LAYOUT_UPDATE]);
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], 0, m_descriptor_set[DESCRIPTOR_UPDATE], {});
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], 1, sScene::Order().m_descriptor_set[sScene::DESCRIPTOR_LAYOUT_MAP], {});
+
+				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COMPUTE_UPDATE]);
 				auto groups = app::calcDipatchGroups(glm::uvec3(8192 / 2, 1, 1), glm::uvec3(1024, 1, 1));
 				cmd.dispatch(groups.x, groups.y, groups.z);
 
@@ -166,7 +163,7 @@ struct sBulletSystem : public Singleton<sBulletSystem>
 					auto to_read = m_emit.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
 					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
 
-					cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_compute_pipeline[COMPUTE_EMIT]);
+					cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COMPUTE_EMIT]);
 					auto groups = app::calcDipatchGroups(glm::uvec3(data.size(), 1, 1), glm::uvec3(1024, 1, 1));
 					cmd.dispatch(groups.x, groups.y, groups.z);
 
@@ -185,11 +182,12 @@ struct sBulletSystem : public Singleton<sBulletSystem>
 
 		void draw(vk::CommandBuffer cmd)
 		{
-			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_graphics_pipeline[GRAPHICS_RENDER]);
 			uint dst_offset = sGlobal::Order().getCPUIndex() == 1 ? (m_bullet.getBufferInfo().range / sizeof(BulletData) / 2) : 0;
 			cmd.pushConstants<uint>(m_pipeline_layout[PIPELINE_LAYOUT_BULLET_DRAW], vk::ShaderStageFlagBits::eVertex, 0, dst_offset);
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_BULLET_DRAW], 0, m_descriptor_set[DESCRIPTOR_UPDATE], {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_BULLET_DRAW], 1, sScene::Order().m_descriptor_set[sScene::DESCRIPTOR_LAYOUT_CAMERA], {});
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_GRAPHICS_RENDER]);
 			cmd.drawIndirect(m_bullet_counter.getBufferInfo().buffer, m_bullet_counter.getBufferInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
 		}
 

@@ -31,37 +31,23 @@ void sBulletSystem::Private::setup(btr::Loader& loader)
 	}
 
 	{
-		const char* name[] = {
-			"BulletUpdate.comp.spv",
-			"BulletEmit.comp.spv",
-		};
-		static_assert(array_length(name) == COMPUTE_NUM, "not equal shader num");
-
-		std::string path = btr::getResourceAppPath() + "shader\\binary\\";
-		for (size_t i = 0; i < COMPUTE_NUM; i++)
-		{
-			m_compute_shader_info[i].setModule(loadShader(loader.m_device.getHandle(), path + name[i]));
-			m_compute_shader_info[i].setStage(vk::ShaderStageFlagBits::eCompute);
-			m_compute_shader_info[i].setPName("main");
-		}
-	}
-
-	{
 		struct ShaderDesc {
 			const char* name;
 			vk::ShaderStageFlagBits stage;
 		} shader_desc[] =
 		{
+			{"BulletUpdate.comp.spv", vk::ShaderStageFlagBits::eCompute },
+			{"BulletEmit.comp.spv",	 vk::ShaderStageFlagBits::eCompute },
 			{"BulletRender.vert.spv", vk::ShaderStageFlagBits::eVertex },
 			{"BulletRender.frag.spv", vk::ShaderStageFlagBits::eFragment },
 		};
-		static_assert(array_length(shader_desc) == GRAPHICS_SHADER_NUM, "not equal shader num");
+		static_assert(array_length(shader_desc) == SHADER_NUM, "not equal shader num");
 		std::string path = btr::getResourceAppPath() + "shader\\binary\\";
-		for (uint32_t i = 0; i < GRAPHICS_SHADER_NUM; i++)
+		for (uint32_t i = 0; i < SHADER_NUM; i++)
 		{
-			m_graphics_shader_info[i].setModule(loadShader(loader.m_device.getHandle(), path + shader_desc[i].name));
-			m_graphics_shader_info[i].setStage(shader_desc[i].stage);
-			m_graphics_shader_info[i].setPName("main");
+			m_shader_info[i].setModule(loadShader(loader.m_device.getHandle(), path + shader_desc[i].name));
+			m_shader_info[i].setStage(shader_desc[i].stage);
+			m_shader_info[i].setPName("main");
 		}
 	}
 
@@ -177,13 +163,15 @@ void sBulletSystem::Private::setup(btr::Loader& loader)
 		std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 		{
 			vk::ComputePipelineCreateInfo()
-			.setStage(m_compute_shader_info[COMPUTE_UPDATE])
+			.setStage(m_shader_info[SHADER_COMPUTE_UPDATE])
 			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE]),
 			vk::ComputePipelineCreateInfo()
-			.setStage(m_compute_shader_info[COMPUTE_EMIT])
+			.setStage(m_shader_info[SHADER_COMPUTE_EMIT])
 			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE]),
 		};
-		m_compute_pipeline = loader.m_device->createComputePipelines(loader.m_cache, compute_pipeline_info);
+		auto compute_pipeline = loader.m_device->createComputePipelines(loader.m_cache, compute_pipeline_info);
+		m_pipeline[PIPELINE_COMPUTE_UPDATE] = compute_pipeline[0];
+		m_pipeline[PIPELINE_COMPUTE_EMIT] = compute_pipeline[1];
 
 		vk::Extent3D size;
 		size.setWidth(640);
@@ -191,6 +179,12 @@ void sBulletSystem::Private::setup(btr::Loader& loader)
 		size.setDepth(1);
 		// pipeline
 		{
+			std::vector<vk::PipelineShaderStageCreateInfo> shader_info =
+			{
+				m_shader_info[SHADER_VERTEX_PARTICLE],
+				m_shader_info[SHADER_FRAGMENT_PARTICLE],
+			};
+
 			// assembly
 			vk::PipelineInputAssemblyStateCreateInfo assembly_info[] =
 			{
@@ -246,8 +240,8 @@ void sBulletSystem::Private::setup(btr::Loader& loader)
 			std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =
 			{
 				vk::GraphicsPipelineCreateInfo()
-				.setStageCount(m_graphics_shader_info.size())
-				.setPStages(m_graphics_shader_info.data())
+				.setStageCount(shader_info.size())
+				.setPStages(shader_info.data())
 				.setPVertexInputState(&vertex_input_info)
 				.setPInputAssemblyState(&assembly_info[0])
 				.setPViewportState(&viewportInfo)
@@ -258,7 +252,8 @@ void sBulletSystem::Private::setup(btr::Loader& loader)
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			m_graphics_pipeline = loader.m_device->createGraphicsPipelines(loader.m_cache, graphics_pipeline_info);
+			auto graphics_pipeline = loader.m_device->createGraphicsPipelines(loader.m_cache, graphics_pipeline_info);
+			m_pipeline[PIPELINE_GRAPHICS_RENDER] = graphics_pipeline[0];
 
 		}
 	}
