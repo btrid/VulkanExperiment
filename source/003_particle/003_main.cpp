@@ -27,7 +27,7 @@
 #include <btrlib/Loader.h>
 
 #include <003_particle/ParticlePipeline.h>
-#include <003_particle/BulletPipeline.h>
+#include <003_particle/sBulletSystem.h>
 #include <003_particle/sBoid.h>
 #include <003_particle/GameDefine.h>
 

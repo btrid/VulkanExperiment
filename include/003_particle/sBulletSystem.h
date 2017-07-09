@@ -40,33 +40,35 @@ struct BulletData
 struct sBulletSystem : public Singleton<sBulletSystem>
 {
 	friend Singleton<sBulletSystem>;
+
+	enum : uint32_t {
+		PIPELINE_COMPUTE_UPDATE,
+		PIPELINE_COMPUTE_EMIT,
+		PIPELINE_GRAPHICS_RENDER,
+		PIPELINE_NUM
+	};
+	enum : uint32_t {
+		SHADER_COMPUTE_UPDATE,
+		SHADER_COMPUTE_EMIT,
+		SHADER_VERTEX_PARTICLE,
+		SHADER_FRAGMENT_PARTICLE,
+		SHADER_NUM,
+	};
+
+	enum PipelineLayout : uint32_t
+	{
+		PIPELINE_LAYOUT_UPDATE,
+		PIPELINE_LAYOUT_BULLET_DRAW,
+		PIPELINE_LAYOUT_NUM,
+	};
+	enum DescriptorSetLayout : uint32_t
+	{
+		DESCRIPTOR_UPDATE,
+		DESCRIPTOR_NUM,
+	};
+
 	struct Private 
 	{
-		enum : uint32_t {
-			PIPELINE_COMPUTE_UPDATE,
-			PIPELINE_COMPUTE_EMIT,
-			PIPELINE_GRAPHICS_RENDER,
-			PIPELINE_NUM
-		};
-		enum : uint32_t {
-			SHADER_COMPUTE_UPDATE,
-			SHADER_COMPUTE_EMIT,
-			SHADER_VERTEX_PARTICLE,
-			SHADER_FRAGMENT_PARTICLE,
-			SHADER_NUM,
-		};
-
-		enum : uint32_t
-		{
-			PIPELINE_LAYOUT_UPDATE,
-			PIPELINE_LAYOUT_BULLET_DRAW,
-			PIPELINE_LAYOUT_NUM,
-		};
-		enum : uint32_t
-		{
-			DESCRIPTOR_UPDATE,
-			DESCRIPTOR_NUM,
-		};
 
 		btr::AllocatedMemory m_bullet;
 		btr::AllocatedMemory m_bullet_info;
@@ -217,5 +219,9 @@ struct sBulletSystem : public Singleton<sBulletSystem>
 		auto& data = m_private->m_append_buffer[sGlobal::Order().getCPUIndex()];
 		data.insert(data.end(), param.begin(), param.end());
 	}
+
+	vk::PipelineLayout getPipelineLayout(PipelineLayout layout)const { return m_private->m_pipeline_layout[layout]; }
+	vk::DescriptorSetLayout getDescriptorSetLayout(DescriptorSetLayout desctiptor)const { return m_private->m_descriptor_set_layout[desctiptor]; }
+
 };
 

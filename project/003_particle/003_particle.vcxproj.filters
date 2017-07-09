@@ -59,9 +59,6 @@
     <ClInclude Include="..\..\include\003_particle\cTriangleLL.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\003_particle\BulletPipeline.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\003_particle\GameDefine.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
@@ -69,6 +66,9 @@
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\003_particle\sBoid.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\003_particle\sBulletSystem.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>

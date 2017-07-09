@@ -1,4 +1,4 @@
-#include <003_particle/BulletPipeline.h>
+#include <003_particle/sBulletSystem.h>
 
 void sBulletSystem::Private::setup(btr::Loader& loader)
 {
