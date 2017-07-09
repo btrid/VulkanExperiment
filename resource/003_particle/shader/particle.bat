@@ -24,3 +24,5 @@ glslc.exe -w -I Include -x glsl -fshader-stage=compute	-o binary\\BulletUpdate.c
 glslc.exe -w -I Include -x glsl -fshader-stage=compute	-o binary\\BulletEmit.comp.spv BulletEmit.comp
 glslc.exe -w -I Include -x glsl -fshader-stage=vertex	-o binary\\BulletRender.vert.spv BulletRender.vert
 glslc.exe -w -I Include -x glsl -fshader-stage=fragment	-o binary\\BulletRender.frag.spv BulletRender.frag
+
+glslc.exe -w -I Include -x glsl -fshader-stage=compute	-o binary\\CollisionTest.comp.spv CollisionTest.comp

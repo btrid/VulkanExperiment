@@ -73,8 +73,8 @@ struct sBulletSystem : public Singleton<sBulletSystem>
 		std::array<std::vector<BulletData>, 2> m_append_buffer;
 		btr::AllocatedMemory m_bullet_counter;
 		btr::AllocatedMemory m_emit;
-
 		btr::AllocatedMemory m_bullet_draw_indiret_info;
+
 		std::array<vk::DescriptorSetLayout, DESCRIPTOR_NUM> m_descriptor_set_layout;
 		std::array<vk::DescriptorSet, DESCRIPTOR_NUM> m_descriptor_set;
 		std::array<vk::PipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;

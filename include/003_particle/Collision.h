@@ -1,5 +1,6 @@
 #pragma once
 #include <memory>
+#include <array>
 #include <btrlib/Singleton.h>
 #include <btrlib/Loader.h>
 
@@ -33,6 +34,9 @@ struct sCollisionSystem : public Singleton<sCollisionSystem>
 		DESCRIPTOR_NUM,
 	};
 
+	std::array<vk::DescriptorSetLayout, DESCRIPTOR_NUM> m_descriptor_set_layout;
+	std::array<vk::DescriptorSet, DESCRIPTOR_NUM> m_descriptor_set;
+	std::array<vk::PipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
 	std::array<vk::Pipeline, PIPELINE_NUM> m_pipeline;
 	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_shader_info;
 

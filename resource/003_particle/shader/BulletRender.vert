@@ -14,7 +14,7 @@
 #extension GL_ARB_shading_language_include : require
 #endif
 
-#define SETPOINT_UPDATE 0
+#define SETPOINT_BULLET 0
 #define SETPOINT_CAMERA 1
 #include <Common.glsl>
 #include <Bullet.glsl>

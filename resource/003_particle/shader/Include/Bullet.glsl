@@ -21,18 +21,18 @@ struct BulletData
 
 };
 
-#ifdef SETPOINT_UPDATE
-layout(std140, set=SETPOINT_UPDATE, binding=0) uniform ParticleInfoUniform {
+#ifdef SETPOINT_BULLET
+layout(std140, set=SETPOINT_BULLET, binding=0) uniform ParticleInfoUniform {
 	BulletInfo u_bullet_info;
 };
 
-layout(std430, set=SETPOINT_UPDATE, binding=1) restrict buffer ParticleDataBuffer {
+layout(std430, set=SETPOINT_BULLET, binding=1) restrict buffer ParticleDataBuffer {
 	BulletData b_bullet[];
 };
-layout(std430, set=SETPOINT_UPDATE, binding=2) restrict buffer CounterBuffer {
+layout(std430, set=SETPOINT_BULLET, binding=2) restrict buffer CounterBuffer {
 	DrawIndirectCommand b_draw_cmd;
 };
-layout(std430, set=SETPOINT_UPDATE, binding=3) readonly buffer EmitBuffer {
+layout(std430, set=SETPOINT_BULLET, binding=3) readonly buffer EmitBuffer {
 	BulletData b_bullet_emit[];
 };
 

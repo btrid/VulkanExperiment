@@ -8,7 +8,7 @@
 #extension GL_GOOGLE_cpp_style_line_directive : require
 #include </Common.glsl>
 
-#define SETPOINT_UPDATE 0
+#define SETPOINT_BOID 0
 #include </Boid.glsl>
 #include <ConvertDimension.glsl>
 

@@ -7,7 +7,7 @@
 
 #extension GL_GOOGLE_cpp_style_line_directive : require
 
-#define SETPOINT_UPDATE 0
+#define SETPOINT_BULLET 0
 #include </Common.glsl>
 #include </Bullet.glsl>
 

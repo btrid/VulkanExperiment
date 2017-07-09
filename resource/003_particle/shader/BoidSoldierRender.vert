@@ -17,7 +17,7 @@
 #define SETPOINT_CAMERA 1
 #include <Common.glsl>
 
-#define SETPOINT_UPDATE 0
+#define SETPOINT_BOID 0
 #include <Boid.glsl>
 out gl_PerVertex{
 	vec4 gl_Position;

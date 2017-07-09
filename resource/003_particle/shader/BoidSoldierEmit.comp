@@ -12,7 +12,7 @@
 
 #include </Common.glsl>
 
-#define SETPOINT_UPDATE 0
+#define SETPOINT_BOID 0
 #include </Boid.glsl>
 
 layout (local_size_x = 1024, local_size_y = 1) in;

@@ -34,25 +34,25 @@ struct SoldierData
 	vec4 m_astar_target;
 };
 
-#ifdef SETPOINT_UPDATE
-layout(std140, set=SETPOINT_UPDATE, binding=0) uniform BoidInfoUniform {
+#ifdef SETPOINT_BOID
+layout(std140, set=SETPOINT_BOID, binding=0) uniform BoidInfoUniform {
 	BoidInfo u_boid_info;
 };
-layout(std140, set=SETPOINT_UPDATE, binding=1) uniform SoldierInfoUniform {
+layout(std140, set=SETPOINT_BOID, binding=1) uniform SoldierInfoUniform {
 	SoldierInfo u_soldier_info[16];
 };
 
-layout(std430, set=SETPOINT_UPDATE, binding=2) restrict buffer BrainDataBuffer {
+layout(std430, set=SETPOINT_BOID, binding=2) restrict buffer BrainDataBuffer {
 	BrainData b_brain[];
 };
-layout(std430, set=SETPOINT_UPDATE, binding=3) restrict buffer SoldierDataBuffer {
+layout(std430, set=SETPOINT_BOID, binding=3) restrict buffer SoldierDataBuffer {
 	SoldierData b_soldier[];
 };
-layout(std430, set=SETPOINT_UPDATE, binding=4) restrict buffer CounterBuffer {
+layout(std430, set=SETPOINT_BOID, binding=4) restrict buffer CounterBuffer {
 	DrawIndirectCommand b_draw_cmd[];
 };
-layout(std430, set=SETPOINT_UPDATE, binding=5) restrict coherent buffer SoldierLLHeadBuffer {
+layout(std430, set=SETPOINT_BOID, binding=5) restrict coherent buffer SoldierLLHeadBuffer {
 	uint b_soldier_head[];
 };
-layout(set=SETPOINT_UPDATE, binding=6, r32ui) uniform readonly uimage2DArray t_astar;
+layout(set=SETPOINT_BOID, binding=6, r32ui) uniform readonly uimage2DArray t_astar;
 #endif
