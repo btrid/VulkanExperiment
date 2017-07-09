@@ -37,10 +37,11 @@ struct BulletData
 };
 
 
-struct sBulletSystem : public Singleton<sBulletSystem>
+class sBulletSystem : public Singleton<sBulletSystem>
 {
 	friend Singleton<sBulletSystem>;
 
+public:
 	enum : uint32_t {
 		PIPELINE_COMPUTE_UPDATE,
 		PIPELINE_COMPUTE_EMIT,
@@ -194,8 +195,10 @@ struct sBulletSystem : public Singleton<sBulletSystem>
 		}
 
 	};
+private:
 	std::unique_ptr<Private> m_private;
 
+public:
 	void setup(btr::Loader& loader)
 	{
 		auto p = std::make_unique<Private>();
