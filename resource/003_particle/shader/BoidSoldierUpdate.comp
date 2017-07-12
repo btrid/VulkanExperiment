@@ -6,19 +6,17 @@
 //#pragma optionNV(strict on)
 
 #extension GL_GOOGLE_cpp_style_line_directive : require
+
+#include <ConvertDimension.glsl>
+
 #include </Common.glsl>
 
 #define SETPOINT_BOID 0
 #include </Boid.glsl>
-#include <ConvertDimension.glsl>
 
+#define SETPOINT_MAP 1
+#include </Map.glsl>
 layout (local_size_x = 1024, local_size_y = 1) in;
-
-
-layout(set=1, binding=0, r8ui) uniform readonly uimage2D t_map;
-layout(std140, set=1, binding=1) uniform MapInfoUniform {
-	MapInfo u_map_info;
-};
 
 
 layout(push_constant) uniform UpdateConstantBlock

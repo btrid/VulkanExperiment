@@ -63,6 +63,8 @@ class sBoid : public Singleton<sBoid>
 		glm::vec4 m_pos;	//!< xyz:pos w:scale
 		glm::vec4 m_vel;	//!< xyz:dir w:distance
 		glm::ivec4 m_map_index;
+		glm::vec4 m_inertia;
+
 		uint m_brain_index;
 		uint m_soldier_type;
 		uint m_ll_next;

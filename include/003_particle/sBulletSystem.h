@@ -33,7 +33,8 @@ struct BulletData
 	float m_power;
 	float m_1;
 	float m_2;
-	float m_3;
+	uint32_t m_ll_next;
+
 };
 
 
@@ -77,6 +78,7 @@ public:
 		btr::AllocatedMemory m_bullet_counter;
 		btr::AllocatedMemory m_emit;
 		btr::AllocatedMemory m_bullet_draw_indiret_info;
+		btr::AllocatedMemory m_bullet_LL_head_gpu;
 
 		std::array<vk::DescriptorSetLayout, DESCRIPTOR_NUM> m_descriptor_set_layout;
 		std::array<vk::DescriptorSet, DESCRIPTOR_NUM> m_descriptor_set;
@@ -86,7 +88,7 @@ public:
 		std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_shader_info;
 
 		BulletInfo m_bullet_info_cpu;
-		void setup(btr::Loader& loader);
+		void setup(std::shared_ptr<btr::Loader>& loader);
 
 		void execute(std::shared_ptr<btr::Executer>& executer)
 		{
@@ -199,7 +201,7 @@ private:
 	std::unique_ptr<Private> m_private;
 
 public:
-	void setup(btr::Loader& loader)
+	void setup(std::shared_ptr<btr::Loader>& loader)
 	{
 		auto p = std::make_unique<Private>();
 		p->setup(loader);

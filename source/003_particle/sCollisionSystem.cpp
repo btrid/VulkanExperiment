@@ -1,4 +1,4 @@
-#include <003_particle/Collision.h>
+#include <003_particle/sCollisionSystem.h>
 #include <003_particle/GameDefine.h>
 #include <003_particle/sBoid.h>
 #include <003_particle/sBulletSystem.h>
@@ -26,7 +26,7 @@ void sCollisionSystem::setup(std::shared_ptr<btr::Loader>& loader)
 	{
 		// descriptor set layout
 		std::vector<std::vector<vk::DescriptorSetLayoutBinding>> bindings(DESCRIPTOR_NUM);
-		bindings[DESCRIPTOR_UPDATE] =
+		bindings[DESCRIPTOR_COLLISION_TEST] =
 		{
 			vk::DescriptorSetLayoutBinding()
 			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex)
@@ -57,13 +57,6 @@ void sCollisionSystem::setup(std::shared_ptr<btr::Loader>& loader)
 				.setPBindings(bindings[i].data());
 			m_descriptor_set_layout[i] = loader->m_device->createDescriptorSetLayout(descriptor_set_layout_info);
 		}
-
-		vk::DescriptorSetAllocateInfo alloc_info;
-		alloc_info.descriptorPool = loader->m_descriptor_pool;
-		alloc_info.descriptorSetCount = m_descriptor_set_layout.size();
-		alloc_info.pSetLayouts = m_descriptor_set_layout.data();
-		auto descriptor_set = loader->m_device->allocateDescriptorSets(alloc_info);
-		std::copy(descriptor_set.begin(), descriptor_set.end(), m_descriptor_set.begin());
 	}
 
 	{
@@ -71,14 +64,12 @@ void sCollisionSystem::setup(std::shared_ptr<btr::Loader>& loader)
 			std::vector<vk::DescriptorSetLayout> layouts = 
 			{
 				sBoid::Order().getDescriptorSetLayout(sBoid::DESCRIPTOR_SOLDIER_UPDATE),
-//				sBulletSystem::Order().
-				m_descriptor_set_layout[DESCRIPTOR_UPDATE],
-				sScene::Order().m_descriptor_set_layout[sScene::DESCRIPTOR_LAYOUT_MAP],
+				sBulletSystem::Order().getDescriptorSetLayout(sBulletSystem::DESCRIPTOR_UPDATE),
 			};
 			std::vector<vk::PushConstantRange> push_constants = {
 				vk::PushConstantRange()
-				.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-				.setSize(16),
+				.setStageFlags(vk::ShaderStageFlagBits::eVertex)
+				.setSize(8),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(layouts.size());
@@ -86,8 +77,14 @@ void sCollisionSystem::setup(std::shared_ptr<btr::Loader>& loader)
 			pipeline_layout_info.setPushConstantRangeCount(push_constants.size());
 			pipeline_layout_info.setPPushConstantRanges(push_constants.data());
 			m_pipeline_layout[PIPELINE_LAYOUT_COLLISION] = loader->m_device->createPipelineLayout(pipeline_layout_info);
-		}
 
+			vk::DescriptorSetAllocateInfo alloc_info;
+			alloc_info.descriptorPool = loader->m_descriptor_pool;
+			alloc_info.descriptorSetCount = layouts.size();
+			alloc_info.pSetLayouts = layouts.data();
+			auto descriptor_set = loader->m_device->allocateDescriptorSets(alloc_info);
+			std::copy(descriptor_set.begin(), descriptor_set.end(), m_descriptor_set.begin());
+		}
 	}
 
 	{
@@ -102,11 +99,28 @@ void sCollisionSystem::setup(std::shared_ptr<btr::Loader>& loader)
 		m_pipeline[PIPELINE_LAYOUT_COLLISION] = compute_pipeline[0];
 
 	}
-
-
 }
 
 void sCollisionSystem::execute(std::shared_ptr<btr::Executer>& executer)
 {
+	{
+		// update
+		struct UpdateConstantBlock
+		{
+			float m_deltatime;
+			uint m_double_buffer_index;
+		};
+		UpdateConstantBlock block;
+		block.m_deltatime = sGlobal::Order().getDeltaTime();
+		block.m_double_buffer_index = sGlobal::Order().getGPUIndex();
+		executer->m_cmd.pushConstants<UpdateConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_COLLISION], vk::ShaderStageFlagBits::eCompute, 0, block);
+		executer->m_cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_COLLISION], 0, m_descriptor_set[DESCRIPTOR_COLLISION_TEST], {});
+		executer->m_cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_COLLISION], 1, sScene::Order().m_descriptor_set[sScene::DESCRIPTOR_LAYOUT_MAP], {});
+
+		executer->m_cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_LAYOUT_COLLISION]);
+		auto groups = app::calcDipatchGroups(glm::uvec3(8192 / 2, 1, 1), glm::uvec3(1024, 1, 1));
+		executer->m_cmd.dispatch(groups.x, groups.y, groups.z);
+
+	}
 
 }

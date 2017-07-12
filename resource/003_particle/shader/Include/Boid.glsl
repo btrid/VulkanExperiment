@@ -27,10 +27,13 @@ struct SoldierData
 	vec4 m_pos;	//!< xyz:pos w:scale
 	vec4 m_vel;	//!< xyz:dir w:distance
 	ivec4 m_map_index;
+	vec4 m_inertia;
+
 	uint m_brain_index;
 	uint m_type;
 	uint m_ll_next;
 	float m_life;
+
 	vec4 m_astar_target;
 };
 

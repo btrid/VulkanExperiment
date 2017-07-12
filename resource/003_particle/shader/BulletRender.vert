@@ -14,9 +14,10 @@
 #extension GL_ARB_shading_language_include : require
 #endif
 
-#define SETPOINT_BULLET 0
 #define SETPOINT_CAMERA 1
 #include <Common.glsl>
+
+#define SETPOINT_BULLET 0
 #include <Bullet.glsl>
 out gl_PerVertex{
 	vec4 gl_Position;

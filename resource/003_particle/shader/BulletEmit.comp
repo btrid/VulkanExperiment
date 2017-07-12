@@ -9,9 +9,9 @@
 
 #extension GL_GOOGLE_cpp_style_line_directive : require
 
-#define SETPOINT_BULLET 0
-
 #include </Common.glsl>
+
+#define SETPOINT_BULLET 0
 #include </Bullet.glsl>
 
 
@@ -31,7 +31,8 @@ void main()
 		return;
 	}
 
-	uint dst_index = atomicAdd(b_draw_cmd.vertexCount, 1);
-	b_bullet[constant.m_dst_offset + dst_index] = b_bullet_emit[index];
+	uint dst_index = atomicAdd(b_bullet_draw_cmd.vertexCount, 1);
+	BulletData b = b_bullet_emit[index];
+	b_bullet[constant.m_dst_offset + dst_index] = b;
 
 }

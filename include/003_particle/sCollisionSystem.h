@@ -30,7 +30,7 @@ struct sCollisionSystem : public Singleton<sCollisionSystem>
 	};
 	enum : uint32_t
 	{
-		DESCRIPTOR_UPDATE,
+		DESCRIPTOR_COLLISION_TEST,
 		DESCRIPTOR_NUM,
 	};
 

@@ -37,12 +37,6 @@ struct DrawIndirectCommand
     uint firstInstance;
 };
 
-struct MapInfo
-{
-	vec4 cell_size;
-	uvec4 m_cell_num;
-};
-
 #if defined(SETPOINT_CAMERA)
 layout(std140, set=SETPOINT_CAMERA, binding=0) uniform CameraUniform
 {

@@ -9,6 +9,9 @@
 #include </Common.glsl>
 #include </Particle.glsl>
 
+#define SETPOINT_MAP 1
+#include </Map.glsl>
+
 layout (local_size_x = 1024, local_size_y = 1) in;
 
 layout(std140, set=0, binding=0) uniform ParticleInfoUniform {
@@ -20,12 +23,6 @@ layout(std430, set=0, binding=1) restrict buffer ParticleDataBuffer {
 };
 layout(std430, set=0, binding=2) restrict buffer CounterBuffer {
 	DrawIndirectCommand b_draw_cmd;
-};
-
-
-layout(set=1, binding=0, r8ui) uniform readonly uimage2D t_map;
-layout(std140, set=1, binding=1) uniform MapInfoUniform {
-	MapInfo u_map_info;
 };
 
 

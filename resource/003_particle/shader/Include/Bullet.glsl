@@ -13,11 +13,11 @@ struct BulletData
 	uint m_type;
 	uint m_flag;
 	float m_life;
+
 	float m_atk;
 	float m_power;
 	float m_1;
-	float m_2;
-	float m_3;
+	uint m_ll_next;
 
 };
 
@@ -29,13 +29,15 @@ layout(std140, set=SETPOINT_BULLET, binding=0) uniform ParticleInfoUniform {
 layout(std430, set=SETPOINT_BULLET, binding=1) restrict buffer ParticleDataBuffer {
 	BulletData b_bullet[];
 };
-layout(std430, set=SETPOINT_BULLET, binding=2) restrict buffer CounterBuffer {
-	DrawIndirectCommand b_draw_cmd;
+layout(std430, set=SETPOINT_BULLET, binding=2) restrict buffer BulletCounterBuffer {
+	DrawIndirectCommand b_bullet_draw_cmd;
 };
-layout(std430, set=SETPOINT_BULLET, binding=3) readonly buffer EmitBuffer {
+layout(std430, set=SETPOINT_BULLET, binding=3) readonly buffer BulletEmitBuffer {
 	BulletData b_bullet_emit[];
 };
-
+layout(std430, set=SETPOINT_BULLET, binding=4) restrict buffer BulletLLHeadBuffer {
+	uint b_bullet_head[];
+};
 
 
 #endif

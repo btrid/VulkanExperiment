@@ -1,41 +1,16 @@
 
 
-struct BulletInfo
+struct MapInfo
 {
-	uint m_max_num;
-};
-struct BulletData
-{
-	vec4 m_pos;	//!< xyz:pos w:scale
-	vec4 m_vel;	//!< xyz:dir
-	ivec4 m_map_index;
-
-	uint m_type;
-	uint m_flag;
-	float m_life;
-	float m_atk;
-	float m_power;
-	float m_1;
-	float m_2;
-	float m_3;
-
+	vec4 cell_size;
+	uvec4 m_cell_num;
 };
 
-#ifdef SETPOINT_UPDATE
-layout(std140, set=SETPOINT_UPDATE, binding=0) uniform ParticleInfoUniform {
-	BulletInfo u_bullet_info;
+#ifdef SETPOINT_MAP
+layout(set=SETPOINT_MAP, binding=0, r8ui) uniform readonly uimage2D t_map;
+layout(std140, set=SETPOINT_MAP, binding=1) uniform MapInfoUniform {
+	MapInfo u_map_info;
 };
-
-layout(std430, set=SETPOINT_UPDATE, binding=1) restrict buffer ParticleDataBuffer {
-	BulletData b_bullet[];
-};
-layout(std430, set=SETPOINT_UPDATE, binding=2) restrict buffer CounterBuffer {
-	DrawIndirectCommand b_draw_cmd;
-};
-layout(std430, set=SETPOINT_UPDATE, binding=3) readonly buffer EmitBuffer {
-	BulletData b_bullet_emit[];
-};
-
 
 
 #endif

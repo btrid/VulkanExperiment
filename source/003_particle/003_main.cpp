@@ -29,6 +29,7 @@
 #include <003_particle/ParticlePipeline.h>
 #include <003_particle/sBulletSystem.h>
 #include <003_particle/sBoid.h>
+#include <003_particle/sCollisionSystem.h>
 #include <003_particle/GameDefine.h>
 
 #pragma comment(lib, "btrlib.lib")
@@ -229,7 +230,7 @@ int main()
 
 		sBoid::Order().setup(loader);
 		pipeline.setup(*loader);
-		sBulletSystem::Order().setup(*loader);
+		sBulletSystem::Order().setup(loader);
 
 		render_cmds[0].end();
 		std::vector<vk::CommandBuffer> cmds = {
@@ -306,6 +307,7 @@ int main()
 			model_render.execute(executer);
 			model_pipeline.execute(render_cmd);
 			sBulletSystem::Order().execute(executer);
+
 			// begin cmd render pass
 			std::vector<vk::ClearValue> clearValue = {
 				vk::ClearValue().setColor(vk::ClearColorValue(std::array<float, 4>{0.3f, 0.3f, 0.8f, 1.f})),

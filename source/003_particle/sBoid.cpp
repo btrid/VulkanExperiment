@@ -590,6 +590,7 @@ void sBoid::execute(std::shared_ptr<btr::Executer>& executer)
 				p.m_brain_index = 0;
 				p.m_ll_next = 0xFFFFFFFF;
 				p.m_astar_target = p.m_pos;
+				p.m_inertia = glm::vec4(0.f, 0.f, 0.f, 0.99f);
 				glm::ivec3 map_index = glm::ivec3(p.m_pos.xyz / sScene::Order().m_map_info_cpu.m_cell_size.xyz());
 				{
 					float particle_size = p.m_pos.w;

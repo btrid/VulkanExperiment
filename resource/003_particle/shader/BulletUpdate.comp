@@ -7,17 +7,16 @@
 
 #extension GL_GOOGLE_cpp_style_line_directive : require
 
-#define SETPOINT_BULLET 0
+#include </ConvertDimension.glsl>
+
 #include </Common.glsl>
+#define SETPOINT_BULLET 0
 #include </Bullet.glsl>
 
+#define SETPOINT_MAP 1
+#include </Map.glsl>
+
 layout (local_size_x = 1024, local_size_y = 1) in;
-
-
-layout(set=1, binding=0, r8ui) uniform readonly uimage2D t_map;
-layout(std140, set=1, binding=1) uniform MapInfoUniform {
-	MapInfo u_map_info;
-};
 
 
 layout(push_constant) uniform UpdateConstantBlock
@@ -56,8 +55,6 @@ void main()
 		vec3 cell_p = p.m_pos.xyz - cell_origin;
 		float x = dir.x < 0. ? cell_p.x : (map_info.cell_size.x- cell_p.x);
 		float z = dir.z < 0. ? cell_p.z : (map_info.cell_size.z- cell_p.z);
-//		x = (x <= bullet_size ? cell_size.x + x : x) - bullet_size;
-//		z = (z <= bullet_size ? cell_size.z + z : z) - bullet_size;
 
 		vec3 dist = vec3(99.);
 		dist.x = abs(dir.x) < FLT_EPSIRON ? 99.9 : abs(x / dir.x);
@@ -90,7 +87,7 @@ void main()
 		if(map == 1) 
 		{
 			// 壁にぶつかったので押し戻す
-//			next_pos = p.m_pos.xyz + prog - vec3(next)*FLT_EPSIRON;
+			next_pos = p.m_pos.xyz + prog - vec3(next)*FLT_EPSIRON;
 
 			vec3 wall = vec3(next);
 			p.m_vel.xyz = reflect(p.m_vel.xyz, wall);
@@ -99,7 +96,12 @@ void main()
 		}
 		p.m_pos.xyz = next_pos;
 	}
-	uint dst_index = atomicAdd(b_draw_cmd.vertexCount, 1);
+	uint dst_index = atomicAdd(b_bullet_draw_cmd.vertexCount, 1);
 	p.m_map_index.xyz = map_index;
+
+	uint old = atomicExchange(b_bullet_head[convert2DTo1D(uvec2(map_index.xz), map_info.m_cell_num.xy)], dst_index);
+	p.m_ll_next = old;
+
 	b_bullet[constant.m_dst_offset + dst_index] = p;
+
 }
