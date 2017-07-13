@@ -123,7 +123,7 @@ void cParticlePipeline::Private::setup(btr::Loader& loader)
 		{
 			std::vector<vk::DescriptorSetLayout> layouts = {
 				m_descriptor_set_layout[DESCRIPTOR_UPDATE],
-				sScene::Order().m_descriptor_set_layout[sScene::DESCRIPTOR_LAYOUT_MAP],
+				sScene::Order().m_descriptor_set_layout[sScene::DESCRIPTOR_SET_LAYOUT_MAP],
 			};
 			std::vector<vk::PushConstantRange> push_constants = {
 				vk::PushConstantRange()
@@ -157,7 +157,7 @@ void cParticlePipeline::Private::setup(btr::Loader& loader)
 		{
 			std::vector<vk::DescriptorSetLayout> layouts = {
 				m_descriptor_set_layout[DESCRIPTOR_UPDATE],
-				sScene::Order().m_descriptor_set_layout[sScene::DESCRIPTOR_LAYOUT_CAMERA],
+				sScene::Order().m_descriptor_set_layout[sScene::DESCRIPTOR_SET_LAYOUT_CAMERA],
 			};
 			std::vector<vk::PushConstantRange> push_constants = {
 				vk::PushConstantRange()

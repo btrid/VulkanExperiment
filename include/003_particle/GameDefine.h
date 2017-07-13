@@ -36,14 +36,20 @@ struct sScene : public Singleton<sScene>
 		SHADER_NUM,
 	};
 
-	enum
+	enum DescriptorSetLayout
 	{
-		DESCRIPTOR_LAYOUT_MAP,
-		DESCRIPTOR_LAYOUT_CAMERA,
-		DESCRIPTOR_LAYOUT_NUM,
+		DESCRIPTOR_SET_LAYOUT_MAP,
+		DESCRIPTOR_SET_LAYOUT_CAMERA,
+		DESCRIPTOR_SET_LAYOUT_NUM,
+	};
+	enum DescriptorSet
+	{
+		DESCRIPTOR_SET_MAP,
+		DESCRIPTOR_SET_CAMERA,
+		DESCRIPTOR_SET_NUM,
 	};
 
-	enum
+	enum PipelineLayout
 	{
 		PIPELINE_LAYOUT_DRAW_FLOOR,
 		PIPELINE_LAYOUT_NUM,
@@ -62,8 +68,8 @@ struct sScene : public Singleton<sScene>
 	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_stage_info;
 	vk::Pipeline m_graphics_pipeline;
 
-	std::array<vk::DescriptorSetLayout, DESCRIPTOR_LAYOUT_NUM> m_descriptor_set_layout;
-	std::vector<vk::DescriptorSet> m_descriptor_set;
+	std::array<vk::DescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
+	std::array<vk::DescriptorSet, DESCRIPTOR_SET_NUM> m_descriptor_set;
 	std::array<vk::PipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
 
 	void setup(std::shared_ptr<btr::Loader>& loader)
@@ -236,8 +242,8 @@ struct sScene : public Singleton<sScene>
 		update_desc.frame_max = sGlobal::FRAME_MAX;
 		m_camera.setup(update_desc);
 
-		std::vector<std::vector<vk::DescriptorSetLayoutBinding>> bindings(DESCRIPTOR_LAYOUT_NUM);
-		bindings[DESCRIPTOR_LAYOUT_MAP] =
+		std::vector<std::vector<vk::DescriptorSetLayoutBinding>> bindings(DESCRIPTOR_SET_LAYOUT_NUM);
+		bindings[DESCRIPTOR_SET_LAYOUT_MAP] =
 		{
 			vk::DescriptorSetLayoutBinding()
 			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
@@ -250,7 +256,7 @@ struct sScene : public Singleton<sScene>
 			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 			.setBinding(1),
 		};
-		bindings[DESCRIPTOR_LAYOUT_CAMERA] =
+		bindings[DESCRIPTOR_SET_LAYOUT_CAMERA] =
 		{
 			vk::DescriptorSetLayoutBinding()
 			.setStageFlags(vk::ShaderStageFlagBits::eVertex)
@@ -258,7 +264,7 @@ struct sScene : public Singleton<sScene>
 			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 			.setBinding(0),
 		};
-		for (size_t i = 0; i < DESCRIPTOR_LAYOUT_NUM; i++)
+		for (size_t i = 0; i < DESCRIPTOR_SET_LAYOUT_NUM; i++)
 		{
 			vk::DescriptorSetLayoutCreateInfo descriptor_set_layout_info = vk::DescriptorSetLayoutCreateInfo()
 				.setBindingCount(bindings[i].size())
@@ -270,8 +276,8 @@ struct sScene : public Singleton<sScene>
 		alloc_info.descriptorPool = loader->m_descriptor_pool;
 		alloc_info.descriptorSetCount = m_descriptor_set_layout.size();
 		alloc_info.pSetLayouts = m_descriptor_set_layout.data();
-		m_descriptor_set = loader->m_device->allocateDescriptorSets(alloc_info);
-
+		auto descriptor_set = loader->m_device->allocateDescriptorSets(alloc_info);
+		std::copy(descriptor_set.begin(), descriptor_set.end(), m_descriptor_set.begin());
 		{
 
 			std::vector<vk::DescriptorBufferInfo> uniforms = {
@@ -289,13 +295,13 @@ struct sScene : public Singleton<sScene>
 				.setDescriptorCount(images.size())
 				.setPImageInfo(images.data())
 				.setDstBinding(0)
-				.setDstSet(m_descriptor_set[DESCRIPTOR_LAYOUT_MAP]),
+				.setDstSet(m_descriptor_set[DESCRIPTOR_SET_MAP]),
 				vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 				.setDescriptorCount(uniforms.size())
 				.setPBufferInfo(uniforms.data())
 				.setDstBinding(1)
-				.setDstSet(m_descriptor_set[DESCRIPTOR_LAYOUT_MAP]),
+				.setDstSet(m_descriptor_set[DESCRIPTOR_SET_MAP]),
 			};
 			loader->m_device->updateDescriptorSets(write_desc, {});
 		}
@@ -311,14 +317,14 @@ struct sScene : public Singleton<sScene>
 				.setDescriptorCount(uniforms.size())
 				.setPBufferInfo(uniforms.data())
 				.setDstBinding(0)
-				.setDstSet(m_descriptor_set[DESCRIPTOR_LAYOUT_CAMERA]),
+				.setDstSet(m_descriptor_set[DESCRIPTOR_SET_LAYOUT_CAMERA]),
 			};
 			loader->m_device->updateDescriptorSets(write_desc, {});
 		}
 
 		{
 			std::vector<vk::DescriptorSetLayout> layouts = {
-				m_descriptor_set_layout[DESCRIPTOR_LAYOUT_CAMERA],
+				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_CAMERA],
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(layouts.size());
@@ -449,7 +455,7 @@ struct sScene : public Singleton<sScene>
 	void draw(vk::CommandBuffer cmd)
 	{
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_graphics_pipeline);
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR], 0, m_descriptor_set[DESCRIPTOR_LAYOUT_CAMERA], {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR], 0, m_descriptor_set[DESCRIPTOR_SET_LAYOUT_CAMERA], {});
 		cmd.bindVertexBuffers(0, { m_maze_geometry.m_resource->m_vertex.getBufferInfo().buffer }, { m_maze_geometry.m_resource->m_vertex.getBufferInfo().offset });
 		cmd.bindIndexBuffer(m_maze_geometry.m_resource->m_index.getBufferInfo().buffer, m_maze_geometry.m_resource->m_index.getBufferInfo().offset, m_maze_geometry.m_resource->m_index_type);
 		cmd.drawIndexedIndirect(m_maze_geometry.m_resource->m_indirect.getBufferInfo().buffer, m_maze_geometry.m_resource->m_indirect.getBufferInfo().offset, 1, sizeof(vk::DrawIndexedIndirectCommand));
@@ -465,4 +471,9 @@ struct sScene : public Singleton<sScene>
 		return map_index;
 
 	}
+
+	vk::PipelineLayout getPipelineLayout(PipelineLayout layout)const { return m_pipeline_layout[layout]; }
+	vk::DescriptorSetLayout getDescriptorSetLayout(DescriptorSetLayout desctiptor)const { return m_descriptor_set_layout[desctiptor]; }
+	vk::DescriptorSet getDescriptorSet(DescriptorSet i)const { return m_descriptor_set[i]; }
+
 };

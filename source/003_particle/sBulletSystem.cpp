@@ -58,8 +58,8 @@ void sBulletSystem::Private::setup(std::shared_ptr<btr::Loader>& loader)
 
 	{
 		// descriptor set layout
-		std::vector<std::vector<vk::DescriptorSetLayoutBinding>> bindings(DESCRIPTOR_NUM);
-		bindings[DESCRIPTOR_UPDATE] =
+		std::vector<std::vector<vk::DescriptorSetLayoutBinding>> bindings(DESCRIPTOR_SET_LAYOUT_NUM);
+		bindings[DESCRIPTOR_SET_LAYOUT_UPDATE] =
 		{
 			vk::DescriptorSetLayoutBinding()
 			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex)
@@ -88,7 +88,7 @@ void sBulletSystem::Private::setup(std::shared_ptr<btr::Loader>& loader)
 			.setBinding(4),
 		};
 
-		for (size_t i = 0; i < DESCRIPTOR_NUM; i++)
+		for (size_t i = 0; i < bindings.size(); i++)
 		{
 			vk::DescriptorSetLayoutCreateInfo descriptor_set_layout_info = vk::DescriptorSetLayoutCreateInfo()
 				.setBindingCount(bindings[i].size())
@@ -106,8 +106,8 @@ void sBulletSystem::Private::setup(std::shared_ptr<btr::Loader>& loader)
 	{
 		{
 			std::vector<vk::DescriptorSetLayout> layouts = {
-				m_descriptor_set_layout[DESCRIPTOR_UPDATE],
-				sScene::Order().m_descriptor_set_layout[sScene::DESCRIPTOR_LAYOUT_MAP],
+				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_UPDATE],
+				sScene::Order().getDescriptorSetLayout(sScene::DESCRIPTOR_SET_LAYOUT_MAP),
 			};
 			std::vector<vk::PushConstantRange> push_constants = {
 				vk::PushConstantRange()
@@ -123,8 +123,8 @@ void sBulletSystem::Private::setup(std::shared_ptr<btr::Loader>& loader)
 		}
 		{
 			std::vector<vk::DescriptorSetLayout> layouts = {
-				m_descriptor_set_layout[DESCRIPTOR_UPDATE],
-				sScene::Order().m_descriptor_set_layout[sScene::DESCRIPTOR_LAYOUT_CAMERA],
+				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_UPDATE],
+				sScene::Order().getDescriptorSetLayout(sScene::DESCRIPTOR_SET_LAYOUT_CAMERA),
 			};
 			std::vector<vk::PushConstantRange> push_constants = {
 				vk::PushConstantRange()
@@ -157,13 +157,13 @@ void sBulletSystem::Private::setup(std::shared_ptr<btr::Loader>& loader)
 				.setDescriptorCount(uniforms.size())
 				.setPBufferInfo(uniforms.data())
 				.setDstBinding(0)
-				.setDstSet(m_descriptor_set[DESCRIPTOR_UPDATE]),
+				.setDstSet(m_descriptor_set[DESCRIPTOR_SET_UPDATE]),
 				vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 				.setDescriptorCount(storages.size())
 				.setPBufferInfo(storages.data())
 				.setDstBinding(1)
-				.setDstSet(m_descriptor_set[DESCRIPTOR_UPDATE]),
+				.setDstSet(m_descriptor_set[DESCRIPTOR_SET_UPDATE]),
 			};
 			loader->m_device->updateDescriptorSets(write_desc, {});
 		}

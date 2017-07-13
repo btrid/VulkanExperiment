@@ -51,6 +51,13 @@ void main()
 	float vel = soldier.m_vel.w;
 	SoldierInfo info = u_soldier_info[soldier.m_type];
 
+	{
+	
+		soldier.m_pos.xz += soldier.m_inertia.xz * constant.m_deltatime;
+		soldier.m_pos.xz = clamp(soldier.m_pos.xz, (map_index*cell_size.xz)+particle_size+FLT_EPSIRON, (map_index+ivec2(1, 1))*cell_size.xz -particle_size-FLT_EPSIRON);
+	
+		soldier.m_inertia *= pow(0.92, 1. + constant.m_deltatime);
+	}
 
 	{
 		// 移動先

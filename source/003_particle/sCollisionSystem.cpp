@@ -57,14 +57,23 @@ void sCollisionSystem::setup(std::shared_ptr<btr::Loader>& loader)
 				.setPBindings(bindings[i].data());
 			m_descriptor_set_layout[i] = loader->m_device->createDescriptorSetLayout(descriptor_set_layout_info);
 		}
+
+		vk::DescriptorSetAllocateInfo alloc_info;
+		alloc_info.descriptorPool = loader->m_descriptor_pool;
+		alloc_info.descriptorSetCount = m_descriptor_set_layout.size();
+		alloc_info.pSetLayouts = m_descriptor_set_layout.data();
+		auto descriptor_set = loader->m_device->allocateDescriptorSets(alloc_info);
+		std::copy(descriptor_set.begin(), descriptor_set.end(), m_descriptor_set.begin());
+
 	}
 
 	{
 		{
 			std::vector<vk::DescriptorSetLayout> layouts = 
 			{
-				sBoid::Order().getDescriptorSetLayout(sBoid::DESCRIPTOR_SOLDIER_UPDATE),
-				sBulletSystem::Order().getDescriptorSetLayout(sBulletSystem::DESCRIPTOR_UPDATE),
+				sBoid::Order().getDescriptorSetLayout(sBoid::DESCRIPTOR_SET_LAYOUT_SOLDIER_UPDATE),
+				sBulletSystem::Order().getDescriptorSetLayout(sBulletSystem::DESCRIPTOR_SET_LAYOUT_UPDATE),
+				sScene::Order().getDescriptorSetLayout(sScene::DESCRIPTOR_SET_LAYOUT_MAP),
 			};
 			std::vector<vk::PushConstantRange> push_constants = {
 				vk::PushConstantRange()
@@ -78,12 +87,6 @@ void sCollisionSystem::setup(std::shared_ptr<btr::Loader>& loader)
 			pipeline_layout_info.setPPushConstantRanges(push_constants.data());
 			m_pipeline_layout[PIPELINE_LAYOUT_COLLISION] = loader->m_device->createPipelineLayout(pipeline_layout_info);
 
-			vk::DescriptorSetAllocateInfo alloc_info;
-			alloc_info.descriptorPool = loader->m_descriptor_pool;
-			alloc_info.descriptorSetCount = layouts.size();
-			alloc_info.pSetLayouts = layouts.data();
-			auto descriptor_set = loader->m_device->allocateDescriptorSets(alloc_info);
-			std::copy(descriptor_set.begin(), descriptor_set.end(), m_descriptor_set.begin());
 		}
 	}
 
@@ -113,11 +116,12 @@ void sCollisionSystem::execute(std::shared_ptr<btr::Executer>& executer)
 		UpdateConstantBlock block;
 		block.m_deltatime = sGlobal::Order().getDeltaTime();
 		block.m_double_buffer_index = sGlobal::Order().getGPUIndex();
-		executer->m_cmd.pushConstants<UpdateConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_COLLISION], vk::ShaderStageFlagBits::eCompute, 0, block);
-		executer->m_cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_COLLISION], 0, m_descriptor_set[DESCRIPTOR_COLLISION_TEST], {});
-		executer->m_cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_COLLISION], 1, sScene::Order().m_descriptor_set[sScene::DESCRIPTOR_LAYOUT_MAP], {});
+		executer->m_cmd.pushConstants<UpdateConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_COLLISION], vk::ShaderStageFlagBits::eVertex, 0, block);
+		executer->m_cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_COLLISION], 0, sBoid::Order().getDescriptorSet(sBoid::DESCRIPTOR_SET_SOLDIER_UPDATE), {});
+		executer->m_cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_COLLISION], 1, sBulletSystem::Order().getDescriptorSet(sBulletSystem::DESCRIPTOR_SET_UPDATE), {});
+		executer->m_cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_COLLISION], 2, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_MAP), {});
 
-		executer->m_cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_LAYOUT_COLLISION]);
+		executer->m_cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COLLISION_TEST]);
 		auto groups = app::calcDipatchGroups(glm::uvec3(8192 / 2, 1, 1), glm::uvec3(1024, 1, 1));
 		executer->m_cmd.dispatch(groups.x, groups.y, groups.z);
 

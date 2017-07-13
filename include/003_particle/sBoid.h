@@ -97,9 +97,15 @@ public:
 	};
 	enum DescriptorSetLayout : uint32_t
 	{
-		DESCRIPTOR_SOLDIER_UPDATE,
-		DESCRIPTOR_SOLDIER_EMIT,
+		DESCRIPTOR_SET_LAYOUT_SOLDIER_UPDATE,
+		DESCRIPTOR_SET_LAYOUT_SOLDIER_EMIT,
 		DESCRIPTOR_SET_LAYOUT_NUM,
+	};
+	enum DescriptorSet : uint32_t
+	{
+		DESCRIPTOR_SET_SOLDIER_UPDATE,
+		DESCRIPTOR_SET_SOLDIER_EMIT,
+		DESCRIPTOR_SET_NUM,
 	};
 private:
 	BoidInfo m_boid_info;
@@ -116,7 +122,7 @@ private:
 	std::array<vk::PipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
 	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_shader_info;
 	std::array<vk::DescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
-	std::array<vk::DescriptorSet, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set;
+	std::array<vk::DescriptorSet, DESCRIPTOR_SET_NUM> m_descriptor_set;
 
 
 	std::vector<vk::Pipeline> m_graphics_pipeline;
@@ -135,4 +141,5 @@ public:
 
 	vk::PipelineLayout getPipelineLayout(PipelineLayout layout)const { return m_pipeline_layout[layout]; }
 	vk::DescriptorSetLayout getDescriptorSetLayout(DescriptorSetLayout desctiptor)const { return m_descriptor_set_layout[desctiptor]; }
+	vk::DescriptorSet getDescriptorSet(DescriptorSet i)const { return m_descriptor_set[i]; }
 };

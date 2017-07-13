@@ -100,7 +100,7 @@ void main()
 	p.m_map_index.xyz = map_index;
 
 	uint old = atomicExchange(b_bullet_head[convert2DTo1D(uvec2(map_index.xz), map_info.m_cell_num.xy)], dst_index);
-	p.m_ll_next = old;
+	p.m_ll_next = -1;
 
 	b_bullet[constant.m_dst_offset + dst_index] = p;
 

@@ -231,7 +231,7 @@ int main()
 		sBoid::Order().setup(loader);
 		pipeline.setup(*loader);
 		sBulletSystem::Order().setup(loader);
-
+		sCollisionSystem::Order().setup(loader);
 		render_cmds[0].end();
 		std::vector<vk::CommandBuffer> cmds = {
 			render_cmds[0],
@@ -279,10 +279,6 @@ int main()
 			}
 			{
 				m_player.execute(executer);
-				if (executer->m_window->getInput().m_keyboard.isHold('o'))
-				{
-//					bullet_system.execute()
-				}
 				model_render.getModelTransform().m_global = glm::translate(m_player.m_pos) * glm::toMat4(glm::quat(glm::vec3(0.f, 0.f, 1.f), m_player.m_dir));
 			}
 
@@ -307,6 +303,7 @@ int main()
 			model_render.execute(executer);
 			model_pipeline.execute(render_cmd);
 			sBulletSystem::Order().execute(executer);
+//			sCollisionSystem::Order().execute(executer);
 
 			// begin cmd render pass
 			std::vector<vk::ClearValue> clearValue = {
@@ -326,7 +323,6 @@ int main()
 			pipeline.draw(render_cmd);
 			model_pipeline.draw(render_cmd);
 			sBulletSystem::Order().draw(render_cmd);
-
 			render_cmd.endRenderPass();
 
 			vk::ImageMemoryBarrier render_to_present_barrier;
