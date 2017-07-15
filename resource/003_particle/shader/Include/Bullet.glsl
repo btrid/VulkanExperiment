@@ -8,15 +8,18 @@ struct BulletData
 {
 	vec4 m_pos;	//!< xyz:pos w:scale
 	vec4 m_vel;	//!< xyz:dir
-	ivec4 m_map_index;
+	ivec2 m_map_index;
+	float _p1;
+	float _p2;
 
 	uint m_type;
 	uint m_flag;
 	float m_life;
-
 	float m_atk;
+
 	float m_power;
 	float m_1;
+	float m_2;
 	uint m_ll_next;
 
 };

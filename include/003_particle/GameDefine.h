@@ -17,8 +17,8 @@ struct ParticleInfo
 };
 struct MapInfo
 {
-	glm::vec4 m_cell_size;
-	glm::ivec4 m_cell_num;
+	glm::vec2 m_cell_size;
+	glm::ivec2 m_cell_num;
 };
 
 struct Map
@@ -74,8 +74,8 @@ struct sScene : public Singleton<sScene>
 
 	void setup(std::shared_ptr<btr::Loader>& loader)
 	{
-		m_map_info_cpu.m_cell_size = glm::vec4(10.f, 1.f, 10.f, 0.f);
-		m_map_info_cpu.m_cell_num = glm::vec4(127, 127, 0, 0);
+		m_map_info_cpu.m_cell_size = glm::vec2(10.f, 10.f);
+		m_map_info_cpu.m_cell_num = glm::vec2(127, 127);
 
 		// setup shader
 		{
@@ -101,7 +101,7 @@ struct sScene : public Singleton<sScene>
 
 		{
 			m_maze.generate(sScene::Order().m_map_info_cpu.m_cell_num.x, sScene::Order().m_map_info_cpu.m_cell_num.y);
-			auto geometry = m_maze.makeGeometry(sScene::Order().m_map_info_cpu.m_cell_size);
+			auto geometry = m_maze.makeGeometry(glm::vec3(sScene::Order().m_map_info_cpu.m_cell_size.x, 1.f, sScene::Order().m_map_info_cpu.m_cell_size.y));
 			Geometry::OptimaizeDuplicateVertexDescriptor opti_desc;
 
 			std::vector<vk::VertexInputAttributeDescription> vertex_attr(1);
@@ -461,13 +461,10 @@ struct sScene : public Singleton<sScene>
 		cmd.drawIndexedIndirect(m_maze_geometry.m_resource->m_indirect.getBufferInfo().buffer, m_maze_geometry.m_resource->m_indirect.getBufferInfo().offset, 1, sizeof(vk::DrawIndexedIndirectCommand));
 	}
 
-	glm::ivec4 calcMapIndex(const glm::vec4& p)
+	glm::ivec2 calcMapIndex(const glm::vec4& p)
 	{
-		glm::vec3 cell_p = glm::mod(p.xyz(), m_map_info_cpu.m_cell_size.xyz());
-		glm::ivec4 map_index(p.xyz / m_map_info_cpu.m_cell_size.xyz, 0);
-//		map_index.x = (cell_p.x <= p.w) ? map_index.x - 1 : (cell_p.x >= (m_map_info_cpu.m_cell_size.x - p.w)) ? map_index.x + 1 : map_index.x;
-		map_index.y = 0;
-//		map_index.z = (cell_p.z <= p.w) ? map_index.z - 1 : (cell_p.z >= (m_map_info_cpu.m_cell_size.z - p.w)) ? map_index.z + 1 : map_index.z;
+		glm::vec2 cell_p = glm::mod(glm::vec2(p.xz), m_map_info_cpu.m_cell_size);
+		glm::ivec2 map_index(glm::vec2(p.xz) / m_map_info_cpu.m_cell_size);
 		return map_index;
 
 	}

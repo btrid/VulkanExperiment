@@ -18,7 +18,7 @@
 
 #include <ConvertDimension.glsl>
 
-layout (local_size_x = 1024, local_size_y = 1) in;
+layout (local_size_x = 32, local_size_y = 32) in;
 
 
 layout(push_constant) uniform UpdateConstantBlock
@@ -30,32 +30,34 @@ layout(push_constant) uniform UpdateConstantBlock
 void main()
 {
 	uvec2 map_index = gl_GlobalInvocationID.xy;
-//	if(map_index >= u_boid_info.m_soldier_max)
-//	{
-//		return;
-//	}
-
-	uint map_id = convert2DTo1D(map_index, u_map_info.m_cell_num.xy);
-	for(uint i = b_soldier_head[map_id]; i != INVALID_INDEX;)
+	if(any(greaterThan(map_index, u_map_info.m_cell_num.xy)))
 	{
-		SoldierData soldier = b_soldier[i];
+		return;
+	}
+
+	uint enemy_offset = u_boid_info.m_soldier_max/2 * constant.m_double_buffer_dst_index;
+	uint map_offset = constant.m_double_buffer_dst_index * convert2DTo1D(u_map_info.m_cell_num.xy, u_map_info.m_cell_num.xy);
+
+	uint bullet_offset = u_bullet_info.m_max_num/2 * constant.m_double_buffer_dst_index;
+	uint map_id = convert2DTo1D(map_index, u_map_info.m_cell_num.xy);
+	for(uint i = b_soldier_head[map_id + map_offset]; i != 0xFFFFFFFF;)
+	{
+		SoldierData soldier = b_soldier[enemy_offset + i];
 		i = soldier.m_ll_next;
 		vec4 enemy_pos = soldier.m_pos;
 		vec4 inertia = soldier.m_inertia;
-
-		for(uint bullet_index = b_bullet_head[map_id]; bullet_index != INVALID_INDEX;)
+		for(uint bullet_index = b_bullet_head[map_id]; bullet_index != 0xFFFFFFFF;)
 		{
-			BulletData bullet = b_bullet[bullet_index];
+			BulletData bullet = b_bullet[bullet_offset + bullet_index];
 			bullet_index = bullet.m_ll_next;
 			if(distance(bullet.m_pos.xyz, enemy_pos.xyz) < enemy_pos.w+bullet.m_pos.w)
 			{
-				inertia.xyz += normalize((enemy_pos - bullet.m_pos).xyz) * 0.3;
+				inertia.xyz += normalize((bullet.m_vel).xyz) * 0.01;
 			}
 
 		}
 		b_soldier[i].m_inertia = inertia;
 
 	}
-
 
 }

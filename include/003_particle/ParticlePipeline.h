@@ -19,11 +19,14 @@ struct ParticleData
 {
 	glm::vec4 m_pos;	//!< xyz:pos w:scale
 	glm::vec4 m_vel;	//!< xyz:dir w:distance
-	glm::ivec4 m_map_index;
+	glm::ivec2 m_map_index;
+	uint32_t _p;
+	uint32_t _p1;
+
 	uint32_t m_type;
 	uint32_t m_flag;
 	float m_life;
-	uint32_t _p;
+	uint32_t _pp;
 };
 
 struct cParticlePipeline
@@ -146,14 +149,7 @@ struct cParticlePipeline
 						p.m_vel = glm::vec4(glm::normalize(glm::vec3(std::rand() % 50-25, 0.f, std::rand() % 50-25 + 0.5f)), std::rand()%50 + 15.5f);
 						p.m_life = std::rand() % 50 + 240;
 
-						glm::ivec3 map_index = glm::ivec3(p.m_pos.xyz / sScene::Order().m_map_info_cpu.m_cell_size.xyz());
-						{
-							float particle_size = 0.f;
-							glm::vec3 cell_p = glm::mod(p.m_pos.xyz(), sScene::Order().m_map_info_cpu.m_cell_size.xyz());
-							map_index.x = (cell_p.x <= particle_size) ? map_index.x - 1 : (cell_p.x >= (sScene::Order().m_map_info_cpu.m_cell_size.x - particle_size)) ? map_index.x + 1 : map_index.x;
-							map_index.z = (cell_p.z <= particle_size) ? map_index.z - 1 : (cell_p.z >= (sScene::Order().m_map_info_cpu.m_cell_size.z - particle_size)) ? map_index.z + 1 : map_index.z;
-							p.m_map_index = glm::ivec4(map_index, 0);
-						}
+						p.m_map_index = sScene::Order().calcMapIndex(p.m_pos);
 					}
 					m_particle_emit.subupdate(data.data(), vector_sizeof(data), 0);
 

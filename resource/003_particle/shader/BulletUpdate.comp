@@ -34,74 +34,21 @@ void main()
 		return;
 	}
 
-	BulletData p = b_bullet[constant.m_src_offset + index];
+	BulletData b = b_bullet[constant.m_src_offset + index];
 	b_bullet[constant.m_src_offset + index].m_life = -1.;
-	p.m_life -= constant.m_deltatime;
-	if(p.m_life <= 0.){
+	b.m_life -= constant.m_deltatime;
+	if(b.m_life <= 0.){
 		return;
 	}
 	MapInfo map_info = u_map_info;
-	float progress = p.m_vel.w * constant.m_deltatime;
-	vec3 cell_size = map_info.cell_size.xyz;
-	float bullet_size = 0.00;
 
-	ivec3 map_index = p.m_map_index.xyz;
-	for(;;)
-	{
-		vec3 dir = p.m_vel.xyz;
-		ivec3 prev_index = map_index;
+	march(b.m_pos.xz, b.m_map_index, b.m_vel.xz*constant.m_deltatime);
 
-		vec3 cell_origin = map_index*cell_size;
-		vec3 cell_p = p.m_pos.xyz - cell_origin;
-		float x = dir.x < 0. ? cell_p.x : (map_info.cell_size.x- cell_p.x);
-		float z = dir.z < 0. ? cell_p.z : (map_info.cell_size.z- cell_p.z);
-
-		vec3 dist = vec3(99.);
-		dist.x = abs(dir.x) < FLT_EPSIRON ? 99.9 : abs(x / dir.x);
-		dist.z = abs(dir.z) < FLT_EPSIRON ? 99.9 : abs(z / dir.z);
-		float rate = min(dist.x, dist.z);
-		rate = abs(dir.x) < FLT_EPSIRON ? dist.z : rate;
-		rate = abs(dir.z) < FLT_EPSIRON ? dist.x : rate;
-
-		vec3 prog = dir * rate;
-		float progLength = length(dir * rate);
-		if(progress < progLength)
-		{
-			// 移動完了
-			p.m_pos.xyz += dir * progress;
-			break;
-		}
-		progress -= progLength;
-
-		ivec3 next = ivec3(0);
-		if(dist.x < dist.z){
-			next.x = dir.x < 0. ? -1 : 1;
-		}
-		else
-		{
-			next.z = dir.z < 0. ? -1 : 1;
-		}
-
-		vec3 next_pos = p.m_pos.xyz + prog + vec3(next)*FLT_EPSIRON;
-		uint map = imageLoad(t_map, (map_index + next).xz ).x;
-		if(map == 1) 
-		{
-			// 壁にぶつかったので押し戻す
-			next_pos = p.m_pos.xyz + prog - vec3(next)*FLT_EPSIRON;
-
-			vec3 wall = vec3(next);
-			p.m_vel.xyz = reflect(p.m_vel.xyz, wall);
-		}else{
-			map_index += next;
-		}
-		p.m_pos.xyz = next_pos;
-	}
 	uint dst_index = atomicAdd(b_bullet_draw_cmd.vertexCount, 1);
-	p.m_map_index.xyz = map_index;
 
-	uint old = atomicExchange(b_bullet_head[convert2DTo1D(uvec2(map_index.xz), map_info.m_cell_num.xy)], dst_index);
-	p.m_ll_next = -1;
+	uint old = atomicExchange(b_bullet_head[convert2DTo1D(b.m_map_index, map_info.m_cell_num.xy)], dst_index);
+	b.m_ll_next = old;
 
-	b_bullet[constant.m_dst_offset + dst_index] = p;
+	b_bullet[constant.m_dst_offset + dst_index] = b;
 
 }

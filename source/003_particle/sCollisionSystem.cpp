@@ -77,7 +77,7 @@ void sCollisionSystem::setup(std::shared_ptr<btr::Loader>& loader)
 			};
 			std::vector<vk::PushConstantRange> push_constants = {
 				vk::PushConstantRange()
-				.setStageFlags(vk::ShaderStageFlagBits::eVertex)
+				.setStageFlags(vk::ShaderStageFlagBits::eCompute)
 				.setSize(8),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
@@ -107,6 +107,12 @@ void sCollisionSystem::setup(std::shared_ptr<btr::Loader>& loader)
 void sCollisionSystem::execute(std::shared_ptr<btr::Executer>& executer)
 {
 	{
+		std::vector<vk::BufferMemoryBarrier> to_read = {
+			sBoid::Order().getLL().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
+			sBulletSystem::Order().getLL().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
+		};
+		executer->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
+
 		// update
 		struct UpdateConstantBlock
 		{
@@ -116,14 +122,14 @@ void sCollisionSystem::execute(std::shared_ptr<btr::Executer>& executer)
 		UpdateConstantBlock block;
 		block.m_deltatime = sGlobal::Order().getDeltaTime();
 		block.m_double_buffer_index = sGlobal::Order().getGPUIndex();
-		executer->m_cmd.pushConstants<UpdateConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_COLLISION], vk::ShaderStageFlagBits::eVertex, 0, block);
+		executer->m_cmd.pushConstants<UpdateConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_COLLISION], vk::ShaderStageFlagBits::eCompute, 0, block);
 		executer->m_cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_COLLISION], 0, sBoid::Order().getDescriptorSet(sBoid::DESCRIPTOR_SET_SOLDIER_UPDATE), {});
 		executer->m_cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_COLLISION], 1, sBulletSystem::Order().getDescriptorSet(sBulletSystem::DESCRIPTOR_SET_UPDATE), {});
 		executer->m_cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_COLLISION], 2, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_MAP), {});
 
 		executer->m_cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COLLISION_TEST]);
-		auto groups = app::calcDipatchGroups(glm::uvec3(8192 / 2, 1, 1), glm::uvec3(1024, 1, 1));
-		executer->m_cmd.dispatch(groups.x, groups.y, groups.z);
+		auto groups = app::calcDipatchGroups(glm::uvec3(8192/2, 1, 1), glm::uvec3(32, 32, 1));
+		executer->m_cmd.dispatch(1, 1, 1);
 
 	}
 

@@ -24,12 +24,15 @@ struct BulletData
 {
 	glm::vec4 m_pos;	//!< xyz:pos w:scale
 	glm::vec4 m_vel;	//!< xyz:dir
-	glm::ivec4 m_map_index;
+	glm::ivec2 m_map_index;
+	float _p1;
+	float _p2;
 
 	uint32_t m_type;
 	uint32_t m_flag;
 	float m_life;
 	float m_atk;
+
 	float m_power;
 	float m_1;
 	float m_2;
@@ -237,6 +240,7 @@ public:
 	vk::PipelineLayout& getPipelineLayout(PipelineLayout layout)const { return m_private->m_pipeline_layout[layout]; }
 	vk::DescriptorSetLayout& getDescriptorSetLayout(DescriptorSetLayout desctiptor)const { return m_private->m_descriptor_set_layout[desctiptor]; }
 	vk::DescriptorSet& getDescriptorSet(DescriptorSet i)const { return m_private->m_descriptor_set[i]; }
+	btr::AllocatedMemory& getLL() { return m_private->m_bullet_LL_head_gpu; }
 
 };
 

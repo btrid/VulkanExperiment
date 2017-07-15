@@ -251,11 +251,11 @@ public:
 	void* getMappedPtr()const { return m_resource->m_mapped_memory; }
 	template<typename T> T* getMappedPtr(size_t offset_num = 0)const { return static_cast<T*>(m_resource->m_mapped_memory)+offset_num; }
 
-	const vk::BufferMemoryBarrier& makeMemoryBarrier(vk::AccessFlags dstAccessMask) {
+	const vk::BufferMemoryBarrier& makeMemoryBarrier(vk::AccessFlags barrier) {
 		m_memory_barrier.buffer = m_buffer_info.buffer;
 		m_memory_barrier.size = m_buffer_info.range;
 		m_memory_barrier.offset = m_buffer_info.offset;
-		m_memory_barrier.dstAccessMask = dstAccessMask;
+		m_memory_barrier.dstAccessMask = barrier;
 		m_memory_barrier.srcAccessMask = m_memory_barrier.dstAccessMask;
 		return m_memory_barrier;
 	}

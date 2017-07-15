@@ -26,7 +26,6 @@
 #include <applib/cModelRender.h>
 #include <btrlib/Loader.h>
 
-#include <003_particle/ParticlePipeline.h>
 #include <003_particle/sBulletSystem.h>
 #include <003_particle/sBoid.h>
 #include <003_particle/sCollisionSystem.h>
@@ -183,7 +182,6 @@ int main()
 		vk::PipelineCacheCreateInfo cacheInfo = vk::PipelineCacheCreateInfo();
 		loader->m_cache = device->createPipelineCache(cacheInfo);
 
-
 	}
 
 	auto executer = std::make_shared<btr::Executer>();
@@ -203,7 +201,6 @@ int main()
 	Player m_player;
 	m_player.m_pos.x = 43.f;
 	m_player.m_pos.z = 83.f;
-	cParticlePipeline pipeline;
 	{
 		vk::CommandBufferBeginInfo begin_info;
 		begin_info.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
@@ -229,7 +226,6 @@ int main()
 		}
 
 		sBoid::Order().setup(loader);
-		pipeline.setup(*loader);
 		sBulletSystem::Order().setup(loader);
 		sCollisionSystem::Order().setup(loader);
 		render_cmds[0].end();
@@ -299,11 +295,10 @@ int main()
 
 			sScene::Order().execute(executer);
 			sBoid::Order().execute(executer);
-			pipeline.execute(*executer);
 			model_render.execute(executer);
 			model_pipeline.execute(render_cmd);
 			sBulletSystem::Order().execute(executer);
-//			sCollisionSystem::Order().execute(executer);
+			sCollisionSystem::Order().execute(executer);
 
 			// begin cmd render pass
 			std::vector<vk::ClearValue> clearValue = {
@@ -320,7 +315,6 @@ int main()
 			// draw
 			sScene::Order().draw(render_cmd);
 			sBoid::Order().draw(render_cmd);
-			pipeline.draw(render_cmd);
 			model_pipeline.draw(render_cmd);
 			sBulletSystem::Order().draw(render_cmd);
 			render_cmd.endRenderPass();

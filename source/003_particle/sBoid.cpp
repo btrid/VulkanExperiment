@@ -32,7 +32,7 @@ void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 			auto staging = loader->m_staging_memory.allocateMemory(desc);
 			auto* info = staging.getMappedPtr<SoldierInfo>();
 			info[0].m_turn_speed = glm::radians(45.f);
-			info[0].m_move_speed = 4.f;
+			info[0].m_move_speed = 8.f;
 
 			vk::BufferCopy copy;
 			copy.setSize(desc.size);
@@ -498,10 +498,8 @@ void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 
 void sBoid::execute(std::shared_ptr<btr::Executer>& executer)
 {
+
 	auto cmd = executer->m_cmd;
-	m_brain_gpu.swap();
-	m_soldier_gpu.swap();
-	m_soldier_LL_head_gpu.swap();
 	{
 		// transfer
 		vk::BufferMemoryBarrier ll_to_transfer;
@@ -563,6 +561,7 @@ void sBoid::execute(std::shared_ptr<btr::Executer>& executer)
 	{
 		static int count;
 		count++;
+		count %= 400;
 		if (count == 1)
 		{
 			auto soldier_barrier = vk::BufferMemoryBarrier();
@@ -580,25 +579,18 @@ void sBoid::execute(std::shared_ptr<btr::Executer>& executer)
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_emit_barrier, {});
 
 			// emit
-			std::array<SoldierData, 300> data;
+			std::array<SoldierData, 50> data;
 			for (auto& p : data)
 			{
-				p.m_pos = glm::vec4(56.f + std::rand() % 50 / 20.f, 0.f, 86.f + std::rand() % 50 / 20.f, 1.f);
-				p.m_vel = glm::vec4(glm::normalize(glm::vec3(std::rand() % 50 - 25, 0.f, std::rand() % 50 - 25 + 0.5f)), 2.5f);
-				p.m_life = 99.f;
+				p.m_pos = glm::vec4(56.f + std::rand() % 50 / 10.f, 0.f, 82.f + std::rand() % 50 / 10.f, 1.f);
+				p.m_vel = glm::vec4(glm::normalize(glm::vec3(std::rand() % 50 - 25, 0.f, std::rand() % 50 - 25 + 0.5f)), 109.5f);
+				p.m_life = std::rand()%30+10.f;
 				p.m_soldier_type = 0;
 				p.m_brain_index = 0;
-				p.m_ll_next = 0xFFFFFFFF;
-				p.m_astar_target = p.m_pos;
-				p.m_inertia = glm::vec4(0.f, 0.f, 0.f, 0.99f);
-				glm::ivec3 map_index = glm::ivec3(p.m_pos.xyz / sScene::Order().m_map_info_cpu.m_cell_size.xyz());
-				{
-					float particle_size = p.m_pos.w;
-					glm::vec3 cell_p = glm::mod(p.m_pos.xyz(), glm::vec3(sScene::Order().m_map_info_cpu.m_cell_size));
-					map_index.x = (cell_p.x <= particle_size) ? map_index.x - 1 : (cell_p.x >= (sScene::Order().m_map_info_cpu.m_cell_size.x - particle_size)) ? map_index.x + 1 : map_index.x;
-					map_index.z = (cell_p.z <= particle_size) ? map_index.z - 1 : (cell_p.z >= (sScene::Order().m_map_info_cpu.m_cell_size.z - particle_size)) ? map_index.z + 1 : map_index.z;
-					p.m_map_index = glm::ivec4(map_index, 0);
-				}
+				p.m_ll_next = -1;
+				p.m_astar_target = (p.m_pos + p.m_vel).xz;
+				p.m_inertia = glm::vec4(0.f, 0.f, 0.f, 1.f);
+				p.m_map_index = sScene::Order().calcMapIndex(p.m_pos);
 			}
 			m_soldier_emit_gpu.subupdate(data.data(), vector_sizeof(data), 0);
 
@@ -637,6 +629,9 @@ void sBoid::execute(std::shared_ptr<btr::Executer>& executer)
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, {}, {}, { to_draw }, {});
 	}
 
+	m_brain_gpu.swap();
+	m_soldier_gpu.swap();
+	m_soldier_LL_head_gpu.swap();
 }
 
 void sBoid::draw(vk::CommandBuffer cmd)
@@ -653,5 +648,6 @@ void sBoid::draw(vk::CommandBuffer cmd)
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW], 0, getDescriptorSet(DESCRIPTOR_SET_SOLDIER_UPDATE), {});
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW], 1, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_CAMERA), {});
 	cmd.drawIndirect(m_soldier_draw_indiret_gpu.getBufferInfo().buffer, m_soldier_draw_indiret_gpu.getBufferInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
+
 
 }

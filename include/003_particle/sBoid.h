@@ -62,14 +62,16 @@ class sBoid : public Singleton<sBoid>
 	{
 		glm::vec4 m_pos;	//!< xyz:pos w:scale
 		glm::vec4 m_vel;	//!< xyz:dir w:distance
-		glm::ivec4 m_map_index;
 		glm::vec4 m_inertia;
+
+		glm::ivec2 m_map_index;
+		glm::vec2 m_astar_target;
 
 		uint m_brain_index;
 		uint m_soldier_type;
 		uint m_ll_next;
 		float m_life;
-		glm::vec4 m_astar_target;
+
 	};
 public:
 	enum : uint32_t
@@ -142,4 +144,6 @@ public:
 	vk::PipelineLayout getPipelineLayout(PipelineLayout layout)const { return m_pipeline_layout[layout]; }
 	vk::DescriptorSetLayout getDescriptorSetLayout(DescriptorSetLayout desctiptor)const { return m_descriptor_set_layout[desctiptor]; }
 	vk::DescriptorSet getDescriptorSet(DescriptorSet i)const { return m_descriptor_set[i]; }
+	btr::AllocatedMemory& getSoldier() { m_soldier_gpu.m_buffer; }
+	btr::AllocatedMemory& getLL() { return m_soldier_LL_head_gpu.m_buffer; }
 };
