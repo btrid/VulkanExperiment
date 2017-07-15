@@ -109,7 +109,7 @@ void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 
 		{
 			auto* maze = &sScene::Order().m_maze;
-			std::vector<uint32_t> solver = maze->solveEx(100, 100);
+			std::vector<uint32_t> solver = maze->solveEx(4, 4);
 			vk::ImageCreateInfo image_info;
 			image_info.imageType = vk::ImageType::e2D;
 			image_info.format = vk::Format::eR32Uint;
@@ -582,7 +582,7 @@ void sBoid::execute(std::shared_ptr<btr::Executer>& executer)
 			std::array<SoldierData, 50> data;
 			for (auto& p : data)
 			{
-				p.m_pos = glm::vec4(56.f + std::rand() % 50 / 10.f, 0.f, 82.f + std::rand() % 50 / 10.f, 1.f);
+				p.m_pos = glm::vec4(232.f + std::rand() % 50 / 10.f, 0.f, 182.f + std::rand() % 50 / 10.f, 1.f);
 				p.m_vel = glm::vec4(glm::normalize(glm::vec3(std::rand() % 50 - 25, 0.f, std::rand() % 50 - 25 + 0.5f)), 109.5f);
 				p.m_life = std::rand()%30+10.f;
 				p.m_soldier_type = 0;

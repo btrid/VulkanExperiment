@@ -25,18 +25,13 @@ struct BulletData
 	glm::vec4 m_pos;	//!< xyz:pos w:scale
 	glm::vec4 m_vel;	//!< xyz:dir
 	glm::ivec2 m_map_index;
-	float _p1;
-	float _p2;
+	uint32_t m_ll_next;
+	float m_power;
 
 	uint32_t m_type;
 	uint32_t m_flag;
 	float m_life;
 	float m_atk;
-
-	float m_power;
-	float m_1;
-	float m_2;
-	uint32_t m_ll_next;
 
 };
 
@@ -44,7 +39,6 @@ struct BulletData
 class sBulletSystem : public Singleton<sBulletSystem>
 {
 	friend Singleton<sBulletSystem>;
-
 public:
 	enum : uint32_t {
 		PIPELINE_COMPUTE_UPDATE,
@@ -102,8 +96,8 @@ public:
 		{
 			vk::CommandBuffer cmd = executer->m_cmd;
 
-			uint src_offset = sGlobal::Order().getCPUIndex() == 0 ? (m_bullet.getBufferInfo().range / sizeof(BulletData) / 2) : 0;
-			uint dst_offset = sGlobal::Order().getCPUIndex() == 1 ? (m_bullet.getBufferInfo().range / sizeof(BulletData) / 2) : 0;
+			uint src_offset = sGlobal::Order().getCPUIndex() == 1 ? (m_bullet.getBufferInfo().range / sizeof(BulletData) / 2) : 0;
+			uint dst_offset = sGlobal::Order().getCPUIndex() == 0 ? (m_bullet.getBufferInfo().range / sizeof(BulletData) / 2) : 0;
 			auto& data = m_append_buffer[sGlobal::Order().getGPUIndex()];
 
 			{

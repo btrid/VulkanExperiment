@@ -271,3 +271,4 @@ void sBulletSystem::Private::setup(std::shared_ptr<btr::Loader>& loader)
 
 }
 
+//ZsBulletSystem sBulletSystem::instance;

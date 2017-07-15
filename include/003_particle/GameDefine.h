@@ -74,8 +74,8 @@ struct sScene : public Singleton<sScene>
 
 	void setup(std::shared_ptr<btr::Loader>& loader)
 	{
-		m_map_info_cpu.m_cell_size = glm::vec2(10.f, 10.f);
-		m_map_info_cpu.m_cell_num = glm::vec2(127, 127);
+		m_map_info_cpu.m_cell_size = glm::vec2(50.f, 50.f);
+		m_map_info_cpu.m_cell_num = glm::vec2(15, 15);
 
 		// setup shader
 		{
@@ -224,7 +224,7 @@ struct sScene : public Singleton<sScene>
 
 			desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging = loader->m_staging_memory.allocateMemory(desc);
-			*staging.getMappedPtr<MapInfo>() = sScene::Order().m_map_info_cpu;
+			*staging.getMappedPtr<MapInfo>() = m_map_info_cpu;
 
 			vk::BufferCopy vertex_copy;
 			vertex_copy.setSize(desc.size);
@@ -465,6 +465,7 @@ struct sScene : public Singleton<sScene>
 	{
 		glm::vec2 cell_p = glm::mod(glm::vec2(p.xz), m_map_info_cpu.m_cell_size);
 		glm::ivec2 map_index(glm::vec2(p.xz) / m_map_info_cpu.m_cell_size);
+		assert(glm::all(glm::greaterThanEqual(map_index, glm::ivec2(0))) && glm::all(glm::lessThan(map_index, m_map_info_cpu.m_cell_num)));
 		return map_index;
 
 	}

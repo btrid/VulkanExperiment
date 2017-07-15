@@ -29,12 +29,14 @@ class sBoid : public Singleton<sBoid>
 		}
 
 		vk::DescriptorBufferInfo getOrg()const { return m_buffer.getBufferInfo(); }
-		vk::DescriptorBufferInfo getSrc()const { return m_buffer_info[m_index.get()]; }
-		vk::DescriptorBufferInfo getDst()const { return m_buffer_info[m_index.getPrev()]; }
-		uint32_t getSrcOffset()const { return m_index.get() == 1 ? m_buffer_info[0].range : 0; }
-		uint32_t getDstOffset()const { return m_index.get() == 0 ? m_buffer_info[0].range : 0; }
-		uint32_t getSrcIndex()const { return m_index.get(); }
-		uint32_t getDstIndex()const { return m_index.getPrev(); }
+		vk::DescriptorBufferInfo getSrc()const { return m_buffer_info[getSrcIndex()]; }
+		vk::DescriptorBufferInfo getDst()const { return m_buffer_info[getDstIndex()]; }
+		uint32_t getSrcOffset()const { return getSrcIndex() == 1 ? m_buffer_info[0].range : 0; }
+		uint32_t getDstOffset()const { return getSrcIndex() == 0 ? m_buffer_info[0].range : 0; }
+// 		uint32_t getSrcIndex()const { return m_index.get(); }
+// 		uint32_t getDstIndex()const { return m_index.getPrev(); }
+		uint32_t getSrcIndex()const { return sGlobal::Order().getCPUIndex(); }
+		uint32_t getDstIndex()const { return sGlobal::Order().getGPUIndex(); }
 
 	};
 	struct BoidInfo

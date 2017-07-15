@@ -111,7 +111,7 @@ void sCollisionSystem::execute(std::shared_ptr<btr::Executer>& executer)
 			sBoid::Order().getLL().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
 			sBulletSystem::Order().getLL().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
 		};
-		executer->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
+		executer->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
 
 		// update
 		struct UpdateConstantBlock

@@ -118,8 +118,8 @@ int main()
 
 	app::App app;
 	auto* camera = cCamera::sCamera::Order().create();
-	camera->m_position = glm::vec3(50.f, 100.f, -50.f);
-	camera->m_target = glm::vec3(50.f, 20.f, 101.f);
+	camera->m_position = glm::vec3(220.f, 60.f, 300.f);
+	camera->m_target = glm::vec3(220.f, 20.f, 201.f);
 	camera->m_up = glm::vec3(0.f, -1.f, 0.f);
 	camera->m_width = 640;
 	camera->m_height = 480;
@@ -199,8 +199,8 @@ int main()
 	cModel model;
 
 	Player m_player;
-	m_player.m_pos.x = 43.f;
-	m_player.m_pos.z = 83.f;
+	m_player.m_pos.x = 223.f;
+	m_player.m_pos.z = 183.f;
 	{
 		vk::CommandBufferBeginInfo begin_info;
 		begin_info.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
@@ -293,12 +293,12 @@ int main()
 				vk::DependencyFlags(),
 				nullptr, nullptr, present_to_render_barrier);
 
-			sScene::Order().execute(executer);
-			sBoid::Order().execute(executer);
 			model_render.execute(executer);
 			model_pipeline.execute(render_cmd);
-			sBulletSystem::Order().execute(executer);
-			sCollisionSystem::Order().execute(executer);
+ 			sScene::Order().execute(executer);
+			sBoid::Order().execute(executer);
+ 			sBulletSystem::Order().execute(executer);
+ 			sCollisionSystem::Order().execute(executer);
 
 			// begin cmd render pass
 			std::vector<vk::ClearValue> clearValue = {
@@ -350,7 +350,7 @@ int main()
 				.setPSignalSemaphores(&cmdsubmit_semaphore)
 			};
 			queue.submit(submitInfo, fence_list[backbuffer_index]);
-
+			queue.waitIdle();
 			vk::PresentInfoKHR present_info = vk::PresentInfoKHR()
 				.setWaitSemaphoreCount(1)
 				.setPWaitSemaphores(&cmdsubmit_semaphore)
