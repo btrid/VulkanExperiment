@@ -12,7 +12,7 @@ class sBoid : public Singleton<sBoid>
 	struct DoubleBuffer
 	{
 		btr::AllocatedMemory m_buffer;
-		CircleIndex<uint32_t, 2> m_index;
+//		CircleIndex<uint32_t, 2> m_index;
 
 		std::array<vk::DescriptorBufferInfo, 2> m_buffer_info;
 		void setup(const btr::AllocatedMemory& buffer)
@@ -25,7 +25,7 @@ class sBoid : public Singleton<sBoid>
 		}
 		void swap()
 		{
-			m_index.increment();
+//			m_index.increment();
 		}
 
 		vk::DescriptorBufferInfo getOrg()const { return m_buffer.getBufferInfo(); }
@@ -69,9 +69,9 @@ class sBoid : public Singleton<sBoid>
 		glm::ivec2 m_map_index;
 		glm::vec2 m_astar_target;
 
+		uint m_ll_next;
 		uint m_brain_index;
 		uint m_soldier_type;
-		uint m_ll_next;
 		float m_life;
 
 	};

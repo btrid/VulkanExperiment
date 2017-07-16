@@ -80,4 +80,9 @@ void march(inout vec2 pos, inout ivec2 map_index, in vec2 _dir)
 
 }
 
+uint calcMapIndex1D(in uvec2 map_index, in uint db_index)
+{
+	uint offset = db_index* (u_map_info.m_cell_num.x*u_map_info.m_cell_num.y);
+	return offset + convert2DTo1D(map_index, u_map_info.m_cell_num.xy);
+}
 #endif

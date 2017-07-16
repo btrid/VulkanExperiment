@@ -35,5 +35,6 @@ void main()
 	}
 
 	uint dst_index = atomicAdd(b_draw_cmd[0].vertexCount, 1);
+	while(dst_index >= 4096){ ;}
 	b_soldier[constant.m_offset + dst_index] = b_emit[index];
 }

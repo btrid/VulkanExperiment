@@ -4,6 +4,8 @@ struct BoidInfo
 {
 	uint m_brain_max;
 	uint m_soldier_max;
+	uint m_soldier_info_max;
+	uint _p3;
 
 };
 struct BrainData
@@ -31,9 +33,9 @@ struct SoldierData
 	ivec2 m_map_index;
 	vec2 m_astar_target;
 
+	uint m_ll_next;
 	uint m_brain_index;
 	uint m_soldier_type;
-	uint m_ll_next;
 	float m_life;
 
 };

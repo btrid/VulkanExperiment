@@ -44,8 +44,7 @@ void main()
 	float particle_size = 0.;
 	float NEAR_DIST = 0.4;
 
-	uint old_map_index = (1-constant.m_double_buffer_dst_index)*map_info.m_cell_num.x*map_info.m_cell_num.y + convert2DTo1D(uvec2(soldier.m_map_index), map_info.m_cell_num.xy);
-
+	uint old_map_index = calcMapIndex1D(soldier.m_map_index, 1-constant.m_double_buffer_dst_index);
 	SoldierInfo info = u_soldier_info[soldier.m_soldier_type];
 
 	{
@@ -144,26 +143,35 @@ void main()
 			// 一番近い相手から離れる
 			vec3 target = nearest.m_pos.xyz;
 			vec3 target_dir = nearest.m_vel.xyz;
-			vec3 rotate_axis = normalize(cross(target_dir, soldier.m_vel.xyz));
-			float angle = info.m_turn_speed * constant.m_deltatime;// * turn_power;
-			quat rot = angleAxis(angle, rotate_axis);
-			next_dir = normalize(rotateQuatVec3(rot, soldier.m_vel.xyz));
+			vec3 rotate_axis = cross(target_dir, soldier.m_vel.xyz);
+			if(dot(rotate_axis, rotate_axis) >= 0.0001)
+			{
+				rotate_axis = normalize(rotate_axis);
+				float angle = info.m_turn_speed * constant.m_deltatime;// * turn_power;
+				quat rot = angleAxis(angle, rotate_axis);
+				next_dir = normalize(rotateQuatVec3(rot, soldier.m_vel.xyz));
 
-			// 減速したり加速したり
-			bool is_front = dot(next_dir, target_dir) >= 0.;
-			vel = clamp(vel + (is_front ? -1. : -0.3) * info.m_move_speed*constant.m_deltatime, info.m_move_speed*0.4, info.m_move_speed*1.2);
+				// 減速したり加速したり
+				bool is_front = dot(next_dir, target_dir) >= 0.;
+				vel = clamp(vel + (is_front ? -1. : -0.3) * info.m_move_speed*constant.m_deltatime, info.m_move_speed*0.4, info.m_move_speed*1.2);
+			}
 		}
 		else if(dot(astar_dir, soldier.m_vel.xyz) <= 0.93)
 		{
 			// 目的地に向かって方向転換
-			vec3 rotate_axis = normalize(cross(soldier.m_vel.xyz, astar_dir));
-			float astar_angle = calcAngle(astar_dir, soldier.m_vel.xyz);
-			astar_angle = min(astar_angle, info.m_turn_speed); 
-			vec4 rot = angleAxis(astar_angle * constant.m_deltatime, rotate_axis);
-			next_dir = normalize(rotateQuatVec3(rot, soldier.m_vel.xyz));
+			vec3 rotate_axis = cross(soldier.m_vel.xyz, astar_dir);
+			if(dot(rotate_axis, rotate_axis) >= 0.0001)
+			{
+				rotate_axis = normalize(rotate_axis);
+				float astar_angle = calcAngle(astar_dir, soldier.m_vel.xyz);
+				astar_angle = min(astar_angle, info.m_turn_speed); 
+				vec4 rot = angleAxis(astar_angle * constant.m_deltatime, rotate_axis);
+				next_dir = normalize(rotateQuatVec3(rot, soldier.m_vel.xyz));
 
-			// 方向転換の時は減速する
-			vel = clamp(vel* pow(0.99, 1.+constant.m_deltatime), info.m_move_speed * 0.3, info.m_move_speed*0.7);
+				// 方向転換の時は減速する
+				vel = clamp(vel* pow(0.99, 1.+constant.m_deltatime), info.m_move_speed * 0.3, info.m_move_speed*0.7);
+
+			}
 		}
 		else
 		{
@@ -179,7 +187,8 @@ void main()
 
 	uint dst_index = atomicAdd(b_draw_cmd[0].vertexCount, 1);
 
-	uint old = atomicExchange(b_soldier_head[constant.m_double_buffer_dst_index*map_info.m_cell_num.x*map_info.m_cell_num.y + convert2DTo1D(soldier.m_map_index, map_info.m_cell_num.xy)], dst_index);
+	uint map_index_1D = calcMapIndex1D(soldier.m_map_index, constant.m_double_buffer_dst_index);
+	uint old = atomicExchange(b_soldier_head[map_index_1D], dst_index);
 	soldier.m_ll_next = old;
 
 	b_soldier[constant.m_dst_offset + dst_index] = soldier;

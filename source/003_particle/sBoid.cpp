@@ -574,17 +574,17 @@ void sBoid::execute(std::shared_ptr<btr::Executer>& executer)
 			std::vector<vk::BufferMemoryBarrier> to_emit_barrier =
 			{
 				soldier_barrier,
-				m_soldier_draw_indiret_gpu.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
+				m_soldier_draw_indiret_gpu.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_emit_barrier, {});
 
 			// emit
-			std::array<SoldierData, 50> data;
+			std::array<SoldierData, 30> data;
 			for (auto& p : data)
 			{
 				p.m_pos = glm::vec4(232.f + std::rand() % 50 / 10.f, 0.f, 182.f + std::rand() % 50 / 10.f, 1.f);
 				p.m_vel = glm::vec4(glm::normalize(glm::vec3(std::rand() % 50 - 25, 0.f, std::rand() % 50 - 25 + 0.5f)), 109.5f);
-				p.m_life = std::rand()%30+10.f;
+				p.m_life = std::rand() % 30 + 10.f;
 				p.m_soldier_type = 0;
 				p.m_brain_index = 0;
 				p.m_ll_next = -1;
@@ -623,10 +623,11 @@ void sBoid::execute(std::shared_ptr<btr::Executer>& executer)
 		soldier_draw_barrier.offset = m_soldier_gpu.getOrg().offset;
 		soldier_draw_barrier.srcAccessMask = vk::AccessFlagBits::eShaderWrite| vk::AccessFlagBits::eShaderRead;
 		soldier_draw_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eVertexShader, {}, {}, soldier_draw_barrier, {});
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, soldier_draw_barrier, {});
 
-		auto to_draw = m_soldier_draw_indiret_gpu.makeMemoryBarrier(vk::AccessFlagBits::eIndirectCommandRead);
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, {}, {}, { to_draw }, {});
+		auto to_draw = m_soldier_draw_indiret_gpu.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_draw }, {});
+
 	}
 
 	m_brain_gpu.swap();
