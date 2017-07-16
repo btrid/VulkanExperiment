@@ -222,11 +222,7 @@ App::App()
 
 glm::uvec3 calcDipatchGroups(const glm::uvec3& num, const glm::uvec3& local_size)
 {
-	glm::uvec3 ret;
-	for (int i = 0; i < 3; i++)
-	{
-		ret[i] = num[i] + (local_size[i] - 1) / local_size[i];
-	}
+	glm::uvec3 ret = (num + local_size - glm::uvec3(1)) / local_size;
 	return ret;
 }
 

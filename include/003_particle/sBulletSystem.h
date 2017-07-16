@@ -24,6 +24,7 @@ struct BulletData
 {
 	glm::vec4 m_pos;	//!< xyz:pos w:scale
 	glm::vec4 m_vel;	//!< xyz:dir
+
 	glm::ivec2 m_map_index;
 	uint32_t m_ll_next;
 	float m_power;
@@ -193,7 +194,7 @@ public:
 
 		void draw(vk::CommandBuffer cmd)
 		{
-			uint dst_offset = sGlobal::Order().getCPUIndex() == 0 ? (m_bullet.getBufferInfo().range / sizeof(BulletData) / 2) : 0;
+			uint dst_offset = sGlobal::Order().getGPUIndex() == 1 ? (m_bullet.getBufferInfo().range / sizeof(BulletData) / 2) : 0;
 			cmd.pushConstants<uint>(m_pipeline_layout[PIPELINE_LAYOUT_BULLET_DRAW], vk::ShaderStageFlagBits::eVertex, 0, dst_offset);
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_BULLET_DRAW], 0, m_descriptor_set[DESCRIPTOR_SET_UPDATE], {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_BULLET_DRAW], 1, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_CAMERA), {});
@@ -235,6 +236,7 @@ public:
 	vk::DescriptorSetLayout& getDescriptorSetLayout(DescriptorSetLayout desctiptor)const { return m_private->m_descriptor_set_layout[desctiptor]; }
 	vk::DescriptorSet& getDescriptorSet(DescriptorSet i)const { return m_private->m_descriptor_set[i]; }
 	btr::AllocatedMemory& getLL() { return m_private->m_bullet_LL_head_gpu; }
+	btr::AllocatedMemory& getBullet() { return m_private->m_bullet; }
 
 };
 

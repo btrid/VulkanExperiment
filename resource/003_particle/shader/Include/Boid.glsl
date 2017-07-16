@@ -60,5 +60,8 @@ layout(std430, set=SETPOINT_BOID, binding=4) restrict buffer CounterBuffer {
 layout(std430, set=SETPOINT_BOID, binding=5) restrict coherent buffer SoldierLLHeadBuffer {
 	uint b_soldier_head[];
 };
-layout(set=SETPOINT_BOID, binding=6, r32ui) uniform readonly uimage2DArray t_astar;
+layout(std430, set=SETPOINT_BOID, binding=6) readonly restrict buffer SoldierEmitDataBuffer {
+	SoldierData b_soldier_emit[];
+};
+layout(set=SETPOINT_BOID, binding=7, r32ui) uniform readonly uimage2DArray t_astar;
 #endif

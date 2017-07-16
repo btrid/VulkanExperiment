@@ -110,8 +110,10 @@ void sCollisionSystem::execute(std::shared_ptr<btr::Executer>& executer)
 		std::vector<vk::BufferMemoryBarrier> to_read = {
 			sBoid::Order().getLL().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
 			sBulletSystem::Order().getLL().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
+			sBoid::Order().getSoldier().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead| vk::AccessFlagBits::eShaderWrite),
+			sBulletSystem::Order().getBullet().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 		};
-		executer->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
+		executer->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
 
 		// update
 		struct UpdateConstantBlock
@@ -128,9 +130,14 @@ void sCollisionSystem::execute(std::shared_ptr<btr::Executer>& executer)
 		executer->m_cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_COLLISION], 2, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_MAP), {});
 
 		executer->m_cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COLLISION_TEST]);
-		auto groups = app::calcDipatchGroups(glm::uvec3(8192/2, 1, 1), glm::uvec3(32, 32, 1));
 		executer->m_cmd.dispatch(1, 1, 1);
 
+
+		std::vector<vk::BufferMemoryBarrier> to = {
+			sBoid::Order().getSoldier().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
+			sBulletSystem::Order().getBullet().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
+		};
+		executer->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to, {});
 	}
 
 }

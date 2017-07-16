@@ -263,18 +263,15 @@ void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 				vk::DescriptorSetLayoutBinding()
 				.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex)
 				.setDescriptorCount(1)
-				.setDescriptorType(vk::DescriptorType::eStorageImage)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 				.setBinding(6),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex)
+				.setDescriptorCount(1)
+				.setDescriptorType(vk::DescriptorType::eStorageImage)
+				.setBinding(7),
 			};
 
-			bindings[DESCRIPTOR_SET_LAYOUT_SOLDIER_EMIT] =
-			{
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-				.setDescriptorCount(1)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setBinding(0),
-			};
 			for (size_t i = 0; i < bindings.size(); i++)
 			{
 				vk::DescriptorSetLayoutCreateInfo descriptor_set_layout_info = vk::DescriptorSetLayoutCreateInfo()
@@ -311,7 +308,6 @@ void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 			{
 				std::vector<vk::DescriptorSetLayout> layouts = {
 					m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_SOLDIER_UPDATE],
-					m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_SOLDIER_EMIT],
 				};
 				std::vector<vk::PushConstantRange> push_constants = {
 					vk::PushConstantRange()
@@ -356,6 +352,7 @@ void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 				m_soldier_gpu.getOrg(),
 				m_soldier_draw_indiret_gpu.getBufferInfo(),
 				m_soldier_LL_head_gpu.getOrg(),
+				m_soldier_emit_gpu.getBufferInfo(),
 			};
 			std::vector<vk::DescriptorImageInfo> images = {
 				vk::DescriptorImageInfo()
@@ -380,28 +377,11 @@ void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 				.setDescriptorType(vk::DescriptorType::eStorageImage)
 				.setDescriptorCount(images.size())
 				.setPImageInfo(images.data())
-				.setDstBinding(6)
+				.setDstBinding(7)
 				.setDstSet(getDescriptorSet(DESCRIPTOR_SET_SOLDIER_UPDATE)),
 			};
 			loader->m_device->updateDescriptorSets(write_desc, {});
 		}
-
-		{
-			std::vector<vk::DescriptorBufferInfo> storages = {
-				m_soldier_emit_gpu.getBufferInfo(),
-			};
-			std::vector<vk::WriteDescriptorSet> write_desc =
-			{
-				vk::WriteDescriptorSet()
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(storages.size())
-				.setPBufferInfo(storages.data())
-				.setDstBinding(0)
-				.setDstSet(getDescriptorSet(DESCRIPTOR_SET_SOLDIER_EMIT)),
-			};
-			loader->m_device->updateDescriptorSets(write_desc, {});
-		}
-
 	}
 
 	// Create pipeline
@@ -579,11 +559,11 @@ void sBoid::execute(std::shared_ptr<btr::Executer>& executer)
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_emit_barrier, {});
 
 			// emit
-			std::array<SoldierData, 30> data;
+			std::array<SoldierData, 70> data;
 			for (auto& p : data)
 			{
-				p.m_pos = glm::vec4(232.f + std::rand() % 50 / 10.f, 0.f, 182.f + std::rand() % 50 / 10.f, 1.f);
-				p.m_vel = glm::vec4(glm::normalize(glm::vec3(std::rand() % 50 - 25, 0.f, std::rand() % 50 - 25 + 0.5f)), 109.5f);
+				p.m_pos = glm::vec4(212.f + std::rand() % 80 / 3.f, 0.f, 162.f + std::rand() % 80 / 3.f, 1.f);
+				p.m_vel = glm::vec4(glm::normalize(glm::vec3(std::rand() % 50 - 25, 0.f, std::rand() % 50 - 25 + 0.5f)), 10.5f);
 				p.m_life = std::rand() % 30 + 10.f;
 				p.m_soldier_type = 0;
 				p.m_brain_index = 0;
@@ -611,7 +591,6 @@ void sBoid::execute(std::shared_ptr<btr::Executer>& executer)
 			block.m_offset = m_soldier_gpu.getDstOffset() / sizeof(SoldierData);
 			cmd.pushConstants<EmitConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_EMIT], vk::ShaderStageFlagBits::eCompute, 0, block);
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_EMIT], 0, getDescriptorSet(DESCRIPTOR_SET_SOLDIER_UPDATE), {});
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_EMIT], 1, getDescriptorSet(DESCRIPTOR_SET_SOLDIER_EMIT), {});
 			auto groups = app::calcDipatchGroups(glm::uvec3(block.m_emit_num, 1, 1), glm::uvec3(1024, 1, 1));
 			cmd.dispatch(groups.x, groups.y, groups.z);
 
@@ -622,7 +601,7 @@ void sBoid::execute(std::shared_ptr<btr::Executer>& executer)
 		soldier_draw_barrier.size = m_soldier_gpu.getOrg().range;
 		soldier_draw_barrier.offset = m_soldier_gpu.getOrg().offset;
 		soldier_draw_barrier.srcAccessMask = vk::AccessFlagBits::eShaderWrite| vk::AccessFlagBits::eShaderRead;
-		soldier_draw_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+		soldier_draw_barrier.dstAccessMask = vk::AccessFlagBits::eShaderWrite | vk::AccessFlagBits::eShaderRead;
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, soldier_draw_barrier, {});
 
 		auto to_draw = m_soldier_draw_indiret_gpu.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);

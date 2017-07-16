@@ -102,13 +102,11 @@ public:
 	enum DescriptorSetLayout : uint32_t
 	{
 		DESCRIPTOR_SET_LAYOUT_SOLDIER_UPDATE,
-		DESCRIPTOR_SET_LAYOUT_SOLDIER_EMIT,
 		DESCRIPTOR_SET_LAYOUT_NUM,
 	};
 	enum DescriptorSet : uint32_t
 	{
 		DESCRIPTOR_SET_SOLDIER_UPDATE,
-		DESCRIPTOR_SET_SOLDIER_EMIT,
 		DESCRIPTOR_SET_NUM,
 	};
 private:
@@ -146,6 +144,6 @@ public:
 	vk::PipelineLayout getPipelineLayout(PipelineLayout layout)const { return m_pipeline_layout[layout]; }
 	vk::DescriptorSetLayout getDescriptorSetLayout(DescriptorSetLayout desctiptor)const { return m_descriptor_set_layout[desctiptor]; }
 	vk::DescriptorSet getDescriptorSet(DescriptorSet i)const { return m_descriptor_set[i]; }
-	btr::AllocatedMemory& getSoldier() { m_soldier_gpu.m_buffer; }
+	btr::AllocatedMemory& getSoldier() { return m_soldier_gpu.m_buffer; }
 	btr::AllocatedMemory& getLL() { return m_soldier_LL_head_gpu.m_buffer; }
 };

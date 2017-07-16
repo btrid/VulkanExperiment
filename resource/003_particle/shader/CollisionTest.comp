@@ -1,7 +1,7 @@
 #version 450
 
 //#pragma optionNV (unroll none)
-#pragma optionNV (inline all)
+//#pragma optionNV (inline all)
 //#pragma optionNV(fastmath on)
 //#pragma optionNV(strict on)
 
@@ -44,18 +44,17 @@ void main()
 	{
 		SoldierData soldier = b_soldier[enemy_offset + i];
 		i = soldier.m_ll_next;
-		vec4 enemy_pos = soldier.m_pos;
 		vec4 inertia = vec4(0.);
 		for(uint bullet_index = b_bullet_head[map_id]; bullet_index != 0xFFFFFFFF;)
 		{
 			BulletData bullet = b_bullet[bullet_offset + bullet_index];
 			bullet_index = bullet.m_ll_next;
-			if(distance(bullet.m_pos.xyz, soldier.m_pos.xyz) < 5.5)
+			if(distance(bullet.m_pos.xyz, soldier.m_pos.xyz) < bullet.m_pos.w+soldier.m_pos.w)
 			{
-				inertia.xyz += normalize((bullet.m_vel).xyz) * 10.1;
+				inertia.xyz += normalize((bullet.m_vel).xyz) * 3.1;
 			}
 		}
-		b_soldier[enemy_offset + i].m_inertia = inertia;
+		b_soldier[enemy_offset + i].m_inertia += inertia;
 
 	}
 
