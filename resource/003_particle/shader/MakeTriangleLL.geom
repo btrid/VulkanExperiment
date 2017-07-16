@@ -22,26 +22,26 @@ layout(triangles) in;
 layout(triangle_strip, max_vertices = 4) out;
 
 
-in gl_PerVertex
+layout(location=0) in gl_PerVertex
 {
 	vec4 gl_Position;
 } gl_in[];
 
-out gl_PerVertex
+layout(location=0) out gl_PerVertex
 {
 	vec4 gl_Position;
 	float gl_PointSize;
 	float gl_ClipDistance[];
 };
 
-in InVertex{
+layout(location=1) in InVertex{
 	vec3 Position;
 	flat int DrawID;
 	flat int InstanceID;
 	flat int VertexID;
 }In[];
 
-out Transform{
+layout(location=1) out Transform{
 	vec3 Position;
 	flat int DrawID;
 	flat int InstanceID;

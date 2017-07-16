@@ -31,7 +31,7 @@ layout(std430, set=0, binding=4) restrict buffer TriangleCountBuffer {
 };
 
 
-in Transform{
+layout(location=1) in Transform{
 	vec3 Position;
 	flat int DrawID;
 	flat int InstanceID;

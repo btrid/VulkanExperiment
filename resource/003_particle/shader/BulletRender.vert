@@ -19,11 +19,11 @@
 
 #define SETPOINT_BULLET 0
 #include <Bullet.glsl>
-out gl_PerVertex{
+layout(location=0) out gl_PerVertex{
 	vec4 gl_Position;
 	float gl_PointSize;
 };
-out VSOUT{
+layout(location=1) out VSOUT{
 	float life;
 }VSOut;
 

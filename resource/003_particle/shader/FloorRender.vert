@@ -16,17 +16,14 @@
 #include <Common.glsl>
 layout(location = 0)in vec3 inPosition;
 
-out gl_PerVertex{
+layout(location=0) out gl_PerVertex{
 	vec4 gl_Position;
 };
 
-out VertexOut
-{
-	vec3 Vertex;
-}Out;
+layout(location=1) out vec3 Vertex;
 void main()
 {
 	vec4 pos = vec4(inPosition.xyz, 1.0);
 	gl_Position = uProjection * uView * pos;
-	Out.Vertex = inPosition.xyz;
+	Vertex = inPosition.xyz;
 }

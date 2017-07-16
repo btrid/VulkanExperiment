@@ -6,12 +6,12 @@
 
 layout(location = 0)in vec3 inPosition;
 
-out gl_PerVertex
+layout(location=0) out gl_PerVertex
 {
 	vec4 gl_Position;
 };
 
-out Vertex{
+layout(location=1) out Vertex{
 	vec3 Position;
 	flat int DrawID;
 	flat int InstanceID;

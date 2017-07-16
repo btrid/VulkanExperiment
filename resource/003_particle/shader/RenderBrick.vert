@@ -17,12 +17,12 @@
 
 layout(location = 0)in vec3 inPosition;
 
-out gl_PerVertex
+layout(location=0) out gl_PerVertex
 {
 	vec4 gl_Position;
 };
 
-out OutVertex{
+layout(location=1) out OutVertex{
 	flat int Visible;
 }Out;
 

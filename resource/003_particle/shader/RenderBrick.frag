@@ -13,7 +13,7 @@
 #include </Shape.glsl>
 #include </TriangleLL.glsl>
 
-in Transform{
+layout(location=1) in Transform{
 	flat int Visible;
 }FSIn;
 

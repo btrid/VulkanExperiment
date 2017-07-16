@@ -10,7 +10,7 @@ layout(early_fragment_tests) in;
 
 layout(location=0) out vec4 FragColor;
 
-in FSIN{
+layout(location=1) in FSIN{
 	float life;
 }FSIn;
 
