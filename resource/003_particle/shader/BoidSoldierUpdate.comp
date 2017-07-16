@@ -50,7 +50,7 @@ void main()
 	{
 	
 		march(soldier.m_pos.xz, soldier.m_map_index, soldier.m_inertia.xz * constant.m_deltatime);	
-//		soldier.m_inertia *= pow(0.92, 1. + constant.m_deltatime);
+		soldier.m_inertia *= pow(0.92, 1. + constant.m_deltatime);
 	}
 
 
@@ -138,7 +138,7 @@ void main()
 
 		group_vel /= count;
 
-/*		if(count > 1 && nearest_dist < NEAR_DIST)
+		if(count > 1 && nearest_dist < NEAR_DIST)
 		{
 			// 一番近い相手から離れる
 			vec3 target = nearest.m_pos.xyz;
@@ -177,13 +177,13 @@ void main()
 		{
 			vel = clamp(mix(vel, group_vel, 0.2), info.m_move_speed * 0.1, info.m_move_speed*0.7);
 		}
-*/
+
 	}	
 
 	soldier.m_vel.xyz = next_dir;
 	soldier.m_vel.w = vel;
 
-//	march(soldier.m_pos.xz, soldier.m_map_index, soldier.m_vel.xz*soldier.m_vel.w*constant.m_deltatime);
+	march(soldier.m_pos.xz, soldier.m_map_index, soldier.m_vel.xz*soldier.m_vel.w*constant.m_deltatime);
 
 	uint dst_index = atomicAdd(b_draw_cmd[0].vertexCount, 1);
 
