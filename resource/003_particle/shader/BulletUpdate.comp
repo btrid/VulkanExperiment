@@ -44,7 +44,7 @@ void main()
 
 	march(b.m_pos.xz, b.m_map_index, b.m_vel.xz*constant.m_deltatime);
 
-	uint dst_index = atomicAdd(b_bullet_draw_cmd.vertexCount, 1);
+	uint dst_index = atomicAdd(b_bullet_draw_cmd.instanceCount, 1);
 
 	uint old = atomicExchange(b_bullet_head[convert2DTo1D(b.m_map_index, map_info.m_cell_num.xy)], dst_index);
 	b.m_ll_next = old;

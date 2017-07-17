@@ -15,7 +15,6 @@
 #include </Bullet.glsl>
 
 
-
 layout(push_constant) uniform UpdateConstantBlock
 {
 	float m_deltatime;

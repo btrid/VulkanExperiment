@@ -21,7 +21,6 @@
 #include <Bullet.glsl>
 layout(location=0) out gl_PerVertex{
 	vec4 gl_Position;
-	float gl_PointSize;
 };
 layout(location=1) out VSOUT{
 	float life;
@@ -35,9 +34,9 @@ layout(push_constant) uniform UpdateConstantBlock
 
 void main()
 {
-	BulletData p = b_bullet[gl_VertexIndex + constant.m_offset];
-	vec4 pos = vec4(p.m_pos.xyz + vec3(0., 0.1, 0.), 1.0);
+	BulletData p = b_bullet[gl_InstanceIndex + constant.m_offset];
+	vec3 vertex = vec3(gl_VertexIndex/2 - 0.5, gl_VertexIndex%2 - 0.5, 0.) * p.m_pos.w;
+	vec4 pos = vec4(p.m_pos.xyz + vertex + vec3(0., 5., 0.), 1.0);
 	gl_Position = uProjection * uView * pos;
-	gl_PointSize = p.m_pos.w / gl_Position.w;
 	VSOut.life = 0.2;
 }

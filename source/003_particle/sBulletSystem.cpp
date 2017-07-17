@@ -20,7 +20,7 @@ void sBulletSystem::Private::setup(std::shared_ptr<btr::Loader>& loader)
 		btr::BufferMemory::Descriptor desc;
 		desc.size = sizeof(vk::DrawIndirectCommand);
 		m_bullet_counter = loader->m_storage_memory.allocateMemory(desc);
-		loader->m_cmd.updateBuffer<vk::DrawIndirectCommand>(m_bullet_counter.getBufferInfo().buffer, m_bullet_counter.getBufferInfo().offset, vk::DrawIndirectCommand(0, 1, 0, 0));
+		loader->m_cmd.updateBuffer<vk::DrawIndirectCommand>(m_bullet_counter.getBufferInfo().buffer, m_bullet_counter.getBufferInfo().offset, vk::DrawIndirectCommand(4, 0, 0, 0));
 		auto count_barrier = m_bullet_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
 		loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { count_barrier }, {});
 
@@ -201,10 +201,7 @@ void sBulletSystem::Private::setup(std::shared_ptr<btr::Loader>& loader)
 			{
 				vk::PipelineInputAssemblyStateCreateInfo()
 				.setPrimitiveRestartEnable(VK_FALSE)
-				.setTopology(vk::PrimitiveTopology::ePointList),
-				vk::PipelineInputAssemblyStateCreateInfo()
-				.setPrimitiveRestartEnable(VK_FALSE)
-				.setTopology(vk::PrimitiveTopology::eTriangleList),
+				.setTopology(vk::PrimitiveTopology::eTriangleStrip),
 			};
 
 			// viewport
@@ -270,5 +267,3 @@ void sBulletSystem::Private::setup(std::shared_ptr<btr::Loader>& loader)
 	}
 
 }
-
-//ZsBulletSystem sBulletSystem::instance;
