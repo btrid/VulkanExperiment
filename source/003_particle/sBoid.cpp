@@ -1,6 +1,6 @@
 #include <003_particle/sBoid.h>
 #include <003_particle/ParticlePipeline.h>
-#include <003_particle/GameDefine.h>
+#include <003_particle/sScene.h>
 
 void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 {

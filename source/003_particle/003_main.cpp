@@ -29,7 +29,7 @@
 #include <003_particle/sBulletSystem.h>
 #include <003_particle/sBoid.h>
 #include <003_particle/sCollisionSystem.h>
-#include <003_particle/GameDefine.h>
+#include <003_particle/sScene.h>
 
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")

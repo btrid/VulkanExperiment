@@ -1,5 +1,5 @@
 #include <003_particle/sCollisionSystem.h>
-#include <003_particle/GameDefine.h>
+#include <003_particle/sScene.h>
 #include <003_particle/sBoid.h>
 #include <003_particle/sBulletSystem.h>
 

@@ -91,7 +91,7 @@
     <ClInclude Include="..\..\include\003_particle\CircleIndex.h" />
     <ClInclude Include="..\..\include\003_particle\sCollisionSystem.h" />
     <ClInclude Include="..\..\include\003_particle\cTriangleLL.h" />
-    <ClInclude Include="..\..\include\003_particle\GameDefine.h" />
+    <ClInclude Include="..\..\include\003_particle\sScene.h" />
     <ClInclude Include="..\..\include\003_particle\Geometry.h" />
     <ClInclude Include="..\..\include\003_particle\KDTreeTriangle.h" />
     <ClInclude Include="..\..\include\003_particle\MazeGenerator.h" />

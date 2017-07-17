@@ -4,17 +4,21 @@
 #include <memory>
 #include <btrlib/BufferMemory.h>
 #include <btrlib/cCamera.h>
+#include <btrlib/Loader.h>
 
 #include <applib/App.h>
-#include <btrlib/Loader.h>
-#include <003_particle/GameDefine.h>
+#include <003_particle/sScene.h>
 #include <003_particle/MazeGenerator.h>
 #include <003_particle/Geometry.h>
 #include <003_particle/CircleIndex.h>
 #include <003_particle/cTriangleLL.h>
 #include <003_particle/sBoid.h>
-#include <003_particle/GameDefine.h>
 
+struct ParticleInfo
+{
+	uint32_t m_max_num;
+	uint32_t m_emit_max_num;
+};
 struct ParticleData
 {
 	glm::vec4 m_pos;	//!< xyz:pos w:scale

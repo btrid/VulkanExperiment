@@ -6,13 +6,13 @@
 #include <btrlib/Singleton.h>
 #include <btrlib/BufferMemory.h>
 #include <btrlib/cCamera.h>
+#include <btrlib/Loader.h>
 
 #include <applib/App.h>
-#include <btrlib/Loader.h>
-#include <003_particle/GameDefine.h>
 #include <003_particle/MazeGenerator.h>
 #include <003_particle/Geometry.h>
 #include <003_particle/CircleIndex.h>
+#include <003_particle/sScene.h>
 
 
 struct BulletInfo

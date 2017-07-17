@@ -36,7 +36,7 @@ void main()
 {
 	BulletData p = b_bullet[gl_InstanceIndex + constant.m_offset];
 	vec3 vertex = vec3(gl_VertexIndex/2 - 0.5, gl_VertexIndex%2 - 0.5, 0.) * p.m_pos.w;
-	vec4 pos = vec4(p.m_pos.xyz + vertex + vec3(0., 5., 0.), 1.0);
+	vec4 pos = vec4(p.m_pos.xyz + vertex, 1.0);
 	gl_Position = uProjection * uView * pos;
 	VSOut.life = 0.2;
 }

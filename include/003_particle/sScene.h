@@ -10,11 +10,6 @@
 #include <003_particle/MazeGenerator.h>
 #include <003_particle/Geometry.h>
 
-struct ParticleInfo
-{
-	uint32_t m_max_num;
-	uint32_t m_emit_max_num;
-};
 struct MapInfo
 {
 	glm::vec2 m_cell_size;
