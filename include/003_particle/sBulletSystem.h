@@ -155,7 +155,6 @@ public:
 
 
 					// emit
-
 					auto to_transfer = m_emit.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite);
 					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
 

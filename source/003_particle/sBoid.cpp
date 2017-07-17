@@ -5,9 +5,6 @@
 void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 {
 	{
-		m_boid_info.m_brain_max = 256;
-		m_boid_info.m_soldier_max = 8192;
-		m_boid_info.m_soldier_info_max = 16;
 		// memory alloc
 		{
 			btr::BufferMemory::Descriptor desc;
@@ -78,11 +75,9 @@ void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 			loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_compute, {});
 		}
 		{
-			btr::UpdateBufferDescriptor emit_desc;
-			emit_desc.device_memory = loader->m_storage_memory;
-			emit_desc.staging_memory = loader->m_staging_memory;
-			emit_desc.frame_max = sGlobal::FRAME_MAX;
-			m_soldier_emit_gpu.setup(emit_desc);
+			btr::BufferMemory::Descriptor desc;
+			desc.size = sizeof(SoldierData)*m_boid_info.m_soldier_emit_max;
+			m_soldier_emit_gpu = loader->m_storage_memory.allocateMemory(desc);
 		}
 		{
 			btr::BufferMemory::Descriptor desc;
@@ -544,19 +539,8 @@ void sBoid::execute(std::shared_ptr<btr::Executer>& executer)
 		count %= 400;
 		if (count == 1)
 		{
-			auto soldier_barrier = vk::BufferMemoryBarrier();
- 			soldier_barrier.buffer = m_soldier_gpu.getDst().buffer;
- 			soldier_barrier.size = m_soldier_gpu.getDst().range;
- 			soldier_barrier.offset = m_soldier_gpu.getDst().offset;
-			soldier_barrier.srcAccessMask = vk::AccessFlagBits::eShaderWrite;
-			soldier_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead| vk::AccessFlagBits::eShaderWrite;
-
-			std::vector<vk::BufferMemoryBarrier> to_emit_barrier =
-			{
-				soldier_barrier,
-				m_soldier_draw_indiret_gpu.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
-			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_emit_barrier, {});
+			auto to_transfer = m_soldier_emit_gpu.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
 
 			// emit
 			std::array<SoldierData, 70> data;
@@ -572,13 +556,23 @@ void sBoid::execute(std::shared_ptr<btr::Executer>& executer)
 				p.m_inertia = glm::vec4(0.f, 0.f, 0.f, 1.f);
 				p.m_map_index = sScene::Order().calcMapIndex(p.m_pos);
 			}
-			m_soldier_emit_gpu.subupdate(data.data(), vector_sizeof(data), 0);
+			btr::BufferMemory::Descriptor emit_desc;
+			emit_desc.size = vector_sizeof(data);
+			emit_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			btr::AllocatedMemory soldier_emit = executer->m_staging_memory.allocateMemory(emit_desc);
+			memcpy(soldier_emit.getMappedPtr(), data.data(), emit_desc.size);
 
-			auto to_transfer = m_soldier_emit_gpu.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite);
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
-			m_soldier_emit_gpu.update(cmd);
-			auto to_read = m_soldier_emit_gpu.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
+			vk::BufferCopy copy;
+			copy.setDstOffset(m_soldier_emit_gpu.getBufferInfo().offset);
+			copy.setSrcOffset(soldier_emit.getBufferInfo().offset);
+			copy.setSize(emit_desc.size);
+			cmd.copyBuffer(soldier_emit.getBufferInfo().buffer, m_soldier_emit_gpu.getBufferInfo().buffer, copy);
+
+			auto to_emit = m_soldier_draw_indiret_gpu.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_emit, {});
+			auto to_read = m_soldier_emit_gpu.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
+
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COMPUTE_SOLDIER_EMIT]);
 			struct EmitConstantBlock

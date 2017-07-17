@@ -44,6 +44,16 @@ class sBoid : public Singleton<sBoid>
 		uint m_brain_max;
 		uint m_soldier_max;
 		uint m_soldier_info_max;
+		uint m_soldier_emit_max;
+
+		BoidInfo()
+		{
+			m_brain_max = 256;
+			m_soldier_max = 8192;
+			m_soldier_info_max = 16;
+			m_soldier_emit_max = 1024;
+
+		}
 	};
 	struct BrainData
 	{
@@ -115,7 +125,7 @@ private:
 	btr::AllocatedMemory m_soldier_info_gpu;
 	DoubleBuffer m_brain_gpu;
 	DoubleBuffer m_soldier_gpu;
-	btr::UpdateBuffer<std::array<SoldierData, 1024>> m_soldier_emit_gpu;
+	btr::AllocatedMemory m_soldier_emit_gpu;
 	btr::AllocatedMemory m_soldier_draw_indiret_gpu;
 	DoubleBuffer m_soldier_LL_head_gpu;
 

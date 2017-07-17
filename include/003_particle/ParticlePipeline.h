@@ -66,7 +66,6 @@ struct cParticlePipeline
 		btr::AllocatedMemory m_particle;
 		btr::AllocatedMemory m_particle_info;
 		btr::UpdateBuffer<std::array<ParticleData, 1024>> m_particle_emit;
-//		btr::AllocatedMemory m_particle_emit;
 		btr::AllocatedMemory m_particle_counter;
 
 		btr::AllocatedMemory m_particle_draw_indiret_info;
