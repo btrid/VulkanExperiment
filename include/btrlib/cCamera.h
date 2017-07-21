@@ -135,9 +135,19 @@ struct CameraGPU
 	{
 		mProjection = glm::perspective(camera.m_fov, camera.getAspect(), camera.m_near, camera.m_far);
 		mView = glm::lookAt(camera.m_position, camera.m_target, camera.m_up);
+		u_eye = glm::vec4(camera.getPosition(), 0.f);
+		u_target = glm::vec4(camera.getTarget(), 0.f);
+		u_aspect = camera.getAspect();
+		u_fov_y = camera.getFov();
 	}
 	glm::mat4 mProjection;
 	glm::mat4 mView;
+	glm::vec4 u_eye;
+	glm::vec4 u_target;
+	float u_aspect;
+	float u_fov_y;
+	float _p;
+	float _pp;
 };
 
 class Frustom {

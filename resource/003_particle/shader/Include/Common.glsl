@@ -43,8 +43,8 @@ layout(std140, set=SETPOINT_CAMERA, binding=0) uniform CameraUniform
 	mat4 uView;
 	vec4 u_eye;
 	vec4 u_target;
-	vec4 u_aspect;
-	vec4 u_fov_y;
+	float u_aspect;
+	float u_fov_y;
 };
 #endif
 
