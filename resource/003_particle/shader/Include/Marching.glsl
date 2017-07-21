@@ -83,7 +83,7 @@ ivec3 marchCell(in BrickParam param, inout vec3 pos, in ivec3 cell, in vec3 dir,
 	return next;
 }
 
-MarchResult marching(in BrickParam param, in Ray ray, in readonly uimage3D t_brick_map, float progress_distance)
+MarchResult marching(in Ray ray)
 {
 	MarchResult result;
 	result.HitResult = MakeHit(); 
@@ -91,70 +91,25 @@ MarchResult marching(in BrickParam param, in Ray ray, in readonly uimage3D t_bri
 	{
 		// そもそもVoxelにヒットするかチェック
 		Hit start = marchToAABB(ray, param.areaMin, param.areaMax);
-//		if(start.IsHit == 0 ){
-//			return result;
-//		}
+		if(start.IsHit == 0 ){
+			return result;
+		}
 		ray.p = start.HitPoint + ray.d*0.0001;
 	}
 
-	vec3 cellSize0 = getCellSize0(param);
-	ivec3 cellNum0 = param.num0;
-	vec3 cellSize1 = getCellSize1(param);
-	ivec3 cellNum1 = param.num1;
-
-	vec3 current  = ray.p;
-	ivec3 index0 = getIndexBrick0(param, current);
-	while(isInRange(index0, cellNum0))
+	while()
 	{
-		for(; isInRange(index0, cellNum0) && imageLoad(t_brick_map, index0).x == 0;)
+		Hit hitResult = MakeHit();
+		if(hitResult.IsHit == 0)
 		{
-			index0 += marchCell(param, current, index0, ray.d, cellSize0);
+			// 当たらなかったらmarch
+			index1 += marchCell(param, current, index1, ray.d, cellSize1);
+			continue;
 		}
-
-		if(!isInRange(index0, cellNum0)){
-			return result;
-		}
-
-		ivec3 index1 = getIndexBrick1(param, current);
-		while(all(greaterThanEqual(index1, ivec3(0))) && all(equal(index1/param.m_subcell_edge_num, index0)))
-		{
-			Hit hitResult = MakeHit();
-			TriangleMesh near;
-			for(uint triIndex = bTriangleLLHead[getTiledIndexBrick1(param, index1)]; triIndex != 0xFFFFFFFF; triIndex = bTriangleLL[triIndex].next)
-			{
-				TriangleLL triangle_LL = bTriangleLL[triIndex];
-				triIndex = triangle_LL.next;
-
-				Vertex a = bVertex[triangle_LL.index[0]];
-				Vertex b = bVertex[triangle_LL.index[1]];
-				Vertex c = bVertex[triangle_LL.index[2]];
-				Triangle t = MakeTriangle(a.Position, b.Position, c.Position);
-				t = scaleTriangle(t, 0.05); // 計算誤差でポリゴンの間が当たらないことがあるので大きくする
-				Hit hit = intersect(t, ray);
-
-				if(hit.IsHit != 0 && hit.Distance < hitResult.Distance)
-				{
-					near.a = a;
-					near.b = b;
-					near.c = c;
-					hitResult = hit;
-					result.TriangleLLIndex = triIndex;
-				}
-			}			
-
-			if(hitResult.IsHit == 0)
-			{
-				// 当たらなかったらmarch
-				index1 += marchCell(param, current, index1, ray.d, cellSize1);
-				continue;
-			}
-			// ヒット
-			result.HitResult = hitResult;
-			result.HitTriangle = near;
-			return result;
-		}
-
-		index0 += marchCell(param, current, index0, ray.d, cellSize0);
+		// ヒット
+		result.HitResult = hitResult;
+		result.HitTriangle = near;
+		return result;
 	}
 	return result;
 }
