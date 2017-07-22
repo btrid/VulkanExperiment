@@ -24,6 +24,7 @@ layout(location=1) out VSOut{
 
 void main()
 {
-	gl_Position = vec4(gl_VertexIndex/2, gl_VertexIndex%2, 0., 1.);
+	vec2 pos = vec2(gl_VertexIndex/2, gl_VertexIndex%2) * 2. - 1.;
+	gl_Position = vec4(pos, 0., 1.);
 	Out.texcoord = gl_Position.xy;
 }

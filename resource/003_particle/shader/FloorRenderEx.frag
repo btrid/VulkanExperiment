@@ -15,18 +15,18 @@
 #define SETPOINT_MAP 1
 #include </Map.glsl>
 
-#define WALL_HEIGHT (3.)
+#define WALL_HEIGHT (5.)
 
 layout(location=1) in FSIn{
 	vec2 texcoord;
 }In;
 layout(location = 0) out vec4 FragColor;
-layout(location = 1) out float OutZ;
+//layout(location = 1) out float OutZ;
 
 
 vec3 getCellSize3D()
 {
-	return vec3(u_map_info.cell_size.x, 5., u_map_info.cell_size.y);
+	return vec3(u_map_info.cell_size.x, WALL_HEIGHT, u_map_info.cell_size.y);
 }
 vec3 clampByMapIndex(in vec3 pos, in ivec3 map_index)
 {
@@ -36,22 +36,68 @@ vec3 clampByMapIndex(in vec3 pos, in ivec3 map_index)
 }
 ivec3 calcMapIndex(in vec3 p)
 {
-	vec3 cell_size = vec3(u_map_info.cell_size.x, 5., u_map_info.cell_size.y);
+	vec3 cell_size = vec3(u_map_info.cell_size.x, WALL_HEIGHT, u_map_info.cell_size.y);
 	ivec3 map_index = ivec3(p.xyz / cell_size);
 	return map_index;
 }
-bool marchCB(inout vec3 pos, inout ivec3 map_index, inout vec3 dir, in vec3 next_pos, in ivec3 next_map_index)
+
+Hit marchToAABB(in Ray ray, in vec3 bmin, in vec3 bmax)
 {
-	map_index = next_map_index;
-	pos = next_pos;
-	
-	return true;
+	Hit ret = MakeHit();
+
+	if(all(lessThan(ray.p, bmax)) 
+	&& all(greaterThan(ray.p, bmin)))
+	{
+		// AABBの中にいる
+		ret.IsHit = 1;
+		ret.HitPoint = ray.p;
+		ret.Distance = 0;
+		return ret;
+	}
+
+	float tmin = 0.;
+	float tmax = 10e6;
+	for (int i = 0; i < 3; i++)
+	{
+		if (abs(ray.d[i]) < 10e-6)
+		{
+			// 光線はスラブに対して平行。原点がスラブの中になければ交点無し。
+			if (ray.p[i] < bmin[i] || ray.p[i] > bmax[i])
+			{
+				return ret;
+			}
+		}
+		else
+		{
+			float ood = 1. / ray.d[i];
+			float t1 = (bmin[i] - ray.p[i]) * ood;
+			float t2 = (bmax[i] - ray.p[i]) * ood;
+
+			// t1が近い平面との交差、t2が遠い平面との交差になる
+			float near = min(t1, t2);
+			float far = max(t1, t2);
+
+			// スラブの交差している感覚との交差を計算
+			tmin = max(near, tmin);
+			tmax = max(far, tmax);
+
+			if (tmin > tmax) {
+				return ret;
+			}
+		}
+	}
+	float dist = tmin;
+	ret.IsHit = 1;
+	ret.HitPoint = ray.p + ray.d*dist;
+	ret.Distance = dist;
+	return ret;
+
 }
+
 ivec3 marchEx(inout vec3 pos, inout ivec3 map_index, in vec3 dir)
 {
-
 	MapInfo map_info = u_map_info;
-	vec3 cell_size = vec3(map_info.cell_size.x, 5., map_info.cell_size.y);
+	vec3 cell_size = vec3(map_info.cell_size.x, WALL_HEIGHT, map_info.cell_size.y);
 	float particle_size = 0.;
 	vec3 cell_origin = vec3(map_index)*cell_size;
 	vec3 cell_p = pos - cell_origin;
@@ -62,10 +108,17 @@ ivec3 marchEx(inout vec3 pos, inout ivec3 map_index, in vec3 dir)
 	y = (y <= particle_size ? cell_size.y + y : y) - particle_size;
 	z = (z <= particle_size ? cell_size.z + z : z) - particle_size;
 
-	vec3 dist = vec3(9999.);
-	dist.x = abs(dir.x) < FLT_EPSIRON ? 9999.9 : abs(x / dir.x);
-	dist.y = abs(dir.y) < FLT_EPSIRON ? 9999.9 : abs(y / dir.y);
-	dist.z = abs(dir.z) < FLT_EPSIRON ? 9999.9 : abs(z / dir.z);
+#if 0
+	vec3 dist = vec3(999999.);
+	dist.x = abs(dir.x) < FLT_EPSIRON ? 999999.9 : abs(x / dir.x);
+	dist.y = abs(dir.y) < FLT_EPSIRON ? 999999.9 : abs(y / dir.y);
+	dist.z = abs(dir.z) < FLT_EPSIRON ? 999999.9 : abs(z / dir.z);
+#else
+	vec3 dist = vec3(x, y, z) / dir;
+	dist.x = isinf(dist.x) ? 9999999. : abs(dist.x);
+	dist.y = isinf(dist.y) ? 9999999. : abs(dist.y);
+	dist.z = isinf(dist.z) ? 9999999. : abs(dist.z);
+#endif
 	float rate = min(dist.x, min(dist.y, dist.z));
 
 	vec3 prog = dir * rate;
@@ -81,8 +134,7 @@ ivec3 marchEx(inout vec3 pos, inout ivec3 map_index, in vec3 dir)
 	{
 		next.z = dir.z < 0. ? -1 : 1;
 	}
-	vec3 next_pos = pos + prog + vec3(next)*FLT_EPSIRON;
-	pos = next_pos;
+	pos += prog;
 	map_index += next;
 	return next;
 }
@@ -90,39 +142,63 @@ ivec3 marchEx(inout vec3 pos, inout ivec3 map_index, in vec3 dir)
 
 void main() 
 {
-	vec2 resolution = vec2(640., 480.);
 	vec3 foward = normalize(u_target - u_eye).xyz;
-	vec3 side = cross(foward, vec3(0., 1., 0.));
-	side = dot(side, side) <= 0.1 ? vec3(-1., 0., 0.) : normalize(side);
+	vec3 side = cross(foward, vec3(0., -1., 0.));
+	side = dot(side, side) <= 0.1 ? vec3(1., 0., 0.) : normalize(side);
 	vec3 up = normalize(cross(side, foward));
 
-	vec2 r = vec2(0.5);
 	// イメージセンサー上の位置。
 	vec3 position_on_sensor =
 		(u_eye.xyz + foward)
-		+ side * (float(r.x + In.texcoord.x) / resolution.x - 0.5)*2.
-		+ up * (float(r.y + In.texcoord.y) / resolution.y - 0.5)*2.;
+		+ side * In.texcoord.x
+		+ up * In.texcoord.y;
 	// レイを飛ばす方向。
 	vec3 dir = normalize(position_on_sensor - u_eye.xyz);
-	vec3 pos = normalize(position_on_sensor);
-	ivec3 map_index = calcMapIndex(position_on_sensor);
+	vec3 pos = position_on_sensor.xyz;
+
+	Ray ray = MakeRay(pos, dir);
+	vec2 area = u_map_info.m_cell_num * u_map_info.cell_size;
+	vec3 bmin = vec3(0) - 0.1;
+	vec3 bmax = vec3(area.x, WALL_HEIGHT, area.y) + 0.1;
+	Hit hit = marchToAABB(ray, bmin, bmax);
+
+	if(hit.IsHit == 0)
+	{
+		FragColor = vec4(0., 0., 0., 1.);
+		return;
+	}
+	pos = hit.HitPoint;
+	ivec3 map_index = calcMapIndex(pos);
 	for(;;)
 	{
 		ivec3 next = marchEx(pos, map_index, dir);
+		if(any(lessThan(map_index.xz, ivec2(0)))
+		|| any(greaterThanEqual(map_index.xz, ivec2(u_map_info.m_cell_num))))
+		{
+			FragColor = vec4(0., 0., 0., 1.);
+			break;
+		}
 		uint map = imageLoad(t_map, map_index.xz).x;
+		vec3 p = pos + next *1.;
 		if(next.y != 0)
 		{
 			// 地面と当たった場合
-			FragColor = vec4(0., 0.3, 0.9, 1.);
-			break;
-		}else{
-			if(pos.y <= 5.*map)
+			if(p.y <= map*WALL_HEIGHT)
 			{
-				FragColor = vec4(0.7, 0.4, 0.4, 1.);
+				FragColor = vec4(map*1., 0., 1., 1.);
+				break;
+			}
+		}
+		else
+		{
+			if(p.y <= map*WALL_HEIGHT)
+			{
+				// 壁と当たった場合
+				FragColor = vec4(1., 0., 0., 1.);
 				break;
 			}
 		}
 	}
-	OutZ = 1.;
+//	OutZ = 1.;
 
 }

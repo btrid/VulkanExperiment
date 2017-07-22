@@ -28,6 +28,8 @@ struct sScene : public Singleton<sScene>
 		SHADER_VERTEX_FLOOR,
 		SHADER_GEOMETRY_FLOOR,
 		SHADER_FRAGMENT_FLOOR,
+		SHADER_VERTEX_FLOOR_EX,
+		SHADER_FRAGMENT_FLOOR_EX,
 		SHADER_NUM,
 	};
 
@@ -49,6 +51,12 @@ struct sScene : public Singleton<sScene>
 		PIPELINE_LAYOUT_DRAW_FLOOR,
 		PIPELINE_LAYOUT_NUM,
 	};
+	enum Pipeline
+	{
+		PIPELINE_DRAW_FLOOR,
+		PIPELINE_DRAW_FLOOR_EX,
+		PIPELINE_NUM,
+	};
 	btr::UpdateBuffer<CameraGPU> m_camera;
 	MapInfo m_map_info_cpu;
 
@@ -61,7 +69,7 @@ struct sScene : public Singleton<sScene>
 	btr::AllocatedMemory m_map_info;
 
 	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_stage_info;
-	vk::Pipeline m_graphics_pipeline;
+	std::array<vk::Pipeline, PIPELINE_NUM> m_pipeline;
 
 	std::array<vk::DescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
 	std::array<vk::DescriptorSet, DESCRIPTOR_SET_NUM> m_descriptor_set;
@@ -83,6 +91,8 @@ struct sScene : public Singleton<sScene>
 				{ "FloorRender.vert.spv",vk::ShaderStageFlagBits::eVertex },
 				{ "FloorRender.geom.spv",vk::ShaderStageFlagBits::eGeometry },
 				{ "FloorRender.frag.spv",vk::ShaderStageFlagBits::eFragment },
+				{ "FloorRenderEx.vert.spv",vk::ShaderStageFlagBits::eVertex },
+				{ "FloorRenderEx.frag.spv",vk::ShaderStageFlagBits::eFragment },
 			};
 			static_assert(array_length(shader_info) == SHADER_NUM, "not equal shader num");
 
@@ -241,12 +251,12 @@ struct sScene : public Singleton<sScene>
 		bindings[DESCRIPTOR_SET_LAYOUT_MAP] =
 		{
 			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
+			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eFragment)
 			.setDescriptorCount(1)
 			.setDescriptorType(vk::DescriptorType::eStorageImage)
 			.setBinding(0),
 			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
+			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eFragment)
 			.setDescriptorCount(1)
 			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 			.setBinding(1),
@@ -254,7 +264,7 @@ struct sScene : public Singleton<sScene>
 		bindings[DESCRIPTOR_SET_LAYOUT_CAMERA] =
 		{
 			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eVertex)
+			.setStageFlags(vk::ShaderStageFlagBits::eVertex| vk::ShaderStageFlagBits::eFragment)
 			.setDescriptorCount(1)
 			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 			.setBinding(0),
@@ -279,9 +289,7 @@ struct sScene : public Singleton<sScene>
 				m_map_info.getBufferInfo(),
 			};
 			std::vector<vk::DescriptorImageInfo> images = {
-				vk::DescriptorImageInfo()
-				.setImageLayout(vk::ImageLayout::eGeneral)
-				.setImageView(m_map_image_view)
+				vk::DescriptorImageInfo().setImageLayout(vk::ImageLayout::eGeneral).setImageView(m_map_image_view)
 			};
 			std::vector<vk::WriteDescriptorSet> write_desc =
 			{
@@ -320,6 +328,7 @@ struct sScene : public Singleton<sScene>
 		{
 			std::vector<vk::DescriptorSetLayout> layouts = {
 				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_CAMERA],
+				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_MAP],
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(layouts.size());
@@ -338,10 +347,10 @@ struct sScene : public Singleton<sScene>
 			{
 				vk::PipelineInputAssemblyStateCreateInfo()
 				.setPrimitiveRestartEnable(VK_FALSE)
-				.setTopology(vk::PrimitiveTopology::ePointList),
+				.setTopology(vk::PrimitiveTopology::eTriangleList),
 				vk::PipelineInputAssemblyStateCreateInfo()
 				.setPrimitiveRestartEnable(VK_FALSE)
-				.setTopology(vk::PrimitiveTopology::eTriangleList),
+				.setTopology(vk::PrimitiveTopology::eTriangleStrip),
 			};
 
 			// viewport
@@ -401,16 +410,28 @@ struct sScene : public Singleton<sScene>
 				.setOffset(0),
 			};
 
-			vertex_input_info[1].setVertexBindingDescriptionCount(vertex_input_binding.size());
-			vertex_input_info[1].setPVertexBindingDescriptions(vertex_input_binding.data());
-			vertex_input_info[1].setVertexAttributeDescriptionCount(vertex_input_attribute.size());
-			vertex_input_info[1].setPVertexAttributeDescriptions(vertex_input_attribute.data());
+			vertex_input_info[0].setVertexBindingDescriptionCount(vertex_input_binding.size());
+			vertex_input_info[0].setPVertexBindingDescriptions(vertex_input_binding.data());
+			vertex_input_info[0].setVertexAttributeDescriptionCount(vertex_input_attribute.size());
+			vertex_input_info[0].setPVertexAttributeDescriptions(vertex_input_attribute.data());
 
 			std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =
 			{
 				vk::GraphicsPipelineCreateInfo()
-				.setStageCount(m_stage_info.size())
-				.setPStages(m_stage_info.data())
+				.setStageCount(3)
+				.setPStages(&m_stage_info.data()[SHADER_VERTEX_FLOOR])
+				.setPVertexInputState(&vertex_input_info[0])
+				.setPInputAssemblyState(&assembly_info[0])
+				.setPViewportState(&viewportInfo)
+				.setPRasterizationState(&rasterization_info)
+				.setPMultisampleState(&sample_info)
+				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR])
+				.setRenderPass(loader->m_render_pass)
+				.setPDepthStencilState(&depth_stencil_info)
+				.setPColorBlendState(&blend_info),
+				vk::GraphicsPipelineCreateInfo()
+				.setStageCount(2)
+				.setPStages(&m_stage_info.data()[SHADER_VERTEX_FLOOR_EX])
 				.setPVertexInputState(&vertex_input_info[1])
 				.setPInputAssemblyState(&assembly_info[1])
 				.setPViewportState(&viewportInfo)
@@ -421,7 +442,8 @@ struct sScene : public Singleton<sScene>
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			m_graphics_pipeline = loader->m_device->createGraphicsPipelines(loader->m_cache, graphics_pipeline_info)[0];
+			auto pipelines = loader->m_device->createGraphicsPipelines(loader->m_cache, graphics_pipeline_info);
+			std::copy(pipelines.begin(), pipelines.end(), m_pipeline.begin());
 
 		}
 	}
@@ -449,11 +471,16 @@ struct sScene : public Singleton<sScene>
 	}
 	void draw(vk::CommandBuffer cmd)
 	{
-		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_graphics_pipeline);
+// 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW_FLOOR]);
+// 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR], 0, m_descriptor_set[DESCRIPTOR_SET_LAYOUT_CAMERA], {});
+// 		cmd.bindVertexBuffers(0, { m_maze_geometry.m_resource->m_vertex.getBufferInfo().buffer }, { m_maze_geometry.m_resource->m_vertex.getBufferInfo().offset });
+// 		cmd.bindIndexBuffer(m_maze_geometry.m_resource->m_index.getBufferInfo().buffer, m_maze_geometry.m_resource->m_index.getBufferInfo().offset, m_maze_geometry.m_resource->m_index_type);
+// 		cmd.drawIndexedIndirect(m_maze_geometry.m_resource->m_indirect.getBufferInfo().buffer, m_maze_geometry.m_resource->m_indirect.getBufferInfo().offset, 1, sizeof(vk::DrawIndexedIndirectCommand));
+
+		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW_FLOOR_EX]);
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR], 0, m_descriptor_set[DESCRIPTOR_SET_LAYOUT_CAMERA], {});
-		cmd.bindVertexBuffers(0, { m_maze_geometry.m_resource->m_vertex.getBufferInfo().buffer }, { m_maze_geometry.m_resource->m_vertex.getBufferInfo().offset });
-		cmd.bindIndexBuffer(m_maze_geometry.m_resource->m_index.getBufferInfo().buffer, m_maze_geometry.m_resource->m_index.getBufferInfo().offset, m_maze_geometry.m_resource->m_index_type);
-		cmd.drawIndexedIndirect(m_maze_geometry.m_resource->m_indirect.getBufferInfo().buffer, m_maze_geometry.m_resource->m_indirect.getBufferInfo().offset, 1, sizeof(vk::DrawIndexedIndirectCommand));
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR], 1, m_descriptor_set[DESCRIPTOR_SET_LAYOUT_MAP], {});
+		cmd.draw(4, 1, 0, 0);
 	}
 
 	glm::ivec2 calcMapIndex(const glm::vec4& p)
