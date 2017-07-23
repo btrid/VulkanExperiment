@@ -112,10 +112,36 @@ struct Player
 	}
 };
 
+glm::mat4 perspectiveReverseZ(float fov_y, float aspect, float z_near, float z_far)
+{
+//	return glm::perspective(fov_y, aspect, z_near, z_far);
+	return glm::perspective(fov_y, aspect, z_far, z_near);
+
+//glm::mat4 perspectiveInfReverseZ(float fov_y, float aspect, float z_near, float z_far)
+// 	float f = 1.0f / tan(fov_y / 2.0f);
+// #	if GLM_COORDINATE_SYSTEM == GLM_LEFT_HANDED
+//	float hand = 1.f;
+// #else
+// 	float hand = -1.f;
+// #endif
+// 	return glm::mat4(
+// 		f / aspect, 0.0f, 0.0f, 0.0f,
+// 		0.f, f,   0.f,    0.f,
+// 		0.f, 0.f, 0.f,    hand,
+// 		0.f, 0.f, z_near, 0.0f);
+}
+
+float calcDepth(float v, float n, float f)
+{
+	return n * f / (v * (f - n) - f);
+}
+float calcReverseDepth(float v, float n, float f)
+{
+	return -calcDepth(v, f, n);
+}
 int main()
 {
 	btr::setResourceAppPath("..\\..\\resource\\003_particle\\");
-
 	app::App app;
 	auto* camera = cCamera::sCamera::Order().create();
 	camera->m_position = glm::vec3(220.f, 60.f, 300.f);

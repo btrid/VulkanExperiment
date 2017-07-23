@@ -139,6 +139,8 @@ struct CameraGPU
 		u_target = glm::vec4(camera.getTarget(), 0.f);
 		u_aspect = camera.getAspect();
 		u_fov_y = camera.getFov();
+		u_near = camera.getNear();
+		u_far = camera.getFar();
 	}
 	glm::mat4 mProjection;
 	glm::mat4 mView;
@@ -146,8 +148,8 @@ struct CameraGPU
 	glm::vec4 u_target;
 	float u_aspect;
 	float u_fov_y;
-	float _p;
-	float _pp;
+	float u_near;
+	float u_far;
 };
 
 class Frustom {
