@@ -89,7 +89,7 @@ struct Player
 				BulletData b;
 				b.m_life = 1.f;
 				b.m_pos = glm::vec4(m_pos, 0.3f);
-				b.m_vel = glm::vec4(m_dir, 13.3f);
+				b.m_vel = glm::vec4(m_dir, 1.f) * 13.3f;
 				b.m_type = 0;
 				b.m_map_index = sScene::Order().calcMapIndex(b.m_pos);
 				m_bullet.push_back(b);
@@ -99,7 +99,7 @@ struct Player
 				BulletData b;
 				b.m_life = 2.f;
 				b.m_pos = glm::vec4(m_pos, 0.3f);
-				b.m_vel = glm::vec4(m_dir, 13.3f);
+				b.m_vel = glm::vec4(m_dir, 1.f) * 13.3f;
 				b.m_type = 0;
 				b.m_map_index = sScene::Order().calcMapIndex(b.m_pos);
 				m_bullet.push_back(b);

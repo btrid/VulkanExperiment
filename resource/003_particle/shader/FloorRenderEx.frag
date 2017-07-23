@@ -220,12 +220,8 @@ void main()
 			}
 		}
 	}
-//	vec3 projection = proj(pos-u_eye.xyz, foward);
-//	gl_FragDepth = calcDepth(distance(projection, u_eye.xyz), u_near, u_far)-0.00001;
 	vec4 p = uProjection * uView * vec4(pos, 1.);
 	p /= p.w;
 	gl_FragDepth = p.z;
-//	FragColor = vec4(gl_FragDepth >= 0.9 ? 0. : 1., 0., 0., 1.);
-//	gl_FragDepth = 0.;
 
 }

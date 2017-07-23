@@ -132,7 +132,6 @@ void sCollisionSystem::execute(std::shared_ptr<btr::Executer>& executer)
 		executer->m_cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COLLISION_TEST]);
 		executer->m_cmd.dispatch(1, 1, 1);
 
-
 		std::vector<vk::BufferMemoryBarrier> to = {
 			sBoid::Order().getSoldier().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
 			sBulletSystem::Order().getBullet().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),

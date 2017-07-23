@@ -30,7 +30,7 @@ void main()
 		return;
 	}
 
-	uint dst_index = atomicAdd(b_bullet_draw_cmd.vertexCount, 1);
+	uint dst_index = atomicAdd(b_bullet_draw_cmd.instanceCount, 1);
 	BulletData b = b_bullet_emit[index];
 	b_bullet[constant.m_dst_offset + dst_index] = b;
 

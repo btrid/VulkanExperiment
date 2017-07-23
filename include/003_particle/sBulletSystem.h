@@ -149,10 +149,9 @@ public:
 					std::vector<vk::BufferMemoryBarrier> to_emit_barrier =
 					{
 						m_bullet.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite),
-						m_bullet_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
+						m_bullet_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 					};
 					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_emit_barrier, {});
-
 
 					// emit
 					auto to_transfer = m_emit.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite);
@@ -163,7 +162,6 @@ public:
 					emit_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 					btr::AllocatedMemory bullet_emit = executer->m_staging_memory.allocateMemory(emit_desc);
 					memcpy(bullet_emit.getMappedPtr(), data.data(), emit_desc.size);
-
 
 					vk::BufferCopy copy;
 					copy.dstOffset = m_emit.getBufferInfo().offset;
