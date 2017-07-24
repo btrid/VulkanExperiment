@@ -42,7 +42,34 @@ void main()
 	}
 	MapInfo map_info = u_map_info;
 
-	march(b.m_pos.xz, b.m_map_index, b.m_vel.xz*constant.m_deltatime);
+	vec2 dir = normalize(b.m_vel.xz);
+	float progress = length(b.m_vel.xz)*constant.m_deltatime;
+	for(;;)
+	{
+		MarchResult result = marchEx(b.m_pos.xz, b.m_map_index, length(b.m_vel.xz)*constant.m_deltatime, dir);
+		if(result.is_end)
+		{
+			b.m_pos.xz = result.next_pos;
+			break;
+		}
+
+		uint map = imageLoad(t_map, result.next_map_index).x;
+		b.m_pos.xz = result.next_pos;
+		if(map == 1)
+		{
+			// 壁にぶつかったので反射
+			vec2 next = vec2(result.next_map_index - b.m_map_index);
+			vec3 wall = vec3(next.x, 0., next.y);
+			b.m_vel.xyz = reflect(b.m_vel.xyz, wall);
+			dir = normalize(b.m_vel.xz);
+		}
+		else
+		{
+			// 何もないのでそのまま進む
+			b.m_map_index = result.next_map_index;
+			progress = result.progress;
+		}
+	}
 
 	uint dst_index = atomicAdd(b_bullet_draw_cmd.instanceCount, 1);
 

@@ -15,7 +15,6 @@
 #define SETPOINT_MAP 1
 #include </Map.glsl>
 
-#define WALL_HEIGHT (5.)
 
 layout(location=1) in FSIn{
 	vec2 texcoord;
@@ -112,50 +111,7 @@ Hit marchToAABB(in Ray ray, in vec3 bmin, in vec3 bmax)
 
 }
 
-ivec3 marchEx(inout vec3 pos, inout ivec3 map_index, in vec3 dir)
-{
-	MapInfo map_info = u_map_info;
-	vec3 cell_size = vec3(map_info.cell_size.x, WALL_HEIGHT, map_info.cell_size.y);
-	float particle_size = 0.;
-	vec3 cell_origin = vec3(map_index)*cell_size;
-	vec3 cell_p = pos - cell_origin;
-	float x = dir.x < 0. ? cell_p.x : (cell_size.x- cell_p.x);
-	float y = dir.y < 0. ? cell_p.y : (cell_size.y- cell_p.y);
-	float z = dir.z < 0. ? cell_p.z : (cell_size.z- cell_p.z);
-	x = (x <= particle_size ? cell_size.x + x : x) - particle_size;
-	y = (y <= particle_size ? cell_size.y + y : y) - particle_size;
-	z = (z <= particle_size ? cell_size.z + z : z) - particle_size;
 
-#if 0
-	vec3 dist = vec3(999999.);
-	dist.x = abs(dir.x) < FLT_EPSIRON ? 999999.9 : abs(x / dir.x);
-	dist.y = abs(dir.y) < FLT_EPSIRON ? 999999.9 : abs(y / dir.y);
-	dist.z = abs(dir.z) < FLT_EPSIRON ? 999999.9 : abs(z / dir.z);
-#else
-	vec3 dist = vec3(x, y, z) / dir;
-	dist.x = isinf(dist.x) ? 9999999. : abs(dist.x);
-	dist.y = isinf(dist.y) ? 9999999. : abs(dist.y);
-	dist.z = isinf(dist.z) ? 9999999. : abs(dist.z);
-#endif
-	float rate = min(dist.x, min(dist.y, dist.z));
-
-	vec3 prog = dir * rate;
-	ivec3 next = ivec3(0);
-	if(dist.x < dist.y && dist.x < dist.z){
-		next.x = dir.x < 0. ? -1 : 1;
-	}
-	else if(dist.y < dist.z)
-	{
-		next.y = dir.y < 0. ? -1 : 1;
-	}
-	else
-	{
-		next.z = dir.z < 0. ? -1 : 1;
-	}
-	pos += prog;
-	map_index += next;
-	return next;
-}
 
 
 void main() 
@@ -192,7 +148,7 @@ void main()
 	ivec3 map_index = calcMapIndex(pos);
 	for(;;)
 	{
-		ivec3 next = marchEx(pos, map_index, dir);
+		ivec3 next = marchEx3D(pos, map_index, dir);
 		if(any(lessThan(map_index.xz, ivec2(0)))
 		|| any(greaterThanEqual(map_index.xz, ivec2(u_map_info.m_cell_num))))
 		{
