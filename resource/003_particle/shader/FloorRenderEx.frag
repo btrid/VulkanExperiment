@@ -135,7 +135,7 @@ void main()
 	Ray ray = MakeRay(pos, dir);
 	vec2 area = u_map_info.m_cell_num * u_map_info.cell_size;
 	vec3 bmin = vec3(0) - 0.1;
-	vec3 bmax = vec3(area.x, WALL_HEIGHT, area.y) + 0.1;
+	vec3 bmax = vec3(area.x, WALL_HEIGHT*5, area.y) + 0.1;
 	Hit hit = marchToAABB(ray, bmin, bmax);
 
 	gl_FragDepth = 1.;

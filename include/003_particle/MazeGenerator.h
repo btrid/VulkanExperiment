@@ -123,10 +123,10 @@ public:
 				}
 
 				//	壁にぶつかったら、処理完了で戻す
-				if (map.dataSafe(x + px * 2, y + py * 2) == CELL_TYPE_WALL)
+				if (map.dataSafe(x + px * 2, y + py * 2) >= 1)
 				{
-					map.data(x, y) = CELL_TYPE_WALL;
-					map.data(x + px, y + py) = CELL_TYPE_WALL;
+					map.data(x, y) = CELL_TYPE_WALL * (std::rand() % 5 + 1);
+					map.data(x + px, y + py) = CELL_TYPE_WALL * (std::rand() % 5 + 1);;
 					return true;
 				}
 
@@ -139,8 +139,8 @@ public:
 					if (_generateSub(map, x + px * 2, y + py * 2))
 					{
 						//	処理完了で戻ってきたら、「作りかけの壁」を「完成した壁」に変える
-						map.data(x, y) = CELL_TYPE_WALL;
-						map.data(x + px, y + py) = CELL_TYPE_WALL;
+						map.data(x, y) = CELL_TYPE_WALL * (std::rand() % 5 + 1);
+						map.data(x + px, y + py) = CELL_TYPE_WALL * (std::rand() % 5 + 1);
 						return true;
 
 					}

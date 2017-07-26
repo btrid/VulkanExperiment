@@ -61,7 +61,7 @@ void march(inout vec2 pos, inout ivec2 map_index, in vec2 _dir)
 
 		vec2 next_pos = pos + prog + vec2(next)*FLT_EPSIRON;
 		uint map = imageLoad(t_map, (map_index + next) ).x;
-		if(map == 1) 
+		if(map != 0) 
 		{
 #if 1
 			// 壁にぶつかったので押し戻す

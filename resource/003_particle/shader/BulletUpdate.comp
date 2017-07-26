@@ -55,7 +55,7 @@ void main()
 
 		uint map = imageLoad(t_map, result.next_map_index).x;
 		b.m_pos.xz = result.next_pos;
-		if(map == 1)
+		if(map != 0)
 		{
 			// 壁にぶつかったので反射
 			vec2 next = vec2(result.next_map_index - b.m_map_index);

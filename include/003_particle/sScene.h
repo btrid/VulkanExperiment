@@ -14,6 +14,7 @@ struct MapInfo
 {
 	glm::vec2 m_cell_size;
 	glm::ivec2 m_cell_num;
+	glm::ivec2 m_subcell_rate;
 };
 
 struct Map
@@ -66,6 +67,9 @@ struct sScene : public Singleton<sScene>
 	vk::Image m_map_image;
 	vk::ImageView m_map_image_view;
 	vk::DeviceMemory m_map_image_memory;
+	vk::Image m_submap_image;
+	vk::ImageView m_submap_image_view;
+	vk::DeviceMemory m_submap_image_memory;
 	btr::AllocatedMemory m_map_info;
 
 	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_stage_info;
@@ -79,6 +83,7 @@ struct sScene : public Singleton<sScene>
 	{
 		m_map_info_cpu.m_cell_size = glm::vec2(50.f, 50.f);
 		m_map_info_cpu.m_cell_num = glm::vec2(15, 15);
+		m_map_info_cpu.m_subcell_rate = glm::ivec2(4, 4);
 
 		// setup shader
 		{
@@ -130,7 +135,6 @@ struct sScene : public Singleton<sScene>
 			);
 
 			{
-				auto map = m_maze.makeMapData();
 				vk::ImageCreateInfo image_info;
 				image_info.imageType = vk::ImageType::e2D;
 				image_info.format = vk::Format::eR8Uint;
@@ -142,17 +146,24 @@ struct sScene : public Singleton<sScene>
 				image_info.sharingMode = vk::SharingMode::eExclusive;
 				image_info.initialLayout = vk::ImageLayout::eUndefined;
 				image_info.extent = { (uint32_t)m_maze.getSizeX(), (uint32_t)m_maze.getSizeY(), 1u };
-				image_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
+//				image_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
 				auto image = loader->m_device->createImage(image_info);
 
 				vk::MemoryRequirements memory_request = loader->m_device->getImageMemoryRequirements(image);
 				vk::MemoryAllocateInfo memory_alloc_info;
 				memory_alloc_info.allocationSize = memory_request.size;
 				memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(loader->m_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
-
 				auto image_memory = loader->m_device->allocateMemory(memory_alloc_info);
 				loader->m_device->bindImageMemory(image, image_memory, 0);
 
+// 				image_info.extent.width *= m_map_info_cpu.m_subcell_rate.x;
+// 				image_info.extent.height *= m_map_info_cpu.m_subcell_rate.y;
+// 				auto subimage = loader->m_device->createImage(image_info);
+// 				memory_request = loader->m_device->getImageMemoryRequirements(subimage);
+// 				memory_alloc_info.allocationSize = memory_request.size;
+// 				memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(loader->m_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+// 				auto subimage_memory = loader->m_device->allocateMemory(memory_alloc_info);
+// 				loader->m_device->bindImageMemory(subimage, subimage_memory, 0);
 
 				vk::ImageSubresourceRange subresourceRange;
 				subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
@@ -172,10 +183,12 @@ struct sScene : public Singleton<sScene>
 				view_info.subresourceRange = subresourceRange;
 				auto image_view = loader->m_device->createImageView(view_info);
 
+// 				view_info.image = subimage;
+// 				auto subimage_view = loader->m_device->createImageView(view_info);
+
 				{
 
 					vk::ImageMemoryBarrier to_transfer;
-					//						to_transfer.dstQueueFamilyIndex = loader->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
 					to_transfer.image = image;
 					to_transfer.oldLayout = vk::ImageLayout::eUndefined;
 					to_transfer.newLayout = vk::ImageLayout::eTransferDstOptimal;
@@ -186,13 +199,14 @@ struct sScene : public Singleton<sScene>
 				}
 
 				{
+					auto map = m_maze.makeMapData();
 					vk::ImageSubresourceLayers l;
 					l.setAspectMask(vk::ImageAspectFlagBits::eColor);
 					l.setBaseArrayLayer(0);
 					l.setLayerCount(1);
 					l.setMipLevel(0);
 					btr::BufferMemory::Descriptor desc;
-					desc.size = memory_alloc_info.allocationSize;
+					desc.size = loader->m_device->getImageMemoryRequirements(image).size;
 					desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 					auto staging = loader->m_staging_memory.allocateMemory(desc);
 					memcpy(staging.getMappedPtr(), map.data(), desc.size);
