@@ -553,7 +553,7 @@ void sBoid::execute(std::shared_ptr<btr::Executer>& executer)
 				p.m_soldier_type = 0;
 				p.m_brain_index = 0;
 				p.m_ll_next = -1;
-				p.m_astar_target = (p.m_pos + p.m_vel).xz;
+				p.m_astar_target = (p.m_pos + glm::normalize(p.m_vel)).xz;
 				p.m_inertia = glm::vec4(0.f, 0.f, 0.f, 1.f);
 				p.m_map_index = sScene::Order().calcMapIndex(p.m_pos);
 			}
