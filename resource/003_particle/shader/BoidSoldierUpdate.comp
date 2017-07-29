@@ -40,11 +40,10 @@ void main()
 	if(soldier.m_life <= 0.){
 		return;
 	}
-	MapInfo map_info = u_map_info;
-	float particle_size = 0.;
-	float NEAR_DIST = 0.4;
+	MapDescriptor desc = u_map_info.m_descriptor[0];
 
-	uint old_map_index = calcMapIndex1D(soldier.m_map_index, 1-constant.m_double_buffer_dst_index);
+	uint old_offset = desc.m_cell_num.x*desc.m_cell_num.y*(1-constant.m_double_buffer_dst_index);
+	uint old_map_index = calcMapIndex1D(soldier.m_map_index)+old_offset;
 	SoldierInfo info = u_soldier_info[soldier.m_soldier_type];
 
 	{
@@ -53,10 +52,12 @@ void main()
 		soldier.m_inertia *= pow(0.92, 1. + constant.m_deltatime);
 	}
 
-
 	vec3 next_dir = soldier.m_vel.xyz;
 	float vel = soldier.m_vel.w;
 	{
+		float NEAR_DIST = 0.4;
+		float particle_size = 0.;
+
 		// 移動先
 		vec2 astar_target = soldier.m_astar_target;
 		if(distance(soldier.m_pos.xz, astar_target) <= 1.5)
@@ -84,8 +85,8 @@ void main()
 				next = ivec2(0,1);
 			}
 			ivec2 map_next = soldier.m_map_index+next;
-			vec2 offset = map_info.cell_size * ((rand(soldier.m_pos.xz)-0.5)*0.7);
-			astar_target = vec2(map_next.x+0.5, map_next.y+0.5) * map_info.cell_size + vec2(0.) + offset;
+			vec2 offset = desc.m_cell_size * ((rand(soldier.m_pos.xz)-0.5)*0.7);
+			astar_target = vec2(map_next.x+0.5, map_next.y+0.5) * desc.m_cell_size + vec2(0.) + offset;
 			soldier.m_astar_target = astar_target;
 		}
 		vec2 _astar_dir = normalize(astar_target - soldier.m_pos.xz);
@@ -187,7 +188,8 @@ void main()
 
 	uint dst_index = atomicAdd(b_draw_cmd[0].vertexCount, 1);
 
-	uint map_index_1D = calcMapIndex1D(soldier.m_map_index, constant.m_double_buffer_dst_index);
+	uint offset = desc.m_cell_num.x*desc.m_cell_num.y*(constant.m_double_buffer_dst_index);
+	uint map_index_1D = calcMapIndex1D(soldier.m_map_index) + offset;
 	uint old = atomicExchange(b_soldier_head[map_index_1D], dst_index);
 	soldier.m_ll_next = old;
 

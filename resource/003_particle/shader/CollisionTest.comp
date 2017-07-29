@@ -30,16 +30,17 @@ layout(push_constant) uniform UpdateConstantBlock
 void main()
 {
 	uvec2 map_index = gl_GlobalInvocationID.xy;
-	if(any(greaterThanEqual(map_index, u_map_info.m_cell_num.xy)))
+	MapDescriptor desc = u_map_info.m_descriptor[0];
+	if(any(greaterThanEqual(map_index, desc.m_cell_num.xy)))
 	{
 		return;
 	}
 
 	uint enemy_offset = (u_boid_info.m_soldier_max/2) * (constant.m_double_buffer_dst_index);
 	uint bullet_offset = (u_bullet_info.m_max_num/2) * (constant.m_double_buffer_dst_index);
-	uint map_offset = u_map_info.m_cell_num.x*u_map_info.m_cell_num.y * (constant.m_double_buffer_dst_index);
+	uint map_offset = desc.m_cell_num.x*desc.m_cell_num.y * (constant.m_double_buffer_dst_index);
 
-	uint map_id = convert2DTo1D(map_index, u_map_info.m_cell_num.xy);
+	uint map_id = convert2DTo1D(map_index, desc.m_cell_num.xy);
 	for(uint i = b_soldier_head[map_id + map_offset]; i != 0xFFFFFFFF;)
 	{
 		uint enemy_index = enemy_offset + i;

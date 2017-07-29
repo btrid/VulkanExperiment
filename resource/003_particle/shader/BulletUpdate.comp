@@ -40,7 +40,7 @@ void main()
 	if(b.m_life <= 0.){
 		return;
 	}
-	MapInfo map_info = u_map_info;
+	MapDescriptor desc = u_map_info.m_descriptor[0];
 
 	vec2 dir = normalize(b.m_vel.xz);
 	float progress = length(b.m_vel.xz)*constant.m_deltatime;
@@ -73,7 +73,7 @@ void main()
 
 	uint dst_index = atomicAdd(b_bullet_draw_cmd.instanceCount, 1);
 
-	uint old = atomicExchange(b_bullet_head[convert2DTo1D(b.m_map_index, map_info.m_cell_num.xy)], dst_index);
+	uint old = atomicExchange(b_bullet_head[convert2DTo1D(b.m_map_index, desc.m_cell_num.xy)], dst_index);
 	b.m_ll_next = old;
 
 	b_bullet[constant.m_dst_offset + dst_index] = b;

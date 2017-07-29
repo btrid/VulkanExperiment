@@ -59,7 +59,8 @@ void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 
 		{
 			btr::BufferMemory::Descriptor desc;
-			desc.size = sizeof(uint32_t) * sScene::Order().m_maze.getSizeX()* sScene::Order().m_maze.getSizeY()*2;
+			auto& map_desc = sScene::Order().m_map_info_cpu.m_descriptor[0];
+			desc.size = sizeof(uint32_t) * map_desc.m_cell_num.x* map_desc.m_cell_num.y*2;
 			m_soldier_LL_head_gpu.setup(loader->m_storage_memory.allocateMemory(desc));
 			loader->m_cmd.fillBuffer(m_soldier_LL_head_gpu.getOrg().buffer, m_soldier_LL_head_gpu.getOrg().offset, m_soldier_LL_head_gpu.getOrg().range, 0xFFFFFFFF);
 

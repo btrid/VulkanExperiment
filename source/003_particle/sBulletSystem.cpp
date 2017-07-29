@@ -29,7 +29,8 @@ void sBulletSystem::Private::setup(std::shared_ptr<btr::Loader>& loader)
 		auto barrier = m_bullet_info.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
 		loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { barrier }, {});
 
-		desc.size = sizeof(uint32_t) * sScene::Order().m_maze.getSizeX()* sScene::Order().m_maze.getSizeY();
+		auto& map_desc = sScene::Order().m_map_info_cpu.m_descriptor[0];
+		desc.size = sizeof(uint32_t) * map_desc.m_cell_num.x* map_desc.m_cell_num.y;
 		m_bullet_LL_head_gpu = loader->m_storage_memory.allocateMemory(desc);
 		loader->m_cmd.fillBuffer(m_bullet_LL_head_gpu.getBufferInfo().buffer, m_bullet_LL_head_gpu.getBufferInfo().offset, m_bullet_LL_head_gpu.getBufferInfo().range, 0xFFFFFFFF);
 

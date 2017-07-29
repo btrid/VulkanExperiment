@@ -10,17 +10,18 @@
 #include <003_particle/MazeGenerator.h>
 #include <003_particle/Geometry.h>
 
-struct MapInfo
+struct MapDescriptor
 {
 	glm::vec2 m_cell_size;
-	glm::ivec2 m_cell_num;
-	glm::ivec2 m_subcell_rate;
+	glm::uvec2 m_cell_num;
 };
 
-struct Map
+struct MapInfo
 {
-
+	MapDescriptor m_descriptor[2];
+	glm::uvec2 m_subcell;
 };
+
 struct sScene : public Singleton<sScene>
 {
 
@@ -81,9 +82,11 @@ struct sScene : public Singleton<sScene>
 
 	void setup(std::shared_ptr<btr::Loader>& loader)
 	{
-		m_map_info_cpu.m_cell_size = glm::vec2(50.f, 50.f);
-		m_map_info_cpu.m_cell_num = glm::vec2(15, 15);
-		m_map_info_cpu.m_subcell_rate = glm::ivec2(4, 4);
+		m_map_info_cpu.m_subcell = glm::uvec2(4, 4);
+		m_map_info_cpu.m_descriptor[1].m_cell_size = glm::vec2(50.f, 50.f);
+		m_map_info_cpu.m_descriptor[1].m_cell_num = glm::vec2(15, 15);
+		m_map_info_cpu.m_descriptor[0].m_cell_size = m_map_info_cpu.m_descriptor[1].m_cell_size/glm::vec2(m_map_info_cpu.m_subcell);
+		m_map_info_cpu.m_descriptor[0].m_cell_num = m_map_info_cpu.m_descriptor[1].m_cell_num*m_map_info_cpu.m_subcell;
 
 		// setup shader
 		{
@@ -110,8 +113,9 @@ struct sScene : public Singleton<sScene>
 		}
 
 		{
-			m_maze.generate(sScene::Order().m_map_info_cpu.m_cell_num.x, sScene::Order().m_map_info_cpu.m_cell_num.y);
-			auto geometry = m_maze.makeGeometry(glm::vec3(sScene::Order().m_map_info_cpu.m_cell_size.x, 1.f, sScene::Order().m_map_info_cpu.m_cell_size.y));
+			auto& map_desc = m_map_info_cpu.m_descriptor[1];
+			m_maze.generate(map_desc.m_cell_num.x, map_desc.m_cell_num.y);
+			auto geometry = m_maze.makeGeometry(glm::vec3(map_desc.m_cell_size.x, 1.f, map_desc.m_cell_size.y));
 			Geometry::OptimaizeDuplicateVertexDescriptor opti_desc;
 
 			std::vector<vk::VertexInputAttributeDescription> vertex_attr(1);
@@ -135,6 +139,7 @@ struct sScene : public Singleton<sScene>
 			);
 
 			{
+				m_map_info_cpu.m_descriptor[0].m_cell_num;
 				vk::ImageCreateInfo image_info;
 				image_info.imageType = vk::ImageType::e2D;
 				image_info.format = vk::Format::eR8Uint;
@@ -145,7 +150,7 @@ struct sScene : public Singleton<sScene>
 				image_info.usage = vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eTransferDst;
 				image_info.sharingMode = vk::SharingMode::eExclusive;
 				image_info.initialLayout = vk::ImageLayout::eUndefined;
-				image_info.extent = { (uint32_t)m_maze.getSizeX(), (uint32_t)m_maze.getSizeY(), 1u };
+				image_info.extent = { m_map_info_cpu.m_descriptor[0].m_cell_num.x, m_map_info_cpu.m_descriptor[0].m_cell_num.y, 1u };
 //				image_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
 				auto image = loader->m_device->createImage(image_info);
 
@@ -156,14 +161,16 @@ struct sScene : public Singleton<sScene>
 				auto image_memory = loader->m_device->allocateMemory(memory_alloc_info);
 				loader->m_device->bindImageMemory(image, image_memory, 0);
 
-// 				image_info.extent.width *= m_map_info_cpu.m_subcell_rate.x;
-// 				image_info.extent.height *= m_map_info_cpu.m_subcell_rate.y;
-// 				auto subimage = loader->m_device->createImage(image_info);
-// 				memory_request = loader->m_device->getImageMemoryRequirements(subimage);
-// 				memory_alloc_info.allocationSize = memory_request.size;
-// 				memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(loader->m_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
-// 				auto subimage_memory = loader->m_device->allocateMemory(memory_alloc_info);
-// 				loader->m_device->bindImageMemory(subimage, subimage_memory, 0);
+				vk::ImageCreateInfo sub_image_info = image_info;
+				sub_image_info.extent.width = m_map_info_cpu.m_descriptor[1].m_cell_num.x;
+				sub_image_info.extent.height = m_map_info_cpu.m_descriptor[1].m_cell_num.y;
+				auto subimage = loader->m_device->createImage(sub_image_info);
+				auto sub_memory_request = loader->m_device->getImageMemoryRequirements(subimage);
+				vk::MemoryAllocateInfo sub_memory_alloc_info;
+				sub_memory_alloc_info.allocationSize = sub_memory_request.size;
+				sub_memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(loader->m_device.getGPU(), sub_memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+				auto subimage_memory = loader->m_device->allocateMemory(sub_memory_alloc_info);
+				loader->m_device->bindImageMemory(subimage, subimage_memory, 0);
 
 				vk::ImageSubresourceRange subresourceRange;
 				subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
@@ -183,8 +190,8 @@ struct sScene : public Singleton<sScene>
 				view_info.subresourceRange = subresourceRange;
 				auto image_view = loader->m_device->createImageView(view_info);
 
-// 				view_info.image = subimage;
-// 				auto subimage_view = loader->m_device->createImageView(view_info);
+				view_info.image = subimage;
+				auto subimage_view = loader->m_device->createImageView(view_info);
 
 				{
 
@@ -194,27 +201,59 @@ struct sScene : public Singleton<sScene>
 					to_transfer.newLayout = vk::ImageLayout::eTransferDstOptimal;
 					to_transfer.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
 					to_transfer.subresourceRange = subresourceRange;
+					vk::ImageMemoryBarrier to_transfer_sub = to_transfer;
+					to_transfer_sub.image = subimage;
 
-					loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_transfer });
+					loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_transfer, to_transfer_sub });
 				}
 
 				{
-					auto map = m_maze.makeMapData();
+					auto submap = m_maze.makeMapData();
+					decltype(submap) map(m_map_info_cpu.m_descriptor[0].m_cell_num.x* m_map_info_cpu.m_descriptor[0].m_cell_num.y);
+					auto xy = m_map_info_cpu.m_descriptor[0].m_cell_num;
+					for (size_t y = 0; y < xy.y; y++)
+					{
+						for (size_t x = 0; x < xy.x; x++)
+						{
+							auto i = y / m_map_info_cpu.m_subcell.x*m_map_info_cpu.m_descriptor[1].m_cell_num.x + x / m_map_info_cpu.m_subcell.y;
+							auto m = submap[i];
+							map[y*xy.x + x] = m;
+						}
+					}
+
 					vk::ImageSubresourceLayers l;
 					l.setAspectMask(vk::ImageAspectFlagBits::eColor);
 					l.setBaseArrayLayer(0);
 					l.setLayerCount(1);
 					l.setMipLevel(0);
-					btr::BufferMemory::Descriptor desc;
-					desc.size = loader->m_device->getImageMemoryRequirements(image).size;
-					desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-					auto staging = loader->m_staging_memory.allocateMemory(desc);
-					memcpy(staging.getMappedPtr(), map.data(), desc.size);
-					vk::BufferImageCopy copy;
-					copy.setBufferOffset(staging.getBufferInfo().offset);
-					copy.setImageSubresource(l);
-					copy.setImageExtent(image_info.extent);
-					loader->m_cmd.copyBufferToImage(staging.getBufferInfo().buffer, image, vk::ImageLayout::eTransferDstOptimal, copy);
+					{
+						btr::BufferMemory::Descriptor desc;
+						desc.size = loader->m_device->getImageMemoryRequirements(image).size;
+						desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+						auto staging = loader->m_staging_memory.allocateMemory(desc);
+						memcpy(staging.getMappedPtr(), map.data(), desc.size);
+						vk::BufferImageCopy copy;
+						copy.setBufferOffset(staging.getBufferInfo().offset);
+						copy.setImageSubresource(l);
+						copy.setImageExtent(image_info.extent);
+
+						loader->m_cmd.copyBufferToImage(staging.getBufferInfo().buffer, image, vk::ImageLayout::eTransferDstOptimal, copy);
+					}
+					{
+						btr::BufferMemory::Descriptor desc;
+						desc.size = loader->m_device->getImageMemoryRequirements(subimage).size;
+						desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+						auto staging = loader->m_staging_memory.allocateMemory(desc);
+
+						memcpy(staging.getMappedPtr(), submap.data(), desc.size);
+						vk::BufferImageCopy copy;
+						copy.setBufferOffset(staging.getBufferInfo().offset);
+						copy.setImageSubresource(l);
+						copy.setImageExtent(sub_image_info.extent);
+
+						loader->m_cmd.copyBufferToImage(staging.getBufferInfo().buffer, subimage, vk::ImageLayout::eTransferDstOptimal, copy);
+
+					}
 				}
 
 				{
@@ -228,12 +267,19 @@ struct sScene : public Singleton<sScene>
 					to_shader_read.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 					to_shader_read.subresourceRange = subresourceRange;
 
-					loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, {}, { to_shader_read });
+					vk::ImageMemoryBarrier to_shader_read_sub = to_shader_read;
+					to_shader_read_sub.image = subimage;
+
+					loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, {}, { to_shader_read,to_shader_read_sub });
 				}
 
 				m_map_image = image;
 				m_map_image_view = image_view;
 				m_map_image_memory = image_memory;
+
+				m_submap_image = subimage;
+				m_submap_image_view = subimage_view;
+				m_submap_image_memory = subimage_memory;
 			}
 
 
@@ -267,13 +313,18 @@ struct sScene : public Singleton<sScene>
 			vk::DescriptorSetLayoutBinding()
 			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eFragment)
 			.setDescriptorCount(1)
-			.setDescriptorType(vk::DescriptorType::eStorageImage)
+			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 			.setBinding(0),
 			vk::DescriptorSetLayoutBinding()
 			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eFragment)
 			.setDescriptorCount(1)
-			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+			.setDescriptorType(vk::DescriptorType::eStorageImage)
 			.setBinding(1),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eFragment)
+			.setDescriptorCount(1)
+			.setDescriptorType(vk::DescriptorType::eStorageImage)
+			.setBinding(2),
 		};
 		bindings[DESCRIPTOR_SET_LAYOUT_CAMERA] =
 		{
@@ -303,20 +354,21 @@ struct sScene : public Singleton<sScene>
 				m_map_info.getBufferInfo(),
 			};
 			std::vector<vk::DescriptorImageInfo> images = {
-				vk::DescriptorImageInfo().setImageLayout(vk::ImageLayout::eGeneral).setImageView(m_map_image_view)
+				vk::DescriptorImageInfo().setImageLayout(vk::ImageLayout::eGeneral).setImageView(m_map_image_view),
+				vk::DescriptorImageInfo().setImageLayout(vk::ImageLayout::eGeneral).setImageView(m_submap_image_view),
 			};
 			std::vector<vk::WriteDescriptorSet> write_desc =
 			{
 				vk::WriteDescriptorSet()
-				.setDescriptorType(vk::DescriptorType::eStorageImage)
-				.setDescriptorCount(images.size())
-				.setPImageInfo(images.data())
-				.setDstBinding(0)
-				.setDstSet(m_descriptor_set[DESCRIPTOR_SET_MAP]),
-				vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 				.setDescriptorCount(uniforms.size())
 				.setPBufferInfo(uniforms.data())
+				.setDstBinding(0)
+				.setDstSet(m_descriptor_set[DESCRIPTOR_SET_MAP]),
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eStorageImage)
+				.setDescriptorCount(images.size())
+				.setPImageInfo(images.data())
 				.setDstBinding(1)
 				.setDstSet(m_descriptor_set[DESCRIPTOR_SET_MAP]),
 			};
@@ -499,9 +551,10 @@ struct sScene : public Singleton<sScene>
 
 	glm::ivec2 calcMapIndex(const glm::vec4& p)
 	{
-		glm::vec2 cell_p = glm::mod(glm::vec2(p.xz), m_map_info_cpu.m_cell_size);
-		glm::ivec2 map_index(glm::vec2(p.xz) / m_map_info_cpu.m_cell_size);
-		assert(glm::all(glm::greaterThanEqual(map_index, glm::ivec2(0))) && glm::all(glm::lessThan(map_index, m_map_info_cpu.m_cell_num)));
+		auto& map_desc = m_map_info_cpu.m_descriptor[0];
+		glm::vec2 cell_p = glm::mod(glm::vec2(p.xz), map_desc.m_cell_size);
+		glm::ivec2 map_index(glm::vec2(p.xz) / map_desc.m_cell_size);
+		assert(glm::all(glm::greaterThanEqual(map_index, glm::ivec2(0))) && glm::all(glm::lessThan(map_index, glm::ivec2(map_desc.m_cell_num))));
 		return map_index;
 
 	}

@@ -21,7 +21,7 @@ layout(location=1) in FSIn{
 }In;
 layout(location = 0) out vec4 FragColor;
 
-
+/*
 vec3 getCellSize3D()
 {
 	return vec3(u_map_info.cell_size.x, WALL_HEIGHT, u_map_info.cell_size.y);
@@ -32,9 +32,10 @@ vec3 clampByMapIndex(in vec3 pos, in ivec3 map_index)
 	float particle_size = 0.;
 	return clamp(pos, (vec3(map_index) * cell_size)+particle_size+FLT_EPSIRON, (map_index+ivec3(1)) * cell_size-particle_size-FLT_EPSIRON);
 }
-ivec3 calcMapIndex(in vec3 p)
+*/
+ivec3 calcMapIndex(in MapDescriptor desc, in vec3 p)
 {
-	vec3 cell_size = vec3(u_map_info.cell_size.x, WALL_HEIGHT, u_map_info.cell_size.y);
+	vec3 cell_size = vec3(desc.m_cell_size.x, WALL_HEIGHT, desc.m_cell_size.y);
 	ivec3 map_index = ivec3(p.xyz / cell_size);
 	return map_index;
 }
@@ -116,6 +117,8 @@ Hit marchToAABB(in Ray ray, in vec3 bmin, in vec3 bmax)
 
 void main() 
 {
+	MapDescriptor desc = u_map_info.m_descriptor[0];
+
 	vec3 foward = normalize(u_target - u_eye).xyz;
 	vec3 side = cross(vec3(0., 1., 0.), foward);
 	side = dot(side, side) <= 0.1 ? vec3(1., 0., 0.) : normalize(side);
@@ -133,7 +136,7 @@ void main()
 	vec3 pos = u_eye.xyz;
 
 	Ray ray = MakeRay(pos, dir);
-	vec2 area = u_map_info.m_cell_num * u_map_info.cell_size;
+	vec2 area = desc.m_cell_num * desc.m_cell_size;
 	vec3 bmin = vec3(0) - 0.1;
 	vec3 bmax = vec3(area.x, WALL_HEIGHT*5, area.y) + 0.1;
 	Hit hit = marchToAABB(ray, bmin, bmax);
@@ -144,13 +147,15 @@ void main()
 		FragColor = vec4(0., 0., 0., 1.);
 		return;
 	}
+
+
 	pos = hit.HitPoint;
-	ivec3 map_index = calcMapIndex(pos);
+	ivec3 map_index = calcMapIndex(desc, pos);
 	for(;;)
 	{
 		ivec3 next = marchEx3D(pos, map_index, dir);
 		if(any(lessThan(map_index.xz, ivec2(0)))
-		|| any(greaterThanEqual(map_index.xz, ivec2(u_map_info.m_cell_num))))
+		|| any(greaterThanEqual(map_index.xz, ivec2(desc.m_cell_num))))
 		{
 			FragColor = vec4(0., 0., 0., 1.);
 			return;

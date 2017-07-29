@@ -1,17 +1,25 @@
 
 
-struct MapInfo
+struct MapDescriptor
 {
-	vec2 cell_size;
+	vec2 m_cell_size;
 	uvec2 m_cell_num;
 };
+
+struct MapInfo
+{
+	MapDescriptor m_descriptor[2];
+	uvec2 m_subcell;
+};
+
 #define WALL_HEIGHT (5.)
 
 #ifdef SETPOINT_MAP
-layout(set=SETPOINT_MAP, binding=0, r8ui) uniform readonly uimage2D t_map;
-layout(std140, set=SETPOINT_MAP, binding=1) uniform MapInfoUniform {
+layout(std140, set=SETPOINT_MAP, binding=0) uniform MapInfoUniform {
 	MapInfo u_map_info;
 };
+layout(set=SETPOINT_MAP, binding=1, r8ui) uniform readonly uimage2D t_map;
+layout(set=SETPOINT_MAP, binding=2, r8ui) uniform readonly uimage2D t_mapsub;
 
 
 
@@ -21,16 +29,16 @@ void march(inout vec2 pos, inout ivec2 map_index, in vec2 _dir)
 	if(progress < 0.00000001){ return;}
 	vec2 dir = normalize(_dir);
 
-	MapInfo map_info = u_map_info;
+	MapDescriptor desc = u_map_info.m_descriptor[0];
 	float particle_size = 0.;
 	for(;;)
 	{
-		vec2 cell_origin = vec2(map_index)*map_info.cell_size.xy;
+		vec2 cell_origin = vec2(map_index)*desc.m_cell_size.xy;
 		vec2 cell_p = pos - cell_origin;
-		float x = dir.x < 0. ? cell_p.x : (map_info.cell_size.x- cell_p.x);
-		float y = dir.y < 0. ? cell_p.y : (map_info.cell_size.y- cell_p.y);
-		x = (x <= particle_size ? map_info.cell_size.x + x : x) - particle_size;
-		y = (y <= particle_size ? map_info.cell_size.y + y : y) - particle_size;
+		float x = dir.x < 0. ? cell_p.x : (desc.m_cell_size.x- cell_p.x);
+		float y = dir.y < 0. ? cell_p.y : (desc.m_cell_size.y- cell_p.y);
+		x = (x <= particle_size ? desc.m_cell_size.x + x : x) - particle_size;
+		y = (y <= particle_size ? desc.m_cell_size.y + y : y) - particle_size;
 
 		vec2 dist = vec2(9999.);
 		dist.x = abs(dir.x) < FLT_EPSIRON ? 9999.9 : abs(x / dir.x);
@@ -45,7 +53,7 @@ void march(inout vec2 pos, inout ivec2 map_index, in vec2 _dir)
 		{
 			// 移動完了
 			pos += dir * progress;
-			pos = clamp(pos, (vec2(map_index) * map_info.cell_size)+particle_size+FLT_EPSIRON, (map_index+ivec2(1)) * map_info.cell_size-particle_size-FLT_EPSIRON);
+			pos = clamp(pos, (vec2(map_index) * desc.m_cell_size)+particle_size+FLT_EPSIRON, (map_index+ivec2(1)) * desc.m_cell_size-particle_size-FLT_EPSIRON);
 			return;
 		}
 		progress -= progLength;
@@ -78,7 +86,7 @@ void march(inout vec2 pos, inout ivec2 map_index, in vec2 _dir)
 			map_index += next;
 		}
 		pos = next_pos;
-		pos = clamp(pos, (vec2(map_index) * map_info.cell_size)+particle_size+FLT_EPSIRON, (map_index+ivec2(1)) * map_info.cell_size-particle_size-FLT_EPSIRON);
+		pos = clamp(pos, (vec2(map_index) * desc.m_cell_size)+particle_size+FLT_EPSIRON, (map_index+ivec2(1)) * desc.m_cell_size-particle_size-FLT_EPSIRON);
 	}
 
 }
@@ -92,14 +100,14 @@ struct MarchResult
 };
 MarchResult marchEx(in vec2 pos, in ivec2 map_index, in float progress, in vec2 dir)
 {
-	MapInfo map_info = u_map_info;
+	MapDescriptor desc = u_map_info.m_descriptor[0];
 	float particle_size = 0.;
-	vec2 cell_origin = vec2(map_index)*map_info.cell_size.xy;
+	vec2 cell_origin = vec2(map_index)*desc.m_cell_size.xy;
 	vec2 cell_p = pos - cell_origin;
-	float x = dir.x < 0. ? cell_p.x : (map_info.cell_size.x- cell_p.x);
-	float y = dir.y < 0. ? cell_p.y : (map_info.cell_size.y- cell_p.y);
-	x = (x <= particle_size ? map_info.cell_size.x + x : x) - particle_size;
-	y = (y <= particle_size ? map_info.cell_size.y + y : y) - particle_size;
+	float x = dir.x < 0. ? cell_p.x : (desc.m_cell_size.x- cell_p.x);
+	float y = dir.y < 0. ? cell_p.y : (desc.m_cell_size.y- cell_p.y);
+	x = (x <= particle_size ? desc.m_cell_size.x + x : x) - particle_size;
+	y = (y <= particle_size ? desc.m_cell_size.y + y : y) - particle_size;
 
 	vec2 dist = vec2(9999.);
 	dist.x = abs(dir.x) < FLT_EPSIRON ? 9999.9 : abs(x / dir.x);
@@ -114,8 +122,6 @@ MarchResult marchEx(in vec2 pos, in ivec2 map_index, in float progress, in vec2 
 	{
 		// 移動完了
 		pos += dir * progress;
-//		pos = clamp(pos, (vec2(map_index) * map_info.cell_size)+particle_size+FLT_EPSIRON, (map_index+ivec2(1)) * map_info.cell_size-particle_size-FLT_EPSIRON);
-//		return ivec2(0);
 		MarchResult result;
 		result.next_pos = pos;
 		result.next_map_index = map_index;
@@ -144,17 +150,17 @@ MarchResult marchEx(in vec2 pos, in ivec2 map_index, in float progress, in vec2 
 	return result;
 }
 
-uint calcMapIndex1D(in uvec2 map_index, in uint db_index)
+uint calcMapIndex1D(in uvec2 map_index)
 {
-	uint offset = db_index* (u_map_info.m_cell_num.x*u_map_info.m_cell_num.y);
-//	return offset + convert2DTo1D(map_index, u_map_info.m_cell_num.xy);
-	return offset + map_index.y * u_map_info.m_cell_num.x + map_index.x;
+	MapDescriptor desc = u_map_info.m_descriptor[0];
+	return map_index.y * desc.m_cell_num.x + map_index.x;
 }
 
 ivec3 marchEx3D(inout vec3 pos, inout ivec3 map_index, in vec3 dir)
 {
-	MapInfo map_info = u_map_info;
-	vec3 cell_size = vec3(map_info.cell_size.x, WALL_HEIGHT, map_info.cell_size.y);
+//	MapInfo map_info = u_map_info;
+	MapDescriptor desc = u_map_info.m_descriptor[0];
+	vec3 cell_size = vec3(desc.m_cell_size.x, WALL_HEIGHT, desc.m_cell_size.y);
 	float particle_size = 0.;
 	vec3 cell_origin = vec3(map_index)*cell_size;
 	vec3 cell_p = pos - cell_origin;
