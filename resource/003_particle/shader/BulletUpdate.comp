@@ -62,6 +62,7 @@ void main()
 			vec3 wall = vec3(next.x, 0., next.y);
 			b.m_vel.xyz = reflect(b.m_vel.xyz, wall);
 			dir = normalize(b.m_vel.xz);
+			imageAtomicAdd(t_map_damage, result.next_map_index, 255);
 		}
 		else
 		{

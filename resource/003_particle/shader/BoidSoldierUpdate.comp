@@ -88,7 +88,6 @@ void main()
 			ivec2 map_next = ivec2(soldier.m_map_index+ next * ivec2(u_map_info.m_subcell));
 			vec2 offset = desc.m_cell_size * ((rand(soldier.m_pos.xz)-0.5)*0.7);
 			astar_target = vec2(map_next.x+0.5, map_next.y+0.5) * desc.m_cell_size + vec2(0.) + offset;
-//			astar_target = vec2(100000.);
 			soldier.m_astar_target = astar_target;
 		}
 		vec2 _astar_dir = normalize(astar_target - soldier.m_pos.xz);

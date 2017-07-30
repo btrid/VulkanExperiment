@@ -7,6 +7,7 @@
 #include <btrlib/BufferMemory.h>
 #include <btrlib/sGlobal.h>
 #include <btrlib/Singleton.h>
+#include <applib/App.h>
 #include <003_particle/MazeGenerator.h>
 #include <003_particle/Geometry.h>
 
@@ -32,6 +33,7 @@ struct sScene : public Singleton<sScene>
 		SHADER_FRAGMENT_FLOOR,
 		SHADER_VERTEX_FLOOR_EX,
 		SHADER_FRAGMENT_FLOOR_EX,
+		SHADER_COMPUTE_MAP_UPDATE,
 		SHADER_NUM,
 	};
 
@@ -57,6 +59,7 @@ struct sScene : public Singleton<sScene>
 	{
 		PIPELINE_DRAW_FLOOR,
 		PIPELINE_DRAW_FLOOR_EX,
+		PIPELINE_COMPUTE_MAP,
 		PIPELINE_NUM,
 	};
 	btr::UpdateBuffer<CameraGPU> m_camera;
@@ -71,9 +74,12 @@ struct sScene : public Singleton<sScene>
 	vk::Image m_submap_image;
 	vk::ImageView m_submap_image_view;
 	vk::DeviceMemory m_submap_image_memory;
+	vk::Image m_map_damae_image;
+	vk::ImageView m_map_damae_image_view;
+	vk::DeviceMemory m_map_damae_image_memory;
 	btr::AllocatedMemory m_map_info;
 
-	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_stage_info;
+	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_shader_info;
 	std::array<vk::Pipeline, PIPELINE_NUM> m_pipeline;
 
 	std::array<vk::DescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
@@ -101,14 +107,15 @@ struct sScene : public Singleton<sScene>
 				{ "FloorRender.frag.spv",vk::ShaderStageFlagBits::eFragment },
 				{ "FloorRenderEx.vert.spv",vk::ShaderStageFlagBits::eVertex },
 				{ "FloorRenderEx.frag.spv",vk::ShaderStageFlagBits::eFragment },
+				{ "MapUpdate.comp.spv",vk::ShaderStageFlagBits::eCompute },
 			};
 			static_assert(array_length(shader_info) == SHADER_NUM, "not equal shader num");
 
 			std::string path = btr::getResourceAppPath() + "shader\\binary\\";
 			for (size_t i = 0; i < SHADER_NUM; i++) {
-				m_stage_info[i].setModule(loadShader(loader->m_device.getHandle(), path + shader_info[i].name));
-				m_stage_info[i].setStage(shader_info[i].stage);
-				m_stage_info[i].setPName("main");
+				m_shader_info[i].setModule(loadShader(loader->m_device.getHandle(), path + shader_info[i].name));
+				m_shader_info[i].setStage(shader_info[i].stage);
+				m_shader_info[i].setPName("main");
 			}
 		}
 
@@ -151,7 +158,6 @@ struct sScene : public Singleton<sScene>
 				image_info.sharingMode = vk::SharingMode::eExclusive;
 				image_info.initialLayout = vk::ImageLayout::eUndefined;
 				image_info.extent = { m_map_info_cpu.m_descriptor[0].m_cell_num.x, m_map_info_cpu.m_descriptor[0].m_cell_num.y, 1u };
-//				image_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
 				auto image = loader->m_device->createImage(image_info);
 
 				vk::MemoryRequirements memory_request = loader->m_device->getImageMemoryRequirements(image);
@@ -160,6 +166,17 @@ struct sScene : public Singleton<sScene>
 				memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(loader->m_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 				auto image_memory = loader->m_device->allocateMemory(memory_alloc_info);
 				loader->m_device->bindImageMemory(image, image_memory, 0);
+
+				vk::ImageCreateInfo image_damage_info = image_info;
+				image_damage_info.format = vk::Format::eR32Uint;
+				auto image_damage = loader->m_device->createImage(image_damage_info);
+
+				vk::MemoryRequirements damage_memory_request = loader->m_device->getImageMemoryRequirements(image_damage);
+				vk::MemoryAllocateInfo damage_memory_alloc_info;
+				damage_memory_alloc_info.allocationSize = damage_memory_request.size;
+				damage_memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(loader->m_device.getGPU(), damage_memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+				auto image_damage_memory = loader->m_device->allocateMemory(damage_memory_alloc_info);
+				loader->m_device->bindImageMemory(image_damage, image_damage_memory, 0);
 
 				vk::ImageCreateInfo sub_image_info = image_info;
 				sub_image_info.extent.width = m_map_info_cpu.m_descriptor[1].m_cell_num.x;
@@ -193,6 +210,11 @@ struct sScene : public Singleton<sScene>
 				view_info.image = subimage;
 				auto subimage_view = loader->m_device->createImageView(view_info);
 
+				vk::ImageViewCreateInfo damage_view_info = vk::ImageViewCreateInfo(view_info)
+					.setFormat(vk::Format::eR32Uint)
+					.setImage(image_damage);
+				auto image_damage_view = loader->m_device->createImageView(damage_view_info);
+
 				{
 
 					vk::ImageMemoryBarrier to_transfer;
@@ -203,8 +225,10 @@ struct sScene : public Singleton<sScene>
 					to_transfer.subresourceRange = subresourceRange;
 					vk::ImageMemoryBarrier to_transfer_sub = to_transfer;
 					to_transfer_sub.image = subimage;
+					vk::ImageMemoryBarrier to_transfer_damage = to_transfer;
+					to_transfer_damage.image = image_damage;
 
-					loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_transfer, to_transfer_sub });
+					loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_transfer, to_transfer_sub, to_transfer_damage });
 				}
 
 				{
@@ -215,7 +239,7 @@ struct sScene : public Singleton<sScene>
 					{
 						for (size_t x = 0; x < xy.x; x++)
 						{
-							auto i = y / m_map_info_cpu.m_subcell.x*m_map_info_cpu.m_descriptor[1].m_cell_num.x + x / m_map_info_cpu.m_subcell.y;
+							auto i = y / m_map_info_cpu.m_subcell.y*m_map_info_cpu.m_descriptor[1].m_cell_num.x + x / m_map_info_cpu.m_subcell.x;
 							auto m = submap[i];
 							map[y*xy.x + x] = m;
 						}
@@ -254,6 +278,8 @@ struct sScene : public Singleton<sScene>
 						loader->m_cmd.copyBufferToImage(staging.getBufferInfo().buffer, subimage, vk::ImageLayout::eTransferDstOptimal, copy);
 
 					}
+
+					loader->m_cmd.clearColorImage(image_damage, vk::ImageLayout::eTransferDstOptimal, vk::ClearColorValue(std::array<unsigned, 4>{}), subresourceRange);
 				}
 
 				{
@@ -270,7 +296,11 @@ struct sScene : public Singleton<sScene>
 					vk::ImageMemoryBarrier to_shader_read_sub = to_shader_read;
 					to_shader_read_sub.image = subimage;
 
-					loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, {}, { to_shader_read,to_shader_read_sub });
+					vk::ImageMemoryBarrier to_compute_damege = to_shader_read;
+					to_compute_damege.image = image_damage;
+					to_compute_damege.dstAccessMask = vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite;
+
+					loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, {}, { to_shader_read,to_shader_read_sub, to_compute_damege });
 				}
 
 				m_map_image = image;
@@ -280,6 +310,10 @@ struct sScene : public Singleton<sScene>
 				m_submap_image = subimage;
 				m_submap_image_view = subimage_view;
 				m_submap_image_memory = subimage_memory;
+
+				m_map_damae_image = image_damage;
+				m_map_damae_image_view = image_damage_view;
+				m_map_damae_image_memory = image_damage_memory;
 			}
 
 
@@ -325,11 +359,16 @@ struct sScene : public Singleton<sScene>
 			.setDescriptorCount(1)
 			.setDescriptorType(vk::DescriptorType::eStorageImage)
 			.setBinding(2),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eFragment)
+			.setDescriptorCount(1)
+			.setDescriptorType(vk::DescriptorType::eStorageImage)
+			.setBinding(3),
 		};
 		bindings[DESCRIPTOR_SET_LAYOUT_CAMERA] =
 		{
 			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eVertex| vk::ShaderStageFlagBits::eFragment)
+			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex| vk::ShaderStageFlagBits::eFragment)
 			.setDescriptorCount(1)
 			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 			.setBinding(0),
@@ -356,6 +395,7 @@ struct sScene : public Singleton<sScene>
 			std::vector<vk::DescriptorImageInfo> images = {
 				vk::DescriptorImageInfo().setImageLayout(vk::ImageLayout::eGeneral).setImageView(m_map_image_view),
 				vk::DescriptorImageInfo().setImageLayout(vk::ImageLayout::eGeneral).setImageView(m_submap_image_view),
+				vk::DescriptorImageInfo().setImageLayout(vk::ImageLayout::eGeneral).setImageView(m_map_damae_image_view),
 			};
 			std::vector<vk::WriteDescriptorSet> write_desc =
 			{
@@ -407,6 +447,17 @@ struct sScene : public Singleton<sScene>
 		size.setHeight(480);
 		size.setDepth(1);
 		// pipeline
+		{
+			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
+			{
+				vk::ComputePipelineCreateInfo()
+				.setStage(m_shader_info[SHADER_COMPUTE_MAP_UPDATE])
+				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR]),
+			};
+			auto pipelines = loader->m_device->createComputePipelines(loader->m_cache, compute_pipeline_info);
+			m_pipeline[PIPELINE_COMPUTE_MAP] = pipelines[0];
+
+		}
 		{
 			// assembly
 			vk::PipelineInputAssemblyStateCreateInfo assembly_info[] =
@@ -485,7 +536,7 @@ struct sScene : public Singleton<sScene>
 			{
 				vk::GraphicsPipelineCreateInfo()
 				.setStageCount(3)
-				.setPStages(&m_stage_info.data()[SHADER_VERTEX_FLOOR])
+				.setPStages(&m_shader_info.data()[SHADER_VERTEX_FLOOR])
 				.setPVertexInputState(&vertex_input_info[0])
 				.setPInputAssemblyState(&assembly_info[0])
 				.setPViewportState(&viewportInfo)
@@ -497,7 +548,7 @@ struct sScene : public Singleton<sScene>
 				.setPColorBlendState(&blend_info),
 				vk::GraphicsPipelineCreateInfo()
 				.setStageCount(2)
-				.setPStages(&m_stage_info.data()[SHADER_VERTEX_FLOOR_EX])
+				.setPStages(&m_shader_info.data()[SHADER_VERTEX_FLOOR_EX])
 				.setPVertexInputState(&vertex_input_info[1])
 				.setPInputAssemblyState(&assembly_info[1])
 				.setPViewportState(&viewportInfo)
@@ -533,6 +584,33 @@ struct sScene : public Singleton<sScene>
 			m_camera.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexShader, {}, {}, { to_draw_barrier }, {});
+
+
+		{
+//			auto to_read = m_soldier_emit_gpu.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
+			vk::ImageMemoryBarrier to_read;
+			to_read.oldLayout = vk::ImageLayout::eGeneral;
+			to_read.newLayout = vk::ImageLayout::eGeneral;
+			to_read.image = m_map_damae_image;
+			to_read.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+			to_read.subresourceRange.baseArrayLayer = 0;
+			to_read.subresourceRange.baseMipLevel = 0;
+			to_read.subresourceRange.layerCount = 1;
+			to_read.subresourceRange.levelCount = 1;
+			to_read.dstAccessMask = vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite;
+			to_read.srcAccessMask = vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite;
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, to_read);
+
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COMPUTE_MAP]);
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR], 0, m_descriptor_set[DESCRIPTOR_SET_LAYOUT_CAMERA], {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR], 1, m_descriptor_set[DESCRIPTOR_SET_LAYOUT_MAP], {});
+						auto groups = app::calcDipatchGroups(glm::uvec3(m_map_info_cpu.m_descriptor[0].m_cell_num, 1), glm::uvec3(32, 32, 1));
+			cmd.dispatch(groups.x, groups.y, groups.z);
+
+		}
+
+
 
 	}
 	void draw(vk::CommandBuffer cmd)

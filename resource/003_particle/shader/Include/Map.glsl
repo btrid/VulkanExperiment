@@ -18,8 +18,9 @@ struct MapInfo
 layout(std140, set=SETPOINT_MAP, binding=0) uniform MapInfoUniform {
 	MapInfo u_map_info;
 };
-layout(set=SETPOINT_MAP, binding=1, r8ui) uniform readonly uimage2D t_map;
+layout(set=SETPOINT_MAP, binding=1, r8ui) uniform /*readonly*/ uimage2D t_map;
 layout(set=SETPOINT_MAP, binding=2, r8ui) uniform readonly uimage2D t_mapsub;
+layout(set=SETPOINT_MAP, binding=3, r32ui) uniform uimage2D t_map_damage;
 
 
 
