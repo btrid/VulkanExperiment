@@ -10,25 +10,10 @@
 //#extension GL_ARB_shading_language_include : require
 #extension GL_GOOGLE_cpp_style_line_directive : require
 #include </Common.glsl>
+#define SETPOINT_PARTICLE 0
 #include </Particle.glsl>
 
 layout (local_size_x = 1024, local_size_y = 1) in;
-
-layout(std140, set=0, binding=0) uniform ParticleInfoUniform 
-{
-	ParticleInfo u_particle_info;
-};
-layout(std430, set=0, binding=1) buffer ParticleDataBuffer 
-{
-	ParticleData b_particle[];
-};
-
-layout(std430, set=0, binding=2) restrict buffer CounterBuffer {
-	DrawIndirectCommand	b_draw_cmd;
-};
-layout(std430, set=1, binding=0) readonly buffer EmitBuffer {
-	ParticleData b_particle_emit[];
-};
 
 layout(push_constant) uniform ConstantBlock
 {

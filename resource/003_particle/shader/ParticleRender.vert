@@ -16,7 +16,10 @@
 
 #define SETPOINT_CAMERA 1
 #include <Common.glsl>
-#include <Particle.glsl>
+
+#define SETPOINT_PARTICLE 0
+#include </Particle.glsl>
+
 layout(location=0) out gl_PerVertex{
 	vec4 gl_Position;
 	float gl_PointSize;
@@ -24,12 +27,6 @@ layout(location=0) out gl_PerVertex{
 layout(location=1) out VSOUT{
 	float life;
 }VSOut;
-
-layout(std140, set=0, binding=1) buffer ParticleDataBuffer 
-{
-	ParticleData b_particle[];
-};
-
 
 layout(push_constant) uniform UpdateConstantBlock
 {

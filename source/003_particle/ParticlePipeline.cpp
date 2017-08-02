@@ -1,6 +1,6 @@
 #include <003_particle/ParticlePipeline.h>
 
-void cParticlePipeline::Private::setup(btr::Loader& loader)
+void sParticlePipeline::Private::setup(btr::Loader& loader)
 {
 
 	m_particle_info_cpu.m_max_num = 8192;
@@ -15,14 +15,6 @@ void cParticlePipeline::Private::setup(btr::Loader& loader)
 			loader.m_cmd.fillBuffer(m_particle.getBufferInfo().buffer, m_particle.getBufferInfo().offset, m_particle.getBufferInfo().range, 0u);
 		}
 
-		{
-			btr::UpdateBufferDescriptor emit_desc;
-			emit_desc.device_memory = loader.m_storage_memory;
-			emit_desc.staging_memory = loader.m_staging_memory;
-			emit_desc.frame_max = sGlobal::FRAME_MAX;
-			m_particle_emit.setup(emit_desc);
-		}
-
 		btr::BufferMemory::Descriptor desc;
 		desc.size = sizeof(vk::DrawIndirectCommand);
 		m_particle_counter = loader.m_storage_memory.allocateMemory(desc);
@@ -35,22 +27,14 @@ void cParticlePipeline::Private::setup(btr::Loader& loader)
 		auto barrier = m_particle_info.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
 		loader.m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { barrier }, {});
 
-	}
-
-	{
-		const char* name[] = {
-			"ParticleUpdate.comp.spv",
-			"ParticleEmit.comp.spv",
-		};
-		static_assert(array_length(name) == COMPUTE_NUM, "not equal shader num");
-
-		std::string path = btr::getResourceAppPath() + "shader\\binary\\";
-		for (size_t i = 0; i < COMPUTE_NUM; i++)
 		{
-			m_compute_shader_info[i].setModule(loadShader(loader.m_device.getHandle(), path + name[i]));
-			m_compute_shader_info[i].setStage(vk::ShaderStageFlagBits::eCompute);
-			m_compute_shader_info[i].setPName("main");
+			btr::BufferMemory::Descriptor data_desc;
+			data_desc.size = sizeof(ParticleData) * m_particle_info_cpu.m_emit_max_num;
+			m_particle_emit = loader.m_storage_memory.allocateMemory(data_desc);
+			std::vector<ParticleData> p(m_particle_info_cpu.m_emit_max_num);
+			loader.m_cmd.fillBuffer(m_particle_emit.getBufferInfo().buffer, m_particle_emit.getBufferInfo().offset, m_particle_emit.getBufferInfo().range, 0u);
 		}
+
 	}
 
 	{
@@ -59,23 +43,26 @@ void cParticlePipeline::Private::setup(btr::Loader& loader)
 			vk::ShaderStageFlagBits stage;
 		} shader_desc[] =
 		{
-			{"Render.vert.spv", vk::ShaderStageFlagBits::eVertex },
-			{"Render.frag.spv", vk::ShaderStageFlagBits::eFragment },
+			{ "ParticleUpdate.comp.spv", vk::ShaderStageFlagBits::eCompute },
+			{ "ParticleEmit.comp.spv", vk::ShaderStageFlagBits::eCompute },
+			{ "Render.vert.spv", vk::ShaderStageFlagBits::eVertex },
+			{ "Render.frag.spv", vk::ShaderStageFlagBits::eFragment },
 		};
-		static_assert(array_length(shader_desc) == GRAPHICS_SHADER_NUM, "not equal shader num");
+		static_assert(array_length(shader_desc) == SHADER_NUM, "not equal shader num");
+
 		std::string path = btr::getResourceAppPath() + "shader\\binary\\";
-		for (uint32_t i = 0; i < GRAPHICS_SHADER_NUM; i++)
+		for (size_t i = 0; i < SHADER_NUM; i++)
 		{
-			m_graphics_shader_info[i].setModule(loadShader(loader.m_device.getHandle(), path + shader_desc[i].name));
-			m_graphics_shader_info[i].setStage(shader_desc[i].stage);
-			m_graphics_shader_info[i].setPName("main");
+			m_shader_info[i].setModule(loadShader(loader.m_device.getHandle(), path + shader_desc[i].name));
+			m_shader_info[i].setStage(shader_desc[i].stage);
+			m_shader_info[i].setPName("main");
 		}
 	}
 
 	{
 		// descriptor set layout
-		std::vector<std::vector<vk::DescriptorSetLayoutBinding>> bindings(DESCRIPTOR_NUM);
-		bindings[DESCRIPTOR_UPDATE] =
+		std::vector<std::vector<vk::DescriptorSetLayoutBinding>> bindings(DESCRIPTOR_SET_LAYOUT_NUM);
+		bindings[DESCRIPTOR_SET_PARTICLE] =
 		{
 			vk::DescriptorSetLayoutBinding()
 			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex)
@@ -93,18 +80,7 @@ void cParticlePipeline::Private::setup(btr::Loader& loader)
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setBinding(2),
 		};
-
-		bindings[DESCRIPTOR_EMIT] =
-		{
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-			.setDescriptorCount(1)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setBinding(0),
-		};
-
-
-		for (size_t i = 0; i < DESCRIPTOR_NUM; i++)
+		for (size_t i = 0; i < DESCRIPTOR_SET_LAYOUT_NUM; i++)
 		{
 			vk::DescriptorSetLayoutCreateInfo descriptor_set_layout_info = vk::DescriptorSetLayoutCreateInfo()
 				.setBindingCount(bindings[i].size())
@@ -122,7 +98,7 @@ void cParticlePipeline::Private::setup(btr::Loader& loader)
 	{
 		{
 			std::vector<vk::DescriptorSetLayout> layouts = {
-				m_descriptor_set_layout[DESCRIPTOR_UPDATE],
+				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_PARTICLE],
 				sScene::Order().m_descriptor_set_layout[sScene::DESCRIPTOR_SET_LAYOUT_MAP],
 			};
 			std::vector<vk::PushConstantRange> push_constants = {
@@ -139,24 +115,7 @@ void cParticlePipeline::Private::setup(btr::Loader& loader)
 		}
 		{
 			std::vector<vk::DescriptorSetLayout> layouts = {
-				m_descriptor_set_layout[DESCRIPTOR_UPDATE],
-				m_descriptor_set_layout[DESCRIPTOR_EMIT],
-			};
-			std::vector<vk::PushConstantRange> push_constants = {
-				vk::PushConstantRange()
-				.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-				.setSize(8),
-			};
-			vk::PipelineLayoutCreateInfo pipeline_layout_info;
-			pipeline_layout_info.setSetLayoutCount(layouts.size());
-			pipeline_layout_info.setPSetLayouts(layouts.data());
-			pipeline_layout_info.setPushConstantRangeCount(push_constants.size());
-			pipeline_layout_info.setPPushConstantRanges(push_constants.data());
-			m_pipeline_layout[COMPUTE_PIPELINE_LAYOUT_EMIT] = loader.m_device->createPipelineLayout(pipeline_layout_info);
-		}
-		{
-			std::vector<vk::DescriptorSetLayout> layouts = {
-				m_descriptor_set_layout[DESCRIPTOR_UPDATE],
+				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_PARTICLE],
 				sScene::Order().m_descriptor_set_layout[sScene::DESCRIPTOR_SET_LAYOUT_CAMERA],
 			};
 			std::vector<vk::PushConstantRange> push_constants = {
@@ -169,7 +128,7 @@ void cParticlePipeline::Private::setup(btr::Loader& loader)
 			pipeline_layout_info.setPSetLayouts(layouts.data());
 			pipeline_layout_info.setPushConstantRangeCount(push_constants.size());
 			pipeline_layout_info.setPPushConstantRanges(push_constants.data());
-			m_pipeline_layout[GRAPHICS_PIPELINE_LAYOUT_PARTICLE_DRAW] = loader.m_device->createPipelineLayout(pipeline_layout_info);
+			m_pipeline_layout[PIPELINE_LAYOUT_DRAW] = loader.m_device->createPipelineLayout(pipeline_layout_info);
 		}
 
 
@@ -181,6 +140,7 @@ void cParticlePipeline::Private::setup(btr::Loader& loader)
 			std::vector<vk::DescriptorBufferInfo> storages = {
 				m_particle.getBufferInfo(),
 				m_particle_counter.getBufferInfo(),
+				m_particle_emit.getBufferInfo(),
 			};
 			std::vector<vk::WriteDescriptorSet> write_desc =
 			{
@@ -189,28 +149,13 @@ void cParticlePipeline::Private::setup(btr::Loader& loader)
 				.setDescriptorCount(uniforms.size())
 				.setPBufferInfo(uniforms.data())
 				.setDstBinding(0)
-				.setDstSet(m_descriptor_set[DESCRIPTOR_UPDATE]),
+				.setDstSet(m_descriptor_set[DESCRIPTOR_SET_LAYOUT_PARTICLE]),
 				vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 				.setDescriptorCount(storages.size())
 				.setPBufferInfo(storages.data())
 				.setDstBinding(1)
-				.setDstSet(m_descriptor_set[DESCRIPTOR_UPDATE]),
-			};
-			loader.m_device->updateDescriptorSets(write_desc, {});
-		}
-		{
-			std::vector<vk::DescriptorBufferInfo> storages = {
-				m_particle_emit.getBufferInfo(),
-			};
-			std::vector<vk::WriteDescriptorSet> write_desc =
-			{
-				vk::WriteDescriptorSet()
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(storages.size())
-				.setPBufferInfo(storages.data())
-				.setDstBinding(0)
-				.setDstSet(m_descriptor_set[DESCRIPTOR_EMIT]),
+				.setDstSet(m_descriptor_set[DESCRIPTOR_SET_LAYOUT_PARTICLE]),
 			};
 			loader.m_device->updateDescriptorSets(write_desc, {});
 		}
@@ -220,13 +165,11 @@ void cParticlePipeline::Private::setup(btr::Loader& loader)
 		std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 		{
 			vk::ComputePipelineCreateInfo()
-			.setStage(m_compute_shader_info[0])
-			.setLayout(m_pipeline_layout[0]),
-			vk::ComputePipelineCreateInfo()
-			.setStage(m_compute_shader_info[1])
-			.setLayout(m_pipeline_layout[1]),
+			.setStage(m_shader_info[SHADER_UPDATE])
+			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE]),
 		};
-		m_compute_pipeline = loader.m_device->createComputePipelines(loader.m_cache, compute_pipeline_info);
+		auto pipelines = loader.m_device->createComputePipelines(loader.m_cache, compute_pipeline_info);
+		m_pipeline[PIPELINE_UPDATE] = pipelines[0];
 
 		vk::Extent3D size;
 		size.setWidth(640);
@@ -286,23 +229,28 @@ void cParticlePipeline::Private::setup(btr::Loader& loader)
 
 			vk::PipelineVertexInputStateCreateInfo vertex_input_info;
 
+			vk::PipelineShaderStageCreateInfo shader_info[] = {
+				m_shader_info[SHADER_DRAW_VERTEX],
+				m_shader_info[SHADER_DRAW_FRAGMENT],
+			};
+
 			std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =
 			{
 				vk::GraphicsPipelineCreateInfo()
-				.setStageCount(m_graphics_shader_info.size())
-				.setPStages(m_graphics_shader_info.data())
+				.setStageCount(array_length(shader_info))
+				.setPStages(shader_info)
 				.setPVertexInputState(&vertex_input_info)
 				.setPInputAssemblyState(&assembly_info[0])
 				.setPViewportState(&viewportInfo)
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
-				.setLayout(m_pipeline_layout[GRAPHICS_PIPELINE_LAYOUT_PARTICLE_DRAW])
+				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW])
 				.setRenderPass(loader.m_render_pass)
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			m_graphics_pipeline = loader.m_device->createGraphicsPipelines(loader.m_cache, graphics_pipeline_info);
-
+			auto pipelines = loader.m_device->createGraphicsPipelines(loader.m_cache, graphics_pipeline_info);
+			m_pipeline[PIPELINE_LAYOUT_DRAW] = pipelines[0];
 		}
 	}
 }

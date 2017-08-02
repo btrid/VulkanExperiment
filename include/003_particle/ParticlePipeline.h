@@ -19,6 +19,7 @@ struct ParticleInfo
 	uint32_t m_max_num;
 	uint32_t m_emit_max_num;
 };
+
 struct ParticleData
 {
 	glm::vec4 m_pos;	//!< xyz:pos w:scale
@@ -32,53 +33,65 @@ struct ParticleData
 	float m_life;
 	uint32_t _pp;
 };
-
-struct cParticlePipeline
+struct ParticleParameter
 {
+	glm::vec4 m_pos;	//!< xyz:pos w:scale
+	glm::vec4 m_rotate;
+	glm::vec4 m_scale;
+	glm::vec4 m_round_length;
+};
+
+struct sParticlePipeline : Singleton<sParticlePipeline>
+{
+	friend Singleton<sParticlePipeline>;
+
 	struct Private 
 	{
 		enum : uint32_t {
-			COMPUTE_UPDATE,
-			COMPUTE_EMIT,
-			COMPUTE_NUM,
+			PIPELINE_UPDATE,
+			PIPELINE_EMIT,
+			PIPELINE_DRAW,
+			PIPELINE_NUM,
 		};
 		enum : uint32_t {
-			GRAPHICS_SHADER_VERTEX_PARTICLE,
-			GRAPHICS_SHADER_FRAGMENT_PARTICLE,
-			GRAPHICS_SHADER_NUM,
+			SHADER_UPDATE,
+			SHADER_EMIT,
+			SHADER_DRAW_VERTEX,
+			SHADER_DRAW_FRAGMENT,
+			SHADER_NUM,
 		};
 
-		enum : uint32_t
+		enum PipelineLayout : uint32_t
 		{
 			PIPELINE_LAYOUT_UPDATE,
-			COMPUTE_PIPELINE_LAYOUT_EMIT,
-			GRAPHICS_PIPELINE_LAYOUT_PARTICLE_DRAW,
-			GRAPHICS_PIPELINE_LAYOUT_FLOOR_DRAW,
+			PIPELINE_LAYOUT_DRAW,
 			PIPELINE_LAYOUT_NUM,
 		};
-		enum : uint32_t
+
+		enum DescriptorSetLayout : uint32_t
 		{
-			DESCRIPTOR_UPDATE,
-			DESCRIPTOR_EMIT,
-			DESCRIPTOR_NUM,
+			DESCRIPTOR_SET_LAYOUT_PARTICLE,
+			DESCRIPTOR_SET_LAYOUT_NUM,
+		};
+		enum DescriptorSet : uint32_t
+		{
+			DESCRIPTOR_SET_PARTICLE,
+			DESCRIPTOR_SET_NUM,
 		};
 
 		btr::AllocatedMemory m_particle;
 		btr::AllocatedMemory m_particle_info;
-		btr::UpdateBuffer<std::array<ParticleData, 1024>> m_particle_emit;
 		btr::AllocatedMemory m_particle_counter;
+		btr::AllocatedMemory m_particle_emit;
 
 		btr::AllocatedMemory m_particle_draw_indiret_info;
 
-		std::array<vk::DescriptorSetLayout, DESCRIPTOR_NUM> m_descriptor_set_layout;
-		std::array<vk::DescriptorSet, DESCRIPTOR_NUM> m_descriptor_set;
+		std::array<vk::DescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
+		std::array<vk::DescriptorSet, DESCRIPTOR_SET_NUM> m_descriptor_set;
 		std::array<vk::PipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
 
-		std::vector<vk::Pipeline> m_compute_pipeline;
-		std::array<vk::PipelineShaderStageCreateInfo, COMPUTE_NUM> m_compute_shader_info;
-
-		std::vector<vk::Pipeline> m_graphics_pipeline;
-		std::array<vk::PipelineShaderStageCreateInfo, GRAPHICS_SHADER_NUM> m_graphics_shader_info;
+		std::array<vk::Pipeline, PIPELINE_LAYOUT_NUM> m_pipeline;
+		std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_shader_info;
 
 		ParticleInfo m_particle_info_cpu;
 
@@ -119,10 +132,10 @@ struct cParticlePipeline
 				block.m_deltatime = sGlobal::Order().getDeltaTime();
 				block.m_src_offset = src_offset;
 				block.m_dst_offset = dst_offset;
-				cmd.pushConstants<UpdateConstantBlock>(m_pipeline_layout[COMPUTE_UPDATE], vk::ShaderStageFlagBits::eCompute, 0, block);
+				cmd.pushConstants<UpdateConstantBlock>(m_pipeline_layout[SHADER_UPDATE], vk::ShaderStageFlagBits::eCompute, 0, block);
 
-				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_compute_pipeline[COMPUTE_UPDATE]);
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], 0, m_descriptor_set[DESCRIPTOR_UPDATE], {});
+				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_UPDATE]);
+				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], 0, m_descriptor_set[DESCRIPTOR_SET_PARTICLE], {});
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], 1, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_MAP), {});
 				auto groups = app::calcDipatchGroups(glm::uvec3(8192 / 2, 1, 1), glm::uvec3(1024, 1, 1));
 				cmd.dispatch(groups.x, groups.y, groups.z);
@@ -136,11 +149,9 @@ struct cParticlePipeline
 				count %= 3000;
 				if (count == 1 )
 				{
-					auto particle_barrier = m_particle.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite);
 					std::vector<vk::BufferMemoryBarrier> to_emit_barrier =
 					{
-						particle_barrier,
-						m_particle_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
+						m_particle_emit.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite)
 					};
 					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_emit_barrier, {});
 
@@ -154,12 +165,15 @@ struct cParticlePipeline
 
 						p.m_map_index = sScene::Order().calcMapIndex(p.m_pos);
 					}
-					m_particle_emit.subupdate(data.data(), vector_sizeof(data), 0);
-
-					auto to_transfer = m_particle_emit.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite);
-					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
-					m_particle_emit.update(cmd);
-					auto to_read = m_particle_emit.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
+					btr::BufferMemory::Descriptor emit_desc;
+					emit_desc.size = vector_sizeof(data);
+					emit_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+					auto staging = executer.m_staging_memory.allocateMemory(emit_desc);
+					memcpy_s(staging.getMappedPtr(), emit_desc.size, data.data(), emit_desc.size);
+					std::vector<vk::BufferMemoryBarrier> to_read = {
+						m_particle_emit.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead), 
+						m_particle_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
+					};
 					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
 
 					struct EmitConstantBlock
@@ -170,13 +184,12 @@ struct cParticlePipeline
 					EmitConstantBlock block;
 					block.m_emit_num = data.size();
 					block.m_offset = dst_offset;
-					cmd.pushConstants<EmitConstantBlock>(m_pipeline_layout[COMPUTE_EMIT], vk::ShaderStageFlagBits::eCompute, 0, block);
-					cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_compute_pipeline[COMPUTE_EMIT]);
-					cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[COMPUTE_PIPELINE_LAYOUT_EMIT], 0, m_descriptor_set[DESCRIPTOR_UPDATE], {});
-					cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[COMPUTE_PIPELINE_LAYOUT_EMIT], 1, m_descriptor_set[DESCRIPTOR_EMIT], {});
+					cmd.pushConstants<EmitConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], vk::ShaderStageFlagBits::eCompute, 0, block);
+					cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_EMIT]);
+					cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], 0, m_descriptor_set[DESCRIPTOR_SET_PARTICLE], {});
+					cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], 1, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_MAP), {});
 					auto groups = app::calcDipatchGroups(glm::uvec3(block.m_emit_num, 1, 1), glm::uvec3(1024, 1, 1));
 					cmd.dispatch(groups.x, groups.y, groups.z);
-
 				}
 
 				struct DrawConstantBlock
@@ -185,7 +198,7 @@ struct cParticlePipeline
 				};
 				DrawConstantBlock block;
 				block.m_src_offset = dst_offset;
-				cmd.pushConstants<DrawConstantBlock>(m_pipeline_layout[GRAPHICS_PIPELINE_LAYOUT_PARTICLE_DRAW], vk::ShaderStageFlagBits::eVertex, 0, block);
+				cmd.pushConstants<DrawConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], vk::ShaderStageFlagBits::eVertex, 0, block);
 				auto particle_barrier = m_particle.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eVertexShader, {}, {}, particle_barrier, {});
 

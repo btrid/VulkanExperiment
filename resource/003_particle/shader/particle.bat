@@ -2,9 +2,9 @@
 cd /d %~dp0
 
 rem glslc.exe -w -I Include -x glsl -fshader-stage=compute	-o binary\\ParticleEmit.comp.spv ParticleEmit.comp
-rem glslc.exe -w -I Include -x glsl -fshader-stage=compute	-o binary\\ParticleUpdate.comp.spv ParticleUpdate.comp
-glslc.exe -w -I Include -x glsl -fshader-stage=vertex	-o binary\\Render.vert.spv Render.vert
-glslc.exe -w -I Include -x glsl -fshader-stage=fragment	-o binary\\Render.frag.spv Render.frag
+glslc.exe -w -I Include -x glsl -fshader-stage=compute	-o binary\\ParticleUpdate.comp.spv ParticleUpdate.comp
+glslc.exe -w -I Include -x glsl -fshader-stage=vertex	-o binary\\ParticleRender.vert.spv ParticleRender.vert
+glslc.exe -w -I Include -x glsl -fshader-stage=fragment	-o binary\\ParticleRender.frag.spv ParticleRender.frag
 
 glslc.exe -w -I Include -x glsl -fshader-stage=vertex	-o binary\\FloorRender.vert.spv FloorRender.vert
 glslc.exe -w -I Include -x glsl -fshader-stage=fragment	-o binary\\FloorRender.frag.spv FloorRender.frag

@@ -7,24 +7,14 @@
 
 #extension GL_GOOGLE_cpp_style_line_directive : require
 #include </Common.glsl>
+
+#define SETPOINT_PARTICLE 0
 #include </Particle.glsl>
 
 #define SETPOINT_MAP 1
 #include </Map.glsl>
 
 layout (local_size_x = 1024, local_size_y = 1) in;
-
-layout(std140, set=0, binding=0) uniform ParticleInfoUniform {
-	ParticleInfo u_particle_info;
-};
-
-layout(std430, set=0, binding=1) restrict buffer ParticleDataBuffer {
-	ParticleData b_particle[];
-};
-layout(std430, set=0, binding=2) restrict buffer CounterBuffer {
-	DrawIndirectCommand b_draw_cmd;
-};
-
 
 layout(push_constant) uniform UpdateConstantBlock
 {
@@ -60,10 +50,8 @@ void main()
 
 		vec3 cell_origin = map_index*cell_size;
 		vec3 cell_p = p.m_pos.xyz - cell_origin;
-		float x = dir.x < 0. ? cell_p.x : (map_info.cell_size.x- cell_p.x);
-		float z = dir.z < 0. ? cell_p.z : (map_info.cell_size.z- cell_p.z);
-//		x = (x <= particle_size ? cell_size.x + x : x) - particle_size;
-//		z = (z <= particle_size ? cell_size.z + z : z) - particle_size;
+		float x = dir.x < 0. ? cell_p.x : (map_info.m_cell_size.x- cell_p.x);
+		float z = dir.z < 0. ? cell_p.z : (map_info.m_cell_size.z- cell_p.z);
 
 		vec3 dist = vec3(99.);
 		dist.x = abs(dir.x) < FLT_EPSIRON ? 99.9 : abs(x / dir.x);
