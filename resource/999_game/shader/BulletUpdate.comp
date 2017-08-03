@@ -1,0 +1,82 @@
+#version 450
+
+//#pragma optionNV (unroll none)
+#pragma optionNV (inline all)
+//#pragma optionNV(fastmath on)
+//#pragma optionNV(strict on)
+
+#extension GL_GOOGLE_cpp_style_line_directive : require
+
+#include </ConvertDimension.glsl>
+
+#include </Common.glsl>
+#define SETPOINT_BULLET 0
+#include </Bullet.glsl>
+
+#define SETPOINT_MAP 1
+#include </Map.glsl>
+
+layout (local_size_x = 1024, local_size_y = 1) in;
+
+
+layout(push_constant) uniform UpdateConstantBlock
+{
+	float m_deltatime;
+	uint m_src_offset;
+	uint m_dst_offset;
+	uint m_emit_num;
+} constant;
+
+void main()
+{
+	uint index = gl_GlobalInvocationID.x;
+	if(index >= u_bullet_info.m_max_num){
+		return;
+	}
+
+	BulletData b = b_bullet[constant.m_src_offset + index];
+	b_bullet[constant.m_src_offset + index].m_life = -1.;
+	b.m_life -= constant.m_deltatime;
+	if(b.m_life <= 0.){
+		return;
+	}
+	MapDescriptor desc = u_map_info.m_descriptor[0];
+
+	vec2 dir = normalize(b.m_vel.xz);
+	float progress = length(b.m_vel.xz)*constant.m_deltatime;
+	for(;;)
+	{
+		MarchResult result = marchEx(b.m_pos.xz, b.m_map_index, length(b.m_vel.xz)*constant.m_deltatime, dir);
+		if(result.is_end)
+		{
+			b.m_pos.xz = result.next_pos;
+			break;
+		}
+
+		uint map = imageLoad(t_map, result.next_map_index).x;
+		b.m_pos.xz = result.next_pos;
+		if(map != 0)
+		{
+			// 壁にぶつかったので反射
+			vec2 next = vec2(result.next_map_index - b.m_map_index);
+			vec3 wall = vec3(next.x, 0., next.y);
+			b.m_vel.xyz = reflect(b.m_vel.xyz, wall);
+			dir = normalize(b.m_vel.xz);
+			imageAtomicAdd(t_map_damage, result.next_map_index, 255);
+		}
+		else
+		{
+			// 何もないのでそのまま進む
+			b.m_map_index = result.next_map_index;
+			progress = result.progress;
+		}
+	}
+
+	uint dst_index = atomicAdd(b_bullet_draw_cmd.instanceCount, 1);
+
+	uint old = atomicExchange(b_bullet_head[convert2DTo1D(b.m_map_index, desc.m_cell_num.xy)], dst_index);
+	b.m_ll_next = old;
+
+	b_bullet[constant.m_dst_offset + dst_index] = b;
+
+}

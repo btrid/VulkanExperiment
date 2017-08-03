@@ -24,6 +24,7 @@
 #include <btrlib/BufferMemory.h>
 #include <applib/cModelRender.h>
 #include <applib/cModelPipeline.h>
+
 //#pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
 #pragma comment(lib, "FreeImage.lib")
@@ -31,7 +32,7 @@
 
 int main()
 {
-	btr::setResourcePath("..\\..\\resource\\004_model\\");
+	btr::setResourceAppPath("..\\..\\resource\\004_model\\");
 	sWindow& w = sWindow::Order();
 	vk::Instance instance = sGlobal::Order().getVKInstance();
 
