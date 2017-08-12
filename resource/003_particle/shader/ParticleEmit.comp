@@ -13,22 +13,24 @@
 #define SETPOINT_PARTICLE 0
 #include </Particle.glsl>
 
-layout (local_size_x = 1024, local_size_y = 1) in;
+layout (local_size_x = 128, local_size_y = 1) in;
 
 layout(push_constant) uniform ConstantBlock
 {
-	uint m_emit_num;
+	uint m_emitdata_num;
 	uint m_offset;
 } constant;
 
 void main()
 {
 	uint index = gl_GlobalInvocationID.x;
-	if(index >= constant.m_emit_num){
+	if(index >= b_emitter_num.x)
+	{
 		return;
 	}
 
 	uint dst_index = atomicAdd(b_draw_cmd.vertexCount, 1);
+//	dst_index = min(u_particle_info.m_particle_max_num, dst_index);
 	b_particle[constant.m_offset + dst_index] = b_particle_emit[index];
 
 }

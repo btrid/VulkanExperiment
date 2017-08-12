@@ -25,7 +25,7 @@
 #include <applib/cModelRender.h>
 #include <applib/cModelPipeline.h>
 
-//#pragma comment(lib, "btrlib.lib")
+#pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
 #pragma comment(lib, "FreeImage.lib")
 #pragma comment(lib, "vulkan-1.lib")
@@ -296,12 +296,12 @@ int main()
 	renderer.setup(*loader);
 	renderer.addModel(&render);
 	{
-		cModelRender::PlayMotionDescriptor desc;
+		PlayMotionDescriptor desc;
 		desc.m_data = model->getResource()->getAnimation().m_motion[0];
 		desc.m_is_loop = true;
 		desc.m_play_no = 0;
 		desc.m_start_time = 0.f;
-		render.play(desc);
+		render.getMotionList().play(desc);
 	}
  
 	auto pool_list = sThreadLocal::Order().getCmdPoolOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));

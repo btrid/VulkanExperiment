@@ -630,7 +630,6 @@ struct sScene : public Singleton<sScene>
 	glm::ivec2 calcMapIndex(const glm::vec4& p)
 	{
 		auto& map_desc = m_map_info_cpu.m_descriptor[0];
-		glm::vec2 cell_p = glm::mod(glm::vec2(p.xz), map_desc.m_cell_size);
 		glm::ivec2 map_index(glm::vec2(p.xz) / map_desc.m_cell_size);
 		assert(glm::all(glm::greaterThanEqual(map_index, glm::ivec2(0))) && glm::all(glm::lessThan(map_index, glm::ivec2(map_desc.m_cell_num))));
 		return map_index;

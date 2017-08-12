@@ -74,10 +74,10 @@ struct Player
 		bool is_front = input.m_keyboard.isHold('w')|| input.m_keyboard.isHold(VK_UP);
 		bool is_back = input.m_keyboard.isHold('s') || input.m_keyboard.isHold(VK_DOWN);
 		glm::vec3 inertia = glm::vec3(0.f);
-		inertia.z += is_front * 1.f;
-		inertia.z -= is_back * 1.f;
-		inertia.x += is_right * 1.f;
-		inertia.x -= is_left * 1.f;
+		inertia.z += is_front * 5.f;
+		inertia.z -= is_back * 5.f;
+		inertia.x += is_right * 5.f;
+		inertia.x -= is_left * 5.f;
 		m_inertia += inertia;
 		m_inertia = glm::clamp(m_inertia, glm::vec3(-1.f), glm::vec3(1.f));
 		m_pos += m_inertia * 0.01f;
@@ -89,7 +89,7 @@ struct Player
 				BulletData b;
 				b.m_life = 1.f;
 				b.m_pos = glm::vec4(m_pos, 0.3f);
-				b.m_vel = glm::vec4(m_dir, 1.f) * 13.3f;
+				b.m_vel = glm::vec4(m_dir, 1.f) * 33.3f;
 				b.m_type = 0;
 				b.m_map_index = sScene::Order().calcMapIndex(b.m_pos);
 				m_bullet.push_back(b);
@@ -99,7 +99,7 @@ struct Player
 				BulletData b;
 				b.m_life = 2.f;
 				b.m_pos = glm::vec4(m_pos, 0.3f);
-				b.m_vel = glm::vec4(m_dir, 1.f) * 13.3f;
+				b.m_vel = glm::vec4(m_dir, 1.f) * 63.3f;
 				b.m_type = 0;
 				b.m_map_index = sScene::Order().calcMapIndex(b.m_pos);
 				m_bullet.push_back(b);

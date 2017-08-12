@@ -1,0 +1,43 @@
+#version 450
+
+#pragma optionNV (unroll none)
+#pragma optionNV (inline all)
+#pragma optionNV(fastmath on)
+//#pragma optionNV(fastprecision on)
+//#pragma optionNV(ifcvt all)
+#pragma optionNV(strict on)
+
+//#extension GL_ARB_shading_language_include : require
+#extension GL_GOOGLE_cpp_style_line_directive : require
+#include </Common.glsl>
+#define SETPOINT_PARTICLE 0
+#include </Particle.glsl>
+
+layout (local_size_x = 1, local_size_y = 1) in;
+
+layout(push_constant) uniform UpdateConstantBlock{
+	float m_deltatime;
+	uint m_double_buffer_dst_index;
+} constant;
+
+
+void main()
+{
+	uint dst_index = atomicAdd(b_generate_cmd_num.x, 1);
+	ParticleGenerateCommand cmd;
+	cmd.m_generate_num = 128;
+	cmd.m_type = 0;
+	cmd.m_life.x =3.;
+	cmd.m_life.y =1.;
+	cmd.m_position.m_value = vec4(0.);
+	cmd.m_position.m_value_rand = vec4(10.,10.,10.,10.);
+	cmd.m_velocity.m_value = vec4(0.);
+	cmd.m_velocity.m_value_rand = vec4(5.,5.,5.,5.);
+	cmd.m_rotate.m_value = vec4(0.);
+	cmd.m_rotate.m_value_rand = vec4(0.);
+	cmd.m_scale.m_value = vec4(1.);
+	cmd.m_scale.m_value_rand = vec4(1.);
+	cmd.m_color.m_value = vec4(0.5);
+	cmd.m_color.m_value_rand = vec4(0.3);
+	b_particle_generate_cmd[dst_index] = cmd;
+}

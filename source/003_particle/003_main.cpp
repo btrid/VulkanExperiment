@@ -26,7 +26,8 @@
 #include <applib/cModelRender.h>
 #include <btrlib/Loader.h>
 
-#include <003_particle/sBulletSystem.h>
+#include <003_particle/sCameraManager.h>
+#include <003_particle/sParticlePipeline.h>
 
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
@@ -38,8 +39,8 @@ int main()
 	btr::setResourceAppPath("..\\..\\resource\\003_particle\\");
 	app::App app;
 	auto* camera = cCamera::sCamera::Order().create();
-	camera->m_position = glm::vec3(220.f, 60.f, 300.f);
-	camera->m_target = glm::vec3(220.f, 20.f, 201.f);
+	camera->m_position = glm::vec3(20.f, 10.f, 30.f);
+	camera->m_target = glm::vec3(0.f, 0.f, 0.f);
 	camera->m_up = glm::vec3(0.f, -1.f, 0.f);
 	camera->m_width = 640;
 	camera->m_height = 480;
@@ -77,7 +78,7 @@ int main()
 	loader->m_render_pass = app.m_render_pass;
 	vk::MemoryPropertyFlags host_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
 	vk::MemoryPropertyFlags device_memory = vk::MemoryPropertyFlagBits::eDeviceLocal;
-//	device_memory = host_memory; // debug
+	device_memory = host_memory; // debug
 	loader->m_vertex_memory.setup(device, vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000*1000 * 100);
 	loader->m_uniform_memory.setup(device, vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 20);
 	loader->m_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 1000 * 200);
@@ -123,7 +124,9 @@ int main()
 		begin_info.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 		render_cmds[0].begin(begin_info);
 		loader->m_cmd = render_cmds[0];
-		sScene::Order().setup(loader);
+
+		sCameraManager::Order().setup(loader);
+		sParticlePipeline::Order().setup(loader);
 
 		model.load(loader.get(), "..\\..\\resource\\tiny.x");
 		model_render.setup(loader, model.getResource());
@@ -184,7 +187,9 @@ int main()
 			{
 				auto* m_camera = cCamera::sCamera::Order().getCameraList()[0];
 				m_camera->control(app.m_window.getInput(), 0.016f);
-				sScene::Order().execute(executer);
+
+				sCameraManager::Order().execute(executer);
+				sParticlePipeline::Order().execute(executer);
 
 			}
 
@@ -220,6 +225,7 @@ int main()
 			render_cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 			// draw
 			model_pipeline.draw(render_cmd);
+			sParticlePipeline::Order().draw(render_cmd);
 			render_cmd.endRenderPass();
 
 			vk::ImageMemoryBarrier render_to_present_barrier;

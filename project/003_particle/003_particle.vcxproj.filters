@@ -18,7 +18,7 @@
     <ClCompile Include="..\..\source\003_particle\003_main.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\source\003_particle\ParticlePipeline.cpp">
+    <ClCompile Include="..\..\source\003_particle\sParticlePipeline.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>
@@ -26,10 +26,13 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\include\003_particle\ParticlePipeline.h">
+    <ClInclude Include="..\..\include\003_particle\CircleIndex.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\003_particle\CircleIndex.h">
+    <ClInclude Include="..\..\include\003_particle\sParticlePipeline.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\003_particle\sCameraManager.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>

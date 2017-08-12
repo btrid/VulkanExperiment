@@ -53,3 +53,6 @@ layout(std140, set=SETPOINT_CAMERA, binding=0) uniform CameraUniform
 float rand(in vec2 co){
     return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
 }
+vec4 rand4(in vec2 co){
+	return vec4(rand(co*sin(co.x*co.y)), rand(co.yx), rand(co*sin(co.y)), rand(co*sin(co.x)));
+}

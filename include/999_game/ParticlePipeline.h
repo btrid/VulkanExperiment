@@ -16,8 +16,8 @@
 
 struct ParticleInfo
 {
-	uint32_t m_max_num;
-	uint32_t m_emit_max_num;
+	uint32_t m_particle_max_num;
+	uint32_t m_emitter_max_num;
 };
 
 struct ParticleData
@@ -82,7 +82,7 @@ struct sParticlePipeline : Singleton<sParticlePipeline>
 		btr::AllocatedMemory m_particle;
 		btr::AllocatedMemory m_particle_info;
 		btr::AllocatedMemory m_particle_counter;
-		btr::AllocatedMemory m_particle_emit;
+		btr::AllocatedMemory m_particle_emitter;
 
 		btr::AllocatedMemory m_particle_draw_indiret_info;
 
@@ -141,8 +141,6 @@ struct sParticlePipeline : Singleton<sParticlePipeline>
 				cmd.dispatch(groups.x, groups.y, groups.z);
 
 			}
-
-
 			{
 				static int count;
 				count++;
@@ -151,7 +149,7 @@ struct sParticlePipeline : Singleton<sParticlePipeline>
 				{
 					std::vector<vk::BufferMemoryBarrier> to_emit_barrier =
 					{
-						m_particle_emit.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite)
+						m_particle_emitter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite)
 					};
 					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_emit_barrier, {});
 
@@ -171,7 +169,7 @@ struct sParticlePipeline : Singleton<sParticlePipeline>
 					auto staging = executer.m_staging_memory.allocateMemory(emit_desc);
 					memcpy_s(staging.getMappedPtr(), emit_desc.size, data.data(), emit_desc.size);
 					std::vector<vk::BufferMemoryBarrier> to_read = {
-						m_particle_emit.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead), 
+						m_particle_emitter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead), 
 						m_particle_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
 					};
 					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});

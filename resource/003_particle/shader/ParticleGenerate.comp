@@ -1,0 +1,62 @@
+#version 450
+
+#pragma optionNV (unroll none)
+#pragma optionNV (inline all)
+#pragma optionNV(fastmath on)
+//#pragma optionNV(fastprecision on)
+//#pragma optionNV(ifcvt all)
+#pragma optionNV(strict on)
+
+//#extension GL_ARB_shading_language_include : require
+#extension GL_GOOGLE_cpp_style_line_directive : require
+#include </Common.glsl>
+#define SETPOINT_PARTICLE 0
+#include </Particle.glsl>
+
+layout (local_size_x = 1024, local_size_y = 1) in;
+
+layout(push_constant) uniform UpdateConstantBlock{
+	float m_deltatime;
+	uint m_double_buffer_dst_index;
+} constant;
+
+shared ParticleGenerateCommand s_cmd;
+void main()
+{
+	uint local_index = gl_LocalInvocationID.x;
+	if(local_index == 0)
+	{
+		s_cmd = b_particle_generate_cmd[gl_WorkGroupID.x];
+	}
+	barrier();
+	memoryBarrierShared();
+
+//	ParticleGenerateCommand s_cmd = b_particle_generate_cmd[0];
+
+	if(local_index >= s_cmd.m_generate_num)
+	{
+		return;
+	}
+	
+	uint dst_index = atomicAdd(b_draw_cmd.vertexCount, 1);
+	vec4 rand01 =  rand4(vec2(gl_GlobalInvocationID.x*dst_index, dst_index+local_index));
+	vec4 rand11 = rand01*2.-1.;
+	vec4 position = s_cmd.m_position.m_value + s_cmd.m_position.m_value_rand*rand11.xyzw;
+	vec4 velocity = s_cmd.m_velocity.m_value + s_cmd.m_velocity.m_value_rand*rand11.yzxy;
+	vec4 rotate = s_cmd.m_rotate.m_value + s_cmd.m_rotate.m_value_rand*rand11.wxyz;
+	vec4 scale = s_cmd.m_scale.m_value + s_cmd.m_scale.m_value_rand*rand11.ywxz;
+	vec4 color = s_cmd.m_color.m_value + s_cmd.m_color.m_value_rand*rand11.zxyw;
+	ParticleData p;
+	p.m_position = position;
+	p.m_velocity = velocity;
+	p.m_rotate = rotate;
+	p.m_scale = scale;
+	p.m_color = color;
+	p.m_life = s_cmd.m_life.x + s_cmd.m_life.y*rand11.x;
+	p.m_type = s_cmd.m_type;
+
+	dst_index = min(u_particle_info.m_particle_max_num, dst_index);
+	uint dst_offset = constant.m_double_buffer_dst_index*u_particle_info.m_particle_max_num;
+	b_particle[dst_offset + dst_index] = p;
+
+}

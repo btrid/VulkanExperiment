@@ -148,7 +148,6 @@ struct cModelRenderPrivate
 						break;
 					}
 				}
-//				transformMatrix = parentMat * glm::scale(scale_value) * glm::toMat4(rotate_value) * glm::translate(translate_value);
 				transformMatrix = parentMat * glm::scale(scale_value) * glm::translate(translate_value)* glm::toMat4(rotate_value);
 				m_node_buffer[node_index] = transformMatrix;
 			}

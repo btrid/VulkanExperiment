@@ -3,15 +3,15 @@
 void sParticlePipeline::Private::setup(btr::Loader& loader)
 {
 
-	m_particle_info_cpu.m_max_num = 8192;
-	m_particle_info_cpu.m_emit_max_num = 1024;
+	m_particle_info_cpu.m_particle_max_num = 8192;
+	m_particle_info_cpu.m_emitter_max_num = 1024;
 
 	{
 		{
 			btr::BufferMemory::Descriptor data_desc;
-			data_desc.size = sizeof(ParticleData) * m_particle_info_cpu.m_max_num;
+			data_desc.size = sizeof(ParticleData) * m_particle_info_cpu.m_particle_max_num;
 			m_particle = loader.m_storage_memory.allocateMemory(data_desc);
-			std::vector<ParticleData> p(m_particle_info_cpu.m_max_num);
+			std::vector<ParticleData> p(m_particle_info_cpu.m_particle_max_num);
 			loader.m_cmd.fillBuffer(m_particle.getBufferInfo().buffer, m_particle.getBufferInfo().offset, m_particle.getBufferInfo().range, 0u);
 		}
 
@@ -29,10 +29,10 @@ void sParticlePipeline::Private::setup(btr::Loader& loader)
 
 		{
 			btr::BufferMemory::Descriptor data_desc;
-			data_desc.size = sizeof(ParticleData) * m_particle_info_cpu.m_emit_max_num;
-			m_particle_emit = loader.m_storage_memory.allocateMemory(data_desc);
-			std::vector<ParticleData> p(m_particle_info_cpu.m_emit_max_num);
-			loader.m_cmd.fillBuffer(m_particle_emit.getBufferInfo().buffer, m_particle_emit.getBufferInfo().offset, m_particle_emit.getBufferInfo().range, 0u);
+			data_desc.size = sizeof(ParticleData) * m_particle_info_cpu.m_emitter_max_num;
+			m_particle_emitter = loader.m_storage_memory.allocateMemory(data_desc);
+			std::vector<ParticleData> p(m_particle_info_cpu.m_emitter_max_num);
+			loader.m_cmd.fillBuffer(m_particle_emitter.getBufferInfo().buffer, m_particle_emitter.getBufferInfo().offset, m_particle_emitter.getBufferInfo().range, 0u);
 		}
 
 	}
@@ -140,7 +140,7 @@ void sParticlePipeline::Private::setup(btr::Loader& loader)
 			std::vector<vk::DescriptorBufferInfo> storages = {
 				m_particle.getBufferInfo(),
 				m_particle_counter.getBufferInfo(),
-				m_particle_emit.getBufferInfo(),
+				m_particle_emitter.getBufferInfo(),
 			};
 			std::vector<vk::WriteDescriptorSet> write_desc =
 			{
