@@ -38,6 +38,6 @@ void main()
 	ParticleData p = b_particle[gl_VertexIndex + constant.m_offset];
 	vec4 pos = vec4(p.m_position.xyz, 1.0);
 	gl_Position = uProjection * uView * pos;
-	gl_PointSize = 10.;
+	gl_PointSize = 300./gl_Position.w;
 	VSOut.life = 0.2;
 }

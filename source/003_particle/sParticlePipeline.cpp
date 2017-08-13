@@ -34,8 +34,8 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Loader>& loader)
 			updater.m_rotate_mul = vec4(1.f);
 			updater.m_scale_add = vec4(0.f);
 			updater.m_scale_mul = vec4(1.f);
-			updater.m_velocity_add = vec4(0.f);
-			updater.m_velocity_mul = vec4(1.f);
+			updater.m_velocity_add = vec4(0.f, -2.f, 0.f, 0.f);
+			updater.m_velocity_mul = vec4(0.999f, 1.f, 0.999f, 0.f);
 			loader->m_cmd.updateBuffer<ParticleUpdateParameter>(m_particle_update_param.getBufferInfo().buffer, m_particle_update_param.getBufferInfo().offset, updater);
 			auto b = m_particle_update_param.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
 			loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { b }, {});

@@ -53,7 +53,7 @@ struct ParticleGenerateCommand
 	uint32_t m_type;
 	vec2 m_life;
 	EmitParam m_position;
-	EmitParam m_velocity;
+	EmitParam m_direction;		//!< xyz:•ûŒü(euler(degree)) w:ˆÚ“®—Ê
 	EmitParam m_rotate;
 	EmitParam m_scale;
 	EmitParam m_color;
@@ -82,7 +82,6 @@ struct EmitterUpdateParameter
 struct sParticlePipeline : Singleton<sParticlePipeline>
 {
 	friend Singleton<sParticlePipeline>;
-
 	struct Private 
 	{
 		enum : uint32_t {
@@ -160,7 +159,7 @@ struct sParticlePipeline : Singleton<sParticlePipeline>
 			// debug
 			static int a;
 			a++;
-			if (a == 10)
+			if (a == 100)
 			{
 				a = 0;
 				std::vector<vk::BufferMemoryBarrier> to_read = {

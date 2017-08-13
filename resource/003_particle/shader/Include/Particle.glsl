@@ -45,10 +45,11 @@ struct ParticleGenerateCommand
 	uint32_t m_type;
 	vec2 m_life;
 	EmitParam m_position;
-	EmitParam m_velocity;
+	EmitParam m_direction;		//!< xyz:方向 w:移動量
 	EmitParam m_rotate;
 	EmitParam m_scale;
 	EmitParam m_color;
+
 };
 
 struct EmitterData
