@@ -53,7 +53,7 @@ struct ParticleGenerateCommand
 	uint32_t m_type;
 	vec2 m_life;
 	EmitParam m_position;
-	EmitParam m_direction;		//!< xyz:•ûŒü(euler(degree)) w:ˆÚ“®—Ê
+	EmitParam m_direction;		//!< xyz:•ûŒü w:ˆÚ“®—Ê
 	EmitParam m_rotate;
 	EmitParam m_scale;
 	EmitParam m_color;
@@ -198,7 +198,7 @@ struct sParticlePipeline : Singleton<sParticlePipeline>
 				};
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
 
-				cmd.updateBuffer<vk::DrawIndirectCommand>(m_particle_counter.getBufferInfo().buffer, m_particle_counter.getBufferInfo().offset, vk::DrawIndirectCommand(0, 1, 0, 0));
+				cmd.updateBuffer<vk::DrawIndirectCommand>(m_particle_counter.getBufferInfo().buffer, m_particle_counter.getBufferInfo().offset, vk::DrawIndirectCommand(4, 0, 0, 0));
 				cmd.updateBuffer<glm::uvec3>(m_generate_cmd_counter.getBufferInfo().buffer, m_generate_cmd_counter.getBufferInfo().offset, glm::uvec3(0, 1, 1));
 
 				// update‚Ì‚½‚ßbarrier

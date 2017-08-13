@@ -22,7 +22,6 @@
 
 layout(location=0) out gl_PerVertex{
 	vec4 gl_Position;
-	float gl_PointSize;
 };
 layout(location=1) out VSOUT{
 	float life;
@@ -35,9 +34,9 @@ layout(push_constant) uniform UpdateConstantBlock
 
 void main()
 {
-	ParticleData p = b_particle[gl_VertexIndex + constant.m_offset];
-	vec4 pos = vec4(p.m_position.xyz, 1.0);
+	ParticleData p = b_particle[gl_InstanceIndex + constant.m_offset];
+	vec3 v = vec3(gl_VertexIndex/2, gl_VertexIndex%2, 0.);
+	vec4 pos = vec4(p.m_position.xyz + v, 1.0);
 	gl_Position = uProjection * uView * pos;
-	gl_PointSize = 300./gl_Position.w;
 	VSOut.life = 0.2;
 }

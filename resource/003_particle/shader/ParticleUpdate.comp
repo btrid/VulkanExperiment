@@ -42,7 +42,7 @@ void main()
 	p.m_velocity *= pow(updater.m_velocity_mul, vec4(1.+constant.m_deltatime));
 	p.m_position += p.m_velocity*constant.m_deltatime;
 
-	uint dst_index = atomicAdd(b_draw_cmd.vertexCount, 1);
+	uint dst_index = atomicAdd(b_draw_cmd.instanceCount, 1);
 	uint dst_offset = (constant.m_double_buffer_dst_index)*u_particle_info.m_particle_max_num;
 	b_particle[dst_offset + dst_index] = p;
 }

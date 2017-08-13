@@ -56,7 +56,7 @@ void main()
 		return;
 	}
 	
-	uint dst_index = atomicAdd(b_draw_cmd.vertexCount, 1);
+	uint dst_index = atomicAdd(b_draw_cmd.instanceCount, 1);
 	vec4 rand01 =  rand4(vec2(gl_GlobalInvocationID.x*dst_index, dst_index+local_index));
 	vec4 rand11 = rand01*2.-1.;
 	vec4 position = s_cmd.m_position.m_value + s_cmd.m_position.m_value_rand*rand11.xyzw;
