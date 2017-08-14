@@ -257,9 +257,6 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Loader>& loader)
 			// assembly
 			vk::PipelineInputAssemblyStateCreateInfo assembly_info[] =
 			{
-// 				vk::PipelineInputAssemblyStateCreateInfo()
-// 				.setPrimitiveRestartEnable(VK_FALSE)
-// 				.setTopology(vk::PrimitiveTopology::ePointList),
 				vk::PipelineInputAssemblyStateCreateInfo()
 				.setPrimitiveRestartEnable(VK_FALSE)
 				.setTopology(vk::PrimitiveTopology::eTriangleStrip),

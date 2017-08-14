@@ -24,7 +24,7 @@ layout(location=0) out gl_PerVertex{
 	vec4 gl_Position;
 };
 layout(location=1) out VSOUT{
-	float life;
+	vec4 m_color;
 }VSOut;
 
 layout(push_constant) uniform UpdateConstantBlock
@@ -36,7 +36,10 @@ void main()
 {
 	ParticleData p = b_particle[gl_InstanceIndex + constant.m_offset];
 	vec3 v = vec3(gl_VertexIndex/2, gl_VertexIndex%2, 0.);
+	mat3 invView = inverse(mat3(uView));
+	v = (invView*v).xyz;
+
 	vec4 pos = vec4(p.m_position.xyz + v, 1.0);
 	gl_Position = uProjection * uView * pos;
-	VSOut.life = 0.2;
+	VSOut.m_color = p.m_color;
 }

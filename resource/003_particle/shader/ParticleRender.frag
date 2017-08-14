@@ -11,11 +11,11 @@
 layout(location=0) out vec4 FragColor;
 
 layout(location=1) in FSIN{
-	float life;
+	vec4 m_color;
 }FSIn;
 
 void main()
 {
-	FragColor.rgb = vec3(FSIn.life);
-	FragColor.a = 1.;
+	FragColor.rgba = FSIn.m_color;
+//	FragColor.a = 1.;
 }
