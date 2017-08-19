@@ -26,7 +26,7 @@
 #include <applib/cModelRender.h>
 #include <btrlib/Loader.h>
 
-#include <003_particle/sCameraManager.h>
+#include <applib/sCameraManager.h>
 #include <003_particle/sParticlePipeline.h>
 
 #pragma comment(lib, "btrlib.lib")
