@@ -1,0 +1,107 @@
+#version 450
+
+#pragma optionNV (unroll all)
+#pragma optionNV (inline all)
+//#pragma optionNV(fastmath on)
+//#pragma optionNV(fastprecision on)
+//#pragma optionNV(ifcvt all)
+#pragma optionNV(strict on)
+#extension GL_GOOGLE_cpp_style_line_directive : require
+
+#include <convertDimension.glsl>
+#include <Shape.glsl>
+#include <Marching.glsl>
+
+layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+
+struct VolumeScene
+{
+	vec3 u_volume_min = vec3(-1000.);
+	vec3 u_volume_max = vec3(1000.);
+
+	vec3 u_light_pos = vec3(1000.);
+	vec3 u_light_color = vec3(1., 0., 0.);
+	vec4 u_background_color = vec4(1., 0., 1., 1.);
+}
+
+#define SETPOINT_VOLUME 0
+layout(set=SETPOINT_VOLUME binding = 0)uniform sampler3D u_volume;
+layout(set=SETPOINT_VOLUME binding = 1, RGBA32F)uniform writeonly image2D uOutput;
+layout(set=SETPOINT_VOLUME binding = 2, std140)uniform VolumeScene u_scene;
+
+
+void main() 
+{
+	vec3 volumeSize = (u_scene.u_volume_max - u_scene.u_volume_min);
+	ivec3 texSize = textureSize(u_volume, 0);
+	vec3 marchDist = volumeSize / (texSize*3.);
+	ivec2 indexXY = ivec2(gl_GlobalInvocationID.xy);
+	vec2 reso = vec2(640., 480.);
+	if(any(greaterThanEqual(indexXY, reso))){
+		return;
+	}
+
+	vec2 screen = (indexXY / reso)*2. - 1.;
+	Ray fromEye = MakeRayFromScreen();
+
+	vec3 currentColor = backgroundColor.xyz;
+	vec3 endpoint = fromEye.p;
+	vec3 startpoint = (fromEye.p + fromEye.d * 9999.);
+	{
+		Ray toAABB;
+		toAABB.p = startpoint;
+		toAABB.d = -fromEye.d;
+		Hit hit = marchToAABB(toAABB, uVolumeMin, uVolumeMax);
+		if(hit.IsHit == 0)
+		{
+			// フォグエリアに当たらなかった
+			imageStore(uOutput, indexXY, vec4(0., 1., 0., 1.));
+			return;
+		}
+		else
+		{
+			startpoint = hit.HitPoint + toAABB.d * 0.01;
+		}
+	}
+	Ray toEye;
+	toEye.p = startpoint;
+	toEye.d = -fromEye.d;
+
+	vec3 volumeColor = vec3(1.);
+	vec3 diffuse = backgroundColor.xyz;
+	float totalpass = 1.;
+	while(isInAABB(toEye.p, uVolumeMin, uVolumeMax) && dot(toEye.d, endpoint-toEye.p) >= 0.)
+	{
+		vec3 p = toEye.p - uVolumeMin;
+		float density = texture(uVolume, p / volumeSize).r;
+		{
+			totalpass = clamp(totalpass-density, 0., 1.);
+			vec3 march = toEye.d * marchDist;
+			toEye.p += march;
+		}
+
+		// ライトからの照度を計算
+		Ray toLight;
+		toLight.p = uLightPos;
+		toLight.d = normalize(toEye.p - uLightPos);
+		Hit hit = marchToAABB(toLight, uVolumeMin, uVolumeMax);
+		toLight.p = hit.HitPoint + toLight.d * 0.01;
+		float pass = 1.;
+		while(isInAABB(toLight.p, uVolumeMin, uVolumeMax) && dot(toLight.d, toEye.p-toLight.p) >= 0.)
+		{
+			vec3 lp = toLight.p - uVolumeMin;
+			float ldensity = texture(uVolume, lp / volumeSize).r;
+			pass = clamp(pass - ldensity, 0., 1.);
+			vec3 march = toLight.d * marchDist;
+			toLight.p += march;
+		}
+
+		vec3 color = mix(volumeColor, lightColor, pass);
+		diffuse = mix(diffuse, color, density);
+
+	}
+	vec3 color = diffuse;
+	imageStore(uOutput, indexXY, vec4(color.xyz, 1.));
+	
+}
+

@@ -1,0 +1,277 @@
+#version 450
+
+#pragma optionNV (unroll all)
+#pragma optionNV (inline all)
+//#pragma optionNV(fastmath on)
+//#pragma optionNV(fastprecision on)
+//#pragma optionNV(ifcvt all)
+#pragma optionNV(strict on)
+#extension GL_ARB_shader_draw_parameters : require
+#extension GL_ARB_bindless_texture : require
+#extension GL_ARB_shading_language_include : require
+
+#include </convertDimension.glsl>
+#include </Shape.glsl>
+
+layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+
+layout(binding = 0)uniform sampler3D uVolume;
+layout(binding = 0, RGBA32F)uniform writeonly image2D uOutput;
+
+struct Vertex{
+	vec4 p;
+	vec4 n;
+};
+
+struct TriangleMesh
+{
+	Vertex a, b, c;
+};
+
+struct MarchResult
+{
+	Hit				HitResult;
+	TriangleMesh	HitTriangle;
+	uint			TriangleLLIndex;
+};
+layout(binding = 0) buffer IndexBuffer
+{
+	ivec3 bIndex[];
+};
+
+layout(std430, binding = 1) buffer VertexBuffer
+{
+	Vertex bVertex[];
+};
+
+uniform vec3 uEye;
+uniform vec3 uTarget; 
+
+uniform int uTime = 0;
+uniform vec3 uVolumeMin = vec3(-1000.);
+uniform vec3 uVolumeMax = vec3(1000.);
+
+uniform vec3 uLightPos = vec3(1000.);
+uniform vec3 lightColor = vec3(1., 1., 0.6);
+vec4 backgroundColor = vec4(1., 0., 1., 1.);
+
+float rand(in vec2 co)
+{
+    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+}
+float rand3d(in vec3 co)
+{
+    return fract(sin(dot(co.xyz ,vec3(12.9898,78.233, 43.543))) * 43758.5453);
+}
+float rand4d(in vec4 co)
+{
+    return fract(sin(dot(co.xyzw ,vec4(12.9898,78.233, 43.543, 22.598))) * 43758.5453);
+}
+
+bool isInAABB(in vec3 p, in vec3 bmin, in vec3 bmax)
+{
+	return (all(lessThanEqual(p, bmax)) && all(greaterThanEqual(p, bmin)));
+}
+Hit marchToAABB(in Ray ray, in vec3 bmin, in vec3 bmax)
+{
+	Hit ret = MakeHit();
+
+	if(all(lessThan(ray.p, bmax)) 
+	&& all(greaterThan(ray.p, bmin)))
+	{
+		// AABBの中にいる
+		ret.IsHit = 1;
+		ret.HitPoint = ray.p;
+		ret.Distance = 0;
+		return ret;
+	}
+
+	float tmin = 0.;
+	float tmax = 10e6;
+	for (int i = 0; i < 3; i++)
+	{
+		if (abs(ray.d[i]) < 10e-6)
+		{
+			// 光線はスラブに対して平行。原点がスラブの中になければ交点無し。
+			if (ray.p[i] < bmin[i] || ray.p[i] > bmax[i])
+			{
+				return ret;
+			}
+		}
+		else
+		{
+			float ood = 1. / ray.d[i];
+			float t1 = (bmin[i] - ray.p[i]) * ood;
+			float t2 = (bmax[i] - ray.p[i]) * ood;
+
+			// t1が近い平面との交差、t2が遠い平面との交差になる
+			float near = min(t1, t2);
+			float far = max(t1, t2);
+
+			// スラブの交差している感覚との交差を計算
+			tmin = max(near, tmin);
+			tmax = max(far, tmax);
+
+			if (tmin > tmax) {
+				return ret;
+			}
+		}
+	}
+	float dist = tmin;
+
+	ret.IsHit = 1;
+	ret.HitPoint = ray.p + ray.d*dist;
+	ret.Distance = dist;
+	return ret;
+
+}
+
+MarchResult march(in Ray ray)
+{
+	MarchResult result;
+	result.HitResult = MakeHit(); 
+
+	Hit hitResult = MakeHit();
+	int indexCount = 36 / 3 - 2;
+	for(int triIndex = 0; triIndex < indexCount; triIndex++)
+	{
+		Vertex a = bVertex[bIndex[triIndex].x];
+		Vertex b = bVertex[bIndex[triIndex].y];
+		Vertex c = bVertex[bIndex[triIndex].z];
+		Triangle t = MakeTriangle(a.p.xyz, b.p.xyz, c.p.xyz);
+		t = scaleTriangle(t, 0.5); // 計算誤差でポリゴンの間が当たらないことがあるので大きくする
+		Hit hit = intersect(t, ray);
+		if(hit.IsHit != 0 && hit.Distance < hitResult.Distance)
+		{
+			hitResult = hit;
+			result.TriangleLLIndex = triIndex;
+			result.HitResult = hitResult;
+			result.HitTriangle.a = a;
+			result.HitTriangle.b = b;
+			result.HitTriangle.c = c;
+		}
+	}
+
+	return result;
+}
+
+
+void main() 
+{
+	vec3 volumeSize = (uVolumeMax - uVolumeMin);
+	ivec3 texSize = textureSize(uVolume, 0);
+	vec3 marchDist = volumeSize / (texSize*3.);
+
+	vec3 front = normalize(uTarget - uEye);
+	vec3 side = normalize(cross(front, vec3(0., 1., 0.)));
+	vec3 up = normalize(cross(side, front));
+
+	float rx = 0.5;
+	float ry = 0.5;
+	ivec2 indexXY = ivec2(gl_GlobalInvocationID.xy);
+	vec2 xy = vec2(gl_GlobalInvocationID.xy);
+
+	vec2 reso = vec2(640., 480.);
+	vec3 forcus = uEye + 
+	(front 
+	 + side * ((rx + xy.x) / reso.x - 0.5) 
+	 + up * ((ry + xy.y) / reso.y - 0.5)
+	 ) /** forcus_dist*/;
+	vec3 lens = uEye;
+	vec3 dir = normalize(forcus - lens);
+
+	Ray fromEye;
+	fromEye.p = uEye;
+	fromEye.d = dir;
+
+	vec3 currentColor = backgroundColor.xyz;
+	MarchResult result = march(fromEye);	
+	if(result.HitResult.IsHit == 0)
+	{
+//		imageStore(uOutput, indexXY, backgroundColor);
+		currentColor = backgroundColor.xyz;
+	}
+	else
+	{
+		vec3 startpoint = result.HitResult.HitPoint;
+		vec3 endpoint = uLightPos;
+		float enddist = distance(startpoint, endpoint);
+
+		Ray toLight;
+		toLight.p = startpoint;
+		toLight.d = normalize(endpoint-startpoint);
+		vec3 floorColor = vec3(0.8);
+		float totalpass = 1.;
+		while(isInAABB(toLight.p, uVolumeMin, uVolumeMax) && distance(toLight.p, endpoint) <= enddist )
+		{
+			{
+				vec3 p = toLight.p - uVolumeMin;
+				float density = texture(uVolume, p / volumeSize).r;
+				totalpass -= density;
+				vec3 march = toLight.d * marchDist;
+				toLight.p += march;
+			}
+		}		
+		vec3 floorNormal = getNormal(MakeTriangle(result.HitTriangle.a.p.xyz, result.HitTriangle.b.p.xyz, result.HitTriangle.c.p.xyz));
+		currentColor = floorColor * lightColor*max(totalpass, 0.) * dot(toLight.d, floorNormal);
+	}
+	vec3 endpoint = fromEye.p;
+//	vec3 startpoint = result.HitResult.IsHit != 0 ? result.HitResult.HitPoint : (fromEye.p + fromEye.d * 99999999.);
+	vec3 startpoint = (fromEye.p + fromEye.d * 99999999.);
+//	if(result.HitResult.IsHit != 0)
+	{
+		Ray toAABB;
+		toAABB.p = startpoint;
+		toAABB.d = -fromEye.d;
+		Hit hit = marchToAABB(toAABB, uVolumeMin, uVolumeMax);
+		if(hit.IsHit == 0)
+		{
+			imageStore(uOutput, indexXY, vec4(0., 0., 0., 1.));
+			return;
+		}
+		else
+		{
+			startpoint = hit.HitPoint + toAABB.d * 0.01;
+		}
+	}
+	Ray toEye;
+	toEye.p = startpoint;
+	toEye.d = -fromEye.d;
+
+	vec3 volumeColor = vec3(1.);
+	currentColor = backgroundColor.xyz;
+	float totalpass = 0.5;
+	while(isInAABB(toEye.p, uVolumeMin, uVolumeMax) && dot(toEye.d, endpoint-toEye.p) >= 0.)
+	{
+		{
+//			vec3 p = toEye.p - uVolumeMin;
+//			float density = texture(uVolume, p / volumeSize).r;
+//			totalpass -= density;
+			vec3 march = toEye.d * marchDist;
+			toEye.p += march;
+		}
+/*
+		// ライトからの照度を計算
+		Ray toLight;
+		toLight.p = uLightPos;
+		toLight.d = normalize(toEye.p - uLightPos);
+		Hit hit = marchToAABB(toLight, uVolumeMin, uVolumeMax);
+		toLight.p = hit.HitPoint + toLight.d * 0.01;
+		float pass = 1.;
+		while(isInAABB(toLight.p, uVolumeMin, uVolumeMax) && dot(toLight.d, toEye.p-toLight.p) >= 0.)
+		{
+			vec3 p = toLight.p - uVolumeMin;
+			float density = texture(uVolume, p / volumeSize).r;
+			pass -= density;
+			vec3 march = toLight.d * marchDist;
+			toLight.p += march;
+		}
+		currentColor = mix(currentColor, volumeColor*lightColor, max(pass, 0.));
+*/
+	}
+	currentColor = mix(vec3(0., 0., 1.), vec3(1., 0., 0.), max(totalpass, 0.));
+	vec3 color = currentColor;
+	imageStore(uOutput, indexXY, vec4(color.xyz, 1.));
+	
+}
+

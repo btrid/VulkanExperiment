@@ -9,7 +9,7 @@
 #include <btrlib/Singleton.h>
 #include <applib/App.h>
 #include <999_game/MazeGenerator.h>
-#include <999_game/Geometry.h>
+#include <applib/Geometry.h>
 
 struct MapDescriptor
 {
@@ -146,7 +146,6 @@ struct sScene : public Singleton<sScene>
 			);
 
 			{
-				m_map_info_cpu.m_descriptor[0].m_cell_num;
 				vk::ImageCreateInfo image_info;
 				image_info.imageType = vk::ImageType::e2D;
 				image_info.format = vk::Format::eR8Uint;

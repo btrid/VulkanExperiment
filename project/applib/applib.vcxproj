@@ -77,9 +77,10 @@
     <ClInclude Include="..\..\include\applib\cModelPipeline.h" />
     <ClInclude Include="..\..\include\applib\cModelRender.h" />
     <ClInclude Include="..\..\include\applib\cModelRenderPrivate.h" />
+    <ClInclude Include="..\..\include\applib\Geometry.h" />
+    <ClInclude Include="..\..\include\applib\sCameraManager.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\include\applib\cMotion" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
@@ -90,6 +91,8 @@
     <ClCompile Include="..\..\source\applib\cModelPipeline.cpp" />
     <ClCompile Include="..\..\source\applib\cModelRender.cpp" />
     <ClCompile Include="..\..\source\applib\cModelRenderPrivate.cpp" />
+    <ClCompile Include="..\..\source\applib\Geometry.cpp" />
+    <ClCompile Include="..\..\source\applib\sParticlePipeline.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

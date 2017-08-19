@@ -1,5 +1,4 @@
-#include <999_game/Geometry.h>
-#include <999_game/KDTreeTriangle.h>
+#include <applib/Geometry.h>
 #include <unordered_map>
 #include <set>
 std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> Geometry::MakeBox(float edge /*= 1.f*/)

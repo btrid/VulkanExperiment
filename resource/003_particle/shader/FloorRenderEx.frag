@@ -21,18 +21,6 @@ layout(location=1) in FSIn{
 }In;
 layout(location = 0) out vec4 FragColor;
 
-/*
-vec3 getCellSize3D()
-{
-	return vec3(u_map_info.cell_size.x, WALL_HEIGHT, u_map_info.cell_size.y);
-}
-vec3 clampByMapIndex(in vec3 pos, in ivec3 map_index)
-{
-	vec3 cell_size = getCellSize3D();
-	float particle_size = 0.;
-	return clamp(pos, (vec3(map_index) * cell_size)+particle_size+FLT_EPSIRON, (map_index+ivec3(1)) * cell_size-particle_size-FLT_EPSIRON);
-}
-*/
 ivec3 calcMapIndex(in MapDescriptor desc, in vec3 p)
 {
 	vec3 cell_size = vec3(desc.m_cell_size.x, WALL_HEIGHT, desc.m_cell_size.y);

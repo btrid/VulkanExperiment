@@ -25,6 +25,7 @@ struct Geometry
 	static std::vector<glm::vec3> CalcNormal(const std::vector<glm::vec3>& vertex, const std::vector<glm::uvec3>& element);
 	static std::tuple<std::vector<glm::vec3>, std::vector<glm::vec3>> createOrthoNormalBasis(const std::vector<glm::vec3>& normal);
 
+	// ‘S‘R‚¾‚ß‚¾‚©‚çŽg‚Á‚Ä‚Í‚¢‚¯‚È‚¢
 	struct OptimaizeDuplicateVertexDescriptor {
 		glm::u64vec3 m_mask_size;
 		float m_duplicate_distance;
@@ -33,6 +34,7 @@ struct Geometry
 			, m_duplicate_distance(1000.f)
 		{}
 	};
+
 	static void OptimaizeDuplicateVertex(std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>>& vertex, const OptimaizeDuplicateVertexDescriptor& desc);
 	static void OptimaizeConnectTriangle(std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>>& vertex);
 

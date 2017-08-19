@@ -1,5 +1,5 @@
 #include <003_particle/sParticlePipeline.h>
-#include <003_particle/sCameraManager.h>
+#include <applib/sCameraManager.h>
 
 void sParticlePipeline::Private::setup(std::shared_ptr<btr::Loader>& loader)
 {

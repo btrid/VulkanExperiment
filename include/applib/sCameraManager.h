@@ -98,7 +98,7 @@ struct sCameraManager : public Singleton<sCameraManager>
 		std::vector<vk::BufferMemoryBarrier> to_draw_barrier = {
 			m_camera.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
 		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexShader, {}, {}, { to_draw_barrier }, {});
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, { to_draw_barrier }, {});
 
 
 	}

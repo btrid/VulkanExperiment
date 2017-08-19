@@ -76,14 +76,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\003_particle\003_main.cpp" />
-    <ClCompile Include="..\..\source\003_particle\sParticlePipeline.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\003_particle\CircleIndex.h" />
-    <ClInclude Include="..\..\include\003_particle\sCameraManager.h" />
     <ClInclude Include="..\..\include\003_particle\sParticlePipeline.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
