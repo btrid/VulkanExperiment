@@ -28,6 +28,7 @@
 
 #include <btrlib/Loader.h>
 #include <005_volume_rendering/VolumeRenderer.h>
+#include <005_volume_rendering/DrawHelper.h>
 
 
 #pragma comment(lib, "btrlib.lib")
@@ -40,7 +41,7 @@ int main()
 	btr::setResourceAppPath("..\\..\\resource\\005_volume_rendering\\");
 	app::App app;
 	auto* camera = cCamera::sCamera::Order().create();
-	camera->m_position = glm::vec3(0.f, 0.f, -2000.f);
+	camera->m_position = glm::vec3(0.f, 0.f, -200.f);
 	camera->m_target = glm::vec3(0.f, 0.f, 201.f);
 	camera->m_up = glm::vec3(0.f, -1.f, 0.f);
 	camera->m_width = 640;
@@ -83,7 +84,7 @@ int main()
 	loader->m_vertex_memory.setup(device, vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 1000 * 100);
 	loader->m_uniform_memory.setup(device, vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 20);
 	loader->m_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 1000 * 200);
-	loader->m_staging_memory.setup(device, vk::BufferUsageFlagBits::eTransferSrc, host_memory, 1000 * 1000 * 100);
+	loader->m_staging_memory.setup(device, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eStorageBuffer, host_memory, 1000 * 1000 * 100);
 	{
 		std::vector<vk::DescriptorPoolSize> pool_size(4);
 		pool_size[0].setType(vk::DescriptorType::eUniformBuffer);
@@ -116,7 +117,6 @@ int main()
 	executer->m_thread_pool = &pool;
 	executer->m_window = &app.m_window;
 
-
 	volumeRenderer volume_renderer;
 	{
 		vk::CommandBufferBeginInfo begin_info;
@@ -125,6 +125,7 @@ int main()
 		loader->m_cmd = render_cmds[0];
 
 		sCameraManager::Order().setup(loader);
+		DrawHelper::Order().setup(loader);
 		volume_renderer.setup(loader);
 
 		render_cmds[0].end();
@@ -173,6 +174,8 @@ int main()
 
 			}
 			{
+//				DrawHelper::Order().ex
+				DrawHelper::Order().drawOrder(DrawHelper::SPHERE, DrawCommand{ mat4(100.) });
 				volume_renderer.execute(executer);
 			}
 
@@ -206,7 +209,9 @@ int main()
 			render_cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
 			// draw
-			volume_renderer.draw(render_cmd);
+			DrawHelper::Order().draw(render_cmd);
+//			volume_renderer.draw(render_cmd);
+
 			render_cmd.endRenderPass();
 
 			vk::ImageMemoryBarrier render_to_present_barrier;

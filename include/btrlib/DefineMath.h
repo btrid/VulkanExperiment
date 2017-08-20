@@ -28,6 +28,8 @@ using uvec4 = glm::uvec4;
 using uvec3 = glm::uvec3;
 using uvec2 = glm::uvec2;
 using uvec1 = glm::uvec1;
+using mat4 = glm::mat4;
+using mat3 = glm::mat3;
 
 using f16x2 = uint16_t;
 using s8x4 = glm::i8vec4;

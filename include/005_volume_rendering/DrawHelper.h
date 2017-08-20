@@ -8,11 +8,20 @@
 #include <btrlib/sGlobal.h>
 #include <btrlib/Singleton.h>
 #include <applib/App.h>
+#include <applib/Geometry.h>
+#include <applib/sCameraManager.h>
 
+struct DrawCommand
+{
+	mat4 world;
+};
 struct DrawHelper : public Singleton<DrawHelper>
 {
 	friend Singleton<DrawHelper>;
 
+	enum {
+		CMD_SIZE = 256,
+	};
 	enum SHADER
 	{
 		SHADER_VERTEX_PRIMITIVE,
@@ -22,29 +31,43 @@ struct DrawHelper : public Singleton<DrawHelper>
 
 	enum DescriptorSetLayout
 	{
-		DESCRIPTOR_SET_LAYOUT_VOLUME_SCENE,
 		DESCRIPTOR_SET_LAYOUT_NUM,
 	};
 	enum DescriptorSet
 	{
-		DESCRIPTOR_SET_VOLUME_SCENE,
 		DESCRIPTOR_SET_NUM,
 	};
 
 	enum PipelineLayout
 	{
-		PIPELINE_LAYOUT_DRAW_VOLUME,
+		PIPELINE_LAYOUT_DRAW_PRIMITIVE,
 		PIPELINE_LAYOUT_NUM,
 	};
 	enum Pipeline
 	{
-		PIPELINE_DRAW_VOLUME,
+		PIPELINE_DRAW_PRIMITIVE,
 		PIPELINE_NUM,
 	};
-	btr::AllocatedMemory m_box_vertex;
-	btr::AllocatedMemory m_box_index;
-	btr::AllocatedMemory m_sphere_vertex;
-	btr::AllocatedMemory m_sphere_index;
+
+	enum PrimitiveType
+	{
+		Box,
+		SPHERE,
+		PrimitiveType_MAX,
+	};
+
+	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_shader_info;
+	std::array<vk::Pipeline, PIPELINE_NUM> m_pipeline;
+
+	std::array<vk::DescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
+	std::array<vk::DescriptorSet, DESCRIPTOR_SET_NUM> m_descriptor_set;
+	std::array<vk::PipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
+
+	std::array<btr::AllocatedMemory, PrimitiveType_MAX> m_mesh_vertex;
+	std::array<btr::AllocatedMemory, PrimitiveType_MAX> m_mesh_index;
+	std::array<uint32_t, PrimitiveType_MAX> m_mesh_index_num;
+	std::array<std::vector<DrawCommand>, PrimitiveType_MAX> m_draw_cmd;
+	btr::AllocatedMemory m_cmd;
 
 	DrawHelper()
 	{
@@ -52,6 +75,90 @@ struct DrawHelper : public Singleton<DrawHelper>
 	}
 	void setup(std::shared_ptr<btr::Loader>& loader)
 	{
+		{
+			std::vector<vec3> v;
+			std::vector<uvec3> i;
+			std::tie(v, i) = Geometry::MakeBox();
+			{
+				btr::BufferMemory::Descriptor desc;
+				desc.size = vector_sizeof(v);
+				m_mesh_vertex[Box] = loader->m_vertex_memory.allocateMemory(desc);
+				desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+				auto staging = loader->m_staging_memory.allocateMemory(desc);
+
+				vk::BufferCopy copy;
+				copy.setSrcOffset(staging.getBufferInfo().offset);
+				copy.setDstOffset(m_mesh_vertex[Box].getBufferInfo().offset);
+				copy.setSize(desc.size);
+				loader->m_cmd.copyBuffer(staging.getBufferInfo().buffer, m_mesh_vertex[Box].getBufferInfo().buffer, copy);
+			}
+
+			{
+				btr::BufferMemory::Descriptor desc;
+				desc.size = vector_sizeof(i);
+				m_mesh_index[Box] = loader->m_vertex_memory.allocateMemory(desc);
+				desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+				auto staging = loader->m_staging_memory.allocateMemory(desc);
+
+				vk::BufferCopy copy;
+				copy.setSrcOffset(staging.getBufferInfo().offset);
+				copy.setDstOffset(m_mesh_index[Box].getBufferInfo().offset);
+				copy.setSize(desc.size);
+				loader->m_cmd.copyBuffer(staging.getBufferInfo().buffer, m_mesh_index[Box].getBufferInfo().buffer, copy);
+			}
+			m_mesh_index_num[Box] = i.size();
+
+		}
+
+		{
+			std::vector<vec3> v;
+			std::vector<uvec3> i;
+			std::tie(v, i) = Geometry::MakeSphere();
+			{
+				btr::BufferMemory::Descriptor desc;
+				desc.size = vector_sizeof(v);
+				m_mesh_vertex[SPHERE] = loader->m_vertex_memory.allocateMemory(desc);
+				desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+				auto staging = loader->m_staging_memory.allocateMemory(desc);
+
+				vk::BufferCopy copy;
+				copy.setSrcOffset(staging.getBufferInfo().offset);
+				copy.setDstOffset(m_mesh_vertex[SPHERE].getBufferInfo().offset);
+				copy.setSize(desc.size);
+				loader->m_cmd.copyBuffer(staging.getBufferInfo().buffer, m_mesh_vertex[SPHERE].getBufferInfo().buffer, copy);
+			}
+
+			{
+				btr::BufferMemory::Descriptor desc;
+				desc.size = vector_sizeof(i);
+				m_mesh_index[SPHERE] = loader->m_vertex_memory.allocateMemory(desc);
+				desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+				auto staging = loader->m_staging_memory.allocateMemory(desc);
+
+				vk::BufferCopy copy;
+				copy.setSrcOffset(staging.getBufferInfo().offset);
+				copy.setDstOffset(m_mesh_index[SPHERE].getBufferInfo().offset);
+				copy.setSize(desc.size);
+				loader->m_cmd.copyBuffer(staging.getBufferInfo().buffer, m_mesh_index[SPHERE].getBufferInfo().buffer, copy);
+			}
+			m_mesh_index_num[SPHERE] = i.size();
+		}
+		{
+			btr::BufferMemory::Descriptor desc;
+			desc.size = sizeof(DrawCommand) * CMD_SIZE;
+			m_cmd = loader->m_staging_memory.allocateMemory(desc);
+		}
+		{
+			std::vector<vk::BufferMemoryBarrier> barrier =
+			{
+				m_mesh_vertex[Box].makeMemoryBarrier(vk::AccessFlagBits::eVertexAttributeRead),
+				m_mesh_index[Box].makeMemoryBarrier(vk::AccessFlagBits::eIndexRead),
+				m_mesh_vertex[SPHERE].makeMemoryBarrier(vk::AccessFlagBits::eVertexAttributeRead),
+				m_mesh_index[SPHERE].makeMemoryBarrier(vk::AccessFlagBits::eIndexRead),
+			};
+			loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexInput, {}, {}, barrier, {});
+		}
+		
 		// setup shader
 		{
 			struct
@@ -60,8 +167,8 @@ struct DrawHelper : public Singleton<DrawHelper>
 				vk::ShaderStageFlagBits stage;
 			}shader_info[] =
 			{
-				{ "VolumeRender.vert.spv",vk::ShaderStageFlagBits::eVertex },
-				{ "VolumeRender.frag.spv",vk::ShaderStageFlagBits::eFragment },
+				{ "DrawPrimitive.vert.spv",vk::ShaderStageFlagBits::eVertex },
+				{ "DrawPrimitive.frag.spv",vk::ShaderStageFlagBits::eFragment },
 			};
 			static_assert(array_length(shader_info) == SHADER_NUM, "not equal shader num");
 
@@ -74,76 +181,24 @@ struct DrawHelper : public Singleton<DrawHelper>
 		}
 
 		// setup descriptor_set_layout
-		{
-			std::vector<std::vector<vk::DescriptorSetLayoutBinding>> bindings(DESCRIPTOR_SET_LAYOUT_NUM);
-			bindings[DESCRIPTOR_SET_LAYOUT_VOLUME_SCENE] =
-			{
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eFragment)
-				.setDescriptorCount(1)
-				.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-				.setBinding(0),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eFragment)
-				.setDescriptorCount(1)
-				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-				.setBinding(1),
-			};
-			for (size_t i = 0; i < DESCRIPTOR_SET_LAYOUT_NUM; i++)
-			{
-				vk::DescriptorSetLayoutCreateInfo descriptor_set_layout_info = vk::DescriptorSetLayoutCreateInfo()
-					.setBindingCount(bindings[i].size())
-					.setPBindings(bindings[i].data());
-				m_descriptor_set_layout[i] = loader->m_device->createDescriptorSetLayout(descriptor_set_layout_info);
-			}
-
-		}
 		// setup descriptor_set
-		{
-			vk::DescriptorSetAllocateInfo alloc_info;
-			alloc_info.descriptorPool = loader->m_descriptor_pool;
-			alloc_info.descriptorSetCount = m_descriptor_set_layout.size();
-			alloc_info.pSetLayouts = m_descriptor_set_layout.data();
-			auto descriptor_set = loader->m_device->allocateDescriptorSets(alloc_info);
-			std::copy(descriptor_set.begin(), descriptor_set.end(), m_descriptor_set.begin());
-			{
-
-				std::vector<vk::DescriptorBufferInfo> uniforms = {
-					m_volume_scene_gpu.getBufferInfo(),
-				};
-				std::vector<vk::DescriptorImageInfo> images = {
-					vk::DescriptorImageInfo().setSampler(m_volume_sampler).setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal).setImageView(m_volume_image_view),
-				};
-				std::vector<vk::WriteDescriptorSet> write_desc =
-				{
-					vk::WriteDescriptorSet()
-					.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-					.setDescriptorCount(images.size())
-					.setPImageInfo(images.data())
-					.setDstBinding(0)
-					.setDstSet(m_descriptor_set[DESCRIPTOR_SET_VOLUME_SCENE]),
-					vk::WriteDescriptorSet()
-					.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-					.setDescriptorCount(uniforms.size())
-					.setPBufferInfo(uniforms.data())
-					.setDstBinding(1)
-					.setDstSet(m_descriptor_set[DESCRIPTOR_SET_VOLUME_SCENE]),
-				};
-				loader->m_device->updateDescriptorSets(write_desc, {});
-			}
-
-		}
 
 		// setup pipeline_layout
 		{
 			std::vector<vk::DescriptorSetLayout> layouts = {
-				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_VOLUME_SCENE],
 				sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
+			};
+			vk::PushConstantRange constant[] = {
+				vk::PushConstantRange()
+				.setSize(64)
+				.setStageFlags(vk::ShaderStageFlagBits::eVertex)
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(layouts.size());
 			pipeline_layout_info.setPSetLayouts(layouts.data());
-			m_pipeline_layout[PIPELINE_LAYOUT_DRAW_VOLUME] = loader->m_device->createPipelineLayout(pipeline_layout_info);
+			pipeline_layout_info.setPushConstantRangeCount(array_length(constant));
+			pipeline_layout_info.setPPushConstantRanges(constant);
+			m_pipeline_layout[PIPELINE_LAYOUT_DRAW_PRIMITIVE] = loader->m_device->createPipelineLayout(pipeline_layout_info);
 		}
 
 		// setup pipeline
@@ -168,7 +223,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 			{
 				vk::PipelineInputAssemblyStateCreateInfo()
 				.setPrimitiveRestartEnable(VK_FALSE)
-				.setTopology(vk::PrimitiveTopology::eTriangleStrip),
+				.setTopology(vk::PrimitiveTopology::eTriangleList),
 			};
 
 			// viewport
@@ -210,34 +265,75 @@ struct DrawHelper : public Singleton<DrawHelper>
 			blend_info.setAttachmentCount(blend_state.size());
 			blend_info.setPAttachments(blend_state.data());
 
+			vk::VertexInputAttributeDescription attr[] =
+			{
+				vk::VertexInputAttributeDescription().setLocation(0).setOffset(0).setBinding(0).setFormat(vk::Format::eR32G32B32A32Sfloat)
+			};
+			vk::VertexInputBindingDescription binding[] =
+			{
+				vk::VertexInputBindingDescription().setBinding(0).setInputRate(vk::VertexInputRate::eVertex).setStride(12)
+			};
 			vk::PipelineVertexInputStateCreateInfo vertex_input_info;
+			vertex_input_info.setVertexAttributeDescriptionCount(array_length(attr));
+			vertex_input_info.setPVertexAttributeDescriptions(attr);
+			vertex_input_info.setVertexBindingDescriptionCount(array_length(binding));
+			vertex_input_info.setPVertexBindingDescriptions(binding);
 
 			vk::PipelineShaderStageCreateInfo shader_info[] = {
-				m_shader_info[SHADER_VERTEX_VOLUME],
-				m_shader_info[SHADER_FRAGMENT_VOLUME],
+				m_shader_info[SHADER_VERTEX_PRIMITIVE],
+				m_shader_info[SHADER_FRAGMENT_PRIMITIVE],
 			};
 
 			std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =
 			{
 				vk::GraphicsPipelineCreateInfo()
-				.setStageCount(2)
+				.setStageCount(array_length(shader_info))
 				.setPStages(shader_info)
 				.setPVertexInputState(&vertex_input_info)
 				.setPInputAssemblyState(&assembly_info[0])
 				.setPViewportState(&viewportInfo)
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
-				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_VOLUME])
+				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_PRIMITIVE])
 				.setRenderPass(loader->m_render_pass)
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
 			auto pipelines = loader->m_device->createGraphicsPipelines(loader->m_cache, graphics_pipeline_info);
-			std::copy(pipelines.begin(), pipelines.end(), m_pipeline.begin());
+			m_pipeline[PIPELINE_DRAW_PRIMITIVE] = pipelines[0];
 
 		}
 
 	}
 
+	void draw(vk::CommandBuffer cmd)
+	{
 
+		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW_PRIMITIVE]);
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_PRIMITIVE], 0, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
+
+		for (size_t i = 0; i < m_draw_cmd.size(); i++)
+		{
+			auto& cmd_list = m_draw_cmd[i];
+			if (cmd_list.empty()) {
+				continue;
+			}
+
+			cmd.bindVertexBuffers(0, m_mesh_vertex[i].getBufferInfo().buffer, m_mesh_vertex[i].getBufferInfo().offset);
+			cmd.bindIndexBuffer(m_mesh_index[i].getBufferInfo().buffer, m_mesh_index[i].getBufferInfo().offset, vk::IndexType::eUint32);
+
+			for (auto& dcmd :cmd_list)
+			{
+				cmd.pushConstants<mat4>(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_PRIMITIVE], vk::ShaderStageFlagBits::eVertex, 0, dcmd.world);
+				cmd.draw(m_mesh_index_num[i], 1, 0, 0);
+			}
+
+			cmd_list.clear();
+		}
+	}
+
+	void drawOrder(PrimitiveType type, const DrawCommand& cmd)
+	{
+		m_draw_cmd[type].push_back(cmd);
+	}
 };

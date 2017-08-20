@@ -48,10 +48,6 @@ struct volumeRenderer
 		PIPELINE_DRAW_VOLUME,
 		PIPELINE_NUM,
 	};
-	btr::AllocatedMemory m_box_vertex;
-	btr::AllocatedMemory m_box_index;
-	btr::AllocatedMemory m_sphere_vertex;
-	btr::AllocatedMemory m_sphere_index;
 
 	btr::AllocatedMemory m_volume_scene_gpu;
 	VolumeScene m_volume_scene_cpu;
@@ -200,71 +196,6 @@ public:
 			btr::BufferMemory::Descriptor desc;
 			desc.size = sizeof(VolumeScene);
 			m_volume_scene_gpu = loader->m_uniform_memory.allocateMemory(desc);
-		}
-		{
-			std::vector<vec3> v;
-			std::vector<uvec3> i;
-			std::tie(v, i) = Geometry::MakeBox();
-			{
-				btr::BufferMemory::Descriptor desc;
-				desc.size = vector_sizeof(v);
-				m_box_vertex = loader->m_vertex_memory.allocateMemory(desc);
-				desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-				auto staging = loader->m_staging_memory.allocateMemory(desc);
-
-				vk::BufferCopy copy;
-				copy.setSrcOffset(staging.getBufferInfo().offset);
-				copy.setDstOffset(m_box_vertex.getBufferInfo().offset);
-				copy.setSize(desc.size);
-				loader->m_cmd.copyBuffer(staging.getBufferInfo().buffer, m_box_vertex.getBufferInfo().buffer, copy);
-			}
-
-			{
-				btr::BufferMemory::Descriptor desc;
-				desc.size = vector_sizeof(i);
-				m_box_index = loader->m_vertex_memory.allocateMemory(desc);
-				desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-				auto staging = loader->m_staging_memory.allocateMemory(desc);
-
-				vk::BufferCopy copy;
-				copy.setSrcOffset(staging.getBufferInfo().offset);
-				copy.setDstOffset(m_box_index.getBufferInfo().offset);
-				copy.setSize(desc.size);
-				loader->m_cmd.copyBuffer(staging.getBufferInfo().buffer, m_box_index.getBufferInfo().buffer, copy);
-			}
-		}
-
-		{
-			std::vector<vec3> v;
-			std::vector<uvec3> i;
-			std::tie(v, i) = Geometry::MakeSphere();
-			{
-				btr::BufferMemory::Descriptor desc;
-				desc.size = vector_sizeof(v);
-				m_sphere_vertex = loader->m_vertex_memory.allocateMemory(desc);
-				desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-				auto staging = loader->m_staging_memory.allocateMemory(desc);
-
-				vk::BufferCopy copy;
-				copy.setSrcOffset(staging.getBufferInfo().offset);
-				copy.setDstOffset(m_sphere_vertex.getBufferInfo().offset);
-				copy.setSize(desc.size);
-				loader->m_cmd.copyBuffer(staging.getBufferInfo().buffer, m_sphere_vertex.getBufferInfo().buffer, copy);
-			}
-
-			{
-				btr::BufferMemory::Descriptor desc;
-				desc.size = vector_sizeof(i);
-				m_sphere_index = loader->m_vertex_memory.allocateMemory(desc);
-				desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-				auto staging = loader->m_staging_memory.allocateMemory(desc);
-
-				vk::BufferCopy copy;
-				copy.setSrcOffset(staging.getBufferInfo().offset);
-				copy.setDstOffset(m_sphere_index.getBufferInfo().offset);
-				copy.setSize(desc.size);
-				loader->m_cmd.copyBuffer(staging.getBufferInfo().buffer, m_sphere_index.getBufferInfo().buffer, copy);
-			}
 		}
 
 
