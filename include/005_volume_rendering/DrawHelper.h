@@ -67,7 +67,6 @@ struct DrawHelper : public Singleton<DrawHelper>
 	std::array<btr::AllocatedMemory, PrimitiveType_MAX> m_mesh_index;
 	std::array<uint32_t, PrimitiveType_MAX> m_mesh_index_num;
 	std::array<std::vector<DrawCommand>, PrimitiveType_MAX> m_draw_cmd;
-	btr::AllocatedMemory m_cmd;
 
 	DrawHelper()
 	{
@@ -85,6 +84,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 				m_mesh_vertex[Box] = loader->m_vertex_memory.allocateMemory(desc);
 				desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 				auto staging = loader->m_staging_memory.allocateMemory(desc);
+				memcpy(staging.getMappedPtr(), v.data(), desc.size);
 
 				vk::BufferCopy copy;
 				copy.setSrcOffset(staging.getBufferInfo().offset);
@@ -99,6 +99,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 				m_mesh_index[Box] = loader->m_vertex_memory.allocateMemory(desc);
 				desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 				auto staging = loader->m_staging_memory.allocateMemory(desc);
+				memcpy(staging.getMappedPtr(), i.data(), desc.size);
 
 				vk::BufferCopy copy;
 				copy.setSrcOffset(staging.getBufferInfo().offset);
@@ -120,6 +121,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 				m_mesh_vertex[SPHERE] = loader->m_vertex_memory.allocateMemory(desc);
 				desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 				auto staging = loader->m_staging_memory.allocateMemory(desc);
+				memcpy(staging.getMappedPtr(), v.data(), desc.size);
 
 				vk::BufferCopy copy;
 				copy.setSrcOffset(staging.getBufferInfo().offset);
@@ -134,6 +136,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 				m_mesh_index[SPHERE] = loader->m_vertex_memory.allocateMemory(desc);
 				desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 				auto staging = loader->m_staging_memory.allocateMemory(desc);
+				memcpy(staging.getMappedPtr(), i.data(), desc.size);
 
 				vk::BufferCopy copy;
 				copy.setSrcOffset(staging.getBufferInfo().offset);
@@ -141,12 +144,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 				copy.setSize(desc.size);
 				loader->m_cmd.copyBuffer(staging.getBufferInfo().buffer, m_mesh_index[SPHERE].getBufferInfo().buffer, copy);
 			}
-			m_mesh_index_num[SPHERE] = i.size();
-		}
-		{
-			btr::BufferMemory::Descriptor desc;
-			desc.size = sizeof(DrawCommand) * CMD_SIZE;
-			m_cmd = loader->m_staging_memory.allocateMemory(desc);
+			m_mesh_index_num[SPHERE] = i.size()*3;
 		}
 		{
 			std::vector<vk::BufferMemoryBarrier> barrier =
@@ -325,7 +323,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 			for (auto& dcmd :cmd_list)
 			{
 				cmd.pushConstants<mat4>(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_PRIMITIVE], vk::ShaderStageFlagBits::eVertex, 0, dcmd.world);
-				cmd.draw(m_mesh_index_num[i], 1, 0, 0);
+				cmd.drawIndexed(m_mesh_index_num[i], 1, 0, 0, 0);
 			}
 
 			cmd_list.clear();
