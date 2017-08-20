@@ -9,6 +9,7 @@
 #include <btrlib/sGlobal.h>
 #include <applib/Geometry.h>
 #include <applib/sCameraManager.h>
+#include <005_volume_rendering/DrawHelper.h>
 
 struct VolumeScene
 {	
@@ -340,7 +341,7 @@ public:
 
 			vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
 			depth_stencil_info.setDepthTestEnable(VK_TRUE);
-			depth_stencil_info.setDepthWriteEnable(VK_TRUE);
+			depth_stencil_info.setDepthWriteEnable(VK_FALSE);
 			depth_stencil_info.setDepthCompareOp(vk::CompareOp::eLessOrEqual);
 			depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
 			depth_stencil_info.setStencilTestEnable(VK_FALSE);
@@ -411,6 +412,9 @@ public:
 				lightPos.y -= value;
 			}
 			m_volume_scene_cpu.u_light_pos += lightPos;
+
+			mat4 mat = glm::translate(m_volume_scene_cpu.u_light_pos.xyz()) * glm::scale(vec3(200.f));
+			DrawHelper::Order().drawOrder(DrawHelper::SPHERE, DrawCommand{ mat });
 
 			btr::BufferMemory::Descriptor desc;
 			desc.size = sizeof(VolumeScene);

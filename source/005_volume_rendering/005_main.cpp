@@ -46,7 +46,7 @@ int main()
 	camera->m_up = glm::vec3(0.f, -1.f, 0.f);
 	camera->m_width = 640;
 	camera->m_height = 480;
-	camera->m_far = 5000.f;
+	camera->m_far = 50000.f;
 	camera->m_near = 0.01f;
 
 	auto device = sThreadLocal::Order().m_device[0];
@@ -174,8 +174,6 @@ int main()
 
 			}
 			{
-//				DrawHelper::Order().ex
-				DrawHelper::Order().drawOrder(DrawHelper::SPHERE, DrawCommand{ mat4(100.) });
 				volume_renderer.execute(executer);
 			}
 
@@ -209,8 +207,8 @@ int main()
 			render_cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
 			// draw
+			volume_renderer.draw(render_cmd);
 			DrawHelper::Order().draw(render_cmd);
-//			volume_renderer.draw(render_cmd);
 
 			render_cmd.endRenderPass();
 
