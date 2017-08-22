@@ -307,8 +307,18 @@ struct DrawHelper : public Singleton<DrawHelper>
 
 	}
 
-	void draw(vk::CommandBuffer cmd)
+	vk::CommandBuffer draw()
 	{
+		vk::CommandBuffer cmd;
+// 		vk::RenderPassBeginInfo begin_render_Info = vk::RenderPassBeginInfo()
+// 			.setRenderPass(app.m_render_pass)
+// 			.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(app.m_window.getClientSize().x, app.m_window.getClientSize().y)))
+// 			.setClearValueCount(clearValue.size())
+// 			.setPClearValues(clearValue.data())
+// 			.setFramebuffer(app.m_framebuffer[0]);
+// 		render_cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
+// 		render_cmd.endRenderPass();
+// 		render_cmd.end();
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW_PRIMITIVE]);
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_PRIMITIVE], 0, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});

@@ -48,7 +48,6 @@ int main()
 	camera->m_height = 480;
 	camera->m_far = 50000.f;
 	camera->m_near = 0.01f;
-
 	auto device = sThreadLocal::Order().m_device[0];
 	auto pool_list = sThreadLocal::Order().getCmdPoolOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
 	std::vector<vk::CommandBuffer> render_cmds(sGlobal::FRAME_MAX);
@@ -78,6 +77,7 @@ int main()
 	std::shared_ptr<btr::Loader> loader = std::make_shared<btr::Loader>();
 	loader->m_device = device;
 	loader->m_render_pass = app.m_render_pass;
+	loader->m_window = &app.m_window;
 	vk::MemoryPropertyFlags host_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
 	vk::MemoryPropertyFlags device_memory = vk::MemoryPropertyFlagBits::eDeviceLocal;
 	//	device_memory = host_memory; // debug
@@ -118,11 +118,44 @@ int main()
 	executer->m_window = &app.m_window;
 
 	volumeRenderer volume_renderer;
+
 	{
 		vk::CommandBufferBeginInfo begin_info;
 		begin_info.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 		render_cmds[0].begin(begin_info);
 		loader->m_cmd = render_cmds[0];
+
+		vk::ImageSubresourceRange subresource_range;
+		subresource_range.setAspectMask(vk::ImageAspectFlagBits::eColor);
+		subresource_range.setBaseArrayLayer(0);
+		subresource_range.setLayerCount(1);
+		subresource_range.setBaseMipLevel(0);
+		subresource_range.setLevelCount(1);
+		std::array<vk::ImageMemoryBarrier, 3+1> barrier;
+		barrier[0].setSubresourceRange(subresource_range);
+		barrier[0].setDstAccessMask(vk::AccessFlagBits::eMemoryRead);
+		barrier[0].setOldLayout(vk::ImageLayout::eUndefined);
+		barrier[0].setNewLayout(vk::ImageLayout::ePresentSrcKHR);
+		barrier[2] = barrier[1] = barrier[0];
+		barrier[0].setImage(app.m_window.getSwapchain().m_backbuffer_image[0]);
+		barrier[1].setImage(app.m_window.getSwapchain().m_backbuffer_image[1]);
+		barrier[2].setImage(app.m_window.getSwapchain().m_backbuffer_image[2]);
+
+		vk::ImageSubresourceRange subresource_depth_range;
+		subresource_depth_range.aspectMask = vk::ImageAspectFlagBits::eDepth;
+		subresource_depth_range.baseArrayLayer = 0;
+		subresource_depth_range.baseMipLevel = 0;
+		subresource_depth_range.layerCount = 1;
+		subresource_depth_range.levelCount = 1;
+
+		barrier[3].setImage(app.m_depth_image);
+		barrier[3].setSubresourceRange(subresource_depth_range);
+		barrier[3].setDstAccessMask(vk::AccessFlagBits::eDepthStencilAttachmentWrite);
+		barrier[3].setOldLayout(vk::ImageLayout::eUndefined);
+		barrier[3].setNewLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+
+		loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::DependencyFlags(), {}, {}, barrier);
+
 
 		sCameraManager::Order().setup(loader);
 		DrawHelper::Order().setup(loader);
@@ -205,12 +238,10 @@ int main()
 				.setPClearValues(clearValue.data())
 				.setFramebuffer(app.m_framebuffer[backbuffer_index]);
 			render_cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
-
-			// draw
-			DrawHelper::Order().draw(render_cmd);
-			volume_renderer.draw(render_cmd);
-
 			render_cmd.endRenderPass();
+			// draw
+//			auto drawhelper_cmd = DrawHelper::Order().draw();
+//			auto cmd = volume_renderer.draw();
 
 			vk::ImageMemoryBarrier render_to_present_barrier;
 			render_to_present_barrier.setSrcAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
@@ -227,6 +258,7 @@ int main()
 
 			render_cmd.end();
 			std::vector<vk::CommandBuffer> cmds = {
+//				drawhelper_cmd,
 				render_cmd,
 			};
 

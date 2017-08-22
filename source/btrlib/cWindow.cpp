@@ -46,12 +46,12 @@ void cWindow::Swapchain::setup(const CreateInfo& descriptor, vk::SurfaceKHR surf
 	auto support_surface = getSupportSurfaceQueue(descriptor.gpu.getHandle(), surface);
 	m_use_device = descriptor.gpu.getDeviceByFamilyIndex(support_surface[0]);
 
-	auto old = m_swapchain_handle;
+	auto old_swap_chain = m_swapchain_handle;
 
 	vk::SurfaceCapabilitiesKHR capability = descriptor.gpu->getSurfaceCapabilitiesKHR(surface);
 	vk::SwapchainCreateInfoKHR swapchain_info;
 	swapchain_info.setSurface(surface);
-	swapchain_info.setMinImageCount(2);
+	swapchain_info.setMinImageCount(3);
 	swapchain_info.setImageFormat(m_surface_format.format);
 	swapchain_info.setImageColorSpace(m_surface_format.colorSpace);
 	swapchain_info.setImageExtent(capability.currentExtent);
@@ -66,8 +66,8 @@ void cWindow::Swapchain::setup(const CreateInfo& descriptor, vk::SurfaceKHR surf
 	swapchain_info.setClipped(true);
 	swapchain_info.setOldSwapchain(m_swapchain_handle);
 	m_swapchain_handle = m_use_device->createSwapchainKHR(swapchain_info);
-	if (old) {
-		m_use_device->destroySwapchainKHR(old);
+	if (old_swap_chain) {
+		m_use_device->destroySwapchainKHR(old_swap_chain);
 	}
 
 	m_backbuffer_image = m_use_device->getSwapchainImagesKHR(m_swapchain_handle);

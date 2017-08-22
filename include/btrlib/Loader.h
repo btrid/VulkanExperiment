@@ -21,6 +21,7 @@ struct Loader
 	vk::PipelineCache m_cache;
 
 	vk::CommandBuffer m_cmd;
+	cWindow* m_window;
 };
 struct Executer
 {

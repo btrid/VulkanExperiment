@@ -50,6 +50,9 @@ struct volumeRenderer
 		PIPELINE_NUM,
 	};
 
+	vk::RenderPass m_render_pass;
+	std::vector<vk::Framebuffer> m_framebuffer;
+
 	btr::AllocatedMemory m_volume_scene_gpu;
 	VolumeScene m_volume_scene_cpu;
 
@@ -71,11 +74,66 @@ public:
 
 	void setup(std::shared_ptr<btr::Loader>& loader)
 	{
-//		m_volume_scene_cpu.u_background_color = 
 		m_volume_scene_cpu.u_volume_min = vec4(-1000.);
 		m_volume_scene_cpu.u_volume_max = vec4(1000.);
 		m_volume_scene_cpu.u_light_pos = vec4(0.);
 		m_volume_scene_cpu.u_light_color = vec4(1., 0., 0., 1.);
+
+		{
+			// レンダーパス
+			{
+				// sub pass
+				std::vector<vk::AttachmentReference> colorRef =
+				{
+					vk::AttachmentReference()
+					.setAttachment(0)
+					.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
+				};
+				vk::SubpassDescription subpass;
+				subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+				subpass.setInputAttachmentCount(0);
+				subpass.setPInputAttachments(nullptr);
+				subpass.setColorAttachmentCount((uint32_t)colorRef.size());
+				subpass.setPColorAttachments(colorRef.data());
+
+				std::vector<vk::AttachmentDescription> attach_description = {
+					// color1
+					vk::AttachmentDescription()
+					.setFormat(loader->m_window->getSwapchain().m_surface_format.format)
+					.setSamples(vk::SampleCountFlagBits::e1)
+					.setLoadOp(vk::AttachmentLoadOp::eClear)
+					.setStoreOp(vk::AttachmentStoreOp::eStore)
+					.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
+					.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
+				};
+				vk::RenderPassCreateInfo renderpass_info = vk::RenderPassCreateInfo()
+					.setAttachmentCount(attach_description.size())
+					.setPAttachments(attach_description.data())
+					.setSubpassCount(1)
+					.setPSubpasses(&subpass);
+
+				m_render_pass = loader->m_device->createRenderPass(renderpass_info);
+			}
+
+			m_framebuffer.resize(loader->m_window->getSwapchain().getSwapchainNum());
+			{
+				std::array<vk::ImageView, 1> view;
+
+				vk::FramebufferCreateInfo framebuffer_info;
+				framebuffer_info.setRenderPass(m_render_pass);
+				framebuffer_info.setAttachmentCount((uint32_t)view.size());
+				framebuffer_info.setPAttachments(view.data());
+				framebuffer_info.setWidth(loader->m_window->getClientSize().x);
+				framebuffer_info.setHeight(loader->m_window->getClientSize().y);
+				framebuffer_info.setLayers(1);
+
+				for (size_t i = 0; i < m_framebuffer.size(); i++) {
+//					view[0] = m_backbuffer_view[i];
+	//				m_framebuffer[i] = loader->m_device->createFramebuffer(framebuffer_info);
+				}
+			}
+
+		}
 
 		{
 			glm::uvec3 texSize(32);
@@ -471,8 +529,9 @@ public:
 		}
 	}
 
-	void draw(vk::CommandBuffer cmd)
+	vk::CommandBuffer draw()
 	{
+		vk::CommandBuffer cmd;
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW_VOLUME]);
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_VOLUME], 0, m_descriptor_set[DESCRIPTOR_SET_VOLUME_SCENE], {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_VOLUME], 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
