@@ -253,7 +253,10 @@ struct DrawHelper : public Singleton<DrawHelper>
 
 			std::vector<vk::PipelineColorBlendAttachmentState> blend_state = {
 				vk::PipelineColorBlendAttachmentState()
-				.setBlendEnable(VK_FALSE)
+				.setBlendEnable(VK_TRUE)
+				.setSrcColorBlendFactor(vk::BlendFactor::eOne)
+				.setDstColorBlendFactor(vk::BlendFactor::eDstAlpha)
+				.setColorBlendOp(vk::BlendOp::eAdd)
 				.setColorWriteMask(vk::ColorComponentFlagBits::eR
 					| vk::ColorComponentFlagBits::eG
 					| vk::ColorComponentFlagBits::eB

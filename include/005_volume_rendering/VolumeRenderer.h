@@ -74,11 +74,19 @@ public:
 //		m_volume_scene_cpu.u_background_color = 
 		m_volume_scene_cpu.u_volume_min = vec4(-1000.);
 		m_volume_scene_cpu.u_volume_max = vec4(1000.);
-		m_volume_scene_cpu.u_light_pos = vec4(1000.);
+		m_volume_scene_cpu.u_light_pos = vec4(0.);
 		m_volume_scene_cpu.u_light_color = vec4(1., 0., 0., 1.);
 
 		{
 			glm::uvec3 texSize(32);
+			std::array<float, 32> coef;
+			coef.fill(0.9f);
+			coef[0] = 0.f;
+			coef[1] = 0.1f;
+			coef[2] = 0.3f;
+			coef[coef.size()-3] = 0.f;
+			coef[coef.size()-2] = 0.1f;
+			coef[coef.size()-1] = 0.3f;
 			std::vector<glm::vec1> rgba(texSize.x*texSize.y*texSize.z);
 			for (int z = 0; z < texSize.z; z++)
 			{
@@ -88,8 +96,7 @@ public:
 					{
 						for (int w = 0; w < 1; w++)
 						{
-							float a = glm::simplex(glm::vec3(x, y, z)*0.08f) * 0.06f;
-							a = glm::max(a, 0.001f);
+							float a = glm::simplex(glm::vec3(x, y, z)*0.033f) * (1.f/32.f) * glm::min(glm::min(coef[x], coef[y]), coef[z]);
 							rgba.data()[x + y*texSize.x + z*texSize.x*texSize.y][w] = a;
 
 						}
@@ -348,7 +355,13 @@ public:
 
 			std::vector<vk::PipelineColorBlendAttachmentState> blend_state = {
 				vk::PipelineColorBlendAttachmentState()
-				.setBlendEnable(VK_FALSE)
+				.setBlendEnable(VK_TRUE)
+				.setSrcColorBlendFactor(vk::BlendFactor::eOne)
+				.setDstColorBlendFactor(vk::BlendFactor::eOneMinusSrcAlpha)
+				.setColorBlendOp(vk::BlendOp::eAdd)
+				.setSrcAlphaBlendFactor(vk::BlendFactor::eOne)
+				.setDstAlphaBlendFactor(vk::BlendFactor::eOneMinusSrcAlpha)
+				.setAlphaBlendOp(vk::BlendOp::eAdd)
 				.setColorWriteMask(vk::ColorComponentFlagBits::eR
 					| vk::ColorComponentFlagBits::eG
 					| vk::ColorComponentFlagBits::eB
@@ -391,7 +404,7 @@ public:
 		executer->m_cmd;
 		{
 			auto& keyboard = executer->m_window->getInput().m_keyboard;
-			float value = 30.f;
+			float value = 10.f;
 			vec4 lightPos(0.f);
 			if (keyboard.isHold(VK_LEFT)) {
 				lightPos.x -= value;
@@ -408,12 +421,12 @@ public:
 			if (keyboard.isHold('a')) {
 				lightPos.y += value;
 			}
-			if (keyboard.isHold('b')) {
+			if (keyboard.isHold('z')) {
 				lightPos.y -= value;
 			}
 			m_volume_scene_cpu.u_light_pos += lightPos;
-
-			mat4 mat = glm::translate(m_volume_scene_cpu.u_light_pos.xyz()) * glm::scale(vec3(200.f));
+			printf("%6.2f, %6.2f, %6.2f\n", m_volume_scene_cpu.u_light_pos.x, m_volume_scene_cpu.u_light_pos.y, m_volume_scene_cpu.u_light_pos.z);
+			mat4 mat = glm::translate(m_volume_scene_cpu.u_light_pos.xyz()) * glm::scale(vec3(20.f));
 			DrawHelper::Order().drawOrder(DrawHelper::SPHERE, DrawCommand{ mat });
 
 			btr::BufferMemory::Descriptor desc;
@@ -426,32 +439,35 @@ public:
 			copy.setDstOffset(m_volume_scene_gpu.getBufferInfo().offset);
 			copy.setSize(desc.size);
 
-
-			vk::ImageSubresourceRange subresourceRange;
-			subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-			subresourceRange.baseArrayLayer = 0;
-			subresourceRange.baseMipLevel = 0;
-			subresourceRange.layerCount = 1;
-			subresourceRange.levelCount = 1;
-			vk::ImageMemoryBarrier to_trans_write;
-			to_trans_write.image = m_volume_image;
-			to_trans_write.oldLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-			to_trans_write.newLayout = vk::ImageLayout::eTransferDstOptimal;
-			to_trans_write.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
-			to_trans_write.srcAccessMask = vk::AccessFlagBits::eShaderRead;
-			to_trans_write.subresourceRange = subresourceRange;
-			executer->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_trans_write });
-
+			executer->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, m_volume_scene_gpu.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite), {});
 			executer->m_cmd.copyBuffer(staging.getBufferInfo().buffer, m_volume_scene_gpu.getBufferInfo().buffer, copy);
+			executer->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, m_volume_scene_gpu.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead), {});
 
-			vk::ImageMemoryBarrier to_shader_read;
-			to_shader_read.image = m_volume_image;
-			to_shader_read.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-			to_shader_read.oldLayout = vk::ImageLayout::eTransferDstOptimal;
-			to_shader_read.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-			to_shader_read.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-			to_shader_read.subresourceRange = subresourceRange;
-			executer->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), {}, {}, { to_shader_read });
+
+// 			vk::ImageSubresourceRange subresourceRange;
+// 			subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+// 			subresourceRange.baseArrayLayer = 0;
+// 			subresourceRange.baseMipLevel = 0;
+// 			subresourceRange.layerCount = 1;
+// 			subresourceRange.levelCount = 1;
+// 			vk::ImageMemoryBarrier to_trans_write;
+// 			to_trans_write.image = m_volume_image;
+// 			to_trans_write.oldLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+// 			to_trans_write.newLayout = vk::ImageLayout::eTransferDstOptimal;
+// 			to_trans_write.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+// 			to_trans_write.srcAccessMask = vk::AccessFlagBits::eShaderRead;
+// 			to_trans_write.subresourceRange = subresourceRange;
+// 			executer->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_trans_write });
+
+
+// 			vk::ImageMemoryBarrier to_shader_read;
+// 			to_shader_read.image = m_volume_image;
+// 			to_shader_read.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+// 			to_shader_read.oldLayout = vk::ImageLayout::eTransferDstOptimal;
+// 			to_shader_read.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+// 			to_shader_read.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+// 			to_shader_read.subresourceRange = subresourceRange;
+// 			executer->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), {}, {}, { to_shader_read });
 		}
 	}
 

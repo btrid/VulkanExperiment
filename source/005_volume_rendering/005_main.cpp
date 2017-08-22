@@ -41,7 +41,7 @@ int main()
 	btr::setResourceAppPath("..\\..\\resource\\005_volume_rendering\\");
 	app::App app;
 	auto* camera = cCamera::sCamera::Order().create();
-	camera->m_position = glm::vec3(0.f, 0.f, -200.f);
+	camera->m_position = glm::vec3(0.f, 0.f, -4000.f);
 	camera->m_target = glm::vec3(0.f, 0.f, 201.f);
 	camera->m_up = glm::vec3(0.f, -1.f, 0.f);
 	camera->m_width = 640;
@@ -207,8 +207,8 @@ int main()
 			render_cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
 			// draw
-			volume_renderer.draw(render_cmd);
 			DrawHelper::Order().draw(render_cmd);
+			volume_renderer.draw(render_cmd);
 
 			render_cmd.endRenderPass();
 

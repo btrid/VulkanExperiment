@@ -43,68 +43,63 @@ void main()
 	vec3 volumeSize = (u_scene.u_volume_max.xyz - u_scene.u_volume_min.xyz);
 	ivec3 texSize = textureSize(u_volume, 0);
 	vec3 marchDist = volumeSize / (texSize*3.);
-
+//	gl_FragDepth = 1.;
 	Ray fromEye = MakeRayFromScreen(u_eye.xyz, u_target.xyz, In.texcoord, u_fov_y, u_aspect);
 
-	vec3 endpoint = fromEye.p;
-	vec3 startpoint = (fromEye.p + fromEye.d * 9999.);
 	{
-		Ray toAABB;
-		toAABB.p = startpoint;
-		toAABB.d = -fromEye.d;
-		Hit hit = marchToAABB(toAABB, u_scene.u_volume_min.xyz, u_scene.u_volume_max.xyz);
+		Hit hit = marchToAABB(fromEye, u_scene.u_volume_min.xyz, u_scene.u_volume_max.xyz);
 		if(hit.IsHit == 0)
 		{
 			// フォグエリアに当たらなかった
 			FragColor = vec4(0.);
-			return;
+//			return;
 			discard;
 
 		}
 		else
 		{
-			startpoint = hit.HitPoint + toAABB.d * 0.01;
+			fromEye.p = hit.HitPoint + fromEye.d * 0.01;
 		}
 	}
-	Ray toEye;
-	toEye.p = startpoint;
-	toEye.d = -fromEye.d;
 
-	vec3 volumeColor = vec3(1.);
-	vec3 diffuse = vec3(0.2, 0.2, 0.9);
-	float totalpass = 1.;
-	while(isInAABB(toEye.p, u_scene.u_volume_min.xyz, u_scene.u_volume_max.xyz) && dot(toEye.d, endpoint-toEye.p) >= 0.)
+	vec3 volume_albedo = vec3(1.);
+	vec3 color = vec3(0.0, 0.0, 0.0);
+	float alpha = 0.;
+	while(isInAABB(fromEye.p, u_scene.u_volume_min.xyz, u_scene.u_volume_max.xyz) && alpha < 1.)
 	{
-		vec3 p = toEye.p - u_scene.u_volume_min.xyz;
+		//Volumeの取得
+		vec3 p = fromEye.p - u_scene.u_volume_min.xyz;
 		float density = texture(u_volume, p / volumeSize).r;
 		{
-			totalpass = clamp(totalpass-density, 0., 1.);
-			vec3 march = toEye.d * marchDist;
-			toEye.p += march;
+			// レイマーチ
+			alpha = alpha + (1.-alpha)*density;
+			vec3 march = fromEye.d * marchDist;
+			fromEye.p += march;
 		}
 
 		// ライトからの照度を計算
 		Ray toLight;
-		toLight.p = u_scene.u_light_pos.xyz;
-		toLight.d = normalize(toEye.p - toLight.p);
-		Hit hit = marchToAABB(toLight, u_scene.u_volume_min.xyz, u_scene.u_volume_max.xyz);
-		toLight.p = hit.HitPoint + toLight.d * 0.01;
-		float pass = 1.;
-		while(isInAABB(toLight.p, u_scene.u_volume_min.xyz, u_scene.u_volume_max.xyz) && dot(toLight.d, toEye.p-toLight.p) >= 0.)
+		toLight.p = fromEye.p;
+		toLight.d = normalize(u_scene.u_light_pos.xyz - toLight.p);
+		float translucent = 0.; // 光がどの程度届いたか
+		while(isInAABB(toLight.p, u_scene.u_volume_min.xyz, u_scene.u_volume_max.xyz) && translucent<1.)
 		{
 			vec3 lp = toLight.p - u_scene.u_volume_min.xyz;
 			float ldensity = texture(u_volume, lp / volumeSize).r;
-			pass = clamp(pass - ldensity, 0., 1.);
+			translucent = translucent + (1.-translucent)*ldensity;
 			vec3 march = toLight.d * marchDist;
 			toLight.p += march;
 		}
 
-		vec3 color = mix(volumeColor, u_scene.u_light_color.xyz, pass);
-		diffuse = mix(diffuse, color, density);
+		vec3 diffuse = volume_albedo * u_scene.u_light_color.xyz*(1.-translucent);
+		color += diffuse * density;
 
 	}
-	vec3 color = diffuse;
-	FragColor = vec4(color, 1.);
+	vec3 ambient= vec3(0.2);
+	FragColor = vec4(mix(vec3(0., 0., 0.), color, alpha) + ambient, alpha);
+//	vec4 p = uProjection * uView * vec4(pos, 1.);
+//	p /= p.w;
+//	gl_FragDepth = p.z;
 //	FragColor = vec4(1.);
 }
 
