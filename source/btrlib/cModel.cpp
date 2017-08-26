@@ -470,9 +470,6 @@ void cModel::load(btr::Loader* loader, const std::string& filename)
 	}
 	importer.FreeScene();
 
-	const cGPU& gpu = sThreadLocal::Order().m_gpu;
-	auto familyIndex = device.getQueueFamilyIndex();
-
 	{
 		cMeshResource& mesh = m_resource->m_mesh_resource;
 

@@ -68,42 +68,10 @@ sGlobal::sGlobal()
 		SetThreadIdealProcessor(::GetCurrentThread(), param.m_index);
 		auto& data = sThreadLocal::Order();
 		data.m_thread_index = param.m_index;
-		data.m_gpu = m_gpu[0];
-		auto device = data.m_gpu.getDevice();
-		data.m_cmd_pool_onetime.resize(device.getQueueFamilyIndex().size());
-		for (int family = 0; family < data.m_cmd_pool_onetime.size(); family++)
-		{
-			auto& cmd_pool_per_device = data.m_cmd_pool_onetime[family];
-			for (auto& cmd_pool_per_frame : cmd_pool_per_device)
-			{
-				vk::CommandPoolCreateInfo cmd_pool_info = vk::CommandPoolCreateInfo()
-				.setQueueFamilyIndex(family)
-				.setFlags(vk::CommandPoolCreateFlagBits::eTransient /*| vk::CommandPoolCreateFlagBits::eResetCommandBuffer*/);
-				cmd_pool_per_frame = data.m_gpu.getDevice()->createCommandPool(cmd_pool_info);
-			}
-		}
-
-
-		vk::AllocationCallbacks cb;
-		cb.setPfnAllocation(btr::Allocation);
-		cb.setPfnFree(btr::Free);
-		cb.setPfnReallocation(btr::Reallocation);
-		cb.setPfnInternalAllocation(btr::InternalAllocationNotification);
-		cb.setPfnInternalFree(btr::InternalFreeNotification);
-		data.m_cmd_pool_compiled.resize(device.getQueueFamilyIndex().size());
-		data.m_cmd_pool_rewrite.resize(device.getQueueFamilyIndex().size());
-		for (int family = 0; family < device.getQueueFamilyIndex().size(); family++)
-		{
-			vk::CommandPoolCreateInfo cmd_pool_info;
-			cmd_pool_info.setQueueFamilyIndex(family);
-			data.m_cmd_pool_compiled[family] = device->createCommandPool(cmd_pool_info, cb);
-
-		}
-
 	};
 
 	auto device = m_gpu[0].getDevice();
-	m_thread_local.resize(std::thread::hardware_concurrency() - 1);
+	m_thread_local.resize(std::thread::hardware_concurrency());
 	for (auto& thread : m_thread_local)
 	{
 		thread.m_cmd_pool_onetime.resize(device.getQueueFamilyIndex().size());
@@ -169,6 +137,12 @@ void sGlobal::swap()
 	m_deltatime = m_timer.getElapsedTimeAsSeconds();
 	m_deltatime = glm::min(m_deltatime, 0.02f);
 }
+
+sGlobal::sGlobal::cThreadData& sGlobal::getThreadLocal()
+{
+	return m_thread_local[sThreadLocal::Order().getThreadIndex()];
+}
+
 vk::ShaderModule loadShader(const vk::Device& device, const std::string& filename)
 {
 	std::experimental::filesystem::path filepath(filename);
@@ -266,3 +240,21 @@ void vk::FenceShared::create(vk::Device device, const vk::FenceCreateInfo& fence
 	*m_fence = device.createFence(fence_info);
 }
 
+vk::CommandBuffer sThreadLocal::getCmdOnetime(int device_family_index) const
+{
+	vk::CommandBufferAllocateInfo cmd_buffer_info;
+	cmd_buffer_info.commandBufferCount = 1;
+	cmd_buffer_info.commandPool = sGlobal::Order().getThreadLocal().m_cmd_pool_onetime[device_family_index][sGlobal::Order().getCurrentFrame()];
+	cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
+	auto cmd = sGlobal::Order().getGPU(0).getDevice()->allocateCommandBuffers(cmd_buffer_info)[0];
+
+	vk::CommandBufferBeginInfo begin_info;
+	begin_info.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+	cmd.begin(begin_info);
+
+	return cmd;
+}
+std::array<vk::CommandPool, sGlobal::FRAME_MAX>& sThreadLocal::getCmdPoolOnetime(int device_family_index) const
+{
+	return sGlobal::Order().getThreadLocal().m_cmd_pool_onetime[device_family_index];
+}

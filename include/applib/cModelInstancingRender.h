@@ -185,8 +185,8 @@ struct cModelInstancingRenderer
 public:
 	cModelInstancingRenderer()
 	{
-		const cGPU& gpu = sThreadLocal::Order().m_gpu;
-		auto device = gpu.getDevice();
+		auto& gpu = sGlobal::Order().getGPU(0);
+		auto& device = gpu.getDevice();
 		m_device = device;
 	}
 	void setup(btr::Loader& loader)

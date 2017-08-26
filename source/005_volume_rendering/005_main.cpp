@@ -49,16 +49,7 @@ int main()
 	camera->m_far = 50000.f;
 	camera->m_near = 0.01f;
 	auto device = sGlobal::Order().getGPU(0).getDevice();
-	auto pool_list = sThreadLocal::Order().getCmdPoolOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
-	std::vector<vk::CommandBuffer> render_cmds(sGlobal::FRAME_MAX);
-	for (int i = 0; i < render_cmds.size(); i++)
-	{
-		vk::CommandBufferAllocateInfo cmd_info = vk::CommandBufferAllocateInfo()
-			.setCommandPool(pool_list[i])
-			.setLevel(vk::CommandBufferLevel::ePrimary)
-			.setCommandBufferCount(1);
-		render_cmds[i] = device->allocateCommandBuffers(cmd_info)[0];
-	}
+	auto setup_cmd = sThreadLocal::Order().getCmdOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
 
 
 	vk::FenceCreateInfo fence_info;
@@ -120,10 +111,7 @@ int main()
 	volumeRenderer volume_renderer;
 
 	{
-		vk::CommandBufferBeginInfo begin_info;
-		begin_info.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-		render_cmds[0].begin(begin_info);
-		loader->m_cmd = render_cmds[0];
+		loader->m_cmd = setup_cmd;
 
 		vk::ImageSubresourceRange subresource_range;
 		subresource_range.setAspectMask(vk::ImageAspectFlagBits::eColor);
@@ -161,9 +149,9 @@ int main()
 		DrawHelper::Order().setup(loader);
 		volume_renderer.setup(loader);
 
-		render_cmds[0].end();
+		setup_cmd.end();
 		std::vector<vk::CommandBuffer> cmds = {
-			render_cmds[0],
+			setup_cmd,
 		};
 
 		vk::PipelineStageFlags waitPipeline = vk::PipelineStageFlagBits::eAllGraphics;
@@ -242,15 +230,14 @@ int main()
 
 		sDebug::Order().waitFence(device.getHandle(), fence_list[backbuffer_index]);
 		device->resetFences({ fence_list[backbuffer_index] });
-		device->resetCommandPool(pool_list[backbuffer_index], vk::CommandPoolResetFlagBits::eReleaseResources);
 		for (auto& tls : sGlobal::Order().getThreadLocalList())
 		{
 			for (auto& pool_family : tls.m_cmd_pool_onetime)
 			{
-				for (auto& pool : pool_family)
-				{
-					device->resetCommandPool(pool, vk::CommandPoolResetFlagBits::eReleaseResources);
-				}
+// 				for (auto& pool : pool_family)
+// 				{
+					device->resetCommandPool(pool_family[sGlobal::Order().getCurrentFrame()], vk::CommandPoolResetFlagBits::eReleaseResources);
+//				}
 			}
 		}		
 
