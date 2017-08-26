@@ -325,7 +325,7 @@ void cModel::load(btr::Loader* loader, const std::string& filename)
 	sDebug::Order().print(sDebug::FLAG_LOG | sDebug::SOURCE_MODEL, "[Load Model %6.2fs] %s \n", timer.getElapsedTimeAsSeconds(), filename.c_str());
 
 
-	auto device = sThreadLocal::Order().m_device[sThreadLocal::DEVICE_GRAPHICS];
+	auto& device = sGlobal::Order().getGPU(0).getDevice();
 
 	auto cmd_pool = sGlobal::Order().getCmdPoolTempolary(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
 	vk::CommandBufferAllocateInfo cmd_info;

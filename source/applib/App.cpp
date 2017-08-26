@@ -27,35 +27,8 @@ App::App()
 	m_window.setup(windowInfo);
 
 
-	cGPU& gpu = sGlobal::Order().getGPU(0);
-	cDevice device = gpu.getDevice(vk::QueueFlagBits::eGraphics)[0];
-
-	{
-		m_backbuffer_view.resize(m_window.getSwapchain().getSwapchainNum());
-		for (uint32_t i = 0; i < m_window.getSwapchain().getSwapchainNum(); i++)
-		{
-			auto subresourceRange = vk::ImageSubresourceRange()
-				.setAspectMask(vk::ImageAspectFlagBits::eColor)
-				.setBaseArrayLayer(0)
-				.setLayerCount(1)
-				.setBaseMipLevel(0)
-				.setLevelCount(1);
-
-			vk::ImageViewCreateInfo backbuffer_view_info;
-			backbuffer_view_info.setImage(m_window.getSwapchain().m_backbuffer_image[i]);
-			backbuffer_view_info.setFormat(m_window.getSwapchain().m_surface_format.format);
-			backbuffer_view_info.setViewType(vk::ImageViewType::e2D);
-			backbuffer_view_info.setComponents(vk::ComponentMapping{
-				vk::ComponentSwizzle::eR,
-				vk::ComponentSwizzle::eG,
-				vk::ComponentSwizzle::eB,
-				vk::ComponentSwizzle::eA,
-			});
-			backbuffer_view_info.setSubresourceRange(subresourceRange);
-			m_backbuffer_view[i] = device->createImageView(backbuffer_view_info);
-
-		}
-	}
+	auto& gpu = sGlobal::Order().getGPU(0);
+	auto& device = gpu.getDevice();
 
 	// レンダーパス
 	{
@@ -105,46 +78,7 @@ App::App()
 		m_render_pass = device->createRenderPass(renderpass_info);
 	}
 
-	{
-		// イメージ生成
-		vk::ImageCreateInfo depth_info;
-		depth_info.format = vk::Format::eD32Sfloat;
-		depth_info.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment;
-		depth_info.arrayLayers = 1;
-		depth_info.mipLevels = 1;
-		depth_info.extent.width = m_window.getClientSize().x;
-		depth_info.extent.height = m_window.getClientSize().y;
-		depth_info.extent.depth = 1;
-		depth_info.imageType = vk::ImageType::e2D;
-		depth_info.initialLayout = vk::ImageLayout::eUndefined;
-		depth_info.queueFamilyIndexCount = device.getQueueFamilyIndex().size();
-		depth_info.pQueueFamilyIndices = device.getQueueFamilyIndex().data();
-		m_depth_image = device->createImage(depth_info);
-
-		// メモリ確保
-		auto memory_request = device->getImageMemoryRequirements(m_depth_image);
-		uint32_t memory_index = cGPU::Helper::getMemoryTypeIndex(device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
-
-		vk::MemoryAllocateInfo memory_info;
-		memory_info.allocationSize = memory_request.size;
-		memory_info.memoryTypeIndex = memory_index;
-		m_depth_memory = device->allocateMemory(memory_info);
-
-		device->bindImageMemory(m_depth_image, m_depth_memory, 0);
-
-		vk::ImageViewCreateInfo depth_view_info;
-		depth_view_info.format = depth_info.format;
-		depth_view_info.image = m_depth_image;
-		depth_view_info.viewType = vk::ImageViewType::e2D;
-		depth_view_info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
-		depth_view_info.subresourceRange.baseArrayLayer = 0;
-		depth_view_info.subresourceRange.baseMipLevel = 0;
-		depth_view_info.subresourceRange.layerCount = 1;
-		depth_view_info.subresourceRange.levelCount = 1;
-		m_depth_view = device->createImageView(depth_view_info);
-
-	}
-	m_framebuffer.resize(m_backbuffer_view.size());
+	m_framebuffer.resize(m_window.getSwapchain().m_backbuffer.size());
 	{
 		std::vector<vk::ImageView> view(2);
 
@@ -156,9 +90,9 @@ App::App()
 		framebuffer_info.setHeight(m_window.getClientSize().y);
 		framebuffer_info.setLayers(1);
 
-		for (size_t i = 0; i < m_backbuffer_view.size(); i++) {
-			view[0] = m_backbuffer_view[i];
-			view[1] = m_depth_view;
+		for (size_t i = 0; i < m_window.getSwapchain().m_backbuffer.size(); i++) {
+			view[0] = m_window.getSwapchain().m_backbuffer[i].m_view;
+			view[1] = m_window.getSwapchain().m_depth.m_view;
 			m_framebuffer[i] = device->createFramebuffer(framebuffer_info);
 		}
 	}

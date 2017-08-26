@@ -10,11 +10,7 @@ struct App
 
 	vk::RenderPass m_render_pass;
 	std::vector<vk::Framebuffer> m_framebuffer;
-	std::vector<vk::ImageView> m_backbuffer_view;
 
-	vk::Image m_depth_image;
-	vk::DeviceMemory m_depth_memory;
-	vk::ImageView m_depth_view;
 
 
 	App();

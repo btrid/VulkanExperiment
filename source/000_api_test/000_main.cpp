@@ -96,7 +96,7 @@ int main()
 	mask.z -= mask.y;
 	mask.y -= mask.x;
 
-	btr::setResourcePath("..\\..\\resource\\000_api_test\\");
+	btr::setResourceAppPath("..\\..\\resource\\000_api_test\\");
 	memoryAllocater();
 
 

@@ -503,7 +503,8 @@ void ModelInstancingRender::setup(cModelInstancingRenderer&  renderer)
 {
 	// setup draw
 	{
-		cDevice graphics_device = sThreadLocal::Order().m_device[sThreadLocal::DEVICE_GRAPHICS];
+		auto& gpu = sGlobal::Order().getGPU(0);
+		auto& device = gpu.getDevice();
 		auto& pipeline = renderer.getComputePipeline();
 
 		{
@@ -512,7 +513,7 @@ void ModelInstancingRender::setup(cModelInstancingRenderer&  renderer)
 			allocInfo.descriptorPool = pipeline.m_descriptor_pool;
 			allocInfo.descriptorSetCount = 1;
 			allocInfo.pSetLayouts = &pipeline.m_descriptor_set_layout[cModelInstancingPipeline::DESCRIPTOR_PER_MESH];
-			m_draw_descriptor_set_per_mesh = graphics_device->allocateDescriptorSets(allocInfo);
+			m_draw_descriptor_set_per_mesh = device->allocateDescriptorSets(allocInfo);
 			for (size_t i = 0; i < m_draw_descriptor_set_per_mesh.size(); i++)
 			{
 				auto& material = m_resource->m_material[m_resource->m_mesh[i].m_material_index];
@@ -529,7 +530,7 @@ void ModelInstancingRender::setup(cModelInstancingRenderer&  renderer)
 					.setDstBinding(0)
 					.setDstSet(m_draw_descriptor_set_per_mesh[i]),
 				};
-				graphics_device->updateDescriptorSets(drawWriteDescriptorSets, {});
+				device->updateDescriptorSets(drawWriteDescriptorSets, {});
 			}
 
 		}
@@ -539,14 +540,15 @@ void ModelInstancingRender::setup(cModelInstancingRenderer&  renderer)
 
 	// setup execute
 	{
-		cDevice compute_device = sThreadLocal::Order().m_device[sThreadLocal::DEVICE_COMPUTE];
+		auto& gpu = sGlobal::Order().getGPU(0);
+		auto& device = gpu.getDevice();
 
 		auto& pipeline = renderer.getComputePipeline();
 		vk::DescriptorSetAllocateInfo descriptor_set_alloc_info;
 		descriptor_set_alloc_info.setDescriptorPool(pipeline.m_descriptor_pool);
 		descriptor_set_alloc_info.setDescriptorSetCount(pipeline.m_descriptor_set_layout.size());
 		descriptor_set_alloc_info.setPSetLayouts(pipeline.m_descriptor_set_layout.data());
-		m_descriptor_set = compute_device->allocateDescriptorSets(descriptor_set_alloc_info);
+		m_descriptor_set = device->allocateDescriptorSets(descriptor_set_alloc_info);
 
 		vk::WriteDescriptorSet desc;
 		// ModelInfo
@@ -562,7 +564,7 @@ void ModelInstancingRender::setup(cModelInstancingRenderer&  renderer)
 			desc.setPBufferInfo(uniforms.data());
 			desc.setDstBinding(0);
 			desc.setDstSet(m_descriptor_set[cModelInstancingPipeline::DESCRIPTOR_MODEL]);
-			compute_device->updateDescriptorSets(desc, {});
+			device->updateDescriptorSets(desc, {});
 
 			std::vector<vk::DescriptorBufferInfo> storages =
 			{
@@ -576,7 +578,7 @@ void ModelInstancingRender::setup(cModelInstancingRenderer&  renderer)
 			desc.setPBufferInfo(storages.data());
 			desc.setDstBinding(1);
 			desc.setDstSet(m_descriptor_set[cModelInstancingPipeline::DESCRIPTOR_MODEL]);
-			compute_device->updateDescriptorSets(desc, {});
+			device->updateDescriptorSets(desc, {});
 		}
 		// AnimationUpdate
 		{
@@ -598,7 +600,7 @@ void ModelInstancingRender::setup(cModelInstancingRenderer&  renderer)
 			desc.setPBufferInfo(storages.data());
 			desc.setDstBinding(0);
 			desc.setDstSet(m_descriptor_set[cModelInstancingPipeline::DESCRIPTOR_ANIMATION]);
-			compute_device->updateDescriptorSets(desc, {});
+			device->updateDescriptorSets(desc, {});
 
 			std::vector<vk::DescriptorImageInfo> images =
 			{
@@ -613,7 +615,7 @@ void ModelInstancingRender::setup(cModelInstancingRenderer&  renderer)
 				.setPImageInfo(images.data())
 				.setDstBinding(32)
 				.setDstSet(m_descriptor_set[cModelInstancingPipeline::DESCRIPTOR_ANIMATION]);
-			compute_device->updateDescriptorSets(desc, {});
+			device->updateDescriptorSets(desc, {});
 		}
 	}
 }

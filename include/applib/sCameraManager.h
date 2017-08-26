@@ -80,9 +80,12 @@ struct sCameraManager : public Singleton<sCameraManager>
 
 	}
 
-	void execute(std::shared_ptr<btr::Executer>& executer)
+	vk::CommandBuffer draw()
 	{
-		vk::CommandBuffer cmd = executer->m_cmd;
+		auto& gpu = sGlobal::Order().getGPU(0);
+		auto& device = gpu.getDevice();
+
+		auto cmd = sThreadLocal::Order().getCmdOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
 
 		std::vector<vk::BufferMemoryBarrier> to_transfer = {
 			m_camera.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite),
@@ -100,14 +103,9 @@ struct sCameraManager : public Singleton<sCameraManager>
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexShader, {}, {}, { to_draw_barrier }, {});
 
+		cmd.end();
+		return cmd;
 
-	}
-	void draw(vk::CommandBuffer cmd)
-	{
-	}
-
-	glm::ivec2 calcMapIndex(const glm::vec4& p)
-	{
 	}
 
 	vk::DescriptorSetLayout getDescriptorSetLayout(DescriptorSetLayout desctiptor)const { return m_descriptor_set_layout[desctiptor]; }

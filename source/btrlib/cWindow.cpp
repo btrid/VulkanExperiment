@@ -44,7 +44,7 @@ void cWindow::Swapchain::setup(const CreateInfo& descriptor, vk::SurfaceKHR surf
 	assert(m_surface_format.format != vk::Format::eUndefined);
 
 	auto support_surface = getSupportSurfaceQueue(descriptor.gpu.getHandle(), surface);
-	m_use_device = descriptor.gpu.getDeviceByFamilyIndex(support_surface[0]);
+	m_use_device = descriptor.gpu.getDevice();
 
 	auto old_swap_chain = m_swapchain_handle;
 
@@ -70,8 +70,82 @@ void cWindow::Swapchain::setup(const CreateInfo& descriptor, vk::SurfaceKHR surf
 		m_use_device->destroySwapchainKHR(old_swap_chain);
 	}
 
-	m_backbuffer_image = m_use_device->getSwapchainImagesKHR(m_swapchain_handle);
+	auto backbuffer_image = m_use_device->getSwapchainImagesKHR(m_swapchain_handle);
+	m_backbuffer.reserve(backbuffer_image.size());
+	{
+		for (uint32_t i = 0; i < backbuffer_image.size(); i++)
+		{
+			auto subresourceRange = vk::ImageSubresourceRange()
+				.setAspectMask(vk::ImageAspectFlagBits::eColor)
+				.setBaseArrayLayer(0)
+				.setLayerCount(1)
+				.setBaseMipLevel(0)
+				.setLevelCount(1);
 
+			vk::ImageViewCreateInfo backbuffer_view_info;
+			backbuffer_view_info.setImage(backbuffer_image[i]);
+			backbuffer_view_info.setFormat(m_surface_format.format);
+			backbuffer_view_info.setViewType(vk::ImageViewType::e2D);
+			backbuffer_view_info.setComponents(vk::ComponentMapping{
+				vk::ComponentSwizzle::eR,
+				vk::ComponentSwizzle::eG,
+				vk::ComponentSwizzle::eB,
+				vk::ComponentSwizzle::eA,
+			});
+			backbuffer_view_info.setSubresourceRange(subresourceRange);
+			auto backbuffer_view = m_use_device->createImageView(backbuffer_view_info);
+
+			RenderTarget rendertarget;
+			rendertarget.m_image = backbuffer_image[i];
+			rendertarget.m_view = backbuffer_view;
+			rendertarget.m_format = m_surface_format.format;
+			rendertarget.m_size = capability.currentExtent;
+			m_backbuffer.emplace_back(rendertarget);
+		}
+	}
+
+	{
+		// イメージ生成
+		vk::ImageCreateInfo depth_info;
+		m_depth.m_format = vk::Format::eD32Sfloat;
+		depth_info.format = vk::Format::eD32Sfloat;
+		depth_info.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment;
+		depth_info.arrayLayers = 1;
+		depth_info.mipLevels = 1;
+		depth_info.extent.width = capability.currentExtent.width;
+		depth_info.extent.height = capability.currentExtent.height;
+		depth_info.extent.depth = 1;
+		depth_info.imageType = vk::ImageType::e2D;
+		depth_info.initialLayout = vk::ImageLayout::eUndefined;
+		depth_info.queueFamilyIndexCount = m_use_device.getQueueFamilyIndex().size();
+		depth_info.pQueueFamilyIndices = m_use_device.getQueueFamilyIndex().data();
+		m_depth.m_image = m_use_device->createImage(depth_info);
+		m_depth.m_size.setWidth(depth_info.extent.width);
+		m_depth.m_size.setHeight(depth_info.extent.height);
+
+		// メモリ確保
+		auto memory_request = m_use_device->getImageMemoryRequirements(m_depth.m_image);
+		uint32_t memory_index = cGPU::Helper::getMemoryTypeIndex(m_use_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+		vk::MemoryAllocateInfo memory_info;
+		memory_info.allocationSize = memory_request.size;
+		memory_info.memoryTypeIndex = memory_index;
+		m_depth.m_memory = m_use_device->allocateMemory(memory_info);
+
+		m_use_device->bindImageMemory(m_depth.m_image, m_depth.m_memory, 0);
+
+		vk::ImageViewCreateInfo depth_view_info;
+		depth_view_info.format = depth_info.format;
+		depth_view_info.image = m_depth.m_image;
+		depth_view_info.viewType = vk::ImageViewType::e2D;
+		depth_view_info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
+		depth_view_info.subresourceRange.baseArrayLayer = 0;
+		depth_view_info.subresourceRange.baseMipLevel = 0;
+		depth_view_info.subresourceRange.layerCount = 1;
+		depth_view_info.subresourceRange.levelCount = 1;
+		m_depth.m_view = m_use_device->createImageView(depth_view_info);
+
+	}
 }
 
 uint32_t cWindow::Swapchain::swap(vk::Semaphore& semaphore)

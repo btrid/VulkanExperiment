@@ -134,13 +134,24 @@ private:
 	GameFrame m_game_frame;
 	uint32_t m_tick_tock;
 	cThreadPool m_thread_pool;
+
+	struct cThreadData
+	{
+		std::vector<std::array<vk::CommandPool, sGlobal::FRAME_MAX>>	m_cmd_pool_onetime;
+	};
+
+	std::vector<cThreadData> m_thread_local;
 	std::vector<vk::CommandPool>	m_cmd_pool_tempolary;
+	std::vector<vk::CommandPool>	m_system_cmd_pool;
 	std::array<std::vector<std::unique_ptr<Deleter>>, FRAME_MAX> m_cmd_delete;
 //	std::array<sThreadLocal*, 8> m_threads;
 
 	cStopWatch m_timer;
 	float m_deltatime;
 public:
+	cThreadData& getThreadLocal(uint32_t thread_index) { return m_thread_local[thread_index]; }
+	std::vector<cThreadData>& getThreadLocalList() { return m_thread_local; }
+	vk::CommandPool getCmdPoolSytem(uint32_t device_family_index)const { return m_system_cmd_pool[device_family_index]; }
 	vk::CommandPool getCmdPoolTempolary(uint32_t device_family_index)const
 	{
 		return m_cmd_pool_tempolary[device_family_index];
@@ -173,26 +184,31 @@ struct sThreadLocal : public SingletonTLS<sThreadLocal>
 		DEVICE_TRANSFAR,
 		DEVICE_MAX,
 	};
-	cDevice m_device[DEVICE_MAX];
 
 	std::vector<vk::CommandPool>	m_cmd_pool_tempolary;
 	std::vector<std::vector<vk::CommandBuffer>>	m_cmd_tempolary;
 	std::vector<std::array<vk::CommandPool, sGlobal::FRAME_MAX>>	m_cmd_pool_onetime;
+	std::vector<std::array<vk::CommandPool, sGlobal::FRAME_MAX>>	m_cmd_pool_rewrite;
 	std::vector<vk::CommandPool>	m_cmd_pool_compiled;
 
 public:
 	std::array<vk::CommandPool, sGlobal::FRAME_MAX> getCmdPoolOnetime(int device_family_index)const { return m_cmd_pool_onetime[device_family_index]; }
-	vk::CommandPool getCmdPoolCompiled(int device_family_index)const { return m_cmd_pool_compiled[device_family_index]; }
-	vk::CommandPool getCmdPoolTempolary(uint32_t device_family_index)const { return m_cmd_pool_tempolary[device_family_index]; }
-	vk::CommandBuffer getCmdTempolary(uint32_t device_family_index)const 
-	{
+	vk::CommandBuffer getCmdOnetime(int device_family_index)const { 
 		vk::CommandBufferAllocateInfo cmd_buffer_info;
 		cmd_buffer_info.commandBufferCount = 1;
-		cmd_buffer_info.commandPool = m_cmd_pool_tempolary[device_family_index];
+		cmd_buffer_info.commandPool = m_cmd_pool_onetime[device_family_index][sGlobal::Order().getCurrentFrame()];
 		cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
-		auto cmd = m_gpu.getDeviceByFamilyIndex(device_family_index)->allocateCommandBuffers(cmd_buffer_info)[0];
+		auto cmd = m_gpu.getDevice()->allocateCommandBuffers(cmd_buffer_info)[0];
+
+		vk::CommandBufferBeginInfo begin_info;
+		begin_info.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+		cmd.begin(begin_info);
+
 		return cmd;
 	}
+
+	std::array<vk::CommandPool, sGlobal::FRAME_MAX> getCmdPoolRewrite(int device_family_index)const { return m_cmd_pool_rewrite[device_family_index]; }
+	vk::CommandPool getCmdPoolCompiled(int device_family_index)const { return m_cmd_pool_compiled[device_family_index]; }
 
 };
 

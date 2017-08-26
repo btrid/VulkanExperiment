@@ -101,7 +101,7 @@ public:
 					vk::AttachmentDescription()
 					.setFormat(loader->m_window->getSwapchain().m_surface_format.format)
 					.setSamples(vk::SampleCountFlagBits::e1)
-					.setLoadOp(vk::AttachmentLoadOp::eClear)
+					.setLoadOp(vk::AttachmentLoadOp::eDontCare)
 					.setStoreOp(vk::AttachmentStoreOp::eStore)
 					.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
 					.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
@@ -128,8 +128,8 @@ public:
 				framebuffer_info.setLayers(1);
 
 				for (size_t i = 0; i < m_framebuffer.size(); i++) {
-//					view[0] = m_backbuffer_view[i];
-	//				m_framebuffer[i] = loader->m_device->createFramebuffer(framebuffer_info);
+					view[0] = loader->m_window->getSwapchain().m_backbuffer[i].m_view;
+					m_framebuffer[i] = loader->m_device->createFramebuffer(framebuffer_info);
 				}
 			}
 
@@ -447,7 +447,7 @@ public:
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
 				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_VOLUME])
-				.setRenderPass(loader->m_render_pass)
+				.setRenderPass(m_render_pass)
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
@@ -487,55 +487,41 @@ public:
 			mat4 mat = glm::translate(m_volume_scene_cpu.u_light_pos.xyz()) * glm::scale(vec3(20.f));
 			DrawHelper::Order().drawOrder(DrawHelper::SPHERE, DrawCommand{ mat });
 
-			btr::BufferMemory::Descriptor desc;
-			desc.size = sizeof(VolumeScene);
-			desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-			auto staging = executer->m_staging_memory.allocateMemory(desc);
-			*staging.getMappedPtr<VolumeScene>() = m_volume_scene_cpu;
-			vk::BufferCopy copy;
-			copy.setSrcOffset(staging.getBufferInfo().offset);
-			copy.setDstOffset(m_volume_scene_gpu.getBufferInfo().offset);
-			copy.setSize(desc.size);
-
-			executer->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, m_volume_scene_gpu.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite), {});
-			executer->m_cmd.copyBuffer(staging.getBufferInfo().buffer, m_volume_scene_gpu.getBufferInfo().buffer, copy);
-			executer->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, m_volume_scene_gpu.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead), {});
-
-
-// 			vk::ImageSubresourceRange subresourceRange;
-// 			subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-// 			subresourceRange.baseArrayLayer = 0;
-// 			subresourceRange.baseMipLevel = 0;
-// 			subresourceRange.layerCount = 1;
-// 			subresourceRange.levelCount = 1;
-// 			vk::ImageMemoryBarrier to_trans_write;
-// 			to_trans_write.image = m_volume_image;
-// 			to_trans_write.oldLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-// 			to_trans_write.newLayout = vk::ImageLayout::eTransferDstOptimal;
-// 			to_trans_write.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
-// 			to_trans_write.srcAccessMask = vk::AccessFlagBits::eShaderRead;
-// 			to_trans_write.subresourceRange = subresourceRange;
-// 			executer->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_trans_write });
-
-
-// 			vk::ImageMemoryBarrier to_shader_read;
-// 			to_shader_read.image = m_volume_image;
-// 			to_shader_read.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-// 			to_shader_read.oldLayout = vk::ImageLayout::eTransferDstOptimal;
-// 			to_shader_read.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-// 			to_shader_read.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-// 			to_shader_read.subresourceRange = subresourceRange;
-// 			executer->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), {}, {}, { to_shader_read });
 		}
 	}
 
-	vk::CommandBuffer draw()
+	vk::CommandBuffer draw(std::shared_ptr<btr::Executer>& executer)
 	{
-		vk::CommandBuffer cmd;
+		vk::CommandBuffer cmd = sThreadLocal::Order().getCmdOnetime(0);
+
+		btr::BufferMemory::Descriptor desc;
+		desc.size = sizeof(VolumeScene);
+		desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+
+		auto staging = executer->m_staging_memory.allocateMemory(desc);
+		*staging.getMappedPtr<VolumeScene>() = m_volume_scene_cpu;
+		vk::BufferCopy copy;
+		copy.setSrcOffset(staging.getBufferInfo().offset);
+		copy.setDstOffset(m_volume_scene_gpu.getBufferInfo().offset);
+		copy.setSize(desc.size);
+
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, m_volume_scene_gpu.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite), {});
+		cmd.copyBuffer(staging.getBufferInfo().buffer, m_volume_scene_gpu.getBufferInfo().buffer, copy);
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, m_volume_scene_gpu.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead), {});
+
+		vk::RenderPassBeginInfo render_begin_info;
+		render_begin_info.setFramebuffer(m_framebuffer[sGlobal::Order().getCurrentFrame()]);
+		render_begin_info.setRenderPass(m_render_pass);
+		render_begin_info.setRenderArea(vk::Rect2D({}, { 640, 480 }));
+		cmd.beginRenderPass(render_begin_info, vk::SubpassContents::eInline);
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW_VOLUME]);
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_VOLUME], 0, m_descriptor_set[DESCRIPTOR_SET_VOLUME_SCENE], {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_VOLUME], 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 		cmd.draw(4, 1, 0, 0);
+
+		cmd.endRenderPass();
+		cmd.end();
+		return cmd;
 
 	}
 };

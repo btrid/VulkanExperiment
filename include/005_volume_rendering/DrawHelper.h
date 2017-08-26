@@ -55,6 +55,8 @@ struct DrawHelper : public Singleton<DrawHelper>
 		SPHERE,
 		PrimitiveType_MAX,
 	};
+	vk::RenderPass m_render_pass;
+	std::vector<vk::Framebuffer> m_framebuffer;
 
 	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_shader_info;
 	std::array<vk::Pipeline, PIPELINE_NUM> m_pipeline;
@@ -74,6 +76,75 @@ struct DrawHelper : public Singleton<DrawHelper>
 	}
 	void setup(std::shared_ptr<btr::Loader>& loader)
 	{
+		{
+			// レンダーパス
+			std::vector<vk::AttachmentReference> colorRef =
+			{
+				vk::AttachmentReference()
+				.setAttachment(0)
+				.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
+			};
+			vk::AttachmentReference depth_ref;
+			depth_ref.setAttachment(1);
+			depth_ref.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+
+			vk::SubpassDescription subpass;
+			subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+			subpass.setInputAttachmentCount(0);
+			subpass.setPInputAttachments(nullptr);
+			subpass.setColorAttachmentCount((uint32_t)colorRef.size());
+			subpass.setPColorAttachments(colorRef.data());
+			subpass.setPDepthStencilAttachment(&depth_ref);
+			// render pass
+			std::vector<vk::AttachmentDescription> attachDescription = 
+			{
+				vk::AttachmentDescription()
+				.setFormat(loader->m_window->getSwapchain().m_surface_format.format)
+				.setSamples(vk::SampleCountFlagBits::e1)
+				.setLoadOp(vk::AttachmentLoadOp::eClear)
+				.setStoreOp(vk::AttachmentStoreOp::eStore)
+				.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
+				.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
+				vk::AttachmentDescription()
+				.setFormat(vk::Format::eD32Sfloat)
+				.setSamples(vk::SampleCountFlagBits::e1)
+				.setLoadOp(vk::AttachmentLoadOp::eClear)
+				.setStoreOp(vk::AttachmentStoreOp::eStore)
+				.setInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
+				.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
+
+			};
+			vk::RenderPassCreateInfo renderpass_info = vk::RenderPassCreateInfo()
+				.setAttachmentCount(attachDescription.size())
+				.setPAttachments(attachDescription.data())
+				.setSubpassCount(1)
+				.setPSubpasses(&subpass);
+
+			m_render_pass = loader->m_device->createRenderPass(renderpass_info);
+
+			// フレームバッファ
+			m_framebuffer.resize(loader->m_window->getSwapchain().getSwapchainNum());
+			{
+				std::vector<vk::ImageView> view(2);
+
+				vk::FramebufferCreateInfo framebuffer_info;
+				framebuffer_info.setRenderPass(m_render_pass);
+				framebuffer_info.setAttachmentCount((uint32_t)view.size());
+				framebuffer_info.setPAttachments(view.data());
+				framebuffer_info.setWidth(loader->m_window->getClientSize().x);
+				framebuffer_info.setHeight(loader->m_window->getClientSize().y);
+				framebuffer_info.setLayers(1);
+
+				for (size_t i = 0; i < m_framebuffer.size(); i++) {
+					view[0] = loader->m_window->getSwapchain().m_backbuffer[i].m_view;
+					view[1] = loader->m_window->getSwapchain().m_depth.m_view;
+					m_framebuffer[i] = loader->m_device->createFramebuffer(framebuffer_info);
+				}
+			}
+
+		}
+
+
 		{
 			std::vector<vec3> v;
 			std::vector<uvec3> i;
@@ -309,16 +380,20 @@ struct DrawHelper : public Singleton<DrawHelper>
 
 	vk::CommandBuffer draw()
 	{
-		vk::CommandBuffer cmd;
-// 		vk::RenderPassBeginInfo begin_render_Info = vk::RenderPassBeginInfo()
-// 			.setRenderPass(app.m_render_pass)
-// 			.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(app.m_window.getClientSize().x, app.m_window.getClientSize().y)))
-// 			.setClearValueCount(clearValue.size())
-// 			.setPClearValues(clearValue.data())
-// 			.setFramebuffer(app.m_framebuffer[0]);
-// 		render_cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
-// 		render_cmd.endRenderPass();
-// 		render_cmd.end();
+		auto device = sGlobal::Order().getGPU(0).getDevice();
+		auto cmd = sThreadLocal::Order().getCmdOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
+
+		std::vector<vk::ClearValue> clearValue = {
+			vk::ClearValue().setColor(vk::ClearColorValue(std::array<float, 4>{0.3f, 0.3f, 0.8f, 1.f})),
+			vk::ClearValue().setDepthStencil(vk::ClearDepthStencilValue(1.f)),
+		};
+		vk::RenderPassBeginInfo begin_render_Info;
+		begin_render_Info.setRenderPass(m_render_pass);
+		begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(640, 480)));
+		begin_render_Info.setFramebuffer(m_framebuffer[sGlobal::Order().getCurrentFrame()]);
+		begin_render_Info.setClearValueCount(clearValue.size());
+		begin_render_Info.setPClearValues(clearValue.data());
+		cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW_PRIMITIVE]);
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_PRIMITIVE], 0, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
@@ -341,6 +416,11 @@ struct DrawHelper : public Singleton<DrawHelper>
 
 			cmd_list.clear();
 		}
+
+		cmd.endRenderPass();
+		cmd.end();
+
+		return cmd;
 	}
 
 	void drawOrder(PrimitiveType type, const DrawCommand& cmd)

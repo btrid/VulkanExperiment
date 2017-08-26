@@ -6,6 +6,36 @@
 #include <iostream>
 #include <fstream>
 
+namespace btr{
+void* VKAPI_PTR Allocation(void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
+{
+	return malloc(size);
+}
+
+void* VKAPI_PTR Reallocation(void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
+{
+	return realloc(pOriginal, size);
+
+}
+
+void VKAPI_PTR Free(void* pUserData, void* pMemory)
+{
+	free(pMemory);
+}
+
+void VKAPI_PTR InternalAllocationNotification(void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope)
+{
+	printf("alloc\n");
+}
+
+void VKAPI_PTR InternalFreeNotification(void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope)
+{
+	printf("free\n");
+}
+
+}
+
+
 sGlobal::sGlobal()
 	: m_current_frame(0)
 	, m_game_frame(0)
@@ -29,68 +59,7 @@ sGlobal::sGlobal()
 		for (auto&& pd : gpus)
 		{
 			m_gpu.emplace_back();
-			auto& gpu = m_gpu.back();
-			gpu.m_handle = pd;
-			std::vector<const char*> extensionName = {
-				VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-			};
-
-			auto gpu_propaty = gpu->getProperties();
-			auto gpu_feature = gpu->getFeatures();
-// 			auto memory_prop = gpu->getMemoryProperties();
-// 			for (uint32_t i = 0; i < memory_prop.memoryTypeCount; i++)
-// 			{
-// 				auto memory_type = memory_prop.memoryTypes[i];
-// 				auto memory_heap = memory_prop.memoryHeaps[memory_type.heapIndex];
-// 				printf("[%2d]%s %s size = %lld\n", i, vk::to_string(memory_type.propertyFlags).c_str(), vk::to_string(memory_heap.flags).c_str(), memory_heap.size);
-// 			}
-			auto queueFamilyProperty = gpu->getQueueFamilyProperties();
-			gpu.m_device_list.reserve(queueFamilyProperty.size());
-
-			std::vector<std::vector<float>> queue_priority(queueFamilyProperty.size());
-			for (size_t i = 0; i < queueFamilyProperty.size(); i++) 
-			{
-				auto& queue_property = queueFamilyProperty[i];
-				auto& priority = queue_priority[i];
-				priority.resize(1);
-				for (size_t q = 1; q < priority.size(); q++)
-				{
-					priority[q] = 1.f / (priority.size() - 1) * q;
-				}
- 			}
-
-			// デバイス
-			std::vector<vk::DeviceQueueCreateInfo> queue_info(queueFamilyProperty.size());
-			std::vector<uint32_t> family_index;
-			for (size_t i = 0; i < queueFamilyProperty.size(); i++)
-			{
-				queue_info[i].queueCount = (uint32_t)queue_priority[i].size();
-				queue_info[i].pQueuePriorities = queue_priority[i].data();
-				queue_info[i].queueFamilyIndex = (uint32_t)i;
-				family_index.push_back((uint32_t)i);
-			}
-
- 			vk::PhysicalDeviceFeatures feature = gpu_feature;
-
-			vk::DeviceCreateInfo deviceInfo = vk::DeviceCreateInfo()
-				.setQueueCreateInfoCount((uint32_t)queue_info.size())
-				.setPQueueCreateInfos(queue_info.data())
-				.setPEnabledFeatures(&feature)
-				.setEnabledExtensionCount((uint32_t)extensionName.size())
-				.setPpEnabledExtensionNames(extensionName.data())
-				;
-			auto device = gpu->createDevice(deviceInfo, nullptr);
-			cGPU::Device device_holder;
-			device_holder.m_device = device;
-			device_holder.m_queue = queue_priority;
-			device_holder.m_family_index = family_index;
-			device_holder.m_vk_debug_marker_set_object_tag = (PFN_vkDebugMarkerSetObjectTagEXT)device.getProcAddr("vkDebugMarkerSetObjectTagEXT");
-			device_holder.m_vk_debug_marker_set_object_name = (PFN_vkDebugMarkerSetObjectNameEXT)device.getProcAddr("vkDebugMarkerSetObjectNameEXT");
-			device_holder.m_vk_cmd_debug_marker_begin = (PFN_vkCmdDebugMarkerBeginEXT)device.getProcAddr("vkCmdDebugMarkerBeginEXT");
-			device_holder.m_vk_cmd_debug_marker_end = (PFN_vkCmdDebugMarkerEndEXT)device.getProcAddr("vkCmdDebugMarkerEndEXT");
-			device_holder.m_vk_cmd_debug_marker_insert = (PFN_vkCmdDebugMarkerInsertEXT)device.getProcAddr("vkCmdDebugMarkerInsertEXT");
-			gpu.m_device_list.emplace_back(std::move(device_holder));
-
+			m_gpu.back().setup(pd);
 		}
 	}
 
@@ -100,12 +69,8 @@ sGlobal::sGlobal()
 		auto& data = sThreadLocal::Order();
 		data.m_thread_index = param.m_index;
 		data.m_gpu = m_gpu[0];
-
-		data.m_device[sThreadLocal::DEVICE_GRAPHICS] = data.m_gpu.getDevice(vk::QueueFlagBits::eGraphics)[0];
-		data.m_device[sThreadLocal::DEVICE_COMPUTE] = data.m_gpu.getDevice(vk::QueueFlagBits::eCompute)[0];
-		data.m_device[sThreadLocal::DEVICE_TRANSFAR] = data.m_gpu.getDevice(vk::QueueFlagBits::eTransfer)[0];
-
-		data.m_cmd_pool_onetime.resize(data.m_gpu.m_device_list.size());
+		auto device = data.m_gpu.getDevice();
+		data.m_cmd_pool_onetime.resize(device.getQueueFamilyIndex().size());
 		for (int family = 0; family < data.m_cmd_pool_onetime.size(); family++)
 		{
 			auto& cmd_pool_per_device = data.m_cmd_pool_onetime[family];
@@ -113,35 +78,74 @@ sGlobal::sGlobal()
 			{
 				vk::CommandPoolCreateInfo cmd_pool_info = vk::CommandPoolCreateInfo()
 				.setQueueFamilyIndex(family)
-				.setFlags(vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
-				cmd_pool_per_frame = data.m_gpu.getDeviceByFamilyIndex(family)->createCommandPool(cmd_pool_info);
+				.setFlags(vk::CommandPoolCreateFlagBits::eTransient /*| vk::CommandPoolCreateFlagBits::eResetCommandBuffer*/);
+				cmd_pool_per_frame = data.m_gpu.getDevice()->createCommandPool(cmd_pool_info);
 			}
 		}
 
-		data.m_cmd_pool_compiled.resize(data.m_gpu.m_device_list.size());
-		for (int family = 0; family < data.m_cmd_pool_compiled.size(); family++)
+
+		vk::AllocationCallbacks cb;
+		cb.setPfnAllocation(btr::Allocation);
+		cb.setPfnFree(btr::Free);
+		cb.setPfnReallocation(btr::Reallocation);
+		cb.setPfnInternalAllocation(btr::InternalAllocationNotification);
+		cb.setPfnInternalFree(btr::InternalFreeNotification);
+		data.m_cmd_pool_compiled.resize(device.getQueueFamilyIndex().size());
+		data.m_cmd_pool_rewrite.resize(device.getQueueFamilyIndex().size());
+		for (int family = 0; family < device.getQueueFamilyIndex().size(); family++)
 		{
-			auto& cmd_pool_per_device = data.m_cmd_pool_compiled[family];
 			vk::CommandPoolCreateInfo cmd_pool_info;
 			cmd_pool_info.setQueueFamilyIndex(family);
-			cmd_pool_info.setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
-			cmd_pool_per_device = data.m_gpu.getDeviceByFamilyIndex(family)->createCommandPool(cmd_pool_info);
+			data.m_cmd_pool_compiled[family] = device->createCommandPool(cmd_pool_info, cb);
+
 		}
 
-//		this->m_threads[param.m_index] = &data;
 	};
 
+	auto device = m_gpu[0].getDevice();
+	m_thread_local.resize(std::thread::hardware_concurrency() - 1);
+	for (auto& thread : m_thread_local)
+	{
+		thread.m_cmd_pool_onetime.resize(device.getQueueFamilyIndex().size());
+		for (size_t family = 0; family < thread.m_cmd_pool_onetime.size(); family++)
+		{
+			vk::CommandPoolCreateInfo cmd_pool_info;
+			cmd_pool_info.queueFamilyIndex = (uint32_t)family;
+			cmd_pool_info.flags = vk::CommandPoolCreateFlagBits::eTransient;
+			for (auto& pool : thread.m_cmd_pool_onetime[family])
+			{
+				pool = device->createCommandPool(cmd_pool_info);
+			}
+		}
+	}
 	m_thread_pool.start(std::thread::hardware_concurrency()-1, init_thread_data_func);
 
-	m_cmd_pool_tempolary.resize(m_gpu[0].m_device_list.size());
+	m_cmd_pool_tempolary.resize(device.getQueueFamilyIndex().size());
 	for (size_t family = 0; family < m_cmd_pool_tempolary.size(); family++)
 	{
 		vk::CommandPoolCreateInfo cmd_pool_info;
 		cmd_pool_info.queueFamilyIndex = (uint32_t)family;
 		cmd_pool_info.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
-		m_cmd_pool_tempolary[family] = m_gpu[0].getDeviceByFamilyIndex((uint32_t)family)->createCommandPool(cmd_pool_info);
+		m_cmd_pool_tempolary[family] = device->createCommandPool(cmd_pool_info);
 	}
 
+	m_system_cmd_pool.resize(device.getQueueFamilyIndex().size());
+	for (size_t family = 0; family < m_system_cmd_pool.size(); family++)
+	{
+		vk::CommandPoolCreateInfo cmd_pool_info;
+		cmd_pool_info.queueFamilyIndex = (uint32_t)family;
+//		cmd_pool_info.setFlags()
+
+		vk::AllocationCallbacks cb;
+		cb.setPfnAllocation(btr::Allocation);
+		cb.setPfnFree(btr::Free);
+		cb.setPfnReallocation(btr::Reallocation);
+		cb.setPfnInternalAllocation(btr::InternalAllocationNotification);
+		cb.setPfnInternalFree(btr::InternalFreeNotification);
+//		cb.setPUserData()
+		m_system_cmd_pool[family] = device->createCommandPool(cmd_pool_info, cb);
+	}
+	
 }
 
 

@@ -7,8 +7,8 @@
 
 void cModelInstancingPipeline::setup(btr::Loader& loader, cModelInstancingRenderer& renderer)
 {
-	const auto& gpu = sThreadLocal::Order().m_gpu;
-	auto device = gpu.getDevice(vk::QueueFlagBits::eCompute)[0];
+	auto& gpu = sGlobal::Order().getGPU(0);
+	auto& device = gpu.getDevice();
 
 	// setup shader
 	{

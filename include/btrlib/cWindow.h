@@ -9,6 +9,14 @@
 #include <btrlib/sGlobal.h>
 #include <btrlib/cInput.h>
 
+struct RenderTarget
+{
+	vk::Image m_image;
+	vk::DeviceMemory m_memory;
+	vk::ImageView m_view;
+	vk::Format m_format;
+	vk::Extent2D m_size;
+};
 class cWindow
 {
 public:
@@ -26,7 +34,9 @@ private:
 	struct Swapchain 
 	{
 		vk::SwapchainKHR m_swapchain_handle;
-		std::vector<vk::Image> m_backbuffer_image;
+		std::vector<RenderTarget> m_backbuffer;
+		RenderTarget m_depth;
+
 		vk::SurfaceFormatKHR m_surface_format;
 		cDevice m_use_device;
 		uint32_t m_backbuffer_index;
@@ -40,7 +50,7 @@ private:
 
 		void setup(const CreateInfo& descriptor, vk::SurfaceKHR surface);
 		uint32_t swap(vk::Semaphore& semaphore);
-		size_t getSwapchainNum()const { return m_backbuffer_image.size(); }
+		size_t getSwapchainNum()const { return m_backbuffer.size(); }
 	};
 
 	class Private

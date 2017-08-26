@@ -48,7 +48,7 @@ int main()
 	camera->m_height = 480;
 	camera->m_far = 50000.f;
 	camera->m_near = 0.01f;
-	auto device = sThreadLocal::Order().m_device[0];
+	auto device = sGlobal::Order().getGPU(0).getDevice();
 	auto pool_list = sThreadLocal::Order().getCmdPoolOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
 	std::vector<vk::CommandBuffer> render_cmds(sGlobal::FRAME_MAX);
 	for (int i = 0; i < render_cmds.size(); i++)
@@ -137,9 +137,9 @@ int main()
 		barrier[0].setOldLayout(vk::ImageLayout::eUndefined);
 		barrier[0].setNewLayout(vk::ImageLayout::ePresentSrcKHR);
 		barrier[2] = barrier[1] = barrier[0];
-		barrier[0].setImage(app.m_window.getSwapchain().m_backbuffer_image[0]);
-		barrier[1].setImage(app.m_window.getSwapchain().m_backbuffer_image[1]);
-		barrier[2].setImage(app.m_window.getSwapchain().m_backbuffer_image[2]);
+		barrier[0].setImage(app.m_window.getSwapchain().m_backbuffer[0].m_image);
+		barrier[1].setImage(app.m_window.getSwapchain().m_backbuffer[1].m_image);
+		barrier[2].setImage(app.m_window.getSwapchain().m_backbuffer[2].m_image);
 
 		vk::ImageSubresourceRange subresource_depth_range;
 		subresource_depth_range.aspectMask = vk::ImageAspectFlagBits::eDepth;
@@ -148,7 +148,7 @@ int main()
 		subresource_depth_range.layerCount = 1;
 		subresource_depth_range.levelCount = 1;
 
-		barrier[3].setImage(app.m_depth_image);
+		barrier[3].setImage(app.m_window.getSwapchain().m_depth.m_image);
 		barrier[3].setSubresourceRange(subresource_depth_range);
 		barrier[3].setDstAccessMask(vk::AccessFlagBits::eDepthStencilAttachmentWrite);
 		barrier[3].setOldLayout(vk::ImageLayout::eUndefined);
@@ -178,38 +178,25 @@ int main()
 
 	}
 
-
-	while (true)
+	std::vector < vk::CommandBuffer > cmd_present_to_render;
+	std::vector < vk::CommandBuffer > cmd_render_to_present;
 	{
-		cStopWatch time;
-
-		uint32_t backbuffer_index = app.m_window.getSwapchain().swap(swapbuffer_semaphore);
 		{
-			auto render_cmd = render_cmds[backbuffer_index];
-			{
-				sDebug::Order().waitFence(device.getHandle(), fence_list[backbuffer_index]);
-				device->resetFences({ fence_list[backbuffer_index] });
-				device->resetCommandPool(pool_list[backbuffer_index], vk::CommandPoolResetFlagBits::eReleaseResources);
+			auto pool = sGlobal::Order().getCmdPoolSytem(0);
+			vk::CommandBufferAllocateInfo cmd_buffer_info;
+			cmd_buffer_info.commandPool = pool;
+			cmd_buffer_info.commandBufferCount = sGlobal::FRAME_MAX;
+			cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
+			cmd_present_to_render = device->allocateCommandBuffers(cmd_buffer_info);
+			cmd_render_to_present = device->allocateCommandBuffers(cmd_buffer_info);
+		}
 
-				// begin cmd
-				vk::CommandBufferBeginInfo begin_info;
-				begin_info.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-				render_cmd.begin(begin_info);
+		vk::CommandBufferBeginInfo begin_info;
+		begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
 
-				executer->m_cmd = render_cmd;
-
-			}
-
-			{
-				auto* m_camera = cCamera::sCamera::Order().getCameraList()[0];
-				m_camera->control(app.m_window.getInput(), 0.016f);
-				sCameraManager::Order().execute(executer);
-
-			}
-			{
-				volume_renderer.execute(executer);
-			}
-
+		for (int i = 0; i < sGlobal::FRAME_MAX; i++)
+		{
+			cmd_present_to_render[i].begin(begin_info);
 
 			vk::ImageMemoryBarrier present_to_render_barrier;
 			present_to_render_barrier.setSrcAccessMask(vk::AccessFlagBits::eMemoryRead);
@@ -217,50 +204,96 @@ int main()
 			present_to_render_barrier.setOldLayout(vk::ImageLayout::ePresentSrcKHR);
 			present_to_render_barrier.setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
 			present_to_render_barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-			present_to_render_barrier.setImage(app.m_window.getSwapchain().m_backbuffer_image[backbuffer_index]);
+			present_to_render_barrier.setImage(app.m_window.getSwapchain().m_backbuffer[i].m_image);
 
-			render_cmd.pipelineBarrier(
+			cmd_present_to_render[i].pipelineBarrier(
 				vk::PipelineStageFlagBits::eTransfer,
 				vk::PipelineStageFlagBits::eFragmentShader,
 				vk::DependencyFlags(),
 				nullptr, nullptr, present_to_render_barrier);
 
-
-			// begin cmd render pass
-			std::vector<vk::ClearValue> clearValue = {
-				vk::ClearValue().setColor(vk::ClearColorValue(std::array<float, 4>{0.3f, 0.3f, 0.8f, 1.f})),
-				vk::ClearValue().setDepthStencil(vk::ClearDepthStencilValue(1.f)),
-			};
-			vk::RenderPassBeginInfo begin_render_Info = vk::RenderPassBeginInfo()
-				.setRenderPass(app.m_render_pass)
-				.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(app.m_window.getClientSize().x, app.m_window.getClientSize().y)))
-				.setClearValueCount(clearValue.size())
-				.setPClearValues(clearValue.data())
-				.setFramebuffer(app.m_framebuffer[backbuffer_index]);
-			render_cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
-			render_cmd.endRenderPass();
-			// draw
-//			auto drawhelper_cmd = DrawHelper::Order().draw();
-//			auto cmd = volume_renderer.draw();
-
+			cmd_present_to_render[i].end();
+		}
+		for (int i = 0; i < sGlobal::FRAME_MAX; i++)
+		{
+			cmd_render_to_present[i].begin(begin_info);
 			vk::ImageMemoryBarrier render_to_present_barrier;
 			render_to_present_barrier.setSrcAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
 			render_to_present_barrier.setDstAccessMask(vk::AccessFlagBits::eMemoryRead);
 			render_to_present_barrier.setOldLayout(vk::ImageLayout::eColorAttachmentOptimal);
 			render_to_present_barrier.setNewLayout(vk::ImageLayout::ePresentSrcKHR);
 			render_to_present_barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-			render_to_present_barrier.setImage(app.m_window.getSwapchain().m_backbuffer_image[backbuffer_index]);
-			render_cmd.pipelineBarrier(
+			render_to_present_barrier.setImage(app.m_window.getSwapchain().m_backbuffer[i].m_image);
+			cmd_render_to_present[i].pipelineBarrier(
 				vk::PipelineStageFlagBits::eFragmentShader,
 				vk::PipelineStageFlagBits::eTransfer,
 				vk::DependencyFlags(),
 				nullptr, nullptr, render_to_present_barrier);
 
-			render_cmd.end();
-			std::vector<vk::CommandBuffer> cmds = {
-//				drawhelper_cmd,
-				render_cmd,
-			};
+			cmd_render_to_present[i].end();
+		}
+	}
+
+	while (true)
+	{
+		cStopWatch time;
+
+		uint32_t backbuffer_index = app.m_window.getSwapchain().swap(swapbuffer_semaphore);
+
+		sDebug::Order().waitFence(device.getHandle(), fence_list[backbuffer_index]);
+		device->resetFences({ fence_list[backbuffer_index] });
+		device->resetCommandPool(pool_list[backbuffer_index], vk::CommandPoolResetFlagBits::eReleaseResources);
+		for (auto& tls : sGlobal::Order().getThreadLocalList())
+		{
+			for (auto& pool_family : tls.m_cmd_pool_onetime)
+			{
+				for (auto& pool : pool_family)
+				{
+					device->resetCommandPool(pool, vk::CommandPoolResetFlagBits::eReleaseResources);
+				}
+			}
+		}		
+
+		{
+
+			{
+//				sThreadLocal::Order().
+				auto* m_camera = cCamera::sCamera::Order().getCameraList()[0];
+				m_camera->control(app.m_window.getInput(), 0.016f);
+			}
+
+			DrawCommand dc;
+			dc.world = glm::translate(glm::vec3(0.f)) * glm::scale(glm::vec3(100));
+			DrawHelper::Order().drawOrder(DrawHelper::SPHERE, dc);
+			// draw
+
+			std::vector<vk::CommandBuffer> cmds(5);
+			{
+				cThreadJob job;
+				job.mFinish = [&]() {
+					cmds[1] = sCameraManager::Order().draw();
+				};
+				sGlobal::Order().getThreadPool().enque(job);
+			}
+			{
+				cThreadJob job;
+				job.mFinish = [&]() {
+					cmds[2] = volume_renderer.draw(executer);
+				};
+				sGlobal::Order().getThreadPool().enque(job);
+			}
+			{
+				cThreadJob job;
+				job.mFinish = [&]() {
+					cmds[3] = DrawHelper::Order().draw();
+				};
+				sGlobal::Order().getThreadPool().enque(job);
+			}
+
+			while (!sGlobal::Order().getThreadPool().wait())
+			{}
+			cmds[0] = cmd_present_to_render[backbuffer_index];
+			cmds[4] = cmd_render_to_present[backbuffer_index];
 
 			vk::PipelineStageFlags waitPipeline = vk::PipelineStageFlagBits::eAllGraphics;
 			std::vector<vk::SubmitInfo> submitInfo =
@@ -275,7 +308,6 @@ int main()
 				.setPSignalSemaphores(&cmdsubmit_semaphore)
 			};
 			queue.submit(submitInfo, fence_list[backbuffer_index]);
-			queue.waitIdle();
 			vk::PresentInfoKHR present_info = vk::PresentInfoKHR()
 				.setWaitSemaphoreCount(1)
 				.setPWaitSemaphores(&cmdsubmit_semaphore)

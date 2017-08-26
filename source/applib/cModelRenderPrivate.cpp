@@ -10,14 +10,15 @@ void cModelRenderPrivate::setup(cModelPipeline& pipeline)
 
 	// setup draw
 	{
-		cDevice graphics_device = sThreadLocal::Order().m_device[sThreadLocal::DEVICE_GRAPHICS];
+		auto& gpu = sGlobal::Order().getGPU(0);
+		auto& device = gpu.getDevice();
 
 		{
 			vk::DescriptorSetAllocateInfo descriptor_set_alloc_info;
 			descriptor_set_alloc_info.setDescriptorPool(pipeline.m_descriptor_pool);
 			descriptor_set_alloc_info.setDescriptorSetCount(1);
 			descriptor_set_alloc_info.setPSetLayouts(&pipeline.m_descriptor_set_layout[cModelPipeline::DESCRIPTOR_MODEL]);
-			m_draw_descriptor_set_per_model = graphics_device->allocateDescriptorSets(descriptor_set_alloc_info)[0];
+			m_draw_descriptor_set_per_model = device->allocateDescriptorSets(descriptor_set_alloc_info)[0];
 
 			std::vector<vk::DescriptorBufferInfo> storages = {
 				m_bone_buffer.getBufferInfo(),
@@ -32,7 +33,7 @@ void cModelRenderPrivate::setup(cModelPipeline& pipeline)
 				.setDstBinding(0)
 				.setDstSet(m_draw_descriptor_set_per_model),
 			};
-			graphics_device->updateDescriptorSets(drawWriteDescriptorSets, {});
+			device->updateDescriptorSets(drawWriteDescriptorSets, {});
 
 		}
 		{
@@ -41,7 +42,7 @@ void cModelRenderPrivate::setup(cModelPipeline& pipeline)
 			allocInfo.descriptorPool = pipeline.m_descriptor_pool;
 			allocInfo.descriptorSetCount = (uint32_t)m_model_resource->m_material.size();
 			allocInfo.pSetLayouts = &pipeline.m_descriptor_set_layout[cModelPipeline::DESCRIPTOR_PER_MESH];
-			m_draw_descriptor_set_per_mesh = graphics_device->allocateDescriptorSets(allocInfo);
+			m_draw_descriptor_set_per_mesh = device->allocateDescriptorSets(allocInfo);
 			for (size_t i = 0; i < m_draw_descriptor_set_per_mesh.size(); i++)
 			{
 				auto& material = m_model_resource->m_material[m_model_resource->m_mesh[i].m_material_index];
@@ -58,7 +59,7 @@ void cModelRenderPrivate::setup(cModelPipeline& pipeline)
 					.setDstBinding(0)
 					.setDstSet(m_draw_descriptor_set_per_mesh[i]),
 				};
-				graphics_device->updateDescriptorSets(drawWriteDescriptorSets, {});
+				device->updateDescriptorSets(drawWriteDescriptorSets, {});
 			}
 		}
 
