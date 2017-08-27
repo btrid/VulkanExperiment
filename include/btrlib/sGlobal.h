@@ -133,25 +133,24 @@ private:
 	GameFrame m_current_frame;
 	GameFrame m_game_frame;
 	uint32_t m_tick_tock;
+
 	cThreadPool m_thread_pool;
 
 	struct cThreadData
 	{
 		std::vector<std::array<vk::CommandPool, sGlobal::FRAME_MAX>>	m_cmd_pool_onetime;
 	};
-
 	std::vector<cThreadData> m_thread_local;
 	std::vector<vk::CommandPool>	m_cmd_pool_tempolary;
-	std::vector<vk::CommandPool>	m_system_cmd_pool;
+	std::vector<vk::CommandPool>	m_cmd_pool_system;
 	std::array<std::vector<std::unique_ptr<Deleter>>, FRAME_MAX> m_cmd_delete;
-//	std::array<sThreadLocal*, 8> m_threads;
 
 	cStopWatch m_timer;
 	float m_deltatime;
 public:
 	cThreadData& getThreadLocal();
 	std::vector<cThreadData>& getThreadLocalList() { return m_thread_local; }
-	vk::CommandPool getCmdPoolSytem(uint32_t device_family_index)const { return m_system_cmd_pool[device_family_index]; }
+	vk::CommandPool getCmdPoolSytem(uint32_t device_family_index)const { return m_cmd_pool_system[device_family_index]; }
 	vk::CommandPool getCmdPoolTempolary(uint32_t device_family_index)const
 	{
 		return m_cmd_pool_tempolary[device_family_index];
@@ -178,7 +177,6 @@ struct sThreadLocal : public SingletonTLS<sThreadLocal>
 	uint32_t getThreadIndex()const { return m_thread_index; }
 
 	vk::CommandBuffer getCmdOnetime(int device_family_index)const;
-	std::array<vk::CommandPool, sGlobal::FRAME_MAX>& getCmdPoolOnetime(int device_family_index)const;
 
 };
 

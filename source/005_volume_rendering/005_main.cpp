@@ -51,7 +51,6 @@ int main()
 	auto device = sGlobal::Order().getGPU(0).getDevice();
 	auto setup_cmd = sThreadLocal::Order().getCmdOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
 
-
 	vk::FenceCreateInfo fence_info;
 	fence_info.setFlags(vk::FenceCreateFlagBits::eSignaled);
 	std::vector<vk::Fence> fence_list;
@@ -234,10 +233,7 @@ int main()
 		{
 			for (auto& pool_family : tls.m_cmd_pool_onetime)
 			{
-// 				for (auto& pool : pool_family)
-// 				{
-					device->resetCommandPool(pool_family[sGlobal::Order().getCurrentFrame()], vk::CommandPoolResetFlagBits::eReleaseResources);
-//				}
+				device->resetCommandPool(pool_family[sGlobal::Order().getCurrentFrame()], vk::CommandPoolResetFlagBits::eReleaseResources);
 			}
 		}		
 
@@ -265,14 +261,14 @@ int main()
 			{
 				cThreadJob job;
 				job.mFinish = [&]() {
-					cmds[2] = volume_renderer.draw(executer);
+					cmds[3] = volume_renderer.draw(executer);
 				};
 				sGlobal::Order().getThreadPool().enque(job);
 			}
 			{
 				cThreadJob job;
 				job.mFinish = [&]() {
-					cmds[3] = DrawHelper::Order().draw();
+					cmds[2] = DrawHelper::Order().draw();
 				};
 				sGlobal::Order().getThreadPool().enque(job);
 			}

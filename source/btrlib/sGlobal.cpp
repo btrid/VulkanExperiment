@@ -97,8 +97,8 @@ sGlobal::sGlobal()
 		m_cmd_pool_tempolary[family] = device->createCommandPool(cmd_pool_info);
 	}
 
-	m_system_cmd_pool.resize(device.getQueueFamilyIndex().size());
-	for (size_t family = 0; family < m_system_cmd_pool.size(); family++)
+	m_cmd_pool_system.resize(device.getQueueFamilyIndex().size());
+	for (size_t family = 0; family < m_cmd_pool_system.size(); family++)
 	{
 		vk::CommandPoolCreateInfo cmd_pool_info;
 		cmd_pool_info.queueFamilyIndex = (uint32_t)family;
@@ -111,7 +111,7 @@ sGlobal::sGlobal()
 		cb.setPfnInternalAllocation(btr::InternalAllocationNotification);
 		cb.setPfnInternalFree(btr::InternalFreeNotification);
 //		cb.setPUserData()
-		m_system_cmd_pool[family] = device->createCommandPool(cmd_pool_info, cb);
+		m_cmd_pool_system[family] = device->createCommandPool(cmd_pool_info, cb);
 	}
 	
 }
@@ -253,8 +253,4 @@ vk::CommandBuffer sThreadLocal::getCmdOnetime(int device_family_index) const
 	cmd.begin(begin_info);
 
 	return cmd;
-}
-std::array<vk::CommandPool, sGlobal::FRAME_MAX>& sThreadLocal::getCmdPoolOnetime(int device_family_index) const
-{
-	return sGlobal::Order().getThreadLocal().m_cmd_pool_onetime[device_family_index];
 }
