@@ -249,32 +249,50 @@ int main()
 			dc.world = glm::translate(glm::vec3(0.f)) * glm::scale(glm::vec3(100));
 			DrawHelper::Order().drawOrder(DrawHelper::SPHERE, dc);
 			// draw
-
+			std::atomic_uint pipeline_num = 3;
+			std::condition_variable_any render_wait_condition;
 			std::vector<vk::CommandBuffer> cmds(5);
 			{
 				cThreadJob job;
-				job.mFinish = [&]() {
-					cmds[1] = sCameraManager::Order().draw();
-				};
+				job.mJob.emplace_back(
+					[&]()
+					{
+						cmds[1] = sCameraManager::Order().draw();
+						pipeline_num--;
+						render_wait_condition.notify_one();
+					}
+				);
 				sGlobal::Order().getThreadPool().enque(job);
 			}
 			{
 				cThreadJob job;
-				job.mFinish = [&]() {
-					cmds[3] = volume_renderer.draw(executer);
-				};
+				job.mJob.emplace_back(
+					[&]() 
+					{
+						cmds[3] = volume_renderer.draw(executer);
+						pipeline_num--;
+						render_wait_condition.notify_one();
+				}
+				);
 				sGlobal::Order().getThreadPool().enque(job);
 			}
 			{
 				cThreadJob job;
-				job.mFinish = [&]() {
+				job.mJob.emplace_back(
+					[&]() {
 					cmds[2] = DrawHelper::Order().draw();
-				};
+					pipeline_num--;
+					render_wait_condition.notify_one();
+				}
+				);
 				sGlobal::Order().getThreadPool().enque(job);
 			}
-
-			while (!sGlobal::Order().getThreadPool().wait())
-			{}
+			{
+				std::mutex render_wait_mutex;
+				std::unique_lock<std::mutex> lock(render_wait_mutex);
+				render_wait_condition.wait(lock, [&]() { return pipeline_num == 0; });
+			}
+//			while (pipeline_num.load(std::memory_order_seq_cst)){}
 			cmds[0] = cmd_present_to_render[backbuffer_index];
 			cmds[4] = cmd_render_to_present[backbuffer_index];
 
