@@ -486,7 +486,6 @@ public:
 			printf("%6.2f, %6.2f, %6.2f\n", m_volume_scene_cpu.u_light_pos.x, m_volume_scene_cpu.u_light_pos.y, m_volume_scene_cpu.u_light_pos.z);
 			mat4 mat = glm::translate(m_volume_scene_cpu.u_light_pos.xyz()) * glm::scale(vec3(20.f));
 			DrawHelper::Order().drawOrder(DrawHelper::SPHERE, DrawCommand{ mat });
-
 		}
 	}
 

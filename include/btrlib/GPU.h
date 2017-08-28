@@ -8,8 +8,7 @@ class cDevice
 	friend class cGPU;
 public:
 	cDevice() {}
-	~cDevice()
-	{}
+	~cDevice(){}
 
 	vk::Device*			operator->() { return &m_handle; }
 	const vk::Device*	operator->()const { return &m_handle; }

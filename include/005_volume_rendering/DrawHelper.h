@@ -68,7 +68,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 	std::array<btr::AllocatedMemory, PrimitiveType_MAX> m_mesh_vertex;
 	std::array<btr::AllocatedMemory, PrimitiveType_MAX> m_mesh_index;
 	std::array<uint32_t, PrimitiveType_MAX> m_mesh_index_num;
-	std::array<std::vector<DrawCommand>, PrimitiveType_MAX> m_draw_cmd;
+	std::vector<std::array<std::array<std::vector<DrawCommand>, PrimitiveType_MAX>, 2>> m_draw_cmd;
 
 	DrawHelper()
 	{
@@ -76,6 +76,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 	}
 	void setup(std::shared_ptr<btr::Loader>& loader)
 	{
+		m_draw_cmd.resize(sGlobal::Order().getThreadPool().getThreadNum());
 		{
 			// レンダーパス
 			std::vector<vk::AttachmentReference> colorRef =
@@ -398,23 +399,26 @@ struct DrawHelper : public Singleton<DrawHelper>
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW_PRIMITIVE]);
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_PRIMITIVE], 0, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 
-		for (size_t i = 0; i < m_draw_cmd.size(); i++)
+		for (auto& cmd_per_thread : m_draw_cmd)
 		{
-			auto& cmd_list = m_draw_cmd[i];
-			if (cmd_list.empty()) {
-				continue;
-			}
-
-			cmd.bindVertexBuffers(0, m_mesh_vertex[i].getBufferInfo().buffer, m_mesh_vertex[i].getBufferInfo().offset);
-			cmd.bindIndexBuffer(m_mesh_index[i].getBufferInfo().buffer, m_mesh_index[i].getBufferInfo().offset, vk::IndexType::eUint32);
-
-			for (auto& dcmd :cmd_list)
+			auto& draw_cmd = cmd_per_thread[sGlobal::Order().getGPUIndex()];
+			for (size_t i = 0; i < draw_cmd.size(); i++)
 			{
-				cmd.pushConstants<mat4>(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_PRIMITIVE], vk::ShaderStageFlagBits::eVertex, 0, dcmd.world);
-				cmd.drawIndexed(m_mesh_index_num[i], 1, 0, 0, 0);
-			}
+				auto& cmd_list = draw_cmd[i];
+				if (cmd_list.empty()) {
+					continue;
+				}
 
-			cmd_list.clear();
+				cmd.bindVertexBuffers(0, m_mesh_vertex[i].getBufferInfo().buffer, m_mesh_vertex[i].getBufferInfo().offset);
+				cmd.bindIndexBuffer(m_mesh_index[i].getBufferInfo().buffer, m_mesh_index[i].getBufferInfo().offset, vk::IndexType::eUint32);
+
+				for (auto& dcmd : cmd_list)
+				{
+					cmd.pushConstants<mat4>(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_PRIMITIVE], vk::ShaderStageFlagBits::eVertex, 0, dcmd.world);
+					cmd.drawIndexed(m_mesh_index_num[i], 1, 0, 0, 0);
+				}
+				cmd_list.clear();
+			}
 		}
 
 		cmd.endRenderPass();
@@ -425,6 +429,6 @@ struct DrawHelper : public Singleton<DrawHelper>
 
 	void drawOrder(PrimitiveType type, const DrawCommand& cmd)
 	{
-		m_draw_cmd[type].push_back(cmd);
+		m_draw_cmd[sThreadLocal::Order().getThreadIndex()][sGlobal::Order().getCPUIndex()][type].push_back(cmd);
 	}
 };

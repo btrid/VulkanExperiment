@@ -62,13 +62,13 @@ public:
 		m_thread.clear();
 		m_thread.resize(num);
 
-		for (int i = 0; i < num; i++) 
+		for (int i = 0; i < num; i++)
 		{
 			m_thread[i] = std::thread([&, i]()
 			{
 				if (initialize) {
 					InitParam param;
-					param.m_index = i+1;
+					param.m_index = i + 1;
 					initialize(param);
 				}
 				this->work();
@@ -126,6 +126,8 @@ public:
 		auto wait_time = std::chrono::milliseconds(0);
 		return m_is_finished.wait_for(lock, wait_time, [&]() { return m_jobs.empty() && (m_process_job_count == 0); });
 	}
+
+	uint32_t getThreadNum()const { return (uint32_t)m_thread.size(); }
 
 private:
 	bool pop(cThreadJob& job)

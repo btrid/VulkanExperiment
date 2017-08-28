@@ -12,6 +12,7 @@
 #include <chrono>
 #include <memory>
 #include <filesystem>
+#include <atomic>
 #include <btrlib/Define.h>
 #include <btrlib/cWindow.h>
 #include <btrlib/cInput.h>
@@ -245,12 +246,32 @@ int main()
 				m_camera->control(app.m_window.getInput(), 0.016f);
 			}
 
-			DrawCommand dc;
-			dc.world = glm::translate(glm::vec3(0.f)) * glm::scale(glm::vec3(100));
-			DrawHelper::Order().drawOrder(DrawHelper::SPHERE, dc);
 			// draw
-			std::atomic_uint pipeline_num = 3;
-			std::condition_variable_any render_wait_condition;
+			struct SynchronizedPoint 
+			{
+				std::atomic_uint m_count;
+				std::condition_variable_any m_condition;
+				std::mutex m_mutex;
+
+				SynchronizedPoint(uint32_t count)
+					: m_count(count)
+				{}
+
+				void arrive()
+				{
+					std::unique_lock<std::mutex> lock(m_mutex);
+					m_count--;
+					m_condition.notify_one();
+				}
+
+				void wait()
+				{
+					std::unique_lock<std::mutex> lock(m_mutex);
+					m_condition.wait(lock, [&]() { return m_count == 0; });
+				}
+			};
+
+			SynchronizedPoint render_syncronized_point(3);
 			std::vector<vk::CommandBuffer> cmds(5);
 			{
 				cThreadJob job;
@@ -258,8 +279,7 @@ int main()
 					[&]()
 					{
 						cmds[1] = sCameraManager::Order().draw();
-						pipeline_num--;
-						render_wait_condition.notify_one();
+						render_syncronized_point.arrive();
 					}
 				);
 				sGlobal::Order().getThreadPool().enque(job);
@@ -270,8 +290,7 @@ int main()
 					[&]() 
 					{
 						cmds[3] = volume_renderer.draw(executer);
-						pipeline_num--;
-						render_wait_condition.notify_one();
+						render_syncronized_point.arrive();
 				}
 				);
 				sGlobal::Order().getThreadPool().enque(job);
@@ -281,18 +300,14 @@ int main()
 				job.mJob.emplace_back(
 					[&]() {
 					cmds[2] = DrawHelper::Order().draw();
-					pipeline_num--;
-					render_wait_condition.notify_one();
+					render_syncronized_point.arrive();
 				}
 				);
 				sGlobal::Order().getThreadPool().enque(job);
 			}
-			{
-				std::mutex render_wait_mutex;
-				std::unique_lock<std::mutex> lock(render_wait_mutex);
-				render_wait_condition.wait(lock, [&]() { return pipeline_num == 0; });
-			}
-//			while (pipeline_num.load(std::memory_order_seq_cst)){}
+//			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			render_syncronized_point.wait();
+
 			cmds[0] = cmd_present_to_render[backbuffer_index];
 			cmds[4] = cmd_render_to_present[backbuffer_index];
 

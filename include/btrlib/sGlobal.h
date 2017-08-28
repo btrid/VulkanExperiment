@@ -100,8 +100,8 @@ public:
 	enum
 	{
 		FRAME_MAX = 3,
+//		THREAD_NUM = std::thread::hardware_concurrency() - 1,
 	};
-
 protected:
 
 	sGlobal();
