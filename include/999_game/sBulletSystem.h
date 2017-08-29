@@ -10,8 +10,6 @@
 
 #include <applib/App.h>
 #include <999_game/MazeGenerator.h>
-#include <999_game/Geometry.h>
-#include <999_game/CircleIndex.h>
 #include <999_game/sScene.h>
 
 

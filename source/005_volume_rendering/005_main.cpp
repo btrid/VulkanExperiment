@@ -42,13 +42,13 @@ int main()
 	btr::setResourceAppPath("..\\..\\resource\\005_volume_rendering\\");
 	app::App app;
 	auto* camera = cCamera::sCamera::Order().create();
-	camera->m_position = glm::vec3(0.f, 0.f, -4000.f);
-	camera->m_target = glm::vec3(0.f, 0.f, 201.f);
-	camera->m_up = glm::vec3(0.f, -1.f, 0.f);
-	camera->m_width = 640;
-	camera->m_height = 480;
-	camera->m_far = 50000.f;
-	camera->m_near = 0.01f;
+	camera->getData().m_position = glm::vec3(0.f, 0.f, -4000.f);
+	camera->getData().m_target = glm::vec3(0.f, 0.f, 201.f);
+	camera->getData().m_up = glm::vec3(0.f, -1.f, 0.f);
+	camera->getData().m_width = 640;
+	camera->getData().m_height = 480;
+	camera->getData().m_far = 50000.f;
+	camera->getData().m_near = 0.01f;
 	auto device = sGlobal::Order().getGPU(0).getDevice();
 	auto setup_cmd = sThreadLocal::Order().getCmdOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
 
@@ -241,44 +241,19 @@ int main()
 		{
 
 			{
-//				sThreadLocal::Order().
 				auto* m_camera = cCamera::sCamera::Order().getCameraList()[0];
 				m_camera->control(app.m_window.getInput(), 0.016f);
 			}
 
 			// draw
-			struct SynchronizedPoint 
-			{
-				std::atomic_uint m_count;
-				std::condition_variable_any m_condition;
-				std::mutex m_mutex;
-
-				SynchronizedPoint(uint32_t count)
-					: m_count(count)
-				{}
-
-				void arrive()
-				{
-					std::unique_lock<std::mutex> lock(m_mutex);
-					m_count--;
-					m_condition.notify_one();
-				}
-
-				void wait()
-				{
-					std::unique_lock<std::mutex> lock(m_mutex);
-					m_condition.wait(lock, [&]() { return m_count == 0; });
-				}
-			};
-
 			SynchronizedPoint render_syncronized_point(3);
-			std::vector<vk::CommandBuffer> cmds(5);
+			std::vector<vk::CommandBuffer> render_cmds(5);
 			{
 				cThreadJob job;
 				job.mJob.emplace_back(
 					[&]()
 					{
-						cmds[1] = sCameraManager::Order().draw();
+						render_cmds[1] = sCameraManager::Order().draw();
 						render_syncronized_point.arrive();
 					}
 				);
@@ -289,7 +264,7 @@ int main()
 				job.mJob.emplace_back(
 					[&]() 
 					{
-						cmds[3] = volume_renderer.draw(executer);
+						render_cmds[3] = volume_renderer.draw(executer);
 						render_syncronized_point.arrive();
 				}
 				);
@@ -299,7 +274,7 @@ int main()
 				cThreadJob job;
 				job.mJob.emplace_back(
 					[&]() {
-					cmds[2] = DrawHelper::Order().draw();
+					render_cmds[2] = DrawHelper::Order().draw();
 					render_syncronized_point.arrive();
 				}
 				);
@@ -308,15 +283,15 @@ int main()
 //			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			render_syncronized_point.wait();
 
-			cmds[0] = cmd_present_to_render[backbuffer_index];
-			cmds[4] = cmd_render_to_present[backbuffer_index];
+			render_cmds[0] = cmd_present_to_render[backbuffer_index];
+			render_cmds[4] = cmd_render_to_present[backbuffer_index];
 
 			vk::PipelineStageFlags waitPipeline = vk::PipelineStageFlagBits::eAllGraphics;
 			std::vector<vk::SubmitInfo> submitInfo =
 			{
 				vk::SubmitInfo()
-				.setCommandBufferCount((uint32_t)cmds.size())
-				.setPCommandBuffers(cmds.data())
+				.setCommandBufferCount((uint32_t)render_cmds.size())
+				.setPCommandBuffers(render_cmds.data())
 				.setWaitSemaphoreCount(1)
 				.setPWaitSemaphores(&swapbuffer_semaphore)
 				.setPWaitDstStageMask(&waitPipeline)
@@ -335,6 +310,7 @@ int main()
 
 		app.m_window.update(sGlobal::Order().getThreadPool());
 		sGlobal::Order().swap();
+		sCameraManager::Order().sync();
 		printf("%6.3fs\n", time.getElapsedTimeAsSeconds());
 	}
 

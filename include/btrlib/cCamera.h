@@ -8,85 +8,99 @@
 #include <btrlib/cInput.h>
 class cCamera
 {
+	struct Data
+	{
+		glm::vec3 m_position;
+		glm::quat m_rotation;
+
+		float m_distance;
+		glm::vec3 m_target;
+		glm::vec3 m_up;
+		float m_angle_x;
+		float m_angle_y;
+		glm::mat4 m_projection;
+		glm::mat4 m_view;
+		float m_near;
+		float m_far;
+		float m_fov;
+		int m_height;
+		int m_width;
+
+		float getAspect()const { return (float)m_width / m_height; }
+	};
+
+	Data m_data;
+	Data m_render;
 public:
 	class sCamera;
 	friend sCamera;
 protected:
 	cCamera()
-		: m_distance(350.f)
-		, m_up(0.f, 1.f, 0.f)
-		, m_angle_y(0.f)
-		, m_angle_x(0.f)
-		, m_near(0.1f)
-		, m_far(1000.f)
-		, m_fov(glm::radians(40.f))
-		, m_height(480)
-		, m_width(640)
 	{
+		m_data.m_distance = 350.f;
+		m_data.m_up = glm::vec3(0.f, 1.f, 0.f);
+		m_data.m_angle_y = 0.f;
+		m_data.m_angle_x = 0.f;
+		m_data.m_near = 0.1f;
+		m_data.m_far = 1000.f;
+		m_data.m_fov = glm::radians(40.f);
+		m_data.m_height = 480;
+		m_data.m_width = 640;
+
+		m_render = m_data;
 	}
 
 	~cCamera() {}
 public:
-	glm::vec3 m_position;
-	glm::quat m_rotation;
+	Data& getData() { return m_data; }
+	const Data& getData()const { return m_data; }
+	float getAspect()const { return m_data.getAspect(); }
+	float getFov()const { return m_data.m_fov; }
+	float getNear()const { return m_data.m_near; }
+	float getFar()const { return m_data.m_far; }
+	glm::vec3 getPosition()const { return m_data.m_position; }
+	glm::vec3 getTarget()const { return m_data.m_target; }
+	glm::vec3 getUp()const { return m_data.m_up; }
 
-	float m_distance;
-	glm::vec3 m_target;
-	glm::vec3 m_up;
-	float m_angle_x;
-	float m_angle_y;
-	glm::mat4 m_projection;
-	glm::mat4 m_view;
-	float m_near;
-	float m_far;
-	float m_fov;
-	int m_height;
-	int m_width;
-
-	float getAspect()const { return (float)m_width / m_height; }
-	float getFov()const { return m_fov; }
-	float getNear()const { return m_near; }
-	float getFar()const { return m_far; }
-	glm::vec3 getPosition()const { return m_position; }
-	glm::vec3 getTarget()const { return m_target; }
-	glm::vec3 getUp()const { return m_up; }
+	Data& getRenderData() { return m_render; }
+	const Data& getRenderData()const { return m_render; }
 public:
 
 	void control(const cInput& input, float deltaTime)
 	{
-		float distance = glm::length(m_target - m_position);
+		float distance = glm::length(m_data.m_target - m_data.m_position);
 		{
 			if (input.m_mouse.getWheel() != 0) {
-				glm::vec3 dir = glm::normalize(m_position - m_target);
+				glm::vec3 dir = glm::normalize(m_data.m_position - m_data.m_target);
 				distance += -input.m_mouse.getWheel() * distance * deltaTime*5.f;
 				distance = glm::max(distance, 1.f);
-				m_position = m_target + dir * distance;
+				m_data.m_position = m_data.m_target + dir * distance;
 
 			}
 		}
 		if (input.m_mouse.isHold(cMouse::BUTTON_MIDDLE))
 		{
 			// XZ•½–Ê‚ÌˆÚ“®
-			auto f = glm::normalize(m_target - m_position);
-			auto s = glm::normalize(glm::cross(m_up, f));
+			auto f = glm::normalize(m_data.m_target - m_data.m_position);
+			auto s = glm::normalize(glm::cross(m_data.m_up, f));
 			auto move = input.m_mouse.getMove();
-			m_position += (s*move.x + f*move.y);
-			m_target += (s*move.x + f*move.y);
+			m_data.m_position += (s*move.x + f*move.y);
+			m_data.m_target += (s*move.x + f*move.y);
 
 		}else if (input.m_mouse.isHold(cMouse::BUTTON_LEFT))
 		{
 			// XY•½–Ê‚ÌˆÚ“®
-			auto f = glm::normalize(m_target - m_position);
-			auto s = glm::normalize(glm::cross(m_up, f));
+			auto f = glm::normalize(m_data.m_target - m_data.m_position);
+			auto s = glm::normalize(glm::cross(m_data.m_up, f));
 			auto move = input.m_mouse.getMove();
-			m_position += (s*move.x + m_up*move.y);// * distance / 100.f;
-			m_target += (s*move.x + m_up*move.y);// * distance / 100.f;
+			m_data.m_position += (s*move.x + m_data.m_up*move.y);// * distance / 100.f;
+			m_data.m_target += (s*move.x + m_data.m_up*move.y);// * distance / 100.f;
 		}
 		else if (input.m_mouse.isHold(cMouse::BUTTON_RIGHT))
 		{
 			// ‰ñ“]ˆÚ“®
-			glm::vec3 f = glm::normalize(m_target - m_position);
-			glm::vec3 s = glm::normalize(glm::cross(f, m_up));
+			glm::vec3 f = glm::normalize(m_data.m_target - m_data.m_position);
+			glm::vec3 s = glm::normalize(glm::cross(f, m_data.m_up));
 			glm::vec3 u = glm::normalize(glm::cross(s, f));
 
 			auto move = glm::vec2(input.m_mouse.getMove());
@@ -94,13 +108,13 @@ public:
 			{
 				glm::quat rot = glm::angleAxis(glm::radians(1.0f), glm::normalize(move.y*s + move.x*u));
 				f = glm::normalize(rot * f);
-				m_target = m_position + f*distance;
-				s = glm::normalize(glm::cross(m_up, f));
-				m_up = glm::normalize(glm::cross(f, s));
+				m_data.m_target = m_data.m_position + f*distance;
+				s = glm::normalize(glm::cross(m_data.m_up, f));
+				m_data.m_up = glm::normalize(glm::cross(f, s));
 			}
 		}
 
-		m_view = glm::lookAt(m_position, m_target, m_up);
+		m_data.m_view = glm::lookAt(m_data.m_position, m_data.m_target, m_data.m_up);
 
 	}
 
@@ -133,14 +147,15 @@ struct CameraGPU
 {
 	void setup(const cCamera& camera)
 	{
-		mProjection = glm::perspective(camera.m_fov, camera.getAspect(), camera.m_near, camera.m_far);
-		mView = glm::lookAt(camera.m_position, camera.m_target, camera.m_up);
-		u_eye = glm::vec4(camera.getPosition(), 0.f);
-		u_target = glm::vec4(camera.getTarget(), 0.f);
-		u_aspect = camera.getAspect();
-		u_fov_y = camera.getFov();
-		u_near = camera.getNear();
-		u_far = camera.getFar();
+		const auto& cam = camera.getRenderData();
+		mProjection = glm::perspective(cam.m_fov, cam.getAspect(), cam.m_near, cam.m_far);
+		mView = glm::lookAt(cam.m_position, cam.m_target, cam.m_up);
+		u_eye = glm::vec4(cam.m_position, 0.f);
+		u_target = glm::vec4(cam.m_target, 0.f);
+		u_aspect = cam.getAspect();
+		u_fov_y = cam.m_fov;
+		u_near = cam.m_near;
+		u_far = cam.m_far;
 	}
 	glm::mat4 mProjection;
 	glm::mat4 mView;
@@ -185,8 +200,9 @@ public:
 
 	void setup(const cCamera& camera)
 	{
-		setProjection(camera.getFov(), camera.getAspect(), camera.getNear(), camera.getFar());
-		setView(camera.getPosition(), camera.getTarget(), camera.getUp());
+		const auto& cam = camera.getRenderData();
+		setProjection(cam.m_fov, cam.getAspect(), cam.m_near, cam.m_far);
+		setView(cam.m_position, cam.m_target, cam.m_up);
 	}
 	void setProjection(float angle, float ratio, float nearD, float farD)
 	{
@@ -260,8 +276,9 @@ struct CameraGPU2
 {
 	void setup(const cCamera& camera)
 	{
-		m_projection = glm::perspective(camera.m_fov, camera.getAspect(), camera.m_near, camera.m_far);
-		m_view = glm::lookAt(camera.m_position, camera.m_target, camera.m_up);
+		const auto& cam = camera.getRenderData();
+		m_projection = glm::perspective(cam.m_fov, cam.getAspect(), cam.m_near, cam.m_far);
+		m_view = glm::lookAt(cam.m_position, cam.m_target, cam.m_up);
 		Frustom f;
 		f.setup(camera);
 		m_plane = f.getPlane();

@@ -32,6 +32,30 @@ struct cThreadWorker
 	}
 };
 
+struct SynchronizedPoint
+{
+	std::atomic_uint m_count;
+	std::condition_variable_any m_condition;
+	std::mutex m_mutex;
+
+	SynchronizedPoint(uint32_t count)
+		: m_count(count)
+	{}
+
+	void arrive()
+	{
+		std::unique_lock<std::mutex> lock(m_mutex);
+		m_count--;
+		m_condition.notify_one();
+	}
+
+	void wait()
+	{
+		std::unique_lock<std::mutex> lock(m_mutex);
+		m_condition.wait(lock, [&]() { return m_count == 0; });
+	}
+};
+
 class cThreadPool
 {
 private:

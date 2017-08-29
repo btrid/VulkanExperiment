@@ -80,6 +80,14 @@ struct sCameraManager : public Singleton<sCameraManager>
 
 	}
 
+	void sync()
+	{
+		for (auto* c : cCamera::sCamera::Order().getCameraList())
+		{
+			c->getRenderData() = c->getData();
+		}
+		
+	}
 	vk::CommandBuffer draw()
 	{
 		auto& gpu = sGlobal::Order().getGPU(0);
