@@ -457,7 +457,7 @@ public:
 		}
 
 	}
-	void execute(std::shared_ptr<btr::Executer>& executer)
+	void work(std::shared_ptr<btr::Executer>& executer)
 	{
 		executer->m_cmd;
 		{

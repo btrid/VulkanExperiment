@@ -246,6 +246,18 @@ int main()
 			}
 
 			// draw
+			SynchronizedPoint worker_syncronized_point(1);
+			{
+				cThreadJob job;
+				job.mFinish = 
+				[&]()
+				{
+					volume_renderer.work(executer);
+					worker_syncronized_point.arrive();
+				};
+				sGlobal::Order().getThreadPool().enque(job);
+
+			}
 			SynchronizedPoint render_syncronized_point(3);
 			std::vector<vk::CommandBuffer> render_cmds(5);
 			{
@@ -266,21 +278,22 @@ int main()
 					{
 						render_cmds[3] = volume_renderer.draw(executer);
 						render_syncronized_point.arrive();
-				}
+					}
 				);
 				sGlobal::Order().getThreadPool().enque(job);
 			}
 			{
 				cThreadJob job;
 				job.mJob.emplace_back(
-					[&]() {
-					render_cmds[2] = DrawHelper::Order().draw();
-					render_syncronized_point.arrive();
-				}
+					[&]() 
+					{
+						render_cmds[2] = DrawHelper::Order().draw();
+						render_syncronized_point.arrive();
+					}
 				);
 				sGlobal::Order().getThreadPool().enque(job);
 			}
-//			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			worker_syncronized_point.wait();
 			render_syncronized_point.wait();
 
 			render_cmds[0] = cmd_present_to_render[backbuffer_index];

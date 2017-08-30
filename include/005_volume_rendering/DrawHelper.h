@@ -76,7 +76,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 	}
 	void setup(std::shared_ptr<btr::Loader>& loader)
 	{
-		m_draw_cmd.resize(sGlobal::Order().getThreadPool().getThreadNum());
+		m_draw_cmd.resize(sGlobal::Order().getThreadPool().getThreadNum()+1);
 		{
 			// レンダーパス
 			std::vector<vk::AttachmentReference> colorRef =

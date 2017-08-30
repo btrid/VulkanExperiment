@@ -80,6 +80,13 @@ struct sCameraManager : public Singleton<sCameraManager>
 
 	}
 
+	void execute()
+	{
+// 		for (auto* c : cCamera::sCamera::Order().getCameraList())
+// 		{
+// 			c->getRenderData() = c->getData();
+// 		}
+	}
 	void sync()
 	{
 		for (auto* c : cCamera::sCamera::Order().getCameraList())
