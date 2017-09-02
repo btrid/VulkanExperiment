@@ -29,7 +29,7 @@
 
 #include <btrlib/Loader.h>
 #include <005_volume_rendering/VolumeRenderer.h>
-#include <005_volume_rendering/DrawHelper.h>
+#include <applib/DrawHelper.h>
 
 
 #pragma comment(lib, "btrlib.lib")

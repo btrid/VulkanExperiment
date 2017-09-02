@@ -27,5 +27,5 @@ layout(push_constant) uniform UpdateConstantBlock
 
 void main()
 {
-	gl_Position = uProjection * uView * constant.m_mat * vec4(in_position.xyz, 1.0);
+	gl_Position = u_camera.u_projection * u_camera.u_view * constant.m_mat * vec4(in_position.xyz, 1.0);
 }

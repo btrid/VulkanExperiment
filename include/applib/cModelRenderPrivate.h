@@ -24,15 +24,17 @@ struct cModelRenderPrivate
 
 	std::shared_ptr<cModel::Resource> m_model_resource;
 	std::vector<glm::mat4> m_node_buffer;
-	btr::UpdateBufferEx m_bone_buffer;
+	std::vector<btr::AllocatedMemory> m_bone_buffer_transfar;
+	btr::AllocatedMemory m_bone_buffer;
 	MotionPlayList m_playlist;
 
+	std::vector<vk::UniqueCommandBuffer> m_transfer_cmd;
+	std::vector<vk::UniqueCommandBuffer> m_graphics_cmd;
 	ModelTransform m_model_transform;
 
-	vk::DescriptorSet m_draw_descriptor_set_per_model;
+	vk::UniqueDescriptorSet m_draw_descriptor_set_per_model;
+	vk::UniqueDescriptorSet m_draw_descriptor_set_per_mesh;
 	btr::AllocatedMemory m_material;
-	std::vector<vk::DescriptorSet> m_draw_descriptor_set_per_mesh;
-	std::vector<vk::DescriptorSet> m_compute_descriptor_set;
 
 	void setup(std::shared_ptr<btr::Loader>& loader, std::shared_ptr<cModel::Resource> resource)
 	{
@@ -46,7 +48,19 @@ struct cModelRenderPrivate
 			desc.device_memory = loader->m_storage_memory;
 			desc.staging_memory = loader->m_staging_memory;
 			desc.frame_max = sGlobal::FRAME_MAX;
-			m_bone_buffer.setup(desc);
+			m_bone_buffer_transfar.resize(sGlobal::FRAME_MAX);
+			for (auto& buffer : m_bone_buffer_transfar)
+			{
+				btr::BufferMemory::Descriptor desc;
+				desc.size = m_model_resource->mBone.size() * sizeof(glm::mat4);
+				buffer = loader->m_staging_memory.allocateMemory(desc);
+			}
+			{
+				btr::BufferMemory::Descriptor desc;
+				desc.size = m_model_resource->mBone.size() * sizeof(glm::mat4);
+				m_bone_buffer = loader->m_storage_memory.allocateMemory(desc);
+
+			}
 		}
 		{
 			// material
@@ -79,27 +93,25 @@ struct cModelRenderPrivate
 	{
 		m_playlist.execute();
 		updateNodeTransform(0, m_model_transform.calcLocal());
-		updateBoneTransform(0);
+		updateBoneTransform();
 	}
-	void draw(vk::CommandBuffer cmd)
-	{
-	}
-	void updateBoneTransform(uint32_t node_index)
+
+	void updateBoneTransform()
 	{
 		// シェーダに送るデータを更新
-		auto* node = m_model_resource->mNodeRoot.getNodeByIndex(node_index);
-		int32_t bone_index =node->m_bone_index;
-		if (bone_index >= 0)
+		auto* ptr = m_bone_buffer_transfar[sGlobal::Order().getCPUFrame()].getMappedPtr<glm::mat4>();
+		for (size_t i = 0; i < m_model_resource->mNodeRoot.mNodeList.size(); i++)
 		{
-			auto m = m_node_buffer[node_index] * m_model_resource->mBone[bone_index].mOffset;
-			m_bone_buffer.subupdate(&m, sizeof(glm::mat4), bone_index* sizeof(glm::mat4));
+			auto* node = m_model_resource->mNodeRoot.getNodeByIndex(i);
+			int32_t bone_index = node->m_bone_index;
+			if (bone_index >= 0)
+			{
+				auto m = m_node_buffer[i] * m_model_resource->mBone[bone_index].mOffset;
+				ptr[bone_index] = m;
+			}
 		}
 
-		for (auto& n : node->mChildren) {
-			updateBoneTransform(n);
-		}
 	}
-
 	void updateNodeTransform(uint32_t node_index, const glm::mat4& parentMat)
 	{
 		auto* node = m_model_resource->mNodeRoot.getNodeByIndex(node_index);

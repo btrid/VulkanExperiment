@@ -12,7 +12,9 @@
 struct cModelRender;
 struct cModelPipeline
 {
-
+	enum {
+		DESCRIPTOR_TEXTURE_NUM = 16,
+	};
 	enum {
 		SHADER_RENDER_VERT,
 		SHADER_RENDER_FRAG,
@@ -30,20 +32,24 @@ struct cModelPipeline
 		PIPELINE_LAYOUT_RENDER,
 		PIPELINE_LAYOUT_NUM,
 	};
+
+	vk::UniqueRenderPass m_render_pass;
+	std::vector<vk::UniqueFramebuffer> m_framebuffer;
+
 	std::array<vk::ShaderModule, SHADER_NUM> m_shader_list;
 	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_stage_info;
 
-	vk::DescriptorPool m_descriptor_pool;
+	vk::UniqueDescriptorPool m_descriptor_pool;
 	vk::PipelineCache m_cache;
 	vk::Pipeline m_graphics_pipeline;
 	std::array<vk::PipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
 	std::array<vk::DescriptorSetLayout, DESCRIPTOR_NUM> m_descriptor_set_layout;
-	btr::UpdateBuffer<CameraGPU2> m_camera;
 
 	vk::DescriptorSet m_descriptor_set_scene;
+	btr::AllocatedMemory m_bone_buffer;
 
 	std::vector<cModelRender*> m_model;
-	void setup(btr::Loader& loader);
+	void setup(std::shared_ptr<btr::Loader>& loader);
 	void addModel(cModelRender* model);
 
 	void draw();

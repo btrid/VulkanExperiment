@@ -24,7 +24,7 @@ struct cMeshResource
 	btr::AllocatedMemory m_index_buffer_ex;
 	btr::AllocatedMemory m_indirect_buffer_ex;
 	vk::IndexType mIndexType;
-	int32_t mIndirectCount;
+	int32_t mIndirectCount; //!< ƒƒbƒVƒ…‚Ì”
 
 };
 
@@ -100,11 +100,11 @@ struct ResourceTexture
 		}
 	};
 
-	std::shared_ptr<Resource> m_private;
+	std::shared_ptr<Resource> m_resource;
 
 	void load(btr::Loader* loader, cThreadPool& thread_pool, const std::string& filename);
-	vk::ImageView getImageView()const { return m_private ? m_private->m_image_view : vk::ImageView(); }
-	vk::Sampler getSampler()const { return m_private ? m_private->m_sampler : vk::Sampler(); }
+	vk::ImageView getImageView()const { return m_resource ? m_resource->m_image_view : vk::ImageView(); }
+	vk::Sampler getSampler()const { return m_resource ? m_resource->m_sampler : vk::Sampler(); }
 
 	bool isReady()const 
 	{

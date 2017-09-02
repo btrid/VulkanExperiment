@@ -26,8 +26,5 @@
     <ClInclude Include="..\..\include\005_volume_rendering\VolumeRenderer.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\005_volume_rendering\DrawHelper.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>

@@ -116,7 +116,9 @@ public:
 	cGPU& getGPU(int index) { return m_gpu[index]; }
 	void swap();
 	uint32_t getCurrentFrame()const { return m_current_frame; }
-	uint32_t getPrevFrame()const { return (m_current_frame == 0 ? FRAME_MAX : m_current_frame)-1; }
+	uint32_t getPrevFrame()const { return (m_current_frame == 0 ? FRAME_MAX : m_current_frame) - 1; }
+	uint32_t getCPUFrame()const { return getCurrentFrame(); }
+	uint32_t getGPUFrame()const { return getPrevFrame(); }
 	uint32_t getGameFrame()const { return m_game_frame; }
 	uint32_t getCPUIndex()const { return m_tick_tock; }
 	uint32_t getGPUIndex()const { return (m_tick_tock+1) % 2; }
@@ -145,7 +147,7 @@ private:
 	{
 		struct CmdPool
 		{
-			vk::CommandPool m_cmd_pool[2];
+			vk::UniqueCommandPool m_cmd_pool[2];
 		};
 		std::vector<std::array<CmdPool, sGlobal::FRAME_MAX>>	m_cmd_pool;
 	};

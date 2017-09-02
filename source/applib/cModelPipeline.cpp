@@ -2,14 +2,81 @@
 #include <applib/cModelPipeline.h>
 #include <applib/cModelRender.h>
 #include <applib/cModelRenderPrivate.h>
+#include <applib/sCameraManager.h>
 #include <btrlib/Define.h>
 #include <btrlib/Shape.h>
 #include <btrlib/cModel.h>
 
-void cModelPipeline::setup(btr::Loader& loader)
+void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 {
 	auto& gpu = sGlobal::Order().getGPU(0);
 	auto& device = gpu.getDevice();
+
+	// レンダーパス
+	{
+		// sub pass
+		std::vector<vk::AttachmentReference> color_ref =
+		{
+			vk::AttachmentReference()
+			.setAttachment(0)
+			.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
+		};
+		vk::AttachmentReference depth_ref;
+		depth_ref.setAttachment(1);
+		depth_ref.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+
+		vk::SubpassDescription subpass;
+		subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+		subpass.setInputAttachmentCount(0);
+		subpass.setPInputAttachments(nullptr);
+		subpass.setColorAttachmentCount((uint32_t)color_ref.size());
+		subpass.setPColorAttachments(color_ref.data());
+		subpass.setPDepthStencilAttachment(&depth_ref);
+
+		std::vector<vk::AttachmentDescription> attach_description = {
+			// color1
+			vk::AttachmentDescription()
+			.setFormat(loader->m_window->getSwapchain().m_surface_format.format)
+			.setSamples(vk::SampleCountFlagBits::e1)
+			.setLoadOp(vk::AttachmentLoadOp::eDontCare)
+			.setStoreOp(vk::AttachmentStoreOp::eStore)
+			.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
+			.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
+			vk::AttachmentDescription()
+			.setFormat(vk::Format::eD32Sfloat)
+			.setSamples(vk::SampleCountFlagBits::e1)
+			.setLoadOp(vk::AttachmentLoadOp::eDontCare)
+			.setStoreOp(vk::AttachmentStoreOp::eStore)
+			.setInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
+			.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
+		};
+		vk::RenderPassCreateInfo renderpass_info = vk::RenderPassCreateInfo()
+			.setAttachmentCount(attach_description.size())
+			.setPAttachments(attach_description.data())
+			.setSubpassCount(1)
+			.setPSubpasses(&subpass);
+
+		m_render_pass = loader->m_device->createRenderPassUnique(renderpass_info);
+	}
+
+	m_framebuffer.resize(loader->m_window->getSwapchain().getSwapchainNum());
+	{
+		std::array<vk::ImageView, 2> view;
+
+		vk::FramebufferCreateInfo framebuffer_info;
+		framebuffer_info.setRenderPass(m_render_pass.get());
+		framebuffer_info.setAttachmentCount((uint32_t)view.size());
+		framebuffer_info.setPAttachments(view.data());
+		framebuffer_info.setWidth(loader->m_window->getClientSize().x);
+		framebuffer_info.setHeight(loader->m_window->getClientSize().y);
+		framebuffer_info.setLayers(1);
+
+		for (size_t i = 0; i < m_framebuffer.size(); i++) {
+			view[0] = loader->m_window->getSwapchain().m_backbuffer[i].m_view;
+			view[1] = loader->m_window->getSwapchain().m_depth.m_view;
+			m_framebuffer[i] = loader->m_device->createFramebufferUnique(framebuffer_info);
+		}
+	}
 
 	// setup shader
 	{
@@ -33,7 +100,9 @@ void cModelPipeline::setup(btr::Loader& loader)
 		}
 	}
 	{
-		m_camera.setup(loader.m_uniform_memory, loader.m_staging_memory);
+		btr::BufferMemory::Descriptor desc;
+		desc.size = sizeof(glm::mat4) * 256;
+		m_bone_buffer = loader->m_storage_memory.allocateMemory(desc);
 	}
 
 	// Create compute pipeline
@@ -55,7 +124,7 @@ void cModelPipeline::setup(btr::Loader& loader)
 	{
 		vk::DescriptorSetLayoutBinding()
 		.setStageFlags(vk::ShaderStageFlagBits::eFragment)
-		.setDescriptorCount(1)
+		.setDescriptorCount(DESCRIPTOR_TEXTURE_NUM)
 		.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
 		.setBinding(0),
 	};
@@ -109,14 +178,10 @@ void cModelPipeline::setup(btr::Loader& loader)
 			}
 		}
 		vk::DescriptorPoolCreateInfo descriptor_pool_info;
-		// 		descriptor_pool_info.maxSets = bindings.size();
-		// 		descriptor_pool_info.poolSizeCount = descriptor_pool_size.size();
-		// 		descriptor_pool_info.pPoolSizes = descriptor_pool_size.data();
 		descriptor_pool_info.maxSets = 20;
 		descriptor_pool_info.poolSizeCount = descriptor_pool_size.size();
 		descriptor_pool_info.pPoolSizes = descriptor_pool_size.data();
-
-		m_descriptor_pool = device->createDescriptorPool(descriptor_pool_info);
+		m_descriptor_pool = device->createDescriptorPoolUnique(descriptor_pool_info);
 	}
 
 
@@ -246,7 +311,7 @@ void cModelPipeline::setup(btr::Loader& loader)
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
 				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_RENDER])
-				.setRenderPass(loader.m_render_pass)
+				.setRenderPass(loader->m_render_pass)
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
@@ -258,13 +323,13 @@ void cModelPipeline::setup(btr::Loader& loader)
 	{
 		// モデルごとのDescriptorの設定
 		vk::DescriptorSetAllocateInfo alloc_info;
-		alloc_info.descriptorPool = m_descriptor_pool;
+		alloc_info.descriptorPool = loader->m_descriptor_pool;
 		alloc_info.descriptorSetCount = 1;
 		alloc_info.pSetLayouts = &m_descriptor_set_layout[cModelPipeline::DESCRIPTOR_SCENE];
 		m_descriptor_set_scene = device->allocateDescriptorSets(alloc_info)[0];
 
 		std::vector<vk::DescriptorBufferInfo> uniformBufferInfo = {
-			m_camera.getBufferInfo(),
+			sCameraManager::Order().m_camera.getBufferInfo(),
 		};
 		std::vector<vk::WriteDescriptorSet> write_descriptor_set =
 		{
@@ -291,21 +356,10 @@ void cModelPipeline::draw()
 	auto& device = gpu.getDevice();
 	auto cmd = sThreadLocal::Order().getCmdOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
 
-	{
-		auto* camera = cCamera::sCamera::Order().getCameraList()[0];
-		CameraGPU2 cameraGPU;
-		cameraGPU.setup(*camera);
-		m_camera.subupdate(cameraGPU);
-		m_camera.update(cmd);
-	}
-
-	for (auto& render : m_model)
-	{
-		render->getPrivate()->execute(*this, cmd);
-	}
 	// draw
 	for (auto& render : m_model)
 	{
+		render->getPrivate()->execute(*this, cmd);
 		render->getPrivate()->draw(*this, cmd);
 	}
 }

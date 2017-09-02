@@ -24,6 +24,7 @@
 #include <applib/App.h>
 #include <applib/cModelPipeline.h>
 #include <applib/cModelRender.h>
+#include <applib/DrawHelper.h>
 #include <btrlib/Loader.h>
 
 #include <999_game/sBulletSystem.h>
@@ -253,11 +254,12 @@ int main()
 			loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::DependencyFlags(), {}, {}, barrier);
 		}
 		sCameraManager::Order().setup(loader);
+		DrawHelper::Order().setup(loader);
 		sScene::Order().setup(loader);
 
 		model.load(loader.get(), "..\\..\\resource\\tiny.x");
 		model_render.setup(loader, model.getResource());
-		model_pipeline.setup(*loader);
+		model_pipeline.setup(loader);
 		model_pipeline.addModel(&model_render);
 		{
 			PlayMotionDescriptor desc;
@@ -305,7 +307,7 @@ int main()
 		{
 			for (auto& pool_family : tls.m_cmd_pool)
 			{
-				device->resetCommandPool(pool_family[sGlobal::Order().getCurrentFrame()].m_cmd_pool[0], vk::CommandPoolResetFlagBits::eReleaseResources);
+				device->resetCommandPool(pool_family[sGlobal::Order().getCurrentFrame()].m_cmd_pool[0].get(), vk::CommandPoolResetFlagBits::eReleaseResources);
 			}
 		}
 
@@ -355,6 +357,7 @@ int main()
 //			sScene::Order().draw(render_cmd);
 //			sBoid::Order().draw(render_cmd);
 //			model_pipeline.draw(render_cmd);
+			model_pipeline.draw();
 //			sBulletSystem::Order().draw(render_cmd);
 			motion_worker_syncronized_point.wait();
 			render_syncronized_point.wait();

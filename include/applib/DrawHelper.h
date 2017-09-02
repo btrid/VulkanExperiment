@@ -70,6 +70,15 @@ struct DrawHelper : public Singleton<DrawHelper>
 	std::array<uint32_t, PrimitiveType_MAX> m_mesh_index_num;
 	std::vector<std::array<std::array<std::vector<DrawCommand>, PrimitiveType_MAX>, 2>> m_draw_cmd;
 
+	struct TextureResource
+	{
+		vk::Image m_image;
+		vk::ImageView m_image_view;
+		vk::DeviceMemory m_memory;
+		vk::Sampler m_sampler;
+	};
+	TextureResource m_whilte_texture;
+	TextureResource& getWhiteTexture() { return m_whilte_texture; }
 	DrawHelper()
 	{
 
@@ -242,7 +251,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 			};
 			static_assert(array_length(shader_info) == SHADER_NUM, "not equal shader num");
 
-			std::string path = btr::getResourceAppPath() + "shader\\binary\\";
+			std::string path = btr::getResourceLibPath() + "shader\\binary\\";
 			for (size_t i = 0; i < SHADER_NUM; i++) {
 				m_shader_info[i].setModule(loadShader(loader->m_device.getHandle(), path + shader_info[i].name));
 				m_shader_info[i].setStage(shader_info[i].stage);
@@ -376,6 +385,106 @@ struct DrawHelper : public Singleton<DrawHelper>
 			m_pipeline[PIPELINE_DRAW_PRIMITIVE] = pipelines[0];
 
 		}
+
+		vk::ImageCreateInfo image_info;
+		image_info.imageType = vk::ImageType::e2D;
+		image_info.format = vk::Format::eR32Sfloat;
+		image_info.mipLevels = 1;
+		image_info.arrayLayers = 1;
+		image_info.samples = vk::SampleCountFlagBits::e1;
+		image_info.tiling = vk::ImageTiling::eLinear;
+		image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
+		image_info.sharingMode = vk::SharingMode::eExclusive;
+		image_info.initialLayout = vk::ImageLayout::eUndefined;
+		image_info.extent = { 1, 1, 1 };
+		image_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
+		vk::Image image = loader->m_device->createImage(image_info);
+
+		vk::MemoryRequirements memory_request = loader->m_device->getImageMemoryRequirements(image);
+		vk::MemoryAllocateInfo memory_alloc_info;
+		memory_alloc_info.allocationSize = memory_request.size;
+		memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(loader->m_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+		vk::DeviceMemory image_memory = loader->m_device->allocateMemory(memory_alloc_info);
+		loader->m_device->bindImageMemory(image, image_memory, 0);
+
+		btr::BufferMemory::Descriptor staging_desc;
+		staging_desc.size = 4;
+		staging_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+		auto staging_buffer = loader->m_staging_memory.allocateMemory(staging_desc);
+		*staging_buffer.getMappedPtr<float>() = 1.f;
+
+		vk::ImageSubresourceRange subresourceRange;
+		subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+		subresourceRange.baseArrayLayer = 0;
+		subresourceRange.baseMipLevel = 0;
+		subresourceRange.layerCount = 1;
+		subresourceRange.levelCount = 1;
+
+		{
+			// staging_buffer‚©‚çimage‚ÖƒRƒs[
+
+			vk::BufferImageCopy copy;
+			copy.bufferOffset = staging_buffer.getBufferInfo().offset;
+			copy.imageExtent = { 1, 1, 1 };
+			copy.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+			copy.imageSubresource.baseArrayLayer = 0;
+			copy.imageSubresource.layerCount = 1;
+			copy.imageSubresource.mipLevel = 0;
+
+			vk::ImageMemoryBarrier to_copy_barrier;
+			to_copy_barrier.dstQueueFamilyIndex = loader->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
+			to_copy_barrier.image = image;
+			to_copy_barrier.oldLayout = vk::ImageLayout::eUndefined;
+			to_copy_barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
+			to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+			to_copy_barrier.subresourceRange = subresourceRange;
+
+			vk::ImageMemoryBarrier to_shader_read_barrier;
+			to_shader_read_barrier.dstQueueFamilyIndex = loader->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
+			to_shader_read_barrier.image = image;
+			to_shader_read_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
+			to_shader_read_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+			to_shader_read_barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+			to_shader_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+			to_shader_read_barrier.subresourceRange = subresourceRange;
+
+			loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
+			loader->m_cmd.copyBufferToImage(staging_buffer.getBufferInfo().buffer, image, vk::ImageLayout::eTransferDstOptimal, { copy });
+			loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
+
+		}
+
+		vk::ImageViewCreateInfo view_info;
+		view_info.viewType = vk::ImageViewType::e2D;
+		view_info.components.r = vk::ComponentSwizzle::eR;
+		view_info.components.g = vk::ComponentSwizzle::eG;
+		view_info.components.b = vk::ComponentSwizzle::eB;
+		view_info.components.a = vk::ComponentSwizzle::eA;
+		view_info.flags = vk::ImageViewCreateFlags();
+		view_info.format = vk::Format::eR32Sfloat;
+		view_info.image = image;
+		view_info.subresourceRange = subresourceRange;
+
+		vk::SamplerCreateInfo sampler_info;
+		sampler_info.magFilter = vk::Filter::eNearest;
+		sampler_info.minFilter = vk::Filter::eNearest;
+		sampler_info.mipmapMode = vk::SamplerMipmapMode::eLinear;
+		sampler_info.addressModeU = vk::SamplerAddressMode::eClampToEdge;
+		sampler_info.addressModeV = vk::SamplerAddressMode::eClampToEdge;
+		sampler_info.addressModeW = vk::SamplerAddressMode::eClampToEdge;
+		sampler_info.mipLodBias = 0.0f;
+		sampler_info.compareOp = vk::CompareOp::eNever;
+		sampler_info.minLod = 0.0f;
+		sampler_info.maxLod = 0.f;
+		sampler_info.maxAnisotropy = 1.0;
+		sampler_info.anisotropyEnable = VK_FALSE;
+		sampler_info.borderColor = vk::BorderColor::eFloatOpaqueWhite;
+
+		m_whilte_texture.m_image = image;
+		m_whilte_texture.m_memory = image_memory;
+		m_whilte_texture.m_image_view = loader->m_device->createImageView(view_info);
+		m_whilte_texture.m_sampler = loader->m_device->createSampler(sampler_info);
 
 	}
 

@@ -85,8 +85,8 @@ sGlobal::sGlobal()
 			cmd_pool_compiled.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
 			for (auto& pool : thread.m_cmd_pool[family])
 			{
-				pool.m_cmd_pool[0] = device->createCommandPool(cmd_pool_onetime);
-				pool.m_cmd_pool[1] = device->createCommandPool(cmd_pool_compiled);
+				pool.m_cmd_pool[0] = device->createCommandPoolUnique(cmd_pool_onetime);
+				pool.m_cmd_pool[1] = device->createCommandPoolUnique(cmd_pool_compiled);
 			}
 		}
 	}
@@ -106,7 +106,6 @@ sGlobal::sGlobal()
 	{
 		vk::CommandPoolCreateInfo cmd_pool_info;
 		cmd_pool_info.queueFamilyIndex = (uint32_t)family;
-//		cmd_pool_info.setFlags()
 
 		vk::AllocationCallbacks cb;
 		cb.setPfnAllocation(btr::Allocation);
@@ -117,7 +116,6 @@ sGlobal::sGlobal()
 //		cb.setPUserData()
 		m_cmd_pool_system[family] = device->createCommandPool(cmd_pool_info, cb);
 	}
-	
 }
 
 
@@ -246,13 +244,13 @@ void vk::FenceShared::create(vk::Device device, const vk::FenceCreateInfo& fence
 
 vk::CommandPool sThreadLocal::getCmdPool(sGlobal::CmdPoolType type, int device_family_index) const
 {
-	return sGlobal::Order().getThreadLocal().m_cmd_pool[device_family_index][sGlobal::Order().getCurrentFrame()].m_cmd_pool[type];
+	return sGlobal::Order().getThreadLocal().m_cmd_pool[device_family_index][sGlobal::Order().getCurrentFrame()].m_cmd_pool[type].get();
 }
 vk::CommandBuffer sThreadLocal::getCmdOnetime(int device_family_index) const
 {
 	vk::CommandBufferAllocateInfo cmd_buffer_info;
 	cmd_buffer_info.commandBufferCount = 1;
-	cmd_buffer_info.commandPool = sGlobal::Order().getThreadLocal().m_cmd_pool[device_family_index][sGlobal::Order().getCurrentFrame()].m_cmd_pool[0];
+	cmd_buffer_info.commandPool = sGlobal::Order().getThreadLocal().m_cmd_pool[device_family_index][sGlobal::Order().getCurrentFrame()].m_cmd_pool[0].get();
 	cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
 	auto cmd = sGlobal::Order().getGPU(0).getDevice()->allocateCommandBuffers(cmd_buffer_info)[0];
 

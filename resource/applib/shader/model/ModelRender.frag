@@ -21,7 +21,12 @@ struct Vertex
 };
 layout(location = 0) in Vertex FSIn;
 
-layout (set = 1, binding = 0) uniform sampler2D tDiffuse;
+layout (set = 1, binding = 0) uniform sampler2D tDiffuse[16];
+
+layout(push_constant) uniform UpdateConstantBlock
+{
+	layout(offset = 64) uint material_index;
+} constant;
 
 
 layout(location=0) out vec4 FragColor;
@@ -45,7 +50,7 @@ vec3 getColor()
 	vec3 diffuse = LightDiffuse * (m.DiffuseTex != 0? texture(sampler2D(m.DiffuseTex), FSIn.Texcoord.xy).xyz : m.Diffuse.xyz) * (sDotN + 0.5);
 	return ambient + diffuse + spec;
 */
-	vec3 diffuse = texture(tDiffuse, FSIn.Texcoord.xy).xyz;
+	vec3 diffuse = texture(tDiffuse[constant.material_index], FSIn.Texcoord.xy).xyz;
 	return diffuse;
 }
 

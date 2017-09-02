@@ -13,11 +13,12 @@
 #else
 #extension GL_ARB_shading_language_include : require
 #endif
+
 #include </Math.glsl>
-#define USE_MODEL_INFO_SET 0
-//#define USE_MODEL_INFO_SET 0
-#define USE_SCENE_SET 2
 #include </MultiModel.glsl>
+
+#define SETPOINT_CAMERA 2
+#include </Camera.glsl>
 
 layout(location = 0)in vec3 inPosition;
 layout(location = 1)in vec3 inNormal;
@@ -45,9 +46,7 @@ layout(std430, set=0, binding=1) restrict buffer MaterialBuffer {
 	Material b_material[];
 };
 
-layout(std140, set=2, binding=0) uniform CameraUniform {
-	Camera2 uCamera;
-};
+
 layout(push_constant) uniform UpdateConstantBlock
 {
 	mat4 m_world;
@@ -71,8 +70,7 @@ void main()
 	vec4 pos = vec4((inPosition).xyz, 1.0);
 	mat4 skinningMat = skinning();
 	pos = constant.m_world * skinningMat * pos;
-	Camera2 camera = uCamera;
-	gl_Position = camera.uProjection * camera.uView * vec4(pos.xyz, 1.0);
+	gl_Position = u_camera.u_projection * u_camera.u_view * vec4(pos.xyz, 1.0);
 
 	VSOut.Position = pos.xyz;
 	VSOut.Normal = /*mat3(skinningMat) **/ /*mat3(transpose(inverse(uView))) **/ inNormal.xyz;

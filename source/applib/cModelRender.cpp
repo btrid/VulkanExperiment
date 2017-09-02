@@ -14,10 +14,6 @@ void cModelRender::work()
 {
 	m_private->work();
 }
-void cModelRender::draw(vk::CommandBuffer cmd)
-{
-	m_private->draw(cmd);
-}
 
 ModelTransform& cModelRender::getModelTransform()
 {

@@ -55,10 +55,10 @@ ResourceManager<ResourceTexture::Resource> ResourceTexture::s_manager;
 ResourceManager<cModel::Resource> cModel::s_manager;
 void ResourceTexture::load(btr::Loader* loader, cThreadPool& thread_pool, const std::string& filename)
 {
-	if (s_manager.manage(m_private, filename)) {
+	if (s_manager.manage(m_resource, filename)) {
 		return;
 	}
-	m_private->m_device = loader->m_device;
+	m_resource->m_device = loader->m_device;
 
 	auto texture_data = rTexture::LoadTexture(filename);
 	vk::ImageCreateInfo image_info;
@@ -156,10 +156,10 @@ void ResourceTexture::load(btr::Loader* loader, cThreadPool& thread_pool, const 
 	sampler_info.anisotropyEnable = VK_FALSE;
 	sampler_info.borderColor = vk::BorderColor::eFloatOpaqueWhite;
 
-	m_private->m_image = image;
-	m_private->m_memory = image_memory;
-	m_private->m_image_view = loader->m_device->createImageView(view_info);
-	m_private->m_sampler = loader->m_device->createSampler(sampler_info);
+	m_resource->m_image = image;
+	m_resource->m_memory = image_memory;
+	m_resource->m_image_view = loader->m_device->createImageView(view_info);
+	m_resource->m_sampler = loader->m_device->createSampler(sampler_info);
 }
 
 

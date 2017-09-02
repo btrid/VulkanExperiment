@@ -20,7 +20,7 @@ void cModelRenderPrivate::setup(cModelPipeline& pipeline)
 			m_draw_descriptor_set_per_model = graphics_device->allocateDescriptorSets(descriptor_set_alloc_info)[0];
 
 			std::vector<vk::DescriptorBufferInfo> storages = {
-				m_bone_buffer.getBufferInfo(),
+				m_bone_buffer_transfer.getBufferInfo(),
 				m_material.getBufferInfo(),
 			};
 			std::vector<vk::WriteDescriptorSet> drawWriteDescriptorSets =
@@ -71,9 +71,9 @@ void cModelRenderPrivate::execute(cModelPipeline& renderer, vk::CommandBuffer& c
 	updateNodeTransform(0, m_world);
 	updateBoneTransform(0);
 	
-	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, m_bone_buffer.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite), {});
-	m_bone_buffer.update(cmd);
-	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, m_bone_buffer.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead), {});
+	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, m_bone_buffer_transfer.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite), {});
+	m_bone_buffer_transfer.update(cmd);
+	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, m_bone_buffer_transfer.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead), {});
 }
 void cModelRenderPrivate::draw(cModelPipeline& pipeline, vk::CommandBuffer& cmd)
 {
