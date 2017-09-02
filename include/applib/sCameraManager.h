@@ -99,7 +99,6 @@ struct sCameraManager : public Singleton<sCameraManager>
 	{
 		auto& gpu = sGlobal::Order().getGPU(0);
 		auto& device = gpu.getDevice();
-
 		auto cmd = sThreadLocal::Order().getCmdOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
 
 		std::vector<vk::BufferMemoryBarrier> to_transfer = {

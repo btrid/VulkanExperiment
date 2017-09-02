@@ -144,13 +144,13 @@ int main()
 	btr::setResourceAppPath("..\\..\\resource\\003_particle\\");
 	app::App app;
 	auto* camera = cCamera::sCamera::Order().create();
-	camera->m_position = glm::vec3(220.f, 60.f, 300.f);
-	camera->m_target = glm::vec3(220.f, 20.f, 201.f);
-	camera->m_up = glm::vec3(0.f, -1.f, 0.f);
-	camera->m_width = 640;
-	camera->m_height = 480;
-	camera->m_far = 5000.f;
-	camera->m_near = 0.01f;
+	camera->getData().m_position = glm::vec3(220.f, 60.f, 300.f);
+	camera->getData().m_target = glm::vec3(220.f, 20.f, 201.f);
+	camera->getData().m_up = glm::vec3(0.f, -1.f, 0.f);
+	camera->getData().m_width = 640;
+	camera->getData().m_height = 480;
+	camera->getData().m_far = 5000.f;
+	camera->getData().m_near = 0.01f;
 
 	auto device = sGlobal::Order().getGPU(0).getDevice();
 	auto setup_cmd = sThreadLocal::Order().getCmdOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
@@ -169,6 +169,7 @@ int main()
 
 
 	std::shared_ptr<btr::Loader> loader = std::make_shared<btr::Loader>();
+	loader->m_window = &app.m_window;
 	loader->m_device = device;
 	loader->m_render_pass = app.m_render_pass;
 	vk::MemoryPropertyFlags host_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
@@ -219,6 +220,39 @@ int main()
 	m_player.m_pos.z = 183.f;
 	{
 		loader->m_cmd = setup_cmd;
+		{
+			vk::ImageSubresourceRange subresource_range;
+			subresource_range.setAspectMask(vk::ImageAspectFlagBits::eColor);
+			subresource_range.setBaseArrayLayer(0);
+			subresource_range.setLayerCount(1);
+			subresource_range.setBaseMipLevel(0);
+			subresource_range.setLevelCount(1);
+			std::array<vk::ImageMemoryBarrier, 3 + 1> barrier;
+			barrier[0].setSubresourceRange(subresource_range);
+			barrier[0].setDstAccessMask(vk::AccessFlagBits::eMemoryRead);
+			barrier[0].setOldLayout(vk::ImageLayout::eUndefined);
+			barrier[0].setNewLayout(vk::ImageLayout::ePresentSrcKHR);
+			barrier[2] = barrier[1] = barrier[0];
+			barrier[0].setImage(app.m_window.getSwapchain().m_backbuffer[0].m_image);
+			barrier[1].setImage(app.m_window.getSwapchain().m_backbuffer[1].m_image);
+			barrier[2].setImage(app.m_window.getSwapchain().m_backbuffer[2].m_image);
+
+			vk::ImageSubresourceRange subresource_depth_range;
+			subresource_depth_range.aspectMask = vk::ImageAspectFlagBits::eDepth;
+			subresource_depth_range.baseArrayLayer = 0;
+			subresource_depth_range.baseMipLevel = 0;
+			subresource_depth_range.layerCount = 1;
+			subresource_depth_range.levelCount = 1;
+
+			barrier[3].setImage(app.m_window.getSwapchain().m_depth.m_image);
+			barrier[3].setSubresourceRange(subresource_depth_range);
+			barrier[3].setDstAccessMask(vk::AccessFlagBits::eDepthStencilAttachmentWrite);
+			barrier[3].setOldLayout(vk::ImageLayout::eUndefined);
+			barrier[3].setNewLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+
+			loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::DependencyFlags(), {}, {}, barrier);
+		}
+		sCameraManager::Order().setup(loader);
 		sScene::Order().setup(loader);
 
 		model.load(loader.get(), "..\\..\\resource\\tiny.x");
@@ -257,61 +291,6 @@ int main()
 		queue.waitIdle();
 
 	}
-	std::vector < vk::CommandBuffer > cmd_present_to_render;
-	std::vector < vk::CommandBuffer > cmd_render_to_present;
-	{
-		{
-			auto pool = sGlobal::Order().getCmdPoolSytem(0);
-			vk::CommandBufferAllocateInfo cmd_buffer_info;
-			cmd_buffer_info.commandPool = pool;
-			cmd_buffer_info.commandBufferCount = sGlobal::FRAME_MAX;
-			cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
-			cmd_present_to_render = device->allocateCommandBuffers(cmd_buffer_info);
-			cmd_render_to_present = device->allocateCommandBuffers(cmd_buffer_info);
-		}
-
-		vk::CommandBufferBeginInfo begin_info;
-		begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
-
-		for (int i = 0; i < sGlobal::FRAME_MAX; i++)
-		{
-			cmd_present_to_render[i].begin(begin_info);
-
-			vk::ImageMemoryBarrier present_to_render_barrier;
-			present_to_render_barrier.setSrcAccessMask(vk::AccessFlagBits::eMemoryRead);
-			present_to_render_barrier.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
-			present_to_render_barrier.setOldLayout(vk::ImageLayout::ePresentSrcKHR);
-			present_to_render_barrier.setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
-			present_to_render_barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-			present_to_render_barrier.setImage(app.m_window.getSwapchain().m_backbuffer[i].m_image);
-
-			cmd_present_to_render[i].pipelineBarrier(
-				vk::PipelineStageFlagBits::eTransfer,
-				vk::PipelineStageFlagBits::eFragmentShader,
-				vk::DependencyFlags(),
-				nullptr, nullptr, present_to_render_barrier);
-
-			cmd_present_to_render[i].end();
-		}
-		for (int i = 0; i < sGlobal::FRAME_MAX; i++)
-		{
-			cmd_render_to_present[i].begin(begin_info);
-			vk::ImageMemoryBarrier render_to_present_barrier;
-			render_to_present_barrier.setSrcAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
-			render_to_present_barrier.setDstAccessMask(vk::AccessFlagBits::eMemoryRead);
-			render_to_present_barrier.setOldLayout(vk::ImageLayout::eColorAttachmentOptimal);
-			render_to_present_barrier.setNewLayout(vk::ImageLayout::ePresentSrcKHR);
-			render_to_present_barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-			render_to_present_barrier.setImage(app.m_window.getSwapchain().m_backbuffer[i].m_image);
-			cmd_render_to_present[i].pipelineBarrier(
-				vk::PipelineStageFlagBits::eFragmentShader,
-				vk::PipelineStageFlagBits::eTransfer,
-				vk::DependencyFlags(),
-				nullptr, nullptr, render_to_present_barrier);
-
-			cmd_render_to_present[i].end();
-		}
-	}
 
 
 	while (true)
@@ -324,9 +303,9 @@ int main()
 		device->resetFences({ fence_list[backbuffer_index] });
 		for (auto& tls : sGlobal::Order().getThreadLocalList())
 		{
-			for (auto& pool_family : tls.m_cmd_pool_onetime)
+			for (auto& pool_family : tls.m_cmd_pool)
 			{
-				device->resetCommandPool(pool_family[sGlobal::Order().getCurrentFrame()], vk::CommandPoolResetFlagBits::eReleaseResources);
+				device->resetCommandPool(pool_family[sGlobal::Order().getCurrentFrame()].m_cmd_pool[0], vk::CommandPoolResetFlagBits::eReleaseResources);
 			}
 		}
 
@@ -335,45 +314,50 @@ int main()
 			{
 				auto* m_camera = cCamera::sCamera::Order().getCameraList()[0];
 				m_camera->control(app.m_window.getInput(), 0.016f);
-				sScene::Order().execute(executer);
 			}
 			{
 				m_player.execute(executer);
 				model_render.getModelTransform().m_global = glm::translate(m_player.m_pos) * glm::toMat4(glm::quat(glm::vec3(0.f, 0.f, 1.f), m_player.m_dir));
 			}
 
+			SynchronizedPoint motion_worker_syncronized_point(1);
+			{
+				cThreadJob job;
+				job.mFinish =
+					[&]()
+				{
+					model_render.work();
+					motion_worker_syncronized_point.arrive();
+				};
+				sGlobal::Order().getThreadPool().enque(job);
+			}
 
-			SynchronizedPoint render_syncronized_point(3);
-			std::vector<vk::CommandBuffer> render_cmds(5);
-			render_cmds.front() = cmd_present_to_render[backbuffer_index];
-			render_cmds.back() = cmd_render_to_present[backbuffer_index];
+			SynchronizedPoint render_syncronized_point(1);
+			std::vector<vk::CommandBuffer> render_cmds(3);
+			render_cmds.front() = app.m_window.getSwapchain().m_cmd_present_to_render[backbuffer_index];
+			render_cmds.back() = app.m_window.getSwapchain().m_cmd_render_to_present[backbuffer_index];
+			//			model_pipeline.execute(render_cmd);
+			{
+				cThreadJob job;
+				job.mFinish =
+					[&]()
+				{
+					render_cmds[1] = sScene::Order().draw(executer);
+					render_syncronized_point.arrive();
+				};
+				sGlobal::Order().getThreadPool().enque(job);
+			}
+			// 			sBoid::Order().execute(executer);
+//  			sBulletSystem::Order().execute(executer);
+//  			sCollisionSystem::Order().execute(executer);
 
-			model_render.execute(executer);
-			model_pipeline.execute(render_cmd);
- 			sScene::Order().execute(executer);
-			sBoid::Order().execute(executer);
- 			sBulletSystem::Order().execute(executer);
- 			sCollisionSystem::Order().execute(executer);
-
-			// begin cmd render pass
-			std::vector<vk::ClearValue> clearValue = {
-				vk::ClearValue().setColor(vk::ClearColorValue(std::array<float, 4>{0.3f, 0.3f, 0.8f, 1.f})),
-				vk::ClearValue().setDepthStencil(vk::ClearDepthStencilValue(1.f)),
-			};
-			vk::RenderPassBeginInfo begin_render_Info = vk::RenderPassBeginInfo()
-				.setRenderPass(app.m_render_pass)
-				.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(app.m_window.getClientSize().x, app.m_window.getClientSize().y)))
-				.setClearValueCount(clearValue.size())
-				.setPClearValues(clearValue.data())
-				.setFramebuffer(app.m_framebuffer[backbuffer_index]);
-			render_cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 			// draw
-			sScene::Order().draw(render_cmd);
-			sBoid::Order().draw(render_cmd);
-			model_pipeline.draw(render_cmd);
-			sBulletSystem::Order().draw(render_cmd);
-			render_cmd.endRenderPass();
-
+//			sScene::Order().draw(render_cmd);
+//			sBoid::Order().draw(render_cmd);
+//			model_pipeline.draw(render_cmd);
+//			sBulletSystem::Order().draw(render_cmd);
+			motion_worker_syncronized_point.wait();
+			render_syncronized_point.wait();
 
 			vk::PipelineStageFlags waitPipeline = vk::PipelineStageFlagBits::eAllGraphics;
 			std::vector<vk::SubmitInfo> submitInfo =

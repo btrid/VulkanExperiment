@@ -41,6 +41,9 @@ private:
 		cDevice m_use_device;
 		uint32_t m_backbuffer_index;
 
+		std::vector < vk::CommandBuffer > m_cmd_present_to_render;
+		std::vector < vk::CommandBuffer > m_cmd_render_to_present;
+
 		Swapchain()
 			: m_swapchain_handle()
 			, m_backbuffer_index(0)

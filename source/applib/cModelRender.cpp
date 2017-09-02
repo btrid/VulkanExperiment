@@ -10,9 +10,9 @@ void cModelRender::setup(std::shared_ptr<btr::Loader>& loader, std::shared_ptr<c
 	m_private = std::make_unique<cModelRenderPrivate>();
 	m_private->setup(loader, resource);
 }
-void cModelRender::execute(std::shared_ptr<btr::Executer>& executer)
+void cModelRender::work()
 {
-	m_private->execute(executer);
+	m_private->work();
 }
 void cModelRender::draw(vk::CommandBuffer cmd)
 {

@@ -75,8 +75,11 @@ struct cModelRenderPrivate
 
 		{}
 	}
-	void execute(std::shared_ptr<btr::Executer>& executer)
+	void work()
 	{
+		m_playlist.execute();
+		updateNodeTransform(0, m_model_transform.calcLocal());
+		updateBoneTransform(0);
 	}
 	void draw(vk::CommandBuffer cmd)
 	{
@@ -95,8 +98,6 @@ struct cModelRenderPrivate
 		for (auto& n : node->mChildren) {
 			updateBoneTransform(n);
 		}
-
-
 	}
 
 	void updateNodeTransform(uint32_t node_index, const glm::mat4& parentMat)

@@ -102,6 +102,11 @@ public:
 		FRAME_MAX = 3,
 //		THREAD_NUM = std::thread::hardware_concurrency() - 1,
 	};
+	enum CmdPoolType
+	{
+		CMD_POOL_TYPE_ONETIME,		//!< 1フレームに一度poolがリセットされる 
+		CMD_POOL_TYPE_COMPILED,		//!< cmdは自分で管理する
+	};
 protected:
 
 	sGlobal();
@@ -138,7 +143,11 @@ private:
 
 	struct cThreadData
 	{
-		std::vector<std::array<vk::CommandPool, sGlobal::FRAME_MAX>>	m_cmd_pool_onetime;
+		struct CmdPool
+		{
+			vk::CommandPool m_cmd_pool[2];
+		};
+		std::vector<std::array<CmdPool, sGlobal::FRAME_MAX>>	m_cmd_pool;
 	};
 	std::vector<cThreadData> m_thread_local;
 	std::vector<vk::CommandPool>	m_cmd_pool_tempolary;
@@ -177,6 +186,7 @@ struct sThreadLocal : public SingletonTLS<sThreadLocal>
 	uint32_t getThreadIndex()const { return m_thread_index; }
 
 	vk::CommandBuffer getCmdOnetime(int device_family_index)const;
+	vk::CommandPool getCmdPool(sGlobal::CmdPoolType type, int device_family_index)const;
 
 };
 

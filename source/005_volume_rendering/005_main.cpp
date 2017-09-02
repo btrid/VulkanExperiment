@@ -232,9 +232,9 @@ int main()
 		device->resetFences({ fence_list[backbuffer_index] });
 		for (auto& tls : sGlobal::Order().getThreadLocalList())
 		{
-			for (auto& pool_family : tls.m_cmd_pool_onetime)
+			for (auto& pool_family : tls.m_cmd_pool)
 			{
-				device->resetCommandPool(pool_family[sGlobal::Order().getCurrentFrame()], vk::CommandPoolResetFlagBits::eReleaseResources);
+				device->resetCommandPool(pool_family[sGlobal::Order().getCurrentFrame()].m_cmd_pool[0], vk::CommandPoolResetFlagBits::eReleaseResources);
 			}
 		}		
 

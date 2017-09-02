@@ -10,6 +10,7 @@
 #include <applib/App.h>
 #include <999_game/MazeGenerator.h>
 #include <applib/Geometry.h>
+#include <applib/sCameraManager.h>
 
 struct MapDescriptor
 {
@@ -62,7 +63,7 @@ struct sScene : public Singleton<sScene>
 		PIPELINE_COMPUTE_MAP,
 		PIPELINE_NUM,
 	};
-	btr::UpdateBuffer<CameraGPU> m_camera;
+
 	MapInfo m_map_info_cpu;
 
 	MazeGenerator m_maze;
@@ -79,6 +80,10 @@ struct sScene : public Singleton<sScene>
 	vk::DeviceMemory m_map_damae_image_memory;
 	btr::AllocatedMemory m_map_info;
 
+	vk::RenderPass m_render_pass;
+	std::vector<vk::Framebuffer> m_framebuffer;
+	std::vector<vk::UniqueCommandBuffer> m_cmd;
+
 	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_shader_info;
 	std::array<vk::Pipeline, PIPELINE_NUM> m_pipeline;
 
@@ -93,6 +98,75 @@ struct sScene : public Singleton<sScene>
 		m_map_info_cpu.m_descriptor[1].m_cell_num = glm::vec2(15, 15);
 		m_map_info_cpu.m_descriptor[0].m_cell_size = m_map_info_cpu.m_descriptor[1].m_cell_size/glm::vec2(m_map_info_cpu.m_subcell);
 		m_map_info_cpu.m_descriptor[0].m_cell_num = m_map_info_cpu.m_descriptor[1].m_cell_num*m_map_info_cpu.m_subcell;
+
+		{
+			// レンダーパス
+			{
+				// sub pass
+				std::vector<vk::AttachmentReference> color_ref =
+				{
+					vk::AttachmentReference()
+					.setAttachment(0)
+					.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
+				};
+				vk::AttachmentReference depth_ref;
+				depth_ref.setAttachment(1);
+				depth_ref.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+
+				vk::SubpassDescription subpass;
+				subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+				subpass.setInputAttachmentCount(0);
+				subpass.setPInputAttachments(nullptr);
+				subpass.setColorAttachmentCount((uint32_t)color_ref.size());
+				subpass.setPColorAttachments(color_ref.data());
+				subpass.setPDepthStencilAttachment(&depth_ref);
+
+				std::vector<vk::AttachmentDescription> attach_description = {
+					// color1
+					vk::AttachmentDescription()
+					.setFormat(loader->m_window->getSwapchain().m_surface_format.format)
+					.setSamples(vk::SampleCountFlagBits::e1)
+					.setLoadOp(vk::AttachmentLoadOp::eDontCare)
+					.setStoreOp(vk::AttachmentStoreOp::eStore)
+					.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
+					.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
+					vk::AttachmentDescription()
+					.setFormat(vk::Format::eD32Sfloat)
+					.setSamples(vk::SampleCountFlagBits::e1)
+					.setLoadOp(vk::AttachmentLoadOp::eDontCare)
+					.setStoreOp(vk::AttachmentStoreOp::eStore)
+					.setInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
+					.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
+				};
+				vk::RenderPassCreateInfo renderpass_info = vk::RenderPassCreateInfo()
+					.setAttachmentCount(attach_description.size())
+					.setPAttachments(attach_description.data())
+					.setSubpassCount(1)
+					.setPSubpasses(&subpass);
+
+				m_render_pass = loader->m_device->createRenderPass(renderpass_info);
+			}
+
+			m_framebuffer.resize(loader->m_window->getSwapchain().getSwapchainNum());
+			{
+				std::array<vk::ImageView, 2> view;
+
+				vk::FramebufferCreateInfo framebuffer_info;
+				framebuffer_info.setRenderPass(m_render_pass);
+				framebuffer_info.setAttachmentCount((uint32_t)view.size());
+				framebuffer_info.setPAttachments(view.data());
+				framebuffer_info.setWidth(loader->m_window->getClientSize().x);
+				framebuffer_info.setHeight(loader->m_window->getClientSize().y);
+				framebuffer_info.setLayers(1);
+
+				for (size_t i = 0; i < m_framebuffer.size(); i++) {
+					view[0] = loader->m_window->getSwapchain().m_backbuffer[i].m_view;
+					view[1] = loader->m_window->getSwapchain().m_depth.m_view;
+					m_framebuffer[i] = loader->m_device->createFramebuffer(framebuffer_info);
+				}
+			}
+
+		}
 
 		// setup shader
 		{
@@ -334,12 +408,6 @@ struct sScene : public Singleton<sScene>
 			loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { barrier }, {});
 		}
 
-		btr::UpdateBufferDescriptor update_desc;
-		update_desc.device_memory = loader->m_uniform_memory;
-		update_desc.staging_memory = loader->m_staging_memory;
-		update_desc.frame_max = sGlobal::FRAME_MAX;
-		m_camera.setup(update_desc);
-
 		std::vector<std::vector<vk::DescriptorSetLayoutBinding>> bindings(DESCRIPTOR_SET_LAYOUT_NUM);
 		bindings[DESCRIPTOR_SET_LAYOUT_MAP] =
 		{
@@ -416,7 +484,7 @@ struct sScene : public Singleton<sScene>
 		{
 
 			std::vector<vk::DescriptorBufferInfo> uniforms = {
-				m_camera.getBufferInfo(),
+				sCameraManager::Order().m_camera.getBufferInfo(),
 			};
 			std::vector<vk::WriteDescriptorSet> write_desc =
 			{
@@ -562,31 +630,19 @@ struct sScene : public Singleton<sScene>
 			std::copy(pipelines.begin(), pipelines.end(), m_pipeline.begin());
 
 		}
-	}
 
-	void execute(std::shared_ptr<btr::Executer>& executer)
-	{
-		vk::CommandBuffer cmd = executer->m_cmd;
+		vk::CommandBufferAllocateInfo cmd_info;
+		cmd_info.commandBufferCount = sGlobal::FRAME_MAX;
+		cmd_info.commandPool = sThreadLocal::Order().getCmdPool(sGlobal::CMD_POOL_TYPE_COMPILED, 0);
+		cmd_info.level = vk::CommandBufferLevel::ePrimary;
+		m_cmd = std::move(loader->m_device->allocateCommandBuffersUnique(cmd_info));
 
-		std::vector<vk::BufferMemoryBarrier> to_transfer = {
-			m_camera.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite),
-		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
-
-		auto* camera = cCamera::sCamera::Order().getCameraList()[0];
-		CameraGPU camera_GPU;
-		camera_GPU.setup(*camera);
-		m_camera.subupdate(camera_GPU);
-		m_camera.update(cmd);
-
-		std::vector<vk::BufferMemoryBarrier> to_draw_barrier = {
-			m_camera.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
-		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexShader, {}, {}, { to_draw_barrier }, {});
-
-
+		vk::CommandBufferBeginInfo begin_info;
+		begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
+		for (size_t i = 0; i < m_cmd.size(); i++)
 		{
-//			auto to_read = m_soldier_emit_gpu.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
+			auto& cmd = m_cmd[i];
+			cmd->begin(begin_info);
 			vk::ImageMemoryBarrier to_read;
 			to_read.oldLayout = vk::ImageLayout::eGeneral;
 			to_read.newLayout = vk::ImageLayout::eGeneral;
@@ -598,32 +654,42 @@ struct sScene : public Singleton<sScene>
 			to_read.subresourceRange.levelCount = 1;
 			to_read.dstAccessMask = vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite;
 			to_read.srcAccessMask = vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite;
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, to_read);
+			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, to_read);
 
+			cmd->bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COMPUTE_MAP]);
+			cmd->bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR], 0, m_descriptor_set[DESCRIPTOR_SET_LAYOUT_CAMERA], {});
+			cmd->bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR], 1, m_descriptor_set[DESCRIPTOR_SET_LAYOUT_MAP], {});
+			auto groups = app::calcDipatchGroups(glm::uvec3(m_map_info_cpu.m_descriptor[0].m_cell_num, 1), glm::uvec3(32, 32, 1));
+			cmd->dispatch(groups.x, groups.y, groups.z);
 
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COMPUTE_MAP]);
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR], 0, m_descriptor_set[DESCRIPTOR_SET_LAYOUT_CAMERA], {});
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR], 1, m_descriptor_set[DESCRIPTOR_SET_LAYOUT_MAP], {});
-						auto groups = app::calcDipatchGroups(glm::uvec3(m_map_info_cpu.m_descriptor[0].m_cell_num, 1), glm::uvec3(32, 32, 1));
-			cmd.dispatch(groups.x, groups.y, groups.z);
+			{
+				vk::RenderPassBeginInfo begin_render_Info = vk::RenderPassBeginInfo()
+					.setRenderPass(m_render_pass)
+					.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(loader->m_window->getClientSize().x, loader->m_window->getClientSize().y)))
+					.setFramebuffer(m_framebuffer[i]);
+				cmd->beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
+// 				cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW_FLOOR]);
+// 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR], 0, m_descriptor_set[DESCRIPTOR_SET_LAYOUT_CAMERA], {});
+// 				cmd.bindVertexBuffers(0, { m_maze_geometry.m_resource->m_vertex.getBufferInfo().buffer }, { m_maze_geometry.m_resource->m_vertex.getBufferInfo().offset });
+// 				cmd.bindIndexBuffer(m_maze_geometry.m_resource->m_index.getBufferInfo().buffer, m_maze_geometry.m_resource->m_index.getBufferInfo().offset, m_maze_geometry.m_resource->m_index_type);
+// 				cmd.drawIndexedIndirect(m_maze_geometry.m_resource->m_indirect.getBufferInfo().buffer, m_maze_geometry.m_resource->m_indirect.getBufferInfo().offset, 1, sizeof(vk::DrawIndexedIndirectCommand));
+
+				cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW_FLOOR_EX]);
+				cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR], 0, m_descriptor_set[DESCRIPTOR_SET_LAYOUT_CAMERA], {});
+				cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR], 1, m_descriptor_set[DESCRIPTOR_SET_LAYOUT_MAP], {});
+				cmd->draw(4, 1, 0, 0);
+
+				cmd->endRenderPass();
+			}
+			cmd->end();
 		}
 
-
-
 	}
-	void draw(vk::CommandBuffer cmd)
-	{
-// 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW_FLOOR]);
-// 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR], 0, m_descriptor_set[DESCRIPTOR_SET_LAYOUT_CAMERA], {});
-// 		cmd.bindVertexBuffers(0, { m_maze_geometry.m_resource->m_vertex.getBufferInfo().buffer }, { m_maze_geometry.m_resource->m_vertex.getBufferInfo().offset });
-// 		cmd.bindIndexBuffer(m_maze_geometry.m_resource->m_index.getBufferInfo().buffer, m_maze_geometry.m_resource->m_index.getBufferInfo().offset, m_maze_geometry.m_resource->m_index_type);
-//		cmd.drawIndexedIndirect(m_maze_geometry.m_resource->m_indirect.getBufferInfo().buffer, m_maze_geometry.m_resource->m_indirect.getBufferInfo().offset, 1, sizeof(vk::DrawIndexedIndirectCommand));
 
-		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW_FLOOR_EX]);
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR], 0, m_descriptor_set[DESCRIPTOR_SET_LAYOUT_CAMERA], {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR], 1, m_descriptor_set[DESCRIPTOR_SET_LAYOUT_MAP], {});
-		cmd.draw(4, 1, 0, 0);
+	vk::CommandBuffer draw(std::shared_ptr<btr::Executer>& executer)
+	{
+		return m_cmd[sGlobal::Order().getCurrentFrame()].get();
 	}
 
 	glm::ivec2 calcMapIndex(const glm::vec4& p)

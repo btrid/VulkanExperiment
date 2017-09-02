@@ -459,7 +459,6 @@ public:
 	}
 	void work(std::shared_ptr<btr::Executer>& executer)
 	{
-		executer->m_cmd;
 		{
 			auto& keyboard = executer->m_window->getInput().m_keyboard;
 			float value = 10.f;

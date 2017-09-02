@@ -69,7 +69,6 @@ void cModelRenderPrivate::setup(cModelPipeline& pipeline)
 void cModelRenderPrivate::execute(cModelPipeline& renderer, vk::CommandBuffer& cmd)
 {
 	m_playlist.execute();
-//	updateNodeTransform(0, glm::mat4(1.f));
 	updateNodeTransform(0, m_model_transform.calcLocal());
 	updateBoneTransform(0);
 	

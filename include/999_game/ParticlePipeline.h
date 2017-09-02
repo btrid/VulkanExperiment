@@ -7,9 +7,9 @@
 #include <btrlib/Loader.h>
 
 #include <applib/App.h>
+#include <applib/Geometry.h>
 #include <999_game/sScene.h>
 #include <999_game/MazeGenerator.h>
-#include <999_game/Geometry.h>
 #include <999_game/CircleIndex.h>
 #include <999_game/cTriangleLL.h>
 #include <999_game/sBoid.h>

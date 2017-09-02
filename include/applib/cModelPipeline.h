@@ -46,7 +46,6 @@ struct cModelPipeline
 	void setup(btr::Loader& loader);
 	void addModel(cModelRender* model);
 
-	void execute(vk::CommandBuffer cmd);
-	void draw(vk::CommandBuffer cmd);
+	void draw();
 
 };

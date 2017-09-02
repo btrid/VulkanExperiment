@@ -146,6 +146,62 @@ void cWindow::Swapchain::setup(const CreateInfo& descriptor, vk::SurfaceKHR surf
 		m_depth.m_view = m_use_device->createImageView(depth_view_info);
 
 	}
+
+	// present cmd‚ÌÝ’è
+	{
+		{
+			auto pool = sGlobal::Order().getCmdPoolSytem(0);
+			vk::CommandBufferAllocateInfo cmd_buffer_info;
+			cmd_buffer_info.commandPool = pool;
+			cmd_buffer_info.commandBufferCount = sGlobal::FRAME_MAX;
+			cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
+			m_cmd_present_to_render = m_use_device->allocateCommandBuffers(cmd_buffer_info);
+			m_cmd_render_to_present = m_use_device->allocateCommandBuffers(cmd_buffer_info);
+		}
+
+		vk::CommandBufferBeginInfo begin_info;
+		begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
+
+		for (int i = 0; i < sGlobal::FRAME_MAX; i++)
+		{
+			m_cmd_present_to_render[i].begin(begin_info);
+
+			vk::ImageMemoryBarrier present_to_render_barrier;
+			present_to_render_barrier.setSrcAccessMask(vk::AccessFlagBits::eMemoryRead);
+			present_to_render_barrier.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+			present_to_render_barrier.setOldLayout(vk::ImageLayout::ePresentSrcKHR);
+			present_to_render_barrier.setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
+			present_to_render_barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+			present_to_render_barrier.setImage(m_backbuffer[i].m_image);
+
+			m_cmd_present_to_render[i].pipelineBarrier(
+				vk::PipelineStageFlagBits::eTransfer,
+				vk::PipelineStageFlagBits::eFragmentShader,
+				vk::DependencyFlags(),
+				nullptr, nullptr, present_to_render_barrier);
+
+			m_cmd_present_to_render[i].end();
+		}
+		for (int i = 0; i < sGlobal::FRAME_MAX; i++)
+		{
+			m_cmd_render_to_present[i].begin(begin_info);
+			vk::ImageMemoryBarrier render_to_present_barrier;
+			render_to_present_barrier.setSrcAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+			render_to_present_barrier.setDstAccessMask(vk::AccessFlagBits::eMemoryRead);
+			render_to_present_barrier.setOldLayout(vk::ImageLayout::eColorAttachmentOptimal);
+			render_to_present_barrier.setNewLayout(vk::ImageLayout::ePresentSrcKHR);
+			render_to_present_barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+			render_to_present_barrier.setImage(m_backbuffer[i].m_image);
+			m_cmd_render_to_present[i].pipelineBarrier(
+				vk::PipelineStageFlagBits::eFragmentShader,
+				vk::PipelineStageFlagBits::eTransfer,
+				vk::DependencyFlags(),
+				nullptr, nullptr, render_to_present_barrier);
+
+			m_cmd_render_to_present[i].end();
+		}
+	}
+
 }
 
 uint32_t cWindow::Swapchain::swap(vk::Semaphore& semaphore)

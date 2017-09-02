@@ -45,6 +45,7 @@ struct SynchronizedPoint
 	void arrive()
 	{
 		std::unique_lock<std::mutex> lock(m_mutex);
+		assert(m_count > 0);
 		m_count--;
 		m_condition.notify_one();
 	}

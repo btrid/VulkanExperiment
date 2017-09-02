@@ -19,8 +19,8 @@ void cModelPipeline::setup(btr::Loader& loader)
 			vk::ShaderStageFlagBits stage;
 		}shader_info[] =
 		{
-			{ "Render.vert.spv",vk::ShaderStageFlagBits::eVertex },
-			{ "Render.frag.spv",vk::ShaderStageFlagBits::eFragment },
+			{ "ModelRender.vert.spv",vk::ShaderStageFlagBits::eVertex },
+			{ "ModelRender.frag.spv",vk::ShaderStageFlagBits::eFragment },
 		};
 		static_assert(array_length(shader_info) == SHADER_NUM, "not equal shader num");
 
@@ -285,8 +285,12 @@ void cModelPipeline::addModel(cModelRender* model)
 	m_model.back()->getPrivate()->setup(*this);
 }
 
-void cModelPipeline::execute(vk::CommandBuffer cmd)
+void cModelPipeline::draw()
 {
+	auto& gpu = sGlobal::Order().getGPU(0);
+	auto& device = gpu.getDevice();
+	auto cmd = sThreadLocal::Order().getCmdOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
+
 	{
 		auto* camera = cCamera::sCamera::Order().getCameraList()[0];
 		CameraGPU2 cameraGPU;
@@ -299,11 +303,6 @@ void cModelPipeline::execute(vk::CommandBuffer cmd)
 	{
 		render->getPrivate()->execute(*this, cmd);
 	}
-}
-
-void cModelPipeline::draw(vk::CommandBuffer cmd)
-{
-//	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_compute_pipeline.m_graphics_pipeline);
 	// draw
 	for (auto& render : m_model)
 	{
