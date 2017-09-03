@@ -377,7 +377,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
 				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_PRIMITIVE])
-				.setRenderPass(loader->m_render_pass)
+				.setRenderPass(m_render_pass)
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};

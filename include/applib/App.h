@@ -8,11 +8,6 @@ struct App
 {
 	cWindow m_window;
 
-	vk::RenderPass m_render_pass;
-	std::vector<vk::Framebuffer> m_framebuffer;
-
-
-
 	App();
 };
 

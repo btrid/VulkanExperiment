@@ -70,52 +70,41 @@ sGlobal::sGlobal()
 		data.m_thread_index = param.m_index;
 	};
 
+	vk::AllocationCallbacks cb;
+	cb.setPfnAllocation(btr::Allocation);
+	cb.setPfnFree(btr::Free);
+	cb.setPfnReallocation(btr::Reallocation);
+	cb.setPfnInternalAllocation(btr::InternalAllocationNotification);
+	cb.setPfnInternalFree(btr::InternalFreeNotification);
+
 	auto device = m_gpu[0].getDevice();
 	m_thread_local.resize(std::thread::hardware_concurrency());
-	for (auto& thread : m_thread_local)
+	for (auto& per_thread : m_thread_local)
 	{
-		thread.m_cmd_pool.resize(device.getQueueFamilyIndex().size());
-		for (size_t family = 0; family < thread.m_cmd_pool.size(); family++)
+		per_thread.m_cmd_pool.resize(device.getQueueFamilyIndex().size());
+		for (size_t family = 0; family < per_thread.m_cmd_pool.size(); family++)
 		{
+			auto& per_family = per_thread.m_cmd_pool[family];
 			vk::CommandPoolCreateInfo cmd_pool_onetime;
 			cmd_pool_onetime.queueFamilyIndex = (uint32_t)family;
 			cmd_pool_onetime.flags = vk::CommandPoolCreateFlagBits::eTransient;
+			for (auto& pool_per_frame : per_family.m_cmd_pool_onetime)
+			{
+				pool_per_frame = device->createCommandPoolUnique(cmd_pool_onetime, cb);
+			}
+
 			vk::CommandPoolCreateInfo cmd_pool_compiled;
 			cmd_pool_compiled.queueFamilyIndex = (uint32_t)family;
 			cmd_pool_compiled.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
-			for (auto& pool : thread.m_cmd_pool[family])
-			{
-				pool.m_cmd_pool[0] = device->createCommandPoolUnique(cmd_pool_onetime);
-				pool.m_cmd_pool[1] = device->createCommandPoolUnique(cmd_pool_compiled);
-			}
+			per_family.m_cmd_pool_compiled = device->createCommandPoolUnique(cmd_pool_onetime, cb);
+
+			vk::CommandPoolCreateInfo cmd_pool_temporary;
+			cmd_pool_temporary.queueFamilyIndex = (uint32_t)family;
+			cmd_pool_temporary.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer | vk::CommandPoolCreateFlagBits::eTransient;
+			per_family.m_cmd_pool_temporary = device->createCommandPoolUnique(cmd_pool_onetime, cb);
 		}
 	}
 	m_thread_pool.start(std::thread::hardware_concurrency()-1, init_thread_data_func);
-
-	m_cmd_pool_tempolary.resize(device.getQueueFamilyIndex().size());
-	for (size_t family = 0; family < m_cmd_pool_tempolary.size(); family++)
-	{
-		vk::CommandPoolCreateInfo cmd_pool_info;
-		cmd_pool_info.queueFamilyIndex = (uint32_t)family;
-		cmd_pool_info.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
-		m_cmd_pool_tempolary[family] = device->createCommandPool(cmd_pool_info);
-	}
-
-	m_cmd_pool_system.resize(device.getQueueFamilyIndex().size());
-	for (size_t family = 0; family < m_cmd_pool_system.size(); family++)
-	{
-		vk::CommandPoolCreateInfo cmd_pool_info;
-		cmd_pool_info.queueFamilyIndex = (uint32_t)family;
-
-		vk::AllocationCallbacks cb;
-		cb.setPfnAllocation(btr::Allocation);
-		cb.setPfnFree(btr::Free);
-		cb.setPfnReallocation(btr::Reallocation);
-		cb.setPfnInternalAllocation(btr::InternalAllocationNotification);
-		cb.setPfnInternalFree(btr::InternalFreeNotification);
-//		cb.setPUserData()
-		m_cmd_pool_system[family] = device->createCommandPool(cmd_pool_info, cb);
-	}
 }
 
 
@@ -145,13 +134,13 @@ sGlobal::sGlobal::cThreadData& sGlobal::getThreadLocal()
 	return m_thread_local[sThreadLocal::Order().getThreadIndex()];
 }
 
-vk::ShaderModule loadShader(const vk::Device& device, const std::string& filename)
+vk::UniqueShaderModule loadShaderUnique(const vk::Device& device, const std::string& filename)
 {
 	std::experimental::filesystem::path filepath(filename);
 	std::ifstream file(filepath, std::ios_base::ate | std::ios::binary);
 	if (!file.is_open()) {
 		assert(false);
-		return vk::ShaderModule();
+		return vk::UniqueShaderModule();
 	}
 
 	size_t file_size = (size_t)file.tellg();
@@ -163,7 +152,11 @@ vk::ShaderModule loadShader(const vk::Device& device, const std::string& filenam
 	vk::ShaderModuleCreateInfo shaderInfo = vk::ShaderModuleCreateInfo()
 		.setPCode(reinterpret_cast<const uint32_t*>(buffer.data()))
 		.setCodeSize(buffer.size());
-	return device.createShaderModule(shaderInfo);
+	return device.createShaderModuleUnique(shaderInfo);
+}
+vk::ShaderModule loadShader(const vk::Device& device, const std::string& filename)
+{
+	return loadShaderUnique(device, filename).release();
 }
 
 vk::DescriptorPool createPool(vk::Device device, const std::vector<std::vector<vk::DescriptorSetLayoutBinding>>& bindings)
@@ -244,13 +237,23 @@ void vk::FenceShared::create(vk::Device device, const vk::FenceCreateInfo& fence
 
 vk::CommandPool sThreadLocal::getCmdPool(sGlobal::CmdPoolType type, int device_family_index) const
 {
-	return sGlobal::Order().getThreadLocal().m_cmd_pool[device_family_index][sGlobal::Order().getCurrentFrame()].m_cmd_pool[type].get();
+	auto& pool_per_family = sGlobal::Order().getThreadLocal().m_cmd_pool[device_family_index];
+	switch (type)
+	{
+	case sGlobal::CMD_POOL_TYPE_ONETIME:
+		return pool_per_family.m_cmd_pool_onetime[sGlobal::Order().getCurrentFrame()].get();
+	case sGlobal::CMD_POOL_TYPE_TEMPORARY:
+		return pool_per_family.m_cmd_pool_temporary.get();
+	case sGlobal::CMD_POOL_TYPE_COMPILED:
+	default:
+		return pool_per_family.m_cmd_pool_compiled.get();
+	}
 }
 vk::CommandBuffer sThreadLocal::getCmdOnetime(int device_family_index) const
 {
 	vk::CommandBufferAllocateInfo cmd_buffer_info;
 	cmd_buffer_info.commandBufferCount = 1;
-	cmd_buffer_info.commandPool = sGlobal::Order().getThreadLocal().m_cmd_pool[device_family_index][sGlobal::Order().getCurrentFrame()].m_cmd_pool[0].get();
+	cmd_buffer_info.commandPool = getCmdPool(sGlobal::CMD_POOL_TYPE_ONETIME, device_family_index);
 	cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
 	auto cmd = sGlobal::Order().getGPU(0).getDevice()->allocateCommandBuffers(cmd_buffer_info)[0];
 

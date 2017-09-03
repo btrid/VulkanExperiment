@@ -1,6 +1,5 @@
 
-#if defined(SETPOINT_CAMERA)
-layout(std140, set=SETPOINT_CAMERA, binding=0) uniform CameraUniform
+struct Camera
 {
 	mat4 u_projection;
 	mat4 u_view;
@@ -10,7 +9,14 @@ layout(std140, set=SETPOINT_CAMERA, binding=0) uniform CameraUniform
 	float u_fov_y;
 	float u_near;
 	float u_far;
-} u_camera;
+};
+
+#if defined(SETPOINT_CAMERA)
+layout(std140, set=SETPOINT_CAMERA, binding=0) uniform CameraUniform
+{
+	Camera u_camera[1];
+};
+
 #endif
 
 #if 0

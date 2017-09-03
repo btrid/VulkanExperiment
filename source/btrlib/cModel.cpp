@@ -327,7 +327,7 @@ void cModel::load(btr::Loader* loader, const std::string& filename)
 
 	auto& device = sGlobal::Order().getGPU(0).getDevice();
 
-	auto cmd_pool = sGlobal::Order().getCmdPoolTempolary(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
+	auto cmd_pool = sThreadLocal::Order().getCmdPool(sGlobal::CMD_POOL_TYPE_ONETIME, 0);
 	vk::CommandBufferAllocateInfo cmd_info;
 	cmd_info.setCommandPool(cmd_pool);
 	cmd_info.setLevel(vk::CommandBufferLevel::ePrimary);

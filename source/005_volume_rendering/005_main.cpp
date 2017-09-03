@@ -234,7 +234,7 @@ int main()
 		{
 			for (auto& pool_family : tls.m_cmd_pool)
 			{
-				device->resetCommandPool(pool_family[sGlobal::Order().getCurrentFrame()].m_cmd_pool[0], vk::CommandPoolResetFlagBits::eReleaseResources);
+				device->resetCommandPool(pool_family[sGlobal::Order().getCurrentFrame()].m_cmd_pool[0].get(), vk::CommandPoolResetFlagBits::eReleaseResources);
 			}
 		}		
 
@@ -296,8 +296,8 @@ int main()
 			worker_syncronized_point.wait();
 			render_syncronized_point.wait();
 
-			render_cmds[0] = cmd_present_to_render[backbuffer_index];
-			render_cmds[4] = cmd_render_to_present[backbuffer_index];
+			render_cmds.front() = cmd_present_to_render[backbuffer_index];
+			render_cmds.back() = cmd_render_to_present[backbuffer_index];
 
 			vk::PipelineStageFlags waitPipeline = vk::PipelineStageFlagBits::eAllGraphics;
 			std::vector<vk::SubmitInfo> submitInfo =

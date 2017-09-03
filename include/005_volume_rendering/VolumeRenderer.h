@@ -9,7 +9,7 @@
 #include <btrlib/sGlobal.h>
 #include <applib/Geometry.h>
 #include <applib/sCameraManager.h>
-#include <005_volume_rendering/DrawHelper.h>
+#include <applib/DrawHelper.h>
 
 struct VolumeScene
 {	

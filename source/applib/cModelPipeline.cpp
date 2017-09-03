@@ -38,14 +38,14 @@ void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 			vk::AttachmentDescription()
 			.setFormat(loader->m_window->getSwapchain().m_surface_format.format)
 			.setSamples(vk::SampleCountFlagBits::e1)
-			.setLoadOp(vk::AttachmentLoadOp::eDontCare)
+			.setLoadOp(vk::AttachmentLoadOp::eLoad)
 			.setStoreOp(vk::AttachmentStoreOp::eStore)
 			.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
 			.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
 			vk::AttachmentDescription()
 			.setFormat(vk::Format::eD32Sfloat)
 			.setSamples(vk::SampleCountFlagBits::e1)
-			.setLoadOp(vk::AttachmentLoadOp::eDontCare)
+			.setLoadOp(vk::AttachmentLoadOp::eLoad)
 			.setStoreOp(vk::AttachmentStoreOp::eStore)
 			.setInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
 			.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
@@ -93,9 +93,9 @@ void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 
 		std::string path = btr::getResourceLibPath() + "shader\\binary\\";
 		for (size_t i = 0; i < SHADER_NUM; i++) {
-			m_shader_list[i] = loadShader(device.getHandle(), path + shader_info[i].name);
+			m_shader_list[i] = std::move(loadShaderUnique(device.getHandle(), path + shader_info[i].name));
 			m_stage_info[i].setStage(shader_info[i].stage);
-			m_stage_info[i].setModule(m_shader_list[i]);
+			m_stage_info[i].setModule(m_shader_list[i].get());
 			m_stage_info[i].setPName("main");
 		}
 	}
@@ -142,15 +142,15 @@ void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 		vk::DescriptorSetLayoutCreateInfo descriptor_layout_info = vk::DescriptorSetLayoutCreateInfo()
 			.setBindingCount(bindings[i].size())
 			.setPBindings(bindings[i].data());
-		m_descriptor_set_layout[i] = device->createDescriptorSetLayout(descriptor_layout_info);
+		m_descriptor_set_layout[i] = device->createDescriptorSetLayoutUnique(descriptor_layout_info);
 	}
 
 	{
 		{
 			vk::DescriptorSetLayout layouts[] = {
-				m_descriptor_set_layout[DESCRIPTOR_MODEL],
-				m_descriptor_set_layout[DESCRIPTOR_PER_MESH],
-				m_descriptor_set_layout[DESCRIPTOR_SCENE],
+				m_descriptor_set_layout[DESCRIPTOR_MODEL].get(),
+				m_descriptor_set_layout[DESCRIPTOR_PER_MESH].get(),
+				m_descriptor_set_layout[DESCRIPTOR_SCENE].get(),
 			};
 			vk::PushConstantRange constant_range[] = {
 				vk::PushConstantRange().setOffset(0).setSize(64).setStageFlags(vk::ShaderStageFlagBits::eVertex),
@@ -162,7 +162,7 @@ void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 			pipeline_layout_info.setPushConstantRangeCount(array_length(constant_range));
 			pipeline_layout_info.setPPushConstantRanges(constant_range);
 
-			m_pipeline_layout[PIPELINE_LAYOUT_RENDER] = device->createPipelineLayout(pipeline_layout_info);
+			m_pipeline_layout[PIPELINE_LAYOUT_RENDER] = device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
 	}
@@ -184,12 +184,6 @@ void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 		m_descriptor_pool = device->createDescriptorPoolUnique(descriptor_pool_info);
 	}
 
-
-	// pipeline cache
-	{
-		vk::PipelineCacheCreateInfo cacheInfo = vk::PipelineCacheCreateInfo();
-		m_cache = device->createPipelineCache(cacheInfo);
-	}
 
 	vk::Extent3D size;
 	size.setWidth(640);
@@ -310,12 +304,12 @@ void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 				.setPViewportState(&viewport_info)
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
-				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_RENDER])
-				.setRenderPass(loader->m_render_pass)
+				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_RENDER].get())
+				.setRenderPass(m_render_pass.get())
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			m_graphics_pipeline = device->createGraphicsPipelines(pipeline_cache, graphics_pipeline_info)[0];
+			m_graphics_pipeline = std::move(device->createGraphicsPipelinesUnique(pipeline_cache, graphics_pipeline_info)[0]);
 		}
 
 	}
@@ -325,8 +319,8 @@ void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 		vk::DescriptorSetAllocateInfo alloc_info;
 		alloc_info.descriptorPool = loader->m_descriptor_pool;
 		alloc_info.descriptorSetCount = 1;
-		alloc_info.pSetLayouts = &m_descriptor_set_layout[cModelPipeline::DESCRIPTOR_SCENE];
-		m_descriptor_set_scene = device->allocateDescriptorSets(alloc_info)[0];
+		alloc_info.pSetLayouts = &m_descriptor_set_layout[cModelPipeline::DESCRIPTOR_SCENE].get();
+		m_descriptor_set_scene = std::move(device->allocateDescriptorSetsUnique(alloc_info)[0]);
 
 		std::vector<vk::DescriptorBufferInfo> uniformBufferInfo = {
 			sCameraManager::Order().m_camera.getBufferInfo(),
@@ -338,7 +332,7 @@ void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 			.setDescriptorCount(uniformBufferInfo.size())
 			.setPBufferInfo(uniformBufferInfo.data())
 			.setDstBinding(0)
-			.setDstSet(m_descriptor_set_scene),
+			.setDstSet(m_descriptor_set_scene.get()),
 		};
 		device->updateDescriptorSets(write_descriptor_set, {});
 	}
@@ -350,16 +344,40 @@ void cModelPipeline::addModel(cModelRender* model)
 	m_model.back()->getPrivate()->setup(*this);
 }
 
-void cModelPipeline::draw()
+vk::CommandBuffer cModelPipeline::draw(std::shared_ptr<btr::Executer>& executer)
 {
 	auto& gpu = sGlobal::Order().getGPU(0);
 	auto& device = gpu.getDevice();
-	auto cmd = sThreadLocal::Order().getCmdOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
+//	auto cmd = sThreadLocal::Order().getCmdOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
+
+	vk::CommandBufferAllocateInfo cmd_info;
+	cmd_info.commandBufferCount = 1;
+	cmd_info.commandPool = sThreadLocal::Order().getCmdPool(sGlobal::CMD_POOL_TYPE_ONETIME, 0);
+	cmd_info.level = vk::CommandBufferLevel::ePrimary;
+	auto cmd = sGlobal::Order().getGPU(0).getDevice()->allocateCommandBuffers(cmd_info)[0];
+
+	vk::CommandBufferBeginInfo begin_info;
+	begin_info.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit | vk::CommandBufferUsageFlagBits::eSimultaneousUse);
+	cmd.begin(begin_info);
 
 	// draw
 	for (auto& render : m_model)
 	{
-		render->getPrivate()->execute(*this, cmd);
-		render->getPrivate()->draw(*this, cmd);
+		render->getPrivate()->execute(executer, cmd);
 	}
+
+	vk::RenderPassBeginInfo begin_render_Info;
+	begin_render_Info.setRenderPass(m_render_pass.get());
+	begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(640, 480)));
+	begin_render_Info.setFramebuffer(m_framebuffer[executer->getGPUFrame()].get());
+	cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eSecondaryCommandBuffers);
+
+	for (auto& render : m_model)
+	{
+		render->getPrivate()->draw(executer, cmd);
+	}
+	cmd.endRenderPass();
+
+	cmd.end();
+	return cmd;
 }

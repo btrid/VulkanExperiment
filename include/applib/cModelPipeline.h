@@ -36,22 +36,21 @@ struct cModelPipeline
 	vk::UniqueRenderPass m_render_pass;
 	std::vector<vk::UniqueFramebuffer> m_framebuffer;
 
-	std::array<vk::ShaderModule, SHADER_NUM> m_shader_list;
+	std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_list;
 	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_stage_info;
 
 	vk::UniqueDescriptorPool m_descriptor_pool;
-	vk::PipelineCache m_cache;
-	vk::Pipeline m_graphics_pipeline;
-	std::array<vk::PipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
-	std::array<vk::DescriptorSetLayout, DESCRIPTOR_NUM> m_descriptor_set_layout;
+	vk::UniquePipeline m_graphics_pipeline;
+	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
+	std::array<vk::UniqueDescriptorSetLayout, DESCRIPTOR_NUM> m_descriptor_set_layout;
 
-	vk::DescriptorSet m_descriptor_set_scene;
+	vk::UniqueDescriptorSet m_descriptor_set_scene;
 	btr::AllocatedMemory m_bone_buffer;
 
 	std::vector<cModelRender*> m_model;
 	void setup(std::shared_ptr<btr::Loader>& loader);
 	void addModel(cModelRender* model);
 
-	void draw();
+	vk::CommandBuffer draw(std::shared_ptr<btr::Executer>& executer);
 
 };

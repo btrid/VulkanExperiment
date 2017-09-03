@@ -15,6 +15,7 @@
 #endif
 
 #define SETPOINT_CAMERA 1
+#include <Camera.glsl>
 #include <Common.glsl>
 
 #define SETPOINT_BULLET 0
@@ -37,6 +38,6 @@ void main()
 	BulletData p = b_bullet[gl_InstanceIndex + constant.m_offset];
 	vec3 vertex = vec3(gl_VertexIndex/2 - 0.5, gl_VertexIndex%2 - 0.5, 0.) * p.m_pos.w;
 	vec4 pos = vec4(p.m_pos.xyz + vertex, 1.0);
-	gl_Position = uProjection * uView * pos;
+	gl_Position = u_camera[0].u_projection * u_camera[0].u_view * pos;
 	VSOut.life = 0.2;
 }

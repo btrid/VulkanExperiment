@@ -10,6 +10,7 @@
 //#include </Marching.glsl>
 
 #define SETPOINT_CAMERA 0
+#include <Camera.glsl>
 #include <Common.glsl>
 
 #define SETPOINT_MAP 1
@@ -21,18 +22,6 @@ layout(location=1) in FSIn{
 }In;
 layout(location = 0) out vec4 FragColor;
 
-/*
-vec3 getCellSize3D()
-{
-	return vec3(u_map_info.cell_size.x, WALL_HEIGHT, u_map_info.cell_size.y);
-}
-vec3 clampByMapIndex(in vec3 pos, in ivec3 map_index)
-{
-	vec3 cell_size = getCellSize3D();
-	float particle_size = 0.;
-	return clamp(pos, (vec3(map_index) * cell_size)+particle_size+FLT_EPSIRON, (map_index+ivec3(1)) * cell_size-particle_size-FLT_EPSIRON);
-}
-*/
 ivec3 calcMapIndex(in MapDescriptor desc, in vec3 p)
 {
 	vec3 cell_size = vec3(desc.m_cell_size.x, WALL_HEIGHT, desc.m_cell_size.y);
@@ -119,21 +108,21 @@ void main()
 {
 	MapDescriptor desc = u_map_info.m_descriptor[0];
 
-	vec3 foward = normalize(u_target - u_eye).xyz;
+	vec3 foward = normalize(u_camera[0].u_target - u_camera[0].u_eye).xyz;
 	vec3 side = cross(vec3(0., 1., 0.), foward);
 	side = dot(side, side) <= 0.1 ? vec3(1., 0., 0.) : normalize(side);
 	vec3 up = normalize(cross(side, foward));
 
 	// イメージセンサー上の位置
-	float tan_fov_y = tan(u_fov_y / 2.);
+	float tan_fov_y = tan(u_camera[0].u_fov_y / 2.);
 
 	vec3 position_on_sensor =
-		(u_eye.xyz + foward)
-		+ side * -In.texcoord.x * tan_fov_y * u_aspect
+		(u_camera[0].u_eye.xyz + foward)
+		+ side * -In.texcoord.x * tan_fov_y * u_camera[0].u_aspect
 		+ up * In.texcoord.y * tan_fov_y;
 	// レイを飛ばす方向。
-	vec3 dir = normalize(position_on_sensor - u_eye.xyz);
-	vec3 pos = u_eye.xyz;
+	vec3 dir = normalize(position_on_sensor - u_camera[0].u_eye.xyz);
+	vec3 pos = u_camera[0].u_eye.xyz;
 
 	Ray ray = MakeRay(pos, dir);
 	vec2 area = desc.m_cell_num * desc.m_cell_size;
@@ -141,10 +130,10 @@ void main()
 	vec3 bmax = vec3(area.x, WALL_HEIGHT*5, area.y) + 0.1;
 	Hit hit = marchToAABB(ray, bmin, bmax);
 
-	gl_FragDepth = 1.;
+	gl_FragDepth = 0.;
 	if(hit.IsHit == 0)
 	{
-		FragColor = vec4(0., 0., 0., 1.);
+		FragColor = vec4(1., 0., 0., 1.);
 		return;
 	}
 
@@ -157,7 +146,7 @@ void main()
 		if(any(lessThan(map_index.xz, ivec2(0)))
 		|| any(greaterThanEqual(map_index.xz, ivec2(desc.m_cell_num))))
 		{
-			FragColor = vec4(0., 0., 0., 1.);
+			FragColor = vec4(1., 0., 0., 1.);
 			return;
 		}
 		uint map = imageLoad(t_map, map_index.xz).x;
@@ -181,7 +170,7 @@ void main()
 			}
 		}
 	}
-	vec4 p = uProjection * uView * vec4(pos, 1.);
+	vec4 p = u_camera[0].u_projection * u_camera[0].u_view * vec4(pos, 1.);
 	p /= p.w;
 	gl_FragDepth = p.z;
 

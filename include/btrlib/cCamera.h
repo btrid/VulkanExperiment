@@ -148,8 +148,8 @@ struct CameraGPU
 	void setup(const cCamera& camera)
 	{
 		const auto& cam = camera.getRenderData();
-		mProjection = glm::perspective(cam.m_fov, cam.getAspect(), cam.m_near, cam.m_far);
-		mView = glm::lookAt(cam.m_position, cam.m_target, cam.m_up);
+		u_projection = glm::perspective(cam.m_fov, cam.getAspect(), cam.m_near, cam.m_far);
+		u_view = glm::lookAt(cam.m_position, cam.m_target, cam.m_up);
 		u_eye = glm::vec4(cam.m_position, 0.f);
 		u_target = glm::vec4(cam.m_target, 0.f);
 		u_aspect = cam.getAspect();
@@ -157,8 +157,8 @@ struct CameraGPU
 		u_near = cam.m_near;
 		u_far = cam.m_far;
 	}
-	glm::mat4 mProjection;
-	glm::mat4 mView;
+	glm::mat4 u_projection;
+	glm::mat4 u_view;
 	glm::vec4 u_eye;
 	glm::vec4 u_target;
 	float u_aspect;

@@ -104,7 +104,8 @@ public:
 	};
 	enum CmdPoolType
 	{
-		CMD_POOL_TYPE_ONETIME,		//!< 1フレームに一度poolがリセットされる 
+		CMD_POOL_TYPE_ONETIME,	//!< 1フレームに一度poolがリセットされる 
+		CMD_POOL_TYPE_TEMPORARY,		//!< 数フレームに渡ってcmdが使われる。自分で管理する 
 		CMD_POOL_TYPE_COMPILED,		//!< cmdは自分で管理する
 	};
 protected:
@@ -145,15 +146,15 @@ private:
 
 	struct cThreadData
 	{
-		struct CmdPool
+		struct CmdPoolPerFamily
 		{
-			vk::UniqueCommandPool m_cmd_pool[2];
+			std::array<vk::UniqueCommandPool, sGlobal::FRAME_MAX> m_cmd_pool_onetime;
+			vk::UniqueCommandPool	m_cmd_pool_temporary;
+			vk::UniqueCommandPool	m_cmd_pool_compiled;
 		};
-		std::vector<std::array<CmdPool, sGlobal::FRAME_MAX>>	m_cmd_pool;
+		std::vector<CmdPoolPerFamily>	m_cmd_pool;
 	};
 	std::vector<cThreadData> m_thread_local;
-	std::vector<vk::CommandPool>	m_cmd_pool_tempolary;
-	std::vector<vk::CommandPool>	m_cmd_pool_system;
 	std::array<std::vector<std::unique_ptr<Deleter>>, FRAME_MAX> m_cmd_delete;
 
 	cStopWatch m_timer;
@@ -161,11 +162,6 @@ private:
 public:
 	cThreadData& getThreadLocal();
 	std::vector<cThreadData>& getThreadLocalList() { return m_thread_local; }
-	vk::CommandPool getCmdPoolSytem(uint32_t device_family_index)const { return m_cmd_pool_system[device_family_index]; }
-	vk::CommandPool getCmdPoolTempolary(uint32_t device_family_index)const
-	{
-		return m_cmd_pool_tempolary[device_family_index];
-	}
 
 	void destroyResource(std::unique_ptr<Deleter>&& deleter) {
 		// @todo thread-safe対応
@@ -193,6 +189,7 @@ struct sThreadLocal : public SingletonTLS<sThreadLocal>
 };
 
 
+vk::UniqueShaderModule loadShaderUnique(const vk::Device& device, const std::string& filename);
 vk::ShaderModule loadShader(const vk::Device& device, const std::string& filename);
 
 struct Descriptor

@@ -80,8 +80,8 @@ struct sScene : public Singleton<sScene>
 	vk::DeviceMemory m_map_damae_image_memory;
 	btr::AllocatedMemory m_map_info;
 
-	vk::RenderPass m_render_pass;
-	std::vector<vk::Framebuffer> m_framebuffer;
+	vk::UniqueRenderPass m_render_pass;
+	std::vector<vk::UniqueFramebuffer> m_framebuffer;
 	std::vector<vk::UniqueCommandBuffer> m_cmd;
 
 	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_shader_info;
@@ -126,14 +126,14 @@ struct sScene : public Singleton<sScene>
 					vk::AttachmentDescription()
 					.setFormat(loader->m_window->getSwapchain().m_surface_format.format)
 					.setSamples(vk::SampleCountFlagBits::e1)
-					.setLoadOp(vk::AttachmentLoadOp::eDontCare)
+					.setLoadOp(vk::AttachmentLoadOp::eLoad)
 					.setStoreOp(vk::AttachmentStoreOp::eStore)
 					.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
 					.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
 					vk::AttachmentDescription()
 					.setFormat(vk::Format::eD32Sfloat)
 					.setSamples(vk::SampleCountFlagBits::e1)
-					.setLoadOp(vk::AttachmentLoadOp::eDontCare)
+					.setLoadOp(vk::AttachmentLoadOp::eLoad)
 					.setStoreOp(vk::AttachmentStoreOp::eStore)
 					.setInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
 					.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
@@ -144,7 +144,7 @@ struct sScene : public Singleton<sScene>
 					.setSubpassCount(1)
 					.setPSubpasses(&subpass);
 
-				m_render_pass = loader->m_device->createRenderPass(renderpass_info);
+				m_render_pass = loader->m_device->createRenderPassUnique(renderpass_info);
 			}
 
 			m_framebuffer.resize(loader->m_window->getSwapchain().getSwapchainNum());
@@ -152,7 +152,7 @@ struct sScene : public Singleton<sScene>
 				std::array<vk::ImageView, 2> view;
 
 				vk::FramebufferCreateInfo framebuffer_info;
-				framebuffer_info.setRenderPass(m_render_pass);
+				framebuffer_info.setRenderPass(m_render_pass.get());
 				framebuffer_info.setAttachmentCount((uint32_t)view.size());
 				framebuffer_info.setPAttachments(view.data());
 				framebuffer_info.setWidth(loader->m_window->getClientSize().x);
@@ -162,7 +162,7 @@ struct sScene : public Singleton<sScene>
 				for (size_t i = 0; i < m_framebuffer.size(); i++) {
 					view[0] = loader->m_window->getSwapchain().m_backbuffer[i].m_view;
 					view[1] = loader->m_window->getSwapchain().m_depth.m_view;
-					m_framebuffer[i] = loader->m_device->createFramebuffer(framebuffer_info);
+					m_framebuffer[i] = loader->m_device->createFramebufferUnique(framebuffer_info);
 				}
 			}
 
@@ -610,7 +610,7 @@ struct sScene : public Singleton<sScene>
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
 				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR])
-				.setRenderPass(loader->m_render_pass)
+				.setRenderPass(m_render_pass.get())
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 				vk::GraphicsPipelineCreateInfo()
@@ -622,7 +622,7 @@ struct sScene : public Singleton<sScene>
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
 				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR])
-				.setRenderPass(loader->m_render_pass)
+				.setRenderPass(m_render_pass.get())
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
@@ -664,9 +664,9 @@ struct sScene : public Singleton<sScene>
 
 			{
 				vk::RenderPassBeginInfo begin_render_Info = vk::RenderPassBeginInfo()
-					.setRenderPass(m_render_pass)
+					.setRenderPass(m_render_pass.get())
 					.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(loader->m_window->getClientSize().x, loader->m_window->getClientSize().y)))
-					.setFramebuffer(m_framebuffer[i]);
+					.setFramebuffer(m_framebuffer[i].get());
 				cmd->beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
 // 				cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW_FLOOR]);

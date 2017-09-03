@@ -265,9 +265,9 @@ struct BufferMemory
 	struct Resource
 	{
 		cDevice m_device;
-		vk::Buffer m_buffer;
+		vk::UniqueBuffer m_buffer;
+		vk::UniqueDeviceMemory m_memory;
 
-		vk::DeviceMemory m_memory;
 		GPUMemoryAllocater m_free_zone;
 
 		vk::MemoryRequirements m_memory_request;
@@ -299,15 +299,15 @@ struct BufferMemory
 		vk::BufferCreateInfo buffer_info;
 		buffer_info.usage = flag;
 		buffer_info.size = size;
-		resource->m_buffer = device->createBuffer(buffer_info);
+		resource->m_buffer = device->createBufferUnique(buffer_info);
 		resource->m_buffer_info = buffer_info;
 
-		vk::MemoryRequirements memory_request = resource->m_device->getBufferMemoryRequirements(resource->m_buffer);
+		vk::MemoryRequirements memory_request = resource->m_device->getBufferMemoryRequirements(resource->m_buffer.get());
 		vk::MemoryAllocateInfo memory_alloc;
 		memory_alloc.setAllocationSize(memory_request.size);
 		memory_alloc.setMemoryTypeIndex(cGPU::Helper::getMemoryTypeIndex(device.getGPU(), memory_request, memory_type));
-		resource->m_memory = device->allocateMemory(memory_alloc);
-		device->bindBufferMemory(resource->m_buffer, resource->m_memory, 0);
+		resource->m_memory = device->allocateMemoryUnique(memory_alloc);
+		device->bindBufferMemory(resource->m_buffer.get(), resource->m_memory.get(), 0);
 
 		resource->m_free_zone.setup(size, memory_request.alignment);
 
@@ -319,7 +319,7 @@ struct BufferMemory
 		resource->m_mapped_memory = nullptr;
 		if (btr::isOn(resource->m_memory_type.propertyFlags, vk::MemoryPropertyFlagBits::eHostCoherent) )
 		{
-			resource->m_mapped_memory = device->mapMemory(resource->m_memory, 0, size);
+			resource->m_mapped_memory = device->mapMemory(resource->m_memory.get(), 0, size);
 		}
 		m_resource = std::move(resource);
 	}
@@ -373,8 +373,8 @@ struct BufferMemory
 		};
 		alloc.m_resource = std::shared_ptr<AllocatedMemory::Resource>(new AllocatedMemory::Resource, deleter);
 		alloc.m_resource->m_zone = zone;
-		alloc.m_resource->m_memory_ref = m_resource->m_memory;
-		alloc.m_buffer_info.buffer = m_resource->m_buffer;
+		alloc.m_resource->m_memory_ref = m_resource->m_memory.get();
+		alloc.m_buffer_info.buffer = m_resource->m_buffer.get();
 		alloc.m_buffer_info.offset = alloc.m_resource->m_zone.m_start;
 		alloc.m_buffer_info.range = arg.size;
 
@@ -387,7 +387,7 @@ struct BufferMemory
 	}
 	cDevice getDevice()const { return m_resource->m_device; }
 	const vk::BufferCreateInfo& getBufferCreateInfo()const { return m_resource->m_buffer_info; }
-	const vk::Buffer& getBuffer()const { return m_resource->m_buffer; }
+	vk::Buffer getBuffer()const { return m_resource->m_buffer.get(); }
 
 };
 

@@ -276,7 +276,7 @@ struct cTriangleLL
 
 			CameraGPU camera;
 			camera.setup(*cCamera::sCamera::Order().getCameraList()[0]);
-			auto pv = camera.mProjection * camera.mView;
+			auto pv = camera.u_projection * camera.u_view;
 			cmd.pushConstants<glm::mat4>(m_pipeline_layout, vk::ShaderStageFlagBits::eVertex, 0, pv);
 
 			cmd.drawIndexed(m_index_count, m_brick_info.m_total_num.w + 1, 0, 0, 0);

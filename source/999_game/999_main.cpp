@@ -172,7 +172,6 @@ int main()
 	std::shared_ptr<btr::Loader> loader = std::make_shared<btr::Loader>();
 	loader->m_window = &app.m_window;
 	loader->m_device = device;
-	loader->m_render_pass = app.m_render_pass;
 	vk::MemoryPropertyFlags host_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
 	vk::MemoryPropertyFlags device_memory = vk::MemoryPropertyFlagBits::eDeviceLocal;
 //	device_memory = host_memory; // debug
@@ -274,9 +273,9 @@ int main()
 			transform.m_local_translate = glm::vec3(0.f, 280.f, 0.f);
 		}
 
-		sBoid::Order().setup(loader);
-		sBulletSystem::Order().setup(loader);
-		sCollisionSystem::Order().setup(loader);
+// 		sBoid::Order().setup(loader);
+// 		sBulletSystem::Order().setup(loader);
+// 		sCollisionSystem::Order().setup(loader);
 		setup_cmd.end();
 		std::vector<vk::CommandBuffer> cmds = {
 			setup_cmd,
@@ -303,11 +302,13 @@ int main()
 
 		sDebug::Order().waitFence(device.getHandle(), fence_list[backbuffer_index]);
 		device->resetFences({ fence_list[backbuffer_index] });
+
+//		executer->
 		for (auto& tls : sGlobal::Order().getThreadLocalList())
 		{
 			for (auto& pool_family : tls.m_cmd_pool)
 			{
-				device->resetCommandPool(pool_family[sGlobal::Order().getCurrentFrame()].m_cmd_pool[0].get(), vk::CommandPoolResetFlagBits::eReleaseResources);
+				device->resetCommandPool(pool_family.m_cmd_pool_onetime[executer->getGPUFrame()].get(), vk::CommandPoolResetFlagBits::eReleaseResources);
 			}
 		}
 
@@ -334,21 +335,39 @@ int main()
 				sGlobal::Order().getThreadPool().enque(job);
 			}
 
-			SynchronizedPoint render_syncronized_point(1);
-			std::vector<vk::CommandBuffer> render_cmds(3);
-			render_cmds.front() = app.m_window.getSwapchain().m_cmd_present_to_render[backbuffer_index];
-			render_cmds.back() = app.m_window.getSwapchain().m_cmd_render_to_present[backbuffer_index];
+			SynchronizedPoint render_syncronized_point(3);
+			std::vector<vk::CommandBuffer> render_cmds(5);
 			//			model_pipeline.execute(render_cmd);
+			{
+				cThreadJob job;
+				job.mFinish = [&]()
+				{
+					render_cmds[1] = sCameraManager::Order().draw();
+					render_syncronized_point.arrive();
+				};
+				sGlobal::Order().getThreadPool().enque(job);
+			}
 			{
 				cThreadJob job;
 				job.mFinish =
 					[&]()
 				{
-					render_cmds[1] = sScene::Order().draw(executer);
+					render_cmds[2] = sScene::Order().draw(executer);
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);
 			}
+			{
+				cThreadJob job;
+				job.mFinish =
+					[&]()
+				{
+					render_cmds[3] = model_pipeline.draw(executer);
+					render_syncronized_point.arrive();
+				};
+				sGlobal::Order().getThreadPool().enque(job);
+			}
+			;
 			// 			sBoid::Order().execute(executer);
 //  			sBulletSystem::Order().execute(executer);
 //  			sCollisionSystem::Order().execute(executer);
@@ -357,8 +376,9 @@ int main()
 //			sScene::Order().draw(render_cmd);
 //			sBoid::Order().draw(render_cmd);
 //			model_pipeline.draw(render_cmd);
-			model_pipeline.draw();
 //			sBulletSystem::Order().draw(render_cmd);
+			render_cmds.front() = app.m_window.getSwapchain().m_cmd_present_to_render[backbuffer_index];
+			render_cmds.back() = app.m_window.getSwapchain().m_cmd_render_to_present[backbuffer_index];
 			motion_worker_syncronized_point.wait();
 			render_syncronized_point.wait();
 
@@ -375,7 +395,6 @@ int main()
 				.setPSignalSemaphores(&cmdsubmit_semaphore)
 			};
 			queue.submit(submitInfo, fence_list[backbuffer_index]);
-			queue.waitIdle();
 			vk::PresentInfoKHR present_info = vk::PresentInfoKHR()
 				.setWaitSemaphoreCount(1)
 				.setPWaitSemaphores(&cmdsubmit_semaphore)
@@ -387,6 +406,7 @@ int main()
 
 		app.m_window.update(sGlobal::Order().getThreadPool());
 		sGlobal::Order().swap();
+		sCameraManager::Order().sync();
 		printf("%6.3fs\n", time.getElapsedTimeAsSeconds());
 	}
 

@@ -13,6 +13,7 @@
 #endif
 
 #define SETPOINT_CAMERA 0
+#include <Camera.glsl>
 #include <Common.glsl>
 layout(location = 0)in vec3 inPosition;
 
@@ -24,6 +25,6 @@ layout(location=1) out vec3 Vertex;
 void main()
 {
 	vec4 pos = vec4(inPosition.xyz, 1.0);
-	gl_Position = uProjection * uView * pos;
+	gl_Position = u_camera[0].u_projection * u_camera[0].u_view * pos;
 	Vertex = inPosition.xyz;
 }

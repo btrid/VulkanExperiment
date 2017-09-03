@@ -18,7 +18,7 @@ void cModelRenderPrivate::setup(cModelPipeline& pipeline)
 			vk::DescriptorSetAllocateInfo descriptor_set_alloc_info;
 			descriptor_set_alloc_info.setDescriptorPool(pipeline.m_descriptor_pool.get());
 			descriptor_set_alloc_info.setDescriptorSetCount(1);
-			descriptor_set_alloc_info.setPSetLayouts(&pipeline.m_descriptor_set_layout[cModelPipeline::DESCRIPTOR_MODEL]);
+			descriptor_set_alloc_info.setPSetLayouts(&pipeline.m_descriptor_set_layout[cModelPipeline::DESCRIPTOR_MODEL].get());
 			m_draw_descriptor_set_per_model = std::move(device->allocateDescriptorSetsUnique(descriptor_set_alloc_info)[0]);
 
 			std::vector<vk::DescriptorBufferInfo> storages = {
@@ -41,7 +41,7 @@ void cModelRenderPrivate::setup(cModelPipeline& pipeline)
 			vk::DescriptorSetAllocateInfo allocInfo;
 			allocInfo.descriptorPool = pipeline.m_descriptor_pool.get();
 			allocInfo.descriptorSetCount = 1;
-			allocInfo.pSetLayouts = &pipeline.m_descriptor_set_layout[cModelPipeline::DESCRIPTOR_PER_MESH];
+			allocInfo.pSetLayouts = &pipeline.m_descriptor_set_layout[cModelPipeline::DESCRIPTOR_PER_MESH].get();
 			m_draw_descriptor_set_per_mesh = std::move(device->allocateDescriptorSetsUnique(allocInfo)[0]);
 
 			std::vector<vk::DescriptorImageInfo> color_image_info(cModelPipeline::DESCRIPTOR_TEXTURE_NUM, vk::DescriptorImageInfo(DrawHelper::Order().getWhiteTexture().m_sampler, DrawHelper::Order().getWhiteTexture().m_image_view, vk::ImageLayout::eShaderReadOnlyOptimal));
@@ -88,7 +88,7 @@ void cModelRenderPrivate::setup(cModelPipeline& pipeline)
 			copy.srcOffset = m_bone_buffer_transfar[i].getBufferInfo().offset;
 			cmd.copyBuffer(m_bone_buffer_transfar[i].getBufferInfo().buffer, m_bone_buffer.getBufferInfo().buffer, copy);
 
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexShader, {}, {}, m_bone_buffer.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead), {});
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, m_bone_buffer.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead), {});
 			cmd.end();
 		}
 
@@ -115,30 +115,29 @@ void cModelRenderPrivate::setup(cModelPipeline& pipeline)
 
 			cmd.begin(begin_info);
 
-			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.m_graphics_pipeline);
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelPipeline::PIPELINE_LAYOUT_RENDER], 0, m_draw_descriptor_set_per_model.get(), {});
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelPipeline::PIPELINE_LAYOUT_RENDER], 1, m_draw_descriptor_set_per_mesh.get(), {});
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelPipeline::PIPELINE_LAYOUT_RENDER], 2, pipeline.m_descriptor_set_scene, {});
-			cmd.pushConstants<glm::mat4>(pipeline.m_pipeline_layout[cModelPipeline::PIPELINE_LAYOUT_RENDER], vk::ShaderStageFlagBits::eVertex, 0, m_model_transform.calcGlobal());
+			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.m_graphics_pipeline.get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelPipeline::PIPELINE_LAYOUT_RENDER].get(), 0, m_draw_descriptor_set_per_model.get(), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelPipeline::PIPELINE_LAYOUT_RENDER].get(), 1, m_draw_descriptor_set_per_mesh.get(), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelPipeline::PIPELINE_LAYOUT_RENDER].get(), 2, pipeline.m_descriptor_set_scene.get(), {});
+			cmd.pushConstants<glm::mat4>(pipeline.m_pipeline_layout[cModelPipeline::PIPELINE_LAYOUT_RENDER].get(), vk::ShaderStageFlagBits::eVertex, 0, m_model_transform.calcGlobal());
 			cmd.bindVertexBuffers(0, { m_model_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().buffer }, { m_model_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().offset });
 			cmd.bindIndexBuffer(m_model_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().buffer, m_model_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().offset, m_model_resource->m_mesh_resource.mIndexType);
 			for (auto& m : m_model_resource->m_mesh)
 			{
-				cmd.pushConstants<uint32_t>(pipeline.m_pipeline_layout[cModelPipeline::PIPELINE_LAYOUT_RENDER], vk::ShaderStageFlagBits::eFragment, 64, m.m_material_index);
+				cmd.pushConstants<uint32_t>(pipeline.m_pipeline_layout[cModelPipeline::PIPELINE_LAYOUT_RENDER].get(), vk::ShaderStageFlagBits::eFragment, 64, m.m_material_index);
 				//			cmd.drawIndexedIndirect(m_model_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().buffer, m_model_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().offset, m_model_resource->m_mesh_resource.mIndirectCount, sizeof(cModel::Mesh));
 				cmd.drawIndexedIndirect(m_model_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().buffer, m_model_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().offset + sizeof(cModel::Mesh)*i, 1, sizeof(cModel::Mesh));
 			}
-
 			cmd.end();
 		}
 	}
 
 }
-void cModelRenderPrivate::execute(cModelPipeline& renderer, vk::CommandBuffer& cmd)
+void cModelRenderPrivate::execute(std::shared_ptr<btr::Executer>& executer, vk::CommandBuffer& cmd)
 {
-	cmd.executeCommands(m_transfer_cmd[sGlobal::Order().getGPUFrame()].get());
+	cmd.executeCommands(m_transfer_cmd[executer->getGPUFrame()].get());
 }
-void cModelRenderPrivate::draw(cModelPipeline& pipeline, vk::CommandBuffer& cmd)
+void cModelRenderPrivate::draw(std::shared_ptr<btr::Executer>& executer, vk::CommandBuffer& cmd)
 {
-	cmd.executeCommands(m_graphics_cmd[sGlobal::Order().getGPUFrame()].get());
+	cmd.executeCommands(m_graphics_cmd[executer->getGPUFrame()].get());
 }
