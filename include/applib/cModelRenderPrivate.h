@@ -24,7 +24,7 @@ struct cModelRenderPrivate
 
 	std::shared_ptr<cModel::Resource> m_model_resource;
 	std::vector<glm::mat4> m_node_buffer;
-	std::vector<btr::AllocatedMemory> m_bone_buffer_transfar;
+	std::vector<btr::AllocatedMemory> m_bone_buffer_transfer;
 	btr::AllocatedMemory m_bone_buffer;
 	MotionPlayList m_playlist;
 
@@ -48,8 +48,8 @@ struct cModelRenderPrivate
 			desc.device_memory = loader->m_storage_memory;
 			desc.staging_memory = loader->m_staging_memory;
 			desc.frame_max = sGlobal::FRAME_MAX;
-			m_bone_buffer_transfar.resize(sGlobal::FRAME_MAX);
-			for (auto& buffer : m_bone_buffer_transfar)
+			m_bone_buffer_transfer.resize(sGlobal::FRAME_MAX);
+			for (auto& buffer : m_bone_buffer_transfer)
 			{
 				btr::BufferMemory::Descriptor desc;
 				desc.size = m_model_resource->mBone.size() * sizeof(glm::mat4);
@@ -92,14 +92,14 @@ struct cModelRenderPrivate
 	void work()
 	{
 		m_playlist.execute();
-		updateNodeTransform(0, m_model_transform.calcLocal());
+		updateNodeTransform(0, m_model_transform.calcGlobal()*m_model_transform.calcLocal());
 		updateBoneTransform();
 	}
 
 	void updateBoneTransform()
 	{
 		// シェーダに送るデータを更新
-		auto* ptr = m_bone_buffer_transfar[sGlobal::Order().getCPUFrame()].getMappedPtr<glm::mat4>();
+		auto* ptr = m_bone_buffer_transfer[sGlobal::Order().getCPUFrame()].getMappedPtr<glm::mat4>();
 		for (size_t i = 0; i < m_model_resource->mNodeRoot.mNodeList.size(); i++)
 		{
 			auto* node = m_model_resource->mNodeRoot.getNodeByIndex(i);

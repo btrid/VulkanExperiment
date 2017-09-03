@@ -85,10 +85,10 @@ void cModelRenderPrivate::setup(cModelPipeline& pipeline)
 			vk::BufferCopy copy;
 			copy.dstOffset = m_bone_buffer.getBufferInfo().offset;
 			copy.size = m_bone_buffer.getBufferInfo().range;
-			copy.srcOffset = m_bone_buffer_transfar[i].getBufferInfo().offset;
-			cmd.copyBuffer(m_bone_buffer_transfar[i].getBufferInfo().buffer, m_bone_buffer.getBufferInfo().buffer, copy);
+			copy.srcOffset = m_bone_buffer_transfer[i].getBufferInfo().offset;
+			cmd.copyBuffer(m_bone_buffer_transfer[i].getBufferInfo().buffer, m_bone_buffer.getBufferInfo().buffer, copy);
 
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, m_bone_buffer.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead), {});
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexShader, {}, {}, m_bone_buffer.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead), {});
 			cmd.end();
 		}
 
@@ -107,7 +107,7 @@ void cModelRenderPrivate::setup(cModelPipeline& pipeline)
 			vk::CommandBufferBeginInfo begin_info;
 			begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse | vk::CommandBufferUsageFlagBits::eRenderPassContinue);
 			vk::CommandBufferInheritanceInfo inheritance_info;
-			//		inheritance_info.setFramebuffer()
+			inheritance_info.setFramebuffer(pipeline.m_framebuffer[i].get());
 			//		inheritance_info.setPipelineStatistics()
 			//		inheritance_info.setSubpass()
 			inheritance_info.setRenderPass(pipeline.m_render_pass.get());
@@ -124,9 +124,9 @@ void cModelRenderPrivate::setup(cModelPipeline& pipeline)
 			cmd.bindIndexBuffer(m_model_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().buffer, m_model_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().offset, m_model_resource->m_mesh_resource.mIndexType);
 			for (auto& m : m_model_resource->m_mesh)
 			{
-				cmd.pushConstants<uint32_t>(pipeline.m_pipeline_layout[cModelPipeline::PIPELINE_LAYOUT_RENDER].get(), vk::ShaderStageFlagBits::eFragment, 64, m.m_material_index);
-				//			cmd.drawIndexedIndirect(m_model_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().buffer, m_model_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().offset, m_model_resource->m_mesh_resource.mIndirectCount, sizeof(cModel::Mesh));
-				cmd.drawIndexedIndirect(m_model_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().buffer, m_model_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().offset + sizeof(cModel::Mesh)*i, 1, sizeof(cModel::Mesh));
+//				cmd.pushConstants<uint32_t>(pipeline.m_pipeline_layout[cModelPipeline::PIPELINE_LAYOUT_RENDER].get(), vk::ShaderStageFlagBits::eFragment, 64, m.m_material_index);
+				cmd.drawIndexedIndirect(m_model_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().buffer, m_model_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().offset, m_model_resource->m_mesh_resource.mIndirectCount, sizeof(cModel::Mesh));
+//				cmd.drawIndexedIndirect(m_model_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().buffer, m_model_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().offset + sizeof(cModel::Mesh)*i, 1, sizeof(cModel::Mesh));
 			}
 			cmd.end();
 		}

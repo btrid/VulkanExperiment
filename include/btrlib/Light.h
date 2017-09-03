@@ -126,7 +126,7 @@ struct Light
 
 			std::array<ComputePipeline, COMPUTE_NUM> m_pipeline_ex;
 
-			void setup(const cDevice& device, btr::BufferMemory& storage_memory, size_t light_num)
+			void setup(const cDevice& device, btr::BufferMemory& storage_memory, uint32_t light_num)
 			{
 				m_device = device;
 				m_light_num = light_num;
@@ -250,7 +250,7 @@ struct Light
 					for (size_t i = 0; i < bindings.size(); i++)
 					{
 						vk::DescriptorSetLayoutCreateInfo descriptor_layout_info = vk::DescriptorSetLayoutCreateInfo()
-							.setBindingCount(bindings[i].size())
+							.setBindingCount((uint32_t)bindings[i].size())
 							.setPBindings(bindings[i].data());
 						auto descriptor_set_layout = device->createDescriptorSetLayout(descriptor_layout_info);
 
@@ -272,7 +272,7 @@ struct Light
 							}
 						}
 						vk::DescriptorPoolCreateInfo descriptor_pool_info;
-						descriptor_pool_info.maxSets = bindings.size();
+						descriptor_pool_info.maxSets = (uint32_t)bindings.size();
 						descriptor_pool_info.poolSizeCount = descriptor_pool_size.size();
 						descriptor_pool_info.pPoolSizes = descriptor_pool_size.data();
 
@@ -302,7 +302,7 @@ struct Light
 				}
 				vk::DescriptorSetAllocateInfo descriptor_set_alloc_info;
 				descriptor_set_alloc_info.setDescriptorPool(m_descriptor_pool);
-				descriptor_set_alloc_info.setDescriptorSetCount(m_descriptor_set_layout.size());
+				descriptor_set_alloc_info.setDescriptorSetCount((uint32_t)m_descriptor_set_layout.size());
 				descriptor_set_alloc_info.setPSetLayouts(m_descriptor_set_layout.data());
 				m_compute_descriptor_set = device->allocateDescriptorSets(descriptor_set_alloc_info);
 

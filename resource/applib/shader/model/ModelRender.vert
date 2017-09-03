@@ -69,8 +69,8 @@ void main()
 {
 	vec4 pos = vec4((inPosition).xyz, 1.0);
 	mat4 skinningMat = skinning();
-	pos = constant.m_world * skinningMat * pos;
-	gl_Position = u_camera.u_projection * u_camera.u_view * vec4(pos.xyz, 1.0);
+	pos = /*constant.m_world **/ skinningMat * pos;
+	gl_Position = u_camera[0].u_projection * u_camera[0].u_view * vec4(pos.xyz, 1.0);
 
 	VSOut.Position = pos.xyz;
 	VSOut.Normal = /*mat3(skinningMat) **/ /*mat3(transpose(inverse(uView))) **/ inNormal.xyz;

@@ -117,7 +117,7 @@ void cWindow::Swapchain::setup(const CreateInfo& descriptor, vk::SurfaceKHR surf
 		depth_info.extent.depth = 1;
 		depth_info.imageType = vk::ImageType::e2D;
 		depth_info.initialLayout = vk::ImageLayout::eUndefined;
-		depth_info.queueFamilyIndexCount = m_use_device.getQueueFamilyIndex().size();
+		depth_info.queueFamilyIndexCount = (uint32_t)m_use_device.getQueueFamilyIndex().size();
 		depth_info.pQueueFamilyIndices = m_use_device.getQueueFamilyIndex().data();
 		m_depth.m_image = m_use_device->createImage(depth_info);
 		m_depth.m_size.setWidth(depth_info.extent.width);

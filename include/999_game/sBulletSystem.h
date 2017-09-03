@@ -189,7 +189,7 @@ public:
 
 		void draw(vk::CommandBuffer cmd)
 		{
-			uint dst_offset = sGlobal::Order().getGPUIndex() == 1 ? (m_bullet.getBufferInfo().range / sizeof(BulletData) / 2) : 0;
+			auto dst_offset = sGlobal::Order().getGPUIndex() == 1 ? (m_bullet.getBufferInfo().range / sizeof(BulletData) / 2) : 0;
 			cmd.pushConstants<uint>(m_pipeline_layout[PIPELINE_LAYOUT_BULLET_DRAW], vk::ShaderStageFlagBits::eVertex, 0, dst_offset);
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_BULLET_DRAW], 0, m_descriptor_set[DESCRIPTOR_SET_UPDATE], {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_BULLET_DRAW], 1, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_CAMERA), {});

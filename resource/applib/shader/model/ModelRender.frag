@@ -50,7 +50,7 @@ vec3 getColor()
 	vec3 diffuse = LightDiffuse * (m.DiffuseTex != 0? texture(sampler2D(m.DiffuseTex), FSIn.Texcoord.xy).xyz : m.Diffuse.xyz) * (sDotN + 0.5);
 	return ambient + diffuse + spec;
 */
-	vec3 diffuse = texture(tDiffuse[constant.material_index], FSIn.Texcoord.xy).xyz;
+	vec3 diffuse = texture(tDiffuse[0], FSIn.Texcoord.xy).xyz;
 	return diffuse;
 }
 

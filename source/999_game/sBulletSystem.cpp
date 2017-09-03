@@ -155,7 +155,7 @@ void sBulletSystem::Private::setup(std::shared_ptr<btr::Loader>& loader)
 			{
 				vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-				.setDescriptorCount(uniforms.size())
+				.setDescriptorCount((uint32_t)uniforms.size())
 				.setPBufferInfo(uniforms.data())
 				.setDstBinding(0)
 				.setDstSet(m_descriptor_set[DESCRIPTOR_SET_UPDATE]),
@@ -241,7 +241,7 @@ void sBulletSystem::Private::setup(std::shared_ptr<btr::Loader>& loader)
 					| vk::ColorComponentFlagBits::eA)
 			};
 			vk::PipelineColorBlendStateCreateInfo blend_info;
-			blend_info.setAttachmentCount(blend_state.size());
+			blend_info.setAttachmentCount((uint32_t)blend_state.size());
 			blend_info.setPAttachments(blend_state.data());
 
 			vk::PipelineVertexInputStateCreateInfo vertex_input_info;
@@ -249,7 +249,7 @@ void sBulletSystem::Private::setup(std::shared_ptr<btr::Loader>& loader)
 			std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =
 			{
 				vk::GraphicsPipelineCreateInfo()
-				.setStageCount(shader_info.size())
+				.setStageCount((uint32_t)shader_info.size())
 				.setPStages(shader_info.data())
 				.setPVertexInputState(&vertex_input_info)
 				.setPInputAssemblyState(&assembly_info[0])

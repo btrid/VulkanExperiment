@@ -130,10 +130,10 @@ void main()
 	vec3 bmax = vec3(area.x, WALL_HEIGHT*5, area.y) + 0.1;
 	Hit hit = marchToAABB(ray, bmin, bmax);
 
-	gl_FragDepth = 0.;
 	if(hit.IsHit == 0)
 	{
-		FragColor = vec4(1., 0., 0., 1.);
+		discard;
+		FragColor = vec4(0., 0., 0., 1.);
 		return;
 	}
 
@@ -146,6 +146,7 @@ void main()
 		if(any(lessThan(map_index.xz, ivec2(0)))
 		|| any(greaterThanEqual(map_index.xz, ivec2(desc.m_cell_num))))
 		{
+			discard;
 			FragColor = vec4(1., 0., 0., 1.);
 			return;
 		}
