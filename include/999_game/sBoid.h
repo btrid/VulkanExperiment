@@ -12,7 +12,6 @@ class sBoid : public Singleton<sBoid>
 	struct DoubleBuffer
 	{
 		btr::AllocatedMemory m_buffer;
-//		CircleIndex<uint32_t, 2> m_index;
 
 		std::array<vk::DescriptorBufferInfo, 2> m_buffer_info;
 		void setup(const btr::AllocatedMemory& buffer)
@@ -119,6 +118,13 @@ public:
 		DESCRIPTOR_SET_SOLDIER_UPDATE,
 		DESCRIPTOR_SET_NUM,
 	};
+
+	struct EmitData
+	{
+		bool m_is_emit;
+		uint32_t m_emit_num;
+		btr::AllocatedMemory m_buffer;
+	};
 private:
 	BoidInfo m_boid_info;
 	btr::AllocatedMemory m_boid_info_gpu;
@@ -126,34 +132,39 @@ private:
 	DoubleBuffer m_brain_gpu;
 	DoubleBuffer m_soldier_gpu;
 	btr::AllocatedMemory m_soldier_emit_gpu;
+	std::vector<EmitData> m_emit_transfer;
 	btr::AllocatedMemory m_soldier_draw_indiret_gpu;
 	DoubleBuffer m_soldier_LL_head_gpu;
 
+	vk::UniqueRenderPass m_render_pass;
+	std::vector<vk::UniqueFramebuffer> m_framebuffer;
 
-	std::array<vk::Pipeline, PIPELINE_NUM> m_pipeline;
-	std::array<vk::PipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
+	std::array<vk::UniquePipeline, PIPELINE_NUM> m_pipeline;
+	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
+	std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_module;
+	std::array<vk::UniqueDescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
+	std::array<vk::UniqueDescriptorSet, DESCRIPTOR_SET_NUM> m_descriptor_set;
+
 	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_shader_info;
-	std::array<vk::DescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
-	std::array<vk::DescriptorSet, DESCRIPTOR_SET_NUM> m_descriptor_set;
 
+	std::vector<vk::UniqueCommandBuffer> m_update_cmd;
+	std::vector<vk::UniqueCommandBuffer> m_emit_cpu_cmd;
+	std::vector<vk::UniqueCommandBuffer> m_draw_cmd;
 
-	std::vector<vk::Pipeline> m_graphics_pipeline;
-
-
-	vk::Image m_astar_image;
-	vk::ImageView m_astar_image_view;
-	vk::DeviceMemory m_astar_image_memory;
+	vk::UniqueImage m_astar_image;
+	vk::UniqueImageView m_astar_image_view;
+	vk::UniqueDeviceMemory m_astar_image_memory;
 
 	glm::vec3 cell_size;
 
 public:
 	void setup(std::shared_ptr<btr::Loader>& loader);
-	void execute(std::shared_ptr<btr::Executer>& executer);
-	void draw(vk::CommandBuffer cmd);
+	vk::CommandBuffer execute(std::shared_ptr<btr::Executer>& executer);
+	vk::CommandBuffer draw(std::shared_ptr<btr::Executer>& executer);
 
-	vk::PipelineLayout getPipelineLayout(PipelineLayout layout)const { return m_pipeline_layout[layout]; }
-	vk::DescriptorSetLayout getDescriptorSetLayout(DescriptorSetLayout desctiptor)const { return m_descriptor_set_layout[desctiptor]; }
-	vk::DescriptorSet getDescriptorSet(DescriptorSet i)const { return m_descriptor_set[i]; }
+	vk::PipelineLayout getPipelineLayout(PipelineLayout layout)const { return m_pipeline_layout[layout].get(); }
+	vk::DescriptorSetLayout getDescriptorSetLayout(DescriptorSetLayout desctiptor)const { return m_descriptor_set_layout[desctiptor].get(); }
+	vk::DescriptorSet getDescriptorSet(DescriptorSet i)const { return m_descriptor_set[i].get(); }
 	btr::AllocatedMemory& getSoldier() { return m_soldier_gpu.m_buffer; }
 	btr::AllocatedMemory& getLL() { return m_soldier_LL_head_gpu.m_buffer; }
 };

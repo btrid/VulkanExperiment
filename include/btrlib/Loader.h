@@ -35,7 +35,7 @@ struct Executer
 	cThreadPool* m_thread_pool;
 	cWindow* m_window;
 
-	uint32_t getCPUFrame()const { return (m_window->getSwapchain().m_backbuffer_index+1)% m_window->getSwapchain().getSwapchainNum(); }
+	uint32_t getCPUFrame()const { return (m_window->getSwapchain().m_backbuffer_index+1)% m_window->getSwapchain().getBackbufferNum(); }
 	uint32_t getGPUFrame()const { return m_window->getSwapchain().m_backbuffer_index; }
 };
 

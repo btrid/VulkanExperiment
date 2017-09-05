@@ -59,7 +59,7 @@ void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 		m_render_pass = loader->m_device->createRenderPassUnique(renderpass_info);
 	}
 
-	m_framebuffer.resize(loader->m_window->getSwapchain().getSwapchainNum());
+	m_framebuffer.resize(loader->m_window->getSwapchain().getBackbufferNum());
 	{
 		std::array<vk::ImageView, 2> view;
 
@@ -348,17 +348,7 @@ vk::CommandBuffer cModelPipeline::draw(std::shared_ptr<btr::Executer>& executer)
 {
 	auto& gpu = sGlobal::Order().getGPU(0);
 	auto& device = gpu.getDevice();
-//	auto cmd = sThreadLocal::Order().getCmdOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
-
-	vk::CommandBufferAllocateInfo cmd_info;
-	cmd_info.commandBufferCount = 1;
-	cmd_info.commandPool = sThreadLocal::Order().getCmdPool(sGlobal::CMD_POOL_TYPE_ONETIME, 0);
-	cmd_info.level = vk::CommandBufferLevel::ePrimary;
-	auto cmd = sGlobal::Order().getGPU(0).getDevice()->allocateCommandBuffers(cmd_info)[0];
-
-	vk::CommandBufferBeginInfo begin_info;
-	begin_info.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit | vk::CommandBufferUsageFlagBits::eSimultaneousUse);
-	cmd.begin(begin_info);
+	auto cmd = sThreadLocal::Order().getCmdOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
 
 	// draw
 	for (auto& render : m_model)

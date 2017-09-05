@@ -91,7 +91,6 @@ public:
 	~cModelRender();
 	void setup(std::shared_ptr<btr::Loader>& loader, std::shared_ptr<cModel::Resource> resource);
 	void work();
-	void draw(vk::CommandBuffer cmd);
 
 	ModelTransform& getModelTransform();
 	MotionPlayList& getMotionList();

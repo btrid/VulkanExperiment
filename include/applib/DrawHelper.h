@@ -133,7 +133,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 			m_render_pass = loader->m_device->createRenderPass(renderpass_info);
 
 			// フレームバッファ
-			m_framebuffer.resize(loader->m_window->getSwapchain().getSwapchainNum());
+			m_framebuffer.resize(loader->m_window->getSwapchain().getBackbufferNum());
 			{
 				std::vector<vk::ImageView> view(2);
 

@@ -1,0 +1,196 @@
+#version 450
+
+//#pragma optionNV (unroll none)
+#pragma optionNV (inline all)
+//#pragma optionNV(fastmath on)
+//#pragma optionNV(strict on)
+
+#extension GL_GOOGLE_cpp_style_line_directive : require
+
+#include <ConvertDimension.glsl>
+
+#include </Common.glsl>
+
+#define SETPOINT_BOID 0
+#include </Boid.glsl>
+
+#define SETPOINT_MAP 1
+#include </Map.glsl>
+layout (local_size_x = 1024, local_size_y = 1) in;
+
+
+layout(push_constant) uniform UpdateConstantBlock
+{
+	float m_deltatime;
+	uint m_src_offset;
+	uint m_dst_offset;
+	uint m_double_buffer_dst_index;
+} constant;
+
+void main()
+{
+	uint index = gl_GlobalInvocationID.x;
+	if(index >= u_boid_info.m_soldier_max){
+		return;
+	}
+
+	b_soldier[index].m_life -= constant.m_deltatime;
+	if(b_soldier[index].m_life <= 0.){
+		return;
+	}
+	MapDescriptor desc = u_map_info.m_descriptor[0];
+
+	b_soldier[index].m_map_index
+	vec3 soldier_pos = b_soldier[index].m_pos.xyz;
+	uint old_map_index = calcMapIndex1D(b_soldier[index].m_map_index);
+	SoldierInfo info = u_soldier_info[b_soldier[index].m_soldier_type];
+
+	{	
+		march(soldier_pos.xz, soldier.m_map_index, soldier.m_inertia.xz * constant.m_deltatime);	
+		soldier.m_inertia *= pow(0.92, 1. + constant.m_deltatime);
+	}
+
+	vec3 next_dir = soldier.m_vel.xyz;
+	float vel = soldier.m_vel.w;
+	{
+		float NEAR_DIST = 0.4;
+		float particle_size = 0.;
+
+		// 移動先
+		vec2 astar_target = soldier.m_astar_target;
+		if(distance(soldier.m_pos.xz, astar_target) <= 1.5)
+		{
+			// 目的地に血数いたので次のターゲットを決める
+			ivec2 astar_index = ivec2(soldier.m_map_index / u_map_info.m_subcell);
+			uint next_distance = imageLoad(t_astar, ivec3(astar_index + ivec2(-1, 0), soldier.m_brain_index)).x;
+			ivec2 next = ivec2(-1, 0);
+		
+			uint n = imageLoad(t_astar, ivec3(astar_index + ivec2(1, 0),  soldier.m_brain_index)).x;
+			if(n < next_distance )
+			{
+				next_distance = n;
+				next = ivec2(1, 0);
+			}
+			n = imageLoad(t_astar, ivec3(astar_index + ivec2(0, -1),  soldier.m_brain_index)).x;
+			if(n < next_distance )
+			{
+				next_distance = n;
+				next = ivec2(0,-1);
+			}
+			n = imageLoad(t_astar, ivec3(astar_index + ivec2(0, 1),  soldier.m_brain_index)).x;
+			if(n < next_distance )
+			{
+				next_distance = n;
+				next = ivec2(0,1);
+			}
+			ivec2 map_next = ivec2(soldier.m_map_index+ next * ivec2(u_map_info.m_subcell));
+			vec2 offset = desc.m_cell_size * ((rand(soldier.m_pos.xz)-0.5)*0.7);
+			astar_target = vec2(map_next.x+0.5, map_next.y+0.5) * desc.m_cell_size + vec2(0.) + offset;
+			soldier.m_astar_target = astar_target;
+		}
+		vec2 _astar_dir = normalize(astar_target - soldier.m_pos.xz);
+		vec3 astar_dir = vec3(_astar_dir.x, 0., _astar_dir.y);
+
+		// 群れで行動する
+		SoldierData nearest;
+		float nearest_dist = 99999.;
+		SoldierData nearest_astar;
+		float nearest_astar_dist = 99999.;
+		uint count = 0;
+		vec3 group_center = vec3(0.);
+		vec3 group_dir = vec3(0.);
+		float group_vel = 0.;
+		for(uint i = b_soldier_head[old_map_index]; i != 0xFFFFFFFF; )
+		{
+			if(i == index)
+			{
+				// 自分はスキップ
+				i = soldier.m_ll_next;
+				continue;
+			}
+			SoldierData test = b_soldier[constant.m_src_offset + i];
+			i = test.m_ll_next;
+
+			group_center += test.m_pos.xyz;
+			group_dir += test.m_vel.xyz;
+			group_vel += test.m_vel.w;
+			count++;
+
+			float d = distance(test.m_pos.xyz, soldier.m_pos.xyz);
+			if(d < nearest_dist && nearest_dist >= 0.00001){
+				nearest_dist = d;
+				nearest = test;
+			}
+			float dd = distance(test.m_pos.xz, astar_target);
+			if(dd < nearest_astar_dist){
+				nearest_astar_dist = dd;
+				nearest_astar = test;
+			}
+			
+		}
+
+		{
+			group_center.xz += astar_target;
+			group_dir += astar_dir;
+			group_vel += info.m_move_speed*0.3;
+			count++;			
+		}
+
+		group_vel /= count;
+
+		if(count > 1 && nearest_dist < NEAR_DIST)
+		{
+			// 一番近い相手から離れる
+			vec3 target = nearest.m_pos.xyz;
+			vec3 target_dir = nearest.m_vel.xyz;
+			vec3 rotate_axis = cross(target_dir, soldier.m_vel.xyz);
+			if(dot(rotate_axis, rotate_axis) >= 0.0001)
+			{
+				rotate_axis = normalize(rotate_axis);
+				float angle = info.m_turn_speed * constant.m_deltatime;// * turn_power;
+				quat rot = angleAxis(angle, rotate_axis);
+				next_dir = normalize(rotateQuatVec3(rot, soldier.m_vel.xyz));
+
+				// 減速したり加速したり
+				bool is_front = dot(next_dir, target_dir) >= 0.;
+				vel = clamp(vel + (is_front ? -1. : -0.3) * info.m_move_speed*constant.m_deltatime, info.m_move_speed*0.4, info.m_move_speed*1.2);
+			}
+		}
+		else if(dot(astar_dir, soldier.m_vel.xyz) <= 0.93)
+		{
+			// 目的地に向かって方向転換
+			vec3 rotate_axis = cross(soldier.m_vel.xyz, astar_dir);
+			if(dot(rotate_axis, rotate_axis) >= 0.0001)
+			{
+				rotate_axis = normalize(rotate_axis);
+				float astar_angle = calcAngle(astar_dir, soldier.m_vel.xyz);
+				astar_angle = min(astar_angle, info.m_turn_speed); 
+				vec4 rot = angleAxis(astar_angle * constant.m_deltatime, rotate_axis);
+				next_dir = normalize(rotateQuatVec3(rot, soldier.m_vel.xyz));
+
+				// 方向転換の時は減速する
+				vel = clamp(vel* pow(0.99, 1.+constant.m_deltatime), info.m_move_speed * 0.3, info.m_move_speed*0.7);
+
+			}
+		}
+		else
+		{
+			vel = clamp(mix(vel, group_vel, 0.2), info.m_move_speed * 0.1, info.m_move_speed*0.7);
+		}
+
+	}	
+
+	soldier.m_vel.xyz = next_dir;
+	soldier.m_vel.w = vel;
+
+	march(soldier.m_pos.xz, soldier.m_map_index, soldier.m_vel.xz*soldier.m_vel.w*constant.m_deltatime);
+
+	uint dst_index = atomicAdd(b_draw_cmd[0].vertexCount, 1);
+
+	uint offset = desc.m_cell_num.x*desc.m_cell_num.y*(constant.m_double_buffer_dst_index);
+	uint map_index_1D = calcMapIndex1D(soldier.m_map_index) + offset;
+	uint old = atomicExchange(b_soldier_head[map_index_1D], dst_index);
+	soldier.m_ll_next = old;
+
+	b_soldier[constant.m_dst_offset + dst_index] = soldier;
+}

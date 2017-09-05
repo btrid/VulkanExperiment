@@ -147,7 +147,7 @@ struct sScene : public Singleton<sScene>
 				m_render_pass = loader->m_device->createRenderPassUnique(renderpass_info);
 			}
 
-			m_framebuffer.resize(loader->m_window->getSwapchain().getSwapchainNum());
+			m_framebuffer.resize(loader->m_window->getSwapchain().getBackbufferNum());
 			{
 				std::array<vk::ImageView, 2> view;
 

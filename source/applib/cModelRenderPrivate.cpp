@@ -108,8 +108,6 @@ void cModelRenderPrivate::setup(cModelPipeline& pipeline)
 			begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse | vk::CommandBufferUsageFlagBits::eRenderPassContinue);
 			vk::CommandBufferInheritanceInfo inheritance_info;
 			inheritance_info.setFramebuffer(pipeline.m_framebuffer[i].get());
-			//		inheritance_info.setPipelineStatistics()
-			//		inheritance_info.setSubpass()
 			inheritance_info.setRenderPass(pipeline.m_render_pass.get());
 			begin_info.pInheritanceInfo = &inheritance_info;
 

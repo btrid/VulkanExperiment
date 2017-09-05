@@ -89,7 +89,7 @@ int main()
 		cmd_pool = device->createCommandPool(poolInfo);
 		setup_cmd_pool = device->createCommandPool(poolInfo);
 	}
-	std::vector<vk::ImageView> backbuffer_view(window.getSwapchain().getSwapchainNum());
+	std::vector<vk::ImageView> backbuffer_view(window.getSwapchain().getBackbufferNum());
 	vk::CommandBufferAllocateInfo setup_cmd_info;
 	setup_cmd_info.setCommandPool(setup_cmd_pool);
 	setup_cmd_info.setLevel(vk::CommandBufferLevel::ePrimary);
@@ -99,7 +99,7 @@ int main()
 	cmd_begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
 	setup_cmd.begin(cmd_begin_info);
 	{
-		for (uint32_t i = 0; i < window.getSwapchain().getSwapchainNum(); i++)
+		for (uint32_t i = 0; i < window.getSwapchain().getBackbufferNum(); i++)
 		{
 			auto subresourceRange = vk::ImageSubresourceRange()
 				.setAspectMask(vk::ImageAspectFlagBits::eColor)

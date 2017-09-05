@@ -273,7 +273,7 @@ int main()
 			transform.m_local_translate = glm::vec3(0.f, 280.f, 0.f);
 		}
 
-// 		sBoid::Order().setup(loader);
+ 		sBoid::Order().setup(loader);
 // 		sBulletSystem::Order().setup(loader);
 // 		sCollisionSystem::Order().setup(loader);
 		setup_cmd.end();
@@ -335,8 +335,8 @@ int main()
 				sGlobal::Order().getThreadPool().enque(job);
 			}
 
-			SynchronizedPoint render_syncronized_point(3);
-			std::vector<vk::CommandBuffer> render_cmds(5);
+			SynchronizedPoint render_syncronized_point(4);
+			std::vector<vk::CommandBuffer> render_cmds(7);
 			//			model_pipeline.execute(render_cmd);
 			{
 				cThreadJob job;
@@ -367,8 +367,18 @@ int main()
 				};
 				sGlobal::Order().getThreadPool().enque(job);
 			}
-			;
-			// 			sBoid::Order().execute(executer);
+			{
+				cThreadJob job;
+				job.mFinish =
+					[&]()
+				{
+					render_cmds[4] = sBoid::Order().execute(executer);
+					render_cmds[5] = sBoid::Order().draw(executer);
+					render_syncronized_point.arrive();
+				};
+				sGlobal::Order().getThreadPool().enque(job);
+			}
+ 			;
 //  			sBulletSystem::Order().execute(executer);
 //  			sCollisionSystem::Order().execute(executer);
 
