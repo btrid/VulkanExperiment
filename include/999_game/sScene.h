@@ -521,7 +521,7 @@ struct sScene : public Singleton<sScene>
 				.setStage(m_shader_info[SHADER_COMPUTE_MAP_UPDATE])
 				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR]),
 			};
-			auto pipelines = loader->m_device->createComputePipelines(loader->m_cache, compute_pipeline_info);
+			auto pipelines = loader->m_device->createComputePipelines(loader->m_cache.get(), compute_pipeline_info);
 			m_pipeline[PIPELINE_COMPUTE_MAP] = pipelines[0];
 
 		}
@@ -626,7 +626,7 @@ struct sScene : public Singleton<sScene>
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			auto pipelines = loader->m_device->createGraphicsPipelines(loader->m_cache, graphics_pipeline_info);
+			auto pipelines = loader->m_device->createGraphicsPipelines(loader->m_cache.get(), graphics_pipeline_info);
 			std::copy(pipelines.begin(), pipelines.end(), m_pipeline.begin());
 
 		}

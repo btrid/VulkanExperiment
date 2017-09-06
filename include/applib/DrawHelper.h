@@ -285,17 +285,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 		size.setWidth(640);
 		size.setHeight(480);
 		size.setDepth(1);
-		// pipeline
-		// 		{
-		// 			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
-		// 			{
-		// 				vk::ComputePipelineCreateInfo()
-		// 				.setStage(m_shader_info[SHADER_COMPUTE_MAP_UPDATE])
-		// 				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR]),
-		// 			};
-		// 			auto pipelines = loader->m_device->createComputePipelines(loader->m_cache, compute_pipeline_info);
-		// 			m_pipeline[PIPELINE_COMPUTE_MAP] = pipelines[0];
-		// 		}
+
 		{
 			// assembly
 			vk::PipelineInputAssemblyStateCreateInfo assembly_info[] =
@@ -381,7 +371,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			auto pipelines = loader->m_device->createGraphicsPipelines(loader->m_cache, graphics_pipeline_info);
+			auto pipelines = loader->m_device->createGraphicsPipelines(loader->m_cache.get(), graphics_pipeline_info);
 			m_pipeline[PIPELINE_DRAW_PRIMITIVE] = pipelines[0];
 
 		}

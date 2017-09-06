@@ -483,7 +483,7 @@ void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 		.setStage(m_shader_info[SHADER_COMPUTE_EMIT_SOLDIER])
 		.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_EMIT].get()),
 	};
-	auto compute_pipeline = loader->m_device->createComputePipelinesUnique(loader->m_cache, compute_pipeline_info);
+	auto compute_pipeline = loader->m_device->createComputePipelinesUnique(loader->m_cache.get(), compute_pipeline_info);
 	m_pipeline[PIPELINE_COMPUTE_SOLDIER_UPDATE] = std::move(compute_pipeline[0]);
 	m_pipeline[PIPELINE_COMPUTE_SOLDIER_EMIT] = std::move(compute_pipeline[1]);
 
@@ -560,7 +560,7 @@ void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 			.setPDepthStencilState(&depth_stencil_info)
 			.setPColorBlendState(&blend_info),
 		};
-		auto graphics_pipeline = loader->m_device->createGraphicsPipelinesUnique(loader->m_cache, graphics_pipeline_info);
+		auto graphics_pipeline = loader->m_device->createGraphicsPipelinesUnique(loader->m_cache.get(), graphics_pipeline_info);
 		m_pipeline[PIPELINE_GRAPHICS_SOLDIER_DRAW] = std::move(graphics_pipeline[0]);
 	}
 }

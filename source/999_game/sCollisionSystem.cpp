@@ -98,7 +98,7 @@ void sCollisionSystem::setup(std::shared_ptr<btr::Loader>& loader)
 			.setStage(m_shader_info[SHADER_COMPUTE_COLLISION])
 			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_COLLISION]),
 		};
-		auto compute_pipeline = loader->m_device->createComputePipelines(loader->m_cache, compute_pipeline_info);
+		auto compute_pipeline = loader->m_device->createComputePipelines(loader->m_cache.get(), compute_pipeline_info);
 		m_pipeline[PIPELINE_LAYOUT_COLLISION] = compute_pipeline[0];
 
 	}

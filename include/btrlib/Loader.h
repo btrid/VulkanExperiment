@@ -18,7 +18,7 @@ struct Loader
 	btr::BufferMemory m_staging_memory;
 
 	vk::UniqueDescriptorPool m_descriptor_pool;
-	vk::PipelineCache m_cache;
+	vk::UniquePipelineCache m_cache;
 
 	vk::CommandBuffer m_cmd;
 	cWindow* m_window;

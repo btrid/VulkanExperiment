@@ -170,7 +170,7 @@ int main()
 		loader->m_descriptor_pool = device->createDescriptorPoolUnique(pool_info);
 
 		vk::PipelineCacheCreateInfo cacheInfo = vk::PipelineCacheCreateInfo();
-		loader->m_cache = device->createPipelineCache(cacheInfo);
+		loader->m_cache.get() = device->createPipelineCache(cacheInfo);
 
 	}
 

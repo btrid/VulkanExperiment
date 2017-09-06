@@ -243,7 +243,7 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Loader>& loader)
 			.setStage(m_shader_info[SHADER_GENERATE_TRANSFAR_CPU])
 			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE]),
 		};
-		auto pipelines = loader->m_device->createComputePipelines(loader->m_cache, compute_pipeline_info);
+		auto pipelines = loader->m_device->createComputePipelines(loader->m_cache.get(), compute_pipeline_info);
 		m_pipeline[PIPELINE_UPDATE] = pipelines[0];
 		m_pipeline[PIPELINE_GENERATE] = pipelines[1];
 		m_pipeline[PIPELINE_CMD_TRANSFAR] = pipelines[2];
@@ -323,7 +323,7 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Loader>& loader)
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			auto pipelines = loader->m_device->createGraphicsPipelines(loader->m_cache, graphics_pipeline_info);
+			auto pipelines = loader->m_device->createGraphicsPipelines(loader->m_cache.get(), graphics_pipeline_info);
 			m_pipeline[PIPELINE_DRAW] = pipelines[0];
 		}
 	}
