@@ -167,10 +167,13 @@ void sBulletSystem::Private::setup(std::shared_ptr<btr::Loader>& loader)
 			m_descriptor_set_layout[i] = loader->m_device->createDescriptorSetLayoutUnique(descriptor_set_layout_info);
 		}
 
+		vk::DescriptorSetLayout layouts[] = {
+			m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_UPDATE].get(),
+		};
 		vk::DescriptorSetAllocateInfo alloc_info;
 		alloc_info.descriptorPool = loader->m_descriptor_pool.get();
-		alloc_info.descriptorSetCount = 1;
-		alloc_info.pSetLayouts = &m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_UPDATE].get();
+		alloc_info.descriptorSetCount = array_length(layouts);
+		alloc_info.pSetLayouts = layouts;
 		auto descriptor_set = loader->m_device->allocateDescriptorSetsUnique(alloc_info);
 		std::copy(std::make_move_iterator(descriptor_set.begin()), std::make_move_iterator(descriptor_set.end()), m_descriptor_set.begin());
 	}

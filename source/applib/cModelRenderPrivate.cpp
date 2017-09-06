@@ -15,10 +15,15 @@ void cModelRenderPrivate::setup(cModelPipeline& pipeline)
 		auto& device = gpu.getDevice();
 
 		{
+			vk::DescriptorSetLayout layouts[] = 
+			{
+				pipeline.m_descriptor_set_layout[cModelPipeline::DESCRIPTOR_MODEL].get() 
+			};
+
 			vk::DescriptorSetAllocateInfo descriptor_set_alloc_info;
 			descriptor_set_alloc_info.setDescriptorPool(pipeline.m_descriptor_pool.get());
-			descriptor_set_alloc_info.setDescriptorSetCount(1);
-			descriptor_set_alloc_info.setPSetLayouts(&pipeline.m_descriptor_set_layout[cModelPipeline::DESCRIPTOR_MODEL].get());
+			descriptor_set_alloc_info.setDescriptorSetCount(array_length(layouts));
+			descriptor_set_alloc_info.setPSetLayouts(layouts);
 			m_draw_descriptor_set_per_model = std::move(device->allocateDescriptorSetsUnique(descriptor_set_alloc_info)[0]);
 
 			std::vector<vk::DescriptorBufferInfo> storages = {
@@ -38,10 +43,13 @@ void cModelRenderPrivate::setup(cModelPipeline& pipeline)
 		}
 		{
 			// mesh‚²‚Æ‚ÌXV
+			vk::DescriptorSetLayout layouts[] = {
+				pipeline.m_descriptor_set_layout[cModelPipeline::DESCRIPTOR_PER_MESH].get(),
+			};
 			vk::DescriptorSetAllocateInfo allocInfo;
 			allocInfo.descriptorPool = pipeline.m_descriptor_pool.get();
-			allocInfo.descriptorSetCount = 1;
-			allocInfo.pSetLayouts = &pipeline.m_descriptor_set_layout[cModelPipeline::DESCRIPTOR_PER_MESH].get();
+			allocInfo.descriptorSetCount = array_length(layouts);
+			allocInfo.pSetLayouts = layouts;
 			m_draw_descriptor_set_per_mesh = std::move(device->allocateDescriptorSetsUnique(allocInfo)[0]);
 
 			std::vector<vk::DescriptorImageInfo> color_image_info(cModelPipeline::DESCRIPTOR_TEXTURE_NUM, vk::DescriptorImageInfo(DrawHelper::Order().getWhiteTexture().m_sampler, DrawHelper::Order().getWhiteTexture().m_image_view, vk::ImageLayout::eShaderReadOnlyOptimal));
