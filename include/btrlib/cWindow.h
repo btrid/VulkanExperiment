@@ -72,6 +72,8 @@ private:
 	Swapchain m_swapchain;
 	CreateInfo m_descriptor;
 
+	std::vector<vk::UniqueFence> m_fence_list;
+
 	static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 		switch (message)
@@ -144,6 +146,14 @@ public:
 		m_surface = sGlobal::Order().getVKInstance().createWin32SurfaceKHR(surfaceInfo);
 
 		m_swapchain.setup(descriptor, m_surface);
+
+		vk::FenceCreateInfo fence_info;
+		fence_info.setFlags(vk::FenceCreateFlagBits::eSignaled);
+		m_fence_list.reserve(m_swapchain.m_backbuffer.size());
+		for (size_t i = 0; i < m_swapchain.m_backbuffer.size(); i++)
+		{
+			m_fence_list.emplace_back(descriptor.gpu.getDevice()->createFenceUnique(fence_info));
+		}
 	}
 
 	void update(cThreadPool& pool)
@@ -301,6 +311,8 @@ public:
 	Swapchain& getSwapchain() { return m_swapchain; }
 	vk::SurfaceKHR getSurface()const { return m_surface; }
 	const cInput& getInput()const { return m_input; }
+	
+	vk::Fence getFence(uint32_t index) { return m_fence_list[index].get(); }
 };
 
 class sWindow : public Singleton<sWindow>

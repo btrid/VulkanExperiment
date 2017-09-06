@@ -1,14 +1,18 @@
 #pragma once
+#include <memory>
 #include <btrlib/Define.h>
 #include <btrlib/cWindow.h>
+#include <btrlib/Loader.h>
 namespace app
 {
 
 struct App
 {
 	cWindow m_window;
+	std::shared_ptr<btr::Loader> m_loader;
 
 	App();
+	void setup(std::shared_ptr<btr::Loader>& loader);
 };
 
 

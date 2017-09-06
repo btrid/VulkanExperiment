@@ -129,18 +129,10 @@ int main()
 	auto device = sGlobal::Order().getGPU(0).getDevice();
 	auto setup_cmd = sThreadLocal::Order().getCmdOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
 
-	vk::FenceCreateInfo fence_info;
-	fence_info.setFlags(vk::FenceCreateFlagBits::eSignaled);
-	std::vector<vk::Fence> fence_list;
-	fence_list.emplace_back(device->createFence(fence_info));
-	fence_list.emplace_back(device->createFence(fence_info));
-	fence_list.emplace_back(device->createFence(fence_info));
-
 	vk::SemaphoreCreateInfo semaphoreInfo = vk::SemaphoreCreateInfo();
 	vk::Semaphore swapbuffer_semaphore = device->createSemaphore(semaphoreInfo);
 	vk::Semaphore cmdsubmit_semaphore = device->createSemaphore(semaphoreInfo);
 	vk::Queue queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), 0);
-
 
 	std::shared_ptr<btr::Loader> loader = std::make_shared<btr::Loader>();
 	loader->m_window = &app.m_window;
@@ -193,38 +185,7 @@ int main()
 	m_player.m_pos.z = 183.f;
 	{
 		loader->m_cmd = setup_cmd;
-		{
-			vk::ImageSubresourceRange subresource_range;
-			subresource_range.setAspectMask(vk::ImageAspectFlagBits::eColor);
-			subresource_range.setBaseArrayLayer(0);
-			subresource_range.setLayerCount(1);
-			subresource_range.setBaseMipLevel(0);
-			subresource_range.setLevelCount(1);
-			std::array<vk::ImageMemoryBarrier, 3 + 1> barrier;
-			barrier[0].setSubresourceRange(subresource_range);
-			barrier[0].setDstAccessMask(vk::AccessFlagBits::eMemoryRead);
-			barrier[0].setOldLayout(vk::ImageLayout::eUndefined);
-			barrier[0].setNewLayout(vk::ImageLayout::ePresentSrcKHR);
-			barrier[2] = barrier[1] = barrier[0];
-			barrier[0].setImage(app.m_window.getSwapchain().m_backbuffer[0].m_image);
-			barrier[1].setImage(app.m_window.getSwapchain().m_backbuffer[1].m_image);
-			barrier[2].setImage(app.m_window.getSwapchain().m_backbuffer[2].m_image);
-
-			vk::ImageSubresourceRange subresource_depth_range;
-			subresource_depth_range.aspectMask = vk::ImageAspectFlagBits::eDepth;
-			subresource_depth_range.baseArrayLayer = 0;
-			subresource_depth_range.baseMipLevel = 0;
-			subresource_depth_range.layerCount = 1;
-			subresource_depth_range.levelCount = 1;
-
-			barrier[3].setImage(app.m_window.getSwapchain().m_depth.m_image);
-			barrier[3].setSubresourceRange(subresource_depth_range);
-			barrier[3].setDstAccessMask(vk::AccessFlagBits::eDepthStencilAttachmentWrite);
-			barrier[3].setOldLayout(vk::ImageLayout::eUndefined);
-			barrier[3].setNewLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-
-			loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::DependencyFlags(), {}, {}, barrier);
-		}
+		app.setup(loader);
 		sCameraManager::Order().setup(loader);
 		DrawHelper::Order().setup(loader);
 		sScene::Order().setup(loader);
@@ -273,10 +234,9 @@ int main()
 
 		uint32_t backbuffer_index = app.m_window.getSwapchain().swap(swapbuffer_semaphore);
 
-		sDebug::Order().waitFence(device.getHandle(), fence_list[backbuffer_index]);
-		device->resetFences({ fence_list[backbuffer_index] });
+		sDebug::Order().waitFence(device.getHandle(), app.m_window.getFence(backbuffer_index));
+		device->resetFences({ app.m_window.getFence(backbuffer_index) });
 
-//		executer->
 		for (auto& tls : sGlobal::Order().getThreadLocalList())
 		{
 			for (auto& pool_family : tls.m_cmd_pool)
@@ -310,7 +270,6 @@ int main()
 
 			SynchronizedPoint render_syncronized_point(6);
 			std::vector<vk::CommandBuffer> render_cmds(10);
-			//			model_pipeline.execute(render_cmd);
 			{
 				cThreadJob job;
 				job.mFinish = [&]()
@@ -391,7 +350,7 @@ int main()
 				.setSignalSemaphoreCount(1)
 				.setPSignalSemaphores(&cmdsubmit_semaphore)
 			};
-			queue.submit(submitInfo, fence_list[backbuffer_index]);
+			queue.submit(submitInfo, app.m_window.getFence(backbuffer_index));
 			vk::PresentInfoKHR present_info = vk::PresentInfoKHR()
 				.setWaitSemaphoreCount(1)
 				.setPWaitSemaphores(&cmdsubmit_semaphore)
