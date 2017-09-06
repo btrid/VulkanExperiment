@@ -121,8 +121,13 @@ public:
 
 	struct EmitData
 	{
-		bool m_is_emit;
-		uint32_t m_emit_num;
+		struct EmitBuffer
+		{
+			bool m_is_emit;
+			uint32_t m_emit_num;
+			btr::AllocatedMemory m_buffer;
+		};
+		std::vector<EmitBuffer> m_staging;
 		btr::AllocatedMemory m_buffer;
 	};
 private:
@@ -131,8 +136,7 @@ private:
 	btr::AllocatedMemory m_soldier_info_gpu;
 	DoubleBuffer m_brain_gpu;
 	DoubleBuffer m_soldier_gpu;
-	btr::AllocatedMemory m_soldier_emit_gpu;
-	std::vector<EmitData> m_emit_transfer;
+	EmitData m_emit_data;
 	btr::AllocatedMemory m_soldier_draw_indiret_gpu;
 	DoubleBuffer m_soldier_LL_head_gpu;
 
@@ -146,10 +150,6 @@ private:
 	std::array<vk::UniqueDescriptorSet, DESCRIPTOR_SET_NUM> m_descriptor_set;
 
 	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_shader_info;
-
-	std::vector<vk::UniqueCommandBuffer> m_update_cmd;
-	std::vector<vk::UniqueCommandBuffer> m_emit_cpu_cmd;
-	std::vector<vk::UniqueCommandBuffer> m_draw_cmd;
 
 	vk::UniqueImage m_astar_image;
 	vk::UniqueImageView m_astar_image_view;

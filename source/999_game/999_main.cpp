@@ -142,7 +142,7 @@ float calcReverseDepth(float v, float n, float f)
 }
 int main()
 {
-	btr::setResourceAppPath("..\\..\\resource\\003_particle\\");
+	btr::setResourceAppPath("..\\..\\resource\\999_game\\");
 	app::App app;
 	auto* camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = glm::vec3(220.f, 60.f, 300.f);

@@ -144,18 +144,14 @@ void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 		{
 			btr::BufferMemory::Descriptor desc;
 			desc.size = sizeof(SoldierData)*m_boid_info.m_soldier_emit_max;
-			m_soldier_emit_gpu = loader->m_storage_memory.allocateMemory(desc);
-		}
-		{
-			m_emit_transfer.resize(loader->m_window->getSwapchain().getBackbufferNum());
-			btr::BufferMemory::Descriptor desc;
-			desc.size = sizeof(SoldierData) * 1024;
-			for (auto& data : m_emit_transfer)
+			m_emit_data.m_buffer = loader->m_storage_memory.allocateMemory(desc);
+			m_emit_data.m_staging.resize(loader->m_window->getSwapchain().getBackbufferNum());
+			for (auto& data : m_emit_data.m_staging)
 			{
 				data.m_is_emit = false;
 				data.m_buffer = loader->m_staging_memory.allocateMemory(desc);
 			}
-			// emit
+			// emit test
 			std::array<SoldierData, 70> data;
 			for (auto& p : data)
 			{
@@ -169,9 +165,9 @@ void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 				p.m_inertia = glm::vec4(0.f, 0.f, 0.f, 1.f);
 				p.m_map_index = sScene::Order().calcMapIndex(p.m_pos);
 			}
-			memcpy_s(m_emit_transfer[2].m_buffer.getMappedPtr(), vector_sizeof(data), data.data(), vector_sizeof(data));
-			m_emit_transfer[2].m_is_emit = true;
-			m_emit_transfer[2].m_emit_num = 70;
+			memcpy_s(m_emit_data.m_staging[2].m_buffer.getMappedPtr(), vector_sizeof(data), data.data(), vector_sizeof(data));
+			m_emit_data.m_staging[2].m_is_emit = true;
+			m_emit_data.m_staging[2].m_emit_num = 70;
 
 		}
 		{
@@ -389,7 +385,7 @@ void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 				std::vector<vk::PushConstantRange> push_constants = {
 					vk::PushConstantRange()
 					.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-					.setSize(16),
+					.setSize(8),
 				};
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
 				pipeline_layout_info.setSetLayoutCount(layouts.size());
@@ -445,7 +441,7 @@ void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 				m_soldier_gpu.getOrg(),
 				m_soldier_draw_indiret_gpu.getBufferInfo(),
 				m_soldier_LL_head_gpu.getOrg(),
-				m_soldier_emit_gpu.getBufferInfo(),
+				m_emit_data.m_buffer.getBufferInfo(),
 			};
 			std::vector<vk::DescriptorImageInfo> images = {
 				vk::DescriptorImageInfo()
@@ -567,125 +563,6 @@ void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 		auto graphics_pipeline = loader->m_device->createGraphicsPipelinesUnique(loader->m_cache, graphics_pipeline_info);
 		m_pipeline[PIPELINE_GRAPHICS_SOLDIER_DRAW] = std::move(graphics_pipeline[0]);
 	}
-
-	// record cmd
-	{
-		vk::CommandBufferAllocateInfo cmd_buffer_info;
-		cmd_buffer_info.commandBufferCount = sGlobal::FRAME_MAX;
-		cmd_buffer_info.commandPool = sThreadLocal::Order().getCmdPool(sGlobal::CMD_POOL_TYPE_COMPILED, 0);
-		cmd_buffer_info.level = vk::CommandBufferLevel::eSecondary;
-
-		m_update_cmd = sGlobal::Order().getGPU(0).getDevice()->allocateCommandBuffersUnique(cmd_buffer_info);
-		for (size_t i = 0; i < m_update_cmd.size(); i++)
-		{
-			vk::CommandBufferBeginInfo begin_info;
-			begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
-			vk::CommandBufferInheritanceInfo inheritance_info;
-			begin_info.setPInheritanceInfo(&inheritance_info);
-
-			auto& cmd = m_update_cmd[i].get();
-			cmd.begin(begin_info);
-			{
-				// transfer
-				vk::BufferMemoryBarrier ll_to_transfer;
-				ll_to_transfer.buffer = m_soldier_LL_head_gpu.getOrg().buffer;
-				ll_to_transfer.offset = m_soldier_LL_head_gpu.getOrg().offset;
-				ll_to_transfer.size = m_soldier_LL_head_gpu.getOrg().range;
-				ll_to_transfer.srcAccessMask = vk::AccessFlagBits::eShaderWrite | vk::AccessFlagBits::eShaderRead;
-				ll_to_transfer.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
-				std::vector<vk::BufferMemoryBarrier> to_transfer = {
-					ll_to_transfer,
-					m_soldier_draw_indiret_gpu.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite),
-				};
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
-
-				cmd.updateBuffer<vk::DrawIndirectCommand>(m_soldier_draw_indiret_gpu.getBufferInfo().buffer, m_soldier_draw_indiret_gpu.getBufferInfo().offset, vk::DrawIndirectCommand(0, 1, 0, 0));
-				cmd.fillBuffer(m_soldier_LL_head_gpu.getDst().buffer, m_soldier_LL_head_gpu.getDst().offset, m_soldier_LL_head_gpu.getDst().range, 0xFFFFFFFF);
-
-				vk::BufferMemoryBarrier ll_to_read = ll_to_transfer;
-				ll_to_read.buffer = m_soldier_LL_head_gpu.getOrg().buffer;
-				ll_to_read.offset = m_soldier_LL_head_gpu.getOrg().offset;
-				ll_to_read.size = m_soldier_LL_head_gpu.getOrg().range;
-				ll_to_read.srcAccessMask = ll_to_transfer.dstAccessMask;
-				ll_to_read.dstAccessMask = vk::AccessFlagBits::eShaderWrite | vk::AccessFlagBits::eShaderRead;
-				std::vector<vk::BufferMemoryBarrier> to_update_barrier = {
-					ll_to_read,
-					m_soldier_draw_indiret_gpu.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
-				};
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_update_barrier, {});
-
-			}
-			{
-				// update
-				struct UpdateConstantBlock
-				{
-					float m_deltatime;
-					uint m_double_buffer_index;
-				};
-				UpdateConstantBlock block;
-				block.m_deltatime = sGlobal::Order().getDeltaTime();
-				block.m_double_buffer_index = m_soldier_LL_head_gpu.getDstIndex();
-				cmd.pushConstants<UpdateConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_UPDATE].get(), vk::ShaderStageFlagBits::eCompute, 0, block);
-
-				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COMPUTE_SOLDIER_UPDATE].get());
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_UPDATE].get(), 0, getDescriptorSet(DESCRIPTOR_SET_SOLDIER_UPDATE), {});
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_UPDATE].get(), 1, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_MAP), {});
-				auto groups = app::calcDipatchGroups(glm::uvec3(m_boid_info.m_soldier_max / 2, 1, 1), glm::uvec3(1024, 1, 1));
-				cmd.dispatch(groups.x, groups.y, groups.z);
-			}
-			cmd.end();
-		}
-
-
-
-		m_emit_cpu_cmd = sGlobal::Order().getGPU(0).getDevice()->allocateCommandBuffersUnique(cmd_buffer_info);
-		for (size_t i = 0; i < m_emit_cpu_cmd.size(); i++)
-		{
-			vk::CommandBufferBeginInfo begin_info;
-			begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
-			vk::CommandBufferInheritanceInfo inheritance_info;
-			begin_info.setPInheritanceInfo(&inheritance_info);
-
-			auto& cmd = m_emit_cpu_cmd[i].get();
-			cmd.begin(begin_info);
-
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COMPUTE_SOLDIER_EMIT].get());
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_EMIT].get(), 0, getDescriptorSet(DESCRIPTOR_SET_SOLDIER_UPDATE), {});
-			auto groups = app::calcDipatchGroups(glm::uvec3(1, 1, 1), glm::uvec3(1024, 1, 1));
-			cmd.dispatch(groups.x, groups.y, groups.z);
-
-			cmd.end();
-		}
-
-		m_draw_cmd = sGlobal::Order().getGPU(0).getDevice()->allocateCommandBuffersUnique(cmd_buffer_info);
-		for (size_t i = 0; i < m_draw_cmd.size(); i++)
-		{
-			vk::CommandBufferBeginInfo begin_info;
-			begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse|vk::CommandBufferUsageFlagBits::eRenderPassContinue);
-			vk::CommandBufferInheritanceInfo inheritance_info;
-			inheritance_info.setFramebuffer(m_framebuffer[i].get());
-			inheritance_info.setRenderPass(m_render_pass.get());
-			begin_info.setPInheritanceInfo(&inheritance_info);
-
-			auto& cmd = m_draw_cmd[i].get();
-			cmd.begin(begin_info);
-
-// 			auto to_draw = vk::BufferMemoryBarrier();
-// 			to_draw.buffer = m_soldier_draw_indiret_gpu.getBufferInfo().buffer;
-// 			to_draw.size = m_soldier_draw_indiret_gpu.getBufferInfo().range;
-// 			to_draw.offset = m_soldier_draw_indiret_gpu.getBufferInfo().offset;
-// 			to_draw.srcAccessMask = vk::AccessFlagBits::eShaderWrite | vk::AccessFlagBits::eShaderRead;
-// 			to_draw.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-// 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, /*vk::DependencyFlagBits::eByRegion*/{}, {}, to_draw, {});
-
-			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_GRAPHICS_SOLDIER_DRAW].get());
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW].get(), 0, getDescriptorSet(DESCRIPTOR_SET_SOLDIER_UPDATE), {});
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW].get(), 1, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_CAMERA), {});
-			cmd.drawIndirect(m_soldier_draw_indiret_gpu.getBufferInfo().buffer, m_soldier_draw_indiret_gpu.getBufferInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
-
-			cmd.end();
-		}
-	}
 }
 
 vk::CommandBuffer sBoid::execute(std::shared_ptr<btr::Executer>& executer)
@@ -694,36 +571,119 @@ vk::CommandBuffer sBoid::execute(std::shared_ptr<btr::Executer>& executer)
 	auto& device = gpu.getDevice();
 	auto cmd = sThreadLocal::Order().getCmdOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
 	{
-		// update
-		struct UpdateConstantBlock
-		{
-			float m_deltatime;
-			uint m_double_buffer_index;
-		};
-		UpdateConstantBlock block;
-		block.m_deltatime = sGlobal::Order().getDeltaTime();
-		block.m_double_buffer_index = sGlobal::Order().getGPUIndex();
-		cmd.pushConstants<UpdateConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_UPDATE].get(), vk::ShaderStageFlagBits::eCompute, 0, block);
 
-		cmd.executeCommands(m_update_cmd[executer->getGPUFrame()].get());
+		{
+			// transfer
+			vk::BufferMemoryBarrier ll_to_transfer;
+			ll_to_transfer.buffer = m_soldier_LL_head_gpu.getOrg().buffer;
+			ll_to_transfer.offset = m_soldier_LL_head_gpu.getOrg().offset;
+			ll_to_transfer.size = m_soldier_LL_head_gpu.getOrg().range;
+			ll_to_transfer.srcAccessMask = vk::AccessFlagBits::eShaderWrite | vk::AccessFlagBits::eShaderRead;
+			ll_to_transfer.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+			vk::BufferMemoryBarrier indirect_to_transfer;
+			indirect_to_transfer.buffer = m_soldier_draw_indiret_gpu.getBufferInfo().buffer;
+			indirect_to_transfer.offset = m_soldier_draw_indiret_gpu.getBufferInfo().offset;
+			indirect_to_transfer.size = m_soldier_draw_indiret_gpu.getBufferInfo().range;
+			indirect_to_transfer.srcAccessMask = vk::AccessFlagBits::eShaderWrite | vk::AccessFlagBits::eShaderRead;
+			indirect_to_transfer.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+			std::vector<vk::BufferMemoryBarrier> to_transfer = {
+				ll_to_transfer,
+				indirect_to_transfer,
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eDrawIndirect, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
+
+			cmd.updateBuffer<vk::DrawIndirectCommand>(m_soldier_draw_indiret_gpu.getBufferInfo().buffer, m_soldier_draw_indiret_gpu.getBufferInfo().offset, vk::DrawIndirectCommand(0, 1, 0, 0));
+			cmd.fillBuffer(m_soldier_LL_head_gpu.getDst().buffer, m_soldier_LL_head_gpu.getDst().offset, m_soldier_LL_head_gpu.getDst().range, 0xFFFFFFFF);
+
+			vk::BufferMemoryBarrier ll_to_read = ll_to_transfer;
+			ll_to_read.buffer = m_soldier_LL_head_gpu.getOrg().buffer;
+			ll_to_read.offset = m_soldier_LL_head_gpu.getOrg().offset;
+			ll_to_read.size = m_soldier_LL_head_gpu.getOrg().range;
+			ll_to_read.srcAccessMask = ll_to_transfer.dstAccessMask;
+			ll_to_read.dstAccessMask = vk::AccessFlagBits::eShaderWrite | vk::AccessFlagBits::eShaderRead;
+			vk::BufferMemoryBarrier to_read;
+			to_read.buffer = m_soldier_draw_indiret_gpu.getBufferInfo().buffer;
+			to_read.offset = m_soldier_draw_indiret_gpu.getBufferInfo().offset;
+			to_read.size = m_soldier_draw_indiret_gpu.getBufferInfo().range;
+			to_read.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+			to_read.dstAccessMask = vk::AccessFlagBits::eShaderWrite | vk::AccessFlagBits::eShaderRead;
+			std::vector<vk::BufferMemoryBarrier> to_update_barrier = {
+				ll_to_read,
+				to_read,
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_update_barrier, {});
+
+		}
+		{
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COMPUTE_SOLDIER_UPDATE].get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_UPDATE].get(), 0, getDescriptorSet(DESCRIPTOR_SET_SOLDIER_UPDATE), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_UPDATE].get(), 1, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_MAP), {});
+
+			// update
+			struct UpdateConstantBlock
+			{
+				float m_deltatime;
+				uint m_double_buffer_dst_index;
+			};
+			UpdateConstantBlock block;
+			block.m_deltatime = sGlobal::Order().getDeltaTime();
+			block.m_double_buffer_dst_index = sGlobal::Order().getGPUIndex();
+			cmd.pushConstants<UpdateConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_UPDATE].get(), vk::ShaderStageFlagBits::eCompute, 0, block);
+
+
+			auto groups = app::calcDipatchGroups(glm::uvec3(m_boid_info.m_soldier_max / 2, 1, 1), glm::uvec3(1024, 1, 1));
+			cmd.dispatch(groups.x, groups.y, groups.z);
+		}
+
+//		cmd.executeCommands(m_update_cmd[executer->getGPUFrame()].get());
 
 	}
 	{
-		auto& data = m_emit_transfer[executer->getGPUFrame()];
-
+		auto i = executer->getGPUFrame();
+		auto& data = m_emit_data.m_staging[executer->getGPUFrame()];
 		if (data.m_is_emit)
 		{
 			data.m_is_emit = false;
+
+			vk::BufferMemoryBarrier to_dst_transfer;
+			to_dst_transfer.buffer = m_emit_data.m_buffer.getBufferInfo().buffer;
+			to_dst_transfer.offset = m_emit_data.m_buffer.getBufferInfo().offset;
+			to_dst_transfer.size = m_emit_data.m_buffer.getBufferInfo().range;
+			to_dst_transfer.srcAccessMask = vk::AccessFlagBits::eShaderRead;
+			to_dst_transfer.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_dst_transfer, {});
+
+			vk::BufferCopy copy;
+			copy.setSrcOffset(m_emit_data.m_staging[i].m_buffer.getBufferInfo().offset);
+			copy.setDstOffset(m_emit_data.m_buffer.getBufferInfo().offset);
+			copy.setSize(m_emit_data.m_buffer.getBufferInfo().range);
+			cmd.copyBuffer(m_emit_data.m_staging[i].m_buffer.getBufferInfo().buffer, m_emit_data.m_buffer.getBufferInfo().buffer, copy);
+
+			vk::BufferMemoryBarrier to_read;
+			to_read.buffer = m_emit_data.m_buffer.getBufferInfo().buffer;
+			to_read.offset = m_emit_data.m_buffer.getBufferInfo().offset;
+			to_read.size = m_emit_data.m_buffer.getBufferInfo().range;
+			to_read.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+			to_read.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COMPUTE_SOLDIER_EMIT].get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_EMIT].get(), 0, getDescriptorSet(DESCRIPTOR_SET_SOLDIER_UPDATE), {});
+
 			struct EmitConstantBlock
 			{
 				uint m_emit_num;
-				uint m_double_buffer_index;
+				uint m_double_buffer_dst_index;
 			};
 			EmitConstantBlock block;
 			block.m_emit_num = data.m_emit_num;
-			block.m_double_buffer_index = sGlobal::Order().getGPUIndex();
+			block.m_double_buffer_dst_index = sGlobal::Order().getGPUIndex();
 			cmd.pushConstants<EmitConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_EMIT].get(), vk::ShaderStageFlagBits::eCompute, 0, block);
-			cmd.executeCommands(m_emit_cpu_cmd[executer->getGPUFrame()].get());
+
+			auto groups = app::calcDipatchGroups(glm::uvec3(1, 1, 1), glm::uvec3(1024, 1, 1));
+			cmd.dispatch(groups.x, groups.y, groups.z);
+
+//			cmd.executeCommands(m_emit_cpu_cmd[executer->getGPUFrame()].get());
 		}
 	}
 	cmd.end();
@@ -744,6 +704,17 @@ vk::CommandBuffer sBoid::draw(std::shared_ptr<btr::Executer>& executer)
 	to_draw.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, /*vk::DependencyFlagBits::eByRegion*/{}, {}, to_draw, {});
 
+
+	vk::RenderPassBeginInfo begin_render_Info;
+	begin_render_Info.setRenderPass(m_render_pass.get());
+	begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), executer->m_window->getClientSize<vk::Extent2D>()));
+	begin_render_Info.setFramebuffer(m_framebuffer[sGlobal::Order().getCurrentFrame()].get());
+	cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
+
+	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_GRAPHICS_SOLDIER_DRAW].get());
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW].get(), 0, getDescriptorSet(DESCRIPTOR_SET_SOLDIER_UPDATE), {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW].get(), 1, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_CAMERA), {});
+
 	struct DrawConstantBlock
 	{
 		uint m_double_buffer_index;
@@ -752,13 +723,9 @@ vk::CommandBuffer sBoid::draw(std::shared_ptr<btr::Executer>& executer)
 	block.m_double_buffer_index = sGlobal::Order().getGPUIndex();
 	cmd.pushConstants<DrawConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW].get(), vk::ShaderStageFlagBits::eVertex, 0, block);
 
-	vk::RenderPassBeginInfo begin_render_Info;
-	begin_render_Info.setRenderPass(m_render_pass.get());
-	begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), executer->m_window->getClientSize<vk::Extent2D>()));
-	begin_render_Info.setFramebuffer(m_framebuffer[sGlobal::Order().getCurrentFrame()].get());
-	cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eSecondaryCommandBuffers);
+	cmd.drawIndirect(m_soldier_draw_indiret_gpu.getBufferInfo().buffer, m_soldier_draw_indiret_gpu.getBufferInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
 
-	cmd.executeCommands(m_draw_cmd[executer->getGPUFrame()].get());
+//	cmd.executeCommands(m_draw_cmd[executer->getGPUFrame()].get());
 
 	cmd.endRenderPass();
 	cmd.end();

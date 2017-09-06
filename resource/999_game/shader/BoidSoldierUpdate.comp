@@ -22,8 +22,6 @@ layout (local_size_x = 1024, local_size_y = 1) in;
 layout(push_constant) uniform UpdateConstantBlock
 {
 	float m_deltatime;
-	uint m_src_offset;
-	uint m_dst_offset;
 	uint m_double_buffer_dst_index;
 } constant;
 
@@ -33,9 +31,11 @@ void main()
 	if(index >= u_boid_info.m_soldier_max){
 		return;
 	}
+	uint src_offset = (1-constant.m_double_buffer_dst_index) * u_boid_info.m_soldier_max/2;
+	uint dst_offset = constant.m_double_buffer_dst_index * u_boid_info.m_soldier_max/2;
 
-	SoldierData soldier = b_soldier[constant.m_src_offset + index];
-	b_soldier[constant.m_src_offset + index].m_life = -1.;
+	SoldierData soldier = b_soldier[src_offset + index];
+	b_soldier[src_offset + index].m_life = -1.;
 	soldier.m_life -= constant.m_deltatime;
 	if(soldier.m_life <= 0.){
 		return;
@@ -110,7 +110,7 @@ void main()
 				i = soldier.m_ll_next;
 				continue;
 			}
-			SoldierData test = b_soldier[constant.m_src_offset + i];
+			SoldierData test = b_soldier[src_offset + i];
 			i = test.m_ll_next;
 
 			group_center += test.m_pos.xyz;
@@ -194,5 +194,5 @@ void main()
 	uint old = atomicExchange(b_soldier_head[map_index_1D], dst_index);
 	soldier.m_ll_next = old;
 
-	b_soldier[constant.m_dst_offset + dst_index] = soldier;
+	b_soldier[dst_offset + dst_index] = soldier;
 }

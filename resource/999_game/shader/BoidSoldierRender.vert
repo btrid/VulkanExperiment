@@ -31,14 +31,16 @@ layout(location=1) out VSOUT{
 
 layout(push_constant) uniform UpdateConstantBlock
 {
-	uint m_offset;
+	uint m_double_buffer_dst_index;
 } constant;
 
 void main()
 {
-	SoldierData s = b_soldier[gl_VertexIndex + constant.m_offset];
-	vec4 pos = vec4(s.m_pos.xyz + vec3(0., 0.1, 0.), 1.0);
+	uint offset = constant.m_double_buffer_dst_index * u_boid_info.m_soldier_max/2;
+	vec3 s_pos = b_soldier[gl_VertexIndex + offset].m_pos.xyz;
+	vec4 pos = vec4(s_pos.xyz + vec3(0., 0.1, 0.), 1.0);
 	gl_Position = u_camera[0].u_projection * u_camera[0].u_view * pos;
 	gl_PointSize = 300./ gl_Position.w;
 	VSOut.life = 0.2;
+
 }

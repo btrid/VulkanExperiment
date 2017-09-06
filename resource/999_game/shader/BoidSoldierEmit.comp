@@ -20,7 +20,7 @@ layout (local_size_x = 1024, local_size_y = 1) in;
 layout(push_constant) uniform ConstantBlock
 {
 	uint m_emit_num;
-	uint m_offset;
+	uint m_double_buffer_dst_index;
 } constant;
 
 void main()
@@ -30,6 +30,7 @@ void main()
 		return;
 	}
 
+	uint dst_offset = constant.m_double_buffer_dst_index * u_boid_info.m_soldier_max/2;
 	uint dst_index = atomicAdd(b_draw_cmd[0].vertexCount, 1);
-	b_soldier[constant.m_offset + dst_index] = b_soldier_emit[index];
+	b_soldier[dst_offset + dst_index] = b_soldier_emit[index];
 }
