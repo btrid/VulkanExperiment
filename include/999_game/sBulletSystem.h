@@ -244,9 +244,9 @@ public:
 		data.insert(data.end(), param.begin(), param.end());
 	}
 
-	vk::PipelineLayout& getPipelineLayout(PipelineLayout layout)const { return m_private->m_pipeline_layout[layout].get(); }
-	vk::DescriptorSetLayout& getDescriptorSetLayout(DescriptorSetLayout desctiptor)const { return m_private->m_descriptor_set_layout[desctiptor].get(); }
-	vk::DescriptorSet& getDescriptorSet(DescriptorSet i)const { return m_private->m_descriptor_set[i].get(); }
+	vk::PipelineLayout getPipelineLayout(PipelineLayout layout)const { return m_private->m_pipeline_layout[layout].get(); }
+	vk::DescriptorSetLayout getDescriptorSetLayout(DescriptorSetLayout desctiptor)const { return m_private->m_descriptor_set_layout[desctiptor].get(); }
+	vk::DescriptorSet getDescriptorSet(DescriptorSet i)const { return m_private->m_descriptor_set[i].get(); }
 	btr::AllocatedMemory& getLL() { return m_private->m_bullet_LL_head_gpu; }
 	btr::AllocatedMemory& getBullet() { return m_private->m_bullet; }
 

@@ -72,7 +72,6 @@
   <ItemGroup>
     <ClCompile Include="..\..\source\999_game\999_main.cpp" />
     <ClCompile Include="..\..\source\999_game\MazeGenerator.cpp" />
-    <ClCompile Include="..\..\source\999_game\ParticlePipeline.cpp" />
     <ClCompile Include="..\..\source\999_game\sBoid.cpp" />
     <ClCompile Include="..\..\source\999_game\sBulletSystem.cpp" />
     <ClCompile Include="..\..\source\999_game\sCollisionSystem.cpp" />
@@ -83,7 +82,6 @@
     <ClInclude Include="..\..\include\999_game\KDTree.h" />
     <ClInclude Include="..\..\include\999_game\KDTreeTriangle.h" />
     <ClInclude Include="..\..\include\999_game\MazeGenerator.h" />
-    <ClInclude Include="..\..\include\999_game\ParticlePipeline.h" />
     <ClInclude Include="..\..\include\999_game\sBoid.h" />
     <ClInclude Include="..\..\include\999_game\sBulletSystem.h" />
     <ClInclude Include="..\..\include\999_game\sCollisionSystem.h" />

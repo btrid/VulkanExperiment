@@ -248,7 +248,7 @@ int main()
 
  		sBoid::Order().setup(loader);
 		sBulletSystem::Order().setup(loader);
-// 		sCollisionSystem::Order().setup(loader);
+ 		sCollisionSystem::Order().setup(loader);
 		setup_cmd.end();
 		std::vector<vk::CommandBuffer> cmds = {
 			setup_cmd,
@@ -308,8 +308,8 @@ int main()
 				sGlobal::Order().getThreadPool().enque(job);
 			}
 
-			SynchronizedPoint render_syncronized_point(5);
-			std::vector<vk::CommandBuffer> render_cmds(9);
+			SynchronizedPoint render_syncronized_point(6);
+			std::vector<vk::CommandBuffer> render_cmds(10);
 			//			model_pipeline.execute(render_cmd);
 			{
 				cThreadJob job;
@@ -362,10 +362,18 @@ int main()
 				};
 				sGlobal::Order().getThreadPool().enque(job);
 			}
-//  			sCollisionSystem::Order().execute(executer);
+			{
+				cThreadJob job;
+				job.mFinish =
+					[&]()
+				{
+					render_cmds[8] = sCollisionSystem::Order().execute(executer);
+					render_syncronized_point.arrive();
+				};
+				sGlobal::Order().getThreadPool().enque(job);
+			}
 
 			// draw
-//			model_pipeline.draw(render_cmd);
 			render_cmds.front() = app.m_window.getSwapchain().m_cmd_present_to_render[backbuffer_index];
 			render_cmds.back() = app.m_window.getSwapchain().m_cmd_render_to_present[backbuffer_index];
 			motion_worker_syncronized_point.wait();

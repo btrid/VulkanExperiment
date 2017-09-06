@@ -1,13 +1,80 @@
-#include <003_particle/sParticlePipeline.h>
+#include <applib/sParticlePipeline.h>
 #include <applib/sCameraManager.h>
 
 void sParticlePipeline::Private::setup(std::shared_ptr<btr::Loader>& loader)
 {
-
 	m_particle_info_cpu.m_particle_max_num = 8192/2;
 	m_particle_info_cpu.m_emitter_max_num = 1024;
 	m_particle_info_cpu.m_generate_cmd_max_num = 256;
 
+	{
+		// レンダーパス
+		{
+			// sub pass
+			std::vector<vk::AttachmentReference> color_ref =
+			{
+				vk::AttachmentReference()
+				.setAttachment(0)
+				.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
+			};
+			vk::AttachmentReference depth_ref;
+			depth_ref.setAttachment(1);
+			depth_ref.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+
+			vk::SubpassDescription subpass;
+			subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+			subpass.setInputAttachmentCount(0);
+			subpass.setPInputAttachments(nullptr);
+			subpass.setColorAttachmentCount((uint32_t)color_ref.size());
+			subpass.setPColorAttachments(color_ref.data());
+			subpass.setPDepthStencilAttachment(&depth_ref);
+
+			std::vector<vk::AttachmentDescription> attach_description = {
+				// color1
+				vk::AttachmentDescription()
+				.setFormat(loader->m_window->getSwapchain().m_surface_format.format)
+				.setSamples(vk::SampleCountFlagBits::e1)
+				.setLoadOp(vk::AttachmentLoadOp::eLoad)
+				.setStoreOp(vk::AttachmentStoreOp::eStore)
+				.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
+				.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
+				vk::AttachmentDescription()
+				.setFormat(vk::Format::eD32Sfloat)
+				.setSamples(vk::SampleCountFlagBits::e1)
+				.setLoadOp(vk::AttachmentLoadOp::eLoad)
+				.setStoreOp(vk::AttachmentStoreOp::eStore)
+				.setInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
+				.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
+			};
+			vk::RenderPassCreateInfo renderpass_info = vk::RenderPassCreateInfo()
+				.setAttachmentCount(attach_description.size())
+				.setPAttachments(attach_description.data())
+				.setSubpassCount(1)
+				.setPSubpasses(&subpass);
+
+			m_render_pass = loader->m_device->createRenderPassUnique(renderpass_info);
+		}
+
+		m_framebuffer.resize(loader->m_window->getSwapchain().getBackbufferNum());
+		{
+			std::array<vk::ImageView, 2> view;
+
+			vk::FramebufferCreateInfo framebuffer_info;
+			framebuffer_info.setRenderPass(m_render_pass.get());
+			framebuffer_info.setAttachmentCount((uint32_t)view.size());
+			framebuffer_info.setPAttachments(view.data());
+			framebuffer_info.setWidth(loader->m_window->getClientSize().x);
+			framebuffer_info.setHeight(loader->m_window->getClientSize().y);
+			framebuffer_info.setLayers(1);
+
+			for (size_t i = 0; i < m_framebuffer.size(); i++) {
+				view[0] = loader->m_window->getSwapchain().m_backbuffer[i].m_view;
+				view[1] = loader->m_window->getSwapchain().m_depth.m_view;
+				m_framebuffer[i] = loader->m_device->createFramebufferUnique(framebuffer_info);
+			}
+		}
+
+	}
 	{
 		{
 			btr::BufferMemory::Descriptor data_desc;
@@ -94,7 +161,8 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Loader>& loader)
 		std::string path = btr::getResourceAppPath() + "shader\\binary\\";
 		for (size_t i = 0; i < SHADER_NUM; i++)
 		{
-			m_shader_info[i].setModule(loadShader(loader->m_device.getHandle(), path + shader_desc[i].name));
+			m_shader_module[i] = loadShaderUnique(loader->m_device.getHandle(), path + shader_desc[i].name);
+			m_shader_info[i].setModule(m_shader_module[i].get());
 			m_shader_info[i].setStage(shader_desc[i].stage);
 			m_shader_info[i].setPName("main");
 		}
@@ -151,20 +219,23 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Loader>& loader)
 			vk::DescriptorSetLayoutCreateInfo descriptor_set_layout_info = vk::DescriptorSetLayoutCreateInfo()
 				.setBindingCount(bindings[i].size())
 				.setPBindings(bindings[i].data());
-			m_descriptor_set_layout[i] = loader->m_device->createDescriptorSetLayout(descriptor_set_layout_info);
+			m_descriptor_set_layout[i] = loader->m_device->createDescriptorSetLayoutUnique(descriptor_set_layout_info);
 		}
 
+		vk::DescriptorSetLayout layouts[] = { 
+			m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_PARTICLE].get() 
+		};
 		vk::DescriptorSetAllocateInfo alloc_info;
 		alloc_info.descriptorPool = loader->m_descriptor_pool.get();
-		alloc_info.descriptorSetCount = m_descriptor_set_layout.size();
-		alloc_info.pSetLayouts = m_descriptor_set_layout.data();
-		auto descriptor_set = loader->m_device->allocateDescriptorSets(alloc_info);
-		m_descriptor_set[DESCRIPTOR_SET_PARTICLE] = descriptor_set[DESCRIPTOR_SET_PARTICLE];
+		alloc_info.descriptorSetCount = array_length(layouts);
+		alloc_info.pSetLayouts = layouts;
+		auto descriptor_set = loader->m_device->allocateDescriptorSetsUnique(alloc_info);
+		m_descriptor_set[DESCRIPTOR_SET_PARTICLE] = std::move(descriptor_set[0]);
 	}
 	{
 		{
 			std::vector<vk::DescriptorSetLayout> layouts = {
-				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_PARTICLE],
+				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_PARTICLE].get(),
 			};
 			std::vector<vk::PushConstantRange> push_constants = {
 				vk::PushConstantRange()
@@ -176,11 +247,11 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Loader>& loader)
 			pipeline_layout_info.setPSetLayouts(layouts.data());
 			pipeline_layout_info.setPushConstantRangeCount(push_constants.size());
 			pipeline_layout_info.setPPushConstantRanges(push_constants.data());
-			m_pipeline_layout[PIPELINE_LAYOUT_UPDATE] = loader->m_device->createPipelineLayout(pipeline_layout_info);
+			m_pipeline_layout[PIPELINE_LAYOUT_UPDATE] = loader->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
 		{
 			std::vector<vk::DescriptorSetLayout> layouts = {
-				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_PARTICLE],
+				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_PARTICLE].get(),
 				sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
 			};
 			std::vector<vk::PushConstantRange> push_constants = {
@@ -193,7 +264,7 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Loader>& loader)
 			pipeline_layout_info.setPSetLayouts(layouts.data());
 			pipeline_layout_info.setPushConstantRangeCount(push_constants.size());
 			pipeline_layout_info.setPPushConstantRanges(push_constants.data());
-			m_pipeline_layout[PIPELINE_LAYOUT_DRAW] = loader->m_device->createPipelineLayout(pipeline_layout_info);
+			m_pipeline_layout[PIPELINE_LAYOUT_DRAW] = loader->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
 
@@ -218,13 +289,13 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Loader>& loader)
 				.setDescriptorCount(uniforms.size())
 				.setPBufferInfo(uniforms.data())
 				.setDstBinding(0)
-				.setDstSet(m_descriptor_set[DESCRIPTOR_SET_LAYOUT_PARTICLE]),
+				.setDstSet(m_descriptor_set[DESCRIPTOR_SET_LAYOUT_PARTICLE].get()),
 				vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 				.setDescriptorCount(storages.size())
 				.setPBufferInfo(storages.data())
 				.setDstBinding(1)
-				.setDstSet(m_descriptor_set[DESCRIPTOR_SET_LAYOUT_PARTICLE]),
+				.setDstSet(m_descriptor_set[DESCRIPTOR_SET_LAYOUT_PARTICLE].get()),
 			};
 			loader->m_device->updateDescriptorSets(write_desc, {});
 		}
@@ -235,18 +306,18 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Loader>& loader)
 		{
 			vk::ComputePipelineCreateInfo()
 			.setStage(m_shader_info[SHADER_UPDATE])
-			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE]),
+			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get()),
 			vk::ComputePipelineCreateInfo()
 			.setStage(m_shader_info[SHADER_GENERATE])
-			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE]),
+			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get()),
 			vk::ComputePipelineCreateInfo()
 			.setStage(m_shader_info[SHADER_GENERATE_TRANSFAR_CPU])
-			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE]),
+			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get()),
 		};
-		auto pipelines = loader->m_device->createComputePipelines(loader->m_cache.get(), compute_pipeline_info);
-		m_pipeline[PIPELINE_UPDATE] = pipelines[0];
-		m_pipeline[PIPELINE_GENERATE] = pipelines[1];
-		m_pipeline[PIPELINE_CMD_TRANSFAR] = pipelines[2];
+		auto pipelines = loader->m_device->createComputePipelinesUnique(loader->m_cache.get(), compute_pipeline_info);
+		m_pipeline[PIPELINE_UPDATE] = std::move(pipelines[0]);
+		m_pipeline[PIPELINE_GENERATE] = std::move(pipelines[1]);
+		m_pipeline[PIPELINE_CMD_TRANSFAR] = std::move(pipelines[2]);
 
 		vk::Extent3D size;
 		size.setWidth(640);
@@ -318,24 +389,26 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Loader>& loader)
 				.setPViewportState(&viewportInfo)
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
-				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW])
+				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get())
 				.setRenderPass(loader->m_render_pass)
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			auto pipelines = loader->m_device->createGraphicsPipelines(loader->m_cache.get(), graphics_pipeline_info);
-			m_pipeline[PIPELINE_DRAW] = pipelines[0];
+			auto pipelines = loader->m_device->createGraphicsPipelinesUnique(loader->m_cache.get(), graphics_pipeline_info);
+			m_pipeline[PIPELINE_DRAW] = std::move(pipelines[0]);
 		}
 	}
 }
 
-void sParticlePipeline::Private::draw(vk::CommandBuffer cmd)
+vk::CommandBuffer sParticlePipeline::Private::draw(std::shared_ptr<btr::Executer>& executer)
 {
-	// 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_graphics_pipeline[1]);
-	// 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[GRAPHICS_PIPELINE_LAYOUT_FLOOR_DRAW], 0, m_descriptor_set[DESCRIPTOR_DRAW_CAMERA], {});
-	// 			cmd.bindVertexBuffers(0, { m_maze_geometry.m_resource->m_vertex.getBufferInfo().buffer }, { m_maze_geometry.m_resource->m_vertex.getBufferInfo().offset });
-	// 			cmd.bindIndexBuffer(m_maze_geometry.m_resource->m_index.getBufferInfo().buffer, m_maze_geometry.m_resource->m_index.getBufferInfo().offset, m_maze_geometry.m_resource->m_index_type);
-	// 			cmd.drawIndexedIndirect(m_maze_geometry.m_resource->m_indirect.getBufferInfo().buffer, m_maze_geometry.m_resource->m_indirect.getBufferInfo().offset, 1, sizeof(vk::DrawIndexedIndirectCommand));
+	auto cmd = sThreadLocal::Order().getCmdOnetime(0);
+
+	vk::RenderPassBeginInfo begin_render_Info;
+	begin_render_Info.setRenderPass(m_render_pass.get());
+	begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), executer->m_window->getClientSize<vk::Extent2D>()));
+	begin_render_Info.setFramebuffer(m_framebuffer[executer->getGPUFrame()].get());
+	cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
 	struct DrawConstantBlock
 	{
@@ -344,11 +417,15 @@ void sParticlePipeline::Private::draw(vk::CommandBuffer cmd)
 	DrawConstantBlock draw_constant;
 	uint dst_offset = sGlobal::Order().getCPUIndex() == 0 ? m_particle_info_cpu.m_particle_max_num : 0;
 	draw_constant.m_src_offset = dst_offset;
-	cmd.pushConstants<DrawConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_DRAW], vk::ShaderStageFlagBits::eVertex, 0, draw_constant);
+	cmd.pushConstants<DrawConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), vk::ShaderStageFlagBits::eVertex, 0, draw_constant);
 
-	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW]);
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW], 0, m_descriptor_set[DESCRIPTOR_SET_PARTICLE], {});
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW], 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
+	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW].get());
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 0, m_descriptor_set[DESCRIPTOR_SET_PARTICLE].get(), {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 	cmd.drawIndirect(m_particle_counter.getBufferInfo().buffer, m_particle_counter.getBufferInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
+
+	cmd.endRenderPass();
+	cmd.end();
+	return cmd;
 }
 

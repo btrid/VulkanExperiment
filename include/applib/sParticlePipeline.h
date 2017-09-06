@@ -129,11 +129,15 @@ struct sParticlePipeline : Singleton<sParticlePipeline>
 		btr::AllocatedMemory m_particle_emitter;
 		btr::AllocatedMemory m_particle_emitter_counter;
 
-		std::array<vk::DescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
-		std::array<vk::DescriptorSet, DESCRIPTOR_SET_NUM> m_descriptor_set;
-		std::array<vk::PipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
+		vk::UniqueRenderPass m_render_pass;
+		std::vector<vk::UniqueFramebuffer> m_framebuffer;
 
-		std::array<vk::Pipeline, PIPELINE_NUM> m_pipeline;
+		std::array<vk::UniqueDescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
+		std::array<vk::UniqueDescriptorSet, DESCRIPTOR_SET_NUM> m_descriptor_set;
+		std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
+
+		std::array<vk::UniquePipeline, PIPELINE_NUM> m_pipeline;
+		std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_module;
 		std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_shader_info;
 
 		ParticleInfo m_particle_info_cpu;
@@ -142,9 +146,9 @@ struct sParticlePipeline : Singleton<sParticlePipeline>
 
 		void setup(std::shared_ptr<btr::Loader>& loader);
 
-		void execute(std::shared_ptr<btr::Executer>& executer)
+		vk::CommandBuffer execute(std::shared_ptr<btr::Executer>& executer)
 		{
-			vk::CommandBuffer cmd = executer->m_cmd;
+			auto cmd = sThreadLocal::Order().getCmdOnetime(0);
 
 			struct UpdateConstantBlock
 			{
@@ -167,9 +171,9 @@ struct sParticlePipeline : Singleton<sParticlePipeline>
 				};
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eBottomOfPipe, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
 
-				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_CMD_TRANSFAR]);
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], 0, m_descriptor_set[DESCRIPTOR_SET_PARTICLE], {});
-				cmd.pushConstants<UpdateConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], vk::ShaderStageFlagBits::eCompute, 0, constant);
+				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_CMD_TRANSFAR].get());
+				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 0, m_descriptor_set[DESCRIPTOR_SET_PARTICLE].get(), {});
+				cmd.pushConstants<UpdateConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), vk::ShaderStageFlagBits::eCompute, 0, constant);
 				cmd.dispatch(1, 1, 1);
 			}
 
@@ -185,9 +189,9 @@ struct sParticlePipeline : Singleton<sParticlePipeline>
 				};
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eDrawIndirect, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read2, {});
 
-				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_GENERATE]);
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], 0, m_descriptor_set[DESCRIPTOR_SET_PARTICLE], {});
-				cmd.pushConstants<UpdateConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], vk::ShaderStageFlagBits::eCompute, 0, constant);
+				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_GENERATE].get());
+				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 0, m_descriptor_set[DESCRIPTOR_SET_PARTICLE].get(), {});
+				cmd.pushConstants<UpdateConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), vk::ShaderStageFlagBits::eCompute, 0, constant);
 				cmd.dispatchIndirect(m_generate_cmd_counter.getBufferInfo().buffer, m_generate_cmd_counter.getBufferInfo().offset);
 			}
 			{
@@ -217,10 +221,10 @@ struct sParticlePipeline : Singleton<sParticlePipeline>
 				};
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eBottomOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, {}, {}, to_read2, {});
 
-				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_UPDATE]);
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], 0, m_descriptor_set[DESCRIPTOR_SET_PARTICLE], {});
+				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_UPDATE].get());
+				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 0, m_descriptor_set[DESCRIPTOR_SET_PARTICLE].get(), {});
 				constant.m_double_buffer_dst_index = sGlobal::Order().getGPUIndex();
-				cmd.pushConstants<UpdateConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], vk::ShaderStageFlagBits::eCompute, 0, constant);
+				cmd.pushConstants<UpdateConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), vk::ShaderStageFlagBits::eCompute, 0, constant);
 				auto groups = app::calcDipatchGroups(glm::uvec3(m_particle_info_cpu.m_particle_max_num, 1, 1), glm::uvec3(1024, 1, 1));
 				cmd.dispatch(groups.x, groups.y, groups.z);
 			}
@@ -230,9 +234,11 @@ struct sParticlePipeline : Singleton<sParticlePipeline>
 			auto to_draw = m_particle_counter.makeMemoryBarrier(vk::AccessFlagBits::eIndirectCommandRead);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, {}, {}, { to_draw }, {});
 
+			cmd.end();
+			return cmd;
 		}
 
-		void draw(vk::CommandBuffer cmd);
+		vk::CommandBuffer draw(std::shared_ptr<btr::Executer>& executer);
 
 	};
 	std::unique_ptr<Private> m_private;
@@ -245,14 +251,14 @@ struct sParticlePipeline : Singleton<sParticlePipeline>
 		m_private = std::move(p);
 	}
 
-	void execute(std::shared_ptr<btr::Executer>& executer)
+	vk::CommandBuffer execute(std::shared_ptr<btr::Executer>& executer)
 	{
-		m_private->execute(executer);
+		return m_private->execute(executer);
 	}
 
-	void draw(vk::CommandBuffer cmd)
+	vk::CommandBuffer draw(std::shared_ptr<btr::Executer>& executer)
 	{
-		m_private->draw(cmd);
+		return m_private->draw(executer);
 	}
 };
 

@@ -1,5 +1,5 @@
 #include <999_game/sBoid.h>
-#include <999_game/ParticlePipeline.h>
+#include <applib/sParticlePipeline.h>
 #include <999_game/sScene.h>
 
 void sBoid::setup(std::shared_ptr<btr::Loader>& loader)

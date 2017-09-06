@@ -10,6 +10,7 @@ namespace btr
 
 struct Loader
 {
+	cGPU m_gpu;
 	cDevice m_device;
 	vk::RenderPass m_render_pass;
 	btr::BufferMemory m_vertex_memory;
@@ -26,7 +27,6 @@ struct Loader
 struct Executer
 {
 	cDevice m_device;
-	vk::CommandBuffer m_cmd;
 	btr::BufferMemory m_vertex_memory;
 	btr::BufferMemory m_uniform_memory;
 	btr::BufferMemory m_storage_memory;

@@ -30,17 +30,24 @@ struct sCollisionSystem : public Singleton<sCollisionSystem>
 	};
 	enum : uint32_t
 	{
+		DESCRIPTOR_LAYOUT_COLLISION_TEST,
+		DESCRIPTOR_LAYOUT_NUM,
+	};
+	enum : uint32_t
+	{
 		DESCRIPTOR_COLLISION_TEST,
 		DESCRIPTOR_NUM,
 	};
 
-	std::array<vk::DescriptorSetLayout, DESCRIPTOR_NUM> m_descriptor_set_layout;
-	std::array<vk::DescriptorSet, DESCRIPTOR_NUM> m_descriptor_set;
-	std::array<vk::PipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
-	std::array<vk::Pipeline, PIPELINE_NUM> m_pipeline;
+	std::array<vk::UniqueDescriptorSetLayout, DESCRIPTOR_LAYOUT_NUM> m_descriptor_set_layout;
+	std::array<vk::UniqueDescriptorSet, DESCRIPTOR_NUM> m_descriptor_set;
+	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
+	std::array<vk::UniquePipeline, PIPELINE_NUM> m_pipeline;
+	std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_module;
+
 	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_shader_info;
 
 	void setup(std::shared_ptr<btr::Loader>& loader);
-	void execute(std::shared_ptr<btr::Executer>& executer);
+	vk::CommandBuffer execute(std::shared_ptr<btr::Executer>& executer);
 
 };
