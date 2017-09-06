@@ -449,7 +449,7 @@ struct sScene : public Singleton<sScene>
 		}
 
 		vk::DescriptorSetAllocateInfo alloc_info;
-		alloc_info.descriptorPool = loader->m_descriptor_pool;
+		alloc_info.descriptorPool = loader->m_descriptor_pool.get();
 		alloc_info.descriptorSetCount = m_descriptor_set_layout.size();
 		alloc_info.pSetLayouts = m_descriptor_set_layout.data();
 		auto descriptor_set = loader->m_device->allocateDescriptorSets(alloc_info);

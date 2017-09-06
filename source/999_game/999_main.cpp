@@ -167,7 +167,7 @@ int main()
 		pool_info.setPoolSizeCount((uint32_t)pool_size.size());
 		pool_info.setPPoolSizes(pool_size.data());
 		pool_info.setMaxSets(20);
-		loader->m_descriptor_pool = device->createDescriptorPool(pool_info);
+		loader->m_descriptor_pool = device->createDescriptorPoolUnique(pool_info);
 
 		vk::PipelineCacheCreateInfo cacheInfo = vk::PipelineCacheCreateInfo();
 		loader->m_cache = device->createPipelineCache(cacheInfo);
@@ -247,7 +247,7 @@ int main()
 		}
 
  		sBoid::Order().setup(loader);
-// 		sBulletSystem::Order().setup(loader);
+		sBulletSystem::Order().setup(loader);
 // 		sCollisionSystem::Order().setup(loader);
 		setup_cmd.end();
 		std::vector<vk::CommandBuffer> cmds = {
@@ -308,8 +308,8 @@ int main()
 				sGlobal::Order().getThreadPool().enque(job);
 			}
 
-			SynchronizedPoint render_syncronized_point(4);
-			std::vector<vk::CommandBuffer> render_cmds(7);
+			SynchronizedPoint render_syncronized_point(5);
+			std::vector<vk::CommandBuffer> render_cmds(9);
 			//			model_pipeline.execute(render_cmd);
 			{
 				cThreadJob job;
@@ -351,15 +351,21 @@ int main()
 				};
 				sGlobal::Order().getThreadPool().enque(job);
 			}
- 			;
-//  			sBulletSystem::Order().execute(executer);
+			{
+				cThreadJob job;
+				job.mFinish =
+					[&]()
+				{
+					render_cmds[6] = sBulletSystem::Order().execute(executer);
+					render_cmds[7] = sBulletSystem::Order().draw(executer);
+					render_syncronized_point.arrive();
+				};
+				sGlobal::Order().getThreadPool().enque(job);
+			}
 //  			sCollisionSystem::Order().execute(executer);
 
 			// draw
-//			sScene::Order().draw(render_cmd);
-//			sBoid::Order().draw(render_cmd);
 //			model_pipeline.draw(render_cmd);
-//			sBulletSystem::Order().draw(render_cmd);
 			render_cmds.front() = app.m_window.getSwapchain().m_cmd_present_to_render[backbuffer_index];
 			render_cmds.back() = app.m_window.getSwapchain().m_cmd_render_to_present[backbuffer_index];
 			motion_worker_syncronized_point.wait();

@@ -81,20 +81,24 @@ public:
 		btr::AllocatedMemory m_bullet_draw_indiret_info;
 		btr::AllocatedMemory m_bullet_LL_head_gpu;
 
-		std::array<vk::DescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
-		std::array<vk::DescriptorSet, DESCRIPTOR_SET_NUM> m_descriptor_set;
-		std::array<vk::PipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
+		vk::UniqueRenderPass m_render_pass;
+		std::vector<vk::UniqueFramebuffer> m_framebuffer;
 
-		std::array<vk::Pipeline, PIPELINE_NUM> m_pipeline;
+		std::array<vk::UniqueDescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
+		std::array<vk::UniqueDescriptorSet, DESCRIPTOR_SET_NUM> m_descriptor_set;
+		std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
+
+		std::array<vk::UniquePipeline, PIPELINE_NUM> m_pipeline;
+		std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_module;
 		std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_shader_info;
 
 		BulletInfo m_bullet_info_cpu;
 		void setup(std::shared_ptr<btr::Loader>& loader);
 
-		void execute(std::shared_ptr<btr::Executer>& executer)
+		vk::CommandBuffer execute(std::shared_ptr<btr::Executer>& executer)
 		{
-			vk::CommandBuffer cmd = executer->m_cmd;
-
+//			vk::CommandBuffer cmd = executer->m_cmd;
+			auto cmd = sThreadLocal::Order().getCmdOnetime(0);
 			uint src_offset = sGlobal::Order().getCPUIndex() == 1 ? (m_bullet.getBufferInfo().range / sizeof(BulletData) / 2) : 0;
 			uint dst_offset = sGlobal::Order().getCPUIndex() == 0 ? (m_bullet.getBufferInfo().range / sizeof(BulletData) / 2) : 0;
 			auto& data = m_append_buffer[sGlobal::Order().getGPUIndex()];
@@ -131,11 +135,11 @@ public:
 				block.m_src_offset = src_offset;
 				block.m_dst_offset = dst_offset;
 				block.m_emit_num = data.size();
-				cmd.pushConstants<UpdateConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], vk::ShaderStageFlagBits::eCompute, 0, block);
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], 0, m_descriptor_set[DESCRIPTOR_SET_UPDATE], {});
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE], 1, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_MAP), {});
+				cmd.pushConstants<UpdateConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), vk::ShaderStageFlagBits::eCompute, 0, block);
+				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 0, m_descriptor_set[DESCRIPTOR_SET_UPDATE].get(), {});
+				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 1, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_MAP), {});
 
-				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COMPUTE_UPDATE]);
+				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COMPUTE_UPDATE].get());
 				auto groups = app::calcDipatchGroups(glm::uvec3(m_bullet_info_cpu.m_max_num / 2, 1, 1), glm::uvec3(1024, 1, 1));
 				cmd.dispatch(groups.x, groups.y, groups.z);
 
@@ -170,7 +174,7 @@ public:
 					auto to_read = m_emit.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
 					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
 
-					cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COMPUTE_EMIT]);
+					cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COMPUTE_EMIT].get());
 					auto groups = app::calcDipatchGroups(glm::uvec3(data.size(), 1, 1), glm::uvec3(1024, 1, 1));
 					cmd.dispatch(groups.x, groups.y, groups.z);
 
@@ -185,17 +189,30 @@ public:
 			auto to_draw = m_bullet_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_draw }, {});
 
+			cmd.end();
+			return cmd;
 		}
 
-		void draw(vk::CommandBuffer cmd)
+		vk::CommandBuffer draw(std::shared_ptr<btr::Executer>& executer)
 		{
-			auto dst_offset = sGlobal::Order().getGPUIndex() == 1 ? (m_bullet.getBufferInfo().range / sizeof(BulletData) / 2) : 0;
-			cmd.pushConstants<uint>(m_pipeline_layout[PIPELINE_LAYOUT_BULLET_DRAW], vk::ShaderStageFlagBits::eVertex, 0, dst_offset);
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_BULLET_DRAW], 0, m_descriptor_set[DESCRIPTOR_SET_UPDATE], {});
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_BULLET_DRAW], 1, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_CAMERA), {});
+			auto cmd = sThreadLocal::Order().getCmdOnetime(0);
+			vk::RenderPassBeginInfo begin_render_Info;
+			begin_render_Info.setRenderPass(m_render_pass.get());
+			begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), executer->m_window->getClientSize<vk::Extent2D>()));
+			begin_render_Info.setFramebuffer(m_framebuffer[executer->getGPUFrame()].get());
+			cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
-			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_GRAPHICS_RENDER]);
+			auto dst_offset = sGlobal::Order().getGPUIndex() == 1 ? (m_bullet.getBufferInfo().range / sizeof(BulletData) / 2) : 0;
+			cmd.pushConstants<uint>(m_pipeline_layout[PIPELINE_LAYOUT_BULLET_DRAW].get(), vk::ShaderStageFlagBits::eVertex, 0, dst_offset);
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_BULLET_DRAW].get(), 0, m_descriptor_set[DESCRIPTOR_SET_UPDATE].get(), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_BULLET_DRAW].get(), 1, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_CAMERA), {});
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_GRAPHICS_RENDER].get());
 			cmd.drawIndirect(m_bullet_counter.getBufferInfo().buffer, m_bullet_counter.getBufferInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
+
+			cmd.endRenderPass();
+			cmd.end();
+			return cmd;
 		}
 
 	};
@@ -211,14 +228,14 @@ public:
 		m_private = std::move(p);
 	}
 
-	void execute(std::shared_ptr<btr::Executer>& executer)
+	vk::CommandBuffer execute(std::shared_ptr<btr::Executer>& executer)
 	{
-		m_private->execute(executer);
+		return m_private->execute(executer);
 	}
 
-	void draw(vk::CommandBuffer cmd)
+	vk::CommandBuffer draw(std::shared_ptr<btr::Executer>& executer)
 	{
-		m_private->draw(cmd);
+		return m_private->draw(executer);
 	}
 
 	void shoot(const std::vector<BulletData>& param)
@@ -227,9 +244,9 @@ public:
 		data.insert(data.end(), param.begin(), param.end());
 	}
 
-	vk::PipelineLayout& getPipelineLayout(PipelineLayout layout)const { return m_private->m_pipeline_layout[layout]; }
-	vk::DescriptorSetLayout& getDescriptorSetLayout(DescriptorSetLayout desctiptor)const { return m_private->m_descriptor_set_layout[desctiptor]; }
-	vk::DescriptorSet& getDescriptorSet(DescriptorSet i)const { return m_private->m_descriptor_set[i]; }
+	vk::PipelineLayout& getPipelineLayout(PipelineLayout layout)const { return m_private->m_pipeline_layout[layout].get(); }
+	vk::DescriptorSetLayout& getDescriptorSetLayout(DescriptorSetLayout desctiptor)const { return m_private->m_descriptor_set_layout[desctiptor].get(); }
+	vk::DescriptorSet& getDescriptorSet(DescriptorSet i)const { return m_private->m_descriptor_set[i].get(); }
 	btr::AllocatedMemory& getLL() { return m_private->m_bullet_LL_head_gpu; }
 	btr::AllocatedMemory& getBullet() { return m_private->m_bullet; }
 

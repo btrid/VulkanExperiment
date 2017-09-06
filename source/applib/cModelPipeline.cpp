@@ -317,7 +317,7 @@ void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 	{
 		// ƒ‚ƒfƒ‹‚²‚Æ‚ÌDescriptor‚ÌÝ’è
 		vk::DescriptorSetAllocateInfo alloc_info;
-		alloc_info.descriptorPool = loader->m_descriptor_pool;
+		alloc_info.descriptorPool = loader->m_descriptor_pool.get();
 		alloc_info.descriptorSetCount = 1;
 		alloc_info.pSetLayouts = &m_descriptor_set_layout[cModelPipeline::DESCRIPTOR_SCENE].get();
 		m_descriptor_set_scene = std::move(device->allocateDescriptorSetsUnique(alloc_info)[0]);

@@ -369,7 +369,7 @@ void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 
 			vk::DescriptorSetLayout layouts[] = { m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_SOLDIER_UPDATE].get() };
 			vk::DescriptorSetAllocateInfo alloc_info;
-			alloc_info.descriptorPool = loader->m_descriptor_pool;
+			alloc_info.descriptorPool = loader->m_descriptor_pool.get();
 			alloc_info.descriptorSetCount = array_length(layouts);
 			alloc_info.pSetLayouts = layouts;
 			auto descriptor_set = loader->m_device->allocateDescriptorSetsUnique(alloc_info);

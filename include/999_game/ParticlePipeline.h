@@ -95,9 +95,7 @@ struct sParticlePipeline : Singleton<sParticlePipeline>
 
 		ParticleInfo m_particle_info_cpu;
 
-
-
-		void setup(btr::Loader& loader);
+		void setup(std::shared_ptr<btr::Loader>& loader);
 
 		void execute(btr::Executer& executer)
 		{
@@ -223,7 +221,7 @@ struct sParticlePipeline : Singleton<sParticlePipeline>
 	};
 	std::unique_ptr<Private> m_private;
 
-	void setup(btr::Loader& loader)
+	void setup(std::shared_ptr<btr::Loader>& loader)
 	{
 		auto p = std::make_unique<Private>();
 		p->setup(loader);
