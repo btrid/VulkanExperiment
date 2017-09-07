@@ -53,6 +53,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "005_volume_rendering", "pro
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "006_voxel_based_GI", "project\006_voxel_based_GI\006_voxel_based_GI.vcxproj", "{C10DF2B6-C703-46F2-994A-139C5CD52BD5}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "007_multi_window", "project\007_multi_window\007_multi_window.vcxproj", "{0659FD78-3BCE-4029-921F-041B2A955D07}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -117,12 +119,16 @@ Global
 		{2E94C7AB-E275-42CE-89B6-DE14ACD8AD10}.Release|x86.ActiveCfg = Release|x64
 		{C10DF2B6-C703-46F2-994A-139C5CD52BD5}.Debug|x64.ActiveCfg = Debug|x64
 		{C10DF2B6-C703-46F2-994A-139C5CD52BD5}.Debug|x64.Build.0 = Debug|x64
-		{C10DF2B6-C703-46F2-994A-139C5CD52BD5}.Debug|x86.ActiveCfg = Debug|Win32
-		{C10DF2B6-C703-46F2-994A-139C5CD52BD5}.Debug|x86.Build.0 = Debug|Win32
+		{C10DF2B6-C703-46F2-994A-139C5CD52BD5}.Debug|x86.ActiveCfg = Debug|x64
 		{C10DF2B6-C703-46F2-994A-139C5CD52BD5}.Release|x64.ActiveCfg = Release|x64
 		{C10DF2B6-C703-46F2-994A-139C5CD52BD5}.Release|x64.Build.0 = Release|x64
-		{C10DF2B6-C703-46F2-994A-139C5CD52BD5}.Release|x86.ActiveCfg = Release|Win32
-		{C10DF2B6-C703-46F2-994A-139C5CD52BD5}.Release|x86.Build.0 = Release|Win32
+		{C10DF2B6-C703-46F2-994A-139C5CD52BD5}.Release|x86.ActiveCfg = Release|x64
+		{0659FD78-3BCE-4029-921F-041B2A955D07}.Debug|x64.ActiveCfg = Debug|x64
+		{0659FD78-3BCE-4029-921F-041B2A955D07}.Debug|x64.Build.0 = Debug|x64
+		{0659FD78-3BCE-4029-921F-041B2A955D07}.Debug|x86.ActiveCfg = Debug|x64
+		{0659FD78-3BCE-4029-921F-041B2A955D07}.Release|x64.ActiveCfg = Release|x64
+		{0659FD78-3BCE-4029-921F-041B2A955D07}.Release|x64.Build.0 = Release|x64
+		{0659FD78-3BCE-4029-921F-041B2A955D07}.Release|x86.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

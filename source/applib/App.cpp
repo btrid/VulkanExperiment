@@ -30,7 +30,8 @@ void App::setup(std::shared_ptr<btr::Loader>& loader)
 	windowInfo.window_name = L"Vulkan Test";
 	windowInfo.class_name = L"VulkanMainWindow";
 
-	m_window.setup(windowInfo);
+	m_window = std::make_shared<cWindow>();
+	m_window->setup(windowInfo);
 
 	// backbufferÇÃèâä˙âª
 	vk::ImageSubresourceRange subresource_range;
@@ -45,9 +46,9 @@ void App::setup(std::shared_ptr<btr::Loader>& loader)
 	barrier[0].setOldLayout(vk::ImageLayout::eUndefined);
 	barrier[0].setNewLayout(vk::ImageLayout::ePresentSrcKHR);
 	barrier[2] = barrier[1] = barrier[0];
-	barrier[0].setImage(m_window.getSwapchain().m_backbuffer[0].m_image);
-	barrier[1].setImage(m_window.getSwapchain().m_backbuffer[1].m_image);
-	barrier[2].setImage(m_window.getSwapchain().m_backbuffer[2].m_image);
+	barrier[0].setImage(m_window->getSwapchain().m_backbuffer[0].m_image);
+	barrier[1].setImage(m_window->getSwapchain().m_backbuffer[1].m_image);
+	barrier[2].setImage(m_window->getSwapchain().m_backbuffer[2].m_image);
 
 	vk::ImageSubresourceRange subresource_depth_range;
 	subresource_depth_range.aspectMask = vk::ImageAspectFlagBits::eDepth;
@@ -56,18 +57,18 @@ void App::setup(std::shared_ptr<btr::Loader>& loader)
 	subresource_depth_range.layerCount = 1;
 	subresource_depth_range.levelCount = 1;
 
-	barrier[3].setImage(m_window.getSwapchain().m_depth.m_image);
+	barrier[3].setImage(m_window->getSwapchain().m_depth.m_image);
 	barrier[3].setSubresourceRange(subresource_depth_range);
 	barrier[3].setDstAccessMask(vk::AccessFlagBits::eDepthStencilAttachmentWrite);
 	barrier[3].setOldLayout(vk::ImageLayout::eUndefined);
 	barrier[3].setNewLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
 	loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::DependencyFlags(), {}, {}, barrier);
-
+	loader->m_window = m_window;
 	return;
 	// ñ¢é¿ëï
 	m_loader = std::make_shared<btr::Loader>();
-	m_loader->m_window = &m_window;
+	m_loader->m_window = m_window;
 	auto device = sGlobal::Order().getGPU(0).getDevice();
 	m_loader->m_device = device;
 	vk::MemoryPropertyFlags host_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;

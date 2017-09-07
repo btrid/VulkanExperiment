@@ -8,7 +8,8 @@ namespace app
 
 struct App
 {
-	cWindow m_window;
+	cGPU m_gpu;
+	std::shared_ptr<cWindow> m_window;
 	std::shared_ptr<btr::Loader> m_loader;
 
 	App();

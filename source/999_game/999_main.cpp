@@ -135,7 +135,7 @@ int main()
 	vk::Queue queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), 0);
 
 	std::shared_ptr<btr::Loader> loader = std::make_shared<btr::Loader>();
-	loader->m_window = &app.m_window;
+//	loader->m_window = app.m_window;
 	loader->m_device = device;
 	vk::MemoryPropertyFlags host_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
 	vk::MemoryPropertyFlags device_memory = vk::MemoryPropertyFlagBits::eDeviceLocal;
@@ -166,15 +166,15 @@ int main()
 
 	}
 
+	loader->m_cmd = setup_cmd;
+	app.setup(loader);
 	auto executer = std::make_shared<btr::Executer>();
 	executer->m_device = device;
 	executer->m_vertex_memory	= loader->m_vertex_memory;
 	executer->m_uniform_memory	= loader->m_uniform_memory;
 	executer->m_storage_memory	= loader->m_storage_memory;
 	executer->m_staging_memory	= loader->m_staging_memory;
-	cThreadPool& pool = sGlobal::Order().getThreadPool();
-	executer->m_thread_pool = &pool;
-	executer->m_window = &app.m_window;
+	executer->m_window = app.m_window;
 
 	cModelPipeline model_pipeline;
 	cModelRender model_render;
@@ -184,8 +184,6 @@ int main()
 	m_player.m_pos.x = 223.f;
 	m_player.m_pos.z = 183.f;
 	{
-		loader->m_cmd = setup_cmd;
-		app.setup(loader);
 		sCameraManager::Order().setup(loader);
 		DrawHelper::Order().setup(loader);
 		sScene::Order().setup(loader);
@@ -232,10 +230,10 @@ int main()
 	{
 		cStopWatch time;
 
-		uint32_t backbuffer_index = app.m_window.getSwapchain().swap(swapbuffer_semaphore);
+		uint32_t backbuffer_index = app.m_window->getSwapchain().swap(swapbuffer_semaphore);
 
-		sDebug::Order().waitFence(device.getHandle(), app.m_window.getFence(backbuffer_index));
-		device->resetFences({ app.m_window.getFence(backbuffer_index) });
+		sDebug::Order().waitFence(device.getHandle(), app.m_window->getFence(backbuffer_index));
+		device->resetFences({ app.m_window->getFence(backbuffer_index) });
 
 		for (auto& tls : sGlobal::Order().getThreadLocalList())
 		{
@@ -249,7 +247,7 @@ int main()
 
 			{
 				auto* m_camera = cCamera::sCamera::Order().getCameraList()[0];
-				m_camera->control(app.m_window.getInput(), 0.016f);
+				m_camera->control(app.m_window->getInput(), 0.016f);
 			}
 			{
 				m_player.execute(executer);
@@ -333,8 +331,8 @@ int main()
 			}
 
 			// draw
-			render_cmds.front() = app.m_window.getSwapchain().m_cmd_present_to_render[backbuffer_index];
-			render_cmds.back() = app.m_window.getSwapchain().m_cmd_render_to_present[backbuffer_index];
+			render_cmds.front() = app.m_window->getSwapchain().m_cmd_present_to_render[backbuffer_index];
+			render_cmds.back() = app.m_window->getSwapchain().m_cmd_render_to_present[backbuffer_index];
 			motion_worker_syncronized_point.wait();
 			render_syncronized_point.wait();
 
@@ -350,17 +348,17 @@ int main()
 				.setSignalSemaphoreCount(1)
 				.setPSignalSemaphores(&cmdsubmit_semaphore)
 			};
-			queue.submit(submitInfo, app.m_window.getFence(backbuffer_index));
+			queue.submit(submitInfo, app.m_window->getFence(backbuffer_index));
 			vk::PresentInfoKHR present_info = vk::PresentInfoKHR()
 				.setWaitSemaphoreCount(1)
 				.setPWaitSemaphores(&cmdsubmit_semaphore)
 				.setSwapchainCount(1)
-				.setPSwapchains(&app.m_window.getSwapchain().m_swapchain_handle)
+				.setPSwapchains(&app.m_window->getSwapchain().m_swapchain_handle)
 				.setPImageIndices(&backbuffer_index);
 			queue.presentKHR(present_info);
 		}
 
-		app.m_window.update(sGlobal::Order().getThreadPool());
+		app.m_window->update(sGlobal::Order().getThreadPool());
 		sGlobal::Order().swap();
 		sCameraManager::Order().sync();
 		printf("%6.3fs\n", time.getElapsedTimeAsSeconds());

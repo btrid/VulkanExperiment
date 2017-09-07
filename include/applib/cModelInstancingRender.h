@@ -126,10 +126,15 @@ public:
 	std::shared_ptr<cModel::Resource> m_resource;
 	std::vector<cModel*> m_model;
 
-	std::vector<vk::DescriptorSet> m_descriptor_set;
-	vk::DescriptorSet m_draw_descriptor_set_per_model;
-	std::vector<vk::DescriptorSet> m_draw_descriptor_set_per_mesh;
-	std::vector<vk::DescriptorSet> m_compute_descriptor_set;
+	enum DescriptorSet
+	{
+		DESCRIPTOR_SET_MODEL,
+		DESCRIPTOR_SET_MESH,
+		DESCRIPTOR_SET_ANIMATION,
+	};
+	std::vector<vk::UniqueDescriptorSet> m_descriptor_set;
+	vk::UniqueDescriptorSet m_draw_descriptor_set_per_model;
+	std::vector<vk::UniqueDescriptorSet> m_compute_descriptor_set;
 
 	enum ModelStorageBuffer : s32
 	{
@@ -189,7 +194,7 @@ public:
 		auto& device = gpu.getDevice();
 		m_device = device;
 	}
-	void setup(btr::Loader& loader)
+	void setup(std::shared_ptr<btr::Loader>& loader)
 	{
 		m_light_pipeline.setup(*this);
 		m_compute_pipeline.setup(loader, *this);
@@ -220,7 +225,7 @@ public:
 	}
 	void draw(vk::CommandBuffer cmd)
 	{
-		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_compute_pipeline.m_graphics_pipeline);
+		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_compute_pipeline.m_graphics_pipeline.get());
 		// draw
 		for (auto& render : m_model)
 		{

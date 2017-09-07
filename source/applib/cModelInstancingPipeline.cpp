@@ -5,11 +5,79 @@
 #include <btrlib/Shape.h>
 #include <btrlib/cModel.h>
 
-void cModelInstancingPipeline::setup(btr::Loader& loader, cModelInstancingRenderer& renderer)
+void cModelInstancingPipeline::setup(std::shared_ptr<btr::Loader>& loader, cModelInstancingRenderer& renderer)
 {
 	auto& gpu = sGlobal::Order().getGPU(0);
 	auto& device = gpu.getDevice();
 
+	{
+		// レンダーパス
+		{
+			// sub pass
+			std::vector<vk::AttachmentReference> color_ref =
+			{
+				vk::AttachmentReference()
+				.setAttachment(0)
+				.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
+			};
+			vk::AttachmentReference depth_ref;
+			depth_ref.setAttachment(1);
+			depth_ref.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+
+			vk::SubpassDescription subpass;
+			subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+			subpass.setInputAttachmentCount(0);
+			subpass.setPInputAttachments(nullptr);
+			subpass.setColorAttachmentCount((uint32_t)color_ref.size());
+			subpass.setPColorAttachments(color_ref.data());
+			subpass.setPDepthStencilAttachment(&depth_ref);
+
+			std::vector<vk::AttachmentDescription> attach_description = {
+				// color1
+				vk::AttachmentDescription()
+				.setFormat(loader->m_window->getSwapchain().m_surface_format.format)
+				.setSamples(vk::SampleCountFlagBits::e1)
+				.setLoadOp(vk::AttachmentLoadOp::eLoad)
+				.setStoreOp(vk::AttachmentStoreOp::eStore)
+				.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
+				.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
+				vk::AttachmentDescription()
+				.setFormat(vk::Format::eD32Sfloat)
+				.setSamples(vk::SampleCountFlagBits::e1)
+				.setLoadOp(vk::AttachmentLoadOp::eLoad)
+				.setStoreOp(vk::AttachmentStoreOp::eStore)
+				.setInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
+				.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
+			};
+			vk::RenderPassCreateInfo renderpass_info = vk::RenderPassCreateInfo()
+				.setAttachmentCount(attach_description.size())
+				.setPAttachments(attach_description.data())
+				.setSubpassCount(1)
+				.setPSubpasses(&subpass);
+
+			m_render_pass = loader->m_device->createRenderPassUnique(renderpass_info);
+		}
+
+		m_framebuffer.resize(loader->m_window->getSwapchain().getBackbufferNum());
+		{
+			std::array<vk::ImageView, 2> view;
+
+			vk::FramebufferCreateInfo framebuffer_info;
+			framebuffer_info.setRenderPass(m_render_pass.get());
+			framebuffer_info.setAttachmentCount((uint32_t)view.size());
+			framebuffer_info.setPAttachments(view.data());
+			framebuffer_info.setWidth(loader->m_window->getClientSize().x);
+			framebuffer_info.setHeight(loader->m_window->getClientSize().y);
+			framebuffer_info.setLayers(1);
+
+			for (size_t i = 0; i < m_framebuffer.size(); i++) {
+				view[0] = loader->m_window->getSwapchain().m_backbuffer[i].m_view;
+				view[1] = loader->m_window->getSwapchain().m_depth.m_view;
+				m_framebuffer[i] = loader->m_device->createFramebufferUnique(framebuffer_info);
+			}
+		}
+
+	}
 	// setup shader
 	{
 		struct
@@ -31,19 +99,19 @@ void cModelInstancingPipeline::setup(btr::Loader& loader, cModelInstancingRender
 
 		std::string path = btr::getResourceLibPath() + "shader\\binary\\";
 		for (size_t i = 0; i < SHADER_NUM; i++) {
-			m_shader_list[i] = loadShader(device.getHandle(), path + shader_info[i].name);
+			m_shader_list[i] = loadShaderUnique(device.getHandle(), path + shader_info[i].name);
 			m_stage_info[i].setStage(shader_info[i].stage);
-			m_stage_info[i].setModule(m_shader_list[i]);
+			m_stage_info[i].setModule(m_shader_list[i].get());
 			m_stage_info[i].setPName("main");
 		}
 	}
 	{
-		m_camera.setup(loader.m_uniform_memory, loader.m_staging_memory);
+		m_camera.setup(loader->m_uniform_memory, loader->m_staging_memory);
 	}
 
 	// Create compute pipeline
 	std::vector<std::vector<vk::DescriptorSetLayoutBinding>> bindings(DESCRIPTOR_NUM);
-	bindings[DESCRIPTOR_ANIMATION] = {
+	bindings[DESCRIPTOR_LAYOUT_ANIMATION] = {
 		vk::DescriptorSetLayoutBinding()
 		.setStageFlags(vk::ShaderStageFlagBits::eCompute)
 		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
@@ -95,7 +163,7 @@ void cModelInstancingPipeline::setup(btr::Loader& loader, cModelInstancingRender
 		.setDescriptorCount(1)
 		.setBinding(32),
 	};
-	bindings[DESCRIPTOR_MODEL] = {
+	bindings[DESCRIPTOR_LAYOUT_MODEL] = {
 		vk::DescriptorSetLayoutBinding()
 		.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
 		.setDescriptorType(vk::DescriptorType::eUniformBuffer)
@@ -118,7 +186,7 @@ void cModelInstancingPipeline::setup(btr::Loader& loader, cModelInstancingRender
 		.setBinding(3),
 	};
 	// DescriptorSetLayout
-	bindings[DESCRIPTOR_PER_MESH] =
+	bindings[DESCRIPTOR_LAYOUT_PER_MESH] =
 	{
 		vk::DescriptorSetLayoutBinding()
 		.setStageFlags(vk::ShaderStageFlagBits::eFragment)
@@ -127,7 +195,7 @@ void cModelInstancingPipeline::setup(btr::Loader& loader, cModelInstancingRender
 		.setBinding(0),
 	};
 
-	bindings[DESCRIPTOR_SCENE] =
+	bindings[DESCRIPTOR_LAYOUT_SCENE] =
 	{
 		vk::DescriptorSetLayoutBinding()
 		.setStageFlags(vk::ShaderStageFlagBits::eVertex)
@@ -137,7 +205,7 @@ void cModelInstancingPipeline::setup(btr::Loader& loader, cModelInstancingRender
 	};
 
 
-	bindings[DESCRIPTOR_LIGHT] =
+	bindings[DESCRIPTOR_LAYOUT_LIGHT] =
 	{
 		vk::DescriptorSetLayoutBinding()
 		.setStageFlags(vk::ShaderStageFlagBits::eFragment)
@@ -165,26 +233,26 @@ void cModelInstancingPipeline::setup(btr::Loader& loader, cModelInstancingRender
 		vk::DescriptorSetLayoutCreateInfo descriptor_layout_info = vk::DescriptorSetLayoutCreateInfo()
 			.setBindingCount(bindings[i].size())
 			.setPBindings(bindings[i].data());
-		m_descriptor_set_layout[i] = device->createDescriptorSetLayout(descriptor_layout_info);
+		m_descriptor_set_layout[i] = device->createDescriptorSetLayoutUnique(descriptor_layout_info);
 	}
 
 	{
 		{
 			vk::DescriptorSetLayout layouts[] = {
-				m_descriptor_set_layout[DESCRIPTOR_MODEL],
-				m_descriptor_set_layout[DESCRIPTOR_ANIMATION],
+				m_descriptor_set_layout[DESCRIPTOR_LAYOUT_MODEL].get(),
+				m_descriptor_set_layout[DESCRIPTOR_LAYOUT_ANIMATION].get(),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info = vk::PipelineLayoutCreateInfo()
 				.setSetLayoutCount(array_length(layouts))
 				.setPSetLayouts(layouts);
-			m_pipeline_layout[PIPELINE_LAYOUT_COMPUTE] = device->createPipelineLayout(pipeline_layout_info);
+			m_pipeline_layout[PIPELINE_LAYOUT_COMPUTE] = device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
 		{
 			vk::DescriptorSetLayout layouts[] = {
-				m_descriptor_set_layout[DESCRIPTOR_MODEL],
-				m_descriptor_set_layout[DESCRIPTOR_PER_MESH],
-				m_descriptor_set_layout[DESCRIPTOR_SCENE],
-				m_descriptor_set_layout[DESCRIPTOR_LIGHT],
+				m_descriptor_set_layout[DESCRIPTOR_LAYOUT_MODEL].get(),
+				m_descriptor_set_layout[DESCRIPTOR_LAYOUT_PER_MESH].get(),
+				m_descriptor_set_layout[DESCRIPTOR_LAYOUT_SCENE].get(),
+				m_descriptor_set_layout[DESCRIPTOR_LAYOUT_LIGHT].get(),
 			};
 			vk::PushConstantRange constant_range[] = {
 				vk::PushConstantRange().setOffset(0).setSize(4).setStageFlags(vk::ShaderStageFlagBits::eFragment),
@@ -195,7 +263,7 @@ void cModelInstancingPipeline::setup(btr::Loader& loader, cModelInstancingRender
 			pipeline_layout_info.setPushConstantRangeCount(array_length(constant_range));
 			pipeline_layout_info.setPPushConstantRanges(constant_range);
 
-			m_pipeline_layout[PIPELINE_LAYOUT_RENDER] = device->createPipelineLayout(pipeline_layout_info);
+			m_pipeline_layout[PIPELINE_LAYOUT_RENDER] = device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
 	}
@@ -218,40 +286,35 @@ void cModelInstancingPipeline::setup(btr::Loader& loader, cModelInstancingRender
 		descriptor_pool_info.poolSizeCount = descriptor_pool_size.size();
 		descriptor_pool_info.pPoolSizes = descriptor_pool_size.data();
 
-		m_descriptor_pool = device->createDescriptorPool(descriptor_pool_info);
+		m_descriptor_pool = device->createDescriptorPoolUnique(descriptor_pool_info);
 	}
 
 
-	// pipeline cache
-	{
-		vk::PipelineCacheCreateInfo cacheInfo = vk::PipelineCacheCreateInfo();
-		m_cache = device->createPipelineCache(cacheInfo);
-	}
 	// Create pipeline
 	std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info = {
 		vk::ComputePipelineCreateInfo()
 		.setStage(m_stage_info[SHADER_COMPUTE_CLEAR])
-		.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_COMPUTE]),
+		.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_COMPUTE].get()),
 		vk::ComputePipelineCreateInfo()
 		.setStage(m_stage_info[SHADER_COMPUTE_ANIMATION_UPDATE])
-		.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_COMPUTE]),
+		.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_COMPUTE].get()),
 		vk::ComputePipelineCreateInfo()
 		.setStage(m_stage_info[SHADER_COMPUTE_MOTION_UPDATE])
-		.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_COMPUTE]),
+		.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_COMPUTE].get()),
 		vk::ComputePipelineCreateInfo()
 		.setStage(m_stage_info[SHADER_COMPUTE_NODE_TRANSFORM])
-		.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_COMPUTE]),
+		.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_COMPUTE].get()),
 		vk::ComputePipelineCreateInfo()
 		.setStage(m_stage_info[SHADER_COMPUTE_CULLING])
-		.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_COMPUTE]),
+		.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_COMPUTE].get()),
 		vk::ComputePipelineCreateInfo()
 		.setStage(m_stage_info[SHADER_COMPUTE_BONE_TRANSFORM])
-		.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_COMPUTE]),
+		.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_COMPUTE].get()),
 	};
 
 	for (size_t i = 0; i < compute_pipeline_info.size(); i++) {
-		auto p = device->createComputePipelines(m_cache, { compute_pipeline_info[i] });
-		m_pipeline.insert(m_pipeline.end(), p.begin(), p.end());
+		auto p = device->createComputePipelinesUnique(loader->m_cache.get(), { compute_pipeline_info[i] });
+		m_pipeline.insert(m_pipeline.end(), std::make_move_iterator(p.begin()), std::make_move_iterator(p.end()));
 	}
 
 	vk::Extent3D size;
@@ -373,23 +436,27 @@ void cModelInstancingPipeline::setup(btr::Loader& loader, cModelInstancingRender
 				.setPViewportState(&viewport_info)
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
-				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_RENDER])
-				.setRenderPass(loader.m_render_pass)
+				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_RENDER].get())
+				.setRenderPass(m_render_pass.get())
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			m_graphics_pipeline = device->createGraphicsPipelines(pipeline_cache, graphics_pipeline_info)[0];
+			m_graphics_pipeline = std::move(device->createGraphicsPipelinesUnique(pipeline_cache, graphics_pipeline_info)[0]);
 		}
 
 	}
 
 	{
 		// モデルごとのDescriptorの設定
+
+		vk::DescriptorSetLayout layouts[] = {
+			m_descriptor_set_layout[cModelInstancingPipeline::DESCRIPTOR_LAYOUT_SCENE].get(),
+		};
 		vk::DescriptorSetAllocateInfo alloc_info;
-		alloc_info.descriptorPool = m_descriptor_pool;
-		alloc_info.descriptorSetCount = 1;
-		alloc_info.pSetLayouts = &m_descriptor_set_layout[cModelInstancingPipeline::DESCRIPTOR_SCENE];
-		m_descriptor_set_scene = device->allocateDescriptorSets(alloc_info)[0];
+		alloc_info.descriptorPool = loader->m_descriptor_pool.get();
+		alloc_info.descriptorSetCount = array_length(layouts);
+		alloc_info.pSetLayouts = layouts;
+		m_descriptor_set_scene = std::move(device->allocateDescriptorSetsUnique(alloc_info)[0]);
 
 		std::vector<vk::DescriptorBufferInfo> uniformBufferInfo = {
 			m_camera.getBufferInfo(),
@@ -401,17 +468,20 @@ void cModelInstancingPipeline::setup(btr::Loader& loader, cModelInstancingRender
 			.setDescriptorCount(uniformBufferInfo.size())
 			.setPBufferInfo(uniformBufferInfo.data())
 			.setDstBinding(0)
-			.setDstSet(m_descriptor_set_scene),
+			.setDstSet(m_descriptor_set_scene.get()),
 		};
 		device->updateDescriptorSets(write_descriptor_set, {});
 	}
 	{
 		// ライトのDescriptorの設定
+		vk::DescriptorSetLayout layouts[] = {
+			m_descriptor_set_layout[cModelInstancingPipeline::DESCRIPTOR_LAYOUT_LIGHT].get(),
+		};
 		vk::DescriptorSetAllocateInfo alloc_info;
-		alloc_info.descriptorPool = m_descriptor_pool;
-		alloc_info.descriptorSetCount = 1;
-		alloc_info.pSetLayouts = &m_descriptor_set_layout[cModelInstancingPipeline::DESCRIPTOR_LIGHT];
-		m_descriptor_set_light = device->allocateDescriptorSets(alloc_info)[0];
+		alloc_info.descriptorPool = loader->m_descriptor_pool.get();
+		alloc_info.descriptorSetCount = array_length(layouts);
+		alloc_info.pSetLayouts = layouts;
+		m_descriptor_set_light = std::move(device->allocateDescriptorSetsUnique(alloc_info)[0]);
 
 		std::vector<vk::DescriptorBufferInfo> uniformBufferInfo = {
 			renderer.getLight().getLightInfoBufferInfo(),
@@ -428,13 +498,13 @@ void cModelInstancingPipeline::setup(btr::Loader& loader, cModelInstancingRender
 			.setDescriptorCount(uniformBufferInfo.size())
 			.setPBufferInfo(uniformBufferInfo.data())
 			.setDstBinding(0)
-			.setDstSet(m_descriptor_set_light),
+			.setDstSet(m_descriptor_set_light.get()),
 			vk::WriteDescriptorSet()
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setDescriptorCount(storageBufferInfo.size())
 			.setPBufferInfo(storageBufferInfo.data())
 			.setDstBinding(1)
-			.setDstSet(m_descriptor_set_light),
+			.setDstSet(m_descriptor_set_light.get()),
 		};
 		device->updateDescriptorSets(write_descriptor_set, {});
 	}

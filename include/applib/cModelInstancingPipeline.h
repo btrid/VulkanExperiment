@@ -11,6 +11,7 @@
 
 struct cModelInstancingRenderer;
 
+// pipelineÅAÉâÉCÉgÇ»Ç«ÇÃä«óù
 struct cModelInstancingPipeline
 {
 
@@ -29,11 +30,11 @@ struct cModelInstancingPipeline
 	};
 	enum DescriptorLayout
 	{
-		DESCRIPTOR_MODEL,
-		DESCRIPTOR_ANIMATION,
-		DESCRIPTOR_PER_MESH,
-		DESCRIPTOR_SCENE,
-		DESCRIPTOR_LIGHT,
+		DESCRIPTOR_LAYOUT_MODEL,
+		DESCRIPTOR_LAYOUT_ANIMATION,
+		DESCRIPTOR_LAYOUT_PER_MESH,
+		DESCRIPTOR_LAYOUT_SCENE,
+		DESCRIPTOR_LAYOUT_LIGHT,
 		DESCRIPTOR_NUM,
 	};
 	enum PipelineLayout
@@ -42,19 +43,21 @@ struct cModelInstancingPipeline
 		PIPELINE_LAYOUT_RENDER,
 		PIPELINE_LAYOUT_NUM,
 	};
-	std::array<vk::ShaderModule, SHADER_NUM> m_shader_list;
+	vk::UniqueRenderPass m_render_pass;
+	std::vector<vk::UniqueFramebuffer> m_framebuffer;
+
+	std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_list;
 	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_stage_info;
 
-	vk::DescriptorPool m_descriptor_pool;
-	vk::PipelineCache m_cache;
-	std::vector<vk::Pipeline> m_pipeline;
-	vk::Pipeline m_graphics_pipeline;
-	std::array<vk::PipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
-	std::array<vk::DescriptorSetLayout, DESCRIPTOR_NUM> m_descriptor_set_layout;
+	vk::UniqueDescriptorPool m_descriptor_pool;
+	std::vector<vk::UniquePipeline> m_pipeline;
+	vk::UniquePipeline m_graphics_pipeline;
+	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
+	std::array<vk::UniqueDescriptorSetLayout, DESCRIPTOR_NUM> m_descriptor_set_layout;
 	btr::UpdateBuffer<CameraGPU2> m_camera;
 
-	vk::DescriptorSet m_descriptor_set_scene;
-	vk::DescriptorSet m_descriptor_set_light;
+	vk::UniqueDescriptorSet m_descriptor_set_scene;
+	vk::UniqueDescriptorSet m_descriptor_set_light;
 
-	void setup(btr::Loader& loader, cModelInstancingRenderer& renderer);
+	void setup(std::shared_ptr<btr::Loader>& loader, cModelInstancingRenderer& renderer);
 };

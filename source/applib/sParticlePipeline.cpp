@@ -390,7 +390,7 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Loader>& loader)
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
 				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get())
-				.setRenderPass(loader->m_render_pass)
+				.setRenderPass(m_render_pass.get())
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
