@@ -156,10 +156,9 @@ public:
 		}
 	}
 
-	void update(cThreadPool& pool)
+	void update()
 	{
 		MSG msg;
-//		std::vector<MSG> msgList;
 		auto old = m_input.m_mouse;
 		m_input.m_mouse.wheel = 0;
 		while (PeekMessage(&msg, m_private->m_window, 0, 0, PM_REMOVE))

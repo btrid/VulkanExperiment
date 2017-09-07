@@ -135,7 +135,6 @@ int main()
 	vk::Queue queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), 0);
 
 	std::shared_ptr<btr::Loader> loader = std::make_shared<btr::Loader>();
-//	loader->m_window = app.m_window;
 	loader->m_device = device;
 	vk::MemoryPropertyFlags host_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
 	vk::MemoryPropertyFlags device_memory = vk::MemoryPropertyFlagBits::eDeviceLocal;
@@ -162,7 +161,7 @@ int main()
 		loader->m_descriptor_pool = device->createDescriptorPoolUnique(pool_info);
 
 		vk::PipelineCacheCreateInfo cacheInfo = vk::PipelineCacheCreateInfo();
-		loader->m_cache.get() = device->createPipelineCache(cacheInfo);
+		loader->m_cache = device->createPipelineCacheUnique(cacheInfo);
 
 	}
 
@@ -175,6 +174,7 @@ int main()
 	executer->m_storage_memory	= loader->m_storage_memory;
 	executer->m_staging_memory	= loader->m_staging_memory;
 	executer->m_window = app.m_window;
+	loader->m_window = app.m_window;
 
 	cModelPipeline model_pipeline;
 	cModelRender model_render;
@@ -357,8 +357,7 @@ int main()
 				.setPImageIndices(&backbuffer_index);
 			queue.presentKHR(present_info);
 		}
-
-		app.m_window->update(sGlobal::Order().getThreadPool());
+		app.m_window->update();
 		sGlobal::Order().swap();
 		sCameraManager::Order().sync();
 		printf("%6.3fs\n", time.getElapsedTimeAsSeconds());

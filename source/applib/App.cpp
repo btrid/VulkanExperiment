@@ -64,8 +64,9 @@ void App::setup(std::shared_ptr<btr::Loader>& loader)
 	barrier[3].setNewLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
 	loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::DependencyFlags(), {}, {}, barrier);
-	loader->m_window = m_window;
+
 	return;
+
 	// –¢ŽÀ‘•
 	m_loader = std::make_shared<btr::Loader>();
 	m_loader->m_window = m_window;
