@@ -126,6 +126,7 @@ int main()
 	camera->getData().m_far = 5000.f;
 	camera->getData().m_near = 0.01f;
 
+	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
 	auto setup_cmd = sThreadLocal::Order().getCmdOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
 
@@ -164,8 +165,8 @@ int main()
 		loader->m_cache = device->createPipelineCacheUnique(cacheInfo);
 
 	}
-
 	loader->m_cmd = setup_cmd;
+
 	app.setup(loader);
 	auto executer = std::make_shared<btr::Executer>();
 	executer->m_device = device;

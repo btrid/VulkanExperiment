@@ -74,12 +74,12 @@ private:
 
 class cGPU
 {
+	friend class sGlobal;
 
-public:
+public:	
 	cGPU() = default;
 	~cGPU() = default;
 	void setup(vk::PhysicalDevice pd);
-	friend class sGlobal;
 public:
 	vk::PhysicalDevice*			operator->() { return &m_handle; }
 	const vk::PhysicalDevice*	operator->()const { return &m_handle; }

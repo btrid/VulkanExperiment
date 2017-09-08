@@ -9,6 +9,7 @@
 namespace app
 {
 
+
 App::App()
 {
 
@@ -65,6 +66,7 @@ void App::setup(std::shared_ptr<btr::Loader>& loader)
 
 	loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::DependencyFlags(), {}, {}, barrier);
 
+	m_cmd_pool = cCmdPool::MakeCmdPool(m_gpu);
 	return;
 
 	// –¢ŽÀ‘•

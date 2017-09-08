@@ -75,6 +75,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\include\btrlib\cAudio.h" />
     <ClInclude Include="..\..\include\btrlib\cCamera.h" />
+    <ClInclude Include="..\..\include\btrlib\cCmdPool.h" />
     <ClInclude Include="..\..\include\btrlib\cDebug.h" />
     <ClInclude Include="..\..\include\btrlib\cInput.h" />
     <ClInclude Include="..\..\include\btrlib\cMotion.h" />
@@ -98,6 +99,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\source\btrlib\cAudio.cpp" />
     <ClCompile Include="..\..\source\btrlib\cCamera.cpp" />
+    <ClCompile Include="..\..\source\btrlib\cCmdPool.cpp" />
     <ClCompile Include="..\..\source\btrlib\cModel.cpp" />
     <ClCompile Include="..\..\source\btrlib\cWindow.cpp" />
     <ClCompile Include="..\..\source\btrlib\Define.cpp" />

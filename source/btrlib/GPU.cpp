@@ -1,4 +1,6 @@
+#include <thread>
 #include <btrlib/GPU.h>
+#include <btrlib/sGlobal.h>
 
 void cGPU::setup(vk::PhysicalDevice pd)
 {
