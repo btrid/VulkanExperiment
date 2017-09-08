@@ -26,13 +26,14 @@
 #include <applib/cModelRender.h>
 #include <applib/DrawHelper.h>
 #include <btrlib/Loader.h>
+#include <imgui/imgui.h>
 
 
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
 //#pragma comment(lib, "FreeImage.lib")
 #pragma comment(lib, "vulkan-1.lib")
-#pragma comment(lib, "imgui.lib")
+//#pragma comment(lib, "imgui.lib")
 
 
 int main()

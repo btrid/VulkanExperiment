@@ -6,6 +6,7 @@
     <btrSource>$(SolutionDir)source\</btrSource>
     <btrBin>$(SolutionDir)bin\</btrBin>
     <btrObj>$(SolutionDir)obj\</btrObj>
+    <btrExternal>$(SolutionDir)external\</btrExternal>
   </PropertyGroup>
   <PropertyGroup>
     <OutDir>$(btrBin)$(Platform)\$(Configuration)\</OutDir>
@@ -18,7 +19,7 @@
       <AdditionalOptions>/experimental:module %(AdditionalOptions)</AdditionalOptions>
     </Manifest>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(btrInclude);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(btrInclude);&amp;(btrExternal)%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
@@ -38,6 +39,9 @@
     </BuildMacro>
     <BuildMacro Include="btrObj">
       <Value>$(btrObj)</Value>
+    </BuildMacro>
+    <BuildMacro Include="btrExternal">
+      <Value>$(btrExternal)</Value>
     </BuildMacro>
   </ItemGroup>
 </Project>
