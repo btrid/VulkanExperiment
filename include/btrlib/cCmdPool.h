@@ -7,8 +7,14 @@
 #include <btrlib/GPU.h>
 #include <btrlib/sGlobal.h>
 
+namespace btr
+{
+struct Executer;
+}
 struct cCmdPool
 {
+	static std::shared_ptr<cCmdPool> MakeCmdPool(cGPU& gpu);
+
 	enum CmdPoolType
 	{
 		CMD_POOL_TYPE_ONETIME,	//!< 1フレームに一度poolがリセットされる 
@@ -19,6 +25,7 @@ struct cCmdPool
 	struct CmdPoolPerFamily
 	{
 		std::array<vk::UniqueCommandPool, sGlobal::FRAME_MAX> m_cmd_pool_onetime;
+		std::array<std::vector<vk::UniqueCommandBuffer>, sGlobal::FRAME_MAX> m_cmd_onetime_deleter;
 		vk::UniqueCommandPool	m_cmd_pool_temporary;
 		vk::UniqueCommandPool	m_cmd_pool_compiled;
 	};
@@ -28,8 +35,8 @@ struct cCmdPool
 	};
 	std::vector<CmdPoolPerThread> m_per_thread;
 
-	vk::CommandBuffer getCmdOnetime(int device_family_index)const;
+	vk::CommandBuffer getCmdOnetime(int device_family_index);
 	vk::CommandPool getCmdPool(CmdPoolType type, int device_family_index)const;
 
-	static std::shared_ptr<cCmdPool> MakeCmdPool(cGPU& gpu);
+	void resetPool(std::shared_ptr<btr::Executer>& executer);
 };

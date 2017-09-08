@@ -1,4 +1,5 @@
 #include <btrlib/cCmdPool.h>
+#include <btrlib/Loader.h>
 
 void* VKAPI_PTR Allocation(void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
 {
@@ -83,13 +84,28 @@ vk::CommandPool cCmdPool::getCmdPool(cCmdPool::CmdPoolType type, int device_fami
 		return pool_per_family.m_cmd_pool_compiled.get();
 	}
 }
-vk::CommandBuffer cCmdPool::getCmdOnetime(int device_family_index) const
+
+void cCmdPool::resetPool(std::shared_ptr<btr::Executer>& executer)
+{
+	for (auto& tls : m_per_thread)
+	{
+		for (auto& pool_family : tls.m_per_family)
+		{
+			executer->m_gpu.getDevice()->resetCommandPool(pool_family.m_cmd_pool_onetime[executer->getGPUFrame()].get(), vk::CommandPoolResetFlagBits::eReleaseResources);
+			pool_family.m_cmd_onetime_deleter[executer->getGPUFrame()].clear();
+		}
+	}
+}
+
+vk::CommandBuffer cCmdPool::getCmdOnetime(int device_family_index)
 {
 	vk::CommandBufferAllocateInfo cmd_buffer_info;
 	cmd_buffer_info.commandBufferCount = 1;
 	cmd_buffer_info.commandPool = getCmdPool(CMD_POOL_TYPE_ONETIME, device_family_index);
 	cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
-	auto cmd = sGlobal::Order().getGPU(0).getDevice()->allocateCommandBuffers(cmd_buffer_info)[0];
+	auto cmd_unique = std::move(sGlobal::Order().getGPU(0).getDevice()->allocateCommandBuffersUnique(cmd_buffer_info)[0]);
+	auto cmd = cmd_unique.get();
+	m_per_thread[sThreadLocal::Order().getThreadIndex()].m_per_family[device_family_index].m_cmd_onetime_deleter[sGlobal::Order().getGPUIndex()].push_back(std::move(cmd_unique));
 
 	vk::CommandBufferBeginInfo begin_info;
 	begin_info.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
