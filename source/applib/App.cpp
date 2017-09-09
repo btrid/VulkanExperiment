@@ -34,40 +34,6 @@ void App::setup(std::shared_ptr<btr::Loader>& loader)
 	m_window = std::make_shared<cWindow>();
 	m_window->setup(loader, windowInfo);
 
-	// backbuffer‚Ì‰Šú‰»
-	vk::ImageSubresourceRange subresource_range;
-	subresource_range.setAspectMask(vk::ImageAspectFlagBits::eColor);
-	subresource_range.setBaseArrayLayer(0);
-	subresource_range.setLayerCount(1);
-	subresource_range.setBaseMipLevel(0);
-	subresource_range.setLevelCount(1);
-	std::vector<vk::ImageMemoryBarrier> barrier(m_window->getSwapchain().getBackbufferNum() + 1);
-	barrier[0].setSubresourceRange(subresource_range);
-	barrier[0].setDstAccessMask(vk::AccessFlagBits::eMemoryRead);
-	barrier[0].setOldLayout(vk::ImageLayout::eUndefined);
-	barrier[0].setNewLayout(vk::ImageLayout::ePresentSrcKHR);
-	barrier[0].setImage(m_window->getSwapchain().m_backbuffer[0].m_image);
-	for (uint32_t i = 1 ; i<m_window->getSwapchain().getBackbufferNum(); i++)
-	{
-		barrier[i] = barrier[0];
-		barrier[i].setImage(m_window->getSwapchain().m_backbuffer[i].m_image);
-	}
-
-	vk::ImageSubresourceRange subresource_depth_range;
-	subresource_depth_range.aspectMask = vk::ImageAspectFlagBits::eDepth;
-	subresource_depth_range.baseArrayLayer = 0;
-	subresource_depth_range.baseMipLevel = 0;
-	subresource_depth_range.layerCount = 1;
-	subresource_depth_range.levelCount = 1;
-
-	barrier.back().setImage(m_window->getSwapchain().m_depth.m_image);
-	barrier.back().setSubresourceRange(subresource_depth_range);
-	barrier.back().setDstAccessMask(vk::AccessFlagBits::eDepthStencilAttachmentWrite);
-	barrier.back().setOldLayout(vk::ImageLayout::eUndefined);
-	barrier.back().setNewLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-
-	loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::DependencyFlags(), {}, {}, barrier);
-
 	m_cmd_pool = cCmdPool::MakeCmdPool(m_gpu);
 	return;
 

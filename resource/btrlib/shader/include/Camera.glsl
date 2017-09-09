@@ -16,7 +16,6 @@ layout(std140, set=SETPOINT_CAMERA, binding=0) uniform CameraUniform
 {
 	Camera u_camera[1];
 };
-
 #endif
 
 #if 0

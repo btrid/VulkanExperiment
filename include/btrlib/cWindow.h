@@ -51,7 +51,7 @@ private:
 		std::vector < vk::CommandBuffer > m_cmd_render_to_present;
 
 		vk::UniqueSemaphore m_swapbuffer_semaphore;
-		vk::UniqueSemaphore m_cmdsubmit_semaphore;
+		vk::UniqueSemaphore m_submit_semaphore;
 
 		Swapchain()
 			: m_swapchain_handle()

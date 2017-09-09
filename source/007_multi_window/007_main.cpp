@@ -90,6 +90,18 @@ int main()
 
 	app::App app;
 	app.setup(loader);
+	std::shared_ptr<cWindow> sub = std::make_shared<cWindow>();
+	{
+		cWindow::CreateInfo window_info;
+		window_info.class_name = L"Sub Window";
+		window_info.window_name = L"Sub Window";
+		window_info.backbuffer_num = sGlobal::Order().FRAME_MAX;
+		window_info.gpu = gpu;
+		window_info.size = vk::Extent2D(480, 480);
+		window_info.surface_format_request = app.m_window->getSwapchain().m_surface_format;
+		sub->setup(loader, window_info);
+
+	}
 	auto executer = std::make_shared<btr::Executer>();
 	executer->m_device = device;
 	executer->m_vertex_memory = loader->m_vertex_memory;
@@ -126,9 +138,10 @@ int main()
 		cStopWatch time;
 
 		uint32_t backbuffer_index = app.m_window->getSwapchain().swap();
+		uint32_t subbackbuffer_index = sub->getSwapchain().swap();
 
 		sDebug::Order().waitFence(device.getHandle(), app.m_window->getFence(backbuffer_index));
-		device->resetFences({ app.m_window->getFence(backbuffer_index) });
+		device->resetFences({ app.m_window->getFence(backbuffer_index), sub->getFence(subbackbuffer_index)});
 
 		{
 
@@ -139,22 +152,27 @@ int main()
 
 			SynchronizedPoint motion_worker_syncronized_point(1);
 			SynchronizedPoint render_syncronized_point(6);
-			std::vector<vk::CommandBuffer> render_cmds(2);
+			std::vector<vk::CommandBuffer> render_cmds(4);
 
 			// draw
-			render_cmds.front() = app.m_window->getSwapchain().m_cmd_present_to_render[backbuffer_index];
-			render_cmds.back() = app.m_window->getSwapchain().m_cmd_render_to_present[backbuffer_index];
-// 			motion_worker_syncronized_point.wait();
-// 			render_syncronized_point.wait();
+			render_cmds[0] = app.m_window->getSwapchain().m_cmd_present_to_render[backbuffer_index];
+			render_cmds[1] = app.m_window->getSwapchain().m_cmd_render_to_present[backbuffer_index];
+			render_cmds[2] = sub->getSwapchain().m_cmd_present_to_render[backbuffer_index];
+			render_cmds[3] = sub->getSwapchain().m_cmd_render_to_present[backbuffer_index];
 
 			vk::Semaphore swap_wait_semas[] = {
 				app.m_window->getSwapchain().m_swapbuffer_semaphore.get(),
+				sub->getSwapchain().m_swapbuffer_semaphore.get(),
 			};
 			vk::Semaphore submit_wait_semas[] = {
-				app.m_window->getSwapchain().m_swapbuffer_semaphore.get(),
+				app.m_window->getSwapchain().m_submit_semaphore.get(),
+				sub->getSwapchain().m_submit_semaphore.get(),
 			};
 
-			vk::PipelineStageFlags waitPipeline = vk::PipelineStageFlagBits::eAllGraphics;
+			vk::PipelineStageFlags wait_pipeline[] = {
+				vk::PipelineStageFlagBits::eAllGraphics,
+				vk::PipelineStageFlagBits::eAllGraphics,
+			};
 			std::vector<vk::SubmitInfo> submitInfo =
 			{
 				vk::SubmitInfo()
@@ -162,7 +180,7 @@ int main()
 				.setPCommandBuffers(render_cmds.data())
 				.setWaitSemaphoreCount(array_length(swap_wait_semas))
 				.setPWaitSemaphores(swap_wait_semas)
-				.setPWaitDstStageMask(&waitPipeline)
+				.setPWaitDstStageMask(wait_pipeline)
 				.setSignalSemaphoreCount(array_length(submit_wait_semas))
 				.setPSignalSemaphores(submit_wait_semas)
 			};
@@ -170,9 +188,11 @@ int main()
 
 			vk::SwapchainKHR swapchains[] = {
 				app.m_window->getSwapchain().m_swapchain_handle.get(),
+				sub->getSwapchain().m_swapchain_handle.get(),
 			};
 			uint32_t backbuffer_indexs[] = {
-				backbuffer_index 
+				backbuffer_index,
+				subbackbuffer_index,
 			};
 			vk::PresentInfoKHR present_info = vk::PresentInfoKHR()
 				.setWaitSemaphoreCount(array_length(submit_wait_semas))
@@ -183,6 +203,7 @@ int main()
 			queue.presentKHR(present_info);
 		}
 		app.m_window->update();
+		sub->update();
 		sGlobal::Order().swap();
 		sCameraManager::Order().sync();
 		printf("%6.3fs\n", time.getElapsedTimeAsSeconds());
