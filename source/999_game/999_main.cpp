@@ -136,6 +136,7 @@ int main()
 	vk::Queue queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), 0);
 
 	std::shared_ptr<btr::Loader> loader = std::make_shared<btr::Loader>();
+	loader->m_gpu = gpu;
 	loader->m_device = device;
 	vk::MemoryPropertyFlags host_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
 	vk::MemoryPropertyFlags device_memory = vk::MemoryPropertyFlagBits::eDeviceLocal;
@@ -231,7 +232,7 @@ int main()
 	{
 		cStopWatch time;
 
-		uint32_t backbuffer_index = app.m_window->getSwapchain().swap(swapbuffer_semaphore);
+		uint32_t backbuffer_index = app.m_window->getSwapchain().swap();
 
 		sDebug::Order().waitFence(device.getHandle(), app.m_window->getFence(backbuffer_index));
 		device->resetFences({ app.m_window->getFence(backbuffer_index) });
@@ -337,25 +338,41 @@ int main()
 			motion_worker_syncronized_point.wait();
 			render_syncronized_point.wait();
 
-			vk::PipelineStageFlags waitPipeline = vk::PipelineStageFlagBits::eAllGraphics;
+			vk::Semaphore swap_wait_semas[] = {
+				app.m_window->getSwapchain().m_swapbuffer_semaphore.get(),
+			};
+			vk::Semaphore submit_wait_semas[] = {
+				app.m_window->getSwapchain().m_submit_semaphore.get(),
+			};
+
+			vk::PipelineStageFlags wait_pipelines[] = {
+				vk::PipelineStageFlagBits::eAllGraphics,
+			};
 			std::vector<vk::SubmitInfo> submitInfo =
 			{
 				vk::SubmitInfo()
 				.setCommandBufferCount((uint32_t)render_cmds.size())
 				.setPCommandBuffers(render_cmds.data())
-				.setWaitSemaphoreCount(1)
-				.setPWaitSemaphores(&swapbuffer_semaphore)
-				.setPWaitDstStageMask(&waitPipeline)
-				.setSignalSemaphoreCount(1)
-				.setPSignalSemaphores(&cmdsubmit_semaphore)
+				.setWaitSemaphoreCount(array_length(swap_wait_semas))
+				.setPWaitSemaphores(swap_wait_semas)
+				.setPWaitDstStageMask(wait_pipelines)
+				.setSignalSemaphoreCount(array_length(submit_wait_semas))
+				.setPSignalSemaphores(submit_wait_semas)
 			};
 			queue.submit(submitInfo, app.m_window->getFence(backbuffer_index));
+
+			vk::SwapchainKHR swapchains[] = {
+				app.m_window->getSwapchain().m_swapchain_handle.get(),
+			};
+			uint32_t backbuffer_indexs[] = {
+				app.m_window->getSwapchain().m_backbuffer_index,
+			};
 			vk::PresentInfoKHR present_info = vk::PresentInfoKHR()
-				.setWaitSemaphoreCount(1)
-				.setPWaitSemaphores(&cmdsubmit_semaphore)
-				.setSwapchainCount(1)
-				.setPSwapchains(&app.m_window->getSwapchain().m_swapchain_handle)
-				.setPImageIndices(&backbuffer_index);
+				.setWaitSemaphoreCount(array_length(submit_wait_semas))
+				.setPWaitSemaphores(submit_wait_semas)
+				.setSwapchainCount(array_length(swapchains))
+				.setPSwapchains(swapchains)
+				.setPImageIndices(backbuffer_indexs);
 			queue.presentKHR(present_info);
 		}
 		app.m_window->update();

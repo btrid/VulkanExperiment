@@ -169,7 +169,7 @@ int main()
 				sub->getSwapchain().m_submit_semaphore.get(),
 			};
 
-			vk::PipelineStageFlags wait_pipeline[] = {
+			vk::PipelineStageFlags wait_pipelines[] = {
 				vk::PipelineStageFlagBits::eAllGraphics,
 				vk::PipelineStageFlagBits::eAllGraphics,
 			};
@@ -180,7 +180,7 @@ int main()
 				.setPCommandBuffers(render_cmds.data())
 				.setWaitSemaphoreCount(array_length(swap_wait_semas))
 				.setPWaitSemaphores(swap_wait_semas)
-				.setPWaitDstStageMask(wait_pipeline)
+				.setPWaitDstStageMask(wait_pipelines)
 				.setSignalSemaphoreCount(array_length(submit_wait_semas))
 				.setPSignalSemaphores(submit_wait_semas)
 			};
@@ -191,8 +191,8 @@ int main()
 				sub->getSwapchain().m_swapchain_handle.get(),
 			};
 			uint32_t backbuffer_indexs[] = {
-				backbuffer_index,
-				subbackbuffer_index,
+				app.m_window->getSwapchain().m_backbuffer_index,
+				sub->getSwapchain().m_backbuffer_index,
 			};
 			vk::PresentInfoKHR present_info = vk::PresentInfoKHR()
 				.setWaitSemaphoreCount(array_length(submit_wait_semas))
