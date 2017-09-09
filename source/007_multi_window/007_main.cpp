@@ -26,6 +26,7 @@
 #include <applib/cModelRender.h>
 #include <applib/DrawHelper.h>
 #include <btrlib/Loader.h>
+#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 #include <imgui/imgui.h>
 
 
@@ -33,13 +34,12 @@
 #pragma comment(lib, "applib.lib")
 //#pragma comment(lib, "FreeImage.lib")
 #pragma comment(lib, "vulkan-1.lib")
-//#pragma comment(lib, "imgui.lib")
+#pragma comment(lib, "imgui.lib")
 
 
 int main()
 {
 	btr::setResourceAppPath("..\\..\\resource\\007_multi_window\\");
-	app::App app;
 	auto* camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = glm::vec3(220.f, 60.f, 300.f);
 	camera->getData().m_target = glm::vec3(220.f, 20.f, 201.f);
@@ -90,6 +90,7 @@ int main()
 	}
 	loader->m_cmd = setup_cmd;
 
+	app::App app;
 	app.setup(loader);
 	auto executer = std::make_shared<btr::Executer>();
 	executer->m_device = device;
@@ -140,13 +141,13 @@ int main()
 
 			SynchronizedPoint motion_worker_syncronized_point(1);
 			SynchronizedPoint render_syncronized_point(6);
-			std::vector<vk::CommandBuffer> render_cmds(10);
+			std::vector<vk::CommandBuffer> render_cmds(2);
 
 			// draw
 			render_cmds.front() = app.m_window->getSwapchain().m_cmd_present_to_render[backbuffer_index];
 			render_cmds.back() = app.m_window->getSwapchain().m_cmd_render_to_present[backbuffer_index];
-			motion_worker_syncronized_point.wait();
-			render_syncronized_point.wait();
+// 			motion_worker_syncronized_point.wait();
+// 			render_syncronized_point.wait();
 
 			vk::PipelineStageFlags waitPipeline = vk::PipelineStageFlagBits::eAllGraphics;
 			std::vector<vk::SubmitInfo> submitInfo =
@@ -161,12 +162,19 @@ int main()
 				.setPSignalSemaphores(&cmdsubmit_semaphore)
 			};
 			queue.submit(submitInfo, app.m_window->getFence(backbuffer_index));
+
+			vk::SwapchainKHR swapchains[] = {
+				app.m_window->getSwapchain().m_swapchain_handle.get(),
+			};
+			uint32_t backbuffer_indexs[] = {
+				backbuffer_index 
+			};
 			vk::PresentInfoKHR present_info = vk::PresentInfoKHR()
 				.setWaitSemaphoreCount(1)
 				.setPWaitSemaphores(&cmdsubmit_semaphore)
-				.setSwapchainCount(1)
-				.setPSwapchains(&app.m_window->getSwapchain().m_swapchain_handle)
-				.setPImageIndices(&backbuffer_index);
+				.setSwapchainCount(array_length(swapchains))
+				.setPSwapchains(swapchains)
+				.setPImageIndices(backbuffer_indexs);
 			queue.presentKHR(present_info);
 		}
 		app.m_window->update();

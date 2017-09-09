@@ -32,7 +32,7 @@ void App::setup(std::shared_ptr<btr::Loader>& loader)
 	windowInfo.class_name = L"VulkanMainWindow";
 
 	m_window = std::make_shared<cWindow>();
-	m_window->setup(windowInfo);
+	m_window->setup(loader, windowInfo);
 
 	// backbufferÇÃèâä˙âª
 	vk::ImageSubresourceRange subresource_range;
@@ -41,15 +41,17 @@ void App::setup(std::shared_ptr<btr::Loader>& loader)
 	subresource_range.setLayerCount(1);
 	subresource_range.setBaseMipLevel(0);
 	subresource_range.setLevelCount(1);
-	std::array<vk::ImageMemoryBarrier, 3 + 1> barrier;
+	std::vector<vk::ImageMemoryBarrier> barrier(m_window->getSwapchain().getBackbufferNum() + 1);
 	barrier[0].setSubresourceRange(subresource_range);
 	barrier[0].setDstAccessMask(vk::AccessFlagBits::eMemoryRead);
 	barrier[0].setOldLayout(vk::ImageLayout::eUndefined);
 	barrier[0].setNewLayout(vk::ImageLayout::ePresentSrcKHR);
-	barrier[2] = barrier[1] = barrier[0];
 	barrier[0].setImage(m_window->getSwapchain().m_backbuffer[0].m_image);
-	barrier[1].setImage(m_window->getSwapchain().m_backbuffer[1].m_image);
-	barrier[2].setImage(m_window->getSwapchain().m_backbuffer[2].m_image);
+	for (uint32_t i = 1 ; i<m_window->getSwapchain().getBackbufferNum(); i++)
+	{
+		barrier[i] = barrier[0];
+		barrier[i].setImage(m_window->getSwapchain().m_backbuffer[i].m_image);
+	}
 
 	vk::ImageSubresourceRange subresource_depth_range;
 	subresource_depth_range.aspectMask = vk::ImageAspectFlagBits::eDepth;
@@ -58,11 +60,11 @@ void App::setup(std::shared_ptr<btr::Loader>& loader)
 	subresource_depth_range.layerCount = 1;
 	subresource_depth_range.levelCount = 1;
 
-	barrier[3].setImage(m_window->getSwapchain().m_depth.m_image);
-	barrier[3].setSubresourceRange(subresource_depth_range);
-	barrier[3].setDstAccessMask(vk::AccessFlagBits::eDepthStencilAttachmentWrite);
-	barrier[3].setOldLayout(vk::ImageLayout::eUndefined);
-	barrier[3].setNewLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+	barrier.back().setImage(m_window->getSwapchain().m_depth.m_image);
+	barrier.back().setSubresourceRange(subresource_depth_range);
+	barrier.back().setDstAccessMask(vk::AccessFlagBits::eDepthStencilAttachmentWrite);
+	barrier.back().setOldLayout(vk::ImageLayout::eUndefined);
+	barrier.back().setNewLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
 	loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::DependencyFlags(), {}, {}, barrier);
 

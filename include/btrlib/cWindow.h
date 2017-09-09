@@ -8,12 +8,18 @@
 #include <btrlib/Singleton.h>
 #include <btrlib/sGlobal.h>
 #include <btrlib/cInput.h>
+#include <btrlib/GPU.h>
 
+namespace btr
+{
+struct Loader;
+}
 struct RenderTarget
 {
-	vk::Image m_image;
-	vk::DeviceMemory m_memory;
+	vk::Image m_image; //!< vkGetSwapchainImagesKHR‚Å‚Æ‚Á‚Ä‚é‚Ì‚Ådestroy‚Å‚«‚È‚¢
+//	vk::UniqueImageView m_view;
 	vk::ImageView m_view;
+	vk::UniqueDeviceMemory m_memory;
 	vk::Format m_format;
 	vk::Extent2D m_size;
 };
@@ -33,7 +39,7 @@ public:
 private:
 	struct Swapchain 
 	{
-		vk::SwapchainKHR m_swapchain_handle;
+		vk::UniqueSwapchainKHR m_swapchain_handle;
 		std::vector<RenderTarget> m_backbuffer;
 		RenderTarget m_depth;
 
@@ -67,7 +73,7 @@ private:
 	};
 	std::shared_ptr<Private> m_private;
 
-	vk::SurfaceKHR m_surface;
+	vk::UniqueSurfaceKHR m_surface;
 	cInput m_input;
 	Swapchain m_swapchain;
 	CreateInfo m_descriptor;
@@ -110,51 +116,7 @@ public:
 
 	}
 
-	void setup(const CreateInfo& descriptor)
-	{
-		m_descriptor = descriptor;
-		WNDCLASSEXW wcex = {};
-
-		wcex.cbSize = sizeof(WNDCLASSEX);
-		wcex.style = CS_HREDRAW | CS_VREDRAW;
-		wcex.lpfnWndProc = WndProc;
-		wcex.cbClsExtra = 0;
-		wcex.cbWndExtra = 0;
-		wcex.hInstance = GetModuleHandle(nullptr);
-		wcex.lpszClassName = m_descriptor.class_name.c_str();
-		if (!RegisterClassExW(&wcex)) {
-			assert(false);
-			return;
-		}
-
-		DWORD dwExStyle = WS_EX_APPWINDOW | WS_EX_WINDOWEDGE;
-		DWORD dwStyle = WS_OVERLAPPEDWINDOW | WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
-		RECT rect{ 0, 0, (LONG)m_descriptor.size.width, (LONG)m_descriptor.size.height };
-		AdjustWindowRectEx(&rect, dwStyle, false, dwExStyle);
-		m_private->m_window = CreateWindowExW(dwExStyle, m_descriptor.class_name.c_str(), m_descriptor.window_name.c_str(), dwStyle,
-			CW_USEDEFAULT, CW_USEDEFAULT, rect.right - rect.left, rect.bottom - rect.top, nullptr, nullptr, GetModuleHandle(nullptr), nullptr);
-
-		assert(m_private->m_window);
-
-		ShowWindow(m_private->m_window, 1);
-		UpdateWindow(m_private->m_window);
-
-		// vulkan setup
-		vk::Win32SurfaceCreateInfoKHR surfaceInfo = vk::Win32SurfaceCreateInfoKHR()
-			.setHinstance(GetModuleHandle(nullptr))
-			.setHwnd(m_private->m_window);
-		m_surface = sGlobal::Order().getVKInstance().createWin32SurfaceKHR(surfaceInfo);
-
-		m_swapchain.setup(descriptor, m_surface);
-
-		vk::FenceCreateInfo fence_info;
-		fence_info.setFlags(vk::FenceCreateFlagBits::eSignaled);
-		m_fence_list.reserve(m_swapchain.m_backbuffer.size());
-		for (size_t i = 0; i < m_swapchain.m_backbuffer.size(); i++)
-		{
-			m_fence_list.emplace_back(descriptor.gpu.getDevice()->createFenceUnique(fence_info));
-		}
-	}
+	void setup(std::shared_ptr<btr::Loader>& loader, const CreateInfo& descriptor);
 
 	void update()
 	{
@@ -308,7 +270,7 @@ public:
 	template<typename T> T getClientSize()const { return T{ m_descriptor.size.width, m_descriptor.size.height }; }
 	const Swapchain& getSwapchain()const { return m_swapchain; }
 	Swapchain& getSwapchain() { return m_swapchain; }
-	vk::SurfaceKHR getSurface()const { return m_surface; }
+	vk::SurfaceKHR getSurface()const { return m_surface.get(); }
 	const cInput& getInput()const { return m_input; }
 	
 	vk::Fence getFence(uint32_t index) { return m_fence_list[index].get(); }

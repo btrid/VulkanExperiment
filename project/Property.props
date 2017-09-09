@@ -13,13 +13,15 @@
     <IntDir>$(btrObj)$(ProjectName)_$(Platform)\$(Configuration)\</IntDir>
     <IncludePath>$(VK_SDK_PATH)\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(VK_SDK_PATH)\Lib;$(VK_SDK_PATH)\bin;;$(LibraryPath)</LibraryPath>
+    <RuntimeLibrary>
+    </RuntimeLibrary>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <Manifest>
       <AdditionalOptions>/experimental:module %(AdditionalOptions)</AdditionalOptions>
     </Manifest>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(btrInclude);&amp;(btrExternal)%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(btrInclude);$(btrExternal);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>

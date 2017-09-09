@@ -46,7 +46,7 @@ void cWindow::Swapchain::setup(const CreateInfo& descriptor, vk::SurfaceKHR surf
 	auto support_surface = getSupportSurfaceQueue(descriptor.gpu.getHandle(), surface);
 	m_use_device = descriptor.gpu.getDevice();
 
-	auto old_swap_chain = m_swapchain_handle;
+	auto old_swap_chain = m_swapchain_handle.get();
 
 	vk::SurfaceCapabilitiesKHR capability = descriptor.gpu->getSurfaceCapabilitiesKHR(surface);
 	vk::SwapchainCreateInfoKHR swapchain_info;
@@ -64,14 +64,11 @@ void cWindow::Swapchain::setup(const CreateInfo& descriptor, vk::SurfaceKHR surf
 	swapchain_info.setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque);
 	swapchain_info.setPresentMode(vk::PresentModeKHR::eMailbox);
 	swapchain_info.setClipped(true);
-	swapchain_info.setOldSwapchain(m_swapchain_handle);
-	m_swapchain_handle = m_use_device->createSwapchainKHR(swapchain_info);
-	if (old_swap_chain) {
-		m_use_device->destroySwapchainKHR(old_swap_chain);
-	}
+	swapchain_info.setOldSwapchain(m_swapchain_handle.get());
+	m_swapchain_handle = m_use_device->createSwapchainKHRUnique(swapchain_info);
 
-	auto backbuffer_image = m_use_device->getSwapchainImagesKHR(m_swapchain_handle);
-	m_backbuffer.reserve(backbuffer_image.size());
+	auto backbuffer_image = m_use_device->getSwapchainImagesKHR(m_swapchain_handle.get());
+	m_backbuffer.resize(backbuffer_image.size());
 	{
 		for (uint32_t i = 0; i < backbuffer_image.size(); i++)
 		{
@@ -95,12 +92,11 @@ void cWindow::Swapchain::setup(const CreateInfo& descriptor, vk::SurfaceKHR surf
 			backbuffer_view_info.setSubresourceRange(subresourceRange);
 			auto backbuffer_view = m_use_device->createImageView(backbuffer_view_info);
 
-			RenderTarget rendertarget;
+			RenderTarget& rendertarget = m_backbuffer[i];
 			rendertarget.m_image = backbuffer_image[i];
 			rendertarget.m_view = backbuffer_view;
 			rendertarget.m_format = m_surface_format.format;
 			rendertarget.m_size = capability.currentExtent;
-			m_backbuffer.emplace_back(rendertarget);
 		}
 	}
 
@@ -130,9 +126,9 @@ void cWindow::Swapchain::setup(const CreateInfo& descriptor, vk::SurfaceKHR surf
 		vk::MemoryAllocateInfo memory_info;
 		memory_info.allocationSize = memory_request.size;
 		memory_info.memoryTypeIndex = memory_index;
-		m_depth.m_memory = m_use_device->allocateMemory(memory_info);
+		m_depth.m_memory = m_use_device->allocateMemoryUnique(memory_info);
 
-		m_use_device->bindImageMemory(m_depth.m_image, m_depth.m_memory, 0);
+		m_use_device->bindImageMemory(m_depth.m_image, m_depth.m_memory.get(), 0);
 
 		vk::ImageViewCreateInfo depth_view_info;
 		depth_view_info.format = depth_info.format;
@@ -254,8 +250,53 @@ void cWindow::Swapchain::setup(const CreateInfo& descriptor, vk::SurfaceKHR surf
 
 uint32_t cWindow::Swapchain::swap(vk::Semaphore& semaphore)
 {
-	m_use_device->acquireNextImageKHR(m_swapchain_handle, 1000, semaphore, vk::Fence(), &m_backbuffer_index);
+	m_use_device->acquireNextImageKHR(m_swapchain_handle.get(), 1000, semaphore, vk::Fence(), &m_backbuffer_index);
 	return m_backbuffer_index;
 }
 
+void cWindow::setup(std::shared_ptr<btr::Loader>& loader, const CreateInfo& descriptor)
+{
+	m_descriptor = descriptor;
+	WNDCLASSEXW wcex = {};
+
+	wcex.cbSize = sizeof(WNDCLASSEX);
+	wcex.style = CS_HREDRAW | CS_VREDRAW;
+	wcex.lpfnWndProc = WndProc;
+	wcex.cbClsExtra = 0;
+	wcex.cbWndExtra = 0;
+	wcex.hInstance = GetModuleHandle(nullptr);
+	wcex.lpszClassName = m_descriptor.class_name.c_str();
+	if (!RegisterClassExW(&wcex)) {
+		assert(false);
+		return;
+	}
+
+	DWORD dwExStyle = WS_EX_APPWINDOW | WS_EX_WINDOWEDGE;
+	DWORD dwStyle = WS_OVERLAPPEDWINDOW | WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
+	RECT rect{ 0, 0, (LONG)m_descriptor.size.width, (LONG)m_descriptor.size.height };
+	AdjustWindowRectEx(&rect, dwStyle, false, dwExStyle);
+	m_private->m_window = CreateWindowExW(dwExStyle, m_descriptor.class_name.c_str(), m_descriptor.window_name.c_str(), dwStyle,
+		CW_USEDEFAULT, CW_USEDEFAULT, rect.right - rect.left, rect.bottom - rect.top, nullptr, nullptr, GetModuleHandle(nullptr), nullptr);
+
+	assert(m_private->m_window);
+
+	ShowWindow(m_private->m_window, 1);
+	UpdateWindow(m_private->m_window);
+
+	// vulkan setup
+	vk::Win32SurfaceCreateInfoKHR surfaceInfo = vk::Win32SurfaceCreateInfoKHR()
+		.setHinstance(GetModuleHandle(nullptr))
+		.setHwnd(m_private->m_window);
+	m_surface = sGlobal::Order().getVKInstance().createWin32SurfaceKHRUnique(surfaceInfo);
+
+	m_swapchain.setup(descriptor, m_surface.get());
+
+	vk::FenceCreateInfo fence_info;
+	fence_info.setFlags(vk::FenceCreateFlagBits::eSignaled);
+	m_fence_list.reserve(m_swapchain.m_backbuffer.size());
+	for (size_t i = 0; i < m_swapchain.m_backbuffer.size(); i++)
+	{
+		m_fence_list.emplace_back(descriptor.gpu.getDevice()->createFenceUnique(fence_info));
+	}
+}
 
