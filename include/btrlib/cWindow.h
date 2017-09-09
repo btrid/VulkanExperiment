@@ -50,6 +50,9 @@ private:
 		std::vector < vk::CommandBuffer > m_cmd_present_to_render;
 		std::vector < vk::CommandBuffer > m_cmd_render_to_present;
 
+		vk::UniqueSemaphore m_swapbuffer_semaphore;
+		vk::UniqueSemaphore m_cmdsubmit_semaphore;
+
 		Swapchain()
 			: m_swapchain_handle()
 			, m_backbuffer_index(0)
@@ -58,7 +61,7 @@ private:
 		}
 
 		void setup(const CreateInfo& descriptor, vk::SurfaceKHR surface);
-		uint32_t swap(vk::Semaphore& semaphore);
+		uint32_t swap();
 		size_t getBackbufferNum()const { return m_backbuffer.size(); }
 	};
 

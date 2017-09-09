@@ -1,4 +1,5 @@
 #include <btrlib/cWindow.h>
+#include <btrlib/Loader.h>
 
 namespace
 {
@@ -248,9 +249,9 @@ void cWindow::Swapchain::setup(const CreateInfo& descriptor, vk::SurfaceKHR surf
 
 }
 
-uint32_t cWindow::Swapchain::swap(vk::Semaphore& semaphore)
+uint32_t cWindow::Swapchain::swap()
 {
-	m_use_device->acquireNextImageKHR(m_swapchain_handle.get(), 1000, semaphore, vk::Fence(), &m_backbuffer_index);
+	m_use_device->acquireNextImageKHR(m_swapchain_handle.get(), 1000, m_swapbuffer_semaphore.get(), vk::Fence(), &m_backbuffer_index);
 	return m_backbuffer_index;
 }
 
@@ -298,5 +299,9 @@ void cWindow::setup(std::shared_ptr<btr::Loader>& loader, const CreateInfo& desc
 	{
 		m_fence_list.emplace_back(descriptor.gpu.getDevice()->createFenceUnique(fence_info));
 	}
+	vk::SemaphoreCreateInfo semaphoreInfo = vk::SemaphoreCreateInfo();
+	m_swapchain.m_swapbuffer_semaphore = loader->m_gpu.getDevice()->createSemaphoreUnique(semaphoreInfo);
+	m_swapchain.m_cmdsubmit_semaphore = loader->m_gpu.getDevice()->createSemaphoreUnique(semaphoreInfo);
+
 }
 
