@@ -23,6 +23,7 @@ void App::setup(std::shared_ptr<btr::Loader>& loader)
 #if _DEBUG
 	static cDebug debug(instance);
 #endif
+	m_gpu = sGlobal::Order().getGPU(0);
 
 	cWindow::CreateInfo windowInfo;
 	windowInfo.surface_format_request = vk::SurfaceFormatKHR{ vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear };

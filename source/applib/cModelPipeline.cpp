@@ -106,8 +106,8 @@ void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 	}
 
 	// Create compute pipeline
-	std::vector<std::vector<vk::DescriptorSetLayoutBinding>> bindings(DESCRIPTOR_NUM);
-	bindings[DESCRIPTOR_MODEL] = {
+	std::vector<std::vector<vk::DescriptorSetLayoutBinding>> bindings(DESCRIPTOR_SET_LAYOUT_NUM);
+	bindings[DESCRIPTOR_SET_LAYOUT_MODEL] = {
 		vk::DescriptorSetLayoutBinding()
 		.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
 		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
@@ -120,7 +120,7 @@ void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 		.setBinding(1),
 	};
 	// DescriptorSetLayout
-	bindings[DESCRIPTOR_PER_MESH] =
+	bindings[DESCRIPTOR_SET_LAYOUT_PER_MESH] =
 	{
 		vk::DescriptorSetLayoutBinding()
 		.setStageFlags(vk::ShaderStageFlagBits::eFragment)
@@ -129,7 +129,7 @@ void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 		.setBinding(0),
 	};
 
-	bindings[DESCRIPTOR_SCENE] =
+	bindings[DESCRIPTOR_SET_LAYOUT_SCENE] =
 	{
 		vk::DescriptorSetLayoutBinding()
 		.setStageFlags(vk::ShaderStageFlagBits::eVertex)
@@ -148,9 +148,9 @@ void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 	{
 		{
 			vk::DescriptorSetLayout layouts[] = {
-				m_descriptor_set_layout[DESCRIPTOR_MODEL].get(),
-				m_descriptor_set_layout[DESCRIPTOR_PER_MESH].get(),
-				m_descriptor_set_layout[DESCRIPTOR_SCENE].get(),
+				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_MODEL].get(),
+				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_PER_MESH].get(),
+				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_SCENE].get(),
 			};
 			vk::PushConstantRange constant_range[] = {
 				vk::PushConstantRange().setOffset(0).setSize(64).setStageFlags(vk::ShaderStageFlagBits::eVertex),
@@ -318,7 +318,7 @@ void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 		// ƒ‚ƒfƒ‹‚²‚Æ‚ÌDescriptor‚ÌÝ’è
 	
 		vk::DescriptorSetLayout layouts[] = {
-			m_descriptor_set_layout[cModelPipeline::DESCRIPTOR_SCENE].get(),
+			m_descriptor_set_layout[cModelPipeline::DESCRIPTOR_SET_LAYOUT_SCENE].get(),
 		};
 		vk::DescriptorSetAllocateInfo alloc_info;
 		alloc_info.descriptorPool = loader->m_descriptor_pool.get();

@@ -33,7 +33,7 @@ std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> Geometry::MakeBox(fl
 	return std::tie(v, i);
 }
 
-std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> Geometry::MakePlane()
+std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> Geometry::MakePlane(float edge /*= 1.f*/)
 {
 	std::vector<glm::uvec3> i =
 	{
@@ -43,10 +43,10 @@ std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> Geometry::MakePlane(
 
 	std::vector<glm::vec3> v =
 	{
-		{-1.f, 0.f,  -1.f},
-		{ 1.f,  0.f, -1.f},
-		{-1.f, 0.f,   1.f},
-	 	{ 1.f,  0.f,  1.f}, 
+		{-edge, 0.f,  -edge},
+		{ edge,  0.f, -edge},
+		{-edge, 0.f,   edge},
+	 	{ edge,  0.f,  edge}, 
 	};
 	return std::tie(v, i);
 }

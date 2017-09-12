@@ -1,0 +1,29 @@
+#version 450
+
+#pragma optionNV (unroll all)
+#pragma optionNV (inline all)
+#pragma optionNV(fastmath on)
+//#pragma optionNV(fastprecision on)
+//#pragma optionNV(ifcvt all)
+#pragma optionNV(strict on)
+#extension GL_ARB_shading_language_include : require
+#include </convertDimension.glsl>
+#include </Brick.glsl>
+
+layout (local_size_x = 64, local_size_y = 16, local_size_z = 1) in;
+
+layout(std140, binding=0) uniform BrickParamUniform {
+	BrickParam uParam;
+};
+
+layout(std430, binding=0) writeonly restrict buffer LLHeadBuffer {
+	uint bLLHead[];
+};
+
+
+void main() 
+{
+	ivec3 index = ivec3(gl_GlobalInvocationID.xyz);
+	int i = convert3DTo1D(index, uParam.num1);
+	bLLHead[i] = 0xFFFFFFFF;
+}

@@ -17,7 +17,7 @@ void cModelRenderPrivate::setup(cModelPipeline& pipeline)
 		{
 			vk::DescriptorSetLayout layouts[] = 
 			{
-				pipeline.m_descriptor_set_layout[cModelPipeline::DESCRIPTOR_MODEL].get() 
+				pipeline.m_descriptor_set_layout[cModelPipeline::DESCRIPTOR_SET_LAYOUT_MODEL].get() 
 			};
 
 			vk::DescriptorSetAllocateInfo descriptor_set_alloc_info;
@@ -44,7 +44,7 @@ void cModelRenderPrivate::setup(cModelPipeline& pipeline)
 		{
 			// meshÇ≤Ç∆ÇÃçXêV
 			vk::DescriptorSetLayout layouts[] = {
-				pipeline.m_descriptor_set_layout[cModelPipeline::DESCRIPTOR_PER_MESH].get(),
+				pipeline.m_descriptor_set_layout[cModelPipeline::DESCRIPTOR_SET_LAYOUT_PER_MESH].get(),
 			};
 			vk::DescriptorSetAllocateInfo allocInfo;
 			allocInfo.descriptorPool = pipeline.m_descriptor_pool.get();

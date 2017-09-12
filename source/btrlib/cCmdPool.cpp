@@ -97,6 +97,13 @@ void cCmdPool::resetPool(std::shared_ptr<btr::Executer>& executer)
 	}
 }
 
+void cCmdPool::enque(vk::UniqueCommandBuffer&& cmd, uint32_t family_index)
+{
+	auto& pool_per_family = m_per_thread[sThreadLocal::Order().getThreadIndex()].m_per_family[family_index];
+	pool_per_family.m_cmd_queue.push_back(std::move(cmd));
+
+}
+
 vk::CommandBuffer cCmdPool::getCmdOnetime(int device_family_index)
 {
 	vk::CommandBufferAllocateInfo cmd_buffer_info;
