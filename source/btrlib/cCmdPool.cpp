@@ -97,11 +97,33 @@ void cCmdPool::resetPool(std::shared_ptr<btr::Executer>& executer)
 	}
 }
 
-void cCmdPool::enque(vk::UniqueCommandBuffer&& cmd, uint32_t family_index)
+void cCmdPool::enqueCmd(vk::UniqueCommandBuffer&& cmd, uint32_t family_index)
 {
 	auto& pool_per_family = m_per_thread[sThreadLocal::Order().getThreadIndex()].m_per_family[family_index];
-	pool_per_family.m_cmd_queue.push_back(std::move(cmd));
+	{
+		std::lock_guard<std::mutex> lk(m_cmd_queue_mutex);
+		pool_per_family.m_cmd_queue.push_back(std::move(cmd));
 
+	}
+}
+PerFamilyIndex<std::vector<vk::UniqueCommandBuffer>> cCmdPool::submitCmd()
+{
+	PerFamilyIndex<std::vector<vk::UniqueCommandBuffer>> cmds;
+	cmds.resize(m_per_thread[0].m_per_family.size());
+	{
+		std::lock_guard<std::mutex> lk(m_cmd_queue_mutex);
+		for (size_t thread = 0; thread < m_per_thread.size(); thread++)
+		{
+			auto& per_thread = m_per_thread[thread];
+			for (size_t family = 0; family < per_thread.m_per_family.size(); family++)
+			{
+				auto& per_family = per_thread.m_per_family[family].m_cmd_queue;
+				cmds[family].insert(cmds[family].end(), std::make_move_iterator(per_family.begin()), std::make_move_iterator(per_family.end()));
+				per_family.clear();
+			}
+		}
+	}
+	return cmds;
 }
 
 vk::CommandBuffer cCmdPool::getCmdOnetime(int device_family_index)

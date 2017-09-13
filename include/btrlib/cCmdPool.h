@@ -19,6 +19,8 @@ struct DoubleBuffer
 	T& getCPUThreadData() { return m_data[sGlobal::Order().getCPUIndex()]; }
 	T& getGPUThreadData() { return m_data[sGlobal::Order().getGPUIndex()]; }
 };
+template<typename T> using PerThread = std::vector<T>;
+template<typename T> using PerFamilyIndex = std::vector<T>;
 struct cCmdPool
 {
 	static std::shared_ptr<cCmdPool> MakeCmdPool(cGPU& gpu);
@@ -44,10 +46,12 @@ struct cCmdPool
 		std::vector<CmdPoolPerFamily>	m_per_family;
 	};
 	std::vector<CmdPoolPerThread> m_per_thread;
+	std::mutex m_cmd_queue_mutex;
 
 	vk::CommandBuffer getCmdOnetime(int device_family_index);
 	vk::CommandPool getCmdPool(CmdPoolType type, int device_family_index)const;
 
 	void resetPool(std::shared_ptr<btr::Executer>& executer);
-	void enque(vk::UniqueCommandBuffer&& cmd, uint32_t family_index);
+	void enqueCmd(vk::UniqueCommandBuffer&& cmd, uint32_t family_index);
+	PerFamilyIndex<std::vector<vk::UniqueCommandBuffer>> submitCmd();
 };

@@ -532,8 +532,8 @@ struct VoxelPipeline
 			}
 
 		}
-
-		loader->m_cmd_pool->enque(std::move(cmd), 0);
+		cmd->end();
+		loader->m_cmd_pool->enqueCmd(std::move(cmd), 0);
 	}
 
 	vk::CommandBuffer draw(std::shared_ptr<btr::Executer>& executer)

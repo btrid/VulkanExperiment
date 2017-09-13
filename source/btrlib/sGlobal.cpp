@@ -134,6 +134,12 @@ sGlobal::sGlobal::cThreadData& sGlobal::getThreadLocal()
 	return m_thread_local[sThreadLocal::Order().getThreadIndex()];
 }
 
+std::vector<std::unique_ptr<DeleterEx>> g_deleter;
+void swapDeleter()
+{
+	g_deleter.erase(std::remove_if(g_deleter.begin(), g_deleter.end(), [&](auto& d) { return d->count-- == 0; }), g_deleter.end());
+}
+
 vk::UniqueShaderModule loadShaderUnique(const vk::Device& device, const std::string& filename)
 {
 	std::experimental::filesystem::path filepath(filename);

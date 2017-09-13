@@ -102,7 +102,7 @@ int main()
 	executer->m_window = app.m_window;
 	loader->m_window = app.m_window;
 	loader->m_cmd_pool = app.m_cmd_pool;
-
+	executer->m_cmd_pool = app.m_cmd_pool;
 	VoxelPipeline voxelize;
 	{
 		sCameraManager::Order().setup(loader);
@@ -172,6 +172,42 @@ int main()
 			render_cmds.front() = app.m_window->getSwapchain().m_cmd_present_to_render[backbuffer_index];
 			render_cmds.back() = app.m_window->getSwapchain().m_cmd_render_to_present[backbuffer_index];
 
+			auto cmd_queues = executer->m_cmd_pool->submitCmd();
+			for (size_t i = 0; i < cmd_queues.size(); i++)
+			{
+				auto& cmds = cmd_queues[i];
+				if (cmds.empty())
+				{
+					continue;
+				}
+				std::vector<vk::CommandBuffer> cmd(cmds.size());
+				for (size_t i = 0; i < cmds.size(); i++)
+				{
+					cmd[i] = cmds[i].get();
+				}
+
+				vk::PipelineStageFlags wait_pipelines[] = {
+					vk::PipelineStageFlagBits::eAllCommands,
+				};
+				std::vector<vk::SubmitInfo> submit_info =
+				{
+					vk::SubmitInfo()
+					.setCommandBufferCount((uint32_t)cmd.size())
+					.setPCommandBuffers(cmd.data())
+					.setWaitSemaphoreCount(0)
+					.setPWaitSemaphores(nullptr)
+					.setPWaitDstStageMask(wait_pipelines)
+					.setSignalSemaphoreCount(0)
+					.setPSignalSemaphores(nullptr)
+				};
+
+				vk::FenceCreateInfo info;
+				auto fence = device->createFenceUnique(info);
+				auto q = device->getQueue(i, 0);
+				q.submit(submit_info, fence.get());
+				enqueDeleter(std::move(cmds), std::move(fence));
+			}
+
 			vk::Semaphore swap_wait_semas[] = {
 				app.m_window->getSwapchain().m_swapbuffer_semaphore.get(),
 			};
@@ -180,7 +216,6 @@ int main()
 			};
 
 			vk::PipelineStageFlags wait_pipelines[] = {
-				vk::PipelineStageFlagBits::eAllGraphics,
 				vk::PipelineStageFlagBits::eAllGraphics,
 			};
 			std::vector<vk::SubmitInfo> submitInfo =
@@ -213,6 +248,7 @@ int main()
 		app.m_window->update();
 		sGlobal::Order().swap();
 		sCameraManager::Order().sync();
+		swapDeleter();
 		printf("%6.3fs\n", time.getElapsedTimeAsSeconds());
 	}
 

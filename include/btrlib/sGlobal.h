@@ -31,6 +31,27 @@ struct FenceShared
 
 }
 
+struct DeleterEx {
+	uint32_t count;
+	DeleterEx() : count(5) {}
+	virtual ~DeleterEx() { ; }
+};
+
+extern std::vector<std::unique_ptr<DeleterEx>> g_deleter;
+template<typename... T>
+void enqueDeleter(T&&... handle)
+{
+	struct HandleHolder : DeleterEx
+	{
+		std::tuple<T...> m_handle;
+		HandleHolder(T&&... arg) : m_handle(std::move(arg)...) {}
+	};
+
+	auto ptr = std::make_unique<HandleHolder>(std::move(handle)...);
+	g_deleter.push_back(std::move(ptr));
+};
+
+void swapDeleter();
 // @deprecated?
 struct Deleter {
 	vk::Device device;
