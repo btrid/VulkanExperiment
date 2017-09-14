@@ -205,7 +205,7 @@ int main()
 				auto fence = device->createFenceUnique(info);
 				auto q = device->getQueue(i, 0);
 				q.submit(submit_info, fence.get());
-				enqueDeleter(std::move(cmds), std::move(fence));
+				sDeleter::Order().enque(std::move(cmds), std::move(fence));
 			}
 
 			vk::Semaphore swap_wait_semas[] = {
@@ -248,7 +248,7 @@ int main()
 		app.m_window->update();
 		sGlobal::Order().swap();
 		sCameraManager::Order().sync();
-		swapDeleter();
+		sDeleter::Order().swap();
 		printf("%6.3fs\n", time.getElapsedTimeAsSeconds());
 	}
 

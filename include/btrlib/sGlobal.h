@@ -15,104 +15,46 @@
 #include <btrlib/cStopWatch.h>
 
 using GameFrame = uint32_t;
-namespace vk
+
+class sDeleter : public Singleton<sDeleter>
 {
-
-// @deprecated
-struct FenceShared
-{
-	std::shared_ptr<vk::Fence> m_fence;
-	void create(vk::Device device, const vk::FenceCreateInfo& fence_info);
-
-	vk::Fence getHandle()const { return m_fence ? *m_fence : vk::Fence(); }
-	operator VkFence() const { return getHandle(); }
-	vk::Fence operator*() const { return getHandle(); }
-};
-
-}
-
-struct DeleterEx {
-	uint32_t count;
-	DeleterEx() : count(5) {}
-	virtual ~DeleterEx() { ; }
-};
-
-extern std::vector<std::unique_ptr<DeleterEx>> g_deleter;
-template<typename... T>
-void enqueDeleter(T&&... handle)
-{
-	struct HandleHolder : DeleterEx
+	friend Singleton<sGlobal>;
+public:
+	template<typename... T>
+	void enque(T&&... handle)
 	{
-		std::tuple<T...> m_handle;
-		HandleHolder(T&&... arg) : m_handle(std::move(arg)...) {}
+		struct HandleHolder : Deleter
+		{
+			std::tuple<T...> m_handle;
+			HandleHolder(T&&... arg) : m_handle(std::move(arg)...) {}
+		};
+
+		auto ptr = std::make_unique<HandleHolder>(std::move(handle)...);
+		{
+			std::lock_guard<std::mutex> lk(m_deleter_mutex);
+			m_deleter_list.push_back(std::move(ptr));
+		}
 	};
 
-	auto ptr = std::make_unique<HandleHolder>(std::move(handle)...);
-	g_deleter.push_back(std::move(ptr));
-};
-
-void swapDeleter();
-// @deprecated?
-struct Deleter {
-	vk::Device device;
-
-	vk::CommandPool pool;
-	std::vector<vk::CommandBuffer> cmd;
-
-	std::vector<vk::Fence> fence;
-	std::vector<vk::FenceShared> fence_shared;
-	std::vector<vk::Buffer> buffer;
-	std::vector<vk::Image> image;
-	std::vector<vk::DeviceMemory> memory;
-	std::vector<vk::Sampler> sampler;
-
-	~Deleter() 
+	void swap()
 	{
-		for (auto& f : fence) {
-			device.destroyFence(f);
-		}
-
-		if (!cmd.empty())
-		{
-			device.freeCommandBuffers(pool, cmd);
-		}
-
-		for (auto& b : buffer)
-		{
-			device.destroyBuffer(b);
-		}
-		for (auto& i : image)
-		{
-			device.destroyImage(i);
-		}
-		for (auto& m : memory)
-		{
-			device.freeMemory(m);
-		}
-		for (auto& s : sampler)
-		{
-			device.destroySampler(s);
-		}
-	};
-	bool isReady()const
-	{
-		for (auto& f : fence)
-		{
-			// todo : device lost?
-			if (device.getFenceStatus(f) != vk::Result::eSuccess) {
-				return false;
-			}
-		}
-		for (auto& f : fence_shared)
-		{
-			// todo : device lost?
-			if (device.getFenceStatus(f.getHandle()) != vk::Result::eSuccess) {
-				return false;
-			}
-		}
-		return true;
+		std::lock_guard<std::mutex> lk(m_deleter_mutex);
+		m_deleter_list.erase(std::remove_if(m_deleter_list.begin(), m_deleter_list.end(), [&](auto& d) { return d->count-- == 0; }), m_deleter_list.end());
 	}
+
+private:
+	struct Deleter
+	{
+		uint32_t count;
+		Deleter() : count(5) {}
+		virtual ~Deleter() { ; }
+	};
+	std::vector<std::unique_ptr<Deleter>> m_deleter_list;
+	std::mutex m_deleter_mutex;
+
+
 };
+
 
 class sGlobal : public Singleton<sGlobal>
 {
@@ -176,7 +118,6 @@ private:
 		std::vector<CmdPoolPerFamily>	m_cmd_pool;
 	};
 	std::vector<cThreadData> m_thread_local;
-	std::array<std::vector<std::unique_ptr<Deleter>>, FRAME_MAX> m_cmd_delete;
 
 	cStopWatch m_timer;
 	float m_deltatime;
@@ -184,20 +125,9 @@ public:
 	cThreadData& getThreadLocal();
 	std::vector<cThreadData>& getThreadLocalList() { return m_thread_local; }
 
-	void destroyResource(std::unique_ptr<Deleter>&& deleter) {
-		// @todo thread-safe‘Î‰ž
-		assert(deleter->device);
-		for (auto& fence : deleter->fence) {
-			assert(fence);
-		}
-		for (auto& fence : deleter->fence_shared){
-			assert(fence.getHandle());
-		}
-		m_cmd_delete[getCurrentFrame()].emplace_back(std::move(deleter));
-	}
-
 	float getDeltaTime()const { return m_deltatime; }
 };
+
 struct sThreadLocal : public SingletonTLS<sThreadLocal>
 {
 	friend SingletonTLS<sThreadLocal>;

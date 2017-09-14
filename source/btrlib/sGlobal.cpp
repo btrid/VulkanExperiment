@@ -115,16 +115,6 @@ void sGlobal::swap()
 	m_current_frame = m_game_frame % FRAME_MAX;
 	m_tick_tock = (m_tick_tock + 1) % 2;
 	auto next = (m_current_frame+1) % FRAME_MAX;
-	auto& deletelist = m_cmd_delete[next];
-	for (auto it = deletelist.begin(); it != deletelist.end();)
-	{
-		if ((*it)->isReady()) {
-			it = deletelist.erase(it);
-		}
-		else {
-			it++;
-		}
-	}
 	m_deltatime = m_timer.getElapsedTimeAsSeconds();
 	m_deltatime = glm::min(m_deltatime, 0.02f);
 }
@@ -132,12 +122,6 @@ void sGlobal::swap()
 sGlobal::sGlobal::cThreadData& sGlobal::getThreadLocal()
 {
 	return m_thread_local[sThreadLocal::Order().getThreadIndex()];
-}
-
-std::vector<std::unique_ptr<DeleterEx>> g_deleter;
-void swapDeleter()
-{
-	g_deleter.erase(std::remove_if(g_deleter.begin(), g_deleter.end(), [&](auto& d) { return d->count-- == 0; }), g_deleter.end());
 }
 
 vk::UniqueShaderModule loadShaderUnique(const vk::Device& device, const std::string& filename)
@@ -225,20 +209,6 @@ std::unique_ptr<Descriptor> createDescriptor(vk::Device device, vk::DescriptorPo
 	alloc_info.pSetLayouts = descriptor->m_descriptor_set_layout.data();
 	descriptor->m_descriptor_set = device.allocateDescriptorSets(alloc_info);
 	return std::move(descriptor);
-}
-
-void vk::FenceShared::create(vk::Device device, const vk::FenceCreateInfo& fence_info)
-{
-	auto deleter = [=](vk::Fence* fence)
-	{
-		auto deleter = std::make_unique<Deleter>();
-		deleter->device = device;
-		deleter->fence = { *fence };
-		sGlobal::Order().destroyResource(std::move(deleter));
-		delete fence;
-	};
-	m_fence = std::shared_ptr<vk::Fence>(new vk::Fence(), deleter);
-	*m_fence = device.createFence(fence_info);
 }
 
 vk::CommandPool sThreadLocal::getCmdPool(sGlobal::CmdPoolType type, int device_family_index) const
