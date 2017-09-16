@@ -225,17 +225,3 @@ vk::CommandPool sThreadLocal::getCmdPool(sGlobal::CmdPoolType type, int device_f
 		return pool_per_family.m_cmd_pool_compiled.get();
 	}
 }
-vk::CommandBuffer sThreadLocal::getCmdOnetime(int device_family_index) const
-{
-	vk::CommandBufferAllocateInfo cmd_buffer_info;
-	cmd_buffer_info.commandBufferCount = 1;
-	cmd_buffer_info.commandPool = getCmdPool(sGlobal::CMD_POOL_TYPE_ONETIME, device_family_index);
-	cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
-	auto cmd = sGlobal::Order().getGPU(0).getDevice()->allocateCommandBuffers(cmd_buffer_info)[0];
-
-	vk::CommandBufferBeginInfo begin_info;
-	begin_info.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-	cmd.begin(begin_info);
-
-	return cmd;
-}

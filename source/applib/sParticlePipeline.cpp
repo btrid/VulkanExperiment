@@ -403,7 +403,7 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Loader>& loader)
 
 vk::CommandBuffer sParticlePipeline::Private::draw(std::shared_ptr<btr::Executer>& executer)
 {
-	auto cmd = sThreadLocal::Order().getCmdOnetime(0);
+	auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
 
 	vk::RenderPassBeginInfo begin_render_Info;
 	begin_render_Info.setRenderPass(m_render_pass.get());

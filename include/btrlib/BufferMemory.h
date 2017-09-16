@@ -475,7 +475,6 @@ struct UpdateBuffer
 	{
 		if (isUpdate()) {
 			assert(isUpdate());
-//			return vk::DescriptorBufferInfo();
 			return;
 		}
 		vk::BufferCopy copy_info;

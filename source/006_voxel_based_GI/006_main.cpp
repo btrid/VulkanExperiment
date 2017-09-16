@@ -60,13 +60,13 @@ int main()
 
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
-	auto setup_cmd = sThreadLocal::Order().getCmdOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
 
 	vk::Queue queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), 0);
 
 	std::shared_ptr<btr::Loader> loader = std::make_shared<btr::Loader>();
 	loader->m_gpu = gpu;
 	loader->m_device = device;
+
 	vk::MemoryPropertyFlags host_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
 	vk::MemoryPropertyFlags device_memory = vk::MemoryPropertyFlagBits::eDeviceLocal;
 	//	device_memory = host_memory; // debug
@@ -112,6 +112,7 @@ int main()
 	executer->m_cmd_pool = app.m_cmd_pool;
 	VoxelPipeline voxelize;
 	{
+		auto setup_cmd = loader->m_cmd_pool->allocCmdOnetime(0);
 		sCameraManager::Order().setup(loader);
 		DrawHelper::Order().setup(loader);
 		voxelize.setup(loader);
@@ -180,8 +181,8 @@ int main()
 				job.mJob.emplace_back(
 					[&]()
 				{
-					render_cmds[1] = sCameraManager::Order().draw();
-					render_cmds[2] = DrawHelper::Order().draw();
+					render_cmds[1] = sCameraManager::Order().draw(executer);
+					render_cmds[2] = DrawHelper::Order().draw(executer);
 					render_syncronized_point.arrive();
 				}
 				);

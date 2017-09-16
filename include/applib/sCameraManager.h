@@ -95,11 +95,10 @@ struct sCameraManager : public Singleton<sCameraManager>
 		}
 		
 	}
-	vk::CommandBuffer draw()
+	vk::CommandBuffer draw(std::shared_ptr<btr::Executer>& executer)
 	{
-		auto& gpu = sGlobal::Order().getGPU(0);
-		auto& device = gpu.getDevice();
-		auto cmd = sThreadLocal::Order().getCmdOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
+		auto& device = executer->m_gpu.getDevice();
+		auto cmd = executer->m_cmd_pool->allocCmdOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
 
 		std::vector<vk::BufferMemoryBarrier> to_transfer = {
 			m_camera.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite),

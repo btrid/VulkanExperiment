@@ -480,10 +480,10 @@ struct DrawHelper : public Singleton<DrawHelper>
 		m_whilte_texture.m_sampler = loader->m_device->createSampler(sampler_info);
 	}
 
-	vk::CommandBuffer draw()
+	vk::CommandBuffer draw(std::shared_ptr<btr::Executer>& executer)
 	{
 		auto device = sGlobal::Order().getGPU(0).getDevice();
-		auto cmd = sThreadLocal::Order().getCmdOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
+		auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
 
 		std::vector<vk::ClearValue> clearValue = {
 			vk::ClearValue().setColor(vk::ClearColorValue(std::array<float, 4>{0.3f, 0.3f, 0.8f, 1.f})),

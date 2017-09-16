@@ -148,7 +148,7 @@ struct sParticlePipeline : Singleton<sParticlePipeline>
 
 		vk::CommandBuffer execute(std::shared_ptr<btr::Executer>& executer)
 		{
-			auto cmd = sThreadLocal::Order().getCmdOnetime(0);
+			auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
 
 			struct UpdateConstantBlock
 			{

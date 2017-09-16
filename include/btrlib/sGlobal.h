@@ -134,7 +134,6 @@ struct sThreadLocal : public SingletonTLS<sThreadLocal>
 	uint32_t m_thread_index;
 	uint32_t getThreadIndex()const { return m_thread_index; }
 
-	vk::CommandBuffer getCmdOnetime(int device_family_index)const;
 	vk::CommandPool getCmdPool(sGlobal::CmdPoolType type, int device_family_index)const;
 
 };
