@@ -5,11 +5,8 @@
 //#pragma optionNV(fastprecision on)
 //#pragma optionNV(ifcvt all)
 #pragma optionNV(strict on)
-#ifdef VULKAN
+
 #extension GL_GOOGLE_cpp_style_line_directive : require
-#else
-#extension GL_ARB_shading_language_include : require
-#endif
 
 #include </convertDimension.glsl>
 #include </Shape.glsl>

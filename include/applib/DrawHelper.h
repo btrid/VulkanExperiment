@@ -230,11 +230,13 @@ struct DrawHelper : public Singleton<DrawHelper>
 		{
 			std::vector<vk::BufferMemoryBarrier> barrier =
 			{
-				m_mesh_vertex[Box].makeMemoryBarrier(vk::AccessFlagBits::eVertexAttributeRead),
+//				m_mesh_vertex[Box].makeMemoryBarrier(vk::AccessFlagBits::eVertexAttributeRead),
 				m_mesh_index[Box].makeMemoryBarrier(vk::AccessFlagBits::eIndexRead),
-				m_mesh_vertex[SPHERE].makeMemoryBarrier(vk::AccessFlagBits::eVertexAttributeRead),
+//				m_mesh_vertex[SPHERE].makeMemoryBarrier(vk::AccessFlagBits::eVertexAttributeRead),
 				m_mesh_index[SPHERE].makeMemoryBarrier(vk::AccessFlagBits::eIndexRead),
 			};
+			barrier[0].setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+			barrier[1].setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 			loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexInput, {}, {}, barrier, {});
 		}
 		
@@ -439,9 +441,9 @@ struct DrawHelper : public Singleton<DrawHelper>
 			to_shader_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 			to_shader_read_barrier.subresourceRange = subresourceRange;
 
-			loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
+			loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
 			loader->m_cmd.copyBufferToImage(staging_buffer.getBufferInfo().buffer, image, vk::ImageLayout::eTransferDstOptimal, { copy });
-			loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
+			loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllGraphics, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
 
 		}
 

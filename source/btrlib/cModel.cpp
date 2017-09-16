@@ -73,15 +73,15 @@ void ResourceTexture::load(btr::Loader* loader, cThreadPool& thread_pool, const 
 	image_info.initialLayout = vk::ImageLayout::eUndefined;
 	image_info.extent = { texture_data.m_size.x, texture_data.m_size.y, 1 };
 	image_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
-	vk::Image image = loader->m_device->createImage(image_info);
+	vk::UniqueImage image = loader->m_device->createImageUnique(image_info);
 
-	vk::MemoryRequirements memory_request = loader->m_device->getImageMemoryRequirements(image);
+	vk::MemoryRequirements memory_request = loader->m_device->getImageMemoryRequirements(image.get());
 	vk::MemoryAllocateInfo memory_alloc_info;
 	memory_alloc_info.allocationSize = memory_request.size;
 	memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(loader->m_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-	vk::DeviceMemory image_memory = loader->m_device->allocateMemory(memory_alloc_info);
-	loader->m_device->bindImageMemory(image, image_memory, 0);
+	vk::UniqueDeviceMemory image_memory = loader->m_device->allocateMemoryUnique(memory_alloc_info);
+	loader->m_device->bindImageMemory(image.get(), image_memory.get(), 0);
 
 	btr::BufferMemory::Descriptor staging_desc;
 	staging_desc.size = texture_data.getBufferSize();
@@ -109,7 +109,7 @@ void ResourceTexture::load(btr::Loader* loader, cThreadPool& thread_pool, const 
 
 		vk::ImageMemoryBarrier to_copy_barrier;
 		to_copy_barrier.dstQueueFamilyIndex = loader->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
-		to_copy_barrier.image = image;
+		to_copy_barrier.image = image.get();
 		to_copy_barrier.oldLayout = vk::ImageLayout::eUndefined;
 		to_copy_barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
 		to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
@@ -117,7 +117,7 @@ void ResourceTexture::load(btr::Loader* loader, cThreadPool& thread_pool, const 
 
 		vk::ImageMemoryBarrier to_shader_read_barrier;
 		to_shader_read_barrier.dstQueueFamilyIndex = loader->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
-		to_shader_read_barrier.image = image;
+		to_shader_read_barrier.image = image.get();
 		to_shader_read_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
 		to_shader_read_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 		to_shader_read_barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
@@ -125,7 +125,7 @@ void ResourceTexture::load(btr::Loader* loader, cThreadPool& thread_pool, const 
 		to_shader_read_barrier.subresourceRange = subresourceRange;
 
 		loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
-		loader->m_cmd.copyBufferToImage(staging_buffer.getBufferInfo().buffer, image, vk::ImageLayout::eTransferDstOptimal, { copy });
+		loader->m_cmd.copyBufferToImage(staging_buffer.getBufferInfo().buffer, image.get(), vk::ImageLayout::eTransferDstOptimal, { copy });
 		loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
 
 	}
@@ -138,7 +138,7 @@ void ResourceTexture::load(btr::Loader* loader, cThreadPool& thread_pool, const 
 	view_info.components.a = vk::ComponentSwizzle::eA;
 	view_info.flags = vk::ImageViewCreateFlags();
 	view_info.format = vk::Format::eR32G32B32A32Sfloat;
-	view_info.image = image;
+	view_info.image = image.get();
 	view_info.subresourceRange = subresourceRange;
 
 	vk::SamplerCreateInfo sampler_info;
@@ -156,10 +156,10 @@ void ResourceTexture::load(btr::Loader* loader, cThreadPool& thread_pool, const 
 	sampler_info.anisotropyEnable = VK_FALSE;
 	sampler_info.borderColor = vk::BorderColor::eFloatOpaqueWhite;
 
-	m_resource->m_image = image;
-	m_resource->m_memory = image_memory;
-	m_resource->m_image_view = loader->m_device->createImageView(view_info);
-	m_resource->m_sampler = loader->m_device->createSampler(sampler_info);
+	m_resource->m_image = std::move(image) ;
+	m_resource->m_memory = std::move(image_memory);
+	m_resource->m_image_view = loader->m_device->createImageViewUnique(view_info);
+	m_resource->m_sampler = loader->m_device->createSamplerUnique(sampler_info);
 }
 
 
@@ -327,12 +327,13 @@ void cModel::load(btr::Loader* loader, const std::string& filename)
 
 	auto& device = sGlobal::Order().getGPU(0).getDevice();
 
-	auto cmd_pool = sThreadLocal::Order().getCmdPool(sGlobal::CMD_POOL_TYPE_ONETIME, 0);
+	auto cmd_pool = sThreadLocal::Order().getCmdPool(sGlobal::CMD_POOL_TYPE_TEMPORARY, 0);
 	vk::CommandBufferAllocateInfo cmd_info;
 	cmd_info.setCommandPool(cmd_pool);
 	cmd_info.setLevel(vk::CommandBufferLevel::ePrimary);
 	cmd_info.setCommandBufferCount(1);
-	auto cmd = device->allocateCommandBuffers(cmd_info)[0];
+	auto cmds = device->allocateCommandBuffersUnique(cmd_info);
+	auto cmd = cmds[0].get();
 	vk::CommandBufferBeginInfo begin_info;
 	begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
 	cmd.begin(begin_info);
@@ -558,16 +559,11 @@ void cModel::load(btr::Loader* loader, const std::string& filename)
 	submit_info.pCommandBuffers = &cmd;
 
 	vk::FenceCreateInfo fence_info;
-	vk::Fence fence = device->createFence(fence_info);
+	vk::UniqueFence fence = device->createFenceUnique(fence_info);
 
-	queue.submit(submit_info, fence);
+	queue.submit(submit_info, fence.get());
 	queue.waitIdle();
-	std::unique_ptr<Deleter> deleter = std::make_unique<Deleter>();
-	deleter->pool = cmd_pool;
-	deleter->cmd.push_back(cmd);
-	deleter->device = device.getHandle();
-	deleter->fence = { fence };
-	sGlobal::Order().destroyResource(std::move(deleter));
+	sDeleter::Order().enque(std::move(cmds), std::move(fence));
 
 	auto e = std::chrono::system_clock::now();
 	auto t = std::chrono::duration_cast<std::chrono::microseconds>(e - s);

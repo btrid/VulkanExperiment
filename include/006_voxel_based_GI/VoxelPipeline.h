@@ -8,7 +8,12 @@ struct VoxelizeModelResource
 	btr::AllocatedMemory m_vertex;
 	btr::AllocatedMemory m_index;
 	btr::AllocatedMemory m_material;
+	btr::AllocatedMemory m_mesh_info;
+	btr::AllocatedMemory m_indirect;
+	uint32_t m_mesh_count;
+	uint32_t m_index_count;
 
+	vk::UniqueDescriptorSet m_model_descriptor_set;
 };
 
 struct VoxelInfo
@@ -31,8 +36,12 @@ struct VoxelizeMesh
 };
 struct VoxelizeMaterial
 {
-	glm::vec4 albedo;
-	glm::vec4 emission;
+	vec4 albedo;
+	vec4 emission;
+};
+struct VoxelizeMeshInfo
+{
+	uint32_t material_index;
 };
 
 struct VoxelizeModel
@@ -84,16 +93,20 @@ struct VoxelPipeline
 
 	vk::UniqueDescriptorPool m_descriptor_pool;
 	vk::UniquePipelineCache m_pipeline_cache;
-	std::array<vk::UniquePipeline, PIPELINE_NUM> m_graphics_pipeline;
+	std::array<vk::UniquePipeline, PIPELINE_NUM> m_pipeline;
 	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
 	std::array<vk::UniqueDescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
 	std::array<vk::UniqueDescriptorSet, DESCRIPTOR_SET_NUM> m_descriptor_set;
+
+	std::vector<vk::UniqueCommandBuffer> m_make_cmd;
+	vk::UniqueDescriptorSetLayout m_model_descriptor_set_layout;
+	vk::UniqueDescriptorPool m_model_descriptor_pool;
 
 	btr::AllocatedMemory m_voxel_info;
 	vk::UniqueImage m_voxel_image;
 	vk::UniqueImageView m_voxel_imageview;
 	vk::UniqueDeviceMemory m_voxel_imagememory;
-	std::vector<std::shared_ptr<VoxelizeModelResource>> m_model;
+	std::vector<std::shared_ptr<VoxelizeModelResource>> m_model_list;
 	void setup(std::shared_ptr<btr::Loader>& loader)
 	{
 		auto& gpu = loader->m_gpu;
@@ -162,15 +175,15 @@ struct VoxelPipeline
 			subresourceRange.levelCount = 1;
 
 			{
-
+				// ‰ŠúÝ’è
 				vk::ImageMemoryBarrier to_copy_barrier;
 				to_copy_barrier.image = image.get();
 				to_copy_barrier.oldLayout = vk::ImageLayout::eUndefined;
-				to_copy_barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
+				to_copy_barrier.newLayout = vk::ImageLayout::eGeneral;
 				to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
 				to_copy_barrier.subresourceRange = subresourceRange;
 
-				cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
+				cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
 
 			}
 
@@ -330,26 +343,49 @@ struct VoxelPipeline
 			}
 		}
 
-		// Create compute pipeline
-		std::vector<std::vector<vk::DescriptorSetLayoutBinding>> bindings(DESCRIPTOR_SET_NUM);
-		bindings[DESCRIPTOR_SET_VOXELIZE] = {
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment)
-			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-			.setDescriptorCount(1)
-			.setBinding(0),
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment)
-			.setDescriptorType(vk::DescriptorType::eStorageImage)
-			.setDescriptorCount(1)
-			.setBinding(1),
-		};
-		for (u32 i = 0; i < bindings.size(); i++)
+		// Create descriptor set layout
 		{
-			vk::DescriptorSetLayoutCreateInfo descriptor_layout_info = vk::DescriptorSetLayoutCreateInfo()
-				.setBindingCount(bindings[i].size())
-				.setPBindings(bindings[i].data());
-			m_descriptor_set_layout[i] = device->createDescriptorSetLayoutUnique(descriptor_layout_info);
+			{
+				std::vector<std::vector<vk::DescriptorSetLayoutBinding>> bindings(DESCRIPTOR_SET_NUM);
+				bindings[DESCRIPTOR_SET_VOXELIZE] = {
+					vk::DescriptorSetLayoutBinding()
+					.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment)
+					.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+					.setDescriptorCount(1)
+					.setBinding(0),
+					vk::DescriptorSetLayoutBinding()
+					.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment)
+					.setDescriptorType(vk::DescriptorType::eStorageImage)
+					.setDescriptorCount(1)
+					.setBinding(1),
+				};
+				for (u32 i = 0; i < bindings.size(); i++)
+				{
+					vk::DescriptorSetLayoutCreateInfo descriptor_layout_info = vk::DescriptorSetLayoutCreateInfo()
+						.setBindingCount(bindings[i].size())
+						.setPBindings(bindings[i].data());
+					m_descriptor_set_layout[i] = device->createDescriptorSetLayoutUnique(descriptor_layout_info);
+				}
+			}
+
+			// ƒ‚ƒfƒ‹—p
+			{
+				vk::DescriptorSetLayoutCreateInfo layout_info;
+				vk::DescriptorSetLayoutBinding bindings[2];
+				bindings[0].setDescriptorType(vk::DescriptorType::eStorageBuffer);
+				bindings[0].setBinding(0);
+				bindings[0].setDescriptorCount(1);
+				bindings[0].setStageFlags(vk::ShaderStageFlagBits::eFragment);
+				bindings[1].setDescriptorType(vk::DescriptorType::eStorageBuffer);
+				bindings[1].setBinding(1);
+				bindings[1].setDescriptorCount(1);
+				bindings[1].setStageFlags(vk::ShaderStageFlagBits::eFragment);
+				layout_info.setBindingCount(array_length(bindings));
+				layout_info.setPBindings(bindings);
+				m_model_descriptor_set_layout = device->createDescriptorSetLayoutUnique(layout_info);
+
+			}
+
 		}
 
 		{
@@ -390,6 +426,7 @@ struct VoxelPipeline
 			{
 				vk::DescriptorSetLayout layouts[] = {
 					m_descriptor_set_layout[DESCRIPTOR_SET_VOXELIZE].get(),
+					m_model_descriptor_set_layout.get()
 				};
 //				vk::PushConstantRange constant_range[] = {
 //					vk::PushConstantRange().setOffset(0).setSize(64).setStageFlags(vk::ShaderStageFlagBits::eVertex),
@@ -528,8 +565,22 @@ struct VoxelPipeline
 					.setPColorBlendState(&blend_info),
 				};
 				auto pipelines = device->createGraphicsPipelinesUnique(m_pipeline_cache.get(), graphics_pipeline_info);
-				std::copy(std::make_move_iterator(pipelines.begin()), std::make_move_iterator(pipelines.end()), m_graphics_pipeline.begin());
+				std::copy(std::make_move_iterator(pipelines.begin()), std::make_move_iterator(pipelines.end()), m_pipeline.begin());
 			}
+
+		}
+
+		{
+			vk::DescriptorPoolSize pool_size[1];
+			pool_size[0].setDescriptorCount(30);
+			pool_size[0].setType(vk::DescriptorType::eStorageBuffer);
+			vk::DescriptorPoolCreateInfo descriptor_pool_info;
+			descriptor_pool_info.setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet);
+			descriptor_pool_info.setMaxSets(1);
+			descriptor_pool_info.setPoolSizeCount(1);
+			descriptor_pool_info.setPoolSizeCount(array_length(pool_size));
+			descriptor_pool_info.setPPoolSizes(pool_size);
+			m_model_descriptor_pool = device->createDescriptorPoolUnique(descriptor_pool_info);
 
 		}
 		cmd->end();
@@ -538,13 +589,86 @@ struct VoxelPipeline
 
 	vk::CommandBuffer draw(std::shared_ptr<btr::Executer>& executer)
 	{
+// 		vk::CommandBufferAllocateInfo alloc_info;
+// 		alloc_info.setCommandBufferCount(executer->m_window->getSwapchain().getBackbufferNum());
+// 		alloc_info.setCommandPool(executer->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0));
+// 		alloc_info.setLevel(vk::CommandBufferLevel::ePrimary);
+// 		m_make_cmd = executer->m_device->allocateCommandBuffersUnique(alloc_info);
+// 
+// 		auto& cmd = m_make_cmd[0];
+// 
+// 		vk::CommandBufferBeginInfo begin_info;
+// 		begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
+// 		cmd->begin(begin_info);
 
+		auto cmd = executer->m_cmd_pool->getCmdOnetime(0);
+		vk::ImageSubresourceRange range;
+		range.setLayerCount(1);
+		range.setLevelCount(1);
+		range.setAspectMask(vk::ImageAspectFlagBits::eColor);
+		range.setBaseArrayLayer(0);
+		range.setBaseMipLevel(0);
+
+		{
+			// clear
+			vk::ImageMemoryBarrier to_copy_barrier;
+			to_copy_barrier.image = m_voxel_image.get();
+			to_copy_barrier.oldLayout = vk::ImageLayout::eGeneral;
+			to_copy_barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
+			to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+			to_copy_barrier.subresourceRange = range;
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
+
+			vk::ClearColorValue clear_value;
+			clear_value.setUint32(std::array<uint32_t, 4>{});
+			cmd.clearColorImage(m_voxel_image.get(), vk::ImageLayout::eTransferDstOptimal, clear_value, range);
+
+			vk::ImageMemoryBarrier to_shader_barrier;
+			to_shader_barrier.image = m_voxel_image.get();
+			to_shader_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
+			to_shader_barrier.newLayout = vk::ImageLayout::eGeneral;
+			to_shader_barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+			to_shader_barrier.dstAccessMask = vk::AccessFlagBits::eShaderWrite;
+			to_shader_barrier.subresourceRange = range;
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
+		}
+		{
+			vk::RenderPassBeginInfo begin_render_info;
+			begin_render_info.setRenderPass(m_voxelize_render_pass.get());
+			begin_render_info.setRenderArea(vk::Rect2D({}, { 32, 32 }));
+
+			cmd.beginRenderPass(begin_render_info, vk::SubpassContents::eSecondaryCommandBuffers);
+			// make
+			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_MAKE_VOXEL].get());
+
+			std::vector<vk::DescriptorSet> descriptor_sets = {
+				m_descriptor_set[DESCRIPTOR_SET_VOXELIZE].get(),
+			};
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_VOXELIZE].get(), 0, descriptor_sets, {});
+
+		}
+
+		for (auto& model : m_model_list)
+		{
+			std::vector<vk::DescriptorSet> descriptor_sets = {
+				model->m_model_descriptor_set.get(),
+			};
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_VOXELIZE].get(), 1, descriptor_sets, {});
+			cmd.bindIndexBuffer(model->m_index.getBufferInfo().buffer, model->m_index.getBufferInfo().offset, vk::IndexType::eUint32);
+			cmd.bindVertexBuffers(0, model->m_vertex.getBufferInfo().buffer, model->m_vertex.getBufferInfo().offset);
+			cmd.drawIndexedIndirect(model->m_indirect.getBufferInfo().buffer, model->m_indirect.getBufferInfo().offset, model->m_mesh_count, sizeof(vk::DrawIndexedIndirectCommand));
+		}
 	}
 
 	void addModel(std::shared_ptr<btr::Executer>& executer, vk::CommandBuffer cmd, const VoxelizeModel& model)
 	{
 		std::vector<VoxelizeVertex> vertex;
 		std::vector<glm::uvec3> index;
+		std::vector<VoxelizeMeshInfo> mesh_info;
+		std::vector<vk::DrawIndexedIndirectCommand> indirect;
+		mesh_info.reserve(model.m_mesh.size());
+		indirect.reserve(model.m_mesh.size());
+
 		size_t index_offset = 0;
 		for (auto& mesh : model.m_mesh)
 		{
@@ -552,10 +676,24 @@ struct VoxelPipeline
 			auto idx = mesh.index;
 			std::for_each(idx.begin(), idx.end(), [=](auto& i) {i += index_offset; });
 			index.insert(index.end(), idx.begin(), idx.end());
+
+			vk::DrawIndexedIndirectCommand draw_cmd;
+			draw_cmd.setFirstIndex(index_offset);
+			draw_cmd.setFirstInstance(0);
+			draw_cmd.setIndexCount(mesh.index.size() * 3);
+			draw_cmd.setInstanceCount(1);
+			draw_cmd.setVertexOffset(0);
+			indirect.push_back(draw_cmd);
+
+			VoxelizeMeshInfo minfo;
+			minfo.material_index = mesh.m_material_index;
+			mesh_info.push_back(minfo);
+
 			index_offset += mesh.index.size() * 3;
 		}
-
 		std::shared_ptr<VoxelizeModelResource> resource(std::make_shared<VoxelizeModelResource>());
+		resource->m_mesh_count = model.m_mesh.size();
+		resource->m_index_count = index_offset;
 		{
 			btr::BufferMemory::Descriptor desc;
 			desc.size = vector_sizeof(vertex);
@@ -587,11 +725,41 @@ struct VoxelPipeline
 			copy.setSrcOffset(staging.getBufferInfo().offset);
 			cmd.copyBuffer(staging.getBufferInfo().buffer, resource->m_index.getBufferInfo().buffer, copy);
 		}
+		{
+			btr::BufferMemory::Descriptor desc;
+			desc.size = vector_sizeof(indirect);
+			resource->m_indirect = executer->m_vertex_memory.allocateMemory(desc);
+
+			desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			auto staging = executer->m_staging_memory.allocateMemory(desc);
+			memcpy_s(staging.getMappedPtr(), desc.size, indirect.data(), desc.size);
+
+			vk::BufferCopy copy;
+			copy.setSize(desc.size);
+			copy.setSrcOffset(resource->m_indirect.getBufferInfo().offset);
+			copy.setSrcOffset(staging.getBufferInfo().offset);
+			cmd.copyBuffer(staging.getBufferInfo().buffer, resource->m_indirect.getBufferInfo().buffer, copy);
+		}
 
 		{
 			btr::BufferMemory::Descriptor desc;
+			desc.size = vector_sizeof(mesh_info);
+			resource->m_mesh_info = executer->m_storage_memory.allocateMemory(desc);
+
+			desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			auto staging = executer->m_staging_memory.allocateMemory(desc);
+			memcpy_s(staging.getMappedPtr(), desc.size, mesh_info.data(), desc.size);
+
+			vk::BufferCopy copy;
+			copy.setSize(desc.size);
+			copy.setSrcOffset(resource->m_mesh_info.getBufferInfo().offset);
+			copy.setSrcOffset(staging.getBufferInfo().offset);
+			cmd.copyBuffer(staging.getBufferInfo().buffer, resource->m_mesh_info.getBufferInfo().buffer, copy);
+		}
+		{
+			btr::BufferMemory::Descriptor desc;
 			desc.size = vector_sizeof(model.m_material);
-			resource->m_material = executer->m_uniform_memory.allocateMemory(desc);
+			resource->m_material = executer->m_storage_memory.allocateMemory(desc);
 
 			desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging = executer->m_staging_memory.allocateMemory(desc);
@@ -604,6 +772,29 @@ struct VoxelPipeline
 			cmd.copyBuffer(staging.getBufferInfo().buffer, resource->m_material.getBufferInfo().buffer, copy);
 		}
 
-		m_model.push_back(resource);
+
+		{
+			vk::DescriptorSetLayout layouts[] = {
+				m_model_descriptor_set_layout.get(),
+			};
+			vk::DescriptorSetAllocateInfo info;
+			info.setDescriptorPool(m_model_descriptor_pool.get());
+			info.setDescriptorSetCount(array_length(layouts));
+			info.setPSetLayouts(layouts);
+			resource->m_model_descriptor_set = std::move(executer->m_device->allocateDescriptorSetsUnique(info)[0]);
+
+			vk::DescriptorBufferInfo uniforms[] = {
+				resource->m_material.getBufferInfo(),
+				resource->m_mesh_info.getBufferInfo(),
+			};
+			vk::WriteDescriptorSet write_desc;
+			write_desc.setDescriptorType(vk::DescriptorType::eUniformBuffer);
+			write_desc.setDescriptorCount(array_length(uniforms));
+			write_desc.setPBufferInfo(uniforms);
+			write_desc.setDstSet(resource->m_model_descriptor_set.get());
+			write_desc.setDstBinding(0);
+			executer->m_device->updateDescriptorSets(write_desc, {});
+		}
+		m_model_list.push_back(resource);
 	}
 };

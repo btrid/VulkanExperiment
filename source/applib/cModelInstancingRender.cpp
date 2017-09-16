@@ -23,7 +23,7 @@ MotionTexture create(btr::Loader* loader, const cMotion& motion, const RootNode&
 	image_info.extent = { SIZE, 1u, 1u };
 
 	auto image_prop = loader->m_device.getGPU().getImageFormatProperties(image_info.format, image_info.imageType, image_info.tiling, image_info.usage, image_info.flags);
-	vk::Image image = loader->m_device->createImage(image_info);
+	vk::UniqueImage image = loader->m_device->createImageUnique(image_info);
 
 	btr::BufferMemory::Descriptor staging_desc;
 	staging_desc.size = image_info.arrayLayers * motion.m_data.size() * SIZE * sizeof(glm::u16vec4);
@@ -106,13 +106,13 @@ MotionTexture create(btr::Loader* loader, const cMotion& motion, const RootNode&
 		assert(count == SIZE);
 	}
 
-	vk::MemoryRequirements memory_request = loader->m_device->getImageMemoryRequirements(image);
+	vk::MemoryRequirements memory_request = loader->m_device->getImageMemoryRequirements(image.get());
 	vk::MemoryAllocateInfo memory_alloc_info;
 	memory_alloc_info.allocationSize = memory_request.size;
 	memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(loader->m_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-	vk::DeviceMemory image_memory = loader->m_device->allocateMemory(memory_alloc_info);
-	loader->m_device->bindImageMemory(image, image_memory, 0);
+	vk::UniqueDeviceMemory image_memory = loader->m_device->allocateMemoryUnique(memory_alloc_info);
+	loader->m_device->bindImageMemory(image.get(), image_memory.get(), 0);
 
 	vk::ImageSubresourceRange subresourceRange;
 	subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
@@ -131,7 +131,7 @@ MotionTexture create(btr::Loader* loader, const cMotion& motion, const RootNode&
 
 	vk::ImageMemoryBarrier to_copy_barrier;
 	to_copy_barrier.dstQueueFamilyIndex = loader->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
-	to_copy_barrier.image = image;
+	to_copy_barrier.image = image.get();
 	to_copy_barrier.oldLayout = vk::ImageLayout::eUndefined;
 	to_copy_barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
 	to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
@@ -139,7 +139,7 @@ MotionTexture create(btr::Loader* loader, const cMotion& motion, const RootNode&
 
 	vk::ImageMemoryBarrier to_shader_read_barrier;
 	to_shader_read_barrier.dstQueueFamilyIndex = loader->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
-	to_shader_read_barrier.image = image;
+	to_shader_read_barrier.image = image.get();
 	to_shader_read_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
 	to_shader_read_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 	to_shader_read_barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
@@ -147,13 +147,13 @@ MotionTexture create(btr::Loader* loader, const cMotion& motion, const RootNode&
 	to_shader_read_barrier.subresourceRange = subresourceRange;
 
 	loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
-	loader->m_cmd.copyBufferToImage(staging_buffer.getBufferInfo().buffer, image, vk::ImageLayout::eTransferDstOptimal, { copy });
+	loader->m_cmd.copyBufferToImage(staging_buffer.getBufferInfo().buffer, image.get(), vk::ImageLayout::eTransferDstOptimal, { copy });
 	loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
 
 	MotionTexture tex;
 	tex.m_resource = std::make_shared<MotionTexture::Resource>();
 	tex.m_resource->m_device = loader->m_device;
-	tex.m_resource->m_image = image;
+	tex.m_resource->m_image = std::move(image);
 
 	vk::ImageViewCreateInfo view_info;
 	view_info.viewType = vk::ImageViewType::e1DArray;
@@ -163,11 +163,11 @@ MotionTexture create(btr::Loader* loader, const cMotion& motion, const RootNode&
 	view_info.components.a = vk::ComponentSwizzle::eA;
 	view_info.flags = vk::ImageViewCreateFlags();
 	view_info.format = image_info.format;
-	view_info.image = image;
+	view_info.image = image.get();
 	view_info.subresourceRange = subresourceRange;
 
-	tex.m_resource->m_image_view = loader->m_device->createImageView(view_info);
-	tex.m_resource->m_memory = image_memory;
+	tex.m_resource->m_image_view = loader->m_device->createImageViewUnique(view_info);
+	tex.m_resource->m_memory = std::move(image_memory);
 
 	vk::SamplerCreateInfo sampler_info;
 	sampler_info.magFilter = vk::Filter::eNearest;
@@ -184,7 +184,7 @@ MotionTexture create(btr::Loader* loader, const cMotion& motion, const RootNode&
 	sampler_info.anisotropyEnable = VK_FALSE;
 	sampler_info.borderColor = vk::BorderColor::eFloatOpaqueWhite;
 
-	tex.m_resource->m_sampler = loader->m_device->createSampler(sampler_info);
+	tex.m_resource->m_sampler = loader->m_device->createSamplerUnique(sampler_info);
 	return tex;
 }
 
@@ -591,7 +591,7 @@ void ModelInstancingRender::setup(cModelInstancingRenderer&  renderer)
 				{
 					vk::DescriptorImageInfo()
 					.setImageView(m_resource_instancing->m_motion_texture[0].getImageView())
-					.setSampler(m_resource_instancing->m_motion_texture[0].m_resource->m_sampler)
+					.setSampler(m_resource_instancing->m_motion_texture[0].m_resource->m_sampler.get())
 					.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
 				};
 				std::vector<vk::WriteDescriptorSet> drawWriteDescriptorSets =

@@ -16,35 +16,27 @@ struct MotionTexture
 	struct Resource
 	{
 		cDevice m_device;
-		vk::FenceShared m_fence_shared;
-		vk::Image m_image;
-		vk::ImageView m_image_view;
-		vk::DeviceMemory m_memory;
-		vk::Sampler m_sampler;
+		vk::UniqueFence m_fence;
+		vk::UniqueImage m_image;
+		vk::UniqueImageView m_image_view;
+		vk::UniqueDeviceMemory m_memory;
+		vk::UniqueSampler m_sampler;
 		~Resource()
 		{
 			if (m_image)
 			{
-				std::unique_ptr<Deleter> deleter = std::make_unique<Deleter>();
-				deleter->device = m_device.getHandle();
-				deleter->image = { m_image };
-				//				deleter->sampler = { m_sampler };
-				deleter->memory = { m_memory };
-				deleter->fence_shared = { m_fence_shared };
-				sGlobal::Order().destroyResource(std::move(deleter));
-
-				m_device->destroyImageView(m_image_view);
+				sDeleter::Order().enque(std::move(m_image), std::move(m_image_view), std::move(m_memory), std::move(m_sampler));
 			}
 		}
 	};
 
 	std::shared_ptr<Resource> m_resource;
 
-	vk::ImageView getImageView()const { return m_resource ? m_resource->m_image_view : vk::ImageView(); }
+	vk::ImageView getImageView()const { return m_resource ? m_resource->m_image_view.get() : vk::ImageView(); }
 
 	bool isReady()const
 	{
-		return m_resource ? m_resource->m_device->getFenceStatus(*m_resource->m_fence_shared) == vk::Result::eSuccess : true;
+		return m_resource ? m_resource->m_device->getFenceStatus(m_resource->m_fence.get()) == vk::Result::eSuccess : true;
 	}
 };
 class ModelInstancingRender

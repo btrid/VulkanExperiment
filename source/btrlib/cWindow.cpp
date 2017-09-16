@@ -192,7 +192,7 @@ void cWindow::Swapchain::setup(const CreateInfo& descriptor, vk::SurfaceKHR surf
 			clear_to_render.setImage(m_backbuffer[i].m_image);
 			cmd.pipelineBarrier(
 				vk::PipelineStageFlagBits::eTransfer,
-				vk::PipelineStageFlagBits::eFragmentShader,
+				vk::PipelineStageFlagBits::eColorAttachmentOutput,
 				vk::DependencyFlags(),
 				nullptr, nullptr, clear_to_render);
 
@@ -334,7 +334,7 @@ void cWindow::setup(std::shared_ptr<btr::Loader>& loader, const CreateInfo& desc
 	barrier.back().setOldLayout(vk::ImageLayout::eUndefined);
 	barrier.back().setNewLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
-	loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::DependencyFlags(), {}, {}, barrier);
+	loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eLateFragmentTests, vk::DependencyFlags(), {}, {}, barrier);
 
 }
 
