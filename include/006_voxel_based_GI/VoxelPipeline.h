@@ -57,6 +57,8 @@ struct VoxelPipeline
 		SHADER_VERTEX_VOXELIZE,
 		SHADER_GEOMETRY_VOXELIZE,
 		SHADER_FRAGMENT_VOXELIZE,
+		SHADER_DRAW_VOXEL_VERTEX,
+		SHADER_DRAW_VOXEL_FRAGMENT,
 		SHADER_NUM,
 	};
 
@@ -73,20 +75,21 @@ struct VoxelPipeline
 
 	enum PipelineLayout
 	{
-		PIPELINE_LAYOUT_VOXELIZE,
+		PIPELINE_LAYOUT_MAKE_VOXEL,
+		PIPELINE_LAYOUT_DRAW_VOXEL,
 		PIPELINE_LAYOUT_NUM,
 	};
 	enum Pipeline
 	{
 		PIPELINE_MAKE_VOXEL,
-		PIPELINE_DRAW_VOXE,
+		PIPELINE_DRAW_VOXEL,
 		PIPELINE_NUM,
 	};
 
-	vk::UniqueRenderPass m_voxelize_render_pass;
-	std::vector<vk::UniqueFramebuffer> m_voxelize_framebuffer;
-	vk::UniqueRenderPass m_render_pass;
-	std::vector<vk::UniqueFramebuffer> m_framebuffer;
+	vk::UniqueRenderPass m_make_voxel_pass;
+	std::vector<vk::UniqueFramebuffer> m_make_voxel_framebuffer;
+	vk::UniqueRenderPass m_draw_voxel_pass;
+	std::vector<vk::UniqueFramebuffer> m_draw_voxel_framebuffer;
 
 	std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_list;
 	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_stage_info;
@@ -251,7 +254,7 @@ struct VoxelPipeline
 					.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
 					.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
 					vk::AttachmentDescription()
-					.setFormat(vk::Format::eD32Sfloat)
+					.setFormat(loader->m_window->getSwapchain().m_depth.m_format)
 					.setSamples(vk::SampleCountFlagBits::e1)
 					.setLoadOp(vk::AttachmentLoadOp::eLoad)
 					.setStoreOp(vk::AttachmentStoreOp::eStore)
@@ -263,23 +266,23 @@ struct VoxelPipeline
 					.setPAttachments(attach_description.data())
 					.setSubpassCount(1)
 					.setPSubpasses(&subpass);
-				m_render_pass = loader->m_device->createRenderPassUnique(renderpass_info);
-				m_framebuffer.resize(loader->m_window->getSwapchain().getBackbufferNum());
+				m_draw_voxel_pass = loader->m_device->createRenderPassUnique(renderpass_info);
+				m_draw_voxel_framebuffer.resize(loader->m_window->getSwapchain().getBackbufferNum());
 				{
 					std::array<vk::ImageView, 2> view;
 
 					vk::FramebufferCreateInfo framebuffer_info;
-					framebuffer_info.setRenderPass(m_render_pass.get());
+					framebuffer_info.setRenderPass(m_draw_voxel_pass.get());
 					framebuffer_info.setAttachmentCount((uint32_t)view.size());
 					framebuffer_info.setPAttachments(view.data());
 					framebuffer_info.setWidth(loader->m_window->getClientSize().x);
 					framebuffer_info.setHeight(loader->m_window->getClientSize().y);
 					framebuffer_info.setLayers(1);
 
-					for (size_t i = 0; i < m_framebuffer.size(); i++) {
+					for (size_t i = 0; i < m_draw_voxel_framebuffer.size(); i++) {
 						view[0] = loader->m_window->getSwapchain().m_backbuffer[i].m_view;
 						view[1] = loader->m_window->getSwapchain().m_depth.m_view;
-						m_framebuffer[i] = loader->m_device->createFramebufferUnique(framebuffer_info);
+						m_draw_voxel_framebuffer[i] = loader->m_device->createFramebufferUnique(framebuffer_info);
 					}
 				}
 
@@ -300,20 +303,20 @@ struct VoxelPipeline
 					.setPAttachments(nullptr)
 					.setSubpassCount(1)
 					.setPSubpasses(&subpass);
-				m_voxelize_render_pass = loader->m_device->createRenderPassUnique(renderpass_info);
+				m_make_voxel_pass = loader->m_device->createRenderPassUnique(renderpass_info);
 
-				m_voxelize_framebuffer.resize(loader->m_window->getSwapchain().getBackbufferNum());
+				m_make_voxel_framebuffer.resize(loader->m_window->getSwapchain().getBackbufferNum());
 				{
 					vk::FramebufferCreateInfo framebuffer_info;
-					framebuffer_info.setRenderPass(m_voxelize_render_pass.get());
+					framebuffer_info.setRenderPass(m_make_voxel_pass.get());
 					framebuffer_info.setAttachmentCount(0);
 					framebuffer_info.setPAttachments(nullptr);
 					framebuffer_info.setWidth(32);
 					framebuffer_info.setHeight(32);
 					framebuffer_info.setLayers(1);
 
-					for (size_t i = 0; i < m_voxelize_framebuffer.size(); i++) {
-						m_voxelize_framebuffer[i] = loader->m_device->createFramebufferUnique(framebuffer_info);
+					for (size_t i = 0; i < m_make_voxel_framebuffer.size(); i++) {
+						m_make_voxel_framebuffer[i] = loader->m_device->createFramebufferUnique(framebuffer_info);
 					}
 				}
 			}
@@ -331,6 +334,8 @@ struct VoxelPipeline
 				{ "Voxelize.vert.spv",vk::ShaderStageFlagBits::eVertex },
 				{ "Voxelize.geom.spv",vk::ShaderStageFlagBits::eGeometry },
 				{ "Voxelize.frag.spv",vk::ShaderStageFlagBits::eFragment },
+				{ "DrawAlbedoVoxel.vert.spv",vk::ShaderStageFlagBits::eVertex },
+				{ "DrawAlbedoVoxel.frag.spv",vk::ShaderStageFlagBits::eFragment },
 			};
 			static_assert(array_length(shader_info) == SHADER_NUM, "not equal shader num");
 
@@ -428,17 +433,20 @@ struct VoxelPipeline
 					m_descriptor_set_layout[DESCRIPTOR_SET_VOXELIZE].get(),
 					m_model_descriptor_set_layout.get()
 				};
-//				vk::PushConstantRange constant_range[] = {
-//					vk::PushConstantRange().setOffset(0).setSize(64).setStageFlags(vk::ShaderStageFlagBits::eVertex),
-//					vk::PushConstantRange().setOffset(64).setSize(4).setStageFlags(vk::ShaderStageFlagBits::eFragment),
-//				};
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
 				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 				pipeline_layout_info.setPSetLayouts(layouts);
-//				pipeline_layout_info.setPushConstantRangeCount(array_length(constant_range));
-//				pipeline_layout_info.setPPushConstantRanges(constant_range);
-
-				m_pipeline_layout[PIPELINE_LAYOUT_VOXELIZE] = device->createPipelineLayoutUnique(pipeline_layout_info);
+				m_pipeline_layout[PIPELINE_LAYOUT_MAKE_VOXEL] = device->createPipelineLayoutUnique(pipeline_layout_info);
+			}
+			{
+				vk::DescriptorSetLayout layouts[] = {
+					m_descriptor_set_layout[DESCRIPTOR_SET_VOXELIZE].get(),
+					sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
+				};
+				vk::PipelineLayoutCreateInfo pipeline_layout_info;
+				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
+				pipeline_layout_info.setPSetLayouts(layouts);
+				m_pipeline_layout[PIPELINE_LAYOUT_DRAW_VOXEL] = device->createPipelineLayoutUnique(pipeline_layout_info);
 			}
 
 		}
@@ -507,7 +515,7 @@ struct VoxelPipeline
 					vk::VertexInputBindingDescription()
 					.setBinding(0)
 					.setInputRate(vk::VertexInputRate::eVertex)
-					.setStride(32)
+					.setStride(sizeof(VoxelizeVertex))
 				};
 
 				std::vector<vk::VertexInputAttributeDescription> vertex_input_attribute =
@@ -518,24 +526,6 @@ struct VoxelPipeline
 					.setLocation(0)
 					.setFormat(vk::Format::eR32G32B32Sfloat)
 					.setOffset(0),
-					// normal
-					vk::VertexInputAttributeDescription()
-					.setBinding(0)
-					.setLocation(1)
-					.setFormat(vk::Format::eR32G32B32Sfloat)
-					.setOffset(12),
-					// diffuse
-					vk::VertexInputAttributeDescription()
-					.setBinding(0)
-					.setLocation(2)
-					.setFormat(vk::Format::eR8G8B8A8Snorm)
-					.setOffset(24),
-					// emission
-					vk::VertexInputAttributeDescription()
-					.setBinding(0)
-					.setLocation(3)
-					.setFormat(vk::Format::eR8G8B8A8Snorm)
-					.setOffset(28),
 				};
 				vk::PipelineVertexInputStateCreateInfo vertex_input_info;
 				vertex_input_info.setVertexBindingDescriptionCount((uint32_t)vertex_input_binding.size());
@@ -559,13 +549,82 @@ struct VoxelPipeline
 					.setPViewportState(&viewport_info)
 					.setPRasterizationState(&rasterization_info)
 					.setPMultisampleState(&sample_info)
-					.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_VOXELIZE].get())
-					.setRenderPass(m_voxelize_render_pass.get())
+					.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_MAKE_VOXEL].get())
+					.setRenderPass(m_make_voxel_pass.get())
 					.setPDepthStencilState(&depth_stencil_info)
 					.setPColorBlendState(&blend_info),
 				};
-				auto pipelines = device->createGraphicsPipelinesUnique(m_pipeline_cache.get(), graphics_pipeline_info);
-				std::copy(std::make_move_iterator(pipelines.begin()), std::make_move_iterator(pipelines.end()), m_pipeline.begin());
+				m_pipeline[PIPELINE_MAKE_VOXEL] = std::move(device->createGraphicsPipelinesUnique(m_pipeline_cache.get(), graphics_pipeline_info)[0]);
+			}
+			{
+				// assembly
+				vk::PipelineInputAssemblyStateCreateInfo assembly_info = vk::PipelineInputAssemblyStateCreateInfo()
+					.setPrimitiveRestartEnable(VK_FALSE)
+					.setTopology(vk::PrimitiveTopology::eTriangleStrip);
+
+				// viewport
+				vk::Viewport viewports[] = {
+					vk::Viewport(0.f, 0.f, (float)loader->m_window->getClientSize().x, (float)loader->m_window->getClientSize().y),
+				};
+				vk::Rect2D scissors[] = {
+					vk::Rect2D(vk::Offset2D(0, 0), loader->m_window->getClientSize<vk::Extent2D>()),
+				};
+				vk::PipelineViewportStateCreateInfo viewport_info;
+				viewport_info.setViewportCount(array_length(viewports));
+				viewport_info.setPViewports(viewports);
+				viewport_info.setScissorCount(array_length(scissors));
+				viewport_info.setPScissors(scissors);
+
+				// ラスタライズ
+				vk::PipelineRasterizationStateCreateInfo rasterization_info;
+				rasterization_info.setPolygonMode(vk::PolygonMode::eFill);
+				rasterization_info.setCullMode(vk::CullModeFlagBits::eNone);
+				rasterization_info.setFrontFace(vk::FrontFace::eCounterClockwise);
+				rasterization_info.setLineWidth(1.f);
+				// サンプリング
+				vk::PipelineMultisampleStateCreateInfo sample_info;
+				sample_info.setRasterizationSamples(vk::SampleCountFlagBits::e1);
+
+				// デプスステンシル
+				vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
+				depth_stencil_info.setDepthTestEnable(VK_FALSE);
+				depth_stencil_info.setDepthWriteEnable(VK_FALSE);
+				depth_stencil_info.setDepthCompareOp(vk::CompareOp::eLessOrEqual);
+				depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
+				depth_stencil_info.setStencilTestEnable(VK_FALSE);
+
+				// ブレンド
+				vk::PipelineColorBlendAttachmentState blend_states[] = {
+					vk::PipelineColorBlendAttachmentState().setBlendEnable(true).setColorBlendOp(vk::BlendOp::eAdd)
+				};
+				vk::PipelineColorBlendStateCreateInfo blend_info;
+				blend_info.setAttachmentCount(array_length(blend_states));
+				blend_info.setPAttachments(blend_states);
+
+				// todo
+				vk::PipelineVertexInputStateCreateInfo vertex_input_info;
+
+				vk::PipelineShaderStageCreateInfo stage_infos[] =
+				{
+					m_stage_info[SHADER_DRAW_VOXEL_VERTEX],
+					m_stage_info[SHADER_DRAW_VOXEL_FRAGMENT],
+				};
+				std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =
+				{
+					vk::GraphicsPipelineCreateInfo()
+					.setStageCount(array_length(stage_infos))
+					.setPStages(stage_infos)
+					.setPVertexInputState(&vertex_input_info)
+					.setPInputAssemblyState(&assembly_info)
+					.setPViewportState(&viewport_info)
+					.setPRasterizationState(&rasterization_info)
+					.setPMultisampleState(&sample_info)
+					.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_VOXEL].get())
+					.setRenderPass(m_draw_voxel_pass.get())
+					.setPDepthStencilState(&depth_stencil_info)
+					.setPColorBlendState(&blend_info),
+				};
+				m_pipeline[PIPELINE_DRAW_VOXEL] = std::move(device->createGraphicsPipelinesUnique(m_pipeline_cache.get(), graphics_pipeline_info)[0]);
 			}
 
 		}
@@ -589,17 +648,6 @@ struct VoxelPipeline
 
 	vk::CommandBuffer draw(std::shared_ptr<btr::Executer>& executer)
 	{
-// 		vk::CommandBufferAllocateInfo alloc_info;
-// 		alloc_info.setCommandBufferCount(executer->m_window->getSwapchain().getBackbufferNum());
-// 		alloc_info.setCommandPool(executer->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0));
-// 		alloc_info.setLevel(vk::CommandBufferLevel::ePrimary);
-// 		m_make_cmd = executer->m_device->allocateCommandBuffersUnique(alloc_info);
-// 
-// 		auto& cmd = m_make_cmd[0];
-// 
-// 		vk::CommandBufferBeginInfo begin_info;
-// 		begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
-// 		cmd->begin(begin_info);
 
 		auto cmd = executer->m_cmd_pool->getCmdOnetime(0);
 		vk::ImageSubresourceRange range;
@@ -635,10 +683,12 @@ struct VoxelPipeline
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), {}, {}, { to_shader_barrier });
 			}
 		}
+
 		{
+			// make voxel
 			vk::RenderPassBeginInfo begin_render_info;
-			begin_render_info.setFramebuffer(m_voxelize_framebuffer[executer->getGPUFrame()].get());
-			begin_render_info.setRenderPass(m_voxelize_render_pass.get());
+			begin_render_info.setFramebuffer(m_make_voxel_framebuffer[executer->getGPUFrame()].get());
+			begin_render_info.setRenderPass(m_make_voxel_pass.get());
 			begin_render_info.setRenderArea(vk::Rect2D({}, { 32, 32 }));
 
 			cmd.beginRenderPass(begin_render_info, vk::SubpassContents::eInline);
@@ -648,22 +698,52 @@ struct VoxelPipeline
 			std::vector<vk::DescriptorSet> descriptor_sets = {
 				m_descriptor_set[DESCRIPTOR_SET_VOXELIZE].get(),
 			};
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_VOXELIZE].get(), 0, descriptor_sets, {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_MAKE_VOXEL].get(), 0, descriptor_sets, {});
 
+			for (auto& model : m_model_list)
+			{
+				std::vector<vk::DescriptorSet> descriptor_sets = {
+					model->m_model_descriptor_set.get(),
+				};
+				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_MAKE_VOXEL].get(), 1, descriptor_sets, {});
+				cmd.bindIndexBuffer(model->m_index.getBufferInfo().buffer, model->m_index.getBufferInfo().offset, vk::IndexType::eUint32);
+				cmd.bindVertexBuffers(0, model->m_vertex.getBufferInfo().buffer, model->m_vertex.getBufferInfo().offset);
+				cmd.drawIndexedIndirect(model->m_indirect.getBufferInfo().buffer, model->m_indirect.getBufferInfo().offset, model->m_mesh_count, sizeof(vk::DrawIndexedIndirectCommand));
+			}
+			cmd.endRenderPass();
 		}
 
-		for (auto& model : m_model_list)
+
 		{
+			// draw voxel
+			{
+				vk::ImageMemoryBarrier to_read_barrier;
+				to_read_barrier.image = m_voxel_image.get();
+				to_read_barrier.oldLayout = vk::ImageLayout::eGeneral;
+				to_read_barrier.newLayout = vk::ImageLayout::eGeneral;
+				to_read_barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+				to_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+				to_read_barrier.subresourceRange = range;
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), {}, {}, { to_read_barrier });
+			}
+			vk::RenderPassBeginInfo begin_render_info;
+			begin_render_info.setFramebuffer(m_draw_voxel_framebuffer[executer->getGPUFrame()].get());
+			begin_render_info.setRenderPass(m_draw_voxel_pass.get());
+			begin_render_info.setRenderArea(vk::Rect2D({}, executer->m_window->getClientSize<vk::Extent2D>()));
+			cmd.beginRenderPass(begin_render_info, vk::SubpassContents::eInline);
+			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW_VOXEL].get());
 			std::vector<vk::DescriptorSet> descriptor_sets = {
-				model->m_model_descriptor_set.get(),
+				m_descriptor_set[DESCRIPTOR_SET_VOXELIZE].get(),
+				sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA),
 			};
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_VOXELIZE].get(), 1, descriptor_sets, {});
-			cmd.bindIndexBuffer(model->m_index.getBufferInfo().buffer, model->m_index.getBufferInfo().offset, vk::IndexType::eUint32);
-			cmd.bindVertexBuffers(0, model->m_vertex.getBufferInfo().buffer, model->m_vertex.getBufferInfo().offset);
-			cmd.drawIndexedIndirect(model->m_indirect.getBufferInfo().buffer, model->m_indirect.getBufferInfo().offset, model->m_mesh_count, sizeof(vk::DrawIndexedIndirectCommand));
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_VOXEL].get(), 0, descriptor_sets, {});
+			cmd.draw(14, 32*32*32, 0, 0);
+			cmd.endRenderPass();
 		}
-		cmd.endRenderPass();
+
 		cmd.end();
+
+
 		return cmd;
 	}
 

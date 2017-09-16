@@ -43,8 +43,8 @@ int main()
 {
 	btr::setResourceAppPath("..\\..\\resource\\006_voxel_based_GI\\");
 	auto* camera = cCamera::sCamera::Order().create();
-	camera->getData().m_position = glm::vec3(220.f, 60.f, 300.f);
-	camera->getData().m_target = glm::vec3(220.f, 20.f, 201.f);
+	camera->getData().m_position = glm::vec3(2.f, 0.f, 30.f);
+	camera->getData().m_target = glm::vec3(0.f, 0.f, 0.f);
 	camera->getData().m_up = glm::vec3(0.f, -1.f, 0.f);
 	camera->getData().m_width = 640;
 	camera->getData().m_height = 480;
@@ -158,22 +158,32 @@ int main()
 		device->resetFences({ app.m_window->getFence(backbuffer_index)});
 
 		{
-
 			{
 				auto* m_camera = cCamera::sCamera::Order().getCameraList()[0];
 				m_camera->control(app.m_window->getInput(), 0.016f);
 			}
 
 			SynchronizedPoint motion_worker_syncronized_point(1);
-			SynchronizedPoint render_syncronized_point(1);
-			std::vector<vk::CommandBuffer> render_cmds(3);
+			SynchronizedPoint render_syncronized_point(2);
+			std::vector<vk::CommandBuffer> render_cmds(4);
 
 			{
 				cThreadJob job;
 				job.mJob.emplace_back(
 					[&]()
 				{
-					render_cmds[1] = voxelize.draw(executer);
+					render_cmds[1] = sCameraManager::Order().draw();
+					render_syncronized_point.arrive();
+				}
+				);
+				sGlobal::Order().getThreadPool().enque(job);
+			}
+			{
+				cThreadJob job;
+				job.mJob.emplace_back(
+					[&]()
+				{
+					render_cmds[2] = voxelize.draw(executer);
 					render_syncronized_point.arrive();
 				}
 				);
@@ -217,6 +227,7 @@ int main()
 				auto fence = device->createFenceUnique(info);
 				auto q = device->getQueue(i, 0);
 				q.submit(submit_info, fence.get());
+				q.waitIdle();
 				sDeleter::Order().enque(std::move(cmds), std::move(fence));
 			}
 			render_syncronized_point.wait();

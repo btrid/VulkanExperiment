@@ -334,7 +334,7 @@ void cWindow::setup(std::shared_ptr<btr::Loader>& loader, const CreateInfo& desc
 	barrier.back().setOldLayout(vk::ImageLayout::eUndefined);
 	barrier.back().setNewLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
-	loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eLateFragmentTests, vk::DependencyFlags(), {}, {}, barrier);
+	loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eEarlyFragmentTests, vk::DependencyFlags(), {}, {}, barrier);
 
 }
 

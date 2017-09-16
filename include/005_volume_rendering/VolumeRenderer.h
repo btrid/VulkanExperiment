@@ -223,7 +223,7 @@ public:
 				to_transfer.newLayout = vk::ImageLayout::eTransferDstOptimal;
 				to_transfer.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
 				to_transfer.subresourceRange = subresourceRange;
-				loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_transfer });
+				loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_transfer });
 
 				vk::ImageSubresourceLayers l;
 				l.setAspectMask(vk::ImageAspectFlagBits::eColor);
@@ -262,6 +262,7 @@ public:
 			btr::BufferMemory::Descriptor desc;
 			desc.size = sizeof(VolumeScene);
 			m_volume_scene_gpu = loader->m_uniform_memory.allocateMemory(desc);
+			m_volume_scene_gpu.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
 		}
 
 
@@ -314,7 +315,7 @@ public:
 		// setup descriptor_set
 		{
 			vk::DescriptorSetAllocateInfo alloc_info;
-			alloc_info.descriptorPool = loader->m_descriptor_pool;
+			alloc_info.descriptorPool = loader->m_descriptor_pool.get();
 			alloc_info.descriptorSetCount = m_descriptor_set_layout.size();
 			alloc_info.pSetLayouts = m_descriptor_set_layout.data();
 			auto descriptor_set = loader->m_device->allocateDescriptorSets(alloc_info);
@@ -503,7 +504,10 @@ public:
 		copy.setDstOffset(m_volume_scene_gpu.getBufferInfo().offset);
 		copy.setSize(desc.size);
 
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, m_volume_scene_gpu.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite), {});
+		{
+			auto to_write = m_volume_scene_gpu.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_write, {});
+		}
 		cmd.copyBuffer(staging.getBufferInfo().buffer, m_volume_scene_gpu.getBufferInfo().buffer, copy);
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, m_volume_scene_gpu.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead), {});
 

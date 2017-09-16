@@ -104,7 +104,7 @@ struct sCameraManager : public Singleton<sCameraManager>
 		std::vector<vk::BufferMemoryBarrier> to_transfer = {
 			m_camera.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite),
 		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
 
 		auto* camera = cCamera::sCamera::Order().getCameraList()[0];
 		CameraGPU camera_GPU;

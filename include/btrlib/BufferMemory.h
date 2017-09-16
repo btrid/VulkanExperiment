@@ -255,8 +255,8 @@ public:
 		m_memory_barrier.buffer = m_buffer_info.buffer;
 		m_memory_barrier.size = m_buffer_info.range;
 		m_memory_barrier.offset = m_buffer_info.offset;
-		m_memory_barrier.dstAccessMask = barrier;
 		m_memory_barrier.srcAccessMask = m_memory_barrier.dstAccessMask;
+		m_memory_barrier.dstAccessMask = barrier;
 		return m_memory_barrier;
 	}
 };

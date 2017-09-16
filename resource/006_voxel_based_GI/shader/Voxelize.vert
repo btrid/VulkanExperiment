@@ -1,16 +1,9 @@
 #version 450
 
-#ifdef VULKAN
 #extension GL_GOOGLE_cpp_style_line_directive : require
-#else
-#extension GL_ARB_shading_language_include : require
-#endif
 #extension GL_ARB_shader_draw_parameters : require
 //#extension VK_KHR_shader_draw_parameters : require
 layout(location = 0)in vec3 inPosition;
-layout(location = 1)in vec3 inNormal;
-layout(location = 2)in vec3 inAlbedo;
-layout(location = 3)in vec3 inEmission;
 
 layout(location=0) out gl_PerVertex
 {
