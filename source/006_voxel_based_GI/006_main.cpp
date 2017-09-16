@@ -165,8 +165,20 @@ int main()
 			}
 
 			SynchronizedPoint motion_worker_syncronized_point(1);
-			SynchronizedPoint render_syncronized_point(6);
-			std::vector<vk::CommandBuffer> render_cmds(2);
+			SynchronizedPoint render_syncronized_point(1);
+			std::vector<vk::CommandBuffer> render_cmds(3);
+
+			{
+				cThreadJob job;
+				job.mJob.emplace_back(
+					[&]()
+				{
+					render_cmds[1] = voxelize.draw(executer);
+					render_syncronized_point.arrive();
+				}
+				);
+				sGlobal::Order().getThreadPool().enque(job);
+			}
 
 			// draw
 			render_cmds.front() = app.m_window->getSwapchain().m_cmd_present_to_render[backbuffer_index];
@@ -207,6 +219,7 @@ int main()
 				q.submit(submit_info, fence.get());
 				sDeleter::Order().enque(std::move(cmds), std::move(fence));
 			}
+			render_syncronized_point.wait();
 
 			vk::Semaphore swap_wait_semas[] = {
 				app.m_window->getSwapchain().m_swapbuffer_semaphore.get(),

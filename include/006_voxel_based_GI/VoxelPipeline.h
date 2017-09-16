@@ -302,7 +302,7 @@ struct VoxelPipeline
 					.setPSubpasses(&subpass);
 				m_voxelize_render_pass = loader->m_device->createRenderPassUnique(renderpass_info);
 
-				m_framebuffer.resize(loader->m_window->getSwapchain().getBackbufferNum());
+				m_voxelize_framebuffer.resize(loader->m_window->getSwapchain().getBackbufferNum());
 				{
 					vk::FramebufferCreateInfo framebuffer_info;
 					framebuffer_info.setRenderPass(m_voxelize_render_pass.get());
@@ -312,8 +312,8 @@ struct VoxelPipeline
 					framebuffer_info.setHeight(32);
 					framebuffer_info.setLayers(1);
 
-					for (size_t i = 0; i < m_framebuffer.size(); i++) {
-						m_framebuffer[i] = loader->m_device->createFramebufferUnique(framebuffer_info);
+					for (size_t i = 0; i < m_voxelize_framebuffer.size(); i++) {
+						m_voxelize_framebuffer[i] = loader->m_device->createFramebufferUnique(framebuffer_info);
 					}
 				}
 			}
@@ -611,33 +611,37 @@ struct VoxelPipeline
 
 		{
 			// clear
-			vk::ImageMemoryBarrier to_copy_barrier;
-			to_copy_barrier.image = m_voxel_image.get();
-			to_copy_barrier.oldLayout = vk::ImageLayout::eGeneral;
-			to_copy_barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
-			to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
-			to_copy_barrier.subresourceRange = range;
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
+			{
+				vk::ImageMemoryBarrier to_copy_barrier;
+				to_copy_barrier.image = m_voxel_image.get();
+				to_copy_barrier.oldLayout = vk::ImageLayout::eGeneral;
+				to_copy_barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
+				to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+				to_copy_barrier.subresourceRange = range;
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
+			}
 
 			vk::ClearColorValue clear_value;
 			clear_value.setUint32(std::array<uint32_t, 4>{});
 			cmd.clearColorImage(m_voxel_image.get(), vk::ImageLayout::eTransferDstOptimal, clear_value, range);
-
-			vk::ImageMemoryBarrier to_shader_barrier;
-			to_shader_barrier.image = m_voxel_image.get();
-			to_shader_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
-			to_shader_barrier.newLayout = vk::ImageLayout::eGeneral;
-			to_shader_barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
-			to_shader_barrier.dstAccessMask = vk::AccessFlagBits::eShaderWrite;
-			to_shader_barrier.subresourceRange = range;
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
+			{
+				vk::ImageMemoryBarrier to_shader_barrier;
+				to_shader_barrier.image = m_voxel_image.get();
+				to_shader_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
+				to_shader_barrier.newLayout = vk::ImageLayout::eGeneral;
+				to_shader_barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+				to_shader_barrier.dstAccessMask = vk::AccessFlagBits::eShaderWrite;
+				to_shader_barrier.subresourceRange = range;
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), {}, {}, { to_shader_barrier });
+			}
 		}
 		{
 			vk::RenderPassBeginInfo begin_render_info;
+			begin_render_info.setFramebuffer(m_voxelize_framebuffer[executer->getGPUFrame()].get());
 			begin_render_info.setRenderPass(m_voxelize_render_pass.get());
 			begin_render_info.setRenderArea(vk::Rect2D({}, { 32, 32 }));
 
-			cmd.beginRenderPass(begin_render_info, vk::SubpassContents::eSecondaryCommandBuffers);
+			cmd.beginRenderPass(begin_render_info, vk::SubpassContents::eInline);
 			// make
 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_MAKE_VOXEL].get());
 
@@ -658,6 +662,9 @@ struct VoxelPipeline
 			cmd.bindVertexBuffers(0, model->m_vertex.getBufferInfo().buffer, model->m_vertex.getBufferInfo().offset);
 			cmd.drawIndexedIndirect(model->m_indirect.getBufferInfo().buffer, model->m_indirect.getBufferInfo().offset, model->m_mesh_count, sizeof(vk::DrawIndexedIndirectCommand));
 		}
+		cmd.endRenderPass();
+		cmd.end();
+		return cmd;
 	}
 
 	void addModel(std::shared_ptr<btr::Executer>& executer, vk::CommandBuffer cmd, const VoxelizeModel& model)
