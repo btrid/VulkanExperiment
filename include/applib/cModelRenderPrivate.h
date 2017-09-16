@@ -38,6 +38,8 @@ struct cModelRenderPrivate
 
 	void setup(std::shared_ptr<btr::Loader>& loader, std::shared_ptr<cModel::Resource> resource)
 	{
+		auto cmd = loader->m_cmd_pool->allocCmdTempolary(0);
+
 		m_model_resource = resource;
 		m_node_buffer.resize(m_model_resource->m_model_info.mNodeNum);
 
@@ -84,10 +86,8 @@ struct cModelRenderPrivate
 			copy_info.setSize(staging_material.getBufferInfo().range);
 			copy_info.setSrcOffset(staging_material.getBufferInfo().offset);
 			copy_info.setDstOffset(m_material.getBufferInfo().offset);
-			loader->m_cmd.copyBuffer(staging_material.getBufferInfo().buffer, m_material.getBufferInfo().buffer, copy_info);
+			cmd->copyBuffer(staging_material.getBufferInfo().buffer, m_material.getBufferInfo().buffer, copy_info);
 		}
-
-		{}
 	}
 	void work()
 	{

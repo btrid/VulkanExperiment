@@ -85,6 +85,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 	}
 	void setup(std::shared_ptr<btr::Loader>& loader)
 	{
+		auto cmd = loader->m_cmd_pool->allocCmdTempolary(0);
 		m_draw_cmd.resize(sGlobal::Order().getThreadPool().getThreadNum()+1);
 		{
 			// レンダーパス
@@ -171,7 +172,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 				copy.setSrcOffset(staging.getBufferInfo().offset);
 				copy.setDstOffset(m_mesh_vertex[Box].getBufferInfo().offset);
 				copy.setSize(desc.size);
-				loader->m_cmd.copyBuffer(staging.getBufferInfo().buffer, m_mesh_vertex[Box].getBufferInfo().buffer, copy);
+				cmd->copyBuffer(staging.getBufferInfo().buffer, m_mesh_vertex[Box].getBufferInfo().buffer, copy);
 			}
 
 			{
@@ -186,7 +187,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 				copy.setSrcOffset(staging.getBufferInfo().offset);
 				copy.setDstOffset(m_mesh_index[Box].getBufferInfo().offset);
 				copy.setSize(desc.size);
-				loader->m_cmd.copyBuffer(staging.getBufferInfo().buffer, m_mesh_index[Box].getBufferInfo().buffer, copy);
+				cmd->copyBuffer(staging.getBufferInfo().buffer, m_mesh_index[Box].getBufferInfo().buffer, copy);
 			}
 			m_mesh_index_num[Box] = i.size();
 
@@ -208,7 +209,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 				copy.setSrcOffset(staging.getBufferInfo().offset);
 				copy.setDstOffset(m_mesh_vertex[SPHERE].getBufferInfo().offset);
 				copy.setSize(desc.size);
-				loader->m_cmd.copyBuffer(staging.getBufferInfo().buffer, m_mesh_vertex[SPHERE].getBufferInfo().buffer, copy);
+				cmd->copyBuffer(staging.getBufferInfo().buffer, m_mesh_vertex[SPHERE].getBufferInfo().buffer, copy);
 			}
 
 			{
@@ -223,7 +224,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 				copy.setSrcOffset(staging.getBufferInfo().offset);
 				copy.setDstOffset(m_mesh_index[SPHERE].getBufferInfo().offset);
 				copy.setSize(desc.size);
-				loader->m_cmd.copyBuffer(staging.getBufferInfo().buffer, m_mesh_index[SPHERE].getBufferInfo().buffer, copy);
+				cmd->copyBuffer(staging.getBufferInfo().buffer, m_mesh_index[SPHERE].getBufferInfo().buffer, copy);
 			}
 			m_mesh_index_num[SPHERE] = i.size()*3;
 		}
@@ -237,7 +238,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 			};
 			barrier[0].setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 			barrier[1].setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
-			loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexInput, {}, {}, barrier, {});
+			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexInput, {}, {}, barrier, {});
 		}
 		
 		// setup shader
@@ -441,9 +442,9 @@ struct DrawHelper : public Singleton<DrawHelper>
 			to_shader_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 			to_shader_read_barrier.subresourceRange = subresourceRange;
 
-			loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
-			loader->m_cmd.copyBufferToImage(staging_buffer.getBufferInfo().buffer, image, vk::ImageLayout::eTransferDstOptimal, { copy });
-			loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllGraphics, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
+			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
+			cmd->copyBufferToImage(staging_buffer.getBufferInfo().buffer, image, vk::ImageLayout::eTransferDstOptimal, { copy });
+			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllGraphics, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
 
 		}
 
@@ -477,7 +478,6 @@ struct DrawHelper : public Singleton<DrawHelper>
 		m_whilte_texture.m_memory = image_memory;
 		m_whilte_texture.m_image_view = loader->m_device->createImageView(view_info);
 		m_whilte_texture.m_sampler = loader->m_device->createSampler(sampler_info);
-
 	}
 
 	vk::CommandBuffer draw()

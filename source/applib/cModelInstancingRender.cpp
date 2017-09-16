@@ -5,7 +5,7 @@
 /**
 *	モーションのデータを一枚の1DArrayに格納
 */
-MotionTexture create(btr::Loader* loader, const cMotion& motion, const RootNode& root)
+MotionTexture create(btr::Loader* loader, vk::CommandBuffer cmd, const cMotion& motion, const RootNode& root)
 {
 	uint32_t SIZE = 256;
 
@@ -146,9 +146,9 @@ MotionTexture create(btr::Loader* loader, const cMotion& motion, const RootNode&
 	to_shader_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 	to_shader_read_barrier.subresourceRange = subresourceRange;
 
-	loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
-	loader->m_cmd.copyBufferToImage(staging_buffer.getBufferInfo().buffer, image.get(), vk::ImageLayout::eTransferDstOptimal, { copy });
-	loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
+	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
+	cmd.copyBufferToImage(staging_buffer.getBufferInfo().buffer, image.get(), vk::ImageLayout::eTransferDstOptimal, { copy });
+	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
 
 	MotionTexture tex;
 	tex.m_resource = std::make_shared<MotionTexture::Resource>();
@@ -188,14 +188,14 @@ MotionTexture create(btr::Loader* loader, const cMotion& motion, const RootNode&
 	return tex;
 }
 
-std::vector<MotionTexture> createMotion(btr::Loader* loader, const cAnimation& anim, const RootNode& rootnode)
+std::vector<MotionTexture> createMotion(btr::Loader* loader, vk::CommandBuffer cmd, const cAnimation& anim, const RootNode& rootnode)
 {
 
 	std::vector<MotionTexture> motion_texture(anim.m_motion.size());
 	for (size_t i = 0; i < anim.m_motion.size(); i++)
 	{
 		{
-			motion_texture[i] = create(loader, *anim.m_motion[i], rootnode);
+			motion_texture[i] = create(loader, cmd, *anim.m_motion[i], rootnode);
 		}
 	}
 
@@ -233,6 +233,8 @@ std::vector<ModelInstancingRender::NodeInfo> createNodeInfo(const RootNode& root
 
 void ModelInstancingRender::setup(btr::Loader* loader, std::shared_ptr<cModel::Resource> resource, uint32_t instanceNum)
 {
+	auto cmd = loader->m_cmd_pool->allocCmdTempolary(0);
+
 	m_resource = resource;
 	m_resource_instancing = std::make_unique<InstancingResource>();
 	m_resource_instancing->m_instance_max_num = instanceNum;
@@ -259,7 +261,7 @@ void ModelInstancingRender::setup(btr::Loader* loader, std::shared_ptr<cModel::R
 		copy_info.setSize(staging_material.getBufferInfo().range);
 		copy_info.setSrcOffset(staging_material.getBufferInfo().offset);
 		copy_info.setDstOffset(buffer.getBufferInfo().offset);
-		loader->m_cmd.copyBuffer(staging_material.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
+		cmd->copyBuffer(staging_material.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
 
 	}
 	// material index
@@ -280,10 +282,10 @@ void ModelInstancingRender::setup(btr::Loader* loader, std::shared_ptr<cModel::R
 		copy_info.setSize(staging.getBufferInfo().range);
 		copy_info.setSrcOffset(staging.getBufferInfo().offset);
 		copy_info.setDstOffset(buffer.getBufferInfo().offset);
-		loader->m_cmd.copyBuffer(staging.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
+		cmd->copyBuffer(staging.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
 
 		auto to_render = buffer.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
-		loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexInput, {}, {}, to_render, {});
+		cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexInput, {}, {}, to_render, {});
 	}
 	// node info
 	auto nodeInfo = createNodeInfo(m_resource->mNodeRoot);
@@ -301,7 +303,7 @@ void ModelInstancingRender::setup(btr::Loader* loader, std::shared_ptr<cModel::R
 		copy_info.setSize(staging_desc.size);
 		copy_info.setSrcOffset(staging_node_info_buffer.getBufferInfo().offset);
 		copy_info.setDstOffset(buffer.getBufferInfo().offset);
-		loader->m_cmd.copyBuffer(staging_node_info_buffer.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
+		cmd->copyBuffer(staging_node_info_buffer.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
 
 	}
 
@@ -325,7 +327,7 @@ void ModelInstancingRender::setup(btr::Loader* loader, std::shared_ptr<cModel::R
 			copy_info.setSize(staging_bone_info.getBufferInfo().range);
 			copy_info.setSrcOffset(staging_bone_info.getBufferInfo().offset);
 			copy_info.setDstOffset(buffer.getBufferInfo().offset);
-			loader->m_cmd.copyBuffer(staging_bone_info.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
+			cmd->copyBuffer(staging_bone_info.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
 		}
 
 		// BoneTransform
@@ -361,7 +363,7 @@ void ModelInstancingRender::setup(btr::Loader* loader, std::shared_ptr<cModel::R
 		copy_info.setSize(staging_model_info.getBufferInfo().range);
 		copy_info.setSrcOffset(staging_model_info.getBufferInfo().offset);
 		copy_info.setDstOffset(buffer.getBufferInfo().offset);
-		loader->m_cmd.copyBuffer(staging_model_info.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
+		cmd->copyBuffer(staging_model_info.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
 
 	}
 
@@ -417,14 +419,14 @@ void ModelInstancingRender::setup(btr::Loader* loader, std::shared_ptr<cModel::R
 		copy_info.setSize(staging_compute.getBufferInfo().range);
 		copy_info.setSrcOffset(staging_compute.getBufferInfo().offset);
 		copy_info.setDstOffset(m_resource_instancing->m_compute_indirect_buffer.getBufferInfo().offset);
-		loader->m_cmd.copyBuffer(staging_compute.getBufferInfo().buffer, m_resource_instancing->m_compute_indirect_buffer.getBufferInfo().buffer, copy_info);
+		cmd->copyBuffer(staging_compute.getBufferInfo().buffer, m_resource_instancing->m_compute_indirect_buffer.getBufferInfo().buffer, copy_info);
 
 		vk::BufferMemoryBarrier dispatch_indirect_barrier;
 		dispatch_indirect_barrier.setBuffer(m_resource_instancing->m_compute_indirect_buffer.getBufferInfo().buffer);
 		dispatch_indirect_barrier.setOffset(m_resource_instancing->m_compute_indirect_buffer.getBufferInfo().offset);
 		dispatch_indirect_barrier.setSize(m_resource_instancing->m_compute_indirect_buffer.getBufferInfo().range);
 		dispatch_indirect_barrier.setDstAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
-		loader->m_cmd.pipelineBarrier(
+		cmd->pipelineBarrier(
 			vk::PipelineStageFlagBits::eTransfer,
 			vk::PipelineStageFlagBits::eComputeShader,
 			vk::DependencyFlags(),
@@ -433,7 +435,7 @@ void ModelInstancingRender::setup(btr::Loader* loader, std::shared_ptr<cModel::R
 
 	{
 		auto& anim = m_resource->getAnimation();
-		m_resource_instancing->m_motion_texture = createMotion(loader, m_resource->getAnimation(), m_resource->mNodeRoot);
+		m_resource_instancing->m_motion_texture = createMotion(loader, cmd.get(), m_resource->getAnimation(), m_resource->mNodeRoot);
 
 		btr::BufferMemory::Descriptor staging_desc;
 		staging_desc.size = sizeof(ModelInstancingRender::AnimationInfo) * anim.m_motion.size();
@@ -457,14 +459,14 @@ void ModelInstancingRender::setup(btr::Loader* loader, std::shared_ptr<cModel::R
 			copy_info.setSize(staging.getBufferInfo().range);
 			copy_info.setSrcOffset(staging.getBufferInfo().offset);
 			copy_info.setDstOffset(buffer.getBufferInfo().offset);
-			loader->m_cmd.copyBuffer(staging.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
+			cmd->copyBuffer(staging.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
 
 			vk::BufferMemoryBarrier barrier;
 			barrier.setBuffer(buffer.getBufferInfo().buffer);
 			barrier.setOffset(buffer.getBufferInfo().offset);
 			barrier.setSize(buffer.getBufferInfo().range);
 			barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-			loader->m_cmd.pipelineBarrier(
+			cmd->pipelineBarrier(
 				vk::PipelineStageFlagBits::eTransfer,
 				vk::PipelineStageFlagBits::eComputeShader,
 				vk::DependencyFlags(),
@@ -493,10 +495,11 @@ void ModelInstancingRender::setup(btr::Loader* loader, std::shared_ptr<cModel::R
 			copy_info.setSize(staging_playing_animation.getBufferInfo().range);
 			copy_info.setSrcOffset(staging_playing_animation.getBufferInfo().offset);
 			copy_info.setDstOffset(buffer.getBufferInfo().offset);
-			loader->m_cmd.copyBuffer(staging_playing_animation.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
+			cmd->copyBuffer(staging_playing_animation.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
 		}
 
 	}
+
 
 }
 

@@ -126,7 +126,7 @@ PerFamilyIndex<std::vector<vk::UniqueCommandBuffer>> cCmdPool::submitCmd()
 	return cmds;
 }
 
-vk::CommandBuffer cCmdPool::getCmdOnetime(int device_family_index)
+vk::CommandBuffer cCmdPool::allocCmdOnetime(int device_family_index)
 {
 	vk::CommandBufferAllocateInfo cmd_buffer_info;
 	cmd_buffer_info.commandBufferCount = 1;
@@ -141,4 +141,46 @@ vk::CommandBuffer cCmdPool::getCmdOnetime(int device_family_index)
 	cmd.begin(begin_info);
 
 	return cmd;
+}
+
+struct CMDDeleter 
+{
+	void operator()(vk::UniqueCommandBuffer* ptr) {
+
+	}
+};
+ScopedCommand cCmdPool::allocCmdTempolary(uint32_t device_family_index)
+{
+	vk::CommandBufferAllocateInfo cmd_buffer_info;
+	cmd_buffer_info.commandBufferCount = 1;
+	cmd_buffer_info.commandPool = getCmdPool(CMD_POOL_TYPE_ONETIME, device_family_index);
+	cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
+	auto cmd_unique = std::move(sGlobal::Order().getGPU(0).getDevice()->allocateCommandBuffersUnique(cmd_buffer_info)[0]);
+
+	vk::CommandBufferBeginInfo begin_info;
+	begin_info.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+	cmd_unique->begin(begin_info);
+
+	ScopedCommand scoped;
+	scoped.m_resource = std::make_shared<ScopedCommand::Resource>();
+	scoped.m_resource->m_cmd = std::move(cmd_unique);
+	scoped.m_resource->m_family_index = device_family_index;
+	scoped.m_resource->m_parent = this;
+	return std::move(scoped);
+}
+//	return cmd_unique;
+
+ScopedCommand::Resource::Resource() : m_cmd()
+, m_family_index(0)
+, m_parent(nullptr)
+{
+}
+
+ScopedCommand::Resource::~Resource()
+{
+	if (m_cmd)
+	{
+		m_cmd->end();
+		m_parent->enqueCmd(std::move(m_cmd), m_family_index);
+	}
 }

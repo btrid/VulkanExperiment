@@ -53,7 +53,7 @@ namespace {
 
 ResourceManager<ResourceTexture::Resource> ResourceTexture::s_manager;
 ResourceManager<cModel::Resource> cModel::s_manager;
-void ResourceTexture::load(btr::Loader* loader, cThreadPool& thread_pool, const std::string& filename)
+void ResourceTexture::load(btr::Loader* loader, vk::CommandBuffer cmd, const std::string& filename)
 {
 	if (s_manager.manage(m_resource, filename)) {
 		return;
@@ -124,9 +124,9 @@ void ResourceTexture::load(btr::Loader* loader, cThreadPool& thread_pool, const 
 		to_shader_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 		to_shader_read_barrier.subresourceRange = subresourceRange;
 
-		loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
-		loader->m_cmd.copyBufferToImage(staging_buffer.getBufferInfo().buffer, image.get(), vk::ImageLayout::eTransferDstOptimal, { copy });
-		loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
+		cmd.copyBufferToImage(staging_buffer.getBufferInfo().buffer, image.get(), vk::ImageLayout::eTransferDstOptimal, { copy });
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
 
 	}
 
@@ -163,7 +163,7 @@ void ResourceTexture::load(btr::Loader* loader, cThreadPool& thread_pool, const 
 }
 
 
-std::vector<cModel::Material> loadMaterial(const aiScene* scene, const std::string& filename, btr::Loader* loader)
+std::vector<cModel::Material> loadMaterial(const aiScene* scene, const std::string& filename, btr::Loader* loader, vk::CommandBuffer cmd)
 {
 	std::string path = std::tr2::sys::path(filename).remove_filename().string();
 	std::vector<cModel::Material> material(scene->mNumMaterials);
@@ -188,21 +188,21 @@ std::vector<cModel::Material> loadMaterial(const aiScene* scene, const std::stri
 		aiTextureMapping mapping;
 		unsigned uvIndex;
 		if (aiMat->GetTexture(aiTextureType_DIFFUSE, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode) == AI_SUCCESS) {
-			mat.mDiffuseTex.load(loader, sGlobal::Order().getThreadPool(), path + "/" + str.C_Str());
+			mat.mDiffuseTex.load(loader, cmd, path + "/" + str.C_Str());
 		}
 		if (aiMat->GetTexture(aiTextureType_AMBIENT, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode)) {
-			mat.mAmbientTex.load(loader, sGlobal::Order().getThreadPool(), path + "/" + str.C_Str());
+			mat.mAmbientTex.load(loader, cmd, path + "/" + str.C_Str());
 		}
 		if (aiMat->GetTexture(aiTextureType_SPECULAR, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode)) {
-			mat.mSpecularTex.load(loader, sGlobal::Order().getThreadPool(), path + "/" + str.C_Str());
+			mat.mSpecularTex.load(loader, cmd, path + "/" + str.C_Str());
 		}
 
 		if (aiMat->GetTexture(aiTextureType_NORMALS, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode)) {
-			mat.mNormalTex.load(loader, sGlobal::Order().getThreadPool(), path + "/" + str.C_Str());
+			mat.mNormalTex.load(loader, cmd, path + "/" + str.C_Str());
 		}
 
 		if (aiMat->GetTexture(aiTextureType_HEIGHT, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode)) {
-			mat.mHeightTex.load(loader, sGlobal::Order().getThreadPool(), path + "/" + str.C_Str());
+			mat.mHeightTex.load(loader, cmd, path + "/" + str.C_Str());
 		}
 	}
 	return material;
@@ -327,19 +327,10 @@ void cModel::load(btr::Loader* loader, const std::string& filename)
 
 	auto& device = sGlobal::Order().getGPU(0).getDevice();
 
-	auto cmd_pool = sThreadLocal::Order().getCmdPool(sGlobal::CMD_POOL_TYPE_TEMPORARY, 0);
-	vk::CommandBufferAllocateInfo cmd_info;
-	cmd_info.setCommandPool(cmd_pool);
-	cmd_info.setLevel(vk::CommandBufferLevel::ePrimary);
-	cmd_info.setCommandBufferCount(1);
-	auto cmds = device->allocateCommandBuffersUnique(cmd_info);
-	auto cmd = cmds[0].get();
-	vk::CommandBufferBeginInfo begin_info;
-	begin_info.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
-	cmd.begin(begin_info);
+	auto cmd = loader->m_cmd_pool->allocCmdTempolary(0);
 
 	// ‰Šú‰»
-	m_resource->m_material = loadMaterial(scene, filename, loader);
+	m_resource->m_material = loadMaterial(scene, filename, loader, cmd.get());
 	m_resource->mNodeRoot = loadNode(scene);
 	loadMotion(m_resource->m_animation, scene, m_resource->mNodeRoot, loader);
 
@@ -498,17 +489,17 @@ void cModel::load(btr::Loader* loader, const std::string& filename)
 			copy_info.setSize(staging_vertex.getBufferInfo().range);
 			copy_info.setSrcOffset(staging_vertex.getBufferInfo().offset);
 			copy_info.setDstOffset(mesh.m_vertex_buffer_ex.getBufferInfo().offset);
-			cmd.copyBuffer(staging_vertex.getBufferInfo().buffer, mesh.m_vertex_buffer_ex.getBufferInfo().buffer, copy_info);
+			cmd->copyBuffer(staging_vertex.getBufferInfo().buffer, mesh.m_vertex_buffer_ex.getBufferInfo().buffer, copy_info);
 
 			copy_info.setSize(staging_index.getBufferInfo().range);
 			copy_info.setSrcOffset(staging_index.getBufferInfo().offset);
 			copy_info.setDstOffset(mesh.m_index_buffer_ex.getBufferInfo().offset);
-			cmd.copyBuffer(staging_index.getBufferInfo().buffer, mesh.m_index_buffer_ex.getBufferInfo().buffer, copy_info);
+			cmd->copyBuffer(staging_index.getBufferInfo().buffer, mesh.m_index_buffer_ex.getBufferInfo().buffer, copy_info);
 
 			copy_info.setSize(staging_indirect.getBufferInfo().range);
 			copy_info.setSrcOffset(staging_indirect.getBufferInfo().offset);
 			copy_info.setDstOffset(mesh.m_indirect_buffer_ex.getBufferInfo().offset);
-			cmd.copyBuffer(staging_indirect.getBufferInfo().buffer, mesh.m_indirect_buffer_ex.getBufferInfo().buffer, copy_info);
+			cmd->copyBuffer(staging_indirect.getBufferInfo().buffer, mesh.m_indirect_buffer_ex.getBufferInfo().buffer, copy_info);
 
 			vk::BufferMemoryBarrier vertex_barrier;
 			vertex_barrier.setBuffer(mesh.m_vertex_buffer_ex.getBufferInfo().buffer);
@@ -525,12 +516,12 @@ void cModel::load(btr::Loader* loader, const std::string& filename)
 			indirect_barrier.setOffset(mesh.m_indirect_buffer_ex.getBufferInfo().offset);
 			indirect_barrier.setSize(mesh.m_indirect_buffer_ex.getBufferInfo().range);
 			indirect_barrier.setDstAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
-			cmd.pipelineBarrier(
+			cmd->pipelineBarrier(
 				vk::PipelineStageFlagBits::eTransfer,
 				vk::PipelineStageFlagBits::eVertexInput,
 				vk::DependencyFlags(),
 				{}, { vertex_barrier, index_barrier}, {});
-			cmd.pipelineBarrier(
+			cmd->pipelineBarrier(
 				vk::PipelineStageFlagBits::eTransfer,
 				vk::PipelineStageFlagBits::eTopOfPipe,
 				vk::DependencyFlags(),
@@ -552,18 +543,22 @@ void cModel::load(btr::Loader* loader, const std::string& filename)
 
 	m_resource->m_model_info.mInvGlobalMatrix = glm::inverse(m_resource->mNodeRoot.getRootNode()->mTransformation);
 
-	cmd.end();
+	cmd->end();
+
+	vk::CommandBuffer cmds[] = {
+		cmd.get(),
+	};
 	auto queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), device.getQueueNum(vk::QueueFlagBits::eGraphics)-1);
 	vk::SubmitInfo submit_info;
-	submit_info.commandBufferCount = 1;
-	submit_info.pCommandBuffers = &cmd;
+	submit_info.commandBufferCount = array_length(cmds);
+	submit_info.pCommandBuffers = cmds;
 
 	vk::FenceCreateInfo fence_info;
 	vk::UniqueFence fence = device->createFenceUnique(fence_info);
 
 	queue.submit(submit_info, fence.get());
 	queue.waitIdle();
-	sDeleter::Order().enque(std::move(cmds), std::move(fence));
+	sDeleter::Order().enque(std::move(cmd), std::move(fence));
 
 	auto e = std::chrono::system_clock::now();
 	auto t = std::chrono::duration_cast<std::chrono::microseconds>(e - s);

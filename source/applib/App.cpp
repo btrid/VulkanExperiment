@@ -24,6 +24,8 @@ void App::setup(std::shared_ptr<btr::Loader>& loader)
 	static cDebug debug(instance);
 #endif
 	m_gpu = sGlobal::Order().getGPU(0);
+	m_cmd_pool = cCmdPool::MakeCmdPool(m_gpu);
+	loader->m_cmd_pool = m_cmd_pool;
 
 	cWindow::CreateInfo windowInfo;
 	windowInfo.surface_format_request = vk::SurfaceFormatKHR{ vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear };
@@ -35,7 +37,6 @@ void App::setup(std::shared_ptr<btr::Loader>& loader)
 	m_window = std::make_shared<cWindow>();
 	m_window->setup(loader, windowInfo);
 
-	m_cmd_pool = cCmdPool::MakeCmdPool(m_gpu);
 	return;
 
 	// –¢ŽÀ‘•

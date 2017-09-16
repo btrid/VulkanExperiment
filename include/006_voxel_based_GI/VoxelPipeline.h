@@ -115,15 +115,7 @@ struct VoxelPipeline
 		auto& gpu = loader->m_gpu;
 		auto& device = gpu.getDevice();
 
-		vk::CommandBufferAllocateInfo cmd_buffer_info;
-		cmd_buffer_info.commandBufferCount = 1;
-		cmd_buffer_info.commandPool = loader->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_TEMPORARY, 0);
-		cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
-		auto cmd = std::move(device->allocateCommandBuffersUnique(cmd_buffer_info)[0]);
-
-		vk::CommandBufferBeginInfo begin_info;
-		begin_info.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-		cmd->begin(begin_info);
+		auto cmd = loader->m_cmd_pool->allocCmdTempolary(0);
 
 		// resource setup
 		{
@@ -642,14 +634,12 @@ struct VoxelPipeline
 			m_model_descriptor_pool = device->createDescriptorPoolUnique(descriptor_pool_info);
 
 		}
-		cmd->end();
-		loader->m_cmd_pool->enqueCmd(std::move(cmd), 0);
 	}
 
 	vk::CommandBuffer draw(std::shared_ptr<btr::Executer>& executer)
 	{
 
-		auto cmd = executer->m_cmd_pool->getCmdOnetime(0);
+		auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
 		vk::ImageSubresourceRange range;
 		range.setLayerCount(1);
 		range.setLevelCount(1);

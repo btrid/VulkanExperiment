@@ -7,6 +7,7 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Loader>& loader)
 	m_particle_info_cpu.m_emitter_max_num = 1024;
 	m_particle_info_cpu.m_generate_cmd_max_num = 256;
 
+	auto cmd = loader->m_cmd_pool->allocCmdTempolary(0);
 	{
 		// レンダーパス
 		{
@@ -81,15 +82,15 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Loader>& loader)
 			data_desc.size = sizeof(ParticleData) * m_particle_info_cpu.m_particle_max_num*2;
 			m_particle = loader->m_storage_memory.allocateMemory(data_desc);
 			std::vector<ParticleData> p(m_particle_info_cpu.m_particle_max_num*2);
-			loader->m_cmd.fillBuffer(m_particle.getBufferInfo().buffer, m_particle.getBufferInfo().offset, m_particle.getBufferInfo().range, 0u);
+			cmd->fillBuffer(m_particle.getBufferInfo().buffer, m_particle.getBufferInfo().offset, m_particle.getBufferInfo().range, 0u);
 		}
 		{
 			btr::BufferMemory::Descriptor desc;
 			desc.size = sizeof(vk::DrawIndirectCommand);
 			m_particle_counter = loader->m_storage_memory.allocateMemory(desc);
-			loader->m_cmd.updateBuffer<vk::DrawIndirectCommand>(m_particle_counter.getBufferInfo().buffer, m_particle_counter.getBufferInfo().offset, vk::DrawIndirectCommand(4, 0, 0, 0));
+			cmd->updateBuffer<vk::DrawIndirectCommand>(m_particle_counter.getBufferInfo().buffer, m_particle_counter.getBufferInfo().offset, vk::DrawIndirectCommand(4, 0, 0, 0));
 			auto count_barrier = m_particle_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
-			loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { count_barrier }, {});
+			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { count_barrier }, {});
 		}
 		{
 			btr::BufferMemory::Descriptor desc;
@@ -103,9 +104,9 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Loader>& loader)
 			updater.m_scale_mul = vec4(1.f);
 			updater.m_velocity_add = vec4(0.f, -2.f, 0.f, 0.f);
 			updater.m_velocity_mul = vec4(0.999f, 1.f, 0.999f, 0.f);
-			loader->m_cmd.updateBuffer<ParticleUpdateParameter>(m_particle_update_param.getBufferInfo().buffer, m_particle_update_param.getBufferInfo().offset, updater);
+			cmd->updateBuffer<ParticleUpdateParameter>(m_particle_update_param.getBufferInfo().buffer, m_particle_update_param.getBufferInfo().offset, updater);
 			auto b = m_particle_update_param.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
-			loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { b }, {});
+			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { b }, {});
 			
 		}
 		{
@@ -113,24 +114,24 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Loader>& loader)
 			desc.size = sizeof(ParticleGenerateCommand) * m_particle_info_cpu.m_emitter_max_num;
 			m_particle_generate_cmd = loader->m_storage_memory.allocateMemory(desc);
 			std::vector<ParticleGenerateCommand> p(m_particle_info_cpu.m_emitter_max_num);
-			loader->m_cmd.fillBuffer(m_particle_generate_cmd.getBufferInfo().buffer, m_particle_generate_cmd.getBufferInfo().offset, m_particle_generate_cmd.getBufferInfo().range, 0u);
+			cmd->fillBuffer(m_particle_generate_cmd.getBufferInfo().buffer, m_particle_generate_cmd.getBufferInfo().offset, m_particle_generate_cmd.getBufferInfo().range, 0u);
 		}
 		{
 			btr::BufferMemory::Descriptor desc;
 			desc.size = sizeof(glm::uvec3);
 			m_generate_cmd_counter = loader->m_storage_memory.allocateMemory(desc);
-			loader->m_cmd.updateBuffer<glm::uvec3>(m_generate_cmd_counter.getBufferInfo().buffer, m_generate_cmd_counter.getBufferInfo().offset, glm::uvec3(0, 1, 1));
+			cmd->updateBuffer<glm::uvec3>(m_generate_cmd_counter.getBufferInfo().buffer, m_generate_cmd_counter.getBufferInfo().offset, glm::uvec3(0, 1, 1));
 
 			m_particle_emitter_counter = loader->m_storage_memory.allocateMemory(desc);
-			loader->m_cmd.updateBuffer<glm::uvec3>(m_particle_emitter_counter.getBufferInfo().buffer, m_particle_emitter_counter.getBufferInfo().offset, glm::uvec3(0, 1, 1));
+			cmd->updateBuffer<glm::uvec3>(m_particle_emitter_counter.getBufferInfo().buffer, m_particle_emitter_counter.getBufferInfo().offset, glm::uvec3(0, 1, 1));
 		}
 
 
 		{
 			m_particle_info = loader->m_uniform_memory.allocateMemory(sizeof(ParticleInfo));
-			loader->m_cmd.updateBuffer<ParticleInfo>(m_particle_info.getBufferInfo().buffer, m_particle_info.getBufferInfo().offset, { m_particle_info_cpu });
+			cmd->updateBuffer<ParticleInfo>(m_particle_info.getBufferInfo().buffer, m_particle_info.getBufferInfo().offset, { m_particle_info_cpu });
 			auto barrier = m_particle_info.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
-			loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { barrier }, {});
+			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { barrier }, {});
 		}
 
 		{
@@ -138,7 +139,7 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Loader>& loader)
 			data_desc.size = sizeof(EmitterData) * m_particle_info_cpu.m_emitter_max_num;
 			m_particle_emitter = loader->m_storage_memory.allocateMemory(data_desc);
 			std::vector<EmitterData> p(m_particle_info_cpu.m_emitter_max_num);
-			loader->m_cmd.fillBuffer(m_particle_emitter.getBufferInfo().buffer, m_particle_emitter.getBufferInfo().offset, m_particle_emitter.getBufferInfo().range, 0u);
+			cmd->fillBuffer(m_particle_emitter.getBufferInfo().buffer, m_particle_emitter.getBufferInfo().offset, m_particle_emitter.getBufferInfo().range, 0u);
 		}
 
 	}

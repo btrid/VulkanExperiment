@@ -22,8 +22,6 @@ struct Loader
 	vk::UniqueDescriptorPool m_descriptor_pool;
 	vk::UniquePipelineCache m_cache;
 
-	vk::CommandBuffer m_cmd;
-	std::vector<vk::UniqueCommandBuffer> m_cmds;
 	std::shared_ptr<cCmdPool> m_cmd_pool;
 	std::shared_ptr<cWindow> m_window;
 };

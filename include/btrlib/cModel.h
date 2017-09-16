@@ -93,7 +93,7 @@ struct ResourceTexture
 
 	std::shared_ptr<Resource> m_resource;
 
-	void load(btr::Loader* loader, cThreadPool& thread_pool, const std::string& filename);
+	void load(btr::Loader* loader, vk::CommandBuffer cmd, const std::string& filename);
 	vk::ImageView getImageView()const { return m_resource ? m_resource->m_image_view.get() : vk::ImageView(); }
 	vk::Sampler getSampler()const { return m_resource ? m_resource->m_sampler.get() : vk::Sampler(); }
 

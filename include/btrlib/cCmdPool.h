@@ -21,6 +21,24 @@ struct DoubleBuffer
 };
 template<typename T> using PerThread = std::vector<T>;
 template<typename T> using PerFamilyIndex = std::vector<T>;
+
+struct cCmdPool;
+struct ScopedCommand
+{
+	struct Resource {
+		vk::UniqueCommandBuffer m_cmd;
+		uint32_t m_family_index;
+		cCmdPool* m_parent;
+
+		Resource();
+		~Resource();
+	};
+	std::shared_ptr<Resource> m_resource;
+
+	vk::CommandBuffer const* operator->() const { return m_resource->m_cmd.operator->(); }
+	vk::CommandBuffer get()const { return m_resource->m_cmd.get(); }
+};
+
 struct cCmdPool
 {
 	static std::shared_ptr<cCmdPool> MakeCmdPool(cGPU& gpu);
@@ -48,7 +66,9 @@ struct cCmdPool
 	std::vector<CmdPoolPerThread> m_per_thread;
 	std::mutex m_cmd_queue_mutex;
 
-	vk::CommandBuffer getCmdOnetime(int device_family_index);
+	vk::CommandBuffer allocCmdOnetime(int device_family_index);
+	ScopedCommand allocCmdTempolary(uint32_t device_family_index);
+//	vk::UniqueCommandBuffer allocCmdTempolary(int device_family_index);
 	vk::CommandPool getCmdPool(CmdPoolType type, int device_family_index)const;
 
 	void resetPool(std::shared_ptr<btr::Executer>& executer);

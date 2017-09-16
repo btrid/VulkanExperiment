@@ -43,7 +43,7 @@ int main()
 {
 	btr::setResourceAppPath("..\\..\\resource\\006_voxel_based_GI\\");
 	auto* camera = cCamera::sCamera::Order().create();
-	camera->getData().m_position = glm::vec3(2.f, 0.f, 30.f);
+	camera->getData().m_position = glm::vec3(0.f, 0.f, 30.f);
 	camera->getData().m_target = glm::vec3(0.f, 0.f, 0.f);
 	camera->getData().m_up = glm::vec3(0.f, -1.f, 0.f);
 	camera->getData().m_width = 640;
@@ -88,7 +88,6 @@ int main()
 		loader->m_cache = device->createPipelineCacheUnique(cacheInfo);
 
 	}
-	loader->m_cmd = setup_cmd;
 
 	app::App app;
 	app.setup(loader);
@@ -161,11 +160,14 @@ int main()
 			{
 				auto* m_camera = cCamera::sCamera::Order().getCameraList()[0];
 				m_camera->control(app.m_window->getInput(), 0.016f);
+				DrawCommand dcmd;
+				dcmd.world = glm::mat4(1.f);
+				DrawHelper::Order().drawOrder(DrawHelper::SPHERE, dcmd);
 			}
 
 			SynchronizedPoint motion_worker_syncronized_point(1);
-			SynchronizedPoint render_syncronized_point(2);
-			std::vector<vk::CommandBuffer> render_cmds(4);
+			SynchronizedPoint render_syncronized_point(3);
+			std::vector<vk::CommandBuffer> render_cmds(3);
 
 			{
 				cThreadJob job;
@@ -183,7 +185,18 @@ int main()
 				job.mJob.emplace_back(
 					[&]()
 				{
-					render_cmds[2] = voxelize.draw(executer);
+					//					render_cmds[1] = sCameraManager::Order().draw();
+					render_syncronized_point.arrive();
+				}
+				);
+				sGlobal::Order().getThreadPool().enque(job);
+			}
+			{
+				cThreadJob job;
+				job.mJob.emplace_back(
+					[&]()
+				{
+	//				render_cmds[2] = voxelize.draw(executer);
 					render_syncronized_point.arrive();
 				}
 				);
