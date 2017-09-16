@@ -126,7 +126,7 @@ int main()
 			model.m_mesh[0].vertex.resize(v.size());
 			for (size_t i = 0; i < model.m_mesh[0].vertex.size(); i++)
 			{
-				model.m_mesh[0].vertex[i].pos = v[i]*100.f;
+				model.m_mesh[0].vertex[i].pos = v[i]*200.f;
 			}
 			model.m_mesh[0].index = i;
 			model.m_mesh[0].m_material_index = 0;

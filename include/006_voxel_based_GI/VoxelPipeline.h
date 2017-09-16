@@ -105,6 +105,7 @@ struct VoxelPipeline
 	vk::UniqueDescriptorSetLayout m_model_descriptor_set_layout;
 	vk::UniqueDescriptorPool m_model_descriptor_pool;
 
+	VoxelInfo m_voxelize_info_cpu;
 	btr::AllocatedMemory m_voxel_info;
 	vk::UniqueImage m_voxel_image;
 	vk::UniqueImageView m_voxel_imageview;
@@ -126,12 +127,11 @@ struct VoxelPipeline
 			desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging = loader->m_staging_memory.allocateMemory(desc);
 
-			VoxelInfo info;
-			info.u_area_max = vec4(1000.f);
-			info.u_area_min = vec4(-1000.f);
-			info.u_cell_num = uvec4(32);
-			info.u_cell_size = (info.u_area_max - info.u_area_min) / vec4(info.u_cell_num);
-			*staging.getMappedPtr<VoxelInfo>() = info;
+			m_voxelize_info_cpu.u_area_max = vec4(1000.f);
+			m_voxelize_info_cpu.u_area_min = vec4(-1000.f);
+			m_voxelize_info_cpu.u_cell_num = uvec4(32);
+			m_voxelize_info_cpu.u_cell_size = (m_voxelize_info_cpu.u_area_max - m_voxelize_info_cpu.u_area_min) / vec4(m_voxelize_info_cpu.u_cell_num);
+			*staging.getMappedPtr<VoxelInfo>() = m_voxelize_info_cpu;
 
 			vk::BufferCopy copy;
 			copy.setSrcOffset(staging.getBufferInfo().offset);
@@ -151,7 +151,7 @@ struct VoxelPipeline
 			image_info.usage = vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
 			image_info.sharingMode = vk::SharingMode::eExclusive;
 			image_info.initialLayout = vk::ImageLayout::eUndefined;
-			image_info.extent = { 32, 32, 32 };
+			image_info.extent = { m_voxelize_info_cpu.u_cell_num.x, m_voxelize_info_cpu.u_cell_num.y, m_voxelize_info_cpu.u_cell_num.z };
 			auto image = device->createImageUnique(image_info);
 
 			vk::MemoryRequirements memory_request = device->getImageMemoryRequirements(image.get());
@@ -303,8 +303,8 @@ struct VoxelPipeline
 					framebuffer_info.setRenderPass(m_make_voxel_pass.get());
 					framebuffer_info.setAttachmentCount(0);
 					framebuffer_info.setPAttachments(nullptr);
-					framebuffer_info.setWidth(32);
-					framebuffer_info.setHeight(32);
+					framebuffer_info.setWidth(m_voxelize_info_cpu.u_cell_num.x);
+					framebuffer_info.setHeight(m_voxelize_info_cpu.u_cell_num.y);
 					framebuffer_info.setLayers(1);
 
 					for (size_t i = 0; i < m_make_voxel_framebuffer.size(); i++) {
@@ -457,9 +457,9 @@ struct VoxelPipeline
 
 				// viewport
 				vk::Extent3D size;
-				size.setWidth(32);
-				size.setHeight(32);
-				size.setDepth(32);
+				size.setWidth(m_voxelize_info_cpu.u_cell_num.x);
+				size.setHeight(m_voxelize_info_cpu.u_cell_num.y);
+				size.setDepth(m_voxelize_info_cpu.u_cell_num.z);
 				vk::Viewport viewports[] = {
 					vk::Viewport(0.f, 0.f, (float)size.depth, (float)size.height, 0.f, 1.f),
 					vk::Viewport(0.f, 0.f, (float)size.width, (float)size.depth, 0.f, 1.f),
@@ -488,8 +488,8 @@ struct VoxelPipeline
 
 				// デプスステンシル
 				vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
-				depth_stencil_info.setDepthTestEnable(VK_TRUE);
-				depth_stencil_info.setDepthWriteEnable(VK_TRUE);
+				depth_stencil_info.setDepthTestEnable(VK_FALSE);
+				depth_stencil_info.setDepthWriteEnable(VK_FALSE);
 				depth_stencil_info.setDepthCompareOp(vk::CompareOp::eLessOrEqual);
 				depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
 				depth_stencil_info.setStencilTestEnable(VK_FALSE);
@@ -578,8 +578,8 @@ struct VoxelPipeline
 
 				// デプスステンシル
 				vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
-				depth_stencil_info.setDepthTestEnable(VK_FALSE);
-				depth_stencil_info.setDepthWriteEnable(VK_FALSE);
+				depth_stencil_info.setDepthTestEnable(VK_TRUE);
+				depth_stencil_info.setDepthWriteEnable(VK_TRUE);
 				depth_stencil_info.setDepthCompareOp(vk::CompareOp::eLessOrEqual);
 				depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
 				depth_stencil_info.setStencilTestEnable(VK_FALSE);
@@ -682,7 +682,7 @@ struct VoxelPipeline
 			vk::RenderPassBeginInfo begin_render_info;
 			begin_render_info.setFramebuffer(m_make_voxel_framebuffer[executer->getGPUFrame()].get());
 			begin_render_info.setRenderPass(m_make_voxel_pass.get());
-			begin_render_info.setRenderArea(vk::Rect2D({}, { 32, 32 }));
+			begin_render_info.setRenderArea(vk::Rect2D({}, { m_voxelize_info_cpu.u_cell_num.x, m_voxelize_info_cpu.u_cell_num.y }));
 
 			cmd.beginRenderPass(begin_render_info, vk::SubpassContents::eInline);
 			// make
@@ -731,7 +731,7 @@ struct VoxelPipeline
 				sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA),
 			};
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_VOXEL].get(), 0, descriptor_sets, {});
-			cmd.draw(14, 32*32*32, 0, 0);
+			cmd.draw(14, m_voxelize_info_cpu.u_cell_num.x *m_voxelize_info_cpu.u_cell_num.y*m_voxelize_info_cpu.u_cell_num.z, 0, 0);
 			cmd.endRenderPass();
 		}
 
