@@ -4,6 +4,7 @@ void sBulletSystem::Private::setup(std::shared_ptr<btr::Loader>& loader)
 {
 
 	m_bullet_info_cpu.m_max_num = 8192;
+	auto cmd = loader->m_cmd_pool->allocCmdTempolary(0);
 
 	{
 		// レンダーパス
@@ -80,7 +81,7 @@ void sBulletSystem::Private::setup(std::shared_ptr<btr::Loader>& loader)
 			data_desc.size = sizeof(BulletData) * m_bullet_info_cpu.m_max_num;
 			m_bullet = loader->m_storage_memory.allocateMemory(data_desc);
 			std::vector<BulletData> p(m_bullet_info_cpu.m_max_num);
-			loader->m_cmd.fillBuffer(m_bullet.getBufferInfo().buffer, m_bullet.getBufferInfo().offset, m_bullet.getBufferInfo().range, 0u);
+			cmd->fillBuffer(m_bullet.getBufferInfo().buffer, m_bullet.getBufferInfo().offset, m_bullet.getBufferInfo().range, 0u);
 
 			data_desc.size = sizeof(BulletData) * 1024;
 			m_emit = loader->m_storage_memory.allocateMemory(data_desc);
@@ -89,19 +90,19 @@ void sBulletSystem::Private::setup(std::shared_ptr<btr::Loader>& loader)
 		btr::BufferMemory::Descriptor desc;
 		desc.size = sizeof(vk::DrawIndirectCommand);
 		m_bullet_counter = loader->m_storage_memory.allocateMemory(desc);
-		loader->m_cmd.updateBuffer<vk::DrawIndirectCommand>(m_bullet_counter.getBufferInfo().buffer, m_bullet_counter.getBufferInfo().offset, vk::DrawIndirectCommand(4, 0, 0, 0));
+		cmd->updateBuffer<vk::DrawIndirectCommand>(m_bullet_counter.getBufferInfo().buffer, m_bullet_counter.getBufferInfo().offset, vk::DrawIndirectCommand(4, 0, 0, 0));
 		auto count_barrier = m_bullet_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
-		loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { count_barrier }, {});
+		cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { count_barrier }, {});
 
 		m_bullet_info = loader->m_uniform_memory.allocateMemory(sizeof(BulletInfo));
-		loader->m_cmd.updateBuffer<BulletInfo>(m_bullet_info.getBufferInfo().buffer, m_bullet_info.getBufferInfo().offset, { m_bullet_info_cpu });
+		cmd->updateBuffer<BulletInfo>(m_bullet_info.getBufferInfo().buffer, m_bullet_info.getBufferInfo().offset, { m_bullet_info_cpu });
 		auto barrier = m_bullet_info.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
-		loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { barrier }, {});
+		cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { barrier }, {});
 
 		auto& map_desc = sScene::Order().m_map_info_cpu.m_descriptor[0];
 		desc.size = sizeof(uint32_t) * map_desc.m_cell_num.x* map_desc.m_cell_num.y;
 		m_bullet_LL_head_gpu = loader->m_storage_memory.allocateMemory(desc);
-		loader->m_cmd.fillBuffer(m_bullet_LL_head_gpu.getBufferInfo().buffer, m_bullet_LL_head_gpu.getBufferInfo().offset, m_bullet_LL_head_gpu.getBufferInfo().range, 0xFFFFFFFF);
+		cmd->fillBuffer(m_bullet_LL_head_gpu.getBufferInfo().buffer, m_bullet_LL_head_gpu.getBufferInfo().offset, m_bullet_LL_head_gpu.getBufferInfo().range, 0xFFFFFFFF);
 
 	}
 

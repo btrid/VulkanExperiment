@@ -119,7 +119,7 @@ int main()
 		{
 			std::vector<glm::vec3> v;
 			std::vector<glm::uvec3> i;
-			std::tie(v, i) = Geometry::MakeSphere();
+			std::tie(v, i) = Geometry::MakeSphere(3);
 
 			VoxelizeModel model;
 			model.m_mesh.resize(1);

@@ -128,7 +128,6 @@ int main()
 
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
-	auto setup_cmd = sThreadLocal::Order().getCmdOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
 
 	vk::SemaphoreCreateInfo semaphoreInfo = vk::SemaphoreCreateInfo();
 	vk::Semaphore swapbuffer_semaphore = device->createSemaphore(semaphoreInfo);
@@ -166,7 +165,6 @@ int main()
 		loader->m_cache = device->createPipelineCacheUnique(cacheInfo);
 
 	}
-	loader->m_cmd = setup_cmd;
 
 	app.setup(loader);
 	auto executer = std::make_shared<btr::Executer>();
@@ -186,6 +184,8 @@ int main()
 	m_player.m_pos.x = 223.f;
 	m_player.m_pos.z = 183.f;
 	{
+		auto setup_cmd = loader->m_cmd_pool->allocCmdOnetime(0);
+
 		sCameraManager::Order().setup(loader);
 		DrawHelper::Order().setup(loader);
 		sScene::Order().setup(loader);
@@ -274,7 +274,7 @@ int main()
 				cThreadJob job;
 				job.mFinish = [&]()
 				{
-					render_cmds[1] = sCameraManager::Order().draw();
+					render_cmds[1] = sCameraManager::Order().draw(executer);
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);

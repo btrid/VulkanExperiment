@@ -110,7 +110,7 @@ void sCollisionSystem::setup(std::shared_ptr<btr::Loader>& loader)
 
 vk::CommandBuffer sCollisionSystem::execute(std::shared_ptr<btr::Executer>& executer)
 {
-	auto cmd = sThreadLocal::Order().getCmdOnetime(0);
+	auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
 	{
 		std::vector<vk::BufferMemoryBarrier> to_read = {
 			sBoid::Order().getLL().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),

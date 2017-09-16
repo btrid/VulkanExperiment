@@ -43,34 +43,24 @@ uint elements[] = {
 };
 void main()
 {
-//	if(gl_InstanceID < OctreeCellNum[uHierarchy])
+	uvec3 index = convert1DTo3D(gl_InstanceIndex, uvec3(32, 32, 32));
+	uint packd_value = imageLoad(t_voxel_albedo, ivec3(index)).r;
+	uint count = (packd_value)&((1<<5)-1);
+	if(count != 0)
 	{
-		uvec3 index = convert1DTo3D(gl_InstanceIndex, uvec3(32, 32, 32));
-		uint packd_value = imageLoad(t_voxel_albedo, ivec3(index)).r;
-		uint count = (packd_value)&((1<<5)-1);
-		if(count != 0)
-		{
-			uint packd_albedo_r = (packd_value>>23)&((1<<9)-1);
-			uint packd_albedo_g = (packd_value>>14)&((1<<9)-1);
-			uint packd_albedo_b = (packd_value>>5)&((1<<9)-1);
-			vec3 albedo = vec3(packd_albedo_r, packd_albedo_g, packd_albedo_b) / 64. / float(count);
-			vec3 size = u_voxel_info.u_cell_size.xyz;
-			Out.albedo = vec3(albedo / float(count));
-			vec3 vertex = box[elements[gl_VertexIndex]];
-			gl_Position = u_camera[0].u_projection * u_camera[0].u_view * vec4((vertex+vec3(index))*size+u_voxel_info.u_area_min.xyz + size*0.5, 1.0);
-//			gl_Position = vec4(gl_VertexIndex%2*100., gl_VertexIndex/2*100., 0.5, 1.);
-		}
-		else
-		{
-			Out.albedo = vec3(0.);
-			gl_Position = vec4(0.);
-		}
-
+		uint packd_albedo_r = (packd_value>>23)&((1<<9)-1);
+		uint packd_albedo_g = (packd_value>>14)&((1<<9)-1);
+		uint packd_albedo_b = (packd_value>>5)&((1<<9)-1);
+		vec3 albedo = vec3(packd_albedo_r, packd_albedo_g, packd_albedo_b) / 64. / float(count);
+		vec3 size = u_voxel_info.u_cell_size.xyz;
+		Out.albedo = vec3(albedo / float(count));
+		vec3 vertex = box[elements[gl_VertexIndex]];
+		gl_Position = u_camera[0].u_projection * u_camera[0].u_view * vec4((vertex+vec3(index))*size+u_voxel_info.u_area_min.xyz + size*0.5, 1.0);
 	}
-//	else
+	else
 	{
-//		Out.albedo = vec4(1.);
-//		gl_Position = PV * vec4(inPosition*(BRICK_AREA_MAX-BRICK_AREA_MIN), 1.0);
+		Out.albedo = vec3(0.);
+		gl_Position = vec4(0.);
 	}
 
 }

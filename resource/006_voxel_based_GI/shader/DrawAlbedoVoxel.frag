@@ -15,7 +15,7 @@ layout(location=1)in Vertex{
 	vec3 albedo;
 }In;
 
-//layout(early_fragment_tests) in;
+layout(early_fragment_tests) in;
 //layout(post_depth_coverage) in;
 layout(location = 0) out vec4 FragColor;
 

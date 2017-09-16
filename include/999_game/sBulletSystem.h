@@ -97,8 +97,7 @@ public:
 
 		vk::CommandBuffer execute(std::shared_ptr<btr::Executer>& executer)
 		{
-//			vk::CommandBuffer cmd = executer->m_cmd;
-			auto cmd = sThreadLocal::Order().getCmdOnetime(0);
+			auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
 			uint src_offset = sGlobal::Order().getCPUIndex() == 1 ? (m_bullet.getBufferInfo().range / sizeof(BulletData) / 2) : 0;
 			uint dst_offset = sGlobal::Order().getCPUIndex() == 0 ? (m_bullet.getBufferInfo().range / sizeof(BulletData) / 2) : 0;
 			auto& data = m_append_buffer[sGlobal::Order().getGPUIndex()];
@@ -195,7 +194,7 @@ public:
 
 		vk::CommandBuffer draw(std::shared_ptr<btr::Executer>& executer)
 		{
-			auto cmd = sThreadLocal::Order().getCmdOnetime(0);
+			auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
 			vk::RenderPassBeginInfo begin_render_Info;
 			begin_render_Info.setRenderPass(m_render_pass.get());
 			begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), executer->m_window->getClientSize<vk::Extent2D>()));

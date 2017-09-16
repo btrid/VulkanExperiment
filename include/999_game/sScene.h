@@ -99,6 +99,8 @@ struct sScene : public Singleton<sScene>
 		m_map_info_cpu.m_descriptor[0].m_cell_size = m_map_info_cpu.m_descriptor[1].m_cell_size/glm::vec2(m_map_info_cpu.m_subcell);
 		m_map_info_cpu.m_descriptor[0].m_cell_num = m_map_info_cpu.m_descriptor[1].m_cell_num*m_map_info_cpu.m_subcell;
 
+		auto cmd = loader->m_cmd_pool->allocCmdTempolary(0);
+
 		{
 			// レンダーパス
 			{
@@ -301,7 +303,7 @@ struct sScene : public Singleton<sScene>
 					vk::ImageMemoryBarrier to_transfer_damage = to_transfer;
 					to_transfer_damage.image = image_damage;
 
-					loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_transfer, to_transfer_sub, to_transfer_damage });
+					cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_transfer, to_transfer_sub, to_transfer_damage });
 				}
 
 				{
@@ -334,7 +336,7 @@ struct sScene : public Singleton<sScene>
 						copy.setImageSubresource(l);
 						copy.setImageExtent(image_info.extent);
 
-						loader->m_cmd.copyBufferToImage(staging.getBufferInfo().buffer, image, vk::ImageLayout::eTransferDstOptimal, copy);
+						cmd->copyBufferToImage(staging.getBufferInfo().buffer, image, vk::ImageLayout::eTransferDstOptimal, copy);
 					}
 					{
 						btr::BufferMemory::Descriptor desc;
@@ -348,11 +350,11 @@ struct sScene : public Singleton<sScene>
 						copy.setImageSubresource(l);
 						copy.setImageExtent(sub_image_info.extent);
 
-						loader->m_cmd.copyBufferToImage(staging.getBufferInfo().buffer, subimage, vk::ImageLayout::eTransferDstOptimal, copy);
+						cmd->copyBufferToImage(staging.getBufferInfo().buffer, subimage, vk::ImageLayout::eTransferDstOptimal, copy);
 
 					}
 
-					loader->m_cmd.clearColorImage(image_damage, vk::ImageLayout::eTransferDstOptimal, vk::ClearColorValue(std::array<unsigned, 4>{}), subresourceRange);
+					cmd->clearColorImage(image_damage, vk::ImageLayout::eTransferDstOptimal, vk::ClearColorValue(std::array<unsigned, 4>{}), subresourceRange);
 				}
 
 				{
@@ -373,7 +375,7 @@ struct sScene : public Singleton<sScene>
 					to_compute_damege.image = image_damage;
 					to_compute_damege.dstAccessMask = vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite;
 
-					loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, {}, { to_shader_read,to_shader_read_sub, to_compute_damege });
+					cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, {}, { to_shader_read,to_shader_read_sub, to_compute_damege });
 				}
 
 				m_map_image = image;
@@ -402,10 +404,10 @@ struct sScene : public Singleton<sScene>
 			vertex_copy.setSize(desc.size);
 			vertex_copy.setSrcOffset(staging.getBufferInfo().offset);
 			vertex_copy.setDstOffset(m_map_info.getBufferInfo().offset);
-			loader->m_cmd.copyBuffer(staging.getBufferInfo().buffer, m_map_info.getBufferInfo().buffer, vertex_copy);
+			cmd->copyBuffer(staging.getBufferInfo().buffer, m_map_info.getBufferInfo().buffer, vertex_copy);
 
 			auto barrier = m_map_info.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
-			loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { barrier }, {});
+			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { barrier }, {});
 		}
 
 		std::vector<std::vector<vk::DescriptorSetLayoutBinding>> bindings(DESCRIPTOR_SET_LAYOUT_NUM);
