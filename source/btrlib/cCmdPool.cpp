@@ -91,8 +91,12 @@ void cCmdPool::resetPool(std::shared_ptr<btr::Executer>& executer)
 	{
 		for (auto& pool_family : tls.m_per_family)
 		{
-			executer->m_gpu.getDevice()->resetCommandPool(pool_family.m_cmd_pool_onetime[executer->getGPUFrame()].get(), vk::CommandPoolResetFlagBits::eReleaseResources);
-			pool_family.m_cmd_onetime_deleter[executer->getGPUFrame()].clear();
+			if (!pool_family.m_cmd_onetime_deleter[sGlobal::Order().getCurrentFrame()].empty())
+			{
+				executer->m_gpu.getDevice()->resetCommandPool(pool_family.m_cmd_pool_onetime[sGlobal::Order().getCurrentFrame()].get(), vk::CommandPoolResetFlagBits::eReleaseResources);
+				pool_family.m_cmd_onetime_deleter[sGlobal::Order().getCurrentFrame()].clear();
+
+			}
 		}
 	}
 }
@@ -143,12 +147,6 @@ vk::CommandBuffer cCmdPool::allocCmdOnetime(int device_family_index)
 	return cmd;
 }
 
-struct CMDDeleter 
-{
-	void operator()(vk::UniqueCommandBuffer* ptr) {
-
-	}
-};
 ScopedCommand cCmdPool::allocCmdTempolary(uint32_t device_family_index)
 {
 	vk::CommandBufferAllocateInfo cmd_buffer_info;
@@ -168,7 +166,6 @@ ScopedCommand cCmdPool::allocCmdTempolary(uint32_t device_family_index)
 	scoped.m_resource->m_parent = this;
 	return std::move(scoped);
 }
-//	return cmd_unique;
 
 ScopedCommand::Resource::Resource() : m_cmd()
 , m_family_index(0)

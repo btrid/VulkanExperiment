@@ -53,7 +53,7 @@ void main()
 			uint packd_albedo_r = (packd_value>>23)&((1<<9)-1);
 			uint packd_albedo_g = (packd_value>>14)&((1<<9)-1);
 			uint packd_albedo_b = (packd_value>>5)&((1<<9)-1);
-			vec3 albedo = vec3(packd_albedo_r, packd_albedo_g, packd_albedo_b) / float(count);
+			vec3 albedo = vec3(packd_albedo_r, packd_albedo_g, packd_albedo_b) / 64. / float(count);
 			vec3 size = u_voxel_info.u_cell_size.xyz;
 			Out.albedo = vec3(albedo / float(count));
 			vec3 vertex = box[elements[gl_VertexIndex]];

@@ -41,9 +41,16 @@
 
 int main()
 {
+	vec3 albedo = vec3(1.4f, 0.2f, 0.7f);
+	uint packd_albedo = uint(albedo.r * 64) << 23 | uint(albedo.g * 64) << 14 | uint(albedo.b * 64) << 5 | 1;
+	float packd_albedo_r = ((packd_albedo >> 23)&((1 << 9) - 1)) / 64.f;
+	float packd_albedo_g = ((packd_albedo >> 14)&((1 << 9) - 1)) / 64.f;
+	float packd_albedo_b = ((packd_albedo >> 5)&((1 << 9) - 1)) / 64.f;
+	uint count = (packd_albedo)&((1 << 5) - 1);
+
 	btr::setResourceAppPath("..\\..\\resource\\006_voxel_based_GI\\");
 	auto* camera = cCamera::sCamera::Order().create();
-	camera->getData().m_position = glm::vec3(0.f, 0.f, 30.f);
+	camera->getData().m_position = glm::vec3(0.f, 0.f, 1200.f);
 	camera->getData().m_target = glm::vec3(0.f, 0.f, 0.f);
 	camera->getData().m_up = glm::vec3(0.f, -1.f, 0.f);
 	camera->getData().m_width = 640;
@@ -93,6 +100,7 @@ int main()
 	app.setup(loader);
 
 	auto executer = std::make_shared<btr::Executer>();
+	executer->m_gpu = gpu;
 	executer->m_device = device;
 	executer->m_vertex_memory = loader->m_vertex_memory;
 	executer->m_uniform_memory = loader->m_uniform_memory;
@@ -155,14 +163,12 @@ int main()
 
 		sDebug::Order().waitFence(device.getHandle(), app.m_window->getFence(backbuffer_index));
 		device->resetFences({ app.m_window->getFence(backbuffer_index)});
+		app.m_cmd_pool->resetPool(executer);
 
 		{
 			{
 				auto* m_camera = cCamera::sCamera::Order().getCameraList()[0];
 				m_camera->control(app.m_window->getInput(), 0.016f);
-// 				DrawCommand dcmd;
-// 				dcmd.world = glm::mat4(1.f);
-// 				DrawHelper::Order().drawOrder(DrawHelper::SPHERE, dcmd);
 			}
 
 			SynchronizedPoint motion_worker_syncronized_point(1);
@@ -257,7 +263,7 @@ int main()
 				.setPSignalSemaphores(submit_wait_semas)
 			};
 			queue.submit(submitInfo, app.m_window->getFence(backbuffer_index));
-
+			queue.waitIdle();
 			vk::SwapchainKHR swapchains[] = {
 				app.m_window->getSwapchain().m_swapchain_handle.get(),
 			};

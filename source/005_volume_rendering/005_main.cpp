@@ -97,7 +97,6 @@ int main()
 
 	volumeRenderer volume_renderer;
 
-	loader->m_cmd = setup_cmd;
 	app::App app;
 	app.setup(loader);
 

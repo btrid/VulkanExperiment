@@ -846,7 +846,7 @@ struct VoxelPipeline
 
 			vk::BufferCopy copy;
 			copy.setSize(desc.size);
-			copy.setSrcOffset(resource->m_material.getBufferInfo().offset);
+			copy.setDstOffset(resource->m_material.getBufferInfo().offset);
 			copy.setSrcOffset(staging.getBufferInfo().offset);
 			cmd.copyBuffer(staging.getBufferInfo().buffer, resource->m_material.getBufferInfo().buffer, copy);
 		}
