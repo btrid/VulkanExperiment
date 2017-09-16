@@ -443,10 +443,6 @@ struct VoxelPipeline
 
 		}
 
-		vk::Extent3D size;
-		size.setWidth(32);
-		size.setHeight(32);
-		size.setDepth(32);
 		// pipeline
 		{
 			// キャッシュ
@@ -460,6 +456,10 @@ struct VoxelPipeline
 					.setTopology(vk::PrimitiveTopology::eTriangleList);
 
 				// viewport
+				vk::Extent3D size;
+				size.setWidth(32);
+				size.setHeight(32);
+				size.setDepth(32);
 				vk::Viewport viewports[] = {
 					vk::Viewport(0.f, 0.f, (float)size.depth, (float)size.height, 0.f, 1.f),
 					vk::Viewport(0.f, 0.f, (float)size.width, (float)size.depth, 0.f, 1.f),
@@ -479,7 +479,7 @@ struct VoxelPipeline
 				// ラスタライズ
 				vk::PipelineRasterizationStateCreateInfo rasterization_info;
 				rasterization_info.setPolygonMode(vk::PolygonMode::eFill);
-				rasterization_info.setCullMode(vk::CullModeFlagBits::eBack);
+				rasterization_info.setCullMode(vk::CullModeFlagBits::eNone);
 				rasterization_info.setFrontFace(vk::FrontFace::eCounterClockwise);
 				rasterization_info.setLineWidth(1.f);
 				// サンプリング
@@ -488,8 +488,8 @@ struct VoxelPipeline
 
 				// デプスステンシル
 				vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
-				depth_stencil_info.setDepthTestEnable(VK_FALSE);
-				depth_stencil_info.setDepthWriteEnable(VK_FALSE);
+				depth_stencil_info.setDepthTestEnable(VK_TRUE);
+				depth_stencil_info.setDepthWriteEnable(VK_TRUE);
 				depth_stencil_info.setDepthCompareOp(vk::CompareOp::eLessOrEqual);
 				depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
 				depth_stencil_info.setStencilTestEnable(VK_FALSE);
@@ -501,7 +501,6 @@ struct VoxelPipeline
 				blend_info.setAttachmentCount(blend_state.size());
 				blend_info.setPAttachments(blend_state.data());
 
-				// todo
 				std::vector<vk::VertexInputBindingDescription> vertex_input_binding =
 				{
 					vk::VertexInputBindingDescription()
@@ -587,13 +586,17 @@ struct VoxelPipeline
 
 				// ブレンド
 				vk::PipelineColorBlendAttachmentState blend_states[] = {
-					vk::PipelineColorBlendAttachmentState().setBlendEnable(true).setColorBlendOp(vk::BlendOp::eAdd)
+					vk::PipelineColorBlendAttachmentState()
+					.setBlendEnable(VK_FALSE)
+					.setColorWriteMask(vk::ColorComponentFlagBits::eR
+						| vk::ColorComponentFlagBits::eG
+						| vk::ColorComponentFlagBits::eB
+						| vk::ColorComponentFlagBits::eA)
 				};
 				vk::PipelineColorBlendStateCreateInfo blend_info;
 				blend_info.setAttachmentCount(array_length(blend_states));
 				blend_info.setPAttachments(blend_states);
 
-				// todo
 				vk::PipelineVertexInputStateCreateInfo vertex_input_info;
 
 				vk::PipelineShaderStageCreateInfo stage_infos[] =
@@ -720,6 +723,7 @@ struct VoxelPipeline
 			begin_render_info.setFramebuffer(m_draw_voxel_framebuffer[executer->getGPUFrame()].get());
 			begin_render_info.setRenderPass(m_draw_voxel_pass.get());
 			begin_render_info.setRenderArea(vk::Rect2D({}, executer->m_window->getClientSize<vk::Extent2D>()));
+
 			cmd.beginRenderPass(begin_render_info, vk::SubpassContents::eInline);
 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW_VOXEL].get());
 			std::vector<vk::DescriptorSet> descriptor_sets = {
@@ -732,8 +736,6 @@ struct VoxelPipeline
 		}
 
 		cmd.end();
-
-
 		return cmd;
 	}
 
@@ -782,7 +784,7 @@ struct VoxelPipeline
 
 			vk::BufferCopy copy;
 			copy.setSize(desc.size);
-			copy.setSrcOffset(resource->m_vertex.getBufferInfo().offset);
+			copy.setDstOffset(resource->m_vertex.getBufferInfo().offset);
 			copy.setSrcOffset(staging.getBufferInfo().offset);
 			cmd.copyBuffer(staging.getBufferInfo().buffer, resource->m_vertex.getBufferInfo().buffer, copy);
 		}
@@ -798,7 +800,7 @@ struct VoxelPipeline
 
 			vk::BufferCopy copy;
 			copy.setSize(desc.size);
-			copy.setSrcOffset(resource->m_index.getBufferInfo().offset);
+			copy.setDstOffset(resource->m_index.getBufferInfo().offset);
 			copy.setSrcOffset(staging.getBufferInfo().offset);
 			cmd.copyBuffer(staging.getBufferInfo().buffer, resource->m_index.getBufferInfo().buffer, copy);
 		}
@@ -813,7 +815,7 @@ struct VoxelPipeline
 
 			vk::BufferCopy copy;
 			copy.setSize(desc.size);
-			copy.setSrcOffset(resource->m_indirect.getBufferInfo().offset);
+			copy.setDstOffset(resource->m_indirect.getBufferInfo().offset);
 			copy.setSrcOffset(staging.getBufferInfo().offset);
 			cmd.copyBuffer(staging.getBufferInfo().buffer, resource->m_indirect.getBufferInfo().buffer, copy);
 		}
@@ -829,7 +831,7 @@ struct VoxelPipeline
 
 			vk::BufferCopy copy;
 			copy.setSize(desc.size);
-			copy.setSrcOffset(resource->m_mesh_info.getBufferInfo().offset);
+			copy.setDstOffset(resource->m_mesh_info.getBufferInfo().offset);
 			copy.setSrcOffset(staging.getBufferInfo().offset);
 			cmd.copyBuffer(staging.getBufferInfo().buffer, resource->m_mesh_info.getBufferInfo().buffer, copy);
 		}

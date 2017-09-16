@@ -110,14 +110,14 @@ int main()
 		{
 			std::vector<glm::vec3> v;
 			std::vector<glm::uvec3> i;
-			std::tie(v, i) = Geometry::MakeBox();
+			std::tie(v, i) = Geometry::MakeSphere();
 
 			VoxelizeModel model;
 			model.m_mesh.resize(1);
 			model.m_mesh[0].vertex.resize(v.size());
 			for (size_t i = 0; i < model.m_mesh[0].vertex.size(); i++)
 			{
-				model.m_mesh[0].vertex[i].pos = v[i];
+				model.m_mesh[0].vertex[i].pos = v[i]*100.f;
 			}
 			model.m_mesh[0].index = i;
 			model.m_mesh[0].m_material_index = 0;
@@ -160,14 +160,14 @@ int main()
 			{
 				auto* m_camera = cCamera::sCamera::Order().getCameraList()[0];
 				m_camera->control(app.m_window->getInput(), 0.016f);
-				DrawCommand dcmd;
-				dcmd.world = glm::mat4(1.f);
-				DrawHelper::Order().drawOrder(DrawHelper::SPHERE, dcmd);
+// 				DrawCommand dcmd;
+// 				dcmd.world = glm::mat4(1.f);
+// 				DrawHelper::Order().drawOrder(DrawHelper::SPHERE, dcmd);
 			}
 
 			SynchronizedPoint motion_worker_syncronized_point(1);
-			SynchronizedPoint render_syncronized_point(3);
-			std::vector<vk::CommandBuffer> render_cmds(3);
+			SynchronizedPoint render_syncronized_point(2);
+			std::vector<vk::CommandBuffer> render_cmds(5);
 
 			{
 				cThreadJob job;
@@ -175,6 +175,7 @@ int main()
 					[&]()
 				{
 					render_cmds[1] = sCameraManager::Order().draw();
+					render_cmds[2] = DrawHelper::Order().draw();
 					render_syncronized_point.arrive();
 				}
 				);
@@ -185,18 +186,7 @@ int main()
 				job.mJob.emplace_back(
 					[&]()
 				{
-					//					render_cmds[1] = sCameraManager::Order().draw();
-					render_syncronized_point.arrive();
-				}
-				);
-				sGlobal::Order().getThreadPool().enque(job);
-			}
-			{
-				cThreadJob job;
-				job.mJob.emplace_back(
-					[&]()
-				{
-	//				render_cmds[2] = voxelize.draw(executer);
+					render_cmds[3] = voxelize.draw(executer);
 					render_syncronized_point.arrive();
 				}
 				);
