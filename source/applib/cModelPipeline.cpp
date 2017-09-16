@@ -51,7 +51,7 @@ void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 			.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
 		};
 		vk::RenderPassCreateInfo renderpass_info = vk::RenderPassCreateInfo()
-			.setAttachmentCount(attach_description.size())
+			.setAttachmentCount((uint32_t)attach_description.size())
 			.setPAttachments(attach_description.data())
 			.setSubpassCount(1)
 			.setPSubpasses(&subpass);
@@ -350,9 +350,7 @@ void cModelPipeline::addModel(cModelRender* model)
 
 vk::CommandBuffer cModelPipeline::draw(std::shared_ptr<btr::Executer>& executer)
 {
-	auto& gpu = sGlobal::Order().getGPU(0);
-	auto& device = gpu.getDevice();
-	auto cmd = sThreadLocal::Order().getCmdOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
+	auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
 
 	// draw
 	for (auto& render : m_model)

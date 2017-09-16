@@ -219,6 +219,7 @@ std::tuple<std::vector<glm::vec3>, std::vector<glm::vec3>> Geometry::createOrtho
 
 Geometry Geometry::MakeGeometry(std::shared_ptr<btr::Loader>& loader, const void* vertex, size_t vertex_size, const void* index, size_t index_size, vk::IndexType index_type, const std::vector<vk::VertexInputAttributeDescription>& vertex_attr, const std::vector<vk::VertexInputBindingDescription>& vertex_bind)
 {
+	auto cmd = loader->m_cmd_pool->allocCmdTempolary(0);
 	auto resource = std::make_unique<Resource>();
 	resource->m_vertex_binding = vertex_bind;
 	resource->m_vertex_attribute = vertex_attr;
@@ -237,7 +238,7 @@ Geometry Geometry::MakeGeometry(std::shared_ptr<btr::Loader>& loader, const void
 			vertex_copy.setSize(vertex_size);
 			vertex_copy.setSrcOffset(staging.getBufferInfo().offset);
 			vertex_copy.setDstOffset(resource->m_vertex.getBufferInfo().offset);
-			loader->m_cmd.copyBuffer(staging.getBufferInfo().buffer, resource->m_vertex.getBufferInfo().buffer, vertex_copy);
+			cmd->copyBuffer(staging.getBufferInfo().buffer, resource->m_vertex.getBufferInfo().buffer, vertex_copy);
 		}
 		{
 			btr::BufferMemory::Descriptor index_desc;
@@ -252,7 +253,7 @@ Geometry Geometry::MakeGeometry(std::shared_ptr<btr::Loader>& loader, const void
 			index_copy.setSize(index_size);
 			index_copy.setSrcOffset(staging.getBufferInfo().offset);
 			index_copy.setDstOffset(resource->m_index.getBufferInfo().offset);
-			loader->m_cmd.copyBuffer(staging.getBufferInfo().buffer, resource->m_index.getBufferInfo().buffer, index_copy);
+			cmd->copyBuffer(staging.getBufferInfo().buffer, resource->m_index.getBufferInfo().buffer, index_copy);
 		}
 
 		{
@@ -273,7 +274,7 @@ Geometry Geometry::MakeGeometry(std::shared_ptr<btr::Loader>& loader, const void
 			indirect_copy.setSize(indirect_desc.size);
 			indirect_copy.setSrcOffset(staging.getBufferInfo().offset);
 			indirect_copy.setDstOffset(resource->m_indirect.getBufferInfo().offset);
-			loader->m_cmd.copyBuffer(staging.getBufferInfo().buffer, resource->m_indirect.getBufferInfo().buffer, indirect_copy);
+			cmd->copyBuffer(staging.getBufferInfo().buffer, resource->m_indirect.getBufferInfo().buffer, indirect_copy);
 
 		}
 	}

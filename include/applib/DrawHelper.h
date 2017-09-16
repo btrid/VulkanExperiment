@@ -482,7 +482,6 @@ struct DrawHelper : public Singleton<DrawHelper>
 
 	vk::CommandBuffer draw(std::shared_ptr<btr::Executer>& executer)
 	{
-		auto device = sGlobal::Order().getGPU(0).getDevice();
 		auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
 
 		std::vector<vk::ClearValue> clearValue = {
@@ -492,7 +491,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 		vk::RenderPassBeginInfo begin_render_Info;
 		begin_render_Info.setRenderPass(m_render_pass);
 		begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(640, 480)));
-		begin_render_Info.setFramebuffer(m_framebuffer[sGlobal::Order().getCurrentFrame()]);
+		begin_render_Info.setFramebuffer(m_framebuffer[executer->getGPUFrame()]);
 		begin_render_Info.setClearValueCount(clearValue.size());
 		begin_render_Info.setPClearValues(clearValue.data());
 		cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);

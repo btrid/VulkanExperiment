@@ -27,8 +27,8 @@
 #include <applib/DrawHelper.h>
 #include <btrlib/Loader.h>
 #include <applib/Geometry.h>
-#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-#include <imgui/imgui.h>
+// #define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+// #include <imgui/imgui.h>
 
 #include <006_voxel_based_GI/VoxelPipeline.h>
 
@@ -36,7 +36,7 @@
 #pragma comment(lib, "applib.lib")
 //#pragma comment(lib, "FreeImage.lib")
 #pragma comment(lib, "vulkan-1.lib")
-#pragma comment(lib, "imgui.lib")
+//#pragma comment(lib, "imgui.lib")
 
 
 int main()
