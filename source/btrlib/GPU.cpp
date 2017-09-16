@@ -7,6 +7,7 @@ void cGPU::setup(vk::PhysicalDevice pd)
 	m_handle = pd;
 	std::vector<const char*> extensionName = {
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+		VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME,
 	};
 
 	auto gpu_propaty = m_handle.getProperties();
@@ -44,6 +45,7 @@ void cGPU::setup(vk::PhysicalDevice pd)
 	}
 
 	vk::PhysicalDeviceFeatures feature = gpu_feature;
+//	feature.
 	feature.robustBufferAccess = 0; // debug‚ÅŽ~‚Ü‚Á‚Ä‚Ù‚µ‚¢
 
 	vk::DeviceCreateInfo deviceInfo = vk::DeviceCreateInfo()

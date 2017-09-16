@@ -783,14 +783,14 @@ struct VoxelPipeline
 			info.setPSetLayouts(layouts);
 			resource->m_model_descriptor_set = std::move(executer->m_device->allocateDescriptorSetsUnique(info)[0]);
 
-			vk::DescriptorBufferInfo uniforms[] = {
+			vk::DescriptorBufferInfo storages[] = {
 				resource->m_material.getBufferInfo(),
 				resource->m_mesh_info.getBufferInfo(),
 			};
 			vk::WriteDescriptorSet write_desc;
-			write_desc.setDescriptorType(vk::DescriptorType::eUniformBuffer);
-			write_desc.setDescriptorCount(array_length(uniforms));
-			write_desc.setPBufferInfo(uniforms);
+			write_desc.setDescriptorType(vk::DescriptorType::eStorageBuffer);
+			write_desc.setDescriptorCount(array_length(storages));
+			write_desc.setPBufferInfo(storages);
 			write_desc.setDstSet(resource->m_model_descriptor_set.get());
 			write_desc.setDstBinding(0);
 			executer->m_device->updateDescriptorSets(write_desc, {});
