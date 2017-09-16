@@ -114,7 +114,7 @@ vk::CommandBuffer sCollisionSystem::execute(std::shared_ptr<btr::Executer>& exec
 	{
 		std::vector<vk::BufferMemoryBarrier> to_read = {
 			sBoid::Order().getLL().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
-			sBulletSystem::Order().getLL().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
+//			sBulletSystem::Order().getLL().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
 			sBoid::Order().getSoldier().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead| vk::AccessFlagBits::eShaderWrite),
 			sBulletSystem::Order().getBullet().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 		};
@@ -141,7 +141,7 @@ vk::CommandBuffer sCollisionSystem::execute(std::shared_ptr<btr::Executer>& exec
 			sBoid::Order().getSoldier().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
 			sBulletSystem::Order().getBullet().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
 		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to, {});
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to, {});
 
 		cmd.end();
 		return cmd;

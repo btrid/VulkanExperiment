@@ -74,4 +74,5 @@ struct cCmdPool
 	void resetPool(std::shared_ptr<btr::Executer>& executer);
 	void enqueCmd(vk::UniqueCommandBuffer&& cmd, uint32_t family_index);
 	PerFamilyIndex<std::vector<vk::UniqueCommandBuffer>> submitCmd();
+	void submit(std::shared_ptr<btr::Executer>& executer);
 };

@@ -107,26 +107,29 @@ void ResourceTexture::load(btr::Loader* loader, vk::CommandBuffer cmd, const std
 		copy.imageSubresource.layerCount = 1;
 		copy.imageSubresource.mipLevel = 0;
 
-		vk::ImageMemoryBarrier to_copy_barrier;
-		to_copy_barrier.dstQueueFamilyIndex = loader->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
-		to_copy_barrier.image = image.get();
-		to_copy_barrier.oldLayout = vk::ImageLayout::eUndefined;
-		to_copy_barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
-		to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
-		to_copy_barrier.subresourceRange = subresourceRange;
 
-		vk::ImageMemoryBarrier to_shader_read_barrier;
-		to_shader_read_barrier.dstQueueFamilyIndex = loader->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
-		to_shader_read_barrier.image = image.get();
-		to_shader_read_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
-		to_shader_read_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-		to_shader_read_barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-		to_shader_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-		to_shader_read_barrier.subresourceRange = subresourceRange;
-
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
+		{
+			vk::ImageMemoryBarrier to_copy_barrier;
+			to_copy_barrier.dstQueueFamilyIndex = loader->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
+			to_copy_barrier.image = image.get();
+			to_copy_barrier.oldLayout = vk::ImageLayout::eUndefined;
+			to_copy_barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
+			to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+			to_copy_barrier.subresourceRange = subresourceRange;
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
+		}
 		cmd.copyBufferToImage(staging_buffer.getBufferInfo().buffer, image.get(), vk::ImageLayout::eTransferDstOptimal, { copy });
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
+		{
+			vk::ImageMemoryBarrier to_shader_read_barrier;
+			to_shader_read_barrier.dstQueueFamilyIndex = loader->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
+			to_shader_read_barrier.image = image.get();
+			to_shader_read_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
+			to_shader_read_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+			to_shader_read_barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+			to_shader_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+			to_shader_read_barrier.subresourceRange = subresourceRange;
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
+		}
 
 	}
 
@@ -501,16 +504,6 @@ void cModel::load(btr::Loader* loader, const std::string& filename)
 			copy_info.setDstOffset(mesh.m_indirect_buffer_ex.getBufferInfo().offset);
 			cmd->copyBuffer(staging_indirect.getBufferInfo().buffer, mesh.m_indirect_buffer_ex.getBufferInfo().buffer, copy_info);
 
-			vk::BufferMemoryBarrier vertex_barrier;
-			vertex_barrier.setBuffer(mesh.m_vertex_buffer_ex.getBufferInfo().buffer);
-			vertex_barrier.setOffset(mesh.m_vertex_buffer_ex.getBufferInfo().offset);
-			vertex_barrier.setSize(mesh.m_vertex_buffer_ex.getBufferInfo().range);
-			vertex_barrier.setDstAccessMask(vk::AccessFlagBits::eVertexAttributeRead);
-			vk::BufferMemoryBarrier index_barrier;
-			index_barrier.setBuffer(mesh.m_index_buffer_ex.getBufferInfo().buffer);
-			index_barrier.setOffset(mesh.m_index_buffer_ex.getBufferInfo().offset);
-			index_barrier.setSize(mesh.m_index_buffer_ex.getBufferInfo().range);
-			index_barrier.setDstAccessMask(vk::AccessFlagBits::eIndexRead);
 			vk::BufferMemoryBarrier indirect_barrier;
 			indirect_barrier.setBuffer(mesh.m_indirect_buffer_ex.getBufferInfo().buffer);
 			indirect_barrier.setOffset(mesh.m_indirect_buffer_ex.getBufferInfo().offset);
@@ -518,12 +511,7 @@ void cModel::load(btr::Loader* loader, const std::string& filename)
 			indirect_barrier.setDstAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
 			cmd->pipelineBarrier(
 				vk::PipelineStageFlagBits::eTransfer,
-				vk::PipelineStageFlagBits::eVertexInput,
-				vk::DependencyFlags(),
-				{}, { vertex_barrier, index_barrier}, {});
-			cmd->pipelineBarrier(
-				vk::PipelineStageFlagBits::eTransfer,
-				vk::PipelineStageFlagBits::eTopOfPipe,
+				vk::PipelineStageFlagBits::eDrawIndirect,
 				vk::DependencyFlags(),
 				{}, { indirect_barrier }, {});
 

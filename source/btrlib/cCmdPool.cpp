@@ -130,6 +130,45 @@ PerFamilyIndex<std::vector<vk::UniqueCommandBuffer>> cCmdPool::submitCmd()
 	return cmds;
 }
 
+void cCmdPool::submit(std::shared_ptr<btr::Executer>& executer)
+{
+	auto cmd_queues = submitCmd();
+	for (size_t i = 0; i < cmd_queues.size(); i++)
+	{
+		auto& cmds = cmd_queues[i];
+		if (cmds.empty())
+		{
+			continue;
+		}
+		std::vector<vk::CommandBuffer> cmd(cmds.size());
+		for (size_t i = 0; i < cmds.size(); i++)
+		{
+			cmd[i] = cmds[i].get();
+		}
+
+		vk::PipelineStageFlags wait_pipelines[] = {
+			vk::PipelineStageFlagBits::eAllCommands,
+		};
+		std::vector<vk::SubmitInfo> submit_info =
+		{
+			vk::SubmitInfo()
+			.setCommandBufferCount((uint32_t)cmd.size())
+			.setPCommandBuffers(cmd.data())
+			.setWaitSemaphoreCount(0)
+			.setPWaitSemaphores(nullptr)
+			.setPWaitDstStageMask(wait_pipelines)
+			.setSignalSemaphoreCount(0)
+			.setPSignalSemaphores(nullptr)
+		};
+
+		vk::FenceCreateInfo info;
+		auto fence = executer->m_device->createFenceUnique(info);
+		auto q = executer->m_device->getQueue(i, 0);
+		q.submit(submit_info, fence.get());
+		sDeleter::Order().enque(std::move(cmds), std::move(fence));
+	}
+
+}
 vk::CommandBuffer cCmdPool::allocCmdOnetime(int device_family_index)
 {
 	vk::CommandBufferAllocateInfo cmd_buffer_info;

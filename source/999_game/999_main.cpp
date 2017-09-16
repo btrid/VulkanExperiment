@@ -116,7 +116,6 @@ struct Player
 int main()
 {
 	btr::setResourceAppPath("..\\..\\resource\\999_game\\");
-	app::App app;
 	auto* camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = glm::vec3(220.f, 60.f, 300.f);
 	camera->getData().m_target = glm::vec3(220.f, 20.f, 201.f);
@@ -129,9 +128,6 @@ int main()
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
 
-	vk::SemaphoreCreateInfo semaphoreInfo = vk::SemaphoreCreateInfo();
-	vk::Semaphore swapbuffer_semaphore = device->createSemaphore(semaphoreInfo);
-	vk::Semaphore cmdsubmit_semaphore = device->createSemaphore(semaphoreInfo);
 	vk::Queue queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), 0);
 
 	std::shared_ptr<btr::Loader> loader = std::make_shared<btr::Loader>();
@@ -166,15 +162,19 @@ int main()
 
 	}
 
+	app::App app;
 	app.setup(loader);
 	auto executer = std::make_shared<btr::Executer>();
+	executer->m_gpu = gpu;
 	executer->m_device = device;
 	executer->m_vertex_memory	= loader->m_vertex_memory;
 	executer->m_uniform_memory	= loader->m_uniform_memory;
 	executer->m_storage_memory	= loader->m_storage_memory;
 	executer->m_staging_memory	= loader->m_staging_memory;
 	executer->m_window = app.m_window;
+	executer->m_cmd_pool = app.m_cmd_pool;
 	loader->m_window = app.m_window;
+	loader->m_cmd_pool = app.m_cmd_pool;
 
 	cModelPipeline model_pipeline;
 	cModelRender model_render;
@@ -335,6 +335,9 @@ int main()
 			// draw
 			render_cmds.front() = app.m_window->getSwapchain().m_cmd_present_to_render[backbuffer_index];
 			render_cmds.back() = app.m_window->getSwapchain().m_cmd_render_to_present[backbuffer_index];
+
+			executer->m_cmd_pool->submit(executer);
+
 			motion_worker_syncronized_point.wait();
 			render_syncronized_point.wait();
 

@@ -31,4 +31,4 @@ glslc.exe -w -I Include -I ../../btrlib/shader/include -x glsl -fshader-stage=fr
 
 glslc.exe -w -I Include -I ../../btrlib/shader/include -x glsl -fshader-stage=compute	-o binary\\CollisionTest.comp.spv CollisionTest.comp
 
-glslc.exe -w -I Include -I ../../btrlib/shader/include -x glsl -fshader-stage=compute	-o binary\\MapUpdate.comp.spv MapUpdate.comp
+glslc.exe -w -I Include -I ../../btrlib/shader/include -x glsl -fshader-stage=compute	-o binary\\FloorUpdateDamage.comp.spv FloorUpdateDamage.comp

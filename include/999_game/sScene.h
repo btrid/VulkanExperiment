@@ -303,7 +303,7 @@ struct sScene : public Singleton<sScene>
 					vk::ImageMemoryBarrier to_transfer_damage = to_transfer;
 					to_transfer_damage.image = image_damage;
 
-					cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_transfer, to_transfer_sub, to_transfer_damage });
+					cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_transfer, to_transfer_sub, to_transfer_damage });
 				}
 
 				{
@@ -635,7 +635,7 @@ struct sScene : public Singleton<sScene>
 
 		vk::CommandBufferAllocateInfo cmd_info;
 		cmd_info.commandBufferCount = sGlobal::FRAME_MAX;
-		cmd_info.commandPool = sThreadLocal::Order().getCmdPool(sGlobal::CMD_POOL_TYPE_COMPILED, 0);
+		cmd_info.commandPool = loader->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
 		cmd_info.level = vk::CommandBufferLevel::ePrimary;
 		m_cmd = std::move(loader->m_device->allocateCommandBuffersUnique(cmd_info));
 
@@ -656,7 +656,7 @@ struct sScene : public Singleton<sScene>
 			to_read.subresourceRange.levelCount = 1;
 			to_read.dstAccessMask = vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite;
 			to_read.srcAccessMask = vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite;
-			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, to_read);
+			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, to_read);
 
 			cmd->bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COMPUTE_MAP]);
 			cmd->bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR], 0, m_descriptor_set[DESCRIPTOR_SET_LAYOUT_CAMERA], {});

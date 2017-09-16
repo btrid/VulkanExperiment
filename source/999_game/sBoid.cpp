@@ -247,7 +247,7 @@ void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 				to_transfer.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
 				to_transfer.subresourceRange = subresourceRange;
 
-				cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_transfer });
+				cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_transfer });
 			}
 
 			{
@@ -588,9 +588,9 @@ vk::CommandBuffer sBoid::execute(std::shared_ptr<btr::Executer>& executer)
 			indirect_to_transfer.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
 			std::vector<vk::BufferMemoryBarrier> to_transfer = {
 				ll_to_transfer,
-				indirect_to_transfer,
+//				indirect_to_transfer,
 			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eDrawIndirect, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
 
 			cmd.updateBuffer<vk::DrawIndirectCommand>(m_soldier_draw_indiret_gpu.getBufferInfo().buffer, m_soldier_draw_indiret_gpu.getBufferInfo().offset, vk::DrawIndirectCommand(0, 1, 0, 0));
 			cmd.fillBuffer(m_soldier_LL_head_gpu.getDst().buffer, m_soldier_LL_head_gpu.getDst().offset, m_soldier_LL_head_gpu.getDst().range, 0xFFFFFFFF);
@@ -608,7 +608,7 @@ vk::CommandBuffer sBoid::execute(std::shared_ptr<btr::Executer>& executer)
 			to_read.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
 			to_read.dstAccessMask = vk::AccessFlagBits::eShaderWrite | vk::AccessFlagBits::eShaderRead;
 			std::vector<vk::BufferMemoryBarrier> to_update_barrier = {
-				ll_to_read,
+//				ll_to_read,
 				to_read,
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_update_barrier, {});
@@ -699,9 +699,8 @@ vk::CommandBuffer sBoid::draw(std::shared_ptr<btr::Executer>& executer)
 	to_draw.size = m_soldier_draw_indiret_gpu.getBufferInfo().range;
 	to_draw.offset = m_soldier_draw_indiret_gpu.getBufferInfo().offset;
 	to_draw.srcAccessMask = vk::AccessFlagBits::eShaderWrite | vk::AccessFlagBits::eShaderRead;
-	to_draw.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+	to_draw.dstAccessMask = vk::AccessFlagBits::eIndirectCommandRead;
 	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, /*vk::DependencyFlagBits::eByRegion*/{}, {}, to_draw, {});
-
 
 	vk::RenderPassBeginInfo begin_render_Info;
 	begin_render_Info.setRenderPass(m_render_pass.get());

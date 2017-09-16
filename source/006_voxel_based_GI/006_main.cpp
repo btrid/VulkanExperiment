@@ -237,7 +237,6 @@ int main()
 				auto fence = device->createFenceUnique(info);
 				auto q = device->getQueue(i, 0);
 				q.submit(submit_info, fence.get());
-				q.waitIdle();
 				sDeleter::Order().enque(std::move(cmds), std::move(fence));
 			}
 			render_syncronized_point.wait();
