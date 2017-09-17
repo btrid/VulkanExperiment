@@ -119,7 +119,7 @@ int main()
 		{
 			std::vector<glm::vec3> v;
 			std::vector<glm::uvec3> i;
-			std::tie(v, i) = Geometry::MakeSphere(3);
+			std::tie(v, i) = Geometry::MakeSphere();
 
 			VoxelizeModel model;
 			model.m_mesh.resize(1);
@@ -170,11 +170,16 @@ int main()
 			{
 				auto* m_camera = cCamera::sCamera::Order().getCameraList()[0];
 				m_camera->control(app.m_window->getInput(), 0.016f);
+
+				DrawCommand dcmd;
+				dcmd.world = glm::mat4(0.01f);
+				DrawHelper::Order().drawOrder(DrawHelper::SPHERE, dcmd);
 			}
 
 			SynchronizedPoint motion_worker_syncronized_point(1);
 			SynchronizedPoint render_syncronized_point(2);
-			std::vector<vk::CommandBuffer> render_cmds(5);
+			SynchronizedPoint loader_syncronized_point(1);
+			std::vector<vk::CommandBuffer> render_cmds(4);
 
 			{
 				cThreadJob job;
@@ -193,7 +198,7 @@ int main()
 				job.mJob.emplace_back(
 					[&]()
 				{
-					render_cmds[3] = voxelize.draw(executer);
+//					render_cmds[3] = voxelize.draw(executer);
 					render_syncronized_point.arrive();
 				}
 				);
@@ -204,42 +209,20 @@ int main()
 			render_cmds.front() = app.m_window->getSwapchain().m_cmd_present_to_render[backbuffer_index];
 			render_cmds.back() = app.m_window->getSwapchain().m_cmd_render_to_present[backbuffer_index];
 
-			auto cmd_queues = executer->m_cmd_pool->submitCmd();
-			for (size_t i = 0; i < cmd_queues.size(); i++)
 			{
-				auto& cmds = cmd_queues[i];
-				if (cmds.empty())
+				cThreadJob job;
+				job.mJob.emplace_back(
+					[&]()
 				{
-					continue;
+					executer->m_cmd_pool->submit(executer);
+					loader_syncronized_point.arrive();
 				}
-				std::vector<vk::CommandBuffer> cmd(cmds.size());
-				for (size_t i = 0; i < cmds.size(); i++)
-				{
-					cmd[i] = cmds[i].get();
-				}
-
-				vk::PipelineStageFlags wait_pipelines[] = {
-					vk::PipelineStageFlagBits::eAllCommands,
-				};
-				std::vector<vk::SubmitInfo> submit_info =
-				{
-					vk::SubmitInfo()
-					.setCommandBufferCount((uint32_t)cmd.size())
-					.setPCommandBuffers(cmd.data())
-					.setWaitSemaphoreCount(0)
-					.setPWaitSemaphores(nullptr)
-					.setPWaitDstStageMask(wait_pipelines)
-					.setSignalSemaphoreCount(0)
-					.setPSignalSemaphores(nullptr)
-				};
-
-				vk::FenceCreateInfo info;
-				auto fence = device->createFenceUnique(info);
-				auto q = device->getQueue(i, 0);
-				q.submit(submit_info, fence.get());
-				sDeleter::Order().enque(std::move(cmds), std::move(fence));
+				);
+				sGlobal::Order().getThreadPool().enque(job);
 			}
+
 			render_syncronized_point.wait();
+			loader_syncronized_point.wait();
 
 			vk::Semaphore swap_wait_semas[] = {
 				app.m_window->getSwapchain().m_swapbuffer_semaphore.get(),

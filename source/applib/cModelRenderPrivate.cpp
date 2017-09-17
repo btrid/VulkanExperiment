@@ -52,7 +52,7 @@ void cModelRenderPrivate::setup(cModelPipeline& pipeline)
 			allocInfo.pSetLayouts = layouts;
 			m_draw_descriptor_set_per_mesh = std::move(device->allocateDescriptorSetsUnique(allocInfo)[0]);
 
-			std::vector<vk::DescriptorImageInfo> color_image_info(cModelPipeline::DESCRIPTOR_TEXTURE_NUM, vk::DescriptorImageInfo(DrawHelper::Order().getWhiteTexture().m_sampler, DrawHelper::Order().getWhiteTexture().m_image_view, vk::ImageLayout::eShaderReadOnlyOptimal));
+			std::vector<vk::DescriptorImageInfo> color_image_info(cModelPipeline::DESCRIPTOR_TEXTURE_NUM, vk::DescriptorImageInfo(DrawHelper::Order().getWhiteTexture().m_sampler.get(), DrawHelper::Order().getWhiteTexture().m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal));
 			for (size_t i = 0; i < m_model_resource->m_mesh.size(); i++)
 			{
 				auto& material = m_model_resource->m_material[m_model_resource->m_mesh[i].m_material_index];

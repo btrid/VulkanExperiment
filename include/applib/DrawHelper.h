@@ -55,15 +55,16 @@ struct DrawHelper : public Singleton<DrawHelper>
 		SPHERE,
 		PrimitiveType_MAX,
 	};
-	vk::RenderPass m_render_pass;
-	std::vector<vk::Framebuffer> m_framebuffer;
+	vk::UniqueRenderPass m_render_pass;
+	std::vector<vk::UniqueFramebuffer> m_framebuffer;
 
+	std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_module;
 	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_shader_info;
-	std::array<vk::Pipeline, PIPELINE_NUM> m_pipeline;
+	std::array<vk::UniquePipeline, PIPELINE_NUM> m_pipeline;
 
-	std::array<vk::DescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
-	std::array<vk::DescriptorSet, DESCRIPTOR_SET_NUM> m_descriptor_set;
-	std::array<vk::PipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
+	std::array<vk::UniqueDescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
+	std::array<vk::UniqueDescriptorSet, DESCRIPTOR_SET_NUM> m_descriptor_set;
+	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
 
 	std::array<btr::AllocatedMemory, PrimitiveType_MAX> m_mesh_vertex;
 	std::array<btr::AllocatedMemory, PrimitiveType_MAX> m_mesh_index;
@@ -72,10 +73,10 @@ struct DrawHelper : public Singleton<DrawHelper>
 
 	struct TextureResource
 	{
-		vk::Image m_image;
-		vk::ImageView m_image_view;
-		vk::DeviceMemory m_memory;
-		vk::Sampler m_sampler;
+		vk::UniqueImage m_image;
+		vk::UniqueImageView m_image_view;
+		vk::UniqueDeviceMemory m_memory;
+		vk::UniqueSampler m_sampler;
 	};
 	TextureResource m_whilte_texture;
 	TextureResource& getWhiteTexture() { return m_whilte_texture; }
@@ -112,14 +113,14 @@ struct DrawHelper : public Singleton<DrawHelper>
 				vk::AttachmentDescription()
 				.setFormat(loader->m_window->getSwapchain().m_surface_format.format)
 				.setSamples(vk::SampleCountFlagBits::e1)
-				.setLoadOp(vk::AttachmentLoadOp::eClear)
+				.setLoadOp(vk::AttachmentLoadOp::eLoad)
 				.setStoreOp(vk::AttachmentStoreOp::eStore)
 				.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
 				.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
 				vk::AttachmentDescription()
 				.setFormat(vk::Format::eD32Sfloat)
 				.setSamples(vk::SampleCountFlagBits::e1)
-				.setLoadOp(vk::AttachmentLoadOp::eClear)
+				.setLoadOp(vk::AttachmentLoadOp::eLoad)
 				.setStoreOp(vk::AttachmentStoreOp::eStore)
 				.setInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
 				.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
@@ -131,7 +132,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 				.setSubpassCount(1)
 				.setPSubpasses(&subpass);
 
-			m_render_pass = loader->m_device->createRenderPass(renderpass_info);
+			m_render_pass = loader->m_device->createRenderPassUnique(renderpass_info);
 
 			// フレームバッファ
 			m_framebuffer.resize(loader->m_window->getSwapchain().getBackbufferNum());
@@ -139,7 +140,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 				std::vector<vk::ImageView> view(2);
 
 				vk::FramebufferCreateInfo framebuffer_info;
-				framebuffer_info.setRenderPass(m_render_pass);
+				framebuffer_info.setRenderPass(m_render_pass.get());
 				framebuffer_info.setAttachmentCount((uint32_t)view.size());
 				framebuffer_info.setPAttachments(view.data());
 				framebuffer_info.setWidth(loader->m_window->getClientSize().x);
@@ -149,7 +150,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 				for (size_t i = 0; i < m_framebuffer.size(); i++) {
 					view[0] = loader->m_window->getSwapchain().m_backbuffer[i].m_view;
 					view[1] = loader->m_window->getSwapchain().m_depth.m_view;
-					m_framebuffer[i] = loader->m_device->createFramebuffer(framebuffer_info);
+					m_framebuffer[i] = loader->m_device->createFramebufferUnique(framebuffer_info);
 				}
 			}
 
@@ -256,7 +257,8 @@ struct DrawHelper : public Singleton<DrawHelper>
 
 			std::string path = btr::getResourceLibPath() + "shader\\binary\\";
 			for (size_t i = 0; i < SHADER_NUM; i++) {
-				m_shader_info[i].setModule(loadShader(loader->m_device.getHandle(), path + shader_info[i].name));
+				m_shader_module[i] = loadShaderUnique(loader->m_device.getHandle(), path + shader_info[i].name);
+				m_shader_info[i].setModule(m_shader_module[i].get());
 				m_shader_info[i].setStage(shader_info[i].stage);
 				m_shader_info[i].setPName("main");
 			}
@@ -280,7 +282,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 			pipeline_layout_info.setPSetLayouts(layouts.data());
 			pipeline_layout_info.setPushConstantRangeCount(array_length(constant));
 			pipeline_layout_info.setPPushConstantRanges(constant);
-			m_pipeline_layout[PIPELINE_LAYOUT_DRAW_PRIMITIVE] = loader->m_device->createPipelineLayout(pipeline_layout_info);
+			m_pipeline_layout[PIPELINE_LAYOUT_DRAW_PRIMITIVE] = loader->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
 		// setup pipeline
@@ -369,13 +371,13 @@ struct DrawHelper : public Singleton<DrawHelper>
 				.setPViewportState(&viewportInfo)
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
-				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_PRIMITIVE])
-				.setRenderPass(m_render_pass)
+				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_PRIMITIVE].get())
+				.setRenderPass(m_render_pass.get())
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			auto pipelines = loader->m_device->createGraphicsPipelines(loader->m_cache.get(), graphics_pipeline_info);
-			m_pipeline[PIPELINE_DRAW_PRIMITIVE] = pipelines[0];
+			auto pipelines = loader->m_device->createGraphicsPipelinesUnique(loader->m_cache.get(), graphics_pipeline_info);
+			m_pipeline[PIPELINE_DRAW_PRIMITIVE] = std::move(pipelines[0]);
 
 		}
 
@@ -391,15 +393,15 @@ struct DrawHelper : public Singleton<DrawHelper>
 		image_info.initialLayout = vk::ImageLayout::eUndefined;
 		image_info.extent = { 1, 1, 1 };
 		image_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
-		vk::Image image = loader->m_device->createImage(image_info);
+		auto image = loader->m_device->createImageUnique(image_info);
 
-		vk::MemoryRequirements memory_request = loader->m_device->getImageMemoryRequirements(image);
+		vk::MemoryRequirements memory_request = loader->m_device->getImageMemoryRequirements(image.get());
 		vk::MemoryAllocateInfo memory_alloc_info;
 		memory_alloc_info.allocationSize = memory_request.size;
-		memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(loader->m_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+		memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(loader->m_gpu.getHandle(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-		vk::DeviceMemory image_memory = loader->m_device->allocateMemory(memory_alloc_info);
-		loader->m_device->bindImageMemory(image, image_memory, 0);
+		auto image_memory = loader->m_device->allocateMemoryUnique(memory_alloc_info);
+		loader->m_device->bindImageMemory(image.get(), image_memory.get(), 0);
 
 		btr::BufferMemory::Descriptor staging_desc;
 		staging_desc.size = 4;
@@ -427,7 +429,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 
 			vk::ImageMemoryBarrier to_copy_barrier;
 			to_copy_barrier.dstQueueFamilyIndex = loader->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
-			to_copy_barrier.image = image;
+			to_copy_barrier.image = image.get();
 			to_copy_barrier.oldLayout = vk::ImageLayout::eUndefined;
 			to_copy_barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
 			to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
@@ -435,7 +437,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 
 			vk::ImageMemoryBarrier to_shader_read_barrier;
 			to_shader_read_barrier.dstQueueFamilyIndex = loader->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
-			to_shader_read_barrier.image = image;
+			to_shader_read_barrier.image = image.get();
 			to_shader_read_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
 			to_shader_read_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 			to_shader_read_barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
@@ -443,7 +445,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 			to_shader_read_barrier.subresourceRange = subresourceRange;
 
 			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
-			cmd->copyBufferToImage(staging_buffer.getBufferInfo().buffer, image, vk::ImageLayout::eTransferDstOptimal, { copy });
+			cmd->copyBufferToImage(staging_buffer.getBufferInfo().buffer, image.get(), vk::ImageLayout::eTransferDstOptimal, { copy });
 			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllGraphics, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
 
 		}
@@ -456,7 +458,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 		view_info.components.a = vk::ComponentSwizzle::eA;
 		view_info.flags = vk::ImageViewCreateFlags();
 		view_info.format = vk::Format::eR32Sfloat;
-		view_info.image = image;
+		view_info.image = image.get();
 		view_info.subresourceRange = subresourceRange;
 
 		vk::SamplerCreateInfo sampler_info;
@@ -474,30 +476,24 @@ struct DrawHelper : public Singleton<DrawHelper>
 		sampler_info.anisotropyEnable = VK_FALSE;
 		sampler_info.borderColor = vk::BorderColor::eFloatOpaqueWhite;
 
-		m_whilte_texture.m_image = image;
-		m_whilte_texture.m_memory = image_memory;
-		m_whilte_texture.m_image_view = loader->m_device->createImageView(view_info);
-		m_whilte_texture.m_sampler = loader->m_device->createSampler(sampler_info);
+		m_whilte_texture.m_image = std::move(image);
+		m_whilte_texture.m_memory = std::move(image_memory);
+		m_whilte_texture.m_image_view = loader->m_device->createImageViewUnique(view_info);
+		m_whilte_texture.m_sampler = loader->m_device->createSamplerUnique(sampler_info);
 	}
 
 	vk::CommandBuffer draw(std::shared_ptr<btr::Executer>& executer)
 	{
 		auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
 
-		std::vector<vk::ClearValue> clearValue = {
-			vk::ClearValue().setColor(vk::ClearColorValue(std::array<float, 4>{0.3f, 0.3f, 0.8f, 1.f})),
-			vk::ClearValue().setDepthStencil(vk::ClearDepthStencilValue(1.f)),
-		};
 		vk::RenderPassBeginInfo begin_render_Info;
-		begin_render_Info.setRenderPass(m_render_pass);
+		begin_render_Info.setRenderPass(m_render_pass.get());
 		begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(640, 480)));
-		begin_render_Info.setFramebuffer(m_framebuffer[executer->getGPUFrame()]);
-		begin_render_Info.setClearValueCount(clearValue.size());
-		begin_render_Info.setPClearValues(clearValue.data());
+		begin_render_Info.setFramebuffer(m_framebuffer[executer->getGPUFrame()].get());
 		cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
-		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW_PRIMITIVE]);
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_PRIMITIVE], 0, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
+		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW_PRIMITIVE].get());
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_PRIMITIVE].get(), 0, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 
 		for (auto& cmd_per_thread : m_draw_cmd)
 		{
@@ -514,7 +510,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 
 				for (auto& dcmd : cmd_list)
 				{
-					cmd.pushConstants<mat4>(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_PRIMITIVE], vk::ShaderStageFlagBits::eVertex, 0, dcmd.world);
+					cmd.pushConstants<mat4>(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_PRIMITIVE].get(), vk::ShaderStageFlagBits::eVertex, 0, dcmd.world);
 					cmd.drawIndexed(m_mesh_index_num[i], 1, 0, 0, 0);
 				}
 				cmd_list.clear();

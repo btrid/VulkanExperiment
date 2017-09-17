@@ -526,7 +526,7 @@ void ModelInstancingRender::setup(cModelInstancingRenderer&  renderer)
 
 			// mesh
 			{
-				vk::DescriptorImageInfo default(DrawHelper::Order().getWhiteTexture().m_sampler, DrawHelper::Order().getWhiteTexture().m_image_view, vk::ImageLayout::eShaderReadOnlyOptimal);
+				vk::DescriptorImageInfo default(DrawHelper::Order().getWhiteTexture().m_sampler.get(), DrawHelper::Order().getWhiteTexture().m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal);
 				std::vector<vk::DescriptorImageInfo> albedo_image_info(16, default);
 				for (size_t i = 0; i < m_descriptor_set.size(); i++)
 				{
