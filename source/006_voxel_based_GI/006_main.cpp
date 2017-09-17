@@ -172,14 +172,14 @@ int main()
 				m_camera->control(app.m_window->getInput(), 0.016f);
 
 				DrawCommand dcmd;
-				dcmd.world = glm::mat4(0.01f);
+				dcmd.world = glm::scale(vec3(200.f));
 				DrawHelper::Order().drawOrder(DrawHelper::SPHERE, dcmd);
 			}
 
 			SynchronizedPoint motion_worker_syncronized_point(1);
 			SynchronizedPoint render_syncronized_point(2);
 			SynchronizedPoint loader_syncronized_point(1);
-			std::vector<vk::CommandBuffer> render_cmds(4);
+			std::vector<vk::CommandBuffer> render_cmds(5);
 
 			{
 				cThreadJob job;
@@ -198,7 +198,7 @@ int main()
 				job.mJob.emplace_back(
 					[&]()
 				{
-//					render_cmds[3] = voxelize.draw(executer);
+					render_cmds[3] = voxelize.draw(executer);
 					render_syncronized_point.arrive();
 				}
 				);
