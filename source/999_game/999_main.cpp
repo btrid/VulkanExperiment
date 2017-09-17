@@ -128,53 +128,11 @@ int main()
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
 
-	vk::Queue queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), 0);
-
-	std::shared_ptr<btr::Loader> loader = std::make_shared<btr::Loader>();
-	loader->m_gpu = gpu;
-	loader->m_device = device;
-	vk::MemoryPropertyFlags host_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
-	vk::MemoryPropertyFlags device_memory = vk::MemoryPropertyFlagBits::eDeviceLocal;
-//	device_memory = host_memory; // debug
-	loader->m_vertex_memory.setup(device, vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000*1000 * 100);
-	loader->m_uniform_memory.setup(device, vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 20);
-	loader->m_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 1000 * 200);
-	loader->m_staging_memory.setup(device, vk::BufferUsageFlagBits::eTransferSrc, host_memory, 1000 * 1000 * 100);
-	{
-		std::vector<vk::DescriptorPoolSize> pool_size(4);
-		pool_size[0].setType(vk::DescriptorType::eUniformBuffer);
-		pool_size[0].setDescriptorCount(10);
-		pool_size[1].setType(vk::DescriptorType::eStorageBuffer);
-		pool_size[1].setDescriptorCount(20);
-		pool_size[2].setType(vk::DescriptorType::eCombinedImageSampler);
-		pool_size[2].setDescriptorCount(10);
-		pool_size[3].setType(vk::DescriptorType::eStorageImage);
-		pool_size[3].setDescriptorCount(10);
-
-		vk::DescriptorPoolCreateInfo pool_info;
-		pool_info.setPoolSizeCount((uint32_t)pool_size.size());
-		pool_info.setPPoolSizes(pool_size.data());
-		pool_info.setMaxSets(20);
-		loader->m_descriptor_pool = device->createDescriptorPoolUnique(pool_info);
-
-		vk::PipelineCacheCreateInfo cacheInfo = vk::PipelineCacheCreateInfo();
-		loader->m_cache = device->createPipelineCacheUnique(cacheInfo);
-
-	}
-
 	app::App app;
 	app.setup(gpu);
-	auto executer = std::make_shared<btr::Executer>();
-	executer->m_gpu = gpu;
-	executer->m_device = device;
-	executer->m_vertex_memory	= loader->m_vertex_memory;
-	executer->m_uniform_memory	= loader->m_uniform_memory;
-	executer->m_storage_memory	= loader->m_storage_memory;
-	executer->m_staging_memory	= loader->m_staging_memory;
-	executer->m_window = app.m_window;
-	executer->m_cmd_pool = app.m_cmd_pool;
-	loader->m_window = app.m_window;
-	loader->m_cmd_pool = app.m_cmd_pool;
+
+	auto loader = app.m_loader;
+	auto executer = app.m_executer;
 
 	cModelPipeline model_pipeline;
 	cModelRender model_render;
@@ -213,7 +171,7 @@ int main()
 
 	}
 
-
+	vk::Queue queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), 0);
 	while (true)
 	{
 		cStopWatch time;
