@@ -51,8 +51,8 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Loader>& loader)
 		{
 			btr::BufferMemory::Descriptor desc;
 			desc.size = sizeof(glm::uvec3);
-			m_generate_cmd_counter = loader->m_storage_memory.allocateMemory(desc);
-			loader->m_cmd.updateBuffer<glm::uvec3>(m_generate_cmd_counter.getBufferInfo().buffer, m_generate_cmd_counter.getBufferInfo().offset, glm::uvec3(0, 1, 1));
+			m_particle_generate_cmd_counter = loader->m_storage_memory.allocateMemory(desc);
+			loader->m_cmd.updateBuffer<glm::uvec3>(m_particle_generate_cmd_counter.getBufferInfo().buffer, m_particle_generate_cmd_counter.getBufferInfo().offset, glm::uvec3(0, 1, 1));
 
 			m_particle_emitter_counter = loader->m_storage_memory.allocateMemory(desc);
 			loader->m_cmd.updateBuffer<glm::uvec3>(m_particle_emitter_counter.getBufferInfo().buffer, m_particle_emitter_counter.getBufferInfo().offset, glm::uvec3(0, 1, 1));
@@ -208,7 +208,7 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Loader>& loader)
 				m_particle_emitter.getBufferInfo(),
 				m_particle_emitter_counter.getBufferInfo(),
 				m_particle_generate_cmd.getBufferInfo(),
-				m_generate_cmd_counter.getBufferInfo(),
+				m_particle_generate_cmd_counter.getBufferInfo(),
 				m_particle_update_param.getBufferInfo(),
 			};
 			std::vector<vk::WriteDescriptorSet> write_desc =
@@ -240,13 +240,13 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Loader>& loader)
 			.setStage(m_shader_info[SHADER_GENERATE])
 			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE]),
 			vk::ComputePipelineCreateInfo()
-			.setStage(m_shader_info[SHADER_GENERATE_TRANSFAR_CPU])
+			.setStage(m_shader_info[SHADER_GENERATE_TRANSFAR_DEBUG])
 			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE]),
 		};
 		auto pipelines = loader->m_device->createComputePipelines(loader->m_cache, compute_pipeline_info);
 		m_pipeline[PIPELINE_UPDATE] = pipelines[0];
 		m_pipeline[PIPELINE_GENERATE] = pipelines[1];
-		m_pipeline[PIPELINE_CMD_TRANSFAR] = pipelines[2];
+		m_pipeline[PIPELINE_GENERATE_DEBUG] = pipelines[2];
 
 		vk::Extent3D size;
 		size.setWidth(640);

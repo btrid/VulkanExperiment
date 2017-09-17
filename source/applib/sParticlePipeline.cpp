@@ -119,8 +119,8 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Loader>& loader)
 		{
 			btr::BufferMemory::Descriptor desc;
 			desc.size = sizeof(glm::uvec3);
-			m_generate_cmd_counter = loader->m_storage_memory.allocateMemory(desc);
-			cmd->updateBuffer<glm::uvec3>(m_generate_cmd_counter.getBufferInfo().buffer, m_generate_cmd_counter.getBufferInfo().offset, glm::uvec3(0, 1, 1));
+			m_particle_generate_cmd_counter = loader->m_storage_memory.allocateMemory(desc);
+			cmd->updateBuffer<glm::uvec3>(m_particle_generate_cmd_counter.getBufferInfo().buffer, m_particle_generate_cmd_counter.getBufferInfo().offset, glm::uvec3(0, 1, 1));
 
 			m_particle_emitter_counter = loader->m_storage_memory.allocateMemory(desc);
 			cmd->updateBuffer<glm::uvec3>(m_particle_emitter_counter.getBufferInfo().buffer, m_particle_emitter_counter.getBufferInfo().offset, glm::uvec3(0, 1, 1));
@@ -152,7 +152,7 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Loader>& loader)
 		{
 			{ "ParticleUpdate.comp.spv", vk::ShaderStageFlagBits::eCompute },
 			{ "ParticleEmit.comp.spv", vk::ShaderStageFlagBits::eCompute },
-			{ "ParticleGenerateCPU.comp.spv", vk::ShaderStageFlagBits::eCompute },
+			{ "ParticleGenerateDebug.comp.spv", vk::ShaderStageFlagBits::eCompute },
 			{ "ParticleGenerate.comp.spv", vk::ShaderStageFlagBits::eCompute },
 			{ "ParticleRender.vert.spv", vk::ShaderStageFlagBits::eVertex },
 			{ "ParticleRender.frag.spv", vk::ShaderStageFlagBits::eFragment },
@@ -280,7 +280,7 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Loader>& loader)
 				m_particle_emitter.getBufferInfo(),
 				m_particle_emitter_counter.getBufferInfo(),
 				m_particle_generate_cmd.getBufferInfo(),
-				m_generate_cmd_counter.getBufferInfo(),
+				m_particle_generate_cmd_counter.getBufferInfo(),
 				m_particle_update_param.getBufferInfo(),
 			};
 			std::vector<vk::WriteDescriptorSet> write_desc =
@@ -312,13 +312,13 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Loader>& loader)
 			.setStage(m_shader_info[SHADER_GENERATE])
 			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get()),
 			vk::ComputePipelineCreateInfo()
-			.setStage(m_shader_info[SHADER_GENERATE_TRANSFAR_CPU])
+			.setStage(m_shader_info[SHADER_GENERATE_TRANSFAR_DEBUG])
 			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get()),
 		};
 		auto pipelines = loader->m_device->createComputePipelinesUnique(loader->m_cache.get(), compute_pipeline_info);
 		m_pipeline[PIPELINE_UPDATE] = std::move(pipelines[0]);
 		m_pipeline[PIPELINE_GENERATE] = std::move(pipelines[1]);
-		m_pipeline[PIPELINE_CMD_TRANSFAR] = std::move(pipelines[2]);
+		m_pipeline[PIPELINE_GENERATE_DEBUG] = std::move(pipelines[2]);
 
 		vk::Extent3D size;
 		size.setWidth(640);
@@ -399,6 +399,97 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Loader>& loader)
 			m_pipeline[PIPELINE_DRAW] = std::move(pipelines[0]);
 		}
 	}
+}
+
+vk::CommandBuffer sParticlePipeline::Private::execute(std::shared_ptr<btr::Executer>& executer)
+{
+	auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
+
+	struct UpdateConstantBlock
+	{
+		float m_deltatime;
+		uint m_double_buffer_dst_index;
+	};
+	UpdateConstantBlock constant;
+	constant.m_deltatime = sGlobal::Order().getDeltaTime();
+	constant.m_double_buffer_dst_index = sGlobal::Order().getCPUIndex();
+
+
+	// debug
+	static int a;
+	a++;
+	if (a == 100)
+	{
+		a = 0;
+		{
+			vk::BufferMemoryBarrier to_read = m_particle_generate_cmd_counter.makeMemoryBarrierEx();
+			to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+			to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
+		}
+
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_GENERATE_DEBUG].get());
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 0, m_descriptor_set[DESCRIPTOR_SET_PARTICLE].get(), {});
+		cmd.pushConstants<UpdateConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), vk::ShaderStageFlagBits::eCompute, 0, constant);
+		cmd.dispatch(1, 1, 1);
+	}
+
+	// generate particle
+	{
+		{
+			// 描画待ち
+			vk::BufferMemoryBarrier to_read = m_particle_counter.makeMemoryBarrierEx();
+			to_read.setSrcAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
+			to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eDrawIndirect, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
+		}
+		{
+			vk::BufferMemoryBarrier to_read = m_particle_generate_cmd.makeMemoryBarrierEx();
+			to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+			to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
+			vk::BufferMemoryBarrier to_read2 = m_particle_generate_cmd_counter.makeMemoryBarrierEx();
+			to_read2.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+			to_read2.setDstAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, {}, {}, to_read2, {});
+		}
+
+
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_GENERATE].get());
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 0, m_descriptor_set[DESCRIPTOR_SET_PARTICLE].get(), {});
+		cmd.pushConstants<UpdateConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), vk::ShaderStageFlagBits::eCompute, 0, constant);
+		cmd.dispatchIndirect(m_particle_generate_cmd_counter.getBufferInfo().buffer, m_particle_generate_cmd_counter.getBufferInfo().offset);
+	}
+	{
+		// パーティクル数初期化
+		vk::BufferMemoryBarrier to_transfer = m_particle_counter.makeMemoryBarrierEx();
+		to_transfer.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+		to_transfer.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
+
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
+
+		cmd.updateBuffer<vk::DrawIndirectCommand>(m_particle_counter.getBufferInfo().buffer, m_particle_counter.getBufferInfo().offset, vk::DrawIndirectCommand(4, 0, 0, 0));
+		cmd.updateBuffer<glm::uvec3>(m_particle_generate_cmd_counter.getBufferInfo().buffer, m_particle_generate_cmd_counter.getBufferInfo().offset, glm::uvec3(0, 1, 1));
+
+	}
+
+	// update
+	{
+		vk::BufferMemoryBarrier to_read = m_particle_counter.makeMemoryBarrierEx();
+		to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+		to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
+
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_UPDATE].get());
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 0, m_descriptor_set[DESCRIPTOR_SET_PARTICLE].get(), {});
+		constant.m_double_buffer_dst_index = sGlobal::Order().getGPUIndex();
+		cmd.pushConstants<UpdateConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), vk::ShaderStageFlagBits::eCompute, 0, constant);
+		auto groups = app::calcDipatchGroups(glm::uvec3(m_particle_info_cpu.m_particle_max_num, 1, 1), glm::uvec3(1024, 1, 1));
+		cmd.dispatch(groups.x, groups.y, groups.z);
+	}
+
+	cmd.end();
+	return cmd;
 }
 
 vk::CommandBuffer sParticlePipeline::Private::draw(std::shared_ptr<btr::Executer>& executer)

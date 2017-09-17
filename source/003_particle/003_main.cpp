@@ -98,7 +98,6 @@ int main()
 			{
 				auto* m_camera = cCamera::sCamera::Order().getCameraList()[0];
 				m_camera->control(app.m_window->getInput(), 0.016f);
-				sCameraManager::Order().execute();
 
 // 				DrawCommand dcmd;
 // 				dcmd.world = glm::scale(vec3(5.f));

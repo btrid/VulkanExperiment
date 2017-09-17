@@ -14,11 +14,13 @@
 #extension GL_ARB_shading_language_include : require
 #endif
 
-#define SETPOINT_CAMERA 1
 #include <Common.glsl>
 
 #define SETPOINT_PARTICLE 0
 #include </Particle.glsl>
+
+#define SETPOINT_CAMERA 1
+#include <Camera.glsl>
 
 layout(location=0) out gl_PerVertex{
 	vec4 gl_Position;
@@ -36,10 +38,11 @@ void main()
 {
 	ParticleData p = b_particle[gl_InstanceIndex + constant.m_offset];
 	vec3 v = vec3(gl_VertexIndex/2, gl_VertexIndex%2, 0.);
-	mat3 invView = inverse(mat3(uView));
+	mat3 invView = inverse(mat3(u_camera[0].u_view));
 	v = (invView*v).xyz;
 
 	vec4 pos = vec4(p.m_position.xyz + v, 1.0);
-	gl_Position = uProjection * uView * pos;
+	gl_Position = u_camera[0].u_projection * u_camera[0].u_view * pos;
 	VSOut.m_color = p.m_color;
+
 }

@@ -11,9 +11,6 @@
 #define SETPOINT_PARTICLE 0
 #include </Particle.glsl>
 
-#define SETPOINT_MAP 1
-#include </Map.glsl>
-
 layout (local_size_x = 1024, local_size_y = 1) in;
 
 layout(push_constant) uniform UpdateConstantBlock{

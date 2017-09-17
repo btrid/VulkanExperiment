@@ -80,9 +80,6 @@ struct sCameraManager : public Singleton<sCameraManager>
 
 	}
 
-	void execute()
-	{
-	}
 	void sync()
 	{
 		for (auto* c : cCamera::sCamera::Order().getCameraList())
