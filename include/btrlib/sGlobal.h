@@ -63,13 +63,6 @@ public:
 	enum
 	{
 		FRAME_MAX = 3,
-//		THREAD_NUM = std::thread::hardware_concurrency() - 1,
-	};
-	enum CmdPoolType
-	{
-		CMD_POOL_TYPE_ONETIME,	//!< 1フレームに一度poolがリセットされる 
-		CMD_POOL_TYPE_TEMPORARY,		//!< 数フレームに渡ってcmdが使われる。自分で管理する 
-		CMD_POOL_TYPE_COMPILED,		//!< cmdは自分で管理する
 	};
 protected:
 

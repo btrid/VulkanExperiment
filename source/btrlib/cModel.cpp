@@ -531,22 +531,6 @@ void cModel::load(btr::Loader* loader, const std::string& filename)
 
 	m_resource->m_model_info.mInvGlobalMatrix = glm::inverse(m_resource->mNodeRoot.getRootNode()->mTransformation);
 
-	cmd->end();
-
-	vk::CommandBuffer cmds[] = {
-		cmd.get(),
-	};
-	auto queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), device.getQueueNum(vk::QueueFlagBits::eGraphics)-1);
-	vk::SubmitInfo submit_info;
-	submit_info.commandBufferCount = array_length(cmds);
-	submit_info.pCommandBuffers = cmds;
-
-	vk::FenceCreateInfo fence_info;
-	vk::UniqueFence fence = device->createFenceUnique(fence_info);
-
-	queue.submit(submit_info, fence.get());
-	queue.waitIdle();
-	sDeleter::Order().enque(std::move(cmd), std::move(fence));
 
 	auto e = std::chrono::system_clock::now();
 	auto t = std::chrono::duration_cast<std::chrono::microseconds>(e - s);

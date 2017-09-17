@@ -135,7 +135,7 @@ int main()
 	auto executer = app.m_executer;
 
 	cModelPipeline model_pipeline;
-	cModelRender model_render;
+	std::shared_ptr<cModelRender> model_render = std::make_shared<cModelRender>();
 	cModel model;
 
 	Player m_player;
@@ -144,22 +144,20 @@ int main()
 	{
 		auto setup_cmd = loader->m_cmd_pool->allocCmdTempolary(0);
 
-		sCameraManager::Order().setup(loader);
-		DrawHelper::Order().setup(loader);
 		sScene::Order().setup(loader);
 
 		model.load(loader.get(), "..\\..\\resource\\tiny.x");
-		model_render.setup(loader, model.getResource());
+		model_render->setup(loader, model.getResource());
 		model_pipeline.setup(loader);
-		model_pipeline.addModel(executer, &model_render);
+		model_pipeline.addModel(executer, model_render);
 		{
 			PlayMotionDescriptor desc;
 			desc.m_data = model.getResource()->getAnimation().m_motion[0];
 			desc.m_play_no = 0;
 			desc.m_start_time = 0.f;
-			model_render.getMotionList().play(desc);
+			model_render->getMotionList().play(desc);
 
-			auto& transform = model_render.getModelTransform();
+			auto& transform = model_render->getModelTransform();
 			transform.m_local_scale = glm::vec3(0.002f);
 			transform.m_local_rotate = glm::quat(1.f, 0.f, 0.f, 0.f);
 			transform.m_local_translate = glm::vec3(0.f, 280.f, 0.f);
@@ -191,7 +189,7 @@ int main()
 			}
 			{
 				m_player.execute(executer);
-				model_render.getModelTransform().m_global = glm::translate(m_player.m_pos) * glm::toMat4(glm::quat(glm::vec3(0.f, 0.f, 1.f), m_player.m_dir));
+				model_render->getModelTransform().m_global = glm::translate(m_player.m_pos) * glm::toMat4(glm::quat(glm::vec3(0.f, 0.f, 1.f), m_player.m_dir));
 			}
 
 			SynchronizedPoint motion_worker_syncronized_point(1);
@@ -202,7 +200,7 @@ int main()
 				job.mFinish =
 					[&]()
 				{
-					model_render.work();
+					model_render->work();
 					motion_worker_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);

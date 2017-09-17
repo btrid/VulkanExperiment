@@ -24,6 +24,7 @@
 #include <btrlib/BufferMemory.h>
 #include <applib/cModelRender.h>
 #include <applib/cModelPipeline.h>
+#include <applib/App.h>
 
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
@@ -33,221 +34,17 @@
 int main()
 {
 	btr::setResourceAppPath("..\\..\\resource\\004_model\\");
-	sWindow& w = sWindow::Order();
-	vk::Instance instance = sGlobal::Order().getVKInstance();
-
-#if _DEBUG
-	cDebug debug(instance);
-#endif
-
-	cWindow window;
-	cWindow::CreateInfo windowInfo;
-	windowInfo.surface_format_request = vk::SurfaceFormatKHR{ vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear };
-	windowInfo.gpu = sGlobal::Order().getGPU(0);
-	windowInfo.size = vk::Extent2D(640, 480);
-	windowInfo.window_name = L"Vulkan Test";
-	windowInfo.class_name = L"VulkanMainWindow";
-
-	window.setup(windowInfo);
 
 
-	cGPU& gpu = sGlobal::Order().getGPU(0);
-	cDevice device = gpu.getDevice(vk::QueueFlagBits::eGraphics)[0];
+	auto gpu = sGlobal::Order().getGPU(0);
+	auto device = sGlobal::Order().getGPU(0).getDevice();
+
+	app::App app;
+	app.setup(gpu);
+
+	auto loader = app.m_loader;
+	auto executer = app.m_executer;
 	vk::Queue queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), 0);
-
-	// setup用コマンドバッファ
-	vk::CommandPool setup_cmd_pool;
-	vk::CommandPool cmd_pool;
-	{
-		vk::CommandPoolCreateInfo poolInfo = vk::CommandPoolCreateInfo()
-			.setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer)
-			.setQueueFamilyIndex(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
-
-		cmd_pool = device->createCommandPool(poolInfo);
-		setup_cmd_pool = device->createCommandPool(poolInfo);
-	}
-	std::vector<vk::ImageView> backbuffer_view(window.getSwapchain().getBackbufferNum());
-	vk::CommandBufferAllocateInfo setup_cmd_info;
-	setup_cmd_info.setCommandPool(setup_cmd_pool);
-	setup_cmd_info.setLevel(vk::CommandBufferLevel::ePrimary);
-	setup_cmd_info.setCommandBufferCount(1);
-	auto setup_cmd = device->allocateCommandBuffers(setup_cmd_info)[0];
-	vk::CommandBufferBeginInfo cmd_begin_info;
-	cmd_begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
-	setup_cmd.begin(cmd_begin_info);
-	{
-		for (uint32_t i = 0; i < window.getSwapchain().getBackbufferNum(); i++)
-		{
-			auto subresourceRange = vk::ImageSubresourceRange()
-				.setAspectMask(vk::ImageAspectFlagBits::eColor)
-				.setBaseArrayLayer(0)
-				.setLayerCount(1)
-				.setBaseMipLevel(0)
-				.setLevelCount(1);
-
-			// ばりあ
-			vk::ImageMemoryBarrier barrier = vk::ImageMemoryBarrier()
-				.setImage(window.getSwapchain().m_backbuffer_image[i])
-				.setSubresourceRange(subresourceRange)
-				.setDstAccessMask(vk::AccessFlagBits::eMemoryRead)
-				.setOldLayout(vk::ImageLayout::eUndefined)
-				.setNewLayout(vk::ImageLayout::ePresentSrcKHR)
-				.setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-				.setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-				;
-			setup_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::DependencyFlags(), 0, nullptr, 0, nullptr, 1, &barrier);
-
-			vk::ImageViewCreateInfo backbuffer_view_info;
-			backbuffer_view_info.setImage(window.getSwapchain().m_backbuffer_image[i]);
-			backbuffer_view_info.setFormat(window.getSwapchain().m_surface_format.format);
-			backbuffer_view_info.setViewType(vk::ImageViewType::e2D);
-			backbuffer_view_info.setComponents(vk::ComponentMapping{
-				vk::ComponentSwizzle::eR,
-				vk::ComponentSwizzle::eG,
-				vk::ComponentSwizzle::eB,
-				vk::ComponentSwizzle::eA,
-			});
-			backbuffer_view_info.setSubresourceRange(subresourceRange);
-			backbuffer_view[i] = device->createImageView(backbuffer_view_info);
-
-		}
-	}
-
-	vk::RenderPass render_pass;
-	// レンダーパス
-	{
-		// sub pass
-		std::vector<vk::AttachmentReference> colorRef =
-		{
-			vk::AttachmentReference()
-			.setAttachment(0)
-			.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
-		};
-		vk::AttachmentReference depth_ref;
-		depth_ref.setAttachment(1);
-		depth_ref.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-
-		vk::SubpassDescription subpass;
-		subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
-		subpass.setInputAttachmentCount(0);
-		subpass.setPInputAttachments(nullptr);
-		subpass.setColorAttachmentCount(colorRef.size());
-		subpass.setPColorAttachments(colorRef.data());
-		subpass.setPDepthStencilAttachment(&depth_ref);
-		// render pass
-		std::vector<vk::AttachmentDescription> attachDescription = {
-			// color1
-			vk::AttachmentDescription()
-			.setFormat(window.getSwapchain().m_surface_format.format)
-			.setSamples(vk::SampleCountFlagBits::e1)
-			.setLoadOp(vk::AttachmentLoadOp::eClear)
-			.setStoreOp(vk::AttachmentStoreOp::eStore)
-			.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
-			.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
-			vk::AttachmentDescription()
-			.setFormat(vk::Format::eD32Sfloat)
-			.setSamples(vk::SampleCountFlagBits::e1)
-			.setLoadOp(vk::AttachmentLoadOp::eClear)
-			.setStoreOp(vk::AttachmentStoreOp::eStore)
-			.setInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
-			.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
-
-		};
-		vk::RenderPassCreateInfo renderpass_info = vk::RenderPassCreateInfo()
-			.setAttachmentCount(attachDescription.size())
-			.setPAttachments(attachDescription.data())
-			.setSubpassCount(1)
-			.setPSubpasses(&subpass);
-
-		render_pass = device->createRenderPass(renderpass_info);
-	}
-
-	vk::Image depth_image;
-	vk::DeviceMemory depth_memory;
-	vk::ImageView depth_view;
-	{
-		// イメージ生成
-		vk::ImageCreateInfo depth_info;
-		depth_info.format = vk::Format::eD32Sfloat;
-		depth_info.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment;
-		depth_info.arrayLayers = 1;
-		depth_info.mipLevels = 1;
-		depth_info.extent.width = window.getClientSize().x;
-		depth_info.extent.height = window.getClientSize().y;
-		depth_info.extent.depth = 1;
-		depth_info.imageType = vk::ImageType::e2D;
-		depth_info.initialLayout = vk::ImageLayout::eUndefined;
-		depth_info.queueFamilyIndexCount = device.getQueueFamilyIndex().size();
-		depth_info.pQueueFamilyIndices = device.getQueueFamilyIndex().data();
-		depth_image = device->createImage(depth_info);
-
-		// メモリ確保
-		auto memory_request = device->getImageMemoryRequirements(depth_image);
-		uint32_t memory_index = cGPU::Helper::getMemoryTypeIndex(device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
-
-		vk::MemoryAllocateInfo memory_info;
-		memory_info.allocationSize = memory_request.size;
-		memory_info.memoryTypeIndex = memory_index;
-		depth_memory = device->allocateMemory(memory_info);
-
-		device->bindImageMemory(depth_image, depth_memory, 0);
-
-		vk::ImageViewCreateInfo depth_view_info;
-		depth_view_info.format = depth_info.format;
-		depth_view_info.image = depth_image;
-		depth_view_info.viewType = vk::ImageViewType::e2D;
-		depth_view_info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
-		depth_view_info.subresourceRange.baseArrayLayer = 0;
-		depth_view_info.subresourceRange.baseMipLevel = 0;
-		depth_view_info.subresourceRange.layerCount = 1;
-		depth_view_info.subresourceRange.levelCount = 1;
-		depth_view = device->createImageView(depth_view_info);
-
-		vk::ImageMemoryBarrier to_render_barrier;
-		to_render_barrier.setImage(depth_image);
-		to_render_barrier.setSubresourceRange(depth_view_info.subresourceRange);
-		to_render_barrier.setDstAccessMask(vk::AccessFlagBits::eDepthStencilAttachmentWrite);
-		to_render_barrier.setOldLayout(vk::ImageLayout::eUndefined);
-		to_render_barrier.setNewLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-		to_render_barrier.setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED);
-		to_render_barrier.setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED);
-
-		setup_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::DependencyFlags(), 0, nullptr, 0, nullptr, 1, &to_render_barrier);
-	}
-	std::vector<vk::Framebuffer> framebuffer(backbuffer_view.size());
-	{
-		std::vector<vk::ImageView> view(2);
-
-		vk::FramebufferCreateInfo framebuffer_info;
-		framebuffer_info.setRenderPass(render_pass);
-		framebuffer_info.setAttachmentCount(view.size());
-		framebuffer_info.setPAttachments(view.data());
-		framebuffer_info.setWidth(window.getClientSize().x);
-		framebuffer_info.setHeight(window.getClientSize().y);
-		framebuffer_info.setLayers(1);
-
-		for (size_t i = 0; i < backbuffer_view.size(); i++) {
-			view[0] = backbuffer_view[i];
-			view[1] = depth_view;
-			framebuffer[i] = device->createFramebuffer(framebuffer_info);
-		}
-	}
-	auto loader = std::make_shared<btr::Loader>();
-	loader->m_device = device;
-	auto host_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
-	vk::MemoryPropertyFlags device_memory = vk::MemoryPropertyFlagBits::eDeviceLocal;
-	//	device_memory = host_memory;
-	loader->m_vertex_memory.setup(device, vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 128 * 65536);
-	loader->m_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1024 * 1024 * 20);
-	loader->m_uniform_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 8192);
-	loader->m_staging_memory.setup(device, vk::BufferUsageFlagBits::eTransferSrc, host_memory, 1024 * 1024 * 20);
-	loader->m_cmd = setup_cmd;
-	loader->m_render_pass = render_pass;
-
-	loader->m_vertex_memory.setName("Model Vertex Memory");
-	loader->m_storage_memory.setName("Model Storage Memory");
-	loader->m_uniform_memory.setName("Model Uniform Memory");
-	loader->m_staging_memory.setName("Model Staging Memory");
 
 	auto task = std::make_shared<std::promise<std::unique_ptr<cModel>>>();
 	auto modelFuture = task->get_future();
@@ -256,7 +53,7 @@ int main()
 		auto load = [task, &loader]()
 		{
 			auto model = std::make_unique<cModel>();
-			model->load(loader.get(), btr::getResourceAppPath() + "tiny.x");
+			model->load(loader, btr::getResourceAppPath() + "tiny.x");
 			task->set_value(std::move(model));
 		};
 		job.mFinish = load;
@@ -272,7 +69,6 @@ int main()
 
 	cModelRender render;
 	render.setup(loader, model->getResource());
-	setup_cmd.end();
 
 	vk::SubmitInfo setup_submit_info;
 	setup_submit_info.setCommandBufferCount(1);

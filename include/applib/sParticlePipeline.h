@@ -166,10 +166,10 @@ struct sParticlePipeline : Singleton<sParticlePipeline>
 			if (a == 100)
 			{
 				a = 0;
-				std::vector<vk::BufferMemoryBarrier> to_read = {
-					m_generate_cmd_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
-				};
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eBottomOfPipe, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
+				vk::BufferMemoryBarrier to_read = m_generate_cmd_counter.makeMemoryBarrierEx();
+				to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+				to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
 
 				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_CMD_TRANSFAR].get());
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 0, m_descriptor_set[DESCRIPTOR_SET_PARTICLE].get(), {});
@@ -179,15 +179,9 @@ struct sParticlePipeline : Singleton<sParticlePipeline>
 
 			// generate particle
 			{
-				std::vector<vk::BufferMemoryBarrier> to_read = {
-					m_generate_cmd_counter.makeMemoryBarrier(vk::AccessFlagBits::eIndirectCommandRead),
-				};
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
-
-				std::vector<vk::BufferMemoryBarrier> to_read2 = {
-					m_particle_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
-				};
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eDrawIndirect, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read2, {});
+				vk::BufferMemoryBarrier to_read = m_particle_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+				to_read.setSrcAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eDrawIndirect, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
 
 				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_GENERATE].get());
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 0, m_descriptor_set[DESCRIPTOR_SET_PARTICLE].get(), {});
@@ -196,30 +190,23 @@ struct sParticlePipeline : Singleton<sParticlePipeline>
 			}
 			{
 				// パーティクル数初期化
-				std::vector<vk::BufferMemoryBarrier> to_transfer = { 
-					m_particle_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite),
-					m_generate_cmd_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite),
-				};
+				vk::BufferMemoryBarrier to_transfer = m_particle_counter.makeMemoryBarrierEx();
+				to_transfer.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+				to_transfer.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
+
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
 
 				cmd.updateBuffer<vk::DrawIndirectCommand>(m_particle_counter.getBufferInfo().buffer, m_particle_counter.getBufferInfo().offset, vk::DrawIndirectCommand(4, 0, 0, 0));
 				cmd.updateBuffer<glm::uvec3>(m_generate_cmd_counter.getBufferInfo().buffer, m_generate_cmd_counter.getBufferInfo().offset, glm::uvec3(0, 1, 1));
 
-				// updateのためbarrier
-				std::vector<vk::BufferMemoryBarrier> to_update_barrier = {
-					m_particle_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead| vk::AccessFlagBits::eTransferWrite),
-					m_generate_cmd_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferRead|vk::AccessFlagBits::eTransferWrite),
-				};
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_update_barrier }, {});
 			}
 
 			// update
 			{
-				std::vector<vk::BufferMemoryBarrier> to_read2 = {
-					m_particle.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite),
-					m_particle_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
-				};
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eBottomOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, {}, {}, to_read2, {});
+				vk::BufferMemoryBarrier to_read = m_particle_counter.makeMemoryBarrierEx();
+				to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+				to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
 
 				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_UPDATE].get());
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 0, m_descriptor_set[DESCRIPTOR_SET_PARTICLE].get(), {});
@@ -228,11 +215,6 @@ struct sParticlePipeline : Singleton<sParticlePipeline>
 				auto groups = app::calcDipatchGroups(glm::uvec3(m_particle_info_cpu.m_particle_max_num, 1, 1), glm::uvec3(1024, 1, 1));
 				cmd.dispatch(groups.x, groups.y, groups.z);
 			}
-
-			auto particle_barrier = m_particle.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eVertexShader, {}, {}, particle_barrier, {});
-			auto to_draw = m_particle_counter.makeMemoryBarrier(vk::AccessFlagBits::eIndirectCommandRead);
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, {}, {}, { to_draw }, {});
 
 			cmd.end();
 			return cmd;

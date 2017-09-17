@@ -75,11 +75,11 @@ vk::CommandPool cCmdPool::getCmdPool(cCmdPool::CmdPoolType type, int device_fami
 	auto& pool_per_family = m_per_thread[sThreadLocal::Order().getThreadIndex()].m_per_family[device_family_index];
 	switch (type)
 	{
-	case sGlobal::CMD_POOL_TYPE_ONETIME:
+	case CMD_POOL_TYPE_ONETIME:
 		return pool_per_family.m_cmd_pool_onetime[sGlobal::Order().getCurrentFrame()].get();
-	case sGlobal::CMD_POOL_TYPE_TEMPORARY:
+	case CMD_POOL_TYPE_TEMPORARY:
 		return pool_per_family.m_cmd_pool_temporary.get();
-	case sGlobal::CMD_POOL_TYPE_COMPILED:
+	case CMD_POOL_TYPE_COMPILED:
 	default:
 		return pool_per_family.m_cmd_pool_compiled.get();
 	}

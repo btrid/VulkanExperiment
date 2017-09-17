@@ -24,9 +24,10 @@
 #include <applib/App.h>
 #include <applib/cModelPipeline.h>
 #include <applib/cModelRender.h>
+#include <applib/DrawHelper.h>
+#include <applib/sCameraManager.h>
 #include <btrlib/Loader.h>
 
-#include <applib/sCameraManager.h>
 #include <applib/sParticlePipeline.h>
 
 #pragma comment(lib, "btrlib.lib")
@@ -34,38 +35,9 @@
 #pragma comment(lib, "FreeImage.lib")
 #pragma comment(lib, "vulkan-1.lib")
 
-glm::mat4 perspectiveReverseZ(float fov_y, float aspect, float z_near, float z_far)
-{
-	//	return glm::perspective(fov_y, aspect, z_near, z_far);
-	return glm::perspective(fov_y, aspect, z_far, z_near);
-
-	//glm::mat4 perspectiveInfReverseZ(float fov_y, float aspect, float z_near, float z_far)
-	// 	float f = 1.0f / tan(fov_y / 2.0f);
-	// #	if GLM_COORDINATE_SYSTEM == GLM_LEFT_HANDED
-	//	float hand = 1.f;
-	// #else
-	// 	float hand = -1.f;
-	// #endif
-	// 	return glm::mat4(
-	// 		f / aspect, 0.0f, 0.0f, 0.0f,
-	// 		0.f, f,   0.f,    0.f,
-	// 		0.f, 0.f, 0.f,    hand,
-	// 		0.f, 0.f, z_near, 0.0f);
-}
-
-float calcDepth(float v, float n, float f)
-{
-	return n * f / (v * (f - n) - f);
-}
-float calcReverseDepth(float v, float n, float f)
-{
-	return -calcDepth(v, f, n);
-}
-
 int main()
 {
 	btr::setResourceAppPath("..\\..\\resource\\003_particle\\");
-	app::App app;
 	auto* camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = glm::vec3(20.f, 10.f, 30.f);
 	camera->getData().m_target = glm::vec3(0.f, 0.f, 0.f);
@@ -75,215 +47,170 @@ int main()
 	camera->getData().m_far = 5000.f;
 	camera->getData().m_near = 0.01f;
 
+	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
-	std::vector<vk::CommandBuffer> render_cmds(sGlobal::FRAME_MAX);
-	for (int i = 0; i < render_cmds.size(); i++)
-	{
-		vk::CommandBufferAllocateInfo cmd_info = vk::CommandBufferAllocateInfo()
-			.setCommandPool(pool_list[i])
-			.setLevel(vk::CommandBufferLevel::ePrimary)
-			.setCommandBufferCount(1);
-		render_cmds[i] = device->allocateCommandBuffers(cmd_info)[0];
-	}
 
+	app::App app;
+	app.setup(gpu);
 
-	std::shared_ptr<btr::Loader> loader = std::make_shared<btr::Loader>();
-	loader->m_device = device;
-	vk::MemoryPropertyFlags host_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
-	vk::MemoryPropertyFlags device_memory = vk::MemoryPropertyFlagBits::eDeviceLocal;
-	device_memory = host_memory; // debug
-	loader->m_vertex_memory.setup(device, vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000*1000 * 100);
-	loader->m_uniform_memory.setup(device, vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 20);
-	loader->m_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 1000 * 200);
-	loader->m_staging_memory.setup(device, vk::BufferUsageFlagBits::eTransferSrc, host_memory, 1000 * 1000 * 100);
-	{
-		std::vector<vk::DescriptorPoolSize> pool_size(4);
-		pool_size[0].setType(vk::DescriptorType::eUniformBuffer);
-		pool_size[0].setDescriptorCount(10);
-		pool_size[1].setType(vk::DescriptorType::eStorageBuffer);
-		pool_size[1].setDescriptorCount(20);
-		pool_size[2].setType(vk::DescriptorType::eCombinedImageSampler);
-		pool_size[2].setDescriptorCount(10);
-		pool_size[3].setType(vk::DescriptorType::eStorageImage);
-		pool_size[3].setDescriptorCount(10);
-
-		vk::DescriptorPoolCreateInfo pool_info;
-		pool_info.setPoolSizeCount((uint32_t)pool_size.size());
-		pool_info.setPPoolSizes(pool_size.data());
-		pool_info.setMaxSets(20);
-		loader->m_descriptor_pool = device->createDescriptorPool(pool_info);
-
-		vk::PipelineCacheCreateInfo cacheInfo = vk::PipelineCacheCreateInfo();
-		loader->m_cache = device->createPipelineCacheUnique(cacheInfo);
-
-	}
-
-	auto executer = std::make_shared<btr::Executer>();
-	executer->m_device = device;
-	executer->m_vertex_memory	= loader->m_vertex_memory;
-	executer->m_uniform_memory	= loader->m_uniform_memory;
-	executer->m_storage_memory	= loader->m_storage_memory;
-	executer->m_staging_memory	= loader->m_staging_memory;
-	cThreadPool& pool = sGlobal::Order().getThreadPool();
-	executer->m_thread_pool = &pool;
-	executer->m_window = &app.m_window;
+	auto loader = app.m_loader;
+	auto executer = app.m_executer;
 
 	cModelPipeline model_pipeline;
-	cModelRender model_render;
+	std::shared_ptr<cModelRender> model_render = std::make_shared<cModelRender>();
 	cModel model;
 
 	{
-		vk::CommandBufferBeginInfo begin_info;
-		begin_info.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-		render_cmds[0].begin(begin_info);
-		loader->m_cmd = render_cmds[0];
-
-		sCameraManager::Order().setup(loader);
 		sParticlePipeline::Order().setup(loader);
 
 		model.load(loader.get(), "..\\..\\resource\\tiny.x");
-		model_render.setup(loader, model.getResource());
-		model_pipeline.setup(*loader);
-		model_pipeline.addModel(&model_render);
+		model_render->setup(loader, model.getResource());
+		model_pipeline.setup(loader);
+		model_pipeline.addModel(executer, model_render);
 		{
 			PlayMotionDescriptor desc;
 			desc.m_data = model.getResource()->getAnimation().m_motion[0];
 			desc.m_play_no = 0;
 			desc.m_start_time = 0.f;
-			model_render.getMotionList().play(desc);
+			model_render->getMotionList().play(desc);
 
-			auto& transform = model_render.getModelTransform();
+			auto& transform = model_render->getModelTransform();
 			transform.m_local_scale = glm::vec3(0.002f);
 			transform.m_local_rotate = glm::quat(1.f, 0.f, 0.f, 0.f);
 			transform.m_local_translate = glm::vec3(0.f, 280.f, 0.f);
 		}
-
-		render_cmds[0].end();
-		std::vector<vk::CommandBuffer> cmds = {
-			render_cmds[0],
-		};
-
-		vk::PipelineStageFlags waitPipeline = vk::PipelineStageFlagBits::eAllGraphics;
-		std::vector<vk::SubmitInfo> submitInfo =
-		{
-			vk::SubmitInfo()
-			.setCommandBufferCount((uint32_t)cmds.size())
-			.setPCommandBuffers(cmds.data())
-		};
-		queue.submit(submitInfo, vk::Fence());
-		queue.waitIdle();
-
 	}
 
-
+	vk::Queue queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), 0);
 	while (true)
 	{
 		cStopWatch time;
 
-		uint32_t backbuffer_index = app.m_window.getSwapchain().swap(swapbuffer_semaphore);
+		uint32_t backbuffer_index = app.m_window->getSwapchain().swap();
+
+		sDebug::Order().waitFence(device.getHandle(), app.m_window->getFence(backbuffer_index));
+		device->resetFences({ app.m_window->getFence(backbuffer_index) });
+		app.m_cmd_pool->resetPool(executer);
+
 		{
-			auto render_cmd = render_cmds[backbuffer_index];
-			{
-				sDebug::Order().waitFence(device.getHandle(), fence_list[backbuffer_index]);
-				device->resetFences({ fence_list[backbuffer_index] });
-				device->resetCommandPool(pool_list[backbuffer_index], vk::CommandPoolResetFlagBits::eReleaseResources);
 
-				// begin cmd
-				vk::CommandBufferBeginInfo begin_info;
-				begin_info.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-				render_cmd.begin(begin_info);
-
-				executer->m_cmd = render_cmd;
-
-			}
 
 			{
 				auto* m_camera = cCamera::sCamera::Order().getCameraList()[0];
-				m_camera->control(app.m_window.getInput(), 0.016f);
+				m_camera->control(app.m_window->getInput(), 0.016f);
+				sCameraManager::Order().execute();
 
-				sCameraManager::Order().execute(executer);
-				sParticlePipeline::Order().execute(executer);
-
+// 				DrawCommand dcmd;
+// 				dcmd.world = glm::scale(vec3(5.f));
+// 				DrawHelper::Order().drawOrder(DrawHelper::SPHERE, dcmd);
+				model_render->getModelTransform().m_global = glm::mat4(1.f);
 			}
 
+			SynchronizedPoint render_syncronized_point(2);
+			SynchronizedPoint loader_syncronized_point(1);
+			std::vector<vk::CommandBuffer> render_cmds(7);
+			SynchronizedPoint motion_worker_syncronized_point(1);
+			{
+				cThreadJob job;
+				job.mFinish =
+					[&]()
+				{
+					model_render->work();
+					motion_worker_syncronized_point.arrive();
+				};
+				sGlobal::Order().getThreadPool().enque(job);
+			}
 
-			vk::ImageMemoryBarrier present_to_render_barrier;
-			present_to_render_barrier.setSrcAccessMask(vk::AccessFlagBits::eMemoryRead);
-			present_to_render_barrier.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
-			present_to_render_barrier.setOldLayout(vk::ImageLayout::ePresentSrcKHR);
-			present_to_render_barrier.setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
-			present_to_render_barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-			present_to_render_barrier.setImage(app.m_window.getSwapchain().m_backbuffer_image[backbuffer_index]);
-
-			render_cmd.pipelineBarrier(
-				vk::PipelineStageFlagBits::eTransfer,
-				vk::PipelineStageFlagBits::eFragmentShader,
-				vk::DependencyFlags(),
-				nullptr, nullptr, present_to_render_barrier);
-
-			model_render.execute(executer);
-			model_pipeline.execute(render_cmd);
-
-			// begin cmd render pass
-			std::vector<vk::ClearValue> clearValue = {
-				vk::ClearValue().setColor(vk::ClearColorValue(std::array<float, 4>{0.3f, 0.3f, 0.8f, 1.f})),
-				vk::ClearValue().setDepthStencil(vk::ClearDepthStencilValue(1.f)),
-			};
-			vk::RenderPassBeginInfo begin_render_Info = vk::RenderPassBeginInfo()
-				.setRenderPass(app.m_render_pass)
-				.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(app.m_window.getClientSize().x, app.m_window.getClientSize().y)))
-				.setClearValueCount(clearValue.size())
-				.setPClearValues(clearValue.data())
-				.setFramebuffer(app.m_framebuffer[backbuffer_index]);
-			render_cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 			// draw
-			model_pipeline.draw(render_cmd);
-			sParticlePipeline::Order().draw(render_cmd);
-			render_cmd.endRenderPass();
+			{
+				cThreadJob job;
+				job.mJob.emplace_back(
+					[&]()
+				{
+					executer->m_cmd_pool->submit(executer);
+					loader_syncronized_point.arrive();
+				}
+				);
+				sGlobal::Order().getThreadPool().enque(job);
+			}
 
-			vk::ImageMemoryBarrier render_to_present_barrier;
-			render_to_present_barrier.setSrcAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
-			render_to_present_barrier.setDstAccessMask(vk::AccessFlagBits::eMemoryRead);
-			render_to_present_barrier.setOldLayout(vk::ImageLayout::eColorAttachmentOptimal);
-			render_to_present_barrier.setNewLayout(vk::ImageLayout::ePresentSrcKHR);
-			render_to_present_barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-			render_to_present_barrier.setImage(app.m_window.getSwapchain().m_backbuffer_image[backbuffer_index]);
-			render_cmd.pipelineBarrier(
-				vk::PipelineStageFlagBits::eFragmentShader,
-				vk::PipelineStageFlagBits::eTransfer,
-				vk::DependencyFlags(),
-				nullptr, nullptr, render_to_present_barrier);
+			{
+				cThreadJob job;
+				job.mJob.emplace_back(
+					[&]()
+				{
+					render_cmds[3] = model_pipeline.draw(executer);
+					render_syncronized_point.arrive();
+				}
+				);
+				sGlobal::Order().getThreadPool().enque(job);
+			}
 
-			render_cmd.end();
-			std::vector<vk::CommandBuffer> cmds = {
-				render_cmd,
+			{
+				cThreadJob job;
+				job.mJob.emplace_back(
+					[&]()
+				{
+					render_cmds[4] = sParticlePipeline::Order().execute(executer);
+					render_cmds[5] = sParticlePipeline::Order().draw(executer);
+					render_cmds[1] = sCameraManager::Order().draw(executer);
+					render_cmds[2] = DrawHelper::Order().draw(executer);
+					render_syncronized_point.arrive();
+				}
+				);
+				sGlobal::Order().getThreadPool().enque(job);
+			}
+
+			render_cmds.front() = app.m_window->getSwapchain().m_cmd_present_to_render[backbuffer_index];
+			render_cmds.back() = app.m_window->getSwapchain().m_cmd_render_to_present[backbuffer_index];
+
+			render_syncronized_point.wait();
+			loader_syncronized_point.wait();
+			motion_worker_syncronized_point.wait();
+
+			vk::Semaphore swap_wait_semas[] = {
+				app.m_window->getSwapchain().m_swapbuffer_semaphore.get(),
+			};
+			vk::Semaphore submit_wait_semas[] = {
+				app.m_window->getSwapchain().m_submit_semaphore.get(),
 			};
 
-			vk::PipelineStageFlags waitPipeline = vk::PipelineStageFlagBits::eAllGraphics;
+			vk::PipelineStageFlags wait_pipelines[] = {
+				vk::PipelineStageFlagBits::eAllGraphics,
+			};
 			std::vector<vk::SubmitInfo> submitInfo =
 			{
 				vk::SubmitInfo()
-				.setCommandBufferCount((uint32_t)cmds.size())
-				.setPCommandBuffers(cmds.data())
-				.setWaitSemaphoreCount(1)
-				.setPWaitSemaphores(&swapbuffer_semaphore)
-				.setPWaitDstStageMask(&waitPipeline)
-				.setSignalSemaphoreCount(1)
-				.setPSignalSemaphores(&cmdsubmit_semaphore)
+				.setCommandBufferCount((uint32_t)render_cmds.size())
+				.setPCommandBuffers(render_cmds.data())
+				.setWaitSemaphoreCount(array_length(swap_wait_semas))
+				.setPWaitSemaphores(swap_wait_semas)
+				.setPWaitDstStageMask(wait_pipelines)
+				.setSignalSemaphoreCount(array_length(submit_wait_semas))
+				.setPSignalSemaphores(submit_wait_semas)
 			};
-			queue.submit(submitInfo, fence_list[backbuffer_index]);
+			queue.submit(submitInfo, app.m_window->getFence(backbuffer_index));
 			queue.waitIdle();
+			vk::SwapchainKHR swapchains[] = {
+				app.m_window->getSwapchain().m_swapchain_handle.get(),
+			};
+			uint32_t backbuffer_indexs[] = {
+				app.m_window->getSwapchain().m_backbuffer_index,
+			};
 			vk::PresentInfoKHR present_info = vk::PresentInfoKHR()
-				.setWaitSemaphoreCount(1)
-				.setPWaitSemaphores(&cmdsubmit_semaphore)
-				.setSwapchainCount(1)
-				.setPSwapchains(&app.m_window.getSwapchain().m_swapchain_handle)
-				.setPImageIndices(&backbuffer_index);
+				.setWaitSemaphoreCount(array_length(submit_wait_semas))
+				.setPWaitSemaphores(submit_wait_semas)
+				.setSwapchainCount(array_length(swapchains))
+				.setPSwapchains(swapchains)
+				.setPImageIndices(backbuffer_indexs);
 			queue.presentKHR(present_info);
+
 		}
 
-		app.m_window.update(sGlobal::Order().getThreadPool());
+		app.m_window->update();
 		sGlobal::Order().swap();
+		sCameraManager::Order().sync();
+		sDeleter::Order().swap();
 		printf("%6.3fs\n", time.getElapsedTimeAsSeconds());
 	}
 

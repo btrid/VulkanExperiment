@@ -3,6 +3,10 @@
 #include <btrlib/cDebug.h>
 #include <btrlib/Loader.h>
 
+#include <applib/DrawHelper.h>
+#include <applib/sCameraManager.h>
+
+
 // #pragma comment(lib, "btrlib.lib")
 // #pragma comment(lib, "vulkan-1.lib")
 
@@ -58,7 +62,7 @@ void App::setup(const cGPU& gpu)
 			m_loader->m_descriptor_pool = device->createDescriptorPoolUnique(pool_info);
 
 			vk::PipelineCacheCreateInfo cacheInfo = vk::PipelineCacheCreateInfo();
-			m_loader->m_cache.get() = device->createPipelineCache(cacheInfo);
+			m_loader->m_cache = device->createPipelineCacheUnique(cacheInfo);
 
 		}
 
@@ -85,6 +89,9 @@ void App::setup(const cGPU& gpu)
 	m_executer->m_staging_memory = m_loader->m_staging_memory;
 	m_executer->m_cmd_pool = m_cmd_pool;
 	m_executer->m_window = m_window;
+
+	sCameraManager::Order().setup(m_loader);
+	DrawHelper::Order().setup(m_loader);
 
 }
 

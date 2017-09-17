@@ -405,6 +405,11 @@ vk::CommandBuffer sParticlePipeline::Private::draw(std::shared_ptr<btr::Executer
 {
 	auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
 
+	auto to_draw = m_particle_counter.makeMemoryBarrierEx();
+	to_draw.setSrcAccessMask(vk::AccessFlagBits::eShaderRead| vk::AccessFlagBits::eShaderWrite);
+	to_draw.setDstAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
+	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, {}, {}, { to_draw }, {});
+
 	vk::RenderPassBeginInfo begin_render_Info;
 	begin_render_Info.setRenderPass(m_render_pass.get());
 	begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), executer->m_window->getClientSize<vk::Extent2D>()));

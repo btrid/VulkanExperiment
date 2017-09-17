@@ -11,8 +11,7 @@ void cModelRenderPrivate::setup(std::shared_ptr<btr::Executer>& executer, cModel
 
 	// setup draw
 	{
-		auto& gpu = sGlobal::Order().getGPU(0);
-		auto& device = gpu.getDevice();
+		auto& device = executer->m_device;
 
 		{
 			vk::DescriptorSetLayout layouts[] = 

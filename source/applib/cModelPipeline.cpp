@@ -9,8 +9,7 @@
 
 void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 {
-	auto& gpu = sGlobal::Order().getGPU(0);
-	auto& device = gpu.getDevice();
+	auto& device = loader->m_device;
 
 	// レンダーパス
 	{
@@ -342,7 +341,7 @@ void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 	}
 }
 
-void cModelPipeline::addModel(std::shared_ptr<btr::Executer>& executer, cModelRender* model)
+void cModelPipeline::addModel(std::shared_ptr<btr::Executer>& executer, const std::shared_ptr<cModelRender>& model)
 {
 	m_model.emplace_back(model);
 	m_model.back()->getPrivate()->setup(executer, *this);

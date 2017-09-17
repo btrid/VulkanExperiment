@@ -47,9 +47,9 @@ struct cModelPipeline
 	vk::UniqueDescriptorSet m_descriptor_set_scene;
 	btr::AllocatedMemory m_bone_buffer;
 
-	std::vector<cModelRender*> m_model;
+	std::vector<std::shared_ptr<cModelRender>> m_model;
 	void setup(std::shared_ptr<btr::Loader>& loader);
-	void addModel(std::shared_ptr<btr::Executer>& executer, cModelRender* model);
+	void addModel(std::shared_ptr<btr::Executer>& executer, const std::shared_ptr<cModelRender>& model);
 
 	vk::CommandBuffer draw(std::shared_ptr<btr::Executer>& executer);
 

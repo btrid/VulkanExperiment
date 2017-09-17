@@ -259,6 +259,13 @@ public:
 		m_memory_barrier.dstAccessMask = barrier;
 		return m_memory_barrier;
 	}
+	vk::BufferMemoryBarrier makeMemoryBarrierEx() {
+		vk::BufferMemoryBarrier barrier;
+		barrier.buffer = m_buffer_info.buffer;
+		barrier.size = m_buffer_info.range;
+		barrier.offset = m_buffer_info.offset;
+		return barrier;
+	}
 };
 struct BufferMemory
 {
