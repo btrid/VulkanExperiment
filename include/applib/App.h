@@ -15,9 +15,10 @@ struct App
 	std::shared_ptr<cCmdPool> m_cmd_pool;
 	std::shared_ptr<cWindow> m_window;
 	std::shared_ptr<btr::Loader> m_loader;
+	std::shared_ptr<btr::Executer> m_executer;
 
 	App();
-	void setup(std::shared_ptr<btr::Loader>& loader);
+	void setup(const cGPU& gpu);
 };
 
 

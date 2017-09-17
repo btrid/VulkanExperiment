@@ -163,7 +163,7 @@ int main()
 	}
 
 	app::App app;
-	app.setup(loader);
+	app.setup(gpu);
 	auto executer = std::make_shared<btr::Executer>();
 	executer->m_gpu = gpu;
 	executer->m_device = device;

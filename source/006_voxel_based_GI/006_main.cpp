@@ -41,13 +41,6 @@
 
 int main()
 {
-	vec3 albedo = vec3(1.4f, 0.2f, 0.7f);
-	uint packd_albedo = uint(albedo.r * 64) << 23 | uint(albedo.g * 64) << 14 | uint(albedo.b * 64) << 5 | 1;
-	float packd_albedo_r = ((packd_albedo >> 23)&((1 << 9) - 1)) / 64.f;
-	float packd_albedo_g = ((packd_albedo >> 14)&((1 << 9) - 1)) / 64.f;
-	float packd_albedo_b = ((packd_albedo >> 5)&((1 << 9) - 1)) / 64.f;
-	uint count = (packd_albedo)&((1 << 5) - 1);
-
 	btr::setResourceAppPath("..\\..\\resource\\006_voxel_based_GI\\");
 	auto* camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = glm::vec3(0.f, 0.f, 1200.f);
@@ -61,57 +54,12 @@ int main()
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
 
-	vk::Queue queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), 0);
-
-	std::shared_ptr<btr::Loader> loader = std::make_shared<btr::Loader>();
-	auto executer = std::make_shared<btr::Executer>();
-	{
-		loader->m_gpu = gpu;
-		loader->m_device = device;
-
-		vk::MemoryPropertyFlags host_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
-		vk::MemoryPropertyFlags device_memory = vk::MemoryPropertyFlagBits::eDeviceLocal;
-		//	device_memory = host_memory; // debug
-		loader->m_vertex_memory.setup(device, vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 1000 * 100);
-		loader->m_uniform_memory.setup(device, vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 20);
-		loader->m_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 1000 * 200);
-		loader->m_staging_memory.setup(device, vk::BufferUsageFlagBits::eTransferSrc, host_memory, 1000 * 1000 * 100);
-
-		std::vector<vk::DescriptorPoolSize> pool_size(4);
-		pool_size[0].setType(vk::DescriptorType::eUniformBuffer);
-		pool_size[0].setDescriptorCount(10);
-		pool_size[1].setType(vk::DescriptorType::eStorageBuffer);
-		pool_size[1].setDescriptorCount(20);
-		pool_size[2].setType(vk::DescriptorType::eCombinedImageSampler);
-		pool_size[2].setDescriptorCount(10);
-		pool_size[3].setType(vk::DescriptorType::eStorageImage);
-		pool_size[3].setDescriptorCount(10);
-
-		vk::DescriptorPoolCreateInfo pool_info;
-		pool_info.setPoolSizeCount((uint32_t)pool_size.size());
-		pool_info.setPPoolSizes(pool_size.data());
-		pool_info.setMaxSets(20);
-		loader->m_descriptor_pool = device->createDescriptorPoolUnique(pool_info);
-
-		vk::PipelineCacheCreateInfo cacheInfo = vk::PipelineCacheCreateInfo();
-		loader->m_cache = device->createPipelineCacheUnique(cacheInfo);
-	}
-	{
-		executer->m_gpu = gpu;
-		executer->m_device = device;
-		executer->m_vertex_memory = loader->m_vertex_memory;
-		executer->m_uniform_memory = loader->m_uniform_memory;
-		executer->m_storage_memory = loader->m_storage_memory;
-		executer->m_staging_memory = loader->m_staging_memory;
-	}
-
 	app::App app;
-	app.setup(loader);
+	app.setup(gpu);
 
-	executer->m_window = app.m_window;
-	loader->m_window = app.m_window;
-	loader->m_cmd_pool = app.m_cmd_pool;
-	executer->m_cmd_pool = app.m_cmd_pool;
+	auto loader = app.m_loader;
+	auto executer = app.m_executer;
+
 	VoxelPipeline voxelize;
 	{
 		auto setup_cmd = loader->m_cmd_pool->allocCmdTempolary(0);
@@ -141,6 +89,7 @@ int main()
 
 	}
 
+	vk::Queue queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), 0);
 
 	while (true)
 	{

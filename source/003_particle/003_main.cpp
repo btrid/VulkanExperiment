@@ -27,7 +27,7 @@
 #include <btrlib/Loader.h>
 
 #include <applib/sCameraManager.h>
-#include <003_particle/sParticlePipeline.h>
+#include <applib/sParticlePipeline.h>
 
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
@@ -67,16 +67,15 @@ int main()
 	btr::setResourceAppPath("..\\..\\resource\\003_particle\\");
 	app::App app;
 	auto* camera = cCamera::sCamera::Order().create();
-	camera->m_position = glm::vec3(20.f, 10.f, 30.f);
-	camera->m_target = glm::vec3(0.f, 0.f, 0.f);
-	camera->m_up = glm::vec3(0.f, -1.f, 0.f);
-	camera->m_width = 640;
-	camera->m_height = 480;
-	camera->m_far = 5000.f;
-	camera->m_near = 0.01f;
+	camera->getData().m_position = glm::vec3(20.f, 10.f, 30.f);
+	camera->getData().m_target = glm::vec3(0.f, 0.f, 0.f);
+	camera->getData().m_up = glm::vec3(0.f, -1.f, 0.f);
+	camera->getData().m_width = 640;
+	camera->getData().m_height = 480;
+	camera->getData().m_far = 5000.f;
+	camera->getData().m_near = 0.01f;
 
-	auto device = sThreadLocal::Order().m_device[0];
-	auto pool_list = sThreadLocal::Order().getCmdPoolOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
+	auto device = sGlobal::Order().getGPU(0).getDevice();
 	std::vector<vk::CommandBuffer> render_cmds(sGlobal::FRAME_MAX);
 	for (int i = 0; i < render_cmds.size(); i++)
 	{
@@ -88,22 +87,8 @@ int main()
 	}
 
 
-	vk::FenceCreateInfo fence_info;
-	fence_info.setFlags(vk::FenceCreateFlagBits::eSignaled);
-	std::vector<vk::Fence> fence_list;
-	fence_list.emplace_back(device->createFence(fence_info));
-	fence_list.emplace_back(device->createFence(fence_info));
-	fence_list.emplace_back(device->createFence(fence_info));
-
-	vk::SemaphoreCreateInfo semaphoreInfo = vk::SemaphoreCreateInfo();
-	vk::Semaphore swapbuffer_semaphore = device->createSemaphore(semaphoreInfo);
-	vk::Semaphore cmdsubmit_semaphore = device->createSemaphore(semaphoreInfo);
-	vk::Queue queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), 0);
-
-
 	std::shared_ptr<btr::Loader> loader = std::make_shared<btr::Loader>();
 	loader->m_device = device;
-	loader->m_render_pass = app.m_render_pass;
 	vk::MemoryPropertyFlags host_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
 	vk::MemoryPropertyFlags device_memory = vk::MemoryPropertyFlagBits::eDeviceLocal;
 	device_memory = host_memory; // debug

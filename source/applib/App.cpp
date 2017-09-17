@@ -15,17 +15,54 @@ App::App()
 
 }
 
-void App::setup(std::shared_ptr<btr::Loader>& loader)
+void App::setup(const cGPU& gpu)
 {
-	sWindow& w = sWindow::Order();
 	vk::Instance instance = sGlobal::Order().getVKInstance();
 
 #if _DEBUG
 	static cDebug debug(instance);
 #endif
-	m_gpu = sGlobal::Order().getGPU(0);
+
+	m_gpu = gpu;
+	auto device = sGlobal::Order().getGPU(0).getDevice();
 	m_cmd_pool = cCmdPool::MakeCmdPool(m_gpu);
-	loader->m_cmd_pool = m_cmd_pool;
+
+	m_loader = std::make_shared<btr::Loader>();
+	{
+		m_loader->m_gpu = gpu;
+		m_loader->m_device = device;
+		m_loader->m_cmd_pool = m_cmd_pool;
+
+		vk::MemoryPropertyFlags host_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
+		vk::MemoryPropertyFlags device_memory = vk::MemoryPropertyFlagBits::eDeviceLocal;
+		//	device_memory = host_memory; // debug
+		m_loader->m_vertex_memory.setup(device, vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 1000 * 100);
+		m_loader->m_uniform_memory.setup(device, vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 20);
+		m_loader->m_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 1000 * 200);
+		m_loader->m_staging_memory.setup(device, vk::BufferUsageFlagBits::eTransferSrc, host_memory, 1000 * 1000 * 100);
+		{
+			std::vector<vk::DescriptorPoolSize> pool_size(4);
+			pool_size[0].setType(vk::DescriptorType::eUniformBuffer);
+			pool_size[0].setDescriptorCount(10);
+			pool_size[1].setType(vk::DescriptorType::eStorageBuffer);
+			pool_size[1].setDescriptorCount(20);
+			pool_size[2].setType(vk::DescriptorType::eCombinedImageSampler);
+			pool_size[2].setDescriptorCount(10);
+			pool_size[3].setType(vk::DescriptorType::eStorageImage);
+			pool_size[3].setDescriptorCount(10);
+
+			vk::DescriptorPoolCreateInfo pool_info;
+			pool_info.setPoolSizeCount((uint32_t)pool_size.size());
+			pool_info.setPPoolSizes(pool_size.data());
+			pool_info.setMaxSets(20);
+			m_loader->m_descriptor_pool = device->createDescriptorPoolUnique(pool_info);
+
+			vk::PipelineCacheCreateInfo cacheInfo = vk::PipelineCacheCreateInfo();
+			m_loader->m_cache.get() = device->createPipelineCache(cacheInfo);
+
+		}
+
+	}
 
 	cWindow::CreateInfo windowInfo;
 	windowInfo.surface_format_request = vk::SurfaceFormatKHR{ vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear };
@@ -35,43 +72,19 @@ void App::setup(std::shared_ptr<btr::Loader>& loader)
 	windowInfo.class_name = L"VulkanMainWindow";
 
 	m_window = std::make_shared<cWindow>();
-	m_window->setup(loader, windowInfo);
+	m_window->setup(m_loader, windowInfo);
 
-	return;
-
-	// –¢ŽÀ‘•
-	m_loader = std::make_shared<btr::Loader>();
 	m_loader->m_window = m_window;
-	auto device = sGlobal::Order().getGPU(0).getDevice();
-	m_loader->m_device = device;
-	vk::MemoryPropertyFlags host_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
-	vk::MemoryPropertyFlags device_memory = vk::MemoryPropertyFlagBits::eDeviceLocal;
-	//	device_memory = host_memory; // debug
-	m_loader->m_vertex_memory.setup(device, vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 1000 * 100);
-	m_loader->m_uniform_memory.setup(device, vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 20);
-	m_loader->m_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 1000 * 200);
-	m_loader->m_staging_memory.setup(device, vk::BufferUsageFlagBits::eTransferSrc, host_memory, 1000 * 1000 * 100);
-	{
-		std::vector<vk::DescriptorPoolSize> pool_size(4);
-		pool_size[0].setType(vk::DescriptorType::eUniformBuffer);
-		pool_size[0].setDescriptorCount(10);
-		pool_size[1].setType(vk::DescriptorType::eStorageBuffer);
-		pool_size[1].setDescriptorCount(20);
-		pool_size[2].setType(vk::DescriptorType::eCombinedImageSampler);
-		pool_size[2].setDescriptorCount(10);
-		pool_size[3].setType(vk::DescriptorType::eStorageImage);
-		pool_size[3].setDescriptorCount(10);
 
-		vk::DescriptorPoolCreateInfo pool_info;
-		pool_info.setPoolSizeCount((uint32_t)pool_size.size());
-		pool_info.setPPoolSizes(pool_size.data());
-		pool_info.setMaxSets(20);
-		m_loader->m_descriptor_pool = device->createDescriptorPoolUnique(pool_info);
-
-		vk::PipelineCacheCreateInfo cacheInfo = vk::PipelineCacheCreateInfo();
-		m_loader->m_cache.get() = device->createPipelineCache(cacheInfo);
-
-	}
+	m_executer = std::make_shared<btr::Executer>();
+	m_executer->m_gpu = gpu;
+	m_executer->m_device = device;
+	m_executer->m_vertex_memory = m_loader->m_vertex_memory;
+	m_executer->m_uniform_memory = m_loader->m_uniform_memory;
+	m_executer->m_storage_memory = m_loader->m_storage_memory;
+	m_executer->m_staging_memory = m_loader->m_staging_memory;
+	m_executer->m_cmd_pool = m_cmd_pool;
+	m_executer->m_window = m_window;
 
 }
 
