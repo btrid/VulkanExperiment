@@ -114,7 +114,7 @@ int main()
 	executer->m_cmd_pool = app.m_cmd_pool;
 	VoxelPipeline voxelize;
 	{
-		auto setup_cmd = loader->m_cmd_pool->allocCmdOnetime(0);
+		auto setup_cmd = loader->m_cmd_pool->allocCmdTempolary(0);
 		sCameraManager::Order().setup(loader);
 		DrawHelper::Order().setup(loader);
 		voxelize.setup(loader);
@@ -136,23 +136,8 @@ int main()
 			model.m_material[0].albedo = glm::vec4(1.f, 0.f, 0.f, 1.f);
 			model.m_material[0].emission = glm::vec4(0.f, 0.f, 1.f, 1.f);
 
-			voxelize.addModel(executer, setup_cmd, model);
+			voxelize.addModel(executer, setup_cmd.get(), model);
 		}
-
-		setup_cmd.end();
-		std::vector<vk::CommandBuffer> cmds = {
-			setup_cmd,
-		};
-
-		vk::PipelineStageFlags waitPipeline = vk::PipelineStageFlagBits::eAllGraphics;
-		std::vector<vk::SubmitInfo> submitInfo =
-		{
-			vk::SubmitInfo()
-			.setCommandBufferCount((uint32_t)cmds.size())
-			.setPCommandBuffers(cmds.data())
-		};
-		queue.submit(submitInfo, vk::Fence());
-		queue.waitIdle();
 
 	}
 
