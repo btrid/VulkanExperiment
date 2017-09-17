@@ -49,7 +49,7 @@ struct cModelPipeline
 
 	std::vector<cModelRender*> m_model;
 	void setup(std::shared_ptr<btr::Loader>& loader);
-	void addModel(cModelRender* model);
+	void addModel(std::shared_ptr<btr::Executer>& executer, cModelRender* model);
 
 	vk::CommandBuffer draw(std::shared_ptr<btr::Executer>& executer);
 

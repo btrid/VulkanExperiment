@@ -78,32 +78,7 @@ sGlobal::sGlobal()
 	cb.setPfnInternalFree(btr::InternalFreeNotification);
 
 	auto device = m_gpu[0].getDevice();
-	m_thread_local.resize(std::thread::hardware_concurrency());
-	for (auto& per_thread : m_thread_local)
-	{
-		per_thread.m_cmd_pool.resize(device.getQueueFamilyIndex().size());
-		for (size_t family = 0; family < per_thread.m_cmd_pool.size(); family++)
-		{
-			auto& per_family = per_thread.m_cmd_pool[family];
-			vk::CommandPoolCreateInfo cmd_pool_onetime;
-			cmd_pool_onetime.queueFamilyIndex = (uint32_t)family;
-			cmd_pool_onetime.flags = vk::CommandPoolCreateFlagBits::eTransient;
-			for (auto& pool_per_frame : per_family.m_cmd_pool_onetime)
-			{
-				pool_per_frame = device->createCommandPoolUnique(cmd_pool_onetime, cb);
-			}
 
-			vk::CommandPoolCreateInfo cmd_pool_compiled;
-			cmd_pool_compiled.queueFamilyIndex = (uint32_t)family;
-			cmd_pool_compiled.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
-			per_family.m_cmd_pool_compiled = device->createCommandPoolUnique(cmd_pool_onetime, cb);
-
-			vk::CommandPoolCreateInfo cmd_pool_temporary;
-			cmd_pool_temporary.queueFamilyIndex = (uint32_t)family;
-			cmd_pool_temporary.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer | vk::CommandPoolCreateFlagBits::eTransient;
-			per_family.m_cmd_pool_temporary = device->createCommandPoolUnique(cmd_pool_onetime, cb);
-		}
-	}
 	m_thread_pool.start(std::thread::hardware_concurrency()-1, init_thread_data_func);
 }
 
@@ -119,10 +94,6 @@ void sGlobal::swap()
 	m_deltatime = glm::min(m_deltatime, 0.02f);
 }
 
-sGlobal::sGlobal::cThreadData& sGlobal::getThreadLocal()
-{
-	return m_thread_local[sThreadLocal::Order().getThreadIndex()];
-}
 
 vk::UniqueShaderModule loadShaderUnique(const vk::Device& device, const std::string& filename)
 {
@@ -209,19 +180,4 @@ std::unique_ptr<Descriptor> createDescriptor(vk::Device device, vk::DescriptorPo
 	alloc_info.pSetLayouts = descriptor->m_descriptor_set_layout.data();
 	descriptor->m_descriptor_set = device.allocateDescriptorSets(alloc_info);
 	return std::move(descriptor);
-}
-
-vk::CommandPool sThreadLocal::getCmdPool(sGlobal::CmdPoolType type, int device_family_index) const
-{
-	auto& pool_per_family = sGlobal::Order().getThreadLocal().m_cmd_pool[device_family_index];
-	switch (type)
-	{
-	case sGlobal::CMD_POOL_TYPE_ONETIME:
-		return pool_per_family.m_cmd_pool_onetime[sGlobal::Order().getCurrentFrame()].get();
-	case sGlobal::CMD_POOL_TYPE_TEMPORARY:
-		return pool_per_family.m_cmd_pool_temporary.get();
-	case sGlobal::CMD_POOL_TYPE_COMPILED:
-	default:
-		return pool_per_family.m_cmd_pool_compiled.get();
-	}
 }

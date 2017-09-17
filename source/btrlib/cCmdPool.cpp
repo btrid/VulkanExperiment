@@ -91,10 +91,10 @@ void cCmdPool::resetPool(std::shared_ptr<btr::Executer>& executer)
 	{
 		for (auto& pool_family : tls.m_per_family)
 		{
-			if (!pool_family.m_cmd_onetime_deleter[sGlobal::Order().getCurrentFrame()].empty())
+			if (!pool_family.m_cmd_onetime_deleter[executer->getGPUFrame()].empty())
 			{
-				executer->m_gpu.getDevice()->resetCommandPool(pool_family.m_cmd_pool_onetime[sGlobal::Order().getCurrentFrame()].get(), vk::CommandPoolResetFlagBits::eReleaseResources);
-				pool_family.m_cmd_onetime_deleter[sGlobal::Order().getCurrentFrame()].clear();
+				executer->m_gpu.getDevice()->resetCommandPool(pool_family.m_cmd_pool_onetime[executer->getGPUFrame()].get(), vk::CommandPoolResetFlagBits::eReleaseResources);
+				pool_family.m_cmd_onetime_deleter[executer->getGPUFrame()].clear();
 
 			}
 		}
@@ -177,7 +177,7 @@ vk::CommandBuffer cCmdPool::allocCmdOnetime(int device_family_index)
 	cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
 	auto cmd_unique = std::move(sGlobal::Order().getGPU(0).getDevice()->allocateCommandBuffersUnique(cmd_buffer_info)[0]);
 	auto cmd = cmd_unique.get();
-	m_per_thread[sThreadLocal::Order().getThreadIndex()].m_per_family[device_family_index].m_cmd_onetime_deleter[sGlobal::Order().getGPUIndex()].push_back(std::move(cmd_unique));
+	m_per_thread[sThreadLocal::Order().getThreadIndex()].m_per_family[device_family_index].m_cmd_onetime_deleter[sGlobal::Order().getGPUFrame()].push_back(std::move(cmd_unique));
 
 	vk::CommandBufferBeginInfo begin_info;
 	begin_info.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);

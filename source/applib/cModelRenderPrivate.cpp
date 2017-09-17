@@ -6,7 +6,7 @@
 cModelRenderPrivate::cModelRenderPrivate() = default;
 cModelRenderPrivate::~cModelRenderPrivate() = default;
 
-void cModelRenderPrivate::setup(cModelPipeline& pipeline)
+void cModelRenderPrivate::setup(std::shared_ptr<btr::Executer>& executer, cModelPipeline& pipeline)
 {
 
 	// setup draw
@@ -75,7 +75,7 @@ void cModelRenderPrivate::setup(cModelPipeline& pipeline)
 	{
 		vk::CommandBufferAllocateInfo cmd_buffer_info;
 		cmd_buffer_info.commandBufferCount = sGlobal::FRAME_MAX;
-		cmd_buffer_info.commandPool = sThreadLocal::Order().getCmdPool(sGlobal::CMD_POOL_TYPE_COMPILED, 0);
+		cmd_buffer_info.commandPool = executer->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
 		cmd_buffer_info.level = vk::CommandBufferLevel::eSecondary;
 
 		m_transfer_cmd = sGlobal::Order().getGPU(0).getDevice()->allocateCommandBuffersUnique(cmd_buffer_info);
@@ -105,7 +105,7 @@ void cModelRenderPrivate::setup(cModelPipeline& pipeline)
 	{
 		vk::CommandBufferAllocateInfo cmd_buffer_info;
 		cmd_buffer_info.commandBufferCount = sGlobal::FRAME_MAX;
-		cmd_buffer_info.commandPool = sThreadLocal::Order().getCmdPool(sGlobal::CMD_POOL_TYPE_COMPILED, 0);
+		cmd_buffer_info.commandPool = executer->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
 		cmd_buffer_info.level = vk::CommandBufferLevel::eSecondary;
 		m_graphics_cmd = sGlobal::Order().getGPU(0).getDevice()->allocateCommandBuffersUnique(cmd_buffer_info);
 
@@ -130,9 +130,7 @@ void cModelRenderPrivate::setup(cModelPipeline& pipeline)
 			cmd.bindIndexBuffer(m_model_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().buffer, m_model_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().offset, m_model_resource->m_mesh_resource.mIndexType);
 			for (auto& m : m_model_resource->m_mesh)
 			{
-//				cmd.pushConstants<uint32_t>(pipeline.m_pipeline_layout[cModelPipeline::PIPELINE_LAYOUT_RENDER].get(), vk::ShaderStageFlagBits::eFragment, 64, m.m_material_index);
 				cmd.drawIndexedIndirect(m_model_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().buffer, m_model_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().offset, m_model_resource->m_mesh_resource.mIndirectCount, sizeof(cModel::Mesh));
-//				cmd.drawIndexedIndirect(m_model_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().buffer, m_model_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().offset + sizeof(cModel::Mesh)*i, 1, sizeof(cModel::Mesh));
 			}
 			cmd.end();
 		}

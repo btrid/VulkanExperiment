@@ -184,7 +184,7 @@ int main()
 	m_player.m_pos.x = 223.f;
 	m_player.m_pos.z = 183.f;
 	{
-		auto setup_cmd = loader->m_cmd_pool->allocCmdOnetime(0);
+		auto setup_cmd = loader->m_cmd_pool->allocCmdTempolary(0);
 
 		sCameraManager::Order().setup(loader);
 		DrawHelper::Order().setup(loader);
@@ -193,7 +193,7 @@ int main()
 		model.load(loader.get(), "..\\..\\resource\\tiny.x");
 		model_render.setup(loader, model.getResource());
 		model_pipeline.setup(loader);
-		model_pipeline.addModel(&model_render);
+		model_pipeline.addModel(executer, &model_render);
 		{
 			PlayMotionDescriptor desc;
 			desc.m_data = model.getResource()->getAnimation().m_motion[0];
@@ -210,20 +210,6 @@ int main()
  		sBoid::Order().setup(loader);
 		sBulletSystem::Order().setup(loader);
  		sCollisionSystem::Order().setup(loader);
-		setup_cmd.end();
-		std::vector<vk::CommandBuffer> cmds = {
-			setup_cmd,
-		};
-
-		vk::PipelineStageFlags waitPipeline = vk::PipelineStageFlagBits::eAllGraphics;
-		std::vector<vk::SubmitInfo> submitInfo =
-		{
-			vk::SubmitInfo()
-			.setCommandBufferCount((uint32_t)cmds.size())
-			.setPCommandBuffers(cmds.data())
-		};
-		queue.submit(submitInfo, vk::Fence());
-		queue.waitIdle();
 
 	}
 
@@ -237,13 +223,7 @@ int main()
 		sDebug::Order().waitFence(device.getHandle(), app.m_window->getFence(backbuffer_index));
 		device->resetFences({ app.m_window->getFence(backbuffer_index) });
 
-		for (auto& tls : sGlobal::Order().getThreadLocalList())
-		{
-			for (auto& pool_family : tls.m_cmd_pool)
-			{
-				device->resetCommandPool(pool_family.m_cmd_pool_onetime[executer->getGPUFrame()].get(), vk::CommandPoolResetFlagBits::eReleaseResources);
-			}
-		}
+		app.m_cmd_pool->resetPool(executer);
 
 		{
 
@@ -257,6 +237,8 @@ int main()
 			}
 
 			SynchronizedPoint motion_worker_syncronized_point(1);
+			SynchronizedPoint render_syncronized_point(6);
+			SynchronizedPoint loader_syncronized_point(1);
 			{
 				cThreadJob job;
 				job.mFinish =
@@ -268,7 +250,6 @@ int main()
 				sGlobal::Order().getThreadPool().enque(job);
 			}
 
-			SynchronizedPoint render_syncronized_point(6);
 			std::vector<vk::CommandBuffer> render_cmds(10);
 			{
 				cThreadJob job;
@@ -331,6 +312,17 @@ int main()
 				};
 				sGlobal::Order().getThreadPool().enque(job);
 			}
+			{
+				cThreadJob job;
+				job.mJob.emplace_back(
+					[&]()
+				{
+					executer->m_cmd_pool->submit(executer);
+					loader_syncronized_point.arrive();
+				}
+				);
+				sGlobal::Order().getThreadPool().enque(job);
+			}
 
 			// draw
 			render_cmds.front() = app.m_window->getSwapchain().m_cmd_present_to_render[backbuffer_index];
@@ -340,6 +332,7 @@ int main()
 
 			motion_worker_syncronized_point.wait();
 			render_syncronized_point.wait();
+			loader_syncronized_point.wait();
 
 			vk::Semaphore swap_wait_semas[] = {
 				app.m_window->getSwapchain().m_swapbuffer_semaphore.get(),

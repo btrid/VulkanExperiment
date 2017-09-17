@@ -60,7 +60,7 @@ private:
 
 		}
 
-		void setup(const CreateInfo& descriptor, vk::SurfaceKHR surface);
+		void setup(std::shared_ptr<btr::Loader>& loader, const CreateInfo& descriptor, vk::SurfaceKHR surface);
 		uint32_t swap();
 		size_t getBackbufferNum()const { return m_backbuffer.size(); }
 	};

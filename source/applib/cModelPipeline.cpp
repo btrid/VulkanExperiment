@@ -342,10 +342,10 @@ void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 	}
 }
 
-void cModelPipeline::addModel(cModelRender* model)
+void cModelPipeline::addModel(std::shared_ptr<btr::Executer>& executer, cModelRender* model)
 {
 	m_model.emplace_back(model);
-	m_model.back()->getPrivate()->setup(*this);
+	m_model.back()->getPrivate()->setup(executer, *this);
 }
 
 vk::CommandBuffer cModelPipeline::draw(std::shared_ptr<btr::Executer>& executer)

@@ -170,7 +170,7 @@ struct cModelRenderPrivate
 		}
 	}
 
-	void setup(cModelPipeline& renderer);
+	void setup(std::shared_ptr<btr::Executer>& executer, cModelPipeline& renderer);
 	void execute(std::shared_ptr<btr::Executer>& executer, vk::CommandBuffer& cmd);
 	void draw(std::shared_ptr<btr::Executer>& executer, vk::CommandBuffer& cmd);
 

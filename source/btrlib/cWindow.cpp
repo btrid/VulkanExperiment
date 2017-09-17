@@ -22,7 +22,7 @@ std::vector<uint32_t> getSupportSurfaceQueue(vk::PhysicalDevice gpu, vk::Surface
 
 }
 
-void cWindow::Swapchain::setup(const CreateInfo& descriptor, vk::SurfaceKHR surface)
+void cWindow::Swapchain::setup(std::shared_ptr<btr::Loader>& loader, const CreateInfo& descriptor, vk::SurfaceKHR surface)
 {
 	std::vector<vk::PresentModeKHR> presentModeList = descriptor.gpu->getSurfacePresentModesKHR(surface);
 
@@ -148,7 +148,7 @@ void cWindow::Swapchain::setup(const CreateInfo& descriptor, vk::SurfaceKHR surf
 	{
 		{
 			vk::CommandBufferAllocateInfo cmd_buffer_info;
-			cmd_buffer_info.commandPool = sThreadLocal::Order().getCmdPool(sGlobal::CMD_POOL_TYPE_COMPILED, 0);
+			cmd_buffer_info.commandPool = loader->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
 			cmd_buffer_info.commandBufferCount = sGlobal::FRAME_MAX;
 			cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
 			m_cmd_present_to_render = m_use_device->allocateCommandBuffers(cmd_buffer_info);
@@ -290,7 +290,7 @@ void cWindow::setup(std::shared_ptr<btr::Loader>& loader, const CreateInfo& desc
 		.setHwnd(m_private->m_window);
 	m_surface = sGlobal::Order().getVKInstance().createWin32SurfaceKHRUnique(surfaceInfo);
 
-	m_swapchain.setup(descriptor, m_surface.get());
+	m_swapchain.setup(loader, descriptor, m_surface.get());
 
 	vk::FenceCreateInfo fence_info;
 	fence_info.setFlags(vk::FenceCreateFlagBits::eSignaled);

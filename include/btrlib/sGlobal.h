@@ -107,23 +107,9 @@ private:
 
 	cThreadPool m_thread_pool;
 
-	struct cThreadData
-	{
-		struct CmdPoolPerFamily
-		{
-			std::array<vk::UniqueCommandPool, sGlobal::FRAME_MAX> m_cmd_pool_onetime;
-			vk::UniqueCommandPool	m_cmd_pool_temporary;
-			vk::UniqueCommandPool	m_cmd_pool_compiled;
-		};
-		std::vector<CmdPoolPerFamily>	m_cmd_pool;
-	};
-	std::vector<cThreadData> m_thread_local;
-
 	cStopWatch m_timer;
 	float m_deltatime;
 public:
-	cThreadData& getThreadLocal();
-	std::vector<cThreadData>& getThreadLocalList() { return m_thread_local; }
 
 	float getDeltaTime()const { return m_deltatime; }
 };
@@ -133,8 +119,6 @@ struct sThreadLocal : public SingletonTLS<sThreadLocal>
 	friend SingletonTLS<sThreadLocal>;
 	uint32_t m_thread_index;
 	uint32_t getThreadIndex()const { return m_thread_index; }
-
-	vk::CommandPool getCmdPool(sGlobal::CmdPoolType type, int device_family_index)const;
 
 };
 

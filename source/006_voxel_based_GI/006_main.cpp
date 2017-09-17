@@ -64,17 +64,19 @@ int main()
 	vk::Queue queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), 0);
 
 	std::shared_ptr<btr::Loader> loader = std::make_shared<btr::Loader>();
-	loader->m_gpu = gpu;
-	loader->m_device = device;
-
-	vk::MemoryPropertyFlags host_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
-	vk::MemoryPropertyFlags device_memory = vk::MemoryPropertyFlagBits::eDeviceLocal;
-	//	device_memory = host_memory; // debug
-	loader->m_vertex_memory.setup(device, vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 1000 * 100);
-	loader->m_uniform_memory.setup(device, vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 20);
-	loader->m_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 1000 * 200);
-	loader->m_staging_memory.setup(device, vk::BufferUsageFlagBits::eTransferSrc, host_memory, 1000 * 1000 * 100);
+	auto executer = std::make_shared<btr::Executer>();
 	{
+		loader->m_gpu = gpu;
+		loader->m_device = device;
+
+		vk::MemoryPropertyFlags host_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
+		vk::MemoryPropertyFlags device_memory = vk::MemoryPropertyFlagBits::eDeviceLocal;
+		//	device_memory = host_memory; // debug
+		loader->m_vertex_memory.setup(device, vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 1000 * 100);
+		loader->m_uniform_memory.setup(device, vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 20);
+		loader->m_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 1000 * 200);
+		loader->m_staging_memory.setup(device, vk::BufferUsageFlagBits::eTransferSrc, host_memory, 1000 * 1000 * 100);
+
 		std::vector<vk::DescriptorPoolSize> pool_size(4);
 		pool_size[0].setType(vk::DescriptorType::eUniformBuffer);
 		pool_size[0].setDescriptorCount(10);
@@ -93,19 +95,19 @@ int main()
 
 		vk::PipelineCacheCreateInfo cacheInfo = vk::PipelineCacheCreateInfo();
 		loader->m_cache = device->createPipelineCacheUnique(cacheInfo);
-
+	}
+	{
+		executer->m_gpu = gpu;
+		executer->m_device = device;
+		executer->m_vertex_memory = loader->m_vertex_memory;
+		executer->m_uniform_memory = loader->m_uniform_memory;
+		executer->m_storage_memory = loader->m_storage_memory;
+		executer->m_staging_memory = loader->m_staging_memory;
 	}
 
 	app::App app;
 	app.setup(loader);
 
-	auto executer = std::make_shared<btr::Executer>();
-	executer->m_gpu = gpu;
-	executer->m_device = device;
-	executer->m_vertex_memory = loader->m_vertex_memory;
-	executer->m_uniform_memory = loader->m_uniform_memory;
-	executer->m_storage_memory = loader->m_storage_memory;
-	executer->m_staging_memory = loader->m_staging_memory;
 	executer->m_window = app.m_window;
 	loader->m_window = app.m_window;
 	loader->m_cmd_pool = app.m_cmd_pool;
@@ -130,7 +132,6 @@ int main()
 			}
 			model.m_mesh[0].index = i;
 			model.m_mesh[0].m_material_index = 0;
-
 
 			model.m_material[0].albedo = glm::vec4(1.f, 0.f, 0.f, 1.f);
 			model.m_material[0].emission = glm::vec4(0.f, 0.f, 1.f, 1.f);
