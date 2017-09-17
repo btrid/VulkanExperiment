@@ -67,38 +67,21 @@ vec3 rotate(vec4 q, vec3 v)
 	return v + uv + uuv;
 }
 
-mat4 ortho(float l, float r, float b, float t, float n, float f)
+mat4 orthoLH01(float l, float r, float b, float t, float n, float f)
 {
-	mat4 o = mat4(1.);
-	o[0][0] = 2. / (r - l);
-	o[1][1] = 2. / (t - b);
-	o[2][2] = -2. / (f - n);
-	o[3][0] = - (r + l) / (r - l);
-	o[3][1] = - (t + b) / (t - b);
-	o[3][2] = - (f + n) / (f - n);
-	return o;
-}
-mat4 orthoVec(in vec3 min, in vec3 max)
-{
-	return ortho(min.x, max.x, min.y, max.y, min.z, max.z);
-}
+	mat4 Result = mat4(1.);
+	Result[0][0] = 2. / (r - l);
+	Result[1][1] = 2. / (t - b);
+	Result[3][0] = - (r + l) / (r - l);
+	Result[3][1] = - (t + b) / (t - b);
 
-mat4 perspectiveFovRH(in float fov, in float width, in float height, in float zNear, in float zFar)
-{
-	float rad = fov;
-	float h = cos(0.5 * rad) / sin(0.5 * rad);
-	float w = h * height / width; ///todo max(width , Height) / min(width , Height)?
+	Result[2][2] = 1. / (f - n);
+	Result[3][2] = - n / (f - n);
 
-	mat4  Result = mat4(0);
-	Result[0][0] = w;
-	Result[1][1] = h;
-	Result[2][2] = - (zFar + zNear) / (zFar - zNear);
-	Result[2][3] = - 1.;
-	Result[3][2] = - (2. * zFar * zNear) / (zFar - zNear);
 	return Result;
 }
 
-mat4 lookat(vec3 eye, vec3 target, vec3 up)
+mat4 lookatLH(vec3 eye, vec3 target, vec3 up)
 {
 	vec3 f = normalize(target - eye);
 	vec3 s = normalize(cross(f, up)); 
@@ -116,7 +99,7 @@ mat4 lookat(vec3 eye, vec3 target, vec3 up)
 	view[2][2] =-f.z;
 	view[3][0] =-dot(s, eye);
 	view[3][1] =-dot(u, eye);
-	view[3][2] = dot(f, eye);
+	view[3][2] =-dot(f, eye);
 
 	return view;
 
@@ -150,24 +133,23 @@ void main()
 
 	vec3 areaMin = u_voxel_info.u_area_min.xyz;
 	vec3 areaMax = u_voxel_info.u_area_max.xyz;
-	vec3 size = (areaMax - areaMin);
-	vec3 center = size/2. + areaMin;
+	vec3 areaSize = (areaMax - areaMin);
+	vec3 center = areaSize/2. + areaMin;
 	vec3 eye = center;
 	vec3 up = vec3(0., 1., 0.);
 	mat4 projection;
 
-
 	//保守的ラスタライズ
 	//glEnable(GL_CONSERVATIVE_RASTERIZATION_NV);があれば不要らしい
 	vec3 _min, _max;
-	ToCellAABB(In[0].Position, In[1].Position, In[2].Position, size/u_voxel_info.u_cell_size.xyz, _min, _max);
+	ToCellAABB(In[0].Position, In[1].Position, In[2].Position, u_voxel_info.u_cell_size.xyz, _min, _max);
 	vec4 tMin = vec4(_min, 0.);
 	vec4 tMax = vec4(_max, 0.);
 	vec3 p[4];
 
 	if(abs(x) > abs(y) && abs(x) > abs(z)){
 		eye.x = areaMin.x;
-		projection = ortho(areaMin.z, areaMax.z, areaMin.y, areaMax.y, 0, size.x);
+		projection = orthoLH01(areaMin.z, areaMax.z, areaMin.y, areaMax.y, 0, areaSize.x);
 
 		p[0] = tMin.xyz + tMax.www;
 		p[1] = tMin.xyw + tMax.wwz;
@@ -179,7 +161,7 @@ void main()
 	{
 		eye.y = areaMax.y;
 		up = normalize(vec3(0., 0., 1.));
-		projection = ortho(areaMin.x, areaMax.x, areaMin.z, areaMax.z, 0, size.y);
+		projection = orthoLH01(areaMin.x, areaMax.x, areaMin.z, areaMax.z, 0, areaSize.y);
 
 		p[0] = tMin.xyz + tMax.www;
 		p[1] = tMin.xyw + tMax.wwz;
@@ -190,7 +172,7 @@ void main()
 	else
 	{
 		eye.z = areaMin.z;
-		projection = ortho(areaMin.x, areaMax.x, areaMin.y, areaMax.y, 0, size.z);
+		projection = orthoLH01(areaMin.x, areaMax.x, areaMin.y, areaMax.y, 0, areaSize.z);
 
 		p[0] = tMin.xww + tMax.wyz;
 		p[1] = tMin.xyz + tMax.www;
@@ -198,7 +180,7 @@ void main()
 		p[3] = tMin.wyz + tMax.xww;
 		gl_ViewportIndex = 2;
 	}
-	mat4 view = lookat(eye, center, up);
+	mat4 view = lookatLH(eye, center, up);
 
 	gl_Position = projection * view * vec4(p[0], 1.);
 	transform.Position = p[0];

@@ -132,7 +132,7 @@ int main()
 			model.m_mesh[0].m_material_index = 0;
 
 
-			model.m_material[0].albedo = glm::vec4(0.f, 0.f, 1.f, 1.f);
+			model.m_material[0].albedo = glm::vec4(1.f, 0.f, 0.f, 1.f);
 			model.m_material[0].emission = glm::vec4(0.f, 0.f, 1.f, 1.f);
 
 			voxelize.addModel(executer, setup_cmd, model);
