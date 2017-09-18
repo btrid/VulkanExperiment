@@ -190,7 +190,7 @@ void cModelInstancingPipeline::setup(std::shared_ptr<btr::Loader>& loader, cMode
 	{
 		vk::DescriptorSetLayoutBinding()
 		.setStageFlags(vk::ShaderStageFlagBits::eFragment)
-		.setDescriptorCount(1)
+		.setDescriptorCount(16)
 		.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
 		.setBinding(0),
 	};
@@ -312,9 +312,9 @@ void cModelInstancingPipeline::setup(std::shared_ptr<btr::Loader>& loader, cMode
 		.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_COMPUTE].get()),
 	};
 
-	for (size_t i = 0; i < compute_pipeline_info.size(); i++) {
-		auto p = device->createComputePipelinesUnique(loader->m_cache.get(), { compute_pipeline_info[i] });
-		m_pipeline.insert(m_pipeline.end(), std::make_move_iterator(p.begin()), std::make_move_iterator(p.end()));
+	auto p = device->createComputePipelinesUnique(loader->m_cache.get(), compute_pipeline_info);
+	for (size_t i = 0; i < p.size(); i++) {
+		m_pipeline[i] = std::move(p[i]);
 	}
 
 	vk::Extent3D size;

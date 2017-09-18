@@ -1,0 +1,45 @@
+#version 430
+
+#pragma optionNV (unroll all)
+//#pragma optionNV (unroll all)
+#pragma optionNV (inline all)
+//#pragma optionNV(fastmath on)
+//#pragma optionNV(fastprecision on)
+//#pragma optionNV(ifcvt all)
+//#pragma optionNV(strict on)
+
+//#extension GL_ARB_shading_language_include : require
+#extension GL_GOOGLE_cpp_style_line_directive : require
+#include </Math.glsl>
+
+#define USE_MODEL_INFO_SET 0
+#define USE_ANIMATION_INFO_SET 1
+#include </MultiModel.glsl>
+
+layout (local_size_x = 1024, local_size_y = 1) in;
+
+
+//shared mat4 global_mat[128];
+void main() 
+{
+	ModelInfo model_info = u_model_info;
+	if( int(gl_GlobalInvocationID.x) >= u_model_instancing_info.instanceAliveNum * model_info.nodeNum) { return ;} 
+	int root_index = int(gl_GlobalInvocationID.x) / model_info.nodeNum * model_info.nodeNum;
+	int model_index = int(gl_GlobalInvocationID.x) / model_info.nodeNum;
+	int node_index = int(gl_GlobalInvocationID.x) % model_info.nodeNum;
+
+	if(node_index == 0)
+	{
+		nodeGlobalTransforms[root_index] = worlds[model_index] * nodeLocalTransforms[root_index];
+	}
+	memoryBarrier();
+	for(int i=1; i < model_info.node_depth_max; i++)
+	{
+		if(nodes[node_index].depth == i)
+		{
+			mat4 g = nodeGlobalTransforms[root_index + nodes[node_index].parent] * nodeLocalTransforms[root_index + node_index];
+			nodeGlobalTransforms[root_index+node_index] = g;
+			memoryBarrier();
+		}
+	}
+}

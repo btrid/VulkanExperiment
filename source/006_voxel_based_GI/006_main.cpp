@@ -96,7 +96,6 @@ int main()
 		cStopWatch time;
 
 		uint32_t backbuffer_index = app.m_window->getSwapchain().swap();
-
 		sDebug::Order().waitFence(device.getHandle(), app.m_window->getFence(backbuffer_index));
 		device->resetFences({ app.m_window->getFence(backbuffer_index)});
 		app.m_cmd_pool->resetPool(executer);
@@ -196,10 +195,7 @@ int main()
 				.setPImageIndices(backbuffer_indexs);
 			queue.presentKHR(present_info);
 		}
-		app.m_window->update();
-		sGlobal::Order().swap();
-		sCameraManager::Order().sync();
-		sDeleter::Order().swap();
+		app.postUpdate();
 		printf("%6.3fs\n", time.getElapsedTimeAsSeconds());
 	}
 

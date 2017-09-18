@@ -1,0 +1,44 @@
+#version 450
+
+#pragma optionNV (unroll all)
+#pragma optionNV (inline all)
+
+
+//#extension GL_ARB_shading_language_include : require
+#extension GL_GOOGLE_cpp_style_line_directive : require
+
+#include </CameraCulling.glsl>
+
+#define USE_MODEL_INFO_SET 0
+#define USE_ANIMATION_INFO_SET 1
+#include </MultiModel.glsl>
+
+layout (local_size_x = 1024, local_size_y = 1) in;
+
+void main()
+{
+	ModelInstancingInfo model_instancing_info = u_model_instancing_info;
+	if(gl_GlobalInvocationID.x >= model_instancing_info.instanceAliveNum){ return; }
+	uint srcIndex = gl_GlobalInvocationID.x;
+
+	ModelInfo model_info = u_model_info;
+	// カリングされるなら何もしない
+/*	vec4 aabb = worlds[srcIndex] * vec4(model_info.AABB.xyz, 1.);
+	aabb.w = model_info.AABB.w;
+	Frustom f = uFrustom;
+	if(isCulling(f, aabb)) 
+	{ 
+		return;
+	} 
+*/
+	// instanceのincrement
+
+	// @Todo メッシュ単位のカリング
+	uint index = atomicAdd(u_model_instancing_info.instanceNum, 1);
+	boneMap[index] = srcIndex;
+	for(int i=0; i<model_info.mesh_num; i++) {
+		atomicAdd(meshs[i].instanceCount, 1);
+	}
+
+
+}

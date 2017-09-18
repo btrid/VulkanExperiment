@@ -1,0 +1,26 @@
+#version 450
+
+#pragma optionNV (unroll all)
+#pragma optionNV (inline all)
+
+//#extension GL_ARB_shading_language_include : require
+#extension GL_GOOGLE_cpp_style_line_directive : require
+
+#define USE_MODEL_INFO_SET 0
+#define USE_ANIMATION_INFO_SET 1
+#include </MultiModel.glsl>
+
+layout (local_size_x = 1024, local_size_y = 1) in;
+
+
+void main() 
+{
+	uint index = gl_GlobalInvocationID.x;
+	if(index >= u_model_instancing_info.instanceAliveNum){ return; }
+
+	PlayingAnimation pm = playingMotion[index];
+
+	playingMotion[index].time += 60. + float(index)*0.01;
+//	playingMotion[index].time += 0.016 + float(index)*0.00001;
+}
+

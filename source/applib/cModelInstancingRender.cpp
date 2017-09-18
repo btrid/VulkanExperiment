@@ -5,7 +5,7 @@
 /**
 *	モーションのデータを一枚の1DArrayに格納
 */
-MotionTexture create(btr::Loader* loader, vk::CommandBuffer cmd, const cMotion& motion, const RootNode& root)
+MotionTexture create(std::shared_ptr<btr::Loader>& loader, vk::CommandBuffer cmd, const cMotion& motion, const RootNode& root)
 {
 	uint32_t SIZE = 256;
 
@@ -129,31 +129,29 @@ MotionTexture create(btr::Loader* loader, vk::CommandBuffer cmd, const cMotion& 
 	copy.imageSubresource.layerCount = image_info.arrayLayers;
 	copy.imageSubresource.mipLevel = 0;
 
-	vk::ImageMemoryBarrier to_copy_barrier;
-	to_copy_barrier.dstQueueFamilyIndex = loader->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
-	to_copy_barrier.image = image.get();
-	to_copy_barrier.oldLayout = vk::ImageLayout::eUndefined;
-	to_copy_barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
-	to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
-	to_copy_barrier.subresourceRange = subresourceRange;
-
-	vk::ImageMemoryBarrier to_shader_read_barrier;
-	to_shader_read_barrier.dstQueueFamilyIndex = loader->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
-	to_shader_read_barrier.image = image.get();
-	to_shader_read_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
-	to_shader_read_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-	to_shader_read_barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-	to_shader_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-	to_shader_read_barrier.subresourceRange = subresourceRange;
-
-	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
+	{
+		vk::ImageMemoryBarrier to_copy_barrier;
+		to_copy_barrier.image = image.get();
+		to_copy_barrier.oldLayout = vk::ImageLayout::eUndefined;
+		to_copy_barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
+		to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+		to_copy_barrier.subresourceRange = subresourceRange;
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
+	}
 	cmd.copyBufferToImage(staging_buffer.getBufferInfo().buffer, image.get(), vk::ImageLayout::eTransferDstOptimal, { copy });
-	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
+	{
+		vk::ImageMemoryBarrier to_shader_read_barrier;
+		to_shader_read_barrier.image = image.get();
+		to_shader_read_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
+		to_shader_read_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+		to_shader_read_barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+		to_shader_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+		to_shader_read_barrier.subresourceRange = subresourceRange;
 
-	MotionTexture tex;
-	tex.m_resource = std::make_shared<MotionTexture::Resource>();
-	tex.m_resource->m_device = loader->m_device;
-	tex.m_resource->m_image = std::move(image);
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
+	}
+
+
 
 	vk::ImageViewCreateInfo view_info;
 	view_info.viewType = vk::ImageViewType::e1DArray;
@@ -166,8 +164,6 @@ MotionTexture create(btr::Loader* loader, vk::CommandBuffer cmd, const cMotion& 
 	view_info.image = image.get();
 	view_info.subresourceRange = subresourceRange;
 
-	tex.m_resource->m_image_view = loader->m_device->createImageViewUnique(view_info);
-	tex.m_resource->m_memory = std::move(image_memory);
 
 	vk::SamplerCreateInfo sampler_info;
 	sampler_info.magFilter = vk::Filter::eNearest;
@@ -184,11 +180,17 @@ MotionTexture create(btr::Loader* loader, vk::CommandBuffer cmd, const cMotion& 
 	sampler_info.anisotropyEnable = VK_FALSE;
 	sampler_info.borderColor = vk::BorderColor::eFloatOpaqueWhite;
 
+	MotionTexture tex;
+	tex.m_resource = std::make_shared<MotionTexture::Resource>();
+	tex.m_resource->m_device = loader->m_device;
+	tex.m_resource->m_image = std::move(image);
+	tex.m_resource->m_image_view = loader->m_device->createImageViewUnique(view_info);
+	tex.m_resource->m_memory = std::move(image_memory);
 	tex.m_resource->m_sampler = loader->m_device->createSamplerUnique(sampler_info);
 	return tex;
 }
 
-std::vector<MotionTexture> createMotion(btr::Loader* loader, vk::CommandBuffer cmd, const cAnimation& anim, const RootNode& rootnode)
+std::vector<MotionTexture> createMotion(std::shared_ptr<btr::Loader>& loader, vk::CommandBuffer cmd, const cAnimation& anim, const RootNode& rootnode)
 {
 
 	std::vector<MotionTexture> motion_texture(anim.m_motion.size());
@@ -231,7 +233,7 @@ std::vector<ModelInstancingRender::NodeInfo> createNodeInfo(const RootNode& root
 }
 
 
-void ModelInstancingRender::setup(btr::Loader* loader, std::shared_ptr<cModel::Resource> resource, uint32_t instanceNum)
+void ModelInstancingRender::setup(std::shared_ptr<btr::Loader>& loader, std::shared_ptr<cModel::Resource>& resource, uint32_t instanceNum)
 {
 	auto cmd = loader->m_cmd_pool->allocCmdTempolary(0);
 
@@ -284,8 +286,9 @@ void ModelInstancingRender::setup(btr::Loader* loader, std::shared_ptr<cModel::R
 		copy_info.setDstOffset(buffer.getBufferInfo().offset);
 		cmd->copyBuffer(staging.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
 
-		auto to_render = buffer.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
-		cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexInput, {}, {}, to_render, {});
+		auto to_render = buffer.makeMemoryBarrierEx();
+		to_render.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+		cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexShader, {}, {}, to_render, {});
 	}
 	// node info
 	auto nodeInfo = createNodeInfo(m_resource->mNodeRoot);
@@ -304,6 +307,10 @@ void ModelInstancingRender::setup(btr::Loader* loader, std::shared_ptr<cModel::R
 		copy_info.setSrcOffset(staging_node_info_buffer.getBufferInfo().offset);
 		copy_info.setDstOffset(buffer.getBufferInfo().offset);
 		cmd->copyBuffer(staging_node_info_buffer.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
+
+		auto to_render = buffer.makeMemoryBarrierEx();
+		to_render.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+		cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_render, {});
 
 	}
 
@@ -425,10 +432,11 @@ void ModelInstancingRender::setup(btr::Loader* loader, std::shared_ptr<cModel::R
 		dispatch_indirect_barrier.setBuffer(m_resource_instancing->m_compute_indirect_buffer.getBufferInfo().buffer);
 		dispatch_indirect_barrier.setOffset(m_resource_instancing->m_compute_indirect_buffer.getBufferInfo().offset);
 		dispatch_indirect_barrier.setSize(m_resource_instancing->m_compute_indirect_buffer.getBufferInfo().range);
+		dispatch_indirect_barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 		dispatch_indirect_barrier.setDstAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
 		cmd->pipelineBarrier(
 			vk::PipelineStageFlagBits::eTransfer,
-			vk::PipelineStageFlagBits::eComputeShader,
+			vk::PipelineStageFlagBits::eDrawIndirect,
 			vk::DependencyFlags(),
 			{}, { dispatch_indirect_barrier }, {});
 	}
@@ -453,7 +461,7 @@ void ModelInstancingRender::setup(btr::Loader* loader, std::shared_ptr<cModel::R
 			auto& buffer = m_resource_instancing->getBuffer(ANIMATION_INFO);
 			btr::BufferMemory::Descriptor arg;
 			arg.size = sizeof(ModelInstancingRender::AnimationInfo) * anim.m_motion.size();
-			buffer = loader->m_uniform_memory.allocateMemory(arg);
+			buffer = loader->m_storage_memory.allocateMemory(arg);
 
 			vk::BufferCopy copy_info;
 			copy_info.setSize(staging.getBufferInfo().range);
@@ -524,11 +532,12 @@ void ModelInstancingRender::setup(cModelInstancingRenderer&  renderer)
 			allocInfo.pSetLayouts = layouts;
 			m_descriptor_set = device->allocateDescriptorSetsUnique(allocInfo);
 
-			// mesh
+			// Mesh
 			{
-				vk::DescriptorImageInfo default(DrawHelper::Order().getWhiteTexture().m_sampler.get(), DrawHelper::Order().getWhiteTexture().m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal);
-				std::vector<vk::DescriptorImageInfo> albedo_image_info(16, default);
-				for (size_t i = 0; i < m_descriptor_set.size(); i++)
+				// マテリアルの設定。　16個のテクスチャをバインドする。使わないところはwhite_textureで埋めておく
+				vk::DescriptorImageInfo white_image(DrawHelper::Order().getWhiteTexture().m_sampler.get(), DrawHelper::Order().getWhiteTexture().m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal);
+				std::vector<vk::DescriptorImageInfo> albedo_image_info(16, white_image);
+				for (size_t i = 0; i < m_resource->m_mesh.size(); i++)
 				{
 					auto& material = m_resource->m_material[m_resource->m_mesh[i].m_material_index];
 					albedo_image_info[m_resource->m_mesh[i].m_material_index] = vk::DescriptorImageInfo(material.mDiffuseTex.getSampler(), material.mDiffuseTex.getImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
@@ -663,7 +672,7 @@ void ModelInstancingRender::execute(cModelInstancingRenderer& renderer, vk::Comm
 			model_info_ptr->mInstanceAliveNum = (int32_t)m_model.size();
 			model_info_ptr->mInstanceMaxNum = m_resource_instancing->m_instance_max_num;
 			model_info_ptr->mInstanceNum = 0;
-//			staging.subupdate<ModelInstancingInfo>(info);
+			//			staging.subupdate<ModelInstancingInfo>(info);
 
 			vk::BufferMemoryBarrier to_copy_barrier;
 			to_copy_barrier.setBuffer(buffer.getBufferInfo().buffer);
@@ -714,85 +723,42 @@ void ModelInstancingRender::execute(cModelInstancingRenderer& renderer, vk::Comm
 	for (size_t i = 0; i < pipeline.m_pipeline.size(); i++)
 	{
 
-		if (i == 4)
+		if (i == cModelInstancingPipeline::PIPELINE_COMPUTE_CULLING)
+		{
+			vk::BufferMemoryBarrier barrier = m_resource->m_mesh_resource.m_indirect_buffer_ex.makeMemoryBarrierEx();
+			barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+			barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, barrier, {});
+		}
+		if (i == cModelInstancingPipeline::PIPELINE_COMPUTE_MOTION_UPDATE)
 		{
 			// 
-			std::vector<vk::BufferMemoryBarrier> barrier =
-			{
-				m_resource_instancing->getBuffer(ModelStorageBuffer::MODEL_INSTANCING_INFO).makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
-				m_resource_instancing->getBuffer(ModelStorageBuffer::BONE_MAP).makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite),
-				m_resource_instancing->getBuffer(ModelStorageBuffer::NODE_GLOBAL_TRANSFORM).makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite),
-				m_resource->m_mesh_resource.m_indirect_buffer_ex.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite),
-			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
-				vk::DependencyFlags(), {}, barrier, {});
-
+			vk::BufferMemoryBarrier barrier = m_resource_instancing->getBuffer(ModelStorageBuffer::PLAYING_ANIMATION).makeMemoryBarrierEx();
+			barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+			barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, barrier, {});
 		}
-		if (i == 1)
+
+		if (i == cModelInstancingPipeline::PIPELINE_COMPUTE_BONE_TRANSFORM)
 		{
 			// 
-			std::vector<vk::BufferMemoryBarrier> barrier =
-			{
-				m_resource_instancing->getBuffer(ModelStorageBuffer::PLAYING_ANIMATION).makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
-			};
+			vk::BufferMemoryBarrier barrier = m_resource_instancing->getBuffer(ModelStorageBuffer::NODE_LOCAL_TRANSFORM).makeMemoryBarrierEx();
+			barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+			barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
-				vk::DependencyFlags(), {}, barrier, {});
-
+					vk::DependencyFlags(), {}, barrier, {});
 		}
+
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, pipeline.m_pipeline[i].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipeline.m_pipeline_layout[cModelInstancingPipeline::PIPELINE_LAYOUT_COMPUTE].get(), 0, m_descriptor_set[DESCRIPTOR_SET_MODEL].get(), {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipeline.m_pipeline_layout[cModelInstancingPipeline::PIPELINE_LAYOUT_COMPUTE].get(), 1, m_descriptor_set[DESCRIPTOR_SET_ANIMATION].get(), {});
-		cmd.dispatchIndirect(m_resource_instancing->m_compute_indirect_buffer.getBufferInfo().buffer, m_resource_instancing->m_compute_indirect_buffer.getBufferInfo().offset + i* 12);
+		cmd.dispatchIndirect(m_resource_instancing->m_compute_indirect_buffer.getBufferInfo().buffer, m_resource_instancing->m_compute_indirect_buffer.getBufferInfo().offset + i * 12);
 
-
-		if (i == 3)
-		{ 
-			std::vector<vk::BufferMemoryBarrier> barrier =
-			{
-				vk::BufferMemoryBarrier()
-				.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
-				.setDstAccessMask(vk::AccessFlagBits::eShaderRead)
-				.setBuffer(m_resource_instancing->getBuffer(ModelStorageBuffer::NODE_LOCAL_TRANSFORM).getBufferInfo().buffer)
-				.setOffset(m_resource_instancing->getBuffer(ModelStorageBuffer::NODE_LOCAL_TRANSFORM).getBufferInfo().offset)
-				.setSize(m_resource_instancing->getBuffer(ModelStorageBuffer::NODE_LOCAL_TRANSFORM).getBufferInfo().range),
-			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
-				vk::DependencyFlags(), {}, barrier, {});
- 		}
-		if (i == 1)
-		{
-			// 
-			std::vector<vk::BufferMemoryBarrier> barrier =
-			{
-				m_resource_instancing->getBuffer(ModelStorageBuffer::PLAYING_ANIMATION).makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
-			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
-				vk::DependencyFlags(), {}, barrier, {});
-
-		}
-
-		if (i == 4)
-		{
-			// 
-			std::vector<vk::BufferMemoryBarrier> barrier =
-			{
-				m_resource_instancing->getBuffer(ModelStorageBuffer::MODEL_INSTANCING_INFO).makeMemoryBarrier(vk::AccessFlagBits::eShaderRead| vk::AccessFlagBits::eShaderWrite),
-				m_resource_instancing->getBuffer(ModelStorageBuffer::BONE_MAP).makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
-				m_resource_instancing->getBuffer(ModelStorageBuffer::NODE_GLOBAL_TRANSFORM).makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
-				m_resource->m_mesh_resource.m_indirect_buffer_ex.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
-			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
-				vk::DependencyFlags(), {}, barrier, {});
-		}
 	}
-	std::vector<vk::BufferMemoryBarrier> to_draw_barrier =
-	{
-		m_resource_instancing->getBuffer(ModelStorageBuffer::BONE_TRANSFORM).makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
-		m_resource->m_mesh_resource.m_indirect_buffer_ex.makeMemoryBarrier(vk::AccessFlagBits::eIndirectCommandRead),
-	};
-
-	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands,
-		vk::DependencyFlags(), {}, to_draw_barrier, {});
+	vk::BufferMemoryBarrier to_draw_barrier = m_resource_instancing->getBuffer(ModelStorageBuffer::BONE_TRANSFORM).makeMemoryBarrierEx();
+	to_draw_barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+	to_draw_barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eVertexShader, {}, {}, to_draw_barrier, {});
 
 }
 

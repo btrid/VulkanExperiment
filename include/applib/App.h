@@ -19,6 +19,8 @@ struct App
 
 	App();
 	void setup(const cGPU& gpu);
+	void preUpdate();
+	void postUpdate();
 };
 
 

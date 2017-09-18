@@ -95,6 +95,20 @@ void App::setup(const cGPU& gpu)
 
 }
 
+void App::preUpdate()
+{
+
+}
+
+void App::postUpdate()
+{
+	m_window->update();
+	sGlobal::Order().swap();
+	sCameraManager::Order().sync();
+	sDeleter::Order().swap();
+
+}
+
 glm::uvec3 calcDipatchGroups(const glm::uvec3& num, const glm::uvec3& local_size)
 {
 	glm::uvec3 ret = (num + local_size - glm::uvec3(1)) / local_size;

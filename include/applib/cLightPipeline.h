@@ -136,13 +136,19 @@ struct cFowardPlusPipeline
 	void execute(vk::CommandBuffer cmd)
 	{
 		{
-			auto to_copy_barrier = m_private->m_light_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, { to_copy_barrier }, {});
+			{
+				auto to_copy_barrier = m_private->m_light_counter.makeMemoryBarrierEx();
+				to_copy_barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
+				to_copy_barrier.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, { to_copy_barrier }, {});
+			}
 
 			uint32_t zero = 0;
 			cmd.updateBuffer<uint32_t>(m_private->m_light_counter.getBufferInfo().buffer, m_private->m_light_counter.getBufferInfo().offset, { zero });
 
-			auto to_shader_read_barrier = m_private->m_light_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite);
+			auto to_shader_read_barrier = m_private->m_light_counter.makeMemoryBarrierEx();
+			to_shader_read_barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+			to_shader_read_barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead| vk::AccessFlagBits::eShaderWrite);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, { to_shader_read_barrier }, {});
 		}
 		{
@@ -159,13 +165,17 @@ struct cFowardPlusPipeline
 			frustom_point.rtf = glm::vec4(frustom.rtf_, 1.f);
 			frustom_point.rbf = glm::vec4(frustom.rbf_, 1.f);
 
-			auto to_copy_barrier = m_private->m_frustom_point.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
+			auto to_copy_barrier = m_private->m_frustom_point.getAllocateMemory().makeMemoryBarrierEx();
+			to_copy_barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
+			to_copy_barrier.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, { to_copy_barrier }, {});
 
 			m_private->m_frustom_point.subupdate(frustom_point);
 			m_private->m_frustom_point.update(cmd);
 
-			auto to_shader_read_barrier = m_private->m_frustom_point.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite);
+			auto to_shader_read_barrier = m_private->m_frustom_point.getAllocateMemory().makeMemoryBarrierEx();
+			to_shader_read_barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+			to_shader_read_barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, { to_shader_read_barrier }, {});
 		}
 
@@ -196,14 +206,18 @@ struct cFowardPlusPipeline
 			}
 			{
 
-				auto to_copy_barrier = m_private->m_light_info_gpu.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
+				auto to_copy_barrier = m_private->m_light_info_gpu.getAllocateMemory().makeMemoryBarrierEx();
+				to_copy_barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
+				to_copy_barrier.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, { to_copy_barrier }, {});
 
 				m_private->m_light_info.m_active_light_num = index;
 				m_private->m_light_info_gpu.subupdate(m_private->m_light_info);
 				m_private->m_light_info_gpu.update(cmd);
 
-				auto to_shader_read_barrier = m_private->m_light_info_gpu.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite);
+				auto to_shader_read_barrier = m_private->m_light_info_gpu.getAllocateMemory().makeMemoryBarrierEx();
+				to_shader_read_barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+				to_shader_read_barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, { to_shader_read_barrier }, {});
 			}
 
@@ -212,14 +226,18 @@ struct cFowardPlusPipeline
 			copy_info.srcOffset = m_private->m_light_cpu.getBufferInfo().offset + frame_offset * sizeof(LightParam);
 			copy_info.dstOffset = m_private->m_light.getBufferInfo().offset;
 
-			auto to_copy_barrier = m_private->m_light.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
+			auto to_copy_barrier = m_private->m_light.makeMemoryBarrierEx();
+			to_copy_barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
+			to_copy_barrier.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
 			to_copy_barrier.setSize(copy_info.size);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, { to_copy_barrier }, {});
 
 			cmd.copyBuffer(m_private->m_light_cpu.getBufferInfo().buffer, m_private->m_light.getBufferInfo().buffer, copy_info);
 
-			auto to_shader_read_barrier = m_private->m_light.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
+			auto to_shader_read_barrier = m_private->m_light.makeMemoryBarrierEx();
 			to_shader_read_barrier.setSize(copy_info.size);
+			to_copy_barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
+			to_copy_barrier.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, { to_shader_read_barrier }, {});
 		}
 

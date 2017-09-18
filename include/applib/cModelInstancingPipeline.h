@@ -43,6 +43,16 @@ struct cModelInstancingPipeline
 		PIPELINE_LAYOUT_RENDER,
 		PIPELINE_LAYOUT_NUM,
 	};
+	enum Pipeline
+	{
+		PIPELINE_COMPUTE_CLEAR,
+		PIPELINE_COMPUTE_ANIMATION_UPDATE,
+		PIPELINE_COMPUTE_MOTION_UPDATE,
+		PIPELINE_COMPUTE_NODE_TRANSFORM,
+		PIPELINE_COMPUTE_CULLING,
+		PIPELINE_COMPUTE_BONE_TRANSFORM,
+		PIPELINE_NUM,
+	};
 	vk::UniqueRenderPass m_render_pass;
 	std::vector<vk::UniqueFramebuffer> m_framebuffer;
 
@@ -50,7 +60,7 @@ struct cModelInstancingPipeline
 	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_stage_info;
 
 	vk::UniqueDescriptorPool m_descriptor_pool;
-	std::vector<vk::UniquePipeline> m_pipeline;
+	std::array<vk::UniquePipeline, PIPELINE_NUM> m_pipeline;
 	vk::UniquePipeline m_graphics_pipeline;
 	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
 	std::array<vk::UniqueDescriptorSetLayout, DESCRIPTOR_NUM> m_descriptor_set_layout;
