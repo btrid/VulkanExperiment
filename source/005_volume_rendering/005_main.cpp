@@ -95,10 +95,11 @@ int main()
 				);
 				sGlobal::Order().getThreadPool().enque(job);
 			}
-			worker_syncronized_point.wait();
 			render_syncronized_point.wait();
 
 			app.submit(std::move(render_cmds));
+
+			worker_syncronized_point.wait();
 		}
 
 		app.postUpdate();
