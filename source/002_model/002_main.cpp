@@ -120,14 +120,13 @@ int main()
 
 	for (int i = 0; i < 30; i++)
 	{
-		renderer.getLight().add(std::move(std::make_unique<LightSample>()));
+		renderer.getLight().add(std::move(std::make_unique<LightSample>()));０
 	}
 
 	vk::Queue queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), 0);
 	while (true)
 	{
 		cStopWatch time;
-
 
 		uint32_t backbuffer_index = app.m_window->getSwapchain().swap();
 		sDebug::Order().waitFence(device.getHandle(), app.m_window->getFence(backbuffer_index));
@@ -229,6 +228,7 @@ int main()
 		}
 
 		app.postUpdate();
+		printf("%6.3fs\n", time.getElapsedTimeAsSeconds());
 	}
 
 	return 0;

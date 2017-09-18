@@ -53,7 +53,7 @@ namespace {
 
 ResourceManager<ResourceTexture::Resource> ResourceTexture::s_manager;
 ResourceManager<cModel::Resource> cModel::s_manager;
-void ResourceTexture::load(btr::Loader* loader, vk::CommandBuffer cmd, const std::string& filename)
+void ResourceTexture::load(std::shared_ptr<btr::Loader>& loader, vk::CommandBuffer cmd, const std::string& filename)
 {
 	if (s_manager.manage(m_resource, filename)) {
 		return;
@@ -166,7 +166,7 @@ void ResourceTexture::load(btr::Loader* loader, vk::CommandBuffer cmd, const std
 }
 
 
-std::vector<cModel::Material> loadMaterial(const aiScene* scene, const std::string& filename, btr::Loader* loader, vk::CommandBuffer cmd)
+std::vector<cModel::Material> loadMaterial(const aiScene* scene, const std::string& filename, std::shared_ptr<btr::Loader>& loader, vk::CommandBuffer cmd)
 {
 	std::string path = std::tr2::sys::path(filename).remove_filename().string();
 	std::vector<cModel::Material> material(scene->mNumMaterials);
@@ -236,7 +236,7 @@ RootNode loadNode(const aiScene* scene)
 	return root;
 }
 
-void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& root, btr::Loader* loader)
+void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& root, std::shared_ptr<btr::Loader>& loader)
 {
 	if (!scene->HasAnimations()) {
 		return;
@@ -298,7 +298,7 @@ cModel::~cModel()
 {}
 
 
-void cModel::load(btr::Loader* loader, const std::string& filename)
+void cModel::load(std::shared_ptr<btr::Loader>& loader, const std::string& filename)
 {
 
 	m_instance = std::make_unique<Instance>();
