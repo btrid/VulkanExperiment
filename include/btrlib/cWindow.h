@@ -121,7 +121,7 @@ public:
 
 	void setup(std::shared_ptr<btr::Loader>& loader, const CreateInfo& descriptor);
 
-	void update()
+	void sync()
 	{
 		MSG msg;
 		auto old = m_input.m_mouse;

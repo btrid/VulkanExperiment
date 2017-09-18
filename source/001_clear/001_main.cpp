@@ -169,8 +169,8 @@ int main()
 				queue.presentKHR(present_info);
 		}
 
-		window.update(sGlobal::Order().getThreadPool());
-		sGlobal::Order().swap();
+		window.sync(sGlobal::Order().getThreadPool());
+		sGlobal::Order().sync();
 	}
 
 	return 0;

@@ -83,7 +83,7 @@ sGlobal::sGlobal()
 }
 
 
-void sGlobal::swap()
+void sGlobal::sync()
 {
 	m_game_frame++;
 	m_game_frame = m_game_frame % (std::numeric_limits<decltype(m_game_frame)>::max() / FRAME_MAX*FRAME_MAX);

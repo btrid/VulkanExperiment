@@ -66,7 +66,7 @@ void memoryAllocater()
 			}
 			count--;
 		}
-		sGlobal::Order().swap();
+		sGlobal::Order().sync();
 
 		for (auto it = memory_list.begin(); it != memory_list.end();)
 		{
@@ -80,9 +80,9 @@ void memoryAllocater()
 		}
 	}
 	memory_list.clear();
-	sGlobal::Order().swap();
-	sGlobal::Order().swap();
-	sGlobal::Order().swap();
+	sGlobal::Order().sync();
+	sGlobal::Order().sync();
+	sGlobal::Order().sync();
 	// Œ‹‰Ê
 	staging_memory.gc();
 	count++;

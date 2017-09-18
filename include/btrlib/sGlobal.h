@@ -36,7 +36,7 @@ public:
 		}
 	};
 
-	void swap()
+	void sync()
 	{
 		std::lock_guard<std::mutex> lk(m_deleter_mutex);
 		m_deleter_list.erase(std::remove_if(m_deleter_list.begin(), m_deleter_list.end(), [&](auto& d) { return d->count-- == 0; }), m_deleter_list.end());
@@ -71,7 +71,7 @@ public:
 
 	vk::Instance& getVKInstance() { return m_instance; }
 	cGPU& getGPU(int index) { return m_gpu[index]; }
-	void swap();
+	void sync();
 	uint32_t getCurrentFrame()const { return m_current_frame; }
 	uint32_t getPrevFrame()const { return (m_current_frame == 0 ? FRAME_MAX : m_current_frame) - 1; }
 	uint32_t getCPUFrame()const { return (m_current_frame+1) % FRAME_MAX; }

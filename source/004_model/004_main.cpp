@@ -85,35 +85,16 @@ int main()
 	{
 		cStopWatch time;
 
-		uint32_t backbuffer_index = loader->m_window->getSwapchain().swap();
-		sDebug::Order().waitFence(device.getHandle(), loader->m_window->getFence(backbuffer_index));
-		device->resetFences({ loader->m_window->getFence(backbuffer_index) });
-		app.m_cmd_pool->resetPool(executer);
-
+		app.preUpdate();
 		{
 
 			render->getModelTransform().m_global = mat4(1.f);
 			render->work();
 
-			SynchronizedPoint loader_syncronized_point(1);
-			{
-				cThreadJob job;
-				job.mJob.emplace_back(
-				[&]()
-				{
-					executer->m_cmd_pool->submit(executer);
-					loader_syncronized_point.arrive();
-				}
-				);
-				sGlobal::Order().getThreadPool().enque(job);
-			}
-			loader_syncronized_point.wait();
-
 			std::vector<vk::CommandBuffer> render_cmds(1);
 			render_cmds[0] = renderer.draw(executer);
 			app.submit(std::move(render_cmds));
 		}
-
 		app.postUpdate();
 		printf("%6.3fs\n", time.getElapsedTimeAsSeconds());
 	}

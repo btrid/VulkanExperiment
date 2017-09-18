@@ -185,9 +185,9 @@ int main()
 				.setPImageIndices(backbuffer_indexs);
 			queue.presentKHR(present_info);
 		}
-		app.m_window->update();
-		sub->update();
-		sGlobal::Order().swap();
+		app.m_window->sync();
+		sub->sync();
+		sGlobal::Order().sync();
 		sCameraManager::Order().sync();
 		printf("%6.3fs\n", time.getElapsedTimeAsSeconds());
 	}

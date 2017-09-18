@@ -214,11 +214,11 @@ void App::postUpdate()
 {
 	for (auto& window : m_window_list)
 	{
-		window->update();
+		window->sync();
 	}
-	sGlobal::Order().swap();
+	sGlobal::Order().sync();
 	sCameraManager::Order().sync();
-	sDeleter::Order().swap();
+	sDeleter::Order().sync();
 
 }
 
