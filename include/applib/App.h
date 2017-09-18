@@ -13,12 +13,14 @@ struct App
 {
 	cGPU m_gpu;
 	std::shared_ptr<cCmdPool> m_cmd_pool;
-	std::shared_ptr<cWindow> m_window;
+	std::shared_ptr<cWindow> m_window; // !< mainwindow
+	std::vector<std::shared_ptr<cWindow>> m_window_list;
 	std::shared_ptr<btr::Loader> m_loader;
 	std::shared_ptr<btr::Executer> m_executer;
 
 	App();
 	void setup(const cGPU& gpu);
+	void submit(std::vector<vk::CommandBuffer>&& cmds);
 	void preUpdate();
 	void postUpdate();
 };

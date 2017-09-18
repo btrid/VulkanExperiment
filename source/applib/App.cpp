@@ -75,10 +75,11 @@ void App::setup(const cGPU& gpu)
 	windowInfo.window_name = L"Vulkan Test";
 	windowInfo.class_name = L"VulkanMainWindow";
 
-	m_window = std::make_shared<cWindow>();
-	m_window->setup(m_loader, windowInfo);
-
-	m_loader->m_window = m_window;
+	auto window = std::make_shared<cWindow>();
+	window->setup(m_loader, windowInfo);
+	m_window = window;
+	m_window_list.push_back(window);
+	m_loader->m_window = window;
 
 	m_executer = std::make_shared<btr::Executer>();
 	m_executer->m_gpu = gpu;
@@ -88,10 +89,70 @@ void App::setup(const cGPU& gpu)
 	m_executer->m_storage_memory = m_loader->m_storage_memory;
 	m_executer->m_staging_memory = m_loader->m_staging_memory;
 	m_executer->m_cmd_pool = m_cmd_pool;
-	m_executer->m_window = m_window;
+	m_executer->m_window = window;
 
 	sCameraManager::Order().setup(m_loader);
 	DrawHelper::Order().setup(m_loader);
+
+}
+
+void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
+{
+	std::vector<vk::CommandBuffer> cmds;
+	cmds.reserve(32);
+
+	for (auto& window : m_window_list)
+	{
+		cmds.push_back(window->getSwapchain().m_cmd_present_to_render[window->getSwapchain().m_backbuffer_index]);
+	}
+
+	for (auto& window : m_window_list)
+	{
+		cmds.push_back(window->getSwapchain().m_cmd_render_to_present[window->getSwapchain().m_backbuffer_index]);
+	}
+	cmds.push_back(sCameraManager::Order().draw(m_executer));
+
+	cmds.insert(cmds.end(), std::make_move_iterator(submit_cmds.begin()), std::make_move_iterator(submit_cmds.end()));
+
+	std::vector<vk::Semaphore> swap_wait_semas(m_window_list.size());
+	std::vector<vk::Semaphore> submit_wait_semas(m_window_list.size());
+	std::vector<vk::SwapchainKHR> swapchains(m_window_list.size());
+	std::vector<uint32_t> backbuffer_indexs(m_window_list.size());
+
+	for (size_t i = 0; i < m_window_list.size(); i++)
+	{
+		auto& window = m_window_list[i];
+		swap_wait_semas[i] = window->getSwapchain().m_swapbuffer_semaphore.get();
+		submit_wait_semas[i] = window->getSwapchain().m_submit_semaphore.get();
+		swapchains[i] = window->getSwapchain().m_swapchain_handle.get();
+		backbuffer_indexs[i] = window->getSwapchain().m_backbuffer_index;
+	}
+
+	vk::PipelineStageFlags wait_pipelines[] = {
+		vk::PipelineStageFlagBits::eAllGraphics,
+	};
+	std::vector<vk::SubmitInfo> submitInfo =
+	{
+		vk::SubmitInfo()
+		.setCommandBufferCount((uint32_t)cmds.size())
+		.setPCommandBuffers(cmds.data())
+		.setWaitSemaphoreCount((uint32_t)swap_wait_semas.size())
+		.setPWaitSemaphores(swap_wait_semas.data())
+		.setPWaitDstStageMask(wait_pipelines)
+		.setSignalSemaphoreCount((uint32_t)submit_wait_semas.size())
+		.setPSignalSemaphores(submit_wait_semas.data())
+	};
+
+	auto queue = m_gpu.getDevice()->getQueue(0, 0);
+	queue.submit(submitInfo, m_window_list[0]->getFence(m_window_list[0]->getSwapchain().m_backbuffer_index));
+
+	vk::PresentInfoKHR present_info = vk::PresentInfoKHR()
+		.setWaitSemaphoreCount((uint32_t)submit_wait_semas.size())
+		.setPWaitSemaphores(submit_wait_semas.data())
+		.setSwapchainCount((uint32_t)swapchains.size())
+		.setPSwapchains(swapchains.data())
+		.setPImageIndices(backbuffer_indexs.data());
+	queue.presentKHR(present_info);
 
 }
 
@@ -102,7 +163,10 @@ void App::preUpdate()
 
 void App::postUpdate()
 {
-	m_window->update();
+	for (auto& window : m_window_list)
+	{
+		window->update();
+	}
 	sGlobal::Order().swap();
 	sCameraManager::Order().sync();
 	sDeleter::Order().swap();

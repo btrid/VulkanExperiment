@@ -74,6 +74,7 @@ public:
 
 	void setup(std::shared_ptr<btr::Loader>& loader)
 	{
+		auto cmd = loader->m_cmd_pool->allocCmdTempolary(0);
 		m_volume_scene_cpu.u_volume_min = vec4(-1000.);
 		m_volume_scene_cpu.u_volume_max = vec4(1000.);
 		m_volume_scene_cpu.u_light_pos = vec4(0.);
@@ -223,7 +224,7 @@ public:
 				to_transfer.newLayout = vk::ImageLayout::eTransferDstOptimal;
 				to_transfer.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
 				to_transfer.subresourceRange = subresourceRange;
-				loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_transfer });
+				cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_transfer });
 
 				vk::ImageSubresourceLayers l;
 				l.setAspectMask(vk::ImageAspectFlagBits::eColor);
@@ -241,7 +242,7 @@ public:
 					copy.setImageSubresource(l);
 					copy.setImageExtent(image_info.extent);
 
-					loader->m_cmd.copyBufferToImage(staging.getBufferInfo().buffer, m_volume_image, vk::ImageLayout::eTransferDstOptimal, copy);
+					cmd->copyBufferToImage(staging.getBufferInfo().buffer, m_volume_image, vk::ImageLayout::eTransferDstOptimal, copy);
 				}
 
 				vk::ImageMemoryBarrier to_shader_read;
@@ -252,7 +253,7 @@ public:
 				to_shader_read.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
 				to_shader_read.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 				to_shader_read.subresourceRange = subresourceRange;
-				loader->m_cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), {}, {}, { to_shader_read });
+				cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), {}, {}, { to_shader_read });
 
 			}
 
@@ -491,7 +492,7 @@ public:
 
 	vk::CommandBuffer draw(std::shared_ptr<btr::Executer>& executer)
 	{
-		vk::CommandBuffer cmd = sThreadLocal::Order().getCmdOnetime(0);
+		vk::CommandBuffer cmd = executer->m_cmd_pool->allocCmdOnetime(0);
 
 		btr::BufferMemory::Descriptor desc;
 		desc.size = sizeof(VolumeScene);
