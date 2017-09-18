@@ -115,11 +115,6 @@ vk::UniqueShaderModule loadShaderUnique(const vk::Device& device, const std::str
 		.setCodeSize(buffer.size());
 	return device.createShaderModuleUnique(shaderInfo);
 }
-vk::ShaderModule loadShader(const vk::Device& device, const std::string& filename)
-{
-	return loadShaderUnique(device, filename).release();
-}
-
 vk::DescriptorPool createPool(vk::Device device, const std::vector<std::vector<vk::DescriptorSetLayoutBinding>>& bindings)
 {
 	std::vector<vk::DescriptorPoolSize> pool_size(VK_DESCRIPTOR_TYPE_RANGE_SIZE);

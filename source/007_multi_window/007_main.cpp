@@ -51,7 +51,6 @@ int main()
 
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
-	auto setup_cmd = sThreadLocal::Order().getCmdOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
 
 	vk::Queue queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), 0);
 
@@ -86,10 +85,9 @@ int main()
 		loader->m_cache = device->createPipelineCacheUnique(cacheInfo);
 
 	}
-	loader->m_cmd = setup_cmd;
 
 	app::App app;
-	app.setup(loader);
+	app.setup(gpu);
 	std::shared_ptr<cWindow> sub = std::make_shared<cWindow>();
 	{
 		cWindow::CreateInfo window_info;
@@ -114,21 +112,6 @@ int main()
 	{
 		sCameraManager::Order().setup(loader);
 		DrawHelper::Order().setup(loader);
-
-		setup_cmd.end();
-		std::vector<vk::CommandBuffer> cmds = {
-			setup_cmd,
-		};
-
-		vk::PipelineStageFlags waitPipeline = vk::PipelineStageFlagBits::eAllGraphics;
-		std::vector<vk::SubmitInfo> submitInfo =
-		{
-			vk::SubmitInfo()
-			.setCommandBufferCount((uint32_t)cmds.size())
-			.setPCommandBuffers(cmds.data())
-		};
-		queue.submit(submitInfo, vk::Fence());
-		queue.waitIdle();
 
 	}
 

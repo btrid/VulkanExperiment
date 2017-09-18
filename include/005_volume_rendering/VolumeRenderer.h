@@ -50,23 +50,24 @@ struct volumeRenderer
 		PIPELINE_NUM,
 	};
 
-	vk::RenderPass m_render_pass;
-	std::vector<vk::Framebuffer> m_framebuffer;
+	vk::UniqueRenderPass m_render_pass;
+	std::vector<vk::UniqueFramebuffer> m_framebuffer;
 
 	btr::AllocatedMemory m_volume_scene_gpu;
 	VolumeScene m_volume_scene_cpu;
 
+	std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_module;
 	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_shader_info;
-	std::array<vk::Pipeline, PIPELINE_NUM> m_pipeline;
+	std::array<vk::UniquePipeline, PIPELINE_NUM> m_pipeline;
 
-	std::array<vk::DescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
-	std::array<vk::DescriptorSet, DESCRIPTOR_SET_NUM> m_descriptor_set;
-	std::array<vk::PipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
+	std::array<vk::UniqueDescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
+	std::array<vk::UniqueDescriptorSet, DESCRIPTOR_SET_NUM> m_descriptor_set;
+	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
 
-	vk::Image m_volume_image;
-	vk::ImageView m_volume_image_view;
-	vk::DeviceMemory m_volume_image_memory;
-	vk::Sampler m_volume_sampler;
+	vk::UniqueImage m_volume_image;
+	vk::UniqueImageView m_volume_image_view;
+	vk::UniqueDeviceMemory m_volume_image_memory;
+	vk::UniqueSampler m_volume_sampler;
 
 public:
 	volumeRenderer()
@@ -113,7 +114,7 @@ public:
 					.setSubpassCount(1)
 					.setPSubpasses(&subpass);
 
-				m_render_pass = loader->m_device->createRenderPass(renderpass_info);
+				m_render_pass = loader->m_device->createRenderPassUnique(renderpass_info);
 			}
 
 			m_framebuffer.resize(loader->m_window->getSwapchain().getBackbufferNum());
@@ -121,7 +122,7 @@ public:
 				std::array<vk::ImageView, 1> view;
 
 				vk::FramebufferCreateInfo framebuffer_info;
-				framebuffer_info.setRenderPass(m_render_pass);
+				framebuffer_info.setRenderPass(m_render_pass.get());
 				framebuffer_info.setAttachmentCount((uint32_t)view.size());
 				framebuffer_info.setPAttachments(view.data());
 				framebuffer_info.setWidth(loader->m_window->getClientSize().x);
@@ -130,7 +131,7 @@ public:
 
 				for (size_t i = 0; i < m_framebuffer.size(); i++) {
 					view[0] = loader->m_window->getSwapchain().m_backbuffer[i].m_view;
-					m_framebuffer[i] = loader->m_device->createFramebuffer(framebuffer_info);
+					m_framebuffer[i] = loader->m_device->createFramebufferUnique(framebuffer_info);
 				}
 			}
 
@@ -173,14 +174,14 @@ public:
 			image_info.sharingMode = vk::SharingMode::eExclusive;
 			image_info.initialLayout = vk::ImageLayout::eUndefined;
 			image_info.extent = { texSize.x, texSize.y, texSize.z };
-			m_volume_image = loader->m_device->createImage(image_info);
+			m_volume_image = loader->m_device->createImageUnique(image_info);
 
-			vk::MemoryRequirements memory_request = loader->m_device->getImageMemoryRequirements(m_volume_image);
+			vk::MemoryRequirements memory_request = loader->m_device->getImageMemoryRequirements(m_volume_image.get());
 			vk::MemoryAllocateInfo memory_alloc_info;
 			memory_alloc_info.allocationSize = memory_request.size;
 			memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(loader->m_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
-			m_volume_image_memory = loader->m_device->allocateMemory(memory_alloc_info);
-			loader->m_device->bindImageMemory(m_volume_image, m_volume_image_memory, 0);
+			m_volume_image_memory = loader->m_device->allocateMemoryUnique(memory_alloc_info);
+			loader->m_device->bindImageMemory(m_volume_image.get(), m_volume_image_memory.get(), 0);
 
 			vk::SamplerCreateInfo sampler_info;
 			sampler_info.magFilter = vk::Filter::eLinear;
@@ -196,7 +197,7 @@ public:
 			sampler_info.maxAnisotropy = 1.0;
 			sampler_info.anisotropyEnable = VK_FALSE;
 			sampler_info.borderColor = vk::BorderColor::eFloatOpaqueWhite;
-			m_volume_sampler = loader->m_device->createSampler(sampler_info);
+			m_volume_sampler = loader->m_device->createSamplerUnique(sampler_info);
 
 			vk::ImageSubresourceRange subresourceRange;
 			subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
@@ -212,14 +213,14 @@ public:
 			view_info.components.a = vk::ComponentSwizzle::eA;
 			view_info.flags = vk::ImageViewCreateFlags();
 			view_info.format = image_info.format;
-			view_info.image = m_volume_image;
+			view_info.image = m_volume_image.get();
 			view_info.subresourceRange = subresourceRange;
-			m_volume_image_view = loader->m_device->createImageView(view_info);
+			m_volume_image_view = loader->m_device->createImageViewUnique(view_info);
 
 			{
 
 				vk::ImageMemoryBarrier to_transfer;
-				to_transfer.image = m_volume_image;
+				to_transfer.image = m_volume_image.get();
 				to_transfer.oldLayout = vk::ImageLayout::eUndefined;
 				to_transfer.newLayout = vk::ImageLayout::eTransferDstOptimal;
 				to_transfer.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
@@ -242,12 +243,12 @@ public:
 					copy.setImageSubresource(l);
 					copy.setImageExtent(image_info.extent);
 
-					cmd->copyBufferToImage(staging.getBufferInfo().buffer, m_volume_image, vk::ImageLayout::eTransferDstOptimal, copy);
+					cmd->copyBufferToImage(staging.getBufferInfo().buffer, m_volume_image.get(), vk::ImageLayout::eTransferDstOptimal, copy);
 				}
 
 				vk::ImageMemoryBarrier to_shader_read;
 				to_shader_read.dstQueueFamilyIndex = loader->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
-				to_shader_read.image = m_volume_image;
+				to_shader_read.image = m_volume_image.get();
 				to_shader_read.oldLayout = vk::ImageLayout::eTransferDstOptimal;
 				to_shader_read.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 				to_shader_read.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
@@ -282,7 +283,8 @@ public:
 
 			std::string path = btr::getResourceAppPath() + "shader\\binary\\";
 			for (size_t i = 0; i < SHADER_NUM; i++) {
-				m_shader_info[i].setModule(loadShader(loader->m_device.getHandle(), path + shader_info[i].name));
+				m_shader_module[i] = (loadShaderUnique(loader->m_device.getHandle(), path + shader_info[i].name));
+				m_shader_info[i].setModule(m_shader_module[i].get());
 				m_shader_info[i].setStage(shader_info[i].stage);
 				m_shader_info[i].setPName("main");
 			}
@@ -309,25 +311,28 @@ public:
 				vk::DescriptorSetLayoutCreateInfo descriptor_set_layout_info = vk::DescriptorSetLayoutCreateInfo()
 					.setBindingCount(bindings[i].size())
 					.setPBindings(bindings[i].data());
-				m_descriptor_set_layout[i] = loader->m_device->createDescriptorSetLayout(descriptor_set_layout_info);
+				m_descriptor_set_layout[i] = loader->m_device->createDescriptorSetLayoutUnique(descriptor_set_layout_info);
 			}
 
 		}
 		// setup descriptor_set
 		{
+			vk::DescriptorSetLayout layouts[] = {
+				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_VOLUME_SCENE].get()
+			};
 			vk::DescriptorSetAllocateInfo alloc_info;
 			alloc_info.descriptorPool = loader->m_descriptor_pool.get();
-			alloc_info.descriptorSetCount = m_descriptor_set_layout.size();
-			alloc_info.pSetLayouts = m_descriptor_set_layout.data();
-			auto descriptor_set = loader->m_device->allocateDescriptorSets(alloc_info);
-			std::copy(descriptor_set.begin(), descriptor_set.end(), m_descriptor_set.begin());
+			alloc_info.descriptorSetCount = array_length(layouts);
+			alloc_info.pSetLayouts = layouts;
+			auto descriptor_set = loader->m_device->allocateDescriptorSetsUnique(alloc_info);
+			std::copy(std::make_move_iterator(descriptor_set.begin()), std::make_move_iterator(descriptor_set.end()), m_descriptor_set.begin());
 			{
 
 				std::vector<vk::DescriptorBufferInfo> uniforms = {
 					m_volume_scene_gpu.getBufferInfo(),
 				};
 				std::vector<vk::DescriptorImageInfo> images = {
-					vk::DescriptorImageInfo().setSampler(m_volume_sampler).setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal).setImageView(m_volume_image_view),
+					vk::DescriptorImageInfo().setSampler(m_volume_sampler.get()).setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal).setImageView(m_volume_image_view.get()),
 				};
 				std::vector<vk::WriteDescriptorSet> write_desc =
 				{
@@ -336,13 +341,13 @@ public:
 					.setDescriptorCount(images.size())
 					.setPImageInfo(images.data())
 					.setDstBinding(0)
-					.setDstSet(m_descriptor_set[DESCRIPTOR_SET_VOLUME_SCENE]),
+					.setDstSet(m_descriptor_set[DESCRIPTOR_SET_VOLUME_SCENE].get()),
 					vk::WriteDescriptorSet()
 					.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 					.setDescriptorCount(uniforms.size())
 					.setPBufferInfo(uniforms.data())
 					.setDstBinding(1)
-					.setDstSet(m_descriptor_set[DESCRIPTOR_SET_VOLUME_SCENE]),
+					.setDstSet(m_descriptor_set[DESCRIPTOR_SET_VOLUME_SCENE].get()),
 				};
 				loader->m_device->updateDescriptorSets(write_desc, {});
 			}
@@ -352,13 +357,13 @@ public:
 		// setup pipeline_layout
 		{
 			std::vector<vk::DescriptorSetLayout> layouts = {
-				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_VOLUME_SCENE],
+				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_VOLUME_SCENE].get(),
 				sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(layouts.size());
 			pipeline_layout_info.setPSetLayouts(layouts.data());
-			m_pipeline_layout[PIPELINE_LAYOUT_DRAW_VOLUME] = loader->m_device->createPipelineLayout(pipeline_layout_info);
+			m_pipeline_layout[PIPELINE_LAYOUT_DRAW_VOLUME] = loader->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
 		// setup pipeline
@@ -448,13 +453,12 @@ public:
 				.setPViewportState(&viewportInfo)
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
-				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_VOLUME])
-				.setRenderPass(m_render_pass)
+				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_VOLUME].get())
+				.setRenderPass(m_render_pass.get())
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			auto pipelines = loader->m_device->createGraphicsPipelines(loader->m_cache.get(), graphics_pipeline_info);
-			std::copy(pipelines.begin(), pipelines.end(), m_pipeline.begin());
+			m_pipeline[PIPELINE_DRAW_VOLUME] = std::move(loader->m_device->createGraphicsPipelinesUnique(loader->m_cache.get(), graphics_pipeline_info)[0]);
 
 		}
 
@@ -513,13 +517,13 @@ public:
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, m_volume_scene_gpu.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead), {});
 
 		vk::RenderPassBeginInfo render_begin_info;
-		render_begin_info.setFramebuffer(m_framebuffer[sGlobal::Order().getCurrentFrame()]);
-		render_begin_info.setRenderPass(m_render_pass);
+		render_begin_info.setFramebuffer(m_framebuffer[sGlobal::Order().getCurrentFrame()].get());
+		render_begin_info.setRenderPass(m_render_pass.get());
 		render_begin_info.setRenderArea(vk::Rect2D({}, { 640, 480 }));
 		cmd.beginRenderPass(render_begin_info, vk::SubpassContents::eInline);
-		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW_VOLUME]);
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_VOLUME], 0, m_descriptor_set[DESCRIPTOR_SET_VOLUME_SCENE], {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_VOLUME], 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
+		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW_VOLUME].get());
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_VOLUME].get(), 0, m_descriptor_set[DESCRIPTOR_SET_VOLUME_SCENE].get(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_VOLUME].get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 		cmd.draw(4, 1, 0, 0);
 
 		cmd.endRenderPass();

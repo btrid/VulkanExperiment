@@ -69,6 +69,14 @@ struct cFowardPlusPipeline
 		uint32_t m_active_light_num;
 		uint32_t _p;
 	};
+
+	enum ShaderModule
+	{
+		//			COMPUTE_MAKE_LIGHT,
+		SHADER_COMPUTE_CULL_LIGHT,
+		SHADER_NUM,
+	};
+
 	enum
 	{
 		//			COMPUTE_MAKE_LIGHT,
@@ -113,7 +121,8 @@ struct cFowardPlusPipeline
 		std::array<vk::DescriptorSetLayout, COMPUTE_NUM> m_descriptor_set_layout;
 		std::vector<vk::DescriptorSet> m_compute_descriptor_set;
 
-		std::array<vk::PipelineShaderStageCreateInfo, COMPUTE_NUM> m_shader_info;
+		std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_module;
+		std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_shader_info;
 		std::array<vk::PipelineShaderStageCreateInfo, 2> m_shader_info_debug;
 
 		std::array<ComputePipeline, COMPUTE_NUM> m_pipeline_ex;

@@ -49,11 +49,13 @@ void cFowardPlusPipeline::Private::setup(cModelInstancingRenderer& renderer)
 //			"MakeLight.comp.spv",
 			"CullLight.comp.spv",
 		};
-		static_assert(array_length(name) == COMPUTE_NUM, "not equal shader num");
+		static_assert(array_length(name) == SHADER_NUM, "not equal shader num");
 
 		std::string path = btr::getResourceLibPath() + "shader\\binary\\";
-		for (size_t i = 0; i < COMPUTE_NUM; i++) {
-			m_shader_info[i].setModule(loadShader(m_device.getHandle(), path + name[i]));
+		for (size_t i = 0; i < SHADER_NUM; i++) 
+		{
+			m_shader_module[i] = loadShaderUnique(m_device.getHandle(), path + name[i]);
+			m_shader_info[i].setModule(m_shader_module[i].get());
 			m_shader_info[i].setStage(vk::ShaderStageFlagBits::eCompute);
 			m_shader_info[i].setPName("main");
 		}

@@ -46,7 +46,6 @@ int main()
 
 	cGPU& gpu = sGlobal::Order().getGPU(0);
 	cDevice device = gpu.getDevice(vk::QueueFlagBits::eGraphics)[0];
-	cDevice other_device = gpu.getDevice(vk::QueueFlagBits::eTransfer)[0];
 	vk::Queue queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), 0);
 
 

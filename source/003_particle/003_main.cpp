@@ -63,7 +63,7 @@ int main()
 	{
 		sParticlePipeline::Order().setup(loader);
 
-		model.load(loader.get(), "..\\..\\resource\\tiny.x");
+		model.load(loader, "..\\..\\resource\\tiny.x");
 		model_render->setup(loader, model.getResource());
 		model_pipeline.setup(loader);
 		model_pipeline.addModel(executer, model_render);

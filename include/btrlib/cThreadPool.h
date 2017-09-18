@@ -38,10 +38,17 @@ struct SynchronizedPoint
 	std::condition_variable_any m_condition;
 	std::mutex m_mutex;
 
+	SynchronizedPoint() : SynchronizedPoint(0) {}
 	SynchronizedPoint(uint32_t count)
 		: m_count(count)
 	{}
 
+	void reset(uint32_t count)
+	{
+		std::unique_lock<std::mutex> lock(m_mutex);
+		assert(m_count == 0);
+		m_count = count;
+	}
 	void arrive()
 	{
 		std::unique_lock<std::mutex> lock(m_mutex);

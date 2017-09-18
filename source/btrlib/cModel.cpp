@@ -249,7 +249,7 @@ void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& r
 		motion = std::make_shared<cMotion>();
 		motion->m_name = anim->mName.C_Str();
 		motion->m_duration = (float)anim->mDuration;
-		motion->m_ticks_per_second = anim->mTicksPerSecond == 0.f ? 60.f : anim->mTicksPerSecond;
+		motion->m_ticks_per_second = anim->mTicksPerSecond == 0.f ? 60.f : (float)anim->mTicksPerSecond;
 		motion->m_data.resize(anim->mNumChannels);
 		for (size_t channel_index = 0; channel_index < anim->mNumChannels; channel_index++)
 		{

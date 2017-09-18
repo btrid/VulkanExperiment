@@ -18,6 +18,8 @@ struct App
 	std::shared_ptr<btr::Loader> m_loader;
 	std::shared_ptr<btr::Executer> m_executer;
 
+	std::vector<vk::CommandBuffer> m_system_cmds;
+	SynchronizedPoint m_sync_point;
 	App();
 	void setup(const cGPU& gpu);
 	void submit(std::vector<vk::CommandBuffer>&& cmds);

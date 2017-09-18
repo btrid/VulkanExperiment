@@ -78,10 +78,15 @@ struct Light
 			uint32_t m_active_light_num;
 			uint32_t _p;
 		};
+		enum ShaderModule
+		{
+			SHADER_COMPUTE_MAKE_FRUSTOM,
+			SHADER_COMPUTE_CULL_LIGHT,
+			SHADER_NUM,
+		};
 		enum
 		{
 			COMPUTE_MAKE_FRUSTOM,
-//			COMPUTE_MAKE_LIGHT,
 			COMPUTE_CULL_LIGHT,
 			COMPUTE_NUM,
 		};
@@ -121,7 +126,8 @@ struct Light
 			std::array<vk::DescriptorSetLayout, COMPUTE_NUM> m_descriptor_set_layout;
 			std::vector<vk::DescriptorSet> m_compute_descriptor_set;
 
-			std::array<vk::PipelineShaderStageCreateInfo, COMPUTE_NUM> m_shader_info;
+			std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_module;
+			std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_shader_info;
 			std::array<vk::PipelineShaderStageCreateInfo, 2> m_shader_info_debug;
 
 			std::array<ComputePipeline, COMPUTE_NUM> m_pipeline_ex;
@@ -179,11 +185,12 @@ struct Light
 //						"MakeLight.comp.spv",
 						"CullLight.comp.spv",
 					};
-					static_assert(array_length(name) == COMPUTE_NUM, "not equal shader num");
+					static_assert(array_length(name) == SHADER_NUM, "not equal shader num");
 
 					std::string path = btr::getResourceLibPath() + "shader\\binary\\";
-					for (size_t i = 0; i < COMPUTE_NUM; i++) {
-						m_shader_info[i].setModule(loadShader(m_device.getHandle(), path + name[i]));
+					for (size_t i = 0; i < SHADER_NUM; i++) {
+						m_shader_module[i] = loadShaderUnique(m_device.getHandle(), path + name[i]);
+						m_shader_info[i].setModule(m_shader_module[i].get());
 						m_shader_info[i].setStage(vk::ShaderStageFlagBits::eCompute);
 						m_shader_info[i].setPName("main");
 					}

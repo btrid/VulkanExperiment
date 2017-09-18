@@ -117,7 +117,6 @@ struct sThreadLocal : public SingletonTLS<sThreadLocal>
 
 
 vk::UniqueShaderModule loadShaderUnique(const vk::Device& device, const std::string& filename);
-vk::ShaderModule loadShader(const vk::Device& device, const std::string& filename);
 
 struct Descriptor
 {

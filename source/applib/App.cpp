@@ -106,13 +106,15 @@ void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
 		cmds.push_back(window->getSwapchain().m_cmd_present_to_render[window->getSwapchain().m_backbuffer_index]);
 	}
 
+	m_sync_point.wait();
+	cmds.insert(cmds.end(), std::make_move_iterator(m_system_cmds.begin()), std::make_move_iterator(m_system_cmds.end()));
+
+	cmds.insert(cmds.end(), std::make_move_iterator(submit_cmds.begin()), std::make_move_iterator(submit_cmds.end()));
+
 	for (auto& window : m_window_list)
 	{
 		cmds.push_back(window->getSwapchain().m_cmd_render_to_present[window->getSwapchain().m_backbuffer_index]);
 	}
-	cmds.push_back(sCameraManager::Order().draw(m_executer));
-
-	cmds.insert(cmds.end(), std::make_move_iterator(submit_cmds.begin()), std::make_move_iterator(submit_cmds.end()));
 
 	std::vector<vk::Semaphore> swap_wait_semas(m_window_list.size());
 	std::vector<vk::Semaphore> submit_wait_semas(m_window_list.size());
@@ -158,6 +160,53 @@ void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
 
 void App::preUpdate()
 {
+	auto& device = m_gpu.getDevice();
+	uint32_t backbuffer_index = m_window->getSwapchain().swap();
+	sDebug::Order().waitFence(device.getHandle(), m_window->getFence(backbuffer_index));
+	device->resetFences({ m_window->getFence(backbuffer_index) });
+	m_cmd_pool->resetPool(m_executer);
+
+	{
+		auto* m_camera = cCamera::sCamera::Order().getCameraList()[0];
+		m_camera->control(m_window->getInput(), 0.016f);
+	}
+
+	m_system_cmds.resize(2);
+	m_sync_point.reset(3);
+	{
+		cThreadJob job;
+		job.mJob.emplace_back(
+			[&]()
+		{
+			m_system_cmds[0] = sCameraManager::Order().draw(m_executer);
+			m_sync_point.arrive();
+		}
+		);
+		sGlobal::Order().getThreadPool().enque(job);
+	}
+	{
+		cThreadJob job;
+		job.mJob.emplace_back(
+			[&]()
+		{
+			m_system_cmds[1] = DrawHelper::Order().draw(m_executer);
+			m_sync_point.arrive();
+		}
+		);
+		sGlobal::Order().getThreadPool().enque(job);
+	}
+
+	{
+		cThreadJob job;
+		job.mJob.emplace_back(
+			[&]()
+		{
+			m_executer->m_cmd_pool->submit(m_executer);
+			m_sync_point.arrive();
+		}
+		);
+		sGlobal::Order().getThreadPool().enque(job);
+	}
 
 }
 

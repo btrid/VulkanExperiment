@@ -84,6 +84,7 @@ struct sScene : public Singleton<sScene>
 	std::vector<vk::UniqueFramebuffer> m_framebuffer;
 	std::vector<vk::UniqueCommandBuffer> m_cmd;
 
+	std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_module;
 	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_shader_info;
 	std::array<vk::Pipeline, PIPELINE_NUM> m_pipeline;
 
@@ -189,7 +190,8 @@ struct sScene : public Singleton<sScene>
 
 			std::string path = btr::getResourceAppPath() + "shader\\binary\\";
 			for (size_t i = 0; i < SHADER_NUM; i++) {
-				m_shader_info[i].setModule(loadShader(loader->m_device.getHandle(), path + shader_info[i].name));
+				m_shader_module[i] = loadShaderUnique(loader->m_device.getHandle(), path + shader_info[i].name);
+				m_shader_info[i].setModule(m_shader_module[i].get());
 				m_shader_info[i].setStage(shader_info[i].stage);
 				m_shader_info[i].setPName("main");
 			}
