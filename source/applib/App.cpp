@@ -212,6 +212,7 @@ void App::preUpdate()
 
 void App::postUpdate()
 {
+
 	for (auto& window : m_window_list)
 	{
 		window->sync();

@@ -12,165 +12,55 @@
 #include <chrono>
 #include <memory>
 #include <filesystem>
-#include <btrlib/Singleton.h>
-#include <btrlib/sValidationLayer.h>
+#include <btrlib/Define.h>
 #include <btrlib/cWindow.h>
-//#include "Camera.h"
-#include <btrlib/cThreadPool.h>
-#include <btrlib/cDebug.h>
+#include <btrlib/cInput.h>
+#include <btrlib/cCamera.h>
 #include <btrlib/sGlobal.h>
+#include <btrlib/GPU.h>
 #include <btrlib/cStopWatch.h>
+#include <btrlib/BufferMemory.h>
 
-#pragma comment(lib, "vulkan-1.lib")
+#include <applib/App.h>
+#include <btrlib/Loader.h>
+
 #pragma comment(lib, "btrlib.lib")
+#pragma comment(lib, "applib.lib")
+//#pragma comment(lib, "FreeImage.lib")
+#pragma comment(lib, "vulkan-1.lib")
+//#pragma comment(lib, "imgui.lib")
+
 
 int main()
 {
+	auto* camera = cCamera::sCamera::Order().create();
+	camera->getData().m_position = glm::vec3(0.f, 0.f, 1.f);
+	camera->getData().m_target = glm::vec3(0.f, 0.f, 0.f);
+	camera->getData().m_up = glm::vec3(0.f, -1.f, 0.f);
+	camera->getData().m_width = 640;
+	camera->getData().m_height = 480;
+	camera->getData().m_far = 5000.f;
+	camera->getData().m_near = 0.01f;
 
-	sWindow& w = sWindow::Order();
-	vk::Instance instance = sGlobal::Order().getVKInstance();
+	auto gpu = sGlobal::Order().getGPU(0);
+	auto device = sGlobal::Order().getGPU(0).getDevice();
 
-#if _DEBUG
-	cDebug debug(instance);
-#endif
+	app::App app;
+	app.setup(gpu);
 
- 	cWindow window;
-	cWindow::CreateInfo windowInfo;
-	windowInfo.surface_format_request = vk::SurfaceFormatKHR{ vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear};
-	windowInfo.gpu = sGlobal::Order().getGPU(0);
-	windowInfo.size = vk::Extent2D(640, 480);
-	windowInfo.window_name = L"Vulkan Test";
-	windowInfo.class_name = L"VulkanMainWindow";
+	auto loader = app.m_loader;
+	auto executer = app.m_executer;
 
-	window.setup(windowInfo);
-
-	cGPU& gpu = sGlobal::Order().getGPU(0);
-	cDevice device = gpu.getDevice(vk::QueueFlagBits::eGraphics)[0];
-	vk::Queue queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), 0);
-
-
-	// setup用コマンドバッファ
-	vk::CommandPool cmd_pool;
-	{
-		vk::CommandPoolCreateInfo poolInfo = vk::CommandPoolCreateInfo()
-			.setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer)
-			.setQueueFamilyIndex(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
-		cmd_pool = device->createCommandPool(poolInfo);
-	}
-
-	std::vector<vk::CommandBuffer> present_cmd;
-	{
-		// present barrier cmd
-		vk::CommandBufferAllocateInfo cmd_info = vk::CommandBufferAllocateInfo()
-			.setCommandPool(cmd_pool)
-			.setLevel(vk::CommandBufferLevel::ePrimary)
-			.setCommandBufferCount((uint32_t)window.getSwapchain().m_backbuffer_image.size());
-		present_cmd = device->allocateCommandBuffers(cmd_info);
-
-		for (size_t i = 0; i < present_cmd.size(); i++)
-		{
-			auto& cmd = present_cmd[i];
-			vk::CommandBufferBeginInfo cmd_begin_info = vk::CommandBufferBeginInfo()
-				.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
-			cmd.begin(cmd_begin_info);
-
-			vk::ImageMemoryBarrier present_barrier = vk::ImageMemoryBarrier()
-				.setSrcAccessMask(vk::AccessFlags())
-				.setDstAccessMask(vk::AccessFlagBits::eTransferWrite)
-				.setOldLayout(vk::ImageLayout::eUndefined)
-				.setNewLayout(vk::ImageLayout::eTransferDstOptimal)
-				.setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-				.setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-				.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 })
-				.setImage(window.getSwapchain().m_backbuffer_image[i]);
-
-			cmd.pipelineBarrier(
-				vk::PipelineStageFlagBits::eTransfer,
-				vk::PipelineStageFlagBits::eTransfer,
-				vk::DependencyFlags(),
-				0, nullptr, // No memory barriers,
-				0, nullptr, // No buffer barriers,
-				1, &present_barrier);
-
-			cmd.end();
-		}
-	}
-
-	std::vector<vk::CommandBuffer> clear_cmd;
-	{
-		// clear cmd
-		vk::CommandBufferAllocateInfo cmd_info = vk::CommandBufferAllocateInfo()
-			.setCommandPool(cmd_pool)
-			.setLevel(vk::CommandBufferLevel::ePrimary)
-			.setCommandBufferCount((uint32_t)window.getSwapchain().m_backbuffer_image.size());
-		clear_cmd = device->allocateCommandBuffers(cmd_info);
-		for (size_t i = 0; i < clear_cmd.size(); i++)
-		{
-			auto& cmd = clear_cmd[i];
-			vk::CommandBufferBeginInfo cmd_begin_info = vk::CommandBufferBeginInfo()
-				.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
-			cmd.begin(cmd_begin_info);
-
-			vk::ClearColorValue color = vk::ClearColorValue().setFloat32({ 0.2f, 0.2f, 0.8f, 1.f });
-			vk::ImageSubresourceRange range = vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
-			cmd.clearColorImage(window.getSwapchain().m_backbuffer_image[i], vk::ImageLayout::eTransferDstOptimal, color, range);
-
-			vk::ImageMemoryBarrier clear_barrier = vk::ImageMemoryBarrier()
-				.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite)
-				.setDstAccessMask(vk::AccessFlagBits::eMemoryRead)
-				.setOldLayout(vk::ImageLayout::eTransferDstOptimal)
-				.setNewLayout(vk::ImageLayout::ePresentSrcKHR)
-				.setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-				.setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
-				.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 })
-				.setImage(window.getSwapchain().m_backbuffer_image[i]);
-			cmd.pipelineBarrier(
-				vk::PipelineStageFlagBits::eTransfer,
-				vk::PipelineStageFlagBits::eBottomOfPipe,
-				vk::DependencyFlags(),
-				0, nullptr, 
-				0, nullptr,
-				1, &clear_barrier);
-			cmd.end();
-		}
-	}
-
-
-	vk::SemaphoreCreateInfo semaphoreInfo = vk::SemaphoreCreateInfo();
-	vk::Semaphore swapbuffer_semaphore = device->createSemaphore(semaphoreInfo);
-	vk::Semaphore cmdsubmit_semaphore = device->createSemaphore(semaphoreInfo);
 	while (true)
 	{
-		uint32_t backbuffer_index = window.getSwapchain().swap(swapbuffer_semaphore);
-		{
-			std::vector<vk::CommandBuffer> cmds = {
-				present_cmd[backbuffer_index],
-				clear_cmd[backbuffer_index],
-			};
-			vk::PipelineStageFlags waitPipeline = vk::PipelineStageFlagBits::eTransfer;
-			std::vector<vk::SubmitInfo> submitInfo =
-			{
-				vk::SubmitInfo()
-				.setCommandBufferCount((uint32_t)cmds.size())
-				.setPCommandBuffers(cmds.data())
-				.setWaitSemaphoreCount(1)
-				.setPWaitSemaphores(&swapbuffer_semaphore)
-				.setPWaitDstStageMask(&waitPipeline)
-				.setSignalSemaphoreCount(1)
-				.setPSignalSemaphores(&cmdsubmit_semaphore)
-			};
-			queue.submit(submitInfo, vk::Fence());
-			vk::PresentInfoKHR present_info = vk::PresentInfoKHR()
-				.setWaitSemaphoreCount(1)
-				.setPWaitSemaphores(&cmdsubmit_semaphore)
-				.setSwapchainCount(1)
-				.setPSwapchains(&window.getSwapchain().m_swapchain_handle)
-				.setPImageIndices(&backbuffer_index);
-				queue.presentKHR(present_info);
-		}
+		cStopWatch time;
 
-		window.sync(sGlobal::Order().getThreadPool());
-		sGlobal::Order().sync();
+		app.preUpdate();
+		{
+			app.submit(std::vector<vk::CommandBuffer>{});
+		}
+		app.postUpdate();
+		printf("%6.3fs\n", time.getElapsedTimeAsSeconds());
 	}
 
 	return 0;

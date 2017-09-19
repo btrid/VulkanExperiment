@@ -176,6 +176,7 @@ int main()
 
 		app.preUpdate();
 		{
+			
 			{
 				m_player.execute(executer);
 				model_render->getModelTransform().m_global = glm::translate(m_player.m_pos) * glm::toMat4(glm::quat(glm::vec3(0.f, 0.f, 1.f), m_player.m_dir));
