@@ -18,11 +18,6 @@ layout(location=1)in Transform{
 	uint DrawID;
 }transform;
 
-layout(push_constant) uniform ConstantBlock
-{
-	layout(offset=0) uint u_material_index;
-} constant;
-
 void main()
 {
 	

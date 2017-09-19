@@ -43,12 +43,12 @@ int main()
 {
 	btr::setResourceAppPath("..\\..\\resource\\006_voxel_based_GI\\");
 	auto* camera = cCamera::sCamera::Order().create();
-	camera->getData().m_position = glm::vec3(0.f, 0.f, 1200.f);
+	camera->getData().m_position = glm::vec3(0.f, 0.f, -3000.f);
 	camera->getData().m_target = glm::vec3(0.f, 0.f, 0.f);
 	camera->getData().m_up = glm::vec3(0.f, -1.f, 0.f);
 	camera->getData().m_width = 640;
 	camera->getData().m_height = 480;
-	camera->getData().m_far = 5000.f;
+	camera->getData().m_far = 50000.f;
 	camera->getData().m_near = 0.01f;
 
 	auto gpu = sGlobal::Order().getGPU(0);
@@ -74,13 +74,42 @@ int main()
 			model.m_mesh[0].vertex.resize(v.size());
 			for (size_t i = 0; i < model.m_mesh[0].vertex.size(); i++)
 			{
-				model.m_mesh[0].vertex[i].pos = v[i]*200.f;
+				model.m_mesh[0].vertex[i].pos = v[i] * 50.f;
 			}
 			model.m_mesh[0].index = i;
 			model.m_mesh[0].m_material_index = 0;
 
 			model.m_material[0].albedo = glm::vec4(1.f, 0.f, 0.f, 1.f);
-			model.m_material[0].emission = glm::vec4(0.f, 0.f, 1.f, 1.f);
+			model.m_material[0].emission = glm::vec4(0.f, 0.f, 0.f, 1.f);
+
+//			voxelize.addModel(executer, setup_cmd.get(), model);
+		}
+		{
+			std::vector<glm::vec3> v;
+			std::vector<glm::uvec3> idx;
+			std::tie(v, idx) = Geometry::MakeBox(900.f);
+
+			VoxelizeModel model;
+			model.m_mesh.resize(5);
+			model.m_mesh[0].vertex.resize(v.size());
+			for (size_t i = 0; i < model.m_mesh.size(); i++)
+			{
+				model.m_mesh[i].vertex.resize(v.size());
+				for (size_t j = 0; j < v.size(); j++)
+				{
+					model.m_mesh[i].vertex[j].pos = v[j];
+				}
+				model.m_mesh[i].index.push_back(idx[i * 2]);
+				model.m_mesh[i].index.push_back(idx[i * 2 + 1]);
+				model.m_mesh[i].m_material_index = i;
+			}
+			model.m_material[0].albedo = glm::vec4(0.4f, 0.4f, 1.f, 1.f);
+			model.m_material[1].albedo = glm::vec4(1.f, 0.4f, 0.4f, 1.f);
+			model.m_material[2].albedo = glm::vec4(0.4f, 1.f, 0.4f, 1.f);
+			model.m_material[3].albedo = glm::vec4(1.f, 0.4f, 0.4f, 1.f);
+			model.m_material[4].albedo = glm::vec4(1.f, 1.f, 1.0f, 1.f);
+			model.m_material[5].albedo = glm::vec4(1.f, 0.f, 0.4f, 1.f);
+
 
 			voxelize.addModel(executer, setup_cmd.get(), model);
 		}

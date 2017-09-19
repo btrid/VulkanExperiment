@@ -12,7 +12,7 @@ layout(location=0) out gl_PerVertex
 
 layout(location=1) out Vertex{
 	vec3 Position;
-	uint DrawID;
+	flat uint DrawID;
 }Out;
 
 void main()

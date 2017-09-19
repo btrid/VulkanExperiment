@@ -626,12 +626,11 @@ struct VoxelPipeline
 
 		{
 			vk::DescriptorPoolSize pool_size[1];
-			pool_size[0].setDescriptorCount(30);
+			pool_size[0].setDescriptorCount(20);
 			pool_size[0].setType(vk::DescriptorType::eStorageBuffer);
 			vk::DescriptorPoolCreateInfo descriptor_pool_info;
 			descriptor_pool_info.setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet);
-			descriptor_pool_info.setMaxSets(1);
-			descriptor_pool_info.setPoolSizeCount(1);
+			descriptor_pool_info.setMaxSets(20);
 			descriptor_pool_info.setPoolSizeCount(array_length(pool_size));
 			descriptor_pool_info.setPPoolSizes(pool_size);
 			m_model_descriptor_pool = device->createDescriptorPoolUnique(descriptor_pool_info);
