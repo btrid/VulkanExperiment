@@ -6,7 +6,7 @@
 #include <btrlib/sGlobal.h>
 #include <btrlib/cCamera.h>
 #include <btrlib/Shape.h>
-#include <btrlib/BufferMemory.h>
+#include <btrlib/AllocatedMemory.h>
 #include <btrlib/Loader.h>
 
 struct cModelInstancingRenderer;

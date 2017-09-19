@@ -3,7 +3,7 @@
 #include <array>
 #include <memory>
 #include <btrlib/Define.h>
-#include <btrlib/BufferMemory.h>
+#include <btrlib/AllocatedMemory.h>
 #include <btrlib/cCamera.h>
 
 #include <btrlib/Loader.h>
@@ -36,8 +36,8 @@ struct cTriangleLL
 		vk::PipelineLayout m_pipeline_layout;
 		vk::Pipeline m_pipeline;
 
-		btr::AllocatedMemory m_vertex;
-		btr::AllocatedMemory m_index;
+		btr::BufferMemory m_vertex;
+		btr::BufferMemory m_index;
 		uint32_t m_index_count;
 		void setup(btr::Loader& loader, cTriangleLL* const t)
 		{
@@ -50,11 +50,11 @@ struct cTriangleLL
 				std::tie(v, i) = Geometry::MakeBox(0.5f);
 				m_index_count = i.size() * 3;
 				{
-					btr::BufferMemory::Descriptor desc;
+					btr::AllocatedMemory::Descriptor desc;
 					desc.size = vector_sizeof(v);
 					m_vertex = loader.m_vertex_memory.allocateMemory(desc);
 
-					desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+					desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 					auto staging = loader.m_staging_memory.allocateMemory(desc);
 					memcpy(staging.getMappedPtr(), v.data(), desc.size);
 
@@ -66,11 +66,11 @@ struct cTriangleLL
 
 				}
 				{
-					btr::BufferMemory::Descriptor desc;
+					btr::AllocatedMemory::Descriptor desc;
 					desc.size = vector_sizeof(i);
 					m_index = loader.m_vertex_memory.allocateMemory(desc);
 
-					desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+					desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 					auto staging = loader.m_staging_memory.allocateMemory(desc);
 					memcpy(staging.getMappedPtr(), i.data(), desc.size);
 
@@ -309,10 +309,10 @@ struct cTriangleLL
 	vk::Pipeline m_pipeline;
 
 	BrickParam	m_brick_info;
-	btr::AllocatedMemory m_triangle_info;
-	btr::AllocatedMemory m_triangleLL_head;
-	btr::AllocatedMemory m_triangleLL;
-	btr::AllocatedMemory m_triangleLL_count;
+	btr::BufferMemory m_triangle_info;
+	btr::BufferMemory m_triangleLL_head;
+	btr::BufferMemory m_triangleLL;
+	btr::BufferMemory m_triangleLL_count;
 	btr::UpdateBuffer<TriangleProjection> m_triangle_projection;
 	vk::Image m_brick_image;
 	vk::ImageView m_brick_image_view;
@@ -333,11 +333,11 @@ struct cTriangleLL
 			// ÉÅÉÇÉäämï€
 			{
 				// info
-				btr::BufferMemory::Descriptor desc;
+				btr::AllocatedMemory::Descriptor desc;
 				desc.size = sizeof(BrickParam);
 				m_triangle_info = loader.m_uniform_memory.allocateMemory(desc);
 
-				desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+				desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 				auto staging_buffer = loader.m_staging_memory.allocateMemory(desc);
 				BrickParam& param = *staging_buffer.getMappedPtr<BrickParam>();
 
@@ -361,19 +361,19 @@ struct cTriangleLL
 
 			{
 				// head
-				btr::BufferMemory::Descriptor desc;
+				btr::AllocatedMemory::Descriptor desc;
 				desc.size = sizeof(uint32_t)*m_brick_info.m_total_num.w;
 				m_triangleLL_head = loader.m_storage_memory.allocateMemory(desc);
 			}
 			{
 				// link list
-				btr::BufferMemory::Descriptor desc;
+				btr::AllocatedMemory::Descriptor desc;
 				desc.size = sizeof(TriangleLL) * 1000 * 1000;
 				m_triangleLL = loader.m_storage_memory.allocateMemory(desc);
 			}
 			{
 				// triangle counter
-				btr::BufferMemory::Descriptor desc;
+				btr::AllocatedMemory::Descriptor desc;
 				desc.size = sizeof(uint32_t);
 				m_triangleLL_count = loader.m_storage_memory.allocateMemory(desc);
 			}

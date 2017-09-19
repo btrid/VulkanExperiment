@@ -4,16 +4,16 @@
 #include <memory>
 #include <btrlib/Define.h>
 #include <btrlib/sGlobal.h>
-#include <btrlib/BufferMemory.h>
+#include <btrlib/AllocatedMemory.h>
 #include <btrlib/Loader.h>
 
 struct Geometry
 {
 	struct Resource
 	{
-		btr::AllocatedMemory m_vertex;
-		btr::AllocatedMemory m_index;
-		btr::AllocatedMemory m_indirect;
+		btr::BufferMemory m_vertex;
+		btr::BufferMemory m_index;
+		btr::BufferMemory m_indirect;
 		vk::IndexType m_index_type;
 		std::vector<vk::VertexInputAttributeDescription> m_vertex_attribute;
 		std::vector<vk::VertexInputBindingDescription> m_vertex_binding;

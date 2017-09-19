@@ -233,7 +233,7 @@ private:
 		m_last_gc = sGlobal::Order().getGameFrame();
 	}
 };
-struct AllocatedMemory
+struct BufferMemory
 {
 	vk::DescriptorBufferInfo m_buffer_info;
 	vk::BufferMemoryBarrier m_memory_barrier;
@@ -267,7 +267,7 @@ public:
 		return barrier;
 	}
 };
-struct BufferMemory
+struct AllocatedMemory
 {
 	struct Resource
 	{
@@ -347,14 +347,14 @@ struct BufferMemory
 			, attribute(AttributeFlags())
 		{}
 	};
-	AllocatedMemory allocateMemory(vk::DeviceSize size)
+	BufferMemory allocateMemory(vk::DeviceSize size)
 	{
 		Descriptor arg;
 		arg.size = size;
 		arg.attribute = AttributeFlags();
 		return allocateMemory(arg);
 	}
-	AllocatedMemory allocateMemory(Descriptor arg)
+	BufferMemory allocateMemory(Descriptor arg)
 	{
 //		sDebug::Order().print()
 		// size0はおかしいよね
@@ -365,8 +365,8 @@ struct BufferMemory
 		// allocできた？
 		assert(zone.isValid());
 
-		AllocatedMemory alloc;
-		auto deleter = [&](AllocatedMemory::Resource* ptr)
+		BufferMemory alloc;
+		auto deleter = [&](BufferMemory::Resource* ptr)
 		{
 			if (btr::isOn(m_resource->m_memory_type.propertyFlags, vk::MemoryPropertyFlagBits::eHostCoherent)) {
 				// cpuからアクセスかつcmdでコピーする場合、cmdが実行されてから書き換えないと送信先でデータがおかしくなるので、
@@ -378,7 +378,7 @@ struct BufferMemory
 			}
 			delete ptr;
 		};
-		alloc.m_resource = std::shared_ptr<AllocatedMemory::Resource>(new AllocatedMemory::Resource, deleter);
+		alloc.m_resource = std::shared_ptr<BufferMemory::Resource>(new BufferMemory::Resource, deleter);
 		alloc.m_resource->m_zone = zone;
 		alloc.m_resource->m_memory_ref = m_resource->m_memory.get();
 		alloc.m_buffer_info.buffer = m_resource->m_buffer.get();
@@ -400,8 +400,8 @@ struct BufferMemory
 
 struct UpdateBufferDescriptor
 {
-	btr::BufferMemory device_memory;
-	btr::BufferMemory staging_memory;
+	btr::AllocatedMemory device_memory;
+	btr::AllocatedMemory staging_memory;
 	uint32_t frame_max;
 
 	UpdateBufferDescriptor()
@@ -413,15 +413,15 @@ struct UpdateBufferDescriptor
 template<typename T>
 struct UpdateBuffer
 {
-	AllocatedMemory m_device_memory;
-	AllocatedMemory m_staging_memory;
+	BufferMemory m_device_memory;
+	BufferMemory m_staging_memory;
 	vk::DeviceSize m_begin;
 	vk::DeviceSize m_end;
 	uint32_t m_frame;
 	uint32_t m_frame_max;
 
 	// @deprecated
-	void setup(btr::BufferMemory& device_memory, btr::BufferMemory& staging_memory)
+	void setup(btr::AllocatedMemory& device_memory, btr::AllocatedMemory& staging_memory)
 	{
 		UpdateBufferDescriptor desc;
 		desc.device_memory = device_memory;
@@ -448,11 +448,11 @@ struct UpdateBuffer
 		m_frame_max = desc.frame_max;
 	}
 
-	void setStagingMemory(btr::BufferMemory& staging_memory)
+	void setStagingMemory(btr::AllocatedMemory& staging_memory)
 	{
 		// 更新中っぽい
 		assert(m_begin == ~vk::DeviceSize(0));
-		m_staging_memory = AllocatedMemory();
+		m_staging_memory = BufferMemory();
 		if (staging_memory.isValid())
 		{
 			m_staging_memory = staging_memory.allocateMemory(sizeof(T)*m_frame_max);
@@ -496,14 +496,14 @@ struct UpdateBuffer
 	}
 
 	vk::DescriptorBufferInfo getBufferInfo()const { return m_device_memory.getBufferInfo(); }
-	AllocatedMemory& getAllocateMemory() { return m_device_memory; }
-	const AllocatedMemory& getAllocateMemory()const { return m_device_memory; }
+	BufferMemory& getAllocateMemory() { return m_device_memory; }
+	const BufferMemory& getAllocateMemory()const { return m_device_memory; }
 };
 
 struct UpdateBufferExDescriptor
 {
-	btr::BufferMemory device_memory;
-	btr::BufferMemory staging_memory;
+	btr::AllocatedMemory device_memory;
+	btr::AllocatedMemory staging_memory;
 	uint32_t frame_max;
 	uint32_t alloc_size;
 	UpdateBufferExDescriptor()
@@ -515,8 +515,8 @@ struct UpdateBufferExDescriptor
 
 struct UpdateBufferEx
 {
-	AllocatedMemory m_device_memory;
-	AllocatedMemory m_staging_memory;
+	BufferMemory m_device_memory;
+	BufferMemory m_staging_memory;
 	struct Area
 	{
 		vk::DeviceSize m_begin;
@@ -588,8 +588,8 @@ struct UpdateBufferEx
 	Area& getGPUArea() { return m_area[m_frame == 0 ? (m_frame_max-1) : (m_frame-1)]; }
 	vk::DescriptorBufferInfo getBufferInfo()const { return m_device_memory.getBufferInfo(); }
 	vk::DescriptorBufferInfo getStagingBufferInfo()const { return m_staging_memory.getBufferInfo(); }
-	AllocatedMemory& getAllocateMemory() { return m_device_memory; }
-	const AllocatedMemory& getAllocateMemory()const { return m_device_memory; }
+	BufferMemory& getAllocateMemory() { return m_device_memory; }
+	const BufferMemory& getAllocateMemory()const { return m_device_memory; }
 };
 
 }

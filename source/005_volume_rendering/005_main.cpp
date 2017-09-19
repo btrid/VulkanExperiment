@@ -20,7 +20,7 @@
 #include <btrlib/sGlobal.h>
 #include <btrlib/GPU.h>
 #include <btrlib/cStopWatch.h>
-#include <btrlib/BufferMemory.h>
+#include <btrlib/AllocatedMemory.h>
 
 #include <applib/App.h>
 #include <applib/cModelPipeline.h>

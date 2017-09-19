@@ -99,7 +99,7 @@ void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 		}
 	}
 	{
-		btr::BufferMemory::Descriptor desc;
+		btr::AllocatedMemory::Descriptor desc;
 		desc.size = sizeof(glm::mat4) * 256;
 		m_bone_buffer = loader->m_storage_memory.allocateMemory(desc);
 	}

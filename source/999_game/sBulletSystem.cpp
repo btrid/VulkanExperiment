@@ -77,7 +77,7 @@ void sBulletSystem::Private::setup(std::shared_ptr<btr::Loader>& loader)
 
 	{
 		{
-			btr::BufferMemory::Descriptor data_desc;
+			btr::AllocatedMemory::Descriptor data_desc;
 			data_desc.size = sizeof(BulletData) * m_bullet_info_cpu.m_max_num;
 			m_bullet = loader->m_storage_memory.allocateMemory(data_desc);
 			std::vector<BulletData> p(m_bullet_info_cpu.m_max_num);
@@ -87,7 +87,7 @@ void sBulletSystem::Private::setup(std::shared_ptr<btr::Loader>& loader)
 			m_emit = loader->m_storage_memory.allocateMemory(data_desc);
 		}
 
-		btr::BufferMemory::Descriptor desc;
+		btr::AllocatedMemory::Descriptor desc;
 		desc.size = sizeof(vk::DrawIndirectCommand);
 		m_bullet_counter = loader->m_storage_memory.allocateMemory(desc);
 		cmd->updateBuffer<vk::DrawIndirectCommand>(m_bullet_counter.getBufferInfo().buffer, m_bullet_counter.getBufferInfo().offset, vk::DrawIndirectCommand(4, 0, 0, 0));

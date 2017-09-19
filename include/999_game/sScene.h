@@ -4,7 +4,7 @@
 #include <btrlib/Define.h>
 #include <btrlib/loader.h>
 #include <btrlib/cCamera.h>
-#include <btrlib/BufferMemory.h>
+#include <btrlib/AllocatedMemory.h>
 #include <btrlib/sGlobal.h>
 #include <btrlib/Singleton.h>
 #include <applib/App.h>
@@ -78,7 +78,7 @@ struct sScene : public Singleton<sScene>
 	vk::Image m_map_damae_image;
 	vk::ImageView m_map_damae_image_view;
 	vk::DeviceMemory m_map_damae_image_memory;
-	btr::AllocatedMemory m_map_info;
+	btr::BufferMemory m_map_info;
 
 	vk::UniqueRenderPass m_render_pass;
 	std::vector<vk::UniqueFramebuffer> m_framebuffer;
@@ -328,9 +328,9 @@ struct sScene : public Singleton<sScene>
 					l.setLayerCount(1);
 					l.setMipLevel(0);
 					{
-						btr::BufferMemory::Descriptor desc;
+						btr::AllocatedMemory::Descriptor desc;
 						desc.size = loader->m_device->getImageMemoryRequirements(image).size;
-						desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+						desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 						auto staging = loader->m_staging_memory.allocateMemory(desc);
 						memcpy(staging.getMappedPtr(), map.data(), desc.size);
 						vk::BufferImageCopy copy;
@@ -341,9 +341,9 @@ struct sScene : public Singleton<sScene>
 						cmd->copyBufferToImage(staging.getBufferInfo().buffer, image, vk::ImageLayout::eTransferDstOptimal, copy);
 					}
 					{
-						btr::BufferMemory::Descriptor desc;
+						btr::AllocatedMemory::Descriptor desc;
 						desc.size = loader->m_device->getImageMemoryRequirements(subimage).size;
-						desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+						desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 						auto staging = loader->m_staging_memory.allocateMemory(desc);
 
 						memcpy(staging.getMappedPtr(), submap.data(), desc.size);
@@ -394,11 +394,11 @@ struct sScene : public Singleton<sScene>
 			}
 
 
-			btr::BufferMemory::Descriptor desc;
+			btr::AllocatedMemory::Descriptor desc;
 			desc.size = sizeof(MapInfo);
 			m_map_info = loader->m_uniform_memory.allocateMemory(desc);
 
-			desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging = loader->m_staging_memory.allocateMemory(desc);
 			*staging.getMappedPtr<MapInfo>() = m_map_info_cpu;
 

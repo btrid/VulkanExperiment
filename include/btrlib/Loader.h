@@ -2,7 +2,7 @@
 
 #include <btrlib/Define.h>
 #include <btrlib/GPU.h>
-#include <btrlib/BufferMemory.h>
+#include <btrlib/AllocatedMemory.h>
 #include <btrlib/cWindow.h>
 #include <btrlib/cCmdPool.h>
 
@@ -14,10 +14,10 @@ struct Loader
 	cGPU m_gpu;
 	cDevice m_device;
 
-	btr::BufferMemory m_vertex_memory;
-	btr::BufferMemory m_uniform_memory;
-	btr::BufferMemory m_storage_memory;
-	btr::BufferMemory m_staging_memory;
+	btr::AllocatedMemory m_vertex_memory;
+	btr::AllocatedMemory m_uniform_memory;
+	btr::AllocatedMemory m_storage_memory;
+	btr::AllocatedMemory m_staging_memory;
 
 	vk::UniqueDescriptorPool m_descriptor_pool;
 	vk::UniquePipelineCache m_cache;
@@ -30,10 +30,10 @@ struct Executer
 	cGPU m_gpu;
 	cDevice m_device;
 
-	btr::BufferMemory m_vertex_memory;
-	btr::BufferMemory m_uniform_memory;
-	btr::BufferMemory m_storage_memory;
-	btr::BufferMemory m_staging_memory;
+	btr::AllocatedMemory m_vertex_memory;
+	btr::AllocatedMemory m_uniform_memory;
+	btr::AllocatedMemory m_storage_memory;
+	btr::AllocatedMemory m_staging_memory;
 
 	std::shared_ptr<cWindow> m_window;
 	std::shared_ptr<cCmdPool> m_cmd_pool;

@@ -78,14 +78,14 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Loader>& loader)
 	}
 	{
 		{
-			btr::BufferMemory::Descriptor data_desc;
+			btr::AllocatedMemory::Descriptor data_desc;
 			data_desc.size = sizeof(ParticleData) * m_particle_info_cpu.m_particle_max_num*2;
 			m_particle = loader->m_storage_memory.allocateMemory(data_desc);
 			std::vector<ParticleData> p(m_particle_info_cpu.m_particle_max_num*2);
 			cmd->fillBuffer(m_particle.getBufferInfo().buffer, m_particle.getBufferInfo().offset, m_particle.getBufferInfo().range, 0u);
 		}
 		{
-			btr::BufferMemory::Descriptor desc;
+			btr::AllocatedMemory::Descriptor desc;
 			desc.size = sizeof(vk::DrawIndirectCommand);
 			m_particle_counter = loader->m_storage_memory.allocateMemory(desc);
 			cmd->updateBuffer<vk::DrawIndirectCommand>(m_particle_counter.getBufferInfo().buffer, m_particle_counter.getBufferInfo().offset, vk::DrawIndirectCommand(4, 0, 0, 0));
@@ -93,7 +93,7 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Loader>& loader)
 			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { count_barrier }, {});
 		}
 		{
-			btr::BufferMemory::Descriptor desc;
+			btr::AllocatedMemory::Descriptor desc;
 			desc.size = sizeof(ParticleUpdateParameter);
 			m_particle_update_param = loader->m_storage_memory.allocateMemory(desc);
 
@@ -110,14 +110,14 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Loader>& loader)
 			
 		}
 		{
-			btr::BufferMemory::Descriptor desc;
+			btr::AllocatedMemory::Descriptor desc;
 			desc.size = sizeof(ParticleGenerateCommand) * m_particle_info_cpu.m_emitter_max_num;
 			m_particle_generate_cmd = loader->m_storage_memory.allocateMemory(desc);
 			std::vector<ParticleGenerateCommand> p(m_particle_info_cpu.m_emitter_max_num);
 			cmd->fillBuffer(m_particle_generate_cmd.getBufferInfo().buffer, m_particle_generate_cmd.getBufferInfo().offset, m_particle_generate_cmd.getBufferInfo().range, 0u);
 		}
 		{
-			btr::BufferMemory::Descriptor desc;
+			btr::AllocatedMemory::Descriptor desc;
 			desc.size = sizeof(glm::uvec3);
 			m_particle_generate_cmd_counter = loader->m_storage_memory.allocateMemory(desc);
 			cmd->updateBuffer<glm::uvec3>(m_particle_generate_cmd_counter.getBufferInfo().buffer, m_particle_generate_cmd_counter.getBufferInfo().offset, glm::uvec3(0, 1, 1));
@@ -135,7 +135,7 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Loader>& loader)
 		}
 
 		{
-			btr::BufferMemory::Descriptor data_desc;
+			btr::AllocatedMemory::Descriptor data_desc;
 			data_desc.size = sizeof(EmitterData) * m_particle_info_cpu.m_emitter_max_num;
 			m_particle_emitter = loader->m_storage_memory.allocateMemory(data_desc);
 			std::vector<EmitterData> p(m_particle_info_cpu.m_emitter_max_num);

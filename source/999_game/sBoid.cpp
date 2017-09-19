@@ -75,11 +75,11 @@ void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 	{
 		// memory alloc
 		{
-			btr::BufferMemory::Descriptor desc;
+			btr::AllocatedMemory::Descriptor desc;
 			desc.size = sizeof(BoidInfo);
 			m_boid_info_gpu = loader->m_uniform_memory.allocateMemory(desc);
 
-			desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging = loader->m_staging_memory.allocateMemory(desc);
 			*staging.getMappedPtr<BoidInfo>() = m_boid_info;
 			vk::BufferCopy copy;
@@ -89,11 +89,11 @@ void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 			cmd->copyBuffer(staging.getBufferInfo().buffer, m_boid_info_gpu.getBufferInfo().buffer, copy);
 		}
 		{
-			btr::BufferMemory::Descriptor desc;
+			btr::AllocatedMemory::Descriptor desc;
 			desc.size = sizeof(SoldierInfo) * m_boid_info.m_soldier_info_max;
 			m_soldier_info_gpu = loader->m_uniform_memory.allocateMemory(desc);
 
-			desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging = loader->m_staging_memory.allocateMemory(desc);
 			auto* info = staging.getMappedPtr<SoldierInfo>();
 			info[0].m_turn_speed = glm::radians(45.f);
@@ -106,7 +106,7 @@ void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 			cmd->copyBuffer(staging.getBufferInfo().buffer, m_soldier_info_gpu.getBufferInfo().buffer, copy);
 		}
 		{
-			btr::BufferMemory::Descriptor desc;
+			btr::AllocatedMemory::Descriptor desc;
 			desc.size = sizeof(BrainData) * m_boid_info.m_brain_max;
 			auto brain_gpu = loader->m_storage_memory.allocateMemory(desc);
 
@@ -116,7 +116,7 @@ void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 		}
 
 		{
-			btr::BufferMemory::Descriptor desc;
+			btr::AllocatedMemory::Descriptor desc;
 			desc.size = sizeof(SoldierData) * m_boid_info.m_soldier_max;
 			auto soldier_gpu = loader->m_storage_memory.allocateMemory(desc);
 
@@ -126,7 +126,7 @@ void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 		}
 
 		{
-			btr::BufferMemory::Descriptor desc;
+			btr::AllocatedMemory::Descriptor desc;
 			auto& map_desc = sScene::Order().m_map_info_cpu.m_descriptor[0];
 			desc.size = sizeof(uint32_t) * map_desc.m_cell_num.x* map_desc.m_cell_num.y*2;
 			m_soldier_LL_head_gpu.setup(loader->m_storage_memory.allocateMemory(desc));
@@ -144,7 +144,7 @@ void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_compute, {});
 		}
 		{
-			btr::BufferMemory::Descriptor desc;
+			btr::AllocatedMemory::Descriptor desc;
 			desc.size = sizeof(SoldierData)*m_boid_info.m_soldier_emit_max;
 			m_emit_data.m_buffer = loader->m_storage_memory.allocateMemory(desc);
 			m_emit_data.m_staging.resize(loader->m_window->getSwapchain().getBackbufferNum());
@@ -173,11 +173,11 @@ void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 
 		}
 		{
-			btr::BufferMemory::Descriptor desc;
+			btr::AllocatedMemory::Descriptor desc;
 			desc.size = sizeof(vk::DrawIndirectCommand) * 256;
 			m_soldier_draw_indiret_gpu = loader->m_vertex_memory.allocateMemory(desc);
 
-			desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging = loader->m_staging_memory.allocateMemory(desc);
 			auto* info = staging.getMappedPtr<vk::DrawIndirectCommand>();
 			for (int i = 0; i < 256; i++)
@@ -256,9 +256,9 @@ void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 				l.setBaseArrayLayer(0);
 				l.setLayerCount(1);
 				l.setMipLevel(0);
-				btr::BufferMemory::Descriptor desc;
+				btr::AllocatedMemory::Descriptor desc;
 				desc.size = vector_sizeof(solver);
-				desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+				desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 				auto staging = loader->m_staging_memory.allocateMemory(desc);
 				memcpy(staging.getMappedPtr(), solver.data(), desc.size);
 				vk::BufferImageCopy copy;

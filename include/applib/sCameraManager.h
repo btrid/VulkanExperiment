@@ -3,7 +3,7 @@
 #include <btrlib/Define.h>
 #include <btrlib/loader.h>
 #include <btrlib/cCamera.h>
-#include <btrlib/BufferMemory.h>
+#include <btrlib/AllocatedMemory.h>
 #include <btrlib/sGlobal.h>
 #include <btrlib/Singleton.h>
 #include <applib/App.h>

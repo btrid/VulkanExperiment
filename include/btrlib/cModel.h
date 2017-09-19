@@ -13,16 +13,16 @@
 #include <btrlib/Singleton.h>
 #include <btrlib/rTexture.h>
 #include <btrlib/ResourceManager.h>
-#include <btrlib/BufferMemory.h>
+#include <btrlib/AllocatedMemory.h>
 #include <btrlib/Loader.h>
 #include <btrlib/cMotion.h>
 
 
 struct cMeshResource 
 {
-	btr::AllocatedMemory m_vertex_buffer_ex;
-	btr::AllocatedMemory m_index_buffer_ex;
-	btr::AllocatedMemory m_indirect_buffer_ex;
+	btr::BufferMemory m_vertex_buffer_ex;
+	btr::BufferMemory m_index_buffer_ex;
+	btr::BufferMemory m_indirect_buffer_ex;
 	vk::IndexType mIndexType;
 	int32_t mIndirectCount; //!< ƒƒbƒVƒ…‚Ì”
 

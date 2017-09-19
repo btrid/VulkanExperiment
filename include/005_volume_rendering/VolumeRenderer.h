@@ -5,7 +5,7 @@
 #include <btrlib/Define.h>
 #include <btrlib/Loader.h>
 #include <btrlib/cCamera.h>
-#include <btrlib/BufferMemory.h>
+#include <btrlib/AllocatedMemory.h>
 #include <btrlib/sGlobal.h>
 #include <applib/Geometry.h>
 #include <applib/sCameraManager.h>
@@ -53,7 +53,7 @@ struct volumeRenderer
 	vk::UniqueRenderPass m_render_pass;
 	std::vector<vk::UniqueFramebuffer> m_framebuffer;
 
-	btr::AllocatedMemory m_volume_scene_gpu;
+	btr::BufferMemory m_volume_scene_gpu;
 	VolumeScene m_volume_scene_cpu;
 
 	std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_module;
@@ -233,9 +233,9 @@ public:
 				l.setLayerCount(1);
 				l.setMipLevel(0);
 				{
-					btr::BufferMemory::Descriptor desc;
+					btr::AllocatedMemory::Descriptor desc;
 					desc.size = memory_request.size;
-					desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+					desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 					auto staging = loader->m_staging_memory.allocateMemory(desc);
 					memcpy(staging.getMappedPtr(), rgba.data(), desc.size);
 					vk::BufferImageCopy copy;
@@ -261,7 +261,7 @@ public:
 		}
 
 		{
-			btr::BufferMemory::Descriptor desc;
+			btr::AllocatedMemory::Descriptor desc;
 			desc.size = sizeof(VolumeScene);
 			m_volume_scene_gpu = loader->m_uniform_memory.allocateMemory(desc);
 			m_volume_scene_gpu.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
@@ -498,9 +498,9 @@ public:
 	{
 		vk::CommandBuffer cmd = executer->m_cmd_pool->allocCmdOnetime(0);
 
-		btr::BufferMemory::Descriptor desc;
+		btr::AllocatedMemory::Descriptor desc;
 		desc.size = sizeof(VolumeScene);
-		desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+		desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 
 		auto staging = executer->m_staging_memory.allocateMemory(desc);
 		*staging.getMappedPtr<VolumeScene>() = m_volume_scene_cpu;

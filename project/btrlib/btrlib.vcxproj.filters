@@ -63,9 +63,6 @@
     <ClInclude Include="..\..\include\btrlib\ResourceManager.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\btrlib\BufferMemory.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\btrlib\GPU.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
@@ -79,6 +76,9 @@
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\btrlib\cCmdPool.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\btrlib\BuffersMemory.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>

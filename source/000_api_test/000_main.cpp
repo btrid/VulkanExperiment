@@ -18,7 +18,7 @@
 #include <btrlib/sGlobal.h>
 #include <btrlib/GPU.h>
 #include <btrlib/cStopWatch.h>
-#include <btrlib/BufferMemory.h>
+#include <btrlib/AllocatedMemory.h>
 #include <applib/App.h>
 
 #pragma comment(lib, "applib.lib")
@@ -32,14 +32,14 @@ void memoryAllocater()
 	sGlobal::Order();
 	auto device = sThreadLocal::Order().m_device[0];
 
-	btr::BufferMemory staging_memory;
+	btr::AllocatedMemory staging_memory;
 	staging_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached, 1024 * 1024 * 20);
 
 	auto& thread_pool = sGlobal::Order().getThreadPool();
 	struct Memory
 	{
 		int m_life;
-		btr::AllocatedMemory m_alloced_memory;
+		btr::BufferMemory m_alloced_memory;
 	};
 	std::vector<Memory> memory_list;
 	int32_t next = 0;
@@ -50,11 +50,11 @@ void memoryAllocater()
 		{
 			Memory m;
 			m.m_life = std::rand() % 100;
-			btr::BufferMemory::Descriptor desc;
+			btr::AllocatedMemory::Descriptor desc;
 			desc.size = std::rand() % 16 * 32 + 16;
 			if (std::rand() % 100 < 10)
 			{
-				desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+				desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 			}
 			m.m_alloced_memory = staging_memory.allocateMemory(desc);
 			memory_list.push_back(std::move(m));

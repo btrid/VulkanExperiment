@@ -25,9 +25,9 @@ MotionTexture create(std::shared_ptr<btr::Loader>& loader, vk::CommandBuffer cmd
 	auto image_prop = loader->m_device.getGPU().getImageFormatProperties(image_info.format, image_info.imageType, image_info.tiling, image_info.usage, image_info.flags);
 	vk::UniqueImage image = loader->m_device->createImageUnique(image_info);
 
-	btr::BufferMemory::Descriptor staging_desc;
+	btr::AllocatedMemory::Descriptor staging_desc;
 	staging_desc.size = image_info.arrayLayers * motion.m_data.size() * SIZE * sizeof(glm::u16vec4);
-	staging_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+	staging_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 	auto staging_buffer = loader->m_staging_memory.allocateMemory(staging_desc);
 	auto* data = staging_buffer.getMappedPtr<glm::u16vec4>();
 
@@ -242,9 +242,9 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Loader>& loader, std::sha
 	m_resource_instancing->m_instance_max_num = instanceNum;
 	// material
 	{
-		btr::BufferMemory::Descriptor staging_desc;
+		btr::AllocatedMemory::Descriptor staging_desc;
 		staging_desc.size = m_resource->m_material.size() * sizeof(MaterialBuffer);
-		staging_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+		staging_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 		auto staging_material = loader->m_staging_memory.allocateMemory(staging_desc);
 		auto* mb = static_cast<MaterialBuffer*>(staging_material.getMappedPtr());
 		for (size_t i = 0; i < m_resource->m_material.size(); i++)
@@ -268,9 +268,9 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Loader>& loader, std::sha
 	}
 	// material index
 	{
-		btr::BufferMemory::Descriptor staging_desc;
+		btr::AllocatedMemory::Descriptor staging_desc;
 		staging_desc.size = m_resource->m_mesh.size() * sizeof(uint32_t);
-		staging_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+		staging_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 		auto staging = loader->m_staging_memory.allocateMemory(staging_desc);
 		auto* mi = static_cast<uint32_t*>(staging.getMappedPtr());
 		for (size_t i = 0; i < m_resource->m_mesh.size(); i++) {
@@ -293,9 +293,9 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Loader>& loader, std::sha
 	// node info
 	auto nodeInfo = createNodeInfo(m_resource->mNodeRoot);
 	{
-		btr::BufferMemory::Descriptor staging_desc;
+		btr::AllocatedMemory::Descriptor staging_desc;
 		staging_desc.size = vector_sizeof(nodeInfo);
-		staging_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+		staging_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 		auto staging_node_info_buffer = loader->m_staging_memory.allocateMemory(staging_desc);
 		auto& buffer = m_resource_instancing->getBuffer(NODE_INFO);
 		buffer = loader->m_storage_memory.allocateMemory(staging_desc.size);
@@ -318,10 +318,10 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Loader>& loader, std::sha
 	{
 		// BoneInfo
 		{
-			btr::BufferMemory::Descriptor staging_desc;
+			btr::AllocatedMemory::Descriptor staging_desc;
 			staging_desc.size = m_resource->mBone.size() * sizeof(BoneInfo);
-			staging_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-			btr::AllocatedMemory staging_bone_info = loader->m_staging_memory.allocateMemory(staging_desc);
+			staging_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			btr::BufferMemory staging_bone_info = loader->m_staging_memory.allocateMemory(staging_desc);
 			auto* bo = static_cast<BoneInfo*>(staging_bone_info.getMappedPtr());
 			for (size_t i = 0; i < m_resource->mBone.size(); i++) {
 				bo[i].mBoneOffset = m_resource->mBone[i].mOffset;
@@ -346,7 +346,7 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Loader>& loader, std::sha
 
 	{
 		// staging buffer
-		btr::BufferMemory::Descriptor desc;
+		btr::AllocatedMemory::Descriptor desc;
 		desc.size = instanceNum * sizeof(glm::mat4) * sGlobal::FRAME_MAX;
 		m_resource_instancing->m_world_staging = loader->m_staging_memory.allocateMemory(desc);
 		desc.size = sizeof(ModelInstancingInfo) * sGlobal::FRAME_MAX;
@@ -355,9 +355,9 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Loader>& loader, std::sha
 
 	// ModelInfo
 	{
-		btr::BufferMemory::Descriptor staging_desc;
+		btr::AllocatedMemory::Descriptor staging_desc;
 		staging_desc.size = sizeof(cModel::ModelInfo);
-		staging_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+		staging_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 		auto staging_model_info = loader->m_staging_memory.allocateMemory(staging_desc);
 
 		auto& mi = *static_cast<cModel::ModelInfo*>(staging_model_info.getMappedPtr());
@@ -445,9 +445,9 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Loader>& loader, std::sha
 		auto& anim = m_resource->getAnimation();
 		m_resource_instancing->m_motion_texture = createMotion(loader, cmd.get(), m_resource->getAnimation(), m_resource->mNodeRoot);
 
-		btr::BufferMemory::Descriptor staging_desc;
+		btr::AllocatedMemory::Descriptor staging_desc;
 		staging_desc.size = sizeof(ModelInstancingRender::AnimationInfo) * anim.m_motion.size();
-		staging_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+		staging_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 		auto staging = loader->m_staging_memory.allocateMemory(staging_desc);
 		auto* staging_ptr = staging.getMappedPtr<ModelInstancingRender::AnimationInfo>();
 		for (size_t i = 0; i < anim.m_motion.size(); i++)
@@ -459,7 +459,7 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Loader>& loader, std::sha
 		// AnimeInfo
 		{
 			auto& buffer = m_resource_instancing->getBuffer(ANIMATION_INFO);
-			btr::BufferMemory::Descriptor arg;
+			btr::AllocatedMemory::Descriptor arg;
 			arg.size = sizeof(ModelInstancingRender::AnimationInfo) * anim.m_motion.size();
 			buffer = loader->m_storage_memory.allocateMemory(arg);
 
@@ -482,9 +482,9 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Loader>& loader, std::sha
 		}
 		// PlayingAnimation
 		{
-			btr::BufferMemory::Descriptor staging_desc;
+			btr::AllocatedMemory::Descriptor staging_desc;
 			staging_desc.size = instanceNum * sizeof(PlayingAnimation);
-			staging_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			staging_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging_playing_animation = loader->m_staging_memory.allocateMemory(staging_desc);
 
 			auto* pa = static_cast<PlayingAnimation*>(staging_playing_animation.getMappedPtr());

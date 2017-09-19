@@ -6,7 +6,7 @@
 #include <btrlib/sGlobal.h>
 #include <btrlib/cCamera.h>
 #include <btrlib/Shape.h>
-#include <btrlib/BufferMemory.h>
+#include <btrlib/AllocatedMemory.h>
 #include <btrlib/Loader.h>
 
 struct cModelRender;
@@ -45,7 +45,7 @@ struct cModelPipeline
 	std::array<vk::UniqueDescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
 
 	vk::UniqueDescriptorSet m_descriptor_set_scene;
-	btr::AllocatedMemory m_bone_buffer;
+	btr::BufferMemory m_bone_buffer;
 
 	std::vector<std::shared_ptr<cModelRender>> m_model;
 	void setup(std::shared_ptr<btr::Loader>& loader);

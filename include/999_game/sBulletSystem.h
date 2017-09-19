@@ -4,7 +4,7 @@
 #include <array>
 #include <memory>
 #include <btrlib/Singleton.h>
-#include <btrlib/BufferMemory.h>
+#include <btrlib/AllocatedMemory.h>
 #include <btrlib/cCamera.h>
 #include <btrlib/Loader.h>
 
@@ -73,13 +73,13 @@ public:
 	struct Private 
 	{
 
-		btr::AllocatedMemory m_bullet;
-		btr::AllocatedMemory m_bullet_info;
+		btr::BufferMemory m_bullet;
+		btr::BufferMemory m_bullet_info;
 		std::array<std::vector<BulletData>, 2> m_append_buffer;
-		btr::AllocatedMemory m_bullet_counter;
-		btr::AllocatedMemory m_emit;
-		btr::AllocatedMemory m_bullet_draw_indiret_info;
-		btr::AllocatedMemory m_bullet_LL_head_gpu;
+		btr::BufferMemory m_bullet_counter;
+		btr::BufferMemory m_emit;
+		btr::BufferMemory m_bullet_draw_indiret_info;
+		btr::BufferMemory m_bullet_LL_head_gpu;
 
 		vk::UniqueRenderPass m_render_pass;
 		std::vector<vk::UniqueFramebuffer> m_framebuffer;
@@ -158,10 +158,10 @@ public:
 					auto to_transfer = m_emit.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite);
 					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
 
-					btr::BufferMemory::Descriptor emit_desc;
+					btr::AllocatedMemory::Descriptor emit_desc;
 					emit_desc.size = vector_sizeof(data);
-					emit_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-					btr::AllocatedMemory bullet_emit = executer->m_staging_memory.allocateMemory(emit_desc);
+					emit_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+					btr::BufferMemory bullet_emit = executer->m_staging_memory.allocateMemory(emit_desc);
 					memcpy(bullet_emit.getMappedPtr(), data.data(), emit_desc.size);
 
 					vk::BufferCopy copy;
@@ -246,8 +246,8 @@ public:
 	vk::PipelineLayout getPipelineLayout(PipelineLayout layout)const { return m_private->m_pipeline_layout[layout].get(); }
 	vk::DescriptorSetLayout getDescriptorSetLayout(DescriptorSetLayout desctiptor)const { return m_private->m_descriptor_set_layout[desctiptor].get(); }
 	vk::DescriptorSet getDescriptorSet(DescriptorSet i)const { return m_private->m_descriptor_set[i].get(); }
-	btr::AllocatedMemory& getLL() { return m_private->m_bullet_LL_head_gpu; }
-	btr::AllocatedMemory& getBullet() { return m_private->m_bullet; }
+	btr::BufferMemory& getLL() { return m_private->m_bullet_LL_head_gpu; }
+	btr::BufferMemory& getBullet() { return m_private->m_bullet; }
 
 };
 

@@ -2,7 +2,7 @@
 
 #include <array>
 #include <memory>
-#include <btrlib/BufferMemory.h>
+#include <btrlib/AllocatedMemory.h>
 #include <btrlib/cCamera.h>
 #include <btrlib/Loader.h>
 #include <btrlib/Singleton.h>
@@ -120,14 +120,14 @@ struct sParticlePipeline : Singleton<sParticlePipeline>
 			DESCRIPTOR_SET_NUM,
 		};
 
-		btr::AllocatedMemory m_particle_info;
-		btr::AllocatedMemory m_particle;
-		btr::AllocatedMemory m_particle_update_param;
-		btr::AllocatedMemory m_particle_counter;
-		btr::AllocatedMemory m_particle_generate_cmd;
-		btr::AllocatedMemory m_particle_generate_cmd_counter;
-		btr::AllocatedMemory m_particle_emitter;
-		btr::AllocatedMemory m_particle_emitter_counter;
+		btr::BufferMemory m_particle_info;
+		btr::BufferMemory m_particle;
+		btr::BufferMemory m_particle_update_param;
+		btr::BufferMemory m_particle_counter;
+		btr::BufferMemory m_particle_generate_cmd;
+		btr::BufferMemory m_particle_generate_cmd_counter;
+		btr::BufferMemory m_particle_emitter;
+		btr::BufferMemory m_particle_emitter_counter;
 
 		vk::UniqueRenderPass m_render_pass;
 		std::vector<vk::UniqueFramebuffer> m_framebuffer;

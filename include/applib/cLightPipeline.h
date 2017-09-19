@@ -7,7 +7,7 @@
 #include <btrlib/sGlobal.h>
 #include <btrlib/cCamera.h>
 #include <btrlib/Shape.h>
-#include <btrlib/BufferMemory.h>
+#include <btrlib/AllocatedMemory.h>
 #include <btrlib/Light.h>
 
 struct cModelInstancingRenderer;
@@ -94,17 +94,17 @@ struct cFowardPlusPipeline
 		cDevice m_device;
 		LightInfo m_light_info;
 
-		btr::BufferMemory m_uniform_memory;
-		btr::BufferMemory m_storage_memory;
-		btr::BufferMemory m_staging_memory;
+		btr::AllocatedMemory m_uniform_memory;
+		btr::AllocatedMemory m_storage_memory;
+		btr::AllocatedMemory m_staging_memory;
 
 		btr::UpdateBuffer<LightInfo> m_light_info_gpu;
 		btr::UpdateBuffer<FrustomPoint> m_frustom_point;
 
-		btr::AllocatedMemory m_light;
-		btr::AllocatedMemory m_lightLL_head;
-		btr::AllocatedMemory m_lightLL;
-		btr::AllocatedMemory m_light_counter;
+		btr::BufferMemory m_light;
+		btr::BufferMemory m_lightLL_head;
+		btr::BufferMemory m_lightLL;
+		btr::BufferMemory m_light_counter;
 
 		btr::StagingBuffer m_light_cpu;
 

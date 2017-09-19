@@ -1,6 +1,6 @@
 #pragma once
 #include <btrlib/Define.h>
-#include <btrlib/BufferMemory.h>
+#include <btrlib/AllocatedMemory.h>
 #include <btrlib/cModel.h>
 #include <applib/cModelRender.h>
 
@@ -24,8 +24,8 @@ struct cModelRenderPrivate
 
 	std::shared_ptr<cModel::Resource> m_model_resource;
 	std::vector<glm::mat4> m_node_buffer;
-	std::vector<btr::AllocatedMemory> m_bone_buffer_transfer;
-	btr::AllocatedMemory m_bone_buffer;
+	std::vector<btr::BufferMemory> m_bone_buffer_transfer;
+	btr::BufferMemory m_bone_buffer;
 	MotionPlayList m_playlist;
 
 	std::vector<vk::UniqueCommandBuffer> m_transfer_cmd;
@@ -34,7 +34,7 @@ struct cModelRenderPrivate
 
 	vk::UniqueDescriptorSet m_draw_descriptor_set_per_model;
 	vk::UniqueDescriptorSet m_draw_descriptor_set_per_mesh;
-	btr::AllocatedMemory m_material;
+	btr::BufferMemory m_material;
 
 	void setup(std::shared_ptr<btr::Loader>& loader, std::shared_ptr<cModel::Resource> resource)
 	{
@@ -53,12 +53,12 @@ struct cModelRenderPrivate
 			m_bone_buffer_transfer.resize(sGlobal::FRAME_MAX);
 			for (auto& buffer : m_bone_buffer_transfer)
 			{
-				btr::BufferMemory::Descriptor desc;
+				btr::AllocatedMemory::Descriptor desc;
 				desc.size = m_model_resource->mBone.size() * sizeof(glm::mat4);
 				buffer = loader->m_staging_memory.allocateMemory(desc);
 			}
 			{
-				btr::BufferMemory::Descriptor desc;
+				btr::AllocatedMemory::Descriptor desc;
 				desc.size = m_model_resource->mBone.size() * sizeof(glm::mat4);
 				m_bone_buffer = loader->m_storage_memory.allocateMemory(desc);
 
@@ -66,9 +66,9 @@ struct cModelRenderPrivate
 		}
 		{
 			// material
-			btr::BufferMemory::Descriptor staging_desc;
+			btr::AllocatedMemory::Descriptor staging_desc;
 			staging_desc.size = m_model_resource->m_material.size() * sizeof(MaterialBuffer);
-			staging_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			staging_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging_material = loader->m_staging_memory.allocateMemory(staging_desc);
 			auto* mb = static_cast<MaterialBuffer*>(staging_material.getMappedPtr());
 			for (size_t i = 0; i < m_model_resource->m_material.size(); i++)

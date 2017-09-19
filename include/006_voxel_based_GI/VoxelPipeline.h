@@ -5,11 +5,11 @@
 
 struct VoxelizeModelResource
 {
-	btr::AllocatedMemory m_vertex;
-	btr::AllocatedMemory m_index;
-	btr::AllocatedMemory m_material;
-	btr::AllocatedMemory m_mesh_info;
-	btr::AllocatedMemory m_indirect;
+	btr::BufferMemory m_vertex;
+	btr::BufferMemory m_index;
+	btr::BufferMemory m_material;
+	btr::BufferMemory m_mesh_info;
+	btr::BufferMemory m_indirect;
 	uint32_t m_mesh_count;
 	uint32_t m_index_count;
 
@@ -106,7 +106,7 @@ struct VoxelPipeline
 	vk::UniqueDescriptorPool m_model_descriptor_pool;
 
 	VoxelInfo m_voxelize_info_cpu;
-	btr::AllocatedMemory m_voxel_info;
+	btr::BufferMemory m_voxel_info;
 	vk::UniqueImage m_voxel_image;
 	vk::UniqueImageView m_voxel_imageview;
 	vk::UniqueDeviceMemory m_voxel_imagememory;
@@ -120,11 +120,11 @@ struct VoxelPipeline
 
 		// resource setup
 		{
-			btr::BufferMemory::Descriptor desc;
+			btr::AllocatedMemory::Descriptor desc;
 			desc.size = sizeof(VoxelInfo);
 			m_voxel_info = loader->m_uniform_memory.allocateMemory(desc);
 
-			desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging = loader->m_staging_memory.allocateMemory(desc);
 
 			m_voxelize_info_cpu.u_area_max = vec4(1000.f);
@@ -775,11 +775,11 @@ struct VoxelPipeline
 		resource->m_mesh_count = model.m_mesh.size();
 		resource->m_index_count = index_offset;
 		{
-			btr::BufferMemory::Descriptor desc;
+			btr::AllocatedMemory::Descriptor desc;
 			desc.size = vector_sizeof(vertex);
 			resource->m_vertex = executer->m_vertex_memory.allocateMemory(desc);
 
-			desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging = executer->m_staging_memory.allocateMemory(desc);
 			memcpy_s(staging.getMappedPtr(), desc.size, vertex.data(), desc.size);
 
@@ -791,11 +791,11 @@ struct VoxelPipeline
 		}
 
 		{
-			btr::BufferMemory::Descriptor desc;
+			btr::AllocatedMemory::Descriptor desc;
 			desc.size = vector_sizeof(index);
 			resource->m_index = executer->m_vertex_memory.allocateMemory(desc);
 
-			desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging = executer->m_staging_memory.allocateMemory(desc);
 			memcpy_s(staging.getMappedPtr(), desc.size, index.data(), desc.size);
 
@@ -806,11 +806,11 @@ struct VoxelPipeline
 			cmd.copyBuffer(staging.getBufferInfo().buffer, resource->m_index.getBufferInfo().buffer, copy);
 		}
 		{
-			btr::BufferMemory::Descriptor desc;
+			btr::AllocatedMemory::Descriptor desc;
 			desc.size = vector_sizeof(indirect);
 			resource->m_indirect = executer->m_vertex_memory.allocateMemory(desc);
 
-			desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging = executer->m_staging_memory.allocateMemory(desc);
 			memcpy_s(staging.getMappedPtr(), desc.size, indirect.data(), desc.size);
 
@@ -822,11 +822,11 @@ struct VoxelPipeline
 		}
 
 		{
-			btr::BufferMemory::Descriptor desc;
+			btr::AllocatedMemory::Descriptor desc;
 			desc.size = vector_sizeof(mesh_info);
 			resource->m_mesh_info = executer->m_storage_memory.allocateMemory(desc);
 
-			desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging = executer->m_staging_memory.allocateMemory(desc);
 			memcpy_s(staging.getMappedPtr(), desc.size, mesh_info.data(), desc.size);
 
@@ -837,11 +837,11 @@ struct VoxelPipeline
 			cmd.copyBuffer(staging.getBufferInfo().buffer, resource->m_mesh_info.getBufferInfo().buffer, copy);
 		}
 		{
-			btr::BufferMemory::Descriptor desc;
+			btr::AllocatedMemory::Descriptor desc;
 			desc.size = vector_sizeof(model.m_material);
 			resource->m_material = executer->m_storage_memory.allocateMemory(desc);
 
-			desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging = executer->m_staging_memory.allocateMemory(desc);
 			memcpy_s(staging.getMappedPtr(), desc.size, model.m_material.data(), desc.size);
 

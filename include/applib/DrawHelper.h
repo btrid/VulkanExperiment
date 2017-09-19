@@ -4,7 +4,7 @@
 #include <btrlib/Define.h>
 #include <btrlib/loader.h>
 #include <btrlib/cCamera.h>
-#include <btrlib/BufferMemory.h>
+#include <btrlib/AllocatedMemory.h>
 #include <btrlib/sGlobal.h>
 #include <btrlib/Singleton.h>
 #include <applib/App.h>
@@ -66,8 +66,8 @@ struct DrawHelper : public Singleton<DrawHelper>
 	std::array<vk::UniqueDescriptorSet, DESCRIPTOR_SET_NUM> m_descriptor_set;
 	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
 
-	std::array<btr::AllocatedMemory, PrimitiveType_MAX> m_mesh_vertex;
-	std::array<btr::AllocatedMemory, PrimitiveType_MAX> m_mesh_index;
+	std::array<btr::BufferMemory, PrimitiveType_MAX> m_mesh_vertex;
+	std::array<btr::BufferMemory, PrimitiveType_MAX> m_mesh_index;
 	std::array<uint32_t, PrimitiveType_MAX> m_mesh_index_num;
 	std::vector<std::array<std::array<std::vector<DrawCommand>, PrimitiveType_MAX>, 2>> m_draw_cmd;
 
@@ -162,10 +162,10 @@ struct DrawHelper : public Singleton<DrawHelper>
 			std::vector<uvec3> i;
 			std::tie(v, i) = Geometry::MakeBox();
 			{
-				btr::BufferMemory::Descriptor desc;
+				btr::AllocatedMemory::Descriptor desc;
 				desc.size = vector_sizeof(v);
 				m_mesh_vertex[Box] = loader->m_vertex_memory.allocateMemory(desc);
-				desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+				desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 				auto staging = loader->m_staging_memory.allocateMemory(desc);
 				memcpy(staging.getMappedPtr(), v.data(), desc.size);
 
@@ -177,10 +177,10 @@ struct DrawHelper : public Singleton<DrawHelper>
 			}
 
 			{
-				btr::BufferMemory::Descriptor desc;
+				btr::AllocatedMemory::Descriptor desc;
 				desc.size = vector_sizeof(i);
 				m_mesh_index[Box] = loader->m_vertex_memory.allocateMemory(desc);
-				desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+				desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 				auto staging = loader->m_staging_memory.allocateMemory(desc);
 				memcpy(staging.getMappedPtr(), i.data(), desc.size);
 
@@ -199,10 +199,10 @@ struct DrawHelper : public Singleton<DrawHelper>
 			std::vector<uvec3> i;
 			std::tie(v, i) = Geometry::MakeSphere();
 			{
-				btr::BufferMemory::Descriptor desc;
+				btr::AllocatedMemory::Descriptor desc;
 				desc.size = vector_sizeof(v);
 				m_mesh_vertex[SPHERE] = loader->m_vertex_memory.allocateMemory(desc);
-				desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+				desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 				auto staging = loader->m_staging_memory.allocateMemory(desc);
 				memcpy(staging.getMappedPtr(), v.data(), desc.size);
 
@@ -214,10 +214,10 @@ struct DrawHelper : public Singleton<DrawHelper>
 			}
 
 			{
-				btr::BufferMemory::Descriptor desc;
+				btr::AllocatedMemory::Descriptor desc;
 				desc.size = vector_sizeof(i);
 				m_mesh_index[SPHERE] = loader->m_vertex_memory.allocateMemory(desc);
-				desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+				desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 				auto staging = loader->m_staging_memory.allocateMemory(desc);
 				memcpy(staging.getMappedPtr(), i.data(), desc.size);
 
@@ -403,9 +403,9 @@ struct DrawHelper : public Singleton<DrawHelper>
 		auto image_memory = loader->m_device->allocateMemoryUnique(memory_alloc_info);
 		loader->m_device->bindImageMemory(image.get(), image_memory.get(), 0);
 
-		btr::BufferMemory::Descriptor staging_desc;
+		btr::AllocatedMemory::Descriptor staging_desc;
 		staging_desc.size = 4;
-		staging_desc.attribute = btr::BufferMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+		staging_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 		auto staging_buffer = loader->m_staging_memory.allocateMemory(staging_desc);
 		*staging_buffer.getMappedPtr<float>() = 1.f;
 

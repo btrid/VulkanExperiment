@@ -1,7 +1,7 @@
 #pragma once
 
 #include <btrlib/Define.h>
-#include <btrlib/BufferMemory.h>
+#include <btrlib/AllocatedMemory.h>
 #include <btrlib/Loader.h>
 
 #include <999_game/CircleIndex.h>
@@ -11,10 +11,10 @@ class sBoid : public Singleton<sBoid>
 
 	struct DoubleBuffer
 	{
-		btr::AllocatedMemory m_buffer;
+		btr::BufferMemory m_buffer;
 
 		std::array<vk::DescriptorBufferInfo, 2> m_buffer_info;
-		void setup(const btr::AllocatedMemory& buffer)
+		void setup(const btr::BufferMemory& buffer)
 		{
 			m_buffer = buffer;
 			m_buffer_info[0] = m_buffer.getBufferInfo();
@@ -125,19 +125,19 @@ public:
 		{
 			bool m_is_emit;
 			uint32_t m_emit_num;
-			btr::AllocatedMemory m_buffer;
+			btr::BufferMemory m_buffer;
 		};
 		std::vector<EmitBuffer> m_staging;
-		btr::AllocatedMemory m_buffer;
+		btr::BufferMemory m_buffer;
 	};
 private:
 	BoidInfo m_boid_info;
-	btr::AllocatedMemory m_boid_info_gpu;
-	btr::AllocatedMemory m_soldier_info_gpu;
+	btr::BufferMemory m_boid_info_gpu;
+	btr::BufferMemory m_soldier_info_gpu;
 	DoubleBuffer m_brain_gpu;
 	DoubleBuffer m_soldier_gpu;
 	EmitData m_emit_data;
-	btr::AllocatedMemory m_soldier_draw_indiret_gpu;
+	btr::BufferMemory m_soldier_draw_indiret_gpu;
 	DoubleBuffer m_soldier_LL_head_gpu;
 
 	vk::UniqueRenderPass m_render_pass;
@@ -165,6 +165,6 @@ public:
 	vk::PipelineLayout getPipelineLayout(PipelineLayout layout)const { return m_pipeline_layout[layout].get(); }
 	vk::DescriptorSetLayout getDescriptorSetLayout(DescriptorSetLayout desctiptor)const { return m_descriptor_set_layout[desctiptor].get(); }
 	vk::DescriptorSet getDescriptorSet(DescriptorSet i)const { return m_descriptor_set[i].get(); }
-	btr::AllocatedMemory& getSoldier() { return m_soldier_gpu.m_buffer; }
-	btr::AllocatedMemory& getLL() { return m_soldier_LL_head_gpu.m_buffer; }
+	btr::BufferMemory& getSoldier() { return m_soldier_gpu.m_buffer; }
+	btr::BufferMemory& getLL() { return m_soldier_LL_head_gpu.m_buffer; }
 };

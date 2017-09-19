@@ -7,14 +7,14 @@
 #include <btrlib/sGlobal.h>
 #include <btrlib/cCamera.h>
 #include <btrlib/Shape.h>
-#include <btrlib/BufferMemory.h>
+#include <btrlib/AllocatedMemory.h>
 namespace btr
 {
 
 struct StagingBuffer
 {
-	AllocatedMemory m_staging_memory;
-	void setup(btr::BufferMemory staging_memory, vk::DeviceSize size)
+	BufferMemory m_staging_memory;
+	void setup(btr::AllocatedMemory staging_memory, vk::DeviceSize size)
 	{
 		m_staging_memory = staging_memory.allocateMemory(size);
 	}
@@ -102,15 +102,15 @@ struct Light
 			UpdateBuffer<LightInfo> m_light_info_gpu;
 			UpdateBuffer<FrustomPoint> m_frustom_point;
 
-			btr::BufferMemory m_uniform_memory;
-			btr::BufferMemory m_storage_memory;
-			AllocatedMemory m_light;
-			AllocatedMemory m_lightLL_head;
-			AllocatedMemory m_lightLL_next;
-			AllocatedMemory m_frustom;
-			AllocatedMemory m_light_counter;
+			btr::AllocatedMemory m_uniform_memory;
+			btr::AllocatedMemory m_storage_memory;
+			btr::BufferMemory m_light;
+			btr::BufferMemory m_lightLL_head;
+			btr::BufferMemory m_lightLL_next;
+			btr::BufferMemory m_frustom;
+			btr::BufferMemory m_light_counter;
 
-			btr::BufferMemory m_staging_memory;
+			btr::AllocatedMemory m_staging_memory;
 			btr::StagingBuffer m_light_cpu;
 
 			uint32_t m_light_num;
@@ -132,7 +132,7 @@ struct Light
 
 			std::array<ComputePipeline, COMPUTE_NUM> m_pipeline_ex;
 
-			void setup(const cDevice& device, btr::BufferMemory& storage_memory, uint32_t light_num)
+			void setup(const cDevice& device, btr::AllocatedMemory& storage_memory, uint32_t light_num)
 			{
 				m_device = device;
 				m_light_num = light_num;
@@ -374,7 +374,7 @@ struct Light
 		};
 		std::unique_ptr<Private> m_private;
 
-		void setup(const cDevice& device, btr::BufferMemory& storage_memory, size_t light_num)
+		void setup(const cDevice& device, btr::AllocatedMemory& storage_memory, size_t light_num)
 		{
 			m_private = std::make_unique<Private>();
 			m_private->setup(device, storage_memory, light_num);

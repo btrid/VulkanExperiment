@@ -19,7 +19,7 @@
 #include <btrlib/cDebug.h>
 #include <btrlib/sGlobal.h>
 #include <btrlib/cStopWatch.h>
-#include <btrlib/BufferMemory.h>
+#include <btrlib/AllocatedMemory.h>
 #include <applib/cModelInstancingPipeline.h>
 #include <applib/cModelInstancingRender.h>
 

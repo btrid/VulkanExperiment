@@ -2,7 +2,7 @@
 #include <memory>
 #include <btrlib/cModel.h>
 #include <btrlib/Light.h>
-#include <btrlib/BufferMemory.h>
+#include <btrlib/AllocatedMemory.h>
 #include <btrlib/Loader.h>
 #include <applib/cModelInstancingPipeline.h>
 #include <applib/cLightPipeline.h>
@@ -150,12 +150,12 @@ public:
 	{
 		uint32_t m_instance_max_num;
 		std::vector<MotionTexture> m_motion_texture;
-		btr::AllocatedMemory m_compute_indirect_buffer;
-		btr::AllocatedMemory m_world_staging;
-		btr::AllocatedMemory m_instancing_info;
-		std::array<btr::AllocatedMemory, static_cast<s32>(ModelStorageBuffer::NUM)> m_storage_buffer;
-		const btr::AllocatedMemory& getBuffer(ModelStorageBuffer buffer)const { return m_storage_buffer[static_cast<s32>(buffer)]; }
-		btr::AllocatedMemory& getBuffer(ModelStorageBuffer buffer) { return m_storage_buffer[static_cast<s32>(buffer)]; }
+		btr::BufferMemory m_compute_indirect_buffer;
+		btr::BufferMemory m_world_staging;
+		btr::BufferMemory m_instancing_info;
+		std::array<btr::BufferMemory, static_cast<s32>(ModelStorageBuffer::NUM)> m_storage_buffer;
+		const btr::BufferMemory& getBuffer(ModelStorageBuffer buffer)const { return m_storage_buffer[static_cast<s32>(buffer)]; }
+		btr::BufferMemory& getBuffer(ModelStorageBuffer buffer) { return m_storage_buffer[static_cast<s32>(buffer)]; }
 
 	};
 	std::unique_ptr<InstancingResource> m_resource_instancing;

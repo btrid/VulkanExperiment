@@ -21,7 +21,7 @@
 #include <btrlib/cStopWatch.h>
 #include <btrlib/cModel.h>
 #include <btrlib/cCamera.h>
-#include <btrlib/BufferMemory.h>
+#include <btrlib/AllocatedMemory.h>
 #include <applib/cModelRender.h>
 #include <applib/cModelRenderPrivate.h>
 #include <applib/cModelPipeline.h>
