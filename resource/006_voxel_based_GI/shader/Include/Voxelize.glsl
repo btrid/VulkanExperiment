@@ -30,11 +30,11 @@ struct VoxelMeshInfo
 {
 	uint material_index;
 };
-layout(std140, set=SETPOINT_VOXEL_MODEL, binding = 0) buffer VoxelMaterialBuffer
+layout(std430, set=SETPOINT_VOXEL_MODEL, binding = 0) buffer VoxelMaterialBuffer
 {
 	VoxelMaterial b_voxel_model_material[];
 };
-layout(std140, set=SETPOINT_VOXEL_MODEL, binding = 1) buffer VoxelMeshInfoBuffer
+layout(std430, set=SETPOINT_VOXEL_MODEL, binding = 1) buffer VoxelMeshInfoBuffer
 {
 	VoxelMeshInfo b_voxel_model_mesh_info[];
 };

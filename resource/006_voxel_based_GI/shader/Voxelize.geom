@@ -29,7 +29,7 @@ layout(location=0)in gl_PerVertex
 
 layout(location=1)in InVertex{
 	vec3 Position;
-	uint DrawID;
+	vec3 Albedo;
 }In[];
 
 layout(location=0)out gl_PerVertex
@@ -39,7 +39,7 @@ layout(location=0)out gl_PerVertex
 
 layout(location=1)out Transform{
 	vec3 Position;
-	uint DrawID;
+	vec3 Albedo;
 }transform;
 
 
@@ -184,7 +184,7 @@ void main()
 
 	gl_Position = projection * view * vec4(p[0], 1.);
 	transform.Position = p[0];
-	transform.DrawID = In[0].DrawID;
+	transform.Albedo = In[0].Albedo;
 	EmitVertex();
 	gl_Position = projection * view * vec4(p[1], 1.);
 	transform.Position = p[1];

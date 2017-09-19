@@ -372,11 +372,11 @@ struct VoxelPipeline
 				bindings[0].setDescriptorType(vk::DescriptorType::eStorageBuffer);
 				bindings[0].setBinding(0);
 				bindings[0].setDescriptorCount(1);
-				bindings[0].setStageFlags(vk::ShaderStageFlagBits::eFragment);
+				bindings[0].setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment);
 				bindings[1].setDescriptorType(vk::DescriptorType::eStorageBuffer);
 				bindings[1].setBinding(1);
 				bindings[1].setDescriptorCount(1);
-				bindings[1].setStageFlags(vk::ShaderStageFlagBits::eFragment);
+				bindings[1].setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment);
 				layout_info.setBindingCount(array_length(bindings));
 				layout_info.setPBindings(bindings);
 				m_model_descriptor_set_layout = device->createDescriptorSetLayoutUnique(layout_info);
@@ -748,11 +748,12 @@ struct VoxelPipeline
 		indirect.reserve(model.m_mesh.size());
 
 		size_t index_offset = 0;
+		size_t vertex_offset = 0;
 		for (auto& mesh : model.m_mesh)
 		{
 			vertex.insert(vertex.end(), mesh.vertex.begin(), mesh.vertex.end());
 			auto idx = mesh.index;
-			std::for_each(idx.begin(), idx.end(), [=](auto& i) {i += index_offset; });
+			std::for_each(idx.begin(), idx.end(), [=](auto& i) {i += vertex_offset; });
 			index.insert(index.end(), idx.begin(), idx.end());
 
 			vk::DrawIndexedIndirectCommand draw_cmd;
@@ -768,6 +769,7 @@ struct VoxelPipeline
 			mesh_info.push_back(minfo);
 
 			index_offset += mesh.index.size() * 3;
+			vertex_offset += mesh.vertex.size();
 		}
 		std::shared_ptr<VoxelizeModelResource> resource(std::make_shared<VoxelizeModelResource>());
 		resource->m_mesh_count = model.m_mesh.size();
