@@ -110,13 +110,10 @@ int main()
 			model.m_material[4].albedo = glm::vec4(1.f, 1.f, 1.0f, 1.f);
 			model.m_material[5].albedo = glm::vec4(1.f, 0.f, 0.4f, 1.f);
 
-
 			voxelize.addModel(executer, setup_cmd.get(), model);
 		}
 
 	}
-
-	vk::Queue queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), 0);
 
 	while (true)
 	{

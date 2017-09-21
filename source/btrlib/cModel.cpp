@@ -107,7 +107,6 @@ void ResourceTexture::load(std::shared_ptr<btr::Loader>& loader, vk::CommandBuff
 		copy.imageSubresource.layerCount = 1;
 		copy.imageSubresource.mipLevel = 0;
 
-
 		{
 			vk::ImageMemoryBarrier to_copy_barrier;
 			to_copy_barrier.dstQueueFamilyIndex = loader->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);

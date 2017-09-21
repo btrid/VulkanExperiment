@@ -120,6 +120,7 @@ void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
 	std::vector<vk::Semaphore> submit_wait_semas(m_window_list.size());
 	std::vector<vk::SwapchainKHR> swapchains(m_window_list.size());
 	std::vector<uint32_t> backbuffer_indexs(m_window_list.size());
+	std::vector<vk::PipelineStageFlags> wait_pipelines(m_window_list.size());
 
 	for (size_t i = 0; i < m_window_list.size(); i++)
 	{
@@ -128,11 +129,9 @@ void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
 		submit_wait_semas[i] = window->getSwapchain().m_submit_semaphore.get();
 		swapchains[i] = window->getSwapchain().m_swapchain_handle.get();
 		backbuffer_indexs[i] = window->getSwapchain().m_backbuffer_index;
+		wait_pipelines[i] = vk::PipelineStageFlagBits::eAllGraphics;
 	}
 
-	vk::PipelineStageFlags wait_pipelines[] = {
-		vk::PipelineStageFlagBits::eAllGraphics,
-	};
 	std::vector<vk::SubmitInfo> submitInfo =
 	{
 		vk::SubmitInfo()
@@ -140,7 +139,7 @@ void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
 		.setPCommandBuffers(cmds.data())
 		.setWaitSemaphoreCount((uint32_t)swap_wait_semas.size())
 		.setPWaitSemaphores(swap_wait_semas.data())
-		.setPWaitDstStageMask(wait_pipelines)
+		.setPWaitDstStageMask(wait_pipelines.data())
 		.setSignalSemaphoreCount((uint32_t)submit_wait_semas.size())
 		.setPSignalSemaphores(submit_wait_semas.data())
 	};
@@ -161,7 +160,11 @@ void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
 void App::preUpdate()
 {
 	auto& device = m_gpu.getDevice();
-	uint32_t backbuffer_index = m_window->getSwapchain().swap();
+	for (auto& window : m_window_list)
+	{
+		window->getSwapchain().swap();
+	}
+	uint32_t backbuffer_index = m_window->getSwapchain().m_backbuffer_index;
 	sDebug::Order().waitFence(device.getHandle(), m_window->getFence(backbuffer_index));
 	device->resetFences({ m_window->getFence(backbuffer_index) });
 	m_cmd_pool->resetPool(m_executer);
