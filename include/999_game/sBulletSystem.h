@@ -204,7 +204,7 @@ public:
 			auto dst_offset = sGlobal::Order().getGPUIndex() == 1 ? (m_bullet.getBufferInfo().range / sizeof(BulletData) / 2) : 0;
 			cmd.pushConstants<uint>(m_pipeline_layout[PIPELINE_LAYOUT_BULLET_DRAW].get(), vk::ShaderStageFlagBits::eVertex, 0, dst_offset);
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_BULLET_DRAW].get(), 0, m_descriptor_set[DESCRIPTOR_SET_UPDATE].get(), {});
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_BULLET_DRAW].get(), 1, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_CAMERA), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_BULLET_DRAW].get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_GRAPHICS_RENDER].get());
 			cmd.drawIndirect(m_bullet_counter.getBufferInfo().buffer, m_bullet_counter.getBufferInfo().offset, 1, sizeof(vk::DrawIndirectCommand));

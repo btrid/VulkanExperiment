@@ -415,7 +415,7 @@ void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 			{
 				std::vector<vk::DescriptorSetLayout> layouts = {
 					m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_SOLDIER_UPDATE].get(),
-					sScene::Order().getDescriptorSetLayout(sScene::DESCRIPTOR_SET_LAYOUT_CAMERA),
+					sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
 				};
 				std::vector<vk::PushConstantRange> push_constants = {
 					vk::PushConstantRange()
@@ -710,7 +710,7 @@ vk::CommandBuffer sBoid::draw(std::shared_ptr<btr::Executer>& executer)
 
 	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_GRAPHICS_SOLDIER_DRAW].get());
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW].get(), 0, getDescriptorSet(DESCRIPTOR_SET_SOLDIER_UPDATE), {});
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW].get(), 1, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_CAMERA), {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW].get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 
 	struct DrawConstantBlock
 	{

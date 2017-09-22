@@ -199,7 +199,7 @@ void sBulletSystem::Private::setup(std::shared_ptr<btr::Loader>& loader)
 		{
 			std::vector<vk::DescriptorSetLayout> layouts = {
 				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_UPDATE].get(),
-				sScene::Order().getDescriptorSetLayout(sScene::DESCRIPTOR_SET_LAYOUT_CAMERA),
+				sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
 			};
 			std::vector<vk::PushConstantRange> push_constants = {
 				vk::PushConstantRange()

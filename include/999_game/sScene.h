@@ -41,13 +41,11 @@ struct sScene : public Singleton<sScene>
 	enum DescriptorSetLayout
 	{
 		DESCRIPTOR_SET_LAYOUT_MAP,
-		DESCRIPTOR_SET_LAYOUT_CAMERA,
 		DESCRIPTOR_SET_LAYOUT_NUM,
 	};
 	enum DescriptorSet
 	{
 		DESCRIPTOR_SET_MAP,
-		DESCRIPTOR_SET_CAMERA,
 		DESCRIPTOR_SET_NUM,
 	};
 
@@ -69,15 +67,15 @@ struct sScene : public Singleton<sScene>
 	MazeGenerator m_maze;
 	Geometry m_maze_geometry;
 
-	vk::Image m_map_image;
-	vk::ImageView m_map_image_view;
-	vk::DeviceMemory m_map_image_memory;
-	vk::Image m_submap_image;
-	vk::ImageView m_submap_image_view;
-	vk::DeviceMemory m_submap_image_memory;
-	vk::Image m_map_damae_image;
-	vk::ImageView m_map_damae_image_view;
-	vk::DeviceMemory m_map_damae_image_memory;
+	vk::UniqueImage m_map_image;
+	vk::UniqueImageView m_map_image_view;
+	vk::UniqueDeviceMemory m_map_image_memory;
+	vk::UniqueImage m_submap_image;
+	vk::UniqueImageView m_submap_image_view;
+	vk::UniqueDeviceMemory m_submap_image_memory;
+	vk::UniqueImage m_map_damae_image;
+	vk::UniqueImageView m_map_damae_image_view;
+	vk::UniqueDeviceMemory m_map_damae_image_memory;
 	btr::BufferMemory m_map_info;
 
 	vk::UniqueRenderPass m_render_pass;
@@ -86,11 +84,11 @@ struct sScene : public Singleton<sScene>
 
 	std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_module;
 	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_shader_info;
-	std::array<vk::Pipeline, PIPELINE_NUM> m_pipeline;
+	std::array<vk::UniquePipeline, PIPELINE_NUM> m_pipeline;
 
-	std::array<vk::DescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
-	std::array<vk::DescriptorSet, DESCRIPTOR_SET_NUM> m_descriptor_set;
-	std::array<vk::PipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
+	std::array<vk::UniqueDescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
+	std::array<vk::UniqueDescriptorSet, DESCRIPTOR_SET_NUM> m_descriptor_set;
+	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
 
 	void setup(std::shared_ptr<btr::Loader>& loader)
 	{
@@ -235,36 +233,36 @@ struct sScene : public Singleton<sScene>
 				image_info.sharingMode = vk::SharingMode::eExclusive;
 				image_info.initialLayout = vk::ImageLayout::eUndefined;
 				image_info.extent = { m_map_info_cpu.m_descriptor[0].m_cell_num.x, m_map_info_cpu.m_descriptor[0].m_cell_num.y, 1u };
-				auto image = loader->m_device->createImage(image_info);
+				auto image = loader->m_device->createImageUnique(image_info);
 
-				vk::MemoryRequirements memory_request = loader->m_device->getImageMemoryRequirements(image);
+				vk::MemoryRequirements memory_request = loader->m_device->getImageMemoryRequirements(image.get());
 				vk::MemoryAllocateInfo memory_alloc_info;
 				memory_alloc_info.allocationSize = memory_request.size;
 				memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(loader->m_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
-				auto image_memory = loader->m_device->allocateMemory(memory_alloc_info);
-				loader->m_device->bindImageMemory(image, image_memory, 0);
+				auto image_memory = loader->m_device->allocateMemoryUnique(memory_alloc_info);
+				loader->m_device->bindImageMemory(image.get(), image_memory.get(), 0);
 
 				vk::ImageCreateInfo image_damage_info = image_info;
 				image_damage_info.format = vk::Format::eR32Uint;
-				auto image_damage = loader->m_device->createImage(image_damage_info);
+				auto image_damage = loader->m_device->createImageUnique(image_damage_info);
 
-				vk::MemoryRequirements damage_memory_request = loader->m_device->getImageMemoryRequirements(image_damage);
+				vk::MemoryRequirements damage_memory_request = loader->m_device->getImageMemoryRequirements(image_damage.get());
 				vk::MemoryAllocateInfo damage_memory_alloc_info;
 				damage_memory_alloc_info.allocationSize = damage_memory_request.size;
 				damage_memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(loader->m_device.getGPU(), damage_memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
-				auto image_damage_memory = loader->m_device->allocateMemory(damage_memory_alloc_info);
-				loader->m_device->bindImageMemory(image_damage, image_damage_memory, 0);
+				auto image_damage_memory = loader->m_device->allocateMemoryUnique(damage_memory_alloc_info);
+				loader->m_device->bindImageMemory(image_damage.get(), image_damage_memory.get(), 0);
 
 				vk::ImageCreateInfo sub_image_info = image_info;
 				sub_image_info.extent.width = m_map_info_cpu.m_descriptor[1].m_cell_num.x;
 				sub_image_info.extent.height = m_map_info_cpu.m_descriptor[1].m_cell_num.y;
-				auto subimage = loader->m_device->createImage(sub_image_info);
-				auto sub_memory_request = loader->m_device->getImageMemoryRequirements(subimage);
+				auto subimage = loader->m_device->createImageUnique(sub_image_info);
+				auto sub_memory_request = loader->m_device->getImageMemoryRequirements(subimage.get());
 				vk::MemoryAllocateInfo sub_memory_alloc_info;
 				sub_memory_alloc_info.allocationSize = sub_memory_request.size;
 				sub_memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(loader->m_device.getGPU(), sub_memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
-				auto subimage_memory = loader->m_device->allocateMemory(sub_memory_alloc_info);
-				loader->m_device->bindImageMemory(subimage, subimage_memory, 0);
+				auto subimage_memory = loader->m_device->allocateMemoryUnique(sub_memory_alloc_info);
+				loader->m_device->bindImageMemory(subimage.get(), subimage_memory.get(), 0);
 
 				vk::ImageSubresourceRange subresourceRange;
 				subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
@@ -280,30 +278,30 @@ struct sScene : public Singleton<sScene>
 				view_info.components.a = vk::ComponentSwizzle::eA;
 				view_info.flags = vk::ImageViewCreateFlags();
 				view_info.format = image_info.format;
-				view_info.image = image;
+				view_info.image = image.get();
 				view_info.subresourceRange = subresourceRange;
-				auto image_view = loader->m_device->createImageView(view_info);
+				auto image_view = loader->m_device->createImageViewUnique(view_info);
 
-				view_info.image = subimage;
-				auto subimage_view = loader->m_device->createImageView(view_info);
+				view_info.image = subimage.get();
+				auto subimage_view = loader->m_device->createImageViewUnique(view_info);
 
 				vk::ImageViewCreateInfo damage_view_info = vk::ImageViewCreateInfo(view_info)
 					.setFormat(vk::Format::eR32Uint)
-					.setImage(image_damage);
-				auto image_damage_view = loader->m_device->createImageView(damage_view_info);
+					.setImage(image_damage.get());
+				auto image_damage_view = loader->m_device->createImageViewUnique(damage_view_info);
 
 				{
 
 					vk::ImageMemoryBarrier to_transfer;
-					to_transfer.image = image;
+					to_transfer.image = image.get();
 					to_transfer.oldLayout = vk::ImageLayout::eUndefined;
 					to_transfer.newLayout = vk::ImageLayout::eTransferDstOptimal;
 					to_transfer.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
 					to_transfer.subresourceRange = subresourceRange;
 					vk::ImageMemoryBarrier to_transfer_sub = to_transfer;
-					to_transfer_sub.image = subimage;
+					to_transfer_sub.image = subimage.get();
 					vk::ImageMemoryBarrier to_transfer_damage = to_transfer;
-					to_transfer_damage.image = image_damage;
+					to_transfer_damage.image = image_damage.get();
 
 					cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_transfer, to_transfer_sub, to_transfer_damage });
 				}
@@ -329,7 +327,7 @@ struct sScene : public Singleton<sScene>
 					l.setMipLevel(0);
 					{
 						btr::AllocatedMemory::Descriptor desc;
-						desc.size = loader->m_device->getImageMemoryRequirements(image).size;
+						desc.size = loader->m_device->getImageMemoryRequirements(image.get()).size;
 						desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 						auto staging = loader->m_staging_memory.allocateMemory(desc);
 						memcpy(staging.getMappedPtr(), map.data(), desc.size);
@@ -338,11 +336,11 @@ struct sScene : public Singleton<sScene>
 						copy.setImageSubresource(l);
 						copy.setImageExtent(image_info.extent);
 
-						cmd->copyBufferToImage(staging.getBufferInfo().buffer, image, vk::ImageLayout::eTransferDstOptimal, copy);
+						cmd->copyBufferToImage(staging.getBufferInfo().buffer, image.get(), vk::ImageLayout::eTransferDstOptimal, copy);
 					}
 					{
 						btr::AllocatedMemory::Descriptor desc;
-						desc.size = loader->m_device->getImageMemoryRequirements(subimage).size;
+						desc.size = loader->m_device->getImageMemoryRequirements(subimage.get()).size;
 						desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 						auto staging = loader->m_staging_memory.allocateMemory(desc);
 
@@ -352,18 +350,18 @@ struct sScene : public Singleton<sScene>
 						copy.setImageSubresource(l);
 						copy.setImageExtent(sub_image_info.extent);
 
-						cmd->copyBufferToImage(staging.getBufferInfo().buffer, subimage, vk::ImageLayout::eTransferDstOptimal, copy);
+						cmd->copyBufferToImage(staging.getBufferInfo().buffer, subimage.get(), vk::ImageLayout::eTransferDstOptimal, copy);
 
 					}
 
-					cmd->clearColorImage(image_damage, vk::ImageLayout::eTransferDstOptimal, vk::ClearColorValue(std::array<unsigned, 4>{}), subresourceRange);
+					cmd->clearColorImage(image_damage.get(), vk::ImageLayout::eTransferDstOptimal, vk::ClearColorValue(std::array<unsigned, 4>{}), subresourceRange);
 				}
 
 				{
 
 					vk::ImageMemoryBarrier to_shader_read;
 					to_shader_read.dstQueueFamilyIndex = loader->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
-					to_shader_read.image = image;
+					to_shader_read.image = image.get();
 					to_shader_read.oldLayout = vk::ImageLayout::eTransferDstOptimal;
 					to_shader_read.newLayout = vk::ImageLayout::eGeneral;
 					to_shader_read.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
@@ -371,26 +369,26 @@ struct sScene : public Singleton<sScene>
 					to_shader_read.subresourceRange = subresourceRange;
 
 					vk::ImageMemoryBarrier to_shader_read_sub = to_shader_read;
-					to_shader_read_sub.image = subimage;
+					to_shader_read_sub.image = subimage.get();
 
 					vk::ImageMemoryBarrier to_compute_damege = to_shader_read;
-					to_compute_damege.image = image_damage;
+					to_compute_damege.image = image_damage.get();
 					to_compute_damege.dstAccessMask = vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite;
 
 					cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, {}, { to_shader_read,to_shader_read_sub, to_compute_damege });
 				}
 
-				m_map_image = image;
-				m_map_image_view = image_view;
-				m_map_image_memory = image_memory;
+				m_map_image = std::move(image);
+				m_map_image_view = std::move(image_view);
+				m_map_image_memory = std::move(image_memory);
 
-				m_submap_image = subimage;
-				m_submap_image_view = subimage_view;
-				m_submap_image_memory = subimage_memory;
+				m_submap_image = std::move(subimage);
+				m_submap_image_view = std::move(subimage_view);
+				m_submap_image_memory = std::move(subimage_memory);
 
-				m_map_damae_image = image_damage;
-				m_map_damae_image_view = image_damage_view;
-				m_map_damae_image_memory = image_damage_memory;
+				m_map_damae_image = std::move(image_damage);
+				m_map_damae_image_view = std::move(image_damage_view);
+				m_map_damae_image_memory = std::move(image_damage_memory);
 			}
 
 
@@ -436,37 +434,33 @@ struct sScene : public Singleton<sScene>
 			.setDescriptorType(vk::DescriptorType::eStorageImage)
 			.setBinding(3),
 		};
-		bindings[DESCRIPTOR_SET_LAYOUT_CAMERA] =
-		{
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex| vk::ShaderStageFlagBits::eFragment)
-			.setDescriptorCount(1)
-			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-			.setBinding(0),
-		};
 		for (size_t i = 0; i < DESCRIPTOR_SET_LAYOUT_NUM; i++)
 		{
 			vk::DescriptorSetLayoutCreateInfo descriptor_set_layout_info = vk::DescriptorSetLayoutCreateInfo()
 				.setBindingCount(bindings[i].size())
 				.setPBindings(bindings[i].data());
-			m_descriptor_set_layout[i] = loader->m_device->createDescriptorSetLayout(descriptor_set_layout_info);
+			m_descriptor_set_layout[i] = loader->m_device->createDescriptorSetLayoutUnique(descriptor_set_layout_info);
 		}
 
-		vk::DescriptorSetAllocateInfo alloc_info;
-		alloc_info.descriptorPool = loader->m_descriptor_pool.get();
-		alloc_info.descriptorSetCount = m_descriptor_set_layout.size();
-		alloc_info.pSetLayouts = m_descriptor_set_layout.data();
-		auto descriptor_set = loader->m_device->allocateDescriptorSets(alloc_info);
-		std::copy(descriptor_set.begin(), descriptor_set.end(), m_descriptor_set.begin());
+		// descriptor set
 		{
+			vk::DescriptorSetLayout layouts[] = {
+				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_MAP].get(),
+			};
+			vk::DescriptorSetAllocateInfo alloc_info;
+			alloc_info.descriptorPool = loader->m_descriptor_pool.get();
+			alloc_info.descriptorSetCount = array_length(layouts);
+			alloc_info.pSetLayouts = layouts;
+			auto descriptor_set = loader->m_device->allocateDescriptorSetsUnique(alloc_info);
+			std::copy(std::make_move_iterator(descriptor_set.begin()), std::make_move_iterator(descriptor_set.end()), m_descriptor_set.begin());
 
 			std::vector<vk::DescriptorBufferInfo> uniforms = {
 				m_map_info.getBufferInfo(),
 			};
 			std::vector<vk::DescriptorImageInfo> images = {
-				vk::DescriptorImageInfo().setImageLayout(vk::ImageLayout::eGeneral).setImageView(m_map_image_view),
-				vk::DescriptorImageInfo().setImageLayout(vk::ImageLayout::eGeneral).setImageView(m_submap_image_view),
-				vk::DescriptorImageInfo().setImageLayout(vk::ImageLayout::eGeneral).setImageView(m_map_damae_image_view),
+				vk::DescriptorImageInfo().setImageLayout(vk::ImageLayout::eGeneral).setImageView(m_map_image_view.get()),
+				vk::DescriptorImageInfo().setImageLayout(vk::ImageLayout::eGeneral).setImageView(m_submap_image_view.get()),
+				vk::DescriptorImageInfo().setImageLayout(vk::ImageLayout::eGeneral).setImageView(m_map_damae_image_view.get()),
 			};
 			std::vector<vk::WriteDescriptorSet> write_desc =
 			{
@@ -475,42 +469,27 @@ struct sScene : public Singleton<sScene>
 				.setDescriptorCount(uniforms.size())
 				.setPBufferInfo(uniforms.data())
 				.setDstBinding(0)
-				.setDstSet(m_descriptor_set[DESCRIPTOR_SET_MAP]),
+				.setDstSet(m_descriptor_set[DESCRIPTOR_SET_MAP].get()),
 				vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eStorageImage)
 				.setDescriptorCount(images.size())
 				.setPImageInfo(images.data())
 				.setDstBinding(1)
-				.setDstSet(m_descriptor_set[DESCRIPTOR_SET_MAP]),
+				.setDstSet(m_descriptor_set[DESCRIPTOR_SET_MAP].get()),
 			};
 			loader->m_device->updateDescriptorSets(write_desc, {});
-		}
-		{
 
-			std::vector<vk::DescriptorBufferInfo> uniforms = {
-				sCameraManager::Order().m_camera.getBufferInfo(),
-			};
-			std::vector<vk::WriteDescriptorSet> write_desc =
-			{
-				vk::WriteDescriptorSet()
-				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-				.setDescriptorCount(uniforms.size())
-				.setPBufferInfo(uniforms.data())
-				.setDstBinding(0)
-				.setDstSet(m_descriptor_set[DESCRIPTOR_SET_LAYOUT_CAMERA]),
-			};
-			loader->m_device->updateDescriptorSets(write_desc, {});
 		}
 
 		{
-			std::vector<vk::DescriptorSetLayout> layouts = {
-				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_CAMERA],
-				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_MAP],
+			vk::DescriptorSetLayout layouts[] = {
+				sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
+				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_MAP].get(),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
-			pipeline_layout_info.setSetLayoutCount(layouts.size());
-			pipeline_layout_info.setPSetLayouts(layouts.data());
-			m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR] = loader->m_device->createPipelineLayout(pipeline_layout_info);
+			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
+			pipeline_layout_info.setPSetLayouts(layouts);
+			m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR] = loader->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
 		vk::Extent3D size;
@@ -523,10 +502,10 @@ struct sScene : public Singleton<sScene>
 			{
 				vk::ComputePipelineCreateInfo()
 				.setStage(m_shader_info[SHADER_COMPUTE_MAP_UPDATE])
-				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR]),
+				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR].get()),
 			};
-			auto pipelines = loader->m_device->createComputePipelines(loader->m_cache.get(), compute_pipeline_info);
-			m_pipeline[PIPELINE_COMPUTE_MAP] = pipelines[0];
+			auto pipelines = loader->m_device->createComputePipelinesUnique(loader->m_cache.get(), compute_pipeline_info);
+			m_pipeline[PIPELINE_COMPUTE_MAP] = std::move(pipelines[0]);
 
 		}
 		{
@@ -613,7 +592,7 @@ struct sScene : public Singleton<sScene>
 				.setPViewportState(&viewportInfo)
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
-				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR])
+				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR].get())
 				.setRenderPass(m_render_pass.get())
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
@@ -625,13 +604,13 @@ struct sScene : public Singleton<sScene>
 				.setPViewportState(&viewportInfo)
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
-				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR])
+				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR].get())
 				.setRenderPass(m_render_pass.get())
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			auto pipelines = loader->m_device->createGraphicsPipelines(loader->m_cache.get(), graphics_pipeline_info);
-			std::copy(pipelines.begin(), pipelines.end(), m_pipeline.begin());
+			auto pipelines = loader->m_device->createGraphicsPipelinesUnique(loader->m_cache.get(), graphics_pipeline_info);
+			std::copy(std::make_move_iterator(pipelines.begin()), std::make_move_iterator(pipelines.end()), m_pipeline.begin());
 
 		}
 
@@ -650,7 +629,7 @@ struct sScene : public Singleton<sScene>
 			vk::ImageMemoryBarrier to_read;
 			to_read.oldLayout = vk::ImageLayout::eGeneral;
 			to_read.newLayout = vk::ImageLayout::eGeneral;
-			to_read.image = m_map_damae_image;
+			to_read.image = m_map_damae_image.get();
 			to_read.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
 			to_read.subresourceRange.baseArrayLayer = 0;
 			to_read.subresourceRange.baseMipLevel = 0;
@@ -660,9 +639,9 @@ struct sScene : public Singleton<sScene>
 			to_read.srcAccessMask = vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite;
 			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, to_read);
 
-			cmd->bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COMPUTE_MAP]);
-			cmd->bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR], 0, m_descriptor_set[DESCRIPTOR_SET_LAYOUT_CAMERA], {});
-			cmd->bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR], 1, m_descriptor_set[DESCRIPTOR_SET_LAYOUT_MAP], {});
+			cmd->bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COMPUTE_MAP].get());
+			cmd->bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR].get(), 0, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
+			cmd->bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR].get(), 1, m_descriptor_set[DESCRIPTOR_SET_LAYOUT_MAP].get(), {});
 			auto groups = app::calcDipatchGroups(glm::uvec3(m_map_info_cpu.m_descriptor[0].m_cell_num, 1), glm::uvec3(32, 32, 1));
 			cmd->dispatch(groups.x, groups.y, groups.z);
 
@@ -679,9 +658,9 @@ struct sScene : public Singleton<sScene>
 // 				cmd.bindIndexBuffer(m_maze_geometry.m_resource->m_index.getBufferInfo().buffer, m_maze_geometry.m_resource->m_index.getBufferInfo().offset, m_maze_geometry.m_resource->m_index_type);
 // 				cmd.drawIndexedIndirect(m_maze_geometry.m_resource->m_indirect.getBufferInfo().buffer, m_maze_geometry.m_resource->m_indirect.getBufferInfo().offset, 1, sizeof(vk::DrawIndexedIndirectCommand));
 
-				cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW_FLOOR_EX]);
-				cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR], 0, m_descriptor_set[DESCRIPTOR_SET_LAYOUT_CAMERA], {});
-				cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR], 1, m_descriptor_set[DESCRIPTOR_SET_LAYOUT_MAP], {});
+				cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW_FLOOR_EX].get());
+				cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR].get(), 0, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
+				cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR].get(), 1, m_descriptor_set[DESCRIPTOR_SET_LAYOUT_MAP].get(), {});
 				cmd->draw(4, 1, 0, 0);
 
 				cmd->endRenderPass();
@@ -705,8 +684,8 @@ struct sScene : public Singleton<sScene>
 
 	}
 
-	vk::PipelineLayout getPipelineLayout(PipelineLayout layout)const { return m_pipeline_layout[layout]; }
-	vk::DescriptorSetLayout getDescriptorSetLayout(DescriptorSetLayout desctiptor)const { return m_descriptor_set_layout[desctiptor]; }
-	vk::DescriptorSet getDescriptorSet(DescriptorSet i)const { return m_descriptor_set[i]; }
+	vk::PipelineLayout getPipelineLayout(PipelineLayout layout)const { return m_pipeline_layout[layout].get(); }
+	vk::DescriptorSetLayout getDescriptorSetLayout(DescriptorSetLayout desctiptor)const { return m_descriptor_set_layout[desctiptor].get(); }
+	vk::DescriptorSet getDescriptorSet(DescriptorSet i)const { return m_descriptor_set[i].get(); }
 
 };
