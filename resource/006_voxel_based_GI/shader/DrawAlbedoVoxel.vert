@@ -28,14 +28,14 @@ layout(location=1)out Vertex
 }Out;
 
 vec3 box[] = { 
-	vec3(1.0, 1.0, 1.0),
-	vec3(0.0, 1.0, 1.0),
-	vec3(1.0, 1.0, 0.0),
-	vec3(0.0, 1.0, 0.0),
-	vec3(1.0, 0.0, 1.0),
-	vec3(0.0, 0.0, 1.0),
-	vec3(0.0, 0.0, 0.0),
-	vec3(1.0, 0.0, 0.0)
+	vec3(1., 1., 1.),
+	vec3(-1., 1., 1.),
+	vec3(1., 1., -1.),
+	vec3(-1., 1., -1.),
+	vec3(1., -1., 1.),
+	vec3(-1., -1., 1.),
+	vec3(-1., -1., -1.),
+	vec3(1., -1., -1.)
 };
 uint elements[] = {
 	3, 2, 6, 7, 4, 2, 0,
@@ -54,13 +54,13 @@ void main()
 		vec3 albedo = vec3(packd_albedo_r, packd_albedo_g, packd_albedo_b) / 64. / float(count);
 		vec3 size = u_voxel_info.u_cell_size.xyz;
 		Out.albedo = vec3(albedo / float(count));
-		vec3 vertex = box[elements[gl_VertexIndex]];
-		gl_Position = u_camera[0].u_projection * u_camera[0].u_view * vec4((vertex+vec3(index))*size+u_voxel_info.u_area_min.xyz + size*0.5, 1.0);
+		vec3 vertex = box[elements[gl_VertexIndex]]*0.3;
+		gl_Position = u_camera[0].u_projection * u_camera[0].u_view * vec4((vertex+vec3(index))*size+u_voxel_info.u_area_min.xyz, 1.0);
 	}
 	else
 	{
 		Out.albedo = vec3(0.);
-		gl_Position = vec4(0.);
+		gl_Position = vec4(-1., -1., 1., 1.);
 	}
 
 }

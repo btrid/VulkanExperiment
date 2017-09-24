@@ -310,7 +310,6 @@ struct ModelVoxelize : public Voxelize
 			begin_render_info.setRenderArea(vk::Rect2D({}, { parent->getVoxelInfo().u_cell_num.x, parent->getVoxelInfo().u_cell_num.y }));
 
 			cmd.beginRenderPass(begin_render_info, vk::SubpassContents::eInline);
-			// make
 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_MAKE_VOXEL].get());
 
 			std::vector<vk::DescriptorSet> descriptor_sets = {

@@ -211,12 +211,13 @@ struct VoxelPipeline
 					.setInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
 					.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
 				};
-				vk::RenderPassCreateInfo renderpass_info = vk::RenderPassCreateInfo()
-					.setAttachmentCount(attach_description.size())
-					.setPAttachments(attach_description.data())
-					.setSubpassCount(1)
-					.setPSubpasses(&subpass);
+				vk::RenderPassCreateInfo renderpass_info;
+				renderpass_info.setAttachmentCount(attach_description.size());
+				renderpass_info.setPAttachments(attach_description.data());
+				renderpass_info.setSubpassCount(1);
+				renderpass_info.setPSubpasses(&subpass);
 				m_draw_voxel_pass = loader->m_device->createRenderPassUnique(renderpass_info);
+
 				m_draw_voxel_framebuffer.resize(loader->m_window->getSwapchain().getBackbufferNum());
 				{
 					std::array<vk::ImageView, 2> view;
@@ -369,6 +370,7 @@ struct VoxelPipeline
 				rasterization_info.setCullMode(vk::CullModeFlagBits::eNone);
 				rasterization_info.setFrontFace(vk::FrontFace::eCounterClockwise);
 				rasterization_info.setLineWidth(1.f);
+
 				// サンプリング
 				vk::PipelineMultisampleStateCreateInfo sample_info;
 				sample_info.setRasterizationSamples(vk::SampleCountFlagBits::e1);
@@ -384,7 +386,10 @@ struct VoxelPipeline
 				// ブレンド
 				vk::PipelineColorBlendAttachmentState blend_states[] = {
 					vk::PipelineColorBlendAttachmentState()
-					.setBlendEnable(VK_FALSE)
+					.setBlendEnable(VK_TRUE)
+					.setDstColorBlendFactor(vk::BlendFactor::eOneMinusSrcAlpha)
+					.setSrcColorBlendFactor(vk::BlendFactor::eSrcAlpha)
+					.setColorBlendOp(vk::BlendOp::eAdd)
 					.setColorWriteMask(vk::ColorComponentFlagBits::eR
 						| vk::ColorComponentFlagBits::eG
 						| vk::ColorComponentFlagBits::eB
