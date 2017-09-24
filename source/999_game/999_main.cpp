@@ -195,13 +195,14 @@ int main()
 				sGlobal::Order().getThreadPool().enque(job);
 			}
 
-			std::vector<vk::CommandBuffer> render_cmds(7);
+			std::vector<vk::CommandBuffer> render_cmds(8);
 			{
 				cThreadJob job;
 				job.mFinish =
 					[&]()
 				{
-					render_cmds[0] = sScene::Order().draw(executer);
+					render_cmds[0] = sScene::Order().draw1(executer);
+					render_cmds[1] = sScene::Order().draw(executer);
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);
@@ -211,7 +212,7 @@ int main()
 				job.mFinish =
 					[&]()
 				{
-					render_cmds[1] = model_pipeline.draw(executer);
+					render_cmds[2] = model_pipeline.draw(executer);
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);
@@ -221,8 +222,8 @@ int main()
 				job.mFinish =
 					[&]()
 				{
-					render_cmds[2] = sBoid::Order().execute(executer);
-					render_cmds[3] = sBoid::Order().draw(executer);
+					render_cmds[3] = sBoid::Order().execute(executer);
+					render_cmds[4] = sBoid::Order().draw(executer);
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);
@@ -232,8 +233,8 @@ int main()
 				job.mFinish =
 					[&]()
 				{
-					render_cmds[4] = sBulletSystem::Order().execute(executer);
-					render_cmds[5] = sBulletSystem::Order().draw(executer);
+					render_cmds[5] = sBulletSystem::Order().execute(executer);
+					render_cmds[6] = sBulletSystem::Order().draw(executer);
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);
@@ -243,7 +244,7 @@ int main()
 				job.mFinish =
 					[&]()
 				{
-					render_cmds[6] = sCollisionSystem::Order().execute(executer);
+					render_cmds[7] = sCollisionSystem::Order().execute(executer);
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);

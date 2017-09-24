@@ -40,6 +40,7 @@ sGlobal::sGlobal()
 	: m_current_frame(0)
 	, m_game_frame(0)
 	, m_tick_tock(0)
+	, m_totaltime(0.f)
 {
 	m_deltatime = 0.016f;
 	{
@@ -92,6 +93,7 @@ void sGlobal::sync()
 	auto next = (m_current_frame+1) % FRAME_MAX;
 	m_deltatime = m_timer.getElapsedTimeAsSeconds();
 	m_deltatime = glm::min(m_deltatime, 0.02f);
+	m_totaltime += m_deltatime;
 }
 
 

@@ -102,9 +102,11 @@ private:
 
 	cStopWatch m_timer;
 	float m_deltatime;
+	float m_totaltime;
 public:
 
 	float getDeltaTime()const { return m_deltatime; }
+	float getTotalTime()const { return m_totaltime; }
 };
 
 struct sThreadLocal : public SingletonTLS<sThreadLocal>

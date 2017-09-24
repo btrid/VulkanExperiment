@@ -9,6 +9,7 @@
 
 #include <ConvertDimension.glsl>
 
+#include </Math.glsl>
 #include </Common.glsl>
 
 #define SETPOINT_BOID 0

@@ -6,6 +6,7 @@
 #extension GL_GOOGLE_cpp_style_line_directive : require
 #extension GL_ARB_shader_image_load_store : require
 
+#include </Math.glsl>
 #include </Shape.glsl>
 //#include </Marching.glsl>
 
@@ -14,8 +15,8 @@
 #include <Common.glsl>
 
 #define SETPOINT_MAP 1
+#define SETPOINT_SCENE 2
 #include </Map.glsl>
-
 
 layout(location=1) in FSIn{
 	vec2 texcoord;
@@ -101,8 +102,19 @@ Hit marchToAABB(in Ray ray, in vec3 bmin, in vec3 bmax)
 
 }
 
-
-
+float calcEmission(in vec3 pos)
+{
+	float power = 0.2;
+	float start_time_offset = dot(pos, pos) / length(pos);
+//	start_time_offset += rand3(pos)*20;
+	float time = u_scene_data.m_totaltime*50. - start_time_offset;
+	if(time <= 0.){ return power;}
+	time = mod(time/10, 20.);
+	time = min(time, 1.);
+	power += 1-pow(time, 0.8);
+	return min(power, 1.);
+	
+}
 
 void main() 
 {
@@ -137,7 +149,6 @@ void main()
 		return;
 	}
 
-
 	pos = hit.HitPoint;
 	ivec3 map_index = calcMapIndex(desc, pos);
 	for(;;)
@@ -147,8 +158,6 @@ void main()
 		|| any(greaterThanEqual(map_index.xz, ivec2(desc.m_cell_num))))
 		{
 			discard;
-			FragColor = vec4(1., 0., 0., 1.);
-			return;
 		}
 		uint map = imageLoad(t_map, map_index.xz).x;
 		vec3 p = pos + next *1.;
@@ -157,7 +166,7 @@ void main()
 			// 地面と当たった場合
 			if(p.y <= map*WALL_HEIGHT)
 			{
-				FragColor = vec4(map*1., 0., 1., 1.);
+				FragColor = vec4(vec3(map*1., 0., 1.) * calcEmission(pos), 1.);
 				break;
 			}
 		}
@@ -166,7 +175,8 @@ void main()
 			if(p.y <= map*WALL_HEIGHT)
 			{
 				// 壁と当たった場合
-				FragColor = vec4(1., 0., 0., 1.);
+//				FragColor = vec4(1., 0., 0., 1.);
+				FragColor = vec4(vec3(1., 0., 0.) * calcEmission(pos), 1.);
 				break;
 			}
 		}

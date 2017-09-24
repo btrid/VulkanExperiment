@@ -10,10 +10,21 @@ struct MapInfo
 {
 	MapDescriptor m_descriptor[2];
 	uvec2 m_subcell;
+	float m_timeloop;
 };
 
 #define WALL_HEIGHT (5.)
 
+struct SceneData
+{
+	float m_deltatime;
+	float m_totaltime;
+};
+#ifdef SETPOINT_SCENE
+layout(std140, set=SETPOINT_SCENE, binding=0) uniform SceneDataUniform {
+	SceneData u_scene_data;
+};
+#endif
 #ifdef SETPOINT_MAP
 layout(std140, set=SETPOINT_MAP, binding=0) uniform MapInfoUniform {
 	MapInfo u_map_info;
@@ -21,7 +32,6 @@ layout(std140, set=SETPOINT_MAP, binding=0) uniform MapInfoUniform {
 layout(set=SETPOINT_MAP, binding=1, r8ui) uniform /*readonly*/ uimage2D t_map;
 layout(set=SETPOINT_MAP, binding=2, r8ui) uniform readonly uimage2D t_mapsub;
 layout(set=SETPOINT_MAP, binding=3, r32ui) uniform uimage2D t_map_damage;
-
 
 
 void march(inout vec2 pos, inout ivec2 map_index, in vec2 _dir)
