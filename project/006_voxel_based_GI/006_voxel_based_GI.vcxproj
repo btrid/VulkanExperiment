@@ -18,7 +18,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\006_voxel_based_GI\ModelVoxelize.h" />
-    <ClInclude Include="..\..\include\006_voxel_based_GI\VoxelPipeline.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

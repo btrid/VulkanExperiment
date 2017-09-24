@@ -254,7 +254,7 @@ struct VoxelPipeline
 			};
 			static_assert(array_length(shader_info) == SHADER_NUM, "not equal shader num");
 
-			std::string path = btr::getResourceAppPath() + "shader\\binary\\";
+			std::string path = btr::getResourceBtrLibPath() + "shader\\binary\\";
 			for (size_t i = 0; i < SHADER_NUM; i++) {
 				m_shader_list[i] = std::move(loadShaderUnique(device.getHandle(), path + shader_info[i].name));
 				m_stage_info[i].setStage(shader_info[i].stage);

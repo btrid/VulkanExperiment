@@ -1,7 +1,7 @@
 #pragma once
 #include <btrlib/Define.h>
 #include <btrlib/Loader.h>
-#include <006_voxel_based_GI/VoxelPipeline.h>
+#include <btrlib/VoxelPipeline.h>
 
 struct VoxelizeModelResource
 {

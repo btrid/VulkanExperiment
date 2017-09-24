@@ -94,6 +94,7 @@
     <ClInclude Include="..\..\include\btrlib\Singleton.h" />
     <ClInclude Include="..\..\include\btrlib\sValidationLayer.h" />
     <ClInclude Include="..\..\include\btrlib\sGlobal.h" />
+    <ClInclude Include="..\..\include\btrlib\VoxelPipeline.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\btrlib\cAudio.cpp" />

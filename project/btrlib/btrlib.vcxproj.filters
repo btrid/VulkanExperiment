@@ -81,6 +81,9 @@
     <ClInclude Include="..\..\include\btrlib\BuffersMemory.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\btrlib\VoxelPipeline.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\btrlib\cWindow.cpp">

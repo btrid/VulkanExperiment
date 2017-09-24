@@ -12,6 +12,7 @@
 namespace btr {
 	std::string getResourceAppPath();
 	std::string getResourceLibPath();
+	std::string getResourceBtrLibPath();
 	void setResourceAppPath(const std::string& str);
 	void setResourceLibPath(const std::string& str);
 }

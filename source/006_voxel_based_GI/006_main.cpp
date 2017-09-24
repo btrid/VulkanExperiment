@@ -30,7 +30,7 @@
 // #define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 // #include <imgui/imgui.h>
 
-#include <006_voxel_based_GI/VoxelPipeline.h>
+#include <btrlib/VoxelPipeline.h>
 #include <006_voxel_based_GI/ModelVoxelize.h>
 
 #pragma comment(lib, "btrlib.lib")

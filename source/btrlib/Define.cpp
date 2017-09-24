@@ -3,6 +3,7 @@ namespace btr
 {
 	static std::string s_app_path = "..\\..\\resource\\";
 	static std::string s_lib_path = "..\\..\\resource\\applib\\";
+	static std::string s_btrlib_path = "..\\..\\resource\\btrlib\\";
 	std::string getResourceAppPath()
 	{
 		return s_app_path;
@@ -18,6 +19,10 @@ namespace btr
 	void setResourceLibPath(const std::string& str)
 	{
 		s_lib_path = str;
+	}
+	std::string getResourceBtrLibPath()
+	{
+		return s_btrlib_path;
 	}
 
 }
