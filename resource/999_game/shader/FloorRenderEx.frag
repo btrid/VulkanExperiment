@@ -145,8 +145,6 @@ void main()
 	if(hit.IsHit == 0)
 	{
 		discard;
-		FragColor = vec4(0., 0., 0., 1.);
-		return;
 	}
 
 	pos = hit.HitPoint;

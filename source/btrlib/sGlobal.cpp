@@ -101,10 +101,7 @@ vk::UniqueShaderModule loadShaderUnique(const vk::Device& device, const std::str
 {
 	std::experimental::filesystem::path filepath(filename);
 	std::ifstream file(filepath, std::ios_base::ate | std::ios::binary);
-	if (!file.is_open()) {
-		assert(false);
-		return vk::UniqueShaderModule();
-	}
+	assert(file.is_open());
 
 	size_t file_size = (size_t)file.tellg();
 	file.seekg(0);

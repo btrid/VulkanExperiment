@@ -26,5 +26,8 @@
     <ClInclude Include="..\..\include\006_voxel_based_GI\VoxelPipeline.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\006_voxel_based_GI\ModelVoxelize.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

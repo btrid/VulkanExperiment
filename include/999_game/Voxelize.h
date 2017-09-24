@@ -3,6 +3,19 @@
 #include <btrlib/Define.h>
 #include <btrlib/Loader.h>
 
+struct VoxelizeModelResource
+{
+	btr::BufferMemory m_vertex;
+	btr::BufferMemory m_index;
+	btr::BufferMemory m_material;
+	btr::BufferMemory m_mesh_info;
+	btr::BufferMemory m_indirect;
+	uint32_t m_mesh_count;
+	uint32_t m_index_count;
+
+	vk::UniqueDescriptorSet m_model_descriptor_set;
+};
+
 struct VoxelInfo
 {
 	vec4 u_area_min;
@@ -11,16 +24,34 @@ struct VoxelInfo
 	uvec4 u_cell_num;
 };
 
-struct VoxelPipeline;
-struct Voxelize
+struct VoxelizeVertex
 {
-	virtual void draw(std::shared_ptr<btr::Executer>& executer, VoxelPipeline const * const parent, vk::CommandBuffer cmd) = 0;
-	virtual ~Voxelize() = default;
+	glm::vec3 pos;
+};
+struct VoxelizeMesh
+{
+	std::vector<VoxelizeVertex> vertex;
+	std::vector<glm::uvec3> index;
+	uint32_t m_material_index;
+};
+struct VoxelizeMaterial
+{
+	vec4 albedo;
+	vec4 emission;
+};
+struct VoxelizeMeshInfo
+{
+	uint32_t material_index;
+};
+
+struct VoxelizeModel
+{
+	std::vector<VoxelizeMesh> m_mesh;
+	std::array<VoxelizeMaterial, 16> m_material;
 };
 
 struct VoxelPipeline
 {
-
 	enum SHADER
 	{
 		SHADER_DRAW_VOXEL_VERTEX,
@@ -68,7 +99,6 @@ struct VoxelPipeline
 	vk::UniqueImageView m_voxel_imageview;
 	vk::UniqueDeviceMemory m_voxel_imagememory;
 
-	std::vector<std::shared_ptr<Voxelize>> m_voxelize_list;
 	void setup(std::shared_ptr<btr::Loader>& loader)
 	{
 		auto& gpu = loader->m_gpu;
@@ -236,6 +266,39 @@ struct VoxelPipeline
 					}
 				}
 
+			}
+			{
+
+				vk::SubpassDescription subpass;
+				subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+				subpass.setInputAttachmentCount(0);
+				subpass.setPInputAttachments(nullptr);
+				subpass.setColorAttachmentCount(0);
+				subpass.setPColorAttachments(nullptr);
+				subpass.setPDepthStencilAttachment(nullptr);
+
+				//				std::vector<vk::AttachmentDescription> attach_description = {};
+				vk::RenderPassCreateInfo renderpass_info = vk::RenderPassCreateInfo()
+					.setAttachmentCount(0)
+					.setPAttachments(nullptr)
+					.setSubpassCount(1)
+					.setPSubpasses(&subpass);
+				m_make_voxel_pass = loader->m_device->createRenderPassUnique(renderpass_info);
+
+				m_make_voxel_framebuffer.resize(loader->m_window->getSwapchain().getBackbufferNum());
+				{
+					vk::FramebufferCreateInfo framebuffer_info;
+					framebuffer_info.setRenderPass(m_make_voxel_pass.get());
+					framebuffer_info.setAttachmentCount(0);
+					framebuffer_info.setPAttachments(nullptr);
+					framebuffer_info.setWidth(m_voxelize_info_cpu.u_cell_num.x);
+					framebuffer_info.setHeight(m_voxelize_info_cpu.u_cell_num.y);
+					framebuffer_info.setLayers(1);
+
+					for (size_t i = 0; i < m_make_voxel_framebuffer.size(); i++) {
+						m_make_voxel_framebuffer[i] = loader->m_device->createFramebufferUnique(framebuffer_info);
+					}
+				}
 			}
 		}
 
@@ -461,10 +524,6 @@ struct VoxelPipeline
 			}
 		}
 
-		for (auto& voxelize : m_voxelize_list)
-		{
-			voxelize->draw(executer, this, cmd);
-		}
 		{
 			// draw voxel
 			{
@@ -497,14 +556,146 @@ struct VoxelPipeline
 		return cmd;
 	}
 
-	template<typename T>
-	std::shared_ptr<T> createPipeline(std::shared_ptr<btr::Loader>& loader)
+	void addModel(std::shared_ptr<btr::Executer>& executer, vk::CommandBuffer cmd, const VoxelizeModel& model)
 	{
-		auto ptr = std::make_shared<T>();
-		m_voxelize_list.push_back(ptr);
-		ptr->setup(loader, this);
-		return ptr;
+		std::vector<VoxelizeVertex> vertex;
+		std::vector<glm::uvec3> index;
+		std::vector<VoxelizeMeshInfo> mesh_info;
+		std::vector<vk::DrawIndexedIndirectCommand> indirect;
+		mesh_info.reserve(model.m_mesh.size());
+		indirect.reserve(model.m_mesh.size());
+
+		size_t index_offset = 0;
+		size_t vertex_offset = 0;
+		for (auto& mesh : model.m_mesh)
+		{
+			vertex.insert(vertex.end(), mesh.vertex.begin(), mesh.vertex.end());
+			auto idx = mesh.index;
+			std::for_each(idx.begin(), idx.end(), [=](auto& i) {i += vertex_offset; });
+			index.insert(index.end(), idx.begin(), idx.end());
+
+			vk::DrawIndexedIndirectCommand draw_cmd;
+			draw_cmd.setFirstIndex(index_offset);
+			draw_cmd.setFirstInstance(0);
+			draw_cmd.setIndexCount(mesh.index.size() * 3);
+			draw_cmd.setInstanceCount(1);
+			draw_cmd.setVertexOffset(0);
+			indirect.push_back(draw_cmd);
+
+			VoxelizeMeshInfo minfo;
+			minfo.material_index = mesh.m_material_index;
+			mesh_info.push_back(minfo);
+
+			index_offset += mesh.index.size() * 3;
+			vertex_offset += mesh.vertex.size();
+		}
+		std::shared_ptr<VoxelizeModelResource> resource(std::make_shared<VoxelizeModelResource>());
+		resource->m_mesh_count = model.m_mesh.size();
+		resource->m_index_count = index_offset;
+		{
+			btr::AllocatedMemory::Descriptor desc;
+			desc.size = vector_sizeof(vertex);
+			resource->m_vertex = executer->m_vertex_memory.allocateMemory(desc);
+
+			desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			auto staging = executer->m_staging_memory.allocateMemory(desc);
+			memcpy_s(staging.getMappedPtr(), desc.size, vertex.data(), desc.size);
+
+			vk::BufferCopy copy;
+			copy.setSize(desc.size);
+			copy.setDstOffset(resource->m_vertex.getBufferInfo().offset);
+			copy.setSrcOffset(staging.getBufferInfo().offset);
+			cmd.copyBuffer(staging.getBufferInfo().buffer, resource->m_vertex.getBufferInfo().buffer, copy);
+		}
+
+		{
+			btr::AllocatedMemory::Descriptor desc;
+			desc.size = vector_sizeof(index);
+			resource->m_index = executer->m_vertex_memory.allocateMemory(desc);
+
+			desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			auto staging = executer->m_staging_memory.allocateMemory(desc);
+			memcpy_s(staging.getMappedPtr(), desc.size, index.data(), desc.size);
+
+			vk::BufferCopy copy;
+			copy.setSize(desc.size);
+			copy.setDstOffset(resource->m_index.getBufferInfo().offset);
+			copy.setSrcOffset(staging.getBufferInfo().offset);
+			cmd.copyBuffer(staging.getBufferInfo().buffer, resource->m_index.getBufferInfo().buffer, copy);
+		}
+		{
+			btr::AllocatedMemory::Descriptor desc;
+			desc.size = vector_sizeof(indirect);
+			resource->m_indirect = executer->m_vertex_memory.allocateMemory(desc);
+
+			desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			auto staging = executer->m_staging_memory.allocateMemory(desc);
+			memcpy_s(staging.getMappedPtr(), desc.size, indirect.data(), desc.size);
+
+			vk::BufferCopy copy;
+			copy.setSize(desc.size);
+			copy.setDstOffset(resource->m_indirect.getBufferInfo().offset);
+			copy.setSrcOffset(staging.getBufferInfo().offset);
+			cmd.copyBuffer(staging.getBufferInfo().buffer, resource->m_indirect.getBufferInfo().buffer, copy);
+		}
+
+		{
+			btr::AllocatedMemory::Descriptor desc;
+			desc.size = vector_sizeof(mesh_info);
+			resource->m_mesh_info = executer->m_storage_memory.allocateMemory(desc);
+
+			desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			auto staging = executer->m_staging_memory.allocateMemory(desc);
+			memcpy_s(staging.getMappedPtr(), desc.size, mesh_info.data(), desc.size);
+
+			vk::BufferCopy copy;
+			copy.setSize(desc.size);
+			copy.setDstOffset(resource->m_mesh_info.getBufferInfo().offset);
+			copy.setSrcOffset(staging.getBufferInfo().offset);
+			cmd.copyBuffer(staging.getBufferInfo().buffer, resource->m_mesh_info.getBufferInfo().buffer, copy);
+		}
+		{
+			btr::AllocatedMemory::Descriptor desc;
+			desc.size = vector_sizeof(model.m_material);
+			resource->m_material = executer->m_storage_memory.allocateMemory(desc);
+
+			desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			auto staging = executer->m_staging_memory.allocateMemory(desc);
+			memcpy_s(staging.getMappedPtr(), desc.size, model.m_material.data(), desc.size);
+
+			vk::BufferCopy copy;
+			copy.setSize(desc.size);
+			copy.setDstOffset(resource->m_material.getBufferInfo().offset);
+			copy.setSrcOffset(staging.getBufferInfo().offset);
+			cmd.copyBuffer(staging.getBufferInfo().buffer, resource->m_material.getBufferInfo().buffer, copy);
+		}
+
+
+		{
+			vk::DescriptorSetLayout layouts[] = {
+				m_model_descriptor_set_layout.get(),
+			};
+			vk::DescriptorSetAllocateInfo info;
+			info.setDescriptorPool(m_model_descriptor_pool.get());
+			info.setDescriptorSetCount(array_length(layouts));
+			info.setPSetLayouts(layouts);
+			resource->m_model_descriptor_set = std::move(executer->m_device->allocateDescriptorSetsUnique(info)[0]);
+
+			vk::DescriptorBufferInfo storages[] = {
+				resource->m_material.getBufferInfo(),
+				resource->m_mesh_info.getBufferInfo(),
+			};
+			vk::WriteDescriptorSet write_desc;
+			write_desc.setDescriptorType(vk::DescriptorType::eStorageBuffer);
+			write_desc.setDescriptorCount(array_length(storages));
+			write_desc.setPBufferInfo(storages);
+			write_desc.setDstSet(resource->m_model_descriptor_set.get());
+			write_desc.setDstBinding(0);
+			executer->m_device->updateDescriptorSets(write_desc, {});
+		}
+		m_model_list.push_back(resource);
 	}
+
 	const VoxelInfo& getVoxelInfo()const { return m_voxelize_info_cpu; }
 	vk::DescriptorSetLayout getDescriptorSetLayout(DescriptorSetLayout type)const { return m_descriptor_set_layout[type].get(); }
 	vk::DescriptorSet getDescriptorSet(DescriptorSet type)const { return m_descriptor_set[type].get(); }

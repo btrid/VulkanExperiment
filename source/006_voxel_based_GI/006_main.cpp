@@ -31,6 +31,7 @@
 // #include <imgui/imgui.h>
 
 #include <006_voxel_based_GI/VoxelPipeline.h>
+#include <006_voxel_based_GI/ModelVoxelize.h>
 
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
@@ -60,10 +61,11 @@ int main()
 	auto loader = app.m_loader;
 	auto executer = app.m_executer;
 
-	VoxelPipeline voxelize;
+	VoxelPipeline voxelize_pipeline;
+	voxelize_pipeline.setup(loader);
 	{
+		auto model_voxelize = voxelize_pipeline.createPipeline<ModelVoxelize>(loader);
 		auto setup_cmd = loader->m_cmd_pool->allocCmdTempolary(0);
-		voxelize.setup(loader);
 		{
 			std::vector<glm::vec3> v;
 			std::vector<glm::uvec3> i;
@@ -74,7 +76,7 @@ int main()
 			model.m_mesh[0].vertex.resize(v.size());
 			for (size_t i = 0; i < model.m_mesh[0].vertex.size(); i++)
 			{
-				model.m_mesh[0].vertex[i].pos = v[i] * 50.f;
+				model.m_mesh[0].vertex[i].pos = v[i] * 200.f;
 			}
 			model.m_mesh[0].index = i;
 			model.m_mesh[0].m_material_index = 0;
@@ -82,7 +84,7 @@ int main()
 			model.m_material[0].albedo = glm::vec4(1.f, 0.f, 0.f, 1.f);
 			model.m_material[0].emission = glm::vec4(0.f, 0.f, 0.f, 1.f);
 
-//			voxelize.addModel(executer, setup_cmd.get(), model);
+			model_voxelize->addModel(executer, setup_cmd.get(), model);
 		}
 		{
 			std::vector<glm::vec3> v;
@@ -110,7 +112,7 @@ int main()
 			model.m_material[4].albedo = glm::vec4(1.f, 1.f, 1.0f, 1.f);
 			model.m_material[5].albedo = glm::vec4(1.f, 0.f, 0.4f, 1.f);
 
-			voxelize.addModel(executer, setup_cmd.get(), model);
+			model_voxelize->addModel(executer, setup_cmd.get(), model);
 		}
 
 	}
@@ -122,9 +124,9 @@ int main()
 		app.preUpdate();
 		{
 			{
-				DrawCommand dcmd;
-				dcmd.world = glm::scale(vec3(200.f));
-				DrawHelper::Order().drawOrder(DrawHelper::SPHERE, dcmd);
+// 				DrawCommand dcmd;
+// 				dcmd.world = glm::scale(vec3(200.f));
+// 				DrawHelper::Order().drawOrder(DrawHelper::SPHERE, dcmd);
 			}
 
 			SynchronizedPoint render_syncronized_point(1);
@@ -135,7 +137,7 @@ int main()
 				job.mJob.emplace_back(
 					[&]()
 				{
-					render_cmds[0] = voxelize.draw(executer);
+					render_cmds[0] = voxelize_pipeline.draw(executer);
 					render_syncronized_point.arrive();
 				}
 				);

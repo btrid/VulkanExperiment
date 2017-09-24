@@ -5,8 +5,9 @@
 //#extension VK_KHR_shader_draw_parameters : require
 
 #define SETPOINT_VOXEL 0
-#define SETPOINT_VOXEL_MODEL 1
 #include </Voxelize.glsl>
+#define SETPOINT_VOXEL_MODEL 1
+#include </ModelVoxelize.glsl>
 
 layout(location = 0)in vec3 inPosition;
 

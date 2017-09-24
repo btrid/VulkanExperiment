@@ -10,8 +10,9 @@
 #include </convertDimension.glsl>
 
 #define SETPOINT_VOXEL 0
-#define SETPOINT_VOXEL_MODEL 1
 #include </Voxelize.glsl>
+#define SETPOINT_VOXEL_MODEL 1
+#include </ModelVoxelize.glsl>
 
 layout(location=1)in Transform{
 	vec3 Position;
