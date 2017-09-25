@@ -9,8 +9,8 @@
 
 #extension GL_GOOGLE_cpp_style_line_directive : require
 
-#include </convertDimension.glsl>
-#include </Shape.glsl>
+#include <btrlib/ConvertDimension.glsl>
+#include <btrlib/Shape.glsl>
 #include </TriangleLL.glsl>
 
 layout(location=1) in Transform{

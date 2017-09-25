@@ -147,7 +147,7 @@ struct MapVoxelize : Voxelize
 			parent->getDescriptorSet(VoxelPipeline::DESCRIPTOR_SET_VOXELIZE),
 		};
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_MAKE_VOXEL].get(), 0, descriptor_sets, {});
-		cmd.dispatch(1, 1, 32);
+		cmd.dispatch(1, 1, 64);
 	}
 };
 

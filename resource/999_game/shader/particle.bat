@@ -11,6 +11,7 @@ glslc.exe -w -I Include -I ../../btrlib/shader/include -x glsl -fshader-stage=fr
 glslc.exe -w -I Include -I ../../btrlib/shader/include -x glsl -fshader-stage=geometry	-o binary\\FloorRender.geom.spv FloorRender.geom
 glslc.exe -w -I Include -I ../../btrlib/shader/include -x glsl -fshader-stage=vertex	-o binary\\FloorRenderEx.vert.spv FloorRenderEx.vert
 glslc.exe -w -I Include -I ../../btrlib/shader/include -x glsl -fshader-stage=fragment	-o binary\\FloorRenderEx.frag.spv FloorRenderEx.frag
+glslc.exe -w -I Include -I ../../btrlib/shader/include -x glsl -fshader-stage=compute	-o binary\\MapVoxelize.comp.spv MapVoxelize.comp
 
 glslc.exe -w -I Include -I ../../btrlib/shader/include -x glsl -fshader-stage=vertex	-o binary\\MakeTriangleLL.vert.spv MakeTriangleLL.vert
 glslc.exe -w -I Include -I ../../btrlib/shader/include -x glsl -fshader-stage=fragment	-o binary\\MakeTriangleLL.frag.spv MakeTriangleLL.frag

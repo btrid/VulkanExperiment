@@ -1,5 +1,21 @@
+#ifndef BTRLIB_MATH_GLSL
+#define BTRLIB_MATH_GLSL
 
+#ifndef quat
 #define quat vec4
+#endif
+
+#ifndef FLT_EPSIRON
+#define FLT_EPSIRON (0.0000001)
+#endif
+
+#ifndef PI
+#define PI (3.141592)
+#endif
+
+#ifndef HALF_PI
+#define HALF_PI 3.141592 / 2. 
+#endif
 
 float rand(in vec2 co){
     return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
@@ -118,6 +134,5 @@ mat4 lookat(in vec3 eye, in vec3 target, in vec3 up)
 	return view;
 
 }
-#define PI 3.141592
-#define HALF_PI 3.141592 / 2. 
 
+#endif

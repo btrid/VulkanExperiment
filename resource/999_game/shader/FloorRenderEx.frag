@@ -6,12 +6,12 @@
 #extension GL_GOOGLE_cpp_style_line_directive : require
 #extension GL_ARB_shader_image_load_store : require
 
-#include </Math.glsl>
-#include </Shape.glsl>
+#include <btrlib/Math.glsl>
+#include <btrlib/Shape.glsl>
 //#include </Marching.glsl>
 
 #define SETPOINT_CAMERA 0
-#include <Camera.glsl>
+#include <btrlib/Camera.glsl>
 #include <Common.glsl>
 
 #define SETPOINT_MAP 1
@@ -153,7 +153,7 @@ void main()
 			if(p.y <= map*WALL_HEIGHT)
 			{
 				// 壁と当たった場合
-/				FragColor = vec4(vec3(1., 0., 0.) * calcEmission(pos), 1.);
+				FragColor = vec4(vec3(1., 0., 0.) * calcEmission(pos), 1.);
 				break;
 			}
 		}

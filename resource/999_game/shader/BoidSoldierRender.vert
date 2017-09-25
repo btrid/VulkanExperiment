@@ -15,7 +15,7 @@
 #endif
 
 #define SETPOINT_CAMERA 1
-#include <Camera.glsl>
+#include <btrlib/Camera.glsl>
 #include <Common.glsl>
 
 #define SETPOINT_BOID 0

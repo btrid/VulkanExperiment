@@ -1,5 +1,5 @@
+#include <btrlib/Math.glsl>
 
-#define quat vec4
 quat angleAxis(in float angle, in vec3 v)
 {
 	quat Result;
@@ -27,7 +27,6 @@ vec3 rotateQuatVec3(in quat q,	in vec3 v)
 	return v + ((uv * q.w) + uuv) * 2.;
 }
 
-#define FLT_EPSIRON (0.0001)
 struct DrawIndirectCommand
 {
     uint vertexCount;

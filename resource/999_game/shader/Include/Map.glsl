@@ -1,4 +1,7 @@
-
+#define WALL_HEIGHT (5.)
+#ifndef FLT_EPSIRON
+#define FLT_EPSIRON (0.0000001)
+#endif
 
 struct MapDescriptor
 {
@@ -13,7 +16,6 @@ struct MapInfo
 	float m_timeloop;
 };
 
-#define WALL_HEIGHT (5.)
 
 struct SceneData
 {

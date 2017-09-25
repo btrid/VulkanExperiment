@@ -1,5 +1,4 @@
 
-
 Hit marchToAABB(in Ray ray, in vec3 bmin, in vec3 bmax)
 {
 	Hit ret = MakeHit();

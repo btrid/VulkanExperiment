@@ -7,35 +7,35 @@
 
 #extension GL_GOOGLE_cpp_style_line_directive : require
 
-#include </btrlib/ConvertDimension.glsl>
+#include <btrlib/ConvertDimension.glsl>
 
 #define SETPOINT_VOXEL 0
-#include </btrlib/Voxelize/Voxelize.glsl>
+#include <btrlib/Voxelize/Voxelize.glsl>
 
 #define SETPOINT_MAP 1
 #define SETPOINT_SCENE 2
-#include </Map.glsl>
+#include <Map.glsl>
 
-layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+layout (local_size_x = 64, local_size_y = 4, local_size_z = 1) in;
 
 void main()
 {
-	uint3 index = gl_GlobalInvocationID.xyz;
-	if(any(greaterThan(index, u_voxelize_info.u_cell_num.xyz))){
+	uvec3 index = gl_GlobalInvocationID.xyz;
+	if(any(greaterThan(index, u_voxel_info.u_cell_num.xyz))){
 		return;
 	}
 
-	MapDescriptor map_desc = u_map_info.m_descriptor[1]
-	vec2 cell_size = u_map_info.m_descriptor[1].m_cell_size;
-	uint map_height = imageLoad(t_map, index.xy).r;
-	if(map_height < index.z){
+	MapDescriptor map_desc = u_map_info.m_descriptor[1];
+	vec2 cell_size = u_map_info.m_descriptor[1].m_cell_size.xy;
+	uint map_height = imageLoad(t_map, ivec2(index.xz)).r;
+	if(map_height < index.y){
 		// 何もないはず
 	}else{
 		vec3 map_cell_size = vec3(cell_size.x, 1., cell_size.y);
 		float power = calcEmission(index*map_cell_size + (map_cell_size*0.5));
 		vec3 albedo = vec3(0., 0., 1.);
 		uint packd_albedo = uint(albedo.r*64)<<23 | uint(albedo.g*64)<<14 | uint(albedo.b*64)<<5 | 1;
-		imageAtomicAdd(t_voxel_albedo, index, packd_albedo);
+		imageAtomicAdd(t_voxel_albedo, ivec3(index), packd_albedo);
 	}
 
 

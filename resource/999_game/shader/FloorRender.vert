@@ -13,7 +13,7 @@
 #endif
 
 #define SETPOINT_CAMERA 0
-#include <Camera.glsl>
+#include <btrlib/Camera.glsl>
 #include <Common.glsl>
 layout(location = 0)in vec3 inPosition;
 

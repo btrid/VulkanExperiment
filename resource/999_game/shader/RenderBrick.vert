@@ -10,8 +10,8 @@
 #extension GL_GOOGLE_cpp_style_line_directive : require
 
 
-#include </ConvertDimension.glsl>
-#include </Shape.glsl>
+#include <btrlib/ConvertDimension.glsl>
+#include <btrlib/Shape.glsl>
 #include </TriangleLL.glsl>
 
 
