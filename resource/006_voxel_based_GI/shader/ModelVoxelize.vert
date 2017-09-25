@@ -5,7 +5,7 @@
 //#extension VK_KHR_shader_draw_parameters : require
 
 #define SETPOINT_VOXEL 0
-#include </Voxelize.glsl>
+#include <btrlib/Voxelize/Voxelize.glsl>
 #define SETPOINT_VOXEL_MODEL 1
 #include </ModelVoxelize.glsl>
 

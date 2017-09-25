@@ -7,10 +7,10 @@
 
 #extension GL_GOOGLE_cpp_style_line_directive : require
 
-#include </convertDimension.glsl>
+#include <btrlib/convertDimension.glsl>
 
 #define SETPOINT_VOXEL 0
-#include </Voxelize.glsl>
+#include <btrlib/Voxelize/Voxelize.glsl>
 #define SETPOINT_VOXEL_MODEL 1
 #include </ModelVoxelize.glsl>
 

@@ -11,11 +11,11 @@
 #extension GL_ARB_shading_language_include : require
 #endif
 
-#include </convertDimension.glsl>
-#include </Shape.glsl>
+#include <btrlib/ConvertDimension.glsl>
+#include <btrlib/Shape.glsl>
 
 #define SETPOINT_VOXEL 0
-#include </Voxelize.glsl>
+#include <btrlib/Voxelize/Voxelize.glsl>
 
 
 layout(triangles) in;
