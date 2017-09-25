@@ -133,14 +133,15 @@ int main()
 			}
 
 			SynchronizedPoint render_syncronized_point(1);
-			std::vector<vk::CommandBuffer> render_cmds(1);
+			std::vector<vk::CommandBuffer> render_cmds(2);
 
 			{
 				cThreadJob job;
 				job.mJob.emplace_back(
 					[&]()
 				{
-					render_cmds[0] = voxelize_pipeline.draw(executer);
+					render_cmds[0] = voxelize_pipeline.make(executer);
+					render_cmds[1] = voxelize_pipeline.draw(executer);
 					render_syncronized_point.arrive();
 				}
 				);

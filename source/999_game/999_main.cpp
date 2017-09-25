@@ -32,7 +32,7 @@
 #include <999_game/sBoid.h>
 #include <999_game/sCollisionSystem.h>
 #include <999_game/sScene.h>
-#include <999_game/MapVoxel.h>
+#include <999_game/MapVoxelize.h>
 
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
@@ -136,6 +136,7 @@ int main()
 	auto loader = app.m_loader;
 	auto executer = app.m_executer;
 
+	VoxelPipeline voxelize_pipeline;
 	cModelPipeline model_pipeline;
 	std::shared_ptr<cModelRender> model_render = std::make_shared<cModelRender>();
 	cModel model;
@@ -169,6 +170,13 @@ int main()
 		sBulletSystem::Order().setup(loader);
  		sCollisionSystem::Order().setup(loader);
 
+		VoxelInfo info;
+		info.u_area_min = vec4(0.f, 0.f, 0.f, 1.f);
+		info.u_area_max = vec4(1000.f, 20.f, 1000.f, 1.f);
+		info.u_cell_num = uvec4(64, 4, 64, 1);
+		info.u_cell_size = (info.u_area_max - info.u_area_min) / vec4(info.u_cell_num);
+		voxelize_pipeline.setup(loader, info);
+		voxelize_pipeline.createPipeline<MapVoxelize>(loader);
 
 	}
 

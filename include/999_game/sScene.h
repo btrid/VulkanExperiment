@@ -31,43 +31,6 @@ struct SceneData
 	float m_totaltime;
 };
 
-struct MapVoxelize : Voxelize
-{
-	enum SHADER
-	{
-		SHADER_COMPUTE_VOXELIZE,
-		SHADER_NUM,
-	};
-
-	enum DescriptorSetLayout
-	{
-		DESCRIPTOR_SET_LAYOUT_MODEL_VOXELIZE,
-		DESCRIPTOR_SET_LAYOUT_NUM,
-	};
-
-	enum PipelineLayout
-	{
-		PIPELINE_LAYOUT_MAKE_VOXEL,
-		PIPELINE_LAYOUT_NUM,
-	};
-	enum Pipeline
-	{
-		PIPELINE_COMPUTE_MAKE_VOXEL,
-		PIPELINE_NUM,
-	};
-
-	std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_module;
-	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_stage_info;
-
-	std::array<vk::UniquePipeline, PIPELINE_NUM> m_pipeline;
-	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
-	std::array<vk::UniqueDescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
-
-	std::vector<vk::UniqueCommandBuffer> m_make_cmd;
-
-	void setup(std::shared_ptr<btr::Loader> loader, VoxelPipeline const * const parent);
-	void draw(std::shared_ptr<btr::Executer>& executer, VoxelPipeline const * const parent, vk::CommandBuffer cmd) override;
-};
 
 struct sScene : public Singleton<sScene>
 {
@@ -144,7 +107,6 @@ struct sScene : public Singleton<sScene>
 	std::array<vk::UniqueDescriptorSet, DESCRIPTOR_SET_NUM> m_descriptor_set;
 	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
 
-	VoxelPipeline m_voxel;
 	void setup(std::shared_ptr<btr::Loader>& loader)
 	{
 		m_map_info_cpu.m_subcell = glm::uvec2(4, 4);
@@ -841,14 +803,6 @@ struct sScene : public Singleton<sScene>
 			}
 			cmd->end();
 		}
-
-		VoxelInfo info;
-		info.u_area_min = vec4(0.f, 0.f, 0.f, 1.f);
-		info.u_area_max = vec4(1000.f, 20.f, 1000.f, 1.f);
-		info.u_cell_num = uvec4(64, 4, 64, 1);
-		info.u_cell_size = (info.u_area_max - info.u_area_min) / vec4(info.u_cell_num);
-		m_voxel.setup(loader, info);
-		m_voxel.createPipeline<MapVoxelize>(loader);
 	}
 
 	vk::CommandBuffer draw1(std::shared_ptr<btr::Executer>& executer)

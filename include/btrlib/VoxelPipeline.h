@@ -433,9 +433,8 @@ struct VoxelPipeline
 
 	}
 
-	vk::CommandBuffer draw(std::shared_ptr<btr::Executer>& executer)
+	vk::CommandBuffer make(std::shared_ptr<btr::Executer>& executer)
 	{
-
 		auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
 		vk::ImageSubresourceRange range;
 		range.setLayerCount(1);
@@ -475,6 +474,21 @@ struct VoxelPipeline
 		{
 			voxelize->draw(executer, this, cmd);
 		}
+		cmd.end();
+		return cmd;
+
+	}
+	vk::CommandBuffer draw(std::shared_ptr<btr::Executer>& executer)
+	{
+
+		auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
+
+		vk::ImageSubresourceRange range;
+		range.setLayerCount(1);
+		range.setLevelCount(1);
+		range.setAspectMask(vk::ImageAspectFlagBits::eColor);
+		range.setBaseArrayLayer(0);
+		range.setBaseMipLevel(0);
 		{
 			// draw voxel
 			{
