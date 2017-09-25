@@ -169,9 +169,9 @@ int main()
 		sBulletSystem::Order().setup(loader);
  		sCollisionSystem::Order().setup(loader);
 
+
 	}
 
-	vk::Queue queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), 0);
 	while (true)
 	{
 		cStopWatch time;

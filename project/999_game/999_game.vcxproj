@@ -74,19 +74,18 @@
     <ClCompile Include="..\..\source\999_game\sBoid.cpp" />
     <ClCompile Include="..\..\source\999_game\sBulletSystem.cpp" />
     <ClCompile Include="..\..\source\999_game\sCollisionSystem.cpp" />
+    <ClCompile Include="..\..\source\999_game\sScene.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\999_game\CircleIndex.h" />
     <ClInclude Include="..\..\include\999_game\cTriangleLL.h" />
     <ClInclude Include="..\..\include\999_game\KDTree.h" />
     <ClInclude Include="..\..\include\999_game\KDTreeTriangle.h" />
-    <ClInclude Include="..\..\include\999_game\MapVoxel.h" />
     <ClInclude Include="..\..\include\999_game\MazeGenerator.h" />
     <ClInclude Include="..\..\include\999_game\sBoid.h" />
     <ClInclude Include="..\..\include\999_game\sBulletSystem.h" />
     <ClInclude Include="..\..\include\999_game\sCollisionSystem.h" />
     <ClInclude Include="..\..\include\999_game\sScene.h" />
-    <ClInclude Include="..\..\include\999_game\Voxelize.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

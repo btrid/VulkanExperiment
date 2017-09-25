@@ -331,12 +331,12 @@ struct VoxelPipeline
 				std::vector<std::vector<vk::DescriptorSetLayoutBinding>> bindings(DESCRIPTOR_SET_NUM);
 				bindings[DESCRIPTOR_SET_VOXELIZE] = {
 					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment)
+					.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute)
 					.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 					.setDescriptorCount(1)
 					.setBinding(0),
 					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment)
+					.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute)
 					.setDescriptorType(vk::DescriptorType::eStorageImage)
 					.setDescriptorCount(1)
 					.setBinding(1),

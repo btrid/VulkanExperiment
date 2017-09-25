@@ -30,6 +30,45 @@ struct SceneData
 	float m_deltatime;
 	float m_totaltime;
 };
+
+struct MapVoxelize : Voxelize
+{
+	enum SHADER
+	{
+		SHADER_COMPUTE_VOXELIZE,
+		SHADER_NUM,
+	};
+
+	enum DescriptorSetLayout
+	{
+		DESCRIPTOR_SET_LAYOUT_MODEL_VOXELIZE,
+		DESCRIPTOR_SET_LAYOUT_NUM,
+	};
+
+	enum PipelineLayout
+	{
+		PIPELINE_LAYOUT_MAKE_VOXEL,
+		PIPELINE_LAYOUT_NUM,
+	};
+	enum Pipeline
+	{
+		PIPELINE_COMPUTE_MAKE_VOXEL,
+		PIPELINE_NUM,
+	};
+
+	std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_module;
+	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_stage_info;
+
+	std::array<vk::UniquePipeline, PIPELINE_NUM> m_pipeline;
+	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
+	std::array<vk::UniqueDescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
+
+	std::vector<vk::UniqueCommandBuffer> m_make_cmd;
+
+	void setup(std::shared_ptr<btr::Loader> loader, VoxelPipeline const * const parent);
+	void draw(std::shared_ptr<btr::Executer>& executer, VoxelPipeline const * const parent, vk::CommandBuffer cmd) override;
+};
+
 struct sScene : public Singleton<sScene>
 {
 
@@ -544,7 +583,7 @@ struct sScene : public Singleton<sScene>
 		bindings[DESCRIPTOR_SET_LAYOUT_SCENE] =
 		{
 			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eFragment)
+			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eFragment)
 			.setDescriptorCount(1)
 			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 			.setBinding(0),
@@ -809,6 +848,7 @@ struct sScene : public Singleton<sScene>
 		info.u_cell_num = uvec4(64, 4, 64, 1);
 		info.u_cell_size = (info.u_area_max - info.u_area_min) / vec4(info.u_cell_num);
 		m_voxel.setup(loader, info);
+		m_voxel.createPipeline<MapVoxelize>(loader);
 	}
 
 	vk::CommandBuffer draw1(std::shared_ptr<btr::Executer>& executer)
@@ -852,3 +892,4 @@ struct sScene : public Singleton<sScene>
 	vk::DescriptorSet getDescriptorSet(DescriptorSet i)const { return m_descriptor_set[i].get(); }
 
 };
+
