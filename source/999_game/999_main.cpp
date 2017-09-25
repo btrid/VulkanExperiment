@@ -26,11 +26,13 @@
 #include <applib/cModelRender.h>
 #include <applib/DrawHelper.h>
 #include <btrlib/Loader.h>
+#include <btrlib/VoxelPipeline.h>
 
 #include <999_game/sBulletSystem.h>
 #include <999_game/sBoid.h>
 #include <999_game/sCollisionSystem.h>
 #include <999_game/sScene.h>
+#include <999_game/MapVoxel.h>
 
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")

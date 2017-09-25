@@ -24,6 +24,18 @@ struct SceneData
 layout(std140, set=SETPOINT_SCENE, binding=0) uniform SceneDataUniform {
 	SceneData u_scene_data;
 };
+float calcEmission(in vec3 pos)
+{
+	float power = 0.2;
+	float start_time_offset = dot(pos, pos) / length(pos);
+//	start_time_offset += rand3(pos)*20;
+	float time = u_scene_data.m_totaltime*50. - start_time_offset;
+	if(time <= 0.){ return power;}
+	time = mod(time/10, 20.);
+	time = min(time, 1.);
+	power += 1-pow(time, 0.8);
+	return min(power, 1.);	
+}
 #endif
 #ifdef SETPOINT_MAP
 layout(std140, set=SETPOINT_MAP, binding=0) uniform MapInfoUniform {
@@ -33,6 +45,12 @@ layout(set=SETPOINT_MAP, binding=1, r8ui) uniform /*readonly*/ uimage2D t_map;
 layout(set=SETPOINT_MAP, binding=2, r8ui) uniform readonly uimage2D t_mapsub;
 layout(set=SETPOINT_MAP, binding=3, r32ui) uniform uimage2D t_map_damage;
 
+ivec3 calcMapIndex(in MapDescriptor desc, in vec3 p)
+{
+	vec3 cell_size = vec3(desc.m_cell_size.x, WALL_HEIGHT, desc.m_cell_size.y);
+	ivec3 map_index = ivec3(p.xyz / cell_size);
+	return map_index;
+}
 
 void march(inout vec2 pos, inout ivec2 map_index, in vec2 _dir)
 {

@@ -62,7 +62,10 @@ int main()
 	auto executer = app.m_executer;
 
 	VoxelPipeline voxelize_pipeline;
-	voxelize_pipeline.setup(loader);
+	VoxelInfo info;
+	info.u_cell_num = uvec4(64, 16, 64, 1);
+	info.u_cell_size = (info.u_area_max - info.u_area_min) / vec4(info.u_cell_num);
+	voxelize_pipeline.setup(loader, info);
 	{
 		auto model_voxelize = voxelize_pipeline.createPipeline<ModelVoxelize>(loader);
 		auto setup_cmd = loader->m_cmd_pool->allocCmdTempolary(0);

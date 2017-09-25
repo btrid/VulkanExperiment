@@ -23,12 +23,6 @@ layout(location=1) in FSIn{
 }In;
 layout(location = 0) out vec4 FragColor;
 
-ivec3 calcMapIndex(in MapDescriptor desc, in vec3 p)
-{
-	vec3 cell_size = vec3(desc.m_cell_size.x, WALL_HEIGHT, desc.m_cell_size.y);
-	ivec3 map_index = ivec3(p.xyz / cell_size);
-	return map_index;
-}
 
 float calcDepthStandard(in float v, in float n, in float f)
 {
@@ -102,20 +96,6 @@ Hit marchToAABB(in Ray ray, in vec3 bmin, in vec3 bmax)
 
 }
 
-float calcEmission(in vec3 pos)
-{
-	float power = 0.2;
-	float start_time_offset = dot(pos, pos) / length(pos);
-//	start_time_offset += rand3(pos)*20;
-	float time = u_scene_data.m_totaltime*50. - start_time_offset;
-	if(time <= 0.){ return power;}
-	time = mod(time/10, 20.);
-	time = min(time, 1.);
-	power += 1-pow(time, 0.8);
-	return min(power, 1.);
-	
-}
-
 void main() 
 {
 	MapDescriptor desc = u_map_info.m_descriptor[0];
@@ -173,8 +153,7 @@ void main()
 			if(p.y <= map*WALL_HEIGHT)
 			{
 				// 壁と当たった場合
-//				FragColor = vec4(1., 0., 0., 1.);
-				FragColor = vec4(vec3(1., 0., 0.) * calcEmission(pos), 1.);
+/				FragColor = vec4(vec3(1., 0., 0.) * calcEmission(pos), 1.);
 				break;
 			}
 		}

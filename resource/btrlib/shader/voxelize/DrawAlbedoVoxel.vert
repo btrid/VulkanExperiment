@@ -12,7 +12,7 @@
 #include </convertDimension.glsl>
 
 #define SETPOINT_VOXEL 0
-#include </Voxelize.glsl>
+#include </Voxelize/Voxelize.glsl>
 
 #define SETPOINT_CAMERA 1
 #include </Camera.glsl>
@@ -43,7 +43,7 @@ uint elements[] = {
 };
 void main()
 {
-	uvec3 index = convert1DTo3D(gl_InstanceIndex, uvec3(32, 32, 32));
+	uvec3 index = convert1DTo3D(gl_InstanceIndex, u_voxel_info.u_cell_num.xyz);
 	uint packd_value = imageLoad(t_voxel_albedo, ivec3(index)).r;
 	uint count = (packd_value)&((1<<5)-1);
 	if(count != 0)

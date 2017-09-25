@@ -80,6 +80,7 @@
     <ClInclude Include="..\..\include\999_game\cTriangleLL.h" />
     <ClInclude Include="..\..\include\999_game\KDTree.h" />
     <ClInclude Include="..\..\include\999_game\KDTreeTriangle.h" />
+    <ClInclude Include="..\..\include\999_game\MapVoxel.h" />
     <ClInclude Include="..\..\include\999_game\MazeGenerator.h" />
     <ClInclude Include="..\..\include\999_game\sBoid.h" />
     <ClInclude Include="..\..\include\999_game\sBulletSystem.h" />

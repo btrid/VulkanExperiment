@@ -12,6 +12,8 @@
 #include <applib/Geometry.h>
 #include <applib/sCameraManager.h>
 
+#include <btrlib/VoxelPipeline.h>
+
 struct MapDescriptor
 {
 	glm::vec2 m_cell_size;
@@ -28,7 +30,6 @@ struct SceneData
 	float m_deltatime;
 	float m_totaltime;
 };
-
 struct sScene : public Singleton<sScene>
 {
 
@@ -104,6 +105,7 @@ struct sScene : public Singleton<sScene>
 	std::array<vk::UniqueDescriptorSet, DESCRIPTOR_SET_NUM> m_descriptor_set;
 	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
 
+	VoxelPipeline m_voxel;
 	void setup(std::shared_ptr<btr::Loader>& loader)
 	{
 		m_map_info_cpu.m_subcell = glm::uvec2(4, 4);
@@ -801,6 +803,12 @@ struct sScene : public Singleton<sScene>
 			cmd->end();
 		}
 
+		VoxelInfo info;
+		info.u_area_min = vec4(0.f, 0.f, 0.f, 1.f);
+		info.u_area_max = vec4(1000.f, 20.f, 1000.f, 1.f);
+		info.u_cell_num = uvec4(64, 4, 64, 1);
+		info.u_cell_size = (info.u_area_max - info.u_area_min) / vec4(info.u_cell_num);
+		m_voxel.setup(loader, info);
 	}
 
 	vk::CommandBuffer draw1(std::shared_ptr<btr::Executer>& executer)

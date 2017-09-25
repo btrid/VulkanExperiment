@@ -9,6 +9,14 @@ struct VoxelInfo
 	vec4 u_area_max;
 	vec4 u_cell_size;
 	uvec4 u_cell_num;
+
+	VoxelInfo()
+	{
+		u_area_max = vec4(1000.f);
+		u_area_min = vec4(-1000.f);
+		u_cell_num = uvec4(32);
+		u_cell_size = (u_area_max - u_area_min) / vec4(u_cell_num);
+	}
 };
 
 struct VoxelPipeline;
@@ -20,7 +28,6 @@ struct Voxelize
 
 struct VoxelPipeline
 {
-
 	enum SHADER
 	{
 		SHADER_DRAW_VOXEL_VERTEX,
@@ -69,10 +76,12 @@ struct VoxelPipeline
 	vk::UniqueDeviceMemory m_voxel_imagememory;
 
 	std::vector<std::shared_ptr<Voxelize>> m_voxelize_list;
-	void setup(std::shared_ptr<btr::Loader>& loader)
+	void setup(std::shared_ptr<btr::Loader>& loader, const VoxelInfo& info)
 	{
 		auto& gpu = loader->m_gpu;
 		auto& device = gpu.getDevice();
+
+		m_voxelize_info_cpu = info;
 
 		auto cmd = loader->m_cmd_pool->allocCmdTempolary(0);
 
@@ -85,10 +94,6 @@ struct VoxelPipeline
 			desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging = loader->m_staging_memory.allocateMemory(desc);
 
-			m_voxelize_info_cpu.u_area_max = vec4(1000.f);
-			m_voxelize_info_cpu.u_area_min = vec4(-1000.f);
-			m_voxelize_info_cpu.u_cell_num = uvec4(32);
-			m_voxelize_info_cpu.u_cell_size = (m_voxelize_info_cpu.u_area_max - m_voxelize_info_cpu.u_area_min) / vec4(m_voxelize_info_cpu.u_cell_num);
 			*staging.getMappedPtr<VoxelInfo>() = m_voxelize_info_cpu;
 
 			vk::BufferCopy copy;
@@ -502,12 +507,12 @@ struct VoxelPipeline
 		return cmd;
 	}
 
-	template<typename T>
-	std::shared_ptr<T> createPipeline(std::shared_ptr<btr::Loader>& loader)
+	template<typename T, typename... Args>
+	std::shared_ptr<T> createPipeline(std::shared_ptr<btr::Loader>& loader, Args... args)
 	{
 		auto ptr = std::make_shared<T>();
 		m_voxelize_list.push_back(ptr);
-		ptr->setup(loader, this);
+		ptr->setup(loader, this, args...);
 		return ptr;
 	}
 	const VoxelInfo& getVoxelInfo()const { return m_voxelize_info_cpu; }

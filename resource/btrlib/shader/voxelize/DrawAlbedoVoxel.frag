@@ -9,7 +9,7 @@
 
 #extension GL_GOOGLE_cpp_style_line_directive : require
 
-#include <Voxelize.glsl>
+#include <Voxelize/Voxelize.glsl>
 
 layout(location=1)in Vertex{
 	vec3 albedo;
