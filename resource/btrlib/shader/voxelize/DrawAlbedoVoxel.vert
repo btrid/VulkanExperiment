@@ -9,13 +9,13 @@
 
 #extension GL_GOOGLE_cpp_style_line_directive : require
 
-#include </convertDimension.glsl>
+#include <btrlib/ConvertDimension.glsl>
 
 #define SETPOINT_VOXEL 0
-#include </Voxelize/Voxelize.glsl>
+#include <btrlib/Voxelize/Voxelize.glsl>
 
 #define SETPOINT_CAMERA 1
-#include </Camera.glsl>
+#include <btrlib/Camera.glsl>
 
 layout(location=0)out gl_PerVertex
 {

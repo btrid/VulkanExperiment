@@ -78,7 +78,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 		vk::UniqueDeviceMemory m_memory;
 		vk::UniqueSampler m_sampler;
 	};
-	TextureResource m_whilte_texture;
+	TextureResource m_whilte_texture; //!< ダミーテクスチャ
 	TextureResource& getWhiteTexture() { return m_whilte_texture; }
 	DrawHelper()
 	{
