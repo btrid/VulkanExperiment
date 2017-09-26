@@ -107,6 +107,8 @@ struct sScene : public Singleton<sScene>
 	std::array<vk::UniqueDescriptorSet, DESCRIPTOR_SET_NUM> m_descriptor_set;
 	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
 
+	VoxelPipeline m_voxelize_pipeline;
+
 	void setup(std::shared_ptr<btr::Loader>& loader)
 	{
 		m_map_info_cpu.m_subcell = glm::uvec2(4, 4);
@@ -803,6 +805,14 @@ struct sScene : public Singleton<sScene>
 			}
 			cmd->end();
 		}
+
+		VoxelInfo info;
+		info.u_area_min = vec4(0.f, 0.f, 0.f, 1.f);
+		info.u_area_max = vec4(500.f, 20.f, 500.f, 1.f);
+		info.u_cell_num = uvec4(128, 4, 128, 1);
+		info.u_cell_size = (info.u_area_max - info.u_area_min) / vec4(info.u_cell_num);
+		m_voxelize_pipeline.setup(loader, info);
+
 	}
 
 	vk::CommandBuffer draw1(std::shared_ptr<btr::Executer>& executer)
@@ -844,6 +854,7 @@ struct sScene : public Singleton<sScene>
 	vk::PipelineLayout getPipelineLayout(PipelineLayout layout)const { return m_pipeline_layout[layout].get(); }
 	vk::DescriptorSetLayout getDescriptorSetLayout(DescriptorSetLayout desctiptor)const { return m_descriptor_set_layout[desctiptor].get(); }
 	vk::DescriptorSet getDescriptorSet(DescriptorSet i)const { return m_descriptor_set[i].get(); }
+	VoxelPipeline& getVoxel() { return m_voxelize_pipeline; }
 
 };
 

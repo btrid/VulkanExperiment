@@ -136,7 +136,6 @@ int main()
 	auto loader = app.m_loader;
 	auto executer = app.m_executer;
 
-	VoxelPipeline voxelize_pipeline;
 	cModelPipeline model_pipeline;
 	std::shared_ptr<cModelRender> model_render = std::make_shared<cModelRender>();
 	cModel model;
@@ -170,14 +169,7 @@ int main()
 		sBulletSystem::Order().setup(loader);
  		sCollisionSystem::Order().setup(loader);
 
-		VoxelInfo info;
-		info.u_area_min = vec4(0.f, 0.f, 0.f, 1.f);
-		info.u_area_max = vec4(500.f, 20.f, 500.f, 1.f);
-		info.u_cell_num = uvec4(128, 4, 128, 1);
-		info.u_cell_size = (info.u_area_max - info.u_area_min) / vec4(info.u_cell_num);
-		voxelize_pipeline.setup(loader, info);
-		voxelize_pipeline.createPipeline<MapVoxelize>(loader);
-
+		sScene::Order().getVoxel().createPipeline<MapVoxelize>(loader);
 	}
 
 	while (true)
@@ -204,8 +196,8 @@ int main()
 				sGlobal::Order().getThreadPool().enque(job);
 			}
 
-			SynchronizedPoint render_syncronized_point(5);
-			std::vector<vk::CommandBuffer> render_cmds(8);
+			SynchronizedPoint render_syncronized_point(6);
+			std::vector<vk::CommandBuffer> render_cmds(9);
 			{
 				cThreadJob job;
 				job.mFinish =
@@ -222,7 +214,7 @@ int main()
 				job.mFinish =
 					[&]()
 				{
-					render_cmds[2] = model_pipeline.draw(executer);
+					render_cmds[2] = sScene::Order().getVoxel().make(executer);
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);
@@ -232,8 +224,7 @@ int main()
 				job.mFinish =
 					[&]()
 				{
-					render_cmds[3] = sBoid::Order().execute(executer);
-					render_cmds[4] = sBoid::Order().draw(executer);
+					render_cmds[3] = model_pipeline.draw(executer);
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);
@@ -243,8 +234,8 @@ int main()
 				job.mFinish =
 					[&]()
 				{
-					render_cmds[5] = sBulletSystem::Order().execute(executer);
-					render_cmds[6] = sBulletSystem::Order().draw(executer);
+					render_cmds[4] = sBoid::Order().execute(executer);
+					render_cmds[5] = sBoid::Order().draw(executer);
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);
@@ -254,7 +245,18 @@ int main()
 				job.mFinish =
 					[&]()
 				{
-					render_cmds[7] = sCollisionSystem::Order().execute(executer);
+					render_cmds[6] = sBulletSystem::Order().execute(executer);
+					render_cmds[7] = sBulletSystem::Order().draw(executer);
+					render_syncronized_point.arrive();
+				};
+				sGlobal::Order().getThreadPool().enque(job);
+			}
+			{
+				cThreadJob job;
+				job.mFinish =
+					[&]()
+				{
+					render_cmds[8] = sCollisionSystem::Order().execute(executer);
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);
