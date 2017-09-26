@@ -1,24 +1,14 @@
 #version 450
 
-#pragma optionNV (unroll all)
-#pragma optionNV (inline all)
-
 //#extension GL_ARB_shader_draw_parameters : require
-//#extension GL_ARB_bindless_texture : require
 
-
-#ifdef VULKAN
 #extension GL_GOOGLE_cpp_style_line_directive : require
-//#extension GL_KHR_vulkan_glsl : require
-#else
-#extension GL_ARB_shading_language_include : require
-#endif
 
-#include </Math.glsl>
-#include </MultiModel.glsl>
+#include <btrlib/Math.glsl>
+#include <applib/model/MultiModel.glsl>
 
 #define SETPOINT_CAMERA 2
-#include </Camera.glsl>
+#include <btrlib/Camera.glsl>
 
 layout(location = 0)in vec3 inPosition;
 layout(location = 1)in vec3 inNormal;
@@ -46,12 +36,6 @@ layout(std430, set=0, binding=1) restrict buffer MaterialBuffer {
 	Material b_material[];
 };
 
-
-layout(push_constant) uniform UpdateConstantBlock
-{
-	mat4 m_world;
-} constant;
-
 mat4 skinning()
 {
 	mat4 transMat = mat4(0.0);
@@ -69,7 +53,7 @@ void main()
 {
 	vec4 pos = vec4((inPosition).xyz, 1.0);
 	mat4 skinningMat = skinning();
-	pos = /*constant.m_world **/ skinningMat * pos;
+	pos = skinningMat * pos;
 	gl_Position = u_camera[0].u_projection * u_camera[0].u_view * vec4(pos.xyz, 1.0);
 
 	VSOut.Position = pos.xyz;

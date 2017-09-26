@@ -128,14 +128,6 @@ void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 		.setBinding(0),
 	};
 
-	bindings[DESCRIPTOR_SET_LAYOUT_SCENE] =
-	{
-		vk::DescriptorSetLayoutBinding()
-		.setStageFlags(vk::ShaderStageFlagBits::eVertex)
-		.setDescriptorCount(1)
-		.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-		.setBinding(0),
-	};
 	for (u32 i = 0; i < bindings.size(); i++)
 	{
 		vk::DescriptorSetLayoutCreateInfo descriptor_layout_info = vk::DescriptorSetLayoutCreateInfo()
@@ -149,7 +141,7 @@ void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 			vk::DescriptorSetLayout layouts[] = {
 				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_MODEL].get(),
 				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_PER_MESH].get(),
-				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_SCENE].get(),
+				sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA)
 			};
 			vk::PushConstantRange constant_range[] = {
 				vk::PushConstantRange().setOffset(0).setSize(64).setStageFlags(vk::ShaderStageFlagBits::eVertex),
@@ -311,33 +303,6 @@ void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 			m_graphics_pipeline = std::move(device->createGraphicsPipelinesUnique(pipeline_cache, graphics_pipeline_info)[0]);
 		}
 
-	}
-
-	{
-		// ƒ‚ƒfƒ‹‚²‚Æ‚ÌDescriptor‚ÌÝ’è
-	
-		vk::DescriptorSetLayout layouts[] = {
-			m_descriptor_set_layout[cModelPipeline::DESCRIPTOR_SET_LAYOUT_SCENE].get(),
-		};
-		vk::DescriptorSetAllocateInfo alloc_info;
-		alloc_info.descriptorPool = loader->m_descriptor_pool.get();
-		alloc_info.descriptorSetCount = array_length(layouts);
-		alloc_info.pSetLayouts = layouts;
-		m_descriptor_set_scene = std::move(device->allocateDescriptorSetsUnique(alloc_info)[0]);
-
-		std::vector<vk::DescriptorBufferInfo> uniformBufferInfo = {
-			sCameraManager::Order().m_camera.getBufferInfo(),
-		};
-		std::vector<vk::WriteDescriptorSet> write_descriptor_set =
-		{
-			vk::WriteDescriptorSet()
-			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-			.setDescriptorCount(uniformBufferInfo.size())
-			.setPBufferInfo(uniformBufferInfo.data())
-			.setDstBinding(0)
-			.setDstSet(m_descriptor_set_scene.get()),
-		};
-		device->updateDescriptorSets(write_descriptor_set, {});
 	}
 }
 

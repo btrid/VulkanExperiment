@@ -24,7 +24,6 @@ struct cModelPipeline
 	{
 		DESCRIPTOR_SET_LAYOUT_MODEL,
 		DESCRIPTOR_SET_LAYOUT_PER_MESH,
-		DESCRIPTOR_SET_LAYOUT_SCENE,
 		DESCRIPTOR_SET_LAYOUT_NUM,
 	};
 	enum PipelineLayout
@@ -41,10 +40,9 @@ struct cModelPipeline
 
 	vk::UniqueDescriptorPool m_descriptor_pool;
 	vk::UniquePipeline m_graphics_pipeline;
-	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
 	std::array<vk::UniqueDescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
+	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
 
-	vk::UniqueDescriptorSet m_descriptor_set_scene;
 	btr::BufferMemory m_bone_buffer;
 
 	std::vector<std::shared_ptr<cModelRender>> m_model;

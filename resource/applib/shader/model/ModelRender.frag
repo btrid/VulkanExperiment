@@ -1,33 +1,20 @@
 #version 450
-#pragma optionNV (unroll all)
-#pragma optionNV (inline all)
 
-//#extension GL_ARB_bindless_texture : require
-//#extension GL_NV_gpu_shader5 : require
-//#extension GL_ARB_shading_language_include : require
-//#extension GL_KHR_vulkan_glsl : require
 #extension GL_GOOGLE_cpp_style_line_directive : require
 #extension GL_ARB_shader_image_load_store : require
-#include </MultiModel.glsl>
+#include <applib/model/MultiModel.glsl>
 
 layout(early_fragment_tests) in;
 
 struct Vertex
 {
-//	flat int MaterialIndex;
 	vec3 Position;
 	vec3 Normal;
 	vec3 Texcoord;
 };
 layout(location = 0) in Vertex FSIn;
 
-layout (set = 1, binding = 0) uniform sampler2D tDiffuse[16];
-
-layout(push_constant) uniform UpdateConstantBlock
-{
-	layout(offset = 64) uint material_index;
-} constant;
-
+layout (set=1, binding = 0) uniform sampler2D tDiffuse[16];
 
 layout(location=0) out vec4 FragColor;
 
@@ -56,10 +43,6 @@ vec3 getColor()
 
 void main()
 {
-//	int i = getMortonNumber(FSIn.Position.xyz, 0.);
-//	color[i].rgba.rgb = getColor();
-//	color[i].rgba.rgb = vec3(1.);
-//	color[i].rgba.a = 1.;
 	FragColor.rgb = getColor();
 	FragColor.a = 1.;
 }

@@ -37,7 +37,7 @@ int main()
 {
 	btr::setResourceAppPath("..\\..\\resource\\004_model\\");
 	auto* camera = cCamera::sCamera::Order().create();
-	camera->getData().m_position = glm::vec3(0.f, -10.f, -20.f);
+	camera->getData().m_position = glm::vec3(10.f, 5.f, 20.f);
 	camera->getData().m_target = glm::vec3(0.f, 0.f, 0.f);
 	camera->getData().m_up = glm::vec3(0.f, -1.f, 0.f);
 	camera->getData().m_width = 640;
@@ -85,7 +85,6 @@ int main()
 
 		app.preUpdate();
 		{
-
 			render->getModelTransform().m_global = mat4(1.f);
 			render->work();
 

@@ -213,7 +213,7 @@ public:
 	~cModel();
 
 	void load(std::shared_ptr<btr::Loader>& loader, const std::string& filename);
-	void makeInstancing() { ; }
+
 	std::string getFilename()const;
 	const cMeshResource* getMesh()const;
 	std::shared_ptr<Resource> getResource()const { return m_resource; }

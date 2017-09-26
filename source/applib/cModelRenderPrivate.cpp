@@ -123,7 +123,7 @@ void cModelRenderPrivate::setup(std::shared_ptr<btr::Executer>& executer, cModel
 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.m_graphics_pipeline.get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelPipeline::PIPELINE_LAYOUT_RENDER].get(), 0, m_draw_descriptor_set_per_model.get(), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelPipeline::PIPELINE_LAYOUT_RENDER].get(), 1, m_draw_descriptor_set_per_mesh.get(), {});
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelPipeline::PIPELINE_LAYOUT_RENDER].get(), 2, pipeline.m_descriptor_set_scene.get(), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelPipeline::PIPELINE_LAYOUT_RENDER].get(), 2, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 			cmd.pushConstants<glm::mat4>(pipeline.m_pipeline_layout[cModelPipeline::PIPELINE_LAYOUT_RENDER].get(), vk::ShaderStageFlagBits::eVertex, 0, m_model_transform.calcGlobal());
 			cmd.bindVertexBuffers(0, { m_model_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().buffer }, { m_model_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().offset });
 			cmd.bindIndexBuffer(m_model_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().buffer, m_model_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().offset, m_model_resource->m_mesh_resource.mIndexType);
