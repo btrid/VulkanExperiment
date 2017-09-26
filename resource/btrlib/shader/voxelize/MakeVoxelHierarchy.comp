@@ -1,25 +1,36 @@
 #version 450
-
-#pragma optionNV (unroll all)
-#pragma optionNV (inline all)
-#pragma optionNV(fastmath on)
-//#pragma optionNV(fastprecision on)
-//#pragma optionNV(ifcvt all)
-#pragma optionNV(strict on)
-
 #extension GL_GOOGLE_cpp_style_line_directive : require
 
+layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 
-layout(location=0)out gl_PerVertex
+layout (set=0, binding=0, r32ui) uniform uimage3D t_voxel_src;
+layout (set=0, binding=1, r32f) uniform image3D t_voxel_dst;
+
+vec3 unpack(uint packed)
 {
-	vec4 gl_Position;
-};
+	uvec4 count = (packed)&((1<<5)-1);
+	if(count != 0)
+	{
+		uint packed_r = (packed>>23)&((1<<9)-1);
+		uint packed_g = (packed>>14)&((1<<9)-1);
+		uint packed_b = (packed>>5)&((1<<9)-1);
+		vec3 unpacked = vec3(packed_r, packed_g, packed_b) / 64. / float(count);
+		return unpacked;
+	}
+	return vec3(0.);
 
-layout(location=1)out Vertex
-{
-	vec3 albedo;
-}Out;
-
+}
 void main()
 {
+	ivec3 id = ivec3(gl_GlobalInvocationID.xy);
+	vec3 value = vec3(0.);
+	value+=unpack(imageLoad(t_voxel_src, id*2+ivec3(0, 0, 0)).r);
+	value+=unpack(imageLoad(t_voxel_src, id*2+ivec3(0, 0, 1)).r);
+	value+=unpack(imageLoad(t_voxel_src, id*2+ivec3(0, 1, 0)).r);
+	value+=unpack(imageLoad(t_voxel_src, id*2+ivec3(0, 1, 1)).r);
+	value+=unpack(imageLoad(t_voxel_src, id*2+ivec3(1, 0, 0)).r);
+	value+=unpack(imageLoad(t_voxel_src, id*2+ivec3(1, 0, 1)).r);
+	value+=unpack(imageLoad(t_voxel_src, id*2+ivec3(1, 1, 0)).r);
+	value+=unpack(imageLoad(t_voxel_src, id*2+ivec3(1, 1, 1)).r);
+	imageStore(t_voxel_dst, id, value);
 }

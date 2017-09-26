@@ -75,6 +75,10 @@ struct VoxelPipeline
 	vk::UniqueImageView m_voxel_imageview;
 	vk::UniqueDeviceMemory m_voxel_imagememory;
 
+	vk::UniqueImage m_voxel_hierarchy_image;
+	vk::UniqueImageView m_voxel_hierarchy_imageview;
+	vk::UniqueDeviceMemory m_voxel_hierarchy_imagememory;
+
 	std::vector<std::shared_ptr<Voxelize>> m_voxelize_list;
 	void setup(std::shared_ptr<btr::Loader>& loader, const VoxelInfo& info)
 	{
@@ -176,6 +180,66 @@ struct VoxelPipeline
 			m_voxel_imageview = device->createImageViewUnique(view_info);
 
 		}
+
+		{
+			vk::ImageCreateInfo image_info;
+			image_info.imageType = vk::ImageType::e3D;
+			image_info.format = vk::Format::eR32Sfloat;
+			image_info.mipLevels = 4;
+			image_info.arrayLayers = 1;
+			image_info.samples = vk::SampleCountFlagBits::e1;
+			image_info.tiling = vk::ImageTiling::eOptimal;
+			image_info.usage = vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
+			image_info.sharingMode = vk::SharingMode::eExclusive;
+			image_info.initialLayout = vk::ImageLayout::eUndefined;
+			image_info.extent = { m_voxelize_info_cpu.u_cell_num.x/2, m_voxelize_info_cpu.u_cell_num.y / 2, m_voxelize_info_cpu.u_cell_num.z / 2 };
+			auto image = device->createImageUnique(image_info);
+
+			vk::MemoryRequirements memory_request = device->getImageMemoryRequirements(image.get());
+			vk::MemoryAllocateInfo memory_alloc_info;
+			memory_alloc_info.allocationSize = memory_request.size;
+			memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+			auto image_memory = device->allocateMemoryUnique(memory_alloc_info);
+			device->bindImageMemory(image.get(), image_memory.get(), 0);
+
+			vk::ImageSubresourceRange subresourceRange;
+			subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+			subresourceRange.baseArrayLayer = 0;
+			subresourceRange.baseMipLevel = 0;
+			subresourceRange.layerCount = 1;
+			subresourceRange.levelCount = image_info.mipLevels;
+
+			{
+				// 初期設定
+				vk::ImageMemoryBarrier to_copy_barrier;
+				to_copy_barrier.image = image.get();
+				to_copy_barrier.oldLayout = vk::ImageLayout::eUndefined;
+				to_copy_barrier.newLayout = vk::ImageLayout::eGeneral;
+				to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+				to_copy_barrier.subresourceRange = subresourceRange;
+
+				cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
+
+			}
+
+			vk::ImageViewCreateInfo view_info;
+			view_info.viewType = vk::ImageViewType::e3D;
+			view_info.components.r = vk::ComponentSwizzle::eR;
+			view_info.components.g = vk::ComponentSwizzle::eG;
+			view_info.components.b = vk::ComponentSwizzle::eB;
+			view_info.components.a = vk::ComponentSwizzle::eA;
+			view_info.flags = vk::ImageViewCreateFlags();
+			view_info.format = image_info.format;
+			view_info.image = image.get();
+			view_info.subresourceRange = subresourceRange;
+
+			m_voxel_hierarchy_image = std::move(image);
+			m_voxel_hierarchy_imagememory = std::move(image_memory);
+			m_voxel_hierarchy_imageview = device->createImageViewUnique(view_info);
+
+		}
+
 
 		// レンダーパス
 		{

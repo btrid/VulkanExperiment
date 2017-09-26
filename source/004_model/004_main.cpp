@@ -54,7 +54,6 @@ int main()
 
 	auto loader = app.m_loader;
 	auto executer = app.m_executer;
-	vk::Queue queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), 0);
 
 	cModel model;
 	model.load(loader, btr::getResourceAppPath() + "tiny.x");
@@ -74,7 +73,6 @@ int main()
 		transform.m_local_rotate = glm::quat(1.f, 0.f, 0.f, 0.f);
 		transform.m_local_translate = glm::vec3(0.f, 0.f, 0.f);
 	}
-
 
 
 	cModelPipeline renderer;
