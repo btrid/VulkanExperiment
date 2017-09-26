@@ -1,4 +1,19 @@
 
+struct CameraPlane
+{
+	vec3 normal;
+	float n;
+};
+struct CameraFrustom{
+	CameraPlane p[6];
+};
+
+struct Camera2
+{
+	mat4 uProjection;
+	mat4 uView;
+};
+
 struct Camera
 {
 	mat4 u_projection;
@@ -9,6 +24,8 @@ struct Camera
 	float u_fov_y;
 	float u_near;
 	float u_far;
+
+	CameraFrustom u_frustom;
 };
 
 #if defined(SETPOINT_CAMERA)
@@ -18,19 +35,15 @@ layout(std140, set=SETPOINT_CAMERA, binding=0) uniform CameraUniform
 };
 #endif
 
-#if 0
-
-
-
-Plane MakePlane(in vec3 a, in vec3 b, in vec3 c)
+CameraPlane MakePlane(in vec3 a, in vec3 b, in vec3 c)
 {
-	Plane p;
+	CameraPlane p;
 	p.normal = normalize(cross(b - a, c - a));
 	p.n = dot(p.normal, a);
 	return p;
 }
 
-bool isCulling(in Frustom frustom, in vec4 AABB)
+bool isCulling(in CameraFrustom frustom, in vec4 AABB)
 {
 	for (int i = 0; i < 6; i++)
 	{
@@ -41,7 +54,7 @@ bool isCulling(in Frustom frustom, in vec4 AABB)
 	}
 	return false;
 }
-bool isCullingInf(in Frustom frustom, in vec4 AABB)
+bool isCullingInf(in CameraFrustom frustom, in vec4 AABB)
 {
 	int count = 0;
 	for (int i = 0; i < 4; i++)
@@ -54,5 +67,3 @@ bool isCullingInf(in Frustom frustom, in vec4 AABB)
 	}
 	return count == 4;
 }
-
-#endif

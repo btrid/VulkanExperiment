@@ -143,28 +143,16 @@ public:
 
 };
 
-struct CameraGPU
+struct FrustomPoint
 {
-	void setup(const cCamera& camera)
-	{
-		const auto& cam = camera.getRenderData();
-		u_projection = glm::perspective(cam.m_fov, cam.getAspect(), cam.m_near, cam.m_far);
-		u_view = glm::lookAt(cam.m_position, cam.m_target, cam.m_up);
-		u_eye = glm::vec4(cam.m_position, 0.f);
-		u_target = glm::vec4(cam.m_target, 0.f);
-		u_aspect = cam.getAspect();
-		u_fov_y = cam.m_fov;
-		u_near = cam.m_near;
-		u_far = cam.m_far;
-	}
-	glm::mat4 u_projection;
-	glm::mat4 u_view;
-	glm::vec4 u_eye;
-	glm::vec4 u_target;
-	float u_aspect;
-	float u_fov_y;
-	float u_near;
-	float u_far;
+	glm::vec4 ltn;	//!< nearTopLeft
+	glm::vec4 rtn;
+	glm::vec4 lbn;
+	glm::vec4 rbn;
+	glm::vec4 ltf;	//!< nearTopLeft
+	glm::vec4 rtf;
+	glm::vec4 lbf;
+	glm::vec4 rbf;
 };
 
 class Frustom {
@@ -219,7 +207,8 @@ public:
 		fh_ = farD  * tang_;
 		fw_ = fh_ * ratio;
 	}
-	void setView(const glm::vec3 &p, const glm::vec3 &l, const glm::vec3 &u) {
+	void setView(const glm::vec3 &p, const glm::vec3 &l, const glm::vec3 &u) 
+	{
 
 		glm::vec3 Z = glm::normalize(p - l);
 		glm::vec3 X = glm::normalize(glm::cross(u, Z));
@@ -272,18 +261,34 @@ public:
 	}
 };
 
-struct CameraGPU2
+struct CameraGPU
 {
 	void setup(const cCamera& camera)
 	{
 		const auto& cam = camera.getRenderData();
-		m_projection = glm::perspective(cam.m_fov, cam.getAspect(), cam.m_near, cam.m_far);
-		m_view = glm::lookAt(cam.m_position, cam.m_target, cam.m_up);
+		u_projection = glm::perspective(cam.m_fov, cam.getAspect(), cam.m_near, cam.m_far);
+		u_view = glm::lookAt(cam.m_position, cam.m_target, cam.m_up);
+		u_eye = glm::vec4(cam.m_position, 0.f);
+		u_target = glm::vec4(cam.m_target, 0.f);
+		u_aspect = cam.getAspect();
+		u_fov_y = cam.m_fov;
+		u_near = cam.m_near;
+		u_far = cam.m_far;
+
 		Frustom f;
 		f.setup(camera);
 		m_plane = f.getPlane();
 	}
-	glm::mat4 m_projection;
-	glm::mat4 m_view;
+	glm::mat4 u_projection;
+	glm::mat4 u_view;
+	glm::vec4 u_eye;
+	glm::vec4 u_target;
+	float u_aspect;
+	float u_fov_y;
+	float u_near;
+	float u_far;
+
 	std::array<Plane, 6> m_plane;
+
 };
+

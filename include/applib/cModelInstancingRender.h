@@ -116,7 +116,6 @@ public:
 	};
 
 	std::shared_ptr<cModel::Resource> m_resource;
-	std::vector<cModel*> m_model;
 
 	enum DescriptorSet
 	{
@@ -160,9 +159,16 @@ public:
 	};
 	std::unique_ptr<InstancingResource> m_resource_instancing;
 
+
+	struct InstanceResource
+	{
+		mat4 m_world;
+	};
+	std::array<std::atomic_uint32_t,sGlobal::FRAME_MAX> m_instance_count;
+	void addModel(const InstanceResource& data) { addModel(&data, 1); }
+	void addModel(const InstanceResource* data, uint32_t num);
 public:
 	void setup(std::shared_ptr<btr::Loader>& loader, std::shared_ptr<cModel::Resource>& resource, uint32_t instanceNum);
-	void addModel(cModel* model) { m_model.push_back(model); }
 
 	void setup(cModelInstancingRenderer& renderer);
 	void execute(cModelInstancingRenderer& renderer, vk::CommandBuffer& cmd);
@@ -200,13 +206,6 @@ public:
 	vk::CommandBuffer execute(std::shared_ptr<btr::Executer>& executer)
 	{
 		auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
-		{
-			auto* camera = cCamera::sCamera::Order().getCameraList()[0];
-			CameraGPU2 cameraGPU;
-			cameraGPU.setup(*camera);
-			m_compute_pipeline.m_camera.subupdate(cameraGPU);
-			m_compute_pipeline.m_camera.update(cmd);
-		}
 
 		m_light_pipeline.execute(cmd);
 

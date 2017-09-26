@@ -1,18 +1,10 @@
 #version 450
 
-#pragma optionNV (unroll none)
-#pragma optionNV (inline all)
-#pragma optionNV(fastmath on)
-//#pragma optionNV(fastprecision on)
-//#pragma optionNV(ifcvt all)
-#pragma optionNV(strict on)
-
-//#extension GL_ARB_shading_language_include : require
 #extension GL_GOOGLE_cpp_style_line_directive : require
 
 #define USE_MODEL_INFO_SET 0
 #define USE_ANIMATION_INFO_SET 1
-#include </MultiModel.glsl>
+#include <applib/model/MultiModel.glsl>
 
 layout (local_size_x = 256, local_size_y = 1) in;
 

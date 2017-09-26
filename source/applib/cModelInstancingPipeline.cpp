@@ -4,6 +4,7 @@
 #include <btrlib/Define.h>
 #include <btrlib/Shape.h>
 #include <btrlib/cModel.h>
+#include <applib/sCameraManager.h>
 
 void cModelInstancingPipeline::setup(std::shared_ptr<btr::Loader>& loader, cModelInstancingRenderer& renderer)
 {
@@ -105,9 +106,6 @@ void cModelInstancingPipeline::setup(std::shared_ptr<btr::Loader>& loader, cMode
 			m_stage_info[i].setPName("main");
 		}
 	}
-	{
-		m_camera.setup(loader->m_uniform_memory, loader->m_staging_memory);
-	}
 
 	// Create compute pipeline
 	std::vector<std::vector<vk::DescriptorSetLayoutBinding>> bindings(DESCRIPTOR_NUM);
@@ -195,15 +193,6 @@ void cModelInstancingPipeline::setup(std::shared_ptr<btr::Loader>& loader, cMode
 		.setBinding(0),
 	};
 
-	bindings[DESCRIPTOR_LAYOUT_SCENE] =
-	{
-		vk::DescriptorSetLayoutBinding()
-		.setStageFlags(vk::ShaderStageFlagBits::eVertex)
-		.setDescriptorCount(1)
-		.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-		.setBinding(0),
-	};
-
 
 	bindings[DESCRIPTOR_LAYOUT_LIGHT] =
 	{
@@ -251,7 +240,7 @@ void cModelInstancingPipeline::setup(std::shared_ptr<btr::Loader>& loader, cMode
 			vk::DescriptorSetLayout layouts[] = {
 				m_descriptor_set_layout[DESCRIPTOR_LAYOUT_MODEL].get(),
 				m_descriptor_set_layout[DESCRIPTOR_LAYOUT_PER_MESH].get(),
-				m_descriptor_set_layout[DESCRIPTOR_LAYOUT_SCENE].get(),
+				sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
 				m_descriptor_set_layout[DESCRIPTOR_LAYOUT_LIGHT].get(),
 			};
 			vk::PushConstantRange constant_range[] = {
@@ -279,9 +268,6 @@ void cModelInstancingPipeline::setup(std::shared_ptr<btr::Loader>& loader, cMode
 			}
 		}
 		vk::DescriptorPoolCreateInfo descriptor_pool_info;
-// 		descriptor_pool_info.maxSets = bindings.size();
-// 		descriptor_pool_info.poolSizeCount = descriptor_pool_size.size();
-// 		descriptor_pool_info.pPoolSizes = descriptor_pool_size.data();
 		descriptor_pool_info.maxSets = 20;
 		descriptor_pool_info.poolSizeCount = descriptor_pool_size.size();
 		descriptor_pool_info.pPoolSizes = descriptor_pool_size.data();
@@ -446,32 +432,6 @@ void cModelInstancingPipeline::setup(std::shared_ptr<btr::Loader>& loader, cMode
 
 	}
 
-	{
-		// ÉÇÉfÉãÇ≤Ç∆ÇÃDescriptorÇÃê›íË
-
-		vk::DescriptorSetLayout layouts[] = {
-			m_descriptor_set_layout[cModelInstancingPipeline::DESCRIPTOR_LAYOUT_SCENE].get(),
-		};
-		vk::DescriptorSetAllocateInfo alloc_info;
-		alloc_info.descriptorPool = loader->m_descriptor_pool.get();
-		alloc_info.descriptorSetCount = array_length(layouts);
-		alloc_info.pSetLayouts = layouts;
-		m_descriptor_set_scene = std::move(device->allocateDescriptorSetsUnique(alloc_info)[0]);
-
-		std::vector<vk::DescriptorBufferInfo> uniformBufferInfo = {
-			m_camera.getBufferInfo(),
-		};
-		std::vector<vk::WriteDescriptorSet> write_descriptor_set =
-		{
-			vk::WriteDescriptorSet()
-			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-			.setDescriptorCount(uniformBufferInfo.size())
-			.setPBufferInfo(uniformBufferInfo.data())
-			.setDstBinding(0)
-			.setDstSet(m_descriptor_set_scene.get()),
-		};
-		device->updateDescriptorSets(write_descriptor_set, {});
-	}
 	{
 		// ÉâÉCÉgÇÃDescriptorÇÃê›íË
 		vk::DescriptorSetLayout layouts[] = {

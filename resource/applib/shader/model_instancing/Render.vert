@@ -1,23 +1,14 @@
 #version 450
 
-#pragma optionNV (unroll all)
-#pragma optionNV (inline all)
-
 #extension GL_ARB_shader_draw_parameters : require
-//#extension GL_ARB_bindless_texture : require
-
-
-#ifdef VULKAN
 #extension GL_GOOGLE_cpp_style_line_directive : require
-//#extension GL_KHR_vulkan_glsl : require
-#else
-#extension GL_ARB_shading_language_include : require
-#endif
-#include </Math.glsl>
+
+#include <btrlib/Math.glsl>
+#define SETPOINT_CAMERA 2
+#include <btrlib/Camera.glsl>
+
 #define USE_MODEL_INFO_SET 0
-//#define USE_MODEL_INFO_SET 0
-#define USE_SCENE_SET 2
-#include </MultiModel.glsl>
+#include <applib/model/MultiModel.glsl>
 
 layout(location = 0)in vec3 inPosition;
 layout(location = 1)in vec3 inNormal;
@@ -58,8 +49,7 @@ void main()
 	vec4 pos = vec4((inPosition).xyz, 1.0);
 	mat4 skinningMat = skinning();
 	pos = skinningMat * pos;
-	Camera2 camera = uCamera;
-	gl_Position = camera.uProjection * camera.uView * vec4(pos.xyz, 1.0);
+	gl_Position = u_camera[0].u_projection * u_camera[0].u_view * vec4(pos.xyz, 1.0);
 
 	VSOut.Position = pos.xyz;
 	VSOut.Normal = /*mat3(skinningMat) **/ /*mat3(transpose(inverse(uView))) **/ inNormal.xyz;

@@ -1,14 +1,8 @@
 #version 450
-
-#pragma optionNV (unroll none)
-//#pragma optionNV (inline all)
-
-
-//#extension GL_ARB_shading_language_include : require
 #extension GL_GOOGLE_cpp_style_line_directive : require
 
-#include </Light.glsl>
-#include </CameraCulling.glsl>
+#include <btrlib/Camera.glsl>
+#include <applib/model/Light.glsl>
 
 layout (local_size_x = 32, local_size_y = 32) in;
 
@@ -49,7 +43,7 @@ void main()
 	vec3 lbf = u_frustom.m_ltf.xyz + (index+uvec3(0, 1, 0))*f_per_size;
 	vec3 rtf = u_frustom.m_ltf.xyz + (index+uvec3(1, 0, 0))*f_per_size;
 	vec3 rbf = u_frustom.m_ltf.xyz + (index+uvec3(1, 1, 0))*f_per_size;
-	Frustom2 f;
+	CameraFrustom f;
 	f.p[0] = MakePlane(rtn, ltn, ltf);
 	f.p[1] = MakePlane(lbn, rbn, rbf);
 	f.p[2] = MakePlane(ltn, lbn, lbf);
@@ -58,7 +52,7 @@ void main()
 	uint head = INVALID_LIGHT_INDEX;
 	for(uint i = 0; i < u_light_info.m_active_light_num; i++)
 	{
-		if(isCulling2(f, b_light[i].m_position*vec4(1., 1., 1., 2.))) {
+		if(isCullingInf(f, b_light[i].m_position*vec4(1., 1., 1., 2.))) {
 			continue;
 		}
 		uint light_index = atomicAdd(b_light_count, 1);

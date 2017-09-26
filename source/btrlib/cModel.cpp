@@ -290,17 +290,10 @@ void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& r
 }
 
 
-cModel::cModel()
-{
-}
-cModel::~cModel()
-{}
-
 
 void cModel::load(std::shared_ptr<btr::Loader>& loader, const std::string& filename)
 {
 
-	m_instance = std::make_unique<Instance>();
 	if (s_manager.manage(m_resource, filename)) {
 		return;
 	}
@@ -327,8 +320,7 @@ void cModel::load(std::shared_ptr<btr::Loader>& loader, const std::string& filen
 	sDebug::Order().print(sDebug::FLAG_LOG | sDebug::SOURCE_MODEL, "[Load Model %6.2fs] %s \n", timer.getElapsedTimeAsSeconds(), filename.c_str());
 
 
-	auto& device = sGlobal::Order().getGPU(0).getDevice();
-
+	auto& device = loader->m_device;
 	auto cmd = loader->m_cmd_pool->allocCmdTempolary(0);
 
 	// èâä˙âª
@@ -465,7 +457,7 @@ void cModel::load(std::shared_ptr<btr::Loader>& loader, const std::string& filen
 	importer.FreeScene();
 
 	{
-		cMeshResource& mesh = m_resource->m_mesh_resource;
+		ResourceVertex& mesh = m_resource->m_mesh_resource;
 
 		{
 			mesh.m_vertex_buffer_ex = loader->m_vertex_memory.allocateMemory(staging_vertex.getBufferInfo().range);
@@ -542,7 +534,7 @@ std::string cModel::getFilename() const
 {
 	return m_resource ? m_resource->m_filename : "";
 }
-const cMeshResource* cModel::getMesh() const
+const ResourceVertex* cModel::getMesh() const
 {
 	return m_resource ? &m_resource->m_mesh_resource : nullptr;
 }

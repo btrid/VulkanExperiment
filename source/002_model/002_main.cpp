@@ -106,15 +106,10 @@ int main()
 	renderer.setup(loader);
 	renderer.addModel(&render);
 
-	std::vector<std::unique_ptr<cModel>> models;
-	models.reserve(1000);
+	std::vector<ModelInstancingRender::InstanceResource> data(1000);
 	for (int i = 0; i < 1000; i++)
 	{
-		auto m = std::make_unique<cModel>();
-		m->load(loader, btr::getResourceAppPath() + "tiny.x");
-		render.addModel(m.get());
-		m->getInstance()->m_world = glm::translate(glm::ballRand(2999.f));
-		models.push_back(std::move(m));
+		data[i].m_world = glm::translate(glm::ballRand(2999.f));
 	}
 
 
@@ -123,7 +118,6 @@ int main()
 		renderer.getLight().add(std::move(std::make_unique<LightSample>()));
 	}
 
-	vk::Queue queue = device->getQueue(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics), 0);
 	while (true)
 	{
 		cStopWatch time;
@@ -131,6 +125,8 @@ int main()
 		app.preUpdate();
 		{
 			SynchronizedPoint render_syncronized_point(1);
+
+			render.addModel(data.data(), data.size());
 			std::vector<vk::CommandBuffer> render_cmds(2);
 			{
 				cThreadJob job;

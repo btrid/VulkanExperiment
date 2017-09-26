@@ -16,20 +16,6 @@ struct LightParam {
 	glm::vec4 m_position;
 	glm::vec4 m_emission;
 };
-
-struct FrustomPoint
-{
-	glm::vec4 ltn;	//!< nearTopLeft
-	glm::vec4 rtn;
-	glm::vec4 lbn;
-	glm::vec4 rbn;
-	glm::vec4 ltf;	//!< nearTopLeft
-	glm::vec4 rtf;
-	glm::vec4 lbf;
-	glm::vec4 rbf;
-
-};
-
 struct ComputePipeline
 {
 	vk::Pipeline					m_pipeline;

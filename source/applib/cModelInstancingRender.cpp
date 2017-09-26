@@ -1,6 +1,7 @@
 ﻿#include <applib/cModelInstancingRender.h>
 #include <applib/cModelInstancingPipeline.h>
 #include <applib/DrawHelper.h>
+#include <applib/sCameraManager.h>
 
 /**
 *	モーションのデータを一枚の1DArrayに格納
@@ -626,20 +627,35 @@ void ModelInstancingRender::setup(cModelInstancingRenderer&  renderer)
 		}
 	}
 }
+
+void ModelInstancingRender::addModel(const InstanceResource* data, uint32_t num)
+{
+	auto cpu = sGlobal::Order().getCPUFrame();
+	auto index = m_instance_count[cpu].fetch_add(num);
+	auto& staging = m_resource_instancing->m_world_staging;
+	auto* world_ptr = static_cast<glm::mat4*>(staging.getMappedPtr()) + m_resource_instancing->m_instance_max_num*cpu;
+	for (uint32_t i = 0; i < num; i++)
+	{
+		world_ptr[index + i] = data[i].m_world;
+	}
+
+}
+
 void ModelInstancingRender::execute(cModelInstancingRenderer& renderer, vk::CommandBuffer& cmd)
 {
 	// bufferの更新
 	{
+		auto gpu = sGlobal::Order().getGPUFrame();
+		if (m_instance_count[gpu] == 0)
+		{
+			// やることない
+			return;
+		}
 		// world
+		int32_t model_count = m_instance_count[gpu];
+		m_instance_count[gpu] = 0;
 		{
 			auto& staging = m_resource_instancing->m_world_staging;
-			auto* world_ptr = static_cast<glm::mat4*>(staging.getMappedPtr()) + m_resource_instancing->m_instance_max_num*sGlobal::Order().getCurrentFrame();
-			uint32_t model_count = 0;
-			for (auto& m : m_model)
-			{
-				world_ptr[model_count] = m->getInstance()->m_world;
-				model_count++;
-			}
 			auto& buffer = m_resource_instancing->getBuffer(ModelStorageBuffer::WORLD);
 
 			vk::BufferMemoryBarrier to_copy_barrier;
@@ -651,7 +667,7 @@ void ModelInstancingRender::execute(cModelInstancingRenderer& renderer, vk::Comm
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, { to_copy_barrier }, {});
 
 			vk::BufferCopy copy_info;
-			copy_info.setSize(m_model.size() * sizeof(glm::mat4));
+			copy_info.setSize(model_count * sizeof(glm::mat4));
 			copy_info.setSrcOffset(staging.getBufferInfo().offset + sizeof(glm::mat4) * m_resource_instancing->m_instance_max_num* sGlobal::Order().getCurrentFrame());
 			copy_info.setDstOffset(buffer.getBufferInfo().offset);
 			cmd.copyBuffer(staging.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
@@ -669,7 +685,7 @@ void ModelInstancingRender::execute(cModelInstancingRenderer& renderer, vk::Comm
 			auto& buffer = m_resource_instancing->getBuffer(ModelStorageBuffer::MODEL_INSTANCING_INFO);
 			auto& staging = m_resource_instancing->m_instancing_info;
 			auto* model_info_ptr = staging.getMappedPtr<ModelInstancingInfo>(sGlobal::Order().getCurrentFrame());
-			model_info_ptr->mInstanceAliveNum = (int32_t)m_model.size();
+			model_info_ptr->mInstanceAliveNum = model_count;
 			model_info_ptr->mInstanceMaxNum = m_resource_instancing->m_instance_max_num;
 			model_info_ptr->mInstanceNum = 0;
 			//			staging.subupdate<ModelInstancingInfo>(info);
@@ -768,7 +784,7 @@ void ModelInstancingRender::draw(cModelInstancingRenderer& renderer, vk::Command
 	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.m_graphics_pipeline.get());
 	for (auto m : m_resource->m_mesh)
 	{
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelInstancingPipeline::PIPELINE_LAYOUT_RENDER].get(), 2, pipeline.m_descriptor_set_scene.get(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelInstancingPipeline::PIPELINE_LAYOUT_RENDER].get(), 2, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelInstancingPipeline::PIPELINE_LAYOUT_RENDER].get(), 0, m_descriptor_set[DESCRIPTOR_SET_MODEL].get(), {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelInstancingPipeline::PIPELINE_LAYOUT_RENDER].get(), 3, pipeline.m_descriptor_set_light.get(), {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelInstancingPipeline::PIPELINE_LAYOUT_RENDER].get(), 1, m_descriptor_set[DESCRIPTOR_SET_MESH].get(), {});

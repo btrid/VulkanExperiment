@@ -17,17 +17,6 @@
 #include <btrlib/Loader.h>
 #include <btrlib/cMotion.h>
 
-
-struct cMeshResource 
-{
-	btr::BufferMemory m_vertex_buffer_ex;
-	btr::BufferMemory m_index_buffer_ex;
-	btr::BufferMemory m_indirect_buffer_ex;
-	vk::IndexType mIndexType;
-	int32_t mIndirectCount; //!< メッシュの数
-
-};
-
 class Node
 {
 public:
@@ -71,6 +60,15 @@ public:
 
 };
 
+
+struct ResourceVertex
+{
+	btr::BufferMemory m_vertex_buffer_ex;
+	btr::BufferMemory m_index_buffer_ex;
+	btr::BufferMemory m_indirect_buffer_ex;
+	vk::IndexType mIndexType;
+	int32_t mIndirectCount; //!< メッシュの数
+};
 struct ResourceTexture
 {
 	struct Resource 
@@ -81,14 +79,6 @@ struct ResourceTexture
 		vk::UniqueImageView m_image_view;
 		vk::UniqueDeviceMemory m_memory;
 		vk::UniqueSampler m_sampler;
-
-		~Resource()
-		{
-			if (m_image)
-			{
-				sDeleter::Order().enque(m_image, m_image_view, m_memory, m_sampler);
-			}
-		}
 	};
 
 	std::shared_ptr<Resource> m_resource;
@@ -106,6 +96,7 @@ struct ResourceTexture
 	static ResourceManager<Resource> s_manager;
 
 };
+
 
 class cModel
 {
@@ -182,41 +173,30 @@ public:
 		friend cModel;
 	public:
 		std::string m_filename;
-		cMeshResource m_mesh_resource;
-		std::vector<Mesh> m_mesh;
-
-		RootNode mNodeRoot;
-		std::vector<Bone> mBone;
-		std::vector<Material>	m_material;
-
-		cAnimation m_animation;
 
 		ModelInfo m_model_info;
+		RootNode mNodeRoot;
+		std::vector<Bone> mBone;
+		std::vector<Mesh> m_mesh;
+		std::vector<Material> m_material;
+
+
+		ResourceVertex m_mesh_resource;
+		cAnimation m_animation;
+
 
 		cAnimation& getAnimation() { return m_animation; }
-
-		Resource(){}
-		~Resource(){}
 	};
 	std::shared_ptr<Resource> m_resource;
-
-	struct Instance
-	{
-		glm::mat4 m_world;
-	};
-	std::unique_ptr<Instance> m_instance;
 
 	static ResourceManager<Resource> s_manager;
 
 public:
-	cModel();
-	~cModel();
 
 	void load(std::shared_ptr<btr::Loader>& loader, const std::string& filename);
 
 	std::string getFilename()const;
-	const cMeshResource* getMesh()const;
+	const ResourceVertex* getMesh()const;
 	std::shared_ptr<Resource> getResource()const { return m_resource; }
-	std::unique_ptr<Instance>& getInstance() { return m_instance; }
 };
 

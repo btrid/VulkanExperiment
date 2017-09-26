@@ -162,9 +162,3 @@ layout(std430, set=USE_ANIMATION_INFO_SET, binding=8) restrict coherent buffer M
 layout (set=USE_MESH_SET, binding = 0) uniform sampler2D tDiffuse[16];
 #endif
 
-#ifdef USE_SCENE_SET
-layout(std140, set=USE_SCENE_SET, binding=0) uniform CameraUniform {
-	Camera2 uCamera;
-};
-#endif
-

@@ -33,7 +33,6 @@ struct cModelInstancingPipeline
 		DESCRIPTOR_LAYOUT_MODEL,
 		DESCRIPTOR_LAYOUT_ANIMATION,
 		DESCRIPTOR_LAYOUT_PER_MESH,
-		DESCRIPTOR_LAYOUT_SCENE,
 		DESCRIPTOR_LAYOUT_LIGHT,
 		DESCRIPTOR_NUM,
 	};
@@ -64,9 +63,7 @@ struct cModelInstancingPipeline
 	vk::UniquePipeline m_graphics_pipeline;
 	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
 	std::array<vk::UniqueDescriptorSetLayout, DESCRIPTOR_NUM> m_descriptor_set_layout;
-	btr::UpdateBuffer<CameraGPU2> m_camera;
 
-	vk::UniqueDescriptorSet m_descriptor_set_scene;
 	vk::UniqueDescriptorSet m_descriptor_set_light;
 
 	void setup(std::shared_ptr<btr::Loader>& loader, cModelInstancingRenderer& renderer);

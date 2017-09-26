@@ -4,10 +4,15 @@
 #include <mutex>
 #include <string>
 #include <memory>
+#include <btrlib/sGlobal.h>
 
 template<typename T>
 struct ResourceManager
 {
+	struct ManageHandle : public T
+	{
+		std::string _m_hash;
+	};
 	std::unordered_map<std::string, std::weak_ptr<T>> m_resource_list;
 	std::mutex m_mutex;
 
@@ -24,7 +29,7 @@ struct ResourceManager
 			resource = it->second.lock();
 			return true;
 		}
-		auto deleter = [=](T* ptr) { release(ptr->m_filename); delete ptr; };
+		auto deleter = [&](T* ptr) { release(ptr->m_filename); sDeleter::Order().enque(std::unique_ptr<T>(ptr)); };
 		resource = std::shared_ptr<T>(new T, deleter);
 		resource->m_filename = filename;
 		m_resource_list[filename] = resource;

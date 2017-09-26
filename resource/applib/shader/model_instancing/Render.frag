@@ -1,14 +1,8 @@
 #version 450
-#pragma optionNV (unroll all)
-#pragma optionNV (inline all)
-
-//#extension GL_ARB_bindless_texture : require
-//#extension GL_NV_gpu_shader5 : require
-//#extension GL_ARB_shading_language_include : require
-//#extension GL_KHR_vulkan_glsl : require
 #extension GL_GOOGLE_cpp_style_line_directive : require
 #extension GL_ARB_shader_image_load_store : require
-#include </MultiModel.glsl>
+
+#include <applib/model/MultiModel.glsl>
 
 layout(early_fragment_tests) in;
 
