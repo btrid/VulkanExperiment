@@ -8,7 +8,6 @@ cModelRenderPrivate::~cModelRenderPrivate() = default;
 
 void cModelRenderPrivate::setup(std::shared_ptr<btr::Executer>& executer, cModelPipeline& pipeline)
 {
-
 	// setup draw
 	{
 		auto& device = executer->m_device;
@@ -20,7 +19,7 @@ void cModelRenderPrivate::setup(std::shared_ptr<btr::Executer>& executer, cModel
 			};
 
 			vk::DescriptorSetAllocateInfo descriptor_set_alloc_info;
-			descriptor_set_alloc_info.setDescriptorPool(pipeline.m_descriptor_pool.get());
+			descriptor_set_alloc_info.setDescriptorPool(pipeline.m_model_descriptor_pool.get());
 			descriptor_set_alloc_info.setDescriptorSetCount(array_length(layouts));
 			descriptor_set_alloc_info.setPSetLayouts(layouts);
 			m_draw_descriptor_set_per_model = std::move(device->allocateDescriptorSetsUnique(descriptor_set_alloc_info)[0]);
@@ -64,7 +63,7 @@ void cModelRenderPrivate::setup(std::shared_ptr<btr::Executer>& executer, cModel
 		cmd_buffer_info.commandPool = executer->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
 		cmd_buffer_info.level = vk::CommandBufferLevel::eSecondary;
 
-		m_transfer_cmd = sGlobal::Order().getGPU(0).getDevice()->allocateCommandBuffersUnique(cmd_buffer_info);
+		m_transfer_cmd = executer->m_device->allocateCommandBuffersUnique(cmd_buffer_info);
 		for (size_t i = 0; i < m_transfer_cmd.size(); i++)
 		{
 			vk::CommandBufferBeginInfo begin_info;
@@ -79,8 +78,8 @@ void cModelRenderPrivate::setup(std::shared_ptr<btr::Executer>& executer, cModel
 			vk::BufferCopy copy;
 			copy.dstOffset = m_bone_buffer.getBufferInfo().offset;
 			copy.size = m_bone_buffer.getBufferInfo().range;
-			copy.srcOffset = m_bone_buffer_transfer[i].getBufferInfo().offset;
-			cmd.copyBuffer(m_bone_buffer_transfer[i].getBufferInfo().buffer, m_bone_buffer.getBufferInfo().buffer, copy);
+			copy.srcOffset = m_bone_buffer_staging[i].getBufferInfo().offset;
+			cmd.copyBuffer(m_bone_buffer_staging[i].getBufferInfo().buffer, m_bone_buffer.getBufferInfo().buffer, copy);
 
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexShader, {}, {}, m_bone_buffer.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead), {});
 			cmd.end();
@@ -93,7 +92,7 @@ void cModelRenderPrivate::setup(std::shared_ptr<btr::Executer>& executer, cModel
 		cmd_buffer_info.commandBufferCount = sGlobal::FRAME_MAX;
 		cmd_buffer_info.commandPool = executer->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
 		cmd_buffer_info.level = vk::CommandBufferLevel::eSecondary;
-		m_graphics_cmd = sGlobal::Order().getGPU(0).getDevice()->allocateCommandBuffersUnique(cmd_buffer_info);
+		m_graphics_cmd = executer->m_device->allocateCommandBuffersUnique(cmd_buffer_info);
 
 		for (size_t i = 0; i < m_graphics_cmd.size(); i++)
 		{
@@ -107,7 +106,7 @@ void cModelRenderPrivate::setup(std::shared_ptr<btr::Executer>& executer, cModel
 
 			cmd.begin(begin_info);
 
-			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.m_graphics_pipeline.get());
+			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.m_render_pipeline.get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelPipeline::PIPELINE_LAYOUT_RENDER].get(), 0, m_draw_descriptor_set_per_model.get(), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelPipeline::PIPELINE_LAYOUT_RENDER].get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 			cmd.bindVertexBuffers(0, { m_model_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().buffer }, { m_model_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().offset });

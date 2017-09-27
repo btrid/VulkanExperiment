@@ -52,13 +52,11 @@ struct cModelPipeline
 	std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_list;
 	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_stage_info;
 
-	vk::UniquePipeline m_graphics_pipeline;
+	vk::UniquePipeline m_render_pipeline;
 	std::array<vk::UniqueDescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
 	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
 
-	btr::BufferMemory m_bone_buffer;
-
-	vk::UniqueDescriptorPool m_descriptor_pool;
+	vk::UniqueDescriptorPool m_model_descriptor_pool;
 
 	std::vector<std::shared_ptr<cModelRender>> m_model;
 	void setup(std::shared_ptr<btr::Loader>& loader);

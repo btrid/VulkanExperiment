@@ -98,11 +98,6 @@ void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 			m_stage_info[i].setPName("main");
 		}
 	}
-	{
-		btr::AllocatedMemory::Descriptor desc;
-		desc.size = sizeof(glm::mat4) * 256;
-		m_bone_buffer = loader->m_storage_memory.allocateMemory(desc);
-	}
 
 	// Create compute pipeline
 	std::vector<std::vector<vk::DescriptorSetLayoutBinding>> bindings(DESCRIPTOR_SET_LAYOUT_NUM);
@@ -140,14 +135,6 @@ void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 		.setBinding(5),
 	};
 
-	for (u32 i = 0; i < bindings.size(); i++)
-	{
-		vk::DescriptorSetLayoutCreateInfo descriptor_layout_info = vk::DescriptorSetLayoutCreateInfo()
-			.setBindingCount(bindings[i].size())
-			.setPBindings(bindings[i].data());
-		m_descriptor_set_layout[i] = device->createDescriptorSetLayoutUnique(descriptor_layout_info);
-	}
-
 	{
 		{
 			vk::DescriptorSetLayout layouts[] = {
@@ -177,7 +164,7 @@ void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 		descriptor_pool_info.maxSets = 20;
 		descriptor_pool_info.poolSizeCount = descriptor_pool_size.size();
 		descriptor_pool_info.pPoolSizes = descriptor_pool_size.data();
-		m_descriptor_pool = device->createDescriptorPoolUnique(descriptor_pool_info);
+		m_model_descriptor_pool = device->createDescriptorPoolUnique(descriptor_pool_info);
 	}
 
 
@@ -305,7 +292,7 @@ void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			m_graphics_pipeline = std::move(device->createGraphicsPipelinesUnique(pipeline_cache, graphics_pipeline_info)[0]);
+			m_render_pipeline = std::move(device->createGraphicsPipelinesUnique(pipeline_cache, graphics_pipeline_info)[0]);
 		}
 
 	}
