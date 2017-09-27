@@ -120,7 +120,6 @@ public:
 	enum DescriptorSet
 	{
 		DESCRIPTOR_SET_MODEL,
-		DESCRIPTOR_SET_MESH,
 		DESCRIPTOR_SET_ANIMATION,
 	};
 	std::vector<vk::UniqueDescriptorSet> m_descriptor_set;

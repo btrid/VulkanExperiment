@@ -2,54 +2,47 @@
 #extension GL_GOOGLE_cpp_style_line_directive : require
 #extension GL_ARB_shader_image_load_store : require
 
-#define USE_MESH_SET 1
+#include <btrlib/ConvertDimension.glsl>
+
+#define USE_MODEL_INFO_SET 0
 #include <applib/model/MultiModel.glsl>
 #include <applib/model/Light.glsl>
-#include <btrlib/ConvertDimension.glsl>
 
 layout(early_fragment_tests) in;
 layout(origin_upper_left) in vec4 gl_FragCoord;
 
-struct Vertex
+layout(location = 1) in Vertex 
 {
-//	flat int MaterialIndex;
 	vec3 Position;
 	vec3 Normal;
 	vec3 Texcoord;
-};
-layout(location = 0) in Vertex FSIn;
+	flat int DrawID;
+}FSIn;
 
-layout(push_constant) uniform ConstantBlock
-{
-	layout(offset=0) uint m_material_index;
-} constant;
-
-
-
-
-layout(std140, set=3, binding=0) uniform LightInfoUniform {
+layout(std140, set=2, binding=0) uniform LightInfoUniform {
 	LightInfo u_light_info;
 };
-layout(std430, set=3, binding=1) readonly restrict buffer LightLLHeadBuffer {
+layout(std430, set=2, binding=1) readonly restrict buffer LightLLHeadBuffer {
 	uint b_lightLL_head[];
 };
-layout(std430, set=3, binding=2) readonly restrict buffer LightLLBuffer {
+layout(std430, set=2, binding=2) readonly restrict buffer LightLLBuffer {
 	LightLL b_lightLL[];
 };
-layout(std430, set=3, binding=3) readonly restrict buffer LightBuffer {
+layout(std430, set=2, binding=3) readonly restrict buffer LightBuffer {
 	LightParam b_light[];
 };
 
 layout(location=0) out vec4 FragColor;
 
-vec3 getColor(in Vertex v)
+vec3 getColor()
 {
 	uvec2 tile_index = uvec2(gl_FragCoord.xy / u_light_info.m_tile_size);
 	uint tile_index_1D = convert2DTo1D(tile_index, u_light_info.m_tile_num);
 	tile_index_1D = 0;
-	vec3 pos = v.Position;
-	vec3 norm = v.Normal;
-	vec3 albedo = texture(tDiffuse[constant.m_material_index], FSIn.Texcoord.xy).xyz;
+	vec3 pos = FSIn.Position;
+	vec3 norm = FSIn.Normal;
+	uint material_index = b_material_index[FSIn.DrawID];
+	vec3 albedo = texture(tDiffuse[material_index], FSIn.Texcoord.xy).xyz;
 	vec3 diffuse = vec3(0.);
 
 	for(uint i = b_lightLL_head[tile_index_1D]; i != INVALID_LIGHT_INDEX;)
@@ -70,7 +63,7 @@ vec3 getColor(in Vertex v)
 
 void main()
 {
-	FragColor.rgb = getColor(FSIn);
+	FragColor.rgb = getColor();
 //	FragColor.rgb = vec3(1.);
 	FragColor.a = 1.;
 }

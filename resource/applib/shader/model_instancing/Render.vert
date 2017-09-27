@@ -4,7 +4,7 @@
 #extension GL_GOOGLE_cpp_style_line_directive : require
 
 #include <btrlib/Math.glsl>
-#define SETPOINT_CAMERA 2
+#define SETPOINT_CAMERA 1
 #include <btrlib/Camera.glsl>
 
 #define USE_MODEL_INFO_SET 0
@@ -17,18 +17,17 @@ layout(location = 3)in uvec4 inBoneID;
 layout(location = 4)in vec4 inWeight;
 
 
-out gl_PerVertex{
+layout(location = 0) out gl_PerVertex{
 	vec4 gl_Position;
 };
 
-struct Vertex
+layout(location = 1) out Vertex
 {
-//	flat int MaterialIndex;
 	vec3 Position;
 	vec3 Normal;
 	vec3 Texcoord;
-};
-layout(location = 0) out Vertex VSOut;
+	flat int DrawID;
+}VSOut;
 
 
 mat4 skinning()
@@ -54,4 +53,5 @@ void main()
 	VSOut.Position = pos.xyz;
 	VSOut.Normal = /*mat3(skinningMat) **/ /*mat3(transpose(inverse(uView))) **/ inNormal.xyz;
 	VSOut.Texcoord = inTexcoord.xyz;
+	VSOut.DrawID = gl_DrawIDARB;
 }

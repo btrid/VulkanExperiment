@@ -1,12 +1,3 @@
-struct Plane
-{
-	vec3 normal;
-	float n;
-};
-struct Frustom{
-	Plane p[6];
-};
-
 struct Material
 {
 	vec4	Ambient;
@@ -14,10 +5,10 @@ struct Material
 	vec4	Specular;
 	vec4	Emissive;
 
-	uvec2	DiffuseTex;
-	uvec2	AmbientTex;
-	uvec2	SpecularTex;
-	uvec2	_pp;
+	uint	u_albedo_texture;
+	uint	u_ambient_texture;
+	uint	u_specular_texture;
+	uint	u_emissive_texture;
 
 	float		Shininess;
 	float		_p;
@@ -105,7 +96,7 @@ struct PlayingAnimation
 };
 
 #ifdef USE_MODEL_INFO_SET
-layout(std140, set=USE_MODEL_INFO_SET, binding=0) restrict uniform ModelInfoUniform 
+layout(std430, set=USE_MODEL_INFO_SET, binding=0) restrict buffer ModelInfoBuffer 
 {
 	ModelInfo u_model_info;
 };
@@ -116,9 +107,13 @@ layout(std430, set=USE_MODEL_INFO_SET, binding=1) restrict buffer ModelInstancin
 layout(std430, set=USE_MODEL_INFO_SET, binding=2) restrict buffer BoneTransformBuffer {
 	mat4 bones[];
 };
-layout(std430, set=USE_MODEL_INFO_SET, binding=3) restrict buffer MaterialBuffer {
+layout(std430, set=USE_MODEL_INFO_SET, binding=3) restrict buffer MaterialIndexBuffer {
+	uint b_material_index[];
+};
+layout(std430, set=USE_MODEL_INFO_SET, binding=4) restrict buffer MaterialBuffer {
 	Material b_material[];
 };
+layout (set=USE_MODEL_INFO_SET, binding = 5) uniform sampler2D tDiffuse[16];
 #endif
 
 #ifdef USE_ANIMATION_INFO_SET
@@ -158,7 +153,4 @@ layout(std430, set=USE_ANIMATION_INFO_SET, binding=8) restrict coherent buffer M
 };
 #endif
 
-#ifdef USE_MESH_SET
-layout (set=USE_MESH_SET, binding = 0) uniform sampler2D tDiffuse[16];
-#endif
 

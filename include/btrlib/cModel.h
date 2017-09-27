@@ -180,7 +180,6 @@ public:
 		std::vector<Mesh> m_mesh;
 		std::vector<Material> m_material;
 
-
 		ResourceVertex m_mesh_resource;
 		cAnimation m_animation;
 

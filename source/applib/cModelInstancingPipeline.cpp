@@ -43,7 +43,7 @@ void cModelInstancingPipeline::setup(std::shared_ptr<btr::Loader>& loader, cMode
 				.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
 				.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
 				vk::AttachmentDescription()
-				.setFormat(vk::Format::eD32Sfloat)
+				.setFormat(loader->m_window->getSwapchain().m_depth.m_format)
 				.setSamples(vk::SampleCountFlagBits::e1)
 				.setLoadOp(vk::AttachmentLoadOp::eLoad)
 				.setStoreOp(vk::AttachmentStoreOp::eStore)
@@ -109,7 +109,7 @@ void cModelInstancingPipeline::setup(std::shared_ptr<btr::Loader>& loader, cMode
 
 	// Create compute pipeline
 	std::vector<std::vector<vk::DescriptorSetLayoutBinding>> bindings(DESCRIPTOR_NUM);
-	bindings[DESCRIPTOR_LAYOUT_ANIMATION] = {
+	bindings[DESCRIPTOR_SET_LAYOUT_ANIMATION] = {
 		vk::DescriptorSetLayoutBinding()
 		.setStageFlags(vk::ShaderStageFlagBits::eCompute)
 		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
@@ -161,10 +161,11 @@ void cModelInstancingPipeline::setup(std::shared_ptr<btr::Loader>& loader, cMode
 		.setDescriptorCount(1)
 		.setBinding(32),
 	};
-	bindings[DESCRIPTOR_LAYOUT_MODEL] = {
+	bindings[DESCRIPTOR_SET_LAYOUT_MODEL] =
+	{
 		vk::DescriptorSetLayoutBinding()
 		.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
-		.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 		.setDescriptorCount(1)
 		.setBinding(0),
 		vk::DescriptorSetLayoutBinding()
@@ -182,19 +183,18 @@ void cModelInstancingPipeline::setup(std::shared_ptr<btr::Loader>& loader, cMode
 		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 		.setDescriptorCount(1)
 		.setBinding(3),
-	};
-	// DescriptorSetLayout
-	bindings[DESCRIPTOR_LAYOUT_PER_MESH] =
-	{
 		vk::DescriptorSetLayoutBinding()
-		.setStageFlags(vk::ShaderStageFlagBits::eFragment)
+		.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
+		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+		.setDescriptorCount(1)
+		.setBinding(4),
+		vk::DescriptorSetLayoutBinding()
+		.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
 		.setDescriptorCount(16)
 		.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-		.setBinding(0),
+		.setBinding(5),
 	};
-
-
-	bindings[DESCRIPTOR_LAYOUT_LIGHT] =
+	bindings[DESCRIPTOR_SET_LAYOUT_LIGHT] =
 	{
 		vk::DescriptorSetLayoutBinding()
 		.setStageFlags(vk::ShaderStageFlagBits::eFragment)
@@ -228,8 +228,8 @@ void cModelInstancingPipeline::setup(std::shared_ptr<btr::Loader>& loader, cMode
 	{
 		{
 			vk::DescriptorSetLayout layouts[] = {
-				m_descriptor_set_layout[DESCRIPTOR_LAYOUT_MODEL].get(),
-				m_descriptor_set_layout[DESCRIPTOR_LAYOUT_ANIMATION].get(),
+				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_MODEL].get(),
+				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_ANIMATION].get(),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info = vk::PipelineLayoutCreateInfo()
 				.setSetLayoutCount(array_length(layouts))
@@ -238,19 +238,13 @@ void cModelInstancingPipeline::setup(std::shared_ptr<btr::Loader>& loader, cMode
 		}
 		{
 			vk::DescriptorSetLayout layouts[] = {
-				m_descriptor_set_layout[DESCRIPTOR_LAYOUT_MODEL].get(),
-				m_descriptor_set_layout[DESCRIPTOR_LAYOUT_PER_MESH].get(),
+				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_MODEL].get(),
 				sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
-				m_descriptor_set_layout[DESCRIPTOR_LAYOUT_LIGHT].get(),
-			};
-			vk::PushConstantRange constant_range[] = {
-				vk::PushConstantRange().setOffset(0).setSize(4).setStageFlags(vk::ShaderStageFlagBits::eFragment),
+				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_LIGHT].get(),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 			pipeline_layout_info.setPSetLayouts(layouts);
-			pipeline_layout_info.setPushConstantRangeCount(array_length(constant_range));
-			pipeline_layout_info.setPPushConstantRanges(constant_range);
 
 			m_pipeline_layout[PIPELINE_LAYOUT_RENDER] = device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
@@ -309,9 +303,6 @@ void cModelInstancingPipeline::setup(std::shared_ptr<btr::Loader>& loader, cMode
 	size.setDepth(1);
 	// pipeline
 	{
-		// キャッシュ
-		vk::PipelineCacheCreateInfo pipeline_cache_info = vk::PipelineCacheCreateInfo();
-		vk::PipelineCache pipeline_cache = device->createPipelineCache(pipeline_cache_info);
 		{
 			// assembly
 			vk::PipelineInputAssemblyStateCreateInfo assembly_info = vk::PipelineInputAssemblyStateCreateInfo()
@@ -427,7 +418,7 @@ void cModelInstancingPipeline::setup(std::shared_ptr<btr::Loader>& loader, cMode
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			m_graphics_pipeline = std::move(device->createGraphicsPipelinesUnique(pipeline_cache, graphics_pipeline_info)[0]);
+			m_graphics_pipeline = std::move(device->createGraphicsPipelinesUnique(loader->m_cache.get(), graphics_pipeline_info)[0]);
 		}
 
 	}
@@ -435,7 +426,7 @@ void cModelInstancingPipeline::setup(std::shared_ptr<btr::Loader>& loader, cMode
 	{
 		// ライトのDescriptorの設定
 		vk::DescriptorSetLayout layouts[] = {
-			m_descriptor_set_layout[cModelInstancingPipeline::DESCRIPTOR_LAYOUT_LIGHT].get(),
+			m_descriptor_set_layout[cModelInstancingPipeline::DESCRIPTOR_SET_LAYOUT_LIGHT].get(),
 		};
 		vk::DescriptorSetAllocateInfo alloc_info;
 		alloc_info.descriptorPool = loader->m_descriptor_pool.get();

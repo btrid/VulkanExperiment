@@ -289,7 +289,7 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Loader>& loader, std::sha
 
 		auto to_render = buffer.makeMemoryBarrierEx();
 		to_render.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-		cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexShader, {}, {}, to_render, {});
+		cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, to_render, {});
 	}
 	// node info
 	auto nodeInfo = createNodeInfo(m_resource->mNodeRoot);
@@ -365,7 +365,7 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Loader>& loader, std::sha
 		mi = m_resource->m_model_info;
 
 		auto& buffer = m_resource_instancing->getBuffer(ModelStorageBuffer::MODEL_INFO);
-		buffer = loader->m_uniform_memory.allocateMemory(sizeof(cModel::ModelInfo));
+		buffer = loader->m_storage_memory.allocateMemory(sizeof(cModel::ModelInfo));
 
 		vk::BufferCopy copy_info;
 		copy_info.setSize(staging_model_info.getBufferInfo().range);
@@ -523,9 +523,8 @@ void ModelInstancingRender::setup(cModelInstancingRenderer&  renderer)
 		{
 			// meshごとの更新
 			vk::DescriptorSetLayout layouts[] = {
-				pipeline.m_descriptor_set_layout[cModelInstancingPipeline::DESCRIPTOR_LAYOUT_MODEL].get(),
-				pipeline.m_descriptor_set_layout[cModelInstancingPipeline::DESCRIPTOR_LAYOUT_PER_MESH].get(),
-				pipeline.m_descriptor_set_layout[cModelInstancingPipeline::DESCRIPTOR_LAYOUT_ANIMATION].get(),
+				pipeline.m_descriptor_set_layout[cModelInstancingPipeline::DESCRIPTOR_SET_LAYOUT_MODEL].get(),
+				pipeline.m_descriptor_set_layout[cModelInstancingPipeline::DESCRIPTOR_SET_LAYOUT_ANIMATION].get(),
 			};
 			vk::DescriptorSetAllocateInfo allocInfo;
 			allocInfo.descriptorPool = pipeline.m_descriptor_pool.get();
@@ -533,54 +532,38 @@ void ModelInstancingRender::setup(cModelInstancingRenderer&  renderer)
 			allocInfo.pSetLayouts = layouts;
 			m_descriptor_set = device->allocateDescriptorSetsUnique(allocInfo);
 
-			// Mesh
+			// Model
 			{
-				// マテリアルの設定。　16個のテクスチャをバインドする。使わないところはwhite_textureで埋めておく
-				vk::DescriptorImageInfo white_image(DrawHelper::Order().getWhiteTexture().m_sampler.get(), DrawHelper::Order().getWhiteTexture().m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal);
-				std::vector<vk::DescriptorImageInfo> albedo_image_info(16, white_image);
-				for (size_t i = 0; i < m_resource->m_mesh.size(); i++)
-				{
-					auto& material = m_resource->m_material[m_resource->m_mesh[i].m_material_index];
-					albedo_image_info[m_resource->m_mesh[i].m_material_index] = vk::DescriptorImageInfo(material.mDiffuseTex.getSampler(), material.mDiffuseTex.getImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
-				}
-				std::vector<vk::WriteDescriptorSet> drawWriteDescriptorSets =
-				{
-					vk::WriteDescriptorSet()
-					.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-					.setDescriptorCount(albedo_image_info.size())
-					.setPImageInfo(albedo_image_info.data())
-					.setDstBinding(0)
-					.setDstSet(m_descriptor_set[DESCRIPTOR_SET_MESH].get()),
-				};
-				device->updateDescriptorSets(drawWriteDescriptorSets, {});
-
-			}
-			// ModelInfo
-			{
-				std::vector<vk::DescriptorBufferInfo> uniforms =
-				{
-					m_resource_instancing->getBuffer(ModelStorageBuffer::MODEL_INFO).getBufferInfo(),
-				};
 				std::vector<vk::DescriptorBufferInfo> storages =
 				{
+					m_resource_instancing->getBuffer(ModelStorageBuffer::MODEL_INFO).getBufferInfo(),
 					m_resource_instancing->getBuffer(MODEL_INSTANCING_INFO).getBufferInfo(),
 					m_resource_instancing->getBuffer(BONE_TRANSFORM).getBufferInfo(),
+					m_resource_instancing->getBuffer(MATERIAL_INDEX).getBufferInfo(),
 					m_resource_instancing->getBuffer(MATERIAL).getBufferInfo(),
 				};
 
+				vk::DescriptorImageInfo white_image(DrawHelper::Order().getWhiteTexture().m_sampler.get(), DrawHelper::Order().getWhiteTexture().m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal);
+				std::vector<vk::DescriptorImageInfo> albedo_images(16, white_image);
+				for (size_t i = 0; i < m_resource->m_mesh.size(); i++)
+				{
+					auto& material = m_resource->m_material[m_resource->m_mesh[i].m_material_index];
+					albedo_images[m_resource->m_mesh[i].m_material_index] = vk::DescriptorImageInfo(material.mDiffuseTex.getSampler(), material.mDiffuseTex.getImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
+				}
+
 				std::vector<vk::WriteDescriptorSet> drawWriteDescriptorSets =
 				{
-					vk::WriteDescriptorSet()
-					.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-					.setDescriptorCount((uint32_t)uniforms.size())
-					.setPBufferInfo(uniforms.data())
-					.setDstBinding(0)
-					.setDstSet(m_descriptor_set[DESCRIPTOR_SET_MODEL].get()),
 					vk::WriteDescriptorSet()
 					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 					.setDescriptorCount((uint32_t)storages.size())
 					.setPBufferInfo(storages.data())
-					.setDstBinding(1)
+					.setDstBinding(0)
+					.setDstSet(m_descriptor_set[DESCRIPTOR_SET_MODEL].get()),
+					vk::WriteDescriptorSet()
+					.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+					.setDescriptorCount(albedo_images.size())
+					.setPImageInfo(albedo_images.data())
+					.setDstBinding(5)
 					.setDstSet(m_descriptor_set[DESCRIPTOR_SET_MODEL].get()),
 				};
 				device->updateDescriptorSets(drawWriteDescriptorSets, {});
@@ -646,13 +629,13 @@ void ModelInstancingRender::execute(cModelInstancingRenderer& renderer, vk::Comm
 	// bufferの更新
 	{
 		auto gpu = sGlobal::Order().getGPUFrame();
-		if (m_instance_count[gpu] == 0)
+		int32_t model_count = m_instance_count[gpu];
+		if (model_count == 0)
 		{
 			// やることない
 			return;
 		}
 		// world
-		int32_t model_count = m_instance_count[gpu];
 		m_instance_count[gpu] = 0;
 		{
 			auto& staging = m_resource_instancing->m_world_staging;
@@ -688,7 +671,6 @@ void ModelInstancingRender::execute(cModelInstancingRenderer& renderer, vk::Comm
 			model_info_ptr->mInstanceAliveNum = model_count;
 			model_info_ptr->mInstanceMaxNum = m_resource_instancing->m_instance_max_num;
 			model_info_ptr->mInstanceNum = 0;
-			//			staging.subupdate<ModelInstancingInfo>(info);
 
 			vk::BufferMemoryBarrier to_copy_barrier;
 			to_copy_barrier.setBuffer(buffer.getBufferInfo().buffer);
@@ -782,15 +764,10 @@ void ModelInstancingRender::draw(cModelInstancingRenderer& renderer, vk::Command
 {
 	auto& pipeline = renderer.getComputePipeline();
 	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.m_graphics_pipeline.get());
-	for (auto m : m_resource->m_mesh)
-	{
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelInstancingPipeline::PIPELINE_LAYOUT_RENDER].get(), 2, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelInstancingPipeline::PIPELINE_LAYOUT_RENDER].get(), 0, m_descriptor_set[DESCRIPTOR_SET_MODEL].get(), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelInstancingPipeline::PIPELINE_LAYOUT_RENDER].get(), 3, pipeline.m_descriptor_set_light.get(), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelInstancingPipeline::PIPELINE_LAYOUT_RENDER].get(), 1, m_descriptor_set[DESCRIPTOR_SET_MESH].get(), {});
-		cmd.pushConstants<uint32_t>(pipeline.m_pipeline_layout[cModelInstancingPipeline::PIPELINE_LAYOUT_RENDER].get(), vk::ShaderStageFlagBits::eFragment, 0, m.m_material_index);
- 		cmd.bindVertexBuffers(0, { m_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().buffer }, { m_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().offset });
- 		cmd.bindIndexBuffer(m_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().buffer, m_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().offset, m_resource->m_mesh_resource.mIndexType);
- 		cmd.drawIndexedIndirect(m_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().buffer, m_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().offset, m_resource->m_mesh_resource.mIndirectCount, sizeof(cModel::Mesh));
-	}
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelInstancingPipeline::PIPELINE_LAYOUT_RENDER].get(), 0, m_descriptor_set[DESCRIPTOR_SET_MODEL].get(), {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelInstancingPipeline::PIPELINE_LAYOUT_RENDER].get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelInstancingPipeline::PIPELINE_LAYOUT_RENDER].get(), 2, pipeline.m_descriptor_set_light.get(), {});
+ 	cmd.bindVertexBuffers(0, { m_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().buffer }, { m_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().offset });
+ 	cmd.bindIndexBuffer(m_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().buffer, m_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().offset, m_resource->m_mesh_resource.mIndexType);
+ 	cmd.drawIndexedIndirect(m_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().buffer, m_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().offset, m_resource->m_mesh_resource.mIndirectCount, sizeof(cModel::Mesh));
 }

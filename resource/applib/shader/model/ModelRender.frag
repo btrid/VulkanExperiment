@@ -2,6 +2,8 @@
 
 #extension GL_GOOGLE_cpp_style_line_directive : require
 #extension GL_ARB_shader_image_load_store : require
+
+#define USE_MODEL_INFO_SET 0
 #include <applib/model/MultiModel.glsl>
 
 layout(early_fragment_tests) in;
@@ -13,8 +15,6 @@ struct Vertex
 	vec3 Texcoord;
 };
 layout(location = 0) in Vertex FSIn;
-
-layout (set=1, binding = 0) uniform sampler2D tDiffuse[16];
 
 layout(location=0) out vec4 FragColor;
 

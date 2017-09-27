@@ -2,27 +2,21 @@
 #extension GL_GOOGLE_cpp_style_line_directive : require
 #extension GL_ARB_shader_image_load_store : require
 
+
+#define USE_MODEL_INFO_SET 0
 #include <applib/model/MultiModel.glsl>
 
 layout(early_fragment_tests) in;
 
 struct Vertex
 {
-//	flat int MaterialIndex;
 	vec3 Position;
 	vec3 Normal;
 	vec3 Texcoord;
 };
 layout(location = 0) in Vertex FSIn;
 
-layout (set = 1, binding = 32) uniform sampler2D tDiffuse;
-
-layout(std140, binding=16) restrict buffer MaterialBuffer {
-	Material materials[];
-};
-
 layout(location=0) out vec4 FragColor;
-//layout(location=1) out vec4 OutNormal;
 
 
 vec4 LightPosition = vec4(10000.);
@@ -43,7 +37,7 @@ vec3 getColor()
 	vec3 diffuse = LightDiffuse * (m.DiffuseTex != 0? texture(sampler2D(m.DiffuseTex), FSIn.Texcoord.xy).xyz : m.Diffuse.xyz) * (sDotN + 0.5);
 	return ambient + diffuse + spec;
 */
-	vec3 diffuse = texture(tDiffuse, FSIn.Texcoord.xy).xyz;
+	vec3 diffuse = texture(tDiffuse[0], FSIn.Texcoord.xy).xyz;
 	return diffuse;
 }
 

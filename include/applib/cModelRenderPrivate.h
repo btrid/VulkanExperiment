@@ -13,6 +13,10 @@ struct cModelRenderPrivate
 		glm::vec4		mDiffuse;
 		glm::vec4		mSpecular;
 		glm::vec4		mEmissive;
+		uint32_t		u_albedo_texture;
+		uint32_t		u_ambient_texture;
+		uint32_t		u_specular_texture;
+		uint32_t		u_emissive_texture;
 		float			mShininess;
 		float			__p;
 		float			__p1;
@@ -25,15 +29,17 @@ struct cModelRenderPrivate
 	std::shared_ptr<cModel::Resource> m_model_resource;
 	std::vector<glm::mat4> m_node_buffer;
 	std::vector<btr::BufferMemory> m_bone_buffer_transfer;
-	btr::BufferMemory m_bone_buffer;
-	MotionPlayList m_playlist;
 
 	std::vector<vk::UniqueCommandBuffer> m_transfer_cmd;
 	std::vector<vk::UniqueCommandBuffer> m_graphics_cmd;
+
 	ModelTransform m_model_transform;
+	MotionPlayList m_playlist;
 
 	vk::UniqueDescriptorSet m_draw_descriptor_set_per_model;
-	vk::UniqueDescriptorSet m_draw_descriptor_set_per_mesh;
+
+	btr::BufferMemory m_bone_buffer;
+	btr::BufferMemory m_material_index;
 	btr::BufferMemory m_material;
 
 	void setup(std::shared_ptr<btr::Loader>& loader, std::shared_ptr<cModel::Resource> resource)
@@ -61,11 +67,34 @@ struct cModelRenderPrivate
 				btr::AllocatedMemory::Descriptor desc;
 				desc.size = m_model_resource->mBone.size() * sizeof(glm::mat4);
 				m_bone_buffer = loader->m_storage_memory.allocateMemory(desc);
-
 			}
 		}
+
+		// material index
 		{
-			// material
+			btr::AllocatedMemory::Descriptor staging_desc;
+			staging_desc.size = m_model_resource->m_mesh.size() * sizeof(uint32_t);
+			staging_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			auto staging = loader->m_staging_memory.allocateMemory(staging_desc);
+
+			std::vector<uint32_t> material_index(m_model_resource->m_mesh.size());
+			for (size_t i = 0; i < material_index.size(); i++)
+			{
+				staging.getMappedPtr<uint32_t>()[i] = m_model_resource->m_mesh[i].m_material_index;
+			}
+			
+			m_material_index = loader->m_storage_memory.allocateMemory(material_index.size() * sizeof(uint32_t));
+
+			vk::BufferCopy copy_info;
+			copy_info.setSize(staging.getBufferInfo().range);
+			copy_info.setSrcOffset(staging.getBufferInfo().offset);
+			copy_info.setDstOffset(m_material_index.getBufferInfo().offset);
+			cmd->copyBuffer(staging.getBufferInfo().buffer, m_material_index.getBufferInfo().buffer, copy_info);
+
+		}
+
+		// material
+		{
 			btr::AllocatedMemory::Descriptor staging_desc;
 			staging_desc.size = m_model_resource->m_material.size() * sizeof(MaterialBuffer);
 			staging_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;

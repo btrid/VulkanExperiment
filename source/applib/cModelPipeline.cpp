@@ -106,7 +106,8 @@ void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 
 	// Create compute pipeline
 	std::vector<std::vector<vk::DescriptorSetLayoutBinding>> bindings(DESCRIPTOR_SET_LAYOUT_NUM);
-	bindings[DESCRIPTOR_SET_LAYOUT_MODEL] = {
+	bindings[DESCRIPTOR_SET_LAYOUT_MODEL] = 
+	{
 		vk::DescriptorSetLayoutBinding()
 		.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
 		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
@@ -117,15 +118,26 @@ void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 		.setDescriptorCount(1)
 		.setBinding(1),
-	};
-	// DescriptorSetLayout
-	bindings[DESCRIPTOR_SET_LAYOUT_PER_MESH] =
-	{
 		vk::DescriptorSetLayoutBinding()
-		.setStageFlags(vk::ShaderStageFlagBits::eFragment)
+		.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
+		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+		.setDescriptorCount(1)
+		.setBinding(2),
+		vk::DescriptorSetLayoutBinding()
+		.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
+		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+		.setDescriptorCount(1)
+		.setBinding(3),
+		vk::DescriptorSetLayoutBinding()
+		.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
+		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+		.setDescriptorCount(1)
+		.setBinding(4),
+		vk::DescriptorSetLayoutBinding()
+		.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
 		.setDescriptorCount(DESCRIPTOR_TEXTURE_NUM)
 		.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-		.setBinding(0),
+		.setBinding(5),
 	};
 
 	for (u32 i = 0; i < bindings.size(); i++)
@@ -140,18 +152,11 @@ void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 		{
 			vk::DescriptorSetLayout layouts[] = {
 				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_MODEL].get(),
-				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_PER_MESH].get(),
 				sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA)
-			};
-			vk::PushConstantRange constant_range[] = {
-				vk::PushConstantRange().setOffset(0).setSize(64).setStageFlags(vk::ShaderStageFlagBits::eVertex),
-				vk::PushConstantRange().setOffset(64).setSize(4).setStageFlags(vk::ShaderStageFlagBits::eFragment),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 			pipeline_layout_info.setPSetLayouts(layouts);
-			pipeline_layout_info.setPushConstantRangeCount(array_length(constant_range));
-			pipeline_layout_info.setPPushConstantRanges(constant_range);
 
 			m_pipeline_layout[PIPELINE_LAYOUT_RENDER] = device->createPipelineLayoutUnique(pipeline_layout_info);
 		}

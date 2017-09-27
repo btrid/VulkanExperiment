@@ -5,9 +5,11 @@
 #extension GL_GOOGLE_cpp_style_line_directive : require
 
 #include <btrlib/Math.glsl>
+
+#define USE_MODEL_INFO_SET 0
 #include <applib/model/MultiModel.glsl>
 
-#define SETPOINT_CAMERA 2
+#define SETPOINT_CAMERA 1
 #include <btrlib/Camera.glsl>
 
 layout(location = 0)in vec3 inPosition;
@@ -28,13 +30,6 @@ struct Vertex
 	vec3 Texcoord;
 };
 layout(location = 0) out Vertex VSOut;
-
-layout(std430, set=0, binding=0) restrict buffer BoneTransformBuffer {
-	mat4 bones[];
-};
-layout(std430, set=0, binding=1) restrict buffer MaterialBuffer {
-	Material b_material[];
-};
 
 mat4 skinning()
 {

@@ -20,16 +20,5 @@ struct LightLL
 	uint light_index;
 };
 
-struct FrustomPoint
-{
-	vec4 m_ltn;
-	vec4 m_rtn;
-	vec4 m_lbn;
-	vec4 m_rbn;
-	vec4 m_ltf;
-	vec4 m_rtf;
-	vec4 m_lbf;
-	vec4 m_rbf;
-};
 
 #define INVALID_LIGHT_INDEX uint(0xFFFFFFFF)

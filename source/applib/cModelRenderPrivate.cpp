@@ -27,47 +27,34 @@ void cModelRenderPrivate::setup(std::shared_ptr<btr::Executer>& executer, cModel
 
 			std::vector<vk::DescriptorBufferInfo> storages = {
 				m_bone_buffer.getBufferInfo(),
+				m_material_index.getBufferInfo(),
 				m_material.getBufferInfo(),
 			};
+
+			std::vector<vk::DescriptorImageInfo> color_images(cModelPipeline::DESCRIPTOR_TEXTURE_NUM, vk::DescriptorImageInfo(DrawHelper::Order().getWhiteTexture().m_sampler.get(), DrawHelper::Order().getWhiteTexture().m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal));
+			for (size_t i = 0; i < m_model_resource->m_mesh.size(); i++)
+			{
+				auto& material = m_model_resource->m_material[m_model_resource->m_mesh[i].m_material_index];
+				color_images[i] = vk::DescriptorImageInfo(material.mDiffuseTex.getSampler(), material.mDiffuseTex.getImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
+			}
 			std::vector<vk::WriteDescriptorSet> drawWriteDescriptorSets =
 			{
 				vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 				.setDescriptorCount((uint32_t)storages.size())
 				.setPBufferInfo(storages.data())
-				.setDstBinding(0)
+				.setDstBinding(2)
+				.setDstSet(m_draw_descriptor_set_per_model.get()),
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+				.setDescriptorCount((uint32_t)color_images.size())
+				.setPImageInfo(color_images.data())
+				.setDstBinding(5)
 				.setDstSet(m_draw_descriptor_set_per_model.get()),
 			};
 			device->updateDescriptorSets(drawWriteDescriptorSets, {});
 		}
-		{
-			// mesh‚²‚Æ‚ÌXV
-			vk::DescriptorSetLayout layouts[] = {
-				pipeline.m_descriptor_set_layout[cModelPipeline::DESCRIPTOR_SET_LAYOUT_PER_MESH].get(),
-			};
-			vk::DescriptorSetAllocateInfo allocInfo;
-			allocInfo.descriptorPool = pipeline.m_descriptor_pool.get();
-			allocInfo.descriptorSetCount = array_length(layouts);
-			allocInfo.pSetLayouts = layouts;
-			m_draw_descriptor_set_per_mesh = std::move(device->allocateDescriptorSetsUnique(allocInfo)[0]);
 
-			std::vector<vk::DescriptorImageInfo> color_image_info(cModelPipeline::DESCRIPTOR_TEXTURE_NUM, vk::DescriptorImageInfo(DrawHelper::Order().getWhiteTexture().m_sampler.get(), DrawHelper::Order().getWhiteTexture().m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal));
-			for (size_t i = 0; i < m_model_resource->m_mesh.size(); i++)
-			{
-				auto& material = m_model_resource->m_material[m_model_resource->m_mesh[i].m_material_index];
-				color_image_info[i] = vk::DescriptorImageInfo(material.mDiffuseTex.getSampler(), material.mDiffuseTex.getImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
-			}
-			std::vector<vk::WriteDescriptorSet> drawWriteDescriptorSets =
-			{
-				vk::WriteDescriptorSet()
-				.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-				.setDescriptorCount((uint32_t)color_image_info.size())
-				.setPImageInfo(color_image_info.data())
-				.setDstBinding(0)
-				.setDstSet(m_draw_descriptor_set_per_mesh.get()),
-			};
-			device->updateDescriptorSets(drawWriteDescriptorSets, {});
-		}
 
 	}
 
@@ -122,15 +109,11 @@ void cModelRenderPrivate::setup(std::shared_ptr<btr::Executer>& executer, cModel
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.m_graphics_pipeline.get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelPipeline::PIPELINE_LAYOUT_RENDER].get(), 0, m_draw_descriptor_set_per_model.get(), {});
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelPipeline::PIPELINE_LAYOUT_RENDER].get(), 1, m_draw_descriptor_set_per_mesh.get(), {});
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelPipeline::PIPELINE_LAYOUT_RENDER].get(), 2, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
-			cmd.pushConstants<glm::mat4>(pipeline.m_pipeline_layout[cModelPipeline::PIPELINE_LAYOUT_RENDER].get(), vk::ShaderStageFlagBits::eVertex, 0, m_model_transform.calcGlobal());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelPipeline::PIPELINE_LAYOUT_RENDER].get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 			cmd.bindVertexBuffers(0, { m_model_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().buffer }, { m_model_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().offset });
 			cmd.bindIndexBuffer(m_model_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().buffer, m_model_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().offset, m_model_resource->m_mesh_resource.mIndexType);
-			for (auto& m : m_model_resource->m_mesh)
-			{
-				cmd.drawIndexedIndirect(m_model_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().buffer, m_model_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().offset, m_model_resource->m_mesh_resource.mIndirectCount, sizeof(cModel::Mesh));
-			}
+			cmd.drawIndexedIndirect(m_model_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().buffer, m_model_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().offset, m_model_resource->m_mesh_resource.mIndirectCount, sizeof(cModel::Mesh));
+
 			cmd.end();
 		}
 	}
