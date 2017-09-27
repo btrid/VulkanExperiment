@@ -42,7 +42,7 @@ void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 			.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
 			.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
 			vk::AttachmentDescription()
-			.setFormat(vk::Format::eD32Sfloat)
+			.setFormat(loader->m_window->getSwapchain().m_depth.m_format)
 			.setSamples(vk::SampleCountFlagBits::e1)
 			.setLoadOp(vk::AttachmentLoadOp::eLoad)
 			.setStoreOp(vk::AttachmentStoreOp::eStore)
@@ -178,14 +178,11 @@ void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 
 
 	vk::Extent3D size;
-	size.setWidth(640);
-	size.setHeight(480);
+	size.setWidth(loader->m_window->getClientSize().x);
+	size.setHeight(loader->m_window->getClientSize().y);
 	size.setDepth(1);
 	// pipeline
 	{
-		// ƒLƒƒƒbƒVƒ…
-		vk::PipelineCacheCreateInfo pipeline_cache_info = vk::PipelineCacheCreateInfo();
-		vk::PipelineCache pipeline_cache = device->createPipelineCache(pipeline_cache_info);
 		{
 			// assembly
 			vk::PipelineInputAssemblyStateCreateInfo assembly_info = vk::PipelineInputAssemblyStateCreateInfo()
@@ -234,47 +231,8 @@ void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 			blend_info.setAttachmentCount(blend_state.size());
 			blend_info.setPAttachments(blend_state.data());
 
-			// todo
-			std::vector<vk::VertexInputBindingDescription> vertex_input_binding =
-			{
-				vk::VertexInputBindingDescription()
-				.setBinding(0)
-				.setInputRate(vk::VertexInputRate::eVertex)
-				.setStride(sizeof(cModel::Vertex))
-			};
-
-			std::vector<vk::VertexInputAttributeDescription> vertex_input_attribute =
-			{
-				// pos
-				vk::VertexInputAttributeDescription()
-				.setBinding(0)
-				.setLocation(0)
-				.setFormat(vk::Format::eR32G32B32Sfloat)
-				.setOffset(0),
-				// normal
-				vk::VertexInputAttributeDescription()
-				.setBinding(0)
-				.setLocation(1)
-				.setFormat(vk::Format::eR32G32B32Sfloat)
-				.setOffset(12),
-				// texcoord
-				vk::VertexInputAttributeDescription()
-				.setBinding(0)
-				.setLocation(2)
-				.setFormat(vk::Format::eR8G8B8A8Snorm)
-				.setOffset(24),
-				// boneID
-				vk::VertexInputAttributeDescription()
-				.setBinding(0)
-				.setLocation(3)
-				.setFormat(vk::Format::eR8G8B8A8Uint)
-				.setOffset(28),
-				vk::VertexInputAttributeDescription()
-				.setBinding(0)
-				.setLocation(4)
-				.setFormat(vk::Format::eR8G8B8A8Unorm)
-				.setOffset(32),
-			};
+			auto vertex_input_binding = cModel::GetVertexInputBinding();
+			auto vertex_input_attribute = cModel::GetVertexInputAttribute();
 			vk::PipelineVertexInputStateCreateInfo vertex_input_info;
 			vertex_input_info.setVertexBindingDescriptionCount((uint32_t)vertex_input_binding.size());
 			vertex_input_info.setPVertexBindingDescriptions(vertex_input_binding.data());
@@ -301,7 +259,7 @@ void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			m_render_pipeline = std::move(device->createGraphicsPipelinesUnique(pipeline_cache, graphics_pipeline_info)[0]);
+			m_render_pipeline = std::move(device->createGraphicsPipelinesUnique(loader->m_cache.get(), graphics_pipeline_info)[0]);
 		}
 
 	}

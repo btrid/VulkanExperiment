@@ -457,15 +457,15 @@ void cModel::load(std::shared_ptr<btr::Loader>& loader, const std::string& filen
 	importer.FreeScene();
 
 	{
-		ResourceVertex& mesh = m_resource->m_mesh_resource;
+		ResourceVertex& vertex_data = m_resource->m_mesh_resource;
 
 		{
-			mesh.m_vertex_buffer_ex = loader->m_vertex_memory.allocateMemory(staging_vertex.getBufferInfo().range);
-			mesh.m_index_buffer_ex = loader->m_vertex_memory.allocateMemory(staging_index.getBufferInfo().range);
+			vertex_data.m_vertex_buffer_ex = loader->m_vertex_memory.allocateMemory(staging_vertex.getBufferInfo().range);
+			vertex_data.m_index_buffer_ex = loader->m_vertex_memory.allocateMemory(staging_index.getBufferInfo().range);
 
 			btr::AllocatedMemory::Descriptor indirect_desc;
 			indirect_desc.size = vector_sizeof(m_resource->m_mesh);
-			mesh.m_indirect_buffer_ex = loader->m_vertex_memory.allocateMemory(indirect_desc);
+			vertex_data.m_indirect_buffer_ex = loader->m_vertex_memory.allocateMemory(indirect_desc);
 
 			indirect_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging_indirect = loader->m_staging_memory.allocateMemory(indirect_desc);
@@ -482,23 +482,23 @@ void cModel::load(std::shared_ptr<btr::Loader>& loader, const std::string& filen
 			vk::BufferCopy copy_info;
 			copy_info.setSize(staging_vertex.getBufferInfo().range);
 			copy_info.setSrcOffset(staging_vertex.getBufferInfo().offset);
-			copy_info.setDstOffset(mesh.m_vertex_buffer_ex.getBufferInfo().offset);
-			cmd->copyBuffer(staging_vertex.getBufferInfo().buffer, mesh.m_vertex_buffer_ex.getBufferInfo().buffer, copy_info);
+			copy_info.setDstOffset(vertex_data.m_vertex_buffer_ex.getBufferInfo().offset);
+			cmd->copyBuffer(staging_vertex.getBufferInfo().buffer, vertex_data.m_vertex_buffer_ex.getBufferInfo().buffer, copy_info);
 
 			copy_info.setSize(staging_index.getBufferInfo().range);
 			copy_info.setSrcOffset(staging_index.getBufferInfo().offset);
-			copy_info.setDstOffset(mesh.m_index_buffer_ex.getBufferInfo().offset);
-			cmd->copyBuffer(staging_index.getBufferInfo().buffer, mesh.m_index_buffer_ex.getBufferInfo().buffer, copy_info);
+			copy_info.setDstOffset(vertex_data.m_index_buffer_ex.getBufferInfo().offset);
+			cmd->copyBuffer(staging_index.getBufferInfo().buffer, vertex_data.m_index_buffer_ex.getBufferInfo().buffer, copy_info);
 
 			copy_info.setSize(staging_indirect.getBufferInfo().range);
 			copy_info.setSrcOffset(staging_indirect.getBufferInfo().offset);
-			copy_info.setDstOffset(mesh.m_indirect_buffer_ex.getBufferInfo().offset);
-			cmd->copyBuffer(staging_indirect.getBufferInfo().buffer, mesh.m_indirect_buffer_ex.getBufferInfo().buffer, copy_info);
+			copy_info.setDstOffset(vertex_data.m_indirect_buffer_ex.getBufferInfo().offset);
+			cmd->copyBuffer(staging_indirect.getBufferInfo().buffer, vertex_data.m_indirect_buffer_ex.getBufferInfo().buffer, copy_info);
 
 			vk::BufferMemoryBarrier indirect_barrier;
-			indirect_barrier.setBuffer(mesh.m_indirect_buffer_ex.getBufferInfo().buffer);
-			indirect_barrier.setOffset(mesh.m_indirect_buffer_ex.getBufferInfo().offset);
-			indirect_barrier.setSize(mesh.m_indirect_buffer_ex.getBufferInfo().range);
+			indirect_barrier.setBuffer(vertex_data.m_indirect_buffer_ex.getBufferInfo().buffer);
+			indirect_barrier.setOffset(vertex_data.m_indirect_buffer_ex.getBufferInfo().offset);
+			indirect_barrier.setSize(vertex_data.m_indirect_buffer_ex.getBufferInfo().range);
 			indirect_barrier.setDstAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
 			cmd->pipelineBarrier(
 				vk::PipelineStageFlagBits::eTransfer,
@@ -506,8 +506,15 @@ void cModel::load(std::shared_ptr<btr::Loader>& loader, const std::string& filen
 				vk::DependencyFlags(),
 				{}, { indirect_barrier }, {});
 
-			mesh.mIndexType = index_type;
-			mesh.mIndirectCount = (int32_t)m_resource->m_mesh.size();
+			vertex_data.mIndexType = index_type;
+			vertex_data.mIndirectCount = (int32_t)m_resource->m_mesh.size();
+
+			vertex_data.m_vertex_input_binding = GetVertexInputBinding();
+			vertex_data.m_vertex_input_attribute = GetVertexInputAttribute();
+			vertex_data.m_vertex_input_info.setVertexBindingDescriptionCount((uint32_t)vertex_data.m_vertex_input_binding.size());
+			vertex_data.m_vertex_input_info.setPVertexBindingDescriptions(vertex_data.m_vertex_input_binding.data());
+			vertex_data.m_vertex_input_info.setVertexAttributeDescriptionCount((uint32_t)vertex_data.m_vertex_input_attribute.size());
+			vertex_data.m_vertex_input_info.setPVertexAttributeDescriptions(vertex_data.m_vertex_input_attribute.data());
 		}
 	}
 

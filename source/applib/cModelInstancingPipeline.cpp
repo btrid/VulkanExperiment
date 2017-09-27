@@ -351,47 +351,9 @@ void cModelInstancingPipeline::setup(std::shared_ptr<btr::Loader>& loader, cMode
 			blend_info.setAttachmentCount(blend_state.size());
 			blend_info.setPAttachments(blend_state.data());
 
-			// todo
-			std::vector<vk::VertexInputBindingDescription> vertex_input_binding =
-			{
-				vk::VertexInputBindingDescription()
-				.setBinding(0)
-				.setInputRate(vk::VertexInputRate::eVertex)
-				.setStride(sizeof(cModel::Vertex))
-			};
-
-			std::vector<vk::VertexInputAttributeDescription> vertex_input_attribute =
-			{
-				// pos
-				vk::VertexInputAttributeDescription()
-				.setBinding(0)
-				.setLocation(0)
-				.setFormat(vk::Format::eR32G32B32Sfloat)
-				.setOffset(0),
-				// normal
-				vk::VertexInputAttributeDescription()
-				.setBinding(0)
-				.setLocation(1)
-				.setFormat(vk::Format::eR32G32B32Sfloat)
-				.setOffset(12),
-				// texcoord
-				vk::VertexInputAttributeDescription()
-				.setBinding(0)
-				.setLocation(2)
-				.setFormat(vk::Format::eR8G8B8A8Snorm)
-				.setOffset(24),
-				// boneID
-				vk::VertexInputAttributeDescription()
-				.setBinding(0)
-				.setLocation(3)
-				.setFormat(vk::Format::eR8G8B8A8Uint)
-				.setOffset(28),
-				vk::VertexInputAttributeDescription()
-				.setBinding(0)
-				.setLocation(4)
-				.setFormat(vk::Format::eR8G8B8A8Unorm)
-				.setOffset(32),
-			};
+			// vertexinput
+			auto vertex_input_binding = cModel::GetVertexInputBinding();
+			auto vertex_input_attribute = cModel::GetVertexInputAttribute();
 			vk::PipelineVertexInputStateCreateInfo vertex_input_info;
 			vertex_input_info.setVertexBindingDescriptionCount((uint32_t)vertex_input_binding.size());
 			vertex_input_info.setPVertexBindingDescriptions(vertex_input_binding.data());
