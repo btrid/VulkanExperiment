@@ -99,6 +99,7 @@ void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 		}
 	}
 
+
 	// Create compute pipeline
 	std::vector<std::vector<vk::DescriptorSetLayoutBinding>> bindings(DESCRIPTOR_SET_LAYOUT_NUM);
 	bindings[DESCRIPTOR_SET_LAYOUT_MODEL] = 
@@ -134,6 +135,14 @@ void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 		.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
 		.setBinding(5),
 	};
+
+	for (u32 i = 0; i < bindings.size(); i++)
+	{
+		vk::DescriptorSetLayoutCreateInfo descriptor_layout_info = vk::DescriptorSetLayoutCreateInfo()
+			.setBindingCount(bindings[i].size())
+			.setPBindings(bindings[i].data());
+		m_descriptor_set_layout[i] = device->createDescriptorSetLayoutUnique(descriptor_layout_info);
+	}
 
 	{
 		{
