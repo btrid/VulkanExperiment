@@ -2,7 +2,7 @@
 
 #include <memory>
 #include <btrlib/Define.h>
-#include <btrlib/loader.h>
+#include <btrlib/Context.h>
 #include <btrlib/cCamera.h>
 #include <btrlib/AllocatedMemory.h>
 #include <btrlib/sGlobal.h>
@@ -109,7 +109,7 @@ struct sScene : public Singleton<sScene>
 
 	VoxelPipeline m_voxelize_pipeline;
 
-	void setup(std::shared_ptr<btr::Loader>& loader)
+	void setup(std::shared_ptr<btr::Context>& loader)
 	{
 		m_map_info_cpu.m_subcell = glm::uvec2(4, 4);
 		m_map_info_cpu.m_descriptor[1].m_cell_size = glm::vec2(50.f, 50.f);
@@ -815,7 +815,7 @@ struct sScene : public Singleton<sScene>
 
 	}
 
-	vk::CommandBuffer draw1(std::shared_ptr<btr::Executer>& executer)
+	vk::CommandBuffer draw1(std::shared_ptr<btr::Context>& executer)
 	{
 		auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
 		SceneData data;
@@ -837,7 +837,7 @@ struct sScene : public Singleton<sScene>
 		cmd.end();
 		return cmd;
 	}
-	vk::CommandBuffer draw(std::shared_ptr<btr::Executer>& executer)
+	vk::CommandBuffer draw(std::shared_ptr<btr::Context>& executer)
 	{
 		return m_cmd[sGlobal::Order().getCurrentFrame()].get();
 	}

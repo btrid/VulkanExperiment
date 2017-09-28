@@ -69,9 +69,6 @@
     <ClInclude Include="..\..\include\btrlib\cModel.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\btrlib\Loader.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\btrlib\cMotion.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
@@ -82,6 +79,9 @@
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\btrlib\VoxelPipeline.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\btrlib\Context.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>

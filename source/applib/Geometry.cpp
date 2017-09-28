@@ -217,7 +217,7 @@ std::tuple<std::vector<glm::vec3>, std::vector<glm::vec3>> Geometry::createOrtho
 	return std::tuple<std::vector<glm::vec3>, std::vector<glm::vec3>>(std::move(tangent), std::move(binormal));
 }
 
-Geometry Geometry::MakeGeometry(std::shared_ptr<btr::Loader>& loader, const void* vertex, size_t vertex_size, const void* index, size_t index_size, vk::IndexType index_type, const std::vector<vk::VertexInputAttributeDescription>& vertex_attr, const std::vector<vk::VertexInputBindingDescription>& vertex_bind)
+Geometry Geometry::MakeGeometry(std::shared_ptr<btr::Context>& loader, const void* vertex, size_t vertex_size, const void* index, size_t index_size, vk::IndexType index_type, const std::vector<vk::VertexInputAttributeDescription>& vertex_attr, const std::vector<vk::VertexInputBindingDescription>& vertex_bind)
 {
 	auto cmd = loader->m_cmd_pool->allocCmdTempolary(0);
 	auto resource = std::make_unique<Resource>();

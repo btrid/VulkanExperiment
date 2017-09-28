@@ -25,7 +25,7 @@
 #include <applib/cModelPipeline.h>
 #include <applib/cModelRender.h>
 #include <applib/DrawHelper.h>
-#include <btrlib/Loader.h>
+#include <btrlib/Context.h>
 #define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 #include <imgui/imgui.h>
 
@@ -63,7 +63,7 @@ int main()
 		window_info.gpu = gpu;
 		window_info.size = vk::Extent2D(480, 480);
 		window_info.surface_format_request = app.m_window->getSwapchain().m_surface_format;
-		sub->setup(app.m_loader, window_info);
+		sub->setup(app.m_context, window_info);
 		app.m_window_list.push_back(sub);
 	}
 

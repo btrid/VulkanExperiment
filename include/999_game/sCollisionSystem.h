@@ -2,7 +2,7 @@
 #include <memory>
 #include <array>
 #include <btrlib/Singleton.h>
-#include <btrlib/Loader.h>
+#include <btrlib/Context.h>
 
 struct Pipeline
 {
@@ -47,7 +47,7 @@ struct sCollisionSystem : public Singleton<sCollisionSystem>
 
 	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_shader_info;
 
-	void setup(std::shared_ptr<btr::Loader>& loader);
-	vk::CommandBuffer execute(std::shared_ptr<btr::Executer>& executer);
+	void setup(std::shared_ptr<btr::Context>& loader);
+	vk::CommandBuffer execute(std::shared_ptr<btr::Context>& executer);
 
 };

@@ -22,7 +22,7 @@
 #include <btrlib/AllocatedMemory.h>
 
 #include <applib/App.h>
-#include <btrlib/Loader.h>
+#include <btrlib/Context.h>
 
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
@@ -48,7 +48,7 @@ int main()
 	app::App app;
 	app.setup(gpu);
 
-	auto loader = app.m_loader;
+	auto loader = app.m_context;
 	auto executer = app.m_executer;
 
 	while (true)

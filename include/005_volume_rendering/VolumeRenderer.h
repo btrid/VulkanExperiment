@@ -3,7 +3,7 @@
 #include <array>
 #include <vector>
 #include <btrlib/Define.h>
-#include <btrlib/Loader.h>
+#include <btrlib/Context.h>
 #include <btrlib/cCamera.h>
 #include <btrlib/AllocatedMemory.h>
 #include <btrlib/sGlobal.h>
@@ -73,7 +73,7 @@ public:
 	volumeRenderer()
 	{}
 
-	void setup(std::shared_ptr<btr::Loader>& loader)
+	void setup(std::shared_ptr<btr::Context>& loader)
 	{
 		auto cmd = loader->m_cmd_pool->allocCmdTempolary(0);
 		m_volume_scene_cpu.u_volume_min = vec4(-1000.);
@@ -463,7 +463,7 @@ public:
 		}
 
 	}
-	void work(std::shared_ptr<btr::Executer>& executer)
+	void work(std::shared_ptr<btr::Context>& executer)
 	{
 		{
 			auto& keyboard = executer->m_window->getInput().m_keyboard;
@@ -494,7 +494,7 @@ public:
 		}
 	}
 
-	vk::CommandBuffer draw(std::shared_ptr<btr::Executer>& executer)
+	vk::CommandBuffer draw(std::shared_ptr<btr::Context>& executer)
 	{
 		vk::CommandBuffer cmd = executer->m_cmd_pool->allocCmdOnetime(0);
 

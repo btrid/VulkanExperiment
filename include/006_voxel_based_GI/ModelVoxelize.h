@@ -1,6 +1,6 @@
 #pragma once
 #include <btrlib/Define.h>
-#include <btrlib/Loader.h>
+#include <btrlib/Context.h>
 #include <btrlib/VoxelPipeline.h>
 
 struct VoxelizeModelResource
@@ -87,7 +87,7 @@ struct ModelVoxelize : public Voxelize
 	vk::UniqueDescriptorSetLayout m_model_descriptor_set_layout;
 	vk::UniqueDescriptorPool m_model_descriptor_pool;
 
-	void setup(std::shared_ptr<btr::Loader>& loader, VoxelPipeline const * const parent)
+	void setup(std::shared_ptr<btr::Context>& loader, VoxelPipeline const * const parent)
 	{
 		auto& gpu = loader->m_gpu;
 		auto& device = gpu.getDevice();
@@ -293,7 +293,7 @@ struct ModelVoxelize : public Voxelize
 
 	}
 
-	void draw(std::shared_ptr<btr::Executer>& executer, VoxelPipeline const * const parent, vk::CommandBuffer cmd)
+	void draw(std::shared_ptr<btr::Context>& executer, VoxelPipeline const * const parent, vk::CommandBuffer cmd)
 	{
 		vk::ImageSubresourceRange range;
 		range.setLayerCount(1);
@@ -331,7 +331,7 @@ struct ModelVoxelize : public Voxelize
 		}
 
 	}
-	void addModel(std::shared_ptr<btr::Executer>& executer, vk::CommandBuffer cmd, const VoxelizeModel& model)
+	void addModel(std::shared_ptr<btr::Context>& executer, vk::CommandBuffer cmd, const VoxelizeModel& model)
 	{
 		std::vector<VoxelizeVertex> vertex;
 		std::vector<glm::uvec3> index;

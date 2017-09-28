@@ -25,7 +25,7 @@
 #include <applib/cModelPipeline.h>
 #include <applib/cModelRender.h>
 #include <applib/DrawHelper.h>
-#include <btrlib/Loader.h>
+#include <btrlib/Context.h>
 #include <applib/Geometry.h>
 // #define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 // #include <imgui/imgui.h>
@@ -58,7 +58,7 @@ int main()
 	app::App app;
 	app.setup(gpu);
 
-	auto loader = app.m_loader;
+	auto loader = app.m_context;
 	auto executer = app.m_executer;
 
 	VoxelPipeline voxelize_pipeline;

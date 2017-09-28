@@ -1,5 +1,5 @@
 #include <btrlib/cWindow.h>
-#include <btrlib/Loader.h>
+#include <btrlib/Context.h>
 
 namespace
 {
@@ -22,7 +22,7 @@ std::vector<uint32_t> getSupportSurfaceQueue(vk::PhysicalDevice gpu, vk::Surface
 
 }
 
-void cWindow::Swapchain::setup(std::shared_ptr<btr::Loader>& loader, const CreateInfo& descriptor, vk::SurfaceKHR surface)
+void cWindow::Swapchain::setup(std::shared_ptr<btr::Context>& loader, const CreateInfo& descriptor, vk::SurfaceKHR surface)
 {
 	std::vector<vk::PresentModeKHR> presentModeList = descriptor.gpu->getSurfacePresentModesKHR(surface);
 
@@ -255,7 +255,7 @@ uint32_t cWindow::Swapchain::swap()
 	return m_backbuffer_index;
 }
 
-void cWindow::setup(std::shared_ptr<btr::Loader>& loader, const CreateInfo& descriptor)
+void cWindow::setup(std::shared_ptr<btr::Context>& loader, const CreateInfo& descriptor)
 {
 	m_descriptor = descriptor;
 	WNDCLASSEXW wcex = {};

@@ -25,7 +25,7 @@
 #include <applib/cModelPipeline.h>
 #include <applib/cModelRender.h>
 #include <applib/DrawHelper.h>
-#include <btrlib/Loader.h>
+#include <btrlib/Context.h>
 #include <btrlib/VoxelPipeline.h>
 
 #include <999_game/sBulletSystem.h>
@@ -59,7 +59,7 @@ struct Player
 	Gun m_right;
 
 
-	void execute(std::shared_ptr<btr::Executer>& executer)
+	void execute(std::shared_ptr<btr::Context>& executer)
 	{
 		const cInput& input = executer->m_window->getInput();
 		auto resolution = executer->m_window->getClientSize();
@@ -133,7 +133,7 @@ int main()
 	app::App app;
 	app.setup(gpu);
 
-	auto loader = app.m_loader;
+	auto loader = app.m_context;
 	auto executer = app.m_executer;
 
 	cModelPipeline model_pipeline;

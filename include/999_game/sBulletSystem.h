@@ -6,7 +6,7 @@
 #include <btrlib/Singleton.h>
 #include <btrlib/AllocatedMemory.h>
 #include <btrlib/cCamera.h>
-#include <btrlib/Loader.h>
+#include <btrlib/Context.h>
 
 #include <applib/App.h>
 #include <999_game/MazeGenerator.h>
@@ -93,9 +93,9 @@ public:
 		std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_shader_info;
 
 		BulletInfo m_bullet_info_cpu;
-		void setup(std::shared_ptr<btr::Loader>& loader);
+		void setup(std::shared_ptr<btr::Context>& loader);
 
-		vk::CommandBuffer execute(std::shared_ptr<btr::Executer>& executer)
+		vk::CommandBuffer execute(std::shared_ptr<btr::Context>& executer)
 		{
 			auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
 			uint src_offset = sGlobal::Order().getCPUIndex() == 1 ? (m_bullet.getBufferInfo().range / sizeof(BulletData) / 2) : 0;
@@ -192,7 +192,7 @@ public:
 			return cmd;
 		}
 
-		vk::CommandBuffer draw(std::shared_ptr<btr::Executer>& executer)
+		vk::CommandBuffer draw(std::shared_ptr<btr::Context>& executer)
 		{
 			auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
 			vk::RenderPassBeginInfo begin_render_Info;
@@ -219,7 +219,7 @@ private:
 	std::unique_ptr<Private> m_private;
 
 public:
-	void setup(std::shared_ptr<btr::Loader>& loader)
+	void setup(std::shared_ptr<btr::Context>& loader)
 	{
 		auto p = std::make_unique<Private>();
 		p->setup(loader);
@@ -227,12 +227,12 @@ public:
 		m_private = std::move(p);
 	}
 
-	vk::CommandBuffer execute(std::shared_ptr<btr::Executer>& executer)
+	vk::CommandBuffer execute(std::shared_ptr<btr::Context>& executer)
 	{
 		return m_private->execute(executer);
 	}
 
-	vk::CommandBuffer draw(std::shared_ptr<btr::Executer>& executer)
+	vk::CommandBuffer draw(std::shared_ptr<btr::Context>& executer)
 	{
 		return m_private->draw(executer);
 	}

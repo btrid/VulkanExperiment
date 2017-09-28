@@ -9,7 +9,7 @@
 
 namespace btr
 {
-struct Executer;
+struct Context;
 }
 
 template<typename T>
@@ -71,8 +71,8 @@ struct cCmdPool
 //	vk::UniqueCommandBuffer allocCmdTempolary(int device_family_index);
 	vk::CommandPool getCmdPool(CmdPoolType type, int device_family_index)const;
 
-	void resetPool(std::shared_ptr<btr::Executer>& executer);
+	void resetPool(std::shared_ptr<btr::Context>& executer);
 	void enqueCmd(vk::UniqueCommandBuffer&& cmd, uint32_t family_index);
 	PerFamilyIndex<std::vector<vk::UniqueCommandBuffer>> submitCmd();
-	void submit(std::shared_ptr<btr::Executer>& executer);
+	void submit(std::shared_ptr<btr::Context>& executer);
 };

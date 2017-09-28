@@ -7,7 +7,7 @@
 #include <btrlib/cCamera.h>
 #include <btrlib/Shape.h>
 #include <btrlib/AllocatedMemory.h>
-#include <btrlib/Loader.h>
+#include <btrlib/Context.h>
 
 struct cModelRender;
 struct Component
@@ -48,9 +48,9 @@ struct cModelPipeline
 	vk::UniqueDescriptorPool m_model_descriptor_pool;
 
 	std::vector<std::shared_ptr<cModelRender>> m_model;
-	void setup(std::shared_ptr<btr::Loader>& loader);
-	void addModel(std::shared_ptr<btr::Executer>& executer, const std::shared_ptr<cModelRender>& model);
+	void setup(std::shared_ptr<btr::Context>& loader);
+	void addModel(std::shared_ptr<btr::Context>& executer, const std::shared_ptr<cModelRender>& model);
 
-	vk::CommandBuffer draw(std::shared_ptr<btr::Executer>& executer);
+	vk::CommandBuffer draw(std::shared_ptr<btr::Context>& executer);
 
 };

@@ -52,15 +52,14 @@ int main()
 	app::App app;
 	app.setup(gpu);
 
-	auto loader = app.m_loader;
-	auto executer = app.m_executer;
+	auto context = app.m_context;
 
 	cModel model;
-	model.load(loader, btr::getResourceAppPath() + "tiny.x");
+	model.load(context, btr::getResourceAppPath() + "tiny.x");
 
 
 	std::shared_ptr<cModelRender> render = std::make_shared<cModelRender>();
-	render->setup(loader, model.getResource());
+	render->setup(context, model.getResource());
 	{
 		PlayMotionDescriptor desc;
 		desc.m_data = model.getResource()->getAnimation().m_motion[0];
@@ -76,8 +75,8 @@ int main()
 
 
 	cModelPipeline renderer;
-	renderer.setup(loader);
-	renderer.addModel(executer, render);
+	renderer.setup(context);
+	renderer.addModel(context, render);
  
 	while (true)
 	{
@@ -89,7 +88,7 @@ int main()
 			render->work();
 
 			std::vector<vk::CommandBuffer> render_cmds(1);
-			render_cmds[0] = renderer.draw(executer);
+			render_cmds[0] = renderer.draw(context);
 			app.submit(std::move(render_cmds));
 		}
 		app.postUpdate();

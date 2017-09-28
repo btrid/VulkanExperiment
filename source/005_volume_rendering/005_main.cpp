@@ -27,7 +27,7 @@
 #include <applib/cModelRender.h>
 #include <applib/sCameraManager.h>
 
-#include <btrlib/Loader.h>
+#include <btrlib/Context.h>
 #include <005_volume_rendering/VolumeRenderer.h>
 #include <applib/DrawHelper.h>
 
@@ -57,7 +57,7 @@ int main()
 	app.setup(gpu);
 
 	auto executer = app.m_executer;
-	auto loader = app.m_loader;
+	auto loader = app.m_context;
 
 	volumeRenderer volume_renderer;
 	volume_renderer.setup(loader);

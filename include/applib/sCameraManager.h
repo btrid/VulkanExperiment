@@ -1,7 +1,7 @@
 #pragma once
 
 #include <btrlib/Define.h>
-#include <btrlib/loader.h>
+#include <btrlib/Context.h>
 #include <btrlib/cCamera.h>
 #include <btrlib/AllocatedMemory.h>
 #include <btrlib/sGlobal.h>
@@ -27,13 +27,13 @@ struct sCameraManager : public Singleton<sCameraManager>
 	std::array<vk::DescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
 	std::array<vk::DescriptorSet, DESCRIPTOR_SET_NUM> m_descriptor_set;
 
-	void setup(std::shared_ptr<btr::Loader>& loader)
+	void setup(std::shared_ptr<btr::Context>& context)
 	{
 		{
 
 			btr::UpdateBufferDescriptor update_desc;
-			update_desc.device_memory = loader->m_uniform_memory;
-			update_desc.staging_memory = loader->m_staging_memory;
+			update_desc.device_memory = context->m_uniform_memory;
+			update_desc.staging_memory = context->m_staging_memory;
 			update_desc.frame_max = sGlobal::FRAME_MAX;
 			m_camera.setup(update_desc);
 		}
@@ -52,14 +52,14 @@ struct sCameraManager : public Singleton<sCameraManager>
 			vk::DescriptorSetLayoutCreateInfo descriptor_set_layout_info = vk::DescriptorSetLayoutCreateInfo()
 				.setBindingCount(bindings[i].size())
 				.setPBindings(bindings[i].data());
-			m_descriptor_set_layout[i] = loader->m_device->createDescriptorSetLayout(descriptor_set_layout_info);
+			m_descriptor_set_layout[i] = context->m_device->createDescriptorSetLayout(descriptor_set_layout_info);
 		}
 
 		vk::DescriptorSetAllocateInfo alloc_info;
-		alloc_info.descriptorPool = loader->m_descriptor_pool.get();
+		alloc_info.descriptorPool = context->m_descriptor_pool.get();
 		alloc_info.descriptorSetCount = m_descriptor_set_layout.size();
 		alloc_info.pSetLayouts = m_descriptor_set_layout.data();
-		auto descriptor_set = loader->m_device->allocateDescriptorSets(alloc_info);
+		auto descriptor_set = context->m_device->allocateDescriptorSets(alloc_info);
 		std::copy(descriptor_set.begin(), descriptor_set.end(), m_descriptor_set.begin());
 		{
 
@@ -75,7 +75,7 @@ struct sCameraManager : public Singleton<sCameraManager>
 				.setDstBinding(0)
 				.setDstSet(m_descriptor_set[DESCRIPTOR_SET_LAYOUT_CAMERA]),
 			};
-			loader->m_device->updateDescriptorSets(write_desc, {});
+			context->m_device->updateDescriptorSets(write_desc, {});
 		}
 
 	}
@@ -88,7 +88,7 @@ struct sCameraManager : public Singleton<sCameraManager>
 		}
 		
 	}
-	vk::CommandBuffer draw(std::shared_ptr<btr::Executer>& executer)
+	vk::CommandBuffer draw(std::shared_ptr<btr::Context>& executer)
 	{
 		auto& device = executer->m_gpu.getDevice();
 		auto cmd = executer->m_cmd_pool->allocCmdOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));

@@ -1,6 +1,6 @@
 #include <999_game/sBulletSystem.h>
 
-void sBulletSystem::Private::setup(std::shared_ptr<btr::Loader>& loader)
+void sBulletSystem::Private::setup(std::shared_ptr<btr::Context>& loader)
 {
 
 	m_bullet_info_cpu.m_max_num = 8192;

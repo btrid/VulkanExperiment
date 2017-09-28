@@ -41,7 +41,7 @@ struct cModelRenderPrivate
 	btr::BufferMemory m_material_index;
 	btr::BufferMemory m_material;
 
-	void setup(std::shared_ptr<btr::Loader>& loader, std::shared_ptr<cModel::Resource> resource)
+	void setup(std::shared_ptr<btr::Context>& loader, std::shared_ptr<cModel::Resource> resource)
 	{
 		auto cmd = loader->m_cmd_pool->allocCmdTempolary(0);
 
@@ -200,8 +200,8 @@ struct cModelRenderPrivate
 		}
 	}
 
-	void setup(std::shared_ptr<btr::Executer>& executer, cModelPipeline& renderer);
-	void execute(std::shared_ptr<btr::Executer>& executer, vk::CommandBuffer& cmd);
-	void draw(std::shared_ptr<btr::Executer>& executer, vk::CommandBuffer& cmd);
+	void setup(std::shared_ptr<btr::Context>& executer, cModelPipeline& renderer);
+	void execute(std::shared_ptr<btr::Context>& executer, vk::CommandBuffer& cmd);
+	void draw(std::shared_ptr<btr::Context>& executer, vk::CommandBuffer& cmd);
 
 };

@@ -6,7 +6,7 @@
 #include <btrlib/cModel.h>
 #include <applib/sCameraManager.h>
 
-void cModelInstancingPipeline::setup(std::shared_ptr<btr::Loader>& loader, cModelInstancingRenderer& renderer)
+void cModelInstancingPipeline::setup(std::shared_ptr<btr::Context>& loader, cModelInstancingRenderer& renderer)
 {
 	auto& gpu = sGlobal::Order().getGPU(0);
 	auto& device = gpu.getDevice();

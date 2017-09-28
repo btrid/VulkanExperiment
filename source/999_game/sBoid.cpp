@@ -2,7 +2,7 @@
 #include <applib/sParticlePipeline.h>
 #include <999_game/sScene.h>
 
-void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
+void sBoid::setup(std::shared_ptr<btr::Context>& loader)
 {
 	auto cmd = loader->m_cmd_pool->allocCmdTempolary(0);
 
@@ -567,7 +567,7 @@ void sBoid::setup(std::shared_ptr<btr::Loader>& loader)
 	}
 }
 
-vk::CommandBuffer sBoid::execute(std::shared_ptr<btr::Executer>& executer)
+vk::CommandBuffer sBoid::execute(std::shared_ptr<btr::Context>& executer)
 {
 	auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
 	{
@@ -690,7 +690,7 @@ vk::CommandBuffer sBoid::execute(std::shared_ptr<btr::Executer>& executer)
 	return cmd;
 }
 
-vk::CommandBuffer sBoid::draw(std::shared_ptr<btr::Executer>& executer)
+vk::CommandBuffer sBoid::draw(std::shared_ptr<btr::Context>& executer)
 {
 	auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
 

@@ -14,7 +14,7 @@
 #include <btrlib/rTexture.h>
 #include <btrlib/ResourceManager.h>
 #include <btrlib/AllocatedMemory.h>
-#include <btrlib/Loader.h>
+#include <btrlib/Context.h>
 #include <btrlib/cMotion.h>
 
 class Node
@@ -88,7 +88,7 @@ struct ResourceTexture
 
 	std::shared_ptr<Resource> m_resource;
 
-	void load(std::shared_ptr<btr::Loader>& loader, vk::CommandBuffer cmd, const std::string& filename);
+	void load(std::shared_ptr<btr::Context>& loader, vk::CommandBuffer cmd, const std::string& filename);
 	vk::ImageView getImageView()const { return m_resource ? m_resource->m_image_view.get() : vk::ImageView(); }
 	vk::Sampler getSampler()const { return m_resource ? m_resource->m_sampler.get() : vk::Sampler(); }
 
@@ -244,7 +244,7 @@ public:
 
 public:
 
-	void load(std::shared_ptr<btr::Loader>& loader, const std::string& filename);
+	void load(std::shared_ptr<btr::Context>& loader, const std::string& filename);
 
 	std::string getFilename()const;
 	const ResourceVertex* getMesh()const;

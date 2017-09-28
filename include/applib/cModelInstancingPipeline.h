@@ -7,7 +7,7 @@
 #include <btrlib/cCamera.h>
 #include <btrlib/Shape.h>
 #include <btrlib/AllocatedMemory.h>
-#include <btrlib/Loader.h>
+#include <btrlib/Context.h>
 
 struct cModelInstancingRenderer;
 
@@ -65,5 +65,5 @@ struct cModelInstancingPipeline
 
 	vk::UniqueDescriptorSet m_descriptor_set_light;
 
-	void setup(std::shared_ptr<btr::Loader>& loader, cModelInstancingRenderer& renderer);
+	void setup(std::shared_ptr<btr::Context>& loader, cModelInstancingRenderer& renderer);
 };

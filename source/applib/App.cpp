@@ -1,7 +1,7 @@
 #include <applib/App.h>
 #include <btrlib/sGlobal.h>
 #include <btrlib/cDebug.h>
-#include <btrlib/Loader.h>
+#include <btrlib/Context.h>
 
 #include <applib/DrawHelper.h>
 #include <applib/sCameraManager.h>
@@ -31,19 +31,19 @@ void App::setup(const cGPU& gpu)
 	auto device = sGlobal::Order().getGPU(0).getDevice();
 	m_cmd_pool = cCmdPool::MakeCmdPool(m_gpu);
 
-	m_loader = std::make_shared<btr::Loader>();
+	m_context = std::make_shared<btr::Context>();
 	{
-		m_loader->m_gpu = gpu;
-		m_loader->m_device = device;
-		m_loader->m_cmd_pool = m_cmd_pool;
+		m_context->m_gpu = gpu;
+		m_context->m_device = device;
+		m_context->m_cmd_pool = m_cmd_pool;
 
 		vk::MemoryPropertyFlags host_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
 		vk::MemoryPropertyFlags device_memory = vk::MemoryPropertyFlagBits::eDeviceLocal;
 		//	device_memory = host_memory; // debug
-		m_loader->m_vertex_memory.setup(device, vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 1000 * 100);
-		m_loader->m_uniform_memory.setup(device, vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 20);
-		m_loader->m_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 1000 * 200);
-		m_loader->m_staging_memory.setup(device, vk::BufferUsageFlagBits::eTransferSrc, host_memory, 1000 * 1000 * 100);
+		m_context->m_vertex_memory.setup(device, vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 1000 * 100);
+		m_context->m_uniform_memory.setup(device, vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 20);
+		m_context->m_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 1000 * 200);
+		m_context->m_staging_memory.setup(device, vk::BufferUsageFlagBits::eTransferSrc, host_memory, 1000 * 1000 * 100);
 		{
 			std::vector<vk::DescriptorPoolSize> pool_size(4);
 			pool_size[0].setType(vk::DescriptorType::eUniformBuffer);
@@ -59,10 +59,10 @@ void App::setup(const cGPU& gpu)
 			pool_info.setPoolSizeCount((uint32_t)pool_size.size());
 			pool_info.setPPoolSizes(pool_size.data());
 			pool_info.setMaxSets(20);
-			m_loader->m_descriptor_pool = device->createDescriptorPoolUnique(pool_info);
+			m_context->m_descriptor_pool = device->createDescriptorPoolUnique(pool_info);
 
 			vk::PipelineCacheCreateInfo cacheInfo = vk::PipelineCacheCreateInfo();
-			m_loader->m_cache = device->createPipelineCacheUnique(cacheInfo);
+			m_context->m_cache = device->createPipelineCacheUnique(cacheInfo);
 
 		}
 
@@ -76,23 +76,13 @@ void App::setup(const cGPU& gpu)
 	windowInfo.class_name = L"VulkanMainWindow";
 
 	auto window = std::make_shared<cWindow>();
-	window->setup(m_loader, windowInfo);
+	window->setup(m_context, windowInfo);
 	m_window = window;
 	m_window_list.push_back(window);
-	m_loader->m_window = window;
+	m_context->m_window = window;
 
-	m_executer = std::make_shared<btr::Executer>();
-	m_executer->m_gpu = gpu;
-	m_executer->m_device = device;
-	m_executer->m_vertex_memory = m_loader->m_vertex_memory;
-	m_executer->m_uniform_memory = m_loader->m_uniform_memory;
-	m_executer->m_storage_memory = m_loader->m_storage_memory;
-	m_executer->m_staging_memory = m_loader->m_staging_memory;
-	m_executer->m_cmd_pool = m_cmd_pool;
-	m_executer->m_window = window;
-
-	sCameraManager::Order().setup(m_loader);
-	DrawHelper::Order().setup(m_loader);
+	sCameraManager::Order().setup(m_context);
+	DrawHelper::Order().setup(m_context);
 
 }
 
@@ -167,7 +157,7 @@ void App::preUpdate()
 	uint32_t backbuffer_index = m_window->getSwapchain().m_backbuffer_index;
 	sDebug::Order().waitFence(device.getHandle(), m_window->getFence(backbuffer_index));
 	device->resetFences({ m_window->getFence(backbuffer_index) });
-	m_cmd_pool->resetPool(m_executer);
+	m_cmd_pool->resetPool(m_context);
 
 	{
 		auto* m_camera = cCamera::sCamera::Order().getCameraList()[0];
@@ -181,7 +171,7 @@ void App::preUpdate()
 		job.mJob.emplace_back(
 			[&]()
 		{
-			m_system_cmds[0] = sCameraManager::Order().draw(m_executer);
+			m_system_cmds[0] = sCameraManager::Order().draw(m_context);
 			m_sync_point.arrive();
 		}
 		);
@@ -192,7 +182,7 @@ void App::preUpdate()
 		job.mJob.emplace_back(
 			[&]()
 		{
-			m_system_cmds[1] = DrawHelper::Order().draw(m_executer);
+			m_system_cmds[1] = DrawHelper::Order().draw(m_context);
 			m_sync_point.arrive();
 		}
 		);
@@ -204,7 +194,7 @@ void App::preUpdate()
 		job.mJob.emplace_back(
 			[&]()
 		{
-			m_executer->m_cmd_pool->submit(m_executer);
+			m_context->m_cmd_pool->submit(m_context);
 			m_sync_point.arrive();
 		}
 		);

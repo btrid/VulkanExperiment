@@ -1,7 +1,7 @@
 #pragma once
 #include <memory>
 #include <btrlib/Define.h>
-#include <btrlib/Loader.h>
+#include <btrlib/Context.h>
 #include <999_game/sScene.h>
 
 struct MapVoxelize : Voxelize

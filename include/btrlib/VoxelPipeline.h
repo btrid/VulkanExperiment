@@ -1,7 +1,7 @@
 #pragma once
 #include <memory>
 #include <btrlib/Define.h>
-#include <btrlib/Loader.h>
+#include <btrlib/Context.h>
 
 struct VoxelInfo
 {
@@ -22,7 +22,7 @@ struct VoxelInfo
 struct VoxelPipeline;
 struct Voxelize
 {
-	virtual void draw(std::shared_ptr<btr::Executer>& executer, VoxelPipeline const * const parent, vk::CommandBuffer cmd) = 0;
+	virtual void draw(std::shared_ptr<btr::Context>& context, VoxelPipeline const * const parent, vk::CommandBuffer cmd) = 0;
 	virtual ~Voxelize() = default;
 };
 
@@ -80,7 +80,7 @@ struct VoxelPipeline
 	vk::UniqueDeviceMemory m_voxel_hierarchy_imagememory;
 
 	std::vector<std::shared_ptr<Voxelize>> m_voxelize_list;
-	void setup(std::shared_ptr<btr::Loader>& loader, const VoxelInfo& info)
+	void setup(std::shared_ptr<btr::Context>& loader, const VoxelInfo& info)
 	{
 		auto& gpu = loader->m_gpu;
 		auto& device = gpu.getDevice();
@@ -497,7 +497,7 @@ struct VoxelPipeline
 
 	}
 
-	vk::CommandBuffer make(std::shared_ptr<btr::Executer>& executer)
+	vk::CommandBuffer make(std::shared_ptr<btr::Context>& executer)
 	{
 		auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
 		vk::ImageSubresourceRange range;
@@ -542,7 +542,7 @@ struct VoxelPipeline
 		return cmd;
 
 	}
-	vk::CommandBuffer draw(std::shared_ptr<btr::Executer>& executer)
+	vk::CommandBuffer draw(std::shared_ptr<btr::Context>& executer)
 	{
 
 		auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
@@ -586,7 +586,7 @@ struct VoxelPipeline
 	}
 
 	template<typename T, typename... Args>
-	std::shared_ptr<T> createPipeline(std::shared_ptr<btr::Loader>& loader, Args... args)
+	std::shared_ptr<T> createPipeline(std::shared_ptr<btr::Context>& loader, Args... args)
 	{
 		auto ptr = std::make_shared<T>();
 		m_voxelize_list.push_back(ptr);

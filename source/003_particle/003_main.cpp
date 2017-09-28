@@ -26,7 +26,7 @@
 #include <applib/cModelRender.h>
 #include <applib/DrawHelper.h>
 #include <applib/sCameraManager.h>
-#include <btrlib/Loader.h>
+#include <btrlib/Context.h>
 
 #include <applib/sParticlePipeline.h>
 
@@ -53,7 +53,7 @@ int main()
 	app::App app;
 	app.setup(gpu);
 
-	auto loader = app.m_loader;
+	auto loader = app.m_context;
 	auto executer = app.m_executer;
 
 	cModelPipeline model_pipeline;

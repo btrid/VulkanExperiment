@@ -1,5 +1,5 @@
 #include <btrlib/cCmdPool.h>
-#include <btrlib/Loader.h>
+#include <btrlib/Context.h>
 
 void* VKAPI_PTR Allocation(void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
 {
@@ -85,7 +85,7 @@ vk::CommandPool cCmdPool::getCmdPool(cCmdPool::CmdPoolType type, int device_fami
 	}
 }
 
-void cCmdPool::resetPool(std::shared_ptr<btr::Executer>& executer)
+void cCmdPool::resetPool(std::shared_ptr<btr::Context>& executer)
 {
 	for (auto& tls : m_per_thread)
 	{
@@ -130,7 +130,7 @@ PerFamilyIndex<std::vector<vk::UniqueCommandBuffer>> cCmdPool::submitCmd()
 	return cmds;
 }
 
-void cCmdPool::submit(std::shared_ptr<btr::Executer>& executer)
+void cCmdPool::submit(std::shared_ptr<btr::Context>& context)
 {
 	auto cmd_queues = submitCmd();
 	for (size_t i = 0; i < cmd_queues.size(); i++)
@@ -162,8 +162,8 @@ void cCmdPool::submit(std::shared_ptr<btr::Executer>& executer)
 		};
 
 		vk::FenceCreateInfo info;
-		auto fence = executer->m_device->createFenceUnique(info);
-		auto q = executer->m_device->getQueue(i, 0);
+		auto fence = context->m_device->createFenceUnique(info);
+		auto q = context->m_device->getQueue(i, 0);
 		q.submit(submit_info, fence.get());
 		sDeleter::Order().enque(std::move(cmds), std::move(fence));
 	}

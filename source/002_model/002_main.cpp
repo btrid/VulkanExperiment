@@ -75,7 +75,7 @@ int main()
 	app::App app;
 	app.setup(gpu);
 
-	auto loader = app.m_loader;
+	auto loader = app.m_context;
 	auto executer = app.m_executer;
 
 	auto task = std::make_shared<std::promise<std::unique_ptr<cModel>>>();

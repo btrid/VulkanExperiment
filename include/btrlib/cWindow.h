@@ -12,7 +12,7 @@
 
 namespace btr
 {
-struct Loader;
+struct Context;
 }
 struct RenderTarget
 {
@@ -60,7 +60,7 @@ private:
 
 		}
 
-		void setup(std::shared_ptr<btr::Loader>& loader, const CreateInfo& descriptor, vk::SurfaceKHR surface);
+		void setup(std::shared_ptr<btr::Context>& loader, const CreateInfo& descriptor, vk::SurfaceKHR surface);
 		uint32_t swap();
 		size_t getBackbufferNum()const { return m_backbuffer.size(); }
 	};
@@ -119,7 +119,7 @@ public:
 
 	}
 
-	void setup(std::shared_ptr<btr::Loader>& loader, const CreateInfo& descriptor);
+	void setup(std::shared_ptr<btr::Context>& loader, const CreateInfo& descriptor);
 
 	void sync()
 	{

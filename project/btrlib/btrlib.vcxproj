@@ -78,7 +78,7 @@
     <ClInclude Include="..\..\include\btrlib\cDebug.h" />
     <ClInclude Include="..\..\include\btrlib\cInput.h" />
     <ClInclude Include="..\..\include\btrlib\cMotion.h" />
-    <ClInclude Include="..\..\include\btrlib\Loader.h" />
+    <ClInclude Include="..\..\include\btrlib\Context.h" />
     <ClInclude Include="..\..\include\btrlib\cStopWatch.h" />
     <ClInclude Include="..\..\include\btrlib\cThreadPool.h" />
     <ClInclude Include="..\..\include\btrlib\BuffersMemory.h" />

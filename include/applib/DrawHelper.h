@@ -2,7 +2,7 @@
 
 #include <memory>
 #include <btrlib/Define.h>
-#include <btrlib/loader.h>
+#include <btrlib/Context.h>
 #include <btrlib/cCamera.h>
 #include <btrlib/AllocatedMemory.h>
 #include <btrlib/sGlobal.h>
@@ -84,7 +84,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 	{
 
 	}
-	void setup(std::shared_ptr<btr::Loader>& loader)
+	void setup(std::shared_ptr<btr::Context>& loader)
 	{
 		auto cmd = loader->m_cmd_pool->allocCmdTempolary(0);
 		m_draw_cmd.resize(sGlobal::Order().getThreadPool().getThreadNum()+1);
@@ -482,7 +482,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 		m_whilte_texture.m_sampler = loader->m_device->createSamplerUnique(sampler_info);
 	}
 
-	vk::CommandBuffer draw(std::shared_ptr<btr::Executer>& executer)
+	vk::CommandBuffer draw(std::shared_ptr<btr::Context>& executer)
 	{
 		auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
 

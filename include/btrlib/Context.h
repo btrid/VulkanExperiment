@@ -29,6 +29,4 @@ struct Context
 	uint32_t getGPUFrame()const { return m_window->getSwapchain().m_backbuffer_index; }
 };
 
-struct Loader : public Context{};
-struct Executer : public Context {};
 }

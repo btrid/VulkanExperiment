@@ -53,12 +53,12 @@ namespace {
 
 ResourceManager<ResourceTexture::Resource> ResourceTexture::s_manager;
 ResourceManager<cModel::Resource> cModel::s_manager;
-void ResourceTexture::load(std::shared_ptr<btr::Loader>& loader, vk::CommandBuffer cmd, const std::string& filename)
+void ResourceTexture::load(std::shared_ptr<btr::Context>& context, vk::CommandBuffer cmd, const std::string& filename)
 {
 	if (s_manager.manage(m_resource, filename)) {
 		return;
 	}
-	m_resource->m_device = loader->m_device;
+	m_resource->m_device = context->m_device;
 
 	auto texture_data = rTexture::LoadTexture(filename);
 	vk::ImageCreateInfo image_info;
@@ -73,20 +73,20 @@ void ResourceTexture::load(std::shared_ptr<btr::Loader>& loader, vk::CommandBuff
 	image_info.initialLayout = vk::ImageLayout::eUndefined;
 	image_info.extent = { texture_data.m_size.x, texture_data.m_size.y, 1 };
 	image_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
-	vk::UniqueImage image = loader->m_device->createImageUnique(image_info);
+	vk::UniqueImage image = context->m_device->createImageUnique(image_info);
 
-	vk::MemoryRequirements memory_request = loader->m_device->getImageMemoryRequirements(image.get());
+	vk::MemoryRequirements memory_request = context->m_device->getImageMemoryRequirements(image.get());
 	vk::MemoryAllocateInfo memory_alloc_info;
 	memory_alloc_info.allocationSize = memory_request.size;
-	memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(loader->m_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+	memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(context->m_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-	vk::UniqueDeviceMemory image_memory = loader->m_device->allocateMemoryUnique(memory_alloc_info);
-	loader->m_device->bindImageMemory(image.get(), image_memory.get(), 0);
+	vk::UniqueDeviceMemory image_memory = context->m_device->allocateMemoryUnique(memory_alloc_info);
+	context->m_device->bindImageMemory(image.get(), image_memory.get(), 0);
 
 	btr::AllocatedMemory::Descriptor staging_desc;
 	staging_desc.size = texture_data.getBufferSize();
 	staging_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-	auto staging_buffer = loader->m_staging_memory.allocateMemory(staging_desc);	
+	auto staging_buffer = context->m_staging_memory.allocateMemory(staging_desc);	
 	memcpy(staging_buffer.getMappedPtr(), texture_data.m_data.data(), texture_data.getBufferSize());
 
 	vk::ImageSubresourceRange subresourceRange;
@@ -109,7 +109,7 @@ void ResourceTexture::load(std::shared_ptr<btr::Loader>& loader, vk::CommandBuff
 
 		{
 			vk::ImageMemoryBarrier to_copy_barrier;
-			to_copy_barrier.dstQueueFamilyIndex = loader->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
+			to_copy_barrier.dstQueueFamilyIndex = context->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
 			to_copy_barrier.image = image.get();
 			to_copy_barrier.oldLayout = vk::ImageLayout::eUndefined;
 			to_copy_barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
@@ -120,7 +120,7 @@ void ResourceTexture::load(std::shared_ptr<btr::Loader>& loader, vk::CommandBuff
 		cmd.copyBufferToImage(staging_buffer.getBufferInfo().buffer, image.get(), vk::ImageLayout::eTransferDstOptimal, { copy });
 		{
 			vk::ImageMemoryBarrier to_shader_read_barrier;
-			to_shader_read_barrier.dstQueueFamilyIndex = loader->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
+			to_shader_read_barrier.dstQueueFamilyIndex = context->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
 			to_shader_read_barrier.image = image.get();
 			to_shader_read_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
 			to_shader_read_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
@@ -160,12 +160,12 @@ void ResourceTexture::load(std::shared_ptr<btr::Loader>& loader, vk::CommandBuff
 
 	m_resource->m_image = std::move(image) ;
 	m_resource->m_memory = std::move(image_memory);
-	m_resource->m_image_view = loader->m_device->createImageViewUnique(view_info);
-	m_resource->m_sampler = loader->m_device->createSamplerUnique(sampler_info);
+	m_resource->m_image_view = context->m_device->createImageViewUnique(view_info);
+	m_resource->m_sampler = context->m_device->createSamplerUnique(sampler_info);
 }
 
 
-std::vector<cModel::Material> loadMaterial(const aiScene* scene, const std::string& filename, std::shared_ptr<btr::Loader>& loader, vk::CommandBuffer cmd)
+std::vector<cModel::Material> loadMaterial(const aiScene* scene, const std::string& filename, std::shared_ptr<btr::Context>& context, vk::CommandBuffer cmd)
 {
 	std::string path = std::tr2::sys::path(filename).remove_filename().string();
 	std::vector<cModel::Material> material(scene->mNumMaterials);
@@ -190,21 +190,21 @@ std::vector<cModel::Material> loadMaterial(const aiScene* scene, const std::stri
 		aiTextureMapping mapping;
 		unsigned uvIndex;
 		if (aiMat->GetTexture(aiTextureType_DIFFUSE, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode) == AI_SUCCESS) {
-			mat.mDiffuseTex.load(loader, cmd, path + "/" + str.C_Str());
+			mat.mDiffuseTex.load(context, cmd, path + "/" + str.C_Str());
 		}
 		if (aiMat->GetTexture(aiTextureType_AMBIENT, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode)) {
-			mat.mAmbientTex.load(loader, cmd, path + "/" + str.C_Str());
+			mat.mAmbientTex.load(context, cmd, path + "/" + str.C_Str());
 		}
 		if (aiMat->GetTexture(aiTextureType_SPECULAR, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode)) {
-			mat.mSpecularTex.load(loader, cmd, path + "/" + str.C_Str());
+			mat.mSpecularTex.load(context, cmd, path + "/" + str.C_Str());
 		}
 
 		if (aiMat->GetTexture(aiTextureType_NORMALS, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode)) {
-			mat.mNormalTex.load(loader, cmd, path + "/" + str.C_Str());
+			mat.mNormalTex.load(context, cmd, path + "/" + str.C_Str());
 		}
 
 		if (aiMat->GetTexture(aiTextureType_HEIGHT, 0, &str, &mapping, &uvIndex, NULL, NULL, mapmode)) {
-			mat.mHeightTex.load(loader, cmd, path + "/" + str.C_Str());
+			mat.mHeightTex.load(context, cmd, path + "/" + str.C_Str());
 		}
 	}
 	return material;
@@ -235,7 +235,7 @@ RootNode loadNode(const aiScene* scene)
 	return root;
 }
 
-void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& root, std::shared_ptr<btr::Loader>& loader)
+void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& root, std::shared_ptr<btr::Context>& context)
 {
 	if (!scene->HasAnimations()) {
 		return;
@@ -291,7 +291,7 @@ void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& r
 
 
 
-void cModel::load(std::shared_ptr<btr::Loader>& loader, const std::string& filename)
+void cModel::load(std::shared_ptr<btr::Context>& context, const std::string& filename)
 {
 
 	if (s_manager.manage(m_resource, filename)) {
@@ -320,13 +320,13 @@ void cModel::load(std::shared_ptr<btr::Loader>& loader, const std::string& filen
 	sDebug::Order().print(sDebug::FLAG_LOG | sDebug::SOURCE_MODEL, "[Load Model %6.2fs] %s \n", timer.getElapsedTimeAsSeconds(), filename.c_str());
 
 
-	auto& device = loader->m_device;
-	auto cmd = loader->m_cmd_pool->allocCmdTempolary(0);
+	auto& device = context->m_device;
+	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
 	// ‰Šú‰»
-	m_resource->m_material = loadMaterial(scene, filename, loader, cmd.get());
+	m_resource->m_material = loadMaterial(scene, filename, context, cmd.get());
 	m_resource->mNodeRoot = loadNode(scene);
-	loadMotion(m_resource->m_animation, scene, m_resource->mNodeRoot, loader);
+	loadMotion(m_resource->m_animation, scene, m_resource->mNodeRoot, context);
 
 	std::vector<Bone>& boneList = m_resource->mBone;
 
@@ -350,14 +350,14 @@ void cModel::load(std::shared_ptr<btr::Loader>& loader, const std::string& filen
 	btr::AllocatedMemory::Descriptor staging_vertex_desc;
 	staging_vertex_desc.size = sizeof(Vertex) * numVertex;
 	staging_vertex_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-	auto staging_vertex = loader->m_staging_memory.allocateMemory(staging_vertex_desc);
+	auto staging_vertex = context->m_staging_memory.allocateMemory(staging_vertex_desc);
 
 	auto index_type = numVertex < std::numeric_limits<uint16_t>::max() ? vk::IndexType::eUint16 : vk::IndexType::eUint32;
 
 	btr::AllocatedMemory::Descriptor staging_index_desc;
 	staging_index_desc.size = (index_type == vk::IndexType::eUint16 ? sizeof(uint16_t) : sizeof(uint32_t)) * numIndex;
 	staging_index_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-	auto staging_index = loader->m_staging_memory.allocateMemory(staging_index_desc);
+	auto staging_index = context->m_staging_memory.allocateMemory(staging_index_desc);
 	auto index_stride = (index_type == vk::IndexType::eUint16 ? sizeof(uint16_t) : sizeof(uint32_t));
 	auto* index = static_cast<char*>(staging_index.getMappedPtr());
 	Vertex* vertex = static_cast<Vertex*>(staging_vertex.getMappedPtr());
@@ -460,15 +460,15 @@ void cModel::load(std::shared_ptr<btr::Loader>& loader, const std::string& filen
 		ResourceVertex& vertex_data = m_resource->m_mesh_resource;
 
 		{
-			vertex_data.m_vertex_buffer_ex = loader->m_vertex_memory.allocateMemory(staging_vertex.getBufferInfo().range);
-			vertex_data.m_index_buffer_ex = loader->m_vertex_memory.allocateMemory(staging_index.getBufferInfo().range);
+			vertex_data.m_vertex_buffer_ex = context->m_vertex_memory.allocateMemory(staging_vertex.getBufferInfo().range);
+			vertex_data.m_index_buffer_ex = context->m_vertex_memory.allocateMemory(staging_index.getBufferInfo().range);
 
 			btr::AllocatedMemory::Descriptor indirect_desc;
 			indirect_desc.size = vector_sizeof(m_resource->m_mesh);
-			vertex_data.m_indirect_buffer_ex = loader->m_vertex_memory.allocateMemory(indirect_desc);
+			vertex_data.m_indirect_buffer_ex = context->m_vertex_memory.allocateMemory(indirect_desc);
 
 			indirect_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-			auto staging_indirect = loader->m_staging_memory.allocateMemory(indirect_desc);
+			auto staging_indirect = context->m_staging_memory.allocateMemory(indirect_desc);
 			auto* indirect = staging_indirect.getMappedPtr<Mesh>(0);
 			int offset = 0;
 			for (size_t i = 0; i < m_resource->m_mesh.size(); i++) {

@@ -6,7 +6,7 @@
 /**
 *	モーションのデータを一枚の1DArrayに格納
 */
-MotionTexture create(std::shared_ptr<btr::Loader>& loader, vk::CommandBuffer cmd, const cMotion& motion, const RootNode& root)
+MotionTexture create(std::shared_ptr<btr::Context>& loader, vk::CommandBuffer cmd, const cMotion& motion, const RootNode& root)
 {
 	uint32_t SIZE = 256;
 
@@ -191,7 +191,7 @@ MotionTexture create(std::shared_ptr<btr::Loader>& loader, vk::CommandBuffer cmd
 	return tex;
 }
 
-std::vector<MotionTexture> createMotion(std::shared_ptr<btr::Loader>& loader, vk::CommandBuffer cmd, const cAnimation& anim, const RootNode& rootnode)
+std::vector<MotionTexture> createMotion(std::shared_ptr<btr::Context>& loader, vk::CommandBuffer cmd, const cAnimation& anim, const RootNode& rootnode)
 {
 
 	std::vector<MotionTexture> motion_texture(anim.m_motion.size());
@@ -234,7 +234,7 @@ std::vector<ModelInstancingRender::NodeInfo> createNodeInfo(const RootNode& root
 }
 
 
-void ModelInstancingRender::setup(std::shared_ptr<btr::Loader>& loader, std::shared_ptr<cModel::Resource>& resource, uint32_t instanceNum)
+void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& loader, std::shared_ptr<cModel::Resource>& resource, uint32_t instanceNum)
 {
 	auto cmd = loader->m_cmd_pool->allocCmdTempolary(0);
 

@@ -7,7 +7,7 @@
 #include <btrlib/Shape.h>
 #include <btrlib/cModel.h>
 
-void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
+void cModelPipeline::setup(std::shared_ptr<btr::Context>& loader)
 {
 	auto& device = loader->m_device;
 
@@ -265,31 +265,31 @@ void cModelPipeline::setup(std::shared_ptr<btr::Loader>& loader)
 	}
 }
 
-void cModelPipeline::addModel(std::shared_ptr<btr::Executer>& executer, const std::shared_ptr<cModelRender>& model)
+void cModelPipeline::addModel(std::shared_ptr<btr::Context>& executer, const std::shared_ptr<cModelRender>& model)
 {
 	m_model.emplace_back(model);
 	m_model.back()->getPrivate()->setup(executer, *this);
 }
 
-vk::CommandBuffer cModelPipeline::draw(std::shared_ptr<btr::Executer>& executer)
+vk::CommandBuffer cModelPipeline::draw(std::shared_ptr<btr::Context>& context)
 {
-	auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
+	auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 
 	// draw
 	for (auto& render : m_model)
 	{
-		render->getPrivate()->execute(executer, cmd);
+		render->getPrivate()->execute(context, cmd);
 	}
 
 	vk::RenderPassBeginInfo begin_render_Info;
 	begin_render_Info.setRenderPass(m_render_pass.get());
 	begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(640, 480)));
-	begin_render_Info.setFramebuffer(m_framebuffer[executer->getGPUFrame()].get());
+	begin_render_Info.setFramebuffer(m_framebuffer[context->getGPUFrame()].get());
 	cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eSecondaryCommandBuffers);
 
 	for (auto& render : m_model)
 	{
-		render->getPrivate()->draw(executer, cmd);
+		render->getPrivate()->draw(context, cmd);
 	}
 	cmd.endRenderPass();
 

@@ -89,7 +89,7 @@ struct cModelRender
 public:
 	cModelRender();
 	~cModelRender();
-	void setup(std::shared_ptr<btr::Loader>& loader, std::shared_ptr<cModel::Resource> resource);
+	void setup(std::shared_ptr<btr::Context>& loader, std::shared_ptr<cModel::Resource> resource);
 	void work();
 
 	ModelTransform& getModelTransform();

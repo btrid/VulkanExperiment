@@ -6,7 +6,7 @@
 cModelRenderPrivate::cModelRenderPrivate() = default;
 cModelRenderPrivate::~cModelRenderPrivate() = default;
 
-void cModelRenderPrivate::setup(std::shared_ptr<btr::Executer>& executer, cModelPipeline& pipeline)
+void cModelRenderPrivate::setup(std::shared_ptr<btr::Context>& executer, cModelPipeline& pipeline)
 {
 	// setup draw
 	{
@@ -118,11 +118,11 @@ void cModelRenderPrivate::setup(std::shared_ptr<btr::Executer>& executer, cModel
 	}
 
 }
-void cModelRenderPrivate::execute(std::shared_ptr<btr::Executer>& executer, vk::CommandBuffer& cmd)
+void cModelRenderPrivate::execute(std::shared_ptr<btr::Context>& executer, vk::CommandBuffer& cmd)
 {
 	cmd.executeCommands(m_transfer_cmd[executer->getGPUFrame()].get());
 }
-void cModelRenderPrivate::draw(std::shared_ptr<btr::Executer>& executer, vk::CommandBuffer& cmd)
+void cModelRenderPrivate::draw(std::shared_ptr<btr::Context>& executer, vk::CommandBuffer& cmd)
 {
 	cmd.executeCommands(m_graphics_cmd[executer->getGPUFrame()].get());
 }

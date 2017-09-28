@@ -3,7 +3,7 @@
 #include <btrlib/cModel.h>
 #include <btrlib/Light.h>
 #include <btrlib/AllocatedMemory.h>
-#include <btrlib/Loader.h>
+#include <btrlib/Context.h>
 #include <applib/cModelInstancingPipeline.h>
 #include <applib/cLightPipeline.h>
 struct cModelInstancingRenderer;
@@ -167,7 +167,7 @@ public:
 	void addModel(const InstanceResource& data) { addModel(&data, 1); }
 	void addModel(const InstanceResource* data, uint32_t num);
 public:
-	void setup(std::shared_ptr<btr::Loader>& loader, std::shared_ptr<cModel::Resource>& resource, uint32_t instanceNum);
+	void setup(std::shared_ptr<btr::Context>& loader, std::shared_ptr<cModel::Resource>& resource, uint32_t instanceNum);
 
 	void setup(cModelInstancingRenderer& renderer);
 	void execute(cModelInstancingRenderer& renderer, vk::CommandBuffer& cmd);
@@ -192,7 +192,7 @@ public:
 		auto& device = gpu.getDevice();
 		m_device = device;
 	}
-	void setup(std::shared_ptr<btr::Loader>& loader)
+	void setup(std::shared_ptr<btr::Context>& loader)
 	{
 		m_light_pipeline.setup(*this);
 		m_compute_pipeline.setup(loader, *this);
@@ -202,7 +202,7 @@ public:
 		m_model.emplace_back(model);
 		m_model.back()->setup(*this);
 	}
-	vk::CommandBuffer execute(std::shared_ptr<btr::Executer>& executer)
+	vk::CommandBuffer execute(std::shared_ptr<btr::Context>& executer)
 	{
 		auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
 
@@ -216,7 +216,7 @@ public:
 		cmd.end();
 		return cmd;
 	}
-	vk::CommandBuffer draw(std::shared_ptr<btr::Executer>& executer)
+	vk::CommandBuffer draw(std::shared_ptr<btr::Context>& executer)
 	{
 		auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
 

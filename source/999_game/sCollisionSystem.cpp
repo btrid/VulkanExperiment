@@ -3,7 +3,7 @@
 #include <999_game/sBoid.h>
 #include <999_game/sBulletSystem.h>
 
-void sCollisionSystem::setup(std::shared_ptr<btr::Loader>& loader)
+void sCollisionSystem::setup(std::shared_ptr<btr::Context>& loader)
 {
 	{
 		struct ShaderDesc {
@@ -108,7 +108,7 @@ void sCollisionSystem::setup(std::shared_ptr<btr::Loader>& loader)
 	}
 }
 
-vk::CommandBuffer sCollisionSystem::execute(std::shared_ptr<btr::Executer>& executer)
+vk::CommandBuffer sCollisionSystem::execute(std::shared_ptr<btr::Context>& executer)
 {
 	auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
 	{

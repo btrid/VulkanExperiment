@@ -2,7 +2,7 @@
 
 #include <btrlib/Define.h>
 #include <btrlib/AllocatedMemory.h>
-#include <btrlib/Loader.h>
+#include <btrlib/Context.h>
 
 #include <999_game/CircleIndex.h>
 class sBoid : public Singleton<sBoid>
@@ -158,9 +158,9 @@ private:
 	glm::vec3 cell_size;
 
 public:
-	void setup(std::shared_ptr<btr::Loader>& loader);
-	vk::CommandBuffer execute(std::shared_ptr<btr::Executer>& executer);
-	vk::CommandBuffer draw(std::shared_ptr<btr::Executer>& executer);
+	void setup(std::shared_ptr<btr::Context>& loader);
+	vk::CommandBuffer execute(std::shared_ptr<btr::Context>& executer);
+	vk::CommandBuffer draw(std::shared_ptr<btr::Context>& executer);
 
 	vk::PipelineLayout getPipelineLayout(PipelineLayout layout)const { return m_pipeline_layout[layout].get(); }
 	vk::DescriptorSetLayout getDescriptorSetLayout(DescriptorSetLayout desctiptor)const { return m_descriptor_set_layout[desctiptor].get(); }

@@ -5,7 +5,7 @@ cModelRender::cModelRender() = default;
 cModelRender::~cModelRender() = default;
 
 
-void cModelRender::setup(std::shared_ptr<btr::Loader>& loader, std::shared_ptr<cModel::Resource> resource)
+void cModelRender::setup(std::shared_ptr<btr::Context>& loader, std::shared_ptr<cModel::Resource> resource)
 {
 	m_private = std::make_unique<cModelRenderPrivate>();
 	m_private->setup(loader, resource);
