@@ -12,19 +12,8 @@
 struct cModelRender;
 struct Component
 {
-	enum DescriptorSetLayout
-	{
-		DESCRIPTOR_SET_LAYOUT_MODEL,
-		DESCRIPTOR_SET_LAYOUT_NUM,
-	};
-	std::array<vk::UniqueDescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
-	vk::UniquePipelineLayout m_pipeline_layout;
-
 };
-struct DrawPipeline
-{
 
-};
 struct cModelPipeline
 {
 	enum {

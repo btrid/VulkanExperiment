@@ -120,13 +120,14 @@ struct cModelRenderPrivate
 	{
 		m_playlist.execute();
 
-		std::vector<glm::mat4> node_buffer(m_model_resource->m_model_info.mNodeNum);
-		updateNodeTransform(0, m_model_transform.calcGlobal()*m_model_transform.calcLocal(), node_buffer);
-		updateBoneTransform(node_buffer);
+		updateBoneTransform();
 	}
 
-	void updateBoneTransform(const std::vector<glm::mat4>& node_buffer)
+	void updateBoneTransform()
 	{
+		std::vector<glm::mat4> node_buffer(m_model_resource->m_model_info.mNodeNum);
+		updateNodeTransform(0, m_model_transform.calcGlobal()*m_model_transform.calcLocal(), node_buffer);
+
 		// シェーダに送るデータを更新
 		auto* ptr = m_bone_buffer_staging[sGlobal::Order().getCPUFrame()].getMappedPtr<glm::mat4>();
 		for (size_t i = 0; i < m_model_resource->mNodeRoot.mNodeList.size(); i++)
