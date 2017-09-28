@@ -353,9 +353,9 @@ struct ModelRender : public RenderComponent
 	std::vector<vk::UniqueCommandBuffer> m_draw_cmd;
 	vk::UniqueDescriptorSet m_descriptor_set_model;
 
-	void draw(std::shared_ptr<btr::Context>& executer, vk::CommandBuffer& cmd)
+	void draw(std::shared_ptr<btr::Context>& context, vk::CommandBuffer& cmd)
 	{
-		cmd.executeCommands(m_draw_cmd[executer->getGPUFrame()].get());
+		cmd.executeCommands(m_draw_cmd[context->getGPUFrame()].get());
 	}
 
 };
@@ -757,7 +757,7 @@ struct cModelPipeline
 	std::shared_ptr<Model> createRender(std::shared_ptr<btr::Context>& context, const std::shared_ptr<cModel::Resource>& resource);
 
 	void setup(std::shared_ptr<btr::Context>& context);
-	vk::CommandBuffer draw(std::shared_ptr<btr::Context>& executer);
+	vk::CommandBuffer draw(std::shared_ptr<btr::Context>& context);
 
 };
 
