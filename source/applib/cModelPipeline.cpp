@@ -8,7 +8,14 @@
 void cModelPipeline::setup(std::shared_ptr<btr::Context>& context)
 {
 	auto render_pass = std::make_shared<RenderPassModule>(context);
-	m_pipeline = std::make_shared<ModelPipelineComponent>(context, render_pass);
+	std::string path = btr::getResourceLibPath() + "shader\\binary\\";
+	std::vector<ShaderDescriptor> shader_desc =
+	{
+		{ path + "ModelRender.vert.spv",vk::ShaderStageFlagBits::eVertex },
+		{ path + "ModelRender.frag.spv",vk::ShaderStageFlagBits::eFragment },
+	};
+	auto shader = std::make_shared<ShaderModule>(context, shader_desc);
+	m_pipeline = std::make_shared<ModelPipelineComponent>(context, render_pass, shader);
 }
 
 vk::CommandBuffer cModelPipeline::draw(std::shared_ptr<btr::Context>& context)
@@ -22,9 +29,9 @@ vk::CommandBuffer cModelPipeline::draw(std::shared_ptr<btr::Context>& context)
 	}
 
 	vk::RenderPassBeginInfo begin_render_Info;
-	begin_render_Info.setRenderPass(m_pipeline->m_render_pass->getRenderPass());
+	begin_render_Info.setRenderPass(m_pipeline->getRenderPassComponent()->getRenderPass());
 	begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(640, 480)));
-	begin_render_Info.setFramebuffer(m_pipeline->m_render_pass->getFramebuffer(context->getGPUFrame()));
+	begin_render_Info.setFramebuffer(m_pipeline->getRenderPassComponent()->getFramebuffer(context->getGPUFrame()));
 	cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eSecondaryCommandBuffers);
 
 	for (auto& render : m_model)
@@ -64,13 +71,13 @@ std::shared_ptr<Model> cModelPipeline::createRender(std::shared_ptr<btr::Context
 			vk::CommandBufferBeginInfo begin_info;
 			begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse | vk::CommandBufferUsageFlagBits::eRenderPassContinue);
 			vk::CommandBufferInheritanceInfo inheritance_info;
-			inheritance_info.setFramebuffer(m_pipeline->m_render_pass->getFramebuffer(i));
-			inheritance_info.setRenderPass(m_pipeline->m_render_pass->getRenderPass());
+			inheritance_info.setFramebuffer(m_pipeline->getRenderPassComponent()->getFramebuffer(i));
+			inheritance_info.setRenderPass(m_pipeline->getRenderPassComponent()->getRenderPass());
 			begin_info.pInheritanceInfo = &inheritance_info;
 
 			cmd.begin(begin_info);
 
-			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline->m_pipeline.get());
+			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline->getPipeline());
 			m_pipeline->bindDescriptor(render, cmd);
 			cmd.bindVertexBuffers(0, { resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().buffer }, { resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().offset });
 			cmd.bindIndexBuffer(resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().buffer, resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().offset, resource->m_mesh_resource.mIndexType);

@@ -449,39 +449,45 @@ private:
 
 };
 
+struct ShaderDescriptor
+{
+	std::string filepath;
+	vk::ShaderStageFlagBits stage;
+};
+struct ShaderModule
+{
+	ShaderModule(const std::shared_ptr<btr::Context>& context, const std::vector<ShaderDescriptor>& desc)
+	{
+		auto& device = context->m_device;
+		// setup shader
+		{
+			m_shader_list.resize(desc.size());
+			m_stage_info.resize(desc.size());
+			for (size_t i = 0; i < desc.size(); i++) {
+				m_shader_list[i] = std::move(loadShaderUnique(device.getHandle(), desc[i].filepath));
+				m_stage_info[i].setModule(m_shader_list[i].get());
+				m_stage_info[i].setStage(desc[i].stage);
+				m_stage_info[i].setPName("main");
+			}
+		}
+	}
+	const std::vector<vk::PipelineShaderStageCreateInfo>& getShaderStageInfo()const { return m_stage_info; }
+
+private:
+	std::vector<vk::UniqueShaderModule> m_shader_list;
+	std::vector<vk::PipelineShaderStageCreateInfo> m_stage_info;
+};
+
 struct ModelPipelineComponent
 {
 	enum {
 		DESCRIPTOR_TEXTURE_NUM = 16,
 	};
-	ModelPipelineComponent(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderPassModule>& render_pass)
+	ModelPipelineComponent(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderPassModule>& render_pass, const std::shared_ptr<ShaderModule>& shader)
 	{
 		auto& device = context->m_device;
-
 		m_render_pass = render_pass;
-
-		// setup shader
-		{
-			struct
-			{
-				const char* name;
-				vk::ShaderStageFlagBits stage;
-			}shader_info[] =
-			{
-				{ "ModelRender.vert.spv",vk::ShaderStageFlagBits::eVertex },
-				{ "ModelRender.frag.spv",vk::ShaderStageFlagBits::eFragment },
-			};
-			static_assert(array_length(shader_info) == SHADER_NUM, "not equal shader num");
-
-			std::string path = btr::getResourceLibPath() + "shader\\binary\\";
-			for (size_t i = 0; i < SHADER_NUM; i++) {
-				m_shader_list[i] = std::move(loadShaderUnique(device.getHandle(), path + shader_info[i].name));
-				m_stage_info[i].setStage(shader_info[i].stage);
-				m_stage_info[i].setModule(m_shader_list[i].get());
-				m_stage_info[i].setPName("main");
-			}
-		}
-
+		m_shader = shader;
 
 		// Create compute pipeline
 		std::vector<std::vector<vk::DescriptorSetLayoutBinding>> bindings(DESCRIPTOR_SET_LAYOUT_NUM);
@@ -622,16 +628,11 @@ struct ModelPipelineComponent
 				vertex_input_info.setVertexAttributeDescriptionCount((uint32_t)vertex_input_attribute.size());
 				vertex_input_info.setPVertexAttributeDescriptions(vertex_input_attribute.data());
 
-				std::array<vk::PipelineShaderStageCreateInfo, 2> stage_info =
-				{
-					m_stage_info[SHADER_RENDER_VERT],
-					m_stage_info[SHADER_RENDER_FRAG],
-				};
 				std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =
 				{
 					vk::GraphicsPipelineCreateInfo()
-					.setStageCount((uint32_t)stage_info.size())
-					.setPStages(stage_info.data())
+					.setStageCount((uint32_t)shader->getShaderStageInfo().size())
+					.setPStages(shader->getShaderStageInfo().data())
 					.setPVertexInputState(&vertex_input_info)
 					.setPInputAssemblyState(&assembly_info)
 					.setPViewportState(&viewport_info)
@@ -648,28 +649,6 @@ struct ModelPipelineComponent
 
 	}
 
-	enum {
-		SHADER_RENDER_VERT,
-		SHADER_RENDER_FRAG,
-		SHADER_NUM,
-	};
-
-	std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_list;
-	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_stage_info;
-
-	enum DescriptorSetLayout
-	{
-		DESCRIPTOR_SET_LAYOUT_MODEL,
-		DESCRIPTOR_SET_LAYOUT_NUM,
-	};
-
-	vk::UniquePipeline m_pipeline;
-	std::array<vk::UniqueDescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
-	vk::UniquePipelineLayout m_pipeline_layout;
-
-	vk::UniqueDescriptorPool m_model_descriptor_pool;
-
-	std::shared_ptr<RenderPassModule> m_render_pass;
 
 	void createDescriptorSet(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<Model>& model, std::shared_ptr<ModelRender>& render)
 	{
@@ -720,14 +699,28 @@ struct ModelPipelineComponent
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 	}
 	const std::shared_ptr<RenderPassModule>& getRenderPassComponent()const { return m_render_pass; }
+	vk::Pipeline getPipeline()const { return m_pipeline.get(); }
+
+private:
+
+	enum DescriptorSetLayout
+	{
+		DESCRIPTOR_SET_LAYOUT_MODEL,
+		DESCRIPTOR_SET_LAYOUT_NUM,
+	};
+
+	vk::UniquePipeline m_pipeline;
+	std::array<vk::UniqueDescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
+	vk::UniquePipelineLayout m_pipeline_layout;
+	vk::UniqueDescriptorPool m_model_descriptor_pool;
+
+	std::shared_ptr<RenderPassModule> m_render_pass;
+	std::shared_ptr<ShaderModule> m_shader;
+
 };
 
 struct cModelPipeline
 {
-	enum {
-		DESCRIPTOR_TEXTURE_NUM = 16,
-	};
-
 	std::shared_ptr<ModelPipelineComponent> m_pipeline;
 
 	std::vector<std::shared_ptr<Model>> m_model;
