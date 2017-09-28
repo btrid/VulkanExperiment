@@ -479,7 +479,10 @@ private:
 	std::vector<vk::PipelineShaderStageCreateInfo> m_stage_info;
 };
 
-struct ModelPipelineComponent
+struct PipelineComponent
+{
+};
+struct ModelPipelineComponent : PipelineComponent
 {
 	enum {
 		DESCRIPTOR_TEXTURE_NUM = 16,
@@ -648,15 +651,15 @@ struct ModelPipelineComponent
 
 	}
 
-
-	void createDescriptorSet(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<Model>& model, std::shared_ptr<ModelRender>& render)
+	std::shared_ptr<ModelRender> createRender(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<Model>& model)
 	{
 		auto& device = context->m_device;
+		auto render = std::make_shared<ModelRender>();
+
 		vk::DescriptorSetLayout layouts[] =
 		{
 			m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_MODEL].get()
 		};
-
 		vk::DescriptorSetAllocateInfo descriptor_set_alloc_info;
 		descriptor_set_alloc_info.setDescriptorPool(m_model_descriptor_pool.get());
 		descriptor_set_alloc_info.setDescriptorSetCount(array_length(layouts));
@@ -691,11 +694,39 @@ struct ModelPipelineComponent
 			.setDstSet(render->m_descriptor_set_model.get()),
 		};
 		device->updateDescriptorSets(drawWriteDescriptorSets, {});
-	}
-	void bindDescriptor(std::shared_ptr<ModelRender>& render, vk::CommandBuffer& cmd)
-	{
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 0, render->m_descriptor_set_model.get(), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
+
+		// recode command
+		{
+			vk::CommandBufferAllocateInfo cmd_buffer_info;
+			cmd_buffer_info.commandBufferCount = sGlobal::FRAME_MAX;
+			cmd_buffer_info.commandPool = context->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
+			cmd_buffer_info.level = vk::CommandBufferLevel::eSecondary;
+			render->m_draw_cmd = context->m_device->allocateCommandBuffersUnique(cmd_buffer_info);
+
+			for (size_t i = 0; i < render->m_draw_cmd.size(); i++)
+			{
+				auto& cmd = render->m_draw_cmd[i].get();
+				vk::CommandBufferBeginInfo begin_info;
+				begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse | vk::CommandBufferUsageFlagBits::eRenderPassContinue);
+				vk::CommandBufferInheritanceInfo inheritance_info;
+				inheritance_info.setFramebuffer(getRenderPassComponent()->getFramebuffer(i));
+				inheritance_info.setRenderPass(getRenderPassComponent()->getRenderPass());
+				begin_info.pInheritanceInfo = &inheritance_info;
+
+				cmd.begin(begin_info);
+
+				cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, getPipeline());
+				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 0, render->m_descriptor_set_model.get(), {});
+				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
+				cmd.bindVertexBuffers(0, { model->m_model_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().buffer }, { model->m_model_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().offset });
+				cmd.bindIndexBuffer(model->m_model_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().buffer, model->m_model_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().offset, model->m_model_resource->m_mesh_resource.mIndexType);
+				cmd.drawIndexedIndirect(model->m_model_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().buffer, model->m_model_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().offset, model->m_model_resource->m_mesh_resource.mIndirectCount, sizeof(cModel::Mesh));
+
+				cmd.end();
+			}
+		}
+
+		return render;
 	}
 	const std::shared_ptr<RenderPassModule>& getRenderPassComponent()const { return m_render_pass; }
 	vk::Pipeline getPipeline()const { return m_pipeline.get(); }

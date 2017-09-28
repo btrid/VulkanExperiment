@@ -51,42 +51,9 @@ std::shared_ptr<Model> cModelPipeline::createRender(std::shared_ptr<btr::Context
 	model->m_model_resource = resource;
 	model->m_material = std::make_shared<DefaultMaterialModule>(context, resource);
 	model->m_animation = std::make_shared<DefaultAnimationModule>(context, resource);
-	auto render = std::make_shared<ModelRender>();
+	model->m_render = m_pipeline->createRender(context, model);
+	
 
-	{
-		m_pipeline->createDescriptorSet(context, model, render);
-	}
-
-
-	{
-		vk::CommandBufferAllocateInfo cmd_buffer_info;
-		cmd_buffer_info.commandBufferCount = sGlobal::FRAME_MAX;
-		cmd_buffer_info.commandPool = context->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
-		cmd_buffer_info.level = vk::CommandBufferLevel::eSecondary;
-		render->m_draw_cmd = context->m_device->allocateCommandBuffersUnique(cmd_buffer_info);
-
-		for (size_t i = 0; i < render->m_draw_cmd.size(); i++)
-		{
-			auto& cmd = render->m_draw_cmd[i].get();
-			vk::CommandBufferBeginInfo begin_info;
-			begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse | vk::CommandBufferUsageFlagBits::eRenderPassContinue);
-			vk::CommandBufferInheritanceInfo inheritance_info;
-			inheritance_info.setFramebuffer(m_pipeline->getRenderPassComponent()->getFramebuffer(i));
-			inheritance_info.setRenderPass(m_pipeline->getRenderPassComponent()->getRenderPass());
-			begin_info.pInheritanceInfo = &inheritance_info;
-
-			cmd.begin(begin_info);
-
-			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline->getPipeline());
-			m_pipeline->bindDescriptor(render, cmd);
-			cmd.bindVertexBuffers(0, { resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().buffer }, { resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().offset });
-			cmd.bindIndexBuffer(resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().buffer, resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().offset, resource->m_mesh_resource.mIndexType);
-			cmd.drawIndexedIndirect(resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().buffer, resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().offset, resource->m_mesh_resource.mIndirectCount, sizeof(cModel::Mesh));
-
-			cmd.end();
-		}
-	}
-	model->m_render = std::move(render);
 	m_model.push_back(model);
 	return model;
 
