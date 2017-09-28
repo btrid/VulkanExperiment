@@ -15,7 +15,7 @@ void cModelPipeline::setup(std::shared_ptr<btr::Context>& context)
 		{ path + "ModelRender.frag.spv",vk::ShaderStageFlagBits::eFragment },
 	};
 	auto shader = std::make_shared<ShaderModule>(context, shader_desc);
-	m_pipeline = std::make_shared<ModelPipelineComponent>(context, render_pass, shader);
+	m_pipeline = std::make_shared<DefaultModelPipelineComponent>(context, render_pass, shader);
 }
 
 vk::CommandBuffer cModelPipeline::draw(std::shared_ptr<btr::Context>& context)
@@ -29,9 +29,9 @@ vk::CommandBuffer cModelPipeline::draw(std::shared_ptr<btr::Context>& context)
 	}
 
 	vk::RenderPassBeginInfo begin_render_Info;
-	begin_render_Info.setRenderPass(m_pipeline->getRenderPassComponent()->getRenderPass());
+	begin_render_Info.setRenderPass(m_pipeline->getRenderPassModule()->getRenderPass());
 	begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), context->m_window->getClientSize<vk::Extent2D>()));
-	begin_render_Info.setFramebuffer(m_pipeline->getRenderPassComponent()->getFramebuffer(context->getGPUFrame()));
+	begin_render_Info.setFramebuffer(m_pipeline->getRenderPassModule()->getFramebuffer(context->getGPUFrame()));
 	cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eSecondaryCommandBuffers);
 
 	for (auto& render : m_model)

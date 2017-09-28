@@ -482,12 +482,19 @@ private:
 struct PipelineComponent
 {
 };
-struct ModelPipelineComponent : PipelineComponent
+struct ModelPipelineComponent : public PipelineComponent
+{
+	virtual std::shared_ptr<ModelRender> createRender(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<Model>& model) = 0;
+	virtual const std::shared_ptr<RenderPassModule>& getRenderPassModule()const = 0;
+	virtual vk::Pipeline getPipeline()const = 0;
+};
+struct DefaultModelPipelineComponent : public ModelPipelineComponent
 {
 	enum {
 		DESCRIPTOR_TEXTURE_NUM = 16,
 	};
-	ModelPipelineComponent(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderPassModule>& render_pass, const std::shared_ptr<ShaderModule>& shader)
+
+	DefaultModelPipelineComponent(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderPassModule>& render_pass, const std::shared_ptr<ShaderModule>& shader)
 	{
 		auto& device = context->m_device;
 		m_render_pass = render_pass;
@@ -637,7 +644,7 @@ struct ModelPipelineComponent : PipelineComponent
 
 	}
 
-	std::shared_ptr<ModelRender> createRender(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<Model>& model)
+	std::shared_ptr<ModelRender> createRender(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<Model>& model) override
 	{
 		auto& device = context->m_device;
 		auto render = std::make_shared<ModelRender>();
@@ -695,8 +702,8 @@ struct ModelPipelineComponent : PipelineComponent
 				vk::CommandBufferBeginInfo begin_info;
 				begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse | vk::CommandBufferUsageFlagBits::eRenderPassContinue);
 				vk::CommandBufferInheritanceInfo inheritance_info;
-				inheritance_info.setFramebuffer(getRenderPassComponent()->getFramebuffer(i));
-				inheritance_info.setRenderPass(getRenderPassComponent()->getRenderPass());
+				inheritance_info.setFramebuffer(getRenderPassModule()->getFramebuffer(i));
+				inheritance_info.setRenderPass(getRenderPassModule()->getRenderPass());
 				begin_info.pInheritanceInfo = &inheritance_info;
 
 				cmd.begin(begin_info);
@@ -714,8 +721,8 @@ struct ModelPipelineComponent : PipelineComponent
 
 		return render;
 	}
-	const std::shared_ptr<RenderPassModule>& getRenderPassComponent()const { return m_render_pass; }
-	vk::Pipeline getPipeline()const { return m_pipeline.get(); }
+	virtual const std::shared_ptr<RenderPassModule>& getRenderPassModule()const override { return m_render_pass; }
+	virtual vk::Pipeline getPipeline()const override { return m_pipeline.get(); }
 
 private:
 
