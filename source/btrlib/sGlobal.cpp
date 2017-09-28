@@ -114,7 +114,7 @@ vk::UniqueShaderModule loadShaderUnique(const vk::Device& device, const std::str
 		.setCodeSize(buffer.size());
 	return device.createShaderModuleUnique(shaderInfo);
 }
-vk::DescriptorPool createPool(vk::Device device, const std::vector<std::vector<vk::DescriptorSetLayoutBinding>>& bindings)
+vk::UniqueDescriptorPool createDescriptorPool(vk::Device device, const std::vector<std::vector<vk::DescriptorSetLayoutBinding>>& bindings, uint32_t set_size)
 {
 	std::vector<vk::DescriptorPoolSize> pool_size(VK_DESCRIPTOR_TYPE_RANGE_SIZE);
 	for (auto& binding : bindings)
@@ -122,35 +122,14 @@ vk::DescriptorPool createPool(vk::Device device, const std::vector<std::vector<v
 		for (auto& b : binding)
 		{
 			pool_size[(uint32_t)b.descriptorType].setType(b.descriptorType);
-			pool_size[(uint32_t)b.descriptorType].descriptorCount++;
+			pool_size[(uint32_t)b.descriptorType].descriptorCount += b.descriptorCount*set_size;
 		}
 	}
 	pool_size.erase(std::remove_if(pool_size.begin(), pool_size.end(), [](auto& p) {return p.descriptorCount == 0; }), pool_size.end());
 	vk::DescriptorPoolCreateInfo pool_info;
 	pool_info.setPoolSizeCount((uint32_t)pool_size.size());
 	pool_info.setPPoolSizes(pool_size.data());
-	pool_info.setMaxSets((uint32_t)bindings.size());
-	return device.createDescriptorPool(pool_info);
+	pool_info.setMaxSets(set_size);
+	return device.createDescriptorPoolUnique(pool_info);
 
-}
-
-std::unique_ptr<Descriptor> createDescriptor(vk::Device device, vk::DescriptorPool pool, const std::vector<std::vector<vk::DescriptorSetLayoutBinding>>& bindings)
-{
-	std::unique_ptr<Descriptor> descriptor = std::make_unique<Descriptor>();
-	descriptor->m_descriptor_pool = pool;
-	descriptor->m_descriptor_set_layout.resize(bindings.size());
-	for (size_t i = 0; i < bindings.size(); i++)
-	{
-		vk::DescriptorSetLayoutCreateInfo descriptor_set_layout_info = vk::DescriptorSetLayoutCreateInfo()
-			.setBindingCount((uint32_t)bindings[i].size())
-			.setPBindings(bindings[i].data());
-		descriptor->m_descriptor_set_layout[i] = device.createDescriptorSetLayout(descriptor_set_layout_info);
-	}
-
-	vk::DescriptorSetAllocateInfo alloc_info;
-	alloc_info.descriptorPool = descriptor->m_descriptor_pool;
-	alloc_info.descriptorSetCount = (uint32_t)descriptor->m_descriptor_set_layout.size();
-	alloc_info.pSetLayouts = descriptor->m_descriptor_set_layout.data();
-	descriptor->m_descriptor_set = device.allocateDescriptorSets(alloc_info);
-	return std::move(descriptor);
 }

@@ -121,7 +121,7 @@ struct cTriangleLL
 					.setPBindings(bindings.data());
 				m_descriptor_set_layout = loader.m_device->createDescriptorSetLayout(descriptor_set_layout_info);
 
-				m_descriptor_pool = createPool(loader.m_device.getHandle(), { bindings });
+				m_descriptor_pool = createDescriptorPool(loader.m_device.getHandle(), { bindings });
 
 				vk::DescriptorSetAllocateInfo alloc_info;
 				alloc_info.descriptorPool = m_descriptor_pool;
@@ -503,7 +503,7 @@ struct cTriangleLL
 				.setPBindings(bindings.data());
 			m_descriptor_set_layout = loader.m_device->createDescriptorSetLayout(descriptor_set_layout_info);
 
-			m_descriptor_pool = createPool(loader.m_device.getHandle(), { bindings });
+			m_descriptor_pool = createDescriptorPool(loader.m_device.getHandle(), { bindings });
 
 			vk::DescriptorSetAllocateInfo alloc_info;
 			alloc_info.descriptorPool = m_descriptor_pool;

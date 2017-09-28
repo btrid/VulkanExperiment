@@ -493,160 +493,146 @@ struct ModelPipelineComponent : PipelineComponent
 		m_render_pass = render_pass;
 		m_shader = shader;
 
-		// Create compute pipeline
-		std::vector<std::vector<vk::DescriptorSetLayoutBinding>> bindings(DESCRIPTOR_SET_LAYOUT_NUM);
-		bindings[DESCRIPTOR_SET_LAYOUT_MODEL] =
+		// Create descriptor set
 		{
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(1)
-			.setBinding(0),
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(1)
-			.setBinding(1),
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(1)
-			.setBinding(2),
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(1)
-			.setBinding(3),
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(1)
-			.setBinding(4),
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
-			.setDescriptorCount(16)
-			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-			.setBinding(5),
-		};
-
-		for (u32 i = 0; i < bindings.size(); i++)
-		{
-			vk::DescriptorSetLayoutCreateInfo descriptor_layout_info = vk::DescriptorSetLayoutCreateInfo()
-				.setBindingCount(bindings[i].size())
-				.setPBindings(bindings[i].data());
-			m_descriptor_set_layout[i] = device->createDescriptorSetLayoutUnique(descriptor_layout_info);
-		}
-
-		{
+			std::vector<std::vector<vk::DescriptorSetLayoutBinding>> bindings(DESCRIPTOR_SET_LAYOUT_NUM);
+			bindings[DESCRIPTOR_SET_LAYOUT_MODEL] =
 			{
-				vk::DescriptorSetLayout layouts[] = {
-					m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_MODEL].get(),
-					sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA)
-				};
-				vk::PipelineLayoutCreateInfo pipeline_layout_info;
-				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
-				pipeline_layout_info.setPSetLayouts(layouts);
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(1)
+				.setBinding(0),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(1)
+				.setBinding(1),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(1)
+				.setBinding(2),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(1)
+				.setBinding(3),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(1)
+				.setBinding(4),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
+				.setDescriptorCount(DESCRIPTOR_TEXTURE_NUM)
+				.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+				.setBinding(5),
+			};
 
-				m_pipeline_layout = device->createPipelineLayoutUnique(pipeline_layout_info);
-			}
-
-		}
-
-		// DescriptorPool
-		{
-			std::vector<vk::DescriptorPoolSize> descriptor_pool_size;
-			for (auto& binding : bindings)
+			for (u32 i = 0; i < bindings.size(); i++)
 			{
-				for (auto& buffer : binding)
-				{
-					descriptor_pool_size.emplace_back(buffer.descriptorType, buffer.descriptorCount * 10);
-				}
+				vk::DescriptorSetLayoutCreateInfo descriptor_layout_info = vk::DescriptorSetLayoutCreateInfo()
+					.setBindingCount(bindings[i].size())
+					.setPBindings(bindings[i].data());
+				m_descriptor_set_layout[i] = device->createDescriptorSetLayoutUnique(descriptor_layout_info);
 			}
-			vk::DescriptorPoolCreateInfo descriptor_pool_info;
-			descriptor_pool_info.maxSets = 20;
-			descriptor_pool_info.poolSizeCount = descriptor_pool_size.size();
-			descriptor_pool_info.pPoolSizes = descriptor_pool_size.data();
-			m_model_descriptor_pool = device->createDescriptorPoolUnique(descriptor_pool_info);
+			// DescriptorPool
+			{
+				m_model_descriptor_pool = createDescriptorPool(device.getHandle(), bindings, 30);
+			}
 		}
 
 
-		vk::Extent3D size;
-		size.setWidth(context->m_window->getClientSize().x);
-		size.setHeight(context->m_window->getClientSize().y);
-		size.setDepth(1);
+		// pipeline layout
+		{
+			vk::DescriptorSetLayout layouts[] = {
+				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_MODEL].get(),
+				sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA)
+			};
+			vk::PipelineLayoutCreateInfo pipeline_layout_info;
+			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
+			pipeline_layout_info.setPSetLayouts(layouts);
+
+			m_pipeline_layout = device->createPipelineLayoutUnique(pipeline_layout_info);
+
+		}
+
 		// pipeline
 		{
+			// assembly
+			vk::PipelineInputAssemblyStateCreateInfo assembly_info = vk::PipelineInputAssemblyStateCreateInfo()
+				.setPrimitiveRestartEnable(VK_FALSE)
+				.setTopology(vk::PrimitiveTopology::eTriangleList);
+
+			vk::Extent3D size;
+			size.setWidth(context->m_window->getClientSize().x);
+			size.setHeight(context->m_window->getClientSize().y);
+			size.setDepth(1);
+			// viewport
+			vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)size.width, (float)size.height, 0.f, 1.f);
+			vk::Rect2D scissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(size.width, size.height));
+			vk::PipelineViewportStateCreateInfo viewport_info;
+			viewport_info.setViewportCount(1);
+			viewport_info.setPViewports(&viewport);
+			viewport_info.setScissorCount(1);
+			viewport_info.setPScissors(&scissor);
+
+			// ラスタライズ
+			vk::PipelineRasterizationStateCreateInfo rasterization_info;
+			rasterization_info.setPolygonMode(vk::PolygonMode::eFill);
+			rasterization_info.setCullMode(vk::CullModeFlagBits::eBack);
+			rasterization_info.setFrontFace(vk::FrontFace::eCounterClockwise);
+			rasterization_info.setLineWidth(1.f);
+			// サンプリング
+			vk::PipelineMultisampleStateCreateInfo sample_info;
+			sample_info.setRasterizationSamples(vk::SampleCountFlagBits::e1);
+
+			// デプスステンシル
+			vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
+			depth_stencil_info.setDepthTestEnable(VK_TRUE);
+			depth_stencil_info.setDepthWriteEnable(VK_TRUE);
+			depth_stencil_info.setDepthCompareOp(vk::CompareOp::eLessOrEqual);
+			depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
+			depth_stencil_info.setStencilTestEnable(VK_FALSE);
+
+			// ブレンド
+			std::vector<vk::PipelineColorBlendAttachmentState> blend_state = {
+				vk::PipelineColorBlendAttachmentState()
+				.setBlendEnable(VK_FALSE)
+				.setColorWriteMask(vk::ColorComponentFlagBits::eR
+					| vk::ColorComponentFlagBits::eG
+					| vk::ColorComponentFlagBits::eB
+					| vk::ColorComponentFlagBits::eA)
+			};
+			vk::PipelineColorBlendStateCreateInfo blend_info;
+			blend_info.setAttachmentCount(blend_state.size());
+			blend_info.setPAttachments(blend_state.data());
+
+			auto vertex_input_binding = cModel::GetVertexInputBinding();
+			auto vertex_input_attribute = cModel::GetVertexInputAttribute();
+			vk::PipelineVertexInputStateCreateInfo vertex_input_info;
+			vertex_input_info.setVertexBindingDescriptionCount((uint32_t)vertex_input_binding.size());
+			vertex_input_info.setPVertexBindingDescriptions(vertex_input_binding.data());
+			vertex_input_info.setVertexAttributeDescriptionCount((uint32_t)vertex_input_attribute.size());
+			vertex_input_info.setPVertexAttributeDescriptions(vertex_input_attribute.data());
+
+			std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =
 			{
-				// assembly
-				vk::PipelineInputAssemblyStateCreateInfo assembly_info = vk::PipelineInputAssemblyStateCreateInfo()
-					.setPrimitiveRestartEnable(VK_FALSE)
-					.setTopology(vk::PrimitiveTopology::eTriangleList);
-
-				// viewport
-				vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)size.width, (float)size.height, 0.f, 1.f);
-				vk::Rect2D scissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(size.width, size.height));
-				vk::PipelineViewportStateCreateInfo viewport_info;
-				viewport_info.setViewportCount(1);
-				viewport_info.setPViewports(&viewport);
-				viewport_info.setScissorCount(1);
-				viewport_info.setPScissors(&scissor);
-
-				// ラスタライズ
-				vk::PipelineRasterizationStateCreateInfo rasterization_info;
-				rasterization_info.setPolygonMode(vk::PolygonMode::eFill);
-				rasterization_info.setCullMode(vk::CullModeFlagBits::eBack);
-				rasterization_info.setFrontFace(vk::FrontFace::eCounterClockwise);
-				rasterization_info.setLineWidth(1.f);
-				// サンプリング
-				vk::PipelineMultisampleStateCreateInfo sample_info;
-				sample_info.setRasterizationSamples(vk::SampleCountFlagBits::e1);
-
-				// デプスステンシル
-				vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
-				depth_stencil_info.setDepthTestEnable(VK_TRUE);
-				depth_stencil_info.setDepthWriteEnable(VK_TRUE);
-				depth_stencil_info.setDepthCompareOp(vk::CompareOp::eLessOrEqual);
-				depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
-				depth_stencil_info.setStencilTestEnable(VK_FALSE);
-
-				// ブレンド
-				std::vector<vk::PipelineColorBlendAttachmentState> blend_state = {
-					vk::PipelineColorBlendAttachmentState()
-					.setBlendEnable(VK_FALSE)
-					.setColorWriteMask(vk::ColorComponentFlagBits::eR
-						| vk::ColorComponentFlagBits::eG
-						| vk::ColorComponentFlagBits::eB
-						| vk::ColorComponentFlagBits::eA)
-				};
-				vk::PipelineColorBlendStateCreateInfo blend_info;
-				blend_info.setAttachmentCount(blend_state.size());
-				blend_info.setPAttachments(blend_state.data());
-
-				auto vertex_input_binding = cModel::GetVertexInputBinding();
-				auto vertex_input_attribute = cModel::GetVertexInputAttribute();
-				vk::PipelineVertexInputStateCreateInfo vertex_input_info;
-				vertex_input_info.setVertexBindingDescriptionCount((uint32_t)vertex_input_binding.size());
-				vertex_input_info.setPVertexBindingDescriptions(vertex_input_binding.data());
-				vertex_input_info.setVertexAttributeDescriptionCount((uint32_t)vertex_input_attribute.size());
-				vertex_input_info.setPVertexAttributeDescriptions(vertex_input_attribute.data());
-
-				std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =
-				{
-					vk::GraphicsPipelineCreateInfo()
-					.setStageCount((uint32_t)shader->getShaderStageInfo().size())
-					.setPStages(shader->getShaderStageInfo().data())
-					.setPVertexInputState(&vertex_input_info)
-					.setPInputAssemblyState(&assembly_info)
-					.setPViewportState(&viewport_info)
-					.setPRasterizationState(&rasterization_info)
-					.setPMultisampleState(&sample_info)
-					.setLayout(m_pipeline_layout.get())
-					.setRenderPass(render_pass->getRenderPass())
-					.setPDepthStencilState(&depth_stencil_info)
-					.setPColorBlendState(&blend_info),
-				};
-				m_pipeline = std::move(device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info)[0]);
-			}
+				vk::GraphicsPipelineCreateInfo()
+				.setStageCount((uint32_t)shader->getShaderStageInfo().size())
+				.setPStages(shader->getShaderStageInfo().data())
+				.setPVertexInputState(&vertex_input_info)
+				.setPInputAssemblyState(&assembly_info)
+				.setPViewportState(&viewport_info)
+				.setPRasterizationState(&rasterization_info)
+				.setPMultisampleState(&sample_info)
+				.setLayout(m_pipeline_layout.get())
+				.setRenderPass(render_pass->getRenderPass())
+				.setPDepthStencilState(&depth_stencil_info)
+				.setPColorBlendState(&blend_info),
+			};
+			m_pipeline = std::move(device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info)[0]);
 		}
 
 	}
