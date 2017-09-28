@@ -1,15 +1,13 @@
 
 #include <applib/cModelPipeline.h>
-#include <applib/cModelRender.h>
-#include <applib/cModelRenderPrivate.h>
 #include <applib/sCameraManager.h>
 #include <btrlib/Define.h>
 #include <btrlib/Shape.h>
-#include <btrlib/cModel.h>
+#include <applib/DrawHelper.h>
 
-void cModelPipeline::setup(std::shared_ptr<btr::Context>& loader)
+void cModelPipeline::setup(std::shared_ptr<btr::Context>& context)
 {
-	auto& device = loader->m_device;
+	auto& device = context->m_device;
 
 	// レンダーパス
 	{
@@ -35,14 +33,14 @@ void cModelPipeline::setup(std::shared_ptr<btr::Context>& loader)
 		std::vector<vk::AttachmentDescription> attach_description = {
 			// color1
 			vk::AttachmentDescription()
-			.setFormat(loader->m_window->getSwapchain().m_surface_format.format)
+			.setFormat(context->m_window->getSwapchain().m_surface_format.format)
 			.setSamples(vk::SampleCountFlagBits::e1)
 			.setLoadOp(vk::AttachmentLoadOp::eLoad)
 			.setStoreOp(vk::AttachmentStoreOp::eStore)
 			.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
 			.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
 			vk::AttachmentDescription()
-			.setFormat(loader->m_window->getSwapchain().m_depth.m_format)
+			.setFormat(context->m_window->getSwapchain().m_depth.m_format)
 			.setSamples(vk::SampleCountFlagBits::e1)
 			.setLoadOp(vk::AttachmentLoadOp::eLoad)
 			.setStoreOp(vk::AttachmentStoreOp::eStore)
@@ -55,10 +53,10 @@ void cModelPipeline::setup(std::shared_ptr<btr::Context>& loader)
 			.setSubpassCount(1)
 			.setPSubpasses(&subpass);
 
-		m_render_pass = loader->m_device->createRenderPassUnique(renderpass_info);
+		m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
 	}
 
-	m_framebuffer.resize(loader->m_window->getSwapchain().getBackbufferNum());
+	m_framebuffer.resize(context->m_window->getSwapchain().getBackbufferNum());
 	{
 		std::array<vk::ImageView, 2> view;
 
@@ -66,14 +64,14 @@ void cModelPipeline::setup(std::shared_ptr<btr::Context>& loader)
 		framebuffer_info.setRenderPass(m_render_pass.get());
 		framebuffer_info.setAttachmentCount((uint32_t)view.size());
 		framebuffer_info.setPAttachments(view.data());
-		framebuffer_info.setWidth(loader->m_window->getClientSize().x);
-		framebuffer_info.setHeight(loader->m_window->getClientSize().y);
+		framebuffer_info.setWidth(context->m_window->getClientSize().x);
+		framebuffer_info.setHeight(context->m_window->getClientSize().y);
 		framebuffer_info.setLayers(1);
 
 		for (size_t i = 0; i < m_framebuffer.size(); i++) {
-			view[0] = loader->m_window->getSwapchain().m_backbuffer[i].m_view;
-			view[1] = loader->m_window->getSwapchain().m_depth.m_view;
-			m_framebuffer[i] = loader->m_device->createFramebufferUnique(framebuffer_info);
+			view[0] = context->m_window->getSwapchain().m_backbuffer[i].m_view;
+			view[1] = context->m_window->getSwapchain().m_depth.m_view;
+			m_framebuffer[i] = context->m_device->createFramebufferUnique(framebuffer_info);
 		}
 	}
 
@@ -178,8 +176,8 @@ void cModelPipeline::setup(std::shared_ptr<btr::Context>& loader)
 
 
 	vk::Extent3D size;
-	size.setWidth(loader->m_window->getClientSize().x);
-	size.setHeight(loader->m_window->getClientSize().y);
+	size.setWidth(context->m_window->getClientSize().x);
+	size.setHeight(context->m_window->getClientSize().y);
 	size.setDepth(1);
 	// pipeline
 	{
@@ -259,16 +257,9 @@ void cModelPipeline::setup(std::shared_ptr<btr::Context>& loader)
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			m_render_pipeline = std::move(device->createGraphicsPipelinesUnique(loader->m_cache.get(), graphics_pipeline_info)[0]);
+			m_render_pipeline = std::move(device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info)[0]);
 		}
-
 	}
-}
-
-void cModelPipeline::addModel(std::shared_ptr<btr::Context>& executer, const std::shared_ptr<cModelRender>& model)
-{
-	m_model.emplace_back(model);
-	m_model.back()->getPrivate()->setup(executer, *this);
 }
 
 vk::CommandBuffer cModelPipeline::draw(std::shared_ptr<btr::Context>& context)
@@ -278,7 +269,7 @@ vk::CommandBuffer cModelPipeline::draw(std::shared_ptr<btr::Context>& context)
 	// draw
 	for (auto& render : m_model)
 	{
-		render->getPrivate()->execute(context, cmd);
+		render->m_animation->execute(context, cmd);
 	}
 
 	vk::RenderPassBeginInfo begin_render_Info;
@@ -289,10 +280,100 @@ vk::CommandBuffer cModelPipeline::draw(std::shared_ptr<btr::Context>& context)
 
 	for (auto& render : m_model)
 	{
-		render->getPrivate()->draw(context, cmd);
+		render->m_render->draw(context, cmd);
 	}
 	cmd.endRenderPass();
 
 	cmd.end();
 	return cmd;
+}
+std::shared_ptr<Model> cModelPipeline::createRender(std::shared_ptr<btr::Context>& context, const std::shared_ptr<cModel::Resource>& resource)
+{
+	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+
+	auto model = std::make_shared<Model>();
+	model->m_material = std::make_shared<DefaultMaterialModule>(context, resource);
+	model->m_animation = std::make_shared<DefaultAnimationModule>(context, resource);
+	auto render = std::make_shared<ModelRender>();
+
+
+	{
+		auto& device = context->m_device;
+		{
+			vk::DescriptorSetLayout layouts[] =
+			{
+				m_descriptor_set_layout[cModelPipeline::DESCRIPTOR_SET_LAYOUT_MODEL].get()
+			};
+
+			vk::DescriptorSetAllocateInfo descriptor_set_alloc_info;
+			descriptor_set_alloc_info.setDescriptorPool(m_model_descriptor_pool.get());
+			descriptor_set_alloc_info.setDescriptorSetCount(array_length(layouts));
+			descriptor_set_alloc_info.setPSetLayouts(layouts);
+			render->m_descriptor_set_model = std::move(device->allocateDescriptorSetsUnique(descriptor_set_alloc_info)[0]);
+
+			std::vector<vk::DescriptorBufferInfo> storages = {
+				model->m_animation->getBoneBuffer().getBufferInfo(),
+				model->m_material->getMaterialIndexBuffer().getBufferInfo(),
+				model->m_material->getMaterialBuffer().getBufferInfo(),
+			};
+
+			std::vector<vk::DescriptorImageInfo> color_images(cModelPipeline::DESCRIPTOR_TEXTURE_NUM, vk::DescriptorImageInfo(DrawHelper::Order().getWhiteTexture().m_sampler.get(), DrawHelper::Order().getWhiteTexture().m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal));
+			for (size_t i = 0; i < resource->m_mesh.size(); i++)
+			{
+				auto& material = resource->m_material[resource->m_mesh[i].m_material_index];
+				color_images[i] = vk::DescriptorImageInfo(material.mDiffuseTex.getSampler(), material.mDiffuseTex.getImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
+			}
+			std::vector<vk::WriteDescriptorSet> drawWriteDescriptorSets =
+			{
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount((uint32_t)storages.size())
+				.setPBufferInfo(storages.data())
+				.setDstBinding(2)
+				.setDstSet(render->m_descriptor_set_model.get()),
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+				.setDescriptorCount((uint32_t)color_images.size())
+				.setPImageInfo(color_images.data())
+				.setDstBinding(5)
+				.setDstSet(render->m_descriptor_set_model.get()),
+			};
+			device->updateDescriptorSets(drawWriteDescriptorSets, {});
+		}
+	}
+
+
+	{
+		vk::CommandBufferAllocateInfo cmd_buffer_info;
+		cmd_buffer_info.commandBufferCount = sGlobal::FRAME_MAX;
+		cmd_buffer_info.commandPool = context->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
+		cmd_buffer_info.level = vk::CommandBufferLevel::eSecondary;
+		render->m_draw_cmd = context->m_device->allocateCommandBuffersUnique(cmd_buffer_info);
+
+		for (size_t i = 0; i < render->m_draw_cmd.size(); i++)
+		{
+			auto& cmd = render->m_draw_cmd[i].get();
+			vk::CommandBufferBeginInfo begin_info;
+			begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse | vk::CommandBufferUsageFlagBits::eRenderPassContinue);
+			vk::CommandBufferInheritanceInfo inheritance_info;
+			inheritance_info.setFramebuffer(m_framebuffer[i].get());
+			inheritance_info.setRenderPass(m_render_pass.get());
+			begin_info.pInheritanceInfo = &inheritance_info;
+
+			cmd.begin(begin_info);
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_render_pipeline.get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[cModelPipeline::PIPELINE_LAYOUT_RENDER].get(), 0, render->m_descriptor_set_model.get(), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[cModelPipeline::PIPELINE_LAYOUT_RENDER].get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
+			cmd.bindVertexBuffers(0, { resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().buffer }, { resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().offset });
+			cmd.bindIndexBuffer(resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().buffer, resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().offset, resource->m_mesh_resource.mIndexType);
+			cmd.drawIndexedIndirect(resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().buffer, resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().offset, resource->m_mesh_resource.mIndirectCount, sizeof(cModel::Mesh));
+
+			cmd.end();
+		}
+	}
+	model->m_render = std::move(render);
+	m_model.push_back(model);
+	return model;
+
 }

@@ -22,8 +22,6 @@
 #include <btrlib/cModel.h>
 #include <btrlib/cCamera.h>
 #include <btrlib/AllocatedMemory.h>
-#include <applib/cModelRender.h>
-#include <applib/cModelRenderPrivate.h>
 #include <applib/cModelPipeline.h>
 #include <applib/sCameraManager.h>
 #include <applib/App.h>
@@ -45,9 +43,7 @@ int main()
 	camera->getData().m_far = 10000.f;
 	camera->getData().m_near = 0.01f;
 
-
 	auto gpu = sGlobal::Order().getGPU(0);
-	auto device = sGlobal::Order().getGPU(0).getDevice();
 
 	app::App app;
 	app.setup(gpu);
@@ -58,34 +54,30 @@ int main()
 	model.load(context, btr::getResourceAppPath() + "tiny.x");
 
 
-	std::shared_ptr<cModelRender> render = std::make_shared<cModelRender>();
-	render->setup(context, model.getResource());
+	cModelPipeline renderer;
+	renderer.setup(context);
+	auto render = renderer.createRender(context, model.getResource());
 	{
 		PlayMotionDescriptor desc;
 		desc.m_data = model.getResource()->getAnimation().m_motion[0];
 		desc.m_play_no = 0;
 		desc.m_start_time = 0.f;
-		render->getMotionList().play(desc);
+		render->m_animation->getPlayList().play(desc);
 
-		auto& transform = render->getModelTransform();
+		auto& transform = render->m_animation->getModelTransform();
 		transform.m_local_scale = glm::vec3(0.02f);
 		transform.m_local_rotate = glm::quat(1.f, 0.f, 0.f, 0.f);
 		transform.m_local_translate = glm::vec3(0.f, 0.f, 0.f);
 	}
 
-
-	cModelPipeline renderer;
-	renderer.setup(context);
-	renderer.addModel(context, render);
- 
 	while (true)
 	{
 		cStopWatch time;
 
 		app.preUpdate();
 		{
-			render->getModelTransform().m_global = mat4(1.f);
-			render->work();
+			render->m_animation->getModelTransform().m_global = mat4(1.f);
+			render->m_animation->update();
 
 			std::vector<vk::CommandBuffer> render_cmds(1);
 			render_cmds[0] = renderer.draw(context);

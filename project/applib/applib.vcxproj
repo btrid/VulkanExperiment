@@ -74,8 +74,6 @@
     <ClInclude Include="..\..\include\applib\cModelInstancingPipeline.h" />
     <ClInclude Include="..\..\include\applib\cModelInstancingRender.h" />
     <ClInclude Include="..\..\include\applib\cModelPipeline.h" />
-    <ClInclude Include="..\..\include\applib\cModelRender.h" />
-    <ClInclude Include="..\..\include\applib\cModelRenderPrivate.h" />
     <ClInclude Include="..\..\include\applib\DrawHelper.h" />
     <ClInclude Include="..\..\include\applib\Geometry.h" />
     <ClInclude Include="..\..\include\applib\sCameraManager.h" />
@@ -90,8 +88,6 @@
     <ClCompile Include="..\..\source\applib\cModelInstancingPipeline.cpp" />
     <ClCompile Include="..\..\source\applib\cModelInstancingRender.cpp" />
     <ClCompile Include="..\..\source\applib\cModelPipeline.cpp" />
-    <ClCompile Include="..\..\source\applib\cModelRender.cpp" />
-    <ClCompile Include="..\..\source\applib\cModelRenderPrivate.cpp" />
     <ClCompile Include="..\..\source\applib\Geometry.cpp" />
     <ClCompile Include="..\..\source\applib\sParticlePipeline.cpp" />
   </ItemGroup>
