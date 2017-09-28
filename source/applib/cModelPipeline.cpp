@@ -30,7 +30,7 @@ vk::CommandBuffer cModelPipeline::draw(std::shared_ptr<btr::Context>& context)
 
 	vk::RenderPassBeginInfo begin_render_Info;
 	begin_render_Info.setRenderPass(m_pipeline->getRenderPassComponent()->getRenderPass());
-	begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(640, 480)));
+	begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), context->m_window->getClientSize<vk::Extent2D>()));
 	begin_render_Info.setFramebuffer(m_pipeline->getRenderPassComponent()->getFramebuffer(context->getGPUFrame()));
 	cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eSecondaryCommandBuffers);
 

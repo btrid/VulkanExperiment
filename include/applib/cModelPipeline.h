@@ -367,6 +367,7 @@ struct Model : public Drawable
 	std::shared_ptr<DefaultAnimationModule> m_animation;
 	
 	std::shared_ptr<ModelRender> m_render;
+
 };
 struct RenderPassModule
 {
@@ -580,14 +581,12 @@ struct ModelPipelineComponent
 
 				// viewport
 				vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)size.width, (float)size.height, 0.f, 1.f);
-				std::vector<vk::Rect2D> scissor = {
-					vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(size.width, size.height))
-				};
+				vk::Rect2D scissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(size.width, size.height));
 				vk::PipelineViewportStateCreateInfo viewport_info;
 				viewport_info.setViewportCount(1);
 				viewport_info.setPViewports(&viewport);
-				viewport_info.setScissorCount((uint32_t)scissor.size());
-				viewport_info.setPScissors(scissor.data());
+				viewport_info.setScissorCount(1);
+				viewport_info.setPScissors(&scissor);
 
 				// ラスタライズ
 				vk::PipelineRasterizationStateCreateInfo rasterization_info;
@@ -730,3 +729,4 @@ struct cModelPipeline
 	vk::CommandBuffer draw(std::shared_ptr<btr::Context>& executer);
 
 };
+

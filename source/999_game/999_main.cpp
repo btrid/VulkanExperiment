@@ -23,7 +23,6 @@
 
 #include <applib/App.h>
 #include <applib/cModelPipeline.h>
-#include <applib/cModelRender.h>
 #include <applib/DrawHelper.h>
 #include <btrlib/Context.h>
 #include <btrlib/VoxelPipeline.h>
@@ -133,43 +132,38 @@ int main()
 	app::App app;
 	app.setup(gpu);
 
-	auto loader = app.m_context;
-	auto executer = app.m_executer;
+	auto context = app.m_context;
 
 	cModelPipeline model_pipeline;
-	std::shared_ptr<cModelRender> model_render = std::make_shared<cModelRender>();
 	cModel model;
-
+	std::shared_ptr<Model> render;
 	Player m_player;
 	m_player.m_pos.x = 223.f;
 	m_player.m_pos.z = 183.f;
 	{
-		auto setup_cmd = loader->m_cmd_pool->allocCmdTempolary(0);
+		sScene::Order().setup(context);
 
-		sScene::Order().setup(loader);
-
-		model.load(loader, "..\\..\\resource\\tiny.x");
-		model_render->setup(loader, model.getResource());
-		model_pipeline.setup(loader);
-		model_pipeline.addModel(executer, model_render);
+		model.load(context, "..\\..\\resource\\tiny.x");
+		model_pipeline.setup(context);
+		render = model_pipeline.createRender(context, model.getResource());
 		{
 			PlayMotionDescriptor desc;
 			desc.m_data = model.getResource()->getAnimation().m_motion[0];
 			desc.m_play_no = 0;
 			desc.m_start_time = 0.f;
-			model_render->getMotionList().play(desc);
+			render->m_animation->getPlayList().play(desc);
 
-			auto& transform = model_render->getModelTransform();
-			transform.m_local_scale = glm::vec3(0.002f);
+			auto& transform = render->m_animation->getModelTransform();
+			transform.m_local_scale = glm::vec3(0.02f);
 			transform.m_local_rotate = glm::quat(1.f, 0.f, 0.f, 0.f);
-			transform.m_local_translate = glm::vec3(0.f, 280.f, 0.f);
+			transform.m_local_translate = glm::vec3(0.f, 0.f, 0.f);
 		}
 
- 		sBoid::Order().setup(loader);
-		sBulletSystem::Order().setup(loader);
- 		sCollisionSystem::Order().setup(loader);
+ 		sBoid::Order().setup(context);
+		sBulletSystem::Order().setup(context);
+ 		sCollisionSystem::Order().setup(context);
 
-		sScene::Order().getVoxel().createPipeline<MapVoxelize>(loader);
+		sScene::Order().getVoxel().createPipeline<MapVoxelize>(context);
 	}
 
 	while (true)
@@ -180,8 +174,8 @@ int main()
 		{
 			
 			{
-				m_player.execute(executer);
-				model_render->getModelTransform().m_global = glm::translate(m_player.m_pos) * glm::toMat4(glm::quat(glm::vec3(0.f, 0.f, 1.f), m_player.m_dir));
+				m_player.execute(context);
+				render->m_animation->getModelTransform().m_global = glm::translate(m_player.m_pos) * glm::toMat4(glm::quat(glm::vec3(0.f, 0.f, 1.f), m_player.m_dir));
 			}
 
 			SynchronizedPoint motion_worker_syncronized_point(1);
@@ -190,7 +184,7 @@ int main()
 				job.mFinish =
 					[&]()
 				{
-					model_render->work();
+					render->m_animation->update();
 					motion_worker_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);
@@ -203,8 +197,8 @@ int main()
 				job.mFinish =
 					[&]()
 				{
-					render_cmds[0] = sScene::Order().draw1(executer);
-					render_cmds[1] = sScene::Order().draw(executer);
+					render_cmds[0] = sScene::Order().draw1(context);
+					render_cmds[1] = sScene::Order().draw(context);
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);
@@ -214,7 +208,7 @@ int main()
 				job.mFinish =
 					[&]()
 				{
-					render_cmds[2] = sScene::Order().getVoxel().make(executer);
+					render_cmds[2] = sScene::Order().getVoxel().make(context);
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);
@@ -224,7 +218,7 @@ int main()
 				job.mFinish =
 					[&]()
 				{
-					render_cmds[3] = model_pipeline.draw(executer);
+					render_cmds[3] = model_pipeline.draw(context);
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);
@@ -234,8 +228,8 @@ int main()
 				job.mFinish =
 					[&]()
 				{
-					render_cmds[4] = sBoid::Order().execute(executer);
-					render_cmds[5] = sBoid::Order().draw(executer);
+					render_cmds[4] = sBoid::Order().execute(context);
+					render_cmds[5] = sBoid::Order().draw(context);
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);
@@ -245,8 +239,8 @@ int main()
 				job.mFinish =
 					[&]()
 				{
-					render_cmds[6] = sBulletSystem::Order().execute(executer);
-					render_cmds[7] = sBulletSystem::Order().draw(executer);
+					render_cmds[6] = sBulletSystem::Order().execute(context);
+					render_cmds[7] = sBulletSystem::Order().draw(context);
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);
@@ -256,7 +250,7 @@ int main()
 				job.mFinish =
 					[&]()
 				{
-					render_cmds[8] = sCollisionSystem::Order().execute(executer);
+					render_cmds[8] = sCollisionSystem::Order().execute(context);
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);

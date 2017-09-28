@@ -38,9 +38,9 @@ struct MapVoxelize : Voxelize
 
 	std::vector<vk::UniqueCommandBuffer> m_make_cmd;
 
-	void setup(std::shared_ptr<btr::Loader> loader, VoxelPipeline const * const parent)
+	void setup(std::shared_ptr<btr::Context> context, VoxelPipeline const * const parent)
 	{
-		auto& gpu = loader->m_gpu;
+		auto& gpu = context->m_gpu;
 		auto& device = gpu.getDevice();
 
 		// setup shader
@@ -84,13 +84,13 @@ struct MapVoxelize : Voxelize
 				.setStage(m_stage_info[SHADER_COMPUTE_VOXELIZE])
 				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_MAKE_VOXEL].get()),
 			};
-			auto compute_pipeline = loader->m_device->createComputePipelinesUnique(loader->m_cache.get(), compute_pipeline_info);
+			auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
 			m_pipeline[PIPELINE_COMPUTE_MAKE_VOXEL] = std::move(compute_pipeline[0]);
 
 		}
 	}
 
-	void draw(std::shared_ptr<btr::Executer>& executer, VoxelPipeline const * const parent, vk::CommandBuffer cmd)
+	void draw(std::shared_ptr<btr::Context>& context, VoxelPipeline const * const parent, vk::CommandBuffer cmd)
 	{
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COMPUTE_MAKE_VOXEL].get());
 
