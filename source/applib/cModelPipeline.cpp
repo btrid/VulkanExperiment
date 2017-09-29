@@ -12,11 +12,11 @@ struct DefaultAnimationModule : public AnimationModule
 		m_model_resource = resource;
 		// bone memory allocate
 		{
-			btr::UpdateBufferExDescriptor desc;
-			desc.alloc_size = (uint32_t)(resource->mBone.size() * sizeof(glm::mat4));
-			desc.device_memory = context->m_storage_memory;
-			desc.staging_memory = context->m_staging_memory;
-			desc.frame_max = sGlobal::FRAME_MAX;
+// 			btr::UpdateBufferDescriptor desc;
+// 			desc.device_memory = context->m_storage_memory;
+// 			desc.staging_memory = context->m_staging_memory;
+// 			desc.frame_max = context->m_window->getSwapchain().getBackbufferNum();
+// 			desc.element_num = resource->mBone.size();
 			m_bone_buffer_staging.resize(sGlobal::FRAME_MAX);
 			for (auto& buffer : m_bone_buffer_staging)
 			{
