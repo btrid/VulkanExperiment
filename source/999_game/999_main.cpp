@@ -426,7 +426,7 @@ int main()
 			desc.m_start_time = 0.f;
 			render->m_animation->getPlayList().play(desc);
 
-			auto& transform = render->m_animation->getModelTransform();
+			auto& transform = render->m_animation->getTransform();
 			transform.m_local_scale = glm::vec3(0.02f);
 			transform.m_local_rotate = glm::quat(1.f, 0.f, 0.f, 0.f);
 			transform.m_local_translate = glm::vec3(0.f, 0.f, 0.f);
@@ -443,7 +443,7 @@ int main()
 			
 			{
 				m_player.execute(context);
-				render->m_animation->getModelTransform().m_global = glm::translate(m_player.m_pos) * glm::toMat4(glm::quat(glm::vec3(0.f, 0.f, 1.f), m_player.m_dir));
+				render->m_animation->getTransform().m_global = glm::translate(m_player.m_pos) * glm::toMat4(glm::quat(glm::vec3(0.f, 0.f, 1.f), m_player.m_dir));
 			}
 
 			SynchronizedPoint motion_worker_syncronized_point(1);

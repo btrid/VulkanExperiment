@@ -75,17 +75,16 @@ int main()
 	app::App app;
 	app.setup(gpu);
 
-	auto loader = app.m_context;
-	auto executer = app.m_executer;
+	auto context = app.m_context;
 
 	auto task = std::make_shared<std::promise<std::unique_ptr<cModel>>>();
 	auto modelFuture = task->get_future();
 	{
 		cThreadJob job;
-		auto load = [task, &loader]()
+		auto load = [task, &context]()
 		{
 			auto model = std::make_unique<cModel>();
-			model->load(loader, btr::getResourceAppPath() + "tiny.x");
+			model->load(context, btr::getResourceAppPath() + "tiny.x");
 			task->set_value(std::move(model));
 		};
 		job.mFinish = load;
@@ -100,10 +99,10 @@ int main()
 
 
 	ModelInstancingRender render;
-	render.setup(loader, model->getResource(), 1000);
+	render.setup(context, model->getResource(), 1000);
 
 	cModelInstancingRenderer renderer;
-	renderer.setup(loader);
+	renderer.setup(context);
 	renderer.addModel(&render);
 
 	std::vector<ModelInstancingRender::InstanceResource> data(1000);
@@ -133,8 +132,8 @@ int main()
 				job.mJob.emplace_back(
 					[&]()
 				{
-					render_cmds[0] = renderer.execute(executer);
-					render_cmds[1] = renderer.draw(executer);
+					render_cmds[0] = renderer.execute(context);
+					render_cmds[1] = renderer.draw(context);
 					render_syncronized_point.arrive();
 				}
 				);

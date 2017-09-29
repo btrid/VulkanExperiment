@@ -64,7 +64,7 @@ int main()
 		desc.m_start_time = 0.f;
 		render->m_animation->getPlayList().play(desc);
 
-		auto& transform = render->m_animation->getModelTransform();
+		auto& transform = render->m_animation->getTransform();
 		transform.m_local_scale = glm::vec3(0.02f);
 		transform.m_local_rotate = glm::quat(1.f, 0.f, 0.f, 0.f);
 		transform.m_local_translate = glm::vec3(0.f, 0.f, 0.f);
@@ -76,7 +76,7 @@ int main()
 
 		app.preUpdate();
 		{
-			render->m_animation->getModelTransform().m_global = mat4(1.f);
+			render->m_animation->getTransform().m_global = mat4(1.f);
 			render->m_animation->update();
 
 			std::vector<vk::CommandBuffer> render_cmds(1);
