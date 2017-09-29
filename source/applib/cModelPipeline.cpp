@@ -5,17 +5,22 @@
 #include <btrlib/Shape.h>
 #include <applib/DrawHelper.h>
 
-void cModelPipeline::setup(std::shared_ptr<btr::Context>& context)
+void cModelPipeline::setup(std::shared_ptr<btr::Context>& context, const std::shared_ptr<ModelPipelineComponent>& pipeline /*= nullptr*/)
 {
-	auto render_pass = std::make_shared<RenderPassModule>(context);
-	std::string path = btr::getResourceLibPath() + "shader\\binary\\";
-	std::vector<ShaderDescriptor> shader_desc =
+	m_pipeline = pipeline;
+	if (!m_pipeline)
 	{
-		{ path + "ModelRender.vert.spv",vk::ShaderStageFlagBits::eVertex },
-		{ path + "ModelRender.frag.spv",vk::ShaderStageFlagBits::eFragment },
-	};
-	auto shader = std::make_shared<ShaderModule>(context, shader_desc);
-	m_pipeline = std::make_shared<DefaultModelPipelineComponent>(context, render_pass, shader);
+		// なかったらデフォルトで初期化
+		auto render_pass = std::make_shared<RenderPassModule>(context);
+		std::string path = btr::getResourceLibPath() + "shader\\binary\\";
+		std::vector<ShaderDescriptor> shader_desc =
+		{
+			{ path + "ModelRender.vert.spv",vk::ShaderStageFlagBits::eVertex },
+			{ path + "ModelRender.frag.spv",vk::ShaderStageFlagBits::eFragment },
+		};
+		auto shader = std::make_shared<ShaderModule>(context, shader_desc);
+		m_pipeline = std::make_shared<DefaultModelPipelineComponent>(context, render_pass, shader);
+	}
 }
 
 vk::CommandBuffer cModelPipeline::draw(std::shared_ptr<btr::Context>& context)

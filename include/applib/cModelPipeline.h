@@ -749,7 +749,7 @@ struct cModelPipeline
 	std::vector<std::shared_ptr<Model>> m_model;
 	std::shared_ptr<Model> createRender(std::shared_ptr<btr::Context>& context, const std::shared_ptr<cModel::Resource>& resource);
 
-	void setup(std::shared_ptr<btr::Context>& context);
+	void setup(std::shared_ptr<btr::Context>& context, const std::shared_ptr<ModelPipelineComponent>& pipeline = nullptr);
 	vk::CommandBuffer draw(std::shared_ptr<btr::Context>& context);
 
 };

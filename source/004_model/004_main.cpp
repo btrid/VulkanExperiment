@@ -55,7 +55,7 @@ int main()
 
 
 	cModelPipeline renderer;
-	renderer.setup(context);
+	renderer.setup(context, nullptr);
 	auto render = renderer.createRender(context, model.getResource());
 	{
 		PlayMotionDescriptor desc;
