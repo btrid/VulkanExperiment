@@ -255,11 +255,13 @@ public:
 };
 struct ModelDescriptorModule : public DescriptorModule
 {
-	enum {
-		DESCRIPTOR_TEXTURE_NUM = 16,
-	};
+	virtual vk::UniqueDescriptorSet allocateDescriptorSet(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<Model>& model) = 0;
+};
 
-	ModelDescriptorModule(const std::shared_ptr<btr::Context>& context)
+struct DefaultModelDescriptorModule : public ModelDescriptorModule
+{
+
+	DefaultModelDescriptorModule(const std::shared_ptr<btr::Context>& context)
 	{
 		std::vector<vk::DescriptorSetLayoutBinding> binding =
 		{
@@ -298,7 +300,7 @@ struct ModelDescriptorModule : public DescriptorModule
 		m_descriptor_pool = createDescriptorPool(context, binding, 30);
 	}
 
-	vk::UniqueDescriptorSet allocateDescriptorSet(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<Model>& model)
+	vk::UniqueDescriptorSet allocateDescriptorSet(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<Model>& model) override
 	{
 		auto& device = context->m_device;
 		vk::DescriptorSetLayout layouts[] =
@@ -341,6 +343,11 @@ struct ModelDescriptorModule : public DescriptorModule
 		device->updateDescriptorSets(drawWriteDescriptorSets, {});
 		return descriptor_set;
 	}
+
+private:
+	enum {
+		DESCRIPTOR_TEXTURE_NUM = 16,
+	};
 };
 
 struct cModelPipeline

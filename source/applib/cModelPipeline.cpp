@@ -168,7 +168,7 @@ struct DefaultModelPipelineComponent : public ModelPipelineComponent
 		m_shader = shader;
 
 		// Create descriptor set
-		m_model_descriptor = std::make_shared<ModelDescriptorModule>(context);
+		m_model_descriptor = std::make_shared<DefaultModelDescriptorModule>(context);
 
 		// pipeline layout
 		{
