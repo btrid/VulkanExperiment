@@ -51,6 +51,8 @@ struct cModelInstancingPipeline
 		PIPELINE_COMPUTE_BONE_TRANSFORM,
 		PIPELINE_NUM,
 	};
+//	std::shared_ptr<ModelPipelineComponent> m_pipeline;
+
 	vk::UniqueRenderPass m_render_pass;
 	std::vector<vk::UniqueFramebuffer> m_framebuffer;
 
@@ -66,4 +68,21 @@ struct cModelInstancingPipeline
 	vk::UniqueDescriptorSet m_descriptor_set_light;
 
 	void setup(std::shared_ptr<btr::Context>& loader, cModelInstancingRenderer& renderer);
+
+// 	std::shared_ptr<Model> createRender(std::shared_ptr<btr::Context>& context, const std::shared_ptr<cModel::Resource>& resource)
+// 	{
+// 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+// 
+// 		auto model = std::make_shared<Model>();
+// 		model->m_model_resource = resource;
+// 		model->m_material = std::make_shared<DefaultMaterialModule>(context, resource);
+// 		model->m_animation = std::make_shared<DefaultAnimationModule>(context, resource);
+// 		model->m_render = m_pipeline->createRender(context, model);
+// 
+// 
+// 		m_model.push_back(model);
+// 		return model;
+// 
+// 	}
+
 };

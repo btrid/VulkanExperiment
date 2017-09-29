@@ -41,20 +41,6 @@ struct MotionTexture
 class ModelInstancingRender
 {
 public:
-	struct MaterialBuffer {
-		glm::vec4		mAmbient;
-		glm::vec4		mDiffuse;
-		glm::vec4		mSpecular;
-		glm::vec4		mEmissive;
-		std::uint64_t	mDiffuseTex;
-		std::uint64_t	mAmbientTex;
-		std::uint64_t	mSpecularTex;
-		std::uint64_t	__pp;
-		float			mShininess;
-		float			__p;
-		float			__p1;
-		float			__p2;
-	};
 	struct AnimationInfo
 	{
 		//	int animationNo_;
@@ -128,9 +114,6 @@ public:
 		NODE_INFO,
 		BONE_INFO,
 		PLAYING_ANIMATION,
-		MATERIAL_INDEX,
-		MATERIAL,
-		VS_MATERIAL,	// vertex stage material
 		NODE_LOCAL_TRANSFORM,
 		NODE_GLOBAL_TRANSFORM,
 		BONE_TRANSFORM,
@@ -179,11 +162,7 @@ struct cModelInstancingRenderer
 	std::vector<ModelInstancingRender*> m_model;
 
 public:
-	cModelInstancingRenderer()
-	{
-		auto& gpu = sGlobal::Order().getGPU(0);
-		auto& device = gpu.getDevice();
-	}
+
 	void setup(std::shared_ptr<btr::Context>& context)
 	{
 		m_light_pipeline.setup(context);

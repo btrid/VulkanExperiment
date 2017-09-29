@@ -234,72 +234,23 @@ std::vector<ModelInstancingRender::NodeInfo> createNodeInfo(const RootNode& root
 }
 
 
-void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& loader, std::shared_ptr<cModel::Resource>& resource, uint32_t instanceNum)
+void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& context, std::shared_ptr<cModel::Resource>& resource, uint32_t instanceNum)
 {
-	auto cmd = loader->m_cmd_pool->allocCmdTempolary(0);
+	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
 	m_resource = resource;
 	m_resource_instancing = std::make_unique<InstancingResource>();
 	m_resource_instancing->m_instance_max_num = instanceNum;
-	// material
-	{
-		btr::AllocatedMemory::Descriptor staging_desc;
-		staging_desc.size = m_resource->m_material.size() * sizeof(MaterialBuffer);
-		staging_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-		auto staging_material = loader->m_staging_memory.allocateMemory(staging_desc);
-		auto* mb = static_cast<MaterialBuffer*>(staging_material.getMappedPtr());
-		for (size_t i = 0; i < m_resource->m_material.size(); i++)
-		{
-			mb[i].mAmbient = m_resource->m_material[i].mAmbient;
-			mb[i].mDiffuse = m_resource->m_material[i].mDiffuse;
-			mb[i].mEmissive = m_resource->m_material[i].mEmissive;
-			mb[i].mSpecular = m_resource->m_material[i].mSpecular;
-			mb[i].mShininess = m_resource->m_material[i].mShininess;
-		}
 
-		auto& buffer = m_resource_instancing->getBuffer(MATERIAL);
-		buffer = loader->m_storage_memory.allocateMemory(m_resource->m_material.size() * sizeof(MaterialBuffer));
-
-		vk::BufferCopy copy_info;
-		copy_info.setSize(staging_material.getBufferInfo().range);
-		copy_info.setSrcOffset(staging_material.getBufferInfo().offset);
-		copy_info.setDstOffset(buffer.getBufferInfo().offset);
-		cmd->copyBuffer(staging_material.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
-
-	}
-	// material index
-	{
-		btr::AllocatedMemory::Descriptor staging_desc;
-		staging_desc.size = m_resource->m_mesh.size() * sizeof(uint32_t);
-		staging_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-		auto staging = loader->m_staging_memory.allocateMemory(staging_desc);
-		auto* mi = static_cast<uint32_t*>(staging.getMappedPtr());
-		for (size_t i = 0; i < m_resource->m_mesh.size(); i++) {
-			mi[i] = m_resource->m_mesh[i].m_material_index;
-		}
-
-		auto& buffer = m_resource_instancing->getBuffer(MATERIAL_INDEX);
-		buffer = loader->m_storage_memory.allocateMemory(staging_desc.size);
-
-		vk::BufferCopy copy_info;
-		copy_info.setSize(staging.getBufferInfo().range);
-		copy_info.setSrcOffset(staging.getBufferInfo().offset);
-		copy_info.setDstOffset(buffer.getBufferInfo().offset);
-		cmd->copyBuffer(staging.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
-
-		auto to_render = buffer.makeMemoryBarrierEx();
-		to_render.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-		cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, to_render, {});
-	}
 	// node info
 	auto nodeInfo = createNodeInfo(m_resource->mNodeRoot);
 	{
 		btr::AllocatedMemory::Descriptor staging_desc;
 		staging_desc.size = vector_sizeof(nodeInfo);
 		staging_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-		auto staging_node_info_buffer = loader->m_staging_memory.allocateMemory(staging_desc);
+		auto staging_node_info_buffer = context->m_staging_memory.allocateMemory(staging_desc);
 		auto& buffer = m_resource_instancing->getBuffer(NODE_INFO);
-		buffer = loader->m_storage_memory.allocateMemory(staging_desc.size);
+		buffer = context->m_storage_memory.allocateMemory(staging_desc.size);
 
 		memcpy_s(staging_node_info_buffer.getMappedPtr(), staging_desc.size, nodeInfo.data(), staging_desc.size);
 
@@ -322,14 +273,14 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& loader, std::sh
 			btr::AllocatedMemory::Descriptor staging_desc;
 			staging_desc.size = m_resource->mBone.size() * sizeof(BoneInfo);
 			staging_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-			btr::BufferMemory staging_bone_info = loader->m_staging_memory.allocateMemory(staging_desc);
+			btr::BufferMemory staging_bone_info = context->m_staging_memory.allocateMemory(staging_desc);
 			auto* bo = static_cast<BoneInfo*>(staging_bone_info.getMappedPtr());
 			for (size_t i = 0; i < m_resource->mBone.size(); i++) {
 				bo[i].mBoneOffset = m_resource->mBone[i].mOffset;
 				bo[i].mNodeIndex = m_resource->mBone[i].mNodeIndex;
 			}
 			auto& buffer = m_resource_instancing->getBuffer(BONE_INFO);
-			buffer = loader->m_storage_memory.allocateMemory(m_resource->mBone.size() * sizeof(BoneInfo));
+			buffer = context->m_storage_memory.allocateMemory(m_resource->mBone.size() * sizeof(BoneInfo));
 
 			vk::BufferCopy copy_info;
 			copy_info.setSize(staging_bone_info.getBufferInfo().range);
@@ -341,7 +292,7 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& loader, std::sh
 		// BoneTransform
 		{
 			auto& buffer = m_resource_instancing->getBuffer(ModelStorageBuffer::BONE_TRANSFORM);
-			buffer = loader->m_storage_memory.allocateMemory(m_resource->mBone.size() * instanceNum * sizeof(BoneTransformBuffer));
+			buffer = context->m_storage_memory.allocateMemory(m_resource->mBone.size() * instanceNum * sizeof(BoneTransformBuffer));
 		}
 	}
 
@@ -349,9 +300,9 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& loader, std::sh
 		// staging buffer
 		btr::AllocatedMemory::Descriptor desc;
 		desc.size = instanceNum * sizeof(glm::mat4) * sGlobal::FRAME_MAX;
-		m_resource_instancing->m_world_staging = loader->m_staging_memory.allocateMemory(desc);
+		m_resource_instancing->m_world_staging = context->m_staging_memory.allocateMemory(desc);
 		desc.size = sizeof(ModelInstancingInfo) * sGlobal::FRAME_MAX;
-		m_resource_instancing->m_instancing_info = loader->m_staging_memory.allocateMemory(desc);
+		m_resource_instancing->m_instancing_info = context->m_staging_memory.allocateMemory(desc);
 	}
 
 	// ModelInfo
@@ -359,13 +310,13 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& loader, std::sh
 		btr::AllocatedMemory::Descriptor staging_desc;
 		staging_desc.size = sizeof(cModel::ModelInfo);
 		staging_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-		auto staging_model_info = loader->m_staging_memory.allocateMemory(staging_desc);
+		auto staging_model_info = context->m_staging_memory.allocateMemory(staging_desc);
 
 		auto& mi = *static_cast<cModel::ModelInfo*>(staging_model_info.getMappedPtr());
 		mi = m_resource->m_model_info;
 
 		auto& buffer = m_resource_instancing->getBuffer(ModelStorageBuffer::MODEL_INFO);
-		buffer = loader->m_storage_memory.allocateMemory(sizeof(cModel::ModelInfo));
+		buffer = context->m_storage_memory.allocateMemory(sizeof(cModel::ModelInfo));
 
 		vk::BufferCopy copy_info;
 		copy_info.setSize(staging_model_info.getBufferInfo().range);
@@ -378,37 +329,37 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& loader, std::sh
 	//ModelInstancingInfo
 	{
 		auto& buffer = m_resource_instancing->getBuffer(ModelStorageBuffer::MODEL_INSTANCING_INFO);
-		buffer = loader->m_storage_memory.allocateMemory(sizeof(ModelInstancingInfo));
+		buffer = context->m_storage_memory.allocateMemory(sizeof(ModelInstancingInfo));
 	}
 	//BoneMap
 	{
 		auto& buffer = m_resource_instancing->getBuffer(ModelStorageBuffer::BONE_MAP);
-		buffer = loader->m_storage_memory.allocateMemory(instanceNum * sizeof(s32));
+		buffer = context->m_storage_memory.allocateMemory(instanceNum * sizeof(s32));
 	}
 
 	//	NodeLocalTransformBuffer
 	{
 		auto& buffer = m_resource_instancing->getBuffer(ModelStorageBuffer::NODE_LOCAL_TRANSFORM);
-		buffer = loader->m_storage_memory.allocateMemory(m_resource->mNodeRoot.mNodeList.size() * instanceNum * sizeof(NodeLocalTransformBuffer));
+		buffer = context->m_storage_memory.allocateMemory(m_resource->mNodeRoot.mNodeList.size() * instanceNum * sizeof(NodeLocalTransformBuffer));
 	}
 
 
 	//	NodeGlobalTransformBuffer
 	{
 		auto& buffer = m_resource_instancing->getBuffer(ModelStorageBuffer::NODE_GLOBAL_TRANSFORM);
-		buffer = loader->m_storage_memory.allocateMemory(m_resource->mNodeRoot.mNodeList.size() * instanceNum * sizeof(NodeGlobalTransformBuffer));
+		buffer = context->m_storage_memory.allocateMemory(m_resource->mNodeRoot.mNodeList.size() * instanceNum * sizeof(NodeGlobalTransformBuffer));
 	}
 	// world
 	{
 		auto& buffer = m_resource_instancing->getBuffer(ModelStorageBuffer::WORLD);
-		buffer = loader->m_storage_memory.allocateMemory(instanceNum * sizeof(glm::mat4));
+		buffer = context->m_storage_memory.allocateMemory(instanceNum * sizeof(glm::mat4));
 	}
 
 	{
 		auto& buffer = m_resource_instancing->m_compute_indirect_buffer;
-		buffer = loader->m_vertex_memory.allocateMemory(sizeof(glm::ivec3) * 6);
+		buffer = context->m_vertex_memory.allocateMemory(sizeof(glm::ivec3) * 6);
 
-		auto staging_compute = loader->m_staging_memory.allocateMemory(sizeof(glm::ivec3) * 6);
+		auto staging_compute = context->m_staging_memory.allocateMemory(sizeof(glm::ivec3) * 6);
 		auto* group_ptr = static_cast<glm::ivec3*>(staging_compute.getMappedPtr());
 		int32_t local_size_x = 1024;
 		// shaderのlocal_size_xと合わせる
@@ -444,12 +395,12 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& loader, std::sh
 
 	{
 		auto& anim = m_resource->getAnimation();
-		m_resource_instancing->m_motion_texture = createMotion(loader, cmd.get(), m_resource->getAnimation(), m_resource->mNodeRoot);
+		m_resource_instancing->m_motion_texture = createMotion(context, cmd.get(), m_resource->getAnimation(), m_resource->mNodeRoot);
 
 		btr::AllocatedMemory::Descriptor staging_desc;
 		staging_desc.size = sizeof(ModelInstancingRender::AnimationInfo) * anim.m_motion.size();
 		staging_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-		auto staging = loader->m_staging_memory.allocateMemory(staging_desc);
+		auto staging = context->m_staging_memory.allocateMemory(staging_desc);
 		auto* staging_ptr = staging.getMappedPtr<ModelInstancingRender::AnimationInfo>();
 		for (size_t i = 0; i < anim.m_motion.size(); i++)
 		{
@@ -462,7 +413,7 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& loader, std::sh
 			auto& buffer = m_resource_instancing->getBuffer(ANIMATION_INFO);
 			btr::AllocatedMemory::Descriptor arg;
 			arg.size = sizeof(ModelInstancingRender::AnimationInfo) * anim.m_motion.size();
-			buffer = loader->m_storage_memory.allocateMemory(arg);
+			buffer = context->m_storage_memory.allocateMemory(arg);
 
 			vk::BufferCopy copy_info;
 			copy_info.setSize(staging.getBufferInfo().range);
@@ -486,7 +437,7 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& loader, std::sh
 			btr::AllocatedMemory::Descriptor staging_desc;
 			staging_desc.size = instanceNum * sizeof(PlayingAnimation);
 			staging_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-			auto staging_playing_animation = loader->m_staging_memory.allocateMemory(staging_desc);
+			auto staging_playing_animation = context->m_staging_memory.allocateMemory(staging_desc);
 
 			auto* pa = static_cast<PlayingAnimation*>(staging_playing_animation.getMappedPtr());
 			for (int i = 0; i < instanceNum; i++)
@@ -498,7 +449,7 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& loader, std::sh
 			}
 
 			auto& buffer = m_resource_instancing->getBuffer(ModelStorageBuffer::PLAYING_ANIMATION);
-			buffer = loader->m_storage_memory.allocateMemory(instanceNum * sizeof(PlayingAnimation));
+			buffer = context->m_storage_memory.allocateMemory(instanceNum * sizeof(PlayingAnimation));
 
 			vk::BufferCopy copy_info;
 			copy_info.setSize(staging_playing_animation.getBufferInfo().range);
@@ -539,8 +490,6 @@ void ModelInstancingRender::setup(cModelInstancingRenderer&  renderer)
 					m_resource_instancing->getBuffer(ModelStorageBuffer::MODEL_INFO).getBufferInfo(),
 					m_resource_instancing->getBuffer(MODEL_INSTANCING_INFO).getBufferInfo(),
 					m_resource_instancing->getBuffer(BONE_TRANSFORM).getBufferInfo(),
-					m_resource_instancing->getBuffer(MATERIAL_INDEX).getBufferInfo(),
-					m_resource_instancing->getBuffer(MATERIAL).getBufferInfo(),
 				};
 
 				vk::DescriptorImageInfo white_image(DrawHelper::Order().getWhiteTexture().m_sampler.get(), DrawHelper::Order().getWhiteTexture().m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal);

@@ -160,9 +160,6 @@ private:
 
 struct DefaultModelPipelineComponent : public ModelPipelineComponent
 {
-	enum {
-		DESCRIPTOR_TEXTURE_NUM = 16,
-	};
 
 	DefaultModelPipelineComponent(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderPassModule>& render_pass, const std::shared_ptr<ShaderModule>& shader)
 	{
@@ -171,60 +168,12 @@ struct DefaultModelPipelineComponent : public ModelPipelineComponent
 		m_shader = shader;
 
 		// Create descriptor set
-		{
-			std::vector<std::vector<vk::DescriptorSetLayoutBinding>> bindings(DESCRIPTOR_SET_LAYOUT_NUM);
-			bindings[DESCRIPTOR_SET_LAYOUT_MODEL] =
-			{
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(0),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(1),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(2),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(3),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(4),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
-				.setDescriptorCount(DESCRIPTOR_TEXTURE_NUM)
-				.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-				.setBinding(5),
-			};
-
-			for (u32 i = 0; i < bindings.size(); i++)
-			{
-				vk::DescriptorSetLayoutCreateInfo descriptor_layout_info = vk::DescriptorSetLayoutCreateInfo()
-					.setBindingCount(bindings[i].size())
-					.setPBindings(bindings[i].data());
-				m_descriptor_set_layout[i] = device->createDescriptorSetLayoutUnique(descriptor_layout_info);
-			}
-			// DescriptorPool
-			{
-				m_model_descriptor_pool = createDescriptorPool(device.getHandle(), bindings, 30);
-			}
-		}
-
+		m_model_descriptor = std::make_shared<ModelDescriptorModule>(context);
 
 		// pipeline layout
 		{
 			vk::DescriptorSetLayout layouts[] = {
-				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_MODEL].get(),
+				m_model_descriptor->getLayout(),
 				sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA)
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
@@ -232,7 +181,6 @@ struct DefaultModelPipelineComponent : public ModelPipelineComponent
 			pipeline_layout_info.setPSetLayouts(layouts);
 
 			m_pipeline_layout = device->createPipelineLayoutUnique(pipeline_layout_info);
-
 		}
 
 		// pipeline
@@ -319,44 +267,7 @@ struct DefaultModelPipelineComponent : public ModelPipelineComponent
 		auto& device = context->m_device;
 		auto render = std::make_shared<ModelRender>();
 
-		vk::DescriptorSetLayout layouts[] =
-		{
-			m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_MODEL].get()
-		};
-		vk::DescriptorSetAllocateInfo descriptor_set_alloc_info;
-		descriptor_set_alloc_info.setDescriptorPool(m_model_descriptor_pool.get());
-		descriptor_set_alloc_info.setDescriptorSetCount(array_length(layouts));
-		descriptor_set_alloc_info.setPSetLayouts(layouts);
-		render->m_descriptor_set_model = std::move(device->allocateDescriptorSetsUnique(descriptor_set_alloc_info)[0]);
-
-		std::vector<vk::DescriptorBufferInfo> storages = {
-			model->m_animation->getBoneBuffer().getBufferInfo(),
-			model->m_material->getMaterialIndexBuffer().getBufferInfo(),
-			model->m_material->getMaterialBuffer().getBufferInfo(),
-		};
-
-		std::vector<vk::DescriptorImageInfo> color_images(DESCRIPTOR_TEXTURE_NUM, vk::DescriptorImageInfo(DrawHelper::Order().getWhiteTexture().m_sampler.get(), DrawHelper::Order().getWhiteTexture().m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal));
-		for (size_t i = 0; i < model->m_model_resource->m_mesh.size(); i++)
-		{
-			auto& material = model->m_model_resource->m_material[model->m_model_resource->m_mesh[i].m_material_index];
-			color_images[i] = vk::DescriptorImageInfo(material.mDiffuseTex.getSampler(), material.mDiffuseTex.getImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
-		}
-		std::vector<vk::WriteDescriptorSet> drawWriteDescriptorSets =
-		{
-			vk::WriteDescriptorSet()
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount((uint32_t)storages.size())
-			.setPBufferInfo(storages.data())
-			.setDstBinding(2)
-			.setDstSet(render->m_descriptor_set_model.get()),
-			vk::WriteDescriptorSet()
-			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-			.setDescriptorCount((uint32_t)color_images.size())
-			.setPImageInfo(color_images.data())
-			.setDstBinding(5)
-			.setDstSet(render->m_descriptor_set_model.get()),
-		};
-		device->updateDescriptorSets(drawWriteDescriptorSets, {});
+		render->m_descriptor_set_model = m_model_descriptor->allocateDescriptorSet(context, model);
 
 		// recode command
 		{
@@ -396,19 +307,12 @@ struct DefaultModelPipelineComponent : public ModelPipelineComponent
 
 private:
 
-	enum DescriptorSetLayout
-	{
-		DESCRIPTOR_SET_LAYOUT_MODEL,
-		DESCRIPTOR_SET_LAYOUT_NUM,
-	};
-
 	vk::UniquePipeline m_pipeline;
-	std::array<vk::UniqueDescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
 	vk::UniquePipelineLayout m_pipeline_layout;
-	vk::UniqueDescriptorPool m_model_descriptor_pool;
 
 	std::shared_ptr<RenderPassModule> m_render_pass;
 	std::shared_ptr<ShaderModule> m_shader;
+	std::shared_ptr<ModelDescriptorModule> m_model_descriptor;
 
 };
 
