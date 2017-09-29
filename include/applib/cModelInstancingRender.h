@@ -1,7 +1,6 @@
 #pragma once
 #include <memory>
 #include <btrlib/cModel.h>
-#include <btrlib/Light.h>
 #include <btrlib/AllocatedMemory.h>
 #include <btrlib/Context.h>
 #include <applib/cModelInstancingPipeline.h>
@@ -100,10 +99,6 @@ public:
 		}
 	};
 
-	struct NodeTransformBuffer {
-		glm::mat4	localAnimated_;		//!< parentMatrix,World‚ð‚©‚¯‚Ä‚¢‚È‚¢s—ñ
-		glm::mat4	globalAnimated_;
-	};
 	struct NodeLocalTransformBuffer {
 		glm::mat4	localAnimated_;		//!< parentMatrix,World‚ð‚©‚¯‚Ä‚¢‚È‚¢s—ñ
 	};
@@ -179,8 +174,6 @@ private:
 
 struct cModelInstancingRenderer
 {
-	cDevice m_device;
-
 	cFowardPlusPipeline m_light_pipeline;
 	cModelInstancingPipeline m_compute_pipeline;
 	std::vector<ModelInstancingRender*> m_model;
@@ -190,12 +183,11 @@ public:
 	{
 		auto& gpu = sGlobal::Order().getGPU(0);
 		auto& device = gpu.getDevice();
-		m_device = device;
 	}
-	void setup(std::shared_ptr<btr::Context>& loader)
+	void setup(std::shared_ptr<btr::Context>& context)
 	{
-		m_light_pipeline.setup(*this);
-		m_compute_pipeline.setup(loader, *this);
+		m_light_pipeline.setup(context);
+		m_compute_pipeline.setup(context, *this);
 	}
 	void addModel(ModelInstancingRender* model)
 	{
@@ -205,9 +197,6 @@ public:
 	vk::CommandBuffer execute(std::shared_ptr<btr::Context>& executer)
 	{
 		auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
-
-		m_light_pipeline.execute(cmd);
-
 
 		for (auto& render : m_model)
 		{

@@ -1,36 +1,12 @@
 #version 450
 
-#pragma optionNV (unroll none)
-//#pragma optionNV (inline all)
-
-
-//#extension GL_ARB_shading_language_include : require
 #extension GL_GOOGLE_cpp_style_line_directive : require
 
+#define USE_LIGHT 0
 #include </Light.glsl>
-#include </CameraCulling.glsl>
+#include </Camera.glsl>
 
 layout (local_size_x = 32, local_size_y = 32) in;
-
-layout(std140, binding=0) uniform LightInfoUniform {
-	LightInfo u_light_info;
-};
-layout(std140, binding=1) uniform FrustomUniform {
-	FrustomPoint u_frustom;
-};
-
-layout(std430, binding=8) readonly restrict buffer LightBuffer {
-	LightParam b_light[];
-};
-layout(std430, binding=9) restrict buffer LLHeadBuffer {
-	uint b_LLhead[];
-};
-layout(std430, binding=10) writeonly restrict buffer LLBuffer {
-	LightLL b_light_LL[];
-};
-layout(std430, binding=11) coherent restrict buffer LightCounter {
-	uint b_light_count;
-};
 
 
 void main()
@@ -49,13 +25,13 @@ void main()
 	vec3 lbf = u_frustom.m_ltf.xyz + (index+uvec3(0, 1, 0))*f_per_size;
 	vec3 rtf = u_frustom.m_ltf.xyz + (index+uvec3(1, 0, 0))*f_per_size;
 	vec3 rbf = u_frustom.m_ltf.xyz + (index+uvec3(1, 1, 0))*f_per_size;
-	Frustom2 f;
+	CameraFrustom f;
 	f.p[0] = MakePlane(rtn, ltn, ltf);
 	f.p[1] = MakePlane(lbn, rbn, rbf);
 	f.p[2] = MakePlane(ltn, lbn, lbf);
 	f.p[3] = MakePlane(rbn, rtn, rbf);
 
-	uint head = INVALID_LIGHT_INDEX;
+	uint head = uint(-1);
 	for(uint i = 0; i < u_light_info.m_active_light_num; i++)
 	{
 		if(isCulling2(f, b_light[i].m_position*vec4(1., 1., 1., 2.))) {

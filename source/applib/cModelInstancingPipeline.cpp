@@ -6,10 +6,9 @@
 #include <btrlib/cModel.h>
 #include <applib/sCameraManager.h>
 
-void cModelInstancingPipeline::setup(std::shared_ptr<btr::Context>& loader, cModelInstancingRenderer& renderer)
+void cModelInstancingPipeline::setup(std::shared_ptr<btr::Context>& context, cModelInstancingRenderer& renderer)
 {
-	auto& gpu = sGlobal::Order().getGPU(0);
-	auto& device = gpu.getDevice();
+	auto& device = context->m_device;
 
 	{
 		// レンダーパス
@@ -36,14 +35,14 @@ void cModelInstancingPipeline::setup(std::shared_ptr<btr::Context>& loader, cMod
 			std::vector<vk::AttachmentDescription> attach_description = {
 				// color1
 				vk::AttachmentDescription()
-				.setFormat(loader->m_window->getSwapchain().m_surface_format.format)
+				.setFormat(context->m_window->getSwapchain().m_surface_format.format)
 				.setSamples(vk::SampleCountFlagBits::e1)
 				.setLoadOp(vk::AttachmentLoadOp::eLoad)
 				.setStoreOp(vk::AttachmentStoreOp::eStore)
 				.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
 				.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
 				vk::AttachmentDescription()
-				.setFormat(loader->m_window->getSwapchain().m_depth.m_format)
+				.setFormat(context->m_window->getSwapchain().m_depth.m_format)
 				.setSamples(vk::SampleCountFlagBits::e1)
 				.setLoadOp(vk::AttachmentLoadOp::eLoad)
 				.setStoreOp(vk::AttachmentStoreOp::eStore)
@@ -56,10 +55,10 @@ void cModelInstancingPipeline::setup(std::shared_ptr<btr::Context>& loader, cMod
 				.setSubpassCount(1)
 				.setPSubpasses(&subpass);
 
-			m_render_pass = loader->m_device->createRenderPassUnique(renderpass_info);
+			m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
 		}
 
-		m_framebuffer.resize(loader->m_window->getSwapchain().getBackbufferNum());
+		m_framebuffer.resize(context->m_window->getSwapchain().getBackbufferNum());
 		{
 			std::array<vk::ImageView, 2> view;
 
@@ -67,17 +66,16 @@ void cModelInstancingPipeline::setup(std::shared_ptr<btr::Context>& loader, cMod
 			framebuffer_info.setRenderPass(m_render_pass.get());
 			framebuffer_info.setAttachmentCount((uint32_t)view.size());
 			framebuffer_info.setPAttachments(view.data());
-			framebuffer_info.setWidth(loader->m_window->getClientSize().x);
-			framebuffer_info.setHeight(loader->m_window->getClientSize().y);
+			framebuffer_info.setWidth(context->m_window->getClientSize().x);
+			framebuffer_info.setHeight(context->m_window->getClientSize().y);
 			framebuffer_info.setLayers(1);
 
 			for (size_t i = 0; i < m_framebuffer.size(); i++) {
-				view[0] = loader->m_window->getSwapchain().m_backbuffer[i].m_view;
-				view[1] = loader->m_window->getSwapchain().m_depth.m_view;
-				m_framebuffer[i] = loader->m_device->createFramebufferUnique(framebuffer_info);
+				view[0] = context->m_window->getSwapchain().m_backbuffer[i].m_view;
+				view[1] = context->m_window->getSwapchain().m_depth.m_view;
+				m_framebuffer[i] = context->m_device->createFramebufferUnique(framebuffer_info);
 			}
 		}
-
 	}
 	// setup shader
 	{
@@ -292,7 +290,7 @@ void cModelInstancingPipeline::setup(std::shared_ptr<btr::Context>& loader, cMod
 		.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_COMPUTE].get()),
 	};
 
-	auto p = device->createComputePipelinesUnique(loader->m_cache.get(), compute_pipeline_info);
+	auto p = device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
 	for (size_t i = 0; i < p.size(); i++) {
 		m_pipeline[i] = std::move(p[i]);
 	}
@@ -380,7 +378,7 @@ void cModelInstancingPipeline::setup(std::shared_ptr<btr::Context>& loader, cMod
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			m_graphics_pipeline = std::move(device->createGraphicsPipelinesUnique(loader->m_cache.get(), graphics_pipeline_info)[0]);
+			m_graphics_pipeline = std::move(device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info)[0]);
 		}
 
 	}
@@ -391,7 +389,7 @@ void cModelInstancingPipeline::setup(std::shared_ptr<btr::Context>& loader, cMod
 			m_descriptor_set_layout[cModelInstancingPipeline::DESCRIPTOR_SET_LAYOUT_LIGHT].get(),
 		};
 		vk::DescriptorSetAllocateInfo alloc_info;
-		alloc_info.descriptorPool = loader->m_descriptor_pool.get();
+		alloc_info.descriptorPool = context->m_descriptor_pool.get();
 		alloc_info.descriptorSetCount = array_length(layouts);
 		alloc_info.pSetLayouts = layouts;
 		m_descriptor_set_light = std::move(device->allocateDescriptorSetsUnique(alloc_info)[0]);

@@ -33,7 +33,7 @@
 
 struct LightSample : public Light
 {
-	LightParam m_param;
+	LightData m_param;
 	int life;
 
 	LightSample()
@@ -49,7 +49,7 @@ struct LightSample : public Light
 		return life >= 0;
 	}
 
-	virtual LightParam getParam()const override
+	virtual LightData getParam()const override
 	{
 		return m_param;
 	}
@@ -126,14 +126,15 @@ int main()
 			SynchronizedPoint render_syncronized_point(1);
 
 			render.addModel(data.data(), data.size());
-			std::vector<vk::CommandBuffer> render_cmds(2);
+			std::vector<vk::CommandBuffer> render_cmds(3);
 			{
 				cThreadJob job;
 				job.mJob.emplace_back(
 					[&]()
 				{
 					render_cmds[0] = renderer.execute(context);
-					render_cmds[1] = renderer.draw(context);
+					render_cmds[1] = renderer.getLight().execute(context);
+					render_cmds[2] = renderer.draw(context);
 					render_syncronized_point.arrive();
 				}
 				);

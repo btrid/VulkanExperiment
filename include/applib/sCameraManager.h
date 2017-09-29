@@ -35,6 +35,7 @@ struct sCameraManager : public Singleton<sCameraManager>
 			update_desc.device_memory = context->m_uniform_memory;
 			update_desc.staging_memory = context->m_staging_memory;
 			update_desc.frame_max = sGlobal::FRAME_MAX;
+			update_desc.element_num = 1;
 			m_camera.setup(update_desc);
 		}
 
@@ -88,24 +89,25 @@ struct sCameraManager : public Singleton<sCameraManager>
 		}
 		
 	}
-	vk::CommandBuffer draw(std::shared_ptr<btr::Context>& executer)
+	vk::CommandBuffer draw(std::shared_ptr<btr::Context>& context)
 	{
-		auto& device = executer->m_gpu.getDevice();
-		auto cmd = executer->m_cmd_pool->allocCmdOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
+		auto& device = context->m_gpu.getDevice();
+		auto cmd = context->m_cmd_pool->allocCmdOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
 
 		std::vector<vk::BufferMemoryBarrier> to_transfer = {
-			m_camera.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite),
+			m_camera.getBufferMemory().makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
 
 		auto* camera = cCamera::sCamera::Order().getCameraList()[0];
 		CameraGPU camera_GPU;
 		camera_GPU.setup(*camera);
-		m_camera.subupdate(camera_GPU);
-		m_camera.update(cmd);
+		m_camera.subupdate(&camera_GPU, 1, 0, context->getGPUFrame());
+		auto copy_info = m_camera.update(context->getGPUFrame());
+		cmd.copyBuffer(m_camera.getStagingBufferInfo().buffer, m_camera.getBufferInfo().buffer, copy_info);
 
 		std::vector<vk::BufferMemoryBarrier> to_draw_barrier = {
-			m_camera.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
+			m_camera.getBufferMemory().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexShader, {}, {}, { to_draw_barrier }, {});
 

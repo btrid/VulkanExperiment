@@ -722,9 +722,9 @@ struct cTriangleLL
 				projection.view[2] = glm::lookAt(eye, center, glm::vec3(0., 1., 0.));
 				m_triangle_projection.subupdate(projection);
 
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eGeometryShader, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, { m_triangle_projection.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite) }, {});
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eGeometryShader, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, { m_triangle_projection.getBufferMemory().makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite) }, {});
 				m_triangle_projection.update(cmd);
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), {}, { m_triangle_projection.getAllocateMemory().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead) }, {});
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), {}, { m_triangle_projection.getBufferMemory().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead) }, {});
 
 			}
 		}

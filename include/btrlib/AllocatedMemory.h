@@ -437,101 +437,102 @@ struct UpdateBufferDescriptor
 	btr::AllocatedMemory device_memory;
 	btr::AllocatedMemory staging_memory;
 	uint32_t frame_max;
+	uint32_t element_num;
 
 	UpdateBufferDescriptor()
 	{
-		frame_max = sGlobal::FRAME_MAX;
+		frame_max = -1;
+		element_num = -1;
 	}
 };
 
 template<typename T>
 struct UpdateBuffer
 {
-	BufferMemory m_device_memory;
-	BufferMemory m_staging_memory;
-	vk::DeviceSize m_begin;
-	vk::DeviceSize m_end;
-	uint32_t m_frame;
-	uint32_t m_frame_max;
-
-	// @deprecated
-	void setup(btr::AllocatedMemory& device_memory, btr::AllocatedMemory& staging_memory)
-	{
-		UpdateBufferDescriptor desc;
-		desc.device_memory = device_memory;
-		desc.staging_memory = staging_memory;
-		desc.frame_max = sGlobal::FRAME_MAX;
-
-		setup(desc);
-	}
-
 	void setup(UpdateBufferDescriptor& desc)
 	{
-		assert(!m_device_memory.isValid());
+		assert(!m_device_buffer.isValid());
 		assert(desc.device_memory.isValid());
 		assert(btr::isOn(desc.device_memory.getBufferCreateInfo().usage, vk::BufferUsageFlagBits::eTransferDst));
 
-		m_device_memory = desc.device_memory.allocateMemory(sizeof(T));
-		if (desc.staging_memory.isValid()) {
-	 		assert(btr::isOn(desc.staging_memory.getBufferCreateInfo().usage, vk::BufferUsageFlagBits::eTransferSrc));
-			m_staging_memory = desc.staging_memory.allocateMemory(sizeof(T)*desc.frame_max);
-		}
-		m_begin = ~vk::DeviceSize(0);
-		m_end = vk::DeviceSize(0);
-		m_frame = 0;
-		m_frame_max = desc.frame_max;
+		m_device_buffer = desc.device_memory.allocateMemory(sizeof(T)*desc.element_num);
+		m_staging_buffer = desc.staging_memory.allocateMemory(sizeof(T)*desc.element_num*desc.frame_max);
+		m_element_max = desc.element_num;
+		m_area.resize(desc.frame_max);
 	}
 
-	void setStagingMemory(btr::AllocatedMemory& staging_memory)
+	void subupdate(const T* data, vk::DeviceSize data_num, vk::DeviceSize offset, uint32_t cpu_index)
 	{
-		// 更新中っぽい
-		assert(m_begin == ~vk::DeviceSize(0));
-		m_staging_memory = BufferMemory();
-		if (staging_memory.isValid())
-		{
-			m_staging_memory = staging_memory.allocateMemory(sizeof(T)*m_frame_max);
-		}
-	}
-
-	void subupdate(const T& data)
-	{
-		auto* ptr = m_staging_memory.getMappedPtr<T>(m_frame);
-		*ptr = data;
-		m_begin = 0;
-		m_end = sizeof(T);
-	}
-	void subupdate(const void* data, vk::DeviceSize data_size, vk::DeviceSize offset)
-	{
-		auto* ptr = m_staging_memory.getMappedPtr<T>(m_frame);
+		auto data_size = sizeof(T)*data_num;
+		auto* ptr = m_staging_buffer.getMappedPtr<T>(cpu_index*m_element_max);
 		memcpy_s(ptr + offset, data_size, data, data_size);
-		m_begin = std::min(offset, m_begin);
-		m_end = std::max(offset + data_size, m_end);
+
+		flushSubBuffer(data_num, offset, cpu_index);
 	}
 
-	bool isUpdate()const {
-		return m_end < m_begin;
-	}
-
-	void update(vk::CommandBuffer cmd)
+	T* mapSubBuffer(uint32_t cpu_index)
 	{
-		if (isUpdate()) {
-			assert(isUpdate());
-			return;
-		}
-		vk::BufferCopy copy_info;
-		copy_info.setSize(m_end - m_begin);
-		copy_info.setSrcOffset(m_staging_memory.getBufferInfo().offset + sizeof(T)*m_frame + m_begin);
-		copy_info.setDstOffset(m_device_memory.getBufferInfo().offset + m_begin);
-		cmd.copyBuffer(m_staging_memory.getBufferInfo().buffer, m_device_memory.getBufferInfo().buffer, copy_info);
-
-		m_begin = ~vk::DeviceSize(0);
-		m_end = vk::DeviceSize(0);
-		m_frame = (m_frame + 1) % m_frame_max;
+		return m_staging_buffer.getMappedPtr<T>(cpu_index*m_element_max);
 	}
 
-	vk::DescriptorBufferInfo getBufferInfo()const { return m_device_memory.getBufferInfo(); }
-	BufferMemory& getAllocateMemory() { return m_device_memory; }
-	const BufferMemory& getAllocateMemory()const { return m_device_memory; }
+	void flushSubBuffer(vk::DeviceSize data_num, vk::DeviceSize offset, uint32_t cpu_index)
+	{
+		auto data_size = sizeof(T)*data_num;
+		auto& area = m_area[cpu_index];
+		area.m_begin = std::min(offset, area.m_begin);
+		area.m_end = std::max(offset + data_size, area.m_end);
+	}
+
+	vk::BufferCopy update(uint32_t cpu_index)
+	{
+		auto& area = m_area[cpu_index];
+		if (area.isZero()) {
+			// subupdateを読んでいないのでバグの可能性高し
+			assert(false);
+			return vk::BufferCopy();
+		}
+
+		vk::BufferCopy copy_info;
+		copy_info.setSize(area.m_end - area.m_begin);
+		copy_info.setSrcOffset(m_staging_buffer.getBufferInfo().offset + sizeof(T)*m_element_max*cpu_index + area.m_begin);
+		copy_info.setDstOffset(m_device_buffer.getBufferInfo().offset + area.m_begin);
+
+		area.reset();
+
+		return copy_info;
+	}
+
+	vk::DescriptorBufferInfo getBufferInfo()const { return m_device_buffer.getBufferInfo(); }
+	vk::DescriptorBufferInfo getStagingBufferInfo()const { return m_staging_buffer.getBufferInfo(); }
+	BufferMemory& getBufferMemory() { return m_device_buffer; }
+	const BufferMemory& getBufferMemory()const { return m_device_buffer; }
+
+private:
+	BufferMemory m_device_buffer;
+	BufferMemory m_staging_buffer;
+	struct Area
+	{
+		vk::DeviceSize m_begin;
+		vk::DeviceSize m_end;
+
+		Area()
+		{
+			reset();
+		}
+		void reset()
+		{
+			m_begin = ~vk::DeviceSize(0);
+			m_end = vk::DeviceSize(0);
+		}
+
+		bool isZero()const
+		{
+			return m_end < m_begin;
+		}
+	};
+	std::vector<Area> m_area;
+	uint32_t m_element_max;
+
 };
 
 struct UpdateBufferExDescriptor
