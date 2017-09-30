@@ -36,7 +36,7 @@ struct ResourceTexture
 
 struct MaterialModule
 {
-	virtual const btr::BufferMemory& getMaterialIndexBuffer()const = 0;
-	virtual const btr::BufferMemory& getMaterialBuffer()const = 0;
+	virtual vk::DescriptorBufferInfo getMaterialIndexBuffer()const = 0;
+	virtual vk::DescriptorBufferInfo getMaterialBuffer()const = 0;
 	virtual const std::vector<ResourceTexture>& getTextureList()const = 0;
 };

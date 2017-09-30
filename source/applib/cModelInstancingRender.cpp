@@ -10,8 +10,8 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& context, std::s
 	m_material = std::make_shared<DefaultMaterialModule>(context, resource);
 
 	m_resource = resource;
-	m_resource_instancing = std::make_unique<InstancingResource>();
-	m_resource_instancing->m_instance_max_num = instanceNum;
+	m_instancing = std::make_shared<InstancingResource>();
+	m_instancing->m_instance_max_num = instanceNum;
 
 	// node info
 	auto nodeInfo = model::NodeInfo::createNodeInfo(m_resource->mNodeRoot);
@@ -20,7 +20,7 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& context, std::s
 		staging_desc.size = vector_sizeof(nodeInfo);
 		staging_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 		auto staging_node_info_buffer = context->m_staging_memory.allocateMemory(staging_desc);
-		auto& buffer = m_resource_instancing->getBuffer(NODE_INFO);
+		auto& buffer = m_instancing->getBuffer(NODE_INFO);
 		buffer = context->m_storage_memory.allocateMemory(staging_desc.size);
 
 		memcpy_s(staging_node_info_buffer.getMappedPtr(), staging_desc.size, nodeInfo.data(), staging_desc.size);
@@ -50,7 +50,7 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& context, std::s
 				bo[i].mBoneOffset = m_resource->mBone[i].mOffset;
 				bo[i].mNodeIndex = m_resource->mBone[i].mNodeIndex;
 			}
-			auto& buffer = m_resource_instancing->getBuffer(BONE_INFO);
+			auto& buffer = m_instancing->getBuffer(BONE_INFO);
 			buffer = context->m_storage_memory.allocateMemory(m_resource->mBone.size() * sizeof(model::BoneInfo));
 
 			vk::BufferCopy copy_info;
@@ -62,7 +62,7 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& context, std::s
 
 		// BoneTransform
 		{
-			auto& buffer = m_resource_instancing->getBuffer(ModelStorageBuffer::BONE_TRANSFORM);
+			auto& buffer = m_instancing->getBuffer(ModelStorageBuffer::BONE_TRANSFORM);
 			buffer = context->m_storage_memory.allocateMemory(m_resource->mBone.size() * instanceNum * sizeof(mat4));
 		}
 	}
@@ -78,7 +78,7 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& context, std::s
 		auto& mi = *static_cast<cModel::ModelInfo*>(staging_model_info.getMappedPtr());
 		mi = m_resource->m_model_info;
 
-		auto& buffer = m_resource_instancing->getBuffer(ModelStorageBuffer::MODEL_INFO);
+		auto& buffer = m_instancing->getBuffer(ModelStorageBuffer::MODEL_INFO);
 		buffer = context->m_storage_memory.allocateMemory(sizeof(cModel::ModelInfo));
 
 		vk::BufferCopy copy_info;
@@ -96,7 +96,7 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& context, std::s
 		desc.staging_memory = context->m_staging_memory;
 		desc.frame_max = context->m_window->getSwapchain().getBackbufferNum();
 		desc.element_num = 1;
-		m_resource_instancing->m_instancing_info_buffer.setup(desc);
+		m_instancing->m_instancing_info_buffer.setup(desc);
 	}
 	// world
 	{
@@ -105,28 +105,47 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& context, std::s
 		desc.staging_memory = context->m_staging_memory;
 		desc.frame_max = context->m_window->getSwapchain().getBackbufferNum();
 		desc.element_num = instanceNum;
-		m_resource_instancing->m_world_buffer.setup(desc);
+		m_instancing->m_world_buffer.setup(desc);
 	}
 
 	//BoneMap
 	{
-		auto& buffer = m_resource_instancing->getBuffer(ModelStorageBuffer::BONE_MAP);
+		auto& buffer = m_instancing->getBuffer(ModelStorageBuffer::BONE_MAP);
 		buffer = context->m_storage_memory.allocateMemory(instanceNum * sizeof(s32));
 	}
-
-	//	NodeLocalTransformBuffer
+	// draw indirect
 	{
-		auto& buffer = m_resource_instancing->getBuffer(ModelStorageBuffer::NODE_TRANSFORM);
+		btr::AllocatedMemory::Descriptor desc;
+		desc.size = sizeof(cModel::Mesh)*resource->m_mesh.size();
+
+		auto& buffer = m_instancing->getBuffer(ModelStorageBuffer::DRAW_INDIRECT);
+		buffer = context->m_vertex_memory.allocateMemory(desc);
+
+		desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+		auto staging = context->m_staging_memory.allocateMemory(desc);
+
+		memcpy_s(staging.getMappedPtr(), desc.size, resource->m_mesh.data(), desc.size);
+
+		vk::BufferCopy copy_info;
+		copy_info.setSize(staging.getBufferInfo().range);
+		copy_info.setSrcOffset(staging.getBufferInfo().offset);
+		copy_info.setDstOffset(buffer.getBufferInfo().offset);
+		cmd->copyBuffer(staging.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
+
+	}
+
+	{
+		auto& buffer = m_instancing->getBuffer(ModelStorageBuffer::NODE_TRANSFORM);
 		buffer = context->m_storage_memory.allocateMemory(m_resource->mNodeRoot.mNodeList.size() * instanceNum * sizeof(mat4));
 	}
 
 
 	{
-		auto& buffer = m_resource_instancing->m_compute_indirect_buffer;
+		auto& buffer = m_instancing->m_compute_indirect_buffer;
 		buffer = context->m_vertex_memory.allocateMemory(sizeof(glm::ivec3) * 6);
 
-		auto staging_compute = context->m_staging_memory.allocateMemory(sizeof(glm::ivec3) * 6);
-		auto* group_ptr = static_cast<glm::ivec3*>(staging_compute.getMappedPtr());
+		auto staging = context->m_staging_memory.allocateMemory(sizeof(glm::ivec3) * 6);
+		auto* group_ptr = static_cast<glm::ivec3*>(staging.getMappedPtr());
 		int32_t local_size_x = 1024;
 		// shaderのlocal_size_xと合わせる
 		std::vector<glm::ivec3> group =
@@ -141,15 +160,15 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& context, std::s
 		memcpy_s(group_ptr, sizeof(glm::ivec3) * 6, group.data(), sizeof(glm::ivec3) * 6);
 
 		vk::BufferCopy copy_info;
-		copy_info.setSize(staging_compute.getBufferInfo().range);
-		copy_info.setSrcOffset(staging_compute.getBufferInfo().offset);
-		copy_info.setDstOffset(m_resource_instancing->m_compute_indirect_buffer.getBufferInfo().offset);
-		cmd->copyBuffer(staging_compute.getBufferInfo().buffer, m_resource_instancing->m_compute_indirect_buffer.getBufferInfo().buffer, copy_info);
+		copy_info.setSize(staging.getBufferInfo().range);
+		copy_info.setSrcOffset(staging.getBufferInfo().offset);
+		copy_info.setDstOffset(m_instancing->m_compute_indirect_buffer.getBufferInfo().offset);
+		cmd->copyBuffer(staging.getBufferInfo().buffer, m_instancing->m_compute_indirect_buffer.getBufferInfo().buffer, copy_info);
 
 		vk::BufferMemoryBarrier dispatch_indirect_barrier;
-		dispatch_indirect_barrier.setBuffer(m_resource_instancing->m_compute_indirect_buffer.getBufferInfo().buffer);
-		dispatch_indirect_barrier.setOffset(m_resource_instancing->m_compute_indirect_buffer.getBufferInfo().offset);
-		dispatch_indirect_barrier.setSize(m_resource_instancing->m_compute_indirect_buffer.getBufferInfo().range);
+		dispatch_indirect_barrier.setBuffer(m_instancing->m_compute_indirect_buffer.getBufferInfo().buffer);
+		dispatch_indirect_barrier.setOffset(m_instancing->m_compute_indirect_buffer.getBufferInfo().offset);
+		dispatch_indirect_barrier.setSize(m_instancing->m_compute_indirect_buffer.getBufferInfo().range);
 		dispatch_indirect_barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 		dispatch_indirect_barrier.setDstAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
 		cmd->pipelineBarrier(
@@ -161,7 +180,7 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& context, std::s
 
 	{
 		auto& anim = m_resource->getAnimation();
-		m_resource_instancing->m_motion_texture = MotionTexture::createMotion(context, cmd.get(), m_resource->getAnimation());
+		m_instancing->m_motion_texture = MotionTexture::createMotion(context, cmd.get(), m_resource->getAnimation());
 
 		btr::AllocatedMemory::Descriptor staging_desc;
 		staging_desc.size = sizeof(ModelInstancingRender::AnimationInfo) * anim.m_motion.size();
@@ -176,7 +195,7 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& context, std::s
 		}
 		// AnimeInfo
 		{
-			auto& buffer = m_resource_instancing->getBuffer(ANIMATION_INFO);
+			auto& buffer = m_instancing->getBuffer(ANIMATION_INFO);
 			btr::AllocatedMemory::Descriptor arg;
 			arg.size = sizeof(ModelInstancingRender::AnimationInfo) * anim.m_motion.size();
 			buffer = context->m_storage_memory.allocateMemory(arg);
@@ -214,7 +233,7 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& context, std::s
 				pa[i].currentMotionInfoIndex = 0;
 			}
 
-			auto& buffer = m_resource_instancing->getBuffer(ModelStorageBuffer::PLAYING_ANIMATION);
+			auto& buffer = m_instancing->getBuffer(ModelStorageBuffer::PLAYING_ANIMATION);
 			buffer = context->m_storage_memory.allocateMemory(instanceNum * sizeof(PlayingAnimation));
 
 			vk::BufferCopy copy_info;
@@ -226,99 +245,21 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& context, std::s
 	}
 }
 
-void ModelInstancingRender::setup(cModelInstancingPipeline& pipeline)
+void ModelInstancingRender::setup(const std::shared_ptr<btr::Context>& context, cModelInstancingPipeline& pipeline)
 {
 	// setup draw
 	{
-		auto& gpu = sGlobal::Order().getGPU(0);
-		auto& device = gpu.getDevice();
+		auto& device = context->m_device;
 
 		{
 			// meshごとの更新
-			vk::DescriptorSetLayout layouts[] = {
-				pipeline.m_descriptor_set_layout[cModelInstancingPipeline::DESCRIPTOR_SET_LAYOUT_MODEL].get(),
-				pipeline.m_descriptor_set_layout[cModelInstancingPipeline::DESCRIPTOR_SET_LAYOUT_ANIMATION].get(),
-			};
-			vk::DescriptorSetAllocateInfo allocInfo;
-			allocInfo.descriptorPool = pipeline.m_descriptor_pool.get();
-			allocInfo.descriptorSetCount = array_length(layouts);
-			allocInfo.pSetLayouts = layouts;
-			m_descriptor_set = device->allocateDescriptorSetsUnique(allocInfo);
+			m_model_descriptor_set = pipeline.m_model_descriptor->allocateDescriptorSet(context);
+			pipeline.m_model_descriptor->updateMaterial(context, m_model_descriptor_set.get(), m_material);
+			pipeline.m_model_descriptor->updateInstancing(context, m_model_descriptor_set.get(), m_instancing);
+			pipeline.m_model_descriptor->updateAnimation(context, m_model_descriptor_set.get(), m_instancing);
 
-			// Model
-			{
-				std::vector<vk::DescriptorBufferInfo> storages =
-				{
-					m_resource_instancing->getBuffer(ModelStorageBuffer::MODEL_INFO).getBufferInfo(),
-					m_resource_instancing->m_instancing_info_buffer.getBufferInfo(),
-					m_resource_instancing->getBuffer(BONE_TRANSFORM).getBufferInfo(),
-					m_material->getMaterialIndexBuffer().getBufferInfo(),
-					m_material->getMaterialBuffer().getBufferInfo(),
-				};
-
-				vk::DescriptorImageInfo white_image(DrawHelper::Order().getWhiteTexture().m_sampler.get(), DrawHelper::Order().getWhiteTexture().m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal);
-				std::vector<vk::DescriptorImageInfo> albedo_images(16, white_image);
-				for (size_t i = 0; i < m_resource->m_mesh.size(); i++)
-				{
-					auto& material = m_resource->m_material[m_resource->m_mesh[i].m_material_index];
-					albedo_images[m_resource->m_mesh[i].m_material_index] = vk::DescriptorImageInfo(material.mDiffuseTex.getSampler(), material.mDiffuseTex.getImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
-				}
-
-				std::vector<vk::WriteDescriptorSet> drawWriteDescriptorSets =
-				{
-					vk::WriteDescriptorSet()
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount((uint32_t)storages.size())
-					.setPBufferInfo(storages.data())
-					.setDstBinding(0)
-					.setDstSet(m_descriptor_set[DESCRIPTOR_SET_MODEL].get()),
-					vk::WriteDescriptorSet()
-					.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-					.setDescriptorCount(albedo_images.size())
-					.setPImageInfo(albedo_images.data())
-					.setDstBinding(5)
-					.setDstSet(m_descriptor_set[DESCRIPTOR_SET_MODEL].get()),
-				};
-				device->updateDescriptorSets(drawWriteDescriptorSets, {});
-			}
-			// AnimationUpdate
-			{
-				std::vector<vk::DescriptorBufferInfo> storages =
-				{
-					m_resource_instancing->getBuffer(ANIMATION_INFO).getBufferInfo(),
-					m_resource_instancing->getBuffer(PLAYING_ANIMATION).getBufferInfo(),
-					m_resource_instancing->getBuffer(NODE_INFO).getBufferInfo(),
-					m_resource_instancing->getBuffer(BONE_INFO).getBufferInfo(),
-					m_resource_instancing->getBuffer(NODE_TRANSFORM).getBufferInfo(),
-					m_resource_instancing->m_world_buffer.getBufferInfo(),
-					m_resource_instancing->getBuffer(BONE_MAP).getBufferInfo(),
-					m_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo(),
-				};
-
-				std::vector<vk::DescriptorImageInfo> images =
-				{
-					vk::DescriptorImageInfo()
-					.setImageView(m_resource_instancing->m_motion_texture[0].getImageView())
-					.setSampler(m_resource_instancing->m_motion_texture[0].m_resource->m_sampler.get())
-					.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
-				};
-				std::vector<vk::WriteDescriptorSet> drawWriteDescriptorSets =
-				{
-					vk::WriteDescriptorSet()
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount((uint32_t)storages.size())
-					.setPBufferInfo(storages.data())
-					.setDstBinding(0)
-					.setDstSet(m_descriptor_set[DESCRIPTOR_SET_ANIMATION].get()),
-					vk::WriteDescriptorSet()
-					.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-					.setDescriptorCount(images.size())
-					.setPImageInfo(images.data())
-					.setDstBinding(32)
-					.setDstSet(m_descriptor_set[DESCRIPTOR_SET_ANIMATION].get()),
-				};
-				device->updateDescriptorSets(drawWriteDescriptorSets, {});
-			}
+			m_animation_descriptor_set = pipeline.m_animation_descriptor->allocateDescriptorSet(context);
+			pipeline.m_animation_descriptor->updateAnimation(context, m_animation_descriptor_set.get(), m_instancing);
 		}
 	}
 }
@@ -327,7 +268,7 @@ void ModelInstancingRender::addModel(const InstanceResource* data, uint32_t num)
 {
 	auto frame = sGlobal::Order().getCPUFrame();
 	auto index = m_instance_count[frame].fetch_add(num);
-	auto* staging = m_resource_instancing->m_world_buffer.mapSubBuffer(frame, index);
+	auto* staging = m_instancing->m_world_buffer.mapSubBuffer(frame, index);
 	for (uint32_t i = 0; i < num; i++)
 	{
 		staging[i] = data[i].m_world;
@@ -340,16 +281,15 @@ void ModelInstancingRender::execute(cModelInstancingPipeline& pipeline, vk::Comm
 	// bufferの更新
 	{
 		auto frame = sGlobal::Order().getGPUFrame();
-		int32_t model_count = m_instance_count[frame];
+		int32_t model_count = m_instance_count[frame].exchange(0);
 		if (model_count == 0)
 		{
 			// やることない
 			return;
 		}
 		// world
-		m_instance_count[frame] = 0;
 		{
-			auto& world = m_resource_instancing->m_world_buffer;
+			auto& world = m_instancing->m_world_buffer;
 			world.flushSubBuffer(model_count, 0, frame);
 			auto& buffer = world.getBufferMemory();
 
@@ -373,10 +313,10 @@ void ModelInstancingRender::execute(cModelInstancingPipeline& pipeline, vk::Comm
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, { to_shader_read_barrier }, {});
 		}
 		{
-			auto& instancing = m_resource_instancing->m_instancing_info_buffer;
+			auto& instancing = m_instancing->m_instancing_info_buffer;
 			ModelInstancingInfo info;
 			info.mInstanceAliveNum = model_count;
-			info.mInstanceMaxNum = m_resource_instancing->m_instance_max_num;
+			info.mInstanceMaxNum = m_instancing->m_instance_max_num;
 			info.mInstanceNum = 0;
 			instancing.subupdate(&info, 1, 0, frame);
 
@@ -395,7 +335,7 @@ void ModelInstancingRender::execute(cModelInstancingPipeline& pipeline, vk::Comm
 			vk::BufferMemoryBarrier to_shader_read_barrier;
 			to_shader_read_barrier.setBuffer(buffer.getBufferInfo().buffer);
 			to_shader_read_barrier.setOffset(buffer.getBufferInfo().offset);
-			to_shader_read_barrier.setSize(sizeof(ModelInstancingInfo));
+			to_shader_read_barrier.setSize(buffer.getBufferInfo().range);
 			to_shader_read_barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 			to_shader_read_barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, { to_shader_read_barrier }, {});
@@ -408,15 +348,15 @@ void ModelInstancingRender::execute(cModelInstancingPipeline& pipeline, vk::Comm
 		vk::BufferMemoryBarrier()
 		.setSrcAccessMask(vk::AccessFlagBits::eIndirectCommandRead)
 		.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
-		.setBuffer(m_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().buffer)
-		.setSize(m_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().range)
-		.setOffset(m_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().offset),
+		.setBuffer(m_instancing->getDrawIndirect().buffer)
+		.setSize(m_instancing->getDrawIndirect().range)
+		.setOffset(m_instancing->getDrawIndirect().offset),
 		vk::BufferMemoryBarrier()
 		.setSrcAccessMask(vk::AccessFlagBits::eShaderRead)
 		.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
-		.setBuffer(m_resource_instancing->getBuffer(ModelStorageBuffer::BONE_TRANSFORM).getBufferInfo().buffer)
-		.setSize(m_resource_instancing->getBuffer(ModelStorageBuffer::BONE_TRANSFORM).getBufferInfo().range)
-		.setOffset(m_resource_instancing->getBuffer(ModelStorageBuffer::BONE_TRANSFORM).getBufferInfo().offset)
+		.setBuffer(m_instancing->getBuffer(ModelStorageBuffer::BONE_TRANSFORM).getBufferInfo().buffer)
+		.setSize(m_instancing->getBuffer(ModelStorageBuffer::BONE_TRANSFORM).getBufferInfo().range)
+		.setOffset(m_instancing->getBuffer(ModelStorageBuffer::BONE_TRANSFORM).getBufferInfo().offset)
 	};
 
 	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands,
@@ -427,7 +367,7 @@ void ModelInstancingRender::execute(cModelInstancingPipeline& pipeline, vk::Comm
 
 		if (i == cModelInstancingPipeline::PIPELINE_COMPUTE_CULLING)
 		{
-			vk::BufferMemoryBarrier barrier = m_resource->m_mesh_resource.m_indirect_buffer_ex.makeMemoryBarrierEx();
+			vk::BufferMemoryBarrier barrier = m_instancing->getBuffer(ModelStorageBuffer::DRAW_INDIRECT).makeMemoryBarrierEx();
 			barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
 			barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, barrier, {});
@@ -435,7 +375,7 @@ void ModelInstancingRender::execute(cModelInstancingPipeline& pipeline, vk::Comm
 		if (i == cModelInstancingPipeline::PIPELINE_COMPUTE_MOTION_UPDATE)
 		{
 			// 
-			vk::BufferMemoryBarrier barrier = m_resource_instancing->getBuffer(ModelStorageBuffer::PLAYING_ANIMATION).makeMemoryBarrierEx();
+			vk::BufferMemoryBarrier barrier = m_instancing->getBuffer(ModelStorageBuffer::PLAYING_ANIMATION).makeMemoryBarrierEx();
 			barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
 			barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, barrier, {});
@@ -444,7 +384,7 @@ void ModelInstancingRender::execute(cModelInstancingPipeline& pipeline, vk::Comm
 		if (i == cModelInstancingPipeline::PIPELINE_COMPUTE_BONE_TRANSFORM)
 		{
 			// 
-			vk::BufferMemoryBarrier barrier = m_resource_instancing->getBuffer(ModelStorageBuffer::NODE_TRANSFORM).makeMemoryBarrierEx();
+			vk::BufferMemoryBarrier barrier = m_instancing->getBuffer(ModelStorageBuffer::NODE_TRANSFORM).makeMemoryBarrierEx();
 			barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
 			barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
@@ -452,12 +392,12 @@ void ModelInstancingRender::execute(cModelInstancingPipeline& pipeline, vk::Comm
 		}
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, pipeline.m_pipeline[i].get());
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipeline.m_pipeline_layout[cModelInstancingPipeline::PIPELINE_LAYOUT_COMPUTE].get(), 0, m_descriptor_set[DESCRIPTOR_SET_MODEL].get(), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipeline.m_pipeline_layout[cModelInstancingPipeline::PIPELINE_LAYOUT_COMPUTE].get(), 1, m_descriptor_set[DESCRIPTOR_SET_ANIMATION].get(), {});
-		cmd.dispatchIndirect(m_resource_instancing->m_compute_indirect_buffer.getBufferInfo().buffer, m_resource_instancing->m_compute_indirect_buffer.getBufferInfo().offset + i * 12);
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipeline.m_pipeline_layout[cModelInstancingPipeline::PIPELINE_LAYOUT_COMPUTE].get(), 0, m_model_descriptor_set.get(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipeline.m_pipeline_layout[cModelInstancingPipeline::PIPELINE_LAYOUT_COMPUTE].get(), 1, m_animation_descriptor_set.get(), {});
+		cmd.dispatchIndirect(m_instancing->m_compute_indirect_buffer.getBufferInfo().buffer, m_instancing->m_compute_indirect_buffer.getBufferInfo().offset + i * 12);
 
 	}
-	vk::BufferMemoryBarrier to_draw_barrier = m_resource_instancing->getBuffer(ModelStorageBuffer::BONE_TRANSFORM).makeMemoryBarrierEx();
+	vk::BufferMemoryBarrier to_draw_barrier = m_instancing->getBuffer(ModelStorageBuffer::BONE_TRANSFORM).makeMemoryBarrierEx();
 	to_draw_barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
 	to_draw_barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
 	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eVertexShader, {}, {}, to_draw_barrier, {});
@@ -467,7 +407,7 @@ void ModelInstancingRender::execute(cModelInstancingPipeline& pipeline, vk::Comm
 void ModelInstancingRender::draw(cModelInstancingPipeline& pipeline, vk::CommandBuffer& cmd)
 {
 	vk::ArrayProxy<const vk::DescriptorSet> sets = {
-		m_descriptor_set[DESCRIPTOR_SET_MODEL].get(),
+		m_model_descriptor_set.get(),
 		sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA),
 		pipeline.getLight()->getDescriptorSet(cFowardPlusPipeline::DESCRIPTOR_SET_LIGHT),
 	};
@@ -475,5 +415,5 @@ void ModelInstancingRender::draw(cModelInstancingPipeline& pipeline, vk::Command
 
 	cmd.bindVertexBuffers(0, { m_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().buffer }, { m_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().offset });
  	cmd.bindIndexBuffer(m_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().buffer, m_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().offset, m_resource->m_mesh_resource.mIndexType);
- 	cmd.drawIndexedIndirect(m_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().buffer, m_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().offset, m_resource->m_mesh_resource.mIndirectCount, sizeof(cModel::Mesh));
+ 	cmd.drawIndexedIndirect(m_instancing->getDrawIndirect().buffer, m_instancing->getDrawIndirect().offset, m_resource->m_mesh_resource.mIndirectCount, sizeof(cModel::Mesh));
 }

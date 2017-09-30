@@ -70,8 +70,8 @@ struct DefaultAnimationModule : public AnimationModule
 
 	std::vector<vk::UniqueCommandBuffer> m_bone_update_cmd;
 
-	virtual const btr::BufferMemory& getBoneBuffer()const override { return m_bone_buffer; }
-	virtual void update() override
+	virtual vk::DescriptorBufferInfo getBoneBuffer()const override { return m_bone_buffer.getBufferInfo(); }
+	virtual void animationUpdate() override
 	{
 		m_playlist.execute();
 		std::vector<glm::mat4> node_buffer(m_model_resource->m_model_info.mNodeNum);
@@ -91,7 +91,7 @@ struct DefaultAnimationModule : public AnimationModule
 			}
 		}
 	}
-	virtual void execute(const std::shared_ptr<btr::Context>& context, vk::CommandBuffer& cmd) override
+	virtual void animationExecute(const std::shared_ptr<btr::Context>& context, vk::CommandBuffer& cmd) override
 	{
 		cmd.executeCommands(m_bone_update_cmd[context->getGPUFrame()].get());
 	}
@@ -268,8 +268,8 @@ struct DefaultModelPipelineComponent : public ModelPipelineComponent
 		auto render = std::make_shared<ModelRender>();
 
 		render->m_descriptor_set_model = m_model_descriptor->allocateDescriptorSet(context);
-		m_model_descriptor->update(context, render->m_descriptor_set_model.get(), model->m_animation);
-		m_model_descriptor->update(context, render->m_descriptor_set_model.get(), model->m_material);
+		m_model_descriptor->updateAnimation(context, render->m_descriptor_set_model.get(), model->m_animation);
+		m_model_descriptor->updateMaterial(context, render->m_descriptor_set_model.get(), model->m_material);
 
 		// recode command
 		{
@@ -345,7 +345,7 @@ vk::CommandBuffer cModelPipeline::draw(std::shared_ptr<btr::Context>& context)
 	// draw
 	for (auto& render : m_model)
 	{
-		render->m_animation->execute(context, cmd);
+		render->m_animation->animationExecute(context, cmd);
 	}
 
 	vk::RenderPassBeginInfo begin_render_Info;

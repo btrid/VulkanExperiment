@@ -60,6 +60,7 @@ struct MotionTexture
 	std::shared_ptr<Resource> m_resource;
 
 	vk::ImageView getImageView()const { return m_resource ? m_resource->m_image_view.get() : vk::ImageView(); }
+	vk::Sampler getSampler()const { return m_resource ? m_resource->m_sampler.get() : vk::Sampler(); }
 
 	static std::vector<MotionTexture> createMotion(std::shared_ptr<btr::Context>& context, vk::CommandBuffer cmd, const cAnimation& anim)
 	{

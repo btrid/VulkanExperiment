@@ -6,16 +6,19 @@
 #include <btrlib/cModel.h>
 #include <applib/sCameraManager.h>
 
-void cModelInstancingPipeline::addModel(ModelInstancingRender* model)
+void cModelInstancingPipeline::addModel(const std::shared_ptr<btr::Context>& context, ModelInstancingRender* model)
 {
 	m_model.emplace_back(model);
-	m_model.back()->setup(*this);
+	m_model.back()->setup(context, *this);
 }
 
 void cModelInstancingPipeline::setup(const std::shared_ptr<btr::Context>& context)
 {
 	auto& device = context->m_device;
 	m_render_pass = std::make_shared<RenderPassModule>(context);
+
+	m_model_descriptor = std::make_shared<ModelDescriptorModule>(context);
+	m_animation_descriptor = std::make_shared<InstancingAnimationDescriptorModule>(context);
 
 	m_light_pipeline = std::make_shared<cFowardPlusPipeline>();
 	m_light_pipeline->setup(context);
@@ -48,106 +51,12 @@ void cModelInstancingPipeline::setup(const std::shared_ptr<btr::Context>& contex
 		}
 	}
 
-	// Create compute pipeline
-	std::vector<std::vector<vk::DescriptorSetLayoutBinding>> bindings(DESCRIPTOR_NUM);
-	bindings[DESCRIPTOR_SET_LAYOUT_ANIMATION] = {
-		vk::DescriptorSetLayoutBinding()
-		.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-		.setDescriptorCount(1)
-		.setBinding(0),
-		vk::DescriptorSetLayoutBinding()
-		.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-		.setDescriptorCount(1)
-		.setBinding(1),
-		vk::DescriptorSetLayoutBinding()
-		.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-		.setDescriptorCount(1)
-		.setBinding(2),
-		vk::DescriptorSetLayoutBinding()
-		.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-		.setDescriptorCount(1)
-		.setBinding(3),
-		vk::DescriptorSetLayoutBinding()
-		.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-		.setDescriptorCount(1)
-		.setBinding(4),
-		vk::DescriptorSetLayoutBinding()
-		.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-		.setDescriptorCount(1)
-		.setBinding(5),
-		vk::DescriptorSetLayoutBinding()
-		.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-		.setDescriptorCount(1)
-		.setBinding(6),
-		vk::DescriptorSetLayoutBinding()
-		.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-		.setDescriptorCount(1)
-		.setBinding(7),
-		vk::DescriptorSetLayoutBinding()
-		.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-		.setDescriptorCount(1)
-		.setBinding(8),
-		vk::DescriptorSetLayoutBinding()
-		.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-		.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-		.setDescriptorCount(1)
-		.setBinding(32),
-	};
-	bindings[DESCRIPTOR_SET_LAYOUT_MODEL] =
-	{
-		vk::DescriptorSetLayoutBinding()
-		.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
-		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-		.setDescriptorCount(1)
-		.setBinding(0),
-		vk::DescriptorSetLayoutBinding()
-		.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
-		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-		.setDescriptorCount(1)
-		.setBinding(1),
-		vk::DescriptorSetLayoutBinding()
-		.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
-		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-		.setDescriptorCount(1)
-		.setBinding(2),
-		vk::DescriptorSetLayoutBinding()
-		.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
-		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-		.setDescriptorCount(1)
-		.setBinding(3),
-		vk::DescriptorSetLayoutBinding()
-		.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
-		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-		.setDescriptorCount(1)
-		.setBinding(4),
-		vk::DescriptorSetLayoutBinding()
-		.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
-		.setDescriptorCount(16)
-		.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-		.setBinding(5),
-	};
-	for (u32 i = 0; i < bindings.size(); i++)
-	{
-		vk::DescriptorSetLayoutCreateInfo descriptor_layout_info = vk::DescriptorSetLayoutCreateInfo()
-			.setBindingCount(bindings[i].size())
-			.setPBindings(bindings[i].data());
-		m_descriptor_set_layout[i] = device->createDescriptorSetLayoutUnique(descriptor_layout_info);
-	}
 
 	{
 		{
 			vk::DescriptorSetLayout layouts[] = {
-				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_MODEL].get(),
-				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_ANIMATION].get(),
+				m_model_descriptor->getLayout(),
+				m_animation_descriptor->getLayout(),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info = vk::PipelineLayoutCreateInfo()
 				.setSetLayoutCount(array_length(layouts))
@@ -156,7 +65,7 @@ void cModelInstancingPipeline::setup(const std::shared_ptr<btr::Context>& contex
 		}
 		{
 			vk::DescriptorSetLayout layouts[] = {
-				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_MODEL].get(),
+				m_model_descriptor->getLayout(),
 				sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
 				m_light_pipeline->getDescriptorSetLayout(cFowardPlusPipeline::DESCRIPTOR_SET_LAYOUT_LIGHT),
 			};
@@ -167,24 +76,6 @@ void cModelInstancingPipeline::setup(const std::shared_ptr<btr::Context>& contex
 			m_pipeline_layout[PIPELINE_LAYOUT_RENDER] = device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
-	}
-
-	// DescriptorPool
-	{
-		std::vector<vk::DescriptorPoolSize> descriptor_pool_size;
-		for (auto& binding : bindings)
-		{
-			for (auto& buffer : binding)
-			{
-				descriptor_pool_size.emplace_back(buffer.descriptorType, buffer.descriptorCount*10);
-			}
-		}
-		vk::DescriptorPoolCreateInfo descriptor_pool_info;
-		descriptor_pool_info.maxSets = 20;
-		descriptor_pool_info.poolSizeCount = descriptor_pool_size.size();
-		descriptor_pool_info.pPoolSizes = descriptor_pool_size.data();
-
-		m_descriptor_pool = device->createDescriptorPoolUnique(descriptor_pool_info);
 	}
 
 
@@ -304,9 +195,9 @@ void cModelInstancingPipeline::setup(const std::shared_ptr<btr::Context>& contex
 	}
 }
 
-vk::CommandBuffer cModelInstancingPipeline::execute(std::shared_ptr<btr::Context>& executer)
+vk::CommandBuffer cModelInstancingPipeline::execute(std::shared_ptr<btr::Context>& context)
 {
-	auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
+	auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 
 	for (auto& render : m_model)
 	{
@@ -316,14 +207,14 @@ vk::CommandBuffer cModelInstancingPipeline::execute(std::shared_ptr<btr::Context
 	return cmd;
 }
 
-vk::CommandBuffer cModelInstancingPipeline::draw(std::shared_ptr<btr::Context>& executer)
+vk::CommandBuffer cModelInstancingPipeline::draw(std::shared_ptr<btr::Context>& context)
 {
-	auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
+	auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 
 	vk::RenderPassBeginInfo render_begin_info;
 	render_begin_info.setRenderPass(m_render_pass->getRenderPass());
-	render_begin_info.setFramebuffer(m_render_pass->getFramebuffer(executer->getGPUFrame()));
-	render_begin_info.setRenderArea(vk::Rect2D({}, executer->m_window->getClientSize<vk::Extent2D>()));
+	render_begin_info.setFramebuffer(m_render_pass->getFramebuffer(context->getGPUFrame()));
+	render_begin_info.setRenderArea(vk::Rect2D({}, context->m_window->getClientSize<vk::Extent2D>()));
 
 	cmd.beginRenderPass(render_begin_info, vk::SubpassContents::eInline);
 	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_graphics_pipeline.get());

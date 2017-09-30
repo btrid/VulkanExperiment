@@ -103,7 +103,7 @@ int main()
 
 	cModelInstancingPipeline pipeline;
 	pipeline.setup(context);
-	pipeline.addModel(&render);
+	pipeline.addModel(context, &render);
 
 	std::vector<ModelInstancingRender::InstanceResource> data(1000);
 	for (int i = 0; i < 1000; i++)

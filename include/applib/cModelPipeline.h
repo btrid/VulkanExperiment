@@ -100,17 +100,15 @@ struct AnimationModule
 	MotionPlayList& getPlayList() { return m_playlist; }
 	const MotionPlayList& getPlayList()const { return m_playlist; }
 
-	virtual const btr::BufferMemory& getBoneBuffer()const = 0;
-	virtual void update() = 0;
-	virtual void execute(const std::shared_ptr<btr::Context>& context, vk::CommandBuffer& cmd) = 0;
+	virtual vk::DescriptorBufferInfo getBoneBuffer()const = 0;
+	virtual void animationUpdate() = 0;
+	virtual void animationExecute(const std::shared_ptr<btr::Context>& context, vk::CommandBuffer& cmd) = 0;
 };
 
 struct InstancingModule
 {
-	btr::BufferMemory m_model_info;
-	btr::BufferMemory m_instancing_info;
-	const btr::BufferMemory& getModelInfo()const { return m_model_info; }
-	const btr::BufferMemory& getInstancingInfo()const { return m_instancing_info; }
+	virtual vk::DescriptorBufferInfo getModelInfo()const = 0;
+	virtual vk::DescriptorBufferInfo getInstancingInfo()const = 0;
 };
 
 struct DefaultMaterialModule : public MaterialModule
@@ -195,8 +193,8 @@ struct DefaultMaterialModule : public MaterialModule
 		}
 	}
 
-	virtual const btr::BufferMemory& getMaterialIndexBuffer()const override { return m_material_index; }
-	virtual const btr::BufferMemory& getMaterialBuffer()const override { return m_material; }
+	virtual vk::DescriptorBufferInfo getMaterialIndexBuffer()const override { return m_material_index.getBufferInfo(); }
+	virtual vk::DescriptorBufferInfo getMaterialBuffer()const override { return m_material.getBufferInfo(); }
 	virtual const std::vector<ResourceTexture>& getTextureList()const { return m_texture; }
 
 };
@@ -288,32 +286,32 @@ struct ModelDescriptorModule : public DescriptorModule
 		std::vector<vk::DescriptorSetLayoutBinding> binding =
 		{
 			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
+			.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute)
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setDescriptorCount(1)
 			.setBinding(0),
 			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
+			.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute)
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setDescriptorCount(1)
 			.setBinding(1),
 			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
+			.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute)
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setDescriptorCount(1)
 			.setBinding(2),
 			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
+			.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute)
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setDescriptorCount(1)
 			.setBinding(3),
 			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
+			.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute)
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setDescriptorCount(1)
 			.setBinding(4),
 			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
+			.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute)
 			.setDescriptorCount(DESCRIPTOR_TEXTURE_NUM)
 			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
 			.setBinding(5),
@@ -322,11 +320,11 @@ struct ModelDescriptorModule : public DescriptorModule
 		m_descriptor_pool = createDescriptorPool(context, binding, 30);
 	}
 
-	void update(const std::shared_ptr<btr::Context>& context, vk::DescriptorSet descriptor_set, const std::shared_ptr<MaterialModule>& material)
+	void updateMaterial(const std::shared_ptr<btr::Context>& context, vk::DescriptorSet descriptor_set, const std::shared_ptr<MaterialModule>& material)
 	{
 		std::vector<vk::DescriptorBufferInfo> storages = {
-			material->getMaterialIndexBuffer().getBufferInfo(),
-			material->getMaterialBuffer().getBufferInfo(),
+			material->getMaterialIndexBuffer(),
+			material->getMaterialBuffer(),
 		};
 
 		std::vector<vk::DescriptorImageInfo> color_images(DESCRIPTOR_TEXTURE_NUM, vk::DescriptorImageInfo(DrawHelper::Order().getWhiteTexture().m_sampler.get(), DrawHelper::Order().getWhiteTexture().m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal));
@@ -354,10 +352,10 @@ struct ModelDescriptorModule : public DescriptorModule
 		};
 		context->m_device->updateDescriptorSets(write, {});
 	}
-	void update(const std::shared_ptr<btr::Context>& context, vk::DescriptorSet descriptor_set, const std::shared_ptr<AnimationModule>& animation)
+	void updateAnimation(const std::shared_ptr<btr::Context>& context, vk::DescriptorSet descriptor_set, const std::shared_ptr<AnimationModule>& animation)
 	{
 		std::vector<vk::DescriptorBufferInfo> storages = {
-			animation->getBoneBuffer().getBufferInfo(),
+			animation->getBoneBuffer(),
 		};
 		std::vector<vk::WriteDescriptorSet> drawWriteDescriptorSets =
 		{
@@ -370,11 +368,11 @@ struct ModelDescriptorModule : public DescriptorModule
 		};
 		context->m_device->updateDescriptorSets(drawWriteDescriptorSets, {});
 	}
-	void update(const std::shared_ptr<btr::Context>& context, vk::DescriptorSet descriptor_set, const std::shared_ptr<InstancingModule>& instancing)
+	void updateInstancing(const std::shared_ptr<btr::Context>& context, vk::DescriptorSet descriptor_set, const std::shared_ptr<InstancingModule>& instancing)
 	{
 		std::vector<vk::DescriptorBufferInfo> storages = {
-			instancing->getModelInfo().getBufferInfo(),
-			instancing->getInstancingInfo().getBufferInfo(),
+			instancing->getModelInfo(),
+			instancing->getInstancingInfo(),
 		};
 		std::vector<vk::WriteDescriptorSet> write =
 		{

@@ -4,8 +4,7 @@
 #include <btrlib/AllocatedMemory.h>
 #include <btrlib/Context.h>
 #include <applib/cLightPipeline.h>
-
-struct cModelInstancingPipeline;
+#include <applib/cModelInstancingPipeline.h>
 
 namespace model
 {
@@ -83,26 +82,12 @@ public:
 		int		isLoop;				//!<
 	};
 
-
 	struct ModelInstancingInfo {
 		s32 mInstanceMaxNum;		//!< 出せるモデルの量
 		s32 mInstanceAliveNum;		//!< 生きているモデルの量
 		s32 mInstanceNum;			//!< 実際に描画する数
 		s32 _p[1];
 	};
-public:
-
-	std::shared_ptr<cModel::Resource> m_resource;
-
-	enum DescriptorSet
-	{
-		DESCRIPTOR_SET_MODEL,
-		DESCRIPTOR_SET_ANIMATION,
-	};
-	std::vector<vk::UniqueDescriptorSet> m_descriptor_set;
-	vk::UniqueDescriptorSet m_model_descriptor_set;
-	vk::UniqueDescriptorSet m_animation_descriptor_set;
-	std::shared_ptr<MaterialModule> m_material;
 
 	enum ModelStorageBuffer : s32
 	{
@@ -114,9 +99,11 @@ public:
 		NODE_TRANSFORM,
 		BONE_TRANSFORM,
 		BONE_MAP,	//!< instancingの際のBoneの参照先
+		DRAW_INDIRECT,	
 		NUM,
 	};
-	struct InstancingResource
+
+	struct InstancingResource : public InstancingAnimationModule, public InstancingModule
 	{
 		uint32_t m_instance_max_num;
 		std::vector<MotionTexture> m_motion_texture;
@@ -129,8 +116,34 @@ public:
 		const btr::BufferMemory& getBuffer(ModelStorageBuffer buffer)const { return m_storage_buffer[static_cast<s32>(buffer)]; }
 		btr::BufferMemory& getBuffer(ModelStorageBuffer buffer) { return m_storage_buffer[static_cast<s32>(buffer)]; }
 
+		virtual vk::DescriptorBufferInfo getBoneBuffer()const override { return getBuffer(BONE_TRANSFORM).getBufferInfo(); }
+		virtual void animationUpdate() override {}
+		virtual void animationExecute(const std::shared_ptr<btr::Context>& context, vk::CommandBuffer& cmd) override { ; }
+
+		virtual vk::DescriptorBufferInfo getAnimationInfoBuffer()const override { return getBuffer(ANIMATION_INFO).getBufferInfo(); }
+		virtual vk::DescriptorBufferInfo getPlayingAnimationBuffer()const override { return getBuffer(PLAYING_ANIMATION).getBufferInfo(); }
+		virtual vk::DescriptorBufferInfo getNodeBuffer()const override { return getBuffer(NODE_TRANSFORM).getBufferInfo(); }
+		virtual vk::DescriptorBufferInfo getBoneMap()const override { return getBuffer(BONE_MAP).getBufferInfo(); }
+		virtual vk::DescriptorBufferInfo getNodeInfoBuffer()const override { return getBuffer(NODE_INFO).getBufferInfo(); }
+		virtual vk::DescriptorBufferInfo getBoneInfoBuffer()const override { return getBuffer(BONE_INFO).getBufferInfo(); }
+		virtual vk::DescriptorBufferInfo getWorldBuffer()const override { return m_world_buffer.getBufferInfo(); }
+		virtual vk::DescriptorBufferInfo getDrawIndirect()const override { return getBuffer(DRAW_INDIRECT).getBufferInfo(); }
+		virtual const std::vector<MotionTexture>& getMotionTexture()const override { return m_motion_texture; }
+
+		virtual vk::DescriptorBufferInfo getModelInfo()const override { return getBuffer(MODEL_INFO).getBufferInfo(); }
+		virtual vk::DescriptorBufferInfo getInstancingInfo()const override { return m_instancing_info_buffer.getBufferMemory().getBufferInfo(); }
+
+
 	};
-	std::unique_ptr<InstancingResource> m_resource_instancing;
+public:
+
+	std::shared_ptr<cModel::Resource> m_resource;
+
+	vk::UniqueDescriptorSet m_model_descriptor_set;
+	vk::UniqueDescriptorSet m_animation_descriptor_set;
+	std::shared_ptr<MaterialModule> m_material;
+	std::shared_ptr<InstancingResource> m_instancing;
+
 
 
 	struct InstanceResource
@@ -143,7 +156,7 @@ public:
 public:
 	void setup(std::shared_ptr<btr::Context>& loader, std::shared_ptr<cModel::Resource>& resource, uint32_t instanceNum);
 
-	void setup(cModelInstancingPipeline& pipeline);
+	void setup(const std::shared_ptr<btr::Context>& context, cModelInstancingPipeline& pipeline);
 	void execute(cModelInstancingPipeline& pipeline, vk::CommandBuffer& cmd);
 	void draw(cModelInstancingPipeline& pipeline, vk::CommandBuffer& cmd);
 

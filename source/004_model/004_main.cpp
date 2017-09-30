@@ -77,7 +77,7 @@ int main()
 		app.preUpdate();
 		{
 			render->m_animation->getTransform().m_global = mat4(1.f);
-			render->m_animation->update();
+			render->m_animation->animationUpdate();
 
 			std::vector<vk::CommandBuffer> render_cmds(1);
 			render_cmds[0] = renderer.draw(context);
