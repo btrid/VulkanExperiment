@@ -58,7 +58,6 @@ void ResourceTexture::load(std::shared_ptr<btr::Context>& context, vk::CommandBu
 	if (s_manager.manage(m_resource, filename)) {
 		return;
 	}
-	m_resource->m_device = context->m_device;
 
 	auto texture_data = rTexture::LoadTexture(filename);
 	vk::ImageCreateInfo image_info;

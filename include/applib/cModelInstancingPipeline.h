@@ -9,6 +9,7 @@
 #include <btrlib/AllocatedMemory.h>
 #include <btrlib/Context.h>
 #include <applib/cLightPipeline.h>
+#include <applib/cModelPipeline.h>
 
 struct ModelInstancingRender;
 
@@ -63,6 +64,7 @@ struct cModelInstancingPipeline
 	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
 	std::array<vk::UniqueDescriptorSetLayout, DESCRIPTOR_NUM> m_descriptor_set_layout;
 
+	std::shared_ptr<ModelDescriptorModule> m_model_descriptor;
 
 	std::shared_ptr<cFowardPlusPipeline> m_light_pipeline;
 	std::vector<ModelInstancingRender*> m_model;

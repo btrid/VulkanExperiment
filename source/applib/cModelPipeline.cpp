@@ -70,7 +70,7 @@ struct DefaultAnimationModule : public AnimationModule
 
 	std::vector<vk::UniqueCommandBuffer> m_bone_update_cmd;
 
-	virtual btr::BufferMemory getBoneBuffer()const override { return m_bone_buffer; }
+	virtual const btr::BufferMemory& getBoneBuffer()const override { return m_bone_buffer; }
 	virtual void update() override
 	{
 		m_playlist.execute();
@@ -168,7 +168,7 @@ struct DefaultModelPipelineComponent : public ModelPipelineComponent
 		m_shader = shader;
 
 		// Create descriptor set
-		m_model_descriptor = std::make_shared<DefaultModelDescriptorModule>(context);
+		m_model_descriptor = std::make_shared<ModelDescriptorModule>(context);
 
 		// pipeline layout
 		{
@@ -267,7 +267,9 @@ struct DefaultModelPipelineComponent : public ModelPipelineComponent
 		auto& device = context->m_device;
 		auto render = std::make_shared<ModelRender>();
 
-		render->m_descriptor_set_model = m_model_descriptor->allocateDescriptorSet(context, model);
+		render->m_descriptor_set_model = m_model_descriptor->allocateDescriptorSet(context);
+		m_model_descriptor->update(context, render->m_descriptor_set_model.get(), model->m_animation);
+		m_model_descriptor->update(context, render->m_descriptor_set_model.get(), model->m_material);
 
 		// recode command
 		{

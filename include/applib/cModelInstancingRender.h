@@ -100,6 +100,8 @@ public:
 		DESCRIPTOR_SET_ANIMATION,
 	};
 	std::vector<vk::UniqueDescriptorSet> m_descriptor_set;
+	vk::UniqueDescriptorSet m_model_descriptor_set;
+	vk::UniqueDescriptorSet m_animation_descriptor_set;
 	std::shared_ptr<MaterialModule> m_material;
 
 	enum ModelStorageBuffer : s32

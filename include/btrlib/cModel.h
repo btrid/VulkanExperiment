@@ -16,6 +16,7 @@
 #include <btrlib/AllocatedMemory.h>
 #include <btrlib/Context.h>
 #include <btrlib/cMotion.h>
+#include <btrlib/Material.h>
 
 class Node
 {
@@ -72,33 +73,6 @@ struct ResourceVertex
 	std::vector<vk::VertexInputBindingDescription> m_vertex_input_binding;
 	std::vector<vk::VertexInputAttributeDescription> m_vertex_input_attribute;
 	vk::PipelineVertexInputStateCreateInfo m_vertex_input_info;
-
-};
-struct ResourceTexture
-{
-	struct Resource 
-	{
-		std::string m_filename;
-		cDevice m_device;
-		vk::UniqueImage m_image;
-		vk::UniqueImageView m_image_view;
-		vk::UniqueDeviceMemory m_memory;
-		vk::UniqueSampler m_sampler;
-	};
-
-	std::shared_ptr<Resource> m_resource;
-
-	void load(std::shared_ptr<btr::Context>& loader, vk::CommandBuffer cmd, const std::string& filename);
-	vk::ImageView getImageView()const { return m_resource ? m_resource->m_image_view.get() : vk::ImageView(); }
-	vk::Sampler getSampler()const { return m_resource ? m_resource->m_sampler.get() : vk::Sampler(); }
-
-	bool isReady()const 
-	{
-//		return m_private ? m_private->m_device->getFenceStatus(*m_private->m_fence_shared) == vk::Result::eSuccess : true;
-		return true;
-	}
-
-	static ResourceManager<Resource> s_manager;
 
 };
 

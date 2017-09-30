@@ -100,9 +100,17 @@ struct AnimationModule
 	MotionPlayList& getPlayList() { return m_playlist; }
 	const MotionPlayList& getPlayList()const { return m_playlist; }
 
-	virtual btr::BufferMemory getBoneBuffer()const = 0;
+	virtual const btr::BufferMemory& getBoneBuffer()const = 0;
 	virtual void update() = 0;
 	virtual void execute(const std::shared_ptr<btr::Context>& context, vk::CommandBuffer& cmd) = 0;
+};
+
+struct InstancingModule
+{
+	btr::BufferMemory m_model_info;
+	btr::BufferMemory m_instancing_info;
+	const btr::BufferMemory& getModelInfo()const { return m_model_info; }
+	const btr::BufferMemory& getInstancingInfo()const { return m_instancing_info; }
 };
 
 struct DefaultMaterialModule : public MaterialModule
@@ -124,6 +132,7 @@ struct DefaultMaterialModule : public MaterialModule
 
 	btr::BufferMemory m_material_index;
 	btr::BufferMemory m_material;
+	std::vector<ResourceTexture> m_texture;
 
 	DefaultMaterialModule(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<cModel::Resource>& resource)
 	{
@@ -176,11 +185,20 @@ struct DefaultMaterialModule : public MaterialModule
 			copy_info.setDstOffset(m_material.getBufferInfo().offset);
 			cmd->copyBuffer(staging_material.getBufferInfo().buffer, m_material.getBufferInfo().buffer, copy_info);
 		}
-
+		
+		// todo Œ‹\“K“–
+		m_texture.resize(resource->m_material.size() * 1);
+		for (size_t i = 0; i < resource->m_material.size(); i++)
+		{
+			auto& m = resource->m_material[i];
+			m_texture[i * 1 + 0] = m.mDiffuseTex.isReady() ? m.mDiffuseTex : ResourceTexture();
+		}
 	}
 
-	virtual btr::BufferMemory getMaterialIndexBuffer()const override { return m_material_index; }
-	virtual btr::BufferMemory getMaterialBuffer()const override { return m_material; }
+	virtual const btr::BufferMemory& getMaterialIndexBuffer()const override { return m_material_index; }
+	virtual const btr::BufferMemory& getMaterialBuffer()const override { return m_material; }
+	virtual const std::vector<ResourceTexture>& getTextureList()const { return m_texture; }
+
 };
 
 
@@ -213,6 +231,21 @@ struct ModelPipelineComponent : public PipelineComponent
 
 struct DescriptorModule
 {
+public:
+	vk::UniqueDescriptorSet allocateDescriptorSet(const std::shared_ptr<btr::Context>& context)
+	{
+		auto& device = context->m_device;
+		vk::DescriptorSetLayout layouts[] =
+		{
+			m_descriptor_set_layout.get()
+		};
+		vk::DescriptorSetAllocateInfo descriptor_set_alloc_info;
+		descriptor_set_alloc_info.setDescriptorPool(getPool());
+		descriptor_set_alloc_info.setDescriptorSetCount(array_length(layouts));
+		descriptor_set_alloc_info.setPSetLayouts(layouts);
+		auto descriptor_set = std::move(device->allocateDescriptorSetsUnique(descriptor_set_alloc_info)[0]);
+		return descriptor_set;
+	}
 protected:
 	vk::UniqueDescriptorSetLayout createDescriptorSetLayout(const std::shared_ptr<btr::Context>& context, const std::vector<vk::DescriptorSetLayoutBinding>& binding)
 	{
@@ -238,22 +271,19 @@ protected:
 		pool_info.setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet);
 		return device->createDescriptorPoolUnique(pool_info);
 	}
+
 protected:
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorPool m_descriptor_pool;
 public:
 	vk::DescriptorSetLayout getLayout()const { return m_descriptor_set_layout.get(); }
+protected:
 	vk::DescriptorPool getPool()const { return m_descriptor_pool.get(); }
 
 };
 struct ModelDescriptorModule : public DescriptorModule
 {
-	virtual vk::UniqueDescriptorSet allocateDescriptorSet(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<Model>& model) = 0;
-};
-
-struct DefaultModelDescriptorModule : public ModelDescriptorModule
-{
-	DefaultModelDescriptorModule(const std::shared_ptr<btr::Context>& context)
+	ModelDescriptorModule(const std::shared_ptr<btr::Context>& context)
 	{
 		std::vector<vk::DescriptorSetLayoutBinding> binding =
 		{
@@ -292,31 +322,43 @@ struct DefaultModelDescriptorModule : public ModelDescriptorModule
 		m_descriptor_pool = createDescriptorPool(context, binding, 30);
 	}
 
-	vk::UniqueDescriptorSet allocateDescriptorSet(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<Model>& model) override
+	void update(const std::shared_ptr<btr::Context>& context, vk::DescriptorSet descriptor_set, const std::shared_ptr<MaterialModule>& material)
 	{
-		auto& device = context->m_device;
-		vk::DescriptorSetLayout layouts[] =
-		{
-			m_descriptor_set_layout.get()
-		};
-		vk::DescriptorSetAllocateInfo descriptor_set_alloc_info;
-		descriptor_set_alloc_info.setDescriptorPool(getPool());
-		descriptor_set_alloc_info.setDescriptorSetCount(array_length(layouts));
-		descriptor_set_alloc_info.setPSetLayouts(layouts);
-		auto descriptor_set = std::move(device->allocateDescriptorSetsUnique(descriptor_set_alloc_info)[0]);
-
 		std::vector<vk::DescriptorBufferInfo> storages = {
-			model->m_animation->getBoneBuffer().getBufferInfo(),
-			model->m_material->getMaterialIndexBuffer().getBufferInfo(),
-			model->m_material->getMaterialBuffer().getBufferInfo(),
+			material->getMaterialIndexBuffer().getBufferInfo(),
+			material->getMaterialBuffer().getBufferInfo(),
 		};
 
 		std::vector<vk::DescriptorImageInfo> color_images(DESCRIPTOR_TEXTURE_NUM, vk::DescriptorImageInfo(DrawHelper::Order().getWhiteTexture().m_sampler.get(), DrawHelper::Order().getWhiteTexture().m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal));
-		for (size_t i = 0; i < model->m_model_resource->m_mesh.size(); i++)
+		for (size_t i = 0; i < material->getTextureList().size(); i++)
 		{
-			auto& material = model->m_model_resource->m_material[model->m_model_resource->m_mesh[i].m_material_index];
-			color_images[i] = vk::DescriptorImageInfo(material.mDiffuseTex.getSampler(), material.mDiffuseTex.getImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
+			const auto& tex = material->getTextureList()[i];
+			if (tex.isReady()) {
+				color_images[i] = vk::DescriptorImageInfo(tex.getSampler(), tex.getImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
+			}
 		}
+		std::vector<vk::WriteDescriptorSet> write =
+		{
+			vk::WriteDescriptorSet()
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount((uint32_t)storages.size())
+			.setPBufferInfo(storages.data())
+			.setDstBinding(3)
+			.setDstSet(descriptor_set),
+			vk::WriteDescriptorSet()
+			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+			.setDescriptorCount((uint32_t)color_images.size())
+			.setPImageInfo(color_images.data())
+			.setDstBinding(5)
+			.setDstSet(descriptor_set),
+		};
+		context->m_device->updateDescriptorSets(write, {});
+	}
+	void update(const std::shared_ptr<btr::Context>& context, vk::DescriptorSet descriptor_set, const std::shared_ptr<AnimationModule>& animation)
+	{
+		std::vector<vk::DescriptorBufferInfo> storages = {
+			animation->getBoneBuffer().getBufferInfo(),
+		};
 		std::vector<vk::WriteDescriptorSet> drawWriteDescriptorSets =
 		{
 			vk::WriteDescriptorSet()
@@ -324,16 +366,26 @@ struct DefaultModelDescriptorModule : public ModelDescriptorModule
 			.setDescriptorCount((uint32_t)storages.size())
 			.setPBufferInfo(storages.data())
 			.setDstBinding(2)
-			.setDstSet(descriptor_set.get()),
-			vk::WriteDescriptorSet()
-			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-			.setDescriptorCount((uint32_t)color_images.size())
-			.setPImageInfo(color_images.data())
-			.setDstBinding(5)
-			.setDstSet(descriptor_set.get()),
+			.setDstSet(descriptor_set),
 		};
-		device->updateDescriptorSets(drawWriteDescriptorSets, {});
-		return descriptor_set;
+		context->m_device->updateDescriptorSets(drawWriteDescriptorSets, {});
+	}
+	void update(const std::shared_ptr<btr::Context>& context, vk::DescriptorSet descriptor_set, const std::shared_ptr<InstancingModule>& instancing)
+	{
+		std::vector<vk::DescriptorBufferInfo> storages = {
+			instancing->getModelInfo().getBufferInfo(),
+			instancing->getInstancingInfo().getBufferInfo(),
+		};
+		std::vector<vk::WriteDescriptorSet> write =
+		{
+			vk::WriteDescriptorSet()
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount((uint32_t)storages.size())
+			.setPBufferInfo(storages.data())
+			.setDstBinding(0)
+			.setDstSet(descriptor_set),
+		};
+		context->m_device->updateDescriptorSets(write, {});
 	}
 
 private:
