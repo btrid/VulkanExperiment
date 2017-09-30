@@ -205,33 +205,6 @@ std::vector<MotionTexture> createMotion(std::shared_ptr<btr::Context>& loader, v
 	return motion_texture;
 
 }
-void createNodeInfoRecurcive(const RootNode& rootnode, const Node& node, std::vector<ModelInstancingRender::NodeInfo>& nodeBuffer, int parentIndex)
-{
-	nodeBuffer.emplace_back();
-	auto& n = nodeBuffer.back();
-	n.mNodeNo = (s32)nodeBuffer.size() - 1;
-	n.mParent = parentIndex;
-	n.m_depth = nodeBuffer[parentIndex].m_depth + 1;
-	for (size_t i = 0; i < node.mChildren.size(); i++) {
-		createNodeInfoRecurcive(rootnode, rootnode.mNodeList[node.mChildren[i]], nodeBuffer, n.mNodeNo);
-	}
-}
-
-std::vector<ModelInstancingRender::NodeInfo> createNodeInfo(const RootNode& rootnode)
-{
-	std::vector<ModelInstancingRender::NodeInfo> nodeBuffer;
-	nodeBuffer.reserve(rootnode.mNodeList.size());
-	nodeBuffer.emplace_back();
-	auto& node = nodeBuffer.back();
-	node.mNodeNo = (int32_t)nodeBuffer.size() - 1;
-	node.mParent = -1;
-	node.m_depth = 0;
-	for (size_t i = 0; i < rootnode.mNodeList[0].mChildren.size(); i++) {
-		createNodeInfoRecurcive(rootnode, rootnode.mNodeList[rootnode.mNodeList[0].mChildren[i]], nodeBuffer, node.mNodeNo);
-	}
-
-	return nodeBuffer;
-}
 
 
 void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& context, std::shared_ptr<cModel::Resource>& resource, uint32_t instanceNum)
@@ -243,7 +216,7 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& context, std::s
 	m_resource_instancing->m_instance_max_num = instanceNum;
 
 	// node info
-	auto nodeInfo = createNodeInfo(m_resource->mNodeRoot);
+	auto nodeInfo = model::NodeInfo::createNodeInfo(m_resource->mNodeRoot);
 	{
 		btr::AllocatedMemory::Descriptor staging_desc;
 		staging_desc.size = vector_sizeof(nodeInfo);
@@ -271,16 +244,16 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& context, std::s
 		// BoneInfo
 		{
 			btr::AllocatedMemory::Descriptor staging_desc;
-			staging_desc.size = m_resource->mBone.size() * sizeof(BoneInfo);
+			staging_desc.size = m_resource->mBone.size() * sizeof(model::BoneInfo);
 			staging_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 			btr::BufferMemory staging_bone_info = context->m_staging_memory.allocateMemory(staging_desc);
-			auto* bo = static_cast<BoneInfo*>(staging_bone_info.getMappedPtr());
+			auto* bo = static_cast<model::BoneInfo*>(staging_bone_info.getMappedPtr());
 			for (size_t i = 0; i < m_resource->mBone.size(); i++) {
 				bo[i].mBoneOffset = m_resource->mBone[i].mOffset;
 				bo[i].mNodeIndex = m_resource->mBone[i].mNodeIndex;
 			}
 			auto& buffer = m_resource_instancing->getBuffer(BONE_INFO);
-			buffer = context->m_storage_memory.allocateMemory(m_resource->mBone.size() * sizeof(BoneInfo));
+			buffer = context->m_storage_memory.allocateMemory(m_resource->mBone.size() * sizeof(model::BoneInfo));
 
 			vk::BufferCopy copy_info;
 			copy_info.setSize(staging_bone_info.getBufferInfo().range);
@@ -713,9 +686,12 @@ void ModelInstancingRender::draw(cModelInstancingRenderer& renderer, vk::Command
 {
 	auto& pipeline = renderer.getComputePipeline();
 	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.m_graphics_pipeline.get());
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelInstancingPipeline::PIPELINE_LAYOUT_RENDER].get(), 0, m_descriptor_set[DESCRIPTOR_SET_MODEL].get(), {});
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelInstancingPipeline::PIPELINE_LAYOUT_RENDER].get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelInstancingPipeline::PIPELINE_LAYOUT_RENDER].get(), 2, pipeline.m_descriptor_set_light.get(), {});
+	vk::ArrayProxy<const vk::DescriptorSet> sets = {
+		m_descriptor_set[DESCRIPTOR_SET_MODEL].get(),
+		sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA),
+		pipeline.m_descriptor_set_light.get(),
+	};
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelInstancingPipeline::PIPELINE_LAYOUT_RENDER].get(), 0, sets, {});
  	cmd.bindVertexBuffers(0, { m_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().buffer }, { m_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().offset });
  	cmd.bindIndexBuffer(m_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().buffer, m_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().offset, m_resource->m_mesh_resource.mIndexType);
  	cmd.drawIndexedIndirect(m_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().buffer, m_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().offset, m_resource->m_mesh_resource.mIndirectCount, sizeof(cModel::Mesh));

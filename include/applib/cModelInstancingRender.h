@@ -5,7 +5,64 @@
 #include <btrlib/Context.h>
 #include <applib/cModelInstancingPipeline.h>
 #include <applib/cLightPipeline.h>
+
 struct cModelInstancingRenderer;
+
+namespace model
+{
+struct BoneInfo
+{
+	s32 mNodeIndex;
+	s32 _p[3];
+	glm::mat4 mBoneOffset;
+
+	static std::vector<BoneInfo> createBoneInfo(const std::vector<cModel::Bone>& bone)
+	{
+		std::vector<BoneInfo> bo(bone.size());
+		for (size_t i = 0; i < bone.size(); i++) {
+			bo[i].mBoneOffset = bone[i].mOffset;
+			bo[i].mNodeIndex = bone[i].mNodeIndex;
+		}
+		return bo;
+	}
+};
+struct NodeInfo 
+{
+	int32_t		mNodeNo;
+	int32_t		mParent;
+	int32_t		mBoneIndex;
+	int32_t		m_depth;	//!< RootNodeからの深さ
+
+	static void createNodeInfoRecurcive(const RootNode& rootnode, const Node& node, std::vector<NodeInfo>& nodeBuffer, int parentIndex)
+	{
+		nodeBuffer.emplace_back();
+		auto& n = nodeBuffer.back();
+		n.mNodeNo = (s32)nodeBuffer.size() - 1;
+		n.mParent = parentIndex;
+		n.m_depth = nodeBuffer[parentIndex].m_depth + 1;
+		for (size_t i = 0; i < node.mChildren.size(); i++) {
+			createNodeInfoRecurcive(rootnode, rootnode.mNodeList[node.mChildren[i]], nodeBuffer, n.mNodeNo);
+		}
+	}
+
+	static std::vector<NodeInfo> createNodeInfo(const RootNode& rootnode)
+	{
+		std::vector<NodeInfo> nodeBuffer;
+		nodeBuffer.reserve(rootnode.mNodeList.size());
+		nodeBuffer.emplace_back();
+		auto& node = nodeBuffer.back();
+		node.mNodeNo = (int32_t)nodeBuffer.size() - 1;
+		node.mParent = -1;
+		node.m_depth = 0;
+		for (size_t i = 0; i < rootnode.mNodeList[0].mChildren.size(); i++) {
+			createNodeInfoRecurcive(rootnode, rootnode.mNodeList[rootnode.mNodeList[0].mChildren[i]], nodeBuffer, node.mNodeNo);
+		}
+
+		return nodeBuffer;
+	}
+
+};
+}
 
 /**
 * animationデータを格納したテクスチャ
@@ -57,12 +114,7 @@ public:
 		int		isLoop;				//!<
 	};
 
-	struct BoneInfo
-	{
-		s32 mNodeIndex;
-		s32 _p[3];
-		glm::mat4 mBoneOffset;
-	};
+
 	struct ModelInstancingInfo {
 		s32 mInstanceMaxNum;		//!< 出せるモデルの量
 		s32 mInstanceAliveNum;		//!< 生きているモデルの量
@@ -70,20 +122,6 @@ public:
 		s32 _p[1];
 	};
 public:
-	struct NodeInfo {
-		int32_t		mNodeNo;
-		int32_t		mParent;
-		int32_t		mBoneIndex;
-		int32_t		m_depth;	//!< RootNodeからの深さ
-
-		NodeInfo()
-			: mNodeNo(-1)
-			, mParent(-1)
-			, mBoneIndex(-1)
-			, m_depth(0)
-		{
-		}
-	};
 
 	struct NodeLocalTransformBuffer {
 		glm::mat4	localAnimated_;		//!< parentMatrix,Worldをかけていない行列
