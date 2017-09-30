@@ -51,7 +51,6 @@ struct cModelInstancingPipeline
 		PIPELINE_COMPUTE_BONE_TRANSFORM,
 		PIPELINE_NUM,
 	};
-//	std::shared_ptr<ModelPipelineComponent> m_pipeline;
 
 	std::shared_ptr<RenderPassModule> m_render_pass;
 

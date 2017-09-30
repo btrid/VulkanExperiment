@@ -152,3 +152,9 @@ private:
 struct PipelineComponent
 {
 };
+
+struct MaterialModule
+{
+	virtual btr::BufferMemory getMaterialIndexBuffer()const = 0;
+	virtual btr::BufferMemory getMaterialBuffer()const = 0;
+};

@@ -1,11 +1,13 @@
 ﻿#include <applib/cModelInstancingRender.h>
 #include <applib/cModelInstancingPipeline.h>
+#include <applib/cModelPipeline.h>
 #include <applib/DrawHelper.h>
 #include <applib/sCameraManager.h>
 
 void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& context, std::shared_ptr<cModel::Resource>& resource, uint32_t instanceNum)
 {
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+	m_material = std::make_shared<DefaultMaterialModule>(context, resource);
 
 	m_resource = resource;
 	m_resource_instancing = std::make_unique<InstancingResource>();
@@ -258,6 +260,8 @@ void ModelInstancingRender::setup(cModelInstancingPipeline& pipeline)
 					m_resource_instancing->getBuffer(ModelStorageBuffer::MODEL_INFO).getBufferInfo(),
 					m_resource_instancing->getBuffer(MODEL_INSTANCING_INFO).getBufferInfo(),
 					m_resource_instancing->getBuffer(BONE_TRANSFORM).getBufferInfo(),
+					m_material->getMaterialIndexBuffer().getBufferInfo(),
+					m_material->getMaterialBuffer().getBufferInfo(),
 				};
 
 				vk::DescriptorImageInfo white_image(DrawHelper::Order().getWhiteTexture().m_sampler.get(), DrawHelper::Order().getWhiteTexture().m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal);

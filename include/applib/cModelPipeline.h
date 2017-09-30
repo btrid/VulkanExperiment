@@ -105,12 +105,6 @@ struct AnimationModule
 	virtual void execute(const std::shared_ptr<btr::Context>& context, vk::CommandBuffer& cmd) = 0;
 };
 
-struct MaterialModule
-{
-	virtual btr::BufferMemory getMaterialIndexBuffer()const = 0;
-	virtual btr::BufferMemory getMaterialBuffer()const = 0;
-};
-
 struct DefaultMaterialModule : public MaterialModule
 {
 	struct MaterialBuffer {

@@ -113,6 +113,7 @@ public:
 	std::vector<vk::UniqueDescriptorSet> m_descriptor_set;
 	vk::UniqueDescriptorSet m_draw_descriptor_set_per_model;
 	std::vector<vk::UniqueDescriptorSet> m_compute_descriptor_set;
+	std::shared_ptr<MaterialModule> m_material;
 
 	enum ModelStorageBuffer : s32
 	{
