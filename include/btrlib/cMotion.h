@@ -31,6 +31,11 @@ struct cMotion
 	uint32_t m_node_num;
 	std::vector<NodeMotion> m_data;
 };
+struct cAnimation
+{
+	std::vector<std::shared_ptr<cMotion>> m_motion;
+};
+
 
 /**
 * animationデータを格納したテクスチャ
@@ -55,6 +60,16 @@ struct MotionTexture
 	std::shared_ptr<Resource> m_resource;
 
 	vk::ImageView getImageView()const { return m_resource ? m_resource->m_image_view.get() : vk::ImageView(); }
+
+	static std::vector<MotionTexture> createMotion(std::shared_ptr<btr::Context>& context, vk::CommandBuffer cmd, const cAnimation& anim)
+	{
+		std::vector<MotionTexture> motion_texture(anim.m_motion.size());
+		for (size_t i = 0; i < anim.m_motion.size(); i++)
+		{
+			motion_texture[i] = MotionTexture::create(context, cmd, anim.m_motion[i]);
+		}
+		return motion_texture;
+	}
 
 	/**
 	*	モーションのデータを一枚の1DArrayに格納
@@ -239,10 +254,5 @@ struct MotionTexture
 		tex.m_resource->m_sampler = context->m_device->createSamplerUnique(sampler_info);
 		return tex;
 	}
-};
-
-struct cAnimation
-{
-	std::vector<std::shared_ptr<cMotion>> m_motion;
 };
 

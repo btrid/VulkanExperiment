@@ -3,23 +3,6 @@
 #include <applib/DrawHelper.h>
 #include <applib/sCameraManager.h>
 
-
-std::vector<MotionTexture> createMotion(std::shared_ptr<btr::Context>& loader, vk::CommandBuffer cmd, const cAnimation& anim)
-{
-
-	std::vector<MotionTexture> motion_texture(anim.m_motion.size());
-	for (size_t i = 0; i < anim.m_motion.size(); i++)
-	{
-		{
-			motion_texture[i] = MotionTexture::create(loader, cmd, anim.m_motion[i]);
-		}
-	}
-
-	return motion_texture;
-
-}
-
-
 void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& context, std::shared_ptr<cModel::Resource>& resource, uint32_t instanceNum)
 {
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
@@ -181,7 +164,7 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& context, std::s
 
 	{
 		auto& anim = m_resource->getAnimation();
-		m_resource_instancing->m_motion_texture = createMotion(context, cmd.get(), m_resource->getAnimation());
+		m_resource_instancing->m_motion_texture = MotionTexture::createMotion(context, cmd.get(), m_resource->getAnimation());
 
 		btr::AllocatedMemory::Descriptor staging_desc;
 		staging_desc.size = sizeof(ModelInstancingRender::AnimationInfo) * anim.m_motion.size();
