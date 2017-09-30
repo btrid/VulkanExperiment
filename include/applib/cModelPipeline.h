@@ -253,7 +253,6 @@ struct ModelDescriptorModule : public DescriptorModule
 
 struct DefaultModelDescriptorModule : public ModelDescriptorModule
 {
-
 	DefaultModelDescriptorModule(const std::shared_ptr<btr::Context>& context)
 	{
 		std::vector<vk::DescriptorSetLayoutBinding> binding =

@@ -228,10 +228,7 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& context, std::s
 			copy_info.setDstOffset(buffer.getBufferInfo().offset);
 			cmd->copyBuffer(staging_playing_animation.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
 		}
-
 	}
-
-
 }
 
 void ModelInstancingRender::setup(cModelInstancingPipeline& pipeline)

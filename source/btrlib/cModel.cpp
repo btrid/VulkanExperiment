@@ -338,7 +338,7 @@ void cModel::load(std::shared_ptr<btr::Context>& context, const std::string& fil
 	{
 		m_resource->m_mesh[i].m_draw_cmd.indexCount = scene->mMeshes[i]->mNumFaces * 3;
 		m_resource->m_mesh[i].m_draw_cmd.firstIndex = numIndex;
-		m_resource->m_mesh[i].m_draw_cmd.instanceCount = 100;
+		m_resource->m_mesh[i].m_draw_cmd.instanceCount = 1;
 		m_resource->m_mesh[i].m_draw_cmd.vertexOffset = 0;
 		m_resource->m_mesh[i].m_draw_cmd.firstInstance = 0;
 		m_resource->m_mesh[i].m_vertex_num = scene->mMeshes[i]->mNumVertices;
@@ -471,15 +471,8 @@ void cModel::load(std::shared_ptr<btr::Context>& context, const std::string& fil
 			indirect_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging_indirect = context->m_staging_memory.allocateMemory(indirect_desc);
 			auto* indirect = staging_indirect.getMappedPtr<Mesh>(0);
-			int offset = 0;
-			for (size_t i = 0; i < m_resource->m_mesh.size(); i++) {
-				indirect[i].m_draw_cmd.indexCount = m_resource->m_mesh[i].m_draw_cmd.indexCount;
-				indirect[i].m_draw_cmd.firstIndex = offset;
-				indirect[i].m_draw_cmd.instanceCount = 100;
-				indirect[i].m_draw_cmd.vertexOffset = 0;
-				indirect[i].m_draw_cmd.firstInstance = 0;
-				offset += indirect[i].m_draw_cmd.indexCount;
-			}
+			memcpy_s(indirect, indirect_desc.size, m_resource->m_mesh.data(), indirect_desc.size);
+
 			vk::BufferCopy copy_info;
 			copy_info.setSize(staging_vertex.getBufferInfo().range);
 			copy_info.setSrcOffset(staging_vertex.getBufferInfo().offset);
