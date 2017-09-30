@@ -110,16 +110,10 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& context, std::s
 
 	//	NodeLocalTransformBuffer
 	{
-		auto& buffer = m_resource_instancing->getBuffer(ModelStorageBuffer::NODE_LOCAL_TRANSFORM);
+		auto& buffer = m_resource_instancing->getBuffer(ModelStorageBuffer::NODE_TRANSFORM);
 		buffer = context->m_storage_memory.allocateMemory(m_resource->mNodeRoot.mNodeList.size() * instanceNum * sizeof(NodeLocalTransformBuffer));
 	}
 
-
-	//	NodeGlobalTransformBuffer
-	{
-		auto& buffer = m_resource_instancing->getBuffer(ModelStorageBuffer::NODE_GLOBAL_TRANSFORM);
-		buffer = context->m_storage_memory.allocateMemory(m_resource->mNodeRoot.mNodeList.size() * instanceNum * sizeof(NodeGlobalTransformBuffer));
-	}
 	// world
 	{
 		auto& buffer = m_resource_instancing->getBuffer(ModelStorageBuffer::WORLD);
@@ -294,8 +288,7 @@ void ModelInstancingRender::setup(cModelInstancingPipeline& pipeline)
 					m_resource_instancing->getBuffer(PLAYING_ANIMATION).getBufferInfo(),
 					m_resource_instancing->getBuffer(NODE_INFO).getBufferInfo(),
 					m_resource_instancing->getBuffer(BONE_INFO).getBufferInfo(),
-					m_resource_instancing->getBuffer(NODE_LOCAL_TRANSFORM).getBufferInfo(),
-					m_resource_instancing->getBuffer(NODE_GLOBAL_TRANSFORM).getBufferInfo(),
+					m_resource_instancing->getBuffer(NODE_TRANSFORM).getBufferInfo(),
 					m_resource_instancing->getBuffer(WORLD).getBufferInfo(),
 					m_resource_instancing->getBuffer(BONE_MAP).getBufferInfo(),
 					m_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo(),
@@ -456,7 +449,7 @@ void ModelInstancingRender::execute(cModelInstancingPipeline& pipeline, vk::Comm
 		if (i == cModelInstancingPipeline::PIPELINE_COMPUTE_BONE_TRANSFORM)
 		{
 			// 
-			vk::BufferMemoryBarrier barrier = m_resource_instancing->getBuffer(ModelStorageBuffer::NODE_LOCAL_TRANSFORM).makeMemoryBarrierEx();
+			vk::BufferMemoryBarrier barrier = m_resource_instancing->getBuffer(ModelStorageBuffer::NODE_TRANSFORM).makeMemoryBarrierEx();
 			barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
 			barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,

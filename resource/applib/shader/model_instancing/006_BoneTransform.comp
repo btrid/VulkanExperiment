@@ -21,7 +21,7 @@ void main()
 	uint nodeIndexOffset = boneMap[index / model_info.boneNum] * model_info.nodeNum;
 	bones[index] 
 		= inv
-		* nodeGlobalTransforms[nodeIndexOffset + bone_info.nodeIndex]
+		* nodeTransforms[nodeIndexOffset + bone_info.nodeIndex]
 		* bone_info.boneOffset;
 
 }

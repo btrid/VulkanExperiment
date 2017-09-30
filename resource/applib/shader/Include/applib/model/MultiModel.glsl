@@ -135,20 +135,17 @@ layout(std430, set=USE_ANIMATION_INFO_SET, binding=3) readonly restrict buffer B
 };
 
 layout(std430, set=USE_ANIMATION_INFO_SET, binding=4) restrict buffer NodeLocalTransformBuffer {
-	mat4 nodeLocalTransforms[];
+	mat4 nodeTransforms[];
 };
-layout(std430, set=USE_ANIMATION_INFO_SET, binding=5) restrict buffer NodeGlobalTransformBuffer {
-	mat4 nodeGlobalTransforms[];
-};
-layout(std430, set=USE_ANIMATION_INFO_SET, binding=6) readonly restrict buffer WorldTransform {
+layout(std430, set=USE_ANIMATION_INFO_SET, binding=5) readonly restrict buffer WorldTransform {
 	mat4 worlds[];
 };
 
-layout(std430, set=USE_ANIMATION_INFO_SET, binding=7) restrict buffer BoneMapBuffer {
+layout(std430, set=USE_ANIMATION_INFO_SET, binding=6) restrict buffer BoneMapBuffer {
 	uint boneMap[];
 };
 
-layout(std430, set=USE_ANIMATION_INFO_SET, binding=8) restrict coherent buffer MeshBuffer {
+layout(std430, set=USE_ANIMATION_INFO_SET, binding=7) restrict buffer MeshBuffer {
 	Mesh meshs[];
 };
 #endif

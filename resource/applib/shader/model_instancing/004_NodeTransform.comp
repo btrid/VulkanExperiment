@@ -21,16 +21,17 @@ void main()
 
 	if(node_index == 0)
 	{
-		nodeGlobalTransforms[root_index] = worlds[model_index] * nodeLocalTransforms[root_index];
+		nodeTransforms[root_index] = worlds[model_index] * nodeTransforms[root_index];
 	}
-	memoryBarrier();
+	barrier();
+	memoryBarrierBuffer();
 	for(int i=1; i < model_info.node_depth_max; i++)
 	{
 		if(nodes[node_index].depth == i)
 		{
-			mat4 g = nodeGlobalTransforms[root_index + nodes[node_index].parent] * nodeLocalTransforms[root_index + node_index];
-			nodeGlobalTransforms[root_index+node_index] = g;
-			memoryBarrier();
+			nodeTransforms[root_index + node_index] = nodeTransforms[root_index + nodes[node_index].parent] * nodeTransforms[root_index + node_index];
 		}
+		barrier();
+		memoryBarrierBuffer();
 	}
 }
