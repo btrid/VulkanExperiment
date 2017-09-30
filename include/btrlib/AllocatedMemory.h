@@ -375,7 +375,6 @@ struct AllocatedMemory
 	{
 		vk::DeviceSize size;
 		AttributeFlags attribute;
-//		bool is_short_life;
 		Descriptor()
 			: size(0)
 			, attribute(AttributeFlags())
@@ -390,7 +389,7 @@ struct AllocatedMemory
 	}
 	BufferMemory allocateMemory(Descriptor arg)
 	{
-//		sDebug::Order().print()
+
 		// size0はおかしいよね
 		assert(arg.size != 0);
 
@@ -402,14 +401,7 @@ struct AllocatedMemory
 		BufferMemory alloc;
 		auto deleter = [&](BufferMemory::Resource* ptr)
 		{
-			if (btr::isOn(m_resource->m_memory_type.propertyFlags, vk::MemoryPropertyFlagBits::eHostCoherent)) {
-				// cpuからアクセスかつcmdでコピーする場合、cmdが実行されてから書き換えないと送信先でデータがおかしくなるので、
-				// 遅延して解放を行う必要がある？
-				m_resource->m_free_zone.delayedFree(ptr->m_zone);
-			}
-			else {
-				m_resource->m_free_zone.free(ptr->m_zone);
-			}
+			m_resource->m_free_zone.delayedFree(ptr->m_zone);
 			delete ptr;
 		};
 		alloc.m_resource = std::shared_ptr<BufferMemory::Resource>(new BufferMemory::Resource, deleter);
@@ -461,13 +453,13 @@ struct UpdateBuffer
 		m_area.resize(desc.frame_max);
 	}
 
-	void subupdate(const T* data, vk::DeviceSize data_num, vk::DeviceSize offset, uint32_t cpu_index)
+	void subupdate(const T* data, vk::DeviceSize data_num, uint32_t offset_num, uint32_t cpu_index)
 	{
 		auto data_size = sizeof(T)*data_num;
-		auto* ptr = m_staging_buffer.getMappedPtr<T>(cpu_index*m_element_max);
-		memcpy_s(ptr + offset, data_size, data, data_size);
+		auto* ptr = m_staging_buffer.getMappedPtr<T>(cpu_index*m_element_max+offset_num);
+		memcpy_s(ptr, data_size, data, data_size);
 
-		flushSubBuffer(data_num, offset, cpu_index);
+		flushSubBuffer(data_num, offset_num, cpu_index);
 	}
 
 	T* mapSubBuffer(uint32_t cpu_index)
@@ -475,12 +467,12 @@ struct UpdateBuffer
 		return m_staging_buffer.getMappedPtr<T>(cpu_index*m_element_max);
 	}
 
-	void flushSubBuffer(vk::DeviceSize data_num, vk::DeviceSize offset, uint32_t cpu_index)
+	void flushSubBuffer(vk::DeviceSize data_num, uint32_t offset_num, uint32_t cpu_index)
 	{
 		auto data_size = sizeof(T)*data_num;
 		auto& area = m_area[cpu_index];
-		area.m_begin = std::min(offset, area.m_begin);
-		area.m_end = std::max(offset + data_size, area.m_end);
+		area.m_begin = std::min(sizeof(T)*offset_num, area.m_begin);
+		area.m_end = std::max(sizeof(T)*offset_num + data_size, area.m_end);
 	}
 
 	vk::BufferCopy update(uint32_t cpu_index)

@@ -250,6 +250,7 @@ void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& r
 		motion->m_duration = (float)anim->mDuration;
 		motion->m_ticks_per_second = anim->mTicksPerSecond == 0.f ? 60.f : (float)anim->mTicksPerSecond;
 		motion->m_data.resize(anim->mNumChannels);
+		motion->m_node_num = root.mNodeList.size();
 		for (size_t channel_index = 0; channel_index < anim->mNumChannels; channel_index++)
 		{
 			aiNodeAnim* aiAnim = anim->mChannels[channel_index];

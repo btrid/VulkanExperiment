@@ -6,7 +6,7 @@
 /**
 *	モーションのデータを一枚の1DArrayに格納
 */
-MotionTexture create(std::shared_ptr<btr::Context>& loader, vk::CommandBuffer cmd, const cMotion& motion, const RootNode& root)
+MotionTexture create(std::shared_ptr<btr::Context>& loader, vk::CommandBuffer cmd, const cMotion& motion)
 {
 	uint32_t SIZE = 256;
 
@@ -14,7 +14,7 @@ MotionTexture create(std::shared_ptr<btr::Context>& loader, vk::CommandBuffer cm
 	image_info.imageType = vk::ImageType::e1D;
 	image_info.format = vk::Format::eR16G16B16A16Sfloat;
 	image_info.mipLevels = 1;
-	image_info.arrayLayers = (uint32_t)root.mNodeList.size() * 3u;
+	image_info.arrayLayers = motion.m_node_num * 3u;
 	image_info.samples = vk::SampleCountFlagBits::e1;
 	image_info.tiling = vk::ImageTiling::eOptimal;
 	image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
@@ -191,14 +191,14 @@ MotionTexture create(std::shared_ptr<btr::Context>& loader, vk::CommandBuffer cm
 	return tex;
 }
 
-std::vector<MotionTexture> createMotion(std::shared_ptr<btr::Context>& loader, vk::CommandBuffer cmd, const cAnimation& anim, const RootNode& rootnode)
+std::vector<MotionTexture> createMotion(std::shared_ptr<btr::Context>& loader, vk::CommandBuffer cmd, const cAnimation& anim)
 {
 
 	std::vector<MotionTexture> motion_texture(anim.m_motion.size());
 	for (size_t i = 0; i < anim.m_motion.size(); i++)
 	{
 		{
-			motion_texture[i] = create(loader, cmd, *anim.m_motion[i], rootnode);
+			motion_texture[i] = create(loader, cmd, *anim.m_motion[i]);
 		}
 	}
 
@@ -395,7 +395,7 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& context, std::s
 
 	{
 		auto& anim = m_resource->getAnimation();
-		m_resource_instancing->m_motion_texture = createMotion(context, cmd.get(), m_resource->getAnimation(), m_resource->mNodeRoot);
+		m_resource_instancing->m_motion_texture = createMotion(context, cmd.get(), m_resource->getAnimation());
 
 		btr::AllocatedMemory::Descriptor staging_desc;
 		staging_desc.size = sizeof(ModelInstancingRender::AnimationInfo) * anim.m_motion.size();

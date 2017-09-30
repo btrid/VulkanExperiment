@@ -28,6 +28,7 @@ struct cMotion
 	std::string m_name;
 	float m_duration;
 	float m_ticks_per_second;
+	uint32_t m_node_num;
 	std::vector<NodeMotion> m_data;
 };
 struct cAnimation
