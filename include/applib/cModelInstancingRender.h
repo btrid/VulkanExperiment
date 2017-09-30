@@ -100,14 +100,11 @@ public:
 		DESCRIPTOR_SET_ANIMATION,
 	};
 	std::vector<vk::UniqueDescriptorSet> m_descriptor_set;
-	vk::UniqueDescriptorSet m_draw_descriptor_set_per_model;
-	std::vector<vk::UniqueDescriptorSet> m_compute_descriptor_set;
 	std::shared_ptr<MaterialModule> m_material;
 
 	enum ModelStorageBuffer : s32
 	{
 		MODEL_INFO,
-		MODEL_INSTANCING_INFO,
 		NODE_INFO,
 		BONE_INFO,
 		ANIMATION_INFO,
@@ -115,7 +112,6 @@ public:
 		NODE_TRANSFORM,
 		BONE_TRANSFORM,
 		BONE_MAP,	//!< instancing‚ÌÛ‚ÌBone‚ÌŽQÆæ
-//		WORLD,
 		NUM,
 	};
 	struct InstancingResource
@@ -123,8 +119,10 @@ public:
 		uint32_t m_instance_max_num;
 		std::vector<MotionTexture> m_motion_texture;
 		btr::BufferMemory m_compute_indirect_buffer;
-		btr::UpdateBuffer<mat4> m_world;
-		btr::BufferMemory m_instancing_info;
+
+		btr::UpdateBuffer<mat4> m_world_buffer;
+		btr::UpdateBuffer<ModelInstancingInfo> m_instancing_info_buffer;
+
 		std::array<btr::BufferMemory, static_cast<s32>(ModelStorageBuffer::NUM)> m_storage_buffer;
 		const btr::BufferMemory& getBuffer(ModelStorageBuffer buffer)const { return m_storage_buffer[static_cast<s32>(buffer)]; }
 		btr::BufferMemory& getBuffer(ModelStorageBuffer buffer) { return m_storage_buffer[static_cast<s32>(buffer)]; }

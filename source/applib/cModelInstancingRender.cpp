@@ -67,12 +67,6 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& context, std::s
 		}
 	}
 
-	{
-		// staging buffer
-		btr::AllocatedMemory::Descriptor desc;
-		desc.size = sizeof(ModelInstancingInfo) * sGlobal::FRAME_MAX;
-		m_resource_instancing->m_instancing_info = context->m_staging_memory.allocateMemory(desc);
-	}
 
 	// ModelInfo
 	{
@@ -97,9 +91,23 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& context, std::s
 
 	//ModelInstancingInfo
 	{
-		auto& buffer = m_resource_instancing->getBuffer(ModelStorageBuffer::MODEL_INSTANCING_INFO);
-		buffer = context->m_storage_memory.allocateMemory(sizeof(ModelInstancingInfo));
+		btr::UpdateBufferDescriptor desc;
+		desc.device_memory = context->m_storage_memory;
+		desc.staging_memory = context->m_staging_memory;
+		desc.frame_max = context->m_window->getSwapchain().getBackbufferNum();
+		desc.element_num = 1;
+		m_resource_instancing->m_instancing_info_buffer.setup(desc);
 	}
+	// world
+	{
+		btr::UpdateBufferDescriptor desc;
+		desc.device_memory = context->m_storage_memory;
+		desc.staging_memory = context->m_staging_memory;
+		desc.frame_max = context->m_window->getSwapchain().getBackbufferNum();
+		desc.element_num = instanceNum;
+		m_resource_instancing->m_world_buffer.setup(desc);
+	}
+
 	//BoneMap
 	{
 		auto& buffer = m_resource_instancing->getBuffer(ModelStorageBuffer::BONE_MAP);
@@ -112,17 +120,6 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& context, std::s
 		buffer = context->m_storage_memory.allocateMemory(m_resource->mNodeRoot.mNodeList.size() * instanceNum * sizeof(mat4));
 	}
 
-	// world
-	{
-//		auto& buffer = m_resource_instancing->getBuffer(ModelStorageBuffer::WORLD);
-//		buffer = context->m_storage_memory.allocateMemory(instanceNum * sizeof(glm::mat4));
-		btr::UpdateBufferDescriptor desc;
-		desc.device_memory = context->m_storage_memory;
-		desc.staging_memory = context->m_staging_memory;
-		desc.frame_max = context->m_window->getSwapchain().getBackbufferNum();
-		desc.element_num = instanceNum;
-		m_resource_instancing->m_world.setup(desc);
-	}
 
 	{
 		auto& buffer = m_resource_instancing->m_compute_indirect_buffer;
@@ -253,7 +250,7 @@ void ModelInstancingRender::setup(cModelInstancingPipeline& pipeline)
 				std::vector<vk::DescriptorBufferInfo> storages =
 				{
 					m_resource_instancing->getBuffer(ModelStorageBuffer::MODEL_INFO).getBufferInfo(),
-					m_resource_instancing->getBuffer(MODEL_INSTANCING_INFO).getBufferInfo(),
+					m_resource_instancing->m_instancing_info_buffer.getBufferInfo(),
 					m_resource_instancing->getBuffer(BONE_TRANSFORM).getBufferInfo(),
 					m_material->getMaterialIndexBuffer().getBufferInfo(),
 					m_material->getMaterialBuffer().getBufferInfo(),
@@ -293,7 +290,7 @@ void ModelInstancingRender::setup(cModelInstancingPipeline& pipeline)
 					m_resource_instancing->getBuffer(NODE_INFO).getBufferInfo(),
 					m_resource_instancing->getBuffer(BONE_INFO).getBufferInfo(),
 					m_resource_instancing->getBuffer(NODE_TRANSFORM).getBufferInfo(),
-					m_resource_instancing->m_world.getBufferInfo(),
+					m_resource_instancing->m_world_buffer.getBufferInfo(),
 					m_resource_instancing->getBuffer(BONE_MAP).getBufferInfo(),
 					m_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo(),
 				};
@@ -330,7 +327,7 @@ void ModelInstancingRender::addModel(const InstanceResource* data, uint32_t num)
 {
 	auto frame = sGlobal::Order().getCPUFrame();
 	auto index = m_instance_count[frame].fetch_add(num);
-	auto* staging = m_resource_instancing->m_world.mapSubBuffer(frame, index);
+	auto* staging = m_resource_instancing->m_world_buffer.mapSubBuffer(frame, index);
 	for (uint32_t i = 0; i < num; i++)
 	{
 		staging[i] = data[i].m_world;
@@ -352,7 +349,7 @@ void ModelInstancingRender::execute(cModelInstancingPipeline& pipeline, vk::Comm
 		// world
 		m_instance_count[frame] = 0;
 		{
-			auto& world = m_resource_instancing->m_world;
+			auto& world = m_resource_instancing->m_world_buffer;
 			world.flushSubBuffer(model_count, 0, frame);
 			auto& buffer = world.getBufferMemory();
 
@@ -376,14 +373,14 @@ void ModelInstancingRender::execute(cModelInstancingPipeline& pipeline, vk::Comm
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, { to_shader_read_barrier }, {});
 		}
 		{
-			// instance num
-			auto& buffer = m_resource_instancing->getBuffer(ModelStorageBuffer::MODEL_INSTANCING_INFO);
-			auto& staging = m_resource_instancing->m_instancing_info;
-			auto* model_info_ptr = staging.getMappedPtr<ModelInstancingInfo>(sGlobal::Order().getCurrentFrame());
-			model_info_ptr->mInstanceAliveNum = model_count;
-			model_info_ptr->mInstanceMaxNum = m_resource_instancing->m_instance_max_num;
-			model_info_ptr->mInstanceNum = 0;
+			auto& instancing = m_resource_instancing->m_instancing_info_buffer;
+			ModelInstancingInfo info;
+			info.mInstanceAliveNum = model_count;
+			info.mInstanceMaxNum = m_resource_instancing->m_instance_max_num;
+			info.mInstanceNum = 0;
+			instancing.subupdate(&info, 1, 0, frame);
 
+			auto& buffer = instancing.getBufferMemory();
 			vk::BufferMemoryBarrier to_copy_barrier;
 			to_copy_barrier.setBuffer(buffer.getBufferInfo().buffer);
 			to_copy_barrier.setOffset(buffer.getBufferInfo().offset);
@@ -392,11 +389,8 @@ void ModelInstancingRender::execute(cModelInstancingPipeline& pipeline, vk::Comm
 			to_copy_barrier.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, { to_copy_barrier }, {});
 
-			vk::BufferCopy copy_info;
-			copy_info.setSize(sizeof(ModelInstancingInfo));
-			copy_info.setSrcOffset(staging.getBufferInfo().offset + sizeof(ModelInstancingInfo) * sGlobal::Order().getCurrentFrame());
-			copy_info.setDstOffset(buffer.getBufferInfo().offset);
-			cmd.copyBuffer(staging.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
+			vk::BufferCopy copy_info = instancing.update(frame);
+			cmd.copyBuffer(instancing.getStagingBufferInfo().buffer, instancing.getBufferInfo().buffer, copy_info);
 
 			vk::BufferMemoryBarrier to_shader_read_barrier;
 			to_shader_read_barrier.setBuffer(buffer.getBufferInfo().buffer);

@@ -462,6 +462,10 @@ struct UpdateBuffer
 		flushSubBuffer(data_num, offset_num, cpu_index);
 	}
 
+	/**
+	 * subupdateのstagingバッファを自分で更新する
+	 * 使い終わったらflushSubBufferを呼ぶ
+	 */
 	T* mapSubBuffer(uint32_t cpu_index, uint32_t offset_num = 0)
 	{
 		return m_staging_buffer.getMappedPtr<T>(cpu_index*m_element_max+ offset_num);
