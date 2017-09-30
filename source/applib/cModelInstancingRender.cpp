@@ -63,15 +63,13 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& context, std::s
 		// BoneTransform
 		{
 			auto& buffer = m_resource_instancing->getBuffer(ModelStorageBuffer::BONE_TRANSFORM);
-			buffer = context->m_storage_memory.allocateMemory(m_resource->mBone.size() * instanceNum * sizeof(BoneTransformBuffer));
+			buffer = context->m_storage_memory.allocateMemory(m_resource->mBone.size() * instanceNum * sizeof(mat4));
 		}
 	}
 
 	{
 		// staging buffer
 		btr::AllocatedMemory::Descriptor desc;
-		desc.size = instanceNum * sizeof(glm::mat4) * sGlobal::FRAME_MAX;
-		m_resource_instancing->m_world_staging = context->m_staging_memory.allocateMemory(desc);
 		desc.size = sizeof(ModelInstancingInfo) * sGlobal::FRAME_MAX;
 		m_resource_instancing->m_instancing_info = context->m_staging_memory.allocateMemory(desc);
 	}
@@ -111,13 +109,19 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& context, std::s
 	//	NodeLocalTransformBuffer
 	{
 		auto& buffer = m_resource_instancing->getBuffer(ModelStorageBuffer::NODE_TRANSFORM);
-		buffer = context->m_storage_memory.allocateMemory(m_resource->mNodeRoot.mNodeList.size() * instanceNum * sizeof(NodeLocalTransformBuffer));
+		buffer = context->m_storage_memory.allocateMemory(m_resource->mNodeRoot.mNodeList.size() * instanceNum * sizeof(mat4));
 	}
 
 	// world
 	{
-		auto& buffer = m_resource_instancing->getBuffer(ModelStorageBuffer::WORLD);
-		buffer = context->m_storage_memory.allocateMemory(instanceNum * sizeof(glm::mat4));
+//		auto& buffer = m_resource_instancing->getBuffer(ModelStorageBuffer::WORLD);
+//		buffer = context->m_storage_memory.allocateMemory(instanceNum * sizeof(glm::mat4));
+		btr::UpdateBufferDescriptor desc;
+		desc.device_memory = context->m_storage_memory;
+		desc.staging_memory = context->m_staging_memory;
+		desc.frame_max = context->m_window->getSwapchain().getBackbufferNum();
+		desc.element_num = instanceNum;
+		m_resource_instancing->m_world.setup(desc);
 	}
 
 	{
@@ -289,7 +293,7 @@ void ModelInstancingRender::setup(cModelInstancingPipeline& pipeline)
 					m_resource_instancing->getBuffer(NODE_INFO).getBufferInfo(),
 					m_resource_instancing->getBuffer(BONE_INFO).getBufferInfo(),
 					m_resource_instancing->getBuffer(NODE_TRANSFORM).getBufferInfo(),
-					m_resource_instancing->getBuffer(WORLD).getBufferInfo(),
+					m_resource_instancing->m_world.getBufferInfo(),
 					m_resource_instancing->getBuffer(BONE_MAP).getBufferInfo(),
 					m_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo(),
 				};
@@ -324,13 +328,12 @@ void ModelInstancingRender::setup(cModelInstancingPipeline& pipeline)
 
 void ModelInstancingRender::addModel(const InstanceResource* data, uint32_t num)
 {
-	auto cpu = sGlobal::Order().getCPUFrame();
-	auto index = m_instance_count[cpu].fetch_add(num);
-	auto& staging = m_resource_instancing->m_world_staging;
-	auto* world_ptr = static_cast<glm::mat4*>(staging.getMappedPtr()) + m_resource_instancing->m_instance_max_num*cpu;
+	auto frame = sGlobal::Order().getCPUFrame();
+	auto index = m_instance_count[frame].fetch_add(num);
+	auto* staging = m_resource_instancing->m_world.mapSubBuffer(frame, index);
 	for (uint32_t i = 0; i < num; i++)
 	{
-		world_ptr[index + i] = data[i].m_world;
+		staging[i] = data[i].m_world;
 	}
 
 }
@@ -339,18 +342,19 @@ void ModelInstancingRender::execute(cModelInstancingPipeline& pipeline, vk::Comm
 {
 	// bufferの更新
 	{
-		auto gpu = sGlobal::Order().getGPUFrame();
-		int32_t model_count = m_instance_count[gpu];
+		auto frame = sGlobal::Order().getGPUFrame();
+		int32_t model_count = m_instance_count[frame];
 		if (model_count == 0)
 		{
 			// やることない
 			return;
 		}
 		// world
-		m_instance_count[gpu] = 0;
+		m_instance_count[frame] = 0;
 		{
-			auto& staging = m_resource_instancing->m_world_staging;
-			auto& buffer = m_resource_instancing->getBuffer(ModelStorageBuffer::WORLD);
+			auto& world = m_resource_instancing->m_world;
+			world.flushSubBuffer(model_count, 0, frame);
+			auto& buffer = world.getBufferMemory();
 
 			vk::BufferMemoryBarrier to_copy_barrier;
 			to_copy_barrier.setBuffer(buffer.getBufferInfo().buffer);
@@ -360,11 +364,8 @@ void ModelInstancingRender::execute(cModelInstancingPipeline& pipeline, vk::Comm
 			to_copy_barrier.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, { to_copy_barrier }, {});
 
-			vk::BufferCopy copy_info;
-			copy_info.setSize(model_count * sizeof(glm::mat4));
-			copy_info.setSrcOffset(staging.getBufferInfo().offset + sizeof(glm::mat4) * m_resource_instancing->m_instance_max_num* sGlobal::Order().getCurrentFrame());
-			copy_info.setDstOffset(buffer.getBufferInfo().offset);
-			cmd.copyBuffer(staging.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
+			vk::BufferCopy copy_info = world.update(frame);
+			cmd.copyBuffer(world.getStagingBufferInfo().buffer, world.getBufferInfo().buffer, copy_info);
 
 			vk::BufferMemoryBarrier to_shader_read_barrier;
 			to_shader_read_barrier.setBuffer(buffer.getBufferInfo().buffer);

@@ -462,9 +462,9 @@ struct UpdateBuffer
 		flushSubBuffer(data_num, offset_num, cpu_index);
 	}
 
-	T* mapSubBuffer(uint32_t cpu_index)
+	T* mapSubBuffer(uint32_t cpu_index, uint32_t offset_num = 0)
 	{
-		return m_staging_buffer.getMappedPtr<T>(cpu_index*m_element_max);
+		return m_staging_buffer.getMappedPtr<T>(cpu_index*m_element_max+ offset_num);
 	}
 
 	void flushSubBuffer(vk::DeviceSize data_num, uint32_t offset_num, uint32_t cpu_index)

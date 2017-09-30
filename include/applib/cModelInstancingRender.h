@@ -92,17 +92,6 @@ public:
 	};
 public:
 
-	struct NodeLocalTransformBuffer {
-		glm::mat4	localAnimated_;		//!< parentMatrix,World‚ð‚©‚¯‚Ä‚¢‚È‚¢s—ñ
-	};
-	struct NodeGlobalTransformBuffer {
-		glm::mat4	globalAnimated_;
-	};
-
-	struct BoneTransformBuffer {
-		glm::mat4	value_;
-	};
-
 	std::shared_ptr<cModel::Resource> m_resource;
 
 	enum DescriptorSet
@@ -126,7 +115,7 @@ public:
 		NODE_TRANSFORM,
 		BONE_TRANSFORM,
 		BONE_MAP,	//!< instancing‚ÌÛ‚ÌBone‚ÌŽQÆæ
-		WORLD,
+//		WORLD,
 		NUM,
 	};
 	struct InstancingResource
@@ -134,7 +123,7 @@ public:
 		uint32_t m_instance_max_num;
 		std::vector<MotionTexture> m_motion_texture;
 		btr::BufferMemory m_compute_indirect_buffer;
-		btr::BufferMemory m_world_staging;
+		btr::UpdateBuffer<mat4> m_world;
 		btr::BufferMemory m_instancing_info;
 		std::array<btr::BufferMemory, static_cast<s32>(ModelStorageBuffer::NUM)> m_storage_buffer;
 		const btr::BufferMemory& getBuffer(ModelStorageBuffer buffer)const { return m_storage_buffer[static_cast<s32>(buffer)]; }
