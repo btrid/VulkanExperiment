@@ -232,13 +232,12 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& context, std::s
 
 }
 
-void ModelInstancingRender::setup(cModelInstancingRenderer&  renderer)
+void ModelInstancingRender::setup(cModelInstancingPipeline& pipeline)
 {
 	// setup draw
 	{
 		auto& gpu = sGlobal::Order().getGPU(0);
 		auto& device = gpu.getDevice();
-		auto& pipeline = renderer.getComputePipeline();
 
 		{
 			// meshごとの更新
@@ -342,7 +341,7 @@ void ModelInstancingRender::addModel(const InstanceResource* data, uint32_t num)
 
 }
 
-void ModelInstancingRender::execute(cModelInstancingRenderer& renderer, vk::CommandBuffer& cmd)
+void ModelInstancingRender::execute(cModelInstancingPipeline& pipeline, vk::CommandBuffer& cmd)
 {
 	// bufferの更新
 	{
@@ -434,8 +433,6 @@ void ModelInstancingRender::execute(cModelInstancingRenderer& renderer, vk::Comm
 	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands,
 		vk::DependencyFlags(), {}, to_clear_barrier, {});
 
-	auto& pipeline = renderer.getComputePipeline();
-
 	for (size_t i = 0; i < pipeline.m_pipeline.size(); i++)
 	{
 
@@ -478,17 +475,16 @@ void ModelInstancingRender::execute(cModelInstancingRenderer& renderer, vk::Comm
 
 }
 
-void ModelInstancingRender::draw(cModelInstancingRenderer& renderer, vk::CommandBuffer& cmd)
+void ModelInstancingRender::draw(cModelInstancingPipeline& pipeline, vk::CommandBuffer& cmd)
 {
-	auto& pipeline = renderer.getComputePipeline();
-	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.m_graphics_pipeline.get());
 	vk::ArrayProxy<const vk::DescriptorSet> sets = {
 		m_descriptor_set[DESCRIPTOR_SET_MODEL].get(),
 		sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA),
-		pipeline.m_descriptor_set_light.get(),
+		pipeline.getLight()->getDescriptorSet(cFowardPlusPipeline::DESCRIPTOR_SET_LIGHT),
 	};
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelInstancingPipeline::PIPELINE_LAYOUT_RENDER].get(), 0, sets, {});
- 	cmd.bindVertexBuffers(0, { m_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().buffer }, { m_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().offset });
+
+	cmd.bindVertexBuffers(0, { m_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().buffer }, { m_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().offset });
  	cmd.bindIndexBuffer(m_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().buffer, m_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().offset, m_resource->m_mesh_resource.mIndexType);
  	cmd.drawIndexedIndirect(m_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().buffer, m_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().offset, m_resource->m_mesh_resource.mIndirectCount, sizeof(cModel::Mesh));
 }

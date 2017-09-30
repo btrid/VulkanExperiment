@@ -36,20 +36,20 @@ struct FrustomPoint
 layout(set=USE_LIGHT, binding=0, std140) uniform LightInfoUniform {
 	LightInfo u_light_info;
 };
-layout(set=USE_LIGHT, std140, binding=1) uniform FrustomUniform {
+layout(set=USE_LIGHT, binding=1, std140) uniform FrustomUniform {
 	FrustomPoint u_frustom;
 };
-
-layout(set=USE_LIGHT, std430, binding=8) readonly restrict buffer LightBuffer {
+layout(set=USE_LIGHT, binding=2, std430) restrict buffer LightBuffer {
 	LightParam b_light[];
 };
-layout(set=USE_LIGHT, std430, binding=9) restrict buffer LLHeadBuffer {
-	uint b_LLhead[];
+layout(set=USE_LIGHT, binding=3, std430) restrict buffer LLHeadBuffer {
+	uint b_light_LL_head[];
 };
-layout(set=USE_LIGHT, std430, binding=10) writeonly restrict buffer LLBuffer {
+layout(set=USE_LIGHT, binding=4, std430) restrict buffer LLBuffer {
 	LightLL b_light_LL[];
 };
-layout(set=USE_LIGHT, std430, binding=11) coherent restrict buffer LightCounter {
+layout(set=USE_LIGHT, binding=5, std430) coherent restrict buffer LightCounter {
 	uint b_light_count;
 };
 #endif
+#define INVALID_LIGHT_INDEX uint(-1)

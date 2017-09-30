@@ -75,6 +75,8 @@ struct cFowardPlusPipeline
 		PIPELINE_NUM,
 	};
 
+	vk::DescriptorSetLayout getDescriptorSetLayout(DescriptorSetLayout index)const { return m_private->m_descriptor_set_layout[index].get(); }
+	vk::DescriptorSet getDescriptorSet(DescriptorSet index)const { return m_private->m_descriptor_set[index].get(); }
 	vk::DescriptorBufferInfo getLightInfoBufferInfo()const { return m_private->m_light_info_gpu.getBufferInfo(); }
 	vk::DescriptorBufferInfo getLightBufferInfo()const { return m_private->m_light.getBufferInfo(); }
 	vk::DescriptorBufferInfo getLightLLHeadBufferInfo()const { return m_private->m_lightLL_head.getBufferInfo(); }

@@ -6,77 +6,20 @@
 #include <btrlib/cModel.h>
 #include <applib/sCameraManager.h>
 
-void cModelInstancingPipeline::setup(std::shared_ptr<btr::Context>& context, cModelInstancingRenderer& renderer)
+void cModelInstancingPipeline::addModel(ModelInstancingRender* model)
+{
+	m_model.emplace_back(model);
+	m_model.back()->setup(*this);
+}
+
+void cModelInstancingPipeline::setup(const std::shared_ptr<btr::Context>& context)
 {
 	auto& device = context->m_device;
+	m_render_pass = std::make_shared<RenderPassModule>(context);
 
-	{
-		// レンダーパス
-		{
-			// sub pass
-			std::vector<vk::AttachmentReference> color_ref =
-			{
-				vk::AttachmentReference()
-				.setAttachment(0)
-				.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
-			};
-			vk::AttachmentReference depth_ref;
-			depth_ref.setAttachment(1);
-			depth_ref.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+	m_light_pipeline = std::make_shared<cFowardPlusPipeline>();
+	m_light_pipeline->setup(context);
 
-			vk::SubpassDescription subpass;
-			subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
-			subpass.setInputAttachmentCount(0);
-			subpass.setPInputAttachments(nullptr);
-			subpass.setColorAttachmentCount((uint32_t)color_ref.size());
-			subpass.setPColorAttachments(color_ref.data());
-			subpass.setPDepthStencilAttachment(&depth_ref);
-
-			std::vector<vk::AttachmentDescription> attach_description = {
-				// color1
-				vk::AttachmentDescription()
-				.setFormat(context->m_window->getSwapchain().m_surface_format.format)
-				.setSamples(vk::SampleCountFlagBits::e1)
-				.setLoadOp(vk::AttachmentLoadOp::eLoad)
-				.setStoreOp(vk::AttachmentStoreOp::eStore)
-				.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
-				.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
-				vk::AttachmentDescription()
-				.setFormat(context->m_window->getSwapchain().m_depth.m_format)
-				.setSamples(vk::SampleCountFlagBits::e1)
-				.setLoadOp(vk::AttachmentLoadOp::eLoad)
-				.setStoreOp(vk::AttachmentStoreOp::eStore)
-				.setInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
-				.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
-			};
-			vk::RenderPassCreateInfo renderpass_info = vk::RenderPassCreateInfo()
-				.setAttachmentCount(attach_description.size())
-				.setPAttachments(attach_description.data())
-				.setSubpassCount(1)
-				.setPSubpasses(&subpass);
-
-			m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
-		}
-
-		m_framebuffer.resize(context->m_window->getSwapchain().getBackbufferNum());
-		{
-			std::array<vk::ImageView, 2> view;
-
-			vk::FramebufferCreateInfo framebuffer_info;
-			framebuffer_info.setRenderPass(m_render_pass.get());
-			framebuffer_info.setAttachmentCount((uint32_t)view.size());
-			framebuffer_info.setPAttachments(view.data());
-			framebuffer_info.setWidth(context->m_window->getClientSize().x);
-			framebuffer_info.setHeight(context->m_window->getClientSize().y);
-			framebuffer_info.setLayers(1);
-
-			for (size_t i = 0; i < m_framebuffer.size(); i++) {
-				view[0] = context->m_window->getSwapchain().m_backbuffer[i].m_view;
-				view[1] = context->m_window->getSwapchain().m_depth.m_view;
-				m_framebuffer[i] = context->m_device->createFramebufferUnique(framebuffer_info);
-			}
-		}
-	}
 	// setup shader
 	{
 		struct
@@ -192,29 +135,6 @@ void cModelInstancingPipeline::setup(std::shared_ptr<btr::Context>& context, cMo
 		.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
 		.setBinding(5),
 	};
-	bindings[DESCRIPTOR_SET_LAYOUT_LIGHT] =
-	{
-		vk::DescriptorSetLayoutBinding()
-		.setStageFlags(vk::ShaderStageFlagBits::eFragment)
-		.setDescriptorCount(1)
-		.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-		.setBinding(0),
-		vk::DescriptorSetLayoutBinding()
-		.setStageFlags(vk::ShaderStageFlagBits::eFragment)
-		.setDescriptorCount(1)
-		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-		.setBinding(1),
-		vk::DescriptorSetLayoutBinding()
-		.setStageFlags(vk::ShaderStageFlagBits::eFragment)
-		.setDescriptorCount(1)
-		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-		.setBinding(2),
-		vk::DescriptorSetLayoutBinding()
-		.setStageFlags(vk::ShaderStageFlagBits::eFragment)
-		.setDescriptorCount(1)
-		.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-		.setBinding(3),
-	};
 	for (u32 i = 0; i < bindings.size(); i++)
 	{
 		vk::DescriptorSetLayoutCreateInfo descriptor_layout_info = vk::DescriptorSetLayoutCreateInfo()
@@ -238,7 +158,7 @@ void cModelInstancingPipeline::setup(std::shared_ptr<btr::Context>& context, cMo
 			vk::DescriptorSetLayout layouts[] = {
 				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_MODEL].get(),
 				sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
-				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_LIGHT].get(),
+				m_light_pipeline->getDescriptorSetLayout(cFowardPlusPipeline::DESCRIPTOR_SET_LAYOUT_LIGHT),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
@@ -374,7 +294,7 @@ void cModelInstancingPipeline::setup(std::shared_ptr<btr::Context>& context, cMo
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
 				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_RENDER].get())
-				.setRenderPass(m_render_pass.get())
+				.setRenderPass(m_render_pass->getRenderPass())
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
@@ -382,41 +302,38 @@ void cModelInstancingPipeline::setup(std::shared_ptr<btr::Context>& context, cMo
 		}
 
 	}
+}
 
+vk::CommandBuffer cModelInstancingPipeline::execute(std::shared_ptr<btr::Context>& executer)
+{
+	auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
+
+	for (auto& render : m_model)
 	{
-		// ライトのDescriptorの設定
-		vk::DescriptorSetLayout layouts[] = {
-			m_descriptor_set_layout[cModelInstancingPipeline::DESCRIPTOR_SET_LAYOUT_LIGHT].get(),
-		};
-		vk::DescriptorSetAllocateInfo alloc_info;
-		alloc_info.descriptorPool = context->m_descriptor_pool.get();
-		alloc_info.descriptorSetCount = array_length(layouts);
-		alloc_info.pSetLayouts = layouts;
-		m_descriptor_set_light = std::move(device->allocateDescriptorSetsUnique(alloc_info)[0]);
-
-		std::vector<vk::DescriptorBufferInfo> uniformBufferInfo = {
-			renderer.getLight().getLightInfoBufferInfo(),
-		};
-		std::vector<vk::DescriptorBufferInfo> storageBufferInfo = {
-			renderer.getLight().getLightLLHeadBufferInfo(),
-			renderer.getLight().getLightLLBufferInfo(),
-			renderer.getLight().getLightBufferInfo(),
-		};
-		std::vector<vk::WriteDescriptorSet> write_descriptor_set =
-		{
-			vk::WriteDescriptorSet()
-			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-			.setDescriptorCount(uniformBufferInfo.size())
-			.setPBufferInfo(uniformBufferInfo.data())
-			.setDstBinding(0)
-			.setDstSet(m_descriptor_set_light.get()),
-			vk::WriteDescriptorSet()
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(storageBufferInfo.size())
-			.setPBufferInfo(storageBufferInfo.data())
-			.setDstBinding(1)
-			.setDstSet(m_descriptor_set_light.get()),
-		};
-		device->updateDescriptorSets(write_descriptor_set, {});
+		render->execute(*this, cmd);
 	}
+	cmd.end();
+	return cmd;
+}
+
+vk::CommandBuffer cModelInstancingPipeline::draw(std::shared_ptr<btr::Context>& executer)
+{
+	auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
+
+	vk::RenderPassBeginInfo render_begin_info;
+	render_begin_info.setRenderPass(m_render_pass->getRenderPass());
+	render_begin_info.setFramebuffer(m_render_pass->getFramebuffer(executer->getGPUFrame()));
+	render_begin_info.setRenderArea(vk::Rect2D({}, executer->m_window->getClientSize<vk::Extent2D>()));
+
+	cmd.beginRenderPass(render_begin_info, vk::SubpassContents::eInline);
+	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_graphics_pipeline.get());
+	// draw
+	for (auto& render : m_model)
+	{
+		render->draw(*this, cmd);
+	}
+
+	cmd.endRenderPass();
+	cmd.end();
+	return cmd;
 }

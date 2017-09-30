@@ -209,7 +209,6 @@ struct Model : public Drawable
 	std::shared_ptr<AnimationModule> m_animation;
 	
 	std::shared_ptr<ModelRender> m_render;
-
 };
 struct ModelPipelineComponent : public PipelineComponent
 {

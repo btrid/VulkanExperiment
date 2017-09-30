@@ -8,8 +8,9 @@
 #include <btrlib/Shape.h>
 #include <btrlib/AllocatedMemory.h>
 #include <btrlib/Context.h>
+#include <applib/cLightPipeline.h>
 
-struct cModelInstancingRenderer;
+struct ModelInstancingRender;
 
 // pipelineÅAÉâÉCÉgÇ»Ç«ÇÃä«óù
 struct cModelInstancingPipeline
@@ -32,7 +33,6 @@ struct cModelInstancingPipeline
 	{
 		DESCRIPTOR_SET_LAYOUT_MODEL,
 		DESCRIPTOR_SET_LAYOUT_ANIMATION,
-		DESCRIPTOR_SET_LAYOUT_LIGHT,
 		DESCRIPTOR_NUM,
 	};
 	enum PipelineLayout
@@ -53,8 +53,7 @@ struct cModelInstancingPipeline
 	};
 //	std::shared_ptr<ModelPipelineComponent> m_pipeline;
 
-	vk::UniqueRenderPass m_render_pass;
-	std::vector<vk::UniqueFramebuffer> m_framebuffer;
+	std::shared_ptr<RenderPassModule> m_render_pass;
 
 	std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_list;
 	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_stage_info;
@@ -65,24 +64,16 @@ struct cModelInstancingPipeline
 	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
 	std::array<vk::UniqueDescriptorSetLayout, DESCRIPTOR_NUM> m_descriptor_set_layout;
 
-	vk::UniqueDescriptorSet m_descriptor_set_light;
+	std::shared_ptr<cFowardPlusPipeline> m_light_pipeline;
+	std::vector<ModelInstancingRender*> m_model;
 
-	void setup(std::shared_ptr<btr::Context>& loader, cModelInstancingRenderer& renderer);
 
-// 	std::shared_ptr<Model> createRender(std::shared_ptr<btr::Context>& context, const std::shared_ptr<cModel::Resource>& resource)
-// 	{
-// 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-// 
-// 		auto model = std::make_shared<Model>();
-// 		model->m_model_resource = resource;
-// 		model->m_material = std::make_shared<DefaultMaterialModule>(context, resource);
-// 		model->m_animation = std::make_shared<DefaultAnimationModule>(context, resource);
-// 		model->m_render = m_pipeline->createRender(context, model);
-// 
-// 
-// 		m_model.push_back(model);
-// 		return model;
-// 
-// 	}
+	void setup(const std::shared_ptr<btr::Context>& loader);
+	vk::CommandBuffer execute(std::shared_ptr<btr::Context>& executer);
+	vk::CommandBuffer draw(std::shared_ptr<btr::Context>& executer);
+
+	void addModel(ModelInstancingRender* model);
+
+	std::shared_ptr<cFowardPlusPipeline> getLight() { return m_light_pipeline; }
 
 };

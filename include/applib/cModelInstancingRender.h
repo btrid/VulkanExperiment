@@ -3,10 +3,9 @@
 #include <btrlib/cModel.h>
 #include <btrlib/AllocatedMemory.h>
 #include <btrlib/Context.h>
-#include <applib/cModelInstancingPipeline.h>
 #include <applib/cLightPipeline.h>
 
-struct cModelInstancingRenderer;
+struct cModelInstancingPipeline;
 
 namespace model
 {
@@ -155,67 +154,10 @@ public:
 public:
 	void setup(std::shared_ptr<btr::Context>& loader, std::shared_ptr<cModel::Resource>& resource, uint32_t instanceNum);
 
-	void setup(cModelInstancingRenderer& renderer);
-	void execute(cModelInstancingRenderer& renderer, vk::CommandBuffer& cmd);
-	void draw(cModelInstancingRenderer& renderer, vk::CommandBuffer& cmd);
+	void setup(cModelInstancingPipeline& pipeline);
+	void execute(cModelInstancingPipeline& pipeline, vk::CommandBuffer& cmd);
+	void draw(cModelInstancingPipeline& pipeline, vk::CommandBuffer& cmd);
 
 protected:
 private:
-};
-
-struct cModelInstancingRenderer
-{
-	cFowardPlusPipeline m_light_pipeline;
-	cModelInstancingPipeline m_compute_pipeline;
-	std::vector<ModelInstancingRender*> m_model;
-
-public:
-
-	void setup(std::shared_ptr<btr::Context>& context)
-	{
-		m_light_pipeline.setup(context);
-		m_compute_pipeline.setup(context, *this);
-	}
-	void addModel(ModelInstancingRender* model)
-	{
-		m_model.emplace_back(model);
-		m_model.back()->setup(*this);
-	}
-	vk::CommandBuffer execute(std::shared_ptr<btr::Context>& executer)
-	{
-		auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
-
-		for (auto& render : m_model)
-		{
-			render->execute(*this, cmd);
-		}
-		cmd.end();
-		return cmd;
-	}
-	vk::CommandBuffer draw(std::shared_ptr<btr::Context>& executer)
-	{
-		auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
-
-		vk::RenderPassBeginInfo render_begin_info;
-		render_begin_info.setRenderPass(m_compute_pipeline.m_render_pass.get());
-		render_begin_info.setFramebuffer(m_compute_pipeline.m_framebuffer[executer->getGPUFrame()].get());
-		render_begin_info.setRenderArea(vk::Rect2D({}, executer->m_window->getClientSize<vk::Extent2D>()));
-
-		cmd.beginRenderPass(render_begin_info, vk::SubpassContents::eInline);
-		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_compute_pipeline.m_graphics_pipeline.get());
-		// draw
-		for (auto& render : m_model)
-		{
-			render->draw(*this, cmd);
-		}
-
-		cmd.endRenderPass();
-		cmd.end();
-		return cmd;
-	}
-
-	cModelInstancingPipeline& getComputePipeline() { return m_compute_pipeline; }
-	cFowardPlusPipeline& getLight() {
-		return m_light_pipeline;
-	}
 };

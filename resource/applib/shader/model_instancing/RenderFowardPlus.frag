@@ -6,7 +6,9 @@
 
 #define USE_MODEL_INFO_SET 0
 #include <applib/model/MultiModel.glsl>
-#include <applib/model/Light.glsl>
+
+#define USE_LIGHT 2
+#include <applib/Light.glsl>
 
 layout(early_fragment_tests) in;
 layout(origin_upper_left) in vec4 gl_FragCoord;
@@ -19,18 +21,6 @@ layout(location = 1) in Vertex
 	flat int DrawID;
 }FSIn;
 
-layout(std140, set=2, binding=0) uniform LightInfoUniform {
-	LightInfo u_light_info;
-};
-layout(std430, set=2, binding=1) readonly restrict buffer LightLLHeadBuffer {
-	uint b_lightLL_head[];
-};
-layout(std430, set=2, binding=2) readonly restrict buffer LightLLBuffer {
-	LightLL b_lightLL[];
-};
-layout(std430, set=2, binding=3) readonly restrict buffer LightBuffer {
-	LightParam b_light[];
-};
 
 layout(location=0) out vec4 FragColor;
 
@@ -45,9 +35,9 @@ vec3 getColor()
 	vec3 albedo = texture(tDiffuse[material_index], FSIn.Texcoord.xy).xyz;
 	vec3 diffuse = vec3(0.);
 
-	for(uint i = b_lightLL_head[tile_index_1D]; i != INVALID_LIGHT_INDEX;)
+	for(uint i = b_light_LL_head[tile_index_1D]; i != INVALID_LIGHT_INDEX;)
 	{
-		LightLL ll = b_lightLL[i];
+		LightLL ll = b_light_LL[i];
 		LightParam light = b_light[ll.light_index];
 		vec3 dir = normalize(light.m_position.xyz - pos);
 

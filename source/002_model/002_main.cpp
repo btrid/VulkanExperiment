@@ -101,9 +101,9 @@ int main()
 	ModelInstancingRender render;
 	render.setup(context, model->getResource(), 1000);
 
-	cModelInstancingRenderer renderer;
-	renderer.setup(context);
-	renderer.addModel(&render);
+	cModelInstancingPipeline pipeline;
+	pipeline.setup(context);
+	pipeline.addModel(&render);
 
 	std::vector<ModelInstancingRender::InstanceResource> data(1000);
 	for (int i = 0; i < 1000; i++)
@@ -114,7 +114,7 @@ int main()
 
 	for (int i = 0; i < 30; i++)
 	{
-		renderer.getLight().add(std::move(std::make_unique<LightSample>()));
+		pipeline.getLight()->add(std::move(std::make_unique<LightSample>()));
 	}
 
 	while (true)
@@ -132,9 +132,9 @@ int main()
 				job.mJob.emplace_back(
 					[&]()
 				{
-					render_cmds[0] = renderer.execute(context);
-					render_cmds[1] = renderer.getLight().execute(context);
-					render_cmds[2] = renderer.draw(context);
+					render_cmds[0] = pipeline.execute(context);
+					render_cmds[1] = pipeline.getLight()->execute(context);
+					render_cmds[2] = pipeline.draw(context);
 					render_syncronized_point.arrive();
 				}
 				);

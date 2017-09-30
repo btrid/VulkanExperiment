@@ -83,40 +83,40 @@ void cFowardPlusPipeline::Private::setup(const std::shared_ptr<btr::Context>& co
 		bindings[DESCRIPTOR_SET_LAYOUT_LIGHT] =
 		{
 			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
+			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eFragment)
 			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 			.setDescriptorCount(1)
 			.setBinding(0),
 			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
+			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eFragment)
 			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 			.setDescriptorCount(1)
 			.setBinding(1),
 			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
+			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eFragment)
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setDescriptorCount(1)
-			.setBinding(8),
+			.setBinding(2),
 			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
+			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eFragment)
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setDescriptorCount(1)
-			.setBinding(9),
+			.setBinding(3),
 			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
+			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eFragment)
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setDescriptorCount(1)
-			.setBinding(10),
+			.setBinding(4),
 			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
+			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eFragment)
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setDescriptorCount(1)
-			.setBinding(11),
+			.setBinding(5),
 			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
+			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eFragment)
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setDescriptorCount(1)
-			.setBinding(12),
+			.setBinding(6),
 		};
 
 		for (size_t i = 0; i < bindings.size(); i++)
@@ -139,6 +139,37 @@ void cFowardPlusPipeline::Private::setup(const std::shared_ptr<btr::Context>& co
 		descriptor_set_alloc_info.setPSetLayouts(layouts);
 		auto descriptors = device->allocateDescriptorSetsUnique(descriptor_set_alloc_info);
 		std::copy(std::make_move_iterator(descriptors.begin()), std::make_move_iterator(descriptors.end()), m_descriptor_set.begin());
+
+		// update descriptor_set
+		{
+			std::vector<vk::DescriptorBufferInfo> uniforms =
+			{
+				m_light_info_gpu.getBufferInfo(),
+				m_frustom_point.getBufferInfo(),
+			};
+			std::vector<vk::DescriptorBufferInfo> storages =
+			{
+				m_light.getBufferInfo(),
+				m_lightLL_head.getBufferInfo(),
+				m_lightLL.getBufferInfo(),
+				m_light_counter.getBufferInfo(),
+			};
+
+			vk::WriteDescriptorSet desc;
+			desc.setDescriptorType(vk::DescriptorType::eUniformBuffer);
+			desc.setDescriptorCount(uniforms.size());
+			desc.setPBufferInfo(uniforms.data());
+			desc.setDstBinding(0);
+			desc.setDstSet(m_descriptor_set[DESCRIPTOR_SET_LIGHT].get());
+			device->updateDescriptorSets(desc, {});
+			desc.setDescriptorType(vk::DescriptorType::eStorageBuffer);
+			desc.setDescriptorCount(storages.size());
+			desc.setPBufferInfo(storages.data());
+			desc.setDstBinding(2);
+			desc.setDstSet(m_descriptor_set[DESCRIPTOR_SET_LIGHT].get());
+			device->updateDescriptorSets(desc, {});
+
+		}
 	}
 
 	// Create pipeline layout
@@ -168,34 +199,4 @@ void cFowardPlusPipeline::Private::setup(const std::shared_ptr<btr::Context>& co
 
 	}
 
-	// LightCulling
-	{
-		std::vector<vk::DescriptorBufferInfo> uniforms =
-		{
-			m_light_info_gpu.getBufferInfo(),
-			m_frustom_point.getBufferInfo(),
-		};
-		std::vector<vk::DescriptorBufferInfo> storages =
-		{
-			m_light.getBufferInfo(),
-			m_lightLL_head.getBufferInfo(),
-			m_lightLL.getBufferInfo(),
-			m_light_counter.getBufferInfo(),
-		};
-
-		vk::WriteDescriptorSet desc;
-		desc.setDescriptorType(vk::DescriptorType::eUniformBuffer);
-		desc.setDescriptorCount(uniforms.size());
-		desc.setPBufferInfo(uniforms.data());
-		desc.setDstBinding(0);
-		desc.setDstSet(m_descriptor_set[DESCRIPTOR_SET_LIGHT].get());
-		device->updateDescriptorSets(desc, {});
-		desc.setDescriptorType(vk::DescriptorType::eStorageBuffer);
-		desc.setDescriptorCount(storages.size());
-		desc.setPBufferInfo(storages.data());
-		desc.setDstBinding(8);
-		desc.setDstSet(m_descriptor_set[DESCRIPTOR_SET_LIGHT].get());
-		device->updateDescriptorSets(desc, {});
-
-	}
 }
