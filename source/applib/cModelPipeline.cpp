@@ -158,7 +158,7 @@ private:
 };
 
 
-struct DefaultModelPipelineComponent : public ModelPipelineComponent
+struct DefaultModelPipelineComponent : public ModelDrawPipelineComponent
 {
 
 	DefaultModelPipelineComponent(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderPassModule>& render_pass, const std::shared_ptr<ShaderModule>& shader)
@@ -285,13 +285,13 @@ struct DefaultModelPipelineComponent : public ModelPipelineComponent
 				vk::CommandBufferBeginInfo begin_info;
 				begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse | vk::CommandBufferUsageFlagBits::eRenderPassContinue);
 				vk::CommandBufferInheritanceInfo inheritance_info;
-				inheritance_info.setFramebuffer(getRenderPassModule()->getFramebuffer(i));
-				inheritance_info.setRenderPass(getRenderPassModule()->getRenderPass());
+				inheritance_info.setFramebuffer(m_render_pass->getFramebuffer(i));
+				inheritance_info.setRenderPass(m_render_pass->getRenderPass());
 				begin_info.pInheritanceInfo = &inheritance_info;
 
 				cmd.begin(begin_info);
 
-				cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, getPipeline());
+				cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline.get());
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 0, render->m_descriptor_set_model.get(), {});
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 				cmd.bindVertexBuffers(0, { model->m_model_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().buffer }, { model->m_model_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().offset });
@@ -305,7 +305,6 @@ struct DefaultModelPipelineComponent : public ModelPipelineComponent
 		return render;
 	}
 	virtual const std::shared_ptr<RenderPassModule>& getRenderPassModule()const override { return m_render_pass; }
-	virtual vk::Pipeline getPipeline()const override { return m_pipeline.get(); }
 
 private:
 
@@ -320,7 +319,7 @@ private:
 
 
 
-void cModelPipeline::setup(std::shared_ptr<btr::Context>& context, const std::shared_ptr<ModelPipelineComponent>& pipeline /*= nullptr*/)
+void cModelPipeline::setup(std::shared_ptr<btr::Context>& context, const std::shared_ptr<ModelDrawPipelineComponent>& pipeline /*= nullptr*/)
 {
 	m_pipeline = pipeline;
 	if (!m_pipeline)

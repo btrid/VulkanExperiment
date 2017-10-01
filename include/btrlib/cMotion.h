@@ -62,7 +62,7 @@ struct MotionTexture
 	vk::ImageView getImageView()const { return m_resource ? m_resource->m_image_view.get() : vk::ImageView(); }
 	vk::Sampler getSampler()const { return m_resource ? m_resource->m_sampler.get() : vk::Sampler(); }
 
-	static std::vector<MotionTexture> createMotion(std::shared_ptr<btr::Context>& context, vk::CommandBuffer cmd, const cAnimation& anim)
+	static std::vector<MotionTexture> createMotion(const std::shared_ptr<btr::Context>& context, vk::CommandBuffer cmd, const cAnimation& anim)
 	{
 		std::vector<MotionTexture> motion_texture(anim.m_motion.size());
 		for (size_t i = 0; i < anim.m_motion.size(); i++)
@@ -75,7 +75,7 @@ struct MotionTexture
 	/**
 	*	モーションのデータを一枚の1DArrayに格納
 	*/
-	static MotionTexture create(std::shared_ptr<btr::Context>& context, vk::CommandBuffer cmd, const std::shared_ptr<cMotion>& motion)
+	static MotionTexture create(const std::shared_ptr<btr::Context>& context, vk::CommandBuffer cmd, const std::shared_ptr<cMotion>& motion)
 	{
 		uint32_t SIZE = 256;
 
@@ -89,7 +89,7 @@ struct MotionTexture
 		image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
 		image_info.sharingMode = vk::SharingMode::eExclusive;
 		image_info.initialLayout = vk::ImageLayout::eUndefined;
-		image_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
+//		image_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
 		image_info.extent = { SIZE, 1u, 1u };
 
 		auto image_prop = context->m_device.getGPU().getImageFormatProperties(image_info.format, image_info.imageType, image_info.tiling, image_info.usage, image_info.flags);
@@ -255,5 +255,115 @@ struct MotionTexture
 		tex.m_resource->m_sampler = context->m_device->createSamplerUnique(sampler_info);
 		return tex;
 	}
+};
+
+struct PlayMotionDescriptor
+{
+	std::shared_ptr<cMotion> m_data;
+	uint32_t m_play_no;
+	uint32_t m_is_loop;
+	float m_start_time;
+
+	PlayMotionDescriptor()
+		: m_play_no(0)
+		, m_is_loop(false)
+		, m_start_time(0.f)
+	{
+
+	}
+
+};
+struct MotionPlayList
+{
+	struct Work
+	{
+		std::shared_ptr<cMotion> m_motion;
+		float m_time;		//!< 再生位置
+		int m_index;
+		bool m_is_playing;	//!< 再生中？
+
+		Work()
+			: m_time(0.f)
+			, m_is_playing(false)
+
+		{}
+	};
+	std::array<Work, 8> m_work;
+
+	void execute()
+	{
+		float dt = sGlobal::Order().getDeltaTime();
+		for (auto& work : m_work)
+		{
+			if (!work.m_is_playing)
+			{
+				continue;
+			}
+			work.m_time += dt * work.m_motion->m_ticks_per_second;
+		}
+	}
+
+	void play(const PlayMotionDescriptor& desc)
+	{
+		m_work[desc.m_play_no].m_motion = desc.m_data;
+		m_work[desc.m_play_no].m_time = desc.m_start_time;
+		m_work[desc.m_play_no].m_index = 0;
+		m_work[desc.m_play_no].m_is_playing = true;
+	}
+};
+
+struct ModelTransform
+{
+	glm::vec3 m_local_scale;
+	glm::quat m_local_rotate;
+	glm::vec3 m_local_translate;
+
+	glm::mat4 m_global;
+
+	ModelTransform()
+		: m_local_scale(1.f)
+		, m_local_rotate(1.f, 0.f, 0.f, 0.f)
+		, m_local_translate(0.f)
+		, m_global(1.f)
+	{}
+	glm::mat4 calcLocal()const
+	{
+		return glm::scale(m_local_scale) * glm::toMat4(m_local_rotate) * glm::translate(m_local_translate);
+	}
+	glm::mat4 calcGlobal()const
+	{
+		return m_global;
+	}
+};
+
+struct AnimationModule
+{
+	ModelTransform m_model_transform;
+	MotionPlayList m_playlist;
+
+	ModelTransform& getTransform() { return m_model_transform; }
+	const ModelTransform& getTransform()const { return m_model_transform; }
+	MotionPlayList& getPlayList() { return m_playlist; }
+	const MotionPlayList& getPlayList()const { return m_playlist; }
+
+	virtual vk::DescriptorBufferInfo getBoneBuffer()const = 0;
+	virtual void animationUpdate() = 0;
+	virtual void animationExecute(const std::shared_ptr<btr::Context>& context, vk::CommandBuffer& cmd) = 0;
+};
+
+struct InstancingAnimationModule : public AnimationModule
+{
+	virtual vk::DescriptorBufferInfo getModelInfo()const = 0;
+	virtual vk::DescriptorBufferInfo getInstancingInfo()const = 0;
+	virtual vk::DescriptorBufferInfo getAnimationInfoBuffer()const = 0;
+	virtual vk::DescriptorBufferInfo getPlayingAnimationBuffer()const = 0;
+	virtual vk::DescriptorBufferInfo getNodeBuffer()const = 0;
+	virtual vk::DescriptorBufferInfo getBoneMap()const = 0;
+	virtual vk::DescriptorBufferInfo getNodeInfoBuffer()const = 0;
+	virtual vk::DescriptorBufferInfo getBoneInfoBuffer()const = 0;
+	virtual vk::DescriptorBufferInfo getWorldBuffer()const = 0;
+	virtual vk::DescriptorBufferInfo getDrawIndirect()const = 0;
+	virtual const std::vector<MotionTexture>& getMotionTexture()const = 0;
+
 };
 

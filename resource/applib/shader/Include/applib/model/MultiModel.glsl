@@ -111,35 +111,47 @@ layout (set=USE_MODEL_INFO_SET, binding = 5) uniform sampler2D tDiffuse[16];
 #ifdef USE_ANIMATION_INFO_SET
 layout (set = USE_ANIMATION_INFO_SET, binding = 32) uniform sampler1DArray tMotionData;
 
-layout(std430, set=USE_ANIMATION_INFO_SET, binding=0)restrict buffer AnimationInfoBuffer 
+layout(std430, set=USE_ANIMATION_INFO_SET, binding=0) restrict buffer ModelInfoBuffer 
+{
+	ModelInfo u_model_info;
+};
+layout(std430, set=USE_ANIMATION_INFO_SET, binding=1) restrict buffer ModelInstancingInfoBuffer
+{
+	ModelInstancingInfo u_model_instancing_info;
+};
+layout(std430, set=USE_ANIMATION_INFO_SET, binding=2)restrict buffer AnimationInfoBuffer 
 {
 	AnimationInfo animInfo[];
 };
-layout(std430, set=USE_ANIMATION_INFO_SET, binding=1)restrict buffer PlayingAnimationBuffer 
+layout(std430, set=USE_ANIMATION_INFO_SET, binding=3)restrict buffer PlayingAnimationBuffer 
 {
 	PlayingAnimation playingMotion[];
 };
-layout(std430, set=USE_ANIMATION_INFO_SET, binding=2) readonly restrict buffer NodeInfoBuffer {
+layout(std430, set=USE_ANIMATION_INFO_SET, binding=4) readonly restrict buffer NodeInfoBuffer {
 	NodeInfo nodes[];
 };
-layout(std430, set=USE_ANIMATION_INFO_SET, binding=3) readonly restrict buffer BoneInfoBuffer {
+layout(std430, set=USE_ANIMATION_INFO_SET, binding=5) readonly restrict buffer BoneInfoBuffer {
 	BoneInfo boneInfo[];
 };
 
-layout(std430, set=USE_ANIMATION_INFO_SET, binding=4) restrict buffer NodeLocalTransformBuffer {
+layout(std430, set=USE_ANIMATION_INFO_SET, binding=6) restrict buffer NodeLocalTransformBuffer {
 	mat4 nodeTransforms[];
 };
-layout(std430, set=USE_ANIMATION_INFO_SET, binding=5) readonly restrict buffer WorldTransform {
+layout(std430, set=USE_ANIMATION_INFO_SET, binding=7) readonly restrict buffer WorldTransform {
 	mat4 worlds[];
 };
 
-layout(std430, set=USE_ANIMATION_INFO_SET, binding=6) restrict buffer BoneMapBuffer {
+layout(std430, set=USE_ANIMATION_INFO_SET, binding=8) restrict buffer BoneMapBuffer {
 	uint boneMap[];
 };
 
-layout(std430, set=USE_ANIMATION_INFO_SET, binding=7) restrict buffer MeshBuffer {
+layout(std430, set=USE_ANIMATION_INFO_SET, binding=9) restrict buffer MeshBuffer {
 	Mesh meshs[];
 };
+layout(std430, set=USE_ANIMATION_INFO_SET, binding=10) restrict buffer BoneTransformBuffer {
+	mat4 bones[];
+};
+
 #endif
 
 

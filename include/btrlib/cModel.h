@@ -16,7 +16,6 @@
 #include <btrlib/AllocatedMemory.h>
 #include <btrlib/Context.h>
 #include <btrlib/cMotion.h>
-#include <btrlib/Material.h>
 
 class Node
 {

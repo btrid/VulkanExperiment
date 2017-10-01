@@ -98,14 +98,11 @@ int main()
 	auto model = modelFuture.get();
 
 
-	ModelInstancingRender render;
-	render.setup(context, model->getResource(), 1000);
-
 	cModelInstancingPipeline pipeline;
 	pipeline.setup(context);
-	pipeline.addModel(context, &render);
-
-	std::vector<ModelInstancingRender::InstanceResource> data(1000);
+	auto render = pipeline.createModel(context, model->getResource());
+	pipeline.addModel(render);
+	std::vector<ModelInstancingModule::InstanceResource> data(1000);
 	for (int i = 0; i < 1000; i++)
 	{
 		data[i].m_world = glm::translate(glm::ballRand(2999.f));
@@ -114,7 +111,7 @@ int main()
 
 	for (int i = 0; i < 30; i++)
 	{
-		pipeline.getLight()->add(std::move(std::make_unique<LightSample>()));
+		pipeline.m_render_pipeline->m_light_pipeline->add(std::move(std::make_unique<LightSample>()));
 	}
 
 	while (true)
@@ -125,7 +122,7 @@ int main()
 		{
 			SynchronizedPoint render_syncronized_point(1);
 
-			render.addModel(data.data(), data.size());
+			render->m_instancing->addModel(data.data(), data.size());
 			std::vector<vk::CommandBuffer> render_cmds(3);
 			{
 				cThreadJob job;
@@ -133,7 +130,7 @@ int main()
 					[&]()
 				{
 					render_cmds[0] = pipeline.execute(context);
-					render_cmds[1] = pipeline.getLight()->execute(context);
+					render_cmds[1] = pipeline.m_render_pipeline->m_light_pipeline->execute(context);
 					render_cmds[2] = pipeline.draw(context);
 					render_syncronized_point.arrive();
 				}

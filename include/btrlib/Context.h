@@ -29,7 +29,6 @@ struct Context
 	uint32_t getCPUFrame()const { return (m_window->getSwapchain().m_backbuffer_index + 1) % m_window->getSwapchain().getBackbufferNum(); }
 	uint32_t getGPUFrame()const { return m_window->getSwapchain().m_backbuffer_index; }
 };
-
 }
 
 struct Component
@@ -155,3 +154,8 @@ struct PipelineComponent
 };
 
 
+struct InstancingModule
+{
+	virtual vk::DescriptorBufferInfo getModelInfo()const = 0;
+	virtual vk::DescriptorBufferInfo getInstancingInfo()const = 0;
+};

@@ -114,7 +114,7 @@ struct Player
 	}
 };
 
-struct ModelGIPipelineComponent : public ModelPipelineComponent
+struct ModelGIPipelineComponent : public ModelDrawPipelineComponent
 {
 	enum {
 		DESCRIPTOR_TEXTURE_NUM = 16,
@@ -335,7 +335,7 @@ struct ModelGIPipelineComponent : public ModelPipelineComponent
 
 				cmd.begin(begin_info);
 
-				cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, getPipeline());
+				cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline.get());
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 0, render->m_descriptor_set_model.get(), {});
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 2, sScene::Order().getVoxel().getDescriptorSet(VoxelPipeline::DESCRIPTOR_SET_VOXELIZE), {});
@@ -350,7 +350,6 @@ struct ModelGIPipelineComponent : public ModelPipelineComponent
 		return render;
 	}
 	virtual const std::shared_ptr<RenderPassModule>& getRenderPassModule()const override { return m_render_pass; }
-	virtual vk::Pipeline getPipeline()const override { return m_pipeline.get(); }
 
 private:
 
