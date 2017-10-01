@@ -287,9 +287,9 @@ struct ModelGIPipelineComponent : public ModelDrawPipelineComponent
 		render->m_descriptor_set_model = std::move(device->allocateDescriptorSetsUnique(descriptor_set_alloc_info)[0]);
 
 		std::vector<vk::DescriptorBufferInfo> storages = {
-			model->m_animation->getBoneBuffer().getBufferInfo(),
-			model->m_material->getMaterialIndexBuffer().getBufferInfo(),
-			model->m_material->getMaterialBuffer().getBufferInfo(),
+			model->m_animation->getBoneBuffer(),
+			model->m_material->getMaterialIndexBuffer(),
+			model->m_material->getMaterialBuffer(),
 		};
 
 		std::vector<vk::DescriptorImageInfo> color_images(DESCRIPTOR_TEXTURE_NUM, vk::DescriptorImageInfo(DrawHelper::Order().getWhiteTexture().m_sampler.get(), DrawHelper::Order().getWhiteTexture().m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal));
@@ -451,7 +451,7 @@ int main()
 				job.mFinish =
 					[&]()
 				{
-					render->m_animation->update();
+					render->m_animation->animationUpdate();
 					motion_worker_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);

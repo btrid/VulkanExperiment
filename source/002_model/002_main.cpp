@@ -121,8 +121,19 @@ int main()
 		app.preUpdate();
 		{
 			SynchronizedPoint render_syncronized_point(1);
+			SynchronizedPoint work_syncronized_point(1);
 
-			render->m_instancing->addModel(data.data(), data.size());
+			{
+				cThreadJob job;
+				job.mJob.emplace_back(
+					[&]()
+				{
+					render->m_instancing->addModel(data.data(), data.size());
+					work_syncronized_point.arrive();
+				}
+				);
+				sGlobal::Order().getThreadPool().enque(job);
+			}
 			std::vector<vk::CommandBuffer> render_cmds(3);
 			{
 				cThreadJob job;
@@ -140,6 +151,7 @@ int main()
 
 			render_syncronized_point.wait();
 			app.submit(std::move(render_cmds));
+			work_syncronized_point.wait();
 		}
 
 		app.postUpdate();
