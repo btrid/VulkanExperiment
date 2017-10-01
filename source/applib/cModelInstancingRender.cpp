@@ -16,20 +16,22 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& context, std::s
 	// node info
 	auto nodeInfo = model::NodeInfo::createNodeInfo(m_resource->mNodeRoot);
 	{
-		btr::AllocatedMemory::Descriptor staging_desc;
-		staging_desc.size = vector_sizeof(nodeInfo);
-		staging_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-		auto staging_node_info_buffer = context->m_staging_memory.allocateMemory(staging_desc);
-		auto& buffer = m_instancing->getBuffer(NODE_INFO);
-		buffer = context->m_storage_memory.allocateMemory(staging_desc.size);
+		btr::AllocatedMemory::Descriptor desc;
+		desc.size = vector_sizeof(nodeInfo);
 
-		memcpy_s(staging_node_info_buffer.getMappedPtr(), staging_desc.size, nodeInfo.data(), staging_desc.size);
+		auto& buffer = m_instancing->getBuffer(NODE_INFO);
+		buffer = context->m_storage_memory.allocateMemory(desc.size);
+
+		desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+		auto staging = context->m_staging_memory.allocateMemory(desc);
+
+		memcpy_s(staging.getMappedPtr(), desc.size, nodeInfo.data(), desc.size);
 
 		vk::BufferCopy copy_info;
-		copy_info.setSize(staging_desc.size);
-		copy_info.setSrcOffset(staging_node_info_buffer.getBufferInfo().offset);
+		copy_info.setSize(desc.size);
+		copy_info.setSrcOffset(staging.getBufferInfo().offset);
 		copy_info.setDstOffset(buffer.getBufferInfo().offset);
-		cmd->copyBuffer(staging_node_info_buffer.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
+		cmd->copyBuffer(staging.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
 
 		auto to_render = buffer.makeMemoryBarrierEx();
 		to_render.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
@@ -41,23 +43,24 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& context, std::s
 	{
 		// BoneInfo
 		{
-			btr::AllocatedMemory::Descriptor staging_desc;
-			staging_desc.size = m_resource->mBone.size() * sizeof(model::BoneInfo);
-			staging_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-			btr::BufferMemory staging_bone_info = context->m_staging_memory.allocateMemory(staging_desc);
-			auto* bo = static_cast<model::BoneInfo*>(staging_bone_info.getMappedPtr());
-			for (size_t i = 0; i < m_resource->mBone.size(); i++) {
-				bo[i].mBoneOffset = m_resource->mBone[i].mOffset;
-				bo[i].mNodeIndex = m_resource->mBone[i].mNodeIndex;
-			}
+			btr::AllocatedMemory::Descriptor desc;
+			desc.size = m_resource->mBone.size() * sizeof(model::BoneInfo);
+
 			auto& buffer = m_instancing->getBuffer(BONE_INFO);
-			buffer = context->m_storage_memory.allocateMemory(m_resource->mBone.size() * sizeof(model::BoneInfo));
+			buffer = context->m_storage_memory.allocateMemory(desc);
+
+			desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			btr::BufferMemory staging = context->m_staging_memory.allocateMemory(desc);
+			auto bone_info = model::BoneInfo::createBoneInfo(m_resource->mBone);
+
+
+			memcpy_s(staging.getMappedPtr(), desc.size, bone_info.data(), desc.size);
 
 			vk::BufferCopy copy_info;
-			copy_info.setSize(staging_bone_info.getBufferInfo().range);
-			copy_info.setSrcOffset(staging_bone_info.getBufferInfo().offset);
+			copy_info.setSize(staging.getBufferInfo().range);
+			copy_info.setSrcOffset(staging.getBufferInfo().offset);
 			copy_info.setDstOffset(buffer.getBufferInfo().offset);
-			cmd->copyBuffer(staging_bone_info.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
+			cmd->copyBuffer(staging.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
 		}
 
 		// BoneTransform
