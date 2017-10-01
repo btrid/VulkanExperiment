@@ -68,7 +68,6 @@ class ModelInstancingRender
 public:
 	struct AnimationInfo
 	{
-		//	int animationNo_;
 		float duration_;
 		float ticksPerSecond_;
 		int numInfo_;
@@ -133,7 +132,6 @@ public:
 		virtual vk::DescriptorBufferInfo getModelInfo()const override { return getBuffer(MODEL_INFO).getBufferInfo(); }
 		virtual vk::DescriptorBufferInfo getInstancingInfo()const override { return m_instancing_info_buffer.getBufferMemory().getBufferInfo(); }
 
-
 	};
 public:
 
@@ -144,6 +142,8 @@ public:
 	std::shared_ptr<MaterialModule> m_material;
 	std::shared_ptr<InstancingResource> m_instancing;
 
+	std::vector<vk::UniqueCommandBuffer> m_draw_cmd;
+	std::vector<vk::UniqueCommandBuffer> m_execute_cmd;
 
 
 	struct InstanceResource
@@ -154,11 +154,11 @@ public:
 	void addModel(const InstanceResource& data) { addModel(&data, 1); }
 	void addModel(const InstanceResource* data, uint32_t num);
 public:
-	void setup(std::shared_ptr<btr::Context>& loader, std::shared_ptr<cModel::Resource>& resource, uint32_t instanceNum);
+	void setup(std::shared_ptr<btr::Context>& context, std::shared_ptr<cModel::Resource>& resource, uint32_t instanceNum);
 
 	void setup(const std::shared_ptr<btr::Context>& context, cModelInstancingPipeline& pipeline);
-	void execute(cModelInstancingPipeline& pipeline, vk::CommandBuffer& cmd);
-	void draw(cModelInstancingPipeline& pipeline, vk::CommandBuffer& cmd);
+	void execute(const std::shared_ptr<btr::Context>& context, vk::CommandBuffer& cmd);
+	void draw(const std::shared_ptr<btr::Context>& context, vk::CommandBuffer& cmd);
 
 protected:
 private:

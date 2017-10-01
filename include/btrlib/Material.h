@@ -40,3 +40,4 @@ struct MaterialModule
 	virtual vk::DescriptorBufferInfo getMaterialBuffer()const = 0;
 	virtual const std::vector<ResourceTexture>& getTextureList()const = 0;
 };
+

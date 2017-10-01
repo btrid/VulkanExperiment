@@ -201,7 +201,7 @@ vk::CommandBuffer cModelInstancingPipeline::execute(std::shared_ptr<btr::Context
 
 	for (auto& render : m_model)
 	{
-		render->execute(*this, cmd);
+		render->execute(context, cmd);
 	}
 	cmd.end();
 	return cmd;
@@ -216,12 +216,12 @@ vk::CommandBuffer cModelInstancingPipeline::draw(std::shared_ptr<btr::Context>& 
 	render_begin_info.setFramebuffer(m_render_pass->getFramebuffer(context->getGPUFrame()));
 	render_begin_info.setRenderArea(vk::Rect2D({}, context->m_window->getClientSize<vk::Extent2D>()));
 
-	cmd.beginRenderPass(render_begin_info, vk::SubpassContents::eInline);
-	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_graphics_pipeline.get());
+	cmd.beginRenderPass(render_begin_info, vk::SubpassContents::eSecondaryCommandBuffers);
+
 	// draw
 	for (auto& render : m_model)
 	{
-		render->draw(*this, cmd);
+		render->draw(context, cmd);
 	}
 
 	cmd.endRenderPass();

@@ -39,14 +39,6 @@ struct NodeInfo
 
 };
 
-struct NodeLocalTransform
-{
-	mat3x4 local;
-};
-struct NodeGlobalTransform
-{
-	mat3x4 global;
-};
 struct ModelInfo
 {
 	int nodeNum;

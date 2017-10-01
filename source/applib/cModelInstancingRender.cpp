@@ -246,6 +246,7 @@ void ModelInstancingRender::setup(std::shared_ptr<btr::Context>& context, std::s
 			cmd->copyBuffer(staging_playing_animation.getBufferInfo().buffer, buffer.getBufferInfo().buffer, copy_info);
 		}
 	}
+
 }
 
 void ModelInstancingRender::setup(const std::shared_ptr<btr::Context>& context, cModelInstancingPipeline& pipeline)
@@ -253,7 +254,6 @@ void ModelInstancingRender::setup(const std::shared_ptr<btr::Context>& context, 
 	// setup draw
 	{
 		auto& device = context->m_device;
-
 		{
 			// meshごとの更新
 			m_model_descriptor_set = pipeline.m_model_descriptor->allocateDescriptorSet(context);
@@ -263,6 +263,124 @@ void ModelInstancingRender::setup(const std::shared_ptr<btr::Context>& context, 
 
 			m_animation_descriptor_set = pipeline.m_animation_descriptor->allocateDescriptorSet(context);
 			pipeline.m_animation_descriptor->updateAnimation(context, m_animation_descriptor_set.get(), m_instancing);
+		}
+	}
+
+	// recode draw command
+	{
+		vk::CommandBufferAllocateInfo cmd_buffer_info;
+		cmd_buffer_info.commandBufferCount = context->m_window->getSwapchain().getBackbufferNum();
+		cmd_buffer_info.commandPool = context->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
+		cmd_buffer_info.level = vk::CommandBufferLevel::eSecondary;
+		m_draw_cmd = context->m_device->allocateCommandBuffersUnique(cmd_buffer_info);
+
+		for (size_t i = 0; i < m_draw_cmd.size(); i++)
+		{
+			auto& cmd = m_draw_cmd[i].get();
+
+			vk::CommandBufferBeginInfo begin_info;
+			begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse | vk::CommandBufferUsageFlagBits::eRenderPassContinue);
+			vk::CommandBufferInheritanceInfo inheritance_info;
+			inheritance_info.setFramebuffer(pipeline.m_render_pass->getFramebuffer(i));
+			inheritance_info.setRenderPass(pipeline.m_render_pass->getRenderPass());
+			begin_info.pInheritanceInfo = &inheritance_info;
+
+			cmd.begin(begin_info);
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline.m_graphics_pipeline.get());
+			vk::ArrayProxy<const vk::DescriptorSet> sets = {
+				m_model_descriptor_set.get(),
+				sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA),
+				pipeline.getLight()->getDescriptorSet(cFowardPlusPipeline::DESCRIPTOR_SET_LIGHT),
+			};
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelInstancingPipeline::PIPELINE_LAYOUT_RENDER].get(), 0, sets, {});
+
+			cmd.bindVertexBuffers(0, { m_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().buffer }, { m_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().offset });
+			cmd.bindIndexBuffer(m_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().buffer, m_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().offset, m_resource->m_mesh_resource.mIndexType);
+			cmd.drawIndexedIndirect(m_instancing->getDrawIndirect().buffer, m_instancing->getDrawIndirect().offset, m_resource->m_mesh_resource.mIndirectCount, sizeof(cModel::Mesh));
+
+			cmd.end();
+		}
+	}
+	// recode update bone & animation
+	{
+		vk::CommandBufferAllocateInfo cmd_buffer_info;
+		cmd_buffer_info.commandBufferCount = context->m_window->getSwapchain().getBackbufferNum();
+		cmd_buffer_info.commandPool = context->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
+		cmd_buffer_info.level = vk::CommandBufferLevel::eSecondary;
+		m_execute_cmd = context->m_device->allocateCommandBuffersUnique(cmd_buffer_info);
+
+		for (size_t i = 0; i < m_execute_cmd.size(); i++)
+		{
+			auto& cmd = m_execute_cmd[i].get();
+
+			vk::CommandBufferBeginInfo begin_info;
+			begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
+			vk::CommandBufferInheritanceInfo inheritance_info;
+			begin_info.setPInheritanceInfo(&inheritance_info);
+			cmd.begin(begin_info);
+
+			std::vector<vk::BufferMemoryBarrier> to_clear_barrier =
+			{
+				vk::BufferMemoryBarrier()
+				.setSrcAccessMask(vk::AccessFlagBits::eIndirectCommandRead)
+				.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
+				.setBuffer(m_instancing->getDrawIndirect().buffer)
+				.setSize(m_instancing->getDrawIndirect().range)
+				.setOffset(m_instancing->getDrawIndirect().offset),
+				vk::BufferMemoryBarrier()
+				.setSrcAccessMask(vk::AccessFlagBits::eShaderRead)
+				.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
+				.setBuffer(m_instancing->getBuffer(ModelStorageBuffer::BONE_TRANSFORM).getBufferInfo().buffer)
+				.setSize(m_instancing->getBuffer(ModelStorageBuffer::BONE_TRANSFORM).getBufferInfo().range)
+				.setOffset(m_instancing->getBuffer(ModelStorageBuffer::BONE_TRANSFORM).getBufferInfo().offset)
+			};
+
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands,
+				vk::DependencyFlags(), {}, to_clear_barrier, {});
+
+			for (size_t i = 0; i < pipeline.m_pipeline.size(); i++)
+			{
+
+				if (i == cModelInstancingPipeline::PIPELINE_COMPUTE_CULLING)
+				{
+					vk::BufferMemoryBarrier barrier = m_instancing->getBuffer(ModelStorageBuffer::DRAW_INDIRECT).makeMemoryBarrierEx();
+					barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+					barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, barrier, {});
+				}
+				if (i == cModelInstancingPipeline::PIPELINE_COMPUTE_MOTION_UPDATE)
+				{
+					// 
+					vk::BufferMemoryBarrier barrier = m_instancing->getBuffer(ModelStorageBuffer::PLAYING_ANIMATION).makeMemoryBarrierEx();
+					barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+					barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, barrier, {});
+				}
+
+				if (i == cModelInstancingPipeline::PIPELINE_COMPUTE_BONE_TRANSFORM)
+				{
+					// 
+					vk::BufferMemoryBarrier barrier = m_instancing->getBuffer(ModelStorageBuffer::NODE_TRANSFORM).makeMemoryBarrierEx();
+					barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+					barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
+						vk::DependencyFlags(), {}, barrier, {});
+				}
+
+				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, pipeline.m_pipeline[i].get());
+				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipeline.m_pipeline_layout[cModelInstancingPipeline::PIPELINE_LAYOUT_COMPUTE].get(), 0, m_model_descriptor_set.get(), {});
+				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipeline.m_pipeline_layout[cModelInstancingPipeline::PIPELINE_LAYOUT_COMPUTE].get(), 1, m_animation_descriptor_set.get(), {});
+				cmd.dispatchIndirect(m_instancing->m_compute_indirect_buffer.getBufferInfo().buffer, m_instancing->m_compute_indirect_buffer.getBufferInfo().offset + i * 12);
+
+			}
+			vk::BufferMemoryBarrier to_draw_barrier = m_instancing->getBuffer(ModelStorageBuffer::BONE_TRANSFORM).makeMemoryBarrierEx();
+			to_draw_barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+			to_draw_barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eVertexShader, {}, {}, to_draw_barrier, {});
+
+			cmd.end();
+
 		}
 	}
 }
@@ -279,7 +397,7 @@ void ModelInstancingRender::addModel(const InstanceResource* data, uint32_t num)
 
 }
 
-void ModelInstancingRender::execute(cModelInstancingPipeline& pipeline, vk::CommandBuffer& cmd)
+void ModelInstancingRender::execute(const std::shared_ptr<btr::Context>& context, vk::CommandBuffer& cmd)
 {
 	// bufferの更新
 	{
@@ -345,78 +463,11 @@ void ModelInstancingRender::execute(cModelInstancingPipeline& pipeline, vk::Comm
 		}
 
 	}
-
-	std::vector<vk::BufferMemoryBarrier> to_clear_barrier =
-	{
-		vk::BufferMemoryBarrier()
-		.setSrcAccessMask(vk::AccessFlagBits::eIndirectCommandRead)
-		.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
-		.setBuffer(m_instancing->getDrawIndirect().buffer)
-		.setSize(m_instancing->getDrawIndirect().range)
-		.setOffset(m_instancing->getDrawIndirect().offset),
-		vk::BufferMemoryBarrier()
-		.setSrcAccessMask(vk::AccessFlagBits::eShaderRead)
-		.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
-		.setBuffer(m_instancing->getBuffer(ModelStorageBuffer::BONE_TRANSFORM).getBufferInfo().buffer)
-		.setSize(m_instancing->getBuffer(ModelStorageBuffer::BONE_TRANSFORM).getBufferInfo().range)
-		.setOffset(m_instancing->getBuffer(ModelStorageBuffer::BONE_TRANSFORM).getBufferInfo().offset)
-	};
-
-	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands,
-		vk::DependencyFlags(), {}, to_clear_barrier, {});
-
-	for (size_t i = 0; i < pipeline.m_pipeline.size(); i++)
-	{
-
-		if (i == cModelInstancingPipeline::PIPELINE_COMPUTE_CULLING)
-		{
-			vk::BufferMemoryBarrier barrier = m_instancing->getBuffer(ModelStorageBuffer::DRAW_INDIRECT).makeMemoryBarrierEx();
-			barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
-			barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, barrier, {});
-		}
-		if (i == cModelInstancingPipeline::PIPELINE_COMPUTE_MOTION_UPDATE)
-		{
-			// 
-			vk::BufferMemoryBarrier barrier = m_instancing->getBuffer(ModelStorageBuffer::PLAYING_ANIMATION).makeMemoryBarrierEx();
-			barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
-			barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, barrier, {});
-		}
-
-		if (i == cModelInstancingPipeline::PIPELINE_COMPUTE_BONE_TRANSFORM)
-		{
-			// 
-			vk::BufferMemoryBarrier barrier = m_instancing->getBuffer(ModelStorageBuffer::NODE_TRANSFORM).makeMemoryBarrierEx();
-			barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
-			barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
-					vk::DependencyFlags(), {}, barrier, {});
-		}
-
-		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, pipeline.m_pipeline[i].get());
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipeline.m_pipeline_layout[cModelInstancingPipeline::PIPELINE_LAYOUT_COMPUTE].get(), 0, m_model_descriptor_set.get(), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipeline.m_pipeline_layout[cModelInstancingPipeline::PIPELINE_LAYOUT_COMPUTE].get(), 1, m_animation_descriptor_set.get(), {});
-		cmd.dispatchIndirect(m_instancing->m_compute_indirect_buffer.getBufferInfo().buffer, m_instancing->m_compute_indirect_buffer.getBufferInfo().offset + i * 12);
-
-	}
-	vk::BufferMemoryBarrier to_draw_barrier = m_instancing->getBuffer(ModelStorageBuffer::BONE_TRANSFORM).makeMemoryBarrierEx();
-	to_draw_barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
-	to_draw_barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eVertexShader, {}, {}, to_draw_barrier, {});
-
+	cmd.executeCommands(m_execute_cmd[context->getGPUFrame()].get());
+	
 }
 
-void ModelInstancingRender::draw(cModelInstancingPipeline& pipeline, vk::CommandBuffer& cmd)
+void ModelInstancingRender::draw(const std::shared_ptr<btr::Context>& context, vk::CommandBuffer& cmd)
 {
-	vk::ArrayProxy<const vk::DescriptorSet> sets = {
-		m_model_descriptor_set.get(),
-		sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA),
-		pipeline.getLight()->getDescriptorSet(cFowardPlusPipeline::DESCRIPTOR_SET_LIGHT),
-	};
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline.m_pipeline_layout[cModelInstancingPipeline::PIPELINE_LAYOUT_RENDER].get(), 0, sets, {});
-
-	cmd.bindVertexBuffers(0, { m_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().buffer }, { m_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().offset });
- 	cmd.bindIndexBuffer(m_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().buffer, m_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().offset, m_resource->m_mesh_resource.mIndexType);
- 	cmd.drawIndexedIndirect(m_instancing->getDrawIndirect().buffer, m_instancing->getDrawIndirect().offset, m_resource->m_mesh_resource.mIndirectCount, sizeof(cModel::Mesh));
+	cmd.executeCommands(m_draw_cmd[context->getGPUFrame()].get());
 }

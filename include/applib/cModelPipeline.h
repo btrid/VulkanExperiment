@@ -105,12 +105,6 @@ struct AnimationModule
 	virtual void animationExecute(const std::shared_ptr<btr::Context>& context, vk::CommandBuffer& cmd) = 0;
 };
 
-struct InstancingModule
-{
-	virtual vk::DescriptorBufferInfo getModelInfo()const = 0;
-	virtual vk::DescriptorBufferInfo getInstancingInfo()const = 0;
-};
-
 struct DefaultMaterialModule : public MaterialModule
 {
 	struct MaterialBuffer {
@@ -183,7 +177,7 @@ struct DefaultMaterialModule : public MaterialModule
 			copy_info.setDstOffset(m_material.getBufferInfo().offset);
 			cmd->copyBuffer(staging_material.getBufferInfo().buffer, m_material.getBufferInfo().buffer, copy_info);
 		}
-		
+
 		// todo Œ‹\“K“–
 		m_texture.resize(resource->m_material.size() * 1);
 		for (size_t i = 0; i < resource->m_material.size(); i++)
@@ -198,6 +192,13 @@ struct DefaultMaterialModule : public MaterialModule
 	virtual const std::vector<ResourceTexture>& getTextureList()const { return m_texture; }
 
 };
+
+struct InstancingModule
+{
+	virtual vk::DescriptorBufferInfo getModelInfo()const = 0;
+	virtual vk::DescriptorBufferInfo getInstancingInfo()const = 0;
+};
+
 
 
 struct ModelRender : public RenderComponent
