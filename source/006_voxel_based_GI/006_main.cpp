@@ -23,7 +23,6 @@
 
 #include <applib/App.h>
 #include <applib/cModelPipeline.h>
-#include <applib/cModelRender.h>
 #include <applib/DrawHelper.h>
 #include <btrlib/Context.h>
 #include <applib/Geometry.h>
@@ -58,17 +57,16 @@ int main()
 	app::App app;
 	app.setup(gpu);
 
-	auto loader = app.m_context;
-	auto executer = app.m_executer;
+	auto context = app.m_context;
 
 	VoxelPipeline voxelize_pipeline;
 	VoxelInfo info;
 	info.u_cell_num = uvec4(64, 16, 64, 1);
 	info.u_cell_size = (info.u_area_max - info.u_area_min) / vec4(info.u_cell_num);
-	voxelize_pipeline.setup(loader, info);
+	voxelize_pipeline.setup(context, info);
 	{
-		auto model_voxelize = voxelize_pipeline.createPipeline<ModelVoxelize>(loader);
-		auto setup_cmd = loader->m_cmd_pool->allocCmdTempolary(0);
+		auto model_voxelize = voxelize_pipeline.createPipeline<ModelVoxelize>(context);
+		auto setup_cmd = context->m_cmd_pool->allocCmdTempolary(0);
 		{
 			std::vector<glm::vec3> v;
 			std::vector<glm::uvec3> i;
@@ -87,7 +85,7 @@ int main()
 			model.m_material[0].albedo = glm::vec4(1.f, 0.f, 0.f, 1.f);
 			model.m_material[0].emission = glm::vec4(0.f, 0.f, 0.f, 1.f);
 
-			model_voxelize->addModel(executer, setup_cmd.get(), model);
+			model_voxelize->addModel(context, setup_cmd.get(), model);
 		}
 		{
 			std::vector<glm::vec3> v;
@@ -115,7 +113,7 @@ int main()
 			model.m_material[4].albedo = glm::vec4(1.f, 1.f, 1.0f, 1.f);
 			model.m_material[5].albedo = glm::vec4(1.f, 0.f, 0.4f, 1.f);
 
-			model_voxelize->addModel(executer, setup_cmd.get(), model);
+			model_voxelize->addModel(context, setup_cmd.get(), model);
 		}
 
 	}
@@ -140,8 +138,8 @@ int main()
 				job.mJob.emplace_back(
 					[&]()
 				{
-					render_cmds[0] = voxelize_pipeline.make(executer);
-					render_cmds[1] = voxelize_pipeline.draw(executer);
+					render_cmds[0] = voxelize_pipeline.make(context);
+					render_cmds[1] = voxelize_pipeline.draw(context);
 					render_syncronized_point.arrive();
 				}
 				);

@@ -116,8 +116,8 @@ struct ModelVoxelize : public Voxelize
 				framebuffer_info.setAttachmentCount(0);
 				framebuffer_info.setPAttachments(nullptr);
 				framebuffer_info.setWidth(parent->getVoxelInfo().u_cell_num.x);
-				framebuffer_info.setHeight(parent->getVoxelInfo().u_cell_num.y);
-				framebuffer_info.setLayers(1);
+				framebuffer_info.setHeight(parent->getVoxelInfo().u_cell_num.z);
+				framebuffer_info.setLayers(3);
 
 				for (size_t i = 0; i < m_make_voxel_framebuffer.size(); i++) {
 					m_make_voxel_framebuffer[i] = loader->m_device->createFramebufferUnique(framebuffer_info);
@@ -293,7 +293,7 @@ struct ModelVoxelize : public Voxelize
 
 	}
 
-	void draw(std::shared_ptr<btr::Context>& executer, VoxelPipeline const * const parent, vk::CommandBuffer cmd)
+	void draw(std::shared_ptr<btr::Context>& context, VoxelPipeline const * const parent, vk::CommandBuffer cmd)
 	{
 		vk::ImageSubresourceRange range;
 		range.setLayerCount(1);
@@ -305,9 +305,9 @@ struct ModelVoxelize : public Voxelize
 		{
 			// make voxel
 			vk::RenderPassBeginInfo begin_render_info;
-			begin_render_info.setFramebuffer(m_make_voxel_framebuffer[executer->getGPUFrame()].get());
+			begin_render_info.setFramebuffer(m_make_voxel_framebuffer[context->getGPUFrame()].get());
 			begin_render_info.setRenderPass(m_make_voxel_pass.get());
-			begin_render_info.setRenderArea(vk::Rect2D({}, { parent->getVoxelInfo().u_cell_num.x, parent->getVoxelInfo().u_cell_num.y }));
+			begin_render_info.setRenderArea(vk::Rect2D({}, { parent->getVoxelInfo().u_cell_num.x, parent->getVoxelInfo().u_cell_num.z }));
 
 			cmd.beginRenderPass(begin_render_info, vk::SubpassContents::eInline);
 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_MAKE_VOXEL].get());
@@ -331,7 +331,7 @@ struct ModelVoxelize : public Voxelize
 		}
 
 	}
-	void addModel(std::shared_ptr<btr::Context>& executer, vk::CommandBuffer cmd, const VoxelizeModel& model)
+	void addModel(std::shared_ptr<btr::Context>& context, vk::CommandBuffer cmd, const VoxelizeModel& model)
 	{
 		std::vector<VoxelizeVertex> vertex;
 		std::vector<glm::uvec3> index;
@@ -370,10 +370,10 @@ struct ModelVoxelize : public Voxelize
 		{
 			btr::AllocatedMemory::Descriptor desc;
 			desc.size = vector_sizeof(vertex);
-			resource->m_vertex = executer->m_vertex_memory.allocateMemory(desc);
+			resource->m_vertex = context->m_vertex_memory.allocateMemory(desc);
 
 			desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-			auto staging = executer->m_staging_memory.allocateMemory(desc);
+			auto staging = context->m_staging_memory.allocateMemory(desc);
 			memcpy_s(staging.getMappedPtr(), desc.size, vertex.data(), desc.size);
 
 			vk::BufferCopy copy;
@@ -386,10 +386,10 @@ struct ModelVoxelize : public Voxelize
 		{
 			btr::AllocatedMemory::Descriptor desc;
 			desc.size = vector_sizeof(index);
-			resource->m_index = executer->m_vertex_memory.allocateMemory(desc);
+			resource->m_index = context->m_vertex_memory.allocateMemory(desc);
 
 			desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-			auto staging = executer->m_staging_memory.allocateMemory(desc);
+			auto staging = context->m_staging_memory.allocateMemory(desc);
 			memcpy_s(staging.getMappedPtr(), desc.size, index.data(), desc.size);
 
 			vk::BufferCopy copy;
@@ -401,10 +401,10 @@ struct ModelVoxelize : public Voxelize
 		{
 			btr::AllocatedMemory::Descriptor desc;
 			desc.size = vector_sizeof(indirect);
-			resource->m_indirect = executer->m_vertex_memory.allocateMemory(desc);
+			resource->m_indirect = context->m_vertex_memory.allocateMemory(desc);
 
 			desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-			auto staging = executer->m_staging_memory.allocateMemory(desc);
+			auto staging = context->m_staging_memory.allocateMemory(desc);
 			memcpy_s(staging.getMappedPtr(), desc.size, indirect.data(), desc.size);
 
 			vk::BufferCopy copy;
@@ -417,10 +417,10 @@ struct ModelVoxelize : public Voxelize
 		{
 			btr::AllocatedMemory::Descriptor desc;
 			desc.size = vector_sizeof(mesh_info);
-			resource->m_mesh_info = executer->m_storage_memory.allocateMemory(desc);
+			resource->m_mesh_info = context->m_storage_memory.allocateMemory(desc);
 
 			desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-			auto staging = executer->m_staging_memory.allocateMemory(desc);
+			auto staging = context->m_staging_memory.allocateMemory(desc);
 			memcpy_s(staging.getMappedPtr(), desc.size, mesh_info.data(), desc.size);
 
 			vk::BufferCopy copy;
@@ -432,10 +432,10 @@ struct ModelVoxelize : public Voxelize
 		{
 			btr::AllocatedMemory::Descriptor desc;
 			desc.size = vector_sizeof(model.m_material);
-			resource->m_material = executer->m_storage_memory.allocateMemory(desc);
+			resource->m_material = context->m_storage_memory.allocateMemory(desc);
 
 			desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-			auto staging = executer->m_staging_memory.allocateMemory(desc);
+			auto staging = context->m_staging_memory.allocateMemory(desc);
 			memcpy_s(staging.getMappedPtr(), desc.size, model.m_material.data(), desc.size);
 
 			vk::BufferCopy copy;
@@ -454,7 +454,7 @@ struct ModelVoxelize : public Voxelize
 			info.setDescriptorPool(m_model_descriptor_pool.get());
 			info.setDescriptorSetCount(array_length(layouts));
 			info.setPSetLayouts(layouts);
-			resource->m_model_descriptor_set = std::move(executer->m_device->allocateDescriptorSetsUnique(info)[0]);
+			resource->m_model_descriptor_set = std::move(context->m_device->allocateDescriptorSetsUnique(info)[0]);
 
 			vk::DescriptorBufferInfo storages[] = {
 				resource->m_material.getBufferInfo(),
@@ -466,7 +466,7 @@ struct ModelVoxelize : public Voxelize
 			write_desc.setPBufferInfo(storages);
 			write_desc.setDstSet(resource->m_model_descriptor_set.get());
 			write_desc.setDstBinding(0);
-			executer->m_device->updateDescriptorSets(write_desc, {});
+			context->m_device->updateDescriptorSets(write_desc, {});
 		}
 		m_model_list.push_back(resource);
 	}

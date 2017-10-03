@@ -24,7 +24,6 @@
 
 #include <applib/App.h>
 #include <applib/cModelPipeline.h>
-#include <applib/cModelRender.h>
 #include <applib/sCameraManager.h>
 
 #include <btrlib/Context.h>
@@ -56,11 +55,10 @@ int main()
 	app::App app;
 	app.setup(gpu);
 
-	auto executer = app.m_executer;
-	auto loader = app.m_context;
+	auto context = app.m_context;
 
 	volumeRenderer volume_renderer;
-	volume_renderer.setup(loader);
+	volume_renderer.setup(context);
 
 	while (true)
 	{
@@ -76,7 +74,7 @@ int main()
 				job.mFinish = 
 				[&]()
 				{
-					volume_renderer.work(executer);
+					volume_renderer.work(context);
 					worker_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);
@@ -89,7 +87,7 @@ int main()
 				job.mJob.emplace_back(
 					[&]() 
 					{
-						render_cmds[0] = volume_renderer.draw(executer);
+						render_cmds[0] = volume_renderer.draw(context);
 						render_syncronized_point.arrive();
 					}
 				);

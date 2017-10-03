@@ -57,8 +57,7 @@ struct VoxelPipeline
 		PIPELINE_NUM,
 	};
 
-	vk::UniqueRenderPass m_draw_voxel_pass;
-	std::vector<vk::UniqueFramebuffer> m_draw_voxel_framebuffer;
+	std::shared_ptr<RenderPassModule> m_draw_render_pass;
 
 	std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_list;
 	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_stage_info;
@@ -80,23 +79,23 @@ struct VoxelPipeline
 	vk::UniqueDeviceMemory m_voxel_hierarchy_imagememory;
 
 	std::vector<std::shared_ptr<Voxelize>> m_voxelize_list;
-	void setup(std::shared_ptr<btr::Context>& loader, const VoxelInfo& info)
+	void setup(std::shared_ptr<btr::Context>& context, const VoxelInfo& info)
 	{
-		auto& gpu = loader->m_gpu;
+		auto& gpu = context->m_gpu;
 		auto& device = gpu.getDevice();
 
 		m_voxelize_info_cpu = info;
 
-		auto cmd = loader->m_cmd_pool->allocCmdTempolary(0);
+		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
 		// resource setup
 		{
 			btr::AllocatedMemory::Descriptor desc;
 			desc.size = sizeof(VoxelInfo);
-			m_voxel_info = loader->m_uniform_memory.allocateMemory(desc);
+			m_voxel_info = context->m_uniform_memory.allocateMemory(desc);
 
 			desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-			auto staging = loader->m_staging_memory.allocateMemory(desc);
+			auto staging = context->m_staging_memory.allocateMemory(desc);
 
 			*staging.getMappedPtr<VoxelInfo>() = m_voxelize_info_cpu;
 
@@ -243,70 +242,7 @@ struct VoxelPipeline
 
 		// レンダーパス
 		{
-			// sub pass
-			{
-				std::vector<vk::AttachmentReference> color_ref =
-				{
-					vk::AttachmentReference()
-					.setAttachment(0)
-					.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
-				};
-				vk::AttachmentReference depth_ref;
-				depth_ref.setAttachment(1);
-				depth_ref.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-
-				vk::SubpassDescription subpass;
-				subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
-				subpass.setInputAttachmentCount(0);
-				subpass.setPInputAttachments(nullptr);
-				subpass.setColorAttachmentCount((uint32_t)color_ref.size());
-				subpass.setPColorAttachments(color_ref.data());
-				subpass.setPDepthStencilAttachment(&depth_ref);
-
-				std::vector<vk::AttachmentDescription> attach_description = {
-					// color1
-					vk::AttachmentDescription()
-					.setFormat(loader->m_window->getSwapchain().m_surface_format.format)
-					.setSamples(vk::SampleCountFlagBits::e1)
-					.setLoadOp(vk::AttachmentLoadOp::eLoad)
-					.setStoreOp(vk::AttachmentStoreOp::eStore)
-					.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
-					.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
-					vk::AttachmentDescription()
-					.setFormat(loader->m_window->getSwapchain().m_depth.m_format)
-					.setSamples(vk::SampleCountFlagBits::e1)
-					.setLoadOp(vk::AttachmentLoadOp::eLoad)
-					.setStoreOp(vk::AttachmentStoreOp::eStore)
-					.setInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
-					.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
-				};
-				vk::RenderPassCreateInfo renderpass_info;
-				renderpass_info.setAttachmentCount(attach_description.size());
-				renderpass_info.setPAttachments(attach_description.data());
-				renderpass_info.setSubpassCount(1);
-				renderpass_info.setPSubpasses(&subpass);
-				m_draw_voxel_pass = loader->m_device->createRenderPassUnique(renderpass_info);
-
-				m_draw_voxel_framebuffer.resize(loader->m_window->getSwapchain().getBackbufferNum());
-				{
-					std::array<vk::ImageView, 2> view;
-
-					vk::FramebufferCreateInfo framebuffer_info;
-					framebuffer_info.setRenderPass(m_draw_voxel_pass.get());
-					framebuffer_info.setAttachmentCount((uint32_t)view.size());
-					framebuffer_info.setPAttachments(view.data());
-					framebuffer_info.setWidth(loader->m_window->getClientSize().x);
-					framebuffer_info.setHeight(loader->m_window->getClientSize().y);
-					framebuffer_info.setLayers(1);
-
-					for (size_t i = 0; i < m_draw_voxel_framebuffer.size(); i++) {
-						view[0] = loader->m_window->getSwapchain().m_backbuffer[i].m_view;
-						view[1] = loader->m_window->getSwapchain().m_depth.m_view;
-						m_draw_voxel_framebuffer[i] = loader->m_device->createFramebufferUnique(framebuffer_info);
-					}
-				}
-
-			}
+			m_draw_render_pass = std::make_shared<RenderPassModule>(context);
 		}
 
 
@@ -366,7 +302,7 @@ struct VoxelPipeline
 					m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_VOXELIZE].get(),
 				};
 				vk::DescriptorSetAllocateInfo alloc_info;
-				alloc_info.descriptorPool = loader->m_descriptor_pool.get();
+				alloc_info.descriptorPool = context->m_descriptor_pool.get();
 				alloc_info.descriptorSetCount = array_length(layouts);
 				alloc_info.pSetLayouts = layouts;
 				m_descriptor_set[DESCRIPTOR_SET_VOXELIZE] = std::move(device->allocateDescriptorSetsUnique(alloc_info)[0]);
@@ -422,10 +358,10 @@ struct VoxelPipeline
 
 				// viewport
 				vk::Viewport viewports[] = {
-					vk::Viewport(0.f, 0.f, (float)loader->m_window->getClientSize().x, (float)loader->m_window->getClientSize().y),
+					vk::Viewport(0.f, 0.f, (float)context->m_window->getClientSize().x, (float)context->m_window->getClientSize().y),
 				};
 				vk::Rect2D scissors[] = {
-					vk::Rect2D(vk::Offset2D(0, 0), loader->m_window->getClientSize<vk::Extent2D>()),
+					vk::Rect2D(vk::Offset2D(0, 0), context->m_window->getClientSize<vk::Extent2D>()),
 				};
 				vk::PipelineViewportStateCreateInfo viewport_info;
 				viewport_info.setViewportCount(array_length(viewports));
@@ -455,7 +391,7 @@ struct VoxelPipeline
 				// ブレンド
 				vk::PipelineColorBlendAttachmentState blend_states[] = {
 					vk::PipelineColorBlendAttachmentState()
-					.setBlendEnable(VK_TRUE)
+					.setBlendEnable(VK_FALSE)
 					.setDstColorBlendFactor(vk::BlendFactor::eOneMinusSrcAlpha)
 					.setSrcColorBlendFactor(vk::BlendFactor::eSrcAlpha)
 					.setColorBlendOp(vk::BlendOp::eAdd)
@@ -486,7 +422,7 @@ struct VoxelPipeline
 					.setPRasterizationState(&rasterization_info)
 					.setPMultisampleState(&sample_info)
 					.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_VOXEL].get())
-					.setRenderPass(m_draw_voxel_pass.get())
+					.setRenderPass(m_draw_render_pass->getRenderPass())
 					.setPDepthStencilState(&depth_stencil_info)
 					.setPColorBlendState(&blend_info),
 				};
@@ -497,9 +433,9 @@ struct VoxelPipeline
 
 	}
 
-	vk::CommandBuffer make(std::shared_ptr<btr::Context>& executer)
+	vk::CommandBuffer make(std::shared_ptr<btr::Context>& context)
 	{
-		auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
+		auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 		vk::ImageSubresourceRange range;
 		range.setLayerCount(1);
 		range.setLevelCount(1);
@@ -536,16 +472,16 @@ struct VoxelPipeline
 
 		for (auto& voxelize : m_voxelize_list)
 		{
-			voxelize->draw(executer, this, cmd);
+			voxelize->draw(context, this, cmd);
 		}
 		cmd.end();
 		return cmd;
 
 	}
-	vk::CommandBuffer draw(std::shared_ptr<btr::Context>& executer)
+	vk::CommandBuffer draw(std::shared_ptr<btr::Context>& context)
 	{
 
-		auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
+		auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 
 		vk::ImageSubresourceRange range;
 		range.setLayerCount(1);
@@ -566,9 +502,9 @@ struct VoxelPipeline
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), {}, {}, { to_read_barrier });
 			}
 			vk::RenderPassBeginInfo begin_render_info;
-			begin_render_info.setFramebuffer(m_draw_voxel_framebuffer[executer->getGPUFrame()].get());
-			begin_render_info.setRenderPass(m_draw_voxel_pass.get());
-			begin_render_info.setRenderArea(vk::Rect2D({}, executer->m_window->getClientSize<vk::Extent2D>()));
+			begin_render_info.setFramebuffer(m_draw_render_pass->getFramebuffer(context->getGPUFrame()));
+			begin_render_info.setRenderPass(m_draw_render_pass->getRenderPass());
+			begin_render_info.setRenderArea(vk::Rect2D({}, context->m_window->getClientSize<vk::Extent2D>()));
 
 			cmd.beginRenderPass(begin_render_info, vk::SubpassContents::eInline);
 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW_VOXEL].get());
@@ -577,7 +513,7 @@ struct VoxelPipeline
 				sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA),
 			};
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_VOXEL].get(), 0, descriptor_sets, {});
-			cmd.draw(14, m_voxelize_info_cpu.u_cell_num.x *m_voxelize_info_cpu.u_cell_num.y*m_voxelize_info_cpu.u_cell_num.z, 0, 0);
+			cmd.draw(8, m_voxelize_info_cpu.u_cell_num.x *m_voxelize_info_cpu.u_cell_num.y*m_voxelize_info_cpu.u_cell_num.z, 0, 0);
 			cmd.endRenderPass();
 		}
 
@@ -586,11 +522,11 @@ struct VoxelPipeline
 	}
 
 	template<typename T, typename... Args>
-	std::shared_ptr<T> createPipeline(std::shared_ptr<btr::Context>& loader, Args... args)
+	std::shared_ptr<T> createPipeline(std::shared_ptr<btr::Context>& context, Args... args)
 	{
 		auto ptr = std::make_shared<T>();
 		m_voxelize_list.push_back(ptr);
-		ptr->setup(loader, this, args...);
+		ptr->setup(context, this, args...);
 		return ptr;
 	}
 	const VoxelInfo& getVoxelInfo()const { return m_voxelize_info_cpu; }
