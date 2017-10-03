@@ -292,10 +292,9 @@ struct VoxelPipeline
 					m_descriptor_set_layout[i] = device->createDescriptorSetLayoutUnique(descriptor_layout_info);
 				}
 			}
-
-
 		}
 
+		// pipeline layout
 		{
 			{
 				vk::DescriptorSetLayout layouts[] = {

@@ -278,6 +278,7 @@ struct CameraGPU
 		Frustom f;
 		f.setup(camera);
 		m_plane = f.getPlane();
+
 	}
 	glm::mat4 u_projection;
 	glm::mat4 u_view;
@@ -289,6 +290,24 @@ struct CameraGPU
 	float u_far;
 
 	std::array<Plane, 6> m_plane;
-
 };
+struct CameraFrustom
+{
+	void setup(const cCamera& camera)
+	{
+		Frustom f;
+		f.setup(camera);
+
+		m_frustom_point.ltn = glm::vec4(f.ltn_, 1.f);
+		m_frustom_point.lbn = glm::vec4(f.lbn_, 1.f);
+		m_frustom_point.rtn = glm::vec4(f.rtn_, 1.f);
+		m_frustom_point.rbn = glm::vec4(f.rbn_, 1.f);
+		m_frustom_point.ltf = glm::vec4(f.ltf_, 1.f);
+		m_frustom_point.lbf = glm::vec4(f.lbf_, 1.f);
+		m_frustom_point.rtf = glm::vec4(f.rtf_, 1.f);
+		m_frustom_point.rbf = glm::vec4(f.rbf_, 1.f);
+	}
+	FrustomPoint m_frustom_point;
+};
+
 

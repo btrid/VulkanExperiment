@@ -20,35 +20,20 @@ struct LightLL
 	uint light_index;
 };
 
-struct FrustomPoint
-{
-	vec4 m_ltn;
-	vec4 m_rtn;
-	vec4 m_lbn;
-	vec4 m_rbn;
-	vec4 m_ltf;
-	vec4 m_rtf;
-	vec4 m_lbf;
-	vec4 m_rbf;
-};
-
 #ifdef USE_LIGHT
 layout(set=USE_LIGHT, binding=0, std140) uniform LightInfoUniform {
 	LightInfo u_light_info;
 };
-layout(set=USE_LIGHT, binding=1, std140) uniform FrustomUniform {
-	FrustomPoint u_frustom;
-};
-layout(set=USE_LIGHT, binding=2, std430) restrict buffer LightBuffer {
+layout(set=USE_LIGHT, binding=1, std430) restrict buffer LightBuffer {
 	LightParam b_light[];
 };
-layout(set=USE_LIGHT, binding=3, std430) restrict buffer LLHeadBuffer {
+layout(set=USE_LIGHT, binding=2, std430) restrict buffer LLHeadBuffer {
 	uint b_light_LL_head[];
 };
-layout(set=USE_LIGHT, binding=4, std430) restrict buffer LLBuffer {
+layout(set=USE_LIGHT, binding=3, std430) restrict buffer LLBuffer {
 	LightLL b_light_LL[];
 };
-layout(set=USE_LIGHT, binding=5, std430) coherent restrict buffer LightCounter {
+layout(set=USE_LIGHT, binding=4, std430) coherent restrict buffer LightCounter {
 	uint b_light_count;
 };
 #endif

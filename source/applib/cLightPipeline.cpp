@@ -1,5 +1,6 @@
 #include <applib/cLightPipeline.h>
 #include <applib/cModelInstancingRender.h>
+#include <applib/sCameraManager.h>
 
 void cFowardPlusPipeline::Private::setup(const std::shared_ptr<btr::Context>& context)
 {
@@ -22,14 +23,6 @@ void cFowardPlusPipeline::Private::setup(const std::shared_ptr<btr::Context>& co
 			desc.element_num = 1;
 			desc.frame_max = context->m_window->getSwapchain().getBackbufferNum();
 			m_light_info_gpu.setup(desc);
-		}
-		{
-			btr::UpdateBufferDescriptor desc;
-			desc.device_memory = context->m_uniform_memory;
-			desc.staging_memory = context->m_staging_memory;
-			desc.element_num = 1;
-			desc.frame_max = context->m_window->getSwapchain().getBackbufferNum();
-			m_frustom_point.setup(desc);
 		}
 		{
 			btr::UpdateBufferDescriptor desc;
@@ -89,7 +82,7 @@ void cFowardPlusPipeline::Private::setup(const std::shared_ptr<btr::Context>& co
 			.setBinding(0),
 			vk::DescriptorSetLayoutBinding()
 			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eFragment)
-			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setDescriptorCount(1)
 			.setBinding(1),
 			vk::DescriptorSetLayoutBinding()
@@ -112,11 +105,6 @@ void cFowardPlusPipeline::Private::setup(const std::shared_ptr<btr::Context>& co
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setDescriptorCount(1)
 			.setBinding(5),
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eFragment)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(1)
-			.setBinding(6),
 		};
 
 		for (size_t i = 0; i < bindings.size(); i++)
@@ -145,7 +133,6 @@ void cFowardPlusPipeline::Private::setup(const std::shared_ptr<btr::Context>& co
 			std::vector<vk::DescriptorBufferInfo> uniforms =
 			{
 				m_light_info_gpu.getBufferInfo(),
-				m_frustom_point.getBufferInfo(),
 			};
 			std::vector<vk::DescriptorBufferInfo> storages =
 			{
@@ -165,7 +152,7 @@ void cFowardPlusPipeline::Private::setup(const std::shared_ptr<btr::Context>& co
 			desc.setDescriptorType(vk::DescriptorType::eStorageBuffer);
 			desc.setDescriptorCount(storages.size());
 			desc.setPBufferInfo(storages.data());
-			desc.setDstBinding(2);
+			desc.setDstBinding(1);
 			desc.setDstSet(m_descriptor_set[DESCRIPTOR_SET_LIGHT].get());
 			device->updateDescriptorSets(desc, {});
 
@@ -176,6 +163,7 @@ void cFowardPlusPipeline::Private::setup(const std::shared_ptr<btr::Context>& co
 	{
 		vk::DescriptorSetLayout layouts[] = {
 			m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_LIGHT].get(),
+			sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
 		};
 		vk::PipelineLayoutCreateInfo pipelineLayoutInfo = vk::PipelineLayoutCreateInfo()
 			.setSetLayoutCount(array_length(layouts))
@@ -199,4 +187,92 @@ void cFowardPlusPipeline::Private::setup(const std::shared_ptr<btr::Context>& co
 
 	}
 
+}
+
+vk::CommandBuffer cFowardPlusPipeline::execute(const std::shared_ptr<btr::Context>& context)
+{
+	// lightの更新
+	{
+		// 新しいライトの追加
+		std::vector<std::unique_ptr<Light>> light;
+		{
+			std::lock_guard<std::mutex> lock(m_private->m_light_new_mutex);
+			light = std::move(m_private->m_light_list_new);
+		}
+		m_private->m_light_list.insert(m_private->m_light_list.end(), std::make_move_iterator(light.begin()), std::make_move_iterator(light.end()));
+		// 更新と寿命の尽きたライトの削除
+		m_private->m_light_list.erase(std::remove_if(m_private->m_light_list.begin(), m_private->m_light_list.end(), [](auto& p) { return !p->update(); }), m_private->m_light_list.end());
+	}
+
+
+	auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
+
+	// cpuからの更新のバリア
+	{
+		auto to_copy_barrier = m_private->m_light_counter.makeMemoryBarrierEx();
+		to_copy_barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
+		to_copy_barrier.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, { to_copy_barrier }, {});
+	}
+	{
+		uint32_t zero = 0;
+		cmd.updateBuffer<uint32_t>(m_private->m_light_counter.getBufferInfo().buffer, m_private->m_light_counter.getBufferInfo().offset, { zero });
+	}
+
+	{
+		// ライトのデータをdeviceにコピー
+		uint32_t light_num = 0;
+		{
+			auto* p = m_private->m_light.mapSubBuffer(context->getGPUFrame());
+			for (auto& it : m_private->m_light_list)
+			{
+				assert(light_num < m_private->m_light_num);
+				p[light_num] = it->getParam();
+				light_num++;
+			}
+
+			m_private->m_light.flushSubBuffer(light_num, 0, context->getGPUFrame());
+			auto copy_info = m_private->m_light.update(context->getGPUFrame());
+			cmd.copyBuffer(m_private->m_light.getStagingBufferInfo().buffer, m_private->m_light.getBufferInfo().buffer, copy_info);
+		}
+		{
+
+			m_private->m_light_info.m_active_light_num = light_num;
+			m_private->m_light_info_gpu.subupdate(&m_private->m_light_info, 1, 0, context->getGPUFrame());
+			auto copy_info = m_private->m_light_info_gpu.update(context->getGPUFrame());
+			cmd.copyBuffer(m_private->m_light_info_gpu.getStagingBufferInfo().buffer, m_private->m_light_info_gpu.getBufferInfo().buffer, copy_info);
+
+			auto to_shader_read_barrier = m_private->m_light_info_gpu.getBufferMemory().makeMemoryBarrierEx();
+			to_shader_read_barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+			to_shader_read_barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, { to_shader_read_barrier }, {});
+		}
+	}
+
+	{
+
+		{
+			std::vector<vk::BufferMemoryBarrier> barrier = {
+				m_private->m_light_counter.makeMemoryBarrierEx()
+				.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite)
+				.setDstAccessMask(vk::AccessFlagBits::eShaderWrite | vk::AccessFlagBits::eShaderRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, barrier, {});
+		}
+
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_private->m_pipeline[PIPELINE_CULL_LIGHT].get());
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_private->m_pipeline_layout[PIPELINE_CULL_LIGHT].get(), 0, m_private->m_descriptor_set[DESCRIPTOR_SET_LIGHT].get(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_private->m_pipeline_layout[PIPELINE_CULL_LIGHT].get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
+		cmd.dispatch(1, 1, 1);
+		{
+			std::vector<vk::BufferMemoryBarrier> barrier = {
+				m_private->m_lightLL_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite),
+				m_private->m_lightLL.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite)
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), {}, barrier, {});
+		}
+	}
+
+	cmd.end();
+	return cmd;
 }

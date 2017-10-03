@@ -22,7 +22,7 @@ struct sCameraManager : public Singleton<sCameraManager>
 	};
 
 	btr::UpdateBuffer<CameraGPU> m_camera;
-
+	btr::UpdateBuffer<CameraFrustom> m_camera_frustom;
 
 	std::array<vk::DescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
 	std::array<vk::DescriptorSet, DESCRIPTOR_SET_NUM> m_descriptor_set;
@@ -30,13 +30,13 @@ struct sCameraManager : public Singleton<sCameraManager>
 	void setup(std::shared_ptr<btr::Context>& context)
 	{
 		{
-
 			btr::UpdateBufferDescriptor update_desc;
 			update_desc.device_memory = context->m_uniform_memory;
 			update_desc.staging_memory = context->m_staging_memory;
 			update_desc.frame_max = sGlobal::FRAME_MAX;
 			update_desc.element_num = 1;
 			m_camera.setup(update_desc);
+			m_camera_frustom.setup(update_desc);
 		}
 
 		std::vector<std::vector<vk::DescriptorSetLayoutBinding>> bindings(DESCRIPTOR_SET_LAYOUT_NUM);
@@ -47,6 +47,11 @@ struct sCameraManager : public Singleton<sCameraManager>
 			.setDescriptorCount(1)
 			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 			.setBinding(0),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
+			.setDescriptorCount(1)
+			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+			.setBinding(1),
 		};
 		for (size_t i = 0; i < DESCRIPTOR_SET_LAYOUT_NUM; i++)
 		{
@@ -66,6 +71,7 @@ struct sCameraManager : public Singleton<sCameraManager>
 
 			std::vector<vk::DescriptorBufferInfo> uniforms = {
 				m_camera.getBufferInfo(),
+				m_camera_frustom.getBufferInfo(),
 			};
 			std::vector<vk::WriteDescriptorSet> write_desc =
 			{
@@ -95,21 +101,27 @@ struct sCameraManager : public Singleton<sCameraManager>
 		auto cmd = context->m_cmd_pool->allocCmdOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
 
 		std::vector<vk::BufferMemoryBarrier> to_transfer = {
-			m_camera.getBufferMemory().makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite),
+			m_camera.getBufferMemory().makeMemoryBarrierEx().setDstAccessMask(vk::AccessFlagBits::eTransferWrite),
+			m_camera_frustom.getBufferMemory().makeMemoryBarrierEx().setDstAccessMask(vk::AccessFlagBits::eTransferWrite),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
 
 		auto* camera = cCamera::sCamera::Order().getCameraList()[0];
 		CameraGPU camera_GPU;
 		camera_GPU.setup(*camera);
+		CameraFrustom camera_frustom;
+		camera_frustom.setup(*camera);
+
 		m_camera.subupdate(&camera_GPU, 1, 0, context->getGPUFrame());
-		auto copy_info = m_camera.update(context->getGPUFrame());
-		cmd.copyBuffer(m_camera.getStagingBufferInfo().buffer, m_camera.getBufferInfo().buffer, copy_info);
+		m_camera_frustom.subupdate(&camera_frustom, 1, 0, context->getGPUFrame());
+		vk::BufferCopy copy_info[] = { m_camera.update(context->getGPUFrame()), m_camera_frustom.update(context->getGPUFrame()) };
+		cmd.copyBuffer(m_camera.getStagingBufferInfo().buffer, m_camera.getBufferInfo().buffer, array_length(copy_info), copy_info);
 
 		std::vector<vk::BufferMemoryBarrier> to_draw_barrier = {
-			m_camera.getBufferMemory().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
+			m_camera.getBufferMemory().makeMemoryBarrierEx().setSrcAccessMask(vk::AccessFlagBits::eTransferWrite).setDstAccessMask(vk::AccessFlagBits::eShaderRead),
+			m_camera_frustom.getBufferMemory().makeMemoryBarrierEx().setSrcAccessMask(vk::AccessFlagBits::eTransferWrite).setDstAccessMask(vk::AccessFlagBits::eShaderRead),
 		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexShader, {}, {}, { to_draw_barrier }, {});
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_draw_barrier }, {});
 
 		cmd.end();
 		return cmd;

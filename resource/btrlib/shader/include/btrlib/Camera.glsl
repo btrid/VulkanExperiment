@@ -34,9 +34,13 @@ struct Camera
 };
 
 #if defined(SETPOINT_CAMERA)
-layout(std140, set=SETPOINT_CAMERA, binding=0) uniform CameraUniform
+layout(set=SETPOINT_CAMERA, binding=0, std140) uniform CameraUniform
 {
 	Camera u_camera[1];
+};
+layout(set=SETPOINT_CAMERA, binding=1, std140) uniform CameraFrustomPointUniform
+{
+	CameraFrustomPoint u_camera_frustom_point[1];
 };
 #endif
 
