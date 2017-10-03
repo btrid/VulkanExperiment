@@ -124,7 +124,7 @@ int main()
 			SynchronizedPoint work_syncronized_point(1);
 
 			{
-				cThreadJob job;
+				MAKE_THREAD_JOB(job);
 				job.mJob.emplace_back(
 					[&]()
 				{
@@ -136,7 +136,7 @@ int main()
 			}
 			std::vector<vk::CommandBuffer> render_cmds(3);
 			{
-				cThreadJob job;
+				MAKE_THREAD_JOB(job);
 				job.mJob.emplace_back(
 					[&]()
 				{
@@ -155,7 +155,7 @@ int main()
 		}
 
 		app.postUpdate();
-		printf("%6.3fs\n", time.getElapsedTimeAsSeconds());
+		printf("%6.4fs\n", time.getElapsedTimeAsSeconds());
 	}
 
 	return 0;

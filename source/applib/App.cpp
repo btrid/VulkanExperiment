@@ -167,7 +167,7 @@ void App::preUpdate()
 	m_system_cmds.resize(2);
 	m_sync_point.reset(3);
 	{
-		cThreadJob job;
+		MAKE_THREAD_JOB(job);
 		job.mJob.emplace_back(
 			[&]()
 		{
@@ -178,7 +178,7 @@ void App::preUpdate()
 		sGlobal::Order().getThreadPool().enque(job);
 	}
 	{
-		cThreadJob job;
+		MAKE_THREAD_JOB(job);
 		job.mJob.emplace_back(
 			[&]()
 		{
@@ -190,7 +190,7 @@ void App::preUpdate()
 	}
 
 	{
-		cThreadJob job;
+		MAKE_THREAD_JOB(job);
 		job.mJob.emplace_back(
 			[&]()
 		{

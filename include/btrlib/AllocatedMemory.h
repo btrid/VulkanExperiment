@@ -471,6 +471,9 @@ struct UpdateBuffer
 		return m_staging_buffer.getMappedPtr<T>(cpu_index*m_element_max+ offset_num);
 	}
 
+	/**
+　	 * 使った部分をマークする
+	 */
 	void flushSubBuffer(vk::DeviceSize data_num, uint32_t offset_num, uint32_t cpu_index)
 	{
 		auto data_size = sizeof(T)*data_num;

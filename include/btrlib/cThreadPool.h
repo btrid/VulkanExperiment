@@ -13,9 +13,13 @@
 #include <cassert>
 
 struct cThreadJob {
+	std::string file;
+	int line;
 	std::vector<std::function<void()>> mJob;
 	std::function<void()> mFinish;
 };
+#define MAKE_THREAD_JOB(_name) cThreadJob _name; _name.file = __FILE__; _name.line = __LINE__; 
+
 struct cThreadWorker
 {
 	void operator()(const cThreadJob&& job) {
