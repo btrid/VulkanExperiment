@@ -155,10 +155,14 @@ struct GPUMemoryAllocater
 		assert(zone.isValid());
 		zone.m_wait_frame = sGlobal::Order().getGameFrame();
 
-		auto it = std::find_if(m_active_zone.begin(), m_active_zone.end(), [&](Zone& active) { return active.m_start == zone.m_start; });
-//		if (it != m_active_zone.end()) 
 		{
-			m_active_zone.erase(it);
+			std::lock_guard<std::mutex> lock(m_free_zone_mutex);
+			auto it = std::find_if(m_active_zone.begin(), m_active_zone.end(), [&](Zone& active) { return active.m_start == zone.m_start; });
+			if (it != m_active_zone.end())
+			{
+				m_active_zone.erase(it);
+			}
+
 		}
 
 		auto& list = m_delayed_active;

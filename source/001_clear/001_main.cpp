@@ -12,7 +12,6 @@
 #include <chrono>
 #include <memory>
 #include <filesystem>
-#include <btrlib/Define.h>
 #include <btrlib/cWindow.h>
 #include <btrlib/cInput.h>
 #include <btrlib/cCamera.h>
@@ -48,8 +47,7 @@ int main()
 	app::App app;
 	app.setup(gpu);
 
-	auto loader = app.m_context;
-	auto executer = app.m_executer;
+	auto context = app.m_context;
 
 	while (true)
 	{
@@ -60,7 +58,7 @@ int main()
 			app.submit(std::vector<vk::CommandBuffer>{});
 		}
 		app.postUpdate();
-		printf("%6.3fs\n", time.getElapsedTimeAsSeconds());
+		printf("%6.4fs\n", time.getElapsedTimeAsSeconds());
 	}
 
 	return 0;

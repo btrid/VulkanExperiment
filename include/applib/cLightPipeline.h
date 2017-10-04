@@ -10,8 +10,6 @@
 #include <btrlib/AllocatedMemory.h>
 #include <btrlib/Context.h>
 
-struct cModelInstancingRenderer;
-
 struct LightData {
 	glm::vec4 m_position;
 	glm::vec4 m_emission;

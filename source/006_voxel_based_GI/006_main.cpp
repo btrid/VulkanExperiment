@@ -72,7 +72,7 @@ int main()
 			std::vector<glm::uvec3> i;
 			std::tie(v, i) = Geometry::MakeSphere();
 
-			VoxelizeModel model;
+			ModelVoxelize::Model model;
 			model.m_mesh.resize(1);
 			model.m_mesh[0].vertex.resize(v.size());
 			for (size_t i = 0; i < model.m_mesh[0].vertex.size(); i++)
@@ -92,7 +92,7 @@ int main()
 			std::vector<glm::uvec3> idx;
 			std::tie(v, idx) = Geometry::MakeBox(900.f);
 
-			VoxelizeModel model;
+			ModelVoxelize::Model model;
 			model.m_mesh.resize(5);
 			model.m_mesh[0].vertex.resize(v.size());
 			for (size_t i = 0; i < model.m_mesh.size(); i++)

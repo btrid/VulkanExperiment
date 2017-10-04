@@ -3,48 +3,48 @@
 #include <btrlib/Context.h>
 #include <btrlib/VoxelPipeline.h>
 
-struct VoxelizeModelResource
-{
-	btr::BufferMemory m_vertex;
-	btr::BufferMemory m_index;
-	btr::BufferMemory m_material;
-	btr::BufferMemory m_mesh_info;
-	btr::BufferMemory m_indirect;
-	uint32_t m_mesh_count;
-	uint32_t m_index_count;
-
-	vk::UniqueDescriptorSet m_model_descriptor_set;
-};
-
-
-struct VoxelizeVertex
-{
-	glm::vec3 pos;
-};
-struct VoxelizeMesh
-{
-	std::vector<VoxelizeVertex> vertex;
-	std::vector<glm::uvec3> index;
-	uint32_t m_material_index;
-};
-struct VoxelizeMaterial
-{
-	vec4 albedo;
-	vec4 emission;
-};
-struct VoxelizeMeshInfo
-{
-	uint32_t material_index;
-};
-
-struct VoxelizeModel
-{
-	std::vector<VoxelizeMesh> m_mesh;
-	std::array<VoxelizeMaterial, 16> m_material;
-};
-
 struct ModelVoxelize : public Voxelize
 {
+	struct Resource
+	{
+		btr::BufferMemory m_vertex;
+		btr::BufferMemory m_index;
+		btr::BufferMemory m_material;
+		btr::BufferMemory m_mesh_info;
+		btr::BufferMemory m_indirect;
+		uint32_t m_mesh_count;
+		uint32_t m_index_count;
+
+		vk::UniqueDescriptorSet m_model_descriptor_set;
+	};
+
+
+	struct Vertex
+	{
+		glm::vec3 pos;
+	};
+	struct Mesh
+	{
+		std::vector<Vertex> vertex;
+		std::vector<glm::uvec3> index;
+		uint32_t m_material_index;
+	};
+	struct Material
+	{
+		vec4 albedo;
+		vec4 emission;
+	};
+	struct MeshInfo
+	{
+		uint32_t material_index;
+	};
+
+	struct Model
+	{
+		std::vector<Mesh> m_mesh;
+		std::array<Material, 16> m_material;
+	};
+
 	enum SHADER
 	{
 		SHADER_VERTEX_VOXELIZE,
@@ -73,7 +73,7 @@ struct ModelVoxelize : public Voxelize
 	vk::UniqueRenderPass m_make_voxel_pass;
 	std::vector<vk::UniqueFramebuffer> m_make_voxel_framebuffer;
 
-	std::vector<std::shared_ptr<VoxelizeModelResource>> m_model_list;
+	std::vector<std::shared_ptr<Resource>> m_model_list;
 
 	std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_list;
 	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_stage_info;
@@ -234,7 +234,7 @@ struct ModelVoxelize : public Voxelize
 				vk::VertexInputBindingDescription()
 				.setBinding(0)
 				.setInputRate(vk::VertexInputRate::eVertex)
-				.setStride(sizeof(VoxelizeVertex))
+				.setStride(sizeof(Vertex))
 			};
 
 			std::vector<vk::VertexInputAttributeDescription> vertex_input_attribute =
@@ -331,11 +331,11 @@ struct ModelVoxelize : public Voxelize
 		}
 
 	}
-	void addModel(std::shared_ptr<btr::Context>& context, vk::CommandBuffer cmd, const VoxelizeModel& model)
+	void addModel(std::shared_ptr<btr::Context>& context, vk::CommandBuffer cmd, const Model& model)
 	{
-		std::vector<VoxelizeVertex> vertex;
+		std::vector<Vertex> vertex;
 		std::vector<glm::uvec3> index;
-		std::vector<VoxelizeMeshInfo> mesh_info;
+		std::vector<MeshInfo> mesh_info;
 		std::vector<vk::DrawIndexedIndirectCommand> indirect;
 		mesh_info.reserve(model.m_mesh.size());
 		indirect.reserve(model.m_mesh.size());
@@ -357,14 +357,14 @@ struct ModelVoxelize : public Voxelize
 			draw_cmd.setVertexOffset(0);
 			indirect.push_back(draw_cmd);
 
-			VoxelizeMeshInfo minfo;
+			MeshInfo minfo;
 			minfo.material_index = mesh.m_material_index;
 			mesh_info.push_back(minfo);
 
 			index_offset += mesh.index.size() * 3;
 			vertex_offset += mesh.vertex.size();
 		}
-		std::shared_ptr<VoxelizeModelResource> resource(std::make_shared<VoxelizeModelResource>());
+		std::shared_ptr<Resource> resource(std::make_shared<Resource>());
 		resource->m_mesh_count = model.m_mesh.size();
 		resource->m_index_count = index_offset;
 		{
