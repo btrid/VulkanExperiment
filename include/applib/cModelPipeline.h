@@ -12,58 +12,6 @@
 #include <btrlib/Material.h>
 #include <applib/DrawHelper.h>
 
-struct DescriptorModule
-{
-public:
-	vk::UniqueDescriptorSet allocateDescriptorSet(const std::shared_ptr<btr::Context>& context)
-	{
-		auto& device = context->m_device;
-		vk::DescriptorSetLayout layouts[] =
-		{
-			m_descriptor_set_layout.get()
-		};
-		vk::DescriptorSetAllocateInfo descriptor_set_alloc_info;
-		descriptor_set_alloc_info.setDescriptorPool(getPool());
-		descriptor_set_alloc_info.setDescriptorSetCount(array_length(layouts));
-		descriptor_set_alloc_info.setPSetLayouts(layouts);
-		auto descriptor_set = std::move(device->allocateDescriptorSetsUnique(descriptor_set_alloc_info)[0]);
-		return descriptor_set;
-	}
-protected:
-	vk::UniqueDescriptorSetLayout createDescriptorSetLayout(const std::shared_ptr<btr::Context>& context, const std::vector<vk::DescriptorSetLayoutBinding>& binding)
-	{
-		vk::DescriptorSetLayoutCreateInfo descriptor_layout_info;
-		descriptor_layout_info.setBindingCount((uint32_t)binding.size());
-		descriptor_layout_info.setPBindings(binding.data());
-		return context->m_device->createDescriptorSetLayoutUnique(descriptor_layout_info);
-	}
-	vk::UniqueDescriptorPool createDescriptorPool(const std::shared_ptr<btr::Context>& context, const std::vector<vk::DescriptorSetLayoutBinding>& binding, uint32_t set_size)
-	{
-		auto& device = context->m_device;
-		std::vector<vk::DescriptorPoolSize> pool_size(VK_DESCRIPTOR_TYPE_RANGE_SIZE);
-		for (auto& b : binding)
-		{
-			pool_size[(uint32_t)b.descriptorType].setType(b.descriptorType);
-			pool_size[(uint32_t)b.descriptorType].descriptorCount += b.descriptorCount*set_size;
-		}
-		pool_size.erase(std::remove_if(pool_size.begin(), pool_size.end(), [](auto& p) {return p.descriptorCount == 0; }), pool_size.end());
-		vk::DescriptorPoolCreateInfo pool_info;
-		pool_info.setPoolSizeCount((uint32_t)pool_size.size());
-		pool_info.setPPoolSizes(pool_size.data());
-		pool_info.setMaxSets(set_size);
-		pool_info.setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet);
-		return device->createDescriptorPoolUnique(pool_info);
-	}
-
-protected:
-	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
-	vk::UniqueDescriptorPool m_descriptor_pool;
-public:
-	vk::DescriptorSetLayout getLayout()const { return m_descriptor_set_layout.get(); }
-protected:
-	vk::DescriptorPool getPool()const { return m_descriptor_pool.get(); }
-
-};
 
 struct ModelDescriptorModule : public DescriptorModule
 {

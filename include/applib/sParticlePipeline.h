@@ -82,7 +82,7 @@ struct EmitterUpdateParameter
 struct sParticlePipeline : Singleton<sParticlePipeline>
 {
 	friend Singleton<sParticlePipeline>;
-	struct Private 
+	struct Private
 	{
 		enum : uint32_t {
 			PIPELINE_UPDATE,
@@ -144,29 +144,29 @@ struct sParticlePipeline : Singleton<sParticlePipeline>
 
 
 
-		void setup(std::shared_ptr<btr::Context>& loader);
-		vk::CommandBuffer execute(std::shared_ptr<btr::Context>& executer);
-		vk::CommandBuffer draw(std::shared_ptr<btr::Context>& executer);
+		void setup(std::shared_ptr<btr::Context>& context);
+		vk::CommandBuffer execute(std::shared_ptr<btr::Context>& context);
+		vk::CommandBuffer draw(std::shared_ptr<btr::Context>& context);
 
 	};
 	std::unique_ptr<Private> m_private;
 
-	void setup(std::shared_ptr<btr::Context>& loader)
+	void setup(std::shared_ptr<btr::Context>& context)
 	{
 		auto p = std::make_unique<Private>();
-		p->setup(loader);
+		p->setup(context);
 
 		m_private = std::move(p);
 	}
 
-	vk::CommandBuffer execute(std::shared_ptr<btr::Context>& executer)
+	vk::CommandBuffer execute(std::shared_ptr<btr::Context>& context)
 	{
-		return m_private->execute(executer);
+		return m_private->execute(context);
 	}
 
-	vk::CommandBuffer draw(std::shared_ptr<btr::Context>& executer)
+	vk::CommandBuffer draw(std::shared_ptr<btr::Context>& context)
 	{
-		return m_private->draw(executer);
+		return m_private->draw(context);
 	}
 };
 

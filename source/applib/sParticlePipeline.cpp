@@ -1,13 +1,13 @@
 #include <applib/sParticlePipeline.h>
 #include <applib/sCameraManager.h>
 
-void sParticlePipeline::Private::setup(std::shared_ptr<btr::Context>& loader)
+void sParticlePipeline::Private::setup(std::shared_ptr<btr::Context>& context)
 {
 	m_particle_info_cpu.m_particle_max_num = 8192/2;
 	m_particle_info_cpu.m_emitter_max_num = 1024;
 	m_particle_info_cpu.m_generate_cmd_max_num = 256;
 
-	auto cmd = loader->m_cmd_pool->allocCmdTempolary(0);
+	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 	{
 		// レンダーパス
 		{
@@ -33,7 +33,7 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Context>& loader)
 			std::vector<vk::AttachmentDescription> attach_description = {
 				// color1
 				vk::AttachmentDescription()
-				.setFormat(loader->m_window->getSwapchain().m_surface_format.format)
+				.setFormat(context->m_window->getSwapchain().m_surface_format.format)
 				.setSamples(vk::SampleCountFlagBits::e1)
 				.setLoadOp(vk::AttachmentLoadOp::eLoad)
 				.setStoreOp(vk::AttachmentStoreOp::eStore)
@@ -53,10 +53,10 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Context>& loader)
 				.setSubpassCount(1)
 				.setPSubpasses(&subpass);
 
-			m_render_pass = loader->m_device->createRenderPassUnique(renderpass_info);
+			m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
 		}
 
-		m_framebuffer.resize(loader->m_window->getSwapchain().getBackbufferNum());
+		m_framebuffer.resize(context->m_window->getSwapchain().getBackbufferNum());
 		{
 			std::array<vk::ImageView, 2> view;
 
@@ -64,14 +64,14 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Context>& loader)
 			framebuffer_info.setRenderPass(m_render_pass.get());
 			framebuffer_info.setAttachmentCount((uint32_t)view.size());
 			framebuffer_info.setPAttachments(view.data());
-			framebuffer_info.setWidth(loader->m_window->getClientSize().x);
-			framebuffer_info.setHeight(loader->m_window->getClientSize().y);
+			framebuffer_info.setWidth(context->m_window->getClientSize().x);
+			framebuffer_info.setHeight(context->m_window->getClientSize().y);
 			framebuffer_info.setLayers(1);
 
 			for (size_t i = 0; i < m_framebuffer.size(); i++) {
-				view[0] = loader->m_window->getSwapchain().m_backbuffer[i].m_view;
-				view[1] = loader->m_window->getSwapchain().m_depth.m_view;
-				m_framebuffer[i] = loader->m_device->createFramebufferUnique(framebuffer_info);
+				view[0] = context->m_window->getSwapchain().m_backbuffer[i].m_view;
+				view[1] = context->m_window->getSwapchain().m_depth.m_view;
+				m_framebuffer[i] = context->m_device->createFramebufferUnique(framebuffer_info);
 			}
 		}
 
@@ -80,14 +80,14 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Context>& loader)
 		{
 			btr::AllocatedMemory::Descriptor data_desc;
 			data_desc.size = sizeof(ParticleData) * m_particle_info_cpu.m_particle_max_num*2;
-			m_particle = loader->m_storage_memory.allocateMemory(data_desc);
+			m_particle = context->m_storage_memory.allocateMemory(data_desc);
 			std::vector<ParticleData> p(m_particle_info_cpu.m_particle_max_num*2);
 			cmd->fillBuffer(m_particle.getBufferInfo().buffer, m_particle.getBufferInfo().offset, m_particle.getBufferInfo().range, 0u);
 		}
 		{
 			btr::AllocatedMemory::Descriptor desc;
 			desc.size = sizeof(vk::DrawIndirectCommand);
-			m_particle_counter = loader->m_storage_memory.allocateMemory(desc);
+			m_particle_counter = context->m_storage_memory.allocateMemory(desc);
 			cmd->updateBuffer<vk::DrawIndirectCommand>(m_particle_counter.getBufferInfo().buffer, m_particle_counter.getBufferInfo().offset, vk::DrawIndirectCommand(4, 0, 0, 0));
 			auto count_barrier = m_particle_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
 			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { count_barrier }, {});
@@ -95,7 +95,7 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Context>& loader)
 		{
 			btr::AllocatedMemory::Descriptor desc;
 			desc.size = sizeof(ParticleUpdateParameter);
-			m_particle_update_param = loader->m_storage_memory.allocateMemory(desc);
+			m_particle_update_param = context->m_storage_memory.allocateMemory(desc);
 
 			ParticleUpdateParameter updater;
 			updater.m_rotate_add = vec4(0.f);
@@ -112,23 +112,23 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Context>& loader)
 		{
 			btr::AllocatedMemory::Descriptor desc;
 			desc.size = sizeof(ParticleGenerateCommand) * m_particle_info_cpu.m_emitter_max_num;
-			m_particle_generate_cmd = loader->m_storage_memory.allocateMemory(desc);
+			m_particle_generate_cmd = context->m_storage_memory.allocateMemory(desc);
 			std::vector<ParticleGenerateCommand> p(m_particle_info_cpu.m_emitter_max_num);
 			cmd->fillBuffer(m_particle_generate_cmd.getBufferInfo().buffer, m_particle_generate_cmd.getBufferInfo().offset, m_particle_generate_cmd.getBufferInfo().range, 0u);
 		}
 		{
 			btr::AllocatedMemory::Descriptor desc;
 			desc.size = sizeof(glm::uvec3);
-			m_particle_generate_cmd_counter = loader->m_storage_memory.allocateMemory(desc);
+			m_particle_generate_cmd_counter = context->m_storage_memory.allocateMemory(desc);
 			cmd->updateBuffer<glm::uvec3>(m_particle_generate_cmd_counter.getBufferInfo().buffer, m_particle_generate_cmd_counter.getBufferInfo().offset, glm::uvec3(0, 1, 1));
 
-			m_particle_emitter_counter = loader->m_storage_memory.allocateMemory(desc);
+			m_particle_emitter_counter = context->m_storage_memory.allocateMemory(desc);
 			cmd->updateBuffer<glm::uvec3>(m_particle_emitter_counter.getBufferInfo().buffer, m_particle_emitter_counter.getBufferInfo().offset, glm::uvec3(0, 1, 1));
 		}
 
 
 		{
-			m_particle_info = loader->m_uniform_memory.allocateMemory(sizeof(ParticleInfo));
+			m_particle_info = context->m_uniform_memory.allocateMemory(sizeof(ParticleInfo));
 			cmd->updateBuffer<ParticleInfo>(m_particle_info.getBufferInfo().buffer, m_particle_info.getBufferInfo().offset, { m_particle_info_cpu });
 			auto barrier = m_particle_info.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
 			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { barrier }, {});
@@ -137,7 +137,7 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Context>& loader)
 		{
 			btr::AllocatedMemory::Descriptor data_desc;
 			data_desc.size = sizeof(EmitterData) * m_particle_info_cpu.m_emitter_max_num;
-			m_particle_emitter = loader->m_storage_memory.allocateMemory(data_desc);
+			m_particle_emitter = context->m_storage_memory.allocateMemory(data_desc);
 			std::vector<EmitterData> p(m_particle_info_cpu.m_emitter_max_num);
 			cmd->fillBuffer(m_particle_emitter.getBufferInfo().buffer, m_particle_emitter.getBufferInfo().offset, m_particle_emitter.getBufferInfo().range, 0u);
 		}
@@ -162,7 +162,7 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Context>& loader)
 		std::string path = btr::getResourceAppPath() + "shader\\binary\\";
 		for (size_t i = 0; i < SHADER_NUM; i++)
 		{
-			m_shader_module[i] = loadShaderUnique(loader->m_device.getHandle(), path + shader_desc[i].name);
+			m_shader_module[i] = loadShaderUnique(context->m_device.getHandle(), path + shader_desc[i].name);
 			m_shader_info[i].setModule(m_shader_module[i].get());
 			m_shader_info[i].setStage(shader_desc[i].stage);
 			m_shader_info[i].setPName("main");
@@ -220,17 +220,17 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Context>& loader)
 			vk::DescriptorSetLayoutCreateInfo descriptor_set_layout_info = vk::DescriptorSetLayoutCreateInfo()
 				.setBindingCount(bindings[i].size())
 				.setPBindings(bindings[i].data());
-			m_descriptor_set_layout[i] = loader->m_device->createDescriptorSetLayoutUnique(descriptor_set_layout_info);
+			m_descriptor_set_layout[i] = context->m_device->createDescriptorSetLayoutUnique(descriptor_set_layout_info);
 		}
 
 		vk::DescriptorSetLayout layouts[] = { 
 			m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_PARTICLE].get() 
 		};
 		vk::DescriptorSetAllocateInfo alloc_info;
-		alloc_info.descriptorPool = loader->m_descriptor_pool.get();
+		alloc_info.descriptorPool = context->m_descriptor_pool.get();
 		alloc_info.descriptorSetCount = array_length(layouts);
 		alloc_info.pSetLayouts = layouts;
-		auto descriptor_set = loader->m_device->allocateDescriptorSetsUnique(alloc_info);
+		auto descriptor_set = context->m_device->allocateDescriptorSetsUnique(alloc_info);
 		m_descriptor_set[DESCRIPTOR_SET_PARTICLE] = std::move(descriptor_set[0]);
 	}
 	{
@@ -248,7 +248,7 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Context>& loader)
 			pipeline_layout_info.setPSetLayouts(layouts.data());
 			pipeline_layout_info.setPushConstantRangeCount(push_constants.size());
 			pipeline_layout_info.setPPushConstantRanges(push_constants.data());
-			m_pipeline_layout[PIPELINE_LAYOUT_UPDATE] = loader->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PIPELINE_LAYOUT_UPDATE] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
 		{
 			std::vector<vk::DescriptorSetLayout> layouts = {
@@ -265,7 +265,7 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Context>& loader)
 			pipeline_layout_info.setPSetLayouts(layouts.data());
 			pipeline_layout_info.setPushConstantRangeCount(push_constants.size());
 			pipeline_layout_info.setPPushConstantRanges(push_constants.data());
-			m_pipeline_layout[PIPELINE_LAYOUT_DRAW] = loader->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PIPELINE_LAYOUT_DRAW] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
 
@@ -298,7 +298,7 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Context>& loader)
 				.setDstBinding(1)
 				.setDstSet(m_descriptor_set[DESCRIPTOR_SET_LAYOUT_PARTICLE].get()),
 			};
-			loader->m_device->updateDescriptorSets(write_desc, {});
+			context->m_device->updateDescriptorSets(write_desc, {});
 		}
 	}
 	{
@@ -315,7 +315,7 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Context>& loader)
 			.setStage(m_shader_info[SHADER_GENERATE_TRANSFAR_DEBUG])
 			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get()),
 		};
-		auto pipelines = loader->m_device->createComputePipelinesUnique(loader->m_cache.get(), compute_pipeline_info);
+		auto pipelines = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
 		m_pipeline[PIPELINE_UPDATE] = std::move(pipelines[0]);
 		m_pipeline[PIPELINE_GENERATE] = std::move(pipelines[1]);
 		m_pipeline[PIPELINE_GENERATE_DEBUG] = std::move(pipelines[2]);
@@ -395,15 +395,15 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Context>& loader)
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			auto pipelines = loader->m_device->createGraphicsPipelinesUnique(loader->m_cache.get(), graphics_pipeline_info);
+			auto pipelines = context->m_device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info);
 			m_pipeline[PIPELINE_DRAW] = std::move(pipelines[0]);
 		}
 	}
 }
 
-vk::CommandBuffer sParticlePipeline::Private::execute(std::shared_ptr<btr::Context>& executer)
+vk::CommandBuffer sParticlePipeline::Private::execute(std::shared_ptr<btr::Context>& context)
 {
-	auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
+	auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 
 	struct UpdateConstantBlock
 	{
@@ -492,9 +492,9 @@ vk::CommandBuffer sParticlePipeline::Private::execute(std::shared_ptr<btr::Conte
 	return cmd;
 }
 
-vk::CommandBuffer sParticlePipeline::Private::draw(std::shared_ptr<btr::Context>& executer)
+vk::CommandBuffer sParticlePipeline::Private::draw(std::shared_ptr<btr::Context>& context)
 {
-	auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
+	auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 
 	auto to_draw = m_particle_counter.makeMemoryBarrierEx();
 	to_draw.setSrcAccessMask(vk::AccessFlagBits::eShaderRead| vk::AccessFlagBits::eShaderWrite);
@@ -503,8 +503,8 @@ vk::CommandBuffer sParticlePipeline::Private::draw(std::shared_ptr<btr::Context>
 
 	vk::RenderPassBeginInfo begin_render_Info;
 	begin_render_Info.setRenderPass(m_render_pass.get());
-	begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), executer->m_window->getClientSize<vk::Extent2D>()));
-	begin_render_Info.setFramebuffer(m_framebuffer[executer->getGPUFrame()].get());
+	begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), context->m_window->getClientSize<vk::Extent2D>()));
+	begin_render_Info.setFramebuffer(m_framebuffer[context->getGPUFrame()].get());
 	cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
 	struct DrawConstantBlock

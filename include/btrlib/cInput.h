@@ -22,13 +22,29 @@ struct cKeyboard {
 		{}
 	};
 	std::unordered_map<WPARAM, Param> m_data;
-	bool isHold(char key)const 
-	{ 
+	bool isHold(char key)const
+	{
 		auto it = m_data.find((char)std::toupper(key));
 		if (it == m_data.end()) {
 			return false;
 		}
 		return btr::isOn(it->second.state, STATE_HOLD);
+	}
+	bool isOn(char key)const
+	{
+		auto it = m_data.find((char)std::toupper(key));
+		if (it == m_data.end()) {
+			return false;
+		}
+		return btr::isOn(it->second.state, STATE_ON);
+	}
+	bool isOff(char key)const
+	{
+		auto it = m_data.find((char)std::toupper(key));
+		if (it == m_data.end()) {
+			return false;
+		}
+		return btr::isOn(it->second.state, STATE_OFF);
 	}
 };
 struct cMouse

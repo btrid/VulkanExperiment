@@ -77,6 +77,7 @@ void App::setup(const cGPU& gpu)
 	m_window_list.push_back(window);
 	m_context->m_window = window;
 
+	sSystem::Order().setup(m_context);
 	sCameraManager::Order().setup(m_context);
 	DrawHelper::Order().setup(m_context);
 
@@ -160,14 +161,15 @@ void App::preUpdate()
 		m_camera->control(m_window->getInput(), 0.016f);
 	}
 
-	m_system_cmds.resize(2);
-	m_sync_point.reset(3);
+	m_system_cmds.resize(3);
+	m_sync_point.reset(4);
+
 	{
 		MAKE_THREAD_JOB(job);
 		job.mJob.emplace_back(
 			[&]()
 		{
-			m_system_cmds[0] = sCameraManager::Order().draw(m_context);
+			m_system_cmds[0] = sSystem::Order().execute(m_context);
 			m_sync_point.arrive();
 		}
 		);
@@ -178,7 +180,18 @@ void App::preUpdate()
 		job.mJob.emplace_back(
 			[&]()
 		{
-			m_system_cmds[1] = DrawHelper::Order().draw(m_context);
+			m_system_cmds[1] = sCameraManager::Order().draw(m_context);
+			m_sync_point.arrive();
+		}
+		);
+		sGlobal::Order().getThreadPool().enque(job);
+	}
+	{
+		MAKE_THREAD_JOB(job);
+		job.mJob.emplace_back(
+			[&]()
+		{
+			m_system_cmds[2] = DrawHelper::Order().draw(m_context);
 			m_sync_point.arrive();
 		}
 		);
