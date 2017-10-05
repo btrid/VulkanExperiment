@@ -13,7 +13,7 @@ struct Zone
 	vk::DeviceSize m_end;
 	uint32_t m_is_reverse_alloc : 1;
 	uint32_t _flag : 31;
-	GameFrame m_wait_frame;	//!< 遅延削除のために数フレーム待つ
+	uint32_t m_wait_frame;	//!< 遅延削除のために数フレーム待つ
 	Zone()
 		: m_start(0llu)
 		, m_end(0llu)
@@ -153,7 +153,7 @@ struct GPUMemoryAllocater
 	void delayedFree(Zone zone)
 	{
 		assert(zone.isValid());
-		zone.m_wait_frame = sGlobal::Order().getGameFrame();
+		zone.m_wait_frame = 5;
 
 		{
 			std::lock_guard<std::mutex> lock(m_free_zone_mutex);
@@ -215,7 +215,7 @@ private:
 			std::lock_guard<std::mutex> lock(list.m_mutex);
 			for (auto it = list.m_list.begin(); it != list.m_list.end();)
 			{
-				if (sGlobal::Order().isElapsed(it->m_wait_frame))
+				if (--it->m_wait_frame == 0)
 				{
 					// cmdが発行されたので削除
 					free_impl(*it);
@@ -237,6 +237,8 @@ private:
 		m_last_gc = sGlobal::Order().getGameFrame();
 	}
 };
+
+
 struct BufferMemory
 {
 	vk::DescriptorBufferInfo m_buffer_info;

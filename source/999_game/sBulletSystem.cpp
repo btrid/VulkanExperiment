@@ -1,10 +1,10 @@
 #include <999_game/sBulletSystem.h>
 
-void sBulletSystem::Private::setup(std::shared_ptr<btr::Context>& loader)
+void sBulletSystem::setup(std::shared_ptr<btr::Context>& context)
 {
 
 	m_bullet_info_cpu.m_max_num = 8192;
-	auto cmd = loader->m_cmd_pool->allocCmdTempolary(0);
+	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
 	{
 		// レンダーパス
@@ -31,7 +31,7 @@ void sBulletSystem::Private::setup(std::shared_ptr<btr::Context>& loader)
 			std::vector<vk::AttachmentDescription> attach_description = {
 				// color1
 				vk::AttachmentDescription()
-				.setFormat(loader->m_window->getSwapchain().m_surface_format.format)
+				.setFormat(context->m_window->getSwapchain().m_surface_format.format)
 				.setSamples(vk::SampleCountFlagBits::e1)
 				.setLoadOp(vk::AttachmentLoadOp::eLoad)
 				.setStoreOp(vk::AttachmentStoreOp::eStore)
@@ -51,10 +51,10 @@ void sBulletSystem::Private::setup(std::shared_ptr<btr::Context>& loader)
 				.setSubpassCount(1)
 				.setPSubpasses(&subpass);
 
-			m_render_pass = loader->m_device->createRenderPassUnique(renderpass_info);
+			m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
 		}
 
-		m_framebuffer.resize(loader->m_window->getSwapchain().getBackbufferNum());
+		m_framebuffer.resize(context->m_window->getSwapchain().getBackbufferNum());
 		{
 			std::array<vk::ImageView, 2> view;
 
@@ -62,14 +62,14 @@ void sBulletSystem::Private::setup(std::shared_ptr<btr::Context>& loader)
 			framebuffer_info.setRenderPass(m_render_pass.get());
 			framebuffer_info.setAttachmentCount((uint32_t)view.size());
 			framebuffer_info.setPAttachments(view.data());
-			framebuffer_info.setWidth(loader->m_window->getClientSize().x);
-			framebuffer_info.setHeight(loader->m_window->getClientSize().y);
+			framebuffer_info.setWidth(context->m_window->getClientSize().x);
+			framebuffer_info.setHeight(context->m_window->getClientSize().y);
 			framebuffer_info.setLayers(1);
 
 			for (size_t i = 0; i < m_framebuffer.size(); i++) {
-				view[0] = loader->m_window->getSwapchain().m_backbuffer[i].m_view;
-				view[1] = loader->m_window->getSwapchain().m_depth.m_view;
-				m_framebuffer[i] = loader->m_device->createFramebufferUnique(framebuffer_info);
+				view[0] = context->m_window->getSwapchain().m_backbuffer[i].m_view;
+				view[1] = context->m_window->getSwapchain().m_depth.m_view;
+				m_framebuffer[i] = context->m_device->createFramebufferUnique(framebuffer_info);
 			}
 		}
 
@@ -79,29 +79,29 @@ void sBulletSystem::Private::setup(std::shared_ptr<btr::Context>& loader)
 		{
 			btr::AllocatedMemory::Descriptor data_desc;
 			data_desc.size = sizeof(BulletData) * m_bullet_info_cpu.m_max_num;
-			m_bullet = loader->m_storage_memory.allocateMemory(data_desc);
+			m_bullet = context->m_storage_memory.allocateMemory(data_desc);
 			std::vector<BulletData> p(m_bullet_info_cpu.m_max_num);
 			cmd->fillBuffer(m_bullet.getBufferInfo().buffer, m_bullet.getBufferInfo().offset, m_bullet.getBufferInfo().range, 0u);
 
 			data_desc.size = sizeof(BulletData) * 1024;
-			m_emit = loader->m_storage_memory.allocateMemory(data_desc);
+			m_emit = context->m_storage_memory.allocateMemory(data_desc);
 		}
 
 		btr::AllocatedMemory::Descriptor desc;
 		desc.size = sizeof(vk::DrawIndirectCommand);
-		m_bullet_counter = loader->m_storage_memory.allocateMemory(desc);
+		m_bullet_counter = context->m_storage_memory.allocateMemory(desc);
 		cmd->updateBuffer<vk::DrawIndirectCommand>(m_bullet_counter.getBufferInfo().buffer, m_bullet_counter.getBufferInfo().offset, vk::DrawIndirectCommand(4, 0, 0, 0));
 		auto count_barrier = m_bullet_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
 		cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { count_barrier }, {});
 
-		m_bullet_info = loader->m_uniform_memory.allocateMemory(sizeof(BulletInfo));
+		m_bullet_info = context->m_uniform_memory.allocateMemory(sizeof(BulletInfo));
 		cmd->updateBuffer<BulletInfo>(m_bullet_info.getBufferInfo().buffer, m_bullet_info.getBufferInfo().offset, { m_bullet_info_cpu });
 		auto barrier = m_bullet_info.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
 		cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { barrier }, {});
 
 		auto& map_desc = sScene::Order().m_map_info_cpu.m_descriptor[0];
 		desc.size = sizeof(uint32_t) * map_desc.m_cell_num.x* map_desc.m_cell_num.y;
-		m_bullet_LL_head_gpu = loader->m_storage_memory.allocateMemory(desc);
+		m_bullet_LL_head_gpu = context->m_storage_memory.allocateMemory(desc);
 		cmd->fillBuffer(m_bullet_LL_head_gpu.getBufferInfo().buffer, m_bullet_LL_head_gpu.getBufferInfo().offset, m_bullet_LL_head_gpu.getBufferInfo().range, 0xFFFFFFFF);
 
 	}
@@ -121,7 +121,7 @@ void sBulletSystem::Private::setup(std::shared_ptr<btr::Context>& loader)
 		std::string path = btr::getResourceAppPath() + "shader\\binary\\";
 		for (uint32_t i = 0; i < SHADER_NUM; i++)
 		{
-			m_shader_module[i] = loadShaderUnique(loader->m_device.getHandle(), path + shader_desc[i].name);
+			m_shader_module[i] = loadShaderUnique(context->m_device.getHandle(), path + shader_desc[i].name);
 			m_shader_info[i].setModule(m_shader_module[i].get());
 			m_shader_info[i].setStage(shader_desc[i].stage);
 			m_shader_info[i].setPName("main");
@@ -165,17 +165,17 @@ void sBulletSystem::Private::setup(std::shared_ptr<btr::Context>& loader)
 			vk::DescriptorSetLayoutCreateInfo descriptor_set_layout_info = vk::DescriptorSetLayoutCreateInfo()
 				.setBindingCount(bindings[i].size())
 				.setPBindings(bindings[i].data());
-			m_descriptor_set_layout[i] = loader->m_device->createDescriptorSetLayoutUnique(descriptor_set_layout_info);
+			m_descriptor_set_layout[i] = context->m_device->createDescriptorSetLayoutUnique(descriptor_set_layout_info);
 		}
 
 		vk::DescriptorSetLayout layouts[] = {
 			m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_UPDATE].get(),
 		};
 		vk::DescriptorSetAllocateInfo alloc_info;
-		alloc_info.descriptorPool = loader->m_descriptor_pool.get();
+		alloc_info.descriptorPool = context->m_descriptor_pool.get();
 		alloc_info.descriptorSetCount = array_length(layouts);
 		alloc_info.pSetLayouts = layouts;
-		auto descriptor_set = loader->m_device->allocateDescriptorSetsUnique(alloc_info);
+		auto descriptor_set = context->m_device->allocateDescriptorSetsUnique(alloc_info);
 		std::copy(std::make_move_iterator(descriptor_set.begin()), std::make_move_iterator(descriptor_set.end()), m_descriptor_set.begin());
 	}
 	{
@@ -194,7 +194,7 @@ void sBulletSystem::Private::setup(std::shared_ptr<btr::Context>& loader)
 			pipeline_layout_info.setPSetLayouts(layouts.data());
 			pipeline_layout_info.setPushConstantRangeCount(push_constants.size());
 			pipeline_layout_info.setPPushConstantRanges(push_constants.data());
-			m_pipeline_layout[PIPELINE_LAYOUT_UPDATE] = loader->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PIPELINE_LAYOUT_UPDATE] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
 		{
 			std::vector<vk::DescriptorSetLayout> layouts = {
@@ -211,7 +211,7 @@ void sBulletSystem::Private::setup(std::shared_ptr<btr::Context>& loader)
 			pipeline_layout_info.setPSetLayouts(layouts.data());
 			pipeline_layout_info.setPushConstantRangeCount(push_constants.size());
 			pipeline_layout_info.setPPushConstantRanges(push_constants.data());
-			m_pipeline_layout[PIPELINE_LAYOUT_BULLET_DRAW] = loader->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PIPELINE_LAYOUT_BULLET_DRAW] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
 		{
@@ -240,7 +240,7 @@ void sBulletSystem::Private::setup(std::shared_ptr<btr::Context>& loader)
 				.setDstBinding(1)
 				.setDstSet(m_descriptor_set[DESCRIPTOR_SET_UPDATE].get()),
 			};
-			loader->m_device->updateDescriptorSets(write_desc, {});
+			context->m_device->updateDescriptorSets(write_desc, {});
 		}
 
 	}
@@ -255,7 +255,7 @@ void sBulletSystem::Private::setup(std::shared_ptr<btr::Context>& loader)
 			.setStage(m_shader_info[SHADER_COMPUTE_EMIT])
 			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get()),
 		};
-		auto compute_pipeline = loader->m_device->createComputePipelinesUnique(loader->m_cache.get(), compute_pipeline_info);
+		auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
 		m_pipeline[PIPELINE_COMPUTE_UPDATE] = std::move(compute_pipeline[0]);
 		m_pipeline[PIPELINE_COMPUTE_EMIT] = std::move(compute_pipeline[1]);
 
@@ -276,9 +276,9 @@ void sBulletSystem::Private::setup(std::shared_ptr<btr::Context>& loader)
 			};
 
 			// viewport
-			vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)loader->m_window->getClientSize().x, (float)loader->m_window->getClientSize().y, 0.f, 1.f);
+			vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)context->m_window->getClientSize().x, (float)context->m_window->getClientSize().y, 0.f, 1.f);
 			std::vector<vk::Rect2D> scissor = {
-				vk::Rect2D(vk::Offset2D(0, 0), loader->m_window->getClientSize<vk::Extent2D>())
+				vk::Rect2D(vk::Offset2D(0, 0), context->m_window->getClientSize<vk::Extent2D>())
 			};
 			vk::PipelineViewportStateCreateInfo viewportInfo;
 			viewportInfo.setViewportCount(1);
@@ -331,7 +331,7 @@ void sBulletSystem::Private::setup(std::shared_ptr<btr::Context>& loader)
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			auto graphics_pipeline = loader->m_device->createGraphicsPipelinesUnique(loader->m_cache.get(), graphics_pipeline_info);
+			auto graphics_pipeline = context->m_device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info);
 			m_pipeline[PIPELINE_GRAPHICS_RENDER] = std::move(graphics_pipeline[0]);
 
 		}

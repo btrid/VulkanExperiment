@@ -6,10 +6,6 @@
 #include <applib/DrawHelper.h>
 #include <applib/sCameraManager.h>
 
-
-// #pragma comment(lib, "btrlib.lib")
-// #pragma comment(lib, "vulkan-1.lib")
-
 namespace app
 {
 

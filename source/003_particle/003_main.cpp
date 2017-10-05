@@ -23,7 +23,6 @@
 
 #include <applib/App.h>
 #include <applib/cModelPipeline.h>
-#include <applib/cModelRender.h>
 #include <applib/DrawHelper.h>
 #include <applib/sCameraManager.h>
 #include <btrlib/Context.h>
@@ -53,28 +52,26 @@ int main()
 	app::App app;
 	app.setup(gpu);
 
-	auto loader = app.m_context;
-	auto executer = app.m_executer;
+	auto context = app.m_context;
 
-	cModelPipeline model_pipeline;
-	std::shared_ptr<cModelRender> model_render = std::make_shared<cModelRender>();
 	cModel model;
+	model.load(context, btr::getResourceAppPath() + "tiny.x");
+
+	cModelPipeline renderer;
+	renderer.setup(context, nullptr);
+	auto render = renderer.createRender(context, model.getResource());
 
 	{
-		sParticlePipeline::Order().setup(loader);
+		sParticlePipeline::Order().setup(context);
 
-		model.load(loader, "..\\..\\resource\\tiny.x");
-		model_render->setup(loader, model.getResource());
-		model_pipeline.setup(loader);
-		model_pipeline.addModel(executer, model_render);
 		{
 			PlayMotionDescriptor desc;
 			desc.m_data = model.getResource()->getAnimation().m_motion[0];
 			desc.m_play_no = 0;
 			desc.m_start_time = 0.f;
-			model_render->getMotionList().play(desc);
+			render->m_animation->getPlayList().play(desc);
 
-			auto& transform = model_render->getModelTransform();
+			auto& transform = render->m_animation->getTransform();
 			transform.m_local_scale = glm::vec3(0.002f);
 			transform.m_local_rotate = glm::quat(1.f, 0.f, 0.f, 0.f);
 			transform.m_local_translate = glm::vec3(0.f, 280.f, 0.f);
@@ -91,7 +88,7 @@ int main()
 
 
 			{
-				model_render->getModelTransform().m_global = glm::mat4(1.f);
+				render->m_animation->getTransform().m_global = glm::mat4(1.f);
 			}
 
 			SynchronizedPoint motion_worker_syncronized_point(1);
@@ -100,7 +97,7 @@ int main()
 				job.mFinish =
 					[&]()
 				{
-					model_render->work();
+					render->m_animation->animationUpdate();
 					motion_worker_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);
@@ -113,7 +110,7 @@ int main()
 				job.mJob.emplace_back(
 					[&]()
 				{
-					render_cmds[0] = model_pipeline.draw(executer);
+					render_cmds[0] = renderer.draw(context);
 					render_syncronized_point.arrive();
 				}
 				);
@@ -125,8 +122,8 @@ int main()
 				job.mJob.emplace_back(
 					[&]()
 				{
-					render_cmds[1] = sParticlePipeline::Order().execute(executer);
-					render_cmds[2] = sParticlePipeline::Order().draw(executer);
+					render_cmds[1] = sParticlePipeline::Order().execute(context);
+					render_cmds[2] = sParticlePipeline::Order().draw(context);
 					render_syncronized_point.arrive();
 				}
 				);
