@@ -1,24 +1,15 @@
 #version 450
 
-#pragma optionNV (unroll none)
-#pragma optionNV (inline all)
-#pragma optionNV(fastmath on)
-//#pragma optionNV(fastprecision on)
-//#pragma optionNV(ifcvt all)
-#pragma optionNV(strict on)
-
-//#extension GL_ARB_shading_language_include : require
 #extension GL_GOOGLE_cpp_style_line_directive : require
 #include </Common.glsl>
-#define SETPOINT_PARTICLE 0
+
+#define USE_PARTICLE 0
 #include </Particle.glsl>
 
-layout (local_size_x = 1, local_size_y = 1) in;
+#define USE_SYSTEM 1
+#include <applib/System.glsl>
 
-layout(push_constant) uniform UpdateConstantBlock{
-	float m_deltatime;
-	uint m_double_buffer_dst_index;
-} constant;
+layout (local_size_x = 1, local_size_y = 1) in;
 
 
 void main()

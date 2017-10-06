@@ -5,6 +5,7 @@
 
 #include <applib/DrawHelper.h>
 #include <applib/sCameraManager.h>
+#include <applib/sSystem.h>
 
 namespace app
 {

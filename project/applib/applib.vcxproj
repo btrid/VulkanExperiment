@@ -78,6 +78,7 @@
     <ClInclude Include="..\..\include\applib\Geometry.h" />
     <ClInclude Include="..\..\include\applib\sCameraManager.h" />
     <ClInclude Include="..\..\include\applib\sParticlePipeline.h" />
+    <ClInclude Include="..\..\include\applib\sSystem.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

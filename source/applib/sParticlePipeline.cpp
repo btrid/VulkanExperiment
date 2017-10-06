@@ -1,5 +1,6 @@
 #include <applib/sParticlePipeline.h>
 #include <applib/sCameraManager.h>
+#include <applib/sSystem.h>
 
 void sParticlePipeline::Private::setup(std::shared_ptr<btr::Context>& context)
 {
@@ -237,34 +238,22 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Context>& context)
 		{
 			std::vector<vk::DescriptorSetLayout> layouts = {
 				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_PARTICLE].get(),
-			};
-			std::vector<vk::PushConstantRange> push_constants = {
-				vk::PushConstantRange()
-				.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-				.setSize(8),
+				sSystem::Order().getSystemDescriptor().getLayout(),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(layouts.size());
 			pipeline_layout_info.setPSetLayouts(layouts.data());
-			pipeline_layout_info.setPushConstantRangeCount(push_constants.size());
-			pipeline_layout_info.setPPushConstantRanges(push_constants.data());
 			m_pipeline_layout[PIPELINE_LAYOUT_UPDATE] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
 		{
 			std::vector<vk::DescriptorSetLayout> layouts = {
 				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_PARTICLE].get(),
 				sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
-			};
-			std::vector<vk::PushConstantRange> push_constants = {
-				vk::PushConstantRange()
-				.setStageFlags(vk::ShaderStageFlagBits::eVertex)
-				.setSize(4),
+				sSystem::Order().getSystemDescriptor().getLayout(),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(layouts.size());
 			pipeline_layout_info.setPSetLayouts(layouts.data());
-			pipeline_layout_info.setPushConstantRangeCount(push_constants.size());
-			pipeline_layout_info.setPPushConstantRanges(push_constants.data());
 			m_pipeline_layout[PIPELINE_LAYOUT_DRAW] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
@@ -405,17 +394,7 @@ vk::CommandBuffer sParticlePipeline::Private::execute(std::shared_ptr<btr::Conte
 {
 	auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 
-	struct UpdateConstantBlock
-	{
-		float m_deltatime;
-		uint m_double_buffer_dst_index;
-	};
-	UpdateConstantBlock constant;
-	constant.m_deltatime = sGlobal::Order().getDeltaTime();
-	constant.m_double_buffer_dst_index = sGlobal::Order().getCPUIndex();
-
-
-	// debug
+	// debug generate command
 	static int a;
 	a++;
 	if (a == 100)
@@ -430,7 +409,7 @@ vk::CommandBuffer sParticlePipeline::Private::execute(std::shared_ptr<btr::Conte
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_GENERATE_DEBUG].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 0, m_descriptor_set[DESCRIPTOR_SET_PARTICLE].get(), {});
-		cmd.pushConstants<UpdateConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), vk::ShaderStageFlagBits::eCompute, 0, constant);
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 1, sSystem::Order().getSystemDescriptor().getSet(), {});
 		cmd.dispatch(1, 1, 1);
 	}
 
@@ -451,13 +430,12 @@ vk::CommandBuffer sParticlePipeline::Private::execute(std::shared_ptr<btr::Conte
 			vk::BufferMemoryBarrier to_read2 = m_particle_generate_cmd_counter.makeMemoryBarrierEx();
 			to_read2.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
 			to_read2.setDstAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, {}, {}, to_read2, {});
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eAllCommands, {}, {}, to_read2, {});
 		}
-
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_GENERATE].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 0, m_descriptor_set[DESCRIPTOR_SET_PARTICLE].get(), {});
-		cmd.pushConstants<UpdateConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), vk::ShaderStageFlagBits::eCompute, 0, constant);
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 1, sSystem::Order().getSystemDescriptor().getSet(), {});
 		cmd.dispatchIndirect(m_particle_generate_cmd_counter.getBufferInfo().buffer, m_particle_generate_cmd_counter.getBufferInfo().offset);
 	}
 	{
@@ -465,25 +443,22 @@ vk::CommandBuffer sParticlePipeline::Private::execute(std::shared_ptr<btr::Conte
 		vk::BufferMemoryBarrier to_transfer = m_particle_counter.makeMemoryBarrierEx();
 		to_transfer.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
 		to_transfer.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
-
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
 
 		cmd.updateBuffer<vk::DrawIndirectCommand>(m_particle_counter.getBufferInfo().buffer, m_particle_counter.getBufferInfo().offset, vk::DrawIndirectCommand(4, 0, 0, 0));
 		cmd.updateBuffer<glm::uvec3>(m_particle_generate_cmd_counter.getBufferInfo().buffer, m_particle_generate_cmd_counter.getBufferInfo().offset, glm::uvec3(0, 1, 1));
-
 	}
 
 	// update
 	{
 		vk::BufferMemoryBarrier to_read = m_particle_counter.makeMemoryBarrierEx();
-		to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+		to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 		to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_UPDATE].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 0, m_descriptor_set[DESCRIPTOR_SET_PARTICLE].get(), {});
-		constant.m_double_buffer_dst_index = sGlobal::Order().getGPUIndex();
-		cmd.pushConstants<UpdateConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), vk::ShaderStageFlagBits::eCompute, 0, constant);
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 1, sSystem::Order().getSystemDescriptor().getSet(), {});
 		auto groups = app::calcDipatchGroups(glm::uvec3(m_particle_info_cpu.m_particle_max_num, 1, 1), glm::uvec3(1024, 1, 1));
 		cmd.dispatch(groups.x, groups.y, groups.z);
 	}
@@ -507,18 +482,10 @@ vk::CommandBuffer sParticlePipeline::Private::draw(std::shared_ptr<btr::Context>
 	begin_render_Info.setFramebuffer(m_framebuffer[context->getGPUFrame()].get());
 	cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
-	struct DrawConstantBlock
-	{
-		uint m_src_offset;
-	};
-	DrawConstantBlock draw_constant;
-	uint dst_offset = sGlobal::Order().getCPUIndex() == 0 ? m_particle_info_cpu.m_particle_max_num : 0;
-	draw_constant.m_src_offset = dst_offset;
-	cmd.pushConstants<DrawConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), vk::ShaderStageFlagBits::eVertex, 0, draw_constant);
-
 	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW].get());
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 0, m_descriptor_set[DESCRIPTOR_SET_PARTICLE].get(), {});
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 2, sSystem::Order().getSystemDescriptor().getSet(), {});
 	cmd.drawIndirect(m_particle_counter.getBufferInfo().buffer, m_particle_counter.getBufferInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
 
 	cmd.endRenderPass();

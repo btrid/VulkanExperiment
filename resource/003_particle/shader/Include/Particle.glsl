@@ -72,30 +72,30 @@ struct EmitterUpdateParameter
 	vec4 m_emit_offset;		//!< パーティクル生成オフセットのランダム値
 };
 
-#ifdef SETPOINT_PARTICLE
-layout(std140, set=SETPOINT_PARTICLE, binding=0) uniform ParticleInfoUniform {
+#ifdef USE_PARTICLE
+layout(std140, set=USE_PARTICLE, binding=0) uniform ParticleInfoUniform {
 	ParticleInfo u_particle_info;
 };
 
-layout(std430, set=SETPOINT_PARTICLE, binding=1) restrict buffer ParticleDataBuffer {
+layout(std430, set=USE_PARTICLE, binding=1) restrict buffer ParticleDataBuffer {
 	ParticleData b_particle[];
 };
-layout(std430, set=SETPOINT_PARTICLE, binding=2) restrict buffer CounterBuffer {
+layout(std430, set=USE_PARTICLE, binding=2) restrict buffer CounterBuffer {
 	DrawIndirectCommand b_draw_cmd;
 };
-layout(std430, set=SETPOINT_PARTICLE, binding=3) restrict buffer EmitterDataBuffer {
+layout(std430, set=USE_PARTICLE, binding=3) restrict buffer EmitterDataBuffer {
 	EmitterData b_emitter[];
 };
-layout(std430, set=SETPOINT_PARTICLE, binding=4) restrict buffer ParticleEmitterBuffer {
+layout(std430, set=USE_PARTICLE, binding=4) restrict buffer ParticleEmitterBuffer {
 	uvec3 b_emitter_num;
 };
-layout(std430, set=SETPOINT_PARTICLE, binding=5) restrict buffer ParticleGenerateCommandBuffer {
+layout(std430, set=USE_PARTICLE, binding=5) restrict buffer ParticleGenerateCommandBuffer {
 	ParticleGenerateCommand b_particle_generate_cmd[];
 };
-layout(std430, set=SETPOINT_PARTICLE, binding=6) restrict buffer ParticleGenerateDataBuffer {
+layout(std430, set=USE_PARTICLE, binding=6) restrict buffer ParticleGenerateDataBuffer {
 	uvec3 b_generate_cmd_num;
 };
-layout(std430, set=SETPOINT_PARTICLE, binding=7) restrict buffer ParticleUpdateParameterBuffer {
+layout(std430, set=USE_PARTICLE, binding=7) restrict buffer ParticleUpdateParameterBuffer {
 	ParticleUpdateParameter b_particle_update_param[];
 };
 #endif

@@ -1,3 +1,6 @@
+#ifndef BTRLIB_MODEL_GLSL
+#define BTRLIB_MODEL_GLSL
+
 struct Material
 {
 	vec4	Ambient;
@@ -155,3 +158,4 @@ layout(std430, set=USE_ANIMATION_INFO_SET, binding=10) restrict buffer BoneTrans
 #endif
 
 
+#endif

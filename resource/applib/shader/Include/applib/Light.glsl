@@ -1,3 +1,5 @@
+#ifndef BTRLIB_LIGHT_GLSL
+#define BTRLIB_LIGHT_GLSL
 
 struct LightInfo
 {
@@ -38,3 +40,5 @@ layout(set=USE_LIGHT, binding=4, std430) coherent restrict buffer LightCounter {
 };
 #endif
 #define INVALID_LIGHT_INDEX uint(-1)
+
+#endif

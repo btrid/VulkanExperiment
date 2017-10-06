@@ -79,6 +79,43 @@ struct EmitterUpdateParameter
 	vec4 m_emit_offset;		//!< パーティクル生成オフセットのランダム値
 };
 
+struct ParticleDescriptor : public UniqueDescriptorModule
+{
+	ParticleDescriptor(const std::shared_ptr<btr::Context>& context)
+	{
+		// create descriptor
+		{
+			std::vector<vk::DescriptorSetLayoutBinding> desc =
+			{
+				vk::DescriptorSetLayoutBinding()
+				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+				.setStageFlags(vk::ShaderStageFlagBits::eAll)
+				.setDescriptorCount(1)
+				.setBinding(0),
+			};
+			createDescriptor(context, desc);
+
+		}
+
+		// update descriptor
+		{
+
+// 			std::vector<vk::WriteDescriptorSet> write_desc =
+// 			{
+// 				vk::WriteDescriptorSet()
+// 				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+// 				.setDescriptorCount(uniforms.size())
+// 				.setPBufferInfo(uniforms.data())
+// 				.setDstBinding(0)
+// 				.setDstSet(m_descriptor_set.get()),
+// 			};
+// 			context->m_device->updateDescriptorSets(write_desc, {});
+		}
+
+	}
+
+};
+
 struct sParticlePipeline : Singleton<sParticlePipeline>
 {
 	friend Singleton<sParticlePipeline>;
