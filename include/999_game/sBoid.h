@@ -4,7 +4,6 @@
 #include <btrlib/AllocatedMemory.h>
 #include <btrlib/Context.h>
 
-#include <999_game/CircleIndex.h>
 class sBoid : public Singleton<sBoid>
 {
 	friend Singleton<sBoid>;

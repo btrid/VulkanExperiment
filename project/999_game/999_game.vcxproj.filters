@@ -35,9 +35,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\include\999_game\CircleIndex.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\999_game\cTriangleLL.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>

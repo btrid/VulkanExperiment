@@ -77,7 +77,6 @@
     <ClCompile Include="..\..\source\999_game\sScene.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\include\999_game\CircleIndex.h" />
     <ClInclude Include="..\..\include\999_game\cTriangleLL.h" />
     <ClInclude Include="..\..\include\999_game\KDTree.h" />
     <ClInclude Include="..\..\include\999_game\KDTreeTriangle.h" />
