@@ -1,5 +1,5 @@
 #include <999_game/sBoid.h>
-#include <applib/sParticlePipeline.h>
+#include <applib/sSystem.h>
 #include <999_game/sScene.h>
 
 void sBoid::setup(std::shared_ptr<btr::Context>& context)
@@ -322,22 +322,17 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context)
 				std::vector<vk::DescriptorSetLayout> layouts = {
 					m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_SOLDIER_UPDATE].get(),
 					sScene::Order().getDescriptorSetLayout(sScene::DESCRIPTOR_SET_LAYOUT_MAP),
-				};
-				std::vector<vk::PushConstantRange> push_constants = {
-					vk::PushConstantRange()
-					.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-					.setSize(8),
+					sSystem::Order().getSystemDescriptor().getLayout(),
 				};
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
 				pipeline_layout_info.setSetLayoutCount(layouts.size());
 				pipeline_layout_info.setPSetLayouts(layouts.data());
-				pipeline_layout_info.setPushConstantRangeCount(push_constants.size());
-				pipeline_layout_info.setPPushConstantRanges(push_constants.data());
 				m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_UPDATE] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 			}
 			{
 				std::vector<vk::DescriptorSetLayout> layouts = {
 					m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_SOLDIER_UPDATE].get(),
+					sSystem::Order().getSystemDescriptor().getLayout(),
 				};
 				std::vector<vk::PushConstantRange> push_constants = {
 					vk::PushConstantRange()
@@ -355,17 +350,11 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context)
 				std::vector<vk::DescriptorSetLayout> layouts = {
 					m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_SOLDIER_UPDATE].get(),
 					sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
-				};
-				std::vector<vk::PushConstantRange> push_constants = {
-					vk::PushConstantRange()
-					.setStageFlags(vk::ShaderStageFlagBits::eVertex)
-					.setSize(4),
+					sSystem::Order().getSystemDescriptor().getLayout(),
 				};
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
 				pipeline_layout_info.setSetLayoutCount(layouts.size());
 				pipeline_layout_info.setPSetLayouts(layouts.data());
-				pipeline_layout_info.setPushConstantRangeCount(push_constants.size());
-				pipeline_layout_info.setPPushConstantRanges(push_constants.data());
 				m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 			}
 		}
@@ -557,18 +546,7 @@ vk::CommandBuffer sBoid::execute(std::shared_ptr<btr::Context>& context)
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COMPUTE_SOLDIER_UPDATE].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_UPDATE].get(), 0, getDescriptorSet(DESCRIPTOR_SET_SOLDIER_UPDATE), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_UPDATE].get(), 1, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_MAP), {});
-
-			// update
-			struct UpdateConstantBlock
-			{
-				float m_deltatime;
-				uint m_double_buffer_dst_index;
-			};
-			UpdateConstantBlock block;
-			block.m_deltatime = sGlobal::Order().getDeltaTime();
-			block.m_double_buffer_dst_index = sGlobal::Order().getGPUIndex();
-			cmd.pushConstants<UpdateConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_UPDATE].get(), vk::ShaderStageFlagBits::eCompute, 0, block);
-
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_UPDATE].get(), 2, sSystem::Order().getSystemDescriptor().getSet(), {});
 
 			auto groups = app::calcDipatchGroups(glm::uvec3(m_boid_info.m_soldier_max / 2, 1, 1), glm::uvec3(1024, 1, 1));
 			cmd.dispatch(groups.x, groups.y, groups.z);
@@ -608,6 +586,7 @@ vk::CommandBuffer sBoid::execute(std::shared_ptr<btr::Context>& context)
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COMPUTE_SOLDIER_EMIT].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_EMIT].get(), 0, getDescriptorSet(DESCRIPTOR_SET_SOLDIER_UPDATE), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_EMIT].get(), 1, sSystem::Order().getSystemDescriptor().getSet(), {});
 
 			struct EmitConstantBlock
 			{
@@ -650,14 +629,8 @@ vk::CommandBuffer sBoid::draw(std::shared_ptr<btr::Context>& context)
 	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_GRAPHICS_SOLDIER_DRAW].get());
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW].get(), 0, getDescriptorSet(DESCRIPTOR_SET_SOLDIER_UPDATE), {});
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW].get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW].get(), 2, sSystem::Order().getSystemDescriptor().getSet(), {});
 
-	struct DrawConstantBlock
-	{
-		uint m_double_buffer_index;
-	};
-	DrawConstantBlock block;
-	block.m_double_buffer_index = sGlobal::Order().getGPUIndex();
-	cmd.pushConstants<DrawConstantBlock>(m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW].get(), vk::ShaderStageFlagBits::eVertex, 0, block);
 
 	cmd.drawIndirect(m_soldier_draw_indiret_gpu.getBufferInfo().buffer, m_soldier_draw_indiret_gpu.getBufferInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
 

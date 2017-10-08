@@ -17,14 +17,11 @@
 
 #define SETPOINT_MAP 1
 #include </Map.glsl>
+
+#define USE_SYSTEM 2
+#include <applib/System.glsl>
+
 layout (local_size_x = 1024, local_size_y = 1) in;
-
-
-layout(push_constant) uniform UpdateConstantBlock
-{
-	float m_deltatime;
-	uint m_double_buffer_dst_index;
-} constant;
 
 void main()
 {
@@ -32,25 +29,26 @@ void main()
 	if(index >= u_boid_info.m_soldier_max){
 		return;
 	}
-	uint src_offset = (1-constant.m_double_buffer_dst_index) * u_boid_info.m_soldier_max/2;
-	uint dst_offset = constant.m_double_buffer_dst_index * u_boid_info.m_soldier_max/2;
+	uint src_offset = (1-u_system_data.m_gpu_index) * u_boid_info.m_soldier_max/2;
+	uint dst_offset = u_system_data.m_gpu_index * u_boid_info.m_soldier_max/2;
+	float deltatime = u_system_data.m_deltatime;
 
 	SoldierData soldier = b_soldier[src_offset + index];
 	b_soldier[src_offset + index].m_life = -1.;
-	soldier.m_life -= constant.m_deltatime;
+	soldier.m_life -= deltatime;
 	if(soldier.m_life <= 0.){
 		return;
 	}
 	MapDescriptor desc = u_map_info.m_descriptor[0];
 
-	uint old_offset = desc.m_cell_num.x*desc.m_cell_num.y*(1-constant.m_double_buffer_dst_index);
+	uint old_offset = desc.m_cell_num.x*desc.m_cell_num.y*(1-u_system_data.m_gpu_index);
 	uint old_map_index = calcMapIndex1D(soldier.m_map_index)+old_offset;
 	SoldierInfo info = u_soldier_info[soldier.m_soldier_type];
 
 	{
 	
-		march(soldier.m_pos.xz, soldier.m_map_index, soldier.m_inertia.xz * constant.m_deltatime);	
-		soldier.m_inertia *= pow(0.92, 1. + constant.m_deltatime);
+		march(soldier.m_pos.xz, soldier.m_map_index, soldier.m_inertia.xz * deltatime);	
+		soldier.m_inertia *= pow(0.92, 1. + deltatime);
 	}
 
 	vec3 next_dir = soldier.m_vel.xyz;
@@ -150,13 +148,13 @@ void main()
 			if(dot(rotate_axis, rotate_axis) >= 0.0001)
 			{
 				rotate_axis = normalize(rotate_axis);
-				float angle = info.m_turn_speed * constant.m_deltatime;// * turn_power;
+				float angle = info.m_turn_speed * deltatime;// * turn_power;
 				quat rot = angleAxis(angle, rotate_axis);
 				next_dir = normalize(rotateQuatVec3(rot, soldier.m_vel.xyz));
 
 				// 減速したり加速したり
 				bool is_front = dot(next_dir, target_dir) >= 0.;
-				vel = clamp(vel + (is_front ? -1. : -0.3) * info.m_move_speed*constant.m_deltatime, info.m_move_speed*0.4, info.m_move_speed*1.2);
+				vel = clamp(vel + (is_front ? -1. : -0.3) * info.m_move_speed*deltatime, info.m_move_speed*0.4, info.m_move_speed*1.2);
 			}
 		}
 		else if(dot(astar_dir, soldier.m_vel.xyz) <= 0.93)
@@ -168,11 +166,11 @@ void main()
 				rotate_axis = normalize(rotate_axis);
 				float astar_angle = calcAngle(astar_dir, soldier.m_vel.xyz);
 				astar_angle = min(astar_angle, info.m_turn_speed); 
-				vec4 rot = angleAxis(astar_angle * constant.m_deltatime, rotate_axis);
+				vec4 rot = angleAxis(astar_angle * deltatime, rotate_axis);
 				next_dir = normalize(rotateQuatVec3(rot, soldier.m_vel.xyz));
 
 				// 方向転換の時は減速する
-				vel = clamp(vel* pow(0.99, 1.+constant.m_deltatime), info.m_move_speed * 0.3, info.m_move_speed*0.7);
+				vel = clamp(vel* pow(0.99, 1.+deltatime), info.m_move_speed * 0.3, info.m_move_speed*0.7);
 
 			}
 		}
@@ -186,11 +184,11 @@ void main()
 	soldier.m_vel.xyz = next_dir;
 	soldier.m_vel.w = vel;
 
-	march(soldier.m_pos.xz, soldier.m_map_index, soldier.m_vel.xz*soldier.m_vel.w*constant.m_deltatime);
+	march(soldier.m_pos.xz, soldier.m_map_index, soldier.m_vel.xz*soldier.m_vel.w*deltatime);
 
 	uint dst_index = atomicAdd(b_draw_cmd[0].vertexCount, 1);
 
-	uint offset = desc.m_cell_num.x*desc.m_cell_num.y*(constant.m_double_buffer_dst_index);
+	uint offset = desc.m_cell_num.x*desc.m_cell_num.y*(u_system_data.m_gpu_index);
 	uint map_index_1D = calcMapIndex1D(soldier.m_map_index) + offset;
 	uint old = atomicExchange(b_soldier_head[map_index_1D], dst_index);
 	soldier.m_ll_next = old;
