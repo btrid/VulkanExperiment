@@ -102,17 +102,8 @@ void march(inout vec2 pos, inout ivec2 map_index, in vec2 _dir)
 		uint map = imageLoad(t_map, (map_index + next) ).x;
 		if(map != 0) 
 		{
-#if 1
 			// 壁にぶつかったので押し戻す
 			next_pos = pos + prog - vec2(next)*FLT_EPSIRON*1000.;
-
-#else
-			// 壁にぶつかったので反射
-			next_pos = pos.xz + prog - vec2(next) *FLT_EPSIRON;
-
-			vec3 wall = vec2(next);
-			p.m_vel.xyz = reflect(p.m_vel.xyz, wall);
-#endif
 		}else{
 			map_index += next;
 		}

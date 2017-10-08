@@ -1,90 +1,48 @@
 #include <999_game/sBulletSystem.h>
+#include <applib/sSystem.h>
 
 void sBulletSystem::setup(std::shared_ptr<btr::Context>& context)
 {
 
-	m_bullet_info_cpu.m_max_num = 8192;
+	m_bullet_info_cpu.m_max_num = 8192/2;
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
 	{
 		// レンダーパス
-		{
-			// sub pass
-			std::vector<vk::AttachmentReference> color_ref =
-			{
-				vk::AttachmentReference()
-				.setAttachment(0)
-				.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
-			};
-			vk::AttachmentReference depth_ref;
-			depth_ref.setAttachment(1);
-			depth_ref.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-
-			vk::SubpassDescription subpass;
-			subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
-			subpass.setInputAttachmentCount(0);
-			subpass.setPInputAttachments(nullptr);
-			subpass.setColorAttachmentCount((uint32_t)color_ref.size());
-			subpass.setPColorAttachments(color_ref.data());
-			subpass.setPDepthStencilAttachment(&depth_ref);
-
-			std::vector<vk::AttachmentDescription> attach_description = {
-				// color1
-				vk::AttachmentDescription()
-				.setFormat(context->m_window->getSwapchain().m_surface_format.format)
-				.setSamples(vk::SampleCountFlagBits::e1)
-				.setLoadOp(vk::AttachmentLoadOp::eLoad)
-				.setStoreOp(vk::AttachmentStoreOp::eStore)
-				.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
-				.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
-				vk::AttachmentDescription()
-				.setFormat(vk::Format::eD32Sfloat)
-				.setSamples(vk::SampleCountFlagBits::e1)
-				.setLoadOp(vk::AttachmentLoadOp::eLoad)
-				.setStoreOp(vk::AttachmentStoreOp::eStore)
-				.setInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
-				.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
-			};
-			vk::RenderPassCreateInfo renderpass_info = vk::RenderPassCreateInfo()
-				.setAttachmentCount(attach_description.size())
-				.setPAttachments(attach_description.data())
-				.setSubpassCount(1)
-				.setPSubpasses(&subpass);
-
-			m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
-		}
-
-		m_framebuffer.resize(context->m_window->getSwapchain().getBackbufferNum());
-		{
-			std::array<vk::ImageView, 2> view;
-
-			vk::FramebufferCreateInfo framebuffer_info;
-			framebuffer_info.setRenderPass(m_render_pass.get());
-			framebuffer_info.setAttachmentCount((uint32_t)view.size());
-			framebuffer_info.setPAttachments(view.data());
-			framebuffer_info.setWidth(context->m_window->getClientSize().x);
-			framebuffer_info.setHeight(context->m_window->getClientSize().y);
-			framebuffer_info.setLayers(1);
-
-			for (size_t i = 0; i < m_framebuffer.size(); i++) {
-				view[0] = context->m_window->getSwapchain().m_backbuffer[i].m_view;
-				view[1] = context->m_window->getSwapchain().m_depth.m_view;
-				m_framebuffer[i] = context->m_device->createFramebufferUnique(framebuffer_info);
-			}
-		}
-
+		m_render_pass = std::make_shared<RenderPassModule>(context);
 	}
 
 	{
 		{
 			btr::AllocatedMemory::Descriptor data_desc;
-			data_desc.size = sizeof(BulletData) * m_bullet_info_cpu.m_max_num;
+			data_desc.size = sizeof(BulletData) * m_bullet_info_cpu.m_max_num * 2;
 			m_bullet = context->m_storage_memory.allocateMemory(data_desc);
-			std::vector<BulletData> p(m_bullet_info_cpu.m_max_num);
-			cmd->fillBuffer(m_bullet.getBufferInfo().buffer, m_bullet.getBufferInfo().offset, m_bullet.getBufferInfo().range, 0u);
 
+			data_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			BulletData bd;
+			bd.m_life = -1.f;
+			std::vector<BulletData> p(m_bullet_info_cpu.m_max_num * 2, bd);
+			auto staging = context->m_staging_memory.allocateMemory(data_desc);
+			memcpy_s(staging.getMappedPtr(), data_desc.size, p.data(), vector_sizeof(p));
+			vk::BufferCopy copy_info;
+			copy_info.setSize(data_desc.size);
+			copy_info.setSrcOffset(staging.getBufferInfo().offset);
+			copy_info.setDstOffset(m_bullet.getBufferInfo().offset);
+			cmd->copyBuffer(staging.getBufferInfo().buffer, m_bullet.getBufferInfo().buffer, copy_info);
+
+			auto to_compute = m_bullet.makeMemoryBarrierEx();
+			to_compute.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+			to_compute.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_compute }, {});
+		}
+		{
+
+			btr::AllocatedMemory::Descriptor data_desc;
 			data_desc.size = sizeof(BulletData) * 1024;
-			m_emit = context->m_storage_memory.allocateMemory(data_desc);
+			m_bullet_emit = context->m_storage_memory.allocateMemory(data_desc);
+
+			data_desc.size = sizeof(uint32_t);
+			m_bullet_emit_count = context->m_storage_memory.allocateMemory(data_desc);
 		}
 
 		btr::AllocatedMemory::Descriptor desc;
@@ -158,6 +116,11 @@ void sBulletSystem::setup(std::shared_ptr<btr::Context>& context)
 			.setDescriptorCount(1)
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setBinding(4),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex)
+			.setDescriptorCount(1)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setBinding(5),
 		};
 
 		for (size_t i = 0; i < bindings.size(); i++)
@@ -183,35 +146,23 @@ void sBulletSystem::setup(std::shared_ptr<btr::Context>& context)
 			std::vector<vk::DescriptorSetLayout> layouts = {
 				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_UPDATE].get(),
 				sScene::Order().getDescriptorSetLayout(sScene::DESCRIPTOR_SET_LAYOUT_MAP),
-			};
-			std::vector<vk::PushConstantRange> push_constants = {
-				vk::PushConstantRange()
-				.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-				.setSize(16),
+				sSystem::Order().getSystemDescriptor().getLayout(),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(layouts.size());
 			pipeline_layout_info.setPSetLayouts(layouts.data());
-			pipeline_layout_info.setPushConstantRangeCount(push_constants.size());
-			pipeline_layout_info.setPPushConstantRanges(push_constants.data());
 			m_pipeline_layout[PIPELINE_LAYOUT_UPDATE] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
 		{
 			std::vector<vk::DescriptorSetLayout> layouts = {
 				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_UPDATE].get(),
 				sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
-			};
-			std::vector<vk::PushConstantRange> push_constants = {
-				vk::PushConstantRange()
-				.setStageFlags(vk::ShaderStageFlagBits::eVertex)
-				.setSize(4),
+				sSystem::Order().getSystemDescriptor().getLayout(),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(layouts.size());
 			pipeline_layout_info.setPSetLayouts(layouts.data());
-			pipeline_layout_info.setPushConstantRangeCount(push_constants.size());
-			pipeline_layout_info.setPPushConstantRanges(push_constants.data());
-			m_pipeline_layout[PIPELINE_LAYOUT_BULLET_DRAW] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PIPELINE_LAYOUT_DRAW] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
 		{
@@ -222,8 +173,9 @@ void sBulletSystem::setup(std::shared_ptr<btr::Context>& context)
 			std::vector<vk::DescriptorBufferInfo> storages = {
 				m_bullet.getBufferInfo(),
 				m_bullet_counter.getBufferInfo(),
-				m_emit.getBufferInfo(),
+				m_bullet_emit.getBufferInfo(),
 				m_bullet_LL_head_gpu.getBufferInfo(),
+				m_bullet_emit_count.getBufferInfo(),
 			};
 			std::vector<vk::WriteDescriptorSet> write_desc =
 			{
@@ -326,8 +278,8 @@ void sBulletSystem::setup(std::shared_ptr<btr::Context>& context)
 				.setPViewportState(&viewportInfo)
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
-				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_BULLET_DRAW].get())
-				.setRenderPass(m_render_pass.get())
+				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get())
+				.setRenderPass(m_render_pass->getRenderPass())
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};

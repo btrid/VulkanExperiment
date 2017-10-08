@@ -419,16 +419,16 @@ int main()
 				};
 				sGlobal::Order().getThreadPool().enque(job);
 			}
-// 			{
-// 				cThreadJob job;
-// 				job.mFinish =
-// 					[&]()
-// 				{
-// 					render_cmds[8] = sCollisionSystem::Order().execute(context);
-// 					render_syncronized_point.arrive();
-// 				};
-// 				sGlobal::Order().getThreadPool().enque(job);
-// 			}
+			{
+				cThreadJob job;
+				job.mFinish =
+					[&]()
+				{
+					render_cmds[8] = sCollisionSystem::Order().execute(context);
+					render_syncronized_point.arrive();
+				};
+//				sGlobal::Order().getThreadPool().enque(job);
+			}
 #if 0 // voxelize check
 			SynchronizedPoint render_syncronized_point(1);
 			std::vector<vk::CommandBuffer> render_cmds(3);

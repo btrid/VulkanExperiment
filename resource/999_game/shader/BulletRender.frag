@@ -16,6 +16,6 @@ layout(location=1) in FSIN{
 
 void main()
 {
-	FragColor.rgb = vec3(FSIn.life);
+	FragColor.rgb = vec3(1.);
 	FragColor.a = 1.;
 }

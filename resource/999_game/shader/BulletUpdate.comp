@@ -1,10 +1,5 @@
 #version 450
 
-//#pragma optionNV (unroll none)
-#pragma optionNV (inline all)
-//#pragma optionNV(fastmath on)
-//#pragma optionNV(strict on)
-
 #extension GL_GOOGLE_cpp_style_line_directive : require
 
 #include <btrlib/ConvertDimension.glsl>
@@ -16,16 +11,10 @@
 #define SETPOINT_MAP 1
 #include </Map.glsl>
 
+#define USE_SYSTEM 2
+#include <applib/System.glsl>
+
 layout (local_size_x = 1024, local_size_y = 1) in;
-
-
-layout(push_constant) uniform UpdateConstantBlock
-{
-	float m_deltatime;
-	uint m_src_offset;
-	uint m_dst_offset;
-	uint m_emit_num;
-} constant;
 
 void main()
 {
@@ -34,24 +23,31 @@ void main()
 		return;
 	}
 
-	BulletData b = b_bullet[constant.m_src_offset + index];
-	b_bullet[constant.m_src_offset + index].m_life = -1.;
-	b.m_life -= constant.m_deltatime;
+	uint src_offset = (1-u_system_data.m_gpu_index) * u_bullet_info.m_max_num;
+	uint dst_offset = (u_system_data.m_gpu_index) * u_bullet_info.m_max_num;
+	float deltatime = u_system_data.m_deltatime;
+
+	BulletData b = b_bullet[src_offset + index];
+	b_bullet[src_offset + index].m_life = -1.;
+	b.m_life -= deltatime;
+
 	if(b.m_life <= 0.){
 		return;
 	}
 	MapDescriptor desc = u_map_info.m_descriptor[0];
 
 	vec2 dir = normalize(b.m_vel.xz);
-	float progress = length(b.m_vel.xz)*constant.m_deltatime;
-	for(;;)
+	float progress = length(b.m_vel.xz)*deltatime;
+	for(int i = 0; i < 100; i++)
+//	for(;;)
 	{
-		MarchResult result = marchEx(b.m_pos.xz, b.m_map_index, length(b.m_vel.xz)*constant.m_deltatime, dir);
+		MarchResult result = marchEx(b.m_pos.xz, b.m_map_index, progress, dir);
 		if(result.is_end)
 		{
 			b.m_pos.xz = result.next_pos;
 			break;
 		}
+		progress = result.progress;
 
 		uint map = imageLoad(t_map, result.next_map_index).x;
 		b.m_pos.xz = result.next_pos;
@@ -68,7 +64,6 @@ void main()
 		{
 			// 何もないのでそのまま進む
 			b.m_map_index = result.next_map_index;
-			progress = result.progress;
 		}
 	}
 
@@ -77,6 +72,6 @@ void main()
 	uint old = atomicExchange(b_bullet_head[convert2DTo1D(b.m_map_index, desc.m_cell_num.xy)], dst_index);
 	b.m_ll_next = old;
 
-	b_bullet[constant.m_dst_offset + dst_index] = b;
+	b_bullet[dst_offset + dst_index] = b;
 
 }

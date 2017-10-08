@@ -14,24 +14,19 @@
 #define SETPOINT_BULLET 0
 #include </Bullet.glsl>
 
+#define USE_SYSTEM 2
+#include <applib/System.glsl>
 
-layout(push_constant) uniform UpdateConstantBlock
-{
-	float m_deltatime;
-	uint m_src_offset;
-	uint m_dst_offset;
-	uint m_emit_num;
-} constant;
 
 void main()
 {
 	uint index = gl_GlobalInvocationID.x;
-	if(index >= constant.m_emit_num){
+	if(index >= b_bullet_emit_count){
 		return;
 	}
 
-	uint dst_index = atomicAdd(b_bullet_draw_cmd.instanceCount, 1);
 	BulletData b = b_bullet_emit[index];
-	b_bullet[constant.m_dst_offset + dst_index] = b;
+	uint dst_index = atomicAdd(b_bullet_draw_cmd.instanceCount, 1);
+	b_bullet[u_system_data.m_gpu_index*u_bullet_info.m_max_num + dst_index] = b;
 
 }

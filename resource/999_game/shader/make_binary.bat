@@ -25,10 +25,10 @@ glslc.exe -w -I Include -I ../../applib/shader/include -I ../../btrlib/shader/in
 glslc.exe -w -I Include -I ../../applib/shader/include -I ../../btrlib/shader/include -x glsl -fshader-stage=vertex	-o binary\\BoidSoldierRender.vert.spv BoidSoldierRender.vert
 glslc.exe -w -I Include -I ../../applib/shader/include -I ../../btrlib/shader/include -x glsl -fshader-stage=fragment	-o binary\\BoidSoldierRender.frag.spv BoidSoldierRender.frag
 
-glslc.exe -w -I Include -I ../../btrlib/shader/include -x glsl -fshader-stage=compute	-o binary\\BulletUpdate.comp.spv BulletUpdate.comp
-glslc.exe -w -I Include -I ../../btrlib/shader/include -x glsl -fshader-stage=compute	-o binary\\BulletEmit.comp.spv BulletEmit.comp
-glslc.exe -w -I Include -I ../../btrlib/shader/include -x glsl -fshader-stage=vertex	-o binary\\BulletRender.vert.spv BulletRender.vert
-glslc.exe -w -I Include -I ../../btrlib/shader/include -x glsl -fshader-stage=fragment	-o binary\\BulletRender.frag.spv BulletRender.frag
+glslc.exe -w -I Include -I ../../applib/shader/include -I ../../btrlib/shader/include -x glsl -fshader-stage=compute	-o binary\\BulletUpdate.comp.spv BulletUpdate.comp
+glslc.exe -w -I Include -I ../../applib/shader/include -I ../../btrlib/shader/include -x glsl -fshader-stage=compute	-o binary\\BulletEmit.comp.spv BulletEmit.comp
+glslc.exe -w -I Include -I ../../applib/shader/include -I ../../btrlib/shader/include -x glsl -fshader-stage=vertex	-o binary\\BulletRender.vert.spv BulletRender.vert
+glslc.exe -w -I Include -I ../../applib/shader/include -I ../../btrlib/shader/include -x glsl -fshader-stage=fragment	-o binary\\BulletRender.frag.spv BulletRender.frag
 
 glslc.exe -w -I Include -I ../../btrlib/shader/include -x glsl -fshader-stage=compute	-o binary\\CollisionTest.comp.spv CollisionTest.comp
 

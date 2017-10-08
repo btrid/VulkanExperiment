@@ -12,13 +12,6 @@ namespace btr
 struct Context;
 }
 
-template<typename T>
-struct DoubleBuffer
-{
-	std::array<T, 2> m_data;
-	T& getCPUThreadData() { return m_data[sGlobal::Order().getCPUIndex()]; }
-	T& getGPUThreadData() { return m_data[sGlobal::Order().getGPUIndex()]; }
-};
 template<typename T> using PerThread = std::vector<T>;
 template<typename T> using PerFamilyIndex = std::vector<T>;
 

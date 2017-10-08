@@ -26,7 +26,7 @@ layout(std140, set=SETPOINT_BULLET, binding=0) uniform ParticleInfoUniform {
 	BulletInfo u_bullet_info;
 };
 
-layout(std430, set=SETPOINT_BULLET, binding=1) coherent restrict buffer BulletDataBuffer {
+layout(std430, set=SETPOINT_BULLET, binding=1) restrict buffer BulletDataBuffer {
 	BulletData b_bullet[];
 };
 layout(std430, set=SETPOINT_BULLET, binding=2) restrict buffer BulletCounterBuffer {
@@ -35,8 +35,11 @@ layout(std430, set=SETPOINT_BULLET, binding=2) restrict buffer BulletCounterBuff
 layout(std430, set=SETPOINT_BULLET, binding=3) readonly buffer BulletEmitBuffer {
 	BulletData b_bullet_emit[];
 };
-layout(std430, set=SETPOINT_BULLET, binding=4) coherent restrict buffer BulletLLHeadBuffer {
+layout(std430, set=SETPOINT_BULLET, binding=4) restrict buffer BulletLLHeadBuffer {
 	uint b_bullet_head[];
+};
+layout(std430, set=SETPOINT_BULLET, binding=5) readonly restrict buffer BulletEmitCountBuffer {
+	uint b_bullet_emit_count;
 };
 
 
