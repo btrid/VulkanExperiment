@@ -9,6 +9,7 @@
 #include <btrlib/Context.h>
 
 #include <applib/App.h>
+#include <applib/Utility.h>
 #include <999_game/MazeGenerator.h>
 #include <999_game/sScene.h>
 
@@ -34,32 +35,6 @@ struct BulletData
 
 };
 
-template<typename T, uint32_t N>
-struct AppendBuffer
-{
-	std::array<T, N> m_buffer;
-	std::atomic_uint32_t m_offset;
-
-	AppendBuffer() : m_offset(0) {}
-
-	void push(const T* data, size_t num)
-	{
-		auto index = m_offset.fetch_add(num);
-		assert(index + num < N);
-
-		memcpy_s(&m_buffer.data()[index], num * sizeof(T), data, num * sizeof(T));
-	}
-
-	bool empty()const { return m_offset == 0; }
-	std::vector<T> get()
-	{
-		// thread_safe‚Å‚Í‚È‚¢
-		auto num = m_offset.exchange(0);
-		std::vector<T> ret(num);
-		memcpy_s(ret.data(), num * sizeof(T), m_buffer.data(), num * sizeof(T));
-		return ret;
-	}
-};
 
 class sBulletSystem : public Singleton<sBulletSystem>
 {

@@ -8,7 +8,6 @@
 #include <btrlib/Singleton.h>
 
 
-
 namespace vk {
 	class Device;
 	class Fence;

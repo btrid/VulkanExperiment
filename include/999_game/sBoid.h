@@ -3,6 +3,7 @@
 #include <btrlib/Define.h>
 #include <btrlib/AllocatedMemory.h>
 #include <btrlib/Context.h>
+#include <applib/Utility.h>
 
 class sBoid : public Singleton<sBoid>
 {
@@ -107,24 +108,15 @@ public:
 		DESCRIPTOR_SET_NUM,
 	};
 
-	struct EmitData
-	{
-		struct EmitBuffer
-		{
-			bool m_is_emit;
-			uint32_t m_emit_num;
-			btr::BufferMemory m_buffer;
-		};
-		std::vector<EmitBuffer> m_staging;
-		btr::BufferMemory m_buffer;
-	};
 private:
 	BoidInfo m_boid_info;
 	btr::BufferMemory m_boid_info_gpu;
 	btr::BufferMemory m_soldier_info_gpu;
 	DoubleBuffer m_brain_gpu;
 	DoubleBuffer m_soldier_gpu;
-	EmitData m_emit_data;
+	std::array<AppendBuffer<SoldierData, 1024>, 2> m_emit_data_cpu;
+	btr::BufferMemory m_soldier_emit_data;
+
 	btr::BufferMemory m_soldier_draw_indiret_gpu;
 	DoubleBuffer m_soldier_LL_head_gpu;
 
