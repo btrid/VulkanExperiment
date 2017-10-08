@@ -21,18 +21,12 @@ class sBoid : public Singleton<sBoid>
 			m_buffer_info[0].range /= 2;
 			m_buffer_info[1].offset += m_buffer_info[0].range;
 		}
-		void swap()
-		{
-//			m_index.increment();
-		}
 
 		vk::DescriptorBufferInfo getOrg()const { return m_buffer.getBufferInfo(); }
 		vk::DescriptorBufferInfo getSrc()const { return m_buffer_info[getSrcIndex()]; }
 		vk::DescriptorBufferInfo getDst()const { return m_buffer_info[getDstIndex()]; }
 		uint32_t getSrcOffset()const { return getSrcIndex() == 1 ? m_buffer_info[0].range : 0; }
 		uint32_t getDstOffset()const { return getSrcIndex() == 0 ? m_buffer_info[0].range : 0; }
-// 		uint32_t getSrcIndex()const { return m_index.get(); }
-// 		uint32_t getDstIndex()const { return m_index.getPrev(); }
 		uint32_t getSrcIndex()const { return sGlobal::Order().getCPUIndex(); }
 		uint32_t getDstIndex()const { return sGlobal::Order().getGPUIndex(); }
 
@@ -139,8 +133,7 @@ private:
 	btr::BufferMemory m_soldier_draw_indiret_gpu;
 	DoubleBuffer m_soldier_LL_head_gpu;
 
-	vk::UniqueRenderPass m_render_pass;
-	std::vector<vk::UniqueFramebuffer> m_framebuffer;
+	std::shared_ptr<RenderPassModule> m_render_pass;
 
 	std::array<vk::UniquePipeline, PIPELINE_NUM> m_pipeline;
 	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
@@ -157,9 +150,9 @@ private:
 	glm::vec3 cell_size;
 
 public:
-	void setup(std::shared_ptr<btr::Context>& loader);
-	vk::CommandBuffer execute(std::shared_ptr<btr::Context>& executer);
-	vk::CommandBuffer draw(std::shared_ptr<btr::Context>& executer);
+	void setup(std::shared_ptr<btr::Context>& context);
+	vk::CommandBuffer execute(std::shared_ptr<btr::Context>& context);
+	vk::CommandBuffer draw(std::shared_ptr<btr::Context>& context);
 
 	vk::PipelineLayout getPipelineLayout(PipelineLayout layout)const { return m_pipeline_layout[layout].get(); }
 	vk::DescriptorSetLayout getDescriptorSetLayout(DescriptorSetLayout desctiptor)const { return m_descriptor_set_layout[desctiptor].get(); }
