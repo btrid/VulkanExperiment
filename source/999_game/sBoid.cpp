@@ -508,27 +508,14 @@ vk::CommandBuffer sBoid::execute(std::shared_ptr<btr::Context>& context)
 			ll_to_transfer.size = m_soldier_LL_head_gpu.getOrg().range;
 			ll_to_transfer.srcAccessMask = vk::AccessFlagBits::eShaderWrite | vk::AccessFlagBits::eShaderRead;
 			ll_to_transfer.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
-			vk::BufferMemoryBarrier indirect_to_transfer;
-			indirect_to_transfer.buffer = m_soldier_draw_indiret_gpu.getBufferInfo().buffer;
-			indirect_to_transfer.offset = m_soldier_draw_indiret_gpu.getBufferInfo().offset;
-			indirect_to_transfer.size = m_soldier_draw_indiret_gpu.getBufferInfo().range;
-			indirect_to_transfer.srcAccessMask = vk::AccessFlagBits::eShaderWrite | vk::AccessFlagBits::eShaderRead;
-			indirect_to_transfer.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
 			std::vector<vk::BufferMemoryBarrier> to_transfer = {
 				ll_to_transfer,
-//				indirect_to_transfer,
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
 
 			cmd.updateBuffer<vk::DrawIndirectCommand>(m_soldier_draw_indiret_gpu.getBufferInfo().buffer, m_soldier_draw_indiret_gpu.getBufferInfo().offset, vk::DrawIndirectCommand(0, 1, 0, 0));
-			cmd.fillBuffer(m_soldier_LL_head_gpu.getDst().buffer, m_soldier_LL_head_gpu.getDst().offset, m_soldier_LL_head_gpu.getDst().range, 0xFFFFFFFF);
+			cmd.fillBuffer(m_soldier_LL_head_gpu.getInfo(sGlobal::Order().getGPUIndex()).buffer, m_soldier_LL_head_gpu.getInfo(sGlobal::Order().getGPUIndex()).offset, m_soldier_LL_head_gpu.getInfo(sGlobal::Order().getGPUIndex()).range, 0xFFFFFFFF);
 
-			vk::BufferMemoryBarrier ll_to_read = ll_to_transfer;
-			ll_to_read.buffer = m_soldier_LL_head_gpu.getOrg().buffer;
-			ll_to_read.offset = m_soldier_LL_head_gpu.getOrg().offset;
-			ll_to_read.size = m_soldier_LL_head_gpu.getOrg().range;
-			ll_to_read.srcAccessMask = ll_to_transfer.dstAccessMask;
-			ll_to_read.dstAccessMask = vk::AccessFlagBits::eShaderWrite | vk::AccessFlagBits::eShaderRead;
 			vk::BufferMemoryBarrier to_read;
 			to_read.buffer = m_soldier_draw_indiret_gpu.getBufferInfo().buffer;
 			to_read.offset = m_soldier_draw_indiret_gpu.getBufferInfo().offset;
@@ -536,7 +523,6 @@ vk::CommandBuffer sBoid::execute(std::shared_ptr<btr::Context>& context)
 			to_read.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
 			to_read.dstAccessMask = vk::AccessFlagBits::eShaderWrite | vk::AccessFlagBits::eShaderRead;
 			std::vector<vk::BufferMemoryBarrier> to_update_barrier = {
-//				ll_to_read,
 				to_read,
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_update_barrier, {});

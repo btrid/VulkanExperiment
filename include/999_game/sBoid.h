@@ -23,12 +23,7 @@ class sBoid : public Singleton<sBoid>
 		}
 
 		vk::DescriptorBufferInfo getOrg()const { return m_buffer.getBufferInfo(); }
-		vk::DescriptorBufferInfo getSrc()const { return m_buffer_info[getSrcIndex()]; }
-		vk::DescriptorBufferInfo getDst()const { return m_buffer_info[getDstIndex()]; }
-		uint32_t getSrcOffset()const { return getSrcIndex() == 1 ? m_buffer_info[0].range : 0; }
-		uint32_t getDstOffset()const { return getSrcIndex() == 0 ? m_buffer_info[0].range : 0; }
-		uint32_t getSrcIndex()const { return sGlobal::Order().getCPUIndex(); }
-		uint32_t getDstIndex()const { return sGlobal::Order().getGPUIndex(); }
+		vk::DescriptorBufferInfo getInfo(uint32_t index)const { return m_buffer_info[index]; }
 
 	};
 	struct BoidInfo
