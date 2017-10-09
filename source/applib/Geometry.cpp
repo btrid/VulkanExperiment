@@ -176,6 +176,38 @@ std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> Geometry::MakeSphere
 
 }
 
+std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> Geometry::MakeFrustom(const Frustom& frustom)
+{
+	std::vector<glm::vec3> v =
+	{
+		frustom.ltf_.xyz(),
+		frustom.rtf_.xyz(),
+		frustom.lbf_.xyz(),
+		frustom.rbf_.xyz(),
+		frustom.ltn_.xyz(),
+		frustom.rtn_.xyz(),
+		frustom.lbn_.xyz(),
+		frustom.rbn_.xyz(),
+	};
+
+	std::vector<glm::uvec3> i =
+	{
+		{ 0, 2, 3 },
+		{ 0, 3, 1 },
+		{ 0, 1, 5 },
+		{ 0, 5, 4 },
+		{ 6, 7, 3 },
+		{ 6, 3, 2 },
+		{ 0, 4, 6 },
+		{ 0, 6, 2 },
+		{ 3, 7, 5 },
+		{ 3, 5, 1 },
+		{ 5, 7, 6 },
+		{ 5, 6, 4 },
+	};
+	return std::tie(v, i);
+}
+
 std::vector<glm::vec3> Geometry::CalcNormal(const std::vector<glm::vec3>& vertex, const std::vector<glm::uvec3>& element)
 {
 	std::vector<glm::vec3> normal(vertex.size());

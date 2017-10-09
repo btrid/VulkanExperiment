@@ -71,7 +71,8 @@ struct DrawHelper : public Singleton<DrawHelper>
 	std::array<btr::BufferMemory, PrimitiveType_MAX> m_mesh_index;
 	std::array<uint32_t, PrimitiveType_MAX> m_mesh_index_num;
 	std::array<std::array<AppendBuffer<DrawCommand, 1024>, PrimitiveType_MAX>, 2> m_draw_cmd;
-
+	std::array<AppendBuffer<GeometryVertex, 1024>, 2> m_draw_dynamic_vertex;
+	
 	struct TextureResource
 	{
 		vk::UniqueImage m_image;
@@ -233,9 +234,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 		{
 			std::vector<vk::BufferMemoryBarrier> barrier =
 			{
-//				m_mesh_vertex[Box].makeMemoryBarrier(vk::AccessFlagBits::eVertexAttributeRead),
 				m_mesh_index[Box].makeMemoryBarrier(vk::AccessFlagBits::eIndexRead),
-//				m_mesh_vertex[SPHERE].makeMemoryBarrier(vk::AccessFlagBits::eVertexAttributeRead),
 				m_mesh_index[SPHERE].makeMemoryBarrier(vk::AccessFlagBits::eIndexRead),
 			};
 			barrier[0].setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
@@ -264,9 +263,6 @@ struct DrawHelper : public Singleton<DrawHelper>
 				m_shader_info[i].setPName("main");
 			}
 		}
-
-		// setup descriptor_set_layout
-		// setup descriptor_set
 
 		// setup pipeline_layout
 		{

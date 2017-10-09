@@ -274,7 +274,6 @@ private:
 	std::shared_ptr<ModelDescriptorModule> m_model_descriptor;
 	std::shared_ptr<RenderPassModule> m_render_pass;
 	std::shared_ptr<ShaderModule> m_shader;
-
 };
 
 int main()

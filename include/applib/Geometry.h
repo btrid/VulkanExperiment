@@ -6,7 +6,13 @@
 #include <btrlib/sGlobal.h>
 #include <btrlib/AllocatedMemory.h>
 #include <btrlib/Context.h>
+#include <btrlib/cCamera.h>
 
+struct GeometryVertex
+{
+	std::vector<glm::vec3> m_vertex;
+	std::vector<glm::uvec3> m_index;
+};
 struct Geometry
 {
 	struct Resource
@@ -22,6 +28,7 @@ struct Geometry
 	static std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> MakeBox(float edge = 1.f);
 	static std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> MakePlane(float edge /*= 1.f*/);
 	static std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> MakeSphere(uint32_t quarity = 1);
+	static std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> MakeFrustom(const Frustom& frustom);
 	static std::vector<glm::vec3> CalcNormal(const std::vector<glm::vec3>& vertex, const std::vector<glm::uvec3>& element);
 	static std::tuple<std::vector<glm::vec3>, std::vector<glm::vec3>> createOrthoNormalBasis(const std::vector<glm::vec3>& normal);
 

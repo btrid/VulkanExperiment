@@ -291,7 +291,7 @@ struct CameraGPU
 
 	std::array<Plane, 6> m_plane;
 };
-struct CameraFrustom
+struct CameraFrustomGPU
 {
 	void setup(const cCamera& camera)
 	{

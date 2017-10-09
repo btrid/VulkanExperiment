@@ -22,7 +22,7 @@ struct sCameraManager : public Singleton<sCameraManager>
 	};
 
 	btr::UpdateBuffer<CameraGPU> m_camera;
-	btr::UpdateBuffer<CameraFrustom> m_camera_frustom;
+	btr::UpdateBuffer<CameraFrustomGPU> m_camera_frustom;
 
 	std::array<vk::DescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
 	std::array<vk::DescriptorSet, DESCRIPTOR_SET_NUM> m_descriptor_set;
@@ -109,7 +109,7 @@ struct sCameraManager : public Singleton<sCameraManager>
 		auto* camera = cCamera::sCamera::Order().getCameraList()[0];
 		CameraGPU camera_GPU;
 		camera_GPU.setup(*camera);
-		CameraFrustom camera_frustom;
+		CameraFrustomGPU camera_frustom;
 		camera_frustom.setup(*camera);
 
 		m_camera.subupdate(&camera_GPU, 1, 0, context->getGPUFrame());
