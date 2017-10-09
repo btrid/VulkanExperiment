@@ -81,7 +81,6 @@
     <ClInclude Include="..\..\include\btrlib\Context.h" />
     <ClInclude Include="..\..\include\btrlib\cStopWatch.h" />
     <ClInclude Include="..\..\include\btrlib\cThreadPool.h" />
-    <ClInclude Include="..\..\include\btrlib\BuffersMemory.h" />
     <ClInclude Include="..\..\include\btrlib\GPU.h" />
     <ClInclude Include="..\..\include\btrlib\Material.h" />
     <ClInclude Include="..\..\include\btrlib\Module.h" />
