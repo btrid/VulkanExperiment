@@ -1,10 +1,5 @@
 #version 450
 
-//#pragma optionNV (unroll none)
-//#pragma optionNV (inline all)
-//#pragma optionNV(fastmath on)
-//#pragma optionNV(strict on)
-
 #extension GL_GOOGLE_cpp_style_line_directive : require
 
 #include <btrlib/ConvertDimension.glsl>
@@ -16,16 +11,11 @@
 #include </Bullet.glsl>
 #define SETPOINT_MAP 2
 #include </Map.glsl>
+#define USE_SYSTEM 3
+#include <applib/System.glsl>
 
 
 layout (local_size_x = 32, local_size_y = 32) in;
-
-
-layout(push_constant) uniform UpdateConstantBlock
-{
-	float m_deltatime;
-	uint m_double_buffer_dst_index;
-} constant;
 
 void main()
 {
@@ -36,9 +26,9 @@ void main()
 		return;
 	}
 
-	uint enemy_offset = (u_boid_info.m_soldier_max/2) * (constant.m_double_buffer_dst_index);
-	uint bullet_offset = (u_bullet_info.m_max_num/2) * (constant.m_double_buffer_dst_index);
-	uint map_offset = desc.m_cell_num.x*desc.m_cell_num.y * (constant.m_double_buffer_dst_index);
+	uint enemy_offset = (u_boid_info.m_soldier_max) * (u_system_data.m_gpu_index);
+	uint bullet_offset = (u_bullet_info.m_max_num) * (u_system_data.m_gpu_index);
+	uint map_offset = desc.m_cell_num.x*desc.m_cell_num.y * (u_system_data.m_gpu_index);
 
 	uint map_id = convert2DTo1D(map_index, desc.m_cell_num.xy);
 	for(uint i = b_soldier_head[map_id + map_offset]; i != 0xFFFFFFFF;)

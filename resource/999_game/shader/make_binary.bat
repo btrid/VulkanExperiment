@@ -30,9 +30,9 @@ glslc.exe -w -I Include -I ../../applib/shader/include -I ../../btrlib/shader/in
 glslc.exe -w -I Include -I ../../applib/shader/include -I ../../btrlib/shader/include -x glsl -fshader-stage=vertex	-o binary\\BulletRender.vert.spv BulletRender.vert
 glslc.exe -w -I Include -I ../../applib/shader/include -I ../../btrlib/shader/include -x glsl -fshader-stage=fragment	-o binary\\BulletRender.frag.spv BulletRender.frag
 
-glslc.exe -w -I Include -I ../../btrlib/shader/include -x glsl -fshader-stage=compute	-o binary\\CollisionTest.comp.spv CollisionTest.comp
+glslc.exe -w -I Include -I ../../applib/shader/include -I ../../btrlib/shader/include -x glsl -fshader-stage=compute	-o binary\\CollisionTest.comp.spv CollisionTest.comp
 
-glslc.exe -w -I Include -I ../../btrlib/shader/include -x glsl -fshader-stage=compute	-o binary\\FloorUpdateDamage.comp.spv FloorUpdateDamage.comp
+glslc.exe -w -I Include -I ../../applib/shader/include -I ../../btrlib/shader/include -x glsl -fshader-stage=compute	-o binary\\FloorUpdateDamage.comp.spv FloorUpdateDamage.comp
 
-glslc.exe -w -I Include -I ../../applib/shader/include -I ../../btrlib/shader/include -x glsl -fshader-stage=vertex		-o binary\\ModelRender.vert.spv ModelRender.vert
-glslc.exe -w -I Include -I ../../applib/shader/include -I ../../btrlib/shader/include -x glsl -fshader-stage=fragment	-o binary\\ModelRender.frag.spv ModelRender.frag
+glslc.exe -w -I Include -I ../../applib/shader/include -I ../../applib/shader/include -I ../../btrlib/shader/include -x glsl -fshader-stage=vertex		-o binary\\ModelRender.vert.spv ModelRender.vert
+glslc.exe -w -I Include -I ../../applib/shader/include -I ../../applib/shader/include -I ../../btrlib/shader/include -x glsl -fshader-stage=fragment	-o binary\\ModelRender.frag.spv ModelRender.frag

@@ -38,7 +38,7 @@ class sBoid : public Singleton<sBoid>
 		BoidInfo()
 		{
 			m_brain_max = 256;
-			m_soldier_max = 8192;
+			m_soldier_max = 8192/2;
 			m_soldier_info_max = 16;
 			m_soldier_emit_max = 1024;
 

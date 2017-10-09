@@ -74,7 +74,7 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context)
 
 		{
 			btr::AllocatedMemory::Descriptor desc;
-			desc.size = sizeof(SoldierData) * m_boid_info.m_soldier_max;
+			desc.size = sizeof(SoldierData) * m_boid_info.m_soldier_max*2;
 			auto soldier_gpu = context->m_storage_memory.allocateMemory(desc);
 
 			cmd->fillBuffer(soldier_gpu.getBufferInfo().buffer, soldier_gpu.getBufferInfo().offset, soldier_gpu.getBufferInfo().range, 0);
@@ -518,7 +518,7 @@ vk::CommandBuffer sBoid::execute(std::shared_ptr<btr::Context>& context)
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_UPDATE].get(), 1, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_MAP), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_UPDATE].get(), 2, sSystem::Order().getSystemDescriptor().getSet(), {});
 
-			auto groups = app::calcDipatchGroups(glm::uvec3(m_boid_info.m_soldier_max / 2, 1, 1), glm::uvec3(1024, 1, 1));
+			auto groups = app::calcDipatchGroups(glm::uvec3(m_boid_info.m_soldier_max, 1, 1), glm::uvec3(1024, 1, 1));
 			cmd.dispatch(groups.x, groups.y, groups.z);
 		}
 

@@ -25,7 +25,7 @@ layout(location=1) out VSOUT{
 
 void main()
 {
-	uint offset = u_system_data.m_gpu_index * u_boid_info.m_soldier_max/2;
+	uint offset = u_system_data.m_gpu_index * u_boid_info.m_soldier_max;
 	vec3 s_pos = b_soldier[gl_VertexIndex + offset].m_pos.xyz;
 	vec4 pos = vec4(s_pos.xyz + vec3(0., 0.1, 0.), 1.0);
 	gl_Position = u_camera[0].u_projection * u_camera[0].u_view * pos;

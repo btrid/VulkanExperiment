@@ -424,7 +424,7 @@ int main()
 				job.mFinish =
 					[&]()
 				{
-//					render_cmds[8] = sCollisionSystem::Order().execute(context);
+					render_cmds[8] = sCollisionSystem::Order().execute(context);
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);

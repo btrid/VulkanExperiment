@@ -29,8 +29,8 @@ void main()
 	if(index >= u_boid_info.m_soldier_max){
 		return;
 	}
-	uint src_offset = (1-u_system_data.m_gpu_index) * u_boid_info.m_soldier_max/2;
-	uint dst_offset = u_system_data.m_gpu_index * u_boid_info.m_soldier_max/2;
+	uint src_offset = (1-u_system_data.m_gpu_index) * u_boid_info.m_soldier_max;
+	uint dst_offset = u_system_data.m_gpu_index * u_boid_info.m_soldier_max;
 	float deltatime = u_system_data.m_deltatime;
 
 	SoldierData soldier = b_soldier[src_offset + index];
