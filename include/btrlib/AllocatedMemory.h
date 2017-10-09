@@ -540,4 +540,124 @@ private:
 
 };
 
+/**
+ buffer{
+   int a;
+   float b;
+   char c[];
+ }; みたいな
+*/
+template<typename T, typename U>
+struct UpdateBuffer2
+{
+	void setup(UpdateBufferDescriptor& desc)
+	{
+		assert(!m_device_buffer.isValid());
+		assert(desc.device_memory.isValid());
+		assert(btr::isOn(desc.device_memory.getBufferCreateInfo().usage, vk::BufferUsageFlagBits::eTransferDst));
+
+		m_device_buffer = desc.device_memory.allocateMemory(sizeof(T) + sizeof(U)*desc.element_num);
+		m_staging_buffer = desc.staging_memory.allocateMemory((sizeof(T) + sizeof(U)*desc.element_num)*desc.frame_max);
+		m_element_max = desc.element_num;
+		m_area.resize(desc.frame_max);
+
+		m_precompute.size_T = sizeof(T);
+		m_precompute.size_buffer = sizeof(T) + sizeof(U)*desc.element_num;
+	}
+
+	void subupdate(const U* data, vk::DeviceSize data_num, uint32_t offset_num, uint32_t cpu_index)
+	{
+		auto data_size = sizeof(U)*data_num;
+		auto* ptr = reinterpret_cast<U*>(m_staging_buffer.getMappedPtr<char>(cpu_index*m_precompute.size_buffer + sizeof(T)))+offset_num;
+		memcpy_s(ptr, data_size, data, data_size);
+
+		flushSubBuffer(data_num, offset_num, cpu_index);
+	}
+	void subupdate(const T& data, uint32_t cpu_index)
+	{
+		auto* ptr = m_staging_buffer.getMappedPtr<T>(cpu_index * (sizeof(T) + sizeof(U)*desc.element_num));
+		memcpy_s(ptr, data_size, data, data_size);
+
+		flushSubBuffer(data_num, offset_num, cpu_index);
+	}
+
+	/**
+	* subupdateのstagingバッファを自分で更新する
+	* 使い終わったらflushSubBufferを呼ぶ
+	*/
+	T* mapSubBuffer(uint32_t cpu_index, uint32_t offset_num = 0)
+	{
+		return m_staging_buffer.getMappedPtr<T>(cpu_index*m_element_max + offset_num);
+	}
+
+	/**
+	　	 * 使った部分をマークする
+		 */
+	void flushSubBuffer(vk::DeviceSize data_num, uint32_t offset_num, uint32_t cpu_index)
+	{
+		auto data_size = sizeof(T)*data_num;
+		auto& area = m_area[cpu_index];
+		area.m_begin = std::min(sizeof(T)*offset_num, area.m_begin);
+		area.m_end = std::max(sizeof(T)*offset_num + data_size, area.m_end);
+	}
+
+	vk::BufferCopy update(uint32_t cpu_index)
+	{
+		auto& area = m_area[cpu_index];
+		if (area.isZero()) {
+			// subupdateを読んでいないのでバグの可能性高し
+			assert(false);
+			return vk::BufferCopy();
+		}
+
+		vk::BufferCopy copy_info;
+		copy_info.setSize(area.m_end - area.m_begin);
+		copy_info.setSrcOffset(m_staging_buffer.getBufferInfo().offset + sizeof(T)*m_element_max*cpu_index + area.m_begin);
+		copy_info.setDstOffset(m_device_buffer.getBufferInfo().offset + area.m_begin);
+
+		area.reset();
+
+		return copy_info;
+	}
+
+	vk::DescriptorBufferInfo getBufferInfo()const { return m_device_buffer.getBufferInfo(); }
+	vk::DescriptorBufferInfo getStagingBufferInfo()const { return m_staging_buffer.getBufferInfo(); }
+	BufferMemory& getBufferMemory() { return m_device_buffer; }
+	const BufferMemory& getBufferMemory()const { return m_device_buffer; }
+
+private:
+	BufferMemory m_device_buffer;
+	BufferMemory m_staging_buffer;
+	struct Area
+	{
+		vk::DeviceSize m_begin;
+		vk::DeviceSize m_end;
+
+		Area()
+		{
+			reset();
+		}
+		void reset()
+		{
+			m_begin = ~vk::DeviceSize(0);
+			m_end = vk::DeviceSize(0);
+		}
+
+		bool isZero()const
+		{
+			return m_end < m_begin;
+		}
+	};
+	std::vector<Area> m_area;
+	uint32_t m_element_max;
+	struct Precompute
+	{
+		uint32_t size_T;
+		uint32_t size_Uarray;
+		uint32_t size_buffer;
+	};
+	Precompute m_precompute;
+
+};
+
 }

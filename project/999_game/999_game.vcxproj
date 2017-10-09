@@ -85,7 +85,8 @@
     <ClInclude Include="..\..\include\999_game\sBulletSystem.h" />
     <ClInclude Include="..\..\include\999_game\sCollisionSystem.h" />
     <ClInclude Include="..\..\include\999_game\sScene.h" />
-    <ClInclude Include="..\..\include\999_game\MapVoxelize.h" />
+    <ClInclude Include="..\..\include\999_game\VoxelizeBullet.h" />
+    <ClInclude Include="..\..\include\999_game\VoxelizeMap.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

@@ -59,7 +59,10 @@
     <ClInclude Include="..\..\include\999_game\sScene.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\999_game\MapVoxelize.h">
+    <ClInclude Include="..\..\include\999_game\VoxelizeMap.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\999_game\VoxelizeBullet.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>

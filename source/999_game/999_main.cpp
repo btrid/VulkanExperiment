@@ -31,7 +31,8 @@
 #include <999_game/sBoid.h>
 #include <999_game/sCollisionSystem.h>
 #include <999_game/sScene.h>
-#include <999_game/MapVoxelize.h>
+#include <999_game/VoxelizeMap.h>
+#include <999_game/VoxelizeBullet.h>
 
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
@@ -307,7 +308,7 @@ int main()
 		model.load(context, "..\\..\\resource\\tiny.x");
 
 		sScene::Order().setup(context);
-		sScene::Order().getVoxel().createPipeline<MapVoxelize>(context);
+		sScene::Order().getVoxel().createPipeline<VoxelizeMap>(context);
 		sBoid::Order().setup(context);
 		sBulletSystem::Order().setup(context);
 		sCollisionSystem::Order().setup(context);

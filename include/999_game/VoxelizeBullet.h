@@ -4,7 +4,7 @@
 #include <btrlib/Context.h>
 #include <999_game/sScene.h>
 
-struct MapVoxelize : Voxelize
+struct VoxelizeBullet : Voxelize
 {
 	enum SHADER
 	{
