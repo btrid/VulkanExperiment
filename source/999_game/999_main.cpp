@@ -117,7 +117,7 @@ struct Player
 
 struct ModelGIPipelineComponent : public ModelDrawPipelineComponent
 {
-	ModelGIPipelineComponent(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderPassModule>& render_pass, const std::shared_ptr<ShaderModule>& shader)
+	ModelGIPipelineComponent(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderBackbufferModule>& render_pass, const std::shared_ptr<ShaderModule>& shader)
 	{
 		auto& device = context->m_device;
 		m_render_pass = render_pass;
@@ -266,13 +266,13 @@ struct ModelGIPipelineComponent : public ModelDrawPipelineComponent
 
 		return render;
 	}
-	virtual const std::shared_ptr<RenderPassModule>& getRenderPassModule()const override { return m_render_pass; }
+	virtual const std::shared_ptr<RenderBackbufferModule>& getRenderPassModule()const override { return m_render_pass; }
 
 private:
 	vk::UniquePipeline m_pipeline;
 	vk::UniquePipelineLayout m_pipeline_layout;
 	std::shared_ptr<ModelDescriptorModule> m_model_descriptor;
-	std::shared_ptr<RenderPassModule> m_render_pass;
+	std::shared_ptr<RenderBackbufferModule> m_render_pass;
 	std::shared_ptr<ShaderModule> m_shader;
 };
 
@@ -313,7 +313,7 @@ int main()
 		sCollisionSystem::Order().setup(context);
 
 		{
-			auto render_pass = std::make_shared<RenderPassModule>(context);
+			auto render_pass = std::make_shared<RenderBackbufferModule>(context);
 			std::string path = btr::getResourceAppPath() + "shader\\binary\\";
 			std::vector<ShaderDescriptor> shader_desc =
 			{

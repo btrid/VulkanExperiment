@@ -47,8 +47,8 @@ private:
 		cDevice m_use_device;
 		uint32_t m_backbuffer_index;
 
-		std::vector < vk::CommandBuffer > m_cmd_present_to_render;
-		std::vector < vk::CommandBuffer > m_cmd_render_to_present;
+		std::vector <vk::UniqueCommandBuffer> m_cmd_present_to_render;
+		std::vector <vk::UniqueCommandBuffer> m_cmd_render_to_present;
 
 		vk::UniqueSemaphore m_swapbuffer_semaphore;
 		vk::UniqueSemaphore m_submit_semaphore;

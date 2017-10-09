@@ -150,7 +150,7 @@ struct Model : public Drawable
 struct ModelDrawPipelineComponent : public PipelineComponent
 {
 	virtual std::shared_ptr<ModelRender> createRender(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<Model>& model) = 0;
-	virtual const std::shared_ptr<RenderPassModule>& getRenderPassModule()const = 0;
+	virtual const std::shared_ptr<RenderBackbufferModule>& getRenderPassModule()const = 0;
 };
 
 

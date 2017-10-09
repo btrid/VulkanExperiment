@@ -57,7 +57,7 @@ struct VoxelPipeline
 		PIPELINE_NUM,
 	};
 
-	std::shared_ptr<RenderPassModule> m_draw_render_pass;
+	std::shared_ptr<RenderBackbufferModule> m_draw_render_pass;
 
 	std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_list;
 	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_stage_info;
@@ -242,7 +242,7 @@ struct VoxelPipeline
 
 		// レンダーパス
 		{
-			m_draw_render_pass = std::make_shared<RenderPassModule>(context);
+			m_draw_render_pass = std::make_shared<RenderBackbufferModule>(context);
 		}
 
 

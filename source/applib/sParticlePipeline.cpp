@@ -10,7 +10,7 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Context>& context)
 
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 	{
-		m_render_pass = std::make_shared<RenderPassModule>(context);
+		m_render_pass = std::make_shared<RenderBackbufferModule>(context);
 	}
 	{
 		{

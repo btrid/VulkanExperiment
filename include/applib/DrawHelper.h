@@ -90,73 +90,6 @@ struct DrawHelper : public Singleton<DrawHelper>
 	void setup(std::shared_ptr<btr::Context>& context)
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-		{
-			// レンダーパス
-			std::vector<vk::AttachmentReference> colorRef =
-			{
-				vk::AttachmentReference()
-				.setAttachment(0)
-				.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
-			};
-			vk::AttachmentReference depth_ref;
-			depth_ref.setAttachment(1);
-			depth_ref.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-
-			vk::SubpassDescription subpass;
-			subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
-			subpass.setInputAttachmentCount(0);
-			subpass.setPInputAttachments(nullptr);
-			subpass.setColorAttachmentCount((uint32_t)colorRef.size());
-			subpass.setPColorAttachments(colorRef.data());
-			subpass.setPDepthStencilAttachment(&depth_ref);
-			// render pass
-			std::vector<vk::AttachmentDescription> attachDescription = 
-			{
-				vk::AttachmentDescription()
-				.setFormat(context->m_window->getSwapchain().m_surface_format.format)
-				.setSamples(vk::SampleCountFlagBits::e1)
-				.setLoadOp(vk::AttachmentLoadOp::eLoad)
-				.setStoreOp(vk::AttachmentStoreOp::eStore)
-				.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
-				.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
-				vk::AttachmentDescription()
-				.setFormat(vk::Format::eD32Sfloat)
-				.setSamples(vk::SampleCountFlagBits::e1)
-				.setLoadOp(vk::AttachmentLoadOp::eLoad)
-				.setStoreOp(vk::AttachmentStoreOp::eStore)
-				.setInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
-				.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
-
-			};
-			vk::RenderPassCreateInfo renderpass_info = vk::RenderPassCreateInfo()
-				.setAttachmentCount(attachDescription.size())
-				.setPAttachments(attachDescription.data())
-				.setSubpassCount(1)
-				.setPSubpasses(&subpass);
-
-			m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
-
-			// フレームバッファ
-			m_framebuffer.resize(context->m_window->getSwapchain().getBackbufferNum());
-			{
-				std::vector<vk::ImageView> view(2);
-
-				vk::FramebufferCreateInfo framebuffer_info;
-				framebuffer_info.setRenderPass(m_render_pass.get());
-				framebuffer_info.setAttachmentCount((uint32_t)view.size());
-				framebuffer_info.setPAttachments(view.data());
-				framebuffer_info.setWidth(context->m_window->getClientSize().x);
-				framebuffer_info.setHeight(context->m_window->getClientSize().y);
-				framebuffer_info.setLayers(1);
-
-				for (size_t i = 0; i < m_framebuffer.size(); i++) {
-					view[0] = context->m_window->getSwapchain().m_backbuffer[i].m_view;
-					view[1] = context->m_window->getSwapchain().m_depth.m_view;
-					m_framebuffer[i] = context->m_device->createFramebufferUnique(framebuffer_info);
-				}
-			}
-
-		}
 
 
 		{
@@ -229,7 +162,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 				copy.setSize(desc.size);
 				cmd->copyBuffer(staging.getBufferInfo().buffer, m_mesh_index[SPHERE].getBufferInfo().buffer, copy);
 			}
-			m_mesh_index_num[SPHERE] = i.size()*3;
+			m_mesh_index_num[SPHERE] = i.size() * 3;
 		}
 		{
 			std::vector<vk::BufferMemoryBarrier> barrier =
@@ -241,6 +174,76 @@ struct DrawHelper : public Singleton<DrawHelper>
 			barrier[1].setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexInput, {}, {}, barrier, {});
 		}
+
+		{
+			// レンダーパス
+			std::vector<vk::AttachmentReference> colorRef =
+			{
+				vk::AttachmentReference()
+				.setAttachment(0)
+				.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
+			};
+			vk::AttachmentReference depth_ref;
+			depth_ref.setAttachment(1);
+			depth_ref.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+
+			vk::SubpassDescription subpass;
+			subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+			subpass.setInputAttachmentCount(0);
+			subpass.setPInputAttachments(nullptr);
+			subpass.setColorAttachmentCount((uint32_t)colorRef.size());
+			subpass.setPColorAttachments(colorRef.data());
+			subpass.setPDepthStencilAttachment(&depth_ref);
+			// render pass
+			std::vector<vk::AttachmentDescription> attachDescription = 
+			{
+				vk::AttachmentDescription()
+				.setFormat(context->m_window->getSwapchain().m_surface_format.format)
+				.setSamples(vk::SampleCountFlagBits::e1)
+				.setLoadOp(vk::AttachmentLoadOp::eLoad)
+				.setStoreOp(vk::AttachmentStoreOp::eStore)
+				.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
+				.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
+				vk::AttachmentDescription()
+				.setFormat(vk::Format::eD32Sfloat)
+				.setSamples(vk::SampleCountFlagBits::e1)
+				.setLoadOp(vk::AttachmentLoadOp::eLoad)
+				.setStoreOp(vk::AttachmentStoreOp::eStore)
+				.setInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
+				.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
+
+			};
+			vk::RenderPassCreateInfo renderpass_info = vk::RenderPassCreateInfo()
+				.setAttachmentCount(attachDescription.size())
+				.setPAttachments(attachDescription.data())
+				.setSubpassCount(1)
+				.setPSubpasses(&subpass);
+
+			m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
+
+			// フレームバッファ
+			m_framebuffer.resize(context->m_window->getSwapchain().getBackbufferNum());
+			{
+				std::vector<vk::ImageView> view(2);
+
+				vk::FramebufferCreateInfo framebuffer_info;
+				framebuffer_info.setRenderPass(m_render_pass.get());
+				framebuffer_info.setAttachmentCount((uint32_t)view.size());
+				framebuffer_info.setPAttachments(view.data());
+				framebuffer_info.setWidth(context->m_window->getClientSize().x);
+				framebuffer_info.setHeight(context->m_window->getClientSize().y);
+				framebuffer_info.setLayers(1);
+
+				for (size_t i = 0; i < m_framebuffer.size(); i++) {
+					view[0] = context->m_window->getSwapchain().m_backbuffer[i].m_view;
+					view[1] = context->m_window->getSwapchain().m_depth.m_view;
+					m_framebuffer[i] = context->m_device->createFramebufferUnique(framebuffer_info);
+				}
+			}
+
+		}
+
+
 		
 		// setup shader
 		{

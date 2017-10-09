@@ -10,7 +10,17 @@ struct Drawable : public Component {};
 
 struct RenderPassModule
 {
-	RenderPassModule(const std::shared_ptr<btr::Context>& context)
+	virtual vk::RenderPass getRenderPass()const = 0;
+	virtual vk::Framebuffer getFramebuffer(uint32_t index)const = 0;
+};
+
+struct RenderOffscreenModule : public RenderPassModule
+{
+
+};
+struct RenderBackbufferModule : public RenderPassModule
+{
+	RenderBackbufferModule(const std::shared_ptr<btr::Context>& context)
 	{
 		auto& device = context->m_device;
 		// レンダーパス
@@ -80,8 +90,8 @@ struct RenderPassModule
 		}
 	}
 
-	virtual vk::RenderPass getRenderPass()const { return m_render_pass.get(); }
-	virtual vk::Framebuffer getFramebuffer(uint32_t index)const { return m_framebuffer[index].get(); }
+	virtual vk::RenderPass getRenderPass()const override { return m_render_pass.get(); }
+	virtual vk::Framebuffer getFramebuffer(uint32_t index)const override { return m_framebuffer[index].get(); }
 
 private:
 	vk::UniqueRenderPass m_render_pass;

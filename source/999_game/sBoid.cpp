@@ -8,7 +8,7 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context)
 
 	// レンダーパス
 	{
-		m_render_pass = std::make_shared<RenderPassModule>(context);
+		m_render_pass = std::make_shared<RenderBackbufferModule>(context);
 	}
 
 	{
