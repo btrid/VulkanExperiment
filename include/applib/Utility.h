@@ -1,5 +1,12 @@
 #pragma once
 
+#include <array>
+#include <vector>
+#include <atomic>
+#include <memory>
+
+// マルチスレッドからpush, reserveを呼べる固定長バッファ
+// get / push reserve 非スレッドセーフ
 template<typename T, uint32_t N>
 struct AppendBuffer
 {
@@ -13,7 +20,7 @@ struct AppendBuffer
 	T* reserve(size_t num)
 	{
 		auto index = m_offset.fetch_add(num);
-		assert(index + num < N);
+		assert(index + num < N); // 取りすぎ
 
 		return m_buffer.data() + index;
 	}

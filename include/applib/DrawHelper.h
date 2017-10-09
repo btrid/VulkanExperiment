@@ -9,6 +9,7 @@
 #include <btrlib/Singleton.h>
 #include <applib/App.h>
 #include <applib/Geometry.h>
+#include <applib/Utility.h>
 #include <applib/sCameraManager.h>
 
 struct DrawCommand
@@ -69,7 +70,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 	std::array<btr::BufferMemory, PrimitiveType_MAX> m_mesh_vertex;
 	std::array<btr::BufferMemory, PrimitiveType_MAX> m_mesh_index;
 	std::array<uint32_t, PrimitiveType_MAX> m_mesh_index_num;
-	std::vector<std::array<std::array<std::vector<DrawCommand>, PrimitiveType_MAX>, 2>> m_draw_cmd;
+	std::array<std::array<AppendBuffer<DrawCommand, 1024>, PrimitiveType_MAX>, 2> m_draw_cmd;
 
 	struct TextureResource
 	{
@@ -80,14 +81,14 @@ struct DrawHelper : public Singleton<DrawHelper>
 	};
 	TextureResource m_whilte_texture; //!< ダミーテクスチャ
 	TextureResource& getWhiteTexture() { return m_whilte_texture; }
+
 	DrawHelper()
 	{
 
 	}
-	void setup(std::shared_ptr<btr::Context>& loader)
+	void setup(std::shared_ptr<btr::Context>& context)
 	{
-		auto cmd = loader->m_cmd_pool->allocCmdTempolary(0);
-		m_draw_cmd.resize(sGlobal::Order().getThreadPool().getThreadNum()+1);
+		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 		{
 			// レンダーパス
 			std::vector<vk::AttachmentReference> colorRef =
@@ -111,7 +112,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 			std::vector<vk::AttachmentDescription> attachDescription = 
 			{
 				vk::AttachmentDescription()
-				.setFormat(loader->m_window->getSwapchain().m_surface_format.format)
+				.setFormat(context->m_window->getSwapchain().m_surface_format.format)
 				.setSamples(vk::SampleCountFlagBits::e1)
 				.setLoadOp(vk::AttachmentLoadOp::eLoad)
 				.setStoreOp(vk::AttachmentStoreOp::eStore)
@@ -132,10 +133,10 @@ struct DrawHelper : public Singleton<DrawHelper>
 				.setSubpassCount(1)
 				.setPSubpasses(&subpass);
 
-			m_render_pass = loader->m_device->createRenderPassUnique(renderpass_info);
+			m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
 
 			// フレームバッファ
-			m_framebuffer.resize(loader->m_window->getSwapchain().getBackbufferNum());
+			m_framebuffer.resize(context->m_window->getSwapchain().getBackbufferNum());
 			{
 				std::vector<vk::ImageView> view(2);
 
@@ -143,14 +144,14 @@ struct DrawHelper : public Singleton<DrawHelper>
 				framebuffer_info.setRenderPass(m_render_pass.get());
 				framebuffer_info.setAttachmentCount((uint32_t)view.size());
 				framebuffer_info.setPAttachments(view.data());
-				framebuffer_info.setWidth(loader->m_window->getClientSize().x);
-				framebuffer_info.setHeight(loader->m_window->getClientSize().y);
+				framebuffer_info.setWidth(context->m_window->getClientSize().x);
+				framebuffer_info.setHeight(context->m_window->getClientSize().y);
 				framebuffer_info.setLayers(1);
 
 				for (size_t i = 0; i < m_framebuffer.size(); i++) {
-					view[0] = loader->m_window->getSwapchain().m_backbuffer[i].m_view;
-					view[1] = loader->m_window->getSwapchain().m_depth.m_view;
-					m_framebuffer[i] = loader->m_device->createFramebufferUnique(framebuffer_info);
+					view[0] = context->m_window->getSwapchain().m_backbuffer[i].m_view;
+					view[1] = context->m_window->getSwapchain().m_depth.m_view;
+					m_framebuffer[i] = context->m_device->createFramebufferUnique(framebuffer_info);
 				}
 			}
 
@@ -164,9 +165,9 @@ struct DrawHelper : public Singleton<DrawHelper>
 			{
 				btr::BufferMemoryDescriptor desc;
 				desc.size = vector_sizeof(v);
-				m_mesh_vertex[Box] = loader->m_vertex_memory.allocateMemory(desc);
+				m_mesh_vertex[Box] = context->m_vertex_memory.allocateMemory(desc);
 				desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
-				auto staging = loader->m_staging_memory.allocateMemory(desc);
+				auto staging = context->m_staging_memory.allocateMemory(desc);
 				memcpy(staging.getMappedPtr(), v.data(), desc.size);
 
 				vk::BufferCopy copy;
@@ -179,9 +180,9 @@ struct DrawHelper : public Singleton<DrawHelper>
 			{
 				btr::BufferMemoryDescriptor desc;
 				desc.size = vector_sizeof(i);
-				m_mesh_index[Box] = loader->m_vertex_memory.allocateMemory(desc);
+				m_mesh_index[Box] = context->m_vertex_memory.allocateMemory(desc);
 				desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
-				auto staging = loader->m_staging_memory.allocateMemory(desc);
+				auto staging = context->m_staging_memory.allocateMemory(desc);
 				memcpy(staging.getMappedPtr(), i.data(), desc.size);
 
 				vk::BufferCopy copy;
@@ -201,9 +202,9 @@ struct DrawHelper : public Singleton<DrawHelper>
 			{
 				btr::BufferMemoryDescriptor desc;
 				desc.size = vector_sizeof(v);
-				m_mesh_vertex[SPHERE] = loader->m_vertex_memory.allocateMemory(desc);
+				m_mesh_vertex[SPHERE] = context->m_vertex_memory.allocateMemory(desc);
 				desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
-				auto staging = loader->m_staging_memory.allocateMemory(desc);
+				auto staging = context->m_staging_memory.allocateMemory(desc);
 				memcpy(staging.getMappedPtr(), v.data(), desc.size);
 
 				vk::BufferCopy copy;
@@ -216,9 +217,9 @@ struct DrawHelper : public Singleton<DrawHelper>
 			{
 				btr::BufferMemoryDescriptor desc;
 				desc.size = vector_sizeof(i);
-				m_mesh_index[SPHERE] = loader->m_vertex_memory.allocateMemory(desc);
+				m_mesh_index[SPHERE] = context->m_vertex_memory.allocateMemory(desc);
 				desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
-				auto staging = loader->m_staging_memory.allocateMemory(desc);
+				auto staging = context->m_staging_memory.allocateMemory(desc);
 				memcpy(staging.getMappedPtr(), i.data(), desc.size);
 
 				vk::BufferCopy copy;
@@ -257,7 +258,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 
 			std::string path = btr::getResourceLibPath() + "shader\\binary\\";
 			for (size_t i = 0; i < SHADER_NUM; i++) {
-				m_shader_module[i] = loadShaderUnique(loader->m_device.getHandle(), path + shader_info[i].name);
+				m_shader_module[i] = loadShaderUnique(context->m_device.getHandle(), path + shader_info[i].name);
 				m_shader_info[i].setModule(m_shader_module[i].get());
 				m_shader_info[i].setStage(shader_info[i].stage);
 				m_shader_info[i].setPName("main");
@@ -282,7 +283,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 			pipeline_layout_info.setPSetLayouts(layouts.data());
 			pipeline_layout_info.setPushConstantRangeCount(array_length(constant));
 			pipeline_layout_info.setPPushConstantRanges(constant);
-			m_pipeline_layout[PIPELINE_LAYOUT_DRAW_PRIMITIVE] = loader->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PIPELINE_LAYOUT_DRAW_PRIMITIVE] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
 		// setup pipeline
@@ -376,7 +377,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			auto pipelines = loader->m_device->createGraphicsPipelinesUnique(loader->m_cache.get(), graphics_pipeline_info);
+			auto pipelines = context->m_device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info);
 			m_pipeline[PIPELINE_DRAW_PRIMITIVE] = std::move(pipelines[0]);
 
 		}
@@ -393,20 +394,20 @@ struct DrawHelper : public Singleton<DrawHelper>
 		image_info.initialLayout = vk::ImageLayout::eUndefined;
 		image_info.extent = { 1, 1, 1 };
 		image_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
-		auto image = loader->m_device->createImageUnique(image_info);
+		auto image = context->m_device->createImageUnique(image_info);
 
-		vk::MemoryRequirements memory_request = loader->m_device->getImageMemoryRequirements(image.get());
+		vk::MemoryRequirements memory_request = context->m_device->getImageMemoryRequirements(image.get());
 		vk::MemoryAllocateInfo memory_alloc_info;
 		memory_alloc_info.allocationSize = memory_request.size;
-		memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(loader->m_gpu.getHandle(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+		memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(context->m_gpu.getHandle(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-		auto image_memory = loader->m_device->allocateMemoryUnique(memory_alloc_info);
-		loader->m_device->bindImageMemory(image.get(), image_memory.get(), 0);
+		auto image_memory = context->m_device->allocateMemoryUnique(memory_alloc_info);
+		context->m_device->bindImageMemory(image.get(), image_memory.get(), 0);
 
 		btr::BufferMemoryDescriptor staging_desc;
 		staging_desc.size = 4;
 		staging_desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
-		auto staging_buffer = loader->m_staging_memory.allocateMemory(staging_desc);
+		auto staging_buffer = context->m_staging_memory.allocateMemory(staging_desc);
 		*staging_buffer.getMappedPtr<float>() = 1.f;
 
 		vk::ImageSubresourceRange subresourceRange;
@@ -428,7 +429,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 			copy.imageSubresource.mipLevel = 0;
 
 			vk::ImageMemoryBarrier to_copy_barrier;
-			to_copy_barrier.dstQueueFamilyIndex = loader->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
+			to_copy_barrier.dstQueueFamilyIndex = context->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
 			to_copy_barrier.image = image.get();
 			to_copy_barrier.oldLayout = vk::ImageLayout::eUndefined;
 			to_copy_barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
@@ -436,7 +437,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 			to_copy_barrier.subresourceRange = subresourceRange;
 
 			vk::ImageMemoryBarrier to_shader_read_barrier;
-			to_shader_read_barrier.dstQueueFamilyIndex = loader->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
+			to_shader_read_barrier.dstQueueFamilyIndex = context->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
 			to_shader_read_barrier.image = image.get();
 			to_shader_read_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
 			to_shader_read_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
@@ -478,8 +479,8 @@ struct DrawHelper : public Singleton<DrawHelper>
 
 		m_whilte_texture.m_image = std::move(image);
 		m_whilte_texture.m_memory = std::move(image_memory);
-		m_whilte_texture.m_image_view = loader->m_device->createImageViewUnique(view_info);
-		m_whilte_texture.m_sampler = loader->m_device->createSamplerUnique(sampler_info);
+		m_whilte_texture.m_image_view = context->m_device->createImageViewUnique(view_info);
+		m_whilte_texture.m_sampler = context->m_device->createSamplerUnique(sampler_info);
 	}
 
 	vk::CommandBuffer draw(std::shared_ptr<btr::Context>& executer)
@@ -495,25 +496,22 @@ struct DrawHelper : public Singleton<DrawHelper>
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW_PRIMITIVE].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_PRIMITIVE].get(), 0, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 
-		for (auto& cmd_per_thread : m_draw_cmd)
+		auto& draw_cmd = m_draw_cmd[sGlobal::Order().getGPUIndex()];
+		for (size_t i = 0; i < draw_cmd.size(); i++)
 		{
-			auto& draw_cmd = cmd_per_thread[sGlobal::Order().getGPUIndex()];
-			for (size_t i = 0; i < draw_cmd.size(); i++)
+			auto& cmd_list = draw_cmd[i];
+			if (cmd_list.empty()) {
+				continue;
+			}
+
+			cmd.bindVertexBuffers(0, m_mesh_vertex[i].getBufferInfo().buffer, m_mesh_vertex[i].getBufferInfo().offset);
+			cmd.bindIndexBuffer(m_mesh_index[i].getBufferInfo().buffer, m_mesh_index[i].getBufferInfo().offset, vk::IndexType::eUint32);
+
+			auto cmd_data = cmd_list.get();
+			for (auto& dcmd : cmd_data)
 			{
-				auto& cmd_list = draw_cmd[i];
-				if (cmd_list.empty()) {
-					continue;
-				}
-
-				cmd.bindVertexBuffers(0, m_mesh_vertex[i].getBufferInfo().buffer, m_mesh_vertex[i].getBufferInfo().offset);
-				cmd.bindIndexBuffer(m_mesh_index[i].getBufferInfo().buffer, m_mesh_index[i].getBufferInfo().offset, vk::IndexType::eUint32);
-
-				for (auto& dcmd : cmd_list)
-				{
-					cmd.pushConstants<mat4>(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_PRIMITIVE].get(), vk::ShaderStageFlagBits::eVertex, 0, dcmd.world);
-					cmd.drawIndexed(m_mesh_index_num[i], 1, 0, 0, 0);
-				}
-				cmd_list.clear();
+				cmd.pushConstants<mat4>(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_PRIMITIVE].get(), vk::ShaderStageFlagBits::eVertex, 0, dcmd.world);
+				cmd.drawIndexed(m_mesh_index_num[i], 1, 0, 0, 0);
 			}
 		}
 
@@ -525,6 +523,6 @@ struct DrawHelper : public Singleton<DrawHelper>
 
 	void drawOrder(PrimitiveType type, const DrawCommand& cmd)
 	{
-		m_draw_cmd[sThreadLocal::Order().getThreadIndex()][sGlobal::Order().getCPUIndex()][type].push_back(cmd);
+		m_draw_cmd[sGlobal::Order().getCPUIndex()][type].push(&cmd, 1);
 	}
 };

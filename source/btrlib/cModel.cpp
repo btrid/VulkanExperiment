@@ -285,11 +285,7 @@ void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& r
 		}
 
 	}
-
-
 }
-
-
 
 void cModel::load(std::shared_ptr<btr::Context>& context, const std::string& filename)
 {
