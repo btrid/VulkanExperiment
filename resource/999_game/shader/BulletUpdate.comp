@@ -38,8 +38,7 @@ void main()
 
 	vec2 dir = normalize(b.m_vel.xz);
 	float progress = length(b.m_vel.xz)*deltatime;
-	for(int i = 0; i < 100; i++)
-//	for(;;)
+	for(;;)
 	{
 		MarchResult result = marchEx(b.m_pos.xz, b.m_map_index, progress, dir);
 		if(result.is_end)

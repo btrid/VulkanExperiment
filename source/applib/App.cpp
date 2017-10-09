@@ -86,6 +86,8 @@ void App::setup(const cGPU& gpu)
 
 void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
 {
+	submit_cmds.erase(std::remove_if(submit_cmds.begin(), submit_cmds.end(), [&](auto& d) { return !d; }), submit_cmds.end());
+
 	std::vector<vk::CommandBuffer> cmds;
 	cmds.reserve(32);
 

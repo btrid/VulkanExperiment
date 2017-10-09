@@ -25,9 +25,9 @@ struct BulletData
 	glm::vec4 m_pos;	//!< xyz:pos w:scale
 	glm::vec4 m_vel;	//!< xyz:dir
 
-	glm::ivec2 m_map_index;
 	uint32_t m_ll_next;
 	float m_power;
+	glm::ivec2 m_map_index;
 
 	uint32_t m_type;
 	uint32_t m_flag;
@@ -36,7 +36,11 @@ struct BulletData
 
 	BulletData()
 	{
-		m_ll_next = -1;
+		memset(this, 0, sizeof(BulletData));
+// 		m_ll_next = -1;
+// 		m_type = -1;
+		m_life = -1.f;
+//		m_atk = -1.f;
 	}
 };
 

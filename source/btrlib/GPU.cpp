@@ -46,7 +46,7 @@ void cGPU::setup(vk::PhysicalDevice pd)
 
 	vk::PhysicalDeviceFeatures feature = gpu_feature;
 //	feature.
-	feature.robustBufferAccess = 0; // debug‚ÅŽ~‚Ü‚Á‚Ä‚Ù‚µ‚¢
+//	feature.robustBufferAccess = 0; // debug‚ÅŽ~‚Ü‚Á‚Ä‚Ù‚µ‚¢
 
 	vk::DeviceCreateInfo deviceInfo = vk::DeviceCreateInfo()
 		.setQueueCreateInfoCount((uint32_t)queue_info.size())

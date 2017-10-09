@@ -37,24 +37,30 @@ void sBulletSystem::setup(std::shared_ptr<btr::Context>& context)
 		}
 		{
 
-			btr::AllocatedMemory::Descriptor data_desc;
-			data_desc.size = sizeof(BulletData) * 1024;
-			m_bullet_emit = context->m_storage_memory.allocateMemory(data_desc);
-
-			data_desc.size = sizeof(uint32_t);
-			m_bullet_emit_count = context->m_storage_memory.allocateMemory(data_desc);
+			btr::AllocatedMemory::Descriptor desc;
+			desc.size = sizeof(BulletData) * 1024;
+			m_bullet_emit = context->m_storage_memory.allocateMemory(desc);
+		}
+		{
+			btr::AllocatedMemory::Descriptor desc;
+			desc.size = sizeof(uint32_t);
+			m_bullet_emit_count = context->m_storage_memory.allocateMemory(desc);
 		}
 
 		btr::AllocatedMemory::Descriptor desc;
 		desc.size = sizeof(vk::DrawIndirectCommand);
 		m_bullet_counter = context->m_storage_memory.allocateMemory(desc);
 		cmd->updateBuffer<vk::DrawIndirectCommand>(m_bullet_counter.getBufferInfo().buffer, m_bullet_counter.getBufferInfo().offset, vk::DrawIndirectCommand(4, 0, 0, 0));
-		auto count_barrier = m_bullet_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
-		cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { count_barrier }, {});
+		auto count_barrier = m_bullet_counter.makeMemoryBarrierEx();
+		count_barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+		count_barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+		cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, count_barrier, {});
 
 		m_bullet_info = context->m_uniform_memory.allocateMemory(sizeof(BulletInfo));
 		cmd->updateBuffer<BulletInfo>(m_bullet_info.getBufferInfo().buffer, m_bullet_info.getBufferInfo().offset, { m_bullet_info_cpu });
-		auto barrier = m_bullet_info.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
+		auto barrier = m_bullet_info.makeMemoryBarrierEx();
+		barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+		barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
 		cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { barrier }, {});
 
 		auto& map_desc = sScene::Order().m_map_info_cpu.m_descriptor[0];
@@ -295,52 +301,44 @@ vk::CommandBuffer sBulletSystem::execute(std::shared_ptr<btr::Context>& context)
 {
 	auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 
-	{
-		// transfer
-		auto to_transfer = m_bullet_counter.makeMemoryBarrierEx();
-		to_transfer.setSrcAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
-		to_transfer.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eDrawIndirect, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
-
-		cmd.fillBuffer(m_bullet_LL_head_gpu.getBufferInfo().buffer, m_bullet_LL_head_gpu.getBufferInfo().offset, m_bullet_LL_head_gpu.getBufferInfo().range, 0xFFFFFFFF);
-		cmd.updateBuffer<vk::DrawIndirectCommand>(m_bullet_counter.getBufferInfo().buffer, m_bullet_counter.getBufferInfo().offset, vk::DrawIndirectCommand(4, 0, 0, 0));
-	}
-	{
-		auto to_read = m_bullet_counter.makeMemoryBarrierEx();
-		to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
-		to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_read }, {});
-
-		// update
-		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COMPUTE_UPDATE].get());
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 0, m_descriptor_set[DESCRIPTOR_SET_UPDATE].get(), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 1, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_MAP), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 2, sSystem::Order().getSystemDescriptor().getSet(), {});
-
-		auto groups = app::calcDipatchGroups(glm::uvec3(m_bullet_info_cpu.m_max_num, 1, 1), glm::uvec3(1024, 1, 1));
-		cmd.dispatch(groups.x, groups.y, groups.z);
-
-	}
 	// エミット
 	{
 		auto data = m_data[sGlobal::Order().getGPUIndex()].get();
 		if (!data.empty())
 		{
-			auto to_emit = m_bullet_counter.makeMemoryBarrierEx();
-			to_emit.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
-			to_emit.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_emit, {});
+			{
+				auto to_write = m_bullet_emit_count.makeMemoryBarrierEx();
+				to_write.setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
+				to_write.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_write, {});
 
-			btr::AllocatedMemory::Descriptor emit_desc;
-			emit_desc.size = vector_sizeof(data);
-			emit_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
-			auto staging = context->m_staging_memory.allocateMemory(emit_desc);
-			memcpy(staging.getMappedPtr(), data.data(), emit_desc.size);
+				cmd.updateBuffer<uint32_t>(m_bullet_emit_count.getBufferInfo().buffer, m_bullet_emit_count.getBufferInfo().offset, uint32_t(data.size()));
 
-			cmd.updateBuffer<uint32_t>(m_bullet_emit_count.getBufferInfo().buffer, m_bullet_emit_count.getBufferInfo().offset, uint32_t(data.size()));
+				auto to_read = m_bullet_emit_count.makeMemoryBarrierEx();
+				to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+				to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
+			}
+			{
+				auto to_read = m_bullet_counter.makeMemoryBarrierEx();
+				to_read.setSrcAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
+				to_read.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eDrawIndirect, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_read, {});
+			}
+
+			auto to_transfer = m_bullet_emit.makeMemoryBarrierEx();
+			to_transfer.setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
+			to_transfer.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
+
+			btr::AllocatedMemory::Descriptor desc;
+			desc.size = vector_sizeof(data);
+			desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			auto staging = context->m_staging_memory.allocateMemory(desc);
+			memcpy(staging.getMappedPtr(), data.data(), desc.size);
 
 			vk::BufferCopy copy;
-			copy.setSize(emit_desc.size);
+			copy.setSize(desc.size);
 			copy.setSrcOffset(staging.getBufferInfo().offset);
 			copy.setDstOffset(m_bullet_emit.getBufferInfo().offset);
 			cmd.copyBuffer(staging.getBufferInfo().buffer, m_bullet_emit.getBufferInfo().buffer, copy);
@@ -360,6 +358,38 @@ vk::CommandBuffer sBulletSystem::execute(std::shared_ptr<btr::Context>& context)
 		}
 	}
 
+	{
+		// 初期化
+		auto to_clear = m_bullet_counter.makeMemoryBarrierEx();
+		to_clear.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+		to_clear.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_clear, {});
+
+		cmd.fillBuffer(m_bullet_LL_head_gpu.getBufferInfo().buffer, m_bullet_LL_head_gpu.getBufferInfo().offset, m_bullet_LL_head_gpu.getBufferInfo().range, 0xFFFFFFFF);
+		cmd.updateBuffer<vk::DrawIndirectCommand>(m_bullet_counter.getBufferInfo().buffer, m_bullet_counter.getBufferInfo().offset, vk::DrawIndirectCommand(4, 0, 0, 0));
+
+		auto to_read = m_bullet_counter.makeMemoryBarrierEx();
+		to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+		to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_read }, {});
+	}
+	{
+		auto to_read = m_bullet.makeMemoryBarrierEx();
+		to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+		to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_read }, {});
+
+		// update
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COMPUTE_UPDATE].get());
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 0, m_descriptor_set[DESCRIPTOR_SET_UPDATE].get(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 1, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_MAP), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 2, sSystem::Order().getSystemDescriptor().getSet(), {});
+
+		auto groups = app::calcDipatchGroups(glm::uvec3(m_bullet_info_cpu.m_max_num, 1, 1), glm::uvec3(1024, 1, 1));
+		cmd.dispatch(groups.x, groups.y, groups.z);
+
+	}
+
 	cmd.end();
 	return cmd;
 }
@@ -370,16 +400,9 @@ vk::CommandBuffer sBulletSystem::draw(std::shared_ptr<btr::Context>& context)
 
 	{
 		auto to_draw = m_bullet_counter.makeMemoryBarrierEx();
-		to_draw.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+		to_draw.setSrcAccessMask(vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite);
 		to_draw.setDstAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, {}, {}, { to_draw }, {});
-	}
-
-	{
-		auto to_draw = m_bullet.makeMemoryBarrierEx();
-		to_draw.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
-		to_draw.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eVertexShader, {}, {}, { to_draw }, {});
 	}
 
 	vk::RenderPassBeginInfo begin_render_Info;

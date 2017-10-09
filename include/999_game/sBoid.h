@@ -20,6 +20,7 @@ class sBoid : public Singleton<sBoid>
 			m_buffer_info[0] = m_buffer.getBufferInfo();
 			m_buffer_info[1] = m_buffer.getBufferInfo();
 			m_buffer_info[0].range /= 2;
+			m_buffer_info[1].range /= 2;
 			m_buffer_info[1].offset += m_buffer_info[0].range;
 		}
 

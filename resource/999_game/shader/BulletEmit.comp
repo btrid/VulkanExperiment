@@ -1,12 +1,5 @@
 #version 450
 
-#pragma optionNV (unroll none)
-#pragma optionNV (inline all)
-#pragma optionNV(fastmath on)
-//#pragma optionNV(fastprecision on)
-//#pragma optionNV(ifcvt all)
-#pragma optionNV(strict on)
-
 #extension GL_GOOGLE_cpp_style_line_directive : require
 
 #include </Common.glsl>
@@ -14,9 +7,13 @@
 #define SETPOINT_BULLET 0
 #include </Bullet.glsl>
 
+#define SETPOINT_MAP 1
+#include </Map.glsl>
+
 #define USE_SYSTEM 2
 #include <applib/System.glsl>
 
+layout (local_size_x = 1024, local_size_y = 1) in;
 
 void main()
 {
@@ -27,6 +24,6 @@ void main()
 
 	BulletData b = b_bullet_emit[index];
 	uint dst_index = atomicAdd(b_bullet_draw_cmd.instanceCount, 1);
-	b_bullet[u_system_data.m_gpu_index*u_bullet_info.m_max_num + dst_index] = b;
+	b_bullet[(1-u_system_data.m_gpu_index)*u_bullet_info.m_max_num + dst_index] = b;
 
 }
