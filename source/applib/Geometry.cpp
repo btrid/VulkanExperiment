@@ -226,11 +226,11 @@ Geometry Geometry::MakeGeometry(std::shared_ptr<btr::Context>& loader, const voi
 	resource->m_index_type = index_type;
 	{
 		{
-			btr::AllocatedMemory::Descriptor vertex_desc;
+			btr::BufferMemoryDescriptor vertex_desc;
 			vertex_desc.size = vertex_size;
 			resource->m_vertex = loader->m_vertex_memory.allocateMemory(vertex_desc);
 
-			vertex_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			vertex_desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging = loader->m_staging_memory.allocateMemory(vertex_desc);
 			std::memcpy(staging.getMappedPtr(), vertex, vertex_size);
 
@@ -241,11 +241,11 @@ Geometry Geometry::MakeGeometry(std::shared_ptr<btr::Context>& loader, const voi
 			cmd->copyBuffer(staging.getBufferInfo().buffer, resource->m_vertex.getBufferInfo().buffer, vertex_copy);
 		}
 		{
-			btr::AllocatedMemory::Descriptor index_desc;
+			btr::BufferMemoryDescriptor index_desc;
 			index_desc.size = index_size;
 			resource->m_index = loader->m_vertex_memory.allocateMemory(index_desc);
 
-			index_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			index_desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging = loader->m_staging_memory.allocateMemory(index_desc);
 			std::memcpy(staging.getMappedPtr(), index, index_size);
 
@@ -257,11 +257,11 @@ Geometry Geometry::MakeGeometry(std::shared_ptr<btr::Context>& loader, const voi
 		}
 
 		{
-			btr::AllocatedMemory::Descriptor indirect_desc;
+			btr::BufferMemoryDescriptor indirect_desc;
 			indirect_desc.size = sizeof(vk::DrawIndexedIndirectCommand);
 			resource->m_indirect = loader->m_vertex_memory.allocateMemory(indirect_desc);
 
-			indirect_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			indirect_desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging = loader->m_staging_memory.allocateMemory(indirect_desc);
 			auto* ptr = staging.getMappedPtr<vk::DrawIndexedIndirectCommand>();
 			ptr->setFirstInstance(0);

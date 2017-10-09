@@ -33,18 +33,18 @@ void cFowardPlusPipeline::setup(const std::shared_ptr<btr::Context>& context)
 			m_light.setup(desc);
 		}
 		{
-			btr::AllocatedMemory::Descriptor desc;
+			btr::BufferMemoryDescriptor desc;
 			desc.size = sizeof(uint32_t) * tile_num_all;
 			m_lightLL_head = context->m_storage_memory.allocateMemory(desc);
 		}
 		{
-			btr::AllocatedMemory::Descriptor desc;
+			btr::BufferMemoryDescriptor desc;
 			desc.size = sizeof(LightLL) * tile_num_all * m_light_info.m_light_max_num;
 			m_lightLL = context->m_storage_memory.allocateMemory(desc);
 
 		}
 		{
-			btr::AllocatedMemory::Descriptor desc;
+			btr::BufferMemoryDescriptor desc;
 			desc.size = sizeof(uint32_t);
 			m_light_counter = context->m_storage_memory.allocateMemory(desc);
 

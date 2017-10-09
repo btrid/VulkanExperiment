@@ -233,9 +233,9 @@ public:
 				l.setLayerCount(1);
 				l.setMipLevel(0);
 				{
-					btr::AllocatedMemory::Descriptor desc;
+					btr::BufferMemoryDescriptor desc;
 					desc.size = memory_request.size;
-					desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+					desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 					auto staging = loader->m_staging_memory.allocateMemory(desc);
 					memcpy(staging.getMappedPtr(), rgba.data(), desc.size);
 					vk::BufferImageCopy copy;
@@ -261,7 +261,7 @@ public:
 		}
 
 		{
-			btr::AllocatedMemory::Descriptor desc;
+			btr::BufferMemoryDescriptor desc;
 			desc.size = sizeof(VolumeScene);
 			m_volume_scene_gpu = loader->m_uniform_memory.allocateMemory(desc);
 			m_volume_scene_gpu.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
@@ -498,9 +498,9 @@ public:
 	{
 		vk::CommandBuffer cmd = executer->m_cmd_pool->allocCmdOnetime(0);
 
-		btr::AllocatedMemory::Descriptor desc;
+		btr::BufferMemoryDescriptor desc;
 		desc.size = sizeof(VolumeScene);
-		desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+		desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 
 		auto staging = executer->m_staging_memory.allocateMemory(desc);
 		*staging.getMappedPtr<VolumeScene>() = m_volume_scene_cpu;

@@ -387,13 +387,13 @@ struct ModelInstancingAnimationPipelineComponent : public PipelineComponent
 		// node info
 		{
 			auto nodeInfo = ModelInstancingModule::NodeInfo::createNodeInfo(resource->mNodeRoot);
-			btr::AllocatedMemory::Descriptor desc;
+			btr::BufferMemoryDescriptor desc;
 			desc.size = vector_sizeof(nodeInfo);
 
 			auto& buffer = instancing_module->getBuffer(ModelInstancingModule::NODE_INFO);
 			buffer = context->m_storage_memory.allocateMemory(desc);
 
-			desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging = context->m_staging_memory.allocateMemory(desc);
 
 			memcpy_s(staging.getMappedPtr(), desc.size, nodeInfo.data(), desc.size);
@@ -413,13 +413,13 @@ struct ModelInstancingAnimationPipelineComponent : public PipelineComponent
 		{
 			// BoneInfo
 			auto bone_info = ModelInstancingModule::BoneInfo::createBoneInfo(resource->mBone);
-			btr::AllocatedMemory::Descriptor desc;
+			btr::BufferMemoryDescriptor desc;
 			desc.size = vector_sizeof(bone_info);
 
 			auto& buffer = instancing_module->getBuffer(ModelInstancingModule::BONE_INFO);
 			buffer = context->m_storage_memory.allocateMemory(desc);
 
-			desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 			btr::BufferMemory staging = context->m_staging_memory.allocateMemory(desc);
 
 			memcpy_s(staging.getMappedPtr(), desc.size, bone_info.data(), desc.size);
@@ -444,9 +444,9 @@ struct ModelInstancingAnimationPipelineComponent : public PipelineComponent
 
 		// ModelInfo
 		{
-			btr::AllocatedMemory::Descriptor staging_desc;
+			btr::BufferMemoryDescriptor staging_desc;
 			staging_desc.size = sizeof(cModel::ModelInfo);
-			staging_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			staging_desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging_model_info = context->m_staging_memory.allocateMemory(staging_desc);
 
 			auto& mi = *static_cast<cModel::ModelInfo*>(staging_model_info.getMappedPtr());
@@ -489,13 +489,13 @@ struct ModelInstancingAnimationPipelineComponent : public PipelineComponent
 		}
 		// draw indirect
 		{
-			btr::AllocatedMemory::Descriptor desc;
+			btr::BufferMemoryDescriptor desc;
 			desc.size = sizeof(cModel::Mesh)*resource->m_mesh.size();
 
 			auto& buffer = instancing_module->getBuffer(ModelInstancingModule::DRAW_INDIRECT);
 			buffer = context->m_vertex_memory.allocateMemory(desc);
 
-			desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging = context->m_staging_memory.allocateMemory(desc);
 
 			memcpy_s(staging.getMappedPtr(), desc.size, resource->m_mesh.data(), desc.size);
@@ -550,13 +550,13 @@ struct ModelInstancingAnimationPipelineComponent : public PipelineComponent
 			auto& anim = resource->getAnimation();
 			instancing_module->m_motion_texture = MotionTexture::createMotion(context, cmd, resource->getAnimation());
 
-			btr::AllocatedMemory::Descriptor desc;
+			btr::BufferMemoryDescriptor desc;
 			desc.size = sizeof(ModelInstancingModule::AnimationInfo) * anim.m_motion.size();
 
 			auto& buffer = instancing_module->getBuffer(ModelInstancingModule::ANIMATION_INFO);
 			buffer = context->m_storage_memory.allocateMemory(desc);
 
-			desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging = context->m_staging_memory.allocateMemory(desc);
 			auto* staging_ptr = staging.getMappedPtr<ModelInstancingModule::AnimationInfo>();
 			for (size_t i = 0; i < anim.m_motion.size(); i++)
@@ -585,13 +585,13 @@ struct ModelInstancingAnimationPipelineComponent : public PipelineComponent
 		}
 		// PlayingAnimation
 		{
-			btr::AllocatedMemory::Descriptor desc;
+			btr::BufferMemoryDescriptor desc;
 			desc.size = instanceNum * sizeof(ModelInstancingModule::PlayingAnimation);
 
 			auto& buffer = instancing_module->getBuffer(ModelInstancingModule::PLAYING_ANIMATION);
 			buffer = context->m_storage_memory.allocateMemory(desc);
 
-			desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging_playing_animation = context->m_staging_memory.allocateMemory(desc);
 
 			auto* pa = static_cast<ModelInstancingModule::PlayingAnimation*>(staging_playing_animation.getMappedPtr());

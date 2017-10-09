@@ -43,9 +43,9 @@ struct DefaultMaterialModule : public MaterialModule
 
 		// material index
 		{
-			btr::AllocatedMemory::Descriptor staging_desc;
+			btr::BufferMemoryDescriptor staging_desc;
 			staging_desc.size = resource->m_mesh.size() * sizeof(uint32_t);
-			staging_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			staging_desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging = context->m_staging_memory.allocateMemory(staging_desc);
 
 			std::vector<uint32_t> material_index(resource->m_mesh.size());
@@ -66,9 +66,9 @@ struct DefaultMaterialModule : public MaterialModule
 
 		// material
 		{
-			btr::AllocatedMemory::Descriptor staging_desc;
+			btr::BufferMemoryDescriptor staging_desc;
 			staging_desc.size = resource->m_material.size() * sizeof(MaterialBuffer);
-			staging_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			staging_desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging_material = context->m_staging_memory.allocateMemory(staging_desc);
 			auto* mb = static_cast<MaterialBuffer*>(staging_material.getMappedPtr());
 			for (size_t i = 0; i < resource->m_material.size(); i++)

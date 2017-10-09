@@ -368,11 +368,11 @@ struct ModelVoxelize : public Voxelize
 		resource->m_mesh_count = model.m_mesh.size();
 		resource->m_index_count = index_offset;
 		{
-			btr::AllocatedMemory::Descriptor desc;
+			btr::BufferMemoryDescriptor desc;
 			desc.size = vector_sizeof(vertex);
 			resource->m_vertex = context->m_vertex_memory.allocateMemory(desc);
 
-			desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging = context->m_staging_memory.allocateMemory(desc);
 			memcpy_s(staging.getMappedPtr(), desc.size, vertex.data(), desc.size);
 
@@ -384,11 +384,11 @@ struct ModelVoxelize : public Voxelize
 		}
 
 		{
-			btr::AllocatedMemory::Descriptor desc;
+			btr::BufferMemoryDescriptor desc;
 			desc.size = vector_sizeof(index);
 			resource->m_index = context->m_vertex_memory.allocateMemory(desc);
 
-			desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging = context->m_staging_memory.allocateMemory(desc);
 			memcpy_s(staging.getMappedPtr(), desc.size, index.data(), desc.size);
 
@@ -399,11 +399,11 @@ struct ModelVoxelize : public Voxelize
 			cmd.copyBuffer(staging.getBufferInfo().buffer, resource->m_index.getBufferInfo().buffer, copy);
 		}
 		{
-			btr::AllocatedMemory::Descriptor desc;
+			btr::BufferMemoryDescriptor desc;
 			desc.size = vector_sizeof(indirect);
 			resource->m_indirect = context->m_vertex_memory.allocateMemory(desc);
 
-			desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging = context->m_staging_memory.allocateMemory(desc);
 			memcpy_s(staging.getMappedPtr(), desc.size, indirect.data(), desc.size);
 
@@ -415,11 +415,11 @@ struct ModelVoxelize : public Voxelize
 		}
 
 		{
-			btr::AllocatedMemory::Descriptor desc;
+			btr::BufferMemoryDescriptor desc;
 			desc.size = vector_sizeof(mesh_info);
 			resource->m_mesh_info = context->m_storage_memory.allocateMemory(desc);
 
-			desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging = context->m_staging_memory.allocateMemory(desc);
 			memcpy_s(staging.getMappedPtr(), desc.size, mesh_info.data(), desc.size);
 
@@ -430,11 +430,11 @@ struct ModelVoxelize : public Voxelize
 			cmd.copyBuffer(staging.getBufferInfo().buffer, resource->m_mesh_info.getBufferInfo().buffer, copy);
 		}
 		{
-			btr::AllocatedMemory::Descriptor desc;
+			btr::BufferMemoryDescriptor desc;
 			desc.size = vector_sizeof(model.m_material);
 			resource->m_material = context->m_storage_memory.allocateMemory(desc);
 
-			desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging = context->m_staging_memory.allocateMemory(desc);
 			memcpy_s(staging.getMappedPtr(), desc.size, model.m_material.data(), desc.size);
 

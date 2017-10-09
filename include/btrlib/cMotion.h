@@ -95,9 +95,9 @@ struct MotionTexture
 		auto image_prop = context->m_device.getGPU().getImageFormatProperties(image_info.format, image_info.imageType, image_info.tiling, image_info.usage, image_info.flags);
 		vk::UniqueImage image = context->m_device->createImageUnique(image_info);
 
-		btr::AllocatedMemory::Descriptor staging_desc;
+		btr::BufferMemoryDescriptor staging_desc;
 		staging_desc.size = image_info.arrayLayers * motion->m_data.size() * SIZE * sizeof(glm::u16vec4);
-		staging_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+		staging_desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 		auto staging_buffer = context->m_staging_memory.allocateMemory(staging_desc);
 		auto* data = staging_buffer.getMappedPtr<glm::u16vec4>();
 

@@ -82,9 +82,9 @@ void ResourceTexture::load(std::shared_ptr<btr::Context>& context, vk::CommandBu
 	vk::UniqueDeviceMemory image_memory = context->m_device->allocateMemoryUnique(memory_alloc_info);
 	context->m_device->bindImageMemory(image.get(), image_memory.get(), 0);
 
-	btr::AllocatedMemory::Descriptor staging_desc;
+	btr::BufferMemoryDescriptor staging_desc;
 	staging_desc.size = texture_data.getBufferSize();
-	staging_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+	staging_desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 	auto staging_buffer = context->m_staging_memory.allocateMemory(staging_desc);	
 	memcpy(staging_buffer.getMappedPtr(), texture_data.m_data.data(), texture_data.getBufferSize());
 
@@ -347,16 +347,16 @@ void cModel::load(std::shared_ptr<btr::Context>& context, const std::string& fil
 		numIndex += scene->mMeshes[i]->mNumFaces * 3;
 	}
 
-	btr::AllocatedMemory::Descriptor staging_vertex_desc;
+	btr::BufferMemoryDescriptor staging_vertex_desc;
 	staging_vertex_desc.size = sizeof(Vertex) * numVertex;
-	staging_vertex_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+	staging_vertex_desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 	auto staging_vertex = context->m_staging_memory.allocateMemory(staging_vertex_desc);
 
 	auto index_type = numVertex < std::numeric_limits<uint16_t>::max() ? vk::IndexType::eUint16 : vk::IndexType::eUint32;
 
-	btr::AllocatedMemory::Descriptor staging_index_desc;
+	btr::BufferMemoryDescriptor staging_index_desc;
 	staging_index_desc.size = (index_type == vk::IndexType::eUint16 ? sizeof(uint16_t) : sizeof(uint32_t)) * numIndex;
-	staging_index_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+	staging_index_desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 	auto staging_index = context->m_staging_memory.allocateMemory(staging_index_desc);
 	auto index_stride = (index_type == vk::IndexType::eUint16 ? sizeof(uint16_t) : sizeof(uint32_t));
 	auto* index = static_cast<char*>(staging_index.getMappedPtr());
@@ -463,11 +463,11 @@ void cModel::load(std::shared_ptr<btr::Context>& context, const std::string& fil
 			vertex_data.m_vertex_buffer_ex = context->m_vertex_memory.allocateMemory(staging_vertex.getBufferInfo().range);
 			vertex_data.m_index_buffer_ex = context->m_vertex_memory.allocateMemory(staging_index.getBufferInfo().range);
 
-			btr::AllocatedMemory::Descriptor indirect_desc;
+			btr::BufferMemoryDescriptor indirect_desc;
 			indirect_desc.size = vector_sizeof(m_resource->m_mesh);
 			vertex_data.m_indirect_buffer_ex = context->m_vertex_memory.allocateMemory(indirect_desc);
 
-			indirect_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			indirect_desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging_indirect = context->m_staging_memory.allocateMemory(indirect_desc);
 			auto* indirect = staging_indirect.getMappedPtr<Mesh>(0);
 			memcpy_s(indirect, indirect_desc.size, m_resource->m_mesh.data(), indirect_desc.size);

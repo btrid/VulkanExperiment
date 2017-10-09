@@ -50,11 +50,11 @@ struct cTriangleLL
 				std::tie(v, i) = Geometry::MakeBox(0.5f);
 				m_index_count = i.size() * 3;
 				{
-					btr::AllocatedMemory::Descriptor desc;
+					btr::BufferMemoryDescriptor desc;
 					desc.size = vector_sizeof(v);
 					m_vertex = loader.m_vertex_memory.allocateMemory(desc);
 
-					desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+					desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 					auto staging = loader.m_staging_memory.allocateMemory(desc);
 					memcpy(staging.getMappedPtr(), v.data(), desc.size);
 
@@ -66,11 +66,11 @@ struct cTriangleLL
 
 				}
 				{
-					btr::AllocatedMemory::Descriptor desc;
+					btr::BufferMemoryDescriptor desc;
 					desc.size = vector_sizeof(i);
 					m_index = loader.m_vertex_memory.allocateMemory(desc);
 
-					desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+					desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 					auto staging = loader.m_staging_memory.allocateMemory(desc);
 					memcpy(staging.getMappedPtr(), i.data(), desc.size);
 
@@ -333,11 +333,11 @@ struct cTriangleLL
 			// ÉÅÉÇÉäämï€
 			{
 				// info
-				btr::AllocatedMemory::Descriptor desc;
+				btr::BufferMemoryDescriptor desc;
 				desc.size = sizeof(BrickParam);
 				m_triangle_info = loader.m_uniform_memory.allocateMemory(desc);
 
-				desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+				desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 				auto staging_buffer = loader.m_staging_memory.allocateMemory(desc);
 				BrickParam& param = *staging_buffer.getMappedPtr<BrickParam>();
 
@@ -361,19 +361,19 @@ struct cTriangleLL
 
 			{
 				// head
-				btr::AllocatedMemory::Descriptor desc;
+				btr::BufferMemoryDescriptor desc;
 				desc.size = sizeof(uint32_t)*m_brick_info.m_total_num.w;
 				m_triangleLL_head = loader.m_storage_memory.allocateMemory(desc);
 			}
 			{
 				// link list
-				btr::AllocatedMemory::Descriptor desc;
+				btr::BufferMemoryDescriptor desc;
 				desc.size = sizeof(TriangleLL) * 1000 * 1000;
 				m_triangleLL = loader.m_storage_memory.allocateMemory(desc);
 			}
 			{
 				// triangle counter
-				btr::AllocatedMemory::Descriptor desc;
+				btr::BufferMemoryDescriptor desc;
 				desc.size = sizeof(uint32_t);
 				m_triangleLL_count = loader.m_storage_memory.allocateMemory(desc);
 			}

@@ -20,12 +20,12 @@ struct DefaultAnimationModule : public AnimationModule
 			m_bone_buffer_staging.resize(sGlobal::FRAME_MAX);
 			for (auto& buffer : m_bone_buffer_staging)
 			{
-				btr::AllocatedMemory::Descriptor desc;
+				btr::BufferMemoryDescriptor desc;
 				desc.size = resource->mBone.size() * sizeof(glm::mat4);
 				buffer = context->m_staging_memory.allocateMemory(desc);
 			}
 			{
-				btr::AllocatedMemory::Descriptor desc;
+				btr::BufferMemoryDescriptor desc;
 				desc.size = resource->mBone.size() * sizeof(glm::mat4);
 				m_bone_buffer = context->m_storage_memory.allocateMemory(desc);
 			}

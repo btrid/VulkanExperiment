@@ -160,11 +160,11 @@ void memoryAllocater()
 		{
 			Memory m;
 			m.m_life = std::rand() % 100;
-			btr::AllocatedMemory::Descriptor desc;
+			btr::BufferMemoryDescriptor desc;
 			desc.size = std::rand() % 16 * 32 + 16;
 			if (std::rand() % 100 < 10)
 			{
-				desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+				desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 			}
 			m.m_alloced_memory = staging_memory.allocateMemory(desc);
 			memory_list.push_back(std::move(m));

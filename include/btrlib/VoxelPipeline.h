@@ -90,11 +90,11 @@ struct VoxelPipeline
 
 		// resource setup
 		{
-			btr::AllocatedMemory::Descriptor desc;
+			btr::BufferMemoryDescriptor desc;
 			desc.size = sizeof(VoxelInfo);
 			m_voxel_info = context->m_uniform_memory.allocateMemory(desc);
 
-			desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging = context->m_staging_memory.allocateMemory(desc);
 
 			*staging.getMappedPtr<VoxelInfo>() = m_voxelize_info_cpu;

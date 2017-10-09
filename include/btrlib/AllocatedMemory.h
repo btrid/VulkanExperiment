@@ -238,6 +238,20 @@ private:
 	}
 };
 
+enum class BufferMemoryAttributeFlagBits : uint32_t
+{
+	SHORT_LIVE_BIT = 1 << 0,
+};
+using BufferMemoryAttributeFlags = vk::Flags<BufferMemoryAttributeFlagBits, uint32_t>;
+struct BufferMemoryDescriptor
+{
+	vk::DeviceSize size;
+	BufferMemoryAttributeFlags attribute;
+	BufferMemoryDescriptor()
+		: size(0)
+		, attribute(BufferMemoryAttributeFlags())
+	{}
+};
 
 struct BufferMemory
 {
@@ -248,6 +262,12 @@ struct BufferMemory
 		Zone m_zone;
 		vk::DeviceMemory m_memory_ref;
 		void* m_mapped_memory;
+
+		~Resource()
+		{
+//			m_free_zone.delayedFree(m_zone);
+		}
+
 	};
 	std::shared_ptr<Resource> m_resource;
 public:
@@ -372,34 +392,20 @@ struct AllocatedMemory
 	}
 
 
-	enum class AttributeFlagBits : uint32_t
-	{
-		SHORT_LIVE_BIT = 1<<0,
-	};
-	using AttributeFlags = vk::Flags<AttributeFlagBits, uint32_t>;
-	struct Descriptor
-	{
-		vk::DeviceSize size;
-		AttributeFlags attribute;
-		Descriptor()
-			: size(0)
-			, attribute(AttributeFlags())
-		{}
-	};
 	BufferMemory allocateMemory(vk::DeviceSize size)
 	{
-		Descriptor arg;
-		arg.size = size;
-		arg.attribute = AttributeFlags();
-		return allocateMemory(arg);
+		BufferMemoryDescriptor desc;
+		desc.size = size;
+		desc.attribute = BufferMemoryAttributeFlags();
+		return allocateMemory(desc);
 	}
-	BufferMemory allocateMemory(Descriptor arg)
+	BufferMemory allocateMemory(const BufferMemoryDescriptor& arg)
 	{
 
 		// size0はおかしいよね
 		assert(arg.size != 0);
 
-		auto zone = m_resource->m_free_zone.alloc(arg.size, btr::isOn(arg.attribute, AttributeFlagBits::SHORT_LIVE_BIT));
+		auto zone = m_resource->m_free_zone.alloc(arg.size, btr::isOn(arg.attribute, BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT));
 
 		// allocできた？
 		assert(zone.isValid());
@@ -407,6 +413,7 @@ struct AllocatedMemory
 		BufferMemory alloc;
 		auto deleter = [&](BufferMemory::Resource* ptr)
 		{
+			// todo deleterは遅くなるのでやめたいデストラクタでする
 			m_resource->m_free_zone.delayedFree(ptr->m_zone);
 			delete ptr;
 		};

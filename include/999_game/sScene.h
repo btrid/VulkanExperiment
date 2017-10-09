@@ -298,9 +298,9 @@ struct sScene : public Singleton<sScene>
 // 				l.setLayerCount(1);
 // 				l.setMipLevel(0);
 // 				{
-// 					btr::AllocatedMemory::Descriptor desc;
+// 					btr::BufferMemoryDescriptor desc;
 // 	//				desc.size = loader->m_device->getImageMemoryRequirements(image.get()).size;
-// 					desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+// 					desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 // 					auto staging = loader->m_staging_memory.allocateMemory(desc);
 // 	//				memcpy(staging.getMappedPtr(), map.data(), desc.size);
 // 					vk::BufferImageCopy copy;
@@ -311,9 +311,9 @@ struct sScene : public Singleton<sScene>
 // 	//				cmd->copyBufferToImage(staging.getBufferInfo().buffer, image.get(), vk::ImageLayout::eTransferDstOptimal, copy);
 // 				}
 // 				{
-// 					btr::AllocatedMemory::Descriptor desc;
+// 					btr::BufferMemoryDescriptor desc;
 // 	//				desc.size = loader->m_device->getImageMemoryRequirements(subimage.get()).size;
-// 					desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+// 					desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 // 					auto staging = loader->m_staging_memory.allocateMemory(desc);
 // 
 // 	//				memcpy(staging.getMappedPtr(), submap.data(), desc.size);
@@ -431,9 +431,9 @@ struct sScene : public Singleton<sScene>
 					l.setLayerCount(1);
 					l.setMipLevel(0);
 					{
-						btr::AllocatedMemory::Descriptor desc;
+						btr::BufferMemoryDescriptor desc;
 						desc.size = context->m_device->getImageMemoryRequirements(image.get()).size;
-						desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+						desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 						auto staging = context->m_staging_memory.allocateMemory(desc);
 						memcpy_s(staging.getMappedPtr(), desc.size, map.data(), vector_sizeof(map));
 						vk::BufferImageCopy copy;
@@ -444,9 +444,9 @@ struct sScene : public Singleton<sScene>
 						cmd->copyBufferToImage(staging.getBufferInfo().buffer, image.get(), vk::ImageLayout::eTransferDstOptimal, copy);
 					}
 					{
-						btr::AllocatedMemory::Descriptor desc;
+						btr::BufferMemoryDescriptor desc;
 						desc.size = context->m_device->getImageMemoryRequirements(subimage.get()).size;
-						desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+						desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 						auto staging = context->m_staging_memory.allocateMemory(desc);
 
 						memcpy_s(staging.getMappedPtr(), desc.size, submap.data(), vector_sizeof(submap));
@@ -495,11 +495,11 @@ struct sScene : public Singleton<sScene>
 				m_map_damae_image_memory = std::move(image_damage_memory);
 			}
 			{
-				btr::AllocatedMemory::Descriptor desc;
+				btr::BufferMemoryDescriptor desc;
 				desc.size = sizeof(MapInfo);
 				m_map_info = context->m_uniform_memory.allocateMemory(desc);
 
-				desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+				desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 				auto staging = context->m_staging_memory.allocateMemory(desc);
 				*staging.getMappedPtr<MapInfo>() = m_map_info_cpu;
 
@@ -513,7 +513,7 @@ struct sScene : public Singleton<sScene>
 				cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { barrier }, {});
 			}
 			{
-				btr::AllocatedMemory::Descriptor desc;
+				btr::BufferMemoryDescriptor desc;
 				desc.size = sizeof(SceneData);
 				m_scene_data = context->m_uniform_memory.allocateMemory(desc);
 			}
@@ -822,9 +822,9 @@ struct sScene : public Singleton<sScene>
 		data.m_deltatime = sGlobal::Order().getDeltaTime();
 		data.m_totaltime = sGlobal::Order().getTotalTime();
 
-		btr::AllocatedMemory::Descriptor desc;
+		btr::BufferMemoryDescriptor desc;
 		desc.size = sizeof(SceneData);
-		desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+		desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 		auto staging = executer->m_staging_memory.allocateMemory(desc);
 
 		*staging.getMappedPtr<SceneData>() = data;

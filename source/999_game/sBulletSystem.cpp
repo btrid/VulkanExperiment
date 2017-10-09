@@ -14,11 +14,11 @@ void sBulletSystem::setup(std::shared_ptr<btr::Context>& context)
 
 	{
 		{
-			btr::AllocatedMemory::Descriptor data_desc;
+			btr::BufferMemoryDescriptor data_desc;
 			data_desc.size = sizeof(BulletData) * m_bullet_info_cpu.m_max_num * 2;
 			m_bullet = context->m_storage_memory.allocateMemory(data_desc);
 
-			data_desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			data_desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 			BulletData bd;
 			bd.m_life = -1.f;
 			std::vector<BulletData> p(m_bullet_info_cpu.m_max_num * 2, bd);
@@ -37,17 +37,17 @@ void sBulletSystem::setup(std::shared_ptr<btr::Context>& context)
 		}
 		{
 
-			btr::AllocatedMemory::Descriptor desc;
+			btr::BufferMemoryDescriptor desc;
 			desc.size = sizeof(BulletData) * 1024;
 			m_bullet_emit = context->m_storage_memory.allocateMemory(desc);
 		}
 		{
-			btr::AllocatedMemory::Descriptor desc;
+			btr::BufferMemoryDescriptor desc;
 			desc.size = sizeof(uint32_t);
 			m_bullet_emit_count = context->m_storage_memory.allocateMemory(desc);
 		}
 
-		btr::AllocatedMemory::Descriptor desc;
+		btr::BufferMemoryDescriptor desc;
 		desc.size = sizeof(vk::DrawIndirectCommand);
 		m_bullet_counter = context->m_storage_memory.allocateMemory(desc);
 		cmd->updateBuffer<vk::DrawIndirectCommand>(m_bullet_counter.getBufferInfo().buffer, m_bullet_counter.getBufferInfo().offset, vk::DrawIndirectCommand(4, 0, 0, 0));
@@ -331,9 +331,9 @@ vk::CommandBuffer sBulletSystem::execute(std::shared_ptr<btr::Context>& context)
 			to_transfer.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
 
-			btr::AllocatedMemory::Descriptor desc;
+			btr::BufferMemoryDescriptor desc;
 			desc.size = vector_sizeof(data);
-			desc.attribute = btr::AllocatedMemory::AttributeFlagBits::SHORT_LIVE_BIT;
+			desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging = context->m_staging_memory.allocateMemory(desc);
 			memcpy(staging.getMappedPtr(), data.data(), desc.size);
 
