@@ -166,8 +166,7 @@ struct sParticlePipeline : Singleton<sParticlePipeline>
 		btr::BufferMemory m_particle_emitter;
 		btr::BufferMemory m_particle_emitter_counter;
 
-		vk::UniqueRenderPass m_render_pass;
-		std::vector<vk::UniqueFramebuffer> m_framebuffer;
+		std::shared_ptr<RenderPassModule> m_render_pass;
 
 		std::array<vk::UniqueDescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
 		std::array<vk::UniqueDescriptorSet, DESCRIPTOR_SET_NUM> m_descriptor_set;

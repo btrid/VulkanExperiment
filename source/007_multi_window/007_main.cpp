@@ -23,7 +23,6 @@
 
 #include <applib/App.h>
 #include <applib/cModelPipeline.h>
-#include <applib/cModelRender.h>
 #include <applib/DrawHelper.h>
 #include <btrlib/Context.h>
 #define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
