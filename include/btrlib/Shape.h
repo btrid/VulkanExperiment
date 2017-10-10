@@ -6,8 +6,6 @@
 struct Rect{
 	glm::vec2 lt_;
 	glm::vec2 rb_;
-
-//	bool isHit
 };
 
 struct Point2

@@ -11,6 +11,7 @@
 #include <btrlib/cModel.h>
 #include <btrlib/Material.h>
 #include <applib/DrawHelper.h>
+#include <applib/GraphicsResource.h>
 
 
 struct ModelDescriptorModule : public DescriptorModule
@@ -61,7 +62,7 @@ struct ModelDescriptorModule : public DescriptorModule
 			material->getMaterialBuffer(),
 		};
 
-		std::vector<vk::DescriptorImageInfo> color_images(DESCRIPTOR_TEXTURE_NUM, vk::DescriptorImageInfo(DrawHelper::Order().getWhiteTexture().m_sampler.get(), DrawHelper::Order().getWhiteTexture().m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal));
+		std::vector<vk::DescriptorImageInfo> color_images(DESCRIPTOR_TEXTURE_NUM, vk::DescriptorImageInfo(sGraphicsResource::Order().getWhiteTexture().m_sampler.get(), sGraphicsResource::Order().getWhiteTexture().m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal));
 		for (size_t i = 0; i < material->getTextureList().size(); i++)
 		{
 			const auto& tex = material->getTextureList()[i];

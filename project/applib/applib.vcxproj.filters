@@ -48,14 +48,14 @@
     <ClInclude Include="..\..\include\applib\Utility.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\applib\GraphicsResource.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\source\applib\App.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\source\applib\cModelPipeline.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
@@ -72,6 +72,9 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="..\..\source\applib\sParticlePipeline.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\applib\App.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

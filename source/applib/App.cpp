@@ -6,6 +6,7 @@
 #include <applib/DrawHelper.h>
 #include <applib/sCameraManager.h>
 #include <applib/sSystem.h>
+#include <applib/GraphicsResource.h>
 
 namespace app
 {
@@ -36,7 +37,7 @@ void App::setup(const cGPU& gpu)
 
 		vk::MemoryPropertyFlags host_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
 		vk::MemoryPropertyFlags device_memory = vk::MemoryPropertyFlagBits::eDeviceLocal;
-		device_memory = host_memory; // debug
+//		device_memory = host_memory; // debug
 		m_context->m_vertex_memory.setup(device, vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 1000 * 100);
 		m_context->m_uniform_memory.setup(device, vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 20);
 		m_context->m_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 1000 * 200);
@@ -81,7 +82,7 @@ void App::setup(const cGPU& gpu)
 	sSystem::Order().setup(m_context);
 	sCameraManager::Order().setup(m_context);
 	DrawHelper::Order().setup(m_context);
-
+	sGraphicsResource::Order().setup(m_context);
 }
 
 void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
@@ -93,7 +94,7 @@ void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
 
 	for (auto& window : m_window_list)
 	{
-		cmds.push_back(window->getSwapchain().m_cmd_present_to_render[window->getSwapchain().m_backbuffer_index]);
+		cmds.push_back(window->getSwapchain().m_cmd_present_to_render[window->getSwapchain().m_backbuffer_index].get());
 	}
 
 	m_sync_point.wait();
@@ -103,7 +104,7 @@ void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
 
 	for (auto& window : m_window_list)
 	{
-		cmds.push_back(window->getSwapchain().m_cmd_render_to_present[window->getSwapchain().m_backbuffer_index]);
+		cmds.push_back(window->getSwapchain().m_cmd_render_to_present[window->getSwapchain().m_backbuffer_index].get());
 	}
 
 	std::vector<vk::Semaphore> swap_wait_semas(m_window_list.size());

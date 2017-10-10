@@ -12,12 +12,9 @@ struct RenderPassModule
 {
 	virtual vk::RenderPass getRenderPass()const = 0;
 	virtual vk::Framebuffer getFramebuffer(uint32_t index)const = 0;
-};
-
-struct RenderOffscreenModule : public RenderPassModule
-{
 
 };
+
 struct RenderBackbufferModule : public RenderPassModule
 {
 	RenderBackbufferModule(const std::shared_ptr<btr::Context>& context)
@@ -89,7 +86,6 @@ struct RenderBackbufferModule : public RenderPassModule
 			}
 		}
 	}
-
 	virtual vk::RenderPass getRenderPass()const override { return m_render_pass.get(); }
 	virtual vk::Framebuffer getFramebuffer(uint32_t index)const override { return m_framebuffer[index].get(); }
 
@@ -97,6 +93,142 @@ private:
 	vk::UniqueRenderPass m_render_pass;
 	std::vector<vk::UniqueFramebuffer> m_framebuffer;
 
+};
+struct RenderOffscreenModule : public RenderPassModule
+{
+	RenderOffscreenModule(const std::shared_ptr<btr::Context>& context)
+	{
+		auto& device = context->m_device;
+		// レンダーパス
+		{
+			// sub pass
+			std::vector<vk::AttachmentReference> color_ref =
+			{
+				vk::AttachmentReference()
+				.setAttachment(0)
+				.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
+			};
+			vk::AttachmentReference depth_ref;
+			depth_ref.setAttachment(1);
+			depth_ref.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+
+			vk::SubpassDescription subpass;
+			subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+			subpass.setInputAttachmentCount(0);
+			subpass.setPInputAttachments(nullptr);
+			subpass.setColorAttachmentCount((uint32_t)color_ref.size());
+			subpass.setPColorAttachments(color_ref.data());
+			subpass.setPDepthStencilAttachment(&depth_ref);
+
+			std::vector<vk::AttachmentDescription> attach_description = {
+				// color1
+				vk::AttachmentDescription()
+				.setFormat(vk::Format::eR16G16B16Sfloat)
+				.setSamples(vk::SampleCountFlagBits::e1)
+				.setLoadOp(vk::AttachmentLoadOp::eLoad)
+				.setStoreOp(vk::AttachmentStoreOp::eStore)
+				.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
+				.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
+				vk::AttachmentDescription()
+				.setFormat(context->m_window->getSwapchain().m_depth.m_format)
+				.setSamples(vk::SampleCountFlagBits::e1)
+				.setLoadOp(vk::AttachmentLoadOp::eLoad)
+				.setStoreOp(vk::AttachmentStoreOp::eStore)
+				.setInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
+				.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
+			};
+			vk::RenderPassCreateInfo renderpass_info = vk::RenderPassCreateInfo()
+				.setAttachmentCount((uint32_t)attach_description.size())
+				.setPAttachments(attach_description.data())
+				.setSubpassCount(1)
+				.setPSubpasses(&subpass);
+
+			m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
+		}
+		{
+			vk::ImageCreateInfo image_info;
+			image_info.imageType = vk::ImageType::e2D;
+			image_info.format = vk::Format::eR16G16B16Sfloat;
+			image_info.mipLevels = 1;
+			image_info.arrayLayers = 1;
+			image_info.samples = vk::SampleCountFlagBits::e1;
+			image_info.tiling = vk::ImageTiling::eOptimal;
+			image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
+			image_info.sharingMode = vk::SharingMode::eExclusive;
+			image_info.initialLayout = vk::ImageLayout::eUndefined;
+			image_info.extent = { context->m_window->getClientSize().x, context->m_window->getClientSize().y, 1 };
+			m_image = context->m_device->createImageUnique(image_info);
+
+			vk::MemoryRequirements memory_request = context->m_device->getImageMemoryRequirements(m_image.get());
+			vk::MemoryAllocateInfo memory_alloc_info;
+			memory_alloc_info.allocationSize = memory_request.size;
+			memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(context->m_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+			m_memory = context->m_device->allocateMemoryUnique(memory_alloc_info);
+			context->m_device->bindImageMemory(m_image.get(), m_memory.get(), 0);
+
+			vk::ImageSubresourceRange subresourceRange;
+			subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+			subresourceRange.baseArrayLayer = 0;
+			subresourceRange.baseMipLevel = 0;
+			subresourceRange.layerCount = 1;
+			subresourceRange.levelCount = 1;
+			vk::ImageViewCreateInfo view_info;
+			view_info.viewType = vk::ImageViewType::e3D;
+			view_info.components.r = vk::ComponentSwizzle::eR;
+			view_info.components.g = vk::ComponentSwizzle::eG;
+			view_info.components.b = vk::ComponentSwizzle::eB;
+			view_info.components.a = vk::ComponentSwizzle::eA;
+			view_info.flags = vk::ImageViewCreateFlags();
+			view_info.format = image_info.format;
+			view_info.image = m_image.get();
+			view_info.subresourceRange = subresourceRange;
+			m_view = context->m_device->createImageViewUnique(view_info);
+
+			{
+				auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+
+				vk::ImageMemoryBarrier to_transfer;
+				to_transfer.image = m_image.get();
+				to_transfer.oldLayout = vk::ImageLayout::eUndefined;
+				to_transfer.newLayout = vk::ImageLayout::eColorAttachmentOptimal;
+				to_transfer.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eColorAttachmentRead;
+				to_transfer.subresourceRange = subresourceRange;
+				cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_transfer });
+			}
+
+		}
+
+		{
+			std::array<vk::ImageView, 2> view;
+			view[0] = m_view.get();
+			view[1] = context->m_window->getSwapchain().m_depth.m_view;
+
+			vk::FramebufferCreateInfo framebuffer_info;
+			framebuffer_info.setRenderPass(m_render_pass.get());
+			framebuffer_info.setAttachmentCount((uint32_t)view.size());
+			framebuffer_info.setPAttachments(view.data());
+			framebuffer_info.setWidth(context->m_window->getClientSize().x);
+			framebuffer_info.setHeight(context->m_window->getClientSize().y);
+			framebuffer_info.setLayers(1);
+
+			m_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
+		}
+	}
+
+	virtual vk::RenderPass getRenderPass()const override { return m_render_pass.get(); }
+	virtual vk::Framebuffer getFramebuffer(uint32_t index)const override { return m_framebuffer.get(); }
+
+private:
+	vk::UniqueRenderPass m_render_pass;
+	vk::UniqueFramebuffer m_framebuffer;
+
+	std::vector<vk::Viewport> m_viewport;
+	std::vector<vk::Rect2D> m_sissor;
+
+	vk::UniqueImage m_image;
+	vk::UniqueImageView m_view;
+	vk::UniqueDeviceMemory m_memory;
+	vk::Format m_format;
 };
 
 struct ShaderDescriptor

@@ -76,6 +76,7 @@
     <ClInclude Include="..\..\include\applib\cModelPipeline.h" />
     <ClInclude Include="..\..\include\applib\DrawHelper.h" />
     <ClInclude Include="..\..\include\applib\Geometry.h" />
+    <ClInclude Include="..\..\include\applib\GraphicsResource.h" />
     <ClInclude Include="..\..\include\applib\sCameraManager.h" />
     <ClInclude Include="..\..\include\applib\sParticlePipeline.h" />
     <ClInclude Include="..\..\include\applib\sSystem.h" />
