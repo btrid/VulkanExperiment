@@ -85,8 +85,6 @@ int main()
 
 		app.preUpdate();
 		{
-
-
 			{
 				render->m_animation->getTransform().m_global = glm::mat4(1.f);
 			}

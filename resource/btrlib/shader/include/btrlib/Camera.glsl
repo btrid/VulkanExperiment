@@ -36,11 +36,11 @@ struct Camera
 #if defined(SETPOINT_CAMERA)
 layout(set=SETPOINT_CAMERA, binding=0, std140) uniform CameraUniform
 {
-	Camera u_camera[1];
+	Camera u_camera[2];
 };
 layout(set=SETPOINT_CAMERA, binding=1, std140) uniform CameraFrustomPointUniform
 {
-	CameraFrustomPoint u_camera_frustom_point[1];
+	CameraFrustomPoint u_camera_frustom_point[2];
 };
 #endif
 

@@ -1,0 +1,21 @@
+#version 450
+
+#extension GL_GOOGLE_cpp_style_line_directive : require
+#extension GL_ARB_shader_draw_parameters : require
+
+#define USE_CULLING 0
+#include <Culling.glsl>
+
+layout (local_size_x = 1024) in;
+
+void main() 
+{
+	uint index = gl_GlobalInvocationID.x;
+	if(index >= 1000){ return; }
+	if(b_visible[index] == 0){ return; }
+
+	uint reference_index = atomicAdd(b_cmd.instanceCount, 1);
+	b_map[reference_index] = index;
+
+}
+

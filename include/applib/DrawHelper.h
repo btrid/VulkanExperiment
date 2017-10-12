@@ -233,8 +233,6 @@ struct DrawHelper : public Singleton<DrawHelper>
 			}
 
 		}
-
-
 		
 		// setup shader
 		{

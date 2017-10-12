@@ -399,13 +399,13 @@ struct AllocatedMemory
 		desc.attribute = BufferMemoryAttributeFlags();
 		return allocateMemory(desc);
 	}
-	BufferMemory allocateMemory(const BufferMemoryDescriptor& arg)
+	BufferMemory allocateMemory(const BufferMemoryDescriptor& desc)
 	{
 
 		// size0‚Í‚¨‚©‚µ‚¢‚æ‚Ë
-		assert(arg.size != 0);
+		assert(desc.size != 0);
 
-		auto zone = m_resource->m_free_zone.alloc(arg.size, btr::isOn(arg.attribute, BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT));
+		auto zone = m_resource->m_free_zone.alloc(desc.size, btr::isOn(desc.attribute, BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT));
 
 		// alloc‚Å‚«‚½H
 		assert(zone.isValid());
@@ -422,7 +422,7 @@ struct AllocatedMemory
 		alloc.m_resource->m_memory_ref = m_resource->m_memory.get();
 		alloc.m_buffer_info.buffer = m_resource->m_buffer.get();
 		alloc.m_buffer_info.offset = alloc.m_resource->m_zone.m_start;
-		alloc.m_buffer_info.range = arg.size;
+		alloc.m_buffer_info.range = desc.size;
 
 		alloc.m_resource->m_mapped_memory = nullptr;
 		if (m_resource->m_mapped_memory)
