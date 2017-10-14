@@ -1,18 +1,18 @@
 #include <applib/Geometry.h>
 #include <unordered_map>
 #include <set>
-std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> Geometry::MakeBox(float edge /*= 1.f*/)
+std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> Geometry::MakeBox(const glm::vec3& edge /*= glm::vec3(1.f)*/)
 {
 	std::vector<glm::vec3> v = 
 	{
-		{-edge,  edge,  edge},
-		{ edge,  edge,  edge},
-		{-edge, -edge,  edge},
-		{ edge, -edge,  edge},
-		{-edge,  edge, -edge},
-		{ edge,  edge, -edge},
-		{-edge, -edge, -edge},
-		{ edge, -edge, -edge},
+		{-edge.x,  edge.y,  edge.z},
+		{ edge.x,  edge.y,  edge.z},
+		{-edge.x, -edge.y,  edge.z},
+		{ edge.x, -edge.y,  edge.z},
+		{-edge.x,  edge.y, -edge.z},
+		{ edge.x,  edge.y, -edge.z},
+		{-edge.x, -edge.y, -edge.z},
+		{ edge.x, -edge.y, -edge.z},
 	};
 
 	std::vector<glm::uvec3> i =

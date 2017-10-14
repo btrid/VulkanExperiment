@@ -7,15 +7,16 @@
 #include <Culling.glsl>
 
 layout(early_fragment_tests) in;
+in vec4 gl_FragCoord;
+out float gl_FragDepth;
 
 layout(location = 1)in Vertex{
-	flat int objectID;
+	flat int instance_ID;
 }In;
-
-
 
 void main()
 {
-	b_visible[In.objectID] = 1;
-//	bVisible[In.objectID].instanceCount = 1;
+	b_visible[In.instance_ID] = 1;
+	gl_FragDepth = gl_FragCoord.z;
+
 }

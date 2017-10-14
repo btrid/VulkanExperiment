@@ -15,7 +15,7 @@ void main()
 	if(b_visible[index] == 0){ return; }
 
 	uint reference_index = atomicAdd(b_cmd.instanceCount, 1);
-	b_map[reference_index] = index;
+	b_instance_index_map[reference_index] = index;
 
 }
 

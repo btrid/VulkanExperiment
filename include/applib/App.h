@@ -10,6 +10,11 @@
 namespace app
 {
 
+struct AppDescriptor
+{
+	cGPU m_gpu;
+	uvec2 m_window_size;
+};
 struct App
 {
 	cGPU m_gpu;
@@ -21,7 +26,7 @@ struct App
 	std::vector<vk::CommandBuffer> m_system_cmds;
 	SynchronizedPoint m_sync_point;
 	App();
-	void setup(const cGPU& gpu);
+	void setup(const AppDescriptor& desc);
 	void submit(std::vector<vk::CommandBuffer>&& cmds);
 	void preUpdate();
 	void postUpdate();

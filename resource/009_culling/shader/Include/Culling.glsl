@@ -15,9 +15,8 @@ layout(std430, set=USE_CULLING, binding=2) buffer DrawCommandBuffer {
 	DrawElementIndirectCommand b_cmd;
 };
 layout(std430, set=USE_CULLING, binding=3) buffer MappingBuffer {
-	uint b_map[];
+	uint b_instance_index_map[];
 };
-
 #endif
 
 #endif

@@ -464,6 +464,7 @@ struct UpdateBuffer
 		m_staging_buffer = desc.staging_memory.allocateMemory(sizeof(T)*desc.element_num*desc.frame_max);
 		m_element_max = desc.element_num;
 		m_area.resize(desc.frame_max);
+		m_desc = desc;
 	}
 
 	void subupdate(const T* data, vk::DeviceSize data_num, uint32_t offset_num, uint32_t cpu_index)
@@ -516,6 +517,7 @@ struct UpdateBuffer
 
 	vk::DescriptorBufferInfo getBufferInfo()const { return m_device_buffer.getBufferInfo(); }
 	vk::DescriptorBufferInfo getStagingBufferInfo()const { return m_staging_buffer.getBufferInfo(); }
+	const UpdateBufferDescriptor& getDescriptor()const { return m_desc; }
 	BufferMemory& getBufferMemory() { return m_device_buffer; }
 	const BufferMemory& getBufferMemory()const { return m_device_buffer; }
 
@@ -543,6 +545,7 @@ private:
 		}
 	};
 	std::vector<Area> m_area;
+	UpdateBufferDescriptor m_desc;
 	uint32_t m_element_max;
 
 };

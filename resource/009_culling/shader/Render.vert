@@ -18,6 +18,6 @@ layout(location = 0)out gl_PerVertex{
 
 void main()
 {
-	gl_Position = vec4(inPosition.xyz, 1.);
-
+	gl_Position = b_world[b_instance_index_map[gl_InstanceIndex]] * vec4(inPosition.xyz, 1.);
+//	gl_Position = b_world[gl_InstanceIndex] * vec4(inPosition.xyz, 1.);
 }

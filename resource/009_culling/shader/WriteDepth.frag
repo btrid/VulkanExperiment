@@ -1,9 +1,13 @@
 #version 450
 
-//layout(location=0) out vec4 FragColor;
+out float gl_FragDepth;
+in vec4 gl_FragCoord;
 
 void main()
 {
 	// depth 書くだけ
-//	FragColor = vec4(1., 0., 0., 1); // occluder書いておく
+	// glslc バグってるのか、明示的に書かないとFragmentShaderが起動しない？ while(true);も無視される
+	//	while(true);
+	gl_FragDepth = gl_FragCoord.z;
+
 }

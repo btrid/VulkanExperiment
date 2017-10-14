@@ -17,7 +17,7 @@ App::App()
 
 }
 
-void App::setup(const cGPU& gpu)
+void App::setup(const AppDescriptor& desc)
 {
 	vk::Instance instance = sGlobal::Order().getVKInstance();
 
@@ -25,13 +25,13 @@ void App::setup(const cGPU& gpu)
 	static cDebug debug(instance);
 #endif
 
-	m_gpu = gpu;
+	m_gpu = desc.m_gpu;
 	auto device = sGlobal::Order().getGPU(0).getDevice();
 	m_cmd_pool = cCmdPool::MakeCmdPool(m_gpu);
 
 	m_context = std::make_shared<btr::Context>();
 	{
-		m_context->m_gpu = gpu;
+		m_context->m_gpu = m_gpu;
 		m_context->m_device = device;
 		m_context->m_cmd_pool = m_cmd_pool;
 
@@ -69,7 +69,7 @@ void App::setup(const cGPU& gpu)
 	cWindow::CreateInfo windowInfo;
 	windowInfo.surface_format_request = vk::SurfaceFormatKHR{ vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear };
 	windowInfo.gpu = sGlobal::Order().getGPU(0);
-	windowInfo.size = vk::Extent2D(640, 480);
+	windowInfo.size = vk::Extent2D(desc.m_window_size.x, desc.m_window_size.y);
 	windowInfo.window_name = L"Vulkan Test";
 	windowInfo.class_name = L"VulkanMainWindow";
 

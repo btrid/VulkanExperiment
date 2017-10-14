@@ -25,7 +25,7 @@ struct Geometry
 		std::vector<vk::VertexInputBindingDescription> m_vertex_binding;
 	};
 	std::unique_ptr<Resource> m_resource;
-	static std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> MakeBox(float edge = 1.f);
+	static std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> MakeBox(const glm::vec3& edge = glm::vec3(1.f));
 	static std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> MakePlane(float edge /*= 1.f*/);
 	static std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> MakeSphere(uint32_t quarity = 1);
 	static std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> MakeFrustom(const Frustom& frustom);

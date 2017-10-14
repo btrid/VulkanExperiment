@@ -29,9 +29,6 @@ layout(location = 0)out gl_PerVertex
 	float gl_ClipDistance[];
 };
 
-//out int gl_Layer;
-//out int gl_ViewportIndex;
-
 void main()
 {
 		gl_ViewportIndex = gl_InvocationID;

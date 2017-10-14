@@ -11,18 +11,19 @@
 
 layout(location = 0)in vec4 inPosition;
 
-layout(location = 0)out gl_PerVertex{
+layout(location=0) out gl_PerVertex
+{
 	vec4 gl_Position;
 };
 
 layout(location = 1)out Vertex{
-	flat int objectID;
+	flat int instance_ID;
 }Out;
-
 
 void main()
 {
+
 	mat4 VP = u_camera[0].u_projection * u_camera[0].u_view;
 	gl_Position = VP * b_world[gl_InstanceIndex] * vec4(inPosition.xyz, 1.);
-	Out.objectID = gl_DrawIDARB;
+	Out.instance_ID = gl_InstanceIndex;
 }

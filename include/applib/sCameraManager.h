@@ -34,7 +34,7 @@ struct sCameraManager : public Singleton<sCameraManager>
 			update_desc.device_memory = context->m_uniform_memory;
 			update_desc.staging_memory = context->m_staging_memory;
 			update_desc.frame_max = sGlobal::FRAME_MAX;
-			update_desc.element_num = 1;
+			update_desc.element_num = 2;
 			m_camera.setup(update_desc);
 			m_camera_frustom.setup(update_desc);
 		}
@@ -107,14 +107,18 @@ struct sCameraManager : public Singleton<sCameraManager>
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
 
-		auto* camera = cCamera::sCamera::Order().getCameraList()[0];
-		CameraGPU camera_GPU;
-		camera_GPU.setup(*camera);
-		CameraFrustomGPU camera_frustom;
-		camera_frustom.setup(*camera);
+		for (size_t i = 0 ; i < m_camera.getDescriptor().element_num; i++)
+		{
+			auto* camera = cCamera::sCamera::Order().getCameraList()[i];
+			CameraGPU camera_GPU;
+			camera_GPU.setup(*camera);
+			CameraFrustomGPU camera_frustom;
+			camera_frustom.setup(*camera);
 
-		m_camera.subupdate(&camera_GPU, 1, 0, context->getGPUFrame());
-		m_camera_frustom.subupdate(&camera_frustom, 1, 0, context->getGPUFrame());
+			m_camera.subupdate(&camera_GPU, 1, i, context->getGPUFrame());
+			m_camera_frustom.subupdate(&camera_frustom, 1, i, context->getGPUFrame());
+		}
+
 		vk::BufferCopy copy_info[] = { m_camera.update(context->getGPUFrame()), m_camera_frustom.update(context->getGPUFrame()) };
 		cmd.copyBuffer(m_camera.getStagingBufferInfo().buffer, m_camera.getBufferInfo().buffer, array_length(copy_info), copy_info);
 

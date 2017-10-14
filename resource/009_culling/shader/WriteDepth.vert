@@ -9,7 +9,6 @@
 #define SETPOINT_CAMERA 1
 #include <btrlib/Camera.glsl>
 
-
 layout(location = 0)in vec4 inPosition;
 
 layout(location=0) out gl_PerVertex
@@ -20,6 +19,6 @@ layout(location=0) out gl_PerVertex
 void main()
 {
 	mat4 VP = u_camera[0].u_projection * u_camera[0].u_view;
-	gl_Position = VP * vec4(inPosition.xyz, 1.);
+	gl_Position = VP * b_world[gl_InstanceIndex] * vec4(inPosition.xyz, 1.);
 
 }

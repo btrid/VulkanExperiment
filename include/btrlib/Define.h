@@ -4,6 +4,9 @@
 #include <Windows.h>
 #define VK_USE_PLATFORM_WIN32_KHR
 //#define VULKAN_HPP_NO_SMART_HANDLE
+#ifdef MemoryBarrier
+#undef MemoryBarrier
+#endif // MemoryBarrier
 #include <vulkan/vulkan.hpp>
 
 #include <btrlib/DefineMath.h>
