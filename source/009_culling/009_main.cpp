@@ -41,27 +41,27 @@ struct CullingDescriptorSetModule
 	void update(const std::shared_ptr<btr::Context>& context)
 	{
 		{
-			std::vector<vk::DescriptorBufferInfo> storages = {
+			vk::DescriptorBufferInfo storages[] = {
 				m_world.getBufferInfo(),
 				m_visible.getBufferInfo(),
 				m_draw_cmd.getBufferInfo(),
-				m_map.getBufferInfo(),
+				m_instance_index_map.getBufferInfo(),
 			};
-			std::vector<vk::WriteDescriptorSet> write_desc =
+			vk::WriteDescriptorSet write_desc[] =
 			{
 				vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(storages.size())
-				.setPBufferInfo(storages.data())
+				.setDescriptorCount(array_length(storages))
+				.setPBufferInfo(storages)
 				.setDstBinding(0)
 				.setDstSet(m_descriptor_set.get()),
 			};
-			context->m_device->updateDescriptorSets(write_desc, {});
+			context->m_device->updateDescriptorSets(array_length(write_desc), write_desc, 0, nullptr);
 		}
 
 	}
 
-	btr::BufferMemory m_map;
+	btr::BufferMemory m_instance_index_map;
 	btr::BufferMemory m_visible;
 	btr::BufferMemory m_draw_cmd;
 	btr::BufferMemory m_world;
@@ -78,7 +78,7 @@ struct CullingTest
 		btr::BufferMemory m_mesh_index;
 		btr::BufferMemory m_mesh_indirect;
 		btr::BufferMemory m_world;
-		btr::BufferMemory m_visible_index;
+		btr::BufferMemory m_instance_index_map;
 
 		std::shared_ptr<CullingDescriptorSetModule> m_occlusion_descriptor_set;
 
@@ -119,7 +119,6 @@ struct CullingTest
 
 	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
 	std::shared_ptr<DescriptorSetLayoutModule> m_occlusion_descriptor_set_layout;
-//	std::shared_ptr<DescriptorSetLayoutModule> m_render_descriptor_set_layout;
 
 	CullingTest(const std::shared_ptr<btr::Context>& context)
 	{
@@ -234,14 +233,14 @@ struct CullingTest
 				desc.size = sizeof(uint32_t) * num;
 				auto buffer = context->m_storage_memory.allocateMemory(desc);
 
-				resource->m_visible_index = buffer;
+				resource->m_instance_index_map = buffer;
 			}
 			{
 				resource->m_occlusion_descriptor_set = std::make_shared<CullingDescriptorSetModule>(context, m_occlusion_descriptor_set_layout);
 				{
 					btr::BufferMemoryDescriptor desc;
 					desc.size = sizeof(uint32_t) * num;
-					resource->m_occlusion_descriptor_set->m_map = context->m_storage_memory.allocateMemory(desc);
+					resource->m_occlusion_descriptor_set->m_instance_index_map = resource->m_instance_index_map;
 
 				}
 				{
@@ -340,7 +339,7 @@ struct CullingTest
 				desc.size = sizeof(uint32_t) * num;
 				auto buffer = context->m_storage_memory.allocateMemory(desc);
 
-				resource->m_visible_index = buffer;
+				resource->m_instance_index_map = buffer;
 			}
 			{
 				resource->m_occlusion_descriptor_set = std::make_shared<CullingDescriptorSetModule>(context, m_occlusion_descriptor_set_layout);
@@ -348,9 +347,9 @@ struct CullingTest
 				{
 					btr::BufferMemoryDescriptor desc;
 					desc.size = sizeof(uint32_t) * num;
-					resource->m_occlusion_descriptor_set->m_map = context->m_storage_memory.allocateMemory(desc);
+					resource->m_occlusion_descriptor_set->m_instance_index_map = resource->m_instance_index_map;
 
-					cmd->fillBuffer(resource->m_occlusion_descriptor_set->m_map.getBufferInfo().buffer, resource->m_occlusion_descriptor_set->m_map.getBufferInfo().offset, resource->m_occlusion_descriptor_set->m_map.getBufferInfo().range, 0u);
+					cmd->fillBuffer(resource->m_occlusion_descriptor_set->m_instance_index_map.getBufferInfo().buffer, resource->m_occlusion_descriptor_set->m_instance_index_map.getBufferInfo().offset, resource->m_occlusion_descriptor_set->m_instance_index_map.getBufferInfo().range, 0u);
 				}
 				{
 					btr::BufferMemoryDescriptor desc;
@@ -401,25 +400,19 @@ struct CullingTest
 
 				m_occlusion_test_pass = context->m_device->createRenderPassUnique(renderpass_info);
 			}
-
-//				m_occusion_test_framebuffer.resize(context->m_window->getSwapchain().getBackbufferNum());
 			{
-				std::array<vk::ImageView, 1> view;
-
+				vk::ImageView view[] = {
+					context->m_window->getSwapchain().m_depth.m_view,
+				};
 				vk::FramebufferCreateInfo framebuffer_info;
 				framebuffer_info.setRenderPass(m_occlusion_test_pass.get());
-				framebuffer_info.setAttachmentCount((uint32_t)view.size());
-				framebuffer_info.setPAttachments(view.data());
+				framebuffer_info.setAttachmentCount(array_length(view));
+				framebuffer_info.setPAttachments(view);
 				framebuffer_info.setWidth(context->m_window->getClientSize().x);
 				framebuffer_info.setHeight(context->m_window->getClientSize().y);
 				framebuffer_info.setLayers(1);
 
-//				for (size_t i = 0; i < m_framebuffer.size(); i++) 
-				{
-//					view[0] = context->m_window->getSwapchain().m_backbuffer[i].m_view;
-					view[0] = context->m_window->getSwapchain().m_depth.m_view;
-					m_occlusion_test_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
-				}
+				m_occlusion_test_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
 			}
 
 		}

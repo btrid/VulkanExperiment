@@ -22,7 +22,7 @@ std::vector<uint32_t> getSupportSurfaceQueue(vk::PhysicalDevice gpu, vk::Surface
 
 }
 
-void cWindow::Swapchain::setup(std::shared_ptr<btr::Context>& loader, const CreateInfo& descriptor, vk::SurfaceKHR surface)
+void cWindow::Swapchain::setup(std::shared_ptr<btr::Context>& context, const cWindowDescriptor& descriptor, vk::SurfaceKHR surface)
 {
 	std::vector<vk::PresentModeKHR> presentModeList = descriptor.gpu->getSurfacePresentModesKHR(surface);
 
@@ -148,7 +148,7 @@ void cWindow::Swapchain::setup(std::shared_ptr<btr::Context>& loader, const Crea
 	{
 		{
 			vk::CommandBufferAllocateInfo cmd_buffer_info;
-			cmd_buffer_info.commandPool = loader->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
+			cmd_buffer_info.commandPool = context->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
 			cmd_buffer_info.commandBufferCount = sGlobal::FRAME_MAX;
 			cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
 			m_cmd_present_to_render = m_use_device->allocateCommandBuffersUnique(cmd_buffer_info);
@@ -255,7 +255,7 @@ uint32_t cWindow::Swapchain::swap()
 	return m_backbuffer_index;
 }
 
-void cWindow::setup(std::shared_ptr<btr::Context>& loader, const CreateInfo& descriptor)
+void cWindow::setup(std::shared_ptr<btr::Context>& context, const cWindowDescriptor& descriptor)
 {
 	m_descriptor = descriptor;
 	WNDCLASSEXW wcex = {};
@@ -290,7 +290,7 @@ void cWindow::setup(std::shared_ptr<btr::Context>& loader, const CreateInfo& des
 		.setHwnd(m_private->m_window);
 	m_surface = sGlobal::Order().getVKInstance().createWin32SurfaceKHRUnique(surfaceInfo);
 
-	m_swapchain.setup(loader, descriptor, m_surface.get());
+	m_swapchain.setup(context, descriptor, m_surface.get());
 
 	vk::FenceCreateInfo fence_info;
 	fence_info.setFlags(vk::FenceCreateFlagBits::eSignaled);
@@ -300,8 +300,8 @@ void cWindow::setup(std::shared_ptr<btr::Context>& loader, const CreateInfo& des
 		m_fence_list.emplace_back(descriptor.gpu.getDevice()->createFenceUnique(fence_info));
 	}
 	vk::SemaphoreCreateInfo semaphoreInfo = vk::SemaphoreCreateInfo();
-	m_swapchain.m_swapbuffer_semaphore = loader->m_gpu.getDevice()->createSemaphoreUnique(semaphoreInfo);
-	m_swapchain.m_submit_semaphore = loader->m_gpu.getDevice()->createSemaphoreUnique(semaphoreInfo);
+	m_swapchain.m_swapbuffer_semaphore = context->m_gpu.getDevice()->createSemaphoreUnique(semaphoreInfo);
+	m_swapchain.m_submit_semaphore = context->m_gpu.getDevice()->createSemaphoreUnique(semaphoreInfo);
 
 	vk::ImageSubresourceRange subresource_range;
 	subresource_range.setAspectMask(vk::ImageAspectFlagBits::eColor);
@@ -334,7 +334,7 @@ void cWindow::setup(std::shared_ptr<btr::Context>& loader, const CreateInfo& des
 	barrier.back().setOldLayout(vk::ImageLayout::eUndefined);
 	barrier.back().setNewLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
-	auto cmd = loader->m_cmd_pool->allocCmdTempolary(0);
+	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 	cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eEarlyFragmentTests, vk::DependencyFlags(), {}, {}, barrier);
 }
 

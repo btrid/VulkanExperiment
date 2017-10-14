@@ -66,15 +66,15 @@ void App::setup(const AppDescriptor& desc)
 
 	}
 
-	cWindow::CreateInfo windowInfo;
-	windowInfo.surface_format_request = vk::SurfaceFormatKHR{ vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear };
-	windowInfo.gpu = sGlobal::Order().getGPU(0);
-	windowInfo.size = vk::Extent2D(desc.m_window_size.x, desc.m_window_size.y);
-	windowInfo.window_name = L"Vulkan Test";
-	windowInfo.class_name = L"VulkanMainWindow";
+	cWindowDescriptor window_desc;
+	window_desc.surface_format_request = vk::SurfaceFormatKHR{ vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear };
+	window_desc.gpu = sGlobal::Order().getGPU(0);
+	window_desc.size = vk::Extent2D(desc.m_window_size.x, desc.m_window_size.y);
+	window_desc.window_name = L"Vulkan Test";
+	window_desc.class_name = L"VulkanMainWindow";
 
 	auto window = std::make_shared<cWindow>();
-	window->setup(m_context, windowInfo);
+	window->setup(m_context, window_desc);
 	m_window = window;
 	m_window_list.push_back(window);
 	m_context->m_window = window;

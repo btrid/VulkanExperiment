@@ -7,7 +7,7 @@
 layout(std430, set=USE_CULLING, binding=0) buffer DrawParameterBuffer {
 	mat4 b_world[];
 };
-layout(std430, set=USE_CULLING, binding=1) buffer VisibleBuffer {
+layout(std430, set=USE_CULLING, binding=1) restrict buffer VisibleBuffer {
 	uint b_visible[];
 };
 

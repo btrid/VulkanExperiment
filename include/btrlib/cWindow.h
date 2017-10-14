@@ -23,19 +23,20 @@ struct RenderTarget
 	vk::Format m_format;
 	vk::Extent2D m_size;
 };
+
+struct cWindowDescriptor
+{
+	cGPU gpu;
+	std::wstring class_name;
+	std::wstring window_name;
+
+	vk::Extent2D size;
+	vk::SurfaceFormatKHR surface_format_request;
+	int backbuffer_num;
+};
 class cWindow
 {
 public:
-	struct CreateInfo
-	{
-		cGPU gpu;
-		std::wstring class_name;
-		std::wstring window_name;
-
-		vk::Extent2D size;
-		vk::SurfaceFormatKHR surface_format_request;
-		int backbuffer_num;
-	};
 private:
 	struct Swapchain 
 	{
@@ -60,7 +61,7 @@ private:
 
 		}
 
-		void setup(std::shared_ptr<btr::Context>& loader, const CreateInfo& descriptor, vk::SurfaceKHR surface);
+		void setup(std::shared_ptr<btr::Context>& loader, const cWindowDescriptor& descriptor, vk::SurfaceKHR surface);
 		uint32_t swap();
 		size_t getBackbufferNum()const { return m_backbuffer.size(); }
 	};
@@ -79,7 +80,7 @@ private:
 	vk::UniqueSurfaceKHR m_surface;
 	cInput m_input;
 	Swapchain m_swapchain;
-	CreateInfo m_descriptor;
+	cWindowDescriptor m_descriptor;
 
 	std::vector<vk::UniqueFence> m_fence_list;
 
@@ -119,7 +120,7 @@ public:
 
 	}
 
-	void setup(std::shared_ptr<btr::Context>& loader, const CreateInfo& descriptor);
+	void setup(std::shared_ptr<btr::Context>& loader, const cWindowDescriptor& descriptor);
 
 	void sync()
 	{
