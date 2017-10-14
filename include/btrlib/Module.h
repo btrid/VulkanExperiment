@@ -408,6 +408,7 @@ protected:
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorPool m_descriptor_pool;
 	vk::DescriptorPool m_default_pool;
+public:
 	vk::DescriptorSetLayout getLayout()const { return m_descriptor_set_layout.get(); }
 	vk::DescriptorPool getPool()const { return m_descriptor_pool.get() ? m_descriptor_pool.get() : m_default_pool; }
 

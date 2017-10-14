@@ -40,15 +40,16 @@ struct sCameraManager : public Singleton<sCameraManager>
 		}
 
 		std::vector<std::vector<vk::DescriptorSetLayoutBinding>> bindings(DESCRIPTOR_SET_LAYOUT_NUM);
+		auto stage = vk::ShaderStageFlagBits::eAll;
 		bindings[DESCRIPTOR_SET_LAYOUT_CAMERA] =
 		{
 			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
+			.setStageFlags(stage)
 			.setDescriptorCount(1)
 			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 			.setBinding(0),
 			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)
+			.setStageFlags(stage)
 			.setDescriptorCount(1)
 			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 			.setBinding(1),

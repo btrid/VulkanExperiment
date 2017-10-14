@@ -75,6 +75,10 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "applib", "project\applib\ap
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "009_culling", "project\009_culling\009_culling.vcxproj", "{EDACA061-B99E-45EF-BD6B-501FDE10B32B}"
+	ProjectSection(ProjectDependencies) = postProject
+		{6AB61332-963C-4D53-B5FF-04B3A9689E23} = {6AB61332-963C-4D53-B5FF-04B3A9689E23}
+		{C902CBC4-17CF-47BA-B10E-DA6F79032944} = {C902CBC4-17CF-47BA-B10E-DA6F79032944}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
