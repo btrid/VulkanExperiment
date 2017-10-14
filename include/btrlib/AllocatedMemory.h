@@ -265,7 +265,7 @@ struct BufferMemory
 
 		~Resource()
 		{
-//			m_free_zone.delayedFree(m_zone);
+			//			m_free_zone.delayedFree(m_zone);
 		}
 
 	};
@@ -275,7 +275,7 @@ public:
 	vk::DescriptorBufferInfo getBufferInfo()const { return m_buffer_info; }
 	vk::DeviceMemory getDeviceMemory()const { return m_resource->m_memory_ref; }
 	void* getMappedPtr()const { return m_resource->m_mapped_memory; }
-	template<typename T> T* getMappedPtr(size_t offset_num = 0)const { return static_cast<T*>(m_resource->m_mapped_memory)+offset_num; }
+	template<typename T> T* getMappedPtr(size_t offset_num = 0)const { return static_cast<T*>(m_resource->m_mapped_memory) + offset_num; }
 
 	const vk::BufferMemoryBarrier& makeMemoryBarrier(vk::AccessFlags dstAccessMask) {
 		m_memory_barrier.buffer = m_buffer_info.buffer;
@@ -290,6 +290,40 @@ public:
 		barrier.buffer = m_buffer_info.buffer;
 		barrier.size = m_buffer_info.range;
 		barrier.offset = m_buffer_info.offset;
+		return barrier;
+	}
+};
+
+template<typename T>
+struct BufferMemoryEx
+{
+	struct Resource
+	{
+		vk::DescriptorBufferInfo m_buffer_info;
+		std::shared_ptr<GPUMemoryAllocater> m_allocater;
+		T* m_mapped_memory;
+
+		~Resource()
+		{
+			Zone zone;
+			zone.m_start = m_buffer_info.offset;
+			zone.m_end = m_buffer_info.offset + m_buffer_info.range;
+			m_allocater->delayedFree(zone);
+		}
+
+	};
+	std::shared_ptr<Resource> m_resource;
+public:
+	bool isValid()const { return !!m_resource; }
+	vk::DescriptorBufferInfo getInfo()const { return m_resource->m_buffer_info; }
+	vk::DescriptorBufferInfo getBufferInfo()const { return m_resource->m_buffer_info; }
+	T* getMappedPtr(size_t offset_num = 0)const { return m_resource->m_mapped_memory + offset_num; }
+
+	vk::BufferMemoryBarrier makeMemoryBarrier() {
+		vk::BufferMemoryBarrier barrier;
+		barrier.buffer = m_resource->m_buffer_info.buffer;
+		barrier.size = m_resource->m_buffer_info.range;
+		barrier.offset = m_resource->m_buffer_info.offset;
 		return barrier;
 	}
 };
@@ -333,11 +367,10 @@ struct AllocatedMemory
 {
 	struct Resource
 	{
-		cDevice m_device;
 		vk::UniqueBuffer m_buffer;
 		vk::UniqueDeviceMemory m_memory;
 
-		GPUMemoryAllocater m_free_zone;
+		std::shared_ptr<GPUMemoryAllocater> m_free_zone;
 
 		vk::MemoryRequirements m_memory_request;
 		vk::MemoryAllocateInfo m_memory_alloc;
@@ -353,7 +386,7 @@ struct AllocatedMemory
 	};
 	std::shared_ptr<Resource> m_resource;
 
-	void gc() { m_resource->m_free_zone.gc(); }
+	void gc() { m_resource->m_free_zone->gc(); }
 	bool isValid()const { return m_resource.get(); }
 	void setName(const std::string& name) { m_resource->m_name = name; }
 	void setup(const cDevice& device, vk::BufferUsageFlags flag, vk::MemoryPropertyFlags memory_type, vk::DeviceSize size)
@@ -361,7 +394,6 @@ struct AllocatedMemory
 		assert(!m_resource);
 
 		auto resource = std::make_shared<Resource>();
-		resource->m_device = device;
 
 		vk::BufferCreateInfo buffer_info;
 		buffer_info.usage = flag;
@@ -369,14 +401,15 @@ struct AllocatedMemory
 		resource->m_buffer = device->createBufferUnique(buffer_info);
 		resource->m_buffer_info = buffer_info;
 
-		vk::MemoryRequirements memory_request = resource->m_device->getBufferMemoryRequirements(resource->m_buffer.get());
+		vk::MemoryRequirements memory_request = device->getBufferMemoryRequirements(resource->m_buffer.get());
 		vk::MemoryAllocateInfo memory_alloc;
 		memory_alloc.setAllocationSize(memory_request.size);
 		memory_alloc.setMemoryTypeIndex(cGPU::Helper::getMemoryTypeIndex(device.getGPU(), memory_request, memory_type));
 		resource->m_memory = device->allocateMemoryUnique(memory_alloc);
 		device->bindBufferMemory(resource->m_buffer.get(), resource->m_memory.get(), 0);
 
-		resource->m_free_zone.setup(size, memory_request.alignment);
+		resource->m_free_zone = std::make_shared<GPUMemoryAllocater>();
+		resource->m_free_zone->setup(size, memory_request.alignment);
 
 		resource->m_memory_alloc = memory_alloc;
 		resource->m_memory_request = memory_request;
@@ -405,7 +438,7 @@ struct AllocatedMemory
 		// size0はおかしいよね
 		assert(desc.size != 0);
 
-		auto zone = m_resource->m_free_zone.alloc(desc.size, btr::isOn(desc.attribute, BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT));
+		auto zone = m_resource->m_free_zone->alloc(desc.size, btr::isOn(desc.attribute, BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT));
 
 		// allocできた？
 		assert(zone.isValid());
@@ -414,7 +447,7 @@ struct AllocatedMemory
 		auto deleter = [&](BufferMemory::Resource* ptr)
 		{
 			// todo deleterは遅くなるのでやめたいデストラクタでする
-			m_resource->m_free_zone.delayedFree(ptr->m_zone);
+			m_resource->m_free_zone->delayedFree(ptr->m_zone);
 			delete ptr;
 		};
 		alloc.m_resource = std::shared_ptr<BufferMemory::Resource>(new BufferMemory::Resource, deleter);
@@ -431,7 +464,29 @@ struct AllocatedMemory
 		}
 		return alloc;
 	}
-	cDevice getDevice()const { return m_resource->m_device; }
+
+	template<typename T>
+	BufferMemoryEx<T> allocateMemory(const BufferMemoryDescriptor& desc)
+	{
+		assert(desc.size != 0);// size0はおかしいよね
+
+		auto zone = m_resource->m_free_zone->alloc(desc.size, btr::isOn(desc.attribute, BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT));		
+		assert(zone.isValid());// allocできた？
+
+		BufferMemoryEx<T> alloc;
+		alloc.m_resource = std::make_shared<BufferMemoryEx<T>::Resource>();
+		alloc.m_resource->m_allocater = m_resource->m_free_zone;
+		alloc.m_resource->m_buffer_info.buffer = m_resource->m_buffer.get();
+		alloc.m_resource->m_buffer_info.offset = zone.m_start;
+		alloc.m_resource->m_buffer_info.range = zone.range();
+
+		alloc.m_resource->m_mapped_memory = nullptr;
+		if (m_resource->m_mapped_memory)
+		{
+			alloc.m_resource->m_mapped_memory = (T*)((char*)m_resource->m_mapped_memory + zone.m_start);
+		}
+		return alloc;
+	}
 	const vk::BufferCreateInfo& getBufferCreateInfo()const { return m_resource->m_buffer_info; }
 	vk::Buffer getBuffer()const { return m_resource->m_buffer.get(); }
 
