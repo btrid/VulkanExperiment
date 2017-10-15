@@ -32,89 +32,102 @@
 #pragma comment(lib, "vulkan-1.lib")
 
 
+struct LayoutDescriptor
+{
+	std::vector<vk::DescriptorSetLayoutBinding> binding;
+	int m_set_num;
+};
+template<typename T>
+struct DescriptorLayout : DescriptorModule
+{
+	DescriptorLayout(const std::shared_ptr<btr::Context>& context)
+	{
+		auto layout_desc = T::GetLayout();
+		m_descriptor_set_layout = createDescriptorSetLayout(context, layout_desc.binding);
+		m_descriptor_pool = createDescriptorPool(context, layout_desc.binding, layout_desc.m_set_num);
+	}
+	std::shared_ptr<DescriptorSet<T>> createDescriptorSet(const std::shared_ptr<btr::Context>& context, const T& desc)
+	{
+		auto descriptor_set = allocateDescriptorSet(context);
+		auto ret = std::make_shared<DescriptorSet<T>>();
+		ret->m_descriptor = desc;
+		ret->m_descriptor.updateDescriptor(context, descriptor_set.get());
+		ret->m_descriptor_set = std::move(descriptor_set);
+		return ret;
+	}
+};
+
 struct CullingDescriptor
 {
 	btr::BufferMemoryEx<uint32_t> m_instance_index_map;
 	btr::BufferMemoryEx<uint32_t> m_visible;
 	btr::BufferMemoryEx<vk::DrawIndexedIndirectCommand> m_draw_cmd;
 	btr::BufferMemoryEx<mat4> m_world;
-};
 
-using CullingDescriptorSet = DescriptorSet<CullingDescriptor>;
-struct CullingDescriptorModule : DescriptorModule
-{
-	CullingDescriptorModule(const std::shared_ptr<btr::Context>& context)
+	void updateDescriptor(const std::shared_ptr<btr::Context>& context, vk::DescriptorSet descriptor_set)
 	{
+		vk::DescriptorBufferInfo storages[] = {
+			m_world.getBufferInfo(),
+			m_visible.getBufferInfo(),
+			m_draw_cmd.getBufferInfo(),
+			m_instance_index_map.getBufferInfo(),
+		};
+		vk::WriteDescriptorSet write_desc[] =
 		{
-			auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
-			std::vector<vk::DescriptorSetLayoutBinding> binding =
-			{
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(stage)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(0),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(stage)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(1),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(stage)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(2),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(stage)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(3),
-			};
-			m_descriptor_set_layout = createDescriptorSetLayout(context, binding);
-			m_descriptor_pool = createDescriptorPool(context, binding, 10);
-		}
+			vk::WriteDescriptorSet()
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(array_length(storages))
+			.setPBufferInfo(storages)
+			.setDstBinding(0)
+			.setDstSet(descriptor_set),
+		};
+		context->m_device->updateDescriptorSets(array_length(write_desc), write_desc, 0, nullptr);
 
 	}
-	std::shared_ptr<CullingDescriptorSet> createDescriptorSet(const std::shared_ptr<btr::Context>& context, const CullingDescriptor& desc)
-	{
-		auto descriptor_set = allocateDescriptorSet(context);
+	static LayoutDescriptor GetLayout()
+	{	
+		LayoutDescriptor desc;
+		auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
+		desc.binding = 
 		{
-			vk::DescriptorBufferInfo storages[] = {
-				desc.m_world.getBufferInfo(),
-				desc.m_visible.getBufferInfo(),
-				desc.m_draw_cmd.getBufferInfo(),
-				desc.m_instance_index_map.getBufferInfo(),
-			};
-			vk::WriteDescriptorSet write_desc[] =
-			{
-				vk::WriteDescriptorSet()
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(array_length(storages))
-				.setPBufferInfo(storages)
-				.setDstBinding(0)
-				.setDstSet(descriptor_set.get()),
-			};
-			context->m_device->updateDescriptorSets(array_length(write_desc), write_desc, 0, nullptr);
-		}
-		auto ret = std::make_shared<CullingDescriptorSet>();
-		ret->m_descriptor = desc;
-		ret->m_descriptor_set = std::move(descriptor_set);
-		return ret;
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(stage)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(0),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(stage)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(1),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(stage)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(2),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(stage)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(3),
+		};
+		desc.m_set_num = 10;
+		return desc;
 	}
 };
+
 
 struct CullingTest
 {
 	struct ResourceVertex
 	{
-		btr::BufferMemory m_vertex;
-		btr::BufferMemory m_index;
+		btr::BufferMemoryEx<vec3> m_vertex;
+		btr::BufferMemoryEx<uvec3> m_index;
 		btr::BufferMemoryEx<vk::DrawIndexedIndirectCommand> m_draw_indirect;
 		btr::BufferMemoryEx<mat4> m_world;
 		btr::BufferMemoryEx<uint32_t> m_instance_index_map;
 
-		std::shared_ptr<CullingDescriptorSet> m_occlusion_descriptor_set;
-
+		std::shared_ptr<DescriptorSet<CullingDescriptor>> m_occlusion_descriptor_set;
 	};
 
 	enum Shader
@@ -151,13 +164,12 @@ struct CullingTest
 	std::array<vk::UniquePipeline, PIPELINE_NUM> m_pipeline;
 
 	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
-	std::shared_ptr<CullingDescriptorModule> m_occlusion_descriptor;
+	std::shared_ptr<DescriptorLayout<CullingDescriptor>> m_occlusion_descriptor_layout;
 
 	CullingTest(const std::shared_ptr<btr::Context>& context)
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-		m_occlusion_descriptor = std::make_shared<CullingDescriptorModule>(context);
-
+		m_occlusion_descriptor_layout = std::make_shared<DescriptorLayout<CullingDescriptor>>(context);
 
 		{
 			std::shared_ptr<ResourceVertex> resource = std::make_shared<ResourceVertex>();
@@ -169,9 +181,9 @@ struct CullingTest
 
 				btr::BufferMemoryDescriptor desc;
 				desc.size = vector_sizeof(v);
-				resource->m_vertex = context->m_vertex_memory.allocateMemory(desc);
+				resource->m_vertex = context->m_vertex_memory.allocateMemory<vec3>(desc);
 				desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
-				auto staging = context->m_staging_memory.allocateMemory(desc);
+				auto staging = context->m_staging_memory.allocateMemory<vec3>(desc);
 				memcpy(staging.getMappedPtr(), v.data(), desc.size);
 
 				vk::BufferCopy copy;
@@ -184,9 +196,9 @@ struct CullingTest
 			{
 				btr::BufferMemoryDescriptor desc;
 				desc.size = vector_sizeof(i);
-				resource->m_index = context->m_vertex_memory.allocateMemory(desc);
+				resource->m_index = context->m_vertex_memory.allocateMemory<uvec3>(desc);
 				desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
-				auto staging = context->m_staging_memory.allocateMemory(desc);
+				auto staging = context->m_staging_memory.allocateMemory<uvec3>(desc);
 				memcpy(staging.getMappedPtr(), i.data(), desc.size);
 
 				vk::BufferCopy copy;
@@ -242,8 +254,7 @@ struct CullingTest
 
 				resource->m_instance_index_map = buffer;
 			}
-			{
-			}
+
 			{
 				CullingDescriptor desc_set;
 				desc_set.m_draw_cmd = resource->m_draw_indirect;
@@ -254,7 +265,7 @@ struct CullingTest
 				desc.size = sizeof(uint32_t) * num;
 				desc_set.m_visible = context->m_storage_memory.allocateMemory<uint32_t>(desc);
 
-				resource->m_occlusion_descriptor_set = m_occlusion_descriptor->createDescriptorSet(context, desc_set);
+				resource->m_occlusion_descriptor_set = m_occlusion_descriptor_layout->createDescriptorSet(context, desc_set);
 			}
 
 			m_culling_target = resource;
@@ -270,9 +281,9 @@ struct CullingTest
 
 				btr::BufferMemoryDescriptor desc;
 				desc.size = vector_sizeof(v);
-				resource->m_vertex = context->m_vertex_memory.allocateMemory(desc);
+				resource->m_vertex = context->m_vertex_memory.allocateMemory<vec3>(desc);
 				desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
-				auto staging = context->m_staging_memory.allocateMemory(desc);
+				auto staging = context->m_staging_memory.allocateMemory<vec3>(desc);
 				memcpy(staging.getMappedPtr(), v.data(), desc.size);
 
 				vk::BufferCopy copy;
@@ -285,9 +296,9 @@ struct CullingTest
 			{
 				btr::BufferMemoryDescriptor desc;
 				desc.size = vector_sizeof(i);
-				resource->m_index = context->m_vertex_memory.allocateMemory(desc);
+				resource->m_index = context->m_vertex_memory.allocateMemory<uvec3>(desc);
 				desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
-				auto staging = context->m_staging_memory.allocateMemory(desc);
+				auto staging = context->m_staging_memory.allocateMemory<uvec3>(desc);
 				memcpy(staging.getMappedPtr(), i.data(), desc.size);
 
 				vk::BufferCopy copy;
@@ -351,7 +362,7 @@ struct CullingTest
 				desc.size = sizeof(uint32_t) * num;
 				desc_set.m_visible = context->m_storage_memory.allocateMemory<uint32_t>(desc);
 
-				resource->m_occlusion_descriptor_set = m_occlusion_descriptor->createDescriptorSet(context, desc_set);
+				resource->m_occlusion_descriptor_set = m_occlusion_descriptor_layout->createDescriptorSet(context, desc_set);
 			}
 
 
@@ -438,7 +449,7 @@ struct CullingTest
 			{
 				std::vector<vk::DescriptorSetLayout> layouts =
 				{
-					m_occlusion_descriptor->getLayout(),
+					m_occlusion_descriptor_layout->getLayout(),
 					sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
 				};
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
@@ -449,7 +460,7 @@ struct CullingTest
 			{
 				std::vector<vk::DescriptorSetLayout> layouts =
 				{
-					m_occlusion_descriptor->getLayout(),
+					m_occlusion_descriptor_layout->getLayout(),
 				};
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
 				pipeline_layout_info.setSetLayoutCount(layouts.size());
