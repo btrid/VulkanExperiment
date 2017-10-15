@@ -37,7 +37,7 @@
 int main()
 {
 	btr::setResourceAppPath("..\\..\\resource\\003_particle\\");
-	auto* camera = cCamera::sCamera::Order().create();
+	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = glm::vec3(20.f, 10.f, 30.f);
 	camera->getData().m_target = glm::vec3(0.f, 0.f, 0.f);
 	camera->getData().m_up = glm::vec3(0.f, -1.f, 0.f);
@@ -50,7 +50,12 @@ int main()
 	auto device = sGlobal::Order().getGPU(0).getDevice();
 
 	app::App app;
-	app.setup(gpu);
+	{
+		app::AppDescriptor desc;
+		desc.m_gpu = gpu;
+		desc.m_window_size = uvec2(640, 480);
+		app.setup(desc);
+	}
 
 	auto context = app.m_context;
 
