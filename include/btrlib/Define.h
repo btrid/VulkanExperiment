@@ -1,5 +1,6 @@
 #pragma once
 
+#define BTR_USE_REVERSED_Z 1
 #define NOMINMAX
 #include <Windows.h>
 #define VK_USE_PLATFORM_WIN32_KHR

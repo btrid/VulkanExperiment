@@ -506,7 +506,7 @@ struct CullingTest
 				vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
 				depth_stencil_info.setDepthTestEnable(VK_TRUE);
 				depth_stencil_info.setDepthWriteEnable(VK_TRUE);
-				depth_stencil_info.setDepthCompareOp(vk::CompareOp::eLessOrEqual);
+				depth_stencil_info.setDepthCompareOp(vk::CompareOp::eGreaterOrEqual);
 				depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
 				depth_stencil_info.setStencilTestEnable(VK_FALSE);
 
@@ -649,7 +649,7 @@ struct CullingTest
 
 					vk::PipelineDepthStencilStateCreateInfo no_depth_stencil_info;
 					depth_stencil_info.setDepthTestEnable(VK_TRUE);
-					depth_stencil_info.setDepthCompareOp(vk::CompareOp::eLessOrEqual);
+					depth_stencil_info.setDepthCompareOp(vk::CompareOp::eGreaterOrEqual);
 
 					std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =
 					{

@@ -73,7 +73,12 @@ int main()
 	auto device = sGlobal::Order().getGPU(0).getDevice();
 
 	app::App app;
-	app.setup(gpu);
+	{
+		app::AppDescriptor desc;
+		desc.m_gpu = gpu;
+		desc.m_window_size = uvec2(640, 480);
+		app.setup(desc);
+	}
 
 	auto context = app.m_context;
 

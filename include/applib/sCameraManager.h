@@ -109,6 +109,11 @@ struct sCameraManager : public Singleton<sCameraManager>
 
 		for (size_t i = 0 ; i < m_camera.getDescriptor().element_num; i++)
 		{
+			if (i >= cCamera::sCamera::Order().getCameraList().size())
+			{
+				break;
+			}
+
 			auto* camera = cCamera::sCamera::Order().getCameraList()[i];
 			CameraGPU camera_GPU;
 			camera_GPU.setup(*camera);

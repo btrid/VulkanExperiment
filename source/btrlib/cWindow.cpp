@@ -180,7 +180,11 @@ void cWindow::Swapchain::setup(std::shared_ptr<btr::Context>& context, const cWi
 			vk::ClearColorValue clear_color;
 			clear_color.setFloat32(std::array<float, 4>{0.f, 0.f, 1.f, 0.f});
 			vk::ClearDepthStencilValue clear_depth;
+#if BTR_USE_REVERSED_Z
+			clear_depth.setDepth(0.f);	// reversed-Z
+#else
 			clear_depth.setDepth(1.f);
+#endif
 			cmd->clearColorImage(m_backbuffer[i].m_image, vk::ImageLayout::eTransferDstOptimal, clear_color, vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
 
 			vk::ImageMemoryBarrier clear_to_render;

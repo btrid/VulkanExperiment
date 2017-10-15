@@ -266,7 +266,11 @@ struct CameraGPU
 	void setup(const cCamera& camera)
 	{
 		const auto& cam = camera.getRenderData();
+#if BTR_USE_REVERSED_Z
+		u_projection = glm::perspective(cam.m_fov, cam.getAspect(), cam.m_far, cam.m_near);
+#else
 		u_projection = glm::perspective(cam.m_fov, cam.getAspect(), cam.m_near, cam.m_far);
+#endif
 		u_view = glm::lookAt(cam.m_position, cam.m_target, cam.m_up);
 		u_eye = glm::vec4(cam.m_position, 0.f);
 		u_target = glm::vec4(cam.m_target, 0.f);
