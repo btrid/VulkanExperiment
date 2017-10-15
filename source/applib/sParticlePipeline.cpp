@@ -16,22 +16,22 @@ void sParticlePipeline::setup(std::shared_ptr<btr::Context>& context)
 		{
 			btr::BufferMemoryDescriptor data_desc;
 			data_desc.size = sizeof(ParticleData) * m_particle_info_cpu.m_particle_max_num*2;
-			m_particle = context->m_storage_memory.allocateMemory(data_desc);
+			m_particle = context->m_storage_memory.allocateMemory<ParticleData>(data_desc);
 			std::vector<ParticleData> p(m_particle_info_cpu.m_particle_max_num*2);
 			cmd->fillBuffer(m_particle.getBufferInfo().buffer, m_particle.getBufferInfo().offset, m_particle.getBufferInfo().range, 0u);
 		}
 		{
 			btr::BufferMemoryDescriptor desc;
 			desc.size = sizeof(vk::DrawIndirectCommand);
-			m_particle_counter = context->m_storage_memory.allocateMemory(desc);
+			m_particle_counter = context->m_storage_memory.allocateMemory<vk::DrawIndirectCommand>(desc);
 			cmd->updateBuffer<vk::DrawIndirectCommand>(m_particle_counter.getBufferInfo().buffer, m_particle_counter.getBufferInfo().offset, vk::DrawIndirectCommand(4, 0, 0, 0));
-			auto count_barrier = m_particle_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
-			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { count_barrier }, {});
+//			auto count_barrier = m_particle_counter.makeMemoryBarrier();
+//			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { count_barrier }, {});
 		}
 		{
 			btr::BufferMemoryDescriptor desc;
 			desc.size = sizeof(ParticleUpdateParameter);
-			m_particle_update_param = context->m_storage_memory.allocateMemory(desc);
+			m_particle_update_param = context->m_storage_memory.allocateMemory<ParticleUpdateParameter>(desc);
 
 			ParticleUpdateParameter updater;
 			updater.m_rotate_add = vec4(0.f);
@@ -41,39 +41,41 @@ void sParticlePipeline::setup(std::shared_ptr<btr::Context>& context)
 			updater.m_velocity_add = vec4(0.f, -2.f, 0.f, 0.f);
 			updater.m_velocity_mul = vec4(0.999f, 1.f, 0.999f, 0.f);
 			cmd->updateBuffer<ParticleUpdateParameter>(m_particle_update_param.getBufferInfo().buffer, m_particle_update_param.getBufferInfo().offset, updater);
-			auto b = m_particle_update_param.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
-			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { b }, {});
+// 			auto b = m_particle_update_param.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
+// 			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { b }, {});
 			
 		}
 		{
 			btr::BufferMemoryDescriptor desc;
 			desc.size = sizeof(ParticleGenerateCommand) * m_particle_info_cpu.m_emitter_max_num;
-			m_particle_generate_cmd = context->m_storage_memory.allocateMemory(desc);
+			m_particle_generate_cmd = context->m_storage_memory.allocateMemory<ParticleGenerateCommand>(desc);
 			std::vector<ParticleGenerateCommand> p(m_particle_info_cpu.m_emitter_max_num);
 			cmd->fillBuffer(m_particle_generate_cmd.getBufferInfo().buffer, m_particle_generate_cmd.getBufferInfo().offset, m_particle_generate_cmd.getBufferInfo().range, 0u);
 		}
 		{
 			btr::BufferMemoryDescriptor desc;
 			desc.size = sizeof(glm::uvec3);
-			m_particle_generate_cmd_counter = context->m_storage_memory.allocateMemory(desc);
+			m_particle_generate_cmd_counter = context->m_storage_memory.allocateMemory<uvec3>(desc);
 			cmd->updateBuffer<glm::uvec3>(m_particle_generate_cmd_counter.getBufferInfo().buffer, m_particle_generate_cmd_counter.getBufferInfo().offset, glm::uvec3(0, 1, 1));
 
-			m_particle_emitter_counter = context->m_storage_memory.allocateMemory(desc);
+			m_particle_emitter_counter = context->m_storage_memory.allocateMemory<uvec3>(desc);
 			cmd->updateBuffer<glm::uvec3>(m_particle_emitter_counter.getBufferInfo().buffer, m_particle_emitter_counter.getBufferInfo().offset, glm::uvec3(0, 1, 1));
 		}
 
 
 		{
-			m_particle_info = context->m_uniform_memory.allocateMemory(sizeof(ParticleInfo));
+			btr::BufferMemoryDescriptor desc;
+			desc.size = sizeof(ParticleInfo);
+			m_particle_info = context->m_uniform_memory.allocateMemory<ParticleInfo>(desc);
 			cmd->updateBuffer<ParticleInfo>(m_particle_info.getBufferInfo().buffer, m_particle_info.getBufferInfo().offset, { m_particle_info_cpu });
-			auto barrier = m_particle_info.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
-			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { barrier }, {});
+//			auto barrier = m_particle_info.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
+//			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { barrier }, {});
 		}
 
 		{
 			btr::BufferMemoryDescriptor data_desc;
 			data_desc.size = sizeof(EmitterData) * m_particle_info_cpu.m_emitter_max_num;
-			m_particle_emitter = context->m_storage_memory.allocateMemory(data_desc);
+			m_particle_emitter = context->m_storage_memory.allocateMemory<EmitterData>(data_desc);
 			std::vector<EmitterData> p(m_particle_info_cpu.m_emitter_max_num);
 			cmd->fillBuffer(m_particle_emitter.getBufferInfo().buffer, m_particle_emitter.getBufferInfo().offset, m_particle_emitter.getBufferInfo().range, 0u);
 		}
@@ -87,7 +89,7 @@ void sParticlePipeline::setup(std::shared_ptr<btr::Context>& context)
 		} shader_desc[] =
 		{
 			{ "ParticleUpdate.comp.spv", vk::ShaderStageFlagBits::eCompute },
-			{ "ParticleEmit.comp.spv", vk::ShaderStageFlagBits::eCompute },
+//			{ "ParticleEmit.comp.spv", vk::ShaderStageFlagBits::eCompute },
 			{ "ParticleGenerateDebug.comp.spv", vk::ShaderStageFlagBits::eCompute },
 			{ "ParticleGenerate.comp.spv", vk::ShaderStageFlagBits::eCompute },
 			{ "ParticleRender.vert.spv", vk::ShaderStageFlagBits::eVertex },
@@ -95,7 +97,7 @@ void sParticlePipeline::setup(std::shared_ptr<btr::Context>& context)
 		};
 		static_assert(array_length(shader_desc) == SHADER_NUM, "not equal shader num");
 
-		std::string path = btr::getResourceAppPath() + "shader\\binary\\";
+		std::string path = btr::getResourceLibPath() + "shader\\binary\\";
 		for (size_t i = 0; i < SHADER_NUM; i++)
 		{
 			m_shader_module[i] = loadShaderUnique(context->m_device.getHandle(), path + shader_desc[i].name);
@@ -336,7 +338,7 @@ vk::CommandBuffer sParticlePipeline::execute(std::shared_ptr<btr::Context>& cont
 	{
 		a = 0;
 		{
-			vk::BufferMemoryBarrier to_read = m_particle_generate_cmd_counter.makeMemoryBarrierEx();
+			vk::BufferMemoryBarrier to_read = m_particle_generate_cmd_counter.makeMemoryBarrier();
 			to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
 			to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
@@ -352,17 +354,17 @@ vk::CommandBuffer sParticlePipeline::execute(std::shared_ptr<btr::Context>& cont
 	{
 		{
 			// 描画待ち
-			vk::BufferMemoryBarrier to_read = m_particle_counter.makeMemoryBarrierEx();
+			vk::BufferMemoryBarrier to_read = m_particle_counter.makeMemoryBarrier();
 			to_read.setSrcAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
 			to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eDrawIndirect, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
 		}
 		{
-			vk::BufferMemoryBarrier to_read = m_particle_generate_cmd.makeMemoryBarrierEx();
+			vk::BufferMemoryBarrier to_read = m_particle_generate_cmd.makeMemoryBarrier();
 			to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
 			to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
-			vk::BufferMemoryBarrier to_read2 = m_particle_generate_cmd_counter.makeMemoryBarrierEx();
+			vk::BufferMemoryBarrier to_read2 = m_particle_generate_cmd_counter.makeMemoryBarrier();
 			to_read2.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
 			to_read2.setDstAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eAllCommands, {}, {}, to_read2, {});
@@ -375,7 +377,7 @@ vk::CommandBuffer sParticlePipeline::execute(std::shared_ptr<btr::Context>& cont
 	}
 	{
 		// パーティクル数初期化
-		vk::BufferMemoryBarrier to_transfer = m_particle_counter.makeMemoryBarrierEx();
+		vk::BufferMemoryBarrier to_transfer = m_particle_counter.makeMemoryBarrier();
 		to_transfer.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
 		to_transfer.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
@@ -386,7 +388,7 @@ vk::CommandBuffer sParticlePipeline::execute(std::shared_ptr<btr::Context>& cont
 
 	// update
 	{
-		vk::BufferMemoryBarrier to_read = m_particle_counter.makeMemoryBarrierEx();
+		vk::BufferMemoryBarrier to_read = m_particle_counter.makeMemoryBarrier();
 		to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 		to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
@@ -406,7 +408,7 @@ vk::CommandBuffer sParticlePipeline::draw(std::shared_ptr<btr::Context>& context
 {
 	auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 
-	auto to_draw = m_particle_counter.makeMemoryBarrierEx();
+	auto to_draw = m_particle_counter.makeMemoryBarrier();
 	to_draw.setSrcAccessMask(vk::AccessFlagBits::eShaderRead| vk::AccessFlagBits::eShaderWrite);
 	to_draw.setDstAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
 	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, {}, {}, { to_draw }, {});

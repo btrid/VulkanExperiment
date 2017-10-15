@@ -18,7 +18,6 @@ struct ParticleInfo
 
 struct ParticleData
 {
-	//	vec4 m_offset;		//!< 位置のオフセット エミットした位置
 	vec4 m_position;		//!< 位置
 	vec4 m_velocity;		//!< 回転
 
@@ -79,31 +78,6 @@ struct EmitterUpdateParameter
 	vec4 m_emit_offset;		//!< パーティクル生成オフセットのランダム値
 };
 
-struct ParticleDescriptor : public UniqueDescriptorModule
-{
-	ParticleDescriptor(const std::shared_ptr<btr::Context>& context)
-	{
-		// create descriptor
-		{
-			std::vector<vk::DescriptorSetLayoutBinding> desc =
-			{
-				vk::DescriptorSetLayoutBinding()
-				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-				.setStageFlags(vk::ShaderStageFlagBits::eAll)
-				.setDescriptorCount(1)
-				.setBinding(0),
-			};
-			createDescriptor(context, desc);
-
-		}
-
-		// update descriptor
-		{
-		}
-
-	}
-
-};
 
 struct sParticlePipeline : Singleton<sParticlePipeline>
 {
@@ -118,7 +92,7 @@ struct sParticlePipeline : Singleton<sParticlePipeline>
 	};
 	enum : uint32_t {
 		SHADER_UPDATE,
-		SHADER_EMIT,
+//		SHADER_EMIT,
 		SHADER_GENERATE_TRANSFAR_DEBUG,
 		SHADER_GENERATE,
 		SHADER_DRAW_VERTEX,
@@ -144,14 +118,14 @@ struct sParticlePipeline : Singleton<sParticlePipeline>
 		DESCRIPTOR_SET_NUM,
 	};
 
-	btr::BufferMemory m_particle_info;
-	btr::BufferMemory m_particle;
-	btr::BufferMemory m_particle_update_param;
-	btr::BufferMemory m_particle_counter;
-	btr::BufferMemory m_particle_generate_cmd;
-	btr::BufferMemory m_particle_generate_cmd_counter;
-	btr::BufferMemory m_particle_emitter;
-	btr::BufferMemory m_particle_emitter_counter;
+	btr::BufferMemoryEx<ParticleInfo> m_particle_info;
+	btr::BufferMemoryEx<ParticleData> m_particle;
+	btr::BufferMemoryEx<ParticleUpdateParameter> m_particle_update_param;
+	btr::BufferMemoryEx<vk::DrawIndirectCommand> m_particle_counter;
+	btr::BufferMemoryEx<ParticleGenerateCommand> m_particle_generate_cmd;
+	btr::BufferMemoryEx<uvec3> m_particle_generate_cmd_counter;
+	btr::BufferMemoryEx<EmitterData> m_particle_emitter;
+	btr::BufferMemoryEx<uvec3> m_particle_emitter_counter;
 
 	std::shared_ptr<RenderBackbufferModule> m_render_pass;
 
