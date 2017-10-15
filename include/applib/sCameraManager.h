@@ -57,20 +57,20 @@ struct sCameraManager : public Singleton<sCameraManager>
 		for (size_t i = 0; i < DESCRIPTOR_SET_LAYOUT_NUM; i++)
 		{
 			vk::DescriptorSetLayoutCreateInfo descriptor_set_layout_info = vk::DescriptorSetLayoutCreateInfo()
-				.setBindingCount(bindings[i].size())
+				.setBindingCount((uint32_t)bindings[i].size())
 				.setPBindings(bindings[i].data());
 			m_descriptor_set_layout[i] = context->m_device->createDescriptorSetLayout(descriptor_set_layout_info);
 		}
 
 		vk::DescriptorSetAllocateInfo alloc_info;
 		alloc_info.descriptorPool = context->m_descriptor_pool.get();
-		alloc_info.descriptorSetCount = m_descriptor_set_layout.size();
+		alloc_info.descriptorSetCount = (uint32_t)m_descriptor_set_layout.size();
 		alloc_info.pSetLayouts = m_descriptor_set_layout.data();
 		auto descriptor_set = context->m_device->allocateDescriptorSets(alloc_info);
 		std::copy(descriptor_set.begin(), descriptor_set.end(), m_descriptor_set.begin());
 		{
 
-			std::vector<vk::DescriptorBufferInfo> uniforms = {
+			vk::DescriptorBufferInfo uniforms[] = {
 				m_camera.getBufferInfo(),
 				m_camera_frustom.getBufferInfo(),
 			};
@@ -78,8 +78,8 @@ struct sCameraManager : public Singleton<sCameraManager>
 			{
 				vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-				.setDescriptorCount(uniforms.size())
-				.setPBufferInfo(uniforms.data())
+				.setDescriptorCount(array_length(uniforms))
+				.setPBufferInfo(uniforms)
 				.setDstBinding(0)
 				.setDstSet(m_descriptor_set[DESCRIPTOR_SET_LAYOUT_CAMERA]),
 			};
@@ -90,7 +90,7 @@ struct sCameraManager : public Singleton<sCameraManager>
 
 	void sync()
 	{
-		for (auto* c : cCamera::sCamera::Order().getCameraList())
+		for (auto& c : cCamera::sCamera::Order().getCameraList())
 		{
 			c->getRenderData() = c->getData();
 		}
@@ -107,18 +107,18 @@ struct sCameraManager : public Singleton<sCameraManager>
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
 
-		for (size_t i = 0 ; i < m_camera.getDescriptor().element_num; i++)
+		for (uint32_t i = 0 ; i < m_camera.getDescriptor().element_num; i++)
 		{
-			if (i >= cCamera::sCamera::Order().getCameraList().size())
+			if (i >= (uint32_t)cCamera::sCamera::Order().getCameraList().size())
 			{
 				break;
 			}
 
-			auto* camera = cCamera::sCamera::Order().getCameraList()[i];
+			auto& camera = cCamera::sCamera::Order().getCameraList()[i];
 			CameraGPU camera_GPU;
-			camera_GPU.setup(*camera);
+			camera_GPU.setup(*camera.get());
 			CameraFrustomGPU camera_frustom;
-			camera_frustom.setup(*camera);
+			camera_frustom.setup(*camera.get());
 
 			m_camera.subupdate(&camera_GPU, 1, i, context->getGPUFrame());
 			m_camera_frustom.subupdate(&camera_frustom, 1, i, context->getGPUFrame());

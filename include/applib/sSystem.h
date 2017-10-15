@@ -35,15 +35,15 @@ struct SystemDescriptor : public UniqueDescriptorModule
 		// update descriptor
 		{
 
-			std::vector<vk::DescriptorBufferInfo> uniforms = {
+			vk::DescriptorBufferInfo uniforms[] = {
 				m_data.getBufferInfo(),
 			};
 			std::vector<vk::WriteDescriptorSet> write_desc =
 			{
 				vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-				.setDescriptorCount(uniforms.size())
-				.setPBufferInfo(uniforms.data())
+				.setDescriptorCount(array_length(uniforms))
+				.setPBufferInfo(uniforms)
 				.setDstBinding(0)
 				.setDstSet(m_descriptor_set.get()),
 			};

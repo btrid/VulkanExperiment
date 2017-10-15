@@ -161,7 +161,7 @@ void App::preUpdate()
 	m_cmd_pool->resetPool(m_context);
 
 	{
-		auto* m_camera = cCamera::sCamera::Order().getCameraList()[0];
+		auto& m_camera = cCamera::sCamera::Order().getCameraList()[0];
 		m_camera->control(m_window->getInput(), 0.016f);
 	}
 

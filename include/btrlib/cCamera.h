@@ -122,23 +122,28 @@ public:
 	class sCamera : public Singleton<sCamera>
 	{
 		friend Singleton<sCamera>;
-		std::vector<cCamera*> m_camera;
+		std::vector<std::shared_ptr<cCamera>> m_camera;
 	public:
-		cCamera* create() {
-			m_camera.emplace_back(new cCamera);
-			return m_camera.back();
+		std::shared_ptr<cCamera> create() {
+			struct C : cCamera {};
+			auto camera = std::make_shared<C>();
+			m_camera.emplace_back(camera);
+			return camera;
 		}
 
-		void destroy(cCamera* cam) {
+		void destroy(const std::shared_ptr<cCamera>& cam) 
+		{
 			if (!cam) {
 				return;
 			}
 			auto it = std::find(m_camera.begin(), m_camera.end(), cam);
-			m_camera.erase(it);
-			delete cam;
+			if (it != m_camera.end())
+			{
+				m_camera.erase(it);
+			}
 		}
 
-		const std::vector<cCamera*>& getCameraList()const { return m_camera; }
+		const std::vector<std::shared_ptr<cCamera>>& getCameraList()const { return m_camera; }
 	};
 
 };
