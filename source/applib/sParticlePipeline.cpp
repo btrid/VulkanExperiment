@@ -2,7 +2,7 @@
 #include <applib/sCameraManager.h>
 #include <applib/sSystem.h>
 
-void sParticlePipeline::Private::setup(std::shared_ptr<btr::Context>& context)
+void sParticlePipeline::setup(std::shared_ptr<btr::Context>& context)
 {
 	m_particle_info_cpu.m_particle_max_num = 8192/2;
 	m_particle_info_cpu.m_emitter_max_num = 1024;
@@ -325,7 +325,7 @@ void sParticlePipeline::Private::setup(std::shared_ptr<btr::Context>& context)
 	}
 }
 
-vk::CommandBuffer sParticlePipeline::Private::execute(std::shared_ptr<btr::Context>& context)
+vk::CommandBuffer sParticlePipeline::execute(std::shared_ptr<btr::Context>& context)
 {
 	auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 
@@ -402,7 +402,7 @@ vk::CommandBuffer sParticlePipeline::Private::execute(std::shared_ptr<btr::Conte
 	return cmd;
 }
 
-vk::CommandBuffer sParticlePipeline::Private::draw(std::shared_ptr<btr::Context>& context)
+vk::CommandBuffer sParticlePipeline::draw(std::shared_ptr<btr::Context>& context)
 {
 	auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 

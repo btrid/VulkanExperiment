@@ -99,17 +99,6 @@ struct ParticleDescriptor : public UniqueDescriptorModule
 
 		// update descriptor
 		{
-
-// 			std::vector<vk::WriteDescriptorSet> write_desc =
-// 			{
-// 				vk::WriteDescriptorSet()
-// 				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-// 				.setDescriptorCount(uniforms.size())
-// 				.setPBufferInfo(uniforms.data())
-// 				.setDstBinding(0)
-// 				.setDstSet(m_descriptor_set.get()),
-// 			};
-// 			context->m_device->updateDescriptorSets(write_desc, {});
 		}
 
 	}
@@ -119,90 +108,68 @@ struct ParticleDescriptor : public UniqueDescriptorModule
 struct sParticlePipeline : Singleton<sParticlePipeline>
 {
 	friend Singleton<sParticlePipeline>;
-	struct Private
-	{
-		enum : uint32_t {
-			PIPELINE_UPDATE,
-			PIPELINE_EMIT,
-			PIPELINE_GENERATE_DEBUG,
-			PIPELINE_GENERATE,
-			PIPELINE_DRAW,
-			PIPELINE_NUM,
-		};
-		enum : uint32_t {
-			SHADER_UPDATE,
-			SHADER_EMIT,
-			SHADER_GENERATE_TRANSFAR_DEBUG,
-			SHADER_GENERATE,
-			SHADER_DRAW_VERTEX,
-			SHADER_DRAW_FRAGMENT,
-			SHADER_NUM,
-		};
-
-		enum PipelineLayout : uint32_t
-		{
-			PIPELINE_LAYOUT_UPDATE,
-			PIPELINE_LAYOUT_DRAW,
-			PIPELINE_LAYOUT_NUM,
-		};
-
-		enum DescriptorSetLayout : uint32_t
-		{
-			DESCRIPTOR_SET_LAYOUT_PARTICLE,
-			DESCRIPTOR_SET_LAYOUT_NUM,
-		};
-		enum DescriptorSet : uint32_t
-		{
-			DESCRIPTOR_SET_PARTICLE,
-			DESCRIPTOR_SET_NUM,
-		};
-
-		btr::BufferMemory m_particle_info;
-		btr::BufferMemory m_particle;
-		btr::BufferMemory m_particle_update_param;
-		btr::BufferMemory m_particle_counter;
-		btr::BufferMemory m_particle_generate_cmd;
-		btr::BufferMemory m_particle_generate_cmd_counter;
-		btr::BufferMemory m_particle_emitter;
-		btr::BufferMemory m_particle_emitter_counter;
-
-		std::shared_ptr<RenderBackbufferModule> m_render_pass;
-
-		std::array<vk::UniqueDescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
-		std::array<vk::UniqueDescriptorSet, DESCRIPTOR_SET_NUM> m_descriptor_set;
-		std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
-
-		std::array<vk::UniquePipeline, PIPELINE_NUM> m_pipeline;
-		std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_module;
-		std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_shader_info;
-
-		ParticleInfo m_particle_info_cpu;
-
-
-
-		void setup(std::shared_ptr<btr::Context>& context);
-		vk::CommandBuffer execute(std::shared_ptr<btr::Context>& context);
-		vk::CommandBuffer draw(std::shared_ptr<btr::Context>& context);
-
+	enum : uint32_t {
+		PIPELINE_UPDATE,
+		PIPELINE_EMIT,
+		PIPELINE_GENERATE_DEBUG,
+		PIPELINE_GENERATE,
+		PIPELINE_DRAW,
+		PIPELINE_NUM,
 	};
-	std::unique_ptr<Private> m_private;
+	enum : uint32_t {
+		SHADER_UPDATE,
+		SHADER_EMIT,
+		SHADER_GENERATE_TRANSFAR_DEBUG,
+		SHADER_GENERATE,
+		SHADER_DRAW_VERTEX,
+		SHADER_DRAW_FRAGMENT,
+		SHADER_NUM,
+	};
 
-	void setup(std::shared_ptr<btr::Context>& context)
+	enum PipelineLayout : uint32_t
 	{
-		auto p = std::make_unique<Private>();
-		p->setup(context);
+		PIPELINE_LAYOUT_UPDATE,
+		PIPELINE_LAYOUT_DRAW,
+		PIPELINE_LAYOUT_NUM,
+	};
 
-		m_private = std::move(p);
-	}
-
-	vk::CommandBuffer execute(std::shared_ptr<btr::Context>& context)
+	enum DescriptorSetLayout : uint32_t
 	{
-		return m_private->execute(context);
-	}
-
-	vk::CommandBuffer draw(std::shared_ptr<btr::Context>& context)
+		DESCRIPTOR_SET_LAYOUT_PARTICLE,
+		DESCRIPTOR_SET_LAYOUT_NUM,
+	};
+	enum DescriptorSet : uint32_t
 	{
-		return m_private->draw(context);
-	}
+		DESCRIPTOR_SET_PARTICLE,
+		DESCRIPTOR_SET_NUM,
+	};
+
+	btr::BufferMemory m_particle_info;
+	btr::BufferMemory m_particle;
+	btr::BufferMemory m_particle_update_param;
+	btr::BufferMemory m_particle_counter;
+	btr::BufferMemory m_particle_generate_cmd;
+	btr::BufferMemory m_particle_generate_cmd_counter;
+	btr::BufferMemory m_particle_emitter;
+	btr::BufferMemory m_particle_emitter_counter;
+
+	std::shared_ptr<RenderBackbufferModule> m_render_pass;
+
+	std::array<vk::UniqueDescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
+	std::array<vk::UniqueDescriptorSet, DESCRIPTOR_SET_NUM> m_descriptor_set;
+	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
+
+	std::array<vk::UniquePipeline, PIPELINE_NUM> m_pipeline;
+	std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_module;
+	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_shader_info;
+
+	ParticleInfo m_particle_info_cpu;
+
+
+
+	void setup(std::shared_ptr<btr::Context>& context);
+	vk::CommandBuffer execute(std::shared_ptr<btr::Context>& context);
+	vk::CommandBuffer draw(std::shared_ptr<btr::Context>& context);
+
 };
 
