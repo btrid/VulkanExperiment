@@ -300,6 +300,15 @@ public:
 
 };
 
+template<typename T>
+struct DescriptorSet
+{
+	T m_descriptor;
+	vk::UniqueDescriptorSet m_descriptor_set;
+
+	vk::DescriptorSet getDescriptorSet() const { return m_descriptor_set.get(); }
+};
+
 struct DescriptorModule
 {
 public:
@@ -379,22 +388,6 @@ public:
 		return descriptor_set;
 	}
 
-	template<typename T>
-	std::shared_ptr<T> createDescriptorSetModule(const std::shared_ptr<btr::Context>& context)
-	{
-		auto& device = context->m_device;
-		vk::DescriptorSetLayout layouts[] =
-		{
-			m_descriptor_set_layout.get()
-		};
-		vk::DescriptorSetAllocateInfo descriptor_set_alloc_info;
-		descriptor_set_alloc_info.setDescriptorPool(getPool());
-		descriptor_set_alloc_info.setDescriptorSetCount(array_length(layouts));
-		descriptor_set_alloc_info.setPSetLayouts(layouts);
-		auto module = std::make_shared<T>();
-		module->m_descriptor_set = std::move(device->allocateDescriptorSetsUnique(descriptor_set_alloc_info)[0]);
-		return module;
-	}
 protected:
 	vk::UniqueDescriptorSetLayout createDescriptorSetLayout(const std::shared_ptr<btr::Context>& context, const std::vector<vk::DescriptorSetLayoutBinding>& binding)
 	{

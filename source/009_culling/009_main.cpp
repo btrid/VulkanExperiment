@@ -32,29 +32,58 @@
 #pragma comment(lib, "vulkan-1.lib")
 
 
-struct CullingDescriptorSet
+struct CullingDescriptor
 {
-	std::shared_ptr<DescriptorSetLayoutModule>& occlusion_layout;
 	btr::BufferMemoryEx<uint32_t> m_instance_index_map;
 	btr::BufferMemoryEx<uint32_t> m_visible;
 	btr::BufferMemoryEx<vk::DrawIndexedIndirectCommand> m_draw_cmd;
 	btr::BufferMemoryEx<mat4> m_world;
 };
-struct CullingDescriptorSetModule
-{
-	CullingDescriptorSetModule(const std::shared_ptr<btr::Context>& context, std::shared_ptr<DescriptorSetLayoutModule>& occlusion_layout)
-	{
-		m_descriptor_set = occlusion_layout->allocateDescriptorSet(context);
-	}
 
-	void update(const std::shared_ptr<btr::Context>& context)
+using CullingDescriptorSet = DescriptorSet<CullingDescriptor>;
+struct CullingDescriptorModule : DescriptorModule
+{
+	CullingDescriptorModule(const std::shared_ptr<btr::Context>& context)
 	{
 		{
+			auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
+			std::vector<vk::DescriptorSetLayoutBinding> binding =
+			{
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(stage)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(1)
+				.setBinding(0),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(stage)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(1)
+				.setBinding(1),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(stage)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(1)
+				.setBinding(2),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(stage)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(1)
+				.setBinding(3),
+			};
+			m_descriptor_set_layout = createDescriptorSetLayout(context, binding);
+			m_descriptor_pool = createDescriptorPool(context, binding, 10);
+		}
+
+	}
+	std::shared_ptr<CullingDescriptorSet> createDescriptorSet(const std::shared_ptr<btr::Context>& context, const CullingDescriptor& desc)
+	{
+		auto descriptor_set = allocateDescriptorSet(context);
+		{
 			vk::DescriptorBufferInfo storages[] = {
-				m_world.getBufferInfo(),
-				m_visible.getBufferInfo(),
-				m_draw_cmd.getBufferInfo(),
-				m_instance_index_map.getBufferInfo(),
+				desc.m_world.getBufferInfo(),
+				desc.m_visible.getBufferInfo(),
+				desc.m_draw_cmd.getBufferInfo(),
+				desc.m_instance_index_map.getBufferInfo(),
 			};
 			vk::WriteDescriptorSet write_desc[] =
 			{
@@ -63,33 +92,28 @@ struct CullingDescriptorSetModule
 				.setDescriptorCount(array_length(storages))
 				.setPBufferInfo(storages)
 				.setDstBinding(0)
-				.setDstSet(m_descriptor_set.get()),
+				.setDstSet(descriptor_set.get()),
 			};
 			context->m_device->updateDescriptorSets(array_length(write_desc), write_desc, 0, nullptr);
 		}
-
+		auto ret = std::make_shared<CullingDescriptorSet>();
+		ret->m_descriptor = desc;
+		ret->m_descriptor_set = std::move(descriptor_set);
+		return ret;
 	}
-
-	btr::BufferMemoryEx<uint32_t> m_instance_index_map;
-	btr::BufferMemoryEx<uint32_t> m_visible;
-	btr::BufferMemoryEx<vk::DrawIndexedIndirectCommand> m_draw_cmd;
-	btr::BufferMemoryEx<mat4> m_world;
-	vk::DescriptorSet getSet()const { return m_descriptor_set.get(); }
-private:
-	vk::UniqueDescriptorSet m_descriptor_set;
 };
 
 struct CullingTest
 {
 	struct ResourceVertex
 	{
-		btr::BufferMemory m_mesh_vertex;
-		btr::BufferMemory m_mesh_index;
-		btr::BufferMemoryEx<vk::DrawIndexedIndirectCommand> m_mesh_indirect;
+		btr::BufferMemory m_vertex;
+		btr::BufferMemory m_index;
+		btr::BufferMemoryEx<vk::DrawIndexedIndirectCommand> m_draw_indirect;
 		btr::BufferMemoryEx<mat4> m_world;
 		btr::BufferMemoryEx<uint32_t> m_instance_index_map;
 
-		std::shared_ptr<CullingDescriptorSetModule> m_occlusion_descriptor_set;
+		std::shared_ptr<CullingDescriptorSet> m_occlusion_descriptor_set;
 
 	};
 
@@ -127,39 +151,13 @@ struct CullingTest
 	std::array<vk::UniquePipeline, PIPELINE_NUM> m_pipeline;
 
 	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
-	std::shared_ptr<DescriptorSetLayoutModule> m_occlusion_descriptor_set_layout;
+	std::shared_ptr<CullingDescriptorModule> m_occlusion_descriptor;
 
 	CullingTest(const std::shared_ptr<btr::Context>& context)
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+		m_occlusion_descriptor = std::make_shared<CullingDescriptorModule>(context);
 
-		{
-			auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
-			std::vector<vk::DescriptorSetLayoutBinding> binding =
-			{
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(stage)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(0),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(stage)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(1),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(stage)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(2),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(stage)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(3),
-			};
-			m_occlusion_descriptor_set_layout = std::make_shared<DescriptorSetLayoutModule>(context, binding, 10);
-		}
 
 		{
 			std::shared_ptr<ResourceVertex> resource = std::make_shared<ResourceVertex>();
@@ -171,36 +169,36 @@ struct CullingTest
 
 				btr::BufferMemoryDescriptor desc;
 				desc.size = vector_sizeof(v);
-				resource->m_mesh_vertex = context->m_vertex_memory.allocateMemory(desc);
+				resource->m_vertex = context->m_vertex_memory.allocateMemory(desc);
 				desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 				auto staging = context->m_staging_memory.allocateMemory(desc);
 				memcpy(staging.getMappedPtr(), v.data(), desc.size);
 
 				vk::BufferCopy copy;
 				copy.setSrcOffset(staging.getBufferInfo().offset);
-				copy.setDstOffset(resource->m_mesh_vertex.getBufferInfo().offset);
+				copy.setDstOffset(resource->m_vertex.getBufferInfo().offset);
 				copy.setSize(desc.size);
-				cmd->copyBuffer(staging.getBufferInfo().buffer, resource->m_mesh_vertex.getBufferInfo().buffer, copy);
+				cmd->copyBuffer(staging.getBufferInfo().buffer, resource->m_vertex.getBufferInfo().buffer, copy);
 			}
 
 			{
 				btr::BufferMemoryDescriptor desc;
 				desc.size = vector_sizeof(i);
-				resource->m_mesh_index = context->m_vertex_memory.allocateMemory(desc);
+				resource->m_index = context->m_vertex_memory.allocateMemory(desc);
 				desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 				auto staging = context->m_staging_memory.allocateMemory(desc);
 				memcpy(staging.getMappedPtr(), i.data(), desc.size);
 
 				vk::BufferCopy copy;
 				copy.setSrcOffset(staging.getBufferInfo().offset);
-				copy.setDstOffset(resource->m_mesh_index.getBufferInfo().offset);
+				copy.setDstOffset(resource->m_index.getBufferInfo().offset);
 				copy.setSize(desc.size);
-				cmd->copyBuffer(staging.getBufferInfo().buffer, resource->m_mesh_index.getBufferInfo().buffer, copy);
+				cmd->copyBuffer(staging.getBufferInfo().buffer, resource->m_index.getBufferInfo().buffer, copy);
 			}
 			{
 				btr::BufferMemoryDescriptor desc;
 				desc.size = sizeof(vk::DrawIndexedIndirectCommand);
-				resource->m_mesh_indirect = context->m_vertex_memory.allocateMemory<vk::DrawIndexedIndirectCommand>(desc);
+				resource->m_draw_indirect = context->m_vertex_memory.allocateMemory<vk::DrawIndexedIndirectCommand>(desc);
 				desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 				auto staging = context->m_staging_memory.allocateMemory<vk::DrawIndexedIndirectCommand>(desc);
 				auto* indirect_cmd = staging.getMappedPtr();
@@ -212,9 +210,9 @@ struct CullingTest
 
 				vk::BufferCopy copy;
 				copy.setSrcOffset(staging.getBufferInfo().offset);
-				copy.setDstOffset(resource->m_mesh_indirect.getBufferInfo().offset);
+				copy.setDstOffset(resource->m_draw_indirect.getBufferInfo().offset);
 				copy.setSize(desc.size);
-				cmd->copyBuffer(staging.getBufferInfo().buffer, resource->m_mesh_indirect.getBufferInfo().buffer, copy);
+				cmd->copyBuffer(staging.getBufferInfo().buffer, resource->m_draw_indirect.getBufferInfo().buffer, copy);
 			}
 			{
 				btr::BufferMemoryDescriptor desc;
@@ -245,25 +243,18 @@ struct CullingTest
 				resource->m_instance_index_map = buffer;
 			}
 			{
-				resource->m_occlusion_descriptor_set = std::make_shared<CullingDescriptorSetModule>(context, m_occlusion_descriptor_set_layout);
-				{
-					btr::BufferMemoryDescriptor desc;
-					desc.size = sizeof(uint32_t) * num;
-					resource->m_occlusion_descriptor_set->m_instance_index_map = resource->m_instance_index_map;
+			}
+			{
+				CullingDescriptor desc_set;
+				desc_set.m_draw_cmd = resource->m_draw_indirect;
+				desc_set.m_instance_index_map = resource->m_instance_index_map;
+				desc_set.m_world = resource->m_world;
 
-				}
-				{
-					btr::BufferMemoryDescriptor desc;
-					desc.size = sizeof(uint32_t) * num;
-					resource->m_occlusion_descriptor_set->m_visible = context->m_storage_memory.allocateMemory<uint32_t>(desc);
-				}
-				{
-					resource->m_occlusion_descriptor_set->m_world = resource->m_world;
-				}
-				{
-					resource->m_occlusion_descriptor_set->m_draw_cmd = resource->m_mesh_indirect;
-				}
-				resource->m_occlusion_descriptor_set->update(context);
+				btr::BufferMemoryDescriptor desc;
+				desc.size = sizeof(uint32_t) * num;
+				desc_set.m_visible = context->m_storage_memory.allocateMemory<uint32_t>(desc);
+
+				resource->m_occlusion_descriptor_set = m_occlusion_descriptor->createDescriptorSet(context, desc_set);
 			}
 
 			m_culling_target = resource;
@@ -279,36 +270,36 @@ struct CullingTest
 
 				btr::BufferMemoryDescriptor desc;
 				desc.size = vector_sizeof(v);
-				resource->m_mesh_vertex = context->m_vertex_memory.allocateMemory(desc);
+				resource->m_vertex = context->m_vertex_memory.allocateMemory(desc);
 				desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 				auto staging = context->m_staging_memory.allocateMemory(desc);
 				memcpy(staging.getMappedPtr(), v.data(), desc.size);
 
 				vk::BufferCopy copy;
 				copy.setSrcOffset(staging.getBufferInfo().offset);
-				copy.setDstOffset(resource->m_mesh_vertex.getBufferInfo().offset);
+				copy.setDstOffset(resource->m_vertex.getBufferInfo().offset);
 				copy.setSize(desc.size);
-				cmd->copyBuffer(staging.getBufferInfo().buffer, resource->m_mesh_vertex.getBufferInfo().buffer, copy);
+				cmd->copyBuffer(staging.getBufferInfo().buffer, resource->m_vertex.getBufferInfo().buffer, copy);
 			}
 
 			{
 				btr::BufferMemoryDescriptor desc;
 				desc.size = vector_sizeof(i);
-				resource->m_mesh_index = context->m_vertex_memory.allocateMemory(desc);
+				resource->m_index = context->m_vertex_memory.allocateMemory(desc);
 				desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 				auto staging = context->m_staging_memory.allocateMemory(desc);
 				memcpy(staging.getMappedPtr(), i.data(), desc.size);
 
 				vk::BufferCopy copy;
 				copy.setSrcOffset(staging.getBufferInfo().offset);
-				copy.setDstOffset(resource->m_mesh_index.getBufferInfo().offset);
+				copy.setDstOffset(resource->m_index.getBufferInfo().offset);
 				copy.setSize(desc.size);
-				cmd->copyBuffer(staging.getBufferInfo().buffer, resource->m_mesh_index.getBufferInfo().buffer, copy);
+				cmd->copyBuffer(staging.getBufferInfo().buffer, resource->m_index.getBufferInfo().buffer, copy);
 			}
 			{
 				btr::BufferMemoryDescriptor desc;
 				desc.size = sizeof(vk::DrawIndexedIndirectCommand);
-				resource->m_mesh_indirect = context->m_vertex_memory.allocateMemory<vk::DrawIndexedIndirectCommand>(desc);
+				resource->m_draw_indirect = context->m_vertex_memory.allocateMemory<vk::DrawIndexedIndirectCommand>(desc);
 				desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 				auto staging = context->m_staging_memory.allocateMemory<vk::DrawIndexedIndirectCommand>(desc);
 				auto* indirect_cmd = staging.getMappedPtr();
@@ -320,9 +311,9 @@ struct CullingTest
 
 				vk::BufferCopy copy;
 				copy.setSrcOffset(staging.getBufferInfo().offset);
-				copy.setDstOffset(resource->m_mesh_indirect.getBufferInfo().offset);
+				copy.setDstOffset(resource->m_draw_indirect.getBufferInfo().offset);
 				copy.setSize(desc.size);
-				cmd->copyBuffer(staging.getBufferInfo().buffer, resource->m_mesh_indirect.getBufferInfo().buffer, copy);
+				cmd->copyBuffer(staging.getBufferInfo().buffer, resource->m_draw_indirect.getBufferInfo().buffer, copy);
 			}
 			{
 				btr::BufferMemoryDescriptor desc;
@@ -351,27 +342,16 @@ struct CullingTest
 				resource->m_instance_index_map = buffer;
 			}
 			{
-				resource->m_occlusion_descriptor_set = std::make_shared<CullingDescriptorSetModule>(context, m_occlusion_descriptor_set_layout);
-//				res
-				{
-					btr::BufferMemoryDescriptor desc;
-					desc.size = sizeof(uint32_t) * num;
-					resource->m_occlusion_descriptor_set->m_instance_index_map = resource->m_instance_index_map;
+				CullingDescriptor desc_set;
+				desc_set.m_draw_cmd = resource->m_draw_indirect;
+				desc_set.m_instance_index_map = resource->m_instance_index_map;
+				desc_set.m_world = resource->m_world;
 
-					cmd->fillBuffer(resource->m_occlusion_descriptor_set->m_instance_index_map.getBufferInfo().buffer, resource->m_occlusion_descriptor_set->m_instance_index_map.getBufferInfo().offset, resource->m_occlusion_descriptor_set->m_instance_index_map.getBufferInfo().range, 0u);
-				}
-				{
-					btr::BufferMemoryDescriptor desc;
-					desc.size = sizeof(uint32_t) * num;
-					resource->m_occlusion_descriptor_set->m_visible = context->m_storage_memory.allocateMemory<uint32_t>(desc);
-				}
-				{
-					resource->m_occlusion_descriptor_set->m_world = resource->m_world;
-				}
-				{
-					resource->m_occlusion_descriptor_set->m_draw_cmd = resource->m_mesh_indirect;
-				}
-				resource->m_occlusion_descriptor_set->update(context);
+				btr::BufferMemoryDescriptor desc;
+				desc.size = sizeof(uint32_t) * num;
+				desc_set.m_visible = context->m_storage_memory.allocateMemory<uint32_t>(desc);
+
+				resource->m_occlusion_descriptor_set = m_occlusion_descriptor->createDescriptorSet(context, desc_set);
 			}
 
 
@@ -458,7 +438,7 @@ struct CullingTest
 			{
 				std::vector<vk::DescriptorSetLayout> layouts =
 				{
-					m_occlusion_descriptor_set_layout->getLayout(),
+					m_occlusion_descriptor->getLayout(),
 					sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
 				};
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
@@ -469,7 +449,7 @@ struct CullingTest
 			{
 				std::vector<vk::DescriptorSetLayout> layouts =
 				{
-					m_occlusion_descriptor_set_layout->getLayout(),
+					m_occlusion_descriptor->getLayout(),
 				};
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
 				pipeline_layout_info.setSetLayoutCount(layouts.size());
@@ -690,14 +670,14 @@ struct CullingTest
 
 		{
 			{
-				auto to_transfer = m_culling_target->m_occlusion_descriptor_set->m_draw_cmd.makeMemoryBarrier();
+				auto to_transfer = m_culling_target->m_draw_indirect.makeMemoryBarrier();
 				to_transfer.setSrcAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
 				to_transfer.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eDrawIndirect, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
 
-				cmd.updateBuffer<uint32_t>(m_culling_target->m_occlusion_descriptor_set->m_draw_cmd.getBufferInfo().buffer, m_culling_target->m_occlusion_descriptor_set->m_draw_cmd.getBufferInfo().offset + offsetof(vk::DrawIndexedIndirectCommand, instanceCount), 1000u);
+				cmd.updateBuffer<uint32_t>(m_culling_target->m_draw_indirect.getBufferInfo().buffer, m_culling_target->m_occlusion_descriptor_set->m_descriptor.m_draw_cmd.getBufferInfo().offset + offsetof(vk::DrawIndexedIndirectCommand, instanceCount), 1000u);
 
-				auto to_read = m_culling_target->m_occlusion_descriptor_set->m_draw_cmd.makeMemoryBarrier();
+				auto to_read = m_culling_target->m_occlusion_descriptor_set->m_descriptor.m_draw_cmd.makeMemoryBarrier();
 				to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 				to_read.setDstAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eDrawIndirect, {}, {}, to_read, {});
@@ -705,14 +685,14 @@ struct CullingTest
 
 			{
 
-				auto to_transfer = m_culling_target->m_occlusion_descriptor_set->m_visible.makeMemoryBarrier();
+				auto to_transfer = m_culling_target->m_occlusion_descriptor_set->m_descriptor.m_visible.makeMemoryBarrier();
 				to_transfer.setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
 				to_transfer.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
 
-				cmd.fillBuffer(m_culling_target->m_occlusion_descriptor_set->m_visible.getBufferInfo().buffer, m_culling_target->m_occlusion_descriptor_set->m_visible.getBufferInfo().offset, m_culling_target->m_occlusion_descriptor_set->m_visible.getBufferInfo().range, 0u);
+				cmd.fillBuffer(m_culling_target->m_occlusion_descriptor_set->m_descriptor.m_visible.getBufferInfo().buffer, m_culling_target->m_occlusion_descriptor_set->m_descriptor.m_visible.getBufferInfo().offset, m_culling_target->m_occlusion_descriptor_set->m_descriptor.m_visible.getBufferInfo().range, 0u);
 
-				auto to_write = m_culling_target->m_occlusion_descriptor_set->m_visible.makeMemoryBarrier();
+				auto to_write = m_culling_target->m_occlusion_descriptor_set->m_descriptor.m_visible.makeMemoryBarrier();
 				to_write.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 				to_write.setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, to_write, {});
@@ -729,23 +709,23 @@ struct CullingTest
 		{
 			// depth
 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_GRAPHICS_WRITE_DEPTH].get());
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 0, m_occluder->m_occlusion_descriptor_set->getSet(), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 0, m_occluder->m_occlusion_descriptor_set->getDescriptorSet(), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 
-			cmd.bindVertexBuffers(0, m_occluder->m_mesh_vertex.getBufferInfo().buffer, m_occluder->m_mesh_vertex.getBufferInfo().offset);
-			cmd.bindIndexBuffer(m_occluder->m_mesh_index.getBufferInfo().buffer, m_occluder->m_mesh_index.getBufferInfo().offset, vk::IndexType::eUint32);
-			cmd.drawIndexedIndirect(m_occluder->m_mesh_indirect.getBufferInfo().buffer, m_occluder->m_mesh_indirect.getBufferInfo().offset, 1, sizeof(vk::DrawIndexedIndirectCommand));
+			cmd.bindVertexBuffers(0, m_occluder->m_vertex.getBufferInfo().buffer, m_occluder->m_vertex.getBufferInfo().offset);
+			cmd.bindIndexBuffer(m_occluder->m_index.getBufferInfo().buffer, m_occluder->m_index.getBufferInfo().offset, vk::IndexType::eUint32);
+			cmd.drawIndexedIndirect(m_occluder->m_draw_indirect.getBufferInfo().buffer, m_occluder->m_draw_indirect.getBufferInfo().offset, 1, sizeof(vk::DrawIndexedIndirectCommand));
 		}
 
 		{
 			// culling visible test
 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_GRAPHICS_OCCULSION_TEST].get());
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 0, m_culling_target->m_occlusion_descriptor_set->getSet(), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 0, m_culling_target->m_occlusion_descriptor_set->getDescriptorSet(), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 
-			cmd.bindVertexBuffers(0, m_culling_target->m_mesh_vertex.getBufferInfo().buffer, m_culling_target->m_mesh_vertex.getBufferInfo().offset);
-			cmd.bindIndexBuffer(m_culling_target->m_mesh_index.getBufferInfo().buffer, m_culling_target->m_mesh_index.getBufferInfo().offset, vk::IndexType::eUint32);
-			cmd.drawIndexedIndirect(m_culling_target->m_mesh_indirect.getBufferInfo().buffer, m_culling_target->m_mesh_indirect.getBufferInfo().offset, 1, sizeof(vk::DrawIndexedIndirectCommand));
+			cmd.bindVertexBuffers(0, m_culling_target->m_vertex.getBufferInfo().buffer, m_culling_target->m_vertex.getBufferInfo().offset);
+			cmd.bindIndexBuffer(m_culling_target->m_index.getBufferInfo().buffer, m_culling_target->m_index.getBufferInfo().offset, vk::IndexType::eUint32);
+			cmd.drawIndexedIndirect(m_culling_target->m_draw_indirect.getBufferInfo().buffer, m_culling_target->m_draw_indirect.getBufferInfo().offset, 1, sizeof(vk::DrawIndexedIndirectCommand));
 		}
 
 		cmd.endRenderPass();
@@ -753,32 +733,32 @@ struct CullingTest
 		// visible calc
 		{
 			{
-				auto to_transfer = m_culling_target->m_occlusion_descriptor_set->m_draw_cmd.makeMemoryBarrier();
+				auto to_transfer = m_culling_target->m_occlusion_descriptor_set->m_descriptor.m_draw_cmd.makeMemoryBarrier();
 				to_transfer.setSrcAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
 				to_transfer.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eDrawIndirect, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
 
-				cmd.updateBuffer<uint32_t>(m_culling_target->m_occlusion_descriptor_set->m_draw_cmd.getBufferInfo().buffer, m_culling_target->m_occlusion_descriptor_set->m_draw_cmd.getBufferInfo().offset + offsetof(vk::DrawIndexedIndirectCommand, instanceCount), 0u);
+				cmd.updateBuffer<uint32_t>(m_culling_target->m_occlusion_descriptor_set->m_descriptor.m_draw_cmd.getBufferInfo().buffer, m_culling_target->m_occlusion_descriptor_set->m_descriptor.m_draw_cmd.getBufferInfo().offset + offsetof(vk::DrawIndexedIndirectCommand, instanceCount), 0u);
 
-				auto to_read = m_culling_target->m_occlusion_descriptor_set->m_draw_cmd.makeMemoryBarrier();
+				auto to_read = m_culling_target->m_occlusion_descriptor_set->m_descriptor.m_draw_cmd.makeMemoryBarrier();
 				to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 				to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead| vk::AccessFlagBits::eShaderWrite);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
 			}
 
 			{
-				auto to_read = m_culling_target->m_occlusion_descriptor_set->m_visible.makeMemoryBarrier();
+				auto to_read = m_culling_target->m_occlusion_descriptor_set->m_descriptor.m_visible.makeMemoryBarrier();
 				to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
 				to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
  				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_read }, {});
 			}
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COMPUTE_VISIBLE].get());
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_COMPUTE].get(), 0, m_culling_target->m_occlusion_descriptor_set->getSet(), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_COMPUTE].get(), 0, m_culling_target->m_occlusion_descriptor_set->getDescriptorSet(), {});
 			cmd.dispatch(1, 1, 1);
 
 			{
-				auto to_read = m_culling_target->m_occlusion_descriptor_set->m_draw_cmd.makeMemoryBarrier();
+				auto to_read = m_culling_target->m_occlusion_descriptor_set->m_descriptor.m_draw_cmd.makeMemoryBarrier();
 				to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
 				to_read.setDstAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, {}, {}, to_read, {});
@@ -794,15 +774,15 @@ struct CullingTest
 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_GRAPHICS_RENDER].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 0, m_occluder->m_occlusion_descriptor_set->getSet(), {});
-			cmd.bindVertexBuffers(0, m_occluder->m_mesh_vertex.getBufferInfo().buffer, m_occluder->m_mesh_vertex.getBufferInfo().offset);
-			cmd.bindIndexBuffer(m_occluder->m_mesh_index.getBufferInfo().buffer, m_occluder->m_mesh_index.getBufferInfo().offset, vk::IndexType::eUint32);
-			cmd.drawIndexedIndirect(m_occluder->m_mesh_indirect.getBufferInfo().buffer, m_occluder->m_mesh_indirect.getBufferInfo().offset, 1, sizeof(vk::DrawIndexedIndirectCommand));
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 0, m_occluder->m_occlusion_descriptor_set->getDescriptorSet(), {});
+			cmd.bindVertexBuffers(0, m_occluder->m_vertex.getBufferInfo().buffer, m_occluder->m_vertex.getBufferInfo().offset);
+			cmd.bindIndexBuffer(m_occluder->m_index.getBufferInfo().buffer, m_occluder->m_index.getBufferInfo().offset, vk::IndexType::eUint32);
+			cmd.drawIndexedIndirect(m_occluder->m_draw_indirect.getBufferInfo().buffer, m_occluder->m_draw_indirect.getBufferInfo().offset, 1, sizeof(vk::DrawIndexedIndirectCommand));
 
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 0, m_culling_target->m_occlusion_descriptor_set->getSet(), {});
-			cmd.bindVertexBuffers(0, m_culling_target->m_mesh_vertex.getBufferInfo().buffer, m_culling_target->m_mesh_vertex.getBufferInfo().offset);
-			cmd.bindIndexBuffer(m_culling_target->m_mesh_index.getBufferInfo().buffer, m_culling_target->m_mesh_index.getBufferInfo().offset, vk::IndexType::eUint32);
-			cmd.drawIndexedIndirect(m_culling_target->m_mesh_indirect.getBufferInfo().buffer, m_culling_target->m_mesh_indirect.getBufferInfo().offset, 1, sizeof(vk::DrawIndexedIndirectCommand));
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 0, m_culling_target->m_occlusion_descriptor_set->getDescriptorSet(), {});
+			cmd.bindVertexBuffers(0, m_culling_target->m_vertex.getBufferInfo().buffer, m_culling_target->m_vertex.getBufferInfo().offset);
+			cmd.bindIndexBuffer(m_culling_target->m_index.getBufferInfo().buffer, m_culling_target->m_index.getBufferInfo().offset, vk::IndexType::eUint32);
+			cmd.drawIndexedIndirect(m_culling_target->m_draw_indirect.getBufferInfo().buffer, m_culling_target->m_draw_indirect.getBufferInfo().offset, 1, sizeof(vk::DrawIndexedIndirectCommand));
 
 		}
 		cmd.endRenderPass();
