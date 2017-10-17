@@ -78,7 +78,6 @@ struct EmitterUpdateParameter
 	vec4 m_emit_offset;		//!< パーティクル生成オフセットのランダム値
 };
 
-
 struct sParticlePipeline : Singleton<sParticlePipeline>
 {
 	friend Singleton<sParticlePipeline>;

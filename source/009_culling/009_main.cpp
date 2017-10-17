@@ -28,34 +28,9 @@
 
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
-//#pragma comment(lib, "FreeImage.lib")
 #pragma comment(lib, "vulkan-1.lib")
 
 
-struct LayoutDescriptor
-{
-	std::vector<vk::DescriptorSetLayoutBinding> binding;
-	int m_set_num;
-};
-template<typename T>
-struct DescriptorLayout : DescriptorModule
-{
-	DescriptorLayout(const std::shared_ptr<btr::Context>& context)
-	{
-		auto layout_desc = T::GetLayout();
-		m_descriptor_set_layout = createDescriptorSetLayout(context, layout_desc.binding);
-		m_descriptor_pool = createDescriptorPool(context, layout_desc.binding, layout_desc.m_set_num);
-	}
-	std::shared_ptr<DescriptorSet<T>> createDescriptorSet(const std::shared_ptr<btr::Context>& context, const T& desc)
-	{
-		auto descriptor_set = allocateDescriptorSet(context);
-		auto ret = std::make_shared<DescriptorSet<T>>();
-		ret->m_descriptor = desc;
-		ret->m_descriptor.updateDescriptor(context, descriptor_set.get());
-		ret->m_descriptor_set = std::move(descriptor_set);
-		return ret;
-	}
-};
 
 struct CullingDescriptor
 {

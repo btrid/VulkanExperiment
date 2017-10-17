@@ -74,6 +74,7 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\include\003_particle\Movable.h" />
     <ClInclude Include="..\..\include\005_volume_rendering\VolumeRenderer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

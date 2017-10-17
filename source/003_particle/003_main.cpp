@@ -27,7 +27,7 @@
 #include <applib/sCameraManager.h>
 #include <btrlib/Context.h>
 
-#include <applib/sParticlePipeline.h>
+#include <003_particle/Movable.h>
 
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
@@ -67,7 +67,7 @@ int main()
 	auto render = renderer.createRender(context, model.getResource());
 
 	{
-		sParticlePipeline::Order().setup(context);
+		sMovable::Order().setup(context);
 
 		{
 			PlayMotionDescriptor desc;
@@ -125,8 +125,8 @@ int main()
 				job.mJob.emplace_back(
 					[&]()
 				{
-					render_cmds[1] = sParticlePipeline::Order().execute(context);
-					render_cmds[2] = sParticlePipeline::Order().draw(context);
+					render_cmds[1] = sMovable::Order().execute(context);
+					render_cmds[2] = sMovable::Order().draw(context);
 					render_syncronized_point.arrive();
 				}
 				);

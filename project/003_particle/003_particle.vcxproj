@@ -79,6 +79,9 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\include\003_particle\Movable.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="..\..\packages\libFreeImage.1.0.0\build\native\libFreeImage.targets" Condition="Exists('..\..\packages\libFreeImage.1.0.0\build\native\libFreeImage.targets')" />
