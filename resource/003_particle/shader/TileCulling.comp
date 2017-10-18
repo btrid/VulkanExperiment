@@ -1,0 +1,66 @@
+#version 450
+#extension GL_GOOGLE_cpp_style_line_directive : require
+#extension GL_ARB_gpu_shader_int64 : require
+
+#define SETPOINT_CAMERA 1
+#include <btrlib/Camera.glsl>
+
+#define USE_MOVABLE 0
+#include <Movable.glsl>
+
+layout (local_size_x = 32, local_size_x = 32) in;
+
+shared uint s_counter;
+shared CameraFrustom f;
+void main()
+{
+	uvec3 index = uvec3(gl_GlobalInvocationID.xy, 0);
+	TileInfo tile_info = b_tile_info;
+	if(any(greaterThanEqual(index.xy, tile_info.m_tile_num))) { return; }
+	uint index1D = index.x + index.y * tile_info.m_tile_num.x;
+
+	if(gl_LocalInvocationID.x == 0)
+	{
+		s_counter = 0;
+
+		CameraFrustomPoint frustom_point = u_camera_frustom_point[0];
+		vec3 n_per_size = vec3(vec2(1.) / tile_info.m_tile_num, 0.) * (frustom_point.m_rbn - frustom_point.m_ltn).xyz;
+		vec3 f_per_size = vec3(vec2(1.) / tile_info.m_tile_num, 0.) * (frustom_point.m_rbf - frustom_point.m_ltf).xyz;
+		vec3 ltn = frustom_point.m_ltn.xyz + index*n_per_size;
+		vec3 lbn = frustom_point.m_ltn.xyz + (index+uvec3(0, 1, 0))*n_per_size;
+		vec3 rtn = frustom_point.m_ltn.xyz + (index+uvec3(1, 0, 0))*n_per_size;
+		vec3 rbn = frustom_point.m_ltn.xyz + (index+uvec3(1, 1, 0))*n_per_size;
+		vec3 ltf = frustom_point.m_ltf.xyz + index*f_per_size;
+		vec3 lbf = frustom_point.m_ltf.xyz + (index+uvec3(0, 1, 0))*f_per_size;
+		vec3 rtf = frustom_point.m_ltf.xyz + (index+uvec3(1, 0, 0))*f_per_size;
+		vec3 rbf = frustom_point.m_ltf.xyz + (index+uvec3(1, 1, 0))*f_per_size;
+//		CameraFrustom f;
+		f.p[0] = MakePlane(rtn, ltn, ltf);
+		f.p[1] = MakePlane(lbn, rbn, rbf);
+		f.p[2] = MakePlane(ltn, lbn, lbf);
+		f.p[3] = MakePlane(rbn, rtn, rbf);
+	}
+	barrier();
+	memoryBarrierShared();
+
+	uint tiled_1D_index = gl_WorkGroupID.x+ gl_WorkGroupID.y*gl_NumWorkGroups.x; 
+	uint count_list_offset = tiled_1D_index*tile_info.m_tile_count_max;
+	for(uint i = 0; i < b_movable_info.m_active_counter; i++)
+	{
+		vec3 pos = unpackMovablePos(b_movable_data[i].packed_pos);
+		if(isCullingInf(f, vec4(pos, b_movable_data[i].scale))) 
+		{
+			continue;
+		}
+		uint tile_list_index = atomicAdd(s_counter, 1);
+		b_tiled_index[count_list_offset+tile_list_index] = i;
+	}
+
+	barrier();
+	memoryBarrierShared();
+	if(gl_LocalInvocationID.x == 0)
+	{
+		b_tiled_count[tiled_1D_index] = s_counter;
+	}
+}
+

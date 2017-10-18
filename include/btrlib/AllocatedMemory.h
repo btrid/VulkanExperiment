@@ -252,6 +252,16 @@ struct BufferMemoryDescriptor
 		, attribute(BufferMemoryAttributeFlags())
 	{}
 };
+template<typename T>
+struct BufferMemoryDescriptorEx
+{
+	uint32_t element_num;
+	BufferMemoryAttributeFlags attribute;
+	BufferMemoryDescriptorEx()
+		: element_num(0)
+		, attribute(BufferMemoryAttributeFlags())
+	{}
+};
 
 struct BufferMemory
 {
@@ -466,11 +476,11 @@ struct AllocatedMemory
 	}
 
 	template<typename T>
-	BufferMemoryEx<T> allocateMemory(const BufferMemoryDescriptor& desc)
+	BufferMemoryEx<T> allocateMemory(const BufferMemoryDescriptorEx<T>& desc)
 	{
-		assert(desc.size != 0);// size0ÇÕÇ®Ç©ÇµÇ¢ÇÊÇÀ
+		assert(desc.element_num != 0);// size0ÇÕÇ®Ç©ÇµÇ¢ÇÊÇÀ
 
-		auto zone = m_resource->m_free_zone->alloc(desc.size, btr::isOn(desc.attribute, BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT));		
+		auto zone = m_resource->m_free_zone->alloc(desc.element_num * sizeof(T), btr::isOn(desc.attribute, BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT));
 		assert(zone.isValid());// allocÇ≈Ç´ÇΩÅH
 
 		BufferMemoryEx<T> alloc;
@@ -486,6 +496,16 @@ struct AllocatedMemory
 			alloc.m_resource->m_mapped_memory = (T*)((char*)m_resource->m_mapped_memory + zone.m_start);
 		}
 		return alloc;
+
+	}
+
+	template<typename T>
+	BufferMemoryEx<T> allocateMemory(const BufferMemoryDescriptor& desc)
+	{
+		BufferMemoryDescriptorEx<T> descEx;
+		descEx.attribute = desc.attribute;
+		descEx.element_num = desc.size/sizeof(T);
+		return allocateMemory(descEx);
 	}
 	const vk::BufferCreateInfo& getBufferCreateInfo()const { return m_resource->m_buffer_info; }
 	vk::Buffer getBuffer()const { return m_resource->m_buffer.get(); }

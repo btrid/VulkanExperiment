@@ -34,6 +34,10 @@
 #pragma comment(lib, "FreeImage.lib")
 #pragma comment(lib, "vulkan-1.lib")
 
+struct Light : Movable 
+{
+
+};
 int main()
 {
 	btr::setResourceAppPath("..\\..\\resource\\003_particle\\");
@@ -66,9 +70,10 @@ int main()
 	renderer.setup(context, nullptr);
 	auto render = renderer.createRender(context, model.getResource());
 
-	{
-		sMovable::Order().setup(context);
+	sMovable movable;
+	movable.setup(context);
 
+	{
 		{
 			PlayMotionDescriptor desc;
 			desc.m_data = model.getResource()->getAnimation().m_motion[0];
@@ -125,8 +130,8 @@ int main()
 				job.mJob.emplace_back(
 					[&]()
 				{
-					render_cmds[1] = sMovable::Order().execute(context);
-					render_cmds[2] = sMovable::Order().draw(context);
+					render_cmds[1] = movable.execute(context);
+					render_cmds[2] = movable.draw(context);
 					render_syncronized_point.arrive();
 				}
 				);
