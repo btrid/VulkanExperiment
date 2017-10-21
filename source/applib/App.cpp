@@ -5,6 +5,7 @@
 
 #include <applib/DrawHelper.h>
 #include <applib/sCameraManager.h>
+#include <applib/sParticlePipeline.h>
 #include <applib/sSystem.h>
 #include <applib/GraphicsResource.h>
 
@@ -45,9 +46,9 @@ void App::setup(const AppDescriptor& desc)
 		{
 			std::vector<vk::DescriptorPoolSize> pool_size(4);
 			pool_size[0].setType(vk::DescriptorType::eUniformBuffer);
-			pool_size[0].setDescriptorCount(10);
+			pool_size[0].setDescriptorCount(20);
 			pool_size[1].setType(vk::DescriptorType::eStorageBuffer);
-			pool_size[1].setDescriptorCount(20);
+			pool_size[1].setDescriptorCount(30);
 			pool_size[2].setType(vk::DescriptorType::eCombinedImageSampler);
 			pool_size[2].setDescriptorCount(10);
 			pool_size[3].setType(vk::DescriptorType::eStorageImage);
@@ -81,6 +82,7 @@ void App::setup(const AppDescriptor& desc)
 
 	sSystem::Order().setup(m_context);
 	sCameraManager::Order().setup(m_context);
+	sParticlePipeline::Order().setup(m_context);
 	DrawHelper::Order().setup(m_context);
 	sGraphicsResource::Order().setup(m_context);
 }
@@ -165,8 +167,8 @@ void App::preUpdate()
 		m_camera->control(m_window->getInput(), 0.016f);
 	}
 
-	m_system_cmds.resize(3);
-	m_sync_point.reset(4);
+	m_system_cmds.resize(5);
+	m_sync_point.reset(5);
 
 	{
 		MAKE_THREAD_JOB(job);
@@ -195,7 +197,19 @@ void App::preUpdate()
 		job.mJob.emplace_back(
 			[&]()
 		{
-			m_system_cmds[2] = DrawHelper::Order().draw(m_context);
+			m_system_cmds[4] = DrawHelper::Order().draw(m_context);
+			m_sync_point.arrive();
+		}
+		);
+		sGlobal::Order().getThreadPool().enque(job);
+	}
+	{
+		MAKE_THREAD_JOB(job);
+		job.mJob.emplace_back(
+			[&]()
+		{
+			m_system_cmds[2] = sParticlePipeline::Order().draw(m_context);
+			m_system_cmds[3] = sParticlePipeline::Order().draw(m_context);
 			m_sync_point.arrive();
 		}
 		);

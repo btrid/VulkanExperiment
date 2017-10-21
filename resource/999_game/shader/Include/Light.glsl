@@ -20,20 +20,20 @@ struct LightData
 layout(std140, set=USE_LIGHT, binding=0) uniform LightInfoUniform {
 	LightInfo u_light_info;
 };
-layout(std140, set=USE_LIGHT, binding=0) uniform TileInfoUniform {
+layout(std140, set=USE_LIGHT, binding=1) uniform TileInfoUniform {
 	TileInfo u_tile_info;
 };
-layout(std430, set=USE_LIGHT, binding=1) restrict buffer LightDataBuffer {
+layout(std430, set=USE_LIGHT, binding=2) restrict buffer LightDataBuffer {
 	LightData b_light[];
 };
-layout(std430, set=USE_LIGHT, binding=2) restrict buffer CounterBuffer {
+layout(std430, set=USE_LIGHT, binding=3) restrict buffer CounterBuffer {
 	uint b_data_counter;
 };
-layout(std430, set=USE_LIGHT, binding=3) restrict buffer TileCounterBuffer {
+layout(std430, set=USE_LIGHT, binding=4) restrict buffer TileCounterBuffer {
 	uint b_tile_data_counter[];
 };
-layout(std430, set=USE_LIGHT, binding=4) restrict buffer TileIndexBuffer {
-	uint b_tile_data_index[];
+layout(std430, set=USE_LIGHT, binding=5) restrict buffer TileIndexBuffer {
+	uint b_tile_data_map[];
 };
 
 #endif

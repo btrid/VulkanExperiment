@@ -53,7 +53,7 @@ void main()
 			continue;
 		}
 		uint tile_list_index = atomicAdd(s_counter, 1);
-		b_tile_data_index[count_list_offset+tile_list_index] = i;
+		b_tile_data_map[count_list_offset+tile_list_index] = i;
 	}
 
 	barrier();

@@ -148,6 +148,37 @@ void sBulletSystem::setup(std::shared_ptr<btr::Context>& context)
 		std::copy(std::make_move_iterator(descriptor_set.begin()), std::make_move_iterator(descriptor_set.end()), m_descriptor_set.begin());
 	}
 	{
+
+		std::vector<vk::DescriptorBufferInfo> uniforms = {
+			m_bullet_info.getBufferInfo(),
+		};
+		std::vector<vk::DescriptorBufferInfo> storages = {
+			m_bullet.getBufferInfo(),
+			m_bullet_counter.getBufferInfo(),
+			m_bullet_emit.getBufferInfo(),
+			m_bullet_LL_head_gpu.getBufferInfo(),
+			m_bullet_emit_count.getBufferInfo(),
+		};
+		std::vector<vk::WriteDescriptorSet> write_desc =
+		{
+			vk::WriteDescriptorSet()
+			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+			.setDescriptorCount((uint32_t)uniforms.size())
+			.setPBufferInfo(uniforms.data())
+			.setDstBinding(0)
+			.setDstSet(m_descriptor_set[DESCRIPTOR_SET_UPDATE].get()),
+			vk::WriteDescriptorSet()
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(storages.size())
+			.setPBufferInfo(storages.data())
+			.setDstBinding(1)
+			.setDstSet(m_descriptor_set[DESCRIPTOR_SET_UPDATE].get()),
+		};
+		context->m_device->updateDescriptorSets(write_desc, {});
+	}
+
+	// pipeline layout
+	{
 		{
 			std::vector<vk::DescriptorSetLayout> layouts = {
 				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_UPDATE].get(),
@@ -171,35 +202,6 @@ void sBulletSystem::setup(std::shared_ptr<btr::Context>& context)
 			m_pipeline_layout[PIPELINE_LAYOUT_DRAW] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
-		{
-
-			std::vector<vk::DescriptorBufferInfo> uniforms = {
-				m_bullet_info.getBufferInfo(),
-			};
-			std::vector<vk::DescriptorBufferInfo> storages = {
-				m_bullet.getBufferInfo(),
-				m_bullet_counter.getBufferInfo(),
-				m_bullet_emit.getBufferInfo(),
-				m_bullet_LL_head_gpu.getBufferInfo(),
-				m_bullet_emit_count.getBufferInfo(),
-			};
-			std::vector<vk::WriteDescriptorSet> write_desc =
-			{
-				vk::WriteDescriptorSet()
-				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-				.setDescriptorCount((uint32_t)uniforms.size())
-				.setPBufferInfo(uniforms.data())
-				.setDstBinding(0)
-				.setDstSet(m_descriptor_set[DESCRIPTOR_SET_UPDATE].get()),
-				vk::WriteDescriptorSet()
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(storages.size())
-				.setPBufferInfo(storages.data())
-				.setDstBinding(1)
-				.setDstSet(m_descriptor_set[DESCRIPTOR_SET_UPDATE].get()),
-			};
-			context->m_device->updateDescriptorSets(write_desc, {});
-		}
 
 	}
 	{

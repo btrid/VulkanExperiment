@@ -17,30 +17,30 @@ void sLightSystem::setup(std::shared_ptr<btr::Context>& context)
 		{
 			btr::BufferMemoryDescriptorEx<LightInfo> desc;
 			desc.element_num = 1;
-			m_light_info = context->m_storage_memory.allocateMemory(desc);
+			m_light_info = context->m_uniform_memory.allocateMemory(desc);
 
 			auto staging = context->m_staging_memory.allocateMemory(desc);
 			staging.getMappedPtr()->m_max_num = num;
 			vk::BufferCopy copy;
 			copy.setSize(staging.getBufferInfo().range);
 			copy.setSrcOffset(staging.getBufferInfo().offset);
-			copy.setDstOffset(m_light_info.getBufferInfo().range);
+			copy.setDstOffset(m_light_info.getBufferInfo().offset);
 
-			cmd->copyBuffer(m_light_info.getBufferInfo().buffer, staging.getBufferInfo().buffer, copy);
+			cmd->copyBuffer(staging.getBufferInfo().buffer, m_light_info.getBufferInfo().buffer, copy);
 		}
 		{
 			btr::BufferMemoryDescriptorEx<TileInfo> desc;
 			desc.element_num = 1;
-			m_tile_info = context->m_storage_memory.allocateMemory(desc);
+			m_tile_info = context->m_uniform_memory.allocateMemory(desc);
 
 			auto staging = context->m_staging_memory.allocateMemory(desc);
 			*staging.getMappedPtr() = m_tile_info_cpu;
 			vk::BufferCopy copy;
 			copy.setSize(staging.getBufferInfo().range);
 			copy.setSrcOffset(staging.getBufferInfo().offset);
-			copy.setDstOffset(m_tile_info.getBufferInfo().range);
+			copy.setDstOffset(m_tile_info.getBufferInfo().offset);
 
-			cmd->copyBuffer(m_tile_info.getBufferInfo().buffer, staging.getBufferInfo().buffer, copy);
+			cmd->copyBuffer(staging.getBufferInfo().buffer, m_tile_info.getBufferInfo().buffer, copy);
 		}
 		{
 			btr::BufferMemoryDescriptorEx<LightData> desc;
@@ -50,7 +50,7 @@ void sLightSystem::setup(std::shared_ptr<btr::Context>& context)
 		{
 			btr::BufferMemoryDescriptorEx<uint32_t> desc;
 			desc.element_num = 1;
-			m_data_counter = context->m_storage_memory.allocateMemory(desc);
+			m_light_data_counter = context->m_storage_memory.allocateMemory(desc);
 		}
 		{
 			btr::BufferMemoryDescriptorEx<uint32_t> desc;
@@ -60,7 +60,7 @@ void sLightSystem::setup(std::shared_ptr<btr::Context>& context)
 		{
 			btr::BufferMemoryDescriptorEx<uint32_t> desc;
 			desc.element_num = m_tile_info_cpu.m_tile_buffer_max_num;
-			m_tile_data_list = context->m_storage_memory.allocateMemory(desc);
+			m_tile_data_map = context->m_storage_memory.allocateMemory(desc);
 		}
 
 	}
@@ -72,7 +72,7 @@ void sLightSystem::setup(std::shared_ptr<btr::Context>& context)
 		{
 			{ "LightCollectParticle.comp.spv", vk::ShaderStageFlagBits::eCompute },
 			{ "LightCollectBullet.comp.spv", vk::ShaderStageFlagBits::eCompute },
-			{ "CollisionTest.comp.spv", vk::ShaderStageFlagBits::eCompute },
+			{ "LightTileCulling.comp.spv", vk::ShaderStageFlagBits::eCompute },
 		};
 		static_assert(array_length(shader_desc) == SHADER_NUM, "not equal shader num");
 		std::string path = btr::getResourceAppPath() + "shader\\binary\\";
@@ -98,7 +98,7 @@ void sLightSystem::setup(std::shared_ptr<btr::Context>& context)
 			vk::DescriptorSetLayoutBinding()
 			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex)
 			.setDescriptorCount(1)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 			.setBinding(1),
 			vk::DescriptorSetLayoutBinding()
 			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex)
@@ -110,6 +110,16 @@ void sLightSystem::setup(std::shared_ptr<btr::Context>& context)
 			.setDescriptorCount(1)
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setBinding(3),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex)
+			.setDescriptorCount(1)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setBinding(4),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex)
+			.setDescriptorCount(1)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setBinding(5),
 		};
 
 		for (size_t i = 0; i < DESCRIPTOR_SET_LAYOUT_NUM; i++)
@@ -130,6 +140,35 @@ void sLightSystem::setup(std::shared_ptr<btr::Context>& context)
 		auto descriptor_set = context->m_device->allocateDescriptorSetsUnique(alloc_info);
 		std::copy(std::make_move_iterator(descriptor_set.begin()), std::make_move_iterator(descriptor_set.end()), m_descriptor_set.begin());
 
+		{
+
+			std::vector<vk::DescriptorBufferInfo> uniforms = {
+				m_light_info.getBufferInfo(),
+				m_tile_info.getBufferInfo(),
+			};
+			std::vector<vk::DescriptorBufferInfo> storages = {
+				m_light_data.getBufferInfo(),
+				m_light_data_counter.getBufferInfo(),
+				m_tile_data_counter.getBufferInfo(),
+				m_tile_data_map.getBufferInfo(),
+			};
+			std::vector<vk::WriteDescriptorSet> write_desc =
+			{
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+				.setDescriptorCount((uint32_t)uniforms.size())
+				.setPBufferInfo(uniforms.data())
+				.setDstBinding(0)
+				.setDstSet(m_descriptor_set[DESCRIPTOR_SET_LIGHT].get()),
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(storages.size())
+				.setPBufferInfo(storages.data())
+				.setDstBinding(2)
+				.setDstSet(m_descriptor_set[DESCRIPTOR_SET_LIGHT].get()),
+			};
+			context->m_device->updateDescriptorSets(write_desc, {});
+		}	
 	}
 
 	{
@@ -188,9 +227,9 @@ void sLightSystem::setup(std::shared_ptr<btr::Context>& context)
 			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_TILE_CULLING].get()),
 		};
 		auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
-		m_pipeline[PIPELINE_LAYOUT_PARTICLE_COLLECT] = std::move(compute_pipeline[0]);
-		m_pipeline[PIPELINE_LAYOUT_BULLET_COLLECT] = std::move(compute_pipeline[1]);
-		m_pipeline[PIPELINE_LAYOUT_TILE_CULLING] = std::move(compute_pipeline[2]);
+		m_pipeline[PIPELINE_PARTICLE_COLLECT] = std::move(compute_pipeline[0]);
+		m_pipeline[PIPELINE_BULLET_COLLECT] = std::move(compute_pipeline[1]);
+		m_pipeline[PIPELINE_TILE_CULLING] = std::move(compute_pipeline[2]);
 
 	}
 }
@@ -200,7 +239,7 @@ vk::CommandBuffer sLightSystem::execute(std::shared_ptr<btr::Context>& context)
 	auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 	{
 		{
-			auto to_transfer = m_data_counter.makeMemoryBarrier();
+			auto to_transfer = m_light_data_counter.makeMemoryBarrier();
 			to_transfer.setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
 			to_transfer.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
 			auto to_transfer2 = m_tile_data_counter.makeMemoryBarrier();
@@ -208,10 +247,10 @@ vk::CommandBuffer sLightSystem::execute(std::shared_ptr<btr::Context>& context)
 			to_transfer2.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, { to_transfer, to_transfer2 }, {});
 
-			cmd.fillBuffer(m_data_counter.getBufferInfo().buffer, m_data_counter.getBufferInfo().offset, m_data_counter.getBufferInfo().range, 0u);
+			cmd.fillBuffer(m_light_data_counter.getBufferInfo().buffer, m_light_data_counter.getBufferInfo().offset, m_light_data_counter.getBufferInfo().range, 0u);
 			cmd.fillBuffer(m_tile_data_counter.getBufferInfo().buffer, m_tile_data_counter.getBufferInfo().offset, m_tile_data_counter.getBufferInfo().range, 0u);
 
-			auto to_write = m_data_counter.makeMemoryBarrier();
+			auto to_write = m_light_data_counter.makeMemoryBarrier();
 			to_write.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 			to_write.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_write, {});

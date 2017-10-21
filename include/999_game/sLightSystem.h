@@ -51,7 +51,7 @@ struct sLightSystem : public Singleton<sLightSystem>
 	};
 	enum : uint32_t
 	{
-		DESCRIPTOR_SET_COLLISION_TEST,
+		DESCRIPTOR_SET_LIGHT,
 		DESCRIPTOR_SET_NUM,
 	};
 
@@ -60,9 +60,9 @@ struct sLightSystem : public Singleton<sLightSystem>
 	btr::BufferMemoryEx<LightInfo> m_light_info;
 	btr::BufferMemoryEx<TileInfo> m_tile_info;
 	btr::BufferMemoryEx<LightData> m_light_data;
-	btr::BufferMemoryEx<uint32_t> m_data_counter;
+	btr::BufferMemoryEx<uint32_t> m_light_data_counter;
 	btr::BufferMemoryEx<uint32_t> m_tile_data_counter;
-	btr::BufferMemoryEx<uint32_t> m_tile_data_list;
+	btr::BufferMemoryEx<uint32_t> m_tile_data_map;
 	std::array<vk::UniqueDescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
 	std::array<vk::UniqueDescriptorSet, DESCRIPTOR_SET_NUM> m_descriptor_set;
 	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;

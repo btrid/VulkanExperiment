@@ -317,7 +317,7 @@ int main()
 		sBoid::Order().setup(context);
 		sBulletSystem::Order().setup(context);
 		sCollisionSystem::Order().setup(context);
-
+		sLightSystem::Order().setup(context);
 		{
 			auto render_pass = std::make_shared<RenderBackbufferModule>(context);
 			std::string path = btr::getResourceAppPath() + "shader\\binary\\";
@@ -370,8 +370,8 @@ int main()
 				sGlobal::Order().getThreadPool().enque(job);
 			}
 
-			SynchronizedPoint render_syncronized_point(6);
-			std::vector<vk::CommandBuffer> render_cmds(9);
+			SynchronizedPoint render_syncronized_point(7);
+			std::vector<vk::CommandBuffer> render_cmds(10);
 			{
 				cThreadJob job;
 				job.mFinish =
@@ -434,6 +434,17 @@ int main()
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);
+			}
+			{
+				cThreadJob job;
+				job.mFinish =
+					[&]()
+				{
+					render_cmds[9] = sLightSystem::Order().execute(context);
+					render_syncronized_point.arrive();
+				};
+				sGlobal::Order().getThreadPool().enque(job);
+
 			}
 #if 0 // voxelize check
 			SynchronizedPoint render_syncronized_point(1);
