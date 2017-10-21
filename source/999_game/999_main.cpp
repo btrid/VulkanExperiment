@@ -30,6 +30,7 @@
 #include <999_game/sBulletSystem.h>
 #include <999_game/sBoid.h>
 #include <999_game/sCollisionSystem.h>
+#include <999_game/sLightSystem.h>
 #include <999_game/sScene.h>
 #include <999_game/VoxelizeMap.h>
 #include <999_game/VoxelizeBullet.h>
@@ -279,7 +280,7 @@ private:
 int main()
 {
 	btr::setResourceAppPath("..\\..\\resource\\999_game\\");
-	auto* camera = cCamera::sCamera::Order().create();
+	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = glm::vec3(220.f, 20.f, 0.f);
 	camera->getData().m_target = glm::vec3(220.f, 0.f, 51.f);
 	camera->getData().m_up = glm::vec3(0.f, -1.f, 0.f);
@@ -292,7 +293,12 @@ int main()
 	auto device = sGlobal::Order().getGPU(0).getDevice();
 
 	app::App app;
-	app.setup(gpu);
+	{
+		app::AppDescriptor desc;
+		desc.m_gpu = gpu;
+		desc.m_window_size = uvec2(640, 480);
+		app.setup(desc);
+	}
 
 	auto context = app.m_context;
 
@@ -453,7 +459,7 @@ int main()
 
 		}
 		app.postUpdate();
-		printf("%6.3fs\n", time.getElapsedTimeAsSeconds());
+		printf("%6.4fs\n", time.getElapsedTimeAsSeconds());
 	}
 
 	return 0;

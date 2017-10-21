@@ -74,12 +74,14 @@
     <ClCompile Include="..\..\source\999_game\sBoid.cpp" />
     <ClCompile Include="..\..\source\999_game\sBulletSystem.cpp" />
     <ClCompile Include="..\..\source\999_game\sCollisionSystem.cpp" />
+    <ClCompile Include="..\..\source\999_game\sLightSystem.cpp" />
     <ClCompile Include="..\..\source\999_game\sScene.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\999_game\cTriangleLL.h" />
     <ClInclude Include="..\..\include\999_game\KDTree.h" />
     <ClInclude Include="..\..\include\999_game\KDTreeTriangle.h" />
+    <ClInclude Include="..\..\include\999_game\sLightSystem.h" />
     <ClInclude Include="..\..\include\999_game\MazeGenerator.h" />
     <ClInclude Include="..\..\include\999_game\sBoid.h" />
     <ClInclude Include="..\..\include\999_game\sBulletSystem.h" />

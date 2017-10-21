@@ -3,7 +3,7 @@
 #extension GL_ARB_shader_draw_parameters : require
 #extension GL_GOOGLE_cpp_style_line_directive : require
 
-#include <Common.glsl>
+#include <btrlib/Common.glsl>
 
 #define SETPOINT_BOID 0
 #include <Boid.glsl>

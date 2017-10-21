@@ -3,8 +3,8 @@
 #extension GL_GOOGLE_cpp_style_line_directive : require
 
 #include <btrlib/ConvertDimension.glsl>
+#include <btrlib/Common.glsl>
 
-#include </Common.glsl>
 #define SETPOINT_BULLET 0
 #include </Bullet.glsl>
 

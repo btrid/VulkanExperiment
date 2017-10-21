@@ -1,4 +1,8 @@
 
+#ifndef BULLET_GLSL
+#define BULLET_GLSL
+
+#include <btrlib/common.glsl>
 
 struct BulletInfo
 {
@@ -41,5 +45,7 @@ layout(std430, set=SETPOINT_BULLET, binding=5) readonly restrict buffer BulletEm
 	uint b_bullet_emit_count;
 };
 
+
+#endif
 
 #endif

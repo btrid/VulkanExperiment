@@ -10,7 +10,7 @@
 #include <btrlib/ConvertDimension.glsl>
 #include <btrlib/Math.glsl>
 
-#include </Common.glsl>
+#include <btrlib/Common.glsl>
 
 #define SETPOINT_BOID 0
 #include </Boid.glsl>

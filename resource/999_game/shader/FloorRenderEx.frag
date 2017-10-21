@@ -6,13 +6,12 @@
 #extension GL_GOOGLE_cpp_style_line_directive : require
 #extension GL_ARB_shader_image_load_store : require
 
+#include <btrlib/Common.glsl>
 #include <btrlib/Math.glsl>
 #include <btrlib/Shape.glsl>
-//#include </Marching.glsl>
 
 #define SETPOINT_CAMERA 0
 #include <btrlib/Camera.glsl>
-#include <Common.glsl>
 
 #define SETPOINT_MAP 1
 #define SETPOINT_SCENE 2

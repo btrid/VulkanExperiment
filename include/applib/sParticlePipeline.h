@@ -138,11 +138,12 @@ struct sParticlePipeline : Singleton<sParticlePipeline>
 
 	ParticleInfo m_particle_info_cpu;
 
-
-
 	void setup(std::shared_ptr<btr::Context>& context);
 	vk::CommandBuffer execute(std::shared_ptr<btr::Context>& context);
 	vk::CommandBuffer draw(std::shared_ptr<btr::Context>& context);
+
+	vk::DescriptorSetLayout getDescriptorSetLayout(DescriptorSetLayout desctiptor)const { return m_descriptor_set_layout[desctiptor].get(); }
+	vk::DescriptorSet getDescriptorSet(DescriptorSet i)const { return m_descriptor_set[i].get(); }
 
 };
 

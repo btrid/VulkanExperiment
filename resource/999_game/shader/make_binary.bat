@@ -2,9 +2,6 @@
 cd /d %~dp0
 
 rem glslc.exe -w -I Include -x glsl -fshader-stage=compute	-o binary\\ParticleEmit.comp.spv ParticleEmit.comp
-rem glslc.exe -w -I Include -I ../../btrlib/shader/include -x glsl -fshader-stage=compute	-o binary\\ParticleUpdate.comp.spv ParticleUpdate.comp
-rem glslc.exe -w -I Include -I ../../btrlib/shader/include -x glsl -fshader-stage=vertex	-o binary\\ParticleRender.vert.spv ParticleRender.vert
-rem glslc.exe -w -I Include -I ../../btrlib/shader/include -x glsl -fshader-stage=fragment	-o binary\\ParticleRender.frag.spv ParticleRender.frag
 
 rem glslc.exe -w -I Include -I ../../applib/shader/include -I ../../btrlib/shader/include -x glsl -fshader-stage=vertex	-o binary\\FloorRender.vert.spv FloorRender.vert
 rem glslc.exe -w -I Include -I ../../btrlib/shader/include -x glsl -fshader-stage=fragment	-o binary\\FloorRender.frag.spv FloorRender.frag
@@ -34,5 +31,9 @@ glslc.exe -w -I Include -I ../../applib/shader/include -I ../../btrlib/shader/in
 
 glslc.exe -w -I Include -I ../../applib/shader/include -I ../../btrlib/shader/include -x glsl -fshader-stage=compute	-o binary\\FloorUpdateDamage.comp.spv FloorUpdateDamage.comp
 
-glslc.exe -w -I Include -I ../../applib/shader/include -I ../../applib/shader/include -I ../../btrlib/shader/include -x glsl -fshader-stage=vertex		-o binary\\ModelRender.vert.spv ModelRender.vert
-glslc.exe -w -I Include -I ../../applib/shader/include -I ../../applib/shader/include -I ../../btrlib/shader/include -x glsl -fshader-stage=fragment	-o binary\\ModelRender.frag.spv ModelRender.frag
+glslc.exe -w -I Include -I ../../applib/shader/include -I ../../btrlib/shader/include -x glsl -fshader-stage=vertex		-o binary\\ModelRender.vert.spv ModelRender.vert
+glslc.exe -w -I Include -I ../../applib/shader/include -I ../../btrlib/shader/include -x glsl -fshader-stage=fragment	-o binary\\ModelRender.frag.spv ModelRender.frag
+
+glslc.exe -w -I Include -I ../../applib/shader/include -I ../../btrlib/shader/include -x glsl -fshader-stage=compute	-o binary\\LightTileCulling.comp.spv LightTileCulling.comp
+glslc.exe -w -I Include -I ../../applib/shader/include -I ../../btrlib/shader/include -x glsl -fshader-stage=compute	-o binary\\LightCollectBullet.comp.spv LightCollectBullet.comp
+glslc.exe -w -I Include -I ../../applib/shader/include -I ../../btrlib/shader/include -x glsl -fshader-stage=compute	-o binary\\LightCollectParticle.comp.spv LightCollectParticle.comp

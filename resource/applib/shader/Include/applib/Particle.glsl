@@ -1,11 +1,14 @@
-#define uint32_t uint
-#define int32_t int
+
+#ifndef APPLIB_PARTICLE_GLSL
+#define APPLIB_PARTICLE_GLSL
+
+#include <btrlib/Common.glsl>
 
 struct ParticleInfo
 {
-	uint32_t m_particle_max_num;
-	uint32_t m_emitter_max_num;
-	uint32_t m_generate_cmd_max_num;
+	uint m_particle_max_num;
+	uint m_emitter_max_num;
+	uint m_generate_cmd_max_num;
 };
 
 struct ParticleData
@@ -18,8 +21,8 @@ struct ParticleData
 	vec4 m_scale;
 	vec4 m_color;		//!< 色
 
-	uint32_t m_type;		//!< パーティクルのタイプ
-	uint32_t m_flag;
+	uint m_type;		//!< パーティクルのタイプ
+	uint m_flag;
 	float m_age;		//!< 年齢
 	float m_life;		//!< 寿命
 };
@@ -41,8 +44,8 @@ struct EmitParam
 
 struct ParticleGenerateCommand
 {
-	uint32_t m_generate_num;
-	uint32_t m_type;
+	uint m_generate_num;
+	uint m_type;
 	vec2 m_life;
 	EmitParam m_position;
 	EmitParam m_direction;		//!< xyz:方向 w:移動量
@@ -56,8 +59,8 @@ struct EmitterData
 {
 	vec4 m_pos;
 
-	uint32_t m_type;		//!< Emitterのタイプ
-	uint32_t m_flag;
+	uint m_type;		//!< Emitterのタイプ
+	uint m_flag;
 	float m_age;		//!< 年齢
 	float m_life;		//!< 寿命
 
@@ -80,8 +83,8 @@ layout(std140, set=USE_PARTICLE, binding=0) uniform ParticleInfoUniform {
 layout(std430, set=USE_PARTICLE, binding=1) restrict buffer ParticleDataBuffer {
 	ParticleData b_particle[];
 };
-layout(std430, set=USE_PARTICLE, binding=2) restrict buffer CounterBuffer {
-	DrawIndirectCommand b_draw_cmd;
+layout(std430, set=USE_PARTICLE, binding=2) restrict buffer ParticleDrawCmdBuffer {
+	DrawIndirectCommand b_particle_draw_cmd;
 };
 layout(std430, set=USE_PARTICLE, binding=3) restrict buffer EmitterDataBuffer {
 	EmitterData b_emitter[];
@@ -98,4 +101,6 @@ layout(std430, set=USE_PARTICLE, binding=6) restrict buffer ParticleGenerateData
 layout(std430, set=USE_PARTICLE, binding=7) restrict buffer ParticleUpdateParameterBuffer {
 	ParticleUpdateParameter b_particle_update_param[];
 };
+#endif
+
 #endif

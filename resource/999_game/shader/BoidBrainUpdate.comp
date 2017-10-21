@@ -6,7 +6,7 @@
 //#pragma optionNV(strict on)
 
 #extension GL_GOOGLE_cpp_style_line_directive : require
-#include </Common.glsl>
+#include <btrlib/Common.glsl>
 #include </Boid.glsl>
 
 layout (local_size_x = 1024, local_size_y = 1) in;

@@ -1,0 +1,38 @@
+#version 450
+#extension GL_GOOGLE_cpp_style_line_directive : require
+#extension GL_ARB_gpu_shader_int64 : require
+
+#define USE_LIGHT 0
+#include <Light.glsl>
+
+#define USE_PARTICLE 1
+#include <applib/Particle.glsl>
+
+#define USE_SYSTEM 2
+#include <applib/System.glsl>
+
+layout (local_size_x = 1024) in;
+
+void main()
+{
+	uint index = gl_GlobalInvocationID.x;
+	uint loop_count = (u_particle_info.m_particle_max_num-1) / 1024 + 1;
+	loop_count = uint(min(max(int(b_particle_draw_cmd.instanceCount - loop_count*index), 0), int(loop_count)));
+	if(loop_count == 0){
+		return;
+	}
+
+	uint light_index = atomicAdd(b_data_counter, loop_count);
+	uint src_offset = u_system_data.m_gpu_index * u_particle_info.m_particle_max_num;
+	for(uint i = 0; i < loop_count; i++)
+	{
+		uint data_index = index * loop_count + i;
+		LightData light;
+		light.m_pos = b_particle[src_offset + data_index].m_position;
+		light.m_emissive = b_particle[src_offset + data_index].m_color;
+		b_light[light_index++] = light;
+	}
+
+
+}
+
