@@ -377,8 +377,8 @@ int main()
 				job.mFinish =
 					[&]()
 				{
-					render_cmds[0] = sScene::Order().draw1(context);
-					render_cmds[1] = sScene::Order().draw(context);
+					render_cmds[0] = sScene::Order().execute(context);
+					render_cmds[6] = sScene::Order().draw(context);
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);
@@ -388,7 +388,7 @@ int main()
 				job.mFinish =
 					[&]()
 				{
-					render_cmds[2] = sScene::Order().getVoxel().make(context);
+					render_cmds[1] = sScene::Order().getVoxel().make(context);
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);
@@ -398,7 +398,7 @@ int main()
 				job.mFinish =
 					[&]()
 				{
-					render_cmds[3] = model_pipeline.draw(context);
+					render_cmds[7] = model_pipeline.draw(context);
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);
@@ -408,8 +408,8 @@ int main()
 				job.mFinish =
 					[&]()
 				{
-					render_cmds[4] = sBoid::Order().execute(context);
-					render_cmds[5] = sBoid::Order().draw(context);
+					render_cmds[2] = sBoid::Order().execute(context);
+					render_cmds[8] = sBoid::Order().draw(context);
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);
@@ -419,8 +419,8 @@ int main()
 				job.mFinish =
 					[&]()
 				{
-					render_cmds[6] = sBulletSystem::Order().execute(context);
-					render_cmds[7] = sBulletSystem::Order().draw(context);
+					render_cmds[3] = sBulletSystem::Order().execute(context);
+					render_cmds[9] = sBulletSystem::Order().draw(context);
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);
@@ -430,7 +430,7 @@ int main()
 				job.mFinish =
 					[&]()
 				{
-					render_cmds[8] = sCollisionSystem::Order().execute(context);
+					render_cmds[4] = sCollisionSystem::Order().execute(context);
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);
@@ -440,7 +440,7 @@ int main()
 				job.mFinish =
 					[&]()
 				{
-					render_cmds[9] = sLightSystem::Order().execute(context);
+					render_cmds[5] = sLightSystem::Order().execute(context);
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);

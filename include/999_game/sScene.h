@@ -815,7 +815,7 @@ struct sScene : public Singleton<sScene>
 
 	}
 
-	vk::CommandBuffer draw1(std::shared_ptr<btr::Context>& executer)
+	vk::CommandBuffer execute(std::shared_ptr<btr::Context>& executer)
 	{
 		auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
 		SceneData data;
