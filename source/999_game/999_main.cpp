@@ -282,8 +282,8 @@ int main()
 {
 	btr::setResourceAppPath("..\\..\\resource\\999_game\\");
 	auto camera = cCamera::sCamera::Order().create();
-	camera->getData().m_position = glm::vec3(220.f, 20.f, 0.f);
-	camera->getData().m_target = glm::vec3(220.f, 0.f, 51.f);
+	camera->getData().m_position = glm::vec3(220.f, 40.f, 30.f);
+	camera->getData().m_target = glm::vec3(220.f, 10.f, 191.f);
 	camera->getData().m_up = glm::vec3(0.f, -1.f, 0.f);
 	camera->getData().m_width = 640;
 	camera->getData().m_height = 480;

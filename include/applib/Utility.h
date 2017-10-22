@@ -12,12 +12,12 @@ struct AppendBuffer
 {
 	AppendBuffer() : m_offset(0) {}
 
-	void push(const T* data, size_t num)
+	void push(const T* data, uint32_t num)
 	{
 		auto* buf = reserve(num);
 		memcpy_s(buf, num * sizeof(T), data, num * sizeof(T));
 	}
-	T* reserve(size_t num)
+	T* reserve(uint32_t num)
 	{
 		auto index = m_offset.fetch_add(num);
 		assert(index + num < N); // Žæ‚è‚·‚¬
