@@ -9,9 +9,10 @@ void sLightSystem::setup(std::shared_ptr<btr::Context>& context)
 {
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
-	m_tile_info_cpu.m_tile_index_max = 256;
+	m_tile_info_cpu.m_resolusion = uvec2(640, 480);
 	m_tile_info_cpu.m_tile_num = uvec2(32);
-	m_tile_info_cpu.m_tile_buffer_max_num = m_tile_info_cpu.m_tile_index_max * m_tile_info_cpu.m_tile_num.x*m_tile_info_cpu.m_tile_num.y;
+	m_tile_info_cpu.m_tile_index_map_max = 256;
+	m_tile_info_cpu.m_tile_buffer_max_num = m_tile_info_cpu.m_tile_index_map_max * m_tile_info_cpu.m_tile_num.x*m_tile_info_cpu.m_tile_num.y;
 	{
 		uint32_t num = 8192;
 		{
@@ -88,35 +89,36 @@ void sLightSystem::setup(std::shared_ptr<btr::Context>& context)
 	{
 		// descriptor set layout
 		std::vector<std::vector<vk::DescriptorSetLayoutBinding>> bindings(DESCRIPTOR_SET_LAYOUT_NUM);
+		auto use_stage = vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment;
 		bindings[DESCRIPTOR_SET_LAYOUT_LIGHT] =
 		{
 			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex)
+			.setStageFlags(use_stage)
 			.setDescriptorCount(1)
 			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 			.setBinding(0),
 			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex)
+			.setStageFlags(use_stage)
 			.setDescriptorCount(1)
 			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 			.setBinding(1),
 			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex)
+			.setStageFlags(use_stage)
 			.setDescriptorCount(1)
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setBinding(2),
 			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex)
+			.setStageFlags(use_stage)
 			.setDescriptorCount(1)
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setBinding(3),
 			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex)
+			.setStageFlags(use_stage)
 			.setDescriptorCount(1)
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setBinding(4),
 			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex)
+			.setStageFlags(use_stage)
 			.setDescriptorCount(1)
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setBinding(5),

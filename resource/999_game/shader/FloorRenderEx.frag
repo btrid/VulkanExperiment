@@ -17,30 +17,13 @@
 #define SETPOINT_SCENE 2
 #include </Map.glsl>
 
+#define USE_LIGHT 3
+#include <Light.glsl>
+
 layout(location=1) in FSIn{
 	vec2 texcoord;
 }In;
 layout(location = 0) out vec4 FragColor;
-
-
-float calcDepthStandard(in float v, in float n, in float f)
-{
-	return n * f / (v * (f - n) - f);
-}
-float calcReverseDepth(in float v, in float n, in float f)
-{
-	return -calcDepthStandard(v, f, n);
-}
-float calcDepth(in float v, in float n, in float f)
-{
-	return 1.-calcDepthStandard(v, n, f);
-}
-
-vec3 proj(in vec3 x, in vec3 normal)
-{
-	return dot(x, normal) / dot(normal, normal) * normal;
-}
-
 
 Hit marchToAABB(in Ray ray, in vec3 bmin, in vec3 bmax)
 {
@@ -157,8 +140,22 @@ void main()
 			}
 		}
 	}
+
+	vec2 tex01 = (In.texcoord + 1.) * 0.5;
+	uvec2 tile_index = uvec2(tex01 / (1. / u_tile_info.m_tile_num));
+	uint tile_index_1d = tile_index.x + tile_index.y * u_tile_info.m_tile_num.x;
+	uint tile_map_index_1d = tile_index_1d * u_tile_info.m_tile_index_map_max;
+	uint light_num = b_tile_data_counter[tile_index_1d];
+	for(uint i = 0; i < light_num; i++)
+	{
+//		uint light_index = b_tile_data_map[tile_map_index_1d + i];
+//		b_light[light_index].
+		FragColor = vec4(1.);
+	}
+
 	vec4 p = u_camera[0].u_projection * u_camera[0].u_view * vec4(pos, 1.);
 	p /= p.w;
+	p.xy;
 	gl_FragDepth = p.z;
 
 }

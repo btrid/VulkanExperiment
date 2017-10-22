@@ -44,7 +44,7 @@ void main()
 	memoryBarrierShared();
 
 	uint tiled_1D_index = gl_WorkGroupID.x+ gl_WorkGroupID.y*gl_NumWorkGroups.x; 
-	uint count_list_offset = tiled_1D_index*tile_info.m_tile_index_max;
+	uint count_list_offset = tiled_1D_index*tile_info.m_tile_index_map_max;
 	for(uint i = 0; i < b_data_counter; i++)
 	{
 //		vec3 pos = unpackMovablePos(b_movable_data[i].packed_pos);

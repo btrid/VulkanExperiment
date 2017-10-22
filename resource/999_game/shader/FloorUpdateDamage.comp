@@ -10,10 +10,7 @@
 #include <btrlib/ConvertDimension.glsl>
 #include <btrlib/Common.glsl>
 
-#define SETPOINT_CAMERA 0
-#include <btrlib/Camera.glsl>
-
-#define SETPOINT_MAP 1
+#define SETPOINT_MAP 0
 #include </Map.glsl>
 
 layout (local_size_x = 32, local_size_y = 32) in;

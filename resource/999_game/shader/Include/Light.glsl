@@ -2,8 +2,9 @@
 
 struct TileInfo
 {
+	uvec2 m_resolusion;
 	uvec2 m_tile_num;
-	uint m_tile_index_max;
+	uint m_tile_index_map_max;
 	uint m_tile_buffer_max_num;
 };
 struct LightInfo

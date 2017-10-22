@@ -32,6 +32,7 @@
 #include <999_game/sCollisionSystem.h>
 #include <999_game/sLightSystem.h>
 #include <999_game/sScene.h>
+#include <999_game/sMap.h>
 #include <999_game/VoxelizeMap.h>
 #include <999_game/VoxelizeBullet.h>
 
@@ -135,7 +136,7 @@ struct ModelGIPipelineComponent : public ModelDrawPipelineComponent
 			vk::DescriptorSetLayout layouts[] = {
 				m_model_descriptor->getLayout(),
 				sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
-				sScene::Order().getVoxel().getDescriptorSetLayout(VoxelPipeline::DESCRIPTOR_SET_LAYOUT_VOXELIZE),
+				sMap::Order().getVoxel().getDescriptorSetLayout(VoxelPipeline::DESCRIPTOR_SET_LAYOUT_VOXELIZE),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
@@ -256,7 +257,7 @@ struct ModelGIPipelineComponent : public ModelDrawPipelineComponent
 				cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline.get());
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 0, render->m_descriptor_set_model.get(), {});
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 2, sScene::Order().getVoxel().getDescriptorSet(VoxelPipeline::DESCRIPTOR_SET_VOXELIZE), {});
+				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 2, sMap::Order().getVoxel().getDescriptorSet(VoxelPipeline::DESCRIPTOR_SET_VOXELIZE), {});
 				cmd.bindVertexBuffers(0, { model->m_model_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().buffer }, { model->m_model_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().offset });
 				cmd.bindIndexBuffer(model->m_model_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().buffer, model->m_model_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().offset, model->m_model_resource->m_mesh_resource.mIndexType);
 				cmd.drawIndexedIndirect(model->m_model_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().buffer, model->m_model_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().offset, model->m_model_resource->m_mesh_resource.mIndirectCount, sizeof(cModel::Mesh));
@@ -313,11 +314,13 @@ int main()
 		model.load(context, "..\\..\\resource\\tiny.x");
 
 		sScene::Order().setup(context);
-		sScene::Order().getVoxel().createPipeline<VoxelizeMap>(context);
 		sBoid::Order().setup(context);
 		sBulletSystem::Order().setup(context);
 		sCollisionSystem::Order().setup(context);
 		sLightSystem::Order().setup(context);
+		sMap::Order().setup(context);
+		sMap::Order().getVoxel().createPipeline<VoxelizeMap>(context);
+
 		{
 			auto render_pass = std::make_shared<RenderBackbufferModule>(context);
 			std::string path = btr::getResourceAppPath() + "shader\\binary\\";
@@ -378,7 +381,7 @@ int main()
 					[&]()
 				{
 					render_cmds[0] = sScene::Order().execute(context);
-					render_cmds[6] = sScene::Order().draw(context);
+					render_cmds[6] = sMap::Order().draw(context);
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);
@@ -388,7 +391,7 @@ int main()
 				job.mFinish =
 					[&]()
 				{
-					render_cmds[1] = sScene::Order().getVoxel().make(context);
+					render_cmds[1] = sMap::Order().getVoxel().make(context);
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);

@@ -6,8 +6,9 @@
 
 struct TileInfo
 {
+	uvec2 m_resolusion;
 	uvec2 m_tile_num;
-	uint m_tile_index_max;
+	uint m_tile_index_map_max;
 	uint m_tile_buffer_max_num;
 };
 struct LightInfo
@@ -44,12 +45,12 @@ struct sLightSystem : public Singleton<sLightSystem>
 		PIPELINE_NUM,
 	};
 
-	enum : uint32_t
+	enum DescriptorSetLayout : uint32_t
 	{
 		DESCRIPTOR_SET_LAYOUT_LIGHT,
 		DESCRIPTOR_SET_LAYOUT_NUM,
 	};
-	enum : uint32_t
+	enum DescriptorSet: uint32_t
 	{
 		DESCRIPTOR_SET_LIGHT,
 		DESCRIPTOR_SET_NUM,
@@ -74,4 +75,6 @@ struct sLightSystem : public Singleton<sLightSystem>
 	void setup(std::shared_ptr<btr::Context>& context);
 	vk::CommandBuffer execute(std::shared_ptr<btr::Context>& context);
 
+	vk::DescriptorSetLayout getDescriptorSetLayout(DescriptorSetLayout desctiptor)const { return m_descriptor_set_layout[desctiptor].get(); }
+	vk::DescriptorSet getDescriptorSet(DescriptorSet i)const { return m_descriptor_set[i].get(); }
 };
