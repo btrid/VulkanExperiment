@@ -22,9 +22,4 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\..\include\003_particle\Movable.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
-  </ItemGroup>
 </Project>

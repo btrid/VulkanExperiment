@@ -110,7 +110,7 @@ void sParticlePipeline::setup(std::shared_ptr<btr::Context>& context)
 	{
 		// descriptor set layout
 		std::vector<std::vector<vk::DescriptorSetLayoutBinding>> bindings(DESCRIPTOR_SET_LAYOUT_NUM);
-		bindings[DESCRIPTOR_SET_PARTICLE] =
+		bindings[DESCRIPTOR_SET_LAYOUT_PARTICLE] =
 		{
 			vk::DescriptorSetLayoutBinding()
 			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eVertex)

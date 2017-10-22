@@ -27,17 +27,13 @@
 #include <applib/sCameraManager.h>
 #include <btrlib/Context.h>
 
-#include <003_particle/Movable.h>
+#include <applib/sParticlePipeline.h>
 
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
 #pragma comment(lib, "FreeImage.lib")
 #pragma comment(lib, "vulkan-1.lib")
 
-struct Light : Movable 
-{
-
-};
 int main()
 {
 	btr::setResourceAppPath("..\\..\\resource\\003_particle\\");
@@ -69,9 +65,6 @@ int main()
 	cModelPipeline renderer;
 	renderer.setup(context, nullptr);
 	auto render = renderer.createRender(context, model.getResource());
-
-	sMovable movable;
-	movable.setup(context);
 
 	{
 		{
@@ -130,8 +123,8 @@ int main()
 				job.mJob.emplace_back(
 					[&]()
 				{
-					render_cmds[1] = movable.execute(context);
-					render_cmds[2] = movable.draw(context);
+					render_cmds[1] = sParticlePipeline::Order().execute(context);
+					render_cmds[2] = sParticlePipeline::Order().draw(context);
 					render_syncronized_point.arrive();
 				}
 				);
