@@ -8,7 +8,7 @@
 #define SETPOINT_CAMERA 1
 #include <btrlib/Camera.glsl>
 
-layout (local_size_x = 32, local_size_y = 32) in;
+layout (local_size_x = 32, local_size_y = 1) in;
 
 shared uint s_counter;
 shared CameraFrustom f;
@@ -45,9 +45,16 @@ void main()
 	barrier();
 	memoryBarrierShared();
 
+	uint data_num = b_data_counter;
 	uint count_list_offset = tiled_1D_index*tile_info.m_tile_index_map_max;
-	for(uint i = 0; i < b_data_counter; i++)
+	uint loop_count = (data_num-1) / gl_NumWorkGroups.x + 1;
+	uint loop_begin = gl_LocalInvocationID.x*loop_count;
+	uint loop_end = loop_begin + loop_count;
+	for(uint i = loop_begin; i < loop_end; i++)
 	{
+		if(i >= data_num){
+			break;
+		}
 		if(isCullingInf(f, vec4(b_light[i].m_pos))) 
 		{
 			continue;
