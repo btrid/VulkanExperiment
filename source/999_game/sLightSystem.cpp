@@ -278,10 +278,12 @@ vk::CommandBuffer sLightSystem::execute(std::shared_ptr<btr::Context>& context)
 	// culling
 	{
 
-		auto to_read = m_light_data.makeMemoryBarrier();
-		to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
-		to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
+		{
+			auto to_read = m_light_data.makeMemoryBarrier();
+			to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+			to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
+		}
 
 		// update
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_TILE_CULLING].get());
@@ -289,7 +291,16 @@ vk::CommandBuffer sLightSystem::execute(std::shared_ptr<btr::Context>& context)
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_TILE_CULLING].get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 
 		cmd.dispatch(32, 32, 1);
+
+		{
+			auto to_read = m_tile_data_counter.makeMemoryBarrier();
+			to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+			to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, to_read, {});
+		}
 	}
+
+
 	cmd.end();
 	return cmd;
 

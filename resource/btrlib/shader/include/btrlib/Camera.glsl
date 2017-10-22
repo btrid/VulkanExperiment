@@ -69,10 +69,9 @@ bool isCullingInf(in CameraFrustom frustom, in vec4 AABB)
 	for (int i = 0; i < 4; i++)
 	{
 		float dist = dot(AABB.xyz, frustom.p[i].normal) - frustom.p[i].n;
-		if (dist > -abs(AABB.w*2.)) {
-			count++;
-//			return true;
+		if (dist < -abs(AABB.w)) {
+			return true;
 		}
 	}
-	return count == 4;
+	return false;
 }

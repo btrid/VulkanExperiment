@@ -20,9 +20,12 @@
 #define USE_LIGHT 3
 #include <Light.glsl>
 
+layout(origin_upper_left) in vec4 gl_FragCoord;
+
 layout(location=1) in FSIn{
 	vec2 texcoord;
 }In;
+
 layout(location = 0) out vec4 FragColor;
 
 Hit marchToAABB(in Ray ray, in vec3 bmin, in vec3 bmax)
@@ -142,6 +145,9 @@ void main()
 	}
 
 	vec2 tex01 = (In.texcoord + 1.) * 0.5;
+	tex01 = 1.-tex01;
+//	vec2 tex01 = (gl_FragCoord.xy + 1.) * 0.5;
+//	vec2 tex01 = gl_FragCoord.xy;
 	uvec2 tile_index = uvec2(tex01 / (1. / u_tile_info.m_tile_num));
 	uint tile_index_1d = tile_index.x + tile_index.y * u_tile_info.m_tile_num.x;
 	uint tile_map_index_1d = tile_index_1d * u_tile_info.m_tile_index_map_max;
@@ -151,6 +157,7 @@ void main()
 //		uint light_index = b_tile_data_map[tile_map_index_1d + i];
 //		b_light[light_index].
 		FragColor = vec4(1.);
+//		while(true);
 	}
 
 	vec4 p = u_camera[0].u_projection * u_camera[0].u_view * vec4(pos, 1.);
