@@ -45,7 +45,7 @@ void main()
 	barrier();
 	memoryBarrierShared();
 
-	uint data_num = b_data_counter;
+	uint data_num = min(b_data_counter, u_light_info.m_max_num);
 	uint count_list_offset = tiled_1D_index*tile_info.m_tile_index_map_max;
 	uint loop_count = (data_num-1) / gl_NumWorkGroups.x + 1;
 	uint loop_begin = gl_LocalInvocationID.x*loop_count;
@@ -60,14 +60,16 @@ void main()
 			continue;
 		}
 		uint tile_list_index = atomicAdd(s_counter, 1);
-		b_tile_data_map[count_list_offset+tile_list_index] = i;
+		if(tile_list_index < u_tile_info.m_tile_index_map_max){
+			b_tile_data_map[count_list_offset+tile_list_index] = i;
+		}
 	}
 
 	barrier();
 	memoryBarrierShared();
 	if(gl_LocalInvocationID.x == 0)
 	{
-		b_tile_data_counter[tiled_1D_index] = s_counter;
+		b_tile_data_counter[tiled_1D_index] = min(s_counter, u_tile_info.m_tile_index_map_max);
 	}
 }
 

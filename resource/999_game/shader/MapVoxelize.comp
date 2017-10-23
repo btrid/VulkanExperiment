@@ -16,6 +16,13 @@
 #define SETPOINT_SCENE 2
 #include <Map.glsl>
 
+#define USE_LIGHT 3
+#include <Light.glsl>
+
+#define SETPOINT_CAMERA 4
+#include <btrlib/Camera.glsl>
+
+
 layout (local_size_x = 128, local_size_y = 4, local_size_z = 1) in;
 
 void main()
@@ -27,14 +34,46 @@ void main()
 
 	MapDescriptor map_desc = u_map_info.m_descriptor[1];
 	vec3 pos = vec3(id*u_voxel_info.u_cell_size.xyz) + u_voxel_info.u_area_min.xyz;
+	mat4 to_screen = inverse(u_camera[0].u_view*u_camera[0].u_projection);
+	vec4 screen_pos = to_screen * vec4(pos, 1.);
+	screen_pos /= screen_pos.w;
+
+	vec3 irradiance = vec3(0.);
+	// lightの1次反射を計算
+	if(all(lessThan(abs(screen_pos.xy), vec2(1.))))
+	{
+		vec2 screen_coord = screen_pos.xy*0.5 + 0.5;
+		screen_coord = 1.-screen_coord;
+		uvec2 tile_index = uvec2(screen_coord / (1. / u_tile_info.m_tile_num));
+		uint tile_index_1d = tile_index.x + tile_index.y * u_tile_info.m_tile_num.x;
+		uint tile_map_index_1d = tile_index_1d * u_tile_info.m_tile_index_map_max;
+		uint light_num = b_tile_data_counter[tile_index_1d];
+		for(uint i = 0; i < light_num; i++)
+		{
+			uint light_index = b_tile_data_map[tile_map_index_1d + i];
+			vec4 light_pos = b_light[light_index].m_pos.xyzw;
+			float dist = max(distance(light_pos.xyz, pos) - light_pos.w, 1.);
+			// 完全拡散反射
+			vec3 power = b_light[light_index].m_emissive.rgb / dist / 3.141592;
+			irradiance += power;
+
+			// debug
+			irradiance = vec3(1.);
+		}
+		// 受け取る面積(未定)
+		float S = 1.;
+		irradiance *= S;
+	}
+
 	ivec3 index = calcMapIndex(map_desc, pos);
 	uint map_height = imageLoad(t_map, ivec2(index.xz)).r;
 	if(map_height < id.y){
 		// 何もないはず
 	}else{
-		float power = calcEmission(pos);
-		vec3 albedo = vec3(1., 0., 1.) * power;
-		uint packd_albedo = uint(albedo.r*64)<<23 | uint(albedo.g*64)<<14 | uint(albedo.b*64)<<5 | 1;
+//		float power = calcEmission(pos);
+		vec3 albedo = vec3(1., 0., 1.);
+		vec3 diffuse = albedo * irradiance;
+		uint packd_albedo = uint(diffuse.r*64)<<23 | uint(diffuse.g*64)<<14 | uint(diffuse.b*64)<<5 | 1;
 		imageAtomicAdd(t_voxel_albedo, ivec3(id), packd_albedo);
 	}
 

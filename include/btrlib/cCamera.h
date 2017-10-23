@@ -284,6 +284,7 @@ struct CameraGPU
 		u_near = cam.m_near;
 		u_far = cam.m_far;
 
+//		u_to_screen = glm::inverse(u_view*u_projection);
 		Frustom f;
 		f.setup(camera);
 		m_plane = f.getPlane();

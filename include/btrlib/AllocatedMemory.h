@@ -188,6 +188,7 @@ private:
 		assert(zone.isValid());
 		assert(zone.range() != 0);
 		{
+			std::lock_guard<std::mutex> lock(m_free_zone_mutex);
 			// active‚©‚çíœ
 			auto it = std::find_if(m_active_zone.begin(), m_active_zone.end(), [&](Zone& active) { return active.m_start == zone.m_start; });
 			if (it != m_active_zone.end()) {

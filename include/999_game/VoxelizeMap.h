@@ -3,6 +3,8 @@
 #include <btrlib/Define.h>
 #include <btrlib/Context.h>
 #include <999_game/sScene.h>
+#include <applib/sCameraManager.h>
+#include <999_game/sLightSystem.h>
 
 struct VoxelizeMap : Voxelize
 {
@@ -69,6 +71,8 @@ struct VoxelizeMap : Voxelize
 				parent->getDescriptorSetLayout(VoxelPipeline::DESCRIPTOR_SET_LAYOUT_VOXELIZE),
 				sScene::Order().getDescriptorSetLayout(sScene::DESCRIPTOR_SET_LAYOUT_MAP),
 				sScene::Order().getDescriptorSetLayout(sScene::DESCRIPTOR_SET_LAYOUT_SCENE),
+				sLightSystem::Order().getDescriptorSetLayout(sLightSystem::DESCRIPTOR_SET_LAYOUT_LIGHT),
+				sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
@@ -98,6 +102,8 @@ struct VoxelizeMap : Voxelize
 			parent->getDescriptorSet(VoxelPipeline::DESCRIPTOR_SET_VOXELIZE),
 			sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_MAP),
 			sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_SCENE),
+			sLightSystem::Order().getDescriptorSet(sLightSystem::DESCRIPTOR_SET_LIGHT),
+			sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA),
 		};
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_MAKE_VOXEL].get(), 0, descriptor_sets, {});
 		cmd.dispatch(1, 1, 64);

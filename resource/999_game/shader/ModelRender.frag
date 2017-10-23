@@ -21,12 +21,6 @@ layout(location = 0) in Vertex FSIn;
 
 layout(location=0) out vec4 FragColor;
 
-
-vec4 LightPosition = vec4(10000.);
-vec3 LightDiffuse = vec3(1.);
-vec3 LightAmbient = vec3(0.5);
-vec3 LightSpecular = vec3(0.5);
-
 vec3 getColor()
 {
 /*	Material m = materials[FSIn.MaterialIndex];
