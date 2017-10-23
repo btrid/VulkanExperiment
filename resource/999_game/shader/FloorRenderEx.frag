@@ -159,8 +159,6 @@ void main()
 	
 	for(uint i = 0; i < light_num; i++)
 	{
-//		uint light_index = b_tile_data_map[tile_map_index_1d + i];
-//		b_light[light_index].
 		FragColor = vec4(1.);
 	}
 

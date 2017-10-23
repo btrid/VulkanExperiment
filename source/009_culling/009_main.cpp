@@ -240,7 +240,7 @@ struct CullingTest
 				desc.size = sizeof(uint32_t) * num;
 				desc_set.m_visible = context->m_storage_memory.allocateMemory<uint32_t>(desc);
 
-				resource->m_occlusion_descriptor_set = m_occlusion_descriptor_layout->createDescriptorSet(context, desc_set);
+				resource->m_occlusion_descriptor_set = m_occlusion_descriptor_layout->createDescriptorSet(context, std::move(desc_set));
 			}
 
 			m_culling_target = resource;
@@ -337,7 +337,7 @@ struct CullingTest
 				desc.size = sizeof(uint32_t) * num;
 				desc_set.m_visible = context->m_storage_memory.allocateMemory<uint32_t>(desc);
 
-				resource->m_occlusion_descriptor_set = m_occlusion_descriptor_layout->createDescriptorSet(context, desc_set);
+				resource->m_occlusion_descriptor_set = m_occlusion_descriptor_layout->createDescriptorSet(context, std::move(desc_set));
 			}
 
 
@@ -789,7 +789,7 @@ struct CullingTest
 int main()
 {
 	btr::setResourceAppPath("..\\..\\resource\\009_culling\\");
-	auto* camera = cCamera::sCamera::Order().create();
+	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = glm::vec3(500.f, 300.f, -700.f);
 	camera->getData().m_target = glm::vec3(0.f, 0.f, 0.f);
 	camera->getData().m_up = glm::vec3(0.f, -1.f, 0.f);
