@@ -16,14 +16,11 @@
 
 #include <btrlib/VoxelPipeline.h>
 
-struct sMap : public Singleton<sMap>
+struct sMap_RayMarch : public Singleton<sMap_RayMarch>
 {
 
 	enum
 	{
-		SHADER_VERTEX_FLOOR,
-		SHADER_GEOMETRY_FLOOR,
-		SHADER_FRAGMENT_FLOOR,
 		SHADER_VERTEX_FLOOR_EX,
 		SHADER_FRAGMENT_FLOOR_EX,
 		SHADER_NUM,
@@ -37,7 +34,6 @@ struct sMap : public Singleton<sMap>
 	enum Pipeline
 	{
 		PIPELINE_DRAW_FLOOR,
-		PIPELINE_DRAW_FLOOR_EX,
 		PIPELINE_NUM,
 	};
 
@@ -69,9 +65,6 @@ struct sMap : public Singleton<sMap>
 			}
 			shader_info[] =
 			{
-				{ "FloorRender.vert.spv",vk::ShaderStageFlagBits::eVertex },
-				{ "FloorRender.geom.spv",vk::ShaderStageFlagBits::eGeometry },
-				{ "FloorRender.frag.spv",vk::ShaderStageFlagBits::eFragment },
 				{ "FloorRenderEx.vert.spv",vk::ShaderStageFlagBits::eVertex },
 				{ "FloorRenderEx.frag.spv",vk::ShaderStageFlagBits::eFragment },
 			};
@@ -181,18 +174,6 @@ struct sMap : public Singleton<sMap>
 			std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =
 			{
 				vk::GraphicsPipelineCreateInfo()
-				.setStageCount(3)
-				.setPStages(&m_shader_info.data()[SHADER_VERTEX_FLOOR])
-				.setPVertexInputState(&vertex_input_info[0])
-				.setPInputAssemblyState(&assembly_info[0])
-				.setPViewportState(&viewportInfo)
-				.setPRasterizationState(&rasterization_info)
-				.setPMultisampleState(&sample_info)
-				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR].get())
-				.setRenderPass(m_render_pass->getRenderPass())
-				.setPDepthStencilState(&depth_stencil_info)
-				.setPColorBlendState(&blend_info),
-				vk::GraphicsPipelineCreateInfo()
 				.setStageCount(2)
 				.setPStages(&m_shader_info.data()[SHADER_VERTEX_FLOOR_EX])
 				.setPVertexInputState(&vertex_input_info[1])
@@ -230,7 +211,7 @@ struct sMap : public Singleton<sMap>
 					.setFramebuffer(m_render_pass->getFramebuffer(i));
 				cmd->beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
-				cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW_FLOOR_EX].get());
+				cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW_FLOOR].get());
 				cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR].get(), 0, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 				cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR].get(), 1, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_MAP), {});
 				cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR].get(), 2, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_SCENE), {});

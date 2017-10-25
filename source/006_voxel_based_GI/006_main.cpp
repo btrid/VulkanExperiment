@@ -42,7 +42,7 @@
 int main()
 {
 	btr::setResourceAppPath("..\\..\\resource\\006_voxel_based_GI\\");
-	auto* camera = cCamera::sCamera::Order().create();
+	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = glm::vec3(0.f, 0.f, -3000.f);
 	camera->getData().m_target = glm::vec3(0.f, 0.f, 0.f);
 	camera->getData().m_up = glm::vec3(0.f, -1.f, 0.f);
@@ -55,7 +55,12 @@ int main()
 	auto device = sGlobal::Order().getGPU(0).getDevice();
 
 	app::App app;
-	app.setup(gpu);
+	{
+		app::AppDescriptor desc;
+		desc.m_gpu = gpu;
+		desc.m_window_size = uvec2(640, 480);
+		app.setup(desc);
+	}
 
 	auto context = app.m_context;
 
@@ -90,7 +95,7 @@ int main()
 		{
 			std::vector<glm::vec3> v;
 			std::vector<glm::uvec3> idx;
-			std::tie(v, idx) = Geometry::MakeBox(900.f);
+			std::tie(v, idx) = Geometry::MakeBox(vec3(900.f));
 
 			ModelVoxelize::Model model;
 			model.m_mesh.resize(5);

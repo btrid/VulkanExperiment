@@ -3,9 +3,9 @@ cd /d %~dp0
 
 rem glslc.exe -w -I Include -x glsl -fshader-stage=compute	-o binary\\ParticleEmit.comp.spv ParticleEmit.comp
 
-rem glslc.exe -w -I Include -I ../../applib/shader/include -I ../../btrlib/shader/include -x glsl -fshader-stage=vertex	-o binary\\FloorRender.vert.spv FloorRender.vert
-rem glslc.exe -w -I Include -I ../../btrlib/shader/include -x glsl -fshader-stage=fragment	-o binary\\FloorRender.frag.spv FloorRender.frag
-rem glslc.exe -w -I Include -I ../../btrlib/shader/include -x glsl -fshader-stage=geometry	-o binary\\FloorRender.geom.spv FloorRender.geom
+glslc.exe -w -I Include -I ../../applib/shader/include -I ../../btrlib/shader/include -x glsl -fshader-stage=vertex	-o binary\\FloorRender.vert.spv FloorRender.vert
+glslc.exe -w -I Include -I ../../applib/shader/include -I ../../btrlib/shader/include -x glsl -fshader-stage=fragment	-o binary\\FloorRender.frag.spv FloorRender.frag
+glslc.exe -w -I Include -I ../../applib/shader/include -I ../../btrlib/shader/include -x glsl -fshader-stage=geometry	-o binary\\FloorRender.geom.spv FloorRender.geom
 glslc.exe -w -I Include -I ../../btrlib/shader/include -x glsl -fshader-stage=vertex	-o binary\\FloorRenderEx.vert.spv FloorRenderEx.vert
 glslc.exe -w -I Include -I ../../btrlib/shader/include -x glsl -fshader-stage=fragment	-o binary\\FloorRenderEx.frag.spv FloorRenderEx.frag
 glslc.exe -w -I Include -I ../../btrlib/shader/include -x glsl -fshader-stage=compute	-o binary\\MapVoxelize.comp.spv MapVoxelize.comp

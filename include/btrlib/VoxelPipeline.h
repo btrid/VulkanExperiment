@@ -391,9 +391,6 @@ struct VoxelPipeline
 				vk::PipelineColorBlendAttachmentState blend_states[] = {
 					vk::PipelineColorBlendAttachmentState()
 					.setBlendEnable(VK_FALSE)
-					.setDstColorBlendFactor(vk::BlendFactor::eOneMinusSrcAlpha)
-					.setSrcColorBlendFactor(vk::BlendFactor::eSrcAlpha)
-					.setColorBlendOp(vk::BlendOp::eAdd)
 					.setColorWriteMask(vk::ColorComponentFlagBits::eR
 						| vk::ColorComponentFlagBits::eG
 						| vk::ColorComponentFlagBits::eB

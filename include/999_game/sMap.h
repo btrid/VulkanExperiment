@@ -16,16 +16,80 @@
 
 #include <btrlib/VoxelPipeline.h>
 
+struct DrawDescriptor
+{
+	uint32_t instance_num;
+
+	btr::BufferMemoryEx<uint32_t> m_instance_index_map;
+	btr::BufferMemoryEx<uint32_t> m_visible;
+	btr::BufferMemoryEx<vk::DrawIndexedIndirectCommand> m_draw_cmd;
+	btr::BufferMemoryEx<mat4> m_world;
+
+	void updateDescriptor(const std::shared_ptr<btr::Context>& context, vk::DescriptorSet descriptor_set)
+	{
+		vk::DescriptorBufferInfo storages[] = {
+			m_world.getBufferInfo(),
+			m_visible.getBufferInfo(),
+			m_draw_cmd.getBufferInfo(),
+			m_instance_index_map.getBufferInfo(),
+		};
+		vk::WriteDescriptorSet write_desc[] =
+		{
+			vk::WriteDescriptorSet()
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(array_length(storages))
+			.setPBufferInfo(storages)
+			.setDstBinding(0)
+			.setDstSet(descriptor_set),
+		};
+		context->m_device->updateDescriptorSets(array_length(write_desc), write_desc, 0, nullptr);
+
+	}
+	static LayoutDescriptor GetLayout()
+	{
+		LayoutDescriptor desc;
+		auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
+		desc.binding =
+		{
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(stage)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(0),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(stage)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(1),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(stage)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(2),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(stage)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(3),
+		};
+		desc.m_set_num = 10;
+		return desc;
+	}
+};
+
 struct sMap : public Singleton<sMap>
 {
+	struct DrawResource
+	{
+		btr::BufferMemoryEx<vk::DrawIndirectCommand> m_draw_indirect;
+		btr::BufferMemoryEx<uint32_t> m_instance_index_map;
+	};
 
 	enum
 	{
 		SHADER_VERTEX_FLOOR,
 		SHADER_GEOMETRY_FLOOR,
 		SHADER_FRAGMENT_FLOOR,
-		SHADER_VERTEX_FLOOR_EX,
-		SHADER_FRAGMENT_FLOOR_EX,
 		SHADER_NUM,
 	};
 
@@ -37,13 +101,13 @@ struct sMap : public Singleton<sMap>
 	enum Pipeline
 	{
 		PIPELINE_DRAW_FLOOR,
-		PIPELINE_DRAW_FLOOR_EX,
 		PIPELINE_NUM,
 	};
 
 	std::shared_ptr<RenderBackbufferModule> m_render_pass;
 	std::vector<vk::UniqueCommandBuffer> m_cmd;
 
+	std::shared_ptr<DrawResource> m_draw_resource;
 	std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_module;
 	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_shader_info;
 	std::array<vk::UniquePipeline, PIPELINE_NUM> m_pipeline;
@@ -72,8 +136,6 @@ struct sMap : public Singleton<sMap>
 				{ "FloorRender.vert.spv",vk::ShaderStageFlagBits::eVertex },
 				{ "FloorRender.geom.spv",vk::ShaderStageFlagBits::eGeometry },
 				{ "FloorRender.frag.spv",vk::ShaderStageFlagBits::eFragment },
-				{ "FloorRenderEx.vert.spv",vk::ShaderStageFlagBits::eVertex },
-				{ "FloorRenderEx.frag.spv",vk::ShaderStageFlagBits::eFragment },
 			};
 			static_assert(array_length(shader_info) == SHADER_NUM, "not equal shader num");
 
@@ -86,7 +148,39 @@ struct sMap : public Singleton<sMap>
 			}
 		}
 
+		{
+			auto resource = std::make_shared<DrawResource>();
+// 			std::vector<vec3> v;
+// 			std::vector<uvec3> i;
+// 			std::tie(v, i) = Geometry::MakeBox(vec3(500.f, 500.f, 1.f));
+			uint32_t num = 1024;
+			{
+				btr::BufferMemoryDescriptor desc;
+				desc.size = sizeof(vk::DrawIndirectCommand);
+				resource->m_draw_indirect = context->m_vertex_memory.allocateMemory<vk::DrawIndirectCommand>(desc);
+				desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
+				auto staging = context->m_staging_memory.allocateMemory<vk::DrawIndirectCommand>(desc);
+				auto* indirect_cmd = staging.getMappedPtr();
+				indirect_cmd->instanceCount = 1024;
+				indirect_cmd->firstVertex = 0;
+				indirect_cmd->setVertexCount(14);
+				indirect_cmd->firstInstance = 0;
 
+				vk::BufferCopy copy;
+				copy.setSrcOffset(staging.getBufferInfo().offset);
+				copy.setDstOffset(resource->m_draw_indirect.getBufferInfo().offset);
+				copy.setSize(desc.size);
+				cmd->copyBuffer(staging.getBufferInfo().buffer, resource->m_draw_indirect.getBufferInfo().buffer, copy);
+			}
+			{
+				btr::BufferMemoryDescriptor desc;
+				desc.size = sizeof(uint32_t) * num;
+				auto buffer = context->m_storage_memory.allocateMemory<uint32_t>(desc);
+
+				resource->m_instance_index_map = buffer;
+			}
+			m_draw_resource = resource;
+		}
 		{
 			vk::DescriptorSetLayout layouts[] = {
 				sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
@@ -192,18 +286,6 @@ struct sMap : public Singleton<sMap>
 				.setRenderPass(m_render_pass->getRenderPass())
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
-				vk::GraphicsPipelineCreateInfo()
-				.setStageCount(2)
-				.setPStages(&m_shader_info.data()[SHADER_VERTEX_FLOOR_EX])
-				.setPVertexInputState(&vertex_input_info[1])
-				.setPInputAssemblyState(&assembly_info[1])
-				.setPViewportState(&viewportInfo)
-				.setPRasterizationState(&rasterization_info)
-				.setPMultisampleState(&sample_info)
-				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR].get())
-				.setRenderPass(m_render_pass->getRenderPass())
-				.setPDepthStencilState(&depth_stencil_info)
-				.setPColorBlendState(&blend_info),
 			};
 			auto pipelines = context->m_device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info);
 			std::copy(std::make_move_iterator(pipelines.begin()), std::make_move_iterator(pipelines.end()), m_pipeline.begin());
@@ -230,7 +312,7 @@ struct sMap : public Singleton<sMap>
 					.setFramebuffer(m_render_pass->getFramebuffer(i));
 				cmd->beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
-				cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW_FLOOR_EX].get());
+				cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW_FLOOR].get());
 				cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR].get(), 0, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 				cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR].get(), 1, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_MAP), {});
 				cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR].get(), 2, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_SCENE), {});
