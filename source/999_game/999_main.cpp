@@ -288,7 +288,7 @@ int main()
 	camera->getData().m_up = glm::vec3(0.f, -1.f, 0.f);
 	camera->getData().m_width = 640;
 	camera->getData().m_height = 480;
-	camera->getData().m_far = 5000.f;
+	camera->getData().m_far = 50000.f;
 	camera->getData().m_near = 0.01f;
 
 	auto gpu = sGlobal::Order().getGPU(0);
