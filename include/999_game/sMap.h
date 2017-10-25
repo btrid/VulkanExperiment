@@ -41,8 +41,7 @@ struct sMap : public Singleton<sMap>
 		PIPELINE_NUM,
 	};
 
-	vk::UniqueRenderPass m_render_pass;
-	std::vector<vk::UniqueFramebuffer> m_framebuffer;
+	std::shared_ptr<RenderBackbufferModule> m_render_pass;
 	std::vector<vk::UniqueCommandBuffer> m_cmd;
 
 	std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_module;
@@ -58,71 +57,7 @@ struct sMap : public Singleton<sMap>
 
 		{
 			// レンダーパス
-			{
-				// sub pass
-				std::vector<vk::AttachmentReference> color_ref =
-				{
-					vk::AttachmentReference()
-					.setAttachment(0)
-					.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
-				};
-				vk::AttachmentReference depth_ref;
-				depth_ref.setAttachment(1);
-				depth_ref.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-
-				vk::SubpassDescription subpass;
-				subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
-				subpass.setInputAttachmentCount(0);
-				subpass.setPInputAttachments(nullptr);
-				subpass.setColorAttachmentCount((uint32_t)color_ref.size());
-				subpass.setPColorAttachments(color_ref.data());
-				subpass.setPDepthStencilAttachment(&depth_ref);
-
-				std::vector<vk::AttachmentDescription> attach_description = {
-					// color1
-					vk::AttachmentDescription()
-					.setFormat(context->m_window->getSwapchain().m_surface_format.format)
-					.setSamples(vk::SampleCountFlagBits::e1)
-					.setLoadOp(vk::AttachmentLoadOp::eLoad)
-					.setStoreOp(vk::AttachmentStoreOp::eStore)
-					.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
-					.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
-					vk::AttachmentDescription()
-					.setFormat(vk::Format::eD32Sfloat)
-					.setSamples(vk::SampleCountFlagBits::e1)
-					.setLoadOp(vk::AttachmentLoadOp::eLoad)
-					.setStoreOp(vk::AttachmentStoreOp::eStore)
-					.setInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
-					.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
-				};
-				vk::RenderPassCreateInfo renderpass_info = vk::RenderPassCreateInfo()
-					.setAttachmentCount(attach_description.size())
-					.setPAttachments(attach_description.data())
-					.setSubpassCount(1)
-					.setPSubpasses(&subpass);
-
-				m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
-			}
-
-			m_framebuffer.resize(context->m_window->getSwapchain().getBackbufferNum());
-			{
-				std::array<vk::ImageView, 2> view;
-
-				vk::FramebufferCreateInfo framebuffer_info;
-				framebuffer_info.setRenderPass(m_render_pass.get());
-				framebuffer_info.setAttachmentCount((uint32_t)view.size());
-				framebuffer_info.setPAttachments(view.data());
-				framebuffer_info.setWidth(context->m_window->getClientSize().x);
-				framebuffer_info.setHeight(context->m_window->getClientSize().y);
-				framebuffer_info.setLayers(1);
-
-				for (size_t i = 0; i < m_framebuffer.size(); i++) {
-					view[0] = context->m_window->getSwapchain().m_backbuffer[i].m_view;
-					view[1] = context->m_window->getSwapchain().m_depth.m_view;
-					m_framebuffer[i] = context->m_device->createFramebufferUnique(framebuffer_info);
-				}
-			}
-
+			m_render_pass = std::make_shared<RenderBackbufferModule>(context);
 		}
 
 		// setup shader
@@ -254,7 +189,7 @@ struct sMap : public Singleton<sMap>
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
 				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR].get())
-				.setRenderPass(m_render_pass.get())
+				.setRenderPass(m_render_pass->getRenderPass())
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 				vk::GraphicsPipelineCreateInfo()
@@ -266,7 +201,7 @@ struct sMap : public Singleton<sMap>
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
 				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR].get())
-				.setRenderPass(m_render_pass.get())
+				.setRenderPass(m_render_pass->getRenderPass())
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
@@ -290,9 +225,9 @@ struct sMap : public Singleton<sMap>
 
 			{
 				vk::RenderPassBeginInfo begin_render_Info = vk::RenderPassBeginInfo()
-					.setRenderPass(m_render_pass.get())
+					.setRenderPass(m_render_pass->getRenderPass())
 					.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(context->m_window->getClientSize().x, context->m_window->getClientSize().y)))
-					.setFramebuffer(m_framebuffer[i].get());
+					.setFramebuffer(m_render_pass->getFramebuffer(i));
 				cmd->beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
 				cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW_FLOOR_EX].get());
