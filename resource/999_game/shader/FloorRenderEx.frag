@@ -86,9 +86,9 @@ void main()
 	MapDescriptor desc = u_map_info.m_descriptor[0];
 
 	vec3 foward = normalize(u_camera[0].u_target - u_camera[0].u_eye).xyz;
-	vec3 side = cross(vec3(0., 1., 0.), foward);
+	vec3 side = cross(foward, u_camera[0].u_up.xyz);
 	side = dot(side, side) <= 0.1 ? vec3(1., 0., 0.) : normalize(side);
-	vec3 up = normalize(cross(side, foward));
+	vec3 up = u_camera[0].u_up.xyz;
 
 	// イメージセンサー上の位置
 	float tan_fov_y = tan(u_camera[0].u_fov_y / 2.);
@@ -150,7 +150,6 @@ void main()
 	gl_FragDepth = p.z;
 
 	vec2 tex01 = (p.xy * 0.5) + 0.5;
-//	vec2 tex01 = (In.texcoord);
 	tex01 = 1.-tex01;
 	uvec2 tile_index = uvec2(tex01 / (1. / u_tile_info.m_tile_num));
 	uint tile_index_1d = tile_index.x + tile_index.y * u_tile_info.m_tile_num.x;

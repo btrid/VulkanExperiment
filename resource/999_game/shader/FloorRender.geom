@@ -15,8 +15,10 @@ layout(location=0) out gl_PerVertex
 	vec4 gl_Position;
 };
 
-
-layout(location=1) in vec3 Vertex[];
+layout(location=0)in Vertex
+{
+	uint instanceIndex;
+}In[];
 
 layout(location=1) out GSOUT
 {
@@ -42,8 +44,8 @@ void main()
 {
 	for(int i = 0; i < 14; i++)
 	{
-		gl_Position = gl_in[i].gl_Position;
-		GSOut.Color.b = Vertex[i].y;
+		gl_Position = vec4(box[elements[i]], 1.);
+//		GSOut.Color.b = Vertex[i].y;
 		EmitVertex();
 	}	
 	EndPrimitive();

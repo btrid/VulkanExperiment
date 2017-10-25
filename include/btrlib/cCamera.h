@@ -279,12 +279,12 @@ struct CameraGPU
 		u_view = glm::lookAt(cam.m_position, cam.m_target, cam.m_up);
 		u_eye = glm::vec4(cam.m_position, 0.f);
 		u_target = glm::vec4(cam.m_target, 0.f);
+		u_up = glm::vec4(cam.m_up, 0.f);
 		u_aspect = cam.getAspect();
 		u_fov_y = cam.m_fov;
 		u_near = cam.m_near;
 		u_far = cam.m_far;
 
-//		u_to_screen = glm::inverse(u_view*u_projection);
 		Frustom f;
 		f.setup(camera);
 		m_plane = f.getPlane();
@@ -294,6 +294,7 @@ struct CameraGPU
 	glm::mat4 u_view;
 	glm::vec4 u_eye;
 	glm::vec4 u_target;
+	glm::vec4 u_up;
 	float u_aspect;
 	float u_fov_y;
 	float u_near;

@@ -197,6 +197,7 @@ private:
 		}
 
 		{
+			std::lock_guard<std::mutex> lock(m_free_zone_mutex);
 			// freeÇ…É}Å[ÉW
 			for (auto& free_zone : m_free_zone)
 			{

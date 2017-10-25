@@ -25,6 +25,7 @@ struct Camera
 	mat4 u_view;
 	vec4 u_eye;
 	vec4 u_target;
+	vec4 u_up;
 	float u_aspect;
 	float u_fov_y;
 	float u_near;
