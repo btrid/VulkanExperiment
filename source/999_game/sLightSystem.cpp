@@ -2,6 +2,7 @@
 #include <999_game/sScene.h>
 #include <999_game/sBoid.h>
 #include <999_game/sBulletSystem.h>
+#include <999_game/sScene.h>
 #include <applib/sSystem.h>
 #include <applib/sParticlePipeline.h>
 
@@ -73,6 +74,7 @@ void sLightSystem::setup(std::shared_ptr<btr::Context>& context)
 		{
 			{ "LightCollectParticle.comp.spv", vk::ShaderStageFlagBits::eCompute },
 			{ "LightCollectBullet.comp.spv", vk::ShaderStageFlagBits::eCompute },
+			{ "LightCollectEffect.comp.spv", vk::ShaderStageFlagBits::eCompute },
 			{ "LightTileCulling.comp.spv", vk::ShaderStageFlagBits::eCompute },
 		};
 		static_assert(array_length(shader_desc) == SHADER_NUM, "not equal shader num");
@@ -204,6 +206,22 @@ void sLightSystem::setup(std::shared_ptr<btr::Context>& context)
 			std::vector<vk::DescriptorSetLayout> layouts =
 			{
 				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_LIGHT].get(),
+				sBulletSystem::Order().getDescriptorSetLayout(sBulletSystem::DESCRIPTOR_SET_LAYOUT_UPDATE),
+				sSystem::Order().getSystemDescriptor().getLayout(),
+				sScene::Order().getDescriptorSetLayout(sScene::DESCRIPTOR_SET_LAYOUT_MAP),
+				sScene::Order().getDescriptorSetLayout(sScene::DESCRIPTOR_SET_LAYOUT_SCENE),
+				sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
+			};
+			vk::PipelineLayoutCreateInfo pipeline_layout_info;
+			pipeline_layout_info.setSetLayoutCount(layouts.size());
+			pipeline_layout_info.setPSetLayouts(layouts.data());
+			m_pipeline_layout[PIPELINE_LAYOUT_EFFECT_COLLECT] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+
+		}
+		{
+			std::vector<vk::DescriptorSetLayout> layouts =
+			{
+				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_LIGHT].get(),
 				sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
@@ -225,13 +243,17 @@ void sLightSystem::setup(std::shared_ptr<btr::Context>& context)
 			.setStage(m_shader_info[SHADER_BULLET_COLLECT])
 			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_BULLET_COLLECT].get()),
 			vk::ComputePipelineCreateInfo()
+			.setStage(m_shader_info[SHADER_EFFECT_COLLECT])
+			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_EFFECT_COLLECT].get()),
+			vk::ComputePipelineCreateInfo()
 			.setStage(m_shader_info[SHADER_TILE_CULLING])
 			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_TILE_CULLING].get()),
 		};
 		auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
 		m_pipeline[PIPELINE_PARTICLE_COLLECT] = std::move(compute_pipeline[0]);
 		m_pipeline[PIPELINE_BULLET_COLLECT] = std::move(compute_pipeline[1]);
-		m_pipeline[PIPELINE_TILE_CULLING] = std::move(compute_pipeline[2]);
+		m_pipeline[PIPELINE_EFFECT_COLLECT] = std::move(compute_pipeline[2]);
+		m_pipeline[PIPELINE_TILE_CULLING] = std::move(compute_pipeline[3]);
 
 	}
 }
@@ -261,18 +283,31 @@ vk::CommandBuffer sLightSystem::execute(std::shared_ptr<btr::Context>& context)
 	}
 	// collect
 	{
-		auto to_read = sBulletSystem::Order().getBullet().makeMemoryBarrierEx();
-		to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
-		to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
+		{
+			auto to_read = sBulletSystem::Order().getBullet().makeMemoryBarrierEx();
+			to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+			to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
 
-		// update
-		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_BULLET_COLLECT].get());
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_BULLET_COLLECT].get(), 0, m_descriptor_set[DESCRIPTOR_SET_LAYOUT_LIGHT].get(), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_BULLET_COLLECT].get(), 1, sBulletSystem::Order().getDescriptorSet(sBulletSystem::DESCRIPTOR_SET_UPDATE), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_BULLET_COLLECT].get(), 2, sSystem::Order().getSystemDescriptor().getSet(), {});
+			// update
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_BULLET_COLLECT].get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_BULLET_COLLECT].get(), 0, m_descriptor_set[DESCRIPTOR_SET_LAYOUT_LIGHT].get(), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_BULLET_COLLECT].get(), 1, sBulletSystem::Order().getDescriptorSet(sBulletSystem::DESCRIPTOR_SET_UPDATE), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_BULLET_COLLECT].get(), 2, sSystem::Order().getSystemDescriptor().getSet(), {});
 
-		cmd.dispatch(1, 1, 1);
+//			cmd.dispatch(1, 1, 1);
+		}
+		{
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_EFFECT_COLLECT].get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_EFFECT_COLLECT].get(), 0, m_descriptor_set[DESCRIPTOR_SET_LAYOUT_LIGHT].get(), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_EFFECT_COLLECT].get(), 1, sBulletSystem::Order().getDescriptorSet(sBulletSystem::DESCRIPTOR_SET_UPDATE), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_EFFECT_COLLECT].get(), 2, sSystem::Order().getSystemDescriptor().getSet(), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_EFFECT_COLLECT].get(), 3, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_MAP), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_EFFECT_COLLECT].get(), 4, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_SCENE), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_EFFECT_COLLECT].get(), 5, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
+			cmd.dispatch(32, 32, 1);
+
+		}
 	}
 
 	// culling

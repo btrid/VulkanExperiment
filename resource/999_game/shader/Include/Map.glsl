@@ -28,7 +28,7 @@ layout(std140, set=SETPOINT_SCENE, binding=0) uniform SceneDataUniform {
 };
 float calcEmission(in vec3 pos)
 {
-	float power = 0.2;
+	float power = 0.;
 	float start_time_offset = dot(pos, pos) / length(pos);
 //	start_time_offset += rand3(pos)*20;
 	float time = u_scene_data.m_totaltime*50. - start_time_offset;

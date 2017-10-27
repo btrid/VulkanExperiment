@@ -32,6 +32,7 @@ void main()
 		uint bullet_index = index * loop_count + i;
 		LightData light;
 		light.m_pos = vec4(b_bullet[bullet_src_offset + bullet_index].m_pos.xyz, 1);
+		light.m_normal = vec4(0.);
 		light.m_emissive = vec4(1., 1., 1., 1.);
 		b_light[light_index++] = light;
 	}

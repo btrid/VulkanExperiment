@@ -29,6 +29,7 @@ void main()
 		uint data_index = index * loop_count + i;
 		LightData light;
 		light.m_pos = b_particle[src_offset + data_index].m_position;
+		light.m_normal = vec4(0.);
 		light.m_emissive = b_particle[src_offset + data_index].m_color;
 		b_light[light_index++] = light;
 	}

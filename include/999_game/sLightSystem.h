@@ -18,6 +18,7 @@ struct LightInfo
 struct LightData
 {
 	vec4 m_pos;	//!< xyz:pos w:scale
+	vec4 m_normal;
 	vec4 m_emissive;
 };
 struct sLightSystem : public Singleton<sLightSystem>
@@ -27,6 +28,7 @@ struct sLightSystem : public Singleton<sLightSystem>
 	enum : uint32_t {
 		SHADER_PARTICLE_COLLECT,
 		SHADER_BULLET_COLLECT,
+		SHADER_EFFECT_COLLECT,
 		SHADER_TILE_CULLING,
 		SHADER_NUM,
 	};
@@ -35,12 +37,14 @@ struct sLightSystem : public Singleton<sLightSystem>
 	{
 		PIPELINE_LAYOUT_PARTICLE_COLLECT,
 		PIPELINE_LAYOUT_BULLET_COLLECT,
+		PIPELINE_LAYOUT_EFFECT_COLLECT,
 		PIPELINE_LAYOUT_TILE_CULLING,
 		PIPELINE_LAYOUT_NUM,
 	};
 	enum : uint32_t {
 		PIPELINE_PARTICLE_COLLECT,
 		PIPELINE_BULLET_COLLECT,
+		PIPELINE_EFFECT_COLLECT,
 		PIPELINE_TILE_CULLING,
 		PIPELINE_NUM,
 	};

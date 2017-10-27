@@ -37,3 +37,4 @@ glslc.exe -w -I Include -I ../../applib/shader/include -I ../../btrlib/shader/in
 glslc.exe -w -I Include -I ../../applib/shader/include -I ../../btrlib/shader/include -x glsl -fshader-stage=compute	-o binary\\LightTileCulling.comp.spv LightTileCulling.comp
 glslc.exe -w -I Include -I ../../applib/shader/include -I ../../btrlib/shader/include -x glsl -fshader-stage=compute	-o binary\\LightCollectBullet.comp.spv LightCollectBullet.comp
 glslc.exe -w -I Include -I ../../applib/shader/include -I ../../btrlib/shader/include -x glsl -fshader-stage=compute	-o binary\\LightCollectParticle.comp.spv LightCollectParticle.comp
+glslc.exe -w -I Include -I ../../applib/shader/include -I ../../btrlib/shader/include -x glsl -fshader-stage=compute	-o binary\\LightCollectEffect.comp.spv LightCollectEffect.comp

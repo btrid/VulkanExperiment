@@ -52,6 +52,8 @@ Hit marchToAABB(in Ray ray, in vec3 bmin, in vec3 bmax)
 
 }
 
+
+/*
 ivec3 marchCell(in BrickParam param, inout vec3 pos, in ivec3 cell, in vec3 dir, in vec3 cellSize)
 {
 	vec3 cellOrigin = cell * cellSize + param.areaMin;
@@ -112,3 +114,4 @@ MarchResult marching(in Ray ray)
 	}
 	return result;
 }
+*/

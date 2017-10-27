@@ -14,6 +14,7 @@ struct LightInfo
 struct LightData
 {
 	vec4 m_pos;	//!< xyz:pos w:scale
+	vec4 m_normal;
 	vec4 m_emissive;
 };
 
