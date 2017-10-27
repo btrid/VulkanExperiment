@@ -295,7 +295,7 @@ vk::CommandBuffer sLightSystem::execute(std::shared_ptr<btr::Context>& context)
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_BULLET_COLLECT].get(), 1, sBulletSystem::Order().getDescriptorSet(sBulletSystem::DESCRIPTOR_SET_UPDATE), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_BULLET_COLLECT].get(), 2, sSystem::Order().getSystemDescriptor().getSet(), {});
 
-//			cmd.dispatch(1, 1, 1);
+			cmd.dispatch(1, 1, 1);
 		}
 		{
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_EFFECT_COLLECT].get());

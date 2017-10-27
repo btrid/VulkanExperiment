@@ -107,9 +107,10 @@ void main()
 	uint tile_map_index_1d = tile_index_1d * u_tile_info.m_tile_index_map_max;
 	uint light_num = b_tile_data_counter[tile_index_1d];
 	
+	FragColor = vec4(0.);
 	for(uint i = 0; i < light_num; i++)
 	{
-		FragColor = vec4(1.);
+		FragColor += b_light[b_tile_data_map[light_num]].m_emissive / light_num;
 	}
 
 }
