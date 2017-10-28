@@ -6,13 +6,21 @@ struct VoxelInfo
 	uvec4 u_cell_num;
 };
 
-#if defined(SETPOINT_VOXEL)
-layout(std140, set=SETPOINT_VOXEL, binding = 0) uniform VoxelInfoUniform
+#if defined(USE_VOXEL_WRITE)
+layout(std140, set=USE_VOXEL_WRITE, binding = 0) restrict uniform VoxelInfoUniform
 {
 	VoxelInfo u_voxel_info;
 };
-layout (set=SETPOINT_VOXEL, binding=1, r32ui) uniform uimage3D t_voxel_albedo;
+layout (set=USE_VOXEL_WRITE, binding=1, rgba32f) restrict uniform image3D t_voxel_image[8];
+#endif
 
+#if defined(USE_VOXEL_READ)
+layout(std140, set=USE_VOXEL_READ, binding = 0) restrict uniform VoxelInfoUniform
+{
+	VoxelInfo u_voxel_info;
+};
+layout (set=USE_VOXEL_READ, binding=1) uniform sampler3D t_voxel_albedo;
+#endif
 
 ivec3 getVoxelIndex(/*in VoxelInfo info,*/ in vec3 pos) 
 {
@@ -33,24 +41,4 @@ vec3 unpack(uint packed)
 	return vec3(0.);
 
 }
-#endif
 
-#if defined(SETPOINT_VOXEL_MODEL)
-struct VoxelMaterial
-{
-	vec4 albedo;
-	vec4 emission;
-};
-struct VoxelMeshInfo
-{
-	uint material_index;
-};
-layout(std430, set=SETPOINT_VOXEL_MODEL, binding = 0) buffer VoxelMaterialBuffer
-{
-	VoxelMaterial b_voxel_model_material[];
-};
-layout(std430, set=SETPOINT_VOXEL_MODEL, binding = 1) buffer VoxelMeshInfoBuffer
-{
-	VoxelMeshInfo b_voxel_model_mesh_info[];
-};
-#endif

@@ -70,10 +70,9 @@ void main()
 	if(map_height < id.y){
 		// 何もないはず
 	}else{
-//		float power = calcEmission(pos);
 		vec3 albedo = vec3(1., 0., 1.);
 		vec3 diffuse = albedo * irradiance;
-		uint packd_albedo = uint(diffuse.r*64)<<23 | uint(diffuse.g*64)<<14 | uint(diffuse.b*64)<<5 | 1;
+		uint packd_albedo = uint(diffuse.r*64+32)<<23 | uint(diffuse.g*64+32)<<14 | uint(diffuse.b*64+32)<<5 | 1;
 		imageAtomicAdd(t_voxel_albedo, ivec3(id), packd_albedo);
 	}
 

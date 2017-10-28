@@ -1,3 +1,12 @@
+#if defined(SETPOINT_VOXEL)
+layout(std140, set=SETPOINT_VOXEL, binding = 0) uniform VoxelInfoUniform
+{
+	VoxelInfo u_voxel_info;
+};
+layout (set=SETPOINT_VOXEL, binding=1, r32ui) uniform uimage3D t_voxel_albedo;
+#endif
+
+
 #if defined(SETPOINT_VOXEL_MODEL)
 struct VoxelMaterial
 {

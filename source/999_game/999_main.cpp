@@ -137,7 +137,7 @@ struct ModelGIPipelineComponent : public ModelDrawPipelineComponent
 			vk::DescriptorSetLayout layouts[] = {
 				m_model_descriptor->getLayout(),
 				sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
-				sMap_RayMarch::Order().getVoxel().getDescriptorSetLayout(VoxelPipeline::DESCRIPTOR_SET_LAYOUT_VOXELIZE),
+				sMap_RayMarch::Order().getVoxel().getDescriptorSetLayout(VoxelPipeline::DESCRIPTOR_SET_LAYOUT_VOXEL_WRITE),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
@@ -258,7 +258,7 @@ struct ModelGIPipelineComponent : public ModelDrawPipelineComponent
 				cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline.get());
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 0, render->m_descriptor_set_model.get(), {});
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 2, sMap_RayMarch::Order().getVoxel().getDescriptorSet(VoxelPipeline::DESCRIPTOR_SET_VOXELIZE), {});
+				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 2, sMap_RayMarch::Order().getVoxel().getDescriptorSet(VoxelPipeline::DESCRIPTOR_SET_VOXEL_WRITE), {});
 				cmd.bindVertexBuffers(0, { model->m_model_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().buffer }, { model->m_model_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().offset });
 				cmd.bindIndexBuffer(model->m_model_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().buffer, model->m_model_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().offset, model->m_model_resource->m_mesh_resource.mIndexType);
 				cmd.drawIndexedIndirect(model->m_model_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().buffer, model->m_model_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().offset, model->m_model_resource->m_mesh_resource.mIndirectCount, sizeof(cModel::Mesh));
@@ -356,7 +356,6 @@ int main()
 
 		app.preUpdate();
 		{
-			
 			{
 				m_player.execute(context);
 				render->m_animation->getTransform().m_global = glm::translate(m_player.m_pos) * glm::toMat4(glm::quat(glm::vec3(0.f, 0.f, 1.f), m_player.m_dir));
@@ -375,7 +374,7 @@ int main()
 			}
 
 			SynchronizedPoint render_syncronized_point(7);
-			std::vector<vk::CommandBuffer> render_cmds(10);
+			std::vector<vk::CommandBuffer> render_cmds(11);
 			{
 				cThreadJob job;
 				job.mFinish =
@@ -445,32 +444,16 @@ int main()
 					[&]()
 				{
 					render_cmds[5] = sMap_RayMarch::Order().getVoxel().make(context);
+					render_cmds[10] = sMap_RayMarch::Order().getVoxel().draw(context);
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);
 			}
 
-#if 0 // voxelize check
-			SynchronizedPoint render_syncronized_point(1);
-			std::vector<vk::CommandBuffer> render_cmds(3);
-			{
-				cThreadJob job;
-				job.mJob.emplace_back(
-					[&]()
-				{
- 					render_cmds[0] = sScene::Order().draw1(executer);
-					render_cmds[1] = voxelize_pipeline.make(executer);
-					render_cmds[2] = voxelize_pipeline.draw(executer);
-					render_syncronized_point.arrive();
-				}
-				);
-				sGlobal::Order().getThreadPool().enque(job);
-			}
-#endif
 			render_syncronized_point.wait();
 			app.submit(std::move(render_cmds));
-
 			motion_worker_syncronized_point.wait();
+
 
 		}
 		app.postUpdate();

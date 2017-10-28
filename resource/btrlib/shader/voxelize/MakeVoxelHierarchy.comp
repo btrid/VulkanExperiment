@@ -1,36 +1,28 @@
 #version 450
 #extension GL_GOOGLE_cpp_style_line_directive : require
 
-layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+layout (local_size_x = 2, local_size_y = 2, local_size_z = 2) in;
 
-layout (set=0, binding=0, r32ui) uniform uimage3D t_voxel_src;
-layout (set=0, binding=1, r32f) uniform image3D t_voxel_dst;
+#define USE_VOXEL_WRITE 0
+#include <btrlib/Voxelize/Voxelize.glsl>
 
-vec3 unpack(uint packed)
+layout(push_constant) uniform ConstantBlock
 {
-	uvec4 count = (packed)&((1<<5)-1);
-	if(count != 0)
-	{
-		uint packed_r = (packed>>23)&((1<<9)-1);
-		uint packed_g = (packed>>14)&((1<<9)-1);
-		uint packed_b = (packed>>5)&((1<<9)-1);
-		vec3 unpacked = vec3(packed_r, packed_g, packed_b) / 64. / float(count);
-		return unpacked;
-	}
-	return vec3(0.);
+	int m_miplevel;
+} constant;
 
-}
+shared vec3 s_value[8];
 void main()
 {
-	ivec3 id = ivec3(gl_GlobalInvocationID.xy);
-	vec3 value = vec3(0.);
-	value+=unpack(imageLoad(t_voxel_src, id*2+ivec3(0, 0, 0)).r);
-	value+=unpack(imageLoad(t_voxel_src, id*2+ivec3(0, 0, 1)).r);
-	value+=unpack(imageLoad(t_voxel_src, id*2+ivec3(0, 1, 0)).r);
-	value+=unpack(imageLoad(t_voxel_src, id*2+ivec3(0, 1, 1)).r);
-	value+=unpack(imageLoad(t_voxel_src, id*2+ivec3(1, 0, 0)).r);
-	value+=unpack(imageLoad(t_voxel_src, id*2+ivec3(1, 0, 1)).r);
-	value+=unpack(imageLoad(t_voxel_src, id*2+ivec3(1, 1, 0)).r);
-	value+=unpack(imageLoad(t_voxel_src, id*2+ivec3(1, 1, 1)).r);
-	imageStore(t_voxel_dst, id, value);
+	s_value[gl_LocalInvocationIndex] = imageLoad(t_voxel_image[constant.m_miplevel], ivec3(gl_WorkGroupID*2+gl_LocalInvocationID)).rgb;
+
+	barrier();
+	if(all(equal(gl_LocalInvocationID.xyz, uvec3(0))))
+	{
+		memoryBarrierShared();
+
+		vec3 value = s_value[0] +s_value[1] +s_value[2] +s_value[3] +s_value[4] +s_value[5] +s_value[6] +s_value[7];
+		imageStore(t_voxel_image[constant.m_miplevel+1], ivec3(gl_WorkGroupID), vec4(value, 1.));
+	}
 }
+

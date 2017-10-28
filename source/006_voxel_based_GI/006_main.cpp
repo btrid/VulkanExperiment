@@ -136,7 +136,7 @@ int main()
 			}
 
 			SynchronizedPoint render_syncronized_point(1);
-			std::vector<vk::CommandBuffer> render_cmds(2);
+			std::vector<vk::CommandBuffer> render_cmds(3);
 
 			{
 				cThreadJob job;
@@ -144,7 +144,8 @@ int main()
 					[&]()
 				{
 					render_cmds[0] = voxelize_pipeline.make(context);
-					render_cmds[1] = voxelize_pipeline.draw(context);
+					render_cmds[1] = voxelize_pipeline.makeHierarchy(context);
+					render_cmds[2] = voxelize_pipeline.draw(context);
 					render_syncronized_point.arrive();
 				}
 				);
@@ -155,7 +156,7 @@ int main()
 			app.submit(std::move(render_cmds));
 		}
 		app.postUpdate();
-		printf("%6.3fs\n", time.getElapsedTimeAsSeconds());
+		printf("%6.4fs\n", time.getElapsedTimeAsSeconds());
 	}
 
 	return 0;

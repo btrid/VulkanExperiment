@@ -66,7 +66,7 @@ struct VoxelizeBullet : Voxelize
 		// setup pipeline layout
 		{
 			vk::DescriptorSetLayout layouts[] = {
-				parent->getDescriptorSetLayout(VoxelPipeline::DESCRIPTOR_SET_LAYOUT_VOXELIZE),
+				parent->getDescriptorSetLayout(VoxelPipeline::DESCRIPTOR_SET_LAYOUT_VOXEL_WRITE),
 				sScene::Order().getDescriptorSetLayout(sScene::DESCRIPTOR_SET_LAYOUT_MAP),
 				sScene::Order().getDescriptorSetLayout(sScene::DESCRIPTOR_SET_LAYOUT_SCENE),
 			};
@@ -95,7 +95,7 @@ struct VoxelizeBullet : Voxelize
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COMPUTE_MAKE_VOXEL].get());
 
 		std::vector<vk::DescriptorSet> descriptor_sets = {
-			parent->getDescriptorSet(VoxelPipeline::DESCRIPTOR_SET_VOXELIZE),
+			parent->getDescriptorSet(VoxelPipeline::DESCRIPTOR_SET_VOXEL_WRITE),
 			sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_MAP),
 			sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_SCENE),
 		};

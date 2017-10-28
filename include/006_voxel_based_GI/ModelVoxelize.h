@@ -78,7 +78,6 @@ struct ModelVoxelize : public Voxelize
 	std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_list;
 	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_stage_info;
 
-	vk::UniquePipelineCache m_pipeline_cache;
 	std::array<vk::UniquePipeline, PIPELINE_NUM> m_pipeline;
 	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
 	std::array<vk::UniqueDescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
@@ -87,10 +86,92 @@ struct ModelVoxelize : public Voxelize
 	vk::UniqueDescriptorSetLayout m_model_descriptor_set_layout;
 	vk::UniqueDescriptorPool m_model_descriptor_pool;
 
-	void setup(std::shared_ptr<btr::Context>& loader, VoxelPipeline const * const parent)
+
+	vk::UniqueImage m_voxel_image;
+	vk::UniqueImageView m_voxel_imageview;
+	vk::UniqueDeviceMemory m_voxel_imagememory;
+
+	void setup(std::shared_ptr<btr::Context>& context, VoxelPipeline const * const parent)
 	{
-		auto& gpu = loader->m_gpu;
+		auto& gpu = context->m_gpu;
 		auto& device = gpu.getDevice();
+
+		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+
+
+		{
+			vk::ImageCreateInfo image_info;
+			image_info.imageType = vk::ImageType::e3D;
+			image_info.format = vk::Format::eR32Uint;
+			image_info.mipLevels = 1;
+			image_info.arrayLayers = 1;
+			image_info.samples = vk::SampleCountFlagBits::e1;
+			image_info.tiling = vk::ImageTiling::eOptimal;
+			image_info.usage = vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
+			image_info.sharingMode = vk::SharingMode::eExclusive;
+			image_info.initialLayout = vk::ImageLayout::eUndefined;
+			image_info.extent = { parent->m_voxelize_info_cpu.u_cell_num.x, parent->m_voxelize_info_cpu.u_cell_num.y, parent->m_voxelize_info_cpu.u_cell_num.z };
+			auto image = device->createImageUnique(image_info);
+
+			vk::MemoryRequirements memory_request = device->getImageMemoryRequirements(image.get());
+			vk::MemoryAllocateInfo memory_alloc_info;
+			memory_alloc_info.allocationSize = memory_request.size;
+			memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+			auto image_memory = device->allocateMemoryUnique(memory_alloc_info);
+			device->bindImageMemory(image.get(), image_memory.get(), 0);
+
+			vk::ImageSubresourceRange subresourceRange;
+			subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+			subresourceRange.baseArrayLayer = 0;
+			subresourceRange.baseMipLevel = 0;
+			subresourceRange.layerCount = 1;
+			subresourceRange.levelCount = 1;
+
+			{
+				// ‰ŠúÝ’è
+				vk::ImageMemoryBarrier to_copy_barrier;
+				to_copy_barrier.image = image.get();
+				to_copy_barrier.oldLayout = vk::ImageLayout::eUndefined;
+				to_copy_barrier.newLayout = vk::ImageLayout::eGeneral;
+				to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+				to_copy_barrier.subresourceRange = subresourceRange;
+
+				cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
+
+			}
+
+			vk::ImageViewCreateInfo view_info;
+			view_info.viewType = vk::ImageViewType::e3D;
+			view_info.components.r = vk::ComponentSwizzle::eR;
+			view_info.components.g = vk::ComponentSwizzle::eG;
+			view_info.components.b = vk::ComponentSwizzle::eB;
+			view_info.components.a = vk::ComponentSwizzle::eA;
+			view_info.flags = vk::ImageViewCreateFlags();
+			view_info.format = vk::Format::eR32Uint;
+			view_info.image = image.get();
+			view_info.subresourceRange = subresourceRange;
+
+			vk::SamplerCreateInfo sampler_info;
+			sampler_info.magFilter = vk::Filter::eNearest;
+			sampler_info.minFilter = vk::Filter::eNearest;
+			sampler_info.mipmapMode = vk::SamplerMipmapMode::eLinear;
+			sampler_info.addressModeU = vk::SamplerAddressMode::eClampToEdge;
+			sampler_info.addressModeV = vk::SamplerAddressMode::eClampToEdge;
+			sampler_info.addressModeW = vk::SamplerAddressMode::eClampToEdge;
+			sampler_info.mipLodBias = 0.0f;
+			sampler_info.compareOp = vk::CompareOp::eNever;
+			sampler_info.minLod = 0.0f;
+			sampler_info.maxLod = 0.f;
+			sampler_info.maxAnisotropy = 1.0;
+			sampler_info.anisotropyEnable = VK_FALSE;
+			sampler_info.borderColor = vk::BorderColor::eFloatOpaqueWhite;
+
+			m_voxel_image = std::move(image);
+			m_voxel_imagememory = std::move(image_memory);
+			m_voxel_imageview = device->createImageViewUnique(view_info);
+
+		}
 
 		// renderpass
 		{
@@ -107,9 +188,9 @@ struct ModelVoxelize : public Voxelize
 				.setPAttachments(nullptr)
 				.setSubpassCount(1)
 				.setPSubpasses(&subpass);
-			m_make_voxel_pass = loader->m_device->createRenderPassUnique(renderpass_info);
+			m_make_voxel_pass = context->m_device->createRenderPassUnique(renderpass_info);
 
-			m_make_voxel_framebuffer.resize(loader->m_window->getSwapchain().getBackbufferNum());
+			m_make_voxel_framebuffer.resize(context->m_window->getSwapchain().getBackbufferNum());
 			{
 				vk::FramebufferCreateInfo framebuffer_info;
 				framebuffer_info.setRenderPass(m_make_voxel_pass.get());
@@ -120,7 +201,7 @@ struct ModelVoxelize : public Voxelize
 				framebuffer_info.setLayers(3);
 
 				for (size_t i = 0; i < m_make_voxel_framebuffer.size(); i++) {
-					m_make_voxel_framebuffer[i] = loader->m_device->createFramebufferUnique(framebuffer_info);
+					m_make_voxel_framebuffer[i] = context->m_device->createFramebufferUnique(framebuffer_info);
 				}
 			}
 		}
@@ -167,7 +248,7 @@ struct ModelVoxelize : public Voxelize
 		// setup pipeline layout
 		{
 			vk::DescriptorSetLayout layouts[] = {
-				parent->getDescriptorSetLayout(VoxelPipeline::DESCRIPTOR_SET_LAYOUT_VOXELIZE),
+				parent->getDescriptorSetLayout(VoxelPipeline::DESCRIPTOR_SET_LAYOUT_VOXEL_WRITE),
 				m_model_descriptor_set_layout.get()
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
@@ -273,7 +354,7 @@ struct ModelVoxelize : public Voxelize
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			m_pipeline[PIPELINE_MAKE_VOXEL] = std::move(device->createGraphicsPipelinesUnique(m_pipeline_cache.get(), graphics_pipeline_info)[0]);
+			m_pipeline[PIPELINE_MAKE_VOXEL] = std::move(device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info)[0]);
 		}
 
 
@@ -303,6 +384,35 @@ struct ModelVoxelize : public Voxelize
 		range.setBaseMipLevel(0);
 
 		{
+			// clear
+			{
+				vk::ImageMemoryBarrier to_copy_barrier;
+				to_copy_barrier.image = m_voxel_image.get();
+				to_copy_barrier.oldLayout = vk::ImageLayout::eGeneral;
+				to_copy_barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
+				to_copy_barrier.srcAccessMask = vk::AccessFlagBits::eShaderRead;
+				to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+				to_copy_barrier.subresourceRange = range;
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
+			}
+
+			vk::ClearColorValue clear_value;
+			clear_value.setUint32(std::array<uint32_t, 4>{});
+			cmd.clearColorImage(m_voxel_image.get(), vk::ImageLayout::eTransferDstOptimal, clear_value, range);
+			{
+				vk::ImageMemoryBarrier to_shader_barrier;
+				to_shader_barrier.image = m_voxel_image.get();
+				to_shader_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
+				to_shader_barrier.newLayout = vk::ImageLayout::eGeneral;
+				to_shader_barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+				to_shader_barrier.dstAccessMask = vk::AccessFlagBits::eShaderWrite;
+				to_shader_barrier.subresourceRange = range;
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), {}, {}, { to_shader_barrier });
+			}
+		}
+
+
+		{
 			// make voxel
 			vk::RenderPassBeginInfo begin_render_info;
 			begin_render_info.setFramebuffer(m_make_voxel_framebuffer[context->getGPUFrame()].get());
@@ -313,7 +423,7 @@ struct ModelVoxelize : public Voxelize
 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_MAKE_VOXEL].get());
 
 			std::vector<vk::DescriptorSet> descriptor_sets = {
-				parent->getDescriptorSet(VoxelPipeline::DESCRIPTOR_SET_VOXELIZE),
+				parent->getDescriptorSet(VoxelPipeline::DESCRIPTOR_SET_VOXEL_WRITE),
 			};
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_MAKE_VOXEL].get(), 0, descriptor_sets, {});
 
