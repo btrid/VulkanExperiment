@@ -38,14 +38,12 @@ struct VoxelPipeline
 
 	enum DescriptorSetLayout
 	{
-		DESCRIPTOR_SET_LAYOUT_VOXEL_WRITE,
-		DESCRIPTOR_SET_LAYOUT_VOXEL_READ,
+		DESCRIPTOR_SET_LAYOUT_VOXEL,
 		DESCRIPTOR_SET_LAYOUT_NUM,
 	};
 	enum DescriptorSet
 	{
-		DESCRIPTOR_SET_VOXEL_WRITE,
-		DESCRIPTOR_SET_VOXEL_READ,
+		DESCRIPTOR_SET_VOXEL,
 		DESCRIPTOR_SET_NUM,
 	};
 
@@ -182,6 +180,7 @@ struct VoxelPipeline
 			sampler_info.maxAnisotropy = 1.0;
 			sampler_info.anisotropyEnable = VK_FALSE;
 			sampler_info.borderColor = vk::BorderColor::eFloatOpaqueWhite;
+
 			m_voxel_sampler = context->m_device->createSamplerUnique(sampler_info);
 
 			view_info.subresourceRange.levelCount = 1;
@@ -209,8 +208,8 @@ struct VoxelPipeline
 				vk::ShaderStageFlagBits stage;
 			}shader_info[] =
 			{
-				{ "DrawAlbedoVoxel.vert.spv",vk::ShaderStageFlagBits::eVertex },
-				{ "DrawAlbedoVoxel.frag.spv",vk::ShaderStageFlagBits::eFragment },
+				{ "DrawVoxel.vert.spv",vk::ShaderStageFlagBits::eVertex },
+				{ "DrawVoxel.frag.spv",vk::ShaderStageFlagBits::eFragment },
 				{ "MakeVoxelHierarchy.comp.spv",vk::ShaderStageFlagBits::eCompute },
 			};
 			static_assert(array_length(shader_info) == SHADER_NUM, "not equal shader num");
@@ -228,7 +227,7 @@ struct VoxelPipeline
 		{
 			{
 				std::vector<std::vector<vk::DescriptorSetLayoutBinding>> bindings(DESCRIPTOR_SET_NUM);
-				bindings[DESCRIPTOR_SET_VOXEL_WRITE] = {
+				bindings[DESCRIPTOR_SET_VOXEL] = {
 					vk::DescriptorSetLayoutBinding()
 					.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute)
 					.setDescriptorType(vk::DescriptorType::eUniformBuffer)
@@ -239,18 +238,11 @@ struct VoxelPipeline
 					.setDescriptorType(vk::DescriptorType::eStorageImage)
 					.setDescriptorCount(8)
 					.setBinding(1),
-				};
-				bindings[DESCRIPTOR_SET_VOXEL_READ] = {
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute)
-					.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-					.setDescriptorCount(1)
-					.setBinding(0),
 					vk::DescriptorSetLayoutBinding()
 					.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute)
 					.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
 					.setDescriptorCount(1)
-					.setBinding(1),
+					.setBinding(2),
 				};
 				for (u32 i = 0; i < bindings.size(); i++)
 				{
@@ -264,13 +256,13 @@ struct VoxelPipeline
 			// descriptor set
 			{
 				vk::DescriptorSetLayout layouts[] = {
-					m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_VOXEL_WRITE].get(),
+					m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_VOXEL].get(),
 				};
 				vk::DescriptorSetAllocateInfo alloc_info;
 				alloc_info.descriptorPool = context->m_descriptor_pool.get();
 				alloc_info.descriptorSetCount = array_length(layouts);
 				alloc_info.pSetLayouts = layouts;
-				m_descriptor_set[DESCRIPTOR_SET_VOXEL_WRITE] = std::move(device->allocateDescriptorSetsUnique(alloc_info)[0]);
+				m_descriptor_set[DESCRIPTOR_SET_VOXEL] = std::move(device->allocateDescriptorSetsUnique(alloc_info)[0]);
 
 				std::vector<vk::DescriptorBufferInfo> uniforms = {
 					m_voxel_info.getBufferInfo(),
@@ -282,6 +274,14 @@ struct VoxelPipeline
 				{
 					textures[i].setImageView(m_voxel_hierarchy_imageview[i].get());
 				}
+
+				std::vector<vk::DescriptorImageInfo> samplers = {
+					vk::DescriptorImageInfo()
+					.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
+					.setImageView(m_voxel_imageview.get())
+					.setSampler(m_voxel_sampler.get())
+				};
+
 				std::vector<vk::WriteDescriptorSet> write_descriptor_set =
 				{
 					vk::WriteDescriptorSet()
@@ -289,53 +289,25 @@ struct VoxelPipeline
 					.setDescriptorCount(uniforms.size())
 					.setPBufferInfo(uniforms.data())
 					.setDstBinding(0)
-					.setDstSet(m_descriptor_set[DESCRIPTOR_SET_VOXEL_WRITE].get()),
-					vk::WriteDescriptorSet()
-					.setDescriptorType(vk::DescriptorType::eStorageImage)
-					.setDescriptorCount(textures.size())
-					.setPImageInfo(textures.data())
-					.setDstBinding(1)
-					.setDstSet(m_descriptor_set[DESCRIPTOR_SET_VOXEL_WRITE].get()),
-				};
-				device->updateDescriptorSets(write_descriptor_set, {});
-			}
-
-			{
-				vk::DescriptorSetLayout layouts[] = {
-					m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_VOXEL_READ].get(),
-				};
-				vk::DescriptorSetAllocateInfo alloc_info;
-				alloc_info.descriptorPool = context->m_descriptor_pool.get();
-				alloc_info.descriptorSetCount = array_length(layouts);
-				alloc_info.pSetLayouts = layouts;
-				m_descriptor_set[DESCRIPTOR_SET_VOXEL_READ] = std::move(device->allocateDescriptorSetsUnique(alloc_info)[0]);
-
-				std::vector<vk::DescriptorBufferInfo> uniforms = {
-					m_voxel_info.getBufferInfo(),
-				};
-
-				auto param = vk::DescriptorImageInfo();
-				param.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
-				param.setImageView(m_voxel_imageview.get());
-				param.setSampler(m_voxel_sampler.get());
-				std::vector<vk::DescriptorImageInfo> textures = {
-					param
-				};
-				std::vector<vk::WriteDescriptorSet> write_descriptor_set =
-				{
-					vk::WriteDescriptorSet()
-					.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-					.setDescriptorCount(uniforms.size())
-					.setPBufferInfo(uniforms.data())
-					.setDstBinding(0)
-					.setDstSet(m_descriptor_set[DESCRIPTOR_SET_VOXEL_READ].get()),
+					.setDstSet(m_descriptor_set[DESCRIPTOR_SET_VOXEL].get()),
 					vk::WriteDescriptorSet()
 					.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-					.setDescriptorCount(textures.size())
-					.setPImageInfo(textures.data())
-					.setDstBinding(1)
-					.setDstSet(m_descriptor_set[DESCRIPTOR_SET_VOXEL_READ].get()),
+					.setDescriptorCount(samplers.size())
+					.setPImageInfo(samplers.data())
+					.setDstBinding(2)
+					.setDstSet(m_descriptor_set[DESCRIPTOR_SET_VOXEL].get()),
 				};
+				for (int i = 0; i < textures.size(); i++)
+				{
+					vk::WriteDescriptorSet tex = vk::WriteDescriptorSet()
+						.setDescriptorType(vk::DescriptorType::eStorageImage)
+						.setDescriptorCount(1)
+						.setPImageInfo(&textures[i])
+						.setDstBinding(1)
+						.setDstArrayElement(i)
+						.setDstSet(m_descriptor_set[DESCRIPTOR_SET_VOXEL].get());
+					write_descriptor_set.push_back(tex);
+				}
 				device->updateDescriptorSets(write_descriptor_set, {});
 			}
 
@@ -345,7 +317,7 @@ struct VoxelPipeline
 		{
 			{
 				vk::DescriptorSetLayout layouts[] = {
-					m_descriptor_set_layout[DESCRIPTOR_SET_VOXEL_READ].get(),
+					m_descriptor_set_layout[DESCRIPTOR_SET_VOXEL].get(),
 					sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
 				};
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
@@ -355,7 +327,7 @@ struct VoxelPipeline
 			}
 			{
 				vk::DescriptorSetLayout layouts[] = {
-					m_descriptor_set_layout[DESCRIPTOR_SET_VOXEL_WRITE].get(),
+					m_descriptor_set_layout[DESCRIPTOR_SET_VOXEL].get(),
 				};
 				vk::PushConstantRange constants[] = {
 					vk::PushConstantRange()
@@ -505,7 +477,7 @@ struct VoxelPipeline
 		{
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_MAKE_HIERARCHY_VOXEL].get());
 			vk::ArrayProxy<const vk::DescriptorSet> descriptor_sets = {
-				m_descriptor_set[DESCRIPTOR_SET_VOXEL_WRITE].get(),
+				m_descriptor_set[DESCRIPTOR_SET_VOXEL].get(),
 			};
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_MAKE_HIERARCHY_VOXEL].get(), 0, descriptor_sets, {});
 			cmd.pushConstants<int>(m_pipeline_layout[PIPELINE_LAYOUT_MAKE_HIERARCHY_VOXEL].get(), vk::ShaderStageFlagBits::eCompute, 0, i);
@@ -549,7 +521,7 @@ struct VoxelPipeline
 			cmd.beginRenderPass(begin_render_info, vk::SubpassContents::eInline);
 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW_VOXEL].get());
 			std::vector<vk::DescriptorSet> descriptor_sets = {
-				m_descriptor_set[DESCRIPTOR_SET_VOXEL_READ].get(),
+				m_descriptor_set[DESCRIPTOR_SET_VOXEL].get(),
 				sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA),
 			};
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_VOXEL].get(), 0, descriptor_sets, {});

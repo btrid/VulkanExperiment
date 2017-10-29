@@ -4,7 +4,7 @@
 
 #include <btrlib/ConvertDimension.glsl>
 
-#define USE_VOXEL_READ 0
+#define USE_VOXEL 0
 #include <btrlib/Voxelize/Voxelize.glsl>
 
 #define SETPOINT_CAMERA 1
@@ -37,8 +37,8 @@ uint elements[] = {
 void main()
 {
 	uvec3 index = convert1DTo3D(gl_InstanceIndex, u_voxel_info.u_cell_num.xyz);
-	vec4 value = textureLod(t_voxel_albedo, u_voxel_info.u_cell_num.xyz/vec3(index), 0);
-	if(dot(value, value) >= 0.001)
+	vec4 value = textureLod(t_voxel_sampler, u_voxel_info.u_cell_num.xyz/vec3(index), 0);
+	if(dot(value.xyz, value.xyz) >= 0.001)
 	{
 		vec3 size = u_voxel_info.u_cell_size.xyz;
 		Out.albedo = value.xyz;

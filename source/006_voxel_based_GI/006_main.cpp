@@ -144,7 +144,7 @@ int main()
 					[&]()
 				{
 					render_cmds[0] = voxelize_pipeline.make(context);
-					render_cmds[1] = voxelize_pipeline.makeHierarchy(context);
+//					render_cmds[1] = voxelize_pipeline.makeHierarchy(context);
 					render_cmds[2] = voxelize_pipeline.draw(context);
 					render_syncronized_point.arrive();
 				}

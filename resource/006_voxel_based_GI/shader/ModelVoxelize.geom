@@ -1,22 +1,15 @@
 #version 450
-#pragma optionNV (unroll all)
-#pragma optionNV (inline all)
-#pragma optionNV(fastmath on)
-//#pragma optionNV(fastprecision on)
-//#pragma optionNV(ifcvt all)
-#pragma optionNV(strict on)
-#ifdef VULKAN
+
 #extension GL_GOOGLE_cpp_style_line_directive : require
-#else
-#extension GL_ARB_shading_language_include : require
-#endif
 
 #include <btrlib/ConvertDimension.glsl>
 #include <btrlib/Shape.glsl>
 
-#define SETPOINT_VOXEL 0
+#define USE_VOXEL 0
 #include <btrlib/Voxelize/Voxelize.glsl>
-
+#define USE_VOXELIZE 1
+#define SETPOINT_VOXEL_MODEL 2
+#include </ModelVoxelize.glsl>
 
 layout(triangles) in;
 layout(triangle_strip, max_vertices = 4) out;

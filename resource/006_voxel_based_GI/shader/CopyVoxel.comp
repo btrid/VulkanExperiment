@@ -1,0 +1,16 @@
+#version 450
+#extension GL_GOOGLE_cpp_style_line_directive : require
+
+layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+#define USE_VOXEL 0
+#include <btrlib/Voxelize/Voxelize.glsl>
+
+#define USE_VOXELIZE 1
+#include </ModelVoxelize.glsl>
+
+void main()
+{
+	vec3 value = unpack(imageLoad(t_voxel_albedo, ivec3(gl_GlobalInvocationID)).r);
+	imageStore(t_voxel_image[0], ivec3(gl_GlobalInvocationID), vec4(value, 1.));
+}

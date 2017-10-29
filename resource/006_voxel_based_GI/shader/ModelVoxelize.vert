@@ -4,9 +4,11 @@
 #extension GL_ARB_shader_draw_parameters : require
 //#extension VK_KHR_shader_draw_parameters : require
 
-#define SETPOINT_VOXEL 0
+#define USE_VOXEL 0
 #include <btrlib/Voxelize/Voxelize.glsl>
-#define SETPOINT_VOXEL_MODEL 1
+
+#define USE_VOXELIZE 1
+#define SETPOINT_VOXEL_MODEL 2
 #include </ModelVoxelize.glsl>
 
 layout(location = 0)in vec3 inPosition;
