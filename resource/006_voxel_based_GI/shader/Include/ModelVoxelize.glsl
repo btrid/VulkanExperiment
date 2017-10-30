@@ -25,16 +25,17 @@ layout(std430, set=SETPOINT_VOXEL_MODEL, binding = 1) buffer VoxelMeshInfoBuffer
 
 vec3 unpack(uint packed)
 {
-	uint count = (packed)&((1<<5)-1);
+	uint count = packed&((1<<5)-1);
+	vec3 value = vec3(0.);
 	if(count != 0)
 	{
 		uint packed_r = (packed>>23)&((1<<9)-1);
 		uint packed_g = (packed>>14)&((1<<9)-1);
 		uint packed_b = (packed>>5)&((1<<9)-1);
-		vec3 unpacked = vec3(packed_r, packed_g, packed_b) / 64. / float(count);
-		return unpacked;
+		value = vec3(packed_r, packed_g, packed_b) / 64. / count;
 	}
-	return vec3(0.);
+
+	return value;
 
 }
 

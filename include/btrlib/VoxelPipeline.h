@@ -141,8 +141,11 @@ struct VoxelPipeline
 				// èâä˙ê›íË
 				vk::ImageMemoryBarrier to_copy_barrier;
 				to_copy_barrier.image = image.get();
+// 				to_copy_barrier.oldLayout = vk::ImageLayout::eUndefined;
+// 				to_copy_barrier.newLayout = vk::ImageLayout::eGeneral;
+// 				to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 				to_copy_barrier.oldLayout = vk::ImageLayout::eUndefined;
-				to_copy_barrier.newLayout = vk::ImageLayout::eGeneral;
+				to_copy_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 				to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 				to_copy_barrier.subresourceRange = subresourceRange;
 
@@ -527,17 +530,6 @@ struct VoxelPipeline
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_VOXEL].get(), 0, descriptor_sets, {});
 			cmd.draw(14, m_voxelize_info_cpu.u_cell_num.x *m_voxelize_info_cpu.u_cell_num.y*m_voxelize_info_cpu.u_cell_num.z, 0, 0);
 			cmd.endRenderPass();
-
-			{
-				vk::ImageMemoryBarrier to_read;
-				to_read.image = m_voxel_hierarchy_image.get();
-				to_read.oldLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-				to_read.newLayout = vk::ImageLayout::eGeneral;
-				to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
-				to_read.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-				to_read.subresourceRange = range;
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, {}, { to_read });
-			}
 		}
 
 		cmd.end();

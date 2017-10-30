@@ -118,7 +118,7 @@ struct ModelVoxelize : public Voxelize
 			image_info.arrayLayers = 1;
 			image_info.samples = vk::SampleCountFlagBits::e1;
 			image_info.tiling = vk::ImageTiling::eOptimal;
-			image_info.usage = vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
+			image_info.usage = vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eTransferDst;
 			image_info.sharingMode = vk::SharingMode::eExclusive;
 			image_info.initialLayout = vk::ImageLayout::eUndefined;
 			image_info.extent = { parent->m_voxelize_info_cpu.u_cell_num.x, parent->m_voxelize_info_cpu.u_cell_num.y, parent->m_voxelize_info_cpu.u_cell_num.z };
@@ -280,7 +280,6 @@ struct ModelVoxelize : public Voxelize
 					.setDescriptorType(vk::DescriptorType::eStorageImage)
 					.setDescriptorCount(textures.size())
 					.setPImageInfo(textures.data())
-					.setDescriptorCount(1)
 					.setDstBinding(0)
 					.setDstSet(m_descriptor_set[DESCRIPTOR_SET_VOXEL].get()),
 				};
@@ -470,7 +469,6 @@ struct ModelVoxelize : public Voxelize
 		range.setAspectMask(vk::ImageAspectFlagBits::eColor);
 		range.setBaseArrayLayer(0);
 		range.setBaseMipLevel(0);
-
 		{
 			// clear
 			{
@@ -485,22 +483,24 @@ struct ModelVoxelize : public Voxelize
 			}
 
 			vk::ClearColorValue clear_value;
-			clear_value.setUint32(std::array<uint32_t, 4>{});
+			clear_value.setUint32(std::array<uint32_t, 4>{0u});
+//			clear_value.setUint32(std::array<uint32_t, 4>{0xFFFFFFFFu});
 			cmd.clearColorImage(m_voxel_image.get(), vk::ImageLayout::eTransferDstOptimal, clear_value, range);
+		}
+
+
+		{
 			{
 				vk::ImageMemoryBarrier to_shader_barrier;
 				to_shader_barrier.image = m_voxel_image.get();
 				to_shader_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
 				to_shader_barrier.newLayout = vk::ImageLayout::eGeneral;
 				to_shader_barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
-				to_shader_barrier.dstAccessMask = vk::AccessFlagBits::eShaderWrite;
+				to_shader_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite;
 				to_shader_barrier.subresourceRange = range;
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), {}, {}, { to_shader_barrier });
 			}
-		}
 
-
-		{
 			// make voxel
 			vk::RenderPassBeginInfo begin_render_info;
 			begin_render_info.setFramebuffer(m_make_voxel_framebuffer[context->getGPUFrame()].get());
@@ -518,10 +518,10 @@ struct ModelVoxelize : public Voxelize
 
 			for (auto& model : m_model_list)
 			{
-				std::vector<vk::DescriptorSet> descriptor_sets = {
+				std::vector<vk::DescriptorSet> descriptor = {
 					model->m_model_descriptor_set.get(),
 				};
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_MAKE_VOXEL].get(), 2, descriptor_sets, {});
+				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_MAKE_VOXEL].get(), 2, descriptor, {});
 				cmd.bindIndexBuffer(model->m_index.getBufferInfo().buffer, model->m_index.getBufferInfo().offset, vk::IndexType::eUint32);
 				cmd.bindVertexBuffers(0, model->m_vertex.getBufferInfo().buffer, model->m_vertex.getBufferInfo().offset);
 				cmd.drawIndexedIndirect(model->m_indirect.getBufferInfo().buffer, model->m_indirect.getBufferInfo().offset, model->m_mesh_count, sizeof(vk::DrawIndexedIndirectCommand));
@@ -536,8 +536,18 @@ struct ModelVoxelize : public Voxelize
 				to_copy_barrier.image = m_voxel_image.get();
 				to_copy_barrier.oldLayout = vk::ImageLayout::eGeneral;
 				to_copy_barrier.newLayout = vk::ImageLayout::eGeneral;
-				to_copy_barrier.srcAccessMask = vk::AccessFlagBits::eShaderWrite;
+				to_copy_barrier.srcAccessMask = vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite;
 				to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+				to_copy_barrier.subresourceRange = range;
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
+			}
+			{
+				vk::ImageMemoryBarrier to_copy_barrier;
+				to_copy_barrier.image = parent->m_voxel_hierarchy_image.get();
+				to_copy_barrier.oldLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+				to_copy_barrier.newLayout = vk::ImageLayout::eGeneral;
+				to_copy_barrier.srcAccessMask = vk::AccessFlagBits::eShaderRead;
+				to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eShaderWrite;
 				to_copy_barrier.subresourceRange = range;
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
 			}

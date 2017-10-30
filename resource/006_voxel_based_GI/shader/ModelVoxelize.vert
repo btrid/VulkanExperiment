@@ -6,7 +6,6 @@
 
 #define USE_VOXEL 0
 #include <btrlib/Voxelize/Voxelize.glsl>
-
 #define USE_VOXELIZE 1
 #define SETPOINT_VOXEL_MODEL 2
 #include </ModelVoxelize.glsl>
@@ -30,6 +29,7 @@ void main()
 
 	uint material_index = b_voxel_model_mesh_info[gl_DrawIDARB].material_index;
 	vec3 albedo = b_voxel_model_material[material_index].albedo.xyz;
+	
 	Out.Albedo = albedo;
 
 }

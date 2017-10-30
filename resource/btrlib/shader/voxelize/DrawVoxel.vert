@@ -37,8 +37,8 @@ uint elements[] = {
 void main()
 {
 	uvec3 index = convert1DTo3D(gl_InstanceIndex, u_voxel_info.u_cell_num.xyz);
-	vec4 value = textureLod(t_voxel_sampler, u_voxel_info.u_cell_num.xyz/vec3(index), 0);
-	if(dot(value.xyz, value.xyz) >= 0.001)
+	vec4 value = textureLod(t_voxel_sampler, vec3(index)/u_voxel_info.u_cell_num.xyz, 0);
+	if(dot(value.xyz, value.xyz) >= 0.0003)
 	{
 		vec3 size = u_voxel_info.u_cell_size.xyz;
 		Out.albedo = value.xyz;
