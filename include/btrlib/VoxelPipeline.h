@@ -170,8 +170,8 @@ struct VoxelPipeline
 			m_voxel_imageview = device->createImageViewUnique(view_info);
 
 			vk::SamplerCreateInfo sampler_info;
-			sampler_info.magFilter = vk::Filter::eNearest;
-			sampler_info.minFilter = vk::Filter::eNearest;
+			sampler_info.magFilter = vk::Filter::eLinear;
+			sampler_info.minFilter = vk::Filter::eLinear;
 			sampler_info.mipmapMode = vk::SamplerMipmapMode::eLinear;
 			sampler_info.addressModeU = vk::SamplerAddressMode::eClampToEdge;
 			sampler_info.addressModeV = vk::SamplerAddressMode::eClampToEdge;
@@ -444,6 +444,44 @@ struct VoxelPipeline
 	vk::CommandBuffer make(std::shared_ptr<btr::Context>& context)
 	{
 		auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
+		vk::ImageSubresourceRange range;
+		range.setLayerCount(1);
+		range.setLevelCount(5);
+		range.setAspectMask(vk::ImageAspectFlagBits::eColor);
+		range.setBaseArrayLayer(0);
+		range.setBaseMipLevel(0);
+
+		{
+
+			vk::ImageMemoryBarrier to_clear_barrier;
+			to_clear_barrier.image = m_voxel_hierarchy_image.get();
+			to_clear_barrier.oldLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+			to_clear_barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
+			to_clear_barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
+			to_clear_barrier.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
+			to_clear_barrier.subresourceRange = range;
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_clear_barrier });
+
+			vk::ClearColorValue clear_value;
+			clear_value.setUint32(std::array<uint32_t, 4>{0u});
+			cmd.clearColorImage(m_voxel_hierarchy_image.get(), vk::ImageLayout::eTransferDstOptimal, clear_value, range);
+
+		}
+
+		{
+			vk::ImageMemoryBarrier to_read_barrier;
+			to_read_barrier.image = m_voxel_hierarchy_image.get();
+			to_read_barrier.newLayout = vk::ImageLayout::eGeneral;
+			to_read_barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+// 			to_read_barrier.oldLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+// 			to_read_barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
+			to_read_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
+			to_read_barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+			to_read_barrier.subresourceRange = range;
+//			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, {}, { to_read_barrier });
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, {}, { to_read_barrier });
+
+		}
 
 		for (auto& voxelize : m_voxelize_list)
 		{
@@ -463,28 +501,34 @@ struct VoxelPipeline
 		range.setBaseArrayLayer(0);
 		range.setBaseMipLevel(0);
 
-		{
-			vk::ImageMemoryBarrier to_read_barrier;
-			to_read_barrier.image = m_voxel_hierarchy_image.get();
-			to_read_barrier.oldLayout = vk::ImageLayout::eGeneral;
-			to_read_barrier.newLayout = vk::ImageLayout::eGeneral;
-			to_read_barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
-			to_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderWrite;
-			to_read_barrier.subresourceRange = range;
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, {}, { to_read_barrier });
-		}
-
+		vk::ImageMemoryBarrier to_read_barrier;
+		to_read_barrier.image = m_voxel_hierarchy_image.get();
+		to_read_barrier.oldLayout = vk::ImageLayout::eGeneral;
+		to_read_barrier.newLayout = vk::ImageLayout::eGeneral;
+		to_read_barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+		to_read_barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+		to_read_barrier.subresourceRange = range;
 
 		auto groups = m_voxelize_info_cpu.u_cell_num;
-		for (int i = 0; i < 4; i++)
+		for (int32_t i = 0; i < 5; i++)
 		{
+			to_read_barrier.subresourceRange.baseMipLevel = i;
+			if (i == 0)
+			{
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, {}, { to_read_barrier });
+			}
+			else
+			{
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, {}, { to_read_barrier });
+			}
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_MAKE_HIERARCHY_VOXEL].get());
 			vk::ArrayProxy<const vk::DescriptorSet> descriptor_sets = {
 				m_descriptor_set[DESCRIPTOR_SET_VOXEL].get(),
 			};
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_MAKE_HIERARCHY_VOXEL].get(), 0, descriptor_sets, {});
-			cmd.pushConstants<int>(m_pipeline_layout[PIPELINE_LAYOUT_MAKE_HIERARCHY_VOXEL].get(), vk::ShaderStageFlagBits::eCompute, 0, i);
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_MAKE_HIERARCHY_VOXEL].get(), 0, descriptor_sets, {});
+			cmd.pushConstants<int32_t>(m_pipeline_layout[PIPELINE_LAYOUT_MAKE_HIERARCHY_VOXEL].get(), vk::ShaderStageFlagBits::eCompute, 0, i);
 			groups /= 2;
+			groups = glm::max(groups, uvec4(1));
 			cmd.dispatch(groups.x, groups.y, groups.z);
 		}
 
@@ -500,7 +544,7 @@ struct VoxelPipeline
 
 		vk::ImageSubresourceRange range;
 		range.setLayerCount(1);
-		range.setLevelCount(1);
+		range.setLevelCount(5);
 		range.setAspectMask(vk::ImageAspectFlagBits::eColor);
 		range.setBaseArrayLayer(0);
 		range.setBaseMipLevel(0);
@@ -514,7 +558,7 @@ struct VoxelPipeline
 				to_read_barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
 				to_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 				to_read_barrier.subresourceRange = range;
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), {}, {}, { to_read_barrier });
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eVertexShader, vk::DependencyFlags(), {}, {}, { to_read_barrier });
 			}
 			vk::RenderPassBeginInfo begin_render_info;
 			begin_render_info.setFramebuffer(m_draw_render_pass->getFramebuffer(context->getGPUFrame()));
@@ -528,7 +572,8 @@ struct VoxelPipeline
 				sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA),
 			};
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_VOXEL].get(), 0, descriptor_sets, {});
-			cmd.draw(14, m_voxelize_info_cpu.u_cell_num.x *m_voxelize_info_cpu.u_cell_num.y*m_voxelize_info_cpu.u_cell_num.z, 0, 0);
+			uint32_t miplevel = 0;
+			cmd.draw(14, m_voxelize_info_cpu.u_cell_num.x *m_voxelize_info_cpu.u_cell_num.y*m_voxelize_info_cpu.u_cell_num.z / (1<<(3*miplevel)), 0, 0);
 			cmd.endRenderPass();
 		}
 

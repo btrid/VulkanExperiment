@@ -541,16 +541,6 @@ struct ModelVoxelize : public Voxelize
 				to_copy_barrier.subresourceRange = range;
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
 			}
-			{
-				vk::ImageMemoryBarrier to_copy_barrier;
-				to_copy_barrier.image = parent->m_voxel_hierarchy_image.get();
-				to_copy_barrier.oldLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-				to_copy_barrier.newLayout = vk::ImageLayout::eGeneral;
-				to_copy_barrier.srcAccessMask = vk::AccessFlagBits::eShaderRead;
-				to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eShaderWrite;
-				to_copy_barrier.subresourceRange = range;
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
-			}
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COPY_VOXEL].get());
 			std::vector<vk::DescriptorSet> descriptor_sets = {

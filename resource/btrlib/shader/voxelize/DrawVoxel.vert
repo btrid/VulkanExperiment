@@ -36,14 +36,18 @@ uint elements[] = {
 };
 void main()
 {
-	uvec3 index = convert1DTo3D(gl_InstanceIndex, u_voxel_info.u_cell_num.xyz);
-	vec4 value = textureLod(t_voxel_sampler, vec3(index)/u_voxel_info.u_cell_num.xyz, 0);
+	int mipmap = 0;
+	uvec3 cell_num = u_voxel_info.u_cell_num.xyz/(1<<mipmap);
+	cell_num = max(cell_num, uvec3(1));
+
+	uvec3 index = convert1DTo3D(gl_InstanceIndex, cell_num);
+	vec4 value = texelFetch(t_voxel_sampler, ivec3(index), mipmap);
 	if(dot(value.xyz, value.xyz) >= 0.0003)
 	{
-		vec3 size = u_voxel_info.u_cell_size.xyz;
+		vec3 size = u_voxel_info.u_cell_size.xyz*(1<<mipmap);
 		Out.albedo = value.xyz;
 		vec3 vertex = box[elements[gl_VertexIndex]]*0.3;
-		gl_Position = u_camera[0].u_projection * u_camera[0].u_view * vec4((vertex+vec3(index))*size+u_voxel_info.u_area_min.xyz, 1.0);
+		gl_Position = u_camera[0].u_projection * u_camera[0].u_view * vec4((vertex+vec3(index))*size + size*0.5 + u_voxel_info.u_area_min.xyz, 1.0);
 	}
 	else
 	{

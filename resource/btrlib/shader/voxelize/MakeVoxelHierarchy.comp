@@ -12,16 +12,20 @@ layout(push_constant) uniform ConstantBlock
 } constant;
 
 shared vec3 s_value[8];
+shared int s_has_value[8];
 void main()
 {
-	s_value[gl_LocalInvocationIndex] = imageLoad(t_voxel_image[constant.m_miplevel], ivec3(gl_WorkGroupID*2+gl_LocalInvocationID)).rgb;
-
+	{
+		vec3 value = imageLoad(t_voxel_image[constant.m_miplevel], ivec3(gl_WorkGroupID*2+gl_LocalInvocationID)).rgb;
+		s_value[gl_LocalInvocationIndex] = value;
+		s_has_value[gl_LocalInvocationIndex] = dot(value,value) >= 0.00001 ? 1 : 0;
+	}
 	barrier();
-	if(all(equal(gl_LocalInvocationID.xyz, uvec3(0))))
+	if(gl_LocalInvocationIndex == 0)
 	{
 		memoryBarrierShared();
-
-		vec3 value = s_value[0] +s_value[1] +s_value[2] +s_value[3] +s_value[4] +s_value[5] +s_value[6] +s_value[7];
+		int count = (s_has_value[0] +s_has_value[1] +s_has_value[2] +s_has_value[3] +s_has_value[4] +s_has_value[5] +s_has_value[6] +s_has_value[7]);
+		vec3 value = (s_value[0] +s_value[1] +s_value[2] +s_value[3] +s_value[4] +s_value[5] +s_value[6] +s_value[7]) / (count == 0 ? 1 : count);
 		imageStore(t_voxel_image[constant.m_miplevel+1], ivec3(gl_WorkGroupID), vec4(value, 1.));
 	}
 }
