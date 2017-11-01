@@ -34,9 +34,15 @@ uint elements[] = {
 	3, 2, 6, 7, 4, 2, 0,
 	3, 1, 6, 5, 4, 1, 0
 };
+
+layout(push_constant) uniform ConstantBlock
+{
+	int m_miplevel;
+} constant;
+
 void main()
 {
-	int mipmap = 0;
+	int mipmap = constant.m_miplevel;
 	uvec3 cell_num = u_voxel_info.u_cell_num.xyz/(1<<mipmap);
 	cell_num = max(cell_num, uvec3(1));
 
