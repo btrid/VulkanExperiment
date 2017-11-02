@@ -9,7 +9,7 @@
 
 #include <btrlib/ConvertDimension.glsl>
 
-#define SETPOINT_VOXEL 0
+#define USE_VOXEL 0
 #include <btrlib/Voxelize/Voxelize.glsl>
 
 #define SETPOINT_MAP 1
@@ -27,6 +27,7 @@ layout (local_size_x = 128, local_size_y = 4, local_size_z = 1) in;
 
 void main()
 {
+/*
 	uvec3 id = gl_GlobalInvocationID.xyz;
 	if(any(greaterThan(id, u_voxel_info.u_cell_num.xyz))){
 		return;
@@ -73,7 +74,8 @@ void main()
 		vec3 albedo = vec3(1., 0., 1.);
 		vec3 diffuse = albedo * irradiance;
 		uint packd_albedo = uint(diffuse.r*64+32)<<23 | uint(diffuse.g*64+32)<<14 | uint(diffuse.b*64+32)<<5 | 1;
-		imageAtomicAdd(t_voxel_albedo, ivec3(id), packd_albedo);
+		imageAtomicAdd(t_voxel, ivec3(id), packd_albedo);
 	}
+*/
 
 }

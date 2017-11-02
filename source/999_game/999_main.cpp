@@ -137,7 +137,7 @@ struct ModelGIPipelineComponent : public ModelDrawPipelineComponent
 			vk::DescriptorSetLayout layouts[] = {
 				m_model_descriptor->getLayout(),
 				sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
-				sMap_RayMarch::Order().getVoxel().getDescriptorSetLayout(VoxelPipeline::DESCRIPTOR_SET_LAYOUT_VOXEL_WRITE),
+				sMap_RayMarch::Order().getVoxel().getDescriptorSetLayout(VoxelPipeline::DESCRIPTOR_SET_LAYOUT_VOXEL),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
@@ -258,7 +258,7 @@ struct ModelGIPipelineComponent : public ModelDrawPipelineComponent
 				cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline.get());
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 0, render->m_descriptor_set_model.get(), {});
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 2, sMap_RayMarch::Order().getVoxel().getDescriptorSet(VoxelPipeline::DESCRIPTOR_SET_VOXEL_WRITE), {});
+				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 2, sMap_RayMarch::Order().getVoxel().getDescriptorSet(VoxelPipeline::DESCRIPTOR_SET_VOXEL), {});
 				cmd.bindVertexBuffers(0, { model->m_model_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().buffer }, { model->m_model_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().offset });
 				cmd.bindIndexBuffer(model->m_model_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().buffer, model->m_model_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().offset, model->m_model_resource->m_mesh_resource.mIndexType);
 				cmd.drawIndexedIndirect(model->m_model_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().buffer, model->m_model_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().offset, model->m_model_resource->m_mesh_resource.mIndirectCount, sizeof(cModel::Mesh));

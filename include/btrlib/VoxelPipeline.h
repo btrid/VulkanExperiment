@@ -141,9 +141,6 @@ struct VoxelPipeline
 				// èâä˙ê›íË
 				vk::ImageMemoryBarrier to_copy_barrier;
 				to_copy_barrier.image = image.get();
-// 				to_copy_barrier.oldLayout = vk::ImageLayout::eUndefined;
-// 				to_copy_barrier.newLayout = vk::ImageLayout::eGeneral;
-// 				to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 				to_copy_barrier.oldLayout = vk::ImageLayout::eUndefined;
 				to_copy_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 				to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;

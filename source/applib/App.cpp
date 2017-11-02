@@ -50,9 +50,9 @@ void App::setup(const AppDescriptor& desc)
 			pool_size[1].setType(vk::DescriptorType::eStorageBuffer);
 			pool_size[1].setDescriptorCount(30);
 			pool_size[2].setType(vk::DescriptorType::eCombinedImageSampler);
-			pool_size[2].setDescriptorCount(10);
+			pool_size[2].setDescriptorCount(30);
 			pool_size[3].setType(vk::DescriptorType::eStorageImage);
-			pool_size[3].setDescriptorCount(10);
+			pool_size[3].setDescriptorCount(30);
 
 			vk::DescriptorPoolCreateInfo pool_info;
 			pool_info.setPoolSizeCount((uint32_t)pool_size.size());

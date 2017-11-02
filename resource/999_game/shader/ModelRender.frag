@@ -35,9 +35,9 @@ vec3 getColor()
 	return ambient + diffuse + spec;
 */
 	vec3 albedo = texture(tDiffuse[0], FSIn.Texcoord.xy).xyz;
-	uint packed = imageLoad(t_voxel_albedo, getVoxelIndex(FSIn.Position)).r;
-	vec3 emissive = unpack(packed);
-	return albedo * emissive;
+//	uint packed = imageLoad(t_voxel_albedo, getVoxelIndex(FSIn.Position)).r;
+//	vec3 emissive = unpack(packed);
+	return albedo;
 }
 
 void main()
