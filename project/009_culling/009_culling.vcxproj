@@ -73,6 +73,9 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\include\009_culling\PreDepthPass.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="..\..\packages\glm.0.9.8.4\build\native\glm.targets" Condition="Exists('..\..\packages\glm.0.9.8.4\build\native\glm.targets')" />
