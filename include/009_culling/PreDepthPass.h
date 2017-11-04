@@ -2,7 +2,48 @@
 #include <memory>
 #include <btrlib/Define.h>
 #include <btrlib/Context.h>
+#include <btrlib/Singleton.h>
+#include <applib/sCameraManager.h>
 
+struct ModelRenderer : Singleton<ModelRenderer>
+{
+	friend Singleton<ModelRenderer>;
+	// setup descriptor_set_layout
+	void setup(const std::shared_ptr<btr::Context>& context)
+	{
+		auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
+		std::vector<vk::DescriptorSetLayoutBinding> binding =
+		{
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(stage)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(0),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(stage)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(1),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(stage)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(2),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(stage)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(3),
+		};
+
+		DescriptorLayoutDescriptor desc;
+		desc.binding = binding;
+		desc.m_set_num = 20;
+		m_model_descriptor_layout = std::make_shared<DescriptorLayoutEx>(context, desc);
+	}
+	std::shared_ptr<DescriptorLayoutEx> m_model_descriptor_layout;
+
+};
 struct DepthRenderPass : public RenderPassModule
 {
 	DepthRenderPass(const std::shared_ptr<btr::Context>& context)
@@ -62,7 +103,6 @@ struct DepthRenderPass : public RenderPassModule
 struct PreDepthPass;
 struct PreDepthPipeline
 {
-	std::shared_ptr<PreDepthPass> m_pass;
 	PreDepthPipeline(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<PreDepthPass>& pass)
 		: m_pass(pass)
 	{
@@ -87,48 +127,13 @@ struct PreDepthPipeline
 				m_shader_info[i].setPName("main");
 			}
 		}
-		// setup descriptor_set_layout
-// 		vk::UniqueDescriptorPool m_descriptor_pool;
-// 		vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
-// 		{
-// 			auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
-// 			vk::DescriptorSetLayoutBinding binding[] =
-// 			{
-// 				vk::DescriptorSetLayoutBinding()
-// 				.setStageFlags(stage)
-// 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-// 				.setDescriptorCount(1)
-// 				.setBinding(0),
-// 				vk::DescriptorSetLayoutBinding()
-// 				.setStageFlags(stage)
-// 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-// 				.setDescriptorCount(1)
-// 				.setBinding(1),
-// 				vk::DescriptorSetLayoutBinding()
-// 				.setStageFlags(stage)
-// 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-// 				.setDescriptorCount(1)
-// 				.setBinding(2),
-// 				vk::DescriptorSetLayoutBinding()
-// 				.setStageFlags(stage)
-// 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-// 				.setDescriptorCount(1)
-// 				.setBinding(3),
-// 			};
-// 			vk::DescriptorSetLayoutCreateInfo descriptor_set_layout_info;
-// 			descriptor_set_layout_info.setBindingCount(array_length(binding));
-// 			descriptor_set_layout_info.setPBindings(binding);
-// 			m_descriptor_set_layout = context->m_device->createDescriptorSetLayoutUnique(descriptor_set_layout_info);
-// 
-// 			m_descriptor_pool = createDescriptorPool(context, binding, array_length(binding), 10);
-// 		}
-// 
+
 		// setup pipeline_layout
 		{
 			std::vector<vk::DescriptorSetLayout> layouts =
 			{
 				sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
-				m_descriptor_set_layout.get(),
+				ModelRenderer::Order().m_model_descriptor_layout->getLayout(),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(layouts.size());
@@ -274,7 +279,7 @@ struct PreDepthPipeline
 		SHADER_NUM,
 	};
 
-
+	std::shared_ptr<PreDepthPass> m_pass;
 	vk::UniquePipelineLayout m_pipeline_layout;
 	vk::UniquePipeline m_pipeline;
 	std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_module;

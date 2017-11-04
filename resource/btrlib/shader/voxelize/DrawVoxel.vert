@@ -21,18 +21,20 @@ layout(location=1)out Vertex
 }Out;
 
 vec3 box[] = { 
-	vec3(1., 1., 1.),
-	vec3(-1., 1., 1.),
-	vec3(1., 1., -1.),
-	vec3(-1., 1., -1.),
+	vec3(-1., 1., 1.),  
 	vec3(1., -1., 1.),
-	vec3(-1., -1., 1.),
+	vec3(1., 1., 1.),
+	vec3(1., 1., -1.),
+	vec3(-1., 1., 1.),
+	vec3(-1., 1., -1.),
 	vec3(-1., -1., -1.),
-	vec3(1., -1., -1.)
-};
-uint elements[] = {
-	3, 2, 6, 7, 4, 2, 0,
-	3, 1, 6, 5, 4, 1, 0
+	vec3(1., 1., -1.),
+	vec3(1., -1., -1.), 
+	vec3(1., -1., 1.),  
+	vec3(-1., -1., -1.), 
+	vec3(-1., -1., 1.),
+	vec3(-1., 1., 1.),  
+	vec3(1., -1., 1.),
 };
 
 layout(push_constant) uniform ConstantBlock
@@ -52,7 +54,7 @@ void main()
 	{
 		vec3 size = u_voxel_info.u_cell_size.xyz*(1<<mipmap);
 		Out.albedo = value.xyz;
-		vec3 vertex = box[elements[gl_VertexIndex]]*0.3;
+		vec3 vertex = box[gl_VertexIndex]*0.3;
 		gl_Position = u_camera[0].u_projection * u_camera[0].u_view * vec4((vertex+vec3(index))*size + size*0.5 + u_voxel_info.u_area_min.xyz, 1.0);
 	}
 	else
