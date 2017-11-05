@@ -26,13 +26,14 @@
 #include <applib/Geometry.h>
 #include <applib/sCameraManager.h>
 
+//#include <009_culling/PreDepthPass.h>
+
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
 #pragma comment(lib, "vulkan-1.lib")
 
 
-
-struct CullingDescriptor
+struct InstancingDescriptorSet
 {
 	btr::BufferMemoryEx<uint32_t> m_instance_index_map;
 	btr::BufferMemoryEx<uint32_t> m_visible;
@@ -91,18 +92,22 @@ struct CullingDescriptor
 	}
 };
 
-
 struct CullingTest
 {
-	struct ResourceVertex
+	struct ResourceVertex //: IDepthRender
 	{
 		btr::BufferMemoryEx<vec3> m_vertex;
 		btr::BufferMemoryEx<uvec3> m_index;
 		btr::BufferMemoryEx<vk::DrawIndexedIndirectCommand> m_draw_indirect;
+
 		btr::BufferMemoryEx<mat4> m_world;
 		btr::BufferMemoryEx<uint32_t> m_instance_index_map;
 
-		std::shared_ptr<DescriptorSet<CullingDescriptor>> m_occlusion_descriptor_set;
+		std::shared_ptr<DescriptorSet<InstancingDescriptorSet>> m_instancing_descriptor_set;
+	};
+	struct Renderer
+	{
+		std::vector<std::shared_ptr<ResourceVertex>> m_renders;
 	};
 
 	enum Shader
@@ -139,12 +144,12 @@ struct CullingTest
 	std::array<vk::UniquePipeline, PIPELINE_NUM> m_pipeline;
 
 	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
-	std::shared_ptr<DescriptorLayout<CullingDescriptor>> m_occlusion_descriptor_layout;
+	std::shared_ptr<DescriptorLayout<InstancingDescriptorSet>> m_occlusion_descriptor_layout;
 
 	CullingTest(const std::shared_ptr<btr::Context>& context)
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-		m_occlusion_descriptor_layout = std::make_shared<DescriptorLayout<CullingDescriptor>>(context);
+		m_occlusion_descriptor_layout = std::make_shared<DescriptorLayout<InstancingDescriptorSet>>(context);
 
 		{
 			std::shared_ptr<ResourceVertex> resource = std::make_shared<ResourceVertex>();
@@ -231,7 +236,7 @@ struct CullingTest
 			}
 
 			{
-				CullingDescriptor desc_set;
+				InstancingDescriptorSet desc_set;
 				desc_set.m_draw_cmd = resource->m_draw_indirect;
 				desc_set.m_instance_index_map = resource->m_instance_index_map;
 				desc_set.m_world = resource->m_world;
@@ -240,7 +245,7 @@ struct CullingTest
 				desc.size = sizeof(uint32_t) * num;
 				desc_set.m_visible = context->m_storage_memory.allocateMemory<uint32_t>(desc);
 
-				resource->m_occlusion_descriptor_set = m_occlusion_descriptor_layout->createDescriptorSet(context, std::move(desc_set));
+				resource->m_instancing_descriptor_set = m_occlusion_descriptor_layout->createDescriptorSet(context, std::move(desc_set));
 			}
 
 			m_culling_target = resource;
@@ -328,7 +333,7 @@ struct CullingTest
 				resource->m_instance_index_map = buffer;
 			}
 			{
-				CullingDescriptor desc_set;
+				InstancingDescriptorSet desc_set;
 				desc_set.m_draw_cmd = resource->m_draw_indirect;
 				desc_set.m_instance_index_map = resource->m_instance_index_map;
 				desc_set.m_world = resource->m_world;
@@ -337,7 +342,7 @@ struct CullingTest
 				desc.size = sizeof(uint32_t) * num;
 				desc_set.m_visible = context->m_storage_memory.allocateMemory<uint32_t>(desc);
 
-				resource->m_occlusion_descriptor_set = m_occlusion_descriptor_layout->createDescriptorSet(context, std::move(desc_set));
+				resource->m_instancing_descriptor_set = m_occlusion_descriptor_layout->createDescriptorSet(context, std::move(desc_set));
 			}
 
 
@@ -661,9 +666,9 @@ struct CullingTest
 				to_transfer.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eDrawIndirect, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
 
-				cmd.updateBuffer<uint32_t>(m_culling_target->m_draw_indirect.getBufferInfo().buffer, m_culling_target->m_occlusion_descriptor_set->m_descriptor.m_draw_cmd.getBufferInfo().offset + offsetof(vk::DrawIndexedIndirectCommand, instanceCount), 1000u);
+				cmd.updateBuffer<uint32_t>(m_culling_target->m_draw_indirect.getBufferInfo().buffer, m_culling_target->m_instancing_descriptor_set->m_descriptor.m_draw_cmd.getBufferInfo().offset + offsetof(vk::DrawIndexedIndirectCommand, instanceCount), 1000u);
 
-				auto to_read = m_culling_target->m_occlusion_descriptor_set->m_descriptor.m_draw_cmd.makeMemoryBarrier();
+				auto to_read = m_culling_target->m_instancing_descriptor_set->m_descriptor.m_draw_cmd.makeMemoryBarrier();
 				to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 				to_read.setDstAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eDrawIndirect, {}, {}, to_read, {});
@@ -671,14 +676,14 @@ struct CullingTest
 
 			{
 
-				auto to_transfer = m_culling_target->m_occlusion_descriptor_set->m_descriptor.m_visible.makeMemoryBarrier();
+				auto to_transfer = m_culling_target->m_instancing_descriptor_set->m_descriptor.m_visible.makeMemoryBarrier();
 				to_transfer.setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
 				to_transfer.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
 
-				cmd.fillBuffer(m_culling_target->m_occlusion_descriptor_set->m_descriptor.m_visible.getBufferInfo().buffer, m_culling_target->m_occlusion_descriptor_set->m_descriptor.m_visible.getBufferInfo().offset, m_culling_target->m_occlusion_descriptor_set->m_descriptor.m_visible.getBufferInfo().range, 0u);
+				cmd.fillBuffer(m_culling_target->m_instancing_descriptor_set->m_descriptor.m_visible.getBufferInfo().buffer, m_culling_target->m_instancing_descriptor_set->m_descriptor.m_visible.getBufferInfo().offset, m_culling_target->m_instancing_descriptor_set->m_descriptor.m_visible.getBufferInfo().range, 0u);
 
-				auto to_write = m_culling_target->m_occlusion_descriptor_set->m_descriptor.m_visible.makeMemoryBarrier();
+				auto to_write = m_culling_target->m_instancing_descriptor_set->m_descriptor.m_visible.makeMemoryBarrier();
 				to_write.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 				to_write.setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, to_write, {});
@@ -695,7 +700,7 @@ struct CullingTest
 		{
 			// depth
 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_GRAPHICS_WRITE_DEPTH].get());
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 0, m_occluder->m_occlusion_descriptor_set->getDescriptorSet(), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 0, m_occluder->m_instancing_descriptor_set->getDescriptorSet(), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 
 			cmd.bindVertexBuffers(0, m_occluder->m_vertex.getBufferInfo().buffer, m_occluder->m_vertex.getBufferInfo().offset);
@@ -706,7 +711,7 @@ struct CullingTest
 		{
 			// culling visible test
 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_GRAPHICS_OCCULSION_TEST].get());
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 0, m_culling_target->m_occlusion_descriptor_set->getDescriptorSet(), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 0, m_culling_target->m_instancing_descriptor_set->getDescriptorSet(), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 
 			cmd.bindVertexBuffers(0, m_culling_target->m_vertex.getBufferInfo().buffer, m_culling_target->m_vertex.getBufferInfo().offset);
@@ -719,32 +724,32 @@ struct CullingTest
 		// visible calc
 		{
 			{
-				auto to_transfer = m_culling_target->m_occlusion_descriptor_set->m_descriptor.m_draw_cmd.makeMemoryBarrier();
+				auto to_transfer = m_culling_target->m_instancing_descriptor_set->m_descriptor.m_draw_cmd.makeMemoryBarrier();
 				to_transfer.setSrcAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
 				to_transfer.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eDrawIndirect, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
 
-				cmd.updateBuffer<uint32_t>(m_culling_target->m_occlusion_descriptor_set->m_descriptor.m_draw_cmd.getBufferInfo().buffer, m_culling_target->m_occlusion_descriptor_set->m_descriptor.m_draw_cmd.getBufferInfo().offset + offsetof(vk::DrawIndexedIndirectCommand, instanceCount), 0u);
+				cmd.updateBuffer<uint32_t>(m_culling_target->m_instancing_descriptor_set->m_descriptor.m_draw_cmd.getBufferInfo().buffer, m_culling_target->m_instancing_descriptor_set->m_descriptor.m_draw_cmd.getBufferInfo().offset + offsetof(vk::DrawIndexedIndirectCommand, instanceCount), 0u);
 
-				auto to_read = m_culling_target->m_occlusion_descriptor_set->m_descriptor.m_draw_cmd.makeMemoryBarrier();
+				auto to_read = m_culling_target->m_instancing_descriptor_set->m_descriptor.m_draw_cmd.makeMemoryBarrier();
 				to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 				to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead| vk::AccessFlagBits::eShaderWrite);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
 			}
 
 			{
-				auto to_read = m_culling_target->m_occlusion_descriptor_set->m_descriptor.m_visible.makeMemoryBarrier();
+				auto to_read = m_culling_target->m_instancing_descriptor_set->m_descriptor.m_visible.makeMemoryBarrier();
 				to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
 				to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
  				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_read }, {});
 			}
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COMPUTE_VISIBLE].get());
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_COMPUTE].get(), 0, m_culling_target->m_occlusion_descriptor_set->getDescriptorSet(), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_COMPUTE].get(), 0, m_culling_target->m_instancing_descriptor_set->getDescriptorSet(), {});
 			cmd.dispatch(1, 1, 1);
 
 			{
-				auto to_read = m_culling_target->m_occlusion_descriptor_set->m_descriptor.m_draw_cmd.makeMemoryBarrier();
+				auto to_read = m_culling_target->m_instancing_descriptor_set->m_descriptor.m_draw_cmd.makeMemoryBarrier();
 				to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
 				to_read.setDstAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, {}, {}, to_read, {});
@@ -760,12 +765,12 @@ struct CullingTest
 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_GRAPHICS_RENDER].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 0, m_occluder->m_occlusion_descriptor_set->getDescriptorSet(), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 0, m_occluder->m_instancing_descriptor_set->getDescriptorSet(), {});
 			cmd.bindVertexBuffers(0, m_occluder->m_vertex.getBufferInfo().buffer, m_occluder->m_vertex.getBufferInfo().offset);
 			cmd.bindIndexBuffer(m_occluder->m_index.getBufferInfo().buffer, m_occluder->m_index.getBufferInfo().offset, vk::IndexType::eUint32);
 			cmd.drawIndexedIndirect(m_occluder->m_draw_indirect.getBufferInfo().buffer, m_occluder->m_draw_indirect.getBufferInfo().offset, 1, sizeof(vk::DrawIndexedIndirectCommand));
 
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 0, m_culling_target->m_occlusion_descriptor_set->getDescriptorSet(), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 0, m_culling_target->m_instancing_descriptor_set->getDescriptorSet(), {});
 			cmd.bindVertexBuffers(0, m_culling_target->m_vertex.getBufferInfo().buffer, m_culling_target->m_vertex.getBufferInfo().offset);
 			cmd.bindIndexBuffer(m_culling_target->m_index.getBufferInfo().buffer, m_culling_target->m_index.getBufferInfo().offset, vk::IndexType::eUint32);
 			cmd.drawIndexedIndirect(m_culling_target->m_draw_indirect.getBufferInfo().buffer, m_culling_target->m_draw_indirect.getBufferInfo().offset, 1, sizeof(vk::DrawIndexedIndirectCommand));

@@ -5,9 +5,19 @@
 #include <btrlib/Singleton.h>
 #include <applib/sCameraManager.h>
 
+struct RenderModule
+{
+	virtual void draw(vk::CommandBuffer cmd) = 0;
+};
+
+struct IDepthRender
+{
+//	virtual DescriptorSet<InstancingDescriptorSet> m_desc;
+};
 struct ModelRenderer : Singleton<ModelRenderer>
 {
 	friend Singleton<ModelRenderer>;
+
 	// setup descriptor_set_layout
 	void setup(const std::shared_ptr<btr::Context>& context)
 	{
@@ -99,9 +109,12 @@ struct DepthRenderPass : public RenderPassModule
 	vk::UniqueFramebuffer m_framebuffer;
 
 };
+struct DepthRenderer 
+{
+};
 
 struct PreDepthPass;
-struct PreDepthPipeline
+struct PreDepthPipeline : public std::enable_shared_from_this<PreDepthPipeline>
 {
 	PreDepthPipeline(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<PreDepthPass>& pass)
 		: m_pass(pass)
@@ -240,36 +253,6 @@ struct PreDepthPipeline
 	{
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline.get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 0, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
-
-		for (auto& render : m_draw_cmds[sGlobal::Order().getGPUIndex()])
-		{
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 1, render.m_descriptor_set, {});
-			render.render->draw(cmd);
-		}
-	}
-
-	struct RenderModule
-	{
-		btr::BufferMemoryEx<vec3> m_vertex;
-		btr::BufferMemoryEx<uvec3> m_index;
-		btr::BufferMemoryEx<vk::DrawIndexedIndirectCommand> m_draw_indirect;
-
-		void draw(vk::CommandBuffer cmd)
-		{
-			cmd.bindVertexBuffers(0, m_vertex.getBufferInfo().buffer, m_vertex.getBufferInfo().offset);
-			cmd.bindIndexBuffer(m_index.getBufferInfo().buffer, m_index.getBufferInfo().offset, vk::IndexType::eUint32);
-			cmd.drawIndexedIndirect(m_draw_indirect.getBufferInfo().buffer, m_draw_indirect.getBufferInfo().offset, 1, sizeof(vk::DrawIndexedIndirectCommand));
-		}
-	};
-	struct DrawCmd
-	{
-		vk::DescriptorSet m_descriptor_set;
-		std::shared_ptr<RenderModule> render;
-	};
-
-	void drawRegister(DrawCmd&& drawCmd)
-	{
-		m_draw_cmds[sGlobal::Order().getCPUIndex()].push_back(std::move(drawCmd));
 	}
 
 	enum Shader
@@ -285,7 +268,23 @@ struct PreDepthPipeline
 	std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_module;
 	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_shader_info;
 
-	std::array<std::vector<DrawCmd>, 2> m_draw_cmds;
+	template<typename T, typename... Args>
+	std::shared_ptr<T> makeRenderer(const std::shared_ptr<btr::Context>& context, Args... args)
+	{
+		struct U : public T
+		{
+			template<typename... Args>
+			U(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<PreDepthPipeline>& parent, Args... args)
+				: T(context, parent, args...)
+			{}
+		};
+		auto parent = shared_from_this();
+		auto ptr = std::make_shared<U>(context, parent, args...);
+//		m_renderer.push_back(ptr);
+		return ptr;
+	}
+
+//	std::vector<std::shared_ptr<Renderer>> m_renderer;
 
 };
 struct PreDepthPass : public std::enable_shared_from_this<PreDepthPass>
