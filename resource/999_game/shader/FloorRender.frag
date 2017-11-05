@@ -15,12 +15,13 @@
 layout(location=0) out vec4 FragColor;
 
 
-layout(location=1) in FSIN
+layout(location=1) in GSOUT
 {
-	vec4 Color;
-}FSIn;
+	uint map;
+	vec3 axis;
+}GSOut;
 
 void main()
 {
-	FragColor = FSIn.Color;
+	FragColor = vec4(GSOut.axis, 1.);
 }

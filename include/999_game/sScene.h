@@ -309,22 +309,22 @@ struct sScene : public Singleton<sScene>
 		bindings[DESCRIPTOR_SET_LAYOUT_MAP] =
 		{
 			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eFragment)
+			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment)
 			.setDescriptorCount(1)
 			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 			.setBinding(0),
 			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eFragment)
+			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment)
 			.setDescriptorCount(1)
 			.setDescriptorType(vk::DescriptorType::eStorageImage)
 			.setBinding(1),
 			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eFragment)
+			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment)
 			.setDescriptorCount(1)
 			.setDescriptorType(vk::DescriptorType::eStorageImage)
 			.setBinding(2),
 			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eFragment)
+			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment)
 			.setDescriptorCount(1)
 			.setDescriptorType(vk::DescriptorType::eStorageImage)
 			.setBinding(3),
@@ -332,7 +332,7 @@ struct sScene : public Singleton<sScene>
 		bindings[DESCRIPTOR_SET_LAYOUT_SCENE] =
 		{
 			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eFragment)
+			.setStageFlags(vk::ShaderStageFlagBits::eCompute | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment)
 			.setDescriptorCount(1)
 			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 			.setBinding(0),
