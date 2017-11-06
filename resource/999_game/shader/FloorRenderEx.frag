@@ -102,16 +102,15 @@ void main()
 
 	vec2 tex01 = (p.xy * 0.5) + 0.5;
 	tex01 = 1.-tex01;
-	uvec2 tile_index = uvec2(tex01 / (1. / u_tile_info.m_tile_num));
+	uvec2 tile_index = uvec2(tex01 * u_tile_info.m_tile_num);
 	uint tile_index_1d = tile_index.x + tile_index.y * u_tile_info.m_tile_num.x;
-	uint tile_map_index_1d = tile_index_1d * u_tile_info.m_tile_index_map_max;
+	uint tile_map_index_offset = tile_index_1d * u_tile_info.m_tile_index_map_max;
 	uint light_num = b_tile_data_counter[tile_index_1d];
 	
-	uint count_list_offset = tile_index_1d*u_tile_info.m_tile_index_map_max;
 	FragColor = vec4(0.);
 	for(uint i = 0; i < light_num; i++)
 	{
-		FragColor += b_light[b_tile_data_map[count_list_offset+i]].m_emissive / light_num;
+		FragColor += b_light[b_tile_data_map[tile_map_index_offset+i]].m_emissive / light_num;
 	}
 
 }

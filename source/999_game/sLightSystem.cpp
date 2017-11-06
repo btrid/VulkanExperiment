@@ -331,7 +331,8 @@ vk::CommandBuffer sLightSystem::execute(std::shared_ptr<btr::Context>& context)
 			auto to_read = m_tile_data_counter.makeMemoryBarrier();
 			to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
 			to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
+//			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eAllCommands, {}, {}, to_read, {});
 		}
 	}
 

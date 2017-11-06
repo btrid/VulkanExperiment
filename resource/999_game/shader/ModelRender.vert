@@ -52,6 +52,6 @@ void main()
 	gl_Position = u_camera[0].u_projection * u_camera[0].u_view * vec4(pos.xyz, 1.0);
 
 	VSOut.Position = pos.xyz;
-	VSOut.Normal = /*mat3(skinningMat) **/ /*mat3(transpose(inverse(uView))) **/ inNormal.xyz;
+	VSOut.Normal = mat3(skinningMat) * inNormal.xyz;
 	VSOut.Texcoord = inTexcoord.xyz;
 }

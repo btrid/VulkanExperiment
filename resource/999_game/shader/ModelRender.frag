@@ -9,6 +9,9 @@
 #define SETPOINT_VOXEL 2
 #include <btrlib/Voxelize/Voxelize.glsl>
 
+#define USE_LIGHT 3
+#include <Light.glsl>
+
 layout(early_fragment_tests) in;
 
 struct Vertex
@@ -18,26 +21,36 @@ struct Vertex
 	vec3 Texcoord;
 };
 layout(location = 0) in Vertex FSIn;
-
+//in vec4 gl_FragCoord;
 layout(location=0) out vec4 FragColor;
 
 vec3 getColor()
 {
-/*	Material m = materials[FSIn.MaterialIndex];
-	vec3 pos = FSIn.Position;
-	vec3 norm = FSIn.Normal;
-	vec3 s = normalize(LightPosition.xyz - pos);
-	vec3 v = normalize(-pos.xyz);
-	vec3 r = reflect( -s, norm );
-	vec3 ambient = LightAmbient * (m.AmbientTex != 0 ? texture(sampler2D(m.AmbientTex), FSIn.Texcoord.xy).xyz : m.Ambient.xyz);
-	float sDotN = max( dot(s,norm), 0.0 );
-	vec3 diffuse = LightDiffuse * (m.DiffuseTex != 0? texture(sampler2D(m.DiffuseTex), FSIn.Texcoord.xy).xyz : m.Diffuse.xyz) * (sDotN + 0.5);
-	return ambient + diffuse + spec;
-*/
 	vec3 albedo = texture(tDiffuse[0], FSIn.Texcoord.xy).xyz;
-//	uint packed = imageLoad(t_voxel_albedo, getVoxelIndex(FSIn.Position)).r;
-//	vec3 emissive = unpack(packed);
-	return albedo;
+	vec3 pos = FSIn.Position;
+	vec3 normal = normalize(FSIn.Normal);
+
+	vec2 screen = (gl_FragCoord.xy/ u_tile_info.m_resolusion);
+//	vec2 screen = gl_FragCoord.xy;
+	screen = 1. - screen;
+	uvec2 tile_index = uvec2(screen * u_tile_info.m_tile_num);
+	uint tile_index_1d = tile_index.x + tile_index.y *u_tile_info.m_tile_num.x;
+	uint light_num = b_tile_data_counter[tile_index_1d];
+	uint light_data_offset = tile_index_1d*u_tile_info.m_tile_index_map_max;
+
+	vec3 diffuse = vec3(0.);
+	#define light b_light[b_tile_data_map[i+light_data_offset]]
+	for(uint i = 0 ; i < light_num; i++)
+	{
+//		LightData light = b_light[b_tile_data_map[i+light_data_offset]];
+		vec3 s = normalize(light.m_pos.xyz - pos);
+		float sDotN = max( dot(s,normal), 0.0 );
+		float dist = distance(light.m_pos.xyz, pos) - light.m_pos.w;
+		diffuse += sDotN * albedo * light.m_emissive.xyz / dist;
+	}
+	#undef light
+
+	return diffuse;
 }
 
 void main()
