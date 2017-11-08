@@ -77,9 +77,6 @@
     <ClInclude Include="..\..\include\999_game\sMap_RayMarch.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\999_game\MessageSystem.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
