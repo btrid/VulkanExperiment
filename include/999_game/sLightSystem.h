@@ -15,6 +15,17 @@ struct LightInfo
 {
 	uint m_max_num;
 };
+
+enum class SpotLightType
+{
+	Effect,	
+};
+struct SpotLightInfo
+{
+	float m_cone_angle; // コーンアングルの角度
+	float m_penumbra_angle; //… 有効拡散角度。ライトのエッジがボケる大きさを設定します
+	float m_dropoff; //… スポットライトのビームの中心からエッジに向かって、ライトの明るさが減衰する割合を設定します
+};
 struct LightData
 {
 	vec4 m_pos;	//!< xyz:pos w:scale

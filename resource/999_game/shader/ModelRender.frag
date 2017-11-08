@@ -39,16 +39,16 @@ vec3 getColor()
 	uint light_data_offset = tile_index_1d*u_tile_info.m_tile_index_map_max;
 
 	vec3 diffuse = vec3(0.);
-	#define light b_light[b_tile_data_map[i+light_data_offset]]
+//	#define light b_light[b_tile_data_map[i+light_data_offset]]
 	for(uint i = 0 ; i < light_num; i++)
 	{
-//		LightData light = b_light[b_tile_data_map[i+light_data_offset]];
+		LightData light = b_light[b_tile_data_map[i+light_data_offset]];
 		vec3 s = normalize(light.m_pos.xyz - pos);
 		float sDotN = max( dot(s,normal), 0.0 );
 		float dist = distance(light.m_pos.xyz, pos) - light.m_pos.w;
-		diffuse += sDotN * albedo * light.m_emissive.xyz / dist;
+		diffuse += sDotN * albedo * light.m_emissive.xyz / (dist*dist);
 	}
-	#undef light
+//	#undef light
 
 	return diffuse;
 }
