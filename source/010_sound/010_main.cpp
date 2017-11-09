@@ -22,6 +22,7 @@
 
 #include <applib/App.h>
 #include <btrlib/Context.h>
+#include <010_sound/rWave.h>
 
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
@@ -32,6 +33,8 @@
 
 int main()
 {
+	btr::setResourceAppPath("..\\..\\resource\\010_sound\\");
+
 	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = glm::vec3(0.f, 0.f, 1.f);
 	camera->getData().m_target = glm::vec3(0.f, 0.f, 0.f);
@@ -53,6 +56,8 @@ int main()
 	}
 
 	auto context = app.m_context;
+
+	rWave wave("..\\..\\resource\\010_sound\\mono.wav");
 
 	while (true)
 	{

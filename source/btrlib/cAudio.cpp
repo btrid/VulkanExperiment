@@ -92,7 +92,6 @@ uint32_t DecodeOggVorbis(OggVorbis_File* psOggVorbisFile, char *pDecodeBuffer, u
 	return decode_done;
 }
 
-
 class SoundPlayer
 {
 
@@ -120,7 +119,6 @@ private:
 		FILE*           m_file_handle;
 		float           m_current;            ///< 今再生している場所
 
-		unsigned    sourceId_;
 		short       format_;
 		char*       bufferData_;            //!< 音のデータを保存しておく場所
 		unsigned    bufferSize_;            //!< buffer_のサイズ
@@ -138,54 +136,55 @@ public:
 
 	void setup(const std::string& filename)
 	{
-// 		m_resoure = std::make_shared<Resource>();
-// 		ov_callbacks callbacks;
-// 		callbacks.read_func = ov_read_func;
-// 		callbacks.seek_func = ov_seek_func;
-// 		callbacks.close_func = ov_close_func;
-// 		callbacks.tell_func = ov_tell_func;
-// 
-// 		if (ov_open_callbacks(fileHandle_, &oggVorbisFile_, NULL, 0, callbacks) != 0) {
-// 			::printf("can't open []. \n");
-// 			return false;
-// 		}
-// 
-// 		vorbisInfo_ = ov_info(&oggVorbisFile_, -1);
-// 		if (!vorbisInfo_) {
-// 			::printf("[] is different ogg file. \n");
-// 			return false;
-// 		}
-// 		long ulFrequency = vorbisInfo_->rate;
-// 		int ulChannels = vorbisInfo_->channels;
+		m_resoure = std::make_shared<Resource>();
+		ov_callbacks callbacks;
+		callbacks.read_func = ov_read_func;
+		callbacks.seek_func = ov_seek_func;
+		callbacks.close_func = ov_close_func;
+		callbacks.tell_func = ov_tell_func;
+
+		if (ov_open_callbacks(m_resoure->m_file_handle, &m_resoure->m_ogg_vorbis_file, NULL, 0, callbacks) != 0) {
+			assert(false);
+			return;
+		}
+
+		m_resoure->m_vorbis_Info = ov_info(&m_resoure->m_ogg_vorbis_file, -1);
+		if (!m_resoure->m_vorbis_Info) {
+			::printf("[] is different ogg file. \n");
+			assert(false);
+			return;
+		}
+		long ulFrequency = m_resoure->m_vorbis_Info->rate;
+		int ulChannels = m_resoure->m_vorbis_Info->channels;
 	}
 
-// 	void uninitialize()
-// 	{
-// 		ov_clear(&m_private->m_ogg_vorbis_file);
-// 		m_vorbis_Info = NULL;
-//	}
-// 	int getNextBufferData(char* data, unsigned dataSize)
-// 	{
-// 		int decodeSize = DecodeOggVorbis(&m_ogg_vorbis_file, data, dataSize, m_vorbis_Info->channels);
-// 		currentPos_ = static_cast<float>(ov_time_tell(&m_ogg_vorbis_file));
-//		return decodeSize;
-//	}
-// 	void getAudioData(AudioData& data)
-// 	{
-// 		data.m_channels = vorbisInfo_->channels;
-// 		data.m_frequency = vorbisInfo_->rate;
-// 		data.m_time = static_cast<float>(ov_time_total(&m_ogg_vorbis_file, -1));
-// 	}
+	void uninitialize()
+	{
+		ov_clear(&m_resoure->m_ogg_vorbis_file);
+		m_resoure->m_vorbis_Info = NULL;
+	}
+	int getNextBufferData(char* data, unsigned dataSize)
+	{
+		int decodeSize = DecodeOggVorbis(&m_ogg_vorbis_file, data, dataSize, m_vorbis_Info->channels);
+		currentPos_ = static_cast<float>(ov_time_tell(&m_ogg_vorbis_file));
+		return decodeSize;
+	}
+	void getAudioData(AudioData& data)
+	{
+		data.m_channels = vorbisInfo_->channels;
+		data.m_frequency = vorbisInfo_->rate;
+		data.m_time = static_cast<float>(ov_time_total(&m_ogg_vorbis_file, -1));
+	}
 
-// 	float getCurrentTime()const
-// 	{
-// 		return currentPos_;
-// 	}
-// 
-// 	void seek(float time)
-// 	{
-// 		ov_time_seek(&m_ogg_vorbis_file, static_cast<float>(time));
-// 		currentPos_ = static_cast<float>(ov_time_tell(&m_ogg_vorbis_file));
-// 	}
+	float getCurrentTime()const
+	{
+		return currentPos_;
+	}
+
+	void seek(float time)
+	{
+		ov_time_seek(&m_ogg_vorbis_file, static_cast<float>(time));
+		currentPos_ = static_cast<float>(ov_time_tell(&m_ogg_vorbis_file));
+	}
 
 };
