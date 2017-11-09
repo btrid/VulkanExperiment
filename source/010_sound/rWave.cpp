@@ -49,30 +49,16 @@ struct WaveFormatPCM {
 	}
 };
 
-#ifndef GUID_DEFINED
-#define GUID_DEFINED
-#if defined(__midl)
-typedef struct {
-	unsigned long  Data1;
-	unsigned short Data2;
-	unsigned short Data3;
-	byte           Data4[8];
-} GUID;
-#else
 typedef struct _GUID {
 	unsigned long  Data1;
 	unsigned short Data2;
 	unsigned short Data3;
 	unsigned char  Data4[8];
 } GUID;
-#endif
-#endif
 
 struct WaveFormatExtensible
 {
-	WaveFormat format_;
 	short      size_;             /* the count in bytes of the size of */
-
 	union {
 		short validBitsPerSample_;       /* bits of precision  */
 		short samplesPerBlock_;          /* valid if wBitsPerSample==0 */
@@ -81,26 +67,17 @@ struct WaveFormatExtensible
 	long        channelMask_;      /* which channels are */
 								   /* present in stream  */
 	GUID        SubFormat_;
-
-	/// ダウンキャストコンストラクタ
-	WaveFormatExtensible(const WaveFormat& rhv)
-	{
-		format_ = rhv;
-	}
-
-	const WaveFormatExtensible& operator=(const WaveFormat& rhv)
-	{
-		format_ = rhv;
-		return *this;
-	}
-
 };
 
 template<typename T>
-T* read(char*& p)
+T* read(std::vector<char>& p, uint32_t& offset)
 {
-	T* pp = (RiffHeader*)(p);
-	p += sizeof(T);
+	if (offset >= p.size())
+	{
+		return nullptr;
+	}
+	T* pp = (T*)(p.data()+ offset);
+	offset += sizeof(T);
 	return pp;
 }
 rWave::rWave(const std::string& filename)
@@ -111,7 +88,7 @@ rWave::rWave(const std::string& filename)
 	m_filename = filename;
 
 	// ファイルを開く
-//	{
+	{
 		std::experimental::filesystem::path filepath(filename);
 		std::ifstream file(filepath, std::ios_base::ate | std::ios::binary);
 		assert(file.is_open());
@@ -122,92 +99,65 @@ rWave::rWave(const std::string& filename)
 
 		m_data.resize(file_size);
 		file.read(m_data.data(), m_data.size());
-//	}
+	}
 
-//	char* p = m_data.data();
-
-//	RiffHeader* header = read<RiffHeader>(p);
-	file.clear();
-	file.seekg(0);
-	RiffHeader header;
-	file.read((char*)&header, 4);
-	if (header.riff_[0] != 'R'
-		|| header.riff_[1] != 'I'
-		|| header.riff_[2] != 'F'
-		|| header.riff_[3] != 'F')
+	uint32_t offset = 0;
+	RiffHeader* header = read<RiffHeader>(m_data, offset);
+	if (header->riff_[0] != 'R'
+		|| header->riff_[1] != 'I'
+		|| header->riff_[2] != 'F'
+		|| header->riff_[3] != 'F')
 	{
 		::printf("[%s] is not wave\n", filename.c_str());
 		assert(false);
 		return;
 	}
 
-//	fread(&header->riffSize_, 4, 1, fileHandle_);
-//	fread(header->wave_, 1, 4, fileHandle_);
-	file.read((char*)&header.riffSize_, 4);
-	file.read((char*)&header.wave_, 4);
-	RiffChunk chunk;
-	while (file.read((char*)&chunk, sizeof(RiffChunk)))
+	while (RiffChunk* chunk = read<RiffChunk>(m_data, offset))
 	{
-		if (strncmp(chunk.chunkName_, "fmt ", 4) == 0)
+		if (strncmp(chunk->chunkName_, "fmt ", 4) == 0)
 		{
 			// 音データのフォーマットを読み込む
-			WaveFormat waveFormat;
-// 			fread(&waveFormat.waveFormatType_, 2, 1, fileHandle_);
-// 			fread(&waveFormat.channel_, 2, 1, fileHandle_);
-// 			fread(&waveFormat.samplesPerSec_, 4, 1, fileHandle_);
-// 			fread(&waveFormat.bytesPerSec_, 4, 1, fileHandle_);
-// 			fread(&waveFormat.blockSize_, 2, 1, fileHandle_);
-// 			fread(&waveFormat.bitsPerSample_, 2, 1, fileHandle_);
-			file.read((char*)&waveFormat, sizeof(waveFormat));
+			WaveFormat* waveFormat = read<WaveFormat>(m_data, offset);
+			frequency_ = waveFormat->samplesPerSec_;
+			bps_ = waveFormat->bytesPerSec_;
+			blockSize_ = waveFormat->blockSize_;
 
-			frequency_ = waveFormat.samplesPerSec_;
-			bps_ = waveFormat.bytesPerSec_;
-			blockSize_ = waveFormat.blockSize_;
-
-			if (waveFormat.waveFormatType_ == RT_WAVE_FORMAT_PCM)
+			if (waveFormat->waveFormatType_ == RT_WAVE_FORMAT_PCM)
 			{
-				WaveFormatPCM pcm = waveFormat;
+//				WaveFormatPCM pcm = waveFormat;
 			}
-			else if (waveFormat.waveFormatType_ == static_cast<short>(RT_WAVE_FORMAT_EXTENSIBLE))
+			else if (waveFormat->waveFormatType_ == static_cast<short>(RT_WAVE_FORMAT_EXTENSIBLE))
 			{
-				WaveFormatExtensible ext = waveFormat;
-// 				fread(&ext.size_, 1, sizeof(ext.size_), fileHandle_);
-// 				fread(&ext.Samples, 1, sizeof(ext.Samples), fileHandle_);
-// 				fread(&ext.channelMask_, 1, sizeof(ext.channelMask_), fileHandle_);
+				WaveFormatExtensible* ext = read<WaveFormatExtensible>(m_data, offset);
+				m_size = ext->size_;
+				m_samples.m_valid_bits_per_sample = ext->Samples.validBitsPerSample_;
+				m_channel_mask = ext->channelMask_;
 // 				fread(&ext.SubFormat_, 1, sizeof(ext.SubFormat_), fileHandle_);
-//				file.read()
-				file.seekg(chunk.chunkSize_ - sizeof(WaveFormat), std::ios::cur);
+//				offset += chunk->chunkSize_ - sizeof(WaveFormat);
 			}
 			else
 			{
 				// 未定義のフォーマットタイプの場合は飛ばす
-				file.seekg(chunk.chunkSize_ - sizeof(WaveFormat), std::ios::cur);
-//				fseek(fileHandle_, chunk.chunkSize_ - sizeof(WaveFormat), SEEK_CUR);
+				offset += chunk->chunkSize_ - sizeof(WaveFormat);
 			}
 
 		}
-		else if (strncmp(chunk.chunkName_, "data", 4) == 0)
+		else if (strncmp(chunk->chunkName_, "data", 4) == 0)
 		{
 			// 音データを読み込む
-//			length_ = chunk.chunkSize_;
-//			data_ = new char[length_];
-// 			for (int i = 0; i < length_; i++)
-// 			{
-// 				char a;
-// 				fread(&a, 1, 1, fileHandle_);
-// 				data_[i] = a;
-// 			}
-			m_data_ptr = m_data.data() + file.tellg();
-			m_data_length = chunk.chunkSize_;
+			m_data_ptr = m_data.data() + offset;
+			m_data_length = chunk->chunkSize_;
+			offset += chunk->chunkSize_;
 		}
-		else if (strncmp(chunk.chunkName_, "cue ", 4) == 0) {
-			// 未実装
-			file.seekg(chunk.chunkSize_ - sizeof(WaveFormat), std::ios::cur);
-		}
+// 		else if (strncmp(chunk.chunkName_, "cue ", 4) == 0) {
+// 			// 未実装
+// 			file.seekg(chunk.chunkSize_ - sizeof(WaveFormat), std::ios::cur);
+// 		}
 		else {
 			// 未実装
 			// fmtとdata以外のチャンクはオプションなので読み込む必要はない
-			file.seekg(chunk.chunkSize_ - sizeof(WaveFormat), std::ios::cur);
+			offset += chunk->chunkSize_;
 		}
 	}
 
