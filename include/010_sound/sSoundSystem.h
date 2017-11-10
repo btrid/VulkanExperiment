@@ -15,5 +15,6 @@ struct sSoundSystem : Singleton<sSoundSystem>
 	CComPtr<IMMDevice>			m_device;				// デバイスインターフェース
 	CComPtr<IAudioClient>		m_audio_client;			// オーディオクライアントインターフェース
 	CComPtr<IAudioRenderClient>	m_render_client;		// レンダークライアントインターフェース
+	WAVEFORMATEXTENSIBLE m_format;
 
 };

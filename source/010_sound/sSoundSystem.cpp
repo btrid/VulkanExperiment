@@ -54,32 +54,31 @@ void sSoundSystem::setup()
 	assert(SUCCEEDED(ret));
 
 	// 	// フォーマットの構築
-	WAVEFORMATEXTENSIBLE wf;
-	ZeroMemory(&wf, sizeof(wf));
-	wf.Format.cbSize = sizeof(WAVEFORMATEXTENSIBLE);
-	wf.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
-	wf.Format.nChannels = 2;
-	wf.Format.nSamplesPerSec = 44100;
-	wf.Format.wBitsPerSample = 16;
-	wf.Format.nBlockAlign = wf.Format.nChannels * wf.Format.wBitsPerSample / 8;
-	wf.Format.nAvgBytesPerSec = wf.Format.nSamplesPerSec * wf.Format.nBlockAlign;
-	wf.Samples.wValidBitsPerSample = wf.Format.wBitsPerSample;
-	wf.dwChannelMask = SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT;
-	wf.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
+	ZeroMemory(&m_format, sizeof(m_format));
+	m_format.Format.cbSize = sizeof(WAVEFORMATEXTENSIBLE);
+	m_format.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
+	m_format.Format.nChannels = 2;
+	m_format.Format.nSamplesPerSec = 44100;
+	m_format.Format.wBitsPerSample = 16;
+	m_format.Format.nBlockAlign = m_format.Format.nChannels * m_format.Format.wBitsPerSample / 8;
+	m_format.Format.nAvgBytesPerSec = m_format.Format.nSamplesPerSec * m_format.Format.nBlockAlign;
+	m_format.Samples.wValidBitsPerSample = m_format.Format.wBitsPerSample;
+	m_format.dwChannelMask = SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT;
+	m_format.SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
 
 //	AUDCLNT_SHAREMODE mode = AUDCLNT_SHAREMODE_EXCLUSIVE;
 	AUDCLNT_SHAREMODE mode = AUDCLNT_SHAREMODE_SHARED;
 	// フォーマットのサポートチェック
 	WAVEFORMATEX* closest = nullptr;
-	ret = m_audio_client->IsFormatSupported(mode, (WAVEFORMATEX*)&wf, &closest);
+	ret = m_audio_client->IsFormatSupported(mode, (WAVEFORMATEX*)&m_format, &closest);
 	if (FAILED(ret)) {
 		// 未サポートのフォーマット
 		assert(SUCCEEDED(ret));
 	}
 	if (ret == S_FALSE) {
 		// 近いフォーマットに変更
-		wf.Format = *closest;
-		wf.Samples.wValidBitsPerSample = wf.Format.wBitsPerSample;
+		m_format.Format = *closest;
+		m_format.Samples.wValidBitsPerSample = m_format.Format.wBitsPerSample;
 	}
 
 	// レイテンシ設定
@@ -95,7 +94,7 @@ void sSoundSystem::setup()
 		AUDCLNT_STREAMFLAGS_NOPERSIST | AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
 		default_device_period,				// デフォルトデバイスピリオド値をセット
 		default_device_period,				// デフォルトデバイスピリオド値をセット
-		(WAVEFORMATEX*)&wf.Format,
+		(WAVEFORMATEX*)&m_format.Format,
 		NULL);
 	if (FAILED(ret)) {
 		if (ret == AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED) {
@@ -107,7 +106,7 @@ void sSoundSystem::setup()
 			default_device_period = (REFERENCE_TIME)(10000.0 *						// (REFERENCE_TIME(100ns) / ms) *
 				1000 *						// (ms / s) *
 				frame /						// frames /
-				wf.Format.nSamplesPerSec +	// (frames / s)
+				m_format.Format.nSamplesPerSec +	// (frames / s)
 				0.5);							// 四捨五入？
 //			DEBUG("修正後のレイテンシ         : %I64d (%fミリ秒)\n", default_device_period, default_device_period / 10000.0);
 
@@ -121,7 +120,7 @@ void sSoundSystem::setup()
 				AUDCLNT_STREAMFLAGS_NOPERSIST | AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
 				default_device_period,
 				default_device_period,
-				(WAVEFORMATEX*)&wf,
+				(WAVEFORMATEX*)&m_format,
 				NULL);
 		}
 		if (FAILED(ret))
@@ -145,7 +144,7 @@ void sSoundSystem::setup()
 	ret = m_audio_client->GetBufferSize(&frame);
 	assert(SUCCEEDED(ret));
 
-	UINT32 size = frame * wf.Format.nBlockAlign;
+	UINT32 size = frame * m_format.Format.nBlockAlign;
 
 	// ゼロクリアをしてイベントをリセット
 	LPBYTE pData;
