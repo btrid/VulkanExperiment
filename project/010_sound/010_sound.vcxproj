@@ -70,12 +70,14 @@
   <ItemGroup>
     <ClCompile Include="..\..\source\010_sound\010_main.cpp" />
     <ClCompile Include="..\..\source\010_sound\rWave.cpp" />
+    <ClCompile Include="..\..\source\010_sound\sSoundSystem.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\010_sound\rWave.h" />
+    <ClInclude Include="..\..\include\010_sound\sSoundSystem.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

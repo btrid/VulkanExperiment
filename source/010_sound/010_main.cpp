@@ -23,6 +23,7 @@
 #include <applib/App.h>
 #include <btrlib/Context.h>
 #include <010_sound/rWave.h>
+#include <010_sound/sSoundSystem.h>
 
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
@@ -58,6 +59,7 @@ int main()
 	auto context = app.m_context;
 
 	rWave wave("..\\..\\resource\\010_sound\\mono.wav");
+	sSoundSystem::Order().setup();
 
 	while (true)
 	{
