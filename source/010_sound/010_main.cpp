@@ -59,7 +59,8 @@ int main()
 	auto context = app.m_context;
 
 	rWave wave("..\\..\\resource\\010_sound\\mono.wav");
-	sSoundSystem::Order().setup();
+	sSoundSystem::Order().setup(context);
+	sSoundSystem::Order().execute_loop(context);
 
 	while (true)
 	{
