@@ -11,7 +11,7 @@ struct sSoundSystem : Singleton<sSoundSystem>
 {
 	friend Singleton<sSoundSystem>;
 	void setup(std::shared_ptr<btr::Context>& context);
-	void execute_loop(std::shared_ptr<btr::Context>& context);
+	void execute_loop(const std::shared_ptr<btr::Context>& context);
 
 	CComPtr<IMMDeviceEnumerator> m_device_enumerator;	// マルチメディアデバイス列挙インターフェース
 	CComPtr<IMMDevice>			m_device;				// デバイスインターフェース

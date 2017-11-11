@@ -163,28 +163,28 @@ public:
 		ov_clear(&m_resoure->m_ogg_vorbis_file);
 		m_resoure->m_vorbis_Info = NULL;
 	}
-	int getNextBufferData(char* data, unsigned dataSize)
-	{
-		int decodeSize = DecodeOggVorbis(&m_ogg_vorbis_file, data, dataSize, m_vorbis_Info->channels);
-		currentPos_ = static_cast<float>(ov_time_tell(&m_ogg_vorbis_file));
-		return decodeSize;
-	}
-	void getAudioData(AudioData& data)
-	{
-		data.m_channels = vorbisInfo_->channels;
-		data.m_frequency = vorbisInfo_->rate;
-		data.m_time = static_cast<float>(ov_time_total(&m_ogg_vorbis_file, -1));
-	}
-
-	float getCurrentTime()const
-	{
-		return currentPos_;
-	}
-
-	void seek(float time)
-	{
-		ov_time_seek(&m_ogg_vorbis_file, static_cast<float>(time));
-		currentPos_ = static_cast<float>(ov_time_tell(&m_ogg_vorbis_file));
-	}
-
+// 	int getNextBufferData(char* data, unsigned dataSize)
+// 	{
+// 		int decodeSize = DecodeOggVorbis(&m_ogg_vorbis_file, data, dataSize, m_vorbis_Info->channels);
+// 		currentPos_ = static_cast<float>(ov_time_tell(&m_ogg_vorbis_file));
+// 		return decodeSize;
+// 	}
+// 	void getAudioData(AudioData& data)
+// 	{
+// 		data.m_channels = vorbisInfo_->channels;
+// 		data.m_frequency = vorbisInfo_->rate;
+// 		data.m_time = static_cast<float>(ov_time_total(&m_ogg_vorbis_file, -1));
+// 	}
+// 
+// 	float getCurrentTime()const
+// 	{
+// 		return currentPos_;
+// 	}
+// 
+// 	void seek(float time)
+// 	{
+// 		ov_time_seek(&m_ogg_vorbis_file, static_cast<float>(time));
+// 		currentPos_ = static_cast<float>(ov_time_tell(&m_ogg_vorbis_file));
+// 	}
+// 
 };

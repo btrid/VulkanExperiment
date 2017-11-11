@@ -116,7 +116,7 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 
 	if (FAILED(ret)) {
 		if (ret == AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED) {
-			//			DEBUG("バッファサイズアライメントエラーのため修正する\n");
+			//	バッファサイズアライメントエラーのため修正する
 			UINT32 frame = 0;
 			ret = m_audio_client->GetBufferSize(&frame);
 			default_device_period =
@@ -193,7 +193,7 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 }
 
 
-void sSoundSystem::execute_loop(std::shared_ptr<btr::Context>& context)
+void sSoundSystem::execute_loop(const std::shared_ptr<btr::Context>& context)
 {
 //	DEBUG("スレッド開始\n");
 

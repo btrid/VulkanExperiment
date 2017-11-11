@@ -60,7 +60,12 @@ int main()
 
 	rWave wave("..\\..\\resource\\010_sound\\mono.wav");
 	sSoundSystem::Order().setup(context);
-	sSoundSystem::Order().execute_loop(context);
+
+	{
+		cThreadJob job;
+		job.mFinish = [=]() { sSoundSystem::Order().execute_loop(context); };
+		sGlobal::Order().getThreadPoolSound().enque(std::move(job));
+	}
 
 	while (true)
 	{

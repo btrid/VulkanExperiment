@@ -90,6 +90,7 @@ public:
 
 public:
 	cThreadPool& getThreadPool() { return m_thread_pool; }
+	cThreadPool& getThreadPoolSound() { return m_thread_pool_sound; }
 private:
 	vk::Instance m_instance;
 	std::vector<cGPU> m_gpu;
@@ -99,6 +100,7 @@ private:
 	uint32_t m_tick_tock;
 
 	cThreadPool m_thread_pool;
+	cThreadPool m_thread_pool_sound;
 
 	cStopWatch m_timer;
 	float m_deltatime;

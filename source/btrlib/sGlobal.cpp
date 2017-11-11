@@ -63,24 +63,19 @@ sGlobal::sGlobal()
 			m_gpu.back().setup(pd);
 		}
 	}
-
 	auto init_thread_data_func = [=](const cThreadPool::InitParam& param)
 	{
 		SetThreadIdealProcessor(::GetCurrentThread(), param.m_index);
 		auto& data = sThreadLocal::Order();
 		data.m_thread_index = param.m_index;
 	};
-
-	vk::AllocationCallbacks cb;
-	cb.setPfnAllocation(btr::Allocation);
-	cb.setPfnFree(btr::Free);
-	cb.setPfnReallocation(btr::Reallocation);
-	cb.setPfnInternalAllocation(btr::InternalAllocationNotification);
-	cb.setPfnInternalFree(btr::InternalFreeNotification);
-
-	auto device = m_gpu[0].getDevice();
-
-	m_thread_pool.start(std::thread::hardware_concurrency()-1, init_thread_data_func);
+	m_thread_pool.start(std::thread::hardware_concurrency() - 2, init_thread_data_func);
+	m_thread_pool_sound.start(1, [](const cThreadPool::InitParam& param){
+		if (param.m_index == 1)
+		{
+			SetThreadIdealProcessor(::GetCurrentThread(), 7);
+		}
+	});
 }
 
 
