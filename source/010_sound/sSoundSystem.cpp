@@ -8,6 +8,8 @@
 #include <endpointvolume.h>
 #include <FunctionDiscoveryKeys_devpkey.h>
 
+#include <010_sound/rWave.h>
+
 std::string to_string(HRESULT ret)
 {	
 	switch (ret)
@@ -66,7 +68,7 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 	ret = m_device->Activate(__uuidof(IAudioClient), CLSCTX_ALL, NULL, (void**)&m_audio_client);
 	assert(succeeded(ret));
 
-	// 	// フォーマットの構築
+	// フォーマットの構築
 	ZeroMemory(&m_format, sizeof(m_format));
 	m_format.Format.cbSize = sizeof(WAVEFORMATEXTENSIBLE);
 	m_format.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
@@ -111,7 +113,7 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 		stream_flag,
 		default_device_period,				// デフォルトデバイスピリオド値をセット
 		default_device_period,				// デフォルトデバイスピリオド値をセット
-		(WAVEFORMATEX*)&m_format.Format,
+		(WAVEFORMATEX*)&m_format,
 		NULL);
 
 	if (FAILED(ret)) {
@@ -175,6 +177,7 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 
 	m_current = 0;
 	{
+#if 0
 		btr::BufferMemoryDescriptorEx<int16_t> desc;
 		desc.element_num = size / sizeof(int16_t) * 3;
 		m_buffer = context->m_staging_memory.allocateMemory(desc);
@@ -183,8 +186,19 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 		for (int i = 0; i < desc.element_num; i++)
 		{
 			float a = 128.f / desc.element_num;
-			m_buffer.getMappedPtr()[i] = sin(i%128 * a)*30000;
+			m_buffer.getMappedPtr()[i] = sin(i%128 * a)*20000;
 		}
+#else
+		rWave wave("..\\..\\resource\\010_sound\\Alesis-Fusion-Steel-String-Guitar-C4.wav");
+		btr::BufferMemoryDescriptorEx<int16_t> desc;
+		desc.element_num = wave.getLength()/2;
+		m_buffer = context->m_staging_memory.allocateMemory(desc);
+
+		memcpy(m_buffer.getMappedPtr(), wave.getData(), wave.getLength());
+
+		// @Todo 共有モードだとm_format(48.0kHz)とデータの周波数(44.1kHz)が違うので音が高く聞こえる。
+		// データを変換する作業が必要
+#endif	
 	}
 
 	ret = m_audio_client->Start();
@@ -237,6 +251,7 @@ void sSoundSystem::execute_loop(const std::shared_ptr<btr::Context>& context)
 		// timer driven
 		else 
 		{
+
 			uint32_t padding = 0;
 			auto hr = m_audio_client->GetCurrentPadding(&padding);
 			assert(succeeded(hr));

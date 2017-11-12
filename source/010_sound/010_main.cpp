@@ -58,7 +58,7 @@ int main()
 
 	auto context = app.m_context;
 
-	rWave wave("..\\..\\resource\\010_sound\\mono.wav");
+//	rWave wave("..\\..\\resource\\010_sound\\Alesis-Fusion-Steel-String-Guitar-C4.wav");
 	sSoundSystem::Order().setup(context);
 
 	{
