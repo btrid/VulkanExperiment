@@ -21,5 +21,5 @@ struct sSoundSystem : Singleton<sSoundSystem>
 	HANDLE				m_event;
 
 	int						m_current;						// WAVファイルの再生位置
-	btr::BufferMemoryEx<int16_t> m_buffer;
+	btr::BufferMemoryEx<int32_t> m_buffer;
 };

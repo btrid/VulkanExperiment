@@ -188,13 +188,30 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 			float a = 128.f / desc.element_num;
 			m_buffer.getMappedPtr()[i] = sin(i%128 * a)*20000;
 		}
+		memcpy(m_buffer.getMappedPtr(), wave.getData(), wave.getLength());
 #else
 		rWave wave("..\\..\\resource\\010_sound\\Alesis-Fusion-Steel-String-Guitar-C4.wav");
-		btr::BufferMemoryDescriptorEx<int16_t> desc;
-		desc.element_num = wave.getLength()/2;
-		m_buffer = context->m_staging_memory.allocateMemory(desc);
 
-		memcpy(m_buffer.getMappedPtr(), wave.getData(), wave.getLength());
+		{
+			std::vector<int32_t> buf(((float)m_format.Format.nSamplesPerSec / wave.getFormat()->nSamplesPerSec) * wave.getLength() / 2);
+
+			auto* src_data = (int16_t*)wave.getData();
+			float rate = (float)wave.getFormat()->nSamplesPerSec / m_format.Format.nSamplesPerSec;
+			int32_t dst_index = 0;
+			for (int32_t dst_index = 0; dst_index < buf.size(); dst_index++)
+			{
+				float src_index = dst_index * rate;
+				float lerp_rate = src_index - floor(src_index);
+				int i = floor(src_index);
+				buf[dst_index] = glm::lerp<float>(src_data[i], src_data[i+1], lerp_rate) * 65000;
+			}
+
+			btr::BufferMemoryDescriptorEx<int32_t> desc;
+			desc.element_num = buf.size();
+			m_buffer = context->m_staging_memory.allocateMemory(desc);
+
+			memcpy(m_buffer.getMappedPtr(), buf.data(), vector_sizeof(buf));
+		}
 
 		// @Todo 共有モードだとm_format(48.0kHz)とデータの周波数(44.1kHz)が違うので音が高く聞こえる。
 		// データを変換する作業が必要
@@ -267,7 +284,7 @@ void sSoundSystem::execute_loop(const std::shared_ptr<btr::Context>& context)
 
 			int buf_size = (audio_buffer_size - padding) * m_format.Format.nBlockAlign;
 			auto copy = std::min<uint32_t>(m_buffer.getInfo().range - m_current, buf_size);
-			memcpy(&dst[0], &src[m_current/sizeof(int16_t)], copy);
+			memcpy(&dst[0], &src[m_current/m_buffer.getDataSizeof()], copy);
 			auto mod = buf_size - copy;
 			if (mod > 0) {
 				memcpy(&dst[copy], &src[0], mod);

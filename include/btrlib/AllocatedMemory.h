@@ -284,7 +284,8 @@ struct BufferMemory
 	std::shared_ptr<Resource> m_resource;
 public:
 	bool isValid()const { return !!m_resource; }
-	vk::DescriptorBufferInfo getBufferInfo()const { return m_buffer_info; }
+	vk::DescriptorBufferInfo getInfo()const { return m_buffer_info; }
+	vk::DescriptorBufferInfo getBufferInfo()const { return m_buffer_info; } // @deprecated –¼‘O‚ª’·‚¢‚Ì‚Å
 	vk::DeviceMemory getDeviceMemory()const { return m_resource->m_memory_ref; }
 	void* getMappedPtr()const { return m_resource->m_mapped_memory; }
 	template<typename T> T* getMappedPtr(size_t offset_num = 0)const { return static_cast<T*>(m_resource->m_mapped_memory) + offset_num; }
@@ -330,6 +331,7 @@ public:
 	vk::DescriptorBufferInfo getInfo()const { return m_resource->m_buffer_info; }
 	vk::DescriptorBufferInfo getBufferInfo()const { return m_resource->m_buffer_info; }
 	T* getMappedPtr(size_t offset_num = 0)const { return m_resource->m_mapped_memory + offset_num; }
+	uint32_t getDataSizeof()const { return sizeof(T); }
 
 	vk::BufferMemoryBarrier makeMemoryBarrier() {
 		vk::BufferMemoryBarrier barrier;
@@ -338,7 +340,15 @@ public:
 		barrier.offset = m_resource->m_buffer_info.offset;
 		return barrier;
 	}
+
+	template<typename U>
+	BufferMemoryEx<U> convert() {
+		BufferMemoryEx<U> ret;
+		ret.m_resource = m_resource;
+		return m_resource;
+	}
 };
+
 
 struct ImageMemory
 {

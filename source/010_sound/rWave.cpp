@@ -69,8 +69,19 @@ rWave::rWave(const std::string& filename)
 		if (strncmp(chunk->chunkName_, "fmt ", 4) == 0)
 		{
 			// 音データのフォーマットを読み込む
-			m_wave_format = read<WAVEFORMAT>(m_data, offset);
+			auto* wave_format = read<WAVEFORMAT>(m_data, offset);
 			offset += chunk->chunkSize_ - sizeof(WAVEFORMAT);
+			switch (wave_format->wFormatTag)
+			{
+			case WAVE_FORMAT_PCM:
+			case WAVE_FORMAT_EXTENSIBLE:
+				m_wave_format = reinterpret_cast<WAVEFORMATEX*>(wave_format);
+				break;
+			default:
+				// それ以外は未対応
+				assert(false);
+
+			}
 		}
 		else if (strncmp(chunk->chunkName_, "data", 4) == 0)
 		{
