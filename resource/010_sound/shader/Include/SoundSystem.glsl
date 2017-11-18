@@ -55,6 +55,8 @@ struct SoundPlayInfo
 
 	uint m_sound_deltatime;
 	uint m_write_start;
+	uint _p2;
+	uint _p3;
 };
 
 struct SoundInfo
@@ -87,11 +89,11 @@ layout(std430, set=USE_SOUND_SYSTEM, binding = 10) buffer SoundAccumIndex
 };
 layout(std430, set=USE_SOUND_SYSTEM, binding = 11) buffer SoundAccumBuffer
 {
-	uint b_accume_id_buffer[SOUND_REQUEST_SIZE];	//!< 空いているSoundGenerateの番号リスト
+	uint b_accume_id_buffer[];	//!< 空いているSoundGenerateの番号リスト
 };
 layout(std430, set=USE_SOUND_SYSTEM, binding = 12) buffer SoundPlayRequestDataBuffer
 {
-	SoundPlayRequestData u_sound_play_request_data[SOUND_REQUEST_SIZE];
+	SoundPlayRequestData u_sound_play_request_data[];
 };
 
 layout(std140, set=USE_SOUND_SYSTEM, binding = 20) uniform SoundInfoUniform

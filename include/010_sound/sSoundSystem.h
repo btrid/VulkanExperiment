@@ -24,6 +24,8 @@ struct SoundPlayInfo
 
 	uint32_t m_sound_deltatime;
 	uint32_t m_write_start;
+	uint32_t _p2;
+	uint32_t _p3;
 };
 
 struct SoundFormat
