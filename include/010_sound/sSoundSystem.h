@@ -46,7 +46,7 @@ struct SoundFormat
 struct sSoundSystem : Singleton<sSoundSystem>
 {
 	friend Singleton<sSoundSystem>;
-	sSoundSystem() {}
+
 	void setup(std::shared_ptr<btr::Context>& context);
 	vk::CommandBuffer execute_loop(const std::shared_ptr<btr::Context>& context);
 
@@ -61,6 +61,20 @@ private:
 		SOUND_BANK_SIZE = 64,
 		SOUND_REQUEST_SIZE = 256,
 	};
+
+	enum Shader
+	{
+		SHADER_SOUND_PLAY,
+		SHADER_SOUND_UPDATE,
+		SHADER_NUM,
+	};
+	enum Pipeline
+	{
+		PIPELINE_SOUND_PLAY,
+		PIPELINE_SOUND_UPDATE,
+		PIPELINE_NUM,
+	};
+
 	CComPtr<IMMDeviceEnumerator> m_device_enumerator;	// マルチメディアデバイス列挙インターフェース
 	CComPtr<IMMDevice>			m_device;				// デバイスインターフェース
 	CComPtr<IAudioClient>		m_audio_client;			// オーディオクライアントインターフェース
@@ -68,19 +82,23 @@ private:
 	WAVEFORMATEXTENSIBLE m_format;
 
 	int							m_current;						// WAVファイルの再生位置
+
+	vk::UniqueDescriptorPool		m_descriptor_pool;
+	vk::UniqueDescriptorSetLayout	m_descriptor_set_layout;
+	vk::UniqueDescriptorSet			m_descriptor_set;
+
+	std::array<vk::UniqueShaderModule, SHADER_NUM>	m_shader_module;
+	std::array<vk::UniquePipeline, PIPELINE_NUM>	m_pipeline;
+	vk::UniquePipelineLayout						m_pipeline_layout;
+
 	btr::BufferMemoryEx<SoundFormat> m_sound_format;
 	btr::UpdateBuffer<SoundPlayInfo> m_sound_play_info;
 	btr::BufferMemoryEx<int32_t> m_buffer;
+	btr::BufferMemoryEx<uint32_t> m_buffer_info;
 	btr::BufferMemoryEx<int32_t> m_request_buffer_index;
 	btr::BufferMemoryEx<int32_t> m_request_buffer_list;
 	btr::BufferMemoryEx<SoundPlayRequestData> m_request_buffer;
 
-//	btr::UpdateBuffer<SoundPlayRequestData> m_sound_request_data_buffer;
-
-	vk::UniqueShaderModule m_play_shader;
-	vk::UniqueDescriptorPool		m_descriptor_pool;
-	vk::UniqueDescriptorSetLayout	m_descriptor_set_layout;
-	vk::UniqueDescriptorSet			m_descriptor_set;
 
 	std::array<std::shared_ptr<SoundBuffer>, SOUND_BANK_SIZE> m_soundbank;
 	std::vector<std::shared_ptr<SoundPlayRequestData>> m_sound_request_data_cpu;

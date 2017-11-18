@@ -203,6 +203,7 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 	m_current = 0;
 
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+
 	{
 
 		btr::BufferMemoryDescriptorEx<int32_t> desc;
@@ -225,6 +226,11 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 		btr::BufferMemoryDescriptorEx<SoundPlayRequestData> desc;
 		desc.element_num = SOUND_REQUEST_SIZE;
 		m_request_buffer = context->m_storage_memory.allocateMemory(desc);
+	}
+	{
+		btr::BufferMemoryDescriptorEx<uint32_t> desc;
+		desc.element_num = 1;
+		m_buffer_info = context->m_storage_memory.allocateMemory(desc);
 	}
 	{
 		btr::BufferMemoryDescriptorEx<int32_t> desc;
@@ -298,6 +304,11 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 				.setStageFlags(stage)
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 				.setDescriptorCount(1)
+				.setBinding(3),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(stage)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(1)
 				.setBinding(20),
 				vk::DescriptorSetLayoutBinding()
 				.setStageFlags(stage)
@@ -336,6 +347,7 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 				m_sound_play_info.getBufferInfo(),
 			};
 			vk::DescriptorBufferInfo storages[] = {
+				m_buffer_info.getInfo(),
 				m_buffer.getInfo(),
 			};
 			vk::DescriptorBufferInfo requests[] = {
@@ -364,6 +376,60 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 				.setDstBinding(20)
 				.setDstSet(m_descriptor_set.get()),
 			};
+		}
+
+		// setup shader
+		{
+			struct
+			{
+				const char* name;
+			}shader_info[] =
+			{
+				{ "SoundPlay.comp.spv" },
+				{ "SoundUpdate.comp.spv" },
+			};
+			static_assert(array_length(shader_info) == SHADER_NUM, "not equal shader num");
+
+			std::string path = btr::getResourceAppPath() + "shader\\binary\\";
+			for (size_t i = 0; i < SHADER_NUM; i++) {
+				m_shader_module[i] = loadShaderUnique(context->m_device.getHandle(), path + shader_info[i].name);
+			}
+		}
+
+		// pipeline layout
+		{
+			vk::DescriptorSetLayout layouts[] =
+			{
+				m_descriptor_set_layout.get(),
+			};
+			vk::PipelineLayoutCreateInfo pipeline_layout_info;
+			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
+			pipeline_layout_info.setPSetLayouts(layouts);
+			m_pipeline_layout = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+
+		}
+		// pipeline
+		{
+			vk::PipelineShaderStageCreateInfo shader_info[SHADER_NUM];
+			for (size_t i = 0; i < SHADER_NUM; i++) {
+				shader_info[i].setModule(m_shader_module[i].get());
+				shader_info[i].setStage(vk::ShaderStageFlagBits::eCompute);
+				shader_info[i].setPName("main");
+			}
+
+//			vk::ComputePipelineCreateInfo compute_pipeline_info[] =
+			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
+			{
+				vk::ComputePipelineCreateInfo()
+				.setStage(shader_info[SHADER_SOUND_PLAY])
+				.setLayout(m_pipeline_layout.get()),
+				vk::ComputePipelineCreateInfo()
+				.setStage(shader_info[SHADER_SOUND_UPDATE])
+				.setLayout(m_pipeline_layout.get()),
+			};
+			auto pipelines = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
+			std::copy(std::make_move_iterator(pipelines.begin()), std::make_move_iterator(pipelines.end()), m_pipeline.begin());
+
 		}
 
 	}
