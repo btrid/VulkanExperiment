@@ -1,0 +1,30 @@
+#version 450
+#extension GL_GOOGLE_cpp_style_line_directive : require
+
+layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+#define USE_SOUND_SYSTEM 0
+#include <SoundSystem.glsl>
+
+shared uint s_max;
+void main()
+{
+	uint local = gl_LocalInvocationID.x;
+	if(local == 0)
+	{
+		s_max = b_accume_id_buffer_index;
+	}
+	barrier();
+	memoryBarrierShared();
+
+	if(local >= s_max){
+		return;
+	}
+	uint next = u_sound_play_request_data[local].m_current += u_play_info.m_sound_deltatime;
+	if(next >= u_sound_play_request_data[local].m_time)
+	{
+		// 再生終了
+		uint index = atomicAdd(b_accume_id_buffer_index, -1);
+		b_accume_id_buffer[index] = local;
+	}
+}

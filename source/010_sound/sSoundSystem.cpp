@@ -265,7 +265,7 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 		staging.getMappedPtr()->wBitsPerSample = m_format.Format.wBitsPerSample;
 		staging.getMappedPtr()->samples_per_frame = m_format.Format.nSamplesPerSec*m_format.Format.nChannels / 60.f;
 		staging.getMappedPtr()->frame_num = 3;
-		
+		staging.getMappedPtr()->m_buffer_length = m_format.Format.nSamplesPerSec*m_format.Format.nChannels / 60.f * 3.f;
 		vk::BufferCopy copy;
 		copy.setSrcOffset(staging.getInfo().offset);
 		copy.setDstOffset(m_sound_format.getInfo().offset);

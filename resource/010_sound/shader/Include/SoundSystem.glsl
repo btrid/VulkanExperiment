@@ -36,7 +36,7 @@ struct SoundFormat
 	// buffer format
 	int frame_num;
 	int samples_per_frame;// m_format.Format.nSamplesPerSec*m_format.Format.nChannels / 60.f
-	int		_p22;
+	uint m_buffer_length;
 	int		_p23;
 };
 
@@ -44,7 +44,7 @@ struct SoundPlayRequestData
 {
 	uint m_play_sound_id;
 	uint m_current;
-	uint _p2;
+	uint m_time;
 	uint _p3;
 	vec4 m_position; //!< w!=0.f ? 指向性 : ノット指向性
 };
@@ -53,7 +53,11 @@ struct SoundPlayInfo
 	vec4 m_listener;
 	vec4 m_direction;
 
-	uint play_sound_num;
+	uint m_sound_deltatime;
+};
+struct SoundBufferInfo
+{
+	uint m_current;
 };
 
 struct SoundInfo
@@ -72,7 +76,11 @@ layout(std140, set=USE_SOUND_SYSTEM, binding = 1) uniform SoundPlayInfoUniform
 {
 	SoundPlayInfo u_play_info;
 };
-layout(std430, set=USE_SOUND_SYSTEM, binding = 2) buffer SoundBuffer
+layout(std430, set=USE_SOUND_SYSTEM, binding = 2) buffer SoundBufferInfoBuffer
+{
+	SoundBufferInfo b_sound_buffer_info;
+};
+layout(std430, set=USE_SOUND_SYSTEM, binding = 3) buffer SoundBuffer
 {
 	uint b_sound_buffer[];
 };

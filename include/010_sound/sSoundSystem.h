@@ -39,7 +39,7 @@ struct SoundFormat
 	// buffer format
 	int32_t frame_num;
 	int32_t samples_per_frame;// m_format.Format.nSamplesPerSec*m_format.Format.nChannels / 60.f
-	int32_t		_p22;
+	int32_t	m_buffer_length;
 	int32_t		_p23;
 };
 
