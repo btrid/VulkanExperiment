@@ -50,13 +50,14 @@ struct SoundPlayRequestData
 };
 struct SoundPlayInfo
 {
-	vec4 m_listener;
-	vec4 m_direction;
-
 	uint m_sound_deltatime;
 	uint m_write_start;
 	uint _p2;
 	uint _p3;
+
+	vec4 m_listener;
+	vec4 m_direction;
+
 };
 
 struct SoundInfo
@@ -70,11 +71,11 @@ struct SoundInfo
 #define SOUND_BANK_SIZE (16)
 #define SOUND_REQUEST_SIZE (64)
 
-layout(std140, set=USE_SOUND_SYSTEM, binding = 0) uniform SoundFormatUniform
+layout(std140, set=USE_SOUND_SYSTEM, binding = 0) buffer SoundFormatUniform
 {
 	SoundFormat u_sound_format;
 };
-layout(std140, set=USE_SOUND_SYSTEM, binding = 1) uniform SoundPlayInfoUniform
+layout(std140, set=USE_SOUND_SYSTEM, binding = 1) buffer SoundPlayInfoUniform
 {
 	SoundPlayInfo u_play_info;
 };

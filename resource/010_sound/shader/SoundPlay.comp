@@ -14,7 +14,7 @@ layout(push_constant) uniform UpdateConstantBlock
 void main()
 {
 #if 0
-	uint data_index = gl_WorkGroupID.x;
+//	uint data_index = gl_WorkGroupID.x;
 #else
 	uint data_index = constant.m_data_index;
 	if(data_index >= b_accume_id_buffer_index.x){
@@ -22,11 +22,12 @@ void main()
 	}
 #endif
 	SoundPlayRequestData request = u_sound_play_request_data[data_index];
+
 	uint buffer_length = u_sound_format.m_buffer_length;
 
 	uint buffer_offset = u_play_info.m_write_start;
 	uint data_num = u_play_info.m_sound_deltatime;
-	uint loop_count = gl_NumWorkGroups.x == 0 ? 1 : ((data_num-1) / gl_NumWorkGroups.x + 1);
+	uint loop_count = (data_num-1) / gl_NumWorkGroups.x + 1;
 	uint loop_begin = gl_LocalInvocationID.x*loop_count;
 	uint loop_end = loop_begin + loop_count;
 

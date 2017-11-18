@@ -216,7 +216,7 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 	{
 
 		btr::UpdateBufferDescriptor desc;
-		desc.device_memory = context->m_uniform_memory;
+		desc.device_memory = context->m_storage_memory;
 		desc.staging_memory = context->m_staging_memory;
 		desc.element_num = 1;
 		desc.frame_max = sGlobal::FRAME_MAX;
@@ -233,6 +233,13 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 		m_request_buffer_index = context->m_storage_memory.allocateMemory(desc);
 
 		cmd->updateBuffer<uvec3>(m_request_buffer_index.getInfo().buffer, m_request_buffer_index.getInfo().offset, uvec3(0u, 1u, 1u));
+		{
+			auto to_read = m_request_buffer_index.makeMemoryBarrier();
+			to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+			to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
+		}
+
 	}
 	{
 		btr::BufferMemoryDescriptorEx<int32_t> desc;
@@ -251,11 +258,18 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 		copy.setDstOffset(m_request_buffer_list.getInfo().offset);
 		copy.setSize(staging.getInfo().range);
 		cmd->copyBuffer(staging.getInfo().buffer, m_request_buffer_list.getInfo().buffer, copy);
+
+		{
+			auto to_read = m_request_buffer_list.makeMemoryBarrier();
+			to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+			to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
+		}
 	}
 	{
 		btr::BufferMemoryDescriptorEx<SoundFormat> desc;
 		desc.element_num = 1;
-		m_sound_format = context->m_uniform_memory.allocateMemory(desc);
+		m_sound_format = context->m_storage_memory.allocateMemory(desc);
 
 		desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 		auto staging = context->m_staging_memory.allocateMemory(desc);
@@ -275,6 +289,13 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 
 		cmd->copyBuffer(staging.getInfo().buffer, m_sound_format.getBufferInfo().buffer, copy);
 
+		{
+			auto to_read = m_sound_format.makeMemoryBarrier();
+			to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+			to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
+		}
+
 	}
 	{
 		{
@@ -283,12 +304,12 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 			{
 				vk::DescriptorSetLayoutBinding()
 				.setStageFlags(stage)
-				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 				.setDescriptorCount(1)
 				.setBinding(0),
 				vk::DescriptorSetLayoutBinding()
 				.setStageFlags(stage)
-				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 				.setDescriptorCount(1)
 				.setBinding(1),
 				vk::DescriptorSetLayoutBinding()
@@ -350,7 +371,7 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 			std::vector<vk::WriteDescriptorSet> write_desc =
 			{
 				vk::WriteDescriptorSet()
-				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 				.setDescriptorCount(array_length(uniforms))
 				.setPBufferInfo(uniforms)
 				.setDstBinding(0)
@@ -546,7 +567,6 @@ vk::CommandBuffer sSoundSystem::execute_loop(const std::shared_ptr<btr::Context>
 			to_transfer.setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
 			to_transfer.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
-
 		}
 
 		SoundPlayInfo info;
@@ -567,7 +587,7 @@ vk::CommandBuffer sSoundSystem::execute_loop(const std::shared_ptr<btr::Context>
 
 	cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_SOUND_PLAY].get());
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOUND_PLAY].get(), 0, m_descriptor_set.get(), {});
-	for (uint i = 0; i < SOUND_BANK_SIZE; i++)
+	for (uint i = 0; i < 1; i++)
 	{
 		cmd.pushConstants<uint32_t>(m_pipeline_layout[PIPELINE_LAYOUT_SOUND_PLAY].get(), vk::ShaderStageFlagBits::eCompute, 0, i);
 		cmd.dispatch(1024, 1, 1);
