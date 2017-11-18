@@ -69,13 +69,13 @@ sGlobal::sGlobal()
 		auto& data = sThreadLocal::Order();
 		data.m_thread_index = param.m_index;
 	};
-	m_thread_pool.start(std::thread::hardware_concurrency() - 2, init_thread_data_func);
-	m_thread_pool_sound.start(1, [](const cThreadPool::InitParam& param){
-		if (param.m_index == 1)
-		{
-			SetThreadIdealProcessor(::GetCurrentThread(), 7);
-		}
-	});
+	m_thread_pool.start(std::thread::hardware_concurrency() - 1, init_thread_data_func);
+// 	m_thread_pool_sound.start(1, [](const cThreadPool::InitParam& param){
+// 		if (param.m_index == 1)
+// 		{
+// 			SetThreadIdealProcessor(::GetCurrentThread(), 7);
+// 		}
+// 	});
 }
 
 

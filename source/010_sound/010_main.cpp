@@ -73,14 +73,21 @@ int main()
 
 		app.preUpdate();
 
+		SynchronizedPoint render_syncronized_point(1);
+		std::vector<vk::CommandBuffer> render_cmds(1);
+
 		{
 			cThreadJob job;
-			job.mFinish = [=]() { sSoundSystem::Order().execute_loop(context); };
-//			sGlobal::Order().getThreadPoolSound().enque(std::move(job));
+			job.mFinish = [&]() { 
+				render_cmds[0] = sSoundSystem::Order().execute_loop(context); 
+				render_syncronized_point.arrive();
+			};
 			sGlobal::Order().getThreadPool().enque(std::move(job));
 		}
 		{
-			app.submit(std::vector<vk::CommandBuffer>{});
+			render_syncronized_point.wait();
+			app.submit(std::move(render_cmds));
+// 			app.submit(std::move(std::vector<vk::CommandBuffer> {}));
 		}
 		app.postUpdate();
 		printf("%6.4fs\n", time.getElapsedTimeAsSeconds());

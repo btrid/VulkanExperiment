@@ -43,7 +43,7 @@ void App::setup(const AppDescriptor& desc)
 		m_context->m_vertex_memory.setup(device, vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 1000 * 100);
 		m_context->m_uniform_memory.setup(device, vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 20);
 		m_context->m_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 1000 * 200);
-		m_context->m_staging_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferSrc, host_memory, 1000 * 1000 * 100);
+		m_context->m_staging_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst, host_memory, 1000 * 1000 * 100);
 		{
 			std::vector<vk::DescriptorPoolSize> pool_size(4);
 			pool_size[0].setType(vk::DescriptorType::eUniformBuffer);
@@ -209,7 +209,7 @@ void App::preUpdate()
 		job.mJob.emplace_back(
 			[&]()
 		{
-			m_system_cmds[2] = sParticlePipeline::Order().draw(m_context);
+			m_system_cmds[2] = sParticlePipeline::Order().execute(m_context);
 			m_system_cmds[3] = sParticlePipeline::Order().draw(m_context);
 			m_sync_point.arrive();
 		}

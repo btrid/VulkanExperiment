@@ -54,10 +54,7 @@ struct SoundPlayInfo
 	vec4 m_direction;
 
 	uint m_sound_deltatime;
-};
-struct SoundBufferInfo
-{
-	uint m_current;
+	uint m_write_start;
 };
 
 struct SoundInfo
@@ -68,6 +65,9 @@ struct SoundInfo
 
 
 #ifdef USE_SOUND_SYSTEM
+#define SOUND_BANK_SIZE (16)
+#define SOUND_REQUEST_SIZE (64)
+
 layout(std140, set=USE_SOUND_SYSTEM, binding = 0) uniform SoundFormatUniform
 {
 	SoundFormat u_sound_format;
@@ -76,36 +76,32 @@ layout(std140, set=USE_SOUND_SYSTEM, binding = 1) uniform SoundPlayInfoUniform
 {
 	SoundPlayInfo u_play_info;
 };
-layout(std430, set=USE_SOUND_SYSTEM, binding = 2) buffer SoundBufferInfoBuffer
-{
-	SoundBufferInfo b_sound_buffer_info;
-};
-layout(std430, set=USE_SOUND_SYSTEM, binding = 3) buffer SoundBuffer
+layout(std430, set=USE_SOUND_SYSTEM, binding = 2) buffer SoundBuffer
 {
 	uint b_sound_buffer[];
 };
 
-layout(std430, set=USE_SOUND_SYSTEM, binding = 20) buffer SoundAccumIndex
+layout(std430, set=USE_SOUND_SYSTEM, binding = 10) buffer SoundAccumIndex
 {
-	uint b_accume_id_buffer_index;
+	uvec3 b_accume_id_buffer_index;
 };
-layout(std140, set=USE_SOUND_SYSTEM, binding = 21) buffer SoundAccumBuffer
+layout(std430, set=USE_SOUND_SYSTEM, binding = 11) buffer SoundAccumBuffer
 {
-	uint b_accume_id_buffer[256];	//!< 空いているSoundGenerateの番号リスト
+	uint b_accume_id_buffer[SOUND_REQUEST_SIZE];	//!< 空いているSoundGenerateの番号リスト
 };
-layout(std430, set=USE_SOUND_SYSTEM, binding = 22) buffer SoundPlayRequestDataBuffer
+layout(std430, set=USE_SOUND_SYSTEM, binding = 12) buffer SoundPlayRequestDataBuffer
 {
-	SoundPlayRequestData u_sound_play_request_data[256];
-};
-
-layout(std140, set=USE_SOUND_SYSTEM, binding = 100) uniform SoundInfoUniform
-{
-	SoundInfo u_sound_info[64];
+	SoundPlayRequestData u_sound_play_request_data[SOUND_REQUEST_SIZE];
 };
 
-layout(std430, set=USE_SOUND_SYSTEM, binding = 101) buffer SoundDataBuffer
+layout(std140, set=USE_SOUND_SYSTEM, binding = 20) uniform SoundInfoUniform
 {
-	uint b_sound_data_buffer[][64];
+	SoundInfo u_sound_info[SOUND_BANK_SIZE];
+};
+
+layout(std430, set=USE_SOUND_SYSTEM, binding = 21) buffer SoundDataBuffer
+{
+	uint b_sound_data_buffer[][SOUND_BANK_SIZE];
 };
 
 #endif

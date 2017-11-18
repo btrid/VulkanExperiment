@@ -1,0 +1,50 @@
+#version 450
+#extension GL_GOOGLE_cpp_style_line_directive : require
+
+layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+#define USE_SOUND_SYSTEM 0
+#include <SoundSystem.glsl>
+
+#define buf_size (4096)
+shared uint s_max;
+shared uint s_buffer[buf_size];
+void main()
+{
+	uint local = gl_LocalInvocationID.x;
+	if(local == 0)
+	{
+		s_max = b_accume_id_buffer_index;
+	}
+	uint loop = (u_play_info.m_sound_deltatime / 256 + 1)*2;
+	for(uint i = 0; i < loop; i++)
+	{
+		s_buffer[loop * local + i] = 0;
+	}
+
+	barrier();
+	memoryBarrierShared();
+
+	if(local < s_max)
+	{
+		SoundPlayRequestData request = u_sound_play_request_data[local];
+		uint count = min(u_play_info.m_sound_deltatime, u_sound_info[request.m_play_sound_id].m_length - request.m_current);
+		for(uint i = 0; i < count; i++)
+		{
+			atomicAdd(s_buffer[i], b_sound_data_buffer[request.m_play_sound_id][request.m_current+i]);
+		}
+	}
+
+	barrier();
+	memoryBarrierShared();
+
+	uint buffer_length = u_sound_format.m_buffer_length;
+
+	for(uint i = 0; i < loop; i++)
+	{
+		uint buffer_index = loop * local + i;
+		buffer_index %= buffer_length;
+		b_sound_buffer[buffer_index] = s_buffer[loop * local + i];
+	}
+	b_sound_buffer_info.m_current = u_play_info.m_sound_deltatime;
+}

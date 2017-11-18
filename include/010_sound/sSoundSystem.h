@@ -22,7 +22,8 @@ struct SoundPlayInfo
 	glm::vec4 m_listener;
 	glm::vec4 m_direction;
 
-	uint32_t play_sound_num;
+	uint32_t m_sound_deltatime;
+	uint32_t m_write_start;
 };
 
 struct SoundFormat
@@ -40,7 +41,7 @@ struct SoundFormat
 	int32_t frame_num;
 	int32_t samples_per_frame;// m_format.Format.nSamplesPerSec*m_format.Format.nChannels / 60.f
 	int32_t	m_buffer_length;
-	int32_t		_p23;
+	int32_t	m_request_length;
 };
 
 struct sSoundSystem : Singleton<sSoundSystem>
@@ -58,8 +59,8 @@ struct sSoundSystem : Singleton<sSoundSystem>
 private:
 	enum 
 	{
-		SOUND_BANK_SIZE = 64,
-		SOUND_REQUEST_SIZE = 256,
+		SOUND_BANK_SIZE = 16,
+		SOUND_REQUEST_SIZE = 64,
 	};
 
 	enum Shader
@@ -74,6 +75,12 @@ private:
 		PIPELINE_SOUND_UPDATE,
 		PIPELINE_NUM,
 	};
+	enum PipelineLayout
+	{
+		PIPELINE_LAYOUT_SOUND_PLAY,
+		PIPELINE_LAYOUT_SOUND_UPDATE,
+		PIPELINE_LAYOUT_NUM,
+	};
 
 	CComPtr<IMMDeviceEnumerator> m_device_enumerator;	// マルチメディアデバイス列挙インターフェース
 	CComPtr<IMMDevice>			m_device;				// デバイスインターフェース
@@ -81,7 +88,7 @@ private:
 	CComPtr<IAudioRenderClient>	m_render_client;		// レンダークライアントインターフェース
 	WAVEFORMATEXTENSIBLE m_format;
 
-	int							m_current;						// WAVファイルの再生位置
+	int32_t						m_current;						// WAVファイルの再生位置
 
 	vk::UniqueDescriptorPool		m_descriptor_pool;
 	vk::UniqueDescriptorSetLayout	m_descriptor_set_layout;
@@ -89,13 +96,12 @@ private:
 
 	std::array<vk::UniqueShaderModule, SHADER_NUM>	m_shader_module;
 	std::array<vk::UniquePipeline, PIPELINE_NUM>	m_pipeline;
-	vk::UniquePipelineLayout						m_pipeline_layout;
+	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM>	m_pipeline_layout;
 
 	btr::BufferMemoryEx<SoundFormat> m_sound_format;
 	btr::UpdateBuffer<SoundPlayInfo> m_sound_play_info;
 	btr::BufferMemoryEx<int32_t> m_buffer;
-	btr::BufferMemoryEx<uint32_t> m_buffer_info;
-	btr::BufferMemoryEx<int32_t> m_request_buffer_index;
+	btr::BufferMemoryEx<uvec3> m_request_buffer_index;
 	btr::BufferMemoryEx<int32_t> m_request_buffer_list;
 	btr::BufferMemoryEx<SoundPlayRequestData> m_request_buffer;
 

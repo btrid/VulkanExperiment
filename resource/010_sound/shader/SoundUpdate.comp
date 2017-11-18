@@ -12,7 +12,7 @@ void main()
 	uint local = gl_LocalInvocationID.x;
 	if(local == 0)
 	{
-		s_max = b_accume_id_buffer_index;
+		s_max = b_accume_id_buffer_index.x;
 	}
 	barrier();
 	memoryBarrierShared();
@@ -24,7 +24,7 @@ void main()
 	if(next >= u_sound_play_request_data[local].m_time)
 	{
 		// 再生終了
-		uint index = atomicAdd(b_accume_id_buffer_index, -1);
+		uint index = atomicAdd(b_accume_id_buffer_index.x, -1);
 		b_accume_id_buffer[index] = local;
 	}
 }
