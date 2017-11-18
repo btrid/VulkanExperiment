@@ -52,6 +52,43 @@ bool succeeded(HRESULT result)
 	printf("%s\n", to_string(result).c_str());
 	return false;
 }
+
+// std::vector<int8_t> convertData(const WAVEFORMATEX* src, const WAVEFORMATEX* dst, int8_t* src_data, uint32_t src_num)
+// {
+// 	float rate = (float)src->nSamplesPerSec / dst->nSamplesPerSec;
+// 	std::vector<int8_t> buf((1.f/rate) * src_num * (src->wBitsPerSample / 8));
+// 
+// 	void* dst_data = buf.data();
+// 	int32_t dst_byte = dst->wBitsPerSample / 8;
+// 	int32_t src_byte = src->wBitsPerSample / 8;
+// 
+// 	float power = 1.f;
+// 	if (dst_byte > src_byte) {
+// 		power = 1 << (dst_byte - src_byte);
+// 	}
+// 	else if (dst_byte < src_byte) {
+// 		power = 1.f / (1 << (dst_byte - src_byte));
+// 	}
+// 
+// 	for (int32_t dst_index = 0; dst_index < buf.size(); dst_index++)
+// 	{
+// 		float src_index = dst_index * rate;
+// 		float lerp_rate = src_index - floor(src_index);
+// 		int i = floor(src_index);
+// 		float data1 = src_data[i];
+// 		float data2 = src_data[i + 1];
+// 		for (int ii = 1; ii < src_byte; ii++)
+// 		{
+// 			data1 += src_data[i] * (1 << ii);
+// 			data2 += src_data[i + 1] * (1 << ii);
+// 		}
+// 		int32_t data = glm::lerp<float>(data1, data2, lerp_rate) * power;
+// 		memcpy(dst_data, ) = ;
+// 		(CHAR*)dst_data += dst_byte;
+// 	}
+// 
+// }
+
 void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 {
 	CoInitialize(NULL);
@@ -67,7 +104,6 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 	// オーディオクライアント
 	ret = m_device->Activate(__uuidof(IAudioClient), CLSCTX_ALL, NULL, (void**)&m_audio_client);
 	assert(succeeded(ret));
-
 	// フォーマットの構築
 	ZeroMemory(&m_format, sizeof(m_format));
 	m_format.Format.cbSize = sizeof(WAVEFORMATEXTENSIBLE);
@@ -83,7 +119,7 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 //#define USE_EXCLUSIVE
 #ifdef USE_EXCLUSIVE
 	AUDCLNT_SHAREMODE share_mode = AUDCLNT_SHAREMODE_EXCLUSIVE;
-	int stream_flag = AUDCLNT_STREAMFLAGS_NOPERSIST | AUDCLNT_STREAMFLAGS_EVENTCALLBACK;
+	int stream_flag = AUDCLNT_STREAMFLAGS_NOPERSIST;
 #else
 	AUDCLNT_SHAREMODE share_mode = AUDCLNT_SHAREMODE_SHARED;
 	int stream_flag = AUDCLNT_STREAMFLAGS_NOPERSIST; // 共有モードはEventDriven動かないらしい
@@ -144,17 +180,6 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 		assert(succeeded(ret));
 	}
 
-	m_event = nullptr;
-	if (stream_flag & AUDCLNT_STREAMFLAGS_EVENTCALLBACK)
-	{
-		// イベント生成
-		m_event = CreateEvent(NULL, FALSE, FALSE, NULL);
-		// イベントのセット
-		ret = m_audio_client->SetEventHandle(m_event);
-		assert(succeeded(ret));
-
-	}
-
 	// レンダラーの取得
 	ret = m_audio_client->GetService(IID_PPV_ARGS(&m_render_client));
 	assert(succeeded(ret));
@@ -164,7 +189,6 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 	ret = m_audio_client->GetBufferSize(&frame);
 	assert(succeeded(ret));
 
-
 	// ゼロクリア
 	LPBYTE pData;
 	ret = m_render_client->GetBuffer(frame, &pData);
@@ -172,50 +196,176 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 
 	UINT32 size = frame * m_format.Format.nBlockAlign;
 	ZeroMemory(pData, frame * m_format.Format.nBlockAlign);
+
 	ret = m_render_client->ReleaseBuffer(frame, 0);
 	assert(succeeded(ret));
 
 	m_current = 0;
+
+	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 	{
-#if 0
-		btr::BufferMemoryDescriptorEx<int16_t> desc;
-		desc.element_num = size / sizeof(int16_t) * 3;
+
+		btr::BufferMemoryDescriptorEx<int32_t> desc;
+		desc.element_num = m_format.Format.nSamplesPerSec*m_format.Format.nChannels / 60.f * 3.f; // 3f分くらい
 		m_buffer = context->m_staging_memory.allocateMemory(desc);
 
-		// debug用の音を投入
-		for (int i = 0; i < desc.element_num; i++)
+		std::vector<uint32_t> clear(desc.element_num);
+		memcpy(m_buffer.getMappedPtr(), clear.data(), vector_sizeof(clear));
+	}
+	{
+
+		btr::UpdateBufferDescriptor desc;
+		desc.device_memory = context->m_uniform_memory;
+		desc.staging_memory = context->m_staging_memory;
+		desc.element_num = 1;
+		desc.frame_max = sGlobal::FRAME_MAX;
+		m_sound_play_info.setup(desc);
+	}
+	{
+		btr::BufferMemoryDescriptorEx<SoundPlayRequestData> desc;
+		desc.element_num = SOUND_REQUEST_SIZE;
+		m_request_buffer = context->m_storage_memory.allocateMemory(desc);
+	}
+	{
+		btr::BufferMemoryDescriptorEx<int32_t> desc;
+		desc.element_num = 1;
+		m_request_buffer_index = context->m_storage_memory.allocateMemory(desc);
+
+		cmd->fillBuffer(m_request_buffer_index.getInfo().buffer, m_request_buffer_index.getInfo().offset, m_request_buffer_index.getInfo().range, 0u);
+	}
+	{
+		btr::BufferMemoryDescriptorEx<int32_t> desc;
+		desc.element_num = SOUND_REQUEST_SIZE;
+		m_request_buffer_list = context->m_storage_memory.allocateMemory(desc);
+
+		desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
+		auto staging = context->m_staging_memory.allocateMemory(desc);
+		for (uint32_t i = 0; i < SOUND_REQUEST_SIZE; i++)
 		{
-			float a = 128.f / desc.element_num;
-			m_buffer.getMappedPtr()[i] = sin(i%128 * a)*20000;
+			staging.getMappedPtr()[i] = i;
 		}
-		memcpy(m_buffer.getMappedPtr(), wave.getData(), wave.getLength());
-#else
-		rWave wave("..\\..\\resource\\010_sound\\Alesis-Fusion-Steel-String-Guitar-C4.wav");
 
+		vk::BufferCopy copy;
+		copy.setSrcOffset(staging.getInfo().offset);
+		copy.setDstOffset(m_request_buffer_list.getInfo().offset);
+		copy.setSize(staging.getInfo().range);
+		cmd->copyBuffer(staging.getInfo().buffer, m_request_buffer_list.getInfo().buffer, copy);
+	}
+	{
+		btr::BufferMemoryDescriptorEx<SoundFormat> desc;
+		desc.element_num = 1;
+		m_sound_format = context->m_uniform_memory.allocateMemory(desc);
+
+		desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
+		auto staging = context->m_staging_memory.allocateMemory(desc);
+		staging.getMappedPtr()->nAvgBytesPerSec = m_format.Format.nAvgBytesPerSec;
+		staging.getMappedPtr()->nBlockAlign = m_format.Format.nAvgBytesPerSec;
+		staging.getMappedPtr()->nChannels = m_format.Format.nAvgBytesPerSec;
+		staging.getMappedPtr()->nSamplesPerSec = m_format.Format.nAvgBytesPerSec;
+		staging.getMappedPtr()->wBitsPerSample = m_format.Format.wBitsPerSample;
+		staging.getMappedPtr()->samples_per_frame = m_format.Format.nSamplesPerSec*m_format.Format.nChannels / 60.f;
+		staging.getMappedPtr()->frame_num = 3;
+		
+		vk::BufferCopy copy;
+		copy.setSrcOffset(staging.getInfo().offset);
+		copy.setDstOffset(m_sound_format.getInfo().offset);
+		copy.setSize(staging.getBufferInfo().range);
+
+		cmd->copyBuffer(staging.getInfo().buffer, m_sound_format.getBufferInfo().buffer, copy);
+
+	}
+	{
 		{
-			std::vector<int32_t> buf(((float)m_format.Format.nSamplesPerSec / wave.getFormat()->nSamplesPerSec) * wave.getLength() / 2);
-
-			auto* src_data = (int16_t*)wave.getData();
-			float rate = (float)wave.getFormat()->nSamplesPerSec / m_format.Format.nSamplesPerSec;
-			int32_t dst_index = 0;
-			for (int32_t dst_index = 0; dst_index < buf.size(); dst_index++)
+			auto stage = vk::ShaderStageFlagBits::eCompute;
+			std::vector<vk::DescriptorSetLayoutBinding> binding =
 			{
-				float src_index = dst_index * rate;
-				float lerp_rate = src_index - floor(src_index);
-				int i = floor(src_index);
-				buf[dst_index] = glm::lerp<float>(src_data[i], src_data[i+1], lerp_rate) * 65000;
-			}
-
-			btr::BufferMemoryDescriptorEx<int32_t> desc;
-			desc.element_num = buf.size();
-			m_buffer = context->m_staging_memory.allocateMemory(desc);
-
-			memcpy(m_buffer.getMappedPtr(), buf.data(), vector_sizeof(buf));
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(stage)
+				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+				.setDescriptorCount(1)
+				.setBinding(0),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(stage)
+				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+				.setDescriptorCount(1)
+				.setBinding(1),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(stage)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(1)
+				.setBinding(2),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(stage)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(1)
+				.setBinding(20),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(stage)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(1)
+				.setBinding(21),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(stage)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(1)
+				.setBinding(22),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(stage)
+				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+				.setDescriptorCount(1)
+				.setBinding(100),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(stage)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(SOUND_BANK_SIZE)
+				.setBinding(101),
+			};
+			m_descriptor_set_layout = btr::Descriptor::createDescriptorSetLayout(context, binding);
+			m_descriptor_pool = btr::Descriptor::createDescriptorPool(context, binding, 1);
+			vk::DescriptorSetLayout layouts[] = { m_descriptor_set_layout.get() };
+			vk::DescriptorSetAllocateInfo alloc_info;
+			alloc_info.setDescriptorPool(m_descriptor_pool.get());
+			alloc_info.setDescriptorSetCount(array_length(layouts));
+			alloc_info.setPSetLayouts(layouts);
+			m_descriptor_set = std::move(context->m_device->allocateDescriptorSetsUnique(alloc_info)[0]);
 		}
 
-		// @Todo 共有モードだとm_format(48.0kHz)とデータの周波数(44.1kHz)が違うので音が高く聞こえる。
-		// データを変換する作業が必要
-#endif	
+		{
+			vk::DescriptorBufferInfo uniforms[] = {
+				m_sound_format.getInfo(),
+				m_sound_play_info.getBufferInfo(),
+			};
+			vk::DescriptorBufferInfo storages[] = {
+				m_buffer.getInfo(),
+			};
+			vk::DescriptorBufferInfo requests[] = {
+				m_request_buffer_index.getInfo(),
+				m_request_buffer_list.getInfo(),
+				m_request_buffer.getInfo(),
+			};
+
+			std::vector<vk::WriteDescriptorSet> write_desc =
+			{
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+				.setDescriptorCount(array_length(uniforms))
+				.setPBufferInfo(uniforms)
+				.setDstBinding(0)
+				.setDstSet(m_descriptor_set.get()),
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(array_length(storages))
+				.setPBufferInfo(storages)
+				.setDstBinding(2),
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(array_length(requests))
+				.setPBufferInfo(requests)
+				.setDstBinding(20)
+				.setDstSet(m_descriptor_set.get()),
+			};
+		}
+
 	}
 
 	ret = m_audio_client->Start();
@@ -223,81 +373,89 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 
 }
 
-
-void sSoundSystem::execute_loop(const std::shared_ptr<btr::Context>& context)
+void sSoundSystem::setSoundbank(const std::shared_ptr<btr::Context>& context, std::vector<std::shared_ptr<SoundBuffer>>&& bank)
 {
-//	DEBUG("スレッド開始\n");
 
+	std::copy(std::make_move_iterator(bank.begin()), std::make_move_iterator(bank.end()), m_soundbank.begin());
+
+	vk::DescriptorBufferInfo soundinfos[SOUND_BANK_SIZE] = {};
+	vk::DescriptorBufferInfo sounddatas[SOUND_BANK_SIZE] = {};
+	vk::WriteDescriptorSet write_desc[SOUND_BANK_SIZE*2] = {};
+	for (uint32_t i = 0; i < bank.size(); i++)
+	{
+		soundinfos[i] = m_soundbank[i]->m_info.getInfo();
+		sounddatas[i] = m_soundbank[i]->m_buffer.getInfo();
+		write_desc[i * 2].setDescriptorType(vk::DescriptorType::eUniformBuffer);
+		write_desc[i * 2].setDescriptorCount(1);
+		write_desc[i * 2].setPBufferInfo(&soundinfos[i]);
+		write_desc[i * 2].setDstBinding(100);
+		write_desc[i * 2].setDstArrayElement(i);
+		write_desc[i * 2].setDstSet(m_descriptor_set.get());
+
+		write_desc[i * 2 + 1].setDescriptorType(vk::DescriptorType::eStorageBuffer);
+		write_desc[i * 2 + 1].setDescriptorCount(1);
+		write_desc[i * 2 + 1].setPBufferInfo(&sounddatas[i]);
+		write_desc[i * 2 + 1].setDstBinding(101);
+		write_desc[i * 2 + 1].setDstArrayElement(i);
+		write_desc[i * 2 + 1].setDstSet(m_descriptor_set.get());
+	}
+
+	context->m_device->updateDescriptorSets(bank.size()*2,  write_desc, 0, nullptr);
+
+}
+
+std::weak_ptr<SoundPlayRequestData> sSoundSystem::playOneShot(int32_t play_sound_id)
+{
+	auto data = std::make_shared<SoundPlayRequestData>();
+	data->m_play_sound_id = play_sound_id;
+	data->m_current = 0;
+	data->m_position = vec4(0.f);
+	std::weak_ptr<SoundPlayRequestData> weak = data;
+	m_sound_request_data_cpu.push_back(std::move(data));
+	return weak;
+}
+
+vk::CommandBuffer sSoundSystem::execute_loop(const std::shared_ptr<btr::Context>& context)
+{
+	auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 	UINT32 audio_buffer_size;
-	HRESULT hr = m_audio_client->GetBufferSize(&audio_buffer_size);
+	auto hr = m_audio_client->GetBufferSize(&audio_buffer_size);
 	assert(succeeded(hr));
 
-	while (true)
-	{
+	uint32_t padding = 0;
+	hr = m_audio_client->GetCurrentPadding(&padding);
+	assert(succeeded(hr));
 
+	if (padding == audio_buffer_size)
+	{
+		// やることない
+		return cmd;
+	}
+
+
+	do
+	{
 		// ソースバッファのポインタを取得
 		auto* src = m_buffer.getMappedPtr();
 
-		// event driven
-		if (m_event)
-		{
-			DWORD retval = WaitForSingleObject(m_event, 2000);
-			if (retval != WAIT_OBJECT_0) {
-				m_audio_client->Stop();
-				break;
-			}
-			LPBYTE dst;
-			hr = m_render_client->GetBuffer(audio_buffer_size, &dst);
-			assert(succeeded(hr));
+		LPBYTE dst;
+		hr = m_render_client->GetBuffer(audio_buffer_size-padding, &dst);
+		assert(succeeded(hr));
 
-
-			int buf_size = audio_buffer_size * m_format.Format.nBlockAlign;
-			auto copy = std::min<uint32_t>(m_buffer.getInfo().range - m_current, buf_size);
-			memcpy(&dst[0], &src[m_current/sizeof(int16_t)], copy);
-			auto mod = buf_size - copy;
-			if (mod > 0) {
-				memcpy(&dst[copy], &src[0], mod);
-			}
-			m_current = (m_current + buf_size) % m_buffer.getInfo().range;
-
-			// バッファに書き込んだことを通知
-			hr = m_render_client->ReleaseBuffer(audio_buffer_size, 0);
-			assert(succeeded(hr));
-
+		int buf_size = (audio_buffer_size - padding) * m_format.Format.nBlockAlign;
+		auto copy = std::min<uint32_t>(m_buffer.getInfo().range - m_current, buf_size);
+		memcpy(&dst[0], &src[m_current/m_buffer.getDataSizeof()], copy);
+		auto mod = buf_size - copy;
+		if (mod > 0) {
+			memcpy(&dst[copy], &src[0], mod);
 		}
-		// timer driven
-		else 
-		{
+		m_current = (m_current + buf_size) % m_buffer.getInfo().range;
 
-			uint32_t padding = 0;
-			auto hr = m_audio_client->GetCurrentPadding(&padding);
-			assert(succeeded(hr));
+		// バッファに書き込んだことを通知
+		hr = m_render_client->ReleaseBuffer(audio_buffer_size - padding, 0);
+		assert(succeeded(hr));
 
-			if (padding == audio_buffer_size)
-			{
-				// 空きなし
-				continue;
-			}
-			LPBYTE dst;
-			hr = m_render_client->GetBuffer(audio_buffer_size-padding, &dst);
-			assert(succeeded(hr));
+	} while (false);
 
-			int buf_size = (audio_buffer_size - padding) * m_format.Format.nBlockAlign;
-			auto copy = std::min<uint32_t>(m_buffer.getInfo().range - m_current, buf_size);
-			memcpy(&dst[0], &src[m_current/m_buffer.getDataSizeof()], copy);
-			auto mod = buf_size - copy;
-			if (mod > 0) {
-				memcpy(&dst[copy], &src[0], mod);
-			}
-			m_current = (m_current + buf_size) % m_buffer.getInfo().range;
-
-			// バッファに書き込んだことを通知
-			hr = m_render_client->ReleaseBuffer(audio_buffer_size - padding, 0);
-			assert(succeeded(hr));
-			std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
-		}
-
-	}
-
+	return cmd;
 }

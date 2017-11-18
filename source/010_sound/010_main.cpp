@@ -58,20 +58,27 @@ int main()
 
 	auto context = app.m_context;
 
-//	rWave wave("..\\..\\resource\\010_sound\\Alesis-Fusion-Steel-String-Guitar-C4.wav");
 	sSoundSystem::Order().setup(context);
 
-	{
-		cThreadJob job;
-		job.mFinish = [=]() { sSoundSystem::Order().execute_loop(context); };
-		sGlobal::Order().getThreadPoolSound().enque(std::move(job));
-	}
+	std::shared_ptr<rWave> wave = std::make_shared<rWave>("..\\..\\resource\\010_sound\\Alesis-Fusion-Steel-String-Guitar-C4.wav");
+	std::vector<std::shared_ptr<SoundBuffer>> bank = {
+		std::make_shared<SoundBuffer>(context, wave),
+	};
+	sSoundSystem::Order().setSoundbank(context, std::move(bank));
+//	sSoundSystem::Order().playOneShot(0);
 
 	while (true)
 	{
 		cStopWatch time;
 
 		app.preUpdate();
+
+		{
+			cThreadJob job;
+			job.mFinish = [=]() { sSoundSystem::Order().execute_loop(context); };
+//			sGlobal::Order().getThreadPoolSound().enque(std::move(job));
+			sGlobal::Order().getThreadPool().enque(std::move(job));
+		}
 		{
 			app.submit(std::vector<vk::CommandBuffer>{});
 		}
