@@ -18,10 +18,10 @@ void main()
 #else
 	uint data_index = constant.m_data_index;
 	if(data_index >= b_active_id_counter){
-//		return;
+		return;
 	}
 #endif
-	SoundPlayRequestData request = b_sound_playing_data[0];
+	SoundPlayRequestData request = b_sound_playing_data[data_index];
 
 	uint buffer_length = u_sound_format.m_buffer_length;
 

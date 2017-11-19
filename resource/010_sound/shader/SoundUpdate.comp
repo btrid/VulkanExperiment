@@ -23,8 +23,8 @@ void main()
 
 	if(b_sound_playing_data[local].m_is_playing != 0)
 	{
-		b_sound_playing_data[local].m_current += u_play_info.m_sound_deltatime;
-		if(b_sound_playing_data[local].m_current >= b_sound_playing_data[local].m_time)
+		uint next = b_sound_playing_data[local].m_current += u_play_info.m_sound_deltatime;
+		if(next >= b_sound_playing_data[local].m_time)
 		{
 //			b_sound_playing_data[local].m_time = 0;
 //			uint index = atomicAdd(s_active_counter, 1);
