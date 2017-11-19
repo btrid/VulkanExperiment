@@ -64,6 +64,8 @@ struct SoundInfo
 {
 	uint m_length;
 	uint m_samples_per_sec;
+	uint _p2;
+	uint _p3;
 };
 
 
@@ -71,11 +73,11 @@ struct SoundInfo
 #define SOUND_BANK_SIZE (16)
 #define SOUND_REQUEST_SIZE (64)
 
-layout(std140, set=USE_SOUND_SYSTEM, binding = 0) buffer SoundFormatUniform
+layout(std430, set=USE_SOUND_SYSTEM, binding = 0) readonly restrict buffer SoundFormatUniform
 {
 	SoundFormat u_sound_format;
 };
-layout(std140, set=USE_SOUND_SYSTEM, binding = 1) buffer SoundPlayInfoUniform
+layout(std430, set=USE_SOUND_SYSTEM, binding = 1) readonly restrict buffer SoundPlayInfoUniform
 {
 	SoundPlayInfo u_play_info;
 };

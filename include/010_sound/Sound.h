@@ -14,6 +14,8 @@ struct SoundInfo
 {
 	uint32_t m_length;
 	uint32_t m_samples_per_sec;
+	uint _p2;
+	uint _p3;
 };
 
 struct SoundBuffer
