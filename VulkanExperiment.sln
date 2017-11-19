@@ -86,6 +86,12 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "010_sound", "project\010_so
 		{C902CBC4-17CF-47BA-B10E-DA6F79032944} = {C902CBC4-17CF-47BA-B10E-DA6F79032944}
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "011_ui", "project\011_ui\011_ui.vcxproj", "{754AD9DC-0D64-4EBC-AFCF-E541E47E66D9}"
+	ProjectSection(ProjectDependencies) = postProject
+		{6AB61332-963C-4D53-B5FF-04B3A9689E23} = {6AB61332-963C-4D53-B5FF-04B3A9689E23}
+		{C902CBC4-17CF-47BA-B10E-DA6F79032944} = {C902CBC4-17CF-47BA-B10E-DA6F79032944}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -154,6 +160,10 @@ Global
 		{39A725CE-075D-4CF0-9C42-EA5CF81D8411}.Debug|x64.Build.0 = Debug|x64
 		{39A725CE-075D-4CF0-9C42-EA5CF81D8411}.Release|x64.ActiveCfg = Release|x64
 		{39A725CE-075D-4CF0-9C42-EA5CF81D8411}.Release|x64.Build.0 = Release|x64
+		{754AD9DC-0D64-4EBC-AFCF-E541E47E66D9}.Debug|x64.ActiveCfg = Debug|x64
+		{754AD9DC-0D64-4EBC-AFCF-E541E47E66D9}.Debug|x64.Build.0 = Debug|x64
+		{754AD9DC-0D64-4EBC-AFCF-E541E47E66D9}.Release|x64.ActiveCfg = Release|x64
+		{754AD9DC-0D64-4EBC-AFCF-E541E47E66D9}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
