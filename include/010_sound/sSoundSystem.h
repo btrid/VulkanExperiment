@@ -69,18 +69,21 @@ private:
 	{
 		SHADER_SOUND_PLAY,
 		SHADER_SOUND_UPDATE,
+		SHADER_SOUND_REQUEST,
 		SHADER_NUM,
 	};
 	enum Pipeline
 	{
 		PIPELINE_SOUND_PLAY,
 		PIPELINE_SOUND_UPDATE,
+		PIPELINE_SOUND_REQUEST,
 		PIPELINE_NUM,
 	};
 	enum PipelineLayout
 	{
 		PIPELINE_LAYOUT_SOUND_PLAY,
 		PIPELINE_LAYOUT_SOUND_UPDATE,
+		PIPELINE_LAYOUT_SOUND_REQUEST,
 		PIPELINE_LAYOUT_NUM,
 	};
 
@@ -103,7 +106,7 @@ private:
 	btr::BufferMemoryEx<SoundFormat> m_sound_format;
 	btr::UpdateBuffer<SoundPlayInfo> m_sound_play_info;
 	btr::BufferMemoryEx<int32_t> m_buffer;
-	btr::BufferMemoryEx<uvec2> m_sound_id_buffer;
+	btr::BufferMemoryEx<uvec3> m_sound_counter;
 	btr::BufferMemoryEx<int32_t> m_active_buffer;
 	btr::BufferMemoryEx<int32_t> m_free_buffer;
 	btr::BufferMemoryEx<SoundPlayRequestData> m_playing_buffer;

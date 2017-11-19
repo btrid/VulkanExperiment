@@ -236,13 +236,13 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 		m_request_buffer = context->m_storage_memory.allocateMemory(desc);
 	}
 	{
-		btr::BufferMemoryDescriptorEx<uvec2> desc;
+		btr::BufferMemoryDescriptorEx<uvec3> desc;
 		desc.element_num = 1;
-		m_sound_id_buffer = context->m_storage_memory.allocateMemory(desc);
+		m_sound_counter = context->m_storage_memory.allocateMemory(desc);
 
-		cmd->updateBuffer<uvec2>(m_sound_id_buffer.getInfo().buffer, m_sound_id_buffer.getInfo().offset, uvec2(0u, 0u));
+		cmd->updateBuffer<uvec3>(m_sound_counter.getInfo().buffer, m_sound_counter.getInfo().offset, uvec3(0u, 0u, 0u));
 		{
-			auto to_read = m_sound_id_buffer.makeMemoryBarrier();
+			auto to_read = m_sound_counter.makeMemoryBarrier();
 			to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 			to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
 			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
@@ -328,7 +328,12 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 				.setBinding(13),
 				vk::DescriptorSetLayoutBinding()
 				.setStageFlags(stage)
-				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(1)
+				.setBinding(14),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(stage)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 				.setDescriptorCount(SOUND_BANK_SIZE)
 				.setBinding(20),
 				vk::DescriptorSetLayoutBinding()
@@ -357,9 +362,10 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 				m_buffer.getInfo(),
 			};
 			vk::DescriptorBufferInfo requests[] = {
-				m_sound_id_buffer.getInfo(),
+				m_sound_counter.getInfo(),
 				m_active_buffer.getInfo(),
 				m_free_buffer.getInfo(),
+				m_playing_buffer.getInfo(),
 				m_request_buffer.getInfo(),
 			};
 
@@ -396,6 +402,7 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 			{
 				{ "SoundPlay.comp.spv" },
 				{ "SoundUpdate.comp.spv" },
+				{ "SoundRequest.comp.spv" },
 			};
 			static_assert(array_length(shader_info) == SHADER_NUM, "not equal shader num");
 
@@ -416,6 +423,7 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 				pipeline_layout_info.setPSetLayouts(layouts);
 				m_pipeline_layout[PIPELINE_LAYOUT_SOUND_UPDATE] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+				m_pipeline_layout[PIPELINE_LAYOUT_SOUND_REQUEST] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 			}
 			{
 				vk::DescriptorSetLayout layouts[] =
@@ -453,6 +461,9 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[SHADER_SOUND_UPDATE])
 				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_SOUND_UPDATE].get()),
+				vk::ComputePipelineCreateInfo()
+				.setStage(shader_info[SHADER_SOUND_REQUEST])
+				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_SOUND_REQUEST].get()),
 			};
 			auto pipelines = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
 			std::copy(std::make_move_iterator(pipelines.begin()), std::make_move_iterator(pipelines.end()), m_pipeline.begin());
@@ -479,7 +490,7 @@ void sSoundSystem::setSoundbank(const std::shared_ptr<btr::Context>& context, st
 	{
 		soundinfos[i] = m_soundbank[i]->m_info.getInfo();
 		sounddatas[i] = m_soundbank[i]->m_buffer.getInfo();
-		write_desc[i * 2].setDescriptorType(vk::DescriptorType::eUniformBuffer);
+		write_desc[i * 2].setDescriptorType(vk::DescriptorType::eStorageBuffer);
 		write_desc[i * 2].setDescriptorCount(1);
 		write_desc[i * 2].setPBufferInfo(&soundinfos[i]);
 		write_desc[i * 2].setDstBinding(20);
@@ -497,7 +508,7 @@ void sSoundSystem::setSoundbank(const std::shared_ptr<btr::Context>& context, st
 	// 空きスペースは適当なもので埋める。todo 空データ準備
 	for (uint32_t i = bank.size(); i < SOUND_BANK_SIZE; i++)
 	{
-		write_desc[i * 2].setDescriptorType(vk::DescriptorType::eUniformBuffer);
+		write_desc[i * 2].setDescriptorType(vk::DescriptorType::eStorageBuffer);
 		write_desc[i * 2].setDescriptorCount(1);
 		write_desc[i * 2].setPBufferInfo(&soundinfos[0]);
 		write_desc[i * 2].setDstBinding(20);
@@ -530,6 +541,46 @@ std::weak_ptr<SoundPlayRequestData> sSoundSystem::playOneShot(int32_t play_sound
 vk::CommandBuffer sSoundSystem::execute_loop(const std::shared_ptr<btr::Context>& context)
 {
 	auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
+
+	static int is_init;
+	if (is_init == 0)
+	{
+		is_init = 1;
+		// sound初期化
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_SOUND_UPDATE].get());
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOUND_UPDATE].get(), 0, m_descriptor_set.get(), {});
+		cmd.dispatch(1, 1, 1);
+
+		// debug
+		SoundPlayRequestData request;
+		request.m_play_sound_id = 0;
+		request.m_position = vec4(0.f);
+		cmd.updateBuffer<SoundPlayRequestData>(m_request_buffer.getInfo().buffer, m_request_buffer.getInfo().offset, request);
+		cmd.updateBuffer<uint32_t>(m_sound_counter.getInfo().buffer, m_sound_counter.getInfo().offset + 8, 1);
+		{
+			auto to_read = m_sound_counter.makeMemoryBarrier();
+			to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+			to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
+		}
+
+	}
+
+	{
+		// 再生リクエストの処理
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_SOUND_REQUEST].get());
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOUND_REQUEST].get(), 0, m_descriptor_set.get(), {});
+		cmd.dispatch(1, 1, 1);
+		{
+			auto to_read = m_sound_counter.makeMemoryBarrier();
+			to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+			to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
+		}
+	}
+
+
+
 	UINT32 audio_buffer_size;
 	auto hr = m_audio_client->GetBufferSize(&audio_buffer_size);
 	assert(succeeded(hr));
@@ -544,18 +595,7 @@ vk::CommandBuffer sSoundSystem::execute_loop(const std::shared_ptr<btr::Context>
 		cmd.end();
 		return cmd;
 	}
-
-	static int is_init;
-	if (is_init == 0)
-	{
-		// sound初期化
-		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_SOUND_UPDATE].get());
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOUND_UPDATE].get(), 0, m_descriptor_set.get(), {});
-		cmd.dispatch(1, 1, 1);
-		is_init = 1;
-	}
 	auto request_size = audio_buffer_size - padding;
-
 	{
 		// bufferの0埋め
 		auto offset = m_current + (audio_buffer_size*(sGlobal::FRAME_MAX - 1));
@@ -589,7 +629,6 @@ vk::CommandBuffer sSoundSystem::execute_loop(const std::shared_ptr<btr::Context>
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
 		}
 
-//		cmd.updateBuffer<>(m_request_buffer.getInfo().buffer, m_request_buffer.getInfo().offset, );
 
 		// bufferをデータで埋める
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_SOUND_PLAY].get());
@@ -597,7 +636,7 @@ vk::CommandBuffer sSoundSystem::execute_loop(const std::shared_ptr<btr::Context>
 		for (uint i = 0; i < 1; i++)
 		{
 			cmd.pushConstants<uint32_t>(m_pipeline_layout[PIPELINE_LAYOUT_SOUND_PLAY].get(), vk::ShaderStageFlagBits::eCompute, 0, i);
-			cmd.dispatch(1024, 1, 1);
+			cmd.dispatch(1, 1, 1);
 		}
 	}
 

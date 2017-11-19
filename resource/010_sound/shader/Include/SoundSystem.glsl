@@ -81,35 +81,35 @@ layout(std430, set=USE_SOUND_SYSTEM, binding = 1) readonly restrict buffer Sound
 {
 	SoundPlayInfo u_play_info;
 };
-layout(std430, set=USE_SOUND_SYSTEM, binding = 2) buffer SoundBuffer
+layout(std430, set=USE_SOUND_SYSTEM, binding = 2) restrict buffer SoundBuffer
 {
 	uint b_sound_buffer[];
 };
 
-layout(std430, set=USE_SOUND_SYSTEM, binding = 10) buffer SoundCounterBuffer
+layout(std430, set=USE_SOUND_SYSTEM, binding = 10) restrict buffer SoundCounterBuffer
 {
 	uint b_active_id_counter;
 	uint b_free_id_counter;
 	uint b_request_counter;
 };
-layout(std430, set=USE_SOUND_SYSTEM, binding = 11) buffer SoundActiveBuffer
+layout(std430, set=USE_SOUND_SYSTEM, binding = 11) restrict buffer SoundActiveBuffer
 {
 	uint b_active_id_buffer[];	//!< 空いているSoundGenerateの番号リスト
 };
-layout(std430, set=USE_SOUND_SYSTEM, binding = 12) buffer SoundFreeBuffer
+layout(std430, set=USE_SOUND_SYSTEM, binding = 12) restrict buffer SoundFreeBuffer
 {
 	uint b_free_id_buffer[];
 };
-layout(std430, set=USE_SOUND_SYSTEM, binding = 13) buffer SoundPlayingDataBuffer
+layout(std430, set=USE_SOUND_SYSTEM, binding = 13) restrict buffer SoundPlayingDataBuffer
 {
 	SoundPlayRequestData b_sound_playing_data[];
 };
-layout(std430, set=USE_SOUND_SYSTEM, binding = 14) buffer SoundPlayRequestDataBuffer
+layout(std430, set=USE_SOUND_SYSTEM, binding = 14) restrict buffer SoundPlayRequestDataBuffer
 {
 	SoundPlayRequestData b_sound_request_data[];
 };
 
-layout(std140, set=USE_SOUND_SYSTEM, binding = 20) uniform SoundInfoUniform
+layout(std140, set=USE_SOUND_SYSTEM, binding = 20) buffer SoundInfoUniform
 {
 	SoundInfo u_sound_info[SOUND_BANK_SIZE];
 };

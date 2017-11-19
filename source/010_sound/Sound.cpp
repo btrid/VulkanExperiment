@@ -44,7 +44,7 @@ SoundBuffer::SoundBuffer(const std::shared_ptr<btr::Context>& context, const std
 	{
 		btr::BufferMemoryDescriptorEx<SoundInfo> desc;
 		desc.element_num = 1;
-		m_info = context->m_uniform_memory.allocateMemory(desc);
+		m_info = context->m_storage_memory.allocateMemory(desc);
 
 		desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 		auto staging = context->m_staging_memory.allocateMemory(desc);

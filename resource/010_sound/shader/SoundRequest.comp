@@ -8,21 +8,25 @@ layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 
 void main()
 {
-	uint index = gl_LocalInvocationID.x;
-	if(index >= b_request_counter)
+	uint local = gl_LocalInvocationID.x;
+	if(local >= b_request_counter)
 	{
 		return;
 	}
 	barrier();
 
-	uint dst_index = b_free_id_buffer[index];
-	SoundPlayRequestData data = b_sound_request_data[index];
+	uint dst_index = b_free_id_buffer[local];
+	SoundPlayRequestData data = b_sound_request_data[local];
 	data.m_current = 0;
 	data.m_time = u_sound_info[data.m_play_sound_id].m_length;
 	data.m_is_playing = 1;
 	b_sound_playing_data[dst_index] = data;
+	b_active_id_buffer[b_active_id_counter+local] = dst_index;
 
-	if(index == 0){
+	barrier();
+	memoryBarrierBuffer();
+	if(local == 0){
+		atomicAdd(b_active_id_counter, b_request_counter);
 		b_request_counter = 0;
 	}
 }
