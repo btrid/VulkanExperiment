@@ -45,7 +45,7 @@ struct SoundPlayRequestData
 	uint m_play_sound_id;
 	uint m_current;
 	uint m_time;
-	uint _p3;
+	uint m_is_playing;
 	vec4 m_position; //!< w!=0.f ? 指向性 : ノット指向性
 };
 struct SoundPlayInfo
@@ -86,17 +86,27 @@ layout(std430, set=USE_SOUND_SYSTEM, binding = 2) buffer SoundBuffer
 	uint b_sound_buffer[];
 };
 
-layout(std430, set=USE_SOUND_SYSTEM, binding = 10) buffer SoundAccumIndex
+layout(std430, set=USE_SOUND_SYSTEM, binding = 10) buffer SoundCounterBuffer
 {
-	uvec3 b_accume_id_buffer_index;
+	uint b_active_id_counter;
+	uint b_free_id_counter;
+	uint b_request_counter;
 };
-layout(std430, set=USE_SOUND_SYSTEM, binding = 11) buffer SoundAccumBuffer
+layout(std430, set=USE_SOUND_SYSTEM, binding = 11) buffer SoundActiveBuffer
 {
-	uint b_accume_id_buffer[];	//!< 空いているSoundGenerateの番号リスト
+	uint b_active_id_buffer[];	//!< 空いているSoundGenerateの番号リスト
 };
-layout(std430, set=USE_SOUND_SYSTEM, binding = 12) buffer SoundPlayRequestDataBuffer
+layout(std430, set=USE_SOUND_SYSTEM, binding = 12) buffer SoundFreeBuffer
 {
-	SoundPlayRequestData u_sound_play_request_data[];
+	uint b_free_id_buffer[];
+};
+layout(std430, set=USE_SOUND_SYSTEM, binding = 13) buffer SoundPlayingDataBuffer
+{
+	SoundPlayRequestData b_sound_playing_data[];
+};
+layout(std430, set=USE_SOUND_SYSTEM, binding = 14) buffer SoundPlayRequestDataBuffer
+{
+	SoundPlayRequestData b_sound_request_data[];
 };
 
 layout(std140, set=USE_SOUND_SYSTEM, binding = 20) uniform SoundInfoUniform

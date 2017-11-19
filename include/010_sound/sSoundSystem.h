@@ -103,10 +103,11 @@ private:
 	btr::BufferMemoryEx<SoundFormat> m_sound_format;
 	btr::UpdateBuffer<SoundPlayInfo> m_sound_play_info;
 	btr::BufferMemoryEx<int32_t> m_buffer;
-	btr::BufferMemoryEx<uvec3> m_request_buffer_index;
-	btr::BufferMemoryEx<int32_t> m_request_buffer_list;
+	btr::BufferMemoryEx<uvec2> m_sound_id_buffer;
+	btr::BufferMemoryEx<int32_t> m_active_buffer;
+	btr::BufferMemoryEx<int32_t> m_free_buffer;
+	btr::BufferMemoryEx<SoundPlayRequestData> m_playing_buffer;
 	btr::BufferMemoryEx<SoundPlayRequestData> m_request_buffer;
-
 
 	std::array<std::shared_ptr<SoundBuffer>, SOUND_BANK_SIZE> m_soundbank;
 	std::vector<std::shared_ptr<SoundPlayRequestData>> m_sound_request_data_cpu;

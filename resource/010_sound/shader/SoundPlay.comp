@@ -17,11 +17,11 @@ void main()
 //	uint data_index = gl_WorkGroupID.x;
 #else
 	uint data_index = constant.m_data_index;
-	if(data_index >= b_accume_id_buffer_index.x){
+	if(data_index >= b_active_id_counter){
 		return;
 	}
 #endif
-	SoundPlayRequestData request = u_sound_play_request_data[data_index];
+	SoundPlayRequestData request = b_sound_playing_data[data_index];
 
 	uint buffer_length = u_sound_format.m_buffer_length;
 

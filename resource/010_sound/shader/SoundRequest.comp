@@ -1,0 +1,28 @@
+#version 450
+#extension GL_GOOGLE_cpp_style_line_directive : require
+
+layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+#define USE_SOUND_SYSTEM 0
+#include <SoundSystem.glsl>
+
+void main()
+{
+	uint index = gl_LocalInvocationID.x;
+	if(index >= b_request_counter)
+	{
+		return;
+	}
+	barrier();
+
+	uint dst_index = b_free_id_buffer[index];
+	SoundPlayRequestData data = b_sound_request_data[index];
+	data.m_current = 0;
+	data.m_time = u_sound_info[data.m_play_sound_id].m_length;
+	data.m_is_playing = 1;
+	b_sound_playing_data[dst_index] = data;
+
+	if(index == 0){
+		b_request_counter = 0;
+	}
+}

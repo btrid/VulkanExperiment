@@ -225,16 +225,24 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 	{
 		btr::BufferMemoryDescriptorEx<SoundPlayRequestData> desc;
 		desc.element_num = SOUND_REQUEST_SIZE;
+		m_playing_buffer = context->m_storage_memory.allocateMemory(desc);
+		cmd->fillBuffer(m_playing_buffer.getInfo().buffer, m_playing_buffer.getInfo().offset, m_playing_buffer.getInfo().range, 0u);
+		{
+			auto to_read = m_playing_buffer.makeMemoryBarrier();
+			to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+			to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
+		}
 		m_request_buffer = context->m_storage_memory.allocateMemory(desc);
 	}
 	{
-		btr::BufferMemoryDescriptorEx<uvec3> desc;
+		btr::BufferMemoryDescriptorEx<uvec2> desc;
 		desc.element_num = 1;
-		m_request_buffer_index = context->m_storage_memory.allocateMemory(desc);
+		m_sound_id_buffer = context->m_storage_memory.allocateMemory(desc);
 
-		cmd->updateBuffer<uvec3>(m_request_buffer_index.getInfo().buffer, m_request_buffer_index.getInfo().offset, uvec3(0u, 1u, 1u));
+		cmd->updateBuffer<uvec2>(m_sound_id_buffer.getInfo().buffer, m_sound_id_buffer.getInfo().offset, uvec2(0u, 0u));
 		{
-			auto to_read = m_request_buffer_index.makeMemoryBarrier();
+			auto to_read = m_sound_id_buffer.makeMemoryBarrier();
 			to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 			to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
 			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
@@ -244,27 +252,8 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 	{
 		btr::BufferMemoryDescriptorEx<int32_t> desc;
 		desc.element_num = SOUND_REQUEST_SIZE;
-		m_request_buffer_list = context->m_storage_memory.allocateMemory(desc);
-
-		desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
-		auto staging = context->m_staging_memory.allocateMemory(desc);
-		for (uint32_t i = 0; i < SOUND_REQUEST_SIZE; i++)
-		{
-			staging.getMappedPtr()[i] = i;
-		}
-
-		vk::BufferCopy copy;
-		copy.setSrcOffset(staging.getInfo().offset);
-		copy.setDstOffset(m_request_buffer_list.getInfo().offset);
-		copy.setSize(staging.getInfo().range);
-		cmd->copyBuffer(staging.getInfo().buffer, m_request_buffer_list.getInfo().buffer, copy);
-
-		{
-			auto to_read = m_request_buffer_list.makeMemoryBarrier();
-			to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
-			to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
-		}
+		m_active_buffer = context->m_storage_memory.allocateMemory(desc);
+		m_free_buffer = context->m_storage_memory.allocateMemory(desc);
 	}
 	{
 		btr::BufferMemoryDescriptorEx<SoundFormat> desc;
@@ -334,6 +323,11 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 				.setBinding(12),
 				vk::DescriptorSetLayoutBinding()
 				.setStageFlags(stage)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(1)
+				.setBinding(13),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(stage)
 				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 				.setDescriptorCount(SOUND_BANK_SIZE)
 				.setBinding(20),
@@ -363,8 +357,9 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 				m_buffer.getInfo(),
 			};
 			vk::DescriptorBufferInfo requests[] = {
-				m_request_buffer_index.getInfo(),
-				m_request_buffer_list.getInfo(),
+				m_sound_id_buffer.getInfo(),
+				m_active_buffer.getInfo(),
+				m_free_buffer.getInfo(),
 				m_request_buffer.getInfo(),
 			};
 
@@ -466,6 +461,7 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 
 	}
 
+
 	ret = m_audio_client->Start();
 	assert(succeeded(ret));
 
@@ -549,6 +545,15 @@ vk::CommandBuffer sSoundSystem::execute_loop(const std::shared_ptr<btr::Context>
 		return cmd;
 	}
 
+	static int is_init;
+	if (is_init == 0)
+	{
+		// sound初期化
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_SOUND_UPDATE].get());
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOUND_UPDATE].get(), 0, m_descriptor_set.get(), {});
+		cmd.dispatch(1, 1, 1);
+		is_init = 1;
+	}
 	auto request_size = audio_buffer_size - padding;
 
 	{
@@ -583,15 +588,19 @@ vk::CommandBuffer sSoundSystem::execute_loop(const std::shared_ptr<btr::Context>
 			to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
 		}
+
+//		cmd.updateBuffer<>(m_request_buffer.getInfo().buffer, m_request_buffer.getInfo().offset, );
+
+		// bufferをデータで埋める
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_SOUND_PLAY].get());
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOUND_PLAY].get(), 0, m_descriptor_set.get(), {});
+		for (uint i = 0; i < 1; i++)
+		{
+			cmd.pushConstants<uint32_t>(m_pipeline_layout[PIPELINE_LAYOUT_SOUND_PLAY].get(), vk::ShaderStageFlagBits::eCompute, 0, i);
+			cmd.dispatch(1024, 1, 1);
+		}
 	}
 
-	cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_SOUND_PLAY].get());
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOUND_PLAY].get(), 0, m_descriptor_set.get(), {});
-	for (uint i = 0; i < 1; i++)
-	{
-		cmd.pushConstants<uint32_t>(m_pipeline_layout[PIPELINE_LAYOUT_SOUND_PLAY].get(), vk::ShaderStageFlagBits::eCompute, 0, i);
-		cmd.dispatch(1024, 1, 1);
-	}
 	do
 	{
 		// ソースバッファのポインタを取得
@@ -615,6 +624,13 @@ vk::CommandBuffer sSoundSystem::execute_loop(const std::shared_ptr<btr::Context>
 		assert(succeeded(hr));
 
 	} while (false);
+
+	{
+		// sound更新
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_SOUND_UPDATE].get());
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOUND_UPDATE].get(), 0, m_descriptor_set.get(), {});
+		cmd.dispatch(1, 1, 1);
+	}
 
 	cmd.end();
 	return cmd;
