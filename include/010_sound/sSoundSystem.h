@@ -115,5 +115,4 @@ private:
 
 	std::array<std::shared_ptr<SoundBuffer>, SOUND_BANK_SIZE> m_soundbank;
 	std::vector<std::shared_ptr<SoundPlayRequestData>> m_sound_request_data_cpu;
-	SoundPlayInfo m_sound_play_info_cpu;
 };

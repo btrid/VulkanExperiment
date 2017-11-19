@@ -23,6 +23,8 @@
 #include <applib/App.h>
 #include <btrlib/Context.h>
 
+#include <011_ui/sUISystem.h>
+
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
 //#pragma comment(lib, "FreeImage.lib")
@@ -51,8 +53,9 @@ int main()
 		desc.m_window_size = uvec2(640, 480);
 		app.setup(desc);
 	}
-
 	auto context = app.m_context;
+
+	sUISystem::Order().setup(context);
 
 	while (true)
 	{

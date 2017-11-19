@@ -101,7 +101,7 @@ void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
 	}
 
 	m_sync_point.wait();
-	m_system_cmds.erase(std::remove_if(m_system_cmds.begin(), m_system_cmds.end(), [&](auto& d) { return !d; }), m_system_cmds.end());
+//	m_system_cmds.erase(std::remove_if(m_system_cmds.begin(), m_system_cmds.end(), [&](auto& d) { return !d; }), m_system_cmds.end());
 	cmds.insert(cmds.end(), std::make_move_iterator(m_system_cmds.begin()), std::make_move_iterator(m_system_cmds.end()));
 
 	cmds.insert(cmds.end(), std::make_move_iterator(submit_cmds.begin()), std::make_move_iterator(submit_cmds.end()));
