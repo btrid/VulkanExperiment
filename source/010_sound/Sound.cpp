@@ -15,7 +15,7 @@ SoundBuffer::SoundBuffer(const std::shared_ptr<btr::Context>& context, const std
 		float src_index = dst_index * rate;
 		float lerp_rate = src_index - floor(src_index);
 		int i = floor(src_index);
-		buf[dst_index] = glm::lerp<float>(src_data[i], src_data[i + 1], lerp_rate) * 65000;
+		buf[dst_index] = glm::lerp<float>(src_data[i], src_data[i + 1], lerp_rate) * 50000;
 	}
 
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);

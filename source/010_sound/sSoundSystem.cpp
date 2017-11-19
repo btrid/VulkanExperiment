@@ -278,7 +278,6 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 		copy.setSize(staging.getInfo().range);
 
 		cmd->copyBuffer(staging.getInfo().buffer, m_sound_format.getInfo().buffer, copy);
-
 		{
 			auto to_read = m_sound_format.makeMemoryBarrier();
 			to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
@@ -552,16 +551,25 @@ vk::CommandBuffer sSoundSystem::execute_loop(const std::shared_ptr<btr::Context>
 		cmd.dispatch(1, 1, 1);
 
 		// debug
-		SoundPlayRequestData request;
-		request.m_play_sound_id = 0;
-		request.m_position = vec4(0.f);
-		cmd.updateBuffer<SoundPlayRequestData>(m_request_buffer.getInfo().buffer, m_request_buffer.getInfo().offset, request);
-		cmd.updateBuffer<uint32_t>(m_sound_counter.getInfo().buffer, m_sound_counter.getInfo().offset + 8, 1);
 		{
-			auto to_read = m_sound_counter.makeMemoryBarrier();
-			to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
-			to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
+			SoundPlayRequestData request;
+			request.m_play_sound_id = 0;
+			request.m_position = vec4(0.f);
+			cmd.updateBuffer<SoundPlayRequestData>(m_request_buffer.getInfo().buffer, m_request_buffer.getInfo().offset, request);
+			cmd.updateBuffer<uint32_t>(m_sound_counter.getInfo().buffer, m_sound_counter.getInfo().offset + 8, 1);
+			{
+				auto to_read = m_request_buffer.makeMemoryBarrier();
+				to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+				to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
+			}
+			{
+				auto to_read = m_sound_counter.makeMemoryBarrier();
+				to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+				to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
+			}
+
 		}
 
 	}
@@ -578,8 +586,6 @@ vk::CommandBuffer sSoundSystem::execute_loop(const std::shared_ptr<btr::Context>
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
 		}
 	}
-
-
 
 	UINT32 audio_buffer_size;
 	auto hr = m_audio_client->GetBufferSize(&audio_buffer_size);
@@ -599,22 +605,66 @@ vk::CommandBuffer sSoundSystem::execute_loop(const std::shared_ptr<btr::Context>
 	auto request_size = audio_buffer_size - padding;
 	auto request_byte = request_size* m_format.Format.nBlockAlign;
 	auto padding_byte = padding* m_format.Format.nBlockAlign;
+
+
 	{
-		// bufferの0埋め
-		auto offset_byte = m_current + (audio_buffer_byte*(3));
-		offset_byte %= m_buffer.getInfo().range;
-		auto copy_byte = glm::min<int32_t>(request_byte, m_buffer.getInfo().range - offset_byte);
-		if (copy_byte > 0)
+		// サウンドにデータを渡す
+		auto* src = m_buffer.getMappedPtr();
+
+		LPBYTE dst;
+		hr = m_render_client->GetBuffer(request_size, &dst);
+		assert(succeeded(hr));
+
+		auto copy = std::min<uint32_t>(m_buffer.getInfo().range - m_current, request_byte);
+		{
+			auto to_transfer = m_buffer.makeMemoryBarrier();
+			to_transfer.offset += m_current;
+			to_transfer.size = copy;
+			to_transfer.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+			to_transfer.setDstAccessMask(vk::AccessFlagBits::eHostRead);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eHost, {}, {}, to_transfer, {});
+		}
+		memcpy(&dst[0], &src[m_current / m_buffer.getDataSizeof()], copy);
+		auto mod = request_byte - copy;
+		if (mod > 0) 
 		{
 			{
 				auto to_transfer = m_buffer.makeMemoryBarrier();
-				to_transfer.offset += offset_byte;
-				to_transfer.size = copy_byte;
-				to_transfer.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
-				to_transfer.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
+				to_transfer.offset += 0;
+				to_transfer.size = mod;
+				to_transfer.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+				to_transfer.setDstAccessMask(vk::AccessFlagBits::eHostRead);
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eHost, {}, {}, to_transfer, {});
 			}
-			cmd.fillBuffer(m_buffer.getInfo().buffer, m_buffer.getInfo().offset + offset_byte, copy_byte, 0u);
+			memcpy(&dst[copy], &src[0], mod);
+		}
+
+		// バッファに書き込んだことを通知
+		hr = m_render_client->ReleaseBuffer(request_size, 0);
+		assert(succeeded(hr));
+	}
+
+	{
+		// bufferの0埋め
+		auto offset_byte = m_current;
+		offset_byte %= m_buffer.getInfo().range;
+		auto copy_byte = glm::min<int32_t>(request_byte, m_buffer.getInfo().range - offset_byte);
+		{
+			auto to_transfer = m_buffer.makeMemoryBarrier();
+			to_transfer.offset += offset_byte;
+			to_transfer.size = copy_byte;
+			to_transfer.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+			to_transfer.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
+		}
+		cmd.fillBuffer(m_buffer.getInfo().buffer, m_buffer.getInfo().offset + offset_byte, copy_byte, 0u);
+		{
+			auto to_write = m_buffer.makeMemoryBarrier();
+			to_write.offset += offset_byte;
+			to_write.size = copy_byte;
+			to_write.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+			to_write.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_write, {});
 		}
 		if (request_byte > copy_byte) 
 		{
@@ -628,37 +678,44 @@ vk::CommandBuffer sSoundSystem::execute_loop(const std::shared_ptr<btr::Context>
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
 			}
 			cmd.fillBuffer(m_buffer.getInfo().buffer, m_buffer.getInfo().offset, (request_byte - copy_byte), 0u);
+			{
+				auto to_write = m_buffer.makeMemoryBarrier();
+				to_write.offset += 0;
+				to_write.size = (request_byte - copy_byte);
+				to_write.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+				to_write.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_write, {});
+			}
 		}
 
 		{
-			auto to_transfer = m_sound_play_info.getBufferMemory().makeMemoryBarrierEx();
-			to_transfer.setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
-			to_transfer.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
+			SoundPlayInfo info;
+			info.m_listener = vec4(0.f);
+			info.m_direction = vec4(0.f);
+			info.m_sound_deltatime = request_byte / 4;
+			info.m_write_start = offset_byte / 4;
+			m_sound_play_info.subupdate(&info, 1, 0, sGlobal::Order().getGPUIndex());
+			auto copy = m_sound_play_info.update(sGlobal::Order().getGPUIndex());
+			{
+				auto to_transfer = m_sound_play_info.getBufferMemory().makeMemoryBarrierEx();
+				to_transfer.setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
+				to_transfer.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
+			}
+			cmd.copyBuffer(m_sound_play_info.getStagingBufferInfo().buffer, m_sound_play_info.getBufferInfo().buffer, copy);
+			{
+				auto to_read = m_sound_play_info.getBufferMemory().makeMemoryBarrierEx();
+				to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+				to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
+			}
 		}
 
-		SoundPlayInfo info;
-		info.m_listener = vec4(0.f);
-		info.m_direction = vec4(0.f);
-		info.m_sound_deltatime = request_byte / 4;
-		info.m_write_start = offset_byte / 4;
-		m_sound_play_info.subupdate(&info, 1, 0, sGlobal::Order().getGPUIndex());
-		auto copy = m_sound_play_info.update(sGlobal::Order().getGPUIndex());
-		cmd.copyBuffer(m_sound_play_info.getStagingBufferInfo().buffer, m_sound_play_info.getBufferInfo().buffer, copy);
 		{
-			auto to_read = m_sound_play_info.getBufferMemory().makeMemoryBarrierEx();
-			to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
-			to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
-		}
-
-		{
-			auto to_transfer = m_sound_play_info.getBufferMemory().makeMemoryBarrierEx();
-			to_transfer.offset += offset_byte;
-			to_transfer.size = copy_byte;
-			to_transfer.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
-			to_transfer.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
+			auto to_read = m_sound_counter.makeMemoryBarrier();
+			to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+			to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead );
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
 		}
 
 		// bufferをデータで埋める
@@ -672,35 +729,35 @@ vk::CommandBuffer sSoundSystem::execute_loop(const std::shared_ptr<btr::Context>
 	}
 
 	{
-		// サウンドにデータを渡す
-		auto* src = m_buffer.getMappedPtr();
-
-		LPBYTE dst;
-		hr = m_render_client->GetBuffer(request_size, &dst);
-		assert(succeeded(hr));
-
-		auto copy = std::min<uint32_t>(m_buffer.getInfo().range - m_current, request_byte);
-		memcpy(&dst[0], &src[m_current/m_buffer.getDataSizeof()], copy);
-		auto mod = request_byte - copy;
-		if (mod > 0) {
-			memcpy(&dst[copy], &src[0], mod);
+		{
+			std::array<vk::BufferMemoryBarrier, 2> to_read;
+			to_read[0] = m_playing_buffer.makeMemoryBarrier();
+			to_read[0].setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
+			to_read[0].setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+			to_read[1] = m_sound_counter.makeMemoryBarrier();
+			to_read[1].setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
+			to_read[1].setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
 		}
 
-		// バッファに書き込んだことを通知
-		hr = m_render_client->ReleaseBuffer(request_size, 0);
-		assert(succeeded(hr));
-
-		m_current = (m_current + request_byte) % m_buffer.getInfo().range;
-
-
-	}
-	{
 		// sound更新
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_SOUND_UPDATE].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOUND_UPDATE].get(), 0, m_descriptor_set.get(), {});
 		cmd.dispatch(1, 1, 1);
+
+		{
+			std::array<vk::BufferMemoryBarrier, 2> to_read;
+			to_read[0] = m_playing_buffer.makeMemoryBarrier();
+			to_read[0].setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+			to_read[0].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+			to_read[1] = m_sound_counter.makeMemoryBarrier();
+			to_read[1].setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+			to_read[1].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
+		}
 	}
 
+	m_current = (m_current + request_byte) % m_buffer.getInfo().range;
 	cmd.end();
 	return cmd;
 }

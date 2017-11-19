@@ -149,7 +149,6 @@ void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
 		.setPSwapchains(swapchains.data())
 		.setPImageIndices(backbuffer_indexs.data());
 	queue.presentKHR(present_info);
-
 }
 
 void App::preUpdate()

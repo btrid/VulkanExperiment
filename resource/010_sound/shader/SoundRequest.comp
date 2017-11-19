@@ -24,7 +24,6 @@ void main()
 	b_active_id_buffer[b_active_id_counter+local] = dst_index;
 
 	barrier();
-	memoryBarrierBuffer();
 	if(local == 0){
 		atomicAdd(b_active_id_counter, b_request_counter);
 		b_request_counter = 0;

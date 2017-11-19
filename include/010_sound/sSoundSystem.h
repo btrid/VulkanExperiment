@@ -63,7 +63,7 @@ private:
 	{
 		SOUND_BANK_SIZE = 1,
 		SOUND_REQUEST_SIZE = 1,
-		SOUND_BUFFER_FRAME = 6,
+		SOUND_BUFFER_FRAME = 3,
 	};
 
 	enum Shader

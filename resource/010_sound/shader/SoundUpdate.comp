@@ -1,10 +1,11 @@
 #version 450
 #extension GL_GOOGLE_cpp_style_line_directive : require
 
-layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
-
 #define USE_SOUND_SYSTEM 0
 #include <SoundSystem.glsl>
+
+layout (local_size_x = SOUND_REQUEST_SIZE, local_size_y = 1, local_size_z = 1) in;
+
 
 shared uint s_active_counter;
 shared uint s_free_counter;
@@ -22,9 +23,13 @@ void main()
 
 	if(b_sound_playing_data[local].m_is_playing != 0)
 	{
-		uint next = b_sound_playing_data[local].m_current += u_play_info.m_sound_deltatime;
-		if(next >= b_sound_playing_data[local].m_time)
+		b_sound_playing_data[local].m_current += u_play_info.m_sound_deltatime;
+		if(b_sound_playing_data[local].m_current >= b_sound_playing_data[local].m_time)
 		{
+//			b_sound_playing_data[local].m_time = 0;
+//			uint index = atomicAdd(s_active_counter, 1);
+//			b_active_id_buffer[index] = local;
+
 			// 再生終了
 			b_sound_playing_data[local].m_is_playing = 0;
 		}

@@ -70,8 +70,8 @@ struct SoundInfo
 
 
 #ifdef USE_SOUND_SYSTEM
-#define SOUND_BANK_SIZE (16)
-#define SOUND_REQUEST_SIZE (64)
+#define SOUND_BANK_SIZE (1)
+#define SOUND_REQUEST_SIZE (1)
 
 layout(std430, set=USE_SOUND_SYSTEM, binding = 0) readonly restrict buffer SoundFormatUniform
 {
@@ -83,7 +83,7 @@ layout(std430, set=USE_SOUND_SYSTEM, binding = 1) readonly restrict buffer Sound
 };
 layout(std430, set=USE_SOUND_SYSTEM, binding = 2) restrict buffer SoundBuffer
 {
-	uint b_sound_buffer[];
+	int b_sound_buffer[];
 };
 
 layout(std430, set=USE_SOUND_SYSTEM, binding = 10) restrict buffer SoundCounterBuffer
@@ -116,7 +116,7 @@ layout(std140, set=USE_SOUND_SYSTEM, binding = 20) buffer SoundInfoUniform
 
 layout(std430, set=USE_SOUND_SYSTEM, binding = 21) buffer SoundDataBuffer
 {
-	uint b_sound_data_buffer[];
+	int b_sound_data_buffer[];
 };
 
 #endif
