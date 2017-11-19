@@ -25,6 +25,10 @@ public:
 		return f;
 	}
 
+	float getElapsedTimeAsMilliSeconds()
+	{
+		return getElapsedTimeAsMicroSeconds() / 1000.f;
+	}
 	float getElapsedTimeAsSeconds()
 	{
 		return getElapsedTimeAsMicroSeconds() / 1000.f / 1000.f;
