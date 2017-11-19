@@ -195,7 +195,7 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 	assert(succeeded(ret));
 
 	UINT32 size = frame * m_format.Format.nBlockAlign;
-	ZeroMemory(pData, frame * m_format.Format.nBlockAlign);
+	ZeroMemory(pData, size);
 
 	ret = m_render_client->ReleaseBuffer(frame, 0);
 	assert(succeeded(ret));
@@ -207,9 +207,10 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 	{
 
 		btr::BufferMemoryDescriptorEx<int32_t> desc;
-		desc.element_num = frame * sGlobal::FRAME_MAX; // 3f分くらい
+		desc.element_num = size/4 * SOUND_BUFFER_FRAME;
 		m_buffer = context->m_staging_memory.allocateMemory(desc);
 
+		desc.element_num = m_format.Format.nSamplesPerSec*m_format.Format.nChannels / 60.f * 3.f; // 3f分くらい
 		std::vector<uint32_t> clear(desc.element_num);
 		memcpy(m_buffer.getMappedPtr(), clear.data(), vector_sizeof(clear));
 	}
@@ -263,20 +264,20 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 		desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 		auto staging = context->m_staging_memory.allocateMemory(desc);
 		staging.getMappedPtr()->nAvgBytesPerSec = m_format.Format.nAvgBytesPerSec;
-		staging.getMappedPtr()->nBlockAlign = m_format.Format.nAvgBytesPerSec;
-		staging.getMappedPtr()->nChannels = m_format.Format.nAvgBytesPerSec;
-		staging.getMappedPtr()->nSamplesPerSec = m_format.Format.nAvgBytesPerSec;
+		staging.getMappedPtr()->nBlockAlign = m_format.Format.nBlockAlign;
+		staging.getMappedPtr()->nChannels = m_format.Format.nChannels;
+		staging.getMappedPtr()->nSamplesPerSec = m_format.Format.nSamplesPerSec;
 		staging.getMappedPtr()->wBitsPerSample = m_format.Format.wBitsPerSample;
 		staging.getMappedPtr()->samples_per_frame = m_format.Format.nSamplesPerSec*m_format.Format.nChannels / 60.f;
-		staging.getMappedPtr()->frame_num = sGlobal::FRAME_MAX;
-		staging.getMappedPtr()->m_buffer_length = frame * sGlobal::FRAME_MAX;
-		staging.getMappedPtr()->m_request_length = frame;
+		staging.getMappedPtr()->frame_num = SOUND_BUFFER_FRAME;
+		staging.getMappedPtr()->m_buffer_length = size / 4 * SOUND_BUFFER_FRAME;
+		staging.getMappedPtr()->m_request_length = size / 4;
 		vk::BufferCopy copy;
 		copy.setSrcOffset(staging.getInfo().offset);
 		copy.setDstOffset(m_sound_format.getInfo().offset);
-		copy.setSize(staging.getBufferInfo().range);
+		copy.setSize(staging.getInfo().range);
 
-		cmd->copyBuffer(staging.getInfo().buffer, m_sound_format.getBufferInfo().buffer, copy);
+		cmd->copyBuffer(staging.getInfo().buffer, m_sound_format.getInfo().buffer, copy);
 
 		{
 			auto to_read = m_sound_format.makeMemoryBarrier();
@@ -452,7 +453,6 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 				shader_info[i].setPName("main");
 			}
 
-//			vk::ComputePipelineCreateInfo compute_pipeline_info[] =
 			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 			{
 				vk::ComputePipelineCreateInfo()
@@ -584,6 +584,7 @@ vk::CommandBuffer sSoundSystem::execute_loop(const std::shared_ptr<btr::Context>
 	UINT32 audio_buffer_size;
 	auto hr = m_audio_client->GetBufferSize(&audio_buffer_size);
 	assert(succeeded(hr));
+	UINT32 audio_buffer_byte = audio_buffer_size * m_format.Format.nBlockAlign;
 
 	uint32_t padding = 0;
 	hr = m_audio_client->GetCurrentPadding(&padding);
@@ -596,15 +597,37 @@ vk::CommandBuffer sSoundSystem::execute_loop(const std::shared_ptr<btr::Context>
 		return cmd;
 	}
 	auto request_size = audio_buffer_size - padding;
+	auto request_byte = request_size* m_format.Format.nBlockAlign;
+	auto padding_byte = padding* m_format.Format.nBlockAlign;
 	{
 		// bufferの0埋め
-		auto offset = m_current + (audio_buffer_size*(sGlobal::FRAME_MAX - 1));
-		offset %= m_buffer.getInfo().range;
-		auto range = glm::min<uint32_t>(request_size, m_buffer.getInfo().range - offset);
-		cmd.fillBuffer(m_buffer.getInfo().buffer, m_buffer.getInfo().offset + offset, range, 0u);
-		if (padding > range) {
+		auto offset_byte = m_current + (audio_buffer_byte*(3));
+		offset_byte %= m_buffer.getInfo().range;
+		auto copy_byte = glm::min<int32_t>(request_byte, m_buffer.getInfo().range - offset_byte);
+		if (copy_byte > 0)
+		{
+			{
+				auto to_transfer = m_buffer.makeMemoryBarrier();
+				to_transfer.offset += offset_byte;
+				to_transfer.size = copy_byte;
+				to_transfer.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+				to_transfer.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
+			}
+			cmd.fillBuffer(m_buffer.getInfo().buffer, m_buffer.getInfo().offset + offset_byte, copy_byte, 0u);
+		}
+		if (request_byte > copy_byte) 
+		{
 			// 残りは前から詰める
-			cmd.fillBuffer(m_buffer.getInfo().buffer, m_buffer.getInfo().offset, padding - range, 0u);
+			{
+				auto to_transfer = m_buffer.makeMemoryBarrier();
+				to_transfer.offset += 0;
+				to_transfer.size = (request_byte - copy_byte);
+				to_transfer.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+				to_transfer.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
+			}
+			cmd.fillBuffer(m_buffer.getInfo().buffer, m_buffer.getInfo().offset, (request_byte - copy_byte), 0u);
 		}
 
 		{
@@ -617,8 +640,8 @@ vk::CommandBuffer sSoundSystem::execute_loop(const std::shared_ptr<btr::Context>
 		SoundPlayInfo info;
 		info.m_listener = vec4(0.f);
 		info.m_direction = vec4(0.f);
-		info.m_sound_deltatime = request_size;
-		info.m_write_start = offset;
+		info.m_sound_deltatime = request_byte / 4;
+		info.m_write_start = offset_byte / 4;
 		m_sound_play_info.subupdate(&info, 1, 0, sGlobal::Order().getGPUIndex());
 		auto copy = m_sound_play_info.update(sGlobal::Order().getGPUIndex());
 		cmd.copyBuffer(m_sound_play_info.getStagingBufferInfo().buffer, m_sound_play_info.getBufferInfo().buffer, copy);
@@ -629,6 +652,14 @@ vk::CommandBuffer sSoundSystem::execute_loop(const std::shared_ptr<btr::Context>
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
 		}
 
+		{
+			auto to_transfer = m_sound_play_info.getBufferMemory().makeMemoryBarrierEx();
+			to_transfer.offset += offset_byte;
+			to_transfer.size = copy_byte;
+			to_transfer.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+			to_transfer.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
+		}
 
 		// bufferをデータで埋める
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_SOUND_PLAY].get());
@@ -640,30 +671,29 @@ vk::CommandBuffer sSoundSystem::execute_loop(const std::shared_ptr<btr::Context>
 		}
 	}
 
-	do
 	{
-		// ソースバッファのポインタを取得
+		// サウンドにデータを渡す
 		auto* src = m_buffer.getMappedPtr();
 
 		LPBYTE dst;
 		hr = m_render_client->GetBuffer(request_size, &dst);
 		assert(succeeded(hr));
 
-		int buf_size = request_size * m_format.Format.nBlockAlign;
-		auto copy = std::min<uint32_t>(m_buffer.getInfo().range - m_current, buf_size);
+		auto copy = std::min<uint32_t>(m_buffer.getInfo().range - m_current, request_byte);
 		memcpy(&dst[0], &src[m_current/m_buffer.getDataSizeof()], copy);
-		auto mod = buf_size - copy;
+		auto mod = request_byte - copy;
 		if (mod > 0) {
 			memcpy(&dst[copy], &src[0], mod);
 		}
-		m_current = (m_current + buf_size) % m_buffer.getInfo().range;
 
 		// バッファに書き込んだことを通知
 		hr = m_render_client->ReleaseBuffer(request_size, 0);
 		assert(succeeded(hr));
 
-	} while (false);
+		m_current = (m_current + request_byte) % m_buffer.getInfo().range;
 
+
+	}
 	{
 		// sound更新
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_SOUND_UPDATE].get());

@@ -116,7 +116,7 @@ layout(std140, set=USE_SOUND_SYSTEM, binding = 20) buffer SoundInfoUniform
 
 layout(std430, set=USE_SOUND_SYSTEM, binding = 21) buffer SoundDataBuffer
 {
-	uint b_sound_data_buffer[][SOUND_BANK_SIZE];
+	uint b_sound_data_buffer[];
 };
 
 #endif

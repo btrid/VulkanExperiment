@@ -50,7 +50,7 @@ SoundBuffer::SoundBuffer(const std::shared_ptr<btr::Context>& context, const std
 		auto staging = context->m_staging_memory.allocateMemory(desc);
 
 		SoundInfo info;
-		info.m_length = wave->getLength()/2;
+		info.m_length = buf.size();
 		info.m_samples_per_sec = play_format->nSamplesPerSec;
 		memcpy(staging.getMappedPtr(), &info, sizeof(info));
 

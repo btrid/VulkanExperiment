@@ -27,7 +27,7 @@ void main()
 
 	uint buffer_offset = u_play_info.m_write_start;
 	uint data_num = u_play_info.m_sound_deltatime;
-	uint loop_count = (data_num-1) / gl_NumWorkGroups.x + 1;
+	uint loop_count = (data_num-1) / 256 + 1;
 	uint loop_begin = gl_LocalInvocationID.x*loop_count;
 	uint loop_end = loop_begin + loop_count;
 
@@ -38,7 +38,7 @@ void main()
 		}
 		uint buffer_index = i + buffer_offset;
 		buffer_index %= buffer_length;
-		b_sound_buffer[buffer_index] += b_sound_data_buffer[request.m_play_sound_id][request.m_current+i];
+		b_sound_buffer[buffer_index] += b_sound_data_buffer[request.m_current+i];
 	}
 
 }

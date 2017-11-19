@@ -35,7 +35,6 @@ void main()
 		}
 	}
 
-	   b_sound_playing_data[local].m_is_playing = 0;
 	if(b_sound_playing_data[local].m_is_playing == 0)
 	{
 		uint index = atomicAdd(s_free_counter, 1);

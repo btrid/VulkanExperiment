@@ -61,8 +61,9 @@ struct sSoundSystem : Singleton<sSoundSystem>
 private:
 	enum 
 	{
-		SOUND_BANK_SIZE = 16,
-		SOUND_REQUEST_SIZE = 64,
+		SOUND_BANK_SIZE = 1,
+		SOUND_REQUEST_SIZE = 1,
+		SOUND_BUFFER_FRAME = 6,
 	};
 
 	enum Shader
