@@ -110,10 +110,11 @@ public:
 					continue;
 				}
 
-				if ((prop.memoryTypes[i].propertyFlags & flag) == flag)
+				if ((prop.memoryTypes[i].propertyFlags & flag) != flag)
 				{
-					return i;
+					continue;
 				}
+				return i;
 			}
 			return 0xffffffffu;
 		}

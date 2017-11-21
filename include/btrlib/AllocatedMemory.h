@@ -352,7 +352,6 @@ public:
 
 struct ImageMemory
 {
-//	vk::MemoryRequirements
 	vk::DescriptorBufferInfo m_buffer_info;
 	vk::BufferMemoryBarrier m_memory_barrier;
 	struct Resource

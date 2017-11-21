@@ -34,6 +34,7 @@
 
 int main()
 {
+	btr::setResourceAppPath("..\\..\\resource\\011_ui\\");
 	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = glm::vec3(0.f, 0.f, 1.f);
 	camera->getData().m_target = glm::vec3(0.f, 0.f, 0.f);
@@ -55,8 +56,9 @@ int main()
 	}
 	auto context = app.m_context;
 
-	sUISystem::Order().setup(context);
 
+	sUISystem::Order().setup(context);
+	auto ui = sUISystem::Order().create(context);
 	while (true)
 	{
 		cStopWatch time;

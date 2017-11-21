@@ -233,9 +233,9 @@ struct MotionTexture
 		view_info.subresourceRange = subresourceRange;
 
 		vk::SamplerCreateInfo sampler_info;
-		sampler_info.magFilter = vk::Filter::eNearest;
-		sampler_info.minFilter = vk::Filter::eNearest;
-		sampler_info.mipmapMode = vk::SamplerMipmapMode::eLinear;
+		sampler_info.magFilter = vk::Filter::eLinear;
+		sampler_info.minFilter = vk::Filter::eLinear;
+		sampler_info.mipmapMode = vk::SamplerMipmapMode::eNearest;
 		sampler_info.addressModeU = vk::SamplerAddressMode::eRepeat;//
 		sampler_info.addressModeV = vk::SamplerAddressMode::eClampToEdge;
 		sampler_info.addressModeW = vk::SamplerAddressMode::eClampToEdge;

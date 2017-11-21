@@ -53,42 +53,6 @@ bool succeeded(HRESULT result)
 	return false;
 }
 
-// std::vector<int8_t> convertData(const WAVEFORMATEX* src, const WAVEFORMATEX* dst, int8_t* src_data, uint32_t src_num)
-// {
-// 	float rate = (float)src->nSamplesPerSec / dst->nSamplesPerSec;
-// 	std::vector<int8_t> buf((1.f/rate) * src_num * (src->wBitsPerSample / 8));
-// 
-// 	void* dst_data = buf.data();
-// 	int32_t dst_byte = dst->wBitsPerSample / 8;
-// 	int32_t src_byte = src->wBitsPerSample / 8;
-// 
-// 	float power = 1.f;
-// 	if (dst_byte > src_byte) {
-// 		power = 1 << (dst_byte - src_byte);
-// 	}
-// 	else if (dst_byte < src_byte) {
-// 		power = 1.f / (1 << (dst_byte - src_byte));
-// 	}
-// 
-// 	for (int32_t dst_index = 0; dst_index < buf.size(); dst_index++)
-// 	{
-// 		float src_index = dst_index * rate;
-// 		float lerp_rate = src_index - floor(src_index);
-// 		int i = floor(src_index);
-// 		float data1 = src_data[i];
-// 		float data2 = src_data[i + 1];
-// 		for (int ii = 1; ii < src_byte; ii++)
-// 		{
-// 			data1 += src_data[i] * (1 << ii);
-// 			data2 += src_data[i + 1] * (1 << ii);
-// 		}
-// 		int32_t data = glm::lerp<float>(data1, data2, lerp_rate) * power;
-// 		memcpy(dst_data, ) = ;
-// 		(CHAR*)dst_data += dst_byte;
-// 	}
-// 
-// }
-
 void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 {
 	CoInitialize(NULL);
@@ -210,7 +174,6 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 		desc.element_num = size/4 * SOUND_BUFFER_FRAME;
 		m_buffer = context->m_staging_memory.allocateMemory(desc);
 
-		desc.element_num = m_format.Format.nSamplesPerSec*m_format.Format.nChannels / 60.f * 3.f; // 3f•ª‚­‚ç‚¢
 		std::vector<uint32_t> clear(desc.element_num);
 		memcpy(m_buffer.getMappedPtr(), clear.data(), vector_sizeof(clear));
 	}
