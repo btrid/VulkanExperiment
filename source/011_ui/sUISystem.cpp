@@ -9,6 +9,23 @@
 
 void sUISystem::setup(const std::shared_ptr<btr::Context>& context)
 {
+	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+	{
+		btr::BufferMemoryDescriptorEx<UIGlobal> desc;
+		desc.element_num = 1;
+		m_global = context->m_uniform_memory.allocateMemory(desc);
+
+		desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
+		auto staging = context->m_staging_memory.allocateMemory(desc);
+		staging.getMappedPtr()->m_resolusion = uvec2(640, 480);
+
+		vk::BufferCopy copy;
+		copy.setSrcOffset(staging.getInfo().offset);
+		copy.setDstOffset(m_global.getInfo().offset);
+		copy.setSrcOffset(staging.getInfo().range);
+		cmd->copyBuffer(staging.getInfo().buffer, m_global.getInfo().buffer, copy);
+	}
+
 	// descriptor
 	{
 		auto stage = vk::ShaderStageFlagBits::eCompute;
@@ -21,19 +38,18 @@ void sUISystem::setup(const std::shared_ptr<btr::Context>& context)
 			.setBinding(0),
 			vk::DescriptorSetLayoutBinding()
 			.setStageFlags(stage)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 			.setDescriptorCount(1)
 			.setBinding(1),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(stage)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(2),
 		};
 		m_descriptor_set_layout = btr::Descriptor::createDescriptorSetLayout(context, binding);
 		m_descriptor_pool = btr::Descriptor::createDescriptorPool(context, binding, 30);
 
-		vk::DescriptorSetLayout layouts[] = { m_descriptor_set_layout.get() };
-		vk::DescriptorSetAllocateInfo alloc_info;
-		alloc_info.setDescriptorPool(m_descriptor_pool.get());
-		alloc_info.setDescriptorSetCount(array_length(layouts));
-		alloc_info.setPSetLayouts(layouts);
-		m_descriptor_set = std::move(context->m_device->allocateDescriptorSetsUnique(alloc_info)[0]);
 	}
 
 
@@ -114,16 +130,25 @@ std::shared_ptr<UI> sUISystem::create(const std::shared_ptr<btr::Context>& conte
 	{
 		btr::BufferMemoryDescriptorEx<UIInfo> desc;
 		desc.element_num = 1;
-		ui->m_info = context->m_staging_memory.allocateMemory(desc);
+		ui->m_info = context->m_uniform_memory.allocateMemory(desc);
 
 	}
 	{
 		btr::BufferMemoryDescriptorEx<UIParam> desc;
 		desc.element_num = 1024;
-		ui->m_object = context->m_staging_memory.allocateMemory(desc);
+		ui->m_object = context->m_storage_memory.allocateMemory(desc);
 	}
 	{
+
+		vk::DescriptorSetLayout layouts[] = { m_descriptor_set_layout.get() };
+		vk::DescriptorSetAllocateInfo alloc_info;
+		alloc_info.setDescriptorPool(m_descriptor_pool.get());
+		alloc_info.setDescriptorSetCount(array_length(layouts));
+		alloc_info.setPSetLayouts(layouts);
+		ui->m_descriptor_set = std::move(context->m_device->allocateDescriptorSetsUnique(alloc_info)[0]);
+
 		vk::DescriptorBufferInfo uniforms[] = {
+			m_global.getInfo(),
 			ui->m_info.getInfo(),
 		};
 		vk::DescriptorBufferInfo storages[] = {
@@ -133,20 +158,27 @@ std::shared_ptr<UI> sUISystem::create(const std::shared_ptr<btr::Context>& conte
 		auto write_desc =
 		{
 			vk::WriteDescriptorSet()
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 			.setDescriptorCount(array_length(uniforms))
 			.setPBufferInfo(uniforms)
 			.setDstBinding(0)
-			.setDstSet(m_descriptor_set.get()),
+			.setDstSet(ui->m_descriptor_set.get()),
 			vk::WriteDescriptorSet()
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setDescriptorCount(array_length(storages))
 			.setPBufferInfo(storages)
-			.setDstBinding(1)
-			.setDstSet(m_descriptor_set.get()),
+			.setDstBinding(2)
+			.setDstSet(ui->m_descriptor_set.get()),
 		};
 		context->m_device->updateDescriptorSets(write_desc.size(), write_desc.begin(), 0, {});
 	}
 
 	return ui;
+}
+
+vk::CommandBuffer sUISystem::draw(const std::shared_ptr<btr::Context>& context)
+{
+	auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
+	cmd.end();
+	return cmd;
 }

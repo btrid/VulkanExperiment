@@ -3,20 +3,31 @@
 #include <btrlib/Singleton.h>
 #include <btrlib/Context.h>
 
+struct UIGlobal
+{
+	uvec2 m_resolusion; // ‰ð‘œ“x
+};
 struct UIInfo
 {
-	uint m_object_num; // Node + sprite + boundary
+	uint m_object_num; // node + sprite + boundary
 	uint m_node_num;
 	uint m_sprite_num;
 	uint m_boundary_num;
 };
 
+enum UIFlagBit
+{
+	is_reserve = 1 << 0,
+	is_visible = 1 << 1,
+	is_enable = 1 << 2,
+	_reserved1 = 1 << 3,
+	_reserved2 = 1 << 4,
+};
 struct UIParam
 {
-	vec2 m_position; //!< parent‚©‚ç‚ÌˆÊ’u
-	vec2 m_size;
-	vec4 m_color;
-//	uint32_t m_hash;
+	vec2 m_position_local; //!< Ž©•ª‚ÌêŠ
+	vec2 m_size_local;
+	vec4 m_color_local;
 	uint32_t _p13;
 	uint32_t m_flag;
 	int32_t m_parent;
@@ -40,12 +51,23 @@ struct UIObject
 };
 struct UI
 {
+	vk::UniqueDescriptorSet	m_descriptor_set;
 	btr::BufferMemoryEx<UIInfo> m_info;
 	btr::BufferMemoryEx<UIParam> m_object;
 
 	vk::UniqueImage m_ui_image;
 	vk::UniqueImageView m_image_view;
 	vk::UniqueDeviceMemory m_ui_texture_memory;
+};
+
+struct UIAnimationInfo
+{
+
+};
+
+struct UIAnimationParam
+{
+
 };
 struct sUISystem : Singleton<sUISystem>
 {
@@ -54,6 +76,11 @@ struct sUISystem : Singleton<sUISystem>
 	void setup(const std::shared_ptr<btr::Context>& context);
 	std::shared_ptr<UI> create(const std::shared_ptr<btr::Context>& context);
 
+	void addRender(std::shared_ptr<UI>& ui)
+	{
+		m_render.push_back(ui);
+	}
+	vk::CommandBuffer draw(const std::shared_ptr<btr::Context>& context);
 private:
 	enum Shader
 	{
@@ -84,12 +111,13 @@ private:
 
 	vk::UniqueDescriptorPool		m_descriptor_pool;
 	vk::UniqueDescriptorSetLayout	m_descriptor_set_layout;
-	vk::UniqueDescriptorSet			m_descriptor_set;
 
 	std::array<vk::UniqueShaderModule, SHADER_NUM>				m_shader_module;
 	std::array<vk::UniquePipeline, PIPELINE_NUM>				m_pipeline;
 	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM>	m_pipeline_layout;
 
+	btr::BufferMemoryEx<UIGlobal> m_global;
+	std::vector<std::shared_ptr<UI>> m_render;
 
 // 	vk::ImageCreateInfo image_info;
 // 	image_info.imageType = vk::ImageType::e2D;

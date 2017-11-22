@@ -56,9 +56,9 @@ int main()
 	}
 	auto context = app.m_context;
 
-
 	sUISystem::Order().setup(context);
 	auto ui = sUISystem::Order().create(context);
+
 	while (true)
 	{
 		cStopWatch time;
