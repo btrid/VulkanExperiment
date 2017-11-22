@@ -137,8 +137,7 @@ public:
 				case WM_KEYDOWN:
 				{
 					auto& p = m_input.m_keyboard.m_data[msg.wParam];
-					p.key = (char)msg.wParam;
-					bool isPrevPress = (msg.lParam & (1 << 30)) != 0;
+					p.key = (uint8_t)msg.wParam;
 					p.state = cKeyboard::STATE_ON;
 				}
 				break;
@@ -146,7 +145,7 @@ public:
 				case WM_KEYUP:
 				{
 					auto& p = m_input.m_keyboard.m_data[msg.wParam];
-					p.key = (char)msg.wParam;
+					p.key = (uint8_t)msg.wParam;
 					p.state = cKeyboard::STATE_OFF;
 				}
 				break;
@@ -230,20 +229,20 @@ public:
 
 		for (auto& key : m_input.m_keyboard.m_data)
 		{
-			if (btr::isOn(key.second.state_old, cMouse::STATE_ON))
+			if (btr::isOn(key.state_old, cMouse::STATE_ON))
 			{
 				// ONは押したタイミングだけ立つ
-				btr::setOff(key.second.state, cMouse::STATE_ON);
+				btr::setOff(key.state, cMouse::STATE_ON);
 			}
-			if (btr::isOn(key.second.state_old, cMouse::STATE_ON) || btr::isOn(key.second.state, cMouse::STATE_HOLD))
+			if (btr::isOn(key.state_old, cMouse::STATE_ON) || btr::isOn(key.state, cMouse::STATE_HOLD))
 			{
-				key.second.state |= cMouse::STATE_HOLD;
+				key.state |= cMouse::STATE_HOLD;
 			}
-			if (btr::isOn(key.second.state_old, cMouse::STATE_OFF))
+			if (btr::isOn(key.state_old, cMouse::STATE_OFF))
 			{
-				key.second.state = 0;
+				key.state = 0;
 			}
-			key.second.state_old = key.second.state;
+			key.state_old = key.state;
 		}
 
 		for (int i = 0; i < cMouse::BUTTON_NUM; i++)

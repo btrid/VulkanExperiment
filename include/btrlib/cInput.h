@@ -12,39 +12,30 @@ struct cKeyboard {
 		STATE_HOLD = 1 << 2,
 	};
 	struct Param {
-		char key;
-		int state;
-		int state_old;
+		uint8_t key;
+		uint8_t state;
+		uint8_t state_old;
 		Param()
 			: key(0)
 			, state(0)
 			, state_old(0)
 		{}
 	};
-	std::unordered_map<WPARAM, Param> m_data;
+	std::array<Param, 255> m_data;
 	bool isHold(char key)const
 	{
-		auto it = m_data.find((char)std::toupper(key));
-		if (it == m_data.end()) {
-			return false;
-		}
-		return btr::isOn(it->second.state, STATE_HOLD);
+		auto& it = m_data[std::toupper(key)];
+		return btr::isOn(it.state, STATE_HOLD);
 	}
 	bool isOn(char key)const
 	{
-		auto it = m_data.find((char)std::toupper(key));
-		if (it == m_data.end()) {
-			return false;
-		}
-		return btr::isOn(it->second.state, STATE_ON);
+		auto& it = m_data[std::toupper(key)];
+		return btr::isOn(it.state, STATE_ON);
 	}
 	bool isOff(char key)const
 	{
-		auto it = m_data.find((char)std::toupper(key));
-		if (it == m_data.end()) {
-			return false;
-		}
-		return btr::isOn(it->second.state, STATE_OFF);
+		auto& it = m_data[std::toupper(key)];
+		return btr::isOn(it.state, STATE_OFF);
 	}
 };
 struct cMouse
@@ -80,6 +71,8 @@ struct cMouse
 	{}
 	int32_t getWheel()const { return wheel; }
 	glm::ivec2 getMove()const { return xy_old - xy; }
+	bool isOn(Button button)const { return btr::isOn(m_param[button].state, STATE_ON); }
+	bool isOff(Button button)const { return btr::isOn(m_param[button].state, STATE_OFF); }
 	bool isHold(Button button)const { return btr::isOn(m_param[button].state, STATE_HOLD); }
 };
 

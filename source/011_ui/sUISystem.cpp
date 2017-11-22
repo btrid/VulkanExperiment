@@ -65,6 +65,7 @@ void sUISystem::setup(const std::shared_ptr<btr::Context>& context)
 			{ "UITransform.comp.spv" },
 			{ "UIRender.Vert.spv" },
 			{ "UIRender.frag.spv" },
+//			{ "UIManipurater.comp.spv" },
 		};
 		static_assert(array_length(shader_info) == SHADER_NUM, "not equal shader num");
 
@@ -88,7 +89,6 @@ void sUISystem::setup(const std::shared_ptr<btr::Context>& context)
 			m_pipeline_layout[PIPELINE_LAYOUT_UPDATE] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 			m_pipeline_layout[PIPELINE_LAYOUT_TRANSFORM] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
-
 	}
 	// pipeline
 	{
@@ -124,9 +124,6 @@ void sUISystem::setup(const std::shared_ptr<btr::Context>& context)
 std::shared_ptr<UI> sUISystem::create(const std::shared_ptr<btr::Context>& context)
 {
 	auto ui = std::make_shared<UI>();
-// 	{
-//		ui->m_info = context->m_storage_memory.allocateMemory()
-// 	}
 	{
 		btr::BufferMemoryDescriptorEx<UIInfo> desc;
 		desc.element_num = 1;

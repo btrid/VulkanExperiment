@@ -17,9 +17,9 @@ struct UIInfo
 
 enum UIFlagBit
 {
-	is_reserve = 1 << 0,
-	is_visible = 1 << 1,
-	is_enable = 1 << 2,
+	is_use = 1 << 0,
+	is_enable = 1 << 1,
+	is_visible = 1 << 2,
 	_reserved1 = 1 << 3,
 	_reserved2 = 1 << 4,
 };
@@ -28,7 +28,7 @@ struct UIParam
 	vec2 m_position_local; //!< Ž©•ª‚ÌêŠ
 	vec2 m_size_local;
 	vec4 m_color_local;
-	uint32_t _p13;
+	uint32_t m_name_hash;
 	uint32_t m_flag;
 	int32_t m_parent;
 	int32_t m_depth;
@@ -47,7 +47,6 @@ struct UIObject
 	std::string m_name;
 	UIParam m_param;
 
-//	std::array<Texture, 64> m_color_image;
 };
 struct UI
 {
@@ -58,6 +57,30 @@ struct UI
 	vk::UniqueImage m_ui_image;
 	vk::UniqueImageView m_image_view;
 	vk::UniqueDeviceMemory m_ui_texture_memory;
+
+//	std::array<Texture, 64> m_color_image;
+};
+
+struct UIManipurater 
+{
+	std::shared_ptr<btr::Context> m_context;
+	std::shared_ptr<UI> m_ui;
+	UIManipurater(const std::shared_ptr<btr::Context>& context, std::shared_ptr<UI>& ui)
+	{
+		m_context = context;
+		m_ui = ui;
+	}
+	void sort()
+	{
+//		m_context->m_staging_memory.allocateMemory();
+//		m_ui->m_info.getMappedPtr()
+	}
+
+	struct Cmd 
+	{
+		void undo(){}
+		void redo(){}
+	};
 };
 
 struct UIAnimationInfo
