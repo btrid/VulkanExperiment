@@ -29,7 +29,7 @@ sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 			image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
 			image_info.sharingMode = vk::SharingMode::eExclusive;
 			image_info.initialLayout = vk::ImageLayout::eUndefined;
-			image_info.extent = vk::Extent3D( width, height, 1 );
+			image_info.extent = vk::Extent3D(width, height, 1);
 			m_image = context->m_device->createImageUnique(image_info);
 
 			vk::MemoryRequirements memory_request = context->m_device->getImageMemoryRequirements(m_image.get());
@@ -58,7 +58,7 @@ sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 
 				vk::BufferImageCopy copy;
 				copy.bufferOffset = staging_buffer.getBufferInfo().offset;
-				copy.imageExtent = vk::Extent3D( width, height, 1 );
+				copy.imageExtent = vk::Extent3D(width, height, 1);
 				copy.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
 				copy.imageSubresource.baseArrayLayer = 0;
 				copy.imageSubresource.layerCount = 1;
@@ -114,16 +114,6 @@ sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 			m_sampler = context->m_device->createSamplerUnique(sampler_info);
 
 		}
-	}
-	{
-		btr::BufferMemoryDescriptorEx<ImDrawVert> v_desc;
-		v_desc.element_num = 4096;
-		m_vertex = context->m_staging_memory.allocateMemory(v_desc);
-		btr::BufferMemoryDescriptorEx<ImDrawIdx> i_desc;
-		i_desc.element_num = 4096;
-		m_index = context->m_staging_memory.allocateMemory(i_desc);
-		m_vertex_offset = 0;
-		m_index_offset = 0;
 	}
 	// descriptor
 	{
@@ -188,8 +178,8 @@ sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 		vk::PipelineLayoutCreateInfo pipeline_layout_info;
 		pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 		pipeline_layout_info.setPSetLayouts(layouts);
-// 		pipeline_layout_info.setPushConstantRangeCount(array_length(constants));
-// 		pipeline_layout_info.setPPushConstantRanges(constants);
+		// 		pipeline_layout_info.setPushConstantRangeCount(array_length(constants));
+		// 		pipeline_layout_info.setPPushConstantRanges(constants);
 		m_pipeline_layout[PIPELINE_LAYOUT_RENDER] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 	}
 
@@ -326,41 +316,29 @@ vk::CommandBuffer sImGuiRenderer::Render()
 	begin_render_info.setRenderPass(m_render_pass->getRenderPass());
 	begin_render_info.setRenderArea(vk::Rect2D({}, m_render_pass->getResolution()));
 	cmd.beginRenderPass(begin_render_info, vk::SubpassContents::eInline);
-
 	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_RENDER].get());
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_RENDER].get(), 0, { m_descriptor_set.get() }, {});
 
 	for (int n = 0; n < draw_data->CmdListsCount; n++)
 	{
 		auto* cmd_list = draw_data->CmdLists[n];
-		assert(cmd_list->VtxBuffer.size() < m_vertex.getDescriptor().element_num);
-		auto v_begin = m_vertex_offset;
-		{
-			auto v_num = cmd_list->VtxBuffer.size();
-			auto v_end = v_begin + v_num;
-			if (v_end >= m_vertex.getDescriptor().element_num)
-			{
-				m_vertex_offset = 0;
-				v_begin = 0;
-				v_end = v_begin + v_num;
-			}
-			memcpy(m_vertex.getMappedPtr(v_begin), cmd_list->VtxBuffer.Data, sizeof(ImDrawVert)*v_num);
-			m_vertex_offset += v_num;
-		}
-		auto i_begin = m_index_offset;
-		{
-			auto i_num = cmd_list->IdxBuffer.size();
-			auto i_end = i_begin + i_num;
-			if (i_end >= m_index.getDescriptor().element_num)
-			{
-				m_index_offset = 0;
-				i_begin = 0;
-				i_end = i_begin + i_num;
-			}
-			memcpy(m_index.getMappedPtr(i_begin), cmd_list->IdxBuffer.Data, sizeof(ImDrawIdx)*i_num);
-			m_index_offset += i_num;
-		}
+		auto v_num = cmd_list->VtxBuffer.size();
+		auto i_num = cmd_list->IdxBuffer.size();
 
-		cmd.bindVertexBuffers(0, { m_vertex.getInfo().buffer }, { m_vertex.getInfo().offset+v_begin*sizeof(ImDrawVert) });
+		btr::BufferMemoryDescriptorEx<ImDrawVert> v_desc;
+		v_desc.element_num = v_num;
+		v_desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
+		auto vertex = m_context->m_staging_memory.allocateMemory(v_desc);
+		btr::BufferMemoryDescriptorEx<ImDrawIdx> i_desc;
+		i_desc.element_num = i_num;
+		i_desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
+		auto index = m_context->m_staging_memory.allocateMemory(i_desc);
+
+		memcpy(vertex.getMappedPtr(), cmd_list->VtxBuffer.Data, sizeof(ImDrawVert)*v_num);
+		memcpy(index.getMappedPtr(), cmd_list->IdxBuffer.Data, sizeof(ImDrawIdx)*i_num);
+
+		cmd.bindVertexBuffers(0, { vertex.getInfo().buffer }, { vertex.getInfo().offset });
+		auto i_offset = 0u;
 		for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
 		{
 			const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
@@ -370,14 +348,10 @@ vk::CommandBuffer sImGuiRenderer::Render()
 			}
 			else
 			{
-				// Render 'pcmd->ElemCount/3' texture triangles
-//				MyEngineBindTexture(pcmd->TextureId);
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_RENDER].get(), 0, { m_descriptor_set.get() }, {});
-//				MyEngineScissor((int)pcmd->ClipRect.x, (int)pcmd->ClipRect.y, (int)(pcmd->ClipRect.z - pcmd->ClipRect.x), (int)(pcmd->ClipRect.w - pcmd->ClipRect.y));
-				cmd.bindIndexBuffer(m_index.getInfo().buffer, m_index.getInfo().offset + i_begin * sizeof(ImDrawIdx), sizeof(ImDrawIdx) == 2 ? vk::IndexType::eUint16 : vk::IndexType::eUint32);
+				cmd.bindIndexBuffer(index.getInfo().buffer, index.getInfo().offset + i_offset * sizeof(ImDrawIdx), sizeof(ImDrawIdx) == 2 ? vk::IndexType::eUint16 : vk::IndexType::eUint32);
 				cmd.drawIndexed(pcmd->ElemCount, 1, 0, 0, 0);
 			}
-			i_begin += pcmd->ElemCount;
+			i_offset += pcmd->ElemCount;
 		}
 	}
 

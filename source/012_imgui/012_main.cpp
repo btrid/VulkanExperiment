@@ -67,7 +67,7 @@ int main()
 			app.submit(std::move(cmds));
 		}
 		app.postUpdate();
-		printf("%6.4fs\n", time.getElapsedTimeAsSeconds());
+		printf("%-6.4fms\n", time.getElapsedTimeAsMilliSeconds());
 	}
 
 	return 0;

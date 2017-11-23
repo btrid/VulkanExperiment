@@ -51,8 +51,4 @@ private:
 
 	std::vector<vk::UniqueImageView> m_image_view;
 
-	btr::BufferMemoryEx<ImDrawVert> m_vertex;
-	btr::BufferMemoryEx<ImDrawIdx> m_index;
-	uint32_t m_vertex_offset;
-	uint32_t m_index_offset;
 };
