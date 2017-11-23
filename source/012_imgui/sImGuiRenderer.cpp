@@ -194,11 +194,6 @@ sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 	}
 
 	// setup pipeline
-	vk::Extent3D size;
-	size.setWidth(640);
-	size.setHeight(480);
-	size.setDepth(1);
-
 	{
 		// assembly
 		vk::PipelineInputAssemblyStateCreateInfo assembly_info[] =
@@ -209,15 +204,13 @@ sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 		};
 
 		// viewport
-		vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)size.width, (float)size.height, 0.f, 1.f);
-		std::vector<vk::Rect2D> scissor = {
-			vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(size.width, size.height))
-		};
+		vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)m_render_pass->getResolution().width, (float)m_render_pass->getResolution().height, 0.f, 1.f);
+		vk::Rect2D scissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(m_render_pass->getResolution().width, m_render_pass->getResolution().height));
 		vk::PipelineViewportStateCreateInfo viewportInfo;
 		viewportInfo.setViewportCount(1);
 		viewportInfo.setPViewports(&viewport);
-		viewportInfo.setScissorCount((uint32_t)scissor.size());
-		viewportInfo.setPScissors(scissor.data());
+		viewportInfo.setScissorCount(1);
+		viewportInfo.setPScissors(&scissor);
 
 		vk::PipelineRasterizationStateCreateInfo rasterization_info;
 		rasterization_info.setPolygonMode(vk::PolygonMode::eFill);
