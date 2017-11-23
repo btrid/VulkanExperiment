@@ -332,8 +332,14 @@ vk::CommandBuffer sImGuiRenderer::Render()
 		}
 	}
 	ImGui::NewFrame();
-
-	ImGui::ShowTestWindow();
+	{
+		auto&& cmds = std::move(m_imgui_cmd[sGlobal::Order().getGPUIndex()]);
+		for (auto&& cmd : cmds)
+		{
+			cmd();
+		}
+		cmds.clear();
+	}
 
 	ImGui::Render();
 	ImDrawData* draw_data = ImGui::GetDrawData();

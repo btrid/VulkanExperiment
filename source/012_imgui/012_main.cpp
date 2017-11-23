@@ -63,6 +63,7 @@ int main()
 			std::vector<vk::CommandBuffer> cmds;
 
 			cmds.emplace_back(sImGuiRenderer::Order().Render());
+			sImGuiRenderer::Order().pushCmd([]() { ImGui::ShowTestWindow(); });
 
 			app.submit(std::move(cmds));
 		}
