@@ -270,7 +270,7 @@ public:
 public:
 
 	glm::uvec2 getClientSize()const { return glm::uvec2(m_descriptor.size.width, m_descriptor.size.height); }
-	template<typename T> T getClientSize()const { return T{ m_descriptor.size.width, m_descriptor.size.height }; }
+	template<typename T> T getClientSize()const { return T( m_descriptor.size.width, m_descriptor.size.height ); }
 	const Swapchain& getSwapchain()const { return m_swapchain; }
 	Swapchain& getSwapchain() { return m_swapchain; }
 	vk::SurfaceKHR getSurface()const { return m_surface.get(); }

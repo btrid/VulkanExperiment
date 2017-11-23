@@ -313,6 +313,7 @@ struct BufferMemoryEx
 	struct Resource
 	{
 		vk::DescriptorBufferInfo m_buffer_info;
+		btr::BufferMemoryDescriptorEx<T> m_buffer_descriptor;
 		std::shared_ptr<GPUMemoryAllocater> m_allocater;
 		T* m_mapped_memory;
 
@@ -330,6 +331,7 @@ public:
 	bool isValid()const { return !!m_resource; }
 	vk::DescriptorBufferInfo getInfo()const { return m_resource->m_buffer_info; }
 	vk::DescriptorBufferInfo getBufferInfo()const { return m_resource->m_buffer_info; }
+	const btr::BufferMemoryDescriptorEx<T>& getDescriptor()const { return m_resource->m_buffer_descriptor; }
 	T* getMappedPtr(size_t offset_num = 0)const { return m_resource->m_mapped_memory + offset_num; }
 	uint32_t getDataSizeof()const { return sizeof(T); }
 
@@ -500,6 +502,7 @@ struct AllocatedMemory
 		alloc.m_resource->m_buffer_info.buffer = m_resource->m_buffer.get();
 		alloc.m_resource->m_buffer_info.offset = zone.m_start;
 		alloc.m_resource->m_buffer_info.range = zone.range();
+		alloc.m_resource->m_buffer_descriptor = desc;
 
 		alloc.m_resource->m_mapped_memory = nullptr;
 		if (m_resource->m_mapped_memory)

@@ -12,6 +12,7 @@ struct RenderPassModule
 {
 	virtual vk::RenderPass getRenderPass()const = 0;
 	virtual vk::Framebuffer getFramebuffer(uint32_t index)const = 0;
+	virtual vk::Extent2D getResolution()const = 0;
 
 };
 
@@ -88,6 +89,7 @@ struct RenderBackbufferModule : public RenderPassModule
 	}
 	virtual vk::RenderPass getRenderPass()const override { return m_render_pass.get(); }
 	virtual vk::Framebuffer getFramebuffer(uint32_t index)const override { return m_framebuffer[index].get(); }
+	virtual vk::Extent2D getResolution()const override { return { 640u, 480u }; }
 
 private:
 	vk::UniqueRenderPass m_render_pass;
@@ -217,6 +219,7 @@ struct RenderOffscreenModule : public RenderPassModule
 
 	virtual vk::RenderPass getRenderPass()const override { return m_render_pass.get(); }
 	virtual vk::Framebuffer getFramebuffer(uint32_t index)const override { return m_framebuffer.get(); }
+	virtual vk::Extent2D getResolution()const override { return { 640u, 480u }; }
 
 private:
 	vk::UniqueRenderPass m_render_pass;

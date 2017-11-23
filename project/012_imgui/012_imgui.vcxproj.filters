@@ -15,10 +15,10 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\source\011_ui\011_main.cpp">
+    <ClCompile Include="..\..\source\012_imgui\012_main.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\source\011_ui\sUISystem.cpp">
+    <ClCompile Include="..\..\source\012_imgui\sImGuiRenderer.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>
@@ -26,10 +26,7 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\include\011_ui\sUISystem.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\011_ui\sGUISystem.h">
+    <ClInclude Include="..\..\include\012_imgui\sImGuiRenderer.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>
