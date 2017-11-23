@@ -5,6 +5,10 @@
 #include <cstring>
 #include <cctype>
 #include <btrlib/Define.h>
+
+// 0x16‚ÍŽg‚í‚ê‚Ä‚¢‚È‚¢‚Ì‚Åvk_alt‚Æ‚·‚é
+#define vk_alt 0x16u
+
 struct cKeyboard {
 	enum State {
 		STATE_ON = 1 << 0,
@@ -21,18 +25,18 @@ struct cKeyboard {
 			, state_old(0)
 		{}
 	};
-	std::array<Param, 255> m_data;
-	bool isHold(char key)const
+	std::array<Param, 256> m_data;
+	bool isHold(uint8_t key)const
 	{
 		auto& it = m_data[std::toupper(key)];
 		return btr::isOn(it.state, STATE_HOLD);
 	}
-	bool isOn(char key)const
+	bool isOn(uint8_t key)const
 	{
 		auto& it = m_data[std::toupper(key)];
 		return btr::isOn(it.state, STATE_ON);
 	}
-	bool isOff(char key)const
+	bool isOff(uint8_t key)const
 	{
 		auto& it = m_data[std::toupper(key)];
 		return btr::isOn(it.state, STATE_OFF);

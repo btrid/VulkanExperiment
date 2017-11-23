@@ -134,14 +134,27 @@ public:
 			{
 				switch (msg.message)
 				{
+				case WM_SYSKEYDOWN:
+				{
+					auto& p = m_input.m_keyboard.m_data[vk_alt];
+					p.key = vk_alt;
+					p.state = cKeyboard::STATE_ON;
+				}
+				break;
+				case WM_SYSKEYUP:
+				{
+					auto& p = m_input.m_keyboard.m_data[vk_alt];
+					p.key = vk_alt;
+					p.state = cKeyboard::STATE_OFF;
+				}
+				break;
 				case WM_KEYDOWN:
 				{
-					auto& p = m_input.m_keyboard.m_data[msg.wParam];
+					auto& p = m_input.m_keyboard.m_data[vk_alt];
 					p.key = (uint8_t)msg.wParam;
 					p.state = cKeyboard::STATE_ON;
 				}
 				break;
-
 				case WM_KEYUP:
 				{
 					auto& p = m_input.m_keyboard.m_data[msg.wParam];
@@ -161,7 +174,8 @@ public:
 				case WM_RBUTTONUP:
 				case WM_XBUTTONDOWN:
 				case WM_XBUTTONUP:
-				{
+				case WM_LBUTTONDBLCLK:
+					{
 					int xPos = GET_X_LPARAM(msg.lParam);
 					int yPos = GET_Y_LPARAM(msg.lParam);
 					switch (msg.message)
@@ -173,8 +187,8 @@ public:
 						break;
 					case WM_LBUTTONUP:
 						m_input.m_mouse.m_param[cMouse::BUTTON_LEFT].state = cMouse::STATE_OFF;
-						m_input.m_mouse.m_param[cMouse::BUTTON_LEFT].x = -1;
-						m_input.m_mouse.m_param[cMouse::BUTTON_LEFT].y = -1;
+						m_input.m_mouse.m_param[cMouse::BUTTON_LEFT].x = xPos;
+						m_input.m_mouse.m_param[cMouse::BUTTON_LEFT].y = yPos;
 						break;
 					case WM_MBUTTONDOWN:
 						m_input.m_mouse.m_param[cMouse::BUTTON_MIDDLE].state |= cMouse::STATE_ON;
@@ -195,6 +209,9 @@ public:
 						m_input.m_mouse.m_param[cMouse::BUTTON_RIGHT].state = cMouse::STATE_OFF;
 						m_input.m_mouse.m_param[cMouse::BUTTON_RIGHT].x = -1;
 						m_input.m_mouse.m_param[cMouse::BUTTON_RIGHT].y = -1;
+						break;
+					case WM_LBUTTONDBLCLK:
+						m_input.m_mouse.m_param[cMouse::BUTTON_LEFT].state = cMouse::STATE_ON;
 						break;
 					case WM_XBUTTONDOWN:
 					case WM_XBUTTONUP:
@@ -262,6 +279,8 @@ public:
 			if (btr::isOn(param_old.state, cMouse::STATE_OFF))
 			{
 				param.state = 0;
+				param.x = -1;
+				param.y = -1;
 			}
 		}
 		m_input.m_mouse.xy_old = old.xy;

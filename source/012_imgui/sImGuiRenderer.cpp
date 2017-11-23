@@ -12,7 +12,7 @@ sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 	{
 		ImGuiIO& io = ImGui::GetIO();
 		io.DisplaySize = context->m_window->getClientSize<ImVec2>();
-		io.FontGlobalScale = 2.f;
+		io.FontGlobalScale = 1.f;
 		io.RenderDrawListsFn = nullptr;  // Setup a render function, or set to NULL and call GetDrawData() after Render() to access the render data.
 
 		unsigned char* pixels;
@@ -296,20 +296,34 @@ sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 
 	}
 
-
-	// Call NewFrame(), after this point you can use ImGui::* functions anytime
-	ImGui::NewFrame();
 }
 
 vk::CommandBuffer sImGuiRenderer::Render()
 {
 	auto cmd = m_context->m_cmd_pool->allocCmdOnetime(0);
 
-	// Most of your application code here
-//	ImGui::Begin(); 
+	auto& io = ImGui::GetIO();
+	{
+		auto& mouse = m_context->m_window->getInput().m_mouse;
+		io.MousePos = ImVec2(mouse.xy.x, mouse.xy.y);
+		io.MouseDown[0] = mouse.isHold(cMouse::BUTTON_LEFT);
+		io.MouseDown[1] = mouse.isHold(cMouse::BUTTON_RIGHT);
+		io.MouseDown[2] = mouse.isHold(cMouse::BUTTON_MIDDLE);
+		io.MouseWheel = mouse.getWheel();
+	}
+	{
+		auto& keyboard = m_context->m_window->getInput().m_keyboard;
+		io.KeyShift = keyboard.isHold(VK_SHIFT);
+		io.KeyCtrl = keyboard.isHold(VK_CONTROL);
+		io.KeyAlt = keyboard.isHold(vk_alt);
+		for (uint32_t i = 0; i < 256; i++)
+		{
+			io.KeysDown[i] = keyboard.isHold(i);
+		}
+	}
+	ImGui::NewFrame();
+
 	ImGui::ShowTestWindow();
-//	ImGui::Text("Hello, world!"); 
-//	ImGui::End();
 
 	ImGui::Render();
 	ImDrawData* draw_data = ImGui::GetDrawData();
@@ -373,9 +387,6 @@ vk::CommandBuffer sImGuiRenderer::Render()
 			i_begin += pcmd->ElemCount;
 		}
 	}
-
-	// Call NewFrame(), after this point you can use ImGui::* functions anytime
-	ImGui::NewFrame();
 
 	cmd.endRenderPass();
 	cmd.end();

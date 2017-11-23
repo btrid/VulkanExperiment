@@ -17,7 +17,8 @@ layout(location = 1) out PerVertex{
 
 void main()
 {
-	gl_Position = vec4(in_position/ vec2(640., 480), 0., 1.);
+	vec2 p = vec2(in_position/ vec2(640., 480) *2. - 1.);
+	gl_Position = vec4(p, 0., 1.);
 //	gl_Position.y = 1.-gl_Position.y;
 	vertex.texcoord = in_texcoord;
 	vertex.color = in_color;
