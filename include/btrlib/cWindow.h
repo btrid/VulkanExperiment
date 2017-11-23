@@ -150,7 +150,7 @@ public:
 				break;
 				case WM_KEYDOWN:
 				{
-					auto& p = m_input.m_keyboard.m_data[vk_alt];
+					auto& p = m_input.m_keyboard.m_data[msg.wParam];
 					p.key = (uint8_t)msg.wParam;
 					p.state = cKeyboard::STATE_ON;
 				}

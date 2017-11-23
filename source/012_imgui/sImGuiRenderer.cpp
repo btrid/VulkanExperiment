@@ -14,6 +14,25 @@ sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 		io.DisplaySize = context->m_window->getClientSize<ImVec2>();
 		io.FontGlobalScale = 1.f;
 		io.RenderDrawListsFn = nullptr;  // Setup a render function, or set to NULL and call GetDrawData() after Render() to access the render data.
+		io.KeyMap[ImGuiKey_Tab] = VK_TAB;
+		io.KeyMap[ImGuiKey_LeftArrow] = VK_LEFT;
+		io.KeyMap[ImGuiKey_RightArrow] = VK_RIGHT;
+		io.KeyMap[ImGuiKey_UpArrow] = VK_UP;
+		io.KeyMap[ImGuiKey_DownArrow] = VK_DOWN;
+//		io.KeyMap[ImGuiKey_PageUp] = VK_PAGE;
+// 		io.KeyMap[ImGuiKey_PageDown] = i;
+// 		io.KeyMap[ImGuiKey_Home] = i;
+// 		io.KeyMap[ImGuiKey_End] = i;
+		io.KeyMap[ImGuiKey_Delete] = VK_DELETE;
+		io.KeyMap[ImGuiKey_Backspace] = VK_BACK;
+		io.KeyMap[ImGuiKey_Enter] = VK_RETURN;
+		io.KeyMap[ImGuiKey_Escape] = VK_ESCAPE;
+// 		io.KeyMap[ImGuiKey_A] = i;
+// 		io.KeyMap[ImGuiKey_C] = i;
+// 		io.KeyMap[ImGuiKey_V] = i;
+// 		io.KeyMap[ImGuiKey_X] = i;
+// 		io.KeyMap[ImGuiKey_Y] = i;
+// 		io.KeyMap[ImGuiKey_Z] = i;
 
 		unsigned char* pixels;
 		int width, height, byte_per_pixel;
@@ -296,12 +315,20 @@ vk::CommandBuffer sImGuiRenderer::Render()
 	}
 	{
 		auto& keyboard = m_context->m_window->getInput().m_keyboard;
-		io.KeyShift = keyboard.isHold(VK_SHIFT);
+		auto is_shift = keyboard.isHold(VK_SHIFT);
+		io.KeyShift = is_shift;
 		io.KeyCtrl = keyboard.isHold(VK_CONTROL);
 		io.KeyAlt = keyboard.isHold(vk_alt);
+		int32_t input_count = 0;
 		for (uint32_t i = 0; i < 256; i++)
 		{
-			io.KeysDown[i] = keyboard.isHold(i);
+			bool is_on = keyboard.isOn(i);
+			io.KeysDown[i] = is_on;
+			if (is_on && input_count < 16 && (std::isprint(i) || std::isblank(i)) )
+			{
+				auto a = is_shift ? std::toupper(i) : std::tolower(i);
+				io.InputCharacters[input_count++] = a;
+			}
 		}
 	}
 	ImGui::NewFrame();

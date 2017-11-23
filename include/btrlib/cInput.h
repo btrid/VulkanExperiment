@@ -28,17 +28,17 @@ struct cKeyboard {
 	std::array<Param, 256> m_data;
 	bool isHold(uint8_t key)const
 	{
-		auto& it = m_data[std::toupper(key)];
+		auto& it = m_data[key];
 		return btr::isOn(it.state, STATE_HOLD);
 	}
 	bool isOn(uint8_t key)const
 	{
-		auto& it = m_data[std::toupper(key)];
+		auto& it = m_data[key];
 		return btr::isOn(it.state, STATE_ON);
 	}
 	bool isOff(uint8_t key)const
 	{
-		auto& it = m_data[std::toupper(key)];
+		auto& it = m_data[key];
 		return btr::isOn(it.state, STATE_OFF);
 	}
 };
