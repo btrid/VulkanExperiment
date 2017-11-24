@@ -201,23 +201,6 @@ void memoryAllocater()
 	count++;
 }
 
-float calcDepth(float v, float n, float f)
-{
-	return /*1.f -*/ (n * f / (v * (f - n) - f));
-}
-
-void depth_test()
-{
-
-	auto p = glm::perspective(glm::radians(60.f), 1.f, 0.1f, 5000.f);
-	auto v = glm::lookAt(glm::vec3(2888.f), glm::vec3(0.f), glm::vec3(0.f, 1.f, 0.f));
-	auto s = p*v*vec4(30.f, 10.f, -15.f, 1.f);
-	s /= s.w;
-
-	auto d = calcDepth(4500.f, 0.1f, 5000.f);
-	int a = 0;
-	a++;
-}
 int main()
 {
 	glm::vec3 a(0.f, 0.f, 1.f);
@@ -229,7 +212,6 @@ int main()
 
 	btr::setResourceAppPath("..\\..\\resource\\000_api_test\\");
 //	ImageMemoryAllocate();
-	depth_test();
 	memoryAllocate();
 	memoryAllocater();
 

@@ -75,7 +75,6 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\include\011_ui\sGUISystem.h" />
     <ClInclude Include="..\..\include\011_ui\sUISystem.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

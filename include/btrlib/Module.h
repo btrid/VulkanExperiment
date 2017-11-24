@@ -86,14 +86,16 @@ struct RenderBackbufferModule : public RenderPassModule
 				m_framebuffer[i] = context->m_device->createFramebufferUnique(framebuffer_info);
 			}
 		}
+		m_resolution = context->m_window->getClientSize<vk::Extent2D>();
 	}
 	virtual vk::RenderPass getRenderPass()const override { return m_render_pass.get(); }
 	virtual vk::Framebuffer getFramebuffer(uint32_t index)const override { return m_framebuffer[index].get(); }
-	virtual vk::Extent2D getResolution()const override { return { 640u, 480u }; }
+	virtual vk::Extent2D getResolution()const override { return m_resolution; }
 
 private:
 	vk::UniqueRenderPass m_render_pass;
 	std::vector<vk::UniqueFramebuffer> m_framebuffer;
+	vk::Extent2D m_resolution;
 
 };
 struct RenderOffscreenModule : public RenderPassModule
@@ -215,15 +217,17 @@ struct RenderOffscreenModule : public RenderPassModule
 
 			m_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
 		}
+		m_resolution = context->m_window->getClientSize<vk::Extent2D>();
 	}
 
 	virtual vk::RenderPass getRenderPass()const override { return m_render_pass.get(); }
 	virtual vk::Framebuffer getFramebuffer(uint32_t index)const override { return m_framebuffer.get(); }
-	virtual vk::Extent2D getResolution()const override { return { 640u, 480u }; }
+	virtual vk::Extent2D getResolution()const override { return m_resolution; }
 
 private:
 	vk::UniqueRenderPass m_render_pass;
 	vk::UniqueFramebuffer m_framebuffer;
+	vk::Extent2D m_resolution;
 
 	std::vector<vk::Viewport> m_viewport;
 	std::vector<vk::Rect2D> m_sissor;

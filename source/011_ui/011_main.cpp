@@ -22,6 +22,7 @@
 
 #include <applib/App.h>
 #include <btrlib/Context.h>
+#include <applib/sImGuiRenderer.h>
 
 #include <011_ui/sUISystem.h>
 
@@ -29,7 +30,7 @@
 #pragma comment(lib, "applib.lib")
 //#pragma comment(lib, "FreeImage.lib")
 #pragma comment(lib, "vulkan-1.lib")
-//#pragma comment(lib, "imgui.lib")
+#pragma comment(lib, "imgui.lib")
 
 
 int main()
@@ -39,8 +40,8 @@ int main()
 	camera->getData().m_position = glm::vec3(0.f, 0.f, 1.f);
 	camera->getData().m_target = glm::vec3(0.f, 0.f, 0.f);
 	camera->getData().m_up = glm::vec3(0.f, -1.f, 0.f);
-	camera->getData().m_width = 640;
-	camera->getData().m_height = 480;
+	camera->getData().m_width = 800;
+	camera->getData().m_height = 600;
 	camera->getData().m_far = 5000.f;
 	camera->getData().m_near = 0.01f;
 
@@ -51,14 +52,15 @@ int main()
 	{
 		app::AppDescriptor desc;
 		desc.m_gpu = gpu;
-		desc.m_window_size = uvec2(640, 480);
+		desc.m_window_size = uvec2(800, 600);
 		app.setup(desc);
 	}
 	auto context = app.m_context;
 
+	sImGuiRenderer::Create(context);
 	sUISystem::Order().setup(context);
 	auto ui = sUISystem::Order().create(context);
-//	ui->m_object.
+	UIManipulater manip(context, ui);
 	sUISystem::Order().addRender(ui);
 	while (true)
 	{
@@ -66,7 +68,10 @@ int main()
 
 		app.preUpdate();
 		{
-			app.submit(std::vector<vk::CommandBuffer>{});
+			std::vector<vk::CommandBuffer> cmds(1);
+			manip.test();
+			cmds[0] = sImGuiRenderer::Order().Render();
+			app.submit(std::move(cmds));
 		}
 		app.postUpdate();
 		printf("%6.4fms\n", time.getElapsedTimeAsMilliSeconds());

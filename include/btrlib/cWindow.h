@@ -127,6 +127,8 @@ public:
 		MSG msg;
 		auto old = m_input.m_mouse;
 		m_input.m_mouse.wheel = 0;
+		m_input.m_keyboard.m_char.fill(0);
+		m_input.m_keyboard.m_char_count = 0;
 		while (PeekMessage(&msg, m_private->m_window, 0, 0, PM_REMOVE))
 		{
 //			msgList.push_back(msg);			
@@ -162,6 +164,10 @@ public:
 					p.state = cKeyboard::STATE_OFF;
 				}
 				break;
+				case WM_CHAR:
+					m_input.m_keyboard.m_char[m_input.m_keyboard.m_char_count++] = msg.wParam;
+					break;
+
 				case WM_MOUSEWHEEL:
 				{
 					m_input.m_mouse.wheel = GET_WHEEL_DELTA_WPARAM(msg.wParam) / WHEEL_DELTA;

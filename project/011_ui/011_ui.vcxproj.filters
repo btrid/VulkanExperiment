@@ -29,8 +29,5 @@
     <ClInclude Include="..\..\include\011_ui\sUISystem.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\011_ui\sGUISystem.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>

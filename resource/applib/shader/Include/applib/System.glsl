@@ -15,11 +15,17 @@ struct SystemData
 	uint m_gpu_frame;
 	float m_deltatime;
 	uint _p13;
+
+	uvec2 m_resolution;
 	ivec2 m_mouse_position;
+
 	ivec2 m_mouse_position_old;
 	uint m_is_mouse_on;
 	uint m_is_mouse_off;
+
 	uint m_is_mouse_hold;
+	uint _p21;
+	uint _p22;
 	uint _p23;
 
 	uint m_is_key_on;

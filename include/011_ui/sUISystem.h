@@ -50,6 +50,7 @@ struct UIObject
 };
 struct UI
 {
+	std::string m_name;
 	vk::UniqueDescriptorSet	m_descriptor_set;
 	btr::BufferMemoryEx<UIInfo> m_info;
 	btr::BufferMemoryEx<UIParam> m_object;
@@ -61,11 +62,11 @@ struct UI
 //	std::array<Texture, 64> m_color_image;
 };
 
-struct UIManipurater 
+struct UIManipulater 
 {
 	std::shared_ptr<btr::Context> m_context;
 	std::shared_ptr<UI> m_ui;
-	UIManipurater(const std::shared_ptr<btr::Context>& context, std::shared_ptr<UI>& ui)
+	UIManipulater(const std::shared_ptr<btr::Context>& context, std::shared_ptr<UI>& ui)
 	{
 		m_context = context;
 		m_ui = ui;
@@ -76,6 +77,7 @@ struct UIManipurater
 //		m_ui->m_info.getMappedPtr()
 	}
 
+	void test();
 	struct Cmd 
 	{
 		void undo(){}
@@ -132,6 +134,7 @@ private:
 		PIPELINE_LAYOUT_NUM,
 	};
 
+	std::shared_ptr<RenderPassModule> m_render_pass;
 	vk::UniqueDescriptorPool		m_descriptor_pool;
 	vk::UniqueDescriptorSetLayout	m_descriptor_set_layout;
 

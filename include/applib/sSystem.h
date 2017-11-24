@@ -59,11 +59,17 @@ public:
 		uint32_t m_gpu_frame;
 		float m_deltatime;
 		uint32_t _p13;
+
+		uvec2 m_resolution;
 		ivec2 m_mouse_position;
+
 		ivec2 m_mouse_position_old;
 		uint32_t m_is_mouse_on;
 		uint32_t m_is_mouse_off;
+
 		uint32_t m_is_mouse_hold;
+		uint32_t _p21;
+		uint32_t _p22;
 		uint32_t _p23;
 
 		uint32_t m_is_key_on;
@@ -91,6 +97,7 @@ struct sSystem : public Singleton<sSystem>
 		data.m_gpu_index = sGlobal::Order().getGPUIndex();
 		data.m_deltatime = sGlobal::Order().getDeltaTime();
 		data.m_gpu_frame = context->getGPUFrame();
+		data.m_resolution = context->m_window->getClientSize();
 		{
 			auto& mouse = context->m_window->getInput().m_mouse;
 			data.m_is_mouse_on = data.m_is_mouse_off = data.m_is_mouse_hold = 0;

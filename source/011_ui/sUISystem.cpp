@@ -6,10 +6,12 @@
 #include <thread>
 
 #include <applib/DrawHelper.h>
+#include <applib/sImGuiRenderer.h>
 
 void sUISystem::setup(const std::shared_ptr<btr::Context>& context)
 {
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+	m_render_pass = std::make_shared<RenderBackbufferModule>(context);
 	{
 		btr::BufferMemoryDescriptorEx<UIGlobal> desc;
 		desc.element_num = 1;
@@ -17,7 +19,7 @@ void sUISystem::setup(const std::shared_ptr<btr::Context>& context)
 
 		desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 		auto staging = context->m_staging_memory.allocateMemory(desc);
-		staging.getMappedPtr()->m_resolusion = uvec2(640, 480);
+		staging.getMappedPtr()->m_resolusion = uvec2(m_render_pass->getResolution().width, m_render_pass->getResolution().height);
 
 		vk::BufferCopy copy;
 		copy.setSrcOffset(staging.getInfo().offset);
@@ -178,4 +180,26 @@ vk::CommandBuffer sUISystem::draw(const std::shared_ptr<btr::Context>& context)
 	auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 	cmd.end();
 	return cmd;
+}
+
+void UIManipulater::test()
+{
+	auto func = [this]() {
+// 		ImGui::SetNextWindowPos(ImVec2(10.f, 10.f), ImGuiCond_Once);
+// 		ImGui::SetNextWindowSize(ImVec2(200.f, 400.f), ImGuiCond_Once);
+// 		m_ui->m_name = "new";
+// 		ImGui::Begin(m_ui->m_name.c_str());
+// 		if (ImGui::CollapsingHeader("Help")) 
+// 		{
+// 			ImGui::Text("new_child");
+// 			ImGui::SameLine();
+// 			if (ImGui::Button("", ImVec2(10.f, 10.f)))
+// 			{
+// 				int a = 0; a++;
+// 			}
+// 		}
+// 		ImGui::End();
+		ImGui::ShowTestWindow();
+	};
+	sImGuiRenderer::Order().pushCmd(std::move(func));
 }

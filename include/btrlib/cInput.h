@@ -10,6 +10,9 @@
 #define vk_alt 0x16u
 
 struct cKeyboard {
+	cKeyboard() 
+		: m_char_count(0)
+	{}
 	enum State {
 		STATE_ON = 1 << 0,
 		STATE_OFF = 1 << 1,
@@ -26,6 +29,8 @@ struct cKeyboard {
 		{}
 	};
 	std::array<Param, 256> m_data;
+	std::array<wchar_t, 16> m_char;
+	uint32_t m_char_count;
 	bool isHold(uint8_t key)const
 	{
 		auto& it = m_data[key];

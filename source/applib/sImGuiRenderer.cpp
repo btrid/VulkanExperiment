@@ -1,8 +1,5 @@
 #include <applib/sImGuiRenderer.h>
-
-#pragma comment(lib, "imgui.lib")
-
-
+#include <applib/sSystem.h>
 sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 {
 	m_context = context;
@@ -117,8 +114,8 @@ sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 			m_image_view.emplace_back(context->m_device->createImageViewUnique(view_info));
 
 			vk::SamplerCreateInfo sampler_info;
-			sampler_info.magFilter = vk::Filter::eNearest;
-			sampler_info.minFilter = vk::Filter::eNearest;
+			sampler_info.magFilter = vk::Filter::eLinear;
+			sampler_info.minFilter = vk::Filter::eLinear;
 			sampler_info.mipmapMode = vk::SamplerMipmapMode::eNearest;
 			sampler_info.addressModeU = vk::SamplerAddressMode::eClampToEdge;
 			sampler_info.addressModeV = vk::SamplerAddressMode::eClampToEdge;
@@ -190,6 +187,7 @@ sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 	{
 		vk::DescriptorSetLayout layouts[] = {
 			m_descriptor_set_layout.get(),
+			sSystem::Order().getSystemDescriptor().getLayout(),
 		};
 		vk::PushConstantRange constants[] = {
 			vk::PushConstantRange().setOffset(0).setSize(4).setStageFlags(vk::ShaderStageFlagBits::eFragment),
@@ -324,12 +322,12 @@ vk::CommandBuffer sImGuiRenderer::Render()
 		{
 			bool is_on = keyboard.isOn(i);
 			io.KeysDown[i] = is_on;
-			if (is_on && input_count < 16 && (std::isprint(i) || std::isblank(i)) )
-			{
-				auto a = is_shift ? std::toupper(i) : std::tolower(i);
-				io.InputCharacters[input_count++] = a;
-			}
 		}
+		for (uint32_t i = 0; i < keyboard.m_char_count; i++)
+		{
+			io.InputCharacters[i] = keyboard.m_char[i];
+		}
+
 	}
 	ImGui::NewFrame();
 	{
@@ -351,6 +349,7 @@ vk::CommandBuffer sImGuiRenderer::Render()
 	cmd.beginRenderPass(begin_render_info, vk::SubpassContents::eInline);
 	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_RENDER].get());
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_RENDER].get(), 0, { m_descriptor_set.get() }, {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_RENDER].get(), 1, { sSystem::Order().getSystemDescriptor().getSet() }, {});
 
 	for (int n = 0; n < draw_data->CmdListsCount; n++)
 	{

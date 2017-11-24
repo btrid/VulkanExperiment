@@ -276,8 +276,8 @@ struct DrawHelper : public Singleton<DrawHelper>
 
 		// setup pipeline
 		vk::Extent3D size;
-		size.setWidth(640);
-		size.setHeight(480);
+		size.setWidth(context->m_window->getClientSize().x);
+		size.setHeight(context->m_window->getClientSize().y);
 		size.setDepth(1);
 
 		{
