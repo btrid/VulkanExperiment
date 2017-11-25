@@ -54,6 +54,15 @@ template<typename A, typename B>
 void setOff(A& bit, B test) {
 	bit &= ~test;
 }
+template<typename A, typename B>
+void setSwap(A& bit, B test) {
+	if (isOn(bit, test)) {
+		setOff(bit, test);
+	}
+	else {
+		setOn(bit, test);
+	}
+}
 
 //!	align(4, 32) -> 32
 //!	align(33, 32) -> 64

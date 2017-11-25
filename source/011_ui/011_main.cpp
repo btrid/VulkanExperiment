@@ -58,19 +58,22 @@ int main()
 	auto context = app.m_context;
 
 	sImGuiRenderer::Create(context);
-	sUISystem::Order().setup(context);
+	sUISystem::Create(context);
+
+
 	auto ui = sUISystem::Order().create(context);
 	UIManipulater manip(context, ui);
-	sUISystem::Order().addRender(ui);
 	while (true)
 	{
 		cStopWatch time;
 
 		app.preUpdate();
 		{
-			std::vector<vk::CommandBuffer> cmds(1);
+			std::vector<vk::CommandBuffer> cmds(2);
 			manip.test();
+			sUISystem::Order().addRender(ui);
 			cmds[0] = sImGuiRenderer::Order().Render();
+			cmds[1] = sUISystem::Order().draw();
 			app.submit(std::move(cmds));
 		}
 		app.postUpdate();

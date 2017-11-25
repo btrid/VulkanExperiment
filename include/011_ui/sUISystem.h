@@ -17,21 +17,29 @@ struct UIInfo
 
 enum UIFlagBit
 {
-	is_use = 1 << 0,
 	is_enable = 1 << 1,
 	is_visible = 1 << 2,
-	_reserved1 = 1 << 3,
-	_reserved2 = 1 << 4,
+	is_sprite = 1 << 3,
+	is_boundary = 1 << 4,
+
+	// for tool
+	is_select = 1 << 30,	//!< 選択中
+	is_trash = 1 << 31,		//!< 破棄済み
 };
 struct UIParam
 {
 	vec2 m_position_local; //!< 自分の場所
 	vec2 m_size_local;
 	vec4 m_color_local;
-	uint32_t m_name_hash;
 	uint32_t m_flag;
-	int32_t m_parent;
+	int32_t m_parent_index;
+	int32_t m_child_index;
 	int32_t m_depth;
+
+	int32_t m_chibiling_index;
+	uint32_t _p11;
+	uint32_t _p12;
+	uint32_t _p13;
 
 	vec2 m_position_anime; //!< animationで移動オフセット
 	vec2 m_size_anime;
@@ -40,6 +48,10 @@ struct UIParam
 	uint32_t _p21;
 	uint32_t _p22;
 	uint32_t _p23;
+
+	uint64_t m_name_hash;
+	uint32_t _p32;
+	uint32_t _p33;
 };
 
 struct UIObject 
@@ -51,7 +63,8 @@ struct UIObject
 struct UI
 {
 	std::string m_name;
-	vk::UniqueDescriptorSet	m_descriptor_set;
+// 	vk::UniqueDescriptorSet	m_descriptor_set;
+
 	btr::BufferMemoryEx<UIInfo> m_info;
 	btr::BufferMemoryEx<UIParam> m_object;
 
@@ -62,27 +75,97 @@ struct UI
 //	std::array<Texture, 64> m_color_image;
 };
 
+struct UiParamTool
+{
+	std::string m_name;
+	bool m_is_select;
+
+	UiParamTool()
+		: m_is_select(false)
+	{}
+};
 struct UIManipulater 
 {
 	std::shared_ptr<btr::Context> m_context;
 	std::shared_ptr<UI> m_ui;
+	std::vector<std::string> m_object_name;
+
+	btr::BufferMemoryEx<UIInfo> m_info;
+	btr::BufferMemoryEx<UIParam> m_object;
+	std::vector<UiParamTool> m_object_tool;
+
+	int32_t m_last_select_index;
+	uint32_t m_object_counter;
 	UIManipulater(const std::shared_ptr<btr::Context>& context, std::shared_ptr<UI>& ui)
+		: m_last_select_index(-1)
+		, m_object_counter(0)
 	{
 		m_context = context;
 		m_ui = ui;
+
+		btr::BufferMemoryDescriptorEx<UIParam> desc;
+		desc.element_num = 1024;
+		m_object = context->m_staging_memory.allocateMemory(desc);
+
+		UIParam root;
+		root.m_position_local;
+		root.m_size_local = vec2(50, 50);
+		root.m_depth = 0;
+		root.m_parent_index = -1;
+		root.m_chibiling_index = -1;
+		root.m_child_index = -1;
+		root.m_flag = 0;
+		root.m_flag |= is_visible;
+		root.m_flag |= is_enable;
+		std::hash<std::string> hash;
+		root.m_name_hash = hash(std::string("root"));
+		*m_object.getMappedPtr(0) = root;
+		m_object_counter++;
+
+		m_object_tool.resize(1024);
+		m_object_tool[0].m_name = "root";
 	}
 	void sort()
 	{
-//		m_context->m_staging_memory.allocateMemory();
-//		m_ui->m_info.getMappedPtr()
 	}
 
 	void test();
+	void drawtree(int32_t index);
+	void addnode(int32_t parent)
+	{
+		auto index = m_object_counter++;
+
+		UIParam new_node;
+		new_node.m_position_local;
+		new_node.m_size_local = vec2(50, 50);
+		new_node.m_depth = 0;
+		new_node.m_parent_index = parent;
+		new_node.m_chibiling_index = -1;
+		new_node.m_child_index = -1;
+		new_node.m_flag = 0;
+		new_node.m_flag |= is_visible;
+		new_node.m_flag |= is_enable;
+
+		{
+			// 名前付け
+			char buf[256] = {};
+			sprintf_s(buf, "%s_05d", m_object_tool[parent].m_name, index);
+			m_object_tool[index].m_name = buf;
+			std::hash<std::string> hash;
+			new_node.m_name_hash = hash(std::string(m_object_tool[index].m_name));
+		}
+		*m_object.getMappedPtr(index) = new_node;
+		m_object.getMappedPtr(parent)->m_child_index = index;
+
+	}
+
 	struct Cmd 
 	{
 		void undo(){}
 		void redo(){}
 	};
+
+//	vk::CommandBuffer draw();
 };
 
 struct UIAnimationInfo
@@ -94,18 +177,18 @@ struct UIAnimationParam
 {
 
 };
-struct sUISystem : Singleton<sUISystem>
+struct sUISystem : SingletonEx<sUISystem>
 {
-	friend Singleton<sUISystem>;
+	friend SingletonEx<sUISystem>;
 
-	void setup(const std::shared_ptr<btr::Context>& context);
+	sUISystem(const std::shared_ptr<btr::Context>& context);
 	std::shared_ptr<UI> create(const std::shared_ptr<btr::Context>& context);
 
 	void addRender(std::shared_ptr<UI>& ui)
 	{
 		m_render.push_back(ui);
 	}
-	vk::CommandBuffer draw(const std::shared_ptr<btr::Context>& context);
+	vk::CommandBuffer draw();
 private:
 	enum Shader
 	{
@@ -134,8 +217,9 @@ private:
 		PIPELINE_LAYOUT_NUM,
 	};
 
+	std::shared_ptr<btr::Context> m_context;
 	std::shared_ptr<RenderPassModule> m_render_pass;
-	vk::UniqueDescriptorPool		m_descriptor_pool;
+	std::array<vk::UniqueDescriptorPool, sGlobal::FRAME_MAX> m_descriptor_pool;
 	vk::UniqueDescriptorSetLayout	m_descriptor_set_layout;
 
 	std::array<vk::UniqueShaderModule, SHADER_NUM>				m_shader_module;
@@ -144,25 +228,6 @@ private:
 
 	btr::BufferMemoryEx<UIGlobal> m_global;
 	std::vector<std::shared_ptr<UI>> m_render;
-
-// 	vk::ImageCreateInfo image_info;
-// 	image_info.imageType = vk::ImageType::e2D;
-// 	image_info.format = vk::Format::eR32Sfloat;
-// 	image_info.mipLevels = 1;
-// 	image_info.arrayLayers = 1;
-// 	image_info.samples = vk::SampleCountFlagBits::e1;
-// 	image_info.tiling = vk::ImageTiling::eLinear;
-// 	image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
-// 	image_info.sharingMode = vk::SharingMode::eExclusive;
-// 	image_info.initialLayout = vk::ImageLayout::eUndefined;
-// 	image_info.extent = { 1, 1, 1 };
-// 	image_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
-// 	auto image = context->m_device->createImageUnique(image_info);
-// 
-// 	vk::MemoryRequirements memory_request = context->m_device->getImageMemoryRequirements(image.get());
-// 	vk::MemoryAllocateInfo memory_alloc_info;
-// 	memory_alloc_info.allocationSize = memory_request.size;
-// 	memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(context->m_gpu.getHandle(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
 };
 
