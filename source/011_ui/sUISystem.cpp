@@ -51,9 +51,7 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context)
 			.setBinding(2),
 		};
 		m_descriptor_set_layout = btr::Descriptor::createDescriptorSetLayout(context, binding);
-		m_descriptor_pool[0] = btr::Descriptor::createDescriptorPool(context, binding, 30);
-		m_descriptor_pool[1] = btr::Descriptor::createDescriptorPool(context, binding, 30);
-		m_descriptor_pool[2] = btr::Descriptor::createDescriptorPool(context, binding, 30);
+		m_descriptor_pool = btr::Descriptor::createDescriptorPool(context, binding, 30);
 
 	}
 
@@ -226,18 +224,15 @@ vk::CommandBuffer sUISystem::draw()
 {
 	auto cmd = m_context->m_cmd_pool->allocCmdOnetime(0);
 
-	m_context->m_device->resetDescriptorPool(m_descriptor_pool[m_context->getGPUFrame()].get());
-	std::unique_ptr<std::vector<vk::UniqueDescriptorSet>> descriptor_holder = std::make_unique<std::vector<vk::UniqueDescriptorSet>>();
-	descriptor_holder->reserve(m_render.size());
+	m_context->m_device->resetDescriptorPool(m_descriptor_pool.get());
 	for (auto& ui : m_render)
 	{
 		vk::DescriptorSetLayout layouts[] = { m_descriptor_set_layout.get() };
 		vk::DescriptorSetAllocateInfo alloc_info;
-		alloc_info.setDescriptorPool(m_descriptor_pool[m_context->getGPUFrame()].get());
+		alloc_info.setDescriptorPool(m_descriptor_pool.get());
 		alloc_info.setDescriptorSetCount(array_length(layouts));
 		alloc_info.setPSetLayouts(layouts);
-		descriptor_holder->emplace_back(std::move(m_context->m_device->allocateDescriptorSetsUnique(alloc_info)[0]));
-		auto descriptor_set = descriptor_holder->back().get();
+		auto descriptor_set = m_context->m_device->allocateDescriptorSets(alloc_info)[0];
 
 		vk::DescriptorBufferInfo uniforms[] = {
 			m_global.getInfo(),
@@ -277,7 +272,6 @@ vk::CommandBuffer sUISystem::draw()
 		cmd.endRenderPass();
 	}
 	m_render.clear();
-//	sDeleter::Order().enque(std::move(descriptor_holder));
 	cmd.end();
 	return cmd;
 }

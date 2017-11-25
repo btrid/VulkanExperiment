@@ -149,7 +149,7 @@ struct UIManipulater
 		{
 			// –¼‘O•t‚¯
 			char buf[256] = {};
-			sprintf_s(buf, "%s_05d", m_object_tool[parent].m_name, index);
+			sprintf_s(buf, "%s_%05d", m_object_tool[parent].m_name.c_str(), index);
 			m_object_tool[index].m_name = buf;
 			std::hash<std::string> hash;
 			new_node.m_name_hash = hash(std::string(m_object_tool[index].m_name));
@@ -219,7 +219,7 @@ private:
 
 	std::shared_ptr<btr::Context> m_context;
 	std::shared_ptr<RenderPassModule> m_render_pass;
-	std::array<vk::UniqueDescriptorPool, sGlobal::FRAME_MAX> m_descriptor_pool;
+	vk::UniqueDescriptorPool m_descriptor_pool;
 	vk::UniqueDescriptorSetLayout	m_descriptor_set_layout;
 
 	std::array<vk::UniqueShaderModule, SHADER_NUM>				m_shader_module;

@@ -34,7 +34,7 @@
 int main()
 {
 	btr::setResourceAppPath("..\\..\\resource\\004_model\\");
-	auto* camera = cCamera::sCamera::Order().create();
+	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = glm::vec3(10.f, 5.f, 20.f);
 	camera->getData().m_target = glm::vec3(0.f, 0.f, 0.f);
 	camera->getData().m_up = glm::vec3(0.f, -1.f, 0.f);

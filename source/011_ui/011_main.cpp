@@ -72,6 +72,8 @@ int main()
 			std::vector<vk::CommandBuffer> cmds(2);
 			manip.test();
 			sUISystem::Order().addRender(ui);
+			sUISystem::Order().addRender(ui);
+			sUISystem::Order().addRender(ui);
 			cmds[0] = sImGuiRenderer::Order().Render();
 			cmds[1] = sUISystem::Order().draw();
 			app.submit(std::move(cmds));

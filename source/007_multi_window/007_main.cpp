@@ -39,7 +39,7 @@
 int main()
 {
 	btr::setResourceAppPath("..\\..\\resource\\007_multi_window\\");
-	auto* camera = cCamera::sCamera::Order().create();
+	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = glm::vec3(220.f, 60.f, 300.f);
 	camera->getData().m_target = glm::vec3(220.f, 20.f, 201.f);
 	camera->getData().m_up = glm::vec3(0.f, -1.f, 0.f);

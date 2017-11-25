@@ -498,7 +498,7 @@ namespace btr
 			pool_info.setPoolSizeCount((uint32_t)pool_size.size());
 			pool_info.setPPoolSizes(pool_size.data());
 			pool_info.setMaxSets(set_size);
-			pool_info.setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet);
+//			pool_info.setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet);
 			return device->createDescriptorPoolUnique(pool_info);
 		}
 
