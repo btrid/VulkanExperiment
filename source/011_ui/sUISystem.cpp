@@ -25,13 +25,20 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context)
 		vk::BufferCopy copy;
 		copy.setSrcOffset(staging.getInfo().offset);
 		copy.setDstOffset(m_global.getInfo().offset);
-		copy.setSrcOffset(staging.getInfo().range);
+		copy.setSize(staging.getInfo().range);
 		cmd->copyBuffer(staging.getInfo().buffer, m_global.getInfo().buffer, copy);
+
+		{
+			auto to_read = m_global.makeMemoryBarrier();
+			to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+			to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexShader, {}, {}, { to_read }, {});
+		}
 	}
 
 	// descriptor
 	{
-		auto stage = vk::ShaderStageFlagBits::eCompute;
+		auto stage = vk::ShaderStageFlagBits::eVertex| vk::ShaderStageFlagBits::eFragment|vk::ShaderStageFlagBits::eCompute;
 		std::vector<vk::DescriptorSetLayoutBinding> binding =
 		{
 			vk::DescriptorSetLayoutBinding()
@@ -279,14 +286,9 @@ vk::CommandBuffer sUISystem::draw()
 void UIManipulater::drawtree(int32_t index)
 {
 	if (index == -1) { return; }
-	bool is_open = ImGui::TreeNodeEx(m_object_tool[index].m_name.c_str(), m_object_tool[index].m_is_select ? ImGuiTreeNodeFlags_Selected|ImGuiTreeNodeFlags_OpenOnArrow : 0);
-	if (ImGui::IsMouseClicked(0))
-	{
-		m_object_tool[index].m_is_select = false;
-	}
+	bool is_open = ImGui::TreeNodeEx(m_object_tool[index].m_name.c_str(), m_last_select_index == index ? ImGuiTreeNodeFlags_Selected | ImGuiTreeNodeFlags_OpenOnArrow : 0);
 	if (ImGui::IsItemClicked(0)) {
 		m_last_select_index = index;
-		m_object_tool[index].m_is_select = true;
 	}
 	if (is_open)
 	{
@@ -296,7 +298,7 @@ void UIManipulater::drawtree(int32_t index)
 	drawtree(m_object.getMappedPtr(index)->m_chibiling_index);
 
 }
-void UIManipulater::test()
+vk::CommandBuffer UIManipulater::execute()
 {
 	auto func = [this]() 
 	{
@@ -307,20 +309,10 @@ void UIManipulater::test()
 		{
 			if (ImGui::CollapsingHeader("Operate"))
 			{
-				if (ImGui::BeginMenu("AddChild"))
+				if (ImGui::MenuItem("node")) 
 				{
-
-					if (ImGui::MenuItem("node")) 
-					{
-						addnode(m_last_select_index);
-					}
-					ImGui::EndMenu();
+					addnode(m_last_select_index);
 				}
-				else if (ImGui::MenuItem("Erase"))
-				{
-
-				}
-				ImGui::EndMenu();
 			}
 			
 			if (ImGui::CollapsingHeader("Info"))
@@ -330,13 +322,15 @@ void UIManipulater::test()
 					auto* param = m_object.getMappedPtr(m_last_select_index);
 					ImGui::CheckboxFlags("IsSprite", &param->m_flag, is_sprite);
 					ImGui::CheckboxFlags("IsBoundary", &param->m_flag, is_boundary);
+					ImGui::CheckboxFlags("IsErase", &param->m_flag, is_trash);
+					ImGui::InputFloat2("Pos", &param->m_position_local[0]);
+					ImGui::InputFloat2("Size", &param->m_size_local[0]);
+					ImGui::InputFloat4("Color", &param->m_color_local[0]);
+					ImGui::ColorPicker4("picker", &param->m_color_local[0]);
 				}
 			}
 
 			{
-// 				if (ImGui::IsMouseClicked(0)) {
-// 					m_last_select_index = -1;
-// 				}
 				drawtree(0);
 			}
 
@@ -348,5 +342,30 @@ void UIManipulater::test()
 
 	};
 	sImGuiRenderer::Order().pushCmd(std::move(func));
+
+	auto cmd = m_context->m_cmd_pool->allocCmdOnetime(0);
+	{
+		{
+			auto to_write = m_ui->m_object.makeMemoryBarrier();
+			to_write.setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
+			to_write.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eVertexShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, {to_write}, {});
+		}
+		vk::BufferCopy copy;
+		copy.setSrcOffset(m_object.getInfo().offset);
+		copy.setDstOffset(m_ui->m_object.getInfo().offset);
+		copy.setSize(m_ui->m_object.getInfo().range);
+		cmd.copyBuffer(m_object.getInfo().buffer, m_ui->m_object.getInfo().buffer, copy);
+
+		{
+			auto to_read = m_ui->m_object.makeMemoryBarrier();
+			to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+			to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexShader, {}, {}, {to_read}, {});
+		}
+	}
+	sUISystem::Order().addRender(m_ui);
+	cmd.end();
+	return cmd;
 }
 

@@ -63,7 +63,6 @@ struct UIObject
 struct UI
 {
 	std::string m_name;
-// 	vk::UniqueDescriptorSet	m_descriptor_set;
 
 	btr::BufferMemoryEx<UIInfo> m_info;
 	btr::BufferMemoryEx<UIParam> m_object;
@@ -96,19 +95,30 @@ struct UIManipulater
 
 	int32_t m_last_select_index;
 	uint32_t m_object_counter;
-	UIManipulater(const std::shared_ptr<btr::Context>& context, std::shared_ptr<UI>& ui)
+	UIManipulater(const std::shared_ptr<btr::Context>& context)
 		: m_last_select_index(-1)
 		, m_object_counter(0)
 	{
 		m_context = context;
-		m_ui = ui;
+		m_ui = std::make_shared<UI>();
+		{
+			btr::BufferMemoryDescriptorEx<UIInfo> desc;
+			desc.element_num = 1;
+			m_ui->m_info = context->m_uniform_memory.allocateMemory(desc);
+
+		}
+		{
+			btr::BufferMemoryDescriptorEx<UIParam> desc;
+			desc.element_num = 1024;
+			m_ui->m_object = context->m_storage_memory.allocateMemory(desc);
+		}
 
 		btr::BufferMemoryDescriptorEx<UIParam> desc;
 		desc.element_num = 1024;
 		m_object = context->m_staging_memory.allocateMemory(desc);
 
 		UIParam root;
-		root.m_position_local;
+		root.m_position_local = vec2(50, 50);
 		root.m_size_local = vec2(50, 50);
 		root.m_depth = 0;
 		root.m_parent_index = -1;
@@ -129,16 +139,31 @@ struct UIManipulater
 	{
 	}
 
-	void test();
+	vk::CommandBuffer execute();
 	void drawtree(int32_t index);
 	void addnode(int32_t parent)
 	{
+		if (parent == -1)
+		{
+			return;
+		}
 		auto index = m_object_counter++;
+		auto& parent_node = *m_object.getMappedPtr(parent);
+		if (parent_node.m_child_index == -1) {
+			parent_node.m_child_index = index;
+		}
+		else {
+			auto* n = m_object.getMappedPtr(parent_node.m_child_index);
+			for (; n->m_chibiling_index != -1; n = m_object.getMappedPtr(n->m_chibiling_index))
+			{}
+
+			n->m_chibiling_index = index;
+		}
 
 		UIParam new_node;
 		new_node.m_position_local;
 		new_node.m_size_local = vec2(50, 50);
-		new_node.m_depth = 0;
+		new_node.m_depth = parent_node.m_depth+1;
 		new_node.m_parent_index = parent;
 		new_node.m_chibiling_index = -1;
 		new_node.m_child_index = -1;
@@ -155,7 +180,6 @@ struct UIManipulater
 			new_node.m_name_hash = hash(std::string(m_object_tool[index].m_name));
 		}
 		*m_object.getMappedPtr(index) = new_node;
-		m_object.getMappedPtr(parent)->m_child_index = index;
 
 	}
 

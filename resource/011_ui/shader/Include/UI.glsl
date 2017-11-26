@@ -3,7 +3,7 @@
 
 struct UIGlobal
 {
-	uint m_resolusion; // 解像度
+	uvec2 m_resolusion; // 解像度
 };
 
 struct UIInfo
@@ -19,10 +19,15 @@ struct UIParam
 	vec2 m_position_local; //!< 自分の場所
 	vec2 m_size_local;
 	vec4 m_color_local;
-	uint _p13;
 	uint m_flag;
-	int m_parent;
+	int m_parent_index;
+	int m_child_index;
 	int m_depth;
+
+	int m_chibiling_index;
+	uint _p11;
+	uint _p12;
+	uint _p13;
 
 	vec2 m_position_anime; //!< animationで移動オフセット
 	vec2 m_size_anime;
@@ -31,6 +36,12 @@ struct UIParam
 	uint _p21;
 	uint _p22;
 	uint _p23;
+
+	uint m_name_hash;
+	uint m_name_hash_;
+	uint _p32;
+	uint _p33;
+
 };
 
 #ifdef USE_UI

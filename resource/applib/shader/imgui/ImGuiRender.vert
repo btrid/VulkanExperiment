@@ -5,7 +5,7 @@
 
 layout(location = 0)in vec2 in_position;
 layout(location = 1)in vec2 in_texcoord;
-layout(location = 2)in uint in_color;
+layout(location = 2)in vec4 in_color;
 
 #define USE_SYSTEM 1
 #include <applib/System.glsl>
@@ -15,7 +15,7 @@ layout(location = 0) out gl_PerVertex{
 };
 layout(location = 1) out PerVertex{
 	vec2 texcoord;
-	uint color;
+	vec4 color;
 }vertex;
 
 void main()

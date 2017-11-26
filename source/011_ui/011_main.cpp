@@ -60,22 +60,17 @@ int main()
 	sImGuiRenderer::Create(context);
 	sUISystem::Create(context);
 
-
-	auto ui = sUISystem::Order().create(context);
-	UIManipulater manip(context, ui);
+	UIManipulater manip(context);
 	while (true)
 	{
 		cStopWatch time;
 
 		app.preUpdate();
 		{
-			std::vector<vk::CommandBuffer> cmds(2);
-			manip.test();
-			sUISystem::Order().addRender(ui);
-			sUISystem::Order().addRender(ui);
-			sUISystem::Order().addRender(ui);
-			cmds[0] = sImGuiRenderer::Order().Render();
+			std::vector<vk::CommandBuffer> cmds(3);
+			cmds[0] = manip.execute();
 			cmds[1] = sUISystem::Order().draw();
+			cmds[2] = sImGuiRenderer::Order().Render();
 			app.submit(std::move(cmds));
 		}
 		app.postUpdate();

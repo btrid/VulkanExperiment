@@ -14,5 +14,9 @@ layout(location = 0) out gl_PerVertex{
 */
 void main()
 {
-	gl_Position = vec4(gl_VertexIndex%2, gl_VertexIndex/2, 0., 1.);
+	vec2 v = vec2(gl_VertexIndex%2, gl_VertexIndex/2);
+	vec2 center = b_param[gl_InstanceIndex].m_position_local;
+	vec2 scale = (v*2.-1.)*b_param[gl_InstanceIndex].m_size_local*0.5;
+	v = ((center+scale) / vec2(u_global.m_resolusion))*2.-1.;
+	gl_Position = vec4(v, 0., 1.);
 }
