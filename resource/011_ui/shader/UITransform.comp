@@ -23,26 +23,27 @@ void main()
 		b_work[0].m_size = b_param[0].m_size_local;// + b_param[0].m_size_anime;
 		b_work[0].m_color = b_param[0].m_color_local;// + b_param[0].m_color_anime;
 	}
-	barrier();
-	memoryBarrierBuffer();
-	for(int i=1; i < u_info.m_depth_max; i++)
+	for(int depth=1; depth <= u_info.m_depth_max; depth++)
 	{
-		if(b_param[i].m_depth == i)
+		barrier();
+		memoryBarrierBuffer();
+		if(b_param[index].m_depth == depth)
 		{
-			int parent_index = b_param[i].m_parent_index;
-			vec2 pos = b_param[index].m_position_local;// + b_param[index].m_position_anime;
+			int parent_index = b_param[index].m_parent_index;
+			vec2 pos = b_param[index].m_position_local;
+//			pos += b_param[index].m_position_anime;
 			pos += b_work[parent_index].m_position;
-			vec2 size = b_param[index].m_size_local;// + b_param[index].m_size_anime;
+			vec2 size = b_param[index].m_size_local;
+			size += b_param[index].m_size_anime;
 //			size += b_work[parent_index].m_size;
-//			vec4 cplor = b_param[index].m_size_local + b_param[index].m_size_anime;
-//			size += b_work[parent_index].m_size;
+//			vec4 color = b_param[index].m_size_local + b_param[index].m_size_anime;
+//			color += b_work[parent_index].m_size;
 
 			b_work[index].m_position = pos;
 			b_work[index].m_size = size;
 //			b_work[index].m_color = b_param[0].m_color_local + b_param[0].m_color_anime;
+			break;
 		}
-		barrier();
-		memoryBarrierBuffer();
 	}
 
 }
