@@ -3,8 +3,8 @@
 #extension GL_GOOGLE_cpp_style_line_directive : require
 //#include <btrlib/Math.glsl>
 
-//#define USE_ANIMATION_INFO_SET 0
-//#include <applib/model/MultiModel.glsl>
+#define USE_UI 0
+#include <UI.glsl>
 
 layout (local_size_x = 1024, local_size_y = 1) in;
 
@@ -12,23 +12,38 @@ layout (local_size_x = 1024, local_size_y = 1) in;
 //shared mat4 global_mat[128];
 void main() 
 {
-/*	uint index = gl_GlobalInvocationID.x;
+	uint index = gl_GlobalInvocationID.x;
+	if(index >= u_info.m_object_num) {
+		return;
+	}
 
 	if(index == 0)
 	{
-		nodeTransforms[root_index] = worlds[model_index] * nodeTransforms[root_index];
+		b_work[0].m_position = b_param[0].m_position_local;// + b_param[0].m_position_anime;
+		b_work[0].m_size = b_param[0].m_size_local;// + b_param[0].m_size_anime;
+		b_work[0].m_color = b_param[0].m_color_local;// + b_param[0].m_color_anime;
 	}
 	barrier();
 	memoryBarrierBuffer();
-	for(int i=1; i < model_info.node_depth_max; i++)
+	for(int i=1; i < u_info.m_depth_max; i++)
 	{
-		if(nodes[node_index].depth == i)
+		if(b_param[i].m_depth == i)
 		{
-			nodeTransforms[root_index + node_index] = nodeTransforms[root_index + nodes[node_index].parent] * nodeTransforms[root_index + node_index];
+			int parent_index = b_param[i].m_parent_index;
+			vec2 pos = b_param[index].m_position_local;// + b_param[index].m_position_anime;
+			pos += b_work[parent_index].m_position;
+			vec2 size = b_param[index].m_size_local;// + b_param[index].m_size_anime;
+//			size += b_work[parent_index].m_size;
+//			vec4 cplor = b_param[index].m_size_local + b_param[index].m_size_anime;
+//			size += b_work[parent_index].m_size;
+
+			b_work[index].m_position = pos;
+			b_work[index].m_size = size;
+//			b_work[index].m_color = b_param[0].m_color_local + b_param[0].m_color_anime;
 		}
 		barrier();
 		memoryBarrierBuffer();
 	}
-*/
+
 }
 

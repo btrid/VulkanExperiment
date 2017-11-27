@@ -12,6 +12,11 @@ struct UIInfo
 	uint m_node_num;
 	uint m_sprite_num;
 	uint m_boundary_num;
+
+	uint m_depth_max;
+	uint _p11;
+	uint _p12;
+	uint _p13;
 };
 
 struct UIParam
@@ -41,7 +46,12 @@ struct UIParam
 	uint m_name_hash_;
 	uint _p32;
 	uint _p33;
-
+};
+struct UIWork
+{
+	vec2 m_position;
+	vec2 m_size;
+	vec4 m_color;
 };
 
 #ifdef USE_UI
@@ -56,6 +66,10 @@ layout(std140, set=USE_UI, binding=1) uniform UIInfoUniform
 layout(std430, set=USE_UI, binding=2) restrict buffer UIParamBuffer 
 {
 	UIParam b_param[];
+};
+layout(std430, set=USE_UI, binding=3) restrict buffer UIWorkBuffer 
+{
+	UIWork b_work[];
 };
 
 #endif

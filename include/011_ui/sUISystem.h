@@ -13,6 +13,11 @@ struct UIInfo
 	uint m_node_num;
 	uint m_sprite_num;
 	uint m_boundary_num;
+
+	uint m_depth_max;
+	uint _p11;
+	uint _p12;
+	uint _p13;
 };
 
 enum UIFlagBit
@@ -54,6 +59,12 @@ struct UIParam
 	uint32_t _p33;
 };
 
+struct UIWork 
+{
+	vec2 m_position;
+	vec2 m_size;
+	vec4 m_color;
+};
 struct UIObject 
 {
 	std::string m_name;
@@ -64,8 +75,10 @@ struct UI
 {
 	std::string m_name;
 
+	btr::BufferMemoryEx<vk::DrawIndirectCommand> m_draw_cmd;
 	btr::BufferMemoryEx<UIInfo> m_info;
 	btr::BufferMemoryEx<UIParam> m_object;
+	btr::BufferMemoryEx<UIWork> m_work;
 
 	vk::UniqueImage m_ui_image;
 	vk::UniqueImageView m_image_view;
@@ -100,22 +113,39 @@ struct UIManipulater
 		, m_object_counter(0)
 	{
 		m_context = context;
+
 		m_ui = std::make_shared<UI>();
 		{
 			btr::BufferMemoryDescriptorEx<UIInfo> desc;
 			desc.element_num = 1;
 			m_ui->m_info = context->m_uniform_memory.allocateMemory(desc);
-
+		}
+		{
+			btr::BufferMemoryDescriptorEx<vk::DrawIndirectCommand> desc;
+			desc.element_num = 1;
+			m_ui->m_draw_cmd = context->m_vertex_memory.allocateMemory(desc);
 		}
 		{
 			btr::BufferMemoryDescriptorEx<UIParam> desc;
 			desc.element_num = 1024;
 			m_ui->m_object = context->m_storage_memory.allocateMemory(desc);
 		}
+		{
+			btr::BufferMemoryDescriptorEx<UIWork> desc;
+			desc.element_num = m_ui->m_object.getDescriptor().element_num;
+			m_ui->m_work = context->m_storage_memory.allocateMemory(desc);
+		}
 
+		{
+
+		}
 		btr::BufferMemoryDescriptorEx<UIParam> desc;
 		desc.element_num = 1024;
 		m_object = context->m_staging_memory.allocateMemory(desc);
+
+		btr::BufferMemoryDescriptorEx<UIInfo> info_desc;
+		info_desc.element_num = 1;
+		m_info = context->m_staging_memory.allocateMemory(info_desc);
 
 		UIParam root;
 		root.m_position_local = vec2(50, 50);
