@@ -277,6 +277,12 @@ public:
 			{
 				// ONは押したタイミングだけ立つ
 				btr::setOff(param.state, cMouse::STATE_ON);
+				param.time = 0.f;
+			}
+			if(btr::isOn(param_old.state, cMouse::STATE_HOLD))
+			{
+				// 押した時間を加算
+				param.time += sGlobal::Order().getDeltaTime();
 			}
 			if (btr::isOn(param.state, cMouse::STATE_ON) || btr::isOn(param_old.state, cMouse::STATE_HOLD))
 			{
@@ -287,6 +293,7 @@ public:
 				param.state = 0;
 				param.x = -1;
 				param.y = -1;
+				param.time = 0.f;
 			}
 		}
 		m_input.m_mouse.xy_old = old.xy;

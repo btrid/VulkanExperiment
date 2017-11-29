@@ -59,6 +59,14 @@ struct UIParam
 	uint32_t _p33;
 };
 
+struct UIBoundary
+{
+	uint32_t m_flag;
+	float m_touch_time;
+	uint m_param_index;
+	uint _p;
+};
+
 struct UIWork 
 {
 	vec2 m_position;
@@ -79,6 +87,7 @@ struct UI
 	btr::BufferMemoryEx<UIInfo> m_info;
 	btr::BufferMemoryEx<UIParam> m_object;
 	btr::BufferMemoryEx<UIWork> m_work;
+	btr::BufferMemoryEx<UIBoundary> m_boundary;
 
 	vk::UniqueImage m_ui_image;
 	vk::UniqueImageView m_image_view;
@@ -113,7 +122,6 @@ struct UIManipulater
 		, m_object_counter(0)
 	{
 		m_context = context;
-
 		m_ui = std::make_shared<UI>();
 		{
 			btr::BufferMemoryDescriptorEx<UIInfo> desc;
@@ -137,7 +145,10 @@ struct UIManipulater
 		}
 
 		{
-
+			btr::BufferMemoryDescriptorEx<UIBoundary> desc;
+			desc.element_num = m_ui->m_object.getDescriptor().element_num;
+			m_ui->m_boundary = context->m_storage_memory.allocateMemory(desc);
+			
 		}
 		btr::BufferMemoryDescriptorEx<UIParam> desc;
 		desc.element_num = 1024;
@@ -150,6 +161,7 @@ struct UIManipulater
 		UIParam root;
 		root.m_position_local = vec2(50, 50);
 		root.m_size_local = vec2(50, 50);
+		root.m_color_local = vec4(1.f);
 		root.m_depth = 0;
 		root.m_parent_index = -1;
 		root.m_chibiling_index = -1;
@@ -194,6 +206,7 @@ struct UIManipulater
 		new_node.m_position_local;
 		new_node.m_size_local = vec2(50, 50);
 		new_node.m_depth = parent_node.m_depth+1;
+		new_node.m_color_local = vec4(1.f);
 		new_node.m_parent_index = parent;
 		new_node.m_chibiling_index = -1;
 		new_node.m_child_index = -1;

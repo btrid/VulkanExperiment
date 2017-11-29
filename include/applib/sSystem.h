@@ -68,7 +68,7 @@ public:
 		uint32_t m_is_mouse_off;
 
 		uint32_t m_is_mouse_hold;
-		uint32_t _p21;
+		float m_touch_time;
 		uint32_t _p22;
 		uint32_t _p23;
 
@@ -103,11 +103,11 @@ struct sSystem : public Singleton<sSystem>
 			data.m_is_mouse_on = data.m_is_mouse_off = data.m_is_mouse_hold = 0;
 			for (uint32_t i = 0; i < cMouse::BUTTON_NUM; i++)
 			{
-				data.m_is_mouse_on |= mouse.isOn((cMouse::Button)i) ? (1 << i) : 0;
-				data.m_is_mouse_off |= mouse.isOff((cMouse::Button)i) ? (1 << i) : 0;
-				data.m_is_mouse_hold |= mouse.isHold((cMouse::Button)i) ? (1 << i) : 0;
+				data.m_is_mouse_on |= mouse.isOn((cMouse::Button)i) ? (1 << (i*3)) : 0;
+				data.m_is_mouse_off |= mouse.isOff((cMouse::Button)i) ? (1 << (i*3+1)) : 0;
+				data.m_is_mouse_hold |= mouse.isHold((cMouse::Button)i) ? (1 << (i*3+2)) : 0;
 			}
-
+			data.m_touch_time = mouse.m_param[0].time;
 		}
 		{
 			auto& keyboard = context->m_window->getInput().m_keyboard;

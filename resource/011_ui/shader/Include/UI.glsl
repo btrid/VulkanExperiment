@@ -1,6 +1,15 @@
 #ifndef BTR_UI_GLSL_
 #define BTR_UI_GLSL_
 
+#define UI_TOUCH_ON 1
+#define UI_TOUCH_HOLD 2
+#define UI_TOUCH_OFF 4
+
+#define UI_enable_bit (1 << 1)
+#define is_visible (1 << 2)
+#define is_sprite (1 << 3)
+#define is_boundary (1 << 4)
+
 struct UIGlobal
 {
 	uvec2 m_resolusion; // 解像度
@@ -54,6 +63,16 @@ struct UIWork
 	vec4 m_color;
 };
 
+struct UIBoundary
+{
+	uint m_flag;
+	float m_touch_time;
+	uint m_param_index;
+	uint m_callback_id;
+//	vec2 m_touch_pos;
+};
+
+
 #ifdef USE_UI
 layout(std140, set=USE_UI, binding=0) uniform UIGlobalUniform 
 {
@@ -70,6 +89,10 @@ layout(std430, set=USE_UI, binding=2) restrict buffer UIParamBuffer
 layout(std430, set=USE_UI, binding=3) restrict buffer UIWorkBuffer 
 {
 	UIWork b_work[];
+};
+layout(std430, set=USE_UI, binding=4) restrict buffer UIBoundaryBuffer 
+{
+	UIBoundary b_boundary[];
 };
 
 #endif

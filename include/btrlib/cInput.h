@@ -63,11 +63,12 @@ struct cMouse
 	struct Param {
 		int x, y;
 		int state;
-
+		float time;
 		Param()
 			: x(0)
 			, y(0)
 			, state(0)
+			, time(0.f)
 		{}
 	};
 	std::array<Param, BUTTON_NUM> m_param;

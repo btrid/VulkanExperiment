@@ -4,12 +4,12 @@
 
 layout (set=0, binding = 0) uniform sampler2D tFont;
 
-
-layout(location=0) out vec4 FragColor;
 layout(location = 1) in PerVertex{
 	vec2 texcoord;
 	vec4 color;
 }vertex;
+
+layout(location=0) out vec4 FragColor;
 
 void main()
 {

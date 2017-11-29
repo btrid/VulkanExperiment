@@ -1,0 +1,64 @@
+#version 430
+
+#extension GL_GOOGLE_cpp_style_line_directive : require
+//#include <btrlib/Math.glsl>
+
+#define USE_UI 0
+#include <UI.glsl>
+
+#define USE_SYSTEM 1
+#include <applib/System.glsl>
+
+layout (local_size_x = 1024, local_size_y = 1) in;
+
+void touch_event(in uint callback_id, in uint param_index)
+{
+	switch(callback_id)
+	{
+		case 0:
+			setSwap(b_param[param_index].m_flag, UI_enable_bit);
+			break;
+	}
+
+}
+
+bool test(in vec4 aabb, in vec2 p)
+{
+	return all(greaterThan(p, aabb.xy)) && all(lessThan(p, aabb.xy+aabb.zw));
+}
+
+void main() 
+{
+	uint index = gl_GlobalInvocationID.x;
+	if(index >= u_info.m_boundary_num) {
+		return;
+	}
+
+	// 押しているとき
+	if(isOn(u_system_data.m_is_mouse_on, 1))
+	{
+		uint work = b_boundary[index].m_param_index;
+		vec4 aabb = vec4(b_work[work].m_position, b_work[work].m_size);
+		bool is_in = test(aabb, vec2(u_system_data.m_mouse_position));
+		if(is_in)
+		{
+			setBit(b_boundary[index].m_flag, UI_TOUCH_ON, true);
+			touch_event(b_boundary[index].m_callback_id, work);
+		}
+	} 
+	// 離したとき
+	else if(isOn(u_system_data.m_is_mouse_on, 4))
+	{
+		uint work = b_boundary[index].m_param_index;
+		vec4 aabb = vec4(b_work[work].m_position, b_work[work].m_size);
+		bool is_in = test(aabb, vec2(u_system_data.m_mouse_position));
+		if(is_in)
+		{
+			setBit(b_boundary[index].m_flag, UI_TOUCH_ON, false);
+			touch_event(b_boundary[index].m_callback_id, work);
+		}
+
+	}
+
+}
+

@@ -36,12 +36,12 @@ void main()
 			vec2 size = b_param[index].m_size_local;
 			size += b_param[index].m_size_anime;
 //			size += b_work[parent_index].m_size;
-//			vec4 color = b_param[index].m_size_local + b_param[index].m_size_anime;
+			vec4 color = b_param[index].m_color_local;// + b_param[index].m_color_anime;
 //			color += b_work[parent_index].m_size;
 
 			b_work[index].m_position = pos;
 			b_work[index].m_size = size;
-//			b_work[index].m_color = b_param[0].m_color_local + b_param[0].m_color_anime;
+			b_work[index].m_color = b_param[0].m_color_local;
 			break;
 		}
 	}
