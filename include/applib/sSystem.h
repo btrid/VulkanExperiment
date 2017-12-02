@@ -104,11 +104,14 @@ struct sSystem : public Singleton<sSystem>
 			for (uint32_t i = 0; i < cMouse::BUTTON_NUM; i++)
 			{
 				data.m_is_mouse_on |= mouse.isOn((cMouse::Button)i) ? (1 << (i*3)) : 0;
-				data.m_is_mouse_off |= mouse.isOff((cMouse::Button)i) ? (1 << (i*3+1)) : 0;
-				data.m_is_mouse_hold |= mouse.isHold((cMouse::Button)i) ? (1 << (i*3+2)) : 0;
+				data.m_is_mouse_on |= mouse.isHold((cMouse::Button)i) ? (1 << (i*3+1)) : 0;
+				data.m_is_mouse_on |= mouse.isOff((cMouse::Button)i) ? (1 << (i*3+2)) : 0;
 			}
 			data.m_touch_time = mouse.m_param[0].time;
+			data.m_mouse_position = mouse.xy;
+			data.m_mouse_position_old = mouse.xy_old;
 		}
+
 		{
 			auto& keyboard = context->m_window->getInput().m_keyboard;
 			struct

@@ -34,20 +34,27 @@ void main()
 		return;
 	}
 
+	if(isOff(b_boundary[index].m_param_index, 1))
+	{
+//		return;
+	}
+
 	// 押しているとき
-	if(isOn(u_system_data.m_is_mouse_on, 1))
+	if(isAny(u_system_data.m_is_mouse_on, 1|2))
 	{
 		uint work = b_boundary[index].m_param_index;
-		vec4 aabb = vec4(b_work[work].m_position, b_work[work].m_size);
+		vec4 aabb = vec4(b_work[work].m_position - b_work[work].m_size/2, b_work[work].m_size);
 		bool is_in = test(aabb, vec2(u_system_data.m_mouse_position));
 		if(is_in)
 		{
 			setBit(b_boundary[index].m_flag, UI_TOUCH_ON, true);
 			touch_event(b_boundary[index].m_callback_id, work);
+			b_work[work].m_size*= 2.;
 		}
 	} 
 	// 離したとき
-	else if(isOn(u_system_data.m_is_mouse_on, 4))
+//	else
+	 if(isOn(u_system_data.m_is_mouse_on, 4))
 	{
 		uint work = b_boundary[index].m_param_index;
 		vec4 aabb = vec4(b_work[work].m_position, b_work[work].m_size);

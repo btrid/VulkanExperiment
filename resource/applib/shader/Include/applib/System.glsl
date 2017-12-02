@@ -2,18 +2,20 @@
 #ifndef BTRLIB_SYSTEM_GLSL
 #define BTRLIB_SYSTEM_GLSL
 
-#define isOn(_a, _b) ((_a&_b)==_b)
-#define isOff(_a, _b) ((_a&_b)==0)
+#define isOn(_a, _b) (((_a)&(_b))==(_b))
+//#define isAll(_a, _b) ((_a&_b)==_b)
+#define isAny(_a, _b) (((_a)&(_b))!=0)
+#define isOff(_a, _b) (((_a)&(_b))==0)
 #define setOn(_a, _b) (_a|=_b)
 #define setOff(_a, _b) (_a&=~_b)
 
 #define setSwap(_a, _b) \
-if(isOn(_a,_b)) setOff(_a,_b); \
-else setOn(_a,_b);
+if(isOn((_a),(_b))) setOff((_a),(_b)); \
+else setOn((_a),(_b))
 
 #define setBit(_a, _b, _c) \
-if(_c) setOn(_a, _b); \
-else setOff(_a, _b);
+if(_c) setOn((_a), (_b)); \
+else setOff((_a), (_b))
 
 #define KEY_BIT_UP (1<<0)
 #define KEY_BIT_DOWN (1<<1)

@@ -69,7 +69,6 @@ struct UIBoundary
 	float m_touch_time;
 	uint m_param_index;
 	uint m_callback_id;
-//	vec2 m_touch_pos;
 };
 
 
@@ -86,13 +85,13 @@ layout(std430, set=USE_UI, binding=2) restrict buffer UIParamBuffer
 {
 	UIParam b_param[];
 };
-layout(std430, set=USE_UI, binding=3) restrict buffer UIWorkBuffer 
-{
-	UIWork b_work[];
-};
-layout(std430, set=USE_UI, binding=4) restrict buffer UIBoundaryBuffer 
+layout(std430, set=USE_UI, binding=3) restrict buffer UIBoundaryBuffer 
 {
 	UIBoundary b_boundary[];
+};
+layout(std430, set=USE_UI, binding=4) restrict buffer UIWorkBuffer 
+{
+	UIWork b_work[];
 };
 
 #endif

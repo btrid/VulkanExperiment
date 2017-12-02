@@ -86,8 +86,8 @@ struct UI
 	btr::BufferMemoryEx<vk::DrawIndirectCommand> m_draw_cmd;
 	btr::BufferMemoryEx<UIInfo> m_info;
 	btr::BufferMemoryEx<UIParam> m_object;
-	btr::BufferMemoryEx<UIWork> m_work;
 	btr::BufferMemoryEx<UIBoundary> m_boundary;
+	btr::BufferMemoryEx<UIWork> m_work;
 
 	vk::UniqueImage m_ui_image;
 	vk::UniqueImageView m_image_view;
@@ -113,13 +113,22 @@ struct UIManipulater
 
 	btr::BufferMemoryEx<UIInfo> m_info;
 	btr::BufferMemoryEx<UIParam> m_object;
+	btr::BufferMemoryEx<UIBoundary> m_boundary;
 	std::vector<UiParamTool> m_object_tool;
 
 	int32_t m_last_select_index;
 	uint32_t m_object_counter;
+	uint32_t m_boundary_counter;
+	uint32_t m_sprite_counter;
+	bool m_request_update_boundary;
+	bool m_request_update_sprite;
 	UIManipulater(const std::shared_ptr<btr::Context>& context)
 		: m_last_select_index(-1)
 		, m_object_counter(0)
+		, m_boundary_counter(0)
+		, m_sprite_counter(0)
+		, m_request_update_boundary(false)
+		, m_request_update_sprite(false)
 	{
 		m_context = context;
 		m_ui = std::make_shared<UI>();
@@ -147,19 +156,21 @@ struct UIManipulater
 		{
 			btr::BufferMemoryDescriptorEx<UIBoundary> desc;
 			desc.element_num = m_ui->m_object.getDescriptor().element_num;
-			m_ui->m_boundary = context->m_storage_memory.allocateMemory(desc);
-			
+			m_ui->m_boundary = context->m_storage_memory.allocateMemory(desc);			
 		}
 		btr::BufferMemoryDescriptorEx<UIParam> desc;
 		desc.element_num = 1024;
 		m_object = context->m_staging_memory.allocateMemory(desc);
+		btr::BufferMemoryDescriptorEx<UIBoundary> boundary_desc;
+		boundary_desc.element_num = 1024;
+		m_boundary = context->m_staging_memory.allocateMemory(boundary_desc);
 
 		btr::BufferMemoryDescriptorEx<UIInfo> info_desc;
 		info_desc.element_num = 1;
 		m_info = context->m_staging_memory.allocateMemory(info_desc);
 
 		UIParam root;
-		root.m_position_local = vec2(50, 50);
+		root.m_position_local = vec2(320, 320);
 		root.m_size_local = vec2(50, 50);
 		root.m_color_local = vec4(1.f);
 		root.m_depth = 0;
@@ -262,6 +273,7 @@ private:
 		SHADER_ANIMATION,
 		SHADER_UPDATE,
 		SHADER_TRANSFORM,
+		SHADER_BOUNDARY,
 		SHADER_VERT_RENDER,
 		SHADER_FRAG_RENDER,
 
@@ -272,6 +284,7 @@ private:
 		PIPELINE_ANIMATION,
 		PIPELINE_UPDATE,
 		PIPELINE_TRANSFORM,
+		PIPELINE_BOUNDARY,
 		PIPELINE_RENDER,
 		PIPELINE_NUM,
 	};
@@ -280,6 +293,7 @@ private:
 		PIPELINE_LAYOUT_ANIMATION,
 		PIPELINE_LAYOUT_UPDATE,
 		PIPELINE_LAYOUT_TRANSFORM,
+		PIPELINE_LAYOUT_BOUNDARY,
 		PIPELINE_LAYOUT_RENDER,
 		PIPELINE_LAYOUT_NUM,
 	};
