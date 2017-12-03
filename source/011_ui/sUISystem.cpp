@@ -362,13 +362,15 @@ void UIManipulater::drawtree(int32_t index)
 	drawtree(m_object.getMappedPtr(index)->m_chibiling_index);
 
 }
+
+
 vk::CommandBuffer UIManipulater::execute()
 {
 	auto func = [this]() 
 	{
 #if 1
 		ImGui::SetNextWindowPos(ImVec2(10.f, 10.f), ImGuiCond_Once);
-		ImGui::SetNextWindowSize(ImVec2(200.f, 400.f), ImGuiCond_Once);
+		ImGui::SetNextWindowSize(ImVec2(200.f, 200.f), ImGuiCond_Once);
 		if (ImGui::Begin(m_object_tool[0].m_name.c_str()))
 		{
 			if (ImGui::CollapsingHeader("Operate"))
@@ -389,8 +391,7 @@ vk::CommandBuffer UIManipulater::execute()
 					ImGui::CheckboxFlags("IsErase", &param->m_flag, is_trash);
 					ImGui::InputFloat2("Pos", &param->m_position_local[0]);
 					ImGui::InputFloat2("Size", &param->m_size_local[0]);
-					ImGui::InputFloat4("Color", &param->m_color_local[0]);
-					ImGui::ColorPicker4("picker", &param->m_color_local[0]);
+					ImGui::ColorPicker4("Color", &param->m_color_local[0]);
 				}
 			}
 
@@ -400,6 +401,118 @@ vk::CommandBuffer UIManipulater::execute()
 
 			ImGui::End();
 		}
+
+		// アニメーションのウインドウ
+//		auto cmd = m_context->m_cmd_pool->allocCmdTempolary(0);
+		ImGui::SetNextWindowPos(ImVec2(10.f, 220.f), ImGuiCond_Once);
+		ImGui::SetNextWindowSize(ImVec2(200.f, 200.f), ImGuiCond_Once);
+		if (ImGui::Begin("anime"))
+		{
+			if (ImGui::BeginPopupContextWindow("add"))
+			{
+				if (m_anim_manip->m_pos.empty() && ImGui::Selectable("Pos")) {
+					m_anim_manip->m_pos.emplace_back(UIAnimationParamPos{ 0, vec2(0.f) });
+				}
+				if (m_anim_manip->m_size.empty() && ImGui::Selectable("Size")) {
+					m_anim_manip->m_size.emplace_back(UIAnimationParamSize{ 0, vec2(0.f) });
+				}
+				if (m_anim_manip->m_color.empty() && ImGui::Selectable("Color")) {
+					m_anim_manip->m_color.emplace_back(UIAnimationParamColor{ 0, vec4(0.f) });
+				}
+				ImGui::EndPopup();
+			}
+			uint32_t frame_max = 100;
+			std::vector<uint32_t> pos_data;
+			std::vector<uint32_t> size_data;
+			std::vector<uint32_t> color_data;
+			if (!m_anim_manip->m_pos.empty())
+			{
+				pos_data.resize(frame_max);
+				UIAnimationParamPos pos_def{ frame_max, vec2(0.f) };
+				uint32_t count = 0;
+				for (size_t n = 0; n < m_anim_manip->m_pos.size();)
+				{
+					auto& current = m_anim_manip->m_pos[n];
+					auto& next = (n+1) >= m_anim_manip->m_pos.size() ? pos_def : m_anim_manip->m_pos[n + 1];
+
+					if (count >= next.m_frame)
+					{
+						n++;
+						continue;
+					}
+					auto& current_value = current.m_value;
+					auto& next_value = next.m_value;
+					auto rate = 1.f - (next.m_frame - count) / (float)(next.m_frame - current.m_frame);
+					auto value = glm::lerp(current_value, next_value, rate);
+					pos_data[count] = glm::packUnorm2x16(value);
+					count++;
+				}
+				assert(count == frame_max);
+			}
+
+			if (!m_anim_manip->m_size.empty())
+			{
+				size_data.resize(frame_max);
+				UIAnimationParamSize size_def{ frame_max, vec2(0.f) };
+				uint32_t count = 0;
+				for (size_t n = 0; n < m_anim_manip->m_pos.size();)
+				{
+					auto& current = m_anim_manip->m_size[n];
+					auto& next = (n+1) >= m_anim_manip->m_size.size() ? size_def : m_anim_manip->m_size[n + 1];
+
+					if (count >= next.m_frame)
+					{
+						n++;
+						continue;
+					}
+					auto& current_value = current.m_value;
+					auto& next_value = next.m_value;
+					auto rate = 1.f - (next.m_frame - count) / (float)(next.m_frame - current.m_frame);
+					auto value = glm::lerp(current_value, next_value, rate);
+					size_data[count] = glm::packUnorm2x16(value);
+					count++;
+				}
+				assert(count == frame_max);
+
+			}
+
+			if (!m_anim_manip->m_color.empty())
+			{
+				color_data.resize(frame_max);
+				UIAnimationParamColor color_def{ frame_max, vec4(0.f) };
+				uint32_t count = 0;
+				for (size_t n = 0; n < m_anim_manip->m_pos.size();)
+				{
+					auto& current = m_anim_manip->m_color[n];
+					auto& next = (n+1) >= m_anim_manip->m_color.size() ? color_def : m_anim_manip->m_color[n + 1];
+
+					if (count >= next.m_frame)
+					{
+						n++;
+						continue;
+					}
+					auto& current_value = current.m_value;
+					auto& next_value = next.m_value;
+					auto rate = 1.f - (next.m_frame - count) / (float)(next.m_frame - current.m_frame);
+					auto value = glm::lerp(current_value, next_value, rate);
+					color_data[count] = glm::packUnorm4x8(value);
+					count++;
+				}
+			}
+			ImGui::PlotLines("pos_x", [](void* data, int idx) -> float {return glm::unpackHalf2x16(*(uint32_t*)data).x; }, pos_data.data(), pos_data.size(), 0, nullptr, -640.f, 640.f);
+			if (ImGui::BeginPopupContextItem("a"))
+			{
+				if (ImGui::Selectable("")) {
+				}
+				ImGui::EndPopup();
+
+			}
+
+			ImGui::PlotLines("pos_y", [](void* data, int idx) -> float {return glm::unpackHalf2x16(*(uint32_t*)data).y; }, pos_data.data(), pos_data.size(), 0, nullptr, -640.f, 640.f);
+
+			ImGui::End();
+		}
+
 
 #else
 		ImGui::ShowTestWindow();

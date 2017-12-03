@@ -71,6 +71,17 @@ struct UIBoundary
 	uint m_callback_id;
 };
 
+struct UIAnimeParamF
+{
+	uint m_frame;
+	float m_value;
+}
+struct UIAnimeParamUI
+{
+	uint m_frame;
+	uint m_value;
+}
+
 #ifdef USE_UI
 layout(std140, set=USE_UI, binding=0) uniform UIGlobalUniform 
 {
@@ -93,54 +104,6 @@ layout(std430, set=USE_UI, binding=4) restrict buffer UIWorkBuffer
 	UIWork b_work[];
 };
 
-#endif
-
-
-struct UIAnimeInfo
-{
-	uint m_anime_flag;
-	float m_frame_max;
-	float m_base_frame_rate; // fps30? 60?
-};
-struct UIAnimeParamF
-{
-	float m_frame;
-	float m_value;
-};
-struct UIAnimeParamUI
-{
-	float m_frame;
-	uint m_value;
-};
-
-struct UIAnimeWork
-{
-	float m_current_frame;
-	uint m_current_index;
-};
-
-#ifdef USE_UI_ANIME
-layout(std140, set=USE_UI_ANIME, binding=0) uniform UIAnimeInfoUniform 
-{
-	UIAnimeInfo u_anime_info;
-};
-layout(std430, set=USE_UI_ANIME, binding=1) buffer UIAnimeWorkBuffer
-{
-	UIAnimeWork b_anime_work;
-};
-layout(std430, set=USE_UI_ANIME, binding=2) buffer UIAnimePosXBuffer 
-{
-	UIAnimeParamF b_posx_list[];
-};
-layout(std430, set=USE_UI_ANIME, binding=3) buffer UIAnimePosYBuffer {
-	UIAnimeParamF b_posy_list[];
-};
-layout(std430, set=USE_UI_ANIME, binding=4) buffer UIAnimeSizeXBuffer {
-	UIAnimeParamF b_sizex_list[];
-};
-layout(std430, set=USE_UI_ANIME, binding=5) buffer UIAnimeSizeYBuffer {
-	UIAnimeParamF b_sizey_list[];
-};
 #endif
 
 

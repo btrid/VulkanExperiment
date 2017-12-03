@@ -2,8 +2,12 @@
 
 #extension GL_GOOGLE_cpp_style_line_directive : require
 
-//#define USE_ANIMATION_INFO_SET 0
-//#include <applib/model/MultiModel.glsl>
+#define USE_UI 0
+#define USE_UI_ANIME 1
+#include <UI.glsl>
+
+#define USE_SYSTEM 2
+#include <applib/System.glsl>
 
 layout (local_size_x = 1024, local_size_y = 1) in;
 

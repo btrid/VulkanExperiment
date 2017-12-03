@@ -77,8 +77,9 @@ struct UIObject
 {
 	std::string m_name;
 	UIParam m_param;
-
 };
+
+
 struct UI
 {
 	std::string m_name;
@@ -96,6 +97,7 @@ struct UI
 //	std::array<Texture, 64> m_color_image;
 };
 
+// 中間バッファ
 struct UiParamTool
 {
 	std::string m_name;
@@ -105,6 +107,32 @@ struct UiParamTool
 		: m_is_select(false)
 	{}
 };
+
+struct UIAnimationInfo
+{
+	uint32_t m_target_index;
+	uint32_t m_enable;
+	uint32_t m_frame_num;
+};
+
+template<typename T>
+struct UIAnimationParam_t
+{
+	uint32_t m_frame;
+	T m_value;
+};
+using UIAnimationParamPos = UIAnimationParam_t<vec2>;
+using UIAnimationParamSize = UIAnimationParam_t<vec2>;
+using UIAnimationParamColor = UIAnimationParam_t<vec4>;
+
+
+struct UIAnimManipulater
+{
+	std::vector<UIAnimationParamPos> m_pos;
+	std::vector<UIAnimationParamSize> m_size;
+	std::vector<UIAnimationParamColor> m_color;
+};
+
 struct UIManipulater 
 {
 	std::shared_ptr<btr::Context> m_context;
@@ -115,6 +143,9 @@ struct UIManipulater
 	btr::BufferMemoryEx<UIParam> m_object;
 	btr::BufferMemoryEx<UIBoundary> m_boundary;
 	std::vector<UiParamTool> m_object_tool;
+
+	std::shared_ptr<UIAnimManipulater> m_anim_manip;
+
 
 	int32_t m_last_select_index;
 	uint32_t m_object_counter;
@@ -187,6 +218,8 @@ struct UIManipulater
 
 		m_object_tool.resize(1024);
 		m_object_tool[0].m_name = "root";
+
+		m_anim_manip = std::make_shared<UIAnimManipulater>();
 	}
 	void sort()
 	{
@@ -242,17 +275,6 @@ struct UIManipulater
 		void undo(){}
 		void redo(){}
 	};
-
-//	vk::CommandBuffer draw();
-};
-
-struct UIAnimationInfo
-{
-
-};
-
-struct UIAnimationParam
-{
 
 };
 struct sUISystem : SingletonEx<sUISystem>

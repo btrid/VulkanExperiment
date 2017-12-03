@@ -34,9 +34,9 @@ void main()
 		return;
 	}
 
-	if(isOff(b_boundary[index].m_param_index, 1))
+	if(isOff(b_boundary[index].m_param_index, UI_enable_bit))
 	{
-//		return;
+		return;
 	}
 
 	// 押しているとき
