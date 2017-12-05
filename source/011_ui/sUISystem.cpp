@@ -363,7 +363,33 @@ void UIManipulater::drawtree(int32_t index)
 
 }
 
+// void UIManipulater::drawAnimeTree(int32_t index)
+// {
+// 	if (index == -1) { return; }
+// 	bool is_open = ImGui::TreeNodeEx(m_object_tool[index].m_name.c_str(), m_last_select_index == index ? ImGuiTreeNodeFlags_Selected | ImGuiTreeNodeFlags_OpenOnArrow : 0);
+// 	if (ImGui::IsItemClicked(0)) {
+// 		m_last_select_index = index;
+// 	}
+// 	if (is_open)
+// 	{
+// 		drawtree(m_object.getMappedPtr(index)->m_child_index);
+// 		ImGui::TreePop();
+// 	}
+// 	drawtree(m_object.getMappedPtr(index)->m_chibiling_index);
+// 
+// }
 
+void UIManipulater::animManip()
+{
+	if (ImGui::SmallButton(m_anim_manip->m_is_playing ? "STOP" : "PLAY")) {
+		m_anim_manip->m_is_playing = !m_anim_manip->m_is_playing;
+	}
+	ImGui::SameLine();
+	ImGui::DragInt("current frame", &m_anim_manip->m_frame, 0.1f, 0, 100);
+
+	ImGui::Separator();
+
+}
 vk::CommandBuffer UIManipulater::execute()
 {
 	auto func = [this]() 
@@ -404,111 +430,65 @@ vk::CommandBuffer UIManipulater::execute()
 
 		// アニメーションのウインドウ
 //		auto cmd = m_context->m_cmd_pool->allocCmdTempolary(0);
+
+		static uint32_t s_frame_num = 10;
 		ImGui::SetNextWindowPos(ImVec2(10.f, 220.f), ImGuiCond_Once);
-		ImGui::SetNextWindowSize(ImVec2(200.f, 200.f), ImGuiCond_Once);
+		ImGui::SetNextWindowSize(ImVec2(800.f, 200.f), ImGuiCond_Once);
 		if (ImGui::Begin("anime"))
 		{
-			if (ImGui::BeginPopupContextWindow("add"))
+
+			animManip();
+
+			auto& keys = m_anim_manip->m_pos_x;
+			if(ImGui::BeginChild("ScrollingRegion", ImVec2(0, -ImGui::GetItemsLineHeightWithSpacing()), false, ImGuiWindowFlags_HorizontalScrollbar))
 			{
-				if (m_anim_manip->m_pos.empty() && ImGui::Selectable("Pos")) {
-					m_anim_manip->m_pos.emplace_back(UIAnimationParamPos{ 0, vec2(0.f) });
-				}
-				if (m_anim_manip->m_size.empty() && ImGui::Selectable("Size")) {
-					m_anim_manip->m_size.emplace_back(UIAnimationParamSize{ 0, vec2(0.f) });
-				}
-				if (m_anim_manip->m_color.empty() && ImGui::Selectable("Color")) {
-					m_anim_manip->m_color.emplace_back(UIAnimationParamColor{ 0, vec4(0.f) });
-				}
-				ImGui::EndPopup();
-			}
-			uint32_t frame_max = 100;
-			std::vector<uint32_t> pos_data;
-			std::vector<uint32_t> size_data;
-			std::vector<uint32_t> color_data;
-			if (!m_anim_manip->m_pos.empty())
-			{
-				pos_data.resize(frame_max);
-				UIAnimationParamPos pos_def{ frame_max, vec2(0.f) };
-				uint32_t count = 0;
-				for (size_t n = 0; n < m_anim_manip->m_pos.size();)
+				if (ImGui::BeginPopupContextWindow("key context"))
 				{
-					auto& current = m_anim_manip->m_pos[n];
-					auto& next = (n+1) >= m_anim_manip->m_pos.size() ? pos_def : m_anim_manip->m_pos[n + 1];
-
-					if (count >= next.m_frame)
+					if (ImGui::Selectable("Add")) 
 					{
-						n++;
-						continue;
-					}
-					auto& current_value = current.m_value;
-					auto& next_value = next.m_value;
-					auto rate = 1.f - (next.m_frame - count) / (float)(next.m_frame - current.m_frame);
-					auto value = glm::lerp(current_value, next_value, rate);
-					pos_data[count] = glm::packUnorm2x16(value);
-					count++;
-				}
-				assert(count == frame_max);
-			}
+						UIAnimationKey new_key;
+						new_key.m_flag = UIAnimationData::is_enable;
+						new_key.m_frame = m_anim_manip->m_frame;
+						new_key.m_value_i = 0;
+						keys.m_key.push_back(new_key);
+					};
 
-			if (!m_anim_manip->m_size.empty())
-			{
-				size_data.resize(frame_max);
-				UIAnimationParamSize size_def{ frame_max, vec2(0.f) };
-				uint32_t count = 0;
-				for (size_t n = 0; n < m_anim_manip->m_pos.size();)
+					ImGui::EndPopup();
+				}
+				ImGui::Columns(3, "animcolumns");
+				ImGui::Text("Frame"); ImGui::NextColumn();
+				ImGui::Text("Value"); ImGui::NextColumn();
+				ImGui::Text("Enable"); ImGui::NextColumn();
+				ImGui::Separator();
+				for (auto i = 0; i < m_anim_manip->m_pos_x.m_key.size(); i++)
 				{
-					auto& current = m_anim_manip->m_size[n];
-					auto& next = (n+1) >= m_anim_manip->m_size.size() ? size_def : m_anim_manip->m_size[n + 1];
-
-					if (count >= next.m_frame)
-					{
-						n++;
-						continue;
-					}
-					auto& current_value = current.m_value;
-					auto& next_value = next.m_value;
-					auto rate = 1.f - (next.m_frame - count) / (float)(next.m_frame - current.m_frame);
-					auto value = glm::lerp(current_value, next_value, rate);
-					size_data[count] = glm::packUnorm2x16(value);
-					count++;
+					char id[32] = {}; 
+					sprintf_s(id, "key_%d", i); ImGui::PushID(id);
+					auto& key = m_anim_manip->m_pos_x.m_key[i];
+					sprintf_s(id, "frame_%d", i); ImGui::PushID(id);
+					ImGui::DragInt("", &key.m_frame, 0.1f, 0, 100); ImGui::NextColumn();
+					ImGui::PopID();
+					sprintf_s(id, "value_%d", i); ImGui::PushID(id);
+					ImGui::DragInt("", &key.m_value_i, 0.1f); ImGui::NextColumn();
+					ImGui::PopID();
+					sprintf_s(id, "enable_%d", i); ImGui::PushID(id);
+					ImGui::CheckboxFlags("", &key.m_flag, UIAnimationData::is_enable); ImGui::NextColumn();
+					ImGui::PopID();
+					ImGui::PopID();
+					ImGui::Separator();
 				}
-				assert(count == frame_max);
+				ImGui::Columns(1);
 
+				ImGui::EndChild();
 			}
-
-			if (!m_anim_manip->m_color.empty())
-			{
-				color_data.resize(frame_max);
-				UIAnimationParamColor color_def{ frame_max, vec4(0.f) };
-				uint32_t count = 0;
-				for (size_t n = 0; n < m_anim_manip->m_pos.size();)
-				{
-					auto& current = m_anim_manip->m_color[n];
-					auto& next = (n+1) >= m_anim_manip->m_color.size() ? color_def : m_anim_manip->m_color[n + 1];
-
-					if (count >= next.m_frame)
-					{
-						n++;
-						continue;
-					}
-					auto& current_value = current.m_value;
-					auto& next_value = next.m_value;
-					auto rate = 1.f - (next.m_frame - count) / (float)(next.m_frame - current.m_frame);
-					auto value = glm::lerp(current_value, next_value, rate);
-					color_data[count] = glm::packUnorm4x8(value);
-					count++;
-				}
-			}
-			ImGui::PlotLines("pos_x", [](void* data, int idx) -> float {return glm::unpackHalf2x16(*(uint32_t*)data).x; }, pos_data.data(), pos_data.size(), 0, nullptr, -640.f, 640.f);
-			if (ImGui::BeginPopupContextItem("a"))
-			{
-				if (ImGui::Selectable("")) {
-				}
-				ImGui::EndPopup();
-
-			}
-
-			ImGui::PlotLines("pos_y", [](void* data, int idx) -> float {return glm::unpackHalf2x16(*(uint32_t*)data).y; }, pos_data.data(), pos_data.size(), 0, nullptr, -640.f, 640.f);
+			ImGui::Separator();
+			// 			if (ImGui::BeginPopupContextWindow("create"))
+// 			{
+// 				if (btr::isOff(m_anim_manip->m_pos_x.m_flag, UIAnimationData::is_enable) && ImGui::Selectable("Pos X")) {
+// 					btr::setOn(m_anim_manip->m_pos_x.m_flag, UIAnimationData::is_enable);
+// 				}
+// 				ImGui::EndPopup();
+// 			}
 
 			ImGui::End();
 		}

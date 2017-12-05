@@ -1,8 +1,8 @@
 #pragma once
 
+#include <vector>
 #include <btrlib/Singleton.h>
 #include <btrlib/Context.h>
-
 struct UIGlobal
 {
 	uvec2 m_resolusion; // ‰ð‘œ“x
@@ -113,24 +113,40 @@ struct UIAnimationInfo
 	uint32_t m_target_index;
 	uint32_t m_enable;
 	uint32_t m_frame_num;
+	uint32_t m_type;
 };
 
-template<typename T>
-struct UIAnimationParam_t
+struct UIAnimationKey
 {
-	uint32_t m_frame;
-	T m_value;
+	int32_t m_frame;
+	uint32_t m_flag;
+	union 
+	{
+		float		m_value_f;
+		uint32_t	m_value_u;
+		int32_t		m_value_i;
+	};
 };
-using UIAnimationParamPos = UIAnimationParam_t<vec2>;
-using UIAnimationParamSize = UIAnimationParam_t<vec2>;
-using UIAnimationParamColor = UIAnimationParam_t<vec4>;
+struct UIAnimationData
+{
+	enum 
+	{
+		is_enable = 1<<0,
+	};
+	uint32_t m_flag;
+	std::vector<UIAnimationKey> m_key;
+};
 
-
+struct UIAnimationDataTool
+{
+	bool m_is_use;
+};
 struct UIAnimManipulater
 {
-	std::vector<UIAnimationParamPos> m_pos;
-	std::vector<UIAnimationParamSize> m_size;
-	std::vector<UIAnimationParamColor> m_color;
+	bool m_is_playing = false;
+	int m_frame = 0;
+	
+	UIAnimationData m_pos_x;
 };
 
 struct UIManipulater 
@@ -227,6 +243,7 @@ struct UIManipulater
 
 	vk::CommandBuffer execute();
 	void drawtree(int32_t index);
+	void animManip();
 	void addnode(int32_t parent)
 	{
 		if (parent == -1)

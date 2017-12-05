@@ -130,16 +130,7 @@ layout(std430, set=USE_UI_ANIME, binding=1) buffer UIAnimeWorkBuffer
 };
 layout(std430, set=USE_UI_ANIME, binding=2) buffer UIAnimePosXBuffer 
 {
-	UIAnimeParamF b_posx_list[];
-};
-layout(std430, set=USE_UI_ANIME, binding=3) buffer UIAnimePosYBuffer {
-	UIAnimeParamF b_posy_list[];
-};
-layout(std430, set=USE_UI_ANIME, binding=4) buffer UIAnimeSizeXBuffer {
-	UIAnimeParamF b_sizex_list[];
-};
-layout(std430, set=USE_UI_ANIME, binding=5) buffer UIAnimeSizeYBuffer {
-	UIAnimeParamF b_sizey_list[];
+	UIAnimeParamF b_anime_param[];
 };
 #endif
 
