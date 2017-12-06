@@ -444,13 +444,20 @@ vk::CommandBuffer UIManipulater::execute()
 			{
 				if (ImGui::BeginPopupContextWindow("key context"))
 				{
-					if (ImGui::Selectable("Add")) 
+					if (ImGui::Selectable("Add"))
 					{
 						UIAnimationKey new_key;
 						new_key.m_flag = UIAnimationData::is_enable;
 						new_key.m_frame = m_anim_manip->m_frame;
 						new_key.m_value_i = 0;
 						keys.m_key.push_back(new_key);
+					};
+					if (ImGui::Selectable("Sort"))
+					{
+						std::stable_sort(std::make_move_iterator(keys.m_key.begin()), std::make_move_iterator(keys.m_key.end()), [](auto&& a, auto&& b)
+						{
+							return a.m_frame < b.m_frame;
+						});
 					};
 
 					ImGui::EndPopup();
@@ -463,17 +470,29 @@ vk::CommandBuffer UIManipulater::execute()
 				for (auto i = 0; i < m_anim_manip->m_pos_x.m_key.size(); i++)
 				{
 					char id[32] = {}; 
-					sprintf_s(id, "key_%d", i); ImGui::PushID(id);
+					sprintf_s(id, "key_%d", i); 
+					ImGui::PushID(id);
+					
 					auto& key = m_anim_manip->m_pos_x.m_key[i];
-					sprintf_s(id, "frame_%d", i); ImGui::PushID(id);
-					ImGui::DragInt("", &key.m_frame, 0.1f, 0, 100); ImGui::NextColumn();
+					
+					sprintf_s(id, "frame_%d", i); 
+					ImGui::PushID(id);
+					ImGui::DragInt("", &key.m_frame, 0.1f, 0, 100); 
+					ImGui::NextColumn();
 					ImGui::PopID();
-					sprintf_s(id, "value_%d", i); ImGui::PushID(id);
-					ImGui::DragInt("", &key.m_value_i, 0.1f); ImGui::NextColumn();
+					
+					sprintf_s(id, "value_%d", i);
+					ImGui::PushID(id);
+					ImGui::DragInt("", &key.m_value_i, 0.1f); 
+					ImGui::NextColumn();
 					ImGui::PopID();
-					sprintf_s(id, "enable_%d", i); ImGui::PushID(id);
-					ImGui::CheckboxFlags("", &key.m_flag, UIAnimationData::is_enable); ImGui::NextColumn();
+					
+					sprintf_s(id, "enable_%d", i);
+					ImGui::PushID(id);
+					ImGui::CheckboxFlags("", &key.m_flag, UIAnimationData::is_enable); 
+					ImGui::NextColumn();
 					ImGui::PopID();
+					
 					ImGui::PopID();
 					ImGui::Separator();
 				}

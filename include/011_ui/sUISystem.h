@@ -126,6 +126,7 @@ struct UIAnimationKey
 		uint32_t	m_value_u;
 		int32_t		m_value_i;
 	};
+
 };
 struct UIAnimationData
 {
