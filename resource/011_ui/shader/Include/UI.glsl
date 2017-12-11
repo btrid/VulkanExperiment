@@ -109,8 +109,14 @@ struct UIAnimationDataInfo
 	uint m_key_offset_num;	//!< オフセットと数
 };
 
-#define getTargetIndex(_info) ((_info.m_target_index & 0xffff0000) >> 16)
-#define getFlag(_info) ((_info.m_key_offset_num & 0xffff0000) >> 16)
+#define	key_is_enable (1 << 0)
+#define	key_is_erase (1 << 1)
+#define	key_pos_xy (1 << 2)
+#define	key_size_xy (1 << 3)
+#define	key_color_rgba (1 << 4)
+
+#define getTargetIndex(_info) ((_info.m_target_index_flag & 0xffff0000) >> 16)
+#define getFlag(_info) ((_info.m_target_index_flag & 0xffff0000) >> 16)
 #define getKeyOffset(_info) (_info.m_key_offset_num & 0x0000ffff)
 #define getKeyNum(_info) ((_info.m_key_offset_num & 0xffff0000) >> 16)
 struct UIAnimationKey
@@ -127,6 +133,10 @@ struct UIAnimeWork
 	uint m_current_index;
 };
 
+struct UIAnimePlayInfo
+{
+	float m_frame;
+};
 struct UIAnimeRequest
 {
 	uint m_target;
@@ -146,10 +156,15 @@ layout(std430, set=USE_UI_ANIME, binding=2) buffer UIAnimeKeyBuffer
 {
 	UIAnimationKey b_anime_key[];
 };
+layout(std430, set=USE_UI_ANIME, binding=3) buffer UIAnimePlayBuffer
+{
+	UIAnimePlayInfo b_anime_play_info;
+};
 layout(std430, set=USE_UI_ANIME, binding=3) buffer UIAnimeWorkBuffer
 {
 	UIAnimeWork b_anime_work[];
 };
+
 #endif
 
 

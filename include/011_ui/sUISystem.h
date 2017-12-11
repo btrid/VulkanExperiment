@@ -307,6 +307,7 @@ struct UIManipulater
 	uint32_t m_sprite_counter;
 	bool m_request_update_boundary;
 	bool m_request_update_sprite;
+	bool m_request_update_animation;
 	UIManipulater(const std::shared_ptr<btr::Context>& context)
 		: m_last_select_index(-1)
 		, m_object_counter(0)
@@ -314,6 +315,7 @@ struct UIManipulater
 		, m_sprite_counter(0)
 		, m_request_update_boundary(false)
 		, m_request_update_sprite(false)
+		, m_request_update_animation(false)
 	{
 		m_context = context;
 		m_ui = std::make_shared<UI>();
@@ -394,7 +396,8 @@ struct UIManipulater
 		if (parent_node.m_child_index == -1) {
 			parent_node.m_child_index = index;
 		}
-		else {
+		else 
+		{
 			auto* n = m_object.getMappedPtr(parent_node.m_child_index);
 			for (; n->m_chibiling_index != -1; n = m_object.getMappedPtr(n->m_chibiling_index))
 			{}
@@ -452,6 +455,7 @@ private:
 	enum Shader
 	{
 		SHADER_ANIMATION,
+		SHADER_CLEAR,
 		SHADER_UPDATE,
 		SHADER_TRANSFORM,
 		SHADER_BOUNDARY,
@@ -463,6 +467,7 @@ private:
 	enum Pipeline
 	{
 		PIPELINE_ANIMATION,
+		PIPELINE_CLEAR,
 		PIPELINE_UPDATE,
 		PIPELINE_TRANSFORM,
 		PIPELINE_BOUNDARY,
@@ -483,6 +488,8 @@ private:
 	std::shared_ptr<RenderPassModule> m_render_pass;
 	vk::UniqueDescriptorPool m_descriptor_pool;
 	vk::UniqueDescriptorSetLayout	m_descriptor_set_layout;
+	vk::UniqueDescriptorPool m_descriptor_pool_anime;
+	vk::UniqueDescriptorSetLayout	m_descriptor_set_layout_anime;
 
 	std::array<vk::UniqueShaderModule, SHADER_NUM>				m_shader_module;
 	std::array<vk::UniquePipeline, PIPELINE_NUM>				m_pipeline;

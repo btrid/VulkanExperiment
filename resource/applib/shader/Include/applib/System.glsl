@@ -17,6 +17,11 @@ else setOn((_a),(_b))
 if(_c) setOn((_a), (_b)); \
 else setOff((_a), (_b))
 
+#define getBit(_bit, _bitoffset, _bitrange) \
+((((1 << (_bitrange)) - 1 << (_bitoffset)) & (_bit)) >> (_bitoffset))
+
+
+
 #define KEY_BIT_UP (1<<0)
 #define KEY_BIT_DOWN (1<<1)
 #define KEY_BIT_RIGHT (1<<2)

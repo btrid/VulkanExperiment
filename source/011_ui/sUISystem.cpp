@@ -72,7 +72,35 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context)
 		m_descriptor_pool = btr::Descriptor::createDescriptorPool(context, binding, 30);
 
 	}
+	{
+		auto stage = vk::ShaderStageFlagBits::eCompute;
+		std::vector<vk::DescriptorSetLayoutBinding> binding =
+		{
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(stage)
+			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+			.setDescriptorCount(1)
+			.setBinding(0),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(stage)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(1),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(stage)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(2),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(stage)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(3),
+		};
+		m_descriptor_set_layout_anime = btr::Descriptor::createDescriptorSetLayout(context, binding);
+		m_descriptor_pool_anime = btr::Descriptor::createDescriptorPool(context, binding, 30);
 
+	}
 
 	// setup shader
 	{
@@ -82,6 +110,7 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context)
 		}shader_info[] =
 		{
 			{ "UIAnimation.comp.spv" },
+			{ "UIClear.comp.spv" },
 			{ "UIUpdate.comp.spv" },
 			{ "UITransform.comp.spv" },
 			{ "UIBoundary.comp.spv" },
@@ -115,7 +144,7 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context)
 			vk::DescriptorSetLayout layouts[] =
 			{
 				m_descriptor_set_layout.get(),
-				sSystem::Order().getSystemDescriptor().getLayout (),
+				sSystem::Order().getSystemDescriptor().getLayout(),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
@@ -139,6 +168,9 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context)
 				.setStage(shader_info[SHADER_ANIMATION])
 				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_ANIMATION].get()),
 				vk::ComputePipelineCreateInfo()
+				.setStage(shader_info[SHADER_CLEAR])
+				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_TRANSFORM].get()),
+				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[SHADER_UPDATE])
 				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get()),
 				vk::ComputePipelineCreateInfo()
@@ -150,9 +182,10 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context)
 			};
 			auto pipelines = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
 			m_pipeline[PIPELINE_ANIMATION] = std::move(pipelines[0]);
-			m_pipeline[PIPELINE_UPDATE] = std::move(pipelines[1]);
-			m_pipeline[PIPELINE_TRANSFORM] = std::move(pipelines[2]);
-			m_pipeline[PIPELINE_BOUNDARY] = std::move(pipelines[3]);
+			m_pipeline[PIPELINE_CLEAR] = std::move(pipelines[1]);
+			m_pipeline[PIPELINE_UPDATE] = std::move(pipelines[2]);
+			m_pipeline[PIPELINE_TRANSFORM] = std::move(pipelines[3]);
+			m_pipeline[PIPELINE_BOUNDARY] = std::move(pipelines[4]);
 		}
 		{
 			// assembly
@@ -295,6 +328,56 @@ vk::CommandBuffer sUISystem::draw()
 		m_context->m_device->updateDescriptorSets(write_desc.size(), write_desc.begin(), 0, {});
 
 		{
+			// 初期化
+			{
+				auto to_write = ui->m_info.makeMemoryBarrier();
+				to_write.setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
+				to_write.setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_write }, {});
+			}
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_CLEAR].get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_TRANSFORM].get(), 0, { descriptor_set }, {});
+			cmd.dispatch(1, 1, 1);
+		}
+		{
+			// アニメーションする？
+			if (ui->m_anime)
+			{
+				
+				vk::DescriptorSetLayout layouts[] = { m_descriptor_set_layout_anime.get() };
+				vk::DescriptorSetAllocateInfo alloc_info;
+				alloc_info.setDescriptorPool(m_descriptor_pool_anime.get());
+				alloc_info.setDescriptorSetCount(array_length(layouts));
+				alloc_info.setPSetLayouts(layouts);
+				auto descriptor_set_anime = m_context->m_device->allocateDescriptorSets(alloc_info)[0];
+
+				vk::DescriptorBufferInfo uniforms[] = {
+					ui->m_anime->m_num.getInfo(),
+				};
+				vk::DescriptorBufferInfo storages[] = {
+					ui->m_anime->m_anim_info.getInfo(),
+					ui->m_anime->m_anim_key.getInfo(),
+					ui->m_work.getInfo(),
+				};
+
+				auto write_desc =
+				{
+					vk::WriteDescriptorSet()
+					.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+					.setDescriptorCount(array_length(uniforms))
+					.setPBufferInfo(uniforms)
+					.setDstBinding(0)
+					.setDstSet(descriptor_set_anime),
+					vk::WriteDescriptorSet()
+					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+					.setDescriptorCount(array_length(storages))
+					.setPBufferInfo(storages)
+					.setDstBinding(1)
+					.setDstSet(descriptor_set_anime),
+				};
+			}
+		}
+		{
 			{
 				auto to_read = ui->m_info.makeMemoryBarrier();
 				to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
@@ -412,6 +495,7 @@ void UIManipulater::dataManip()
 				};
 				if (ImGui::Selectable("Save"))
 				{
+					m_request_update_animation = true;
 				};
 				ImGui::EndPopup();
 			}
@@ -645,7 +729,9 @@ vk::CommandBuffer UIManipulater::execute()
 		}
 	}
 
+	if (m_request_update_animation)
 	{
+		m_request_update_animation = false;
 		m_ui->m_anime = m_anim_manip->m_anime->makeResource(m_context, cmd);
 	}
 
