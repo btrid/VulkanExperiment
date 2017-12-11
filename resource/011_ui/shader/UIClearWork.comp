@@ -1,0 +1,23 @@
+#version 430
+
+#extension GL_GOOGLE_cpp_style_line_directive : require
+//#include <btrlib/Math.glsl>
+
+#define USE_UI 0
+#include <UI.glsl>
+
+layout (local_size_x = 1024, local_size_y = 1) in;
+
+
+void main() 
+{
+	uint index = gl_GlobalInvocationID.x;
+	if(index >= u_info.m_object_num) {
+		return;
+	}
+
+	b_work[index].m_position = b_param[index].m_position_local;// + b_param[0].m_position_anime;
+	b_work[index].m_size = b_param[index].m_size_local;// + b_param[0].m_size_anime;
+	b_work[index].m_color = b_param[index].m_color_local;// + b_param[0].m_color_anime;
+}
+

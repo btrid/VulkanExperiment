@@ -96,21 +96,29 @@ layout(std430, set=USE_UI, binding=4) restrict buffer UIWorkBuffer
 #endif
 
 
-struct UIAnimeInfo
+struct UIAnimationInfo
 {
-	uint m_anime_flag;
-	float m_frame_max;
-	float m_base_frame_rate; // fps30? 60?
+	uint m_anime_num;
 };
-struct UIAnimeParamF
+
+struct UIAnimationDataInfo
 {
-	float m_frame;
-	float m_value;
+	uint m_target_hash_low;
+	uint m_target_hash_hi;
+	uint m_target_index_flag;
+	uint m_key_offset_num;	//!< オフセットと数
 };
-struct UIAnimeParamUI
+
+#define getTargetIndex(_info) ((_info.m_target_index & 0xffff0000) >> 16)
+#define getFlag(_info) ((_info.m_key_offset_num & 0xffff0000) >> 16)
+#define getKeyOffset(_info) (_info.m_key_offset_num & 0x0000ffff)
+#define getKeyNum(_info) ((_info.m_key_offset_num & 0xffff0000) >> 16)
+struct UIAnimationKey
 {
-	float m_frame;
-	uint m_value;
+	uint m_frame;
+	uint m_flag;
+	int	m_value;
+	uint _p;
 };
 
 struct UIAnimeWork
@@ -119,18 +127,28 @@ struct UIAnimeWork
 	uint m_current_index;
 };
 
+struct UIAnimeRequest
+{
+	uint m_target;
+	float m_frame;
+};
+
 #ifdef USE_UI_ANIME
 layout(std140, set=USE_UI_ANIME, binding=0) uniform UIAnimeInfoUniform 
 {
-	UIAnimeInfo u_anime_info;
+	uint u_info_num;
 };
-layout(std430, set=USE_UI_ANIME, binding=1) buffer UIAnimeWorkBuffer
+layout(std430, set=USE_UI_ANIME, binding=1) buffer UIAnimeDataInfoBuffer 
 {
-	UIAnimeWork b_anime_work;
+	UIAnimationDataInfo u_anime_data_info[];
 };
-layout(std430, set=USE_UI_ANIME, binding=2) buffer UIAnimePosXBuffer 
+layout(std430, set=USE_UI_ANIME, binding=2) buffer UIAnimeKeyBuffer 
 {
-	UIAnimeParamF b_anime_param[];
+	UIAnimationKey b_anime_key[];
+};
+layout(std430, set=USE_UI_ANIME, binding=3) buffer UIAnimeWorkBuffer
+{
+	UIAnimeWork b_anime_work[];
 };
 #endif
 

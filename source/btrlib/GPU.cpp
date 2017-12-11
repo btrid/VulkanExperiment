@@ -12,6 +12,9 @@ void cGPU::setup(vk::PhysicalDevice pd)
 
 	auto gpu_propaty = m_handle.getProperties();
 	auto gpu_feature = m_handle.getFeatures();
+//	assert(gpu_feature.shaderInt16);
+//	assert(gpu_feature.shaderInt64);
+	assert(gpu_feature.multiDrawIndirect);
 	// 			auto memory_prop = gpu->getMemoryProperties();
 	// 			for (uint32_t i = 0; i < memory_prop.memoryTypeCount; i++)
 	// 			{
@@ -45,8 +48,6 @@ void cGPU::setup(vk::PhysicalDevice pd)
 	}
 
 	vk::PhysicalDeviceFeatures feature = gpu_feature;
-//	feature.
-//	feature.robustBufferAccess = 0; // debug‚ÅŽ~‚Ü‚Á‚Ä‚Ù‚µ‚¢
 
 	vk::DeviceCreateInfo deviceInfo = vk::DeviceCreateInfo()
 		.setQueueCreateInfoCount((uint32_t)queue_info.size())

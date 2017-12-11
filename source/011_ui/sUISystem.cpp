@@ -350,7 +350,7 @@ vk::CommandBuffer sUISystem::draw()
 void UIManipulater::drawtree(int32_t index)
 {
 	if (index == -1) { return; }
-	bool is_open = ImGui::TreeNodeEx(m_object_tool[index].m_name.c_str(), m_last_select_index == index ? ImGuiTreeNodeFlags_Selected | ImGuiTreeNodeFlags_OpenOnArrow : 0);
+	bool is_open = ImGui::TreeNodeEx(m_object_tool[index].m_name.data(), m_last_select_index == index ? ImGuiTreeNodeFlags_Selected | ImGuiTreeNodeFlags_OpenOnArrow : 0);
 	if (ImGui::IsItemClicked(0)) {
 		m_last_select_index = index;
 	}
@@ -363,22 +363,6 @@ void UIManipulater::drawtree(int32_t index)
 
 }
 
-// void UIManipulater::drawAnimeTree(int32_t index)
-// {
-// 	if (index == -1) { return; }
-// 	bool is_open = ImGui::TreeNodeEx(m_object_tool[index].m_name.c_str(), m_last_select_index == index ? ImGuiTreeNodeFlags_Selected | ImGuiTreeNodeFlags_OpenOnArrow : 0);
-// 	if (ImGui::IsItemClicked(0)) {
-// 		m_last_select_index = index;
-// 	}
-// 	if (is_open)
-// 	{
-// 		drawtree(m_object.getMappedPtr(index)->m_child_index);
-// 		ImGui::TreePop();
-// 	}
-// 	drawtree(m_object.getMappedPtr(index)->m_chibiling_index);
-// 
-// }
-
 void UIManipulater::animManip()
 {
 	if (ImGui::SmallButton(m_anim_manip->m_is_playing ? "STOP" : "PLAY")) {
@@ -390,6 +374,116 @@ void UIManipulater::animManip()
 	ImGui::Separator();
 
 }
+
+void UIManipulater::dataManip()
+{
+	UIAnimationData* data = m_anim_manip->m_anime->getData(m_object_tool[m_last_select_index].m_name.data());
+	if (data)
+	{
+		auto& keys = data->m_key;
+
+		if (ImGui::BeginChild("ScrollingRegion", ImVec2(0, 0), true, ImGuiWindowFlags_HorizontalScrollbar))
+		{
+			if (ImGui::BeginPopupContextWindow("key context"))
+			{
+				if (ImGui::Selectable("Add"))
+				{
+					UIAnimationKey new_key;
+					new_key.m_flag = UIAnimationKey::is_enable;
+					new_key.m_frame = m_anim_manip->m_frame;
+					new_key.m_value_i = 0;
+					keys.push_back(new_key);
+				};
+				if (ImGui::Selectable("Erase"))
+				{
+					for (auto it = keys.begin(); it != keys.end();)
+					{
+						if (btr::isOn(it->m_flag, UIAnimationKey::is_erase)) {
+							it = keys.erase(it);
+						}
+						else {
+							it++;
+						}
+					}
+				};
+				if (ImGui::Selectable("Sort"))
+				{
+					std::stable_sort(keys.begin(), keys.end(), [](auto&& a, auto&& b) { return a.m_frame < b.m_frame; });
+				};
+				if (ImGui::Selectable("Save"))
+				{
+				};
+				ImGui::EndPopup();
+			}
+			ImGui::Columns(4, "animcolumns");
+			ImGui::Text("Frame"); ImGui::NextColumn();
+			ImGui::Text("Value"); ImGui::NextColumn();
+			ImGui::Text("Enable"); ImGui::NextColumn();
+			ImGui::Text("Erase"); ImGui::NextColumn();
+			ImGui::Separator();
+
+			for (auto i = 0; i < keys.size(); i++)
+			{
+				char id[32] = {};
+				sprintf_s(id, "key_%d", i);
+				ImGui::PushID(id);
+
+				auto& key = keys[i];
+
+				sprintf_s(id, "frame_%d", i);
+				ImGui::PushID(id);
+				int32_t frame = key.m_frame;
+				ImGui::DragInt("##frame", &frame, 0.1f, 0, 100);
+				key.m_frame = frame;
+				ImGui::NextColumn();
+				ImGui::PopID();
+
+				sprintf_s(id, "value_%d", i);
+				ImGui::PushID(id);
+				int value[2] = { key.m_value_i16[0], key.m_value_i16[1] };
+				ImGui::DragInt2("##value", value, 0.1f);
+				key.m_value_i16[0] = value[0];
+				key.m_value_i16[1] = value[1];
+				ImGui::NextColumn();
+				ImGui::PopID();
+
+				sprintf_s(id, "enable_%d", i);
+				ImGui::PushID(id);
+				ImGui::CheckboxFlags("##enable", &key.m_flag, UIAnimationKey::is_enable);
+				ImGui::NextColumn();
+				ImGui::PopID();
+
+				sprintf_s(id, "erase_%d", i);
+				ImGui::PushID(id);
+				ImGui::CheckboxFlags("##erase", &key.m_flag, UIAnimationKey::is_erase);
+				ImGui::NextColumn();
+				ImGui::PopID();
+
+				ImGui::PopID();
+				ImGui::Separator();
+			}
+			ImGui::Columns(1);
+			ImGui::EndChild();
+		}
+	}
+	else
+	{
+		if (ImGui::BeginPopupContextWindow("key context"))
+		{
+			if (ImGui::Selectable("Make"))
+			{
+				UIAnimationData data;
+				data.m_target_index = m_last_select_index;
+				data.m_target_hash = m_object_tool[m_last_select_index].makeHash();
+				m_anim_manip->m_anime->m_data.push_back(data);
+			};
+			ImGui::EndPopup();
+		}
+
+	}
+}
+
+
 vk::CommandBuffer UIManipulater::execute()
 {
 	auto func = [this]() 
@@ -397,7 +491,7 @@ vk::CommandBuffer UIManipulater::execute()
 #if 1
 		ImGui::SetNextWindowPos(ImVec2(10.f, 10.f), ImGuiCond_Once);
 		ImGui::SetNextWindowSize(ImVec2(200.f, 200.f), ImGuiCond_Once);
-		if (ImGui::Begin(m_object_tool[0].m_name.c_str()))
+		if (ImGui::Begin(m_object_tool[0].m_name.data()))
 		{
 			if (ImGui::CollapsingHeader("Operate"))
 			{
@@ -418,6 +512,7 @@ vk::CommandBuffer UIManipulater::execute()
 					ImGui::InputFloat2("Pos", &param->m_position_local[0]);
 					ImGui::InputFloat2("Size", &param->m_size_local[0]);
 					ImGui::ColorPicker4("Color", &param->m_color_local[0]);
+					ImGui::InputText("name", m_object_tool[m_last_select_index].m_name.data(), m_object_tool[m_last_select_index].m_name.size(), 0);
 				}
 			}
 
@@ -429,85 +524,15 @@ vk::CommandBuffer UIManipulater::execute()
 		}
 
 		// アニメーションのウインドウ
-//		auto cmd = m_context->m_cmd_pool->allocCmdTempolary(0);
-
-		static uint32_t s_frame_num = 10;
 		ImGui::SetNextWindowPos(ImVec2(10.f, 220.f), ImGuiCond_Once);
 		ImGui::SetNextWindowSize(ImVec2(800.f, 200.f), ImGuiCond_Once);
 		if (ImGui::Begin("anime"))
 		{
-
 			animManip();
 
-			auto& keys = m_anim_manip->m_pos_x;
-			if(ImGui::BeginChild("ScrollingRegion", ImVec2(0, -ImGui::GetItemsLineHeightWithSpacing()), false, ImGuiWindowFlags_HorizontalScrollbar))
-			{
-				if (ImGui::BeginPopupContextWindow("key context"))
-				{
-					if (ImGui::Selectable("Add"))
-					{
-						UIAnimationKey new_key;
-						new_key.m_flag = UIAnimationData::is_enable;
-						new_key.m_frame = m_anim_manip->m_frame;
-						new_key.m_value_i = 0;
-						keys.m_key.push_back(new_key);
-					};
-					if (ImGui::Selectable("Sort"))
-					{
-						std::stable_sort(std::make_move_iterator(keys.m_key.begin()), std::make_move_iterator(keys.m_key.end()), [](auto&& a, auto&& b)
-						{
-							return a.m_frame < b.m_frame;
-						});
-					};
-
-					ImGui::EndPopup();
-				}
-				ImGui::Columns(3, "animcolumns");
-				ImGui::Text("Frame"); ImGui::NextColumn();
-				ImGui::Text("Value"); ImGui::NextColumn();
-				ImGui::Text("Enable"); ImGui::NextColumn();
-				ImGui::Separator();
-				for (auto i = 0; i < m_anim_manip->m_pos_x.m_key.size(); i++)
-				{
-					char id[32] = {}; 
-					sprintf_s(id, "key_%d", i); 
-					ImGui::PushID(id);
-					
-					auto& key = m_anim_manip->m_pos_x.m_key[i];
-					
-					sprintf_s(id, "frame_%d", i); 
-					ImGui::PushID(id);
-					ImGui::DragInt("", &key.m_frame, 0.1f, 0, 100); 
-					ImGui::NextColumn();
-					ImGui::PopID();
-					
-					sprintf_s(id, "value_%d", i);
-					ImGui::PushID(id);
-					ImGui::DragInt("", &key.m_value_i, 0.1f); 
-					ImGui::NextColumn();
-					ImGui::PopID();
-					
-					sprintf_s(id, "enable_%d", i);
-					ImGui::PushID(id);
-					ImGui::CheckboxFlags("", &key.m_flag, UIAnimationData::is_enable); 
-					ImGui::NextColumn();
-					ImGui::PopID();
-					
-					ImGui::PopID();
-					ImGui::Separator();
-				}
-				ImGui::Columns(1);
-
-				ImGui::EndChild();
+			if (m_last_select_index >= 0) {
+				dataManip();
 			}
-			ImGui::Separator();
-			// 			if (ImGui::BeginPopupContextWindow("create"))
-// 			{
-// 				if (btr::isOff(m_anim_manip->m_pos_x.m_flag, UIAnimationData::is_enable) && ImGui::Selectable("Pos X")) {
-// 					btr::setOn(m_anim_manip->m_pos_x.m_flag, UIAnimationData::is_enable);
-// 				}
-// 				ImGui::EndPopup();
-// 			}
 
 			ImGui::End();
 		}
@@ -516,6 +541,7 @@ vk::CommandBuffer UIManipulater::execute()
 #else
 		ImGui::ShowTestWindow();
 #endif
+
 
 	};
 	sImGuiRenderer::Order().pushCmd(std::move(func));
@@ -619,7 +645,12 @@ vk::CommandBuffer UIManipulater::execute()
 		}
 	}
 
+	{
+		m_ui->m_anime = m_anim_manip->m_anime->makeResource(m_context, cmd);
+	}
+
 	sUISystem::Order().addRender(m_ui);
+
 	cmd.end();
 	return cmd;
 }

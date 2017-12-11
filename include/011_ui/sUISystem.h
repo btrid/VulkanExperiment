@@ -73,13 +73,72 @@ struct UIWork
 	vec2 m_size;
 	vec4 m_color;
 };
-struct UIObject 
+
+struct UIAnimationInfo
 {
-	std::string m_name;
-	UIParam m_param;
+	uint64_t m_target_hash;
+	uint16_t m_target_index;
+	uint16_t m_flag;
+	uint16_t m_key_offset;	//!< オフセット
+	uint16_t m_key_num;
+};
+
+struct UIAnimationKey
+{
+	enum
+	{
+		is_enable = 1 << 0,
+		is_erase = 1 << 1,
+	};
+	uint32_t m_frame;
+	uint32_t m_flag;
+	union
+	{
+		int32_t		m_value_i;
+		uint32_t	m_value_u;
+		float		m_value_f;
+		int16_t		m_value_i16[2];
+	};
+	uint32_t _p;
+
+	UIAnimationKey()
+		: m_frame(0)
+		, m_flag(0)
+		, m_value_i(0)
+	{}
 };
 
 
+struct UIAnimationData
+{
+	enum
+	{
+		is_enable = 1 << 0,
+		is_erase = 1 << 1,
+		pos_xy = 1 << 2,
+		size_xy = 1 << 3,
+		color_rgba = 1 << 4,
+	};
+
+	uint64_t m_target_hash;
+	uint16_t m_target_index;
+	uint16_t m_flag;
+
+	std::vector<UIAnimationKey> m_key;
+
+	UIAnimationData()
+		: m_target_hash(0)
+		, m_target_index(0xffff)
+		, m_flag(0)
+	{}
+};
+
+struct UIAnimationResource
+{
+	btr::BufferMemoryEx<uint32_t> m_num;
+	btr::BufferMemoryEx<UIAnimationInfo> m_anim_info;
+	btr::BufferMemoryEx<UIAnimationKey> m_anim_key;
+};
 struct UI
 {
 	std::string m_name;
@@ -90,6 +149,7 @@ struct UI
 	btr::BufferMemoryEx<UIBoundary> m_boundary;
 	btr::BufferMemoryEx<UIWork> m_work;
 
+	std::shared_ptr<UIAnimationResource> m_anime;
 	vk::UniqueImage m_ui_image;
 	vk::UniqueImageView m_image_view;
 	vk::UniqueDeviceMemory m_ui_texture_memory;
@@ -100,43 +160,117 @@ struct UI
 // 中間バッファ
 struct UiParamTool
 {
-	std::string m_name;
-	bool m_is_select;
-
+	std::array<char, 32> m_name;
+	size_t makeHash()const 
+	{
+		std::hash<std::string> make_hash;
+		return make_hash(m_name.data());
+	}
 	UiParamTool()
-		: m_is_select(false)
 	{}
 };
 
-struct UIAnimationInfo
+
+
+
+struct UIAnimation
 {
-	uint32_t m_target_index;
-	uint32_t m_enable;
-	uint32_t m_frame_num;
-	uint32_t m_type;
+	char m_name[32];
+	char m_target_ui[32];
+	std::vector<UIAnimationData> m_data;
+
+	UIAnimationData* getData(const std::string& name){
+		std::hash<std::string> to_hash;
+		auto hash = to_hash(name);
+		for (auto& d : m_data) {
+			if (d.m_target_hash == hash) {
+				return &d;
+			}
+		}
+		return nullptr;
+	}
+
+	std::shared_ptr<UIAnimationResource> makeResource(std::shared_ptr<btr::Context>& context, vk::CommandBuffer cmd)const
+	{
+		if (m_data.empty())
+		{
+			return nullptr;
+		}
+		{
+			uint32_t num = 0;
+			for (auto& data : m_data)
+			{
+				num += data.m_key.size();
+			}
+			
+			if (num == 0)
+			{
+				// データがないので不要
+				return nullptr;
+			}
+		}
+
+		std::shared_ptr<UIAnimationResource> resource = std::make_shared<UIAnimationResource>();
+		{
+			btr::BufferMemoryDescriptorEx<uint> desc;
+			desc.element_num = 1;
+			resource->m_num = context->m_uniform_memory.allocateMemory(desc);
+
+			cmd.updateBuffer<uint32_t>(resource->m_num.getInfo().buffer, resource->m_num.getInfo().offset, m_data.size());
+		}
+		{
+			btr::BufferMemoryDescriptorEx<UIAnimationInfo> desc;
+			desc.element_num = m_data.size();
+			resource->m_anim_info = context->m_storage_memory.allocateMemory(desc);
+		}
+		{
+			uint32_t num = 0;
+			for (auto& data : m_data)
+			{
+				num += data.m_key.size();
+			}
+			btr::BufferMemoryDescriptorEx<UIAnimationKey> desc;
+			desc.element_num = num;
+			resource->m_anim_key = context->m_storage_memory.allocateMemory(desc);
+		}
+		auto desc_info = resource->m_anim_info.getDescriptor();
+		desc_info.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
+		auto staging_info = context->m_staging_memory.allocateMemory(desc_info);
+		auto desc_key = resource->m_anim_key.getDescriptor();
+		desc_key.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
+		auto staging_key = context->m_staging_memory.allocateMemory(desc_key);
+
+		uint32_t offset = 0;
+		for (auto i = 0; i < m_data.size(); i++)
+		{
+			auto& data = m_data[i];
+			staging_info.getMappedPtr(i)->m_target_hash = data.m_target_hash;
+			staging_info.getMappedPtr(i)->m_target_index = data.m_target_index;
+			staging_info.getMappedPtr(i)->m_flag = data.m_flag;
+			staging_info.getMappedPtr(i)->m_key_num = data.m_key.size();
+			staging_info.getMappedPtr(i)->m_key_offset = offset;
+
+			for (auto& key : data.m_key)
+			{
+				*staging_key.getMappedPtr(offset) = key;
+				offset++;
+			}
+		}
+
+
+		vk::BufferCopy copy[2];
+		copy[0].setSrcOffset(staging_info.getInfo().offset);
+		copy[0].setDstOffset(resource->m_anim_info.getInfo().offset);
+		copy[0].setSize(staging_info.getInfo().range);
+		copy[1].setSrcOffset(staging_key.getInfo().offset);
+		copy[1].setDstOffset(resource->m_anim_key.getInfo().offset);
+		copy[1].setSize(staging_key.getInfo().range);
+
+		cmd.copyBuffer(staging_key.getInfo().buffer, resource->m_anim_key.getInfo().buffer, array_length(copy), copy);
+		return resource;
+	}
 };
 
-struct UIAnimationKey
-{
-	int32_t m_frame;
-	uint32_t m_flag;
-	union 
-	{
-		float		m_value_f;
-		uint32_t	m_value_u;
-		int32_t		m_value_i;
-	};
-
-};
-struct UIAnimationData
-{
-	enum 
-	{
-		is_enable = 1<<0,
-	};
-	uint32_t m_flag;
-	std::vector<UIAnimationKey> m_key;
-};
 
 struct UIAnimationDataTool
 {
@@ -147,7 +281,7 @@ struct UIAnimManipulater
 	bool m_is_playing = false;
 	int m_frame = 0;
 	
-	UIAnimationData m_pos_x;
+	std::shared_ptr<UIAnimation> m_anime;
 };
 
 struct UIManipulater 
@@ -162,6 +296,9 @@ struct UIManipulater
 	std::vector<UiParamTool> m_object_tool;
 
 	std::shared_ptr<UIAnimManipulater> m_anim_manip;
+
+	btr::BufferMemoryEx<UIAnimationInfo> m_anim_info;
+	btr::BufferMemoryEx<UIAnimationKey> m_anim_key;
 
 
 	int32_t m_last_select_index;
@@ -234,15 +371,16 @@ struct UIManipulater
 		m_object_counter++;
 
 		m_object_tool.resize(1024);
-		m_object_tool[0].m_name = "root";
+		strcpy_s(m_object_tool[0].m_name.data(), m_object_tool[0].m_name.size(), "root");
 
 		m_anim_manip = std::make_shared<UIAnimManipulater>();
-	}
-	void sort()
-	{
+		m_anim_manip->m_anime = std::make_shared<UIAnimation>();
 	}
 
 	vk::CommandBuffer execute();
+
+	void dataManip();
+
 	void drawtree(int32_t index);
 	void animManip();
 	void addnode(int32_t parent)
@@ -279,10 +417,9 @@ struct UIManipulater
 		{
 			// 名前付け
 			char buf[256] = {};
-			sprintf_s(buf, "%s_%05d", m_object_tool[parent].m_name.c_str(), index);
-			m_object_tool[index].m_name = buf;
-			std::hash<std::string> hash;
-			new_node.m_name_hash = hash(std::string(m_object_tool[index].m_name));
+			sprintf_s(buf, "%s_%05d", m_object_tool[parent].m_name.data(), index);
+			strcpy_s(m_object_tool[index].m_name.data(), m_object_tool[index].m_name.size(), buf);
+			new_node.m_name_hash = m_object_tool[index].makeHash();
 		}
 		*m_object.getMappedPtr(index) = new_node;
 
@@ -302,6 +439,10 @@ struct sUISystem : SingletonEx<sUISystem>
 	sUISystem(const std::shared_ptr<btr::Context>& context);
 	std::shared_ptr<UI> create(const std::shared_ptr<btr::Context>& context);
 
+	struct Scene 
+	{
+		std::array<std::shared_ptr<UIAnimationResource>, 32> m_animelist;
+	};
 	void addRender(std::shared_ptr<UI>& ui)
 	{
 		m_render.push_back(ui);

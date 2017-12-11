@@ -203,6 +203,10 @@ void memoryAllocater()
 
 int main()
 {
+	uint32_t bit = 0;
+	btr::setBit(bit, 1257, 16, 16);
+	auto value = btr::getBit(bit, 16, 16);
+
 	glm::vec3 a(0.f, 0.f, 1.f);
 	glm::vec3 b = glm::normalize(glm::vec3(1.f, 0.f, 1.f));
 	auto angle = glm::degrees(glm::asin(glm::cross(a, b).y));
