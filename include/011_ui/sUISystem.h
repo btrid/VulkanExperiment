@@ -46,14 +46,6 @@ struct UIParam
 	uint32_t _p12;
 	uint32_t _p13;
 
-	vec2 m_position_anime; //!< animationで移動オフセット
-	vec2 m_size_anime;
-	vec4 m_color_anime;
-	uint32_t m_flag_anime;
-	uint32_t _p21;
-	uint32_t _p22;
-	uint32_t _p23;
-
 	uint64_t m_name_hash;
 	uint32_t _p32;
 	uint32_t _p33;
@@ -73,8 +65,13 @@ struct UIWork
 	vec2 m_size;
 	vec4 m_color;
 };
+struct UIAnimeInfo
+{
+	uint m_anime_num;
+	uint m_anime_frame;
+};
 
-struct UIAnimationInfo
+struct UIAnimeDataInfo
 {
 	uint64_t m_target_hash;
 	uint16_t m_target_index;
@@ -82,8 +79,12 @@ struct UIAnimationInfo
 	uint16_t m_key_offset;	//!< オフセット
 	uint16_t m_key_num;
 };
-
-struct UIAnimationKey
+struct UIAnimePlayInfo
+{
+	int32_t m_anime_target;
+	float m_frame;
+};
+struct UIAnimeKey
 {
 	enum
 	{
@@ -101,7 +102,7 @@ struct UIAnimationKey
 	};
 	uint32_t _p;
 
-	UIAnimationKey()
+	UIAnimeKey()
 		: m_frame(0)
 		, m_flag(0)
 		, m_value_i(0)
@@ -109,7 +110,7 @@ struct UIAnimationKey
 };
 
 
-struct UIAnimationData
+struct UIAnimeData
 {
 	enum
 	{
@@ -124,20 +125,20 @@ struct UIAnimationData
 	uint16_t m_target_index;
 	uint16_t m_flag;
 
-	std::vector<UIAnimationKey> m_key;
+	std::vector<UIAnimeKey> m_key;
 
-	UIAnimationData()
+	UIAnimeData()
 		: m_target_hash(0)
 		, m_target_index(0xffff)
 		, m_flag(0)
 	{}
 };
 
-struct UIAnimationResource
+struct UIAnimeResource
 {
 	btr::BufferMemoryEx<uint32_t> m_num;
-	btr::BufferMemoryEx<UIAnimationInfo> m_anim_info;
-	btr::BufferMemoryEx<UIAnimationKey> m_anim_key;
+	btr::BufferMemoryEx<UIAnimeDataInfo> m_anim_info;
+	btr::BufferMemoryEx<UIAnimeKey> m_anim_key;
 };
 struct UI
 {
@@ -148,8 +149,9 @@ struct UI
 	btr::BufferMemoryEx<UIParam> m_object;
 	btr::BufferMemoryEx<UIBoundary> m_boundary;
 	btr::BufferMemoryEx<UIWork> m_work;
+	btr::BufferMemoryEx<UIAnimePlayInfo> m_play_info;
 
-	std::shared_ptr<UIAnimationResource> m_anime;
+	std::shared_ptr<UIAnimeResource> m_anime;
 	vk::UniqueImage m_ui_image;
 	vk::UniqueImageView m_image_view;
 	vk::UniqueDeviceMemory m_ui_texture_memory;
@@ -177,9 +179,9 @@ struct UIAnimation
 {
 	char m_name[32];
 	char m_target_ui[32];
-	std::vector<UIAnimationData> m_data;
+	std::vector<UIAnimeData> m_data;
 
-	UIAnimationData* getData(const std::string& name){
+	UIAnimeData* getData(const std::string& name){
 		std::hash<std::string> to_hash;
 		auto hash = to_hash(name);
 		for (auto& d : m_data) {
@@ -190,7 +192,7 @@ struct UIAnimation
 		return nullptr;
 	}
 
-	std::shared_ptr<UIAnimationResource> makeResource(std::shared_ptr<btr::Context>& context, vk::CommandBuffer cmd)const
+	std::shared_ptr<UIAnimeResource> makeResource(std::shared_ptr<btr::Context>& context, vk::CommandBuffer cmd)const
 	{
 		if (m_data.empty())
 		{
@@ -210,7 +212,7 @@ struct UIAnimation
 			}
 		}
 
-		std::shared_ptr<UIAnimationResource> resource = std::make_shared<UIAnimationResource>();
+		std::shared_ptr<UIAnimeResource> resource = std::make_shared<UIAnimeResource>();
 		{
 			btr::BufferMemoryDescriptorEx<uint> desc;
 			desc.element_num = 1;
@@ -219,7 +221,7 @@ struct UIAnimation
 			cmd.updateBuffer<uint32_t>(resource->m_num.getInfo().buffer, resource->m_num.getInfo().offset, m_data.size());
 		}
 		{
-			btr::BufferMemoryDescriptorEx<UIAnimationInfo> desc;
+			btr::BufferMemoryDescriptorEx<UIAnimeDataInfo> desc;
 			desc.element_num = m_data.size();
 			resource->m_anim_info = context->m_storage_memory.allocateMemory(desc);
 		}
@@ -229,7 +231,7 @@ struct UIAnimation
 			{
 				num += data.m_key.size();
 			}
-			btr::BufferMemoryDescriptorEx<UIAnimationKey> desc;
+			btr::BufferMemoryDescriptorEx<UIAnimeKey> desc;
 			desc.element_num = num;
 			resource->m_anim_key = context->m_storage_memory.allocateMemory(desc);
 		}
@@ -297,8 +299,8 @@ struct UIManipulater
 
 	std::shared_ptr<UIAnimManipulater> m_anim_manip;
 
-	btr::BufferMemoryEx<UIAnimationInfo> m_anim_info;
-	btr::BufferMemoryEx<UIAnimationKey> m_anim_key;
+	btr::BufferMemoryEx<UIAnimeDataInfo> m_anim_info;
+	btr::BufferMemoryEx<UIAnimeKey> m_anim_key;
 
 
 	int32_t m_last_select_index;
@@ -340,6 +342,11 @@ struct UIManipulater
 			m_ui->m_work = context->m_storage_memory.allocateMemory(desc);
 		}
 
+		{
+			btr::BufferMemoryDescriptorEx<UIAnimePlayInfo> desc;
+			desc.element_num = 8;
+			m_ui->m_play_info = context->m_storage_memory.allocateMemory(desc);
+		}
 		{
 			btr::BufferMemoryDescriptorEx<UIBoundary> desc;
 			desc.element_num = m_ui->m_object.getDescriptor().element_num;
@@ -444,7 +451,7 @@ struct sUISystem : SingletonEx<sUISystem>
 
 	struct Scene 
 	{
-		std::array<std::shared_ptr<UIAnimationResource>, 32> m_animelist;
+		std::array<std::shared_ptr<UIAnimeResource>, 32> m_animelist;
 	};
 	void addRender(std::shared_ptr<UI>& ui)
 	{
@@ -477,6 +484,7 @@ private:
 	enum PipelineLayout
 	{
 		PIPELINE_LAYOUT_ANIMATION,
+		PIPELINE_LAYOUT_CLEAR,
 		PIPELINE_LAYOUT_UPDATE,
 		PIPELINE_LAYOUT_TRANSFORM,
 		PIPELINE_LAYOUT_BOUNDARY,

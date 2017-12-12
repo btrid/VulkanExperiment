@@ -67,6 +67,11 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context)
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setDescriptorCount(1)
 			.setBinding(4),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(stage)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(5),
 		};
 		m_descriptor_set_layout = btr::Descriptor::createDescriptorSetLayout(context, binding);
 		m_descriptor_pool = btr::Descriptor::createDescriptorPool(context, binding, 30);
@@ -135,7 +140,6 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context)
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 			pipeline_layout_info.setPSetLayouts(layouts);
-			m_pipeline_layout[PIPELINE_LAYOUT_ANIMATION] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 			m_pipeline_layout[PIPELINE_LAYOUT_UPDATE] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 			m_pipeline_layout[PIPELINE_LAYOUT_TRANSFORM] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 			m_pipeline_layout[PIPELINE_LAYOUT_RENDER] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
@@ -149,7 +153,20 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context)
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 			pipeline_layout_info.setPSetLayouts(layouts);
+			m_pipeline_layout[PIPELINE_LAYOUT_CLEAR] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 			m_pipeline_layout[PIPELINE_LAYOUT_BOUNDARY] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+		}
+		{
+			vk::DescriptorSetLayout layouts[] =
+			{
+				m_descriptor_set_layout.get(),
+				m_descriptor_set_layout_anime.get(),
+				sSystem::Order().getSystemDescriptor().getLayout(),
+			};
+			vk::PipelineLayoutCreateInfo pipeline_layout_info;
+			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
+			pipeline_layout_info.setPSetLayouts(layouts);
+			m_pipeline_layout[PIPELINE_LAYOUT_ANIMATION] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
 	}
 	// pipeline
@@ -169,7 +186,7 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context)
 				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_ANIMATION].get()),
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[SHADER_CLEAR])
-				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_TRANSFORM].get()),
+				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_CLEAR].get()),
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[SHADER_UPDATE])
 				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get()),
@@ -308,6 +325,7 @@ vk::CommandBuffer sUISystem::draw()
 			ui->m_object.getInfo(),
 			ui->m_boundary.getInfo(),
 			ui->m_work.getInfo(),
+			ui->m_play_info.getInfo(),
 		};
 
 		auto write_desc =
@@ -336,7 +354,8 @@ vk::CommandBuffer sUISystem::draw()
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_write }, {});
 			}
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_CLEAR].get());
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_TRANSFORM].get(), 0, { descriptor_set }, {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_CLEAR].get(), 0, { descriptor_set }, {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_CLEAR].get(), 1, { sSystem::Order().getSystemDescriptor().getSet() }, {});
 			cmd.dispatch(1, 1, 1);
 		}
 		{
@@ -375,6 +394,17 @@ vk::CommandBuffer sUISystem::draw()
 					.setDstBinding(1)
 					.setDstSet(descriptor_set_anime),
 				};
+				{
+					auto to_read = ui->m_work.makeMemoryBarrier();
+					to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+					to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_read }, {});
+				}
+				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_LAYOUT_ANIMATION].get());
+				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_ANIMATION].get(), 0, { descriptor_set }, {});
+				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_ANIMATION].get(), 1, { descriptor_set_anime }, {});
+				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_ANIMATION].get(), 2, { sSystem::Order().getSystemDescriptor().getSet() }, {});
+				cmd.dispatch(1, 1, 1);
 			}
 		}
 		{
@@ -384,7 +414,7 @@ vk::CommandBuffer sUISystem::draw()
 				to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_read }, {});
 			}
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_TRANSFORM].get());
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_LAYOUT_TRANSFORM].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_TRANSFORM].get(), 0, { descriptor_set }, {});
 			cmd.dispatch(1, 1, 1);
 		}
@@ -460,7 +490,7 @@ void UIManipulater::animManip()
 
 void UIManipulater::dataManip()
 {
-	UIAnimationData* data = m_anim_manip->m_anime->getData(m_object_tool[m_last_select_index].m_name.data());
+	UIAnimeData* data = m_anim_manip->m_anime->getData(m_object_tool[m_last_select_index].m_name.data());
 	if (data)
 	{
 		auto& keys = data->m_key;
@@ -471,8 +501,8 @@ void UIManipulater::dataManip()
 			{
 				if (ImGui::Selectable("Add"))
 				{
-					UIAnimationKey new_key;
-					new_key.m_flag = UIAnimationKey::is_enable;
+					UIAnimeKey new_key;
+					new_key.m_flag = UIAnimeKey::is_enable;
 					new_key.m_frame = m_anim_manip->m_frame;
 					new_key.m_value_i = 0;
 					keys.push_back(new_key);
@@ -481,7 +511,7 @@ void UIManipulater::dataManip()
 				{
 					for (auto it = keys.begin(); it != keys.end();)
 					{
-						if (btr::isOn(it->m_flag, UIAnimationKey::is_erase)) {
+						if (btr::isOn(it->m_flag, UIAnimeKey::is_erase)) {
 							it = keys.erase(it);
 						}
 						else {
@@ -533,13 +563,13 @@ void UIManipulater::dataManip()
 
 				sprintf_s(id, "enable_%d", i);
 				ImGui::PushID(id);
-				ImGui::CheckboxFlags("##enable", &key.m_flag, UIAnimationKey::is_enable);
+				ImGui::CheckboxFlags("##enable", &key.m_flag, UIAnimeKey::is_enable);
 				ImGui::NextColumn();
 				ImGui::PopID();
 
 				sprintf_s(id, "erase_%d", i);
 				ImGui::PushID(id);
-				ImGui::CheckboxFlags("##erase", &key.m_flag, UIAnimationKey::is_erase);
+				ImGui::CheckboxFlags("##erase", &key.m_flag, UIAnimeKey::is_erase);
 				ImGui::NextColumn();
 				ImGui::PopID();
 
@@ -556,7 +586,7 @@ void UIManipulater::dataManip()
 		{
 			if (ImGui::Selectable("Make"))
 			{
-				UIAnimationData data;
+				UIAnimeData data;
 				data.m_target_index = m_last_select_index;
 				data.m_target_hash = m_object_tool[m_last_select_index].makeHash();
 				m_anim_manip->m_anime->m_data.push_back(data);

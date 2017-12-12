@@ -43,14 +43,6 @@ struct UIParam
 	uint _p12;
 	uint _p13;
 
-	vec2 m_position_anime; //!< animationで移動オフセット
-	vec2 m_size_anime;
-	vec4 m_color_anime;
-	uint m_flag_anime;
-	uint _p21;
-	uint _p22;
-	uint _p23;
-
 	uint m_name_hash;
 	uint m_name_hash_;
 	uint _p32;
@@ -70,7 +62,11 @@ struct UIBoundary
 	uint m_param_index;
 	uint m_callback_id;
 };
-
+struct UIAnimePlayInfo
+{
+	int m_anime_target;
+	float m_frame;
+};
 #ifdef USE_UI
 layout(std140, set=USE_UI, binding=0) uniform UIGlobalUniform 
 {
@@ -92,16 +88,21 @@ layout(std430, set=USE_UI, binding=4) restrict buffer UIWorkBuffer
 {
 	UIWork b_work[];
 };
+layout(std430, set=USE_UI, binding=5) buffer UIAnimePlayBuffer
+{
+	UIAnimePlayInfo b_anime_play_info[8];
+};
 
 #endif
 
 
-struct UIAnimationInfo
+struct UIAnimeInfo
 {
 	uint m_anime_num;
+	uint m_anime_frame;
 };
 
-struct UIAnimationDataInfo
+struct UIAnimeDataInfo
 {
 	uint m_target_hash_low;
 	uint m_target_hash_hi;
@@ -133,38 +134,24 @@ struct UIAnimeWork
 	uint m_current_index;
 };
 
-struct UIAnimePlayInfo
-{
-	float m_frame;
-};
-struct UIAnimeRequest
-{
-	uint m_target;
-	float m_frame;
-};
-
 #ifdef USE_UI_ANIME
 layout(std140, set=USE_UI_ANIME, binding=0) uniform UIAnimeInfoUniform 
 {
-	uint u_info_num;
+	UIAnimeInfo u_anime_info;
 };
 layout(std430, set=USE_UI_ANIME, binding=1) buffer UIAnimeDataInfoBuffer 
 {
-	UIAnimationDataInfo u_anime_data_info[];
+	UIAnimeDataInfo u_anime_data_info[];
 };
 layout(std430, set=USE_UI_ANIME, binding=2) buffer UIAnimeKeyBuffer 
 {
 	UIAnimationKey b_anime_key[];
 };
-layout(std430, set=USE_UI_ANIME, binding=3) buffer UIAnimePlayBuffer
-{
-	UIAnimePlayInfo b_anime_play_info;
-};
-layout(std430, set=USE_UI_ANIME, binding=3) buffer UIAnimeWorkBuffer
+/*layout(std430, set=USE_UI_ANIME, binding=3) buffer UIAnimeWorkBuffer
 {
 	UIAnimeWork b_anime_work[];
 };
-
+*/
 #endif
 
 

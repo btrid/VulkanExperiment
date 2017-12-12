@@ -6,12 +6,20 @@
 #define USE_UI 0
 #include <UI.glsl>
 
+#define USE_SYSTEM 1
+#include <applib/System.glsl>
+
 layout (local_size_x = 1024, local_size_y = 1) in;
 
 
 void main() 
 {
 	uint index = gl_GlobalInvocationID.x;
+
+	if(index < 8) {
+		b_anime_play_info[index].m_frame += u_system_data.m_deltatime;
+	}
+
 	if(index >= u_info.m_object_num) {
 		return;
 	}
@@ -19,5 +27,6 @@ void main()
 	b_work[index].m_position = b_param[index].m_position_local;// + b_param[0].m_position_anime;
 	b_work[index].m_size = b_param[index].m_size_local;// + b_param[0].m_size_anime;
 	b_work[index].m_color = b_param[index].m_color_local;// + b_param[0].m_color_anime;
+
 }
 

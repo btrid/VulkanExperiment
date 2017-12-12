@@ -15,9 +15,9 @@ float s_frame;
 void main() 
 {
 	uint index = gl_GlobalInvocationID.x;
-	if(index >= u_info_num){ return; }
+	if(index >= u_anime_info.m_anime_num){ return; }
 
-	float frame = b_anime_play_info.m_frame;
+	float frame = mod(b_anime_play_info[0].m_frame, u_anime_info.m_anime_frame);
 	uint offset = getKeyOffset(u_anime_data_info[index]);
 	uint num = getKeyNum(u_anime_data_info[index]);
 	uint key_flag = getFlag(u_anime_data_info[index]);
@@ -51,6 +51,5 @@ void main()
 		b_work[target].m_size += value.xy;
 	else if(isOn(key_flag, key_color_rgba))
 		b_work[target].m_color += value;
-
 }
 
