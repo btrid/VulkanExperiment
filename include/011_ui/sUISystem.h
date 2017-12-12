@@ -65,12 +65,17 @@ struct UIWork
 	vec2 m_size;
 	vec4 m_color;
 };
+struct UIAnimePlayInfo
+{
+	int32_t m_anime_target;
+	float m_frame;
+};
+
 struct UIAnimeInfo
 {
 	uint m_anime_num;
 	uint m_anime_frame;
 };
-
 struct UIAnimeDataInfo
 {
 	uint64_t m_target_hash;
@@ -78,11 +83,6 @@ struct UIAnimeDataInfo
 	uint16_t m_flag;
 	uint16_t m_key_offset;	//!< オフセット
 	uint16_t m_key_num;
-};
-struct UIAnimePlayInfo
-{
-	int32_t m_anime_target;
-	float m_frame;
 };
 struct UIAnimeKey
 {
@@ -134,11 +134,12 @@ struct UIAnimeData
 	{}
 };
 
+
 struct UIAnimeResource
 {
-	btr::BufferMemoryEx<uint32_t> m_num;
-	btr::BufferMemoryEx<UIAnimeDataInfo> m_anim_info;
-	btr::BufferMemoryEx<UIAnimeKey> m_anim_key;
+	btr::BufferMemoryEx<UIAnimeInfo> m_anime_info;
+	btr::BufferMemoryEx<UIAnimeDataInfo> m_anime_data_info;
+	btr::BufferMemoryEx<UIAnimeKey> m_anime_key;
 };
 struct UI
 {
@@ -214,16 +215,19 @@ struct UIAnimation
 
 		std::shared_ptr<UIAnimeResource> resource = std::make_shared<UIAnimeResource>();
 		{
-			btr::BufferMemoryDescriptorEx<uint> desc;
+			btr::BufferMemoryDescriptorEx<UIAnimeInfo> desc;
 			desc.element_num = 1;
-			resource->m_num = context->m_uniform_memory.allocateMemory(desc);
+			resource->m_anime_info = context->m_uniform_memory.allocateMemory(desc);
 
-			cmd.updateBuffer<uint32_t>(resource->m_num.getInfo().buffer, resource->m_num.getInfo().offset, m_data.size());
+			UIAnimeInfo info;
+			info.m_anime_frame = 100.f;
+			info.m_anime_num = m_data.size();
+			cmd.updateBuffer<UIAnimeInfo>(resource->m_anime_info.getInfo().buffer, resource->m_anime_info.getInfo().offset, info);
 		}
 		{
 			btr::BufferMemoryDescriptorEx<UIAnimeDataInfo> desc;
 			desc.element_num = m_data.size();
-			resource->m_anim_info = context->m_storage_memory.allocateMemory(desc);
+			resource->m_anime_data_info = context->m_storage_memory.allocateMemory(desc);
 		}
 		{
 			uint32_t num = 0;
@@ -233,12 +237,12 @@ struct UIAnimation
 			}
 			btr::BufferMemoryDescriptorEx<UIAnimeKey> desc;
 			desc.element_num = num;
-			resource->m_anim_key = context->m_storage_memory.allocateMemory(desc);
+			resource->m_anime_key = context->m_storage_memory.allocateMemory(desc);
 		}
-		auto desc_info = resource->m_anim_info.getDescriptor();
+		auto desc_info = resource->m_anime_data_info.getDescriptor();
 		desc_info.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 		auto staging_info = context->m_staging_memory.allocateMemory(desc_info);
-		auto desc_key = resource->m_anim_key.getDescriptor();
+		auto desc_key = resource->m_anime_key.getDescriptor();
 		desc_key.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 		auto staging_key = context->m_staging_memory.allocateMemory(desc_key);
 
@@ -262,13 +266,13 @@ struct UIAnimation
 
 		vk::BufferCopy copy[2];
 		copy[0].setSrcOffset(staging_info.getInfo().offset);
-		copy[0].setDstOffset(resource->m_anim_info.getInfo().offset);
+		copy[0].setDstOffset(resource->m_anime_data_info.getInfo().offset);
 		copy[0].setSize(staging_info.getInfo().range);
 		copy[1].setSrcOffset(staging_key.getInfo().offset);
-		copy[1].setDstOffset(resource->m_anim_key.getInfo().offset);
+		copy[1].setDstOffset(resource->m_anime_key.getInfo().offset);
 		copy[1].setSize(staging_key.getInfo().range);
 
-		cmd.copyBuffer(staging_key.getInfo().buffer, resource->m_anim_key.getInfo().buffer, array_length(copy), copy);
+		cmd.copyBuffer(staging_key.getInfo().buffer, resource->m_anime_key.getInfo().buffer, array_length(copy), copy);
 		return resource;
 	}
 };

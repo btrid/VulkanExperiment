@@ -18,7 +18,7 @@ if(_c) setOn((_a), (_b)); \
 else setOff((_a), (_b))
 
 #define getBit(_bit, _bitoffset, _bitrange) \
-((((1 << (_bitrange)) - 1 << (_bitoffset)) & (_bit)) >> (_bitoffset))
+((((1 << (_bitrange)) - (1 << (_bitoffset))) & (_bit)) >> (_bitoffset))
 
 
 

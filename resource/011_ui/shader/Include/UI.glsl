@@ -88,7 +88,7 @@ layout(std430, set=USE_UI, binding=4) restrict buffer UIWorkBuffer
 {
 	UIWork b_work[];
 };
-layout(std430, set=USE_UI, binding=5) buffer UIAnimePlayBuffer
+layout(std430, set=USE_UI, binding=5) restrict buffer UIAnimePlayBuffer
 {
 	UIAnimePlayInfo b_anime_play_info[8];
 };
@@ -99,7 +99,7 @@ layout(std430, set=USE_UI, binding=5) buffer UIAnimePlayBuffer
 struct UIAnimeInfo
 {
 	uint m_anime_num;
-	uint m_anime_frame;
+	uint m_anime_max_frame;
 };
 
 struct UIAnimeDataInfo
@@ -116,11 +116,11 @@ struct UIAnimeDataInfo
 #define	key_size_xy (1 << 3)
 #define	key_color_rgba (1 << 4)
 
-#define getTargetIndex(_info) ((_info.m_target_index_flag & 0xffff0000) >> 16)
+#define getTargetIndex(_info) (_info.m_target_index_flag & 0x0000ffff)
 #define getFlag(_info) ((_info.m_target_index_flag & 0xffff0000) >> 16)
 #define getKeyOffset(_info) (_info.m_key_offset_num & 0x0000ffff)
 #define getKeyNum(_info) ((_info.m_key_offset_num & 0xffff0000) >> 16)
-struct UIAnimationKey
+struct UIAnimeKey
 {
 	uint m_frame;
 	uint m_flag;
@@ -145,7 +145,7 @@ layout(std430, set=USE_UI_ANIME, binding=1) buffer UIAnimeDataInfoBuffer
 };
 layout(std430, set=USE_UI_ANIME, binding=2) buffer UIAnimeKeyBuffer 
 {
-	UIAnimationKey b_anime_key[];
+	UIAnimeKey b_anime_key[];
 };
 /*layout(std430, set=USE_UI_ANIME, binding=3) buffer UIAnimeWorkBuffer
 {

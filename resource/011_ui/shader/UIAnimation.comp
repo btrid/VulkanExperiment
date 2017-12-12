@@ -17,22 +17,23 @@ void main()
 	uint index = gl_GlobalInvocationID.x;
 	if(index >= u_anime_info.m_anime_num){ return; }
 
-	float frame = mod(b_anime_play_info[0].m_frame, u_anime_info.m_anime_frame);
-	uint offset = getKeyOffset(u_anime_data_info[index]);
-	uint num = getKeyNum(u_anime_data_info[index]);
+	float frame = mod(b_anime_play_info[0].m_frame, u_anime_info.m_anime_max_frame);
+//	float frame = b_anime_play_info[0].m_frame;
+	int offset = int(getKeyOffset(u_anime_data_info[index]));
+	int num = int(getKeyNum(u_anime_data_info[index]));
 	uint key_flag = getFlag(u_anime_data_info[index]);
 	uint target = getTargetIndex(u_anime_data_info[index]);
-	uint key_index = offset;
+	int key_index = offset;
 	for(; key_index < num+offset; key_index++)
 	{
-		if(b_anime_key[key_index].m_frame >= frame){
+		if(frame < b_anime_key[key_index].m_frame){
 			break;
 		}
 	}
-	UIAnimationKey a = b_anime_key[min(key_index,   offset+num-1)];
-	UIAnimationKey b = b_anime_key[min(key_index+1, offset+num-1)];
+	UIAnimeKey a = b_anime_key[clamp(key_index, offset, offset+num-1)];
+	UIAnimeKey b = b_anime_key[clamp(key_index+1, offset, offset+num-1)];
 	uint diff = b.m_frame - a.m_frame;
-	float rate = diff == 0 ? 1. : (b.m_frame - frame) / (b.m_frame - a.m_frame);
+	float rate = diff == 0 ? 1. : ((b.m_frame - frame) / diff);
 	vec4 av, bv;
 	if(isOn(key_flag, key_pos_xy) || isOn(key_flag, key_size_xy)){
 		av = vec4(getBit(a.m_value, 0, 16), getBit(a.m_value, 16, 16), 0., 0.);
@@ -45,9 +46,9 @@ void main()
 		bv = vec4(getBit(ub, 0, 8), getBit(ub, 8, 8), getBit(ub, 16, 8), getBit(ub, 24, 8));
 	}
 	vec4 value = mix(av, bv, rate);
-	if(isOn(key_flag, key_pos_xy))
+	if(isOn(key_flag, key_pos_xy)){
 		b_work[target].m_position += value.xy;
-	else if(isOn(key_flag, key_size_xy))
+	}else if(isOn(key_flag, key_size_xy))
 		b_work[target].m_size += value.xy;
 	else if(isOn(key_flag, key_color_rgba))
 		b_work[target].m_color += value;
