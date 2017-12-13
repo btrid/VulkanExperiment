@@ -228,6 +228,7 @@ struct UIAnimation
 			btr::BufferMemoryDescriptorEx<UIAnimeDataInfo> desc;
 			desc.element_num = m_data.size();
 			resource->m_anime_data_info = context->m_storage_memory.allocateMemory(desc);
+
 		}
 		{
 			uint32_t num = 0;
@@ -273,6 +274,19 @@ struct UIAnimation
 		copy[1].setSize(staging_key.getInfo().range);
 
 		cmd.copyBuffer(staging_key.getInfo().buffer, resource->m_anime_key.getInfo().buffer, array_length(copy), copy);
+
+		{
+			auto to_write = resource->m_anime_data_info.makeMemoryBarrier();
+			to_write.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+			to_write.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_write }, {});
+		}
+		{
+			auto to_write = resource->m_anime_key.makeMemoryBarrier();
+			to_write.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+			to_write.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_write }, {});
+		}
 		return resource;
 	}
 };

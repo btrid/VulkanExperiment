@@ -68,11 +68,11 @@ void setBit(A& bit, B value, uint32_t bitoffset, uint32_t bitrange) {
 	uint32_t mask = (1 << bitrange) - 1;
 	assert(value < mask); // bitrange‚Éû‚Ü‚Á‚Ä‚È‚¢‚Ì‚ÍƒoƒO‚Ì‰Â”\«‚ª‚‚¢‚Ì‚Å~‚ß‚é
 	mask <<= bitoffset;
-	bit = (~mask & bit) + value << bitoffset;
+	bit = ((~mask & bit) + value) << bitoffset;
 }
 template<typename A>
 A getBit(A& bit, uint32_t bitoffset, uint32_t bitrange) {
-	uint32_t mask = (1 << bitrange) - 1 << bitoffset;
+	uint32_t mask = ((1 << bitrange) - 1) << bitoffset;
 	return (mask & bit) >> bitoffset;
 }
 

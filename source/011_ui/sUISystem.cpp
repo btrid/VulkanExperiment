@@ -504,6 +504,10 @@ void UIManipulater::dataManip()
 
 		if (ImGui::BeginChild("ScrollingRegion", ImVec2(0, 0), true, ImGuiWindowFlags_HorizontalScrollbar))
 		{
+			ImGui::BeginGroup();
+			ImGui::Button("h");
+			ImGui::EndGroup();
+			ImGui::BeginGroup();
 			if (ImGui::BeginPopupContextWindow("key context"))
 			{
 				if (ImGui::Selectable("Add"))
@@ -584,6 +588,7 @@ void UIManipulater::dataManip()
 				ImGui::Separator();
 			}
 			ImGui::Columns(1);
+			ImGui::EndGroup();
 			ImGui::EndChild();
 		}
 	}
@@ -771,6 +776,7 @@ vk::CommandBuffer UIManipulater::execute()
 	if (m_request_update_animation)
 	{
 		m_request_update_animation = false;
+		sDeleter::Order().enque(std::move(m_ui->m_anime));
 		m_ui->m_anime = m_anim_manip->m_anime->makeResource(m_context, cmd);
 
 
@@ -781,11 +787,8 @@ vk::CommandBuffer UIManipulater::execute()
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, { to_write }, {});
 		}
 
-		UIAnimePlayInfo info;
-		info.m_anime_target = 0;
-		info.m_frame = 0.f;
-		cmd.updateBuffer<UIAnimePlayInfo>(m_ui->m_play_info.getInfo().buffer, m_ui->m_info.getInfo().offset, info);
-
+		UIAnimePlayInfo info[8] = {};
+		cmd.updateBuffer<UIAnimePlayInfo[8]>(m_ui->m_play_info.getInfo().buffer, m_ui->m_play_info.getInfo().offset, info);
 		{
 			auto to_write = m_ui->m_play_info.makeMemoryBarrier();
 			to_write.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);

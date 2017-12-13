@@ -30,12 +30,15 @@ void main()
 			break;
 		}
 	}
-	UIAnimeKey a = b_anime_key[clamp(key_index, offset, offset+num-1)];
-	UIAnimeKey b = b_anime_key[clamp(key_index+1, offset, offset+num-1)];
+#define a b_anime_key[clamp(key_index-1, offset, offset+num-1)]
+#define b b_anime_key[clamp(key_index, offset, offset+num-1)]
+//	UIAnimeKey a = b_anime_key[clamp(key_index, offset, offset+num-1)];
+//	UIAnimeKey b = b_anime_key[clamp(key_index+1, offset, offset+num-1)];
 	uint diff = b.m_frame - a.m_frame;
-	float rate = diff == 0 ? 1. : ((b.m_frame - frame) / diff);
+	float rate = diff == 0 ? 1. : ((frame-a.m_frame) / diff);
 	vec4 av, bv;
-	if(isOn(key_flag, key_pos_xy) || isOn(key_flag, key_size_xy)){
+	if(isOn(key_flag, key_pos_xy) || isOn(key_flag, key_size_xy))
+	{
 		av = vec4(getBit(a.m_value, 0, 16), getBit(a.m_value, 16, 16), 0., 0.);
 		bv = vec4(getBit(b.m_value, 0, 16), getBit(b.m_value, 16, 16), 0., 0.);
 	}
