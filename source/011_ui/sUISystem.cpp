@@ -72,6 +72,16 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context)
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setDescriptorCount(1)
 			.setBinding(5),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(stage)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(6),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(stage)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(7),
 		};
 		m_descriptor_set_layout = btr::Descriptor::createDescriptorSetLayout(context, binding);
 		m_descriptor_pool = btr::Descriptor::createDescriptorPool(context, binding, 30);
@@ -149,7 +159,6 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context)
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 			pipeline_layout_info.setPSetLayouts(layouts);
 			m_pipeline_layout[PIPELINE_LAYOUT_CLEAR] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
-			m_pipeline_layout[PIPELINE_LAYOUT_BOUNDARY] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
 		{
 			vk::DescriptorSetLayout layouts[] =
@@ -162,6 +171,7 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context)
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 			pipeline_layout_info.setPSetLayouts(layouts);
 			m_pipeline_layout[PIPELINE_LAYOUT_ANIMATION] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PIPELINE_LAYOUT_BOUNDARY] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
 	}
 	// pipeline
@@ -306,6 +316,8 @@ vk::CommandBuffer sUISystem::draw()
 	for (auto& ui : m_render)
 	{
 		vk::DescriptorSet descriptor_set;
+		vk::DescriptorSet descriptor_set_anime;
+
 		{
 			vk::DescriptorSetLayout layouts[] = { m_descriptor_set_layout.get() };
 			vk::DescriptorSetAllocateInfo alloc_info;
@@ -325,6 +337,8 @@ vk::CommandBuffer sUISystem::draw()
 				ui->m_boundary.getInfo(),
 				ui->m_work.getInfo(),
 				ui->m_play_info.getInfo(),
+				ui->m_user_id.getInfo(),
+				ui->m_scene.getInfo(),
 			};
 
 			auto write_desc =
@@ -345,6 +359,41 @@ vk::CommandBuffer sUISystem::draw()
 			m_context->m_device->updateDescriptorSets(write_desc.size(), write_desc.begin(), 0, {});
 		}
 		{
+			vk::DescriptorSetLayout layouts_anime[] = { m_descriptor_set_layout_anime.get() };
+			vk::DescriptorSetAllocateInfo alloc_info;
+			//				alloc_info.setDescriptorPool(m_descriptor_pool_anime.get());
+			alloc_info.setDescriptorPool(m_descriptor_pool.get());
+			alloc_info.setDescriptorSetCount(array_length(layouts_anime));
+			alloc_info.setPSetLayouts(layouts_anime);
+			descriptor_set_anime = m_context->m_device->allocateDescriptorSets(alloc_info)[0];
+		}
+		{
+			vk::DescriptorBufferInfo uniforms[] = {
+				ui->m_anime->m_anime_info.getInfo(),
+			};
+			vk::DescriptorBufferInfo storages[] = {
+				ui->m_anime->m_anime_data_info.getInfo(),
+				ui->m_anime->m_anime_key.getInfo(),
+			};
+			auto write_desc =
+			{
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+				.setDescriptorCount(array_length(uniforms))
+				.setPBufferInfo(uniforms)
+				.setDstBinding(0)
+				.setDstSet(descriptor_set_anime),
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(array_length(storages))
+				.setPBufferInfo(storages)
+				.setDstBinding(1)
+				.setDstSet(descriptor_set_anime),
+			};
+			m_context->m_device->updateDescriptorSets(write_desc.size(), write_desc.begin(), 0, {});
+		}
+
+		{
 			// 初期化
 			{
 				auto to_write = ui->m_info.makeMemoryBarrier();
@@ -362,58 +411,20 @@ vk::CommandBuffer sUISystem::draw()
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_CLEAR].get(), 0, { descriptor_set }, {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_CLEAR].get(), 1, { sSystem::Order().getSystemDescriptor().getSet() }, {});
 			cmd.dispatch(1, 1, 1);
+
+			cmd.fillBuffer(ui->m_scene.getInfo().buffer, ui->m_scene.getInfo().offset, ui->m_scene.getInfo().range, 0u);
 		}
 		{
-			// アニメーションする？
-			if (ui->m_anime)
-			{
-				
-				vk::DescriptorSetLayout layouts_anime[] = { m_descriptor_set_layout_anime.get() };
-				vk::DescriptorSetAllocateInfo alloc_info;
-//				alloc_info.setDescriptorPool(m_descriptor_pool_anime.get());
-				alloc_info.setDescriptorPool(m_descriptor_pool.get());
-				alloc_info.setDescriptorSetCount(array_length(layouts_anime));
-				alloc_info.setPSetLayouts(layouts_anime);
-				auto descriptor_set_anime = m_context->m_device->allocateDescriptorSets(alloc_info)[0];
-
-				vk::DescriptorBufferInfo uniforms[] = {
-					ui->m_anime->m_anime_info.getInfo(),
-				};
-				vk::DescriptorBufferInfo storages[] = {
-					ui->m_anime->m_anime_data_info.getInfo(),
-					ui->m_anime->m_anime_key.getInfo(),
-				};
-
-
-				auto write_desc =
-				{
-					vk::WriteDescriptorSet()
-					.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-					.setDescriptorCount(array_length(uniforms))
-					.setPBufferInfo(uniforms)
-					.setDstBinding(0)
-					.setDstSet(descriptor_set_anime),
-					vk::WriteDescriptorSet()
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(array_length(storages))
-					.setPBufferInfo(storages)
-					.setDstBinding(1)
-					.setDstSet(descriptor_set_anime),
-				};
-				m_context->m_device->updateDescriptorSets(write_desc.size(), write_desc.begin(), 0, {});
-				{
-					auto to_read = ui->m_work.makeMemoryBarrier();
-					to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
-					to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
-					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_read }, {});
-				}
-				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_ANIMATION].get());
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_ANIMATION].get(), 0, { descriptor_set }, {});
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_ANIMATION].get(), 1, { descriptor_set_anime }, {});
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_ANIMATION].get(), 2, { sSystem::Order().getSystemDescriptor().getSet() }, {});
-				cmd.dispatch(1, 1, 1);
-			}
+			auto to_read = ui->m_work.makeMemoryBarrier();
+			to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+			to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_read }, {});
 		}
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_ANIMATION].get());
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_ANIMATION].get(), 0, { descriptor_set }, {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_ANIMATION].get(), 1, { descriptor_set_anime }, {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_ANIMATION].get(), 2, { sSystem::Order().getSystemDescriptor().getSet() }, {});
+		cmd.dispatch(1, 1, 1);
 		{
 			{
 				auto to_read = ui->m_work.makeMemoryBarrier();
@@ -436,7 +447,8 @@ vk::CommandBuffer sUISystem::draw()
 			}
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_BOUNDARY].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_BOUNDARY].get(), 0, { descriptor_set }, {});
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_BOUNDARY].get(), 1, { sSystem::Order().getSystemDescriptor().getSet() }, {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_BOUNDARY].get(), 1, { descriptor_set_anime }, {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_BOUNDARY].get(), 2, { sSystem::Order().getSystemDescriptor().getSet() }, {});
 			cmd.dispatch(1, 1, 1);
 
 		}
@@ -641,6 +653,12 @@ vk::CommandBuffer UIManipulater::execute()
 					ImGui::InputFloat2("Size", &param->m_size_local[0]);
 					ImGui::ColorPicker4("Color", &param->m_color_local[0]);
 					ImGui::InputText("name", m_object_tool[m_last_select_index].m_name.data(), m_object_tool[m_last_select_index].m_name.size(), 0);
+
+					char userid[16] = {};
+					sprintf_s(userid, "%d", param->m_user_id);
+					ImGui::InputText("UserID", userid, 3+1, ImGuiInputTextFlags_CharsDecimal);
+					param->m_user_id = atoi(userid);
+					param->m_user_id = glm::clamp<int>(param->m_user_id, 0, UI::USERID_MAX-1);
 				}
 			}
 
@@ -716,6 +734,7 @@ vk::CommandBuffer UIManipulater::execute()
 	// boundaryの更新があった
 	if (m_request_update_boundary)
 	{
+		m_request_update_boundary = false;
 		m_boundary_counter = 0;
 		btr::BufferMemoryDescriptorEx<UIBoundary> boundary_desc;
 		boundary_desc.element_num = 1024;
@@ -740,7 +759,33 @@ vk::CommandBuffer UIManipulater::execute()
 		copy.setSize(m_ui->m_boundary.getInfo().range);
 		cmd.copyBuffer(staging.getInfo().buffer, m_ui->m_boundary.getInfo().buffer, copy);
 
-		m_request_update_boundary = false;
+	}
+
+	// useridの更新があった
+	if (m_request_update_userid)
+	{
+		m_request_update_userid = false;
+		btr::BufferMemoryDescriptorEx<uint32_t> desc;
+		desc.element_num = UI::USERID_MAX;
+		desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
+		auto staging = m_context->m_staging_memory.allocateMemory(desc);
+
+		memset(staging.getMappedPtr(), 0, UI::USERID_MAX*sizeof(uint32_t));
+		for (uint32_t i = 0; i < m_object_counter; i++)
+		{
+			auto* p = m_object.getMappedPtr(i);
+			if (p->m_user_id != 0)
+			{
+				*staging.getMappedPtr(p->m_user_id) = i;
+			}
+		}
+
+		vk::BufferCopy copy;
+		copy.setSrcOffset(staging.getInfo().offset);
+		copy.setDstOffset(m_ui->m_user_id.getInfo().offset);
+		copy.setSize(m_ui->m_user_id.getInfo().range);
+		cmd.copyBuffer(staging.getInfo().buffer, m_ui->m_user_id.getInfo().buffer, copy);
+
 	}
 
 	int32_t max_depth = 0;

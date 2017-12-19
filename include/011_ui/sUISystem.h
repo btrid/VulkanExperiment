@@ -7,6 +7,10 @@ struct UIGlobal
 {
 	uvec2 m_resolusion; // 解像度
 };
+struct UIScene
+{
+	uint32_t m_is_disable_order; // 操作無効中
+};
 struct UIInfo
 {
 	uint m_object_num; // node + sprite + boundary
@@ -14,11 +18,12 @@ struct UIInfo
 	uint m_sprite_num;
 	uint m_boundary_num;
 
+	uvec2 m_target_resolution;
 	uint m_depth_max;
-	uint _p11;
-	uint _p12;
 	uint _p13;
 };
+
+
 
 enum UIFlagBit
 {
@@ -36,27 +41,36 @@ struct UIParam
 	vec2 m_position_local; //!< 自分の場所
 	vec2 m_size_local;
 	vec4 m_color_local;
-	uint32_t m_flag;
-	int32_t m_parent_index;
-	int32_t m_child_index;
-	int32_t m_depth;
 
-	int32_t m_chibiling_index;
-	uint32_t _p11;
-	uint32_t _p12;
+	int32_t m_user_id; //!< イベント等のターゲット用ID
+	uint32_t m_flag;
+	int32_t m_depth;
 	uint32_t _p13;
 
-	uint64_t m_name_hash;
-	uint32_t _p32;
-	uint32_t _p33;
+	int32_t m_parent_index;
+	int32_t m_child_index;
+	int32_t m_chibiling_index;
+	uint32_t _p23;
+
+};
+
+struct UIEvent
+{
+	uint32_t m_type;
+	int32_t m_value[3];
 };
 
 struct UIBoundary
 {
 	uint32_t m_flag;
 	float m_touch_time;
-	uint m_param_index;
-	uint _p;
+	uint32_t m_param_index;
+	uint32_t _p;
+
+	uint32_t m_touch_callback;
+	uint32_t m_click_callback;
+	uint32_t m_release_callback;
+	uint32_t _p2;
 };
 
 struct UIWork 
@@ -67,6 +81,7 @@ struct UIWork
 };
 struct UIAnimePlayInfo
 {
+	uint m_flag;
 	int32_t m_anime_target;
 	float m_frame;
 };
@@ -75,6 +90,7 @@ struct UIAnimeInfo
 {
 	uint m_anime_num;
 	uint m_anime_frame;
+	uint m_target_fps;
 };
 struct UIAnimeDataInfo
 {
@@ -140,24 +156,6 @@ struct UIAnimeResource
 	btr::BufferMemoryEx<UIAnimeInfo> m_anime_info;
 	btr::BufferMemoryEx<UIAnimeDataInfo> m_anime_data_info;
 	btr::BufferMemoryEx<UIAnimeKey> m_anime_key;
-};
-struct UI
-{
-	std::string m_name;
-
-	btr::BufferMemoryEx<vk::DrawIndirectCommand> m_draw_cmd;
-	btr::BufferMemoryEx<UIInfo> m_info;
-	btr::BufferMemoryEx<UIParam> m_object;
-	btr::BufferMemoryEx<UIBoundary> m_boundary;
-	btr::BufferMemoryEx<UIWork> m_work;
-	btr::BufferMemoryEx<UIAnimePlayInfo> m_play_info;
-
-	std::shared_ptr<UIAnimeResource> m_anime;
-	vk::UniqueImage m_ui_image;
-	vk::UniqueImageView m_image_view;
-	vk::UniqueDeviceMemory m_ui_texture_memory;
-
-//	std::array<Texture, 64> m_color_image;
 };
 
 // 中間バッファ
@@ -304,6 +302,31 @@ struct UIAnimManipulater
 	std::shared_ptr<UIAnimation> m_anime;
 };
 
+struct UI
+{
+	enum
+	{
+		USERID_MAX = 256,
+	};
+	std::string m_name;
+
+	btr::BufferMemoryEx<vk::DrawIndirectCommand> m_draw_cmd;
+	btr::BufferMemoryEx<UIInfo> m_info;
+	btr::BufferMemoryEx<UIParam> m_object;
+	btr::BufferMemoryEx<UIBoundary> m_boundary;
+	btr::BufferMemoryEx<UIWork> m_work;
+	btr::BufferMemoryEx<UIAnimePlayInfo> m_play_info;
+	btr::BufferMemoryEx<uint32_t> m_user_id;
+	btr::BufferMemoryEx<UIEvent> m_event;
+	btr::BufferMemoryEx<UIScene> m_scene;
+	std::shared_ptr<UIAnimeResource> m_anime;
+	vk::UniqueImage m_ui_image;
+	vk::UniqueImageView m_image_view;
+	vk::UniqueDeviceMemory m_ui_texture_memory;
+
+	//	std::array<Texture, 64> m_color_image;
+};
+
 struct UIManipulater 
 {
 	std::shared_ptr<btr::Context> m_context;
@@ -328,6 +351,7 @@ struct UIManipulater
 	bool m_request_update_boundary;
 	bool m_request_update_sprite;
 	bool m_request_update_animation;
+	bool m_request_update_userid;
 	UIManipulater(const std::shared_ptr<btr::Context>& context)
 		: m_last_select_index(-1)
 		, m_object_counter(0)
@@ -336,9 +360,11 @@ struct UIManipulater
 		, m_request_update_boundary(false)
 		, m_request_update_sprite(false)
 		, m_request_update_animation(false)
+		, m_request_update_userid(false)
 	{
 		m_context = context;
 		m_ui = std::make_shared<UI>();
+		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 		{
 			btr::BufferMemoryDescriptorEx<UIInfo> desc;
 			desc.element_num = 1;
@@ -358,6 +384,25 @@ struct UIManipulater
 			btr::BufferMemoryDescriptorEx<UIWork> desc;
 			desc.element_num = m_ui->m_object.getDescriptor().element_num;
 			m_ui->m_work = context->m_storage_memory.allocateMemory(desc);
+		}
+		{
+			btr::BufferMemoryDescriptorEx<uint32_t> desc;
+			desc.element_num = 256;
+			m_ui->m_user_id = context->m_storage_memory.allocateMemory(desc);
+
+			cmd->fillBuffer(m_ui->m_user_id.getInfo().buffer, m_ui->m_user_id.getInfo().offset, m_ui->m_user_id.getInfo().range, 0u);
+		}
+		{
+			btr::BufferMemoryDescriptorEx<UIEvent> desc;
+			desc.element_num = 256;
+			m_ui->m_event = context->m_storage_memory.allocateMemory(desc);
+			cmd->fillBuffer(m_ui->m_event.getInfo().buffer, m_ui->m_event.getInfo().offset, m_ui->m_event.getInfo().range, 0u);
+		}
+		{
+			btr::BufferMemoryDescriptorEx<UIScene> desc;
+			desc.element_num = 1;
+			m_ui->m_scene = context->m_storage_memory.allocateMemory(desc);
+			cmd->fillBuffer(m_ui->m_scene.getInfo().buffer, m_ui->m_scene.getInfo().offset, m_ui->m_scene.getInfo().range, 0u);
 		}
 
 		{
@@ -392,8 +437,7 @@ struct UIManipulater
 		root.m_flag = 0;
 		root.m_flag |= is_visible;
 		root.m_flag |= is_enable;
-		std::hash<std::string> hash;
-		root.m_name_hash = hash(std::string("root"));
+		root.m_user_id = 0;
 		*m_object.getMappedPtr(0) = root;
 		m_object_counter++;
 
@@ -402,6 +446,19 @@ struct UIManipulater
 
 		m_anim_manip = std::make_shared<UIAnimManipulater>();
 		m_anim_manip->m_anime = std::make_shared<UIAnimation>();
+		// 初期設定
+		UIAnimeData anime_data;
+		anime_data.m_flag = UIAnimeData::is_enable;
+		anime_data.m_flag |= UIAnimeData::pos_xy;
+		anime_data.m_target_index = 0;
+		anime_data.m_target_hash = m_object_tool[0].makeHash();
+		UIAnimeKey key;
+		key.m_flag = UIAnimeKey::is_enable;
+		key.m_frame = 0;
+		key.m_value_i = 0;
+		anime_data.m_key.push_back(key);
+		m_anim_manip->m_anime->m_data.push_back(anime_data);
+		m_ui->m_anime = m_anim_manip->m_anime->makeResource(m_context, cmd.get());
 	}
 
 	vk::CommandBuffer execute();
@@ -441,14 +498,14 @@ struct UIManipulater
 		new_node.m_flag = 0;
 		new_node.m_flag |= is_visible;
 		new_node.m_flag |= is_enable;
-
+		new_node.m_user_id = 0;
 		{
 			// 名前付け
 			char buf[256] = {};
 			sprintf_s(buf, "%s_%05d", m_object_tool[parent].m_name.data(), index);
 			strcpy_s(m_object_tool[index].m_name.data(), m_object_tool[index].m_name.size(), buf);
-			new_node.m_name_hash = m_object_tool[index].makeHash();
 		}
+
 		*m_object.getMappedPtr(index) = new_node;
 
 	}

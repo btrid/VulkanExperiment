@@ -1,34 +1,42 @@
 #version 430
 
 #extension GL_GOOGLE_cpp_style_line_directive : require
-//#include <btrlib/Math.glsl>
 
 #define USE_UI 0
+#define USE_UI_ANIME 1
 #include <UI.glsl>
 
-#define USE_SYSTEM 1
+#define USE_SYSTEM 2
 #include <applib/System.glsl>
 
 layout (local_size_x = 1024, local_size_y = 1) in;
 
-void touch_event(in uint callback_id, in uint param_index)
+void touch_event(in uint boundary_index, in uint callback_id, in uint work_index)
 {
-	switch(callback_id)
+	#define event_type_play_anime 0
+	switch(b_event[callback_id].m_type)
 	{
-		case 0:
-			setSwap(b_param[param_index].m_flag, UI_enable_bit);
+		case event_type_play_anime:
+			#define play_anime_id b_event[callback_id].m_value1
+			#define play_target b_event[callback_id].m_value2
+			#define play_index b_event[callback_id].m_value3
+			setSwap(b_anime_play_info[play_index].m_flag, AnimePlayInfo_is_playing);
 			break;
 	}
 
 }
 
-bool test(in vec4 aabb, in vec2 p)
+bool test(in vec4 aabb2d, in vec2 p)
 {
-	return all(greaterThan(p, aabb.xy)) && all(lessThan(p, aabb.xy+aabb.zw));
+	return all(greaterThan(p, aabb2d.xy)) && all(lessThan(p, aabb2d.xy+aabb2d.zw));
 }
 
 void main() 
 {
+	if(b_scene.m_is_disable_order != 0){
+		// @todo 起動しないようにしたい
+		return;
+	}
 	uint index = gl_GlobalInvocationID.x;
 	if(index >= u_info.m_boundary_num) {
 		return;
@@ -39,32 +47,35 @@ void main()
 		return;
 	}
 
-	// 押しているとき
-	if(isAny(u_system_data.m_is_mouse_on, 1|2))
+	uint work = b_boundary[index].m_param_index;
+	vec4 aabb = vec4(b_work[work].m_position - b_work[work].m_size/2, b_work[work].m_size);
+	bool is_in = test(aabb, vec2(u_system_data.m_mouse_position));
+
+	if(is_in)
 	{
-		uint work = b_boundary[index].m_param_index;
-		vec4 aabb = vec4(b_work[work].m_position - b_work[work].m_size/2, b_work[work].m_size);
-		bool is_in = test(aabb, vec2(u_system_data.m_mouse_position));
-		if(is_in)
+		// 押しているとき
+		if(isAny(u_system_data.m_is_mouse_on, 1|2))
 		{
 			setBit(b_boundary[index].m_flag, UI_TOUCH_ON, true);
-			touch_event(b_boundary[index].m_callback_id, work);
-			b_work[work].m_size*= 2.;
-		}
-	} 
-	// 離したとき
-//	else
-	 if(isOn(u_system_data.m_is_mouse_on, 4))
-	{
-		uint work = b_boundary[index].m_param_index;
-		vec4 aabb = vec4(b_work[work].m_position, b_work[work].m_size);
-		bool is_in = test(aabb, vec2(u_system_data.m_mouse_position));
-		if(is_in)
+			touch_event(index, b_boundary[index].m_click_callback, work);
+		} 
+		// 離したとき
+		else if(isOn(u_system_data.m_is_mouse_on, 4))
 		{
 			setBit(b_boundary[index].m_flag, UI_TOUCH_ON, false);
-			touch_event(b_boundary[index].m_callback_id, work);
+			touch_event(index, b_boundary[index].m_release_callback, work);
 		}
-
+		else
+		{
+			// 入ったとき
+			setBit(b_boundary[index].m_flag, UI_TOUCH_BOUNDARY_IN, true);
+			touch_event(index, b_boundary[index].m_touch_callback, work);
+		}
+	}
+	else
+	{
+//		setBit(b_boundary[index].m_flag, UI_TOUCH_ON, UI_TOUCH_BOUNDARY_IN, false);
+//		touch_event(index, b_boundary[index].m_touch_callback, work);		
 	}
 
 }
