@@ -98,7 +98,8 @@ struct UIAnimeDataInfo
 	uint16_t m_target_index;
 	uint16_t m_flag;
 	uint16_t m_key_offset;	//!< オフセット
-	uint16_t m_key_num;
+	uint8_t m_key_num;
+	uint8_t m_type;
 };
 struct UIAnimeKey
 {
@@ -106,6 +107,8 @@ struct UIAnimeKey
 	{
 		is_enable = 1 << 0,
 		is_erase = 1 << 1,
+//		interp_linear = 1 << 2,
+		interp_switch = 1 << 3,
 	};
 	uint32_t m_frame;
 	uint32_t m_flag;
@@ -128,24 +131,32 @@ struct UIAnimeKey
 
 struct UIAnimeData
 {
-	enum
+	enum type
+	{
+		type_pos_xy,
+		type_size_xy,
+		type_color_rgba,
+		type_system_disable_order,
+		type_max,
+	};
+	enum flag
 	{
 		is_enable = 1 << 0,
 		is_erase = 1 << 1,
-		pos_xy = 1 << 2,
-		size_xy = 1 << 3,
-		color_rgba = 1 << 4,
 	};
 
 	uint64_t m_target_hash;
 	uint16_t m_target_index;
+	uint16_t m_type;
 	uint16_t m_flag;
+	uint16_t _p;
 
 	std::vector<UIAnimeKey> m_key;
 
 	UIAnimeData()
 		: m_target_hash(0)
 		, m_target_index(0xffff)
+		, m_type(0)
 		, m_flag(0)
 	{}
 };
@@ -180,11 +191,11 @@ struct UIAnimation
 	char m_target_ui[32];
 	std::vector<UIAnimeData> m_data;
 
-	UIAnimeData* getData(const std::string& name){
+	UIAnimeData* getData(const std::string& name, UIAnimeData::type type){
 		std::hash<std::string> to_hash;
 		auto hash = to_hash(name);
 		for (auto& d : m_data) {
-			if (d.m_target_hash == hash) {
+			if (d.m_target_hash == hash && d.m_type == type) {
 				return &d;
 			}
 		}
@@ -252,6 +263,7 @@ struct UIAnimation
 			staging_info.getMappedPtr(i)->m_target_hash = data.m_target_hash;
 			staging_info.getMappedPtr(i)->m_target_index = data.m_target_index;
 			staging_info.getMappedPtr(i)->m_flag = data.m_flag;
+			staging_info.getMappedPtr(i)->m_type = data.m_type;
 			staging_info.getMappedPtr(i)->m_key_num = data.m_key.size();
 			staging_info.getMappedPtr(i)->m_key_offset = offset;
 
@@ -449,7 +461,7 @@ struct UIManipulater
 		// 初期設定
 		UIAnimeData anime_data;
 		anime_data.m_flag = UIAnimeData::is_enable;
-		anime_data.m_flag |= UIAnimeData::pos_xy;
+		anime_data.m_type = UIAnimeData::type_pos_xy;
 		anime_data.m_target_index = 0;
 		anime_data.m_target_hash = m_object_tool[0].makeHash();
 		UIAnimeKey key;

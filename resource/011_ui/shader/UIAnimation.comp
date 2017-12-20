@@ -20,6 +20,7 @@ void main()
 	float frame = mod(b_anime_play_info[0].m_frame, u_anime_info.m_anime_max_frame);
 	int offset = int(getKeyOffset(u_anime_data_info[index]));
 	int num = int(getKeyNum(u_anime_data_info[index]));
+	int type = int(getKeyType(u_anime_data_info[index]));
 	uint key_flag = getFlag(u_anime_data_info[index]);
 	uint target = getTargetIndex(u_anime_data_info[index]);
 	int key_index = offset;
@@ -32,26 +33,39 @@ void main()
 
 	UIAnimeKey a = b_anime_key[clamp(key_index-1, offset, offset+num-1)];
 	UIAnimeKey b = b_anime_key[clamp(key_index, offset, offset+num-1)];
-	uint diff = b.m_frame - a.m_frame;
-	float rate = diff == 0 ? 1. : ((frame-a.m_frame) / diff);
-	vec4 av, bv;
-	if(isOn(key_flag, key_pos_xy) || isOn(key_flag, key_size_xy))
+	float rate = 0.;
+//	if(!inOn(a.m_flag, AnimeKey_interp_switch))
 	{
-		av = vec4(getBit(a.m_value, 0, 16), getBit(a.m_value, 16, 16), 0., 0.);
-		bv = vec4(getBit(b.m_value, 0, 16), getBit(b.m_value, 16, 16), 0., 0.);
+		uint diff = b.m_frame - a.m_frame;
+		rate = diff == 0 ? 1. : ((frame-a.m_frame) / diff);
 	}
-	else if(isOn(key_flag, key_color_rgba)){
-		uint ua = uint(a.m_value);
-		uint ub = uint(b.m_value);
-		av = vec4(getBit(ua, 0, 8), getBit(ua, 8, 8), getBit(ua, 16, 8), getBit(ua, 24, 8));
-		bv = vec4(getBit(ub, 0, 8), getBit(ub, 8, 8), getBit(ub, 16, 8), getBit(ub, 24, 8));
+	vec4 av = vec4(0.);
+	vec4 bv = vec4(0.);
+	switch(type)
+	{
+		case AnimeDataInfo_type_pos_xy:
+		case AnimeDataInfo_type_size_xy:
+			av = vec4(getBit(a.m_value, 0, 16), getBit(a.m_value, 16, 16), 0., 0.);
+			bv = vec4(getBit(b.m_value, 0, 16), getBit(b.m_value, 16, 16), 0., 0.);
+			break;
+		case AnimeDataInfo_type_color_rgba:
+		{
+			uint ua = uint(a.m_value);
+			uint ub = uint(b.m_value);
+			av = vec4(getBit(ua, 0, 8), getBit(ua, 8, 8), getBit(ua, 16, 8), getBit(ua, 24, 8));
+			bv = vec4(getBit(ub, 0, 8), getBit(ub, 8, 8), getBit(ub, 16, 8), getBit(ub, 24, 8));
+			break;
+		}
+		case AnimeDataInfo_type_disable_order:
+			b_scene.m_is_disable_order = a.m_value;
+			break;
 	}
 	vec4 value = mix(av, bv, rate);
-	if(isOn(key_flag, key_pos_xy)){
+	if(type == AnimeDataInfo_type_pos_xy){
 		b_work[target].m_position += value.xy;
-	}else if(isOn(key_flag, key_size_xy))
+	}else if(type == AnimeDataInfo_type_size_xy)
 		b_work[target].m_size += value.xy;
-	else if(isOn(key_flag, key_color_rgba))
+	else if(type == AnimeDataInfo_type_color_rgba)
 		b_work[target].m_color += value;
 }
 

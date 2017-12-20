@@ -140,19 +140,21 @@ struct UIAnimeDataInfo
 	uint m_target_hash_low;
 	uint m_target_hash_hi;
 	uint m_target_index_flag;
-	uint m_key_offset_num;	//!< オフセットと数
+	uint m_key_offset_num_type;	//!< オフセット16 数8 type8
 };
 
-#define	key_is_enable (1 << 0)
-#define	key_is_erase (1 << 1)
-#define	key_pos_xy (1 << 2)
-#define	key_size_xy (1 << 3)
-#define	key_color_rgba (1 << 4)
+#define	AnimeDataInfo_flag_is_enable (1 << 0)
+#define	AnimeDataInfo_flag_is_erase (1 << 1)
+#define	AnimeDataInfo_type_pos_xy (0)
+#define	AnimeDataInfo_type_size_xy (1)
+#define	AnimeDataInfo_type_color_rgba (2)
+#define	AnimeDataInfo_type_disable_order (3)
 
 #define getTargetIndex(_info) (_info.m_target_index_flag & 0x0000ffff)
 #define getFlag(_info) ((_info.m_target_index_flag & 0xffff0000) >> 16)
-#define getKeyOffset(_info) (_info.m_key_offset_num & 0x0000ffff)
-#define getKeyNum(_info) ((_info.m_key_offset_num & 0xffff0000) >> 16)
+#define getKeyOffset(_info) (_info.m_key_offset_num_type & 0x0000ffff)
+#define getKeyNum(_info) ((_info.m_key_offset_num_type & 0x00ff0000) >> 16)
+#define getKeyType(_info) ((_info.m_key_offset_num_type & 0xff000000) >> 24)
 struct UIAnimeKey
 {
 	uint m_frame;
@@ -160,6 +162,9 @@ struct UIAnimeKey
 	int	m_value;
 	uint _p;
 };
+#define	AnimeKey_is_enable (1 << 0)
+#define	AnimeKey_is_erase (1 << 1)
+#define	AnimeKey_interp_switch (1 << 3)
 
 struct UIAnimeWork
 {

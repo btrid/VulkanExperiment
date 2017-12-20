@@ -509,17 +509,17 @@ void UIManipulater::animManip()
 
 void UIManipulater::dataManip()
 {
-	UIAnimeData* data = m_anim_manip->m_anime->getData(m_object_tool[m_last_select_index].m_name.data());
+	static int current_data_type;
+	const char* types[] = {"pos", "size", "color", "disable order"};
+	static_assert(array_length(types) == UIAnimeData::type_max, "");
+	ImGui::Combo("anime data type", &current_data_type, types, array_length(types));
+	UIAnimeData* data = m_anim_manip->m_anime->getData(m_object_tool[m_last_select_index].m_name.data(), (UIAnimeData::type)current_data_type);
 	if (data)
 	{
 		auto& keys = data->m_key;
 
 		if (ImGui::BeginChild("ScrollingRegion", ImVec2(0, 0), true, ImGuiWindowFlags_HorizontalScrollbar))
 		{
-			ImGui::BeginGroup();
-			ImGui::Button("h");
-			ImGui::EndGroup();
-			ImGui::BeginGroup();
 			if (ImGui::BeginPopupContextWindow("key context"))
 			{
 				if (ImGui::Selectable("Add"))
@@ -600,7 +600,6 @@ void UIManipulater::dataManip()
 				ImGui::Separator();
 			}
 			ImGui::Columns(1);
-			ImGui::EndGroup();
 			ImGui::EndChild();
 		}
 	}
@@ -608,15 +607,15 @@ void UIManipulater::dataManip()
 	{
 		if (ImGui::BeginPopupContextWindow("key context"))
 		{
-			if (ImGui::Selectable("Make"))
+			if (ImGui::Selectable("Make Data"))
 			{
 				UIAnimeData data;
 				data.m_target_index = m_last_select_index;
 				data.m_target_hash = m_object_tool[m_last_select_index].makeHash();
 				data.m_flag = 0;
-				btr::setOn(data.m_flag, UIAnimeData::pos_xy);
+				data.m_type = (UIAnimeData::type)current_data_type;
 				m_anim_manip->m_anime->m_data.push_back(data);
-			};
+			}
 			ImGui::EndPopup();
 		}
 
