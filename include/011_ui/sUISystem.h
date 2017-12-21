@@ -118,6 +118,8 @@ struct UIAnimeKey
 		uint32_t	m_value_u;
 		float		m_value_f;
 		int16_t		m_value_i16[2];
+		int8_t		m_value_i8[4];
+		bool		m_value_b;
 	};
 	uint32_t _p;
 

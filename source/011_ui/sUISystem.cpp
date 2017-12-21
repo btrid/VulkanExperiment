@@ -577,10 +577,35 @@ void UIManipulater::dataManip()
 
 				sprintf_s(id, "value_%d", i);
 				ImGui::PushID(id);
-				int value[2] = { key.m_value_i16[0], key.m_value_i16[1] };
-				ImGui::DragInt2("##value", value, 0.1f);
-				key.m_value_i16[0] = value[0];
-				key.m_value_i16[1] = value[1];
+				switch (current_data_type)
+				{
+				case UIAnimeData::type_pos_xy:
+				case UIAnimeData::type_size_xy:
+				{
+					int value[2] = { key.m_value_i16[0], key.m_value_i16[1] };
+					ImGui::DragInt2("##value", value, 0.1f);
+					key.m_value_i16[0] = value[0];
+					key.m_value_i16[1] = value[1];
+					break;
+				}
+				case UIAnimeData::type_color_rgba:
+				{
+					int value[] = { key.m_value_i8[0], key.m_value_i8[1], key.m_value_i8[2], key.m_value_i8[3] };
+					ImGui::DragInt4("##value", value, 0.1f, -127, 127);
+					key.m_value_i8[0] = value[0];
+					key.m_value_i8[1] = value[1];
+					key.m_value_i8[2] = value[2];
+					key.m_value_i8[3] = value[3];
+					break;
+				}
+				case UIAnimeData::type_system_disable_order:
+				{
+					ImGui::Checkbox("##value", &key.m_value_b);
+					break;
+				}
+				default:
+					break;
+				}
 				ImGui::NextColumn();
 				ImGui::PopID();
 
