@@ -171,6 +171,16 @@ struct UIAnimeResource
 	btr::BufferMemoryEx<UIAnimeKey> m_anime_key;
 };
 
+struct UIAnimeList
+{
+	enum 
+	{
+		LIST_NUM = 2,
+	};
+	std::array<std::shared_ptr<UIAnimeResource>, LIST_NUM> m_anime;
+
+};
+
 // 中間バッファ
 struct UiParamTool
 {

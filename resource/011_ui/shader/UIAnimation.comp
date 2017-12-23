@@ -17,11 +17,11 @@ void main()
 	if(index >= u_anime_info.m_anime_num){ return; }
 
 	float frame = mod(b_anime_play_info[0].m_frame, u_anime_info.m_anime_max_frame);
-	int offset = int(getKeyOffset(u_anime_data_info[index]));
-	int num = int(getKeyNum(u_anime_data_info[index]));
-	int type = int(getKeyType(u_anime_data_info[index]));
-	uint key_flag = getFlag(u_anime_data_info[index]);
-	uint target = getTargetIndex(u_anime_data_info[index]);
+	int offset = int(getKeyOffset(u_anime_data_info[0].m_list[index]));
+	int num = int(getKeyNum(u_anime_data_info[0].m_list[index]));
+	int type = int(getKeyType(u_anime_data_info[0].m_list[index]));
+	uint key_flag = getFlag(u_anime_data_info[0].m_list[index]);
+	uint target = getTargetIndex(u_anime_data_info[0].m_list[index]);
 	int key_index = offset;
 	for(; key_index < num+offset; key_index++)
 	{
@@ -44,8 +44,8 @@ void main()
 	{
 		case AnimeDataInfo_type_pos_xy:
 		case AnimeDataInfo_type_size_xy:
-			av = vec4(getBit(a.m_value, 0, 16), getBit(a.m_value, 16, 16), 0., 0.);
-			bv = vec4(getBit(b.m_value, 0, 16), getBit(b.m_value, 16, 16), 0., 0.);
+			av = vec4(i32Toi16(a.m_value), 0., 0.);
+			bv = vec4(i32Toi16(b.m_value), 0., 0.);
 			break;
 		case AnimeDataInfo_type_color_rgba:
 		{

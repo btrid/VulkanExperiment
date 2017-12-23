@@ -99,7 +99,7 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context)
 			vk::DescriptorSetLayoutBinding()
 			.setStageFlags(stage)
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(1)
+			.setDescriptorCount(UIAnimeList::LIST_NUM)
 			.setBinding(1),
 			vk::DescriptorSetLayoutBinding()
 			.setStageFlags(stage)
@@ -326,8 +326,6 @@ vk::CommandBuffer sUISystem::draw()
 			alloc_info.setPSetLayouts(layouts);
 			descriptor_set = m_context->m_device->allocateDescriptorSets(alloc_info)[0];
 
-		}
-		{
 			vk::DescriptorBufferInfo uniforms[] = {
 				m_global.getInfo(),
 				ui->m_info.getInfo(),
@@ -361,18 +359,21 @@ vk::CommandBuffer sUISystem::draw()
 		{
 			vk::DescriptorSetLayout layouts_anime[] = { m_descriptor_set_layout_anime.get() };
 			vk::DescriptorSetAllocateInfo alloc_info;
-			//				alloc_info.setDescriptorPool(m_descriptor_pool_anime.get());
 			alloc_info.setDescriptorPool(m_descriptor_pool.get());
 			alloc_info.setDescriptorSetCount(array_length(layouts_anime));
 			alloc_info.setPSetLayouts(layouts_anime);
 			descriptor_set_anime = m_context->m_device->allocateDescriptorSets(alloc_info)[0];
-		}
-		{
+
 			vk::DescriptorBufferInfo uniforms[] = {
 				ui->m_anime->m_anime_info.getInfo(),
 			};
-			vk::DescriptorBufferInfo storages[] = {
-				ui->m_anime->m_anime_data_info.getInfo(),
+
+			static vk::DescriptorBufferInfo AnimeDataInfo_default(m_context->m_storage_memory.getBuffer(), 0, sizeof(UIAnimeDataInfo));
+			vk::DescriptorBufferInfo datainfos[UIAnimeList::LIST_NUM];
+			std::fill(std::begin(datainfos), std::end(datainfos), AnimeDataInfo_default);
+			datainfos[0] = ui->m_anime->m_anime_data_info.getInfo();
+
+			vk::DescriptorBufferInfo keys[] = {
 				ui->m_anime->m_anime_key.getInfo(),
 			};
 			auto write_desc =
@@ -385,9 +386,16 @@ vk::CommandBuffer sUISystem::draw()
 				.setDstSet(descriptor_set_anime),
 				vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(array_length(storages))
-				.setPBufferInfo(storages)
+				.setDescriptorCount(array_length(datainfos))
+				.setPBufferInfo(datainfos)
+				.setDstArrayElement(0)
 				.setDstBinding(1)
+				.setDstSet(descriptor_set_anime),
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(array_length(keys))
+				.setPBufferInfo(keys)
+				.setDstBinding(2)
 				.setDstSet(descriptor_set_anime),
 			};
 			m_context->m_device->updateDescriptorSets(write_desc.size(), write_desc.begin(), 0, {});

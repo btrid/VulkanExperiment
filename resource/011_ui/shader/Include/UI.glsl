@@ -173,23 +173,20 @@ struct UIAnimeWork
 };
 
 #ifdef USE_UI_ANIME
+#define LIST_NUM 2
 layout(std140, set=USE_UI_ANIME, binding=0) uniform UIAnimeInfoUniform 
 {
 	UIAnimeInfo u_anime_info;
 };
 layout(std430, set=USE_UI_ANIME, binding=1) buffer UIAnimeDataInfoBuffer 
 {
-	UIAnimeDataInfo u_anime_data_info[];
-};
+	UIAnimeDataInfo m_list[];
+}u_anime_data_info[LIST_NUM];
+
 layout(std430, set=USE_UI_ANIME, binding=2) buffer UIAnimeKeyBuffer 
 {
 	UIAnimeKey b_anime_key[];
 };
-/*layout(std430, set=USE_UI_ANIME, binding=3) buffer UIAnimeWorkBuffer
-{
-	UIAnimeWork b_anime_work[];
-};
-*/
 #endif
 
 

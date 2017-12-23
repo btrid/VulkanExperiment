@@ -35,6 +35,7 @@
 
 int main()
 {
+
 	btr::setResourceAppPath("..\\..\\resource\\011_ui\\");
 	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = glm::vec3(0.f, 0.f, 1.f);
