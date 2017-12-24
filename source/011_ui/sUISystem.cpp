@@ -9,8 +9,36 @@
 #include <applib/sSystem.h>
 #include <applib/sImGuiRenderer.h>
 
+#include <cereal/cereal.hpp>
+#include <cereal/types/unordered_map.hpp>
+#include <cereal/types/memory.hpp>
+#include <cereal/archives/json.hpp>
+struct MyRecord
+{
+	uint8_t x, y;
+	float z;
+
+	template <class Archive>
+	void serialize(Archive & ar)
+	{
+		ar(CEREAL_NVP(x), CEREAL_NVP(y), CEREAL_NVP(z));
+	}
+};
+
+
 sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context)
 {
+	{
+		std::ofstream os("out.json");
+		cereal::JSONOutputArchive archive(os);
+
+		MyRecord myData;
+		myData.x = 125;
+		myData.y = 5454;
+		myData.z = 1.123f;
+		archive(myData);
+	}
+
 	m_context = context;
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 	m_render_pass = std::make_shared<RenderBackbufferModule>(context);

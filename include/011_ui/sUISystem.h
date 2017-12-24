@@ -3,6 +3,8 @@
 #include <vector>
 #include <btrlib/Singleton.h>
 #include <btrlib/Context.h>
+
+
 struct UIGlobal
 {
 	uvec2 m_resolusion; // 解像度
@@ -169,6 +171,13 @@ struct UIAnimeResource
 	btr::BufferMemoryEx<UIAnimeInfo> m_anime_info;
 	btr::BufferMemoryEx<UIAnimeDataInfo> m_anime_data_info;
 	btr::BufferMemoryEx<UIAnimeKey> m_anime_key;
+
+// 	template <class Archive>
+// 	void serialize(Archive & ar)
+// 	{
+// 		ar(CEREAL_NVP(x), CEREAL_NVP(y), CEREAL_NVP(z));
+// 	}
+
 };
 
 struct UIAnimeList
@@ -178,7 +187,6 @@ struct UIAnimeList
 		LIST_NUM = 2,
 	};
 	std::array<std::shared_ptr<UIAnimeResource>, LIST_NUM> m_anime;
-
 };
 
 // 中間バッファ
