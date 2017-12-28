@@ -276,6 +276,13 @@ sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 			.setStage(vk::ShaderStageFlagBits::eFragment),
 		};
 
+		vk::PipelineDynamicStateCreateInfo dynamic_info;
+		vk::DynamicState dynamic_state[] = {
+			vk::DynamicState::eScissor,
+		};
+		dynamic_info.setDynamicStateCount(array_length(dynamic_state));
+		dynamic_info.setPDynamicStates(dynamic_state);
+
 		std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =
 		{
 			vk::GraphicsPipelineCreateInfo()
@@ -289,7 +296,8 @@ sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_RENDER].get())
 			.setRenderPass(m_render_pass->getRenderPass())
 			.setPDepthStencilState(&depth_stencil_info)
-			.setPColorBlendState(&blend_info),
+			.setPColorBlendState(&blend_info)
+			.setPDynamicState(&dynamic_info),
 		};
 		auto pipelines = context->m_device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info);
 		m_pipeline[PIPELINE_RENDER] = std::move(pipelines[0]);
@@ -380,6 +388,8 @@ vk::CommandBuffer sImGuiRenderer::Render()
 			}
 			else
 			{
+				vk::Rect2D sissor(vk::Offset2D(pcmd->ClipRect.x, pcmd->ClipRect.y), vk::Extent2D(pcmd->ClipRect.z- pcmd->ClipRect.x, pcmd->ClipRect.w- pcmd->ClipRect.y));
+				cmd.setScissor(0, 1, &sissor);
 				cmd.bindIndexBuffer(index.getInfo().buffer, index.getInfo().offset + i_offset * sizeof(ImDrawIdx), sizeof(ImDrawIdx) == 2 ? vk::IndexType::eUint16 : vk::IndexType::eUint32);
 				cmd.drawIndexed(pcmd->ElemCount, 1, 0, 0, 0);
 			}
