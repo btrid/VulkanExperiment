@@ -18,6 +18,7 @@ vk::CommandBuffer UIManipulater::execute()
 		{
 			if (ImGui::BeginPopupContextWindow("ui context"))
 			{
+				ImGui::MenuItem("Anime", NULL, &m_is_show_anime_window);
 				ImGui::MenuItem("Texture", NULL, &m_is_show_texture_window);
 				ImGui::EndPopup();
 			}
@@ -50,7 +51,7 @@ vk::CommandBuffer UIManipulater::execute()
 					param->m_user_id = glm::clamp<int>(param->m_user_id, 0, UI::USERID_MAX - 1);
 
 					sprintf_s(buf, "%d", param->m_texture_index);
-					ImGui::InputText("UserID", buf, 2, ImGuiInputTextFlags_CharsDecimal);
+					ImGui::InputText("TextureID", buf, 2, ImGuiInputTextFlags_CharsDecimal);
 					param->m_texture_index = atoi(buf);
 					param->m_texture_index = glm::clamp<int>(param->m_texture_index, 0, UI::TEXTURE_MAX - 1);
 				}
@@ -63,18 +64,9 @@ vk::CommandBuffer UIManipulater::execute()
 			ImGui::End();
 		}
 
-		// アニメーションのウインドウ
-		ImGui::SetNextWindowPos(ImVec2(10.f, 220.f), ImGuiCond_Once);
-		ImGui::SetNextWindowSize(ImVec2(800.f, 200.f), ImGuiCond_Once);
-		if (ImGui::Begin("anime"))
+		if (m_is_show_anime_window)
 		{
-			animManip();
-
-			if (m_last_select_index >= 0) {
-				dataManip();
-			}
-
-			ImGui::End();
+			animeWindow();
 		}
 
 		if (m_is_show_texture_window)
@@ -264,7 +256,7 @@ vk::CommandBuffer UIManipulater::execute()
 void UIManipulater::textureWindow()
 {
 	ImGui::SetNextWindowSize(ImVec2(400.f, 200.f), ImGuiCond_Once);
-	if (ImGui::Begin("hoge"))
+	if (ImGui::Begin("hoge", &m_is_show_texture_window, ImGuiWindowFlags_HorizontalScrollbar))
 	{
 		for (size_t i = 0; i < m_texture_name.size(); i++)
 		{
@@ -296,15 +288,27 @@ void UIManipulater::drawtree(int32_t index)
 
 }
 
-void UIManipulater::animManip()
+void UIManipulater::animeWindow()
 {
-	if (ImGui::SmallButton(m_anim_manip->m_is_playing ? "STOP" : "PLAY")) {
-		m_anim_manip->m_is_playing = !m_anim_manip->m_is_playing;
-	}
-	ImGui::SameLine();
-	ImGui::DragInt("current frame", &m_anim_manip->m_frame, 0.1f, 0, 100);
+	// アニメーションのウインドウ
+	ImGui::SetNextWindowPos(ImVec2(10.f, 220.f), ImGuiCond_Once);
+	ImGui::SetNextWindowSize(ImVec2(800.f, 200.f), ImGuiCond_Once);
+	if (ImGui::Begin("anime", &m_is_show_anime_window))
+	{
+		if (ImGui::SmallButton(m_anim_manip->m_is_playing ? "STOP" : "PLAY")) {
+			m_anim_manip->m_is_playing = !m_anim_manip->m_is_playing;
+		}
+		ImGui::SameLine();
+		ImGui::DragInt("current frame", &m_anim_manip->m_frame, 0.1f, 0, 100);
 
-	ImGui::Separator();
+		ImGui::Separator();
+
+		if (m_last_select_index >= 0) {
+			dataManip();
+		}
+
+		ImGui::End();
+	}
 
 }
 
