@@ -26,7 +26,6 @@ struct RenderTarget
 
 struct cWindowDescriptor
 {
-	cGPU gpu;
 	std::wstring class_name;
 	std::wstring window_name;
 
@@ -40,12 +39,12 @@ public:
 private:
 	struct Swapchain 
 	{
+		std::shared_ptr<btr::Context> m_context;
 		vk::UniqueSwapchainKHR m_swapchain_handle;
 		std::vector<RenderTarget> m_backbuffer;
 		RenderTarget m_depth;
 
 		vk::SurfaceFormatKHR m_surface_format;
-		cDevice m_use_device;
 		uint32_t m_backbuffer_index;
 
 		std::vector <vk::UniqueCommandBuffer> m_cmd_present_to_render;
@@ -61,7 +60,7 @@ private:
 
 		}
 
-		void setup(std::shared_ptr<btr::Context>& loader, const cWindowDescriptor& descriptor, vk::SurfaceKHR surface);
+		void setup(const std::shared_ptr<btr::Context>& context, const cWindowDescriptor& descriptor, vk::SurfaceKHR surface);
 		uint32_t swap();
 		size_t getBackbufferNum()const { return m_backbuffer.size(); }
 	};

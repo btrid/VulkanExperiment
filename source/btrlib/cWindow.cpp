@@ -22,12 +22,13 @@ std::vector<uint32_t> getSupportSurfaceQueue(vk::PhysicalDevice gpu, vk::Surface
 
 }
 
-void cWindow::Swapchain::setup(std::shared_ptr<btr::Context>& context, const cWindowDescriptor& descriptor, vk::SurfaceKHR surface)
+void cWindow::Swapchain::setup(const std::shared_ptr<btr::Context>& context, const cWindowDescriptor& descriptor, vk::SurfaceKHR surface)
 {
-	std::vector<vk::PresentModeKHR> presentModeList = descriptor.gpu->getSurfacePresentModesKHR(surface);
+	m_context = context;
+	std::vector<vk::PresentModeKHR> presentModeList = context->m_gpu->getSurfacePresentModesKHR(surface);
 
 	m_surface_format.format = vk::Format::eUndefined;
-	std::vector<vk::SurfaceFormatKHR> support_format = descriptor.gpu->getSurfaceFormatsKHR(surface);
+	std::vector<vk::SurfaceFormatKHR> support_format = context->m_gpu->getSurfaceFormatsKHR(surface);
 
 	auto request = { 
 		descriptor.surface_format_request,
@@ -44,12 +45,12 @@ void cWindow::Swapchain::setup(std::shared_ptr<btr::Context>& context, const cWi
 	// サーフェスに使用できるフォーマットが見つからなかった
 	assert(m_surface_format.format != vk::Format::eUndefined);
 
-	auto support_surface = getSupportSurfaceQueue(descriptor.gpu.getHandle(), surface);
-	m_use_device = descriptor.gpu.getDevice();
+	auto support_surface = getSupportSurfaceQueue(context->m_gpu.getHandle(), surface);
+	auto device = context->m_gpu.getDevice();
 
 	auto old_swap_chain = m_swapchain_handle.get();
 
-	vk::SurfaceCapabilitiesKHR capability = descriptor.gpu->getSurfaceCapabilitiesKHR(surface);
+	vk::SurfaceCapabilitiesKHR capability = context->m_gpu->getSurfaceCapabilitiesKHR(surface);
 	vk::SwapchainCreateInfoKHR swapchain_info;
 	swapchain_info.setSurface(surface);
 	swapchain_info.setMinImageCount(3);
@@ -66,9 +67,9 @@ void cWindow::Swapchain::setup(std::shared_ptr<btr::Context>& context, const cWi
 	swapchain_info.setPresentMode(vk::PresentModeKHR::eMailbox);
 	swapchain_info.setClipped(true);
 	swapchain_info.setOldSwapchain(m_swapchain_handle.get());
-	m_swapchain_handle = m_use_device->createSwapchainKHRUnique(swapchain_info);
+	m_swapchain_handle = device->createSwapchainKHRUnique(swapchain_info);
 
-	auto backbuffer_image = m_use_device->getSwapchainImagesKHR(m_swapchain_handle.get());
+	auto backbuffer_image = device->getSwapchainImagesKHR(m_swapchain_handle.get());
 	m_backbuffer.resize(backbuffer_image.size());
 	{
 		for (uint32_t i = 0; i < backbuffer_image.size(); i++)
@@ -91,7 +92,7 @@ void cWindow::Swapchain::setup(std::shared_ptr<btr::Context>& context, const cWi
 				vk::ComponentSwizzle::eA,
 			});
 			backbuffer_view_info.setSubresourceRange(subresourceRange);
-			auto backbuffer_view = m_use_device->createImageView(backbuffer_view_info);
+			auto backbuffer_view = device->createImageView(backbuffer_view_info);
 
 			RenderTarget& rendertarget = m_backbuffer[i];
 			rendertarget.m_image = backbuffer_image[i];
@@ -114,22 +115,22 @@ void cWindow::Swapchain::setup(std::shared_ptr<btr::Context>& context, const cWi
 		depth_info.extent.depth = 1;
 		depth_info.imageType = vk::ImageType::e2D;
 		depth_info.initialLayout = vk::ImageLayout::eUndefined;
-		depth_info.queueFamilyIndexCount = (uint32_t)m_use_device.getQueueFamilyIndex().size();
-		depth_info.pQueueFamilyIndices = m_use_device.getQueueFamilyIndex().data();
-		m_depth.m_image = m_use_device->createImage(depth_info);
+		depth_info.queueFamilyIndexCount = (uint32_t)device.getQueueFamilyIndex().size();
+		depth_info.pQueueFamilyIndices = device.getQueueFamilyIndex().data();
+		m_depth.m_image = device->createImage(depth_info);
 		m_depth.m_size.setWidth(depth_info.extent.width);
 		m_depth.m_size.setHeight(depth_info.extent.height);
 
 		// メモリ確保
-		auto memory_request = m_use_device->getImageMemoryRequirements(m_depth.m_image);
-		uint32_t memory_index = cGPU::Helper::getMemoryTypeIndex(m_use_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+		auto memory_request = device->getImageMemoryRequirements(m_depth.m_image);
+		uint32_t memory_index = cGPU::Helper::getMemoryTypeIndex(device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
 		vk::MemoryAllocateInfo memory_info;
 		memory_info.allocationSize = memory_request.size;
 		memory_info.memoryTypeIndex = memory_index;
-		m_depth.m_memory = m_use_device->allocateMemoryUnique(memory_info);
+		m_depth.m_memory = device->allocateMemoryUnique(memory_info);
 
-		m_use_device->bindImageMemory(m_depth.m_image, m_depth.m_memory.get(), 0);
+		device->bindImageMemory(m_depth.m_image, m_depth.m_memory.get(), 0);
 
 		vk::ImageViewCreateInfo depth_view_info;
 		depth_view_info.format = depth_info.format;
@@ -140,7 +141,7 @@ void cWindow::Swapchain::setup(std::shared_ptr<btr::Context>& context, const cWi
 		depth_view_info.subresourceRange.baseMipLevel = 0;
 		depth_view_info.subresourceRange.layerCount = 1;
 		depth_view_info.subresourceRange.levelCount = 1;
-		m_depth.m_view = m_use_device->createImageView(depth_view_info);
+		m_depth.m_view = device->createImageView(depth_view_info);
 
 	}
 
@@ -151,8 +152,8 @@ void cWindow::Swapchain::setup(std::shared_ptr<btr::Context>& context, const cWi
 			cmd_buffer_info.commandPool = context->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
 			cmd_buffer_info.commandBufferCount = sGlobal::FRAME_MAX;
 			cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
-			m_cmd_present_to_render = m_use_device->allocateCommandBuffersUnique(cmd_buffer_info);
-			m_cmd_render_to_present = m_use_device->allocateCommandBuffersUnique(cmd_buffer_info);
+			m_cmd_present_to_render = device->allocateCommandBuffersUnique(cmd_buffer_info);
+			m_cmd_render_to_present = device->allocateCommandBuffersUnique(cmd_buffer_info);
 		}
 
 		vk::CommandBufferBeginInfo begin_info;
@@ -255,7 +256,7 @@ void cWindow::Swapchain::setup(std::shared_ptr<btr::Context>& context, const cWi
 
 uint32_t cWindow::Swapchain::swap()
 {
-	m_use_device->acquireNextImageKHR(m_swapchain_handle.get(), 1000, m_swapbuffer_semaphore.get(), vk::Fence(), &m_backbuffer_index);
+	m_context->m_device->acquireNextImageKHR(m_swapchain_handle.get(), 1000, m_swapbuffer_semaphore.get(), vk::Fence(), &m_backbuffer_index);
 	return m_backbuffer_index;
 }
 
@@ -301,7 +302,7 @@ void cWindow::setup(std::shared_ptr<btr::Context>& context, const cWindowDescrip
 	m_fence_list.reserve(m_swapchain.m_backbuffer.size());
 	for (size_t i = 0; i < m_swapchain.m_backbuffer.size(); i++)
 	{
-		m_fence_list.emplace_back(descriptor.gpu.getDevice()->createFenceUnique(fence_info));
+		m_fence_list.emplace_back(context->m_gpu.getDevice()->createFenceUnique(fence_info));
 	}
 	vk::SemaphoreCreateInfo semaphoreInfo = vk::SemaphoreCreateInfo();
 	m_swapchain.m_swapbuffer_semaphore = context->m_gpu.getDevice()->createSemaphoreUnique(semaphoreInfo);

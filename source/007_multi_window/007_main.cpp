@@ -52,14 +52,19 @@ int main()
 	auto device = sGlobal::Order().getGPU(0).getDevice();
 
 	app::App app;
-	app.setup(gpu);
+	{
+		app::AppDescriptor desc;
+		desc.m_gpu = gpu;
+		desc.m_window_size = uvec2(1200, 800);
+		app.setup(desc);
+	}
+	auto context = app.m_context;
 	std::shared_ptr<cWindow> sub = std::make_shared<cWindow>();
 	{
-		cWindow::CreateInfo window_info;
+		cWindowDescriptor window_info;
 		window_info.class_name = L"Sub Window";
 		window_info.window_name = L"Sub Window";
 		window_info.backbuffer_num = sGlobal::Order().FRAME_MAX;
-		window_info.gpu = gpu;
 		window_info.size = vk::Extent2D(480, 480);
 		window_info.surface_format_request = app.m_window->getSwapchain().m_surface_format;
 		sub->setup(app.m_context, window_info);
@@ -76,7 +81,7 @@ int main()
 			app.submit(std::vector<vk::CommandBuffer>{});
 		}
 		app.postUpdate();
-		printf("%6.3fs\n", time.getElapsedTimeAsSeconds());
+		printf("%6.4fms\n", time.getElapsedTimeAsMilliSeconds());
 	}
 
 	return 0;

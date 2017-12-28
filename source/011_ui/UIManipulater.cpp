@@ -9,51 +9,73 @@
 
 vk::CommandBuffer UIManipulater::execute()
 {
-	auto func = [this]()
 	{
-#if 1
-		ImGui::SetNextWindowPos(ImVec2(10.f, 10.f), ImGuiCond_Once);
-		ImGui::SetNextWindowSize(ImVec2(200.f, 200.f), ImGuiCond_Once);
-		if (ImGui::Begin(m_object_tool[0].m_name.data()))
+		auto func = [this]()
 		{
-			if (ImGui::BeginPopupContextWindow("ui context"))
+#if 1
+			ImGui::SetNextWindowPos(ImVec2(10.f, 10.f), ImGuiCond_Once);
+			ImGui::SetNextWindowSize(ImVec2(200.f, 200.f), ImGuiCond_Once);
+			if (ImGui::Begin(m_object_tool[0].m_name.data()))
 			{
-				ImGui::MenuItem("Tree", NULL, &m_is_show_tree_window);
-				ImGui::MenuItem("Manip", NULL, &m_is_show_manip_window);
-				ImGui::MenuItem("Anime", NULL, &m_is_show_anime_window);
-				ImGui::MenuItem("Texture", NULL, &m_is_show_texture_window);
-				ImGui::EndPopup();
+				if (ImGui::BeginPopupContextWindow("ui context"))
+				{
+					ImGui::MenuItem("Tree", NULL, &m_is_show_tree_window);
+					ImGui::MenuItem("Manip", NULL, &m_is_show_manip_window);
+					ImGui::MenuItem("Anime", NULL, &m_is_show_anime_window);
+					ImGui::MenuItem("Texture", NULL, &m_is_show_texture_window);
+
+					if (ImGui::MenuItem("NewWindow"))
+					{
+						sWindow::Order().
+//						m_context->m_window
+					}
+					ImGui::EndPopup();
+				}
+
+				ImGui::End();
 			}
-				
-			ImGui::End();
-		}
-		if (m_is_show_manip_window)
+#else
+			ImGui::ShowTestWindow();
+#endif
+		};
+		sImGuiRenderer::Order().pushCmd(std::move(func));
+
+	}
+
+	if (m_is_show_manip_window)
+	{
+		auto func = [this]()
 		{
 			manipWindow();
-		}
-		if (m_is_show_tree_window)
+		};
+		sImGuiRenderer::Order().pushCmd(std::move(func));
+	}
+	if (m_is_show_tree_window)
+	{
+		auto func = [this]()
 		{
 			treeWindow();
-		}
+		};
+		sImGuiRenderer::Order().pushCmd(std::move(func));
+	}
 
-		if (m_is_show_anime_window)
+	if (m_is_show_anime_window)
+	{
+		auto func = [this]()
 		{
 			animeWindow();
-		}
+		};
+		sImGuiRenderer::Order().pushCmd(std::move(func));
+	}
 
-		if (m_is_show_texture_window)
+	if (m_is_show_texture_window)
+	{
+		auto func = [this]()
 		{
 			textureWindow();
-		}
-
-
-#else
-		ImGui::ShowTestWindow();
-#endif
-
-
-	};
-	sImGuiRenderer::Order().pushCmd(std::move(func));
+		};
+		sImGuiRenderer::Order().pushCmd(std::move(func));
+	}
 
 	auto cmd = m_context->m_cmd_pool->allocCmdOnetime(0);
 	{

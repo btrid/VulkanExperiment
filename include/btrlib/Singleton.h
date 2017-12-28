@@ -94,30 +94,23 @@ class SingletonEx
 {
 public:
 	static T* s_instance;
-	static std::mutex s_m;
 public:
 	template<typename... Args>
 	static void Create(Args... args)
 	{
-		if (!s_instance)
-		{
-			std::lock_guard<std::mutex> lg(s_m);
-			if (!s_instance)
-			{
-				s_instance = new T(args...);
-			}
-		}
-
+		assert(!s_instance);
+		s_instance = new T(args...);
 	}
-	static void Release()
+	static void Destroy()
 	{
-		std::lock_guard<std::mutex> lg(s_m);
+		assert(s_instance);
 		delete s_instance;
 		s_instance = nullptr;
 	}
 
 	static T& Order()
 	{
+		assert(s_instance);
 		return *s_instance;
 	}
 
@@ -133,8 +126,6 @@ public:
 };
 template<typename T>
 typename T* SingletonEx<T>::s_instance;
-template<typename T>
-std::mutex SingletonEx<T>::s_m;
 
 
 // thread_local U* s_instance;
