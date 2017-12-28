@@ -19,7 +19,6 @@ struct UIManipulater
 
 	btr::BufferMemoryEx<UIAnimeDataInfo> m_anim_info;
 	btr::BufferMemoryEx<UIAnimeKey> m_anim_key;
-	std::array<rTexture, UI::TEXTURE_MAX> m_textures;
 
 	int32_t m_last_select_index;
 	uint32_t m_object_counter;
@@ -29,7 +28,10 @@ struct UIManipulater
 	bool m_request_update_sprite;
 	bool m_request_update_animation;
 	bool m_request_update_userid;
-	std::array<std::string, UI::TEXTURE_MAX> m_texture_name;
+	bool m_request_update_texture;
+	bool m_is_show_texture_window;
+
+	std::array<char[64], UI::TEXTURE_MAX> m_texture_name;
 	UIManipulater(const std::shared_ptr<btr::Context>& context)
 		: m_last_select_index(-1)
 		, m_object_counter(0)
@@ -39,7 +41,14 @@ struct UIManipulater
 		, m_request_update_sprite(false)
 		, m_request_update_animation(false)
 		, m_request_update_userid(false)
+		, m_request_update_texture(false)
+		, m_is_show_texture_window(false)
 	{
+		for (auto& it : m_texture_name)
+		{
+			memset(it, 0, sizeof(it));
+		}
+		
 		m_context = context;
 		m_ui = std::make_shared<UI>();
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
@@ -116,6 +125,7 @@ struct UIManipulater
 		root.m_flag |= is_visible;
 		root.m_flag |= is_enable;
 		root.m_user_id = 0;
+		root.m_texture_index = 0;
 		*m_object.getMappedPtr(0) = root;
 		m_object_counter++;
 
@@ -140,6 +150,8 @@ struct UIManipulater
 	}
 
 	vk::CommandBuffer execute();
+
+	void textureWindow();
 
 	void dataManip();
 

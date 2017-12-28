@@ -47,7 +47,7 @@ struct UIParam
 	int32_t m_user_id; //!< イベント等のターゲット用ID
 	uint32_t m_flag;
 	int32_t m_depth;
-	uint32_t _p13;
+	uint32_t m_texture_index;
 
 	int32_t m_parent_index;
 	int32_t m_child_index;
@@ -336,7 +336,7 @@ struct UI
 	};
 	std::string m_name;
 //	std::array<char[64], TEXTURE_MAX> m_textures;
-	std::array<rTexture, TEXTURE_MAX> m_textures;
+	std::array<ResourceTexture, UI::TEXTURE_MAX> m_textures;
 	btr::BufferMemoryEx<vk::DrawIndirectCommand> m_draw_cmd;
 	btr::BufferMemoryEx<UIInfo> m_info;
 	btr::BufferMemoryEx<UIParam> m_object;

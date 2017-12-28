@@ -42,7 +42,7 @@ struct UIParam
 	uint m_user_id;
 	uint m_flag;
 	int m_depth;
-	uint _p13;
+	int m_texture_index;
 
 	int m_parent_index;
 	int m_child_index;
@@ -121,10 +121,12 @@ layout(std430, set=USE_UI, binding=7) restrict buffer UIEventBuffer
 	UIEvent b_event[];
 };
 
-layout(std430, set=USE_UI, binding=7) restrict buffer UISceneBuffer
+layout(std430, set=USE_UI, binding=8) restrict buffer UISceneBuffer
 {
 	UIScene b_scene;
 };
+
+layout(set=USE_UI, binding=9) uniform sampler2D tDiffuse[32];
 
 #endif
 

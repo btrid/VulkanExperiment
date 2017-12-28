@@ -7,6 +7,7 @@
 
 #include <applib/DrawHelper.h>
 #include <applib/sSystem.h>
+#include <applib/GraphicsResource.h>
 #include <applib/sImGuiRenderer.h>
 
 
@@ -84,6 +85,16 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context)
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setDescriptorCount(1)
 			.setBinding(7),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(stage)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(8),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(stage)
+			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+			.setDescriptorCount(UI::TEXTURE_MAX)
+			.setBinding(9),
 		};
 		m_descriptor_set_layout = btr::Descriptor::createDescriptorSetLayout(context, binding);
 		m_descriptor_pool = btr::Descriptor::createDescriptorPool(context, binding, 30);
@@ -339,7 +350,20 @@ vk::CommandBuffer sUISystem::draw()
 				ui->m_play_info.getInfo(),
 				ui->m_user_id.getInfo(),
 				ui->m_scene.getInfo(),
+				ui->m_scene.getInfo(),
 			};
+			vk::DescriptorImageInfo textures[UI::TEXTURE_MAX];
+			auto default_texture = vk::DescriptorImageInfo(
+				sGraphicsResource::Order().getWhiteTexture().m_sampler.get(),
+				sGraphicsResource::Order().getWhiteTexture().m_image_view.get(),
+				vk::ImageLayout::eShaderReadOnlyOptimal);
+			std::fill(std::begin(textures), std::end(textures), default_texture);
+			for (size_t i = 0; i < ui->m_textures.size(); i++)
+			{
+				if (ui->m_textures[i].isReady()) {
+					textures[i].imageView = ui->m_textures[i].getImageView();
+				}
+			}
 
 			auto write_desc =
 			{
@@ -354,6 +378,12 @@ vk::CommandBuffer sUISystem::draw()
 				.setDescriptorCount(array_length(storages))
 				.setPBufferInfo(storages)
 				.setDstBinding(2)
+				.setDstSet(descriptor_set),
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+				.setDescriptorCount(array_length(textures))
+				.setPImageInfo(textures)
+				.setDstBinding(9)
 				.setDstSet(descriptor_set),
 			};
 			m_context->m_device->updateDescriptorSets(write_desc.size(), write_desc.begin(), 0, {});
