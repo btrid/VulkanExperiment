@@ -157,13 +157,15 @@ struct UIManipulater
 
 	vk::CommandBuffer execute();
 
+	void treeWindow();
+	void treeWindow(int32_t index);
+
 	void manipWindow();
 	void textureWindow();
 	void animeWindow();
 
 	void animedataManip();
 
-	void treeWindow(int32_t index);
 	void addnode(int32_t parent)
 	{
 		if (parent == -1)

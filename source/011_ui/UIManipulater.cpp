@@ -33,16 +33,7 @@ vk::CommandBuffer UIManipulater::execute()
 		}
 		if (m_is_show_tree_window)
 		{
-			ImGui::SetNextWindowSize(ImVec2(400.f, 200.f), ImGuiCond_Once);
-			if (ImGui::Begin("tree", &m_is_show_tree_window))
-			{
-				if (ImGui::Button("addchild"))
-				{
-					addnode(m_last_select_index);
-				}
-				treeWindow(0);
-				ImGui::End();
-			}
+			treeWindow();
 		}
 
 		if (m_is_show_anime_window)
@@ -236,8 +227,8 @@ vk::CommandBuffer UIManipulater::execute()
 
 void UIManipulater::manipWindow()
 {
-	ImGui::SetNextWindowSize(ImVec2(400.f, 200.f), ImGuiCond_Once);
-	if (ImGui::Begin("Info", &m_is_show_manip_window))
+	ImGui::SetNextWindowSize(ImVec2(200.f, 500.f), ImGuiCond_Once);
+	if (ImGui::Begin("Manip", &m_is_show_manip_window))
 	{
 		if (m_last_select_index >= 0)
 		{
@@ -284,6 +275,19 @@ void UIManipulater::textureWindow()
 
 }
 
+void UIManipulater::treeWindow()
+{
+	ImGui::SetNextWindowSize(ImVec2(400.f, 200.f), ImGuiCond_Once);
+	if (ImGui::Begin("tree", &m_is_show_tree_window))
+	{
+		if (ImGui::Button("addchild"))
+		{
+			addnode(m_last_select_index);
+		}
+		treeWindow(0);
+		ImGui::End();
+	}
+}
 void UIManipulater::treeWindow(int32_t index)
 {
 	if (index == -1) { return; }
