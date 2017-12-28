@@ -267,7 +267,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 				.setStageFlags(vk::ShaderStageFlagBits::eVertex)
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
-			pipeline_layout_info.setSetLayoutCount(layouts.size());
+			pipeline_layout_info.setSetLayoutCount((uint32_t)layouts.size());
 			pipeline_layout_info.setPSetLayouts(layouts.data());
 			pipeline_layout_info.setPushConstantRangeCount(array_length(constant));
 			pipeline_layout_info.setPPushConstantRanges(constant);

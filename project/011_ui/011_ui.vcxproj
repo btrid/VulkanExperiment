@@ -69,6 +69,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\011_ui\011_main.cpp" />
+    <ClCompile Include="..\..\source\011_ui\UIManipulater.cpp" />
     <ClCompile Include="..\..\source\011_ui\sUISystem.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -76,11 +77,14 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\011_ui\sUISystem.h" />
+    <ClInclude Include="..\..\include\011_ui\UIManipulater.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="..\..\packages\glm.0.9.8.4\build\native\glm.targets" Condition="Exists('..\..\packages\glm.0.9.8.4\build\native\glm.targets')" />
     <Import Project="..\..\packages\unofficial-flayan-cereal.1.2.2\build\native\unofficial-flayan-cereal.targets" Condition="Exists('..\..\packages\unofficial-flayan-cereal.1.2.2\build\native\unofficial-flayan-cereal.targets')" />
+    <Import Project="..\..\packages\freetype.redist.2.8.0.1\build\native\freetype.redist.targets" Condition="Exists('..\..\packages\freetype.redist.2.8.0.1\build\native\freetype.redist.targets')" />
+    <Import Project="..\..\packages\freetype.2.8.0.1\build\native\freetype.targets" Condition="Exists('..\..\packages\freetype.2.8.0.1\build\native\freetype.targets')" />
   </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
@@ -88,5 +92,7 @@
     </PropertyGroup>
     <Error Condition="!Exists('..\..\packages\glm.0.9.8.4\build\native\glm.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\glm.0.9.8.4\build\native\glm.targets'))" />
     <Error Condition="!Exists('..\..\packages\unofficial-flayan-cereal.1.2.2\build\native\unofficial-flayan-cereal.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\unofficial-flayan-cereal.1.2.2\build\native\unofficial-flayan-cereal.targets'))" />
+    <Error Condition="!Exists('..\..\packages\freetype.redist.2.8.0.1\build\native\freetype.redist.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\freetype.redist.2.8.0.1\build\native\freetype.redist.targets'))" />
+    <Error Condition="!Exists('..\..\packages\freetype.2.8.0.1\build\native\freetype.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\freetype.2.8.0.1\build\native\freetype.targets'))" />
   </Target>
 </Project>

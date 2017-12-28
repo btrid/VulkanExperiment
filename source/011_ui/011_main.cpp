@@ -25,6 +25,7 @@
 #include <applib/sImGuiRenderer.h>
 
 #include <011_ui/sUISystem.h>
+#include <011_ui/UIManipulater.h>
 
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
