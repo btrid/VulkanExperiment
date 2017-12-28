@@ -29,6 +29,8 @@ struct UIManipulater
 	bool m_request_update_animation;
 	bool m_request_update_userid;
 	bool m_request_update_texture;
+	bool m_is_show_manip_window;
+	bool m_is_show_tree_window;
 	bool m_is_show_anime_window;
 	bool m_is_show_texture_window;
 
@@ -43,6 +45,8 @@ struct UIManipulater
 		, m_request_update_animation(false)
 		, m_request_update_userid(false)
 		, m_request_update_texture(false)
+		, m_is_show_manip_window(false)
+		, m_is_show_tree_window(false)
 		, m_is_show_anime_window(false)
 		, m_is_show_texture_window(false)
 	{
@@ -153,12 +157,13 @@ struct UIManipulater
 
 	vk::CommandBuffer execute();
 
+	void manipWindow();
 	void textureWindow();
-
-	void dataManip();
-
-	void drawtree(int32_t index);
 	void animeWindow();
+
+	void animedataManip();
+
+	void treeWindow(int32_t index);
 	void addnode(int32_t parent)
 	{
 		if (parent == -1)

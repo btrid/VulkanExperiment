@@ -18,50 +18,31 @@ vk::CommandBuffer UIManipulater::execute()
 		{
 			if (ImGui::BeginPopupContextWindow("ui context"))
 			{
+				ImGui::MenuItem("Tree", NULL, &m_is_show_tree_window);
+				ImGui::MenuItem("Manip", NULL, &m_is_show_manip_window);
 				ImGui::MenuItem("Anime", NULL, &m_is_show_anime_window);
 				ImGui::MenuItem("Texture", NULL, &m_is_show_texture_window);
 				ImGui::EndPopup();
 			}
 				
-			if (ImGui::CollapsingHeader("Operate"))
+			ImGui::End();
+		}
+		if (m_is_show_manip_window)
+		{
+			manipWindow();
+		}
+		if (m_is_show_tree_window)
+		{
+			ImGui::SetNextWindowSize(ImVec2(400.f, 200.f), ImGuiCond_Once);
+			if (ImGui::Begin("tree", &m_is_show_tree_window))
 			{
 				if (ImGui::Button("addchild"))
 				{
 					addnode(m_last_select_index);
 				}
+				treeWindow(0);
+				ImGui::End();
 			}
-
-			if (ImGui::CollapsingHeader("Info"))
-			{
-				if (m_last_select_index >= 0)
-				{
-					auto* param = m_object.getMappedPtr(m_last_select_index);
-					ImGui::CheckboxFlags("IsSprite", &param->m_flag, is_sprite);
-					m_request_update_boundary = ImGui::CheckboxFlags("IsBoundary", &param->m_flag, is_boundary);
-					ImGui::CheckboxFlags("IsErase", &param->m_flag, is_trash);
-					ImGui::InputFloat2("Pos", &param->m_position_local[0]);
-					ImGui::InputFloat2("Size", &param->m_size_local[0]);
-					ImGui::ColorPicker4("Color", &param->m_color_local[0]);
-					ImGui::InputText("name", m_object_tool[m_last_select_index].m_name.data(), m_object_tool[m_last_select_index].m_name.size(), 0);
-
-					char buf[16] = {};
-					sprintf_s(buf, "%d", param->m_user_id);
-					ImGui::InputText("UserID", buf, 4, ImGuiInputTextFlags_CharsDecimal);
-					param->m_user_id = atoi(buf);
-					param->m_user_id = glm::clamp<int>(param->m_user_id, 0, UI::USERID_MAX - 1);
-
-					sprintf_s(buf, "%d", param->m_texture_index);
-					ImGui::InputText("TextureID", buf, 2, ImGuiInputTextFlags_CharsDecimal);
-					param->m_texture_index = atoi(buf);
-					param->m_texture_index = glm::clamp<int>(param->m_texture_index, 0, UI::TEXTURE_MAX - 1);
-				}
-			}
-
-			{
-				drawtree(0);
-			}
-
-			ImGui::End();
 		}
 
 		if (m_is_show_anime_window)
@@ -253,6 +234,37 @@ vk::CommandBuffer UIManipulater::execute()
 	return cmd;
 }
 
+void UIManipulater::manipWindow()
+{
+	ImGui::SetNextWindowSize(ImVec2(400.f, 200.f), ImGuiCond_Once);
+	if (ImGui::Begin("Info", &m_is_show_manip_window))
+	{
+		if (m_last_select_index >= 0)
+		{
+			auto* param = m_object.getMappedPtr(m_last_select_index);
+			ImGui::CheckboxFlags("IsSprite", &param->m_flag, is_sprite);
+			m_request_update_boundary = ImGui::CheckboxFlags("IsBoundary", &param->m_flag, is_boundary);
+			ImGui::CheckboxFlags("IsErase", &param->m_flag, is_trash);
+			ImGui::InputFloat2("Pos", &param->m_position_local[0]);
+			ImGui::InputFloat2("Size", &param->m_size_local[0]);
+			ImGui::ColorPicker4("Color", &param->m_color_local[0]);
+			ImGui::InputText("name", m_object_tool[m_last_select_index].m_name.data(), m_object_tool[m_last_select_index].m_name.size(), 0);
+
+			char buf[16] = {};
+			sprintf_s(buf, "%d", param->m_user_id);
+			ImGui::InputText("UserID", buf, 4, ImGuiInputTextFlags_CharsDecimal);
+			param->m_user_id = atoi(buf);
+			param->m_user_id = glm::clamp<int>(param->m_user_id, 0, UI::USERID_MAX - 1);
+
+			sprintf_s(buf, "%d", param->m_texture_index);
+			ImGui::InputText("TextureID", buf, 2, ImGuiInputTextFlags_CharsDecimal);
+			param->m_texture_index = atoi(buf);
+			param->m_texture_index = glm::clamp<int>(param->m_texture_index, 0, UI::TEXTURE_MAX - 1);
+		}
+		ImGui::End();
+	}
+}
+
 void UIManipulater::textureWindow()
 {
 	ImGui::SetNextWindowSize(ImVec2(400.f, 200.f), ImGuiCond_Once);
@@ -272,7 +284,7 @@ void UIManipulater::textureWindow()
 
 }
 
-void UIManipulater::drawtree(int32_t index)
+void UIManipulater::treeWindow(int32_t index)
 {
 	if (index == -1) { return; }
 	bool is_open = ImGui::TreeNodeEx(m_object_tool[index].m_name.data(), m_last_select_index == index ? ImGuiTreeNodeFlags_Selected | ImGuiTreeNodeFlags_OpenOnArrow : 0);
@@ -281,10 +293,10 @@ void UIManipulater::drawtree(int32_t index)
 	}
 	if (is_open)
 	{
-		drawtree(m_object.getMappedPtr(index)->m_child_index);
+		treeWindow(m_object.getMappedPtr(index)->m_child_index);
 		ImGui::TreePop();
 	}
-	drawtree(m_object.getMappedPtr(index)->m_chibiling_index);
+	treeWindow(m_object.getMappedPtr(index)->m_chibiling_index);
 
 }
 
@@ -304,7 +316,7 @@ void UIManipulater::animeWindow()
 		ImGui::Separator();
 
 		if (m_last_select_index >= 0) {
-			dataManip();
+			animedataManip();
 		}
 
 		ImGui::End();
@@ -312,7 +324,7 @@ void UIManipulater::animeWindow()
 
 }
 
-void UIManipulater::dataManip()
+void UIManipulater::animedataManip()
 {
 	static int current_data_type;
 	const char* types[] = { "pos", "size", "color", "disable order" };
