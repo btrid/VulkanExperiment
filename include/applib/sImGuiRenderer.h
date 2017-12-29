@@ -16,12 +16,6 @@ struct sImGuiRenderer : SingletonEx<sImGuiRenderer>
 	sImGuiRenderer(const std::shared_ptr<btr::Context>& context);
 
 	vk::CommandBuffer Render();
-
-	void pushCmd(std::function<void()>&& imgui_cmd)
-	{
-		std::lock_guard<std::mutex> lg(m_cmd_mutex);
-		m_imgui_cmd[sGlobal::Order().getCPUIndex()].emplace_back(std::move(imgui_cmd));
-	}
 private:
 	enum Shader
 	{
@@ -55,8 +49,5 @@ private:
 	vk::UniqueDeviceMemory m_image_memory;
 	vk::UniqueSampler m_sampler;
 
-	std::vector<vk::UniqueImageView> m_image_view;
-
-	std::mutex m_cmd_mutex;
-	std::array<std::vector<std::function<void()>>, 2> m_imgui_cmd;
+	std::vector<vk::UniqueImageView> m_image_view;	
 };

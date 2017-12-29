@@ -30,6 +30,7 @@ struct UIManipulater
 	bool m_request_update_userid;
 	bool m_request_update_texture;
 	bool m_is_show_manip_window;
+	int m_manip_window_index;
 	bool m_is_show_tree_window;
 	bool m_is_show_anime_window;
 	bool m_is_show_texture_window;

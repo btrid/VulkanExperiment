@@ -1,5 +1,7 @@
 #include <applib/sImGuiRenderer.h>
 #include <applib/sSystem.h>
+#include <applib/App.h>
+
 sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 {
 	m_context = context;
@@ -311,93 +313,97 @@ vk::CommandBuffer sImGuiRenderer::Render()
 	auto cmd = m_context->m_cmd_pool->allocCmdOnetime(0);
 
 	auto& io = ImGui::GetIO();
+	for (auto& window : app::g_app_instance->m_window_list)
 	{
-		auto& mouse = m_context->m_window->getInput().m_mouse;
-		io.MousePos = ImVec2(mouse.xy.x, mouse.xy.y);
-		io.MouseDown[0] = mouse.isHold(cMouse::BUTTON_LEFT);
-		io.MouseDown[1] = mouse.isHold(cMouse::BUTTON_RIGHT);
-		io.MouseDown[2] = mouse.isHold(cMouse::BUTTON_MIDDLE);
-		io.MouseWheel = mouse.getWheel();
-	}
-	{
-		auto& keyboard = m_context->m_window->getInput().m_keyboard;
-		auto is_shift = keyboard.isHold(VK_SHIFT);
-		io.KeyShift = is_shift;
-		io.KeyCtrl = keyboard.isHold(VK_CONTROL);
-		io.KeyAlt = keyboard.isHold(vk_alt);
-		int32_t input_count = 0;
-		for (uint32_t i = 0; i < 256; i++)
 		{
-			bool is_on = keyboard.isOn(i);
-			io.KeysDown[i] = is_on;
+			auto& mouse = window->getInput().m_mouse;
+			io.MousePos = ImVec2(mouse.xy.x, mouse.xy.y);
+			io.MouseDown[0] = mouse.isHold(cMouse::BUTTON_LEFT);
+			io.MouseDown[1] = mouse.isHold(cMouse::BUTTON_RIGHT);
+			io.MouseDown[2] = mouse.isHold(cMouse::BUTTON_MIDDLE);
+			io.MouseWheel = mouse.getWheel();
 		}
-		for (uint32_t i = 0; i < keyboard.m_char_count; i++)
 		{
-			io.InputCharacters[i] = keyboard.m_char[i];
-		}
-
-	}
-	ImGui::NewFrame();
-	{
-		auto&& cmds = std::move(m_imgui_cmd[sGlobal::Order().getGPUIndex()]);
-		for (auto&& cmd : cmds)
-		{
-			cmd();
-		}
-		cmds.clear();
-	}
-
-	ImGui::Render();
-	ImDrawData* draw_data = ImGui::GetDrawData();
-
-	vk::RenderPassBeginInfo begin_render_info;
-	begin_render_info.setFramebuffer(m_render_pass->getFramebuffer(m_context->getGPUFrame()));
-	begin_render_info.setRenderPass(m_render_pass->getRenderPass());
-	begin_render_info.setRenderArea(vk::Rect2D({}, m_render_pass->getResolution()));
-	cmd.beginRenderPass(begin_render_info, vk::SubpassContents::eInline);
-	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_RENDER].get());
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_RENDER].get(), 0, { m_descriptor_set.get() }, {});
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_RENDER].get(), 1, { sSystem::Order().getSystemDescriptor().getSet() }, {});
-
-	for (int n = 0; n < draw_data->CmdListsCount; n++)
-	{
-		auto* cmd_list = draw_data->CmdLists[n];
-		auto v_num = cmd_list->VtxBuffer.size();
-		auto i_num = cmd_list->IdxBuffer.size();
-
-		btr::BufferMemoryDescriptorEx<ImDrawVert> v_desc;
-		v_desc.element_num = v_num;
-		v_desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
-		auto vertex = m_context->m_staging_memory.allocateMemory(v_desc);
-		btr::BufferMemoryDescriptorEx<ImDrawIdx> i_desc;
-		i_desc.element_num = i_num;
-		i_desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
-		auto index = m_context->m_staging_memory.allocateMemory(i_desc);
-
-		memcpy(vertex.getMappedPtr(), cmd_list->VtxBuffer.Data, sizeof(ImDrawVert)*v_num);
-		memcpy(index.getMappedPtr(), cmd_list->IdxBuffer.Data, sizeof(ImDrawIdx)*i_num);
-
-		cmd.bindVertexBuffers(0, { vertex.getInfo().buffer }, { vertex.getInfo().offset });
-		auto i_offset = 0u;
-		for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
-		{
-			const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
-			if (pcmd->UserCallback)
+			auto& keyboard = window->getInput().m_keyboard;
+			auto is_shift = keyboard.isHold(VK_SHIFT);
+			io.KeyShift = is_shift;
+			io.KeyCtrl = keyboard.isHold(VK_CONTROL);
+			io.KeyAlt = keyboard.isHold(vk_alt);
+			int32_t input_count = 0;
+			for (uint32_t i = 0; i < 256; i++)
 			{
-				pcmd->UserCallback(cmd_list, pcmd);
+				bool is_on = keyboard.isOn(i);
+				io.KeysDown[i] = is_on;
 			}
-			else
+			for (uint32_t i = 0; i < keyboard.m_char_count; i++)
 			{
-				vk::Rect2D sissor(vk::Offset2D(pcmd->ClipRect.x, pcmd->ClipRect.y), vk::Extent2D(pcmd->ClipRect.z- pcmd->ClipRect.x, pcmd->ClipRect.w- pcmd->ClipRect.y));
-				cmd.setScissor(0, 1, &sissor);
-				cmd.bindIndexBuffer(index.getInfo().buffer, index.getInfo().offset + i_offset * sizeof(ImDrawIdx), sizeof(ImDrawIdx) == 2 ? vk::IndexType::eUint16 : vk::IndexType::eUint32);
-				cmd.drawIndexed(pcmd->ElemCount, 1, 0, 0, 0);
+				io.InputCharacters[i] = keyboard.m_char[i];
 			}
-			i_offset += pcmd->ElemCount;
+
 		}
+		ImGui::NewFrame();
+		{
+			auto& cmds = window->getImguiCmd();
+			for (auto& cmd : cmds)
+			{
+				cmd();
+			}
+			cmds.clear();
+		}
+
+		ImGui::Render();
+		ImDrawData* draw_data = ImGui::GetDrawData();
+
+		vk::RenderPassBeginInfo begin_render_info;
+		begin_render_info.setFramebuffer(m_render_pass->getFramebuffer(m_context->getGPUFrame()));
+		begin_render_info.setRenderPass(m_render_pass->getRenderPass());
+		begin_render_info.setRenderArea(vk::Rect2D({}, m_render_pass->getResolution()));
+		cmd.beginRenderPass(begin_render_info, vk::SubpassContents::eInline);
+		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_RENDER].get());
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_RENDER].get(), 0, { m_descriptor_set.get() }, {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_RENDER].get(), 1, { sSystem::Order().getSystemDescriptor().getSet() }, {});
+
+		for (int n = 0; n < draw_data->CmdListsCount; n++)
+		{
+			auto* cmd_list = draw_data->CmdLists[n];
+			auto v_num = cmd_list->VtxBuffer.size();
+			auto i_num = cmd_list->IdxBuffer.size();
+
+			btr::BufferMemoryDescriptorEx<ImDrawVert> v_desc;
+			v_desc.element_num = v_num;
+			v_desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
+			auto vertex = m_context->m_staging_memory.allocateMemory(v_desc);
+			btr::BufferMemoryDescriptorEx<ImDrawIdx> i_desc;
+			i_desc.element_num = i_num;
+			i_desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
+			auto index = m_context->m_staging_memory.allocateMemory(i_desc);
+
+			memcpy(vertex.getMappedPtr(), cmd_list->VtxBuffer.Data, sizeof(ImDrawVert)*v_num);
+			memcpy(index.getMappedPtr(), cmd_list->IdxBuffer.Data, sizeof(ImDrawIdx)*i_num);
+
+			cmd.bindVertexBuffers(0, { vertex.getInfo().buffer }, { vertex.getInfo().offset });
+			auto i_offset = 0u;
+			for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
+			{
+				const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
+				if (pcmd->UserCallback)
+				{
+					pcmd->UserCallback(cmd_list, pcmd);
+				}
+				else
+				{
+					vk::Rect2D sissor(vk::Offset2D(pcmd->ClipRect.x, pcmd->ClipRect.y), vk::Extent2D(pcmd->ClipRect.z - pcmd->ClipRect.x, pcmd->ClipRect.w - pcmd->ClipRect.y));
+					cmd.setScissor(0, 1, &sissor);
+					cmd.bindIndexBuffer(index.getInfo().buffer, index.getInfo().offset + i_offset * sizeof(ImDrawIdx), sizeof(ImDrawIdx) == 2 ? vk::IndexType::eUint16 : vk::IndexType::eUint32);
+					cmd.drawIndexed(pcmd->ElemCount, 1, 0, 0, 0);
+				}
+				i_offset += pcmd->ElemCount;
+			}
+		}
+
+		cmd.endRenderPass();
 	}
 
-	cmd.endRenderPass();
 	cmd.end();
 	return cmd;
 }

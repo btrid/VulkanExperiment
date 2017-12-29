@@ -81,7 +81,6 @@ private:
 	Swapchain m_swapchain;
 	cWindowDescriptor m_descriptor;
 
-	std::vector<vk::UniqueFence> m_fence_list;
 
 	static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
@@ -112,14 +111,14 @@ private:
 	}
 
 public:
-	cWindow()
+	cWindow(const std::shared_ptr<btr::Context>& context, const cWindowDescriptor& descriptor)
 		: m_private(std::make_shared<Private>())
 		, m_surface()
 	{
-
+		setup(context, descriptor);
 	}
 
-	void setup(std::shared_ptr<btr::Context>& loader, const cWindowDescriptor& descriptor);
+	void setup(const std::shared_ptr<btr::Context>& context, const cWindowDescriptor& descriptor);
 
 	void sync()
 	{
@@ -237,17 +236,6 @@ public:
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}		
-// 		if (msgList.empty()) {
-// 			return;
-// 		}
-// 		cThreadJob job;
-// 		job.mJob.emplace_back([=]() 
-// 		{
-// 		});
-// 
-// 		job.mFinish = [&]() {
-// 			// @Todo キーボードの更新など？
-// 		};
 
 		for (auto& key : m_input.m_keyboard.m_data)
 		{
@@ -307,27 +295,22 @@ public:
 	vk::SurfaceKHR getSurface()const { return m_surface.get(); }
 	const cInput& getInput()const { return m_input; }
 	
-	vk::Fence getFence(uint32_t index) { return m_fence_list[index].get(); }
 };
 
 class sWindow : public Singleton<sWindow>
 {
 	friend Singleton<sWindow>;
 	std::vector<std::weak_ptr<cWindow>> mWindowList;
-
-	std::shared_ptr<cWindow> createWindow()
+public:
+	template<typename T>
+	std::shared_ptr<T> createWindow(const std::shared_ptr<btr::Context>& context, const cWindowDescriptor& window_info)
 	{
-		auto window = std::make_shared<cWindow>();
+		auto window = std::make_shared<T>(context, window_info);
 		mWindowList.emplace_back(window);
 		return window;
 	}
 
 	void destroyWindow(cWindow* window)
 	{
-//		window.reset();
 	}
-
-//	std::weak_ptr<cWindow> getWindow(HWND wnd) {
-//		for
-//	}
 };

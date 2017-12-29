@@ -11,6 +11,7 @@
 
 namespace app
 {
+App* g_app_instance = nullptr;
 
 
 App::App()
@@ -20,6 +21,9 @@ App::App()
 
 void App::setup(const AppDescriptor& desc)
 {
+	// ウインドウリストを取りたいけどいい考えがない。後で考える
+	g_app_instance = this;
+
 	vk::Instance instance = sGlobal::Order().getVKInstance();
 
 #if _DEBUG
@@ -68,14 +72,23 @@ void App::setup(const AppDescriptor& desc)
 
 	}
 
+	{
+		vk::FenceCreateInfo fence_info;
+		fence_info.setFlags(vk::FenceCreateFlagBits::eSignaled);
+		m_fence_list.reserve(sGlobal::FRAME_MAX);
+		for (size_t i = 0; i < sGlobal::FRAME_MAX; i++)
+		{
+			m_fence_list.emplace_back(m_context->m_gpu.getDevice()->createFenceUnique(fence_info));
+		}
+	}
+
 	cWindowDescriptor window_desc;
 	window_desc.surface_format_request = vk::SurfaceFormatKHR{ vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear };
 	window_desc.size = vk::Extent2D(desc.m_window_size.x, desc.m_window_size.y);
 	window_desc.window_name = L"Vulkan Test";
 	window_desc.class_name = L"VulkanMainWindow";
 
-	auto window = std::make_shared<cWindow>();
-	window->setup(m_context, window_desc);
+	auto window = sWindow::Order().createWindow<AppWindow>(m_context, window_desc);
 	m_window = window;
 	m_window_list.push_back(window);
 	m_context->m_window = window;
@@ -139,7 +152,7 @@ void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
 	};
 
 	auto queue = m_gpu.getDevice()->getQueue(0, 0);
-	queue.submit(submitInfo, m_window_list[0]->getFence(m_window_list[0]->getSwapchain().m_backbuffer_index));
+	queue.submit(submitInfo, m_fence_list[sGlobal::Order().getCurrentFrame()].get());
 
 	vk::PresentInfoKHR present_info = vk::PresentInfoKHR()
 		.setWaitSemaphoreCount((uint32_t)submit_wait_semas.size())
@@ -157,9 +170,9 @@ void App::preUpdate()
 	{
 		window->getSwapchain().swap();
 	}
-	uint32_t backbuffer_index = m_window->getSwapchain().m_backbuffer_index;
-	sDebug::Order().waitFence(device.getHandle(), m_window->getFence(backbuffer_index));
-	device->resetFences({ m_window->getFence(backbuffer_index) });
+	uint32_t index = sGlobal::Order().getCurrentFrame();
+	sDebug::Order().waitFence(device.getHandle(), m_fence_list[index].get());
+	device->resetFences({ m_fence_list[index].get() });
 	m_cmd_pool->resetPool(m_context);
 
 	{
@@ -237,6 +250,10 @@ void App::postUpdate()
 	{
 		window->sync();
 	}
+
+	m_window_list.insert(m_window_list.end(), std::make_move_iterator(m_window_stack.begin()), std::make_move_iterator(m_window_stack.end()));
+	m_window_stack.clear();
+
 	sGlobal::Order().sync();
 	sCameraManager::Order().sync();
 	sDeleter::Order().sync();

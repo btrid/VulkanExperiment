@@ -59,7 +59,6 @@ int main()
 		app.setup(desc);
 	}
 	auto context = app.m_context;
-	std::shared_ptr<cWindow> sub = std::make_shared<cWindow>();
 	{
 		cWindowDescriptor window_info;
 		window_info.class_name = L"Sub Window";
@@ -67,7 +66,7 @@ int main()
 		window_info.backbuffer_num = sGlobal::Order().FRAME_MAX;
 		window_info.size = vk::Extent2D(480, 480);
 		window_info.surface_format_request = app.m_window->getSwapchain().m_surface_format;
-		sub->setup(app.m_context, window_info);
+		auto sub = sWindow::Order().createWindow<AppWindow>(context, window_info);
 		app.m_window_list.push_back(sub);
 	}
 

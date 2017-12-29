@@ -260,7 +260,7 @@ uint32_t cWindow::Swapchain::swap()
 	return m_backbuffer_index;
 }
 
-void cWindow::setup(std::shared_ptr<btr::Context>& context, const cWindowDescriptor& descriptor)
+void cWindow::setup(const std::shared_ptr<btr::Context>& context, const cWindowDescriptor& descriptor)
 {
 	m_descriptor = descriptor;
 	WNDCLASSEXW wcex = {};
@@ -297,13 +297,6 @@ void cWindow::setup(std::shared_ptr<btr::Context>& context, const cWindowDescrip
 
 	m_swapchain.setup(context, descriptor, m_surface.get());
 
-	vk::FenceCreateInfo fence_info;
-	fence_info.setFlags(vk::FenceCreateFlagBits::eSignaled);
-	m_fence_list.reserve(m_swapchain.m_backbuffer.size());
-	for (size_t i = 0; i < m_swapchain.m_backbuffer.size(); i++)
-	{
-		m_fence_list.emplace_back(context->m_gpu.getDevice()->createFenceUnique(fence_info));
-	}
 	vk::SemaphoreCreateInfo semaphoreInfo = vk::SemaphoreCreateInfo();
 	m_swapchain.m_swapbuffer_semaphore = context->m_gpu.getDevice()->createSemaphoreUnique(semaphoreInfo);
 	m_swapchain.m_submit_semaphore = context->m_gpu.getDevice()->createSemaphoreUnique(semaphoreInfo);
