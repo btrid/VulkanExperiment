@@ -73,6 +73,7 @@ public:
 	cGPU& getGPU(int index) { return m_gpu[index]; }
 	void sync();
 	uint32_t getCurrentFrame()const { return m_current_frame; }
+	uint32_t getNextFrame()const { return (m_current_frame + 1) % FRAME_MAX; }
 	uint32_t getPrevFrame()const { return (m_current_frame == 0 ? FRAME_MAX : m_current_frame) - 1; }
 	uint32_t getCPUFrame()const { return (m_current_frame+1) % FRAME_MAX; }
 	uint32_t getGPUFrame()const { return m_current_frame; }

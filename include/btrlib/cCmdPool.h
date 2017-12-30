@@ -34,7 +34,7 @@ struct ScopedCommand
 
 struct cCmdPool
 {
-	static std::shared_ptr<cCmdPool> MakeCmdPool(cGPU& gpu);
+	cCmdPool(const std::shared_ptr<btr::Context>& context);
 
 	enum CmdPoolType
 	{
@@ -59,9 +59,10 @@ struct cCmdPool
 	std::vector<CmdPoolPerThread> m_per_thread;
 	std::mutex m_cmd_queue_mutex;
 
+	std::array<std::vector<vk::UniqueFence>, sGlobal::FRAME_MAX> m_fences;
+
 	vk::CommandBuffer allocCmdOnetime(int device_family_index);
 	ScopedCommand allocCmdTempolary(uint32_t device_family_index);
-//	vk::UniqueCommandBuffer allocCmdTempolary(int device_family_index);
 	vk::CommandPool getCmdPool(CmdPoolType type, int device_family_index)const;
 
 	void resetPool(std::shared_ptr<btr::Context>& executer);

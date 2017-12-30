@@ -8,6 +8,7 @@
 #include <applib/sParticlePipeline.h>
 #include <applib/sSystem.h>
 #include <applib/GraphicsResource.h>
+#include <applib/sImGuiRenderer.h>
 
 namespace app
 {
@@ -32,13 +33,11 @@ void App::setup(const AppDescriptor& desc)
 
 	m_gpu = desc.m_gpu;
 	auto device = sGlobal::Order().getGPU(0).getDevice();
-	m_cmd_pool = cCmdPool::MakeCmdPool(m_gpu);
 
 	m_context = std::make_shared<btr::Context>();
 	{
 		m_context->m_gpu = m_gpu;
 		m_context->m_device = device;
-		m_context->m_cmd_pool = m_cmd_pool;
 
 		vk::MemoryPropertyFlags host_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
 		vk::MemoryPropertyFlags device_memory = vk::MemoryPropertyFlagBits::eDeviceLocal;
@@ -67,11 +66,11 @@ void App::setup(const AppDescriptor& desc)
 
 			vk::PipelineCacheCreateInfo cacheInfo = vk::PipelineCacheCreateInfo();
 			m_context->m_cache = device->createPipelineCacheUnique(cacheInfo);
-
 		}
-
 	}
 
+	m_cmd_pool = std::make_shared<cCmdPool>(m_context);
+	m_context->m_cmd_pool = m_cmd_pool;
 	{
 		vk::FenceCreateInfo fence_info;
 		fence_info.setFlags(vk::FenceCreateFlagBits::eSignaled);
@@ -81,6 +80,10 @@ void App::setup(const AppDescriptor& desc)
 			m_fence_list.emplace_back(m_context->m_gpu.getDevice()->createFenceUnique(fence_info));
 		}
 	}
+	sSystem::Order().setup(m_context);
+	sCameraManager::Order().setup(m_context);
+	sGraphicsResource::Order().setup(m_context);
+	sImGuiRenderer::Create(m_context);
 
 	cWindowDescriptor window_desc;
 	window_desc.surface_format_request = vk::SurfaceFormatKHR{ vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear };
@@ -93,15 +96,14 @@ void App::setup(const AppDescriptor& desc)
 	m_window_list.push_back(window);
 	m_context->m_window = window;
 
-	sSystem::Order().setup(m_context);
-	sCameraManager::Order().setup(m_context);
 	sParticlePipeline::Order().setup(m_context);
 	DrawHelper::Order().setup(m_context);
-	sGraphicsResource::Order().setup(m_context);
 }
 
 void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
 {
+	m_context->m_cmd_pool->submit(m_context);
+
 	submit_cmds.erase(std::remove_if(submit_cmds.begin(), submit_cmds.end(), [&](auto& d) { return !d; }), submit_cmds.end());
 
 	std::vector<vk::CommandBuffer> cmds;
@@ -109,7 +111,7 @@ void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
 
 	for (auto& window : m_window_list)
 	{
-		cmds.push_back(window->getSwapchain().m_cmd_present_to_render[window->getSwapchain().m_backbuffer_index].get());
+		cmds.push_back(window->m_cmd_present_to_render[window->getSwapchain().m_backbuffer_index].get());
 	}
 
 	m_sync_point.wait();
@@ -120,7 +122,7 @@ void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
 
 	for (auto& window : m_window_list)
 	{
-		cmds.push_back(window->getSwapchain().m_cmd_render_to_present[window->getSwapchain().m_backbuffer_index].get());
+		cmds.push_back(window->m_cmd_render_to_present[window->getSwapchain().m_backbuffer_index].get());
 	}
 
 	std::vector<vk::Semaphore> swap_wait_semas(m_window_list.size());
@@ -234,7 +236,7 @@ void App::preUpdate()
 		job.mJob.emplace_back(
 			[&]()
 		{
-			m_context->m_cmd_pool->submit(m_context);
+//			m_context->m_cmd_pool->submit(m_context);
 			m_sync_point.arrive();
 		}
 		);
@@ -266,4 +268,329 @@ glm::uvec3 calcDipatchGroups(const glm::uvec3& num, const glm::uvec3& local_size
 	return ret;
 }
 
+}
+
+AppWindow::ImguiRenderPipeline::ImguiRenderPipeline(const std::shared_ptr<btr::Context>& context, AppWindow* const window)
+{
+	// setup pipeline
+	{
+		// assembly
+		vk::PipelineInputAssemblyStateCreateInfo assembly_info[] =
+		{
+			vk::PipelineInputAssemblyStateCreateInfo()
+			.setPrimitiveRestartEnable(VK_FALSE)
+			.setTopology(vk::PrimitiveTopology::eTriangleList),
+		};
+
+		auto render_pass = window->getRenderBackbufferPass();
+		// viewport
+		vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)render_pass->getResolution().width, (float)render_pass->getResolution().height, 0.f, 1.f);
+		vk::Rect2D scissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(render_pass->getResolution().width, render_pass->getResolution().height));
+		vk::PipelineViewportStateCreateInfo viewportInfo;
+		viewportInfo.setViewportCount(1);
+		viewportInfo.setPViewports(&viewport);
+		viewportInfo.setScissorCount(1);
+		viewportInfo.setPScissors(&scissor);
+
+		vk::PipelineRasterizationStateCreateInfo rasterization_info;
+		rasterization_info.setPolygonMode(vk::PolygonMode::eFill);
+		rasterization_info.setFrontFace(vk::FrontFace::eCounterClockwise);
+		rasterization_info.setCullMode(vk::CullModeFlagBits::eNone);
+		rasterization_info.setLineWidth(1.f);
+
+		vk::PipelineMultisampleStateCreateInfo sample_info;
+		sample_info.setRasterizationSamples(vk::SampleCountFlagBits::e1);
+
+		vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
+		depth_stencil_info.setDepthTestEnable(VK_FALSE);
+
+		std::vector<vk::PipelineColorBlendAttachmentState> blend_state = {
+			vk::PipelineColorBlendAttachmentState()
+			.setBlendEnable(VK_TRUE)
+			.setSrcAlphaBlendFactor(vk::BlendFactor::eOne)
+			.setDstAlphaBlendFactor(vk::BlendFactor::eOneMinusSrcAlpha)
+			.setAlphaBlendOp(vk::BlendOp::eAdd)
+			.setSrcColorBlendFactor(vk::BlendFactor::eSrcAlpha)
+			.setDstColorBlendFactor(vk::BlendFactor::eOneMinusSrcAlpha)
+			.setColorBlendOp(vk::BlendOp::eAdd)
+			.setColorWriteMask(vk::ColorComponentFlagBits::eR
+				| vk::ColorComponentFlagBits::eG
+				| vk::ColorComponentFlagBits::eB
+				| vk::ColorComponentFlagBits::eA)
+		};
+		vk::PipelineColorBlendStateCreateInfo blend_info;
+		blend_info.setAttachmentCount(blend_state.size());
+		blend_info.setPAttachments(blend_state.data());
+
+		vk::VertexInputAttributeDescription attr[] =
+		{
+			vk::VertexInputAttributeDescription().setLocation(0).setOffset(0).setBinding(0).setFormat(vk::Format::eR32G32Sfloat),
+			vk::VertexInputAttributeDescription().setLocation(1).setOffset(8).setBinding(0).setFormat(vk::Format::eR32G32Sfloat),
+			vk::VertexInputAttributeDescription().setLocation(2).setOffset(16).setBinding(0).setFormat(vk::Format::eR8G8B8A8Unorm),
+		};
+		vk::VertexInputBindingDescription binding[] =
+		{
+			vk::VertexInputBindingDescription().setBinding(0).setInputRate(vk::VertexInputRate::eVertex).setStride(20)
+		};
+		vk::PipelineVertexInputStateCreateInfo vertex_input_info;
+		vertex_input_info.setVertexAttributeDescriptionCount(array_length(attr));
+		vertex_input_info.setPVertexAttributeDescriptions(attr);
+		vertex_input_info.setVertexBindingDescriptionCount(array_length(binding));
+		vertex_input_info.setPVertexBindingDescriptions(binding);
+
+		vk::PipelineShaderStageCreateInfo shader_info[] = {
+			vk::PipelineShaderStageCreateInfo()
+			.setModule(sImGuiRenderer::Order().getShaderModle(sImGuiRenderer::SHADER_VERT_RENDER))
+			.setPName("main")
+			.setStage(vk::ShaderStageFlagBits::eVertex),
+			vk::PipelineShaderStageCreateInfo()
+			.setModule(sImGuiRenderer::Order().getShaderModle(sImGuiRenderer::SHADER_FRAG_RENDER))
+			.setPName("main")
+			.setStage(vk::ShaderStageFlagBits::eFragment),
+		};
+
+		vk::PipelineDynamicStateCreateInfo dynamic_info;
+		vk::DynamicState dynamic_state[] = {
+			vk::DynamicState::eScissor,
+		};
+		dynamic_info.setDynamicStateCount(array_length(dynamic_state));
+		dynamic_info.setPDynamicStates(dynamic_state);
+
+		std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =
+		{
+			vk::GraphicsPipelineCreateInfo()
+			.setStageCount(array_length(shader_info))
+			.setPStages(shader_info)
+			.setPVertexInputState(&vertex_input_info)
+			.setPInputAssemblyState(&assembly_info[0])
+			.setPViewportState(&viewportInfo)
+			.setPRasterizationState(&rasterization_info)
+			.setPMultisampleState(&sample_info)
+			.setLayout(sImGuiRenderer::Order().getPipelineLayout(sImGuiRenderer::PIPELINE_LAYOUT_RENDER))
+			.setRenderPass(render_pass->getRenderPass())
+			.setPDepthStencilState(&depth_stencil_info)
+			.setPColorBlendState(&blend_info)
+			.setPDynamicState(&dynamic_info),
+		};
+		auto pipelines = context->m_device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info);
+		m_pipeline = std::move(pipelines[0]);
+
+	}
+}
+
+AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindowDescriptor& descriptor) : cWindow(context, descriptor)
+{
+	auto& device = context->m_device;
+	{
+		// viewの作成
+		m_backbuffer_view.resize(getSwapchain().getBackbufferNum());
+		for (uint32_t i = 0; i < m_backbuffer_view.size(); i++)
+		{
+			auto subresourceRange = vk::ImageSubresourceRange()
+				.setAspectMask(vk::ImageAspectFlagBits::eColor)
+				.setBaseArrayLayer(0)
+				.setLayerCount(1)
+				.setBaseMipLevel(0)
+				.setLevelCount(1);
+
+			vk::ImageViewCreateInfo backbuffer_view_info;
+			backbuffer_view_info.setImage(getSwapchain().m_backbuffer_image[i]);
+			backbuffer_view_info.setFormat(getSwapchain().m_surface_format.format);
+			backbuffer_view_info.setViewType(vk::ImageViewType::e2D);
+			backbuffer_view_info.setComponents(vk::ComponentMapping{
+				vk::ComponentSwizzle::eR,
+				vk::ComponentSwizzle::eG,
+				vk::ComponentSwizzle::eB,
+				vk::ComponentSwizzle::eA,
+			});
+			backbuffer_view_info.setSubresourceRange(subresourceRange);
+			m_backbuffer_view[i] = context->m_device->createImageViewUnique(backbuffer_view_info);
+		}
+	}
+
+	{
+		vk::SurfaceCapabilitiesKHR capability = context->m_gpu->getSurfaceCapabilitiesKHR(m_surface.get());
+		// デプス生成
+		vk::ImageCreateInfo depth_info;
+		depth_info.format = vk::Format::eD32Sfloat;
+		depth_info.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eTransferDst;
+		depth_info.arrayLayers = 1;
+		depth_info.mipLevels = 1;
+		depth_info.extent.width = capability.currentExtent.width;
+		depth_info.extent.height = capability.currentExtent.height;
+		depth_info.extent.depth = 1;
+		depth_info.imageType = vk::ImageType::e2D;
+		depth_info.initialLayout = vk::ImageLayout::eUndefined;
+		depth_info.queueFamilyIndexCount = (uint32_t)context->m_device.getQueueFamilyIndex().size();
+		depth_info.pQueueFamilyIndices = context->m_device.getQueueFamilyIndex().data();
+		m_depth_image = context->m_device->createImageUnique(depth_info);
+
+					// メモリ確保
+		auto memory_request = context->m_device->getImageMemoryRequirements(m_depth_image.get());
+		uint32_t memory_index = cGPU::Helper::getMemoryTypeIndex(context->m_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+		vk::MemoryAllocateInfo memory_info;
+		memory_info.allocationSize = memory_request.size;
+		memory_info.memoryTypeIndex = memory_index;
+		m_depth_memory = context->m_device->allocateMemoryUnique(memory_info);
+
+		context->m_device->bindImageMemory(m_depth_image.get(), m_depth_memory.get(), 0);
+
+		vk::ImageViewCreateInfo depth_view_info;
+		depth_view_info.format = depth_info.format;
+		depth_view_info.image = m_depth_image.get();
+		depth_view_info.viewType = vk::ImageViewType::e2D;
+		depth_view_info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
+		depth_view_info.subresourceRange.baseArrayLayer = 0;
+		depth_view_info.subresourceRange.baseMipLevel = 0;
+		depth_view_info.subresourceRange.layerCount = 1;
+		depth_view_info.subresourceRange.levelCount = 1;
+		m_depth_view = context->m_device->createImageViewUnique(depth_view_info);
+
+	}
+
+
+	vk::ImageSubresourceRange subresource_range;
+	subresource_range.setAspectMask(vk::ImageAspectFlagBits::eColor);
+	subresource_range.setBaseArrayLayer(0);
+	subresource_range.setLayerCount(1);
+	subresource_range.setBaseMipLevel(0);
+	subresource_range.setLevelCount(1);
+	std::vector<vk::ImageMemoryBarrier> barrier(getSwapchain().getBackbufferNum() + 1);
+	barrier[0].setSubresourceRange(subresource_range);
+	barrier[0].setDstAccessMask(vk::AccessFlagBits::eMemoryRead);
+	barrier[0].setOldLayout(vk::ImageLayout::eUndefined);
+	barrier[0].setNewLayout(vk::ImageLayout::ePresentSrcKHR);
+	barrier[0].setImage(getSwapchain().m_backbuffer_image[0]);
+	for (uint32_t i = 1; i < getSwapchain().getBackbufferNum(); i++)
+	{
+		barrier[i] = barrier[0];
+		barrier[i].setImage(getSwapchain().m_backbuffer_image[i]);
+	}
+
+	vk::ImageSubresourceRange subresource_depth_range;
+	subresource_depth_range.aspectMask = vk::ImageAspectFlagBits::eDepth;
+	subresource_depth_range.baseArrayLayer = 0;
+	subresource_depth_range.baseMipLevel = 0;
+	subresource_depth_range.layerCount = 1;
+	subresource_depth_range.levelCount = 1;
+
+	barrier.back().setImage(m_depth_image.get());
+	barrier.back().setSubresourceRange(subresource_depth_range);
+	barrier.back().setDstAccessMask(vk::AccessFlagBits::eDepthStencilAttachmentWrite);
+	barrier.back().setOldLayout(vk::ImageLayout::eUndefined);
+	barrier.back().setNewLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+
+	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+	cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eEarlyFragmentTests, vk::DependencyFlags(), {}, {}, barrier);
+
+	// present cmdの設定
+	{
+		{
+			vk::CommandBufferAllocateInfo cmd_buffer_info;
+			cmd_buffer_info.commandPool = context->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
+			cmd_buffer_info.commandBufferCount = sGlobal::FRAME_MAX;
+			cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
+			m_cmd_present_to_render = device->allocateCommandBuffersUnique(cmd_buffer_info);
+			m_cmd_render_to_present = device->allocateCommandBuffersUnique(cmd_buffer_info);
+		}
+
+		vk::CommandBufferBeginInfo begin_info;
+		begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
+
+		for (int i = 0; i < sGlobal::FRAME_MAX; i++)
+		{
+			auto& cmd = m_cmd_present_to_render[i];
+			cmd->begin(begin_info);
+
+			vk::ImageMemoryBarrier present_to_clear;
+			present_to_clear.setSrcAccessMask(vk::AccessFlagBits::eMemoryRead);
+			present_to_clear.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
+			present_to_clear.setOldLayout(vk::ImageLayout::ePresentSrcKHR);
+			present_to_clear.setNewLayout(vk::ImageLayout::eTransferDstOptimal);
+			present_to_clear.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+			present_to_clear.setImage(getSwapchain().m_backbuffer_image[i]);
+
+			cmd->pipelineBarrier(
+				vk::PipelineStageFlagBits::eTransfer,
+				vk::PipelineStageFlagBits::eTransfer,
+				vk::DependencyFlags(),
+				nullptr, nullptr, present_to_clear);
+
+			vk::ClearColorValue clear_color;
+			clear_color.setFloat32(std::array<float, 4>{0.f, 0.f, 1.f, 0.f});
+			vk::ClearDepthStencilValue clear_depth;
+#if BTR_USE_REVERSED_Z
+			clear_depth.setDepth(0.f);	// reversed-Z
+#else
+			clear_depth.setDepth(1.f);
+#endif
+			cmd->clearColorImage(getSwapchain().m_backbuffer_image[i], vk::ImageLayout::eTransferDstOptimal, clear_color, vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+
+			vk::ImageMemoryBarrier clear_to_render;
+			clear_to_render.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+			clear_to_render.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+			clear_to_render.setOldLayout(vk::ImageLayout::eTransferDstOptimal);
+			clear_to_render.setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
+			clear_to_render.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+			clear_to_render.setImage(getSwapchain().m_backbuffer_image[i]);
+			cmd->pipelineBarrier(
+				vk::PipelineStageFlagBits::eTransfer,
+				vk::PipelineStageFlagBits::eColorAttachmentOutput,
+				vk::DependencyFlags(),
+				nullptr, nullptr, clear_to_render);
+
+			vk::ImageMemoryBarrier render_to_clear_depth;
+			render_to_clear_depth.setSrcAccessMask(vk::AccessFlagBits::eDepthStencilAttachmentWrite);
+			render_to_clear_depth.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
+			render_to_clear_depth.setOldLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+			render_to_clear_depth.setNewLayout(vk::ImageLayout::eTransferDstOptimal);
+			render_to_clear_depth.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1 });
+			render_to_clear_depth.setImage(m_depth_image.get());
+			cmd->pipelineBarrier(
+				vk::PipelineStageFlagBits::eLateFragmentTests,
+				vk::PipelineStageFlagBits::eTransfer,
+				vk::DependencyFlags(),
+				nullptr, nullptr, render_to_clear_depth);
+			cmd->clearDepthStencilImage(m_depth_image.get(), vk::ImageLayout::eTransferDstOptimal, clear_depth, vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1 });
+
+			vk::ImageMemoryBarrier clear_to_render_depth;
+			clear_to_render_depth.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+			clear_to_render_depth.setDstAccessMask(vk::AccessFlagBits::eDepthStencilAttachmentWrite);
+			clear_to_render_depth.setOldLayout(vk::ImageLayout::eTransferDstOptimal);
+			clear_to_render_depth.setNewLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+			clear_to_render_depth.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1 });
+			clear_to_render_depth.setImage(m_depth_image.get());
+			cmd->pipelineBarrier(
+				vk::PipelineStageFlagBits::eTransfer,
+				vk::PipelineStageFlagBits::eLateFragmentTests,
+				vk::DependencyFlags(),
+				nullptr, nullptr, clear_to_render_depth);
+
+			cmd->end();
+		}
+
+		for (int i = 0; i < sGlobal::FRAME_MAX; i++)
+		{
+			auto& cmd = m_cmd_render_to_present[i];
+			cmd->begin(begin_info);
+			vk::ImageMemoryBarrier render_to_present_barrier;
+			render_to_present_barrier.setSrcAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+			render_to_present_barrier.setDstAccessMask(vk::AccessFlagBits::eMemoryRead);
+			render_to_present_barrier.setOldLayout(vk::ImageLayout::eColorAttachmentOptimal);
+			render_to_present_barrier.setNewLayout(vk::ImageLayout::ePresentSrcKHR);
+			render_to_present_barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+			render_to_present_barrier.setImage(getSwapchain().m_backbuffer_image[i]);
+			cmd->pipelineBarrier(
+				vk::PipelineStageFlagBits::eColorAttachmentOutput,
+				vk::PipelineStageFlagBits::eTransfer,
+				vk::DependencyFlags(),
+				nullptr, nullptr, render_to_present_barrier);
+
+			cmd->end();
+		}
+	}
+
+	m_render_pass = std::make_shared<RenderBackbufferAppModule>(context, this);
+	m_imgui_pipeline = std::make_unique<ImguiRenderPipeline>(context, this);
 }

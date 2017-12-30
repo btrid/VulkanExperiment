@@ -161,7 +161,7 @@ private:
 struct DefaultModelPipelineComponent : public ModelDrawPipelineComponent
 {
 
-	DefaultModelPipelineComponent(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderBackbufferModule>& render_pass, const std::shared_ptr<ShaderModule>& shader)
+	DefaultModelPipelineComponent(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderPassModule>& render_pass, const std::shared_ptr<ShaderModule>& shader)
 	{
 		auto& device = context->m_device;
 		m_render_pass = render_pass;
@@ -304,14 +304,14 @@ struct DefaultModelPipelineComponent : public ModelDrawPipelineComponent
 
 		return render;
 	}
-	virtual const std::shared_ptr<RenderBackbufferModule>& getRenderPassModule()const override { return m_render_pass; }
+	virtual const std::shared_ptr<RenderPassModule>& getRenderPassModule()const override { return m_render_pass; }
 
 private:
 
 	vk::UniquePipeline m_pipeline;
 	vk::UniquePipelineLayout m_pipeline_layout;
 
-	std::shared_ptr<RenderBackbufferModule> m_render_pass;
+	std::shared_ptr<RenderPassModule> m_render_pass;
 	std::shared_ptr<ShaderModule> m_shader;
 	std::shared_ptr<ModelDescriptorModule> m_model_descriptor;
 
@@ -325,7 +325,7 @@ void cModelPipeline::setup(std::shared_ptr<btr::Context>& context, const std::sh
 	if (!m_pipeline)
 	{
 		// なかったらデフォルトで初期化
-		auto render_pass = std::make_shared<RenderBackbufferModule>(context);
+		auto render_pass = context->m_window->getRenderBackbufferPass();
 		std::string path = btr::getResourceLibPath() + "shader\\binary\\";
 		std::vector<ShaderDescriptor> shader_desc =
 		{

@@ -59,7 +59,6 @@ int main()
 	}
 	auto context = app.m_context;
 
-	sImGuiRenderer::Create(context);
 	sUISystem::Create(context);
 
 	UIManipulater manip(context);

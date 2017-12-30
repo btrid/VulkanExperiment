@@ -1,28 +1,20 @@
 #pragma once
-#include "Define.h"
 #include <windowsx.h>
 #include <vector>
 #include <memory>
 #include <unordered_map>
 
+#include <btrlib/Define.h>
 #include <btrlib/Singleton.h>
 #include <btrlib/sGlobal.h>
 #include <btrlib/cInput.h>
 #include <btrlib/GPU.h>
-
+//#include <btrlib/Module.h>
 namespace btr
 {
-struct Context;
+	struct Context;
 }
-struct RenderTarget
-{
-	vk::Image m_image; //!< vkGetSwapchainImagesKHR‚Å‚Æ‚Á‚Ä‚é‚Ì‚Ådestroy‚Å‚«‚È‚¢
-//	vk::UniqueImageView m_view;
-	vk::ImageView m_view;
-	vk::UniqueDeviceMemory m_memory;
-	vk::Format m_format;
-	vk::Extent2D m_size;
-};
+struct RenderPassModule;
 
 struct cWindowDescriptor
 {
@@ -41,14 +33,12 @@ private:
 	{
 		std::shared_ptr<btr::Context> m_context;
 		vk::UniqueSwapchainKHR m_swapchain_handle;
-		std::vector<RenderTarget> m_backbuffer;
-		RenderTarget m_depth;
+		std::vector<vk::Image> m_backbuffer_image;
 
 		vk::SurfaceFormatKHR m_surface_format;
-		uint32_t m_backbuffer_index;
+		vk::Extent2D m_size;
 
-		std::vector <vk::UniqueCommandBuffer> m_cmd_present_to_render;
-		std::vector <vk::UniqueCommandBuffer> m_cmd_render_to_present;
+		uint32_t m_backbuffer_index;
 
 		vk::UniqueSemaphore m_swapbuffer_semaphore;
 		vk::UniqueSemaphore m_submit_semaphore;
@@ -62,7 +52,9 @@ private:
 
 		void setup(const std::shared_ptr<btr::Context>& context, const cWindowDescriptor& descriptor, vk::SurfaceKHR surface);
 		uint32_t swap();
-		size_t getBackbufferNum()const { return m_backbuffer.size(); }
+
+		size_t getBackbufferNum()const { return m_backbuffer_image.size(); }
+		vk::Extent2D getSize()const { return m_size; }
 	};
 
 	class Private
@@ -75,12 +67,12 @@ private:
 		Private() = default;
 	};
 	std::shared_ptr<Private> m_private;
-
+protected:
 	vk::UniqueSurfaceKHR m_surface;
 	cInput m_input;
 	Swapchain m_swapchain;
 	cWindowDescriptor m_descriptor;
-
+	std::shared_ptr<RenderPassModule> m_render_pass;
 
 	static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
@@ -111,14 +103,7 @@ private:
 	}
 
 public:
-	cWindow(const std::shared_ptr<btr::Context>& context, const cWindowDescriptor& descriptor)
-		: m_private(std::make_shared<Private>())
-		, m_surface()
-	{
-		setup(context, descriptor);
-	}
-
-	void setup(const std::shared_ptr<btr::Context>& context, const cWindowDescriptor& descriptor);
+	cWindow(const std::shared_ptr<btr::Context>& context, const cWindowDescriptor& descriptor);
 
 	void sync()
 	{
@@ -295,6 +280,8 @@ public:
 	vk::SurfaceKHR getSurface()const { return m_surface.get(); }
 	const cInput& getInput()const { return m_input; }
 	
+	std::shared_ptr<RenderPassModule> getRenderBackbufferPass() { return m_render_pass; }
+
 };
 
 class sWindow : public Singleton<sWindow>

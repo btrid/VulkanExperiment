@@ -7,10 +7,9 @@ sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 	m_context = context;
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
-	m_render_pass = std::make_shared<RenderBackbufferModule>(context);
 	{
 		ImGuiIO& io = ImGui::GetIO();
-		io.DisplaySize = context->m_window->getClientSize<ImVec2>();
+//		io.DisplaySize = context->m_window->getClientSize<ImVec2>();
 		io.FontGlobalScale = 1.f;
 		io.RenderDrawListsFn = nullptr;  // Setup a render function, or set to NULL and call GetDrawData() after Render() to access the render data.
 		io.KeyMap[ImGuiKey_Tab] = VK_TAB;
@@ -202,109 +201,6 @@ sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 		m_pipeline_layout[PIPELINE_LAYOUT_RENDER] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 	}
 
-	// setup pipeline
-	{
-		// assembly
-		vk::PipelineInputAssemblyStateCreateInfo assembly_info[] =
-		{
-			vk::PipelineInputAssemblyStateCreateInfo()
-			.setPrimitiveRestartEnable(VK_FALSE)
-			.setTopology(vk::PrimitiveTopology::eTriangleList),
-		};
-
-		// viewport
-		vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)m_render_pass->getResolution().width, (float)m_render_pass->getResolution().height, 0.f, 1.f);
-		vk::Rect2D scissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(m_render_pass->getResolution().width, m_render_pass->getResolution().height));
-		vk::PipelineViewportStateCreateInfo viewportInfo;
-		viewportInfo.setViewportCount(1);
-		viewportInfo.setPViewports(&viewport);
-		viewportInfo.setScissorCount(1);
-		viewportInfo.setPScissors(&scissor);
-
-		vk::PipelineRasterizationStateCreateInfo rasterization_info;
-		rasterization_info.setPolygonMode(vk::PolygonMode::eFill);
-		rasterization_info.setFrontFace(vk::FrontFace::eCounterClockwise);
-		rasterization_info.setCullMode(vk::CullModeFlagBits::eNone);
-		rasterization_info.setLineWidth(1.f);
-
-		vk::PipelineMultisampleStateCreateInfo sample_info;
-		sample_info.setRasterizationSamples(vk::SampleCountFlagBits::e1);
-
-		vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
-		depth_stencil_info.setDepthTestEnable(VK_FALSE);
-
-		std::vector<vk::PipelineColorBlendAttachmentState> blend_state = {
-			vk::PipelineColorBlendAttachmentState()
-			.setBlendEnable(VK_TRUE)
-			.setSrcAlphaBlendFactor(vk::BlendFactor::eOne)
-			.setDstAlphaBlendFactor(vk::BlendFactor::eOneMinusSrcAlpha)
-			.setAlphaBlendOp(vk::BlendOp::eAdd)
-			.setSrcColorBlendFactor(vk::BlendFactor::eSrcAlpha)
-			.setDstColorBlendFactor(vk::BlendFactor::eOneMinusSrcAlpha)
-			.setColorBlendOp(vk::BlendOp::eAdd)
-			.setColorWriteMask(vk::ColorComponentFlagBits::eR
-				| vk::ColorComponentFlagBits::eG
-				| vk::ColorComponentFlagBits::eB
-				| vk::ColorComponentFlagBits::eA)
-		};
-		vk::PipelineColorBlendStateCreateInfo blend_info;
-		blend_info.setAttachmentCount(blend_state.size());
-		blend_info.setPAttachments(blend_state.data());
-
-		vk::VertexInputAttributeDescription attr[] =
-		{
-			vk::VertexInputAttributeDescription().setLocation(0).setOffset(0).setBinding(0).setFormat(vk::Format::eR32G32Sfloat),
-			vk::VertexInputAttributeDescription().setLocation(1).setOffset(8).setBinding(0).setFormat(vk::Format::eR32G32Sfloat),
-			vk::VertexInputAttributeDescription().setLocation(2).setOffset(16).setBinding(0).setFormat(vk::Format::eR8G8B8A8Unorm),
-		};
-		vk::VertexInputBindingDescription binding[] =
-		{
-			vk::VertexInputBindingDescription().setBinding(0).setInputRate(vk::VertexInputRate::eVertex).setStride(20)
-		};
-		vk::PipelineVertexInputStateCreateInfo vertex_input_info;
-		vertex_input_info.setVertexAttributeDescriptionCount(array_length(attr));
-		vertex_input_info.setPVertexAttributeDescriptions(attr);
-		vertex_input_info.setVertexBindingDescriptionCount(array_length(binding));
-		vertex_input_info.setPVertexBindingDescriptions(binding);
-
-		vk::PipelineShaderStageCreateInfo shader_info[] = {
-			vk::PipelineShaderStageCreateInfo()
-			.setModule(m_shader_module[SHADER_VERT_RENDER].get())
-			.setPName("main")
-			.setStage(vk::ShaderStageFlagBits::eVertex),
-			vk::PipelineShaderStageCreateInfo()
-			.setModule(m_shader_module[SHADER_FRAG_RENDER].get())
-			.setPName("main")
-			.setStage(vk::ShaderStageFlagBits::eFragment),
-		};
-
-		vk::PipelineDynamicStateCreateInfo dynamic_info;
-		vk::DynamicState dynamic_state[] = {
-			vk::DynamicState::eScissor,
-		};
-		dynamic_info.setDynamicStateCount(array_length(dynamic_state));
-		dynamic_info.setPDynamicStates(dynamic_state);
-
-		std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =
-		{
-			vk::GraphicsPipelineCreateInfo()
-			.setStageCount(array_length(shader_info))
-			.setPStages(shader_info)
-			.setPVertexInputState(&vertex_input_info)
-			.setPInputAssemblyState(&assembly_info[0])
-			.setPViewportState(&viewportInfo)
-			.setPRasterizationState(&rasterization_info)
-			.setPMultisampleState(&sample_info)
-			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_RENDER].get())
-			.setRenderPass(m_render_pass->getRenderPass())
-			.setPDepthStencilState(&depth_stencil_info)
-			.setPColorBlendState(&blend_info)
-			.setPDynamicState(&dynamic_info),
-		};
-		auto pipelines = context->m_device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info);
-		m_pipeline[PIPELINE_RENDER] = std::move(pipelines[0]);
-
-	}
 
 }
 
@@ -315,6 +211,7 @@ vk::CommandBuffer sImGuiRenderer::Render()
 	auto& io = ImGui::GetIO();
 	for (auto& window : app::g_app_instance->m_window_list)
 	{
+		io.DisplaySize = window->getClientSize<ImVec2>();
 		{
 			auto& mouse = window->getInput().m_mouse;
 			io.MousePos = ImVec2(mouse.xy.x, mouse.xy.y);
@@ -343,7 +240,7 @@ vk::CommandBuffer sImGuiRenderer::Render()
 		}
 		ImGui::NewFrame();
 		{
-			auto& cmds = window->getImguiCmd();
+			auto& cmds = window->getImguiPipeline()->getImguiCmd();
 			for (auto& cmd : cmds)
 			{
 				cmd();
@@ -355,11 +252,11 @@ vk::CommandBuffer sImGuiRenderer::Render()
 		ImDrawData* draw_data = ImGui::GetDrawData();
 
 		vk::RenderPassBeginInfo begin_render_info;
-		begin_render_info.setFramebuffer(m_render_pass->getFramebuffer(m_context->getGPUFrame()));
-		begin_render_info.setRenderPass(m_render_pass->getRenderPass());
-		begin_render_info.setRenderArea(vk::Rect2D({}, m_render_pass->getResolution()));
+		begin_render_info.setFramebuffer(window->getRenderBackbufferPass()->getFramebuffer(m_context->getGPUFrame()));
+		begin_render_info.setRenderPass(window->getRenderBackbufferPass()->getRenderPass());
+		begin_render_info.setRenderArea(vk::Rect2D({}, window->getRenderBackbufferPass()->getResolution()));
 		cmd.beginRenderPass(begin_render_info, vk::SubpassContents::eInline);
-		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_RENDER].get());
+		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, window->getImguiPipeline()->m_pipeline.get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_RENDER].get(), 0, { m_descriptor_set.get() }, {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_RENDER].get(), 1, { sSystem::Order().getSystemDescriptor().getSet() }, {});
 

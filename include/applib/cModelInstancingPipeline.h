@@ -18,7 +18,7 @@ struct ModelInstancingRenderPipelineComponent : public PipelineComponent
 	ModelInstancingRenderPipelineComponent(const std::shared_ptr<btr::Context>& context)
 	{
 		auto& device = context->m_device;
-		m_render_pass = std::make_shared<RenderBackbufferModule>(context);
+		m_render_pass = context->m_window->getRenderBackbufferPass();
 		m_model_descriptor = std::make_shared<ModelDescriptorModule>(context);
 
 		m_light_pipeline = std::make_shared<cFowardPlusPipeline>();
@@ -194,7 +194,7 @@ struct ModelInstancingRenderPipelineComponent : public PipelineComponent
 		SHADER_NUM,
 	};
 
-	std::shared_ptr<RenderBackbufferModule> m_render_pass;
+	std::shared_ptr<RenderPassModule> m_render_pass;
 	std::shared_ptr<ShaderModule> m_shader;
 
 	vk::UniquePipeline m_graphics_pipeline;

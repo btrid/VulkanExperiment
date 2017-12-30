@@ -27,10 +27,8 @@ void VKAPI_PTR InternalFreeNotification(void* pUserData, size_t size, VkInternal
 	printf("free\n");
 }
 
-std::shared_ptr<cCmdPool> cCmdPool::MakeCmdPool(cGPU& gpu)
+cCmdPool::cCmdPool(const std::shared_ptr<btr::Context>& context)
 {
-	auto& device = gpu.getDevice();
-
 	vk::AllocationCallbacks cb;
 	cb.setPfnAllocation(Allocation);
 	cb.setPfnFree(Free);
@@ -38,12 +36,10 @@ std::shared_ptr<cCmdPool> cCmdPool::MakeCmdPool(cGPU& gpu)
 	cb.setPfnInternalAllocation(InternalAllocationNotification);
 	cb.setPfnInternalFree(InternalFreeNotification);
 
-	auto cmd_pool = std::make_shared<cCmdPool>();
-
-	cmd_pool->m_per_thread.resize(std::thread::hardware_concurrency());
-	for (auto& per_thread : cmd_pool->m_per_thread)
+	m_per_thread.resize(std::thread::hardware_concurrency());
+	for (auto& per_thread : m_per_thread)
 	{
-		per_thread.m_per_family.resize(device.getQueueFamilyIndex().size());
+		per_thread.m_per_family.resize(context->m_device.getQueueFamilyIndex().size());
 		for (size_t family = 0; family < per_thread.m_per_family.size(); family++)
 		{
 			auto& per_family = per_thread.m_per_family[family];
@@ -52,23 +48,24 @@ std::shared_ptr<cCmdPool> cCmdPool::MakeCmdPool(cGPU& gpu)
 			cmd_pool_onetime.flags = vk::CommandPoolCreateFlagBits::eTransient;
 			for (auto& pool_per_frame : per_family.m_cmd_pool_onetime)
 			{
-				pool_per_frame = device->createCommandPoolUnique(cmd_pool_onetime, cb);
+				pool_per_frame = context->m_device->createCommandPoolUnique(cmd_pool_onetime, cb);
 			}
 
 			vk::CommandPoolCreateInfo cmd_pool_compiled;
 			cmd_pool_compiled.queueFamilyIndex = (uint32_t)family;
 			cmd_pool_compiled.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
-			per_family.m_cmd_pool_compiled = device->createCommandPoolUnique(cmd_pool_onetime, cb);
+			per_family.m_cmd_pool_compiled = context->m_device->createCommandPoolUnique(cmd_pool_onetime, cb);
 
 			vk::CommandPoolCreateInfo cmd_pool_temporary;
 			cmd_pool_temporary.queueFamilyIndex = (uint32_t)family;
 			cmd_pool_temporary.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer | vk::CommandPoolCreateFlagBits::eTransient;
-			per_family.m_cmd_pool_temporary = device->createCommandPoolUnique(cmd_pool_onetime, cb);
+			per_family.m_cmd_pool_temporary = context->m_device->createCommandPoolUnique(cmd_pool_onetime, cb);
 		}
 	}
 
-	return cmd_pool;
 }
+
+
 
 vk::CommandPool cCmdPool::getCmdPool(cCmdPool::CmdPoolType type, int device_family_index) const
 {
@@ -87,6 +84,16 @@ vk::CommandPool cCmdPool::getCmdPool(cCmdPool::CmdPoolType type, int device_fami
 
 void cCmdPool::resetPool(std::shared_ptr<btr::Context>& executer)
 {
+	{
+		auto& fences = m_fences[executer->getGPUFrame()];
+		for (auto& f : fences)
+		{
+			sDebug::Order().waitFence(executer->m_device.getHandle(), f.get());
+			executer->m_device->resetFences({ f.get() });
+		}
+		fences.clear();
+	}
+	
 	for (auto& tls : m_per_thread)
 	{
 		for (auto& pool_family : tls.m_per_family)
@@ -133,6 +140,7 @@ PerFamilyIndex<std::vector<vk::UniqueCommandBuffer>> cCmdPool::submitCmd()
 void cCmdPool::submit(std::shared_ptr<btr::Context>& context)
 {
 	auto cmd_queues = submitCmd();
+	auto& fences = m_fences[sGlobal::Order().getPrevFrame()];
 	for (size_t i = 0; i < cmd_queues.size(); i++)
 	{
 		auto& cmds = cmd_queues[i];
@@ -161,12 +169,13 @@ void cCmdPool::submit(std::shared_ptr<btr::Context>& context)
 			.setPSignalSemaphores(nullptr)
 		};
 
-		vk::FenceCreateInfo info;
-		auto fence = context->m_device->createFenceUnique(info);
 		auto q = context->m_device->getQueue(i, 0);
-		q.submit(submit_info, fence.get());
-		sDeleter::Order().enque(std::move(cmds), std::move(fence));
+
+		vk::FenceCreateInfo info;
+		fences.emplace_back(std::move(context->m_device->createFenceUnique(info)));
+		q.submit(submit_info, fences.back().get());
 	}
+	sDeleter::Order().enque(std::move(cmd_queues));
 
 }
 vk::CommandBuffer cCmdPool::allocCmdOnetime(int device_family_index)

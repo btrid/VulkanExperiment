@@ -47,7 +47,7 @@ vk::CommandBuffer UIManipulater::execute()
 			ImGui::ShowTestWindow();
 #endif
 		};
-		app::g_app_instance->m_window->pushImguiCmd(std::move(func));
+		app::g_app_instance->m_window->getImguiPipeline()->pushImguiCmd(std::move(func));
 
 	}
 
@@ -57,7 +57,7 @@ vk::CommandBuffer UIManipulater::execute()
 		{
 			manipWindow();
 		};
-		app::g_app_instance->m_window->pushImguiCmd(std::move(func));
+		app::g_app_instance->m_window->getImguiPipeline()->pushImguiCmd(std::move(func));
 	}
 	if (m_is_show_tree_window)
 	{
@@ -65,7 +65,7 @@ vk::CommandBuffer UIManipulater::execute()
 		{
 			treeWindow();
 		};
-		app::g_app_instance->m_window->pushImguiCmd(std::move(func));
+		app::g_app_instance->m_window->getImguiPipeline()->pushImguiCmd(std::move(func));
 	}
 
 	if (m_is_show_anime_window)
@@ -74,7 +74,7 @@ vk::CommandBuffer UIManipulater::execute()
 		{
 			animeWindow();
 		};
-		app::g_app_instance->m_window->pushImguiCmd(std::move(func));
+		app::g_app_instance->m_window->getImguiPipeline()->pushImguiCmd(std::move(func));
 	}
 
 	if (m_is_show_texture_window)
@@ -83,7 +83,7 @@ vk::CommandBuffer UIManipulater::execute()
 		{
 			textureWindow();
 		};
-		app::g_app_instance->m_window->pushImguiCmd(std::move(func));
+		app::g_app_instance->m_window->getImguiPipeline()->pushImguiCmd(std::move(func));
 	}
 
 	auto cmd = m_context->m_cmd_pool->allocCmdOnetime(0);

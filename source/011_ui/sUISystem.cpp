@@ -15,8 +15,8 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context)
 {
 
 	m_context = context;
+	m_render_pass = context->m_window->getRenderBackbufferPass();
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-	m_render_pass = std::make_shared<RenderBackbufferModule>(context);
 	{
 		btr::BufferMemoryDescriptorEx<UIGlobal> desc;
 		desc.element_num = 1;
@@ -188,6 +188,7 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context)
 		}
 	}
 	// pipeline
+	m_render_pass = context->m_window->getRenderBackbufferPass();
 	{
 		{
 			vk::PipelineShaderStageCreateInfo shader_info[SHADER_NUM];

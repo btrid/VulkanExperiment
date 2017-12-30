@@ -1,6 +1,7 @@
 #include <applib/sParticlePipeline.h>
 #include <applib/sCameraManager.h>
 #include <applib/sSystem.h>
+#include <btrlib/cWindow.h>
 
 void sParticlePipeline::setup(std::shared_ptr<btr::Context>& context)
 {
@@ -9,9 +10,6 @@ void sParticlePipeline::setup(std::shared_ptr<btr::Context>& context)
 	m_particle_info_cpu.m_generate_cmd_max_num = 256;
 
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-	{
-		m_render_pass = std::make_shared<RenderBackbufferModule>(context);
-	}
 	{
 		{
 			btr::BufferMemoryDescriptor data_desc;
@@ -227,7 +225,12 @@ void sParticlePipeline::setup(std::shared_ptr<btr::Context>& context)
 			context->m_device->updateDescriptorSets(write_desc, {});
 		}
 	}
+
 	{
+		{
+			//		m_render_pass = std::make_shared<RenderBackbufferModule>(context);
+			m_render_pass = context->m_window->getRenderBackbufferPass();
+		}
 		// Create pipeline
 		std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 		{

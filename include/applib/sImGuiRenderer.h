@@ -16,7 +16,8 @@ struct sImGuiRenderer : SingletonEx<sImGuiRenderer>
 	sImGuiRenderer(const std::shared_ptr<btr::Context>& context);
 
 	vk::CommandBuffer Render();
-private:
+
+public:
 	enum Shader
 	{
 		SHADER_VERT_RENDER,
@@ -24,25 +25,20 @@ private:
 
 		SHADER_NUM,
 	};
-	enum Pipeline
-	{
-		PIPELINE_RENDER,
-		PIPELINE_NUM,
-	};
 	enum PipelineLayout
 	{
 		PIPELINE_LAYOUT_RENDER,
 		PIPELINE_LAYOUT_NUM,
 	};
 
+private:
+
 	std::shared_ptr<btr::Context> m_context;
-	std::shared_ptr<RenderPassModule> m_render_pass;
 
 	vk::UniqueDescriptorSetLayout	m_descriptor_set_layout;
 	vk::UniqueDescriptorSet			m_descriptor_set;
 
 	std::array<vk::UniqueShaderModule, SHADER_NUM>				m_shader_module;
-	std::array<vk::UniquePipeline, PIPELINE_NUM>				m_pipeline;
 	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM>	m_pipeline_layout;
 
 	vk::UniqueImage m_image;
@@ -50,4 +46,8 @@ private:
 	vk::UniqueSampler m_sampler;
 
 	std::vector<vk::UniqueImageView> m_image_view;	
+
+public:
+	vk::ShaderModule getShaderModle(Shader type) { return m_shader_module[type].get(); }
+	vk::PipelineLayout getPipelineLayout(PipelineLayout type) { return m_pipeline_layout[type].get(); }
 };

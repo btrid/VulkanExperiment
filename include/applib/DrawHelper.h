@@ -56,8 +56,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 		SPHERE,
 		PrimitiveType_MAX,
 	};
-	vk::UniqueRenderPass m_render_pass;
-	std::vector<vk::UniqueFramebuffer> m_framebuffer;
+	std::shared_ptr<RenderPassModule> m_render_pass;
 
 	std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_module;
 	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_shader_info;
@@ -167,71 +166,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 		}
 
 		{
-			// レンダーパス
-			std::vector<vk::AttachmentReference> colorRef =
-			{
-				vk::AttachmentReference()
-				.setAttachment(0)
-				.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
-			};
-			vk::AttachmentReference depth_ref;
-			depth_ref.setAttachment(1);
-			depth_ref.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-
-			vk::SubpassDescription subpass;
-			subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
-			subpass.setInputAttachmentCount(0);
-			subpass.setPInputAttachments(nullptr);
-			subpass.setColorAttachmentCount((uint32_t)colorRef.size());
-			subpass.setPColorAttachments(colorRef.data());
-			subpass.setPDepthStencilAttachment(&depth_ref);
-			// render pass
-			std::vector<vk::AttachmentDescription> attachDescription = 
-			{
-				vk::AttachmentDescription()
-				.setFormat(context->m_window->getSwapchain().m_surface_format.format)
-				.setSamples(vk::SampleCountFlagBits::e1)
-				.setLoadOp(vk::AttachmentLoadOp::eLoad)
-				.setStoreOp(vk::AttachmentStoreOp::eStore)
-				.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
-				.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
-				vk::AttachmentDescription()
-				.setFormat(vk::Format::eD32Sfloat)
-				.setSamples(vk::SampleCountFlagBits::e1)
-				.setLoadOp(vk::AttachmentLoadOp::eLoad)
-				.setStoreOp(vk::AttachmentStoreOp::eStore)
-				.setInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
-				.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
-
-			};
-			vk::RenderPassCreateInfo renderpass_info = vk::RenderPassCreateInfo()
-				.setAttachmentCount(attachDescription.size())
-				.setPAttachments(attachDescription.data())
-				.setSubpassCount(1)
-				.setPSubpasses(&subpass);
-
-			m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
-
-			// フレームバッファ
-			m_framebuffer.resize(context->m_window->getSwapchain().getBackbufferNum());
-			{
-				std::vector<vk::ImageView> view(2);
-
-				vk::FramebufferCreateInfo framebuffer_info;
-				framebuffer_info.setRenderPass(m_render_pass.get());
-				framebuffer_info.setAttachmentCount((uint32_t)view.size());
-				framebuffer_info.setPAttachments(view.data());
-				framebuffer_info.setWidth(context->m_window->getClientSize().x);
-				framebuffer_info.setHeight(context->m_window->getClientSize().y);
-				framebuffer_info.setLayers(1);
-
-				for (size_t i = 0; i < m_framebuffer.size(); i++) {
-					view[0] = context->m_window->getSwapchain().m_backbuffer[i].m_view;
-					view[1] = context->m_window->getSwapchain().m_depth.m_view;
-					m_framebuffer[i] = context->m_device->createFramebufferUnique(framebuffer_info);
-				}
-			}
-
+			m_render_pass = context->m_window->getRenderBackbufferPass();
 		}
 		
 		// setup shader
@@ -361,7 +296,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
 				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_PRIMITIVE].get())
-				.setRenderPass(m_render_pass.get())
+				.setRenderPass(m_render_pass->getRenderPass())
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
@@ -377,9 +312,9 @@ struct DrawHelper : public Singleton<DrawHelper>
 		auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
 
 		vk::RenderPassBeginInfo begin_render_Info;
-		begin_render_Info.setRenderPass(m_render_pass.get());
+		begin_render_Info.setRenderPass(m_render_pass->getRenderPass());
 		begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(640, 480)));
-		begin_render_Info.setFramebuffer(m_framebuffer[executer->getGPUFrame()].get());
+		begin_render_Info.setFramebuffer(m_render_pass->getFramebuffer(executer->getGPUFrame()));
 		cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW_PRIMITIVE].get());
