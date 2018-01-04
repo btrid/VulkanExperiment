@@ -132,7 +132,7 @@ struct RenderBackbufferAppModule : public RenderPassModule
 	}
 	virtual vk::RenderPass getRenderPass()const override { return m_render_pass.get(); }
 	virtual vk::Framebuffer getFramebuffer(uint32_t index)const override { 
-		return m_framebuffer[m_window->getSwapchain().m_backbuffer_index].get(); 
+		return m_framebuffer[index].get(); 
 	}
 	virtual vk::Extent2D getResolution()const override { return m_resolution; }
 

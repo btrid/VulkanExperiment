@@ -252,7 +252,7 @@ vk::CommandBuffer sImGuiRenderer::Render()
 		ImDrawData* draw_data = ImGui::GetDrawData();
 
 		vk::RenderPassBeginInfo begin_render_info;
-		begin_render_info.setFramebuffer(window->getRenderBackbufferPass()->getFramebuffer(m_context->getGPUFrame()));
+		begin_render_info.setFramebuffer(window->getRenderBackbufferPass()->getFramebuffer(window->getSwapchain().m_backbuffer_index));
 		begin_render_info.setRenderPass(window->getRenderBackbufferPass()->getRenderPass());
 		begin_render_info.setRenderArea(vk::Rect2D({}, window->getRenderBackbufferPass()->getResolution()));
 		cmd.beginRenderPass(begin_render_info, vk::SubpassContents::eInline);
