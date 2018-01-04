@@ -73,6 +73,15 @@ int main()
 			cmds[1] = sUISystem::Order().draw();
 			cmds[2] = sImGuiRenderer::Order().Render();
 			app.submit(std::move(cmds));
+
+// 			auto* c = context.get();
+// 			auto* cp = c->m_cmd_pool.get();
+// 			auto vb = c->m_vertex_memory.getBuffer();
+// 			for (auto i = 0; i < 10000; i++) {
+// 				auto cmd = cp->allocCmdTempolary(0);
+// 				cmd->bindVertexBuffers(0, { vb }, { 0 });
+// 				cmd->bindIndexBuffer(vb, 0, vk::IndexType::eUint32);
+// 			}
 		}
 		app.postUpdate();
 		printf("%6.4fms\n", time.getElapsedTimeAsMilliSeconds());

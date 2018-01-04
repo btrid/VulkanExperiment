@@ -7,7 +7,7 @@
 //#include <btrlib/cWindow.h>
 #include <btrlib/cCmdPool.h>
 
-struct cWindow;
+class cWindow;
 namespace btr
 {
 struct Context

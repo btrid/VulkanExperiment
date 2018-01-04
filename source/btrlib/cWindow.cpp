@@ -70,30 +70,6 @@ void cWindow::Swapchain::setup(const std::shared_ptr<btr::Context>& context, con
 	m_swapchain_handle = device->createSwapchainKHRUnique(swapchain_info);
 
 	m_backbuffer_image = device->getSwapchainImagesKHR(m_swapchain_handle.get());
-	for (uint32_t i = 0; i < m_backbuffer_image.size(); i++)
-	{
-		auto subresourceRange = vk::ImageSubresourceRange()
-			.setAspectMask(vk::ImageAspectFlagBits::eColor)
-			.setBaseArrayLayer(0)
-			.setLayerCount(1)
-			.setBaseMipLevel(0)
-			.setLevelCount(1);
-
-		vk::ImageViewCreateInfo backbuffer_view_info;
-		backbuffer_view_info.setImage(m_backbuffer_image[i]);
-		backbuffer_view_info.setFormat(m_surface_format.format);
-		backbuffer_view_info.setViewType(vk::ImageViewType::e2D);
-		backbuffer_view_info.setComponents(vk::ComponentMapping{
-			vk::ComponentSwizzle::eR,
-			vk::ComponentSwizzle::eG,
-			vk::ComponentSwizzle::eB,
-			vk::ComponentSwizzle::eA,
-		});
-		backbuffer_view_info.setSubresourceRange(subresourceRange);
-		auto backbuffer_view = device->createImageView(backbuffer_view_info);
-
-//		rendertarget.m_view = backbuffer_view;
-	}
 	m_size = capability.currentExtent;
 	
 

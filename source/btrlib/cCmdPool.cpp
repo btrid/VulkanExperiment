@@ -58,7 +58,7 @@ cCmdPool::cCmdPool(const std::shared_ptr<btr::Context>& context)
 
 			vk::CommandPoolCreateInfo cmd_pool_temporary;
 			cmd_pool_temporary.queueFamilyIndex = (uint32_t)family;
-			cmd_pool_temporary.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer | vk::CommandPoolCreateFlagBits::eTransient;
+			cmd_pool_temporary.flags = vk::CommandPoolCreateFlagBits::eTransient;
 			per_family.m_cmd_pool_temporary = context->m_device->createCommandPoolUnique(cmd_pool_onetime, cb);
 		}
 	}
@@ -82,14 +82,14 @@ vk::CommandPool cCmdPool::getCmdPool(cCmdPool::CmdPoolType type, int device_fami
 	}
 }
 
-void cCmdPool::resetPool(std::shared_ptr<btr::Context>& executer)
+void cCmdPool::resetPool(std::shared_ptr<btr::Context>& context)
 {
 	{
-		auto& fences = m_fences[executer->getGPUFrame()];
+		auto& fences = m_fences[context->getGPUFrame()];
 		for (auto& f : fences)
 		{
-			sDebug::Order().waitFence(executer->m_device.getHandle(), f.get());
-			executer->m_device->resetFences({ f.get() });
+			sDebug::Order().waitFence(context->m_device.getHandle(), f.get());
+			context->m_device->resetFences({ f.get() });
 		}
 		fences.clear();
 	}
@@ -98,10 +98,10 @@ void cCmdPool::resetPool(std::shared_ptr<btr::Context>& executer)
 	{
 		for (auto& pool_family : tls.m_per_family)
 		{
-			if (!pool_family.m_cmd_onetime_deleter[executer->getGPUFrame()].empty())
+			if (!pool_family.m_cmd_onetime_deleter[context->getGPUFrame()].empty())
 			{
-				executer->m_gpu.getDevice()->resetCommandPool(pool_family.m_cmd_pool_onetime[executer->getGPUFrame()].get(), vk::CommandPoolResetFlagBits::eReleaseResources);
-				pool_family.m_cmd_onetime_deleter[executer->getGPUFrame()].clear();
+				context->m_gpu.getDevice()->resetCommandPool(pool_family.m_cmd_pool_onetime[context->getGPUFrame()].get(), vk::CommandPoolResetFlagBits::eReleaseResources);
+				pool_family.m_cmd_onetime_deleter[context->getGPUFrame()].clear();
 
 			}
 		}

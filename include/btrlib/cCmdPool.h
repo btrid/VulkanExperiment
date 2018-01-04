@@ -46,11 +46,13 @@ struct cCmdPool
 	struct CmdPoolPerFamily
 	{
 		std::array<vk::UniqueCommandPool, sGlobal::FRAME_MAX> m_cmd_pool_onetime;
+		std::array<std::vector<vk::UniqueCommandBuffer>, sGlobal::FRAME_MAX> m_cmd_onetime_deleter;
+
 		vk::UniqueCommandPool	m_cmd_pool_temporary;
+		std::vector<vk::UniqueCommandBuffer> m_cmd_queue;
+
 		vk::UniqueCommandPool	m_cmd_pool_compiled;
 
-		std::array<std::vector<vk::UniqueCommandBuffer>, sGlobal::FRAME_MAX> m_cmd_onetime_deleter;
-		std::vector<vk::UniqueCommandBuffer> m_cmd_queue;
 	};
 	struct CmdPoolPerThread
 	{

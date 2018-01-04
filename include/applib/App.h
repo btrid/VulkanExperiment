@@ -8,7 +8,10 @@
 #include <btrlib/cWindow.h>
 #include <btrlib/Module.h>
 
+struct Object
+{
 
+};
 struct AppWindow : public cWindow
 {
 	AppWindow(const std::shared_ptr<btr::Context>& context, const cWindowDescriptor& descriptor);

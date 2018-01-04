@@ -93,7 +93,7 @@ void App::setup(const AppDescriptor& desc)
 
 	auto window = sWindow::Order().createWindow<AppWindow>(m_context, window_desc);
 	m_window = window;
-	m_window_list.push_back(window);
+	m_window_list.emplace_back(window);
 	m_context->m_window = window;
 
 	sParticlePipeline::Order().setup(m_context);
@@ -102,7 +102,6 @@ void App::setup(const AppDescriptor& desc)
 
 void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
 {
-	m_context->m_cmd_pool->submit(m_context);
 
 	submit_cmds.erase(std::remove_if(submit_cmds.begin(), submit_cmds.end(), [&](auto& d) { return !d; }), submit_cmds.end());
 
@@ -115,7 +114,7 @@ void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
 	}
 
 	m_sync_point.wait();
-//	m_system_cmds.erase(std::remove_if(m_system_cmds.begin(), m_system_cmds.end(), [&](auto& d) { return !d; }), m_system_cmds.end());
+
 	cmds.insert(cmds.end(), std::make_move_iterator(m_system_cmds.begin()), std::make_move_iterator(m_system_cmds.end()));
 
 	cmds.insert(cmds.end(), std::make_move_iterator(submit_cmds.begin()), std::make_move_iterator(submit_cmds.end()));
@@ -236,7 +235,7 @@ void App::preUpdate()
 		job.mJob.emplace_back(
 			[&]()
 		{
-//			m_context->m_cmd_pool->submit(m_context);
+			m_context->m_cmd_pool->submit(m_context);
 			m_sync_point.arrive();
 		}
 		);
@@ -253,8 +252,16 @@ void App::postUpdate()
 		window->sync();
 	}
 
-	m_window_list.insert(m_window_list.end(), std::make_move_iterator(m_window_stack.begin()), std::make_move_iterator(m_window_stack.end()));
-	m_window_stack.clear();
+	if (!m_window_stack.empty())
+	{
+		m_window_list.reserve(m_window_list.size() + m_window_stack.size());
+		for (auto&& new_window : m_window_stack)
+		{
+			m_window_list.emplace_back(std::move(new_window));
+		}
+		m_window_stack.clear();
+	}
+
 
 	sGlobal::Order().sync();
 	sCameraManager::Order().sync();

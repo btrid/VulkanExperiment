@@ -58,18 +58,11 @@ class Singleton
 public:
 	struct U : public T {};
 	static U* s_instance;
-	static std::mutex s_m;
 public:
 	static T& Order() 
 	{
-		if (!s_instance)
-		{
-			std::lock_guard<std::mutex> lg(s_m);
-			if (!s_instance)
-			{
-				s_instance = new U;
-			}
-		}
+		static std::once_flag flag;
+		std::call_once(flag, []() {s_instance = new U; });
 		return *s_instance;
 	}
 
@@ -85,8 +78,6 @@ public:
 };
 template<typename T>
 typename Singleton<T>::U* Singleton<T>::s_instance;
-template<typename T>
-std::mutex Singleton<T>::s_m;
 
 template <
 	typename T
