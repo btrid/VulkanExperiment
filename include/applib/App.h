@@ -1,5 +1,6 @@
 #pragma once
 #include <memory>
+#include <bitset>
 #include <btrlib/Define.h>
 #include <btrlib/cWindow.h>
 #include <btrlib/cCmdPool.h>
@@ -8,13 +9,20 @@
 #include <btrlib/cWindow.h>
 #include <btrlib/Module.h>
 
-struct Object
+using PipelineFlags = std::bitset<8>;
+struct PipelineFlagBits
 {
-
+	enum {
+		IS_SETUP,
+	};
 };
+
 struct AppWindow : public cWindow
 {
 	AppWindow(const std::shared_ptr<btr::Context>& context, const cWindowDescriptor& descriptor);
+
+	void setup(vk::CommandBuffer cmd);
+
 	std::vector<vk::UniqueImageView> m_backbuffer_view;
 
 	vk::UniqueImage m_depth_image;
@@ -23,7 +31,7 @@ struct AppWindow : public cWindow
 	
 	std::vector <vk::UniqueCommandBuffer> m_cmd_present_to_render;
 	std::vector <vk::UniqueCommandBuffer> m_cmd_render_to_present;
-
+	PipelineFlags m_flags;
 
 	struct ImguiRenderPipeline
 	{
@@ -52,6 +60,7 @@ struct AppWindow : public cWindow
 struct RenderBackbufferAppModule : public RenderPassModule
 {
 	RenderBackbufferAppModule(const std::shared_ptr<btr::Context>& context, AppWindow* const window)
+		: m_window(window)
 	{
 		auto& device = context->m_device;
 		// レンダーパス
@@ -122,14 +131,16 @@ struct RenderBackbufferAppModule : public RenderPassModule
 		m_resolution = window->getClientSize<vk::Extent2D>();
 	}
 	virtual vk::RenderPass getRenderPass()const override { return m_render_pass.get(); }
-	virtual vk::Framebuffer getFramebuffer(uint32_t index)const override { return m_framebuffer[index].get(); }
+	virtual vk::Framebuffer getFramebuffer(uint32_t index)const override { 
+		return m_framebuffer[m_window->getSwapchain().m_backbuffer_index].get(); 
+	}
 	virtual vk::Extent2D getResolution()const override { return m_resolution; }
 
 private:
 	vk::UniqueRenderPass m_render_pass;
 	std::vector<vk::UniqueFramebuffer> m_framebuffer;
 	vk::Extent2D m_resolution;
-
+	AppWindow const * const m_window;
 };
 
 namespace app
