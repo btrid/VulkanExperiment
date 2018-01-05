@@ -382,8 +382,7 @@ struct ModelInstancingAnimationPipelineComponent : public PipelineComponent
 
 		auto instancing_module = std::make_shared<ModelInstancingModule>();
 
-		auto cmd_ = context->m_cmd_pool->allocCmdTempolary(0);
-		auto cmd = cmd_.get();
+		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 		// node info
 		{
 			auto nodeInfo = ModelInstancingModule::NodeInfo::createNodeInfo(resource->mNodeRoot);

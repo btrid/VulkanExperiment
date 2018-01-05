@@ -60,7 +60,7 @@ struct DefaultMaterialModule : public MaterialModule
 			copy_info.setSize(staging.getBufferInfo().range);
 			copy_info.setSrcOffset(staging.getBufferInfo().offset);
 			copy_info.setDstOffset(m_material_index.getBufferInfo().offset);
-			cmd->copyBuffer(staging.getBufferInfo().buffer, m_material_index.getBufferInfo().buffer, copy_info);
+			cmd.copyBuffer(staging.getBufferInfo().buffer, m_material_index.getBufferInfo().buffer, copy_info);
 
 		}
 
@@ -86,7 +86,7 @@ struct DefaultMaterialModule : public MaterialModule
 			copy_info.setSize(staging_material.getBufferInfo().range);
 			copy_info.setSrcOffset(staging_material.getBufferInfo().offset);
 			copy_info.setDstOffset(m_material.getBufferInfo().offset);
-			cmd->copyBuffer(staging_material.getBufferInfo().buffer, m_material.getBufferInfo().buffer, copy_info);
+			cmd.copyBuffer(staging_material.getBufferInfo().buffer, m_material.getBufferInfo().buffer, copy_info);
 		}
 
 		// todo åãç\ìKìñ

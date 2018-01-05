@@ -84,19 +84,19 @@ struct UIManipulater
 			desc.element_num = 256;
 			m_ui->m_user_id = context->m_storage_memory.allocateMemory(desc);
 
-			cmd->fillBuffer(m_ui->m_user_id.getInfo().buffer, m_ui->m_user_id.getInfo().offset, m_ui->m_user_id.getInfo().range, 0u);
+			cmd.fillBuffer(m_ui->m_user_id.getInfo().buffer, m_ui->m_user_id.getInfo().offset, m_ui->m_user_id.getInfo().range, 0u);
 		}
 		{
 			btr::BufferMemoryDescriptorEx<UIEvent> desc;
 			desc.element_num = 256;
 			m_ui->m_event = context->m_storage_memory.allocateMemory(desc);
-			cmd->fillBuffer(m_ui->m_event.getInfo().buffer, m_ui->m_event.getInfo().offset, m_ui->m_event.getInfo().range, 0u);
+			cmd.fillBuffer(m_ui->m_event.getInfo().buffer, m_ui->m_event.getInfo().offset, m_ui->m_event.getInfo().range, 0u);
 		}
 		{
 			btr::BufferMemoryDescriptorEx<UIScene> desc;
 			desc.element_num = 1;
 			m_ui->m_scene = context->m_storage_memory.allocateMemory(desc);
-			cmd->fillBuffer(m_ui->m_scene.getInfo().buffer, m_ui->m_scene.getInfo().offset, m_ui->m_scene.getInfo().range, 0u);
+			cmd.fillBuffer(m_ui->m_scene.getInfo().buffer, m_ui->m_scene.getInfo().offset, m_ui->m_scene.getInfo().range, 0u);
 		}
 
 		{
@@ -153,7 +153,7 @@ struct UIManipulater
 		key.m_value_i = 0;
 		anime_data.m_key.push_back(key);
 		m_anim_manip->m_anime->m_data.push_back(anime_data);
-		m_ui->m_anime = m_anim_manip->m_anime->makeResource(m_context, cmd.get());
+		m_ui->m_anime = m_anim_manip->m_anime->makeResource(m_context, cmd);
 	}
 
 	vk::CommandBuffer execute();

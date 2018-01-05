@@ -209,7 +209,7 @@ void cModel::load(std::shared_ptr<btr::Context>& context, const std::string& fil
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
 	// ‰Šú‰»
-	m_resource->m_material = loadMaterial(scene, filename, context, cmd.get());
+	m_resource->m_material = loadMaterial(scene, filename, context, cmd);
 	m_resource->mNodeRoot = loadNode(scene);
 	loadMotion(m_resource->m_animation, scene, m_resource->mNodeRoot, context);
 
@@ -361,24 +361,24 @@ void cModel::load(std::shared_ptr<btr::Context>& context, const std::string& fil
 			copy_info.setSize(staging_vertex.getBufferInfo().range);
 			copy_info.setSrcOffset(staging_vertex.getBufferInfo().offset);
 			copy_info.setDstOffset(vertex_data.m_vertex_buffer_ex.getBufferInfo().offset);
-			cmd->copyBuffer(staging_vertex.getBufferInfo().buffer, vertex_data.m_vertex_buffer_ex.getBufferInfo().buffer, copy_info);
+			cmd.copyBuffer(staging_vertex.getBufferInfo().buffer, vertex_data.m_vertex_buffer_ex.getBufferInfo().buffer, copy_info);
 
 			copy_info.setSize(staging_index.getBufferInfo().range);
 			copy_info.setSrcOffset(staging_index.getBufferInfo().offset);
 			copy_info.setDstOffset(vertex_data.m_index_buffer_ex.getBufferInfo().offset);
-			cmd->copyBuffer(staging_index.getBufferInfo().buffer, vertex_data.m_index_buffer_ex.getBufferInfo().buffer, copy_info);
+			cmd.copyBuffer(staging_index.getBufferInfo().buffer, vertex_data.m_index_buffer_ex.getBufferInfo().buffer, copy_info);
 
 			copy_info.setSize(staging_indirect.getBufferInfo().range);
 			copy_info.setSrcOffset(staging_indirect.getBufferInfo().offset);
 			copy_info.setDstOffset(vertex_data.m_indirect_buffer_ex.getBufferInfo().offset);
-			cmd->copyBuffer(staging_indirect.getBufferInfo().buffer, vertex_data.m_indirect_buffer_ex.getBufferInfo().buffer, copy_info);
+			cmd.copyBuffer(staging_indirect.getBufferInfo().buffer, vertex_data.m_indirect_buffer_ex.getBufferInfo().buffer, copy_info);
 
 			vk::BufferMemoryBarrier indirect_barrier;
 			indirect_barrier.setBuffer(vertex_data.m_indirect_buffer_ex.getBufferInfo().buffer);
 			indirect_barrier.setOffset(vertex_data.m_indirect_buffer_ex.getBufferInfo().offset);
 			indirect_barrier.setSize(vertex_data.m_indirect_buffer_ex.getBufferInfo().range);
 			indirect_barrier.setDstAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
-			cmd->pipelineBarrier(
+			cmd.pipelineBarrier(
 				vk::PipelineStageFlagBits::eTransfer,
 				vk::PipelineStageFlagBits::eDrawIndirect,
 				vk::DependencyFlags(),

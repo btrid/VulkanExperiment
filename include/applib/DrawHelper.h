@@ -98,7 +98,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 				copy.setSrcOffset(staging.getBufferInfo().offset);
 				copy.setDstOffset(m_mesh_vertex[Box].getBufferInfo().offset);
 				copy.setSize(desc.size);
-				cmd->copyBuffer(staging.getBufferInfo().buffer, m_mesh_vertex[Box].getBufferInfo().buffer, copy);
+				cmd.copyBuffer(staging.getBufferInfo().buffer, m_mesh_vertex[Box].getBufferInfo().buffer, copy);
 			}
 
 			{
@@ -113,7 +113,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 				copy.setSrcOffset(staging.getBufferInfo().offset);
 				copy.setDstOffset(m_mesh_index[Box].getBufferInfo().offset);
 				copy.setSize(desc.size);
-				cmd->copyBuffer(staging.getBufferInfo().buffer, m_mesh_index[Box].getBufferInfo().buffer, copy);
+				cmd.copyBuffer(staging.getBufferInfo().buffer, m_mesh_index[Box].getBufferInfo().buffer, copy);
 			}
 			m_mesh_index_num[Box] = i.size();
 
@@ -135,7 +135,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 				copy.setSrcOffset(staging.getBufferInfo().offset);
 				copy.setDstOffset(m_mesh_vertex[SPHERE].getBufferInfo().offset);
 				copy.setSize(desc.size);
-				cmd->copyBuffer(staging.getBufferInfo().buffer, m_mesh_vertex[SPHERE].getBufferInfo().buffer, copy);
+				cmd.copyBuffer(staging.getBufferInfo().buffer, m_mesh_vertex[SPHERE].getBufferInfo().buffer, copy);
 			}
 
 			{
@@ -150,7 +150,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 				copy.setSrcOffset(staging.getBufferInfo().offset);
 				copy.setDstOffset(m_mesh_index[SPHERE].getBufferInfo().offset);
 				copy.setSize(desc.size);
-				cmd->copyBuffer(staging.getBufferInfo().buffer, m_mesh_index[SPHERE].getBufferInfo().buffer, copy);
+				cmd.copyBuffer(staging.getBufferInfo().buffer, m_mesh_index[SPHERE].getBufferInfo().buffer, copy);
 			}
 			m_mesh_index_num[SPHERE] = i.size() * 3;
 		}
@@ -162,7 +162,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 			};
 			barrier[0].setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 			barrier[1].setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
-			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexInput, {}, {}, barrier, {});
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexInput, {}, {}, barrier, {});
 		}
 
 		{

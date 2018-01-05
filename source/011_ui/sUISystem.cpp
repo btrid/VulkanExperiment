@@ -30,13 +30,13 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context)
 		copy.setSrcOffset(staging.getInfo().offset);
 		copy.setDstOffset(m_global.getInfo().offset);
 		copy.setSize(staging.getInfo().range);
-		cmd->copyBuffer(staging.getInfo().buffer, m_global.getInfo().buffer, copy);
+		cmd.copyBuffer(staging.getInfo().buffer, m_global.getInfo().buffer, copy);
 
 		{
 			auto to_read = m_global.makeMemoryBarrier();
 			to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 			to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexShader, {}, {}, { to_read }, {});
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexShader, {}, {}, { to_read }, {});
 		}
 	}
 

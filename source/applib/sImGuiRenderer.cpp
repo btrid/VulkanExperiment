@@ -96,9 +96,9 @@ sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 				to_shader_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 				to_shader_read_barrier.subresourceRange = subresourceRange;
 
-				cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
-				cmd->copyBufferToImage(staging_buffer.getBufferInfo().buffer, m_image.get(), vk::ImageLayout::eTransferDstOptimal, { copy });
-				cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllGraphics, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
+				cmd.copyBufferToImage(staging_buffer.getBufferInfo().buffer, m_image.get(), vk::ImageLayout::eTransferDstOptimal, { copy });
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllGraphics, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
 
 			}
 
