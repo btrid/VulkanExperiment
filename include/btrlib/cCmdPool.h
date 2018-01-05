@@ -40,13 +40,14 @@ struct cCmdPool
 	std::vector<CmdPoolPerThread> m_per_thread;
 
 	std::array<std::vector<vk::UniqueCommandBuffer>, sGlobal::FRAME_MAX> m_cmds;
-
 	std::array<std::vector<vk::UniqueFence>, sGlobal::FRAME_MAX> m_fences;
 
 	vk::CommandBuffer allocCmdOnetime(int device_family_index);
 	vk::CommandBuffer allocCmdTempolary(uint32_t device_family_index);
 	vk::CommandPool getCmdPool(CmdPoolType type, int device_family_index)const;
 	vk::CommandBuffer get();
+
+	std::array<std::vector<vk::UniqueCommandBuffer>, sGlobal::FRAME_MAX>& getCmds() { return m_cmds; }
 
 	void resetPool(std::shared_ptr<btr::Context>& executer);
 	void submit(std::shared_ptr<btr::Context>& executer);

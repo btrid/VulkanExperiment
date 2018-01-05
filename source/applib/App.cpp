@@ -124,15 +124,10 @@ void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
 	std::vector<vk::CommandBuffer> cmds;
 	cmds.reserve(32);
 
+	m_context->m_cmd_pool->submit(m_context);
+
 	for (auto& window : m_window_list)
 	{
-		if (!window->m_flags.test(PipelineFlagBits::IS_SETUP)) {
-			window->m_flags.set(PipelineFlagBits::IS_SETUP);
-			auto cmd = m_context->m_cmd_pool->allocCmdOnetime(0);
-			window->setup(cmd);
-			cmd.end();
-			cmds.push_back(cmd);
-		}
 		cmds.push_back(window->m_cmd_present_to_render[window->getSwapchain().m_backbuffer_index].get());
 	}
 
@@ -188,8 +183,8 @@ void App::preUpdate()
 		m_camera->control(m_window->getInput(), 0.016f);
 	}
 
-	m_system_cmds.resize(5);
-	m_sync_point.reset(5);
+	m_system_cmds.resize(4);
+	m_sync_point.reset(4);
 
 	{
 		MAKE_THREAD_JOB(job);
@@ -231,18 +226,6 @@ void App::preUpdate()
 		{
  			m_system_cmds[2] = sParticlePipeline::Order().draw(m_context);
 			m_system_cmds[3] = sParticlePipeline::Order().draw(m_context);
-			m_sync_point.arrive();
-		}
-		);
-		sGlobal::Order().getThreadPool().enque(job);
-	}
-
-	{
-		MAKE_THREAD_JOB(job);
-		job.mJob.emplace_back(
-			[&]()
-		{
-			m_context->m_cmd_pool->submit(m_context);
 			m_sync_point.arrive();
 		}
 		);
@@ -390,6 +373,15 @@ AppWindow::ImguiRenderPipeline::ImguiRenderPipeline(const std::shared_ptr<btr::C
 		m_pipeline = std::move(pipelines[0]);
 
 	}
+
+	m_imgui_context = ImGui::CreateContext();
+
+}
+
+AppWindow::ImguiRenderPipeline::~ImguiRenderPipeline()
+{
+	ImGui::DestroyContext(m_imgui_context);
+	m_imgui_context = nullptr;
 }
 
 AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindowDescriptor& descriptor)
@@ -464,6 +456,42 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 
 	}
 
+	{
+		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+		vk::ImageSubresourceRange subresource_range;
+		subresource_range.setAspectMask(vk::ImageAspectFlagBits::eColor);
+		subresource_range.setBaseArrayLayer(0);
+		subresource_range.setLayerCount(1);
+		subresource_range.setBaseMipLevel(0);
+		subresource_range.setLevelCount(1);
+		std::vector<vk::ImageMemoryBarrier> barrier(getSwapchain().getBackbufferNum() + 1);
+		barrier[0].setSubresourceRange(subresource_range);
+		barrier[0].setDstAccessMask(vk::AccessFlagBits::eMemoryRead);
+		barrier[0].setOldLayout(vk::ImageLayout::eUndefined);
+		barrier[0].setNewLayout(vk::ImageLayout::ePresentSrcKHR);
+		barrier[0].setImage(getSwapchain().m_backbuffer_image[0]);
+		for (uint32_t i = 1; i < getSwapchain().getBackbufferNum(); i++)
+		{
+			barrier[i] = barrier[0];
+			barrier[i].setImage(getSwapchain().m_backbuffer_image[i]);
+		}
+
+		vk::ImageSubresourceRange subresource_depth_range;
+		subresource_depth_range.aspectMask = vk::ImageAspectFlagBits::eDepth;
+		subresource_depth_range.baseArrayLayer = 0;
+		subresource_depth_range.baseMipLevel = 0;
+		subresource_depth_range.layerCount = 1;
+		subresource_depth_range.levelCount = 1;
+
+		barrier.back().setImage(m_depth_image.get());
+		barrier.back().setSubresourceRange(subresource_depth_range);
+		barrier.back().setDstAccessMask(vk::AccessFlagBits::eDepthStencilAttachmentWrite);
+		barrier.back().setOldLayout(vk::ImageLayout::eUndefined);
+		barrier.back().setNewLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eEarlyFragmentTests, vk::DependencyFlags(), {}, {}, barrier);
+
+	}
 	// present cmd‚ÌÝ’è
 	{
 		{
@@ -573,40 +601,4 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 
 	m_render_pass = std::make_shared<RenderBackbufferAppModule>(context, this);
 	m_imgui_pipeline = std::make_unique<ImguiRenderPipeline>(context, this);
-}
-
-void AppWindow::setup(vk::CommandBuffer cmd)
-{
-	vk::ImageSubresourceRange subresource_range;
-	subresource_range.setAspectMask(vk::ImageAspectFlagBits::eColor);
-	subresource_range.setBaseArrayLayer(0);
-	subresource_range.setLayerCount(1);
-	subresource_range.setBaseMipLevel(0);
-	subresource_range.setLevelCount(1);
-	std::vector<vk::ImageMemoryBarrier> barrier(getSwapchain().getBackbufferNum() + 1);
-	barrier[0].setSubresourceRange(subresource_range);
-	barrier[0].setDstAccessMask(vk::AccessFlagBits::eMemoryRead);
-	barrier[0].setOldLayout(vk::ImageLayout::eUndefined);
-	barrier[0].setNewLayout(vk::ImageLayout::ePresentSrcKHR);
-	barrier[0].setImage(getSwapchain().m_backbuffer_image[0]);
-	for (uint32_t i = 1; i < getSwapchain().getBackbufferNum(); i++)
-	{
-		barrier[i] = barrier[0];
-		barrier[i].setImage(getSwapchain().m_backbuffer_image[i]);
-	}
-
-	vk::ImageSubresourceRange subresource_depth_range;
-	subresource_depth_range.aspectMask = vk::ImageAspectFlagBits::eDepth;
-	subresource_depth_range.baseArrayLayer = 0;
-	subresource_depth_range.baseMipLevel = 0;
-	subresource_depth_range.layerCount = 1;
-	subresource_depth_range.levelCount = 1;
-
-	barrier.back().setImage(m_depth_image.get());
-	barrier.back().setSubresourceRange(subresource_depth_range);
-	barrier.back().setDstAccessMask(vk::AccessFlagBits::eDepthStencilAttachmentWrite);
-	barrier.back().setOldLayout(vk::ImageLayout::eUndefined);
-	barrier.back().setNewLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-
-	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eEarlyFragmentTests, vk::DependencyFlags(), {}, {}, barrier);
 }

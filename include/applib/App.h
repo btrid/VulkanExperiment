@@ -9,6 +9,8 @@
 #include <btrlib/cWindow.h>
 #include <btrlib/Module.h>
 
+struct ImGuiContext;
+
 using PipelineFlags = std::bitset<8>;
 struct PipelineFlagBits
 {
@@ -21,8 +23,6 @@ struct AppWindow : public cWindow
 {
 	AppWindow(const std::shared_ptr<btr::Context>& context, const cWindowDescriptor& descriptor);
 
-	void setup(vk::CommandBuffer cmd);
-
 	std::vector<vk::UniqueImageView> m_backbuffer_view;
 
 	vk::UniqueImage m_depth_image;
@@ -31,11 +31,12 @@ struct AppWindow : public cWindow
 	
 	std::vector <vk::UniqueCommandBuffer> m_cmd_present_to_render;
 	std::vector <vk::UniqueCommandBuffer> m_cmd_render_to_present;
-	PipelineFlags m_flags;
+//	PipelineFlags m_flags;
 
 	struct ImguiRenderPipeline
 	{
 		ImguiRenderPipeline(const std::shared_ptr<btr::Context>& context, AppWindow* const window);
+		~ImguiRenderPipeline();
 
 		void pushImguiCmd(std::function<void()>&& imgui_cmd)
 		{
@@ -51,6 +52,8 @@ struct AppWindow : public cWindow
 		std::array<std::vector<std::function<void()>>, 2> m_imgui_cmd;
 		vk::UniquePipeline m_pipeline;
 
+		ImGuiContext* m_imgui_context;
+//		std::unique_ptr < ImGuiContext, ImGui::DestroyContext > m_imgui_context;
 	};
 	std::unique_ptr<ImguiRenderPipeline>  m_imgui_pipeline;
 	ImguiRenderPipeline* getImguiPipeline() { return m_imgui_pipeline.get(); }

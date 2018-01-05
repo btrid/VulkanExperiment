@@ -125,7 +125,6 @@ void cCmdPool::submit(std::shared_ptr<btr::Context>& context)
 		vk::PipelineStageFlagBits::eAllCommands,
 	};
 
-
 	std::vector<vk::SubmitInfo> submit_info =
 	{
 		vk::SubmitInfo()
@@ -145,7 +144,7 @@ void cCmdPool::submit(std::shared_ptr<btr::Context>& context)
 	q.submit(submit_info, fences.back().get());
 
 	sDeleter::Order().enque(std::move(cmds));
-	cmds = std::vector<vk::UniqueCommandBuffer>(cmds.size());
+	cmds = std::vector<vk::UniqueCommandBuffer>(std::thread::hardware_concurrency());
 
 }
 vk::CommandBuffer cCmdPool::allocCmdOnetime(int device_family_index)

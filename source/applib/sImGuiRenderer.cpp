@@ -208,9 +208,10 @@ vk::CommandBuffer sImGuiRenderer::Render()
 {
 	auto cmd = m_context->m_cmd_pool->allocCmdOnetime(0);
 
-	auto& io = ImGui::GetIO();
 	for (auto& window : app::g_app_instance->m_window_list)
 	{
+		ImGui::SetCurrentContext(window->getImguiPipeline()->m_imgui_context);
+		auto& io = ImGui::GetIO();
 		io.DisplaySize = window->getClientSize<ImVec2>();
 		{
 			auto& mouse = window->getInput().m_mouse;
