@@ -29,6 +29,7 @@ void VKAPI_PTR InternalFreeNotification(void* pUserData, size_t size, VkInternal
 
 cCmdPool::cCmdPool(const std::shared_ptr<btr::Context>& context)
 {
+	m_context = context;
 	vk::AllocationCallbacks cb;
 	cb.setPfnAllocation(Allocation);
 	cb.setPfnFree(Free);
@@ -45,7 +46,7 @@ cCmdPool::cCmdPool(const std::shared_ptr<btr::Context>& context)
 			auto& per_family = per_thread.m_per_family[family];
 			vk::CommandPoolCreateInfo cmd_pool_onetime;
 			cmd_pool_onetime.queueFamilyIndex = (uint32_t)family;
-			cmd_pool_onetime.flags = vk::CommandPoolCreateFlagBits::eTransient;
+			cmd_pool_onetime.flags = vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
 			for (auto& pool_per_frame : per_family.m_cmd_pool_onetime)
 			{
 				pool_per_frame = context->m_device->createCommandPoolUnique(cmd_pool_onetime, cb);
@@ -80,71 +81,32 @@ vk::CommandPool cCmdPool::getCmdPool(cCmdPool::CmdPoolType type, int device_fami
 	}
 }
 
-void cCmdPool::resetPool(std::shared_ptr<btr::Context>& context)
+void cCmdPool::resetPool()
 {
-	{
-		auto& fences = m_fences[context->getGPUFrame()];
-		for (auto& f : fences)
-		{
-			sDebug::Order().waitFence(context->m_device.getHandle(), f.get());
-			context->m_device->resetFences({ f.get() });
-		}
-		fences.clear();
-	}
-	
 	for (auto& tls : m_per_thread)
 	{
 		for (auto& pool_family : tls.m_per_family)
 		{
-			if (!pool_family.m_cmd_onetime_deleter[context->getGPUFrame()].empty())
+			if (!pool_family.m_cmd_onetime_deleter[m_context->getGPUFrame()].empty())
 			{
-				context->m_gpu.getDevice()->resetCommandPool(pool_family.m_cmd_pool_onetime[context->getGPUFrame()].get(), vk::CommandPoolResetFlagBits::eReleaseResources);
-				pool_family.m_cmd_onetime_deleter[context->getGPUFrame()].clear();
-
+				m_context->m_gpu.getDevice()->resetCommandPool(pool_family.m_cmd_pool_onetime[m_context->getGPUFrame()].get(), vk::CommandPoolResetFlagBits::eReleaseResources);
+				pool_family.m_cmd_onetime_deleter[m_context->getGPUFrame()].clear();
 			}
 		}
 	}
 }
 
-void cCmdPool::submit(std::shared_ptr<btr::Context>& context)
+std::vector<vk::CommandBuffer> cCmdPool::submit()
 {
-	auto& fences = m_fences[sGlobal::Order().getCurrentFrame()];
-	auto& cmds = m_cmds[sGlobal::Order().getCurrentFrame()];
+	auto cmds = m_cmds[sGlobal::Order().getCurrentFrame()];
+	m_cmds[sGlobal::Order().getCurrentFrame()] = std::vector<vk::CommandBuffer>(std::thread::hardware_concurrency());
 
-	std::vector<vk::CommandBuffer> cmd;
-	cmd.reserve(cmds.size());
+	cmds.erase(std::remove_if(cmds.begin(), cmds.end(), [&](auto& d) { return !d; }), cmds.end());
 	for (auto& c : cmds)
 	{
-		if (c) 
-		{
-			c->end();
-			cmd.emplace_back(c.get());
-		}
+		c.end();
 	}
-	vk::PipelineStageFlags wait_pipelines[] = {
-		vk::PipelineStageFlagBits::eAllCommands,
-	};
-
-	std::vector<vk::SubmitInfo> submit_info =
-	{
-		vk::SubmitInfo()
-		.setCommandBufferCount(cmd.size())
-		.setPCommandBuffers(cmd.data())
-		.setWaitSemaphoreCount(0)
-		.setPWaitSemaphores(nullptr)
-		.setPWaitDstStageMask(wait_pipelines)
-		.setSignalSemaphoreCount(0)
-		.setPSignalSemaphores(nullptr)
-	};
-
-	auto q = context->m_device->getQueue(0, 0);
-
-	vk::FenceCreateInfo info;
-	fences.emplace_back(std::move(context->m_device->createFenceUnique(info)));
-	q.submit(submit_info, fences.back().get());
-
-	sDeleter::Order().enque(std::move(cmds));
-	cmds = std::vector<vk::UniqueCommandBuffer>(std::thread::hardware_concurrency());
+	return cmds;
 
 }
 vk::CommandBuffer cCmdPool::allocCmdOnetime(int device_family_index)
@@ -153,7 +115,7 @@ vk::CommandBuffer cCmdPool::allocCmdOnetime(int device_family_index)
 	cmd_buffer_info.commandBufferCount = 1;
 	cmd_buffer_info.commandPool = getCmdPool(CMD_POOL_TYPE_ONETIME, device_family_index);
 	cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
-	auto cmd_unique = std::move(sGlobal::Order().getGPU(0).getDevice()->allocateCommandBuffersUnique(cmd_buffer_info)[0]);
+	auto cmd_unique = std::move(m_context->m_device->allocateCommandBuffersUnique(cmd_buffer_info)[0]);
 	auto cmd = cmd_unique.get();
 	m_per_thread[sThreadLocal::Order().getThreadIndex()].m_per_family[device_family_index].m_cmd_onetime_deleter[sGlobal::Order().getGPUFrame()].push_back(std::move(cmd_unique));
 
@@ -174,15 +136,10 @@ vk::CommandBuffer cCmdPool::get()
 	auto& cmd = m_cmds[sGlobal::Order().getCurrentFrame()][sThreadLocal::Order().getThreadIndex()];
 	if (!cmd)
 	{
-		vk::CommandBufferAllocateInfo cmd_buffer_info;
-		cmd_buffer_info.commandBufferCount = 1;
-		cmd_buffer_info.commandPool = getCmdPool(CMD_POOL_TYPE_ONETIME, 0);
-		cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
-		cmd = std::move(sGlobal::Order().getGPU(0).getDevice()->allocateCommandBuffersUnique(cmd_buffer_info)[0]);
+		cmd = allocCmdOnetime(0);
 
-		vk::CommandBufferBeginInfo begin_info;
-		begin_info.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-		cmd->begin(begin_info);
+		m_context->m_device.DebugMarkerSetObjectName(cmd, "TempCommandBuffer");
+
 	}
-	return cmd.get();
+	return cmd;
 }

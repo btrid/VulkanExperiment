@@ -98,13 +98,11 @@ void App::setup(const AppDescriptor& desc)
 
 	sParticlePipeline::Order().setup(m_context);
 	DrawHelper::Order().setup(m_context);
+
 }
 
 void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
 {
-
-	submit_cmds.erase(std::remove_if(submit_cmds.begin(), submit_cmds.end(), [&](auto& d) { return !d; }), submit_cmds.end());
-
 
 	std::vector<vk::Semaphore> swap_wait_semas(m_window_list.size());
 	std::vector<vk::Semaphore> submit_wait_semas(m_window_list.size());
@@ -124,7 +122,10 @@ void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
 	std::vector<vk::CommandBuffer> cmds;
 	cmds.reserve(32);
 
-	m_context->m_cmd_pool->submit(m_context);
+	{
+		auto precmds = m_context->m_cmd_pool->submit();
+		cmds.insert(cmds.end(), std::make_move_iterator(precmds.begin()), std::make_move_iterator(precmds.end()));
+	}
 
 	for (auto& window : m_window_list)
 	{
@@ -135,6 +136,7 @@ void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
 
 	cmds.insert(cmds.end(), std::make_move_iterator(m_system_cmds.begin()), std::make_move_iterator(m_system_cmds.end()));
 
+	submit_cmds.erase(std::remove_if(submit_cmds.begin(), submit_cmds.end(), [&](auto& d) { return !d; }), submit_cmds.end());
 	cmds.insert(cmds.end(), std::make_move_iterator(submit_cmds.begin()), std::make_move_iterator(submit_cmds.end()));
 
 	for (auto& window : m_window_list)
@@ -168,15 +170,16 @@ void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
 
 void App::preUpdate()
 {
-	auto& device = m_gpu.getDevice();
 	for (auto& window : m_window_list)
 	{
 		window->getSwapchain().swap();
 	}
-	uint32_t index = sGlobal::Order().getCurrentFrame();
-	sDebug::Order().waitFence(device.getHandle(), m_fence_list[index].get());
-	device->resetFences({ m_fence_list[index].get() });
-	m_cmd_pool->resetPool(m_context);
+	{
+		uint32_t index = sGlobal::Order().getCurrentFrame();
+		sDebug::Order().waitFence(m_context->m_device.getHandle(), m_fence_list[index].get());
+		m_context->m_device->resetFences({ m_fence_list[index].get() });
+		m_cmd_pool->resetPool();
+	}
 
 	{
 		auto& m_camera = cCamera::sCamera::Order().getCameraList()[0];

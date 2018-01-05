@@ -62,29 +62,79 @@ int main()
 	sUISystem::Create(context);
 
 	UIManipulater manip(context);
+
+
+	{
+		auto setup_cmds = context->m_cmd_pool->submit();
+		std::vector<vk::SubmitInfo> submitInfo =
+		{
+			vk::SubmitInfo()
+			.setCommandBufferCount((uint32_t)setup_cmds.size())
+			.setPCommandBuffers(setup_cmds.data())
+		};
+
+		auto queue = context->m_device->getQueue(0, 0);
+		queue.submit(submitInfo, nullptr);
+		queue.waitIdle();
+	}
+
 	while (true)
 	{
 		cStopWatch time;
 
 		app.preUpdate();
+#if 1
 		{
 			std::vector<vk::CommandBuffer> cmds(3);
 			cmds[0] = manip.execute();
 			cmds[1] = sUISystem::Order().draw();
 			cmds[2] = sImGuiRenderer::Order().Render();
 
-// 			auto* c = context.get();
-// 			auto* cp = c->m_cmd_pool.get();
-// 			auto vb = c->m_vertex_memory.getBuffer();
-// 			for (auto i = 0; i < 10000; i++) {
-// 				auto cmd = cp->allocCmdTempolary(0);
-// 				cmd.bindVertexBuffers(0, { vb }, { 0 });
-// 				cmd.bindIndexBuffer(vb, 0, vk::IndexType::eUint32);
-// 			}
-
 			app.submit(std::move(cmds));
-
 		}
+#else
+		{
+			std::vector<vk::CommandBuffer> cmds(3);
+			SynchronizedPoint sync_point(3);
+			{
+				MAKE_THREAD_JOB(job);
+				job.mJob.emplace_back(
+					[&]()
+				{
+					cmds[0] = manip.execute();
+					sync_point.arrive();
+				}
+				);
+				sGlobal::Order().getThreadPool().enque(job);
+			}
+			{
+				MAKE_THREAD_JOB(job);
+				job.mJob.emplace_back(
+					[&]()
+				{
+					cmds[1] = sUISystem::Order().draw();
+					sync_point.arrive();
+				}
+				);
+				sGlobal::Order().getThreadPool().enque(job);
+			}
+			{
+				MAKE_THREAD_JOB(job);
+				job.mJob.emplace_back(
+					[&]()
+				{
+					cmds[2] = sImGuiRenderer::Order().Render();
+					sync_point.arrive();
+				}
+				);
+				sGlobal::Order().getThreadPool().enque(job);
+			}
+
+			sync_point.wait();
+			app.submit(std::move(cmds));
+		}
+#endif
+
 		app.postUpdate();
 		printf("%6.4fms\n", time.getElapsedTimeAsMilliSeconds());
 	}

@@ -43,9 +43,26 @@ public:
 	{
 		m_vk_debug_marker_set_object_tag(m_handle, (VkDebugMarkerObjectTagInfoEXT*)pTagInfo);
 	}
-	void DebugMarkerSetObjectName(vk::DebugMarkerObjectNameInfoEXT* pTagInfo)const
+
+	template<typename T, typename... Args>
+	void DebugMarkerSetObjectName(T, const char*, Args...)const { assert(false); }
+
+	template<typename... Args>
+	void DebugMarkerSetObjectNameImpl(uint64_t obj, vk::DebugReportObjectTypeEXT type, const char* name, Args... args)const
 	{
-		m_vk_debug_marker_set_object_name(m_handle, (VkDebugMarkerObjectNameInfoEXT*)pTagInfo);
+		char buf[256];
+		sprintf_s(buf, name, args...);
+
+		vk::DebugMarkerObjectNameInfoEXT name_info;
+		name_info.setObject(obj);
+		name_info.setObjectType(type);
+		name_info.setPObjectName(buf);
+		m_vk_debug_marker_set_object_name(m_handle, (VkDebugMarkerObjectNameInfoEXT*)&name_info);
+	}
+
+	template<typename... Args> 
+	void DebugMarkerSetObjectName(vk::CommandBuffer obj, const char* name, Args... args)const{
+		DebugMarkerSetObjectNameImpl((uint64_t)(VkCommandBuffer)obj, vk::DebugReportObjectTypeEXT::eCommandBuffer, name, args...);
 	}
 	void CmdDebugMarkerBegin(vk::CommandBuffer cmd, vk::DebugMarkerMarkerInfoEXT* pTagInfo)const
 	{

@@ -28,7 +28,6 @@ struct cCmdPool
 		std::array<vk::UniqueCommandPool, sGlobal::FRAME_MAX> m_cmd_pool_onetime;
 		std::array<std::vector<vk::UniqueCommandBuffer>, sGlobal::FRAME_MAX> m_cmd_onetime_deleter;
 
-
 		vk::UniqueCommandPool	m_cmd_pool_compiled;
 
 	};
@@ -39,16 +38,17 @@ struct cCmdPool
 
 	std::vector<CmdPoolPerThread> m_per_thread;
 
-	std::array<std::vector<vk::UniqueCommandBuffer>, sGlobal::FRAME_MAX> m_cmds;
-	std::array<std::vector<vk::UniqueFence>, sGlobal::FRAME_MAX> m_fences;
+	std::array<std::vector<vk::CommandBuffer>, sGlobal::FRAME_MAX> m_cmds;
+
+	std::shared_ptr<btr::Context> m_context;
 
 	vk::CommandBuffer allocCmdOnetime(int device_family_index);
 	vk::CommandBuffer allocCmdTempolary(uint32_t device_family_index);
 	vk::CommandPool getCmdPool(CmdPoolType type, int device_family_index)const;
 	vk::CommandBuffer get();
 
-	std::array<std::vector<vk::UniqueCommandBuffer>, sGlobal::FRAME_MAX>& getCmds() { return m_cmds; }
+	std::array<std::vector<vk::CommandBuffer>, sGlobal::FRAME_MAX>& getCmds() { return m_cmds; }
 
-	void resetPool(std::shared_ptr<btr::Context>& executer);
-	void submit(std::shared_ptr<btr::Context>& executer);
+	void resetPool();
+	std::vector<vk::CommandBuffer> submit();
 };

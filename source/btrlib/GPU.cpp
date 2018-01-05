@@ -8,6 +8,9 @@ void cGPU::setup(vk::PhysicalDevice pd)
 	std::vector<const char*> extensionName = {
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 		VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME,
+#if _DEBUG
+		VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
+#endif
 	};
 
 	auto gpu_propaty = m_handle.getProperties();
