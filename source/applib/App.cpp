@@ -183,7 +183,7 @@ void App::preUpdate()
 		m_camera->control(m_window->getInput(), 0.016f);
 	}
 
-	m_system_cmds.resize(4);
+	m_system_cmds.resize(5);
 	m_sync_point.reset(4);
 
 	{

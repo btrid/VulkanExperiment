@@ -108,8 +108,8 @@ void cCmdPool::resetPool(std::shared_ptr<btr::Context>& context)
 
 void cCmdPool::submit(std::shared_ptr<btr::Context>& context)
 {
-	auto& fences = m_fences[sGlobal::Order().getPrevFrame()];
-	auto& cmds = m_cmds[sGlobal::Order().getPrevFrame()];
+	auto& fences = m_fences[sGlobal::Order().getCurrentFrame()];
+	auto& cmds = m_cmds[sGlobal::Order().getCurrentFrame()];
 
 	std::vector<vk::CommandBuffer> cmd;
 	cmd.reserve(cmds.size());

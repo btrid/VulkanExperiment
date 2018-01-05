@@ -22,7 +22,7 @@ protected:
 	~sDebug() = default;
 
 public:
-	enum
+	enum Flag
 	{
 		FLAG_ERROR	= 1 << 0,
 		FLAG_WARNING = 1 << 1,
