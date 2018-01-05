@@ -168,8 +168,8 @@ struct App
 
 	std::vector<vk::UniqueFence> m_fence_list;
 
-	App();
-	void setup(const AppDescriptor& desc);
+	App(const AppDescriptor& desc);
+	void setup();
 	void submit(std::vector<vk::CommandBuffer>&& cmds);
 	void preUpdate();
 	void postUpdate();

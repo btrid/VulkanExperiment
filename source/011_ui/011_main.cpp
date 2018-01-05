@@ -50,34 +50,18 @@ int main()
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
 
-	app::App app;
-	{
-		app::AppDescriptor desc;
-		desc.m_gpu = gpu;
-		desc.m_window_size = uvec2(1200, 800);
-		app.setup(desc);
-	}
+	app::AppDescriptor app_desc;
+	app_desc.m_gpu = gpu;
+	app_desc.m_window_size = uvec2(1200, 800);
+	app::App app(app_desc);
+
 	auto context = app.m_context;
 
 	sUISystem::Create(context);
 
 	UIManipulater manip(context);
 
-
-	{
-		auto setup_cmds = context->m_cmd_pool->submit();
-		std::vector<vk::SubmitInfo> submitInfo =
-		{
-			vk::SubmitInfo()
-			.setCommandBufferCount((uint32_t)setup_cmds.size())
-			.setPCommandBuffers(setup_cmds.data())
-		};
-
-		auto queue = context->m_device->getQueue(0, 0);
-		queue.submit(submitInfo, nullptr);
-		queue.waitIdle();
-	}
-
+	app.setup();
 	while (true)
 	{
 		cStopWatch time;

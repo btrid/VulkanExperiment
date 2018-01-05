@@ -15,12 +15,7 @@ namespace app
 App* g_app_instance = nullptr;
 
 
-App::App()
-{
-
-}
-
-void App::setup(const AppDescriptor& desc)
+App::App(const AppDescriptor& desc)
 {
 	// ウインドウリストを取りたいけどいい考えがない。後で考える
 	g_app_instance = this;
@@ -42,7 +37,7 @@ void App::setup(const AppDescriptor& desc)
 		vk::MemoryPropertyFlags host_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
 		vk::MemoryPropertyFlags device_memory = vk::MemoryPropertyFlagBits::eDeviceLocal;
 		vk::MemoryPropertyFlags transfer_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-//		device_memory = host_memory; // debug
+		//		device_memory = host_memory; // debug
 		m_context->m_vertex_memory.setup(device, vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 1000 * 100);
 		m_context->m_uniform_memory.setup(device, vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 20);
 		m_context->m_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 1000 * 200);
@@ -100,6 +95,22 @@ void App::setup(const AppDescriptor& desc)
 	DrawHelper::Order().setup(m_context);
 
 }
+
+void App::setup()
+{
+	auto setup_cmds = m_context->m_cmd_pool->submit();
+	std::vector<vk::SubmitInfo> submitInfo =
+	{
+		vk::SubmitInfo()
+		.setCommandBufferCount((uint32_t)setup_cmds.size())
+		.setPCommandBuffers(setup_cmds.data())
+	};
+
+	auto queue = m_context->m_device->getQueue(0, 0);
+	queue.submit(submitInfo, nullptr);
+	queue.waitIdle();
+}
+
 
 void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
 {
