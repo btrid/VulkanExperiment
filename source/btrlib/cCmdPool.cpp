@@ -113,6 +113,10 @@ vk::CommandBuffer cCmdPool::allocCmdImpl()
 	auto cmd = cmd_unique.get();
 	m_cmd[sThreadLocal::Order().getThreadIndex()][sGlobal::Order().getCurrentFrame()].m_cmd_onetime_deleter.push_back(std::move(cmd_unique));
 
+	vk::CommandBufferBeginInfo begin_info;
+	begin_info.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+	cmd.begin(begin_info);
+
 	return cmd;
 }
 
@@ -120,11 +124,7 @@ vk::CommandBuffer cCmdPool::allocCmdOnetime(int device_family_index)
 {
 	auto cmd = allocCmdImpl();
 
-	m_context->m_device.DebugMarkerSetObjectName(cmd, "Onetime CB %d", m_cmd[sThreadLocal::Order().getThreadIndex()][sGlobal::Order().getCurrentFrame()].m_cmd_onetime_deleter.size());
-
-	vk::CommandBufferBeginInfo begin_info;
-	begin_info.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-	cmd.begin(begin_info);
+//	m_context->m_device.DebugMarkerSetObjectName(cmd, "Onetime CB %d", m_cmd[sThreadLocal::Order().getThreadIndex()][sGlobal::Order().getCurrentFrame()].m_cmd_onetime_deleter.size());
 
 	return cmd;
 }
@@ -135,11 +135,7 @@ vk::CommandBuffer cCmdPool::allocCmdTempolary(uint32_t device_family_index)
 	if (!cmd)
 	{
 		cmd = allocCmdImpl();
-		m_context->m_device.DebugMarkerSetObjectName(cmd, "TlsTempolary %d", m_cmd[sThreadLocal::Order().getThreadIndex()][sGlobal::Order().getCurrentFrame()].m_cmd_onetime_deleter.size());
-
-		vk::CommandBufferBeginInfo begin_info;
-		begin_info.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-		cmd.begin(begin_info);
+//		m_context->m_device.DebugMarkerSetObjectName(cmd, "TlsTempolary %d", m_cmd[sThreadLocal::Order().getThreadIndex()][sGlobal::Order().getCurrentFrame()].m_cmd_onetime_deleter.size());
 
 	}
 	return cmd;

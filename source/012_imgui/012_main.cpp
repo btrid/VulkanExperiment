@@ -51,8 +51,6 @@ int main()
 
 	auto context = app.m_context;
 
-	sImGuiRenderer::Create(context);
-
 	app.setup();
 	while (true)
 	{
