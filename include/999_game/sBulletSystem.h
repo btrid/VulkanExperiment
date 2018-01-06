@@ -110,7 +110,7 @@ public:
 
 	void shoot(const std::vector<BulletData>& param)
 	{
-		auto& data = m_data[sGlobal::Order().getCPUIndex()];
+		auto& data = m_data[sGlobal::Order().getWorkerIndex()];
 		data.push(param.data(), param.size());
 	}
 

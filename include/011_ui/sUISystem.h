@@ -26,7 +26,6 @@ struct UIInfo
 	uint _p13;
 };
 
-
 enum UIFlagBit
 {
 	is_enable = 1 << 1,
@@ -375,7 +374,7 @@ struct sUISystem : SingletonEx<sUISystem>
 	};
 	void addRender(std::shared_ptr<UI>& ui)
 	{
-		m_render.push_back(ui);
+		m_render[sGlobal::Order().getWorkerIndex()].push_back(ui);
 	}
 	vk::CommandBuffer draw();
 private:
@@ -424,7 +423,7 @@ private:
 	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM>	m_pipeline_layout;
 
 	btr::BufferMemoryEx<UIGlobal> m_global;
-	std::vector<std::shared_ptr<UI>> m_render;
+	std::vector<std::shared_ptr<UI>> m_render[2];
 
 };
 

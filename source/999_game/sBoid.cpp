@@ -13,7 +13,7 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context)
 
 	{
 		// emit test
-		auto* buf = m_emit_data_cpu[sGlobal::Order().getCPUIndex()].reserve(70);
+		auto* buf = m_emit_data_cpu[sGlobal::Order().getWorkerIndex()].reserve(70);
 		for (uint32_t i = 0; i < 70; i++)
 		{
 			buf[i].m_pos = glm::vec4(212.f + std::rand() % 80 / 3.f, 0.f, 162.f + std::rand() % 80 / 3.f, 1.f);
@@ -503,7 +503,7 @@ vk::CommandBuffer sBoid::execute(std::shared_ptr<btr::Context>& context)
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
 
 			cmd.updateBuffer<vk::DrawIndirectCommand>(m_soldier_draw_indiret_gpu.getBufferInfo().buffer, m_soldier_draw_indiret_gpu.getBufferInfo().offset, vk::DrawIndirectCommand(0, 1, 0, 0));
-			cmd.fillBuffer(m_soldier_LL_head_gpu.getInfo(sGlobal::Order().getGPUIndex()).buffer, m_soldier_LL_head_gpu.getInfo(sGlobal::Order().getGPUIndex()).offset, m_soldier_LL_head_gpu.getInfo(sGlobal::Order().getGPUIndex()).range, 0xFFFFFFFF);
+			cmd.fillBuffer(m_soldier_LL_head_gpu.getInfo(sGlobal::Order().getRenderIndex()).buffer, m_soldier_LL_head_gpu.getInfo(sGlobal::Order().getRenderIndex()).offset, m_soldier_LL_head_gpu.getInfo(sGlobal::Order().getRenderIndex()).range, 0xFFFFFFFF);
 
 			vk::BufferMemoryBarrier to_read = m_soldier_draw_indiret_gpu.makeMemoryBarrierEx();
 			to_read.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
@@ -525,9 +525,9 @@ vk::CommandBuffer sBoid::execute(std::shared_ptr<btr::Context>& context)
 		// emit
 		{
 
-			if (!m_emit_data_cpu[sGlobal::Order().getGPUIndex()].empty())
+			if (!m_emit_data_cpu[sGlobal::Order().getRenderIndex()].empty())
 			{
-				auto data = m_emit_data_cpu[sGlobal::Order().getGPUIndex()].get();
+				auto data = m_emit_data_cpu[sGlobal::Order().getRenderIndex()].get();
 				btr::BufferMemoryDescriptor desc;
 				desc.size = vector_sizeof(data);
 				desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;

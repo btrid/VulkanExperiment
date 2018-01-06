@@ -58,7 +58,7 @@ vk::CommandBuffer sSystem::execute(const std::shared_ptr<btr::Context>& context)
 	auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 
 	SystemDescriptor::SystemData data;
-	data.m_gpu_index = sGlobal::Order().getGPUIndex();
+	data.m_gpu_index = sGlobal::Order().getRenderIndex();
 	data.m_deltatime = sGlobal::Order().getDeltaTime();
 	data.m_gpu_frame = context->getGPUFrame();
 	data.m_resolution = context->m_window->getClientSize();
@@ -101,8 +101,8 @@ vk::CommandBuffer sSystem::execute(const std::shared_ptr<btr::Context>& context)
 		}
 	}
 
-	m_system_descriptor->m_data.subupdate(&data, 1, 0, sGlobal::Order().getGPUIndex());
-	auto copy_info = m_system_descriptor->m_data.update(sGlobal::Order().getGPUIndex());
+	m_system_descriptor->m_data.subupdate(&data, 1, 0, sGlobal::Order().getRenderIndex());
+	auto copy_info = m_system_descriptor->m_data.update(sGlobal::Order().getRenderIndex());
 
 	auto to_transfer = m_system_descriptor->m_data.getBufferMemory().makeMemoryBarrierEx();
 	to_transfer.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);

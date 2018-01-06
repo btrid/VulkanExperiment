@@ -657,8 +657,8 @@ vk::CommandBuffer sSoundSystem::execute_loop(const std::shared_ptr<btr::Context>
 			info.m_direction = vec4(0.f);
 			info.m_sound_deltatime = request_byte / 4;
 			info.m_write_start = offset_byte / 4;
-			m_sound_play_info.subupdate(&info, 1, 0, sGlobal::Order().getGPUIndex());
-			auto copy = m_sound_play_info.update(sGlobal::Order().getGPUIndex());
+			m_sound_play_info.subupdate(&info, 1, 0, sGlobal::Order().getRenderIndex());
+			auto copy = m_sound_play_info.update(sGlobal::Order().getRenderIndex());
 			{
 				auto to_transfer = m_sound_play_info.getBufferMemory().makeMemoryBarrierEx();
 				to_transfer.setSrcAccessMask(vk::AccessFlagBits::eShaderRead);

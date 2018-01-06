@@ -305,7 +305,7 @@ vk::CommandBuffer sBulletSystem::execute(std::shared_ptr<btr::Context>& context)
 
 	// エミット
 	{
-		auto data = m_data[sGlobal::Order().getGPUIndex()].get();
+		auto data = m_data[sGlobal::Order().getRenderIndex()].get();
 		if (!data.empty())
 		{
 			{

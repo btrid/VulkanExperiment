@@ -67,16 +67,6 @@ int main()
 		cStopWatch time;
 
 		app.preUpdate();
-#if 1
-		{
-			std::vector<vk::CommandBuffer> cmds(3);
-			cmds[0] = manip.execute();
-			cmds[1] = sUISystem::Order().draw();
-			cmds[2] = sImGuiRenderer::Order().Render();
-
-			app.submit(std::move(cmds));
-		}
-#else
 		{
 			std::vector<vk::CommandBuffer> cmds(3);
 			SynchronizedPoint sync_point(3);
@@ -117,8 +107,6 @@ int main()
 			sync_point.wait();
 			app.submit(std::move(cmds));
 		}
-#endif
-
 		app.postUpdate();
 		printf("%6.4fms\n", time.getElapsedTimeAsMilliSeconds());
 	}

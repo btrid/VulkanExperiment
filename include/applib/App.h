@@ -41,11 +41,11 @@ struct AppWindow : public cWindow
 		void pushImguiCmd(std::function<void()>&& imgui_cmd)
 		{
 			std::lock_guard<std::mutex> lg(m_cmd_mutex);
-			m_imgui_cmd[sGlobal::Order().getCPUIndex()].emplace_back(std::move(imgui_cmd));
+			m_imgui_cmd[sGlobal::Order().getWorkerIndex()].emplace_back(std::move(imgui_cmd));
 		}
 		std::vector<std::function<void()>>& getImguiCmd()
 		{
-			return std::move(m_imgui_cmd[sGlobal::Order().getGPUIndex()]);
+			return std::move(m_imgui_cmd[sGlobal::Order().getRenderIndex()]);
 		}
 
 		std::mutex m_cmd_mutex;

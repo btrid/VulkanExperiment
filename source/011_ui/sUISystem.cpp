@@ -327,7 +327,8 @@ vk::CommandBuffer sUISystem::draw()
 	auto cmd = m_context->m_cmd_pool->allocCmdOnetime(0);
 
 	m_context->m_device->resetDescriptorPool(m_descriptor_pool.get());
-	for (auto& ui : m_render)
+	auto& renders = m_render[sGlobal::Order().getRenderIndex()];
+	for (auto& ui : renders)
 	{
 		vk::DescriptorSet descriptor_set;
 		vk::DescriptorSet descriptor_set_anime;
@@ -515,7 +516,7 @@ vk::CommandBuffer sUISystem::draw()
 		}
 
 	}
-	m_render.clear();
+	renders.clear();
 	cmd.end();
 	return cmd;
 }

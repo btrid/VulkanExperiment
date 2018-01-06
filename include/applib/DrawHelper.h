@@ -320,7 +320,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW_PRIMITIVE].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_PRIMITIVE].get(), 0, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 
-		auto& draw_cmd = m_draw_cmd[sGlobal::Order().getGPUIndex()];
+		auto& draw_cmd = m_draw_cmd[sGlobal::Order().getRenderIndex()];
 		for (size_t i = 0; i < draw_cmd.size(); i++)
 		{
 			auto& cmd_list = draw_cmd[i];
@@ -347,6 +347,6 @@ struct DrawHelper : public Singleton<DrawHelper>
 
 	void drawOrder(PrimitiveType type, const DrawCommand& cmd)
 	{
-		m_draw_cmd[sGlobal::Order().getCPUIndex()][type].push(&cmd, 1);
+		m_draw_cmd[sGlobal::Order().getWorkerIndex()][type].push(&cmd, 1);
 	}
 };
