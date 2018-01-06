@@ -6,7 +6,7 @@
 
 void ModelInstancingModule::addModel(const InstanceResource* data, uint32_t num)
 {
-	auto frame = sGlobal::Order().getCPUFrame();
+	auto frame = sGlobal::Order().getWorkerFrame();
 	auto index = m_instance_count[frame].fetch_add(num);
 	auto* staging = m_world_buffer.mapSubBuffer(frame, index);
 	for (uint32_t i = 0; i < num; i++)

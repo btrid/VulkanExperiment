@@ -79,7 +79,7 @@ struct DefaultAnimationModule : public AnimationModule
 		updateNodeTransform(0, m_model_transform.calcGlobal()*m_model_transform.calcLocal(), node_buffer);
 
 		// シェーダに送るデータを更新
-		auto* ptr = m_bone_buffer_staging[sGlobal::Order().getCPUFrame()].getMappedPtr<glm::mat4>();
+		auto* ptr = m_bone_buffer_staging[sGlobal::Order().getWorkerFrame()].getMappedPtr<glm::mat4>();
 		for (size_t i = 0; i < m_model_resource->mNodeRoot.mNodeList.size(); i++)
 		{
 			auto* node = m_model_resource->mNodeRoot.getNodeByIndex(i);

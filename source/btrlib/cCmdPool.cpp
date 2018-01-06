@@ -117,7 +117,7 @@ vk::CommandBuffer cCmdPool::allocCmdOnetime(int device_family_index)
 	cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
 	auto cmd_unique = std::move(m_context->m_device->allocateCommandBuffersUnique(cmd_buffer_info)[0]);
 	auto cmd = cmd_unique.get();
-	m_per_thread[sThreadLocal::Order().getThreadIndex()].m_per_family[device_family_index].m_cmd_onetime_deleter[sGlobal::Order().getGPUFrame()].push_back(std::move(cmd_unique));
+	m_per_thread[sThreadLocal::Order().getThreadIndex()].m_per_family[device_family_index].m_cmd_onetime_deleter[sGlobal::Order().getRenderFrame()].push_back(std::move(cmd_unique));
 
 	vk::CommandBufferBeginInfo begin_info;
 	begin_info.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);

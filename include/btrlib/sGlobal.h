@@ -75,8 +75,8 @@ public:
 	uint32_t getCurrentFrame()const { return m_current_frame; }
 	uint32_t getNextFrame()const { return (m_current_frame + 1) % FRAME_MAX; }
 	uint32_t getPrevFrame()const { return (m_current_frame == 0 ? FRAME_MAX : m_current_frame) - 1; }
-	uint32_t getCPUFrame()const { return (m_current_frame+1) % FRAME_MAX; }
-	uint32_t getGPUFrame()const { return m_current_frame; }
+	uint32_t getWorkerFrame()const { return (m_current_frame+1) % FRAME_MAX; }
+	uint32_t getRenderFrame()const { return m_current_frame; }
 	uint32_t getGameFrame()const { return m_game_frame; }
 	uint32_t getWorkerIndex()const { return m_tick_tock; }
 	uint32_t getRenderIndex()const { return (m_tick_tock + 1) % 2; }

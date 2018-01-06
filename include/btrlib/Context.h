@@ -28,8 +28,8 @@ struct Context
 
 //	uint32_t getCPUFrame()const { return (m_window->getSwapchain().m_backbuffer_index + 1) % m_window->getSwapchain().getBackbufferNum(); }
 //	uint32_t getGPUFrame()const { return m_window->getSwapchain().m_backbuffer_index; }
-	uint32_t getCPUFrame()const { return sGlobal::Order().getCPUFrame(); }
-	uint32_t getGPUFrame()const { return sGlobal::Order().getGPUFrame(); }
+	uint32_t getCPUFrame()const { return sGlobal::Order().getWorkerFrame(); }
+	uint32_t getGPUFrame()const { return sGlobal::Order().getRenderFrame(); }
 };
 }
 

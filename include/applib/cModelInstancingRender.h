@@ -124,7 +124,7 @@ struct ModelInstancingModule : public InstancingAnimationModule, public Instanci
 	{ 
 		// bufferÇÃçXêV
 		{
-			auto frame = sGlobal::Order().getGPUFrame();
+			auto frame = sGlobal::Order().getRenderFrame();
 			int32_t model_count = m_instance_count[frame].exchange(0);
 			if (model_count == 0)
 			{
