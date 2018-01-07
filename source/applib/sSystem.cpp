@@ -13,7 +13,7 @@ sSystem::sSystem(const std::shared_ptr<btr::Context>& context)
 		desc.staging_memory = context->m_staging_memory;
 		desc.frame_max = sGlobal::FRAME_MAX;
 		desc.element_num = 16;
-		m_data.setup(desc);
+		m_data.setup(context->m_gpu, desc);
 	}
 
 	// create descriptor layout

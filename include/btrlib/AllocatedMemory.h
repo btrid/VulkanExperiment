@@ -546,17 +546,17 @@ struct UpdateBufferDescriptor
 template<typename T>
 struct UpdateBufferAligned
 {
-	void setup(UpdateBufferDescriptor& desc)
+	void setup(const cGPU& gpu, const UpdateBufferDescriptor& desc)
 	{
 		assert(!m_device_buffer.isValid());
 		assert(desc.device_memory.isValid());
 		assert(btr::isOn(desc.device_memory.getBufferCreateInfo().usage, vk::BufferUsageFlagBits::eTransferDst));
 
 		m_desc = desc;
-		m_stride = sGlobal::Order().getGPU(0)->getProperties().limits.minUniformBufferOffsetAlignment;
+		m_stride = gpu->getProperties().limits.minUniformBufferOffsetAlignment;
 		m_stride = btr::align<uint32_t>(sizeof(T), m_stride);
-		m_device_buffer = desc.device_memory.allocateMemory(m_stride*m_desc.element_num);
-		m_staging_buffer = desc.staging_memory.allocateMemory(m_stride*m_desc.element_num*m_desc.frame_max);
+		m_device_buffer = m_desc.device_memory.allocateMemory(m_stride*m_desc.element_num);
+		m_staging_buffer = m_desc.staging_memory.allocateMemory(m_stride*m_desc.element_num*m_desc.frame_max);
 	}
 
 	void subupdate(const T* data, uint32_t data_num, uint32_t offset_num, uint32_t cpu_index)
