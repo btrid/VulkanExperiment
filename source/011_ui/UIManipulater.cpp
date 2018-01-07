@@ -237,6 +237,7 @@ vk::CommandBuffer UIManipulater::execute()
 	}
 	if (m_request_update_texture)
 	{
+		m_request_update_texture = false;
 		for (size_t i = 0; i < m_texture_name.size(); i++)
 		{
 			if (m_texture_name[i][0] != '\0')

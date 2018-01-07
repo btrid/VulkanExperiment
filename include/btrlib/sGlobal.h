@@ -16,44 +16,6 @@
 
 using GameFrame = uint32_t;
 
-class sDeleter : public Singleton<sDeleter>
-{
-	friend Singleton<sGlobal>;
-public:
-	template<typename... T>
-	void enque(T&&... handle)
-	{
-		struct HandleHolder : Deleter
-		{
-			std::tuple<T...> m_handle;
-			HandleHolder(T&&... arg) : m_handle(std::move(arg)...) {}
-		};
-
-		auto ptr = std::make_unique<HandleHolder>(std::move(handle)...);
-		{
-			std::lock_guard<std::mutex> lk(m_deleter_mutex);
-			m_deleter_list.push_back(std::move(ptr));
-		}
-	};
-
-	void sync()
-	{
-		std::lock_guard<std::mutex> lk(m_deleter_mutex);
-		m_deleter_list.erase(std::remove_if(m_deleter_list.begin(), m_deleter_list.end(), [&](auto& d) { return d->count-- == 0; }), m_deleter_list.end());
-	}
-
-private:
-	struct Deleter
-	{
-		uint32_t count;
-		Deleter() : count(5) {}
-		virtual ~Deleter() { ; }
-	};
-	std::vector<std::unique_ptr<Deleter>> m_deleter_list;
-	std::mutex m_deleter_mutex;
-
-
-};
 
 
 class sGlobal : public Singleton<sGlobal>
@@ -117,6 +79,45 @@ struct sThreadLocal : public SingletonTLS<sThreadLocal>
 	friend SingletonTLS<sThreadLocal>;
 	uint32_t m_thread_index;
 	uint32_t getThreadIndex()const { return m_thread_index; }
+
+};
+
+class sDeleter : public Singleton<sDeleter>
+{
+	friend Singleton<sGlobal>;
+public:
+	template<typename... T>
+	void enque(T&&... handle)
+	{
+		struct HandleHolder : Deleter
+		{
+			std::tuple<T...> m_handle;
+			HandleHolder(T&&... arg) : m_handle(std::move(arg)...) {}
+		};
+
+		auto ptr = std::make_unique<HandleHolder>(std::move(handle)...);
+		{
+			std::lock_guard<std::mutex> lk(m_deleter_mutex);
+			m_deleter_list.push_back(std::move(ptr));
+		}
+	};
+
+	void sync()
+	{
+		std::lock_guard<std::mutex> lk(m_deleter_mutex);
+		m_deleter_list.erase(std::remove_if(m_deleter_list.begin(), m_deleter_list.end(), [&](auto& d) { return d->count-- == 0; }), m_deleter_list.end());
+	}
+
+private:
+	struct Deleter
+	{
+		uint32_t count;
+		Deleter() : count(sGlobal::Order().FRAME_MAX) {}
+		virtual ~Deleter() { ; }
+	};
+	std::vector<std::unique_ptr<Deleter>> m_deleter_list;
+	std::mutex m_deleter_mutex;
+
 
 };
 

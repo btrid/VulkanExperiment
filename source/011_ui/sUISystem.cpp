@@ -326,20 +326,23 @@ vk::CommandBuffer sUISystem::draw()
 {
 	auto cmd = m_context->m_cmd_pool->allocCmdOnetime(0);
 
-	m_context->m_device->resetDescriptorPool(m_descriptor_pool.get());
 	auto& renders = m_render[sGlobal::Order().getRenderIndex()];
+	std::vector<vk::UniqueDescriptorSet> descriptor_holder;
+	descriptor_holder.reserve(renders.size() * 2);
 	for (auto& ui : renders)
 	{
 		vk::DescriptorSet descriptor_set;
 		vk::DescriptorSet descriptor_set_anime;
 
+//		continue;
 		{
 			vk::DescriptorSetLayout layouts[] = { m_descriptor_set_layout.get() };
 			vk::DescriptorSetAllocateInfo alloc_info;
 			alloc_info.setDescriptorPool(m_descriptor_pool.get());
 			alloc_info.setDescriptorSetCount(array_length(layouts));
 			alloc_info.setPSetLayouts(layouts);
-			descriptor_set = m_context->m_device->allocateDescriptorSets(alloc_info)[0];
+			descriptor_holder.emplace_back(std::move(m_context->m_device->allocateDescriptorSetsUnique(alloc_info)[0]));
+			descriptor_set = descriptor_holder.back().get();
 
 			vk::DescriptorBufferInfo uniforms[] = {
 				m_global.getInfo(),
@@ -396,7 +399,9 @@ vk::CommandBuffer sUISystem::draw()
 			alloc_info.setDescriptorPool(m_descriptor_pool.get());
 			alloc_info.setDescriptorSetCount(array_length(layouts_anime));
 			alloc_info.setPSetLayouts(layouts_anime);
-			descriptor_set_anime = m_context->m_device->allocateDescriptorSets(alloc_info)[0];
+
+			descriptor_holder.emplace_back(std::move(m_context->m_device->allocateDescriptorSetsUnique(alloc_info)[0]));
+			descriptor_set_anime = descriptor_holder.back().get();
 
 			vk::DescriptorBufferInfo uniforms[] = {
 				ui->m_anime->m_anime_info.getInfo(),
@@ -517,6 +522,7 @@ vk::CommandBuffer sUISystem::draw()
 
 	}
 	renders.clear();
+	sDeleter::Order().enque(std::move(descriptor_holder));
 	cmd.end();
 	return cmd;
 }
