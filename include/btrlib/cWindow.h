@@ -61,9 +61,6 @@ private:
 	{
 	public:
 		HWND		m_window;
-		HINSTANCE	m_instance;
-
-
 		Private() = default;
 	};
 	std::shared_ptr<Private> m_private;
@@ -105,172 +102,7 @@ protected:
 public:
 	cWindow(const std::shared_ptr<btr::Context>& context, const cWindowDescriptor& descriptor);
 
-	void sync()
-	{
-		MSG msg;
-		auto old = m_input.m_mouse;
-		m_input.m_mouse.wheel = 0;
-		m_input.m_keyboard.m_char.fill(0);
-		m_input.m_keyboard.m_char_count = 0;
-		while (PeekMessage(&msg, m_private->m_window, 0, 0, PM_REMOVE))
-		{
-//			msgList.push_back(msg);			
-//			for (auto&& msg : msgList)
-			{
-				switch (msg.message)
-				{
-				case WM_SYSKEYDOWN:
-				{
-					auto& p = m_input.m_keyboard.m_data[vk_alt];
-					p.key = vk_alt;
-					p.state = cKeyboard::STATE_ON;
-				}
-				break;
-				case WM_SYSKEYUP:
-				{
-					auto& p = m_input.m_keyboard.m_data[vk_alt];
-					p.key = vk_alt;
-					p.state = cKeyboard::STATE_OFF;
-				}
-				break;
-				case WM_KEYDOWN:
-				{
-					auto& p = m_input.m_keyboard.m_data[msg.wParam];
-					p.key = (uint8_t)msg.wParam;
-					p.state = cKeyboard::STATE_ON;
-				}
-				break;
-				case WM_KEYUP:
-				{
-					auto& p = m_input.m_keyboard.m_data[msg.wParam];
-					p.key = (uint8_t)msg.wParam;
-					p.state = cKeyboard::STATE_OFF;
-				}
-				break;
-				case WM_CHAR:
-					m_input.m_keyboard.m_char[m_input.m_keyboard.m_char_count++] = msg.wParam;
-					break;
-
-				case WM_MOUSEWHEEL:
-				{
-					m_input.m_mouse.wheel = GET_WHEEL_DELTA_WPARAM(msg.wParam) / WHEEL_DELTA;
-				}
-				case WM_LBUTTONDOWN:
-				case WM_LBUTTONUP:
-				case WM_MBUTTONDOWN:
-				case WM_MBUTTONUP:
-				case WM_RBUTTONDOWN:
-				case WM_RBUTTONUP:
-				case WM_XBUTTONDOWN:
-				case WM_XBUTTONUP:
-				case WM_LBUTTONDBLCLK:
-					{
-					int xPos = GET_X_LPARAM(msg.lParam);
-					int yPos = GET_Y_LPARAM(msg.lParam);
-					switch (msg.message)
-					{
-					case WM_LBUTTONDOWN:
-						m_input.m_mouse.m_param[cMouse::BUTTON_LEFT].state |= cMouse::STATE_ON;
-						m_input.m_mouse.m_param[cMouse::BUTTON_LEFT].x = xPos;
-						m_input.m_mouse.m_param[cMouse::BUTTON_LEFT].y = yPos;
-						break;
-					case WM_LBUTTONUP:
-						m_input.m_mouse.m_param[cMouse::BUTTON_LEFT].state = cMouse::STATE_OFF;
-						m_input.m_mouse.m_param[cMouse::BUTTON_LEFT].x = xPos;
-						m_input.m_mouse.m_param[cMouse::BUTTON_LEFT].y = yPos;
-						break;
-					case WM_MBUTTONDOWN:
-						m_input.m_mouse.m_param[cMouse::BUTTON_MIDDLE].state |= cMouse::STATE_ON;
-						m_input.m_mouse.m_param[cMouse::BUTTON_MIDDLE].x = xPos;
-						m_input.m_mouse.m_param[cMouse::BUTTON_MIDDLE].y = yPos;
-						break;
-					case WM_MBUTTONUP:
-						m_input.m_mouse.m_param[cMouse::BUTTON_MIDDLE].state = cMouse::STATE_OFF;
-						m_input.m_mouse.m_param[cMouse::BUTTON_MIDDLE].x = -1;
-						m_input.m_mouse.m_param[cMouse::BUTTON_MIDDLE].y = -1;
-						break;
-					case WM_RBUTTONDOWN:
-						m_input.m_mouse.m_param[cMouse::BUTTON_RIGHT].state |= cMouse::STATE_ON;
-						m_input.m_mouse.m_param[cMouse::BUTTON_RIGHT].x = xPos;
-						m_input.m_mouse.m_param[cMouse::BUTTON_RIGHT].y = yPos;
-						break;
-					case WM_RBUTTONUP:
-						m_input.m_mouse.m_param[cMouse::BUTTON_RIGHT].state = cMouse::STATE_OFF;
-						m_input.m_mouse.m_param[cMouse::BUTTON_RIGHT].x = -1;
-						m_input.m_mouse.m_param[cMouse::BUTTON_RIGHT].y = -1;
-						break;
-					case WM_LBUTTONDBLCLK:
-						m_input.m_mouse.m_param[cMouse::BUTTON_LEFT].state = cMouse::STATE_ON;
-						break;
-					case WM_XBUTTONDOWN:
-					case WM_XBUTTONUP:
-						break;
-					}
-				}
-				break;
-				case WM_MOUSEMOVE:
-				{
-					int xPos = GET_X_LPARAM(msg.lParam);
-					int yPos = GET_Y_LPARAM(msg.lParam);
-					m_input.m_mouse.xy = glm::ivec2(xPos, yPos);
-				}
-				break;
-				}
-			}
-
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
-		}		
-
-		for (auto& key : m_input.m_keyboard.m_data)
-		{
-			if (btr::isOn(key.state_old, cMouse::STATE_ON))
-			{
-				// ONは押したタイミングだけ立つ
-				btr::setOff(key.state, cMouse::STATE_ON);
-			}
-			if (btr::isOn(key.state_old, cMouse::STATE_ON) || btr::isOn(key.state, cMouse::STATE_HOLD))
-			{
-				key.state |= cMouse::STATE_HOLD;
-			}
-			if (btr::isOn(key.state_old, cMouse::STATE_OFF))
-			{
-				key.state = 0;
-			}
-			key.state_old = key.state;
-		}
-
-		for (int i = 0; i < cMouse::BUTTON_NUM; i++)
-		{
-			auto& param = m_input.m_mouse.m_param[i];
-			auto& param_old = old.m_param[i];
-			
-			if (btr::isOn(param_old.state, cMouse::STATE_ON))
-			{
-				// ONは押したタイミングだけ立つ
-				btr::setOff(param.state, cMouse::STATE_ON);
-				param.time = 0.f;
-			}
-			if(btr::isOn(param_old.state, cMouse::STATE_HOLD))
-			{
-				// 押した時間を加算
-				param.time += sGlobal::Order().getDeltaTime();
-			}
-			if (btr::isOn(param.state, cMouse::STATE_ON) || btr::isOn(param_old.state, cMouse::STATE_HOLD))
-			{
-				param.state |= cMouse::STATE_HOLD;
-			}
-			if (btr::isOn(param_old.state, cMouse::STATE_OFF))
-			{
-				param.state = 0;
-				param.x = -1;
-				param.y = -1;
-				param.time = 0.f;
-			}
-		}
-		m_input.m_mouse.xy_old = old.xy;
-
-	}
+	void sync();
 public:
 
 	glm::uvec2 getClientSize()const { return glm::uvec2(m_descriptor.size.width, m_descriptor.size.height); }
@@ -292,6 +124,7 @@ public:
 	template<typename T>
 	std::shared_ptr<T> createWindow(const std::shared_ptr<btr::Context>& context, const cWindowDescriptor& window_info)
 	{
+		assert(sThreadLocal::Order().getThreadIndex() == 0); // メインスレッド以外は対応してない
 		auto window = std::make_shared<T>(context, window_info);
 		mWindowList.emplace_back(window);
 		return window;

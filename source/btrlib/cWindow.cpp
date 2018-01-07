@@ -3,7 +3,40 @@
 
 namespace
 {
+	void assert_win(bool expression)
+	{
+		if (expression)
+		{
+			return;
+		}
 
+		LPVOID lpMsgBuf;
+		FormatMessage(
+			FORMAT_MESSAGE_ALLOCATE_BUFFER |
+			FORMAT_MESSAGE_FROM_SYSTEM |
+			FORMAT_MESSAGE_IGNORE_INSERTS,
+			NULL,
+			GetLastError(),
+			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), // 既定の言語
+			(LPTSTR)&lpMsgBuf,
+			0,
+			NULL
+		);
+
+		// lpMsgBuf 内のすべての挿入シーケンスを処理する。
+
+		// ...
+
+		// 文字列を表示する。
+
+		MessageBox(NULL, (LPCTSTR)lpMsgBuf, L"Error", MB_OK | MB_ICONINFORMATION);
+
+		// バッファを解放する。
+
+		LocalFree(lpMsgBuf);
+
+		assert(expression);
+	}
 std::vector<uint32_t> getSupportSurfaceQueue(vk::PhysicalDevice gpu, vk::SurfaceKHR surface)
 {
 	auto queueProp = gpu.getQueueFamilyProperties();
@@ -87,8 +120,8 @@ cWindow::cWindow(const std::shared_ptr<btr::Context>& context, const cWindowDesc
 	, m_surface()
 {
 	m_descriptor = descriptor;
-	WNDCLASSEXW wcex = {};
 
+	WNDCLASSEXW wcex = {};
 	wcex.cbSize = sizeof(WNDCLASSEX);
 	wcex.style = CS_HREDRAW | CS_VREDRAW;
 	wcex.lpfnWndProc = WndProc;
@@ -96,13 +129,13 @@ cWindow::cWindow(const std::shared_ptr<btr::Context>& context, const cWindowDesc
 	wcex.cbWndExtra = 0;
 	wcex.hInstance = GetModuleHandle(nullptr);
 	wcex.lpszClassName = m_descriptor.class_name.c_str();
-	if (!RegisterClassExW(&wcex)) {
-		assert(false);
+	if (!RegisterClassEx(&wcex)) {
+		assert_win(false);
 		return;
 	}
 
 	DWORD dwExStyle = WS_EX_APPWINDOW | WS_EX_WINDOWEDGE;
-	DWORD dwStyle = WS_OVERLAPPEDWINDOW | WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
+	DWORD dwStyle = WS_OVERLAPPEDWINDOW; //| WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
 	RECT rect{ 0, 0, (LONG)m_descriptor.size.width, (LONG)m_descriptor.size.height };
 	AdjustWindowRectEx(&rect, dwStyle, false, dwExStyle);
 	m_private->m_window = CreateWindowExW(dwExStyle, m_descriptor.class_name.c_str(), m_descriptor.window_name.c_str(), dwStyle,
@@ -110,14 +143,14 @@ cWindow::cWindow(const std::shared_ptr<btr::Context>& context, const cWindowDesc
 
 	assert(m_private->m_window);
 
-	ShowWindow(m_private->m_window, 1);
+	ShowWindow(m_private->m_window, SW_SHOW);
 	UpdateWindow(m_private->m_window);
 
 	// vulkan setup
-	vk::Win32SurfaceCreateInfoKHR surfaceInfo = vk::Win32SurfaceCreateInfoKHR()
-		.setHinstance(GetModuleHandle(nullptr))
-		.setHwnd(m_private->m_window);
-	m_surface = sGlobal::Order().getVKInstance().createWin32SurfaceKHRUnique(surfaceInfo);
+	vk::Win32SurfaceCreateInfoKHR surface_info;
+	surface_info.setHwnd(m_private->m_window);
+	surface_info.setHinstance(GetModuleHandle(nullptr));
+	m_surface = sGlobal::Order().getVKInstance().createWin32SurfaceKHRUnique(surface_info);
 
 	m_swapchain.setup(context, descriptor, m_surface.get());
 
@@ -125,5 +158,168 @@ cWindow::cWindow(const std::shared_ptr<btr::Context>& context, const cWindowDesc
 	m_swapchain.m_swapbuffer_semaphore = context->m_gpu.getDevice()->createSemaphoreUnique(semaphoreInfo);
 	m_swapchain.m_submit_semaphore = context->m_gpu.getDevice()->createSemaphoreUnique(semaphoreInfo);
 
+}
+
+void cWindow::sync()
+{
+	auto old = m_input.m_mouse;
+	m_input.m_mouse.wheel = 0;
+	m_input.m_keyboard.m_char.fill(0);
+	m_input.m_keyboard.m_char_count = 0;
+
+	MSG msg;
+	while (PeekMessage(&msg, m_private->m_window, 0, 0, PM_REMOVE))
+	{
+		switch (msg.message)
+		{
+		case WM_SYSKEYDOWN:
+		{
+			auto& p = m_input.m_keyboard.m_data[vk_alt];
+			p.key = vk_alt;
+			p.state = cKeyboard::STATE_ON;
+		}
+		break;
+		case WM_SYSKEYUP:
+		{
+			auto& p = m_input.m_keyboard.m_data[vk_alt];
+			p.key = vk_alt;
+			p.state = cKeyboard::STATE_OFF;
+		}
+		break;
+		case WM_KEYDOWN:
+		{
+			auto& p = m_input.m_keyboard.m_data[msg.wParam];
+			p.key = (uint8_t)msg.wParam;
+			p.state = cKeyboard::STATE_ON;
+		}
+		break;
+		case WM_KEYUP:
+		{
+			auto& p = m_input.m_keyboard.m_data[msg.wParam];
+			p.key = (uint8_t)msg.wParam;
+			p.state = cKeyboard::STATE_OFF;
+		}
+		break;
+		case WM_CHAR:
+			m_input.m_keyboard.m_char[m_input.m_keyboard.m_char_count++] = msg.wParam;
+			break;
+
+		case WM_MOUSEWHEEL:
+		{
+			m_input.m_mouse.wheel = GET_WHEEL_DELTA_WPARAM(msg.wParam) / WHEEL_DELTA;
+		}
+		case WM_LBUTTONDOWN:
+		case WM_LBUTTONUP:
+		case WM_MBUTTONDOWN:
+		case WM_MBUTTONUP:
+		case WM_RBUTTONDOWN:
+		case WM_RBUTTONUP:
+		case WM_XBUTTONDOWN:
+		case WM_XBUTTONUP:
+		case WM_LBUTTONDBLCLK:
+		{
+			int xPos = GET_X_LPARAM(msg.lParam);
+			int yPos = GET_Y_LPARAM(msg.lParam);
+			switch (msg.message)
+			{
+			case WM_LBUTTONDOWN:
+				m_input.m_mouse.m_param[cMouse::BUTTON_LEFT].state |= cMouse::STATE_ON;
+				m_input.m_mouse.m_param[cMouse::BUTTON_LEFT].x = xPos;
+				m_input.m_mouse.m_param[cMouse::BUTTON_LEFT].y = yPos;
+				break;
+			case WM_LBUTTONUP:
+				m_input.m_mouse.m_param[cMouse::BUTTON_LEFT].state = cMouse::STATE_OFF;
+				m_input.m_mouse.m_param[cMouse::BUTTON_LEFT].x = xPos;
+				m_input.m_mouse.m_param[cMouse::BUTTON_LEFT].y = yPos;
+				break;
+			case WM_MBUTTONDOWN:
+				m_input.m_mouse.m_param[cMouse::BUTTON_MIDDLE].state |= cMouse::STATE_ON;
+				m_input.m_mouse.m_param[cMouse::BUTTON_MIDDLE].x = xPos;
+				m_input.m_mouse.m_param[cMouse::BUTTON_MIDDLE].y = yPos;
+				break;
+			case WM_MBUTTONUP:
+				m_input.m_mouse.m_param[cMouse::BUTTON_MIDDLE].state = cMouse::STATE_OFF;
+				m_input.m_mouse.m_param[cMouse::BUTTON_MIDDLE].x = -1;
+				m_input.m_mouse.m_param[cMouse::BUTTON_MIDDLE].y = -1;
+				break;
+			case WM_RBUTTONDOWN:
+				m_input.m_mouse.m_param[cMouse::BUTTON_RIGHT].state |= cMouse::STATE_ON;
+				m_input.m_mouse.m_param[cMouse::BUTTON_RIGHT].x = xPos;
+				m_input.m_mouse.m_param[cMouse::BUTTON_RIGHT].y = yPos;
+				break;
+			case WM_RBUTTONUP:
+				m_input.m_mouse.m_param[cMouse::BUTTON_RIGHT].state = cMouse::STATE_OFF;
+				m_input.m_mouse.m_param[cMouse::BUTTON_RIGHT].x = -1;
+				m_input.m_mouse.m_param[cMouse::BUTTON_RIGHT].y = -1;
+				break;
+			case WM_LBUTTONDBLCLK:
+				m_input.m_mouse.m_param[cMouse::BUTTON_LEFT].state = cMouse::STATE_ON;
+				break;
+			case WM_XBUTTONDOWN:
+			case WM_XBUTTONUP:
+				break;
+			}
+		}
+		break;
+		case WM_MOUSEMOVE:
+		{
+			int xPos = GET_X_LPARAM(msg.lParam);
+			int yPos = GET_Y_LPARAM(msg.lParam);
+			m_input.m_mouse.xy = glm::ivec2(xPos, yPos);
+		}
+		break;
+		}
+
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
+
+	for (auto& key : m_input.m_keyboard.m_data)
+	{
+		if (btr::isOn(key.state_old, cMouse::STATE_ON))
+		{
+			// ONは押したタイミングだけ立つ
+			btr::setOff(key.state, cMouse::STATE_ON);
+		}
+		if (btr::isOn(key.state_old, cMouse::STATE_ON) || btr::isOn(key.state, cMouse::STATE_HOLD))
+		{
+			key.state |= cMouse::STATE_HOLD;
+		}
+		if (btr::isOn(key.state_old, cMouse::STATE_OFF))
+		{
+			key.state = 0;
+		}
+		key.state_old = key.state;
+	}
+
+	for (int i = 0; i < cMouse::BUTTON_NUM; i++)
+	{
+		auto& param = m_input.m_mouse.m_param[i];
+		auto& param_old = old.m_param[i];
+
+		if (btr::isOn(param_old.state, cMouse::STATE_ON))
+		{
+			// ONは押したタイミングだけ立つ
+			btr::setOff(param.state, cMouse::STATE_ON);
+			param.time = 0.f;
+		}
+		if (btr::isOn(param_old.state, cMouse::STATE_HOLD))
+		{
+			// 押した時間を加算
+			param.time += sGlobal::Order().getDeltaTime();
+		}
+		if (btr::isOn(param.state, cMouse::STATE_ON) || btr::isOn(param_old.state, cMouse::STATE_HOLD))
+		{
+			param.state |= cMouse::STATE_HOLD;
+		}
+		if (btr::isOn(param_old.state, cMouse::STATE_OFF))
+		{
+			param.state = 0;
+			param.x = -1;
+			param.y = -1;
+			param.time = 0.f;
+		}
+	}
+	m_input.m_mouse.xy_old = old.xy;
 }
 

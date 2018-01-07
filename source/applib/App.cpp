@@ -181,16 +181,26 @@ void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
 
 void App::preUpdate()
 {
+
 	for (auto& window : m_window_list)
 	{
 		window->getSwapchain().swap();
 	}
+
 	{
 		uint32_t index = sGlobal::Order().getCurrentFrame();
 		sDebug::Order().waitFence(m_context->m_device.getHandle(), m_fence_list[index].get());
 		m_context->m_device->resetFences({ m_fence_list[index].get() });
 		m_cmd_pool->resetPool();
 	}
+
+	for (auto& request : m_window_request)
+	{
+		auto new_window = sWindow::Order().createWindow<AppWindow>(m_context, request);
+		new_window->getSwapchain().swap();
+		m_window_list.emplace_back(std::move(new_window));
+	}
+	m_window_request.clear();
 
 	{
 		auto& m_camera = cCamera::sCamera::Order().getCameraList()[0];
@@ -254,16 +264,6 @@ void App::postUpdate()
 	for (auto& window : m_window_list)
 	{
 		window->sync();
-	}
-
-	if (!m_window_stack.empty())
-	{
-		m_window_list.reserve(m_window_list.size() + m_window_stack.size());
-		for (auto&& new_window : m_window_stack)
-		{
-			m_window_list.emplace_back(std::move(new_window));
-		}
-		m_window_stack.clear();
 	}
 
 

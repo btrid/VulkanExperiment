@@ -160,7 +160,8 @@ struct App
 	std::shared_ptr<cCmdPool> m_cmd_pool;
 	std::shared_ptr<AppWindow> m_window; // !< mainwindow
 	std::vector<std::shared_ptr<AppWindow>> m_window_list;
-	std::vector<std::shared_ptr<AppWindow>> m_window_stack;
+//	std::vector<std::shared_ptr<AppWindow>> m_window_stack;
+	std::vector<cWindowDescriptor> m_window_request;
 	std::shared_ptr<btr::Context> m_context;
 
 	std::vector<vk::CommandBuffer> m_system_cmds;
@@ -174,9 +175,9 @@ struct App
 	void preUpdate();
 	void postUpdate();
 
-	void pushWindow(const std::shared_ptr<AppWindow>& window)
+	void pushWindow(const cWindowDescriptor& descriptor)
 	{
-		m_window_stack.push_back(window);
+		m_window_request.emplace_back(descriptor);
 	}
 };
 
