@@ -18,7 +18,6 @@ struct RenderPassModule;
 
 struct cWindowDescriptor
 {
-	std::wstring class_name;
 	std::wstring window_name;
 
 	vk::Extent2D size;
@@ -61,6 +60,7 @@ private:
 	{
 	public:
 		HWND		m_window;
+		ATOM		m_class_register;
 		Private() = default;
 	};
 	std::shared_ptr<Private> m_private;
@@ -101,7 +101,7 @@ protected:
 
 public:
 	cWindow(const std::shared_ptr<btr::Context>& context, const cWindowDescriptor& descriptor);
-
+	~cWindow();
 	void sync();
 public:
 

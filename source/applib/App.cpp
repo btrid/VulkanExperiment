@@ -86,7 +86,6 @@ App::App(const AppDescriptor& desc)
 	window_desc.surface_format_request = vk::SurfaceFormatKHR{ vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear };
 	window_desc.size = vk::Extent2D(desc.m_window_size.x, desc.m_window_size.y);
 	window_desc.window_name = L"Vulkan Test";
-	window_desc.class_name = L"VulkanMainWindow";
 
 	auto window = sWindow::Order().createWindow<AppWindow>(m_context, window_desc);
 	m_window = window;

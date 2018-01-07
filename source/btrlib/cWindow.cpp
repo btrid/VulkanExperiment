@@ -122,6 +122,10 @@ cWindow::cWindow(const std::shared_ptr<btr::Context>& context, const cWindowDesc
 {
 	m_descriptor = descriptor;
 
+	static int classNo;
+	wchar_t classname[256] = {};
+	swprintf_s(classname, L"%s%d", m_descriptor.window_name.c_str(), classNo++);
+
 	WNDCLASSEXW wcex = {};
 	wcex.cbSize = sizeof(WNDCLASSEX);
 	wcex.style = CS_HREDRAW | CS_VREDRAW;
@@ -129,8 +133,9 @@ cWindow::cWindow(const std::shared_ptr<btr::Context>& context, const cWindowDesc
 	wcex.cbClsExtra = 0;
 	wcex.cbWndExtra = 0;
 	wcex.hInstance = GetModuleHandle(nullptr);
-	wcex.lpszClassName = m_descriptor.class_name.c_str();
-	if (!RegisterClassEx(&wcex)) {
+	wcex.lpszClassName = classname;
+	m_private->m_class_register = RegisterClassEx(&wcex);
+	if (!m_private->m_class_register) {
 		assert_win(false);
 		return;
 	}
@@ -139,7 +144,7 @@ cWindow::cWindow(const std::shared_ptr<btr::Context>& context, const cWindowDesc
 	DWORD dwStyle = WS_OVERLAPPEDWINDOW; //| WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
 	RECT rect{ 0, 0, (LONG)m_descriptor.size.width, (LONG)m_descriptor.size.height };
 	AdjustWindowRectEx(&rect, dwStyle, false, dwExStyle);
-	m_private->m_window = CreateWindowExW(dwExStyle, m_descriptor.class_name.c_str(), m_descriptor.window_name.c_str(), dwStyle,
+	m_private->m_window = CreateWindowExW(dwExStyle, (wchar_t*)MAKELONG(m_private->m_class_register, 0), m_descriptor.window_name.c_str(), dwStyle,
 		CW_USEDEFAULT, CW_USEDEFAULT, rect.right - rect.left, rect.bottom - rect.top, nullptr, nullptr, GetModuleHandle(nullptr), nullptr);
 
 	assert(m_private->m_window);
@@ -159,6 +164,11 @@ cWindow::cWindow(const std::shared_ptr<btr::Context>& context, const cWindowDesc
 	m_swapchain.m_swapbuffer_semaphore = context->m_gpu.getDevice()->createSemaphoreUnique(semaphoreInfo);
 	m_swapchain.m_submit_semaphore = context->m_gpu.getDevice()->createSemaphoreUnique(semaphoreInfo);
 
+}
+
+cWindow::~cWindow()
+{
+	UnregisterClassW((wchar_t*)MAKELONG(m_private->m_class_register, 0), GetModuleHandle(nullptr));
 }
 
 void cWindow::sync()

@@ -29,7 +29,6 @@ vk::CommandBuffer UIManipulater::execute()
 					{
 						{
 							cWindowDescriptor window_info;
-							window_info.class_name = L"Sub Window";
 							window_info.window_name = L"Sub Window";
 							window_info.backbuffer_num = sGlobal::Order().FRAME_MAX;
 							window_info.size = vk::Extent2D(480, 480);
@@ -82,8 +81,8 @@ vk::CommandBuffer UIManipulater::execute()
 		{
 			textureWindow();
 		};
-//		app::g_app_instance->m_window->getImguiPipeline()->pushImguiCmd(std::move(func));
-		app::g_app_instance->m_window_list[app::g_app_instance->m_window_list.size()-1]->getImguiPipeline()->pushImguiCmd(std::move(func));
+		app::g_app_instance->m_window->getImguiPipeline()->pushImguiCmd(std::move(func));
+//		app::g_app_instance->m_window_list[app::g_app_instance->m_window_list.size()-1]->getImguiPipeline()->pushImguiCmd(std::move(func));
 	}
 
 	auto cmd = m_context->m_cmd_pool->allocCmdOnetime(0);
