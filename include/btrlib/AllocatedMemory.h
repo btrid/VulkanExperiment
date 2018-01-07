@@ -5,6 +5,7 @@
 #include <memory>
 #include <btrlib/Define.h>
 #include <btrlib/sGlobal.h>
+//#include <btrlib/Context.h>
 namespace btr
 {
 struct Zone
@@ -532,12 +533,62 @@ struct UpdateBufferDescriptor
 	btr::AllocatedMemory staging_memory;
 	uint32_t frame_max;
 	uint32_t element_num;
+//	uint32_t align;
 
 	UpdateBufferDescriptor()
 	{
 		frame_max = -1;
 		element_num = -1;
+//		align = 0;
 	}
+};
+
+template<typename T>
+struct UpdateBufferAligned
+{
+	void setup(UpdateBufferDescriptor& desc)
+	{
+		assert(!m_device_buffer.isValid());
+		assert(desc.device_memory.isValid());
+		assert(btr::isOn(desc.device_memory.getBufferCreateInfo().usage, vk::BufferUsageFlagBits::eTransferDst));
+
+		m_desc = desc;
+		m_stride = sGlobal::Order().getGPU(0)->getProperties().limits.minUniformBufferOffsetAlignment;
+		m_stride = btr::align<uint32_t>(sizeof(T), m_stride);
+		m_device_buffer = desc.device_memory.allocateMemory(m_stride*m_desc.element_num);
+		m_staging_buffer = desc.staging_memory.allocateMemory(m_stride*m_desc.element_num*m_desc.frame_max);
+	}
+
+	void subupdate(const T* data, uint32_t data_num, uint32_t offset_num, uint32_t cpu_index)
+	{
+		char* ptr = m_staging_buffer.getMappedPtr<char>(m_stride*m_desc.element_num*cpu_index + m_stride*offset_num);
+		for (uint32_t i = 0; i < data_num; i++)
+		{
+			*(T*)ptr = data[i];
+			ptr += m_stride;
+		}
+	}
+
+	vk::BufferCopy update(uint32_t cpu_index)
+	{
+		vk::BufferCopy copy_info;
+		copy_info.setSize(m_stride*m_desc.element_num);
+		copy_info.setSrcOffset(m_staging_buffer.getBufferInfo().offset + m_stride*m_desc.element_num*cpu_index);
+		copy_info.setDstOffset(m_device_buffer.getBufferInfo().offset);
+		return copy_info;
+	}
+
+	vk::DescriptorBufferInfo getBufferInfo()const { return m_device_buffer.getBufferInfo(); }
+	vk::DescriptorBufferInfo getStagingBufferInfo()const { return m_staging_buffer.getBufferInfo(); }
+	const UpdateBufferDescriptor& getDescriptor()const { return m_desc; }
+	BufferMemory& getBufferMemory() { return m_device_buffer; }
+	const BufferMemory& getBufferMemory()const { return m_device_buffer; }
+	uint32_t getStride()const { return m_stride; }
+private:
+	BufferMemory m_device_buffer;
+	BufferMemory m_staging_buffer;
+	UpdateBufferDescriptor m_desc;
+	uint32_t m_stride;
 };
 
 template<typename T>
@@ -636,7 +687,6 @@ private:
 	std::vector<Area> m_area;
 	UpdateBufferDescriptor m_desc;
 	uint32_t m_element_max;
-
 };
 
 /**

@@ -3,40 +3,41 @@
 
 namespace
 {
-	void assert_win(bool expression)
+void assert_win(bool expression)
+{
+	if (expression)
 	{
-		if (expression)
-		{
-			return;
-		}
-
-		LPVOID lpMsgBuf;
-		FormatMessage(
-			FORMAT_MESSAGE_ALLOCATE_BUFFER |
-			FORMAT_MESSAGE_FROM_SYSTEM |
-			FORMAT_MESSAGE_IGNORE_INSERTS,
-			NULL,
-			GetLastError(),
-			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), // 既定の言語
-			(LPTSTR)&lpMsgBuf,
-			0,
-			NULL
-		);
-
-		// lpMsgBuf 内のすべての挿入シーケンスを処理する。
-
-		// ...
-
-		// 文字列を表示する。
-
-		MessageBox(NULL, (LPCTSTR)lpMsgBuf, L"Error", MB_OK | MB_ICONINFORMATION);
-
-		// バッファを解放する。
-
-		LocalFree(lpMsgBuf);
-
-		assert(expression);
+		return;
 	}
+
+	LPVOID lpMsgBuf;
+	FormatMessage(
+		FORMAT_MESSAGE_ALLOCATE_BUFFER |
+		FORMAT_MESSAGE_FROM_SYSTEM |
+		FORMAT_MESSAGE_IGNORE_INSERTS,
+		NULL,
+		GetLastError(),
+		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), // 既定の言語
+		(LPTSTR)&lpMsgBuf,
+		0,
+		NULL
+	);
+
+	// lpMsgBuf 内のすべての挿入シーケンスを処理する。
+
+	// ...
+
+	// 文字列を表示する。
+
+	MessageBox(NULL, (LPCTSTR)lpMsgBuf, L"Error", MB_OK | MB_ICONINFORMATION);
+
+	// バッファを解放する。
+
+	LocalFree(lpMsgBuf);
+
+	assert(expression);
+}
+
 std::vector<uint32_t> getSupportSurfaceQueue(vk::PhysicalDevice gpu, vk::SurfaceKHR surface)
 {
 	auto queueProp = gpu.getQueueFamilyProperties();

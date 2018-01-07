@@ -278,45 +278,11 @@ struct InstancingModule
 	virtual vk::DescriptorBufferInfo getInstancingInfo()const = 0;
 };
 
-struct UniqueDescriptorModule
+struct DescriptorSetModule
 {
-protected:
-	void createDescriptor(const std::shared_ptr<btr::Context>& context, const std::vector<vk::DescriptorSetLayoutBinding>& binding)
-	{
-		vk::DescriptorSetLayoutCreateInfo descriptor_layout_info;
-		descriptor_layout_info.setBindingCount((uint32_t)binding.size());
-		descriptor_layout_info.setPBindings(binding.data());
-		m_descriptor_set_layout = context->m_device->createDescriptorSetLayoutUnique(descriptor_layout_info);
-
-		vk::DescriptorSetLayout layouts[] =
-		{
-			m_descriptor_set_layout.get()
-		};
-		vk::DescriptorSetAllocateInfo descriptor_set_alloc_info;
-		descriptor_set_alloc_info.setDescriptorPool(context->m_descriptor_pool.get());
-		descriptor_set_alloc_info.setDescriptorSetCount(array_length(layouts));
-		descriptor_set_alloc_info.setPSetLayouts(layouts);
-		m_descriptor_set = std::move(context->m_device->allocateDescriptorSetsUnique(descriptor_set_alloc_info)[0]);
-	}
-
-protected:
-	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
-	vk::UniqueDescriptorSet m_descriptor_set;
 public:
-	vk::DescriptorSetLayout getLayout()const { return m_descriptor_set_layout.get(); }
-	vk::DescriptorSet getSet()const { return m_descriptor_set.get(); }
-
+	virtual vk::DescriptorSet getDescriptorSet()const = 0;
 };
-
-template<typename T>
-struct DescriptorSet
-{
-	T m_descriptor;
-	vk::UniqueDescriptorSet m_descriptor_set;
-
-	vk::DescriptorSet getDescriptorSet() const { return m_descriptor_set.get(); }
-};
-
 
 struct DescriptorModule
 {
@@ -371,67 +337,33 @@ protected:
 
 };
 
-struct LayoutDescriptor
+namespace btr
 {
-	std::vector<vk::DescriptorSetLayoutBinding> binding;
-	int m_set_num;
-};
-template<typename T>
-struct DescriptorLayout : DescriptorModule
-{
-	DescriptorLayout(const std::shared_ptr<btr::Context>& context)
-	{
-		auto layout_desc = T::GetLayout();
-		m_descriptor_set_layout = createDescriptorSetLayout(context, layout_desc.binding);
-		m_descriptor_pool = createDescriptorPool(context, layout_desc.binding, layout_desc.m_set_num);
-	}
-	std::shared_ptr<DescriptorSet<T>> createDescriptorSet(const std::shared_ptr<btr::Context>& context, T&& desc)
-	{
-		auto descriptor_set = allocateDescriptorSet(context);
-		auto ret = std::make_shared<DescriptorSet<T>>();
-		ret->m_descriptor = std::move(desc);
-		ret->m_descriptor.updateDescriptor(context, descriptor_set.get());
-		ret->m_descriptor_set = std::move(descriptor_set);
-		return ret;
-	}
-};
-
-struct DescriptorLayoutDescriptor
-{
-	std::vector<vk::DescriptorSetLayoutBinding> binding;
-	uint32_t m_set_num;
-};
-struct DescriptorLayoutEx
+struct Descriptor
 {
 public:
-	DescriptorLayoutEx(const std::shared_ptr<btr::Context> context, const DescriptorLayoutDescriptor& desc)
-	{
-		m_descriptor_set_layout = createDescriptorSetLayout(context, desc.binding);
-		m_descriptor_pool = createDescriptorPool(context, desc.binding, desc.m_set_num);
-	}
-	vk::UniqueDescriptorSet allocateDescriptorSet(const std::shared_ptr<btr::Context>& context)
+	static vk::UniqueDescriptorSet allocateDescriptorSet(const std::shared_ptr<btr::Context>& context, vk::DescriptorPool pool, vk::DescriptorSetLayout layout)
 	{
 		auto& device = context->m_device;
 		vk::DescriptorSetLayout layouts[] =
 		{
-			m_descriptor_set_layout.get()
+			layout
 		};
 		vk::DescriptorSetAllocateInfo descriptor_set_alloc_info;
-		descriptor_set_alloc_info.setDescriptorPool(getPool());
+		descriptor_set_alloc_info.setDescriptorPool(pool);
 		descriptor_set_alloc_info.setDescriptorSetCount(array_length(layouts));
 		descriptor_set_alloc_info.setPSetLayouts(layouts);
 		auto descriptor_set = std::move(device->allocateDescriptorSetsUnique(descriptor_set_alloc_info)[0]);
 		return descriptor_set;
 	}
-protected:
-	vk::UniqueDescriptorSetLayout createDescriptorSetLayout(const std::shared_ptr<btr::Context>& context, const std::vector<vk::DescriptorSetLayoutBinding>& binding)
+	static vk::UniqueDescriptorSetLayout createDescriptorSetLayout(const std::shared_ptr<btr::Context>& context, const std::vector<vk::DescriptorSetLayoutBinding>& binding)
 	{
 		vk::DescriptorSetLayoutCreateInfo descriptor_layout_info;
 		descriptor_layout_info.setBindingCount((uint32_t)binding.size());
 		descriptor_layout_info.setPBindings(binding.data());
 		return context->m_device->createDescriptorSetLayoutUnique(descriptor_layout_info);
 	}
-	vk::UniqueDescriptorPool createDescriptorPool(const std::shared_ptr<btr::Context>& context, const std::vector<vk::DescriptorSetLayoutBinding>& binding, uint32_t set_size)
+	static vk::UniqueDescriptorPool createDescriptorPool(const std::shared_ptr<btr::Context>& context, const std::vector<vk::DescriptorSetLayoutBinding>& binding, uint32_t set_size)
 	{
 		auto& device = context->m_device;
 		std::vector<vk::DescriptorPoolSize> pool_size(VK_DESCRIPTOR_TYPE_RANGE_SIZE);
@@ -449,59 +381,5 @@ protected:
 		return device->createDescriptorPoolUnique(pool_info);
 	}
 
-protected:
-	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
-	vk::UniqueDescriptorPool m_descriptor_pool;
-public:
-	vk::DescriptorSetLayout getLayout()const { return m_descriptor_set_layout.get(); }
-protected:
-	vk::DescriptorPool getPool()const { return m_descriptor_pool.get(); }
-
 };
-
-namespace btr
-{
-	struct Descriptor
-	{
-	public:
-		static vk::UniqueDescriptorSet allocateDescriptorSet(const std::shared_ptr<btr::Context>& context, vk::DescriptorPool pool, vk::DescriptorSetLayout layout)
-		{
-			auto& device = context->m_device;
-			vk::DescriptorSetLayout layouts[] =
-			{
-				layout
-			};
-			vk::DescriptorSetAllocateInfo descriptor_set_alloc_info;
-			descriptor_set_alloc_info.setDescriptorPool(pool);
-			descriptor_set_alloc_info.setDescriptorSetCount(array_length(layouts));
-			descriptor_set_alloc_info.setPSetLayouts(layouts);
-			auto descriptor_set = std::move(device->allocateDescriptorSetsUnique(descriptor_set_alloc_info)[0]);
-			return descriptor_set;
-		}
-		static vk::UniqueDescriptorSetLayout createDescriptorSetLayout(const std::shared_ptr<btr::Context>& context, const std::vector<vk::DescriptorSetLayoutBinding>& binding)
-		{
-			vk::DescriptorSetLayoutCreateInfo descriptor_layout_info;
-			descriptor_layout_info.setBindingCount((uint32_t)binding.size());
-			descriptor_layout_info.setPBindings(binding.data());
-			return context->m_device->createDescriptorSetLayoutUnique(descriptor_layout_info);
-		}
-		static vk::UniqueDescriptorPool createDescriptorPool(const std::shared_ptr<btr::Context>& context, const std::vector<vk::DescriptorSetLayoutBinding>& binding, uint32_t set_size)
-		{
-			auto& device = context->m_device;
-			std::vector<vk::DescriptorPoolSize> pool_size(VK_DESCRIPTOR_TYPE_RANGE_SIZE);
-			for (auto& b : binding)
-			{
-				pool_size[(uint32_t)b.descriptorType].setType(b.descriptorType);
-				pool_size[(uint32_t)b.descriptorType].descriptorCount += b.descriptorCount*set_size;
-			}
-			pool_size.erase(std::remove_if(pool_size.begin(), pool_size.end(), [](auto& p) {return p.descriptorCount == 0; }), pool_size.end());
-			vk::DescriptorPoolCreateInfo pool_info;
-			pool_info.setPoolSizeCount((uint32_t)pool_size.size());
-			pool_info.setPPoolSizes(pool_size.data());
-			pool_info.setMaxSets(set_size);
-			pool_info.setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet);
-			return device->createDescriptorPoolUnique(pool_info);
-		}
-
-	};
 }

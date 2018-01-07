@@ -173,7 +173,7 @@ void sParticlePipeline::setup(std::shared_ptr<btr::Context>& context)
 		{
 			std::vector<vk::DescriptorSetLayout> layouts = {
 				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_PARTICLE].get(),
-				sSystem::Order().getSystemDescriptor().getLayout(),
+				sSystem::Order().getSystemDescriptorLayout(),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(layouts.size());
@@ -184,7 +184,7 @@ void sParticlePipeline::setup(std::shared_ptr<btr::Context>& context)
 			std::vector<vk::DescriptorSetLayout> layouts = {
 				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_PARTICLE].get(),
 				sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
-				sSystem::Order().getSystemDescriptor().getLayout(),
+				sSystem::Order().getSystemDescriptorLayout(),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(layouts.size());
@@ -349,7 +349,7 @@ vk::CommandBuffer sParticlePipeline::execute(std::shared_ptr<btr::Context>& cont
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_GENERATE_DEBUG].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 0, m_descriptor_set[DESCRIPTOR_SET_PARTICLE].get(), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 1, sSystem::Order().getSystemDescriptor().getSet(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 1, sSystem::Order().getSystemDescriptorSet(), {});
 		cmd.dispatch(1, 1, 1);
 	}
 
@@ -375,7 +375,7 @@ vk::CommandBuffer sParticlePipeline::execute(std::shared_ptr<btr::Context>& cont
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_GENERATE].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 0, m_descriptor_set[DESCRIPTOR_SET_PARTICLE].get(), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 1, sSystem::Order().getSystemDescriptor().getSet(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 1, sSystem::Order().getSystemDescriptorSet(), {0});
 		cmd.dispatchIndirect(m_particle_generate_cmd_counter.getBufferInfo().buffer, m_particle_generate_cmd_counter.getBufferInfo().offset);
 	}
 	{
@@ -398,7 +398,7 @@ vk::CommandBuffer sParticlePipeline::execute(std::shared_ptr<btr::Context>& cont
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_UPDATE].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 0, m_descriptor_set[DESCRIPTOR_SET_PARTICLE].get(), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 1, sSystem::Order().getSystemDescriptor().getSet(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 1, sSystem::Order().getSystemDescriptorSet(), {0});
 		auto groups = app::calcDipatchGroups(glm::uvec3(m_particle_info_cpu.m_particle_max_num, 1, 1), glm::uvec3(1024, 1, 1));
 		cmd.dispatch(groups.x, groups.y, groups.z);
 	}
@@ -425,7 +425,7 @@ vk::CommandBuffer sParticlePipeline::draw(std::shared_ptr<btr::Context>& context
 	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW].get());
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 0, m_descriptor_set[DESCRIPTOR_SET_PARTICLE].get(), {});
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 2, sSystem::Order().getSystemDescriptor().getSet(), {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 2, sSystem::Order().getSystemDescriptorSet(), {0});
 	cmd.drawIndirect(m_particle_counter.getBufferInfo().buffer, m_particle_counter.getBufferInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
 
 	cmd.endRenderPass();

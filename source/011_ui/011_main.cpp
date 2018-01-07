@@ -58,7 +58,6 @@ int main()
 	auto context = app.m_context;
 
 	sUISystem::Create(context);
-
 	UIManipulater manip(context);
 
 	app.setup();

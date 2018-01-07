@@ -166,7 +166,7 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context)
 			vk::DescriptorSetLayout layouts[] =
 			{
 				m_descriptor_set_layout.get(),
-				sSystem::Order().getSystemDescriptor().getLayout(),
+				sSystem::Order().getSystemDescriptorLayout(),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
@@ -178,7 +178,7 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context)
 			{
 				m_descriptor_set_layout.get(),
 				m_descriptor_set_layout_anime.get(),
-				sSystem::Order().getSystemDescriptor().getLayout(),
+				sSystem::Order().getSystemDescriptorLayout(),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
@@ -329,8 +329,9 @@ vk::CommandBuffer sUISystem::draw()
 	auto& renders = m_render[sGlobal::Order().getRenderIndex()];
 	std::vector<vk::UniqueDescriptorSet> descriptor_holder;
 	descriptor_holder.reserve(renders.size() * 2);
-	for (auto& ui : renders)
+	for (uint32_t i = 0; i < renders.size(); i++)
 	{
+		auto& ui = renders[i];
 		vk::DescriptorSet descriptor_set;
 		vk::DescriptorSet descriptor_set_anime;
 
@@ -456,7 +457,7 @@ vk::CommandBuffer sUISystem::draw()
 			}
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_CLEAR].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_CLEAR].get(), 0, { descriptor_set }, {});
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_CLEAR].get(), 1, { sSystem::Order().getSystemDescriptor().getSet() }, {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_CLEAR].get(), 1, { sSystem::Order().getSystemDescriptorSet() }, {i * sSystem::Order().getSystemDescriptorStride()});
 			cmd.dispatch(1, 1, 1);
 
 			cmd.fillBuffer(ui->m_scene.getInfo().buffer, ui->m_scene.getInfo().offset, ui->m_scene.getInfo().range, 0u);
@@ -470,7 +471,7 @@ vk::CommandBuffer sUISystem::draw()
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_ANIMATION].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_ANIMATION].get(), 0, { descriptor_set }, {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_ANIMATION].get(), 1, { descriptor_set_anime }, {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_ANIMATION].get(), 2, { sSystem::Order().getSystemDescriptor().getSet() }, {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_ANIMATION].get(), 2, { sSystem::Order().getSystemDescriptorSet() }, { i * sSystem::Order().getSystemDescriptorStride() });
 		cmd.dispatch(1, 1, 1);
 		{
 			{
@@ -495,7 +496,7 @@ vk::CommandBuffer sUISystem::draw()
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_BOUNDARY].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_BOUNDARY].get(), 0, { descriptor_set }, {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_BOUNDARY].get(), 1, { descriptor_set_anime }, {});
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_BOUNDARY].get(), 2, { sSystem::Order().getSystemDescriptor().getSet() }, {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_BOUNDARY].get(), 2, { sSystem::Order().getSystemDescriptorSet() }, { i * sSystem::Order().getSystemDescriptorStride() });
 			cmd.dispatch(1, 1, 1);
 
 		}

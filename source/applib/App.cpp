@@ -43,7 +43,7 @@ App::App(const AppDescriptor& desc)
 		m_context->m_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 1000 * 200);
 		m_context->m_staging_memory.setup(device, vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst, host_memory, 1000 * 1000 * 100);
 		{
-			std::vector<vk::DescriptorPoolSize> pool_size(4);
+			vk::DescriptorPoolSize pool_size[5];
 			pool_size[0].setType(vk::DescriptorType::eUniformBuffer);
 			pool_size[0].setDescriptorCount(20);
 			pool_size[1].setType(vk::DescriptorType::eStorageBuffer);
@@ -52,10 +52,12 @@ App::App(const AppDescriptor& desc)
 			pool_size[2].setDescriptorCount(30);
 			pool_size[3].setType(vk::DescriptorType::eStorageImage);
 			pool_size[3].setDescriptorCount(30);
+			pool_size[4].setType(vk::DescriptorType::eUniformBufferDynamic);
+			pool_size[4].setDescriptorCount(5);
 
 			vk::DescriptorPoolCreateInfo pool_info;
-			pool_info.setPoolSizeCount((uint32_t)pool_size.size());
-			pool_info.setPPoolSizes(pool_size.data());
+			pool_info.setPoolSizeCount(array_length(pool_size));
+			pool_info.setPPoolSizes(pool_size);
 			pool_info.setMaxSets(20);
 			m_context->m_descriptor_pool = device->createDescriptorPoolUnique(pool_info);
 
@@ -75,7 +77,7 @@ App::App(const AppDescriptor& desc)
 			m_fence_list.emplace_back(m_context->m_gpu.getDevice()->createFenceUnique(fence_info));
 		}
 	}
-	sSystem::Order().setup(m_context);
+	sSystem::Create(m_context);
 	sCameraManager::Order().setup(m_context);
 	sGraphicsResource::Order().setup(m_context);
 	sImGuiRenderer::Create(m_context);
@@ -389,6 +391,30 @@ AppWindow::ImguiRenderPipeline::ImguiRenderPipeline(const std::shared_ptr<btr::C
 	}
 
 	m_imgui_context = ImGui::CreateContext();
+	ImGui::SetCurrentContext(m_imgui_context);
+	auto& io = ImGui::GetIO();
+	io.DisplaySize = window->getClientSize<ImVec2>();
+	io.FontGlobalScale = 1.f;
+	io.RenderDrawListsFn = nullptr;  // Setup a render function, or set to NULL and call GetDrawData() after Render() to access the render data.
+	io.KeyMap[ImGuiKey_Tab] = VK_TAB;
+	io.KeyMap[ImGuiKey_LeftArrow] = VK_LEFT;
+	io.KeyMap[ImGuiKey_RightArrow] = VK_RIGHT;
+	io.KeyMap[ImGuiKey_UpArrow] = VK_UP;
+	io.KeyMap[ImGuiKey_DownArrow] = VK_DOWN;
+	//		io.KeyMap[ImGuiKey_PageUp] = VK_PAGE;
+	// 		io.KeyMap[ImGuiKey_PageDown] = i;
+	// 		io.KeyMap[ImGuiKey_Home] = i;
+	// 		io.KeyMap[ImGuiKey_End] = i;
+	io.KeyMap[ImGuiKey_Delete] = VK_DELETE;
+	io.KeyMap[ImGuiKey_Backspace] = VK_BACK;
+	io.KeyMap[ImGuiKey_Enter] = VK_RETURN;
+	io.KeyMap[ImGuiKey_Escape] = VK_ESCAPE;
+	// 		io.KeyMap[ImGuiKey_A] = i;
+	// 		io.KeyMap[ImGuiKey_C] = i;
+	// 		io.KeyMap[ImGuiKey_V] = i;
+	// 		io.KeyMap[ImGuiKey_X] = i;
+	// 		io.KeyMap[ImGuiKey_Y] = i;
+	// 		io.KeyMap[ImGuiKey_Z] = i;
 
 }
 

@@ -82,7 +82,8 @@ vk::CommandBuffer UIManipulater::execute()
 		{
 			textureWindow();
 		};
-		app::g_app_instance->m_window->getImguiPipeline()->pushImguiCmd(std::move(func));
+//		app::g_app_instance->m_window->getImguiPipeline()->pushImguiCmd(std::move(func));
+		app::g_app_instance->m_window_list[app::g_app_instance->m_window_list.size()-1]->getImguiPipeline()->pushImguiCmd(std::move(func));
 	}
 
 	auto cmd = m_context->m_cmd_pool->allocCmdOnetime(0);
@@ -292,11 +293,11 @@ void UIManipulater::textureWindow()
 	ImGui::SetNextWindowSize(ImVec2(400.f, 200.f), ImGuiCond_Once);
 	if (ImGui::Begin("hoge", &m_is_show_texture_window, ImGuiWindowFlags_HorizontalScrollbar))
 	{
-		for (size_t i = 0; i < m_texture_name.size(); i++)
+		for (uint32_t i = 0; i < m_texture_name.size(); i++)
 		{
 			char label[16] = {};
 			sprintf_s(label, "texture %2d", i);
-			ImGui::InputText(label , m_texture_name[i], sizeof(m_texture_name[i]));
+			ImGui::InputText(label, m_texture_name[i], sizeof(m_texture_name[i]));
 		}
 
 		m_request_update_texture = ImGui::Button("texture_modifi");

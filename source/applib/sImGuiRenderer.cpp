@@ -9,28 +9,6 @@ sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 
 	{
 		ImGuiIO& io = ImGui::GetIO();
-//		io.DisplaySize = context->m_window->getClientSize<ImVec2>();
-		io.FontGlobalScale = 1.f;
-		io.RenderDrawListsFn = nullptr;  // Setup a render function, or set to NULL and call GetDrawData() after Render() to access the render data.
-		io.KeyMap[ImGuiKey_Tab] = VK_TAB;
-		io.KeyMap[ImGuiKey_LeftArrow] = VK_LEFT;
-		io.KeyMap[ImGuiKey_RightArrow] = VK_RIGHT;
-		io.KeyMap[ImGuiKey_UpArrow] = VK_UP;
-		io.KeyMap[ImGuiKey_DownArrow] = VK_DOWN;
-//		io.KeyMap[ImGuiKey_PageUp] = VK_PAGE;
-// 		io.KeyMap[ImGuiKey_PageDown] = i;
-// 		io.KeyMap[ImGuiKey_Home] = i;
-// 		io.KeyMap[ImGuiKey_End] = i;
-		io.KeyMap[ImGuiKey_Delete] = VK_DELETE;
-		io.KeyMap[ImGuiKey_Backspace] = VK_BACK;
-		io.KeyMap[ImGuiKey_Enter] = VK_RETURN;
-		io.KeyMap[ImGuiKey_Escape] = VK_ESCAPE;
-// 		io.KeyMap[ImGuiKey_A] = i;
-// 		io.KeyMap[ImGuiKey_C] = i;
-// 		io.KeyMap[ImGuiKey_V] = i;
-// 		io.KeyMap[ImGuiKey_X] = i;
-// 		io.KeyMap[ImGuiKey_Y] = i;
-// 		io.KeyMap[ImGuiKey_Z] = i;
 
 		unsigned char* pixels;
 		int width, height, byte_per_pixel;
@@ -188,7 +166,7 @@ sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 	{
 		vk::DescriptorSetLayout layouts[] = {
 			m_descriptor_set_layout.get(),
-			sSystem::Order().getSystemDescriptor().getLayout(),
+			sSystem::Order().getSystemDescriptorLayout(),
 		};
 		vk::PushConstantRange constants[] = {
 			vk::PushConstantRange().setOffset(0).setSize(4).setStageFlags(vk::ShaderStageFlagBits::eFragment),
@@ -208,8 +186,10 @@ vk::CommandBuffer sImGuiRenderer::Render()
 {
 	auto cmd = m_context->m_cmd_pool->allocCmdOnetime(0);
 
-	for (auto& window : app::g_app_instance->m_window_list)
+	for (uint32_t i = 0; i < app::g_app_instance->m_window_list.size(); i++)
 	{
+		auto& window = app::g_app_instance->m_window_list[i];
+
 		ImGui::SetCurrentContext(window->getImguiPipeline()->m_imgui_context);
 		auto& io = ImGui::GetIO();
 		io.DisplaySize = window->getClientSize<ImVec2>();
@@ -241,14 +221,15 @@ vk::CommandBuffer sImGuiRenderer::Render()
 		}
 		ImGui::NewFrame();
 		{
+			ImGui::PushID(window.get());
 			auto& cmds = window->getImguiPipeline()->getImguiCmd();
 			for (auto& cmd : cmds)
 			{
 				cmd();
 			}
 			cmds.clear();
+			ImGui::PopID();
 		}
-
 		ImGui::Render();
 		ImDrawData* draw_data = ImGui::GetDrawData();
 
@@ -259,7 +240,7 @@ vk::CommandBuffer sImGuiRenderer::Render()
 		cmd.beginRenderPass(begin_render_info, vk::SubpassContents::eInline);
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, window->getImguiPipeline()->m_pipeline.get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_RENDER].get(), 0, { m_descriptor_set.get() }, {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_RENDER].get(), 1, { sSystem::Order().getSystemDescriptor().getSet() }, {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_RENDER].get(), 1, { sSystem::Order().getSystemDescriptorSet() }, { i * sSystem::Order().getSystemDescriptorStride() });
 
 		for (int n = 0; n < draw_data->CmdListsCount; n++)
 		{

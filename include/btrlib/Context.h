@@ -4,7 +4,6 @@
 #include <btrlib/Define.h>
 #include <btrlib/GPU.h>
 #include <btrlib/AllocatedMemory.h>
-//#include <btrlib/cWindow.h>
 #include <btrlib/cCmdPool.h>
 
 class cWindow;
