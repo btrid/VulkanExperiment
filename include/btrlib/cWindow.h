@@ -26,6 +26,30 @@ struct cWindowDescriptor
 };
 class cWindow
 {
+	static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+	{
+		cWindow *pThis = NULL;
+		if (uMsg == WM_NCCREATE)
+		{
+			CREATESTRUCT* pCreate = (CREATESTRUCT*)lParam;
+			pThis = (cWindow*)pCreate->lpCreateParams;
+			SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)pThis);
+			pThis->m_private->m_window = hwnd;
+		}
+		else
+		{
+			pThis = (cWindow*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+		}
+		if (pThis)
+		{
+			return pThis->WindowProc(uMsg, wParam, lParam);
+		}
+		else
+		{
+			return DefWindowProc(hwnd, uMsg, wParam, lParam);
+		}
+	}
+
 public:
 private:
 	struct Swapchain 
@@ -67,66 +91,45 @@ private:
 protected:
 	vk::UniqueSurfaceKHR m_surface;
 	cInput m_input;
+	cInput m_input_worker;
 	Swapchain m_swapchain;
 	cWindowDescriptor m_descriptor;
 	std::shared_ptr<RenderPassModule> m_render_pass;
 
-	static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-	{
-		switch (message)
-		{
-		case WM_SYSKEYDOWN:
-			break;
-
-		case WM_SYSCHAR:
-			break;
-
-		case WM_SYSKEYUP:
-			break;
-
-		case WM_KEYDOWN:
-//			wParam
-			break;
-
-		case WM_KEYUP:
-			break;
-
-		case WM_LBUTTONDBLCLK:
-//			auto xPos = GET_XBUTTON_WPARAM(lParam);
-//			auto yPos = GET_Y_LPARAM(lParam);
-			break;
-		}
-		return DefWindowProc(hWnd, message, wParam, lParam);
-	}
-
+	bool m_is_close;
 public:
 	cWindow(const std::shared_ptr<btr::Context>& context, const cWindowDescriptor& descriptor);
 	~cWindow();
-	void sync();
+	void execute();
+	void swap();
 public:
 
 	glm::uvec2 getClientSize()const { return glm::uvec2(m_descriptor.size.width, m_descriptor.size.height); }
 	template<typename T> T getClientSize()const { return T( m_descriptor.size.width, m_descriptor.size.height ); }
 	const Swapchain& getSwapchain()const { return m_swapchain; }
 	Swapchain& getSwapchain() { return m_swapchain; }
-	vk::SurfaceKHR getSurface()const { return m_surface.get(); }
 	const cInput& getInput()const { return m_input; }
 	
 	std::shared_ptr<RenderPassModule> getRenderBackbufferPass() { return m_render_pass; }
+	bool isClose()const {
+		return m_is_close;
+	}
 
+private:
+	LRESULT WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam);
 };
 
 class sWindow : public Singleton<sWindow>
 {
 	friend Singleton<sWindow>;
-	std::vector<std::weak_ptr<cWindow>> mWindowList;
+	std::vector<std::shared_ptr<cWindow>> mWindowList;
 public:
 	template<typename T>
 	std::shared_ptr<T> createWindow(const std::shared_ptr<btr::Context>& context, const cWindowDescriptor& window_info)
 	{
 		assert(sThreadLocal::Order().getThreadIndex() == 0); // メインスレッド以外は対応してない
 		auto window = std::make_shared<T>(context, window_info);
-		mWindowList.emplace_back(window);
+//		mWindowList.emplace_back(window);
 		return window;
 	}
 

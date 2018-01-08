@@ -3,6 +3,11 @@
 #include <btrlib/Define.h>
 #include <btrlib/Singleton.h>
 #include <btrlib/Context.h>
+
+struct iMessage{
+	uint32_t id;
+	virtual ~iMessage() = default;
+};
 struct sMessageSystem : Singleton<sMessageSystem>
 {
 	friend Singleton<sMessageSystem>;
@@ -18,6 +23,7 @@ struct sMessageSystem : Singleton<sMessageSystem>
 	};
 	btr::BufferMemoryEx<uint32_t> m_se_request_counter;
 	btr::BufferMemoryEx<SERequest> m_se_request_buffer;
+
 	void setup(const std::shared_ptr<btr::Context>& context)
 	{
 		{

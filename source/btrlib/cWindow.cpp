@@ -38,6 +38,7 @@ void assert_win(bool expression)
 	assert(expression);
 }
 
+
 std::vector<uint32_t> getSupportSurfaceQueue(vk::PhysicalDevice gpu, vk::SurfaceKHR surface)
 {
 	auto queueProp = gpu.getQueueFamilyProperties();
@@ -121,6 +122,7 @@ cWindow::cWindow(const std::shared_ptr<btr::Context>& context, const cWindowDesc
 	, m_surface()
 {
 	m_descriptor = descriptor;
+	m_is_close = false;
 
 	static int classNo;
 	wchar_t classname[256] = {};
@@ -129,25 +131,22 @@ cWindow::cWindow(const std::shared_ptr<btr::Context>& context, const cWindowDesc
 	WNDCLASSEXW wcex = {};
 	wcex.cbSize = sizeof(WNDCLASSEX);
 	wcex.style = CS_HREDRAW | CS_VREDRAW;
-	wcex.lpfnWndProc = WndProc;
+	wcex.lpfnWndProc = WindowProc;
 	wcex.cbClsExtra = 0;
 	wcex.cbWndExtra = 0;
 	wcex.hInstance = GetModuleHandle(nullptr);
 	wcex.lpszClassName = classname;
 	m_private->m_class_register = RegisterClassEx(&wcex);
-	if (!m_private->m_class_register) {
-		assert_win(false);
-		return;
-	}
+	assert_win(m_private->m_class_register);
 
 	DWORD dwExStyle = WS_EX_APPWINDOW | WS_EX_WINDOWEDGE;
 	DWORD dwStyle = WS_OVERLAPPEDWINDOW; //| WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
 	RECT rect{ 0, 0, (LONG)m_descriptor.size.width, (LONG)m_descriptor.size.height };
 	AdjustWindowRectEx(&rect, dwStyle, false, dwExStyle);
 	m_private->m_window = CreateWindowExW(dwExStyle, (wchar_t*)MAKELONG(m_private->m_class_register, 0), m_descriptor.window_name.c_str(), dwStyle,
-		CW_USEDEFAULT, CW_USEDEFAULT, rect.right - rect.left, rect.bottom - rect.top, nullptr, nullptr, GetModuleHandle(nullptr), nullptr);
+		CW_USEDEFAULT, CW_USEDEFAULT, rect.right - rect.left, rect.bottom - rect.top, nullptr, nullptr, GetModuleHandle(nullptr), this);
 
-	assert(m_private->m_window);
+	assert_win(m_private->m_window);
 
 	ShowWindow(m_private->m_window, SW_SHOW);
 	UpdateWindow(m_private->m_window);
@@ -168,124 +167,132 @@ cWindow::cWindow(const std::shared_ptr<btr::Context>& context, const cWindowDesc
 
 cWindow::~cWindow()
 {
+	DestroyWindow(m_private->m_window);
 	UnregisterClassW((wchar_t*)MAKELONG(m_private->m_class_register, 0), GetModuleHandle(nullptr));
 }
 
-void cWindow::sync()
+LRESULT cWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-	auto old = m_input.m_mouse;
-	m_input.m_mouse.wheel = 0;
-	m_input.m_keyboard.m_char.fill(0);
-	m_input.m_keyboard.m_char_count = 0;
-
-	MSG msg;
-	while (PeekMessage(&msg, m_private->m_window, 0, 0, PM_REMOVE))
+	switch (uMsg)
 	{
-		switch (msg.message)
-		{
-		case WM_SYSKEYDOWN:
-		{
-			auto& p = m_input.m_keyboard.m_data[vk_alt];
-			p.key = vk_alt;
-			p.state = cKeyboard::STATE_ON;
-		}
+	case WM_SYSKEYDOWN:
+	{
+		auto& p = m_input_worker.m_keyboard.m_data[vk_alt];
+		p.key = vk_alt;
+		p.state = cKeyboard::STATE_ON;
+	}
+	break;
+	case WM_SYSKEYUP:
+	{
+		auto& p = m_input_worker.m_keyboard.m_data[vk_alt];
+		p.key = vk_alt;
+		p.state = cKeyboard::STATE_OFF;
+	}
+	break;
+	case WM_KEYDOWN:
+	{
+		auto& p = m_input_worker.m_keyboard.m_data[wParam];
+		p.key = (uint8_t)wParam;
+		p.state = cKeyboard::STATE_ON;
+	}
+	break;
+	case WM_KEYUP:
+	{
+		auto& p = m_input_worker.m_keyboard.m_data[wParam];
+		p.key = (uint8_t)wParam;
+		p.state = cKeyboard::STATE_OFF;
+	}
+	break;
+	case WM_CHAR:
+		m_input_worker.m_keyboard.m_char[m_input_worker.m_keyboard.m_char_count++] = wParam;
 		break;
-		case WM_SYSKEYUP:
-		{
-			auto& p = m_input.m_keyboard.m_data[vk_alt];
-			p.key = vk_alt;
-			p.state = cKeyboard::STATE_OFF;
-		}
-		break;
-		case WM_KEYDOWN:
-		{
-			auto& p = m_input.m_keyboard.m_data[msg.wParam];
-			p.key = (uint8_t)msg.wParam;
-			p.state = cKeyboard::STATE_ON;
-		}
-		break;
-		case WM_KEYUP:
-		{
-			auto& p = m_input.m_keyboard.m_data[msg.wParam];
-			p.key = (uint8_t)msg.wParam;
-			p.state = cKeyboard::STATE_OFF;
-		}
-		break;
-		case WM_CHAR:
-			m_input.m_keyboard.m_char[m_input.m_keyboard.m_char_count++] = msg.wParam;
-			break;
 
-		case WM_MOUSEWHEEL:
+	case WM_MOUSEWHEEL:
+	{
+		m_input_worker.m_mouse.wheel = GET_WHEEL_DELTA_WPARAM(wParam) / WHEEL_DELTA;
+	}
+	case WM_LBUTTONDOWN:
+	case WM_LBUTTONUP:
+	case WM_MBUTTONDOWN:
+	case WM_MBUTTONUP:
+	case WM_RBUTTONDOWN:
+	case WM_RBUTTONUP:
+	case WM_XBUTTONDOWN:
+	case WM_XBUTTONUP:
+	case WM_LBUTTONDBLCLK:
+	{
+		int xPos = GET_X_LPARAM(lParam);
+		int yPos = GET_Y_LPARAM(lParam);
+		switch (uMsg)
 		{
-			m_input.m_mouse.wheel = GET_WHEEL_DELTA_WPARAM(msg.wParam) / WHEEL_DELTA;
-		}
 		case WM_LBUTTONDOWN:
+			m_input_worker.m_mouse.m_param[cMouse::BUTTON_LEFT].state |= cMouse::STATE_ON;
+			m_input_worker.m_mouse.m_param[cMouse::BUTTON_LEFT].x = xPos;
+			m_input_worker.m_mouse.m_param[cMouse::BUTTON_LEFT].y = yPos;
+			break;
 		case WM_LBUTTONUP:
+			m_input_worker.m_mouse.m_param[cMouse::BUTTON_LEFT].state = cMouse::STATE_OFF;
+			m_input_worker.m_mouse.m_param[cMouse::BUTTON_LEFT].x = xPos;
+			m_input_worker.m_mouse.m_param[cMouse::BUTTON_LEFT].y = yPos;
+			break;
 		case WM_MBUTTONDOWN:
+			m_input_worker.m_mouse.m_param[cMouse::BUTTON_MIDDLE].state |= cMouse::STATE_ON;
+			m_input_worker.m_mouse.m_param[cMouse::BUTTON_MIDDLE].x = xPos;
+			m_input_worker.m_mouse.m_param[cMouse::BUTTON_MIDDLE].y = yPos;
+			break;
 		case WM_MBUTTONUP:
+			m_input_worker.m_mouse.m_param[cMouse::BUTTON_MIDDLE].state = cMouse::STATE_OFF;
+			m_input_worker.m_mouse.m_param[cMouse::BUTTON_MIDDLE].x = -1;
+			m_input_worker.m_mouse.m_param[cMouse::BUTTON_MIDDLE].y = -1;
+			break;
 		case WM_RBUTTONDOWN:
+			m_input_worker.m_mouse.m_param[cMouse::BUTTON_RIGHT].state |= cMouse::STATE_ON;
+			m_input_worker.m_mouse.m_param[cMouse::BUTTON_RIGHT].x = xPos;
+			m_input_worker.m_mouse.m_param[cMouse::BUTTON_RIGHT].y = yPos;
+			break;
 		case WM_RBUTTONUP:
+			m_input_worker.m_mouse.m_param[cMouse::BUTTON_RIGHT].state = cMouse::STATE_OFF;
+			m_input_worker.m_mouse.m_param[cMouse::BUTTON_RIGHT].x = -1;
+			m_input_worker.m_mouse.m_param[cMouse::BUTTON_RIGHT].y = -1;
+			break;
+		case WM_LBUTTONDBLCLK:
+			m_input_worker.m_mouse.m_param[cMouse::BUTTON_LEFT].state = cMouse::STATE_ON;
+			break;
 		case WM_XBUTTONDOWN:
 		case WM_XBUTTONUP:
-		case WM_LBUTTONDBLCLK:
-		{
-			int xPos = GET_X_LPARAM(msg.lParam);
-			int yPos = GET_Y_LPARAM(msg.lParam);
-			switch (msg.message)
-			{
-			case WM_LBUTTONDOWN:
-				m_input.m_mouse.m_param[cMouse::BUTTON_LEFT].state |= cMouse::STATE_ON;
-				m_input.m_mouse.m_param[cMouse::BUTTON_LEFT].x = xPos;
-				m_input.m_mouse.m_param[cMouse::BUTTON_LEFT].y = yPos;
-				break;
-			case WM_LBUTTONUP:
-				m_input.m_mouse.m_param[cMouse::BUTTON_LEFT].state = cMouse::STATE_OFF;
-				m_input.m_mouse.m_param[cMouse::BUTTON_LEFT].x = xPos;
-				m_input.m_mouse.m_param[cMouse::BUTTON_LEFT].y = yPos;
-				break;
-			case WM_MBUTTONDOWN:
-				m_input.m_mouse.m_param[cMouse::BUTTON_MIDDLE].state |= cMouse::STATE_ON;
-				m_input.m_mouse.m_param[cMouse::BUTTON_MIDDLE].x = xPos;
-				m_input.m_mouse.m_param[cMouse::BUTTON_MIDDLE].y = yPos;
-				break;
-			case WM_MBUTTONUP:
-				m_input.m_mouse.m_param[cMouse::BUTTON_MIDDLE].state = cMouse::STATE_OFF;
-				m_input.m_mouse.m_param[cMouse::BUTTON_MIDDLE].x = -1;
-				m_input.m_mouse.m_param[cMouse::BUTTON_MIDDLE].y = -1;
-				break;
-			case WM_RBUTTONDOWN:
-				m_input.m_mouse.m_param[cMouse::BUTTON_RIGHT].state |= cMouse::STATE_ON;
-				m_input.m_mouse.m_param[cMouse::BUTTON_RIGHT].x = xPos;
-				m_input.m_mouse.m_param[cMouse::BUTTON_RIGHT].y = yPos;
-				break;
-			case WM_RBUTTONUP:
-				m_input.m_mouse.m_param[cMouse::BUTTON_RIGHT].state = cMouse::STATE_OFF;
-				m_input.m_mouse.m_param[cMouse::BUTTON_RIGHT].x = -1;
-				m_input.m_mouse.m_param[cMouse::BUTTON_RIGHT].y = -1;
-				break;
-			case WM_LBUTTONDBLCLK:
-				m_input.m_mouse.m_param[cMouse::BUTTON_LEFT].state = cMouse::STATE_ON;
-				break;
-			case WM_XBUTTONDOWN:
-			case WM_XBUTTONUP:
-				break;
-			}
+			break;
 		}
-		break;
-		case WM_MOUSEMOVE:
-		{
-			int xPos = GET_X_LPARAM(msg.lParam);
-			int yPos = GET_Y_LPARAM(msg.lParam);
-			m_input.m_mouse.xy = glm::ivec2(xPos, yPos);
-		}
-		break;
-		}
-
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
 	}
+	break;
+	case WM_MOUSEMOVE:
+	{
+		int xPos = GET_X_LPARAM(lParam);
+		int yPos = GET_Y_LPARAM(lParam);
+		m_input_worker.m_mouse.xy = glm::ivec2(xPos, yPos);
+	}
+	break;
+	case WM_CLOSE:
+		m_is_close = true;
+		break;
+	case WM_QUIT:
+	case WM_DESTROY:
+		break;
+	}
+	return DefWindowProc(m_private->m_window, uMsg, wParam, lParam);
 
-	for (auto& key : m_input.m_keyboard.m_data)
+}
+void cWindow::swap()
+{
+	m_input = m_input_worker;
+}
+void cWindow::execute()
+{
+	const auto& old = m_input.m_mouse;
+	m_input_worker.m_mouse.wheel = 0;
+	m_input_worker.m_keyboard.m_char.fill(0);
+	m_input_worker.m_keyboard.m_char_count = 0;
+
+	for (auto& key : m_input_worker.m_keyboard.m_data)
 	{
 		if (btr::isOn(key.state_old, cMouse::STATE_ON))
 		{
@@ -305,7 +312,7 @@ void cWindow::sync()
 
 	for (int i = 0; i < cMouse::BUTTON_NUM; i++)
 	{
-		auto& param = m_input.m_mouse.m_param[i];
+		auto& param = m_input_worker.m_mouse.m_param[i];
 		auto& param_old = old.m_param[i];
 
 		if (btr::isOn(param_old.state, cMouse::STATE_ON))
@@ -331,6 +338,6 @@ void cWindow::sync()
 			param.time = 0.f;
 		}
 	}
-	m_input.m_mouse.xy_old = old.xy;
+	m_input_worker.m_mouse.xy_old = old.xy;
 }
 

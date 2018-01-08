@@ -211,6 +211,17 @@ void App::preUpdate()
 	m_system_cmds.resize(5);
 	m_sync_point.reset(4);
 
+// 	{
+// 		MAKE_THREAD_JOB(job);
+// 		job.mJob.emplace_back(
+// 			[&]()
+// 		{
+// 			m_sync_point.arrive();
+// 		}
+// 		);
+// 		sGlobal::Order().getThreadPool().enque(job);
+// 	}
+
 	{
 		MAKE_THREAD_JOB(job);
 		job.mJob.emplace_back(
@@ -261,10 +272,25 @@ void App::preUpdate()
 
 void App::postUpdate()
 {
-
-	for (auto& window : m_window_list)
+	MSG msg = {};
+	while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
 	{
-		window->sync();
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
+
+	for (auto it = m_window_list.begin(); it != m_window_list.end();)
+	{
+		(*it)->execute();
+		(*it)->swap();
+		if ((*it)->isClose())
+		{
+			sDeleter::Order().enque(std::move(*it));
+			it = m_window_list.erase(it);
+		}
+		else {
+			it++;
+		}
 	}
 
 
