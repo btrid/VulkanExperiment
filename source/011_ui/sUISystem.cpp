@@ -112,7 +112,7 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context)
 			vk::DescriptorSetLayoutBinding()
 			.setStageFlags(stage)
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(UIAnimeList::LIST_NUM)
+			.setDescriptorCount(UI::ANIME_NUM)
 			.setBinding(1),
 			vk::DescriptorSetLayoutBinding()
 			.setStageFlags(stage)
@@ -314,7 +314,7 @@ std::shared_ptr<UI> sUISystem::create(const std::shared_ptr<btr::Context>& conte
 
 	}
 	{
-		btr::BufferMemoryDescriptorEx<UIParam> desc;
+		btr::BufferMemoryDescriptorEx<UIObject> desc;
 		desc.element_num = 1024;
 		ui->m_object = context->m_storage_memory.allocateMemory(desc);
 	}
@@ -351,7 +351,7 @@ vk::CommandBuffer sUISystem::draw()
 			};
 			vk::DescriptorBufferInfo storages[] = {
 				ui->m_object.getInfo(),
-				ui->m_boundary.getInfo(),
+				ui->m_boundary.isValid() ? ui->m_boundary.getInfo() : m_context->m_storage_memory.getDummyInfo(),
 				ui->m_work.getInfo(),
 				ui->m_play_info.getInfo(),
 				ui->m_user_id.getInfo(),
@@ -405,16 +405,16 @@ vk::CommandBuffer sUISystem::draw()
 			descriptor_set_anime = descriptor_holder.back().get();
 
 			vk::DescriptorBufferInfo uniforms[] = {
-				ui->m_anime->m_anime_info.getInfo(),
+				ui->m_anime_list[0]->m_anime_info.getInfo(),
 			};
 
-			static vk::DescriptorBufferInfo AnimeDataInfo_default(m_context->m_storage_memory.getBuffer(), 0, sizeof(UIAnimeDataInfo));
-			vk::DescriptorBufferInfo datainfos[UIAnimeList::LIST_NUM];
+			static vk::DescriptorBufferInfo AnimeDataInfo_default(m_context->m_storage_memory.getBuffer(), 0, sizeof(UIAnimeKeyInfo));
+			vk::DescriptorBufferInfo datainfos[UI::ANIME_NUM];
 			std::fill(std::begin(datainfos), std::end(datainfos), AnimeDataInfo_default);
-			datainfos[0] = ui->m_anime->m_anime_data_info.getInfo();
+			datainfos[0] = ui->m_anime_list[0]->m_anime_data_info.getInfo();
 
 			vk::DescriptorBufferInfo keys[] = {
-				ui->m_anime->m_anime_key.getInfo(),
+				ui->m_anime_list[0]->m_anime_key.getInfo(),
 			};
 			auto write_desc =
 			{

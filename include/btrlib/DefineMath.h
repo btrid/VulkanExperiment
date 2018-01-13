@@ -42,7 +42,7 @@ bool isOn(A bit, B test) {
 }
 template<typename A, typename B>
 bool isOff(A bit, B test) {
-	return (bit & test) == 0;
+	return (bit & test) != test;
 }
 
 template<typename A, typename B>

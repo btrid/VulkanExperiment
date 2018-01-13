@@ -24,5 +24,5 @@ void main()
 
 	vertex.color = b_work[gl_InstanceIndex].m_color;
 	vertex.uv = vec2(gl_VertexIndex%2, 1.-gl_VertexIndex/2);
-	vertex.texture_index = b_param[gl_InstanceIndex].m_texture_index;
+	vertex.texture_index = b_object[gl_InstanceIndex].m_texture_index;
 }

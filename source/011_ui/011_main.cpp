@@ -34,6 +34,27 @@
 #pragma comment(lib, "imgui.lib")
 
 
+#include <cereal/cereal.hpp>
+#include <cereal/types/string.hpp>
+#include <cereal/types/memory.hpp>
+#include <cereal/archives/json.hpp>
+
+// template<class Archive>
+// void serialize(Archive & archive, UI& ui)
+// {
+// 	int i = 0;
+// //	archive(CEREAL_NVP(name), CEREAL_NVP(hp));
+// }
+void serialize(UIManipulater& manip)
+{
+	std::stringstream ss;
+	{
+		cereal::JSONOutputArchive o_archive(ss);
+		o_archive(manip);
+	}
+	std::cout << ss.str() << std::endl;
+}
+
 int main()
 {
 
@@ -74,7 +95,8 @@ int main()
 				job.mJob.emplace_back(
 					[&]()
 				{
-					cmds[0] = manip.execute();
+					/*cmds[0] =*/ manip.execute();
+//					serialize(manip);
 					sync_point.arrive();
 				}
 				);

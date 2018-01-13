@@ -124,7 +124,7 @@ vk::CommandBuffer cCmdPool::allocCmdOnetime(int device_family_index)
 {
 	auto cmd = allocCmdImpl();
 
-//	m_context->m_device.DebugMarkerSetObjectName(cmd, "Onetime CB %d", m_cmd[sThreadLocal::Order().getThreadIndex()][sGlobal::Order().getCurrentFrame()].m_cmd_onetime_deleter.size());
+	m_context->m_device.DebugMarkerSetObjectName(cmd, "Onetime CB %d", m_cmd[sThreadLocal::Order().getThreadIndex()][sGlobal::Order().getCurrentFrame()].m_cmd_onetime_deleter.size());
 
 	return cmd;
 }
@@ -135,7 +135,7 @@ vk::CommandBuffer cCmdPool::allocCmdTempolary(uint32_t device_family_index)
 	if (!cmd)
 	{
 		cmd = allocCmdImpl();
-//		m_context->m_device.DebugMarkerSetObjectName(cmd, "TlsTempolary %d", m_cmd[sThreadLocal::Order().getThreadIndex()][sGlobal::Order().getCurrentFrame()].m_cmd_onetime_deleter.size());
+		m_context->m_device.DebugMarkerSetObjectName(cmd, "TlsTempolary %d", m_cmd[sThreadLocal::Order().getThreadIndex()][sGlobal::Order().getCurrentFrame()].m_cmd_onetime_deleter.size());
 
 	}
 	return cmd;

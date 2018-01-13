@@ -18,12 +18,12 @@ void main()
 
 	for(int depth=1; depth <= u_info.m_depth_max; depth++)
 	{
-		if(b_param[index].m_depth == depth)
+		if(b_object[index].m_depth == depth)
 		{
 			barrier();
 			memoryBarrierBuffer();
 
-			int parent_index = b_param[index].m_parent_index;
+			int parent_index = b_object[index].m_parent_index;
 			b_work[index].m_position += b_work[parent_index].m_position;
 			b_work[index].m_size += b_work[parent_index].m_size;
 			b_work[index].m_color += b_work[parent_index].m_color;

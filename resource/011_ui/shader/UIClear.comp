@@ -24,9 +24,9 @@ void main()
 		return;
 	}
 
-	b_work[index].m_position = b_param[index].m_position_local;// + b_param[0].m_position_anime;
-	b_work[index].m_size = b_param[index].m_size_local;// + b_param[0].m_size_anime;
-	b_work[index].m_color = b_param[index].m_color_local;// + b_param[0].m_color_anime;
+	b_work[index].m_position = b_object[index].m_position_local;// + b_object[0].m_position_anime;
+	b_work[index].m_size = b_object[index].m_size_local;// + b_object[0].m_size_anime;
+	b_work[index].m_color = b_object[index].m_color_local;// + b_object[0].m_color_anime;
 
 }
 

@@ -35,5 +35,8 @@
     <ClInclude Include="..\..\include\011_ui\UIManipulater.h">
       <Filter>ソース ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\011_ui\cerealDefine.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

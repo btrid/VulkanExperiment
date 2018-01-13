@@ -153,7 +153,7 @@ rTexture::Data rTexture::LoadTextureEx(const std::string& file, const LoadParam&
 #endif
 
 ResourceManager<ResourceTexture::Resource> ResourceTexture::s_manager;
-void ResourceTexture::load(std::shared_ptr<btr::Context>& context, vk::CommandBuffer cmd, const std::string& filename)
+void ResourceTexture::load(const std::shared_ptr<btr::Context>& context, vk::CommandBuffer cmd, const std::string& filename)
 {
 	if (s_manager.manage(m_resource, filename)) {
 		return;

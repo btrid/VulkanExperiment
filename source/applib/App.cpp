@@ -211,17 +211,6 @@ void App::preUpdate()
 	m_system_cmds.resize(5);
 	m_sync_point.reset(4);
 
-// 	{
-// 		MAKE_THREAD_JOB(job);
-// 		job.mJob.emplace_back(
-// 			[&]()
-// 		{
-// 			m_sync_point.arrive();
-// 		}
-// 		);
-// 		sGlobal::Order().getThreadPool().enque(job);
-// 	}
-
 	{
 		MAKE_THREAD_JOB(job);
 		job.mJob.emplace_back(

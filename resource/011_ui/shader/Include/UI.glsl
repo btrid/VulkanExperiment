@@ -34,11 +34,12 @@ struct UIInfo
 	uint _p13;
 };
 
-struct UIParam
+struct UIObject
 {
 	vec2 m_position_local; //!< 自分の場所
 	vec2 m_size_local;
 	vec4 m_color_local;
+
 	uint m_user_id;
 	uint m_flag;
 	int m_depth;
@@ -95,9 +96,9 @@ layout(std140, set=USE_UI, binding=1) uniform UIInfoUniform
 {
 	UIInfo u_info;
 };
-layout(std430, set=USE_UI, binding=2) restrict buffer UIParamBuffer 
+layout(std430, set=USE_UI, binding=2) restrict buffer UIObjectBuffer 
 {
-	UIParam b_param[];
+	UIObject b_object[];
 };
 layout(std430, set=USE_UI, binding=3) restrict buffer UIBoundaryBuffer 
 {
