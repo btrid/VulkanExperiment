@@ -284,13 +284,13 @@ LRESULT cWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
 void cWindow::swap()
 {
 	m_input = m_input_worker;
-}
-void cWindow::execute()
-{
-	const auto& old = m_input.m_mouse;
 	m_input_worker.m_mouse.wheel = 0;
 	m_input_worker.m_keyboard.m_char.fill(0);
 	m_input_worker.m_keyboard.m_char_count = 0;
+
+}
+void cWindow::execute()
+{
 
 	for (auto& key : m_input_worker.m_keyboard.m_data)
 	{
@@ -310,6 +310,7 @@ void cWindow::execute()
 		key.state_old = key.state;
 	}
 
+	const auto& old = m_input.m_mouse;
 	for (int i = 0; i < cMouse::BUTTON_NUM; i++)
 	{
 		auto& param = m_input_worker.m_mouse.m_param[i];
