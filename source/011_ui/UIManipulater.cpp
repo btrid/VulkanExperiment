@@ -5,13 +5,16 @@
 
 void UIManipulater::execute()
 {
+	auto ui_resource = m_ui_resource;
+	auto ui_anime_resource = m_ui_anime_resource;
+
 	{
 		auto func = [this]()
 		{
 #if 1
 			ImGui::SetNextWindowPos(ImVec2(10.f, 10.f), ImGuiCond_Once);
 			ImGui::SetNextWindowSize(ImVec2(200.f, 200.f), ImGuiCond_Once);
-			if (ImGui::Begin("jhgjhghj"))
+			if (ImGui::Begin("ui manipulater"))
 			{
 				if (ImGui::BeginPopupContextWindow("ui context"))
 				{
@@ -79,6 +82,9 @@ void UIManipulater::execute()
 		app::g_app_instance->m_window->getImguiPipeline()->pushImguiCmd(std::move(func));
 	}
 
+//	sDeleter::Order().enque(std::move(m_ui));
+	m_ui = ui_resource.make(m_context);
+	m_ui->m_anime_list[0] = m_ui_anime_resource.make(m_context);
 	sUISystem::Order().addRender(m_ui);
 }
 
@@ -96,7 +102,6 @@ void UIManipulater::manipWindow()
 			ImGui::InputFloat2("Pos", &obj.m_position_local[0]);
 			ImGui::InputFloat2("Size", &obj.m_size_local[0]);
 			ImGui::ColorPicker4("Color", &obj.m_color_local[0]);
-//			ImGui::InputText("name", m_object_tool[m_last_select_index].m_name.data(), m_object_tool[m_last_select_index].m_name.size(), 0);
 
 			char buf[16] = {};
 			sprintf_s(buf, "%d", obj.m_user_id);
@@ -122,8 +127,6 @@ void UIManipulater::textureWindow()
 		{
 			char label[16] = {};
 			sprintf_s(label, "texture %2d", i);
-
-//			ImGui::InputText(label, m_texture_name[i], sizeof(m_texture_name[i]));
 
 			char buf[64] = {};
 			sprintf_s(buf, m_ui_resource.m_texture_name[i].c_str());
@@ -344,12 +347,12 @@ void UIManipulater::addnode(int32_t parent)
 	}
 	else
 	{
-		auto& child_node = m_ui_resource.m_object[parent_node.m_child_index];
-		for (; child_node.m_sibling_index != -1; child_node = m_ui_resource.m_object[child_node.m_sibling_index])
+		auto* child_node = &m_ui_resource.m_object[parent_node.m_child_index];
+		for (; child_node->m_sibling_index != -1; child_node = &m_ui_resource.m_object[child_node->m_sibling_index])
 		{
 		}
 
-		child_node.m_sibling_index = m_ui_resource.m_object.size();
+		child_node->m_sibling_index = m_ui_resource.m_object.size();
 	}
 
 	UIObject new_node;

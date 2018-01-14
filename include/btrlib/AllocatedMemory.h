@@ -57,12 +57,12 @@ struct Zone
 
 	bool tryMarge(const Zone zone)
 	{
-		if (m_start != zone.m_end && m_end != zone.m_start)
+		if (m_start == zone.m_end || m_end == zone.m_start)
 		{
-			return false;
+			marge(zone);
+			return true;
 		}
-		marge(zone);
-		return true;
+		return false;
 	}
 
 	vk::DeviceSize range()const { return m_end - m_start; }
@@ -106,6 +106,7 @@ struct GPUMemoryAllocater
 	}
 	Zone alloc(vk::DeviceSize size, bool is_reverse)
 	{
+		assert(size != 0);
 		if (is_reverse)
 		{
 			return allocReverse(size);
@@ -154,6 +155,7 @@ struct GPUMemoryAllocater
 	void delayedFree(Zone zone)
 	{
 		assert(zone.isValid());
+		assert(zone.range() != 0);
 		zone.m_wait_frame = 5;
 
 		{
@@ -320,10 +322,13 @@ struct BufferMemoryEx
 
 		~Resource()
 		{
-			Zone zone;
-			zone.m_start = m_buffer_info.offset;
-			zone.m_end = m_buffer_info.offset + m_buffer_info.range;
-			m_allocater->delayedFree(zone);
+			if (m_buffer_info.range != 0)
+			{
+				Zone zone;
+				zone.m_start = m_buffer_info.offset;
+				zone.m_end = m_buffer_info.offset + m_buffer_info.range;
+				m_allocater->delayedFree(zone);
+			}
 		}
 
 	};

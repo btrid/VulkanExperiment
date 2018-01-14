@@ -112,7 +112,7 @@ private:
 	struct Deleter
 	{
 		uint32_t count;
-		Deleter() : count(sGlobal::Order().FRAME_MAX) {}
+		Deleter() : count(sGlobal::Order().FRAME_MAX+3) {}
 		virtual ~Deleter() { ; }
 	};
 	std::vector<std::unique_ptr<Deleter>> m_deleter_list;

@@ -259,6 +259,11 @@ struct UI
 	vk::UniqueImage m_ui_image;
 	vk::UniqueImageView m_image_view;
 	vk::UniqueDeviceMemory m_ui_texture_memory;
+
+	~UI()
+	{
+		sDeleter::Order().enque(std::move(m_ui_image), std::move(m_image_view), std::move(m_ui_texture_memory));
+	}
 };
 
 struct sUISystem : SingletonEx<sUISystem>

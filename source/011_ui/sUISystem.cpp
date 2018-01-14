@@ -97,7 +97,7 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context)
 			.setBinding(9),
 		};
 		m_descriptor_set_layout = btr::Descriptor::createDescriptorSetLayout(context, binding);
-		m_descriptor_pool = btr::Descriptor::createDescriptorPool(context, binding, 30);
+		m_descriptor_pool = btr::Descriptor::createDescriptorPool(context, binding, 100);
 
 	}
 	{
@@ -121,7 +121,7 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context)
 			.setBinding(2),
 		};
 		m_descriptor_set_layout_anime = btr::Descriptor::createDescriptorSetLayout(context, binding);
-		m_descriptor_pool_anime = btr::Descriptor::createDescriptorPool(context, binding, 30);
+		m_descriptor_pool_anime = btr::Descriptor::createDescriptorPool(context, binding, 100);
 
 	}
 
