@@ -175,14 +175,12 @@ struct GPUMemoryAllocater
 	}
 	void free(const Zone& zone)
 	{
-		std::lock_guard<std::mutex> lock(m_free_zone_mutex);
 		free_impl(zone);
 
 	}
 
 	void gc()
 	{
-		std::lock_guard<std::mutex> lock(m_free_zone_mutex);
 		gc_impl();
 	}
 private:
@@ -232,11 +230,15 @@ private:
 			}
 		}
 
-		std::sort(m_free_zone.begin(), m_free_zone.end(), [](Zone& a, Zone& b) { return a.m_start < b.m_start; });
-		for (size_t i = m_free_zone.size() - 1; i > 0; i--)
 		{
-			if (m_free_zone[i - 1].tryMarge(m_free_zone[i])) {
-				m_free_zone.erase(m_free_zone.begin() + i);
+			std::lock_guard<std::mutex> lock(m_free_zone_mutex);
+			std::sort(m_free_zone.begin(), m_free_zone.end(), [](Zone& a, Zone& b) { return a.m_start < b.m_start; });
+			for (size_t i = m_free_zone.size() - 1; i > 0; i--)
+			{
+				if (m_free_zone[i - 1].tryMarge(m_free_zone[i])) {
+					m_free_zone.erase(m_free_zone.begin()+ i);
+
+				}
 			}
 		}
 		m_last_gc = sGlobal::Order().getGameFrame();
