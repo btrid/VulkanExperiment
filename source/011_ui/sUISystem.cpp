@@ -304,24 +304,6 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context)
 
 }
 
-std::shared_ptr<UI> sUISystem::create(const std::shared_ptr<btr::Context>& context)
-{
-	auto ui = std::make_shared<UI>();
-	{
-		btr::BufferMemoryDescriptorEx<UIInfo> desc;
-		desc.element_num = 1;
-		ui->m_info = context->m_uniform_memory.allocateMemory(desc);
-
-	}
-	{
-		btr::BufferMemoryDescriptorEx<UIObject> desc;
-		desc.element_num = 1024;
-		ui->m_object = context->m_storage_memory.allocateMemory(desc);
-	}
-
-	return ui;
-}
-
 vk::CommandBuffer sUISystem::draw()
 {
 	auto cmd = m_context->m_cmd_pool->allocCmdOnetime(0);
@@ -455,6 +437,12 @@ vk::CommandBuffer sUISystem::draw()
 				to_write.setDstAccessMask(vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_write }, {});
 			}
+			{
+				auto to_read = ui->m_work.makeMemoryBarrier();
+				to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+				to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eVertexShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_read }, {});
+			}
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_CLEAR].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_CLEAR].get(), 0, { descriptor_set }, {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_CLEAR].get(), 1, { sSystem::Order().getSystemDescriptorSet() }, {i * sSystem::Order().getSystemDescriptorStride()});
@@ -463,16 +451,20 @@ vk::CommandBuffer sUISystem::draw()
 			cmd.fillBuffer(ui->m_scene.getInfo().buffer, ui->m_scene.getInfo().offset, ui->m_scene.getInfo().range, 0u);
 		}
 		{
-			auto to_read = ui->m_work.makeMemoryBarrier();
-			to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
-			to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_read }, {});
+			// animation
+			{
+				auto to_read = ui->m_work.makeMemoryBarrier();
+				to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+				to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_read }, {});
+			}
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_ANIMATION].get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_ANIMATION].get(), 0, { descriptor_set }, {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_ANIMATION].get(), 1, { descriptor_set_anime }, {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_ANIMATION].get(), 2, { sSystem::Order().getSystemDescriptorSet() }, { i * sSystem::Order().getSystemDescriptorStride() });
+			cmd.dispatch(1, 1, 1);
+
 		}
-		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_ANIMATION].get());
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_ANIMATION].get(), 0, { descriptor_set }, {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_ANIMATION].get(), 1, { descriptor_set_anime }, {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_ANIMATION].get(), 2, { sSystem::Order().getSystemDescriptorSet() }, { i * sSystem::Order().getSystemDescriptorStride() });
-		cmd.dispatch(1, 1, 1);
 		{
 			{
 				auto to_read = ui->m_work.makeMemoryBarrier();

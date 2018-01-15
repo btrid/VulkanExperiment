@@ -271,7 +271,6 @@ struct sUISystem : SingletonEx<sUISystem>
 	friend SingletonEx<sUISystem>;
 
 	sUISystem(const std::shared_ptr<btr::Context>& context);
-	std::shared_ptr<UI> create(const std::shared_ptr<btr::Context>& context);
 
 	void addRender(std::shared_ptr<UI>& ui)
 	{

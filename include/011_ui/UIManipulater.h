@@ -37,7 +37,7 @@ struct rUI
 				auto to_read = ui->m_draw_cmd.makeMemoryBarrier();
 				to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 				to_read.setDstAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eDrawIndirect, {}, {}, { to_read }, {});
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllCommands, {}, {}, { to_read }, {});
 			}
 		}
 		{
@@ -59,7 +59,7 @@ struct rUI
 				auto to_read = ui->m_object.makeMemoryBarrier();
 				to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 				to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexShader, {}, {}, { to_read }, {});
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllCommands, {}, {}, { to_read }, {});
 			}
 
 		}
@@ -125,7 +125,7 @@ struct rUI
 					auto to_read = ui->m_object.makeMemoryBarrier();
 					to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 					to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexShader, {}, {}, { to_read }, {});
+					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllCommands, {}, {}, { to_read }, {});
 				}
 			}
 		}
@@ -260,6 +260,14 @@ struct rUIAnime
 			info.m_anime_num = info_num;
 			info.m_target_fps = 60;
 			cmd.updateBuffer<UIAnimeInfo>(resource->m_anime_info.getInfo().buffer, resource->m_anime_info.getInfo().offset, info);
+
+			{
+				auto to_read = resource->m_anime_info.makeMemoryBarrier();
+				to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+				to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllCommands, {}, {}, { to_read }, {});
+			}
+
 		}
 		{
 			btr::BufferMemoryDescriptorEx<UIAnimeKeyInfo> desc;
@@ -311,13 +319,13 @@ struct rUIAnime
 			auto to_write = resource->m_anime_data_info.makeMemoryBarrier();
 			to_write.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 			to_write.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_write }, {});
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllCommands, {}, {}, { to_write }, {});
 		}
 		{
 			auto to_write = resource->m_anime_key.makeMemoryBarrier();
 			to_write.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 			to_write.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_write }, {});
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllCommands, {}, {}, { to_write }, {});
 		}
 		return resource;
 	}

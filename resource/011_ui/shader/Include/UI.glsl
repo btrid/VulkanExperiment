@@ -134,6 +134,7 @@ layout(set=USE_UI, binding=9) uniform sampler2D tDiffuse[32];
 
 struct UIAnimeInfo
 {
+	uint m_target_fps;
 	uint m_anime_num;
 	uint m_anime_max_frame;
 };
