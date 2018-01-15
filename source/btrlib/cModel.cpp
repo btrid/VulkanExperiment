@@ -55,7 +55,7 @@ ResourceManager<cModel::Resource> cModel::s_manager;
 
 std::vector<cModel::Material> loadMaterial(const aiScene* scene, const std::string& filename, std::shared_ptr<btr::Context>& context, vk::CommandBuffer cmd)
 {
-	std::string path = std::tr2::sys::path(filename).remove_filename().string();
+	std::string path = std::experimental::filesystem::path(filename).remove_filename().string();
 	std::vector<cModel::Material> material(scene->mNumMaterials);
 	for (size_t i = 0; i < scene->mNumMaterials; i++)
 	{
