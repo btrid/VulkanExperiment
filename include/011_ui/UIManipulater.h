@@ -64,11 +64,6 @@ struct rUI
 
 		}
 		{
-			btr::BufferMemoryDescriptorEx<UIWork> desc;
-			desc.element_num = m_object.size();
-			ui->m_work = context->m_storage_memory.allocateMemory(desc);
-		}
-		{
 			btr::BufferMemoryDescriptorEx<uint32_t> desc;
 			desc.element_num = 256;
 			ui->m_user_id = context->m_storage_memory.allocateMemory(desc);
@@ -219,6 +214,16 @@ struct rUIAnime
 		archive(CEREAL_NVP(m_key));
 	}
 
+	UIAnimeKey* findKey(UIAnimeKeyInfo::type type)
+	{
+		for (auto& key : m_key)
+		{
+			if (key.m_info.m_type == type) {
+				return &key;
+			}
+		}
+		return nullptr;
+	}
 	std::shared_ptr<UIAnime> make(const std::shared_ptr<btr::Context>& context)const
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);

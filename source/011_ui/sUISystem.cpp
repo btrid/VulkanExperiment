@@ -301,6 +301,11 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context)
 
 	}
 
+	{
+		btr::BufferMemoryDescriptorEx<UIWork> desc;
+		desc.element_num = 10000;
+		m_work = context->m_storage_memory.allocateMemory(desc);
+	}
 
 }
 
@@ -334,7 +339,7 @@ vk::CommandBuffer sUISystem::draw()
 			vk::DescriptorBufferInfo storages[] = {
 				ui->m_object.getInfo(),
 				ui->m_boundary.isValid() ? ui->m_boundary.getInfo() : m_context->m_storage_memory.getDummyInfo(),
-				ui->m_work.getInfo(),
+				m_work.getInfo(),
 				ui->m_play_info.getInfo(),
 				ui->m_user_id.getInfo(),
 				ui->m_scene.getInfo(),
@@ -438,7 +443,7 @@ vk::CommandBuffer sUISystem::draw()
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_write }, {});
 			}
 			{
-				auto to_read = ui->m_work.makeMemoryBarrier();
+				auto to_read = m_work.makeMemoryBarrier();
 				to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
 				to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eVertexShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_read }, {});
@@ -453,7 +458,7 @@ vk::CommandBuffer sUISystem::draw()
 		{
 			// animation
 			{
-				auto to_read = ui->m_work.makeMemoryBarrier();
+				auto to_read = m_work.makeMemoryBarrier();
 				to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
 				to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_read }, {});
@@ -467,7 +472,7 @@ vk::CommandBuffer sUISystem::draw()
 		}
 		{
 			{
-				auto to_read = ui->m_work.makeMemoryBarrier();
+				auto to_read = m_work.makeMemoryBarrier();
 				to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
 				to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_read }, {});
@@ -480,7 +485,7 @@ vk::CommandBuffer sUISystem::draw()
 		{
 			// バウンダリー更新
 			{
-				auto to_read = ui->m_work.makeMemoryBarrier();
+				auto to_read = m_work.makeMemoryBarrier();
 				to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
 				to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_read }, {});
@@ -494,7 +499,7 @@ vk::CommandBuffer sUISystem::draw()
 		}
 		{
 			{
-				auto to_read = ui->m_work.makeMemoryBarrier();
+				auto to_read = m_work.makeMemoryBarrier();
 				to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite);
 				to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eVertexShader, {}, {}, { to_read }, {});

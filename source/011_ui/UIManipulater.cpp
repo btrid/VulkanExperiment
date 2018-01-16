@@ -200,10 +200,10 @@ void UIManipulater::animedataManip()
 	const char* types[] = { "pos", "size", "color", "disable order" };
 	static_assert(array_length(types) == UIAnimeKeyInfo::type_max, "");
 	ImGui::Combo("anime data type", &current_data_type, types, array_length(types));
-	std::vector<UIAnimeKeyData> keys;
-//	if (keys)
+	auto* anime_keys = m_ui_anime_resource.findKey((UIAnimeKeyInfo::type)current_data_type);
+	if (anime_keys)
 	{
-//		auto& keys = data->m_key;
+		auto& keys = anime_keys->m_data;
 
 		if (ImGui::BeginChild("ScrollingRegion", ImVec2(0, 0), true, ImGuiWindowFlags_HorizontalScrollbar))
 		{
@@ -315,23 +315,26 @@ void UIManipulater::animedataManip()
 			ImGui::EndChild();
 		}
 	}
-// 	else
-// 	{
-// 		if (ImGui::BeginPopupContextWindow("key context"))
-// 		{
-// 			if (ImGui::Selectable("Make Data"))
-// 			{
-// 				UIAnimeData data;
-// 				data.m_target_index = m_last_select_index;
-// 				data.m_target_hash = m_object_tool[m_last_select_index].makeHash();
-// 				data.m_flag = 0;
-// 				data.m_type = (UIAnimeData::type)current_data_type;
-// 				m_anim_manip->m_anime->m_data.push_back(data);
-// 			}
-// 			ImGui::EndPopup();
-// 		}
-// 
-// 	}
+	else
+	{
+		if (ImGui::BeginPopupContextWindow("key context"))
+		{
+			if (ImGui::Selectable("Make Data"))
+			{
+				UIAnimeKey new_key;
+				new_key.m_info.m_type = current_data_type;
+				new_key.m_info.m_target_index = m_last_select_index;
+				UIAnimeKeyData new_data;
+				new_data.m_frame = 0;
+				new_data.m_value_i = 0;
+				new_data.m_flag = UIAnimeKeyData::is_enable;
+				new_key.m_data.push_back(new_data);
+				m_ui_anime_resource.m_key.push_back(new_key);
+			}
+			ImGui::EndPopup();
+		}
+
+	}
 }
 
 void UIManipulater::addnode(int32_t parent)

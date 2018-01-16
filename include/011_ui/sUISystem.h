@@ -248,7 +248,6 @@ struct UI
 	btr::BufferMemoryEx<UIInfo> m_info;
 	btr::BufferMemoryEx<UIObject> m_object;
 	btr::BufferMemoryEx<UIBoundary> m_boundary;
-	btr::BufferMemoryEx<UIWork> m_work;
 	btr::BufferMemoryEx<UIAnimePlayInfo> m_play_info;
 	btr::BufferMemoryEx<uint32_t> m_user_id;
 	btr::BufferMemoryEx<UIEvent> m_event;
@@ -323,7 +322,10 @@ private:
 	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM>	m_pipeline_layout;
 
 	btr::BufferMemoryEx<UIGlobal> m_global;
+	btr::BufferMemoryEx<UIWork> m_work;
+
 	std::vector<std::shared_ptr<UI>> m_render[2];
+
 
 };
 
