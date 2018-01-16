@@ -83,7 +83,7 @@ void UIManipulater::execute()
 	}
 
 //	sDeleter::Order().enque(std::move(m_ui));
-	m_ui = ui_resource.make(m_context);
+	ui_resource.reload(m_context, m_ui);
 	m_ui->m_anime_list[0] = m_ui_anime_resource.make(m_context);
 	sUISystem::Order().addRender(m_ui);
 }

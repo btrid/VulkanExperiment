@@ -23,10 +23,9 @@ struct rUI
 		archive(CEREAL_NVP(m_texture_name));
 	}
 
-	std::shared_ptr<UI> make(const std::shared_ptr<btr::Context>& context)
+	void reload(const std::shared_ptr<btr::Context>& context, std::shared_ptr<UI>& ui)
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-		auto ui = std::make_shared<UI>();
 		{
 			btr::BufferMemoryDescriptorEx<vk::DrawIndirectCommand> desc;
 			desc.element_num = 1;
@@ -48,7 +47,7 @@ struct rUI
 			desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging = context->m_staging_memory.allocateMemory(desc);
 
-			memcpy_s(staging.getMappedPtr(), desc.element_num*sizeof(UIObject), m_object.data(), vector_sizeof(m_object));
+			memcpy_s(staging.getMappedPtr(), desc.element_num * sizeof(UIObject), m_object.data(), vector_sizeof(m_object));
 			vk::BufferCopy copy;
 			copy.setSrcOffset(staging.getInfo().offset);
 			copy.setDstOffset(ui->m_object.getInfo().offset);
@@ -83,15 +82,10 @@ struct rUI
 			cmd.fillBuffer(ui->m_scene.getInfo().buffer, ui->m_scene.getInfo().offset, ui->m_scene.getInfo().range, 0u);
 		}
 
-		{
-			btr::BufferMemoryDescriptorEx<UIAnimePlayInfo> desc;
-			desc.element_num = 8;
-			ui->m_play_info = context->m_storage_memory.allocateMemory(desc);
-		}
 		std::vector<UIBoundary> boundarys;
 		{
 			// 有効なバウンダリーをセット
-			for (uint32_t i = 0; i <m_object.size(); i++)
+			for (uint32_t i = 0; i < m_object.size(); i++)
 			{
 				auto& obj = m_object[i];
 				if (btr::isOn(obj.m_flag, is_boundary)) {
@@ -186,6 +180,19 @@ struct rUI
 				}
 			}
 		}
+
+	}
+	std::shared_ptr<UI> make(const std::shared_ptr<btr::Context>& context)
+	{
+		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+		auto ui = std::make_shared<UI>();
+		reload(context, ui);
+		{
+			btr::BufferMemoryDescriptorEx<UIAnimePlayInfo> desc;
+			desc.element_num = 8;
+			ui->m_play_info = context->m_storage_memory.allocateMemory(desc);
+		}
+
 		return ui;
 	}
 };
@@ -261,7 +268,7 @@ struct rUIAnime
 			resource->m_anime_info = context->m_uniform_memory.allocateMemory(desc);
 
 			UIAnimeInfo info;
-			info.m_anime_frame = 100.f;
+			info.m_anime_frame = 5.f;
 			info.m_anime_num = info_num;
 			info.m_target_fps = 60;
 			cmd.updateBuffer<UIAnimeInfo>(resource->m_anime_info.getInfo().buffer, resource->m_anime_info.getInfo().offset, info);
