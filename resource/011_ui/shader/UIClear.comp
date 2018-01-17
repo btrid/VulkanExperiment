@@ -18,7 +18,7 @@ void main()
 	uint index = gl_GlobalInvocationID.x;
 
 	if(index < 8) {
-		b_anime_play_info[index].m_frame = mod(b_anime_play_info[index].m_frame + u_system_data.m_deltatime, u_anime_info.m_anime_max_frame);
+		b_anime_play_info[index].m_frame = mod(b_anime_play_info[index].m_frame + u_system_data.m_deltatime*u_anime_info.m_target_fps, u_anime_info.m_anime_max_frame);
 	}
 
 	if(index >= u_info.m_object_num) {

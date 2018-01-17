@@ -134,12 +134,13 @@ struct UIAnimePlayInfo
 
 struct UIAnimeInfo
 {
-	uint m_target_fps;
+	uint m_target_frame;
 	uint m_anime_num;
-	uint m_anime_frame;
+	uint m_anime_max_frame;
 
 	UIAnimeInfo()
-		: m_target_fps(60)
+		: m_target_frame(60)
+		, m_anime_max_frame(100)
 	{
 
 	}
@@ -148,8 +149,8 @@ struct UIAnimeInfo
 	{
 		archive(
 			CEREAL_NVP(m_anime_num),
-			CEREAL_NVP(m_anime_frame),
-			CEREAL_NVP(m_target_fps),
+			CEREAL_NVP(m_anime_max_frame),
+			CEREAL_NVP(m_target_frame),
 			);
 	}
 };

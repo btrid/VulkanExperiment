@@ -268,9 +268,9 @@ struct rUIAnime
 			resource->m_anime_info = context->m_uniform_memory.allocateMemory(desc);
 
 			UIAnimeInfo info;
-			info.m_anime_frame = 5.f;
+			info.m_anime_max_frame = m_info.m_anime_max_frame;
 			info.m_anime_num = info_num;
-			info.m_target_fps = 60;
+			info.m_target_frame = m_info.m_target_frame;
 			cmd.updateBuffer<UIAnimeInfo>(resource->m_anime_info.getInfo().buffer, resource->m_anime_info.getInfo().offset, info);
 
 			{

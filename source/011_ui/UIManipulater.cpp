@@ -2,7 +2,6 @@
 #include <applib/sImGuiRenderer.h>
 #include <applib/App.h>
 
-
 void UIManipulater::execute()
 {
 	auto ui_resource = m_ui_resource;
@@ -82,7 +81,6 @@ void UIManipulater::execute()
 		app::g_app_instance->m_window->getImguiPipeline()->pushImguiCmd(std::move(func));
 	}
 
-//	sDeleter::Order().enque(std::move(m_ui));
 	ui_resource.reload(m_context, m_ui);
 	m_ui->m_anime_list[0] = m_ui_anime_resource.make(m_context);
 	sUISystem::Order().addRender(m_ui);
@@ -181,7 +179,13 @@ void UIManipulater::animeWindow()
 // 			m_anim_manip->m_is_playing = !m_anim_manip->m_is_playing;
 // 		}
 //		ImGui::SameLine();
-//		ImGui::DragInt("current frame", &m_anim_manip->m_frame, 0.1f, 0, 100);
+// 		int fps = m_ui_anime_resource.m_info.m_target_frame;
+// 		ImGui::DragInt("Target FPS", &fps, 0.1f, 30, 300, "%3.f");
+// 		m_ui_anime_resource.m_info.m_target_frame = fps;
+
+		int max_frame = m_ui_anime_resource.m_info.m_anime_max_frame;
+		ImGui::DragInt("Anime Frame", &max_frame, 0.1f, 30, 300, "%3.f");
+		m_ui_anime_resource.m_info.m_target_frame = max_frame;
 
 		ImGui::Separator();
 
