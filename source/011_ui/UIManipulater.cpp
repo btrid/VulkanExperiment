@@ -243,38 +243,14 @@ void UIManipulater::animedataManip()
 				};
 				ImGui::EndPopup();
 			}
-			int interp = 
-				btr::isOn(anime_keys->m_info.m_flag, UIAnimeKeyInfo::interp_spline) ?
-				1 : 
-				btr::isOn(anime_keys->m_info.m_flag, UIAnimeKeyInfo::interp_bezier) ? 
-				2 : 0;
-				ImGui::RadioButton("liner", &interp, 0); ImGui::SameLine();
-				ImGui::RadioButton("spline", &interp, 1); ImGui::SameLine();
-				ImGui::RadioButton("bezier", &interp, 2);
-
-//				btr::setOff(anime_keys->m_info.m_flag, UIAnimeKeyInfo::interp_linear);
-				btr::setOff(anime_keys->m_info.m_flag, UIAnimeKeyInfo::interp_spline);
-				btr::setOff(anime_keys->m_info.m_flag, UIAnimeKeyInfo::interp_bezier);
-				switch (interp)
-				{
-				case 0:
-				default:
-//					btr::setOn(anime_keys->m_info.m_flag, UIAnimeKeyInfo::interp_linear);
-					break;
-				case 1:
-					btr::setOn(anime_keys->m_info.m_flag, UIAnimeKeyInfo::interp_spline);
-					break;
-				case 2:
-					btr::setOn(anime_keys->m_info.m_flag, UIAnimeKeyInfo::interp_bezier);
-					break;
-				}
 
 
-			ImGui::Columns(4, "animcolumns");
+			ImGui::Columns(5, "animcolumns");
 			ImGui::Text("Frame"); ImGui::NextColumn();
 			ImGui::Text("Value"); ImGui::NextColumn();
 			ImGui::Text("Enable"); ImGui::NextColumn();
 			ImGui::Text("Erase"); ImGui::NextColumn();
+			ImGui::Text("Interp"); ImGui::NextColumn();
 			ImGui::Separator();
 
 			for (auto i = 0; i < keys.size(); i++)
@@ -339,11 +315,35 @@ void UIManipulater::animedataManip()
 				ImGui::NextColumn();
 				ImGui::PopID();
 
-// 				sprintf_s(id, "iterp_type", i);
-// 				ImGui::PushID(id);
-// 				ImGui::RadioButton("##interp", &key.m_flag, UIAnimeKeyData::is_erase);
-// 				ImGui::NextColumn();
-// 				ImGui::PopID();
+				sprintf_s(id, "interp_type_%d", i);
+				ImGui::PushID(id);
+				int interp =
+					btr::isOn(key.m_flag, UIAnimeKeyData::interp_spline) ?
+					1 :
+					btr::isOn(key.m_flag, UIAnimeKeyData::interp_bezier) ?
+					2 : 0;
+
+				const char* interp_name[] = { "liner", "spline", "bezier" };
+				ImGui::Combo("##interp", &interp, interp_name, array_length(interp_name));
+
+				switch (interp)
+				{
+				default:
+					btr::setOff(key.m_flag, UIAnimeKeyData::interp_spline);
+					btr::setOff(key.m_flag, UIAnimeKeyData::interp_bezier);
+					break;
+				case 1:
+					btr::setOff(key.m_flag, UIAnimeKeyData::interp_bezier);
+					btr::setOn(key.m_flag, UIAnimeKeyData::interp_spline);
+					break;
+				case 2:
+					btr::setOff(key.m_flag, UIAnimeKeyData::interp_spline);
+					btr::setOn(key.m_flag, UIAnimeKeyData::interp_bezier);
+					break;
+				}
+
+				ImGui::NextColumn();
+				ImGui::PopID();
 
 				ImGui::PopID();
 				ImGui::Separator();

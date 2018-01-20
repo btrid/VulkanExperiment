@@ -59,69 +59,71 @@ void main()
 
 	int key_index = offset;
 	float rate = 0.;
-
 	vec4 value = vec4(0., 0., 0., 0.);
-	if(isOn(key_flag, AnimeDataInfo_flag_interp_spline))
 	{
-//		uint diff = b.m_frame - a.m_frame;
-//		rate = diff == 0 ? 1. : ((frame-a.m_frame) / diff);
-	}
-	else if(isOn(key_flag, AnimeDataInfo_flag_interp_bezier))
-	{
-		for(; key_index+3 < num+offset; key_index+=3)
+		// ターゲットフレームの検索
+		for(; key_index < num+offset;)
 		{
-			if(frame < b_anime_key[key_index+3].m_frame){
+			int next = 1;
+			if(isOn(b_anime_key[key_index].m_flag, AnimeKey_interp_bezier))
+			{
+				next = 3;
+			}
+			if(frame < b_anime_key[key_index+next].m_frame){
 				break;
 			}
+			key_index += next;
+
 		}
+
 		UIAnimeKey a = b_anime_key[clamp(key_index, offset, offset+num-1)];
-		UIAnimeKey b = b_anime_key[clamp(key_index+1, offset, offset+num-1)];
-		UIAnimeKey c = b_anime_key[clamp(key_index+2, offset, offset+num-1)];
-		UIAnimeKey d = b_anime_key[clamp(key_index+3, offset, offset+num-1)];
-
-		uint diff = d.m_frame - a.m_frame;
-		rate = diff == 0 ? 1. : ((frame-a.m_frame) / diff);
-
-		vec2 av = vec2(i32Toi16(a.m_value));
-		vec2 bv = vec2(i32Toi16(b.m_value));
-		vec2 cv = vec2(i32Toi16(c.m_value));
-		vec2 dv = vec2(i32Toi16(d.m_value));
-		value.xy = bezier(av, bv, cv, dv, rate);
-	}
-	else
-	{
-		for(; key_index < num+offset; key_index++)
+		if(isOn(a.m_flag, AnimeKey_interp_bezier))
 		{
-			if(frame < b_anime_key[key_index].m_frame){
-				break;
-			}
+			// ベジェ曲線で補完する
+			UIAnimeKey b = b_anime_key[clamp(key_index+1, offset, offset+num-1)];
+			UIAnimeKey c = b_anime_key[clamp(key_index+2, offset, offset+num-1)];
+			UIAnimeKey d = b_anime_key[clamp(key_index+3, offset, offset+num-1)];
+
+			uint diff = d.m_frame - a.m_frame;
+			rate = diff == 0 ? 1. : ((frame-a.m_frame) / diff);
+
+			vec2 av = vec2(i32Toi16(a.m_value));
+			vec2 bv = vec2(i32Toi16(b.m_value));
+			vec2 cv = vec2(i32Toi16(c.m_value));
+			vec2 dv = vec2(i32Toi16(d.m_value));
+			value.xy = bezier(av, bv, cv, dv, rate);
 		}
-		UIAnimeKey a = b_anime_key[clamp(key_index-1, offset, offset+num-1)];
-		UIAnimeKey b = b_anime_key[clamp(key_index, offset, offset+num-1)];
-		uint diff = b.m_frame - a.m_frame;
-		rate = diff == 0 ? 1. : ((frame-a.m_frame) / diff);
-		switch(type)
+		else
 		{
-			case AnimeDataInfo_type_pos_xy:
-			case AnimeDataInfo_type_size_xy:
+			// リニア補完
+			UIAnimeKey b = b_anime_key[clamp(key_index+1, offset, offset+num-1)];
+			uint diff = b.m_frame - a.m_frame;
+			rate = diff == 0 ? 1. : ((frame-a.m_frame) / diff);
+
+			switch(type)
 			{
-				vec4 av = vec4(i32Toi16(a.m_value), 0., 0.);
-				vec4 bv = vec4(i32Toi16(b.m_value), 0., 0.);
-				value = mix(av, bv, rate);
-				break;
+				case AnimeDataInfo_type_pos_xy:
+				case AnimeDataInfo_type_size_xy:
+				{
+					vec4 av = vec4(i32Toi16(a.m_value), 0., 0.);
+					vec4 bv = vec4(i32Toi16(b.m_value), 0., 0.);
+					value = mix(av, bv, rate);
+					break;
+				}
+				case AnimeDataInfo_type_color_rgba:
+				{
+					uint ua = uint(a.m_value);
+					uint ub = uint(b.m_value);
+					vec4 av = vec4(getBit(ua, 0, 8), getBit(ua, 8, 8), getBit(ua, 16, 8), getBit(ua, 24, 8));
+					vec4 bv = vec4(getBit(ub, 0, 8), getBit(ub, 8, 8), getBit(ub, 16, 8), getBit(ub, 24, 8));
+					value = mix(av, bv, rate);
+					break;
+				}
+				case AnimeDataInfo_type_disable_order:
+					b_scene.m_is_disable_order = a.m_value;
+					break;
 			}
-			case AnimeDataInfo_type_color_rgba:
-			{
-				uint ua = uint(a.m_value);
-				uint ub = uint(b.m_value);
-				vec4 av = vec4(getBit(ua, 0, 8), getBit(ua, 8, 8), getBit(ua, 16, 8), getBit(ua, 24, 8));
-				vec4 bv = vec4(getBit(ub, 0, 8), getBit(ub, 8, 8), getBit(ub, 16, 8), getBit(ub, 24, 8));
-				value = mix(av, bv, rate);
-				break;
-			}
-			case AnimeDataInfo_type_disable_order:
-				b_scene.m_is_disable_order = a.m_value;
-				break;
+
 		}
 	}
 

@@ -168,9 +168,6 @@ struct UIAnimeKeyInfo
 	{
 		is_enable = 1 << 0,
 		is_erase = 1 << 1,
-//		interp_linear = 1 << 2,
-		interp_spline = 1 << 3,
-		interp_bezier = 1 << 4,
 	};
 	uint64_t m_target_hash;
 	uint16_t m_target_index;
@@ -198,6 +195,8 @@ struct UIAnimeKeyData
 		interp_linear = 1 << 2,
 		interp_switch = 1 << 3,
 		interp_pow = 1<<4,
+		interp_spline = 1 << 5,
+		interp_bezier = 1 << 6,
 	};
 	uint32_t m_frame;
 	uint32_t m_flag;
