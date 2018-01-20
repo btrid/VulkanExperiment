@@ -149,6 +149,9 @@ struct UIAnimeDataInfo
 
 #define	AnimeDataInfo_flag_is_enable (1 << 0)
 #define	AnimeDataInfo_flag_is_erase (1 << 1)
+#define	AnimeDataInfo_flag_interp_spline (1<<3)
+#define	AnimeDataInfo_flag_interp_bezier (1<<4)
+
 #define	AnimeDataInfo_type_pos_xy (0)
 #define	AnimeDataInfo_type_size_xy (1)
 #define	AnimeDataInfo_type_color_rgba (2)
@@ -169,6 +172,7 @@ struct UIAnimeKey
 #define	AnimeKey_is_enable (1 << 0)
 #define	AnimeKey_is_erase (1 << 1)
 #define	AnimeKey_interp_switch (1 << 3)
+#define	AnimeKey_interp_pow (1 << 4)
 
 struct UIAnimeWork
 {

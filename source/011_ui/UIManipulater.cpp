@@ -243,6 +243,33 @@ void UIManipulater::animedataManip()
 				};
 				ImGui::EndPopup();
 			}
+			int interp = 
+				btr::isOn(anime_keys->m_info.m_flag, UIAnimeKeyInfo::interp_spline) ?
+				1 : 
+				btr::isOn(anime_keys->m_info.m_flag, UIAnimeKeyInfo::interp_bezier) ? 
+				2 : 0;
+				ImGui::RadioButton("liner", &interp, 0); ImGui::SameLine();
+				ImGui::RadioButton("spline", &interp, 1); ImGui::SameLine();
+				ImGui::RadioButton("bezier", &interp, 2);
+
+//				btr::setOff(anime_keys->m_info.m_flag, UIAnimeKeyInfo::interp_linear);
+				btr::setOff(anime_keys->m_info.m_flag, UIAnimeKeyInfo::interp_spline);
+				btr::setOff(anime_keys->m_info.m_flag, UIAnimeKeyInfo::interp_bezier);
+				switch (interp)
+				{
+				case 0:
+				default:
+//					btr::setOn(anime_keys->m_info.m_flag, UIAnimeKeyInfo::interp_linear);
+					break;
+				case 1:
+					btr::setOn(anime_keys->m_info.m_flag, UIAnimeKeyInfo::interp_spline);
+					break;
+				case 2:
+					btr::setOn(anime_keys->m_info.m_flag, UIAnimeKeyInfo::interp_bezier);
+					break;
+				}
+
+
 			ImGui::Columns(4, "animcolumns");
 			ImGui::Text("Frame"); ImGui::NextColumn();
 			ImGui::Text("Value"); ImGui::NextColumn();
@@ -311,6 +338,12 @@ void UIManipulater::animedataManip()
 				ImGui::CheckboxFlags("##erase", &key.m_flag, UIAnimeKeyData::is_erase);
 				ImGui::NextColumn();
 				ImGui::PopID();
+
+// 				sprintf_s(id, "iterp_type", i);
+// 				ImGui::PushID(id);
+// 				ImGui::RadioButton("##interp", &key.m_flag, UIAnimeKeyData::is_erase);
+// 				ImGui::NextColumn();
+// 				ImGui::PopID();
 
 				ImGui::PopID();
 				ImGui::Separator();

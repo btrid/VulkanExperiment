@@ -498,6 +498,7 @@ vk::CommandBuffer sUISystem::draw()
 			cmd.dispatch(1, 1, 1);
 
 		}
+//		glm::catmullRom()
 		{
 			{
 				auto to_read = m_work.makeMemoryBarrier();
@@ -518,7 +519,7 @@ vk::CommandBuffer sUISystem::draw()
 
 			cmd.endRenderPass();
 		}
-
+//			glm::gtx::cu
 	}
 	renders.clear();
 	sDeleter::Order().enque(std::move(descriptor_holder));
