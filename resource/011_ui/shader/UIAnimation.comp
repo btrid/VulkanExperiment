@@ -87,11 +87,31 @@ void main()
 			uint diff = d.m_frame - a.m_frame;
 			rate = diff == 0 ? 1. : ((frame-a.m_frame) / diff);
 
-			vec2 av = vec2(i32Toi16(a.m_value));
-			vec2 bv = vec2(i32Toi16(b.m_value));
-			vec2 cv = vec2(i32Toi16(c.m_value));
-			vec2 dv = vec2(i32Toi16(d.m_value));
-			value.xy = bezier(av, bv, cv, dv, rate);
+			switch(type)
+			{
+				case AnimeDataInfo_type_pos_xy:
+				case AnimeDataInfo_type_size_xy:
+				{
+					vec2 av = unpackHalf2x16(a.m_value);
+					vec2 bv = unpackHalf2x16(b.m_value);
+					vec2 cv = unpackHalf2x16(c.m_value);
+					vec2 dv = unpackHalf2x16(d.m_value);
+					value.xy = bezier(av, bv, cv, dv, rate);
+					break;
+				}
+				case AnimeDataInfo_type_color_rgba:
+				{
+					vec4 av = unpackSnorm4x8(a.m_value);
+					vec4 bv = unpackSnorm4x8(b.m_value);
+					vec4 cv = unpackSnorm4x8(c.m_value);
+					vec4 dv = unpackSnorm4x8(d.m_value);
+					value = bezier4(av, bv, cv, dv, rate);
+					break;
+				}
+				case AnimeDataInfo_type_disable_order:
+					b_scene.m_is_disable_order = a.m_value;
+					break;
+			}
 		}
 		else
 		{
@@ -105,17 +125,15 @@ void main()
 				case AnimeDataInfo_type_pos_xy:
 				case AnimeDataInfo_type_size_xy:
 				{
-					vec4 av = vec4(i32Toi16(a.m_value), 0., 0.);
-					vec4 bv = vec4(i32Toi16(b.m_value), 0., 0.);
-					value = mix(av, bv, rate);
+					vec2 av = unpackHalf2x16(a.m_value);
+					vec2 bv = unpackHalf2x16(b.m_value);
+					value.xy = mix(av, bv, rate);
 					break;
 				}
 				case AnimeDataInfo_type_color_rgba:
 				{
-					uint ua = uint(a.m_value);
-					uint ub = uint(b.m_value);
-					vec4 av = vec4(getBit(ua, 0, 8), getBit(ua, 8, 8), getBit(ua, 16, 8), getBit(ua, 24, 8));
-					vec4 bv = vec4(getBit(ub, 0, 8), getBit(ub, 8, 8), getBit(ub, 16, 8), getBit(ub, 24, 8));
+					vec4 av = unpackSnorm4x8(a.m_value);
+					vec4 bv = unpackSnorm4x8(b.m_value);
 					value = mix(av, bv, rate);
 					break;
 				}

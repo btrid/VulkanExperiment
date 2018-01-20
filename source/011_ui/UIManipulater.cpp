@@ -276,20 +276,18 @@ void UIManipulater::animedataManip()
 				case UIAnimeKeyInfo::type_pos_xy:
 				case UIAnimeKeyInfo::type_size_xy:
 				{
-					int value[2] = { key.m_value_i16[0], key.m_value_i16[1] };
+					vec2 value_f = glm::unpackHalf2x16(key.m_value_u);
+					int value[2] = { value_f[0], value_f[1] };
 					ImGui::DragInt2("##value", value, 0.1f);
-					key.m_value_i16[0] = value[0];
-					key.m_value_i16[1] = value[1];
+					key.m_value_u = glm::packHalf2x16(vec2(value[0], value[1]));
 					break;
 				}
 				case UIAnimeKeyInfo::type_color_rgba:
 				{
-					int value[] = { key.m_value_i8[0], key.m_value_i8[1], key.m_value_i8[2], key.m_value_i8[3] };
+					vec4 value_f = glm::unpackSnorm4x8(key.m_value_u);
+					int value[] = { value_f[0], value_f[1], value_f[2], value_f[3] };
 					ImGui::DragInt4("##value", value, 0.1f, -127, 127);
-					key.m_value_i8[0] = value[0];
-					key.m_value_i8[1] = value[1];
-					key.m_value_i8[2] = value[2];
-					key.m_value_i8[3] = value[3];
+					key.m_value_u = glm::packSnorm4x8(vec4(value[0], value[1], value[2], value[3]));
 					break;
 				}
 				case UIAnimeKeyInfo::type_system_disable_order:

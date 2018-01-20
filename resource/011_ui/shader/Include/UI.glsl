@@ -164,7 +164,7 @@ struct UIAnimeKey
 {
 	uint m_frame;
 	uint m_flag;
-	int	m_value;
+	uint m_value;
 	uint _p;
 };
 #define	AnimeKey_is_enable (1 << 0)

@@ -20,27 +20,6 @@ else setOff((_a), (_b))
 #define getBit(_bit, _bitoffset, _bitrange) \
 (((((1 << (_bitrange)) - 1) << (_bitoffset)) & (_bit)) >> (_bitoffset))
 
-ivec2 i32Toi16(in int i32)
-{
-	int hi = getBit(i32, 16, 15);
-	hi = (isOn(i32, 1<<31)? -(0x8000-hi) : hi);
-	int lo = getBit(i32, 0, 15);
-	lo = (isOn(i32, 1<<15) ? -(0x8000 - lo) : lo);
-	return ivec2(lo, hi);
-}
-ivec4 i32Toi8(in int i32)
-{
-	int v0 = getBit(i32, 0, 7);
-	v0 = (isOn(i32, 1<<7)? -(0x80-v0) : v0);
-	int v1 = getBit(i32, 8, 7);
-	v1 = (isOn(i32, 1<<15)? -(0x80-v1) : v1);
-	int v2 = getBit(i32, 16, 7);
-	v2 = (isOn(i32, 1<<23)? -(0x80-v2) : v2);
-	int v3 = getBit(i32, 24, 7);
-	v3 = (isOn(i32, 1<<31)? -(0x80-v3) : v3);
-	return ivec4(v0, v1, v2, v3);
-}
-
 
 #define KEY_BIT_UP (1<<0)
 #define KEY_BIT_DOWN (1<<1)
