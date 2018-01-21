@@ -122,6 +122,9 @@
     <ClCompile Include="..\..\source\btrlib\cCmdPool.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\source\btrlib\AllocatedMemory.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

@@ -33,10 +33,22 @@ void UIManipulater::execute()
 							app::g_app_instance->pushWindow(window_info);
 						}
 					}
+
+					ImGui::MenuItem("Save", NULL, &m_is_save);
+					ImGui::MenuItem("Load", NULL, &m_is_load);
 					ImGui::EndPopup();
 				}
 
 				ImGui::End();
+			}
+			if (m_is_load)
+			{
+				m_is_load = false;
+				std::ifstream is("data.json");
+				{
+					cereal::JSONInputArchive i_archive(is);
+					i_archive(m_ui_resource);
+				}
 			}
 #else
 			ImGui::ShowTestWindow();
@@ -81,6 +93,15 @@ void UIManipulater::execute()
 		app::g_app_instance->m_window->getImguiPipeline()->pushImguiCmd(std::move(func));
 	}
 
+	if (m_is_save)
+	{
+		m_is_save = false;
+		std::ofstream os("data.json");
+		{
+			cereal::JSONOutputArchive o_archive(os);
+			o_archive(ui_resource);
+		}
+	}
 	ui_resource.reload(m_context, m_ui);
 	m_ui->m_anime_list[0] = m_ui_anime_resource.make(m_context);
 	sUISystem::Order().addRender(m_ui);

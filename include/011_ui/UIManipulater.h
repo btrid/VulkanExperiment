@@ -359,6 +359,8 @@ struct UIManipulater
 	bool m_is_show_tree_window;
 	bool m_is_show_anime_window;
 	bool m_is_show_texture_window;
+	bool m_is_save;
+	bool m_is_load;
 
 	UIManipulater(const std::shared_ptr<btr::Context>& context)
 		: m_last_select_index(-1)
@@ -371,6 +373,8 @@ struct UIManipulater
 		, m_is_show_tree_window(false)
 		, m_is_show_anime_window(false)
 		, m_is_show_texture_window(false)
+		, m_is_save(false)
+		, m_is_load(false)
 	{
 		
 		m_context = context;

@@ -98,6 +98,7 @@
     <ClInclude Include="..\..\include\btrlib\VoxelPipeline.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\source\btrlib\AllocatedMemory.cpp" />
     <ClCompile Include="..\..\source\btrlib\cAudio.cpp" />
     <ClCompile Include="..\..\source\btrlib\cCamera.cpp" />
     <ClCompile Include="..\..\source\btrlib\cCmdPool.cpp" />

@@ -83,7 +83,7 @@ struct UIObject
 
 			CEREAL_NVP(m_parent_index),
 			CEREAL_NVP(m_child_index),
-			CEREAL_NVP(m_sibling_index),
+			CEREAL_NVP(m_sibling_index)
 			);
 	}
 
