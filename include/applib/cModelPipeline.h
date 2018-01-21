@@ -14,7 +14,7 @@
 #include <applib/GraphicsResource.h>
 
 
-struct ModelDescriptorModule : public DescriptorModule
+struct ModelDescriptorModule : public DescriptorModuleOld
 {
 	ModelDescriptorModule(const std::shared_ptr<btr::Context>& context)
 	{

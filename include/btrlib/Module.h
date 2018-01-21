@@ -14,9 +14,7 @@ struct RenderPassModule
 	virtual vk::RenderPass getRenderPass()const = 0;
 	virtual vk::Framebuffer getFramebuffer(uint32_t index)const = 0;
 	virtual vk::Extent2D getResolution()const = 0;
-
 };
-
 
 struct ShaderDescriptor
 {
@@ -58,6 +56,13 @@ struct InstancingModule
 };
 
 struct DescriptorModule
+{
+	virtual vk::DescriptorPool getPool()const = 0;
+	virtual vk::DescriptorSetLayout getLayout()const = 0;
+//	virtual vk::DescriptorSetLayout getLayout()const = 0;
+};
+
+struct DescriptorModuleOld
 {
 public:
 	vk::UniqueDescriptorSet allocateDescriptorSet(const std::shared_ptr<btr::Context>& context)
@@ -109,6 +114,7 @@ protected:
 	vk::DescriptorPool getPool()const { return m_descriptor_pool.get(); }
 
 };
+
 
 namespace btr
 {

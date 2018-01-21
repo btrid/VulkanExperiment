@@ -205,7 +205,7 @@ struct ModelInstancingRenderPipelineComponent : public PipelineComponent
 
 };
 
-struct InstancingAnimationDescriptorModule : public DescriptorModule
+struct InstancingAnimationDescriptorModule : public DescriptorModuleOld
 {
 	InstancingAnimationDescriptorModule(const std::shared_ptr<btr::Context>& context)
 	{

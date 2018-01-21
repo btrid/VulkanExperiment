@@ -28,6 +28,7 @@ struct AppWindow : public cWindow
 	vk::UniqueImage m_depth_image;
 	vk::UniqueImageView m_depth_view;
 	vk::UniqueDeviceMemory m_depth_memory;
+	vk::Format m_depth_format;
 	
 	std::vector <vk::UniqueCommandBuffer> m_cmd_present_to_render;
 	std::vector <vk::UniqueCommandBuffer> m_cmd_render_to_present;

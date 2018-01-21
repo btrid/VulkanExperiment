@@ -471,9 +471,10 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 
 	{
 		vk::SurfaceCapabilitiesKHR capability = context->m_gpu->getSurfaceCapabilitiesKHR(m_surface.get());
+		m_depth_format = vk::Format::eD32Sfloat;
 		// ÉfÉvÉXê∂ê¨
 		vk::ImageCreateInfo depth_info;
-		depth_info.format = vk::Format::eD32Sfloat;
+		depth_info.format = m_depth_format;
 		depth_info.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eTransferDst;
 		depth_info.arrayLayers = 1;
 		depth_info.mipLevels = 1;

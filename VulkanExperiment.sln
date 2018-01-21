@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26403.3
+VisualStudioVersion = 15.0.27130.2020
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "btrlib", "project\btrlib\btrlib.vcxproj", "{6AB61332-963C-4D53-B5FF-04B3A9689E23}"
 EndProject
@@ -79,6 +79,7 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "009_culling", "project\009_culling\009_culling.vcxproj", "{EDACA061-B99E-45EF-BD6B-501FDE10B32B}"
 	ProjectSection(ProjectDependencies) = postProject
 		{6AB61332-963C-4D53-B5FF-04B3A9689E23} = {6AB61332-963C-4D53-B5FF-04B3A9689E23}
+		{D7234B59-605E-448A-8E53-D7E19C6CF2B6} = {D7234B59-605E-448A-8E53-D7E19C6CF2B6}
 		{C902CBC4-17CF-47BA-B10E-DA6F79032944} = {C902CBC4-17CF-47BA-B10E-DA6F79032944}
 	EndProjectSection
 EndProject
@@ -220,5 +221,8 @@ Global
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{D7234B59-605E-448A-8E53-D7E19C6CF2B6} = {C30D6B44-918A-4860-81BD-EDF76C36E3A2}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {EA770C54-6FFB-4A2E-9821-1AA044FDD405}
 	EndGlobalSection
 EndGlobal
