@@ -44,10 +44,11 @@ void UIManipulater::execute()
 			if (m_is_load)
 			{
 				m_is_load = false;
-				std::ifstream is("data.json");
+				std::ifstream is(btr::getResourceAppPath() + "ui\\" + "data.json");
 				{
 					cereal::JSONInputArchive i_archive(is);
 					i_archive(m_ui_resource);
+					m_request_update_texture = true;
 				}
 			}
 #else
@@ -96,13 +97,19 @@ void UIManipulater::execute()
 	if (m_is_save)
 	{
 		m_is_save = false;
-		std::ofstream os("data.json");
+		std::ofstream os(btr::getResourceAppPath() + "ui\\" + "data.json");
 		{
 			cereal::JSONOutputArchive o_archive(os);
 			o_archive(ui_resource);
 		}
 	}
 	ui_resource.reload(m_context, m_ui);
+	if (m_request_update_texture) 
+	{
+		m_request_update_texture = false;
+		auto cmd = m_context->m_cmd_pool->allocCmdTempolary(0);
+		m_ui->m_textures = ui_resource.loadTexture(m_context, cmd);
+	}
 	m_ui->m_anime_list[0] = m_ui_anime_resource.make(m_context);
 	sUISystem::Order().addRender(m_ui);
 }

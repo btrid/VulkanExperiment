@@ -167,21 +167,22 @@ struct rUI
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllCommands, {}, {}, { to_read }, {});
 			}
 		}
-		{
-			for (size_t i = 0; i < m_texture_name.size(); i++)
-			{
-				if (!m_texture_name[i].empty())
-				{
-					ui->m_textures[i] = ResourceTexture();
-					ui->m_textures[i].load(context, cmd, btr::getResourceAppPath() + "texture/" + m_texture_name[i]);
-				}
-				else {
-					ui->m_textures[i] = ResourceTexture();
-				}
-			}
-		}
 
 	}
+
+	std::array<ResourceTexture, UI::TEXTURE_MAX> loadTexture(const std::shared_ptr<btr::Context>& context, vk::CommandBuffer cmd)
+	{
+		std::array<ResourceTexture, UI::TEXTURE_MAX> textures;
+		for (size_t i = 0; i < m_texture_name.size(); i++)
+		{
+			if (!m_texture_name[i].empty())
+			{
+				textures[i].load(context, cmd, btr::getResourceAppPath() + "texture/" + m_texture_name[i]);
+			}
+		}
+		return textures;
+	}
+
 	std::shared_ptr<UI> make(const std::shared_ptr<btr::Context>& context)
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
@@ -192,6 +193,8 @@ struct rUI
 			desc.element_num = 8;
 			ui->m_play_info = context->m_storage_memory.allocateMemory(desc);
 		}
+
+		ui->m_textures = loadTexture(context, cmd);
 
 		return ui;
 	}

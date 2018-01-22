@@ -18,8 +18,8 @@
                     "y": 320.0
                 },
                 "m_size_local": {
-                    "x": 1000.0,
-                    "y": 1000.0
+                    "x": 50.0,
+                    "y": 50.0
                 },
                 "m_color_local": {
                     "x": 1.0,
@@ -37,7 +37,7 @@
             }
         ],
         "m_texture_name": {
-            "value0": "",
+            "value0": "lion.tga",
             "value1": "",
             "value2": "",
             "value3": "",
