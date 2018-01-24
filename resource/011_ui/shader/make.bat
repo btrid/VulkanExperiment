@@ -10,4 +10,7 @@ glslc.exe -w %include% -x glsl -o binary\\UIBoundary.comp.spv UIBoundary.comp
 glslc.exe -w %include% -x glsl -o binary\\UIRender.vert.spv UIRender.vert
 glslc.exe -w %include% -x glsl -o binary\\UIRender.frag.spv UIRender.frag
 
+glslc.exe -w %include% -x glsl -o binary\\FontRender.vert.spv FontRender.vert
+glslc.exe -w %include% -x glsl -o binary\\FontRender.frag.spv FontRender.frag
+
 

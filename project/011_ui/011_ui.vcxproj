@@ -78,6 +78,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\011_ui\cerealDefine.h" />
+    <ClInclude Include="..\..\include\011_ui\Font.h" />
     <ClInclude Include="..\..\include\011_ui\sUISystem.h" />
     <ClInclude Include="..\..\include\011_ui\UIManipulater.h" />
   </ItemGroup>

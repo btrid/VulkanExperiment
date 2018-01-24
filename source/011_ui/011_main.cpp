@@ -26,13 +26,13 @@
 
 #include <011_ui/sUISystem.h>
 #include <011_ui/UIManipulater.h>
+#include <011_ui/Font.h>
 
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
 #pragma comment(lib, "FreeImage.lib")
 #pragma comment(lib, "vulkan-1.lib")
 #pragma comment(lib, "imgui.lib")
-
 
 int main()
 {
@@ -60,6 +60,13 @@ int main()
 	sUISystem::Create(context);
 	UIManipulater manip(context);
 
+	sFont::Create(context);
+
+	PipelineDescription p_desc;
+	p_desc.m_context = context;
+	p_desc.m_render_pass = app.m_window->getRenderBackbufferPass();
+	FontRenderPipeline font_renderer(context, p_desc);
+
 	app.setup();
 	while (true)
 	{
@@ -67,7 +74,7 @@ int main()
 
 		app.preUpdate();
 		{
-			std::vector<vk::CommandBuffer> cmds(3);
+			std::vector<vk::CommandBuffer> cmds(4);
 			SynchronizedPoint sync_point(3);
 			{
 				MAKE_THREAD_JOB(job);
@@ -104,6 +111,9 @@ int main()
 				sGlobal::Order().getThreadPool().enque(job);
 			}
 
+			cmds[3] = context->m_cmd_pool->allocCmdOnetime(0);
+			font_renderer.async(cmds[3]);
+			cmds[3].end();
 			sync_point.wait();
 			app.submit(std::move(cmds));
 		}
