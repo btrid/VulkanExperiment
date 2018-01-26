@@ -12,5 +12,5 @@ layout(location = 0) out gl_PerVertex{
 
 void main()
 {
-	gl_Position = vec4(inPosition / 1000., 1., 1.);
+	gl_Position = vec4(inPosition / 100., 1., 1.);
 }

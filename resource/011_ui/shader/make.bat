@@ -13,4 +13,7 @@ glslc.exe -w %include% -x glsl -o binary\\UIRender.frag.spv UIRender.frag
 glslc.exe -w %include% -x glsl -o binary\\FontRender.vert.spv FontRender.vert
 glslc.exe -w %include% -x glsl -o binary\\FontRender.frag.spv FontRender.frag
 
+glslc.exe -w %include% -x glsl -o binary\\FontRasterRender.vert.spv FontRasterRender.vert
+glslc.exe -w %include% -x glsl -o binary\\FontRasterRender.frag.spv FontRasterRender.frag
+
 
