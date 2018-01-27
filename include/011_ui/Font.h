@@ -317,7 +317,7 @@ struct FontRenderPipeline
 
 		}
 
-		FT_New_Face(sFont::Order().m_library, (btr::getResourceAppPath() + "font\\" + "Inconsolata.otf").c_str(), 0, &m_face);
+		FT_New_Face(sFont::Order().m_library, (btr::getResourceAppPath() + "font\\" + "mgenplus-1c-black.ttf").c_str(), 0, &m_face);
 		FT_Set_Pixel_Sizes(m_face, 16, 0);
 		FT_Select_Charmap(m_face, FT_ENCODING_UNICODE);
 		//		FT_Set_Char_Size(m_face, 16*64, 16*64, 640, 480);
@@ -382,7 +382,7 @@ struct FontRenderPipeline
 #endif
 
 		auto& glyph = m_face->glyph;
-		auto char_index = FT_Get_Char_Index(m_face, 'B');
+		auto char_index = FT_Get_Char_Index(m_face, U'‚ ');
 
 		GlyphCache::MetrixInfo* info = nullptr;
 		for (uint32_t i = 0; i < m_cache->m_glyph_metrix.size(); i++)
