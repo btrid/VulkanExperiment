@@ -3,11 +3,14 @@
 #include <string>
 #include <ft2build.h>
 #include <freetype/freetype.h>
+//#include <freetype/fterrdef.h>
 
 #include <btrlib/Define.h>
 #include <btrlib/Singleton.h>
 #include <applib/GraphicsResource.h>
 #include <applib/sSystem.h>
+
+#define assert_ft(_error) { if (_error != FT_Err_Ok) { assert(false);} }
 struct Font
 {
 };
@@ -118,28 +121,6 @@ struct sFont : SingletonEx <sFont>
 	{
 		FT_Done_FreeType(m_library);
 	}
-
-};
-
-struct CmdList
-{
-	void pushCmd(std::function<void()>&& cmd)
-	{
-		std::lock_guard<std::mutex> lg(m_cmd_mutex);
-		m_cmd_list[sGlobal::Order().getWorkerIndex()].emplace_back(std::move(cmd));
-	}
-	std::vector<std::function<void()>>& getCmd()
-	{
-		return std::move(m_cmd_list[sGlobal::Order().getRenderIndex()]);
-	}
-	~CmdList()
-	{
-		assert(m_cmd_list[0].empty());
-		assert(m_cmd_list[1].empty());
-	}
-
-	std::mutex m_cmd_mutex;
-	std::array<std::vector<std::function<void()>>, 2> m_cmd_list;
 
 };
 
@@ -279,48 +260,9 @@ struct FontRenderPipeline
 
 		}
 
-		{
-			vk::ImageCreateInfo image_info;
-			image_info.imageType = vk::ImageType::e2D;
-			image_info.format = vk::Format::eR32Sfloat;
-			image_info.mipLevels = 1;
-			image_info.arrayLayers = 1;
-			image_info.samples = vk::SampleCountFlagBits::e1;
-			image_info.tiling = vk::ImageTiling::eLinear;
-			image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
-			image_info.sharingMode = vk::SharingMode::eExclusive;
-			image_info.initialLayout = vk::ImageLayout::eUndefined;
-			image_info.extent = { 1, 1, 1 };
-			//		image_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
-			auto image = context->m_device->createImageUnique(image_info);
-
-			vk::MemoryRequirements memory_request = context->m_device->getImageMemoryRequirements(image.get());
-			vk::MemoryAllocateInfo memory_alloc_info;
-			memory_alloc_info.allocationSize = memory_request.size;
-			memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(context->m_gpu.getHandle(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
-
-			auto image_memory = context->m_device->allocateMemoryUnique(memory_alloc_info);
-			context->m_device->bindImageMemory(image.get(), image_memory.get(), 0);
-
-			btr::BufferMemoryDescriptor staging_desc;
-			staging_desc.size = 4;
-			staging_desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
-			auto staging_buffer = context->m_staging_memory.allocateMemory(staging_desc);
-			*staging_buffer.getMappedPtr<float>() = 1.f;
-
-			vk::ImageSubresourceRange subresourceRange;
-			subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-			subresourceRange.baseArrayLayer = 0;
-			subresourceRange.baseMipLevel = 0;
-			subresourceRange.layerCount = 1;
-			subresourceRange.levelCount = 1;
-
-		}
-
 		FT_New_Face(sFont::Order().m_library, (btr::getResourceAppPath() + "font\\" + "mgenplus-1c-black.ttf").c_str(), 0, &m_face);
 		FT_Set_Pixel_Sizes(m_face, 16, 0);
 		FT_Select_Charmap(m_face, FT_ENCODING_UNICODE);
-		//		FT_Set_Char_Size(m_face, 16*64, 16*64, 640, 480);
 
 		m_cache = new GlyphCache(context);
 		m_descriptor_set = btr::Descriptor::allocateDescriptorSet(context, context->m_descriptor_pool.get(), sFont::Order().m_descriptor_set_layout[sFont::DESCRIPTOR_SET_LAYOUT_RASTER].get());
@@ -348,7 +290,6 @@ struct FontRenderPipeline
 		FT_Done_Face(m_face);
 
 	}
-
 
 	void async(vk::CommandBuffer& cmd)
 	{
@@ -404,9 +345,9 @@ struct FontRenderPipeline
 					m_cache->m_glyph_metrix[i].m_cache_index = i;
 					m_cache->m_glyph_metrix[i].m_char_index = char_index;
 					auto error = FT_Load_Glyph(m_face, char_index, FT_LOAD_DEFAULT);
-					//		FT_ERR(error);
+					assert_ft(error);
 					error = FT_Render_Glyph(m_face->glyph, FT_RENDER_MODE_NORMAL);
-					//		FT_ERR(error);
+					assert_ft(error);
 					auto& bitmap = glyph->bitmap;
 					info = &m_cache->m_glyph_metrix[i];
 
@@ -466,7 +407,6 @@ struct FontRenderPipeline
 		Pipeline_num,
 	};
 	std::array<vk::UniquePipeline, Pipeline_num> m_pipeline;
-	CmdList m_cmd_list;
 	PipelineDescription m_pipeline_description;
 
 	FT_Face m_face;
@@ -528,13 +468,14 @@ struct FontRenderPipeline
 
 		struct MetrixInfo
 		{
-			// https://www.freetype.org/freetype2/docs/tutorial/step2.html
 			uint32_t m_char_index;
 			uint32_t m_cache_index;
+			bool m_is_raster;
 			MetrixInfo()
 			{
 				m_cache_index = 0;
 				m_char_index = 0;
+				m_is_raster = true;
 			}
 		};
 		std::array<MetrixInfo, 64> m_glyph_metrix;
@@ -542,10 +483,6 @@ struct FontRenderPipeline
 		vk::UniqueImageView m_image_view_raster_cache;
 		vk::UniqueDeviceMemory m_memory_raster_cache;
 
-// 		MetrixInfo* tryGlyph()
-// 		{
-// 
-// 		}
 	};
 
 	GlyphCache* m_cache;
