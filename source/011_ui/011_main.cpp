@@ -66,7 +66,8 @@ int main()
 	p_desc.m_context = context;
 	p_desc.m_render_pass = app.m_window->getRenderBackbufferPass();
 	FontRenderPipeline font_renderer(context, p_desc);
-
+	GlyphCache cache(context);
+	auto text_data = font_renderer.makeRender(U"‚ ‚¢‚¤‚¦‚ð", cache);
 	app.setup();
 	while (true)
 	{
@@ -112,7 +113,7 @@ int main()
 			}
 
 			cmds[3] = context->m_cmd_pool->allocCmdOnetime(0);
-			font_renderer.async(cmds[3]);
+			font_renderer.draw(cmds[3], cache, text_data);
 			cmds[3].end();
 			sync_point.wait();
 			app.submit(std::move(cmds));
