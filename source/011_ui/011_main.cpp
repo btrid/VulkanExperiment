@@ -67,7 +67,8 @@ int main()
 	p_desc.m_render_pass = app.m_window->getRenderBackbufferPass();
 	FontRenderPipeline font_renderer(context, p_desc);
 	GlyphCache cache(context);
-	auto text_data = font_renderer.makeRender(U"あいうえを", cache);
+	auto text_data = font_renderer.makeRender(U"Windowsでコンピューターの世界が広がります。1234567890.:,;'\"(!?)+-*/=", cache);
+	//	auto text_data = font_renderer.makeRender(U"テスト", cache);
 	app.setup();
 	while (true)
 	{

@@ -5,6 +5,9 @@ struct GlyphInfo
 {
 	uint m_char_index;
 	uint m_cache_index;
+	ivec2 m_offset;
+	uvec2 m_size;
+	ivec2 m_begin;
 };
 
 struct GlyphTextureInfo

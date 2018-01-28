@@ -10,15 +10,29 @@
 #include <applib/GraphicsResource.h>
 #include <applib/sSystem.h>
 
+// #undef FTERRORS_H_
+// #define FT_ERRORDEF( e, v, s )  { e, s },
+// #define FT_ERROR_START_LIST     {
+// #define FT_ERROR_END_LIST       { 0, NULL } };
+// const struct
+// {
+// 	int          err_code;
+// 	const char*  err_msg;
+// } ft_errors[] =
+// #include FT_ERRORS_H
 #define assert_ft(_error) { if (_error != FT_Err_Ok) { assert(false);} }
 struct Font
 {
 };
-
+#define font_x (36)
+#define font_y (36)
 struct GlyphInfo
 {
 	uint32_t m_char_index;
 	uint32_t m_cache_index;
+	ivec2 m_offset;
+	uvec2 m_size;
+	ivec2 m_begin;
 	GlyphInfo()
 	{
 		m_cache_index = 0;
@@ -195,11 +209,11 @@ struct GlyphCache
 		image_info.mipLevels = 1;
 		image_info.arrayLayers = 1;
 		image_info.samples = vk::SampleCountFlagBits::e1;
-		image_info.tiling = vk::ImageTiling::eLinear;
+		image_info.tiling = vk::ImageTiling::eOptimal;
 		image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
 		image_info.sharingMode = vk::SharingMode::eExclusive;
 		image_info.initialLayout = vk::ImageLayout::eUndefined;
-		image_info.extent = { 16 * 64, 16, 1 };
+		image_info.extent = { font_x* 64, font_y, 1 };
 		m_image_raster_cache = context->m_device->createImageUnique(image_info);
 
 		vk::MemoryRequirements memory_request = context->m_device->getImageMemoryRequirements(m_image_raster_cache.get());
@@ -244,8 +258,8 @@ struct GlyphCache
 			m_cache_info = context->m_uniform_memory.allocateMemory(desc);
 
 			CacheInfo info;
-			info.m_glyph_size = uvec2(16, 16);
-			info.m_glyph_tex_size = uvec2(64 * 16, 16);
+			info.m_glyph_size = uvec2(font_x, font_y);
+			info.m_glyph_tex_size = uvec2(64 * font_x, font_y);
 			cmd.updateBuffer<CacheInfo>(m_cache_info.getInfo().buffer, m_cache_info.getInfo().offset, info);
 		}
 		{
@@ -255,7 +269,7 @@ struct GlyphCache
 			vk::DescriptorImageInfo images[] = {
 				vk::DescriptorImageInfo()
 				.setImageView(m_image_view_raster_cache.get())
-				.setSampler(sGraphicsResource::Order().getSampler(sGraphicsResource::BASIC_SAMPLER_LINER))
+				.setSampler(sGraphicsResource::Order().getSampler(sGraphicsResource::BASIC_SAMPLER_POINT))
 				.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
 			};
 			auto write_desc =
@@ -417,7 +431,7 @@ struct FontRenderPipeline
 		}
 
 		FT_New_Face(sFont::Order().m_library, (btr::getResourceAppPath() + "font\\" + "mgenplus-1c-black.ttf").c_str(), 0, &m_face);
-		FT_Set_Pixel_Sizes(m_face, 16, 0);
+		FT_Set_Pixel_Sizes(m_face, font_x, font_y);
 		FT_Select_Charmap(m_face, FT_ENCODING_UNICODE);
 
 	}
@@ -492,19 +506,6 @@ struct FontRenderPipeline
 		cmd.endRenderPass();
 #endif
 
-// 		auto& glyph = m_face->glyph;
-// 
-// 		vk::RenderPassBeginInfo begin_render_info;
-// 		begin_render_info.setFramebuffer(m_pipeline_description.m_render_pass->getFramebuffer(m_pipeline_description.m_context->m_window->getSwapchain().m_backbuffer_index));
-// 		begin_render_info.setRenderPass(m_pipeline_description.m_render_pass->getRenderPass());
-// 		begin_render_info.setRenderArea(vk::Rect2D({}, m_pipeline_description.m_render_pass->getResolution()));
-// 		cmd.beginRenderPass(begin_render_info, vk::SubpassContents::eInline);
-// 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[1].get());
-// 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, sFont::Order().getPipelineLayout(sFont::PIPELINE_LAYOUT_RENDER_RASTER), 0, { sSystem::Order().getSystemDescriptorSet() }, {0});
-// 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, sFont::Order().getPipelineLayout(sFont::PIPELINE_LAYOUT_RENDER_RASTER), 1, { m_descriptor_set.get() }, {});
-// 
-// 		cmd.draw(4, 1, 0, 0);
-// 		cmd.endRenderPass();
 	}
 
 	TextData makeRender(const std::u32string& text, GlyphCache& cache)
@@ -513,6 +514,8 @@ struct FontRenderPipeline
 		auto& glyph = m_face->glyph;
 		TextData data;
 		std::vector<GlyphInfo> infos(text.size());
+
+		uint32_t offset = 0;
 		for (uint32_t i = 0; i < infos.size(); i++)
 		{
 			auto char_index = FT_Get_Char_Index(m_face, text[i]);
@@ -535,26 +538,28 @@ struct FontRenderPipeline
 				{
 					if (cache.m_glyph_info[n].m_char_index == 0)
 					{
-						cache.m_glyph_info[n].m_cache_index = n;
-						cache.m_glyph_info[n].m_char_index = char_index;
 						info = &cache.m_glyph_info[n];
+						info->m_cache_index = n;
+						info->m_char_index = char_index;
 
-						auto error = FT_Load_Glyph(m_face, char_index, FT_LOAD_DEFAULT);
+						auto error = FT_Load_Glyph(m_face, char_index, FT_LOAD_NO_HINTING);
 						assert_ft(error);
 						error = FT_Render_Glyph(glyph, FT_RENDER_MODE_NORMAL);
 						assert_ft(error);
 						auto& bitmap = glyph->bitmap;
+						info->m_size = uvec2(bitmap.width, bitmap.rows);
+						info->m_offset = uvec2(glyph->bitmap_left, glyph->bitmap_top);
 
 						btr::BufferMemoryDescriptorEx<unsigned char> v_desc;
-						v_desc.element_num = bitmap.rows*bitmap.pitch;
+						v_desc.element_num = bitmap.rows*bitmap.width;
 						v_desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 						auto staging = m_context->m_staging_memory.allocateMemory(v_desc);
 						memcpy(staging.getMappedPtr(), glyph->bitmap.buffer, staging.getDataSizeof() * v_desc.element_num);
 
 						vk::BufferImageCopy copy;
 						copy.bufferOffset = staging.getInfo().offset;
-						copy.imageOffset = vk::Offset3D(n * 16, 0, 0);
-						copy.imageExtent = vk::Extent3D(bitmap.pitch, bitmap.rows, 1);
+						copy.imageOffset = vk::Offset3D(n * font_x, 0, 0);
+						copy.imageExtent = vk::Extent3D(bitmap.width, bitmap.rows, 1);
 						copy.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
 						copy.imageSubresource.baseArrayLayer = 0;
 						copy.imageSubresource.layerCount = 1;
@@ -566,7 +571,9 @@ struct FontRenderPipeline
 				}
 			}
 			infos[i] = *info;
-
+			infos[i].m_begin.x = offset;
+			infos[i].m_begin += uvec2(info->m_offset.x, -info->m_offset.y);
+			offset += static_cast<int>(glyph->metrics.horiAdvance / 64.0);
 		}
 
 		{

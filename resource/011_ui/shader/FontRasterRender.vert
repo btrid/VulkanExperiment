@@ -22,12 +22,14 @@ layout(location = 1) out VS{
 
 void main()
 {
-	vec2 v = vec2(gl_VertexIndex/2 + gl_InstanceIndex, gl_VertexIndex%2)*2. - 1.;
-	v *= vec2(16.) / u_system_data.m_resolution;
-
+	vec2 v = b_glyph_map[gl_InstanceIndex].m_begin / vec2(u_system_data.m_resolution);
+	vec2 offset = vec2(gl_VertexIndex/2 , gl_VertexIndex%2) * b_glyph_map[gl_InstanceIndex].m_size;
+	offset /= u_system_data.m_resolution;
+	v+=offset;
 	gl_Position = vec4(v, 0., 1.);
 
 	uint cache_No = b_glyph_map[gl_InstanceIndex].m_cache_index;
-	float width = 1. / 64.;
-	vsout.texcoord = vec2((gl_VertexIndex/2+cache_No) * width , gl_VertexIndex%2);
+	vec2 texcoord_size = b_glyph_map[gl_InstanceIndex].m_size;
+	vsout.texcoord = vec2(cache_No*36, 0.) + texcoord_size*vec2(gl_VertexIndex/2 , gl_VertexIndex%2);
+	vsout.texcoord /= vec2(36*64, 36);
 }
