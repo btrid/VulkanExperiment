@@ -19,13 +19,10 @@
 // 	int          err_code;
 // 	const char*  err_msg;
 // } ft_errors[] =
-// #include FT_ERRORS_H
+// #include FT_ERRORS_H
+
 #define assert_ft(_error) { if (_error != FT_Err_Ok) { assert(false);} }
-struct Font
-{
-};
-#define font_x (36)
-#define font_y (36)
+
 struct GlyphInfo
 {
 	uint32_t m_char_index;
@@ -38,6 +35,11 @@ struct GlyphInfo
 		m_cache_index = 0;
 		m_char_index = 0;
 	}
+};
+
+struct TextRequest
+{
+
 };
 
 struct TextData
@@ -194,6 +196,10 @@ struct sFont : SingletonEx <sFont>
 
 };
 
+struct GlyphCacheDescription
+{
+	uint32_t m_glyph_num;
+};
 struct GlyphCache
 {
 	struct CacheInfo
@@ -201,8 +207,47 @@ struct GlyphCache
 		uvec2 m_glyph_size;
 		uvec2 m_glyph_tex_size;
 	};
-	GlyphCache(const std::shared_ptr<btr::Context>& context)
+
+	GlyphCacheDescription m_description;
+	std::vector<GlyphInfo> m_glyph_info;
+	vk::UniqueImage m_image_raster_cache;
+	vk::UniqueImageView m_image_view_raster_cache;
+	vk::UniqueDeviceMemory m_memory_raster_cache;
+	vk::UniqueDescriptorSet	m_descriptor_set;
+
+	btr::BufferMemoryEx<CacheInfo> m_cache_info;
+};
+
+struct PipelineDescription
+{
+	std::shared_ptr<btr::Context> m_context;
+	std::shared_ptr<RenderPassModule> m_render_pass;
+};
+
+struct FontDescription
+{
+	std::string filename;
+	uvec2 m_glyph_size;
+};
+struct Font : std::enable_shared_from_this<Font>
+{
+	Font(const FontDescription& font_desc)
 	{
+		m_description = font_desc;
+
+		FT_New_Face(sFont::Order().m_library, (btr::getResourceAppPath() + "font\\" + font_desc.filename).c_str(), 0, &m_face);
+		FT_Set_Pixel_Sizes(m_face, font_desc.m_glyph_size.x, font_desc.m_glyph_size.y);
+		FT_Select_Charmap(m_face, FT_ENCODING_UNICODE);
+	}
+
+	~Font()
+	{
+		FT_Done_Face(m_face);
+	}
+
+	GlyphCache makeCache(const std::shared_ptr<btr::Context> context, const GlyphCacheDescription& cache_desc)
+	{
+		GlyphCache cache;
 		vk::ImageCreateInfo image_info;
 		image_info.imageType = vk::ImageType::e2D;
 		image_info.format = vk::Format::eR8Unorm;
@@ -213,16 +258,18 @@ struct GlyphCache
 		image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst;
 		image_info.sharingMode = vk::SharingMode::eExclusive;
 		image_info.initialLayout = vk::ImageLayout::eUndefined;
-		image_info.extent = { font_x* 64, font_y, 1 };
-		m_image_raster_cache = context->m_device->createImageUnique(image_info);
+		image_info.extent.width = (m_description.m_glyph_size * cache_desc.m_glyph_num).x;
+		image_info.extent.height = (m_description.m_glyph_size * 1).y;
+		image_info.extent.depth = 1;
+		cache.m_image_raster_cache = context->m_device->createImageUnique(image_info);
 
-		vk::MemoryRequirements memory_request = context->m_device->getImageMemoryRequirements(m_image_raster_cache.get());
+		vk::MemoryRequirements memory_request = context->m_device->getImageMemoryRequirements(cache.m_image_raster_cache.get());
 		vk::MemoryAllocateInfo memory_alloc_info;
 		memory_alloc_info.allocationSize = memory_request.size;
 		memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(context->m_gpu.getHandle(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-		m_memory_raster_cache = context->m_device->allocateMemoryUnique(memory_alloc_info);
-		context->m_device->bindImageMemory(m_image_raster_cache.get(), m_memory_raster_cache.get(), 0);
+		cache.m_memory_raster_cache = context->m_device->allocateMemoryUnique(memory_alloc_info);
+		context->m_device->bindImageMemory(cache.m_image_raster_cache.get(), cache.m_memory_raster_cache.get(), 0);
 
 		vk::ImageSubresourceRange subresourceRange;
 		subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
@@ -239,12 +286,12 @@ struct GlyphCache
 		view_info.components.a = vk::ComponentSwizzle::eR;
 		view_info.flags = vk::ImageViewCreateFlags();
 		view_info.format = image_info.format;
-		view_info.image = m_image_raster_cache.get();
+		view_info.image = cache.m_image_raster_cache.get();
 		view_info.subresourceRange = subresourceRange;
-		m_image_view_raster_cache = context->m_device->createImageViewUnique(view_info);
+		cache.m_image_view_raster_cache = context->m_device->createImageViewUnique(view_info);
 
 		vk::ImageMemoryBarrier init_barrier;
-		init_barrier.image = m_image_raster_cache.get();
+		init_barrier.image = cache.m_image_raster_cache.get();
 		init_barrier.oldLayout = vk::ImageLayout::eUndefined;
 		init_barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
 		init_barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
@@ -253,22 +300,23 @@ struct GlyphCache
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { init_barrier });
 
 		{
-			btr::BufferMemoryDescriptorEx<CacheInfo> desc;
+			btr::BufferMemoryDescriptorEx<GlyphCache::CacheInfo> desc;
 			desc.element_num = 1;
-			m_cache_info = context->m_uniform_memory.allocateMemory(desc);
+			cache.m_cache_info = context->m_uniform_memory.allocateMemory(desc);
 
-			CacheInfo info;
-			info.m_glyph_size = uvec2(font_x, font_y);
-			info.m_glyph_tex_size = uvec2(64 * font_x, font_y);
-			cmd.updateBuffer<CacheInfo>(m_cache_info.getInfo().buffer, m_cache_info.getInfo().offset, info);
+			GlyphCache::CacheInfo info;
+			info.m_glyph_size = m_description.m_glyph_size;
+			info.m_glyph_tex_size = m_description.m_glyph_size * cache_desc.m_glyph_num;
+			cmd.updateBuffer<GlyphCache::CacheInfo>(cache.m_cache_info.getInfo().buffer, cache.m_cache_info.getInfo().offset, info);
+
+			cache.m_glyph_info.resize(m_description.m_glyph_size.x*m_description.m_glyph_size.y);
 		}
 		{
-
-			m_descriptor_set = btr::Descriptor::allocateDescriptorSet(context, context->m_descriptor_pool.get(), sFont::Order().m_descriptor_set_layout[sFont::DESCRIPTOR_SET_LAYOUT_RASTER].get());
+			cache.m_descriptor_set = btr::Descriptor::allocateDescriptorSet(context, context->m_descriptor_pool.get(), sFont::Order().m_descriptor_set_layout[sFont::DESCRIPTOR_SET_LAYOUT_RASTER].get());
 
 			vk::DescriptorImageInfo images[] = {
 				vk::DescriptorImageInfo()
-				.setImageView(m_image_view_raster_cache.get())
+				.setImageView(cache.m_image_view_raster_cache.get())
 				.setSampler(sGraphicsResource::Order().getSampler(sGraphicsResource::BASIC_SAMPLER_POINT))
 				.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
 			};
@@ -279,29 +327,107 @@ struct GlyphCache
 				.setDescriptorCount(array_length(images))
 				.setPImageInfo(images)
 				.setDstBinding(0)
-				.setDstSet(m_descriptor_set.get()),
+				.setDstSet(cache.m_descriptor_set.get()),
 			};
 			context->m_device->updateDescriptorSets(write_desc.size(), write_desc.begin(), 0, {});
 		}
-
+		return cache;
 	}
-	std::array<GlyphInfo, 64> m_glyph_info;
-	vk::UniqueImage m_image_raster_cache;
-	vk::UniqueImageView m_image_view_raster_cache;
-	vk::UniqueDeviceMemory m_memory_raster_cache;
-	vk::UniqueDescriptorSet	m_descriptor_set;
 
-	btr::BufferMemoryEx<CacheInfo> m_cache_info;
-};
+	TextData makeRender(const std::shared_ptr<btr::Context> context, const std::u32string& text, GlyphCache& cache)
+	{
+		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+		auto& glyph = m_face->glyph;
+		TextData data;
+		std::vector<GlyphInfo> infos(text.size());
 
-struct PipelineDescription
-{
-	std::shared_ptr<btr::Context> m_context;
-	std::shared_ptr<RenderPassModule> m_render_pass;
+		uint32_t offset = 0;
+		for (uint32_t i = 0; i < infos.size(); i++)
+		{
+			auto char_index = FT_Get_Char_Index(m_face, text[i]);
+
+			GlyphInfo* info = nullptr;
+			for (uint32_t n = 0; n < cache.m_glyph_info.size(); n++)
+			{
+				if (cache.m_glyph_info[n].m_char_index == char_index)
+				{
+					info = &cache.m_glyph_info[n];
+					break;
+				}
+			}
+
+			if (!info)
+			{
+				// “o˜^
+				// @todo copy‚ð•¡”‰ñs‚Á‚Ä‚¢‚é‚Ì‚Å–³‘Ê‚ª‘½‚¢
+				for (uint32_t n = 0; n < cache.m_glyph_info.size(); n++)
+				{
+					if (cache.m_glyph_info[n].m_char_index == 0)
+					{
+						info = &cache.m_glyph_info[n];
+						info->m_cache_index = n;
+						info->m_char_index = char_index;
+
+						auto error = FT_Load_Glyph(m_face, char_index, FT_LOAD_NO_HINTING);
+						assert_ft(error);
+						error = FT_Render_Glyph(glyph, FT_RENDER_MODE_NORMAL);
+						assert_ft(error);
+						auto& bitmap = glyph->bitmap;
+						info->m_size = uvec2(bitmap.width, bitmap.rows);
+						info->m_offset = uvec2(glyph->bitmap_left, glyph->bitmap_top);
+
+						btr::BufferMemoryDescriptorEx<unsigned char> v_desc;
+						v_desc.element_num = bitmap.rows*bitmap.width;
+						v_desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
+						auto staging = context->m_staging_memory.allocateMemory(v_desc);
+						memcpy(staging.getMappedPtr(), glyph->bitmap.buffer, staging.getDataSizeof() * v_desc.element_num);
+
+						vk::BufferImageCopy copy;
+						copy.bufferOffset = staging.getInfo().offset;
+						copy.imageOffset = vk::Offset3D(n * m_description.m_glyph_size.x, 0, 0);
+						copy.imageExtent = vk::Extent3D(bitmap.width, bitmap.rows, 1);
+						copy.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+						copy.imageSubresource.baseArrayLayer = 0;
+						copy.imageSubresource.layerCount = 1;
+						copy.imageSubresource.mipLevel = 0;
+
+						cmd.copyBufferToImage(staging.getInfo().buffer, cache.m_image_raster_cache.get(), vk::ImageLayout::eTransferDstOptimal, { copy });
+						break;
+					}
+				}
+			}
+			infos[i] = *info;
+			infos[i].m_begin.x = offset;
+			infos[i].m_begin += uvec2(info->m_offset.x, -info->m_offset.y);
+			offset += static_cast<int>(glyph->metrics.horiAdvance / 64.0);
+		}
+
+		{
+			vk::ImageMemoryBarrier to_shader_read_barrier;
+			to_shader_read_barrier.dstQueueFamilyIndex = context->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
+			to_shader_read_barrier.image = cache.m_image_raster_cache.get();
+			to_shader_read_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
+			to_shader_read_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+			to_shader_read_barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+			to_shader_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+			to_shader_read_barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+			to_shader_read_barrier.subresourceRange.baseArrayLayer = 0;
+			to_shader_read_barrier.subresourceRange.baseMipLevel = 0;
+			to_shader_read_barrier.subresourceRange.layerCount = 1;
+			to_shader_read_barrier.subresourceRange.levelCount = 1;
+
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
+		}
+		data.m_info = std::move(infos);
+		return data;
+	}
+
+	FontDescription m_description;
+	FT_Face m_face;
 };
-struct FontRenderPipeline
+struct FontRenderer
 {
-	FontRenderPipeline(const std::shared_ptr<btr::Context>& context, const PipelineDescription& desc)
+	FontRenderer(const std::shared_ptr<btr::Context>& context, const PipelineDescription& desc)
 	{
 		m_context = context;
 		m_pipeline_description = desc;
@@ -430,20 +556,11 @@ struct FontRenderPipeline
 
 		}
 
-		FT_New_Face(sFont::Order().m_library, (btr::getResourceAppPath() + "font\\" + "mgenplus-1c-black.ttf").c_str(), 0, &m_face);
-		FT_Set_Pixel_Sizes(m_face, font_x, font_y);
-		FT_Select_Charmap(m_face, FT_ENCODING_UNICODE);
-
-	}
-	~FontRenderPipeline()
-	{
-		FT_Done_Face(m_face);
-
 	}
 
-	void draw(vk::CommandBuffer& cmd, GlyphCache& cache, const TextData& data)
+	void draw(vk::CommandBuffer& cmd, const Font& font, GlyphCache& cache, const TextData& data)
 	{
-		auto& glyph = m_face->glyph;
+		auto& glyph = font.m_face->glyph;
 
 		{
 			btr::BufferMemoryDescriptorEx<GlyphInfo> desc;
@@ -508,93 +625,6 @@ struct FontRenderPipeline
 
 	}
 
-	TextData makeRender(const std::u32string& text, GlyphCache& cache)
-	{
-		auto cmd = m_context->m_cmd_pool->allocCmdTempolary(0);
-		auto& glyph = m_face->glyph;
-		TextData data;
-		std::vector<GlyphInfo> infos(text.size());
-
-		uint32_t offset = 0;
-		for (uint32_t i = 0; i < infos.size(); i++)
-		{
-			auto char_index = FT_Get_Char_Index(m_face, text[i]);
-
-			GlyphInfo* info = nullptr;
-			for (uint32_t n = 0; n < cache.m_glyph_info.size(); n++)
-			{
-				if (cache.m_glyph_info[n].m_char_index == char_index)
-				{
-					info = &cache.m_glyph_info[n];
-					break;
-				}
-			}
-
-			if (!info)
-			{
-				// “o˜^
-				// @todo copy‚ð•¡”‰ñs‚Á‚Ä‚¢‚é‚Ì‚Å–³‘Ê‚ª‘½‚¢
-				for (uint32_t n = 0; n < cache.m_glyph_info.size(); n++)
-				{
-					if (cache.m_glyph_info[n].m_char_index == 0)
-					{
-						info = &cache.m_glyph_info[n];
-						info->m_cache_index = n;
-						info->m_char_index = char_index;
-
-						auto error = FT_Load_Glyph(m_face, char_index, FT_LOAD_NO_HINTING);
-						assert_ft(error);
-						error = FT_Render_Glyph(glyph, FT_RENDER_MODE_NORMAL);
-						assert_ft(error);
-						auto& bitmap = glyph->bitmap;
-						info->m_size = uvec2(bitmap.width, bitmap.rows);
-						info->m_offset = uvec2(glyph->bitmap_left, glyph->bitmap_top);
-
-						btr::BufferMemoryDescriptorEx<unsigned char> v_desc;
-						v_desc.element_num = bitmap.rows*bitmap.width;
-						v_desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
-						auto staging = m_context->m_staging_memory.allocateMemory(v_desc);
-						memcpy(staging.getMappedPtr(), glyph->bitmap.buffer, staging.getDataSizeof() * v_desc.element_num);
-
-						vk::BufferImageCopy copy;
-						copy.bufferOffset = staging.getInfo().offset;
-						copy.imageOffset = vk::Offset3D(n * font_x, 0, 0);
-						copy.imageExtent = vk::Extent3D(bitmap.width, bitmap.rows, 1);
-						copy.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
-						copy.imageSubresource.baseArrayLayer = 0;
-						copy.imageSubresource.layerCount = 1;
-						copy.imageSubresource.mipLevel = 0;
-
-						cmd.copyBufferToImage(staging.getInfo().buffer, cache.m_image_raster_cache.get(), vk::ImageLayout::eTransferDstOptimal, { copy });
-						break;
-					}
-				}
-			}
-			infos[i] = *info;
-			infos[i].m_begin.x = offset;
-			infos[i].m_begin += uvec2(info->m_offset.x, -info->m_offset.y);
-			offset += static_cast<int>(glyph->metrics.horiAdvance / 64.0);
-		}
-
-		{
-			vk::ImageMemoryBarrier to_shader_read_barrier;
-			to_shader_read_barrier.dstQueueFamilyIndex = m_context->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
-			to_shader_read_barrier.image = cache.m_image_raster_cache.get();
-			to_shader_read_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
-			to_shader_read_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-			to_shader_read_barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-			to_shader_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-			to_shader_read_barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-			to_shader_read_barrier.subresourceRange.baseArrayLayer = 0;
-			to_shader_read_barrier.subresourceRange.baseMipLevel = 0;
-			to_shader_read_barrier.subresourceRange.layerCount = 1;
-			to_shader_read_barrier.subresourceRange.levelCount = 1;
-
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
-		}
-		data.m_info = std::move(infos);
-		return data;
-	}
 	enum Pipeline
 	{
 		Pipeline_outline,
@@ -604,7 +634,6 @@ struct FontRenderPipeline
 	std::array<vk::UniquePipeline, Pipeline_num> m_pipeline;
 	PipelineDescription m_pipeline_description;
 
-	FT_Face m_face;
 	std::shared_ptr<btr::Context> m_context;
 };
 

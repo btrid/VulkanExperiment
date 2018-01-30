@@ -65,9 +65,17 @@ int main()
 	PipelineDescription p_desc;
 	p_desc.m_context = context;
 	p_desc.m_render_pass = app.m_window->getRenderBackbufferPass();
-	FontRenderPipeline font_renderer(context, p_desc);
-	GlyphCache cache(context);
-	auto text_data = font_renderer.makeRender(U"Windowsでコンピューターの世界が広がります。1234567890.:,;'\"(!?)+-*/=", cache);
+	FontRenderer font_renderer(context, p_desc);
+	FontDescription font_desc;
+	font_desc.filename = "mgenplus-1c-black.ttf";
+	font_desc.m_glyph_size = uvec2(36, 36);
+	Font font(font_desc);
+
+	GlyphCacheDescription cache_desc;
+	cache_desc.m_glyph_num = 64;
+	auto cache = font.makeCache(context, cache_desc);
+	auto text_data = font.makeRender(context, U"てすとおおおおおおおおおおおををを!!!11", cache);
+//	auto text_data = font_renderer.makeRender(U"Windowsでコンピューターの世界が広がります。1234567890.:,;'\"(!?)+-*/=", cache);
 	//	auto text_data = font_renderer.makeRender(U"テスト", cache);
 	app.setup();
 	while (true)
@@ -114,7 +122,7 @@ int main()
 			}
 
 			cmds[3] = context->m_cmd_pool->allocCmdOnetime(0);
-			font_renderer.draw(cmds[3], cache, text_data);
+			font_renderer.draw(cmds[3], font, cache, text_data);
 			cmds[3].end();
 			sync_point.wait();
 			app.submit(std::move(cmds));
