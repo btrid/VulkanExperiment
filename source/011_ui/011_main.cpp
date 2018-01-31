@@ -77,10 +77,9 @@ int main()
 
 	TextRequest request;
 	request.m_area_size = uvec2(100);
-	request.m_text = U"てすとおおおおおおおおおおおををを!!!11";
+	request.m_text = U"Windowsでコンピューターの世界が広がります。1234567890.:,;'\"(!?)+-*/=";
 	request.m_vertical = false;
 	auto text_data = font.makeRender(context, request, cache);
-//	auto text_data = font_renderer.makeRender(U"Windowsでコンピューターの世界が広がります。1234567890.:,;'\"(!?)+-*/=", cache);
 	//	auto text_data = font_renderer.makeRender(U"テスト", cache);
 	app.setup();
 	while (true)

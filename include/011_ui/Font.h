@@ -344,6 +344,7 @@ struct Font : std::enable_shared_from_this<Font>
 
 	std::unique_ptr<TextData> makeRender(const std::shared_ptr<btr::Context> context, const TextRequest& request, std::unique_ptr<GlyphCache>& cache)
 	{
+		
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 		auto& glyph = m_face->glyph;
 		std::unique_ptr<TextData> data = std::make_unique<TextData>();
@@ -377,7 +378,7 @@ struct Font : std::enable_shared_from_this<Font>
 						info->m_cache_index = n;
 						info->m_char_index = char_index;
 
-						auto error = FT_Load_Glyph(m_face, char_index, FT_LOAD_NO_HINTING);
+						auto error = FT_Load_Glyph(m_face, char_index, FT_LOAD_NO_HINTING /*| FT_LOAD_VERTICAL_LAYOUT*/);
 						assert_ft(error);
 						error = FT_Render_Glyph(glyph, FT_RENDER_MODE_NORMAL);
 						assert_ft(error);
@@ -409,26 +410,28 @@ struct Font : std::enable_shared_from_this<Font>
 			if (!request.m_vertical)
 			{
 				advance.x = glyph->metrics.horiAdvance / 64;
+				// ‰üs
+				if (offset.x + info->m_offset.x >= request.m_area_size.x)
+				{
+					offset.x = request.m_area_pos.x;
+					offset.y += m_description.m_glyph_size.y;
+				}
 			}
 			else
 			{
 				advance.y = glyph->metrics.vertAdvance / 64;
+				if (offset.y - info->m_offset.y >= request.m_area_size.y)
+				{
+					offset.x -= m_description.m_glyph_size.x;
+					offset.y = request.m_area_pos.y;
+				}
 			}
 
+			// •¶Žš‚ð‘‚­
 			infos[i] = *info;
 			infos[i].m_begin = offset;
 			infos[i].m_begin += uvec2(info->m_offset.x, -info->m_offset.y);
 			offset += advance;
-
-			// ‰üs
-			if (infos[i].m_begin.x >= request.m_area_size.x)
-			{
-				offset.x = request.m_area_pos.x;
-				offset.y += m_description.m_glyph_size.y;
-
-				infos[i].m_begin = offset;
-				infos[i].m_begin += uvec2(info->m_offset.x, -info->m_offset.y);
-			}
 		}
 
 		{
