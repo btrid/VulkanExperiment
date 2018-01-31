@@ -74,7 +74,12 @@ int main()
 	GlyphCacheDescription cache_desc;
 	cache_desc.m_glyph_num = 64;
 	auto cache = font.makeCache(context, cache_desc);
-	auto text_data = font.makeRender(context, U"てすとおおおおおおおおおおおををを!!!11", cache);
+
+	TextRequest request;
+	request.m_area_size = uvec2(100);
+	request.m_text = U"てすとおおおおおおおおおおおををを!!!11";
+	request.m_vertical = false;
+	auto text_data = font.makeRender(context, request, cache);
 //	auto text_data = font_renderer.makeRender(U"Windowsでコンピューターの世界が広がります。1234567890.:,;'\"(!?)+-*/=", cache);
 	//	auto text_data = font_renderer.makeRender(U"テスト", cache);
 	app.setup();
