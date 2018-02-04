@@ -14,6 +14,7 @@ struct UIGlobal
 struct UIScene
 {
 	uint32_t m_is_disable_order; // ëÄçÏñ≥å¯íÜ
+	uint32_t m_parent_user_id;
 };
 struct UIInfo
 {
@@ -248,12 +249,16 @@ struct UI
 	};
 	std::string m_name;
 	std::array<ResourceTexture, UI::TEXTURE_MAX> m_textures;
+
+	vk::UniqueDescriptorSet m_descriptor_set;
+
 	btr::BufferMemoryEx<vk::DrawIndirectCommand> m_draw_cmd;
 	btr::BufferMemoryEx<UIInfo> m_info;
 	btr::BufferMemoryEx<UIObject> m_object;
 	btr::BufferMemoryEx<UIBoundary> m_boundary;
 	btr::BufferMemoryEx<UIAnimePlayInfo> m_play_info;
 	btr::BufferMemoryEx<uint32_t> m_user_id;
+	btr::BufferMemoryEx<UIWork> m_tree;
 	btr::BufferMemoryEx<UIEvent> m_event;
 	btr::BufferMemoryEx<UIScene> m_scene;
 
@@ -263,12 +268,33 @@ struct UI
 	vk::UniqueImageView m_image_view;
 	vk::UniqueDeviceMemory m_ui_texture_memory;
 
+	std::shared_ptr<UI> m_parent;
+	uint32_t m_parent_user_id;
+
+	void setParent(const std::shared_ptr<UI>& parent, uint32_t parent_user_id)
+	{
+		m_parent = parent;
+		m_parent_user_id = parent_user_id;
+	}
+	UI()
+		: m_parent_user_id(0)
+	{
+
+	}
 	~UI()
 	{
 		sDeleter::Order().enque(std::move(m_ui_image), std::move(m_image_view), std::move(m_ui_texture_memory));
 	}
 };
+struct UIInstance
+{
+	std::shared_ptr<UI> m_ui;
 
+	std::shared_ptr<UIInstance> m_parent;
+	uint32_t m_parent_user_id;
+	btr::BufferMemoryEx<UIWork> m_tree;
+
+};
 struct sUISystem : SingletonEx<sUISystem>
 {
 	friend SingletonEx<sUISystem>;

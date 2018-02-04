@@ -410,9 +410,9 @@ struct Font : std::enable_shared_from_this<Font>
 			if (!request.m_vertical)
 			{
 				advance.x = glyph->metrics.horiAdvance / 64;
-				// 改行
 				if (offset.x + info->m_offset.x >= request.m_area_size.x)
 				{
+					// 改行
 					offset.x = request.m_area_pos.x;
 					offset.y += m_description.m_glyph_size.y;
 				}
@@ -422,12 +422,13 @@ struct Font : std::enable_shared_from_this<Font>
 				advance.y = glyph->metrics.vertAdvance / 64;
 				if (offset.y - info->m_offset.y >= request.m_area_size.y)
 				{
+					// 改行
 					offset.x -= m_description.m_glyph_size.x;
 					offset.y = request.m_area_pos.y;
 				}
 			}
 
-			// 文字を書く
+			// 文字を配置
 			infos[i] = *info;
 			infos[i].m_begin = offset;
 			infos[i].m_begin += uvec2(info->m_offset.x, -info->m_offset.y);

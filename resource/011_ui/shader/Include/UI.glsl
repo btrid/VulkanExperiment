@@ -112,7 +112,6 @@ layout(std430, set=USE_UI, binding=5) restrict buffer UIAnimePlayBuffer
 {
 	UIAnimePlayInfo b_anime_play_info[8];
 };
-
 layout(std430, set=USE_UI, binding=6) restrict buffer UIUserIDBuffer
 {
 	uint b_user_id[];
@@ -121,13 +120,24 @@ layout(std430, set=USE_UI, binding=7) restrict buffer UIEventBuffer
 {
 	UIEvent b_event[];
 };
-
 layout(std430, set=USE_UI, binding=8) restrict buffer UISceneBuffer
 {
 	UIScene b_scene;
 };
+layout(std430, set=USE_UI, binding=9) restrict buffer UITreeBuffer
+{
+	UIWork b_tree[];
+};
+layout(std430, set=USE_UI, binding=10) restrict buffer UIParentUserIDBuffer
+{
+	uint b_parent_user_id[];
+};
+layout(std430, set=USE_UI, binding=11) restrict buffer UIParentTreeBuffer
+{
+	UIWork b_parent_tree[];
+};
 
-layout(set=USE_UI, binding=9) uniform sampler2D tDiffuse[32];
+layout(set=USE_UI, binding=12) uniform sampler2D tDiffuse[32];
 
 #endif
 

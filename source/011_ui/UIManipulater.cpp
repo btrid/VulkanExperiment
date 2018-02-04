@@ -3,10 +3,74 @@
 #include <applib/App.h>
 #include <011_ui/Font.h>
 
-void UIManipulater::execute()
+
+void UIManipulater::addnode(int32_t parent)
 {
-	auto ui_resource = m_ui_resource;
-	auto ui_anime_resource = m_ui_anime_resource;
+	if (parent == -1)
+	{
+		return;
+	}
+//	auto index = m_object_counter++;
+	auto& parent_node = m_ui_resource.m_object[parent];
+	if (parent_node.m_child_index == -1) {
+		parent_node.m_child_index = m_ui_resource.m_object.size();
+	}
+	else
+	{
+		auto* child_node = &m_ui_resource.m_object[parent_node.m_child_index];
+		for (; child_node->m_sibling_index != -1; child_node = &m_ui_resource.m_object[child_node->m_sibling_index])
+		{
+		}
+
+		child_node->m_sibling_index = m_ui_resource.m_object.size();
+	}
+
+	UIObject new_node;
+	new_node.m_position_local;
+	new_node.m_size_local = vec2(50, 50);
+	new_node.m_depth = parent_node.m_depth + 1;
+	new_node.m_color_local = vec4(1.f);
+	new_node.m_parent_index = parent;
+	new_node.m_sibling_index = -1;
+	new_node.m_child_index = -1;
+	new_node.m_flag = 0;
+	new_node.m_flag |= is_visible;
+	new_node.m_flag |= is_enable;
+	new_node.m_user_id = 0;
+	{
+		// 名前付け
+		char buf[256] = {};
+//		sprintf_s(buf, "%s_%05d", m_object_tool[parent].m_name.data(), index);
+//		strcpy_s(m_object_tool[index].m_name.data(), m_object_tool[index].m_name.size(), buf);
+	}
+
+	m_ui_resource.m_object.push_back(new_node);
+}
+
+
+void sUIManipulater::execute(vk::CommandBuffer cmd)
+{
+// 	auto ui_resource = m_ui_resource;
+// 	auto ui_anime_resource = m_ui_anime_resource;
+
+
+	// 	if (m_is_save)
+	// 	{
+	// 		m_is_save = false;
+	// 		std::ofstream os(btr::getResourceAppPath() + "ui\\" + "data.json");
+	// 		{
+	// 			cereal::JSONOutputArchive o_archive(os);
+	// 			o_archive(ui_resource);
+	// 		}
+	// 	}
+	// 	ui_resource.reload(m_context, m_ui);
+	// 	if (m_request_update_texture) 
+	// 	{
+	// 		m_request_update_texture = false;
+	// 		auto cmd = m_context->m_cmd_pool->allocCmdTempolary(0);
+	// 		m_ui->m_textures = ui_resource.loadTexture(m_context, cmd);
+	// 	}
+	// 	m_ui->m_anime_list[0] = m_ui_anime_resource.make(m_context);
 
 	{
 		auto func = [this]()
@@ -35,23 +99,65 @@ void UIManipulater::execute()
 						}
 					}
 
-					ImGui::MenuItem("Save", NULL, &m_is_save);
-					ImGui::MenuItem("Load", NULL, &m_is_load);
+					if (ImGui::MenuItem("New"))
+					{
+						m_manip_list.emplace_back(std::make_shared<UIManipulater>(m_context));
+					}
+					if (ImGui::MenuItem("New Anime"))
+					{
+						auto anime = std::make_shared<rUIAnime>();
+						anime->m_name = "New Anime";
+						m_anime_list.emplace_back(anime);
+					}
+
+//					ImGui::MenuItem("Save", NULL, &m_is_save);
+// 					if(ImGui::MenuItem("Load"))
+// 					{
+// 						m_is_load = false;
+// 						std::shared_ptr<UIManipulater> manip;
+// 						std::ifstream is(btr::getResourceAppPath() + "ui\\" + "data.json");
+// 						{
+// 							cereal::JSONInputArchive i_archive(is);
+// 							i_archive(m_ui_resource);
+// 							m_request_update_texture = true;
+// 						}
+// 
+// 					}
 					ImGui::EndPopup();
+				}
+
+				for (auto& manip : m_manip_list)
+				{
+					bool selected = false;
+					ImGui::Selectable(manip->m_ui->m_name.c_str(), &selected);
+					if (selected)
+					{
+						m_manip = manip;
+					}
+				}
+				ImGui::Separator();
+				for (auto& anime : m_anime_list)
+				{
+					bool selected = false;
+					ImGui::Selectable(anime->m_name.c_str(), &selected);
+					if (selected)
+					{
+						m_anime = anime;
+					}
 				}
 
 				ImGui::End();
 			}
-			if (m_is_load)
-			{
-				m_is_load = false;
-				std::ifstream is(btr::getResourceAppPath() + "ui\\" + "data.json");
-				{
-					cereal::JSONInputArchive i_archive(is);
-					i_archive(m_ui_resource);
-					m_request_update_texture = true;
-				}
-			}
+	// 		if (m_is_load)
+	// 		{
+	// 			m_is_load = false;
+	// 			std::ifstream is(btr::getResourceAppPath() + "ui\\" + "data.json");
+	// 			{
+	// 				cereal::JSONInputArchive i_archive(is);
+	// 				i_archive(m_ui_resource);
+	// 				m_request_update_texture = true;
+	// 			}
+	// 		}
 #else
 			ImGui::ShowTestWindow();
 #endif
@@ -60,69 +166,56 @@ void UIManipulater::execute()
 
 	}
 
-	if (m_is_show_manip_window)
+	if (m_manip && m_is_show_manip_window)
 	{
 		auto func = [this]()
 		{
-			manipWindow();
+			manipWindow(m_manip);
 		};
 		app::g_app_instance->m_window->getImguiPipeline()->pushImguiCmd(std::move(func));
 	}
-	if (m_is_show_tree_window)
+	if (m_manip && m_is_show_tree_window)
 	{
 		auto func = [this]()
 		{
-			treeWindow();
-		};
-		app::g_app_instance->m_window->getImguiPipeline()->pushImguiCmd(std::move(func));
-	}
-
-	if (m_is_show_anime_window)
-	{
-		auto func = [this]()
-		{
-			animeWindow();
+			treeWindow(m_manip);
 		};
 		app::g_app_instance->m_window->getImguiPipeline()->pushImguiCmd(std::move(func));
 	}
 
-	if (m_is_show_texture_window)
+	if (m_anime && m_is_show_anime_window)
 	{
 		auto func = [this]()
 		{
-			textureWindow();
+			animeWindow(m_anime);
 		};
 		app::g_app_instance->m_window->getImguiPipeline()->pushImguiCmd(std::move(func));
 	}
 
-	if (m_is_save)
+	if (m_manip && m_is_show_texture_window)
 	{
-		m_is_save = false;
-		std::ofstream os(btr::getResourceAppPath() + "ui\\" + "data.json");
+		auto func = [this]()
 		{
-			cereal::JSONOutputArchive o_archive(os);
-			o_archive(ui_resource);
-		}
+			textureWindow(m_manip);
+		};
+		app::g_app_instance->m_window->getImguiPipeline()->pushImguiCmd(std::move(func));
 	}
-	ui_resource.reload(m_context, m_ui);
-	if (m_request_update_texture) 
+
+	for (auto& manip : m_manip_list)
 	{
-		m_request_update_texture = false;
-		auto cmd = m_context->m_cmd_pool->allocCmdTempolary(0);
-		m_ui->m_textures = ui_resource.loadTexture(m_context, cmd);
+		sUISystem::Order().addRender(manip->m_ui);
 	}
-	m_ui->m_anime_list[0] = m_ui_anime_resource.make(m_context);
-	sUISystem::Order().addRender(m_ui);
+
 }
 
-void UIManipulater::manipWindow()
+void sUIManipulater::manipWindow(std::shared_ptr<UIManipulater>& manip)
 {
 	ImGui::SetNextWindowSize(ImVec2(200.f, 500.f), ImGuiCond_Once);
 	if (ImGui::Begin("Manip", &m_is_show_manip_window))
 	{
 		if (m_last_select_index >= 0)
 		{
-			auto& obj = m_ui_resource.m_object[m_last_select_index];
+			auto& obj = manip->m_ui_resource.m_object[m_last_select_index];
 			ImGui::CheckboxFlags("IsSprite", &obj.m_flag, is_sprite);
 			m_request_update_boundary = ImGui::CheckboxFlags("IsBoundary", &obj.m_flag, is_boundary);
 			ImGui::CheckboxFlags("IsErase", &obj.m_flag, is_trash);
@@ -145,95 +238,93 @@ void UIManipulater::manipWindow()
 	}
 }
 
-void UIManipulater::textureWindow()
+void sUIManipulater::textureWindow(std::shared_ptr<UIManipulater>& manip)
 {
 	ImGui::SetNextWindowSize(ImVec2(400.f, 200.f), ImGuiCond_Once);
 	if (ImGui::Begin("hoge", &m_is_show_texture_window, ImGuiWindowFlags_HorizontalScrollbar))
 	{
-		for (uint32_t i = 0; i < m_ui_resource.m_texture_name.size(); i++)
+		for (uint32_t i = 0; i < manip->m_ui_resource.m_texture_name.size(); i++)
 		{
 			char label[16] = {};
 			sprintf_s(label, "texture %2d", i);
 
 			char buf[64] = {};
-			sprintf_s(buf, m_ui_resource.m_texture_name[i].c_str());
-			ImGui::InputText(label, buf, sizeof(buf)-1);
-			m_ui_resource.m_texture_name[i] = buf;
+			sprintf_s(buf, manip->m_ui_resource.m_texture_name[i].c_str());
+			ImGui::InputText(label, buf, sizeof(buf) - 1);
+			manip->m_ui_resource.m_texture_name[i] = buf;
 		}
 
 		m_request_update_texture = ImGui::Button("texture_modifi");
 
 		ImGui::End();
 	}
-
 }
 
-void UIManipulater::treeWindow()
+void sUIManipulater::treeWindow(std::shared_ptr<UIManipulater>& manip)
 {
 	ImGui::SetNextWindowSize(ImVec2(400.f, 200.f), ImGuiCond_Once);
 	if (ImGui::Begin("tree", &m_is_show_tree_window))
 	{
 		if (ImGui::Button("addchild"))
 		{
-			addnode(m_last_select_index);
+			manip->addnode(m_last_select_index);
 		}
-		treeWindow(0);
+		treeWindow(manip, 0);
 		ImGui::End();
 	}
 }
-void UIManipulater::treeWindow(int32_t index)
+
+void sUIManipulater::treeWindow(std::shared_ptr<UIManipulater>& manip, int32_t index)
 {
 	if (index == -1) { return; }
-	bool is_open = ImGui::TreeNodeEx("objtree", m_last_select_index == index ? ImGuiTreeNodeFlags_Selected | ImGuiTreeNodeFlags_OpenOnArrow : 0, "%d", index );
+	bool is_open = ImGui::TreeNodeEx("objtree", m_last_select_index == index ? ImGuiTreeNodeFlags_Selected | ImGuiTreeNodeFlags_OpenOnArrow : 0, "%d", index);
 	if (ImGui::IsItemClicked(0)) {
 		m_last_select_index = index;
 	}
 	if (is_open)
 	{
-		treeWindow(m_ui_resource.m_object[index].m_child_index);
+		treeWindow(manip, manip->m_ui_resource.m_object[index].m_child_index);
 		ImGui::TreePop();
 	}
-	treeWindow(m_ui_resource.m_object[index].m_sibling_index);
-
+	treeWindow(manip, manip->m_ui_resource.m_object[index].m_sibling_index);
 }
 
-void UIManipulater::animeWindow()
+void sUIManipulater::animeWindow(std::shared_ptr<rUIAnime>& anime)
 {
 	// アニメーションのウインドウ
 	ImGui::SetNextWindowPos(ImVec2(10.f, 220.f), ImGuiCond_Once);
 	ImGui::SetNextWindowSize(ImVec2(800.f, 200.f), ImGuiCond_Once);
 	if (ImGui::Begin("anime", &m_is_show_anime_window))
 	{
-// 		if (ImGui::SmallButton(m_anim_manip->m_is_playing ? "STOP" : "PLAY")) {
-// 			m_anim_manip->m_is_playing = !m_anim_manip->m_is_playing;
-// 		}
-//		ImGui::SameLine();
-// 		int fps = m_ui_anime_resource.m_info.m_target_frame;
-// 		ImGui::DragInt("Target FPS", &fps, 0.1f, 30, 300, "%3.f");
-// 		m_ui_anime_resource.m_info.m_target_frame = fps;
+		// 		if (ImGui::SmallButton(m_anim_manip->m_is_playing ? "STOP" : "PLAY")) {
+		// 			m_anim_manip->m_is_playing = !m_anim_manip->m_is_playing;
+		// 		}
+		//		ImGui::SameLine();
+		// 		int fps = m_ui_anime_resource.m_info.m_target_frame;
+		// 		ImGui::DragInt("Target FPS", &fps, 0.1f, 30, 300, "%3.f");
+		// 		m_ui_anime_resource.m_info.m_target_frame = fps;
 
-		int max_frame = m_ui_anime_resource.m_info.m_anime_max_frame;
+		int max_frame = anime->m_info.m_anime_max_frame;
 		ImGui::DragInt("Anime Frame", &max_frame, 0.1f, 30, 300, "%3.f");
-		m_ui_anime_resource.m_info.m_target_frame = max_frame;
+		anime->m_info.m_target_frame = max_frame;
 
 		ImGui::Separator();
 
-		if (m_last_select_index >= 0) {
-			animedataManip();
+		if (m_anime_index >= 0) {
+			animedataManip(anime);
 		}
 
 		ImGui::End();
 	}
-
 }
 
-void UIManipulater::animedataManip()
+void sUIManipulater::animedataManip(std::shared_ptr<rUIAnime>& anime)
 {
 	static int current_data_type;
 	const char* types[] = { "pos", "size", "color", "disable order" };
 	static_assert(array_length(types) == UIAnimeKeyInfo::type_max, "");
 	ImGui::Combo("anime data type", &current_data_type, types, array_length(types));
-	auto* anime_keys = m_ui_anime_resource.findKey((UIAnimeKeyInfo::type)current_data_type);
+	auto* anime_keys = anime->findKey((UIAnimeKeyInfo::type)current_data_type);
 	if (anime_keys)
 	{
 		auto& keys = anime_keys->m_data;
@@ -268,7 +359,7 @@ void UIManipulater::animedataManip()
 				};
 				if (ImGui::Selectable("Save"))
 				{
-					m_request_update_animation = true;
+					//					m_request_update_animation = true;
 				};
 				ImGui::EndPopup();
 			}
@@ -393,55 +484,10 @@ void UIManipulater::animedataManip()
 				new_data.m_value_i = 0;
 				new_data.m_flag = UIAnimeKeyData::is_enable;
 				new_key.m_data.push_back(new_data);
-				m_ui_anime_resource.m_key.push_back(new_key);
+				anime->m_key.push_back(new_key);
 			}
 			ImGui::EndPopup();
 		}
 
 	}
 }
-
-void UIManipulater::addnode(int32_t parent)
-{
-	if (parent == -1)
-	{
-		return;
-	}
-//	auto index = m_object_counter++;
-	auto& parent_node = m_ui_resource.m_object[parent];
-	if (parent_node.m_child_index == -1) {
-		parent_node.m_child_index = m_ui_resource.m_object.size();
-	}
-	else
-	{
-		auto* child_node = &m_ui_resource.m_object[parent_node.m_child_index];
-		for (; child_node->m_sibling_index != -1; child_node = &m_ui_resource.m_object[child_node->m_sibling_index])
-		{
-		}
-
-		child_node->m_sibling_index = m_ui_resource.m_object.size();
-	}
-
-	UIObject new_node;
-	new_node.m_position_local;
-	new_node.m_size_local = vec2(50, 50);
-	new_node.m_depth = parent_node.m_depth + 1;
-	new_node.m_color_local = vec4(1.f);
-	new_node.m_parent_index = parent;
-	new_node.m_sibling_index = -1;
-	new_node.m_child_index = -1;
-	new_node.m_flag = 0;
-	new_node.m_flag |= is_visible;
-	new_node.m_flag |= is_enable;
-	new_node.m_user_id = 0;
-	{
-		// 名前付け
-		char buf[256] = {};
-//		sprintf_s(buf, "%s_%05d", m_object_tool[parent].m_name.data(), index);
-//		strcpy_s(m_object_tool[index].m_name.data(), m_object_tool[index].m_name.size(), buf);
-	}
-
-	m_ui_resource.m_object.push_back(new_node);
-}
-
-

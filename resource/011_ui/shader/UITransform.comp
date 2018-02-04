@@ -31,5 +31,10 @@ void main()
 		}
 	}
 
+	if(b_object[index].m_user_id != 0)
+	{
+		b_tree[b_object[index].m_user_id] = b_work[index];
+	}
+
 }
 

@@ -92,9 +92,24 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context)
 			.setBinding(8),
 			vk::DescriptorSetLayoutBinding()
 			.setStageFlags(stage)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(9),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(stage)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(10),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(stage)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(11),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(stage)
 			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
 			.setDescriptorCount(UI::TEXTURE_MAX)
-			.setBinding(9),
+			.setBinding(12),
 		};
 		m_descriptor_set_layout = btr::Descriptor::createDescriptorSetLayout(context, binding);
 		m_descriptor_pool = btr::Descriptor::createDescriptorPool(context, binding, 100);
@@ -336,6 +351,9 @@ vk::CommandBuffer sUISystem::draw()
 				m_global.getInfo(),
 				ui->m_info.getInfo(),
 			};
+
+			auto parent_tree_buffer = ui->m_parent ? ui->m_parent->m_tree.getInfo() : ui->m_scene.getInfo();
+			auto parent_user_id_buffer = ui->m_parent ? ui->m_parent->m_user_id.getInfo() : ui->m_scene.getInfo();
 			vk::DescriptorBufferInfo storages[] = {
 				ui->m_object.getInfo(),
 				ui->m_boundary.isValid() ? ui->m_boundary.getInfo() : m_context->m_storage_memory.getDummyInfo(),
@@ -344,6 +362,9 @@ vk::CommandBuffer sUISystem::draw()
 				ui->m_user_id.getInfo(),
 				ui->m_scene.getInfo(),
 				ui->m_scene.getInfo(),
+				ui->m_tree.getInfo(),
+				parent_user_id_buffer,
+				parent_tree_buffer,
 			};
 			vk::DescriptorImageInfo textures[UI::TEXTURE_MAX];
 			auto default_texture = vk::DescriptorImageInfo(
@@ -376,7 +397,7 @@ vk::CommandBuffer sUISystem::draw()
 				.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
 				.setDescriptorCount(array_length(textures))
 				.setPImageInfo(textures)
-				.setDstBinding(9)
+				.setDstBinding(12)
 				.setDstSet(descriptor_set),
 			};
 			m_context->m_device->updateDescriptorSets(write_desc.size(), write_desc.begin(), 0, {});
@@ -454,7 +475,11 @@ vk::CommandBuffer sUISystem::draw()
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_CLEAR].get(), 2, { sSystem::Order().getSystemDescriptorSet() }, {0});
 			cmd.dispatch(1, 1, 1);
 
-			cmd.fillBuffer(ui->m_scene.getInfo().buffer, ui->m_scene.getInfo().offset, ui->m_scene.getInfo().range, 0u);
+//			cmd.fillBuffer(ui->m_scene.getInfo().buffer, ui->m_scene.getInfo().offset, ui->m_scene.getInfo().range, 0u);
+			UIScene scene;
+			scene.m_is_disable_order = 0;
+			scene.m_parent_user_id = ui->m_parent_user_id;
+			cmd.updateBuffer<UIScene>(ui->m_scene.getInfo().buffer, ui->m_scene.getInfo().offset, scene);
 		}
 		{
 			// animation
@@ -498,7 +523,7 @@ vk::CommandBuffer sUISystem::draw()
 			cmd.dispatch(1, 1, 1);
 
 		}
-//		glm::catmullRom()
+
 		{
 			{
 				auto to_read = m_work.makeMemoryBarrier();
@@ -519,7 +544,7 @@ vk::CommandBuffer sUISystem::draw()
 
 			cmd.endRenderPass();
 		}
-//			glm::gtx::cu
+
 	}
 	renders.clear();
 	sDeleter::Order().enque(std::move(descriptor_holder));

@@ -152,7 +152,7 @@ void main()
 	else if(type == AnimeDataInfo_type_size_xy)
 		b_work[target].m_size += value.xy;
 	else if(type == AnimeDataInfo_type_color_rgba)
-		b_work[target].m_color += value;
+		b_work[target].m_color += value;	
 
 }
 

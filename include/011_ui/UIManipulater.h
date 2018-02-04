@@ -70,6 +70,13 @@ struct rUI
 			cmd.fillBuffer(ui->m_user_id.getInfo().buffer, ui->m_user_id.getInfo().offset, ui->m_user_id.getInfo().range, 0u);
 		}
 		{
+			btr::BufferMemoryDescriptorEx<UIWork> desc;
+			desc.element_num = 256;
+			ui->m_tree = context->m_storage_memory.allocateMemory(desc);
+
+			cmd.fillBuffer(ui->m_tree.getInfo().buffer, ui->m_tree.getInfo().offset, ui->m_tree.getInfo().range, 0u);
+		}
+		{
 			btr::BufferMemoryDescriptorEx<UIEvent> desc;
 			desc.element_num = 256;
 			ui->m_event = context->m_storage_memory.allocateMemory(desc);
@@ -214,6 +221,7 @@ struct UIAnimeKey
 };
 struct rUIAnime
 {
+	std::string m_name;
 	UIAnimeInfo m_info;
 	std::vector<UIAnimeKey> m_key;
 
@@ -238,8 +246,6 @@ struct rUIAnime
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
-// 		std::vector<UIAnimeKeyInfo> key_info;
-// 		std::vector<UIAnimeKeyData> key_data;
 		uint32_t data_num = 0;
 		uint32_t info_num = 0;
 		{
@@ -352,36 +358,11 @@ struct UIManipulater
 	rUI m_ui_resource;
 	rUIAnime m_ui_anime_resource;
 
-	int32_t m_last_select_index;
-	bool m_request_update_boundary;
-	bool m_request_update_sprite;
-	bool m_request_update_animation;
-	bool m_request_update_userid;
-	bool m_request_update_texture;
-	bool m_is_show_manip_window;
-	bool m_is_show_tree_window;
-	bool m_is_show_anime_window;
-	bool m_is_show_texture_window;
-	bool m_is_save;
-	bool m_is_load;
 
 	UIManipulater(const std::shared_ptr<btr::Context>& context)
-		: m_last_select_index(-1)
-		, m_request_update_boundary(false)
-		, m_request_update_sprite(false)
-		, m_request_update_animation(false)
-		, m_request_update_userid(false)
-		, m_request_update_texture(false)
-		, m_is_show_manip_window(false)
-		, m_is_show_tree_window(false)
-		, m_is_show_anime_window(false)
-		, m_is_show_texture_window(false)
-		, m_is_save(false)
-		, m_is_load(false)
 	{
 		
 		m_context = context;
-
 		m_ui_resource.m_object.reserve(1024);
 		UIObject root;
 		root.m_position_local = vec2(320, 320);
@@ -413,16 +394,9 @@ struct UIManipulater
 		m_ui = m_ui_resource.make(context);
 		auto anime = m_ui_anime_resource.make(context);
 		m_ui->m_anime_list[0] = anime;
+
+		m_ui->m_name = "New";
 	}
-
-	void execute();
-
-	void treeWindow();
-	void treeWindow(int32_t index);
-
-	void manipWindow();
-	void textureWindow();
-	void animeWindow();
 
 	void animedataManip();
 
@@ -433,17 +407,58 @@ struct UIManipulater
 		void undo() {}
 		void redo() {}
 	};
+};
 
-	template<class Archive>
-	void serialize(Archive & archive)
+struct sUIManipulater : SingletonEx<sUIManipulater>
+{
+	friend SingletonEx<sUIManipulater>;
+
+	std::vector<std::shared_ptr<UIManipulater>> m_manip_list;
+	std::shared_ptr<UIManipulater> m_manip;
+	std::vector<std::shared_ptr<rUIAnime>> m_anime_list;
+	std::shared_ptr<rUIAnime> m_anime;
+
+	int32_t m_last_select_index;
+	int32_t m_anime_index;
+	bool m_is_show_manip_window;
+	bool m_is_show_tree_window;
+	bool m_is_show_anime_window;
+	bool m_is_show_texture_window;
+	bool m_request_update_boundary;
+	bool m_request_update_sprite;
+	bool m_request_update_animation;
+	bool m_request_update_userid;
+	bool m_request_update_texture;
+	bool m_is_save;
+	bool m_is_load;
+
+	std::shared_ptr<btr::Context> m_context;
+	sUIManipulater(const std::shared_ptr<btr::Context>& context)
+		:m_last_select_index(-1)
+		, m_anime_index(-1)
+		, m_is_show_manip_window(false)
+		, m_is_show_tree_window(false)
+		, m_is_show_anime_window(false)
+		, m_is_show_texture_window(false)
+		, m_request_update_boundary(false)
+		, m_request_update_sprite(false)
+		, m_request_update_animation(false)
+		, m_request_update_userid(false)
+		, m_request_update_texture(false)
+		, m_is_save(false)
+		, m_is_load(false)
 	{
-// 		archive(CEREAL_NVP(m_ui->m_name));
-// 		archive(CEREAL_NVP(m_texture_name));
-// 		archive(cereal::make_nvp("UIInfo",*m_info.getMappedPtr()));
-// 		if (Archive::is_loading == std::true_type) {
-// 
-// 		}
-		int i = 0;
+		m_context = context;
 	}
+	void execute(vk::CommandBuffer cmd);
 
+	void manipWindow(std::shared_ptr<UIManipulater>& manip);
+
+	void textureWindow(std::shared_ptr<UIManipulater>& manip);
+
+	void treeWindow(std::shared_ptr<UIManipulater>& manip);
+	void treeWindow(std::shared_ptr<UIManipulater>& manip, int32_t index);
+
+	void animeWindow(std::shared_ptr<rUIAnime>& anime);
+	void animedataManip(std::shared_ptr<rUIAnime>& anime);
 };

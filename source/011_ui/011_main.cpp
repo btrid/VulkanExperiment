@@ -61,6 +61,7 @@ int main()
 	UIManipulater manip(context);
 
 	sFont::Create(context);
+	sUIManipulater::Create(context);
 
 	PipelineDescription p_desc;
 	p_desc.m_context = context;
@@ -80,7 +81,6 @@ int main()
 	request.m_text = U"Windowsでコンピューターの世界が広がります。1234567890.:,;'\"(!?)+-*/=";
 	request.m_vertical = false;
 	auto text_data = font.makeRender(context, request, cache);
-	//	auto text_data = font_renderer.makeRender(U"テスト", cache);
 	app.setup();
 	while (true)
 	{
@@ -95,8 +95,12 @@ int main()
 				job.mJob.emplace_back(
 					[&]()
 				{
-					/*cmds[0] =*/ manip.execute();
+//					/*cmds[0] =*/ manip.execute();
 //					serialize(manip);
+					auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
+					sUIManipulater::Order().execute(cmd);
+					cmd.end();
+					cmds[0] = cmd;
 					sync_point.arrive();
 				}
 				);
@@ -126,7 +130,7 @@ int main()
 			}
 
 			cmds[3] = context->m_cmd_pool->allocCmdOnetime(0);
-			font_renderer.draw(cmds[3], font, cache, text_data);
+//			font_renderer.draw(cmds[3], font, cache, text_data);
 			cmds[3].end();
 			sync_point.wait();
 			app.submit(std::move(cmds));
