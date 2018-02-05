@@ -163,7 +163,7 @@ struct UIAnimeKeyInfo
 		type_size_xy,
 		type_color_rgba,
 		type_system_disable_order,
-		type_max,
+		type_num,
 	};
 	enum flag
 	{

@@ -228,10 +228,31 @@ struct rUIAnime
 	template<class Archive>
 	void serialize(Archive & archive)
 	{
+		archive(CEREAL_NVP(m_name));
 		archive(CEREAL_NVP(m_info));
 		archive(CEREAL_NVP(m_key));
 	}
 
+	UIAnimeKey* findKey(UIAnimeKeyInfo::type type, int target_index)
+	{
+		for (auto& key : m_key)
+		{
+			if (key.m_info.m_type == type && key.m_info.m_target_index == target_index) {
+				return &key;
+			}
+		}
+		return nullptr;
+	}
+	UIAnimeKey* findKey(int target_index)
+	{
+		for (auto& key : m_key)
+		{
+			if (key.m_info.m_target_index == target_index) {
+				return &key;
+			}
+		}
+		return nullptr;
+	}
 	UIAnimeKey* findKey(UIAnimeKeyInfo::type type)
 	{
 		for (auto& key : m_key)

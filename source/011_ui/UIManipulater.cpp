@@ -166,7 +166,7 @@ void sUIManipulater::execute(vk::CommandBuffer cmd)
 
 	}
 
-	if (m_manip && m_is_show_manip_window)
+	if (m_is_show_manip_window)
 	{
 		auto func = [this]()
 		{
@@ -213,7 +213,7 @@ void sUIManipulater::manipWindow(std::shared_ptr<UIManipulater>& manip)
 	ImGui::SetNextWindowSize(ImVec2(200.f, 500.f), ImGuiCond_Once);
 	if (ImGui::Begin("Manip", &m_is_show_manip_window))
 	{
-		if (m_last_select_index >= 0)
+		if (m_manip && m_last_select_index >= 0)
 		{
 			auto& obj = manip->m_ui_resource.m_object[m_last_select_index];
 			ImGui::CheckboxFlags("IsSprite", &obj.m_flag, is_sprite);
@@ -293,7 +293,8 @@ void sUIManipulater::animeWindow(std::shared_ptr<rUIAnime>& anime)
 {
 	// アニメーションのウインドウ
 	ImGui::SetNextWindowPos(ImVec2(10.f, 220.f), ImGuiCond_Once);
-	ImGui::SetNextWindowSize(ImVec2(800.f, 200.f), ImGuiCond_Once);
+	ImGui::SetNextWindowSize(ImVec2(800.f, 400.f), ImGuiCond_Once);
+
 	if (ImGui::Begin("anime", &m_is_show_anime_window))
 	{
 		// 		if (ImGui::SmallButton(m_anim_manip->m_is_playing ? "STOP" : "PLAY")) {
@@ -310,9 +311,37 @@ void sUIManipulater::animeWindow(std::shared_ptr<rUIAnime>& anime)
 
 		ImGui::Separator();
 
-		if (m_anime_index >= 0) {
-			animedataManip(anime);
+		ImGui::BeginChild("Sub1", ImVec2(200, 0), true, ImGuiWindowFlags_HorizontalScrollbar);
+
+		for (int i = 0; i < anime->m_key.size(); i++)
+		{
+			auto& key = anime->m_key[i];
+			char buf[256] = {};
+			sprintf_s(buf, "target_%d", key.m_info.m_target_index);
+			if (ImGui::Selectable(buf)) {
+				m_anime_index = i;
+			}
 		}
+
+		if (ImGui::Button("MakeData")) 
+		{
+			UIAnimeKey new_key;
+			new_key.m_info.m_type = 0;
+			new_key.m_info.m_target_index = 0;
+			UIAnimeKeyData new_data;
+			new_data.m_frame = 0;
+			new_data.m_value_i = 0;
+			new_data.m_flag = UIAnimeKeyData::is_enable;
+			new_key.m_data.push_back(new_data);
+			anime->m_key.push_back(new_key);
+		}
+
+		ImGui::EndChild();
+		ImGui::SameLine();
+
+		ImGui::BeginChild("ScrollingRegion", ImVec2(0, 0), true, ImGuiWindowFlags_HorizontalScrollbar);
+		animedataManip(anime);
+		ImGui::EndChild();
 
 		ImGui::End();
 	}
@@ -322,153 +351,148 @@ void sUIManipulater::animedataManip(std::shared_ptr<rUIAnime>& anime)
 {
 	static int current_data_type;
 	const char* types[] = { "pos", "size", "color", "disable order" };
-	static_assert(array_length(types) == UIAnimeKeyInfo::type_max, "");
+	static_assert(array_length(types) == UIAnimeKeyInfo::type_num, "");
 	ImGui::Combo("anime data type", &current_data_type, types, array_length(types));
 	auto* anime_keys = anime->findKey((UIAnimeKeyInfo::type)current_data_type);
 	if (anime_keys)
 	{
 		auto& keys = anime_keys->m_data;
-
-		if (ImGui::BeginChild("ScrollingRegion", ImVec2(0, 0), true, ImGuiWindowFlags_HorizontalScrollbar))
+		if (ImGui::BeginPopupContextWindow("key context"))
 		{
-			if (ImGui::BeginPopupContextWindow("key context"))
+			if (ImGui::Selectable("Add"))
 			{
-				if (ImGui::Selectable("Add"))
+				UIAnimeKeyData new_key;
+				new_key.m_flag = UIAnimeKeyData::is_enable;
+				new_key.m_frame = 0;
+				new_key.m_value_i = 0;
+				keys.push_back(new_key);
+			};
+			if (ImGui::Selectable("Erase"))
+			{
+				for (auto it = keys.begin(); it != keys.end();)
 				{
-					UIAnimeKeyData new_key;
-					new_key.m_flag = UIAnimeKeyData::is_enable;
-					new_key.m_frame = 0;
-					new_key.m_value_i = 0;
-					keys.push_back(new_key);
-				};
-				if (ImGui::Selectable("Erase"))
-				{
-					for (auto it = keys.begin(); it != keys.end();)
-					{
-						if (btr::isOn(it->m_flag, UIAnimeKeyData::is_erase)) {
-							it = keys.erase(it);
-						}
-						else {
-							it++;
-						}
+					if (btr::isOn(it->m_flag, UIAnimeKeyData::is_erase)) {
+						it = keys.erase(it);
 					}
-				};
-				if (ImGui::Selectable("Sort"))
-				{
-					std::stable_sort(keys.begin(), keys.end(), [](auto&& a, auto&& b) { return a.m_frame < b.m_frame; });
-				};
-				if (ImGui::Selectable("Save"))
-				{
-					//					m_request_update_animation = true;
-				};
-				ImGui::EndPopup();
-			}
-
-
-			ImGui::Columns(5, "animcolumns");
-			ImGui::Text("Frame"); ImGui::NextColumn();
-			ImGui::Text("Value"); ImGui::NextColumn();
-			ImGui::Text("Enable"); ImGui::NextColumn();
-			ImGui::Text("Erase"); ImGui::NextColumn();
-			ImGui::Text("Interp"); ImGui::NextColumn();
-			ImGui::Separator();
-
-			for (auto i = 0; i < keys.size(); i++)
+					else {
+						it++;
+					}
+				}
+			};
+			if (ImGui::Selectable("Sort"))
 			{
-				char id[32] = {};
-				sprintf_s(id, "key_%d", i);
-				ImGui::PushID(id);
-
-				auto& key = keys[i];
-
-				sprintf_s(id, "frame_%d", i);
-				ImGui::PushID(id);
-				int32_t frame = key.m_frame;
-				ImGui::DragInt("##frame", &frame, 0.1f, 0, 100);
-				key.m_frame = frame;
-				ImGui::NextColumn();
-				ImGui::PopID();
-
-				sprintf_s(id, "value_%d", i);
-				ImGui::PushID(id);
-				switch (current_data_type)
-				{
-				case UIAnimeKeyInfo::type_pos_xy:
-				case UIAnimeKeyInfo::type_size_xy:
-				{
-					vec2 value_f = glm::unpackHalf2x16(key.m_value_u);
-					int value[2] = { value_f[0], value_f[1] };
-					ImGui::DragInt2("##value", value, 0.1f);
-					key.m_value_u = glm::packHalf2x16(vec2(value[0], value[1]));
-					break;
-				}
-				case UIAnimeKeyInfo::type_color_rgba:
-				{
-					vec4 value_f = glm::unpackSnorm4x8(key.m_value_u);
-					int value[] = { value_f[0], value_f[1], value_f[2], value_f[3] };
-					ImGui::DragInt4("##value", value, 0.1f, -127, 127);
-					key.m_value_u = glm::packSnorm4x8(vec4(value[0], value[1], value[2], value[3]));
-					break;
-				}
-				case UIAnimeKeyInfo::type_system_disable_order:
-				{
-					ImGui::Checkbox("##value", &key.m_value_b);
-					break;
-				}
-				default:
-					break;
-				}
-				ImGui::NextColumn();
-				ImGui::PopID();
-
-				sprintf_s(id, "enable_%d", i);
-				ImGui::PushID(id);
-				ImGui::CheckboxFlags("##enable", &key.m_flag, UIAnimeKeyData::is_enable);
-				ImGui::NextColumn();
-				ImGui::PopID();
-
-				sprintf_s(id, "erase_%d", i);
-				ImGui::PushID(id);
-				ImGui::CheckboxFlags("##erase", &key.m_flag, UIAnimeKeyData::is_erase);
-				ImGui::NextColumn();
-				ImGui::PopID();
-
-				sprintf_s(id, "interp_type_%d", i);
-				ImGui::PushID(id);
-				int interp =
-					btr::isOn(key.m_flag, UIAnimeKeyData::interp_spline) ?
-					1 :
-					btr::isOn(key.m_flag, UIAnimeKeyData::interp_bezier) ?
-					2 : 0;
-
-				const char* interp_name[] = { "liner", "spline", "bezier" };
-				ImGui::Combo("##interp", &interp, interp_name, array_length(interp_name));
-
-				switch (interp)
-				{
-				default:
-					btr::setOff(key.m_flag, UIAnimeKeyData::interp_spline);
-					btr::setOff(key.m_flag, UIAnimeKeyData::interp_bezier);
-					break;
-				case 1:
-					btr::setOff(key.m_flag, UIAnimeKeyData::interp_bezier);
-					btr::setOn(key.m_flag, UIAnimeKeyData::interp_spline);
-					break;
-				case 2:
-					btr::setOff(key.m_flag, UIAnimeKeyData::interp_spline);
-					btr::setOn(key.m_flag, UIAnimeKeyData::interp_bezier);
-					break;
-				}
-
-				ImGui::NextColumn();
-				ImGui::PopID();
-
-				ImGui::PopID();
-				ImGui::Separator();
-			}
-			ImGui::Columns(1);
-			ImGui::EndChild();
+				std::stable_sort(keys.begin(), keys.end(), [](auto&& a, auto&& b) { return a.m_frame < b.m_frame; });
+			};
+			if (ImGui::Selectable("Save"))
+			{
+				//					m_request_update_animation = true;
+			};
+			ImGui::EndPopup();
 		}
+
+
+		ImGui::Columns(5, "animcolumns");
+		ImGui::Text("Frame"); ImGui::NextColumn();
+		ImGui::Text("Value"); ImGui::NextColumn();
+		ImGui::Text("Enable"); ImGui::NextColumn();
+		ImGui::Text("Erase"); ImGui::NextColumn();
+		ImGui::Text("Interp"); ImGui::NextColumn();
+		ImGui::Separator();
+
+		for (auto i = 0; i < keys.size(); i++)
+		{
+			char id[32] = {};
+			sprintf_s(id, "key_%d", i);
+			ImGui::PushID(id);
+
+			auto& key = keys[i];
+
+			sprintf_s(id, "frame_%d", i);
+			ImGui::PushID(id);
+			int32_t frame = key.m_frame;
+			ImGui::DragInt("##frame", &frame, 0.1f, 0, 100);
+			key.m_frame = frame;
+			ImGui::NextColumn();
+			ImGui::PopID();
+
+			sprintf_s(id, "value_%d", i);
+			ImGui::PushID(id);
+			switch (current_data_type)
+			{
+			case UIAnimeKeyInfo::type_pos_xy:
+			case UIAnimeKeyInfo::type_size_xy:
+			{
+				vec2 value_f = glm::unpackHalf2x16(key.m_value_u);
+				int value[2] = { value_f[0], value_f[1] };
+				ImGui::DragInt2("##value", value, 0.1f);
+				key.m_value_u = glm::packHalf2x16(vec2(value[0], value[1]));
+				break;
+			}
+			case UIAnimeKeyInfo::type_color_rgba:
+			{
+				vec4 value_f = glm::unpackSnorm4x8(key.m_value_u);
+				int value[] = { value_f[0], value_f[1], value_f[2], value_f[3] };
+				ImGui::DragInt4("##value", value, 0.1f, -127, 127);
+				key.m_value_u = glm::packSnorm4x8(vec4(value[0], value[1], value[2], value[3]));
+				break;
+			}
+			case UIAnimeKeyInfo::type_system_disable_order:
+			{
+				ImGui::Checkbox("##value", &key.m_value_b);
+				break;
+			}
+			default:
+				break;
+			}
+			ImGui::NextColumn();
+			ImGui::PopID();
+
+			sprintf_s(id, "enable_%d", i);
+			ImGui::PushID(id);
+			ImGui::CheckboxFlags("##enable", &key.m_flag, UIAnimeKeyData::is_enable);
+			ImGui::NextColumn();
+			ImGui::PopID();
+
+			sprintf_s(id, "erase_%d", i);
+			ImGui::PushID(id);
+			ImGui::CheckboxFlags("##erase", &key.m_flag, UIAnimeKeyData::is_erase);
+			ImGui::NextColumn();
+			ImGui::PopID();
+
+			sprintf_s(id, "interp_type_%d", i);
+			ImGui::PushID(id);
+			int interp =
+				btr::isOn(key.m_flag, UIAnimeKeyData::interp_spline) ?
+				1 :
+				btr::isOn(key.m_flag, UIAnimeKeyData::interp_bezier) ?
+				2 : 0;
+
+			const char* interp_name[] = { "liner", "spline", "bezier" };
+			ImGui::Combo("##interp", &interp, interp_name, array_length(interp_name));
+
+			switch (interp)
+			{
+			default:
+				btr::setOff(key.m_flag, UIAnimeKeyData::interp_spline);
+				btr::setOff(key.m_flag, UIAnimeKeyData::interp_bezier);
+				break;
+			case 1:
+				btr::setOff(key.m_flag, UIAnimeKeyData::interp_bezier);
+				btr::setOn(key.m_flag, UIAnimeKeyData::interp_spline);
+				break;
+			case 2:
+				btr::setOff(key.m_flag, UIAnimeKeyData::interp_spline);
+				btr::setOn(key.m_flag, UIAnimeKeyData::interp_bezier);
+				break;
+			}
+
+			ImGui::NextColumn();
+			ImGui::PopID();
+
+			ImGui::PopID();
+			ImGui::Separator();
+		}
+		ImGui::Columns(1);
 	}
 	else
 	{
@@ -478,7 +502,7 @@ void sUIManipulater::animedataManip(std::shared_ptr<rUIAnime>& anime)
 			{
 				UIAnimeKey new_key;
 				new_key.m_info.m_type = current_data_type;
-				new_key.m_info.m_target_index = m_last_select_index;
+				new_key.m_info.m_target_index = anime->m_key[m_anime_index].m_info.m_target_index;
 				UIAnimeKeyData new_data;
 				new_data.m_frame = 0;
 				new_data.m_value_i = 0;
