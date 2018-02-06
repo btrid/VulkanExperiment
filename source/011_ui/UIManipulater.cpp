@@ -312,7 +312,6 @@ void sUIManipulater::animeWindow(std::shared_ptr<rUIAnime>& anime)
 		ImGui::Separator();
 
 		ImGui::BeginChild("Sub1", ImVec2(200, 0), true, ImGuiWindowFlags_HorizontalScrollbar);
-
 		for (int i = 0; i < anime->m_key.size(); i++)
 		{
 			auto& key = anime->m_key[i];
@@ -322,7 +321,6 @@ void sUIManipulater::animeWindow(std::shared_ptr<rUIAnime>& anime)
 				m_anime_index = i;
 			}
 		}
-
 		if (ImGui::Button("MakeData")) 
 		{
 			UIAnimeKey new_key;
@@ -332,10 +330,9 @@ void sUIManipulater::animeWindow(std::shared_ptr<rUIAnime>& anime)
 			new_data.m_frame = 0;
 			new_data.m_value_i = 0;
 			new_data.m_flag = UIAnimeKeyData::is_enable;
-			new_key.m_data.push_back(new_data);
+			new_key.m_data[new_key.m_info.m_type].push_back(new_data);
 			anime->m_key.push_back(new_key);
 		}
-
 		ImGui::EndChild();
 		ImGui::SameLine();
 
@@ -349,14 +346,23 @@ void sUIManipulater::animeWindow(std::shared_ptr<rUIAnime>& anime)
 
 void sUIManipulater::animedataManip(std::shared_ptr<rUIAnime>& anime)
 {
-	static int current_data_type;
+
 	const char* types[] = { "pos", "size", "color", "disable order" };
 	static_assert(array_length(types) == UIAnimeKeyInfo::type_num, "");
+
+	static int current_data_type;
 	ImGui::Combo("anime data type", &current_data_type, types, array_length(types));
-	auto* anime_keys = anime->findKey((UIAnimeKeyInfo::type)current_data_type);
+
+	auto* anime_keys = anime->findKey(m_anime_index);
 	if (anime_keys)
 	{
-		auto& keys = anime_keys->m_data;
+		{
+			int _target = anime_keys->m_info.m_target_index;
+			ImGui::DragInt("anime target index", &_target);
+			anime_keys->m_info.m_target_index = _target;
+		}
+
+		auto& keys = anime_keys->m_data[current_data_type];
 		if (ImGui::BeginPopupContextWindow("key context"))
 		{
 			if (ImGui::Selectable("Add"))
@@ -507,7 +513,7 @@ void sUIManipulater::animedataManip(std::shared_ptr<rUIAnime>& anime)
 				new_data.m_frame = 0;
 				new_data.m_value_i = 0;
 				new_data.m_flag = UIAnimeKeyData::is_enable;
-				new_key.m_data.push_back(new_data);
+				new_key.m_data[new_key.m_info.m_type].push_back(new_data);
 				anime->m_key.push_back(new_key);
 			}
 			ImGui::EndPopup();

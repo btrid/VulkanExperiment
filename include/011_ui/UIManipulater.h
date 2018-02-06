@@ -210,7 +210,7 @@ struct rUI
 struct UIAnimeKey
 {
 	UIAnimeKeyInfo m_info;
-	std::vector<UIAnimeKeyData> m_data;
+	std::array<std::vector<UIAnimeKeyData>, UIAnimeKeyInfo::type_num> m_data;
 
 	template<class Archive>
 	void serialize(Archive & archive)
@@ -248,16 +248,6 @@ struct rUIAnime
 		for (auto& key : m_key)
 		{
 			if (key.m_info.m_target_index == target_index) {
-				return &key;
-			}
-		}
-		return nullptr;
-	}
-	UIAnimeKey* findKey(UIAnimeKeyInfo::type type)
-	{
-		for (auto& key : m_key)
-		{
-			if (key.m_info.m_type == type) {
 				return &key;
 			}
 		}
@@ -341,8 +331,11 @@ struct rUIAnime
 
 			for (auto& data : key.m_data)
 			{
-				*staging_key.getMappedPtr(offset) = data;
-				offset++;
+				for (auto& d : data)
+				{
+					*staging_key.getMappedPtr(offset) = d;
+					offset++;
+				}
 			}
 		}
 
@@ -409,7 +402,7 @@ struct UIManipulater
 		key_data.m_flag = UIAnimeKeyData::is_enable;
 		key_data.m_frame = 0;
 		key_data.m_value_i = 0;
-		key.m_data.push_back(key_data);
+		key.m_data[UIAnimeKeyInfo::type_pos_xy].push_back(key_data);
 		m_ui_anime_resource.m_key.push_back(key);
 
 		m_ui = m_ui_resource.make(context);
