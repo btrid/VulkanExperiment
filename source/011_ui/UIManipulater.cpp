@@ -311,7 +311,15 @@ void sUIManipulater::animeWindow(std::shared_ptr<rUIAnime>& anime)
 
 		ImGui::Separator();
 
-		ImGui::BeginChild("Sub1", ImVec2(200, 0), true, ImGuiWindowFlags_HorizontalScrollbar);
+		ImGui::BeginChild("anime keys", ImVec2(200, 0), true, ImGuiWindowFlags_HorizontalScrollbar);
+		if (ImGui::BeginPopupContextWindow("anime key context"))
+		{
+			if (ImGui::Selectable("Sort"))
+			{
+			}
+			ImGui::EndPopup();
+		}
+
 		for (int i = 0; i < anime->m_key.size(); i++)
 		{
 			auto& key = anime->m_key[i];
@@ -346,16 +354,17 @@ void sUIManipulater::animeWindow(std::shared_ptr<rUIAnime>& anime)
 
 void sUIManipulater::animedataManip(std::shared_ptr<rUIAnime>& anime)
 {
-
+	static int current_data_type;
 	const char* types[] = { "pos", "size", "color", "disable order" };
 	static_assert(array_length(types) == UIAnimeKeyInfo::type_num, "");
 
-	static int current_data_type;
-	ImGui::Combo("anime data type", &current_data_type, types, array_length(types));
-
-	auto* anime_keys = anime->findKey(m_anime_index);
+	auto* anime_keys = m_anime_index >= 0 ? &anime->m_key[m_anime_index] : nullptr;
 	if (anime_keys)
 	{
+		{
+
+			ImGui::Combo("anime data type", &current_data_type, types, array_length(types));
+		}
 		{
 			int _target = anime_keys->m_info.m_target_index;
 			ImGui::DragInt("anime target index", &_target);
