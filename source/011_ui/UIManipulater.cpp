@@ -367,7 +367,7 @@ void sUIManipulater::animedataManip(std::shared_ptr<rUIAnime>& anime)
 		}
 		{
 			int _target = anime_keys->m_info.m_target_index;
-			ImGui::DragInt("anime target index", &_target);
+			ImGui::DragInt("anime target index", &_target, 1.f, 0, 1024);
 			anime_keys->m_info.m_target_index = _target;
 		}
 
