@@ -1,19 +1,26 @@
 #pragma once
 
 #include <vector>
-
+#include <set>
+#include <unordered_map>
 #include <011_ui/sUISystem.h>
 #include <btrlib/Define.h>
 #include <btrlib/Context.h>
 #include <btrlib/rTexture.h>
 
 #include <011_ui/cerealDefine.h>
-
 struct rUI 
 {
 	UIInfo m_info;
 	std::vector<UIObject> m_object;
 	std::array<std::string, UI::TEXTURE_MAX> m_texture_name;
+
+	struct AnimeRequest
+	{
+		std::string m_anime_name;
+		uint32_t m_object_index;
+	};
+	std::unordered_map<uint32_t, AnimeRequest> m_anime_list;
 
 	template<class Archive>
 	void serialize(Archive & archive)
@@ -21,6 +28,7 @@ struct rUI
 		archive(CEREAL_NVP(m_info));
 		archive(CEREAL_NVP(m_object));
 		archive(CEREAL_NVP(m_texture_name));
+//		archive(CEREAL_NVP(m_anime_play_info));
 	}
 
 	void reload(const std::shared_ptr<btr::Context>& context, std::shared_ptr<UI>& ui)
@@ -206,10 +214,7 @@ struct rUI
 		return ui;
 	}
 };
-struct UIAnimeRequest
-{
 
-};
 struct UIAnimeKey
 {
 	UIAnimeKeyInfo m_info;
@@ -415,7 +420,7 @@ struct sUIManipulater : SingletonEx<sUIManipulater>
 	std::vector<std::shared_ptr<rUIAnime>> m_anime_list;
 	std::shared_ptr<rUIAnime> m_anime;
 
-	int32_t m_last_select_index;
+	int32_t m_object_index;
 	int32_t m_anime_index;
 	bool m_is_show_manip_window;
 	bool m_is_show_tree_window;
@@ -431,7 +436,7 @@ struct sUIManipulater : SingletonEx<sUIManipulater>
 
 	std::shared_ptr<btr::Context> m_context;
 	sUIManipulater(const std::shared_ptr<btr::Context>& context)
-		:m_last_select_index(-1)
+		:m_object_index(-1)
 		, m_anime_index(-1)
 		, m_is_show_manip_window(false)
 		, m_is_show_tree_window(false)

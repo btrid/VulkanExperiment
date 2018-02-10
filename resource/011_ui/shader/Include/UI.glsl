@@ -72,8 +72,10 @@ struct UIBoundary
 struct UIAnimePlayInfo
 {
 	uint m_flag;
+	int m_object_target;
 	int m_anime_target;
 	float m_frame;
+
 };
 #define AnimePlayInfo_is_playing (1<<0)
 #define AnimePlayInfo_is_1 (1<<1)

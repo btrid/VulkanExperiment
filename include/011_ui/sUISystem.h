@@ -85,9 +85,8 @@ struct UIObject
 			CEREAL_NVP(m_parent_index),
 			CEREAL_NVP(m_child_index),
 			CEREAL_NVP(m_sibling_index)
-			);
+		);
 	}
-
 };
 
 struct UIEvent
@@ -117,7 +116,12 @@ struct UIWork
 };
 struct UIAnimePlayInfo
 {
-	uint m_flag;
+	enum {
+		is_play = 1 << 0,
+		is_loop = 1 << 1,
+	};
+	uint32_t m_flag;
+	int32_t m_object_target_userid;
 	int32_t m_anime_target;
 	float m_frame;
 
@@ -126,9 +130,9 @@ struct UIAnimePlayInfo
 	{
 		archive(
 			CEREAL_NVP(m_flag),
+			CEREAL_NVP(m_object_target_userid),
 			CEREAL_NVP(m_anime_target),
 			CEREAL_NVP(m_frame),
-
 			);
 	}
 };
