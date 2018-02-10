@@ -206,7 +206,10 @@ struct rUI
 		return ui;
 	}
 };
+struct UIAnimeRequest
+{
 
+};
 struct UIAnimeKey
 {
 	UIAnimeKeyInfo m_info;
@@ -233,26 +236,6 @@ struct rUIAnime
 		archive(CEREAL_NVP(m_key));
 	}
 
-	UIAnimeKey* findKey(UIAnimeKeyInfo::type type, int target_index)
-	{
-		for (auto& key : m_key)
-		{
-			if (key.m_info.m_type == type && key.m_info.m_target_index == target_index) {
-				return &key;
-			}
-		}
-		return nullptr;
-	}
-	UIAnimeKey* findKey(int target_index)
-	{
-		for (auto& key : m_key)
-		{
-			if (key.m_info.m_target_index == target_index) {
-				return &key;
-			}
-		}
-		return nullptr;
-	}
 	std::shared_ptr<UIAnime> make(const std::shared_ptr<btr::Context>& context)const
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
