@@ -236,8 +236,8 @@ void sUIManipulater::manipWindow(std::shared_ptr<UIManipulater>& manip)
 			obj.m_texture_index = atoi(buf);
 			obj.m_texture_index = glm::clamp<int>(obj.m_texture_index, 0, UI::TEXTURE_MAX - 1);
 
-			ImGui::BeginGroup();
-			ImGui::BeginChild("ManipAnimeInfo", ImVec2(0, 0), true, ImGuiWindowFlags_AlwaysAutoResize);
+// 			ImGui::BeginGroup();
+// 			ImGui::BeginChild("ManipAnimeInfo", ImVec2(0, 0), true, ImGuiWindowFlags_AlwaysAutoResize);
 
 			auto it = manip->m_ui_resource.m_anime_list.find(m_object_index);
 			if (it != manip->m_ui_resource.m_anime_list.end())
@@ -259,22 +259,54 @@ void sUIManipulater::manipWindow(std::shared_ptr<UIManipulater>& manip)
 					ImGui::OpenPopup("ManipAnimeRequest");
 				}
 			}
+// 			ImGui::EndChild();
+// 			ImGui::EndGroup();
+//			using namespace filesys = std::experimental::filesystem;
 			if (ImGui::BeginPopupModal("ManipAnimeRequest", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 			{
-				ImGui::Text("Filter usage:\n"
-					"  \"\"         display all lines\n"
-					"  \"xxx\"      display lines containing \"xxx\"\n"
-					"  \"xxx,yyy\"  display lines containing \"xxx\" or \"yyy\"\n"
-					"  \"-xxx\"     hide lines containing \"xxx\"");
 				static ImGuiTextFilter filter;
+				static std::experimental::filesystem::path anime_dir = std::experimental::filesystem::current_path().parent_path();
+				ImGui::Text("%s",anime_dir.generic_string().c_str());
 				filter.Draw();
-				std::experimental::filesystem::path anime_dir = std::experimental::filesystem::current_path();
-				anime_dir.concat(btr::getResourceAppPath());
-				for (auto i : anime_dir)
-				{
-					if (filter.PassFilter(i.generic_string().c_str()))
-						ImGui::BulletText("%s", i.generic_string().c_str());
 
+// 				if (anime_dir.empty())
+// 				{
+// 				}
+// 				else
+				if (ImGui::Selectable("../"))
+				{
+					anime_dir = std::experimental::filesystem::system_complete(anime_dir.parent_path());
+				}
+				else 
+				{
+					auto file_it = std::experimental::filesystem::directory_iterator(anime_dir);
+					for (auto file = std::experimental::filesystem::begin(file_it); file != std::experimental::filesystem::end(file_it); file++)
+					{
+						auto path = file->path().generic_string();
+						auto name = file->path().filename().generic_string();
+						if (filter.PassFilter(name.c_str()))
+						{
+							auto is_directory = std::experimental::filesystem::is_directory(path.c_str());
+							auto is_file = std::experimental::filesystem::is_regular_file(path.c_str());
+							auto status = std::experimental::filesystem::status(anime_dir.c_str());
+							if (is_directory)
+							{
+								name += "/";
+							}
+							if (ImGui::Selectable(name.c_str()))
+							{
+								if (is_directory)
+								{
+									anime_dir = anime_dir.generic_string() + "/" + file->path().filename().generic_string();
+									break;
+								}
+								else if (is_file)
+								{
+
+								}
+							}
+						}
+					}
 				}
 				if (ImGui::Button("OK", ImVec2(120, 0))) 
 				{
@@ -282,7 +314,6 @@ void sUIManipulater::manipWindow(std::shared_ptr<UIManipulater>& manip)
 					request.m_object_index = m_object_index;
 					manip->m_ui_resource.m_anime_list[m_object_index] = request;
 					it = manip->m_ui_resource.m_anime_list.find(m_object_index);
-					ImGui::CloseCurrentPopup();
 				}
 				ImGui::SameLine();
 				if (ImGui::Button("Cancel", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
@@ -291,15 +322,10 @@ void sUIManipulater::manipWindow(std::shared_ptr<UIManipulater>& manip)
 				{
 					if (ImGui::Button("Delete", ImVec2(120, 0))) {
 						manip->m_ui_resource.m_anime_list.erase(it);
-						ImGui::CloseCurrentPopup();
 					}
 				}
-				ImGui::SameLine();
-
 				ImGui::EndPopup();
 			}
-			ImGui::EndChild();
-			ImGui::EndGroup();
 		}
 		ImGui::End();
 	}
