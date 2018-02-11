@@ -20,7 +20,7 @@ struct rUI
 		std::string m_anime_name;
 		uint32_t m_object_index;
 	};
-	std::unordered_map<uint32_t, AnimeRequest> m_anime_list;
+	std::unordered_map<uint32_t, std::vector<AnimeRequest>> m_anime_list;
 
 	template<class Archive>
 	void serialize(Archive & archive)

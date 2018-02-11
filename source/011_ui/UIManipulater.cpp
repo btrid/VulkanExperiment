@@ -236,48 +236,38 @@ void sUIManipulater::manipWindow(std::shared_ptr<UIManipulater>& manip)
 			obj.m_texture_index = atoi(buf);
 			obj.m_texture_index = glm::clamp<int>(obj.m_texture_index, 0, UI::TEXTURE_MAX - 1);
 
-// 			ImGui::BeginGroup();
-// 			ImGui::BeginChild("ManipAnimeInfo", ImVec2(0, 0), true, ImGuiWindowFlags_AlwaysAutoResize);
+			{
+				auto it = manip->m_ui_resource.m_anime_list.find(m_object_index);
+				if (it != manip->m_ui_resource.m_anime_list.end())
+				{
+					for (auto request = it->second.begin(); request != it->second.end();)
+					{
+						ImGui::Text("%s", request->m_anime_name.c_str());
+						if (ImGui::Button("Erase", ImVec2(120, 0))) {
+							request = it->second.erase(request);
+						}
+						else {
+							request++;
+						}
+					}
 
-			auto it = manip->m_ui_resource.m_anime_list.find(m_object_index);
-			if (it != manip->m_ui_resource.m_anime_list.end())
-			{
-				ImGui::Text("%s", it->second.m_anime_name.c_str());
-				if (ImGui::Button("ChangeAnime"))
-				{
-					ImGui::OpenPopup("ManipAnimeRequest");
+					if (it->second.empty()) {
+						manip->m_ui_resource.m_anime_list.erase(it);
+					}
 				}
 			}
-			else
-			{
-				if (ImGui::Button("AddAnime"))
-				{
-// 					rUI::AnimeRequest request;
-// 					request.m_object_index = m_object_index;
-// 					manip->m_ui_resource.m_anime_list[m_object_index] = request;
-// 					it = manip->m_ui_resource.m_anime_list.find(m_object_index);
-					ImGui::OpenPopup("ManipAnimeRequest");
-				}
-			}
-// 			ImGui::EndChild();
-// 			ImGui::EndGroup();
-//			using namespace filesys = std::experimental::filesystem;
-			if (ImGui::BeginPopupModal("ManipAnimeRequest", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+
 			{
 				static ImGuiTextFilter filter;
 				static std::experimental::filesystem::path anime_dir = std::experimental::filesystem::current_path().parent_path();
-				ImGui::Text("%s",anime_dir.generic_string().c_str());
+				static std::string anime_file_name;
+				ImGui::Text("%s", anime_dir.generic_string().c_str());
 				filter.Draw();
-
-// 				if (anime_dir.empty())
-// 				{
-// 				}
-// 				else
 				if (ImGui::Selectable("../"))
 				{
 					anime_dir = std::experimental::filesystem::system_complete(anime_dir.parent_path());
 				}
-				else 
+				else
 				{
 					auto file_it = std::experimental::filesystem::directory_iterator(anime_dir);
 					for (auto file = std::experimental::filesystem::begin(file_it); file != std::experimental::filesystem::end(file_it); file++)
@@ -288,7 +278,6 @@ void sUIManipulater::manipWindow(std::shared_ptr<UIManipulater>& manip)
 						{
 							auto is_directory = std::experimental::filesystem::is_directory(path.c_str());
 							auto is_file = std::experimental::filesystem::is_regular_file(path.c_str());
-							auto status = std::experimental::filesystem::status(anime_dir.c_str());
 							if (is_directory)
 							{
 								name += "/";
@@ -302,30 +291,34 @@ void sUIManipulater::manipWindow(std::shared_ptr<UIManipulater>& manip)
 								}
 								else if (is_file)
 								{
-
+									anime_file_name = name;
 								}
 							}
 						}
 					}
 				}
-				if (ImGui::Button("OK", ImVec2(120, 0))) 
+				if (ImGui::Button("Add", ImVec2(120, 0)))
 				{
+					auto it = manip->m_ui_resource.m_anime_list.find(m_object_index);
+					if (it == manip->m_ui_resource.m_anime_list.end())
+					{
+						manip->m_ui_resource.m_anime_list[m_object_index] = std::vector<rUI::AnimeRequest>();
+						it = manip->m_ui_resource.m_anime_list.find(m_object_index);
+					}
+
 					rUI::AnimeRequest request;
 					request.m_object_index = m_object_index;
-					manip->m_ui_resource.m_anime_list[m_object_index] = request;
-					it = manip->m_ui_resource.m_anime_list.find(m_object_index);
-				}
-				ImGui::SameLine();
-				if (ImGui::Button("Cancel", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
+					request.m_anime_name = anime_file_name;
+					manip->m_ui_resource.m_anime_list[m_object_index].emplace_back(request);
 
-				if (it != manip->m_ui_resource.m_anime_list.end())
-				{
-					if (ImGui::Button("Delete", ImVec2(120, 0))) {
-						manip->m_ui_resource.m_anime_list.erase(it);
-					}
+					anime_file_name.clear();
+
 				}
-				ImGui::EndPopup();
 			}
+
+// 			ImGui::EndChild();
+// 			ImGui::EndGroup();
+
 		}
 		ImGui::End();
 	}
