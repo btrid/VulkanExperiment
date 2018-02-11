@@ -256,14 +256,15 @@ void sUIManipulater::manipWindow(std::shared_ptr<UIManipulater>& manip)
 					}
 				}
 			}
-
+			if (ImGui::Button("Add Anime Request"))
+				ImGui::OpenPopup("FileSelect");
+			if (ImGui::BeginPopupModal("FileSelect", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 			{
 				static ImGuiTextFilter filter;
 				static std::experimental::filesystem::path anime_dir = std::experimental::filesystem::current_path().parent_path();
-				static std::string anime_file_name;
 				ImGui::Text("%s", anime_dir.generic_string().c_str());
 				filter.Draw();
-				if (ImGui::Selectable("../"))
+				if (ImGui::Selectable("../", false, ImGuiSelectableFlags_DontClosePopups))
 				{
 					anime_dir = std::experimental::filesystem::system_complete(anime_dir.parent_path());
 				}
@@ -282,7 +283,7 @@ void sUIManipulater::manipWindow(std::shared_ptr<UIManipulater>& manip)
 							{
 								name += "/";
 							}
-							if (ImGui::Selectable(name.c_str()))
+							if (ImGui::Selectable(name.c_str(), false, ImGuiSelectableFlags_DontClosePopups))
 							{
 								if (is_directory)
 								{
@@ -291,29 +292,30 @@ void sUIManipulater::manipWindow(std::shared_ptr<UIManipulater>& manip)
 								}
 								else if (is_file)
 								{
-									anime_file_name = name;
+									auto it = manip->m_ui_resource.m_anime_list.find(m_object_index);
+									if (it == manip->m_ui_resource.m_anime_list.end())
+									{
+										manip->m_ui_resource.m_anime_list[m_object_index] = std::vector<rUI::AnimeRequest>();
+										it = manip->m_ui_resource.m_anime_list.find(m_object_index);
+									}
+
+									rUI::AnimeRequest request;
+									request.m_object_index = m_object_index;
+									request.m_anime_name = name;
+									manip->m_ui_resource.m_anime_list[m_object_index].emplace_back(request);
+
+									ImGui::CloseCurrentPopup();
 								}
 							}
 						}
 					}
 				}
-				if (ImGui::Button("Add", ImVec2(120, 0)))
+				if (ImGui::Button("Cancel", ImVec2(120, 0)))
 				{
-					auto it = manip->m_ui_resource.m_anime_list.find(m_object_index);
-					if (it == manip->m_ui_resource.m_anime_list.end())
-					{
-						manip->m_ui_resource.m_anime_list[m_object_index] = std::vector<rUI::AnimeRequest>();
-						it = manip->m_ui_resource.m_anime_list.find(m_object_index);
-					}
-
-					rUI::AnimeRequest request;
-					request.m_object_index = m_object_index;
-					request.m_anime_name = anime_file_name;
-					manip->m_ui_resource.m_anime_list[m_object_index].emplace_back(request);
-
-					anime_file_name.clear();
-
+					ImGui::CloseCurrentPopup();
 				}
+
+				ImGui::EndPopup();
 			}
 
 // 			ImGui::EndChild();
