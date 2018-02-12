@@ -176,7 +176,7 @@ void sUIManipulater::execute(vk::CommandBuffer cmd)
 		};
 		app::g_app_instance->m_window->getImguiPipeline()->pushImguiCmd(std::move(func));
 	}
-	if (m_manip && m_is_show_tree_window)
+	if (m_is_show_tree_window)
 	{
 		auto func = [this]()
 		{
@@ -242,7 +242,7 @@ void sUIManipulater::manipWindow(std::shared_ptr<UIManipulater>& manip)
 				{
 					for (auto request = it->second.begin(); request != it->second.end();)
 					{
-						ImGui::Text("%s", request->m_anime_name.c_str());
+					ImGui::Text("%s", request->m_anime_name.c_str());
 						if (ImGui::Button("Erase", ImVec2(120, 0))) {
 							request = it->second.erase(request);
 						}
@@ -353,11 +353,14 @@ void sUIManipulater::treeWindow(std::shared_ptr<UIManipulater>& manip)
 	ImGui::SetNextWindowSize(ImVec2(400.f, 200.f), ImGuiCond_Once);
 	if (ImGui::Begin("tree", &m_is_show_tree_window))
 	{
-		if (ImGui::Button("addchild"))
+		if (m_manip)
 		{
-			manip->addnode(m_object_index);
+			if (ImGui::Button("addchild"))
+			{
+				manip->addnode(m_object_index);
+			}
+			treeWindow(manip, 0);
 		}
-		treeWindow(manip, 0);
 		ImGui::End();
 	}
 }
@@ -365,7 +368,10 @@ void sUIManipulater::treeWindow(std::shared_ptr<UIManipulater>& manip)
 void sUIManipulater::treeWindow(std::shared_ptr<UIManipulater>& manip, int32_t index)
 {
 	if (index == -1) { return; }
+	ImVec4 color = manip->m_ui_resource.m_object[index].m_user_id != 0 ? ImVec4(1.f, 0.7f, 0.7f, 1.f) : ImVec4(1.f, 1.f, 1.f, 1.f);
+	ImGui::PushStyleColor(ImGuiCol_Text, color);
 	bool is_open = ImGui::TreeNodeEx("objtree", m_object_index == index ? ImGuiTreeNodeFlags_Selected | ImGuiTreeNodeFlags_OpenOnArrow : 0, "%d", index);
+	ImGui::PopStyleColor();
 	if (ImGui::IsItemClicked(0)) {
 		m_object_index = index;
 	}
