@@ -9,18 +9,39 @@
 #include <btrlib/rTexture.h>
 
 #include <011_ui/cerealDefine.h>
+struct UIObjectTool
+{
+	std::string m_object_name;
+};
+
 struct rUI 
 {
 	UIInfo m_info;
 	std::vector<UIObject> m_object;
 	std::array<std::string, UI::TEXTURE_MAX> m_texture_name;
 
+	std::vector<UIObjectTool> m_object_tool;
+
 	struct AnimeRequest
 	{
-		std::string m_anime_name;
 		uint32_t m_object_index;
+		std::string m_anime_name;
 	};
 	std::unordered_map<uint32_t, std::vector<AnimeRequest>> m_anime_list;
+
+	struct BoundaryEvent
+	{
+		enum 
+		{
+			event_end,
+			event_play_anime,
+		};
+		uint32_t m_object_index;
+		uint32_t m_touch_type;
+		uint32_t m_event_type;
+		uint32_t m_event_arg0;
+	};
+	std::unordered_map<uint32_t, std::vector<BoundaryEvent>> m_boundary_list;
 
 	template<class Archive>
 	void serialize(Archive & archive)
@@ -410,7 +431,6 @@ struct UIManipulater
 		void redo() {}
 	};
 };
-
 struct sUIManipulater : SingletonEx<sUIManipulater>
 {
 	friend SingletonEx<sUIManipulater>;

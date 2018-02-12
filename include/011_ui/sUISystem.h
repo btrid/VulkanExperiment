@@ -11,10 +11,17 @@ struct UIGlobal
 {
 	uvec2 m_resolusion; // ‰ğ‘œ“x
 };
+
+struct UICallback
+{
+	uint32_t m_event_id;
+};
 struct UIScene
 {
 	uint32_t m_is_disable_order; // ‘€ì–³Œø’†
 	uint32_t m_parent_user_id;
+
+
 };
 struct UIInfo
 {

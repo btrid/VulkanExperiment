@@ -147,7 +147,6 @@ void sUIManipulater::execute(vk::CommandBuffer cmd)
 						m_anime = anime;
 					}
 				}
-
 				ImGui::End();
 			}
 	// 		if (m_is_load)
@@ -237,6 +236,52 @@ void sUIManipulater::manipWindow(std::shared_ptr<UIManipulater>& manip)
 			obj.m_texture_index = glm::clamp<int>(obj.m_texture_index, 0, UI::TEXTURE_MAX - 1);
 
 			{
+				// boundary
+				auto it = manip->m_ui_resource.m_boundary_list.find(m_object_index);
+				if (it != manip->m_ui_resource.m_boundary_list.end())
+				{
+					for (auto& boundary_event : it->second)
+					{
+						ImGui::PushID(&boundary_event);
+						{
+							int touchtype = boundary_event.m_touch_type;
+							const char* touchtype_msg[] = { "on", "off", "in", "out", "hover" };
+							ImGui::ListBox("touch type", &touchtype, touchtype_msg, array_length(touchtype_msg));
+							boundary_event.m_touch_type = touchtype;
+						}
+						{
+							int eventtype = boundary_event.m_event_type;
+							const char* eventtype_msg[] = { "end", "play anime", };
+							ImGui::ListBox("event type", &eventtype, eventtype_msg, array_length(eventtype_msg));
+							boundary_event.m_event_type = eventtype;
+
+							switch (eventtype)
+							{
+							case rUI::BoundaryEvent::event_end:
+								break;
+							case rUI::BoundaryEvent::event_play_anime:
+								break;
+							default:
+								break;
+							}
+
+						}
+
+						{
+
+						}
+
+						ImGui::PopID();
+					}
+				}
+				if (ImGui::Button("Add Boundary Event"))
+				{
+
+				}
+			}
+
+			{
+				// anime
 				auto it = manip->m_ui_resource.m_anime_list.find(m_object_index);
 				if (it != manip->m_ui_resource.m_anime_list.end())
 				{
@@ -256,7 +301,8 @@ void sUIManipulater::manipWindow(std::shared_ptr<UIManipulater>& manip)
 					}
 				}
 			}
-			if (ImGui::Button("Add Anime Request"))
+
+			if (ImGui::Button("Add Anime Slot"))
 				ImGui::OpenPopup("FileSelect");
 			if (ImGui::BeginPopupModal("FileSelect", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 			{
