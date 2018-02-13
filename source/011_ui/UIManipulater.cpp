@@ -5,7 +5,86 @@
 #include <applib/App.h>
 #include <011_ui/Font.h>
 
+struct FileSelectModal 
+{
+	enum Event
+	{
+		CONTINUE,
+		DICIDE,
+		CANCEL,
+	};
+	ImGuiTextFilter m_filter;
+	std::experimental::filesystem::path m_dir;
+	std::string m_value;
+	FileSelectModal()
+	{
+		m_dir = std::experimental::filesystem::current_path().parent_path();
+		ImGui::OpenPopup("FileSelect");
+	}
 
+	~FileSelectModal()
+	{
+		ImGui::CloseCurrentPopup();
+	}
+	Event update()
+	{
+		if (ImGui::BeginPopupModal("FileSelect", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+		{
+			ImGui::Text("%s", m_dir.generic_string().c_str());
+			m_filter.Draw();
+			if (ImGui::Selectable("../", false, ImGuiSelectableFlags_DontClosePopups))
+			{
+				m_dir = std::experimental::filesystem::system_complete(m_dir.parent_path());
+			}
+			else
+			{
+				auto file_it = std::experimental::filesystem::directory_iterator(m_dir);
+				for (auto file = std::experimental::filesystem::begin(file_it); file != std::experimental::filesystem::end(file_it); file++)
+				{
+					auto path = file->path().generic_string();
+					auto name = file->path().filename().generic_string();
+					if (m_filter.PassFilter(name.c_str()))
+					{
+						auto is_directory = std::experimental::filesystem::is_directory(path.c_str());
+						auto is_file = std::experimental::filesystem::is_regular_file(path.c_str());
+						if (is_directory)
+						{
+							name += "/";
+						}
+						if (ImGui::Selectable(name.c_str(), false, ImGuiSelectableFlags_DontClosePopups))
+						{
+							if (is_directory)
+							{
+								m_dir = m_dir.generic_string() + "/" + file->path().filename().generic_string();
+								break;
+							}
+							else if (is_file)
+							{
+								m_value = name;
+								ImGui::EndPopup();
+								return DICIDE;
+							}
+						}
+					}
+				}
+			}
+			if (ImGui::Button("Cancel", ImVec2(120, 0)))
+			{
+				ImGui::EndPopup();
+				return CANCEL;
+			}
+
+		}
+
+		ImGui::EndPopup();
+		return CONTINUE;
+	}
+
+	std::string get()const
+	{
+		return m_value;
+	}
+};
 void UIManipulater::addnode(int32_t parent)
 {
 	if (parent == -1)
@@ -47,6 +126,7 @@ void UIManipulater::addnode(int32_t parent)
 	}
 
 	m_ui_resource.m_object.push_back(new_node);
+	m_ui_resource.m_object_tool.emplace_back();
 }
 
 
@@ -258,19 +338,17 @@ void sUIManipulater::manipWindow(std::shared_ptr<UIManipulater>& manip)
 							switch (eventtype)
 							{
 							case rUI::BoundaryEvent::event_end:
-								break;
+							{
+							}
+							break;
 							case rUI::BoundaryEvent::event_play_anime:
-								break;
+							{
+							}
+							break;
 							default:
 								break;
 							}
-
 						}
-
-						{
-
-						}
-
 						ImGui::PopID();
 					}
 				}
@@ -302,66 +380,32 @@ void sUIManipulater::manipWindow(std::shared_ptr<UIManipulater>& manip)
 				}
 			}
 
-			if (ImGui::Button("Add Anime Slot"))
-				ImGui::OpenPopup("FileSelect");
-			if (ImGui::BeginPopupModal("FileSelect", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+			static std::unique_ptr<FileSelectModal> modal;
+			if (ImGui::Button("Add Anime Slot")) {
+				modal = std::make_unique<FileSelectModal>();
+			}
+			if (modal)
 			{
-				static ImGuiTextFilter filter;
-				static std::experimental::filesystem::path anime_dir = std::experimental::filesystem::current_path().parent_path();
-				ImGui::Text("%s", anime_dir.generic_string().c_str());
-				filter.Draw();
-				if (ImGui::Selectable("../", false, ImGuiSelectableFlags_DontClosePopups))
+				auto ev = modal->update();
+				if (ev == FileSelectModal::DICIDE)
 				{
-					anime_dir = std::experimental::filesystem::system_complete(anime_dir.parent_path());
-				}
-				else
-				{
-					auto file_it = std::experimental::filesystem::directory_iterator(anime_dir);
-					for (auto file = std::experimental::filesystem::begin(file_it); file != std::experimental::filesystem::end(file_it); file++)
+					auto it = manip->m_ui_resource.m_anime_list.find(m_object_index);
+					if (it == manip->m_ui_resource.m_anime_list.end())
 					{
-						auto path = file->path().generic_string();
-						auto name = file->path().filename().generic_string();
-						if (filter.PassFilter(name.c_str()))
-						{
-							auto is_directory = std::experimental::filesystem::is_directory(path.c_str());
-							auto is_file = std::experimental::filesystem::is_regular_file(path.c_str());
-							if (is_directory)
-							{
-								name += "/";
-							}
-							if (ImGui::Selectable(name.c_str(), false, ImGuiSelectableFlags_DontClosePopups))
-							{
-								if (is_directory)
-								{
-									anime_dir = anime_dir.generic_string() + "/" + file->path().filename().generic_string();
-									break;
-								}
-								else if (is_file)
-								{
-									auto it = manip->m_ui_resource.m_anime_list.find(m_object_index);
-									if (it == manip->m_ui_resource.m_anime_list.end())
-									{
-										manip->m_ui_resource.m_anime_list[m_object_index] = std::vector<rUI::AnimeRequest>();
-										it = manip->m_ui_resource.m_anime_list.find(m_object_index);
-									}
-
-									rUI::AnimeRequest request;
-									request.m_object_index = m_object_index;
-									request.m_anime_name = name;
-									manip->m_ui_resource.m_anime_list[m_object_index].emplace_back(request);
-
-									ImGui::CloseCurrentPopup();
-								}
-							}
-						}
+						manip->m_ui_resource.m_anime_list[m_object_index] = std::vector<rUI::AnimeRequest>();
+						it = manip->m_ui_resource.m_anime_list.find(m_object_index);
 					}
-				}
-				if (ImGui::Button("Cancel", ImVec2(120, 0)))
-				{
-					ImGui::CloseCurrentPopup();
-				}
 
-				ImGui::EndPopup();
+					rUI::AnimeRequest request;
+					//									request.m_object_index = m_object_index;
+					request.m_anime_name = modal->get();
+					manip->m_ui_resource.m_anime_list[m_object_index].emplace_back(request);
+					modal.reset();
+				}
+				else if (ev == FileSelectModal::CANCEL)
+				{
+					modal.reset();
+				}
 			}
 
 // 			ImGui::EndChild();
@@ -416,7 +460,11 @@ void sUIManipulater::treeWindow(std::shared_ptr<UIManipulater>& manip, int32_t i
 	if (index == -1) { return; }
 	ImVec4 color = manip->m_ui_resource.m_object[index].m_user_id != 0 ? ImVec4(1.f, 0.7f, 0.7f, 1.f) : ImVec4(1.f, 1.f, 1.f, 1.f);
 	ImGui::PushStyleColor(ImGuiCol_Text, color);
-	bool is_open = ImGui::TreeNodeEx("objtree", m_object_index == index ? ImGuiTreeNodeFlags_Selected | ImGuiTreeNodeFlags_OpenOnArrow : 0, "%d", index);
+
+	char name[256];
+	sprintf_s(name, "%s : %d", manip->m_ui_resource.m_object_tool[index].m_object_name.c_str(), index);
+
+	bool is_open = ImGui::TreeNodeEx("objtree", m_object_index == index ? ImGuiTreeNodeFlags_Selected | ImGuiTreeNodeFlags_OpenOnArrow : 0, name);
 	ImGui::PopStyleColor();
 	if (ImGui::IsItemClicked(0)) {
 		m_object_index = index;

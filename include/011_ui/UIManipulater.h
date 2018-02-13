@@ -9,6 +9,7 @@
 #include <btrlib/rTexture.h>
 
 #include <011_ui/cerealDefine.h>
+
 struct UIObjectTool
 {
 	std::string m_object_name;
@@ -24,7 +25,7 @@ struct rUI
 
 	struct AnimeRequest
 	{
-		uint32_t m_object_index;
+		std::string m_object_name;
 		std::string m_anime_name;
 	};
 	std::unordered_map<uint32_t, std::vector<AnimeRequest>> m_anime_list;
@@ -401,6 +402,7 @@ struct UIManipulater
 		root.m_user_id = 0;
 		root.m_texture_index = 0;
 		m_ui_resource.m_object.push_back(root);
+		m_ui_resource.m_object_tool.emplace_back();
 
 		// ‰Šúİ’è
 		UIAnimeKey key;
