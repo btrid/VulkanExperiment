@@ -5,6 +5,79 @@
 #include <applib/App.h>
 #include <011_ui/Font.h>
 
+struct NodeSelectModal
+{
+	enum Event
+	{
+		CONTINUE,
+		DICIDE,
+		CANCEL,
+	};
+
+	int32_t m_select;
+	NodeSelectModal()
+	{
+		m_select = -1;
+		ImGui::OpenPopup("NodeSelect");
+	}
+
+	~NodeSelectModal()
+	{
+		ImGui::CloseCurrentPopup();
+	}
+
+	void updateImpl(std::shared_ptr<UIManipulater>& manip, int32_t index)
+	{
+		if (index == -1) { return; }
+		ImVec4 color = manip->m_ui_resource.m_object[index].m_user_id != 0 ? ImVec4(1.f, 0.7f, 0.7f, 1.f) : ImVec4(1.f, 1.f, 1.f, 1.f);
+		ImGui::PushStyleColor(ImGuiCol_Text, color);
+
+		char name[256];
+		sprintf_s(name, "%s : %d", manip->m_ui_resource.m_object_tool[index].m_object_name.c_str(), index);
+
+		bool is_open = ImGui::TreeNodeEx("objtree", m_select == index ? ImGuiTreeNodeFlags_Selected | ImGuiTreeNodeFlags_OpenOnArrow : 0, name);
+		ImGui::PopStyleColor();
+		if (ImGui::IsItemClicked(0)) {
+			m_select = index;
+		}
+		if (is_open)
+		{
+			updateImpl(manip, manip->m_ui_resource.m_object[index].m_child_index);
+			ImGui::TreePop();
+		}
+		updateImpl(manip, manip->m_ui_resource.m_object[index].m_sibling_index);
+	}
+
+	Event update(std::shared_ptr<UIManipulater>& manip)
+	{
+		ImGui::SetNextWindowSize(ImVec2(400.f, 200), ImGuiCond_Once);
+		if (ImGui::BeginPopupModal("NodeSelect"))
+		{
+//			if (ImGui::BeginChild("nodeselectchild", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar) )
+			{
+				updateImpl(manip, 0);
+//				ImGui::EndChild();
+			}
+
+			if (ImGui::Button("Cancel", ImVec2(120, 0)))
+			{
+				ImGui::EndPopup();
+				return CANCEL;
+			}
+
+			ImGui::EndPopup();
+			return CONTINUE;
+		}
+		return CONTINUE;
+	}
+
+	int32_t get()const
+	{
+		return m_select;
+	}
+
+
+};
 struct FileSelectModal 
 {
 	enum Event
@@ -343,6 +416,7 @@ void sUIManipulater::manipWindow(std::shared_ptr<UIManipulater>& manip)
 							break;
 							case rUI::BoundaryEvent::event_play_anime:
 							{
+
 							}
 							break;
 							default:
@@ -352,9 +426,33 @@ void sUIManipulater::manipWindow(std::shared_ptr<UIManipulater>& manip)
 						ImGui::PopID();
 					}
 				}
-				if (ImGui::Button("Add Boundary Event"))
+				static std::unique_ptr<NodeSelectModal> modal;
+				if (ImGui::Button("Boundary Event"))
 				{
-
+					modal = std::make_unique<NodeSelectModal>();
+				}
+				if (modal)
+				{
+					auto ev = modal->update(m_manip);
+					if (ev == NodeSelectModal::DICIDE)
+					{
+// 							auto it = manip->m_ui_resource.m_anime_list.find(m_object_index);
+// 							if (it == manip->m_ui_resource.m_anime_list.end())
+// 							{
+// 								manip->m_ui_resource.m_anime_list[m_object_index] = std::vector<rUI::AnimeRequest>();
+// 								it = manip->m_ui_resource.m_anime_list.find(m_object_index);
+// 							}
+// 
+// 							rUI::AnimeRequest request;
+// 							//									request.m_object_index = m_object_index;
+// 							request.m_anime_name = modal->get();
+// 							manip->m_ui_resource.m_anime_list[m_object_index].emplace_back(request);
+						modal.reset();
+					}
+					else if (ev == FileSelectModal::CANCEL)
+					{
+						modal.reset();
+					}
 				}
 			}
 
