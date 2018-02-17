@@ -10,7 +10,7 @@
 #extension GL_GOOGLE_cpp_style_line_directive : require
 
 #define SETPOINT_CAMERA 0
-#include <Camera.glsl>
+#include <btrlib/Camera.glsl>
 
 layout(location = 0)in vec3 in_position;
 

@@ -249,10 +249,7 @@ void sParticlePipeline::setup(std::shared_ptr<btr::Context>& context)
 		m_pipeline[PIPELINE_GENERATE] = std::move(pipelines[1]);
 		m_pipeline[PIPELINE_GENERATE_DEBUG] = std::move(pipelines[2]);
 
-		vk::Extent3D size;
-		size.setWidth(640);
-		size.setHeight(480);
-		size.setDepth(1);
+		vk::Extent2D size = m_render_pass->getResolution();
 		// pipeline
 		{
 			// assembly

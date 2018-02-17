@@ -193,10 +193,7 @@ struct sMap : public Singleton<sMap>
 			m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
-		vk::Extent3D size;
-		size.setWidth(640);
-		size.setHeight(480);
-		size.setDepth(1);
+		vk::Extent2D size = m_render_pass->getResolution();
 		{
 			// assembly
 			vk::PipelineInputAssemblyStateCreateInfo assembly_info[] =
@@ -415,10 +412,7 @@ struct sMap : public Singleton<sMap>
 			m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
-		vk::Extent3D size;
-		size.setWidth(640);
-		size.setHeight(480);
-		size.setDepth(1);
+		vk::Extent2D size = m_render_pass->getResolution();
 		{
 			// assembly
 			vk::PipelineInputAssemblyStateCreateInfo assembly_info[] =

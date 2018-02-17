@@ -413,10 +413,7 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context)
 	m_pipeline[PIPELINE_COMPUTE_SOLDIER_UPDATE] = std::move(compute_pipeline[0]);
 	m_pipeline[PIPELINE_COMPUTE_SOLDIER_EMIT] = std::move(compute_pipeline[1]);
 
-	vk::Extent3D size;
-	size.setWidth(640);
-	size.setHeight(480);
-	size.setDepth(1);
+	vk::Extent2D size = m_render_pass->getResolution();
 	// pipeline
 	{
 		// assembly

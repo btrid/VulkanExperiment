@@ -10,7 +10,8 @@ void sLightSystem::setup(std::shared_ptr<btr::Context>& context)
 {
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
-	m_tile_info_cpu.m_resolusion = uvec2(640, 480);
+	auto size = app::g_app_instance->m_window->getRenderBackbufferPass()->getResolution();
+	m_tile_info_cpu.m_resolusion = uvec2(size.width, size.height);
 	m_tile_info_cpu.m_tile_num = uvec2(32);
 	m_tile_info_cpu.m_tile_index_map_max = 256;
 	m_tile_info_cpu.m_tile_buffer_max_num = m_tile_info_cpu.m_tile_index_map_max * m_tile_info_cpu.m_tile_num.x*m_tile_info_cpu.m_tile_num.y;
