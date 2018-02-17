@@ -5,7 +5,7 @@
 
 #include <btrlib/Common.glsl>
 #define USE_PARTICLE 0
-#include </Particle.glsl>
+#include <applib/Particle.glsl>
 
 #define SETPOINT_CAMERA 1
 #include <btrlib/Camera.glsl>

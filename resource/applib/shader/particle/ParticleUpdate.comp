@@ -5,7 +5,7 @@
 #include <btrlib/Common.glsl>
 
 #define USE_PARTICLE 0
-#include </Particle.glsl>
+#include <applib/Particle.glsl>
 
 #define USE_SYSTEM 1
 #include <applib/System.glsl>
@@ -41,7 +41,7 @@ void main()
 //	p.m_color += updater.m_color_add*deltatime;
 //	p.m_color *= pow(updater.m_color_mul, vec4(1.+deltatime));
 	
-	uint dst_index = atomicAdd(b_draw_cmd.instanceCount, 1);
+	uint dst_index = atomicAdd(b_particle_draw_cmd.instanceCount, 1);
 	uint dst_offset = (u_system_data.m_gpu_index)*u_particle_info.m_particle_max_num;
 	b_particle[dst_offset + dst_index] = p;
 }

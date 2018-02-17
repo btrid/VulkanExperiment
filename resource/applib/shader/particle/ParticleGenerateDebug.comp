@@ -4,7 +4,7 @@
 #include <btrlib/Common.glsl>
 
 #define USE_PARTICLE 0
-#include </Particle.glsl>
+#include <applib/Particle.glsl>
 
 #define USE_SYSTEM 1
 #include <applib/System.glsl>

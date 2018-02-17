@@ -2,9 +2,10 @@
 
 #extension GL_GOOGLE_cpp_style_line_directive : require
 #include <btrlib/Common.glsl>
+#include <btrlib/Math.glsl>
 
 #define USE_PARTICLE 0
-#include </Particle.glsl>
+#include <applib/Particle.glsl>
 
 #define USE_SYSTEM 1
 #include <applib/System.glsl>
@@ -27,7 +28,7 @@ void main()
 		return;
 	}
 	
-	uint dst_index = atomicAdd(b_draw_cmd.instanceCount, 1);
+	uint dst_index = atomicAdd(b_particle_draw_cmd.instanceCount, 1);
 	vec4 rand01 =  rand4(vec2(gl_GlobalInvocationID.x*dst_index, dst_index+local_index));
 	vec4 rand11 = rand01*2.-1.;
 	vec4 position = s_cmd.m_position.m_value + s_cmd.m_position.m_value_rand*rand11.xyzw;
