@@ -59,6 +59,11 @@ struct NodeSelectModal
 //				ImGui::EndChild();
 			}
 
+			if (ImGui::Button("OK", ImVec2(120, 0)))
+			{
+				ImGui::EndPopup();
+				return DICIDE;
+			}
 			if (ImGui::Button("Cancel", ImVec2(120, 0)))
 			{
 				ImGui::EndPopup();
@@ -241,6 +246,7 @@ void sUIManipulater::execute(vk::CommandBuffer cmd)
 					ImGui::MenuItem("Manip", NULL, &m_is_show_manip_window);
 					ImGui::MenuItem("Anime", NULL, &m_is_show_anime_window);
 					ImGui::MenuItem("Texture", NULL, &m_is_show_texture_window);
+					ImGui::MenuItem("Scene", NULL, &m_is_show_scene_window);
 
 					if (ImGui::MenuItem("NewWindow"))
 					{
@@ -354,6 +360,15 @@ void sUIManipulater::execute(vk::CommandBuffer cmd)
 		};
 		app::g_app_instance->m_window->getImguiPipeline()->pushImguiCmd(std::move(func));
 	}
+	if (m_is_show_scene_window)
+	{
+		auto func = [this]()
+		{
+			sceneWindow(m_scene);
+		};
+		app::g_app_instance->m_window->getImguiPipeline()->pushImguiCmd(std::move(func));
+
+	}
 
 	for (auto& manip : m_manip_list)
 	{
@@ -416,7 +431,24 @@ void sUIManipulater::manipWindow(std::shared_ptr<UIManipulater>& manip)
 							break;
 							case rUI::BoundaryEvent::event_play_anime:
 							{
-
+								static std::unique_ptr<NodeSelectModal> modal;
+								if (ImGui::Button("Anime Event"))
+								{
+									modal = std::make_unique<NodeSelectModal>();
+								}
+								if (modal)
+								{
+									auto ev = modal->update(m_manip);
+									if (ev == NodeSelectModal::DICIDE)
+									{
+//										boundary_event.m_object_index m_manip->m_ui_resource.m_object_tool[modal->get()].m_object_name;
+										modal.reset();
+									}
+									else if (ev == FileSelectModal::CANCEL)
+									{
+										modal.reset();
+									}
+								}
 							}
 							break;
 							default:
@@ -424,34 +456,6 @@ void sUIManipulater::manipWindow(std::shared_ptr<UIManipulater>& manip)
 							}
 						}
 						ImGui::PopID();
-					}
-				}
-				static std::unique_ptr<NodeSelectModal> modal;
-				if (ImGui::Button("Boundary Event"))
-				{
-					modal = std::make_unique<NodeSelectModal>();
-				}
-				if (modal)
-				{
-					auto ev = modal->update(m_manip);
-					if (ev == NodeSelectModal::DICIDE)
-					{
-// 							auto it = manip->m_ui_resource.m_anime_list.find(m_object_index);
-// 							if (it == manip->m_ui_resource.m_anime_list.end())
-// 							{
-// 								manip->m_ui_resource.m_anime_list[m_object_index] = std::vector<rUI::AnimeRequest>();
-// 								it = manip->m_ui_resource.m_anime_list.find(m_object_index);
-// 							}
-// 
-// 							rUI::AnimeRequest request;
-// 							//									request.m_object_index = m_object_index;
-// 							request.m_anime_name = modal->get();
-// 							manip->m_ui_resource.m_anime_list[m_object_index].emplace_back(request);
-						modal.reset();
-					}
-					else if (ev == FileSelectModal::CANCEL)
-					{
-						modal.reset();
 					}
 				}
 			}
@@ -817,4 +821,35 @@ void sUIManipulater::animedataManip(std::shared_ptr<rUIAnime>& anime)
 		}
 
 	}
+}
+
+void sUIManipulater::sceneWindow(std::shared_ptr<rUIScene>& scene)
+{
+	ImGui::SetNextWindowSize(ImVec2(400.f, 200.f), ImGuiCond_Once);
+	if (ImGui::Begin("tree", &m_is_show_scene_window))
+	{
+		if (scene)
+		{
+			for (auto it = scene->m_event_list.begin(); it != scene->m_event_list.end(); )
+			{
+				auto& event = *it;
+				ImGui::PushID(&event);
+				ImGui::InputText("event name", event.m_event_name, sizeof(event.m_event_name));
+				ImGui::SameLine();
+				if (ImGui::Button("erase")) {
+					it = scene->m_event_list.erase(it);
+				}
+				else {
+					it++;
+				}
+				ImGui::PopID();
+			}
+			if (ImGui::Button("AddEvent"))
+			{
+				scene->m_event_list.emplace_back();
+			}
+		}
+		ImGui::End();
+	}
+
 }

@@ -10,11 +10,24 @@
 
 #include <011_ui/cerealDefine.h>
 
+struct UIEventSetting
+{
+	char m_event_name[32];
+};
+
+struct rUIScene
+{
+	std::vector<UIEventSetting> m_event_list;
+};
 struct UIObjectTool
 {
 	std::string m_object_name;
 };
 
+struct UIEventTool : UIEvent
+{
+	std::string m_event_name;
+};
 struct rUI 
 {
 	UIInfo m_info;
@@ -441,13 +454,15 @@ struct sUIManipulater : SingletonEx<sUIManipulater>
 	std::shared_ptr<UIManipulater> m_manip;
 	std::vector<std::shared_ptr<rUIAnime>> m_anime_list;
 	std::shared_ptr<rUIAnime> m_anime;
-
+	std::vector<std::shared_ptr<rUIScene>> m_scene_list;
+	std::shared_ptr<rUIScene> m_scene;
 	int32_t m_object_index;
 	int32_t m_anime_index;
 	bool m_is_show_manip_window;
 	bool m_is_show_tree_window;
 	bool m_is_show_anime_window;
 	bool m_is_show_texture_window;
+	bool m_is_show_scene_window;
 	bool m_request_update_boundary;
 	bool m_request_update_sprite;
 	bool m_request_update_animation;
@@ -464,6 +479,7 @@ struct sUIManipulater : SingletonEx<sUIManipulater>
 		, m_is_show_tree_window(false)
 		, m_is_show_anime_window(false)
 		, m_is_show_texture_window(false)
+		, m_is_show_scene_window(false)
 		, m_request_update_boundary(false)
 		, m_request_update_sprite(false)
 		, m_request_update_animation(false)
@@ -473,6 +489,7 @@ struct sUIManipulater : SingletonEx<sUIManipulater>
 		, m_is_load(false)
 	{
 		m_context = context;
+		m_scene = std::make_shared<rUIScene>();
 	}
 	void execute(vk::CommandBuffer cmd);
 
@@ -485,4 +502,6 @@ struct sUIManipulater : SingletonEx<sUIManipulater>
 
 	void animeWindow(std::shared_ptr<rUIAnime>& anime);
 	void animedataManip(std::shared_ptr<rUIAnime>& anime);
+
+	void sceneWindow(std::shared_ptr<rUIScene>& scene);
 };
