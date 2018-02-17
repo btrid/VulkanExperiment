@@ -191,7 +191,7 @@ struct sScene : public Singleton<sScene>
 					vk::ImageMemoryBarrier to_transfer_damage = to_transfer;
 					to_transfer_damage.image = image_damage.get();
 
-					cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_transfer, to_transfer_sub, to_transfer_damage });
+					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_transfer, to_transfer_sub, to_transfer_damage });
 				}
 
 				{
@@ -226,7 +226,7 @@ struct sScene : public Singleton<sScene>
 						copy.setImageSubresource(l);
 						copy.setImageExtent(image_info.extent);
 
-						cmd->copyBufferToImage(staging.getBufferInfo().buffer, image.get(), vk::ImageLayout::eTransferDstOptimal, copy);
+						cmd.copyBufferToImage(staging.getBufferInfo().buffer, image.get(), vk::ImageLayout::eTransferDstOptimal, copy);
 					}
 					{
 						btr::BufferMemoryDescriptor desc;
@@ -240,11 +240,11 @@ struct sScene : public Singleton<sScene>
 						copy.setImageSubresource(l);
 						copy.setImageExtent(sub_image_info.extent);
 
-						cmd->copyBufferToImage(staging.getBufferInfo().buffer, subimage.get(), vk::ImageLayout::eTransferDstOptimal, copy);
+						cmd.copyBufferToImage(staging.getBufferInfo().buffer, subimage.get(), vk::ImageLayout::eTransferDstOptimal, copy);
 
 					}
 
-					cmd->clearColorImage(image_damage.get(), vk::ImageLayout::eTransferDstOptimal, vk::ClearColorValue(std::array<unsigned, 4>{}), subresourceRange);
+					cmd.clearColorImage(image_damage.get(), vk::ImageLayout::eTransferDstOptimal, vk::ClearColorValue(std::array<unsigned, 4>{}), subresourceRange);
 				}
 
 				{
@@ -265,7 +265,7 @@ struct sScene : public Singleton<sScene>
 					to_compute_damege.image = image_damage.get();
 					to_compute_damege.dstAccessMask = vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite;
 
-					cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, {}, { to_shader_read,to_shader_read_sub, to_compute_damege });
+					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, {}, { to_shader_read,to_shader_read_sub, to_compute_damege });
 				}
 				m_map_image = std::move(image);
 				m_map_image_view = std::move(image_view);
@@ -292,10 +292,10 @@ struct sScene : public Singleton<sScene>
 				vertex_copy.setSize(desc.size);
 				vertex_copy.setSrcOffset(staging.getBufferInfo().offset);
 				vertex_copy.setDstOffset(m_map_info.getBufferInfo().offset);
-				cmd->copyBuffer(staging.getBufferInfo().buffer, m_map_info.getBufferInfo().buffer, vertex_copy);
+				cmd.copyBuffer(staging.getBufferInfo().buffer, m_map_info.getBufferInfo().buffer, vertex_copy);
 
 				auto barrier = m_map_info.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead);
-				cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { barrier }, {});
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { barrier }, {});
 			}
 			{
 				btr::BufferMemoryDescriptor desc;

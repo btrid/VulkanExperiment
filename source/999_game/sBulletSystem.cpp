@@ -9,7 +9,7 @@ void sBulletSystem::setup(std::shared_ptr<btr::Context>& context)
 
 	{
 		// レンダーパス
-		m_render_pass = std::make_shared<RenderBackbufferModule>(context);
+		m_render_pass = app::g_app_instance->m_window->getRenderBackbufferPass();
 	}
 
 	{
@@ -28,12 +28,12 @@ void sBulletSystem::setup(std::shared_ptr<btr::Context>& context)
 			copy_info.setSize(data_desc.size);
 			copy_info.setSrcOffset(staging.getBufferInfo().offset);
 			copy_info.setDstOffset(m_bullet.getBufferInfo().offset);
-			cmd->copyBuffer(staging.getBufferInfo().buffer, m_bullet.getBufferInfo().buffer, copy_info);
+			cmd.copyBuffer(staging.getBufferInfo().buffer, m_bullet.getBufferInfo().buffer, copy_info);
 
 			auto to_compute = m_bullet.makeMemoryBarrierEx();
 			to_compute.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 			to_compute.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_compute }, {});
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_compute }, {});
 		}
 		{
 
@@ -50,23 +50,23 @@ void sBulletSystem::setup(std::shared_ptr<btr::Context>& context)
 		btr::BufferMemoryDescriptor desc;
 		desc.size = sizeof(vk::DrawIndirectCommand);
 		m_bullet_counter = context->m_storage_memory.allocateMemory(desc);
-		cmd->updateBuffer<vk::DrawIndirectCommand>(m_bullet_counter.getBufferInfo().buffer, m_bullet_counter.getBufferInfo().offset, vk::DrawIndirectCommand(4, 0, 0, 0));
+		cmd.updateBuffer<vk::DrawIndirectCommand>(m_bullet_counter.getBufferInfo().buffer, m_bullet_counter.getBufferInfo().offset, vk::DrawIndirectCommand(4, 0, 0, 0));
 		auto count_barrier = m_bullet_counter.makeMemoryBarrierEx();
 		count_barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 		count_barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-		cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, count_barrier, {});
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, count_barrier, {});
 
 		m_bullet_info = context->m_uniform_memory.allocateMemory(sizeof(BulletInfo));
-		cmd->updateBuffer<BulletInfo>(m_bullet_info.getBufferInfo().buffer, m_bullet_info.getBufferInfo().offset, { m_bullet_info_cpu });
+		cmd.updateBuffer<BulletInfo>(m_bullet_info.getBufferInfo().buffer, m_bullet_info.getBufferInfo().offset, { m_bullet_info_cpu });
 		auto barrier = m_bullet_info.makeMemoryBarrierEx();
 		barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 		barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-		cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { barrier }, {});
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { barrier }, {});
 
 		auto& map_desc = sScene::Order().m_map_info_cpu.m_descriptor[0];
 		desc.size = sizeof(uint32_t) * map_desc.m_cell_num.x* map_desc.m_cell_num.y;
 		m_bullet_LL_head_gpu = context->m_storage_memory.allocateMemory(desc);
-		cmd->fillBuffer(m_bullet_LL_head_gpu.getBufferInfo().buffer, m_bullet_LL_head_gpu.getBufferInfo().offset, m_bullet_LL_head_gpu.getBufferInfo().range, 0xFFFFFFFF);
+		cmd.fillBuffer(m_bullet_LL_head_gpu.getBufferInfo().buffer, m_bullet_LL_head_gpu.getBufferInfo().offset, m_bullet_LL_head_gpu.getBufferInfo().range, 0xFFFFFFFF);
 
 	}
 
@@ -183,7 +183,7 @@ void sBulletSystem::setup(std::shared_ptr<btr::Context>& context)
 			std::vector<vk::DescriptorSetLayout> layouts = {
 				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_UPDATE].get(),
 				sScene::Order().getDescriptorSetLayout(sScene::DESCRIPTOR_SET_LAYOUT_MAP),
-				sSystem::Order().getSystemDescriptor().getLayout(),
+				sSystem::Order().getSystemDescriptorLayout(),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(layouts.size());
@@ -194,7 +194,7 @@ void sBulletSystem::setup(std::shared_ptr<btr::Context>& context)
 			std::vector<vk::DescriptorSetLayout> layouts = {
 				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_UPDATE].get(),
 				sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
-				sSystem::Order().getSystemDescriptor().getLayout(),
+				sSystem::Order().getSystemDescriptorLayout(),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(layouts.size());
@@ -353,7 +353,7 @@ vk::CommandBuffer sBulletSystem::execute(std::shared_ptr<btr::Context>& context)
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COMPUTE_EMIT].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 0, m_descriptor_set[DESCRIPTOR_SET_UPDATE].get(), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 1, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_MAP), {});
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 2, sSystem::Order().getSystemDescriptor().getSet(), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 2, sSystem::Order().getSystemDescriptorSet(), {0});
 
 			auto groups = app::calcDipatchGroups(glm::uvec3(data.size(), 1, 1), glm::uvec3(1024, 1, 1));
 			cmd.dispatch(groups.x, groups.y, groups.z);
@@ -385,7 +385,7 @@ vk::CommandBuffer sBulletSystem::execute(std::shared_ptr<btr::Context>& context)
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COMPUTE_UPDATE].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 0, m_descriptor_set[DESCRIPTOR_SET_UPDATE].get(), {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 1, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_MAP), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 2, sSystem::Order().getSystemDescriptor().getSet(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get(), 2, sSystem::Order().getSystemDescriptorSet(), {0});
 
 		auto groups = app::calcDipatchGroups(glm::uvec3(m_bullet_info_cpu.m_max_num, 1, 1), glm::uvec3(1024, 1, 1));
 		cmd.dispatch(groups.x, groups.y, groups.z);
@@ -416,7 +416,7 @@ vk::CommandBuffer sBulletSystem::draw(std::shared_ptr<btr::Context>& context)
 	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_GRAPHICS_RENDER].get());
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 0, m_descriptor_set[DESCRIPTOR_SET_UPDATE].get(), {});
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 2, sSystem::Order().getSystemDescriptor().getSet(), {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 2, sSystem::Order().getSystemDescriptorSet(), {0});
 
 	cmd.drawIndirect(m_bullet_counter.getBufferInfo().buffer, m_bullet_counter.getBufferInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
 

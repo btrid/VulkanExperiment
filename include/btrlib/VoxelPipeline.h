@@ -60,7 +60,7 @@ struct VoxelPipeline
 		PIPELINE_NUM,
 	};
 
-	std::shared_ptr<RenderBackbufferModule> m_draw_render_pass;
+	std::shared_ptr<RenderPassModule> m_draw_render_pass;
 
 	std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_list;
 	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_stage_info;
@@ -104,7 +104,7 @@ struct VoxelPipeline
 			copy.setSrcOffset(staging.getBufferInfo().offset);
 			copy.setDstOffset(m_voxel_info.getBufferInfo().offset);
 			copy.setSize(desc.size);
-			cmd->copyBuffer(staging.getBufferInfo().buffer, m_voxel_info.getBufferInfo().buffer, copy);
+			cmd.copyBuffer(staging.getBufferInfo().buffer, m_voxel_info.getBufferInfo().buffer, copy);
 		}
 
 
@@ -146,7 +146,7 @@ struct VoxelPipeline
 				to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 				to_copy_barrier.subresourceRange = subresourceRange;
 
-				cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
 
 			}
 
@@ -196,7 +196,7 @@ struct VoxelPipeline
 
 		// レンダーパス
 		{
-			m_draw_render_pass = std::make_shared<RenderBackbufferModule>(context);
+			m_draw_render_pass = app::g_app_instance->m_window->getRenderBackbufferPass();
 		}
 
 

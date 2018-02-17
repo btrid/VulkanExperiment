@@ -359,7 +359,7 @@ struct sMap : public Singleton<sMap>
 		PIPELINE_NUM,
 	};
 
-	std::shared_ptr<RenderBackbufferModule> m_render_pass;
+	std::shared_ptr<RenderPassModule> m_render_pass;
 	std::vector<vk::UniqueCommandBuffer> m_cmd;
 
 	std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_module;
@@ -375,7 +375,7 @@ struct sMap : public Singleton<sMap>
 
 		{
 			// レンダーパス
-			m_render_pass = std::make_shared<RenderBackbufferModule>(context);
+			m_render_pass = app::g_app_instance->m_window->getRenderBackbufferPass();
 		}
 
 		// setup shader

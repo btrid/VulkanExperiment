@@ -89,7 +89,7 @@ public:
 	btr::BufferMemory m_bullet_draw_indiret_info;
 	btr::BufferMemory m_bullet_LL_head_gpu;
 
-	std::shared_ptr<RenderBackbufferAppModule> m_render_pass;
+	std::shared_ptr<RenderPassModule> m_render_pass;
 
 	std::array<vk::UniqueDescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
 	std::array<vk::UniqueDescriptorSet, DESCRIPTOR_SET_NUM> m_descriptor_set;

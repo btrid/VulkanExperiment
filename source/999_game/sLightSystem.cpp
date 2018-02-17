@@ -28,7 +28,7 @@ void sLightSystem::setup(std::shared_ptr<btr::Context>& context)
 			copy.setSrcOffset(staging.getBufferInfo().offset);
 			copy.setDstOffset(m_light_info.getBufferInfo().offset);
 
-			cmd->copyBuffer(staging.getBufferInfo().buffer, m_light_info.getBufferInfo().buffer, copy);
+			cmd.copyBuffer(staging.getBufferInfo().buffer, m_light_info.getBufferInfo().buffer, copy);
 		}
 		{
 			btr::BufferMemoryDescriptorEx<TileInfo> desc;
@@ -42,7 +42,7 @@ void sLightSystem::setup(std::shared_ptr<btr::Context>& context)
 			copy.setSrcOffset(staging.getBufferInfo().offset);
 			copy.setDstOffset(m_tile_info.getBufferInfo().offset);
 
-			cmd->copyBuffer(staging.getBufferInfo().buffer, m_tile_info.getBufferInfo().buffer, copy);
+			cmd.copyBuffer(staging.getBufferInfo().buffer, m_tile_info.getBufferInfo().buffer, copy);
 		}
 		{
 			btr::BufferMemoryDescriptorEx<LightData> desc;
@@ -181,7 +181,7 @@ void sLightSystem::setup(std::shared_ptr<btr::Context>& context)
 			{
 				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_LIGHT].get(),
 				sParticlePipeline::Order().getDescriptorSetLayout(sParticlePipeline::DESCRIPTOR_SET_LAYOUT_PARTICLE),
-				sSystem::Order().getSystemDescriptor().getLayout(),
+				sSystem::Order().getSystemDescriptorLayout(),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(layouts.size());
@@ -194,7 +194,7 @@ void sLightSystem::setup(std::shared_ptr<btr::Context>& context)
 			{
 				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_LIGHT].get(),
 				sBulletSystem::Order().getDescriptorSetLayout(sBulletSystem::DESCRIPTOR_SET_LAYOUT_UPDATE),
-				sSystem::Order().getSystemDescriptor().getLayout(),
+				sSystem::Order().getSystemDescriptorLayout(),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(layouts.size());
@@ -207,7 +207,7 @@ void sLightSystem::setup(std::shared_ptr<btr::Context>& context)
 			{
 				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_LIGHT].get(),
 				sBulletSystem::Order().getDescriptorSetLayout(sBulletSystem::DESCRIPTOR_SET_LAYOUT_UPDATE),
-				sSystem::Order().getSystemDescriptor().getLayout(),
+				sSystem::Order().getSystemDescriptorLayout(),
 				sScene::Order().getDescriptorSetLayout(sScene::DESCRIPTOR_SET_LAYOUT_MAP),
 				sScene::Order().getDescriptorSetLayout(sScene::DESCRIPTOR_SET_LAYOUT_SCENE),
 				sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
@@ -293,7 +293,7 @@ vk::CommandBuffer sLightSystem::execute(std::shared_ptr<btr::Context>& context)
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_BULLET_COLLECT].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_BULLET_COLLECT].get(), 0, m_descriptor_set[DESCRIPTOR_SET_LAYOUT_LIGHT].get(), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_BULLET_COLLECT].get(), 1, sBulletSystem::Order().getDescriptorSet(sBulletSystem::DESCRIPTOR_SET_UPDATE), {});
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_BULLET_COLLECT].get(), 2, sSystem::Order().getSystemDescriptor().getSet(), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_BULLET_COLLECT].get(), 2, sSystem::Order().getSystemDescriptorSet(), { 0 });
 
 			cmd.dispatch(1, 1, 1);
 		}
@@ -301,7 +301,7 @@ vk::CommandBuffer sLightSystem::execute(std::shared_ptr<btr::Context>& context)
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_EFFECT_COLLECT].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_EFFECT_COLLECT].get(), 0, m_descriptor_set[DESCRIPTOR_SET_LAYOUT_LIGHT].get(), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_EFFECT_COLLECT].get(), 1, sBulletSystem::Order().getDescriptorSet(sBulletSystem::DESCRIPTOR_SET_UPDATE), {});
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_EFFECT_COLLECT].get(), 2, sSystem::Order().getSystemDescriptor().getSet(), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_EFFECT_COLLECT].get(), 2, sSystem::Order().getSystemDescriptorSet(), {0});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_EFFECT_COLLECT].get(), 3, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_MAP), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_EFFECT_COLLECT].get(), 4, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_SCENE), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_EFFECT_COLLECT].get(), 5, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});

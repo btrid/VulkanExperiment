@@ -121,7 +121,7 @@ private:
 	btr::BufferMemory m_soldier_draw_indiret_gpu;
 	DoubleBuffer m_soldier_LL_head_gpu;
 
-	std::shared_ptr<RenderBackbufferModule> m_render_pass;
+	std::shared_ptr<RenderPassModule> m_render_pass;
 
 	std::array<vk::UniquePipeline, PIPELINE_NUM> m_pipeline;
 	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;

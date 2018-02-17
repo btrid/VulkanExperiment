@@ -79,7 +79,7 @@ void sCollisionSystem::setup(std::shared_ptr<btr::Context>& context)
 				sBoid::Order().getDescriptorSetLayout(sBoid::DESCRIPTOR_SET_LAYOUT_SOLDIER_UPDATE),
 				sBulletSystem::Order().getDescriptorSetLayout(sBulletSystem::DESCRIPTOR_SET_LAYOUT_UPDATE),
 				sScene::Order().getDescriptorSetLayout(sScene::DESCRIPTOR_SET_LAYOUT_MAP),
-				sSystem::Order().getSystemDescriptor().getLayout(),
+				sSystem::Order().getSystemDescriptorLayout(),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(layouts.size());
@@ -118,7 +118,7 @@ vk::CommandBuffer sCollisionSystem::execute(std::shared_ptr<btr::Context>& conte
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_COLLISION].get(), 0, sBoid::Order().getDescriptorSet(sBoid::DESCRIPTOR_SET_SOLDIER_UPDATE), {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_COLLISION].get(), 1, sBulletSystem::Order().getDescriptorSet(sBulletSystem::DESCRIPTOR_SET_UPDATE), {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_COLLISION].get(), 2, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_MAP), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_COLLISION].get(), 3, sSystem::Order().getSystemDescriptor().getSet(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_COLLISION].get(), 3, sSystem::Order().getSystemDescriptorSet(), {0});
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COLLISION_TEST].get());
 		cmd.dispatch(1, 1, 1);

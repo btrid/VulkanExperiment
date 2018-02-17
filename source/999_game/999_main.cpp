@@ -41,6 +41,7 @@
 #pragma comment(lib, "applib.lib")
 #pragma comment(lib, "FreeImage.lib")
 #pragma comment(lib, "vulkan-1.lib")
+#pragma comment(lib, "imgui.lib")
 
 struct Gun{
 
@@ -120,7 +121,7 @@ struct Player
 
 struct ModelGIPipelineComponent : public ModelDrawPipelineComponent
 {
-	ModelGIPipelineComponent(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderBackbufferModule>& render_pass, const std::shared_ptr<ShaderModule>& shader)
+	ModelGIPipelineComponent(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderPassModule>& render_pass, const std::shared_ptr<ShaderModule>& shader)
 	{
 		auto& device = context->m_device;
 		m_render_pass = render_pass;
@@ -271,13 +272,13 @@ struct ModelGIPipelineComponent : public ModelDrawPipelineComponent
 
 		return render;
 	}
-	virtual const std::shared_ptr<RenderBackbufferModule>& getRenderPassModule()const override { return m_render_pass; }
+	virtual const std::shared_ptr<RenderPassModule>& getRenderPassModule()const override { return m_render_pass; }
 
 private:
 	vk::UniquePipeline m_pipeline;
 	vk::UniquePipelineLayout m_pipeline_layout;
 	std::shared_ptr<ModelDescriptorModule> m_model_descriptor;
-	std::shared_ptr<RenderBackbufferModule> m_render_pass;
+	std::shared_ptr<RenderPassModule> m_render_pass;
 	std::shared_ptr<ShaderModule> m_shader;
 };
 
@@ -296,13 +297,10 @@ int main()
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
 
-	app::App app;
-	{
-		app::AppDescriptor desc;
-		desc.m_gpu = gpu;
-		desc.m_window_size = uvec2(640, 480);
-		app.setup(desc);
-	}
+	app::AppDescriptor app_desc;
+	app_desc.m_gpu = gpu;
+	app_desc.m_window_size = uvec2(1200, 800);
+	app::App app(app_desc);
 
 	auto context = app.m_context;
 
@@ -325,7 +323,7 @@ int main()
 		sMap::Order().getVoxel().createPipeline<VoxelizeMap>(context);
 
 		{
-			auto render_pass = std::make_shared<RenderBackbufferModule>(context);
+			auto render_pass = app::g_app_instance->m_window->getRenderBackbufferPass();
 			std::string path = btr::getResourceAppPath() + "shader\\binary\\";
 			std::vector<ShaderDescriptor> shader_desc =
 			{
@@ -352,6 +350,7 @@ int main()
 
 	}
 
+	app.setup();
 	while (true)
 	{
 		cStopWatch time;

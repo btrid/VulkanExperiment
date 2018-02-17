@@ -8,7 +8,7 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context)
 
 	// レンダーパス
 	{
-		m_render_pass = std::make_shared<RenderBackbufferModule>(context);
+		m_render_pass = app::g_app_instance->m_window->getRenderBackbufferPass();
 	}
 
 	{
@@ -43,7 +43,7 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context)
 			copy.setSize(desc.size);
 			copy.setSrcOffset(staging.getBufferInfo().offset);
 			copy.setDstOffset(m_boid_info_gpu.getBufferInfo().offset);
-			cmd->copyBuffer(staging.getBufferInfo().buffer, m_boid_info_gpu.getBufferInfo().buffer, copy);
+			cmd.copyBuffer(staging.getBufferInfo().buffer, m_boid_info_gpu.getBufferInfo().buffer, copy);
 		}
 		{
 			btr::BufferMemoryDescriptor desc;
@@ -60,14 +60,14 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context)
 			copy.setSize(desc.size);
 			copy.setSrcOffset(staging.getBufferInfo().offset);
 			copy.setDstOffset(m_soldier_info_gpu.getBufferInfo().offset);
-			cmd->copyBuffer(staging.getBufferInfo().buffer, m_soldier_info_gpu.getBufferInfo().buffer, copy);
+			cmd.copyBuffer(staging.getBufferInfo().buffer, m_soldier_info_gpu.getBufferInfo().buffer, copy);
 		}
 		{
 			btr::BufferMemoryDescriptor desc;
 			desc.size = sizeof(BrainData) * m_boid_info.m_brain_max;
 			auto brain_gpu = context->m_storage_memory.allocateMemory(desc);
 
-			cmd->fillBuffer(brain_gpu.getBufferInfo().buffer, brain_gpu.getBufferInfo().offset, brain_gpu.getBufferInfo().range, 0);
+			cmd.fillBuffer(brain_gpu.getBufferInfo().buffer, brain_gpu.getBufferInfo().offset, brain_gpu.getBufferInfo().range, 0);
 
 			m_brain_gpu.setup(brain_gpu);
 		}
@@ -77,7 +77,7 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context)
 			desc.size = sizeof(SoldierData) * m_boid_info.m_soldier_max*2;
 			auto soldier_gpu = context->m_storage_memory.allocateMemory(desc);
 
-			cmd->fillBuffer(soldier_gpu.getBufferInfo().buffer, soldier_gpu.getBufferInfo().offset, soldier_gpu.getBufferInfo().range, 0);
+			cmd.fillBuffer(soldier_gpu.getBufferInfo().buffer, soldier_gpu.getBufferInfo().offset, soldier_gpu.getBufferInfo().range, 0);
 
 			m_soldier_gpu.setup(soldier_gpu);
 		}
@@ -93,7 +93,7 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context)
 			auto& map_desc = sScene::Order().m_map_info_cpu.m_descriptor[0];
 			desc.size = sizeof(uint32_t) * map_desc.m_cell_num.x* map_desc.m_cell_num.y*2;
 			m_soldier_LL_head_gpu.setup(context->m_storage_memory.allocateMemory(desc));
-			cmd->fillBuffer(m_soldier_LL_head_gpu.getOrg().buffer, m_soldier_LL_head_gpu.getOrg().offset, m_soldier_LL_head_gpu.getOrg().range, 0xFFFFFFFF);
+			cmd.fillBuffer(m_soldier_LL_head_gpu.getOrg().buffer, m_soldier_LL_head_gpu.getOrg().offset, m_soldier_LL_head_gpu.getOrg().range, 0xFFFFFFFF);
 
 			// transfer
 			vk::BufferMemoryBarrier ll_compute;
@@ -104,7 +104,7 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context)
 			std::vector<vk::BufferMemoryBarrier> to_compute = {
 				ll_compute,
 			};
-			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_compute, {});
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_compute, {});
 		}
 		{
 			btr::BufferMemoryDescriptor desc;
@@ -126,7 +126,7 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context)
 			copy.setSize(desc.size);
 			copy.setSrcOffset(staging.getBufferInfo().offset);
 			copy.setDstOffset(m_soldier_draw_indiret_gpu.getBufferInfo().offset);
-			cmd->copyBuffer(staging.getBufferInfo().buffer, m_soldier_draw_indiret_gpu.getBufferInfo().buffer, copy);
+			cmd.copyBuffer(staging.getBufferInfo().buffer, m_soldier_draw_indiret_gpu.getBufferInfo().buffer, copy);
 		}
 
 		{
@@ -181,7 +181,7 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context)
 				to_transfer.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
 				to_transfer.subresourceRange = subresourceRange;
 
-				cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_transfer });
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_transfer });
 			}
 
 			{
@@ -199,7 +199,7 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context)
 				copy.setBufferOffset(staging.getBufferInfo().offset);
 				copy.setImageSubresource(l);
 				copy.setImageExtent(image_info.extent);
-				cmd->copyBufferToImage(staging.getBufferInfo().buffer, image.get(), vk::ImageLayout::eTransferDstOptimal, copy);
+				cmd.copyBufferToImage(staging.getBufferInfo().buffer, image.get(), vk::ImageLayout::eTransferDstOptimal, copy);
 			}
 
 			{
@@ -212,7 +212,7 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context)
 				to_shader_read.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 				to_shader_read.subresourceRange = subresourceRange;
 
-				cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, {}, { to_shader_read });
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, {}, { to_shader_read });
 			}
 
 			m_astar_image = std::move(image);
@@ -360,7 +360,7 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context)
 				std::vector<vk::DescriptorSetLayout> layouts = {
 					m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_SOLDIER_UPDATE].get(),
 					sScene::Order().getDescriptorSetLayout(sScene::DESCRIPTOR_SET_LAYOUT_MAP),
-					sSystem::Order().getSystemDescriptor().getLayout(),
+					sSystem::Order().getSystemDescriptorLayout(),
 				};
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
 				pipeline_layout_info.setSetLayoutCount(layouts.size());
@@ -370,7 +370,7 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context)
 			{
 				std::vector<vk::DescriptorSetLayout> layouts = {
 					m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_SOLDIER_UPDATE].get(),
-					sSystem::Order().getSystemDescriptor().getLayout(),
+					sSystem::Order().getSystemDescriptorLayout(),
 				};
 				std::vector<vk::PushConstantRange> push_constants = {
 					vk::PushConstantRange()
@@ -388,7 +388,7 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context)
 				std::vector<vk::DescriptorSetLayout> layouts = {
 					m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_SOLDIER_UPDATE].get(),
 					sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
-					sSystem::Order().getSystemDescriptor().getLayout(),
+					sSystem::Order().getSystemDescriptorLayout(),
 				};
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
 				pipeline_layout_info.setSetLayoutCount(layouts.size());
@@ -516,7 +516,7 @@ vk::CommandBuffer sBoid::execute(std::shared_ptr<btr::Context>& context)
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COMPUTE_SOLDIER_UPDATE].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_UPDATE].get(), 0, getDescriptorSet(DESCRIPTOR_SET_SOLDIER_UPDATE), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_UPDATE].get(), 1, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_MAP), {});
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_UPDATE].get(), 2, sSystem::Order().getSystemDescriptor().getSet(), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_UPDATE].get(), 2, sSystem::Order().getSystemDescriptorSet(), {0});
 
 			auto groups = app::calcDipatchGroups(glm::uvec3(m_boid_info.m_soldier_max, 1, 1), glm::uvec3(1024, 1, 1));
 			cmd.dispatch(groups.x, groups.y, groups.z);
@@ -543,7 +543,7 @@ vk::CommandBuffer sBoid::execute(std::shared_ptr<btr::Context>& context)
 				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COMPUTE_SOLDIER_EMIT].get());
 				cmd.pushConstants<uvec2>(m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_EMIT].get(), vk::ShaderStageFlagBits::eCompute, 0, uvec2(data.size(), 0));
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_EMIT].get(), 0, getDescriptorSet(DESCRIPTOR_SET_SOLDIER_UPDATE), {});
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_EMIT].get(), 1, sSystem::Order().getSystemDescriptor().getSet(), {});
+				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_EMIT].get(), 1, sSystem::Order().getSystemDescriptorSet(), { 0 });
 
 // 				vk::BufferMemoryBarrier to_transfer = m_soldier_draw_indiret_gpu.makeMemoryBarrierEx();
 // 				to_transfer.srcAccessMask = vk::AccessFlagBits::eIndirectCommandRead;
@@ -584,7 +584,7 @@ vk::CommandBuffer sBoid::draw(std::shared_ptr<btr::Context>& context)
 	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_GRAPHICS_SOLDIER_DRAW].get());
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW].get(), 0, getDescriptorSet(DESCRIPTOR_SET_SOLDIER_UPDATE), {});
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW].get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW].get(), 2, sSystem::Order().getSystemDescriptor().getSet(), {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW].get(), 2, sSystem::Order().getSystemDescriptorSet(), { 0 });
 
 	cmd.drawIndirect(m_soldier_draw_indiret_gpu.getBufferInfo().buffer, m_soldier_draw_indiret_gpu.getBufferInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
 
