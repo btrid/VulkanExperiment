@@ -418,21 +418,21 @@ void sUIManipulater::manipWindow(std::shared_ptr<UIManipulater>& manip)
 							boundary_event.m_touch_type = touchtype;
 						}
 						{
-							int eventtype = boundary_event.m_event_type;
-							const char* eventtype_msg[] = { "end", "play anime", };
+							int eventtype = boundary_event.m_event.m_event_type;
+							const char* eventtype_msg[] = { "end", "play anime", "play se" };
 							ImGui::ListBox("event type", &eventtype, eventtype_msg, array_length(eventtype_msg));
-							boundary_event.m_event_type = eventtype;
+							boundary_event.m_event.m_event_type = (UIEventTool::EventType)eventtype;
 
 							switch (eventtype)
 							{
-							case rUI::BoundaryEvent::event_end:
+							case UIEventTool::FlagOn:
 							{
 							}
 							break;
-							case rUI::BoundaryEvent::event_play_anime:
+							case UIEventTool::PlayAnime:
 							{
 								static std::unique_ptr<NodeSelectModal> modal;
-								if (ImGui::Button("Anime Event"))
+								if (ImGui::Button("Target"))
 								{
 									modal = std::make_unique<NodeSelectModal>();
 								}
@@ -441,7 +441,7 @@ void sUIManipulater::manipWindow(std::shared_ptr<UIManipulater>& manip)
 									auto ev = modal->update(m_manip);
 									if (ev == NodeSelectModal::DICIDE)
 									{
-//										boundary_event.m_object_index m_manip->m_ui_resource.m_object_tool[modal->get()].m_object_name;
+										strcpy_s(boundary_event.m_event.m_anime.m_anime_name, m_manip->m_ui_resource.m_object_tool[modal->get()].m_object_name.c_str());
 										modal.reset();
 									}
 									else if (ev == FileSelectModal::CANCEL)
@@ -449,7 +449,11 @@ void sUIManipulater::manipWindow(std::shared_ptr<UIManipulater>& manip)
 										modal.reset();
 									}
 								}
+								ImGui::InputText("AnimeName", boundary_event.m_event.m_anime.m_anime_name, sizeof(boundary_event.m_event.m_anime.m_anime_name));
 							}
+							break;
+							case UIEventTool::PlaySe:
+							{}
 							break;
 							default:
 								break;
@@ -819,14 +823,13 @@ void sUIManipulater::animedataManip(std::shared_ptr<rUIAnime>& anime)
 			}
 			ImGui::EndPopup();
 		}
-
 	}
 }
 
 void sUIManipulater::sceneWindow(std::shared_ptr<rUIScene>& scene)
 {
 	ImGui::SetNextWindowSize(ImVec2(400.f, 200.f), ImGuiCond_Once);
-	if (ImGui::Begin("tree", &m_is_show_scene_window))
+	if (ImGui::Begin("scene", &m_is_show_scene_window))
 	{
 		if (scene)
 		{
@@ -847,6 +850,25 @@ void sUIManipulater::sceneWindow(std::shared_ptr<rUIScene>& scene)
 			if (ImGui::Button("AddEvent"))
 			{
 				scene->m_event_list.emplace_back();
+			}
+
+			for (auto it = scene->m_filename.begin(); it != scene->m_filename.end(); )
+			{
+				auto& name = *it;
+				ImGui::PushID(&name);
+				ImGui::InputText("file name", name.m_filename, sizeof(name.m_filename));
+				ImGui::SameLine();
+				if (ImGui::Button("erase")) {
+					it = scene->m_filename.erase(it);
+				}
+				else {
+					it++;
+				}
+				ImGui::PopID();
+			}
+			if (ImGui::Button("AddFile"))
+			{
+				scene->m_filename.emplace_back();
 			}
 		}
 		ImGui::End();

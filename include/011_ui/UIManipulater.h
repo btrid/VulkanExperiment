@@ -10,24 +10,67 @@
 
 #include <011_ui/cerealDefine.h>
 
+struct UIEventFlag
+{
+	uint32_t m_flag;
+};
+
+struct UIEventAnime
+{
+	char m_target_name[32];
+	char m_anime_name[32];
+	uint32_t m_play_flag;
+	uint32_t m_frame;
+};
+struct UIEventSE
+{
+	uint32_t m_flag;
+	char m_se_name[32];
+};
+
+struct UIEvent
+{
+	uint32_t m_type;
+	int32_t m_value[3];
+};
+struct UIEventTool
+{
+	char m_event_name[32];
+	enum EventType
+	{
+		FlagOn,
+		PlayAnime,
+		PlaySe,
+	};
+
+	EventType m_event_type;
+	union 
+	{
+		UIEventFlag m_flag;
+		UIEventAnime m_anime;
+		UIEventSE m_se;
+	};
+};
+
 struct UIEventSetting
 {
 	char m_event_name[32];
 };
 
+struct Filename 
+{
+	char m_filename[32];
+};
 struct rUIScene
 {
 	std::vector<UIEventSetting> m_event_list;
+	std::vector<Filename> m_filename;
 };
 struct UIObjectTool
 {
 	std::string m_object_name;
 };
 
-struct UIEventTool : UIEvent
-{
-	std::string m_event_name;
-};
 struct rUI 
 {
 	UIInfo m_info;
@@ -45,15 +88,9 @@ struct rUI
 
 	struct BoundaryEvent
 	{
-		enum 
-		{
-			event_end,
-			event_play_anime,
-		};
 		uint32_t m_object_index;
 		uint32_t m_touch_type;
-		uint32_t m_event_type;
-		uint32_t m_event_arg0;
+		UIEventTool m_event;
 	};
 	std::unordered_map<uint32_t, std::vector<BoundaryEvent>> m_boundary_list;
 
@@ -122,8 +159,8 @@ struct rUI
 		{
 			btr::BufferMemoryDescriptorEx<UIEvent> desc;
 			desc.element_num = 256;
-			ui->m_event = context->m_storage_memory.allocateMemory(desc);
-			cmd.fillBuffer(ui->m_event.getInfo().buffer, ui->m_event.getInfo().offset, ui->m_event.getInfo().range, 0u);
+// 			ui->m_event = context->m_storage_memory.allocateMemory(desc);
+// 			cmd.fillBuffer(ui->m_event.getInfo().buffer, ui->m_event.getInfo().offset, ui->m_event.getInfo().range, 0u);
 		}
 		{
 			btr::BufferMemoryDescriptorEx<UIScene> desc;

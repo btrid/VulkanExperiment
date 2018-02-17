@@ -12,10 +12,6 @@ struct UIGlobal
 	uvec2 m_resolusion; // ‰ğ‘œ“x
 };
 
-struct UICallback
-{
-	uint32_t m_event_id;
-};
 struct UIScene
 {
 	uint32_t m_is_disable_order; // ‘€ì–³Œø’†
@@ -94,12 +90,6 @@ struct UIObject
 			CEREAL_NVP(m_sibling_index)
 		);
 	}
-};
-
-struct UIEvent
-{
-	uint32_t m_type;
-	int32_t m_value[3];
 };
 
 struct UIBoundary
@@ -270,7 +260,7 @@ struct UI
 	btr::BufferMemoryEx<UIAnimePlayInfo> m_play_info;
 	btr::BufferMemoryEx<uint32_t> m_user_id;
 	btr::BufferMemoryEx<UIWork> m_tree;
-	btr::BufferMemoryEx<UIEvent> m_event;
+//	btr::BufferMemoryEx<UIEvent> m_event;
 	btr::BufferMemoryEx<UIScene> m_scene;
 
 	std::array<std::shared_ptr<UIAnime>, ANIME_NUM> m_anime_list;
