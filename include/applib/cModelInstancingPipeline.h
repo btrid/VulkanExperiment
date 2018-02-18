@@ -176,8 +176,8 @@ struct ModelInstancingRenderPipelineComponent : public PipelineComponent
 				};
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 0, sets, {});
 
-				cmd.bindVertexBuffers(0, { resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().buffer }, { resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().offset });
-				cmd.bindIndexBuffer(resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().buffer, resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().offset, resource->m_mesh_resource.mIndexType);
+				cmd.bindVertexBuffers(0, { resource->m_mesh_resource.m_vertex_buffer.getBufferInfo().buffer }, { resource->m_mesh_resource.m_vertex_buffer.getBufferInfo().offset });
+				cmd.bindIndexBuffer(resource->m_mesh_resource.m_index_buffer.getBufferInfo().buffer, resource->m_mesh_resource.m_index_buffer.getBufferInfo().offset, resource->m_mesh_resource.mIndexType);
 				cmd.drawIndexedIndirect(model->m_instancing->getDrawIndirect().buffer, model->m_instancing->getDrawIndirect().offset, resource->m_mesh_resource.mIndirectCount, sizeof(cModel::Mesh));
 
 				cmd.end();

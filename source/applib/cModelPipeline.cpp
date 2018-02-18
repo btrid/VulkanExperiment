@@ -294,9 +294,9 @@ struct DefaultModelPipelineComponent : public ModelDrawPipelineComponent
 				cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline.get());
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 0, render->m_descriptor_set_model.get(), {});
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
-				cmd.bindVertexBuffers(0, { model->m_model_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().buffer }, { model->m_model_resource->m_mesh_resource.m_vertex_buffer_ex.getBufferInfo().offset });
-				cmd.bindIndexBuffer(model->m_model_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().buffer, model->m_model_resource->m_mesh_resource.m_index_buffer_ex.getBufferInfo().offset, model->m_model_resource->m_mesh_resource.mIndexType);
-				cmd.drawIndexedIndirect(model->m_model_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().buffer, model->m_model_resource->m_mesh_resource.m_indirect_buffer_ex.getBufferInfo().offset, model->m_model_resource->m_mesh_resource.mIndirectCount, sizeof(cModel::Mesh));
+				cmd.bindVertexBuffers(0, { model->m_model_resource->m_mesh_resource.m_vertex_buffer.getBufferInfo().buffer }, { model->m_model_resource->m_mesh_resource.m_vertex_buffer.getBufferInfo().offset });
+				cmd.bindIndexBuffer(model->m_model_resource->m_mesh_resource.m_index_buffer.getBufferInfo().buffer, model->m_model_resource->m_mesh_resource.m_index_buffer.getBufferInfo().offset, model->m_model_resource->m_mesh_resource.mIndexType);
+				cmd.drawIndexedIndirect(model->m_model_resource->m_mesh_resource.m_indirect_buffer.getBufferInfo().buffer, model->m_model_resource->m_mesh_resource.m_indirect_buffer.getBufferInfo().offset, model->m_model_resource->m_mesh_resource.mIndirectCount, sizeof(cModel::Mesh));
 
 				cmd.end();
 			}

@@ -189,8 +189,6 @@ struct ModelInstancingModule : public InstancingAnimationModule, public Instanci
 		cmd.executeCommands(m_execute_cmd[context->getGPUFrame()].get());
 	}
 
-//	virtual vk::DescriptorBufferInfo getModelInfoBuffer()const override { return getBuffer(MODEL_INFO).getBufferInfo(); }
-//	virtual vk::DescriptorBufferInfo getModelInstancingBuffer()const override { return m_instancing_info_buffer.getBufferInfo(); }
 	virtual vk::DescriptorBufferInfo getAnimationInfoBuffer()const override { return getBuffer(ANIMATION_INFO).getBufferInfo(); }
 	virtual vk::DescriptorBufferInfo getPlayingAnimationBuffer()const override { return getBuffer(PLAYING_ANIMATION).getBufferInfo(); }
 	virtual vk::DescriptorBufferInfo getNodeBuffer()const override { return getBuffer(NODE_TRANSFORM).getBufferInfo(); }

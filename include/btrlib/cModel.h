@@ -63,9 +63,9 @@ public:
 
 struct ResourceVertex
 {
-	btr::BufferMemory m_vertex_buffer_ex;
-	btr::BufferMemory m_index_buffer_ex;
-	btr::BufferMemory m_indirect_buffer_ex;
+	btr::BufferMemory m_vertex_buffer;
+	btr::BufferMemory m_index_buffer;
+	btr::BufferMemory m_indirect_buffer;
 	vk::IndexType mIndexType;
 	int32_t mIndirectCount; //!< ƒƒbƒVƒ…‚Ì”
 
