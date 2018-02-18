@@ -225,7 +225,7 @@ public:
 				to_transfer.newLayout = vk::ImageLayout::eTransferDstOptimal;
 				to_transfer.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
 				to_transfer.subresourceRange = subresourceRange;
-				cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_transfer });
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_transfer });
 
 				vk::ImageSubresourceLayers l;
 				l.setAspectMask(vk::ImageAspectFlagBits::eColor);
@@ -243,7 +243,7 @@ public:
 					copy.setImageSubresource(l);
 					copy.setImageExtent(image_info.extent);
 
-					cmd->copyBufferToImage(staging.getBufferInfo().buffer, m_volume_image.get(), vk::ImageLayout::eTransferDstOptimal, copy);
+					cmd.copyBufferToImage(staging.getBufferInfo().buffer, m_volume_image.get(), vk::ImageLayout::eTransferDstOptimal, copy);
 				}
 
 				vk::ImageMemoryBarrier to_shader_read;
@@ -254,7 +254,7 @@ public:
 				to_shader_read.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
 				to_shader_read.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 				to_shader_read.subresourceRange = subresourceRange;
-				cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), {}, {}, { to_shader_read });
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), {}, {}, { to_shader_read });
 
 			}
 

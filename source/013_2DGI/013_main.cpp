@@ -12,7 +12,6 @@
 #include <chrono>
 #include <memory>
 #include <filesystem>
-#include <btrlib/Define.h>
 #include <btrlib/cWindow.h>
 #include <btrlib/cInput.h>
 #include <btrlib/cCamera.h>
@@ -23,16 +22,13 @@
 
 #include <applib/App.h>
 #include <btrlib/Context.h>
+#include <applib/sImGuiRenderer.h>
 
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
 //#pragma comment(lib, "FreeImage.lib")
 #pragma comment(lib, "vulkan-1.lib")
-//#pragma comment(lib, "imgui.lib")
-
-struct TriangleList 
-{
-};
+#pragma comment(lib, "imgui.lib")
 
 int main()
 {
@@ -48,21 +44,29 @@ int main()
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
 
-	app::App app;
-	app.setup(gpu);
+	app::AppDescriptor app_desc;
+	app_desc.m_gpu = gpu;
+	app_desc.m_window_size = uvec2(640, 480);
+	app::App app(app_desc);
 
 	auto context = app.m_context;
 
+	app.setup();
 	while (true)
 	{
 		cStopWatch time;
 
 		app.preUpdate();
 		{
-			app.submit(std::vector<vk::CommandBuffer>{});
+			std::vector<vk::CommandBuffer> cmds;
+
+//			cmds.emplace_back(sImGuiRenderer::Order().Render());
+//			app.m_window->getImguiPipeline()->pushImguiCmd([]() { ImGui::ShowTestWindow(); });
+
+			app.submit(std::move(cmds));
 		}
 		app.postUpdate();
-		printf("%6.4fs\n", time.getElapsedTimeAsSeconds());
+		printf("%-6.4fms\n", time.getElapsedTimeAsMilliSeconds());
 	}
 
 	return 0;

@@ -39,7 +39,7 @@
 int main()
 {
 	btr::setResourceAppPath("..\\..\\resource\\005_volume_rendering\\");
-	auto* camera = cCamera::sCamera::Order().create();
+	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = glm::vec3(0.f, 0.f, -4000.f);
 	camera->getData().m_target = glm::vec3(0.f, 0.f, 201.f);
 	camera->getData().m_up = glm::vec3(0.f, -1.f, 0.f);

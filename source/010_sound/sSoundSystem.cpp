@@ -190,12 +190,12 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 		btr::BufferMemoryDescriptorEx<SoundPlayRequestData> desc;
 		desc.element_num = SOUND_REQUEST_SIZE;
 		m_playing_buffer = context->m_storage_memory.allocateMemory(desc);
-		cmd->fillBuffer(m_playing_buffer.getInfo().buffer, m_playing_buffer.getInfo().offset, m_playing_buffer.getInfo().range, 0u);
+		cmd.fillBuffer(m_playing_buffer.getInfo().buffer, m_playing_buffer.getInfo().offset, m_playing_buffer.getInfo().range, 0u);
 		{
 			auto to_read = m_playing_buffer.makeMemoryBarrier();
 			to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 			to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
 		}
 		m_request_buffer = context->m_storage_memory.allocateMemory(desc);
 	}
@@ -204,12 +204,12 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 		desc.element_num = 1;
 		m_sound_counter = context->m_storage_memory.allocateMemory(desc);
 
-		cmd->updateBuffer<uvec3>(m_sound_counter.getInfo().buffer, m_sound_counter.getInfo().offset, uvec3(0u, 0u, 0u));
+		cmd.updateBuffer<uvec3>(m_sound_counter.getInfo().buffer, m_sound_counter.getInfo().offset, uvec3(0u, 0u, 0u));
 		{
 			auto to_read = m_sound_counter.makeMemoryBarrier();
 			to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 			to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
 		}
 
 	}
@@ -240,12 +240,12 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 		copy.setDstOffset(m_sound_format.getInfo().offset);
 		copy.setSize(staging.getInfo().range);
 
-		cmd->copyBuffer(staging.getInfo().buffer, m_sound_format.getInfo().buffer, copy);
+		cmd.copyBuffer(staging.getInfo().buffer, m_sound_format.getInfo().buffer, copy);
 		{
 			auto to_read = m_sound_format.makeMemoryBarrier();
 			to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 			to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
 		}
 
 	}

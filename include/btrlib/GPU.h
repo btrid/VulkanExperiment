@@ -118,7 +118,7 @@ public:
 	{
 		static uint32_t getMemoryTypeIndex(const vk::PhysicalDevice& gpu, const vk::MemoryRequirements& request, vk::MemoryPropertyFlags flag)
 		{
-			auto& prop = gpu.getMemoryProperties();
+			auto prop = gpu.getMemoryProperties();
 			auto memory_type_bits = request.memoryTypeBits;
 			for (uint32_t i = 0; i < prop.memoryTypeCount; i++)
 			{

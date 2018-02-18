@@ -1,6 +1,8 @@
 #pragma once
 #include <memory>
 #include <bitset>
+#include <mutex>
+#include <functional>
 #include <btrlib/Define.h>
 #include <btrlib/cWindow.h>
 #include <btrlib/cCmdPool.h>
@@ -44,7 +46,7 @@ struct AppWindow : public cWindow
 			std::lock_guard<std::mutex> lg(m_cmd_mutex);
 			m_imgui_cmd[sGlobal::Order().getWorkerIndex()].emplace_back(std::move(imgui_cmd));
 		}
-		std::vector<std::function<void()>>& getImguiCmd()
+		std::vector<std::function<void()>> getImguiCmd()
 		{
 			return std::move(m_imgui_cmd[sGlobal::Order().getRenderIndex()]);
 		}

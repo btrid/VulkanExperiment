@@ -33,12 +33,12 @@ SoundBuffer::SoundBuffer(const std::shared_ptr<btr::Context>& context, const std
 		copy.setSrcOffset(staging.getInfo().offset);
 		copy.setDstOffset(m_buffer.getInfo().offset);
 		copy.setSize(staging.getBufferInfo().range);
-		cmd->copyBuffer(staging.getInfo().buffer, m_buffer.getInfo().buffer, copy);
+		cmd.copyBuffer(staging.getInfo().buffer, m_buffer.getInfo().buffer, copy);
 		{
 			auto to_read = m_buffer.makeMemoryBarrier();
 			to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 			to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
 		}
 	}
 	{
@@ -58,13 +58,13 @@ SoundBuffer::SoundBuffer(const std::shared_ptr<btr::Context>& context, const std
 		copy.setSrcOffset(staging.getInfo().offset);
 		copy.setDstOffset(m_info.getInfo().offset);
 		copy.setSize(staging.getBufferInfo().range);
-		cmd->copyBuffer(staging.getInfo().buffer, m_info.getInfo().buffer, copy);
+		cmd.copyBuffer(staging.getInfo().buffer, m_info.getInfo().buffer, copy);
 
 		{
 			auto to_read = m_info.makeMemoryBarrier();
 			to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 			to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
 		}
 	}
 
