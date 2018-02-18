@@ -236,9 +236,9 @@ void sBulletSystem::setup(std::shared_ptr<btr::Context>& context)
 			};
 
 			// viewport
-			vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)context->m_window->getClientSize().x, (float)context->m_window->getClientSize().y, 0.f, 1.f);
+			vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)m_render_pass->getResolution().width, (float)m_render_pass->getResolution().height, 0.f, 1.f);
 			std::vector<vk::Rect2D> scissor = {
-				vk::Rect2D(vk::Offset2D(0, 0), context->m_window->getClientSize<vk::Extent2D>())
+				vk::Rect2D(vk::Offset2D(0, 0), m_render_pass->getResolution())
 			};
 			vk::PipelineViewportStateCreateInfo viewportInfo;
 			viewportInfo.setViewportCount(1);
@@ -257,7 +257,7 @@ void sBulletSystem::setup(std::shared_ptr<btr::Context>& context)
 
 			vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
 			depth_stencil_info.setDepthTestEnable(VK_TRUE);
-			depth_stencil_info.setDepthWriteEnable(VK_TRUE);
+			depth_stencil_info.setDepthWriteEnable(VK_FALSE);
 			depth_stencil_info.setDepthCompareOp(vk::CompareOp::eGreaterOrEqual);
 			depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
 			depth_stencil_info.setStencilTestEnable(VK_FALSE);
@@ -409,7 +409,7 @@ vk::CommandBuffer sBulletSystem::draw(std::shared_ptr<btr::Context>& context)
 
 	vk::RenderPassBeginInfo begin_render_Info;
 	begin_render_Info.setRenderPass(m_render_pass->getRenderPass());
-	begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), context->m_window->getClientSize<vk::Extent2D>()));
+	begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), m_render_pass->getResolution()));
 	begin_render_Info.setFramebuffer(m_render_pass->getFramebuffer(context->getGPUFrame()));
 	cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 

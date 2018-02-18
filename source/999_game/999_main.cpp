@@ -63,10 +63,10 @@ struct Player
 	Gun m_right;
 
 
-	void execute(std::shared_ptr<btr::Context>& executer)
+	void execute(std::shared_ptr<btr::Context>& context)
 	{
-		const cInput& input = executer->m_window->getInput();
-		auto resolution = executer->m_window->getClientSize();
+		const cInput& input = context->m_window->getInput();
+		auto resolution = context->m_window->getClientSize();
 		auto mouse_n1_to_1 = (glm::vec2(input.m_mouse.xy) / glm::vec2(resolution) - 0.5f) * 2.f;
 		if (glm::dot(mouse_n1_to_1, mouse_n1_to_1) >= 0.0001f) {
 			m_dir = glm::normalize(-glm::vec3(mouse_n1_to_1.x, 0.f, mouse_n1_to_1.y));
@@ -91,7 +91,7 @@ struct Player
 		
 		{
 			std::vector<BulletData> m_bullet;
-			if (input.m_keyboard.isHold('j'))
+			if (input.m_keyboard.isHold('J'))
 			{
 				BulletData b;
 				b.m_life = 1.f;
@@ -101,7 +101,7 @@ struct Player
 				b.m_map_index = sScene::Order().calcMapIndex(b.m_pos);
 				m_bullet.push_back(b);
 			}
-			if (input.m_keyboard.isHold('k'))
+			if (input.m_keyboard.isHold('K'))
 			{
 				BulletData b;
 				b.m_life = 2.f;
@@ -455,10 +455,9 @@ int main()
 			app.submit(std::move(render_cmds));
 			motion_worker_syncronized_point.wait();
 
-
 		}
 		app.postUpdate();
-		printf("%6.4fs\n", time.getElapsedTimeAsSeconds());
+		printf("%6.4fs\n", time.getElapsedTimeAsMilliSeconds());
 	}
 
 	return 0;
