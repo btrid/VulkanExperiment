@@ -30,6 +30,7 @@
 #pragma comment(lib, "applib.lib")
 #pragma comment(lib, "FreeImage.lib")
 #pragma comment(lib, "vulkan-1.lib")
+#pragma comment(lib, "imgui.lib")
 
 struct LightSample : public Light
 {
@@ -72,13 +73,10 @@ int main()
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
 
-	app::App app;
-	{
-		app::AppDescriptor desc;
-		desc.m_gpu = gpu;
-		desc.m_window_size = uvec2(640, 480);
-		app.setup(desc);
-	}
+	app::AppDescriptor app_desc;
+	app_desc.m_gpu = gpu;
+	app_desc.m_window_size = uvec2(640, 480);
+	app::App app(app_desc);
 
 	auto context = app.m_context;
 
@@ -119,6 +117,7 @@ int main()
 		pipeline.m_render_pipeline->m_light_pipeline->add(std::move(std::make_unique<LightSample>()));
 	}
 
+	app.setup();
 	while (true)
 	{
 		cStopWatch time;
@@ -160,7 +159,7 @@ int main()
 		}
 
 		app.postUpdate();
-		printf("%6.4fs\n", time.getElapsedTimeAsSeconds());
+		printf("%6.4fms\n", time.getElapsedTimeAsMilliSeconds());
 	}
 
 	return 0;
