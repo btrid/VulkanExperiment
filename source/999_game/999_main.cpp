@@ -76,10 +76,10 @@ struct Player
 		m_inertia.x = glm::abs(m_inertia.x) < 0.001f ? 0.f : m_inertia.x;
 		m_inertia.z = glm::abs(m_inertia.z) < 0.001f ? 0.f : m_inertia.z;
 
-		bool is_left = input.m_keyboard.isHold('a')|| input.m_keyboard.isHold(VK_LEFT);
-		bool is_right = input.m_keyboard.isHold('d')|| input.m_keyboard.isHold(VK_RIGHT);
-		bool is_front = input.m_keyboard.isHold('w')|| input.m_keyboard.isHold(VK_UP);
-		bool is_back = input.m_keyboard.isHold('s') || input.m_keyboard.isHold(VK_DOWN);
+		bool is_left = input.m_keyboard.isHold('A')|| input.m_keyboard.isHold(VK_LEFT);
+		bool is_right = input.m_keyboard.isHold('D')|| input.m_keyboard.isHold(VK_RIGHT);
+		bool is_front = input.m_keyboard.isHold('W')|| input.m_keyboard.isHold(VK_UP);
+		bool is_back = input.m_keyboard.isHold('S') || input.m_keyboard.isHold(VK_DOWN);
 		glm::vec3 inertia = glm::vec3(0.f);
 		inertia.z += is_front * 5.f;
 		inertia.z -= is_back * 5.f;

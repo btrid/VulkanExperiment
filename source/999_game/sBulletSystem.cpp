@@ -14,8 +14,8 @@ void sBulletSystem::setup(std::shared_ptr<btr::Context>& context)
 
 	{
 		{
-			btr::BufferMemoryDescriptor data_desc;
-			data_desc.size = sizeof(BulletData) * m_bullet_info_cpu.m_max_num * 2;
+			btr::BufferMemoryDescriptorEx<BulletData> data_desc;
+			data_desc.element_num = m_bullet_info_cpu.m_max_num * 2;
 			m_bullet = context->m_storage_memory.allocateMemory(data_desc);
 
 			data_desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
@@ -23,50 +23,58 @@ void sBulletSystem::setup(std::shared_ptr<btr::Context>& context)
 			bd.m_life = -1.f;
 			std::vector<BulletData> p(m_bullet_info_cpu.m_max_num * 2, bd);
 			auto staging = context->m_staging_memory.allocateMemory(data_desc);
-			memcpy_s(staging.getMappedPtr(), data_desc.size, p.data(), vector_sizeof(p));
+			memcpy_s(staging.getMappedPtr(), vector_sizeof(p), p.data(), vector_sizeof(p));
 			vk::BufferCopy copy_info;
-			copy_info.setSize(data_desc.size);
-			copy_info.setSrcOffset(staging.getBufferInfo().offset);
-			copy_info.setDstOffset(m_bullet.getBufferInfo().offset);
-			cmd.copyBuffer(staging.getBufferInfo().buffer, m_bullet.getBufferInfo().buffer, copy_info);
+			copy_info.setSize(vector_sizeof(p));
+			copy_info.setSrcOffset(staging.getInfo().offset);
+			copy_info.setDstOffset(m_bullet.getInfo().offset);
+			cmd.copyBuffer(staging.getInfo().buffer, m_bullet.getInfo().buffer, copy_info);
 
-			auto to_compute = m_bullet.makeMemoryBarrierEx();
+			auto to_compute = m_bullet.makeMemoryBarrier();
 			to_compute.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 			to_compute.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_compute }, {});
 		}
 		{
-
-			btr::BufferMemoryDescriptor desc;
-			desc.size = sizeof(BulletData) * 1024;
+			btr::BufferMemoryDescriptorEx<BulletData> desc;
+			desc.element_num = 1024;
 			m_bullet_emit = context->m_storage_memory.allocateMemory(desc);
 		}
 		{
-			btr::BufferMemoryDescriptor desc;
-			desc.size = sizeof(uint32_t);
+			btr::BufferMemoryDescriptorEx<uint32_t> desc;
+			desc.element_num = 1;
 			m_bullet_emit_count = context->m_storage_memory.allocateMemory(desc);
 		}
 
-		btr::BufferMemoryDescriptor desc;
-		desc.size = sizeof(vk::DrawIndirectCommand);
-		m_bullet_counter = context->m_storage_memory.allocateMemory(desc);
-		cmd.updateBuffer<vk::DrawIndirectCommand>(m_bullet_counter.getBufferInfo().buffer, m_bullet_counter.getBufferInfo().offset, vk::DrawIndirectCommand(4, 0, 0, 0));
-		auto count_barrier = m_bullet_counter.makeMemoryBarrierEx();
-		count_barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
-		count_barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, count_barrier, {});
+		{
+			btr::BufferMemoryDescriptorEx<vk::DrawIndirectCommand> desc;
+			desc.element_num = 1;
+			m_bullet_counter = context->m_storage_memory.allocateMemory(desc);
+			cmd.updateBuffer<vk::DrawIndirectCommand>(m_bullet_counter.getInfo().buffer, m_bullet_counter.getInfo().offset, vk::DrawIndirectCommand(4, 0, 0, 0));
+			auto count_barrier = m_bullet_counter.makeMemoryBarrier();
+			count_barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+			count_barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, count_barrier, {});
+		}
 
-		m_bullet_info = context->m_uniform_memory.allocateMemory(sizeof(BulletInfo));
-		cmd.updateBuffer<BulletInfo>(m_bullet_info.getBufferInfo().buffer, m_bullet_info.getBufferInfo().offset, { m_bullet_info_cpu });
-		auto barrier = m_bullet_info.makeMemoryBarrierEx();
-		barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
-		barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { barrier }, {});
+		{
+			btr::BufferMemoryDescriptorEx<BulletInfo> desc;
+			desc.element_num = 1;
+			m_bullet_info = context->m_uniform_memory.allocateMemory(desc);
+			cmd.updateBuffer<BulletInfo>(m_bullet_info.getInfo().buffer, m_bullet_info.getInfo().offset, { m_bullet_info_cpu });
+			auto barrier = m_bullet_info.makeMemoryBarrier();
+			barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+			barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { barrier }, {});
+		}
 
-		auto& map_desc = sScene::Order().m_map_info_cpu.m_descriptor[0];
-		desc.size = sizeof(uint32_t) * map_desc.m_cell_num.x* map_desc.m_cell_num.y;
-		m_bullet_LL_head_gpu = context->m_storage_memory.allocateMemory(desc);
-		cmd.fillBuffer(m_bullet_LL_head_gpu.getBufferInfo().buffer, m_bullet_LL_head_gpu.getBufferInfo().offset, m_bullet_LL_head_gpu.getBufferInfo().range, 0xFFFFFFFF);
+		{
+			auto& map_desc = sScene::Order().m_map_info_cpu.m_descriptor[0];
+			btr::BufferMemoryDescriptorEx<uint32_t> desc;
+			desc.element_num = map_desc.m_cell_num.x* map_desc.m_cell_num.y;
+			m_bullet_LL_head_gpu = context->m_storage_memory.allocateMemory(desc);
+			cmd.fillBuffer(m_bullet_LL_head_gpu.getInfo().buffer, m_bullet_LL_head_gpu.getInfo().offset, m_bullet_LL_head_gpu.getInfo().range, 0xFFFFFFFF);
+		}
 
 	}
 
@@ -150,14 +158,14 @@ void sBulletSystem::setup(std::shared_ptr<btr::Context>& context)
 	{
 
 		std::vector<vk::DescriptorBufferInfo> uniforms = {
-			m_bullet_info.getBufferInfo(),
+			m_bullet_info.getInfo(),
 		};
 		std::vector<vk::DescriptorBufferInfo> storages = {
-			m_bullet.getBufferInfo(),
-			m_bullet_counter.getBufferInfo(),
-			m_bullet_emit.getBufferInfo(),
-			m_bullet_LL_head_gpu.getBufferInfo(),
-			m_bullet_emit_count.getBufferInfo(),
+			m_bullet.getInfo(),
+			m_bullet_counter.getInfo(),
+			m_bullet_emit.getInfo(),
+			m_bullet_LL_head_gpu.getInfo(),
+			m_bullet_emit_count.getInfo(),
 		};
 		std::vector<vk::WriteDescriptorSet> write_desc =
 		{
@@ -309,26 +317,26 @@ vk::CommandBuffer sBulletSystem::execute(std::shared_ptr<btr::Context>& context)
 		if (!data.empty())
 		{
 			{
-				auto to_write = m_bullet_emit_count.makeMemoryBarrierEx();
+				auto to_write = m_bullet_emit_count.makeMemoryBarrier();
 				to_write.setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
 				to_write.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_write, {});
 
-				cmd.updateBuffer<uint32_t>(m_bullet_emit_count.getBufferInfo().buffer, m_bullet_emit_count.getBufferInfo().offset, uint32_t(data.size()));
+				cmd.updateBuffer<uint32_t>(m_bullet_emit_count.getInfo().buffer, m_bullet_emit_count.getInfo().offset, uint32_t(data.size()));
 
-				auto to_read = m_bullet_emit_count.makeMemoryBarrierEx();
+				auto to_read = m_bullet_emit_count.makeMemoryBarrier();
 				to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 				to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
 			}
 			{
-				auto to_read = m_bullet_counter.makeMemoryBarrierEx();
+				auto to_read = m_bullet_counter.makeMemoryBarrier();
 				to_read.setSrcAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
 				to_read.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eDrawIndirect, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_read, {});
 			}
 
-			auto to_transfer = m_bullet_emit.makeMemoryBarrierEx();
+			auto to_transfer = m_bullet_emit.makeMemoryBarrier();
 			to_transfer.setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
 			to_transfer.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
@@ -341,11 +349,11 @@ vk::CommandBuffer sBulletSystem::execute(std::shared_ptr<btr::Context>& context)
 
 			vk::BufferCopy copy;
 			copy.setSize(desc.size);
-			copy.setSrcOffset(staging.getBufferInfo().offset);
-			copy.setDstOffset(m_bullet_emit.getBufferInfo().offset);
-			cmd.copyBuffer(staging.getBufferInfo().buffer, m_bullet_emit.getBufferInfo().buffer, copy);
+			copy.setSrcOffset(staging.getInfo().offset);
+			copy.setDstOffset(m_bullet_emit.getInfo().offset);
+			cmd.copyBuffer(staging.getInfo().buffer, m_bullet_emit.getInfo().buffer, copy);
 
-			auto to_read = m_bullet_emit.makeMemoryBarrierEx();
+			auto to_read = m_bullet_emit.makeMemoryBarrier();
 			to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 			to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
@@ -362,21 +370,21 @@ vk::CommandBuffer sBulletSystem::execute(std::shared_ptr<btr::Context>& context)
 
 	{
 		// èâä˙âª
-		auto to_clear = m_bullet_counter.makeMemoryBarrierEx();
+		auto to_clear = m_bullet_counter.makeMemoryBarrier();
 		to_clear.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
 		to_clear.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_clear, {});
 
-		cmd.fillBuffer(m_bullet_LL_head_gpu.getBufferInfo().buffer, m_bullet_LL_head_gpu.getBufferInfo().offset, m_bullet_LL_head_gpu.getBufferInfo().range, 0xFFFFFFFF);
-		cmd.updateBuffer<vk::DrawIndirectCommand>(m_bullet_counter.getBufferInfo().buffer, m_bullet_counter.getBufferInfo().offset, vk::DrawIndirectCommand(4, 0, 0, 0));
+		cmd.fillBuffer(m_bullet_LL_head_gpu.getInfo().buffer, m_bullet_LL_head_gpu.getInfo().offset, m_bullet_LL_head_gpu.getInfo().range, 0xFFFFFFFF);
+		cmd.updateBuffer<vk::DrawIndirectCommand>(m_bullet_counter.getInfo().buffer, m_bullet_counter.getInfo().offset, vk::DrawIndirectCommand(4, 0, 0, 0));
 
-		auto to_read = m_bullet_counter.makeMemoryBarrierEx();
+		auto to_read = m_bullet_counter.makeMemoryBarrier();
 		to_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 		to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_read }, {});
 	}
 	{
-		auto to_read = m_bullet.makeMemoryBarrierEx();
+		auto to_read = m_bullet.makeMemoryBarrier();
 		to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
 		to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_read }, {});
@@ -401,7 +409,7 @@ vk::CommandBuffer sBulletSystem::draw(std::shared_ptr<btr::Context>& context)
 	auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 
 	{
-		auto to_draw = m_bullet_counter.makeMemoryBarrierEx();
+		auto to_draw = m_bullet_counter.makeMemoryBarrier();
 		to_draw.setSrcAccessMask(vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite);
 		to_draw.setDstAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, {}, {}, { to_draw }, {});
@@ -418,7 +426,7 @@ vk::CommandBuffer sBulletSystem::draw(std::shared_ptr<btr::Context>& context)
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get(), 2, sSystem::Order().getSystemDescriptorSet(), {0});
 
-	cmd.drawIndirect(m_bullet_counter.getBufferInfo().buffer, m_bullet_counter.getBufferInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
+	cmd.drawIndirect(m_bullet_counter.getInfo().buffer, m_bullet_counter.getInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
 
 	cmd.endRenderPass();
 	cmd.end();

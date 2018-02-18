@@ -80,14 +80,14 @@ public:
 		DESCRIPTOR_SET_NUM,
 	};
 
-	btr::BufferMemory m_bullet;
-	btr::BufferMemory m_bullet_info;
+	btr::BufferMemoryEx<BulletData> m_bullet;
+	btr::BufferMemoryEx<BulletInfo> m_bullet_info;
 	std::array<AppendBuffer<BulletData, 1024>, 2> m_data;
-	btr::BufferMemory m_bullet_counter;
-	btr::BufferMemory m_bullet_emit;
-	btr::BufferMemory m_bullet_emit_count;
+	btr::BufferMemoryEx<vk::DrawIndirectCommand> m_bullet_counter;
+	btr::BufferMemoryEx<BulletData> m_bullet_emit;
+	btr::BufferMemoryEx<uint32_t> m_bullet_emit_count;
 	btr::BufferMemory m_bullet_draw_indiret_info;
-	btr::BufferMemory m_bullet_LL_head_gpu;
+	btr::BufferMemoryEx<uint32_t> m_bullet_LL_head_gpu;
 
 	std::shared_ptr<RenderPassModule> m_render_pass;
 
@@ -103,7 +103,6 @@ public:
 	void setup(std::shared_ptr<btr::Context>& context);
 
 	vk::CommandBuffer execute(std::shared_ptr<btr::Context>& context);
-
 	vk::CommandBuffer draw(std::shared_ptr<btr::Context>& context);
 
 public:
@@ -117,8 +116,8 @@ public:
 	vk::PipelineLayout getPipelineLayout(PipelineLayout layout)const { return m_pipeline_layout[layout].get(); }
 	vk::DescriptorSetLayout getDescriptorSetLayout(DescriptorSetLayout desctiptor)const { return m_descriptor_set_layout[desctiptor].get(); }
 	vk::DescriptorSet getDescriptorSet(DescriptorSet i)const { return m_descriptor_set[i].get(); }
-	btr::BufferMemory& getLL() { return m_bullet_LL_head_gpu; }
-	btr::BufferMemory& getBullet() { return m_bullet; }
+	btr::BufferMemoryEx<uint32_t>& getLL() { return m_bullet_LL_head_gpu; }
+	btr::BufferMemoryEx<BulletData> & getBullet() { return m_bullet; }
 
 };
 

@@ -285,7 +285,7 @@ vk::CommandBuffer sLightSystem::execute(std::shared_ptr<btr::Context>& context)
 	// collect
 	{
 		{
-			auto to_read = sBulletSystem::Order().getBullet().makeMemoryBarrierEx();
+			auto to_read = sBulletSystem::Order().getBullet().makeMemoryBarrier();
 			to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
 			to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});

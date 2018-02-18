@@ -110,7 +110,7 @@ vk::CommandBuffer sCollisionSystem::execute(std::shared_ptr<btr::Context>& conte
 		std::vector<vk::BufferMemoryBarrier> to_read = {
 			sBoid::Order().getLL().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead),
 			sBoid::Order().getSoldier().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead| vk::AccessFlagBits::eShaderWrite),
-			sBulletSystem::Order().getBullet().makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+			sBulletSystem::Order().getBullet().makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_read, {});
 
