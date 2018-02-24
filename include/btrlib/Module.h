@@ -13,6 +13,7 @@ struct RenderPassModule
 {
 	virtual vk::RenderPass getRenderPass()const = 0;
 	virtual vk::Framebuffer getFramebuffer(uint32_t index)const = 0;
+	virtual uint32_t getFramebufferNum()const = 0;
 	virtual vk::Extent2D getResolution()const = 0;
 };
 
@@ -141,6 +142,29 @@ public:
 		descriptor_layout_info.setBindingCount((uint32_t)binding.size());
 		descriptor_layout_info.setPBindings(binding.data());
 		return context->m_device->createDescriptorSetLayoutUnique(descriptor_layout_info);
+	}
+	template<typename T>
+	static TypedDescriptorSet<T> allocateDescriptorSet(const std::shared_ptr<btr::Context>& context, vk::DescriptorPool pool, TypedDescriptorSetLayout<T> layout)
+	{
+		auto& device = context->m_device;
+		vk::DescriptorSetLayout layouts[] =
+		{
+			layout.get();
+		};
+		vk::DescriptorSetAllocateInfo descriptor_set_alloc_info;
+		descriptor_set_alloc_info.setDescriptorPool(pool);
+		descriptor_set_alloc_info.setDescriptorSetCount(array_length(layouts));
+		descriptor_set_alloc_info.setPSetLayouts(layouts);
+		auto descriptor_set = std::move(device->allocateDescriptorSetsUnique(descriptor_set_alloc_info)[0]);
+		return descriptor_set;
+	}
+	template<typename T>
+	static TypedDescriptorSetLayout<T> createDescriptorSetLayout(const std::shared_ptr<btr::Context>& context, const std::vector<vk::DescriptorSetLayoutBinding>& binding)
+	{
+		vk::DescriptorSetLayoutCreateInfo descriptor_layout_info;
+		descriptor_layout_info.setBindingCount((uint32_t)binding.size());
+		descriptor_layout_info.setPBindings(binding.data());
+		return TypedDescriptorSetLayout<T>(context->m_device->createDescriptorSetLayoutUnique(descriptor_layout_info));
 	}
 	static vk::UniqueDescriptorPool createDescriptorPool(const std::shared_ptr<btr::Context>& context, const std::vector<vk::DescriptorSetLayoutBinding>& binding, uint32_t set_size)
 	{

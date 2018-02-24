@@ -374,7 +374,7 @@ vk::CommandBuffer sParticlePipeline::execute(std::shared_ptr<btr::Context>& cont
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, to_transfer, {});
 
 		cmd.updateBuffer<vk::DrawIndirectCommand>(m_particle_counter.getInfo().buffer, m_particle_counter.getInfo().offset, vk::DrawIndirectCommand(4, 0, 0, 0));
-		cmd.updateBuffer<glm::uvec3>(m_particle_generate_cmd_counter.getInfo().buffer, m_particle_generate_cmd_counter.getInfo().offset, glm::uvec3(0, 1, 1));
+		cmd.updateBuffer<uvec3>(m_particle_generate_cmd_counter.getInfo().buffer, m_particle_generate_cmd_counter.getInfo().offset, uvec3(0, 1, 1));
 	}
 
 	// update

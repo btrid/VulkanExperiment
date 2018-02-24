@@ -6,6 +6,32 @@
 #include <btrlib/Define.h>
 #include <btrlib/sGlobal.h>
 //#include <btrlib/Context.h>
+
+template<typename T, typename U>
+struct TypedInfo : public U
+{};
+
+template<typename T, typename U>
+struct TypedHandle : public U
+{
+	TypedHandle() = default;
+	TypedHandle(U& handle)
+		: U(std::move(handle))
+	{}
+	TypedHandle(U&& handle)
+		: U(std::move(handle))
+	{}
+};
+
+template<typename T>
+using TypedBufferInfo = TypedInfo<T, vk::DescriptorBufferInfo>;
+template<typename T>
+using TypedDescriptorSet = TypedHandle<T, vk::UniqueDescriptorSet>;
+template<typename T>
+using TypedDescriptorSetLayout = TypedHandle<T, vk::UniqueDescriptorSetLayout>;
+template<typename T>
+using TypedCommandBuffer = TypedHandle<T, vk::UniqueCommandBuffer>;
+
 namespace btr
 {
 struct Zone
@@ -218,6 +244,14 @@ struct BufferMemoryEx
 public:
 	bool isValid()const { return !!m_resource; }
 	vk::DescriptorBufferInfo getInfo()const { return m_resource->m_buffer_info; }
+	TypedBufferInfo<T> getInfoEx()const
+	{
+		TypedBufferInfo<T> ret;
+		ret.buffer = m_resource->m_buffer_info.buffer;
+		ret.offset = m_resource->m_buffer_info.offset;
+		ret.range = m_resource->m_buffer_info.range;
+		return ret;
+	}
 	vk::DescriptorBufferInfo getBufferInfo()const { return m_resource->m_buffer_info; }
 	const btr::BufferMemoryDescriptorEx<T>& getDescriptor()const { return m_resource->m_buffer_descriptor; }
 	T* getMappedPtr(size_t offset_num = 0)const { assert(offset_num < m_resource->m_buffer_descriptor.element_num); return m_resource->m_mapped_memory + offset_num; }

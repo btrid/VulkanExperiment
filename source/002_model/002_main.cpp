@@ -26,6 +26,9 @@
 #include <applib/DrawHelper.h>
 #include <applib/sCameraManager.h>
 #include <applib/App.h>
+
+#include <002_model/AppModel.h>
+#include <002_model/AppModelRenderer.h>
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
 #pragma comment(lib, "FreeImage.lib")
@@ -100,22 +103,24 @@ int main()
 
 	auto model = modelFuture.get();
 
+	std::shared_ptr<AppModel> appModel = std::make_shared<AppModel>(context, model->getResource(), 1000);
+	AppModelRenderer renderer(context);
 
-	cModelInstancingPipeline pipeline;
-	pipeline.setup(context);
-	auto render = pipeline.createModel(context, model->getResource());
-	pipeline.addModel(render);
-	std::vector<ModelInstancingModule::InstanceResource> data(1000);
-	for (int i = 0; i < 1000; i++)
-	{
-		data[i].m_world = glm::translate(glm::ballRand(2999.f));
-	}
-
-
-	for (int i = 0; i < 30; i++)
-	{
-		pipeline.m_render_pipeline->m_light_pipeline->add(std::move(std::make_unique<LightSample>()));
-	}
+// 	cModelInstancingPipeline pipeline;
+// 	pipeline.setup(context);
+// 	auto render = pipeline.createModel(context, model->getResource());
+// 	pipeline.addModel(render);
+// 	std::vector<ModelInstancingModule::InstanceResource> data(1000);
+// 	for (int i = 0; i < 1000; i++)
+// 	{
+// 		data[i].m_world = glm::translate(glm::ballRand(2999.f));
+// 	}
+// 
+// 
+// 	for (int i = 0; i < 30; i++)
+// 	{
+// 		pipeline.m_render_pipeline->m_light_pipeline->add(std::move(std::make_unique<LightSample>()));
+// 	}
 
 	app.setup();
 	while (true)
@@ -132,7 +137,7 @@ int main()
 				job.mJob.emplace_back(
 					[&]()
 				{
-					render->m_instancing->addModel(data.data(), data.size());
+// 					render->m_instancing->addModel(data.data(), data.size());
 					work_syncronized_point.arrive();
 				}
 				);
@@ -144,9 +149,9 @@ int main()
 				job.mJob.emplace_back(
 					[&]()
 				{
-					render_cmds[0] = pipeline.execute(context);
-					render_cmds[1] = pipeline.m_render_pipeline->m_light_pipeline->execute(context);
-					render_cmds[2] = pipeline.draw(context);
+// 					render_cmds[0] = pipeline.execute(context);
+// 					render_cmds[1] = pipeline.m_render_pipeline->m_light_pipeline->execute(context);
+// 					render_cmds[2] = pipeline.draw(context);
 					render_syncronized_point.arrive();
 				}
 				);

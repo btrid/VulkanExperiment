@@ -74,6 +74,10 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\include\002_model\AppModel.h" />
+    <ClInclude Include="..\..\include\002_model\AppModelRenderer.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="..\..\packages\assimp.v140.redist.3.2\build\native\assimp.v140.redist.targets" Condition="Exists('..\..\packages\assimp.v140.redist.3.2\build\native\assimp.v140.redist.targets')" />
