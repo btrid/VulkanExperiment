@@ -106,7 +106,7 @@ struct AppModel
 			auto node_info = NodeInfo::createNodeInfo(resource->mNodeRoot);
 			btr::BufferMemoryDescriptorEx<NodeInfo> desc;
 			desc.element_num = node_info.size();
-			m_nodeinfo_buffer = context->m_storage_memory.allocateMemory(desc);
+			m_node_info_buffer = context->m_storage_memory.allocateMemory(desc);
 
 			desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging = context->m_staging_memory.allocateMemory(desc);
@@ -116,10 +116,10 @@ struct AppModel
 			vk::BufferCopy copy_info;
 			copy_info.setSize(staging.getInfo().range);
 			copy_info.setSrcOffset(staging.getInfo().offset);
-			copy_info.setDstOffset(m_nodeinfo_buffer.getInfo().offset);
-			cmd.copyBuffer(staging.getInfo().buffer, m_nodeinfo_buffer.getInfo().buffer, copy_info);
+			copy_info.setDstOffset(m_node_info_buffer.getInfo().offset);
+			cmd.copyBuffer(staging.getInfo().buffer, m_node_info_buffer.getInfo().buffer, copy_info);
 
-			auto to_render = m_nodeinfo_buffer.makeMemoryBarrier();
+			auto to_render = m_node_info_buffer.makeMemoryBarrier();
 			to_render.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, to_render, {});
 
@@ -131,7 +131,7 @@ struct AppModel
 			btr::BufferMemoryDescriptorEx<BoneInfo> desc;
 			desc.element_num = bone_info.size();
 
-			auto& buffer = m_boneinfo_buffer;
+			auto& buffer = m_bone_info_buffer;
 			buffer = context->m_storage_memory.allocateMemory(desc);
 
 			desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
@@ -151,7 +151,7 @@ struct AppModel
 			btr::BufferMemoryDescriptorEx<mat4> desc;
 			desc.element_num = resource->mBone.size() * instanceNum;
 
-			auto& buffer = m_bonetransform_buffer;
+			auto& buffer = m_bone_transform_buffer;
 			buffer = context->m_storage_memory.allocateMemory(desc);
 		}
 		// NodeTransform
@@ -159,7 +159,7 @@ struct AppModel
 			btr::BufferMemoryDescriptorEx<mat4> desc;
 			desc.element_num = resource->mNodeRoot.mNodeList.size() * instanceNum;
 
-			auto& buffer = m_nodetransform_buffer;
+			auto& buffer = m_node_transform_buffer;
 			buffer = context->m_storage_memory.allocateMemory(desc);
 		}
 
@@ -168,7 +168,7 @@ struct AppModel
 			btr::BufferMemoryDescriptorEx<cModel::ModelInfo> desc;
 			desc.element_num = 1;
 
-			auto& buffer = m_modelinfo_buffer;
+			auto& buffer = m_model_info_buffer;
 			buffer = context->m_storage_memory.allocateMemory(desc);
 
 			desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
@@ -187,23 +187,17 @@ struct AppModel
 
 		//ModelInstancingInfo
 		{
-			btr::UpdateBufferDescriptor desc;
-			desc.device_memory = context->m_storage_memory;
-			desc.staging_memory = context->m_staging_memory;
-//			desc.frame_max = context->m_window->getSwapchain().getBackbufferNum();
-			desc.frame_max = sGlobal::FRAME_MAX;
+			btr::BufferMemoryDescriptorEx<ModelInstancingInfo> desc;
 			desc.element_num = 1;
-			m_instancing_info_buffer.setup(desc);
+
+			m_instancing_info_buffer = context->m_storage_memory.allocateMemory(desc);
 		}
 		// world
 		{
-			btr::UpdateBufferDescriptor desc;
-			desc.device_memory = context->m_storage_memory;
-			desc.staging_memory = context->m_staging_memory;
-//			desc.frame_max = context->m_window->getSwapchain().getBackbufferNum();
-			desc.frame_max = sGlobal::FRAME_MAX;
+			btr::BufferMemoryDescriptorEx<mat4> desc;
 			desc.element_num = instanceNum;
-			m_world_buffer.setup(desc);
+
+			m_world_buffer = context->m_storage_memory.allocateMemory(desc);
 		}
 
 		//BoneMap
@@ -211,7 +205,7 @@ struct AppModel
 			btr::BufferMemoryDescriptorEx<s32> desc;
 			desc.element_num = instanceNum;
 
-			auto& buffer = m_bonemap_buffer;
+			auto& buffer = m_instance_map_buffer;
 			buffer = context->m_storage_memory.allocateMemory(desc);
 		}
 		// draw indirect
@@ -399,22 +393,27 @@ struct AppModel
 			m_texture[i * 1 + 0] = m.mDiffuseTex.isReady() ? m.mDiffuseTex : ResourceTexture();
 		}
 
+		// initialize
+		{
+
+		}
+
 	}
 	std::shared_ptr<cModel::Resource> m_resource;
 	uint32_t m_instance_max_num;
 	std::vector<MotionTexture> m_motion_texture;
 	btr::BufferMemoryEx<ivec3> m_animation_skinning_indirect_buffer;
 
-	btr::UpdateBuffer<ModelInstancingInfo> m_instancing_info_buffer;
-	btr::UpdateBuffer<mat4> m_world_buffer;
-	btr::BufferMemoryEx<cModel::ModelInfo> m_modelinfo_buffer;
-	btr::BufferMemoryEx<NodeInfo> m_nodeinfo_buffer;
-	btr::BufferMemoryEx<BoneInfo> m_boneinfo_buffer;
+	btr::BufferMemoryEx<ModelInstancingInfo> m_instancing_info_buffer;
+	btr::BufferMemoryEx<mat4> m_world_buffer;
+	btr::BufferMemoryEx<cModel::ModelInfo> m_model_info_buffer;
+	btr::BufferMemoryEx<NodeInfo> m_node_info_buffer;
+	btr::BufferMemoryEx<BoneInfo> m_bone_info_buffer;
 	btr::BufferMemoryEx<AnimationInfo> m_animationinfo_buffer;
 	btr::BufferMemoryEx<PlayingAnimation> m_animationplay_buffer;
-	btr::BufferMemoryEx<mat4> m_nodetransform_buffer;
-	btr::BufferMemoryEx<mat4> m_bonetransform_buffer;
-	btr::BufferMemoryEx<s32> m_bonemap_buffer;
+	btr::BufferMemoryEx<mat4> m_node_transform_buffer;
+	btr::BufferMemoryEx<mat4> m_bone_transform_buffer;
+	btr::BufferMemoryEx<s32> m_instance_map_buffer;
 	btr::BufferMemoryEx<cModel::Mesh> m_draw_indirect_buffer;
 
 	btr::BufferMemoryEx<uint32_t> m_material_index;

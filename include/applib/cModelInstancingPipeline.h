@@ -301,7 +301,7 @@ private:
 
 };
 
-struct InstancingAnimationDescriptorSetLayout : public DescriptorModuleOld
+struct ModelAnimateDescriptor : public DescriptorModuleOld
 {
 	struct Set
 	{
@@ -318,10 +318,10 @@ struct InstancingAnimationDescriptorSetLayout : public DescriptorModuleOld
 		TypedBufferInfo<uvec3> m_anime_indirect;
 		TypedBufferInfo<cModel::Mesh> m_draw_indirect;
 
-		std::vector<MotionTexture> m_motion_texture;
+		std::array<vk::DescriptorImageInfo, 1> m_motion_texture;
 	};
 
-	InstancingAnimationDescriptorSetLayout(const std::shared_ptr<btr::Context>& context)
+	ModelAnimateDescriptor(const std::shared_ptr<btr::Context>& context)
 	{
 		std::vector<vk::DescriptorSetLayoutBinding> binding =
 		{
@@ -420,10 +420,7 @@ struct InstancingAnimationDescriptorSetLayout : public DescriptorModuleOld
 
 		std::vector<vk::DescriptorImageInfo> images =
 		{
-			vk::DescriptorImageInfo()
-			.setImageView(set.m_motion_texture[0].getImageView())
-			.setSampler(set.m_motion_texture[0].getSampler())
-			.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
+			set.m_motion_texture[0]
 		};
 
 		std::vector<vk::WriteDescriptorSet> write =
@@ -448,8 +445,9 @@ struct InstancingAnimationDescriptorSetLayout : public DescriptorModuleOld
 
 	std::shared_ptr<btr::Context> m_context;
 };
+using sModelAnimateDescriptor = SingletonEx<ModelAnimateDescriptor>;
 
-struct ModelInstancingAnimationPipeline : public PipelineComponent
+struct ModelInstancingAnimationPipeline
 {
 	ModelInstancingAnimationPipeline(const std::shared_ptr<btr::Context>& context)
 	{
@@ -465,7 +463,7 @@ struct ModelInstancingAnimationPipeline : public PipelineComponent
 		};
 		assert(shader_desc.size() == SHADER_NUM);
 		m_compute_shader = std::make_shared<ShaderModule>(context, shader_desc);
-		m_animation_descriptor_layout = std::make_shared<InstancingAnimationDescriptorSetLayout>(context);
+		m_animation_descriptor_layout = std::make_shared<ModelAnimateDescriptor>(context);
 
 		// pipeline layout
 		{
@@ -506,7 +504,7 @@ struct ModelInstancingAnimationPipeline : public PipelineComponent
 		}
 
 	}
-	std::vector<TypedCommandBuffer<ModelInstancingAnimationPipeline>> createCmd(const std::shared_ptr<btr::Context>& context, const DescriptorSet<InstancingAnimationDescriptorSetLayout::Set>& descriptor_set)
+	std::vector<TypedCommandBuffer<ModelInstancingAnimationPipeline>> createCmd(const std::shared_ptr<btr::Context>& context, const DescriptorSet<ModelAnimateDescriptor::Set>& descriptor_set)
 	{
 		// recode
 		{
@@ -615,7 +613,7 @@ struct ModelInstancingAnimationPipeline : public PipelineComponent
 	std::shared_ptr<ShaderModule> m_compute_shader;
 
 	std::array<vk::UniquePipeline, SHADER_NUM> m_pipeline;
-	std::shared_ptr<InstancingAnimationDescriptorSetLayout> m_animation_descriptor_layout;
+	std::shared_ptr<ModelAnimateDescriptor> m_animation_descriptor_layout;
 	vk::UniquePipelineLayout m_pipeline_layout;
 
 };
