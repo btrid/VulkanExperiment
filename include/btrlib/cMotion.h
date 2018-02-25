@@ -351,19 +351,4 @@ struct AnimationModule
 	virtual void animationExecute(const std::shared_ptr<btr::Context>& context, vk::CommandBuffer& cmd) = 0;
 };
 
-struct InstancingAnimationModule : public AnimationModule
-{
-	virtual vk::DescriptorBufferInfo getModelInfo()const = 0;
-	virtual vk::DescriptorBufferInfo getInstancingInfo()const = 0;
-	virtual vk::DescriptorBufferInfo getAnimationInfoBuffer()const = 0;
-	virtual vk::DescriptorBufferInfo getPlayingAnimationBuffer()const = 0;
-	virtual vk::DescriptorBufferInfo getNodeBuffer()const = 0;
-	virtual vk::DescriptorBufferInfo getBoneMap()const = 0;
-	virtual vk::DescriptorBufferInfo getNodeInfoBuffer()const = 0;
-	virtual vk::DescriptorBufferInfo getBoneInfoBuffer()const = 0;
-	virtual vk::DescriptorBufferInfo getWorldBuffer()const = 0;
-	virtual vk::DescriptorBufferInfo getDrawIndirect()const = 0;
-	virtual const std::vector<MotionTexture>& getMotionTexture()const = 0;
-
-};
 

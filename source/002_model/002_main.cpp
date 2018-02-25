@@ -21,14 +21,12 @@
 #include <btrlib/cStopWatch.h>
 #include <btrlib/AllocatedMemory.h>
 #include <applib/cModelInstancingPipeline.h>
-#include <applib/cModelInstancingRender.h>
+#include <applib/cAppModel.h>
 
 #include <applib/DrawHelper.h>
 #include <applib/sCameraManager.h>
 #include <applib/App.h>
 
-#include <002_model/AppModel.h>
-#include <002_model/AppModelRenderer.h>
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
 #pragma comment(lib, "FreeImage.lib")
@@ -103,8 +101,29 @@ int main()
 
 	auto model = modelFuture.get();
 
+	sModelRenderDescriptor::Create(context);
+
 	std::shared_ptr<AppModel> appModel = std::make_shared<AppModel>(context, model->getResource(), 1000);
-	AppModelRenderer renderer(context);
+	ModelRenderDescriptor::Set descriptor_set;
+	descriptor_set.m_bonetransform = appModel->m_bonetransform_buffer.getInfoEx();
+	descriptor_set.m_model_info = appModel->m_modelinfo_buffer.getInfoEx();
+	descriptor_set.m_instancing_info = appModel->m_instancing_info_buffer.getInfoEx();
+	descriptor_set.m_material = appModel->m_material.getInfoEx();
+	descriptor_set.m_material_index = appModel->m_material_index.getInfoEx();
+	descriptor_set.m_images.fill(vk::DescriptorImageInfo(sGraphicsResource::Order().getWhiteTexture().m_sampler.get(), sGraphicsResource::Order().getWhiteTexture().m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal));
+	for (size_t i = 0; i < appModel->m_texture.size(); i++)
+	{
+		const auto& tex = appModel->m_texture[i];
+		if (tex.isReady()) {
+			descriptor_set.m_images[i] = vk::DescriptorImageInfo(tex.getSampler(), tex.getImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
+		}
+	}
+
+	auto desc = sModelRenderDescriptor::Order().allocateDescriptorSet(std::move(descriptor_set));
+	appModel->m_world_buffer;
+	AppModelInstancingRenderer renderer(context);
+
+	renderer.createCmd(context, &appModel->m_resource->m_mesh_resource, desc);
 
 // 	cModelInstancingPipeline pipeline;
 // 	pipeline.setup(context);

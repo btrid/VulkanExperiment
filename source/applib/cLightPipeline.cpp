@@ -1,5 +1,4 @@
 #include <applib/cLightPipeline.h>
-#include <applib/cModelInstancingRender.h>
 #include <applib/sCameraManager.h>
 
 void cFowardPlusPipeline::setup(const std::shared_ptr<btr::Context>& context)

@@ -72,7 +72,7 @@
     <ClInclude Include="..\..\include\applib\App.h" />
     <ClInclude Include="..\..\include\applib\cLightPipeline.h" />
     <ClInclude Include="..\..\include\applib\cModelInstancingPipeline.h" />
-    <ClInclude Include="..\..\include\applib\cModelInstancingRender.h" />
+    <ClInclude Include="..\..\include\applib\cAppModel.h" />
     <ClInclude Include="..\..\include\applib\cModelPipeline.h" />
     <ClInclude Include="..\..\include\applib\DrawHelper.h" />
     <ClInclude Include="..\..\include\applib\Geometry.h" />
@@ -92,7 +92,7 @@
     <ClCompile Include="..\..\source\applib\App.cpp" />
     <ClCompile Include="..\..\source\applib\cLightPipeline.cpp" />
     <ClCompile Include="..\..\source\applib\cModelInstancingPipeline.cpp" />
-    <ClCompile Include="..\..\source\applib\cModelInstancingRender.cpp" />
+    <ClCompile Include="..\..\source\applib\cAppModel.cpp" />
     <ClCompile Include="..\..\source\applib\cModelPipeline.cpp" />
     <ClCompile Include="..\..\source\applib\Geometry.cpp" />
     <ClCompile Include="..\..\source\applib\sImGuiRenderer.cpp" />

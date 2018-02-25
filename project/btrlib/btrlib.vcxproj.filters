@@ -81,9 +81,6 @@
     <ClInclude Include="..\..\include\btrlib\Context.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\btrlib\Material.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\btrlib\Module.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>

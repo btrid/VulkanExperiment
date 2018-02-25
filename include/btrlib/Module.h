@@ -7,7 +7,9 @@ struct Component
 };
 
 struct RenderComponent : public Component {};
-struct Drawable : public Component {};
+struct Drawable : public Component {
+	virtual void draw(vk::CommandBuffer cmd)const = 0;
+};
 
 struct RenderPassModule
 {
@@ -48,12 +50,6 @@ private:
 
 struct PipelineComponent
 {
-};
-
-struct InstancingModule
-{
-	virtual vk::DescriptorBufferInfo getModelInfo()const = 0;
-	virtual vk::DescriptorBufferInfo getInstancingInfo()const = 0;
 };
 
 struct DescriptorModule

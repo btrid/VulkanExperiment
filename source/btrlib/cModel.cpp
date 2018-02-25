@@ -423,3 +423,10 @@ const ResourceVertex* cModel::getMesh() const
 {
 	return m_resource ? &m_resource->m_mesh_resource : nullptr;
 }
+
+void ResourceVertex::draw(vk::CommandBuffer cmd) const
+{
+	cmd.bindVertexBuffers(0, m_vertex_buffer.getInfo().buffer, m_vertex_buffer.getInfo().offset);
+	cmd.bindIndexBuffer(m_index_buffer.getInfo().buffer, m_index_buffer.getInfo().offset, mIndexType);
+	cmd.drawIndexedIndirect(m_indirect_buffer.getInfo().buffer, m_indirect_buffer.getInfo().offset, mIndirectCount, sizeof(cModel::Mesh));
+}

@@ -61,7 +61,7 @@ public:
 };
 
 
-struct ResourceVertex
+struct ResourceVertex : public Drawable
 {
 	btr::BufferMemory m_vertex_buffer;
 	btr::BufferMemory m_index_buffer;
@@ -73,6 +73,7 @@ struct ResourceVertex
 	std::vector<vk::VertexInputAttributeDescription> m_vertex_input_attribute;
 	vk::PipelineVertexInputStateCreateInfo m_vertex_input_info;
 
+	void draw(vk::CommandBuffer cmd)const override;
 };
 
 

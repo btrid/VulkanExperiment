@@ -158,7 +158,7 @@ private:
 };
 
 
-struct DefaultModelPipelineComponent : public ModelDrawPipelineComponent
+struct DefaultModelPipelineComponent
 {
 
 	DefaultModelPipelineComponent(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderPassModule>& render_pass, const std::shared_ptr<ShaderModule>& shader)
@@ -168,12 +168,12 @@ struct DefaultModelPipelineComponent : public ModelDrawPipelineComponent
 		m_shader = shader;
 
 		// Create descriptor set
-		m_model_descriptor = std::make_shared<ModelDescriptorModule>(context);
+//		m_model_descriptor = std::make_shared<ModelRenderDescriptor>(context);
 
 		// pipeline layout
 		{
 			vk::DescriptorSetLayout layouts[] = {
-				m_model_descriptor->getLayout(),
+//				sModelRenderDescriptor::Order().getLayout(),
 				sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA)
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
@@ -262,49 +262,48 @@ struct DefaultModelPipelineComponent : public ModelDrawPipelineComponent
 
 	}
 
-	std::shared_ptr<ModelRender> createRender(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<Model>& model) override
-	{
-		auto& device = context->m_device;
-		auto render = std::make_shared<ModelRender>();
-
-		render->m_descriptor_set_model = m_model_descriptor->allocateDescriptorSet(context);
-		m_model_descriptor->updateAnimation(context, render->m_descriptor_set_model.get(), model->m_animation);
-		m_model_descriptor->updateMaterial(context, render->m_descriptor_set_model.get(), model->m_material);
-
-		// recode command
-		{
-			vk::CommandBufferAllocateInfo cmd_buffer_info;
-			cmd_buffer_info.commandBufferCount = sGlobal::FRAME_MAX;
-			cmd_buffer_info.commandPool = context->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
-			cmd_buffer_info.level = vk::CommandBufferLevel::eSecondary;
-			render->m_draw_cmd = context->m_device->allocateCommandBuffersUnique(cmd_buffer_info);
-
-			for (size_t i = 0; i < render->m_draw_cmd.size(); i++)
-			{
-				auto& cmd = render->m_draw_cmd[i].get();
-				vk::CommandBufferBeginInfo begin_info;
-				begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse | vk::CommandBufferUsageFlagBits::eRenderPassContinue);
-				vk::CommandBufferInheritanceInfo inheritance_info;
-				inheritance_info.setFramebuffer(m_render_pass->getFramebuffer(i));
-				inheritance_info.setRenderPass(m_render_pass->getRenderPass());
-				begin_info.pInheritanceInfo = &inheritance_info;
-
-				cmd.begin(begin_info);
-
-				cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline.get());
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 0, render->m_descriptor_set_model.get(), {});
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
-				cmd.bindVertexBuffers(0, { model->m_model_resource->m_mesh_resource.m_vertex_buffer.getBufferInfo().buffer }, { model->m_model_resource->m_mesh_resource.m_vertex_buffer.getBufferInfo().offset });
-				cmd.bindIndexBuffer(model->m_model_resource->m_mesh_resource.m_index_buffer.getBufferInfo().buffer, model->m_model_resource->m_mesh_resource.m_index_buffer.getBufferInfo().offset, model->m_model_resource->m_mesh_resource.mIndexType);
-				cmd.drawIndexedIndirect(model->m_model_resource->m_mesh_resource.m_indirect_buffer.getBufferInfo().buffer, model->m_model_resource->m_mesh_resource.m_indirect_buffer.getBufferInfo().offset, model->m_model_resource->m_mesh_resource.mIndirectCount, sizeof(cModel::Mesh));
-
-				cmd.end();
-			}
-		}
-
-		return render;
-	}
-	virtual const std::shared_ptr<RenderPassModule>& getRenderPassModule()const override { return m_render_pass; }
+// 	std::shared_ptr<ModelRender> createRender(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<Model>& model) override
+// 	{
+// 		auto& device = context->m_device;
+// 		auto render = std::make_shared<ModelRender>();
+// 
+// 		render->m_descriptor_set_model = m_model_descriptor->allocateDescriptorSet(context);
+// 		m_model_descriptor->updateAnimation(context, render->m_descriptor_set_model.get(), model->m_animation);
+// 		m_model_descriptor->updateMaterial(context, render->m_descriptor_set_model.get(), model->m_material);
+// 
+// 		// recode command
+// 		{
+// 			vk::CommandBufferAllocateInfo cmd_buffer_info;
+// 			cmd_buffer_info.commandBufferCount = sGlobal::FRAME_MAX;
+// 			cmd_buffer_info.commandPool = context->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
+// 			cmd_buffer_info.level = vk::CommandBufferLevel::eSecondary;
+// 			render->m_draw_cmd = context->m_device->allocateCommandBuffersUnique(cmd_buffer_info);
+// 
+// 			for (size_t i = 0; i < render->m_draw_cmd.size(); i++)
+// 			{
+// 				auto& cmd = render->m_draw_cmd[i].get();
+// 				vk::CommandBufferBeginInfo begin_info;
+// 				begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse | vk::CommandBufferUsageFlagBits::eRenderPassContinue);
+// 				vk::CommandBufferInheritanceInfo inheritance_info;
+// 				inheritance_info.setFramebuffer(m_render_pass->getFramebuffer(i));
+// 				inheritance_info.setRenderPass(m_render_pass->getRenderPass());
+// 				begin_info.pInheritanceInfo = &inheritance_info;
+// 
+// 				cmd.begin(begin_info);
+// 
+// 				cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline.get());
+// 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 0, render->m_descriptor_set_model.get(), {});
+// 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
+// 				cmd.bindVertexBuffers(0, { model->m_model_resource->m_mesh_resource.m_vertex_buffer.getBufferInfo().buffer }, { model->m_model_resource->m_mesh_resource.m_vertex_buffer.getBufferInfo().offset });
+// 				cmd.bindIndexBuffer(model->m_model_resource->m_mesh_resource.m_index_buffer.getBufferInfo().buffer, model->m_model_resource->m_mesh_resource.m_index_buffer.getBufferInfo().offset, model->m_model_resource->m_mesh_resource.mIndexType);
+// 				cmd.drawIndexedIndirect(model->m_model_resource->m_mesh_resource.m_indirect_buffer.getBufferInfo().buffer, model->m_model_resource->m_mesh_resource.m_indirect_buffer.getBufferInfo().offset, model->m_model_resource->m_mesh_resource.mIndirectCount, sizeof(cModel::Mesh));
+// 
+// 				cmd.end();
+// 			}
+// 		}
+// 
+// 		return render;
+// 	}
 
 private:
 
@@ -313,67 +312,66 @@ private:
 
 	std::shared_ptr<RenderPassModule> m_render_pass;
 	std::shared_ptr<ShaderModule> m_shader;
-	std::shared_ptr<ModelDescriptorModule> m_model_descriptor;
 
 };
 
 
 
-void cModelPipeline::setup(std::shared_ptr<btr::Context>& context, const std::shared_ptr<ModelDrawPipelineComponent>& pipeline /*= nullptr*/)
-{
-	m_pipeline = pipeline;
-	if (!m_pipeline)
-	{
-		// なかったらデフォルトで初期化
-		auto render_pass = context->m_window->getRenderBackbufferPass();
-		std::string path = btr::getResourceLibPath() + "shader\\binary\\";
-		std::vector<ShaderDescriptor> shader_desc =
-		{
-			{ path + "ModelRender.vert.spv",vk::ShaderStageFlagBits::eVertex },
-			{ path + "ModelRender.frag.spv",vk::ShaderStageFlagBits::eFragment },
-		};
-		auto shader = std::make_shared<ShaderModule>(context, shader_desc);
-		m_pipeline = std::make_shared<DefaultModelPipelineComponent>(context, render_pass, shader);
-	}
-}
+// void cModelPipeline::setup(std::shared_ptr<btr::Context>& context, const std::shared_ptr<ModelDrawPipelineComponent>& pipeline /*= nullptr*/)
+// {
+// 	m_pipeline = pipeline;
+// 	if (!m_pipeline)
+// 	{
+// 		// なかったらデフォルトで初期化
+// 		auto render_pass = context->m_window->getRenderBackbufferPass();
+// 		std::string path = btr::getResourceLibPath() + "shader\\binary\\";
+// 		std::vector<ShaderDescriptor> shader_desc =
+// 		{
+// 			{ path + "ModelRender.vert.spv",vk::ShaderStageFlagBits::eVertex },
+// 			{ path + "ModelRender.frag.spv",vk::ShaderStageFlagBits::eFragment },
+// 		};
+// 		auto shader = std::make_shared<ShaderModule>(context, shader_desc);
+// 		m_pipeline = std::make_shared<DefaultModelPipelineComponent>(context, render_pass, shader);
+// 	}
+// }
 
-vk::CommandBuffer cModelPipeline::draw(std::shared_ptr<btr::Context>& context)
-{
-	auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
-
-	// draw
-	for (auto& render : m_model)
-	{
-		render->m_animation->animationExecute(context, cmd);
-	}
-
-	vk::RenderPassBeginInfo begin_render_Info;
-	begin_render_Info.setRenderPass(m_pipeline->getRenderPassModule()->getRenderPass());
-	begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), context->m_window->getClientSize<vk::Extent2D>()));
-	begin_render_Info.setFramebuffer(m_pipeline->getRenderPassModule()->getFramebuffer(context->getGPUFrame()));
-	cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eSecondaryCommandBuffers);
-
-	for (auto& render : m_model)
-	{
-		render->m_render->draw(context, cmd);
-	}
-	cmd.endRenderPass();
-
-	cmd.end();
-	return cmd;
-}
-std::shared_ptr<Model> cModelPipeline::createRender(std::shared_ptr<btr::Context>& context, const std::shared_ptr<cModel::Resource>& resource)
-{
-	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-
-	auto model = std::make_shared<Model>();
-	model->m_model_resource = resource;
-	model->m_material = std::make_shared<DefaultMaterialModule>(context, resource);
-	model->m_animation = std::make_shared<DefaultAnimationModule>(context, resource);
-	model->m_render = m_pipeline->createRender(context, model);
-	
-
-	m_model.push_back(model);
-	return model;
-
-}
+// vk::CommandBuffer cModelPipeline::draw(std::shared_ptr<btr::Context>& context)
+// {
+// 	auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
+// 
+// 	// draw
+// 	for (auto& render : m_model)
+// 	{
+// 		render->m_animation->animationExecute(context, cmd);
+// 	}
+// 
+// 	vk::RenderPassBeginInfo begin_render_Info;
+// 	begin_render_Info.setRenderPass(m_pipeline->getRenderPassModule()->getRenderPass());
+// 	begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), context->m_window->getClientSize<vk::Extent2D>()));
+// 	begin_render_Info.setFramebuffer(m_pipeline->getRenderPassModule()->getFramebuffer(context->getGPUFrame()));
+// 	cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eSecondaryCommandBuffers);
+// 
+// 	for (auto& render : m_model)
+// 	{
+// 		render->m_render->draw(context, cmd);
+// 	}
+// 	cmd.endRenderPass();
+// 
+// 	cmd.end();
+// 	return cmd;
+// }
+// std::shared_ptr<Model> cModelPipeline::createRender(std::shared_ptr<btr::Context>& context, const std::shared_ptr<cModel::Resource>& resource)
+// {
+// 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+// 
+// 	auto model = std::make_shared<Model>();
+// 	model->m_model_resource = resource;
+// 	model->m_material = std::make_shared<DefaultMaterialModule>(context, resource);
+// 	model->m_animation = std::make_shared<DefaultAnimationModule>(context, resource);
+// 	model->m_render = m_pipeline->createRender(context, model);
+// 	
+// 
+// 	m_model.push_back(model);
+// 	return model;
+// 
+// }

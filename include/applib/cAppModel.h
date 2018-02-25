@@ -1,12 +1,10 @@
 #pragma once
 #include <memory>
-#include <vector>
 #include <btrlib/cModel.h>
 #include <btrlib/AllocatedMemory.h>
 #include <btrlib/Context.h>
 #include <applib/cLightPipeline.h>
 #include <btrlib/cMotion.h>
-#include <btrlib/Material.h>
 
 struct ModelInstancingInfo {
 	s32 mInstanceMaxNum;		//!< 出せるモデルの量
@@ -80,35 +78,23 @@ struct PlayingAnimation
 	int		_p2;	//!< 今再生しているモーションデータのインデックス
 	int		isLoop;				//!<
 };
-
-struct AppModelSkinningDescription
-{
-	TypedBufferInfo<ModelInstancingInfo> m_instancing_info;
-	TypedBufferInfo<mat4> m_world;
-
-	TypedBufferInfo<cModel::ModelInfo> m_modelinfo_buffer;
-	TypedBufferInfo<NodeInfo> m_nodeinfo_buffer;
-	TypedBufferInfo<BoneInfo> m_boneinfo_buffer;
-	TypedBufferInfo<AnimationInfo> m_animationinfo_buffer;
-	TypedBufferInfo<PlayingAnimation> m_animationplay_buffer;
-	TypedBufferInfo<mat4> m_nodetransform_buffer;
-	TypedBufferInfo<mat4> m_bonetransform_buffer;
-	TypedBufferInfo<s32> m_bonemap_buffer;
-	TypedBufferInfo<cModel::Mesh> m_draw_indirect_buffer;
-
-};
-
-struct AppModelRenderDescription
-{
-	std::shared_ptr<cModel::Resource> m_resource;
-	TypedBufferInfo<cModel::ModelInfo> m_modelinfo;
-	TypedBufferInfo<mat4> m_bonetransform;
-	TypedBufferInfo<cModel::Mesh> m_draw_indirect;
+struct MaterialBuffer {
+	glm::vec4		mAmbient;
+	glm::vec4		mDiffuse;
+	glm::vec4		mSpecular;
+	glm::vec4		mEmissive;
+	uint32_t		u_albedo_texture;
+	uint32_t		u_ambient_texture;
+	uint32_t		u_specular_texture;
+	uint32_t		u_emissive_texture;
+	float			mShininess;
+	float			__p;
+	float			__p1;
+	float			__p2;
 };
 
 struct AppModel
 {
-
 	AppModel(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<cModel::Resource>& resource, uint32_t instanceNum)
 	{
 		assert(!resource->mBone.empty());
@@ -204,7 +190,8 @@ struct AppModel
 			btr::UpdateBufferDescriptor desc;
 			desc.device_memory = context->m_storage_memory;
 			desc.staging_memory = context->m_staging_memory;
-			desc.frame_max = context->m_window->getSwapchain().getBackbufferNum();
+//			desc.frame_max = context->m_window->getSwapchain().getBackbufferNum();
+			desc.frame_max = sGlobal::FRAME_MAX;
 			desc.element_num = 1;
 			m_instancing_info_buffer.setup(desc);
 		}
@@ -213,7 +200,8 @@ struct AppModel
 			btr::UpdateBufferDescriptor desc;
 			desc.device_memory = context->m_storage_memory;
 			desc.staging_memory = context->m_staging_memory;
-			desc.frame_max = context->m_window->getSwapchain().getBackbufferNum();
+//			desc.frame_max = context->m_window->getSwapchain().getBackbufferNum();
+			desc.frame_max = sGlobal::FRAME_MAX;
 			desc.element_num = instanceNum;
 			m_world_buffer.setup(desc);
 		}
@@ -354,6 +342,63 @@ struct AppModel
 			copy_info.setDstOffset(buffer.getInfo().offset);
 			cmd.copyBuffer(staging.getInfo().buffer, buffer.getInfo().buffer, copy_info);
 		}
+
+		// material index
+		{
+			btr::BufferMemoryDescriptorEx<uint32_t> desc;
+			desc.element_num = resource->m_mesh.size();
+			m_material_index = context->m_storage_memory.allocateMemory(desc);
+			desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
+			auto staging = context->m_staging_memory.allocateMemory(desc);
+
+			std::vector<uint32_t> material_index(resource->m_mesh.size());
+			for (size_t i = 0; i < material_index.size(); i++)
+			{
+				staging.getMappedPtr()[i] = resource->m_mesh[i].m_material_index;
+			}
+
+
+			vk::BufferCopy copy_info;
+			copy_info.setSize(staging.getInfo().range);
+			copy_info.setSrcOffset(staging.getInfo().offset);
+			copy_info.setDstOffset(m_material_index.getInfo().offset);
+			cmd.copyBuffer(staging.getInfo().buffer, m_material_index.getInfo().buffer, copy_info);
+
+		}
+
+		// material
+		{
+			btr::BufferMemoryDescriptorEx<MaterialBuffer> desc;
+			desc.element_num = resource->m_material.size();
+			m_material = context->m_storage_memory.allocateMemory(desc);
+			desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
+			auto staging = context->m_staging_memory.allocateMemory(desc);
+			auto* mb = static_cast<MaterialBuffer*>(staging.getMappedPtr());
+			for (size_t i = 0; i < resource->m_material.size(); i++)
+			{
+				mb[i].mAmbient = resource->m_material[i].mAmbient;
+				mb[i].mDiffuse = resource->m_material[i].mDiffuse;
+				mb[i].mEmissive = resource->m_material[i].mEmissive;
+				mb[i].mSpecular = resource->m_material[i].mSpecular;
+				mb[i].mShininess = resource->m_material[i].mShininess;
+			}
+
+
+			vk::BufferCopy copy_info;
+			copy_info.setSize(staging.getInfo().range);
+			copy_info.setSrcOffset(staging.getInfo().offset);
+			copy_info.setDstOffset(m_material.getInfo().offset);
+			cmd.copyBuffer(staging.getInfo().buffer, m_material.getInfo().buffer, copy_info);
+		}
+
+		// todo 結構適当
+		m_texture.resize(resource->m_material.size() * 1);
+		for (size_t i = 0; i < resource->m_material.size(); i++)
+		{
+			auto& m = resource->m_material[i];
+			m_texture[i * 1 + 0] = m.mDiffuseTex.isReady() ? m.mDiffuseTex : ResourceTexture();
+		}
+
 	}
 	std::shared_ptr<cModel::Resource> m_resource;
 	uint32_t m_instance_max_num;
@@ -372,4 +417,75 @@ struct AppModel
 	btr::BufferMemoryEx<s32> m_bonemap_buffer;
 	btr::BufferMemoryEx<cModel::Mesh> m_draw_indirect_buffer;
 
+	btr::BufferMemoryEx<uint32_t> m_material_index;
+	btr::BufferMemoryEx<MaterialBuffer> m_material;
+	std::vector<ResourceTexture> m_texture;
+
+// 	{ 
+// 		// bufferの更新
+// 		{
+// 			auto frame = sGlobal::Order().getRenderFrame();
+// 			int32_t model_count = m_instance_count[frame].exchange(0);
+// 			if (model_count == 0)
+// 			{
+// 				// やることない
+// 				return;
+// 			}
+// 			// world
+// 			{
+// 				auto& world = m_world_buffer;
+// 				world.flushSubBuffer(model_count, 0, frame);
+// 				auto& buffer = world.getBufferMemory();
+// 
+// 				vk::BufferMemoryBarrier to_copy_barrier;
+// 				to_copy_barrier.setBuffer(buffer.getBufferInfo().buffer);
+// 				to_copy_barrier.setOffset(buffer.getBufferInfo().offset);
+// 				to_copy_barrier.setSize(buffer.getBufferInfo().range);
+// 				to_copy_barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
+// 				to_copy_barrier.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
+// 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, { to_copy_barrier }, {});
+// 
+// 				vk::BufferCopy copy_info = world.update(frame);
+// 				cmd.copyBuffer(world.getStagingBufferInfo().buffer, world.getBufferInfo().buffer, copy_info);
+// 
+// 				vk::BufferMemoryBarrier to_shader_read_barrier;
+// 				to_shader_read_barrier.setBuffer(buffer.getBufferInfo().buffer);
+// 				to_shader_read_barrier.setOffset(buffer.getBufferInfo().offset);
+// 				to_shader_read_barrier.setSize(copy_info.size);
+// 				to_shader_read_barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+// 				to_shader_read_barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+// 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, { to_shader_read_barrier }, {});
+// 			}
+// 			{
+// 				auto& instancing = m_instancing_info_buffer;
+// 				ModelInstancingInfo info;
+// 				info.mInstanceAliveNum = model_count;
+// 				info.mInstanceMaxNum = m_instance_max_num;
+// 				info.mInstanceNum = 0;
+// 				instancing.subupdate(&info, 1, 0, frame);
+// 
+// 				auto& buffer = instancing.getBufferMemory();
+// 				vk::BufferMemoryBarrier to_copy_barrier;
+// 				to_copy_barrier.setBuffer(buffer.getBufferInfo().buffer);
+// 				to_copy_barrier.setOffset(buffer.getBufferInfo().offset);
+// 				to_copy_barrier.setSize(buffer.getBufferInfo().range);
+// 				to_copy_barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
+// 				to_copy_barrier.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
+// 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, { to_copy_barrier }, {});
+// 
+// 				vk::BufferCopy copy_info = instancing.update(frame);
+// 				cmd.copyBuffer(instancing.getStagingBufferInfo().buffer, instancing.getBufferInfo().buffer, copy_info);
+// 
+// 				vk::BufferMemoryBarrier to_shader_read_barrier;
+// 				to_shader_read_barrier.setBuffer(buffer.getBufferInfo().buffer);
+// 				to_shader_read_barrier.setOffset(buffer.getBufferInfo().offset);
+// 				to_shader_read_barrier.setSize(buffer.getBufferInfo().range);
+// 				to_shader_read_barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+// 				to_shader_read_barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+// 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, { to_shader_read_barrier }, {});
+// 			}
+// 
+// 		}
+// //		cmd.executeCommands(m_execute_cmd[context->getGPUFrame()].get());
+// 	}
 };

@@ -9,7 +9,12 @@
 
 template<typename T, typename U>
 struct TypedInfo : public U
-{};
+{
+	TypedInfo() = default;
+	TypedInfo(U& info)
+		: U(info)
+	{}
+};
 
 template<typename T, typename U>
 struct TypedHandle : public U
@@ -580,6 +585,7 @@ struct UpdateBuffer
 	}
 
 	vk::DescriptorBufferInfo getBufferInfo()const { return m_device_buffer.getBufferInfo(); }
+	TypedBufferInfo<T> getInfoEx()const { return m_device_buffer.getInfo(); }
 	vk::DescriptorBufferInfo getStagingBufferInfo()const { return m_staging_buffer.getBufferInfo(); }
 	const UpdateBufferDescriptor& getDescriptor()const { return m_desc; }
 	BufferMemory& getBufferMemory() { return m_device_buffer; }
