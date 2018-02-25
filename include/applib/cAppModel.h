@@ -5,6 +5,7 @@
 #include <btrlib/Context.h>
 #include <applib/cLightPipeline.h>
 #include <btrlib/cMotion.h>
+#include <applib/App.h>
 
 struct ModelInstancingInfo {
 	s32 mInstanceMaxNum;		//!< 出せるモデルの量
@@ -234,23 +235,29 @@ struct AppModel
 
 			auto& buffer = m_animation_skinning_indirect_buffer;
 
-			btr::BufferMemoryDescriptorEx<ivec3> desc;
+			btr::BufferMemoryDescriptorEx<uvec3> desc;
 			desc.element_num = 6;
 			buffer = context->m_vertex_memory.allocateMemory(desc);
 
 			desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging = context->m_staging_memory.allocateMemory(desc);
-			auto* group_ptr = static_cast<glm::ivec3*>(staging.getMappedPtr());
+			auto* group_ptr = static_cast<glm::uvec3*>(staging.getMappedPtr());
 			int32_t local_size_x = 1024;
+			uvec3 local_size(1024, 1, 1);
+			auto nc = (local_size_x / resource->m_model_info.mNodeNum) * resource->m_model_info.mNodeNum;
+			auto node_count = instanceNum * resource->m_model_info.mNodeNum / nc + 1; // @todo 正しい計算 +1は無駄な時ある？
+			auto bc = (local_size_x / resource->m_model_info.mBoneNum) * resource->m_model_info.mBoneNum;
+			auto bone_count = instanceNum * resource->m_model_info.mBoneNum / bc + 1;
+			bone_count = glm::min(node_count, bone_count);
 			// shaderのlocal_size_xと合わせる
-			glm::ivec3 group[] =
+			uvec3 group[] =
 			{
-				glm::ivec3(1, 1, 1),
-				glm::ivec3((instanceNum + local_size_x - 1) / local_size_x, 1, 1),
-				glm::ivec3((instanceNum*resource->m_model_info.mNodeNum + local_size_x - 1) / local_size_x, 1, 1),
-				glm::ivec3((instanceNum*resource->m_model_info.mNodeNum + local_size_x - 1) / local_size_x, 1, 1),
-				glm::ivec3((instanceNum + local_size_x - 1) / local_size_x, 1, 1),
-				glm::ivec3((instanceNum*resource->m_model_info.mBoneNum + local_size_x - 1) / local_size_x, 1, 1),
+				uvec3(1, 1, 1),
+				uvec3((instanceNum + local_size_x - 1) / local_size_x, 1, 1),
+				app::calcDipatchGroups(uvec3(instanceNum*resource->m_model_info.mNodeNum, 1, 1), local_size),
+				uvec3(1, node_count, 1),
+				uvec3((instanceNum + local_size_x - 1) / local_size_x, 1, 1),
+				uvec3(1, bone_count, 1),
 			};
 			memcpy_s(group_ptr, sizeof(group), group, sizeof(group));
 
@@ -259,7 +266,6 @@ struct AppModel
 			copy_info.setSrcOffset(staging.getInfo().offset);
 			copy_info.setDstOffset(m_animation_skinning_indirect_buffer.getInfo().offset);
 			cmd.copyBuffer(staging.getInfo().buffer, m_animation_skinning_indirect_buffer.getInfo().buffer, copy_info);
-
 			vk::BufferMemoryBarrier dispatch_indirect_barrier;
 			dispatch_indirect_barrier.setBuffer(m_animation_skinning_indirect_buffer.getInfo().buffer);
 			dispatch_indirect_barrier.setOffset(m_animation_skinning_indirect_buffer.getInfo().offset);
@@ -444,7 +450,7 @@ struct AppModel
 	std::shared_ptr<cModel::Resource> m_resource;
 	uint32_t m_instance_max_num;
 	std::vector<MotionTexture> m_motion_texture;
-	btr::BufferMemoryEx<ivec3> m_animation_skinning_indirect_buffer;
+	btr::BufferMemoryEx<uvec3> m_animation_skinning_indirect_buffer;
 
 	btr::BufferMemoryEx<ModelInstancingInfo> m_instancing_info_buffer;
 	btr::BufferMemoryEx<mat4> m_world_buffer;

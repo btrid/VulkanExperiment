@@ -33,12 +33,12 @@ layout(location = 1) out Vertex
 mat4 skinning()
 {
 	mat4 transMat = mat4(0.0);
-	int bone_offset = u_model_info.boneNum * int(gl_InstanceIndex);
-	for(int i=0; i<4; i++)
+	uint bone_offset = u_model_info.boneNum * gl_InstanceIndex;
+	for(uint i=0; i<4; i++)
 	{
 		if(inBoneID[i] != 255) 
 		{
-			transMat += inWeight[i] * bones[bone_offset + inBoneID[i]];
+			transMat += inWeight[i] * b_bone_transform[bone_offset + inBoneID[i]];
 		}
 	}
 	return transMat;

@@ -11,15 +11,19 @@ layout (local_size_x = 1024, local_size_y = 1) in;
 void main()
 {
 	ModelInfo model_info = u_model_info;
-	if(gl_GlobalInvocationID.x >= model_info.boneNum * u_model_instancing_info.instanceNum){ return; }
-	uint index = gl_GlobalInvocationID.x;
+	uint local_invocation_node = 1024/model_info.nodeNum*model_info.nodeNum;
+	uint local_invocation_bone = 1024/model_info.boneNum*model_info.boneNum;
+	uint local_invocation_max = min(local_invocation_node, local_invocation_bone);
+	if(gl_LocalInvocationID.x >= local_invocation_max){ return; }
+	uint local_invocation_offset = local_invocation_max * gl_WorkGroupID.y;
+	uint index = gl_LocalInvocationID.x + local_invocation_offset;
+	if(index >= u_model_instancing_info.instanceNum*model_info.boneNum){ return; }
 
 	uint boneInfoIndex = index % model_info.boneNum;
 	BoneInfo bone_info = boneInfo[boneInfoIndex];
-	uint nodeIndexOffset = boneMap[index / model_info.boneNum] * model_info.nodeNum;
-	bones[index] 
-		= model_info.invGlobalMatrix
-		* nodeTransforms[nodeIndexOffset + bone_info.nodeIndex]
+	uint nodeIndexOffset = b_instance_map[index / model_info.boneNum] * model_info.nodeNum;
+	b_bone_transform[index] 
+		= nodeTransforms[nodeIndexOffset + bone_info.nodeIndex]
 		* bone_info.boneOffset;
 
 }

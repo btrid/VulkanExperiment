@@ -82,6 +82,7 @@ struct MotionTexture
 		vk::ImageCreateInfo image_info;
 		image_info.imageType = vk::ImageType::e1D;
 		image_info.format = vk::Format::eR16G16B16A16Sfloat;
+//		image_info.format = vk::Format::eR32G32B32A32Sfloat;
 		image_info.mipLevels = 1;
 		image_info.arrayLayers = motion->m_node_num * 3u;
 		image_info.samples = vk::SampleCountFlagBits::e1;
@@ -233,8 +234,8 @@ struct MotionTexture
 		view_info.subresourceRange = subresourceRange;
 
 		vk::SamplerCreateInfo sampler_info;
-		sampler_info.magFilter = vk::Filter::eLinear;
-		sampler_info.minFilter = vk::Filter::eLinear;
+		sampler_info.magFilter = vk::Filter::eNearest;
+		sampler_info.minFilter = vk::Filter::eNearest;
 		sampler_info.mipmapMode = vk::SamplerMipmapMode::eNearest;
 		sampler_info.addressModeU = vk::SamplerAddressMode::eRepeat;//
 		sampler_info.addressModeV = vk::SamplerAddressMode::eClampToEdge;

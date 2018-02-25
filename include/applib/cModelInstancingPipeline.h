@@ -616,13 +616,19 @@ struct ModelInstancingAnimationPipeline
 					}
 					if (i == SHADER_COMPUTE_NODE_TRANSFORM)
 					{
-						vk::BufferMemoryBarrier barrier;
-						barrier.setBuffer(descriptor.m_node_transform.buffer);
-						barrier.setSize(descriptor.m_node_transform.range);
-						barrier.setOffset(descriptor.m_node_transform.offset);
-						barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
-						barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-						cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, barrier, {});
+						vk::BufferMemoryBarrier barrier[2];
+						barrier[0].setBuffer(descriptor.m_node_transform.buffer);
+						barrier[0].setSize(descriptor.m_node_transform.range);
+						barrier[0].setOffset(descriptor.m_node_transform.offset);
+						barrier[0].setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+						barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+						barrier[1].setBuffer(descriptor.m_instance_map.buffer);
+						barrier[1].setSize(descriptor.m_instance_map.range);
+						barrier[1].setOffset(descriptor.m_instance_map.offset);
+						barrier[1].setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
+						barrier[1].setDstAccessMask(vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite);
+						cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
+							vk::DependencyFlags(), 0, nullptr, array_length(barrier), barrier, 0, nullptr);
 					}
 					if (i == SHADER_COMPUTE_BONE_TRANSFORM)
 					{
@@ -635,7 +641,7 @@ struct ModelInstancingAnimationPipeline
 						barrier[1].setBuffer(descriptor.m_instance_map.buffer);
 						barrier[1].setSize(descriptor.m_instance_map.range);
 						barrier[1].setOffset(descriptor.m_instance_map.offset);
-						barrier[1].setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+						barrier[1].setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
 						barrier[1].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
 						barrier[2].setBuffer(descriptor.m_instancing_info.buffer);
 						barrier[2].setSize(descriptor.m_instancing_info.range);

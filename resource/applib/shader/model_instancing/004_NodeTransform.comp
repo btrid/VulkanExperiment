@@ -13,18 +13,23 @@ layout (local_size_x = 1024, local_size_y = 1) in;
 void main() 
 {
 	ModelInfo model_info = u_model_info;
-	if( int(gl_GlobalInvocationID.x) >= u_model_instancing_info.instanceAliveNum * model_info.nodeNum) { return ;} 
-	int root_index = int(gl_GlobalInvocationID.x) / model_info.nodeNum * model_info.nodeNum;
-	int model_index = int(gl_GlobalInvocationID.x) / model_info.nodeNum;
-	int node_index = int(gl_GlobalInvocationID.x) % model_info.nodeNum;
+//	if( int(gl_GlobalInvocationID.x) >= u_model_instancing_info.instanceAliveNum * model_info.nodeNum) { return ;} 
+	uint local_invocation_max = 1024/model_info.nodeNum*model_info.nodeNum;
+	if(gl_LocalInvocationID.x >= local_invocation_max){ return; }
+	uint local_invocation_offset = local_invocation_max * gl_WorkGroupID.y;
+	uint root_index = (gl_LocalInvocationID.x+local_invocation_offset) / model_info.nodeNum * model_info.nodeNum;
+	uint model_index = (gl_LocalInvocationID.x+local_invocation_offset) / model_info.nodeNum;
+	uint node_index = (gl_LocalInvocationID.x) % model_info.nodeNum;
+
+	if(model_index >= u_model_instancing_info.instanceNum){ return; }
 
 	if(node_index == 0)
 	{
-		nodeTransforms[root_index] = worlds[model_index] * nodeTransforms[root_index];
+		nodeTransforms[root_index] = model_info.invGlobalMatrix * worlds[model_index] * nodeTransforms[root_index];
 	}
 	barrier();
 	memoryBarrierBuffer();
-	for(int i=1; i < model_info.node_depth_max; i++)
+	for(uint i=1; i < model_info.node_depth_max; i++)
 	{
 		if(nodes[node_index].depth == i)
 		{

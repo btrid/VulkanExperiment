@@ -44,10 +44,10 @@ struct NodeInfo
 
 struct ModelInfo
 {
-	int nodeNum;
-	int boneNum;
-	int mesh_num;
-	int node_depth_max;
+	uint nodeNum;
+	uint boneNum;
+	uint mesh_num;
+	uint node_depth_max;
 
 	vec4 AABB;
 	mat4 invGlobalMatrix;
@@ -100,7 +100,7 @@ layout(std430, set=USE_MODEL_INFO_SET, binding=1) restrict buffer ModelInstancin
 	ModelInstancingInfo u_model_instancing_info;
 };
 layout(std430, set=USE_MODEL_INFO_SET, binding=2) restrict buffer BoneTransformBuffer {
-	mat4 bones[];
+	mat4 b_bone_transform[];
 };
 layout(std430, set=USE_MODEL_INFO_SET, binding=3) restrict buffer MaterialIndexBuffer {
 	uint b_material_index[];
@@ -145,14 +145,14 @@ layout(std430, set=USE_ANIMATION_INFO_SET, binding=7) readonly restrict buffer W
 };
 
 layout(std430, set=USE_ANIMATION_INFO_SET, binding=8) restrict buffer BoneMapBuffer {
-	uint boneMap[];
+	uint b_instance_map[];
 };
 
 layout(std430, set=USE_ANIMATION_INFO_SET, binding=9) restrict buffer MeshBuffer {
 	Mesh meshs[];
 };
 layout(std430, set=USE_ANIMATION_INFO_SET, binding=10) restrict buffer BoneTransformBuffer {
-	mat4 bones[];
+	mat4 b_bone_transform[];
 };
 
 #endif
