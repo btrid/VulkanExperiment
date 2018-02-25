@@ -19,6 +19,31 @@ struct DescriptorSet
 	Set m_descriptors;
 };
 
+struct LightSample : public Light
+{
+	LightData m_param;
+	int life;
+
+	LightSample()
+	{
+		life = std::rand() % 50 + 30;
+		m_param.m_position = glm::vec4(glm::ballRand(3000.f), std::rand() % 50 + 500.f);
+		m_param.m_emission = glm::vec4(glm::normalize(glm::abs(glm::ballRand(1.f)) + glm::vec3(0.f, 0.f, 0.01f)), 1.f);
+
+	}
+	virtual bool update() override
+	{
+		//		life--;
+		return life >= 0;
+	}
+
+	virtual LightData getParam()const override
+	{
+		return m_param;
+	}
+
+};
+
 struct ModelRenderDescriptor : public DescriptorModuleOld
 {
 	enum {
@@ -128,6 +153,12 @@ struct AppModelInstancingRenderer
 
 		m_light_pipeline = std::make_shared<cFowardPlusPipeline>();
 		m_light_pipeline->setup(context);
+		{
+			for (int i = 0; i < 30; i++)
+			{
+				m_light_pipeline->add(std::move(std::make_unique<LightSample>()));
+			}
+		}
 
 		// setup shader
 		{
@@ -283,6 +314,23 @@ struct AppModelInstancingRenderer
 		}
 
 	}
+
+	vk::CommandBuffer draw(const std::shared_ptr<btr::Context>& context, std::vector<vk::CommandBuffer>& cmds)
+	{
+		auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
+
+		vk::RenderPassBeginInfo render_begin_info;
+		render_begin_info.setRenderPass(m_render_pass->getRenderPass());
+		render_begin_info.setFramebuffer(m_render_pass->getFramebuffer(context->getGPUFrame()));
+		render_begin_info.setRenderArea(vk::Rect2D({}, m_render_pass->getResolution()));
+
+		cmd.beginRenderPass(render_begin_info, vk::SubpassContents::eSecondaryCommandBuffers);
+		cmd.executeCommands(cmds.size(), cmds.data());
+		cmd.endRenderPass();
+		cmd.end();
+		return cmd;
+
+	}
 private:
 	enum 
 	{
@@ -298,6 +346,8 @@ private:
 	vk::UniquePipelineLayout m_pipeline_layout;
 
 	std::shared_ptr<cFowardPlusPipeline> m_light_pipeline;
+public:
+	std::shared_ptr<cFowardPlusPipeline> getLight() { return m_light_pipeline; }
 
 };
 
@@ -598,6 +648,14 @@ struct ModelInstancingAnimationPipeline
 			return cmd;
 		}
 	}
+	vk::CommandBuffer dispach(const std::shared_ptr<btr::Context>& context, std::vector<vk::CommandBuffer>& cmds)
+	{
+		auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
+		cmd.executeCommands(cmds.size(), cmds.data());
+		cmd.end();
+		return cmd;
+
+	}
 
 	enum Shader
 	{
@@ -616,17 +674,4 @@ struct ModelInstancingAnimationPipeline
 	std::shared_ptr<ModelAnimateDescriptor> m_animation_descriptor_layout;
 	vk::UniquePipelineLayout m_pipeline_layout;
 
-};
-
-// pipelineÅAÉâÉCÉgÇ»Ç«ÇÃä«óù
-struct cModelInstancingPipeline
-{
-	std::shared_ptr<AppModelInstancingRenderer> m_render_pipeline;
-	std::shared_ptr<ModelInstancingAnimationPipeline> m_execute_pipeline;
-
-	void setup(const std::shared_ptr<btr::Context>& context)
-	{
-		m_render_pipeline = std::make_shared<AppModelInstancingRenderer>(context);
-		m_execute_pipeline = std::make_shared<ModelInstancingAnimationPipeline>(context);
-	}
 };

@@ -99,6 +99,7 @@ struct AppModel
 	{
 		assert(!resource->mBone.empty());
 		m_resource = resource;
+		m_instance_max_num = instanceNum;
 
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 		// node info
@@ -395,7 +396,41 @@ struct AppModel
 
 		// initialize
 		{
+			{
+				ModelInstancingInfo info;
+				info.mInstanceAliveNum = m_instance_max_num;
+				info.mInstanceMaxNum = m_instance_max_num;
+				info.mInstanceNum = 0;
 
+				btr::BufferMemoryDescriptorEx<ModelInstancingInfo> desc;
+				desc.element_num = 1;
+				desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
+				auto staging = context->m_staging_memory.allocateMemory(desc);
+				*staging.getMappedPtr() = info;
+
+				vk::BufferCopy copy;
+				copy.setSrcOffset(staging.getInfo().offset);
+				copy.setDstOffset(m_instancing_info_buffer.getInfo().offset);
+				copy.setSize(staging.getInfo().range);
+				cmd.copyBuffer(staging.getInfo().buffer, m_instancing_info_buffer.getInfo().buffer, copy);
+			}
+
+			{
+				btr::BufferMemoryDescriptorEx<mat4> desc;
+				desc.element_num = m_instance_max_num;
+				desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
+				auto staging = context->m_staging_memory.allocateMemory(desc);
+				for (uint32_t i = 0; i < m_instance_max_num; i++)
+				{
+					*staging.getMappedPtr(i) = glm::translate(glm::ballRand(1000.f));
+				}
+
+				vk::BufferCopy copy;
+				copy.setSrcOffset(staging.getInfo().offset);
+				copy.setDstOffset(m_world_buffer.getInfo().offset);
+				copy.setSize(staging.getInfo().range);
+				cmd.copyBuffer(staging.getInfo().buffer, m_world_buffer.getInfo().buffer, copy);
+			}
 		}
 
 	}
@@ -420,71 +455,4 @@ struct AppModel
 	btr::BufferMemoryEx<MaterialBuffer> m_material;
 	std::vector<ResourceTexture> m_texture;
 
-// 	{ 
-// 		// buffer‚ÌXV
-// 		{
-// 			auto frame = sGlobal::Order().getRenderFrame();
-// 			int32_t model_count = m_instance_count[frame].exchange(0);
-// 			if (model_count == 0)
-// 			{
-// 				// ‚â‚é‚±‚Æ‚È‚¢
-// 				return;
-// 			}
-// 			// world
-// 			{
-// 				auto& world = m_world_buffer;
-// 				world.flushSubBuffer(model_count, 0, frame);
-// 				auto& buffer = world.getBufferMemory();
-// 
-// 				vk::BufferMemoryBarrier to_copy_barrier;
-// 				to_copy_barrier.setBuffer(buffer.getBufferInfo().buffer);
-// 				to_copy_barrier.setOffset(buffer.getBufferInfo().offset);
-// 				to_copy_barrier.setSize(buffer.getBufferInfo().range);
-// 				to_copy_barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
-// 				to_copy_barrier.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
-// 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, { to_copy_barrier }, {});
-// 
-// 				vk::BufferCopy copy_info = world.update(frame);
-// 				cmd.copyBuffer(world.getStagingBufferInfo().buffer, world.getBufferInfo().buffer, copy_info);
-// 
-// 				vk::BufferMemoryBarrier to_shader_read_barrier;
-// 				to_shader_read_barrier.setBuffer(buffer.getBufferInfo().buffer);
-// 				to_shader_read_barrier.setOffset(buffer.getBufferInfo().offset);
-// 				to_shader_read_barrier.setSize(copy_info.size);
-// 				to_shader_read_barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
-// 				to_shader_read_barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-// 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, { to_shader_read_barrier }, {});
-// 			}
-// 			{
-// 				auto& instancing = m_instancing_info_buffer;
-// 				ModelInstancingInfo info;
-// 				info.mInstanceAliveNum = model_count;
-// 				info.mInstanceMaxNum = m_instance_max_num;
-// 				info.mInstanceNum = 0;
-// 				instancing.subupdate(&info, 1, 0, frame);
-// 
-// 				auto& buffer = instancing.getBufferMemory();
-// 				vk::BufferMemoryBarrier to_copy_barrier;
-// 				to_copy_barrier.setBuffer(buffer.getBufferInfo().buffer);
-// 				to_copy_barrier.setOffset(buffer.getBufferInfo().offset);
-// 				to_copy_barrier.setSize(buffer.getBufferInfo().range);
-// 				to_copy_barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
-// 				to_copy_barrier.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
-// 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, { to_copy_barrier }, {});
-// 
-// 				vk::BufferCopy copy_info = instancing.update(frame);
-// 				cmd.copyBuffer(instancing.getStagingBufferInfo().buffer, instancing.getBufferInfo().buffer, copy_info);
-// 
-// 				vk::BufferMemoryBarrier to_shader_read_barrier;
-// 				to_shader_read_barrier.setBuffer(buffer.getBufferInfo().buffer);
-// 				to_shader_read_barrier.setOffset(buffer.getBufferInfo().offset);
-// 				to_shader_read_barrier.setSize(buffer.getBufferInfo().range);
-// 				to_shader_read_barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
-// 				to_shader_read_barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-// 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, { to_shader_read_barrier }, {});
-// 			}
-// 
-// 		}
-// //		cmd.executeCommands(m_execute_cmd[context->getGPUFrame()].get());
-// 	}
 };

@@ -33,32 +33,6 @@
 #pragma comment(lib, "vulkan-1.lib")
 #pragma comment(lib, "imgui.lib")
 
-struct LightSample : public Light
-{
-	LightData m_param;
-	int life;
-
-	LightSample()
-	{
-		life = std::rand() % 50 + 30;
-		m_param.m_position = glm::vec4(glm::ballRand(3000.f), std::rand() % 50 + 500.f);
-		m_param.m_emission = glm::vec4(glm::normalize(glm::abs(glm::ballRand(1.f)) + glm::vec3(0.f, 0.f, 0.01f)), 1.f);
-
-	}
-	virtual bool update() override
-	{
-		//		life--;
-		return life >= 0;
-	}
-
-	virtual LightData getParam()const override
-	{
-		return m_param;
-	}
-
-};
-
-
 int main()
 {
 	btr::setResourceAppPath("..\\..\\resource\\002_model\\");
@@ -148,17 +122,6 @@ int main()
 	auto drawCmd = renderer.createCmd(context, &appModel->m_resource->m_mesh_resource, render_descriptor);
 	ModelInstancingAnimationPipeline animater(context);
 	auto animeCmd = animater.createCmd(context, animate_descriptor);
-// 	cModelInstancingPipeline pipeline;
-// 	pipeline.setup(context);
-// 	auto render = pipeline.createModel(context, model->getResource());
-// 	pipeline.addModel(render);
-// 	std::vector<ModelInstancingModule::InstanceResource> data(1000);
-// 	for (int i = 0; i < 1000; i++)
-// 	{
-// 		data[i].m_world = glm::translate(glm::ballRand(2999.f));
-// 	}
-// 
-// 
 
 	app.setup();
 	while (true)
@@ -187,9 +150,19 @@ int main()
 				job.mJob.emplace_back(
 					[&]()
 				{
-// 					render_cmds[0] = pipeline.execute(context);
-// 					render_cmds[1] = pipeline.m_render_pipeline->m_light_pipeline->execute(context);
-// 					render_cmds[2] = pipeline.draw(context);
+					{
+						std::vector<vk::CommandBuffer> cmds(1);
+						cmds[0] = animeCmd[context->getGPUFrame()].get();
+						render_cmds[0] = animater.dispach(context, cmds);
+					}
+					{
+						render_cmds[1] = renderer.getLight()->execute(context);
+					}
+					{
+						std::vector<vk::CommandBuffer> cmds(1);
+						cmds[0] = drawCmd[context->getGPUFrame()].get();
+						render_cmds[2] = renderer.draw(context, cmds);
+					}
 					render_syncronized_point.arrive();
 				}
 				);
