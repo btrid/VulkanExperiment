@@ -243,7 +243,7 @@ struct AppModel
 			auto* group_ptr = static_cast<glm::ivec3*>(staging.getMappedPtr());
 			int32_t local_size_x = 1024;
 			// shaderÇÃlocal_size_xÇ∆çáÇÌÇπÇÈ
-			std::vector<glm::ivec3> group =
+			glm::ivec3 group[] =
 			{
 				glm::ivec3(1, 1, 1),
 				glm::ivec3((instanceNum + local_size_x - 1) / local_size_x, 1, 1),
@@ -252,7 +252,7 @@ struct AppModel
 				glm::ivec3((instanceNum + local_size_x - 1) / local_size_x, 1, 1),
 				glm::ivec3((instanceNum*resource->m_model_info.mBoneNum + local_size_x - 1) / local_size_x, 1, 1),
 			};
-			memcpy_s(group_ptr, sizeof(glm::ivec3) * 6, group.data(), sizeof(glm::ivec3) * 6);
+			memcpy_s(group_ptr, sizeof(group), group, sizeof(group));
 
 			vk::BufferCopy copy_info;
 			copy_info.setSize(staging.getInfo().range);
@@ -394,6 +394,13 @@ struct AppModel
 			m_texture[i * 1 + 0] = m.mDiffuseTex.isReady() ? m.mDiffuseTex : ResourceTexture();
 		}
 
+		m_render.m_vertex_buffer = resource->m_mesh_resource.m_vertex_buffer;
+		m_render.m_index_buffer = resource->m_mesh_resource.m_index_buffer;
+		m_render.m_index_type = resource->m_mesh_resource.mIndexType;
+		m_render.m_indirect_buffer = m_draw_indirect_buffer.getInfo();
+		m_render.m_indirect_count = resource->m_mesh_resource.mIndirectCount;
+		m_render.m_indirect_stride = sizeof(cModel::Mesh);
+
 		// initialize
 		{
 			{
@@ -422,7 +429,7 @@ struct AppModel
 				auto staging = context->m_staging_memory.allocateMemory(desc);
 				for (uint32_t i = 0; i < m_instance_max_num; i++)
 				{
-					*staging.getMappedPtr(i) = glm::translate(glm::ballRand(1000.f));
+					*staging.getMappedPtr(i) = glm::scale(glm::translate(glm::ballRand(700.f)), vec3(0.2f));
 				}
 
 				vk::BufferCopy copy;
@@ -455,4 +462,20 @@ struct AppModel
 	btr::BufferMemoryEx<MaterialBuffer> m_material;
 	std::vector<ResourceTexture> m_texture;
 
+	struct AppModelRender : public Drawable
+	{
+		btr::BufferMemory m_vertex_buffer;
+		btr::BufferMemory m_index_buffer;
+		vk::DescriptorBufferInfo m_indirect_buffer;
+		vk::IndexType m_index_type;
+		int32_t m_indirect_count; //!< ÉÅÉbÉVÉÖÇÃêî
+		int32_t m_indirect_stride; //!< 
+		void draw(vk::CommandBuffer cmd)const override
+		{
+			cmd.bindVertexBuffers(0, m_vertex_buffer.getInfo().buffer, m_vertex_buffer.getInfo().offset);
+			cmd.bindIndexBuffer(m_index_buffer.getInfo().buffer, m_index_buffer.getInfo().offset, m_index_type);
+			cmd.drawIndexedIndirect(m_indirect_buffer.buffer, m_indirect_buffer.offset, m_indirect_count, m_indirect_stride);
+		}
+	};
+	AppModelRender m_render;
 };

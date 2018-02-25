@@ -105,7 +105,7 @@ int main()
 		descriptor_set.m_node_info = appModel->m_node_info_buffer.getInfo();
 		descriptor_set.m_bone_info = appModel->m_bone_info_buffer.getInfo();
 		descriptor_set.m_animation_info = appModel->m_animationinfo_buffer.getInfo();
-		descriptor_set.m_playing_animation = appModel->m_animationinfo_buffer.getInfo();
+		descriptor_set.m_playing_animation = appModel->m_animationplay_buffer.getInfo();
 		descriptor_set.m_anime_indirect = appModel->m_animation_skinning_indirect_buffer.getInfo();
 		descriptor_set.m_node_transform = appModel->m_node_transform_buffer.getInfo();
 		descriptor_set.m_bone_transform = appModel->m_bone_transform_buffer.getInfo();
@@ -119,7 +119,7 @@ int main()
 	}
 	appModel->m_world_buffer;
 	AppModelInstancingRenderer renderer(context);
-	auto drawCmd = renderer.createCmd(context, &appModel->m_resource->m_mesh_resource, render_descriptor);
+	auto drawCmd = renderer.createCmd(context, &appModel->m_render, render_descriptor);
 	ModelInstancingAnimationPipeline animater(context);
 	auto animeCmd = animater.createCmd(context, animate_descriptor);
 

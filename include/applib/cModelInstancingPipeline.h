@@ -564,7 +564,7 @@ struct ModelInstancingAnimationPipeline
 			cmd_buffer_info.level = vk::CommandBufferLevel::eSecondary;
 			auto cmds = context->m_device->allocateCommandBuffersUnique(cmd_buffer_info);
 
-			const auto& descriptor = descriptor_set.m_descriptors;
+		const auto& descriptor = descriptor_set.m_descriptors;
 			for (size_t i = 0; i < cmds.size(); i++)
 			{
 				auto& cmd = cmds[i].get();
@@ -578,15 +578,24 @@ struct ModelInstancingAnimationPipeline
 				std::vector<vk::BufferMemoryBarrier> to_clear_barrier =
 				{
 					vk::BufferMemoryBarrier()
-					.setSrcAccessMask(vk::AccessFlagBits::eIndirectCommandRead)
-					.setDstAccessMask(vk::AccessFlagBits::eShaderWrite)
 					.setBuffer(descriptor.m_draw_indirect.buffer)
 					.setSize(descriptor.m_draw_indirect.range)
-					.setOffset(descriptor.m_draw_indirect.offset),
+					.setOffset(descriptor.m_draw_indirect.offset)
+					.setSrcAccessMask(vk::AccessFlagBits::eIndirectCommandRead)
+					.setDstAccessMask(vk::AccessFlagBits::eShaderWrite),
 				};
-
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eDrawIndirect, vk::PipelineStageFlagBits::eComputeShader,
 					vk::DependencyFlags(), {}, to_clear_barrier, {});
+				{
+					vk::BufferMemoryBarrier barrier;
+					barrier.setBuffer(descriptor.m_bone_transform.buffer);
+					barrier.setSize(descriptor.m_bone_transform.range);
+					barrier.setOffset(descriptor.m_bone_transform.offset);
+					barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
+					barrier.setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
+					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eVertexShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, barrier, {});
+				}
+
 
 				for (size_t i = 0; i < m_pipeline.size(); i++)
 				{
@@ -651,8 +660,10 @@ struct ModelInstancingAnimationPipeline
 	vk::CommandBuffer dispach(const std::shared_ptr<btr::Context>& context, std::vector<vk::CommandBuffer>& cmds)
 	{
 		auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
+
 		cmd.executeCommands(cmds.size(), cmds.data());
 		cmd.end();
+
 		return cmd;
 
 	}
