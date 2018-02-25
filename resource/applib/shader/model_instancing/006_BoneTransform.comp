@@ -12,14 +12,13 @@ void main()
 {
 	ModelInfo model_info = u_model_info;
 	if(gl_GlobalInvocationID.x >= model_info.boneNum * u_model_instancing_info.instanceNum){ return; }
-	mat4 inv = model_info.invGlobalMatrix;
 	uint index = gl_GlobalInvocationID.x;
 
 	uint boneInfoIndex = index % model_info.boneNum;
 	BoneInfo bone_info = boneInfo[boneInfoIndex];
 	uint nodeIndexOffset = boneMap[index / model_info.boneNum] * model_info.nodeNum;
 	bones[index] 
-		= inv
+		= model_info.invGlobalMatrix
 		* nodeTransforms[nodeIndexOffset + bone_info.nodeIndex]
 		* bone_info.boneOffset;
 

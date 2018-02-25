@@ -15,7 +15,7 @@ void main()
 
 	PlayingAnimation pm = playingMotion[index];
 
-	playingMotion[index].time += 60. + float(index)*0.01;
+	playingMotion[index].time = 60. + float(index)*0.01;
 //	playingMotion[index].time += 0.016 + float(index)*0.00001;
 }
 

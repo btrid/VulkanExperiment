@@ -201,9 +201,9 @@ struct AppModel
 			m_world_buffer = context->m_storage_memory.allocateMemory(desc);
 		}
 
-		//BoneMap
+		//BoneMap ‰ü‚ß InstanceMap
 		{
-			btr::BufferMemoryDescriptorEx<s32> desc;
+			btr::BufferMemoryDescriptorEx<u32> desc;
 			desc.element_num = instanceNum;
 
 			auto& buffer = m_instance_map_buffer;
@@ -455,7 +455,7 @@ struct AppModel
 	btr::BufferMemoryEx<PlayingAnimation> m_animationplay_buffer;
 	btr::BufferMemoryEx<mat4> m_node_transform_buffer;
 	btr::BufferMemoryEx<mat4> m_bone_transform_buffer;
-	btr::BufferMemoryEx<s32> m_instance_map_buffer;
+	btr::BufferMemoryEx<u32> m_instance_map_buffer;
 	btr::BufferMemoryEx<cModel::Mesh> m_draw_indirect_buffer;
 
 	btr::BufferMemoryEx<uint32_t> m_material_index;

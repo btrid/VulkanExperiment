@@ -28,10 +28,12 @@ void main()
 	// instanceのincrement
 
 	// @Todo メッシュ単位のカリング
-	uint index = atomicAdd(u_model_instancing_info.instanceNum, 1);
-	boneMap[index] = srcIndex;
+//	uint index = atomicAdd(u_model_instancing_info.instanceNum, 1);
+	u_model_instancing_info.instanceNum = 128;
+	boneMap[srcIndex] = srcIndex;
 	for(int i=0; i<model_info.mesh_num; i++) {
-		atomicAdd(meshs[i].instanceCount, 1);
+//		atomicAdd(meshs[i].instanceCount, 1);
+		meshs[i].instanceCount = 128;
 	}
 
 
