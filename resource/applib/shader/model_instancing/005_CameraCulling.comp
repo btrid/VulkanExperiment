@@ -33,9 +33,5 @@ void main()
 	for(int i=0; i<model_info.mesh_num; i++) {
 		atomicAdd(meshs[i].instanceCount, 1);
 	}
-//	u_model_instancing_info.instanceNum = 1000;
-//	b_instance_map[srcIndex] = srcIndex;
-//	meshs[0].instanceCount = 1000;
-
 
 }

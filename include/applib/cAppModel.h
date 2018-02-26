@@ -246,18 +246,13 @@ struct AppModel
 			uvec3 local_size(1024, 1, 1);
 			auto nc = (local_size_x / resource->m_model_info.mNodeNum) * resource->m_model_info.mNodeNum;
 			auto node_count = instanceNum * resource->m_model_info.mNodeNum / nc + 1; // @todo ³‚µ‚¢ŒvŽZ +1‚Í–³‘Ê‚ÈŽž‚ ‚éH
-			auto bc = (local_size_x / resource->m_model_info.mBoneNum) * resource->m_model_info.mBoneNum;
-			auto bone_count = instanceNum * resource->m_model_info.mBoneNum / bc + 1;
-//			bone_count = glm::max(node_count, bone_count);
-			// shader‚Ìlocal_size_x‚Æ‡‚í‚¹‚é
 			uvec3 group[] =
 			{
 				uvec3(1, 1, 1),
-				uvec3((instanceNum + local_size_x - 1) / local_size_x, 1, 1),
+				app::calcDipatchGroups(uvec3(instanceNum, 1, 1), local_size),
 				app::calcDipatchGroups(uvec3(instanceNum*resource->m_model_info.mNodeNum, 1, 1), local_size),
 				uvec3(1, node_count, 1),
-				uvec3((instanceNum + local_size_x - 1) / local_size_x, 1, 1),
-//				uvec3(1, bone_count, 1),
+				app::calcDipatchGroups(uvec3(instanceNum, 1, 1), local_size),
 				app::calcDipatchGroups(uvec3(instanceNum*resource->m_model_info.mBoneNum, 1, 1), local_size),
 			};
 			memcpy_s(group_ptr, sizeof(group), group, sizeof(group));
