@@ -11,19 +11,14 @@ layout (local_size_x = 1024, local_size_y = 1) in;
 void main()
 {
 	ModelInfo model_info = u_model_info;
-	uint local_invocation_node = 1024/model_info.nodeNum*model_info.nodeNum;
-	uint local_invocation_bone = 1024/model_info.boneNum*model_info.boneNum;
-	uint local_invocation_max = min(local_invocation_node, local_invocation_bone);
-	if(gl_LocalInvocationID.x >= local_invocation_max){ return; }
-	uint local_invocation_offset = local_invocation_max * gl_WorkGroupID.y;
-	uint index = gl_LocalInvocationID.x + local_invocation_offset;
-	if(index >= u_model_instancing_info.instanceNum*model_info.boneNum){ return; }
+	if(gl_GlobalInvocationID.x >= model_info.boneNum * u_model_instancing_info.instanceNum){ return; }
+	uint index = gl_GlobalInvocationID.x;
 
-	uint boneInfoIndex = index % model_info.boneNum;
-	BoneInfo bone_info = boneInfo[boneInfoIndex];
-	uint nodeIndexOffset = b_instance_map[index / model_info.boneNum] * model_info.nodeNum;
-	b_bone_transform[index] 
-		= nodeTransforms[nodeIndexOffset + bone_info.nodeIndex]
-		* bone_info.boneOffset;
+	uint bone_info_index = index % model_info.boneNum;
+	BoneInfo bone_info = boneInfo[bone_info_index];
+	uint instance_id = b_instance_map[index / model_info.boneNum];
+	uint bone_index_offset = instance_id * model_info.boneNum;
+	uint node_index_offset = instance_id * model_info.nodeNum;
+	b_bone_transform[bone_index_offset + bone_info_index] = nodeTransforms[node_index_offset + bone_info.nodeIndex] * bone_info.boneOffset;
 
 }

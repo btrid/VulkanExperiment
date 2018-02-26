@@ -21,7 +21,7 @@ void main()
 	uint model_index = (gl_LocalInvocationID.x+local_invocation_offset) / model_info.nodeNum;
 	uint node_index = (gl_LocalInvocationID.x) % model_info.nodeNum;
 
-	if(model_index >= u_model_instancing_info.instanceNum){ return; }
+	if(model_index >= u_model_instancing_info.instanceAliveNum){ return; }
 
 	if(node_index == 0)
 	{
