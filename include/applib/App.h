@@ -31,7 +31,12 @@ struct AppWindow : public cWindow
 	vk::UniqueImageView m_depth_view;
 	vk::UniqueDeviceMemory m_depth_memory;
 	vk::Format m_depth_format;
-	
+
+	vk::ImageCreateInfo m_render_target_info;
+	vk::UniqueImage m_render_target_image;
+	vk::UniqueImageView m_render_target_view;
+	vk::UniqueDeviceMemory m_render_target_memory;
+
 	std::vector <vk::UniqueCommandBuffer> m_cmd_present_to_render;
 	std::vector <vk::UniqueCommandBuffer> m_cmd_render_to_present;
 //	PipelineFlags m_flags;

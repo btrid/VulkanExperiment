@@ -508,7 +508,41 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 		depth_view_info.subresourceRange.layerCount = 1;
 		depth_view_info.subresourceRange.levelCount = 1;
 		m_depth_view = context->m_device->createImageViewUnique(depth_view_info);
+	}
+	{
+		vk::SurfaceCapabilitiesKHR capability = context->m_gpu->getSurfaceCapabilitiesKHR(m_surface.get());
+		vk::ImageCreateInfo image_info;
+		image_info.format = vk::Format::eR16G16B16A16Sfloat;
+		image_info.usage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst;
+		image_info.arrayLayers = 1;
+		image_info.mipLevels = 1;
+		image_info.extent.width = capability.currentExtent.width;
+		image_info.extent.height = capability.currentExtent.height;
+		image_info.extent.depth = 1;
+		image_info.imageType = vk::ImageType::e2D;
+		image_info.initialLayout = vk::ImageLayout::eUndefined;
+		m_render_target_image = context->m_device->createImageUnique(image_info);
+		m_render_target_info = image_info;
+		// ƒƒ‚ƒŠŠm•Û
+		auto memory_request = context->m_device->getImageMemoryRequirements(m_render_target_image.get());
+		uint32_t memory_index = cGPU::Helper::getMemoryTypeIndex(context->m_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
+		vk::MemoryAllocateInfo memory_info;
+		memory_info.allocationSize = memory_request.size;
+		memory_info.memoryTypeIndex = memory_index;
+		m_render_target_memory = context->m_device->allocateMemoryUnique(memory_info);
+		context->m_device->bindImageMemory(m_render_target_image.get(), m_render_target_memory.get(), 0);
+
+		vk::ImageViewCreateInfo view_info;
+		view_info.format = image_info.format;
+		view_info.image = m_render_target_image.get();
+		view_info.viewType = vk::ImageViewType::e2D;
+		view_info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+		view_info.subresourceRange.baseArrayLayer = 0;
+		view_info.subresourceRange.baseMipLevel = 0;
+		view_info.subresourceRange.layerCount = 1;
+		view_info.subresourceRange.levelCount = 1;
+		m_render_target_view = context->m_device->createImageViewUnique(view_info);
 	}
 
 	{

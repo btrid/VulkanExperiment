@@ -23,6 +23,7 @@
 
 #include <applib/App.h>
 #include <applib/cModelPipeline.h>
+#include <applib/cModelInstancingPipeline.h>
 #include <applib/DrawHelper.h>
 #include <btrlib/Context.h>
 #include <btrlib/VoxelPipeline.h>
@@ -119,24 +120,95 @@ struct Player
 	}
 };
 
-struct ModelGIPipelineComponent : public ModelDrawPipelineComponent
+struct ModelGIPipelineComponent
 {
-	ModelGIPipelineComponent(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderPassModule>& render_pass, const std::shared_ptr<ShaderModule>& shader)
+	ModelGIPipelineComponent(const std::shared_ptr<btr::Context>& context, const AppWindow* window)
 	{
 		auto& device = context->m_device;
-		m_render_pass = render_pass;
-		m_shader = shader;
 
-		// Create descriptor set
+		// レンダーパス
 		{
-			m_model_descriptor = std::make_shared<ModelDescriptorModule>(context);
+			// sub pass
+			std::vector<vk::AttachmentReference> color_ref =
+			{
+				vk::AttachmentReference()
+				.setAttachment(0)
+				.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
+			};
+			vk::AttachmentReference depth_ref;
+			depth_ref.setAttachment(1);
+			depth_ref.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+
+			vk::SubpassDescription subpass;
+			subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+			subpass.setInputAttachmentCount(0);
+			subpass.setPInputAttachments(nullptr);
+			subpass.setColorAttachmentCount((uint32_t)color_ref.size());
+			subpass.setPColorAttachments(color_ref.data());
+			subpass.setPDepthStencilAttachment(&depth_ref);
+
+			std::vector<vk::AttachmentDescription> attach_description = {
+				// color1
+				vk::AttachmentDescription()
+				.setFormat(window->getSwapchain().m_surface_format.format)
+				.setSamples(vk::SampleCountFlagBits::e1)
+				.setLoadOp(vk::AttachmentLoadOp::eLoad)
+				.setStoreOp(vk::AttachmentStoreOp::eStore)
+				.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
+				.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
+				vk::AttachmentDescription()
+				.setFormat(vk::Format::eD32Sfloat)
+				.setSamples(vk::SampleCountFlagBits::e1)
+				.setLoadOp(vk::AttachmentLoadOp::eLoad)
+				.setStoreOp(vk::AttachmentStoreOp::eStore)
+				.setInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
+				.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
+			};
+			vk::RenderPassCreateInfo renderpass_info = vk::RenderPassCreateInfo()
+				.setAttachmentCount((uint32_t)attach_description.size())
+				.setPAttachments(attach_description.data())
+				.setSubpassCount(1)
+				.setPSubpasses(&subpass);
+
+			m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
 		}
 
+		{
+			vk::ImageView view[2] = {
+				window->m_backbuffer_view[i].get();
+				window->m_depth_view.get();
+			};
+
+			vk::FramebufferCreateInfo framebuffer_info;
+			framebuffer_info.setRenderPass(m_render_pass.get());
+			framebuffer_info.setAttachmentCount((uint32_t)view.size());
+			framebuffer_info.setPAttachments(view.data());
+			framebuffer_info.setWidth(window->getClientSize().x);
+			framebuffer_info.setHeight(window->getClientSize().y);
+			framebuffer_info.setLayers(1);
+
+			for (size_t i = 0; i < m_framebuffer.size(); i++) {
+				m_framebuffer[i] = context->m_device->createFramebufferUnique(framebuffer_info);
+			}
+		}
+
+		{
+			std::string path = btr::getResourceAppPath() + "shader\\binary\\";
+			std::string shader_desc[] =
+			{
+				{ path + "ModelRender.vert.spv"},
+				{ path + "ModelRender.frag.spv"},
+			};
+			for (size_t i = 0; i < array_length(shader_desc); i++) {
+				m_shader[i] = std::move(loadShaderUnique(device.getHandle(), shader_desc[i]));
+			}
+
+		}
 
 		// pipeline layout
 		{
 			vk::DescriptorSetLayout layouts[] = {
-				m_model_descriptor->getLayout(),
+				sModelRenderDescriptor::Order().getLayout(),
 				sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
 				sMap::Order().getVoxel().getDescriptorSetLayout(VoxelPipeline::DESCRIPTOR_SET_LAYOUT_VOXEL),
 				sLightSystem::Order().getDescriptorSetLayout(sLightSystem::DESCRIPTOR_SET_LAYOUT_LIGHT),
@@ -208,18 +280,29 @@ struct ModelGIPipelineComponent : public ModelDrawPipelineComponent
 			vertex_input_info.setVertexAttributeDescriptionCount((uint32_t)vertex_input_attribute.size());
 			vertex_input_info.setPVertexAttributeDescriptions(vertex_input_attribute.data());
 
+			vk::PipelineShaderStageCreateInfo stage_info[] = {
+				vk::PipelineShaderStageCreateInfo()
+				.setModule(m_shader[0].get())
+				.setStage(vk::ShaderStageFlagBits::eVertex)
+				.setPName("main"),
+				vk::PipelineShaderStageCreateInfo()
+				.setModule(m_shader[1].get())
+				.setStage(vk::ShaderStageFlagBits::eFragment)
+				.setPName("main"),
+			};
+
 			std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =
 			{
 				vk::GraphicsPipelineCreateInfo()
-				.setStageCount((uint32_t)shader->getShaderStageInfo().size())
-				.setPStages(shader->getShaderStageInfo().data())
+				.setStageCount(array_length(stage_info))
+				.setPStages(stage_info)
 				.setPVertexInputState(&vertex_input_info)
 				.setPInputAssemblyState(&assembly_info)
 				.setPViewportState(&viewport_info)
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
 				.setLayout(m_pipeline_layout.get())
-				.setRenderPass(render_pass->getRenderPass())
+				.setRenderPass(m_render_pass.get())
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
@@ -272,14 +355,13 @@ struct ModelGIPipelineComponent : public ModelDrawPipelineComponent
 
 		return render;
 	}
-	virtual const std::shared_ptr<RenderPassModule>& getRenderPassModule()const override { return m_render_pass; }
 
 private:
+	vk::UniqueShaderModule m_shader[2];
 	vk::UniquePipeline m_pipeline;
 	vk::UniquePipelineLayout m_pipeline_layout;
-	std::shared_ptr<ModelDescriptorModule> m_model_descriptor;
-	std::shared_ptr<RenderPassModule> m_render_pass;
-	std::shared_ptr<ShaderModule> m_shader;
+	vk::UniqueRenderPass m_render_pass;
+	vk::UniqueFramebuffer m_framebuffer;
 };
 
 int main()
@@ -323,14 +405,6 @@ int main()
 		sMap::Order().getVoxel().createPipeline<VoxelizeMap>(context);
 
 		{
-			auto render_pass = app::g_app_instance->m_window->getRenderBackbufferPass();
-			std::string path = btr::getResourceAppPath() + "shader\\binary\\";
-			std::vector<ShaderDescriptor> shader_desc =
-			{
-				{ path + "ModelRender.vert.spv",vk::ShaderStageFlagBits::eVertex },
-				{ path + "ModelRender.frag.spv",vk::ShaderStageFlagBits::eFragment },
-			};
-			auto shader = std::make_shared<ShaderModule>(context, shader_desc);
 			auto pipeline = std::make_shared<ModelGIPipelineComponent>(context, render_pass, shader);
 			model_pipeline.setup(context, pipeline);
 		}
