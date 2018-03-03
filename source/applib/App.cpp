@@ -690,4 +690,84 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 
 	m_render_pass = std::make_shared<RenderBackbufferAppModule>(context, this);
 	m_imgui_pipeline = std::make_unique<ImguiRenderPipeline>(context, this);
+	m_copy_pipeline = std::make_shared<CopyImagePipeline>(context);
+
+}
+
+PresentCmd AppWindow::present(const std::shared_ptr<btr::Context>& context, RenderTarget& target)
+{
+	PresentCmd present_cmd;
+	{
+		vk::DescriptorSetLayout layouts[] = {
+			m_copy_pipeline->m_descriptor_layout.get(),
+		};
+		vk::DescriptorSetAllocateInfo desc_info;
+		desc_info.setDescriptorSetCount(sGlobal::FRAME_MAX);
+		desc_info.setPSetLayouts(layouts);
+		present_cmd.m_copy_descriptor_set = context->m_device->allocateDescriptorSetsUnique(desc_info);
+
+	}
+
+	{
+		vk::CommandBufferAllocateInfo cmd_buffer_info;
+		cmd_buffer_info.commandPool = context->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
+		cmd_buffer_info.commandBufferCount = sGlobal::FRAME_MAX;
+		cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
+		present_cmd.cmds = context->m_device->allocateCommandBuffersUnique(cmd_buffer_info);
+	}
+
+	vk::CommandBufferBeginInfo begin_info;
+	begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
+
+	for (int i = 0; i < present_cmd.cmds.size(); i++)
+	{
+		auto& cmd = present_cmd.cmds[i];
+		cmd->begin(begin_info);
+
+		vk::ImageMemoryBarrier present_to_dstcopy;
+		present_to_dstcopy.setSrcAccessMask(vk::AccessFlagBits::eMemoryRead);
+		present_to_dstcopy.setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
+		present_to_dstcopy.setOldLayout(vk::ImageLayout::ePresentSrcKHR);
+		present_to_dstcopy.setNewLayout(vk::ImageLayout::eGeneral);
+		present_to_dstcopy.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+		present_to_dstcopy.setImage(getSwapchain().m_backbuffer_image[i]);
+
+		cmd->pipelineBarrier(
+			vk::PipelineStageFlagBits::eTransfer,
+			vk::PipelineStageFlagBits::eFragmentShader,
+			vk::DependencyFlags(),
+			nullptr, nullptr, present_to_dstcopy);
+
+		{
+			vk::RenderPassBeginInfo begin_render_info;
+			begin_render_info.setFramebuffer(m_copy_pipeline->m_framebuffer.get());
+			begin_render_info.setRenderPass(m_copy_pipeline->m_render_pass.get());
+			begin_render_info.setRenderArea(vk::Rect2D({}, target.m_resolution));
+			cmd->beginRenderPass(begin_render_info, vk::SubpassContents::eInline);
+
+			cmd->setViewport(0, vk::Viewport{ 0.f, 0.f, (float)target.m_resolution.width, (float)target.m_resolution.height, 0.f, 1.f});
+			cmd->setScissor(0, vk::Rect2D{ vk::Offset2D{}, target.m_resolution });
+			cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, m_copy_pipeline->m_pipeline.get());
+			cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_copy_pipeline->m_pipeline_layout.get(), 0, { present_cmd.m_copy_descriptor_set[i].get() }, {});
+			cmd->draw(4, 1, 0, 0);
+
+			cmd->endRenderPass();
+		}
+
+		vk::ImageMemoryBarrier render_to_present_barrier;
+		render_to_present_barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+		render_to_present_barrier.setDstAccessMask(vk::AccessFlagBits::eMemoryRead);
+		render_to_present_barrier.setOldLayout(vk::ImageLayout::eTransferDstOptimal);
+		render_to_present_barrier.setNewLayout(vk::ImageLayout::ePresentSrcKHR);
+		render_to_present_barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+		render_to_present_barrier.setImage(getSwapchain().m_backbuffer_image[i]);
+		cmd->pipelineBarrier(
+			vk::PipelineStageFlagBits::eTransfer,
+			vk::PipelineStageFlagBits::eTransfer,
+			vk::DependencyFlags(),
+			nullptr, nullptr, render_to_present_barrier);
+
+		cmd->end();
+	}
+	return present_cmd;
 }
