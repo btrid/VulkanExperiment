@@ -24,6 +24,35 @@ struct cWindowDescriptor
 	vk::SurfaceFormatKHR surface_format_request;
 	int backbuffer_num;
 };
+
+struct Swapchain
+{
+	std::shared_ptr<btr::Context> m_context;
+	vk::UniqueSwapchainKHR m_swapchain_handle;
+	std::vector<vk::Image> m_backbuffer_image;
+
+	vk::SurfaceFormatKHR m_surface_format;
+	vk::Extent2D m_size;
+
+	uint32_t m_backbuffer_index;
+
+	vk::UniqueSemaphore m_swapbuffer_semaphore;
+	vk::UniqueSemaphore m_submit_semaphore;
+
+	Swapchain()
+		: m_swapchain_handle()
+		, m_backbuffer_index(0)
+	{
+
+	}
+
+	void setup(const std::shared_ptr<btr::Context>& context, const cWindowDescriptor& descriptor, vk::SurfaceKHR surface);
+	uint32_t swap();
+
+	size_t getBackbufferNum()const { return m_backbuffer_image.size(); }
+	vk::Extent2D getSize()const { return m_size; }
+};
+
 class cWindow
 {
 	static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -52,33 +81,6 @@ class cWindow
 
 public:
 private:
-	struct Swapchain 
-	{
-		std::shared_ptr<btr::Context> m_context;
-		vk::UniqueSwapchainKHR m_swapchain_handle;
-		std::vector<vk::Image> m_backbuffer_image;
-
-		vk::SurfaceFormatKHR m_surface_format;
-		vk::Extent2D m_size;
-
-		uint32_t m_backbuffer_index;
-
-		vk::UniqueSemaphore m_swapbuffer_semaphore;
-		vk::UniqueSemaphore m_submit_semaphore;
-
-		Swapchain()
-			: m_swapchain_handle()
-			, m_backbuffer_index(0)
-		{
-
-		}
-
-		void setup(const std::shared_ptr<btr::Context>& context, const cWindowDescriptor& descriptor, vk::SurfaceKHR surface);
-		uint32_t swap();
-
-		size_t getBackbufferNum()const { return m_backbuffer_image.size(); }
-		vk::Extent2D getSize()const { return m_size; }
-	};
 
 	class Private
 	{

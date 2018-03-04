@@ -39,9 +39,9 @@ struct PresentCmd : Cmd
 	std::vector<vk::UniqueDescriptorSet> m_copy_descriptor_set;
 };
 
-struct CopyImagePipeline
+struct PresentPipeline
 {
-	CopyImagePipeline(const std::shared_ptr<btr::Context>& context)
+	PresentPipeline(const std::shared_ptr<btr::Context>& context, const Swapchain& swapchain)
 	{
 		{
 			auto stage = vk::ShaderStageFlagBits::eFragment;
@@ -51,11 +51,6 @@ struct CopyImagePipeline
 				.setDescriptorCount(1)
 				.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
 				.setBinding(0),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(stage)
-				.setDescriptorCount(1)
-				.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-				.setBinding(1),
 			};
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 			desc_layout_info.setBindingCount(array_length(binding));
@@ -82,32 +77,84 @@ struct CopyImagePipeline
 
 		}
 
+		{
+			// viewの作成
+			m_backbuffer_view.resize(swapchain.getBackbufferNum());
+			for (uint32_t i = 0; i < m_backbuffer_view.size(); i++)
+			{
+				auto subresourceRange = vk::ImageSubresourceRange()
+					.setAspectMask(vk::ImageAspectFlagBits::eColor)
+					.setBaseArrayLayer(0)
+					.setLayerCount(1)
+					.setBaseMipLevel(0)
+					.setLevelCount(1);
+
+				vk::ImageViewCreateInfo backbuffer_view_info;
+				backbuffer_view_info.setImage(swapchain.m_backbuffer_image[i]);
+				backbuffer_view_info.setFormat(swapchain.m_surface_format.format);
+				backbuffer_view_info.setViewType(vk::ImageViewType::e2D);
+				backbuffer_view_info.setComponents(vk::ComponentMapping{
+					vk::ComponentSwizzle::eR,
+					vk::ComponentSwizzle::eG,
+					vk::ComponentSwizzle::eB,
+					vk::ComponentSwizzle::eA,
+					});
+				backbuffer_view_info.setSubresourceRange(subresourceRange);
+				m_backbuffer_view[i] = context->m_device->createImageViewUnique(backbuffer_view_info);
+			}
+		}
+
 		// レンダーパス
 		{
 			// sub pass
+			vk::AttachmentReference color_ref[] =
+			{
+				vk::AttachmentReference()
+				.setAttachment(0)
+				.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
+			};
 			vk::SubpassDescription subpass;
 			subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
 			subpass.setInputAttachmentCount(0);
 			subpass.setPInputAttachments(nullptr);
-			subpass.setColorAttachmentCount(0);
-			subpass.setPColorAttachments(nullptr);
+			subpass.setColorAttachmentCount(array_length(color_ref));
+			subpass.setPColorAttachments(color_ref);
 
+			vk::AttachmentDescription attach_description[] = 
+			{
+				// color1
+				vk::AttachmentDescription()
+				.setFormat(swapchain.m_surface_format.format)
+				.setSamples(vk::SampleCountFlagBits::e1)
+				.setLoadOp(vk::AttachmentLoadOp::eDontCare)
+				.setStoreOp(vk::AttachmentStoreOp::eStore)
+				.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
+				.setFinalLayout(vk::ImageLayout::ePresentSrcKHR),
+			};
 			vk::RenderPassCreateInfo renderpass_info;
-			renderpass_info.setAttachmentCount(0);
-			renderpass_info.setPAttachments(nullptr);
+			renderpass_info.setAttachmentCount(array_length(attach_description));
+			renderpass_info.setPAttachments(attach_description);
 			renderpass_info.setSubpassCount(1);
 			renderpass_info.setPSubpasses(&subpass);
 
 			m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
 		}
+
+		m_framebuffer.resize(swapchain.getBackbufferNum());
+		for (uint32_t i = 0; i < m_framebuffer.size(); i++)
 		{
+			vk::ImageView view[] = {
+				m_backbuffer_view[i].get(),
+			};
 			vk::FramebufferCreateInfo framebuffer_info;
 			framebuffer_info.setRenderPass(m_render_pass.get());
+			framebuffer_info.setAttachmentCount(array_length(view));
+			framebuffer_info.setPAttachments(view);
 			framebuffer_info.setWidth(1);
 			framebuffer_info.setHeight(1);
 			framebuffer_info.setLayers(1);
 
-			m_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
+			m_framebuffer[i] = context->m_device->createFramebufferUnique(framebuffer_info);
 		}
 
 		// pipeline layout
@@ -153,7 +200,24 @@ struct CopyImagePipeline
 			depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
 			depth_stencil_info.setStencilTestEnable(VK_FALSE);
 
+			vk::PipelineColorBlendAttachmentState blend_state[] = {
+				vk::PipelineColorBlendAttachmentState()
+				.setBlendEnable(VK_FALSE)
+				.setSrcAlphaBlendFactor(vk::BlendFactor::eOne)
+				.setDstAlphaBlendFactor(vk::BlendFactor::eOneMinusSrcAlpha)
+				.setAlphaBlendOp(vk::BlendOp::eAdd)
+				.setSrcColorBlendFactor(vk::BlendFactor::eSrcAlpha)
+				.setDstColorBlendFactor(vk::BlendFactor::eOneMinusSrcAlpha)
+				.setColorBlendOp(vk::BlendOp::eAdd)
+				.setColorWriteMask(vk::ColorComponentFlagBits::eR
+					| vk::ColorComponentFlagBits::eG
+					| vk::ColorComponentFlagBits::eB
+					| vk::ColorComponentFlagBits::eA)
+			};
+
 			vk::PipelineColorBlendStateCreateInfo blend_info;
+			blend_info.setAttachmentCount(array_length(blend_state));
+			blend_info.setPAttachments(blend_state);
 
 			vk::PipelineVertexInputStateCreateInfo vertex_input_info;
 
@@ -176,6 +240,7 @@ struct CopyImagePipeline
 			vk::PipelineDynamicStateCreateInfo dynamic_info;
 			dynamic_info.setDynamicStateCount(array_length(dynamic_state));
 			dynamic_info.setPDynamicStates(dynamic_state);
+
 			vk::GraphicsPipelineCreateInfo graphics_pipeline_info =
 			{
 				vk::GraphicsPipelineCreateInfo()
@@ -197,9 +262,11 @@ struct CopyImagePipeline
 		}
 	}
 
+	std::vector<vk::UniqueImageView> m_backbuffer_view;
+
 	vk::UniqueDescriptorSetLayout m_descriptor_layout;
 	vk::UniqueRenderPass m_render_pass;
-	vk::UniqueFramebuffer m_framebuffer;
+	std::vector<vk::UniqueFramebuffer> m_framebuffer;
 	vk::UniqueShaderModule m_shader[2];
 
 	vk::UniquePipelineLayout m_pipeline_layout;
@@ -259,11 +326,10 @@ struct AppWindow : public cWindow
 		vk::UniquePipeline m_pipeline;
 
 		ImGuiContext* m_imgui_context;
-//		std::unique_ptr < ImGuiContext, ImGui::DestroyContext > m_imgui_context;
 	};
 	std::unique_ptr<ImguiRenderPipeline>  m_imgui_pipeline;
 	ImguiRenderPipeline* getImguiPipeline() { return m_imgui_pipeline.get(); }
-	std::shared_ptr<CopyImagePipeline> m_copy_pipeline;
+	std::shared_ptr<PresentPipeline> m_copy_pipeline;
 
 	PresentCmd present(const std::shared_ptr<btr::Context>& context, RenderTarget& target);
 };

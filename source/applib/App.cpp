@@ -156,27 +156,24 @@ void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
 		cmds.push_back(window->m_cmd_render_to_present[window->getSwapchain().m_backbuffer_index].get());
 	}
 
-	std::vector<vk::SubmitInfo> submitInfo =
-	{
-		vk::SubmitInfo()
-		.setCommandBufferCount((uint32_t)cmds.size())
-		.setPCommandBuffers(cmds.data())
-		.setWaitSemaphoreCount((uint32_t)swap_wait_semas.size())
-		.setPWaitSemaphores(swap_wait_semas.data())
-		.setPWaitDstStageMask(wait_pipelines.data())
-		.setSignalSemaphoreCount((uint32_t)submit_wait_semas.size())
-		.setPSignalSemaphores(submit_wait_semas.data())
-	};
+	vk::SubmitInfo submit_info;
+	submit_info.setCommandBufferCount((uint32_t)cmds.size());
+	submit_info.setPCommandBuffers(cmds.data());
+	submit_info.setWaitSemaphoreCount((uint32_t)swap_wait_semas.size());
+	submit_info.setPWaitSemaphores(swap_wait_semas.data());
+	submit_info.setPWaitDstStageMask(wait_pipelines.data());
+	submit_info.setSignalSemaphoreCount((uint32_t)submit_wait_semas.size());
+	submit_info.setPSignalSemaphores(submit_wait_semas.data());
 
 	auto queue = m_gpu.getDevice()->getQueue(0, 0);
-	queue.submit(submitInfo, m_fence_list[sGlobal::Order().getCurrentFrame()].get());
+	queue.submit(submit_info, m_fence_list[sGlobal::Order().getCurrentFrame()].get());
 
-	vk::PresentInfoKHR present_info = vk::PresentInfoKHR()
-		.setWaitSemaphoreCount((uint32_t)submit_wait_semas.size())
-		.setPWaitSemaphores(submit_wait_semas.data())
-		.setSwapchainCount((uint32_t)swapchains.size())
-		.setPSwapchains(swapchains.data())
-		.setPImageIndices(backbuffer_indexs.data());
+	vk::PresentInfoKHR present_info;
+	present_info.setWaitSemaphoreCount((uint32_t)submit_wait_semas.size());
+	present_info.setPWaitSemaphores(submit_wait_semas.data());
+	present_info.setSwapchainCount((uint32_t)swapchains.size());
+	present_info.setPSwapchains(swapchains.data());
+	present_info.setPImageIndices(backbuffer_indexs.data());
 	queue.presentKHR(present_info);
 }
 
@@ -690,7 +687,7 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 
 	m_render_pass = std::make_shared<RenderBackbufferAppModule>(context, this);
 	m_imgui_pipeline = std::make_unique<ImguiRenderPipeline>(context, this);
-	m_copy_pipeline = std::make_shared<CopyImagePipeline>(context);
+	m_copy_pipeline = std::make_shared<PresentPipeline>(context, m_swapchain);
 
 }
 
@@ -740,7 +737,7 @@ PresentCmd AppWindow::present(const std::shared_ptr<btr::Context>& context, Rend
 
 		{
 			vk::RenderPassBeginInfo begin_render_info;
-			begin_render_info.setFramebuffer(m_copy_pipeline->m_framebuffer.get());
+			begin_render_info.setFramebuffer(m_copy_pipeline->m_framebuffer[i].get());
 			begin_render_info.setRenderPass(m_copy_pipeline->m_render_pass.get());
 			begin_render_info.setRenderArea(vk::Rect2D({}, target.m_resolution));
 			cmd->beginRenderPass(begin_render_info, vk::SubpassContents::eInline);

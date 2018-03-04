@@ -11,9 +11,10 @@ struct Vertex
 {
 	vec2 Texcoord;
 };
-layout(location = 0) in Vertex VSIn;
+layout(location=0) in Vertex VSIn;
+layout(location=0) out vec4 FragColor;
 
 void main()
 {
-//	tDst = texture(tSrc, VSIn.Texcoord);
+	FragColor = texture(tSrc, VSIn.Texcoord);
 }

@@ -57,7 +57,7 @@ std::vector<uint32_t> getSupportSurfaceQueue(vk::PhysicalDevice gpu, vk::Surface
 
 }
 
-void cWindow::Swapchain::setup(const std::shared_ptr<btr::Context>& context, const cWindowDescriptor& descriptor, vk::SurfaceKHR surface)
+void Swapchain::setup(const std::shared_ptr<btr::Context>& context, const cWindowDescriptor& descriptor, vk::SurfaceKHR surface)
 {
 	m_context = context;
 	std::vector<vk::PresentModeKHR> presentModeList = context->m_gpu->getSurfacePresentModesKHR(surface);
@@ -106,12 +106,10 @@ void cWindow::Swapchain::setup(const std::shared_ptr<btr::Context>& context, con
 
 	m_backbuffer_image = device->getSwapchainImagesKHR(m_swapchain_handle.get());
 	m_size = capability.currentExtent;
-	
-
 
 }
 
-uint32_t cWindow::Swapchain::swap()
+uint32_t Swapchain::swap()
 {
 	m_context->m_device->acquireNextImageKHR(m_swapchain_handle.get(), 1000, m_swapbuffer_semaphore.get(), vk::Fence(), &m_backbuffer_index);
 	return m_backbuffer_index;
