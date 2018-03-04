@@ -493,10 +493,9 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 
 	{
 		vk::SurfaceCapabilitiesKHR capability = context->m_gpu->getSurfaceCapabilitiesKHR(m_surface.get());
-		m_depth_format = vk::Format::eD32Sfloat;
 		// デプス生成
 		vk::ImageCreateInfo depth_info;
-		depth_info.format = m_depth_format;
+		depth_info.format = vk::Format::eD32Sfloat;
 		depth_info.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eTransferDst;
 		depth_info.arrayLayers = 1;
 		depth_info.mipLevels = 1;
@@ -508,7 +507,7 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 		depth_info.queueFamilyIndexCount = (uint32_t)context->m_device.getQueueFamilyIndex().size();
 		depth_info.pQueueFamilyIndices = context->m_device.getQueueFamilyIndex().data();
 		m_depth_image = context->m_device->createImageUnique(depth_info);
-
+		m_depth_info = depth_info;
 					// メモリ確保
 		auto memory_request = context->m_device->getImageMemoryRequirements(m_depth_image.get());
 		uint32_t memory_index = cGPU::Helper::getMemoryTypeIndex(context->m_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
