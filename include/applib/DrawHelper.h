@@ -56,7 +56,8 @@ struct DrawHelper : public Singleton<DrawHelper>
 		SPHERE,
 		PrimitiveType_MAX,
 	};
-	std::shared_ptr<RenderPassModule> m_render_pass;
+	vk::UniqueRenderPass m_render_pass;
+	vk::UniqueFramebuffer m_framebuffer;
 
 	std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_module;
 	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_shader_info;
@@ -166,7 +167,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 		}
 
 		{
-			m_render_pass = context->m_window->getRenderBackbufferPass();
+//			m_render_pass = context->m_window->getRenderBackbufferPass();
 		}
 		
 		// setup shader
@@ -226,14 +227,12 @@ struct DrawHelper : public Singleton<DrawHelper>
 
 			// viewport
 			vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)size.width, (float)size.height, 0.f, 1.f);
-			std::vector<vk::Rect2D> scissor = {
-				vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(size.width, size.height))
-			};
+			vk::Rect2D scissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(size.width, size.height));
 			vk::PipelineViewportStateCreateInfo viewportInfo;
 			viewportInfo.setViewportCount(1);
 			viewportInfo.setPViewports(&viewport);
-			viewportInfo.setScissorCount((uint32_t)scissor.size());
-			viewportInfo.setPScissors(scissor.data());
+			viewportInfo.setScissorCount(1);
+			viewportInfo.setPScissors(&scissor);
 
 			vk::PipelineRasterizationStateCreateInfo rasterization_info;
 			rasterization_info.setPolygonMode(vk::PolygonMode::eFill);
@@ -296,7 +295,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
 				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_PRIMITIVE].get())
-				.setRenderPass(m_render_pass->getRenderPass())
+				.setRenderPass(m_render_pass.get())
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
@@ -312,9 +311,9 @@ struct DrawHelper : public Singleton<DrawHelper>
 		auto cmd = executer->m_cmd_pool->allocCmdOnetime(0);
 
 		vk::RenderPassBeginInfo begin_render_Info;
-		begin_render_Info.setRenderPass(m_render_pass->getRenderPass());
+		begin_render_Info.setRenderPass(m_render_pass.get());
 		begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(640, 480)));
-		begin_render_Info.setFramebuffer(m_render_pass->getFramebuffer(executer->getGPUFrame()));
+		begin_render_Info.setFramebuffer(m_framebuffer.get());
 		cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW_PRIMITIVE].get());

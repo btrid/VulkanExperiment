@@ -122,7 +122,7 @@ struct Player
 
 struct ModelGIPipelineComponent
 {
-	ModelGIPipelineComponent(const std::shared_ptr<btr::Context>& context, const AppWindow* window)
+	ModelGIPipelineComponent(const std::shared_ptr<btr::Context>& context, const RenderTarget& render_target)
 	{
 		auto& device = context->m_device;
 
@@ -174,22 +174,19 @@ struct ModelGIPipelineComponent
 		}
 
 		{
-			vk::ImageView view[2] = {
-				window->m_backbuffer_view[i].get();
-				window->m_depth_view.get();
-			};
+			vk::ImageView view[2];
 
 			vk::FramebufferCreateInfo framebuffer_info;
 			framebuffer_info.setRenderPass(m_render_pass.get());
-			framebuffer_info.setAttachmentCount((uint32_t)view.size());
-			framebuffer_info.setPAttachments(view.data());
+			framebuffer_info.setAttachmentCount(array_length(view));
+			framebuffer_info.setPAttachments(view);
 			framebuffer_info.setWidth(window->getClientSize().x);
 			framebuffer_info.setHeight(window->getClientSize().y);
 			framebuffer_info.setLayers(1);
 
-			for (size_t i = 0; i < m_framebuffer.size(); i++) {
-				m_framebuffer[i] = context->m_device->createFramebufferUnique(framebuffer_info);
-			}
+			view[0] = render_target.m_image;
+			view[1] = window->m_depth_view.get();
+			m_framebuffer[i] = context->m_device->createFramebufferUnique(framebuffer_info);
 		}
 
 		{

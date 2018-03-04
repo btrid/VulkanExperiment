@@ -44,7 +44,6 @@ private:
 	vk::UniqueImage m_image;
 	vk::UniqueDeviceMemory m_image_memory;
 	vk::UniqueSampler m_sampler;
-
 	std::vector<vk::UniqueImageView> m_image_view;	
 
 public:

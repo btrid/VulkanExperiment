@@ -20,13 +20,20 @@ struct PipelineFlagBits
 		IS_SETUP,
 	};
 };
-
+struct RenderContext 
+{
+};
 struct RenderTarget
 {
 	vk::ImageCreateInfo m_info;
 	vk::Image m_image;
 	vk::ImageView m_view;
 	vk::DeviceMemory m_memory;
+
+	vk::ImageCreateInfo m_depth_info;
+	vk::Image m_depth_image;
+	vk::ImageView m_depth_view;
+	vk::DeviceMemory m_depth_memory;
 
 	bool is_dynamic_resolution; //!< 可変解像度？
 	vk::Extent2D m_resolution;
@@ -176,8 +183,8 @@ struct PresentPipeline
 			assembly_info.setTopology(vk::PrimitiveTopology::eTriangleList);
 
 			// viewport
-			vk::Viewport viewport = vk::Viewport(0.f, 0.f, 1, 1, 0.f, 1.f);
-			vk::Rect2D scissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(1, 1));
+			vk::Viewport viewport = vk::Viewport(0.f, 0.f, swapchain.getSize().width, swapchain.getSize().height, 0.f, 1.f);
+			vk::Rect2D scissor = vk::Rect2D(vk::Offset2D(0, 0), swapchain.getSize());
 			vk::PipelineViewportStateCreateInfo viewportInfo;
 			viewportInfo.setViewportCount(1);
 			viewportInfo.setPViewports(&viewport);
@@ -233,13 +240,7 @@ struct PresentPipeline
 				.setStage(vk::ShaderStageFlagBits::eFragment),
 			};
 
-			vk::DynamicState dynamic_state[] = {
-				vk::DynamicState::eViewport,
-				vk::DynamicState::eScissor,
-			};
 			vk::PipelineDynamicStateCreateInfo dynamic_info;
-			dynamic_info.setDynamicStateCount(array_length(dynamic_state));
-			dynamic_info.setPDynamicStates(dynamic_state);
 
 			vk::GraphicsPipelineCreateInfo graphics_pipeline_info =
 			{
@@ -255,7 +256,7 @@ struct PresentPipeline
 				.setRenderPass(m_render_pass.get())
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info)
-				.setPDynamicState(&dynamic_info)
+//				.setPDynamicState(&dynamic_info)
 			};
 			auto pipelines = context->m_device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info);
 			m_pipeline = std::move(pipelines[0]);
@@ -324,6 +325,8 @@ struct AppWindow : public cWindow
 		std::mutex m_cmd_mutex;
 		std::array<std::vector<std::function<void()>>, 2> m_imgui_cmd;
 		vk::UniquePipeline m_pipeline;
+		vk::UniqueRenderPass m_render_pass;
+		vk::UniqueFramebuffer m_framebuffer;
 
 		ImGuiContext* m_imgui_context;
 	};
@@ -332,93 +335,6 @@ struct AppWindow : public cWindow
 	std::shared_ptr<PresentPipeline> m_copy_pipeline;
 
 	PresentCmd present(const std::shared_ptr<btr::Context>& context, RenderTarget& target);
-};
-
-struct RenderBackbufferAppModule : public RenderPassModule
-{
-	RenderBackbufferAppModule(const std::shared_ptr<btr::Context>& context, AppWindow* const window)
-		: m_window(window)
-	{
-		auto& device = context->m_device;
-		// レンダーパス
-		{
-			// sub pass
-			std::vector<vk::AttachmentReference> color_ref =
-			{
-				vk::AttachmentReference()
-				.setAttachment(0)
-				.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
-			};
-			vk::AttachmentReference depth_ref;
-			depth_ref.setAttachment(1);
-			depth_ref.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-
-			vk::SubpassDescription subpass;
-			subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
-			subpass.setInputAttachmentCount(0);
-			subpass.setPInputAttachments(nullptr);
-			subpass.setColorAttachmentCount((uint32_t)color_ref.size());
-			subpass.setPColorAttachments(color_ref.data());
-			subpass.setPDepthStencilAttachment(&depth_ref);
-
-			std::vector<vk::AttachmentDescription> attach_description = {
-				// color1
-				vk::AttachmentDescription()
-				.setFormat(window->getSwapchain().m_surface_format.format)
-				.setSamples(vk::SampleCountFlagBits::e1)
-				.setLoadOp(vk::AttachmentLoadOp::eLoad)
-				.setStoreOp(vk::AttachmentStoreOp::eStore)
-				.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
-				.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
-				vk::AttachmentDescription()
-				.setFormat(vk::Format::eD32Sfloat)
-				.setSamples(vk::SampleCountFlagBits::e1)
-				.setLoadOp(vk::AttachmentLoadOp::eLoad)
-				.setStoreOp(vk::AttachmentStoreOp::eStore)
-				.setInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
-				.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
-			};
-			vk::RenderPassCreateInfo renderpass_info = vk::RenderPassCreateInfo()
-				.setAttachmentCount((uint32_t)attach_description.size())
-				.setPAttachments(attach_description.data())
-				.setSubpassCount(1)
-				.setPSubpasses(&subpass);
-
-			m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
-		}
-
-		m_framebuffer.resize(window->getSwapchain().getBackbufferNum());
-		{
-			std::array<vk::ImageView, 2> view;
-
-			vk::FramebufferCreateInfo framebuffer_info;
-			framebuffer_info.setRenderPass(m_render_pass.get());
-			framebuffer_info.setAttachmentCount((uint32_t)view.size());
-			framebuffer_info.setPAttachments(view.data());
-			framebuffer_info.setWidth(window->getClientSize().x);
-			framebuffer_info.setHeight(window->getClientSize().y);
-			framebuffer_info.setLayers(1);
-
-			for (size_t i = 0; i < m_framebuffer.size(); i++) {
-				view[0] = window->m_backbuffer_view[i].get();
-				view[1] = window->m_depth_view.get();
-				m_framebuffer[i] = context->m_device->createFramebufferUnique(framebuffer_info);
-			}
-		}
-		m_resolution = window->getClientSize<vk::Extent2D>();
-	}
-	virtual vk::RenderPass getRenderPass()const override { return m_render_pass.get(); }
-	virtual uint32_t getFramebufferNum()const override { return m_framebuffer.size(); }
-	virtual vk::Framebuffer getFramebuffer(uint32_t index)const override {
-			return m_framebuffer[index].get();
-	}
-	virtual vk::Extent2D getResolution()const override { return m_resolution; }
-
-private:
-	vk::UniqueRenderPass m_render_pass;
-	std::vector<vk::UniqueFramebuffer> m_framebuffer;
-	vk::Extent2D m_resolution;
-	AppWindow const * const m_window;
 };
 
 namespace app
@@ -435,7 +351,6 @@ struct App
 	std::shared_ptr<cCmdPool> m_cmd_pool;
 	std::shared_ptr<AppWindow> m_window; // !< mainwindow
 	std::vector<std::shared_ptr<AppWindow>> m_window_list;
-//	std::vector<std::shared_ptr<AppWindow>> m_window_stack;
 	std::vector<cWindowDescriptor> m_window_request;
 	std::shared_ptr<btr::Context> m_context;
 

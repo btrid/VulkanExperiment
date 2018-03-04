@@ -92,8 +92,8 @@ App::App(const AppDescriptor& desc)
 	m_window_list.emplace_back(window);
 	m_context->m_window = window;
 
-	sParticlePipeline::Order().setup(m_context);
-	DrawHelper::Order().setup(m_context);
+//	sParticlePipeline::Order().setup(m_context);
+//	DrawHelper::Order().setup(m_context);
 
 }
 
@@ -205,7 +205,7 @@ void App::preUpdate()
 		m_camera->control(m_window->getInput(), 0.016f);
 	}
 
-	m_system_cmds.resize(5);
+	m_system_cmds.resize(2);
 	m_sync_point.reset(4);
 
 	{
@@ -235,7 +235,7 @@ void App::preUpdate()
 		job.mJob.emplace_back(
 			[&]()
 		{
-			m_system_cmds[4] = DrawHelper::Order().draw(m_context);
+//			m_system_cmds[3] = DrawHelper::Order().draw(m_context);
 			m_sync_point.arrive();
 		}
 		);
@@ -246,8 +246,7 @@ void App::preUpdate()
 		job.mJob.emplace_back(
 			[&]()
 		{
- 			m_system_cmds[2] = sParticlePipeline::Order().draw(m_context);
-			m_system_cmds[3] = sParticlePipeline::Order().draw(m_context);
+// 			m_system_cmds[2] = sParticlePipeline::Order().draw(m_context);
 			m_sync_point.arrive();
 		}
 		);
@@ -296,6 +295,59 @@ glm::uvec3 calcDipatchGroups(const glm::uvec3& num, const glm::uvec3& local_size
 
 AppWindow::ImguiRenderPipeline::ImguiRenderPipeline(const std::shared_ptr<btr::Context>& context, AppWindow* const window)
 {
+	auto render_target = window->getRenderTarget();
+
+	// レンダーパス
+	{
+		// sub pass
+		vk::AttachmentReference color_ref[] =
+		{
+			vk::AttachmentReference()
+			.setAttachment(0)
+			.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
+		};
+		vk::SubpassDescription subpass;
+		subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+		subpass.setInputAttachmentCount(0);
+		subpass.setPInputAttachments(nullptr);
+		subpass.setColorAttachmentCount(array_length(color_ref));
+		subpass.setPColorAttachments(color_ref);
+
+		vk::AttachmentDescription attach_description[] =
+		{
+			// color1
+			vk::AttachmentDescription()
+			.setFormat(render_target.m_info.format)
+			.setSamples(vk::SampleCountFlagBits::e1)
+			.setLoadOp(vk::AttachmentLoadOp::eLoad)
+			.setStoreOp(vk::AttachmentStoreOp::eStore)
+			.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
+			.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
+		};
+		vk::RenderPassCreateInfo renderpass_info;
+		renderpass_info.setAttachmentCount(array_length(attach_description));
+		renderpass_info.setPAttachments(attach_description);
+		renderpass_info.setSubpassCount(1);
+		renderpass_info.setPSubpasses(&subpass);
+
+		m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
+	}
+
+	{
+		vk::ImageView view[] = {
+			render_target.m_view
+		};
+		vk::FramebufferCreateInfo framebuffer_info;
+		framebuffer_info.setRenderPass(m_render_pass.get());
+		framebuffer_info.setAttachmentCount(array_length(view));
+		framebuffer_info.setPAttachments(view);
+		framebuffer_info.setWidth(render_target.m_info.extent.width);
+		framebuffer_info.setHeight(render_target.m_info.extent.height);
+		framebuffer_info.setLayers(1);
+
+		m_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
+	}
+
 	// setup pipeline
 	{
 		// assembly
@@ -306,10 +358,9 @@ AppWindow::ImguiRenderPipeline::ImguiRenderPipeline(const std::shared_ptr<btr::C
 			.setTopology(vk::PrimitiveTopology::eTriangleList),
 		};
 
-		auto render_pass = window->getRenderBackbufferPass();
 		// viewport
-		vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)render_pass->getResolution().width, (float)render_pass->getResolution().height, 0.f, 1.f);
-		vk::Rect2D scissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(render_pass->getResolution().width, render_pass->getResolution().height));
+		vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)render_target.m_info.extent.width, (float)render_target.m_info.extent.height, 0.f, 1.f);
+		vk::Rect2D scissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(render_target.m_info.extent.width, render_target.m_info.extent.height));
 		vk::PipelineViewportStateCreateInfo viewportInfo;
 		viewportInfo.setViewportCount(1);
 		viewportInfo.setPViewports(&viewport);
@@ -391,7 +442,7 @@ AppWindow::ImguiRenderPipeline::ImguiRenderPipeline(const std::shared_ptr<btr::C
 			.setPRasterizationState(&rasterization_info)
 			.setPMultisampleState(&sample_info)
 			.setLayout(sImGuiRenderer::Order().getPipelineLayout(sImGuiRenderer::PIPELINE_LAYOUT_RENDER))
-			.setRenderPass(render_pass->getRenderPass())
+			.setRenderPass(m_render_pass.get())
 			.setPDepthStencilState(&depth_stencil_info)
 			.setPColorBlendState(&blend_info)
 			.setPDynamicState(&dynamic_info),
@@ -439,32 +490,6 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 	: cWindow(context, descriptor)
 {
 	auto& device = context->m_device;
-	{
-		// viewの作成
-		m_backbuffer_view.resize(getSwapchain().getBackbufferNum());
-		for (uint32_t i = 0; i < m_backbuffer_view.size(); i++)
-		{
-			auto subresourceRange = vk::ImageSubresourceRange()
-				.setAspectMask(vk::ImageAspectFlagBits::eColor)
-				.setBaseArrayLayer(0)
-				.setLayerCount(1)
-				.setBaseMipLevel(0)
-				.setLevelCount(1);
-
-			vk::ImageViewCreateInfo backbuffer_view_info;
-			backbuffer_view_info.setImage(getSwapchain().m_backbuffer_image[i]);
-			backbuffer_view_info.setFormat(getSwapchain().m_surface_format.format);
-			backbuffer_view_info.setViewType(vk::ImageViewType::e2D);
-			backbuffer_view_info.setComponents(vk::ComponentMapping{
-				vk::ComponentSwizzle::eR,
-				vk::ComponentSwizzle::eG,
-				vk::ComponentSwizzle::eB,
-				vk::ComponentSwizzle::eA,
-			});
-			backbuffer_view_info.setSubresourceRange(subresourceRange);
-			m_backbuffer_view[i] = context->m_device->createImageViewUnique(backbuffer_view_info);
-		}
-	}
 
 	{
 		vk::SurfaceCapabilitiesKHR capability = context->m_gpu->getSurfaceCapabilitiesKHR(m_surface.get());
@@ -685,7 +710,6 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 		}
 	}
 
-	m_render_pass = std::make_shared<RenderBackbufferAppModule>(context, this);
 	m_imgui_pipeline = std::make_unique<ImguiRenderPipeline>(context, this);
 	m_copy_pipeline = std::make_shared<PresentPipeline>(context, m_swapchain);
 
@@ -742,8 +766,8 @@ PresentCmd AppWindow::present(const std::shared_ptr<btr::Context>& context, Rend
 			begin_render_info.setRenderArea(vk::Rect2D({}, target.m_resolution));
 			cmd->beginRenderPass(begin_render_info, vk::SubpassContents::eInline);
 
-			cmd->setViewport(0, vk::Viewport{ 0.f, 0.f, (float)target.m_resolution.width, (float)target.m_resolution.height, 0.f, 1.f});
-			cmd->setScissor(0, vk::Rect2D{ vk::Offset2D{}, target.m_resolution });
+// 			cmd->setViewport(0, vk::Viewport{ 0.f, 0.f, (float)target.m_resolution.width, (float)target.m_resolution.height, 0.f, 1.f});
+// 			cmd->setScissor(0, vk::Rect2D{ vk::Offset2D{}, target.m_resolution });
 			cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, m_copy_pipeline->m_pipeline.get());
 			cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_copy_pipeline->m_pipeline_layout.get(), 0, { present_cmd.m_copy_descriptor_set[i].get() }, {});
 			cmd->draw(4, 1, 0, 0);
