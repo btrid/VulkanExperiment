@@ -43,7 +43,7 @@ struct Cmd{};
 struct PresentCmd : Cmd 
 {
 	std::vector<vk::UniqueCommandBuffer> cmds;
-	std::vector<vk::UniqueDescriptorSet> m_copy_descriptor_set;
+	vk::UniqueDescriptorSet m_copy_descriptor_set;
 };
 
 struct PresentPipeline
@@ -55,8 +55,8 @@ struct PresentPipeline
 			vk::DescriptorSetLayoutBinding binding[] = {
 				vk::DescriptorSetLayoutBinding()
 				.setStageFlags(stage)
-				.setDescriptorCount(1)
 				.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+				.setDescriptorCount(1)
 				.setBinding(0),
 			};
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
@@ -157,8 +157,8 @@ struct PresentPipeline
 			framebuffer_info.setRenderPass(m_render_pass.get());
 			framebuffer_info.setAttachmentCount(array_length(view));
 			framebuffer_info.setPAttachments(view);
-			framebuffer_info.setWidth(1);
-			framebuffer_info.setHeight(1);
+			framebuffer_info.setWidth(swapchain.getSize().width);
+			framebuffer_info.setHeight(swapchain.getSize().height);
 			framebuffer_info.setLayers(1);
 
 			m_framebuffer[i] = context->m_device->createFramebufferUnique(framebuffer_info);
@@ -256,7 +256,6 @@ struct PresentPipeline
 				.setRenderPass(m_render_pass.get())
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info)
-//				.setPDynamicState(&dynamic_info)
 			};
 			auto pipelines = context->m_device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info);
 			m_pipeline = std::move(pipelines[0]);
@@ -306,10 +305,6 @@ struct AppWindow : public cWindow
 		ret.m_resolution.height = m_render_target_info.extent.height;
 		return ret;
 	}
-
-
-	std::vector <vk::UniqueCommandBuffer> m_cmd_present_to_render;
-	std::vector <vk::UniqueCommandBuffer> m_cmd_render_to_present;
 
 	struct ImguiRenderPipeline
 	{

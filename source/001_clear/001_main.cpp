@@ -30,6 +30,98 @@
 #pragma comment(lib, "imgui.lib")
 
 
+enum CLEAR_RENDER_TARGET {};
+TypedCommandBuffer<CLEAR_RENDER_TARGET> clear(btr::Context* context, const RenderTarget& render_target)
+{
+	vk::CommandBufferAllocateInfo cmd_buffer_info;
+	cmd_buffer_info.commandPool = context->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
+	cmd_buffer_info.commandBufferCount = 1;
+	cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
+	TypedCommandBuffer<CLEAR_RENDER_TARGET> cmd = std::move(context->m_device->allocateCommandBuffersUnique(cmd_buffer_info)[0]);
+	context->m_device.DebugMarkerSetObjectName(cmd.get(), "clear cmd");
+
+	vk::CommandBufferBeginInfo begin_info;
+	begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
+	vk::CommandBufferInheritanceInfo inheritance_info;
+	begin_info.setPInheritanceInfo(&inheritance_info);
+	cmd->begin(begin_info);
+
+	{
+
+		vk::ImageMemoryBarrier present_to_clear;
+//		present_to_clear.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+		present_to_clear.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
+//		present_to_clear.setOldLayout(vk::ImageLayout::eTransferDstOptimal);
+		present_to_clear.setNewLayout(vk::ImageLayout::eTransferDstOptimal);
+		present_to_clear.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+		present_to_clear.setImage(render_target.m_image);
+		cmd->pipelineBarrier(
+			vk::PipelineStageFlagBits::eAllCommands,
+			vk::PipelineStageFlagBits::eTransfer,
+			vk::DependencyFlags(),
+			nullptr, nullptr, present_to_clear);
+
+		vk::ClearColorValue clear_color;
+		clear_color.setFloat32(std::array<float, 4>{0.f, 0.f, 1.f, 0.f});
+		cmd->clearColorImage(render_target.m_image, vk::ImageLayout::eTransferDstOptimal, clear_color, vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+
+	}
+
+	{
+		vk::ImageMemoryBarrier clear_to_render;
+		clear_to_render.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+		clear_to_render.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+		clear_to_render.setOldLayout(vk::ImageLayout::eTransferDstOptimal);
+		clear_to_render.setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
+		clear_to_render.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+		clear_to_render.setImage(render_target.m_image);
+		cmd->pipelineBarrier(
+			vk::PipelineStageFlagBits::eTransfer,
+			vk::PipelineStageFlagBits::eColorAttachmentOutput,
+			vk::DependencyFlags(),
+			nullptr, nullptr, clear_to_render);
+	}
+
+	{
+		vk::ImageMemoryBarrier render_to_clear_depth;
+		render_to_clear_depth.setSrcAccessMask(vk::AccessFlagBits::eDepthStencilAttachmentWrite);
+		render_to_clear_depth.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
+		render_to_clear_depth.setOldLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+		render_to_clear_depth.setNewLayout(vk::ImageLayout::eTransferDstOptimal);
+		render_to_clear_depth.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1 });
+		render_to_clear_depth.setImage(render_target.m_depth_image);
+		cmd->pipelineBarrier(
+			vk::PipelineStageFlagBits::eLateFragmentTests,
+			vk::PipelineStageFlagBits::eTransfer,
+			vk::DependencyFlags(),
+			nullptr, nullptr, render_to_clear_depth);
+
+		vk::ClearDepthStencilValue clear_depth;
+		clear_depth.setDepth(0.f);
+		cmd->clearDepthStencilImage(render_target.m_depth_image, vk::ImageLayout::eTransferDstOptimal, clear_depth, vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1 });
+	}
+
+	{
+		vk::ImageMemoryBarrier clear_to_render_depth;
+		clear_to_render_depth.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+		clear_to_render_depth.setDstAccessMask(vk::AccessFlagBits::eDepthStencilAttachmentWrite);
+		clear_to_render_depth.setOldLayout(vk::ImageLayout::eTransferDstOptimal);
+		clear_to_render_depth.setNewLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+		clear_to_render_depth.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1 });
+		clear_to_render_depth.setImage(render_target.m_depth_image);
+		cmd->pipelineBarrier(
+			vk::PipelineStageFlagBits::eTransfer,
+			vk::PipelineStageFlagBits::eLateFragmentTests,
+			vk::DependencyFlags(),
+			nullptr, nullptr, clear_to_render_depth);
+
+	}
+
+	cmd->end();
+
+	return cmd;
+}
+
 int main()
 {
 	auto camera = cCamera::sCamera::Order().create();
@@ -52,13 +144,22 @@ int main()
 	auto context = app.m_context;
 
 	app.setup();
+
+	auto render_target = app.m_window->getRenderTarget();
+	auto clear_cmd = clear(context.get(), render_target);
+	auto present_cmds = app.m_window->present(context, render_target);
 	while (true)
 	{
 		cStopWatch time;
 
 		app.preUpdate();
 		{
-			app.submit(std::vector<vk::CommandBuffer>{});
+			std::vector<vk::CommandBuffer> cmds =
+			{
+				clear_cmd.get(),
+				present_cmds.cmds[context->getGPUFrame()].get(),
+			};
+			app.submit(std::move(cmds));
 		}
 		app.postUpdate();
 		printf("%6.4fms\n", time.getElapsedTimeAsMilliSeconds());

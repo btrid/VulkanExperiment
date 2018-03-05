@@ -14,6 +14,10 @@ struct TypedInfo : public U
 	TypedInfo(U& info)
 		: U(info)
 	{}
+
+	template<typename A>
+	TypedInfo(A& info) = delete;
+
 };
 
 template<typename T, typename U>
@@ -26,6 +30,9 @@ struct TypedHandle : public U
 	TypedHandle(U&& handle)
 		: U(std::move(handle))
 	{}
+
+	template<typename A>
+	TypedHandle(A&& handle) = delete;
 };
 
 template<typename T>

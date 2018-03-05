@@ -141,7 +141,7 @@ void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
 
 	for (auto& window : m_window_list)
 	{
-		cmds.push_back(window->m_cmd_present_to_render[window->getSwapchain().m_backbuffer_index].get());
+//		cmds.push_back(window->m_cmd_present_to_render[window->getSwapchain().m_backbuffer_index].get());
 	}
 
 	m_sync_point.wait();
@@ -153,7 +153,7 @@ void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
 
 	for (auto& window : m_window_list)
 	{
-		cmds.push_back(window->m_cmd_render_to_present[window->getSwapchain().m_backbuffer_index].get());
+//		cmds.push_back(window->m_cmd_render_to_present[window->getSwapchain().m_backbuffer_index].get());
 	}
 
 	vk::SubmitInfo submit_info;
@@ -534,7 +534,7 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 		vk::SurfaceCapabilitiesKHR capability = context->m_gpu->getSurfaceCapabilitiesKHR(m_surface.get());
 		vk::ImageCreateInfo image_info;
 		image_info.format = vk::Format::eR16G16B16A16Sfloat;
-		image_info.usage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst;
+		image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst;
 		image_info.arrayLayers = 1;
 		image_info.mipLevels = 1;
 		image_info.extent.width = capability.currentExtent.width;
@@ -564,6 +564,23 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 		view_info.subresourceRange.layerCount = 1;
 		view_info.subresourceRange.levelCount = 1;
 		m_render_target_view = context->m_device->createImageViewUnique(view_info);
+
+		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+		vk::ImageSubresourceRange subresource_range;
+		subresource_range.setAspectMask(vk::ImageAspectFlagBits::eColor);
+		subresource_range.setBaseArrayLayer(0);
+		subresource_range.setLayerCount(1);
+		subresource_range.setBaseMipLevel(0);
+		subresource_range.setLevelCount(1);
+		vk::ImageMemoryBarrier barrier;
+		barrier.setSubresourceRange(subresource_range);
+		barrier.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
+		barrier.setOldLayout(vk::ImageLayout::eUndefined);
+		barrier.setNewLayout(vk::ImageLayout::eTransferDstOptimal);
+		barrier.setImage(m_render_target_image.get());
+
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eAllCommands, vk::DependencyFlags(), {}, {}, barrier);
+
 	}
 
 	{
@@ -602,112 +619,7 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eEarlyFragmentTests, vk::DependencyFlags(), {}, {}, barrier);
 
 	}
-	// present cmd‚ÌÝ’è
-	{
-		{
-			vk::CommandBufferAllocateInfo cmd_buffer_info;
-			cmd_buffer_info.commandPool = context->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
-			cmd_buffer_info.commandBufferCount = sGlobal::FRAME_MAX;
-			cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
-			m_cmd_present_to_render = device->allocateCommandBuffersUnique(cmd_buffer_info);
-			m_cmd_render_to_present = device->allocateCommandBuffersUnique(cmd_buffer_info);
-		}
 
-		vk::CommandBufferBeginInfo begin_info;
-		begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
-
-		for (int i = 0; i < sGlobal::FRAME_MAX; i++)
-		{
-			auto& cmd = m_cmd_present_to_render[i];
-			cmd->begin(begin_info);
-
-			vk::ImageMemoryBarrier present_to_clear;
-			present_to_clear.setSrcAccessMask(vk::AccessFlagBits::eMemoryRead);
-			present_to_clear.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
-			present_to_clear.setOldLayout(vk::ImageLayout::ePresentSrcKHR);
-			present_to_clear.setNewLayout(vk::ImageLayout::eTransferDstOptimal);
-			present_to_clear.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-			present_to_clear.setImage(getSwapchain().m_backbuffer_image[i]);
-
-			cmd->pipelineBarrier(
-				vk::PipelineStageFlagBits::eTransfer,
-				vk::PipelineStageFlagBits::eTransfer,
-				vk::DependencyFlags(),
-				nullptr, nullptr, present_to_clear);
-
-			vk::ClearColorValue clear_color;
-			clear_color.setFloat32(std::array<float, 4>{0.f, 0.f, 1.f, 0.f});
-			vk::ClearDepthStencilValue clear_depth;
-#if BTR_USE_REVERSED_Z
-			clear_depth.setDepth(0.f);	// reversed-Z
-#else
-			clear_depth.setDepth(1.f);
-#endif
-			cmd->clearColorImage(getSwapchain().m_backbuffer_image[i], vk::ImageLayout::eTransferDstOptimal, clear_color, vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-
-			vk::ImageMemoryBarrier clear_to_render;
-			clear_to_render.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
-			clear_to_render.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
-			clear_to_render.setOldLayout(vk::ImageLayout::eTransferDstOptimal);
-			clear_to_render.setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
-			clear_to_render.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-			clear_to_render.setImage(getSwapchain().m_backbuffer_image[i]);
-			cmd->pipelineBarrier(
-				vk::PipelineStageFlagBits::eTransfer,
-				vk::PipelineStageFlagBits::eColorAttachmentOutput,
-				vk::DependencyFlags(),
-				nullptr, nullptr, clear_to_render);
-
-			vk::ImageMemoryBarrier render_to_clear_depth;
-			render_to_clear_depth.setSrcAccessMask(vk::AccessFlagBits::eDepthStencilAttachmentWrite);
-			render_to_clear_depth.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
-			render_to_clear_depth.setOldLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-			render_to_clear_depth.setNewLayout(vk::ImageLayout::eTransferDstOptimal);
-			render_to_clear_depth.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1 });
-			render_to_clear_depth.setImage(m_depth_image.get());
-			cmd->pipelineBarrier(
-				vk::PipelineStageFlagBits::eLateFragmentTests,
-				vk::PipelineStageFlagBits::eTransfer,
-				vk::DependencyFlags(),
-				nullptr, nullptr, render_to_clear_depth);
-			cmd->clearDepthStencilImage(m_depth_image.get(), vk::ImageLayout::eTransferDstOptimal, clear_depth, vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1 });
-
-			vk::ImageMemoryBarrier clear_to_render_depth;
-			clear_to_render_depth.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
-			clear_to_render_depth.setDstAccessMask(vk::AccessFlagBits::eDepthStencilAttachmentWrite);
-			clear_to_render_depth.setOldLayout(vk::ImageLayout::eTransferDstOptimal);
-			clear_to_render_depth.setNewLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-			clear_to_render_depth.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1 });
-			clear_to_render_depth.setImage(m_depth_image.get());
-			cmd->pipelineBarrier(
-				vk::PipelineStageFlagBits::eTransfer,
-				vk::PipelineStageFlagBits::eLateFragmentTests,
-				vk::DependencyFlags(),
-				nullptr, nullptr, clear_to_render_depth);
-
-			cmd->end();
-		}
-
-		for (int i = 0; i < sGlobal::FRAME_MAX; i++)
-		{
-			auto& cmd = m_cmd_render_to_present[i];
-			cmd->begin(begin_info);
-			vk::ImageMemoryBarrier render_to_present_barrier;
-			render_to_present_barrier.setSrcAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
-			render_to_present_barrier.setDstAccessMask(vk::AccessFlagBits::eMemoryRead);
-			render_to_present_barrier.setOldLayout(vk::ImageLayout::eColorAttachmentOptimal);
-			render_to_present_barrier.setNewLayout(vk::ImageLayout::ePresentSrcKHR);
-			render_to_present_barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-			render_to_present_barrier.setImage(getSwapchain().m_backbuffer_image[i]);
-			cmd->pipelineBarrier(
-				vk::PipelineStageFlagBits::eColorAttachmentOutput,
-				vk::PipelineStageFlagBits::eTransfer,
-				vk::DependencyFlags(),
-				nullptr, nullptr, render_to_present_barrier);
-
-			cmd->end();
-		}
-	}
 
 	m_imgui_pipeline = std::make_unique<ImguiRenderPipeline>(context, this);
 	m_copy_pipeline = std::make_shared<PresentPipeline>(context, m_swapchain);
@@ -722,9 +634,26 @@ PresentCmd AppWindow::present(const std::shared_ptr<btr::Context>& context, Rend
 			m_copy_pipeline->m_descriptor_layout.get(),
 		};
 		vk::DescriptorSetAllocateInfo desc_info;
-		desc_info.setDescriptorSetCount(sGlobal::FRAME_MAX);
+		desc_info.setDescriptorPool(context->m_descriptor_pool.get());
+		desc_info.setDescriptorSetCount(array_length(layouts));
 		desc_info.setPSetLayouts(layouts);
-		present_cmd.m_copy_descriptor_set = context->m_device->allocateDescriptorSetsUnique(desc_info);
+		present_cmd.m_copy_descriptor_set = std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]);
+
+		vk::DescriptorImageInfo images[] = {
+			vk::DescriptorImageInfo()
+			.setImageView(target.m_view)
+			.setSampler(sGraphicsResource::Order().getSampler(sGraphicsResource::BASIC_SAMPLER_LINER))
+			.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
+		};
+		vk::WriteDescriptorSet write[] = {
+			vk::WriteDescriptorSet()
+			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+			.setDescriptorCount(array_length(images))
+			.setPImageInfo(images)
+			.setDstBinding(0)
+			.setDstSet(present_cmd.m_copy_descriptor_set.get())
+		};
+		context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
 
 	}
 
@@ -734,29 +663,35 @@ PresentCmd AppWindow::present(const std::shared_ptr<btr::Context>& context, Rend
 		cmd_buffer_info.commandBufferCount = sGlobal::FRAME_MAX;
 		cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
 		present_cmd.cmds = context->m_device->allocateCommandBuffersUnique(cmd_buffer_info);
+
+		for (size_t i = 0; i < present_cmd.cmds.size(); i++)
+		{
+			context->m_device.DebugMarkerSetObjectName(present_cmd.cmds[i].get(), "present cmd %d", i);
+		}
 	}
 
-	vk::CommandBufferBeginInfo begin_info;
-	begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
 
 	for (int i = 0; i < present_cmd.cmds.size(); i++)
 	{
 		auto& cmd = present_cmd.cmds[i];
+
+		vk::CommandBufferBeginInfo begin_info;
+		begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
+		vk::CommandBufferInheritanceInfo inheritance_info;
+		begin_info.setPInheritanceInfo(&inheritance_info);
 		cmd->begin(begin_info);
 
-		vk::ImageMemoryBarrier present_to_dstcopy;
-		present_to_dstcopy.setSrcAccessMask(vk::AccessFlagBits::eMemoryRead);
-		present_to_dstcopy.setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
-		present_to_dstcopy.setOldLayout(vk::ImageLayout::ePresentSrcKHR);
-		present_to_dstcopy.setNewLayout(vk::ImageLayout::eGeneral);
-		present_to_dstcopy.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-		present_to_dstcopy.setImage(getSwapchain().m_backbuffer_image[i]);
-
-		cmd->pipelineBarrier(
-			vk::PipelineStageFlagBits::eTransfer,
-			vk::PipelineStageFlagBits::eFragmentShader,
-			vk::DependencyFlags(),
-			nullptr, nullptr, present_to_dstcopy);
+		{
+			vk::ImageMemoryBarrier present_to_dstcopy;
+			present_to_dstcopy.setSrcAccessMask(vk::AccessFlagBits::eMemoryRead);
+			present_to_dstcopy.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+			present_to_dstcopy.setOldLayout(vk::ImageLayout::ePresentSrcKHR);
+			present_to_dstcopy.setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
+			present_to_dstcopy.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+			present_to_dstcopy.setImage(getSwapchain().m_backbuffer_image[i]);
+			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eColorAttachmentOutput, {},
+				nullptr, nullptr, present_to_dstcopy);
+		}
 
 		{
 			vk::RenderPassBeginInfo begin_render_info;
@@ -765,27 +700,12 @@ PresentCmd AppWindow::present(const std::shared_ptr<btr::Context>& context, Rend
 			begin_render_info.setRenderArea(vk::Rect2D({}, target.m_resolution));
 			cmd->beginRenderPass(begin_render_info, vk::SubpassContents::eInline);
 
-// 			cmd->setViewport(0, vk::Viewport{ 0.f, 0.f, (float)target.m_resolution.width, (float)target.m_resolution.height, 0.f, 1.f});
-// 			cmd->setScissor(0, vk::Rect2D{ vk::Offset2D{}, target.m_resolution });
 			cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, m_copy_pipeline->m_pipeline.get());
-			cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_copy_pipeline->m_pipeline_layout.get(), 0, { present_cmd.m_copy_descriptor_set[i].get() }, {});
-			cmd->draw(4, 1, 0, 0);
+			cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_copy_pipeline->m_pipeline_layout.get(), 0, { present_cmd.m_copy_descriptor_set.get() }, {});
+			cmd->draw(3, 1, 0, 0);
 
 			cmd->endRenderPass();
 		}
-
-		vk::ImageMemoryBarrier render_to_present_barrier;
-		render_to_present_barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
-		render_to_present_barrier.setDstAccessMask(vk::AccessFlagBits::eMemoryRead);
-		render_to_present_barrier.setOldLayout(vk::ImageLayout::eTransferDstOptimal);
-		render_to_present_barrier.setNewLayout(vk::ImageLayout::ePresentSrcKHR);
-		render_to_present_barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-		render_to_present_barrier.setImage(getSwapchain().m_backbuffer_image[i]);
-		cmd->pipelineBarrier(
-			vk::PipelineStageFlagBits::eTransfer,
-			vk::PipelineStageFlagBits::eTransfer,
-			vk::DependencyFlags(),
-			nullptr, nullptr, render_to_present_barrier);
 
 		cmd->end();
 	}
