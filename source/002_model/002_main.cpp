@@ -118,7 +118,7 @@ int main()
 		descriptor_set.m_motion_texture[0].imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 		animate_descriptor = sModelAnimateDescriptor::Order().allocateDescriptorSet(std::move(descriptor_set));
 	}
-	appModel->m_world_buffer;
+
 	AppModelInstancingRenderer renderer(context, app.m_window->getRenderTarget());
 	auto drawCmd = renderer.createCmd(context, &appModel->m_render, render_descriptor);
 	ModelInstancingAnimationPipeline animater(context);
@@ -157,7 +157,7 @@ int main()
 					render_cmds[4] = present_pipeline.execute();
 					{
 						std::vector<vk::CommandBuffer> cmds(1);
-						cmds[0] = animeCmd[context->getGPUFrame()].get();
+						cmds[0] = animeCmd.get();
 						render_cmds[1] = animater.dispach(context, cmds);
 					}
 					{
@@ -165,7 +165,7 @@ int main()
 					}
 					{
 						std::vector<vk::CommandBuffer> cmds(1);
-						cmds[0] = drawCmd[context->getGPUFrame()].get();
+						cmds[0] = drawCmd.get();
 						render_cmds[3] = renderer.draw(context, cmds);
 					}
 					render_syncronized_point.arrive();

@@ -122,7 +122,7 @@ struct Player
 
 struct ModelGIPipelineComponent
 {
-	ModelGIPipelineComponent(const std::shared_ptr<btr::Context>& context, const RenderTarget& render_target)
+	ModelGIPipelineComponent(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target)
 	{
 		auto& device = context->m_device;
 
@@ -150,14 +150,14 @@ struct ModelGIPipelineComponent
 			std::vector<vk::AttachmentDescription> attach_description = {
 				// color1
 				vk::AttachmentDescription()
-				.setFormat(window->getSwapchain().m_surface_format.format)
+				.setFormat(render_target->m_info.format)
 				.setSamples(vk::SampleCountFlagBits::e1)
 				.setLoadOp(vk::AttachmentLoadOp::eLoad)
 				.setStoreOp(vk::AttachmentStoreOp::eStore)
 				.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
 				.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
 				vk::AttachmentDescription()
-				.setFormat(vk::Format::eD32Sfloat)
+				.setFormat(render_target->m_depth_info.format)
 				.setSamples(vk::SampleCountFlagBits::e1)
 				.setLoadOp(vk::AttachmentLoadOp::eLoad)
 				.setStoreOp(vk::AttachmentStoreOp::eStore)
@@ -175,18 +175,18 @@ struct ModelGIPipelineComponent
 
 		{
 			vk::ImageView view[2];
+			view[0] = render_target->m_view;
+			view[1] = render_target->m_depth_view;
 
 			vk::FramebufferCreateInfo framebuffer_info;
 			framebuffer_info.setRenderPass(m_render_pass.get());
 			framebuffer_info.setAttachmentCount(array_length(view));
 			framebuffer_info.setPAttachments(view);
-			framebuffer_info.setWidth(window->getClientSize().x);
-			framebuffer_info.setHeight(window->getClientSize().y);
+			framebuffer_info.setWidth(render_target->m_info.extent.width);
+			framebuffer_info.setHeight(render_target->m_info.extent.height);
 			framebuffer_info.setLayers(1);
 
-			view[0] = render_target.m_image;
-			view[1] = window->m_depth_view.get();
-			m_framebuffer[i] = context->m_device->createFramebufferUnique(framebuffer_info);
+			m_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
 		}
 
 		{
@@ -308,7 +308,7 @@ struct ModelGIPipelineComponent
 
 	}
 
-	std::shared_ptr<ModelRender> createRender(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<Model>& model) override
+	std::shared_ptr<ModelRender> createRender(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<AppModel>& model) override
 	{
 		auto& device = context->m_device;
 		auto render = std::make_shared<ModelRender>();
@@ -383,9 +383,8 @@ int main()
 
 	auto context = app.m_context;
 
-	cModelPipeline model_pipeline;
 	cModel model;
-	std::shared_ptr<Model> render;
+	std::shared_ptr<AppModel> render;
 	Player m_player;
 	m_player.m_pos.x = 223.f;
 	m_player.m_pos.z = 183.f;
@@ -405,21 +404,9 @@ int main()
 			auto pipeline = std::make_shared<ModelGIPipelineComponent>(context, render_pass, shader);
 			model_pipeline.setup(context, pipeline);
 		}
-		render = model_pipeline.createRender(context, model.getResource());
-		{
-			PlayMotionDescriptor desc;
-			desc.m_data = model.getResource()->getAnimation().m_motion[0];
-			desc.m_play_no = 0;
-			desc.m_start_time = 0.f;
-			render->m_animation->getPlayList().play(desc);
-
-			auto& transform = render->m_animation->getTransform();
-			transform.m_local_scale = glm::vec3(0.02f);
-			transform.m_local_rotate = glm::quat(1.f, 0.f, 0.f, 0.f);
-			transform.m_local_translate = glm::vec3(0.f, 0.f, 0.f);
-		}
-
 	}
+	sModelRenderDescriptor::Create(context);
+	sModelAnimateDescriptor::Create(context);
 
 	app.setup();
 	while (true)
