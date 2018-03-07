@@ -54,22 +54,8 @@ struct AppWindow : public cWindow
 	vk::UniqueImageView m_render_target_view;
 	vk::UniqueDeviceMemory m_render_target_memory;
 
-	RenderTarget getRenderTarget()const
-	{
-		RenderTarget ret;
-		ret.m_info = m_render_target_info;
-		ret.m_image = m_render_target_image.get();
-		ret.m_view = m_render_target_view.get();
-		ret.m_memory = m_render_target_memory.get();
-		ret.m_depth_info = m_depth_info;
-		ret.m_depth_image = m_depth_image.get();
-		ret.m_depth_memory = m_depth_memory.get();
-		ret.m_depth_view = m_depth_view.get();
-		ret.is_dynamic_resolution = false;
-		ret.m_resolution.width = m_render_target_info.extent.width;
-		ret.m_resolution.height = m_render_target_info.extent.height;
-		return ret;
-	}
+	std::shared_ptr<RenderTarget> m_render_target;
+	const std::shared_ptr<RenderTarget>& getRenderTarget()const { return m_render_target; }
 
 	struct ImguiRenderPipeline
 	{

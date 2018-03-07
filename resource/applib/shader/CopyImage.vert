@@ -19,5 +19,5 @@ void main()
 	float x = float((gl_VertexIndex & 1) << 2);
     float y = float((gl_VertexIndex & 2) << 1);
 	VSOut.Texcoord = vec2(x, y);
-	gl_Position = vec4(x-1., y-1., 0, 1);
+	gl_Position = vec4(vec2(x, y)*2.-1., 0, 1);
  }

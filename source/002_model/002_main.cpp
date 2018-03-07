@@ -26,6 +26,7 @@
 #include <applib/DrawHelper.h>
 #include <applib/sCameraManager.h>
 #include <applib/App.h>
+#include <applib/AppPipeline.h>
 
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
@@ -118,11 +119,13 @@ int main()
 		animate_descriptor = sModelAnimateDescriptor::Order().allocateDescriptorSet(std::move(descriptor_set));
 	}
 	appModel->m_world_buffer;
-	AppModelInstancingRenderer renderer(context);
+	AppModelInstancingRenderer renderer(context, app.m_window->getRenderTarget());
 	auto drawCmd = renderer.createCmd(context, &appModel->m_render, render_descriptor);
 	ModelInstancingAnimationPipeline animater(context);
 	auto animeCmd = animater.createCmd(context, animate_descriptor);
 
+	ClearPipeline clear_render_target(context.get(), app.m_window->getRenderTarget());
+	PresentPipeline present_pipeline(context, app.m_window->getRenderTarget(), context->m_window->getSwapchainPtr());
 	app.setup();
 	while (true)
 	{
@@ -144,24 +147,26 @@ int main()
 				);
 				sGlobal::Order().getThreadPool().enque(job);
 			}
-			std::vector<vk::CommandBuffer> render_cmds(3);
+			std::vector<vk::CommandBuffer> render_cmds(5);
 			{
 				MAKE_THREAD_JOB(job);
 				job.mJob.emplace_back(
 					[&]()
 				{
+					render_cmds[0] = clear_render_target.execute();
+					render_cmds[4] = present_pipeline.execute();
 					{
 						std::vector<vk::CommandBuffer> cmds(1);
 						cmds[0] = animeCmd[context->getGPUFrame()].get();
-						render_cmds[0] = animater.dispach(context, cmds);
+						render_cmds[1] = animater.dispach(context, cmds);
 					}
 					{
-						render_cmds[1] = renderer.getLight()->execute(context);
+						render_cmds[2] = renderer.getLight()->execute(context);
 					}
 					{
 						std::vector<vk::CommandBuffer> cmds(1);
 						cmds[0] = drawCmd[context->getGPUFrame()].get();
-						render_cmds[2] = renderer.draw(context, cmds);
+						render_cmds[3] = renderer.draw(context, cmds);
 					}
 					render_syncronized_point.arrive();
 				}

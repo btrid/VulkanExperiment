@@ -146,10 +146,9 @@ using sModelRenderDescriptor = SingletonEx<ModelRenderDescriptor>;
 
 struct AppModelInstancingRenderer
 {
-	AppModelInstancingRenderer(const std::shared_ptr<btr::Context>& context)
+	AppModelInstancingRenderer(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target)
 	{
 		auto& device = context->m_device;
-		m_render_pass = context->m_window->getRenderBackbufferPass();
 
 		m_light_pipeline = std::make_shared<cFowardPlusPipeline>();
 		m_light_pipeline->setup(context);
@@ -160,6 +159,70 @@ struct AppModelInstancingRenderer
 			}
 		}
 
+		// レンダーパス
+		{
+			// sub pass
+			vk::AttachmentReference color_ref[] =
+			{
+				vk::AttachmentReference()
+				.setAttachment(0)
+				.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
+			};
+			vk::AttachmentReference depth_ref;
+			depth_ref.setAttachment(1);
+			depth_ref.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+
+			vk::SubpassDescription subpass;
+			subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+			subpass.setInputAttachmentCount(0);
+			subpass.setPInputAttachments(nullptr);
+			subpass.setColorAttachmentCount(array_length(color_ref));
+			subpass.setPColorAttachments(color_ref);
+			subpass.setPDepthStencilAttachment(&depth_ref);
+
+			vk::AttachmentDescription attach_description[] =
+			{
+				// color1
+				vk::AttachmentDescription()
+				.setFormat(render_target->m_info.format)
+				.setSamples(vk::SampleCountFlagBits::e1)
+				.setLoadOp(vk::AttachmentLoadOp::eLoad)
+				.setStoreOp(vk::AttachmentStoreOp::eStore)
+				.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
+				.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
+				// depth
+				vk::AttachmentDescription()
+				.setFormat(render_target->m_depth_info.format)
+				.setSamples(vk::SampleCountFlagBits::e1)
+				.setLoadOp(vk::AttachmentLoadOp::eLoad)
+				.setStoreOp(vk::AttachmentStoreOp::eStore)
+				.setInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
+				.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
+			};
+			vk::RenderPassCreateInfo renderpass_info;
+			renderpass_info.setAttachmentCount(array_length(attach_description));
+			renderpass_info.setPAttachments(attach_description);
+			renderpass_info.setSubpassCount(1);
+			renderpass_info.setPSubpasses(&subpass);
+
+			m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
+		}
+
+		{
+			vk::ImageView view[] = {
+				render_target->m_view,
+				render_target->m_depth_view,
+			};
+			vk::FramebufferCreateInfo framebuffer_info;
+			framebuffer_info.setRenderPass(m_render_pass.get());
+			framebuffer_info.setAttachmentCount(array_length(view));
+			framebuffer_info.setPAttachments(view);
+			framebuffer_info.setWidth(render_target->m_info.extent.width);
+			framebuffer_info.setHeight(render_target->m_info.extent.height);
+			framebuffer_info.setLayers(1);
+
+			m_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
+		}
 		// setup shader
 		{
 			std::string path = btr::getResourceLibPath() + "shader\\binary\\";
@@ -193,20 +256,16 @@ struct AppModelInstancingRenderer
 				.setPrimitiveRestartEnable(VK_FALSE)
 				.setTopology(vk::PrimitiveTopology::eTriangleList);
 
-			vk::Extent3D size;
-			size.setWidth(context->m_window->getClientSize().x);
-			size.setHeight(context->m_window->getClientSize().y);
-			size.setDepth(1);
+			vk::Extent3D size = render_target->m_info.extent;
 			// viewport
 			vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)size.width, (float)size.height, 0.f, 1.f);
-			std::vector<vk::Rect2D> scissor = {
-				vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(size.width, size.height))
-			};
+			vk::Rect2D scissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(size.width, size.height));
+
 			vk::PipelineViewportStateCreateInfo viewport_info;
 			viewport_info.setViewportCount(1);
 			viewport_info.setPViewports(&viewport);
-			viewport_info.setScissorCount((uint32_t)scissor.size());
-			viewport_info.setPScissors(scissor.data());
+			viewport_info.setScissorCount(1);
+			viewport_info.setPScissors(&scissor);
 
 			// ラスタライズ
 			vk::PipelineRasterizationStateCreateInfo rasterization_info;
@@ -260,13 +319,13 @@ struct AppModelInstancingRenderer
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
 				.setLayout(m_pipeline_layout.get())
-				.setRenderPass(m_render_pass->getRenderPass())
+				.setRenderPass(m_render_pass.get())
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
 			m_pipeline = std::move(device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info)[0]);
 		}
-
+		m_render_target = render_target;
 	}
 	std::vector<TypedCommandBuffer<AppModelInstancingRenderer>> createCmd(const std::shared_ptr<btr::Context>& context, const Drawable* drawable, const DescriptorSet<ModelRenderDescriptor::Set>& descriptor_set)
 	{
@@ -285,8 +344,8 @@ struct AppModelInstancingRenderer
 				vk::CommandBufferBeginInfo begin_info;
 				begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse | vk::CommandBufferUsageFlagBits::eRenderPassContinue);
 				vk::CommandBufferInheritanceInfo inheritance_info;
-				inheritance_info.setFramebuffer(m_render_pass->getFramebuffer(i));
-				inheritance_info.setRenderPass(m_render_pass->getRenderPass());
+				inheritance_info.setFramebuffer(m_framebuffer.get());
+				inheritance_info.setRenderPass(m_render_pass.get());
 				begin_info.pInheritanceInfo = &inheritance_info;
 
 				cmd.begin(begin_info);
@@ -318,18 +377,19 @@ struct AppModelInstancingRenderer
 	vk::CommandBuffer draw(const std::shared_ptr<btr::Context>& context, std::vector<vk::CommandBuffer>& cmds)
 	{
 		auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
+		context->m_device.DebugMarkerSetObjectName(cmd, "ModelInstancingPipeline", cmd);
 
 		vk::RenderPassBeginInfo render_begin_info;
-		render_begin_info.setRenderPass(m_render_pass->getRenderPass());
-		render_begin_info.setFramebuffer(m_render_pass->getFramebuffer(context->getGPUFrame()));
-		render_begin_info.setRenderArea(vk::Rect2D({}, m_render_pass->getResolution()));
+		render_begin_info.setRenderPass(m_render_pass.get());
+		render_begin_info.setFramebuffer(m_framebuffer.get());
+		render_begin_info.setRenderArea(vk::Rect2D({}, m_render_target->m_resolution));
 
 		cmd.beginRenderPass(render_begin_info, vk::SubpassContents::eSecondaryCommandBuffers);
 		cmd.executeCommands(cmds.size(), cmds.data());
 		cmd.endRenderPass();
 		cmd.end();
-		return cmd;
 
+		return cmd;
 	}
 private:
 	enum 
@@ -339,7 +399,9 @@ private:
 		SHADER_NUM,
 	};
 
-	std::shared_ptr<RenderPassModule> m_render_pass;
+	std::shared_ptr<RenderTarget> m_render_target;
+	vk::UniqueRenderPass m_render_pass;
+	vk::UniqueFramebuffer m_framebuffer;
 	std::shared_ptr<ShaderModule> m_shader;
 
 	vk::UniquePipeline m_pipeline;

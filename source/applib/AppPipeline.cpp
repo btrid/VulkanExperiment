@@ -1,7 +1,96 @@
 #include <applib/AppPipeline.h>
 #include <applib/GraphicsResource.h>
 
-PresentPipeline::PresentPipeline(const std::shared_ptr<btr::Context>& context, const RenderTarget& render_target, const std::shared_ptr<Swapchain>& swapchain)
+ClearPipeline::ClearPipeline(btr::Context* context, const std::shared_ptr<RenderTarget>& render_target)
+{
+	vk::CommandBufferAllocateInfo cmd_buffer_info;
+	cmd_buffer_info.commandPool = context->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
+	cmd_buffer_info.commandBufferCount = 1;
+	cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
+	m_cmd = std::move(context->m_device->allocateCommandBuffersUnique(cmd_buffer_info)[0]);
+	context->m_device.DebugMarkerSetObjectName(m_cmd.get(), "clear cmd");
+
+	auto cmd = m_cmd.get();
+	vk::CommandBufferBeginInfo begin_info;
+	begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
+	vk::CommandBufferInheritanceInfo inheritance_info;
+	begin_info.setPInheritanceInfo(&inheritance_info);
+	cmd.begin(begin_info);
+
+	{
+
+		vk::ImageMemoryBarrier present_to_clear;
+		//present_to_clear.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+		present_to_clear.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
+		//present_to_clear.setOldLayout(vk::ImageLayout::eTransferDstOptimal);
+		present_to_clear.setNewLayout(vk::ImageLayout::eTransferDstOptimal);
+		present_to_clear.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+		present_to_clear.setImage(render_target->m_image);
+		cmd.pipelineBarrier(
+			vk::PipelineStageFlagBits::eAllCommands,
+			vk::PipelineStageFlagBits::eTransfer,
+			vk::DependencyFlags(),
+			nullptr, nullptr, present_to_clear);
+
+		vk::ClearColorValue clear_color;
+		clear_color.setFloat32(std::array<float, 4>{0.8f, 0.8f, 1.f, 0.f});
+		cmd.clearColorImage(render_target->m_image, vk::ImageLayout::eTransferDstOptimal, clear_color, vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+
+	}
+
+	{
+		vk::ImageMemoryBarrier clear_to_render;
+		clear_to_render.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+		clear_to_render.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+		clear_to_render.setOldLayout(vk::ImageLayout::eTransferDstOptimal);
+		clear_to_render.setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
+		clear_to_render.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+		clear_to_render.setImage(render_target->m_image);
+		cmd.pipelineBarrier(
+			vk::PipelineStageFlagBits::eTransfer,
+			vk::PipelineStageFlagBits::eColorAttachmentOutput,
+			vk::DependencyFlags(),
+			nullptr, nullptr, clear_to_render);
+	}
+
+	{
+		vk::ImageMemoryBarrier render_to_clear_depth;
+		render_to_clear_depth.setSrcAccessMask(vk::AccessFlagBits::eDepthStencilAttachmentWrite);
+		render_to_clear_depth.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
+		render_to_clear_depth.setOldLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+		render_to_clear_depth.setNewLayout(vk::ImageLayout::eTransferDstOptimal);
+		render_to_clear_depth.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1 });
+		render_to_clear_depth.setImage(render_target->m_depth_image);
+		cmd.pipelineBarrier(
+			vk::PipelineStageFlagBits::eLateFragmentTests,
+			vk::PipelineStageFlagBits::eTransfer,
+			vk::DependencyFlags(),
+			nullptr, nullptr, render_to_clear_depth);
+
+		vk::ClearDepthStencilValue clear_depth;
+		clear_depth.setDepth(0.f);
+		cmd.clearDepthStencilImage(render_target->m_depth_image, vk::ImageLayout::eTransferDstOptimal, clear_depth, vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1 });
+	}
+
+	{
+		vk::ImageMemoryBarrier clear_to_render_depth;
+		clear_to_render_depth.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+		clear_to_render_depth.setDstAccessMask(vk::AccessFlagBits::eDepthStencilAttachmentWrite);
+		clear_to_render_depth.setOldLayout(vk::ImageLayout::eTransferDstOptimal);
+		clear_to_render_depth.setNewLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+		clear_to_render_depth.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1 });
+		clear_to_render_depth.setImage(render_target->m_depth_image);
+		cmd.pipelineBarrier(
+			vk::PipelineStageFlagBits::eTransfer,
+			vk::PipelineStageFlagBits::eLateFragmentTests,
+			vk::DependencyFlags(),
+			nullptr, nullptr, clear_to_render_depth);
+
+	}
+	cmd.end();
+}
+
+PresentPipeline::PresentPipeline(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target, const std::shared_ptr<Swapchain>& swapchain)
 {
 	m_swapchain = swapchain;
 
@@ -28,7 +117,7 @@ PresentPipeline::PresentPipeline(const std::shared_ptr<btr::Context>& context, c
 		}shader_info[] =
 		{
 			{ "CopyImage.vert.spv",vk::ShaderStageFlagBits::eVertex },
-		{ "CopyImage.frag.spv",vk::ShaderStageFlagBits::eFragment },
+			{ "CopyImage.frag.spv",vk::ShaderStageFlagBits::eFragment },
 		};
 		static_assert(array_length(shader_info) == 2, "not equal shader num");
 
@@ -228,7 +317,7 @@ PresentPipeline::PresentPipeline(const std::shared_ptr<btr::Context>& context, c
 
 		vk::DescriptorImageInfo images[] = {
 			vk::DescriptorImageInfo()
-			.setImageView(render_target.m_view)
+			.setImageView(render_target->m_view)
 			.setSampler(sGraphicsResource::Order().getSampler(sGraphicsResource::BASIC_SAMPLER_LINER))
 			.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal),
 		};
@@ -284,7 +373,7 @@ PresentPipeline::PresentPipeline(const std::shared_ptr<btr::Context>& context, c
 			vk::RenderPassBeginInfo begin_render_info;
 			begin_render_info.setFramebuffer(m_framebuffer[i].get());
 			begin_render_info.setRenderPass(m_render_pass.get());
-			begin_render_info.setRenderArea(vk::Rect2D({}, render_target.m_resolution));
+			begin_render_info.setRenderArea(vk::Rect2D({}, render_target->m_resolution));
 			cmd->beginRenderPass(begin_render_info, vk::SubpassContents::eInline);
 
 			cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline.get());
@@ -298,92 +387,3 @@ PresentPipeline::PresentPipeline(const std::shared_ptr<btr::Context>& context, c
 	}
 }
 
-ClearPipeline::ClearPipeline(btr::Context* context, const RenderTarget& render_target)
-{
-	vk::CommandBufferAllocateInfo cmd_buffer_info;
-	cmd_buffer_info.commandPool = context->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
-	cmd_buffer_info.commandBufferCount = 1;
-	cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
-	m_cmd = std::move(context->m_device->allocateCommandBuffersUnique(cmd_buffer_info)[0]);
-	context->m_device.DebugMarkerSetObjectName(m_cmd.get(), "clear cmd");
-
-	auto cmd = m_cmd.get();
-	vk::CommandBufferBeginInfo begin_info;
-	begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
-	vk::CommandBufferInheritanceInfo inheritance_info;
-	begin_info.setPInheritanceInfo(&inheritance_info);
-	cmd.begin(begin_info);
-
-	{
-
-		vk::ImageMemoryBarrier present_to_clear;
-		//present_to_clear.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
-		present_to_clear.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
-		//present_to_clear.setOldLayout(vk::ImageLayout::eTransferDstOptimal);
-		present_to_clear.setNewLayout(vk::ImageLayout::eTransferDstOptimal);
-		present_to_clear.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-		present_to_clear.setImage(render_target.m_image);
-		cmd.pipelineBarrier(
-			vk::PipelineStageFlagBits::eAllCommands,
-			vk::PipelineStageFlagBits::eTransfer,
-			vk::DependencyFlags(),
-			nullptr, nullptr, present_to_clear);
-
-		vk::ClearColorValue clear_color;
-		clear_color.setFloat32(std::array<float, 4>{0.8f, 0.8f, 1.f, 0.f});
-		cmd.clearColorImage(render_target.m_image, vk::ImageLayout::eTransferDstOptimal, clear_color, vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-
-	}
-
-	{
-		vk::ImageMemoryBarrier clear_to_render;
-		clear_to_render.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
-		clear_to_render.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
-		clear_to_render.setOldLayout(vk::ImageLayout::eTransferDstOptimal);
-		clear_to_render.setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
-		clear_to_render.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-		clear_to_render.setImage(render_target.m_image);
-		cmd.pipelineBarrier(
-			vk::PipelineStageFlagBits::eTransfer,
-			vk::PipelineStageFlagBits::eColorAttachmentOutput,
-			vk::DependencyFlags(),
-			nullptr, nullptr, clear_to_render);
-	}
-
-	{
-		vk::ImageMemoryBarrier render_to_clear_depth;
-		render_to_clear_depth.setSrcAccessMask(vk::AccessFlagBits::eDepthStencilAttachmentWrite);
-		render_to_clear_depth.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
-		render_to_clear_depth.setOldLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-		render_to_clear_depth.setNewLayout(vk::ImageLayout::eTransferDstOptimal);
-		render_to_clear_depth.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1 });
-		render_to_clear_depth.setImage(render_target.m_depth_image);
-		cmd.pipelineBarrier(
-			vk::PipelineStageFlagBits::eLateFragmentTests,
-			vk::PipelineStageFlagBits::eTransfer,
-			vk::DependencyFlags(),
-			nullptr, nullptr, render_to_clear_depth);
-
-		vk::ClearDepthStencilValue clear_depth;
-		clear_depth.setDepth(0.f);
-		cmd.clearDepthStencilImage(render_target.m_depth_image, vk::ImageLayout::eTransferDstOptimal, clear_depth, vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1 });
-	}
-
-	{
-		vk::ImageMemoryBarrier clear_to_render_depth;
-		clear_to_render_depth.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
-		clear_to_render_depth.setDstAccessMask(vk::AccessFlagBits::eDepthStencilAttachmentWrite);
-		clear_to_render_depth.setOldLayout(vk::ImageLayout::eTransferDstOptimal);
-		clear_to_render_depth.setNewLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-		clear_to_render_depth.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1 });
-		clear_to_render_depth.setImage(render_target.m_depth_image);
-		cmd.pipelineBarrier(
-			vk::PipelineStageFlagBits::eTransfer,
-			vk::PipelineStageFlagBits::eLateFragmentTests,
-			vk::DependencyFlags(),
-			nullptr, nullptr, clear_to_render_depth);
-
-	}
-
-	cmd.end();
-}

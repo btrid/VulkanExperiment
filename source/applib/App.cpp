@@ -295,7 +295,7 @@ glm::uvec3 calcDipatchGroups(const glm::uvec3& num, const glm::uvec3& local_size
 
 AppWindow::ImguiRenderPipeline::ImguiRenderPipeline(const std::shared_ptr<btr::Context>& context, AppWindow* const window)
 {
-	auto render_target = window->getRenderTarget();
+	const auto& render_target = window->getRenderTarget();
 
 	// レンダーパス
 	{
@@ -317,7 +317,7 @@ AppWindow::ImguiRenderPipeline::ImguiRenderPipeline(const std::shared_ptr<btr::C
 		{
 			// color1
 			vk::AttachmentDescription()
-			.setFormat(render_target.m_info.format)
+			.setFormat(render_target->m_info.format)
 			.setSamples(vk::SampleCountFlagBits::e1)
 			.setLoadOp(vk::AttachmentLoadOp::eLoad)
 			.setStoreOp(vk::AttachmentStoreOp::eStore)
@@ -335,14 +335,14 @@ AppWindow::ImguiRenderPipeline::ImguiRenderPipeline(const std::shared_ptr<btr::C
 
 	{
 		vk::ImageView view[] = {
-			render_target.m_view
+			render_target->m_view
 		};
 		vk::FramebufferCreateInfo framebuffer_info;
 		framebuffer_info.setRenderPass(m_render_pass.get());
 		framebuffer_info.setAttachmentCount(array_length(view));
 		framebuffer_info.setPAttachments(view);
-		framebuffer_info.setWidth(render_target.m_info.extent.width);
-		framebuffer_info.setHeight(render_target.m_info.extent.height);
+		framebuffer_info.setWidth(render_target->m_info.extent.width);
+		framebuffer_info.setHeight(render_target->m_info.extent.height);
 		framebuffer_info.setLayers(1);
 
 		m_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
@@ -359,8 +359,8 @@ AppWindow::ImguiRenderPipeline::ImguiRenderPipeline(const std::shared_ptr<btr::C
 		};
 
 		// viewport
-		vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)render_target.m_info.extent.width, (float)render_target.m_info.extent.height, 0.f, 1.f);
-		vk::Rect2D scissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(render_target.m_info.extent.width, render_target.m_info.extent.height));
+		vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)render_target->m_info.extent.width, (float)render_target->m_info.extent.height, 0.f, 1.f);
+		vk::Rect2D scissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(render_target->m_info.extent.width, render_target->m_info.extent.height));
 		vk::PipelineViewportStateCreateInfo viewportInfo;
 		viewportInfo.setViewportCount(1);
 		viewportInfo.setPViewports(&viewport);
@@ -620,6 +620,18 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 
 	}
 
+	m_render_target = std::make_shared<RenderTarget>();
+	m_render_target->m_info = m_render_target_info;
+	m_render_target->m_image = m_render_target_image.get();
+	m_render_target->m_view = m_render_target_view.get();
+	m_render_target->m_memory = m_render_target_memory.get();
+	m_render_target->m_depth_info = m_depth_info;
+	m_render_target->m_depth_image = m_depth_image.get();
+	m_render_target->m_depth_memory = m_depth_memory.get();
+	m_render_target->m_depth_view = m_depth_view.get();
+	m_render_target->is_dynamic_resolution = false;
+	m_render_target->m_resolution.width = m_render_target_info.extent.width;
+	m_render_target->m_resolution.height = m_render_target_info.extent.height;
 
 	m_imgui_pipeline = std::make_unique<ImguiRenderPipeline>(context, this);
 

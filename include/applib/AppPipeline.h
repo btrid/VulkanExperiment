@@ -18,7 +18,7 @@ struct IPipeline
 };
 struct ClearPipeline : IPipeline
 {
-	ClearPipeline(btr::Context* context, const RenderTarget& render_target);
+	ClearPipeline(btr::Context* context, const std::shared_ptr<RenderTarget>& render_target);
 
 	vk::CommandBuffer execute() override
 	{
@@ -30,7 +30,7 @@ struct ClearPipeline : IPipeline
 
 struct PresentPipeline : IPipeline
 {
-	PresentPipeline(const std::shared_ptr<btr::Context>& context, const RenderTarget& render_target, const std::shared_ptr<Swapchain>& swapchain);
+	PresentPipeline(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target, const std::shared_ptr<Swapchain>& swapchain);
 
 	vk::CommandBuffer execute() override
 	{
