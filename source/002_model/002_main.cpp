@@ -101,18 +101,18 @@ int main()
 	}
 	{
 		ModelAnimateDescriptor::Set descriptor_set;
-		descriptor_set.m_model_info = appModel->m_model_info_buffer.getInfo();
-		descriptor_set.m_instancing_info = appModel->m_instancing_info_buffer.getInfo();
-		descriptor_set.m_node_info = appModel->m_node_info_buffer.getInfo();
-		descriptor_set.m_bone_info = appModel->m_bone_info_buffer.getInfo();
-		descriptor_set.m_animation_info = appModel->m_animationinfo_buffer.getInfo();
-		descriptor_set.m_playing_animation = appModel->m_animationplay_buffer.getInfo();
-		descriptor_set.m_anime_indirect = appModel->m_animation_skinning_indirect_buffer.getInfo();
-		descriptor_set.m_node_transform = appModel->m_node_transform_buffer.getInfo();
-		descriptor_set.m_bone_transform = appModel->m_bone_transform_buffer.getInfo();
-		descriptor_set.m_instance_map = appModel->m_instance_map_buffer.getInfo();
-		descriptor_set.m_draw_indirect = appModel->m_draw_indirect_buffer.getInfo();
-		descriptor_set.m_world = appModel->m_world_buffer.getInfo();
+		descriptor_set.m_model_info = appModel->m_model_info_buffer.getInfoEx();
+		descriptor_set.m_instancing_info = appModel->m_instancing_info_buffer.getInfoEx();
+		descriptor_set.m_node_info = appModel->m_node_info_buffer.getInfoEx();
+		descriptor_set.m_bone_info = appModel->m_bone_info_buffer.getInfoEx();
+		descriptor_set.m_animation_info = appModel->m_animationinfo_buffer.getInfoEx();
+		descriptor_set.m_playing_animation = appModel->m_animationplay_buffer.getInfoEx();
+		descriptor_set.m_anime_indirect = appModel->m_animation_skinning_indirect_buffer.getInfoEx();
+		descriptor_set.m_node_transform = appModel->m_node_transform_buffer.getInfoEx();
+		descriptor_set.m_bone_transform = appModel->m_bone_transform_buffer.getInfoEx();
+		descriptor_set.m_instance_map = appModel->m_instance_map_buffer.getInfoEx();
+		descriptor_set.m_draw_indirect = appModel->m_draw_indirect_buffer.getInfoEx();
+		descriptor_set.m_world = appModel->m_world_buffer.getInfoEx();
 		descriptor_set.m_motion_texture[0].imageView = appModel->m_motion_texture[0].getImageView();
 		descriptor_set.m_motion_texture[0].sampler = appModel->m_motion_texture[0].getSampler();
 		descriptor_set.m_motion_texture[0].imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;

@@ -16,7 +16,7 @@ struct TypedInfo : public U
 	{}
 
 	template<typename A>
-	TypedInfo(A& info) = delete;
+	TypedInfo(TypedInfo<A, U>& info) = delete;
 
 };
 
