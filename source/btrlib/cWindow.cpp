@@ -155,11 +155,12 @@ cWindow::cWindow(const std::shared_ptr<btr::Context>& context, const cWindowDesc
 	surface_info.setHinstance(GetModuleHandle(nullptr));
 	m_surface = sGlobal::Order().getVKInstance().createWin32SurfaceKHRUnique(surface_info);
 
-	m_swapchain.setup(context, descriptor, m_surface.get());
+	m_swapchain = std::make_shared<Swapchain>();
+	m_swapchain->setup(context, descriptor, m_surface.get());
 
 	vk::SemaphoreCreateInfo semaphoreInfo = vk::SemaphoreCreateInfo();
-	m_swapchain.m_swapbuffer_semaphore = context->m_gpu.getDevice()->createSemaphoreUnique(semaphoreInfo);
-	m_swapchain.m_submit_semaphore = context->m_gpu.getDevice()->createSemaphoreUnique(semaphoreInfo);
+	m_swapchain->m_swapbuffer_semaphore = context->m_gpu.getDevice()->createSemaphoreUnique(semaphoreInfo);
+	m_swapchain->m_submit_semaphore = context->m_gpu.getDevice()->createSemaphoreUnique(semaphoreInfo);
 
 }
 

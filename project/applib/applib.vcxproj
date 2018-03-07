@@ -77,6 +77,7 @@
     <ClInclude Include="..\..\include\applib\DrawHelper.h" />
     <ClInclude Include="..\..\include\applib\Geometry.h" />
     <ClInclude Include="..\..\include\applib\GraphicsResource.h" />
+    <ClInclude Include="..\..\include\applib\AppPipeline.h" />
     <ClInclude Include="..\..\include\applib\sCameraManager.h" />
     <ClInclude Include="..\..\include\applib\sImGuiRenderer.h" />
     <ClInclude Include="..\..\include\applib\sMessageSystem.h" />
@@ -90,6 +91,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\source\012_imgui\012_main.cpp" />
     <ClCompile Include="..\..\source\applib\App.cpp" />
+    <ClCompile Include="..\..\source\applib\AppPipeline.cpp" />
     <ClCompile Include="..\..\source\applib\cLightPipeline.cpp" />
     <ClCompile Include="..\..\source\applib\cModelInstancingPipeline.cpp" />
     <ClCompile Include="..\..\source\applib\cAppModel.cpp" />
