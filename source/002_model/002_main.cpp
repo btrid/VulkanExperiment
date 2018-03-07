@@ -78,50 +78,14 @@ int main()
 
 	sModelRenderDescriptor::Create(context);
 	sModelAnimateDescriptor::Create(context);
+	AppModelInstancingRenderer renderer(context, app.m_window->getRenderTarget());
+	AppModelInstancingAnimationPipeline animater(context);
 
 	std::shared_ptr<AppModel> appModel = std::make_shared<AppModel>(context, model->getResource(), 1000);
-	DescriptorSet<ModelRenderDescriptor::Set> render_descriptor;
-	DescriptorSet<ModelAnimateDescriptor::Set> animate_descriptor;
-	{
-		ModelRenderDescriptor::Set descriptor_set;
-		descriptor_set.m_bonetransform = appModel->m_bone_transform_buffer.getInfoEx();
-		descriptor_set.m_model_info = appModel->m_model_info_buffer.getInfoEx();
-		descriptor_set.m_instancing_info = appModel->m_instancing_info_buffer.getInfoEx();
-		descriptor_set.m_material = appModel->m_material.getInfoEx();
-		descriptor_set.m_material_index = appModel->m_material_index.getInfoEx();
-		descriptor_set.m_images.fill(vk::DescriptorImageInfo(sGraphicsResource::Order().getWhiteTexture().m_sampler.get(), sGraphicsResource::Order().getWhiteTexture().m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal));
-		for (size_t i = 0; i < appModel->m_texture.size(); i++)
-		{
-			const auto& tex = appModel->m_texture[i];
-			if (tex.isReady()) {
-				descriptor_set.m_images[i] = vk::DescriptorImageInfo(tex.getSampler(), tex.getImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
-			}
-		}
-		render_descriptor = sModelRenderDescriptor::Order().allocateDescriptorSet(std::move(descriptor_set));
-	}
-	{
-		ModelAnimateDescriptor::Set descriptor_set;
-		descriptor_set.m_model_info = appModel->m_model_info_buffer.getInfoEx();
-		descriptor_set.m_instancing_info = appModel->m_instancing_info_buffer.getInfoEx();
-		descriptor_set.m_node_info = appModel->m_node_info_buffer.getInfoEx();
-		descriptor_set.m_bone_info = appModel->m_bone_info_buffer.getInfoEx();
-		descriptor_set.m_animation_info = appModel->m_animationinfo_buffer.getInfoEx();
-		descriptor_set.m_playing_animation = appModel->m_animationplay_buffer.getInfoEx();
-		descriptor_set.m_anime_indirect = appModel->m_animation_skinning_indirect_buffer.getInfoEx();
-		descriptor_set.m_node_transform = appModel->m_node_transform_buffer.getInfoEx();
-		descriptor_set.m_bone_transform = appModel->m_bone_transform_buffer.getInfoEx();
-		descriptor_set.m_instance_map = appModel->m_instance_map_buffer.getInfoEx();
-		descriptor_set.m_draw_indirect = appModel->m_draw_indirect_buffer.getInfoEx();
-		descriptor_set.m_world = appModel->m_world_buffer.getInfoEx();
-		descriptor_set.m_motion_texture[0].imageView = appModel->m_motion_texture[0].getImageView();
-		descriptor_set.m_motion_texture[0].sampler = appModel->m_motion_texture[0].getSampler();
-		descriptor_set.m_motion_texture[0].imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-		animate_descriptor = sModelAnimateDescriptor::Order().allocateDescriptorSet(std::move(descriptor_set));
-	}
+	DescriptorSet<ModelRenderDescriptor::Set> render_descriptor = createRenderDescriptorSet(appModel);
+	DescriptorSet<ModelAnimateDescriptor::Set> animate_descriptor = createAnimateDescriptorSet(appModel);
 
-	AppModelInstancingRenderer renderer(context, app.m_window->getRenderTarget());
 	auto drawCmd = renderer.createCmd(context, &appModel->m_render, render_descriptor);
-	ModelInstancingAnimationPipeline animater(context);
 	auto animeCmd = animater.createCmd(context, animate_descriptor);
 
 	ClearPipeline clear_render_target(context.get(), app.m_window->getRenderTarget());

@@ -129,7 +129,7 @@ struct ModelGIPipelineComponent
 		// レンダーパス
 		{
 			// sub pass
-			std::vector<vk::AttachmentReference> color_ref =
+			vk::AttachmentReference color_ref[] =
 			{
 				vk::AttachmentReference()
 				.setAttachment(0)
@@ -143,11 +143,11 @@ struct ModelGIPipelineComponent
 			subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
 			subpass.setInputAttachmentCount(0);
 			subpass.setPInputAttachments(nullptr);
-			subpass.setColorAttachmentCount((uint32_t)color_ref.size());
-			subpass.setPColorAttachments(color_ref.data());
+			subpass.setColorAttachmentCount(array_length(color_ref));
+			subpass.setPColorAttachments(color_ref);
 			subpass.setPDepthStencilAttachment(&depth_ref);
 
-			std::vector<vk::AttachmentDescription> attach_description = {
+			vk::AttachmentDescription attach_description[] = {
 				// color1
 				vk::AttachmentDescription()
 				.setFormat(render_target->m_info.format)
@@ -165,8 +165,8 @@ struct ModelGIPipelineComponent
 				.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
 			};
 			vk::RenderPassCreateInfo renderpass_info = vk::RenderPassCreateInfo()
-				.setAttachmentCount((uint32_t)attach_description.size())
-				.setPAttachments(attach_description.data())
+				.setAttachmentCount(array_length(attach_description))
+				.setPAttachments(attach_description)
 				.setSubpassCount(1)
 				.setPSubpasses(&subpass);
 
@@ -308,49 +308,36 @@ struct ModelGIPipelineComponent
 
 	}
 
-	std::shared_ptr<ModelRender> createRender(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<AppModel>& model) override
+	vk::UniqueCommandBuffer createCmd(const std::shared_ptr<btr::Context>& context, const Drawable* drawable, const DescriptorSet<ModelRenderDescriptor::Set>& descriptor_set)
 	{
 		auto& device = context->m_device;
-		auto render = std::make_shared<ModelRender>();
 
-		render->m_descriptor_set_model = m_model_descriptor->allocateDescriptorSet(context);
-		m_model_descriptor->updateMaterial(context, render->m_descriptor_set_model.get(), model->m_material);
-		m_model_descriptor->updateAnimation(context, render->m_descriptor_set_model.get(), model->m_animation);
-
+		vk::CommandBufferAllocateInfo cmd_buffer_info;
+		cmd_buffer_info.commandBufferCount = 1;
+		cmd_buffer_info.commandPool = context->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
+		cmd_buffer_info.level = vk::CommandBufferLevel::eSecondary;
+		auto cmd = std::move(context->m_device->allocateCommandBuffersUnique(cmd_buffer_info)[0]);
 		// recode command
 		{
-			vk::CommandBufferAllocateInfo cmd_buffer_info;
-			cmd_buffer_info.commandBufferCount = context->m_window->getSwapchain().getBackbufferNum();
-			cmd_buffer_info.commandPool = context->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
-			cmd_buffer_info.level = vk::CommandBufferLevel::eSecondary;
-			render->m_draw_cmd = context->m_device->allocateCommandBuffersUnique(cmd_buffer_info);
+			vk::CommandBufferBeginInfo begin_info;
+			begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse | vk::CommandBufferUsageFlagBits::eRenderPassContinue);
+			vk::CommandBufferInheritanceInfo inheritance_info;
+			inheritance_info.setFramebuffer(m_framebuffer.get());
+			inheritance_info.setRenderPass(m_render_pass.get());
+			begin_info.pInheritanceInfo = &inheritance_info;
+			cmd->begin(begin_info);
 
-			for (size_t i = 0; i < render->m_draw_cmd.size(); i++)
-			{
-				auto& cmd = render->m_draw_cmd[i].get();
-				vk::CommandBufferBeginInfo begin_info;
-				begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse | vk::CommandBufferUsageFlagBits::eRenderPassContinue);
-				vk::CommandBufferInheritanceInfo inheritance_info;
-				inheritance_info.setFramebuffer(getRenderPassModule()->getFramebuffer(i));
-				inheritance_info.setRenderPass(getRenderPassModule()->getRenderPass());
-				begin_info.pInheritanceInfo = &inheritance_info;
+			cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline.get());
+			cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 0, descriptor_set.m_handle.get(), {});
+			cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
+			cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 2, sMap::Order().getVoxel().getDescriptorSet(VoxelPipeline::DESCRIPTOR_SET_VOXEL), {});
+			cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 3, sLightSystem::Order().getDescriptorSet(sLightSystem::DESCRIPTOR_SET_LIGHT), {});
 
-				cmd.begin(begin_info);
-
-				cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline.get());
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 0, render->m_descriptor_set_model.get(), {});
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 2, sMap::Order().getVoxel().getDescriptorSet(VoxelPipeline::DESCRIPTOR_SET_VOXEL), {});
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 3, sLightSystem::Order().getDescriptorSet(sLightSystem::DESCRIPTOR_SET_LIGHT), {});
-				cmd.bindVertexBuffers(0, { model->m_model_resource->m_mesh_resource.m_vertex_buffer.getBufferInfo().buffer }, { model->m_model_resource->m_mesh_resource.m_vertex_buffer.getBufferInfo().offset });
-				cmd.bindIndexBuffer(model->m_model_resource->m_mesh_resource.m_index_buffer.getBufferInfo().buffer, model->m_model_resource->m_mesh_resource.m_index_buffer.getBufferInfo().offset, model->m_model_resource->m_mesh_resource.mIndexType);
-				cmd.drawIndexedIndirect(model->m_model_resource->m_mesh_resource.m_indirect_buffer.getBufferInfo().buffer, model->m_model_resource->m_mesh_resource.m_indirect_buffer.getBufferInfo().offset, model->m_model_resource->m_mesh_resource.mIndirectCount, sizeof(cModel::Mesh));
-
-				cmd.end();
-			}
+			drawable->draw(cmd.get());
+			cmd->end();
 		}
 
-		return render;
+		return cmd;
 	}
 
 private:
@@ -384,7 +371,6 @@ int main()
 	auto context = app.m_context;
 
 	cModel model;
-	std::shared_ptr<AppModel> render;
 	Player m_player;
 	m_player.m_pos.x = 223.f;
 	m_player.m_pos.z = 183.f;
@@ -400,13 +386,19 @@ int main()
 		sMap::Order().setup(context);
 		sMap::Order().getVoxel().createPipeline<VoxelizeMap>(context);
 
-		{
-			auto pipeline = std::make_shared<ModelGIPipelineComponent>(context, render_pass, shader);
-			model_pipeline.setup(context, pipeline);
-		}
 	}
 	sModelRenderDescriptor::Create(context);
 	sModelAnimateDescriptor::Create(context);
+
+	AppModelInstancingRenderer renderer(context, app.m_window->getRenderTarget());
+	AppModelInstancingAnimationPipeline animater(context);
+
+	std::shared_ptr<AppModel> player_model = std::make_shared<AppModel>(context, model.getResource(), 1);
+	DescriptorSet<ModelRenderDescriptor::Set> render_descriptor = createRenderDescriptorSet(player_model);
+	DescriptorSet<ModelAnimateDescriptor::Set> animate_descriptor = createAnimateDescriptorSet(player_model);
+
+	auto drawCmd = renderer.createCmd(context, &player_model->m_render, render_descriptor);
+	auto animeCmd = animater.createCmd(context, animate_descriptor);
 
 	app.setup();
 	while (true)
@@ -417,7 +409,6 @@ int main()
 		{
 			{
 				m_player.execute(context);
-				render->m_animation->getTransform().m_global = glm::translate(m_player.m_pos) * glm::toMat4(glm::quat(glm::vec3(0.f, 0.f, 1.f), m_player.m_dir));
 			}
 
 			SynchronizedPoint motion_worker_syncronized_point(1);
@@ -426,7 +417,7 @@ int main()
 				job.mFinish =
 					[&]()
 				{
-					render->m_animation->animationUpdate();
+//					render->m_animation->animationUpdate();
 					motion_worker_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);
@@ -450,7 +441,16 @@ int main()
 				job.mFinish =
 					[&]()
 				{
-					render_cmds[7] = model_pipeline.draw(context);
+					{
+						std::vector<vk::CommandBuffer> cmds(1);
+						cmds[0] = animeCmd.get();
+						render_cmds[7] = animater.dispach(context, cmds);
+					}
+					{
+						std::vector<vk::CommandBuffer> cmds(1);
+						cmds[0] = drawCmd.get();
+						render_cmds[8] = renderer.draw(context, cmds);
+					}
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);
@@ -461,7 +461,7 @@ int main()
 					[&]()
 				{
 					render_cmds[1] = sBoid::Order().execute(context);
-					render_cmds[8] = sBoid::Order().draw(context);
+					render_cmds[9] = sBoid::Order().draw(context);
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);
@@ -472,7 +472,7 @@ int main()
 					[&]()
 				{
 					render_cmds[2] = sBulletSystem::Order().execute(context);
-					render_cmds[9] = sBulletSystem::Order().draw(context);
+					render_cmds[10] = sBulletSystem::Order().draw(context);
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);

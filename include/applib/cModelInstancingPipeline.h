@@ -12,12 +12,6 @@
 #include <applib/cLightPipeline.h>
 #include <applib/cModelPipeline.h>
 #include <applib/cAppModel.h>
-template<typename Set>
-struct DescriptorSet
-{
-	vk::UniqueDescriptorSet m_handle;
-	Set m_descriptors;
-};
 
 struct LightSample : public Light
 {
@@ -27,7 +21,7 @@ struct LightSample : public Light
 	LightSample()
 	{
 		life = std::rand() % 50 + 30;
-		m_param.m_position = glm::vec4(glm::ballRand(3000.f), std::rand() % 50 + 500.f);
+		m_param.m_position = glm::vec4(glm::ballRand(300.f), std::rand() % 50 + 300.f);
 		m_param.m_emission = glm::vec4(glm::normalize(glm::abs(glm::ballRand(1.f)) + glm::vec3(0.f, 0.f, 0.01f)), 1.f);
 
 	}
@@ -44,105 +38,212 @@ struct LightSample : public Light
 
 };
 
-struct ModelRenderDescriptor : public DescriptorModuleOld
+struct AppModelInstancingAnimationPipeline
 {
-	enum {
-		DESCRIPTOR_TEXTURE_NUM = 16,
-	};
-
-	struct Set
+	AppModelInstancingAnimationPipeline(const std::shared_ptr<btr::Context>& context)
 	{
-		TypedBufferInfo<cModel::ModelInfo> m_model_info;
-		TypedBufferInfo<ModelInstancingInfo> m_instancing_info;
-		TypedBufferInfo<mat4> m_bonetransform;
-		TypedBufferInfo<uint32_t> m_material_index;
-		TypedBufferInfo<MaterialBuffer> m_material;
-		std::array<vk::DescriptorImageInfo, DESCRIPTOR_TEXTURE_NUM> m_images;
-	};
-
-	ModelRenderDescriptor(const std::shared_ptr<btr::Context>& context)
-	{
-		std::vector<vk::DescriptorSetLayoutBinding> binding =
+		std::string path = btr::getResourceLibPath() + "shader\\binary\\";
+		std::vector<ShaderDescriptor> shader_desc =
 		{
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(1)
-			.setBinding(0),
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(1)
-			.setBinding(1),
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(1)
-			.setBinding(2),
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(1)
-			.setBinding(3),
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(1)
-			.setBinding(4),
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute)
-			.setDescriptorCount(DESCRIPTOR_TEXTURE_NUM)
-			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-			.setBinding(5),
+			{ path + "001_Clear.comp.spv", vk::ShaderStageFlagBits::eCompute },
+		{ path + "002_AnimationUpdate.comp.spv",vk::ShaderStageFlagBits::eCompute },
+		{ path + "003_MotionUpdate.comp.spv",vk::ShaderStageFlagBits::eCompute },
+		{ path + "004_NodeTransform.comp.spv",vk::ShaderStageFlagBits::eCompute },
+		{ path + "005_CameraCulling.comp.spv",vk::ShaderStageFlagBits::eCompute },
+		{ path + "006_BoneTransform.comp.spv",vk::ShaderStageFlagBits::eCompute },
 		};
-		m_descriptor_set_layout = createDescriptorSetLayout(context, binding);
-		m_descriptor_pool = createDescriptorPool(context, binding, 30);
-		m_context = context;
+		assert(shader_desc.size() == SHADER_NUM);
+		m_compute_shader = std::make_shared<ShaderModule>(context, shader_desc);
+		m_animation_descriptor_layout = std::make_shared<ModelAnimateDescriptor>(context);
+
+		// pipeline layout
+		{
+			vk::DescriptorSetLayout layouts[] = {
+				m_animation_descriptor_layout->getLayout(),
+			};
+			vk::PipelineLayoutCreateInfo pipeline_layout_info = vk::PipelineLayoutCreateInfo()
+				.setSetLayoutCount(array_length(layouts))
+				.setPSetLayouts(layouts);
+			m_pipeline_layout = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+		}
+
+		// Create pipeline
+		std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info = {
+			vk::ComputePipelineCreateInfo()
+			.setStage(m_compute_shader->getShaderStageInfo()[SHADER_COMPUTE_CLEAR])
+			.setLayout(m_pipeline_layout.get()),
+			vk::ComputePipelineCreateInfo()
+			.setStage(m_compute_shader->getShaderStageInfo()[SHADER_COMPUTE_ANIMATION_UPDATE])
+			.setLayout(m_pipeline_layout.get()),
+			vk::ComputePipelineCreateInfo()
+			.setStage(m_compute_shader->getShaderStageInfo()[SHADER_COMPUTE_MOTION_UPDATE])
+			.setLayout(m_pipeline_layout.get()),
+			vk::ComputePipelineCreateInfo()
+			.setStage(m_compute_shader->getShaderStageInfo()[SHADER_COMPUTE_NODE_TRANSFORM])
+			.setLayout(m_pipeline_layout.get()),
+			vk::ComputePipelineCreateInfo()
+			.setStage(m_compute_shader->getShaderStageInfo()[SHADER_COMPUTE_CULLING])
+			.setLayout(m_pipeline_layout.get()),
+			vk::ComputePipelineCreateInfo()
+			.setStage(m_compute_shader->getShaderStageInfo()[SHADER_COMPUTE_BONE_TRANSFORM])
+			.setLayout(m_pipeline_layout.get()),
+		};
+
+		auto p = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
+		for (size_t i = 0; i < p.size(); i++) {
+			m_pipeline[i] = std::move(p[i]);
+		}
+
+	}
+	vk::UniqueCommandBuffer createCmd(const std::shared_ptr<btr::Context>& context, const DescriptorSet<ModelAnimateDescriptor::Set>& descriptor_set)
+	{
+		// recode
+		vk::CommandBufferAllocateInfo cmd_buffer_info;
+		cmd_buffer_info.commandBufferCount = 1;
+		cmd_buffer_info.commandPool = context->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
+		cmd_buffer_info.level = vk::CommandBufferLevel::eSecondary;
+		auto cmd = std::move(context->m_device->allocateCommandBuffersUnique(cmd_buffer_info)[0]);
+
+		{
+			const auto& descriptor = descriptor_set.m_descriptors;
+
+			vk::CommandBufferBeginInfo begin_info;
+			begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
+			vk::CommandBufferInheritanceInfo inheritance_info;
+			begin_info.setPInheritanceInfo(&inheritance_info);
+			cmd->begin(begin_info);
+
+			{
+				vk::BufferMemoryBarrier barrier;
+				barrier.setBuffer(descriptor.m_draw_indirect.buffer);
+				barrier.setSize(descriptor.m_draw_indirect.range);
+				barrier.setOffset(descriptor.m_draw_indirect.offset);
+				barrier.setSrcAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
+				barrier.setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
+				cmd->pipelineBarrier(vk::PipelineStageFlagBits::eDrawIndirect, vk::PipelineStageFlagBits::eComputeShader,
+					vk::DependencyFlags(), {}, barrier, {});
+			};
+
+			for (size_t i = 0; i < m_pipeline.size(); i++)
+			{
+
+				if (i == SHADER_COMPUTE_CULLING)
+				{
+					vk::BufferMemoryBarrier barrier;
+					barrier.setBuffer(descriptor.m_draw_indirect.buffer);
+					barrier.setSize(descriptor.m_draw_indirect.range);
+					barrier.setOffset(descriptor.m_draw_indirect.offset);
+					barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+					barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+					cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, barrier, {});
+				}
+				if (i == SHADER_COMPUTE_MOTION_UPDATE)
+				{
+					vk::BufferMemoryBarrier barrier[2];
+					barrier[0].setBuffer(descriptor.m_playing_animation.buffer);
+					barrier[0].setSize(descriptor.m_playing_animation.range);
+					barrier[0].setOffset(descriptor.m_playing_animation.offset);
+					barrier[0].setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+					barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+					barrier[1].setBuffer(descriptor.m_node_transform.buffer);
+					barrier[1].setSize(descriptor.m_node_transform.range);
+					barrier[1].setOffset(descriptor.m_node_transform.offset);
+					barrier[1].setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
+					barrier[1].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
+					cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
+						vk::DependencyFlags(), 0, nullptr, array_length(barrier), barrier, 0, nullptr);
+				}
+				if (i == SHADER_COMPUTE_NODE_TRANSFORM)
+				{
+					vk::BufferMemoryBarrier barrier[2];
+					barrier[0].setBuffer(descriptor.m_node_transform.buffer);
+					barrier[0].setSize(descriptor.m_node_transform.range);
+					barrier[0].setOffset(descriptor.m_node_transform.offset);
+					barrier[0].setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+					barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+					barrier[1].setBuffer(descriptor.m_instance_map.buffer);
+					barrier[1].setSize(descriptor.m_instance_map.range);
+					barrier[1].setOffset(descriptor.m_instance_map.offset);
+					barrier[1].setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
+					barrier[1].setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+					cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
+						vk::DependencyFlags(), 0, nullptr, array_length(barrier), barrier, 0, nullptr);
+				}
+				if (i == SHADER_COMPUTE_BONE_TRANSFORM)
+				{
+					vk::BufferMemoryBarrier barrier[3];
+					barrier[0].setBuffer(descriptor.m_node_transform.buffer);
+					barrier[0].setSize(descriptor.m_node_transform.range);
+					barrier[0].setOffset(descriptor.m_node_transform.offset);
+					barrier[0].setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+					barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+					barrier[1].setBuffer(descriptor.m_instance_map.buffer);
+					barrier[1].setSize(descriptor.m_instance_map.range);
+					barrier[1].setOffset(descriptor.m_instance_map.offset);
+					barrier[1].setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+					barrier[1].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+					barrier[2].setBuffer(descriptor.m_instancing_info.buffer);
+					barrier[2].setSize(descriptor.m_instancing_info.range);
+					barrier[2].setOffset(descriptor.m_instancing_info.offset);
+					barrier[2].setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+					barrier[2].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+					cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
+						vk::DependencyFlags(), 0, nullptr, array_length(barrier), barrier, 0, nullptr);
+				}
+
+				cmd->bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[i].get());
+				cmd->bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout.get(), 0, descriptor_set.m_handle.get(), {});
+				cmd->dispatchIndirect(descriptor.m_anime_indirect.buffer, descriptor.m_anime_indirect.offset + i * 12);
+
+			}
+			vk::BufferMemoryBarrier barrier;
+			barrier.setBuffer(descriptor.m_bone_transform.buffer);
+			barrier.setSize(descriptor.m_bone_transform.range);
+			barrier.setOffset(descriptor.m_bone_transform.offset);
+			barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+			barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eVertexShader,
+				{}, {}, barrier, {});
+			barrier.setBuffer(descriptor.m_draw_indirect.buffer);
+			barrier.setSize(descriptor.m_draw_indirect.range);
+			barrier.setOffset(descriptor.m_draw_indirect.offset);
+			barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+			barrier.setDstAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
+			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect,
+				{}, {}, barrier, {});
+			cmd->end();
+		}
+		return cmd;
+	}
+	vk::CommandBuffer dispach(const std::shared_ptr<btr::Context>& context, std::vector<vk::CommandBuffer>& cmds)
+	{
+		auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
+
+		cmd.executeCommands(cmds.size(), cmds.data());
+		cmd.end();
+
+		return cmd;
+
 	}
 
-	DescriptorSet<Set> allocateDescriptorSet(Set&& set)
+	enum Shader
 	{
-		DescriptorSet<Set> desc;
-		vk::DescriptorSetLayout layouts[] =
-		{
-			m_descriptor_set_layout.get()
-		};
-		vk::DescriptorSetAllocateInfo descriptor_set_alloc_info;
-		descriptor_set_alloc_info.setDescriptorPool(m_descriptor_pool.get());
-		descriptor_set_alloc_info.setDescriptorSetCount(array_length(layouts));
-		descriptor_set_alloc_info.setPSetLayouts(layouts);
-		desc.m_handle = std::move(m_context->m_device->allocateDescriptorSetsUnique(descriptor_set_alloc_info)[0]);
-		vk::DescriptorBufferInfo storages[] = {
-			set.m_model_info,
-			set.m_instancing_info,
-			set.m_bonetransform,
-			set.m_material_index,
-			set.m_material,
-		};
+		SHADER_COMPUTE_CLEAR,
+		SHADER_COMPUTE_ANIMATION_UPDATE,
+		SHADER_COMPUTE_MOTION_UPDATE,
+		SHADER_COMPUTE_NODE_TRANSFORM,
+		SHADER_COMPUTE_CULLING,
+		SHADER_COMPUTE_BONE_TRANSFORM,
 
-		vk::WriteDescriptorSet write[] =
-		{
-			vk::WriteDescriptorSet()
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(array_length(storages))
-			.setPBufferInfo(storages)
-			.setDstBinding(0)
-			.setDstSet(desc.m_handle.get()),
-			vk::WriteDescriptorSet()
-			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-			.setDescriptorCount((uint32_t)set.m_images.size())
-			.setPImageInfo(set.m_images.data())
-			.setDstBinding(5)
-			.setDstSet(desc.m_handle.get()),
-		};
-		m_context->m_device->updateDescriptorSets(array_length(write), write, 0, 0);
+		SHADER_NUM,
+	};
+	std::shared_ptr<ShaderModule> m_compute_shader;
 
-		desc.m_descriptors = set;
-		return desc;
-	}
-	std::shared_ptr<btr::Context> m_context;
+	std::array<vk::UniquePipeline, SHADER_NUM> m_pipeline;
+	std::shared_ptr<ModelAnimateDescriptor> m_animation_descriptor_layout;
+	vk::UniquePipelineLayout m_pipeline_layout;
+
 };
-using sModelRenderDescriptor = SingletonEx<ModelRenderDescriptor>;
 
 struct AppModelInstancingRenderer
 {
@@ -398,358 +499,5 @@ private:
 	std::shared_ptr<cFowardPlusPipeline> m_light_pipeline;
 public:
 	std::shared_ptr<cFowardPlusPipeline> getLight() { return m_light_pipeline; }
-
-};
-
-struct ModelAnimateDescriptor : public DescriptorModuleOld
-{
-	struct Set
-	{
-		TypedBufferInfo<cModel::ModelInfo> m_model_info;
-		TypedBufferInfo<ModelInstancingInfo> m_instancing_info;
-		TypedBufferInfo<AnimationInfo> m_animation_info;
-		TypedBufferInfo<PlayingAnimation> m_playing_animation;
-		TypedBufferInfo<NodeInfo> m_node_info;
-		TypedBufferInfo<BoneInfo> m_bone_info;
-		TypedBufferInfo<mat4> m_world;
-		TypedBufferInfo<mat4> m_node_transform;
-		TypedBufferInfo<mat4> m_bone_transform;
-		TypedBufferInfo<uint32_t> m_instance_map;
-		TypedBufferInfo<uvec3> m_anime_indirect;
-		TypedBufferInfo<cModel::Mesh> m_draw_indirect;
-
-		std::array<vk::DescriptorImageInfo, 1> m_motion_texture;
-	};
-
-	ModelAnimateDescriptor(const std::shared_ptr<btr::Context>& context)
-	{
-		std::vector<vk::DescriptorSetLayoutBinding> binding =
-		{
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(1)
-			.setBinding(0),
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(1)
-			.setBinding(1),
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(1)
-			.setBinding(2),
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(1)
-			.setBinding(3),
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(1)
-			.setBinding(4),
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(1)
-			.setBinding(5),
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(1)
-			.setBinding(6),
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(1)
-			.setBinding(7),
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(1)
-			.setBinding(8),
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(1)
-			.setBinding(9),
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(1)
-			.setBinding(10),
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
-			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-			.setDescriptorCount(1)
-			.setBinding(32),
-		};
-		m_descriptor_set_layout = createDescriptorSetLayout(context, binding);
-		m_descriptor_pool = createDescriptorPool(context, binding, 30);
-		m_context = context;
-	}
-
-	DescriptorSet<Set> allocateDescriptorSet(Set&& set)
-	{
-		DescriptorSet<Set> desc;
-		vk::DescriptorSetLayout layouts[] =
-		{
-			m_descriptor_set_layout.get()
-		};
-		vk::DescriptorSetAllocateInfo descriptor_set_alloc_info;
-		descriptor_set_alloc_info.setDescriptorPool(m_descriptor_pool.get());
-		descriptor_set_alloc_info.setDescriptorSetCount(array_length(layouts));
-		descriptor_set_alloc_info.setPSetLayouts(layouts);
-		desc.m_handle = std::move(m_context->m_device->allocateDescriptorSetsUnique(descriptor_set_alloc_info)[0]);
-
-		vk::DescriptorBufferInfo storages[] = {
-			set.m_model_info,
-			set.m_instancing_info,
-			set.m_animation_info,
-			set.m_playing_animation,
-			set.m_node_info,
-			set.m_bone_info,
-			set.m_node_transform,
-			set.m_world,
-			set.m_instance_map,
-			set.m_draw_indirect,
-			set.m_bone_transform,
-		};
-
-		std::vector<vk::DescriptorImageInfo> images =
-		{
-			set.m_motion_texture[0]
-		};
-
-		std::vector<vk::WriteDescriptorSet> write =
-		{
-			vk::WriteDescriptorSet()
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(array_length(storages))
-			.setPBufferInfo(storages)
-			.setDstBinding(0)
-			.setDstSet(desc.m_handle.get()),
-			vk::WriteDescriptorSet()
-			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-			.setDescriptorCount(images.size())
-			.setPImageInfo(images.data())
-			.setDstBinding(32)
-			.setDstSet(desc.m_handle.get()),
-		};
-		m_context->m_device->updateDescriptorSets(write, {});
-		desc.m_descriptors = set;
-		return desc;
-	}
-
-	std::shared_ptr<btr::Context> m_context;
-};
-using sModelAnimateDescriptor = SingletonEx<ModelAnimateDescriptor>;
-
-struct ModelInstancingAnimationPipeline
-{
-	ModelInstancingAnimationPipeline(const std::shared_ptr<btr::Context>& context)
-	{
-		std::string path = btr::getResourceLibPath() + "shader\\binary\\";
-		std::vector<ShaderDescriptor> shader_desc =
-		{
-			{ path+"001_Clear.comp.spv", vk::ShaderStageFlagBits::eCompute },
-			{ path+"002_AnimationUpdate.comp.spv",vk::ShaderStageFlagBits::eCompute },
-			{ path+"003_MotionUpdate.comp.spv",vk::ShaderStageFlagBits::eCompute },
-			{ path+"004_NodeTransform.comp.spv",vk::ShaderStageFlagBits::eCompute },
-			{ path+"005_CameraCulling.comp.spv",vk::ShaderStageFlagBits::eCompute },
-			{ path+"006_BoneTransform.comp.spv",vk::ShaderStageFlagBits::eCompute },
-		};
-		assert(shader_desc.size() == SHADER_NUM);
-		m_compute_shader = std::make_shared<ShaderModule>(context, shader_desc);
-		m_animation_descriptor_layout = std::make_shared<ModelAnimateDescriptor>(context);
-
-		// pipeline layout
-		{
-			vk::DescriptorSetLayout layouts[] = {
-				m_animation_descriptor_layout->getLayout(),
-			};
-			vk::PipelineLayoutCreateInfo pipeline_layout_info = vk::PipelineLayoutCreateInfo()
-				.setSetLayoutCount(array_length(layouts))
-				.setPSetLayouts(layouts);
-			m_pipeline_layout = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
-		}
-
-		// Create pipeline
-		std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info = {
-			vk::ComputePipelineCreateInfo()
-			.setStage(m_compute_shader->getShaderStageInfo()[SHADER_COMPUTE_CLEAR])
-			.setLayout(m_pipeline_layout.get()),
-			vk::ComputePipelineCreateInfo()
-			.setStage(m_compute_shader->getShaderStageInfo()[SHADER_COMPUTE_ANIMATION_UPDATE])
-			.setLayout(m_pipeline_layout.get()),
-			vk::ComputePipelineCreateInfo()
-			.setStage(m_compute_shader->getShaderStageInfo()[SHADER_COMPUTE_MOTION_UPDATE])
-			.setLayout(m_pipeline_layout.get()),
-			vk::ComputePipelineCreateInfo()
-			.setStage(m_compute_shader->getShaderStageInfo()[SHADER_COMPUTE_NODE_TRANSFORM])
-			.setLayout(m_pipeline_layout.get()),
-			vk::ComputePipelineCreateInfo()
-			.setStage(m_compute_shader->getShaderStageInfo()[SHADER_COMPUTE_CULLING])
-			.setLayout(m_pipeline_layout.get()),
-			vk::ComputePipelineCreateInfo()
-			.setStage(m_compute_shader->getShaderStageInfo()[SHADER_COMPUTE_BONE_TRANSFORM])
-			.setLayout(m_pipeline_layout.get()),
-		};
-
-		auto p = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
-		for (size_t i = 0; i < p.size(); i++) {
-			m_pipeline[i] = std::move(p[i]);
-		}
-
-	}
-	vk::UniqueCommandBuffer createCmd(const std::shared_ptr<btr::Context>& context, const DescriptorSet<ModelAnimateDescriptor::Set>& descriptor_set)
-	{
-		// recode
-		vk::CommandBufferAllocateInfo cmd_buffer_info;
-		cmd_buffer_info.commandBufferCount = 1;
-		cmd_buffer_info.commandPool = context->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
-		cmd_buffer_info.level = vk::CommandBufferLevel::eSecondary;
-		auto cmd = std::move(context->m_device->allocateCommandBuffersUnique(cmd_buffer_info)[0]);
-
-		{
-			const auto& descriptor = descriptor_set.m_descriptors;
-
-			vk::CommandBufferBeginInfo begin_info;
-			begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
-			vk::CommandBufferInheritanceInfo inheritance_info;
-			begin_info.setPInheritanceInfo(&inheritance_info);
-			cmd->begin(begin_info);
-
-			{
-				vk::BufferMemoryBarrier barrier;
-				barrier.setBuffer(descriptor.m_draw_indirect.buffer);
-				barrier.setSize(descriptor.m_draw_indirect.range);
-				barrier.setOffset(descriptor.m_draw_indirect.offset);
-				barrier.setSrcAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
-				barrier.setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
-				cmd->pipelineBarrier(vk::PipelineStageFlagBits::eDrawIndirect, vk::PipelineStageFlagBits::eComputeShader,
-					vk::DependencyFlags(), {}, barrier, {});
-			};
-
-			for (size_t i = 0; i < m_pipeline.size(); i++)
-			{
-
-				if (i == SHADER_COMPUTE_CULLING)
-				{
-					vk::BufferMemoryBarrier barrier;
-					barrier.setBuffer(descriptor.m_draw_indirect.buffer);
-					barrier.setSize(descriptor.m_draw_indirect.range);
-					barrier.setOffset(descriptor.m_draw_indirect.offset);
-					barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
-					barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-					cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, barrier, {});
-				}
-				if (i == SHADER_COMPUTE_MOTION_UPDATE)
-				{
-					vk::BufferMemoryBarrier barrier[2];
-					barrier[0].setBuffer(descriptor.m_playing_animation.buffer);
-					barrier[0].setSize(descriptor.m_playing_animation.range);
-					barrier[0].setOffset(descriptor.m_playing_animation.offset);
-					barrier[0].setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
-					barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-					barrier[1].setBuffer(descriptor.m_node_transform.buffer);
-					barrier[1].setSize(descriptor.m_node_transform.range);
-					barrier[1].setOffset(descriptor.m_node_transform.offset);
-					barrier[1].setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
-					barrier[1].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
-					cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
-						vk::DependencyFlags(), 0, nullptr, array_length(barrier), barrier, 0, nullptr);
-				}
-				if (i == SHADER_COMPUTE_NODE_TRANSFORM)
-				{
-					vk::BufferMemoryBarrier barrier[2];
-					barrier[0].setBuffer(descriptor.m_node_transform.buffer);
-					barrier[0].setSize(descriptor.m_node_transform.range);
-					barrier[0].setOffset(descriptor.m_node_transform.offset);
-					barrier[0].setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
-					barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-					barrier[1].setBuffer(descriptor.m_instance_map.buffer);
-					barrier[1].setSize(descriptor.m_instance_map.range);
-					barrier[1].setOffset(descriptor.m_instance_map.offset);
-					barrier[1].setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
-					barrier[1].setDstAccessMask(vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite);
-					cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
-						vk::DependencyFlags(), 0, nullptr, array_length(barrier), barrier, 0, nullptr);
-				}
-				if (i == SHADER_COMPUTE_BONE_TRANSFORM)
-				{
-					vk::BufferMemoryBarrier barrier[3];
-					barrier[0].setBuffer(descriptor.m_node_transform.buffer);
-					barrier[0].setSize(descriptor.m_node_transform.range);
-					barrier[0].setOffset(descriptor.m_node_transform.offset);
-					barrier[0].setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
-					barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-					barrier[1].setBuffer(descriptor.m_instance_map.buffer);
-					barrier[1].setSize(descriptor.m_instance_map.range);
-					barrier[1].setOffset(descriptor.m_instance_map.offset);
-					barrier[1].setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
-					barrier[1].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-					barrier[2].setBuffer(descriptor.m_instancing_info.buffer);
-					barrier[2].setSize(descriptor.m_instancing_info.range);
-					barrier[2].setOffset(descriptor.m_instancing_info.offset);
-					barrier[2].setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
-					barrier[2].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-					cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
-						vk::DependencyFlags(), 0, nullptr, array_length(barrier), barrier, 0, nullptr);
-				}
-
-				cmd->bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[i].get());
-				cmd->bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout.get(), 0, descriptor_set.m_handle.get(), {});
-				cmd->dispatchIndirect(descriptor.m_anime_indirect.buffer, descriptor.m_anime_indirect.offset + i * 12);
-
-			}
-			vk::BufferMemoryBarrier barrier;
-			barrier.setBuffer(descriptor.m_bone_transform.buffer);
-			barrier.setSize(descriptor.m_bone_transform.range);
-			barrier.setOffset(descriptor.m_bone_transform.offset);
-			barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
-			barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eVertexShader,
-				{}, {}, barrier, {});
-			barrier.setBuffer(descriptor.m_draw_indirect.buffer);
-			barrier.setSize(descriptor.m_draw_indirect.range);
-			barrier.setOffset(descriptor.m_draw_indirect.offset);
-			barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
-			barrier.setDstAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
-			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect,
-				{}, {}, barrier, {});
-			cmd->end();
-		}
-		return cmd;
-	}
-	vk::CommandBuffer dispach(const std::shared_ptr<btr::Context>& context, std::vector<vk::CommandBuffer>& cmds)
-	{
-		auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
-
-		cmd.executeCommands(cmds.size(), cmds.data());
-		cmd.end();
-
-		return cmd;
-
-	}
-
-	enum Shader
-	{
-		SHADER_COMPUTE_CLEAR,
-		SHADER_COMPUTE_ANIMATION_UPDATE,
-		SHADER_COMPUTE_MOTION_UPDATE,
-		SHADER_COMPUTE_NODE_TRANSFORM,
-		SHADER_COMPUTE_CULLING,
-		SHADER_COMPUTE_BONE_TRANSFORM,
-
-		SHADER_NUM,
-	};
-	std::shared_ptr<ShaderModule> m_compute_shader;
-
-	std::array<vk::UniquePipeline, SHADER_NUM> m_pipeline;
-	std::shared_ptr<ModelAnimateDescriptor> m_animation_descriptor_layout;
-	vk::UniquePipelineLayout m_pipeline_layout;
 
 };

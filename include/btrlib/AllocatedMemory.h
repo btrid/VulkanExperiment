@@ -7,6 +7,13 @@
 #include <btrlib/sGlobal.h>
 //#include <btrlib/Context.h>
 
+template<typename Set>
+struct DescriptorSet
+{
+	vk::UniqueDescriptorSet m_handle;
+	Set m_descriptors;
+};
+
 template<typename T, typename U>
 struct TypedInfo : public U
 {

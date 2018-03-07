@@ -481,3 +481,252 @@ struct AppModel
 	};
 	AppModelRender m_render;
 };
+
+struct ModelAnimateDescriptor : public DescriptorModuleOld
+{
+	struct Set
+	{
+		TypedBufferInfo<cModel::ModelInfo> m_model_info;
+		TypedBufferInfo<ModelInstancingInfo> m_instancing_info;
+		TypedBufferInfo<AnimationInfo> m_animation_info;
+		TypedBufferInfo<PlayingAnimation> m_playing_animation;
+		TypedBufferInfo<NodeInfo> m_node_info;
+		TypedBufferInfo<BoneInfo> m_bone_info;
+		TypedBufferInfo<mat4> m_world;
+		TypedBufferInfo<mat4> m_node_transform;
+		TypedBufferInfo<mat4> m_bone_transform;
+		TypedBufferInfo<uint32_t> m_instance_map;
+		TypedBufferInfo<uvec3> m_anime_indirect;
+		TypedBufferInfo<cModel::Mesh> m_draw_indirect;
+
+		std::array<vk::DescriptorImageInfo, 1> m_motion_texture;
+	};
+
+	ModelAnimateDescriptor(const std::shared_ptr<btr::Context>& context)
+	{
+		std::vector<vk::DescriptorSetLayoutBinding> binding =
+		{
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(0),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(1),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(2),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(3),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(4),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(5),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(6),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(7),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(8),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(9),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(10),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(vk::ShaderStageFlagBits::eCompute)
+			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+			.setDescriptorCount(1)
+			.setBinding(32),
+		};
+		m_descriptor_set_layout = createDescriptorSetLayout(context, binding);
+		m_descriptor_pool = createDescriptorPool(context, binding, 30);
+		m_context = context;
+	}
+
+	DescriptorSet<Set> allocateDescriptorSet(Set&& set)
+	{
+		DescriptorSet<Set> desc;
+		vk::DescriptorSetLayout layouts[] =
+		{
+			m_descriptor_set_layout.get()
+		};
+		vk::DescriptorSetAllocateInfo descriptor_set_alloc_info;
+		descriptor_set_alloc_info.setDescriptorPool(m_descriptor_pool.get());
+		descriptor_set_alloc_info.setDescriptorSetCount(array_length(layouts));
+		descriptor_set_alloc_info.setPSetLayouts(layouts);
+		desc.m_handle = std::move(m_context->m_device->allocateDescriptorSetsUnique(descriptor_set_alloc_info)[0]);
+
+		vk::DescriptorBufferInfo storages[] = {
+			set.m_model_info,
+			set.m_instancing_info,
+			set.m_animation_info,
+			set.m_playing_animation,
+			set.m_node_info,
+			set.m_bone_info,
+			set.m_node_transform,
+			set.m_world,
+			set.m_instance_map,
+			set.m_draw_indirect,
+			set.m_bone_transform,
+		};
+
+		std::vector<vk::DescriptorImageInfo> images =
+		{
+			set.m_motion_texture[0]
+		};
+
+		std::vector<vk::WriteDescriptorSet> write =
+		{
+			vk::WriteDescriptorSet()
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(array_length(storages))
+			.setPBufferInfo(storages)
+			.setDstBinding(0)
+			.setDstSet(desc.m_handle.get()),
+			vk::WriteDescriptorSet()
+			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+			.setDescriptorCount(images.size())
+			.setPImageInfo(images.data())
+			.setDstBinding(32)
+			.setDstSet(desc.m_handle.get()),
+		};
+		m_context->m_device->updateDescriptorSets(write, {});
+		desc.m_descriptors = set;
+		return desc;
+	}
+
+	std::shared_ptr<btr::Context> m_context;
+};
+
+struct ModelRenderDescriptor : public DescriptorModuleOld
+{
+	enum {
+		DESCRIPTOR_TEXTURE_NUM = 16,
+	};
+
+	struct Set
+	{
+		TypedBufferInfo<cModel::ModelInfo> m_model_info;
+		TypedBufferInfo<ModelInstancingInfo> m_instancing_info;
+		TypedBufferInfo<mat4> m_bonetransform;
+		TypedBufferInfo<uint32_t> m_material_index;
+		TypedBufferInfo<MaterialBuffer> m_material;
+		std::array<vk::DescriptorImageInfo, DESCRIPTOR_TEXTURE_NUM> m_images;
+	};
+
+	ModelRenderDescriptor(const std::shared_ptr<btr::Context>& context)
+	{
+		std::vector<vk::DescriptorSetLayoutBinding> binding =
+		{
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(0),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(1),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(2),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(3),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(4),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute)
+			.setDescriptorCount(DESCRIPTOR_TEXTURE_NUM)
+			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+			.setBinding(5),
+		};
+		m_descriptor_set_layout = createDescriptorSetLayout(context, binding);
+		m_descriptor_pool = createDescriptorPool(context, binding, 30);
+		m_context = context;
+	}
+
+	DescriptorSet<Set> allocateDescriptorSet(Set&& set)
+	{
+		DescriptorSet<Set> desc;
+		vk::DescriptorSetLayout layouts[] =
+		{
+			m_descriptor_set_layout.get()
+		};
+		vk::DescriptorSetAllocateInfo descriptor_set_alloc_info;
+		descriptor_set_alloc_info.setDescriptorPool(m_descriptor_pool.get());
+		descriptor_set_alloc_info.setDescriptorSetCount(array_length(layouts));
+		descriptor_set_alloc_info.setPSetLayouts(layouts);
+		desc.m_handle = std::move(m_context->m_device->allocateDescriptorSetsUnique(descriptor_set_alloc_info)[0]);
+		vk::DescriptorBufferInfo storages[] = {
+			set.m_model_info,
+			set.m_instancing_info,
+			set.m_bonetransform,
+			set.m_material_index,
+			set.m_material,
+		};
+
+		vk::WriteDescriptorSet write[] =
+		{
+			vk::WriteDescriptorSet()
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(array_length(storages))
+			.setPBufferInfo(storages)
+			.setDstBinding(0)
+			.setDstSet(desc.m_handle.get()),
+			vk::WriteDescriptorSet()
+			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+			.setDescriptorCount((uint32_t)set.m_images.size())
+			.setPImageInfo(set.m_images.data())
+			.setDstBinding(5)
+			.setDstSet(desc.m_handle.get()),
+		};
+		m_context->m_device->updateDescriptorSets(array_length(write), write, 0, 0);
+
+		desc.m_descriptors = set;
+		return desc;
+	}
+	std::shared_ptr<btr::Context> m_context;
+};
+
+using sModelAnimateDescriptor = SingletonEx<ModelAnimateDescriptor>;
+using sModelRenderDescriptor = SingletonEx<ModelRenderDescriptor>;
+extern DescriptorSet<ModelAnimateDescriptor::Set> createAnimateDescriptorSet(const std::shared_ptr<AppModel>& appModel);
+extern DescriptorSet<ModelRenderDescriptor::Set> createRenderDescriptorSet(const std::shared_ptr<AppModel>& appModel);
