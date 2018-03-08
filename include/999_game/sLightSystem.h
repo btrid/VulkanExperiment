@@ -26,7 +26,7 @@ struct SpotLightInfo
 	float m_penumbra_angle; //… 有効拡散角度。ライトのエッジがボケる大きさを設定します
 	float m_dropoff; //… スポットライトのビームの中心からエッジに向かって、ライトの明るさが減衰する割合を設定します
 };
-struct LightData
+struct LightDataEx
 {
 	vec4 m_pos;	//!< xyz:pos w:scale
 	vec4 m_normal;
@@ -75,7 +75,7 @@ struct sLightSystem : public Singleton<sLightSystem>
 
 	btr::BufferMemoryEx<LightInfo> m_light_info;
 	btr::BufferMemoryEx<TileInfo> m_tile_info;
-	btr::BufferMemoryEx<LightData> m_light_data;
+	btr::BufferMemoryEx<LightDataEx> m_light_data;
 	btr::BufferMemoryEx<uint32_t> m_light_data_counter;
 	btr::BufferMemoryEx<uint32_t> m_tile_data_counter;
 	btr::BufferMemoryEx<uint32_t> m_tile_data_map;

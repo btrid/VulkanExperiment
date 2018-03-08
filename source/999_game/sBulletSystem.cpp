@@ -1,16 +1,11 @@
 #include <999_game/sBulletSystem.h>
 #include <applib/sSystem.h>
 
-void sBulletSystem::setup(std::shared_ptr<btr::Context>& context)
+void sBulletSystem::setup(std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target)
 {
-
+	m_render_target = render_target;
 	m_bullet_info_cpu.m_max_num = 8192/2;
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-
-	{
-		// レンダーパス
-		m_render_pass = app::g_app_instance->m_window->getRenderBackbufferPass();
-	}
 
 	{
 		{
@@ -77,6 +72,70 @@ void sBulletSystem::setup(std::shared_ptr<btr::Context>& context)
 		}
 
 	}
+	// レンダーパス
+	{
+		// sub pass
+		vk::AttachmentReference color_ref[] =
+		{
+			vk::AttachmentReference()
+			.setAttachment(0)
+			.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
+		};
+		vk::AttachmentReference depth_ref;
+		depth_ref.setAttachment(1);
+		depth_ref.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+
+		vk::SubpassDescription subpass;
+		subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+		subpass.setInputAttachmentCount(0);
+		subpass.setPInputAttachments(nullptr);
+		subpass.setColorAttachmentCount(array_length(color_ref));
+		subpass.setPColorAttachments(color_ref);
+		subpass.setPDepthStencilAttachment(&depth_ref);
+
+		vk::AttachmentDescription attach_description[] =
+		{
+			// color1
+			vk::AttachmentDescription()
+			.setFormat(render_target->m_info.format)
+			.setSamples(vk::SampleCountFlagBits::e1)
+			.setLoadOp(vk::AttachmentLoadOp::eLoad)
+			.setStoreOp(vk::AttachmentStoreOp::eStore)
+			.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
+			.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
+			// depth
+			vk::AttachmentDescription()
+			.setFormat(render_target->m_depth_info.format)
+			.setSamples(vk::SampleCountFlagBits::e1)
+			.setLoadOp(vk::AttachmentLoadOp::eLoad)
+			.setStoreOp(vk::AttachmentStoreOp::eStore)
+			.setInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
+			.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
+		};
+		vk::RenderPassCreateInfo renderpass_info;
+		renderpass_info.setAttachmentCount(array_length(attach_description));
+		renderpass_info.setPAttachments(attach_description);
+		renderpass_info.setSubpassCount(1);
+		renderpass_info.setPSubpasses(&subpass);
+
+		m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
+	}
+
+	{
+		vk::ImageView view[] = {
+			render_target->m_view,
+			render_target->m_depth_view,
+		};
+		vk::FramebufferCreateInfo framebuffer_info;
+		framebuffer_info.setRenderPass(m_render_pass.get());
+		framebuffer_info.setAttachmentCount(array_length(view));
+		framebuffer_info.setPAttachments(view);
+		framebuffer_info.setWidth(render_target->m_info.extent.width);
+		framebuffer_info.setHeight(render_target->m_info.extent.height);
+		framebuffer_info.setLayers(1);
+
+		m_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
+	}
 
 	{
 		struct ShaderDesc {
@@ -94,9 +153,6 @@ void sBulletSystem::setup(std::shared_ptr<btr::Context>& context)
 		for (uint32_t i = 0; i < SHADER_NUM; i++)
 		{
 			m_shader_module[i] = loadShaderUnique(context->m_device.getHandle(), path + shader_desc[i].name);
-			m_shader_info[i].setModule(m_shader_module[i].get());
-			m_shader_info[i].setStage(shader_desc[i].stage);
-			m_shader_info[i].setPName("main");
 		}
 	}
 
@@ -217,10 +273,16 @@ void sBulletSystem::setup(std::shared_ptr<btr::Context>& context)
 		std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 		{
 			vk::ComputePipelineCreateInfo()
-			.setStage(m_shader_info[SHADER_COMPUTE_UPDATE])
+			.setStage(vk::PipelineShaderStageCreateInfo()
+				.setModule(m_shader_module[SHADER_COMPUTE_UPDATE].get())
+				.setPName("main")
+				.setStage(vk::ShaderStageFlagBits::eCompute))
 			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get()),
 			vk::ComputePipelineCreateInfo()
-			.setStage(m_shader_info[SHADER_COMPUTE_EMIT])
+			.setStage(vk::PipelineShaderStageCreateInfo()
+				.setModule(m_shader_module[SHADER_COMPUTE_UPDATE].get())
+				.setPName("main")
+				.setStage(vk::ShaderStageFlagBits::eCompute))
 			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get()),
 		};
 		auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
@@ -231,8 +293,14 @@ void sBulletSystem::setup(std::shared_ptr<btr::Context>& context)
 		{
 			std::vector<vk::PipelineShaderStageCreateInfo> shader_info =
 			{
-				m_shader_info[SHADER_VERTEX_PARTICLE],
-				m_shader_info[SHADER_FRAGMENT_PARTICLE],
+				vk::PipelineShaderStageCreateInfo()
+				.setModule(m_shader_module[SHADER_VERTEX_PARTICLE].get())
+				.setPName("main")
+				.setStage(vk::ShaderStageFlagBits::eVertex),
+				vk::PipelineShaderStageCreateInfo()
+				.setModule(m_shader_module[SHADER_FRAGMENT_PARTICLE].get())
+				.setPName("main")
+				.setStage(vk::ShaderStageFlagBits::eFragment),
 			};
 
 			// assembly
@@ -244,9 +312,9 @@ void sBulletSystem::setup(std::shared_ptr<btr::Context>& context)
 			};
 
 			// viewport
-			vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)m_render_pass->getResolution().width, (float)m_render_pass->getResolution().height, 0.f, 1.f);
+			vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)render_target->m_resolution.width, (float)render_target->m_resolution.height, 0.f, 1.f);
 			std::vector<vk::Rect2D> scissor = {
-				vk::Rect2D(vk::Offset2D(0, 0), m_render_pass->getResolution())
+				vk::Rect2D(vk::Offset2D(0, 0), render_target->m_resolution)
 			};
 			vk::PipelineViewportStateCreateInfo viewportInfo;
 			viewportInfo.setViewportCount(1);
@@ -295,7 +363,7 @@ void sBulletSystem::setup(std::shared_ptr<btr::Context>& context)
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
 				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get())
-				.setRenderPass(m_render_pass->getRenderPass())
+				.setRenderPass(m_render_pass.get())
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
@@ -416,9 +484,9 @@ vk::CommandBuffer sBulletSystem::draw(std::shared_ptr<btr::Context>& context)
 	}
 
 	vk::RenderPassBeginInfo begin_render_Info;
-	begin_render_Info.setRenderPass(m_render_pass->getRenderPass());
-	begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), m_render_pass->getResolution()));
-	begin_render_Info.setFramebuffer(m_render_pass->getFramebuffer(context->getGPUFrame()));
+	begin_render_Info.setRenderPass(m_render_pass.get());
+	begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), m_render_target->m_resolution));
+	begin_render_Info.setFramebuffer(m_framebuffer.get());
 	cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
 	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_GRAPHICS_RENDER].get());

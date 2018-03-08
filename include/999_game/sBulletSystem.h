@@ -89,18 +89,18 @@ public:
 	btr::BufferMemory m_bullet_draw_indiret_info;
 	btr::BufferMemoryEx<uint32_t> m_bullet_LL_head_gpu;
 
-	std::shared_ptr<RenderPassModule> m_render_pass;
-
 	std::array<vk::UniqueDescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
 	std::array<vk::UniqueDescriptorSet, DESCRIPTOR_SET_NUM> m_descriptor_set;
-	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
 
+	std::shared_ptr<RenderTarget> m_render_target;
+	vk::UniqueRenderPass m_render_pass;
+	vk::UniqueFramebuffer m_framebuffer;
+	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
 	std::array<vk::UniquePipeline, PIPELINE_NUM> m_pipeline;
 	std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_module;
-	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_shader_info;
 
 	BulletInfo m_bullet_info_cpu;
-	void setup(std::shared_ptr<btr::Context>& context);
+	void setup(std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target);
 
 	vk::CommandBuffer execute(std::shared_ptr<btr::Context>& context);
 	vk::CommandBuffer draw(std::shared_ptr<btr::Context>& context);

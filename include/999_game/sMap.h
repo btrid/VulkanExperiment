@@ -337,7 +337,6 @@ struct sMap : public Singleton<sMap>
 
 struct sMap : public Singleton<sMap>
 {
-
 	enum
 	{
 		SHADER_VERTEX_FLOOR_EX,
@@ -356,23 +355,85 @@ struct sMap : public Singleton<sMap>
 		PIPELINE_NUM,
 	};
 
-	std::shared_ptr<RenderPassModule> m_render_pass;
-	std::vector<vk::UniqueCommandBuffer> m_cmd;
+	std::shared_ptr<RenderTarget> m_render_target;
+	vk::UniqueRenderPass m_render_pass;
+	vk::UniqueFramebuffer m_framebuffer;
+	vk::UniqueCommandBuffer m_cmd;
 
 	std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_module;
-	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_shader_info;
 	std::array<vk::UniquePipeline, PIPELINE_NUM> m_pipeline;
 	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
 
 	VoxelPipeline m_voxelize_pipeline;
 
-	void setup(std::shared_ptr<btr::Context>& context)
+	void setup(std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target)
 	{
+		m_render_target = render_target;
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
+		// レンダーパス
 		{
-			// レンダーパス
-			m_render_pass = app::g_app_instance->m_window->getRenderBackbufferPass();
+			// sub pass
+			vk::AttachmentReference color_ref[] =
+			{
+				vk::AttachmentReference()
+				.setAttachment(0)
+				.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
+			};
+			vk::AttachmentReference depth_ref;
+			depth_ref.setAttachment(1);
+			depth_ref.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+
+			vk::SubpassDescription subpass;
+			subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+			subpass.setInputAttachmentCount(0);
+			subpass.setPInputAttachments(nullptr);
+			subpass.setColorAttachmentCount(array_length(color_ref));
+			subpass.setPColorAttachments(color_ref);
+			subpass.setPDepthStencilAttachment(&depth_ref);
+
+			vk::AttachmentDescription attach_description[] =
+			{
+				// color1
+				vk::AttachmentDescription()
+				.setFormat(render_target->m_info.format)
+				.setSamples(vk::SampleCountFlagBits::e1)
+				.setLoadOp(vk::AttachmentLoadOp::eLoad)
+				.setStoreOp(vk::AttachmentStoreOp::eStore)
+				.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
+				.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
+				// depth
+				vk::AttachmentDescription()
+				.setFormat(render_target->m_depth_info.format)
+				.setSamples(vk::SampleCountFlagBits::e1)
+				.setLoadOp(vk::AttachmentLoadOp::eLoad)
+				.setStoreOp(vk::AttachmentStoreOp::eStore)
+				.setInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
+				.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
+			};
+			vk::RenderPassCreateInfo renderpass_info;
+			renderpass_info.setAttachmentCount(array_length(attach_description));
+			renderpass_info.setPAttachments(attach_description);
+			renderpass_info.setSubpassCount(1);
+			renderpass_info.setPSubpasses(&subpass);
+
+			m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
+		}
+
+		{
+			vk::ImageView view[] = {
+				render_target->m_view,
+				render_target->m_depth_view,
+			};
+			vk::FramebufferCreateInfo framebuffer_info;
+			framebuffer_info.setRenderPass(m_render_pass.get());
+			framebuffer_info.setAttachmentCount(array_length(view));
+			framebuffer_info.setPAttachments(view);
+			framebuffer_info.setWidth(render_target->m_info.extent.width);
+			framebuffer_info.setHeight(render_target->m_info.extent.height);
+			framebuffer_info.setLayers(1);
+
+			m_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
 		}
 
 		// setup shader
@@ -392,9 +453,6 @@ struct sMap : public Singleton<sMap>
 			std::string path = btr::getResourceAppPath() + "shader\\binary\\";
 			for (size_t i = 0; i < SHADER_NUM; i++) {
 				m_shader_module[i] = loadShaderUnique(context->m_device.getHandle(), path + shader_info[i].name);
-				m_shader_info[i].setModule(m_shader_module[i].get());
-				m_shader_info[i].setStage(shader_info[i].stage);
-				m_shader_info[i].setPName("main");
 			}
 		}
 
@@ -412,7 +470,7 @@ struct sMap : public Singleton<sMap>
 			m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
-		vk::Extent2D size = m_render_pass->getResolution();
+		vk::Extent2D size = render_target->m_resolution;
 		{
 			// assembly
 			vk::PipelineInputAssemblyStateCreateInfo assembly_info[] =
@@ -487,18 +545,30 @@ struct sMap : public Singleton<sMap>
 			vertex_input_info[0].setVertexAttributeDescriptionCount(vertex_input_attribute.size());
 			vertex_input_info[0].setPVertexAttributeDescriptions(vertex_input_attribute.data());
 
+			vk::PipelineShaderStageCreateInfo shader_info[] = 
+			{
+				vk::PipelineShaderStageCreateInfo()
+				.setModule(m_shader_module[SHADER_VERTEX_FLOOR_EX].get())
+				.setPName("main")
+				.setStage(vk::ShaderStageFlagBits::eVertex),
+				vk::PipelineShaderStageCreateInfo()
+				.setModule(m_shader_module[SHADER_FRAGMENT_FLOOR_EX].get())
+				.setPName("main")
+				.setStage(vk::ShaderStageFlagBits::eFragment)
+			};
+
 			std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =
 			{
 				vk::GraphicsPipelineCreateInfo()
-				.setStageCount(2)
-				.setPStages(&m_shader_info.data()[SHADER_VERTEX_FLOOR_EX])
+				.setStageCount(array_length(shader_info))
+				.setPStages(shader_info)
 				.setPVertexInputState(&vertex_input_info[1])
 				.setPInputAssemblyState(&assembly_info[1])
 				.setPViewportState(&viewportInfo)
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
 				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR].get())
-				.setRenderPass(m_render_pass->getRenderPass())
+				.setRenderPass(m_render_pass.get())
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
@@ -508,53 +578,48 @@ struct sMap : public Singleton<sMap>
 		}
 
 		vk::CommandBufferAllocateInfo cmd_info;
-		cmd_info.commandBufferCount = sGlobal::FRAME_MAX;
+		cmd_info.commandBufferCount = 1;
 		cmd_info.commandPool = context->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
 		cmd_info.level = vk::CommandBufferLevel::ePrimary;
-		m_cmd = std::move(context->m_device->allocateCommandBuffersUnique(cmd_info));
+		m_cmd = std::move(context->m_device->allocateCommandBuffersUnique(cmd_info)[0]);
 
 		vk::CommandBufferBeginInfo begin_info;
 		begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
-		for (size_t i = 0; i < m_cmd.size(); i++)
+		m_cmd->begin(begin_info);
 		{
-			auto& cmd = m_cmd[i];
-			cmd->begin(begin_info);
+			vk::RenderPassBeginInfo begin_render_Info;
+			begin_render_Info.setRenderPass(m_render_pass.get());
+			begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), render_target->m_resolution));
+			begin_render_Info.setFramebuffer(m_framebuffer.get());
+			m_cmd->beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
-			{
-				vk::RenderPassBeginInfo begin_render_Info = vk::RenderPassBeginInfo()
-					.setRenderPass(m_render_pass->getRenderPass())
-					.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(context->m_window->getClientSize().x, context->m_window->getClientSize().y)))
-					.setFramebuffer(m_render_pass->getFramebuffer(i));
-				cmd->beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
+			m_cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW_FLOOR].get());
+			m_cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR].get(), 0, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
+			m_cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR].get(), 1, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_MAP), {});
+			m_cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR].get(), 2, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_SCENE), {});
+			m_cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR].get(), 3, sLightSystem::Order().getDescriptorSet(sLightSystem::DESCRIPTOR_SET_LIGHT), {});
+			m_cmd->draw(4, 1, 0, 0);
 
-				cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW_FLOOR].get());
-				cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR].get(), 0, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
-				cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR].get(), 1, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_MAP), {});
-				cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR].get(), 2, sScene::Order().getDescriptorSet(sScene::DESCRIPTOR_SET_SCENE), {});
-				cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR].get(), 3, sLightSystem::Order().getDescriptorSet(sLightSystem::DESCRIPTOR_SET_LIGHT), {});
-				cmd->draw(4, 1, 0, 0);
-
-				cmd->endRenderPass();
-			}
-			cmd->end();
+			m_cmd->endRenderPass();
 		}
+		m_cmd->end();
 
-		VoxelInfo info;
-		info.u_area_min = vec4(0.f, 0.f, 0.f, 1.f);
-		info.u_area_max = vec4(500.f, 20.f, 500.f, 1.f);
-		info.u_cell_num = uvec4(128, 4, 128, 1);
-		info.u_cell_size = (info.u_area_max - info.u_area_min) / vec4(info.u_cell_num);
-		m_voxelize_pipeline.setup(context, info);
+// 		VoxelInfo info;
+// 		info.u_area_min = vec4(0.f, 0.f, 0.f, 1.f);
+// 		info.u_area_max = vec4(500.f, 20.f, 500.f, 1.f);
+// 		info.u_cell_num = uvec4(128, 4, 128, 1);
+// 		info.u_cell_size = (info.u_area_max - info.u_area_min) / vec4(info.u_cell_num);
+//		m_voxelize_pipeline.setup(context, info);
 
 	}
 
 	vk::CommandBuffer draw(std::shared_ptr<btr::Context>& executer)
 	{
-		return m_cmd[sGlobal::Order().getCurrentFrame()].get();
+		return m_cmd.get();
 	}
 
 
-	VoxelPipeline& getVoxel() { return m_voxelize_pipeline; }
+//	VoxelPipeline& getVoxel() { return m_voxelize_pipeline; }
 
 };
 #endif

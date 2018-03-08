@@ -6,10 +6,10 @@
 #define USE_MODEL_INFO_SET 0
 #include <applib/model/MultiModel.glsl>
 
-#define SETPOINT_VOXEL 2
-#include <btrlib/Voxelize/Voxelize.glsl>
+//#define SETPOINT_VOXEL 2
+//#include <btrlib/Voxelize/Voxelize.glsl>
 
-#define USE_LIGHT 3
+#define USE_LIGHT 2
 #include <Light.glsl>
 
 layout(early_fragment_tests) in;

@@ -38,7 +38,7 @@ mat4 skinning()
 	{
 		if(inBoneID[i] != 255) 
 		{
-			transMat += inWeight[i] * bones[inBoneID[i]];
+			transMat += inWeight[i] * b_bone_transform[inBoneID[i]];
 		}
 	}
 	return transMat;

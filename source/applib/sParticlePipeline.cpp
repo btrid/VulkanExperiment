@@ -90,9 +90,6 @@ void sParticlePipeline::setup(std::shared_ptr<btr::Context>& context)
 		for (size_t i = 0; i < SHADER_NUM; i++)
 		{
 			m_shader_module[i] = loadShaderUnique(context->m_device.getHandle(), path + shader_desc[i].name);
-			m_shader_info[i].setModule(m_shader_module[i].get());
-			m_shader_info[i].setStage(shader_desc[i].stage);
-			m_shader_info[i].setPName("main");
 		}
 	}
 
@@ -222,23 +219,38 @@ void sParticlePipeline::setup(std::shared_ptr<btr::Context>& context)
 			//		m_render_pass = std::make_shared<RenderBackbufferModule>(context);
 			m_render_pass = context->m_window->getRenderBackbufferPass();
 		}
+
+		vk::PipelineShaderStageCreateInfo shader_info[] =
+		{
+			vk::PipelineShaderStageCreateInfo()
+			.setModule(m_shader_module[SHADER_UPDATE].get())
+			.setPName("main")
+			.setStage(vk::ShaderStageFlagBits::eCompute),
+			vk::PipelineShaderStageCreateInfo()
+			.setModule(m_shader_module[SHADER_GENERATE].get())
+			.setPName("main")
+			.setStage(vk::ShaderStageFlagBits::eCompute),
+			vk::PipelineShaderStageCreateInfo()
+			.setModule(m_shader_module[SHADER_GENERATE_TRANSFAR_DEBUG].get())
+			.setPName("main")
+			.setStage(vk::ShaderStageFlagBits::eCompute),
+		};
 		// Create pipeline
-		std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
+		vk::ComputePipelineCreateInfo compute_pipeline_info[] =
 		{
 			vk::ComputePipelineCreateInfo()
-			.setStage(m_shader_info[SHADER_UPDATE])
+			.setStage(shader_info[0])
 			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get()),
 			vk::ComputePipelineCreateInfo()
-			.setStage(m_shader_info[SHADER_GENERATE])
+			.setStage(shader_info[1])
 			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get()),
 			vk::ComputePipelineCreateInfo()
-			.setStage(m_shader_info[SHADER_GENERATE_TRANSFAR_DEBUG])
+			.setStage(shader_info[2])
 			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get()),
 		};
-		auto pipelines = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
-		m_pipeline[PIPELINE_UPDATE] = std::move(pipelines[0]);
-		m_pipeline[PIPELINE_GENERATE] = std::move(pipelines[1]);
-		m_pipeline[PIPELINE_GENERATE_DEBUG] = std::move(pipelines[2]);
+		m_pipeline[PIPELINE_UPDATE] = context->m_device->createComputePipelineUnique(context->m_cache.get(), compute_pipeline_info[0]);
+		m_pipeline[PIPELINE_GENERATE] = context->m_device->createComputePipelineUnique(context->m_cache.get(), compute_pipeline_info[1]);
+		m_pipeline[PIPELINE_GENERATE_DEBUG] = context->m_device->createComputePipelineUnique(context->m_cache.get(), compute_pipeline_info[2]);
 
 		vk::Extent2D size = m_render_pass->getResolution();
 		// pipeline
@@ -292,9 +304,16 @@ void sParticlePipeline::setup(std::shared_ptr<btr::Context>& context)
 
 			vk::PipelineVertexInputStateCreateInfo vertex_input_info;
 
-			vk::PipelineShaderStageCreateInfo shader_info[] = {
-				m_shader_info[SHADER_DRAW_VERTEX],
-				m_shader_info[SHADER_DRAW_FRAGMENT],
+			vk::PipelineShaderStageCreateInfo shader_info[] = 
+			{
+				vk::PipelineShaderStageCreateInfo()
+				.setModule(m_shader_module[SHADER_DRAW_VERTEX].get())
+				.setPName("main")
+				.setStage(vk::ShaderStageFlagBits::eVertex),
+				vk::PipelineShaderStageCreateInfo()
+				.setModule(m_shader_module[SHADER_DRAW_FRAGMENT].get())
+				.setPName("main")
+				.setStage(vk::ShaderStageFlagBits::eFragment)
 			};
 
 			std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =

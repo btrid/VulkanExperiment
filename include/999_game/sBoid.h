@@ -4,6 +4,7 @@
 #include <btrlib/AllocatedMemory.h>
 #include <btrlib/Context.h>
 #include <applib/Utility.h>
+#include <applib/App.h>
 
 class sBoid : public Singleton<sBoid>
 {
@@ -108,28 +109,26 @@ public:
 		DESCRIPTOR_SET_SOLDIER_UPDATE,
 		DESCRIPTOR_SET_NUM,
 	};
-
 private:
-	BoidInfo m_boid_info;
-	btr::BufferMemory m_boid_info_gpu;
-	btr::BufferMemory m_soldier_info_gpu;
+	btr::BufferMemoryEx<BoidInfo> m_boid_info_gpu;
+	btr::BufferMemoryEx<SoldierInfo> m_soldier_info_gpu;
 	DoubleBuffer m_brain_gpu;
 	DoubleBuffer m_soldier_gpu;
-	std::array<AppendBuffer<SoldierData, 1024>, 2> m_emit_data_cpu;
-	btr::BufferMemory m_soldier_emit_data;
-
-	btr::BufferMemory m_soldier_draw_indiret_gpu;
+	btr::BufferMemoryEx<SoldierData> m_soldier_emit_data;
+	btr::BufferMemoryEx<vk::DrawIndirectCommand> m_soldier_draw_indiret_gpu;
 	DoubleBuffer m_soldier_LL_head_gpu;
 
-	std::shared_ptr<RenderPassModule> m_render_pass;
-
-	std::array<vk::UniquePipeline, PIPELINE_NUM> m_pipeline;
-	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
-	std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_module;
+	BoidInfo m_boid_info;
+	std::array<AppendBuffer<SoldierData, 1024>, 2> m_emit_data_cpu;
 	std::array<vk::UniqueDescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
 	std::array<vk::UniqueDescriptorSet, DESCRIPTOR_SET_NUM> m_descriptor_set;
 
-	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_shader_info;
+	vk::UniqueRenderPass m_render_pass;
+	vk::UniqueFramebuffer m_framebuffer;
+	std::shared_ptr<RenderTarget> m_render_target;
+	std::array<vk::UniquePipeline, PIPELINE_NUM> m_pipeline;
+	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
+	std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_module;
 
 	vk::UniqueImage m_astar_image;
 	vk::UniqueImageView m_astar_image_view;
@@ -138,7 +137,7 @@ private:
 	glm::vec3 cell_size;
 
 public:
-	void setup(std::shared_ptr<btr::Context>& context);
+	void setup(std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target);
 	vk::CommandBuffer execute(std::shared_ptr<btr::Context>& context);
 	vk::CommandBuffer draw(std::shared_ptr<btr::Context>& context);
 

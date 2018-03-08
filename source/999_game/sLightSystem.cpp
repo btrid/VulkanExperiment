@@ -10,8 +10,8 @@ void sLightSystem::setup(std::shared_ptr<btr::Context>& context)
 {
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
-	auto size = app::g_app_instance->m_window->getRenderBackbufferPass()->getResolution();
-	m_tile_info_cpu.m_resolusion = uvec2(size.width, size.height);
+	auto size = app::g_app_instance->m_window->getClientSize();
+	m_tile_info_cpu.m_resolusion = uvec2(size.x, size.y);
 	m_tile_info_cpu.m_tile_num = uvec2(32);
 	m_tile_info_cpu.m_tile_index_map_max = 256;
 	m_tile_info_cpu.m_tile_buffer_max_num = m_tile_info_cpu.m_tile_index_map_max * m_tile_info_cpu.m_tile_num.x*m_tile_info_cpu.m_tile_num.y;
@@ -46,7 +46,7 @@ void sLightSystem::setup(std::shared_ptr<btr::Context>& context)
 			cmd.copyBuffer(staging.getBufferInfo().buffer, m_tile_info.getBufferInfo().buffer, copy);
 		}
 		{
-			btr::BufferMemoryDescriptorEx<LightData> desc;
+			btr::BufferMemoryDescriptorEx<LightDataEx> desc;
 			desc.element_num = num;
 			m_light_data = context->m_storage_memory.allocateMemory(desc);
 		}
@@ -178,16 +178,16 @@ void sLightSystem::setup(std::shared_ptr<btr::Context>& context)
 
 	{
 		{
-			std::vector<vk::DescriptorSetLayout> layouts =
-			{
-				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_LIGHT].get(),
-				sParticlePipeline::Order().getDescriptorSetLayout(sParticlePipeline::DESCRIPTOR_SET_LAYOUT_PARTICLE),
-				sSystem::Order().getSystemDescriptorLayout(),
-			};
-			vk::PipelineLayoutCreateInfo pipeline_layout_info;
-			pipeline_layout_info.setSetLayoutCount(layouts.size());
-			pipeline_layout_info.setPSetLayouts(layouts.data());
-			m_pipeline_layout[PIPELINE_LAYOUT_PARTICLE_COLLECT] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+// 			std::vector<vk::DescriptorSetLayout> layouts =
+// 			{
+// 				m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_LIGHT].get(),
+// 				sParticlePipeline::Order().getDescriptorSetLayout(sParticlePipeline::DESCRIPTOR_SET_LAYOUT_PARTICLE),
+// 				sSystem::Order().getSystemDescriptorLayout(),
+// 			};
+// 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
+// 			pipeline_layout_info.setSetLayoutCount(layouts.size());
+// 			pipeline_layout_info.setPSetLayouts(layouts.data());
+// 			m_pipeline_layout[PIPELINE_LAYOUT_PARTICLE_COLLECT] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 
 		}
 		{
@@ -237,9 +237,9 @@ void sLightSystem::setup(std::shared_ptr<btr::Context>& context)
 		// Create pipeline
 		std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 		{
-			vk::ComputePipelineCreateInfo()
-			.setStage(m_shader_info[SHADER_PARTICLE_COLLECT])
-			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_PARTICLE_COLLECT].get()),
+// 			vk::ComputePipelineCreateInfo()
+// 			.setStage(m_shader_info[SHADER_PARTICLE_COLLECT])
+// 			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_PARTICLE_COLLECT].get()),
 			vk::ComputePipelineCreateInfo()
 			.setStage(m_shader_info[SHADER_BULLET_COLLECT])
 			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_BULLET_COLLECT].get()),
@@ -251,10 +251,10 @@ void sLightSystem::setup(std::shared_ptr<btr::Context>& context)
 			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_TILE_CULLING].get()),
 		};
 		auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
-		m_pipeline[PIPELINE_PARTICLE_COLLECT] = std::move(compute_pipeline[0]);
-		m_pipeline[PIPELINE_BULLET_COLLECT] = std::move(compute_pipeline[1]);
-		m_pipeline[PIPELINE_EFFECT_COLLECT] = std::move(compute_pipeline[2]);
-		m_pipeline[PIPELINE_TILE_CULLING] = std::move(compute_pipeline[3]);
+//		m_pipeline[PIPELINE_PARTICLE_COLLECT] = std::move(compute_pipeline[0]);
+		m_pipeline[PIPELINE_BULLET_COLLECT] = std::move(compute_pipeline[0]);
+		m_pipeline[PIPELINE_EFFECT_COLLECT] = std::move(compute_pipeline[1]);
+		m_pipeline[PIPELINE_TILE_CULLING] = std::move(compute_pipeline[2]);
 
 	}
 }

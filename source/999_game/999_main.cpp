@@ -25,6 +25,7 @@
 #include <applib/cModelPipeline.h>
 #include <applib/cModelInstancingPipeline.h>
 #include <applib/DrawHelper.h>
+#include <applib/AppPipeline.h>
 #include <btrlib/Context.h>
 #include <btrlib/VoxelPipeline.h>
 
@@ -207,7 +208,7 @@ struct ModelGIPipelineComponent
 			vk::DescriptorSetLayout layouts[] = {
 				sModelRenderDescriptor::Order().getLayout(),
 				sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
-				sMap::Order().getVoxel().getDescriptorSetLayout(VoxelPipeline::DESCRIPTOR_SET_LAYOUT_VOXEL),
+//				sMap::Order().getVoxel().getDescriptorSetLayout(VoxelPipeline::DESCRIPTOR_SET_LAYOUT_VOXEL),
 				sLightSystem::Order().getDescriptorSetLayout(sLightSystem::DESCRIPTOR_SET_LAYOUT_LIGHT),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
@@ -330,7 +331,7 @@ struct ModelGIPipelineComponent
 			cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline.get());
 			cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 0, descriptor_set.m_handle.get(), {});
 			cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
-			cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 2, sMap::Order().getVoxel().getDescriptorSet(VoxelPipeline::DESCRIPTOR_SET_VOXEL), {});
+//			cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 2, sMap::Order().getVoxel().getDescriptorSet(VoxelPipeline::DESCRIPTOR_SET_VOXEL), {});
 			cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 3, sLightSystem::Order().getDescriptorSet(sLightSystem::DESCRIPTOR_SET_LIGHT), {});
 
 			drawable->draw(cmd.get());
@@ -379,12 +380,12 @@ int main()
 		model.load(context, "..\\..\\resource\\tiny.x");
 
 		sScene::Order().setup(context);
-		sBoid::Order().setup(context);
-		sBulletSystem::Order().setup(context);
+		sBoid::Order().setup(context, app.m_window->getRenderTarget());
+		sBulletSystem::Order().setup(context, app.m_window->getRenderTarget());
 		sCollisionSystem::Order().setup(context);
 		sLightSystem::Order().setup(context);
-		sMap::Order().setup(context);
-		sMap::Order().getVoxel().createPipeline<VoxelizeMap>(context);
+		sMap::Order().setup(context, app.m_window->getRenderTarget());
+//		sMap::Order().getVoxel().createPipeline<VoxelizeMap>(context);
 
 	}
 	sModelRenderDescriptor::Create(context);
@@ -399,6 +400,9 @@ int main()
 
 	auto drawCmd = renderer.createCmd(context, &player_model->m_render, render_descriptor);
 	auto animeCmd = animater.createCmd(context, animate_descriptor);
+
+	ClearPipeline clear_render_target(&*context, app.m_window->getRenderTarget());
+	PresentPipeline present_pipeline(context, app.m_window->getRenderTarget(), app.m_window->getSwapchainPtr());
 
 	app.setup();
 	while (true)
@@ -422,16 +426,33 @@ int main()
 				};
 				sGlobal::Order().getThreadPool().enque(job);
 			}
-
+			enum 
+			{
+				cmd_clear_render_target,
+				cmd_boid_exeute,
+				cmd_bullet_exeute,
+				cmd_collision_exeute,
+				cmd_light_exeute,
+				cmd_scene_exeute,
+				cmd_map_draw,
+				cmd_player_animate,
+				cmd_player_draw,
+				cmd_boid_draw,
+				cmd_bullet_draw,
+				cmd_present,
+				cmd_num,
+			};
 			SynchronizedPoint render_syncronized_point(7);
-			std::vector<vk::CommandBuffer> render_cmds(11);
+			std::vector<vk::CommandBuffer> render_cmds(cmd_num);
 			{
 				cThreadJob job;
 				job.mFinish =
 					[&]()
 				{
-					render_cmds[0] = sScene::Order().execute(context);
-					render_cmds[6] = sMap::Order().draw(context);
+					render_cmds[cmd_clear_render_target] = clear_render_target.execute();
+					render_cmds[cmd_present] = present_pipeline.execute();
+					render_cmds[cmd_scene_exeute] = sScene::Order().execute(context);
+					render_cmds[cmd_map_draw] = sMap::Order().draw(context);
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);
@@ -444,12 +465,12 @@ int main()
 					{
 						std::vector<vk::CommandBuffer> cmds(1);
 						cmds[0] = animeCmd.get();
-						render_cmds[7] = animater.dispach(context, cmds);
+						render_cmds[cmd_player_animate] = animater.dispach(context, cmds);
 					}
 					{
 						std::vector<vk::CommandBuffer> cmds(1);
 						cmds[0] = drawCmd.get();
-						render_cmds[8] = renderer.draw(context, cmds);
+						render_cmds[cmd_player_draw] = renderer.draw(context, cmds);
 					}
 					render_syncronized_point.arrive();
 				};
@@ -460,8 +481,8 @@ int main()
 				job.mFinish =
 					[&]()
 				{
-					render_cmds[1] = sBoid::Order().execute(context);
-					render_cmds[9] = sBoid::Order().draw(context);
+					render_cmds[cmd_boid_exeute] = sBoid::Order().execute(context);
+					render_cmds[cmd_boid_draw] = sBoid::Order().draw(context);
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);
@@ -471,8 +492,8 @@ int main()
 				job.mFinish =
 					[&]()
 				{
-					render_cmds[2] = sBulletSystem::Order().execute(context);
-					render_cmds[10] = sBulletSystem::Order().draw(context);
+					render_cmds[cmd_bullet_exeute] = sBulletSystem::Order().execute(context);
+					render_cmds[cmd_bullet_draw] = sBulletSystem::Order().draw(context);
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);
@@ -482,7 +503,7 @@ int main()
 				job.mFinish =
 					[&]()
 				{
-					render_cmds[3] = sCollisionSystem::Order().execute(context);
+					render_cmds[cmd_collision_exeute] = sCollisionSystem::Order().execute(context);
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);
@@ -492,7 +513,7 @@ int main()
 				job.mFinish =
 					[&]()
 				{
-					render_cmds[4] = sLightSystem::Order().execute(context);
+					render_cmds[cmd_light_exeute] = sLightSystem::Order().execute(context);
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);
