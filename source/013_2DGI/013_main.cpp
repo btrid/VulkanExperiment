@@ -21,6 +21,7 @@
 #include <btrlib/AllocatedMemory.h>
 
 #include <applib/App.h>
+#include <applib/AppPipeline.h>
 #include <btrlib/Context.h>
 #include <applib/sImGuiRenderer.h>
 
@@ -50,6 +51,8 @@ int main()
 	app::App app(app_desc);
 
 	auto context = app.m_context;
+	ClearPipeline clear_pipeline(context, app.m_window->getRenderTarget());
+	PresentPipeline present_pipeline(context, app.m_window->getRenderTarget(), app.m_window->getSwapchainPtr());
 
 	app.setup();
 	while (true)
@@ -58,9 +61,16 @@ int main()
 
 		app.preUpdate();
 		{
-			std::vector<vk::CommandBuffer> cmds;
-
-//			cmds.emplace_back(sImGuiRenderer::Order().Render());
+			enum 
+			{
+				cmd_clear,
+				cmd_present,
+				cmd_num
+			};
+			std::vector<vk::CommandBuffer> cmds(cmd_num);
+			cmds[cmd_clear] = clear_pipeline.execute();
+			cmds[cmd_present] = present_pipeline.execute();
+			//			cmds.emplace_back(sImGuiRenderer::Order().Render());
 //			app.m_window->getImguiPipeline()->pushImguiCmd([]() { ImGui::ShowTestWindow(); });
 
 			app.submit(std::move(cmds));

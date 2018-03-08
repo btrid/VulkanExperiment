@@ -18,7 +18,7 @@ struct IPipeline
 };
 struct ClearPipeline : IPipeline
 {
-	ClearPipeline(btr::Context* context, const std::shared_ptr<RenderTarget>& render_target);
+	ClearPipeline(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target);
 
 	vk::CommandBuffer execute() override
 	{

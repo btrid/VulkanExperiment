@@ -1,7 +1,7 @@
 #include <applib/AppPipeline.h>
 #include <applib/GraphicsResource.h>
 
-ClearPipeline::ClearPipeline(btr::Context* context, const std::shared_ptr<RenderTarget>& render_target)
+ClearPipeline::ClearPipeline(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target)
 {
 	vk::CommandBufferAllocateInfo cmd_buffer_info;
 	cmd_buffer_info.commandPool = context->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
