@@ -201,26 +201,6 @@ public:
 			{
 				_setNode(n.x, n.y - 1, calcNodeIndex(n.x, n.y, size), n.cost + 1, open, close);
 			}
-// 			// ¶ã
-// 			if (n.x > 0 && n.y > 0)
-// 			{
-// 				_setNode(n.x - 1, n.y - 1, calcNodeIndex(n.x, n.y), n.cost + 1, open, close);
-// 			}
-// 			// ¶‰º
-// 			if (n.x > 0 && n.y < SIZE_Y - 1)
-// 			{
-// 				_setNode(n.x - 1, n.y + 1, calcNodeIndex(n.x, n.y), n.cost + 1, open, close);
-// 			}
-// 			// ‰E‰º
-// 			if (n.x < SIZE_X - 1 && n.y < SIZE_Y - 1)
-// 			{
-// 				_setNode(n.x + 1, n.y-1, calcNodeIndex(n.x, n.y), n.cost + 1, open, close);
-// 			}
-// 			// ‰Eã
-// 			if (n.x < SIZE_X - 1 && n.y > 0)
-// 			{
-// 				_setNode(n.x+1, n.y +1, calcNodeIndex(n.x, n.y), n.cost + 1, open, close);
-// 			}
 		}
 
 		return std::move(result);
