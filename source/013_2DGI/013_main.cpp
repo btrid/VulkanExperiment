@@ -171,7 +171,23 @@ struct OITRenderer
 			m_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
 		}
 
+		{
+			const char* name[] =
+			{
+				"Radiosity.spv",
+			};
+			static_assert(array_length(name) == array_length(m_shader), "not equal shader num");
 
+			std::string path = btr::getResourceAppPath() + "shader\\binary\\";
+			for (size_t i = 0; i < array_length(name); i++) {
+				m_shader[i] = loadShaderUnique(context->m_device.getHandle(), path + name[i]);
+			}
+
+		}
+
+		{
+
+		}
 	}
 
 	vk::CommandBuffer execute(const std::vector<OITPipeline*>& pipeline)
@@ -198,6 +214,10 @@ struct OITRenderer
 	vk::UniqueRenderPass m_render_pass;
 	vk::UniqueFramebuffer m_framebuffer;
 
+	vk::UniqueShaderModule m_shader[1];
+	vk::UniquePipelineLayout m_pipeline_layout;
+	vk::UniquePipeline m_pipeline;
+
 };
 
 struct AppModelOIT : public OITPipeline
@@ -221,13 +241,11 @@ struct AppModelOIT : public OITPipeline
 	}
 	void execute()override
 	{
-
 	}
 
 	vk::UniqueShaderModule m_shader[2];
 	vk::UniquePipelineLayout m_pipeline_layout;
 	vk::UniquePipeline m_pipeline;
-
 };
 
 int main()

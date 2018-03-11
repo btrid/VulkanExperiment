@@ -1,0 +1,64 @@
+#version 450
+
+#extension GL_GOOGLE_cpp_style_line_directive : require
+
+#include <btrlib/ConvertDimension.glsl>
+#include <btrlib/Common.glsl>
+
+#define USE_OIT 0
+#include <OIT.glsl>
+
+#define ray_num (128)
+layout (local_size_x = ray_num, local_size_y = 1) in;
+
+vec2 rotate(in float angle)
+{
+	vec2 ret = vec2(0., 1.);
+	float c = cos(angle);
+	float s = sin(angle);
+
+	ret.x = ret.x * c - ret.y * s;
+	ret.y = ret.x * s + ret.y * c;
+	return ret;
+}
+
+void main()
+{
+	vec2 dir = rotate(gl_LocalInvocationIndex / float(ray_num) * 3.141592);
+	int emissive_index = b_emissive_map[gl_WorkGroupID.x];
+	ivec2 reso = ivec2(u_OIT_info.m_resolution.xy);
+	ivec2 map_index = ivec2(emissive_index % reso.x, emissive_index / reso.x);
+
+	vec2 cell_size = vec2(1.);
+	vec2 pos = vec2(map_index)*cell_size + cell_size*0.5;
+
+#define FLT_EPSIRON 0.00001
+	for(;;)
+	{
+		vec2 cell_origin = vec2(map_index)*cell_size;
+		vec2 cell_p = pos - cell_origin;
+		float x = dir.x < 0. ? cell_p.x : (cell_size.x- cell_p.x);
+		float y = dir.y < 0. ? cell_p.y : (cell_size.y- cell_p.y);
+
+		vec2 dist = vec2(9999.);
+		dist.x = abs(dir.x) < FLT_EPSIRON ? 9999.9 : abs(x / dir.x);
+		dist.y = abs(dir.y) < FLT_EPSIRON ? 9999.9 : abs(y / dir.y);
+		float rate = min(dist.x, dist.y);
+		rate = abs(dir.x) < FLT_EPSIRON ? dist.y : rate;
+		rate = abs(dir.y) < FLT_EPSIRON ? dist.x : rate;
+
+		vec2 prog = dir * rate;
+		ivec2 next = ivec2(0);
+		if(dist.x < dist.y){
+			next.x = dir.x < 0. ? -1 : 1;
+		}
+		else
+		{
+			next.y = dir.y < 0. ? -1 : 1;
+		}
+		pos += prog;
+		map_index = map_index + next;
+		int map_index_1d = map_index.x + map_index.y*reso.x;
+		b_color[map_index_1d] = vec4(1.);
+	}
+}

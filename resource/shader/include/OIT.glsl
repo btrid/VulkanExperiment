@@ -34,6 +34,9 @@ layout(std430, set=USE_OIT, binding=11) restrict buffer EmissiveBuffer {
 layout(std430, set=USE_OIT, binding=12) restrict buffer EmissiveMapBuffer {
 	int b_emissive_map[];
 };
+layout(std430, set=USE_OIT, binding=20) restrict buffer ColorBuffer {
+	vec4 b_color[];
+};
 
 #endif
 
