@@ -49,17 +49,30 @@ struct OITRenderer
 
 	struct Info
 	{
+		mat4 m_camera_PV;
 		vec3 m_resolution;
 		vec3 m_position;
 	};
 	struct Fragment
 	{
-		vec3 vertex;
+		vec3 albedo;
 	};
 
 	OITRenderer(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target)
 	{
+		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+		{
+			btr::BufferMemoryDescriptorEx<Info> desc;
+			desc.element_num = 1;
+			m_fragment_info = context->m_uniform_memory.allocateMemory(desc);
 
+			Info info;
+			info.m_position = vec3(0.f, 0.f, 0.f);
+			info.m_resolution = vec3(RenderWidth, RenderHeight, RenderDepth);
+			info.m_camera_PV = glm::ortho(-RenderWidth * 0.5f, RenderWidth*0.5f, -RenderHeight * 0.5f, RenderHeight*0.5f);
+			info.m_camera_PV *= glm::lookAt(vec3(0., -1.f, 0.f) + info.m_position, info.m_position, vec3(0.f, 0.f, 1.f));
+			cmd.updateBuffer<Info>(m_fragment_info.getInfo().buffer, m_fragment_info.getInfo().offset, info);
+		}
 		{
 			btr::BufferMemoryDescriptorEx<int32_t> desc;
 			desc.element_num = 1;
@@ -173,10 +186,11 @@ struct OITRenderer
 
 		// post
 	}
+	btr::BufferMemoryEx<Info> m_fragment_info;
 	btr::BufferMemoryEx<int32_t> m_fragment_counter;
 	btr::BufferMemoryEx<Fragment> m_fragment_buffer;
+	btr::BufferMemoryEx<Fragment> m_fragment_buffer_sub;
 	btr::BufferMemoryEx<int32_t> m_fragment_link_next_list;
-	btr::BufferMemoryEx<Info> m_fragment_info;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
@@ -193,12 +207,12 @@ struct AppModelOIT : public OITPipeline
 		{
 			const char* name[] =
 			{
-				"CopyImage.vert.spv",
-				"CopyImage.frag.spv",
+				"OITAppModel.vert.spv",
+				"OITAppModel.frag.spv",
 			};
 			static_assert(array_length(name) == array_length(m_shader), "not equal shader num");
 
-			std::string path = btr::getResourceLibPath() + "shader\\binary\\";
+			std::string path = btr::getResourceAppPath() + "shader\\binary\\";
 			for (size_t i = 0; i < array_length(name); i++) {
 				m_shader[i] = loadShaderUnique(context->m_device.getHandle(), path + name[i]);
 			}
@@ -218,6 +232,7 @@ struct AppModelOIT : public OITPipeline
 
 int main()
 {
+	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = glm::vec3(0.f, 0.f, 1.f);
 	camera->getData().m_target = glm::vec3(0.f, 0.f, 0.f);
