@@ -26,7 +26,7 @@ layout(std430, set=USE_OIT, binding=3) restrict buffer FragmentMapBuffer {
 	int b_fragment_map[];
 };
 layout(std430, set=USE_OIT, binding=10) restrict buffer EmissiveCounter {
-	int b_emissive_counter;
+	ivec3 b_emissive_counter[];
 };
 layout(std430, set=USE_OIT, binding=11) restrict buffer EmissiveBuffer {
 	vec3 b_emissive[];

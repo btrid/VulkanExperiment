@@ -31,7 +31,7 @@ void main()
 
 	vec2 cell_size = vec2(1.);
 	vec2 pos = vec2(map_index)*cell_size + cell_size*0.5;
-
+	float progress = 0.;
 #define FLT_EPSIRON 0.00001
 	for(;;)
 	{
@@ -57,8 +57,15 @@ void main()
 			next.y = dir.y < 0. ? -1 : 1;
 		}
 		pos += prog;
+		progress += length(prog);
 		map_index = map_index + next;
 		int map_index_1d = map_index.x + map_index.y*reso.x;
-		b_color[map_index_1d] = vec4(1.);
+		if(b_fragment_map[map_index_1d] != -1){
+			// hit
+//			if 
+//			int emissive_index = atomicAdd(b_emissive_counter[1].x, 1);
+			break;
+		}
+		b_color[map_index_1d] += vec4(1.) / (1. + (progress*progress));
 	}
 }

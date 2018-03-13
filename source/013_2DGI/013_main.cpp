@@ -174,7 +174,7 @@ struct OITRenderer
 		{
 			const char* name[] =
 			{
-				"Radiosity.spv",
+				"PhotonMapping.spv",
 			};
 			static_assert(array_length(name) == array_length(m_shader), "not equal shader num");
 
