@@ -43,7 +43,7 @@ struct OITRenderer
 	{
 		RenderWidth = 1024,
 		RenderHeight = 1024,
-		RenderDepth = 4,
+		RenderDepth = 1,
 		FragmentBufferSize = RenderWidth*RenderHeight*RenderDepth
 	};
 
@@ -60,6 +60,8 @@ struct OITRenderer
 
 	OITRenderer(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target)
 	{
+		m_context = context;
+
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 		{
 			btr::BufferMemoryDescriptorEx<Info> desc;
@@ -86,16 +88,36 @@ struct OITRenderer
 		{
 			btr::BufferMemoryDescriptorEx<int32_t> desc;
 			desc.element_num = FragmentBufferSize;
-			m_fragment_link_next_list = context->m_storage_memory.allocateMemory(desc);
+			m_fragment_map = context->m_storage_memory.allocateMemory(desc);
 		}
-		btr::BufferMemoryEx<int32_t> m_fragment_link_next_list;
+		{
+			btr::BufferMemoryDescriptorEx<ivec3> desc;
+			desc.element_num = 1;
+			m_emissive_counter = context->m_storage_memory.allocateMemory(desc);
+		}
+		{
+			btr::BufferMemoryDescriptorEx<vec3> desc;
+			desc.element_num = FragmentBufferSize;
+			m_emissive_buffer = context->m_storage_memory.allocateMemory(desc);
+		}
+		{
+			btr::BufferMemoryDescriptorEx<int32_t> desc;
+			desc.element_num = FragmentBufferSize;
+			m_emissive_map = context->m_storage_memory.allocateMemory(desc);
+		}
 
 		{
-			auto stage = vk::ShaderStageFlagBits::eFragment;
+			btr::BufferMemoryDescriptorEx<vec4> desc;
+			desc.element_num = FragmentBufferSize;
+			m_color = context->m_storage_memory.allocateMemory(desc);
+			
+		}
+		{
+			auto stage = vk::ShaderStageFlagBits::eFragment|vk::ShaderStageFlagBits::eCompute;
 			vk::DescriptorSetLayoutBinding binding[] = {
 				vk::DescriptorSetLayoutBinding()
 				.setStageFlags(stage)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 				.setDescriptorCount(1)
 				.setBinding(0),
 				vk::DescriptorSetLayoutBinding()
@@ -108,6 +130,31 @@ struct OITRenderer
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 				.setDescriptorCount(1)
 				.setBinding(2),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(stage)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(1)
+				.setBinding(3),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(stage)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(1)
+				.setBinding(10),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(stage)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(1)
+				.setBinding(11),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(stage)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(1)
+				.setBinding(12),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(stage)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(1)
+				.setBinding(20),
 			};
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 			desc_layout_info.setBindingCount(array_length(binding));
@@ -125,18 +172,47 @@ struct OITRenderer
 			desc_info.setPSetLayouts(layouts);
 			m_descriptor_set = std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]);
 
+			vk::DescriptorBufferInfo uniforms[] = {
+				m_fragment_info.getInfo(),
+			};
 			vk::DescriptorBufferInfo storages[] = {
 				m_fragment_counter.getInfo(),
 				m_fragment_buffer.getInfo(),
-				m_fragment_link_next_list.getInfo(),
+				m_fragment_map.getInfo(),
+			};
+			vk::DescriptorBufferInfo emissive_storages[] = {
+				m_emissive_counter.getInfo(),
+				m_emissive_buffer.getInfo(),
+				m_emissive_map.getInfo(),
+			};
+			vk::DescriptorBufferInfo output_storages[] = {
+				m_color.getInfo(),
 			};
 			vk::WriteDescriptorSet write[] = {
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+				.setDescriptorCount(array_length(uniforms))
+				.setPBufferInfo(uniforms)
+				.setDstBinding(0)
+				.setDstSet(m_descriptor_set.get()),
 				vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 				.setDescriptorCount(array_length(storages))
 				.setPBufferInfo(storages)
-				.setDstBinding(0)
-				.setDstSet(m_descriptor_set.get())
+				.setDstBinding(1)
+				.setDstSet(m_descriptor_set.get()),
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(array_length(emissive_storages))
+				.setPBufferInfo(emissive_storages)
+				.setDstBinding(10)
+				.setDstSet(m_descriptor_set.get()),
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(array_length(output_storages))
+				.setPBufferInfo(output_storages)
+				.setDstBinding(20)
+				.setDstSet(m_descriptor_set.get()),
 			};
 			context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
 		}
@@ -174,7 +250,7 @@ struct OITRenderer
 		{
 			const char* name[] =
 			{
-				"PhotonMapping.spv",
+				"PhotonMapping.comp.spv",
 			};
 			static_assert(array_length(name) == array_length(m_shader), "not equal shader num");
 
@@ -185,14 +261,40 @@ struct OITRenderer
 
 		}
 
+		// pipeline layout
 		{
-
+			vk::DescriptorSetLayout layouts[] = {
+				m_descriptor_set_layout.get()
+			};
+			vk::PipelineLayoutCreateInfo pipeline_layout_info;
+			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
+			pipeline_layout_info.setPSetLayouts(layouts);
+			m_pipeline_layout = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
+
+		// pipeline
+		{
+			vk::PipelineShaderStageCreateInfo shader_info[1];
+			shader_info[0].setModule(m_shader[0].get());
+			shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
+			shader_info[0].setPName("main");
+
+			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
+			{
+				vk::ComputePipelineCreateInfo()
+				.setStage(shader_info[0])
+				.setLayout(m_pipeline_layout.get()),
+			};
+			auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
+			m_pipeline = std::move(compute_pipeline[0]);
+		}
+
 	}
 
 	vk::CommandBuffer execute(const std::vector<OITPipeline*>& pipeline)
 	{
-		// begin
+		auto cmd = m_context->m_cmd_pool->allocCmdOnetime(0);
+		// pre
 
 		// exe
 		for (auto& p : pipeline)
@@ -201,12 +303,19 @@ struct OITRenderer
 		}
 
 		// post
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute ,m_pipeline.get());
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout.get(), 0, m_descriptor_set.get(), {});
+		cmd.dispatchIndirect(m_emissive_counter.getInfo().buffer, m_emissive_map.getInfo().offset);
+
 	}
 	btr::BufferMemoryEx<Info> m_fragment_info;
 	btr::BufferMemoryEx<int32_t> m_fragment_counter;
 	btr::BufferMemoryEx<Fragment> m_fragment_buffer;
-	btr::BufferMemoryEx<Fragment> m_fragment_buffer_sub;
-	btr::BufferMemoryEx<int32_t> m_fragment_link_next_list;
+	btr::BufferMemoryEx<int32_t> m_fragment_map;
+	btr::BufferMemoryEx<ivec3> m_emissive_counter;
+	btr::BufferMemoryEx<vec3> m_emissive_buffer;
+	btr::BufferMemoryEx<int32_t> m_emissive_map;
+	btr::BufferMemoryEx<vec4> m_color;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
@@ -218,6 +327,7 @@ struct OITRenderer
 	vk::UniquePipelineLayout m_pipeline_layout;
 	vk::UniquePipeline m_pipeline;
 
+	std::shared_ptr<btr::Context> m_context;
 };
 
 struct AppModelOIT : public OITPipeline
@@ -272,7 +382,9 @@ int main()
 	ClearPipeline clear_pipeline(context, app.m_window->getRenderTarget());
 	PresentPipeline present_pipeline(context, app.m_window->getRenderTarget(), app.m_window->getSwapchainPtr());
 
+	std::shared_ptr<OITRenderer> oit_renderer = std::make_shared<OITRenderer>(context, app.m_window->getRenderTarget());
 
+//	AppModelOIT model_oit(context, oit_renderer);
 	app.setup();
 	while (true)
 	{
