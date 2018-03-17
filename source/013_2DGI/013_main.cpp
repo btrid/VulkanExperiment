@@ -34,7 +34,7 @@
 // order-independent-transparency
 struct OITPipeline 
 {
-	virtual void execute() = 0;
+	virtual void execute(vk::CommandBuffer cmd) = 0;
 };
 
 struct OITRenderer
@@ -44,13 +44,33 @@ struct OITRenderer
 		RenderWidth = 1024,
 		RenderHeight = 1024,
 		RenderDepth = 1,
-		FragmentBufferSize = RenderWidth*RenderHeight*RenderDepth
+		FragmentBufferSize = RenderWidth * RenderHeight*RenderDepth
 	};
 
+	enum Shader
+	{
+		//		ShaderClear,
+		ShaderPhotonMapping,
+		ShaderRenderingVS,
+		ShaderRenderingFS,
+		ShaderNum,
+	};
+	enum PipelineLayout
+	{
+		PipelineLayoutPhotonMapping,
+		PipelineLayoutRendering,
+		PipelineLayoutNum,
+	};
+	enum Pipeline
+	{
+		PipelinePhotonMapping,
+		PipelineRendering,
+		PipelineNum,
+	};
 	struct Info
 	{
 		mat4 m_camera_PV;
-		vec3 m_resolution;
+		uvec3 m_resolution;
 		vec3 m_position;
 	};
 	struct Fragment
@@ -61,6 +81,7 @@ struct OITRenderer
 	OITRenderer(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target)
 	{
 		m_context = context;
+		m_render_target = render_target;
 
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 		{
@@ -110,10 +131,10 @@ struct OITRenderer
 			btr::BufferMemoryDescriptorEx<vec4> desc;
 			desc.element_num = FragmentBufferSize;
 			m_color = context->m_storage_memory.allocateMemory(desc);
-			
+
 		}
 		{
-			auto stage = vk::ShaderStageFlagBits::eFragment|vk::ShaderStageFlagBits::eCompute;
+			auto stage = vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
 			vk::DescriptorSetLayoutBinding binding[] = {
 				vk::DescriptorSetLayoutBinding()
 				.setStageFlags(stage)
@@ -217,40 +238,13 @@ struct OITRenderer
 			context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
 		}
 
-		// レンダーパス
-		{
-			// sub pass
-			vk::SubpassDescription subpass;
-			subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
-			subpass.setInputAttachmentCount(0);
-			subpass.setPInputAttachments(nullptr);
-			subpass.setColorAttachmentCount(0);
-			subpass.setPColorAttachments(nullptr);
-
-			vk::RenderPassCreateInfo renderpass_info;
-			renderpass_info.setAttachmentCount(0);
-			renderpass_info.setPAttachments(nullptr);
-			renderpass_info.setSubpassCount(1);
-			renderpass_info.setPSubpasses(&subpass);
-
-			m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
-		}
-		{
-			vk::FramebufferCreateInfo framebuffer_info;
-			framebuffer_info.setRenderPass(m_render_pass.get());
-			framebuffer_info.setAttachmentCount(0);
-			framebuffer_info.setPAttachments(nullptr);
-			framebuffer_info.setWidth(RenderWidth);
-			framebuffer_info.setHeight(RenderHeight);
-			framebuffer_info.setLayers(1);
-
-			m_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
-		}
 
 		{
 			const char* name[] =
 			{
 				"PhotonMapping.comp.spv",
+				"PMRendering.vert.spv",
+				"PMRendering.frag.spv",
 			};
 			static_assert(array_length(name) == array_length(m_shader), "not equal shader num");
 
@@ -269,13 +263,14 @@ struct OITRenderer
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 			pipeline_layout_info.setPSetLayouts(layouts);
-			m_pipeline_layout = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PipelineLayoutPhotonMapping] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PipelineLayoutRendering] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
 		// pipeline
 		{
 			vk::PipelineShaderStageCreateInfo shader_info[1];
-			shader_info[0].setModule(m_shader[0].get());
+			shader_info[0].setModule(m_shader[ShaderPhotonMapping].get());
 			shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[0].setPName("main");
 
@@ -283,30 +278,197 @@ struct OITRenderer
 			{
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[0])
-				.setLayout(m_pipeline_layout.get()),
+				.setLayout(m_pipeline_layout[PipelineLayoutPhotonMapping].get()),
 			};
 			auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
-			m_pipeline = std::move(compute_pipeline[0]);
+			m_pipeline[PipelinePhotonMapping] = std::move(compute_pipeline[0]);
 		}
 
+		// レンダーパス
+		{
+			vk::AttachmentReference color_ref[] = {
+				vk::AttachmentReference()
+				.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
+				.setAttachment(0)
+			};
+			// sub pass
+			vk::SubpassDescription subpass;
+			subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+			subpass.setInputAttachmentCount(0);
+			subpass.setPInputAttachments(nullptr);
+			subpass.setColorAttachmentCount(array_length(color_ref));
+			subpass.setPColorAttachments(color_ref);
+
+			vk::AttachmentDescription attach_description[] =
+			{
+				// color1
+				vk::AttachmentDescription()
+				.setFormat(render_target->m_info.format)
+				.setSamples(vk::SampleCountFlagBits::e1)
+				.setLoadOp(vk::AttachmentLoadOp::eLoad)
+				.setStoreOp(vk::AttachmentStoreOp::eStore)
+				.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
+				.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
+			};
+			vk::RenderPassCreateInfo renderpass_info;
+			renderpass_info.setAttachmentCount(array_length(attach_description));
+			renderpass_info.setPAttachments(attach_description);
+			renderpass_info.setSubpassCount(1);
+			renderpass_info.setPSubpasses(&subpass);
+
+			m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
+		}
+		{
+			vk::ImageView view[] = {
+				render_target->m_view,
+			};
+			vk::FramebufferCreateInfo framebuffer_info;
+			framebuffer_info.setRenderPass(m_render_pass.get());
+			framebuffer_info.setAttachmentCount(array_length(view));
+			framebuffer_info.setPAttachments(view);
+			framebuffer_info.setWidth(render_target->m_info.extent.width);
+			framebuffer_info.setHeight(render_target->m_info.extent.height);
+			framebuffer_info.setLayers(1);
+
+			m_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
+		}
+
+		{
+			vk::PipelineShaderStageCreateInfo shader_info[] =
+			{
+				vk::PipelineShaderStageCreateInfo()
+				.setModule(m_shader[ShaderRenderingVS].get())
+				.setPName("main")
+				.setStage(vk::ShaderStageFlagBits::eVertex),
+				vk::PipelineShaderStageCreateInfo()
+				.setModule(m_shader[ShaderRenderingFS].get())
+				.setPName("main")
+				.setStage(vk::ShaderStageFlagBits::eFragment),
+			};
+
+			// assembly
+			vk::PipelineInputAssemblyStateCreateInfo assembly_info;
+			assembly_info.setPrimitiveRestartEnable(VK_FALSE);
+			assembly_info.setTopology(vk::PrimitiveTopology::eTriangleStrip);
+
+			// viewport
+			vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)render_target->m_resolution.width, (float)render_target->m_resolution.height, 0.f, 1.f);
+			std::vector<vk::Rect2D> scissor = {
+				vk::Rect2D(vk::Offset2D(0, 0), render_target->m_resolution)
+			};
+			vk::PipelineViewportStateCreateInfo viewportInfo;
+			viewportInfo.setViewportCount(1);
+			viewportInfo.setPViewports(&viewport);
+			viewportInfo.setScissorCount((uint32_t)scissor.size());
+			viewportInfo.setPScissors(scissor.data());
+
+			vk::PipelineRasterizationStateCreateInfo rasterization_info;
+			rasterization_info.setPolygonMode(vk::PolygonMode::eFill);
+			rasterization_info.setFrontFace(vk::FrontFace::eCounterClockwise);
+			rasterization_info.setCullMode(vk::CullModeFlagBits::eNone);
+			rasterization_info.setLineWidth(1.f);
+
+			vk::PipelineMultisampleStateCreateInfo sample_info;
+			sample_info.setRasterizationSamples(vk::SampleCountFlagBits::e1);
+
+			vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
+			depth_stencil_info.setDepthTestEnable(VK_TRUE);
+			depth_stencil_info.setDepthWriteEnable(VK_FALSE);
+			depth_stencil_info.setDepthCompareOp(vk::CompareOp::eGreaterOrEqual);
+			depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
+			depth_stencil_info.setStencilTestEnable(VK_FALSE);
+
+			std::vector<vk::PipelineColorBlendAttachmentState> blend_state = {
+				vk::PipelineColorBlendAttachmentState()
+				.setBlendEnable(VK_FALSE)
+				.setColorWriteMask(vk::ColorComponentFlagBits::eR
+					| vk::ColorComponentFlagBits::eG
+					| vk::ColorComponentFlagBits::eB
+					| vk::ColorComponentFlagBits::eA)
+			};
+			vk::PipelineColorBlendStateCreateInfo blend_info;
+			blend_info.setAttachmentCount((uint32_t)blend_state.size());
+			blend_info.setPAttachments(blend_state.data());
+
+			vk::PipelineVertexInputStateCreateInfo vertex_input_info;
+
+			std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =
+			{
+				vk::GraphicsPipelineCreateInfo()
+				.setStageCount(array_length(shader_info))
+				.setPStages(shader_info)
+				.setPVertexInputState(&vertex_input_info)
+				.setPInputAssemblyState(&assembly_info)
+				.setPViewportState(&viewportInfo)
+				.setPRasterizationState(&rasterization_info)
+				.setPMultisampleState(&sample_info)
+				.setLayout(m_pipeline_layout[PipelineLayoutRendering].get())
+				.setRenderPass(m_render_pass.get())
+				.setPDepthStencilState(&depth_stencil_info)
+				.setPColorBlendState(&blend_info),
+			};
+			auto graphics_pipeline = context->m_device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info);
+			m_pipeline[PipelineRendering] = std::move(graphics_pipeline[0]);
+
+		}
 	}
 
 	vk::CommandBuffer execute(const std::vector<OITPipeline*>& pipeline)
 	{
 		auto cmd = m_context->m_cmd_pool->allocCmdOnetime(0);
 		// pre
+		{
+			vk::BufferMemoryBarrier to_clear = m_color.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, { to_clear }, {});
 
+			// clear
+			union {
+				uint32_t u;
+				float f;
+			}u2f;
+			u2f.f = 0.f;
+			cmd.fillBuffer(m_color.getInfo().buffer, m_color.getInfo().offset, m_color.getInfo().range, u2f.u);
+			cmd.fillBuffer(m_fragment_counter.getInfo().buffer, m_fragment_counter.getInfo().offset, m_fragment_counter.getInfo().range, 0u);
+			cmd.fillBuffer(m_fragment_buffer.getInfo().buffer, m_fragment_buffer.getInfo().offset, m_fragment_buffer.getInfo().range, 0u);
+			cmd.fillBuffer(m_fragment_map.getInfo().buffer, m_fragment_map.getInfo().offset, m_fragment_map.getInfo().range, 0u);
+			cmd.updateBuffer<ivec3>(m_emissive_counter.getInfo().buffer, m_emissive_counter.getInfo().offset, ivec3(0, 1, 1));
+			cmd.fillBuffer(m_emissive_buffer.getInfo().buffer, m_emissive_buffer.getInfo().offset, m_emissive_buffer.getInfo().range, 0u);
+			cmd.fillBuffer(m_emissive_map.getInfo().buffer, m_emissive_map.getInfo().offset, m_emissive_map.getInfo().range, 0u);
+		}
 		// exe
 		for (auto& p : pipeline)
 		{
-			p->execute();
+			p->execute(cmd);
 		}
 
 		// post
-		cmd.bindPipeline(vk::PipelineBindPoint::eCompute ,m_pipeline.get());
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout.get(), 0, m_descriptor_set.get(), {});
-		cmd.dispatchIndirect(m_emissive_counter.getInfo().buffer, m_emissive_map.getInfo().offset);
+		{
+			// photonmapping
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelinePhotonMapping].get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutPhotonMapping].get(), 0, m_descriptor_set.get(), {});
+			cmd.dispatchIndirect(m_emissive_counter.getInfo().buffer, m_emissive_map.getInfo().offset);
+		}
 
+		{
+			vk::BufferMemoryBarrier to_render = m_color.makeMemoryBarrier(vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eShaderRead);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, { to_render }, {});
+
+			vk::RenderPassBeginInfo begin_render_Info;
+			begin_render_Info.setRenderPass(m_render_pass.get());
+			begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), m_render_target->m_resolution));
+			begin_render_Info.setFramebuffer(m_framebuffer.get());
+			cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
+
+			// render_targetに書く
+			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PipelineRendering].get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayoutRendering].get(), 0, m_descriptor_set.get(), {});
+			cmd.draw(3, 1, 0, 0);
+
+			cmd.endRenderPass();
+		}
+
+		cmd.end();
+		return cmd;
 	}
 	btr::BufferMemoryEx<Info> m_fragment_info;
 	btr::BufferMemoryEx<int32_t> m_fragment_counter;
@@ -320,12 +482,13 @@ struct OITRenderer
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
 
+	std::shared_ptr<RenderTarget> m_render_target;
 	vk::UniqueRenderPass m_render_pass;
 	vk::UniqueFramebuffer m_framebuffer;
 
-	vk::UniqueShaderModule m_shader[1];
-	vk::UniquePipelineLayout m_pipeline_layout;
-	vk::UniquePipeline m_pipeline;
+	vk::UniqueShaderModule m_shader[ShaderNum];
+	std::array<vk::UniquePipelineLayout, PipelineLayoutNum> m_pipeline_layout;
+	std::array<vk::UniquePipeline, PipelineNum> m_pipeline;
 
 	std::shared_ptr<btr::Context> m_context;
 };
@@ -349,13 +512,41 @@ struct AppModelOIT : public OITPipeline
 
 		}
 	}
-	void execute()override
+	void execute(vk::CommandBuffer cmd)override
 	{
-	}
 
+	}
 	vk::UniqueShaderModule m_shader[2];
 	vk::UniquePipelineLayout m_pipeline_layout;
 	vk::UniquePipeline m_pipeline;
+};
+
+struct DebugOIT : public OITPipeline
+{
+	DebugOIT(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<OITRenderer>& renderer)
+	{
+		m_context = context;
+		m_renderer = renderer;
+	}
+	void execute(vk::CommandBuffer cmd)override
+	{
+		vk::BufferMemoryBarrier to_write = m_renderer->m_emissive_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eIndirectCommandRead| vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eTransferWrite);
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands, {}, {}, { to_write }, {});
+
+		cmd.updateBuffer<ivec3>(m_renderer->m_emissive_counter.getInfo().buffer, m_renderer->m_emissive_counter.getInfo().offset, ivec3(1, 1, 1));
+
+		auto e_buffer = m_renderer->m_emissive_buffer.getInfo();
+		cmd.updateBuffer<vec3>(e_buffer.buffer, e_buffer.offset, vec3(100.f, 100.f, 0.f));
+
+		vk::BufferMemoryBarrier to_read = m_renderer->m_emissive_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eIndirectCommandRead);
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands, {}, {}, { to_read }, {});
+	}
+	std::shared_ptr<btr::Context> m_context;
+	std::shared_ptr<OITRenderer> m_renderer;
+
+// 	vk::UniqueShaderModule m_shader[2];
+// 	vk::UniquePipelineLayout m_pipeline_layout;
+// 	vk::UniquePipeline m_pipeline;
 };
 
 int main()
@@ -383,7 +574,7 @@ int main()
 	PresentPipeline present_pipeline(context, app.m_window->getRenderTarget(), app.m_window->getSwapchainPtr());
 
 	std::shared_ptr<OITRenderer> oit_renderer = std::make_shared<OITRenderer>(context, app.m_window->getRenderTarget());
-
+	DebugOIT oit_debug(context, oit_renderer);
 //	AppModelOIT model_oit(context, oit_renderer);
 	app.setup();
 	while (true)
@@ -395,11 +586,14 @@ int main()
 			enum 
 			{
 				cmd_clear,
+				cmd_pm,
 				cmd_present,
 				cmd_num
 			};
 			std::vector<vk::CommandBuffer> cmds(cmd_num);
 			cmds[cmd_clear] = clear_pipeline.execute();
+			auto p = std::vector<OITPipeline*>{&oit_debug};
+			cmds[cmd_pm] = oit_renderer->execute(p);
 			cmds[cmd_present] = present_pipeline.execute();
 			app.submit(std::move(cmds));
 		}

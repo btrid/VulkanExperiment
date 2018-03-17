@@ -4,7 +4,7 @@
 struct OITInfo
 {
 	mat4 m_camera_PV;
-	vec3 m_resolution;
+	uvec3 m_resolution;
 	vec3 m_position;
 };
 struct Fragment
