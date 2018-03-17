@@ -4,35 +4,30 @@
 
 #include <btrlib/ConvertDimension.glsl>
 #include <btrlib/Common.glsl>
+#include <btrlib/Math.glsl>
 
 #define USE_OIT 0
 #include <OIT.glsl>
 
-#define ray_num (128)
+#define ray_num (256)
 layout (local_size_x = ray_num, local_size_y = 1) in;
 
 vec2 rotate(in float angle)
 {
-	vec2 ret = vec2(0., 1.);
-	float c = cos(angle);
-	float s = sin(angle);
-
-	ret.x = ret.x * c - ret.y * s;
-	ret.y = ret.x * s + ret.y * c;
-	return ret;
+	return vec2(-sin(angle), cos(angle));
 }
 
 void main()
 {
-	vec2 dir = rotate(gl_LocalInvocationIndex / float(ray_num) * 3.141592);
+	vec2 dir = rotate(gl_LocalInvocationID.x * 6.28318 / float(ray_num));
 	int emissive_index = b_emissive_map[gl_WorkGroupID.x];
 	ivec2 reso = ivec2(u_OIT_info.m_resolution.xy);
-	ivec2 map_index = ivec2(emissive_index % reso.x, emissive_index / reso.x);
+	ivec2 map_index = ivec2(320, 320);
 
 	vec2 cell_size = vec2(1.);
 	vec2 pos = vec2(map_index)*cell_size + cell_size*0.5;
 	float progress = 0.;
-#define FLT_EPSIRON 0.00001
+
 	for(;;)
 	{
 		vec2 cell_origin = vec2(map_index)*cell_size;
@@ -59,13 +54,22 @@ void main()
 		pos += prog;
 		progress += length(prog);
 		map_index = map_index + next;
+
+		if(any(greaterThanEqual(map_index, reso)) || any(lessThan(map_index, ivec2(0, 0)))) {
+			// 範囲外
+			b_color[1] = vec4(1., 0., 0., 1.);
+			break;
+		}
+
 		int map_index_1d = map_index.x + map_index.y*reso.x;
-		if(b_fragment_map[map_index_1d] != -1){
+		if(b_fragment_map[map_index_1d] != 0){
 			// hit
 //			if 
 //			int emissive_index = atomicAdd(b_emissive_counter[1].x, 1);
+			b_color[2] = vec4(0., 0., 1., 1.);
 			break;
 		}
-		b_color[map_index_1d] += vec4(1.) / (1. + (progress*progress));
+//		b_color[map_index_1d] += vec4(1.) / (1. + (progress));
+		b_color[map_index_1d] = vec4(1.);
 	}
 }

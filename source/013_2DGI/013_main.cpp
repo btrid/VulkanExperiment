@@ -39,12 +39,13 @@ struct OITPipeline
 
 struct OITRenderer
 {
+
 	enum
 	{
-		RenderWidth = 1024,
-		RenderHeight = 1024,
-		RenderDepth = 1,
-		FragmentBufferSize = RenderWidth * RenderHeight*RenderDepth
+// 		RenderWidth = 1024,
+// 		RenderHeight = 1024,
+//		RenderDepth = 1,
+//		FragmentBufferSize = RenderWidth * RenderHeight*RenderDepth,
 	};
 
 	enum Shader
@@ -82,6 +83,11 @@ struct OITRenderer
 	{
 		m_context = context;
 		m_render_target = render_target;
+
+		int RenderWidth = m_render_target->m_resolution.width;
+		int RenderHeight = m_render_target->m_resolution.height;
+		int RenderDepth = 1;
+		int FragmentBufferSize = RenderWidth * RenderHeight*RenderDepth;
 
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 		{
@@ -353,14 +359,12 @@ struct OITRenderer
 
 			// viewport
 			vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)render_target->m_resolution.width, (float)render_target->m_resolution.height, 0.f, 1.f);
-			std::vector<vk::Rect2D> scissor = {
-				vk::Rect2D(vk::Offset2D(0, 0), render_target->m_resolution)
-			};
+			vk::Rect2D scissor = vk::Rect2D(vk::Offset2D(0, 0), render_target->m_resolution);
 			vk::PipelineViewportStateCreateInfo viewportInfo;
 			viewportInfo.setViewportCount(1);
 			viewportInfo.setPViewports(&viewport);
-			viewportInfo.setScissorCount((uint32_t)scissor.size());
-			viewportInfo.setPScissors(scissor.data());
+			viewportInfo.setScissorCount(1);
+			viewportInfo.setPScissors(&scissor);
 
 			vk::PipelineRasterizationStateCreateInfo rasterization_info;
 			rasterization_info.setPolygonMode(vk::PolygonMode::eFill);
@@ -446,7 +450,7 @@ struct OITRenderer
 			// photonmapping
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelinePhotonMapping].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutPhotonMapping].get(), 0, m_descriptor_set.get(), {});
-			cmd.dispatchIndirect(m_emissive_counter.getInfo().buffer, m_emissive_map.getInfo().offset);
+			cmd.dispatchIndirect(m_emissive_counter.getInfo().buffer, m_emissive_counter.getInfo().offset);
 		}
 
 		{
@@ -543,10 +547,6 @@ struct DebugOIT : public OITPipeline
 	}
 	std::shared_ptr<btr::Context> m_context;
 	std::shared_ptr<OITRenderer> m_renderer;
-
-// 	vk::UniqueShaderModule m_shader[2];
-// 	vk::UniquePipelineLayout m_pipeline_layout;
-// 	vk::UniquePipeline m_pipeline;
 };
 
 int main()
@@ -557,7 +557,7 @@ int main()
 	camera->getData().m_target = glm::vec3(0.f, 0.f, 0.f);
 	camera->getData().m_up = glm::vec3(0.f, -1.f, 0.f);
 	camera->getData().m_width = 640;
-	camera->getData().m_height = 480;
+	camera->getData().m_height = 640;
 	camera->getData().m_far = 5000.f;
 	camera->getData().m_near = 0.01f;
 
@@ -566,7 +566,7 @@ int main()
 
 	app::AppDescriptor app_desc;
 	app_desc.m_gpu = gpu;
-	app_desc.m_window_size = uvec2(640, 480);
+	app_desc.m_window_size = uvec2(640, 640);
 	app::App app(app_desc);
 
 	auto context = app.m_context;

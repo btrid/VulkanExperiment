@@ -8,6 +8,9 @@
 #ifndef FLT_EPSIRON
 #define FLT_EPSIRON (0.0000001)
 #endif
+#ifndef FLT_EPSIRON_HALF
+#define FLT_EPSIRON_HALF (0.0001)
+#endif
 
 #ifndef PI
 #define PI (3.141592)

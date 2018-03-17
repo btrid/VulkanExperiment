@@ -18,6 +18,4 @@ struct DrawElementIndirectCommand{
 	uint  baseInstance;
 };
 
-
-
 #endif
