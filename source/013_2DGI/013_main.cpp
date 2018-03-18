@@ -58,12 +58,14 @@ struct OITRenderer
 	};
 	enum PipelineLayout
 	{
+		PipelineLayoutLightCulling,
 		PipelineLayoutPhotonMapping,
 		PipelineLayoutRendering,
 		PipelineLayoutNum,
 	};
 	enum Pipeline
 	{
+		PipelineLightCulling,
 		PipelinePhotonMapping,
 		PipelineRendering,
 		PipelineNum,

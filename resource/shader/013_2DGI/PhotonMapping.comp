@@ -64,8 +64,6 @@ void main()
 		int map_index_1d = map_index.x + map_index.y*reso.x;
 		if(b_fragment_map[map_index_1d] != 0){
 			// hit
-//			if 
-//			int emissive_index = atomicAdd(b_emissive_counter[1].x, 1);
 			b_color[2] = vec4(0., 0., 1., 1.);
 			break;
 		}
