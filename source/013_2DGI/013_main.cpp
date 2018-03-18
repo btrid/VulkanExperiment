@@ -134,6 +134,16 @@ struct OITRenderer
 			desc.element_num = FragmentBufferSize;
 			m_emissive_map = context->m_storage_memory.allocateMemory(desc);
 		}
+		{
+			btr::BufferMemoryDescriptorEx<int32_t> desc;
+			desc.element_num = FragmentBufferSize;
+			m_emissive_tile_counter = context->m_storage_memory.allocateMemory(desc);
+		}
+		{
+			btr::BufferMemoryDescriptorEx<int32_t> desc;
+			desc.element_num = FragmentBufferSize;
+			m_emissive_tile_map = context->m_storage_memory.allocateMemory(desc);
+		}
 
 		{
 			btr::BufferMemoryDescriptorEx<vec4> desc;
@@ -183,6 +193,16 @@ struct OITRenderer
 				.setStageFlags(stage)
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 				.setDescriptorCount(1)
+				.setBinding(13),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(stage)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(1)
+				.setBinding(14),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(stage)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(1)
 				.setBinding(20),
 			};
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
@@ -213,6 +233,8 @@ struct OITRenderer
 				m_emissive_counter.getInfo(),
 				m_emissive_buffer.getInfo(),
 				m_emissive_map.getInfo(),
+				m_emissive_tile_counter.getInfo(),
+				m_emissive_tile_map.getInfo(),
 			};
 			vk::DescriptorBufferInfo output_storages[] = {
 				m_color.getInfo(),
@@ -483,6 +505,8 @@ struct OITRenderer
 	btr::BufferMemoryEx<ivec3> m_emissive_counter;
 	btr::BufferMemoryEx<vec3> m_emissive_buffer;
 	btr::BufferMemoryEx<int32_t> m_emissive_map;
+	btr::BufferMemoryEx<int32_t> m_emissive_tile_counter;
+	btr::BufferMemoryEx<int32_t> m_emissive_tile_map;
 	btr::BufferMemoryEx<vec4> m_color;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;

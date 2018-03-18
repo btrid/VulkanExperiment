@@ -46,7 +46,7 @@ void main()
 		if(i >= data_num){
 			break;
 		}
-		if(!isContainAABB2D(f, s_area)) 
+		if(!isInAABB2D(f, s_area)) 
 		{
 			continue;
 		}
