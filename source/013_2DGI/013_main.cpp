@@ -492,7 +492,6 @@ struct OITRenderer
 			cmd.updateBuffer<ivec3>(m_emissive_counter.getInfo().buffer, m_emissive_counter.getInfo().offset, ivec3(0, 1, 1));
 			cmd.fillBuffer(m_emissive_buffer.getInfo().buffer, m_emissive_buffer.getInfo().offset, m_emissive_buffer.getInfo().range, 0u);
 			cmd.fillBuffer(m_emissive_map.getInfo().buffer, m_emissive_map.getInfo().offset, m_emissive_map.getInfo().range, 0u);
-//			cmd.fillBuffer(m_emissive_tile_counter.getInfo().buffer, m_emissive_tile_counter.getInfo().offset, m_emissive_tile_counter.getInfo().range, 0u);
 		}
 		// exe
 		for (auto& p : pipeline)
@@ -602,22 +601,65 @@ struct DebugOIT : public OITPipeline
 	{
 		m_context = context;
 		m_renderer = renderer;
+		std::vector<OITRenderer::Fragment> map_data(renderer->RenderWidth*renderer->RenderHeight);
+		for (auto& m : map_data)
+		{
+			m.albedo = vec3(0.);
+			if (std::rand() % 100 == 0)
+			{
+				m.albedo = vec3(1.f);
+			}
+		}
+
+		btr::BufferMemoryDescriptorEx<OITRenderer::Fragment> desc;
+		desc.element_num = map_data.size();
+		m_map_data = m_context->m_storage_memory.allocateMemory(desc);
+
+		desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
+		auto staging = m_context->m_staging_memory.allocateMemory(desc);
+		memcpy_s(staging.getMappedPtr(), vector_sizeof(map_data), map_data.data(), vector_sizeof(map_data));
+
+		vk::BufferCopy copy;
+		copy.setSrcOffset(staging.getInfo().offset);
+		copy.setDstOffset(m_map_data.getInfo().offset);
+		copy.setSize(m_map_data.getInfo().range);
+
+		auto cmd = m_context->m_cmd_pool->allocCmdTempolary(0);
+		cmd.copyBuffer(staging.getInfo().buffer, m_map_data.getInfo().buffer, copy);
 	}
 	void execute(vk::CommandBuffer cmd)override
 	{
-		vk::BufferMemoryBarrier to_write = m_renderer->m_emissive_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eIndirectCommandRead| vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eTransferWrite);
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands, {}, {}, { to_write }, {});
+		vk::BufferMemoryBarrier to_write[] =
+		{
+			m_renderer->m_emissive_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eIndirectCommandRead | vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eTransferWrite),
+			m_renderer->m_fragment_buffer.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
+		};
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands, {}, 0, nullptr, array_length(to_write), to_write, 0, nullptr);
 
 		cmd.updateBuffer<ivec3>(m_renderer->m_emissive_counter.getInfo().buffer, m_renderer->m_emissive_counter.getInfo().offset, ivec3(1, 1, 1));
 
 		auto e_buffer = m_renderer->m_emissive_buffer.getInfo();
 		cmd.updateBuffer<vec3>(e_buffer.buffer, e_buffer.offset, vec3(100.f, 100.f, 0.f));
 
-		vk::BufferMemoryBarrier to_read = m_renderer->m_emissive_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eIndirectCommandRead);
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands, {}, {}, { to_read }, {});
+//		cmd.updateBuffer(m_renderer->m_fragment_buffer.getInfo().buffer, m_renderer->m_fragment_buffer.getInfo().offset, vector_sizeof(m_map_data), m_map_data.data());
+		vk::BufferCopy copy;
+		copy.setSrcOffset(m_map_data.getInfo().offset);
+		copy.setDstOffset(m_renderer->m_fragment_buffer.getInfo().offset);
+		copy.setSize(m_map_data.getInfo().range);
+
+		cmd.copyBuffer(m_map_data.getInfo().buffer, m_renderer->m_fragment_buffer.getInfo().buffer, copy);
+
+		vk::BufferMemoryBarrier to_read[] = 
+		{
+			m_renderer->m_emissive_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eIndirectCommandRead),
+			m_renderer->m_fragment_buffer.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eIndirectCommandRead),
+		};
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);
+
 	}
 	std::shared_ptr<btr::Context> m_context;
 	std::shared_ptr<OITRenderer> m_renderer;
+	btr::BufferMemoryEx<OITRenderer::Fragment> m_map_data;
 };
 
 int main()

@@ -38,10 +38,10 @@ void main()
 
 		for(;;)
 		{
-//			ivec2 map_index_1 = map_index/8;
-///			int map_index_1_1d = map_index_1.x + map_index_1.y * (640/8);
-//			uint64_t fragment_map = b_fragment_hierarchy[map_index_1_1d];
-			uint64_t fragment_map = 0;
+			ivec2 map_index_1 = map_index/8;
+			int map_index_1_1d = map_index_1.x + map_index_1.y * (640/8);
+			uint64_t fragment_map = b_fragment_hierarchy[map_index_1_1d];
+//			uint64_t fragment_map = 0;
 
 			int hierarchy = fragment_map == 0 ? 1 : 0;
 			vec2 cell_size = c_cell_size[hierarchy];
