@@ -43,8 +43,7 @@ void main()
 //			uint64_t fragment_map = b_fragment_hierarchy[map_index_1_1d];
 			uint64_t fragment_map = 0;
 
-//			int hierarchy = fragment_map == 0 ? 1 : 0;
-			int hierarchy = 1;
+			int hierarchy = fragment_map == 0 ? 1 : 0;
 			vec2 cell_size = c_cell_size[hierarchy];
 
 			vec2 cell_origin = vec2(map_index)*c_cell_size[hierarchy];
@@ -57,13 +56,12 @@ void main()
 			dist.x = abs(dir.x) < FLT_EPSIRON ? 99999. : abs(x / dir.x);
 			dist.y = abs(dir.y) < FLT_EPSIRON ? 99999. : abs(y / dir.y);
 			float rate = min(dist.x, dist.y);
-			rate = abs(dist.x) < FLT_EPSIRON ? dist.y : rate;
-			rate = abs(dist.y) < FLT_EPSIRON ? dist.x : rate;
+			rate = rate < FLT_EPSIRON ? max(dist.x, dist.y) : rate;
 
 			vec2 prog = dir * rate;
 			pos += prog;
 			ivec2 next = dist.x < dist.y ? next_step.xz : next_step.zy;
-			pos += next * 0.001; // ちょっとずれる.2.500-0.001でmapindexを減らしたい
+			pos += next * 0.01; // ちょっとずれる.2.500-0.001でmapindexを減らしたい
 
 			map_index = ivec2((pos+next*c_cell_size[0]*0.5) / c_cell_size[0]);
 
@@ -80,13 +78,6 @@ void main()
 				b_color[0] = vec4(1., 0., 0., 1.);
 				break;
 			}
-
-//			int map_index_1d = map_index.x + map_index.y*reso.x;
-//			if(b_fragment_map[map_index_1d] != 0){
-				// hit
-//				b_color[pixel_1d] = vec4(0., 0., 1., 1.);
-//				break;
-//			}
 		}
 	}
 

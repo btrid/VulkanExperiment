@@ -2,6 +2,7 @@
 #define _OIT_
 
 #extension GL_ARB_gpu_shader_int64 : require
+//#extension GL_NV_shader_atomic_int64 : require
 struct OITInfo
 {
 	mat4 m_camera_PV;

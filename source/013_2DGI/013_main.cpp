@@ -47,10 +47,15 @@ struct OITRenderer
 //		RenderDepth = 1,
 //		FragmentBufferSize = RenderWidth * RenderHeight*RenderDepth,
 	};
+	int RenderWidth;
+	int RenderHeight;
+	int RenderDepth;
+	int FragmentBufferSize;
 
 	enum Shader
 	{
 		//		ShaderClear,
+		ShaderMakeFragmentHierarchy,
 		ShaderPhotonMapping,
 		ShaderRenderingVS,
 		ShaderRenderingFS,
@@ -58,6 +63,7 @@ struct OITRenderer
 	};
 	enum PipelineLayout
 	{
+		PipelineLayoutMakeFragmentHierarchy,
 		PipelineLayoutLightCulling,
 		PipelineLayoutPhotonMapping,
 		PipelineLayoutRendering,
@@ -65,6 +71,7 @@ struct OITRenderer
 	};
 	enum Pipeline
 	{
+		PipelineMakeFragmentHierarchy,
 		PipelineLightCulling,
 		PipelinePhotonMapping,
 		PipelineRendering,
@@ -82,15 +89,16 @@ struct OITRenderer
 		vec3 albedo;
 	};
 
+
 	OITRenderer(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target)
 	{
 		m_context = context;
 		m_render_target = render_target;
 
-		int RenderWidth = m_render_target->m_resolution.width;
-		int RenderHeight = m_render_target->m_resolution.height;
-		int RenderDepth = 1;
-		int FragmentBufferSize = RenderWidth * RenderHeight*RenderDepth;
+		RenderWidth = m_render_target->m_resolution.width;
+		RenderHeight = m_render_target->m_resolution.height;
+		RenderDepth = 1;
+		FragmentBufferSize = RenderWidth * RenderHeight*RenderDepth;
 
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 		{
@@ -285,6 +293,7 @@ struct OITRenderer
 		{
 			const char* name[] =
 			{
+				"MakeFragmentHierarchy.comp.spv",
 				"PhotonMapping.comp.spv",
 				"PMRendering.vert.spv",
 				"PMRendering.frag.spv",
@@ -306,25 +315,33 @@ struct OITRenderer
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 			pipeline_layout_info.setPSetLayouts(layouts);
+			m_pipeline_layout[PipelineLayoutMakeFragmentHierarchy] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 			m_pipeline_layout[PipelineLayoutPhotonMapping] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 			m_pipeline_layout[PipelineLayoutRendering] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
 		// pipeline
 		{
-			vk::PipelineShaderStageCreateInfo shader_info[1];
-			shader_info[0].setModule(m_shader[ShaderPhotonMapping].get());
+			vk::PipelineShaderStageCreateInfo shader_info[2];
+			shader_info[0].setModule(m_shader[ShaderMakeFragmentHierarchy].get());
 			shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[0].setPName("main");
+			shader_info[1].setModule(m_shader[ShaderPhotonMapping].get());
+			shader_info[1].setStage(vk::ShaderStageFlagBits::eCompute);
+			shader_info[1].setPName("main");
 
 			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 			{
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[0])
+				.setLayout(m_pipeline_layout[PipelineLayoutMakeFragmentHierarchy].get()),
+				vk::ComputePipelineCreateInfo()
+				.setStage(shader_info[1])
 				.setLayout(m_pipeline_layout[PipelineLayoutPhotonMapping].get()),
 			};
 			auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
-			m_pipeline[PipelinePhotonMapping] = std::move(compute_pipeline[0]);
+			m_pipeline[PipelineMakeFragmentHierarchy] = std::move(compute_pipeline[0]);
+			m_pipeline[PipelinePhotonMapping] = std::move(compute_pipeline[1]);
 		}
 
 		// レンダーパス
@@ -485,6 +502,19 @@ struct OITRenderer
 
 		// post
 		{
+			auto to_write = m_fragment_hierarchy.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_write }, {});
+
+			// make hierarchy
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineMakeFragmentHierarchy].get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutMakeFragmentHierarchy].get(), 0, m_descriptor_set.get(), {});
+			cmd.dispatch(RenderWidth / 8, RenderHeight / 8, 1);
+		}
+
+		{
+			auto to_read = m_fragment_hierarchy.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_read }, {});
+
 			// photonmapping
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelinePhotonMapping].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutPhotonMapping].get(), 0, m_descriptor_set.get(), {});

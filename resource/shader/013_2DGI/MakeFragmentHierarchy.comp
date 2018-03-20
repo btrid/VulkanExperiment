@@ -12,26 +12,37 @@
 
 layout (local_size_x = 8, local_size_y = 8) in;
 
-shared uint64_t s_bit;
+//shared uint64_t s_bit;
+shared uint s_bit[2];
 void main()
 {
 
-	if(gl_LocalInvocationIndex == 0)
+	if(gl_LocalInvocationIndex <= 1)
 	{
-		s_bit = 0;
+		s_bit[gl_LocalInvocationIndex] = 0;
 	}
 	barrier();
 	memoryBarrierShared();
 
-//	b_fragment_map[]
-//	uvec3 index = uvec3(gl_WorkGroupID.xy, 1);
-//	uint tiled_1D_index = gl_WorkGroupID.x+ gl_WorkGroupID.y*gl_NumWorkGroups.x; 
-
-//	if(gl_LocalInvocationID.xy == 0)
-//	{
-//	}
-
+	uint tiled_1D_index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*u_OIT_info.m_resolution.x; 
+	vec3 albedo = b_fragment[tiled_1D_index].albedo;
+	if(dot(albedo, albedo) >= 0.001)
+	{
+		uint bit_offset = gl_LocalInvocationID.x + gl_LocalInvocationID.y*8;
+		uint hilow = bit_offset/32;
+		uint offset = bit_offset%32;
+		atomicOr(s_bit[hilow], 1<<offset);
+	}
 	barrier();
 	memoryBarrierShared();
+
+	if(gl_LocalInvocationIndex == 0)
+	{
+		uint64_t bit =  s_bit[1];
+		bit <<= 32;
+		bit |= s_bit[0];
+		uint l1_index_1d = gl_WorkGroupID.x + gl_WorkGroupID.y*(u_OIT_info.m_resolution.x/8);
+		b_fragment_hierarchy[l1_index_1d] = bit;
+	}
 }
 
