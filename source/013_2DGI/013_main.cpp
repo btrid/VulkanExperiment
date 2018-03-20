@@ -73,8 +73,9 @@ struct OITRenderer
 	struct Info
 	{
 		mat4 m_camera_PV;
-		uvec3 m_resolution;
-		vec3 m_position;
+		uvec4 m_resolution;
+		vec4 m_position;
+		uint m_emissive_tile_map_max;
 	};
 	struct Fragment
 	{
@@ -98,10 +99,11 @@ struct OITRenderer
 			m_fragment_info = context->m_uniform_memory.allocateMemory(desc);
 
 			Info info;
-			info.m_position = vec3(0.f, 0.f, 0.f);
-			info.m_resolution = vec3(RenderWidth, RenderHeight, RenderDepth);
+			info.m_position = vec4(0.f, 0.f, 0.f, 0.f);
+			info.m_resolution = vec4(RenderWidth, RenderHeight, RenderDepth, 0.f);
 			info.m_camera_PV = glm::ortho(-RenderWidth * 0.5f, RenderWidth*0.5f, -RenderHeight * 0.5f, RenderHeight*0.5f);
-			info.m_camera_PV *= glm::lookAt(vec3(0., -1.f, 0.f) + info.m_position, info.m_position, vec3(0.f, 0.f, 1.f));
+			info.m_camera_PV *= glm::lookAt(vec3(0., -1.f, 0.f) + info.m_position.xyz(), info.m_position.xyz(), vec3(0.f, 0.f, 1.f));
+			info.m_emissive_tile_map_max = 4;
 			cmd.updateBuffer<Info>(m_fragment_info.getInfo().buffer, m_fragment_info.getInfo().offset, info);
 		}
 		{
@@ -118,6 +120,11 @@ struct OITRenderer
 			btr::BufferMemoryDescriptorEx<int32_t> desc;
 			desc.element_num = FragmentBufferSize;
 			m_fragment_map = context->m_storage_memory.allocateMemory(desc);
+		}
+		{
+			btr::BufferMemoryDescriptorEx<int64_t> desc;
+			desc.element_num = RenderWidth * RenderHeight / 8 / 8;
+			m_fragment_hierarchy = context->m_storage_memory.allocateMemory(desc);
 		}
 		{
 			btr::BufferMemoryDescriptorEx<ivec3> desc;
@@ -178,6 +185,11 @@ struct OITRenderer
 				.setStageFlags(stage)
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 				.setDescriptorCount(1)
+				.setBinding(4),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(stage)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(1)
 				.setBinding(10),
 				vk::DescriptorSetLayoutBinding()
 				.setStageFlags(stage)
@@ -228,6 +240,7 @@ struct OITRenderer
 				m_fragment_counter.getInfo(),
 				m_fragment_buffer.getInfo(),
 				m_fragment_map.getInfo(),
+				m_fragment_hierarchy.getInfo(),
 			};
 			vk::DescriptorBufferInfo emissive_storages[] = {
 				m_emissive_counter.getInfo(),
@@ -462,6 +475,7 @@ struct OITRenderer
 			cmd.updateBuffer<ivec3>(m_emissive_counter.getInfo().buffer, m_emissive_counter.getInfo().offset, ivec3(0, 1, 1));
 			cmd.fillBuffer(m_emissive_buffer.getInfo().buffer, m_emissive_buffer.getInfo().offset, m_emissive_buffer.getInfo().range, 0u);
 			cmd.fillBuffer(m_emissive_map.getInfo().buffer, m_emissive_map.getInfo().offset, m_emissive_map.getInfo().range, 0u);
+//			cmd.fillBuffer(m_emissive_tile_counter.getInfo().buffer, m_emissive_tile_counter.getInfo().offset, m_emissive_tile_counter.getInfo().range, 0u);
 		}
 		// exe
 		for (auto& p : pipeline)
@@ -474,7 +488,7 @@ struct OITRenderer
 			// photonmapping
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelinePhotonMapping].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutPhotonMapping].get(), 0, m_descriptor_set.get(), {});
-			cmd.dispatchIndirect(m_emissive_counter.getInfo().buffer, m_emissive_counter.getInfo().offset);
+			cmd.dispatch(20, 20, 1);
 		}
 
 		{
@@ -502,6 +516,7 @@ struct OITRenderer
 	btr::BufferMemoryEx<int32_t> m_fragment_counter;
 	btr::BufferMemoryEx<Fragment> m_fragment_buffer;
 	btr::BufferMemoryEx<int32_t> m_fragment_map;
+	btr::BufferMemoryEx<int64_t> m_fragment_hierarchy;
 	btr::BufferMemoryEx<ivec3> m_emissive_counter;
 	btr::BufferMemoryEx<vec3> m_emissive_buffer;
 	btr::BufferMemoryEx<int32_t> m_emissive_map;

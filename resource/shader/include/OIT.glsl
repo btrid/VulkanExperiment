@@ -1,6 +1,7 @@
 #ifndef _OIT_
 #define _OIT_
 
+#extension GL_ARB_gpu_shader_int64 : require
 struct OITInfo
 {
 	mat4 m_camera_PV;
@@ -30,8 +31,11 @@ layout(std430, set=USE_OIT, binding=2) restrict buffer FragmentBuffer {
 layout(std430, set=USE_OIT, binding=3) restrict buffer FragmentMapBuffer {
 	int b_fragment_map[];
 };
+layout(std430, set=USE_OIT, binding=4) restrict buffer FragmentHierarchyBuffer {
+	uint64_t b_fragment_hierarchy[];
+};
 layout(std430, set=USE_OIT, binding=10) restrict buffer EmissiveCounter {
-	ivec3 b_emissive_counter[];
+	ivec3 b_emissive_counter;
 };
 layout(std430, set=USE_OIT, binding=11) restrict buffer EmissiveBuffer {
 	vec3 b_emissive[];
