@@ -26,8 +26,7 @@ void main()
 	{
 //		int emissive_pixel_index = b_emissive_tile_map[tile_index*u_OIT_info.m_emissive_tile_map_max + i];
 //		ivec2 emissive_pixel_index_2d = ivec2(emissive_pixel_index % u_OIT_info.m_resolution.x, emissive_pixel_index / u_OIT_info.m_resolution.y);
-		int emissive_pixel_index = 0;
-		ivec2 emissive_pixel_index_2d = ivec2(0, 0);
+		ivec2 emissive_pixel_index_2d = ivec2(100, 100);
 
 		const vec2 start = emissive_pixel_index_2d*c_cell_size[0] + c_cell_size[0]*0.5;
 
@@ -78,13 +77,13 @@ void main()
 				break;
 			}
 
-			if(any(greaterThanEqual(map_index, reso)) || any(lessThan(map_index, ivec2(0, 0)))) 
+/*			if(any(greaterThanEqual(map_index, reso)) || any(lessThan(map_index, ivec2(0, 0)))) 
 			{
 				// 範囲外にはならないようになるのが理想
 				b_color[0] = vec4(1., 0., 0., 1.);
 				break;
 			}
-
+*/
 			map_index_1 = map_index/8;
 			map_index_1_sub = map_index%8;
 			map_index_1_1d = map_index_1.x + map_index_1.y * (640/8);

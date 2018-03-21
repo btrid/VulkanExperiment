@@ -56,6 +56,7 @@ struct OITRenderer
 	{
 		//		ShaderClear,
 		ShaderMakeFragmentHierarchy,
+//		ShaderLightCulling,
 		ShaderPhotonMapping,
 		ShaderRenderingVS,
 		ShaderRenderingFS,
@@ -116,19 +117,9 @@ struct OITRenderer
 			cmd.updateBuffer<Info>(m_fragment_info.getInfo().buffer, m_fragment_info.getInfo().offset, info);
 		}
 		{
-			btr::BufferMemoryDescriptorEx<int32_t> desc;
-			desc.element_num = 1;
-			m_fragment_counter = context->m_storage_memory.allocateMemory(desc);
-		}
-		{
 			btr::BufferMemoryDescriptorEx<Fragment> desc;
 			desc.element_num = FragmentBufferSize;
 			m_fragment_buffer = context->m_storage_memory.allocateMemory(desc);
-		}
-		{
-			btr::BufferMemoryDescriptorEx<int32_t> desc;
-			desc.element_num = FragmentBufferSize;
-			m_fragment_map = context->m_storage_memory.allocateMemory(desc);
 		}
 		{
 			btr::BufferMemoryDescriptorEx<int64_t> desc;
@@ -246,9 +237,7 @@ struct OITRenderer
 				m_fragment_info.getInfo(),
 			};
 			vk::DescriptorBufferInfo storages[] = {
-				m_fragment_counter.getInfo(),
 				m_fragment_buffer.getInfo(),
-				m_fragment_map.getInfo(),
 				m_fragment_hierarchy.getInfo(),
 			};
 			vk::DescriptorBufferInfo emissive_storages[] = {
@@ -487,9 +476,7 @@ struct OITRenderer
 			}u2f;
 			u2f.f = 0.f;
 			cmd.fillBuffer(m_color.getInfo().buffer, m_color.getInfo().offset, m_color.getInfo().range, u2f.u);
-			cmd.fillBuffer(m_fragment_counter.getInfo().buffer, m_fragment_counter.getInfo().offset, m_fragment_counter.getInfo().range, 0u);
 			cmd.fillBuffer(m_fragment_buffer.getInfo().buffer, m_fragment_buffer.getInfo().offset, m_fragment_buffer.getInfo().range, 0u);
-			cmd.fillBuffer(m_fragment_map.getInfo().buffer, m_fragment_map.getInfo().offset, m_fragment_map.getInfo().range, 0u);
 			cmd.updateBuffer<ivec3>(m_emissive_counter.getInfo().buffer, m_emissive_counter.getInfo().offset, ivec3(0, 1, 1));
 			cmd.fillBuffer(m_emissive_buffer.getInfo().buffer, m_emissive_buffer.getInfo().offset, m_emissive_buffer.getInfo().range, 0u);
 			cmd.fillBuffer(m_emissive_map.getInfo().buffer, m_emissive_map.getInfo().offset, m_emissive_map.getInfo().range, 0u);
@@ -543,9 +530,7 @@ struct OITRenderer
 		return cmd;
 	}
 	btr::BufferMemoryEx<Info> m_fragment_info;
-	btr::BufferMemoryEx<int32_t> m_fragment_counter;
 	btr::BufferMemoryEx<Fragment> m_fragment_buffer;
-	btr::BufferMemoryEx<int32_t> m_fragment_map;
 	btr::BufferMemoryEx<int64_t> m_fragment_hierarchy;
 	btr::BufferMemoryEx<ivec3> m_emissive_counter;
 	btr::BufferMemoryEx<vec3> m_emissive_buffer;
