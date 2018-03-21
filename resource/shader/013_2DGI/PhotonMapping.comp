@@ -17,11 +17,10 @@ void main()
 	int tile_index = int(gl_WorkGroupID.x + gl_WorkGroupID.y*32);
 	ivec2 reso = ivec2(u_OIT_info.m_resolution.xy);
 
-	int hierarchy_level = 0;
-	int hierarchy_rate = 8;
-	vec2 c_cell_size[2];
-	c_cell_size[0] = vec2(1.);
-	c_cell_size[1] = c_cell_size[0]*hierarchy_rate;
+	const int hierarchy_rate[2] = {1, 8};
+	const vec2 c_cell_size[2] = {vec2(1.), vec2(1.)*hierarchy_rate[1]};
+
+	const vec2 end = vec2(pixel)*c_cell_size[0] + c_cell_size[0]*0.5;
 
 	for(int i = 0; i < b_emissive_counter.x; i++)
 	{
@@ -30,11 +29,17 @@ void main()
 		int emissive_pixel_index = 0;
 		ivec2 emissive_pixel_index_2d = ivec2(0, 0);
 
-		ivec2 map_index = pixel;
-		vec2 pos = vec2(map_index)*c_cell_size[0] + c_cell_size[0]*0.5;
+		const vec2 start = emissive_pixel_index_2d*c_cell_size[0] + c_cell_size[0]*0.5;
 
-		vec2 dir = normalize(emissive_pixel_index_2d*c_cell_size[0] - pos);
-		ivec3 next_step = ivec3((dir.x < 0. ? -1 : 1), (dir.y < 0. ? -1 : 1), 0);
+		if(all(equal(start, end))){
+			continue;
+		}
+		vec2 dir = normalize(end - start);
+
+		vec2 pos = start;
+		ivec2 map_index = emissive_pixel_index_2d;
+
+		const ivec3 next_step = ivec3((dir.x < 0. ? -1 : 1), (dir.y < 0. ? -1 : 1), 0);
 		ivec2 next = ivec2(0);
 
 		ivec2 map_index_1 = map_index/8;
@@ -48,7 +53,7 @@ void main()
 			int hierarchy = fragment_map == 0 ? 1 : 0;
 			vec2 cell_size = c_cell_size[hierarchy];
 
-			vec2 cell_origin = vec2(map_index)*c_cell_size[hierarchy];
+			vec2 cell_origin = vec2(map_index / hierarchy_rate[hierarchy])*cell_size;
 			vec2 cell_p = (pos+(next*0.001)) - cell_origin;
 
 			float x = dir.x < 0. ? cell_p.x : (cell_size.x- cell_p.x);
@@ -64,9 +69,9 @@ void main()
 			pos += prog;
 			next = dist.x < dist.y ? next_step.xz : next_step.zy;
 
-			map_index = ivec2((pos+next*c_cell_size[0]*0.5) / c_cell_size[0]);
+			map_index = ivec2((pos+next*0.001) / c_cell_size[0]);
 
-			if(distance(pixel, map_index) >= distance(pixel, emissive_pixel_index_2d))
+			if(distance(start, pos) >= distance(start, end))
 			{
 				// 距離を超えたら当たってない
 				b_color[pixel_1d] = vec4(0., 0., 1., 1.);
@@ -79,6 +84,7 @@ void main()
 				b_color[0] = vec4(1., 0., 0., 1.);
 				break;
 			}
+
 			map_index_1 = map_index/8;
 			map_index_1_sub = map_index%8;
 			map_index_1_1d = map_index_1.x + map_index_1.y * (640/8);

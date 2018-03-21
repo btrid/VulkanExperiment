@@ -38,9 +38,7 @@ void main()
 
 	if(gl_LocalInvocationIndex == 0)
 	{
-		uint64_t bit =  s_bit[1];
-		bit <<= 32;
-		bit |= s_bit[0];
+		uint64_t bit =  uint64_t(s_bit[1]) << 32 | s_bit[0];
 		uint l1_index_1d = gl_WorkGroupID.x + gl_WorkGroupID.y*(u_OIT_info.m_resolution.x/8);
 		b_fragment_hierarchy[l1_index_1d] = bit;
 	}

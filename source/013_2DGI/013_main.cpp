@@ -606,7 +606,7 @@ struct DebugOIT : public OITPipeline
 		for (auto& m : map_data)
 		{
 			m.albedo = vec3(0.);
-			if (std::rand() % 100 == 0)
+			if (std::rand() % 1000 < 1)
 			{
 				m.albedo = vec3(1.f);
 			}
