@@ -36,12 +36,13 @@ void main()
 		vec2 dir = normalize(emissive_pixel_index_2d*c_cell_size[0] - pos);
 		ivec3 next_step = ivec3((dir.x < 0. ? -1 : 1), (dir.y < 0. ? -1 : 1), 0);
 
+		ivec2 map_index_1 = map_index/8;
+		ivec2 map_index_1_sub = map_index%8;
+		int map_index_1_1d = map_index_1.x + map_index_1.y * (640/8);
+		uint64_t fragment_map = b_fragment_hierarchy[map_index_1_1d];
+
 		for(;;)
 		{
-			ivec2 map_index_1 = map_index/8;
-			int map_index_1_1d = map_index_1.x + map_index_1.y * (640/8);
-			uint64_t fragment_map = b_fragment_hierarchy[map_index_1_1d];
-//			uint64_t fragment_map = 0;
 
 			int hierarchy = fragment_map == 0 ? 1 : 0;
 			vec2 cell_size = c_cell_size[hierarchy];
@@ -76,6 +77,19 @@ void main()
 			{
 				// 範囲外にはならないようになるのが理想
 				b_color[0] = vec4(1., 0., 0., 1.);
+				break;
+			}
+			map_index_1 = map_index/8;
+			map_index_1_sub = map_index%8;
+			map_index_1_1d = map_index_1.x + map_index_1.y * (640/8);
+			fragment_map = b_fragment_hierarchy[map_index_1_1d];
+
+			uint bit_offset = map_index_1_sub.x + map_index_1_sub.y*8;
+			uint64_t bit = uint64_t(1)<<bit_offset;
+			if((fragment_map & (bit)) != 0)
+			{
+				// 遮蔽物
+				b_color[pixel_1d] = vec4(0., 0., 0., 1.);
 				break;
 			}
 		}

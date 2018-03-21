@@ -87,6 +87,7 @@ struct OITRenderer
 	struct Fragment
 	{
 		vec3 albedo;
+		float _p;
 	};
 
 
@@ -641,7 +642,6 @@ struct DebugOIT : public OITPipeline
 		auto e_buffer = m_renderer->m_emissive_buffer.getInfo();
 		cmd.updateBuffer<vec3>(e_buffer.buffer, e_buffer.offset, vec3(100.f, 100.f, 0.f));
 
-//		cmd.updateBuffer(m_renderer->m_fragment_buffer.getInfo().buffer, m_renderer->m_fragment_buffer.getInfo().offset, vector_sizeof(m_map_data), m_map_data.data());
 		vk::BufferCopy copy;
 		copy.setSrcOffset(m_map_data.getInfo().offset);
 		copy.setDstOffset(m_renderer->m_fragment_buffer.getInfo().offset);
