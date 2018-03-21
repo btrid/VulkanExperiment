@@ -56,7 +56,7 @@ struct OITRenderer
 	{
 		//		ShaderClear,
 		ShaderMakeFragmentHierarchy,
-//		ShaderLightCulling,
+		ShaderLightCulling,
 		ShaderPhotonMapping,
 		ShaderRenderingVS,
 		ShaderRenderingFS,
@@ -81,9 +81,10 @@ struct OITRenderer
 	struct Info
 	{
 		mat4 m_camera_PV;
-		uvec4 m_resolution;
+		uvec2 m_resolution;
+		uvec2 m_emission_tile_num;
 		vec4 m_position;
-		uint m_emission_tile_map_max;
+		int m_emission_tile_map_max;
 	};
 	struct Fragment
 	{
@@ -114,7 +115,8 @@ struct OITRenderer
 
 			Info info;
 			info.m_position = vec4(0.f, 0.f, 0.f, 0.f);
-			info.m_resolution = vec4(RenderWidth, RenderHeight, RenderDepth, 0.f);
+			info.m_resolution = uvec2(RenderWidth, RenderHeight);
+			info.m_emission_tile_num = uvec2(32, 32);
 			info.m_camera_PV = glm::ortho(-RenderWidth * 0.5f, RenderWidth*0.5f, -RenderHeight * 0.5f, RenderHeight*0.5f);
 			info.m_camera_PV *= glm::lookAt(vec3(0., -1.f, 0.f) + info.m_position.xyz(), info.m_position.xyz(), vec3(0.f, 0.f, 1.f));
 			info.m_emission_tile_map_max = 4;
@@ -282,6 +284,7 @@ struct OITRenderer
 			const char* name[] =
 			{
 				"MakeFragmentHierarchy.comp.spv",
+				"LightCulling.comp.spv",
 				"PhotonMapping.comp.spv",
 				"PMRendering.vert.spv",
 				"PMRendering.frag.spv",
@@ -304,19 +307,23 @@ struct OITRenderer
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 			pipeline_layout_info.setPSetLayouts(layouts);
 			m_pipeline_layout[PipelineLayoutMakeFragmentHierarchy] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PipelineLayoutLightCulling] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 			m_pipeline_layout[PipelineLayoutPhotonMapping] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 			m_pipeline_layout[PipelineLayoutRendering] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
 		// pipeline
 		{
-			vk::PipelineShaderStageCreateInfo shader_info[2];
+			vk::PipelineShaderStageCreateInfo shader_info[3];
 			shader_info[0].setModule(m_shader[ShaderMakeFragmentHierarchy].get());
 			shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[0].setPName("main");
-			shader_info[1].setModule(m_shader[ShaderPhotonMapping].get());
+			shader_info[1].setModule(m_shader[ShaderLightCulling].get());
 			shader_info[1].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[1].setPName("main");
+			shader_info[2].setModule(m_shader[ShaderPhotonMapping].get());
+			shader_info[2].setStage(vk::ShaderStageFlagBits::eCompute);
+			shader_info[2].setPName("main");
 
 			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 			{
@@ -325,11 +332,15 @@ struct OITRenderer
 				.setLayout(m_pipeline_layout[PipelineLayoutMakeFragmentHierarchy].get()),
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[1])
+				.setLayout(m_pipeline_layout[PipelineLayoutLightCulling].get()),
+				vk::ComputePipelineCreateInfo()
+				.setStage(shader_info[2])
 				.setLayout(m_pipeline_layout[PipelineLayoutPhotonMapping].get()),
 			};
 			auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
 			m_pipeline[PipelineMakeFragmentHierarchy] = std::move(compute_pipeline[0]);
-			m_pipeline[PipelinePhotonMapping] = std::move(compute_pipeline[1]);
+			m_pipeline[PipelineLayoutLightCulling] = std::move(compute_pipeline[1]);
+			m_pipeline[PipelinePhotonMapping] = std::move(compute_pipeline[2]);
 		}
 
 		// レンダーパス
@@ -492,6 +503,15 @@ struct OITRenderer
 			// make hierarchy
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineMakeFragmentHierarchy].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutMakeFragmentHierarchy].get(), 0, m_descriptor_set.get(), {});
+			cmd.dispatch(RenderWidth / 8, RenderHeight / 8, 1);
+		}
+		{
+			auto to_write = m_emission_buffer.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eMemoryWrite);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_write }, {});
+
+			// light culling
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineLayoutLightCulling].get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutLightCulling].get(), 0, m_descriptor_set.get(), {});
 			cmd.dispatch(RenderWidth / 8, RenderHeight / 8, 1);
 		}
 

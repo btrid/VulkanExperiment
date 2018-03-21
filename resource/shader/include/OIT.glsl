@@ -6,9 +6,10 @@
 struct OITInfo
 {
 	mat4 m_camera_PV;
-	uvec4 m_resolution;
+	uvec2 m_resolution;
+	uvec2 m_tile_num;
 	vec4 m_position;
-	uint m_emissive_tile_map_max;
+	int m_emission_tile_map_max;
 };
 struct Fragment
 {
@@ -39,13 +40,15 @@ layout(std430, set=USE_OIT, binding=11) restrict buffer EmissiveBuffer {
 layout(std430, set=USE_OIT, binding=12) restrict buffer EmissiveTileCounter {
 	int b_emission_tile_counter[];
 };
-layout(std430, set=USE_OIT, binding=13) restrict buffer EmissiveTileBuffer {
+layout(std430, set=USE_OIT, binding=13) restrict buffer EmissiveTileMapBuffer {
 	int b_emission_tile_map[];
 };
 layout(std430, set=USE_OIT, binding=20) restrict buffer ColorBuffer {
 	vec4 b_color[];
 };
 
+#define culling_light_power() (0.001)
+#define light_area() (33.)
 #endif
 
 #endif //_OIT_

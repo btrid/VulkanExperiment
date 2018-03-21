@@ -12,7 +12,7 @@
 
 layout (local_size_x = 32, local_size_y = 32) in;
 
-shared uint s_counter;
+shared int s_counter;
 shared vec4 s_area;
 void main()
 {
@@ -26,15 +26,15 @@ void main()
 
 		vec2 left_top = vec2(0., 0.);
 		vec2 right_bottom = vec2(u_OIT_info.m_resolution.xy);
-		vec2 tile_size = vec2(32.);
+		vec2 tile_size = right_bottom / u_OIT_info.m_tile_num.xy;
 		s_area.xy = left_top + tile_size*index.xy;
 		s_area.zw = s_area.xy + tile_size;
 	}
 	barrier();
 	memoryBarrierShared();
 
-	uint data_num = b_emissive_counter.x;
-	uint count_list_offset = tiled_1D_index*u_OIT_info.m_emissive_tile_map_max;
+	uint data_num = b_emission_counter.x;
+	uint count_list_offset = tiled_1D_index*u_OIT_info.m_emission_tile_map_max;
 	uint loop_count = (data_num-1) / gl_NumWorkGroups.x + 1;
 	uint loop_begin = gl_LocalInvocationID.x*loop_count;
 	uint loop_end = loop_begin + loop_count;
@@ -43,13 +43,17 @@ void main()
 		if(i >= data_num){
 			break;
 		}
-		if(!isContainAABB2D(f, s_area)) 
+		vec4 p = b_emission[i].pos;
+		float DeltaX = p.x - max(s_area.x, min(p.x, s_area.z));
+		float DeltaY = p.y - max(s_area.y, min(p.y, s_area.w));
+		bool is_contain = (DeltaX * DeltaX + DeltaY * DeltaY) < (p.w * p.w + 1.);
+		if(!is_contain) 
 		{
 			continue;
 		}
 		uint tile_list_index = atomicAdd(s_counter, 1);
-		if(tile_list_index < u_OIT_info.m_emissive_tile_map_max){
-			b_emissive_tile_map[count_list_offset+tile_list_index] = i;
+		if(tile_list_index < u_OIT_info.m_emission_tile_map_max){
+			b_emission_tile_map[count_list_offset+tile_list_index] = int(i);
 		}
 	}
 
@@ -57,7 +61,7 @@ void main()
 	memoryBarrierShared();
 	if(gl_LocalInvocationID.x == 0)
 	{
-		b_emissive_tile_counter[tiled_1D_index] = min(s_counter, u_OIT_info.m_emissive_tile_map_max);
+		b_emission_tile_counter[tiled_1D_index] = min(s_counter, u_OIT_info.m_emission_tile_map_max);
 	}
 }
 
