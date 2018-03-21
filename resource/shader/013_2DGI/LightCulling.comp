@@ -10,7 +10,7 @@
 #define USE_OIT 0
 #include <OIT.glsl>
 
-layout (local_size_x = 32, local_size_y = 1) in;
+layout (local_size_x = 32, local_size_y = 32) in;
 
 shared uint s_counter;
 shared vec4 s_area;
@@ -20,16 +20,13 @@ void main()
 	uvec3 index = uvec3(gl_WorkGroupID.xy, 1);
 	uint tiled_1D_index = gl_WorkGroupID.x+ gl_WorkGroupID.y*gl_NumWorkGroups.x; 
 
-	TileInfo tile_info = u_tile_info;
-	if(any(greaterThanEqual(index.xy, tile_info.m_tile_num))) { return; }
-
 	if(gl_LocalInvocationID.x == 0)
 	{
 		s_counter = 0;
 
 		vec2 left_top = vec2(0., 0.);
-		vec2 right_bottom = vec2(640., 640.);
-		vec2 tile_size = (right_bottom - left_top) /vec2(gl_NumWorkGroups.x);
+		vec2 right_bottom = vec2(u_OIT_info.m_resolution.xy);
+		vec2 tile_size = vec2(32.);
 		s_area.xy = left_top + tile_size*index.xy;
 		s_area.zw = s_area.xy + tile_size;
 	}
@@ -46,7 +43,7 @@ void main()
 		if(i >= data_num){
 			break;
 		}
-		if(!isInAABB2D(f, s_area)) 
+		if(!isContainAABB2D(f, s_area)) 
 		{
 			continue;
 		}

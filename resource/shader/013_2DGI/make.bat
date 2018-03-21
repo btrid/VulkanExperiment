@@ -6,7 +6,7 @@ glslc.exe -w %include% -x glsl -o ../binary\\OITAppModel.frag.spv OITAppModel.fr
 
 glslc.exe -w %include% -x glsl -o ../binary\\PhotonMapping.comp.spv PhotonMapping.comp
 glslc.exe -w %include% -x glsl -o ../binary\\MakeFragmentHierarchy.comp.spv MakeFragmentHierarchy.comp
-rem glslc.exe -w %include% -x glsl -o ../binary\\LightCulling.comp.spv LightCulling.comp
+glslc.exe -w %include% -x glsl -o ../binary\\LightCulling.comp.spv LightCulling.comp
 glslc.exe -w %include% -x glsl -o ../binary\\PMRendering.vert.spv PMRendering.vert
 glslc.exe -w %include% -x glsl -o ../binary\\PMRendering.frag.spv PMRendering.frag
 

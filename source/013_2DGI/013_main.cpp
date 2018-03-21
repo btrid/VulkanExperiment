@@ -83,14 +83,18 @@ struct OITRenderer
 		mat4 m_camera_PV;
 		uvec4 m_resolution;
 		vec4 m_position;
-		uint m_emissive_tile_map_max;
+		uint m_emission_tile_map_max;
 	};
 	struct Fragment
 	{
 		vec3 albedo;
 		float _p;
 	};
-
+	struct Emission 
+	{
+		vec4 pos;
+		vec4 value;
+	};
 
 	OITRenderer(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target)
 	{
@@ -113,7 +117,7 @@ struct OITRenderer
 			info.m_resolution = vec4(RenderWidth, RenderHeight, RenderDepth, 0.f);
 			info.m_camera_PV = glm::ortho(-RenderWidth * 0.5f, RenderWidth*0.5f, -RenderHeight * 0.5f, RenderHeight*0.5f);
 			info.m_camera_PV *= glm::lookAt(vec3(0., -1.f, 0.f) + info.m_position.xyz(), info.m_position.xyz(), vec3(0.f, 0.f, 1.f));
-			info.m_emissive_tile_map_max = 4;
+			info.m_emission_tile_map_max = 4;
 			cmd.updateBuffer<Info>(m_fragment_info.getInfo().buffer, m_fragment_info.getInfo().offset, info);
 		}
 		{
@@ -129,27 +133,22 @@ struct OITRenderer
 		{
 			btr::BufferMemoryDescriptorEx<ivec3> desc;
 			desc.element_num = 1;
-			m_emissive_counter = context->m_storage_memory.allocateMemory(desc);
+			m_emission_counter = context->m_storage_memory.allocateMemory(desc);
 		}
 		{
-			btr::BufferMemoryDescriptorEx<vec3> desc;
+			btr::BufferMemoryDescriptorEx<Emission> desc;
 			desc.element_num = FragmentBufferSize;
-			m_emissive_buffer = context->m_storage_memory.allocateMemory(desc);
-		}
-		{
-			btr::BufferMemoryDescriptorEx<int32_t> desc;
-			desc.element_num = FragmentBufferSize;
-			m_emissive_map = context->m_storage_memory.allocateMemory(desc);
+			m_emission_buffer = context->m_storage_memory.allocateMemory(desc);
 		}
 		{
 			btr::BufferMemoryDescriptorEx<int32_t> desc;
 			desc.element_num = FragmentBufferSize;
-			m_emissive_tile_counter = context->m_storage_memory.allocateMemory(desc);
+			m_emission_tile_counter = context->m_storage_memory.allocateMemory(desc);
 		}
 		{
 			btr::BufferMemoryDescriptorEx<int32_t> desc;
 			desc.element_num = FragmentBufferSize;
-			m_emissive_tile_map = context->m_storage_memory.allocateMemory(desc);
+			m_emission_tile_map = context->m_storage_memory.allocateMemory(desc);
 		}
 
 		{
@@ -240,12 +239,11 @@ struct OITRenderer
 				m_fragment_buffer.getInfo(),
 				m_fragment_hierarchy.getInfo(),
 			};
-			vk::DescriptorBufferInfo emissive_storages[] = {
-				m_emissive_counter.getInfo(),
-				m_emissive_buffer.getInfo(),
-				m_emissive_map.getInfo(),
-				m_emissive_tile_counter.getInfo(),
-				m_emissive_tile_map.getInfo(),
+			vk::DescriptorBufferInfo emission_storages[] = {
+				m_emission_counter.getInfo(),
+				m_emission_buffer.getInfo(),
+				m_emission_tile_counter.getInfo(),
+				m_emission_tile_map.getInfo(),
 			};
 			vk::DescriptorBufferInfo output_storages[] = {
 				m_color.getInfo(),
@@ -265,8 +263,8 @@ struct OITRenderer
 				.setDstSet(m_descriptor_set.get()),
 				vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(array_length(emissive_storages))
-				.setPBufferInfo(emissive_storages)
+				.setDescriptorCount(array_length(emission_storages))
+				.setPBufferInfo(emission_storages)
 				.setDstBinding(10)
 				.setDstSet(m_descriptor_set.get()),
 				vk::WriteDescriptorSet()
@@ -477,9 +475,8 @@ struct OITRenderer
 			u2f.f = 0.f;
 			cmd.fillBuffer(m_color.getInfo().buffer, m_color.getInfo().offset, m_color.getInfo().range, u2f.u);
 			cmd.fillBuffer(m_fragment_buffer.getInfo().buffer, m_fragment_buffer.getInfo().offset, m_fragment_buffer.getInfo().range, 0u);
-			cmd.updateBuffer<ivec3>(m_emissive_counter.getInfo().buffer, m_emissive_counter.getInfo().offset, ivec3(0, 1, 1));
-			cmd.fillBuffer(m_emissive_buffer.getInfo().buffer, m_emissive_buffer.getInfo().offset, m_emissive_buffer.getInfo().range, 0u);
-			cmd.fillBuffer(m_emissive_map.getInfo().buffer, m_emissive_map.getInfo().offset, m_emissive_map.getInfo().range, 0u);
+			cmd.updateBuffer<ivec3>(m_emission_counter.getInfo().buffer, m_emission_counter.getInfo().offset, ivec3(0, 1, 1));
+			cmd.fillBuffer(m_emission_buffer.getInfo().buffer, m_emission_buffer.getInfo().offset, m_emission_buffer.getInfo().range, 0u);
 		}
 		// exe
 		for (auto& p : pipeline)
@@ -532,11 +529,10 @@ struct OITRenderer
 	btr::BufferMemoryEx<Info> m_fragment_info;
 	btr::BufferMemoryEx<Fragment> m_fragment_buffer;
 	btr::BufferMemoryEx<int64_t> m_fragment_hierarchy;
-	btr::BufferMemoryEx<ivec3> m_emissive_counter;
-	btr::BufferMemoryEx<vec3> m_emissive_buffer;
-	btr::BufferMemoryEx<int32_t> m_emissive_map;
-	btr::BufferMemoryEx<int32_t> m_emissive_tile_counter;
-	btr::BufferMemoryEx<int32_t> m_emissive_tile_map;
+	btr::BufferMemoryEx<ivec3> m_emission_counter;
+	btr::BufferMemoryEx<Emission> m_emission_buffer;
+	btr::BufferMemoryEx<int32_t> m_emission_tile_counter;
+	btr::BufferMemoryEx<int32_t> m_emission_tile_map;
 	btr::BufferMemoryEx<vec4> m_color;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
@@ -617,14 +613,14 @@ struct DebugOIT : public OITPipeline
 	{
 		vk::BufferMemoryBarrier to_write[] =
 		{
-			m_renderer->m_emissive_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eIndirectCommandRead | vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eTransferWrite),
+			m_renderer->m_emission_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eIndirectCommandRead | vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eTransferWrite),
 			m_renderer->m_fragment_buffer.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands, {}, 0, nullptr, array_length(to_write), to_write, 0, nullptr);
 
-		cmd.updateBuffer<ivec3>(m_renderer->m_emissive_counter.getInfo().buffer, m_renderer->m_emissive_counter.getInfo().offset, ivec3(1, 1, 1));
+		cmd.updateBuffer<ivec3>(m_renderer->m_emission_counter.getInfo().buffer, m_renderer->m_emission_counter.getInfo().offset, ivec3(1, 1, 1));
 
-		auto e_buffer = m_renderer->m_emissive_buffer.getInfo();
+		auto e_buffer = m_renderer->m_emission_buffer.getInfo();
 		cmd.updateBuffer<vec3>(e_buffer.buffer, e_buffer.offset, vec3(100.f, 100.f, 0.f));
 
 		vk::BufferCopy copy;
@@ -636,7 +632,7 @@ struct DebugOIT : public OITPipeline
 
 		vk::BufferMemoryBarrier to_read[] = 
 		{
-			m_renderer->m_emissive_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eIndirectCommandRead),
+			m_renderer->m_emission_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eIndirectCommandRead),
 			m_renderer->m_fragment_buffer.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eIndirectCommandRead),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);

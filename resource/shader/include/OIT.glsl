@@ -14,9 +14,10 @@ struct Fragment
 {
 	vec3 albedo;
 };
-struct Emission
+struct Emission 
 {
-	vec3 emissive;
+	vec4 pos;
+	vec4 value;
 };
 
 #ifdef USE_OIT
@@ -30,19 +31,16 @@ layout(std430, set=USE_OIT, binding=2) restrict buffer FragmentHierarchyBuffer {
 	uint64_t b_fragment_hierarchy[];
 };
 layout(std430, set=USE_OIT, binding=10) restrict buffer EmissiveCounter {
-	ivec3 b_emissive_counter;
+	ivec3 b_emission_counter;
 };
 layout(std430, set=USE_OIT, binding=11) restrict buffer EmissiveBuffer {
-	vec3 b_emissive[];
+	Emission b_emission[];
 };
-layout(std430, set=USE_OIT, binding=12) restrict buffer EmissiveMapBuffer {
-	int b_emissive_map[];
+layout(std430, set=USE_OIT, binding=12) restrict buffer EmissiveTileCounter {
+	int b_emission_tile_counter[];
 };
-layout(std430, set=USE_OIT, binding=13) restrict buffer EmissiveTileCounter {
-	int b_emissive_tile_counter[];
-};
-layout(std430, set=USE_OIT, binding=14) restrict buffer EmissiveTileBuffer {
-	int b_emissive_tile_map[];
+layout(std430, set=USE_OIT, binding=13) restrict buffer EmissiveTileBuffer {
+	int b_emission_tile_map[];
 };
 layout(std430, set=USE_OIT, binding=20) restrict buffer ColorBuffer {
 	vec4 b_color[];
