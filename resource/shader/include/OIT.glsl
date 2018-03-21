@@ -7,7 +7,7 @@ struct OITInfo
 {
 	mat4 m_camera_PV;
 	uvec2 m_resolution;
-	uvec2 m_tile_num;
+	uvec2 m_emission_tile_num;
 	vec4 m_position;
 	int m_emission_tile_map_max;
 };

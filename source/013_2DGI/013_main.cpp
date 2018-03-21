@@ -108,12 +108,12 @@ struct OITRenderer
 		FragmentBufferSize = RenderWidth * RenderHeight*RenderDepth;
 
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+		Info info;
 		{
 			btr::BufferMemoryDescriptorEx<Info> desc;
 			desc.element_num = 1;
 			m_fragment_info = context->m_uniform_memory.allocateMemory(desc);
 
-			Info info;
 			info.m_position = vec4(0.f, 0.f, 0.f, 0.f);
 			info.m_resolution = uvec2(RenderWidth, RenderHeight);
 			info.m_emission_tile_num = uvec2(32, 32);
@@ -144,12 +144,12 @@ struct OITRenderer
 		}
 		{
 			btr::BufferMemoryDescriptorEx<int32_t> desc;
-			desc.element_num = FragmentBufferSize;
+			desc.element_num = info.m_emission_tile_num.x*info.m_emission_tile_num.y;
 			m_emission_tile_counter = context->m_storage_memory.allocateMemory(desc);
 		}
 		{
 			btr::BufferMemoryDescriptorEx<int32_t> desc;
-			desc.element_num = FragmentBufferSize;
+			desc.element_num = info.m_emission_tile_num.x*info.m_emission_tile_num.y*info.m_emission_tile_map_max;
 			m_emission_tile_map = context->m_storage_memory.allocateMemory(desc);
 		}
 
@@ -487,7 +487,9 @@ struct OITRenderer
 			cmd.fillBuffer(m_color.getInfo().buffer, m_color.getInfo().offset, m_color.getInfo().range, u2f.u);
 			cmd.fillBuffer(m_fragment_buffer.getInfo().buffer, m_fragment_buffer.getInfo().offset, m_fragment_buffer.getInfo().range, 0u);
 			cmd.updateBuffer<ivec3>(m_emission_counter.getInfo().buffer, m_emission_counter.getInfo().offset, ivec3(0, 1, 1));
-			cmd.fillBuffer(m_emission_buffer.getInfo().buffer, m_emission_buffer.getInfo().offset, m_emission_buffer.getInfo().range, 0u);
+//			cmd.fillBuffer(m_emission_buffer.getInfo().buffer, m_emission_buffer.getInfo().offset, m_emission_buffer.getInfo().range, 0u);
+			cmd.fillBuffer(m_emission_tile_counter.getInfo().buffer, m_emission_tile_counter.getInfo().offset, m_emission_tile_counter.getInfo().range, 0u);
+			
 		}
 		// exe
 		for (auto& p : pipeline)
@@ -512,12 +514,16 @@ struct OITRenderer
 			// light culling
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineLayoutLightCulling].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutLightCulling].get(), 0, m_descriptor_set.get(), {});
-			cmd.dispatch(RenderWidth / 8, RenderHeight / 8, 1);
+			cmd.dispatch(20, 20, 1);
+
 		}
 
 		{
-			auto to_read = m_fragment_hierarchy.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead);
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_read }, {});
+			vk::BufferMemoryBarrier to_read[] = {
+				m_fragment_hierarchy.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				m_emission_tile_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 			// photonmapping
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelinePhotonMapping].get());
@@ -638,10 +644,17 @@ struct DebugOIT : public OITPipeline
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands, {}, 0, nullptr, array_length(to_write), to_write, 0, nullptr);
 
-		cmd.updateBuffer<ivec3>(m_renderer->m_emission_counter.getInfo().buffer, m_renderer->m_emission_counter.getInfo().offset, ivec3(1, 1, 1));
+		OITRenderer::Emission e;
+		e.pos = vec4(100.f, 100.f, 100.f, 100.f);
+		e.value = vec4(1.f, 1.f, 1.f, 1.f);
 
+		float DeltaX = e.pos.x - glm::max<float>(96.f, glm::min<float>(e.pos.x, 128.f));
+		float DeltaY = e.pos.z - glm::max<float>(96.f, glm::min<float>(e.pos.z, 128.f));
+		bool is_contain = (DeltaX * DeltaX + DeltaY * DeltaY) < (e.pos.w * e.pos.w + 1.);
+
+		cmd.updateBuffer<ivec3>(m_renderer->m_emission_counter.getInfo().buffer, m_renderer->m_emission_counter.getInfo().offset, ivec3(1, 1, 1));
 		auto e_buffer = m_renderer->m_emission_buffer.getInfo();
-		cmd.updateBuffer<vec3>(e_buffer.buffer, e_buffer.offset, vec3(100.f, 100.f, 0.f));
+		cmd.updateBuffer<OITRenderer::Emission>(e_buffer.buffer, e_buffer.offset, e);
 
 		vk::BufferCopy copy;
 		copy.setSrcOffset(m_map_data.getInfo().offset);

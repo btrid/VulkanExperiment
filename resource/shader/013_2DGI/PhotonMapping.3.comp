@@ -14,8 +14,7 @@ void main()
 {
 	ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
 	int pixel_1d = int(pixel.x + pixel.y*u_OIT_info.m_resolution.x);
-	ivec2 tile_index_2d = pixel / ivec2(u_OIT_info.m_emission_tile_num.xy);
-	int tile_index = int(tile_index_2d.x + tile_index_2d.y*u_OIT_info.m_emission_tile_num.x);
+	int tile_index = int(gl_WorkGroupID.x + gl_WorkGroupID.y*32);
 	ivec2 reso = ivec2(u_OIT_info.m_resolution.xy);
 
 	const int hierarchy_rate[2] = {1, 8};
@@ -23,22 +22,22 @@ void main()
 
 	const vec2 end = vec2(pixel)*c_cell_size[0] + c_cell_size[0]*0.5;
 
-	for(int i = 0; i < b_emission_tile_counter[tile_index]; i++)
+	for(int i = 0; i < b_emission_counter.x; i++)
 	{
-		int emission_index = b_emission_tile_map[tile_index*u_OIT_info.m_emission_tile_map_max + i];
-		vec4 emission = b_emission[emission_index].value;
-		vec4 emission_pos = b_emission[emission_index].pos;
-		const vec2 start = emission_pos.xz;
+//		int emissive_pixel_index = b_emissive_tile_map[tile_index*u_OIT_info.m_emissive_tile_map_max + i];
+//		ivec2 emissive_pixel_index_2d = ivec2(emissive_pixel_index % u_OIT_info.m_resolution.x, emissive_pixel_index / u_OIT_info.m_resolution.y);
+		ivec2 emissive_pixel_index_2d = ivec2(100, 100);
+		vec4 emission = vec4(1., 1., 1., 10000);
 
+		const vec2 start = emissive_pixel_index_2d*c_cell_size[0] + c_cell_size[0]*0.5;
 		const float ray_dist = distance(start, end);
 		if(all(equal(start, end))){
 			continue;
 		}
+		vec2 dir = normalize(end - start);
 
 		vec2 pos = start;
-		ivec2 map_index = ivec2(start / c_cell_size[0]);
-
-		vec2 dir = normalize(end - start);
+		ivec2 map_index = emissive_pixel_index_2d;
 
 		const ivec3 next_step = ivec3((dir.x < 0. ? -1 : 1), (dir.y < 0. ? -1 : 1), 0);
 		ivec2 next = ivec2(0);
@@ -66,19 +65,26 @@ void main()
 			float rate = min(dist.x, dist.y);
 			rate = rate < FLT_EPSIRON ? max(dist.x, dist.y) : rate;
 
-			pos += dir * rate;
+			vec2 prog = dir * rate;
+			pos += prog;
 			next = dist.x < dist.y ? next_step.xz : next_step.zy;
 
 			map_index = ivec2((pos+next*0.001) / c_cell_size[0]);
 
 			if(distance(start, pos) >= ray_dist)
 			{
-				// 距離を超えたら光がフラグメントにヒット
-//				b_color[pixel_1d] = vec4(0., 0., 1., 1.);
-				b_color[pixel_1d] = vec4(0., 0., 1., 1.) * emission_pos.w / (1+ray_dist*ray_dist);
+				// 距離を超えたら当たってない
+				b_color[pixel_1d] = vec4(0., 0., 1., 1.) * emission.w / (1+ray_dist*ray_dist);
 				break;
 			}
 
+/*			if(any(greaterThanEqual(map_index, reso)) || any(lessThan(map_index, ivec2(0, 0)))) 
+			{
+				// 範囲外にはならないようになるのが理想
+				b_color[0] = vec4(1., 0., 0., 1.);
+				break;
+			}
+*/
 			map_index_1 = map_index/8;
 			map_index_1_sub = map_index%8;
 			map_index_1_1d = map_index_1.x + map_index_1.y * (640/8);
