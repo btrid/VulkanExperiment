@@ -35,6 +35,7 @@ void main()
 
 		vec2 dir = normalize(emissive_pixel_index_2d*c_cell_size[0] - pos);
 		ivec3 next_step = ivec3((dir.x < 0. ? -1 : 1), (dir.y < 0. ? -1 : 1), 0);
+		ivec2 next = ivec2(0);
 
 		ivec2 map_index_1 = map_index/8;
 		ivec2 map_index_1_sub = map_index%8;
@@ -48,7 +49,7 @@ void main()
 			vec2 cell_size = c_cell_size[hierarchy];
 
 			vec2 cell_origin = vec2(map_index)*c_cell_size[hierarchy];
-			vec2 cell_p = pos - cell_origin;
+			vec2 cell_p = (pos+(next*0.001)) - cell_origin;
 
 			float x = dir.x < 0. ? cell_p.x : (cell_size.x- cell_p.x);
 			float y = dir.y < 0. ? cell_p.y : (cell_size.y- cell_p.y);
@@ -61,8 +62,7 @@ void main()
 
 			vec2 prog = dir * rate;
 			pos += prog;
-			ivec2 next = dist.x < dist.y ? next_step.xz : next_step.zy;
-			pos += next * 0.01; // ちょっとずれる.2.500-0.001でmapindexを減らしたい
+			next = dist.x < dist.y ? next_step.xz : next_step.zy;
 
 			map_index = ivec2((pos+next*c_cell_size[0]*0.5) / c_cell_size[0]);
 
