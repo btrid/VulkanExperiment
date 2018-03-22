@@ -5,6 +5,7 @@
 #include <btrlib/Singleton.h>
 #include <btrlib/Context.h>
 #include <btrlib/rTexture.h>
+#include <applib/App.h>
 
 #include <011_ui/cerealDefine.h>
 struct UIGlobal
@@ -300,7 +301,7 @@ struct sUISystem : SingletonEx<sUISystem>
 {
 	friend SingletonEx<sUISystem>;
 
-	sUISystem(const std::shared_ptr<btr::Context>& context);
+	sUISystem(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target);
 
 	void addRender(std::shared_ptr<UI>& ui)
 	{
@@ -342,7 +343,11 @@ private:
 	};
 
 	std::shared_ptr<btr::Context> m_context;
-	std::shared_ptr<RenderPassModule> m_render_pass;
+	std::shared_ptr<RenderTarget> m_render_target;
+	
+	vk::UniqueRenderPass m_render_pass;
+	vk::UniqueFramebuffer m_framebuffer;
+
 	vk::UniqueDescriptorPool m_descriptor_pool;
 	vk::UniqueDescriptorSetLayout	m_descriptor_set_layout;
 	vk::UniqueDescriptorPool m_descriptor_pool_anime;

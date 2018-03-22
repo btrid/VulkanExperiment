@@ -11,11 +11,11 @@
 #include <applib/sImGuiRenderer.h>
 
 
-sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context)
+sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target)
 {
-
 	m_context = context;
-	m_render_pass = context->m_window->getRenderBackbufferPass();
+	m_render_target = render_target;
+
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 	{
 		btr::BufferMemoryDescriptorEx<UIGlobal> desc;
@@ -24,7 +24,7 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context)
 
 		desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 		auto staging = context->m_staging_memory.allocateMemory(desc);
-		staging.getMappedPtr()->m_resolusion = uvec2(m_render_pass->getResolution().width, m_render_pass->getResolution().height);
+		staging.getMappedPtr()->m_resolusion = uvec2(m_render_target->m_resolution.width, m_render_target->m_resolution.height);
 
 		vk::BufferCopy copy;
 		copy.setSrcOffset(staging.getInfo().offset);
@@ -38,6 +38,55 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context)
 			to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexShader, {}, {}, { to_read }, {});
 		}
+	}
+
+	// レンダーパス
+	{
+		vk::AttachmentReference color_ref[] = {
+			vk::AttachmentReference()
+			.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
+			.setAttachment(0)
+		};
+		// sub pass
+		vk::SubpassDescription subpass;
+		subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+		subpass.setInputAttachmentCount(0);
+		subpass.setPInputAttachments(nullptr);
+		subpass.setColorAttachmentCount(array_length(color_ref));
+		subpass.setPColorAttachments(color_ref);
+
+		vk::AttachmentDescription attach_description[] =
+		{
+			// color1
+			vk::AttachmentDescription()
+			.setFormat(render_target->m_info.format)
+			.setSamples(vk::SampleCountFlagBits::e1)
+			.setLoadOp(vk::AttachmentLoadOp::eLoad)
+			.setStoreOp(vk::AttachmentStoreOp::eStore)
+			.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
+			.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
+		};
+		vk::RenderPassCreateInfo renderpass_info;
+		renderpass_info.setAttachmentCount(array_length(attach_description));
+		renderpass_info.setPAttachments(attach_description);
+		renderpass_info.setSubpassCount(1);
+		renderpass_info.setPSubpasses(&subpass);
+
+		m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
+	}
+	{
+		vk::ImageView view[] = {
+			render_target->m_view,
+		};
+		vk::FramebufferCreateInfo framebuffer_info;
+		framebuffer_info.setRenderPass(m_render_pass.get());
+		framebuffer_info.setAttachmentCount(array_length(view));
+		framebuffer_info.setPAttachments(view);
+		framebuffer_info.setWidth(render_target->m_info.extent.width);
+		framebuffer_info.setHeight(render_target->m_info.extent.height);
+		framebuffer_info.setLayers(1);
+
+		m_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
 	}
 
 	// descriptor
@@ -203,7 +252,6 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context)
 		}
 	}
 	// pipeline
-	m_render_pass = context->m_window->getRenderBackbufferPass();
 	{
 		{
 			vk::PipelineShaderStageCreateInfo shader_info[SHADER_NUM];
@@ -245,8 +293,8 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context)
 			assembly_info.setTopology(vk::PrimitiveTopology::eTriangleStrip);
 
 			// viewport
-			vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)m_render_pass->getResolution().width, (float)m_render_pass->getResolution().height, 0.f, 1.f);
-			vk::Rect2D scissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(m_render_pass->getResolution().width, m_render_pass->getResolution().height));
+			vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)m_render_target->m_resolution.width, (float)m_render_target->m_resolution.height, 0.f, 1.f);
+			vk::Rect2D scissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(m_render_target->m_resolution.width, m_render_target->m_resolution.height));
 			vk::PipelineViewportStateCreateInfo viewportInfo;
 			viewportInfo.setViewportCount(1);
 			viewportInfo.setPViewports(&viewport);
@@ -305,7 +353,7 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context)
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
 				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_RENDER].get())
-				.setRenderPass(m_render_pass->getRenderPass())
+				.setRenderPass(m_render_pass.get())
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
@@ -533,9 +581,9 @@ vk::CommandBuffer sUISystem::draw()
 			}
 
 			vk::RenderPassBeginInfo begin_render_info;
-			begin_render_info.setFramebuffer(m_render_pass->getFramebuffer(m_context->getGPUFrame()));
-			begin_render_info.setRenderPass(m_render_pass->getRenderPass());
-			begin_render_info.setRenderArea(vk::Rect2D({}, m_render_pass->getResolution()));
+			begin_render_info.setFramebuffer(m_framebuffer.get());
+			begin_render_info.setRenderPass(m_render_pass.get());
+			begin_render_info.setRenderArea(vk::Rect2D({}, m_render_target->m_resolution));
 			cmd.beginRenderPass(begin_render_info, vk::SubpassContents::eInline);
 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_RENDER].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_RENDER].get(), 0, { descriptor_set }, {});

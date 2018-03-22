@@ -229,7 +229,7 @@ struct GlyphCache
 struct PipelineDescription
 {
 	std::shared_ptr<btr::Context> m_context;
-	std::shared_ptr<RenderPassModule> m_render_pass;
+	std::shared_ptr<RenderTarget> m_render_target;
 };
 
 struct FontDescription
@@ -464,6 +464,58 @@ struct FontRenderer
 	{
 		m_context = context;
 		m_pipeline_description = desc;
+
+		const auto& render_target = m_pipeline_description.m_render_target;
+
+		// レンダーパス
+		{
+			vk::AttachmentReference color_ref[] = {
+				vk::AttachmentReference()
+				.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
+				.setAttachment(0)
+			};
+			// sub pass
+			vk::SubpassDescription subpass;
+			subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+			subpass.setInputAttachmentCount(0);
+			subpass.setPInputAttachments(nullptr);
+			subpass.setColorAttachmentCount(array_length(color_ref));
+			subpass.setPColorAttachments(color_ref);
+
+			vk::AttachmentDescription attach_description[] =
+			{
+				// color1
+				vk::AttachmentDescription()
+				.setFormat(render_target->m_info.format)
+				.setSamples(vk::SampleCountFlagBits::e1)
+				.setLoadOp(vk::AttachmentLoadOp::eLoad)
+				.setStoreOp(vk::AttachmentStoreOp::eStore)
+				.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
+				.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
+			};
+			vk::RenderPassCreateInfo renderpass_info;
+			renderpass_info.setAttachmentCount(array_length(attach_description));
+			renderpass_info.setPAttachments(attach_description);
+			renderpass_info.setSubpassCount(1);
+			renderpass_info.setPSubpasses(&subpass);
+
+			m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
+		}
+		{
+			vk::ImageView view[] = {
+				render_target->m_view,
+			};
+			vk::FramebufferCreateInfo framebuffer_info;
+			framebuffer_info.setRenderPass(m_render_pass.get());
+			framebuffer_info.setAttachmentCount(array_length(view));
+			framebuffer_info.setPAttachments(view);
+			framebuffer_info.setWidth(render_target->m_info.extent.width);
+			framebuffer_info.setHeight(render_target->m_info.extent.height);
+			framebuffer_info.setLayers(1);
+
+			m_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
+		}
+
 		// setup pipeline
 		{
 			// assembly
@@ -477,10 +529,9 @@ struct FontRenderer
 				.setTopology(vk::PrimitiveTopology::eTriangleStrip),
 			};
 
-			auto& render_pass = m_pipeline_description.m_render_pass;
 			// viewport
-			vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)render_pass->getResolution().width, (float)render_pass->getResolution().height, 0.f, 1.f);
-			vk::Rect2D scissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(render_pass->getResolution().width, render_pass->getResolution().height));
+			vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)render_target->m_resolution.width, (float)render_target->m_resolution.height, 0.f, 1.f);
+			vk::Rect2D scissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(render_target->m_resolution.width, render_target->m_resolution.height));
 			vk::PipelineViewportStateCreateInfo viewportInfo;
 			viewportInfo.setViewportCount(1);
 			viewportInfo.setPViewports(&viewport);
@@ -567,7 +618,7 @@ struct FontRenderer
 				.setPRasterizationState(&rasterization_info[0])
 				.setPMultisampleState(&sample_info)
 				.setLayout(sFont::Order().getPipelineLayout(sFont::PIPELINE_LAYOUT_RENDER))
-				.setRenderPass(render_pass->getRenderPass())
+				.setRenderPass(m_render_pass.get())
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 				vk::GraphicsPipelineCreateInfo()
@@ -579,7 +630,7 @@ struct FontRenderer
 				.setPRasterizationState(&rasterization_info[1])
 				.setPMultisampleState(&sample_info)
 				.setLayout(sFont::Order().getPipelineLayout(sFont::PIPELINE_LAYOUT_RENDER_RASTER))
-				.setRenderPass(render_pass->getRenderPass())
+				.setRenderPass(m_render_pass.get())
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
@@ -611,9 +662,9 @@ struct FontRenderer
 
 
 		vk::RenderPassBeginInfo begin_render_info;
-		begin_render_info.setFramebuffer(m_pipeline_description.m_render_pass->getFramebuffer(m_pipeline_description.m_context->m_window->getSwapchain().m_backbuffer_index));
-		begin_render_info.setRenderPass(m_pipeline_description.m_render_pass->getRenderPass());
-		begin_render_info.setRenderArea(vk::Rect2D({}, m_pipeline_description.m_render_pass->getResolution()));
+		begin_render_info.setFramebuffer(m_framebuffer.get());
+		begin_render_info.setRenderPass(m_render_pass.get());
+		begin_render_info.setRenderArea(vk::Rect2D({}, m_pipeline_description.m_render_target->m_resolution));
 		cmd.beginRenderPass(begin_render_info, vk::SubpassContents::eInline);
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[1].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, sFont::Order().getPipelineLayout(sFont::PIPELINE_LAYOUT_RENDER_RASTER), 0, { sSystem::Order().getSystemDescriptorSet() }, { 0 });
@@ -666,7 +717,10 @@ struct FontRenderer
 	};
 	std::array<vk::UniquePipeline, Pipeline_num> m_pipeline;
 	PipelineDescription m_pipeline_description;
-
 	std::shared_ptr<btr::Context> m_context;
+
+	vk::UniqueRenderPass m_render_pass;
+	vk::UniqueFramebuffer m_framebuffer;
+
 };
 

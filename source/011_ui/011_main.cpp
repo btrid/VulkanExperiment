@@ -57,7 +57,7 @@ int main()
 
 	auto context = app.m_context;
 
-	sUISystem::Create(context);
+	sUISystem::Create(context, app.m_window->getRenderTarget());
 	UIManipulater manip(context);
 
 	sFont::Create(context);
@@ -65,7 +65,7 @@ int main()
 
 	PipelineDescription p_desc;
 	p_desc.m_context = context;
-	p_desc.m_render_pass = app.m_window->getRenderBackbufferPass();
+	p_desc.m_render_target = app.m_window->getRenderTarget();
 	FontRenderer font_renderer(context, p_desc);
 	FontDescription font_desc;
 	font_desc.filename = "mgenplus-1c-black.ttf";
