@@ -18,15 +18,15 @@ void main()
 {
 
 	uvec2 index = gl_WorkGroupID.xy;
-	uint tiled_1D_index = gl_WorkGroupID.x+ gl_WorkGroupID.y*u_OIT_info.m_emission_tile_num.x; 
+	uint tiled_1D_index = gl_WorkGroupID.x + gl_WorkGroupID.y*u_OIT_info.m_emission_tile_num.x; 
 
+	vec2 left_top = vec2(0., 0.);
+	vec2 right_bottom = vec2(u_OIT_info.m_resolution.xy);
 	if(gl_LocalInvocationID.x == 0)
 	{
 		s_counter = 0;
 
-		vec2 left_top = vec2(0., 0.);
-		vec2 right_bottom = vec2(u_OIT_info.m_resolution.xy);
-		vec2 tile_size = right_bottom / u_OIT_info.m_emission_tile_num.xy;
+		vec2 tile_size = u_OIT_info.m_emission_tile_size.xy;
 		s_area.xy = left_top + tile_size*index.xy;
 		s_area.zw = s_area.xy + tile_size;
 	}
@@ -44,9 +44,13 @@ void main()
 			break;
 		}
 		vec4 p = b_emission[i].pos;
+		if(any(lessThan(p.xz-p.w, left_top)) || any(greaterThanEqual(p.xz+p.w, right_bottom)))
+		{
+//			continue;
+		}
 		float DeltaX = p.x - max(s_area.x, min(p.x, s_area.z));
 		float DeltaY = p.z - max(s_area.y, min(p.z, s_area.w));
-		bool is_contain = (DeltaX * DeltaX + DeltaY * DeltaY) < (p.w * p.w + 1.);
+		bool is_contain = (DeltaX * DeltaX + DeltaY * DeltaY) < (p.w*p.w);
 		if(!is_contain) 
 		{
 			continue;

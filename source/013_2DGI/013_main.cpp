@@ -82,7 +82,9 @@ struct OITRenderer
 	{
 		mat4 m_camera_PV;
 		uvec2 m_resolution;
+		uvec2 m_emission_tile_size;
 		uvec2 m_emission_tile_num;
+		uvec2 _p;
 		vec4 m_position;
 		int m_emission_tile_map_max;
 	};
@@ -116,10 +118,11 @@ struct OITRenderer
 
 			info.m_position = vec4(0.f, 0.f, 0.f, 0.f);
 			info.m_resolution = uvec2(RenderWidth, RenderHeight);
-			info.m_emission_tile_num = uvec2(32, 32);
+			info.m_emission_tile_size = uvec2(32, 32);
+			info.m_emission_tile_num = info.m_resolution / info.m_emission_tile_size;
 			info.m_camera_PV = glm::ortho(-RenderWidth * 0.5f, RenderWidth*0.5f, -RenderHeight * 0.5f, RenderHeight*0.5f);
 			info.m_camera_PV *= glm::lookAt(vec3(0., -1.f, 0.f) + info.m_position.xyz(), info.m_position.xyz(), vec3(0.f, 0.f, 1.f));
-			info.m_emission_tile_map_max = 4;
+			info.m_emission_tile_map_max = 16;
 			cmd.updateBuffer<Info>(m_fragment_info.getInfo().buffer, m_fragment_info.getInfo().offset, info);
 		}
 		{
@@ -139,7 +142,7 @@ struct OITRenderer
 		}
 		{
 			btr::BufferMemoryDescriptorEx<Emission> desc;
-			desc.element_num = FragmentBufferSize;
+			desc.element_num = 256;
 			m_emission_buffer = context->m_storage_memory.allocateMemory(desc);
 		}
 		{
@@ -487,7 +490,6 @@ struct OITRenderer
 			cmd.fillBuffer(m_color.getInfo().buffer, m_color.getInfo().offset, m_color.getInfo().range, u2f.u);
 			cmd.fillBuffer(m_fragment_buffer.getInfo().buffer, m_fragment_buffer.getInfo().offset, m_fragment_buffer.getInfo().range, 0u);
 			cmd.updateBuffer<ivec3>(m_emission_counter.getInfo().buffer, m_emission_counter.getInfo().offset, ivec3(0, 1, 1));
-//			cmd.fillBuffer(m_emission_buffer.getInfo().buffer, m_emission_buffer.getInfo().offset, m_emission_buffer.getInfo().range, 0u);
 			cmd.fillBuffer(m_emission_tile_counter.getInfo().buffer, m_emission_tile_counter.getInfo().offset, m_emission_tile_counter.getInfo().range, 0u);
 			
 		}
@@ -609,6 +611,14 @@ struct DebugOIT : public OITPipeline
 	{
 		m_context = context;
 		m_renderer = renderer;
+		m_emission.resize(64);
+		for (auto& e : m_emission)
+		{
+			e.pos = vec4(std::rand() % 500 + 50, std::rand() % 500 + 50, std::rand() % 500 + 50, 100.f);
+//			e.pos = vec4(200, 100, 200, 100.f);
+			e.value = vec4(std::rand() % 100 * 0.01f, std::rand() % 100 * 0.01f, std::rand() % 100 * 0.01f, 1.f);
+		}
+
 		std::vector<OITRenderer::Fragment> map_data(renderer->RenderWidth*renderer->RenderHeight);
 		for (auto& m : map_data)
 		{
@@ -634,6 +644,7 @@ struct DebugOIT : public OITPipeline
 
 		auto cmd = m_context->m_cmd_pool->allocCmdTempolary(0);
 		cmd.copyBuffer(staging.getInfo().buffer, m_map_data.getInfo().buffer, copy);
+
 	}
 	void execute(vk::CommandBuffer cmd)override
 	{
@@ -644,17 +655,9 @@ struct DebugOIT : public OITPipeline
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands, {}, 0, nullptr, array_length(to_write), to_write, 0, nullptr);
 
-		OITRenderer::Emission e;
-		e.pos = vec4(100.f, 100.f, 100.f, 100.f);
-		e.value = vec4(1.f, 1.f, 1.f, 1.f);
-
-		float DeltaX = e.pos.x - glm::max<float>(96.f, glm::min<float>(e.pos.x, 128.f));
-		float DeltaY = e.pos.z - glm::max<float>(96.f, glm::min<float>(e.pos.z, 128.f));
-		bool is_contain = (DeltaX * DeltaX + DeltaY * DeltaY) < (e.pos.w * e.pos.w + 1.);
-
-		cmd.updateBuffer<ivec3>(m_renderer->m_emission_counter.getInfo().buffer, m_renderer->m_emission_counter.getInfo().offset, ivec3(1, 1, 1));
+		cmd.updateBuffer<ivec3>(m_renderer->m_emission_counter.getInfo().buffer, m_renderer->m_emission_counter.getInfo().offset, ivec3(m_emission.size(), 1, 1));
 		auto e_buffer = m_renderer->m_emission_buffer.getInfo();
-		cmd.updateBuffer<OITRenderer::Emission>(e_buffer.buffer, e_buffer.offset, e);
+		cmd.updateBuffer(e_buffer.buffer, e_buffer.offset, vector_sizeof(m_emission), m_emission.data());
 
 		vk::BufferCopy copy;
 		copy.setSrcOffset(m_map_data.getInfo().offset);
@@ -674,6 +677,8 @@ struct DebugOIT : public OITPipeline
 	std::shared_ptr<btr::Context> m_context;
 	std::shared_ptr<OITRenderer> m_renderer;
 	btr::BufferMemoryEx<OITRenderer::Fragment> m_map_data;
+	std::vector<OITRenderer::Emission> m_emission;
+
 };
 
 int main()

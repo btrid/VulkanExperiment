@@ -10,24 +10,33 @@
 #include <OIT.glsl>
 
 layout (local_size_x = 32, local_size_y = 32) in;
+shared Emission s_emission[16];
 void main()
 {
-	ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
-	int pixel_1d = int(pixel.x + pixel.y*u_OIT_info.m_resolution.x);
-	ivec2 tile_index_2d = pixel / ivec2(u_OIT_info.m_emission_tile_num.xy);
-	int tile_index = int(tile_index_2d.x + tile_index_2d.y*u_OIT_info.m_emission_tile_num.x);
-	ivec2 reso = ivec2(u_OIT_info.m_resolution.xy);
+	const ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
+	const int pixel_1d = int(pixel.x + pixel.y*u_OIT_info.m_resolution.x);
+	const ivec2 tile_index_2d = pixel / ivec2(u_OIT_info.m_emission_tile_size.xy);
+	const int tile_index = int(tile_index_2d.x + tile_index_2d.y*u_OIT_info.m_emission_tile_num.x);
+	const ivec2 reso = ivec2(u_OIT_info.m_resolution.xy);
 
 	const int hierarchy_rate[2] = {1, 8};
 	const vec2 c_cell_size[2] = {vec2(1.), vec2(1.)*hierarchy_rate[1]};
 
 	const vec2 end = vec2(pixel)*c_cell_size[0] + c_cell_size[0]*0.5;
-
-	for(int i = 0; i < b_emission_tile_counter[tile_index]; i++)
+	vec3 photon = vec3(0.);
+	int emission_num = b_emission_tile_counter[tile_index];
+	if(gl_LocalInvocationIndex < emission_num)
 	{
-		int emission_index = b_emission_tile_map[tile_index*u_OIT_info.m_emission_tile_map_max + i];
-		vec4 emission = b_emission[emission_index].value;
-		vec4 emission_pos = b_emission[emission_index].pos;
+		int emission_index = b_emission_tile_map[tile_index*u_OIT_info.m_emission_tile_map_max + gl_LocalInvocationIndex];
+		s_emission[gl_LocalInvocationIndex] = b_emission[emission_index];		
+	}
+	barrier();
+	memoryBarrierShared();
+
+	for(int i = 0; i < emission_num; i++)
+	{
+		vec4 emission = s_emission[i].value;
+		vec4 emission_pos = s_emission[i].pos;
 		const vec2 start = emission_pos.xz;
 
 		const float ray_dist = distance(start, end);
@@ -45,12 +54,11 @@ void main()
 
 		ivec2 map_index_1 = map_index/8;
 		ivec2 map_index_1_sub = map_index%8;
-		int map_index_1_1d = map_index_1.x + map_index_1.y * (640/8);
+		int map_index_1_1d = map_index_1.x + map_index_1.y * int(u_OIT_info.m_resolution.x/8);
 		uint64_t fragment_map = b_fragment_hierarchy[map_index_1_1d];
 
 		for(;;)
 		{
-
 			int hierarchy = fragment_map == 0 ? 1 : 0;
 			vec2 cell_size = c_cell_size[hierarchy];
 
@@ -74,14 +82,13 @@ void main()
 			if(distance(start, pos) >= ray_dist)
 			{
 				// 距離を超えたら光がフラグメントにヒット
-//				b_color[pixel_1d] = vec4(0., 0., 1., 1.);
-				b_color[pixel_1d] = vec4(0., 0., 1., 1.) * emission_pos.w / (1+ray_dist*ray_dist);
+				photon += vec3(0., 0., 1.) * emission_pos.w / (1+ray_dist*ray_dist);
 				break;
 			}
 
 			map_index_1 = map_index/8;
 			map_index_1_sub = map_index%8;
-			map_index_1_1d = map_index_1.x + map_index_1.y * (640/8);
+			map_index_1_1d = map_index_1.x + map_index_1.y * int(u_OIT_info.m_resolution.x/8);
 			fragment_map = b_fragment_hierarchy[map_index_1_1d];
 
 			uint bit_offset = map_index_1_sub.x + map_index_1_sub.y*8;
@@ -89,10 +96,9 @@ void main()
 			if((fragment_map & (bit)) != 0)
 			{
 				// 遮蔽物
-				b_color[pixel_1d] = vec4(0., 0., 0., 1.);
 				break;
 			}
 		}
 	}
-
+	b_color[pixel_1d] = vec4(photon, 1.);
 }
