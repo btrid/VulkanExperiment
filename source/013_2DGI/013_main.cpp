@@ -614,7 +614,7 @@ struct DebugOIT : public OITPipeline
 		m_emission.resize(64);
 		for (auto& e : m_emission)
 		{
-			e.pos = vec4(std::rand() % 500 + 50, std::rand() % 500 + 50, std::rand() % 500 + 50, 100.f);
+			e.pos = vec4(std::rand() % 500 + 50, std::rand() % 500 + 50, std::rand() % 500 + 50, 50.f);
 			e.value = vec4(std::rand() % 100 * 0.01f, std::rand() % 100 * 0.01f, std::rand() % 100 * 0.01f, 1.f);
 		}
 

@@ -53,7 +53,6 @@ void main()
 		ivec2 next = ivec2(0);
 
 		ivec2 map_index_1 = map_index/8;
-		ivec2 map_index_1_sub = map_index%8;
 		int map_index_1_1d = map_index_1.x + map_index_1.y * int(u_OIT_info.m_resolution.x/8);
 		uint64_t fragment_map = b_fragment_hierarchy[map_index_1_1d];
 
@@ -77,8 +76,6 @@ void main()
 			pos += dir * rate;
 			next = dist.x < dist.y ? next_step.xz : next_step.zy;
 
-			map_index = ivec2((pos-next*0.5) / c_cell_size[0]);
-
 			if(distance(start, pos) >= ray_dist)
 			{
 				// 距離を超えたら光がフラグメントにヒット
@@ -86,11 +83,12 @@ void main()
 				break;
 			}
 
+			map_index = ivec2((pos-next*0.5) / c_cell_size[0]);
 			map_index_1 = map_index/8;
-			map_index_1_sub = map_index%8;
 			map_index_1_1d = map_index_1.x + map_index_1.y * int(u_OIT_info.m_resolution.x/8);
 			fragment_map = b_fragment_hierarchy[map_index_1_1d];
 
+			ivec2 map_index_1_sub = map_index%8;
 			uint bit_offset = map_index_1_sub.x + map_index_1_sub.y*8;
 			uint64_t bit = uint64_t(1)<<bit_offset;
 			if((fragment_map & (bit)) != 0)
