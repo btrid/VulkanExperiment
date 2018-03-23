@@ -615,14 +615,13 @@ struct DebugOIT : public OITPipeline
 		for (auto& e : m_emission)
 		{
 			e.pos = vec4(std::rand() % 500 + 50, std::rand() % 500 + 50, std::rand() % 500 + 50, 100.f);
-//			e.pos = vec4(200, 100, 200, 100.f);
 			e.value = vec4(std::rand() % 100 * 0.01f, std::rand() % 100 * 0.01f, std::rand() % 100 * 0.01f, 1.f);
 		}
 
 		std::vector<OITRenderer::Fragment> map_data(renderer->RenderWidth*renderer->RenderHeight);
 		for (auto& m : map_data)
 		{
-			m.albedo = vec3(0.);
+			m.albedo = vec3(0.f);
 			if (std::rand() % 1000 < 10)
 			{
 				m.albedo = vec3(1.f);
@@ -662,7 +661,7 @@ struct DebugOIT : public OITPipeline
 		vk::BufferCopy copy;
 		copy.setSrcOffset(m_map_data.getInfo().offset);
 		copy.setDstOffset(m_renderer->m_fragment_buffer.getInfo().offset);
-		copy.setSize(m_map_data.getInfo().range);
+		copy.setSize(m_renderer->m_fragment_buffer.getInfo().range);
 
 		cmd.copyBuffer(m_map_data.getInfo().buffer, m_renderer->m_fragment_buffer.getInfo().buffer, copy);
 

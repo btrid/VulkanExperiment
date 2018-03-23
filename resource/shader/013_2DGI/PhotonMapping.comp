@@ -10,7 +10,7 @@
 #include <OIT.glsl>
 
 layout (local_size_x = 32, local_size_y = 32) in;
-shared Emission s_emission[16];
+shared Emission s_emission[64];
 void main()
 {
 	const ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
@@ -24,7 +24,7 @@ void main()
 
 	const vec2 end = vec2(pixel)*c_cell_size[0] + c_cell_size[0]*0.5;
 	vec3 photon = vec3(0.);
-	int emission_num = b_emission_tile_counter[tile_index];
+	int emission_num = min(b_emission_tile_counter[tile_index], 64);
 	if(gl_LocalInvocationIndex < emission_num)
 	{
 		int emission_index = b_emission_tile_map[tile_index*u_OIT_info.m_emission_tile_map_max + gl_LocalInvocationIndex];
@@ -39,10 +39,10 @@ void main()
 		vec4 emission_pos = s_emission[i].pos;
 		const vec2 start = emission_pos.xz;
 
-		const float ray_dist = distance(start, end);
-		if(all(equal(start, end))){
+		if(dot(start, end) <= 0.001){
 			continue;
 		}
+		const float ray_dist = distance(start, end);
 
 		vec2 pos = start;
 		ivec2 map_index = ivec2(start / c_cell_size[0]);
@@ -59,11 +59,11 @@ void main()
 
 		for(;;)
 		{
-			int hierarchy = fragment_map == 0 ? 1 : 0;
+			const int hierarchy = fragment_map == 0 ? 1 : 0;
 			vec2 cell_size = c_cell_size[hierarchy];
 
-			vec2 cell_origin = vec2(map_index / hierarchy_rate[hierarchy])*cell_size;
-			vec2 cell_p = (pos+(next*0.001)) - cell_origin;
+			vec2 cell_origin = vec2((map_index+next) / hierarchy_rate[hierarchy])*cell_size;
+			vec2 cell_p = pos - cell_origin;
 
 			float x = dir.x < 0. ? cell_p.x : (cell_size.x- cell_p.x);
 			float y = dir.y < 0. ? cell_p.y : (cell_size.y- cell_p.y);
@@ -77,7 +77,7 @@ void main()
 			pos += dir * rate;
 			next = dist.x < dist.y ? next_step.xz : next_step.zy;
 
-			map_index = ivec2((pos+next*0.001) / c_cell_size[0]);
+			map_index = ivec2((pos-next*0.5) / c_cell_size[0]);
 
 			if(distance(start, pos) >= ray_dist)
 			{
