@@ -34,7 +34,6 @@ void main()
 	ivec2 map_index = ivec2(pos / c_cell_size[0]);
 
 	const ivec3 next_step = ivec3((dir.x < 0. ? -1 : 1), (dir.y < 0. ? -1 : 1), 0);
-	ivec2 next = ivec2(0);
 
 	ivec2 map_index_1 = map_index/8;
 	int map_index_1_1d = map_index_1.x + map_index_1.y * int(u_pm_info.m_resolution.x/8);
@@ -42,10 +41,11 @@ void main()
 
 	for(;;)
 	{
-		const int hierarchy = fragment_map == 0 ? 1 : 0;
+//		const int hierarchy = fragment_map == 0 ? 1 : 0;
+		const int hierarchy = 0;
 		vec2 cell_size = c_cell_size[hierarchy];
 
-		vec2 cell_origin = vec2((map_index+next) / hierarchy_rate[hierarchy])*cell_size;
+		vec2 cell_origin = vec2(map_index / hierarchy_rate[hierarchy])*cell_size;
 		vec2 cell_p = pos - cell_origin;
 
 		float x = dir.x < 0. ? cell_p.x : (cell_size.x- cell_p.x);
@@ -54,21 +54,21 @@ void main()
 		vec2 dist = vec2(99999.);
 		dist.x = abs(dir.x) < FLT_EPSIRON ? 99999. : abs(x / dir.x);
 		dist.y = abs(dir.y) < FLT_EPSIRON ? 99999. : abs(y / dir.y);
-		float rate = min(dist.x, dist.y);
-		rate = rate < FLT_EPSIRON ? max(dist.x, dist.y) : rate;
+		int next_ = dist.x < dist.y ? 0 : 1;
+		next_ = dist[next_] < FLT_EPSIRON ? (1-next_) : next_;
+		float rate = dist[next_];
 
 		pos += dir * rate;
-		next = dist.x < dist.y ? next_step.xz : next_step.zy;
-
-		map_index = ivec2((pos-next*0.5) / c_cell_size[0]);
-		map_index_1 = map_index/8;
-		map_index_1_1d = map_index_1.x + map_index_1.y * int(u_pm_info.m_resolution.x/8);
-		fragment_map = b_fragment_hierarchy[map_index_1_1d];
+		ivec2 next = (next_ == 0) ? next_step.xz : next_step.zy;
+		map_index = ivec2( (pos - (next*cell_size*0.5)) / cell_size) + next;
 
 		if(any(greaterThanEqual(map_index, reso)) || any(lessThan(map_index, ivec2(0, 0)))) {
 			// 範囲外
 			break;
 		}
+/*		map_index_1 = map_index/8;
+		map_index_1_1d = map_index_1.x + map_index_1.y * int(u_pm_info.m_resolution.x/8);
+		fragment_map = b_fragment_hierarchy[map_index_1_1d];
 
 		ivec2 map_index_1_sub = map_index%8;
 		uint bit_offset = map_index_1_sub.x + map_index_1_sub.y*8;
@@ -76,10 +76,10 @@ void main()
 		if((fragment_map & (bit)) != 0)
 		{
 			// 遮蔽物
-			break;
+//			break;
 		}
-		ivec2 current = map_index+next;
-		int out_index = int(current.x + current.y * u_pm_info.m_resolution.x);
+*/
+		int out_index = int(map_index.x + map_index.y * u_pm_info.m_resolution.x);
 		b_color[out_index] = vec4(0., 0., 1., 1.);
 	}
 }

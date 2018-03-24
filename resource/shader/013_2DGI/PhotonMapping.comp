@@ -71,11 +71,12 @@ void main()
 			vec2 dist = vec2(99999.);
 			dist.x = abs(dir.x) < FLT_EPSIRON ? 99999. : abs(x / dir.x);
 			dist.y = abs(dir.y) < FLT_EPSIRON ? 99999. : abs(y / dir.y);
-			float rate = min(dist.x, dist.y);
-			rate = rate < FLT_EPSIRON ? max(dist.x, dist.y) : rate;
 
-			pos += dir * rate;
-			next = dist.x < dist.y ? next_step.xz : next_step.zy;
+			int next_ = dist.x < dist.y ? 0 : 1;
+			next_ = dist[next_] < FLT_EPSIRON ? (1-next_) : next_;
+
+			pos += dir * dist[next_];
+			ivec2 next = (next_ == 0) ? next_step.xz : next_step.zy;
 
 			if(distance(start, pos) >= ray_dist)
 			{
