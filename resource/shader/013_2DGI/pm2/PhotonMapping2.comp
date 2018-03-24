@@ -9,7 +9,7 @@
 #define USE_PM 0
 #include <PM.glsl>
 
-#define ray_num (128)
+#define ray_num (256)
 layout (local_size_x = ray_num, local_size_y = 1) in;
 vec2 rotate(in float angle)
 {

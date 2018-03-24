@@ -9,6 +9,7 @@ glslc.exe %include% -w -x glsl %output%LightCulling2.comp.spv LightCulling2.comp
 glslc.exe %include% -w -x glsl %output%PMRendering2.vert.spv PMRendering2.vert
 glslc.exe %include% -w -x glsl %output%PMRendering2.frag.spv PMRendering2.frag
 
-rem glslc.exe -w %include% -x glsl -o ../binary\\OITAppModel.geom.spv OITAppModel.geom
 
+glslc.exe %include% -w -x glsl %output%PMPointLight.vert.spv PMPointLight.vert
+glslc.exe %include% -w -x glsl %output%PMPointLight.frag.spv PMPointLight.frag
 
