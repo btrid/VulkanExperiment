@@ -33,6 +33,9 @@
 #pragma comment(lib, "vulkan-1.lib")
 #pragma comment(lib, "imgui.lib")
 
+namespace pm2d_2
+{
+
 struct PM2DRenderer
 {
 	enum
@@ -614,10 +617,12 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 	cmd.end();
 	return cmd;
 }
-
+}
 
 int main()
 {
+	using namespace pm2d_2;
+//	using namespace pm2d;
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = glm::vec3(0.f, 0.f, 1.f);

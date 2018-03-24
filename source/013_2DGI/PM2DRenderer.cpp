@@ -1,6 +1,6 @@
 #include <013_2DGI/PM2DRenderer.h>
 
-namespace pm2d_old
+namespace pm2d
 {
 
 PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target)

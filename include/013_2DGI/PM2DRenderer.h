@@ -10,7 +10,7 @@ struct PM2DPipeline
 	virtual void execute(vk::CommandBuffer cmd) = 0;
 };
 
-namespace pm2d_old
+namespace pm2d
 {
 
 
