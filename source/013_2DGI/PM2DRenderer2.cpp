@@ -449,7 +449,7 @@ DebugPM2D::DebugPM2D(const std::shared_ptr<btr::Context>& context, const std::sh
 		for (auto& m : map_data)
 		{
 			m.albedo = vec3(0.f);
-			if (std::rand() % 1000 < 10)
+			if (std::rand() % 1000 < 3)
 			{
 				m.albedo = vec3(1.f);
 			}

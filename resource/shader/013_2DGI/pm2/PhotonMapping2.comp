@@ -23,8 +23,7 @@ void main()
 	uint emission_index = gl_WorkGroupID.x;
 	Emission emission = b_emission[emission_index];
 
-	const ivec2 reso = ivec2(u_pm_info.m_resolution.xy);
-
+	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
 
 	const int hierarchy_rate[2] = {1, 8};
 	const vec2 c_cell_size[2] = {vec2(1.), vec2(1.)*hierarchy_rate[1]};
@@ -42,7 +41,8 @@ void main()
 	int map_index_1_1d = map_index_1.x + map_index_1.y * int(u_pm_info.m_resolution.x/8);
 	uint64_t fragment_map = b_fragment_hierarchy[map_index_1_1d];
 
-	for(int i = 0; i < 4000; i++)
+//	for(int i = 0; i < 4000; i++)
+	for(;;)
 	{
 //		const int hierarchy = fragment_map == 0 ? 1 : 0;
 		const int hierarchy = 0;
@@ -61,14 +61,14 @@ void main()
 		ivec2 next = next_ == 0 ? next_step.xz : next_step.zy;
 		pos += dir * dist[next_];
 
-		if(any(greaterThanEqual(map_index, reso)) || any(lessThan(map_index, ivec2(0, 0)))) {
+		if(any(greaterThanEqual(map_index, reso.xy)) || any(lessThan(map_index, ivec2(0, 0)))) {
 			// 範囲外
 			break;
 		}
-		map_index = ivec2((pos+next*0.1) / c_cell_size[0]);
 
-/*		map_index_1 = map_index/8;
-		map_index_1_1d = map_index_1.x + map_index_1.y * int(u_pm_info.m_resolution.x/8);
+		map_index = ivec2((pos+next*0.1) / c_cell_size[0]);
+		map_index_1 = map_index/8;
+		map_index_1_1d = map_index_1.x + map_index_1.y * reso.z;
 		fragment_map = b_fragment_hierarchy[map_index_1_1d];
 
 		ivec2 map_index_1_sub = map_index%8;
@@ -77,18 +77,10 @@ void main()
 		if((fragment_map & (bit)) != 0)
 		{
 			// 遮蔽物
-//			break;
+			break;
 		}
-*/
+
 		int out_index = int(map_index.x + map_index.y * u_pm_info.m_resolution.x);
-//		b_color[out_index] = vec4(0., 0., 1., 1.);
-//		atomicAdd(b_color[out_index], packUnorm4x8(vec4(0., 0., 0.01, 0.)));
 		atomicAdd(b_color[out_index].b, 1);
-//		for(int i = 0; i < 4; i++ )
-//		{
-//			atomicAdd(b_color[out_index][i], vec4(0., 0., 1., 1.)[i]);
-//			b_color[out_index][i] + vec4(0., 0., 1., 1.)[i];
-//		}
-//			break;
 	}
 }
