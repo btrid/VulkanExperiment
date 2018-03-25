@@ -85,7 +85,8 @@ void main()
 		ivec4 map_index_1_sub = map_index%8;
 		ivec2 bit_offset = map_index_1_sub.xz + map_index_1_sub.yw*8;
 		i64vec2 bit = i64vec2(1)<<bit_offset;
-		is_hit |= ivec2((fragment_map & (bit.x)) != 0, (fragment_map & (bit.y)) != 0);
+
+		is_hit |= ivec2((fragment_map & bit.x) != 0, (fragment_map1 & bit.y) != 0);
 		hit_point.xy = (is_hit.x != 0 && is_died.x == 0) ? map_index.xy : hit_point.xy;
 		hit_point.zw = (is_hit.y != 0 && is_died.y == 0) ? map_index.zw : hit_point.zw;
 
@@ -94,11 +95,10 @@ void main()
 		{
 			// 終わり
 			int add_num = is_hit.x + is_hit.y;
-			if(add_num != 0 && constant.store_photon != 0)
+			if(add_num != 0)
 			{
 				int bounce_index = atomicAdd(b_emission_counter[constant.bounce_count+1].x, add_num);
 				int store_index = bounce_index+u_pm_info.m_emission_buffer_offset[constant.bounce_count+1];
-//				int store_index = bounce_index+256;
 				if(is_hit.x != 0)
 				{
 					b_emission[store_index].pos = vec4(hit_point.xxyy);
