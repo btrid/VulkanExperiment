@@ -61,15 +61,10 @@ void main()
 
 		int next_ = dist.x < dist.y ? 0 : 1;
 		int next2_ = dist.z < dist.w ? 2 : 3;
-		pos += dir * vec4(vec2(dist[next_]), vec2(dist[next2_], dist[next2_]));
+		pos += dir * vec4(vec2(dist[next_]), vec2(dist[next2_]));
 
 		ivec4 is_die = ivec4(greaterThanEqual(map_index, reso.xyxy)) + ivec4(lessThan(map_index, ivec4(0)));
 		is_died |= ivec2(any(notEqual(is_die.xy, ivec2(0))), any(notEqual(is_die.zw, ivec2(0))));
-		if(all(notEqual(is_died, ivec2(0))))
-		{
-			// 範囲外
-			break;
-		}
 
 		ivec4 next;
 		next.xy = next_ == 0 ? next_step.xz : next_step.zy;
@@ -84,9 +79,11 @@ void main()
 		ivec4 map_index_1_sub = map_index%8;
 		ivec2 bit_offset = map_index_1_sub.xz + map_index_1_sub.yw*8;
 		i64vec2 bit = i64vec2(1)<<bit_offset;
-		if((fragment_map & (bit.x)) != 0 || (fragment_map & (bit.y)) != 0)
+		is_died |= ivec2((fragment_map & (bit.x)) != 0, (fragment_map & (bit.y)) != 0);
+
+		if(all(notEqual(is_died, ivec2(0))))
 		{
-			// 遮蔽物
+			// 終わり
 			break;
 		}
 
