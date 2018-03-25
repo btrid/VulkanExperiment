@@ -54,7 +54,6 @@ void main()
 		dir.y = abs(dir.y) <= FLT_EPSIRON ? FLT_EPSIRON*2. : dir.y;
 
 		const ivec3 next_step = ivec3((dir.x < 0. ? -1 : 1), (dir.y < 0. ? -1 : 1), 0);
-		ivec2 next = ivec2(0);
 
 		ivec2 map_index_1 = map_index/8;
 		int map_index_1_1d = map_index_1.x + map_index_1.y * (reso.z);
@@ -74,16 +73,8 @@ void main()
 			y = y <= FLT_EPSIRON ? (y+cell_size.y) : y;
 			vec2 dist = abs(vec2(x, y) / dir.xy);
 
-//			vec2 xy;
-//			xy.x = dir.x < 0. ? cell_p.x : (cell_size.x- cell_p.x);
-//			xy.y = dir.y < 0. ? cell_p.y : (cell_size.y- cell_p.y);
-//			xy = vec2(lessThanEqual(xy, FLT_EPSIRON.xx)) * cell_size + xy;
-//			vec2 dist = abs(xy / dir.xy);
-
-
-
 			int next_ = dist.x < dist.y ? 0 : 1;
-			next = next_ == 0 ? next_step.xz : next_step.zy;
+			ivec2 next = next_ == 0 ? next_step.xz : next_step.zy;
 			pos += dir * dist[next_];
 
 			if(distance(start, pos) >= ray_dist)
