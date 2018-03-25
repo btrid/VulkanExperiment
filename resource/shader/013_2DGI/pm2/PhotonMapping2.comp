@@ -25,7 +25,7 @@ vec4 rotate(in vec2 angle)
 }
 void main()
 {
-	uint emission_index = gl_WorkGroupID.x;
+	uint emission_index = gl_WorkGroupID.x + u_pm_info.m_emission_buffer_offset[constant.bounce_count];
 	Emission emission = b_emission[emission_index];
 
 	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
@@ -97,17 +97,19 @@ void main()
 			if(add_num != 0 && constant.store_photon != 0)
 			{
 				int bounce_index = atomicAdd(b_emission_counter[constant.bounce_count+1].x, add_num);
+				int store_index = bounce_index+u_pm_info.m_emission_buffer_offset[constant.bounce_count+1];
+//				int store_index = bounce_index+256;
 				if(is_hit.x != 0)
 				{
-					b_emission[bounce_index].pos = vec4(hit_point.xxyy);
-					b_emission[bounce_index].value = vec4(0., 0., 1., 1.);
-					bounce_index++;
+					b_emission[store_index].pos = vec4(hit_point.xxyy);
+					b_emission[store_index].value = vec4(1., 0., 0., 1.);
+					store_index++;
 				}
 				if(is_hit.y != 0)
 				{
-					b_emission[bounce_index].pos = vec4(hit_point.zzww);
-					b_emission[bounce_index].value = vec4(0., 0., 1., 1.);
-					bounce_index++;
+					b_emission[store_index].pos = vec4(hit_point.zzww);
+					b_emission[store_index].value = vec4(1., 0., 0., 1.);
+					store_index++;
 				}
 			}
 			break;

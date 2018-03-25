@@ -27,6 +27,14 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 		info.m_camera_PV = glm::ortho(-RenderWidth * 0.5f, RenderWidth*0.5f, -RenderHeight * 0.5f, RenderHeight*0.5f);
 		info.m_camera_PV *= glm::lookAt(vec3(0., -1.f, 0.f) + info.m_position.xyz(), info.m_position.xyz(), vec3(0.f, 0.f, 1.f));
 		info.m_emission_tile_map_max = 16;
+		info.m_emission_buffer_size[0] = 256;
+		info.m_emission_buffer_size[1] = 2048;
+		info.m_emission_buffer_size[2] = 2048;
+		info.m_emission_buffer_size[3] = 2048;
+		info.m_emission_buffer_offset[0] = 0;
+		info.m_emission_buffer_offset[1] = info.m_emission_buffer_offset[0] + info.m_emission_buffer_size[0];
+		info.m_emission_buffer_offset[2] = info.m_emission_buffer_offset[1] + info.m_emission_buffer_size[1];
+		info.m_emission_buffer_offset[3] = info.m_emission_buffer_offset[2] + info.m_emission_buffer_size[2];
 		cmd.updateBuffer<Info>(m_fragment_info.getInfo().buffer, m_fragment_info.getInfo().offset, info);
 	}
 	{
@@ -46,7 +54,10 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 	}
 	{
 		btr::BufferMemoryDescriptorEx<Emission> desc;
-		desc.element_num = 256 + 1024 + 1024;
+		desc.element_num = info.m_emission_buffer_size[0];
+		desc.element_num +=info.m_emission_buffer_size[1];
+		desc.element_num +=info.m_emission_buffer_size[2];
+		desc.element_num +=info.m_emission_buffer_size[3];
 		m_emission_buffer = context->m_storage_memory.allocateMemory(desc);
 	}
 
@@ -412,16 +423,16 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelinePhotonMapping].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutPhotonMapping].get(), 0, m_descriptor_set.get(), {});
-		cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayoutPhotonMapping].get(), vk::ShaderStageFlagBits::eCompute, 0, ivec2(0, 0));
+		cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayoutPhotonMapping].get(), vk::ShaderStageFlagBits::eCompute, 0, ivec2(1, 0));
 		cmd.dispatchIndirect(m_emission_counter.getInfo().buffer, m_emission_counter.getInfo().offset);
 	}
 
 	// bounce 1
 	{
-// 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelinePhotonMapping].get());
-// 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutPhotonMapping].get(), 0, m_descriptor_set.get(), {});
-// 		cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayoutPhotonMapping].get(), vk::ShaderStageFlagBits::eCompute, 0, ivec2(0, 0));
-// 		cmd.dispatchIndirect(m_emission_counter.getInfo().buffer, m_emission_counter.getInfo().offset);
+//  		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelinePhotonMapping].get());
+//  		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutPhotonMapping].get(), 0, m_descriptor_set.get(), {});
+//  		cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayoutPhotonMapping].get(), vk::ShaderStageFlagBits::eCompute, 0, ivec2(0, 1));
+//  		cmd.dispatchIndirect(m_emission_counter.getInfo().buffer, m_emission_counter.getInfo().offset+ sizeof(ivec3));
 	}
 
 	{

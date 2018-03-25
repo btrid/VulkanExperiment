@@ -12,6 +12,8 @@ struct PMInfo
 	uvec2 m_emission_tile_num;
 	uvec2 _p;
 	vec4 m_position;
+	ivec4 m_emission_buffer_size;
+	ivec4 m_emission_buffer_offset;
 	int m_emission_tile_map_max;
 };
 struct Fragment
