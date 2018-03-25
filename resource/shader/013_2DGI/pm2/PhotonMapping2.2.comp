@@ -1,0 +1,78 @@
+#version 450
+
+#extension GL_GOOGLE_cpp_style_line_directive : require
+
+#include <btrlib/ConvertDimension.glsl>
+#include <btrlib/Common.glsl>
+#include <btrlib/Math.glsl>
+
+#define USE_PM 0
+#include <PM.glsl>
+
+#define ray_num (256)
+layout (local_size_x = ray_num, local_size_y = 1) in;
+vec2 rotate(in float angle)
+{
+	float c = cos(angle);
+	float s = sin(angle);
+	return vec2(-s, c);
+}
+Emission s_emission;
+void main()
+{
+	uint emission_index = gl_WorkGroupID.x;
+	Emission emission = b_emission[emission_index];
+
+	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
+
+	vec2 pos = vec2(emission.pos.xz);
+	ivec2 map_index = ivec2(pos);
+
+	vec2 dir = rotate(gl_LocalInvocationID.x * 6.28318 / float(ray_num));
+	dir.x = abs(dir.x) <= FLT_EPSIRON ? FLT_EPSIRON*2. : dir.x;
+	dir.y = abs(dir.y) <= FLT_EPSIRON ? FLT_EPSIRON*2. : dir.y;
+
+	const ivec3 next_step = ivec3((dir.x < 0. ? -1 : 1), (dir.y < 0. ? -1 : 1), 0);
+
+	ivec2 map_index_1 = map_index/8;
+	int map_index_1_1d = map_index_1.x + map_index_1.y * reso.z;
+	uint64_t fragment_map = b_fragment_hierarchy[map_index_1_1d];
+
+	for(;;)
+	{
+		vec2 cell_origin = vec2(map_index);
+		vec2 cell_p = pos - cell_origin;
+
+		float x = dir.x < 0. ? cell_p.x : (1.- cell_p.x);
+		float y = dir.y < 0. ? cell_p.y : (1.- cell_p.y);
+		x = x <= FLT_EPSIRON ? (x+1.) : x;
+		y = y <= FLT_EPSIRON ? (y+1.) : y;
+		vec2 dist = abs(vec2(x, y) / dir.xy);
+
+		int next_ = dist.x < dist.y ? 0 : 1;
+		ivec2 next = next_ == 0 ? next_step.xz : next_step.zy;
+		pos += dir * dist[next_];
+
+		if(any(greaterThanEqual(map_index, reso.xy)) || any(lessThan(map_index, ivec2(0, 0)))) {
+			// 範囲外
+			break;
+		}
+
+		map_index = ivec2((pos+next*0.1));
+		map_index_1 = map_index/8;
+		map_index_1_1d = map_index_1.x + map_index_1.y * reso.z;
+		fragment_map = b_fragment_hierarchy[map_index_1_1d];
+
+		ivec2 map_index_1_sub = map_index%8;
+		uint bit_offset = map_index_1_sub.x + map_index_1_sub.y*8;
+		uint64_t bit = uint64_t(1)<<bit_offset;
+		if((fragment_map & (bit)) != 0)
+		{
+			// 遮蔽物
+			break;
+		}
+
+		int out_index = int(map_index.x + map_index.y * reso.x);
+		atomicAdd(b_color[out_index].b, 1);
+	}
+}

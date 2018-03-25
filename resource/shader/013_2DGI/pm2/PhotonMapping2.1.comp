@@ -11,7 +11,7 @@
 
 #define ray_num (128)
 layout (local_size_x = ray_num, local_size_y = 1) in;
-vec4 rotate(in vec2 angle)
+vec4 rotate(in vec2, angle)
 {
 	vec2 c = cos(angle);
 	vec2 s = sin(angle);
@@ -27,9 +27,9 @@ void main()
 	vec4 pos = emission.pos.xzxz;
 	ivec4 map_index = ivec4(pos);
 
-	float angle = gl_LocalInvocationID.x*2 * 6.28318 / float(ray_num*2);
-	float angle2 = (gl_LocalInvocationID.x*2+1) * 6.28318 / float(ray_num*2);
-	vec4 dir = rotate(vec2(angle, angle2));
+	float angle = gl_LocalInvocationID.x * 6.28318 / float(ray_num*2);
+	float angle2 = (gl_LocalInvocationID.x+1) * 6.28318 / float(ray_num*2);
+	vec4 dir = rotate(vec2(angle, angle2)));
 	dir.x = abs(dir.x) <= FLT_EPSIRON ? FLT_EPSIRON*2. : dir.x;
 	dir.y = abs(dir.y) <= FLT_EPSIRON ? FLT_EPSIRON*2. : dir.y;
 	dir.z = abs(dir.z) <= FLT_EPSIRON ? FLT_EPSIRON*2. : dir.z;
