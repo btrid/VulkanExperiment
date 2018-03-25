@@ -35,12 +35,11 @@ layout(std430, set=USE_PM, binding=2) restrict buffer FragmentHierarchyBuffer {
 	uint64_t b_fragment_hierarchy[];
 };
 layout(std430, set=USE_PM, binding=10) restrict buffer EmissiveCounter {
-	ivec3 b_emission_counter;
+	ivec3 b_emission_counter[];
 };
 layout(std430, set=USE_PM, binding=11) restrict buffer EmissiveBuffer {
 	Emission b_emission[];
 };
-//layout(set=USE_PM, binding=12, rgba16f) uniform image2D t_emission;
 
 layout(std430, set=USE_PM, binding=20) restrict buffer ColorBuffer {
 	uvec4 b_color[];

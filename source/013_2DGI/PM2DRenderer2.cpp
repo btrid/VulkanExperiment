@@ -41,12 +41,12 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 	}
 	{
 		btr::BufferMemoryDescriptorEx<ivec3> desc;
-		desc.element_num = 1;
+		desc.element_num = 5;
 		m_emission_counter = context->m_storage_memory.allocateMemory(desc);
 	}
 	{
 		btr::BufferMemoryDescriptorEx<Emission> desc;
-		desc.element_num = 256;
+		desc.element_num = 256 + 1024 + 1024;
 		m_emission_buffer = context->m_storage_memory.allocateMemory(desc);
 	}
 
@@ -177,8 +177,16 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 		pipeline_layout_info.setPSetLayouts(layouts);
 		m_pipeline_layout[PipelineLayoutMakeFragmentHierarchy] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		m_pipeline_layout[PipelineLayoutLightCulling] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
-		m_pipeline_layout[PipelineLayoutPhotonMapping] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		m_pipeline_layout[PipelineLayoutRendering] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+
+
+		vk::PushConstantRange constants[] = {
+			vk::PushConstantRange().setOffset(0).setSize(8).setStageFlags(vk::ShaderStageFlagBits::eCompute),
+//			vk::PushConstantRange().setOffset(4).setSize(4).setStageFlags(vk::ShaderStageFlagBits::eCompute),
+		};
+		pipeline_layout_info.setPushConstantRangeCount(array_length(constants));
+		pipeline_layout_info.setPPushConstantRanges(constants);
+		m_pipeline_layout[PipelineLayoutPhotonMapping] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 	}
 
 	// pipeline
@@ -356,8 +364,8 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 		u2f.f = 0.f;
 		cmd.fillBuffer(m_color.getInfo().buffer, m_color.getInfo().offset, m_color.getInfo().range, u2f.u);
 		cmd.fillBuffer(m_fragment_buffer.getInfo().buffer, m_fragment_buffer.getInfo().offset, m_fragment_buffer.getInfo().range, 0u);
-		cmd.updateBuffer<ivec3>(m_emission_counter.getInfo().buffer, m_emission_counter.getInfo().offset, ivec3(0, 1, 1));
-
+		ivec3 emissive[] = { {0,2,1},{ 0,1,1 },{ 0,1,1 },{ 0,1,1 },{ 0,1,1 } };
+		cmd.updateBuffer<ivec3[5]>(m_emission_counter.getInfo().buffer, m_emission_counter.getInfo().offset, emissive);
 	}
 	// exe
 	for (auto& p : pipeline)
@@ -386,6 +394,7 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 
 	}
 
+	// photonmapping
 	{
 		{
 			vk::BufferMemoryBarrier to_read[] = {
@@ -401,10 +410,18 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);
 		}
 
-		// photonmapping
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelinePhotonMapping].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutPhotonMapping].get(), 0, m_descriptor_set.get(), {});
+		cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayoutPhotonMapping].get(), vk::ShaderStageFlagBits::eCompute, 0, ivec2(0, 0));
 		cmd.dispatchIndirect(m_emission_counter.getInfo().buffer, m_emission_counter.getInfo().offset);
+	}
+
+	// bounce 1
+	{
+// 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelinePhotonMapping].get());
+// 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutPhotonMapping].get(), 0, m_descriptor_set.get(), {});
+// 		cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayoutPhotonMapping].get(), vk::ShaderStageFlagBits::eCompute, 0, ivec2(0, 0));
+// 		cmd.dispatchIndirect(m_emission_counter.getInfo().buffer, m_emission_counter.getInfo().offset);
 	}
 
 	{
