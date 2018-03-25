@@ -65,7 +65,7 @@ void main()
 			const int hierarchy = fragment_map == 0 ? 1 : 0;
 			vec2 cell_size = c_cell_size[hierarchy];
 
-			vec2 cell_origin = vec2((map_index+next) / hierarchy_rate[hierarchy])*cell_size + next_step*cell_size;
+			vec2 cell_origin = vec2((map_index+next) / hierarchy_rate[hierarchy])*cell_size + vec2(next_step)*cell_size;
 			vec2 xy = abs(pos - cell_origin);
 			vec2 dist = abs(xy / dir);
 

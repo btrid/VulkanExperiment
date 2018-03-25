@@ -27,8 +27,8 @@ void main()
 		s_counter = 0;
 
 		vec2 tile_size = u_OIT_info.m_emission_tile_size.xy;
-		s_area.xy = left_top + tile_size*index.xy;
-		s_area.zw = s_area.xy + tile_size;
+		s_area.xy = left_top + tile_size*index.xy - 0.01;
+		s_area.zw = s_area.xy + tile_size + 0.02;
 	}
 	barrier();
 	memoryBarrierShared();

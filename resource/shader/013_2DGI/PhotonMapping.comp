@@ -9,6 +9,7 @@
 #define USE_OIT 0
 #include <OIT.glsl>
 
+#define assert(_x) for(int i = 0; i < 10000 && (_x); i++)
 layout (local_size_x = 32, local_size_y = 32) in;
 shared Emission s_emission[64];
 shared uint64_t s_fragment_map[16];
@@ -18,10 +19,10 @@ void main()
 	const int pixel_1d = int(pixel.x + pixel.y*u_OIT_info.m_resolution.x);
 	const ivec2 tile_index_2d = pixel / ivec2(u_OIT_info.m_emission_tile_size.xy);
 	const int tile_index = int(tile_index_2d.x + tile_index_2d.y*u_OIT_info.m_emission_tile_num.x);
-	const ivec2 reso = ivec2(u_OIT_info.m_resolution.xy);
 
 	const int hierarchy_rate[2] = {1, 8};
 	const vec2 c_cell_size[2] = {vec2(1.), vec2(1.)*hierarchy_rate[1]};
+	const ivec4 reso = ivec4(u_OIT_info.m_resolution.xy, u_OIT_info.m_resolution.xy/8);
 
 	const vec2 end = vec2(pixel)*c_cell_size[0] + c_cell_size[0]*0.5;
 	vec3 photon = vec3(0.);
@@ -49,45 +50,53 @@ void main()
 		ivec2 map_index = ivec2(start / c_cell_size[0]);
 
 		vec2 dir = normalize(end - start);
+		dir.x = abs(dir.x) <= FLT_EPSIRON ? FLT_EPSIRON*2. : dir.x;
+		dir.y = abs(dir.y) <= FLT_EPSIRON ? FLT_EPSIRON*2. : dir.y;
 
 		const ivec3 next_step = ivec3((dir.x < 0. ? -1 : 1), (dir.y < 0. ? -1 : 1), 0);
 		ivec2 next = ivec2(0);
 
 		ivec2 map_index_1 = map_index/8;
-		int map_index_1_1d = map_index_1.x + map_index_1.y * int(u_OIT_info.m_resolution.x/8);
+		int map_index_1_1d = map_index_1.x + map_index_1.y * (reso.z);
 		uint64_t fragment_map = b_fragment_hierarchy[map_index_1_1d];
 
-		for(;;)
+		for(int i = 0; i < 4000; i++)
 		{
 			const int hierarchy = fragment_map == 0 ? 1 : 0;
 			vec2 cell_size = c_cell_size[hierarchy];
 
-			vec2 cell_origin = vec2((map_index+next) / hierarchy_rate[hierarchy])*cell_size;
+			vec2 cell_origin = vec2(map_index / hierarchy_rate[hierarchy])*cell_size;
 			vec2 cell_p = pos - cell_origin;
 
 			float x = dir.x < 0. ? cell_p.x : (cell_size.x- cell_p.x);
 			float y = dir.y < 0. ? cell_p.y : (cell_size.y- cell_p.y);
+			x = x <= FLT_EPSIRON ? (x+cell_size.x) : x;
+			y = y <= FLT_EPSIRON ? (y+cell_size.y) : y;
+			vec2 dist = abs(vec2(x, y) / dir.xy);
 
-			vec2 dist = vec2(99999.);
-			dist.x = abs(dir.x) < FLT_EPSIRON ? 99999. : abs(x / dir.x);
-			dist.y = abs(dir.y) < FLT_EPSIRON ? 99999. : abs(y / dir.y);
+//			vec2 xy;
+//			xy.x = dir.x < 0. ? cell_p.x : (cell_size.x- cell_p.x);
+//			xy.y = dir.y < 0. ? cell_p.y : (cell_size.y- cell_p.y);
+//			xy = vec2(lessThanEqual(xy, FLT_EPSIRON.xx)) * cell_size + xy;
+//			vec2 dist = abs(xy / dir.xy);
+
+
 
 			int next_ = dist.x < dist.y ? 0 : 1;
-			next_ = dist[next_] < FLT_EPSIRON ? (1-next_) : next_;
-
+			next = next_ == 0 ? next_step.xz : next_step.zy;
 			pos += dir * dist[next_];
-			next = (next_ == 0) ? next_step.xz : next_step.zy;
 
 			if(distance(start, pos) >= ray_dist)
 			{
 				// 距離を超えたら光がフラグメントにヒット
 				photon += vec3(0., 0., 1.) * emission_pos.w / (1+ray_dist*ray_dist);
+//				photon += vec3(0., 0., 1.);
 				break;
 			}
 
-			map_index = ivec2((pos-next*0.5) / c_cell_size[0]);
+			map_index = ivec2((pos+next*0.1) / c_cell_size[0]);
 			map_index_1 = map_index/8;
-			map_index_1_1d = map_index_1.x + map_index_1.y * int(u_OIT_info.m_resolution.x/8);
+			map_index_1_1d = map_index_1.x + map_index_1.y * reso.z;
 			fragment_map = b_fragment_hierarchy[map_index_1_1d];
 
 			ivec2 map_index_1_sub = map_index%8;
