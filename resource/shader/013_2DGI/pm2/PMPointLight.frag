@@ -18,12 +18,9 @@ layout(push_constant) uniform InputVertex
 void main()
 {
 
-//	vec2 pos01 = constant.pos.xy / u_pm_info.m_resolution.xy;
-//	vec2 pos11 = pos01 * 2. - 1.;
 	float dist = distance(gl_FragCoord.xy, constant.pos.xy);
-//	dist = sqrt(dist * 0.000001);
 	float power = 1./(1.+dist);
-//	if(power >= 0.5)
+	if(power >= 0.1)
 	{
 		vec2 pos = vec2(gl_FragCoord.xy * u_pm_info.m_resolution.xy);
 

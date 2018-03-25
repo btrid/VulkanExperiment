@@ -2,6 +2,7 @@
 #define _PM_
 
 #extension GL_ARB_gpu_shader_int64 : require
+//#extension GL_ARB_shader_atomic_float : require
 //#extension GL_NV_shader_atomic_int64 : require
 struct PMInfo
 {
@@ -42,7 +43,7 @@ layout(std430, set=USE_PM, binding=11) restrict buffer EmissiveBuffer {
 //layout(set=USE_PM, binding=12, rgba16f) uniform image2D t_emission;
 
 layout(std430, set=USE_PM, binding=20) restrict buffer ColorBuffer {
-	vec4 b_color[];
+	uvec4 b_color[];
 };
 #endif
 

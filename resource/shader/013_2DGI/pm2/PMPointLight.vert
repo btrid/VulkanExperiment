@@ -27,5 +27,5 @@ void main()
 	vec2 pos01 = constant.pos.xy / u_pm_info.m_resolution.xy;
 	vec2 pos11 = pos01 * 2. - 1.;
 	gl_Position = vec4(pos11, 0., 1.0);
-	gl_PointSize = 1.;
+	gl_PointSize = 10.;
 }

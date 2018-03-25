@@ -36,8 +36,8 @@
 
 int main()
 {
-//	using namespace pm2d_2;
-	using namespace pm2d;
+	using namespace pm2d_2;
+//	using namespace pm2d;
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = glm::vec3(0.f, 0.f, 1.f);
