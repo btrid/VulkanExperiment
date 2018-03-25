@@ -76,12 +76,12 @@ void main()
 			next_ = dist[next_] < FLT_EPSIRON ? (1-next_) : next_;
 
 			pos += dir * dist[next_];
-			next = (next_ == 0) ? next_step.xz : next_step.zy;
+			ivec2 next = (next_ == 0) ? next_step.xz : next_step.zy;
 
 			if(distance(start, pos) >= ray_dist)
 			{
 				// 距離を超えたら光がフラグメントにヒット
-				photon += vec3(0., 0., 1.) * emission_pos.w / (1+ray_dist*ray_dist);
+				photon += vec3(0., 0., 1.) * emission_pos.w / (1+ray_dist);
 				break;
 			}
 

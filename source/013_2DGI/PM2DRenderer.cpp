@@ -467,7 +467,7 @@ DebugPM2D::DebugPM2D(const std::shared_ptr<btr::Context>& context, const std::sh
 	m_emission.resize(64);
 	for (auto& e : m_emission)
 	{
-		e.pos = vec4(std::rand() % 500 + 50, std::rand() % 500 + 50, std::rand() % 500 + 50, 50.f);
+		e.pos = vec4(std::rand() % 500 + 50, std::rand() % 500 + 50, std::rand() % 500 + 50, 500.f);
 		e.value = vec4(std::rand() % 100 * 0.01f, std::rand() % 100 * 0.01f, std::rand() % 100 * 0.01f, 1.f);
 	}
 
@@ -475,7 +475,7 @@ DebugPM2D::DebugPM2D(const std::shared_ptr<btr::Context>& context, const std::sh
 	for (auto& m : map_data)
 	{
 		m.albedo = vec3(0.f);
-		if (std::rand() % 1000 < 10)
+		if (std::rand() % 1000 < 100)
 		{
 			m.albedo = vec3(1.f);
 		}
