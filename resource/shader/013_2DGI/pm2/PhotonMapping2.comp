@@ -25,48 +25,61 @@ void main()
 
 	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
 
-	vec2 pos = vec2(emission.pos.xz);
-	ivec2 map_index = ivec2(pos);
+	vec4 pos = emission.pos.xzxz;
+	ivec4 map_index = ivec4(pos);
 
-	vec2 dir = rotate(gl_LocalInvocationID.x * 6.28318 / float(ray_num));
+	float angle = gl_LocalInvocationID.x * 6.28318 / float(ray_num);
+	vec4 dir = vec4(rotate(angle), rotate(angle + 6.28318 / float(ray_num)));
 	dir.x = abs(dir.x) <= FLT_EPSIRON ? FLT_EPSIRON*2. : dir.x;
 	dir.y = abs(dir.y) <= FLT_EPSIRON ? FLT_EPSIRON*2. : dir.y;
+	dir.z = abs(dir.z) <= FLT_EPSIRON ? FLT_EPSIRON*2. : dir.z;
+	dir.w = abs(dir.w) <= FLT_EPSIRON ? FLT_EPSIRON*2. : dir.w;
 
 	const ivec3 next_step = ivec3((dir.x < 0. ? -1 : 1), (dir.y < 0. ? -1 : 1), 0);
+	const ivec3 next_step2 = ivec3((dir.z < 0. ? -1 : 1), (dir.w < 0. ? -1 : 1), 0);
 
-	ivec2 map_index_1 = map_index/8;
-	int map_index_1_1d = map_index_1.x + map_index_1.y * int(u_pm_info.m_resolution.x/8);
-	uint64_t fragment_map = b_fragment_hierarchy[map_index_1_1d];
+	ivec4 map_index_1 = map_index/8;
+	ivec2 map_index_1_1d = map_index_1.xz + map_index_1.yw * reso.z;
+	uint64_t fragment_map = b_fragment_hierarchy[map_index_1_1d.x];
+	uint64_t fragment_map1 = b_fragment_hierarchy[map_index_1_1d.y];
 
 	for(;;)
 	{
-		vec2 cell_origin = vec2(map_index);
-		vec2 cell_p = pos - cell_origin;
+		vec4 cell_origin = vec4(map_index);
+		vec4 cell_p = pos - cell_origin;
 
 		float x = dir.x < 0. ? cell_p.x : (1.- cell_p.x);
 		float y = dir.y < 0. ? cell_p.y : (1.- cell_p.y);
 		x = x <= FLT_EPSIRON ? (x+1.) : x;
 		y = y <= FLT_EPSIRON ? (y+1.) : y;
-		vec2 dist = abs(vec2(x, y) / dir.xy);
+		float z = dir.z < 0. ? cell_p.z : (1.- cell_p.z);
+		float w = dir.w < 0. ? cell_p.w : (1.- cell_p.w);
+		z = z <= FLT_EPSIRON ? (z+1.) : z;
+		w = w <= FLT_EPSIRON ? (w+1.) : w;
+		vec4 dist = abs(vec4(x, y, z, w) / dir.xyzw);
 
 		int next_ = dist.x < dist.y ? 0 : 1;
-		ivec2 next = next_ == 0 ? next_step.xz : next_step.zy;
-		pos += dir * dist[next_];
+		int next2_ = dist.z < dist.w ? 2 : 3;
+		pos += dir * vec4(vec2(dist[next_]), vec2(dist[next2_], dist[next2_]));
 
-		if(any(greaterThanEqual(map_index, reso.xy)) || any(lessThan(map_index, ivec2(0, 0)))) {
+		if(any(greaterThanEqual(map_index, reso.xyxy)) || any(lessThan(map_index, ivec4(0)))) {
 			// 範囲外
 			break;
 		}
 
-		map_index = ivec2((pos+next*0.1));
+		ivec4 next;
+		next.xy = next_ == 0 ? next_step.xz : next_step.zy;
+		next.zw = next2_ == 0 ? next_step2.xz : next_step2.zy;
+		map_index = ivec4((pos+ next*0.1));
 		map_index_1 = map_index/8;
-		map_index_1_1d = map_index_1.x + map_index_1.y * reso.z;
-		fragment_map = b_fragment_hierarchy[map_index_1_1d];
+		map_index_1_1d = map_index_1.xz + map_index_1.yw * reso.z;
+		fragment_map = b_fragment_hierarchy[map_index_1_1d.x];
+		fragment_map1 = b_fragment_hierarchy[map_index_1_1d.y];
 
-		ivec2 map_index_1_sub = map_index%8;
-		uint bit_offset = map_index_1_sub.x + map_index_1_sub.y*8;
-		uint64_t bit = uint64_t(1)<<bit_offset;
-		if((fragment_map & (bit)) != 0)
+		ivec4 map_index_1_sub = map_index%8;
+		ivec2 bit_offset = map_index_1_sub.xz + map_index_1_sub.yw*8;
+		i64vec2 bit = i64vec2(1)<<bit_offset;
+		if((fragment_map & (bit.x)) != 0 || (fragment_map & (bit.y)) != 0)
 		{
 			// 遮蔽物
 			break;
