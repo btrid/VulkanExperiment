@@ -79,7 +79,7 @@ struct PM2DRenderer
 	btr::BufferMemoryEx<Info> m_fragment_info;
 	btr::BufferMemoryEx<Fragment> m_fragment_buffer;
 	btr::BufferMemoryEx<int64_t> m_fragment_hierarchy;
-	btr::BufferMemoryEx<ivec3> m_emission_counter;
+	btr::BufferMemoryEx<ivec4> m_emission_counter;
 	btr::BufferMemoryEx<Emission> m_emission_buffer;
 	btr::BufferMemoryEx<vec4> m_color;
 

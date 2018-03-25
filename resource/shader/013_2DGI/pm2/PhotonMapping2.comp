@@ -13,10 +13,9 @@ layout(push_constant) uniform InputVertex
 {
 	int store_photon;
 	int bounce_count;
-//	int 
 } constant;
 
-layout (local_size_x = 64, local_size_y = 1) in;
+layout (local_size_x = 16, local_size_y = 1) in;
 vec4 rotate(in vec2 angle)
 {
 	vec2 c = cos(angle);
