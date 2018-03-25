@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include <memory>
 #include <btrlib/Define.h>
 #include <btrlib/DefineMath.h>
@@ -6,19 +7,17 @@
 #include <applib/App.h>
 #include <013_2DGI/PM2D.h>
 
-
-namespace pm2d
+namespace pm2d_2
 {
-
 
 struct PM2DRenderer
 {
 	enum
 	{
-// 		RenderWidth = 1024,
-// 		RenderHeight = 1024,
-//		RenderDepth = 1,
-//		FragmentBufferSize = RenderWidth * RenderHeight*RenderDepth,
+		// 		RenderWidth = 1024,
+		// 		RenderHeight = 1024,
+		//		RenderDepth = 1,
+		//		FragmentBufferSize = RenderWidth * RenderHeight*RenderDepth,
 	};
 	int RenderWidth;
 	int RenderHeight;
@@ -66,7 +65,7 @@ struct PM2DRenderer
 		vec3 albedo;
 		float _p;
 	};
-	struct Emission 
+	struct Emission
 	{
 		vec4 pos;
 		vec4 value;
@@ -80,8 +79,6 @@ struct PM2DRenderer
 	btr::BufferMemoryEx<int64_t> m_fragment_hierarchy;
 	btr::BufferMemoryEx<ivec3> m_emission_counter;
 	btr::BufferMemoryEx<Emission> m_emission_buffer;
-	btr::BufferMemoryEx<int32_t> m_emission_tile_counter;
-	btr::BufferMemoryEx<int32_t> m_emission_tile_map;
 	btr::BufferMemoryEx<vec4> m_color;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
@@ -98,17 +95,6 @@ struct PM2DRenderer
 	std::shared_ptr<btr::Context> m_context;
 };
 
-struct AppModelPM2D : public PM2DPipeline
-{
-	AppModelPM2D(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<PM2DRenderer>& renderer);
-	void execute(vk::CommandBuffer cmd)override
-	{
-
-	}
-	vk::UniqueShaderModule m_shader[2];
-	vk::UniquePipelineLayout m_pipeline_layout;
-	vk::UniquePipeline m_pipeline;
-};
 
 struct DebugPM2D : public PM2DPipeline
 {
@@ -117,8 +103,33 @@ struct DebugPM2D : public PM2DPipeline
 
 	std::shared_ptr<btr::Context> m_context;
 	std::shared_ptr<PM2DRenderer> m_renderer;
+
 	btr::BufferMemoryEx<PM2DRenderer::Fragment> m_map_data;
 	std::vector<PM2DRenderer::Emission> m_emission;
+
+	vk::UniqueRenderPass m_render_pass;
+	vk::UniqueFramebuffer m_framebuffer;
+
+	enum Shader
+	{
+		ShaderPointLightVS,
+		ShaderPointLightFS,
+		ShaderNum,
+	};
+	enum PipelineLayout
+	{
+		PipelineLayoutPointLight,
+		PipelineLayoutNum,
+	};
+	enum Pipeline
+	{
+		PipelinePointLight,
+		PipelineNum,
+	};
+	vk::UniqueShaderModule m_shader[ShaderNum];
+	std::array<vk::UniquePipelineLayout, PipelineLayoutNum> m_pipeline_layout;
+	std::array<vk::UniquePipeline, PipelineNum> m_pipeline;
+
 
 };
 
