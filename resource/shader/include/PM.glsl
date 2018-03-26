@@ -56,6 +56,7 @@ layout(std430, set=USE_PM, binding=20) restrict buffer ColorBuffer {
 	uvec4 b_color[];
 };
 layout (set=USE_PM, binding=21, r32ui) uniform uimage2D t_color[5];
+layout (set=USE_PM, binding=30) uniform sampler2D s_color[5];
 
 #endif
 

@@ -14,7 +14,7 @@ struct cDebug {
 //			OutputDebugStringA(buf);
 			printf("------------------------callback------------------------\n");
 			printf(buf);
- 		if (vk::DebugReportFlagBitsEXT(flag) == vk::DebugReportFlagBitsEXT::eError) {
+	 		if (vk::DebugReportFlagBitsEXT(flag) == vk::DebugReportFlagBitsEXT::eError) {
 				return static_cast<VkBool32>(vk::Result::eSuccess);
 			}
 			return static_cast<VkBool32>(vk::Result::eSuccess);

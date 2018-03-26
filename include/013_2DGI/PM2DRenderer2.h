@@ -90,6 +90,9 @@ struct PM2DRenderer
 		vk::UniqueImageView m_image_view;
 		vk::UniqueDeviceMemory m_memory;
 		vk::UniqueSampler m_sampler;
+
+		vk::ImageSubresourceRange m_subresource_range;
+
 	};
 	std::array<TextureResource, 5> m_color_tex;
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
