@@ -83,6 +83,7 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			image_info.sharingMode = vk::SharingMode::eExclusive;
 			image_info.initialLayout = vk::ImageLayout::eUndefined;
 			image_info.extent = { render_target->m_resolution.width<<i, render_target->m_resolution.height << i, 1 };
+			image_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
 
 			tex.m_image = context->m_device->createImageUnique(image_info);
 			tex.m_image_info = image_info;
@@ -217,23 +218,23 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			vk::DescriptorImageInfo()
 			.setImageView(m_color_tex[0].m_image_view.get())
 			.setSampler(sGraphicsResource::Order().getSampler(sGraphicsResource::BASIC_SAMPLER_LINER))
-			.setImageLayout(vk::ImageLayout::eColorAttachmentOptimal),
+			.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal),
 			vk::DescriptorImageInfo()
 			.setImageView(m_color_tex[1].m_image_view.get())
 			.setSampler(sGraphicsResource::Order().getSampler(sGraphicsResource::BASIC_SAMPLER_LINER))
-			.setImageLayout(vk::ImageLayout::eColorAttachmentOptimal),
+			.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal),
 			vk::DescriptorImageInfo()
 			.setImageView(m_color_tex[2].m_image_view.get())
 			.setSampler(sGraphicsResource::Order().getSampler(sGraphicsResource::BASIC_SAMPLER_LINER))
-			.setImageLayout(vk::ImageLayout::eColorAttachmentOptimal),
+			.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal),
 			vk::DescriptorImageInfo()
 			.setImageView(m_color_tex[3].m_image_view.get())
 			.setSampler(sGraphicsResource::Order().getSampler(sGraphicsResource::BASIC_SAMPLER_LINER))
-			.setImageLayout(vk::ImageLayout::eColorAttachmentOptimal),
+			.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal),
 			vk::DescriptorImageInfo()
 			.setImageView(m_color_tex[4].m_image_view.get())
 			.setSampler(sGraphicsResource::Order().getSampler(sGraphicsResource::BASIC_SAMPLER_LINER))
-			.setImageLayout(vk::ImageLayout::eColorAttachmentOptimal),
+			.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal),
 		};
 		vk::WriteDescriptorSet write[] = {
 			vk::WriteDescriptorSet()
@@ -516,18 +517,6 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 			vk::ClearColorValue clear_value({});
 			cmd.clearColorImage(m_color_tex[0].m_image.get(), vk::ImageLayout::eTransferDstOptimal, clear_value, m_color_tex[0].m_subresource_range);
 
-			vk::ImageMemoryBarrier to_write[5];
-			for (int i = 0; i < m_color_tex.max_size(); i++)
-			{
-				to_write[i].setImage(m_color_tex[i].m_image.get());
-				to_write[i].setSubresourceRange(m_color_tex[i].m_subresource_range);
-				to_write[i].setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
-				to_write[i].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
-				to_write[i].setOldLayout(vk::ImageLayout::eTransferDstOptimal);
-				to_write[i].setNewLayout(vk::ImageLayout::eGeneral);
-			}
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {},
-				0, nullptr, 0, nullptr, array_length(to_write), to_write);
 		}
 	}
 	// exe
@@ -577,6 +566,19 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 		}
 
+		vk::ImageMemoryBarrier to_write[5];
+		for (int i = 0; i < m_color_tex.max_size(); i++)
+		{
+			to_write[i].setImage(m_color_tex[i].m_image.get());
+			to_write[i].setSubresourceRange(m_color_tex[i].m_subresource_range);
+			to_write[i].setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+			to_write[i].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
+			to_write[i].setOldLayout(vk::ImageLayout::eTransferDstOptimal);
+			to_write[i].setNewLayout(vk::ImageLayout::eGeneral);
+		}
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {},
+			0, nullptr, 0, nullptr, array_length(to_write), to_write);
+
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelinePhotonMapping].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutPhotonMapping].get(), 0, m_descriptor_set.get(), {});
 		cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayoutPhotonMapping].get(), vk::ShaderStageFlagBits::eCompute, 0, ivec2(1, 0));
@@ -584,6 +586,7 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 	}
 
 	// bounce 1
+	if(0)
 	{
 		{
 			vk::BufferMemoryBarrier to_read[] = {

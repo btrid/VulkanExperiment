@@ -26,7 +26,7 @@ void main()
 {
 	uint emission_index = gl_WorkGroupID.x + u_pm_info.m_emission_buffer_offset[constant.bounce_count];
 	Emission emission = b_emission[emission_index];
-	uvec3 u_rgb = uvec3(emission.value.rgb) << uvec3(21, 11, 0);
+	uvec3 u_rgb = uvec3(1) << uvec3(20, 10, 0);
 	uint rgb = u_rgb.r | u_rgb.g | u_rgb.b;
 
 	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);

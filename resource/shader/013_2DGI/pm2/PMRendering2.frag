@@ -21,7 +21,7 @@ void main()
 //	uint rgba = b_color[index.x + index.y * int(u_pm_info.m_resolution.x)];
 //	FragColor = unpackUnorm4x8(rgba);
 //	uvec4 rgba = b_color[index.x + index.y * int(u_pm_info.m_resolution.x)];
-	FragColor = vec4(1., 0., 0., 1.);
-//	FragColor.b = rgba.b * 0.01;
-//	FragColor = vec4(texture(s_color[0], in_modeldata.texcoord).rgb, 1.);
+//	vec4 rgba = vec4(1., 0., 0., 1.);
+	vec4 rgba = vec4(texture(s_color[0], in_modeldata.texcoord).rgb, 1.);
+	FragColor = rgba;
 }
