@@ -15,7 +15,7 @@ layout(push_constant) uniform InputVertex
 	int bounce_count;
 } constant;
 
-layout (local_size_x = 16, local_size_y = 1) in;
+layout (local_size_x = 4, local_size_y = 1) in;
 vec4 rotate(in vec2 angle)
 {
 	vec2 c = cos(angle);
@@ -24,21 +24,30 @@ vec4 rotate(in vec2 angle)
 }
 void main()
 {
+	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
+	const vec4 cell_size = vec4(1., 1., vec2(1<<constant.bounce_count));
+
 	uint emission_index = gl_WorkGroupID.x + u_pm_info.m_emission_buffer_offset[constant.bounce_count];
 	Emission emission = b_emission[emission_index];
-	uvec3 u_rgb = uvec3(1) << uvec3(21, 10, 0);
-	uint rgb = u_rgb.r | u_rgb.g | u_rgb.b;
-
-	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
-	const vec4 cell_size = vec4(1., 1., 1., 1.);
 
 	vec4 pos = emission.pos.xzxz;
 	ivec4 map_index = ivec4(pos / cell_size.xyxy);
 
-	uint ray_num = gl_NumWorkGroups.y*gl_WorkGroupSize.x*2;
-	uint ray_NO = (gl_LocalInvocationID.x + gl_WorkGroupID.y*gl_WorkGroupSize.x)*2;
-	float angle = ray_NO * 6.28318 / float(ray_num);
-	float angle2 = (ray_NO+1) * 6.28318 / float(ray_num);
+	uvec3 u_rgb = uvec3(emission.value.bgr) << uvec3(16, 8, 0);
+	uint rgb = u_rgb.r | u_rgb.g | u_rgb.b;
+
+	vec2 offset = vec2(rand(vec2(map_index.xy+gl_LocalInvocationID.xy)), rand(vec2(map_index.yx+gl_LocalInvocationID.yx)));
+//	vec2 offset = vec2(0., 0.);
+	pos += (offset.xyxy * 0.5 -1.)*0.5;
+
+	float ray_num = gl_NumWorkGroups.y*gl_WorkGroupSize.x*2.;
+	float ray_NO = (gl_LocalInvocationID.x + gl_WorkGroupID.y*gl_WorkGroupSize.x)*2.;
+
+
+	float angle_offset = ray_num*0.005*offset.x;
+
+	float angle = ray_NO * 6.28318 / ray_num + angle_offset;
+	float angle2 = (ray_NO+1.) * 6.28318 / ray_num + angle_offset;
 	vec4 dir = rotate(vec2(angle, angle2));
 	dir.x = abs(dir.x) <= FLT_EPSIRON ? FLT_EPSIRON*2. : dir.x;
 	dir.y = abs(dir.y) <= FLT_EPSIRON ? FLT_EPSIRON*2. : dir.y;
@@ -53,7 +62,7 @@ void main()
 	ivec4 hit_point = ivec4(-1);
 	for(;;)
 	{
-		vec4 cell_origin = vec4(map_index) * cell_size.zwzw;
+		vec4 cell_origin = vec4(map_index) * cell_size.xyxy;
 		vec4 cell_p = pos - cell_origin;
 
 		float x = dir.x < 0. ? cell_p.x : (cell_size.z- cell_p.x);
@@ -115,7 +124,7 @@ void main()
 */			}
 			break;
 		}
-		is_died.x==0 ? imageAtomicAdd(t_color[constant.bounce_count].x, map_index.xy, 1):0;
-		is_died.y==0 ? imageAtomicAdd(t_color[constant.bounce_count].x, map_index.zw, 1):0;
+		is_died.x==0 ? imageAtomicAdd(t_color[constant.bounce_count].x, map_index.xy>>constant.bounce_count, rgb):0;
+		is_died.y==0 ? imageAtomicAdd(t_color[constant.bounce_count].x, map_index.zw>>constant.bounce_count, rgb):0;
 	}
 }

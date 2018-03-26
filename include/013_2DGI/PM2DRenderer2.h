@@ -14,6 +14,7 @@ struct PM2DRenderer
 {
 	enum
 	{
+		BounceNum = 5, //!< ƒŒƒC”½ŽË‰ñ”
 		// 		RenderWidth = 1024,
 		// 		RenderHeight = 1024,
 		//		RenderDepth = 1,
@@ -94,7 +95,7 @@ struct PM2DRenderer
 		vk::ImageSubresourceRange m_subresource_range;
 
 	};
-	std::array<TextureResource, 5> m_color_tex;
+	std::array<TextureResource, BounceNum> m_color_tex;
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
 

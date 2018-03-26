@@ -26,7 +26,7 @@ void main()
 
 		int index = atomicAdd(b_emission_counter[0].x, 1);
 		b_emission[index].pos = vec4(gl_FragCoord.xyyy);
-		b_emission[index].value = vec4(power);
+		b_emission[index].value = vec4(0., 0., 1., 0.);
 
 	}
 }

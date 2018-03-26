@@ -49,7 +49,7 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 	}
 	{
 		btr::BufferMemoryDescriptorEx<ivec4> desc;
-		desc.element_num = 4;
+		desc.element_num = BounceNum;
 		m_emission_counter = context->m_storage_memory.allocateMemory(desc);
 	}
 	{
@@ -111,7 +111,9 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			view_info.components.b = vk::ComponentSwizzle::eB;
 			view_info.components.a = vk::ComponentSwizzle::eA;
 			view_info.flags = vk::ImageViewCreateFlags();
-			view_info.format = vk::Format::eR32Uint;
+//			view_info.format = vk::Format::eB10G11R11UfloatPack32;
+//			view_info.format = vk::Format::eA2R10G10B10UnormPack32;
+			view_info.format = vk::Format::eR8G8B8A8Unorm;
 			view_info.image = tex.m_image.get();
 			view_info.subresourceRange = subresourceRange;
 			tex.m_image_view = context->m_device->createImageViewUnique(view_info);
@@ -119,7 +121,7 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 		}
 
 		{
-			vk::ImageMemoryBarrier to_init[5];
+			vk::ImageMemoryBarrier to_init[BounceNum];
 			for (int i = 0; i < m_color_tex.max_size(); i++)
 			{
 				to_init[i].image = m_color_tex[i].m_image.get();
@@ -496,12 +498,13 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 		u2f.f = 0.f;
 		cmd.fillBuffer(m_color.getInfo().buffer, m_color.getInfo().offset, m_color.getInfo().range, u2f.u);
 		cmd.fillBuffer(m_fragment_buffer.getInfo().buffer, m_fragment_buffer.getInfo().offset, m_fragment_buffer.getInfo().range, 0u);
-		ivec4 emissive[] = { {0,8,1,0},{ 0,1,1,0 },{ 0,1,1,0 },{ 1,1,1,0 } };
+		ivec4 emissive[] = { {0,8,1,0},{ 0,1,1,0 },{ 0,1,1,0 },{ 1,1,1,0 },{ 1,1,1,0 } };
+		static_assert(array_length(emissive) == BounceNum, "");
 		cmd.updateBuffer(m_emission_counter.getInfo().buffer, m_emission_counter.getInfo().offset, sizeof(emissive), emissive);
 
 		{
 
-			vk::ImageMemoryBarrier to_clear[5];
+			vk::ImageMemoryBarrier to_clear[BounceNum];
 			for (int i = 0; i < m_color_tex.max_size(); i++)
 			{
 				to_clear[i].setImage(m_color_tex[i].m_image.get());
@@ -516,6 +519,7 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 
 			vk::ClearColorValue clear_value({});
 			cmd.clearColorImage(m_color_tex[0].m_image.get(), vk::ImageLayout::eTransferDstOptimal, clear_value, m_color_tex[0].m_subresource_range);
+			cmd.clearColorImage(m_color_tex[1].m_image.get(), vk::ImageLayout::eTransferDstOptimal, clear_value, m_color_tex[1].m_subresource_range);
 
 		}
 	}
@@ -566,7 +570,7 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 		}
 
-		vk::ImageMemoryBarrier to_write[5];
+		vk::ImageMemoryBarrier to_write[BounceNum];
 		for (int i = 0; i < m_color_tex.max_size(); i++)
 		{
 			to_write[i].setImage(m_color_tex[i].m_image.get());
@@ -586,7 +590,7 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 	}
 
 	// bounce 1
-	if(0)
+//	if(0)
 	{
 		{
 			vk::BufferMemoryBarrier to_read[] = {
@@ -613,7 +617,7 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 		vk::BufferMemoryBarrier to_render[] = {
 			m_color.makeMemoryBarrier(vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eShaderRead),
 		};
-		vk::ImageMemoryBarrier to_write[5];
+		vk::ImageMemoryBarrier to_write[BounceNum];
 		for (int i = 0; i < m_color_tex.max_size(); i++)
 		{
 			to_write[i].setImage(m_color_tex[i].m_image.get());
@@ -664,7 +668,7 @@ DebugPM2D::DebugPM2D(const std::shared_ptr<btr::Context>& context, const std::sh
 		for (auto& m : map_data)
 		{
 			m.albedo = vec3(0.f);
-			if (std::rand() % 1000 < 3)
+			if (std::rand() % 1000 < 10)
 			{
 				m.albedo = vec3(1.f);
 			}
