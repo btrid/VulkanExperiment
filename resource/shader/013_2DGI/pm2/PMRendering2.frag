@@ -17,11 +17,9 @@ layout(location=1) in ModelData
 layout(location = 0) out vec4 FragColor;
 void main()
 {
-//	ivec2 index = ivec2(in_modeldata.texcoord * u_pm_info.m_resolution.xy);
-//	uint rgba = b_color[index.x + index.y * int(u_pm_info.m_resolution.x)];
-//	FragColor = unpackUnorm4x8(rgba);
-//	uvec4 rgba = b_color[index.x + index.y * int(u_pm_info.m_resolution.x)];
-//	vec4 rgba = vec4(1., 0., 0., 1.);
-	vec4 rgba = vec4(texture(s_color[0], in_modeldata.texcoord).rgb, 1.);
+	uint rgb = texture(s_color[0], in_modeldata.texcoord).r;
+	uvec3 range = uvec3((1<<11), (1<<11), (1<<10)) - 1;
+	uvec3 rgb_v = (uvec3(rgb) >> uvec3(21, 10, 0)) & range;
+	vec4 rgba = vec4(rgb_v*100. / range, 1.);
 	FragColor = rgba;
 }

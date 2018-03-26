@@ -74,7 +74,7 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			auto& tex = m_color_tex[i];
 			vk::ImageCreateInfo image_info;
 			image_info.imageType = vk::ImageType::e2D;
-			image_info.format = vk::Format::eR32Sfloat;
+			image_info.format = vk::Format::eR32Uint;
 			image_info.mipLevels = 1;
 			image_info.arrayLayers = 1;
 			image_info.samples = vk::SampleCountFlagBits::e1;
@@ -82,7 +82,7 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eStorage;
 			image_info.sharingMode = vk::SharingMode::eExclusive;
 			image_info.initialLayout = vk::ImageLayout::eUndefined;
-			image_info.extent = { render_target->m_resolution.width<<i, render_target->m_resolution.height << i, 1 };
+			image_info.extent = { render_target->m_resolution.width>>i, render_target->m_resolution.height>>i, 1 };
 			image_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
 
 			tex.m_image = context->m_device->createImageUnique(image_info);
@@ -111,7 +111,7 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			view_info.components.b = vk::ComponentSwizzle::eB;
 			view_info.components.a = vk::ComponentSwizzle::eA;
 			view_info.flags = vk::ImageViewCreateFlags();
-			view_info.format = vk::Format::eR32Sfloat;
+			view_info.format = vk::Format::eR32Uint;
 			view_info.image = tex.m_image.get();
 			view_info.subresourceRange = subresourceRange;
 			tex.m_image_view = context->m_device->createImageViewUnique(view_info);

@@ -26,7 +26,7 @@ void main()
 {
 	uint emission_index = gl_WorkGroupID.x + u_pm_info.m_emission_buffer_offset[constant.bounce_count];
 	Emission emission = b_emission[emission_index];
-	uvec3 u_rgb = uvec3(1) << uvec3(20, 10, 0);
+	uvec3 u_rgb = uvec3(1) << uvec3(21, 10, 0);
 	uint rgb = u_rgb.r | u_rgb.g | u_rgb.b;
 
 	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
@@ -115,11 +115,7 @@ void main()
 */			}
 			break;
 		}
-
-//		ivec2 out_index = map_index.xz + map_index.yw * reso.xx;
-//		is_died.x==0 ? atomicAdd(b_color[out_index.x].b, 1):0;
-//		is_died.y==0 ? atomicAdd(b_color[out_index.y].b, 1):0;
-		is_died.x==0 ? imageAtomicAdd(t_color[constant.bounce_count], map_index.xz, rgb):0;
-		is_died.y==0 ? imageAtomicAdd(t_color[constant.bounce_count], map_index.yw, rgb):0;
+		is_died.x==0 ? imageAtomicAdd(t_color[constant.bounce_count].x, map_index.xy, 1):0;
+		is_died.y==0 ? imageAtomicAdd(t_color[constant.bounce_count].x, map_index.zw, 1):0;
 	}
 }
