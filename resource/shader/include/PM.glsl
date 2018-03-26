@@ -42,10 +42,21 @@ layout(std430, set=USE_PM, binding=10) restrict buffer EmissiveCounter {
 layout(std430, set=USE_PM, binding=11) restrict buffer EmissiveBuffer {
 	Emission b_emission[];
 };
-
+/*layout(std430, set=USE_PM, binding=10) restrict buffer BounceCounter {
+	ivec4 b_bounce_counter[];
+};
+layout(std430, set=USE_PM, binding=11) restrict buffer BounceBuffer {
+	Emission b_bounce[];
+};
+layout(std430, set=USE_PM, binding=11) restrict buffer BounceMapBuffer {
+	int b_bounce_map[];
+};
+*/
 layout(std430, set=USE_PM, binding=20) restrict buffer ColorBuffer {
 	uvec4 b_color[];
 };
+layout (set=USE_PM, binding=21, r32ui) uniform uimage2D t_color[5];
+
 #endif
 
 #endif //_PM_

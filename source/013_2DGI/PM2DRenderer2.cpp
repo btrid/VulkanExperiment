@@ -67,6 +67,67 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 		m_color = context->m_storage_memory.allocateMemory(desc);
 
 	}
+
+	{
+		for (int i = 0; i < m_color_tex.max_size(); i++)
+		{
+			auto& tex = m_color_tex[i];
+			vk::ImageCreateInfo image_info;
+			image_info.imageType = vk::ImageType::e2D;
+			image_info.format = vk::Format::eR32Sfloat;
+			image_info.mipLevels = 1;
+			image_info.arrayLayers = 1;
+			image_info.samples = vk::SampleCountFlagBits::e1;
+			image_info.tiling = vk::ImageTiling::eOptimal;
+			image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eStorage;
+			image_info.sharingMode = vk::SharingMode::eExclusive;
+			image_info.initialLayout = vk::ImageLayout::eUndefined;
+			image_info.extent = { render_target->m_resolution.width<<i, render_target->m_resolution.height << i, 1 };
+
+			tex.m_image = context->m_device->createImageUnique(image_info);
+			tex.m_image_info = image_info;
+
+			vk::MemoryRequirements memory_request = context->m_device->getImageMemoryRequirements(tex.m_image.get());
+			vk::MemoryAllocateInfo memory_alloc_info;
+			memory_alloc_info.allocationSize = memory_request.size;
+			memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(context->m_gpu.getHandle(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+			tex.m_memory = context->m_device->allocateMemoryUnique(memory_alloc_info);
+			context->m_device->bindImageMemory(tex.m_image.get(), tex.m_memory.get(), 0);
+
+			vk::ImageSubresourceRange subresourceRange;
+			subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+			subresourceRange.baseArrayLayer = 0;
+			subresourceRange.baseMipLevel = 0;
+			subresourceRange.layerCount = 1;
+			subresourceRange.levelCount = 1;
+
+			{
+				// staging_buffer‚©‚çimage‚ÖƒRƒs[
+				vk::ImageMemoryBarrier to_copy_barrier;
+				to_copy_barrier.image = tex.m_image.get();
+				to_copy_barrier.oldLayout = vk::ImageLayout::eUndefined;
+				to_copy_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+				to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+				to_copy_barrier.subresourceRange = subresourceRange;
+
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
+			}
+
+			vk::ImageViewCreateInfo view_info;
+			view_info.viewType = vk::ImageViewType::e2D;
+			view_info.components.r = vk::ComponentSwizzle::eR;
+			view_info.components.g = vk::ComponentSwizzle::eR;
+			view_info.components.b = vk::ComponentSwizzle::eR;
+			view_info.components.a = vk::ComponentSwizzle::eR;
+			view_info.flags = vk::ImageViewCreateFlags();
+			view_info.format = vk::Format::eR32Sfloat;
+			view_info.image = tex.m_image.get();
+			view_info.subresourceRange = subresourceRange;
+			tex.m_image_view = context->m_device->createImageViewUnique(view_info);
+
+		}
+	}
 	{
 		auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
 		vk::DescriptorSetLayoutBinding binding[] = {
@@ -100,6 +161,11 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setDescriptorCount(1)
 			.setBinding(20),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(stage)
+			.setDescriptorType(vk::DescriptorType::eStorageImage)
+			.setDescriptorCount(5)
+			.setBinding(21),
 		};
 		vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 		desc_layout_info.setBindingCount(array_length(binding));
@@ -131,6 +197,14 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 		vk::DescriptorBufferInfo output_storages[] = {
 			m_color.getInfo(),
 		};
+
+		vk::DescriptorImageInfo output_images[] = {
+			vk::DescriptorImageInfo().setImageView(m_color_tex[0].m_image_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
+			vk::DescriptorImageInfo().setImageView(m_color_tex[1].m_image_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
+			vk::DescriptorImageInfo().setImageView(m_color_tex[2].m_image_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
+			vk::DescriptorImageInfo().setImageView(m_color_tex[3].m_image_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
+			vk::DescriptorImageInfo().setImageView(m_color_tex[4].m_image_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
+		};
 		vk::WriteDescriptorSet write[] = {
 			vk::WriteDescriptorSet()
 			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
@@ -155,6 +229,13 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			.setDescriptorCount(array_length(output_storages))
 			.setPBufferInfo(output_storages)
 			.setDstBinding(20)
+			.setDstSet(m_descriptor_set.get()),
+			vk::WriteDescriptorSet()
+			.setDescriptorType(vk::DescriptorType::eStorageImage)
+			.setDescriptorCount(array_length(output_images))
+			.setPImageInfo(output_images)
+			.setDstBinding(21)
+			.setDstArrayElement(0)
 			.setDstSet(m_descriptor_set.get()),
 		};
 		context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);

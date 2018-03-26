@@ -94,9 +94,9 @@ void main()
 		{
 			// 終わり
 			int add_num = is_hit.x + is_hit.y;
-			if(add_num != 0)
+			if(gl_LocalInvocationIndex == 0)
 			{
-				int bounce_index = atomicAdd(b_emission_counter[constant.bounce_count+1].x, add_num);
+				int bounce_index = atomicAdd(b_emission_counter[constant.bounce_count+1].x, 1);
 				int store_index = bounce_index+u_pm_info.m_emission_buffer_offset[constant.bounce_count+1];
 				if(is_hit.x != 0)
 				{
@@ -104,13 +104,13 @@ void main()
 					b_emission[store_index].value = vec4(1., 0., 0., 1.);
 					store_index++;
 				}
-				if(is_hit.y != 0)
+/*				if(is_hit.y != 0)
 				{
 					b_emission[store_index].pos = vec4(hit_point.zzww);
 					b_emission[store_index].value = vec4(1., 0., 0., 1.);
 					store_index++;
 				}
-			}
+*/			}
 			break;
 		}
 

@@ -83,6 +83,15 @@ struct PM2DRenderer
 	btr::BufferMemoryEx<Emission> m_emission_buffer;
 	btr::BufferMemoryEx<vec4> m_color;
 
+	struct TextureResource
+	{
+		vk::ImageCreateInfo m_image_info;
+		vk::UniqueImage m_image;
+		vk::UniqueImageView m_image_view;
+		vk::UniqueDeviceMemory m_memory;
+		vk::UniqueSampler m_sampler;
+	};
+	std::array<TextureResource, 5> m_color_tex;
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
 
