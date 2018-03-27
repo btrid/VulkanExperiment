@@ -15,7 +15,7 @@ layout(push_constant) uniform InputVertex
 	int bounce_count;
 } constant;
 
-layout (local_size_x = 128, local_size_y = 1) in;
+layout (local_size_x = 32, local_size_y = 1) in;
 vec4 rotate(in vec2 angle)
 {
 	vec2 c = cos(angle);
@@ -27,31 +27,30 @@ void main()
 	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
 	const vec4 cell_size = vec4(1., 1., vec2(1<<constant.bounce_count));
 
-//	Emission emission;
-	ivec4 map_index;// = ivec4(pos / cell_size.xyxy);
+	ivec4 map_index;
 	vec4 color;	
 	{
 		uint e_list_index = gl_WorkGroupID.x + u_pm_info.m_emission_buffer_offset[constant.bounce_count];
 		int e_index = b_emission_list[e_list_index];
-//		emission = b_emission[e_index];
 		color = b_emission[e_index].value;
 
 		e_index -= u_pm_info.m_emission_buffer_offset[constant.bounce_count];
 
 		const ivec2 bounce_reso = u_pm_info.m_resolution.xy>>constant.bounce_count;
-		ivec2 p = ivec2(e_index%bounce_reso.x, e_index/bounce_reso.x);
+		ivec2 p = ivec2(e_index%bounce_reso.x, e_index/bounce_reso.x)<<constant.bounce_count;
 
 		map_index = p.xyxy;
 	}
 
 	vec2 offset = vec2(rand(vec2(map_index.xy+gl_LocalInvocationID.xy)), rand(vec2(map_index.yx+gl_LocalInvocationID.yx)));
-	vec4 pos = map_index*cell_size.xyxy + (offset.xyxy * 0.5 -1.)*0.5;
+	vec4 pos = map_index*cell_size.xyxy + (offset.xyxy * 0.5 -1.)*cell_size.zwzw*0.5;
+	map_index = ivec4((pos) / cell_size.xyxy);
 
 	vec4 dir;
 	{
 		float ray_num = gl_NumWorkGroups.y*gl_WorkGroupSize.x*2.;
 		float ray_NO = (gl_LocalInvocationID.x + gl_WorkGroupID.y*gl_WorkGroupSize.x)*2.;
-		float angle_offset = ray_num*0.1*offset.x;
+		float angle_offset = 1./ray_num*offset.x;
 		float angle = ray_NO * 6.28318 / ray_num + angle_offset;
 		float angle2 = (ray_NO+1.) * 6.28318 / ray_num + angle_offset;
 		
@@ -123,21 +122,24 @@ void main()
 		// 終わり?
 		if(all(notEqual(is_died, ivec2(0))))
 		{
-//			if(gl_LocalInvocationIndex %8 == 0)
+			if(gl_LocalInvocationIndex %8 == 0)
 			{
-				ivec4 store_index_2d = hit_point>>constant.bounce_count;
-				int store_offset = u_pm_info.m_emission_buffer_offset[constant.bounce_count+1];
-				ivec2 store_index = store_index_2d.xz + store_index_2d.yw * (reso.x>>constant.bounce_count);
+				int bounce_count = constant.bounce_count+1;
+				int store_offset = u_pm_info.m_emission_buffer_offset[bounce_count];
+
+				ivec4 store_index_2d = hit_point>>bounce_count;
+				ivec2 store_index = store_index_2d.xz + store_index_2d.yw * (reso.x>>bounce_count);
+				store_index += store_offset;
 				for(int i = 0; i < 2; i++)
 				{
 					// list登録
 					if(is_hit[i] != 0)
 					{
-						if(atomicCompSwap(b_emission_map[store_offset+store_index[i]], -1, 0) == -1)
+						if(atomicCompSwap(b_emission_map[store_index[i]], -1, 0) == -1)
 						{
-							int list_index = atomicAdd(b_emission_counter[constant.bounce_count+1].x, 1);
+							int list_index = atomicAdd(b_emission_counter[bounce_count].x, 1);
 							b_emission_list[store_offset+list_index] = store_index[i];
-							b_emission[store_offset+store_index[i]].value = vec4(0.);// 危ないかも？
+							b_emission[store_index[i]].value = vec4(0.);// 危ないかも？
 						}
 						b_emission[store_index[i]].value += vec4(0., 0., 1., 1.);
 					}
