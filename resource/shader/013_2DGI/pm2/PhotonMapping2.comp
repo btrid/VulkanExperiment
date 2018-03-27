@@ -15,7 +15,7 @@ layout(push_constant) uniform InputVertex
 	int bounce_count;
 } constant;
 
-layout (local_size_x = 16, local_size_y = 1) in;
+layout (local_size_x = 128, local_size_y = 1) in;
 vec4 rotate(in vec2 angle)
 {
 	vec2 c = cos(angle);
@@ -27,24 +27,25 @@ void main()
 	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
 	const vec4 cell_size = vec4(1., 1., vec2(1<<constant.bounce_count));
 
-	Emission emission;
+//	Emission emission;
+	ivec4 map_index;// = ivec4(pos / cell_size.xyxy);
+	vec4 color;	
 	{
 		uint e_list_index = gl_WorkGroupID.x + u_pm_info.m_emission_buffer_offset[constant.bounce_count];
 		int e_index = b_emission_list[e_list_index];
-		emission = b_emission[e_index];
+//		emission = b_emission[e_index];
+		color = b_emission[e_index].value;
 
 		e_index -= u_pm_info.m_emission_buffer_offset[constant.bounce_count];
 
 		const ivec2 bounce_reso = u_pm_info.m_resolution.xy>>constant.bounce_count;
 		ivec2 p = ivec2(e_index%bounce_reso.x, e_index/bounce_reso.x);
 
-		emission.pos = vec4(p.xxyy);
+		map_index = p.xyxy;
 	}
 
-	vec4 pos = emission.pos.xzxz;
-	ivec4 map_index = ivec4(pos / cell_size.xyxy);
 	vec2 offset = vec2(rand(vec2(map_index.xy+gl_LocalInvocationID.xy)), rand(vec2(map_index.yx+gl_LocalInvocationID.yx)));
-	pos += (offset.xyxy * 0.5 -1.)*0.5;
+	vec4 pos = map_index*cell_size.xyxy + (offset.xyxy * 0.5 -1.)*0.5;
 
 	vec4 dir;
 	{
@@ -63,9 +64,9 @@ void main()
 	const ivec3 next_step = ivec3((dir.x < 0. ? -1 : 1), (dir.y < 0. ? -1 : 1), 0);
 	const ivec3 next_step2 = ivec3((dir.z < 0. ? -1 : 1), (dir.w < 0. ? -1 : 1), 0);
 
-	uvec2 u_rg = uvec2(emission.value.rg) << uvec2(0, 16);
+	uvec2 u_rg = uvec2(color.rg) << uvec2(0, 16);
 	uint rg = u_rg.r | u_rg.g;
-	uvec2 u_ba = uvec2(emission.value.ba) << uvec2(0, 16);
+	uvec2 u_ba = uvec2(color.ba) << uvec2(0, 16);
 	uint ba = u_ba.x | u_ba.y;
 
 	ivec2 is_died = ivec2(0);
@@ -122,11 +123,11 @@ void main()
 		// 終わり?
 		if(all(notEqual(is_died, ivec2(0))))
 		{
-			if(gl_LocalInvocationIndex %8 == 0)
+//			if(gl_LocalInvocationIndex %8 == 0)
 			{
 				ivec4 store_index_2d = hit_point>>constant.bounce_count;
 				int store_offset = u_pm_info.m_emission_buffer_offset[constant.bounce_count+1];
-				ivec2 store_index = store_index_2d.xz + store_index_2d.yw * (reso.x>>constant.bounce_count) + store_offset;
+				ivec2 store_index = store_index_2d.xz + store_index_2d.yw * (reso.x>>constant.bounce_count);
 				for(int i = 0; i < 2; i++)
 				{
 					// list登録
@@ -138,7 +139,6 @@ void main()
 							b_emission_list[store_offset+list_index] = store_index[i];
 							b_emission[store_offset+store_index[i]].value = vec4(0.);// 危ないかも？
 						}
-//						b_emission[store_index[i]].pos = vec4(hit_point.xxyy);
 						b_emission[store_index[i]].value += vec4(0., 0., 1., 1.);
 					}
 				}

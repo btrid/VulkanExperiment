@@ -65,7 +65,6 @@ struct PM2DRenderer
 	};
 	struct Emission
 	{
-		vec4 pos;
 		vec4 value;
 	};
 

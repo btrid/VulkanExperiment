@@ -624,7 +624,7 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 	}
 
 	// bounce 1
-	if(0)
+//	if(0)
 	{
 		{
 			vk::BufferMemoryBarrier to_read[] = {
@@ -692,7 +692,7 @@ DebugPM2D::DebugPM2D(const std::shared_ptr<btr::Context>& context, const std::sh
 		m_emission.resize(4);
 		for (auto& e : m_emission)
 		{
-			e.pos = vec4(std::rand() % 500 + 50, std::rand() % 500 + 50, std::rand() % 500 + 50, 50.f);
+//			e.pos = vec4(std::rand() % 500 + 50, std::rand() % 500 + 50, std::rand() % 500 + 50, 50.f);
 			e.value = vec4(std::rand() % 100 * 0.01f, std::rand() % 100 * 0.01f, std::rand() % 100 * 0.01f, 1.f);
 		}
 

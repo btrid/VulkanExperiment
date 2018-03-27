@@ -20,7 +20,7 @@ void main()
 	vec3 rgb = vec3(0.);
 	rgb.rg += texture(s_color[0], vec3(in_modeldata.texcoord, 0.)).rg*1000.;
 	rgb.b += texture(s_color[0], vec3(in_modeldata.texcoord, 1.)).r*1000.;
-	rgb.rg += texture(s_color[1], vec3(in_modeldata.texcoord, 0.)).rg*3.;
-	rgb.b += texture(s_color[1], vec3(in_modeldata.texcoord, 1.)).r*3.;
+	rgb.rg += texture(s_color[1], vec3(in_modeldata.texcoord, 0.)).rg*100.;
+	rgb.b += texture(s_color[1], vec3(in_modeldata.texcoord, 1.)).r*100.;
 	FragColor = vec4(rgb, 1.);
 }
