@@ -511,7 +511,7 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 		u2f.f = 0.f;
 		cmd.fillBuffer(m_color.getInfo().buffer, m_color.getInfo().offset, m_color.getInfo().range, u2f.u);
 		cmd.fillBuffer(m_fragment_buffer.getInfo().buffer, m_fragment_buffer.getInfo().offset, m_fragment_buffer.getInfo().range, 0u);
-		ivec4 emissive[] = { {0,2,1,0},{ 0,1,1,0 },{ 0,1,1,0 },{ 1,1,1,0 } };
+		ivec4 emissive[] = { {0,8,1,0},{ 0,1,1,0 },{ 0,1,1,0 },{ 1,1,1,0 } };
 		static_assert(array_length(emissive) == BounceNum, "");
 		cmd.updateBuffer(m_emission_counter.getInfo().buffer, m_emission_counter.getInfo().offset, sizeof(emissive), emissive);
 		cmd.fillBuffer(m_emission_list.getInfo().buffer, m_emission_list.getInfo().offset, m_emission_list.getInfo().range, -1);
@@ -689,20 +689,26 @@ DebugPM2D::DebugPM2D(const std::shared_ptr<btr::Context>& context, const std::sh
 
 	// リソースセットアップ
 	{
-		m_emission.resize(4);
-		for (auto& e : m_emission)
-		{
-//			e.pos = vec4(std::rand() % 500 + 50, std::rand() % 500 + 50, std::rand() % 500 + 50, 50.f);
-			e.value = vec4(std::rand() % 100 * 0.01f, std::rand() % 100 * 0.01f, std::rand() % 100 * 0.01f, 1.f);
-		}
-
 		std::vector<PM2DRenderer::Fragment> map_data(renderer->RenderWidth*renderer->RenderHeight);
-		for (auto& m : map_data)
 		{
-			m.albedo = vec3(0.f);
-			if (std::rand() % 1000 < 5)
+			std::vector<ivec4> rect;
+			rect.emplace_back(400, 400, 200, 400);
+			rect.emplace_back(80, 50, 500, 30);
+
+			for (size_t y = 0; y < renderer->RenderHeight; y++)
 			{
-				m.albedo = vec3(1.f);
+				for (size_t x = 0; x < renderer->RenderWidth; x++)
+				{
+					auto& m = map_data[x + y * renderer->RenderWidth];
+					m.albedo = vec3(0.f);
+					for (auto& r : rect)
+					{
+						if (x >= r.x && y >= r.y && x <= r.x + r.z && y <= r.y + r.w) {
+							m.albedo = vec3(1.f);
+						}
+					}
+				}
+
 			}
 		}
 

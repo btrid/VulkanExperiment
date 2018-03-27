@@ -116,7 +116,6 @@ struct DebugPM2D : public PM2DPipeline
 	std::shared_ptr<PM2DRenderer> m_renderer;
 
 	btr::BufferMemoryEx<PM2DRenderer::Fragment> m_map_data;
-	std::vector<PM2DRenderer::Emission> m_emission;
 
 	vk::UniqueRenderPass m_render_pass;
 	vk::UniqueFramebuffer m_framebuffer;
