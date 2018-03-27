@@ -17,10 +17,10 @@ layout(location=1) in ModelData
 layout(location = 0) out vec4 FragColor;
 void main()
 {
-	vec2 rg = texture(s_color[0], vec3(in_modeldata.texcoord, 0.)).rg;
-	float b = texture(s_color[0], vec3(in_modeldata.texcoord, 1.)).r;
-//	rg += texture(s_color[1], vec3(in_modeldata.texcoord, 0.)).rg * 0.1;
-//	b += texture(s_color[1], vec3(in_modeldata.texcoord, 1.)).r * 0.1;
-	vec3 rgb = vec3(rg, b);
+	vec3 rgb = vec3(0.);
+	rgb.rg += texture(s_color[0], vec3(in_modeldata.texcoord, 0.)).rg*100.;
+	rgb.b += texture(s_color[0], vec3(in_modeldata.texcoord, 1.)).r*100.;
+	rgb.rg += texture(s_color[1], vec3(in_modeldata.texcoord, 0.)).rg*10.;
+	rgb.b += texture(s_color[1], vec3(in_modeldata.texcoord, 1.)).r*10.;
 	FragColor = vec4(rgb, 1.);
 }

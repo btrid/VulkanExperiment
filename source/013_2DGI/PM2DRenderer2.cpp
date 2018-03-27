@@ -111,8 +111,6 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			view_info.components.b = vk::ComponentSwizzle::eB;
 			view_info.components.a = vk::ComponentSwizzle::eA;
 			view_info.flags = vk::ImageViewCreateFlags();
-//			view_info.format = vk::Format::eB10G11R11UfloatPack32;
-//			view_info.format = vk::Format::eA2R10G10B10UnormPack32;
 			view_info.format = vk::Format::eR16G16Unorm;
 			view_info.image = tex.m_image.get();
 			view_info.subresourceRange = subresourceRange;
@@ -666,7 +664,7 @@ DebugPM2D::DebugPM2D(const std::shared_ptr<btr::Context>& context, const std::sh
 		for (auto& m : map_data)
 		{
 			m.albedo = vec3(0.f);
-			if (std::rand() % 1000 < 3)
+			if (std::rand() % 1000 < 5)
 			{
 				m.albedo = vec3(1.f);
 			}
