@@ -14,7 +14,6 @@ layout(push_constant) uniform InputVertex
 	vec2 pos;
 } constant;
 
-//layout(location = 0) out vec4 FragColor;
 void main()
 {
 
@@ -22,11 +21,16 @@ void main()
 	float power = 1./(1.+dist);
 	if(power >= 0.1)
 	{
-		vec2 pos = vec2(gl_FragCoord.xy * u_pm_info.m_resolution.xy);
+		ivec2 index2d = ivec2(gl_FragCoord.xy);
+		int index = index2d.x + index2d.y*u_pm_info.m_resolution.x;
 
-		int index = atomicAdd(b_emission_counter[0].x, 1);
-		b_emission[index].pos = vec4(gl_FragCoord.xyyy);
-		b_emission[index].value = vec4(0., 0., 1., 0.);
-
+		// list登録
+		if(atomicCompSwap(b_emission_map[index], -1, 0) == -1)
+		{
+			int list_index = atomicAdd(b_emission_counter[0].x, 1);
+			b_emission_list[list_index] = index;
+			b_emission[index].value = vec4(0.);// 危ないかも？
+		}
+		b_emission[index].value += vec4(1., 0., 0., 1.);
 	}
 }

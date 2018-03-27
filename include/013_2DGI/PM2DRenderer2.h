@@ -53,15 +53,10 @@ struct PM2DRenderer
 	};
 	struct Info
 	{
-		mat4 m_camera_PV;
-		uvec2 m_resolution;
-		uvec2 m_emission_tile_size;
-		uvec2 m_emission_tile_num;
+		ivec2 m_resolution;
 		uvec2 _p;
-		vec4 m_position;
 		int m_emission_buffer_size[BounceNum];
 		int m_emission_buffer_offset[BounceNum];
-		int m_emission_tile_map_max;
 	};
 	struct Fragment
 	{

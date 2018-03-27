@@ -15,7 +15,7 @@ layout(push_constant) uniform InputVertex
 	int bounce_count;
 } constant;
 
-layout (local_size_x = 64, local_size_y = 1) in;
+layout (local_size_x = 16, local_size_y = 1) in;
 vec4 rotate(in vec2 angle)
 {
 	vec2 c = cos(angle);
@@ -27,33 +27,46 @@ void main()
 	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
 	const vec4 cell_size = vec4(1., 1., vec2(1<<constant.bounce_count));
 
-	uint emission_index = gl_WorkGroupID.x + u_pm_info.m_emission_buffer_offset[constant.bounce_count];
-	Emission emission = b_emission[emission_index];
+	Emission emission;
+	{
+		uint e_list_index = gl_WorkGroupID.x + u_pm_info.m_emission_buffer_offset[constant.bounce_count];
+		int e_index = b_emission_list[e_list_index];
+		emission = b_emission[e_index];
+
+		e_index -= u_pm_info.m_emission_buffer_offset[constant.bounce_count];
+
+		const ivec2 bounce_reso = u_pm_info.m_resolution.xy>>constant.bounce_count;
+		ivec2 p = ivec2(e_index%bounce_reso.x, e_index/bounce_reso.x);
+
+		emission.pos = vec4(p.xxyy);
+	}
 
 	vec4 pos = emission.pos.xzxz;
 	ivec4 map_index = ivec4(pos / cell_size.xyxy);
+	vec2 offset = vec2(rand(vec2(map_index.xy+gl_LocalInvocationID.xy)), rand(vec2(map_index.yx+gl_LocalInvocationID.yx)));
+	pos += (offset.xyxy * 0.5 -1.)*0.5;
+
+	vec4 dir;
+	{
+		float ray_num = gl_NumWorkGroups.y*gl_WorkGroupSize.x*2.;
+		float ray_NO = (gl_LocalInvocationID.x + gl_WorkGroupID.y*gl_WorkGroupSize.x)*2.;
+		float angle_offset = ray_num*0.1*offset.x;
+		float angle = ray_NO * 6.28318 / ray_num + angle_offset;
+		float angle2 = (ray_NO+1.) * 6.28318 / ray_num + angle_offset;
+		
+		dir = rotate(vec2(angle, angle2));
+		dir.x = abs(dir.x) <= FLT_EPSIRON ? FLT_EPSIRON*2. : dir.x;
+		dir.y = abs(dir.y) <= FLT_EPSIRON ? FLT_EPSIRON*2. : dir.y;
+		dir.z = abs(dir.z) <= FLT_EPSIRON ? FLT_EPSIRON*2. : dir.z;
+		dir.w = abs(dir.w) <= FLT_EPSIRON ? FLT_EPSIRON*2. : dir.w;
+	}
+	const ivec3 next_step = ivec3((dir.x < 0. ? -1 : 1), (dir.y < 0. ? -1 : 1), 0);
+	const ivec3 next_step2 = ivec3((dir.z < 0. ? -1 : 1), (dir.w < 0. ? -1 : 1), 0);
 
 	uvec2 u_rg = uvec2(emission.value.rg) << uvec2(0, 16);
 	uint rg = u_rg.r | u_rg.g;
 	uvec2 u_ba = uvec2(emission.value.ba) << uvec2(0, 16);
 	uint ba = u_ba.x | u_ba.y;
-
-	vec2 offset = vec2(rand(vec2(map_index.xy+gl_LocalInvocationID.xy)), rand(vec2(map_index.yx+gl_LocalInvocationID.yx)));
-	pos += (offset.xyxy * 0.5 -1.)*0.5;
-
-	float ray_num = gl_NumWorkGroups.y*gl_WorkGroupSize.x*2.;
-	float ray_NO = (gl_LocalInvocationID.x + gl_WorkGroupID.y*gl_WorkGroupSize.x)*2.;
-	float angle_offset = ray_num*0.1*offset.x;
-	float angle = ray_NO * 6.28318 / ray_num + angle_offset;
-	float angle2 = (ray_NO+1.) * 6.28318 / ray_num + angle_offset;
-	vec4 dir = rotate(vec2(angle, angle2));
-	dir.x = abs(dir.x) <= FLT_EPSIRON ? FLT_EPSIRON*2. : dir.x;
-	dir.y = abs(dir.y) <= FLT_EPSIRON ? FLT_EPSIRON*2. : dir.y;
-	dir.z = abs(dir.z) <= FLT_EPSIRON ? FLT_EPSIRON*2. : dir.z;
-	dir.w = abs(dir.w) <= FLT_EPSIRON ? FLT_EPSIRON*2. : dir.w;
-
-	const ivec3 next_step = ivec3((dir.x < 0. ? -1 : 1), (dir.y < 0. ? -1 : 1), 0);
-	const ivec3 next_step2 = ivec3((dir.z < 0. ? -1 : 1), (dir.w < 0. ? -1 : 1), 0);
 
 	ivec2 is_died = ivec2(0);
 	ivec2 is_hit = ivec2(0);
@@ -77,14 +90,18 @@ void main()
 		int next2_ = dist.z < dist.w ? 2 : 3;
 		pos += dir * vec4(vec2(dist[next_]), vec2(dist[next2_]));
 
-		ivec4 is_die = ivec4(greaterThanEqual(map_index, reso.xyxy)) + ivec4(lessThan(map_index, ivec4(0)));
-		is_died |= ivec2(any(notEqual(is_die.xy, ivec2(0))), any(notEqual(is_die.zw, ivec2(0))));
-
 		ivec4 next;
 		next.xy = next_ == 0 ? next_step.xz : next_step.zy;
 		next.zw = next2_ == 0 ? next_step2.xz : next_step2.zy;
 		map_index = ivec4((pos+ next*0.1) / cell_size.xyxy);
 
+		// 範囲外
+		{
+			ivec4 is_die = ivec4(greaterThanEqual(map_index, reso.xyxy)) + ivec4(lessThan(map_index, ivec4(0)));
+			is_died |= ivec2(any(notEqual(is_die.xy, ivec2(0))), any(notEqual(is_die.zw, ivec2(0))));
+		}
+
+		// hit確認
 		{
 			ivec4 fragment_index = map_index/8;
 			ivec2 fragment_index_1d = fragment_index.xz + fragment_index.yw*reso.z;
@@ -102,36 +119,42 @@ void main()
 			is_died |= is_hit;
 		}
 
-		ivec4 store_index_2d = map_index>>constant.bounce_count;
+		// 終わり?
 		if(all(notEqual(is_died, ivec2(0))))
 		{
-			// 終わり
 			if(gl_LocalInvocationIndex %8 == 0)
 			{
-				int add_num = is_hit.x + is_hit.y;
-				int bounce_index = atomicAdd(b_emission_counter[constant.bounce_count+1].x, add_num);
+				ivec4 store_index_2d = hit_point>>constant.bounce_count;
 				int store_offset = u_pm_info.m_emission_buffer_offset[constant.bounce_count+1];
-				int store_index = bounce_index+store_offset;
-				if(is_hit.x != 0)
+				ivec2 store_index = store_index_2d.xz + store_index_2d.yw * (reso.x>>constant.bounce_count) + store_offset;
+				for(int i = 0; i < 2; i++)
 				{
-					b_emission[store_index].pos = vec4(hit_point.xxyy);
-//					b_emission[store_index].value = emission.value;
-					b_emission[store_index].value = vec4(1., 0., 0., 1.);
-					store_index++;
+					// list登録
+					if(is_hit[i] != 0)
+					{
+						if(atomicCompSwap(b_emission_map[store_offset+store_index[i]], -1, 0) == -1)
+						{
+							int list_index = atomicAdd(b_emission_counter[constant.bounce_count+1].x, 1);
+							b_emission_list[store_offset+list_index] = store_index[i];
+							b_emission[store_offset+store_index[i]].value = vec4(0.);// 危ないかも？
+						}
+//						b_emission[store_index[i]].pos = vec4(hit_point.xxyy);
+						b_emission[store_index[i]].value += vec4(0., 0., 1., 1.);
+					}
 				}
-				if(is_hit.y != 0)
-				{
-					b_emission[store_index].pos = vec4(hit_point.zzww);
-//					b_emission[store_index].value = emission.value;
-					b_emission[store_index].value = vec4(1., 0., 0., 1.);
-					store_index++;
-				}
+
 			}
 			break;
 		}
-		is_died.x==0 ? imageAtomicAdd(t_color[constant.bounce_count], ivec3(store_index_2d.xy, 0), rg):0;
-		is_died.x==0 ? imageAtomicAdd(t_color[constant.bounce_count], ivec3(store_index_2d.xy, 1), ba):0;
-		is_died.y==0 ? imageAtomicAdd(t_color[constant.bounce_count], ivec3(store_index_2d.zw, 0), rg):0;
-		is_died.y==0 ? imageAtomicAdd(t_color[constant.bounce_count], ivec3(store_index_2d.zw, 1), ba):0;
+
+		// store
+		{
+			ivec4 store_index_2d = map_index>>constant.bounce_count;
+			is_died.x==0 ? imageAtomicAdd(t_color[constant.bounce_count], ivec3(store_index_2d.xy, 0), rg):0;
+			is_died.x==0 ? imageAtomicAdd(t_color[constant.bounce_count], ivec3(store_index_2d.xy, 1), ba):0;
+			is_died.y==0 ? imageAtomicAdd(t_color[constant.bounce_count], ivec3(store_index_2d.zw, 0), rg):0;
+			is_died.y==0 ? imageAtomicAdd(t_color[constant.bounce_count], ivec3(store_index_2d.zw, 1), ba):0;
+
+		}
 	}
 }

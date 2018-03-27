@@ -4,17 +4,14 @@
 #extension GL_ARB_gpu_shader_int64 : require
 //#extension GL_NV_shader_atomic_float : require
 //#extension GL_NV_shader_atomic_int64 : require
+
+#define debug() for(int i = 0; i < 100000000; i++)
+#define heavy_loop(_loop) for(int i = 0; i < _loop; i++)
 struct PMInfo
 {
-	mat4 m_camera_PV;
-	uvec2 m_resolution;
-	uvec2 m_emission_tile_size;
-	uvec2 m_emission_tile_num;
-	uvec2 _p;
-	vec4 m_position;
+	ivec4 m_resolution;
 	ivec4 m_emission_buffer_size;
 	ivec4 m_emission_buffer_offset;
-	int m_emission_tile_map_max;
 };
 struct Fragment
 {
