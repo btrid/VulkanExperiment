@@ -84,21 +84,25 @@ void main()
 		next.xy = next_ == 0 ? next_step.xz : next_step.zy;
 		next.zw = next2_ == 0 ? next_step2.xz : next_step2.zy;
 		map_index = ivec4((pos+ next*0.1) / cell_size.xyxy);
-		ivec4 map_index_1 = map_index/8;
-		ivec2 map_index_1_1d = map_index_1.xz + map_index_1.yw * reso.z;
 
-		uint64_t fragment_map = is_died.x!=0 ? 0 : b_fragment_hierarchy[map_index_1_1d.x];
-		uint64_t fragment_map1 = is_died.y!=0 ? 0 : b_fragment_hierarchy[map_index_1_1d.y];
+		{
+			ivec4 fragment_index = map_index/8;
+			ivec2 fragment_index_1d = fragment_index.xz + fragment_index.yw*reso.z;
+			u64vec2 fragment_map;
+			fragment_map.x = is_died.x!=0 ? 0 : b_fragment_hierarchy[fragment_index_1d.x];
+			fragment_map.y = is_died.y!=0 ? 0 : b_fragment_hierarchy[fragment_index_1d.y];
 
-		ivec4 map_index_1_sub = map_index%8;
-		ivec2 bit_offset = map_index_1_sub.xz + map_index_1_sub.yw*8;
-		i64vec2 bit = i64vec2(1)<<bit_offset;
+			ivec4 fragment_index_sub = map_index%8;
+			ivec2 fragment_index_1d_sub = fragment_index_sub.xz + fragment_index_sub.yw*8;
+			u64vec2 bit = u64vec2(1)<<fragment_index_1d_sub;
 
-		is_hit |= ivec2((fragment_map & bit.x) != 0, (fragment_map1 & bit.y) != 0);
-		hit_point.xy = (is_hit.x != 0 && is_died.x == 0) ? map_index.xy : hit_point.xy;
-		hit_point.zw = (is_hit.y != 0 && is_died.y == 0) ? map_index.zw : hit_point.zw;
+			is_hit |= ivec2((fragment_map & bit) != u64vec2(0));
+			hit_point.xy = (is_hit.x != 0 && is_died.x == 0) ? map_index.xy : hit_point.xy;
+			hit_point.zw = (is_hit.y != 0 && is_died.y == 0) ? map_index.zw : hit_point.zw;
+			is_died |= is_hit;
+		}
 
-		is_died |= is_hit;
+		ivec4 store_index_2d = map_index>>constant.bounce_count;
 		if(all(notEqual(is_died, ivec2(0))))
 		{
 			// 終わり
@@ -106,7 +110,8 @@ void main()
 			{
 				int add_num = is_hit.x + is_hit.y;
 				int bounce_index = atomicAdd(b_emission_counter[constant.bounce_count+1].x, add_num);
-				int store_index = bounce_index+u_pm_info.m_emission_buffer_offset[constant.bounce_count+1];
+				int store_offset = u_pm_info.m_emission_buffer_offset[constant.bounce_count+1];
+				int store_index = bounce_index+store_offset;
 				if(is_hit.x != 0)
 				{
 					b_emission[store_index].pos = vec4(hit_point.xxyy);
@@ -124,9 +129,9 @@ void main()
 			}
 			break;
 		}
-		is_died.x==0 ? imageAtomicAdd(t_color[constant.bounce_count], ivec3(map_index.xy>>constant.bounce_count, 0), rg):0;
-		is_died.x==0 ? imageAtomicAdd(t_color[constant.bounce_count], ivec3(map_index.xy>>constant.bounce_count, 1), ba):0;
-		is_died.y==0 ? imageAtomicAdd(t_color[constant.bounce_count], ivec3(map_index.zw>>constant.bounce_count, 0), rg):0;
-		is_died.y==0 ? imageAtomicAdd(t_color[constant.bounce_count], ivec3(map_index.zw>>constant.bounce_count, 1), ba):0;
+		is_died.x==0 ? imageAtomicAdd(t_color[constant.bounce_count], ivec3(store_index_2d.xy, 0), rg):0;
+		is_died.x==0 ? imageAtomicAdd(t_color[constant.bounce_count], ivec3(store_index_2d.xy, 1), ba):0;
+		is_died.y==0 ? imageAtomicAdd(t_color[constant.bounce_count], ivec3(store_index_2d.zw, 0), rg):0;
+		is_died.y==0 ? imageAtomicAdd(t_color[constant.bounce_count], ivec3(store_index_2d.zw, 1), ba):0;
 	}
 }
