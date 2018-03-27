@@ -33,19 +33,17 @@ void main()
 	vec4 pos = emission.pos.xzxz;
 	ivec4 map_index = ivec4(pos / cell_size.xyxy);
 
-	uvec3 u_rgb = uvec3(emission.value.bgr) << uvec3(16, 8, 0);
-	uint rgb = u_rgb.r | u_rgb.g | u_rgb.b;
+	uvec2 u_rg = uvec2(emission.value.rg) << uvec2(0, 16);
+	uint rg = u_rg.r | u_rg.g;
+	uvec2 u_ba = uvec2(emission.value.ba) << uvec2(0, 16);
+	uint ba = u_ba.x | u_ba.y;
 
 	vec2 offset = vec2(rand(vec2(map_index.xy+gl_LocalInvocationID.xy)), rand(vec2(map_index.yx+gl_LocalInvocationID.yx)));
-//	vec2 offset = vec2(0., 0.);
 	pos += (offset.xyxy * 0.5 -1.)*0.5;
 
 	float ray_num = gl_NumWorkGroups.y*gl_WorkGroupSize.x*2.;
 	float ray_NO = (gl_LocalInvocationID.x + gl_WorkGroupID.y*gl_WorkGroupSize.x)*2.;
-
-
-	float angle_offset = ray_num*0.005*offset.x;
-
+	float angle_offset = ray_num*0.1*offset.x;
 	float angle = ray_NO * 6.28318 / ray_num + angle_offset;
 	float angle2 = (ray_NO+1.) * 6.28318 / ray_num + angle_offset;
 	vec4 dir = rotate(vec2(angle, angle2));
@@ -124,7 +122,9 @@ void main()
 */			}
 			break;
 		}
-		is_died.x==0 ? imageAtomicAdd(t_color[constant.bounce_count].x, map_index.xy>>constant.bounce_count, rgb):0;
-		is_died.y==0 ? imageAtomicAdd(t_color[constant.bounce_count].x, map_index.zw>>constant.bounce_count, rgb):0;
+		is_died.x==0 ? imageAtomicAdd(t_color[constant.bounce_count], ivec3(map_index.xy>>constant.bounce_count, 0), rg):0;
+		is_died.x==0 ? imageAtomicAdd(t_color[constant.bounce_count], ivec3(map_index.xy>>constant.bounce_count, 1), ba):0;
+		is_died.y==0 ? imageAtomicAdd(t_color[constant.bounce_count], ivec3(map_index.zw>>constant.bounce_count, 0), rg):0;
+		is_died.y==0 ? imageAtomicAdd(t_color[constant.bounce_count], ivec3(map_index.zw>>constant.bounce_count, 1), ba):0;
 	}
 }

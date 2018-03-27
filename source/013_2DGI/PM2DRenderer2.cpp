@@ -76,7 +76,7 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			image_info.imageType = vk::ImageType::e2D;
 			image_info.format = vk::Format::eR32Uint;
 			image_info.mipLevels = 1;
-			image_info.arrayLayers = 1;
+			image_info.arrayLayers = 2;
 			image_info.samples = vk::SampleCountFlagBits::e1;
 			image_info.tiling = vk::ImageTiling::eOptimal;
 			image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eStorage;
@@ -100,12 +100,12 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
 			subresourceRange.baseArrayLayer = 0;
 			subresourceRange.baseMipLevel = 0;
-			subresourceRange.layerCount = 1;
+			subresourceRange.layerCount = 2;
 			subresourceRange.levelCount = 1;
 			tex.m_subresource_range = subresourceRange;
 
 			vk::ImageViewCreateInfo view_info;
-			view_info.viewType = vk::ImageViewType::e2D;
+			view_info.viewType = vk::ImageViewType::e2DArray;
 			view_info.components.r = vk::ComponentSwizzle::eR;
 			view_info.components.g = vk::ComponentSwizzle::eG;
 			view_info.components.b = vk::ComponentSwizzle::eB;
@@ -113,7 +113,7 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			view_info.flags = vk::ImageViewCreateFlags();
 //			view_info.format = vk::Format::eB10G11R11UfloatPack32;
 //			view_info.format = vk::Format::eA2R10G10B10UnormPack32;
-			view_info.format = vk::Format::eR8G8B8A8Unorm;
+			view_info.format = vk::Format::eR16G16Unorm;
 			view_info.image = tex.m_image.get();
 			view_info.subresourceRange = subresourceRange;
 			tex.m_image_view = context->m_device->createImageViewUnique(view_info);
@@ -498,7 +498,7 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 		u2f.f = 0.f;
 		cmd.fillBuffer(m_color.getInfo().buffer, m_color.getInfo().offset, m_color.getInfo().range, u2f.u);
 		cmd.fillBuffer(m_fragment_buffer.getInfo().buffer, m_fragment_buffer.getInfo().offset, m_fragment_buffer.getInfo().range, 0u);
-		ivec4 emissive[] = { {0,8,1,0},{ 0,1,1,0 },{ 0,1,1,0 },{ 1,1,1,0 },{ 1,1,1,0 } };
+		ivec4 emissive[] = { {0,2,1,0},{ 0,1,1,0 },{ 0,1,1,0 },{ 1,1,1,0 },{ 1,1,1,0 } };
 		static_assert(array_length(emissive) == BounceNum, "");
 		cmd.updateBuffer(m_emission_counter.getInfo().buffer, m_emission_counter.getInfo().offset, sizeof(emissive), emissive);
 
@@ -660,15 +660,13 @@ DebugPM2D::DebugPM2D(const std::shared_ptr<btr::Context>& context, const std::sh
 		{
 			e.pos = vec4(std::rand() % 500 + 50, std::rand() % 500 + 50, std::rand() % 500 + 50, 50.f);
 			e.value = vec4(std::rand() % 100 * 0.01f, std::rand() % 100 * 0.01f, std::rand() % 100 * 0.01f, 1.f);
-			// 			e.pos = vec4(500.f);
-			// 			e.value = vec4(std::rand() % 100 * 0.01f, std::rand() % 100 * 0.01f, std::rand() % 100 * 0.01f, 1.f);
 		}
 
 		std::vector<PM2DRenderer::Fragment> map_data(renderer->RenderWidth*renderer->RenderHeight);
 		for (auto& m : map_data)
 		{
 			m.albedo = vec3(0.f);
-			if (std::rand() % 1000 < 10)
+			if (std::rand() % 1000 < 3)
 			{
 				m.albedo = vec3(1.f);
 			}
