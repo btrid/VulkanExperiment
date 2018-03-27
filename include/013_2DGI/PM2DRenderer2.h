@@ -14,7 +14,7 @@ struct PM2DRenderer
 {
 	enum
 	{
-		BounceNum = 5, //!< ƒŒƒC”½ŽË‰ñ”
+		BounceNum = 4, //!< ƒŒƒC”½ŽË‰ñ”
 		// 		RenderWidth = 1024,
 		// 		RenderHeight = 1024,
 		//		RenderDepth = 1,
@@ -59,8 +59,8 @@ struct PM2DRenderer
 		uvec2 m_emission_tile_num;
 		uvec2 _p;
 		vec4 m_position;
-		int m_emission_buffer_size[4];
-		int m_emission_buffer_offset[4];
+		int m_emission_buffer_size[BounceNum];
+		int m_emission_buffer_offset[BounceNum];
 		int m_emission_tile_map_max;
 	};
 	struct Fragment
@@ -82,6 +82,8 @@ struct PM2DRenderer
 	btr::BufferMemoryEx<int64_t> m_fragment_hierarchy;
 	btr::BufferMemoryEx<ivec4> m_emission_counter;
 	btr::BufferMemoryEx<Emission> m_emission_buffer;
+	btr::BufferMemoryEx<int32_t> m_emission_list;
+	btr::BufferMemoryEx<int32_t> m_emission_map;	//!< ==-1 emitter‚ª‚È‚¢ !=0‚ ‚é
 	btr::BufferMemoryEx<vec4> m_color;
 
 	struct TextureResource

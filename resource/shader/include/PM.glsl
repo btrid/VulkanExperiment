@@ -36,27 +36,24 @@ layout(std430, set=USE_PM, binding=1) restrict buffer FragmentBuffer {
 layout(std430, set=USE_PM, binding=2) restrict buffer FragmentHierarchyBuffer {
 	uint64_t b_fragment_hierarchy[];
 };
-layout(std430, set=USE_PM, binding=10) restrict buffer EmissiveCounter {
+layout(std430, set=USE_PM, binding=10) restrict buffer EmissionCounter {
 	ivec4 b_emission_counter[];
 };
-layout(std430, set=USE_PM, binding=11) restrict buffer EmissiveBuffer {
+layout(std430, set=USE_PM, binding=11) restrict buffer EmissionBuffer {
 	Emission b_emission[];
 };
-/*layout(std430, set=USE_PM, binding=10) restrict buffer BounceCounter {
-	ivec4 b_bounce_counter[];
+layout(std430, set=USE_PM, binding=12) restrict buffer EmissionListBuffer {
+	int b_emission_list[];
 };
-layout(std430, set=USE_PM, binding=11) restrict buffer BounceBuffer {
-	Emission b_bounce[];
+layout(std430, set=USE_PM, binding=13) restrict buffer EmissionMapBuffer {
+	int b_emission_map[];
 };
-layout(std430, set=USE_PM, binding=11) restrict buffer BounceMapBuffer {
-	int b_bounce_map[];
-};
-*/
+
 layout(std430, set=USE_PM, binding=20) restrict buffer ColorBuffer {
 	uvec4 b_color[];
 };
-layout (set=USE_PM, binding=21, r32ui) uniform uimage2DArray t_color[5];
-layout (set=USE_PM, binding=30) uniform sampler2DArray s_color[5];
+layout (set=USE_PM, binding=21, r32ui) uniform uimage2DArray t_color[4];
+layout (set=USE_PM, binding=30) uniform sampler2DArray s_color[4];
 
 #endif
 

@@ -27,14 +27,13 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 		info.m_camera_PV = glm::ortho(-RenderWidth * 0.5f, RenderWidth*0.5f, -RenderHeight * 0.5f, RenderHeight*0.5f);
 		info.m_camera_PV *= glm::lookAt(vec3(0., -1.f, 0.f) + info.m_position.xyz(), info.m_position.xyz(), vec3(0.f, 0.f, 1.f));
 		info.m_emission_tile_map_max = 16;
-		info.m_emission_buffer_size[0] = 256;
-		info.m_emission_buffer_size[1] = 2048;
-		info.m_emission_buffer_size[2] = 2048;
-		info.m_emission_buffer_size[3] = 2048;
+		info.m_emission_buffer_size[0] = RenderWidth * RenderHeight;
 		info.m_emission_buffer_offset[0] = 0;
-		info.m_emission_buffer_offset[1] = info.m_emission_buffer_offset[0] + info.m_emission_buffer_size[0];
-		info.m_emission_buffer_offset[2] = info.m_emission_buffer_offset[1] + info.m_emission_buffer_size[1];
-		info.m_emission_buffer_offset[3] = info.m_emission_buffer_offset[2] + info.m_emission_buffer_size[2];
+		for (int i = 1; i < BounceNum; i++)
+		{
+			info.m_emission_buffer_size[i] = info.m_emission_buffer_size[i-1]/4;
+			info.m_emission_buffer_offset[i] = info.m_emission_buffer_offset[i-1]+info.m_emission_buffer_size[i-1];
+		}
 		cmd.updateBuffer<Info>(m_fragment_info.getInfo().buffer, m_fragment_info.getInfo().offset, info);
 	}
 	{
@@ -54,11 +53,18 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 	}
 	{
 		btr::BufferMemoryDescriptorEx<Emission> desc;
-		desc.element_num = info.m_emission_buffer_size[0];
-		desc.element_num +=info.m_emission_buffer_size[1];
-		desc.element_num +=info.m_emission_buffer_size[2];
-		desc.element_num +=info.m_emission_buffer_size[3];
+		desc.element_num = info.m_emission_buffer_offset[BounceNum-1]+info.m_emission_buffer_size[BounceNum-1];
 		m_emission_buffer = context->m_storage_memory.allocateMemory(desc);
+	}
+	{
+		btr::BufferMemoryDescriptorEx<int32_t> desc;
+		desc.element_num = info.m_emission_buffer_offset[BounceNum-1]+info.m_emission_buffer_size[BounceNum-1];
+		m_emission_list = context->m_storage_memory.allocateMemory(desc);
+	}
+	{
+		btr::BufferMemoryDescriptorEx<int32_t> desc;
+		desc.element_num = info.m_emission_buffer_offset[BounceNum-1] + info.m_emission_buffer_size[BounceNum-1];
+		m_emission_map = context->m_storage_memory.allocateMemory(desc);
 	}
 
 	{
@@ -164,16 +170,26 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			.setStageFlags(stage)
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setDescriptorCount(1)
+			.setBinding(12),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(stage)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(13),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(stage)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
 			.setBinding(20),
 			vk::DescriptorSetLayoutBinding()
 			.setStageFlags(stage)
 			.setDescriptorType(vk::DescriptorType::eStorageImage)
-			.setDescriptorCount(5)
+			.setDescriptorCount(BounceNum)
 			.setBinding(21),
 			vk::DescriptorSetLayoutBinding()
 			.setStageFlags(stage)
 			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-			.setDescriptorCount(5)
+			.setDescriptorCount(BounceNum)
 			.setBinding(30),
 		};
 		vk::DescriptorSetLayoutCreateInfo desc_layout_info;
@@ -202,6 +218,8 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 		vk::DescriptorBufferInfo emission_storages[] = {
 			m_emission_counter.getInfo(),
 			m_emission_buffer.getInfo(),
+			m_emission_list.getInfo(),
+			m_emission_map.getInfo(),
 		};
 		vk::DescriptorBufferInfo output_storages[] = {
 			m_color.getInfo(),
@@ -212,7 +230,6 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			vk::DescriptorImageInfo().setImageView(m_color_tex[1].m_image_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
 			vk::DescriptorImageInfo().setImageView(m_color_tex[2].m_image_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
 			vk::DescriptorImageInfo().setImageView(m_color_tex[3].m_image_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
-			vk::DescriptorImageInfo().setImageView(m_color_tex[4].m_image_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
 		};
 		vk::DescriptorImageInfo samplers[] = {
 			vk::DescriptorImageInfo()
@@ -229,10 +246,6 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal),
 			vk::DescriptorImageInfo()
 			.setImageView(m_color_tex[3].m_image_view.get())
-			.setSampler(sGraphicsResource::Order().getSampler(sGraphicsResource::BASIC_SAMPLER_LINER))
-			.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal),
-			vk::DescriptorImageInfo()
-			.setImageView(m_color_tex[4].m_image_view.get())
 			.setSampler(sGraphicsResource::Order().getSampler(sGraphicsResource::BASIC_SAMPLER_LINER))
 			.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal),
 		};
@@ -496,9 +509,11 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 		u2f.f = 0.f;
 		cmd.fillBuffer(m_color.getInfo().buffer, m_color.getInfo().offset, m_color.getInfo().range, u2f.u);
 		cmd.fillBuffer(m_fragment_buffer.getInfo().buffer, m_fragment_buffer.getInfo().offset, m_fragment_buffer.getInfo().range, 0u);
-		ivec4 emissive[] = { {0,2,1,0},{ 0,1,1,0 },{ 0,1,1,0 },{ 1,1,1,0 },{ 1,1,1,0 } };
+		ivec4 emissive[] = { {0,2,1,0},{ 0,1,1,0 },{ 0,1,1,0 },{ 1,1,1,0 } };
 		static_assert(array_length(emissive) == BounceNum, "");
 		cmd.updateBuffer(m_emission_counter.getInfo().buffer, m_emission_counter.getInfo().offset, sizeof(emissive), emissive);
+		cmd.fillBuffer(m_emission_list.getInfo().buffer, m_emission_list.getInfo().offset, m_emission_list.getInfo().range, -1);
+		cmd.fillBuffer(m_emission_map.getInfo().buffer, m_emission_map.getInfo().offset, m_emission_map.getInfo().range, -1);
 
 		{
 
