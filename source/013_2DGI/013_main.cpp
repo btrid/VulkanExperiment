@@ -36,8 +36,8 @@
 
 int main()
 {
-	using namespace pm2d_2;
-//	using namespace pm2d;
+//	using namespace pm2d_2;
+	using namespace pm2d;
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = glm::vec3(0.f, 0.f, 1.f);
@@ -61,8 +61,7 @@ int main()
 	PresentPipeline present_pipeline(context, app.m_window->getRenderTarget(), app.m_window->getSwapchainPtr());
 
 	std::shared_ptr<PM2DRenderer> pm_renderer = std::make_shared<PM2DRenderer>(context, app.m_window->getRenderTarget());
-	DebugPM2D oit_debug(context, pm_renderer);
-//	AppModelOIT model_oit(context, oit_renderer);
+	DebugPM2D pm_debug(context, pm_renderer);
 	app.setup();
 	while (true)
 	{
@@ -79,7 +78,7 @@ int main()
 			};
 			std::vector<vk::CommandBuffer> cmds(cmd_num);
 			cmds[cmd_clear] = clear_pipeline.execute();
-			auto p = std::vector<PM2DPipeline*>{&oit_debug};
+			auto p = std::vector<PM2DPipeline*>{&pm_debug};
 			cmds[cmd_pm] = pm_renderer->execute(p);
 			cmds[cmd_present] = present_pipeline.execute();
 			app.submit(std::move(cmds));

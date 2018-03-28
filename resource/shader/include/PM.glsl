@@ -6,7 +6,7 @@
 struct PMInfo
 {
 	mat4 m_camera_PV;
-	uvec2 m_resolution;
+	ivec2 m_resolution;
 	uvec2 m_emission_tile_size;
 	uvec2 m_emission_tile_num;
 	uvec2 _p;

@@ -90,7 +90,6 @@ void main()
 
 			int next_ = dist.x < dist.y ? 0 : 1;
 			int next2_ = dist.z < dist.w ? 2 : 3;
-//			pos += vec4(vec2(cell_p[next_]), vec2(cell_p[next2_]));
 			pos += dir * vec4(vec2(dist[next_]), vec2(dist[next2_]));
 
 			ivec4 next;
