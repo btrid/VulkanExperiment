@@ -6,8 +6,8 @@
 #include <btrlib/ConvertDimension.glsl>
 #include <btrlib/Shape.glsl>
 
-#define USE_OIT 0
-#include <OIT.glsl>
+#define USE_PM 0
+#include <PM.glsl>
 
 layout(location=1) in ModelData
 {
@@ -17,6 +17,6 @@ layout(location=1) in ModelData
 layout(location = 0) out vec4 FragColor;
 void main()
 {
-	ivec2 index = ivec2(in_modeldata.texcoord * u_OIT_info.m_resolution.xy);
-	FragColor = b_color[index.x + index.y * int(u_OIT_info.m_resolution.x)];
+	ivec2 index = ivec2(in_modeldata.texcoord * u_pm_info.m_resolution.xy);
+	FragColor = b_color[index.x + index.y * int(u_pm_info.m_resolution.x)];
 }

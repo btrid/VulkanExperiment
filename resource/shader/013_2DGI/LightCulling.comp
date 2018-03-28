@@ -7,8 +7,8 @@
 #include <btrlib/Common.glsl>
 #include <btrlib/Math.glsl>
 
-#define USE_OIT 0
-#include <OIT.glsl>
+#define USE_PM 0
+#include <PM.glsl>
 
 layout (local_size_x = 32, local_size_y = 1) in;
 
@@ -18,15 +18,15 @@ void main()
 {
 
 	uvec2 index = gl_WorkGroupID.xy;
-	uint tiled_1D_index = gl_WorkGroupID.x + gl_WorkGroupID.y*u_OIT_info.m_emission_tile_num.x; 
+	uint tiled_1D_index = gl_WorkGroupID.x + gl_WorkGroupID.y*u_pm_info.m_emission_tile_num.x; 
 
 	vec2 left_top = vec2(0., 0.);
-	vec2 right_bottom = vec2(u_OIT_info.m_resolution.xy);
+	vec2 right_bottom = vec2(u_pm_info.m_resolution.xy);
 	if(gl_LocalInvocationID.x == 0)
 	{
 		s_counter = 0;
 
-		vec2 tile_size = u_OIT_info.m_emission_tile_size.xy;
+		vec2 tile_size = u_pm_info.m_emission_tile_size.xy;
 		s_area.xy = left_top + tile_size*index.xy - 0.01;
 		s_area.zw = s_area.xy + tile_size + 0.02;
 	}
@@ -34,7 +34,7 @@ void main()
 	memoryBarrierShared();
 
 	uint data_num = b_emission_counter.x;
-	uint count_list_offset = tiled_1D_index*u_OIT_info.m_emission_tile_map_max;
+	uint count_list_offset = tiled_1D_index*u_pm_info.m_emission_tile_map_max;
 	uint loop_count = (data_num-1) / gl_NumWorkGroups.x + 1;
 	uint loop_begin = gl_LocalInvocationID.x*loop_count;
 	uint loop_end = loop_begin + loop_count;
@@ -56,7 +56,7 @@ void main()
 			continue;
 		}
 		uint tile_list_index = atomicAdd(s_counter, 1);
-		if(tile_list_index < u_OIT_info.m_emission_tile_map_max){
+		if(tile_list_index < u_pm_info.m_emission_tile_map_max){
 			b_emission_tile_map[count_list_offset+tile_list_index] = int(i);
 		}
 	}
@@ -65,7 +65,7 @@ void main()
 	memoryBarrierShared();
 	if(gl_LocalInvocationID.x == 0)
 	{
-		b_emission_tile_counter[tiled_1D_index] = min(s_counter, u_OIT_info.m_emission_tile_map_max);
+		b_emission_tile_counter[tiled_1D_index] = min(s_counter, u_pm_info.m_emission_tile_map_max);
 	}
 }
 

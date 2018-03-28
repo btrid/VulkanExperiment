@@ -6,8 +6,8 @@
 #include <btrlib/Common.glsl>
 #include <btrlib/Math.glsl>
 
-#define USE_OIT 0
-#include <OIT.glsl>
+#define USE_PM 0
+#include <PM.glsl>
 
 #define assert(_x) for(int i = 0; i < 10000 && (_x); i++)
 layout (local_size_x = 32, local_size_y = 32) in;
@@ -16,20 +16,20 @@ shared uint64_t s_fragment_map[16];
 void main()
 {
 	const ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
-	const int pixel_1d = int(pixel.x + pixel.y*u_OIT_info.m_resolution.x);
-	const ivec2 tile_index_2d = pixel / ivec2(u_OIT_info.m_emission_tile_size.xy);
-	const int tile_index = int(tile_index_2d.x + tile_index_2d.y*u_OIT_info.m_emission_tile_num.x);
+	const int pixel_1d = int(pixel.x + pixel.y*u_pm_info.m_resolution.x);
+	const ivec2 tile_index_2d = pixel / ivec2(u_pm_info.m_emission_tile_size.xy);
+	const int tile_index = int(tile_index_2d.x + tile_index_2d.y*u_pm_info.m_emission_tile_num.x);
 
 	const int hierarchy_rate[2] = {1, 8};
 	const vec2 c_cell_size[2] = {vec2(1.), vec2(1.)*hierarchy_rate[1]};
-	const ivec4 reso = ivec4(u_OIT_info.m_resolution.xy, u_OIT_info.m_resolution.xy/8);
+	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
 
 	const vec2 end = vec2(pixel)*c_cell_size[0] + c_cell_size[0]*0.5;
 	vec3 photon = vec3(0.);
 	int emission_num = min(b_emission_tile_counter[tile_index], 64);
 	if(gl_LocalInvocationIndex < emission_num)
 	{
-		int emission_index = b_emission_tile_map[tile_index*u_OIT_info.m_emission_tile_map_max + gl_LocalInvocationIndex];
+		int emission_index = b_emission_tile_map[tile_index*u_pm_info.m_emission_tile_map_max + gl_LocalInvocationIndex];
 		s_emission[gl_LocalInvocationIndex] = b_emission[emission_index];		
 	}
 	barrier();

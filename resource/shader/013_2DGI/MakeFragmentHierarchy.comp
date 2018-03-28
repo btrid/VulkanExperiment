@@ -7,8 +7,8 @@
 #include <btrlib/Common.glsl>
 #include <btrlib/Math.glsl>
 
-#define USE_OIT 0
-#include <OIT.glsl>
+#define USE_PM 0
+#include <PM.glsl>
 
 layout (local_size_x = 8, local_size_y = 8) in;
 
@@ -24,7 +24,7 @@ void main()
 	barrier();
 	memoryBarrierShared();
 
-	uint tiled_1D_index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*u_OIT_info.m_resolution.x; 
+	uint tiled_1D_index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*u_pm_info.m_resolution.x; 
 	vec3 albedo = b_fragment[tiled_1D_index].albedo;
 	if(dot(albedo, albedo) >= 0.001)
 	{
@@ -39,7 +39,7 @@ void main()
 	if(gl_LocalInvocationIndex == 0)
 	{
 		uint64_t bit =  uint64_t(s_bit[1]) << 32 | s_bit[0];
-		uint l1_index_1d = gl_WorkGroupID.x + gl_WorkGroupID.y*(u_OIT_info.m_resolution.x/8);
+		uint l1_index_1d = gl_WorkGroupID.x + gl_WorkGroupID.y*(u_pm_info.m_resolution.x/8);
 		b_fragment_hierarchy[l1_index_1d] = bit;
 	}
 }

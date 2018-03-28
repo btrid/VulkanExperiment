@@ -5,8 +5,8 @@
 
 #include <btrlib/Math.glsl>
 
-#define USE_OIT 0
-#include <OIT.glsl>
+#define USE_PM 0
+#include <PM.glsl>
 
 #define USE_MODEL_INFO_SET 1
 #include <applib/model/MultiModel.glsl>
@@ -43,7 +43,7 @@ void main()
 {
 	vec4 pos = vec4((inPosition).xyz, 1.0);
 	mat4 skinningMat = skinning();
-	pos = u_OIT_info.m_camera_PV * skinningMat * pos;
+	pos = u_pm_info.m_camera_PV * skinningMat * pos;
 	gl_Position = vec4(pos.xyz, 1.0);
 
 	out_modeldata.texcoord = inTexcoord.xy;

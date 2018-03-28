@@ -10,8 +10,8 @@
 #include <btrlib/ConvertDimension.glsl>
 #include <btrlib/Shape.glsl>
 
-#define USE_OIT 0
-#include <OIT.glsl>
+#define USE_PM 0
+#include <PM.glsl>
 
 layout(triangles) in;
 layout(triangle_strip, max_vertices = 4) out;
