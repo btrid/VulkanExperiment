@@ -64,7 +64,7 @@ void main()
 			fragment_map = b_fragment_hierarchy[fragment_index_1d];
 		}
 
-		for(int i = 0; i < 50; i++)
+		for(;;)
 		{
 			const int hierarchy = fragment_map == 0 ? 1 : 0;
 			vec2 cell_size = c_cell_size[hierarchy];
