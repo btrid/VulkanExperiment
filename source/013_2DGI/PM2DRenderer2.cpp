@@ -511,7 +511,7 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 		u2f.f = 0.f;
 		cmd.fillBuffer(m_color.getInfo().buffer, m_color.getInfo().offset, m_color.getInfo().range, u2f.u);
 		cmd.fillBuffer(m_fragment_buffer.getInfo().buffer, m_fragment_buffer.getInfo().offset, m_fragment_buffer.getInfo().range, 0u);
-		ivec4 emissive[] = { {0,8,1,0},{ 0,1,1,0 },{ 0,1,1,0 },{ 1,1,1,0 } };
+		ivec4 emissive[] = { {0,16,1,0},{ 0,1,1,0 },{ 0,1,1,0 },{ 1,1,1,0 } };
 		static_assert(array_length(emissive) == BounceNum, "");
 		cmd.updateBuffer(m_emission_counter.getInfo().buffer, m_emission_counter.getInfo().offset, sizeof(emissive), emissive);
 		cmd.fillBuffer(m_emission_list.getInfo().buffer, m_emission_list.getInfo().offset, m_emission_list.getInfo().range, -1);
@@ -693,7 +693,8 @@ DebugPM2D::DebugPM2D(const std::shared_ptr<btr::Context>& context, const std::sh
 		{
 			std::vector<ivec4> rect;
 			rect.emplace_back(400, 400, 200, 400);
-			rect.emplace_back(80, 50, 500, 30);
+			rect.emplace_back(300, 200, 100, 100);
+			rect.emplace_back(80, 50, 300, 30);
 
 			for (size_t y = 0; y < renderer->RenderHeight; y++)
 			{
@@ -874,11 +875,6 @@ void DebugPM2D::execute(vk::CommandBuffer cmd)
 	cmd.copyBuffer(m_map_data.getInfo().buffer, m_renderer->m_fragment_buffer.getInfo().buffer, copy);
 
 	{
-#if 0
-		cmd.updateBuffer<ivec3>(m_renderer->m_emission_counter.getInfo().buffer, m_renderer->m_emission_counter.getInfo().offset, ivec3(m_emission.size(), 1, 1));
-		auto e_buffer = m_renderer->m_emission_buffer.getInfo();
-		cmd.updateBuffer(e_buffer.buffer, e_buffer.offset, vector_sizeof(m_emission), m_emission.data());
-#else
 		vk::RenderPassBeginInfo begin_render_Info;
 		begin_render_Info.setRenderPass(m_render_pass.get());
 		begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), m_renderer->m_render_target->m_resolution));
@@ -889,11 +885,10 @@ void DebugPM2D::execute(vk::CommandBuffer cmd)
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayoutPointLight].get(), 0, m_renderer->m_descriptor_set.get(), {});
 		cmd.pushConstants<vec2>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, 0, vec2(100.f, 400.f));
 		cmd.draw(1, 1, 0, 0);
-		cmd.pushConstants<vec2>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, 0, vec2(500.f, 120.f));
-		cmd.draw(1, 1, 0, 0);
+// 		cmd.pushConstants<vec2>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, 0, vec2(500.f, 120.f));
+// 		cmd.draw(1, 1, 0, 0);
 
 		cmd.endRenderPass();
-#endif
 	}
 	vk::BufferMemoryBarrier to_read[] =
 	{

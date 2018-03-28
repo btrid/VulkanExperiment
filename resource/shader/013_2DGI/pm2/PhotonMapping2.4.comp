@@ -42,20 +42,19 @@ void main()
 		map_index = p.xyxy;
 	}
 
-	vec2 offset = vec2(rand(vec2(map_index.xy+gl_LocalInvocationID.xy+gl_NumWorkGroups.y)), rand(vec2(map_index.yx+gl_LocalInvocationID.yx+gl_NumWorkGroups.y)));
+	vec2 offset = vec2(rand(vec2(map_index.xy+gl_LocalInvocationID.xy)), rand(vec2(map_index.yx+gl_LocalInvocationID.yx)));
 	vec4 pos = map_index*cell_size.xyxy;
 	pos += cell_size.xyxy*0.5;
-//	pos += (offset.xyxy * 0.5 -1.)*cell_size.zwzw*0.49;
-	pos += (offset.xyxy * 0.5 -1.)*cell_size.xyxy*0.49;
+	pos += (offset.xyxy * 0.5 -1.)*cell_size.zwzw*0.49;
 	map_index = ivec4((pos) / cell_size.xyxy);
 
 	vec4 dir;
 	{
 		float ray_num = gl_NumWorkGroups.y*gl_WorkGroupSize.x*2.;
 		float ray_NO = (gl_LocalInvocationID.x + gl_WorkGroupID.y*gl_WorkGroupSize.x)*2.;
-		float angle_offset = 1./ray_num*offset.x;
-		float angle = ray_NO * 2.*PI / ray_num + angle_offset;
-		float angle2 = (ray_NO+1.) * 2.*PI / ray_num + angle_offset;
+		float angle_offset = 5./ray_num*offset.x;
+		float angle = ray_NO * 6.28318 / ray_num + angle_offset;
+		float angle2 = (ray_NO+1.) * 6.28318 / ray_num + angle_offset;
 		
 		dir = rotate(vec2(angle, angle2));
 		dir.x = abs(dir.x) <= FLT_EPSIRON ? FLT_EPSIRON*2. : dir.x;
@@ -76,31 +75,34 @@ void main()
 	ivec4 hit_point = ivec4(-1);
 	for(;;)
 	{
-		// march
-		{
-			vec4 cell_origin = vec4(map_index) * cell_size.xyxy;
-			vec4 cell_p = pos - cell_origin;
+		vec4 cell_origin = vec4(map_index) * cell_size.xyxy;
+		vec4 cell_p = pos - cell_origin;
 
-			float x = dir.x < 0. ? cell_p.x : (cell_size.z- cell_p.x);
-			float y = dir.y < 0. ? cell_p.y : (cell_size.w- cell_p.y);
-			float z = dir.z < 0. ? cell_p.z : (cell_size.z- cell_p.z);
-			float w = dir.w < 0. ? cell_p.w : (cell_size.w- cell_p.w);
+		float x = dir.x < 0. ? cell_p.x : (cell_size.z- cell_p.x);
+		float y = dir.y < 0. ? cell_p.y : (cell_size.w- cell_p.y);
+		x = x <= FLT_EPSIRON ? (x+cell_size.z) : x;
+		y = y <= FLT_EPSIRON ? (y+cell_size.w) : y;
+		float z = dir.z < 0. ? cell_p.z : (cell_size.z- cell_p.z);
+		float w = dir.w < 0. ? cell_p.w : (cell_size.w- cell_p.w);
+		z = z <= FLT_EPSIRON ? (z+cell_size.z) : z;
+		w = w <= FLT_EPSIRON ? (w+cell_size.w) : w;
+		vec4 dist = abs(vec4(x, y, z, w) / dir.xyzw);
 
-			x = x <= FLT_EPSIRON ? (x+cell_size.z) : x;
-			y = y <= FLT_EPSIRON ? (y+cell_size.w) : y;
-			z = z <= FLT_EPSIRON ? (z+cell_size.z) : z;
-			w = w <= FLT_EPSIRON ? (w+cell_size.w) : w;
+		int next_ = dist.x < dist.y ? 0 : 1;
+		int next2_ = dist.z < dist.w ? 2 : 3;
+		pos += dir * vec4(vec2(dist[next_]), vec2(dist[next2_]));
 
-			vec4 dist = abs(vec4(x, y, z, w) / dir.xyzw);
-			int next_ = dist.x < dist.y ? 0 : 1;
-			int next2_ = dist.z < dist.w ? 2 : 3;
-			pos += dir * vec4(vec2(dist[next_]), vec2(dist[next2_]));
+		ivec4 next;
+		next.xy = next_ == 0 ? next_step.xz : next_step.zy;
+		next.zw = next2_ == 0 ? next_step2.xz : next_step2.zy;
+		map_index = ivec4((pos+ next*0.1) / cell_size.xyxy);
 
-			ivec4 next;
-			next.xy = next_ == 0 ? next_step.xz : next_step.zy;
-			next.zw = next2_ == 0 ? next_step2.xz : next_step2.zy;
-			map_index = ivec4((pos+ next*0.1) / cell_size.xyxy);
-		}
+//		pos += dir * cell_size.zwzw*0.9;
+//		ivec4 next_map_index = ivec4(pos / cell_size.xyxy);
+//		if(all(equal(next_map_index, map_index))){
+//			continue;
+//		}
+//		map_index = next_map_index;
 
 		// 範囲外
 		{
@@ -117,8 +119,8 @@ void main()
 			fragment_map.y = is_died.y!=0 ? 0 : b_fragment_hierarchy[fragment_index_1d.y];
 
 			ivec4 fragment_index_sub = map_index%8;
-			ivec2 fragment_index_sub_1d = fragment_index_sub.xz + fragment_index_sub.yw*8;
-			u64vec2 bit = u64vec2(1)<<fragment_index_sub_1d;
+			ivec2 fragment_index_1d_sub = fragment_index_sub.xz + fragment_index_sub.yw*8;
+			u64vec2 bit = u64vec2(1)<<fragment_index_1d_sub;
 
 			is_hit |= ivec2((fragment_map & bit) != u64vec2(0));
 			hit_point.xy = (is_hit.x != 0 && is_died.x == 0) ? map_index.xy : hit_point.xy;
@@ -151,6 +153,7 @@ void main()
 						b_emission[store_index[i]].value += vec4(0., 0., 1., 1.);
 					}
 				}
+
 			}
 			break;
 		}
