@@ -1,0 +1,197 @@
+#version 450
+
+#extension GL_GOOGLE_cpp_style_line_directive : require
+
+#include <btrlib/ConvertDimension.glsl>
+#include <btrlib/Common.glsl>
+#include <btrlib/Math.glsl>
+
+#define USE_PM 0
+#include <PM.glsl>
+
+#define snorm16_max() (32767) 
+#define unorm16_max() (65535) 
+#define i64 int64_t
+#define u64 uint64_t
+#define i32 int
+#define u32 uint
+#define assert(_x) for(int i = 0; i < 10000 && (_x); i++)
+/*
+void setBit(u64 bit, u64 value, u32 bitoffset, u32 bitrange) {
+	u32 mask = (1 << bitrange) - 1;
+//	assert(value < mask); // bitrangeに収まってないのはバグの可能性が高いので止める
+	mask <<= bitoffset;
+	bit = ((~mask & bit) + value) << bitoffset;
+}
+template<typename A>
+A getBit(A& bit, uint32_t bitoffset, uint32_t bitrange) {
+	uint32_t mask = ((1 << bitrange) - 1) << bitoffset;
+	return (mask & bit) >> bitoffset;
+}
+*/
+#define mask(_bit) (_bit-1)
+ivec4 i64_ivec4(in i64 _i)
+{
+	u64 m = u64(mask(16)) << uvec4(0, 16, 32, 48);
+	return ivec4((u64vec4(_i) & m)>>uvec4(0, 16, 32, 48));
+} 
+uvec4 u64_uvec4(in u64 _i)
+{
+	u64 m = u64(mask(16)) << uvec4(0, 16, 32, 48);
+	return uvec4((u64vec4(_i) & m)>>uvec4(0, 16, 32, 48));
+} 
+i64 ivec4_i64(in ivec4 p)
+{
+	i64vec4 x0 = u64vec4(p)<<u64vec4(0,16,32,48);
+	return i64(x0.x|x0.y|x0.z|x0.w);
+} 
+
+
+layout (local_size_x = 32, local_size_y = 32) in;
+shared Emission s_emission[64];
+shared uint64_t s_fragment_map[16];
+void main()
+{
+	u64vec4 pixel; // 32*8 .x=xxxx,y=xxxx,z=yyyy,x=yyyy
+	ivec4 pixel_1d[2];
+
+	ivec4 tile_index[2];
+	{
+		ivec2 p = ivec2(gl_GlobalInvocationID.xy*ivec2(4, 2));
+		{
+			u64vec4 x0 = u64vec4(p.x+0,p.x+1,p.x+2,p.x+3)<<u64vec4(0,16,32,48);
+			pixel.x = x0.x|x0.y|x0.z|x0.w;
+			u64vec4 x1 = u64vec4(p.x+4,p.x+5,p.x+6,p.x+7)<<u64vec4(0,16,32,48);
+			pixel.y = x1.x|x1.y|x1.z|x1.w;
+			u64vec4 y0 = u64vec4(p.y+0,p.y+0,p.y+0,p.y+0)<<u64vec4(0,16,32,48);
+			pixel.z = y0.x|y0.y|y0.z|y0.w;
+			u64vec4 y1 = u64vec4(p.y+1,p.y+1,p.y+1,p.y+1)<<u64vec4(0,16,32,48);
+			pixel.w = y1.x|y1.y|y1.z|y1.w;
+		}
+
+		ivec4 x[2] = ivec4[]{ u64_uvec4(pixel.x), u64_uvec4(pixel.y)};
+		ivec4 y[2] = ivec4[]{ u64_uvec4(pixel.z), u64_uvec4(pixel.w)};
+		{
+			pixel_1d[0] = x[0] + y[0]*u_pm_info.m_resolution.x;
+			pixel_1d[1] = x[1] + y[1]*u_pm_info.m_resolution.x;
+		}
+		{
+			ivec4 t_2d_x0 = x[0] / ivec4(u_pm_info.m_emission_tile_size.xxxx);
+			ivec4 t_2d_x1 = x[1] / ivec4(u_pm_info.m_emission_tile_size.xxxx);
+			ivec4 t_2d_y0 = y[0] / ivec4(u_pm_info.m_emission_tile_size.yyyy);
+			ivec4 t_2d_y1 = y[1] / ivec4(u_pm_info.m_emission_tile_size.yyyy);
+			tile_index[0] = ivec4(t_2d_x0 + t_2d_y0*u_pm_info.m_emission_tile_num.x);
+			tile_index[1] = ivec4(t_2d_x1 + t_2d_y1*u_pm_info.m_emission_tile_num.x);
+		}
+	}
+
+	const int hierarchy_rate[2] = {1, 8};
+	const vec2 c_cell_size[2] = {vec2(1.), vec2(1.)*hierarchy_rate[1]};
+	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
+
+	vec3 photon = vec3(0.);
+	int emission_num = min(b_emission_tile_counter[tile_index], 64);
+	if(gl_LocalInvocationIndex < emission_num)
+	{
+		int emission_index = b_emission_tile_map[tile_index*u_pm_info.m_emission_tile_map_max + gl_LocalInvocationIndex];
+		s_emission[gl_LocalInvocationIndex] = b_emission[emission_index];		
+	}
+	barrier();
+	memoryBarrierShared();
+
+	for(int i = 0; i < emission_num; i++)
+	{
+		vec4 emission = s_emission[i].value;
+		vec4 emission_pos = s_emission[i].pos;
+		ivec2 start = ivec2(emission_pos.xz);
+
+//		const float ray_dist = distance(start, end);
+
+		ivec2 pos = start;
+		ivec2 mindex = ivec2(start / c_cell_size[0]);
+		i32 map_index = mindex.x | (mindex.y<<16); 
+
+		i64vec4 dir; // xyxy
+		{
+			uvec4 x0 = u64_uvec4(pixel.x);
+			uvec4 x1 = u64_uvec4(pixel.y);
+			uvec4 y0 = u64_uvec4(pixel.z);
+			uvec4 y1 = u64_uvec4(pixel.w);
+			vec4 d0 = x0.xxyy*vec4(1,0,1,0) + y0.xxyy*vec4(0,1,0,1);
+			vec4 d1 = x0.zzww*vec4(1,0,1,0) + y0.zzww*vec4(0,1,0,1);
+			vec4 d2 = x1.xxyy*vec4(1,0,1,0) + y1.xxyy*vec4(0,1,0,1);
+			vec4 d3 = x1.zzww*vec4(1,0,1,0) + y1.zzww*vec4(0,1,0,1);
+
+			d0 = normalize(d0-start.xyxy);
+			d1 = normalize(d1-start.xyxy);
+			d2 = normalize(d2-start.xyxy);
+			d3 = normalize(d3-start.xyxy);
+
+			// 0除算回避
+			d0.x = abs(d0.x) <= FLT_EPSIRON ? FLT_EPSIRON*2. : d0.x;
+			d0.y = abs(d0.y) <= FLT_EPSIRON ? FLT_EPSIRON*2. : d0.y;
+			d0.z = abs(d0.z) <= FLT_EPSIRON ? FLT_EPSIRON*2. : d0.z;
+			d0.w = abs(d0.w) <= FLT_EPSIRON ? FLT_EPSIRON*2. : d0.w;
+			d1.x = abs(d1.x) <= FLT_EPSIRON ? FLT_EPSIRON*2. : d1.x;
+			d1.y = abs(d1.y) <= FLT_EPSIRON ? FLT_EPSIRON*2. : d1.y;
+			d1.z = abs(d1.z) <= FLT_EPSIRON ? FLT_EPSIRON*2. : d1.z;
+			d1.w = abs(d1.w) <= FLT_EPSIRON ? FLT_EPSIRON*2. : d1.w;
+
+			dir.x = ivec4_i64(ivec4(d0*snorm16_max)+snorm16_max);
+			dir.y = ivec4_i64(ivec4(d1*snorm16_max)+snorm16_max);
+			dir.z = ivec4_i64(ivec4(d2*snorm16_max)+snorm16_max);
+			dir.w = ivec4_i64(ivec4(d3*snorm16_max)+snorm16_max);
+		}
+
+//		const ivec3 next_step = ivec3((dir.x < 0. ? -1 : 1), (dir.y < 0. ? -1 : 1), 0);
+
+		ivec2 map_index_1 = map_index/8;
+		int map_index_1_1d = map_index_1.x + map_index_1.y * (reso.z);
+		uint64_t fragment_map = b_fragment_hierarchy[map_index_1_1d];
+
+		for(int i = 0; i < 4000; i++)
+		{
+			const int hierarchy = fragment_map == 0 ? 1 : 0;
+			vec2 cell_size = c_cell_size[hierarchy];
+
+			vec2 cell_origin = vec2(map_index / hierarchy_rate[hierarchy])*cell_size;
+			vec2 cell_p = pos - cell_origin;
+
+			float x = dir.x < 0. ? cell_p.x : (cell_size.x- cell_p.x);
+			float y = dir.y < 0. ? cell_p.y : (cell_size.y- cell_p.y);
+			x = x <= FLT_EPSIRON ? (x+cell_size.x) : x;
+			y = y <= FLT_EPSIRON ? (y+cell_size.y) : y;
+			vec2 dist = abs(vec2(x, y) / dir.xy);
+
+			int next_ = dist.x < dist.y ? 0 : 1;
+			ivec2 next = next_ == 0 ? next_step.xz : next_step.zy;
+			pos += dir * dist[next_];
+
+			if(distance(start, pos) >= ray_dist)
+			{
+				// 距離を超えたら光がフラグメントにヒット
+				photon += vec3(0., 0., 1.) * emission_pos.w / (1+ray_dist*ray_dist);
+				break;
+			}
+
+			// hit確認
+			{
+				ivec4 fragment_index = map_index/8;
+				ivec2 fragment_index_1d = fragment_index.xz + fragment_index.yw*reso.z;
+				u64vec2 fragment_map;
+				fragment_map.x = is_died.x!=0 ? 0 : b_fragment_hierarchy[fragment_index_1d.x];
+				fragment_map.y = is_died.y!=0 ? 0 : b_fragment_hierarchy[fragment_index_1d.y];
+
+				ivec4 fragment_index_sub = map_index%8;
+				ivec2 fragment_index_sub_1d = fragment_index_sub.xz + fragment_index_sub.yw*8;
+				u64vec2 bit = u64vec2(1)<<fragment_index_sub_1d;
+
+				is_hit |= ivec2((fragment_map & bit) != u64vec2(0));
+				hit_point.xy = (is_hit.x != 0 && is_died.x == 0) ? map_index.xy : hit_point.xy;
+				hit_point.zw = (is_hit.y != 0 && is_died.y == 0) ? map_index.zw : hit_point.zw;
+				is_died |= is_hit;
+			}
+		}
+	}
+	b_color[pixel_1d] = vec4(photon, 1.);
+}
