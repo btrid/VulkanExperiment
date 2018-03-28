@@ -1,5 +1,5 @@
-#ifndef _PM_
-#define _PM_
+#ifndef _PM2_
+#define _PM2_
 
 #extension GL_ARB_gpu_shader_int64 : require
 //#extension GL_NV_shader_atomic_float : require

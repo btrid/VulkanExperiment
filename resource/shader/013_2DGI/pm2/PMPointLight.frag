@@ -7,7 +7,7 @@
 #include <btrlib/Shape.glsl>
 
 #define USE_PM 0
-#include <PM.glsl>
+#include <PM2.glsl>
 
 layout(push_constant) uniform InputVertex
 {

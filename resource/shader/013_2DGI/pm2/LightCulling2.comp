@@ -8,7 +8,7 @@
 #include <btrlib/Math.glsl>
 
 #define USE_PM 0
-#include <PM.glsl>
+#include <PM2.glsl>
 
 layout (local_size_x = 32, local_size_y = 1) in;
 
