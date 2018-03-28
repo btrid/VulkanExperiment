@@ -60,13 +60,11 @@ void main()
 		
 		dir = rotate(vec2(angle, angle2));
 		map_index_offset = ivec4(greaterThan(dir, vec4(0.)));
-//		map_index+=next;
-		
-//		dir = abs(dir);
-		dir.x = abs(dir.x) < FLT_EPSIRON ? FLT_EPSIRON : dir.x;
-		dir.y = abs(dir.y) < FLT_EPSIRON ? FLT_EPSIRON : dir.y;
-		dir.z = abs(dir.z) < FLT_EPSIRON ? FLT_EPSIRON : dir.z;
-		dir.w = abs(dir.w) < FLT_EPSIRON ? FLT_EPSIRON : dir.w;
+
+		dir.x = abs(dir.x) < FLT_EPSIRON ? ((map_index_offset.x*2-1)*FLT_EPSIRON) : dir.x;
+		dir.y = abs(dir.y) < FLT_EPSIRON ? ((map_index_offset.x*2-1)*FLT_EPSIRON) : dir.y;
+		dir.z = abs(dir.z) < FLT_EPSIRON ? ((map_index_offset.x*2-1)*FLT_EPSIRON) : dir.z;
+		dir.w = abs(dir.w) < FLT_EPSIRON ? ((map_index_offset.x*2-1)*FLT_EPSIRON) : dir.w;
 		inv_dir = 1./dir;
 	}
 	const ivec3 next_step = ivec3((dir.x < 0. ? -1 : 1), (dir.y < 0. ? -1 : 1), 0);
@@ -81,17 +79,18 @@ void main()
 	ivec2 is_hit = ivec2(0);
 	ivec4 hit_point = ivec4(-1);
 	
-	for(int i = 0;i < 1000; i++)
+//	for(int i = 0;i < 500; i++)
+	for(;;)
 	{
 		// march
 		{
-			pos = fract(pos);
-			vec4 cell_origin = vec4(map_index_offset) * cell_size.xyxy;
+			vec4 cell_origin = vec4(map_index+map_index_offset) * cell_size.xyxy;
 			vec4 cell_p = cell_origin-pos;
-			vec4 dist = cell_p * inv_dir;
+			vec4 dist = abs(cell_p * inv_dir);
 
 			int next_ = dist.x < dist.y ? 0 : 1;
 			int next2_ = dist.z < dist.w ? 2 : 3;
+//			pos += vec4(vec2(cell_p[next_]), vec2(cell_p[next2_]));
 			pos += dir * vec4(vec2(dist[next_]), vec2(dist[next2_]));
 
 			ivec4 next;
