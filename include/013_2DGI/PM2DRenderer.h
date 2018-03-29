@@ -59,6 +59,7 @@ struct PM2DRenderer
 		uvec2 m_emission_tile_num;
 		uvec2 _p;
 		vec4 m_position;
+		int m_fragment_map_offset[8];
 		int m_emission_tile_map_max;
 	};
 	struct Fragment
@@ -78,6 +79,7 @@ struct PM2DRenderer
 	btr::BufferMemoryEx<Info> m_fragment_info;
 	btr::BufferMemoryEx<Fragment> m_fragment_buffer;
 	btr::BufferMemoryEx<int64_t> m_fragment_hierarchy;
+	btr::BufferMemoryEx<int32_t> m_fragment_map;
 	btr::BufferMemoryEx<ivec3> m_emission_counter;
 	btr::BufferMemoryEx<Emission> m_emission_buffer;
 	btr::BufferMemoryEx<int32_t> m_emission_tile_counter;

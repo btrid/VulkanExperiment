@@ -26,6 +26,12 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 		info.m_emission_tile_num = info.m_resolution / info.m_emission_tile_size;
 		info.m_camera_PV = glm::ortho(-RenderWidth * 0.5f, RenderWidth*0.5f, -RenderHeight * 0.5f, RenderHeight*0.5f);
 		info.m_camera_PV *= glm::lookAt(vec3(0., -1.f, 0.f) + info.m_position.xyz(), info.m_position.xyz(), vec3(0.f, 0.f, 1.f));
+		info.m_fragment_map_offset[0] = 0;
+		info.m_fragment_map_offset[1] = info.m_fragment_map_offset[0] + RenderHeight * RenderWidth / (2 * 2);
+		info.m_fragment_map_offset[2] = info.m_fragment_map_offset[1] + RenderHeight * RenderWidth / (4 * 4);
+		info.m_fragment_map_offset[3] = info.m_fragment_map_offset[2] + RenderHeight * RenderWidth / (8 * 8);
+		info.m_fragment_map_offset[4] = info.m_fragment_map_offset[3] + RenderHeight * RenderWidth / (16 * 16);
+		info.m_fragment_map_offset[5] = info.m_fragment_map_offset[4] + RenderHeight * RenderWidth / (32 * 32);
 		info.m_emission_tile_map_max = 16;
 		cmd.updateBuffer<Info>(m_fragment_info.getInfo().buffer, m_fragment_info.getInfo().offset, info);
 	}
@@ -38,6 +44,15 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 		btr::BufferMemoryDescriptorEx<int64_t> desc;
 		desc.element_num = RenderWidth * RenderHeight / 8 / 8;
 		m_fragment_hierarchy = context->m_storage_memory.allocateMemory(desc);
+	}
+	{
+		btr::BufferMemoryDescriptorEx<int32_t> desc;
+		desc.element_num = RenderWidth * RenderHeight / (1*1);
+		desc.element_num += RenderWidth * RenderHeight / (2*2);
+		desc.element_num += RenderWidth * RenderHeight / (4*4);
+		desc.element_num += RenderWidth * RenderHeight / (16*16);
+		desc.element_num += RenderWidth * RenderHeight / (32*32);
+		m_fragment_map = context->m_storage_memory.allocateMemory(desc);
 	}
 	{
 		btr::BufferMemoryDescriptorEx<ivec3> desc;
@@ -147,6 +162,7 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 		vk::DescriptorBufferInfo storages[] = {
 			m_fragment_buffer.getInfo(),
 			m_fragment_hierarchy.getInfo(),
+			m_fragment_map.getInfo(),
 		};
 		vk::DescriptorBufferInfo emission_storages[] = {
 			m_emission_counter.getInfo(),
@@ -413,7 +429,7 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineMakeFragmentHierarchy].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutMakeFragmentHierarchy].get(), 0, m_descriptor_set.get(), {});
-		cmd.dispatch(RenderWidth / 8, RenderHeight / 8, 1);
+		cmd.dispatch(RenderWidth / 32, RenderHeight / 32, 1);
 	}
 
 	// light culling
