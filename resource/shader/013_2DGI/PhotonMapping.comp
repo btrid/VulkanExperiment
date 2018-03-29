@@ -14,15 +14,6 @@ shared Emission s_emission[64];
 shared uint64_t s_fragment_map[16];
 void main()
 {
-	int hierarchy_offset[8];
-	hierarchy_offset[0] = 0;
-	hierarchy_offset[1] = hierarchy_offset[0] + u_pm_info.m_resolution.x * u_pm_info.m_resolution.y / (1 * 1);
-	hierarchy_offset[2] = hierarchy_offset[1] + u_pm_info.m_resolution.x * u_pm_info.m_resolution.y / (2 * 2);
-	hierarchy_offset[3] = hierarchy_offset[2] + u_pm_info.m_resolution.x * u_pm_info.m_resolution.y / (4 * 4);
-	hierarchy_offset[4] = hierarchy_offset[3] + u_pm_info.m_resolution.x * u_pm_info.m_resolution.y / (8 * 8);
-	hierarchy_offset[5] = hierarchy_offset[4] + u_pm_info.m_resolution.x * u_pm_info.m_resolution.y / (16 * 16);
-	hierarchy_offset[6] = hierarchy_offset[5] + u_pm_info.m_resolution.x * u_pm_info.m_resolution.y / (32 * 32);
-
 	const vec2 default_cell_size = vec2(1.);
 	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
 	const ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
@@ -45,13 +36,10 @@ void main()
 	for(int i = 0; i < emission_num; i++)
 	{
 		vec4 emission = s_emission[i].value;
-		vec4 emission_pos = s_emission[i].pos;
+		vec4 emission_pos = ivec4(s_emission[i].pos) * 1.;
 		const vec2 start = emission_pos.xz;
-		vec2 pos = start;
-		ivec2 map_index = ivec2(pos / default_cell_size.xy);
 
-
-		const vec2 diff = (end - pos);
+		const vec2 diff = (end - start);
 		if(dot(diff, diff) <= 0.01)
 		{
 			photon += vec3(0., 0., 1.) * emission_pos.w;
@@ -65,19 +53,26 @@ void main()
 
 		const ivec3 next_step = ivec3((dir.x < 0. ? -1 : 1), (dir.y < 0. ? -1 : 1), 0);
 
+		vec2 pos = start;
+		ivec2 map_index = ivec2(pos / default_cell_size.xy);
+		const ivec2 istart = ivec2(emission_pos.xz);
+		const ivec2 iend = ivec2(end);
+		const ivec2 target_dist = abs(istart-iend);
 		for(;;)
 		{
-			int hierarchy = 0;
-			for(; hierarchy<6; hierarchy++)
+			int hierarchy = 5;
 			{
-				ivec2 findex2d = map_index>>hierarchy;
-				int findex = findex2d.x + findex2d.y*(u_pm_info.m_resolution.x>>hierarchy);
-				if(b_fragment_map[findex + hierarchy_offset[hierarchy]] != 0)
+				for(; hierarchy>0; hierarchy--)
 				{
-					break;
+					ivec2 findex2d = map_index>>hierarchy;
+					int findex = findex2d.x + findex2d.y*(u_pm_info.m_resolution.x>>hierarchy);
+					int offset = u_pm_info.m_fragment_map_offset[hierarchy/4][hierarchy%4];
+					if(b_fragment_map[findex + offset] == 0)
+					{
+						break;
+					}
 				}
 			}
-
 			// march
 			{
 				vec2 cell_size = default_cell_size*(1<<hierarchy);
@@ -95,11 +90,11 @@ void main()
 				pos += dir * dist[next_];
 
 				ivec2 next = next_ == 0 ? next_step.xz : next_step.zy;
-				map_index = ivec2((pos+ next*0.1) / default_cell_size.xy);
+				map_index = ivec2((pos+ next*0.5) / default_cell_size.xy);
 			}
 
 			// 終了判定
-			if(distance(start.xy, pos.xy) >= ray_dist.x)
+			if(all(greaterThanEqual(abs(ivec2(map_index)-istart), target_dist)))
 			{
 				// 距離を超えたら光がフラグメントにヒット
 				photon += vec3(0., 0., 1.) * emission_pos.w / (1+ray_dist.x*ray_dist.x);
@@ -113,7 +108,7 @@ void main()
 
 				ivec2 fragment_index_sub = map_index%8;
 				int fragment_index_sub_1d = fragment_index_sub.x + fragment_index_sub.y*8;
-				uint64_t bit = uint64_t(1)<<fragment_index_sub_1d;
+				uint64_t bit = 1ul<<fragment_index_sub_1d;
 
 				if((fragment_map & bit) != 0)
 				{ 

@@ -18,11 +18,11 @@ void main()
 {
 	uint tiled_1D_index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*u_pm_info.m_resolution.x; 
 	vec3 albedo = b_fragment[tiled_1D_index].albedo;
-	bool is_fragment = dot(albedo, albedo) >= 0.001;
+	bool is_fragment = dot(albedo, albedo) >= 0.01;
 
 	// fragment hierarchy
 	{
-		for(int i = 0; i < 7; i++)
+		for(int i = 0; i < 6; i++)
 		{
 			uvec2 local = gl_LocalInvocationID.xy>>i;
 			uint index = local.x + local.y*(32>>i);
@@ -43,12 +43,12 @@ void main()
 			if(all(equal(gl_LocalInvocationID.xy % (1<<i), uvec2(0))))
 			{
 				uvec2 idx2d = gl_GlobalInvocationID.xy>>i;
-				uint idx = idx2d.x+idx2d.y*(u_pm_info.m_resolution.x>>i);
+				uint store = idx2d.x+idx2d.y*(u_pm_info.m_resolution.x>>i);
 				int offset = u_pm_info.m_fragment_map_offset[i/4][i%4];
-				b_fragment_map[offset + idx] = s_fragment_num[index];
+				b_fragment_map[offset + store] = s_fragment_num[index];
 			}
+			barrier();
 		}
-		
 	}
 
 	// fragment map

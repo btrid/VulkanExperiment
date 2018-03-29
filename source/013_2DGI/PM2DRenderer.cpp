@@ -33,7 +33,7 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 		info.m_fragment_map_offset[4] = info.m_fragment_map_offset[3] + RenderHeight * RenderWidth / (8 * 8);
 		info.m_fragment_map_offset[5] = info.m_fragment_map_offset[4] + RenderHeight * RenderWidth / (16 * 16);
 		info.m_fragment_map_offset[6] = info.m_fragment_map_offset[5] + RenderHeight * RenderWidth / (32 * 32);
-		info.m_fragment_map_offset[7] = 0;
+		info.m_fragment_map_offset[7] = info.m_fragment_map_offset[6] + RenderHeight * RenderWidth / (64 * 64);
 		info.m_emission_tile_map_max = 16;
 		cmd.updateBuffer<Info>(m_fragment_info.getInfo().buffer, m_fragment_info.getInfo().offset, info);
 	}
@@ -55,6 +55,7 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 		desc.element_num += RenderWidth * RenderHeight / (8*8);
 		desc.element_num += RenderWidth * RenderHeight / (16*16);
 		desc.element_num += RenderWidth * RenderHeight / (32*32);
+		desc.element_num += RenderWidth * RenderHeight / (64*64);
 		m_fragment_map = context->m_storage_memory.allocateMemory(desc);
 	}
 	{
@@ -476,7 +477,7 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 
 	}
 
-#if 0
+#if 1
 	// photonmapping
 	{
 		vk::BufferMemoryBarrier to_read[] = {

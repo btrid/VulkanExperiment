@@ -65,14 +65,20 @@ void main()
 		for(;;)
 		{
 			int hierarchy = 0;
-			for(; hierarchy<6; hierarchy++)
 			{
-				ivec2 findex2d = map_index>>hierarchy;
-				int findex = findex2d.x + findex2d.y*(u_pm_info.m_resolution.x>>hierarchy);
-				if(b_fragment_map[findex + hierarchy_offset[hierarchy]] != 0)
+				for(; hierarchy<6; hierarchy++)
 				{
-					break;
+					ivec2 findex2d = map_index>>hierarchy;
+					int findex = findex2d.x + findex2d.y*(u_pm_info.m_resolution.x>>hierarchy);
+					int offset = hierarchy_offset[hierarchy];
+					if(b_fragment_map[findex + offset] != 0)
+					{
+						hierarchy = max(hierarchy-1, 0);
+						break;
+					}
 				}
+				if(hierarchy == 0){ hierarchy = 0;}
+
 			}
 
 			// march
