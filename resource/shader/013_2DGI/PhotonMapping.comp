@@ -58,15 +58,32 @@ void main()
 		const ivec2 istart = ivec2(emission_pos.xz);
 		const ivec2 iend = ivec2(end);
 		const ivec2 target_dist = abs(istart-iend);
+
+					// hit確認
+		{
+			ivec2 fragment_index = map_index/8;
+			int fragment_index_1d = fragment_index.x + fragment_index.y*reso.z;
+			uint64_t fragment_map = b_fragment_map[fragment_index_1d];
+
+			ivec2 fragment_index_sub = map_index%8;
+			int fragment_index_sub_1d = fragment_index_sub.x + fragment_index_sub.y*8;
+			uint64_t bit = 1ul<<fragment_index_sub_1d;
+
+			if((fragment_map & bit) != 0)
+			{ 
+				continue;
+			}
+		}
+
 		for(;;)
 		{
-			int hierarchy = 5;
+			int hierarchy =7;
 			{
 				for(; hierarchy>0; hierarchy--)
 				{
 					ivec2 findex2d = map_index>>hierarchy;
 					int findex = findex2d.x + findex2d.y*(u_pm_info.m_resolution.x>>hierarchy);
-					int offset = u_pm_info.m_fragment_hierarchy_offset[hierarchy/4][hierarchy%4];
+					int offset = getFragmentHierarchyOffset(hierarchy);
 					if(b_fragment_hierarchy[findex + offset] == 0)
 					{
 						break;

@@ -10,78 +10,57 @@
 #define USE_PM 0
 #include <PM.glsl>
 
+layout(push_constant) uniform InputVertex
+{
+	int level;
+} constant;
+
 layout (local_size_x = 32, local_size_y = 32) in;
 
-shared uint s_bit[16][2];
-shared int s_fragment_num[32*32];
+shared int s_fragment_num[16*16];
 void main()
 {
-	uint tiled_1D_index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*u_pm_info.m_resolution.x; 
-	vec3 albedo = b_fragment[tiled_1D_index].albedo;
-	bool is_fragment = dot(albedo, albedo) >= 0.01;
+	if(any(greaterThan(gl_GlobalInvocationID.xy, u_pm_info.m_resolution.xy>>(constant.level-1)))){
+		return;
+	}
 
 	// fragment hierarchy
+	int level = constant.level;
+	int prev_level = constant.level-1;
 	{
-		for(int i = 0; i < 6; i++)
 		{
-			uvec2 local = gl_LocalInvocationID.xy>>i;
-			uint index = local.x + local.y*(32>>i);
-			if(all(equal(gl_LocalInvocationID.xy % (1<<i), uvec2(0))))
+			uvec2 local = gl_LocalInvocationID.xy/2;
+			uint index = local.x + local.y*(gl_WorkGroupSize.x/2);
+			if(all(equal(gl_LocalInvocationID.xy % 2, uvec2(0))))
 			{
 				s_fragment_num[index] = 0;
 			}
 			barrier();
 			memoryBarrierShared();
 
-			if(is_fragment)
 			{
-				atomicAdd(s_fragment_num[index], 1);
+				uvec2 idx2d = gl_GlobalInvocationID.xy;
+				uint prev_store = idx2d.x+idx2d.y*(u_pm_info.m_resolution.x>>prev_level);
+				int prev_offset = getFragmentHierarchyOffset(prev_level);
+				int fragment = b_fragment_hierarchy[prev_offset + prev_store];
+
+				if(fragment!=0)
+				{
+					atomicAdd(s_fragment_num[index], fragment);
+				}
+				
 			}
 			barrier();
 			memoryBarrierShared();
 
-			if(all(equal(gl_LocalInvocationID.xy % (1<<i), uvec2(0))))
+			if(all(equal(gl_LocalInvocationID.xy % 2, uvec2(0))))
 			{
-				uvec2 idx2d = gl_GlobalInvocationID.xy>>i;
-				uint store = idx2d.x+idx2d.y*(u_pm_info.m_resolution.x>>i);
-				int offset = u_pm_info.m_fragment_hierarchy_offset[i/4][i%4];
+				uvec2 idx2d = gl_GlobalInvocationID.xy/2;
+				uint store = idx2d.x+idx2d.y*(u_pm_info.m_resolution.x>>level);
+				int offset = getFragmentHierarchyOffset(level);
 				b_fragment_hierarchy[offset + store] = s_fragment_num[index];
 			}
-			barrier();
 		}
-	}
-
-	// fragment map
-	{
-		uvec2 local = gl_LocalInvocationID.xy / 8;
-		uint index = local.x+local.y*4;
-		uvec2 localsub = gl_LocalInvocationID.xy % 8;
-		if(all(equal(localsub, uvec2(0))))
-		{
-			s_bit[index][0] = 0;
-			s_bit[index][1] = 0;
-		}
-		barrier();
-		memoryBarrierShared();
-
-		if(is_fragment)
-		{
-			uint bit_offset = localsub.x + localsub.y*8;
-			uint hilow = bit_offset/32;
-			uint offset = bit_offset%32;
-			atomicOr(s_bit[index][hilow], 1<<offset);
-		}
-		barrier();
-		memoryBarrierShared();
-
-		if(all(equal(localsub, uvec2(0))))
-		{
-			uint64_t bit =  uint64_t(s_bit[index][1]) << 32 | s_bit[index][0];
-			uvec2 global = gl_GlobalInvocationID.xy/8; 
-			uint store = global.x + global.y*u_pm_info.m_resolution.x/8;
-			b_fragment_map[store] = bit;
-		}
-
 	}
 }
 

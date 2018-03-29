@@ -28,6 +28,7 @@ struct PM2DRenderer
 	enum Shader
 	{
 		//		ShaderClear,
+		ShaderMakeFragmentMap,
 		ShaderMakeFragmentHierarchy,
 		ShaderLightCulling,
 		ShaderPhotonMapping,
@@ -39,6 +40,7 @@ struct PM2DRenderer
 	};
 	enum PipelineLayout
 	{
+		PipelineLayoutMakeFragmentMap,
 		PipelineLayoutMakeFragmentHierarchy,
 		PipelineLayoutLightCulling,
 		PipelineLayoutPhotonMapping,
@@ -47,6 +49,7 @@ struct PM2DRenderer
 	};
 	enum Pipeline
 	{
+		PipelineMakeFragmentMap,
 		PipelineMakeFragmentHierarchy,
 		PipelineLightCulling,
 		PipelinePhotonMapping,

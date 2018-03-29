@@ -53,6 +53,7 @@ layout(std430, set=USE_PM, binding=20) restrict buffer ColorBuffer {
 	vec4 b_color[];
 };
 
+#define getFragmentHierarchyOffset(_i) (u_pm_info.m_fragment_hierarchy_offset[((_i)-1)/4][((_i)-1)%4])
 #define culling_light_power() (0.001)
 #define light_area() (33.)
 #endif

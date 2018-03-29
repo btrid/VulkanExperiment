@@ -55,13 +55,13 @@ void main()
 
 		for(;;)
 		{
-			int hierarchy = 5;
+			int hierarchy = 7;
 			{
 				for(; hierarchy>0; hierarchy--)
 				{
 					ivec2 findex2d = map_index>>hierarchy;
 					int findex = findex2d.x + findex2d.y*(u_pm_info.m_resolution.x>>hierarchy);
-					int offset = u_pm_info.m_fragment_hierarchy_offset[hierarchy/4][hierarchy%4];
+					int offset = u_pm_info.m_fragment_hierarchy_offset[(hierarchy-1)/4][(hierarchy-1)%4];
 					if(b_fragment_hierarchy[findex + offset] == 0)
 					{
 						break;
