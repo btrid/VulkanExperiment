@@ -31,6 +31,8 @@ struct PM2DRenderer
 		ShaderMakeFragmentHierarchy,
 		ShaderLightCulling,
 		ShaderPhotonMapping,
+		ShaderPhotonMappingVS,
+		ShaderPhotonMappingFS,
 		ShaderRenderingVS,
 		ShaderRenderingFS,
 		ShaderNum,
@@ -48,6 +50,7 @@ struct PM2DRenderer
 		PipelineMakeFragmentHierarchy,
 		PipelineLightCulling,
 		PipelinePhotonMapping,
+		PipelinePhotonMappingG,
 		PipelineRendering,
 		PipelineNum,
 	};

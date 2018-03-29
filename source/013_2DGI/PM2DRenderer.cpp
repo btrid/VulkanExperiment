@@ -212,6 +212,8 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			"MakeFragmentHierarchy.comp.spv",
 			"LightCulling.comp.spv",
 			"PhotonMapping.comp.spv",
+			"PhotonMapping.vert.spv",
+			"PhotonMapping.frag.spv",
 			"PMRendering.vert.spv",
 			"PMRendering.frag.spv",
 		};
@@ -330,6 +332,17 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			.setPName("main")
 			.setStage(vk::ShaderStageFlagBits::eFragment),
 		};
+		vk::PipelineShaderStageCreateInfo pm_shader_info[] =
+		{
+			vk::PipelineShaderStageCreateInfo()
+			.setModule(m_shader[ShaderPhotonMappingVS].get())
+			.setPName("main")
+			.setStage(vk::ShaderStageFlagBits::eVertex),
+			vk::PipelineShaderStageCreateInfo()
+			.setModule(m_shader[ShaderPhotonMappingFS].get())
+			.setPName("main")
+			.setStage(vk::ShaderStageFlagBits::eFragment),
+		};
 
 		// assembly
 		vk::PipelineInputAssemblyStateCreateInfo assembly_info;
@@ -389,9 +402,22 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			.setRenderPass(m_render_pass.get())
 			.setPDepthStencilState(&depth_stencil_info)
 			.setPColorBlendState(&blend_info),
+			vk::GraphicsPipelineCreateInfo()
+			.setStageCount(array_length(pm_shader_info))
+			.setPStages(pm_shader_info)
+			.setPVertexInputState(&vertex_input_info)
+			.setPInputAssemblyState(&assembly_info)
+			.setPViewportState(&viewportInfo)
+			.setPRasterizationState(&rasterization_info)
+			.setPMultisampleState(&sample_info)
+			.setLayout(m_pipeline_layout[PipelineLayoutPhotonMapping].get())
+			.setRenderPass(m_render_pass.get())
+			.setPDepthStencilState(&depth_stencil_info)
+			.setPColorBlendState(&blend_info),
 		};
 		auto graphics_pipeline = context->m_device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info);
 		m_pipeline[PipelineRendering] = std::move(graphics_pipeline[0]);
+		m_pipeline[PipelinePhotonMappingG] = std::move(graphics_pipeline[1]);
 
 	}
 }
@@ -450,6 +476,7 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 
 	}
 
+#if 0
 	// photonmapping
 	{
 		vk::BufferMemoryBarrier to_read[] = {
@@ -482,7 +509,30 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 
 		cmd.endRenderPass();
 	}
+#else
+	{
+		vk::BufferMemoryBarrier to_read[] = {
+			m_fragment_hierarchy.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			m_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			m_emission_tile_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+		};
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eFragmentShader, {},
+			0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
+		vk::RenderPassBeginInfo begin_render_Info;
+		begin_render_Info.setRenderPass(m_render_pass.get());
+		begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), m_render_target->m_resolution));
+		begin_render_Info.setFramebuffer(m_framebuffer.get());
+		cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
+
+		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PipelinePhotonMappingG].get());
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayoutPhotonMapping].get(), 0, m_descriptor_set.get(), {});
+		cmd.draw(3, 1, 0, 0);
+
+		cmd.endRenderPass();
+
+	}
+#endif
 	cmd.end();
 	return cmd;
 }

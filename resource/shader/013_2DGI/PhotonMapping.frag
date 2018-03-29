@@ -9,9 +9,12 @@
 #define USE_PM 0
 #include <PM.glsl>
 
-layout (local_size_x = 32, local_size_y = 32) in;
-shared Emission s_emission[64];
-shared uint64_t s_fragment_map[16];
+layout(location=1) in Data
+{
+	vec2 texcoord;
+}in_data;
+
+layout(location = 0) out vec4 FragColor;
 void main()
 {
 	int hierarchy_offset[8];
@@ -25,27 +28,21 @@ void main()
 
 	const vec2 default_cell_size = vec2(1.);
 	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
-	const ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
 
+	const ivec2 pixel = ivec2(in_data.texcoord * u_pm_info.m_resolution.xy);
 	const vec2 end = vec2(pixel);
 	vec3 photon = vec3(0.);
 
 	const ivec2 tile_index_2d = pixel / ivec2(u_pm_info.m_emission_tile_size.xy);
 	const int tile_index = int(tile_index_2d.x + tile_index_2d.y*u_pm_info.m_emission_tile_num.x);
+
 	int emission_num = min(b_emission_tile_counter[tile_index.x], 64);
-	{
-		if(gl_LocalInvocationIndex < emission_num)
-		{
-			int emission_index = b_emission_tile_map[tile_index*u_pm_info.m_emission_tile_map_max + gl_LocalInvocationIndex];
-			s_emission[gl_LocalInvocationIndex] = b_emission[emission_index];		
-		}
-		barrier();
-		memoryBarrierShared();
-	}
 	for(int i = 0; i < emission_num; i++)
 	{
-		vec4 emission = s_emission[i].value;
-		vec4 emission_pos = s_emission[i].pos;
+		int emission_index = b_emission_tile_map[tile_index*u_pm_info.m_emission_tile_map_max+i];
+		Emission emission = b_emission[emission_index];
+		vec4 emission_value = emission.value;
+		vec4 emission_pos = emission.pos;
 		const vec2 start = emission_pos.xz;
 		vec2 pos = start;
 		ivec2 map_index = ivec2(pos / default_cell_size.xy);
@@ -122,6 +119,7 @@ void main()
 			}
 		}
 	}
-	const int pixel_1d = pixel.x + pixel.y*u_pm_info.m_resolution.x;
-	b_color[pixel_1d] = vec4(photon, 1.);
+//	const int pixel_1d = pixel.x + pixel.y*u_pm_info.m_resolution.x;
+//	b_color[pixel_1d] = vec4(photon, 1.);
+	FragColor = vec4(photon, 1.);
 }
