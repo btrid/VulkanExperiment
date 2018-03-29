@@ -11,7 +11,7 @@ struct PMInfo
 	uvec2 m_emission_tile_num;
 	uvec2 _p;
 	vec4 m_position;
-	ivec4 m_fragment_map_offset[2];
+	ivec4 m_fragment_hierarchy_offset[2];
 	int m_emission_tile_map_max;
 };
 struct Fragment
@@ -32,10 +32,10 @@ layout(std430, set=USE_PM, binding=1) restrict buffer FragmentBuffer {
 	Fragment b_fragment[];
 };
 layout(std430, set=USE_PM, binding=2) restrict buffer FragmentHierarchyBuffer {
-	uint64_t b_fragment_hierarchy[];
+	uint64_t b_fragment_map[];
 };
 layout(std430, set=USE_PM, binding=3) restrict buffer FragmentHierarchyMapBuffer {
-	int b_fragment_map[];
+	int b_fragment_hierarchy[];
 };
 layout(std430, set=USE_PM, binding=10) restrict buffer EmissiveCounter {
 	ivec3 b_emission_counter;

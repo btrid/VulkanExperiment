@@ -26,14 +26,14 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 		info.m_emission_tile_num = info.m_resolution / info.m_emission_tile_size;
 		info.m_camera_PV = glm::ortho(-RenderWidth * 0.5f, RenderWidth*0.5f, -RenderHeight * 0.5f, RenderHeight*0.5f);
 		info.m_camera_PV *= glm::lookAt(vec3(0., -1.f, 0.f) + info.m_position.xyz(), info.m_position.xyz(), vec3(0.f, 0.f, 1.f));
-		info.m_fragment_map_offset[0] = 0;
-		info.m_fragment_map_offset[1] = info.m_fragment_map_offset[0] + RenderHeight * RenderWidth / (1 * 1);
-		info.m_fragment_map_offset[2] = info.m_fragment_map_offset[1] + RenderHeight * RenderWidth / (2 * 2);
-		info.m_fragment_map_offset[3] = info.m_fragment_map_offset[2] + RenderHeight * RenderWidth / (4 * 4);
-		info.m_fragment_map_offset[4] = info.m_fragment_map_offset[3] + RenderHeight * RenderWidth / (8 * 8);
-		info.m_fragment_map_offset[5] = info.m_fragment_map_offset[4] + RenderHeight * RenderWidth / (16 * 16);
-		info.m_fragment_map_offset[6] = info.m_fragment_map_offset[5] + RenderHeight * RenderWidth / (32 * 32);
-		info.m_fragment_map_offset[7] = info.m_fragment_map_offset[6] + RenderHeight * RenderWidth / (64 * 64);
+		info.m_fragment_hierarchy_offset[0] = 0;
+		info.m_fragment_hierarchy_offset[1] = info.m_fragment_hierarchy_offset[0] + RenderHeight * RenderWidth / (1 * 1);
+		info.m_fragment_hierarchy_offset[2] = info.m_fragment_hierarchy_offset[1] + RenderHeight * RenderWidth / (2 * 2);
+		info.m_fragment_hierarchy_offset[3] = info.m_fragment_hierarchy_offset[2] + RenderHeight * RenderWidth / (4 * 4);
+		info.m_fragment_hierarchy_offset[4] = info.m_fragment_hierarchy_offset[3] + RenderHeight * RenderWidth / (8 * 8);
+		info.m_fragment_hierarchy_offset[5] = info.m_fragment_hierarchy_offset[4] + RenderHeight * RenderWidth / (16 * 16);
+		info.m_fragment_hierarchy_offset[6] = info.m_fragment_hierarchy_offset[5] + RenderHeight * RenderWidth / (32 * 32);
+		info.m_fragment_hierarchy_offset[7] = info.m_fragment_hierarchy_offset[6] + RenderHeight * RenderWidth / (64 * 64);
 		info.m_emission_tile_map_max = 16;
 		cmd.updateBuffer<Info>(m_fragment_info.getInfo().buffer, m_fragment_info.getInfo().offset, info);
 	}
@@ -45,7 +45,7 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 	{
 		btr::BufferMemoryDescriptorEx<int64_t> desc;
 		desc.element_num = RenderWidth * RenderHeight / 8 / 8;
-		m_fragment_hierarchy = context->m_storage_memory.allocateMemory(desc);
+		m_fragment_map = context->m_storage_memory.allocateMemory(desc);
 	}
 	{
 		btr::BufferMemoryDescriptorEx<int32_t> desc;
@@ -56,7 +56,7 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 		desc.element_num += RenderWidth * RenderHeight / (16*16);
 		desc.element_num += RenderWidth * RenderHeight / (32*32);
 		desc.element_num += RenderWidth * RenderHeight / (64*64);
-		m_fragment_map = context->m_storage_memory.allocateMemory(desc);
+		m_fragment_hierarchy = context->m_storage_memory.allocateMemory(desc);
 	}
 	{
 		btr::BufferMemoryDescriptorEx<ivec3> desc;
@@ -165,8 +165,8 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 		};
 		vk::DescriptorBufferInfo storages[] = {
 			m_fragment_buffer.getInfo(),
-			m_fragment_hierarchy.getInfo(),
 			m_fragment_map.getInfo(),
+			m_fragment_hierarchy.getInfo(),
 		};
 		vk::DescriptorBufferInfo emission_storages[] = {
 			m_emission_counter.getInfo(),
@@ -455,8 +455,8 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 	// make hierarchy
 	{
 		vk::BufferMemoryBarrier to_write[] = {
-			m_fragment_hierarchy.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
 			m_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
+			m_fragment_hierarchy.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 			0, nullptr, array_length(to_write), to_write, 0, nullptr);
@@ -481,8 +481,8 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 	// photonmapping
 	{
 		vk::BufferMemoryBarrier to_read[] = {
-			m_fragment_hierarchy.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			m_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			m_fragment_hierarchy.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			m_emission_tile_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
@@ -513,8 +513,8 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 #else
 	{
 		vk::BufferMemoryBarrier to_read[] = {
-			m_fragment_hierarchy.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			m_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			m_fragment_hierarchy.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			m_emission_tile_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eFragmentShader, {},

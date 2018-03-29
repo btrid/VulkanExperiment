@@ -66,8 +66,8 @@ void main()
 				{
 					ivec2 findex2d = map_index>>hierarchy;
 					int findex = findex2d.x + findex2d.y*(u_pm_info.m_resolution.x>>hierarchy);
-					int offset = u_pm_info.m_fragment_map_offset[hierarchy/4][hierarchy%4];
-					if(b_fragment_map[findex + offset] == 0)
+					int offset = u_pm_info.m_fragment_hierarchy_offset[hierarchy/4][hierarchy%4];
+					if(b_fragment_hierarchy[findex + offset] == 0)
 					{
 						break;
 					}
@@ -104,7 +104,7 @@ void main()
 			{
 				ivec2 fragment_index = map_index/8;
 				int fragment_index_1d = fragment_index.x + fragment_index.y*reso.z;
-				uint64_t fragment_map = b_fragment_hierarchy[fragment_index_1d];
+				uint64_t fragment_map = b_fragment_map[fragment_index_1d];
 
 				ivec2 fragment_index_sub = map_index%8;
 				int fragment_index_sub_1d = fragment_index_sub.x + fragment_index_sub.y*8;

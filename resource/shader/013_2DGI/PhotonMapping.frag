@@ -17,15 +17,6 @@ layout(location=1) in Data
 layout(location = 0) out vec4 FragColor;
 void main()
 {
-	int hierarchy_offset[8];
-	hierarchy_offset[0] = 0;
-	hierarchy_offset[1] = hierarchy_offset[0] + u_pm_info.m_resolution.x * u_pm_info.m_resolution.y / (1 * 1);
-	hierarchy_offset[2] = hierarchy_offset[1] + u_pm_info.m_resolution.x * u_pm_info.m_resolution.y / (2 * 2);
-	hierarchy_offset[3] = hierarchy_offset[2] + u_pm_info.m_resolution.x * u_pm_info.m_resolution.y / (4 * 4);
-	hierarchy_offset[4] = hierarchy_offset[3] + u_pm_info.m_resolution.x * u_pm_info.m_resolution.y / (8 * 8);
-	hierarchy_offset[5] = hierarchy_offset[4] + u_pm_info.m_resolution.x * u_pm_info.m_resolution.y / (16 * 16);
-	hierarchy_offset[6] = hierarchy_offset[5] + u_pm_info.m_resolution.x * u_pm_info.m_resolution.y / (32 * 32);
-
 	const vec2 default_cell_size = vec2(1.);
 	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
 
@@ -64,21 +55,18 @@ void main()
 
 		for(;;)
 		{
-			int hierarchy = 0;
+			int hierarchy = 5;
 			{
-				for(; hierarchy<6; hierarchy++)
+				for(; hierarchy>0; hierarchy--)
 				{
 					ivec2 findex2d = map_index>>hierarchy;
 					int findex = findex2d.x + findex2d.y*(u_pm_info.m_resolution.x>>hierarchy);
-					int offset = hierarchy_offset[hierarchy];
-					if(b_fragment_map[findex + offset] != 0)
+					int offset = u_pm_info.m_fragment_hierarchy_offset[hierarchy/4][hierarchy%4];
+					if(b_fragment_hierarchy[findex + offset] == 0)
 					{
-						hierarchy = max(hierarchy-1, 0);
 						break;
 					}
 				}
-				if(hierarchy == 0){ hierarchy = 0;}
-
 			}
 
 			// march
@@ -112,7 +100,7 @@ void main()
 			{
 				ivec2 fragment_index = map_index/8;
 				int fragment_index_1d = fragment_index.x + fragment_index.y*reso.z;
-				uint64_t fragment_map = b_fragment_hierarchy[fragment_index_1d];
+				uint64_t fragment_map = b_fragment_map[fragment_index_1d];
 
 				ivec2 fragment_index_sub = map_index%8;
 				int fragment_index_sub_1d = fragment_index_sub.x + fragment_index_sub.y*8;

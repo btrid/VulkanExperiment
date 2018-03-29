@@ -44,8 +44,8 @@ void main()
 			{
 				uvec2 idx2d = gl_GlobalInvocationID.xy>>i;
 				uint store = idx2d.x+idx2d.y*(u_pm_info.m_resolution.x>>i);
-				int offset = u_pm_info.m_fragment_map_offset[i/4][i%4];
-				b_fragment_map[offset + store] = s_fragment_num[index];
+				int offset = u_pm_info.m_fragment_hierarchy_offset[i/4][i%4];
+				b_fragment_hierarchy[offset + store] = s_fragment_num[index];
 			}
 			barrier();
 		}
@@ -79,7 +79,7 @@ void main()
 			uint64_t bit =  uint64_t(s_bit[index][1]) << 32 | s_bit[index][0];
 			uvec2 global = gl_GlobalInvocationID.xy/8; 
 			uint store = global.x + global.y*u_pm_info.m_resolution.x/8;
-			b_fragment_hierarchy[store] = bit;
+			b_fragment_map[store] = bit;
 		}
 
 	}
