@@ -18,5 +18,5 @@ layout(location = 0) out vec4 FragColor;
 void main()
 {
 	ivec2 index = ivec2(in_modeldata.texcoord * u_pm_info.m_resolution.xy);
-	FragColor = b_color[index.x + index.y * int(u_pm_info.m_resolution.x)]*100;
+	FragColor = b_color[index.x + index.y * int(u_pm_info.m_resolution.x)];
 }

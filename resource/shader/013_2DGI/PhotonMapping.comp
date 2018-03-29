@@ -18,9 +18,8 @@ void main()
 	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
 	const ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
 
-	const vec2 end = vec2(pixel);
+	const vec2 end = vec2(pixel) + 0.5;
 	vec3 photon = vec3(0.);
-
 	const ivec2 tile_index_2d = pixel / ivec2(u_pm_info.m_emission_tile_size.xy);
 	const int tile_index = int(tile_index_2d.x + tile_index_2d.y*u_pm_info.m_emission_tile_num.x);
 	int emission_num = min(b_emission_tile_counter[tile_index.x], 64);
@@ -36,13 +35,13 @@ void main()
 	for(int i = 0; i < emission_num; i++)
 	{
 		vec4 emission = s_emission[i].value;
-		vec4 emission_pos = ivec4(s_emission[i].pos) * 1.;
+		vec4 emission_pos = ivec4(s_emission[i].pos) * 1. + 0.5;
 		const vec2 start = emission_pos.xz;
 
 		const vec2 diff = (end - start);
-		if(dot(diff, diff) <= 0.01)
+		if(dot(diff, diff) <= 10.1)
 		{
-			photon += vec3(0., 0., 1.) * emission_pos.w;
+			photon = vec3(1., 0., 0.) * emission_pos.w;
 			continue;
 		}
 		const float ray_dist = length(diff.xy);
@@ -59,19 +58,20 @@ void main()
 		const ivec2 iend = ivec2(end);
 		const ivec2 target_dist = abs(istart-iend);
 
-					// hit確認
 		{
-			ivec2 fragment_index = map_index/8;
+			ivec2 fragment_index = iend/8;
 			int fragment_index_1d = fragment_index.x + fragment_index.y*reso.z;
 			uint64_t fragment_map = b_fragment_map[fragment_index_1d];
 
-			ivec2 fragment_index_sub = map_index%8;
+			ivec2 fragment_index_sub = iend%8;
 			int fragment_index_sub_1d = fragment_index_sub.x + fragment_index_sub.y*8;
 			uint64_t bit = 1ul<<fragment_index_sub_1d;
 
 			if((fragment_map & bit) != 0)
 			{ 
-				continue;
+				// kabe
+				photon = vec3(1., 0., 0.);
+				break;
 			}
 		}
 
@@ -108,6 +108,7 @@ void main()
 
 				ivec2 next = next_ == 0 ? next_step.xz : next_step.zy;
 				map_index = ivec2((pos+ next*0.5) / default_cell_size.xy);
+
 			}
 
 			// 終了判定
@@ -117,6 +118,7 @@ void main()
 				photon += vec3(0., 0., 1.) * emission_pos.w / (1+ray_dist.x*ray_dist.x);
 				break;
 			}
+
 			// hit確認
 			{
 				ivec2 fragment_index = map_index/8;
