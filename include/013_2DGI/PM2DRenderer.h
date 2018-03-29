@@ -66,6 +66,7 @@ struct PM2DRenderer
 		uvec2 _p;
 		vec4 m_position;
 		int m_fragment_hierarchy_offset[8];
+		int m_fragment_map_hierarchy_offset[8];
 		int m_emission_tile_map_max;
 	};
 	struct Fragment

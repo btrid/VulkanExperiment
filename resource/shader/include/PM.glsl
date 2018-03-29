@@ -12,6 +12,7 @@ struct PMInfo
 	uvec2 _p;
 	vec4 m_position;
 	ivec4 m_fragment_hierarchy_offset[2];
+	ivec4 m_fragment_map_hierarchy_offset[2];
 	int m_emission_tile_map_max;
 };
 struct Fragment
@@ -54,6 +55,7 @@ layout(std430, set=USE_PM, binding=20) restrict buffer ColorBuffer {
 };
 
 #define getFragmentHierarchyOffset(_i) (u_pm_info.m_fragment_hierarchy_offset[((_i)-1)/4][((_i)-1)%4])
+#define getFragmentMapHierarchyOffset(_i) (u_pm_info.m_fragment_map_hierarchy_offset[((_i)-1)/4][((_i)-1)%4])
 #define culling_light_power() (0.001)
 #define light_area() (33.)
 #endif

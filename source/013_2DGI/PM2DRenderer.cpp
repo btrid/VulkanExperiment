@@ -34,6 +34,16 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 		info.m_fragment_hierarchy_offset[5] = info.m_fragment_hierarchy_offset[4] + RenderHeight * RenderWidth / (32 * 32);
 		info.m_fragment_hierarchy_offset[6] = info.m_fragment_hierarchy_offset[5] + RenderHeight * RenderWidth / (64 * 64);
 		info.m_fragment_hierarchy_offset[7] = info.m_fragment_hierarchy_offset[6] + RenderHeight * RenderWidth / (128 * 128);
+
+		int size = RenderHeight * RenderWidth / 64;
+		info.m_fragment_map_hierarchy_offset[0] = 0;
+		info.m_fragment_map_hierarchy_offset[1] = info.m_fragment_map_hierarchy_offset[0] + size / (2 * 2);
+		info.m_fragment_map_hierarchy_offset[2] = info.m_fragment_map_hierarchy_offset[1] + size / (4 * 4);
+		info.m_fragment_map_hierarchy_offset[3] = info.m_fragment_map_hierarchy_offset[2] + size / (8 * 8);
+		info.m_fragment_map_hierarchy_offset[4] = info.m_fragment_map_hierarchy_offset[3] + size / (16 * 16);
+		info.m_fragment_map_hierarchy_offset[5] = info.m_fragment_map_hierarchy_offset[4] + size / (32 * 32);
+		info.m_fragment_map_hierarchy_offset[6] = info.m_fragment_map_hierarchy_offset[5] + size / (64 * 64);
+		info.m_fragment_map_hierarchy_offset[7] = info.m_fragment_map_hierarchy_offset[6] + size / (128 * 128);
 		info.m_emission_tile_map_max = 16;
 		cmd.updateBuffer<Info>(m_fragment_info.getInfo().buffer, m_fragment_info.getInfo().offset, info);
 	}
@@ -44,7 +54,16 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 	}
 	{
 		btr::BufferMemoryDescriptorEx<int64_t> desc;
-		desc.element_num = RenderWidth * RenderHeight / 8 / 8;
+		int size = RenderHeight * RenderWidth / 64;
+		desc.element_num = size;
+		desc.element_num += size / (2 * 2);
+		desc.element_num += size / (4 * 4);
+		desc.element_num += size / (8 * 8);
+		desc.element_num += size / (16 * 16);
+		desc.element_num += size / (32 * 32);
+		desc.element_num += size / (64 * 64);
+		desc.element_num += size / (128 * 128);
+		desc.element_num += size / (256 * 256);
 		m_fragment_map = context->m_storage_memory.allocateMemory(desc);
 	}
 	{
