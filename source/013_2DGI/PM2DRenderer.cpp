@@ -596,20 +596,27 @@ DebugPM2D::DebugPM2D(const std::shared_ptr<btr::Context>& context, const std::sh
 {
 	m_context = context;
 	m_renderer = renderer;
-	m_emission.resize(16);
-	for (auto& e : m_emission)
-	{
-		e.pos = vec4(std::rand() % 500 + 50, std::rand() % 500 + 50, std::rand() % 500 + 50, 300.f);
-		e.value = vec4(std::rand() % 100 * 0.01f, std::rand() % 100 * 0.01f, std::rand() % 100 * 0.01f, 1.f);
-	}
+
 
 	std::vector<PM2DRenderer::Fragment> map_data(renderer->RenderWidth*renderer->RenderHeight);
 	{
+		m_emission.resize(32);
+		for (auto& e : m_emission)
+		{
+			e.pos = vec4(std::rand() % 640, std::rand() % 640, std::rand() % 640, std::rand() % 400 + 50.f);
+			e.value = vec4(std::rand() % 100 * 0.01f, std::rand() % 100 * 0.01f, std::rand() % 100 * 0.01f, 1.f);
+		}
 		std::vector<ivec4> rect;
+#if 1
 		rect.emplace_back(400, 400, 200, 400);
 		rect.emplace_back(300, 200, 100, 100);
 		rect.emplace_back(80, 50, 200, 30);
+#else
+		for (int i = 0; i < 300; i++) {
+			rect.emplace_back(std::rand() % 640, std::rand() % 640, std::rand() % 30, std::rand() % 30);
+		}
 
+#endif
 		for (size_t y = 0; y < renderer->RenderHeight; y++)
 		{
 			for (size_t x = 0; x < renderer->RenderWidth; x++)
@@ -626,6 +633,8 @@ DebugPM2D::DebugPM2D(const std::shared_ptr<btr::Context>& context, const std::sh
 
 		}
 	}
+
+
 
 	btr::BufferMemoryDescriptorEx<PM2DRenderer::Fragment> desc;
 	desc.element_num = map_data.size();

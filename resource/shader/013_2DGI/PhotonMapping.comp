@@ -11,7 +11,6 @@
 
 layout (local_size_x = 32, local_size_y = 32) in;
 shared Emission s_emission[64];
-shared uint64_t s_fragment_map[16];
 void main()
 {
 	const vec2 default_cell_size = vec2(1.);
@@ -19,6 +18,7 @@ void main()
 	const ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
 
 	const vec2 end = vec2(pixel) + 0.5;
+	const ivec2 iend = ivec2(end);
 	vec3 photon = vec3(0.);
 	const ivec2 tile_index_2d = pixel / ivec2(u_pm_info.m_emission_tile_size.xy);
 	const int tile_index = int(tile_index_2d.x + tile_index_2d.y*u_pm_info.m_emission_tile_num.x);
@@ -32,6 +32,24 @@ void main()
 		barrier();
 		memoryBarrierShared();
 	}
+
+	{
+		ivec2 fragment_index = iend/8;
+		int fragment_index_1d = fragment_index.x + fragment_index.y*reso.z;
+		uint64_t fragment_map = b_fragment_map[fragment_index_1d];
+
+		ivec2 fragment_index_sub = iend%8;
+		int fragment_index_sub_1d = fragment_index_sub.x + fragment_index_sub.y*8;
+		uint64_t bit = 1ul<<fragment_index_sub_1d;
+
+		if((fragment_map & bit) != 0)
+		{ 
+			// kabe
+			photon = vec3(1., 0., 0.);
+			emission_num = 0;
+		}
+	}
+
 	for(int i = 0; i < emission_num; i++)
 	{
 		vec4 emission = s_emission[i].value;
@@ -41,8 +59,9 @@ void main()
 		const vec2 diff = (end - start);
 		if(dot(diff, diff) <= 10.1)
 		{
-			photon = vec3(1., 0., 0.) * emission_pos.w;
-			continue;
+			// ライト
+			photon = vec3(0., 1., 0.);
+			break;
 		}
 		const float ray_dist = length(diff.xy);
 
@@ -55,29 +74,12 @@ void main()
 		vec2 pos = start;
 		ivec2 map_index = ivec2(pos / default_cell_size.xy);
 		const ivec2 istart = ivec2(emission_pos.xz);
-		const ivec2 iend = ivec2(end);
 		const ivec2 target_dist = abs(istart-iend);
 
-		{
-			ivec2 fragment_index = iend/8;
-			int fragment_index_1d = fragment_index.x + fragment_index.y*reso.z;
-			uint64_t fragment_map = b_fragment_map[fragment_index_1d];
-
-			ivec2 fragment_index_sub = iend%8;
-			int fragment_index_sub_1d = fragment_index_sub.x + fragment_index_sub.y*8;
-			uint64_t bit = 1ul<<fragment_index_sub_1d;
-
-			if((fragment_map & bit) != 0)
-			{ 
-				// kabe
-				photon = vec3(1., 0., 0.);
-				break;
-			}
-		}
 
 		for(;;)
 		{
-			int hierarchy =7;
+			int hierarchy=7;
 			{
 				for(; hierarchy>0; hierarchy--)
 				{
@@ -107,7 +109,7 @@ void main()
 				pos += dir * dist[next_];
 
 				ivec2 next = next_ == 0 ? next_step.xz : next_step.zy;
-				map_index = ivec2((pos+ next*0.5) / default_cell_size.xy);
+				map_index = ivec2(pos+ next*0.5);
 
 			}
 
