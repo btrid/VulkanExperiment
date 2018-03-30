@@ -10,6 +10,6 @@ glslc.exe %include% -w -x glsl %output%PMRendering2.vert.spv PMRendering2.vert
 glslc.exe %include% -w -x glsl %output%PMRendering2.frag.spv PMRendering2.frag
 
 
-glslc.exe %include% -w -x glsl %output%PMPointLight.vert.spv PMPointLight.vert
-glslc.exe %include% -w -x glsl %output%PMPointLight.frag.spv PMPointLight.frag
+glslc.exe %include% -w -x glsl %output%PMPointLight2.vert.spv PMPointLight2.vert
+glslc.exe %include% -w -x glsl %output%PMPointLight2.frag.spv PMPointLight2.frag
 

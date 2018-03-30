@@ -733,8 +733,8 @@ DebugPM2D::DebugPM2D(const std::shared_ptr<btr::Context>& context, const std::sh
 	{
 		const char* name[] =
 		{
-			"PMPointLight.vert.spv",
-			"PMPointLight.frag.spv",
+			"PMPointLight2.vert.spv",
+			"PMPointLight2.frag.spv",
 		};
 		static_assert(array_length(name) == array_length(m_shader), "not equal shader num");
 

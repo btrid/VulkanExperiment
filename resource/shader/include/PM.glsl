@@ -13,6 +13,8 @@ struct PMInfo
 	vec4 m_position;
 	ivec4 m_fragment_hierarchy_offset[2];
 	ivec4 m_fragment_map_hierarchy_offset[2];
+	ivec4 m_emission_buffer_size;
+	ivec4 m_emission_buffer_offset;
 	int m_emission_tile_map_max;
 };
 struct Fragment
@@ -21,7 +23,6 @@ struct Fragment
 };
 struct Emission 
 {
-	vec4 pos;
 	vec4 value;
 };
 
@@ -39,15 +40,21 @@ layout(std430, set=USE_PM, binding=3) restrict buffer FragmentHierarchyMapBuffer
 	int b_fragment_hierarchy[];
 };
 layout(std430, set=USE_PM, binding=10) restrict buffer EmissiveCounter {
-	ivec3 b_emission_counter;
+	ivec4 b_emission_counter;
 };
 layout(std430, set=USE_PM, binding=11) restrict buffer EmissiveBuffer {
 	Emission b_emission[];
 };
-layout(std430, set=USE_PM, binding=12) restrict buffer EmissiveTileCounter {
+layout(std430, set=USE_PM, binding=12) restrict buffer EmissiveListBuffer {
+	int b_emission_list[];
+};
+layout(std430, set=USE_PM, binding=13) restrict buffer EmissiveMapBuffer {
+	int b_emission_map[];
+};
+layout(std430, set=USE_PM, binding=14) restrict buffer EmissiveTileCounter {
 	int b_emission_tile_counter[];
 };
-layout(std430, set=USE_PM, binding=13) restrict buffer EmissiveTileMapBuffer {
+layout(std430, set=USE_PM, binding=15) restrict buffer EmissiveTileMapBuffer {
 	int b_emission_tile_map[];
 };
 layout(std430, set=USE_PM, binding=20) restrict buffer ColorBuffer {

@@ -11,6 +11,7 @@
 
 layout (local_size_x = 32, local_size_y = 32) in;
 shared Emission s_emission[64];
+shared ivec2 s_emission_pos[64];
 void main()
 {
 	const vec2 default_cell_size = vec2(1.);
@@ -27,7 +28,8 @@ void main()
 		if(gl_LocalInvocationIndex < emission_num)
 		{
 			int emission_index = b_emission_tile_map[tile_index*u_pm_info.m_emission_tile_map_max + gl_LocalInvocationIndex];
-			s_emission[gl_LocalInvocationIndex] = b_emission[emission_index];		
+			s_emission[gl_LocalInvocationIndex] = b_emission[emission_index];
+			s_emission_pos[gl_LocalInvocationIndex] = ivec2(emission_index%u_pm_info.m_resolution.x, emission_index/u_pm_info.m_resolution.x);
 		}
 		barrier();
 		memoryBarrierShared();
@@ -53,8 +55,8 @@ void main()
 	for(int i = 0; i < emission_num; i++)
 	{
 		vec4 emission = s_emission[i].value;
-		vec4 emission_pos = ivec4(s_emission[i].pos) * 1. + 0.5;
-		const vec2 start = emission_pos.xz;
+		vec2 emission_pos = vec2(s_emission_pos[i]) + 0.5;
+		const vec2 start = emission_pos.xy;
 
 		const vec2 diff = (end - start);
 		if(dot(diff, diff) <= 10.1)
@@ -73,7 +75,7 @@ void main()
 
 		vec2 pos = start;
 		ivec2 map_index = ivec2(pos / default_cell_size.xy);
-		const ivec2 istart = ivec2(emission_pos.xz);
+		const ivec2 istart = ivec2(emission_pos.xy);
 		const ivec2 target_dist = abs(istart-iend);
 
 
@@ -117,7 +119,7 @@ void main()
 			if(all(greaterThanEqual(abs(ivec2(map_index)-istart), target_dist)))
 			{
 				// 距離を超えたら光がフラグメントにヒット
-				photon += vec3(0., 0., 1.) * emission_pos.w / (1+ray_dist.x*ray_dist.x);
+				photon += vec3(0., 0., 1.) * emission.w / (1+ray_dist.x*ray_dist.x);
 				break;
 			}
 
@@ -133,6 +135,15 @@ void main()
 
 				if((fragment_map & bit) != 0)
 				{ 
+					// バウンス
+//					if(atomicCompSwap(b_emission_map[index], -1, 0) == -1)
+//					{
+//						int list_index = atomicAdd(b_emission_counter[0].x, 1);
+//						b_emission_list[list_index] = index;
+//						b_emission[index].value = vec4(0.);// 危ないかも？
+//					}
+//					b_emission[index].value += vec4(1., 0., 0., 1.);
+
 					break;
 				}
 			}

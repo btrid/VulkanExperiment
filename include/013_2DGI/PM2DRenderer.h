@@ -15,10 +15,11 @@ struct PM2DRenderer
 {
 	enum
 	{
-// 		RenderWidth = 1024,
-// 		RenderHeight = 1024,
-//		RenderDepth = 1,
-//		FragmentBufferSize = RenderWidth * RenderHeight*RenderDepth,
+		BounceNum = 4, //!< ƒŒƒC”½ŽË‰ñ”
+		// 		RenderWidth = 1024,
+		// 		RenderHeight = 1024,
+		//		RenderDepth = 1,
+		//		FragmentBufferSize = RenderWidth * RenderHeight*RenderDepth,
 	};
 	int RenderWidth;
 	int RenderHeight;
@@ -67,6 +68,9 @@ struct PM2DRenderer
 		vec4 m_position;
 		int m_fragment_hierarchy_offset[8];
 		int m_fragment_map_hierarchy_offset[8];
+		int m_emission_buffer_size[BounceNum];
+		int m_emission_buffer_offset[BounceNum];
+
 		int m_emission_tile_map_max;
 	};
 	struct Fragment
@@ -76,7 +80,6 @@ struct PM2DRenderer
 	};
 	struct Emission 
 	{
-		vec4 pos;
 		vec4 value;
 	};
 
@@ -87,8 +90,10 @@ struct PM2DRenderer
 	btr::BufferMemoryEx<Fragment> m_fragment_buffer;
 	btr::BufferMemoryEx<int64_t> m_fragment_map;
 	btr::BufferMemoryEx<int32_t> m_fragment_hierarchy;
-	btr::BufferMemoryEx<ivec3> m_emission_counter;
+	btr::BufferMemoryEx<ivec4> m_emission_counter;
 	btr::BufferMemoryEx<Emission> m_emission_buffer;
+	btr::BufferMemoryEx<int32_t> m_emission_list;
+	btr::BufferMemoryEx<int32_t> m_emission_map;	//!< ==-1 emitter‚ª‚È‚¢ !=0‚ ‚é
 	btr::BufferMemoryEx<int32_t> m_emission_tile_counter;
 	btr::BufferMemoryEx<int32_t> m_emission_tile_map;
 	btr::BufferMemoryEx<vec4> m_color;
@@ -128,6 +133,29 @@ struct DebugPM2D : public PM2DPipeline
 	std::shared_ptr<PM2DRenderer> m_renderer;
 	btr::BufferMemoryEx<PM2DRenderer::Fragment> m_map_data;
 	std::vector<PM2DRenderer::Emission> m_emission;
+
+	vk::UniqueRenderPass m_render_pass;
+	vk::UniqueFramebuffer m_framebuffer;
+
+	enum Shader
+	{
+		ShaderPointLightVS,
+		ShaderPointLightFS,
+		ShaderNum,
+	};
+	enum PipelineLayout
+	{
+		PipelineLayoutPointLight,
+		PipelineLayoutNum,
+	};
+	enum Pipeline
+	{
+		PipelinePointLight,
+		PipelineNum,
+	};
+	vk::UniqueShaderModule m_shader[ShaderNum];
+	std::array<vk::UniquePipelineLayout, PipelineLayoutNum> m_pipeline_layout;
+	std::array<vk::UniquePipeline, PipelineNum> m_pipeline;
 
 };
 

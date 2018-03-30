@@ -43,21 +43,20 @@ void main()
 		if(i >= data_num){
 			break;
 		}
-		vec4 p = b_emission[i].pos;
-		if(any(lessThan(p.xz-p.w, left_top)) || any(greaterThanEqual(p.xz+p.w, right_bottom)))
-		{
-//			continue;
-		}
-		float DeltaX = p.x - max(s_area.x, min(p.x, s_area.z));
-		float DeltaY = p.z - max(s_area.y, min(p.z, s_area.w));
-		bool is_contain = (DeltaX * DeltaX + DeltaY * DeltaY) < (p.w*p.w);
+		int index1d = b_emission_list[i];
+		vec2 pos = vec2(index1d%u_pm_info.m_resolution.x, index1d/u_pm_info.m_resolution.x);
+		float power = b_emission[index1d].value.w;
+
+		float DeltaX = pos.x - max(s_area.x, min(pos.x, s_area.z));
+		float DeltaY = pos.y - max(s_area.y, min(pos.y, s_area.w));
+		bool is_contain = (DeltaX * DeltaX + DeltaY * DeltaY) < (power*power);
 		if(!is_contain) 
 		{
 			continue;
 		}
 		uint tile_list_index = atomicAdd(s_counter, 1);
 		if(tile_list_index < u_pm_info.m_emission_tile_map_max){
-			b_emission_tile_map[count_list_offset+tile_list_index] = int(i);
+			b_emission_tile_map[count_list_offset+tile_list_index] = index1d;
 		}
 	}
 

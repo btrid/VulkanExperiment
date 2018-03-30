@@ -17,6 +17,7 @@ layout(location=1) in Data
 layout(location = 0) out vec4 FragColor;
 void main()
 {
+	#if 0
 	const vec2 default_cell_size = vec2(1.);
 	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
 
@@ -116,4 +117,5 @@ void main()
 //	const int pixel_1d = pixel.x + pixel.y*u_pm_info.m_resolution.x;
 //	b_color[pixel_1d] = vec4(photon, 1.);
 	FragColor = vec4(photon, 1.);
+	#endif
 }
