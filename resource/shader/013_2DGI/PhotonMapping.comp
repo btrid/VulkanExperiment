@@ -9,6 +9,12 @@
 #define USE_PM 0
 #include <PM.glsl>
 
+layout(push_constant) uniform BounceInfo
+{
+	bool is_store_photon;
+	int bounce_count;
+} constant;
+
 layout (local_size_x = 32, local_size_y = 32) in;
 shared Emission s_emission[64];
 shared ivec2 s_emission_pos[64];
@@ -55,6 +61,7 @@ void main()
 	for(int i = 0; i < emission_num; i++)
 	{
 		vec4 emission = s_emission[i].value;
+		float emissive_power = length(emission.xyz);
 		vec2 emission_pos = vec2(s_emission_pos[i]) + 0.5;
 		const vec2 start = emission_pos.xy;
 
@@ -119,7 +126,7 @@ void main()
 			if(all(greaterThanEqual(abs(ivec2(map_index)-istart), target_dist)))
 			{
 				// 距離を超えたら光がフラグメントにヒット
-				photon += vec3(0., 0., 1.) * emission.w / (1+ray_dist.x*ray_dist.x);
+				photon += vec3(0., 0., 1.) * emissive_power / (1+ray_dist.x*ray_dist.x);
 				break;
 			}
 
@@ -136,13 +143,21 @@ void main()
 				if((fragment_map & bit) != 0)
 				{ 
 					// バウンス
-//					if(atomicCompSwap(b_emission_map[index], -1, 0) == -1)
-//					{
-//						int list_index = atomicAdd(b_emission_counter[0].x, 1);
-//						b_emission_list[list_index] = index;
-//						b_emission[index].value = vec4(0.);// 危ないかも？
-//					}
-//					b_emission[index].value += vec4(1., 0., 0., 1.);
+					if(constant.is_store_photon)
+					{
+						int store_shift = constant.bounce_count+1;
+						int photon_offset = u_pm_info.m_emission_buffer_offset[store_shift];
+	
+						ivec2 store_index_2d = map_index>>store_shift;
+						int store_index = store_index_2d.x + store_index_2d.y*(u_pm_info.m_resolution.x>>store_shift);
+						if(atomicCompSwap(b_emission_map[photon_offset + store_index], -1, 0) == -1)
+						{
+							int list_index = atomicAdd(b_emission_counter[store_shift].x, 1);
+							b_emission_list[photon_offset+list_index] = store_index;
+							b_emission[photon_offset+store_index].value = vec4(0.);// 危ないかも？
+						}
+						b_emission[photon_offset+store_index].value += vec4(1., 0., 0., 0.) * emissive_power / (1+ray_dist.x*ray_dist.x);
+					}
 
 					break;
 				}

@@ -40,7 +40,7 @@ layout(std430, set=USE_PM, binding=3) restrict buffer FragmentHierarchyMapBuffer
 	int b_fragment_hierarchy[];
 };
 layout(std430, set=USE_PM, binding=10) restrict buffer EmissiveCounter {
-	ivec4 b_emission_counter;
+	ivec4 b_emission_counter[];
 };
 layout(std430, set=USE_PM, binding=11) restrict buffer EmissiveBuffer {
 	Emission b_emission[];

@@ -287,9 +287,18 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 		pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 		pipeline_layout_info.setPSetLayouts(layouts);
 		m_pipeline_layout[PipelineLayoutMakeFragmentMap] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
-		m_pipeline_layout[PipelineLayoutLightCulling] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
-		m_pipeline_layout[PipelineLayoutPhotonMapping] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		m_pipeline_layout[PipelineLayoutRendering] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+
+
+		{
+			vk::PushConstantRange constants[] = {
+				vk::PushConstantRange().setOffset(0).setSize(8).setStageFlags(vk::ShaderStageFlagBits::eCompute),
+			};
+			pipeline_layout_info.setPushConstantRangeCount(array_length(constants));
+			pipeline_layout_info.setPPushConstantRanges(constants);
+			m_pipeline_layout[PipelineLayoutLightCulling] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PipelineLayoutPhotonMapping] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+		}
 
 		vk::PushConstantRange constants[] = {
 			vk::PushConstantRange().setOffset(0).setSize(4).setStageFlags(vk::ShaderStageFlagBits::eCompute),
@@ -559,6 +568,7 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineLayoutLightCulling].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutLightCulling].get(), 0, m_descriptor_set.get(), {});
+		cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayoutLightCulling].get(), vk::ShaderStageFlagBits::eCompute, 0, ivec2(0, 0));
 		cmd.dispatch(20, 20, 1);
 
 	}
@@ -576,6 +586,7 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelinePhotonMapping].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutPhotonMapping].get(), 0, m_descriptor_set.get(), {});
+		cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayoutPhotonMapping].get(), vk::ShaderStageFlagBits::eCompute, 0, ivec2(0, 0));
 		cmd.dispatch(20, 20, 1);
 	}
 
@@ -632,11 +643,6 @@ DebugPM2D::DebugPM2D(const std::shared_ptr<btr::Context>& context, const std::sh
 
 	std::vector<PM2DRenderer::Fragment> map_data(renderer->RenderWidth*renderer->RenderHeight);
 	{
-		m_emission.resize(32);
-		for (auto& e : m_emission)
-		{
-			e.value = vec4(std::rand() % 100 * 0.01f, std::rand() % 100 * 0.01f, std::rand() % 100 * 0.01f, 1.f);
-		}
 		std::vector<ivec4> rect;
 #if 1
 		rect.emplace_back(400, 400, 200, 400);

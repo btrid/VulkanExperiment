@@ -10,6 +10,12 @@
 #define USE_PM 0
 #include <PM.glsl>
 
+layout(push_constant) uniform BounceInfo
+{
+	bool is_store_photon;
+	int bounce_count;
+} constant;
+
 layout (local_size_x = 32, local_size_y = 1) in;
 
 shared int s_counter;
@@ -21,7 +27,7 @@ void main()
 	uint tiled_1D_index = gl_WorkGroupID.x + gl_WorkGroupID.y*u_pm_info.m_emission_tile_num.x; 
 
 	vec2 left_top = vec2(0., 0.);
-	vec2 right_bottom = vec2(u_pm_info.m_resolution.xy);
+	vec2 right_bottom = vec2(u_pm_info.m_resolution.xy>>constant.bounce_count);
 	if(gl_LocalInvocationID.x == 0)
 	{
 		s_counter = 0;
@@ -33,7 +39,8 @@ void main()
 	barrier();
 	memoryBarrierShared();
 
-	uint data_num = b_emission_counter.x;
+	uint data_num = b_emission_counter[constant.bounce_count].x;
+	int data_offset = u_pm_info.m_emission_buffer_offset[constant.bounce_count];
 	uint count_list_offset = tiled_1D_index*u_pm_info.m_emission_tile_map_max;
 	uint loop_count = (data_num-1) / gl_NumWorkGroups.x + 1;
 	uint loop_begin = gl_LocalInvocationID.x*loop_count;
@@ -43,9 +50,9 @@ void main()
 		if(i >= data_num){
 			break;
 		}
-		int index1d = b_emission_list[i];
+		int index1d = b_emission_list[data_offset+i];
 		vec2 pos = vec2(index1d%u_pm_info.m_resolution.x, index1d/u_pm_info.m_resolution.x);
-		float power = b_emission[index1d].value.w;
+		float power = length(b_emission[data_offset+index1d].value);
 
 		float DeltaX = pos.x - max(s_area.x, min(pos.x, s_area.z));
 		float DeltaY = pos.y - max(s_area.y, min(pos.y, s_area.w));

@@ -29,6 +29,6 @@ void main()
 			b_emission_list[list_index] = index;
 			b_emission[index].value = vec4(0.);// 危ないかも？
 		}
-		b_emission[index].value += vec4(1., 0., 0., 1500.);
+		b_emission[index].value += vec4(1500., 0., 0., 0.);
 	}
 }
