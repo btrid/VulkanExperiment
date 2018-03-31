@@ -114,7 +114,6 @@ struct PM2DRenderer
 	btr::BufferMemoryEx<int32_t> m_emission_tile_linklist_counter;
 	btr::BufferMemoryEx<int32_t> m_emission_tile_linkhead;
 	btr::BufferMemoryEx<LinkList> m_emission_tile_linklist;
-	btr::BufferMemoryEx<vec4> m_color;
 	std::array<TextureResource, BounceNum> m_color_tex;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;

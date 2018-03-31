@@ -12,8 +12,8 @@
 
 layout(push_constant) uniform BounceInfo
 {
-	bool is_store_photon;
 	int bounce_count;
+	int store_photon_index;
 } constant;
 
 layout (local_size_x = 32, local_size_y = 1) in;
@@ -36,6 +36,7 @@ void main()
 	barrier();
 	memoryBarrierShared();
 
+//	uint data_num = min(b_emission_counter[constant.bounce_count].x, 100);
 	uint data_num = b_emission_counter[constant.bounce_count].x;
 	int data_offset = u_pm_info.m_emission_buffer_offset[constant.bounce_count];
 	uint loop_count = (data_num-1) / gl_NumWorkGroups.x + 1;
@@ -61,8 +62,8 @@ void main()
 		if(linklist_index < u_pm_info.m_emission_tile_linklist_max)
 		{
 			int next = atomicExchange(b_emission_tile_linkhead[tile_index_1d], linklist_index);
-			b_emission_tile_linklist[tile_index_1d].next = next;
-			b_emission_tile_linklist[tile_index_1d].target = index1d;
+			b_emission_tile_linklist[linklist_index].next = next;
+			b_emission_tile_linklist[linklist_index].target = index1d;
 		}
 	}
 }
