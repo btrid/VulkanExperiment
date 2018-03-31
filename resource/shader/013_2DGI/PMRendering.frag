@@ -9,10 +9,10 @@
 #define USE_PM 0
 #include <PM.glsl>
 
-layout(location=1) in ModelData
+layout(location=1) in Data
 {
 	vec2 texcoord;
-}in_modeldata;
+}in_data;
 
 layout(location = 0) out vec4 FragColor;
 void main()
@@ -20,10 +20,10 @@ void main()
 //	ivec2 index = ivec2(in_modeldata.texcoord * u_pm_info.m_resolution.xy);
 //	FragColor = b_color[index.x + index.y * int(u_pm_info.m_resolution.x)]*10.;
 	vec3 rgb = vec3(0.);
-	rgb.rg += texture(s_color[0], vec3(in_modeldata.texcoord, 0.)).rg;
-	rgb.b += texture(s_color[0], vec3(in_modeldata.texcoord, 1.)).r;
-	rgb.rg += texture(s_color[1], vec3(in_modeldata.texcoord, 0.)).rg;
-	rgb.b += texture(s_color[1], vec3(in_modeldata.texcoord, 1.)).r;
+	rgb.rg += texture(s_color[0], vec3(in_data.texcoord, 0.)).rg;
+	rgb.b += texture(s_color[0], vec3(in_data.texcoord, 1.)).r;
+	rgb.rg += texture(s_color[1], vec3(in_data.texcoord, 0.)).rg;
+	rgb.b += texture(s_color[1], vec3(in_data.texcoord, 1.)).r;
 	FragColor = vec4(rgb, 1.);
 
 }

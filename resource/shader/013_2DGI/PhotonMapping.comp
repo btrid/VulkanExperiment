@@ -14,7 +14,9 @@ layout(push_constant) uniform BounceInfo
 	bool is_store_photon;
 	int bounce_count;
 } constant;
-
+#define fragment_state_non (0)
+#define fragment_state_wall (1)
+#define fragment_state_light (2)
 layout (local_size_x = 32, local_size_y = 32) in;
 void main()
 {
@@ -24,7 +26,9 @@ void main()
 
 	const vec2 end = vec2(pixel) + 0.5;
 	const ivec2 iend = ivec2(end);
-	bool is_wall = false;
+
+	int fragment_state = fragment_state_non;
+	vec3 illuminance = vec3(0.);
 	{
 		ivec2 fragment_index = iend/8;
 		int fragment_index_1d = fragment_index.x + fragment_index.y*reso.z;
@@ -34,10 +38,13 @@ void main()
 		int fragment_index_sub_1d = fragment_index_sub.x + fragment_index_sub.y*8;
 		uint64_t bit = 1ul<<fragment_index_sub_1d;
 
-		is_wall = (fragment_map & bit) != 0;
-	}
+		if((fragment_map & bit) != 0)
+		{
+			fragment_state = fragment_state_wall;
+			illuminance = vec3(65555.,0., 0.);
+		}
 
-	vec3 illuminance = vec3(0.);
+	}
 
 	const ivec2 tile_index_2d = pixel / ivec2(u_pm_info.m_emission_tile_size.xy);
 	const int tile_index = int(tile_index_2d.x + tile_index_2d.y*u_pm_info.m_emission_tile_num.x);
@@ -57,9 +64,9 @@ void main()
 		if(dot(diff, diff) <= 10.1)
 		{
 			// ライト
-			const int pixel_1d = pixel.x + pixel.y*reso.x;
-			b_color[pixel_1d] = vec4(0., 65555., 0., 1.);
-			return;
+			illuminance = vec3(0., 65555., 0.);
+			fragment_state = fragment_state_light;
+			break;
 		}
 		const float ray_dist = length(diff.xy);
 
@@ -139,7 +146,7 @@ void main()
 
 	// store
 	{
-		vec3 store_illuminance = is_wall ? vec3(65355., 0., 0.) : (min(illuminance*1000000., vec3(65355.)));
+		vec3 store_illuminance = min(illuminance*1000000., vec3(65355.));
 		uvec2 u_rg = uvec2(store_illuminance.rg) << uvec2(0, 16);
 		uint rg = u_rg.r | u_rg.g;
 		uvec2 u_ba = uvec2(store_illuminance.b, 0) << uvec2(0, 16);
@@ -150,7 +157,7 @@ void main()
 	}
 
 	// バウンス
-	if(constant.is_store_photon && dot(illuminance, illuminance) >= 10.1)
+	if(fragment_state == fragment_state_non && constant.is_store_photon && dot(illuminance, illuminance) >= 10.1)
 	{
 		int store_shift = constant.bounce_count+1;
 		int e_offset = u_pm_info.m_emission_buffer_offset[store_shift];
@@ -163,6 +170,7 @@ void main()
 			int list_index = atomicAdd(b_emission_counter[store_shift].x, 1);
 			b_emission_list[e_offset+list_index] = store_index;
 		}
-		b_emission[e_offset+store_index].value = vec4(illuminance.zyx, 1.);//debugで赤くする
+//		b_emission[e_offset+store_index].value = vec4(illuminance.bgr, 1.);//debugで赤くする
+		b_emission[e_offset+store_index].value = vec4(vec3(100., 0., 0.), 1.);//debugで赤くする
 	}
 }
