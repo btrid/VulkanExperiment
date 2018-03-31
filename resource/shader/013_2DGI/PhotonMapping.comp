@@ -55,10 +55,9 @@ void main()
 			ivec2 e_index_2d = ivec2(emission_index%bounce_reso.x, emission_index/bounce_reso.x);
 			start = vec2(e_index_2d<<constant.bounce_count) + default_cell_size.xy*(1<<constant.bounce_count)*0.5;
 		}
-		float emissive_power = length(emission.xyz);
-
+		
 		const vec2 diff = (end - start);
-		if(dot(diff, diff) <= 4000.1)
+		if(dot(diff, diff) <= 40.1)
 		{
 			// ライト
 			illuminance = vec3(0., 65555., 0.);
@@ -119,7 +118,7 @@ void main()
 			if(all(greaterThanEqual(abs(ivec2(map_index)-istart), target_dist)))
 			{
 				// 距離を超えたら光がフラグメントにヒット
-				illuminance += emission.xyz / (1+ray_dist.x*ray_dist.x);
+				illuminance += max(emission.xyz / (1.+ray_dist*ray_dist), FLT_EPSIRON);
 				break;
 			}
 
@@ -143,7 +142,7 @@ void main()
 
 	// store
 	{
-		vec3 store_illuminance = min(illuminance*100000., vec3(65355.));
+		vec3 store_illuminance = min(illuminance*1000, vec3(65535.));
 		uvec2 u_rg = uvec2(store_illuminance.rg) << uvec2(0, 16);
 		uint rg = u_rg.r | u_rg.g;
 		uvec2 u_ba = uvec2(store_illuminance.b, 0) << uvec2(0, 16);
@@ -154,7 +153,7 @@ void main()
 	}
 
 	// バウンス
-	if(fragment_state == fragment_state_wall && constant.store_photon_index>0 && dot(illuminance, illuminance) >= 0.001)
+	if(fragment_state == fragment_state_wall && constant.store_photon_index>0 && dot(illuminance, illuminance) >= 0.001*0.001)
 	{
 		int store_shift = constant.store_photon_index;
 		int e_offset = u_pm_info.m_emission_buffer_offset[store_shift];
@@ -166,7 +165,7 @@ void main()
 			int list_index = atomicAdd(b_emission_counter[store_shift].x, 1);
 			b_emission_list[e_offset+list_index] = store_index;
 		}
-//		b_emission[e_offset+store_index].value = vec4(illuminance.bgr, 1.);//debugで赤くする
-		b_emission[e_offset+store_index].value = vec4(vec3(3500., 0., 0.), 1.);//debugで赤くする
+		b_emission[e_offset+store_index].value = vec4(illuminance.bgr*10, 1.);
+//		b_emission[e_offset+store_index].value = vec4(vec3(500., 0., 0.), 1.);//debugで赤くする
 	}
 }

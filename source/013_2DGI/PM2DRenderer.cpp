@@ -53,7 +53,7 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			info.m_emission_buffer_size[i] = info.m_emission_buffer_size[i - 1] / 4;
 			info.m_emission_buffer_offset[i] = info.m_emission_buffer_offset[i - 1] + info.m_emission_buffer_size[i - 1];
 		}
-		info.m_emission_tile_linklist_max = 1024;
+		info.m_emission_tile_linklist_max = 8192*1024;
 		cmd.updateBuffer<Info>(m_fragment_info.getInfo().buffer, m_fragment_info.getInfo().offset, info);
 	}
 	{
@@ -720,6 +720,7 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 
 			vk::BufferMemoryBarrier to_write[] = {
 				m_emission_buffer.makeMemoryBarrier(vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eShaderRead),
+				m_emission_list.makeMemoryBarrier(vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eShaderRead),
 				m_emission_map.makeMemoryBarrier(vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eShaderRead),
 				m_emission_tile_linklist_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 				m_emission_tile_linkhead.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eShaderWrite),
@@ -739,6 +740,8 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 			vk::BufferMemoryBarrier to_read[] = {
 				m_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				m_fragment_hierarchy.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+//				m_emission_buffer.makeMemoryBarrier(vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eShaderRead),
+//				m_emission_map.makeMemoryBarrier(vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eShaderRead),
 				m_emission_tile_linklist_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				m_emission_tile_linkhead.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				m_emission_tile_linklist.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
@@ -1048,6 +1051,8 @@ void DebugPM2D::execute(vk::CommandBuffer cmd)
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PipelineLayoutPointLight].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayoutPointLight].get(), 0, m_renderer->m_descriptor_set.get(), {});
 		cmd.pushConstants<vec2>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, 0, vec2(250.f, 400.f));
+		cmd.draw(1, 1, 0, 0);
+		cmd.pushConstants<vec2>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, 0, vec2(400.f, 190.f));
 		cmd.draw(1, 1, 0, 0);
 
 		cmd.endRenderPass();

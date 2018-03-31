@@ -30,8 +30,8 @@ void main()
 	if(gl_LocalInvocationID.x == 0)
 	{
 		vec2 tile_size = u_pm_info.m_emission_tile_size.xy;
-		s_area.xy = left_top + tile_size*tile_index_2d.xy - 0.01;
-		s_area.zw = s_area.xy + tile_size + 0.02;
+		s_area.xy = left_top + tile_size*tile_index_2d.xy - 0.1;
+		s_area.zw = s_area.xy + tile_size + 0.2;
 	}
 	barrier();
 	memoryBarrierShared();
