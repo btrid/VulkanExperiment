@@ -1,4 +1,5 @@
 #include <013_2DGI/PM2DRenderer.h>
+#include <applib/GraphicsResource.h>
 
 namespace pm2d
 {
@@ -129,6 +130,72 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 		m_color = context->m_storage_memory.allocateMemory(desc);
 
 	}
+
+	{
+		for (int i = 0; i < m_color_tex.max_size(); i++)
+		{
+			auto& tex = m_color_tex[i];
+			vk::ImageCreateInfo image_info;
+			image_info.imageType = vk::ImageType::e2D;
+			image_info.format = vk::Format::eR32Uint;
+			image_info.mipLevels = 1;
+			image_info.arrayLayers = 2;
+			image_info.samples = vk::SampleCountFlagBits::e1;
+			image_info.tiling = vk::ImageTiling::eOptimal;
+			image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eStorage;
+			image_info.sharingMode = vk::SharingMode::eExclusive;
+			image_info.initialLayout = vk::ImageLayout::eUndefined;
+			image_info.extent = { render_target->m_resolution.width >> i, render_target->m_resolution.height >> i, 1 };
+			image_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
+
+			tex.m_image = context->m_device->createImageUnique(image_info);
+			tex.m_image_info = image_info;
+
+			vk::MemoryRequirements memory_request = context->m_device->getImageMemoryRequirements(tex.m_image.get());
+			vk::MemoryAllocateInfo memory_alloc_info;
+			memory_alloc_info.allocationSize = memory_request.size;
+			memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(context->m_gpu.getHandle(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+			tex.m_memory = context->m_device->allocateMemoryUnique(memory_alloc_info);
+			context->m_device->bindImageMemory(tex.m_image.get(), tex.m_memory.get(), 0);
+
+			vk::ImageSubresourceRange subresourceRange;
+			subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+			subresourceRange.baseArrayLayer = 0;
+			subresourceRange.baseMipLevel = 0;
+			subresourceRange.layerCount = 2;
+			subresourceRange.levelCount = 1;
+			tex.m_subresource_range = subresourceRange;
+
+			vk::ImageViewCreateInfo view_info;
+			view_info.viewType = vk::ImageViewType::e2DArray;
+			view_info.components.r = vk::ComponentSwizzle::eR;
+			view_info.components.g = vk::ComponentSwizzle::eG;
+			view_info.components.b = vk::ComponentSwizzle::eB;
+			view_info.components.a = vk::ComponentSwizzle::eA;
+			view_info.flags = vk::ImageViewCreateFlags();
+			view_info.format = vk::Format::eR16G16Unorm;
+			view_info.image = tex.m_image.get();
+			view_info.subresourceRange = subresourceRange;
+			tex.m_image_view = context->m_device->createImageViewUnique(view_info);
+
+		}
+
+		{
+			vk::ImageMemoryBarrier to_init[BounceNum];
+			for (int i = 0; i < m_color_tex.max_size(); i++)
+			{
+				to_init[i].image = m_color_tex[i].m_image.get();
+				to_init[i].subresourceRange = m_color_tex[i].m_subresource_range;
+				to_init[i].oldLayout = vk::ImageLayout::eUndefined;
+				to_init[i].newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+				to_init[i].dstAccessMask = vk::AccessFlagBits::eShaderRead;
+			}
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(),
+				0, nullptr, 0, nullptr, array_length(to_init), to_init);
+		}
+	}
+
 	{
 		auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
 		vk::DescriptorSetLayoutBinding binding[] = {
@@ -197,6 +264,16 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setDescriptorCount(1)
 			.setBinding(20),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(stage)
+			.setDescriptorType(vk::DescriptorType::eStorageImage)
+			.setDescriptorCount(BounceNum)
+			.setBinding(21),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(stage)
+			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+			.setDescriptorCount(BounceNum)
+			.setBinding(30),
 		};
 		vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 		desc_layout_info.setBindingCount(array_length(binding));
@@ -234,6 +311,31 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 		vk::DescriptorBufferInfo output_storages[] = {
 			m_color.getInfo(),
 		};
+		vk::DescriptorImageInfo output_images[] = {
+			vk::DescriptorImageInfo().setImageView(m_color_tex[0].m_image_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
+			vk::DescriptorImageInfo().setImageView(m_color_tex[1].m_image_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
+			vk::DescriptorImageInfo().setImageView(m_color_tex[2].m_image_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
+			vk::DescriptorImageInfo().setImageView(m_color_tex[3].m_image_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
+		};
+		vk::DescriptorImageInfo samplers[] = {
+			vk::DescriptorImageInfo()
+			.setImageView(m_color_tex[0].m_image_view.get())
+			.setSampler(sGraphicsResource::Order().getSampler(sGraphicsResource::BASIC_SAMPLER_LINER))
+			.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal),
+			vk::DescriptorImageInfo()
+			.setImageView(m_color_tex[1].m_image_view.get())
+			.setSampler(sGraphicsResource::Order().getSampler(sGraphicsResource::BASIC_SAMPLER_LINER))
+			.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal),
+			vk::DescriptorImageInfo()
+			.setImageView(m_color_tex[2].m_image_view.get())
+			.setSampler(sGraphicsResource::Order().getSampler(sGraphicsResource::BASIC_SAMPLER_LINER))
+			.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal),
+			vk::DescriptorImageInfo()
+			.setImageView(m_color_tex[3].m_image_view.get())
+			.setSampler(sGraphicsResource::Order().getSampler(sGraphicsResource::BASIC_SAMPLER_LINER))
+			.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal),
+		};
+
 		vk::WriteDescriptorSet write[] = {
 			vk::WriteDescriptorSet()
 			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
@@ -258,6 +360,20 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			.setDescriptorCount(array_length(output_storages))
 			.setPBufferInfo(output_storages)
 			.setDstBinding(20)
+			.setDstSet(m_descriptor_set.get()),
+			vk::WriteDescriptorSet()
+			.setDescriptorType(vk::DescriptorType::eStorageImage)
+			.setDescriptorCount(array_length(output_images))
+			.setPImageInfo(output_images)
+			.setDstBinding(21)
+			.setDstArrayElement(0)
+			.setDstSet(m_descriptor_set.get()),
+			vk::WriteDescriptorSet()
+			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+			.setDescriptorCount(array_length(samplers))
+			.setPImageInfo(samplers)
+			.setDstBinding(30)
+			.setDstArrayElement(0)
 			.setDstSet(m_descriptor_set.get()),
 		};
 		context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
@@ -528,6 +644,27 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 		cmd.fillBuffer(m_emission_list.getInfo().buffer, m_emission_list.getInfo().offset, m_emission_list.getInfo().range, -1);
 		cmd.fillBuffer(m_emission_map.getInfo().buffer, m_emission_map.getInfo().offset, m_emission_map.getInfo().range, -1);
 
+		{
+
+			vk::ImageMemoryBarrier to_clear[BounceNum];
+			for (int i = 0; i < m_color_tex.max_size(); i++)
+			{
+				to_clear[i].setImage(m_color_tex[i].m_image.get());
+				to_clear[i].setSubresourceRange(m_color_tex[i].m_subresource_range);
+				to_clear[i].setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
+				to_clear[i].setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
+				to_clear[i].setOldLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+				to_clear[i].setNewLayout(vk::ImageLayout::eTransferDstOptimal);
+			}
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eTransfer, {},
+				0, nullptr, 0, nullptr, array_length(to_clear), to_clear);
+
+			vk::ClearColorValue clear_value({});
+			cmd.clearColorImage(m_color_tex[0].m_image.get(), vk::ImageLayout::eTransferDstOptimal, clear_value, m_color_tex[0].m_subresource_range);
+			cmd.clearColorImage(m_color_tex[1].m_image.get(), vk::ImageLayout::eTransferDstOptimal, clear_value, m_color_tex[1].m_subresource_range);
+
+		}
+
 	}
 	// exe
 	for (auto& p : pipeline)
@@ -537,39 +674,140 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 
 	// post
 
-	// make map
+	// make fragment map
 	{
-		vk::BufferMemoryBarrier to_write[] = {
-			m_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
-			m_fragment_hierarchy.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
-		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
-			0, nullptr, array_length(to_write), to_write, 0, nullptr);
-
-		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineMakeFragmentMap].get());
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutMakeFragmentMap].get(), 0, m_descriptor_set.get(), {});
-		cmd.dispatch(RenderWidth / 32, RenderHeight / 32, 1);
-	}
-	// make hierarchy
-	{
-		for (int i = 2; i < 8; i++)
 		{
 			vk::BufferMemoryBarrier to_write[] = {
-				m_fragment_hierarchy.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite),
+				m_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
+				m_fragment_hierarchy.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_write), to_write, 0, nullptr);
 
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineMakeFragmentHierarchy].get());
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutMakeFragmentHierarchy].get(), 0, m_descriptor_set.get(), {});
-			cmd.pushConstants<int32_t>(m_pipeline_layout[PipelineLayoutMakeFragmentHierarchy].get(), vk::ShaderStageFlagBits::eCompute, 0, i);
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineMakeFragmentMap].get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutMakeFragmentMap].get(), 0, m_descriptor_set.get(), {});
+			cmd.dispatch(RenderWidth / 32, RenderHeight / 32, 1);
+		}
+		// make hierarchy
+		{
+			for (int i = 2; i < 8; i++)
+			{
+				vk::BufferMemoryBarrier to_write[] = {
+					m_fragment_hierarchy.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+					0, nullptr, array_length(to_write), to_write, 0, nullptr);
 
-			auto num = app::calcDipatchGroups(uvec3((RenderWidth >> (i-1)), (RenderHeight >> (i-1)), 1), uvec3(32, 32, 1));
-			cmd.dispatch(num.x, num.y, num.z);
+				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineMakeFragmentHierarchy].get());
+				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutMakeFragmentHierarchy].get(), 0, m_descriptor_set.get(), {});
+				cmd.pushConstants<int32_t>(m_pipeline_layout[PipelineLayoutMakeFragmentHierarchy].get(), vk::ShaderStageFlagBits::eCompute, 0, i);
 
+				auto num = app::calcDipatchGroups(uvec3((RenderWidth >> (i - 1)), (RenderHeight >> (i - 1)), 1), uvec3(32, 32, 1));
+				cmd.dispatch(num.x, num.y, num.z);
+
+			}
 		}
 	}
 
+#if 1
+	vk::ImageMemoryBarrier to_write[BounceNum];
+	for (int i = 0; i < m_color_tex.max_size(); i++)
+	{
+		to_write[i].setImage(m_color_tex[i].m_image.get());
+		to_write[i].setSubresourceRange(m_color_tex[i].m_subresource_range);
+		to_write[i].setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+		to_write[i].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
+		to_write[i].setOldLayout(vk::ImageLayout::eTransferDstOptimal);
+		to_write[i].setNewLayout(vk::ImageLayout::eGeneral);
+	}
+	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {},
+		0, nullptr, 0, nullptr, array_length(to_write), to_write);
+
+	for (int i = 0; i < 2; i++)
+	{
+		// light culling
+		{
+			// clear emission link
+			{
+				vk::BufferMemoryBarrier to_clear[] = {
+					m_emission_tile_linkhead.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
+					m_emission_tile_linklist.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eTransfer, {},
+					0, nullptr, array_length(to_clear), to_clear, 0, nullptr);
+
+				cmd.fillBuffer(m_emission_tile_linklist_counter.getInfo().buffer, m_emission_tile_linklist_counter.getInfo().offset, m_emission_tile_linklist_counter.getInfo().range, 0u);
+				cmd.fillBuffer(m_emission_tile_linkhead.getInfo().buffer, m_emission_tile_linkhead.getInfo().offset, m_emission_tile_linkhead.getInfo().range, -1);
+
+			}
+
+			vk::BufferMemoryBarrier to_write[] = {
+				m_emission_buffer.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eMemoryWrite),
+				m_emission_tile_linkhead.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderWrite),
+				m_emission_tile_linklist.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderWrite),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eComputeShader, {},
+				0, nullptr, array_length(to_write), to_write, 0, nullptr);
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineLayoutLightCulling].get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutLightCulling].get(), 0, m_descriptor_set.get(), {});
+			cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayoutLightCulling].get(), vk::ShaderStageFlagBits::eCompute, 0, ivec2(i!=1, i));
+			cmd.dispatch(20, 20, 1);
+		}
+
+		// photonmapping
+		{
+			vk::BufferMemoryBarrier to_read[] = {
+				m_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				m_fragment_hierarchy.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				m_emission_tile_linkhead.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				m_emission_tile_linklist.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+				0, nullptr, array_length(to_read), to_read, 0, nullptr);
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelinePhotonMapping].get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutPhotonMapping].get(), 0, m_descriptor_set.get(), {});
+			cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayoutPhotonMapping].get(), vk::ShaderStageFlagBits::eCompute, 0, ivec2(i!=1, i));
+			cmd.dispatch(20>>i, 20>>i, 1);
+		}
+	}
+
+
+	// render_targetÇ…èëÇ≠
+	{
+		{
+			vk::BufferMemoryBarrier to_render[] = {
+				m_color.makeMemoryBarrier(vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eShaderRead),
+			};
+			vk::ImageMemoryBarrier to_write[BounceNum];
+			for (int i = 0; i < m_color_tex.max_size(); i++)
+			{
+				to_write[i].setImage(m_color_tex[i].m_image.get());
+				to_write[i].setSubresourceRange(m_color_tex[i].m_subresource_range);
+				to_write[i].setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+				to_write[i].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+				to_write[i].setOldLayout(vk::ImageLayout::eGeneral);
+				to_write[i].setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+			}
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands,
+				{}, 0, nullptr, array_length(to_render), to_render, array_length(to_write), to_write);
+
+		}
+
+		vk::RenderPassBeginInfo begin_render_Info;
+		begin_render_Info.setRenderPass(m_render_pass.get());
+		begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), m_render_target->m_resolution));
+		begin_render_Info.setFramebuffer(m_framebuffer.get());
+		cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
+
+		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PipelineRendering].get());
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayoutRendering].get(), 0, m_descriptor_set.get(), {});
+		cmd.draw(3, 1, 0, 0);
+
+		cmd.endRenderPass();
+	}
+#else
 	// light culling
 	{
 		cmd.fillBuffer(m_emission_tile_linklist_counter.getInfo().buffer, m_emission_tile_linklist_counter.getInfo().offset, m_emission_tile_linklist_counter.getInfo().range, 0u);
@@ -588,41 +826,6 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 
 	}
 
-#if 1
-	// photonmapping
-	{
-		vk::BufferMemoryBarrier to_read[] = {
-			m_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-			m_fragment_hierarchy.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-			m_emission_tile_linklist.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
-			0, nullptr, array_length(to_read), to_read, 0, nullptr);
-
-		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelinePhotonMapping].get());
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutPhotonMapping].get(), 0, m_descriptor_set.get(), {});
-		cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayoutPhotonMapping].get(), vk::ShaderStageFlagBits::eCompute, 0, ivec2(0, 0));
-		cmd.dispatch(20, 20, 1);
-	}
-
-	// render_targetÇ…èëÇ≠
-	{
-		vk::BufferMemoryBarrier to_render = m_color.makeMemoryBarrier(vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eShaderRead);
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, { to_render }, {});
-
-		vk::RenderPassBeginInfo begin_render_Info;
-		begin_render_Info.setRenderPass(m_render_pass.get());
-		begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), m_render_target->m_resolution));
-		begin_render_Info.setFramebuffer(m_framebuffer.get());
-		cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
-
-		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PipelineRendering].get());
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayoutRendering].get(), 0, m_descriptor_set.get(), {});
-		cmd.draw(3, 1, 0, 0);
-
-		cmd.endRenderPass();
-	}
-#else
 	{
 		vk::BufferMemoryBarrier to_read[] = {
 			m_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),

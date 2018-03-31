@@ -162,7 +162,6 @@ void main()
 			is_died.x==0 ? imageAtomicAdd(t_color[constant.bounce_count], ivec3(store_index_2d.xy, 1), ba):0;
 			is_died.y==0 ? imageAtomicAdd(t_color[constant.bounce_count], ivec3(store_index_2d.zw, 0), rg):0;
 			is_died.y==0 ? imageAtomicAdd(t_color[constant.bounce_count], ivec3(store_index_2d.zw, 1), ba):0;
-
 		}
 	}
 }

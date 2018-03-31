@@ -18,12 +18,13 @@ layout(push_constant) uniform BounceInfo
 layout (local_size_x = 32, local_size_y = 32) in;
 void main()
 {
-	const vec4 default_cell_size = vec4(1., 1., vec2(1<<constant.bounce_count));
+	const vec4 default_cell_size = vec4(1., 1., vec2(ivec2(1)<<constant.bounce_count));
 	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
 	const ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
 
 	const vec2 end = vec2(pixel) + 0.5;
 	const ivec2 iend = ivec2(end);
+	bool is_wall = false;
 	{
 		ivec2 fragment_index = iend/8;
 		int fragment_index_1d = fragment_index.x + fragment_index.y*reso.z;
@@ -33,13 +34,7 @@ void main()
 		int fragment_index_sub_1d = fragment_index_sub.x + fragment_index_sub.y*8;
 		uint64_t bit = 1ul<<fragment_index_sub_1d;
 
-		if((fragment_map & bit) != 0)
-		{ 
-			// kabe
-			const int pixel_1d = pixel.x + pixel.y*reso.x;
-			b_color[pixel_1d] = vec4(1., 0., 0., 1.);
-			return;
-		}
+		is_wall = (fragment_map & bit) != 0;
 	}
 
 	vec3 illuminance = vec3(0.);
@@ -54,7 +49,7 @@ void main()
 			int emission_index = b_emission_tile_linklist[i].target;
 			int eoffset = u_pm_info.m_emission_buffer_offset[constant.bounce_count];
 			emission = b_emission[emission_index+eoffset].value;
-			start = ivec2(emission_index%reso.x, emission_index.x/reso.x);
+			start = vec2(emission_index%reso.x, emission_index.x/reso.x) + default_cell_size.zw*0.5;
 		}
 		float emissive_power = length(emission.xyz);
 
@@ -63,7 +58,7 @@ void main()
 		{
 			// ライト
 			const int pixel_1d = pixel.x + pixel.y*reso.x;
-			b_color[pixel_1d] = vec4(0., 1., 0., 1.);
+			b_color[pixel_1d] = vec4(0., 65555., 0., 1.);
 			return;
 		}
 		const float ray_dist = length(diff.xy);
@@ -84,7 +79,7 @@ void main()
 		{
 			int hierarchy=7;
 			{
-				for(; hierarchy>0; hierarchy--)
+				for(; hierarchy>constant.bounce_count; hierarchy--)
 				{
 					ivec2 findex2d = map_index>>hierarchy;
 					int findex = findex2d.x + findex2d.y*(reso.x>>hierarchy);
@@ -136,28 +131,38 @@ void main()
 
 				if((fragment_map & bit) != 0)
 				{ 
-					// バウンス
-					if(constant.is_store_photon)
-					{
-						int store_shift = constant.bounce_count+1;
-						int photon_offset = u_pm_info.m_emission_buffer_offset[store_shift];
-	
-						ivec2 store_index_2d = map_index>>store_shift;
-						int store_index = store_index_2d.x + store_index_2d.y*(reso.x>>store_shift);
-						if(atomicCompSwap(b_emission_map[photon_offset + store_index], -1, 0) == -1)
-						{
-							int list_index = atomicAdd(b_emission_counter[store_shift].x, 1);
-							b_emission_list[photon_offset+list_index] = store_index;
-							b_emission[photon_offset+store_index].value = vec4(0.);// 危ないかも？
-						}
-						b_emission[photon_offset+store_index].value += vec4(1., 0., 0., 0.) * emissive_power / (1+ray_dist.x*ray_dist.x);
-					}
-
 					break;
 				}
 			}
 		}
 	}
-	const int pixel_1d = pixel.x + pixel.y*reso.x;
-	b_color[pixel_1d] = vec4(illuminance, 1.);
+
+	// store
+	{
+		vec3 store_illuminance = is_wall ? vec3(65355., 0., 0.) : (min(illuminance*1000000., vec3(65355.)));
+		uvec2 u_rg = uvec2(store_illuminance.rg) << uvec2(0, 16);
+		uint rg = u_rg.r | u_rg.g;
+		uvec2 u_ba = uvec2(store_illuminance.b, 0) << uvec2(0, 16);
+		uint ba = u_ba.x | u_ba.y;
+		ivec2 store_index_2d = pixel>>constant.bounce_count;
+		imageAtomicAdd(t_color[constant.bounce_count], ivec3(store_index_2d.xy, 0), rg);
+		imageAtomicAdd(t_color[constant.bounce_count], ivec3(store_index_2d.xy, 1), ba);
+	}
+
+	// バウンス
+	if(constant.is_store_photon && dot(illuminance, illuminance) >= 10.1)
+	{
+		int store_shift = constant.bounce_count+1;
+		int e_offset = u_pm_info.m_emission_buffer_offset[store_shift];
+
+		ivec2 store_index_2d = pixel>>store_shift;
+		int store_index = store_index_2d.x + store_index_2d.y*(reso.x>>store_shift);
+		if(atomicCompSwap(b_emission_map[e_offset + store_index], -1, 0) == -1)
+		{
+			b_emission[e_offset+store_index].value = vec4(0.);// 危ないかも？
+			int list_index = atomicAdd(b_emission_counter[store_shift].x, 1);
+			b_emission_list[e_offset+list_index] = store_index;
+		}
+		b_emission[e_offset+store_index].value = vec4(illuminance.zyx, 1.);//debugで赤くする
+	}
 }

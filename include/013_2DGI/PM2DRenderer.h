@@ -88,6 +88,18 @@ struct PM2DRenderer
 		int32_t target;
 	};
 
+	struct TextureResource
+	{
+		vk::ImageCreateInfo m_image_info;
+		vk::UniqueImage m_image;
+		vk::UniqueImageView m_image_view;
+		vk::UniqueDeviceMemory m_memory;
+		vk::UniqueSampler m_sampler;
+
+		vk::ImageSubresourceRange m_subresource_range;
+
+	};
+
 	PM2DRenderer(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target);
 	vk::CommandBuffer execute(const std::vector<PM2DPipeline*>& pipeline);
 
@@ -103,6 +115,7 @@ struct PM2DRenderer
 	btr::BufferMemoryEx<int32_t> m_emission_tile_linkhead;
 	btr::BufferMemoryEx<LinkList> m_emission_tile_linklist;
 	btr::BufferMemoryEx<vec4> m_color;
+	std::array<TextureResource, BounceNum> m_color_tex;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
