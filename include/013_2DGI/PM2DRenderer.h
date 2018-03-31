@@ -71,7 +71,7 @@ struct PM2DRenderer
 		int m_emission_buffer_size[BounceNum];
 		int m_emission_buffer_offset[BounceNum];
 
-		int m_emission_tile_map_max;
+		int m_emission_tile_linklist_max;
 	};
 	struct Fragment
 	{
@@ -81,6 +81,11 @@ struct PM2DRenderer
 	struct Emission 
 	{
 		vec4 value;
+	};
+	struct LinkList
+	{
+		int32_t next;
+		int32_t target;
 	};
 
 	PM2DRenderer(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target);
@@ -94,8 +99,9 @@ struct PM2DRenderer
 	btr::BufferMemoryEx<Emission> m_emission_buffer;
 	btr::BufferMemoryEx<int32_t> m_emission_list;
 	btr::BufferMemoryEx<int32_t> m_emission_map;	//!< ==-1 emitter‚ª‚È‚¢ !=0‚ ‚é
-	btr::BufferMemoryEx<int32_t> m_emission_tile_counter;
-	btr::BufferMemoryEx<int32_t> m_emission_tile_map;
+	btr::BufferMemoryEx<int32_t> m_emission_tile_linklist_counter;
+	btr::BufferMemoryEx<int32_t> m_emission_tile_linkhead;
+	btr::BufferMemoryEx<LinkList> m_emission_tile_linklist;
 	btr::BufferMemoryEx<vec4> m_color;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
@@ -131,6 +137,8 @@ struct DebugPM2D : public PM2DPipeline
 
 	std::shared_ptr<btr::Context> m_context;
 	std::shared_ptr<PM2DRenderer> m_renderer;
+
+	std::vector<PM2DRenderer::Emission> m_emission;
 	btr::BufferMemoryEx<PM2DRenderer::Fragment> m_map_data;
 
 	vk::UniqueRenderPass m_render_pass;

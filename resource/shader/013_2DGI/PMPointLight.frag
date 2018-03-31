@@ -23,11 +23,18 @@ void main()
 		int index = index2d.x + index2d.y*u_pm_info.m_resolution.x;
 
 		// list登録
-		if(atomicCompSwap(b_emission_map[index], -1, 0) == -1)
+/*		if(atomicCompSwap(b_emission_map[index], -1, 0) == -1)
 		{
+			b_emission[index].value = vec4(0.);// 危ないかも？
 			int list_index = atomicAdd(b_emission_counter[0].x, 1);
 			b_emission_list[list_index] = index;
+		}
+*/
+		if(atomicCompSwap(b_emission_map[index], -1, 0) == -1)
+		{
 			b_emission[index].value = vec4(0.);// 危ないかも？
+			int list_index = atomicAdd(b_emission_counter[0].x, 1);
+			b_emission_list[list_index] = index;
 		}
 		b_emission[index].value += vec4(1500., 0., 0., 0.);
 	}

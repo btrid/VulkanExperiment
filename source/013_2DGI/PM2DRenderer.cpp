@@ -52,7 +52,7 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			info.m_emission_buffer_size[i] = info.m_emission_buffer_size[i - 1] / 4;
 			info.m_emission_buffer_offset[i] = info.m_emission_buffer_offset[i - 1] + info.m_emission_buffer_size[i - 1];
 		}
-		info.m_emission_tile_map_max = 16;
+		info.m_emission_tile_linklist_max = 1024;
 		cmd.updateBuffer<Info>(m_fragment_info.getInfo().buffer, m_fragment_info.getInfo().offset, info);
 	}
 	{
@@ -108,13 +108,19 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 	}
 	{
 		btr::BufferMemoryDescriptorEx<int32_t> desc;
-		desc.element_num = info.m_emission_tile_num.x*info.m_emission_tile_num.y;
-		m_emission_tile_counter = context->m_storage_memory.allocateMemory(desc);
+		desc.element_num = 1;
+		m_emission_tile_linklist_counter = context->m_storage_memory.allocateMemory(desc);
+
 	}
 	{
 		btr::BufferMemoryDescriptorEx<int32_t> desc;
-		desc.element_num = info.m_emission_tile_num.x*info.m_emission_tile_num.y*info.m_emission_tile_map_max;
-		m_emission_tile_map = context->m_storage_memory.allocateMemory(desc);
+		desc.element_num = RenderHeight * RenderWidth;
+		m_emission_tile_linkhead = context->m_storage_memory.allocateMemory(desc);
+	}
+	{
+		btr::BufferMemoryDescriptorEx<LinkList> desc;
+		desc.element_num = info.m_emission_tile_linklist_max;
+		m_emission_tile_linklist = context->m_storage_memory.allocateMemory(desc);
 	}
 
 	{
@@ -221,8 +227,9 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			m_emission_buffer.getInfo(),
 			m_emission_list.getInfo(),
 			m_emission_map.getInfo(),
-			m_emission_tile_counter.getInfo(),
-			m_emission_tile_map.getInfo(),
+			m_emission_tile_linklist_counter.getInfo(),
+			m_emission_tile_linkhead.getInfo(),
+			m_emission_tile_linklist.getInfo(),
 		};
 		vk::DescriptorBufferInfo output_storages[] = {
 			m_color.getInfo(),
@@ -514,8 +521,10 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 		u2f.f = 0.f;
 		cmd.fillBuffer(m_color.getInfo().buffer, m_color.getInfo().offset, m_color.getInfo().range, u2f.u);
 		cmd.fillBuffer(m_fragment_buffer.getInfo().buffer, m_fragment_buffer.getInfo().offset, m_fragment_buffer.getInfo().range, 0u);
-		cmd.updateBuffer<ivec4>(m_emission_counter.getInfo().buffer, m_emission_counter.getInfo().offset, ivec4(0, 1, 1, 0));
-		cmd.fillBuffer(m_emission_tile_counter.getInfo().buffer, m_emission_tile_counter.getInfo().offset, m_emission_tile_counter.getInfo().range, 0u);
+
+		ivec4 emissive[] = { { 0,1,1,0 },{ 0,1,1,0 },{ 0,1,1,0 },{ 0,1,1,0 } };
+		static_assert(array_length(emissive) == BounceNum, "");
+		cmd.updateBuffer(m_emission_counter.getInfo().buffer, m_emission_counter.getInfo().offset, sizeof(emissive), emissive);
 		cmd.fillBuffer(m_emission_list.getInfo().buffer, m_emission_list.getInfo().offset, m_emission_list.getInfo().range, -1);
 		cmd.fillBuffer(m_emission_map.getInfo().buffer, m_emission_map.getInfo().offset, m_emission_map.getInfo().range, -1);
 
@@ -563,8 +572,14 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 
 	// light culling
 	{
-		auto to_write = m_emission_buffer.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eMemoryWrite);
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { to_write }, {});
+		cmd.fillBuffer(m_emission_tile_linklist_counter.getInfo().buffer, m_emission_tile_linklist_counter.getInfo().offset, m_emission_tile_linklist_counter.getInfo().range, 0u);
+		cmd.fillBuffer(m_emission_tile_linkhead.getInfo().buffer, m_emission_tile_linkhead.getInfo().offset, m_emission_tile_linkhead.getInfo().range, -1);
+
+		vk::BufferMemoryBarrier to_write[] = {
+			m_emission_buffer.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eMemoryWrite),
+		};
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eComputeShader, {},
+			0, nullptr, array_length(to_write), to_write, 0, nullptr);
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineLayoutLightCulling].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutLightCulling].get(), 0, m_descriptor_set.get(), {});
@@ -579,7 +594,7 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 		vk::BufferMemoryBarrier to_read[] = {
 			m_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			m_fragment_hierarchy.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-			m_emission_tile_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			m_emission_tile_linklist.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 			0, nullptr, array_length(to_read), to_read, 0, nullptr);
@@ -643,6 +658,12 @@ DebugPM2D::DebugPM2D(const std::shared_ptr<btr::Context>& context, const std::sh
 
 	std::vector<PM2DRenderer::Fragment> map_data(renderer->RenderWidth*renderer->RenderHeight);
 	{
+// 		m_emission.resize(32);
+// 		for (auto& e : m_emission)
+// 		{
+// 			e.value = vec4(std::rand() % 100, std::rand() % 100, std::rand() % 100 + 500., 1.f);
+// 		}
+
 		std::vector<ivec4> rect;
 #if 1
 		rect.emplace_back(400, 400, 200, 400);
@@ -833,7 +854,12 @@ void DebugPM2D::execute(vk::CommandBuffer cmd)
 	cmd.copyBuffer(m_map_data.getInfo().buffer, m_renderer->m_fragment_buffer.getInfo().buffer, copy);
 
 	{
-		vk::RenderPassBeginInfo begin_render_Info;
+#if 0
+		cmd.updateBuffer<ivec3>(m_renderer->m_emission_counter.getInfo().buffer, m_renderer->m_emission_counter.getInfo().offset, ivec3(m_emission.size(), 1, 1));
+		auto e_buffer = m_renderer->m_emission_buffer.getInfo();
+		cmd.updateBuffer(e_buffer.buffer, e_buffer.offset, vector_sizeof(m_emission), m_emission.data());
+#else
+	vk::RenderPassBeginInfo begin_render_Info;
 		begin_render_Info.setRenderPass(m_render_pass.get());
 		begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), m_renderer->m_render_target->m_resolution));
 		begin_render_Info.setFramebuffer(m_framebuffer.get());
@@ -845,6 +871,7 @@ void DebugPM2D::execute(vk::CommandBuffer cmd)
 		cmd.draw(1, 1, 0, 0);
 
 		cmd.endRenderPass();
+#endif
 	}
 	vk::BufferMemoryBarrier to_read[] =
 	{

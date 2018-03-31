@@ -18,22 +18,19 @@ layout(push_constant) uniform BounceInfo
 
 layout (local_size_x = 32, local_size_y = 1) in;
 
-shared int s_counter;
 shared vec4 s_area;
 void main()
 {
 
-	uvec2 index = gl_WorkGroupID.xy;
-	uint tiled_1D_index = gl_WorkGroupID.x + gl_WorkGroupID.y*u_pm_info.m_emission_tile_num.x; 
+	uvec2 tile_index_2d = gl_WorkGroupID.xy;
+	uint tile_index_1d = gl_WorkGroupID.x + gl_WorkGroupID.y*u_pm_info.m_emission_tile_num.x; 
 
 	vec2 left_top = vec2(0., 0.);
 	vec2 right_bottom = vec2(u_pm_info.m_resolution.xy>>constant.bounce_count);
 	if(gl_LocalInvocationID.x == 0)
 	{
-		s_counter = 0;
-
 		vec2 tile_size = u_pm_info.m_emission_tile_size.xy;
-		s_area.xy = left_top + tile_size*index.xy - 0.01;
+		s_area.xy = left_top + tile_size*tile_index_2d.xy - 0.01;
 		s_area.zw = s_area.xy + tile_size + 0.02;
 	}
 	barrier();
@@ -41,7 +38,6 @@ void main()
 
 	uint data_num = b_emission_counter[constant.bounce_count].x;
 	int data_offset = u_pm_info.m_emission_buffer_offset[constant.bounce_count];
-	uint count_list_offset = tiled_1D_index*u_pm_info.m_emission_tile_map_max;
 	uint loop_count = (data_num-1) / gl_NumWorkGroups.x + 1;
 	uint loop_begin = gl_LocalInvocationID.x*loop_count;
 	uint loop_end = loop_begin + loop_count;
@@ -61,17 +57,13 @@ void main()
 		{
 			continue;
 		}
-		uint tile_list_index = atomicAdd(s_counter, 1);
-		if(tile_list_index < u_pm_info.m_emission_tile_map_max){
-			b_emission_tile_map[count_list_offset+tile_list_index] = index1d;
+		int linklist_index = atomicAdd(b_emission_tile_counter, 1);
+		if(linklist_index < u_pm_info.m_emission_tile_linklist_max)
+		{
+			int next = atomicExchange(b_emission_tile_linkhead[tile_index_1d], linklist_index);
+			b_emission_tile_linklist[tile_index_1d].next = next;
+			b_emission_tile_linklist[tile_index_1d].target = index1d;
 		}
-	}
-
-	barrier();
-	memoryBarrierShared();
-	if(gl_LocalInvocationID.x == 0)
-	{
-		b_emission_tile_counter[tiled_1D_index] = min(s_counter, u_pm_info.m_emission_tile_map_max);
 	}
 }
 

@@ -16,31 +16,14 @@ layout(push_constant) uniform BounceInfo
 } constant;
 
 layout (local_size_x = 32, local_size_y = 32) in;
-shared Emission s_emission[64];
-shared ivec2 s_emission_pos[64];
 void main()
 {
-	const vec2 default_cell_size = vec2(1.);
+	const vec4 default_cell_size = vec4(1., 1., vec2(1<<constant.bounce_count));
 	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
 	const ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
 
 	const vec2 end = vec2(pixel) + 0.5;
 	const ivec2 iend = ivec2(end);
-	vec3 photon = vec3(0.);
-	const ivec2 tile_index_2d = pixel / ivec2(u_pm_info.m_emission_tile_size.xy);
-	const int tile_index = int(tile_index_2d.x + tile_index_2d.y*u_pm_info.m_emission_tile_num.x);
-	int emission_num = min(b_emission_tile_counter[tile_index.x], 64);
-	{
-		if(gl_LocalInvocationIndex < emission_num)
-		{
-			int emission_index = b_emission_tile_map[tile_index*u_pm_info.m_emission_tile_map_max + gl_LocalInvocationIndex];
-			s_emission[gl_LocalInvocationIndex] = b_emission[emission_index];
-			s_emission_pos[gl_LocalInvocationIndex] = ivec2(emission_index%u_pm_info.m_resolution.x, emission_index/u_pm_info.m_resolution.x);
-		}
-		barrier();
-		memoryBarrierShared();
-	}
-
 	{
 		ivec2 fragment_index = iend/8;
 		int fragment_index_1d = fragment_index.x + fragment_index.y*reso.z;
@@ -53,24 +36,35 @@ void main()
 		if((fragment_map & bit) != 0)
 		{ 
 			// kabe
-			photon = vec3(1., 0., 0.);
-			emission_num = 0;
+			const int pixel_1d = pixel.x + pixel.y*reso.x;
+			b_color[pixel_1d] = vec4(1., 0., 0., 1.);
+			return;
 		}
 	}
 
-	for(int i = 0; i < emission_num; i++)
+	vec3 illuminance = vec3(0.);
+
+	const ivec2 tile_index_2d = pixel / ivec2(u_pm_info.m_emission_tile_size.xy);
+	const int tile_index = int(tile_index_2d.x + tile_index_2d.y*u_pm_info.m_emission_tile_num.x);
+	for(int i = b_emission_tile_linkhead[tile_index]; i != -1; i= b_emission_tile_linklist[i].next)
 	{
-		vec4 emission = s_emission[i].value;
+		vec2 start;
+		vec4 emission;
+		{
+			int emission_index = b_emission_tile_linklist[i].target;
+			int eoffset = u_pm_info.m_emission_buffer_offset[constant.bounce_count];
+			emission = b_emission[emission_index+eoffset].value;
+			start = ivec2(emission_index%reso.x, emission_index.x/reso.x);
+		}
 		float emissive_power = length(emission.xyz);
-		vec2 emission_pos = vec2(s_emission_pos[i]) + 0.5;
-		const vec2 start = emission_pos.xy;
 
 		const vec2 diff = (end - start);
 		if(dot(diff, diff) <= 10.1)
 		{
 			// ライト
-			photon = vec3(0., 1., 0.);
-			break;
+			const int pixel_1d = pixel.x + pixel.y*reso.x;
+			b_color[pixel_1d] = vec4(0., 1., 0., 1.);
+			return;
 		}
 		const float ray_dist = length(diff.xy);
 
@@ -82,7 +76,7 @@ void main()
 
 		vec2 pos = start;
 		ivec2 map_index = ivec2(pos / default_cell_size.xy);
-		const ivec2 istart = ivec2(emission_pos.xy);
+		const ivec2 istart = ivec2(start.xy);
 		const ivec2 target_dist = abs(istart-iend);
 
 
@@ -93,7 +87,7 @@ void main()
 				for(; hierarchy>0; hierarchy--)
 				{
 					ivec2 findex2d = map_index>>hierarchy;
-					int findex = findex2d.x + findex2d.y*(u_pm_info.m_resolution.x>>hierarchy);
+					int findex = findex2d.x + findex2d.y*(reso.x>>hierarchy);
 					int offset = getFragmentHierarchyOffset(hierarchy);
 					if(b_fragment_hierarchy[findex + offset] == 0)
 					{
@@ -103,7 +97,7 @@ void main()
 			}
 			// march
 			{
-				vec2 cell_size = default_cell_size*(1<<hierarchy);
+				vec2 cell_size = default_cell_size.xy*(1<<hierarchy);
 				vec2 cell_origin = vec2(map_index>>hierarchy)*cell_size;
 				vec2 cell_p = pos - cell_origin;
 
@@ -126,7 +120,7 @@ void main()
 			if(all(greaterThanEqual(abs(ivec2(map_index)-istart), target_dist)))
 			{
 				// 距離を超えたら光がフラグメントにヒット
-				photon += vec3(0., 0., 1.) * emissive_power / (1+ray_dist.x*ray_dist.x);
+				illuminance += vec3(0., 0., 1.) * emissive_power / (1+ray_dist.x*ray_dist.x);
 				break;
 			}
 
@@ -149,7 +143,7 @@ void main()
 						int photon_offset = u_pm_info.m_emission_buffer_offset[store_shift];
 	
 						ivec2 store_index_2d = map_index>>store_shift;
-						int store_index = store_index_2d.x + store_index_2d.y*(u_pm_info.m_resolution.x>>store_shift);
+						int store_index = store_index_2d.x + store_index_2d.y*(reso.x>>store_shift);
 						if(atomicCompSwap(b_emission_map[photon_offset + store_index], -1, 0) == -1)
 						{
 							int list_index = atomicAdd(b_emission_counter[store_shift].x, 1);
@@ -164,6 +158,6 @@ void main()
 			}
 		}
 	}
-	const int pixel_1d = pixel.x + pixel.y*u_pm_info.m_resolution.x;
-	b_color[pixel_1d] = vec4(photon, 1.);
+	const int pixel_1d = pixel.x + pixel.y*reso.x;
+	b_color[pixel_1d] = vec4(illuminance, 1.);
 }

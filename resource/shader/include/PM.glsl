@@ -15,7 +15,7 @@ struct PMInfo
 	ivec4 m_fragment_map_hierarchy_offset[2];
 	ivec4 m_emission_buffer_size;
 	ivec4 m_emission_buffer_offset;
-	int m_emission_tile_map_max;
+	int m_emission_tile_linklist_max;
 };
 struct Fragment
 {
@@ -25,6 +25,12 @@ struct Emission
 {
 	vec4 value;
 };
+struct LinkList
+{
+	int next;
+	int target;
+};
+
 
 #ifdef USE_PM
 layout(std140, set=USE_PM, binding=0) uniform PMInfoUniform {
@@ -51,11 +57,14 @@ layout(std430, set=USE_PM, binding=12) restrict buffer EmissiveListBuffer {
 layout(std430, set=USE_PM, binding=13) restrict buffer EmissiveMapBuffer {
 	int b_emission_map[];
 };
-layout(std430, set=USE_PM, binding=14) restrict buffer EmissiveTileCounter {
-	int b_emission_tile_counter[];
+layout(std430, set=USE_PM, binding=14) restrict buffer EmissiveTileLinkListCounter {
+	int b_emission_tile_counter;
 };
-layout(std430, set=USE_PM, binding=15) restrict buffer EmissiveTileMapBuffer {
-	int b_emission_tile_map[];
+layout(std430, set=USE_PM, binding=15) restrict buffer EmissiveTileLinkHeadBuffer {
+	int b_emission_tile_linkhead[];
+};
+layout(std430, set=USE_PM, binding=16) restrict buffer EmissiveTileLinkListBuffer {
+	LinkList b_emission_tile_linklist[];
 };
 layout(std430, set=USE_PM, binding=20) restrict buffer ColorBuffer {
 	vec4 b_color[];
