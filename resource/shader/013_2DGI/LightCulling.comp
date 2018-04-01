@@ -30,11 +30,13 @@ void main()
 	if(gl_LocalInvocationID.x == 0)
 	{
 		vec2 tile_size = u_pm_info.m_emission_tile_size.xy;
-		s_area.xy = left_top + tile_size*tile_index_2d.xy - 0.1;
-		s_area.zw = s_area.xy + tile_size + 0.2;
+		s_area.xy = left_top + tile_size*tile_index_2d.xy - 1.1;
+		s_area.zw = s_area.xy + tile_size + 1.2;
 	}
 	barrier();
 	memoryBarrierShared();
+
+	ivec2 reso = u_pm_info.m_resolution>>constant.bounce_count;
 
 //	uint data_num = min(b_emission_counter[constant.bounce_count].x, 100);
 	uint data_num = b_emission_counter[constant.bounce_count].x;
@@ -48,15 +50,14 @@ void main()
 			break;
 		}
 		int index1d = b_emission_list[data_offset+i];
-		vec2 pos = vec2(ivec2(index1d%u_pm_info.m_resolution.x, index1d/u_pm_info.m_resolution.x)<<constant.bounce_count);
+		vec2 pos = vec2(ivec2(index1d%reso.x, index1d/reso.x)<<constant.bounce_count);
 		float power = length(b_emission[data_offset+index1d].value);
 
-		float DeltaX = pos.x - max(s_area.x, min(pos.x, s_area.z));
-		float DeltaY = pos.y - max(s_area.y, min(pos.y, s_area.w));
-		bool is_contain = (DeltaX * DeltaX + DeltaY * DeltaY) < (power*power);
-		if(!is_contain) 
+		vec2 Delta = pos - max(s_area.xy, min(pos, s_area.zw));
+		bool is_contain = dot(Delta, Delta) < (power*power);
+		if(dot(Delta, Delta) > (power*power)) 
 		{
-			continue;
+//			continue;
 		}
 		int linklist_index = atomicAdd(b_emission_tile_counter, 1);
 		if(linklist_index < u_pm_info.m_emission_tile_linklist_max)

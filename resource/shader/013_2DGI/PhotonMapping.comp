@@ -25,22 +25,20 @@ void main()
 	const ivec2 bounce_reso = ivec2(u_pm_info.m_resolution.xy) >> constant.bounce_count;
 	const ivec2 pixel = ivec2(gl_GlobalInvocationID.xy)<<constant.bounce_count;
 
-	const vec2 end = vec2(pixel) + default_cell_size.xy*(1<<constant.bounce_count)*0.5;
-	const ivec2 iend = ivec2(end);
+//	const vec2 end = vec2(pixel) + default_cell_size.xy*(1<<constant.bounce_count)*0.5;
+//	const ivec2 iend = ivec2(end);
 
 	int fragment_state = fragment_state_non;
 	vec3 illuminance = vec3(0.);
 	{
-		ivec2 fragment_index = iend/8;
-		int fragment_index_1d = fragment_index.x + fragment_index.y*reso.z;
-		uint64_t fragment_map = b_fragment_map[fragment_index_1d];
-
-		ivec2 fragment_index_sub = iend%8;
-		int fragment_index_sub_1d = fragment_index_sub.x + fragment_index_sub.y*8;
-		uint64_t bit = 1ul<<fragment_index_sub_1d;
+		ivec4 fragment_index = ivec4(pixel/8, pixel%8);
+		ivec2 fragment_index_1d = fragment_index.xz + fragment_index.yw*ivec2(reso.z, 8);
+		uint64_t fragment_map = b_fragment_map[fragment_index_1d.x];
+		uint64_t bit = 1ul<<fragment_index_1d.y;
 
 		fragment_state = ((fragment_map & bit) != 0) ? fragment_state_wall : fragment_state_non;
 	}
+	bool is_hit = false;
 
 	const ivec2 tile_index_2d = pixel / ivec2(u_pm_info.m_emission_tile_size.xy);
 	const int tile_index = int(tile_index_2d.x + tile_index_2d.y*u_pm_info.m_emission_tile_num.x);
@@ -55,7 +53,17 @@ void main()
 			ivec2 e_index_2d = ivec2(emission_index%bounce_reso.x, emission_index/bounce_reso.x);
 			start = vec2(e_index_2d<<constant.bounce_count) + default_cell_size.xy*(1<<constant.bounce_count)*0.5;
 		}
-		
+		ivec2 istart = ivec2(start);
+		vec3 end_sub = vec3(0.5);
+		{
+			ivec3 idir = ivec3(pixel - ivec2(start), 0);
+			int max_ = abs(idir.x)>abs(idir.y) ? 1 : abs(idir.y)>abs(idir.x) ? 0 : 2;
+			end_sub[max_] = idir[max_]<0 ? 1. : idir[max_]>0 ? 0. : 0.5;
+		}
+		vec2 end = vec2(pixel) + default_cell_size.xy*(1<<constant.bounce_count)*end_sub.xy;
+		ivec2 iend = ivec2(end);
+		ivec2 idistance = abs(ivec2(end) - ivec2(start))-1;
+
 		const vec2 diff = (end - start);
 		if(dot(diff, diff) <= 40.1)
 		{
@@ -74,9 +82,6 @@ void main()
 
 		vec2 pos = start;
 		ivec2 map_index = ivec2(pos / default_cell_size.xy);
-		const ivec2 istart = ivec2(start.xy);
-		const ivec2 target_dist = abs(istart-iend);
-
 
 		for(;;)
 		{
@@ -115,23 +120,22 @@ void main()
 			}
 
 			// 終了判定
-			if(all(greaterThanEqual(abs(ivec2(map_index)-istart), target_dist)))
+//			if(all(greaterThanEqual(abs(ivec2(map_index)-istart), target_dist)))
+//			if(distance(pos, start) >= ray_dist)
+			if(all(greaterThanEqual(abs(ivec2(map_index)-istart), idistance)))
 			{
 				// 距離を超えたら光がフラグメントにヒット
-				illuminance += max(emission.xyz / (1.+ray_dist*ray_dist), FLT_EPSIRON);
+				illuminance += max(emission.xyz / (1.+ray_dist), FLT_EPSIRON);
+				is_hit = true;
 				break;
 			}
 
 			// hit確認
 			{
-				ivec2 fragment_index = map_index/8;
-				int fragment_index_1d = fragment_index.x + fragment_index.y*reso.z;
-				uint64_t fragment_map = b_fragment_map[fragment_index_1d];
-
-				ivec2 fragment_index_sub = map_index%8;
-				int fragment_index_sub_1d = fragment_index_sub.x + fragment_index_sub.y*8;
-				uint64_t bit = 1ul<<fragment_index_sub_1d;
-
+				ivec4 fragment_index = ivec4(map_index/8, map_index%8);
+				ivec2 fragment_index_1d = fragment_index.xz + fragment_index.yw*ivec2(reso.z, 8);
+				uint64_t fragment_map = b_fragment_map[fragment_index_1d.x];
+				uint64_t bit = 1ul<<fragment_index_1d.y;
 				if((fragment_map & bit) != 0)
 				{ 
 					break;
@@ -142,7 +146,8 @@ void main()
 
 	// store
 	{
-		vec3 store_illuminance = min(illuminance*1000, vec3(65535.));
+		vec3 store_illuminance = min(illuminance, vec3(65535.));
+		store_illuminance.r = fragment_state == fragment_state_wall ? 65535. : store_illuminance.r;
 		uvec2 u_rg = uvec2(store_illuminance.rg) << uvec2(0, 16);
 		uint rg = u_rg.r | u_rg.g;
 		uvec2 u_ba = uvec2(store_illuminance.b, 0) << uvec2(0, 16);
@@ -153,19 +158,21 @@ void main()
 	}
 
 	// バウンス
-	if(fragment_state == fragment_state_wall && constant.store_photon_index>0 && dot(illuminance, illuminance) >= 0.001*0.001)
+//	if(fragment_state == fragment_state_wall && constant.store_photon_index>0)
+	if(fragment_state == fragment_state_wall && constant.store_photon_index>0 && is_hit)//dot(illuminance, illuminance) >= FLT_EPSIRON)
 	{
 		int store_shift = constant.store_photon_index;
-		int e_offset = u_pm_info.m_emission_buffer_offset[store_shift];
-
+		const ivec2 store_reso = ivec2(u_pm_info.m_resolution.xy)>>store_shift;
 		ivec2 store_index_2d = ivec2(gl_GlobalInvocationID.xy)>>store_shift;
-		int store_index = store_index_2d.x + store_index_2d.y*(reso.x>>store_shift);
+		int store_index = store_index_2d.x + store_index_2d.y*store_reso.x;
+
+		int e_offset = u_pm_info.m_emission_buffer_offset[store_shift];
 		if(atomicCompSwap(b_emission_map[e_offset + store_index], -1, 0) == -1)
 		{
 			int list_index = atomicAdd(b_emission_counter[store_shift].x, 1);
 			b_emission_list[e_offset+list_index] = store_index;
 		}
-		b_emission[e_offset+store_index].value = vec4(illuminance.bgr*10, 1.);
+		b_emission[e_offset+store_index].value = vec4(illuminance.bgr, 1.);
 //		b_emission[e_offset+store_index].value = vec4(vec3(500., 0., 0.), 1.);//debugで赤くする
 	}
 }
