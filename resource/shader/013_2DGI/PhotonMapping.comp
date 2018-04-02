@@ -70,17 +70,21 @@ void main()
 			break;
 		}
 		const float ray_dist = length(diff.xy);
-		vec3 illumi = emission.xyz / (1.+ray_dist*ray_dist*0.1);
+		vec3 illumi = emission.xyz / (1.+ray_dist);
+//		vec3 illumi = emission.xyz / (1.+ray_dist*ray_dist);
 		if(length(illumi) <= FLT_EPSIRON){
 			// 影響範囲外
 			continue;
 		}
 		
-		vec2 dir = normalize(end - start);
-		dir.x = abs(dir.x) <= FLT_EPSIRON ? FLT_EPSIRON*2. : dir.x;
-		dir.y = abs(dir.y) <= FLT_EPSIRON ? FLT_EPSIRON*2. : dir.y;
-
+		vec2 dir = end - start;
 		const ivec3 next_step = ivec3((dir.x < 0. ? -1 : 1), (dir.y < 0. ? -1 : 1), 0);
+		{
+			// 0除算回避
+			dir.x = abs(dir.x) < FLT_EPSIRON ? next_step.x*FLT_EPSIRON : dir.x;
+			dir.y = abs(dir.y) < FLT_EPSIRON ? next_step.y*FLT_EPSIRON : dir.y;
+		}
+		dir = normalize(dir);
 
 		vec2 pos = start;
 		ivec2 map_index = ivec2(pos / pixel_size.xy);
@@ -112,17 +116,16 @@ void main()
 				x = x <= FLT_EPSIRON ? (x+cell_size.x) : x;
 				y = y <= FLT_EPSIRON ? (y+cell_size.y) : y;
 
-				vec2 dist = abs(vec2(x, y) / dir);
-				int next_ = dist.x < dist.y ? 0 : 1;
-				pos += dir * dist[next_];
+				vec2 progress = abs(vec2(x, y) / dir);
+				int next_ = progress.x < progress.y ? 0 : 1;
+				pos += dir * progress[next_];
 
 				ivec2 next = next_ == 0 ? next_step.xz : next_step.zy;
 				map_index = ivec2(pos+ next*0.5);
-
 			}
 
 			// 終了判定
-			if(length(pos-start) >= ray_dist-0.1)
+			if(length(pos-start) >= ray_dist-0.51)
 //			if(all(equal(map_index, ivec2(end))))
 			{
 				// 距離を超えたら光がフラグメントにヒット
@@ -145,7 +148,7 @@ void main()
 	}
 
 	// バウンス
-	if(fragment_state == fragment_state_wall && constant.store_photon_index>0 && illuminance.b !=0. /*dot(illuminance, illuminance) >= 0.1*/)
+	if(fragment_state == fragment_state_wall && constant.store_photon_index>0 && /*illuminance.b !=0.*/ dot(illuminance, illuminance) >= 1.1)
 	{
 		int store_shift = constant.store_photon_index;
 		const ivec2 store_reso = ivec2(u_pm_info.m_resolution.xy)>>store_shift;

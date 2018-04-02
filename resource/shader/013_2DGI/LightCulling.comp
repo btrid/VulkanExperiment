@@ -54,7 +54,6 @@ void main()
 		float power = length(b_emission[data_offset+index1d].value);
 
 		vec2 Delta = pos - max(s_area.xy, min(pos, s_area.zw));
-		bool is_contain = dot(Delta, Delta) < (power*power);
 		if(dot(Delta, Delta) > (power*power)) 
 		{
 			continue;

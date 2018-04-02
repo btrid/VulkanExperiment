@@ -28,6 +28,6 @@ void main()
 			int list_index = atomicAdd(b_emission_counter[0].x, 1);
 			b_emission_list[list_index] = index;
 		}
-		b_emission[index].value += vec4(0., 0., 3500., 0.);
+		b_emission[index].value += vec4(0., 0., 8500., 0.);
 	}
 }
