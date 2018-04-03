@@ -113,8 +113,8 @@ void main()
 			ivec4 fragment_index = map_index/8;
 			ivec2 fragment_index_1d = fragment_index.xz + fragment_index.yw*reso.z;
 			u64vec2 fragment_map;
-			fragment_map.x = is_died.x!=0 ? 0 : b_fragment_hierarchy[fragment_index_1d.x];
-			fragment_map.y = is_died.y!=0 ? 0 : b_fragment_hierarchy[fragment_index_1d.y];
+			fragment_map.x = is_died.x!=0 ? 0 : b_fragment_map[fragment_index_1d.x];
+			fragment_map.y = is_died.y!=0 ? 0 : b_fragment_map[fragment_index_1d.y];
 
 			ivec4 fragment_index_sub = map_index%8;
 			ivec2 fragment_index_sub_1d = fragment_index_sub.xz + fragment_index_sub.yw*8;

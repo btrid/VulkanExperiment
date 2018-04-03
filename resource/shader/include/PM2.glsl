@@ -10,6 +10,8 @@
 struct PMInfo
 {
 	ivec4 m_resolution;
+	ivec4 m_fragment_hierarchy_offset[2];
+	ivec4 m_fragment_map_hierarchy_offset[2];
 	ivec4 m_emission_buffer_size;
 	ivec4 m_emission_buffer_offset;
 };
@@ -30,7 +32,10 @@ layout(std430, set=USE_PM, binding=1) restrict buffer FragmentBuffer {
 	Fragment b_fragment[];
 };
 layout(std430, set=USE_PM, binding=2) restrict buffer FragmentHierarchyBuffer {
-	uint64_t b_fragment_hierarchy[];
+	uint64_t b_fragment_map[];
+};
+layout(std430, set=USE_PM, binding=3) restrict buffer FragmentHierarchyMapBuffer {
+	int b_fragment_hierarchy[];
 };
 layout(std430, set=USE_PM, binding=10) restrict buffer EmissionCounter {
 	ivec4 b_emission_counter[];
@@ -50,6 +55,9 @@ layout(std430, set=USE_PM, binding=20) restrict buffer ColorBuffer {
 };
 layout (set=USE_PM, binding=21, r32ui) uniform uimage2DArray t_color[4];
 layout (set=USE_PM, binding=30) uniform sampler2DArray s_color[4];
+
+#define getFragmentHierarchyOffset(_i) (u_pm_info.m_fragment_hierarchy_offset[((_i)-1)/4][((_i)-1)%4])
+#define getFragmentMapHierarchyOffset(_i) (u_pm_info.m_fragment_map_hierarchy_offset[((_i)-1)/4][((_i)-1)%4])
 
 #endif
 

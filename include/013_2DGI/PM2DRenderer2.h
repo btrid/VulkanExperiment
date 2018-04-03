@@ -28,6 +28,7 @@ struct PM2DRenderer
 	enum Shader
 	{
 		//		ShaderClear,
+		ShaderMakeFragmentMap,
 		ShaderMakeFragmentHierarchy,
 		ShaderLightCulling,
 		ShaderPhotonMapping,
@@ -37,6 +38,7 @@ struct PM2DRenderer
 	};
 	enum PipelineLayout
 	{
+		PipelineLayoutMakeFragmentMap,
 		PipelineLayoutMakeFragmentHierarchy,
 		PipelineLayoutLightCulling,
 		PipelineLayoutPhotonMapping,
@@ -45,6 +47,7 @@ struct PM2DRenderer
 	};
 	enum Pipeline
 	{
+		PipelineMakeFragmentMap,
 		PipelineMakeFragmentHierarchy,
 		PipelineLightCulling,
 		PipelinePhotonMapping,
@@ -55,6 +58,8 @@ struct PM2DRenderer
 	{
 		ivec2 m_resolution;
 		uvec2 _p;
+		int m_fragment_hierarchy_offset[8];
+		int m_fragment_map_hierarchy_offset[8];
 		int m_emission_buffer_size[BounceNum];
 		int m_emission_buffer_offset[BounceNum];
 	};
@@ -73,7 +78,8 @@ struct PM2DRenderer
 
 	btr::BufferMemoryEx<Info> m_fragment_info;
 	btr::BufferMemoryEx<Fragment> m_fragment_buffer;
-	btr::BufferMemoryEx<int64_t> m_fragment_hierarchy;
+	btr::BufferMemoryEx<int64_t> m_fragment_map;
+	btr::BufferMemoryEx<int32_t> m_fragment_hierarchy;
 	btr::BufferMemoryEx<ivec4> m_emission_counter;
 	btr::BufferMemoryEx<Emission> m_emission_buffer;
 	btr::BufferMemoryEx<int32_t> m_emission_list;

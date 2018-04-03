@@ -10,37 +10,57 @@
 #define USE_PM 0
 #include <PM2.glsl>
 
-layout (local_size_x = 8, local_size_y = 8) in;
+layout(push_constant) uniform InputVertex
+{
+	int level;
+} constant;
 
-//shared uint64_t s_bit;
-shared uint s_bit[2];
+layout (local_size_x = 32, local_size_y = 32) in;
+
+shared int s_fragment_num[16*16];
 void main()
 {
-
-	if(gl_LocalInvocationIndex <= 1)
-	{
-		s_bit[gl_LocalInvocationIndex] = 0;
+	if(any(greaterThan(gl_GlobalInvocationID.xy, u_pm_info.m_resolution.xy>>(constant.level-1)))){
+		return;
 	}
-	barrier();
-	memoryBarrierShared();
 
-	uint tiled_1D_index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*u_pm_info.m_resolution.x; 
-	vec3 albedo = b_fragment[tiled_1D_index].albedo;
-	if(dot(albedo, albedo) >= 0.001)
+	// fragment hierarchy
+	int level = constant.level;
+	int prev_level = constant.level-1;
 	{
-		uint bit_offset = gl_LocalInvocationID.x + gl_LocalInvocationID.y*8;
-		uint hilow = bit_offset/32;
-		uint offset = bit_offset%32;
-		atomicOr(s_bit[hilow], 1<<offset);
-	}
-	barrier();
-	memoryBarrierShared();
+		{
+			uvec2 local = gl_LocalInvocationID.xy/2;
+			uint index = local.x + local.y*(gl_WorkGroupSize.x/2);
+			if(all(equal(gl_LocalInvocationID.xy % 2, uvec2(0))))
+			{
+				s_fragment_num[index] = 0;
+			}
+			barrier();
+			memoryBarrierShared();
 
-	if(gl_LocalInvocationIndex == 0)
-	{
-		uint64_t bit =  uint64_t(s_bit[1]) << 32 | s_bit[0];
-		uint l1_index_1d = gl_WorkGroupID.x + gl_WorkGroupID.y*(u_pm_info.m_resolution.x/8);
-		b_fragment_hierarchy[l1_index_1d] = bit;
+			{
+				uvec2 idx2d = gl_GlobalInvocationID.xy;
+				uint prev_store = idx2d.x+idx2d.y*(u_pm_info.m_resolution.x>>prev_level);
+				int prev_offset = getFragmentHierarchyOffset(prev_level);
+				int fragment = b_fragment_hierarchy[prev_offset + prev_store];
+
+				if(fragment!=0)
+				{
+					atomicAdd(s_fragment_num[index], fragment);
+				}
+				
+			}
+			barrier();
+			memoryBarrierShared();
+
+			if(all(equal(gl_LocalInvocationID.xy % 2, uvec2(0))))
+			{
+				uvec2 idx2d = gl_GlobalInvocationID.xy/2;
+				uint store = idx2d.x+idx2d.y*(u_pm_info.m_resolution.x>>level);
+				int offset = getFragmentHierarchyOffset(level);
+				b_fragment_hierarchy[offset + store] = s_fragment_num[index];
+			}
+		}
 	}
 }
 
