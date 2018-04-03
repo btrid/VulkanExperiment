@@ -9,7 +9,7 @@
 #define USE_PM 0
 #include <PM2.glsl>
 
-layout(push_constant) uniform InputVertex
+layout(push_constant) uniform BounceInfo
 {
 	int store_photon;
 	int bounce_count;
@@ -25,7 +25,7 @@ vec4 rotate(in vec2 angle)
 void main()
 {
 	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
-	const vec4 cell_size = vec4(1., 1., vec2(1<<constant.bounce_count));
+	const vec4 pixel_size = vec4(1., 1., vec2(1<<constant.bounce_count));
 
 	ivec4 map_index;
 	vec4 color;	
@@ -43,18 +43,11 @@ void main()
 	}
 
 	vec2 offset = vec2(rand(vec2(map_index.xy+gl_LocalInvocationID.xy+gl_NumWorkGroups.y)), rand(vec2(map_index.yx+gl_LocalInvocationID.yx+gl_NumWorkGroups.y)));
-	vec4 pos = map_index*cell_size.xyxy;
-	pos += cell_size.xyxy*0.5;
-	pos += (offset.xyxy * 0.5 -1.)*cell_size.xyxy*0.49;
-	map_index = ivec4((pos) / cell_size.xyxy);
-	{
-		// 	デバッグ用ライト
-		ivec4 store_index_2d = map_index>>constant.bounce_count;
-		imageAtomicAdd(t_color[constant.bounce_count], ivec3(store_index_2d.xy, 0), 0x1fff0000);
-	}
-
-	ivec3 next_step;
-	ivec3 next_step2;
+	vec4 pos = map_index*pixel_size.xyxy;
+	pos += pixel_size.xyxy*0.5;
+//	pos += (offset.xyxy * 0.5 -1.)*pixel_size.zwzw*0.49;
+	pos += (offset.xyxy * 0.5 -1.)*pixel_size.xyxy*0.49;
+	map_index = ivec4((pos) / pixel_size.xyxy);
 
 	vec4 dir;
 	{
@@ -65,14 +58,13 @@ void main()
 		float angle2 = (ray_NO+1.) * 2.*PI / ray_num + angle_offset;
 		
 		dir = rotate(vec2(angle, angle2));
-		next_step = ivec3((dir.x < 0. ? -1 : 1), (dir.y < 0. ? -1 : 1), 0);
-		next_step2 = ivec3((dir.z < 0. ? -1 : 1), (dir.w < 0. ? -1 : 1), 0);
-		// 0除算回避
-		dir.x = abs(dir.x) < FLT_EPSIRON ? next_step.x*FLT_EPSIRON : dir.x;
-		dir.y = abs(dir.y) < FLT_EPSIRON ? next_step.y*FLT_EPSIRON : dir.y;
-		dir.z = abs(dir.z) < FLT_EPSIRON ? next_step2.x*FLT_EPSIRON : dir.z;
-		dir.w = abs(dir.w) < FLT_EPSIRON ? next_step2.y*FLT_EPSIRON : dir.w;
+		dir.x = abs(dir.x) <= FLT_EPSIRON ? FLT_EPSIRON*2. : dir.x;
+		dir.y = abs(dir.y) <= FLT_EPSIRON ? FLT_EPSIRON*2. : dir.y;
+		dir.z = abs(dir.z) <= FLT_EPSIRON ? FLT_EPSIRON*2. : dir.z;
+		dir.w = abs(dir.w) <= FLT_EPSIRON ? FLT_EPSIRON*2. : dir.w;
 	}
+	const ivec3 next_step = ivec3((dir.x < 0. ? -1 : 1), (dir.y < 0. ? -1 : 1), 0);
+	const ivec3 next_step2 = ivec3((dir.z < 0. ? -1 : 1), (dir.w < 0. ? -1 : 1), 0);
 
 	uvec2 u_rg = uvec2(color.rg) << uvec2(0, 16);
 	uint rg = u_rg.r | u_rg.g;
@@ -84,18 +76,47 @@ void main()
 	ivec4 hit_point = ivec4(-1);
 	for(;;)
 	{
+		ivec2 hierarchy = ivec2(7);
+		{
+			for(int i = 0; i < 2; i++)
+			{
+				for(; hierarchy[i]>constant.bounce_count; hierarchy[i]--)
+				{
+					ivec4 findex2d = map_index>>hierarchy.xxyy;
+					ivec2 findex = findex2d.xz + findex2d.yw*(reso.xx>>hierarchy[i]);
+					int offset = getFragmentHierarchyOffset(hierarchy[i]);
+					if(b_fragment_hierarchy[findex[i] + offset] == 0)
+					{
+						break;
+					}
+				}
+			}
+/*			for(; hierarchy>constant.bounce_count; hierarchy--)
+			{				
+				ivec4 findex2d = map_index>>hierarchy;
+				ivec2 findex = findex2d.xz + findex2d.yw*(reso.xx>>hierarchy);
+//				int offset = getFragmentHierarchyOffset(hierarchy);
+//				ivec2 offset = ivec2(349520>>(2*i));
+				if(b_fragment_hierarchy[findex + offset] == 0)
+				{
+					break;
+				}
+			}
+*/		}
+
 		// march
 		{
-			vec4 cell_origin = vec4(map_index) * cell_size.xyxy;
+			vec4 cell_size = pixel_size.xyxy*((ivec2(1)<<hierarchy).xxyy);
+			vec4 cell_origin = vec4(map_index>>hierarchy.xxyy)*cell_size;
 			vec4 cell_p = pos - cell_origin;
 
-			float x = dir.x < 0. ? cell_p.x : (cell_size.z- cell_p.x);
-			float y = dir.y < 0. ? cell_p.y : (cell_size.w- cell_p.y);
+			float x = dir.x < 0. ? cell_p.x : (cell_size.x- cell_p.x);
+			float y = dir.y < 0. ? cell_p.y : (cell_size.y- cell_p.y);
 			float z = dir.z < 0. ? cell_p.z : (cell_size.z- cell_p.z);
 			float w = dir.w < 0. ? cell_p.w : (cell_size.w- cell_p.w);
 
-			x = x <= FLT_EPSIRON ? (x+cell_size.z) : x;
-			y = y <= FLT_EPSIRON ? (y+cell_size.w) : y;
+			x = x <= FLT_EPSIRON ? (x+cell_size.x) : x;
+			y = y <= FLT_EPSIRON ? (y+cell_size.y) : y;
 			z = z <= FLT_EPSIRON ? (z+cell_size.z) : z;
 			w = w <= FLT_EPSIRON ? (w+cell_size.w) : w;
 
@@ -107,7 +128,7 @@ void main()
 			ivec4 next;
 			next.xy = next_ == 0 ? next_step.xz : next_step.zy;
 			next.zw = next2_ == 2 ? next_step2.xz : next_step2.zy;
-			map_index = ivec4((pos+ next*0.1) / cell_size.xyxy);
+			map_index = ivec4((pos+ next*0.1) / pixel_size.xyxy);
 		}
 
 		// 範囲外
@@ -168,8 +189,8 @@ void main()
 			ivec4 store_index_2d = map_index>>constant.bounce_count;
 			is_died.x==0 ? imageAtomicAdd(t_color[constant.bounce_count], ivec3(store_index_2d.xy, 0), rg):0;
 			is_died.x==0 ? imageAtomicAdd(t_color[constant.bounce_count], ivec3(store_index_2d.xy, 1), ba):0;
-			is_died.y==0 ? imageAtomicAdd(t_color[constant.bounce_count], ivec3(store_index_2d.zw, 0), rg):0;
-			is_died.y==0 ? imageAtomicAdd(t_color[constant.bounce_count], ivec3(store_index_2d.zw, 1), ba):0;
+//			is_died.y==0 ? imageAtomicAdd(t_color[constant.bounce_count], ivec3(store_index_2d.zw, 0), rg):0;
+//			is_died.y==0 ? imageAtomicAdd(t_color[constant.bounce_count], ivec3(store_index_2d.zw, 1), ba):0;
 		}
 	}
 }
