@@ -3,6 +3,71 @@
 namespace pm2d_2
 {
 
+uint32_t morton2(uvec2 xy)
+{
+	uvec2 n = xy << uvec2(0, 1);
+	n = (n | (n << uvec2(8))) & uvec2(0x00ff00ff);
+	n = (n | (n << uvec2(4))) & uvec2(0x0f0f0f0f);
+	n = (n | (n << uvec2(2))) & uvec2(0x33333333);
+	n = (n | (n << uvec2(1))) & uvec2(0x55555555);
+	return n.x | n.y;
+}
+uvec2 morton2(const uvec4& minmax)
+{
+	uvec4 n = minmax << uvec4(0, 1, 0, 1);
+	n = (n | (n << uvec4(8))) & uvec4(0x00ff00ff);
+	n = (n | (n << uvec4(4))) & uvec4(0x0f0f0f0f);
+	n = (n | (n << uvec4(2))) & uvec4(0x33333333);
+	n = (n | (n << uvec4(1))) & uvec4(0x55555555);
+	return uvec2(n.x | n.y, n.z | n.w);
+}
+int getMortonNumber(const vec2& pos, float radius)
+{
+	int32_t m_depth = 0;
+	vec2 m_min = vec2(0);
+	vec2 m_max = vec2(512);
+	vec2 m_min_cell_size = m_max - m_min;
+	uint32_t m_cell_num = 1;
+	for (int i = 1; i < m_depth + 1; i++) {
+		int num = 1;
+		for (int ii = 0; ii < i; ii++) {
+			num *= 4;
+		}
+		m_cell_num += num;
+		m_min_cell_size *= 0.5f;
+	}
+
+	std::vector<int32_t> node_num;
+	node_num.resize(m_depth + 1);
+	node_num[0] = 1;
+	for (int i = 1; i < m_depth + 1; i++) {
+		node_num[i] = node_num[i - 1] * 4;
+	}
+
+	uvec4 minmax = uvec4((pos.xyxy() + vec4(vec2(-radius*0.5f), vec2(radius * 0.5f)) - m_min.xyxy()) / m_min_cell_size.xyxy());
+	uvec2 morton = morton2(minmax);
+
+	uint def = morton.x ^ morton.y;
+	int depth = 0;
+	for (int i = 0; i < m_depth; i++)
+	{
+		uint check = (def >> (i * 2)) & 0x3;
+		if (check != 0)
+			depth = i + 1;
+	}
+	uint spaceNum = morton.y >> (depth * 2);
+//	int offset = 1 << (m_depth - depth);
+	int offset = (node_num[m_depth - depth] - 1) / 3;
+	spaceNum += offset;
+
+	if (spaceNum >= (uint)m_cell_num) {
+		return -1;
+	}
+
+	return int(spaceNum);
+
+}
+
 PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target)
 {
 	m_context = context;
