@@ -1030,6 +1030,12 @@ void DebugPM2D::execute(vk::CommandBuffer cmd)
 
 	cmd.copyBuffer(m_map_data.getInfo().buffer, m_renderer->m_fragment_buffer.getInfo().buffer, copy);
 
+	static vec2 light_pos = vec2(200.f);
+	float move = 1.f;
+	light_pos.x += m_context->m_window->getInput().m_keyboard.isHold(VK_RIGHT) * move;
+	light_pos.x -= m_context->m_window->getInput().m_keyboard.isHold(VK_LEFT) * move;
+	light_pos.y -= m_context->m_window->getInput().m_keyboard.isHold(VK_UP) * move;
+	light_pos.y += m_context->m_window->getInput().m_keyboard.isHold(VK_DOWN) * move;
 	{
 		vk::RenderPassBeginInfo begin_render_Info;
 		begin_render_Info.setRenderPass(m_render_pass.get());
@@ -1039,7 +1045,7 @@ void DebugPM2D::execute(vk::CommandBuffer cmd)
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PipelineLayoutPointLight].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayoutPointLight].get(), 0, m_renderer->m_descriptor_set.get(), {});
-		cmd.pushConstants<vec2>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, 0, vec2(100.f, 400.f));
+		cmd.pushConstants<vec2>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, 0, light_pos);
 		cmd.draw(1, 1, 0, 0);
 // 		cmd.pushConstants<vec2>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, 0, vec2(500.f, 120.f));
 // 		cmd.draw(1, 1, 0, 0);

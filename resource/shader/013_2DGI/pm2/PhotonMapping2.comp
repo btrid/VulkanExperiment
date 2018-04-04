@@ -60,11 +60,11 @@ void main()
 	{
 		float ray_num = gl_NumWorkGroups.y*gl_WorkGroupSize.x*2.;
 		float ray_NO = (gl_LocalInvocationID.x + gl_WorkGroupID.y*gl_WorkGroupSize.x)*2.;
+
 		float angle_offset = 1./ray_num*offset.x;
-		float angle = ray_NO * 2.*PI / ray_num + angle_offset;
-		float angle2 = (ray_NO+1.) * 2.*PI / ray_num + angle_offset;
+		vec2 angle = ((ray_NO+vec2(0., 1.)) / ray_num) * (2.*PI) + angle_offset;
 		
-		dir = rotate(vec2(angle, angle2));
+		dir = rotate(angle);
 		next_step = ivec3((dir.x < 0. ? -1 : 1), (dir.y < 0. ? -1 : 1), 0);
 		next_step2 = ivec3((dir.z < 0. ? -1 : 1), (dir.w < 0. ? -1 : 1), 0);
 		// 0除算回避
@@ -72,6 +72,32 @@ void main()
 		dir.y = abs(dir.y) < FLT_EPSIRON ? next_step.y*FLT_EPSIRON : dir.y;
 		dir.z = abs(dir.z) < FLT_EPSIRON ? next_step2.x*FLT_EPSIRON : dir.z;
 		dir.w = abs(dir.w) < FLT_EPSIRON ? next_step2.y*FLT_EPSIRON : dir.w;
+	}
+
+	// march
+	{
+		vec4 cell_origin = vec4(map_index) * cell_size.xyxy;
+		vec4 cell_p = pos - cell_origin;
+
+		float x = dir.x < 0. ? cell_p.x : (cell_size.z- cell_p.x);
+		float y = dir.y < 0. ? cell_p.y : (cell_size.w- cell_p.y);
+		float z = dir.z < 0. ? cell_p.z : (cell_size.z- cell_p.z);
+		float w = dir.w < 0. ? cell_p.w : (cell_size.w- cell_p.w);
+
+		x = x <= FLT_EPSIRON ? (x+cell_size.z) : x;
+		y = y <= FLT_EPSIRON ? (y+cell_size.w) : y;
+		z = z <= FLT_EPSIRON ? (z+cell_size.z) : z;
+		w = w <= FLT_EPSIRON ? (w+cell_size.w) : w;
+
+		vec4 dist = abs(vec4(x, y, z, w) / dir.xyzw);
+		int next_ = dist.x < dist.y ? 0 : 1;
+		int next2_ = dist.z < dist.w ? 2 : 3;
+		pos += dir * vec4(vec2(dist[next_]), vec2(dist[next2_]));
+
+		ivec4 next;
+		next.xy = next_ == 0 ? next_step.xz : next_step.zy;
+		next.zw = next2_ == 2 ? next_step2.xz : next_step2.zy;
+		map_index = ivec4((pos+ next*0.1) / cell_size.xyxy);
 	}
 
 	uvec2 u_rg = uvec2(color.rg) << uvec2(0, 16);
