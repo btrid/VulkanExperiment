@@ -70,8 +70,8 @@ void main()
 			break;
 		}
 		const float ray_dist = length(diff.xy);
-		vec3 illumi = emission.xyz / (1.+ray_dist);
-//		vec3 illumi = emission.xyz / (1.+ray_dist*ray_dist);
+//		vec3 illumi = emission.xyz / (1.+ray_dist);
+		vec3 illumi = emission.xyz / (1.+ray_dist*ray_dist*0.05);
 		if(length(illumi) <= FLT_EPSIRON){
 			// 影響範囲外
 			continue;
@@ -81,13 +81,36 @@ void main()
 		const ivec3 next_step = ivec3((dir.x < 0. ? -1 : 1), (dir.y < 0. ? -1 : 1), 0);
 		{
 			// 0除算回避
-			dir.x = abs(dir.x) < FLT_EPSIRON ? next_step.x*FLT_EPSIRON : dir.x;
-			dir.y = abs(dir.y) < FLT_EPSIRON ? next_step.y*FLT_EPSIRON : dir.y;
+//			dir.x = abs(dir.x) < FLT_EPSIRON ? next_step.x*FLT_EPSIRON : dir.x;
+//			dir.y = abs(dir.y) < FLT_EPSIRON ? next_step.y*FLT_EPSIRON : dir.y;
+			dir.x = dir.x == 0. ? FLT_EPSIRON : dir.x;
+			dir.y = dir.y == 0. ? FLT_EPSIRON : dir.y;
 		}
 		dir = normalize(dir);
 
 		vec2 pos = start;
 		ivec2 map_index = ivec2(pos / pixel_size.xy);
+
+		// march
+		{
+			int hierarchy=constant.bounce_count;
+			vec2 cell_size = pixel_size.xy*(1<<hierarchy);
+			vec2 cell_origin = vec2(map_index>>hierarchy)*cell_size;
+			vec2 cell_p = pos - cell_origin;
+
+			float x = dir.x < 0. ? cell_p.x : (cell_size.x- cell_p.x);
+			float y = dir.y < 0. ? cell_p.y : (cell_size.y- cell_p.y);
+
+			x = x <= FLT_EPSIRON ? (x+cell_size.x) : x;
+			y = y <= FLT_EPSIRON ? (y+cell_size.y) : y;
+
+			vec2 progress = abs(vec2(x, y) / dir);
+			int next_ = progress.x < progress.y ? 0 : 1;
+			pos += dir * progress[next_];
+
+			ivec2 next = next_ == 0 ? next_step.xz : next_step.zy;
+			map_index = ivec2(pos+ next*0.5);
+		}
 
 		for(;;)
 		{
