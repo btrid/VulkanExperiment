@@ -128,6 +128,8 @@ struct PM2DRenderer
 	std::array<vk::UniquePipeline, PipelineNum> m_pipeline;
 
 	std::shared_ptr<btr::Context> m_context;
+	Info m_info;
+
 };
 
 struct AppModelPM2D : public PM2DPipeline

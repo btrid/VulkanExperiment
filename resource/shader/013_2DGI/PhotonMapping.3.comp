@@ -66,10 +66,10 @@ void main()
 			}
 			else
 			{
-				start_subpos.x = idir.x>0 ? 1. : idir.x<0 ? 0. : 0.5;
-				start_subpos.y = idir.y>0 ? 0. : idir.y<0 ? 1. : 0.5;
-				end_subpos.x = idir.x>0 ? 0. : idir.x<0 ? 1. : 0.5;
-				end_subpos.y = idir.y>0 ? 1. : idir.y<0 ? 0. : 0.5;
+				start_subpos.x = idir.x>0 ? 0.9 : idir.x<0 ? 0.1 : 0.5;
+				start_subpos.y = idir.y>0 ? 0.1 : idir.y<0 ? 0.9 : 0.5;
+				end_subpos.x = idir.x>0 ? 0.1 : idir.x<0 ? 0.9 : 0.5;
+				end_subpos.y = idir.y>0 ? 0.9 : idir.y<0 ? 0.1 : 0.5;
 			}
 		}
 
@@ -78,6 +78,8 @@ void main()
 		end = end + subpixel*(end_subpos.xy);
 
 		int goal_index = abs(idir.x) >= abs(idir.y) ? 0: 1;
+		goal_index = idir.x == 0 ? 1:goal_index;
+		goal_index = idir.y == 0 ? 0:goal_index;
 
 		const vec2 diff = (end - start);
 		if(dot(diff, diff) <= 100.1)
@@ -137,6 +139,8 @@ void main()
 			}
 			// 終了判定
 			if(map_index[goal_index] == int(iend[goal_index]))
+//			if(all(equal(map_index, iend)))
+//			if(any(bvec2(ivec2(greaterThanEqual(abs(idir), abs(ivec2(end-map_index)))) & ivec2(bvec2(idir)))))
 			{
 				// 距離を超えたら光がフラグメントにヒット
 				illuminance += illumi;

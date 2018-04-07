@@ -15,46 +15,45 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 	FragmentBufferSize = RenderWidth * RenderHeight*RenderDepth;
 
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-	Info info;
 	{
 		btr::BufferMemoryDescriptorEx<Info> desc;
 		desc.element_num = 1;
 		m_fragment_info = context->m_uniform_memory.allocateMemory(desc);
 
-		info.m_position = vec4(0.f, 0.f, 0.f, 0.f);
-		info.m_resolution = uvec2(RenderWidth, RenderHeight);
-		info.m_emission_tile_size = uvec2(32, 32);
-		info.m_emission_tile_num = info.m_resolution / info.m_emission_tile_size;
-		info.m_camera_PV = glm::ortho(-RenderWidth * 0.5f, RenderWidth*0.5f, -RenderHeight * 0.5f, RenderHeight*0.5f);
-		info.m_camera_PV *= glm::lookAt(vec3(0., -1.f, 0.f) + info.m_position.xyz(), info.m_position.xyz(), vec3(0.f, 0.f, 1.f));
-		info.m_fragment_hierarchy_offset[0] = 0;
-		info.m_fragment_hierarchy_offset[1] = info.m_fragment_hierarchy_offset[0] + RenderHeight * RenderWidth / (2 * 2);
-		info.m_fragment_hierarchy_offset[2] = info.m_fragment_hierarchy_offset[1] + RenderHeight * RenderWidth / (4 * 4);
-		info.m_fragment_hierarchy_offset[3] = info.m_fragment_hierarchy_offset[2] + RenderHeight * RenderWidth / (8 * 8);
-		info.m_fragment_hierarchy_offset[4] = info.m_fragment_hierarchy_offset[3] + RenderHeight * RenderWidth / (16 * 16);
-		info.m_fragment_hierarchy_offset[5] = info.m_fragment_hierarchy_offset[4] + RenderHeight * RenderWidth / (32 * 32);
-		info.m_fragment_hierarchy_offset[6] = info.m_fragment_hierarchy_offset[5] + RenderHeight * RenderWidth / (64 * 64);
-		info.m_fragment_hierarchy_offset[7] = info.m_fragment_hierarchy_offset[6] + RenderHeight * RenderWidth / (128 * 128);
+		m_info.m_position = vec4(0.f, 0.f, 0.f, 0.f);
+		m_info.m_resolution = uvec2(RenderWidth, RenderHeight);
+		m_info.m_emission_tile_size = uvec2(32, 32);
+		m_info.m_emission_tile_num = m_info.m_resolution / m_info.m_emission_tile_size;
+		m_info.m_camera_PV = glm::ortho(-RenderWidth * 0.5f, RenderWidth*0.5f, -RenderHeight * 0.5f, RenderHeight*0.5f);
+		m_info.m_camera_PV *= glm::lookAt(vec3(0., -1.f, 0.f) + m_info.m_position.xyz(), m_info.m_position.xyz(), vec3(0.f, 0.f, 1.f));
+		m_info.m_fragment_hierarchy_offset[0] = 0;
+		m_info.m_fragment_hierarchy_offset[1] = m_info.m_fragment_hierarchy_offset[0] + RenderHeight * RenderWidth / (2 * 2);
+		m_info.m_fragment_hierarchy_offset[2] = m_info.m_fragment_hierarchy_offset[1] + RenderHeight * RenderWidth / (4 * 4);
+		m_info.m_fragment_hierarchy_offset[3] = m_info.m_fragment_hierarchy_offset[2] + RenderHeight * RenderWidth / (8 * 8);
+		m_info.m_fragment_hierarchy_offset[4] = m_info.m_fragment_hierarchy_offset[3] + RenderHeight * RenderWidth / (16 * 16);
+		m_info.m_fragment_hierarchy_offset[5] = m_info.m_fragment_hierarchy_offset[4] + RenderHeight * RenderWidth / (32 * 32);
+		m_info.m_fragment_hierarchy_offset[6] = m_info.m_fragment_hierarchy_offset[5] + RenderHeight * RenderWidth / (64 * 64);
+		m_info.m_fragment_hierarchy_offset[7] = m_info.m_fragment_hierarchy_offset[6] + RenderHeight * RenderWidth / (128 * 128);
 
 		int size = RenderHeight * RenderWidth / 64;
-		info.m_fragment_map_hierarchy_offset[0] = 0;
-		info.m_fragment_map_hierarchy_offset[1] = info.m_fragment_map_hierarchy_offset[0] + size / (2 * 2);
-		info.m_fragment_map_hierarchy_offset[2] = info.m_fragment_map_hierarchy_offset[1] + size / (4 * 4);
-		info.m_fragment_map_hierarchy_offset[3] = info.m_fragment_map_hierarchy_offset[2] + size / (8 * 8);
-		info.m_fragment_map_hierarchy_offset[4] = info.m_fragment_map_hierarchy_offset[3] + size / (16 * 16);
-		info.m_fragment_map_hierarchy_offset[5] = info.m_fragment_map_hierarchy_offset[4] + size / (32 * 32);
-		info.m_fragment_map_hierarchy_offset[6] = info.m_fragment_map_hierarchy_offset[5] + size / (64 * 64);
-		info.m_fragment_map_hierarchy_offset[7] = info.m_fragment_map_hierarchy_offset[6] + size / (128 * 128);
+		m_info.m_fragment_map_hierarchy_offset[0] = 0;
+		m_info.m_fragment_map_hierarchy_offset[1] = m_info.m_fragment_map_hierarchy_offset[0] + size / (2 * 2);
+		m_info.m_fragment_map_hierarchy_offset[2] = m_info.m_fragment_map_hierarchy_offset[1] + size / (4 * 4);
+		m_info.m_fragment_map_hierarchy_offset[3] = m_info.m_fragment_map_hierarchy_offset[2] + size / (8 * 8);
+		m_info.m_fragment_map_hierarchy_offset[4] = m_info.m_fragment_map_hierarchy_offset[3] + size / (16 * 16);
+		m_info.m_fragment_map_hierarchy_offset[5] = m_info.m_fragment_map_hierarchy_offset[4] + size / (32 * 32);
+		m_info.m_fragment_map_hierarchy_offset[6] = m_info.m_fragment_map_hierarchy_offset[5] + size / (64 * 64);
+		m_info.m_fragment_map_hierarchy_offset[7] = m_info.m_fragment_map_hierarchy_offset[6] + size / (128 * 128);
 
-		info.m_emission_buffer_size[0] = RenderWidth * RenderHeight;
-		info.m_emission_buffer_offset[0] = 0;
+		m_info.m_emission_buffer_size[0] = RenderWidth * RenderHeight;
+		m_info.m_emission_buffer_offset[0] = 0;
 		for (int i = 1; i < BounceNum; i++)
 		{
-			info.m_emission_buffer_size[i] = info.m_emission_buffer_size[i - 1] / 4;
-			info.m_emission_buffer_offset[i] = info.m_emission_buffer_offset[i - 1] + info.m_emission_buffer_size[i - 1];
+			m_info.m_emission_buffer_size[i] = m_info.m_emission_buffer_size[i - 1] / 4;
+			m_info.m_emission_buffer_offset[i] = m_info.m_emission_buffer_offset[i - 1] + m_info.m_emission_buffer_size[i - 1];
 		}
-		info.m_emission_tile_linklist_max = 8192*1024;
-		cmd.updateBuffer<Info>(m_fragment_info.getInfo().buffer, m_fragment_info.getInfo().offset, info);
+		m_info.m_emission_tile_linklist_max = 8192*1024;
+		cmd.updateBuffer<Info>(m_fragment_info.getInfo().buffer, m_fragment_info.getInfo().offset, m_info);
 	}
 	{
 		btr::BufferMemoryDescriptorEx<Fragment> desc;
@@ -94,17 +93,17 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 	}
 	{
 		btr::BufferMemoryDescriptorEx<Emission> desc;
-		desc.element_num = info.m_emission_buffer_offset[BounceNum - 1] + info.m_emission_buffer_size[BounceNum - 1];
+		desc.element_num = m_info.m_emission_buffer_offset[BounceNum - 1] + m_info.m_emission_buffer_size[BounceNum - 1];
 		m_emission_buffer = context->m_storage_memory.allocateMemory(desc);
 	}
 	{
 		btr::BufferMemoryDescriptorEx<int32_t> desc;
-		desc.element_num = info.m_emission_buffer_offset[BounceNum - 1] + info.m_emission_buffer_size[BounceNum - 1];
+		desc.element_num = m_info.m_emission_buffer_offset[BounceNum - 1] + m_info.m_emission_buffer_size[BounceNum - 1];
 		m_emission_list = context->m_storage_memory.allocateMemory(desc);
 	}
 	{
 		btr::BufferMemoryDescriptorEx<int32_t> desc;
-		desc.element_num = info.m_emission_buffer_offset[BounceNum - 1] + info.m_emission_buffer_size[BounceNum - 1];
+		desc.element_num = m_info.m_emission_buffer_offset[BounceNum - 1] + m_info.m_emission_buffer_size[BounceNum - 1];
 		m_emission_map = context->m_storage_memory.allocateMemory(desc);
 	}
 	{
@@ -120,7 +119,7 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 	}
 	{
 		btr::BufferMemoryDescriptorEx<LinkList> desc;
-		desc.element_num = info.m_emission_tile_linklist_max;
+		desc.element_num = m_info.m_emission_tile_linklist_max;
 		m_emission_tile_linklist = context->m_storage_memory.allocateMemory(desc);
 	}
 
@@ -659,7 +658,9 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineMakeFragmentMap].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutMakeFragmentMap].get(), 0, m_descriptor_set.get(), {});
-			cmd.dispatch(RenderWidth / 32, RenderHeight / 32, 1);
+
+			auto num = app::calcDipatchGroups(uvec3(RenderWidth, RenderHeight, 1), uvec3(32, 32, 1));
+			cmd.dispatch(num.x, num.y, num.z);
 		}
 		// make hierarchy
 		{
@@ -696,7 +697,7 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {},
 		0, nullptr, 0, nullptr, array_length(to_write), to_write);
 
-	for (int i = 0; i < 2; i++)
+	for (int i = 0; i < 1; i++)
 	{
 		ivec2 constant_param[] = {
 			ivec2(0, 2),
@@ -732,7 +733,7 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineLayoutLightCulling].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutLightCulling].get(), 0, m_descriptor_set.get(), {});
 			cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayoutLightCulling].get(), vk::ShaderStageFlagBits::eCompute, 0, constant_param[i]);
-			cmd.dispatch(20, 20, 1);
+			cmd.dispatch(m_info.m_emission_tile_num.x, m_info.m_emission_tile_num.y, 1);
 		}
 //		if (i == 1) { break; }
 		// photonmapping
@@ -752,7 +753,7 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelinePhotonMapping].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutPhotonMapping].get(), 0, m_descriptor_set.get(), {});
 			cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayoutPhotonMapping].get(), vk::ShaderStageFlagBits::eCompute, 0, constant_param[i]);
-			cmd.dispatch(20>>constant_param[i].x, 20>>constant_param[i].x, 1);
+			cmd.dispatch(m_info.m_emission_tile_num.x >>constant_param[i].x, m_info.m_emission_tile_num.y>>constant_param[i].x, 1);
 		}
 	}
 
@@ -1060,8 +1061,8 @@ void DebugPM2D::execute(vk::CommandBuffer cmd)
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayoutPointLight].get(), 0, m_renderer->m_descriptor_set.get(), {});
 		cmd.pushConstants<vec2>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, 0, light_pos);
 		cmd.draw(1, 1, 0, 0);
-		cmd.pushConstants<vec2>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, 0, vec2(400.f, 190.f));
-		cmd.draw(1, 1, 0, 0);
+// 		cmd.pushConstants<vec2>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, 0, vec2(400.f, 190.f));
+// 		cmd.draw(1, 1, 0, 0);
 
 		cmd.endRenderPass();
 #endif
