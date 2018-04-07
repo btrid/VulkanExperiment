@@ -917,13 +917,13 @@ DebugPM2D::DebugPM2D(const std::shared_ptr<btr::Context>& context, const std::sh
 // 		}
 
 		std::vector<ivec4> rect;
-#if 1
+#if 0
 		rect.emplace_back(400, 400, 200, 400);
 		rect.emplace_back(300, 200, 100, 100);
 		rect.emplace_back(80, 50, 200, 30);
 #else
 		for (int i = 0; i < 300; i++) {
-			rect.emplace_back(std::rand() % 640, std::rand() % 640, std::rand() % 30, std::rand() % 30);
+			rect.emplace_back(std::rand() % 512, std::rand() % 512, std::rand() % 30, std::rand() % 30);
 		}
 
 #endif
