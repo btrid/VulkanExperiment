@@ -101,14 +101,14 @@ void main()
 
 		vec2 pos = start;
 		ivec2 map_index = ivec2(pos / pixel_size.xy);
-		pos = pos - vec2(map_index);
+//		pos = pos - vec2(map_index);
 
 		const ivec3 next_step = ivec3((idir.x < 0 ? -1 : 1), (idir.y < 0 ? -1 : 1), 0);
 		const ivec2 map_index_origin = ivec2((idir.x < 0 ? 0 : 1), (idir.y < 0 ? 0 : 1));
 
 		for(int i = 0; i <1000; i++)
 		{
-			int hierarchy=0;
+			int hierarchy=7;
 			{
 				for(; hierarchy>constant.bounce_count; hierarchy--)
 				{
@@ -123,18 +123,32 @@ void main()
 			}
 			// march
 			{
+//				vec2 cell_size = pixel_size.xy*(1<<hierarchy);
+//				vec2 cell_origin = vec2((map_index>>hierarchy)+map_index_origin)*cell_size;
+//				vec2 cell_p = abs(cell_origin - pos);
+
+//				vec2 progress = abs(cell_p * inv_dir);
+//				int next_ = progress.x < progress.y ? 0 : 1;
+//				pos += dir * progress[next_];
+
 				vec2 cell_size = pixel_size.xy*(1<<hierarchy);
-				vec2 cell_origin = vec2(map_index_origin)*cell_size;
+				vec2 cell_origin = vec2(map_index>>hierarchy)*cell_size;
+				vec2 cell_p = pos - cell_origin;
 
-				vec2 cell_p = abs(cell_origin - pos);
+				float x = dir.x < 0. ? cell_p.x : (cell_size.x- cell_p.x);
+				float y = dir.y < 0. ? cell_p.y : (cell_size.y- cell_p.y);
 
-				vec2 progress = abs(cell_p * inv_dir);
+				x = x <= FLT_EPSIRON ? (x+cell_size.x) : x;
+				y = y <= FLT_EPSIRON ? (y+cell_size.y) : y;
+
+				vec2 progress = abs(vec2(x, y) * inv_dir);
 				int next_ = progress.x < progress.y ? 0 : 1;
 				pos += dir * progress[next_];
 
 				ivec2 next = next_ == 0 ? next_step.xz : next_step.zy;
-				map_index += ivec2(next);
-				pos -= vec2(next);
+				map_index = ivec2((pos+next*0.5) / pixel_size.xy);
+//				map_index += ivec2(next);
+//				pos -= vec2(next);
 			}
 			// 終了判定
 			if(abs(map_index[goal_index]-istart[goal_index]) >= abs(idir[goal_index]))
