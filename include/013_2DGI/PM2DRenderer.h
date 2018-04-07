@@ -37,6 +37,7 @@ struct PM2DRenderer
 		ShaderPhotonMappingFS,
 		ShaderRenderingVS,
 		ShaderRenderingFS,
+		ShaderDebugRenderFragmentMap,
 		ShaderNum,
 	};
 	enum PipelineLayout
@@ -46,6 +47,7 @@ struct PM2DRenderer
 		PipelineLayoutLightCulling,
 		PipelineLayoutPhotonMapping,
 		PipelineLayoutRendering,
+		PipelineLayoutDebugRenderFragmentMap,
 		PipelineLayoutNum,
 	};
 	enum Pipeline
@@ -56,6 +58,7 @@ struct PM2DRenderer
 		PipelinePhotonMapping,
 		PipelinePhotonMappingG,
 		PipelineRendering,
+		PipelineDebugRenderFragmentMap,
 		PipelineNum,
 	};
 	struct Info
@@ -102,6 +105,8 @@ struct PM2DRenderer
 
 	PM2DRenderer(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target);
 	vk::CommandBuffer execute(const std::vector<PM2DPipeline*>& pipeline);
+
+	void DebugRnederFragmentMap(vk::CommandBuffer &cmd);
 
 	btr::BufferMemoryEx<Info> m_fragment_info;
 	btr::BufferMemoryEx<Fragment> m_fragment_buffer;

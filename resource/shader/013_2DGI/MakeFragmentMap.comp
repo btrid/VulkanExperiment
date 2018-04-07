@@ -13,7 +13,7 @@
 layout (local_size_x = 32, local_size_y = 32) in;
 
 shared uint s_bit[16][2];
-shared int s_fragment_num[16*16];
+shared int s_fragment_num[32*32];
 void main()
 {
 	uint tiled_1D_index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*u_pm_info.m_resolution.x; 
@@ -23,31 +23,10 @@ void main()
 	// fragment hierarchy
 	{
 		// 最初の初期化だけここで行う
-		int i = 1;
 		{
-			uvec2 local = gl_LocalInvocationID.xy>>i;
-			uint index = local.x + local.y*(gl_WorkGroupSize.x>>i);
-			if(all(equal(gl_LocalInvocationID.xy % (1<<i), uvec2(0))))
-			{
-				s_fragment_num[index] = 0;
-			}
-			barrier();
-			memoryBarrierShared();
-
-			if(is_fragment)
-			{
-				atomicAdd(s_fragment_num[index], 1);
-			}
-			barrier();
-			memoryBarrierShared();
-
-			if(all(equal(gl_LocalInvocationID.xy % (1<<i), uvec2(0))))
-			{
-				uvec2 idx2d = gl_GlobalInvocationID.xy>>i;
-				uint store = idx2d.x+idx2d.y*(u_pm_info.m_resolution.x>>i);
-				int offset = 0;
-				b_fragment_hierarchy[offset + store] = s_fragment_num[index];
-			}
+			uvec2 idx2d = gl_GlobalInvocationID.xy;
+			uint store = idx2d.x+idx2d.y*(u_pm_info.m_resolution.x);
+			b_fragment_hierarchy[store] = is_fragment ? 1 : 0;
 		}
 	}
 

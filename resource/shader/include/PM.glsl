@@ -69,8 +69,8 @@ layout(std430, set=USE_PM, binding=16) restrict buffer EmissiveTileLinkListBuffe
 layout (set=USE_PM, binding=20, r32ui) uniform uimage2DArray t_color[4];
 layout (set=USE_PM, binding=30) uniform sampler2DArray s_color[4];
 
-#define getFragmentHierarchyOffset(_i) (u_pm_info.m_fragment_hierarchy_offset[((_i)-1)/4][((_i)-1)%4])
-#define getFragmentMapHierarchyOffset(_i) (u_pm_info.m_fragment_map_hierarchy_offset[((_i)-1)/4][((_i)-1)%4])
+#define getFragmentHierarchyOffset(_i) (u_pm_info.m_fragment_hierarchy_offset[((_i))/4][((_i))%4])
+#define getFragmentMapHierarchyOffset(_i) (u_pm_info.m_fragment_map_hierarchy_offset[((_i))/4][((_i))%4])
 #define culling_light_power() (0.001)
 #define light_area() (33.)
 #endif
