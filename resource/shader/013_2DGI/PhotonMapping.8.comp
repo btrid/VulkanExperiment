@@ -54,25 +54,23 @@ void main()
 			ivec2 e_index_2d = ivec2(emission_index%bounce_reso.x, emission_index/bounce_reso.x);
 			start = vec2(e_index_2d<<constant.bounce_count);
 		}
-		ivec2 idir = ivec2(end+0.5) - ivec2(start+0.5);
+		ivec2 idir = ivec2(end) - ivec2(start);
 		vec2 end_subpos = vec2(0.5);
 		vec2 start_subpos = vec2(0.5);
-//		vec2 end_subpos = vec2(0.);
-//		vec2 start_subpos = vec2(0.);
 		{
 			if(abs(idir.x) >= abs(idir.y))
 			{
-				start_subpos.x = idir.x<0 ? 0. : idir.x>0 ? 1. : 0.5;
+				start_subpos.x = idir.x>0 ? 0. : idir.x<0 ? 1. : 0.5;
 				start_subpos.y = idir.y>0 ? 1. : idir.y<0 ? 0. : 0.5;
-				end_subpos.x = idir.x<0 ? 1. : idir.x>0 ? 0. : 0.5;
+				end_subpos.x = idir.x>0 ? 1. : idir.x<0 ? 0. : 0.5;
 				end_subpos.y = idir.y>0 ? 0. : idir.y<0 ? 1. : 0.5;
 			}
 			else
 			{
 				start_subpos.x = idir.x>0 ? 1. : idir.x<0 ? 0. : 0.5;
-				start_subpos.y = idir.y<0 ? 0. : idir.y>0 ? 1. : 0.5;
+				start_subpos.y = idir.y>0 ? 0. : idir.y<0 ? 1. : 0.5;
 				end_subpos.x = idir.x>0 ? 0. : idir.x<0 ? 1. : 0.5;
-				end_subpos.y = idir.y<0 ? 1. : idir.y>0 ? 0. : 0.5;
+				end_subpos.y = idir.y>0 ? 1. : idir.y<0 ? 0. : 0.5;
 			}
 		}
 
@@ -81,10 +79,10 @@ void main()
 		start = start + subpixel*(start_subpos.xy);
 		end = end + subpixel*(end_subpos.xy);
 
-		int goal_index = abs(idir.x) >= abs(idir.y) ? 0: abs(idir.x) < abs(idir.y) ? 1 : 2;
+		int goal_index = abs(idir.x) >= abs(idir.y) ? 0: 1;
 
 		const vec2 diff = (end - start);
-		if(dot(diff, diff) <= 100.1 || goal_index == 2)
+		if(dot(diff, diff) <= 100.1)
 		{
 			// ライト
 			fragment_state = fragment_state_light;
@@ -98,15 +96,13 @@ void main()
 		}
 		
 		vec2 dir = normalize(end - start);
-		dir *= abs(dir.x) >= abs(dir.y) ? abs(1./dir.x) : abs(1./dir.y);
 		vec2 inv_dir;
-		inv_dir.x = dir.x == 0 ? 0. : (1./dir.x);
-		inv_dir.y = dir.y == 0 ? 0. : (1./dir.y);
-
+		inv_dir.x = dir.x == 0 ? 999999999. : (1./dir.x);
+		inv_dir.y = dir.y == 0 ? 999999999. : (1./dir.y);
 
 		vec2 pos = start;
 		ivec2 map_index = ivec2(pos / pixel_size.xy);
-		pos += dir*0.5;
+		pos = fract(pos);
 
 		const ivec3 next_step = ivec3((idir.x < 0 ? -1 : 1), (idir.y < 0 ? -1 : 1), 0);
 		const ivec2 map_index_origin = ivec2((idir.x < 0 ? 0 : 1), (idir.y < 0 ? 0 : 1));
@@ -114,7 +110,7 @@ void main()
 		illuminance = vec3(0., 100., 0.);
 		for(int i = 0; i <1000; i++)
 		{
-			int hierarchy=7;
+			int hierarchy=0;
 			{
 				for(; hierarchy>constant.bounce_count; hierarchy--)
 				{
@@ -123,32 +119,35 @@ void main()
 					int offset = getFragmentHierarchyOffset(hierarchy);
 					if(b_fragment_hierarchy[findex + offset] == 0)
 					{
-						vec2 cell_size = pixel_size.xy*(1<<hierarchy);
-						vec2 cell_origin = vec2(map_index_origin)*cell_size;
-						vec2 map_index_sub = map_index - ((map_index>>hierarchy)<<hierarchy);
-						vec2 cell_p = abs(cell_origin-map_index_sub);
-						float min_axis = min(cell_p.x*inv_dir.x, cell_p.y*inv_dir.y);
-//						pos += dir*min_axis;
-//						map_index = ivec2(pos);
-
-						hierarchy = 0;
 						break;
 					}
 				}
 			}
-			hierarchy = 0;
 			// march
 			{
 				vec2 cell_size = pixel_size.xy*(1<<hierarchy);
-				pos += dir*cell_size;
-				map_index = ivec2(pos);
-		
-//				dir = normalize(end - pos);
-//				dir *= abs(dir.x) >= abs(dir.y) ? abs(1./dir.x) : abs(1./dir.y);
+				vec2 cell_origin = vec2(map_index_origin)*cell_size;
+				vec2 map_index_sub = map_index - ((map_index>>hierarchy)<<hierarchy);
+				vec2 cell_p = abs(cell_origin -(pos + map_index_sub));
+
+				vec2 progress = abs(cell_p * inv_dir);
+				int next_axis = progress.x < progress.y ? 0 : progress.x > progress.y ?1 : 2;
+				vec2 n = vec2(next_axis == 0 ? 1 : 0, next_axis==1?0:1)*0.9;
+
+				vec2 absmove = abs(dir * progress[next_axis%2]);
+				ivec2 next = ivec2(absmove+pos)*next_step.xy;
+				if(all(equal(next, ivec2(0)))){
+					illuminance = vec3(0., 100., 100.);
+//					break;
+					
+				}
+				map_index += ivec2(next);
+				pos = fract(absmove+pos);
 
 			}
 			// 終了判定
-			if(abs(map_index[goal_index]-istart[goal_index]) == abs(idir[goal_index]))
+			if(abs(map_index[goal_index]-istart[goal_index]) >= abs(idir[goal_index]))
+//			if(map_index[goal_index] == int(iend[goal_index]))
 			{
 				// 距離を超えたら光がフラグメントにヒット
 				illuminance = vec3(0., 0., 100.);

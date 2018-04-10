@@ -36,6 +36,28 @@
 
 int main()
 {
+	vec2 pos = vec2(0.7f, 0.2f);
+	vec2 dir = glm::normalize(vec2(-0.5, -0.7f));
+	vec2 next_step = vec2(-1.f, -1.f);
+	vec2 inv_dir = 1.f / dir;
+	ivec2 map_index = ivec2(3, 5);
+	int hierarchy = 0;
+//	for (;;)
+	{
+		vec2 cell_size = vec2(1.f);
+		vec2 cell_origin = vec2(1.f)*cell_size;
+		vec2 map_index_sub = map_index - ((map_index >> hierarchy) << hierarchy);
+		vec2 cell_p = abs(cell_origin - (pos + map_index_sub));
+
+		vec2 progress = abs(cell_p * inv_dir);
+		int next_axis = progress.x < progress.y ? 0 : progress.x > progress.y ? 1 : 2;
+
+		vec2 absmove = abs(dir * progress[next_axis % 2]);
+		vec2 next = floor(absmove + pos)*next_step.xy;
+		map_index += ivec2(next);
+		pos = fract(absmove + pos);
+	}
+
 //	using namespace pm2d_2;
 	using namespace pm2d;
 	btr::setResourceAppPath("../../resource/");
