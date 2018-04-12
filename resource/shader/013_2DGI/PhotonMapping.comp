@@ -57,8 +57,6 @@ void main()
 		ivec2 idir = ivec2(end+0.5) - ivec2(start+0.5);
 		vec2 end_subpos = vec2(0.5);
 		vec2 start_subpos = vec2(0.5);
-//		vec2 end_subpos = vec2(0.);
-//		vec2 start_subpos = vec2(0.);
 		{
 			if(abs(idir.x) >= abs(idir.y))
 			{
@@ -98,24 +96,25 @@ void main()
 		}
 		
 		vec2 dir = normalize(end - start);
-		dir *= abs(dir.x) >= abs(dir.y) ? abs(1./dir.x) : abs(1./dir.y);
 		vec2 inv_dir;
-		inv_dir.x = dir.x == 0 ? 0. : (1./dir.x);
-		inv_dir.y = dir.y == 0 ? 0. : (1./dir.y);
+		inv_dir.x = dir.x == 0. ? 9999999. : (1./dir.x);
+		inv_dir.y = dir.y == 0. ? 9999999. : (1./dir.y);
+		inv_dir = abs(inv_dir);
+		dir *= abs(dir.x) >= abs(dir.y) ? abs(1./dir.x) : abs(1./dir.y);
 
 
 		vec2 pos = start;
 		ivec2 map_index = ivec2(pos / pixel_size.xy);
 		pos += dir*0.5;
 
-		const ivec3 next_step = ivec3((idir.x < 0 ? -1 : 1), (idir.y < 0 ? -1 : 1), 0);
-		const ivec2 map_index_origin = ivec2((idir.x < 0 ? 0 : 1), (idir.y < 0 ? 0 : 1));
+//		const ivec3 next_step = ivec3((idir.x < 0 ? -1 : 1), (idir.y < 0 ? -1 : 1), 0);
+		const ivec2 map_index_origin = ivec2((idir.x > 0 ? 0 : 1), (idir.y > 0 ? 0 : 1));
 
 		illuminance = vec3(0., 100., 0.);
 		for(int i = 0; i <1000; i++)
 		{
-			int hierarchy=7;
 			{
+				int hierarchy=2;
 				for(; hierarchy>constant.bounce_count; hierarchy--)
 				{
 					ivec2 findex2d = map_index>>hierarchy;
@@ -123,32 +122,24 @@ void main()
 					int offset = getFragmentHierarchyOffset(hierarchy);
 					if(b_fragment_hierarchy[findex + offset] == 0)
 					{
-						vec2 cell_size = pixel_size.xy*(1<<hierarchy);
-						vec2 cell_origin = vec2(map_index_origin)*cell_size;
-						vec2 map_index_sub = map_index - ((map_index>>hierarchy)<<hierarchy);
-						vec2 cell_p = abs(cell_origin-map_index_sub);
-						float min_axis = min(cell_p.x*inv_dir.x, cell_p.y*inv_dir.y);
-//						pos += dir*min_axis;
-//						map_index = ivec2(pos);
-
-						hierarchy = 0;
+						ivec2 cell_origin = map_index_origin<<hierarchy;
+						ivec2 map_index_sub = map_index - (findex2d<<hierarchy);
+						vec2 cell_p = abs(cell_origin - (map_index_sub+fract(pos)));
+						float min_axis = min(abs(cell_p.x*inv_dir.x), abs(cell_p.y*inv_dir.y));
+						pos += min_axis*dir - dir*0.5;
+//						pos = floor(pos)+dir*0.5;
 						break;
 					}
 				}
 			}
-			hierarchy = 0;
 			// march
 			{
-				vec2 cell_size = pixel_size.xy*(1<<hierarchy);
-				pos += dir*cell_size;
-				map_index = ivec2(pos);
 		
-//				dir = normalize(end - pos);
-//				dir *= abs(dir.x) >= abs(dir.y) ? abs(1./dir.x) : abs(1./dir.y);
-
+				pos += dir;
+				map_index = ivec2(pos);
 			}
 			// 終了判定
-			if(abs(map_index[goal_index]-istart[goal_index]) == abs(idir[goal_index]))
+			if(abs(map_index[goal_index]-istart[goal_index]) >= abs(idir[goal_index]))
 			{
 				// 距離を超えたら光がフラグメントにヒット
 				illuminance = vec3(0., 0., 100.);
