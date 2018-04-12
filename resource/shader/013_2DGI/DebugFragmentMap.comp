@@ -22,7 +22,7 @@ void main()
 	vec3 illuminance = vec3(0.);
 	ivec2 map_index = ivec2(gl_GlobalInvocationID.xy);
 
-	int hierarchy=6;
+	int hierarchy=7;
 	{
 		ivec2 findex2d = map_index>>hierarchy;
 		int findex = findex2d.x + findex2d.y*(reso.x>>hierarchy);
