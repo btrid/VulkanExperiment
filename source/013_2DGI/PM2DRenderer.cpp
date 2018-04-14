@@ -715,7 +715,7 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 #endif
 #if 1
 
-	for (int i = 0; i < 1; i++)
+	for (int i = 0; i < 2; i++)
 	{
 		ivec2 constant_param[] = {
 			ivec2(0, 2),
@@ -758,8 +758,6 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 			vk::BufferMemoryBarrier to_read[] = {
 				m_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				m_fragment_hierarchy.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-//				m_emission_buffer.makeMemoryBarrier(vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eShaderRead),
-//				m_emission_map.makeMemoryBarrier(vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eShaderRead),
 				m_emission_tile_linklist_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				m_emission_tile_linkhead.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				m_emission_tile_linklist.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
@@ -917,7 +915,7 @@ DebugPM2D::DebugPM2D(const std::shared_ptr<btr::Context>& context, const std::sh
 // 		}
 
 		std::vector<ivec4> rect;
-#if 1
+#if 0
 		rect.emplace_back(400, 400, 200, 400);
 		rect.emplace_back(300, 200, 100, 100);
 		rect.emplace_back(80, 50, 200, 30);
