@@ -934,14 +934,13 @@ DebugPM2D::DebugPM2D(const std::shared_ptr<btr::Context>& context, const std::sh
 				for (auto& r : rect)
 				{
 					if (x >= r.x && y >= r.y && x <= r.x + r.z && y <= r.y + r.w) {
-						m.albedo = vec3(1.f);
+						m.albedo = vec3(1.f, 0., 0.);
 					}
 				}
 			}
 
 		}
 	}
-
 
 
 	btr::BufferMemoryDescriptorEx<PM2DRenderer::Fragment> desc;
@@ -981,7 +980,7 @@ DebugPM2D::DebugPM2D(const std::shared_ptr<btr::Context>& context, const std::sh
 			renderer->m_descriptor_set_layout.get(),
 		};
 		vk::PushConstantRange constants[] = {
-			vk::PushConstantRange().setOffset(0).setSize(8).setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment),
+			vk::PushConstantRange().setOffset(0).setSize(32).setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment),
 		};
 		vk::PipelineLayoutCreateInfo pipeline_layout_info;
 		pipeline_layout_info.setSetLayoutCount(array_length(layouts));
@@ -1123,12 +1122,11 @@ void DebugPM2D::execute(vk::CommandBuffer cmd)
 		begin_render_Info.setFramebuffer(m_framebuffer.get());
 		cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
+		struct InputLight { vec2 p; vec2 _p; vec3 e; };
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PipelineLayoutPointLight].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayoutPointLight].get(), 0, m_renderer->m_descriptor_set.get(), {});
-		cmd.pushConstants<vec2>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, 0, light_pos);
+		cmd.pushConstants<InputLight>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, 0, InputLight{light_pos, light_pos, vec3(2500.f, 0.f, 2500.f)});
 		cmd.draw(1, 1, 0, 0);
-// 		cmd.pushConstants<vec2>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, 0, vec2(400.f, 190.f));
-// 		cmd.draw(1, 1, 0, 0);
 
 		cmd.endRenderPass();
 #endif

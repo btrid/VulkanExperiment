@@ -9,9 +9,11 @@
 #define USE_PM 0
 #include <PM.glsl>
 
-layout(push_constant) uniform InputVertex
+layout(push_constant) uniform InputLight
 {
 	vec2 pos;
+	vec2 _p;
+	vec3 emission;
 } constant;
 
 void main()
@@ -28,6 +30,6 @@ void main()
 			int list_index = atomicAdd(b_emission_counter[0].x, 1);
 			b_emission_list[list_index] = index;
 		}
-		b_emission[index].value += vec4(0., 0., 8500., 0.);
+		b_emission[index].value += vec4(constant.emission, 0.);
 	}
 }

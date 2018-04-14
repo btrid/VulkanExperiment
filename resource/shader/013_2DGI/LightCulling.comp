@@ -56,7 +56,7 @@ void main()
 		vec2 Delta = pos - max(s_area.xy, min(pos, s_area.zw));
 		if(dot(Delta, Delta) > (power*power)) 
 		{
-//			continue;
+			continue;
 		}
 		int linklist_index = atomicAdd(b_emission_tile_counter, 1);
 		if(linklist_index < u_pm_info.m_emission_tile_linklist_max)
