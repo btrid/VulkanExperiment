@@ -9,6 +9,7 @@ rem glslc.exe -w %include% -x glsl -o ../binary\\PhotonMapping.vert.spv PhotonMa
 rem glslc.exe -w %include% -x glsl -o ../binary\\PhotonMapping.frag.spv PhotonMapping.frag
 
 glslc.exe -w %include% -x glsl -o ../binary\\MakeFragmentMap.comp.spv MakeFragmentMap.comp
+glslc.exe -w %include% -x glsl -o ../binary\\MakeFragmentMapHierarchy.comp.spv MakeFragmentMapHierarchy.comp
 glslc.exe -w %include% -x glsl -o ../binary\\MakeFragmentHierarchy.comp.spv MakeFragmentHierarchy.comp
 glslc.exe -w %include% -x glsl -o ../binary\\LightCulling.comp.spv LightCulling.comp
 glslc.exe -w %include% -x glsl -o ../binary\\PMRendering.vert.spv PMRendering.vert

@@ -71,7 +71,6 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 		desc.element_num += size / (32 * 32);
 		desc.element_num += size / (64 * 64);
 		desc.element_num += size / (128 * 128);
-		desc.element_num += size / (256 * 256);
 		m_fragment_map = context->m_storage_memory.allocateMemory(desc);
 	}
 	{
@@ -362,6 +361,7 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 		const char* name[] =
 		{
 			"MakeFragmentMap.comp.spv",
+			"MakeFragmentMapHierarchy.comp.spv",
 			"MakeFragmentHierarchy.comp.spv",
 			"LightCulling.comp.spv",
 			"PhotonMapping.comp.spv",
@@ -408,27 +408,31 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 		};
 		pipeline_layout_info.setPushConstantRangeCount(array_length(constants));
 		pipeline_layout_info.setPPushConstantRanges(constants);
+		m_pipeline_layout[PipelineLayoutMakeFragmentMapHierarchy] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		m_pipeline_layout[PipelineLayoutMakeFragmentHierarchy] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 	}
 
 	// pipeline
 	{
-		vk::PipelineShaderStageCreateInfo shader_info[5];
+		vk::PipelineShaderStageCreateInfo shader_info[6];
 		shader_info[0].setModule(m_shader[ShaderMakeFragmentMap].get());
 		shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[0].setPName("main");
-		shader_info[1].setModule(m_shader[ShaderMakeFragmentHierarchy].get());
+		shader_info[1].setModule(m_shader[ShaderMakeFragmentMapHierarchy].get());
 		shader_info[1].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[1].setPName("main");
-		shader_info[2].setModule(m_shader[ShaderLightCulling].get());
+		shader_info[2].setModule(m_shader[ShaderMakeFragmentHierarchy].get());
 		shader_info[2].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[2].setPName("main");
-		shader_info[3].setModule(m_shader[ShaderPhotonMapping].get());
+		shader_info[3].setModule(m_shader[ShaderLightCulling].get());
 		shader_info[3].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[3].setPName("main");
-		shader_info[4].setModule(m_shader[ShaderDebugRenderFragmentMap].get());
+		shader_info[4].setModule(m_shader[ShaderPhotonMapping].get());
 		shader_info[4].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[4].setPName("main");
+		shader_info[5].setModule(m_shader[ShaderDebugRenderFragmentMap].get());
+		shader_info[5].setStage(vk::ShaderStageFlagBits::eCompute);
+		shader_info[5].setPName("main");
 
 		std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 		{
@@ -437,23 +441,27 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			.setLayout(m_pipeline_layout[PipelineLayoutMakeFragmentMap].get()),
 			vk::ComputePipelineCreateInfo()
 			.setStage(shader_info[1])
-			.setLayout(m_pipeline_layout[PipelineLayoutMakeFragmentHierarchy].get()),
+			.setLayout(m_pipeline_layout[PipelineLayoutMakeFragmentMapHierarchy].get()),
 			vk::ComputePipelineCreateInfo()
 			.setStage(shader_info[2])
-			.setLayout(m_pipeline_layout[PipelineLayoutLightCulling].get()),
+			.setLayout(m_pipeline_layout[PipelineLayoutMakeFragmentHierarchy].get()),
 			vk::ComputePipelineCreateInfo()
 			.setStage(shader_info[3])
-			.setLayout(m_pipeline_layout[PipelineLayoutPhotonMapping].get()),
+			.setLayout(m_pipeline_layout[PipelineLayoutLightCulling].get()),
 			vk::ComputePipelineCreateInfo()
 			.setStage(shader_info[4])
+			.setLayout(m_pipeline_layout[PipelineLayoutPhotonMapping].get()),
+			vk::ComputePipelineCreateInfo()
+			.setStage(shader_info[5])
 			.setLayout(m_pipeline_layout[PipelineLayoutDebugRenderFragmentMap].get()),
 		};
 		auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
 		m_pipeline[PipelineMakeFragmentMap] = std::move(compute_pipeline[0]);
-		m_pipeline[PipelineMakeFragmentHierarchy] = std::move(compute_pipeline[1]);
-		m_pipeline[PipelineLayoutLightCulling] = std::move(compute_pipeline[2]);
-		m_pipeline[PipelinePhotonMapping] = std::move(compute_pipeline[3]);
-		m_pipeline[PipelineDebugRenderFragmentMap] = std::move(compute_pipeline[4]);
+		m_pipeline[PipelineMakeFragmentMapHierarchy] = std::move(compute_pipeline[1]);
+		m_pipeline[PipelineMakeFragmentHierarchy] = std::move(compute_pipeline[2]);
+		m_pipeline[PipelineLayoutLightCulling] = std::move(compute_pipeline[3]);
+		m_pipeline[PipelinePhotonMapping] = std::move(compute_pipeline[4]);
+		m_pipeline[PipelineDebugRenderFragmentMap] = std::move(compute_pipeline[5]);
 	}
 
 	// レンダーパス
@@ -672,6 +680,25 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 			cmd.dispatch(num.x, num.y, num.z);
 		}
 
+		// make map_hierarchy
+		{
+			for (int i = 1; i < 8; i++)
+			{
+				vk::BufferMemoryBarrier to_write[] = {
+					m_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite),
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+					0, nullptr, array_length(to_write), to_write, 0, nullptr);
+
+				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineMakeFragmentMapHierarchy].get());
+				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutMakeFragmentMapHierarchy].get(), 0, m_descriptor_set.get(), {});
+				cmd.pushConstants<int32_t>(m_pipeline_layout[PipelineLayoutMakeFragmentMapHierarchy].get(), vk::ShaderStageFlagBits::eCompute, 0, i);
+
+				auto num = app::calcDipatchGroups(uvec3(RenderWidth >> i, RenderHeight >> i, 1), uvec3(32, 32, 1));
+				cmd.dispatch(num.x, num.y, num.z);
+
+			}
+		}
 		// make hierarchy
 		{
 			for (int i = 1; i < 8; i++)
@@ -707,7 +734,7 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {},
 			0, nullptr, 0, nullptr, array_length(to_write), to_write);
 	}
-//#define debug_render_fragment_map
+#define debug_render_fragment_map
 #if defined(debug_render_fragment_map)
 	DebugRnederFragmentMap(cmd);
 	cmd.end();
@@ -854,7 +881,7 @@ void PM2DRenderer::DebugRnederFragmentMap(vk::CommandBuffer &cmd)
 	// fragment_hierarchyのテスト
 	{
 		vk::BufferMemoryBarrier to_read[] = {
-			m_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			m_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			m_fragment_hierarchy.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			m_emission_tile_linklist_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			m_emission_tile_linkhead.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
@@ -915,7 +942,7 @@ DebugPM2D::DebugPM2D(const std::shared_ptr<btr::Context>& context, const std::sh
 // 		}
 
 		std::vector<ivec4> rect;
-#if 0
+#if 1
 		rect.emplace_back(400, 400, 200, 400);
 		rect.emplace_back(300, 200, 100, 100);
 		rect.emplace_back(80, 50, 200, 30);
