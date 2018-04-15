@@ -734,7 +734,7 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {},
 			0, nullptr, 0, nullptr, array_length(to_write), to_write);
 	}
-#define debug_render_fragment_map
+//#define debug_render_fragment_map
 #if defined(debug_render_fragment_map)
 	DebugRnederFragmentMap(cmd);
 	cmd.end();

@@ -158,9 +158,12 @@ void main()
 			}
 			// hit確認
 			{
-				ivec4 fragment_index = ivec4(map_index/8, map_index%8);
+				ivec2 map_index_sub = map_index>>constant.bounce_count;
+				ivec4 fragment_index = ivec4(map_index_sub/8, map_index_sub%8);
 				ivec2 fragment_index_1d = fragment_index.xz + fragment_index.yw*ivec2(reso.z, 8);
-				uint64_t fragment_map = b_fragment_map[fragment_index_1d.x];
+
+				int offset = getFragmentMapHierarchyOffset(constant.bounce_count);
+				uint64_t fragment_map = b_fragment_map[fragment_index_1d.x + offset];
 				uint64_t bit = 1ul<<fragment_index_1d.y;
 				if((fragment_map & bit) != 0)
 				{ 
