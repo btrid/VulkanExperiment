@@ -61,6 +61,13 @@ void main()
 		ivec2 iend = ivec2(end+0.5);
 		ivec2 istart = ivec2(start+0.5);
 		ivec2 idir = iend - istart;
+		if(all(equal(idir, ivec2(0))))
+		{
+			// ライト
+//			fragment_state = fragment_state_light;
+			illuminance += albedo*radiance.xyz;
+			continue;
+		}
 		{
 //			ivec4 fragment_index = ivec4(istart/8, istart%8);
 //			ivec2 fragment_index_1d = fragment_index.xz + fragment_index.yw*ivec2(reso.z, 8);
@@ -94,12 +101,6 @@ void main()
 		int goal_index = abs(idir.x) >= abs(idir.y) ? 0: 1;
 
 		const vec2 diff = (end - start);
-		if(dot(diff, diff) <= 10.1)
-		{
-			// ライト
-			fragment_state = fragment_state_light;
-			break;
-		}
 		const float ray_dist = length(diff.xy);
 		vec3 illumi = radiance.xyz / (1.+ray_dist);
 		if(dot(illumi, illumi) <= FLT_EPSIRON){
