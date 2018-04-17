@@ -1,0 +1,53 @@
+#version 450
+
+#extension GL_GOOGLE_cpp_style_line_directive : require
+#extension GL_ARB_gpu_shader_int64 : require
+
+#include <btrlib/ConvertDimension.glsl>
+#include <btrlib/Common.glsl>
+#include <btrlib/Math.glsl>
+
+#define USE_PM 0
+#include <PM.glsl>
+
+layout (local_size_x = 32, local_size_y = 32) in;
+
+void main()
+{
+	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
+	uint map_index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*reso.x;
+
+	int hierarchy = 0;
+	for(; hierarchy<8; hierarchy++)
+	{
+		uvec2 map_idx_2d = gl_GlobalInvocationID.xy>>hierarchy;
+		uvec2 mam_idx_2d_sub = map_idx_2d % 8;
+		ivec2 map_idx_offset = ivec2(greaterThanEqual(map_idx_2d_sub, uvec2(4))) * 2 - 1;
+
+		int offset = getFragmentMapHierarchyOffset(hierarchy);
+		ivec4 fragment_index = ivec4(map_idx_2d/8, map_idx_2d%8);
+		ivec2 fragment_index_1d = fragment_index.xz + fragment_index.yw*ivec2(reso.z>>hierarchy, 8);
+		u64vec4 map;
+		map[0] = b_fragment_map[fragment_index_1d.x + offset];
+		map[1] = b_fragment_map[fragment_index_1d.x+map_idx_offset.x + offset];
+		map[2] = b_fragment_map[fragment_index_1d.x+map_idx_offset.y*(reso.z>>hierarchy) + offset];
+		map[3] = b_fragment_map[fragment_index_1d.x+map_idx_offset.x+map_idx_offset.y*(reso.z>>hierarchy) + offset];
+		if(any(notEqual(map, u64vec4(0))))
+		{
+			break;
+		}
+	}
+
+	if(hierarchy == 8){
+		b_
+		return;
+	}
+
+
+
+
+	b_fragment_hierarchy[map_index];
+
+
+}
+

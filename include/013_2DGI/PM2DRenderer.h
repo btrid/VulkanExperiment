@@ -117,6 +117,7 @@ struct PM2DRenderer
 	btr::BufferMemoryEx<int32_t> m_fragment_hierarchy;
 	btr::BufferMemoryEx<ivec4> m_emission_counter;
 	btr::BufferMemoryEx<Emission> m_emission_buffer;
+	btr::BufferMemoryEx<float> m_signed_distance_field;
 	btr::BufferMemoryEx<int32_t> m_emission_list;
 	btr::BufferMemoryEx<int32_t> m_emission_map;	//!< ==-1 emitter‚ª‚È‚¢ !=0‚ ‚é
 	btr::BufferMemoryEx<int32_t> m_emission_tile_linklist_counter;

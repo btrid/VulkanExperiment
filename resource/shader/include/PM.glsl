@@ -45,6 +45,9 @@ layout(std430, set=USE_PM, binding=2) restrict buffer FragmentHierarchyBuffer {
 layout(std430, set=USE_PM, binding=3) restrict buffer FragmentHierarchyMapBuffer {
 	int b_fragment_hierarchy[];
 };
+layout(std430, set=USE_PM, binding=4) restrict buffer FragmentDistanceFieldBuffer {
+	int b_signed_distance_field[];
+};
 layout(std430, set=USE_PM, binding=10) restrict buffer EmissiveCounter {
 	ivec4 b_emission_counter[];
 };

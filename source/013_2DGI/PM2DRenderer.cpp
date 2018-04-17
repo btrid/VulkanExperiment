@@ -86,6 +86,12 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 		m_fragment_hierarchy = context->m_storage_memory.allocateMemory(desc);
 	}
 	{
+		btr::BufferMemoryDescriptorEx<float> desc;
+		desc.element_num = RenderWidth * RenderHeight;
+		m_signed_distance_field = context->m_storage_memory.allocateMemory(desc);
+
+	}
+	{
 		btr::BufferMemoryDescriptorEx<ivec4> desc;
 		desc.element_num = BounceNum;
 		m_emission_counter = context->m_storage_memory.allocateMemory(desc);
@@ -109,7 +115,6 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 		btr::BufferMemoryDescriptorEx<int32_t> desc;
 		desc.element_num = 1;
 		m_emission_tile_linklist_counter = context->m_storage_memory.allocateMemory(desc);
-
 	}
 	{
 		btr::BufferMemoryDescriptorEx<int32_t> desc;
@@ -284,6 +289,7 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			m_fragment_buffer.getInfo(),
 			m_fragment_map.getInfo(),
 			m_fragment_hierarchy.getInfo(),
+			m_signed_distance_field.getInfo(),
 		};
 		vk::DescriptorBufferInfo emission_storages[] = {
 			m_emission_counter.getInfo(),
