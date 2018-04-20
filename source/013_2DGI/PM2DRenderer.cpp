@@ -89,7 +89,26 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 		btr::BufferMemoryDescriptorEx<float> desc;
 		desc.element_num = RenderWidth * RenderHeight;
 		m_signed_distance_field = context->m_storage_memory.allocateMemory(desc);
-
+	}
+	{
+		btr::BufferMemoryDescriptorEx<SDFWork> desc;
+		desc.element_num = RenderWidth * RenderHeight * 8;
+		b_sdf_worker = context->m_storage_memory.allocateMemory(desc);
+	}
+	{
+		btr::BufferMemoryDescriptorEx<SDFWork> desc;
+		desc.element_num = RenderWidth * RenderHeight * 8;
+		b_sdf_worker_top = context->m_storage_memory.allocateMemory(desc);
+	}
+	{
+		btr::BufferMemoryDescriptorEx<ivec4> desc;
+		desc.element_num = Hierarchy_Num + 1;
+		b_sdf_count = context->m_storage_memory.allocateMemory(desc);
+	}
+	{
+		btr::BufferMemoryDescriptorEx<ivec3> desc;
+		desc.element_num = 1;
+		b_sdf_work_count = context->m_storage_memory.allocateMemory(desc);
 	}
 	{
 		btr::BufferMemoryDescriptorEx<ivec4> desc;
@@ -637,6 +656,11 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 		cmd.fillBuffer(m_emission_list.getInfo().buffer, m_emission_list.getInfo().offset, m_emission_list.getInfo().range, -1);
 		cmd.fillBuffer(m_emission_map.getInfo().buffer, m_emission_map.getInfo().offset, m_emission_map.getInfo().range, -1);
 
+		ivec4 sdf_count[] = { { 0,1,1,0 },{ 0,1,1,0 },{ 0,1,1,0 },{ 0,1,1,0 },{ 0,1,1,0 },{ 0,1,1,0 },{ 0,1,1,0 },{ 0,1,1,0 },{ 0,1,1,0 } };
+		static_assert(array_length(sdf_count) == Hierarchy_Num+1, "");		
+		cmd.updateBuffer(b_sdf_count.getInfo().buffer, b_sdf_count.getInfo().offset, sizeof(sdf_count), sdf_count);
+		cmd.fillBuffer(b_sdf_work_count.getInfo().buffer, b_sdf_work_count.getInfo().offset, b_sdf_work_count.getInfo().range, 0);
+		
 		{
 
 			vk::ImageMemoryBarrier to_clear[BounceNum];

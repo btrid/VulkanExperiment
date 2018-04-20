@@ -16,6 +16,7 @@ struct PM2DRenderer
 	enum
 	{
 		BounceNum = 4, //!< ƒŒƒC”½ŽË‰ñ”
+		Hierarchy_Num = 8,
 		// 		RenderWidth = 1024,
 		// 		RenderHeight = 1024,
 		//		RenderDepth = 1,
@@ -72,8 +73,8 @@ struct PM2DRenderer
 		uvec2 m_emission_tile_num;
 		uvec2 _p;
 		vec4 m_position;
-		int m_fragment_hierarchy_offset[8];
-		int m_fragment_map_hierarchy_offset[8];
+		int m_fragment_hierarchy_offset[Hierarchy_Num];
+		int m_fragment_map_hierarchy_offset[Hierarchy_Num];
 		int m_emission_buffer_size[BounceNum];
 		int m_emission_buffer_offset[BounceNum];
 
@@ -92,6 +93,14 @@ struct PM2DRenderer
 	{
 		int32_t next;
 		int32_t target;
+	};
+
+	struct SDFWork
+	{
+		uint map_index;
+		uint hierarchy;
+		uint fragment_idx;
+		uint _p;
 	};
 
 	struct TextureResource
@@ -118,6 +127,10 @@ struct PM2DRenderer
 	btr::BufferMemoryEx<ivec4> m_emission_counter;
 	btr::BufferMemoryEx<Emission> m_emission_buffer;
 	btr::BufferMemoryEx<float> m_signed_distance_field;
+	btr::BufferMemoryEx<SDFWork> b_sdf_worker;
+	btr::BufferMemoryEx<SDFWork> b_sdf_worker_top;
+	btr::BufferMemoryEx<ivec4> b_sdf_count;
+	btr::BufferMemoryEx<ivec3> b_sdf_work_count;
 	btr::BufferMemoryEx<int32_t> m_emission_list;
 	btr::BufferMemoryEx<int32_t> m_emission_map;	//!< ==-1 emitter‚ª‚È‚¢ !=0‚ ‚é
 	btr::BufferMemoryEx<int32_t> m_emission_tile_linklist_counter;

@@ -1,0 +1,45 @@
+#version 450
+
+#extension GL_GOOGLE_cpp_style_line_directive : require
+#extension GL_ARB_gpu_shader_int64 : require
+
+#include <btrlib/ConvertDimension.glsl>
+#include <btrlib/Common.glsl>
+#include <btrlib/Math.glsl>
+
+#define USE_PM 0
+#include <PM.glsl>
+
+layout (local_size_x = 8, local_size_y = 8) in;
+
+shared uint64_t s_map;
+shared SDFWork s_work;
+//shared float s_min_dist;
+shared uint s_min_dist;
+void main()
+{
+	if(gl_LocalInvocationIndex == 0)
+	{
+		s_work = b_sdf_work_top[gl_WorkGroupID.x];
+		s_map = b_fragment_map[s_work.fragment_idx];
+		s_min_dist = 99999999;
+	}
+	barrier();
+	memoryBarrierShared();
+
+	uvec2 map_index = uvec2(s_work.map_index % u_pm_info.m_resolution.x, s_work.map_index / u_pm_info.m_resolution.x);
+	uvec2 fragment_index = uvec2(s_work.fragment_idx % u_pm_info.m_resolution.x, s_work.fragment_idx / u_pm_info.m_resolution.x);
+	fragment_index += gl_LocalInvocationID.xy;
+	float dist = distance(map_index+0.5, fragment_index+0.5);
+	dist += float((s_map & (1ul<<gl_LocalInvocationIndex)) == 0) * 9999999.;
+	atomicMin(s_min_dist, uint(dist*1000.));
+
+	barrier();
+	memoryBarrierShared();
+
+	if(gl_LocalInvocationIndex == 0)
+	{
+		atomicMin(b_signed_distance_field[s_work.map_index], s_min_dist);	
+	}
+}
+

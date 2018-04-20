@@ -1,0 +1,74 @@
+#version 450
+
+#extension GL_GOOGLE_cpp_style_line_directive : require
+#extension GL_ARB_gpu_shader_int64 : require
+
+#include <btrlib/ConvertDimension.glsl>
+#include <btrlib/Common.glsl>
+#include <btrlib/Math.glsl>
+
+#define USE_PM 0
+#include <PM.glsl>
+
+layout (local_size_x = 32*32, local_size_y = 1) in;
+
+layout(push_constant) uniform Input
+{
+	int count;
+} constant;
+
+void main()
+{
+	if(gl_GlobalInvocationIndex.x >= b_sdf_counter[constant.count].w)
+	{
+		 return;
+	}
+
+	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
+	uint work_index = atomicAdd(b_sdf_work_calced_num, 1);
+
+	uint map_index_1d = b_sdf_work[work_index].map_index;
+	uvec2 map_index = uvec2(map_index % reso.x, map_index / reso.x);
+	uint hierarchy = b_sdf_work[work_index].hierarchy;
+	u64vec4 map;
+	{
+		hierarchy -= 1;
+
+		if(hierarchy == 0)
+		{
+
+		}
+		else
+		{
+			uvec2 map_idx_2d = map_index.xy>>hierarchy;
+			uvec2 mam_idx_2d_sub = map_idx_2d % 8;
+			ivec2 map_idx_offset = ivec2(greaterThanEqual(map_idx_2d_sub, uvec2(4))) * 2 - 1;
+
+			int offset = getFragmentMapHierarchyOffset(hierarchy);
+			ivec4 fragment_index = ivec4(map_idx_2d/8, map_idx_2d%8);
+			ivec2 fragment_index_1d = fragment_index.xz + fragment_index.yw*ivec2(reso.z>>hierarchy, 8);
+			map[0] = b_fragment_map[fragment_index_1d.x + offset];
+			map[1] = b_fragment_map[fragment_index_1d.x+map_idx_offset.x + offset];
+			map[2] = b_fragment_map[fragment_index_1d.x+map_idx_offset.y*(reso.z>>hierarchy) + offset];
+			map[3] = b_fragment_map[fragment_index_1d.x+map_idx_offset.x+map_idx_offset.y*(reso.z>>hierarchy) + offset];
+
+		}
+	}
+
+	for(int i = 0; i < 4; i++)
+	{
+		if(map[i] == 0){ continue;}
+
+		int local_index = atomicAdd(b_sdf_counter[constant.count+1].w, 1);
+		if(local_index%(32*32) == 0)
+		{
+			atomicAdd(b_sdf_counter[constant.count+1].x, 1);
+		}
+		int index = atomicAdd(b_sdf_work_num, 1);
+		b_sdf_work[index].map_index = map_index;
+		b_sdf_work[index].hierarchy = hierarchy;
+		b_sdf_work[index].fragment_idx = i;
+	}
+
+}
+

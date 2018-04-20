@@ -31,6 +31,14 @@ struct LinkList
 	int target;
 };
 
+struct SDFWork
+{
+	uint map_index;
+	uint hierarchy;
+	uint fragment_idx;
+	uint _p;
+};
+
 
 #ifdef USE_PM
 layout(std140, set=USE_PM, binding=0) uniform PMInfoUniform {
@@ -45,8 +53,22 @@ layout(std430, set=USE_PM, binding=2) restrict buffer FragmentHierarchyBuffer {
 layout(std430, set=USE_PM, binding=3) restrict buffer FragmentHierarchyMapBuffer {
 	int b_fragment_hierarchy[];
 };
-layout(std430, set=USE_PM, binding=4) restrict buffer FragmentDistanceFieldBuffer {
-	int b_signed_distance_field[];
+layout(std430, set=USE_PM, binding=4) restrict buffer SignedDistanceFieldBuffer {
+	uint b_signed_distance_field[]; // atomic_floatがないのでuint.単位はmm
+};
+layout(std430, set=USE_PM, binding=5) restrict buffer SDFWorkerBuffer {
+	SDFWork b_sdf_work[];
+};
+layout(std430, set=USE_PM, binding=6) restrict buffer SDFCounter {
+	ivec4 b_sdf_counter[];
+};
+layout(std430, set=USE_PM, binding=7) restrict buffer SDFWorkerCounter {
+	uint b_sdf_work_num;
+	uint b_sdf_work_calced_num;
+	uint b_sdf_work_top_num;
+};
+layout(std430, set=USE_PM, binding=8) restrict buffer SDFWorkerTopBuffer {
+	SDFWork b_sdf_work_top[];
 };
 layout(std430, set=USE_PM, binding=10) restrict buffer EmissiveCounter {
 	ivec4 b_emission_counter[];
