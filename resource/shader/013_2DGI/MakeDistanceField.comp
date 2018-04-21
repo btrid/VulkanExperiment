@@ -19,7 +19,8 @@ void main()
 	uint map_index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*reso.x;
 
 	int hierarchy = 0;
-	u64vec4 map;
+	u64vec4 map = u64vec4(0);
+	uint64_t _map[4] = {0, 0, 0, 0};
 	uvec4 fragment_index;
 	for(; hierarchy<HierarchyCheckDepth; hierarchy++)
 	{
@@ -32,16 +33,21 @@ void main()
 		for(int i = 0; i < 4; i++)
 		{
 			ivec2 f_idx = fragment_idx.xy + map_idx_offset*ivec2(i%2, i/2);
-			if(any(lessThan(f_idx, ivec2(0))) || any(greaterThanEqual(f_idx, ivec2(reso.zw)))){
+			if(any(lessThan(f_idx, ivec2(0))) || any(greaterThanEqual(f_idx, ivec2(reso.zw))))
+			{
 				// エリア外はノーチェック
-				map[i] = 0;
+//				map[i] = uint64_t(0);
 				continue;
 			}
 			int f_idx_1d = f_idx.x + f_idx.y*(reso.z>>hierarchy);
-			map[i] = b_fragment_map[f_idx_1d + offset];
+			_map[i] = b_fragment_map[f_idx_1d + offset];
 			fragment_index[i] = f_idx_1d + offset;
 
 		}
+		map.x = _map[0];
+		map.y = _map[1];
+		map.z = _map[2];
+		map.w = _map[3];
 		if(any(notEqual(map, u64vec4(0))))
 		{
 			break;
@@ -56,7 +62,7 @@ void main()
 
 	for(int i = 0; i < 4; i++)
 	{
-		if(map[i] == 0){ continue;}
+		if(_map[i] == 0){ continue;}
 
 		SDFWork work;
 		work.map_index = map_index;

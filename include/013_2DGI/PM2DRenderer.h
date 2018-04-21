@@ -33,6 +33,8 @@ struct PM2DRenderer
 		ShaderMakeFragmentMap,
 		ShaderMakeFragmentMapHierarchy,
 		ShaderMakeFragmentHierarchy,
+		ShaderMakeSDF,
+		ShaderMakeSDF3,
 		ShaderLightCulling,
 		ShaderPhotonMapping,
 		ShaderPhotonMappingVS,
@@ -40,6 +42,7 @@ struct PM2DRenderer
 		ShaderRenderingVS,
 		ShaderRenderingFS,
 		ShaderDebugRenderFragmentMap,
+		ShaderDebugRenderSDF,
 		ShaderNum,
 	};
 	enum PipelineLayout
@@ -47,10 +50,13 @@ struct PM2DRenderer
 		PipelineLayoutMakeFragmentMap,
 		PipelineLayoutMakeFragmentMapHierarchy,
 		PipelineLayoutMakeFragmentHierarchy,
+		PipelineLayoutMakeSDF,
+		PipelineLayoutMakeSDF3,
 		PipelineLayoutLightCulling,
 		PipelineLayoutPhotonMapping,
 		PipelineLayoutRendering,
 		PipelineLayoutDebugRenderFragmentMap,
+		PipelineLayoutDebugRenderSDF,
 		PipelineLayoutNum,
 	};
 	enum Pipeline
@@ -58,11 +64,14 @@ struct PM2DRenderer
 		PipelineMakeFragmentMap,
 		PipelineMakeFragmentMapHierarchy,
 		PipelineMakeFragmentHierarchy,
+		PipelineMakeSDF,
+		PipelineMakeSDF3,
 		PipelineLightCulling,
 		PipelinePhotonMapping,
 		PipelinePhotonMappingG,
 		PipelineRendering,
 		PipelineDebugRenderFragmentMap,
+		PipelineDebugRenderSDF,
 		PipelineNum,
 	};
 	struct Info
@@ -119,6 +128,7 @@ struct PM2DRenderer
 	vk::CommandBuffer execute(const std::vector<PM2DPipeline*>& pipeline);
 
 	void DebugRnederFragmentMap(vk::CommandBuffer &cmd);
+	void DebugRnederSDF(vk::CommandBuffer &cmd);
 
 	btr::BufferMemoryEx<Info> m_fragment_info;
 	btr::BufferMemoryEx<Fragment> m_fragment_buffer;
@@ -127,9 +137,9 @@ struct PM2DRenderer
 	btr::BufferMemoryEx<ivec4> m_emission_counter;
 	btr::BufferMemoryEx<Emission> m_emission_buffer;
 	btr::BufferMemoryEx<float> m_signed_distance_field;
-	btr::BufferMemoryEx<SDFWork> b_sdf_worker;
-	btr::BufferMemoryEx<SDFWork> b_sdf_worker_top;
-	btr::BufferMemoryEx<ivec4> b_sdf_count;
+	btr::BufferMemoryEx<SDFWork> b_sdf_work;
+	btr::BufferMemoryEx<SDFWork> b_sdf_work_top;
+	btr::BufferMemoryEx<ivec4> b_sdf_counter;
 	btr::BufferMemoryEx<ivec3> b_sdf_work_count;
 	btr::BufferMemoryEx<int32_t> m_emission_list;
 	btr::BufferMemoryEx<int32_t> m_emission_map;	//!< ==-1 emitter‚ª‚È‚¢ !=0‚ ‚é
