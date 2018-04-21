@@ -16,7 +16,7 @@ glslc.exe -w %include% -x glsl -o ../binary\\PMRendering.vert.spv PMRendering.ve
 glslc.exe -w %include% -x glsl -o ../binary\\PMRendering.frag.spv PMRendering.frag
 
 glslc.exe -w %include% -x glsl -o ../binary\\MakeDistanceField.comp.spv MakeDistanceField.comp
-rem glslc.exe -w %include% -x glsl -o ../binary\\MakeDistanceField2.comp.spv MakeDistanceField2.comp
+glslc.exe -w %include% -x glsl -o ../binary\\MakeDistanceField2.comp.spv MakeDistanceField2.comp
 glslc.exe -w %include% -x glsl -o ../binary\\MakeDistanceField3.comp.spv MakeDistanceField3.comp
 glslc.exe -w %include% -x glsl -o ../binary\\DebugRenderSDF.comp.spv DebugRenderSDF.comp
 

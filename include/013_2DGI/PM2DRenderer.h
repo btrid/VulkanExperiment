@@ -34,6 +34,7 @@ struct PM2DRenderer
 		ShaderMakeFragmentMapHierarchy,
 		ShaderMakeFragmentHierarchy,
 		ShaderMakeSDF,
+		ShaderMakeSDF2,
 		ShaderMakeSDF3,
 		ShaderLightCulling,
 		ShaderPhotonMapping,
@@ -51,6 +52,7 @@ struct PM2DRenderer
 		PipelineLayoutMakeFragmentMapHierarchy,
 		PipelineLayoutMakeFragmentHierarchy,
 		PipelineLayoutMakeSDF,
+		PipelineLayoutMakeSDF2,
 		PipelineLayoutMakeSDF3,
 		PipelineLayoutLightCulling,
 		PipelineLayoutPhotonMapping,
@@ -65,6 +67,7 @@ struct PM2DRenderer
 		PipelineMakeFragmentMapHierarchy,
 		PipelineMakeFragmentHierarchy,
 		PipelineMakeSDF,
+		PipelineMakeSDF2,
 		PipelineMakeSDF3,
 		PipelineLightCulling,
 		PipelinePhotonMapping,
@@ -140,7 +143,7 @@ struct PM2DRenderer
 	btr::BufferMemoryEx<SDFWork> b_sdf_work;
 	btr::BufferMemoryEx<SDFWork> b_sdf_work_top;
 	btr::BufferMemoryEx<ivec4> b_sdf_counter;
-	btr::BufferMemoryEx<ivec3> b_sdf_work_count;
+	btr::BufferMemoryEx<ivec3> b_sdf_work_counter;
 	btr::BufferMemoryEx<int32_t> m_emission_list;
 	btr::BufferMemoryEx<int32_t> m_emission_map;	//!< ==-1 emitter‚ª‚È‚¢ !=0‚ ‚é
 	btr::BufferMemoryEx<int32_t> m_emission_tile_linklist_counter;
