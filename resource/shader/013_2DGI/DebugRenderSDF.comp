@@ -23,9 +23,7 @@ void main()
 	uint map_index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * reso.x;
 
 	uint sd = b_sdf[map_index];
-//	uint dist = sd / 1000;
-//	illuminance = sd >= 999998 ? vec3(1., 0., 0.) : vec3(1.);//vec3(0., 0., (sd/1000) % 1000); 
-	illuminance = sd >= 999998 ? vec3(1., 0., 0.) : vec3(0., 0., (((sd/1000) % 10)*1000.)) ;
+	illuminance = sd == -1 ? vec3(1., 0., 0.) : vec3(0., 0., (((sd/1000) % 10)*1000.)) ;
 	illuminance *= 100.;
 	// store
 	{

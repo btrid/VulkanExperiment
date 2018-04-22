@@ -12,14 +12,11 @@
 
 layout (local_size_x = 32, local_size_y = 32) in;
 
-#define HierarchyCheckDepth (5)
+#define HierarchyCheckDepth (8)
 void main()
 {
 	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
 	uint map_index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*reso.x;
-
-	uvec2 map_idx_2d_sub = gl_GlobalInvocationID.xy % 8;
-	ivec2 map_idx_offset = ivec2(greaterThanEqual(map_idx_2d_sub, uvec2(4))) * 2 - 1;
 
 	int hierarchy = 0;
 	uint64_t map[4];
@@ -27,10 +24,10 @@ void main()
 	for(; hierarchy<HierarchyCheckDepth; hierarchy++)
 	{
 		uvec2 map_idx_2d = gl_GlobalInvocationID.xy>>hierarchy;
-
-		int offset = getFragmentMapHierarchyOffset(hierarchy);
 		ivec4 fragment_idx = ivec4(map_idx_2d/8, map_idx_2d%8);
 		ivec2 f_idx_offset = ivec2(greaterThanEqual(fragment_idx.zw, uvec2(4))) * 2 - 1;
+
+		int offset = getFragmentMapHierarchyOffset(hierarchy);
 		for(int i = 0; i < 4; i++)
 		{
 			ivec2 f_idx = fragment_idx.xy + f_idx_offset*ivec2(i%2, i/2);
@@ -56,7 +53,7 @@ void main()
 		}
 	}
 
-	b_sdf[map_index] = 9999999;
+	b_sdf[map_index] = -1;
 	if(hierarchy == HierarchyCheckDepth)
 	{
 		return;

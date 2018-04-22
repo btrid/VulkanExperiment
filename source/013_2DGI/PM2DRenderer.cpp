@@ -53,7 +53,7 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			m_info.m_emission_buffer_offset[i] = m_info.m_emission_buffer_offset[i - 1] + m_info.m_emission_buffer_size[i - 1];
 		}
 		m_info.m_emission_tile_linklist_max = 8192 * 1024;
-		m_info.m_sdf_work_num = RenderWidth * RenderHeight * 8;
+		m_info.m_sdf_work_num = RenderWidth * RenderHeight * 30;
 		cmd.updateBuffer<Info>(m_fragment_info.getInfo().buffer, m_fragment_info.getInfo().offset, m_info);
 	}
 	{
@@ -93,7 +93,7 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 	}
 	{
 		btr::BufferMemoryDescriptorEx<SDFWork> desc;
-		desc.element_num = m_info.m_sdf_work_num + RenderWidth * RenderHeight;
+		desc.element_num = m_info.m_sdf_work_num + RenderWidth*RenderHeight*10;
 		b_sdf_work = context->m_storage_memory.allocateMemory(desc);
 	}
 	{
@@ -813,14 +813,20 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 				cmd.dispatch(num.x, num.y, num.z);
 			}
 
-			for (int i = 1; i < 5; i++)
+			for (int i = 1; i < 8; i++)
 			{
 				vk::BufferMemoryBarrier to_indirect[] = {
-					b_sdf_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
+					b_sdf_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
 				};
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, {},
 					0, nullptr, array_length(to_indirect), to_indirect, 0, nullptr);
 
+
+				vk::BufferMemoryBarrier to_rw[] = {
+					b_sdf_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, {},
+					0, nullptr, array_length(to_indirect), to_indirect, 0, nullptr);
 
 				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineMakeSDF2].get());
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutMakeSDF2].get(), 0, m_descriptor_set.get(), {});
