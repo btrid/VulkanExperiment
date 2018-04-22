@@ -91,6 +91,7 @@ struct PM2DRenderer
 		int m_emission_buffer_offset[BounceNum];
 
 		int m_emission_tile_linklist_max;
+		int m_sdf_work_num;
 	};
 	struct Fragment
 	{
@@ -139,11 +140,9 @@ struct PM2DRenderer
 	btr::BufferMemoryEx<int32_t> m_fragment_hierarchy;
 	btr::BufferMemoryEx<ivec4> m_emission_counter;
 	btr::BufferMemoryEx<Emission> m_emission_buffer;
-	btr::BufferMemoryEx<float> m_signed_distance_field;
+	btr::BufferMemoryEx<float> b_sdf;
 	btr::BufferMemoryEx<SDFWork> b_sdf_work;
-	btr::BufferMemoryEx<SDFWork> b_sdf_work_top;
 	btr::BufferMemoryEx<ivec4> b_sdf_counter;
-	btr::BufferMemoryEx<ivec3> b_sdf_work_counter;
 	btr::BufferMemoryEx<int32_t> m_emission_list;
 	btr::BufferMemoryEx<int32_t> m_emission_map;	//!< ==-1 emitter‚ª‚È‚¢ !=0‚ ‚é
 	btr::BufferMemoryEx<int32_t> m_emission_tile_linklist_counter;

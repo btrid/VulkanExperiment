@@ -12,28 +12,30 @@
 
 layout (local_size_x = 32, local_size_y = 32) in;
 
-#define HierarchyCheckDepth (1)
+#define HierarchyCheckDepth (5)
 void main()
 {
 	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
 	uint map_index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*reso.x;
 
+	uvec2 map_idx_2d_sub = gl_GlobalInvocationID.xy % 8;
+	ivec2 map_idx_offset = ivec2(greaterThanEqual(map_idx_2d_sub, uvec2(4))) * 2 - 1;
+
 	int hierarchy = 0;
-//	u64vec4 map = u64vec4(0);
 	uint64_t map[4];
 	uvec4 fragment_index;
 	for(; hierarchy<HierarchyCheckDepth; hierarchy++)
 	{
 		uvec2 map_idx_2d = gl_GlobalInvocationID.xy>>hierarchy;
-		uvec2 map_idx_2d_sub = map_idx_2d % 8;
-		ivec2 map_idx_offset = ivec2(greaterThanEqual(map_idx_2d_sub, uvec2(4))) * 2 - 1;
 
 		int offset = getFragmentMapHierarchyOffset(hierarchy);
 		ivec4 fragment_idx = ivec4(map_idx_2d/8, map_idx_2d%8);
+		ivec2 f_idx_offset = ivec2(greaterThanEqual(fragment_idx.zw, uvec2(4))) * 2 - 1;
 		for(int i = 0; i < 4; i++)
 		{
-			ivec2 f_idx = fragment_idx.xy + map_idx_offset*ivec2(i%2, i/2);
-			if(any(lessThan(f_idx, ivec2(0))) || any(greaterThanEqual(f_idx, ivec2(reso.zw))))
+			ivec2 f_idx = fragment_idx.xy + f_idx_offset*ivec2(i%2, i/2);
+			if(any(lessThan(f_idx, ivec2(0))) 
+			|| any(greaterThanEqual(f_idx, ivec2(reso.zw>>hierarchy))))
 			{
 				// エリア外はノーチェック
 				map[i] = uint64_t(0);
@@ -54,36 +56,41 @@ void main()
 		}
 	}
 
+	b_sdf[map_index] = 9999999;
 	if(hierarchy == HierarchyCheckDepth)
 	{
-		b_signed_distance_field[map_index] = 999999999;
 		return;
 	}
-
+/*
+	SDFWork work[4];
+	int count=0;
 	for(int i = 0; i < 4; i++)
 	{
 		if(map[i] == 0){ continue;}
-
+		work[count].map_index = map_index;
+		work[count].hierarchy = hierarchy;
+		work[count].fragment_idx = fragment_index[i];
+		count++;
+	}
+*/
+	int next_level = 1;
+	int count_index = hierarchy == 0 ? (8*4+0) : (next_level*4+3);
+	int count_work_index = hierarchy == 0 ? (9*4+2) : (9*4+0);
+	int work_offset = hierarchy == 0 ? u_pm_info.m_sdf_work_num : 0;
+	for(int i = 0; i<4; i++)
+	{
+		if(map[i] == 0){ continue;}
+		int local_index = atomicAdd(b_sdf_counter[count_index], 1);
+		if(hierarchy != 0 && local_index%(32*32) == 0)
+		{
+			atomicAdd(b_sdf_counter[next_level*4+0], 1);
+		}
+		uint index = atomicAdd(b_sdf_counter[count_work_index], 1);
 		SDFWork work;
 		work.map_index = map_index;
 		work.hierarchy = hierarchy;
 		work.fragment_idx = fragment_index[i];
-
-		if(hierarchy == 0)
-		{
-			int index = atomicAdd(b_sdf_counter[8].x, 1);
-			b_sdf_work_top[index] = work;
-		}
-		else
-		{
-			int local_index = atomicAdd(b_sdf_counter[1].w, 1);
-			if(local_index%(32*32) == 0)
-			{
-				atomicAdd(b_sdf_counter[1].x, 1);
-			}
-			uint index = atomicAdd(b_sdf_work_num, 1);
-			b_sdf_work[index] = work;
-		}
+		b_sdf_work[index + work_offset] = work;
 	}
 
 }

@@ -23,7 +23,7 @@ void main()
 	ivec2 map_index = ivec2(gl_GlobalInvocationID.xy);
 
 	int hierarchy=7;
-	if(false)
+//	if(false)
 	{
 		ivec2 findex2d = map_index>>hierarchy;
 		int findex = findex2d.x + findex2d.y*(reso.x>>hierarchy);
@@ -36,7 +36,7 @@ void main()
 		}
 	}
 	// hit確認
-//	if(false)
+	if(false)
 	{
 		map_index = map_index>>hierarchy;
 		ivec4 fragment_index = ivec4(map_index/8, map_index%8);

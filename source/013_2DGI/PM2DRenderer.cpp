@@ -52,7 +52,8 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			m_info.m_emission_buffer_size[i] = m_info.m_emission_buffer_size[i - 1] / 4;
 			m_info.m_emission_buffer_offset[i] = m_info.m_emission_buffer_offset[i - 1] + m_info.m_emission_buffer_size[i - 1];
 		}
-		m_info.m_emission_tile_linklist_max = 8192*1024;
+		m_info.m_emission_tile_linklist_max = 8192 * 1024;
+		m_info.m_sdf_work_num = RenderWidth * RenderHeight * 8;
 		cmd.updateBuffer<Info>(m_fragment_info.getInfo().buffer, m_fragment_info.getInfo().offset, m_info);
 	}
 	{
@@ -88,27 +89,17 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 	{
 		btr::BufferMemoryDescriptorEx<float> desc;
 		desc.element_num = RenderWidth * RenderHeight;
-		m_signed_distance_field = context->m_storage_memory.allocateMemory(desc);
+		b_sdf = context->m_storage_memory.allocateMemory(desc);
 	}
 	{
 		btr::BufferMemoryDescriptorEx<SDFWork> desc;
-		desc.element_num = RenderWidth * RenderHeight * 8;
+		desc.element_num = m_info.m_sdf_work_num + RenderWidth * RenderHeight;
 		b_sdf_work = context->m_storage_memory.allocateMemory(desc);
 	}
 	{
-		btr::BufferMemoryDescriptorEx<SDFWork> desc;
-		desc.element_num = RenderWidth * RenderHeight * 8;
-		b_sdf_work_top = context->m_storage_memory.allocateMemory(desc);
-	}
-	{
 		btr::BufferMemoryDescriptorEx<ivec4> desc;
-		desc.element_num = Hierarchy_Num + 1;
+		desc.element_num = Hierarchy_Num + 2;
 		b_sdf_counter = context->m_storage_memory.allocateMemory(desc);
-	}
-	{
-		btr::BufferMemoryDescriptorEx<ivec3> desc;
-		desc.element_num = 1;
-		b_sdf_work_counter = context->m_storage_memory.allocateMemory(desc);
 	}
 	{
 		btr::BufferMemoryDescriptorEx<ivec4> desc;
@@ -258,11 +249,6 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			.setStageFlags(stage)
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setDescriptorCount(1)
-			.setBinding(8),
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(stage)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(1)
 			.setBinding(10),
 			vk::DescriptorSetLayoutBinding()
 			.setStageFlags(stage)
@@ -328,11 +314,9 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			m_fragment_buffer.getInfo(),
 			m_fragment_map.getInfo(),
 			m_fragment_hierarchy.getInfo(),
-			m_signed_distance_field.getInfo(),
-			b_sdf_counter.getInfo(),
 			b_sdf_work.getInfo(),
-			b_sdf_work_counter.getInfo(),
-			b_sdf_work_top.getInfo(),
+			b_sdf_counter.getInfo(),
+			b_sdf.getInfo(),
 		};
 		vk::DescriptorBufferInfo emission_storages[] = {
 			m_emission_counter.getInfo(),
@@ -716,10 +700,9 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 		cmd.fillBuffer(m_emission_list.getInfo().buffer, m_emission_list.getInfo().offset, m_emission_list.getInfo().range, -1);
 		cmd.fillBuffer(m_emission_map.getInfo().buffer, m_emission_map.getInfo().offset, m_emission_map.getInfo().range, -1);
 
-		ivec4 sdf_count[] = { { 0,1,1,0 },{ 0,1,1,0 },{ 0,1,1,0 },{ 0,1,1,0 },{ 0,1,1,0 },{ 0,1,1,0 },{ 0,1,1,0 },{ 0,1,1,0 },{ 0,1,1,0 } };
-		static_assert(array_length(sdf_count) == Hierarchy_Num+1, "");		
+		ivec4 sdf_count[] = { { 0,1,1,0 },{ 0,1,1,0 },{ 0,1,1,0 },{ 0,1,1,0 },{ 0,1,1,0 },{ 0,1,1,0 },{ 0,1,1,0 },{ 0,1,1,0 },{ 0,1,1,0 }, {} };
+		static_assert(array_length(sdf_count) == Hierarchy_Num+2, "");		
 		cmd.updateBuffer(b_sdf_counter.getInfo().buffer, b_sdf_counter.getInfo().offset, sizeof(sdf_count), sdf_count);
-		cmd.fillBuffer(b_sdf_work_counter.getInfo().buffer, b_sdf_work_counter.getInfo().offset, b_sdf_work_counter.getInfo().range, 0);
 		
 		{
 
@@ -817,6 +800,12 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 					0, nullptr, array_length(to_write), to_write, 0, nullptr);
 
+				vk::BufferMemoryBarrier to_w[] = {
+					b_sdf_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {},
+					0, nullptr, array_length(to_w), to_w, 0, nullptr);
+
 				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineMakeSDF].get());
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutMakeSDF].get(), 0, m_descriptor_set.get(), {});
 
@@ -824,21 +813,14 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 				cmd.dispatch(num.x, num.y, num.z);
 			}
 
-			for (int i = 1; i < Hierarchy_Num; i++)
+			for (int i = 1; i < 5; i++)
 			{
 				vk::BufferMemoryBarrier to_indirect[] = {
-					b_sdf_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
+					b_sdf_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
 				};
-				to_indirect[0].offset += sizeof(ivec4)*i;
-				to_indirect[0].size = sizeof(ivec4);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, {},
 					0, nullptr, array_length(to_indirect), to_indirect, 0, nullptr);
 
-				vk::BufferMemoryBarrier to_rw[] = {
-					b_sdf_work_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite),
-				};
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
-					0, nullptr, array_length(to_rw), to_rw, 0, nullptr);
 
 				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineMakeSDF2].get());
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutMakeSDF2].get(), 0, m_descriptor_set.get(), {});
@@ -879,7 +861,7 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 			0, nullptr, 0, nullptr, array_length(to_write), to_write);
 	}
 
-	//#define debug_render_fragment_map
+//	#define debug_render_fragment_map
 #if defined(debug_render_fragment_map)
 	DebugRnederFragmentMap(cmd);
 	cmd.end();
@@ -1083,7 +1065,8 @@ void PM2DRenderer::DebugRnederSDF(vk::CommandBuffer &cmd)
 	// sdf‚ÌƒeƒXƒg
 	{
 		vk::BufferMemoryBarrier to_read[] = {
-			b_sdf_work_top.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			b_sdf_work.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			b_sdf.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 			0, nullptr, array_length(to_read), to_read, 0, nullptr);
