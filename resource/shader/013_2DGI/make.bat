@@ -5,8 +5,6 @@ glslc.exe -w %include% -x glsl -o ../binary\\OITAppModel.vert.spv OITAppModel.ve
 glslc.exe -w %include% -x glsl -o ../binary\\OITAppModel.frag.spv OITAppModel.frag
 
 glslc.exe -w %include% -x glsl -o ../binary\\PhotonMapping.comp.spv PhotonMapping.comp
-rem glslc.exe -w %include% -x glsl -o ../binary\\PhotonMapping.vert.spv PhotonMapping.vert
-rem glslc.exe -w %include% -x glsl -o ../binary\\PhotonMapping.frag.spv PhotonMapping.frag
 
 glslc.exe -w %include% -x glsl -o ../binary\\MakeFragmentMap.comp.spv MakeFragmentMap.comp
 glslc.exe -w %include% -x glsl -o ../binary\\MakeFragmentMapHierarchy.comp.spv MakeFragmentMapHierarchy.comp

@@ -68,13 +68,6 @@ void main()
 			illuminance += albedo*radiance.xyz;
 			continue;
 		}
-		{
-//			ivec4 fragment_index = ivec4(istart/8, istart%8);
-//			ivec2 fragment_index_1d = fragment_index.xz + fragment_index.yw*ivec2(reso.z, 8);
-//			uint64_t fragment_map = b_fragment_map[fragment_index_1d.x];
-//			uint64_t bit = 1ul<<fragment_index_1d.y;
-//			fragment_map & bit != 0;
-		}
 
 		vec2 end_subpos = vec2(0.5);
 		vec2 start_subpos = vec2(0.5);
@@ -122,7 +115,7 @@ void main()
 		const ivec2 map_index_origin = ivec2((idir.x < 0 ? 0 : 1), (idir.y < 0 ? 0 : 1));
 
 		float absorb = 0.;
-		for(int i = 0; i <1000; i++)
+		for(int i = 0; i <2000; i++)
 		{
 			{
 				int hierarchy=7;
@@ -137,7 +130,7 @@ void main()
 						ivec2 map_index_sub = map_index - (findex2d<<hierarchy);
 						vec2 cell_p = abs(cell_origin - (map_index_sub+fract(pos)));
 						float min_axis = min(abs(cell_p.x*inv_dir.x), abs(cell_p.y*inv_dir.y));
-						pos += min_axis*dir - dir*0.5;
+						pos += min_axis*dir - dir* (1<<constant.bounce_count)*0.9; // バギーな実装
 						break;
 					}
 				}
