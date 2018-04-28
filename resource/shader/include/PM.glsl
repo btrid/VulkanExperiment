@@ -53,16 +53,6 @@ layout(std430, set=USE_PM, binding=2) restrict buffer FragmentHierarchyBuffer {
 layout(std430, set=USE_PM, binding=3) restrict buffer FragmentHierarchyMapBuffer {
 	int b_fragment_hierarchy[];
 };
-layout(std430, set=USE_PM, binding=4) restrict buffer SDFWorkerBuffer {
-	SDFWork b_sdf_work[];
-};
-layout(std430, set=USE_PM, binding=5) restrict buffer SDFCounter {
-//	ivec4 b_sdf_counter[];
-	int b_sdf_counter[];
-};
-layout(std430, set=USE_PM, binding=6) restrict buffer SignedDistanceFieldBuffer {
-	uint b_sdf[]; // atomic_floatがないのでuint.単位はmm
-};
 
 layout(std430, set=USE_PM, binding=20) restrict buffer EmissiveCounter {
 	ivec4 b_emission_counter[];
