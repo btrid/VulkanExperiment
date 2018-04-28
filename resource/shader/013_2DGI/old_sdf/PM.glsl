@@ -64,29 +64,29 @@ layout(std430, set=USE_PM, binding=6) restrict buffer SignedDistanceFieldBuffer 
 	uint b_sdf[]; // atomic_floatがないのでuint.単位はmm
 };
 
-layout(std430, set=USE_PM, binding=20) restrict buffer EmissiveCounter {
+layout(std430, set=USE_PM, binding=10) restrict buffer EmissiveCounter {
 	ivec4 b_emission_counter[];
 };
-layout(std430, set=USE_PM, binding=21) restrict buffer EmissiveBuffer {
+layout(std430, set=USE_PM, binding=11) restrict buffer EmissiveBuffer {
 	Emission b_emission[];
 };
-layout(std430, set=USE_PM, binding=22) restrict buffer EmissiveListBuffer {
+layout(std430, set=USE_PM, binding=12) restrict buffer EmissiveListBuffer {
 	int b_emission_list[];
 };
-layout(std430, set=USE_PM, binding=23) restrict buffer EmissiveMapBuffer {
+layout(std430, set=USE_PM, binding=13) restrict buffer EmissiveMapBuffer {
 	int b_emission_map[];
 };
-layout(std430, set=USE_PM, binding=24) restrict buffer EmissiveTileLinkListCounter {
+layout(std430, set=USE_PM, binding=14) restrict buffer EmissiveTileLinkListCounter {
 	int b_emission_tile_counter;
 };
-layout(std430, set=USE_PM, binding=25) restrict buffer EmissiveTileLinkHeadBuffer {
+layout(std430, set=USE_PM, binding=15) restrict buffer EmissiveTileLinkHeadBuffer {
 	int b_emission_tile_linkhead[];
 };
-layout(std430, set=USE_PM, binding=26) restrict buffer EmissiveTileLinkListBuffer {
+layout(std430, set=USE_PM, binding=16) restrict buffer EmissiveTileLinkListBuffer {
 	LinkList b_emission_tile_linklist[];
 };
-layout (set=USE_PM, binding=30, r32ui) uniform uimage2DArray t_color[4];
-layout (set=USE_PM, binding=40) uniform sampler2DArray s_color[4];
+layout (set=USE_PM, binding=20, r32ui) uniform uimage2DArray t_color[4];
+layout (set=USE_PM, binding=30) uniform sampler2DArray s_color[4];
 
 #define getFragmentHierarchyOffset(_i) (u_pm_info.m_fragment_hierarchy_offset[(_i)/4][(_i)%4])
 #define getFragmentMapHierarchyOffset(_i) (u_pm_info.m_fragment_map_hierarchy_offset[(_i)/4][(_i)%4])

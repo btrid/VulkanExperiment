@@ -1,0 +1,74 @@
+#version 450
+
+#extension GL_GOOGLE_cpp_style_line_directive : require
+#extension GL_ARB_gpu_shader_int64 : require
+
+#include <btrlib/ConvertDimension.glsl>
+#include <btrlib/Common.glsl>
+#include <btrlib/Math.glsl>
+
+#define USE_PM 0
+#include <PM.glsl>
+
+layout (local_size_x = 16, local_size_y = 16) in;
+//layout (local_size_x = 32, local_size_y = 32) in;
+
+shared SDFWork s_work;
+shared uint64_t s_map[4];
+shared uint s_min_dist[16];
+void main()
+{
+	// 0~256
+	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
+	uvec2 map_index_2d = uvec2(s_work.map_index % reso.x, s_work.map_index / reso.x);
+	map_index_2d += gl_LocalInvocationID;
+	uint fi = map_index_2d.x + map_index_2d.y * reso.x;
+
+	if(gl_LocalInvocationIndex == 0)
+	{
+		s_work = b_sdf_work[gl_WorkGroupID.x + u_pm_info.m_sdf_work_num];
+	}
+	barrier();
+	memoryBarrierShared();
+
+	if(all(lessThan(gl_LocalInvocationID, uvec2(2))))
+	{
+		uint offset = gl_LocalInvocationID.x + gl_LocalInvocationID.y * reso.z;
+		uint fi = s_work.fragment_idx + offset;
+		uint i = gl_LocalInvocationID.x+gl_LocalInvocationID.y*2;
+		s_map[i] = b_fragment_map[fi];
+	}
+	if(all(lessThan(gl_LocalInvocationID, uvec2(4))))
+	{
+		uint i = gl_LocalInvocationID.x+gl_LocalInvocationID.y*4;
+		s_min_dist[i] = -1;
+	}
+	barrier();
+	memoryBarrierShared();
+
+	uint fragment_bit = (1ul<<(gl_LocalInvocationIndex % 64));
+	uint map_index_sub_2d = gl_LocalInvocationID % 8;
+	uint map_offset_1d = gl_LocalInvocationIndex / 64;
+
+	uvec2 target_index = uvec2(s_work.fragment_idx % reso.z, s_work.fragment_idx / reso.z);
+	target_index = target_index*8 + map_index_sub_2d;
+
+	uint dist = uint(distance(map_index_2d+0.5, target_index+0.5) * 1000.);
+	dist = (s_map[map_offset_1d] & fragment_bit) == 0 ? -1 : dist;
+
+	uint map_index_sub = map_index_sub_2d.x + map_index_sub_2d.y*4;
+	atomicMin(s_min_dist[map_index_sub], dist);
+
+	barrier();
+	memoryBarrierShared();
+
+	if(all(lessThan(gl_LocalInvocationID, uvec2(4))))
+	{
+		uvec2 map = map_index + gl_LocalInvocationID;
+		uint fi = map.x + map.y * reso.x;
+		uint i = gl_LocalInvocationID.x+gl_LocalInvocationID.y * 4;
+		atomicMin(b_sdf[fi], s_min_dist[i]);
+	}
+	
+}
+

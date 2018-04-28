@@ -101,6 +101,28 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 		desc.element_num = Hierarchy_Num + 2;
 		b_sdf_counter = context->m_storage_memory.allocateMemory(desc);
 	}
+
+	{
+		auto s = RenderHeight * RenderWidth;
+		auto size = s / 64;
+		size += s / 64 / 64;
+		size += s / 64 / 64 / 64;
+		{
+			btr::BufferMemoryDescriptorEx<int32_t> desc;
+			desc.element_num = 1;
+			b_sdf_tile_linklist_counter = context->m_storage_memory.allocateMemory(desc);
+		}
+		{
+			btr::BufferMemoryDescriptorEx<int32_t> desc;
+			desc.element_num = size;
+			b_sdf_tile_linkhead = context->m_storage_memory.allocateMemory(desc);
+		}
+		{
+			btr::BufferMemoryDescriptorEx<LinkList> desc;
+			desc.element_num = size;
+			b_sdf_tile_linklist = context->m_storage_memory.allocateMemory(desc);
+		}
+	}
 	{
 		btr::BufferMemoryDescriptorEx<ivec4> desc;
 		desc.element_num = BounceNum;
@@ -249,47 +271,57 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			.setStageFlags(stage)
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setDescriptorCount(1)
-			.setBinding(10),
+			.setBinding(8),
 			vk::DescriptorSetLayoutBinding()
 			.setStageFlags(stage)
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setDescriptorCount(1)
-			.setBinding(11),
+			.setBinding(9),
 			vk::DescriptorSetLayoutBinding()
 			.setStageFlags(stage)
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setDescriptorCount(1)
-			.setBinding(12),
+			.setBinding(20),
 			vk::DescriptorSetLayoutBinding()
 			.setStageFlags(stage)
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setDescriptorCount(1)
-			.setBinding(13),
+			.setBinding(21),
 			vk::DescriptorSetLayoutBinding()
 			.setStageFlags(stage)
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setDescriptorCount(1)
-			.setBinding(14),
+			.setBinding(22),
 			vk::DescriptorSetLayoutBinding()
 			.setStageFlags(stage)
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setDescriptorCount(1)
-			.setBinding(15),
+			.setBinding(23),
 			vk::DescriptorSetLayoutBinding()
 			.setStageFlags(stage)
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setDescriptorCount(1)
-			.setBinding(16),
+			.setBinding(24),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(stage)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(25),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(stage)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(26),
 			vk::DescriptorSetLayoutBinding()
 			.setStageFlags(stage)
 			.setDescriptorType(vk::DescriptorType::eStorageImage)
 			.setDescriptorCount(BounceNum)
-			.setBinding(20),
+			.setBinding(30),
 			vk::DescriptorSetLayoutBinding()
 			.setStageFlags(stage)
 			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
 			.setDescriptorCount(BounceNum)
-			.setBinding(30),
+			.setBinding(40),
 		};
 		vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 		desc_layout_info.setBindingCount(array_length(binding));
@@ -317,6 +349,9 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			b_sdf_work.getInfo(),
 			b_sdf_counter.getInfo(),
 			b_sdf.getInfo(),
+			b_sdf_tile_linklist_counter.getInfo(),
+			b_sdf_tile_linkhead.getInfo(),
+			b_sdf_tile_linklist.getInfo(),
 		};
 		vk::DescriptorBufferInfo emission_storages[] = {
 			m_emission_counter.getInfo(),
@@ -369,20 +404,20 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setDescriptorCount(array_length(emission_storages))
 			.setPBufferInfo(emission_storages)
-			.setDstBinding(10)
+			.setDstBinding(20)
 			.setDstSet(m_descriptor_set.get()),
 			vk::WriteDescriptorSet()
 			.setDescriptorType(vk::DescriptorType::eStorageImage)
 			.setDescriptorCount(array_length(output_images))
 			.setPImageInfo(output_images)
-			.setDstBinding(20)
+			.setDstBinding(30)
 			.setDstArrayElement(0)
 			.setDstSet(m_descriptor_set.get()),
 			vk::WriteDescriptorSet()
 			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
 			.setDescriptorCount(array_length(samplers))
 			.setPImageInfo(samplers)
-			.setDstBinding(30)
+			.setDstBinding(40)
 			.setDstArrayElement(0)
 			.setDstSet(m_descriptor_set.get()),
 		};
@@ -792,6 +827,8 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 			}
 		}
 		// make sdf
+		// èdÇ¢Ç©ÇÁÇ‚ÇﬂÇΩ
+		if(0)
 		{
 			{
 				vk::BufferMemoryBarrier to_write[] = {
@@ -873,7 +910,7 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 	cmd.end();
 	return cmd;
 #endif
-#define debug_render_sdf
+//#define debug_render_sdf
 #if defined(debug_render_sdf)
 	DebugRnederSDF(cmd);
 	cmd.end();
@@ -881,7 +918,7 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 #endif
 #if 1
 
-	for (int i = 0; i < 2; i++)
+	for (int i = 0; i < 1; i++)
 	{
 		ivec2 constant_param[] = {
 			ivec2(0, 2),
@@ -1129,7 +1166,7 @@ DebugPM2D::DebugPM2D(const std::shared_ptr<btr::Context>& context, const std::sh
 // 		}
 
 		std::vector<ivec4> rect;
-#if 1
+#if 0
 		rect.emplace_back(400, 400, 200, 400);
 		rect.emplace_back(300, 200, 100, 100);
 		rect.emplace_back(80, 50, 200, 30);
