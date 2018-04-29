@@ -396,7 +396,7 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 		};
 		static_assert(array_length(name) == array_length(m_shader), "not equal shader num");
 
-		std::string path = btr::getResourceAppPath() + "shader\\binary\\";
+		std::string path = btr::getResourceShaderPath();
 		for (size_t i = 0; i < array_length(name); i++) {
 			m_shader[i] = loadShaderUnique(context->m_device.getHandle(), path + name[i]);
 		}

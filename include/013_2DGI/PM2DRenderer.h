@@ -10,7 +10,6 @@
 namespace pm2d
 {
 
-
 struct PM2DRenderer
 {
 	enum

@@ -16,6 +16,10 @@ namespace btr
 	{
 		return s_lib_path;
 	}
+	std::string getResourceShaderPath()
+	{
+		return "../../resource/shader/binary/";
+	}
 	void setResourceLibPath(const std::string& str)
 	{
 		s_lib_path = str;
