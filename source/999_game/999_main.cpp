@@ -27,7 +27,6 @@
 #include <applib/DrawHelper.h>
 #include <applib/AppPipeline.h>
 #include <btrlib/Context.h>
-#include <btrlib/VoxelPipeline.h>
 
 #include <999_game/sBulletSystem.h>
 #include <999_game/sBoid.h>
@@ -35,9 +34,6 @@
 #include <999_game/sLightSystem.h>
 #include <999_game/sScene.h>
 #include <999_game/sMap.h>
-#include <999_game/sMap_RayMarch.h>
-#include <999_game/VoxelizeMap.h>
-#include <999_game/VoxelizeBullet.h>
 
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
@@ -121,233 +117,6 @@ struct Player
 	}
 };
 
-struct ModelGIPipelineComponent
-{
-	ModelGIPipelineComponent(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target)
-	{
-		auto& device = context->m_device;
-
-		// レンダーパス
-		{
-			// sub pass
-			vk::AttachmentReference color_ref[] =
-			{
-				vk::AttachmentReference()
-				.setAttachment(0)
-				.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
-			};
-			vk::AttachmentReference depth_ref;
-			depth_ref.setAttachment(1);
-			depth_ref.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-
-			vk::SubpassDescription subpass;
-			subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
-			subpass.setInputAttachmentCount(0);
-			subpass.setPInputAttachments(nullptr);
-			subpass.setColorAttachmentCount(array_length(color_ref));
-			subpass.setPColorAttachments(color_ref);
-			subpass.setPDepthStencilAttachment(&depth_ref);
-
-			vk::AttachmentDescription attach_description[] = {
-				// color1
-				vk::AttachmentDescription()
-				.setFormat(render_target->m_info.format)
-				.setSamples(vk::SampleCountFlagBits::e1)
-				.setLoadOp(vk::AttachmentLoadOp::eLoad)
-				.setStoreOp(vk::AttachmentStoreOp::eStore)
-				.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
-				.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
-				vk::AttachmentDescription()
-				.setFormat(render_target->m_depth_info.format)
-				.setSamples(vk::SampleCountFlagBits::e1)
-				.setLoadOp(vk::AttachmentLoadOp::eLoad)
-				.setStoreOp(vk::AttachmentStoreOp::eStore)
-				.setInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
-				.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
-			};
-			vk::RenderPassCreateInfo renderpass_info = vk::RenderPassCreateInfo()
-				.setAttachmentCount(array_length(attach_description))
-				.setPAttachments(attach_description)
-				.setSubpassCount(1)
-				.setPSubpasses(&subpass);
-
-			m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
-		}
-
-		{
-			vk::ImageView view[2];
-			view[0] = render_target->m_view;
-			view[1] = render_target->m_depth_view;
-
-			vk::FramebufferCreateInfo framebuffer_info;
-			framebuffer_info.setRenderPass(m_render_pass.get());
-			framebuffer_info.setAttachmentCount(array_length(view));
-			framebuffer_info.setPAttachments(view);
-			framebuffer_info.setWidth(render_target->m_info.extent.width);
-			framebuffer_info.setHeight(render_target->m_info.extent.height);
-			framebuffer_info.setLayers(1);
-
-			m_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
-		}
-
-		{
-			std::string path = btr::getResourceAppPath() + "shader\\binary\\";
-			std::string shader_desc[] =
-			{
-				{ path + "ModelRender.vert.spv"},
-				{ path + "ModelRender.frag.spv"},
-			};
-			for (size_t i = 0; i < array_length(shader_desc); i++) {
-				m_shader[i] = std::move(loadShaderUnique(device.getHandle(), shader_desc[i]));
-			}
-
-		}
-
-		// pipeline layout
-		{
-			vk::DescriptorSetLayout layouts[] = {
-				sModelRenderDescriptor::Order().getLayout(),
-				sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
-//				sMap::Order().getVoxel().getDescriptorSetLayout(VoxelPipeline::DESCRIPTOR_SET_LAYOUT_VOXEL),
-				sLightSystem::Order().getDescriptorSetLayout(sLightSystem::DESCRIPTOR_SET_LAYOUT_LIGHT),
-			};
-			vk::PipelineLayoutCreateInfo pipeline_layout_info;
-			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
-			pipeline_layout_info.setPSetLayouts(layouts);
-
-			m_pipeline_layout = device->createPipelineLayoutUnique(pipeline_layout_info);
-
-		}
-
-		// pipeline
-		{
-			// assembly
-			vk::PipelineInputAssemblyStateCreateInfo assembly_info = vk::PipelineInputAssemblyStateCreateInfo()
-				.setPrimitiveRestartEnable(VK_FALSE)
-				.setTopology(vk::PrimitiveTopology::eTriangleList);
-
-			vk::Extent3D size;
-			size.setWidth(context->m_window->getClientSize().x);
-			size.setHeight(context->m_window->getClientSize().y);
-			size.setDepth(1);
-			// viewport
-			vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)size.width, (float)size.height, 0.f, 1.f);
-			vk::Rect2D scissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(size.width, size.height));
-			vk::PipelineViewportStateCreateInfo viewport_info;
-			viewport_info.setViewportCount(1);
-			viewport_info.setPViewports(&viewport);
-			viewport_info.setScissorCount(1);
-			viewport_info.setPScissors(&scissor);
-
-			// ラスタライズ
-			vk::PipelineRasterizationStateCreateInfo rasterization_info;
-			rasterization_info.setPolygonMode(vk::PolygonMode::eFill);
-			rasterization_info.setCullMode(vk::CullModeFlagBits::eBack);
-			rasterization_info.setFrontFace(vk::FrontFace::eCounterClockwise);
-			rasterization_info.setLineWidth(1.f);
-			// サンプリング
-			vk::PipelineMultisampleStateCreateInfo sample_info;
-			sample_info.setRasterizationSamples(vk::SampleCountFlagBits::e1);
-
-			// デプスステンシル
-			vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
-			depth_stencil_info.setDepthTestEnable(VK_TRUE);
-			depth_stencil_info.setDepthWriteEnable(VK_TRUE);
-			depth_stencil_info.setDepthCompareOp(vk::CompareOp::eGreaterOrEqual);
-			depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
-			depth_stencil_info.setStencilTestEnable(VK_FALSE);
-
-			// ブレンド
-			std::vector<vk::PipelineColorBlendAttachmentState> blend_state = {
-				vk::PipelineColorBlendAttachmentState()
-				.setBlendEnable(VK_FALSE)
-				.setColorWriteMask(vk::ColorComponentFlagBits::eR
-					| vk::ColorComponentFlagBits::eG
-					| vk::ColorComponentFlagBits::eB
-					| vk::ColorComponentFlagBits::eA)
-			};
-			vk::PipelineColorBlendStateCreateInfo blend_info;
-			blend_info.setAttachmentCount(blend_state.size());
-			blend_info.setPAttachments(blend_state.data());
-
-			auto vertex_input_binding = cModel::GetVertexInputBinding();
-			auto vertex_input_attribute = cModel::GetVertexInputAttribute();
-			vk::PipelineVertexInputStateCreateInfo vertex_input_info;
-			vertex_input_info.setVertexBindingDescriptionCount((uint32_t)vertex_input_binding.size());
-			vertex_input_info.setPVertexBindingDescriptions(vertex_input_binding.data());
-			vertex_input_info.setVertexAttributeDescriptionCount((uint32_t)vertex_input_attribute.size());
-			vertex_input_info.setPVertexAttributeDescriptions(vertex_input_attribute.data());
-
-			vk::PipelineShaderStageCreateInfo stage_info[] = {
-				vk::PipelineShaderStageCreateInfo()
-				.setModule(m_shader[0].get())
-				.setStage(vk::ShaderStageFlagBits::eVertex)
-				.setPName("main"),
-				vk::PipelineShaderStageCreateInfo()
-				.setModule(m_shader[1].get())
-				.setStage(vk::ShaderStageFlagBits::eFragment)
-				.setPName("main"),
-			};
-
-			std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =
-			{
-				vk::GraphicsPipelineCreateInfo()
-				.setStageCount(array_length(stage_info))
-				.setPStages(stage_info)
-				.setPVertexInputState(&vertex_input_info)
-				.setPInputAssemblyState(&assembly_info)
-				.setPViewportState(&viewport_info)
-				.setPRasterizationState(&rasterization_info)
-				.setPMultisampleState(&sample_info)
-				.setLayout(m_pipeline_layout.get())
-				.setRenderPass(m_render_pass.get())
-				.setPDepthStencilState(&depth_stencil_info)
-				.setPColorBlendState(&blend_info),
-			};
-			m_pipeline = std::move(device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info)[0]);
-		}
-
-	}
-
-	vk::UniqueCommandBuffer createCmd(const std::shared_ptr<btr::Context>& context, const Drawable* drawable, const DescriptorSet<ModelRenderDescriptor::Set>& descriptor_set)
-	{
-		auto& device = context->m_device;
-
-		vk::CommandBufferAllocateInfo cmd_buffer_info;
-		cmd_buffer_info.commandBufferCount = 1;
-		cmd_buffer_info.commandPool = context->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
-		cmd_buffer_info.level = vk::CommandBufferLevel::eSecondary;
-		auto cmd = std::move(context->m_device->allocateCommandBuffersUnique(cmd_buffer_info)[0]);
-		// recode command
-		{
-			vk::CommandBufferBeginInfo begin_info;
-			begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse | vk::CommandBufferUsageFlagBits::eRenderPassContinue);
-			vk::CommandBufferInheritanceInfo inheritance_info;
-			inheritance_info.setFramebuffer(m_framebuffer.get());
-			inheritance_info.setRenderPass(m_render_pass.get());
-			begin_info.pInheritanceInfo = &inheritance_info;
-			cmd->begin(begin_info);
-
-			cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline.get());
-			cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 0, descriptor_set.m_handle.get(), {});
-			cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 1, sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA), {});
-//			cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 2, sMap::Order().getVoxel().getDescriptorSet(VoxelPipeline::DESCRIPTOR_SET_VOXEL), {});
-			cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 3, sLightSystem::Order().getDescriptorSet(sLightSystem::DESCRIPTOR_SET_LIGHT), {});
-
-			drawable->draw(cmd.get());
-			cmd->end();
-		}
-
-		return cmd;
-	}
-
-private:
-	vk::UniqueShaderModule m_shader[2];
-	vk::UniquePipeline m_pipeline;
-	vk::UniquePipelineLayout m_pipeline_layout;
-	vk::UniqueRenderPass m_render_pass;
-	vk::UniqueFramebuffer m_framebuffer;
-};
 
 int main()
 {
@@ -385,7 +154,6 @@ int main()
 		sCollisionSystem::Order().setup(context);
 		sLightSystem::Order().setup(context);
 		sMap::Order().setup(context, app.m_window->getRenderTarget());
-//		sMap::Order().getVoxel().createPipeline<VoxelizeMap>(context);
 
 	}
 	sModelRenderDescriptor::Create(context);
@@ -401,7 +169,7 @@ int main()
 	auto drawCmd = renderer.createCmd(context, &player_model->m_render, render_descriptor);
 	auto animeCmd = animater.createCmd(context, animate_descriptor);
 
-	ClearPipeline clear_render_target(&*context, app.m_window->getRenderTarget());
+	ClearPipeline clear_render_target(context, app.m_window->getRenderTarget());
 	PresentPipeline present_pipeline(context, app.m_window->getRenderTarget(), app.m_window->getSwapchainPtr());
 
 	app.setup();
@@ -421,7 +189,6 @@ int main()
 				job.mFinish =
 					[&]()
 				{
-//					render->m_animation->animationUpdate();
 					motion_worker_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);
@@ -523,8 +290,6 @@ int main()
 				job.mFinish =
 					[&]()
 				{
-//					render_cmds[5] = sMap::Order().getVoxel().make(context);
-//					render_cmds[10] = sMap::Order().getVoxel().draw(context);
 					render_syncronized_point.arrive();
 				};
 				sGlobal::Order().getThreadPool().enque(job);

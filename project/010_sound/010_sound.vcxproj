@@ -85,7 +85,7 @@
   <ImportGroup Label="ExtensionTargets">
     <Import Project="..\..\packages\vorbis-msvc14-x64.1.3.5.7785\build\native\vorbis-msvc14-x64.targets" Condition="Exists('..\..\packages\vorbis-msvc14-x64.1.3.5.7785\build\native\vorbis-msvc14-x64.targets')" />
     <Import Project="..\..\packages\ogg-msvc14-x64.1.3.2.7785\build\native\ogg-msvc14-x64.targets" Condition="Exists('..\..\packages\ogg-msvc14-x64.1.3.2.7785\build\native\ogg-msvc14-x64.targets')" />
-    <Import Project="..\..\packages\glm.0.9.8.4\build\native\glm.targets" Condition="Exists('..\..\packages\glm.0.9.8.4\build\native\glm.targets')" />
+    <Import Project="..\..\packages\glm.0.9.8.5\build\native\glm.targets" Condition="Exists('..\..\packages\glm.0.9.8.5\build\native\glm.targets')" />
   </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
@@ -93,6 +93,6 @@
     </PropertyGroup>
     <Error Condition="!Exists('..\..\packages\vorbis-msvc14-x64.1.3.5.7785\build\native\vorbis-msvc14-x64.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\vorbis-msvc14-x64.1.3.5.7785\build\native\vorbis-msvc14-x64.targets'))" />
     <Error Condition="!Exists('..\..\packages\ogg-msvc14-x64.1.3.2.7785\build\native\ogg-msvc14-x64.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\ogg-msvc14-x64.1.3.2.7785\build\native\ogg-msvc14-x64.targets'))" />
-    <Error Condition="!Exists('..\..\packages\glm.0.9.8.4\build\native\glm.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\glm.0.9.8.4\build\native\glm.targets'))" />
+    <Error Condition="!Exists('..\..\packages\glm.0.9.8.5\build\native\glm.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\glm.0.9.8.5\build\native\glm.targets'))" />
   </Target>
 </Project>

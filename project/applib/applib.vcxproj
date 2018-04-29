@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -12,9 +12,9 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
-    <ProjectGuid>{C902CBC4-17CF-47BA-B10E-DA6F79032944}</ProjectGuid>
+    <ProjectGuid>{4C880FFD-9EA8-4E57-A6CD-FE406E798948}</ProjectGuid>
     <RootNamespace>applib</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
@@ -47,14 +47,6 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup />
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
-      <Optimization>Disabled</Optimization>
-      <SDLCheck>true</SDLCheck>
-      <MinimalRebuild>false</MinimalRebuild>
-    </ClCompile>
-  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -62,22 +54,33 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\applib\App.h" />
-    <ClInclude Include="..\..\include\applib\cLightPipeline.h" />
-    <ClInclude Include="..\..\include\applib\cModelInstancingPipeline.h" />
+    <ClInclude Include="..\..\include\applib\AppPipeline.h" />
     <ClInclude Include="..\..\include\applib\cAppModel.h" />
+    <ClInclude Include="..\..\include\applib\cLightPipeline.h" />
+    <ClInclude Include="..\..\include\applib\cModelInstancing.h" />
+    <ClInclude Include="..\..\include\applib\cModelInstancingPipeline.h" />
     <ClInclude Include="..\..\include\applib\cModelPipeline.h" />
     <ClInclude Include="..\..\include\applib\DrawHelper.h" />
     <ClInclude Include="..\..\include\applib\Geometry.h" />
     <ClInclude Include="..\..\include\applib\GraphicsResource.h" />
-    <ClInclude Include="..\..\include\applib\AppPipeline.h" />
+    <ClInclude Include="..\..\include\applib\Loader.h" />
     <ClInclude Include="..\..\include\applib\PM2D.h" />
     <ClInclude Include="..\..\include\applib\PM2DRenderer.h" />
     <ClInclude Include="..\..\include\applib\sCameraManager.h" />
@@ -88,15 +91,11 @@
     <ClInclude Include="..\..\include\applib\Utility.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="..\..\source\012_imgui\012_main.cpp" />
     <ClCompile Include="..\..\source\applib\App.cpp" />
     <ClCompile Include="..\..\source\applib\AppPipeline.cpp" />
+    <ClCompile Include="..\..\source\applib\cAppModel.cpp" />
     <ClCompile Include="..\..\source\applib\cLightPipeline.cpp" />
     <ClCompile Include="..\..\source\applib\cModelInstancingPipeline.cpp" />
-    <ClCompile Include="..\..\source\applib\cAppModel.cpp" />
     <ClCompile Include="..\..\source\applib\cModelPipeline.cpp" />
     <ClCompile Include="..\..\source\applib\Geometry.cpp" />
     <ClCompile Include="..\..\source\applib\PM2DRenderer.cpp" />
@@ -104,14 +103,17 @@
     <ClCompile Include="..\..\source\applib\sParticlePipeline.cpp" />
     <ClCompile Include="..\..\source\applib\sSystem.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="..\..\packages\glm.0.9.8.4\build\native\glm.targets" Condition="Exists('..\..\packages\glm.0.9.8.4\build\native\glm.targets')" />
+    <Import Project="..\..\packages\glm.0.9.8.5\build\native\glm.targets" Condition="Exists('..\..\packages\glm.0.9.8.5\build\native\glm.targets')" />
   </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>このプロジェクトは、このコンピューター上にない NuGet パッケージを参照しています。それらのパッケージをダウンロードするには、[NuGet パッケージの復元] を使用します。詳細については、http://go.microsoft.com/fwlink/?LinkID=322105 を参照してください。見つからないファイルは {0} です。</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\..\packages\glm.0.9.8.4\build\native\glm.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\glm.0.9.8.4\build\native\glm.targets'))" />
+    <Error Condition="!Exists('..\..\packages\glm.0.9.8.5\build\native\glm.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\glm.0.9.8.5\build\native\glm.targets'))" />
   </Target>
 </Project>

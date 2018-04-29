@@ -222,7 +222,7 @@ vk::CommandBuffer sImGuiRenderer::Render()
 		ImGui::NewFrame();
 		{
 			ImGui::PushID(window.get());
-			auto& cmds = window->getImguiPipeline()->getImguiCmd();
+			auto cmds = window->getImguiPipeline()->getImguiCmd();
 			for (auto& cmd : cmds)
 			{
 				cmd();

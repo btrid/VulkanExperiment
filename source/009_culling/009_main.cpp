@@ -376,7 +376,7 @@ struct CullingTest
 
 				vk::AttachmentDescription attach_description[] = {
 					vk::AttachmentDescription()
-					.setFormat(app::g_app_instance->m_window->m_depth_format)
+					.setFormat(app::g_app_instance->m_window->m_depth_info.format)
 					.setSamples(vk::SampleCountFlagBits::e1)
 					.setLoadOp(vk::AttachmentLoadOp::eLoad)
 					.setStoreOp(vk::AttachmentStoreOp::eStore)

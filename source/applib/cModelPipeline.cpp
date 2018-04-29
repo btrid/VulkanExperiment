@@ -45,7 +45,7 @@ struct DefaultAnimationModule : public AnimationModule
 				vk::CommandBufferInheritanceInfo inheritance_info;
 				begin_info.setPInheritanceInfo(&inheritance_info);
 
-				auto& cmd = m_bone_update_cmd[i].get();
+				auto cmd = m_bone_update_cmd[i].get();
 				cmd.begin(begin_info);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eVertexShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, m_bone_buffer.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite), {});
 

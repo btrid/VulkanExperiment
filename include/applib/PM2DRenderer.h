@@ -111,8 +111,6 @@ struct PM2DRenderer
 	PM2DRenderer(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target);
 	vk::CommandBuffer execute(const std::vector<PM2DPipeline*>& pipeline);
 
-	void DebugRnederFragmentMap(vk::CommandBuffer &cmd);
-
 	btr::BufferMemoryEx<Info> m_fragment_info;
 	btr::BufferMemoryEx<Fragment> m_fragment_buffer;
 	btr::BufferMemoryEx<int64_t> m_fragment_map;
@@ -141,6 +139,8 @@ struct PM2DRenderer
 	std::shared_ptr<btr::Context> m_context;
 	Info m_info;
 
+private:
+	void DebugRnederFragmentMap(vk::CommandBuffer &cmd);
 };
 
 struct AppModelPM2D : public PM2DPipeline

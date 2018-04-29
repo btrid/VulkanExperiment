@@ -604,13 +604,6 @@ struct sMap : public Singleton<sMap>
 		}
 		m_cmd->end();
 
-// 		VoxelInfo info;
-// 		info.u_area_min = vec4(0.f, 0.f, 0.f, 1.f);
-// 		info.u_area_max = vec4(500.f, 20.f, 500.f, 1.f);
-// 		info.u_cell_num = uvec4(128, 4, 128, 1);
-// 		info.u_cell_size = (info.u_area_max - info.u_area_min) / vec4(info.u_cell_num);
-//		m_voxelize_pipeline.setup(context, info);
-
 	}
 
 	vk::CommandBuffer draw(std::shared_ptr<btr::Context>& executer)
