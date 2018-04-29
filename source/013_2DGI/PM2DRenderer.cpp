@@ -740,7 +740,7 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 	return cmd;
 #endif
 
-	for (int i = 0; i < 1; i++)
+	for (int i = 0; i < 2; i++)
 	{
 		ivec2 constant_param[] = {
 
@@ -893,12 +893,6 @@ DebugPM2D::DebugPM2D(const std::shared_ptr<btr::Context>& context, const std::sh
 
 	std::vector<PM2DRenderer::Fragment> map_data(renderer->RenderWidth*renderer->RenderHeight);
 	{
-// 		m_emission.resize(32);
-// 		for (auto& e : m_emission)
-// 		{
-// 			e.value = vec4(std::rand() % 100, std::rand() % 100, std::rand() % 100 + 500., 1.f);
-// 		}
-
 		std::vector<ivec4> rect;
 #if 0
 		rect.emplace_back(400, 400, 200, 400);

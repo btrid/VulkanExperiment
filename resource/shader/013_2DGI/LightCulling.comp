@@ -51,10 +51,10 @@ void main()
 		}
 		int index1d = b_emission_list[data_offset+i];
 		vec2 pos = vec2(ivec2(index1d%reso.x, index1d/reso.x)<<constant.bounce_count);
-		float power = length(b_emission[data_offset+index1d].value);
+		float power = length(b_emission[data_offset+index1d].value);		
 
 		vec2 Delta = pos - max(s_area.xy, min(pos, s_area.zw));
-		if(dot(Delta, Delta) > (power*power)) 
+		if(dot(Delta, Delta) > (power)) 
 		{
 			continue;
 		}

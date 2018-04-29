@@ -69,33 +69,17 @@ void main()
 			continue;
 		}
 
-		vec2 end_subpos = vec2(0.5);
-		vec2 start_subpos = vec2(0.5);
-		{
-			if(abs(idir.x) >= abs(idir.y))
-			{
-				start_subpos.x = idir.x<0 ? 0. : idir.x>0 ? 1. : 0.5;
-				start_subpos.y = idir.y>0 ? 1. : idir.y<0 ? 0. : 0.5;
-				end_subpos.x = idir.x<0 ? 1. : idir.x>0 ? 0. : 0.5;
-				end_subpos.y = idir.y>0 ? 0. : idir.y<0 ? 1. : 0.5;
-			}
-			else
-			{
-				start_subpos.x = idir.x>0 ? 1. : idir.x<0 ? 0. : 0.5;
-				start_subpos.y = idir.y<0 ? 0. : idir.y>0 ? 1. : 0.5;
-				end_subpos.x = idir.x>0 ? 0. : idir.x<0 ? 1. : 0.5;
-				end_subpos.y = idir.y<0 ? 1. : idir.y>0 ? 0. : 0.5;
-			}
-		}
-
-		start = start + subpixel*(start_subpos.xy);
-		end = end + subpixel*(end_subpos.xy);
+//		vec2 end_subpos = sign(idir.xy)*0.5+0.5;
+//		vec2 start_subpos = sign(-idir.xy)*0.5+0.5;
+		vec2 subpos = sign(idir.xy)*0.5+0.5;
+		start = start + subpixel*(subpos.xy);
+		end = end + subpixel*(1.-subpos.xy);
 
 		int goal_index = abs(idir.x) >= abs(idir.y) ? 0: 1;
 
 		const vec2 diff = (end - start);
 		const float ray_dist = length(diff.xy);
-		vec3 illumi = radiance.xyz / (1.+ray_dist);
+		vec3 illumi = radiance.xyz / (1.+ray_dist*ray_dist);
 		if(dot(illumi, illumi) <= FLT_EPSIRON){
 			// 影響範囲外
 			continue;
@@ -168,7 +152,7 @@ void main()
 				}
 			}
 		}
-		illumi*= absorb;
+//		illumi*= absorb;
 
 	}
 
