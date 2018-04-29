@@ -19,4 +19,3 @@ glslc.exe -w %include% -x glsl -o ../binary/PMPointLight.frag.spv PMPointLight.f
 
 glslc.exe -w %include% -x glsl -o ../binary\\DebugFragmentMap.comp.spv DebugFragmentMap.comp
 
-

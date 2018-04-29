@@ -115,11 +115,12 @@ void main()
 		const ivec2 map_index_origin = ivec2((idir.x < 0 ? 0 : 1), (idir.y < 0 ? 0 : 1));
 
 		float absorb = 0.;
-		for(int i = 0; i <2000; i++)
+		for(int i = 0; i <3000; i++)
 		{
 			{
-				int hierarchy=7;
-				for(; hierarchy>constant.bounce_count; hierarchy--)
+				vec2 progress = dir * (1<<constant.bounce_count);
+
+				for(int hierarchy=7; hierarchy>constant.bounce_count; hierarchy--)
 				{
 					ivec2 findex2d = map_index>>hierarchy;
 					int findex = findex2d.x + findex2d.y*(reso.x>>hierarchy);
@@ -130,16 +131,14 @@ void main()
 						ivec2 map_index_sub = map_index - (findex2d<<hierarchy);
 						vec2 cell_p = abs(cell_origin - (map_index_sub+fract(pos)));
 						float min_axis = min(abs(cell_p.x*inv_dir.x), abs(cell_p.y*inv_dir.y));
-						pos += min_axis*dir - dir* (1<<constant.bounce_count)*0.9; // バギーな実装
+						progress = min_axis*dir + dir*0.5; // バギーな実装
 						break;
 					}
 				}
-			}
-			// march
-			{
-				pos += dir * (1<<constant.bounce_count);
+				pos += progress;
 				map_index = ivec2(pos);
 			}
+
 			// 終了判定
 			if(abs(map_index[goal_index]-istart[goal_index]) >= abs(idir[goal_index]))
 			{

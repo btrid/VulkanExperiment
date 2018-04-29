@@ -17,10 +17,6 @@ struct PM2DRenderer
 	{
 		BounceNum = 4, //!< ƒŒƒC”½ŽË‰ñ”
 		Hierarchy_Num = 8,
-		// 		RenderWidth = 1024,
-		// 		RenderHeight = 1024,
-		//		RenderDepth = 1,
-		//		FragmentBufferSize = RenderWidth * RenderHeight*RenderDepth,
 	};
 	int RenderWidth;
 	int RenderHeight;

@@ -680,7 +680,7 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 
 		// make map_hierarchy
 		{
-			for (int i = 1; i < 8; i++)
+			for (int i = 1; i < Hierarchy_Num; i++)
 			{
 				vk::BufferMemoryBarrier to_write[] = {
 					m_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite),
@@ -699,7 +699,7 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 		}
 		// make hierarchy
 		{
-			for (int i = 1; i < 8; i++)
+			for (int i = 1; i < Hierarchy_Num; i++)
 			{
 				vk::BufferMemoryBarrier to_write[] = {
 					m_fragment_hierarchy.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
@@ -739,15 +739,8 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 	cmd.end();
 	return cmd;
 #endif
-//#define debug_render_sdf
-#if defined(debug_render_sdf)
-	DebugRnederSDF(cmd);
-	cmd.end();
-	return cmd;
-#endif
-#if 1
 
-	for (int i = 0; i < 2; i++)
+	for (int i = 0; i < 1; i++)
 	{
 		ivec2 constant_param[] = {
 
@@ -836,48 +829,6 @@ vk::CommandBuffer PM2DRenderer::execute(const std::vector<PM2DPipeline*>& pipeli
 
 		cmd.endRenderPass();
 	}
-#else
-	// light culling
-	{
-		cmd.fillBuffer(m_emission_tile_linklist_counter.getInfo().buffer, m_emission_tile_linklist_counter.getInfo().offset, m_emission_tile_linklist_counter.getInfo().range, 0u);
-		cmd.fillBuffer(m_emission_tile_linkhead.getInfo().buffer, m_emission_tile_linkhead.getInfo().offset, m_emission_tile_linkhead.getInfo().range, -1);
-
-		vk::BufferMemoryBarrier to_write[] = {
-			m_emission_buffer.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eMemoryWrite),
-		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eComputeShader, {},
-			0, nullptr, array_length(to_write), to_write, 0, nullptr);
-
-		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineLayoutLightCulling].get());
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutLightCulling].get(), 0, m_descriptor_set.get(), {});
-		cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayoutLightCulling].get(), vk::ShaderStageFlagBits::eCompute, 0, ivec2(0, 0));
-		cmd.dispatch(20, 20, 1);
-
-	}
-
-	{
-		vk::BufferMemoryBarrier to_read[] = {
-			m_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-			m_fragment_hierarchy.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-			m_emission_tile_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eFragmentShader, {},
-			0, nullptr, array_length(to_read), to_read, 0, nullptr);
-
-		vk::RenderPassBeginInfo begin_render_Info;
-		begin_render_Info.setRenderPass(m_render_pass.get());
-		begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), m_render_target->m_resolution));
-		begin_render_Info.setFramebuffer(m_framebuffer.get());
-		cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
-
-		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PipelinePhotonMappingG].get());
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayoutPhotonMapping].get(), 0, m_descriptor_set.get(), {});
-		cmd.draw(3, 1, 0, 0);
-
-		cmd.endRenderPass();
-
-	}
-#endif
 	cmd.end();
 	return cmd;
 }
