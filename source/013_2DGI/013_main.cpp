@@ -25,7 +25,7 @@
 #include <btrlib/Context.h>
 #include <applib/sImGuiRenderer.h>
 
-#include <013_2DGI/PM2DRenderer.h>
+#include <applib/PM2DRenderer.h>
 #include <013_2DGI/PM2DRenderer2.h>
 
 #pragma comment(lib, "btrlib.lib")

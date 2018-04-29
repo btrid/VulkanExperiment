@@ -1,4 +1,5 @@
 #pragma once
+#include <btrlib/Define.h>
 
 struct PM2DPipeline
 {

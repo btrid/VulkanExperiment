@@ -1,4 +1,4 @@
-#include <013_2DGI/PM2DRenderer.h>
+#include <applib/PM2DRenderer.h>
 #include <applib/GraphicsResource.h>
 
 namespace pm2d

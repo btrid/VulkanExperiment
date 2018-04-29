@@ -78,6 +78,8 @@
     <ClInclude Include="..\..\include\applib\Geometry.h" />
     <ClInclude Include="..\..\include\applib\GraphicsResource.h" />
     <ClInclude Include="..\..\include\applib\AppPipeline.h" />
+    <ClInclude Include="..\..\include\applib\PM2D.h" />
+    <ClInclude Include="..\..\include\applib\PM2DRenderer.h" />
     <ClInclude Include="..\..\include\applib\sCameraManager.h" />
     <ClInclude Include="..\..\include\applib\sImGuiRenderer.h" />
     <ClInclude Include="..\..\include\applib\sMessageSystem.h" />
@@ -97,6 +99,7 @@
     <ClCompile Include="..\..\source\applib\cAppModel.cpp" />
     <ClCompile Include="..\..\source\applib\cModelPipeline.cpp" />
     <ClCompile Include="..\..\source\applib\Geometry.cpp" />
+    <ClCompile Include="..\..\source\applib\PM2DRenderer.cpp" />
     <ClCompile Include="..\..\source\applib\sImGuiRenderer.cpp" />
     <ClCompile Include="..\..\source\applib\sParticlePipeline.cpp" />
     <ClCompile Include="..\..\source\applib\sSystem.cpp" />
