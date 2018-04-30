@@ -80,7 +80,6 @@
     <ClInclude Include="..\..\include\applib\DrawHelper.h" />
     <ClInclude Include="..\..\include\applib\Geometry.h" />
     <ClInclude Include="..\..\include\applib\GraphicsResource.h" />
-    <ClInclude Include="..\..\include\applib\Loader.h" />
     <ClInclude Include="..\..\include\applib\PM2D.h" />
     <ClInclude Include="..\..\include\applib\PM2DRenderer.h" />
     <ClInclude Include="..\..\include\applib\sCameraManager.h" />

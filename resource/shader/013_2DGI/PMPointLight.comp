@@ -1,0 +1,34 @@
+#version 450
+
+#extension GL_GOOGLE_cpp_style_line_directive : require
+#extension GL_ARB_shader_draw_parameters : require
+
+#include <btrlib/ConvertDimension.glsl>
+#include <btrlib/Shape.glsl>
+
+#define USE_PM 0
+#include <PM.glsl>
+
+layout (local_size_x = 1, local_size_y = 1) in;
+
+layout(push_constant) uniform InputLight
+{
+	vec2 pos;
+	vec2 _p;
+	vec3 emission;
+} constant;
+
+void main()
+{
+	ivec2 pos = ivec2(constant.pos);
+	int p_index = pos.x + u_pm_info.m_resolution.x*pos.y;
+	{
+		// list登録
+		if(atomicCompSwap(b_emission_map[p_index], -1, 0) == -1)
+		{
+			int list_index = atomicAdd(b_emission_counter[0].x, 1);
+			b_emission_list[list_index] = p_index;
+		}
+		b_emission[p_index].value += vec4(constant.emission, 0.);
+	}
+}

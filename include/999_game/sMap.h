@@ -611,8 +611,5 @@ struct sMap : public Singleton<sMap>
 		return m_cmd.get();
 	}
 
-
-//	VoxelPipeline& getVoxel() { return m_voxelize_pipeline; }
-
 };
 #endif
