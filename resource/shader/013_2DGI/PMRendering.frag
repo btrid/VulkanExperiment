@@ -7,6 +7,7 @@
 #include <btrlib/Shape.glsl>
 
 #define USE_PM 0
+#define USE_PM_RENDER 1
 #include <PM.glsl>
 
 layout(location=1) in Data

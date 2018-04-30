@@ -58,7 +58,6 @@ int main()
 		pos = fract(absmove + pos);
 	}
 
-//	using namespace pm2d_2;
 	using namespace pm2d;
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();
@@ -82,8 +81,12 @@ int main()
 	ClearPipeline clear_pipeline(context, app.m_window->getRenderTarget());
 	PresentPipeline present_pipeline(context, app.m_window->getRenderTarget(), app.m_window->getSwapchainPtr());
 
-	std::shared_ptr<PM2DRenderer> pm_renderer = std::make_shared<PM2DRenderer>(context, app.m_window->getRenderTarget());
-	DebugPM2D pm_debug(context, pm_renderer);
+
+	std::shared_ptr<PM2DContext> pm2d_context = std::make_shared<PM2DContext>(context);
+	std::shared_ptr<PM2DRenderer> pm_renderer = std::make_shared<PM2DRenderer>(context, app.m_window->getRenderTarget(), pm2d_context);
+	PM2DClear pm_clear(context, pm2d_context);
+	PM2DDebug pm_debug(context, pm2d_context);
+	PM2DMakeHierarchy pm_make_hierarchy(context, pm2d_context);
 	app.setup();
 	while (true)
 	{
@@ -100,8 +103,15 @@ int main()
 			};
 			std::vector<vk::CommandBuffer> cmds(cmd_num);
 			cmds[cmd_clear] = clear_pipeline.execute();
-			auto p = std::vector<PM2DPipeline*>{&pm_debug};
-			cmds[cmd_pm] = pm_renderer->execute(p);
+			{
+				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
+				pm_clear.execute(cmd);
+				pm_debug.execute(cmd);
+				pm_make_hierarchy.execute(cmd);
+				pm_renderer->execute(cmd);
+				cmd.end();
+				cmds[cmd_pm] = cmd;
+			}
 			cmds[cmd_present] = present_pipeline.execute();
 			app.submit(std::move(cmds));
 		}

@@ -13,9 +13,6 @@ glslc.exe -w %include% -x glsl -o ../binary\\LightCulling.comp.spv LightCulling.
 glslc.exe -w %include% -x glsl -o ../binary\\PMRendering.vert.spv PMRendering.vert
 glslc.exe -w %include% -x glsl -o ../binary\\PMRendering.frag.spv PMRendering.frag
 
-
-rem glslc.exe -w %include% -x glsl -o ../binary/PMPointLight.vert.spv PMPointLight.vert
-rem glslc.exe -w %include% -x glsl -o ../binary/PMPointLight.frag.spv PMPointLight.frag
 glslc.exe -w %include% -x glsl -o ../binary/PMPointLight.comp.spv PMPointLight.comp
 
 glslc.exe -w %include% -x glsl -o ../binary\\DebugFragmentMap.comp.spv DebugFragmentMap.comp
