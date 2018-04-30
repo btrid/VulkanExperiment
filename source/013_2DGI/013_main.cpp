@@ -25,8 +25,11 @@
 #include <btrlib/Context.h>
 #include <applib/sImGuiRenderer.h>
 
-#include <applib/PM2DRenderer.h>
-#include <013_2DGI/PM2DRenderer2.h>
+#include <applib/PM2D/PM2DRenderer.h>
+#include <applib/PM2D/PM2DClear.h>
+#include <applib/PM2D/PM2DDebug.h>
+
+//#include <013_2DGI/PM2DRenderer2.h>
 
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
@@ -83,9 +86,9 @@ int main()
 
 
 	std::shared_ptr<PM2DContext> pm2d_context = std::make_shared<PM2DContext>(context);
-	std::shared_ptr<PM2DRenderer> pm_renderer = std::make_shared<PM2DRenderer>(context, app.m_window->getRenderTarget(), pm2d_context);
+	PM2DRenderer pm_renderer(context, app.m_window->getRenderTarget(), pm2d_context);
 	PM2DClear pm_clear(context, pm2d_context);
-	PM2DDebug pm_debug(context, pm2d_context);
+	PM2DDebug pm_debug_make_fragment_and_light(context, pm2d_context);
 	PM2DMakeHierarchy pm_make_hierarchy(context, pm2d_context);
 	app.setup();
 	while (true)
@@ -106,9 +109,9 @@ int main()
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				pm_clear.execute(cmd);
-				pm_debug.execute(cmd);
+				pm_debug_make_fragment_and_light.execute(cmd);
 				pm_make_hierarchy.execute(cmd);
-				pm_renderer->execute(cmd);
+				pm_renderer.execute(cmd);
 				cmd.end();
 				cmds[cmd_pm] = cmd;
 			}

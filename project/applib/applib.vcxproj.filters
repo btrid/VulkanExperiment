@@ -14,7 +14,7 @@
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
     <Filter Include="PM2D">
-      <UniqueIdentifier>{255db1e3-0a01-40c1-9d06-657f0be8b2eb}</UniqueIdentifier>
+      <UniqueIdentifier>{9ced4232-d633-41ed-b2fd-1102cbdbc6c1}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -66,10 +66,16 @@
     <ClInclude Include="..\..\include\applib\sSystem.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\applib\PM2D.h">
+    <ClInclude Include="..\..\include\applib\PM2D\PM2D.h">
       <Filter>PM2D</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\applib\PM2DRenderer.h">
+    <ClInclude Include="..\..\include\applib\PM2D\PM2DRenderer.h">
+      <Filter>PM2D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\applib\PM2D\PM2DClear.h">
+      <Filter>PM2D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\applib\PM2D\PM2DDebug.h">
       <Filter>PM2D</Filter>
     </ClInclude>
   </ItemGroup>
@@ -101,11 +107,14 @@
     <ClCompile Include="..\..\source\applib\sSystem.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\source\applib\PM2DRenderer.cpp">
-      <Filter>PM2D</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\source\applib\cModelPipeline.cpp">
       <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\applib\PM2D\PM2DRenderer.cpp">
+      <Filter>PM2D</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\013_2DGI\PM2DDebug.cpp">
+      <Filter>PM2D</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

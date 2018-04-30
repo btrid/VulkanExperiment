@@ -71,12 +71,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\013_2DGI\013_main.cpp" />
-    <ClCompile Include="..\..\source\013_2DGI\PM2DRenderer2.cpp" />
-    <ClCompile Include="..\..\source\013_2DGI\PM2DRenderer3.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\..\include\013_2DGI\PM2DRenderer2.h" />
-    <ClInclude Include="..\..\include\013_2DGI\PM2DRenderer3.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
