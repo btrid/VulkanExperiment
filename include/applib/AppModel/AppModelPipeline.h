@@ -29,12 +29,11 @@ struct AppModelAnimationStage
 		};
 		assert(shader_desc.size() == SHADER_NUM);
 		m_compute_shader = std::make_shared<ShaderModule>(context, shader_desc);
-		m_animation_descriptor_layout = std::make_shared<AppModelAnimateDescriptor>(context);
 
 		// pipeline layout
 		{
 			vk::DescriptorSetLayout layouts[] = {
-				m_animation_descriptor_layout->getLayout(),
+				AppModel::DescriptorSet::Order().getLayout(),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info = vk::PipelineLayoutCreateInfo()
 				.setSetLayoutCount(array_length(layouts))
@@ -70,7 +69,7 @@ struct AppModelAnimationStage
 		}
 
 	}
-	vk::UniqueCommandBuffer createCmd(const std::shared_ptr<btr::Context>& context, const DescriptorSet<AppModelAnimateDescriptor::Set>& descriptor_set)
+	vk::UniqueCommandBuffer createCmd(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<AppModel>& render)
 	{
 		// recode
 		vk::CommandBufferAllocateInfo cmd_buffer_info;
@@ -80,8 +79,6 @@ struct AppModelAnimationStage
 		auto cmd = std::move(context->m_device->allocateCommandBuffersUnique(cmd_buffer_info)[0]);
 
 		{
-			const auto& descriptor = descriptor_set.m_descriptors;
-
 			vk::CommandBufferBeginInfo begin_info;
 			begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
 			vk::CommandBufferInheritanceInfo inheritance_info;
@@ -90,9 +87,9 @@ struct AppModelAnimationStage
 
 			{
 				vk::BufferMemoryBarrier barrier;
-				barrier.setBuffer(descriptor.m_draw_indirect.buffer);
-				barrier.setSize(descriptor.m_draw_indirect.range);
-				barrier.setOffset(descriptor.m_draw_indirect.offset);
+				barrier.setBuffer(render->b_draw_indirect.getInfo().buffer);
+				barrier.setSize(render->b_draw_indirect.getInfo().range);
+				barrier.setOffset(render->b_draw_indirect.getInfo().offset);
 				barrier.setSrcAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
 				barrier.setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
 				cmd->pipelineBarrier(vk::PipelineStageFlagBits::eDrawIndirect, vk::PipelineStageFlagBits::eComputeShader,
@@ -105,9 +102,9 @@ struct AppModelAnimationStage
 				if (i == SHADER_COMPUTE_CULLING)
 				{
 					vk::BufferMemoryBarrier barrier;
-					barrier.setBuffer(descriptor.m_draw_indirect.buffer);
-					barrier.setSize(descriptor.m_draw_indirect.range);
-					barrier.setOffset(descriptor.m_draw_indirect.offset);
+					barrier.setBuffer(render->b_draw_indirect.getInfo().buffer);
+					barrier.setSize(render->b_draw_indirect.getInfo().range);
+					barrier.setOffset(render->b_draw_indirect.getInfo().offset);
 					barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
 					barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
 					cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, barrier, {});
@@ -115,75 +112,39 @@ struct AppModelAnimationStage
 				if (i == SHADER_COMPUTE_MOTION_UPDATE)
 				{
 					vk::BufferMemoryBarrier barrier[2];
-					barrier[0].setBuffer(descriptor.m_playing_animation.buffer);
-					barrier[0].setSize(descriptor.m_playing_animation.range);
-					barrier[0].setOffset(descriptor.m_playing_animation.offset);
-					barrier[0].setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
-					barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-					barrier[1].setBuffer(descriptor.m_node_transform.buffer);
-					barrier[1].setSize(descriptor.m_node_transform.range);
-					barrier[1].setOffset(descriptor.m_node_transform.offset);
-					barrier[1].setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
-					barrier[1].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
+					barrier[0] = render->b_animation_work.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead);
+					barrier[0] = render->b_node_transforms.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite);
 					cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
 						vk::DependencyFlags(), 0, nullptr, array_length(barrier), barrier, 0, nullptr);
 				}
 				if (i == SHADER_COMPUTE_NODE_TRANSFORM)
 				{
 					vk::BufferMemoryBarrier barrier[2];
-					barrier[0].setBuffer(descriptor.m_node_transform.buffer);
-					barrier[0].setSize(descriptor.m_node_transform.range);
-					barrier[0].setOffset(descriptor.m_node_transform.offset);
-					barrier[0].setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
-					barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-					barrier[1].setBuffer(descriptor.m_instance_map.buffer);
-					barrier[1].setSize(descriptor.m_instance_map.range);
-					barrier[1].setOffset(descriptor.m_instance_map.offset);
-					barrier[1].setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
-					barrier[1].setDstAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+					barrier[0] = render->b_node_transforms.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead);
+					barrier[1] = render->b_instance_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
 					cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
 						vk::DependencyFlags(), 0, nullptr, array_length(barrier), barrier, 0, nullptr);
 				}
 				if (i == SHADER_COMPUTE_BONE_TRANSFORM)
 				{
 					vk::BufferMemoryBarrier barrier[3];
-					barrier[0].setBuffer(descriptor.m_node_transform.buffer);
-					barrier[0].setSize(descriptor.m_node_transform.range);
-					barrier[0].setOffset(descriptor.m_node_transform.offset);
-					barrier[0].setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
-					barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-					barrier[1].setBuffer(descriptor.m_instance_map.buffer);
-					barrier[1].setSize(descriptor.m_instance_map.range);
-					barrier[1].setOffset(descriptor.m_instance_map.offset);
-					barrier[1].setSrcAccessMask(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
-					barrier[1].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-					barrier[2].setBuffer(descriptor.m_instancing_info.buffer);
-					barrier[2].setSize(descriptor.m_instancing_info.range);
-					barrier[2].setOffset(descriptor.m_instancing_info.offset);
-					barrier[2].setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
-					barrier[2].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+					barrier[0] = render->b_node_transforms.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead);
+					barrier[1] = render->b_instance_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead);
+					barrier[2] = render->b_model_instancing_info.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead);
 					cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
 						vk::DependencyFlags(), 0, nullptr, array_length(barrier), barrier, 0, nullptr);
 				}
 
 				cmd->bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[i].get());
-				cmd->bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout.get(), 0, descriptor_set.m_handle.get(), {});
-				cmd->dispatchIndirect(descriptor.m_anime_indirect.buffer, descriptor.m_anime_indirect.offset + i * 12);
+				cmd->bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout.get(), 0, render->getDescriptorSet(), {});
+				cmd->dispatchIndirect(render->b_animation_indirect.getInfo().buffer, render->b_animation_indirect.getInfo().offset + i * 12);
 
 			}
-			vk::BufferMemoryBarrier barrier;
-			barrier.setBuffer(descriptor.m_bone_transform.buffer);
-			barrier.setSize(descriptor.m_bone_transform.range);
-			barrier.setOffset(descriptor.m_bone_transform.offset);
-			barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
-			barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+			vk::BufferMemoryBarrier barrier = render->b_bone_transforms.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead);
 			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eVertexShader,
 				{}, {}, barrier, {});
-			barrier.setBuffer(descriptor.m_draw_indirect.buffer);
-			barrier.setSize(descriptor.m_draw_indirect.range);
-			barrier.setOffset(descriptor.m_draw_indirect.offset);
-			barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
-			barrier.setDstAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
+
+			barrier = render->b_draw_indirect.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead);
 			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect,
 				{}, {}, barrier, {});
 			cmd->end();
@@ -215,7 +176,6 @@ struct AppModelAnimationStage
 	std::shared_ptr<ShaderModule> m_compute_shader;
 
 	std::array<vk::UniquePipeline, SHADER_NUM> m_pipeline;
-	std::shared_ptr<AppModelAnimateDescriptor> m_animation_descriptor_layout;
 	vk::UniquePipelineLayout m_pipeline_layout;
 
 };
@@ -301,11 +261,12 @@ struct AppModelRenderStage
 		}
 		// setup shader
 		{
-			std::string path = btr::getResourceLibPath() + "shader\\binary\\";
+			std::string path = btr::getResourceShaderPath();
 			std::vector<ShaderDescriptor> shader_desc =
 			{
 				{ path+"Render.vert.spv",vk::ShaderStageFlagBits::eVertex },
 				{ path+"RenderFowardPlus.frag.spv",vk::ShaderStageFlagBits::eFragment },
+	//			{ path + "RenderFowardPlus.frag.spv",vk::ShaderStageFlagBits::eFragment },
 			};
 			assert(shader_desc.size() == SHADER_NUM);
 			m_shader = std::make_shared<ShaderModule>(context, shader_desc);
@@ -314,7 +275,7 @@ struct AppModelRenderStage
 
 		{
 			vk::DescriptorSetLayout layouts[] = {
-				sModelRenderDescriptor::Order().getLayout(),
+				AppModel::DescriptorSet::Order().getLayout(),
 				sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
 				m_light_pipeline->getDescriptorSetLayout(cFowardPlusPipeline::DESCRIPTOR_SET_LAYOUT_LIGHT),
 			};
@@ -403,7 +364,7 @@ struct AppModelRenderStage
 		}
 		m_render_target = render_target;
 	}
-	vk::UniqueCommandBuffer createCmd(const std::shared_ptr<btr::Context>& context, const Drawable* drawable, const DescriptorSet<AppModelRenderDescriptor::Set>& descriptor_set)
+	vk::UniqueCommandBuffer createCmd(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<AppModel>& render)
 	{
 		// recode draw command
 		vk::CommandBufferAllocateInfo cmd_buffer_info;
@@ -424,13 +385,13 @@ struct AppModelRenderStage
 
 			cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline.get());
 			std::vector<vk::DescriptorSet> sets = {
-				descriptor_set.m_handle.get(),
+				render->getDescriptorSet(),
 				sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA),
 				m_light_pipeline->getDescriptorSet(cFowardPlusPipeline::DESCRIPTOR_SET_LIGHT),
 			};
 			cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 0, sets, {});
 
-			drawable->draw(cmd.get());
+			render->m_render.draw(cmd.get());
 
 			cmd->end();
 		}

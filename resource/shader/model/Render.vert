@@ -7,7 +7,7 @@
 #define SETPOINT_CAMERA 1
 #include <btrlib/Camera.glsl>
 
-#define USE_MODEL_INFO_SET 0
+#define USE_APPMODEL 0
 #include <applib/model/MultiModel.glsl>
 
 layout(location = 0)in vec3 inPosition;
@@ -33,12 +33,12 @@ layout(location = 1) out Vertex
 mat4 skinning()
 {
 	mat4 transMat = mat4(0.0);
-	uint bone_offset = u_model_info.boneNum * gl_InstanceIndex;
+	uint bone_offset = b_model_info.boneNum * gl_InstanceIndex;
 	for(uint i=0; i<4; i++)
 	{
 		if(inBoneID[i] != 255) 
 		{
-			transMat += inWeight[i] * b_bone_transform[bone_offset + inBoneID[i]];
+			transMat += inWeight[i] * b_bone_transforms[bone_offset + inBoneID[i]];
 		}
 	}
 	return transMat;

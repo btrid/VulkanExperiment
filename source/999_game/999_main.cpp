@@ -155,18 +155,14 @@ int main()
 		sMap::Order().setup(context, app.m_window->getRenderTarget());
 
 	}
-	sModelRenderDescriptor::Create(context);
-	sModelAnimateDescriptor::Create(context);
-
+	AppModel::DescriptorSet::Create(context);
 	AppModelRenderStage renderer(context, app.m_window->getRenderTarget());
 	AppModelAnimationStage animater(context);
 
 	std::shared_ptr<AppModel> player_model = std::make_shared<AppModel>(context, model.getResource(), 1);
-	DescriptorSet<AppModelRenderDescriptor::Set> render_descriptor = createRenderDescriptorSet(player_model);
-	DescriptorSet<AppModelAnimateDescriptor::Set> animate_descriptor = createAnimateDescriptorSet(player_model);
 
-	auto drawCmd = renderer.createCmd(context, &player_model->m_render, render_descriptor);
-	auto animeCmd = animater.createCmd(context, animate_descriptor);
+	auto drawCmd = renderer.createCmd(context, player_model);
+	auto animeCmd = animater.createCmd(context, player_model);
 
 	ClearPipeline clear_render_target(context, app.m_window->getRenderTarget());
 	PresentPipeline present_pipeline(context, app.m_window->getRenderTarget(), app.m_window->getSwapchainPtr());

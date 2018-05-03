@@ -2,7 +2,7 @@
 
 #extension GL_GOOGLE_cpp_style_line_directive : require
 
-#define USE_ANIMATION_INFO_SET 0
+#define USE_APPMODEL 0
 #include <applib/model/MultiModel.glsl>
 
 layout (local_size_x = 1024, local_size_y = 1) in;
@@ -10,15 +10,15 @@ layout (local_size_x = 1024, local_size_y = 1) in;
 
 void main()
 {
-	ModelInfo model_info = u_model_info;
-	if(gl_GlobalInvocationID.x >= model_info.boneNum * u_model_instancing_info.instanceNum){ return; }
+	ModelInfo model_info = b_model_info;
+	if(gl_GlobalInvocationID.x >= model_info.boneNum * b_model_instancing_info.instanceNum){ return; }
 	uint index = gl_GlobalInvocationID.x;
 
 	uint bone_info_index = index % model_info.boneNum;
-	BoneInfo bone_info = boneInfo[bone_info_index];
+	BoneInfo bone_info = b_bone_info[bone_info_index];
 	uint instance_id = b_instance_map[index / model_info.boneNum];
 	uint bone_index_offset = instance_id * model_info.boneNum;
 	uint node_index_offset = instance_id * model_info.nodeNum;
-	b_bone_transform[bone_index_offset + bone_info_index] = nodeTransforms[node_index_offset + bone_info.nodeIndex] * bone_info.boneOffset;
+	b_bone_transforms[bone_index_offset + bone_info_index] = b_node_transforms[node_index_offset + bone_info.nodeIndex] * bone_info.boneOffset;
 
 }

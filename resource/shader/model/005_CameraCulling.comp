@@ -4,18 +4,18 @@
 
 //#include </CameraCulling.glsl>
 
-#define USE_ANIMATION_INFO_SET 0
+#define USE_APPMODEL 0
 #include <applib/model/MultiModel.glsl>
 
 layout (local_size_x = 1024, local_size_y = 1) in;
 
 void main()
 {
-	ModelInstancingInfo model_instancing_info = u_model_instancing_info;
+	ModelInstancingInfo model_instancing_info = b_model_instancing_info;
 	if(gl_GlobalInvocationID.x >= model_instancing_info.instanceAliveNum){ return; }
 	uint srcIndex = gl_GlobalInvocationID.x;
 
-	ModelInfo model_info = u_model_info;
+	ModelInfo model_info = b_model_info;
 	// カリングされるなら何もしない
 /*	vec4 aabb = worlds[srcIndex] * vec4(model_info.AABB.xyz, 1.);
 	aabb.w = model_info.AABB.w;
@@ -28,10 +28,10 @@ void main()
 	// instanceのincrement
 
 	// @Todo メッシュ単位のカリング
-	uint index = atomicAdd(u_model_instancing_info.instanceNum, 1);
+	uint index = atomicAdd(b_model_instancing_info.instanceNum, 1);
 	b_instance_map[index] = srcIndex;
 	for(int i=0; i<model_info.mesh_num; i++) {
-		atomicAdd(meshs[i].instanceCount, 1);
+		atomicAdd(b_draw_indirect[i].instanceCount, 1);
 	}
 
 }

@@ -3,7 +3,7 @@
 #extension GL_ARB_shader_image_load_store : require
 
 
-#define USE_MODEL_INFO_SET 0
+#define USE_APPMODEL 0
 #include <applib/model/MultiModel.glsl>
 
 layout(early_fragment_tests) in;

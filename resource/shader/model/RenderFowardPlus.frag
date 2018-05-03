@@ -4,7 +4,7 @@
 
 #include <btrlib/ConvertDimension.glsl>
 
-#define USE_MODEL_INFO_SET 0
+#define USE_APPMODEL 0
 #include <applib/model/MultiModel.glsl>
 
 #define USE_LIGHT 2

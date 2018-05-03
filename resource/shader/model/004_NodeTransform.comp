@@ -3,7 +3,7 @@
 #extension GL_GOOGLE_cpp_style_line_directive : require
 #include <btrlib/Math.glsl>
 
-#define USE_ANIMATION_INFO_SET 0
+#define USE_APPMODEL 0
 #include <applib/model/MultiModel.glsl>
 
 layout (local_size_x = 1024, local_size_y = 1) in;
@@ -12,7 +12,7 @@ layout (local_size_x = 1024, local_size_y = 1) in;
 //shared mat4 global_mat[128];
 void main() 
 {
-	ModelInfo model_info = u_model_info;
+	ModelInfo model_info = b_model_info;
 //	if( int(gl_GlobalInvocationID.x) >= u_model_instancing_info.instanceAliveNum * model_info.nodeNum) { return ;} 
 	uint local_invocation_max = 1024/model_info.nodeNum*model_info.nodeNum;
 	if(gl_LocalInvocationID.x >= local_invocation_max){ return; }
@@ -21,19 +21,19 @@ void main()
 	uint model_index = (gl_LocalInvocationID.x+local_invocation_offset) / model_info.nodeNum;
 	uint node_index = (gl_LocalInvocationID.x) % model_info.nodeNum;
 
-	if(model_index >= u_model_instancing_info.instanceAliveNum){ return; }
+	if(model_index >= b_model_instancing_info.instanceAliveNum){ return; }
 
 	if(node_index == 0)
 	{
-		nodeTransforms[root_index] = model_info.invGlobalMatrix * worlds[model_index] * nodeTransforms[root_index];
+		b_node_transforms[root_index] = model_info.invGlobalMatrix * b_worlds[model_index] * b_node_transforms[root_index];
 	}
 	barrier();
 	memoryBarrierBuffer();
 	for(uint i=1; i < model_info.node_depth_max; i++)
 	{
-		if(nodes[node_index].depth == i)
+		if(b_node_info[node_index].depth == i)
 		{
-			nodeTransforms[root_index + node_index] = nodeTransforms[root_index + nodes[node_index].parent] * nodeTransforms[root_index + node_index];
+			b_node_transforms[root_index + node_index] = b_node_transforms[root_index + b_node_info[node_index].parent] * b_node_transforms[root_index + node_index];
 		}
 		barrier();
 		memoryBarrierBuffer();

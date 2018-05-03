@@ -75,18 +75,14 @@ int main()
 	}
 
 	auto model = modelFuture.get();
-
-	sModelRenderDescriptor::Create(context);
-	sModelAnimateDescriptor::Create(context);
+	AppModel::DescriptorSet::Create(context);
 	AppModelRenderStage renderer(context, app.m_window->getRenderTarget());
 	AppModelAnimationStage animater(context);
 
 	std::shared_ptr<AppModel> appModel = std::make_shared<AppModel>(context, model->getResource(), 1000);
-	DescriptorSet<AppModelRenderDescriptor::Set> render_descriptor = createRenderDescriptorSet(appModel);
-	DescriptorSet<AppModelAnimateDescriptor::Set> animate_descriptor = createAnimateDescriptorSet(appModel);
 
-	auto drawCmd = renderer.createCmd(context, &appModel->m_render, render_descriptor);
-	auto animeCmd = animater.createCmd(context, animate_descriptor);
+	auto drawCmd = renderer.createCmd(context, appModel);
+	auto animeCmd = animater.createCmd(context, appModel);
 
 	ClearPipeline clear_render_target(context, app.m_window->getRenderTarget());
 	PresentPipeline present_pipeline(context, app.m_window->getRenderTarget(), context->m_window->getSwapchainPtr());
