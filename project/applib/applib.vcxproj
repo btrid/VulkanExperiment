@@ -71,12 +71,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\applib\App.h" />
+    <ClInclude Include="..\..\include\applib\AppModel\AppModel.h" />
+    <ClInclude Include="..\..\include\applib\AppModel\AppModelPipeline.h" />
     <ClInclude Include="..\..\include\applib\AppPipeline.h" />
-    <ClInclude Include="..\..\include\applib\cAppModel.h" />
     <ClInclude Include="..\..\include\applib\cLightPipeline.h" />
-    <ClInclude Include="..\..\include\applib\cModelInstancing.h" />
-    <ClInclude Include="..\..\include\applib\cModelInstancingPipeline.h" />
-    <ClInclude Include="..\..\include\applib\cModelPipeline.h" />
     <ClInclude Include="..\..\include\applib\DrawHelper.h" />
     <ClInclude Include="..\..\include\applib\Geometry.h" />
     <ClInclude Include="..\..\include\applib\GraphicsResource.h" />
@@ -95,11 +93,10 @@
   <ItemGroup>
     <ClCompile Include="..\..\source\013_2DGI\PM2DDebug.cpp" />
     <ClCompile Include="..\..\source\applib\App.cpp" />
+    <ClCompile Include="..\..\source\applib\AppModel\AppModel.cpp" />
+    <ClCompile Include="..\..\source\applib\AppModel\AppModelPipeline.cpp" />
     <ClCompile Include="..\..\source\applib\AppPipeline.cpp" />
-    <ClCompile Include="..\..\source\applib\cAppModel.cpp" />
     <ClCompile Include="..\..\source\applib\cLightPipeline.cpp" />
-    <ClCompile Include="..\..\source\applib\cModelInstancingPipeline.cpp" />
-    <ClCompile Include="..\..\source\applib\cModelPipeline.cpp" />
     <ClCompile Include="..\..\source\applib\Geometry.cpp" />
     <ClCompile Include="..\..\source\applib\PM2D\PM2DRenderer.cpp" />
     <ClCompile Include="..\..\source\applib\sImGuiRenderer.cpp" />

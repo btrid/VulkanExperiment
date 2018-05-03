@@ -11,36 +11,11 @@
 #include <btrlib/cMotion.h>
 #include <applib/cLightPipeline.h>
 #include <applib/cModelPipeline.h>
-#include <applib/cAppModel.h>
+#include <applib/AppModel/AppModel.h>
 
-// struct LightSample : public Light
-// {
-// 	LightData m_param;
-// 	int life;
-// 
-// 	LightSample()
-// 	{
-// 		life = std::rand() % 50 + 30;
-// 		m_param.m_position = glm::vec4(glm::ballRand(300.f), std::rand() % 50 + 300.f);
-// 		m_param.m_emission = glm::vec4(glm::normalize(glm::abs(glm::ballRand(1.f)) + glm::vec3(0.f, 0.f, 0.01f)), 1.f);
-// 
-// 	}
-// 	virtual bool update() override
-// 	{
-// 		//		life--;
-// 		return life >= 0;
-// 	}
-// 
-// 	virtual LightData getParam()const override
-// 	{
-// 		return m_param;
-// 	}
-// 
-// };
-
-struct AppModelInstancingAnimationPipeline
+struct AppModelAnimationStage
 {
-	AppModelInstancingAnimationPipeline(const std::shared_ptr<btr::Context>& context)
+	AppModelAnimationStage(const std::shared_ptr<btr::Context>& context)
 	{
 		std::string path = btr::getResourceShaderPath();
 		std::vector<ShaderDescriptor> shader_desc =
@@ -245,9 +220,9 @@ struct AppModelInstancingAnimationPipeline
 
 };
 
-struct AppModelInstancingRenderer
+struct AppModelRenderStage
 {
-	AppModelInstancingRenderer(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target)
+	AppModelRenderStage(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target)
 	{
 		auto& device = context->m_device;
 

@@ -1,5 +1,5 @@
 
-#include <applib/cModelInstancingPipeline.h>
+#include <applib/AppModel/AppModelPipeline.h>
 #include <btrlib/Define.h>
 #include <btrlib/Shape.h>
 #include <btrlib/cModel.h>

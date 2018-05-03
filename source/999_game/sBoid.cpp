@@ -1,6 +1,6 @@
 #include <999_game/sBoid.h>
 #include <applib/sSystem.h>
-#include <applib/cAppModel.h>
+#include <applib/AppModel/AppModel.h>
 #include <999_game/sScene.h>
 
 void sBoid::setup(std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target)

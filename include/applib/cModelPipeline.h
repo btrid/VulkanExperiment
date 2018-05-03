@@ -9,7 +9,7 @@
 #include <btrlib/AllocatedMemory.h>
 #include <btrlib/Context.h>
 #include <btrlib/cModel.h>
-#include <applib/cAppModel.h>
+#include <applib/AppModel/AppModel.h>
 #include <applib/DrawHelper.h>
 #include <applib/GraphicsResource.h>
 

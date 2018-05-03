@@ -22,8 +22,7 @@
 #include <btrlib/AllocatedMemory.h>
 
 #include <applib/App.h>
-#include <applib/cModelPipeline.h>
-#include <applib/cModelInstancingPipeline.h>
+#include <applib/AppModel/AppModelPipeline.h>
 #include <applib/DrawHelper.h>
 #include <applib/AppPipeline.h>
 #include <btrlib/Context.h>
@@ -159,8 +158,8 @@ int main()
 	sModelRenderDescriptor::Create(context);
 	sModelAnimateDescriptor::Create(context);
 
-	AppModelInstancingRenderer renderer(context, app.m_window->getRenderTarget());
-	AppModelInstancingAnimationPipeline animater(context);
+	AppModelRenderStage renderer(context, app.m_window->getRenderTarget());
+	AppModelAnimationStage animater(context);
 
 	std::shared_ptr<AppModel> player_model = std::make_shared<AppModel>(context, model.getResource(), 1);
 	DescriptorSet<ModelRenderDescriptor::Set> render_descriptor = createRenderDescriptorSet(player_model);

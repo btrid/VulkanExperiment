@@ -78,8 +78,8 @@ int main()
 
 	sModelRenderDescriptor::Create(context);
 	sModelAnimateDescriptor::Create(context);
-	AppModelInstancingRenderer renderer(context, app.m_window->getRenderTarget());
-	AppModelInstancingAnimationPipeline animater(context);
+	AppModelRendererStage renderer(context, app.m_window->getRenderTarget());
+	AppModelAnimationStage animater(context);
 
 	std::shared_ptr<AppModel> appModel = std::make_shared<AppModel>(context, model->getResource(), 1000);
 	DescriptorSet<ModelRenderDescriptor::Set> render_descriptor = createRenderDescriptorSet(appModel);
