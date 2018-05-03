@@ -20,8 +20,8 @@
 #include <btrlib/sGlobal.h>
 #include <btrlib/cStopWatch.h>
 #include <btrlib/AllocatedMemory.h>
-#include <applib/cModelInstancingPipeline.h>
-#include <applib/cAppModel.h>
+#include <applib/AppModel/AppModel.h>
+#include <applib/AppModel/AppModelPipeline.h>
 
 #include <applib/DrawHelper.h>
 #include <applib/sCameraManager.h>
@@ -63,7 +63,7 @@ int main()
 		auto load = [task, &context]()
 		{
 			auto model = std::make_unique<cModel>();
-			model->load(context, btr::getResourceAppPath() + "tiny.x");
+			model->load(context, btr::getResourceAppPath() + "../tiny.x");
 			task->set_value(std::move(model));
 		};
 		job.mFinish = load;
@@ -78,17 +78,17 @@ int main()
 
 	sModelRenderDescriptor::Create(context);
 	sModelAnimateDescriptor::Create(context);
-	AppModelRendererStage renderer(context, app.m_window->getRenderTarget());
+	AppModelRenderStage renderer(context, app.m_window->getRenderTarget());
 	AppModelAnimationStage animater(context);
 
 	std::shared_ptr<AppModel> appModel = std::make_shared<AppModel>(context, model->getResource(), 1000);
-	DescriptorSet<ModelRenderDescriptor::Set> render_descriptor = createRenderDescriptorSet(appModel);
-	DescriptorSet<ModelAnimateDescriptor::Set> animate_descriptor = createAnimateDescriptorSet(appModel);
+	DescriptorSet<AppModelRenderDescriptor::Set> render_descriptor = createRenderDescriptorSet(appModel);
+	DescriptorSet<AppModelAnimateDescriptor::Set> animate_descriptor = createAnimateDescriptorSet(appModel);
 
 	auto drawCmd = renderer.createCmd(context, &appModel->m_render, render_descriptor);
 	auto animeCmd = animater.createCmd(context, animate_descriptor);
 
-	ClearPipeline clear_render_target(context.get(), app.m_window->getRenderTarget());
+	ClearPipeline clear_render_target(context, app.m_window->getRenderTarget());
 	PresentPipeline present_pipeline(context, app.m_window->getRenderTarget(), context->m_window->getSwapchainPtr());
 	app.setup();
 	while (true)

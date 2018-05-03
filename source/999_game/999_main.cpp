@@ -162,8 +162,8 @@ int main()
 	AppModelAnimationStage animater(context);
 
 	std::shared_ptr<AppModel> player_model = std::make_shared<AppModel>(context, model.getResource(), 1);
-	DescriptorSet<ModelRenderDescriptor::Set> render_descriptor = createRenderDescriptorSet(player_model);
-	DescriptorSet<ModelAnimateDescriptor::Set> animate_descriptor = createAnimateDescriptorSet(player_model);
+	DescriptorSet<AppModelRenderDescriptor::Set> render_descriptor = createRenderDescriptorSet(player_model);
+	DescriptorSet<AppModelAnimateDescriptor::Set> animate_descriptor = createAnimateDescriptorSet(player_model);
 
 	auto drawCmd = renderer.createCmd(context, &player_model->m_render, render_descriptor);
 	auto animeCmd = animater.createCmd(context, animate_descriptor);

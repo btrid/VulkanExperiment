@@ -482,7 +482,7 @@ struct AppModel
 	AppModelRender m_render;
 };
 
-struct ModelAnimateDescriptor : public DescriptorModuleOld
+struct AppModelAnimateDescriptor : public DescriptorModuleOld
 {
 	struct Set
 	{
@@ -502,7 +502,7 @@ struct ModelAnimateDescriptor : public DescriptorModuleOld
 		std::array<vk::DescriptorImageInfo, 1> m_motion_texture;
 	};
 
-	ModelAnimateDescriptor(const std::shared_ptr<btr::Context>& context)
+	AppModelAnimateDescriptor(const std::shared_ptr<btr::Context>& context)
 	{
 		std::vector<vk::DescriptorSetLayoutBinding> binding =
 		{
@@ -627,7 +627,7 @@ struct ModelAnimateDescriptor : public DescriptorModuleOld
 	std::shared_ptr<btr::Context> m_context;
 };
 
-struct ModelRenderDescriptor : public DescriptorModuleOld
+struct AppModelRenderDescriptor : public DescriptorModuleOld
 {
 	enum {
 		DESCRIPTOR_TEXTURE_NUM = 16,
@@ -643,7 +643,7 @@ struct ModelRenderDescriptor : public DescriptorModuleOld
 		std::array<vk::DescriptorImageInfo, DESCRIPTOR_TEXTURE_NUM> m_images;
 	};
 
-	ModelRenderDescriptor(const std::shared_ptr<btr::Context>& context)
+	AppModelRenderDescriptor(const std::shared_ptr<btr::Context>& context)
 	{
 		std::vector<vk::DescriptorSetLayoutBinding> binding =
 		{
@@ -726,7 +726,7 @@ struct ModelRenderDescriptor : public DescriptorModuleOld
 	std::shared_ptr<btr::Context> m_context;
 };
 
-using sModelAnimateDescriptor = SingletonEx<ModelAnimateDescriptor>;
-using sModelRenderDescriptor = SingletonEx<ModelRenderDescriptor>;
-extern DescriptorSet<ModelAnimateDescriptor::Set> createAnimateDescriptorSet(const std::shared_ptr<AppModel>& appModel);
-extern DescriptorSet<ModelRenderDescriptor::Set> createRenderDescriptorSet(const std::shared_ptr<AppModel>& appModel);
+using sModelAnimateDescriptor = SingletonEx<AppModelAnimateDescriptor>;
+using sModelRenderDescriptor = SingletonEx<AppModelRenderDescriptor>;
+extern DescriptorSet<AppModelAnimateDescriptor::Set> createAnimateDescriptorSet(const std::shared_ptr<AppModel>& appModel);
+extern DescriptorSet<AppModelRenderDescriptor::Set> createRenderDescriptorSet(const std::shared_ptr<AppModel>& appModel);

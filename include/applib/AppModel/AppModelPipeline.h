@@ -29,7 +29,7 @@ struct AppModelAnimationStage
 		};
 		assert(shader_desc.size() == SHADER_NUM);
 		m_compute_shader = std::make_shared<ShaderModule>(context, shader_desc);
-		m_animation_descriptor_layout = std::make_shared<ModelAnimateDescriptor>(context);
+		m_animation_descriptor_layout = std::make_shared<AppModelAnimateDescriptor>(context);
 
 		// pipeline layout
 		{
@@ -70,7 +70,7 @@ struct AppModelAnimationStage
 		}
 
 	}
-	vk::UniqueCommandBuffer createCmd(const std::shared_ptr<btr::Context>& context, const DescriptorSet<ModelAnimateDescriptor::Set>& descriptor_set)
+	vk::UniqueCommandBuffer createCmd(const std::shared_ptr<btr::Context>& context, const DescriptorSet<AppModelAnimateDescriptor::Set>& descriptor_set)
 	{
 		// recode
 		vk::CommandBufferAllocateInfo cmd_buffer_info;
@@ -215,7 +215,7 @@ struct AppModelAnimationStage
 	std::shared_ptr<ShaderModule> m_compute_shader;
 
 	std::array<vk::UniquePipeline, SHADER_NUM> m_pipeline;
-	std::shared_ptr<ModelAnimateDescriptor> m_animation_descriptor_layout;
+	std::shared_ptr<AppModelAnimateDescriptor> m_animation_descriptor_layout;
 	vk::UniquePipelineLayout m_pipeline_layout;
 
 };
@@ -403,7 +403,7 @@ struct AppModelRenderStage
 		}
 		m_render_target = render_target;
 	}
-	vk::UniqueCommandBuffer createCmd(const std::shared_ptr<btr::Context>& context, const Drawable* drawable, const DescriptorSet<ModelRenderDescriptor::Set>& descriptor_set)
+	vk::UniqueCommandBuffer createCmd(const std::shared_ptr<btr::Context>& context, const Drawable* drawable, const DescriptorSet<AppModelRenderDescriptor::Set>& descriptor_set)
 	{
 		// recode draw command
 		vk::CommandBufferAllocateInfo cmd_buffer_info;

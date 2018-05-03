@@ -70,10 +70,6 @@ struct BoneInfo
 	mat4 boneOffset;
 };
 
-struct BoneTransform {
-	mat4 finalTransform;
-};
-
 struct AnimationInfo
 {
 	float maxTime;

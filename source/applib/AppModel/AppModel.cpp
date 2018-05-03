@@ -4,9 +4,9 @@
 #include <applib/DrawHelper.h>
 #include <applib/sCameraManager.h>
 
-DescriptorSet<ModelAnimateDescriptor::Set> createAnimateDescriptorSet(const std::shared_ptr<AppModel>& appModel)
+DescriptorSet<AppModelAnimateDescriptor::Set> createAnimateDescriptorSet(const std::shared_ptr<AppModel>& appModel)
 {
-	ModelAnimateDescriptor::Set descriptor_set;
+	AppModelAnimateDescriptor::Set descriptor_set;
 	descriptor_set.m_model_info = appModel->m_model_info_buffer.getInfoEx();
 	descriptor_set.m_instancing_info = appModel->m_instancing_info_buffer.getInfoEx();
 	descriptor_set.m_node_info = appModel->m_node_info_buffer.getInfoEx();
@@ -25,9 +25,9 @@ DescriptorSet<ModelAnimateDescriptor::Set> createAnimateDescriptorSet(const std:
 	return sModelAnimateDescriptor::Order().allocateDescriptorSet(std::move(descriptor_set));
 }
 
-DescriptorSet<ModelRenderDescriptor::Set> createRenderDescriptorSet(const std::shared_ptr<AppModel>& appModel)
+DescriptorSet<AppModelRenderDescriptor::Set> createRenderDescriptorSet(const std::shared_ptr<AppModel>& appModel)
 {
-	ModelRenderDescriptor::Set descriptor_set;
+	AppModelRenderDescriptor::Set descriptor_set;
 	descriptor_set.m_bonetransform = appModel->m_bone_transform_buffer.getInfoEx();
 	descriptor_set.m_model_info = appModel->m_model_info_buffer.getInfoEx();
 	descriptor_set.m_instancing_info = appModel->m_instancing_info_buffer.getInfoEx();
