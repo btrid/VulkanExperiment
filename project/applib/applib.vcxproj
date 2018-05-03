@@ -81,6 +81,7 @@
     <ClInclude Include="..\..\include\applib\Geometry.h" />
     <ClInclude Include="..\..\include\applib\GraphicsResource.h" />
     <ClInclude Include="..\..\include\applib\PM2D\PM2D.h" />
+    <ClInclude Include="..\..\include\applib\PM2D\PM2DAppModel.h" />
     <ClInclude Include="..\..\include\applib\PM2D\PM2DClear.h" />
     <ClInclude Include="..\..\include\applib\PM2D\PM2DDebug.h" />
     <ClInclude Include="..\..\include\applib\PM2D\PM2DRenderer.h" />

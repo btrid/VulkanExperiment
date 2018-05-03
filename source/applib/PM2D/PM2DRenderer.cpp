@@ -552,23 +552,4 @@ void PM2DRenderer::DebugRnederFragmentMap(PM2DContext* pm2d_context, vk::Command
 	}
 }
 
-
-AppModelPM2D::AppModelPM2D(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<PM2DRenderer>& renderer)
-{
-	{
-		const char* name[] =
-		{
-			"OITAppModel.vert.spv",
-			"OITAppModel.frag.spv",
-		};
-		static_assert(array_length(name) == array_length(m_shader), "not equal shader num");
-
-		std::string path = btr::getResourceAppPath() + "shader\\binary\\";
-		for (size_t i = 0; i < array_length(name); i++) {
-			m_shader[i] = loadShaderUnique(context->m_device.getHandle(), path + name[i]);
-		}
-
-	}
-}
-
 }

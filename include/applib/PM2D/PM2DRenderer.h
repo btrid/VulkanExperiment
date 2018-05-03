@@ -234,17 +234,4 @@ private:
 	void DebugRnederFragmentMap(PM2DContext* pm2d_context, vk::CommandBuffer &cmd);
 };
 
-struct AppModelPM2D : public PM2DPipeline
-{
-	AppModelPM2D(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<PM2DRenderer>& renderer);
-	void execute(vk::CommandBuffer cmd)override
-	{
-
-	}
-	vk::UniqueShaderModule m_shader[2];
-	vk::UniquePipelineLayout m_pipeline_layout;
-	vk::UniquePipeline m_pipeline;
-};
-
-
 }

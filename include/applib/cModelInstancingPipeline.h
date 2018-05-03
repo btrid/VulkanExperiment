@@ -13,44 +13,44 @@
 #include <applib/cModelPipeline.h>
 #include <applib/cAppModel.h>
 
-struct LightSample : public Light
-{
-	LightData m_param;
-	int life;
-
-	LightSample()
-	{
-		life = std::rand() % 50 + 30;
-		m_param.m_position = glm::vec4(glm::ballRand(300.f), std::rand() % 50 + 300.f);
-		m_param.m_emission = glm::vec4(glm::normalize(glm::abs(glm::ballRand(1.f)) + glm::vec3(0.f, 0.f, 0.01f)), 1.f);
-
-	}
-	virtual bool update() override
-	{
-		//		life--;
-		return life >= 0;
-	}
-
-	virtual LightData getParam()const override
-	{
-		return m_param;
-	}
-
-};
+// struct LightSample : public Light
+// {
+// 	LightData m_param;
+// 	int life;
+// 
+// 	LightSample()
+// 	{
+// 		life = std::rand() % 50 + 30;
+// 		m_param.m_position = glm::vec4(glm::ballRand(300.f), std::rand() % 50 + 300.f);
+// 		m_param.m_emission = glm::vec4(glm::normalize(glm::abs(glm::ballRand(1.f)) + glm::vec3(0.f, 0.f, 0.01f)), 1.f);
+// 
+// 	}
+// 	virtual bool update() override
+// 	{
+// 		//		life--;
+// 		return life >= 0;
+// 	}
+// 
+// 	virtual LightData getParam()const override
+// 	{
+// 		return m_param;
+// 	}
+// 
+// };
 
 struct AppModelInstancingAnimationPipeline
 {
 	AppModelInstancingAnimationPipeline(const std::shared_ptr<btr::Context>& context)
 	{
-		std::string path = btr::getResourceLibPath() + "shader\\binary\\";
+		std::string path = btr::getResourceShaderPath();
 		std::vector<ShaderDescriptor> shader_desc =
 		{
 			{ path + "001_Clear.comp.spv", vk::ShaderStageFlagBits::eCompute },
-		{ path + "002_AnimationUpdate.comp.spv",vk::ShaderStageFlagBits::eCompute },
-		{ path + "003_MotionUpdate.comp.spv",vk::ShaderStageFlagBits::eCompute },
-		{ path + "004_NodeTransform.comp.spv",vk::ShaderStageFlagBits::eCompute },
-		{ path + "005_CameraCulling.comp.spv",vk::ShaderStageFlagBits::eCompute },
-		{ path + "006_BoneTransform.comp.spv",vk::ShaderStageFlagBits::eCompute },
+			{ path + "002_AnimationUpdate.comp.spv",vk::ShaderStageFlagBits::eCompute },
+			{ path + "003_MotionUpdate.comp.spv",vk::ShaderStageFlagBits::eCompute },
+			{ path + "004_NodeTransform.comp.spv",vk::ShaderStageFlagBits::eCompute },
+			{ path + "005_CameraCulling.comp.spv",vk::ShaderStageFlagBits::eCompute },
+			{ path + "006_BoneTransform.comp.spv",vk::ShaderStageFlagBits::eCompute },
 		};
 		assert(shader_desc.size() == SHADER_NUM);
 		m_compute_shader = std::make_shared<ShaderModule>(context, shader_desc);
@@ -256,7 +256,7 @@ struct AppModelInstancingRenderer
 		{
 			for (int i = 0; i < 30; i++)
 			{
-				m_light_pipeline->add(std::move(std::make_unique<LightSample>()));
+//				m_light_pipeline->add(std::move(std::make_unique<LightSample>()));
 			}
 		}
 
@@ -465,6 +465,7 @@ struct AppModelInstancingRenderer
 
 	vk::CommandBuffer draw(const std::shared_ptr<btr::Context>& context, std::vector<vk::CommandBuffer>& cmds)
 	{
+
 		auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 		context->m_device.DebugMarkerSetObjectName(cmd, "ModelInstancingPipeline", cmd);
 

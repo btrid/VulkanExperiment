@@ -23,16 +23,10 @@ layout(location=1) in ModelData
 
 void setAlbedo(in vec3 albedo)
 {
-/*	vec2 vpos = gl_FragCoord.xy / gl_FragCoord.w;
+	vec2 vpos = gl_FragCoord.xy / gl_FragCoord.w;
 	int index1D = int(vpos.x + vpos.y * u_pm_info.m_resolution.x);
-	if(atomicCompSwap(b_fragment_map[index1D], 0, 1) == 0)
-	{
-//		int fragment_index = atomicAdd(b_fragment_counter, 1);
-//		b_fragment[fragment_index].albedo = albedo;
-//		b_fragment_map[index1D] = fragment_index;
-	}
 	b_fragment[index1D].albedo = albedo;
-*/}
+}
 void setEmission(in vec3 emissive)
 {
 /*	vec2 vpos = gl_FragCoord.xy / gl_FragCoord.w;

@@ -78,6 +78,9 @@
     <ClInclude Include="..\..\include\applib\PM2D\PM2DDebug.h">
       <Filter>PM2D</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\applib\PM2D\PM2DAppModel.h">
+      <Filter>PM2D</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\applib\App.cpp">
