@@ -85,35 +85,25 @@ struct AppModelAnimationStage
 			begin_info.setPInheritanceInfo(&inheritance_info);
 			cmd->begin(begin_info);
 
-			{
-				vk::BufferMemoryBarrier barrier;
-				barrier.setBuffer(render->b_draw_indirect.getInfo().buffer);
-				barrier.setSize(render->b_draw_indirect.getInfo().range);
-				barrier.setOffset(render->b_draw_indirect.getInfo().offset);
-				barrier.setSrcAccessMask(vk::AccessFlagBits::eIndirectCommandRead);
-				barrier.setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
-				cmd->pipelineBarrier(vk::PipelineStageFlagBits::eDrawIndirect, vk::PipelineStageFlagBits::eComputeShader,
-					vk::DependencyFlags(), {}, barrier, {});
-			};
-
 			for (size_t i = 0; i < m_pipeline.size(); i++)
 			{
 
+				if (i == SHADER_COMPUTE_CLEAR)
+				{
+					vk::BufferMemoryBarrier barrier = render->b_draw_indirect.makeMemoryBarrier(vk::AccessFlagBits::eIndirectCommandRead, vk::AccessFlagBits::eShaderWrite);
+					cmd->pipelineBarrier(vk::PipelineStageFlagBits::eDrawIndirect, vk::PipelineStageFlagBits::eComputeShader,
+						vk::DependencyFlags(), {}, barrier, {});
+				}
 				if (i == SHADER_COMPUTE_CULLING)
 				{
-					vk::BufferMemoryBarrier barrier;
-					barrier.setBuffer(render->b_draw_indirect.getInfo().buffer);
-					barrier.setSize(render->b_draw_indirect.getInfo().range);
-					barrier.setOffset(render->b_draw_indirect.getInfo().offset);
-					barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
-					barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+					vk::BufferMemoryBarrier barrier = render->b_draw_indirect.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead);
 					cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, barrier, {});
 				}
 				if (i == SHADER_COMPUTE_MOTION_UPDATE)
 				{
 					vk::BufferMemoryBarrier barrier[2];
 					barrier[0] = render->b_animation_work.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead);
-					barrier[0] = render->b_node_transforms.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite);
+					barrier[1] = render->b_node_transforms.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite);
 					cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
 						vk::DependencyFlags(), 0, nullptr, array_length(barrier), barrier, 0, nullptr);
 				}

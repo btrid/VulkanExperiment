@@ -8,7 +8,7 @@
 #define USE_PM 0
 #include <PM.glsl>
 
-#define USE_MODEL_INFO_SET 1
+#define USE_APPMODEL 1
 #include <applib/model/MultiModel.glsl>
 
 layout(location = 0)in vec3 inPosition;
@@ -33,7 +33,7 @@ mat4 skinning()
 	{
 		if(inBoneID[i] != 255) 
 		{
-			transMat += inWeight[i] * b_bone_transform[inBoneID[i]];
+			transMat += inWeight[i] * b_bone_transforms[inBoneID[i]];
 		}
 	}
 	return transMat;

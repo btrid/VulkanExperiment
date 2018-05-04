@@ -1,8 +1,8 @@
 @echo off
 cd /d %~dp0
 SET include=-I ../include
-glslc.exe -w %include% -x glsl -o ../binary\\OITAppModel.vert.spv OITAppModel.vert
-glslc.exe -w %include% -x glsl -o ../binary\\OITAppModel.frag.spv OITAppModel.frag
+glslc.exe -w %include% -x glsl -o ../binary\\MakeFragmentAppModel.vert.spv MakeFragmentAppModel.vert
+glslc.exe -w %include% -x glsl -o ../binary\\MakeFragmentAppModel.frag.spv MakeFragmentAppModel.frag
 
 glslc.exe -w %include% -x glsl -o ../binary\\PhotonMapping.comp.spv PhotonMapping.comp
 

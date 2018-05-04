@@ -9,7 +9,7 @@
 #define USE_PM 0
 #include <PM.glsl>
 
-#define USE_MODEL_INFO_SET 1
+#define USE_APPMODEL 1
 #include <applib/model/MultiModel.glsl>
 /*
 in gl_PerFragment{

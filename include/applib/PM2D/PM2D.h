@@ -13,8 +13,8 @@ struct PM2DContext
 		_BounceNum = 4, //!< ƒŒƒC”½ŽË‰ñ”
 		_Hierarchy_Num = 8,
 	};
-	int RenderWidth;
-	int RenderHeight;
+	int32_t RenderWidth;
+	int32_t RenderHeight;
 	int FragmentBufferSize;
 	int BounceNum = 4;
 	int Hierarchy_Num = 8;

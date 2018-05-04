@@ -45,13 +45,13 @@ App::App(const AppDescriptor& desc)
 		{
 			vk::DescriptorPoolSize pool_size[5];
 			pool_size[0].setType(vk::DescriptorType::eUniformBuffer);
-			pool_size[0].setDescriptorCount(20);
+			pool_size[0].setDescriptorCount(200);
 			pool_size[1].setType(vk::DescriptorType::eStorageBuffer);
-			pool_size[1].setDescriptorCount(30);
+			pool_size[1].setDescriptorCount(300);
 			pool_size[2].setType(vk::DescriptorType::eCombinedImageSampler);
-			pool_size[2].setDescriptorCount(30);
+			pool_size[2].setDescriptorCount(300);
 			pool_size[3].setType(vk::DescriptorType::eStorageImage);
-			pool_size[3].setDescriptorCount(30);
+			pool_size[3].setDescriptorCount(300);
 			pool_size[4].setType(vk::DescriptorType::eUniformBufferDynamic);
 			pool_size[4].setDescriptorCount(5);
 

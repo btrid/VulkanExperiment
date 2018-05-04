@@ -23,17 +23,20 @@
 #include <applib/App.h>
 #include <applib/AppPipeline.h>
 #include <btrlib/Context.h>
+
 #include <applib/sImGuiRenderer.h>
 
 #include <applib/PM2D/PM2DRenderer.h>
 #include <applib/PM2D/PM2DClear.h>
 #include <applib/PM2D/PM2DDebug.h>
+#include <applib/PM2D/PM2DAppModel.h>
+#include <applib/AppModel/AppModel.h>
+#include <applib/AppModel/AppModelPipeline.h>
 
-//#include <013_2DGI/PM2DRenderer2.h>
 
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
-//#pragma comment(lib, "FreeImage.lib")
+#pragma comment(lib, "FreeImage.lib")
 #pragma comment(lib, "vulkan-1.lib")
 #pragma comment(lib, "imgui.lib")
 
@@ -81,6 +84,16 @@ int main()
 	app::App app(app_desc);
 
 	auto context = app.m_context;
+
+	AppModel::DescriptorSet::Create(context);
+	AppModelRenderStage renderer(context, app.m_window->getRenderTarget());
+	AppModelAnimationStage animater(context);
+
+	cModel model;
+	model.load(context, "..\\..\\resource\\tiny.x");
+	std::shared_ptr<AppModel> player_model = std::make_shared<AppModel>(context, model.getResource(), 1);
+
+
 	ClearPipeline clear_pipeline(context, app.m_window->getRenderTarget());
 	PresentPipeline present_pipeline(context, app.m_window->getRenderTarget(), app.m_window->getSwapchainPtr());
 
@@ -90,6 +103,11 @@ int main()
 	PM2DClear pm_clear(context, pm2d_context);
 	PM2DDebug pm_debug_make_fragment_and_light(context, pm2d_context);
 	PM2DMakeHierarchy pm_make_hierarchy(context, pm2d_context);
+	PM2DAppModel pm_appmodel(context, pm2d_context);
+
+	auto anime_cmd = animater.createCmd(context, player_model);
+	auto pm_make_cmd = pm_appmodel.createCmd(player_model);
+
 	app.setup();
 	while (true)
 	{
@@ -99,23 +117,50 @@ int main()
 		{
 			enum 
 			{
-				cmd_clear,
-				cmd_pm,
-				cmd_present,
+				cmd_model_update,
+				cmd_render_clear,
+				cmd_pm_clear,
+				cmd_pm_make_fragment,
+				cmd_pm_render,
+				cmd_render_present,
 				cmd_num
 			};
 			std::vector<vk::CommandBuffer> cmds(cmd_num);
-			cmds[cmd_clear] = clear_pipeline.execute();
+
 			{
-				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
-				pm_clear.execute(cmd);
-				pm_debug_make_fragment_and_light.execute(cmd);
-				pm_make_hierarchy.execute(cmd);
-				pm_renderer.execute(cmd);
-				cmd.end();
-				cmds[cmd_pm] = cmd;
+				{
+					std::vector<vk::CommandBuffer> cs(1);
+					cs[0] = anime_cmd.get();
+					cmds[cmd_model_update] = animater.dispach(context, cs);
+				}
 			}
-			cmds[cmd_present] = present_pipeline.execute();
+
+			{
+				cmds[cmd_render_clear] = clear_pipeline.execute();
+				cmds[cmd_render_present] = present_pipeline.execute();
+			}
+			// pm
+			{
+				{
+					auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
+					pm_clear.execute(cmd);
+					pm_debug_make_fragment_and_light.execute(cmd);
+					cmd.end();
+					cmds[cmd_pm_clear] = cmd;
+				}
+				{
+					std::vector<vk::CommandBuffer> cs(1);
+					cs[0] = pm_make_cmd.get();
+					cmds[cmd_pm_make_fragment] = pm_appmodel.dispatchCmd(cs);
+				}
+				{
+					auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
+					pm_make_hierarchy.execute(cmd);
+					pm_renderer.execute(cmd);
+					cmd.end();
+					cmds[cmd_pm_render] = cmd;
+				}
+			}
 			app.submit(std::move(cmds));
 		}
 		app.postUpdate();
