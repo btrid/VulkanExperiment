@@ -11,7 +11,7 @@ PM2DDebug::PM2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 	std::vector<PM2DContext::Fragment> map_data(pm2d_context->RenderWidth*pm2d_context->RenderHeight);
 	{
 		std::vector<ivec4> rect;
-#if 0
+#if 1
 		rect.emplace_back(400, 400, 200, 400);
 		rect.emplace_back(300, 200, 100, 100);
 		rect.emplace_back(80, 50, 200, 30);

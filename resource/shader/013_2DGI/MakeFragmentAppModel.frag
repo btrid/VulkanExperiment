@@ -25,7 +25,8 @@ void setAlbedo(in vec3 albedo)
 {
 	vec2 vpos = gl_FragCoord.xy / gl_FragCoord.w;
 	int index1D = int(vpos.x + vpos.y * u_pm_info.m_resolution.x);
-	b_fragment[index1D].albedo = albedo;
+//	int index1D = 0;
+	b_fragment[index1D].albedo = vec3(100.);
 }
 void setEmission(in vec3 emissive)
 {

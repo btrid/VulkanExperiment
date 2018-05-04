@@ -17,6 +17,8 @@ struct AppModelAnimationStage
 {
 	AppModelAnimationStage(const std::shared_ptr<btr::Context>& context)
 	{
+		m_context = context;
+
 		std::string path = btr::getResourceShaderPath();
 		std::vector<ShaderDescriptor> shader_desc =
 		{
@@ -67,6 +69,7 @@ struct AppModelAnimationStage
 		for (size_t i = 0; i < p.size(); i++) {
 			m_pipeline[i] = std::move(p[i]);
 		}
+
 
 	}
 	vk::UniqueCommandBuffer createCmd(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<AppModel>& render)
@@ -141,9 +144,9 @@ struct AppModelAnimationStage
 		}
 		return cmd;
 	}
-	vk::CommandBuffer dispach(const std::shared_ptr<btr::Context>& context, std::vector<vk::CommandBuffer>& cmds)
+	vk::CommandBuffer dispach(std::vector<vk::CommandBuffer>& cmds)
 	{
-		auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
+		auto cmd = m_context->m_cmd_pool->allocCmdOnetime(0);
 
 		cmd.executeCommands(cmds.size(), cmds.data());
 		cmd.end();
@@ -168,6 +171,7 @@ struct AppModelAnimationStage
 	std::array<vk::UniquePipeline, SHADER_NUM> m_pipeline;
 	vk::UniquePipelineLayout m_pipeline_layout;
 
+	std::shared_ptr<btr::Context> m_context;
 };
 
 struct AppModelRenderStage

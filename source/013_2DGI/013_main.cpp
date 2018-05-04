@@ -129,9 +129,34 @@ int main()
 
 			{
 				{
-					std::vector<vk::CommandBuffer> cs(1);
-					cs[0] = anime_cmd.get();
-					cmds[cmd_model_update] = animater.dispach(context, cs);
+					auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
+					{
+						vk::BufferMemoryBarrier barrier = player_model->b_worlds.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite);
+						cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, barrier, {});
+					}
+
+					auto staging = context->m_staging_memory.allocateMemory<mat4>({ 1, {} });
+					*staging.getMappedPtr() = glm::translate(vec3(200.f, 0.f, 400.f));
+					vk::BufferCopy copy;
+					copy.setSrcOffset(staging.getInfo().offset);
+					copy.setDstOffset(player_model->b_worlds.getInfo().offset);
+					copy.setSize(sizeof(mat4));
+
+					cmd.copyBuffer(staging.getInfo().buffer, player_model->b_worlds.getInfo().buffer, copy);
+
+					{
+						vk::BufferMemoryBarrier barrier = player_model->b_worlds.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead);
+						cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, barrier, {});
+					}
+
+					cmd.executeCommands(1, &anime_cmd.get());
+
+// 					std::vector<vk::CommandBuffer> cs(1);
+// 					cs[0] = anime_cmd.get();
+// 					cmds[cmd_model_update] = animater.dispach(cs);
+
+					cmd.end();
+ 					cmds[cmd_model_update] = cmd;
 				}
 			}
 

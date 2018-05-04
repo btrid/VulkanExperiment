@@ -54,7 +54,7 @@ void main()
 		float power = length(b_emission[data_offset+index1d].value);		
 
 		vec2 Delta = pos - max(s_area.xy, min(pos, s_area.zw));
-		if(dot(Delta, Delta) > (power)) 
+		if(dot(Delta, Delta) > (power*power)) 
 		{
 			continue;
 		}
