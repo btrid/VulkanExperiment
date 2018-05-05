@@ -72,14 +72,14 @@ struct AppModelAnimationStage
 
 
 	}
-	vk::UniqueCommandBuffer createCmd(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<AppModel>& render)
+	vk::UniqueCommandBuffer createCmd(const std::shared_ptr<AppModel>& render)
 	{
 		// recode
 		vk::CommandBufferAllocateInfo cmd_buffer_info;
 		cmd_buffer_info.commandBufferCount = 1;
-		cmd_buffer_info.commandPool = context->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
+		cmd_buffer_info.commandPool = m_context->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
 		cmd_buffer_info.level = vk::CommandBufferLevel::eSecondary;
-		auto cmd = std::move(context->m_device->allocateCommandBuffersUnique(cmd_buffer_info)[0]);
+		auto cmd = std::move(m_context->m_device->allocateCommandBuffersUnique(cmd_buffer_info)[0]);
 
 		{
 			vk::CommandBufferBeginInfo begin_info;
@@ -179,7 +179,7 @@ struct AppModelRenderStage
 	AppModelRenderStage(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target)
 	{
 		auto& device = context->m_device;
-
+		m_context = context;
 		m_light_pipeline = std::make_shared<cFowardPlusPipeline>();
 		m_light_pipeline->setup(context);
 		{
@@ -358,14 +358,14 @@ struct AppModelRenderStage
 		}
 		m_render_target = render_target;
 	}
-	vk::UniqueCommandBuffer createCmd(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<AppModel>& render)
+	vk::UniqueCommandBuffer createCmd(const std::shared_ptr<AppModel>& render)
 	{
 		// recode draw command
 		vk::CommandBufferAllocateInfo cmd_buffer_info;
 		cmd_buffer_info.commandBufferCount = 1;
-		cmd_buffer_info.commandPool = context->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
+		cmd_buffer_info.commandPool = m_context->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
 		cmd_buffer_info.level = vk::CommandBufferLevel::eSecondary;
-		auto cmd = std::move(context->m_device->allocateCommandBuffersUnique(cmd_buffer_info)[0]);
+		auto cmd = std::move(m_context->m_device->allocateCommandBuffersUnique(cmd_buffer_info)[0]);
 		{
 
 			vk::CommandBufferBeginInfo begin_info;
@@ -393,11 +393,11 @@ struct AppModelRenderStage
 
 	}
 
-	vk::CommandBuffer draw(const std::shared_ptr<btr::Context>& context, std::vector<vk::CommandBuffer>& cmds)
+	vk::CommandBuffer draw(std::vector<vk::CommandBuffer>& cmds)
 	{
 
-		auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
-		context->m_device.DebugMarkerSetObjectName(cmd, "ModelInstancingPipeline", cmd);
+		auto cmd = m_context->m_cmd_pool->allocCmdOnetime(0);
+		m_context->m_device.DebugMarkerSetObjectName(cmd, "ModelInstancingPipeline", cmd);
 
 		vk::RenderPassBeginInfo render_begin_info;
 		render_begin_info.setRenderPass(m_render_pass.get());
@@ -428,6 +428,7 @@ private:
 	vk::UniquePipelineLayout m_pipeline_layout;
 
 	std::shared_ptr<cFowardPlusPipeline> m_light_pipeline;
+	std::shared_ptr<btr::Context> m_context;
 public:
 	std::shared_ptr<cFowardPlusPipeline> getLight() { return m_light_pipeline; }
 

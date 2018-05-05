@@ -42,27 +42,6 @@
 
 int main()
 {
-	vec2 pos = vec2(0.7f, 0.2f);
-	vec2 dir = glm::normalize(vec2(-0.5, -0.7f));
-	vec2 next_step = vec2(-1.f, -1.f);
-	vec2 inv_dir = 1.f / dir;
-	ivec2 map_index = ivec2(3, 5);
-	int hierarchy = 0;
-//	for (;;)
-	{
-		vec2 cell_size = vec2(1.f);
-		vec2 cell_origin = vec2(1.f)*cell_size;
-		vec2 map_index_sub = map_index - ((map_index >> hierarchy) << hierarchy);
-		vec2 cell_p = abs(cell_origin - (pos + map_index_sub));
-
-		vec2 progress = abs(cell_p * inv_dir);
-		int next_axis = progress.x < progress.y ? 0 : progress.x > progress.y ? 1 : 2;
-
-		vec2 absmove = abs(dir * progress[next_axis % 2]);
-		vec2 next = floor(absmove + pos)*next_step.xy;
-		map_index += ivec2(next);
-		pos = fract(absmove + pos);
-	}
 
 	using namespace pm2d;
 	btr::setResourceAppPath("../../resource/");
@@ -105,7 +84,7 @@ int main()
 	PM2DMakeHierarchy pm_make_hierarchy(context, pm2d_context);
 	PM2DAppModel pm_appmodel(context, pm2d_context);
 
-	auto anime_cmd = animater.createCmd(context, player_model);
+	auto anime_cmd = animater.createCmd(player_model);
 	auto pm_make_cmd = pm_appmodel.createCmd(player_model);
 
 	app.setup();
@@ -136,7 +115,7 @@ int main()
 					}
 
 					auto staging = context->m_staging_memory.allocateMemory<mat4>({ 1, {} });
-					*staging.getMappedPtr() = glm::translate(vec3(200.f, 0.f, 400.f));
+					*staging.getMappedPtr() = glm::translate(vec3(200.f, 0.f, 400.f)) * glm::scale(vec3(0.05f));
 					vk::BufferCopy copy;
 					copy.setSrcOffset(staging.getInfo().offset);
 					copy.setDstOffset(player_model->b_worlds.getInfo().offset);
@@ -150,10 +129,6 @@ int main()
 					}
 
 					cmd.executeCommands(1, &anime_cmd.get());
-
-// 					std::vector<vk::CommandBuffer> cs(1);
-// 					cs[0] = anime_cmd.get();
-// 					cmds[cmd_model_update] = animater.dispach(cs);
 
 					cmd.end();
  					cmds[cmd_model_update] = cmd;
