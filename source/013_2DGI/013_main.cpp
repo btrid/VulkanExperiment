@@ -28,6 +28,7 @@
 
 #include <applib/PM2D/PM2DRenderer.h>
 #include <applib/PM2D/PM2DClear.h>
+#include <applib/PM2D/PM2DLight.h>
 #include <applib/PM2D/PM2DDebug.h>
 #include <applib/PM2D/PM2DAppModel.h>
 #include <applib/AppModel/AppModel.h>

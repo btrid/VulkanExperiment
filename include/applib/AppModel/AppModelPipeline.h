@@ -260,7 +260,6 @@ struct AppModelRenderStage
 			{
 				{ path+"Render.vert.spv",vk::ShaderStageFlagBits::eVertex },
 				{ path+"RenderFowardPlus.frag.spv",vk::ShaderStageFlagBits::eFragment },
-	//			{ path + "RenderFowardPlus.frag.spv",vk::ShaderStageFlagBits::eFragment },
 			};
 			assert(shader_desc.size() == SHADER_NUM);
 			m_shader = std::make_shared<ShaderModule>(context, shader_desc);

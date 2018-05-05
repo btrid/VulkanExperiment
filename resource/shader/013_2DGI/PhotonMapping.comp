@@ -55,7 +55,7 @@ void main()
 		{
 			int emission_index = b_emission_tile_linklist[i].target;
 			int eoffset = u_pm_info.m_emission_buffer_offset[constant.bounce_count];
-			radiance = b_emission[emission_index+eoffset].value;
+			radiance = b_emission[emission_index+eoffset].emission;
 			ivec2 e_index_2d = ivec2(emission_index%bounce_reso.x, emission_index/bounce_reso.x);
 			start = vec2(e_index_2d<<constant.bounce_count);
 		}
@@ -82,8 +82,8 @@ void main()
 		const vec2 diff = (end - start);
 		const float ray_dist = length(diff.xy);
 //		vec3 illumi = radiance.xyz / (1.+ray_dist*ray_dist);
-//		vec3 illumi = radiance.xyz / (1.+ray_dist);
-		vec3 illumi = radiance.xyz;
+		vec3 illumi = radiance.xyz / (1.+ray_dist);
+//		vec3 illumi = radiance.xyz;
 		if(dot(illumi, illumi) <= FLT_EPSIRON){
 			// 影響範囲外
 			continue;
@@ -164,6 +164,7 @@ void main()
 	}
 
 	// バウンス
+#if 0
 	if(fragment_state == fragment_state_bounce && constant.store_photon_index>0 && /*illuminance.b !=0.*/ dot(illuminance, illuminance) >= 1.1)
 	{
 		int store_shift = constant.store_photon_index;
@@ -179,7 +180,7 @@ void main()
 		}
 		b_emission[e_offset+store_index].value = vec4(illuminance.rgb, 1.);
 	}
-
+#endif
 	// store
 	{
 		vec3 store_illuminance = min(illuminance, vec3(65535.));

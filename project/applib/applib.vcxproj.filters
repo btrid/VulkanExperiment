@@ -78,6 +78,9 @@
     <ClInclude Include="..\..\include\applib\AppModel\AppModelPipeline.h">
       <Filter>AppModel</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\applib\PM2D\PM2DLight.h">
+      <Filter>PM2D</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\applib\App.cpp">
@@ -104,14 +107,17 @@
     <ClCompile Include="..\..\source\applib\PM2D\PM2DRenderer.cpp">
       <Filter>PM2D</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\source\013_2DGI\PM2DDebug.cpp">
-      <Filter>PM2D</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\source\applib\AppModel\AppModel.cpp">
       <Filter>AppModel</Filter>
     </ClCompile>
     <ClCompile Include="..\..\source\applib\AppModel\AppModelPipeline.cpp">
       <Filter>AppModel</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\applib\PM2D\PM2DDebug.cpp">
+      <Filter>PM2D</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\applib\PM2D\PM2DLight.cpp">
+      <Filter>PM2D</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

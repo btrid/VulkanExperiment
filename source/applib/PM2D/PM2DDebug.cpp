@@ -123,6 +123,8 @@ void PM2DDebug::execute(vk::CommandBuffer cmd)
 
 	cmd.copyBuffer(m_map_data.getInfo().buffer, m_pm2d_context->b_fragment_buffer.getInfo().buffer, copy);
 
+	// light‚Ì‚Å‚Î‚Á‚®
+//	if(0)
 	{
 		static vec2 light_pos = vec2(200.f);
 		float move = 1.f;
@@ -131,12 +133,11 @@ void PM2DDebug::execute(vk::CommandBuffer cmd)
 		light_pos.y -= m_context->m_window->getInput().m_keyboard.isHold(VK_UP) * move;
 		light_pos.y += m_context->m_window->getInput().m_keyboard.isHold(VK_DOWN) * move;
 
-		struct InputLight { vec2 p; vec2 _p; vec3 e; };
+		struct InputLight { vec2 p; float d; float r; vec4 e; };
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineLayoutPointLight].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutPointLight].get(), 0, m_pm2d_context->getDescriptorSet(), {});
-		cmd.pushConstants<InputLight>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, InputLight{ light_pos, light_pos, vec3(2500.f, 0.f, 2500.f) });
+		cmd.pushConstants<InputLight>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, InputLight{ light_pos, 0.f, 1.1f, vec4(2500.f, 0.f, 2500.f, 0.f) });
 		cmd.dispatch(1, 1, 1);
-
 	}
 	vk::BufferMemoryBarrier to_read[] =
 	{

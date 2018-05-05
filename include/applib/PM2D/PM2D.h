@@ -6,6 +6,12 @@
 namespace pm2d
 {
 
+struct PM2DLightData
+{
+	vec2 m_pos;
+	vec2 _p;
+	vec4 m_emissive;
+};
 struct PM2DContext
 {
 	enum
@@ -40,10 +46,7 @@ struct PM2DContext
 		vec3 albedo;
 		float _p;
 	};
-	struct Emission
-	{
-		vec4 value;
-	};
+
 	struct LinkList
 	{
 		int32_t next;
@@ -133,7 +136,7 @@ struct PM2DContext
 			b_emission_counter = context->m_storage_memory.allocateMemory(desc);
 		}
 		{
-			btr::BufferMemoryDescriptorEx<Emission> desc;
+			btr::BufferMemoryDescriptorEx<PM2DLightData> desc;
 			desc.element_num = m_pm2d_info.m_emission_buffer_offset[BounceNum - 1] + m_pm2d_info.m_emission_buffer_size[BounceNum - 1];
 			b_emission_buffer = context->m_storage_memory.allocateMemory(desc);
 		}
@@ -319,7 +322,7 @@ struct PM2DContext
 	btr::BufferMemoryEx<int64_t> b_fragment_map;
 	btr::BufferMemoryEx<int32_t> b_fragment_hierarchy;
 	btr::BufferMemoryEx<ivec4> b_emission_counter;
-	btr::BufferMemoryEx<Emission> b_emission_buffer;
+	btr::BufferMemoryEx<PM2DLightData> b_emission_buffer;
 
 	btr::BufferMemoryEx<int32_t> b_emission_list;
 	btr::BufferMemoryEx<int32_t> b_emission_map;	//!< ==-1 emitter‚ª‚È‚¢ !=0‚ ‚é

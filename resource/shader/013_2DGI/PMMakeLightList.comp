@@ -7,21 +7,14 @@
 #include <btrlib/Shape.glsl>
 
 #define USE_PM 0
+#define USE_PM_LIGHT 1
 #include <PM.glsl>
 
-layout (local_size_x = 1, local_size_y = 1) in;
-
-layout(push_constant) uniform InputLight
-{
-	vec2 pos;
-	float dir; // atan
-	float radiance;
-	vec4 emission;
-} constant;
+layout (local_size_x = 1024, local_size_y = 1) in;
 
 void main()
 {
-	ivec2 pos = ivec2(constant.pos);
+/*	ivec2 pos = ivec2(constant.pos);
 	if(any(lessThan(pos, ivec2(0))) || any(greaterThanEqual(pos, ivec2(u_pm_info.m_resolution.xy))))
 	{
 		return;
@@ -35,6 +28,7 @@ void main()
 			int list_index = atomicAdd(b_emission_counter[0].x, 1);
 			b_emission_list[list_index] = p_index;
 		}
-		b_emission[p_index].emission += constant.emission;
+		b_emission[p_index].value += vec4(constant.emission, 0.);
 	}
+	*/
 }

@@ -23,9 +23,14 @@ struct Fragment
 	vec3 albedo;
 };
 struct Emission 
+//struct PM2DLightData
 {
-	vec4 value;
+	vec2 pos;
+	float dir; // atan
+	float radiance;
+	vec4 emission;
 };
+
 struct LinkList
 {
 	int next;
@@ -84,4 +89,12 @@ layout (set=USE_PM_RENDER, binding=0, r32ui) uniform uimage2DArray t_color[4];
 layout (set=USE_PM_RENDER, binding=1) uniform sampler2DArray s_color[4];
 #endif //_PM_RENDER_
 
+#ifdef USE_PM_LIGHT
+layout(std430, set=USE_PM_LIGHT, binding=0) restrict buffer LightCounter {
+	uvec4 b_light_count;
+};
+layout(std430, set=USE_PM_LIGHT, binding=1) restrict buffer LightDataBuffer {
+	Emission b_light_data[];
+};
+#endif
 #endif //_PM_

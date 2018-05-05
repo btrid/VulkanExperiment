@@ -13,7 +13,7 @@ struct PM2DDebug : public PM2DPipeline
 	std::shared_ptr<btr::Context> m_context;
 	std::shared_ptr<PM2DContext> m_pm2d_context;
 
-	std::vector<PM2DContext::Emission> m_emission;
+	std::vector<PM2DLightData> m_emission;
 	btr::BufferMemoryEx<PM2DContext::Fragment> m_map_data;
 
 	enum Shader
