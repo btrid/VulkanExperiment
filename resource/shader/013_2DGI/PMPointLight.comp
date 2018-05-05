@@ -21,7 +21,12 @@ layout(push_constant) uniform InputLight
 void main()
 {
 	ivec2 pos = ivec2(constant.pos);
+	if(any(lessThan(pos, ivec2(0))) || any(greaterThanEqual(pos, ivec2(u_pm_info.m_resolution.xy))))
+	{
+		return;
+	}
 	int p_index = pos.x + u_pm_info.m_resolution.x*pos.y;
+
 	{
 		// list登録
 		if(atomicCompSwap(b_emission_map[p_index], -1, 0) == -1)
