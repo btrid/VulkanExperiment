@@ -82,8 +82,8 @@ void main()
 		const vec2 diff = (end - start);
 		const float ray_dist = length(diff.xy);
 //		vec3 illumi = radiance.xyz / (1.+ray_dist*ray_dist);
-		vec3 illumi = radiance.xyz / (1.+ray_dist);
-//		vec3 illumi = radiance.xyz;
+//		vec3 illumi = radiance.xyz / (1.+ray_dist);
+		vec3 illumi = radiance.xyz;
 		if(dot(illumi, illumi) <= FLT_EPSIRON){
 			// 影響範囲外
 			continue;
@@ -102,33 +102,36 @@ void main()
 		const ivec2 map_index_origin = ivec2((idir.x < 0 ? 0 : 1), (idir.y < 0 ? 0 : 1));
 
 		float absorb = 0.;
-		for(int i = 0; i <1000; i++)
+		for(int i = 0; i <500; i++)
 		{
 			{
-				vec2 progress = dir * (1<<constant.bounce_count);
-
-				for(int hierarchy=7; hierarchy>constant.bounce_count; hierarchy--)
+				int hierarchy=7;
+				for(; hierarchy>constant.bounce_count; hierarchy--)
 				{
 					ivec2 findex2d = map_index>>hierarchy;
 					int findex = findex2d.x + findex2d.y*(reso.x>>hierarchy);
 					int offset = getFragmentHierarchyOffset(hierarchy);
 					if(b_fragment_hierarchy[findex + offset] == 0)
 					{
-						ivec2 cell_origin = map_index_origin<<hierarchy;
-						ivec2 map_index_sub = map_index - (findex2d<<hierarchy);
-						vec2 cell_p = abs(cell_origin - (map_index_sub+fract(pos))) + 0.5;
-						float min_axis = min(abs(cell_p.x*inv_dir.x), abs(cell_p.y*inv_dir.y));
-						progress = min_axis*dir;
 						break;
 					}
 				}
+
+				ivec2 findex2d = map_index>>hierarchy;
+				int findex = findex2d.x + findex2d.y*(reso.x>>hierarchy);
+				int offset = getFragmentHierarchyOffset(hierarchy);
+
+				ivec2 cell_origin = map_index_origin<<hierarchy;
+				ivec2 map_index_sub = map_index - (findex2d<<hierarchy);
+				vec2 cell_p = abs(cell_origin - (map_index_sub+fract(pos))) + pixel_size*0.5;
+				float min_axis = min(abs(cell_p.x*inv_dir.x), abs(cell_p.y*inv_dir.y));
+				vec2 progress = min_axis*dir;
 				pos += progress;
 				map_index = ivec2(pos);
 			}
 
 			// 終了判定
 			if(abs(map_index[goal_index]-istart[goal_index]) >= abs(idir[goal_index]))
-//			if(any(greaterThanEqual(abs(map_index-istart), idist)))
 			{
 				// 距離を超えたら光がフラグメントにヒット
 				illuminance += albedo*illumi;
