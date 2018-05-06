@@ -33,11 +33,11 @@ void main()
 		s_area.xy = left_top + tile_size*tile_index_2d.xy - 1.1;
 		s_area.zw = s_area.xy + tile_size + 1.2;
 	}
-	float tile_size = length(u_pm_info.m_emission_tile_size.xy);
 	barrier();
 	memoryBarrierShared();
 
 	ivec2 reso = u_pm_info.m_resolution>>constant.bounce_count;
+	float tile_size = length(u_pm_info.m_emission_tile_size.xy);
 
 	uint data_num = b_emission_counter[constant.bounce_count].x;
 	int data_offset = u_pm_info.m_emission_buffer_offset[constant.bounce_count];
