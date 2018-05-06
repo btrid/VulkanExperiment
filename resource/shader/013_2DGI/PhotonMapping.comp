@@ -10,6 +10,7 @@
 #define USE_PM_RENDER 1
 #include <PM.glsl>
 
+
 layout(push_constant) uniform BounceInfo
 {
 	int bounce_count;
@@ -52,10 +53,13 @@ void main()
 		vec2 end = pixel;
 		vec2 start;
 		vec4 radiance;
+
+		Emission light;
 		{
 			int emission_index = b_emission_tile_linklist[i].target;
 			int eoffset = u_pm_info.m_emission_buffer_offset[constant.bounce_count];
-			radiance = b_emission[emission_index+eoffset].emission;
+			light = b_emission[emission_index+eoffset];
+			radiance = light.emission;
 			ivec2 e_index_2d = ivec2(emission_index%bounce_reso.x, emission_index/bounce_reso.x);
 			start = vec2(e_index_2d<<constant.bounce_count);
 		}
@@ -64,20 +68,11 @@ void main()
 		ivec2 idir = iend - istart;
 		if(all(equal(idir, ivec2(0))))
 		{
-			// ライト
+			// ライト自身
 //			fragment_state = fragment_state_light;
 			illuminance += albedo*radiance.xyz;
 			continue;
 		}
-
-		int goal_index = abs(idir.x) >= abs(idir.y) ? 0: 1;
-
-		vec2 subpos = sign(idir.xy)*0.5+0.5;
-
-		start = start + subpixel*(subpos.xy);
-		end = end + subpixel*(1.-subpos.xy);
-
-
 
 		const vec2 diff = (end - start);
 		const float ray_dist = length(diff.xy);
@@ -88,6 +83,23 @@ void main()
 			// 影響範囲外
 			continue;
 		}
+
+		vec4 l_dir = rotate2(light.dir.xx + vec2(-light.angle, light.angle));
+		vec3 a = cross(vec3(l_dir.xy, 0.), vec3(diff, 0.));
+		vec3 b = cross(vec3(l_dir.zw, 0.), vec3(diff, 0.));
+		if(a.z > 0. || b.z < 0.)
+		{
+			// spotlight影響範囲外
+			continue;
+		}
+
+		int goal_index = abs(idir.x) >= abs(idir.y) ? 0: 1;
+
+		vec2 subpos = sign(idir.xy)*0.5+0.5;
+		start = start + subpixel*(subpos.xy);
+		end = end + subpixel*(1.-subpos.xy);
+
+
 		
 		vec2 dir = normalize(end - start);
 		dir *= abs(dir.x) >= abs(dir.y) ? abs(1./dir.x) : abs(1./dir.y);

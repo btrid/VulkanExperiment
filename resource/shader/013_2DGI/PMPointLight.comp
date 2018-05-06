@@ -15,7 +15,7 @@ layout(push_constant) uniform InputLight
 {
 	vec2 pos;
 	float dir; // atan
-	float radiance;
+	float angle;
 	vec4 emission;
 } constant;
 
@@ -36,5 +36,7 @@ void main()
 			b_emission_list[list_index] = p_index;
 		}
 		b_emission[p_index].emission += constant.emission;
+		b_emission[p_index].dir = constant.dir;
+		b_emission[p_index].angle = constant.angle;
 	}
 }

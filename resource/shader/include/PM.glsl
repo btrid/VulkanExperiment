@@ -27,7 +27,7 @@ struct Emission
 {
 	vec2 pos;
 	float dir; // atan
-	float radiance;
+	float angle;
 	vec4 emission;
 };
 
@@ -97,4 +97,17 @@ layout(std430, set=USE_PM_LIGHT, binding=1) restrict buffer LightDataBuffer {
 	Emission b_light_data[];
 };
 #endif
+
+vec2 rotate(in float angle)
+{
+	float c = cos(angle);
+	float s = sin(angle);
+	return vec2(-s, c);
+}
+vec4 rotate2(in vec2 angle)
+{
+	vec2 c = cos(angle);
+	vec2 s = sin(angle);
+	return vec4(-s.x, c.x, -s.y, c.y);
+}
 #endif //_PM_
