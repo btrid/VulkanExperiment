@@ -57,6 +57,8 @@ struct PM2DContext
 	{
 		RenderWidth = 1024;
 		RenderHeight = 1024;
+		RenderWidth = 512;
+		RenderHeight = 512;
 		FragmentBufferSize = RenderWidth * RenderHeight;
 
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);

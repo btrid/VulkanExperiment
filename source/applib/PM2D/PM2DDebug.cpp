@@ -138,7 +138,7 @@ void PM2DDebug::execute(vk::CommandBuffer cmd)
 		struct InputLight { vec2 p; float d; float r; vec4 e; };
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineLayoutPointLight].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutPointLight].get(), 0, m_pm2d_context->getDescriptorSet(), {});
-		cmd.pushConstants<InputLight>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, InputLight{ light_pos, light_dir, 1.1f, vec4(2500.f, 0.f, 2500.f, 0.f) });
+		cmd.pushConstants<InputLight>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, InputLight{ light_pos, light_dir, -1.4f, vec4(2500.f, 0.f, 2500.f, 0.f) });
 		cmd.dispatch(1, 1, 1);
 	}
 	vk::BufferMemoryBarrier to_read[] =

@@ -23,7 +23,6 @@ layout(push_constant) uniform BounceInfo
 #define fragment_state_bounce (3)
 #define fragment_state_bounce_hit (4)
 
-//shared uint64_t light_fragment[4][16];
 layout (local_size_x = 32, local_size_y = 32) in;
 void main()
 {
@@ -87,7 +86,7 @@ void main()
 		vec4 l_dir = rotate2(light.dir.xx + vec2(-light.angle, light.angle));
 		vec3 a = cross(vec3(l_dir.xy, 0.), vec3(diff, 0.));
 		vec3 b = cross(vec3(l_dir.zw, 0.), vec3(diff, 0.));
-		if(a.z > 0. || b.z < 0.)
+		if(light.angle>=0. && (a.z > 0. || b.z < 0.))
 		{
 			// spotlight影響範囲外
 			continue;

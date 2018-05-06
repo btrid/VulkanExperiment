@@ -29,6 +29,7 @@ struct Emission
 	float dir; // atan
 	float angle;
 	vec4 emission;
+//	int type;
 };
 
 struct LinkList

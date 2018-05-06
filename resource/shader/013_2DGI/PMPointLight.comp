@@ -27,7 +27,6 @@ void main()
 		return;
 	}
 	int p_index = pos.x + u_pm_info.m_resolution.x*pos.y;
-
 	{
 		// list登録
 		if(atomicCompSwap(b_emission_map[p_index], -1, 0) == -1)
