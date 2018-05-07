@@ -99,21 +99,23 @@ void main()
 		end = end + subpixel*(1.-subpos.xy);
 
 
-		
 		vec2 dir = normalize(end - start);
 		dir *= abs(dir.x) >= abs(dir.y) ? abs(1./dir.x) : abs(1./dir.y);
+#if 0
 		vec2 inv_dir;
 		inv_dir.x = dir.x == 0. ? 9999999. : (1./dir.x);
 		inv_dir.y = dir.y == 0. ? 9999999. : (1./dir.y);
 		inv_dir = abs(inv_dir);
-
+#else
+		vec2 inv_dir = abs(1./dir);
+#endif
 		vec2 pos = start;
 		ivec2 map_index = ivec2(pos / pixel_size.xy);
 
-		const ivec2 map_index_origin = ivec2((idir.x < 0 ? 0 : 1), (idir.y < 0 ? 0 : 1));
+		const ivec2 map_index_origin = ivec2(greaterThanEqual(idir, ivec2(0)));
 
 		float absorb = 0.;
-		for(int i = 0; i <500; i++)
+		for(int i = 0; i <50000; i++)
 		{
 			{
 				int hierarchy=7;
@@ -135,9 +137,8 @@ void main()
 				ivec2 cell_origin = map_index_origin<<hierarchy;
 				ivec2 map_index_sub = map_index - (findex2d<<hierarchy);
 				vec2 cell_p = abs(cell_origin - (map_index_sub+fract(pos))) + pixel_size*0.5;
-				float min_axis = min(abs(cell_p.x*inv_dir.x), abs(cell_p.y*inv_dir.y));
-				vec2 progress = min_axis*dir;
-				pos += progress;
+				vec2 axis = abs(cell_p*inv_dir);
+				pos = min(axis.x, axis.y)*dir + pos;
 				map_index = ivec2(pos);
 			}
 
