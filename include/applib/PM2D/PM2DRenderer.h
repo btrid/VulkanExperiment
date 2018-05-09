@@ -231,7 +231,7 @@ struct PM2DRenderer
 	std::shared_ptr<btr::Context> m_context;
 	std::shared_ptr<PM2DContext> m_pm2d_context;
 private:
-	void DebugRnederFragmentMap(PM2DContext* pm2d_context, vk::CommandBuffer &cmd);
+	void DebugRnederFragmentMap(vk::CommandBuffer &cmd);
 };
 
 }

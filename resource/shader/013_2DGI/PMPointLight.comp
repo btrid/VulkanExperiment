@@ -17,25 +17,30 @@ layout(push_constant) uniform InputLight
 	float dir; // atan
 	float angle;
 	vec4 emission;
+	int level;
 } constant;
 
 void main()
 {
-	ivec2 pos = ivec2(constant.pos);
-	if(any(lessThan(pos, ivec2(0))) || any(greaterThanEqual(pos, ivec2(u_pm_info.m_resolution.xy))))
+	ivec2 reso = ivec2(u_pm_info.m_resolution.xy)>>constant.level;
+	ivec2 pos = ivec2(constant.pos)>>constant.level;
+	if(any(lessThan(pos, ivec2(0))) || any(greaterThanEqual(pos, reso)))
 	{
 		return;
 	}
-	int p_index = pos.x + u_pm_info.m_resolution.x*pos.y;
+
+	int p_index = pos.x + reso.x*pos.y;
 	{
 		// list登録
-		if(atomicCompSwap(b_emission_map[p_index], -1, 0) == -1)
+		int e_offset = u_pm_info.m_emission_buffer_offset[constant.level];
+		if(atomicCompSwap(b_emission_map[e_offset + p_index], -1, 0) == -1)
 		{
-			int list_index = atomicAdd(b_emission_counter[0].x, 1);
-			b_emission_list[list_index] = p_index;
+			int list_index = atomicAdd(b_emission_counter[constant.level].x, 1);
+			b_emission_list[e_offset + list_index] = p_index;
 		}
-		b_emission[p_index].emission += constant.emission;
-		b_emission[p_index].dir = constant.dir;
-		b_emission[p_index].angle = constant.angle;
+		b_emission[e_offset+p_index].emission += constant.emission;
+		b_emission[e_offset+p_index].dir = constant.dir;
+		b_emission[e_offset+p_index].angle = constant.angle;
+		b_emission[e_offset+p_index].level = constant.level;
 	}
 }

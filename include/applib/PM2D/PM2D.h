@@ -9,8 +9,13 @@ namespace pm2d
 struct PM2DLightData
 {
 	vec2 m_pos;
-	vec2 _p;
+	float m_dir;
+	float m_angle;
 	vec4 m_emissive;
+	int level;
+	int _p1;
+	int _p2;
+	int _p3;
 };
 struct PM2DContext
 {

@@ -401,18 +401,19 @@ void PM2DRenderer::execute(vk::CommandBuffer cmd)
 			0, nullptr, 0, nullptr, array_length(to_write), to_write);
 	}
 
-//	#define debug_render_fragment_map
+	#define debug_render_fragment_map
 #if defined(debug_render_fragment_map)
 	DebugRnederFragmentMap(cmd);
-	cmd.end();
-	return cmd;
+//	cmd.end();
+//	return cmd;
+	return;
 #endif
 
 	for (int i = 0; i < 1; i++)
 	{
 		ivec2 constant_param[] = {
 
-			ivec2(0, 2),
+			ivec2(1, 2),
 			ivec2(2, -1),
 		};
 		// light culling
@@ -501,23 +502,24 @@ void PM2DRenderer::execute(vk::CommandBuffer cmd)
 	}
 }
 
-void PM2DRenderer::DebugRnederFragmentMap(PM2DContext* pm2d_context, vk::CommandBuffer &cmd)
+void PM2DRenderer::DebugRnederFragmentMap(vk::CommandBuffer &cmd)
 {
 	// fragment_hierarchy‚ÌƒeƒXƒg
 	{
 		vk::BufferMemoryBarrier to_read[] = {
-			pm2d_context->b_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-			pm2d_context->b_fragment_hierarchy.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-			pm2d_context->b_emission_tile_linklist_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-			pm2d_context->b_emission_tile_linkhead.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-			pm2d_context->b_emission_tile_linklist.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			m_pm2d_context->b_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			m_pm2d_context->b_fragment_hierarchy.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			m_pm2d_context->b_emission_tile_linklist_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			m_pm2d_context->b_emission_tile_linkhead.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			m_pm2d_context->b_emission_tile_linklist.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 			0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineDebugRenderFragmentMap].get());
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutDebugRenderFragmentMap].get(), 0, pm2d_context->getDescriptorSet(), {});
-		cmd.dispatch(pm2d_context->m_pm2d_info.m_resolution.x / 32, pm2d_context->m_pm2d_info.m_resolution.y / 32, 1);
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutDebugRenderFragmentMap].get(), 0, m_pm2d_context->getDescriptorSet(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutDebugRenderFragmentMap].get(), 1, m_descriptor_set.get(), {});
+		cmd.dispatch(m_pm2d_context->m_pm2d_info.m_resolution.x / 32, m_pm2d_context->m_pm2d_info.m_resolution.y / 32, 1);
 	}
 
 	// render_target‚É‘‚­
@@ -545,7 +547,8 @@ void PM2DRenderer::DebugRnederFragmentMap(PM2DContext* pm2d_context, vk::Command
 		cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PipelineRendering].get());
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayoutRendering].get(), 0, pm2d_context->getDescriptorSet(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayoutRendering].get(), 0, m_pm2d_context->getDescriptorSet(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayoutRendering].get(), 1, m_descriptor_set.get(), {});
 		cmd.draw(3, 1, 0, 0);
 
 		cmd.endRenderPass();

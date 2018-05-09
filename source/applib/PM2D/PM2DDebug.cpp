@@ -75,7 +75,7 @@ PM2DDebug::PM2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 			m_pm2d_context->getDescriptorSetLayout(),
 		};
 		vk::PushConstantRange constants[] = {
-			vk::PushConstantRange().setOffset(0).setSize(32).setStageFlags(vk::ShaderStageFlagBits::eCompute),
+			vk::PushConstantRange().setOffset(0).setSize(sizeof(PM2DLightData)).setStageFlags(vk::ShaderStageFlagBits::eCompute),
 		};
 		vk::PipelineLayoutCreateInfo pipeline_layout_info;
 		pipeline_layout_info.setSetLayoutCount(array_length(layouts));
@@ -128,6 +128,7 @@ void PM2DDebug::execute(vk::CommandBuffer cmd)
 	{
 		static vec2 light_pos = vec2(200.f);
 		static float light_dir = 0.f;
+		static int level = 1;
 		float move = 1.f;
 		light_pos.x += m_context->m_window->getInput().m_keyboard.isHold(VK_RIGHT) * move;
 		light_pos.x -= m_context->m_window->getInput().m_keyboard.isHold(VK_LEFT) * move;
@@ -135,10 +136,9 @@ void PM2DDebug::execute(vk::CommandBuffer cmd)
 		light_pos.y += m_context->m_window->getInput().m_keyboard.isHold(VK_DOWN) * move;
 		light_dir += 0.02f;
 
-		struct InputLight { vec2 p; float d; float r; vec4 e; };
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineLayoutPointLight].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutPointLight].get(), 0, m_pm2d_context->getDescriptorSet(), {});
-		cmd.pushConstants<InputLight>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, InputLight{ light_pos, light_dir, -1.4f, vec4(2500.f, 0.f, 2500.f, 0.f) });
+		cmd.pushConstants<PM2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, PM2DLightData{ light_pos, light_dir, -1.4f, vec4(2500.f, 0.f, 2500.f, 0.f), level });
 		cmd.dispatch(1, 1, 1);
 	}
 	vk::BufferMemoryBarrier to_read[] =

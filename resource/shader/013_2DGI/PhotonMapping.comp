@@ -30,7 +30,7 @@ void main()
 	const vec2 subpixel = pixel_size.xy*(1<<constant.bounce_count);
 
 	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
-	const ivec2 bounce_reso = ivec2(u_pm_info.m_resolution.xy) >> constant.bounce_count;
+	const ivec2 bounce_reso = ivec2(u_pm_info.m_resolution.xy)>>constant.bounce_count;
 	const ivec2 pixel = ivec2(gl_GlobalInvocationID.xy)<<constant.bounce_count;
 	int fragment_state = fragment_state_non;
 	vec3 albedo = vec3(0.);
@@ -38,7 +38,8 @@ void main()
 	{
 		ivec4 fragment_index = ivec4(pixel/8, pixel%8);
 		ivec2 fragment_index_1d = fragment_index.xz + fragment_index.yw*ivec2(reso.z, 8);
-		uint64_t fragment_map = b_fragment_map[fragment_index_1d.x];
+		int offset = getFragmentMapHierarchyOffset(constant.bounce_count);
+		uint64_t fragment_map = b_fragment_map[fragment_index_1d.x + offset];
 		uint64_t bit = 1ul<<fragment_index_1d.y;
 
 		fragment_state = ((fragment_map & bit) != 0) ? fragment_state_wall : fragment_state_non;
@@ -154,11 +155,11 @@ void main()
 			}
 			// hit確認
 			{
-				ivec2 map_index_sub = map_index>>constant.bounce_count;
+				ivec2 map_index_sub = map_index/*>>constant.bounce_count*/;
 				ivec4 fragment_index = ivec4(map_index_sub/8, map_index_sub%8);
 				ivec2 fragment_index_1d = fragment_index.xz + fragment_index.yw*ivec2(reso.z, 8);
 
-				int offset = getFragmentMapHierarchyOffset(constant.bounce_count);
+				int offset = 0;//getFragmentMapHierarchyOffset(constant.bounce_count);
 				uint64_t fragment_map = b_fragment_map[fragment_index_1d.x + offset];
 				uint64_t bit = 1ul<<fragment_index_1d.y;
 				if((fragment_map & bit) != 0)
@@ -171,8 +172,6 @@ void main()
 				}
 			}
 		}
-//		illumi*= absorb;
-
 	}
 
 	// バウンス

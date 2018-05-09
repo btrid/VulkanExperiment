@@ -22,8 +22,8 @@ void main()
 	vec2 uv = gl_FragCoord.xy/reso;
 	rgb.rg += texture(s_color[0], vec3(uv, 0.)).rg*1000;
 	rgb.b += texture(s_color[0], vec3(uv, 1.)).r*1000;
-	rgb.rg += texture(s_color[1], vec3(uv, 0.)).rg*100;
-	rgb.b += texture(s_color[1], vec3(uv, 1.)).r*100;
+	rgb.rg += texture(s_color[1], vec3(uv, 0.)).rg*1000;
+	rgb.b += texture(s_color[1], vec3(uv, 1.)).r*1000;
 	rgb.rg += texture(s_color[2], vec3(uv, 0.)).rg*1000;
 	rgb.b += texture(s_color[2], vec3(uv, 1.)).r*1000;
 	FragColor = vec4(rgb, 1.);

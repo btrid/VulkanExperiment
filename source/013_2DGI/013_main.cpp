@@ -44,16 +44,6 @@
 int main()
 {
 	{
-		vec3 dir_b = normalize(vec3(0.3f, 1.f, 0.f));
-		vec3 dir_a = normalize(vec3(0.9f, 0.2f, 0.f));
-		vec3 p = vec3(0.7f, 0.7f, 0.f);
-		vec3 a = cross(dir_a, p);
-		vec3 b = cross(dir_b, p);
-		if (a.z > 0.f && b.z < 0.f) {
-		}
-
-		int aaaa = 0;
-		a++;
 	}
 
 	using namespace pm2d;
