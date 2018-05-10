@@ -401,7 +401,7 @@ void PM2DRenderer::execute(vk::CommandBuffer cmd)
 			0, nullptr, 0, nullptr, array_length(to_write), to_write);
 	}
 
-	#define debug_render_fragment_map
+//#define debug_render_fragment_map
 #if defined(debug_render_fragment_map)
 	DebugRnederFragmentMap(cmd);
 //	cmd.end();

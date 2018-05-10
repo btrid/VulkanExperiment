@@ -39,8 +39,8 @@ void main()
 	// hit確認
 //	if(false)
 	{
-		map_index = map_index>>hierarchy;
-		ivec4 fragment_index = ivec4(map_index/8, map_index%8);
+		ivec2 map_index_sub = map_index>>hierarchy;
+		ivec4 fragment_index = ivec4(map_index_sub/8, map_index_sub%8);
 		ivec2 fragment_index_1d = fragment_index.xz + fragment_index.yw*ivec2(reso.z>>hierarchy, 8);
 		int offset = getFragmentMapHierarchyOffset(hierarchy);
 		uint64_t fragment_map = b_fragment_map[fragment_index_1d.x + offset];
