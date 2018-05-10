@@ -78,8 +78,8 @@ void main()
 		const vec2 diff = (end - start);
 		const float ray_dist = length(diff.xy);
 //		vec3 illumi = radiance.xyz / (1.+ray_dist*ray_dist);
-		vec3 illumi = radiance.xyz / (1.+ray_dist);
-//		vec3 illumi = radiance.xyz;
+//		vec3 illumi = radiance.xyz / (1.+ray_dist);
+		vec3 illumi = radiance.xyz;
 		if(dot(illumi, illumi) <= FLT_EPSIRON){
 			// 影響範囲外
 			continue;
@@ -145,7 +145,7 @@ void main()
 			}
 
 			// 終了判定
-			if(abs(map_index[goal_index]-istart[goal_index]) >= abs(idir[goal_index]))
+			if(abs(idir[goal_index]) - abs(map_index[goal_index]-istart[goal_index]) < 1<<constant.bounce_count)
 			{
 				// 距離を超えたら光がフラグメントにヒット
 				illuminance += albedo*illumi;
