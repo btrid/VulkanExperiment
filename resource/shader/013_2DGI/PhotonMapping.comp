@@ -78,8 +78,8 @@ void main()
 		const vec2 diff = (end - start);
 		const float ray_dist = length(diff.xy);
 //		vec3 illumi = radiance.xyz / (1.+ray_dist*ray_dist);
-//		vec3 illumi = radiance.xyz / (1.+ray_dist);
-		vec3 illumi = radiance.xyz;
+		vec3 illumi = radiance.xyz / (1.+ray_dist);
+//		vec3 illumi = radiance.xyz;
 		if(dot(illumi, illumi) <= FLT_EPSIRON){
 			// 影響範囲外
 			continue;
