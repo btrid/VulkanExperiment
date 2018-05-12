@@ -49,7 +49,6 @@ void main()
 
 	const ivec2 tile_index_2d = pixel / ivec2(u_pm_info.m_emission_tile_size.xy);
 	const int tile_index = int(tile_index_2d.x + tile_index_2d.y*u_pm_info.m_emission_tile_num.x);
-	uint64_t is_dead = 0;
 	for(int i = b_emission_tile_linkhead[tile_index]; i != -1; i= b_emission_tile_linklist[i].next)
 	{
 		vec2 end = pixel;
@@ -117,6 +116,7 @@ void main()
 
 		const ivec2 map_index_origin = ivec2(greaterThanEqual(idir, ivec2(0)));
 
+		float absorb = 0.;
 		for(int i = 0; i <50000; i++)
 		{
 			{
@@ -156,33 +156,20 @@ void main()
 			}
 			// hit確認
 			{
-				ivec2 map_index_hie = map_index>>constant.bounce_count;
-				ivec4 fragment_index = ivec4(map_index_hie/8, map_index_hie%8);
+				ivec2 map_index_sub = map_index>>constant.bounce_count;
+				ivec4 fragment_index = ivec4(map_index_sub/8, map_index_sub%8);
 				ivec2 fragment_index_1d = fragment_index.xz + fragment_index.yw*ivec2(reso.z>>constant.bounce_count, 8);
 
-//				uint64_t fragment_map = b_fragment_map[fragment_index_1d.x + offset];
-				ivec4 findex = map_index_hie.xxxx + ivec4(0,1,0,1) + (map_index_hie.yyyy + ivec4(0,1,0,1)) *(reso.xxxx>>constant.bounce_count);
-				findex += getFragmentHierarchyOffset(constant.bounce_count).xxxx;
-				uint64_t b0 = b_fragment_hierarchy[findex.x];
-				uint64_t b1 = b_fragment_hierarchy[findex.y];
-				uint64_t b2 = b_fragment_hierarchy[findex.z];
-				uint64_t b3 = b_fragment_hierarchy[findex.w];
-				ivec2 shift = map_index - map_index_hie;
-				uint64_t x_line_mask = 255 & ~((1 << shift.x) - 1);
-				uint64_t x_mask = x_line_mask | (x_line_mask << 8) | (x_line_mask << 16) | (x_line_mask << 24) | (x_line_mask << 32) | (x_line_mask << 40) | (x_line_mask << 48) | (x_line_mask << 56);
-				uint64_t y_mask = uint64_t(-1) & ~((uint64_t(1) << (shift.y * 8)) - 1);
-
-				uint64_t c0 = x_mask & y_mask;
-				uint64_t c1 = x_mask & (~y_mask);
-				uint64_t c2 = (~x_mask) & y_mask;
-				uint64_t c3 = (~x_mask) & (~y_mask);
-				uint64_t fragment_map = (b0 & c0)|(b1 & c1)|(b2 & c2)|(b3 & c3);
-
+				int offset = getFragmentMapHierarchyOffset(constant.bounce_count);
+				uint64_t fragment_map = b_fragment_map[fragment_index_1d.x + offset];
 				uint64_t bit = 1ul<<fragment_index_1d.y;
-				is_dead |= fragment_map;
-				if((is_dead & 1) == 1)
+				if((fragment_map & bit) != 0)
 				{ 
-					break;
+					absorb += 1.34;
+					if(absorb >= 1.)
+					{
+						break;
+					}
 				}
 			}
 		}
@@ -207,7 +194,6 @@ void main()
 	}
 #endif
 	// store
-	if((is_dead & 1) == 0)
 	{
 		vec3 store_illuminance = min(illuminance, vec3(65535.));
 

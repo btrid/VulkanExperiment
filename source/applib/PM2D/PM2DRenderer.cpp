@@ -412,7 +412,7 @@ void PM2DRenderer::execute(vk::CommandBuffer cmd)
 	{
 		ivec2 constant_param[] = {
 
-			ivec2(2, 2),
+			ivec2(0, 2),
 			ivec2(2, -1),
 		};
 		// light culling
@@ -465,7 +465,8 @@ void PM2DRenderer::execute(vk::CommandBuffer cmd)
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutPhotonMapping].get(), 1, m_descriptor_set.get(), {});
 
 			cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayoutPhotonMapping].get(), vk::ShaderStageFlagBits::eCompute, 0, constant_param[i]);
-			cmd.dispatch(m_pm2d_context->m_pm2d_info.m_emission_tile_num.x >>constant_param[i].x, m_pm2d_context->m_pm2d_info.m_emission_tile_num.y>>constant_param[i].x, 1);
+//			cmd.dispatch((m_pm2d_context->m_pm2d_info.m_emission_tile_num.x/8) >>constant_param[i].x, (m_pm2d_context->m_pm2d_info.m_emission_tile_num.y/8)>>constant_param[i].x, 1);
+			cmd.dispatch(m_pm2d_context->m_pm2d_info.m_emission_tile_num.x >> constant_param[i].x, m_pm2d_context->m_pm2d_info.m_emission_tile_num.y >> constant_param[i].x, 1);
 		}
 	}
 

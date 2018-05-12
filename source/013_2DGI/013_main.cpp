@@ -43,9 +43,6 @@
 
 int main()
 {
-	{
-	}
-
 	using namespace pm2d;
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();

@@ -128,7 +128,7 @@ void PM2DDebug::execute(vk::CommandBuffer cmd)
 	{
 		static vec2 light_pos = vec2(200.f);
 		static float light_dir = 0.f;
-		static int level = 2;
+		static int level = 0;
 		float move = 1.f;
 		light_pos.x += m_context->m_window->getInput().m_keyboard.isHold(VK_RIGHT) * move;
 		light_pos.x -= m_context->m_window->getInput().m_keyboard.isHold(VK_LEFT) * move;

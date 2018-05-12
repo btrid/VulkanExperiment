@@ -201,8 +201,67 @@ void memoryAllocater()
 	count++;
 }
 
+void bittest()
+{
+	{
+		uint64_t result = 0;
+		uint64_t input = 0b1111111111111111111111111111111111111111111111111111111111111111ull;
+		for (int y = 0; y < 8; y++) {
+			for (int x = 0; x < 8; x++) {
+				printf("%c", ((input&(1ull << (y * 8 + x))) != 0) ? 'x' : ' ');
+			}
+			printf("\n");
+		}
+		printf("---\n");
+
+		int x_shift = 2;
+		int y_shift = 6;
+		uint64_t x_line_mask = 0xffllu & ~((1 << x_shift) - 1);
+		uint64_t x_mask = x_line_mask | (x_line_mask << 8) | (x_line_mask << 16) | (x_line_mask << 24) | (x_line_mask << 32) | (x_line_mask << 40) | (x_line_mask << 48) | (x_line_mask << 56);
+
+		for (int y = 0; y < 8; y++) {
+			for (int x = 0; x < 8; x++) {
+				printf("%c", ((x_mask&(1ull << (y * 8 + x))) != 0) ? 'a' : ' ');
+			}
+			printf("\n");
+		}
+		printf("---\n");
+
+		auto y_mask = 0xffffffffffffffffllu & ~((1llu << (y_shift * 8)) - 1);
+		for (int y = 0; y < 8; y++) {
+			for (int x = 0; x < 8; x++) {
+				printf("%c", ((y_mask&(1ull << (y * 8 + x))) != 0) ? 'b' : ' ');
+			}
+			printf("\n");
+		}
+		printf("---\n");
+
+		auto c = x_mask & y_mask;
+		auto c2 = x_mask & (~y_mask);
+		auto c3 = (~x_mask) & y_mask;
+		auto c4 = (~x_mask) & (~y_mask);
+		for (int y = 0; y < 8; y++) {
+			for (int x = 0; x < 8; x++) {
+				if (((c&(1ull << (y * 8 + x))) != 0))
+					printf("1");
+				else if (((c2&(1ull << (y * 8 + x))) != 0))
+					printf("2");
+				else if (((c3&(1ull << (y * 8 + x))) != 0))
+					printf("3");
+				else if (((c4&(1ull << (y * 8 + x))) != 0))
+					printf("4");
+				else
+					printf(" ");
+			}
+			printf("\n");
+		}
+
+	}
+
+}
 int main()
 {
+	bittest();
 	uint32_t bit = 0;
 	btr::setBit(bit, 1257, 16, 16);
 	btr::setBit(bit, 1145, 0, 16);
