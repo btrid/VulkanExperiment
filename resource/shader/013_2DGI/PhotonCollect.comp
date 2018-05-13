@@ -55,11 +55,11 @@ void main()
 			start = vec2(e_index_2d/*<<constant.bounce_count*/);
 		}
 	
-		const vec2 diff = (end - start);
-		const float ray_dist = length(diff.xy);
-		vec3 radiance = (light.emission.xyz / (1.+ray_dist*ray_dist));
-		uint64_t bit_mask = uint64_t(1) << gl_LocalInvocationIndex;
+		const float ray_dist = distance(end, start);
+		vec3 radiance = (light.emission.xyz / (1.+ray_dist/**ray_dist*/));
+		uint64_t bit_mask = 1ul << gl_LocalInvocationIndex;
 		illuminance += ((ishit[0]&bit_mask) != 0) ? radiance : vec3(0.) ;
+//		illuminance += ((ishit[0]&(1<<38)) != 0) ? radiance : vec3(0.) ;
 	}
 
 	imageStore(t_color[0], pixel, illuminance.xyzz);
