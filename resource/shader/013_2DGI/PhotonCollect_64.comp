@@ -29,12 +29,16 @@ layout (local_size_x = 8, local_size_y = 8) in;
 shared uint64_t ishit[1];
 void main()
 {
-	uint64_t is_reached = b_emission_reached[gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*u_pm_info.m_resolution.x];
+	if(gl_LocalInvocationIndex < 1){
+		ishit[gl_LocalInvocationIndex] = b_emission_reached[gl_WorkGroupID.x + gl_WorkGroupID.y*gl_NumWorkGroups.x];
+	}
 
+	barrier();
+	memoryBarrierShared();
 	vec3 illuminance = vec3(0.);
+
 	vec2 end = vec2(gl_GlobalInvocationID.xy);
 
-	int light_count = 0;
 	const ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
 	const ivec2 tile_index_2d = pixel / ivec2(u_pm_info.m_emission_tile_size.xy);
 	const int tile_index = int(tile_index_2d.x + tile_index_2d.y*u_pm_info.m_emission_tile_num.x);
@@ -53,9 +57,9 @@ void main()
 	
 		const float ray_dist = distance(end, start);
 		vec3 radiance = (light.emission.xyz / (1.+ray_dist/**ray_dist*/));
-		uint64_t bit_mask = 1ul << light_count;
-		illuminance += ((is_reached&bit_mask) != 0) ? radiance : vec3(0.) ;
-		light_count++;
+		uint64_t bit_mask = 1ul << gl_LocalInvocationIndex;
+		illuminance += ((ishit[0]&bit_mask) != 0) ? radiance : vec3(0.) ;
+//		illuminance += ((ishit[0]&(1<<38)) != 0) ? radiance : vec3(0.) ;
 	}
 
 	imageStore(t_color[0], pixel, illuminance.xyzz);
