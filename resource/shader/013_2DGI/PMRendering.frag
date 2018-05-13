@@ -20,12 +20,9 @@ void main()
 	uvec2 reso = textureSize(s_color[0], 0).xy;
 //	uvec2 reso = u_pm_info.m_resolution.xy;
 	vec2 uv = gl_FragCoord.xy/reso;
-	rgb.rg += texture(s_color[0], vec3(uv, 0.)).rg*1000;
-	rgb.b += texture(s_color[0], vec3(uv, 1.)).r*1000;
-	rgb.rg += texture(s_color[1], vec3(uv, 0.)).rg*1000;
-	rgb.b += texture(s_color[1], vec3(uv, 1.)).r*1000;
-	rgb.rg += texture(s_color[2], vec3(uv, 0.)).rg*1000;
-	rgb.b += texture(s_color[2], vec3(uv, 1.)).r*1000;
+	rgb.rgb += texture(s_color[0], uv).rgb;
+	rgb.rgb += texture(s_color[1], uv).rgb;
+	rgb.rgb += texture(s_color[2], uv).rgb;
 	FragColor = vec4(rgb, 1.);
 
 }

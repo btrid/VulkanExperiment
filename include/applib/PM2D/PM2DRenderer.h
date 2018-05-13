@@ -178,6 +178,7 @@ struct PM2DRenderer
 	{
 		ShaderLightCulling,
 		ShaderPhotonMapping,
+		ShaderPhotonCollect,
 		ShaderRenderingVS,
 		ShaderRenderingFS,
 		ShaderDebugRenderFragmentMap,
@@ -187,6 +188,7 @@ struct PM2DRenderer
 	{
 		PipelineLayoutLightCulling,
 		PipelineLayoutPhotonMapping,
+		PipelineLayoutPhotonCollect,
 		PipelineLayoutRendering,
 		PipelineLayoutDebugRenderFragmentMap,
 		PipelineLayoutNum,
@@ -195,6 +197,7 @@ struct PM2DRenderer
 	{
 		PipelineLightCulling,
 		PipelinePhotonMapping,
+		PipelinePhotonCollect,
 		PipelineRendering,
 		PipelineDebugRenderFragmentMap,
 		PipelineNum,

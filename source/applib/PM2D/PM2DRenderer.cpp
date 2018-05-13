@@ -17,7 +17,7 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			auto& tex = m_color_tex[i];
 			vk::ImageCreateInfo image_info;
 			image_info.imageType = vk::ImageType::e2D;
-			image_info.format = vk::Format::eR32Uint;
+			image_info.format = vk::Format::eR16G16B16A16Sfloat;
 			image_info.mipLevels = 1;
 			image_info.arrayLayers = 2;
 			image_info.samples = vk::SampleCountFlagBits::e1;
@@ -43,18 +43,18 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
 			subresourceRange.baseArrayLayer = 0;
 			subresourceRange.baseMipLevel = 0;
-			subresourceRange.layerCount = 2;
+			subresourceRange.layerCount = 1;
 			subresourceRange.levelCount = 1;
 			tex.m_subresource_range = subresourceRange;
 
 			vk::ImageViewCreateInfo view_info;
-			view_info.viewType = vk::ImageViewType::e2DArray;
+			view_info.viewType = vk::ImageViewType::e2D;
 			view_info.components.r = vk::ComponentSwizzle::eR;
 			view_info.components.g = vk::ComponentSwizzle::eG;
 			view_info.components.b = vk::ComponentSwizzle::eB;
 			view_info.components.a = vk::ComponentSwizzle::eA;
 			view_info.flags = vk::ImageViewCreateFlags();
-			view_info.format = vk::Format::eR16G16Unorm;
+			view_info.format = vk::Format::eR16G16B16A16Sfloat;
 			view_info.image = tex.m_image.get();
 			view_info.subresourceRange = subresourceRange;
 			tex.m_image_view = context->m_device->createImageViewUnique(view_info);
@@ -91,6 +91,11 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 				.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
 				.setDescriptorCount(PM2DContext::_BounceNum)
 				.setBinding(1),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(stage)
+				.setDescriptorType(vk::DescriptorType::eStorageImage)
+				.setDescriptorCount(PM2DContext::_BounceNum)
+				.setBinding(2),
 			};
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 			desc_layout_info.setBindingCount(array_length(binding));
@@ -149,6 +154,13 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 				.setDstBinding(1)
 				.setDstArrayElement(0)
 				.setDstSet(m_descriptor_set.get()),
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eStorageImage)
+				.setDescriptorCount(array_length(output_images))
+				.setPImageInfo(output_images)
+				.setDstBinding(2)
+				.setDstArrayElement(0)
+				.setDstSet(m_descriptor_set.get()),
 			};
 			context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
 		}
@@ -160,6 +172,7 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 		{
 			"LightCulling.comp.spv",
 			"PhotonMapping.comp.spv",
+			"PhotonCollect.comp.spv",
 			"PMRendering.vert.spv",
 			"PMRendering.frag.spv",
 			"DebugFragmentMap.comp.spv",
@@ -183,6 +196,7 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 		pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 		pipeline_layout_info.setPSetLayouts(layouts);
 		m_pipeline_layout[PipelineLayoutRendering] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+		m_pipeline_layout[PipelineLayoutPhotonCollect] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		m_pipeline_layout[PipelineLayoutDebugRenderFragmentMap] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 
 
@@ -205,16 +219,19 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 
 	// pipeline
 	{
-		std::array<vk::PipelineShaderStageCreateInfo, 3> shader_info;
+		std::array<vk::PipelineShaderStageCreateInfo, 4> shader_info;
 		shader_info[0].setModule(m_shader[ShaderLightCulling].get());
 		shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[0].setPName("main");
 		shader_info[1].setModule(m_shader[ShaderPhotonMapping].get());
 		shader_info[1].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[1].setPName("main");
-		shader_info[2].setModule(m_shader[ShaderDebugRenderFragmentMap].get());
+		shader_info[2].setModule(m_shader[ShaderPhotonCollect].get());
 		shader_info[2].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[2].setPName("main");
+		shader_info[3].setModule(m_shader[ShaderDebugRenderFragmentMap].get());
+		shader_info[3].setStage(vk::ShaderStageFlagBits::eCompute);
+		shader_info[3].setPName("main");
 		std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 		{
 			vk::ComputePipelineCreateInfo()
@@ -225,12 +242,16 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			.setLayout(m_pipeline_layout[PipelineLayoutPhotonMapping].get()),
 			vk::ComputePipelineCreateInfo()
 			.setStage(shader_info[2])
+			.setLayout(m_pipeline_layout[PipelineLayoutPhotonCollect].get()),
+			vk::ComputePipelineCreateInfo()
+			.setStage(shader_info[3])
 			.setLayout(m_pipeline_layout[PipelineLayoutDebugRenderFragmentMap].get()),
 		};
 		auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
 		m_pipeline[PipelineLayoutLightCulling] = std::move(compute_pipeline[0]);
 		m_pipeline[PipelinePhotonMapping] = std::move(compute_pipeline[1]);
-		m_pipeline[PipelineDebugRenderFragmentMap] = std::move(compute_pipeline[2]);
+		m_pipeline[PipelinePhotonCollect] = std::move(compute_pipeline[2]);
+		m_pipeline[PipelineDebugRenderFragmentMap] = std::move(compute_pipeline[3]);
 	}
 
 	// レンダーパス
@@ -465,9 +486,25 @@ void PM2DRenderer::execute(vk::CommandBuffer cmd)
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutPhotonMapping].get(), 1, m_descriptor_set.get(), {});
 
 			cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayoutPhotonMapping].get(), vk::ShaderStageFlagBits::eCompute, 0, constant_param[i]);
-//			cmd.dispatch((m_pm2d_context->m_pm2d_info.m_emission_tile_num.x/8) >>constant_param[i].x, (m_pm2d_context->m_pm2d_info.m_emission_tile_num.y/8)>>constant_param[i].x, 1);
-			cmd.dispatch(m_pm2d_context->m_pm2d_info.m_emission_tile_num.x >> constant_param[i].x, m_pm2d_context->m_pm2d_info.m_emission_tile_num.y >> constant_param[i].x, 1);
+			cmd.dispatch((m_pm2d_context->m_pm2d_info.m_emission_tile_num.x/8) >>constant_param[i].x, (m_pm2d_context->m_pm2d_info.m_emission_tile_num.y/8)>>constant_param[i].x, 1);
+//			cmd.dispatch(m_pm2d_context->m_pm2d_info.m_emission_tile_num.x >>constant_param[i].x, m_pm2d_context->m_pm2d_info.m_emission_tile_num.y>>constant_param[i].x, 1);
 		}
+	}
+	// photon collect
+	{
+		vk::BufferMemoryBarrier to_read[] = {
+			m_pm2d_context->b_emission_reached.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+		};
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+			0, nullptr, array_length(to_read), to_read, 0, nullptr);
+
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelinePhotonCollect].get());
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutPhotonCollect].get(), 0, m_pm2d_context->getDescriptorSet(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutPhotonCollect].get(), 1, m_descriptor_set.get(), {});
+
+		//			cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayoutPhotonCollect].get(), vk::ShaderStageFlagBits::eCompute, 0, constant_param[i]);
+		cmd.dispatch(m_pm2d_context->RenderWidth / 8, m_pm2d_context->RenderHeight / 8, 1);
+
 	}
 
 	// render_targetに書く

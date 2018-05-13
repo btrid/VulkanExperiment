@@ -5,6 +5,7 @@ glslc.exe -w %include% -x glsl -o ../binary\\MakeFragmentAppModel.vert.spv MakeF
 glslc.exe -w %include% -x glsl -o ../binary\\MakeFragmentAppModel.frag.spv MakeFragmentAppModel.frag
 
 glslc.exe -w %include% -x glsl -o ../binary\\PhotonMapping.comp.spv PhotonMapping.comp
+glslc.exe -w %include% -x glsl -o ../binary\\PhotonCollect.comp.spv PhotonCollect.comp
 
 glslc.exe -w %include% -x glsl -o ../binary\\MakeFragmentMap.comp.spv MakeFragmentMap.comp
 glslc.exe -w %include% -x glsl -o ../binary\\MakeFragmentMapHierarchy.comp.spv MakeFragmentMapHierarchy.comp

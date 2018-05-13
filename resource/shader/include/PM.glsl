@@ -98,14 +98,17 @@ layout(std430, set=USE_PM, binding=25) restrict buffer EmissiveTileLinkHeadBuffe
 layout(std430, set=USE_PM, binding=26) restrict buffer EmissiveTileLinkListBuffer {
 	LinkList b_emission_tile_linklist[];
 };
+layout(std430, set=USE_PM, binding=27) restrict buffer EmmisiveReachedBuffer {
+	uint64_t b_emission_reached[];
+};
 
 #define getFragmentHierarchyOffset(_i) (u_pm_info.m_fragment_hierarchy_offset[(_i)/4][(_i)%4])
 #define getFragmentMapHierarchyOffset(_i) (u_pm_info.m_fragment_map_hierarchy_offset[(_i)/4][(_i)%4])
 #endif
 
 #ifdef USE_PM_RENDER
-layout (set=USE_PM_RENDER, binding=0, r32ui) uniform uimage2DArray t_color[4];
-layout (set=USE_PM_RENDER, binding=1) uniform sampler2DArray s_color[4];
+layout (set=USE_PM_RENDER, binding=0, rgba16f) uniform image2D t_color[4];
+layout (set=USE_PM_RENDER, binding=1) uniform sampler2D s_color[4];
 #endif //_PM_RENDER_
 
 #ifdef USE_PM_LIGHT
