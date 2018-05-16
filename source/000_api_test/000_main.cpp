@@ -203,60 +203,95 @@ void memoryAllocater()
 
 void bittest()
 {
+	// count
 	{
-		uint64_t result = 0;
-		uint64_t input = 0b1111111111111111111111111111111111111111111111111111111111111111ull;
-		for (int y = 0; y < 8; y++) {
-			for (int x = 0; x < 8; x++) {
-				printf("%c", ((input&(1ull << (y * 8 + x))) != 0) ? 'x' : ' ');
-			}
-			printf("\n");
-		}
-		printf("---\n");
+		uint64_t a = 0xffffffffffffffff;
+		uint64_t c = 0;
+		c = (a & 0x5555555555555555ull) + ((a >> 1) & 0x5555555555555555ull);
+		c = (c & 0x3333333333333333ull) + ((c >> 2) & 0x3333333333333333ull);
+		c = (c & 0x0f0f0f0f0f0f0f0full) + ((c >> 4) & 0x0f0f0f0f0f0f0f0full);
+		c = (c & 0x00ff00ff00ff00ffull) + ((c >> 8) & 0x00ff00ff00ff00ffull);
+		c = (c & 0x0000ffff0000ffffull) + ((c >> 16) & 0x0000ffff0000ffffull);
+		c = (c & 0x00000000ffffffffull) + ((c >> 32) & 0x00000000ffffffffull);	
+		c = c;
+	}
 
-		int x_shift = 2;
-		int y_shift = 6;
-		uint64_t x_line_mask = 0xffllu & ~((1 << x_shift) - 1);
-		uint64_t x_mask = x_line_mask | (x_line_mask << 8) | (x_line_mask << 16) | (x_line_mask << 24) | (x_line_mask << 32) | (x_line_mask << 40) | (x_line_mask << 48) | (x_line_mask << 56);
+	int x_shift = 7;
+	int y_shift = 0;
 
-		for (int y = 0; y < 8; y++) {
-			for (int x = 0; x < 8; x++) {
-				printf("%c", ((x_mask&(1ull << (y * 8 + x))) != 0) ? 'a' : ' ');
-			}
-			printf("\n");
-		}
-		printf("---\n");
-
-		auto y_mask = 0xffffffffffffffffllu & ~((1llu << (y_shift * 8)) - 1);
-		for (int y = 0; y < 8; y++) {
-			for (int x = 0; x < 8; x++) {
-				printf("%c", ((y_mask&(1ull << (y * 8 + x))) != 0) ? 'b' : ' ');
-			}
-			printf("\n");
-		}
-		printf("---\n");
-
-		auto c = x_mask & y_mask;
+	uint64_t x_line_mask = 0xffull & ~((1 << (8 - x_shift)) - 1);
+	uint64_t x_mask_inv = x_line_mask | (x_line_mask << 8) | (x_line_mask << 16) | (x_line_mask << 24) | (x_line_mask << 32) | (x_line_mask << 40) | (x_line_mask << 48) | (x_line_mask << 56);
+	uint64_t y_mask_inv = 0xffffffffffffffffull & ~((1ull << ((8 - y_shift) * 8)) - 1);
+	auto x_mask = ~x_mask_inv;
+	auto y_mask = ~y_mask_inv;
+	{
+		auto c1 = x_mask & y_mask;
 		auto c2 = x_mask & (~y_mask);
 		auto c3 = (~x_mask) & y_mask;
 		auto c4 = (~x_mask) & (~y_mask);
 		for (int y = 0; y < 8; y++) {
 			for (int x = 0; x < 8; x++) {
-				if (((c&(1ull << (y * 8 + x))) != 0))
+				uint64_t map = (1ull << (y * 8 + x));
+				if ((c1&map) != 0)
 					printf("1");
-				else if (((c2&(1ull << (y * 8 + x))) != 0))
+				if ((c2&map) != 0)
 					printf("2");
-				else if (((c3&(1ull << (y * 8 + x))) != 0))
+				if ((c3&map) != 0)
 					printf("3");
-				else if (((c4&(1ull << (y * 8 + x))) != 0))
+				if ((c4&map) != 0)
 					printf("4");
-				else
-					printf(" ");
 			}
 			printf("\n");
 		}
+		printf("---\n");
+	}
+
+	{
+		uint64_t x_line_mask2 = 0xffull & ((1 << (x_shift)) - 1);
+		uint64_t x_mask_inv2 = x_line_mask2 | (x_line_mask2 << 8) | (x_line_mask2 << 16) | (x_line_mask2 << 24) | (x_line_mask2 << 32) | (x_line_mask2 << 40) | (x_line_mask2 << 48) | (x_line_mask2 << 56);
+		uint64_t y_mask_inv2 = 0xffffffffffffffffllu & ((1ull << ((y_shift) * 8)) - 1);
+		auto x_mask2 = ~x_mask_inv2;
+		auto y_mask2 = ~y_mask_inv2;
+
+		uint64_t map0 = 0xFFFFFFFFFFFFFFFFull;
+		auto m1 = map0;
+		m1 &= x_mask2 & y_mask2;
+		m1 >>= y_shift*8;
+		m1 >>= x_shift;
+
+		auto m2 = map0;
+		m2 &= x_mask2 & ~y_mask2;
+		m2 <<= (8-y_shift)*8;
+		m2 >>= x_shift;
+
+		auto m3 = map0;
+		m3 &= ~x_mask2 & y_mask2;
+		m3 >>= y_shift*8;
+		m3 <<= (8-x_shift);
+
+		auto m4 = map0;
+		m4 &= ~x_mask2 & ~y_mask2;
+		m4 <<= (8-y_shift)*8;
+		m4 <<= (8-x_shift);
+		for (int y = 0; y < 8; y++) {
+			for (int x = 0; x < 8; x++) {
+				uint64_t map = (1ull << (y * 8 + x));
+				if ((m1&map) != 0)
+					printf("1");
+				if ((m2&map) != 0)
+					printf("2");
+				if ((m3&map) != 0)
+					printf("3");
+				if ((m4&map) != 0)
+					printf("4");
+			}
+			printf("\n");
+		}
+		printf("---\n");
+		x_shift++;
 
 	}
+	x_shift++;
 
 }
 int main()

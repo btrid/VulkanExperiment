@@ -4,8 +4,10 @@ SET include=-I ../include
 glslc.exe -w %include% -x glsl -o ../binary\\MakeFragmentAppModel.vert.spv MakeFragmentAppModel.vert
 glslc.exe -w %include% -x glsl -o ../binary\\MakeFragmentAppModel.frag.spv MakeFragmentAppModel.frag
 
-glslc.exe -w %include% -x glsl -o ../binary\\PhotonMapping.comp.spv PhotonMapping.comp
-glslc.exe -w %include% -x glsl -o ../binary\\PhotonCollect.comp.spv PhotonCollect.comp
+rem glslc.exe -w %include% -x glsl -o ../binary\\PhotonMapping.comp.spv PhotonMapping.comp
+rem glslc.exe -w %include% -x glsl -o ../binary\\PhotonCollect.comp.spv PhotonCollect.comp
+glslc.exe -w %include% -x glsl -o ../binary\\PhotonMapping.comp.spv PhotonMapping_64.comp
+glslc.exe -w %include% -x glsl -o ../binary\\PhotonCollect.comp.spv PhotonCollect_64.comp
 
 glslc.exe -w %include% -x glsl -o ../binary\\MakeFragmentMap.comp.spv MakeFragmentMap.comp
 glslc.exe -w %include% -x glsl -o ../binary\\MakeFragmentMapHierarchy.comp.spv MakeFragmentMapHierarchy.comp
