@@ -173,7 +173,8 @@ struct PM2DContext
 			b_emission_tile_linklist = context->m_storage_memory.allocateMemory(desc);
 		}
 		{
-			b_emission_reached = context->m_storage_memory.allocateMemory<uint64_t>({ (uint32_t)FragmentBufferSize ,{} });
+			b_emission_reached = context->m_storage_memory.allocateMemory<uint64_t>({ (uint32_t)FragmentBufferSize/64*64 ,{} });
+			b_emission_occlusion = context->m_storage_memory.allocateMemory<uint64_t>({ (uint32_t)FragmentBufferSize/64*64 ,{} });
 		}
 
 		{
@@ -270,6 +271,11 @@ struct PM2DContext
 					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 					.setDescriptorCount(1)
 					.setBinding(27),
+					vk::DescriptorSetLayoutBinding()
+					.setStageFlags(stage)
+					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+					.setDescriptorCount(1)
+					.setBinding(28),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -304,6 +310,7 @@ struct PM2DContext
 					b_emission_tile_linkhead.getInfo(),
 					b_emission_tile_linklist.getInfo(),
 					b_emission_reached.getInfo(),
+					b_emission_occlusion.getInfo(),
 				};
 
 				vk::WriteDescriptorSet write[] = {
@@ -346,6 +353,7 @@ struct PM2DContext
 	btr::BufferMemoryEx<int32_t> b_emission_tile_linkhead;
 	btr::BufferMemoryEx<LinkList> b_emission_tile_linklist;
 	btr::BufferMemoryEx<uint64_t> b_emission_reached;
+	btr::BufferMemoryEx<uint64_t> b_emission_occlusion;
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
 

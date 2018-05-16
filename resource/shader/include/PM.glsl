@@ -3,6 +3,7 @@
 
 #extension GL_ARB_gpu_shader_int64 : require
 //#extension GL_NV_shader_atomic_int64 : require
+
 struct PMInfo
 {
 	mat4 m_camera_PV;
@@ -100,6 +101,9 @@ layout(std430, set=USE_PM, binding=26) restrict buffer EmissiveTileLinkListBuffe
 };
 layout(std430, set=USE_PM, binding=27) restrict buffer EmmisiveReachedBuffer {
 	uint64_t b_emission_reached[];
+};
+layout(std430, set=USE_PM, binding=28) restrict buffer EmmisiveOcclusionBuffer {
+	uint64_t b_emission_occlusion[];
 };
 
 #define getFragmentHierarchyOffset(_i) (u_pm_info.m_fragment_hierarchy_offset[(_i)/4][(_i)%4])

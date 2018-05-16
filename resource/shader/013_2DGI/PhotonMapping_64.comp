@@ -174,18 +174,22 @@ void main()
 					uint64_t y_mask2 = ~y_mask_inv2;
 
 					b0 &= x_mask2 & y_mask2;
+					b1 &= x_mask2 & ~y_mask2;
+					b2 &= ~x_mask2 & y_mask2;
+					b3 &= ~x_mask2 & ~y_mask2;
+
+//					atomicOr(b_emission_occlusion[findex.x], is_alive & b0);
+
+
 					b0 >>= shift.y*8;
 					b0 >>= shift.x;
 
-					b1 &= x_mask2 & ~y_mask2;
 					b1 <<= (8-shift.y)*8;
 					b1 >>= shift.x;
 
-					b2 &= ~x_mask2 & y_mask2;
 					b2 >>= shift.y*8;
 					b2 <<= (8-shift.x);
 
-					b3 &= ~x_mask2 & ~y_mask2;
 					b3 <<= (8-shift.y)*8;
 					b3 <<= (8-shift.x);
 					fragment_map = (b0)|(b1)|(b2)|(b3);
