@@ -1,14 +1,13 @@
 #version 450
+#extension GL_GOOGLE_include_directive : require
 
-#extension GL_GOOGLE_cpp_style_line_directive : require
-#extension GL_ARB_gpu_shader_int64 : require
-
-#include <btrlib/ConvertDimension.glsl>
-#include <btrlib/Common.glsl>
-#include <btrlib/Math.glsl>
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Common.glsl"
+#include "btrlib/Math.glsl"
 
 #define USE_PM 0
-#include <PM.glsl>
+#include "PM.glsl"
+
 
 layout(push_constant) uniform BounceInfo
 {

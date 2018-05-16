@@ -2,7 +2,9 @@
 #define _PM_
 
 #extension GL_ARB_gpu_shader_int64 : require
-//#extension GL_NV_shader_atomic_int64 : require
+#extension GL_ARB_shader_draw_parameters : require
+#extension GL_ARB_gpu_shader_int64 : require
+#extension GL_NV_shader_atomic_int64 : require
 
 struct PMInfo
 {

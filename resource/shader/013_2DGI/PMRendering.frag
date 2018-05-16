@@ -1,14 +1,14 @@
 #version 450
+#extension GL_GOOGLE_include_directive : require
 
-#extension GL_GOOGLE_cpp_style_line_directive : require
-#extension GL_ARB_shader_draw_parameters : require
-
-#include <btrlib/ConvertDimension.glsl>
-#include <btrlib/Shape.glsl>
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Common.glsl"
+#include "btrlib/Math.glsl"
 
 #define USE_PM 0
 #define USE_PM_RENDER 1
-#include <PM.glsl>
+#include "PM.glsl"
+
 
 
 layout(location = 0) out vec4 FragColor;

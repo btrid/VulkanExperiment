@@ -1,16 +1,14 @@
 #version 450
+#extension GL_GOOGLE_include_directive : require
 
-#extension GL_GOOGLE_cpp_style_line_directive : require
-#extension GL_ARB_shader_draw_parameters : require
-
-#include <btrlib/ConvertDimension.glsl>
-#include <btrlib/Shape.glsl>
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Shape.glsl"
 
 #define USE_PM 0
-#include <PM.glsl>
+#include "PM.glsl"
 
 #define USE_APPMODEL 1
-#include <applib/model/MultiModel.glsl>
+#include "applib/model/MultiModel.glsl"
 /*
 in gl_PerFragment{
 	vec4 gl_FragCoord;

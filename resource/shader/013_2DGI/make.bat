@@ -1,23 +1,29 @@
 @echo off
 cd /d %~dp0
-SET include=-I ../include
-glslc.exe -w %include% -x glsl -o ../binary\\MakeFragmentAppModel.vert.spv MakeFragmentAppModel.vert
-glslc.exe -w %include% -x glsl -o ../binary\\MakeFragmentAppModel.frag.spv MakeFragmentAppModel.frag
+rem SET exe=glslc.exe
+rem SET include=-I ../include
+rem SET option=-w -x glsl
+SET include=-I../include/
+SET option=--target-env vulkan1.1 -V
+SET exe=glslangValidator.exe
 
-rem glslc.exe -w %include% -x glsl -o ../binary\\PhotonMapping.comp.spv PhotonMapping.comp
-rem glslc.exe -w %include% -x glsl -o ../binary\\PhotonCollect.comp.spv PhotonCollect.comp
-glslc.exe -w %include% -x glsl -o ../binary\\PhotonMapping.comp.spv PhotonMapping_64.comp
-glslc.exe -w %include% -x glsl -o ../binary\\PhotonCollect.comp.spv PhotonCollect_64.comp
+%exe% %include% %option% -o ../binary\\MakeFragmentAppModel.vert.spv MakeFragmentAppModel.vert
+%exe% %include% %option% -o ../binary\\MakeFragmentAppModel.frag.spv MakeFragmentAppModel.frag
 
-glslc.exe -w %include% -x glsl -o ../binary\\MakeFragmentMap.comp.spv MakeFragmentMap.comp
-glslc.exe -w %include% -x glsl -o ../binary\\MakeFragmentMapHierarchy.comp.spv MakeFragmentMapHierarchy.comp
-glslc.exe -w %include% -x glsl -o ../binary\\MakeFragmentHierarchy.comp.spv MakeFragmentHierarchy.comp
-glslc.exe -w %include% -x glsl -o ../binary\\LightCulling.comp.spv LightCulling.comp
-glslc.exe -w %include% -x glsl -o ../binary\\PMRendering.vert.spv PMRendering.vert
-glslc.exe -w %include% -x glsl -o ../binary\\PMRendering.frag.spv PMRendering.frag
+rem %exe% -w %include% -x glsl -o ../binary\\PhotonMapping.comp.spv PhotonMapping.comp
+rem %exe% -w %include% -x glsl -o ../binary\\PhotonCollect.comp.spv PhotonCollect.comp
+%exe% %include% %option% -o ../binary\\PhotonMapping.comp.spv PhotonMapping_64.comp
+%exe% %include% %option% -o ../binary\\PhotonCollect.comp.spv PhotonCollect_64.comp
 
-glslc.exe -w %include% -x glsl -o ../binary/PMPointLight.comp.spv PMPointLight.comp
-glslc.exe -w %include% -x glsl -o ../binary/PMMakeLightList.comp.spv PMMakeLightList.comp
+%exe% %include% %option% -o ../binary\\MakeFragmentMap.comp.spv MakeFragmentMap.comp
+%exe% %include% %option% -o ../binary\\MakeFragmentMapHierarchy.comp.spv MakeFragmentMapHierarchy.comp
+%exe% %include% %option% -o ../binary\\MakeFragmentHierarchy.comp.spv MakeFragmentHierarchy.comp
+%exe% %include% %option% -o ../binary\\LightCulling.comp.spv LightCulling.comp
+%exe% %include% %option% -o ../binary\\PMRendering.vert.spv PMRendering.vert
+%exe% %include% %option% -o ../binary\\PMRendering.frag.spv PMRendering.frag
 
-glslc.exe -w %include% -x glsl -o ../binary\\DebugFragmentMap.comp.spv DebugFragmentMap.comp
+%exe% %include% %option% -o ../binary/PMPointLight.comp.spv PMPointLight.comp
+%exe% %include% %option% -o ../binary/PMMakeLightList.comp.spv PMMakeLightList.comp
+
+%exe% %include% %option% -o ../binary\\DebugFragmentMap.comp.spv DebugFragmentMap.comp
 
