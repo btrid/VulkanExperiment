@@ -81,7 +81,7 @@ void Swapchain::setup(const std::shared_ptr<btr::Context>& context, const cWindo
 	assert(m_surface_format.format != vk::Format::eUndefined);
 
 	auto support_surface = getSupportSurfaceQueue(context->m_gpu.getHandle(), surface);
-	auto device = context->m_gpu.getDevice();
+	auto& device = context->m_device;
 
 	auto old_swap_chain = m_swapchain_handle.get();
 

@@ -50,6 +50,7 @@ public:
 	template<typename... Args>
 	void DebugMarkerSetObjectNameImpl(uint64_t obj, vk::DebugReportObjectTypeEXT type, const char* name, Args... args)const
 	{
+		return;
 		char buf[256];
 		sprintf_s(buf, name, args...);
 

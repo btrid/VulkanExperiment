@@ -9,22 +9,14 @@ void cGPU::setup(vk::PhysicalDevice pd)
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 		VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME,
 #if _DEBUG
-		VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
+//		VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
 #endif
 	};
 
 	auto gpu_propaty = m_handle.getProperties();
 	auto gpu_feature = m_handle.getFeatures();
-//	assert(gpu_feature.shaderInt16);
-//	assert(gpu_feature.shaderInt64);
 	assert(gpu_feature.multiDrawIndirect);
-	// 			auto memory_prop = gpu->getMemoryProperties();
-	// 			for (uint32_t i = 0; i < memory_prop.memoryTypeCount; i++)
-	// 			{
-	// 				auto memory_type = memory_prop.memoryTypes[i];
-	// 				auto memory_heap = memory_prop.memoryHeaps[memory_type.heapIndex];
-	// 				printf("[%2d]%s %s size = %lld\n", i, vk::to_string(memory_type.propertyFlags).c_str(), vk::to_string(memory_heap.flags).c_str(), memory_heap.size);
-	// 			}
+
 	auto queueFamilyProperty = m_handle.getQueueFamilyProperties();
 
 	std::vector<std::vector<float>> queue_priority(queueFamilyProperty.size());
@@ -52,14 +44,14 @@ void cGPU::setup(vk::PhysicalDevice pd)
 
 	vk::PhysicalDeviceFeatures feature = gpu_feature;
 
-	vk::DeviceCreateInfo deviceInfo = vk::DeviceCreateInfo()
-		.setQueueCreateInfoCount((uint32_t)queue_info.size())
-		.setPQueueCreateInfos(queue_info.data())
-		.setPEnabledFeatures(&feature)
-		.setEnabledExtensionCount((uint32_t)extensionName.size())
-		.setPpEnabledExtensionNames(extensionName.data())
-		;
-	auto device = m_handle.createDevice(deviceInfo, nullptr);
+	vk::DeviceCreateInfo device_info;
+	device_info.setQueueCreateInfoCount((uint32_t)queue_info.size());
+	device_info.setPQueueCreateInfos(queue_info.data());
+	device_info.setPEnabledFeatures(&feature);
+	device_info.setEnabledExtensionCount((uint32_t)extensionName.size());
+	device_info.setPpEnabledExtensionNames(extensionName.data());
+
+	auto device = m_handle.createDevice(device_info, nullptr);
 	m_device.m_gpu = m_handle;
 	m_device.m_handle = device;
 	m_device.m_queue_priority = queue_priority;

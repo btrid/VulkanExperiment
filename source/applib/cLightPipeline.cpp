@@ -3,7 +3,7 @@
 
 void cFowardPlusPipeline::setup(const std::shared_ptr<btr::Context>& context)
 {
-	auto device = context->m_device;
+	auto& device = context->m_device;
 	m_light_info.m_light_max_num = 1024;
 	glm::uvec2 resolution_size(640, 480);
 	glm::uvec2 tile_size(32, 32);

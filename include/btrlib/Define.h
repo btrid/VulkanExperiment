@@ -8,6 +8,8 @@
 #ifdef MemoryBarrier
 #undef MemoryBarrier
 #endif // MemoryBarrier
+// #define VULKAN_HPP_NO_EXCEPTIONS
+// #define VULKAN_HPP_DISABLE_ENHANCED_MODE
 #include <vulkan/vulkan.hpp>
 
 #include <btrlib/DefineMath.h>
