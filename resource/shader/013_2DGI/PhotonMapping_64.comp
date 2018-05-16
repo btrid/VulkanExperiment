@@ -116,8 +116,8 @@ void main()
 		for(int i = 0; i <50000; i++)
 		{
 			{
-				int hierarchy=0;
-				for(; hierarchy>constant.bounce_count; hierarchy--)
+				int hierarchy=7;
+				for(; hierarchy>0; hierarchy--)
 				{
 					ivec2 findex2d = map_index>>hierarchy;
 					int findex = findex2d.x + findex2d.y*(reso.x>>hierarchy);
@@ -159,10 +159,6 @@ void main()
 
 //				ivec4 findex = fragment_index.xxxx + ivec4(-1,-1,0,0) + (fragment_index.yyyy + ivec4(-1,0,-1,0))*(reso.zzzz>>constant.bounce_count);
 				ivec4 findex = fragment_index.xxxx + ivec4(0,0,1,1) + (fragment_index.yyyy + ivec4(0,1,0,1))*(reso.zzzz>>constant.bounce_count);
-				uint64_t b0 = b_fragment_map[findex.x];
-				uint64_t b1 = b_fragment_map[findex.y];
-				uint64_t b2 = b_fragment_map[findex.z];
-				uint64_t b3 = b_fragment_map[findex.w];
 
 				uint64_t fragment_map;
 				{
@@ -172,13 +168,15 @@ void main()
 					uint64_t x_mask2 = ~x_mask_inv2;
 					uint64_t y_mask2 = ~y_mask_inv2;
 
+#if 0
+					uint64_t b0 = b_fragment_map[findex.x];
+					uint64_t b1 = b_fragment_map[findex.y];
+					uint64_t b2 = b_fragment_map[findex.z];
+					uint64_t b3 = b_fragment_map[findex.w];
 					b0 &= x_mask2 & y_mask2;
 					b1 &= x_mask2 & ~y_mask2;
 					b2 &= ~x_mask2 & y_mask2;
 					b3 &= ~x_mask2 & ~y_mask2;
-
-//					atomicOr(b_emission_occlusion[findex.x], is_alive & b0);
-
 
 					b0 >>= shift.y*8;
 					b0 >>= shift.x;
@@ -192,8 +190,19 @@ void main()
 					b3 <<= (8-shift.y)*8;
 					b3 <<= (8-shift.x);
 					fragment_map = (b0)|(b1)|(b2)|(b3);
-				}
+#else
+					u64vec4 b = u64vec4(b_fragment_map[findex.x],b_fragment_map[findex.y],b_fragment_map[findex.z],b_fragment_map[findex.w]);
+					b &= u64vec4(x_mask2 & y_mask2, x_mask2 & ~y_mask2, ~x_mask2 & y_mask2, ~x_mask2 & ~y_mask2);
 
+					ivec4 rs = shift.yyyy*ivec4(8,0,8,0) + shift.xxxx*ivec4(1,1,0,0);
+					ivec4 ls = (8-shift.yyyy)*ivec4(0,8,0,8) + (8-shift.xxxx)*ivec4(0,0,1,1);
+
+					b >>= rs;
+					b <<= ls;
+
+					fragment_map = b.x|b.y|b.z|b.w;
+#endif
+				}
 				is_alive &= ~fragment_map;
 				if(is_alive == uint64_t(0))
 				{ 

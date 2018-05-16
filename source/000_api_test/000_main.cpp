@@ -255,22 +255,24 @@ void bittest()
 
 		uint64_t map0 = 0xFFFFFFFFFFFFFFFFull;
 		auto m1 = map0;
+		auto m2 = map0;
+		auto m3 = map0;
+		auto m4 = map0;
+
 		m1 &= x_mask2 & y_mask2;
+		m2 &= x_mask2 & ~y_mask2;
+		m3 &= ~x_mask2 & y_mask2;
+		m4 &= ~x_mask2 & ~y_mask2;
+
 		m1 >>= y_shift*8;
 		m1 >>= x_shift;
 
-		auto m2 = map0;
-		m2 &= x_mask2 & ~y_mask2;
 		m2 <<= (8-y_shift)*8;
 		m2 >>= x_shift;
 
-		auto m3 = map0;
-		m3 &= ~x_mask2 & y_mask2;
 		m3 >>= y_shift*8;
 		m3 <<= (8-x_shift);
 
-		auto m4 = map0;
-		m4 &= ~x_mask2 & ~y_mask2;
 		m4 <<= (8-y_shift)*8;
 		m4 <<= (8-x_shift);
 		for (int y = 0; y < 8; y++) {

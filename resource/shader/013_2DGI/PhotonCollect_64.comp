@@ -45,11 +45,13 @@ u64vec4 popcnt4(in u64vec4 n)
     c = (c & 0x00000000fffffffful) + ((c>>32) & 0x00000000fffffffful);
     return c;
 }
-shared uint64_t ishit[1];
+shared uint64_t s_is_hit[1];
+shared uint64_t s_is_occlude[1];
 void main()
 {
 	if(gl_LocalInvocationIndex < 1){
-		ishit[gl_LocalInvocationIndex] = b_emission_reached[gl_WorkGroupID.x + gl_WorkGroupID.y*gl_NumWorkGroups.x];
+		s_is_hit[gl_LocalInvocationIndex] = b_emission_reached[gl_WorkGroupID.x + gl_WorkGroupID.y*gl_NumWorkGroups.x];
+		s_is_occlude[gl_LocalInvocationIndex] = b_emission_occlusion[gl_WorkGroupID.x + gl_WorkGroupID.y*gl_NumWorkGroups.x];
 	}
 
 	barrier();
@@ -72,7 +74,7 @@ void main()
 	uint64_t b2 = b_fragment_map[findex.z];
 	uint64_t b3 = b_fragment_map[findex.w];
 	uint64_t bit_mask = 1ul << gl_LocalInvocationIndex;
-
+	uint64_t occlude_emit_num = popcnt(s_is_occlude[0]);
 
 	const ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
 	const ivec2 tile_index_2d = pixel / ivec2(u_pm_info.m_emission_tile_size.xy);
@@ -93,10 +95,13 @@ void main()
 		const float ray_dist = distance(end, start);
 //		vec3 radiance = (light.emission.xyz / (1.+ray_dist/**ray_dist*/));
 		vec3 radiance = vec3(1., 1., 1.);
-		radiance *= float(popcnt(ishit[0])) / 64.;
+//		radiance *= float(popcnt(s_is_hit[0])+occlude_emit_num) / 64.;
+//		radiance *= float(64-occlude_emit_num) / 64.;
 		radiance = ((b0&bit_mask) == 0) ? radiance : vec3(0.) ;
-//		illuminance += ((ishit[0]&bit_mask) != 0) ? radiance : vec3(0.) ;
-		illuminance += radiance;
+
+		illuminance += ((s_is_hit[0]&bit_mask) != 0) ? radiance : vec3(0.) ;
+//		illuminance += radiance;
+
 		illuminance = ray_dist <= 10. ? vec3(1., 0., 1.) : illuminance;
 
 	}
