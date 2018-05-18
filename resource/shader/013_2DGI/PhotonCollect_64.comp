@@ -68,12 +68,38 @@ void main()
 	ivec4 fragment_index = ivec4(map_index_hie/8, map_index_hie%8);
 	ivec2 shift = fragment_index.zw;
 
-	ivec4 findex = fragment_index.xxxx + ivec4(0,0,1,1) + (fragment_index.yyyy + ivec4(0,1,0,1))*(reso.zzzz);
-	uint64_t b0 = b_fragment_map[findex.x];
-	uint64_t b1 = b_fragment_map[findex.y];
-	uint64_t b2 = b_fragment_map[findex.z];
-	uint64_t b3 = b_fragment_map[findex.w];
+	int findex_ = fragment_index.x + fragment_index.y*reso.z;
+	uint64_t b = b_fragment_map[findex_.x];
 	uint64_t bit_mask = 1ul << gl_LocalInvocationIndex;
+
+//	ivec2 f_idx_offset = ivec2(greaterThanEqual(fragment_index.zw, uvec2(4))) * 2 - 1;
+	uint64_t reached_map;
+	{
+		ivec2 f_idx_offset = ivec2(0);
+		ivec4 findex = fragment_index.xxxx + ivec4(0,0,1,1)+f_idx_offset.xxxx + (fragment_index.yyyy + ivec4(0,1,0,1)+f_idx_offset.yyyy)*(reso.zzzz);
+		uint64_t r0 = b_emission_reached[findex.x];
+		uint64_t r1 = b_emission_reached[findex.y];
+		uint64_t r2 = b_emission_reached[findex.z];
+		uint64_t r3 = b_emission_reached[findex.w];
+		u64vec4 b = u64vec4(r0, r1,r2,r3);
+
+		uint64_t x_line_mask2 = 0xfful & ((1ul << (shift.x)) - 1ul);
+		uint64_t x_mask_inv2 = x_line_mask2 | (x_line_mask2 << 8) | (x_line_mask2 << 16) | (x_line_mask2 << 24) | (x_line_mask2 << 32) | (x_line_mask2 << 40) | (x_line_mask2 << 48) | (x_line_mask2 << 56);
+		uint64_t y_mask_inv2 = 0xfffffffffffffffful & ((1ul << ((shift.y) * 8)) - 1);
+		uint64_t x_mask2 = ~x_mask_inv2;
+		uint64_t y_mask2 = ~y_mask_inv2;
+		b &= u64vec4(x_mask2 & y_mask2, x_mask2 & ~y_mask2, ~x_mask2 & y_mask2, ~x_mask2 & ~y_mask2);
+
+		ivec4 rs = shift.yyyy*ivec4(8,0,8,0) + shift.xxxx*ivec4(1,1,0,0);
+		ivec4 ls = (8-shift.yyyy)*ivec4(0,8,0,8) + (8-shift.xxxx)*ivec4(0,0,1,1);
+
+		b >>= rs;
+		b <<= ls;
+
+		reached_map = b.x|b.y|b.z|b.w;
+		
+	}
+
 	uint64_t occlude_emit_num = popcnt(s_is_occlude[0]);
 
 	const ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
@@ -95,12 +121,12 @@ void main()
 		const float ray_dist = distance(end, start);
 //		vec3 radiance = (light.emission.xyz / (1.+ray_dist/**ray_dist*/));
 		vec3 radiance = vec3(1., 1., 1.);
-//		radiance *= float(popcnt(s_is_hit[0])+occlude_emit_num) / 64.;
+		radiance *= float(popcnt(reached_map)) / 64.;
 //		radiance *= float(64-occlude_emit_num) / 64.;
-		radiance = ((b0&bit_mask) == 0) ? radiance : vec3(0.) ;
+		radiance = ((b&bit_mask) == 0) ? radiance : vec3(0.) ;
 
-		illuminance += ((s_is_hit[0]&bit_mask) != 0) ? radiance : vec3(0.) ;
-//		illuminance += radiance;
+//		illuminance += ((s_is_hit[0]&bit_mask) != 0) ? radiance : vec3(0.) ;
+		illuminance += radiance;
 
 		illuminance = ray_dist <= 10. ? vec3(1., 0., 1.) : illuminance;
 

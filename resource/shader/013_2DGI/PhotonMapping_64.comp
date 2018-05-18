@@ -54,7 +54,7 @@ void main()
 	{
 		uint64_t is_alive = uint64_t(-1);
 		uint64_t is_arrive = 0;
-		vec2 end = pixel;
+		vec2 end = pixel-4.;
 		vec2 start;
 		vec4 radiance;
 
@@ -117,7 +117,7 @@ void main()
 		{
 			{
 				int hierarchy=7;
-				for(; hierarchy>0; hierarchy--)
+				for(; hierarchy>constant.bounce_count; hierarchy--)
 				{
 					ivec2 findex2d = map_index>>hierarchy;
 					int findex = findex2d.x + findex2d.y*(reso.x>>hierarchy);
@@ -156,8 +156,6 @@ void main()
 				ivec2 map_index_hie = map_index>>constant.bounce_count;
 				ivec4 fragment_index = ivec4(map_index_hie/8, map_index_hie%8);
 				ivec2 shift = fragment_index.zw;
-
-//				ivec4 findex = fragment_index.xxxx + ivec4(-1,-1,0,0) + (fragment_index.yyyy + ivec4(-1,0,-1,0))*(reso.zzzz>>constant.bounce_count);
 				ivec4 findex = fragment_index.xxxx + ivec4(0,0,1,1) + (fragment_index.yyyy + ivec4(0,1,0,1))*(reso.zzzz>>constant.bounce_count);
 
 				uint64_t fragment_map;

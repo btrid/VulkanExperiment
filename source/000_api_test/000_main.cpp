@@ -216,8 +216,8 @@ void bittest()
 		c = c;
 	}
 
-	int x_shift = 7;
-	int y_shift = 0;
+	int x_shift = 3;
+	int y_shift = 2;
 
 	uint64_t x_line_mask = 0xffull & ~((1 << (8 - x_shift)) - 1);
 	uint64_t x_mask_inv = x_line_mask | (x_line_mask << 8) | (x_line_mask << 16) | (x_line_mask << 24) | (x_line_mask << 32) | (x_line_mask << 40) | (x_line_mask << 48) | (x_line_mask << 56);
