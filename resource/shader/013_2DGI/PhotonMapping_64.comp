@@ -54,7 +54,7 @@ void main()
 	{
 		uint64_t is_alive = uint64_t(-1);
 		uint64_t is_arrive = 0;
-		vec2 end = pixel-4.;
+		vec2 end = pixel;
 		vec2 start;
 		vec4 radiance;
 
@@ -85,7 +85,7 @@ void main()
 //		vec3 illumi = radiance.xyz;
 		if(dot(illumi, illumi) <= FLT_EPSIRON){
 			// 影響範囲外
-//			continue;
+			continue;
 		}
 
 		vec4 l_dir = rotate2(light.dir.xx + vec2(-light.angle, light.angle));
@@ -94,7 +94,7 @@ void main()
 		if(light.angle>=0. && (a.z > 0. || b.z < 0.))
 		{
 			// spotlight影響範囲外
-//			continue;
+			continue;
 		}
 
 		int goal_index = abs(idir.x) >= abs(idir.y) ? 0: 1;
@@ -109,20 +109,29 @@ void main()
 		vec2 inv_dir = abs(1./dir);
 
 		vec2 pos = start;
-		ivec2 map_index = ivec2(pos / pixel_size.xy);
+		ivec2 map_index = ivec2(pos);
 
 		const ivec2 map_index_origin = ivec2(greaterThanEqual(idir, ivec2(0)));
 
 		for(int i = 0; i <50000; i++)
 		{
+			// march
 			{
-				int hierarchy=7;
+				int hierarchy=0;
 				for(; hierarchy>constant.bounce_count; hierarchy--)
 				{
-					ivec2 findex2d = map_index>>hierarchy;
-					int findex = findex2d.x + findex2d.y*(reso.x>>hierarchy);
+					ivec2 map_index_hie = map_index>>constant.bounce_count;
+					ivec4 fragment_index = ivec4(map_index_hie/8, map_index_hie%8);
+					ivec2 offset_ = ivec2(lessThan(fragment_index.zw, ivec2(4))) + 1;
+//					ivec2 offset_ = ivec2(0);
+
+					ivec4 findex = fragment_index.xxxx + offset_.xxxx + (fragment_index.yyyy + offset_.yyyy)*(reso.zzzz);
 					int offset = getFragmentHierarchyOffset(hierarchy);
-					if(b_fragment_hierarchy[findex + offset] == 0)
+					uint64_t b = b_fragment_hierarchy[findex.x + offset]
+					 | b_fragment_hierarchy[findex.y + offset] 
+					 | b_fragment_hierarchy[findex.z + offset]
+					 | b_fragment_hierarchy[findex.w + offset];
+					if(b == 0)
 					{
 						break;
 					}

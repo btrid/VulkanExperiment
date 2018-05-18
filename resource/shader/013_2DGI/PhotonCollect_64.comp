@@ -81,22 +81,22 @@ void main()
 		uint64_t r1 = b_emission_reached[findex.y];
 		uint64_t r2 = b_emission_reached[findex.z];
 		uint64_t r3 = b_emission_reached[findex.w];
-		u64vec4 b = u64vec4(r0, r1,r2,r3);
+		u64vec4 r = u64vec4(r0, r1,r2,r3);
 
 		uint64_t x_line_mask2 = 0xfful & ((1ul << (shift.x)) - 1ul);
 		uint64_t x_mask_inv2 = x_line_mask2 | (x_line_mask2 << 8) | (x_line_mask2 << 16) | (x_line_mask2 << 24) | (x_line_mask2 << 32) | (x_line_mask2 << 40) | (x_line_mask2 << 48) | (x_line_mask2 << 56);
 		uint64_t y_mask_inv2 = 0xfffffffffffffffful & ((1ul << ((shift.y) * 8)) - 1);
 		uint64_t x_mask2 = ~x_mask_inv2;
 		uint64_t y_mask2 = ~y_mask_inv2;
-		b &= u64vec4(x_mask2 & y_mask2, x_mask2 & ~y_mask2, ~x_mask2 & y_mask2, ~x_mask2 & ~y_mask2);
+		r &= u64vec4(x_mask2 & y_mask2, x_mask2 & ~y_mask2, ~x_mask2 & y_mask2, ~x_mask2 & ~y_mask2);
 
 		ivec4 rs = shift.yyyy*ivec4(8,0,8,0) + shift.xxxx*ivec4(1,1,0,0);
 		ivec4 ls = (8-shift.yyyy)*ivec4(0,8,0,8) + (8-shift.xxxx)*ivec4(0,0,1,1);
 
-		b >>= rs;
-		b <<= ls;
+		r >>= rs;
+		r <<= ls;
 
-		reached_map = b.x|b.y|b.z|b.w;
+		reached_map = r.x|r.y|r.z|r.w;
 		
 	}
 
@@ -121,14 +121,14 @@ void main()
 		const float ray_dist = distance(end, start);
 //		vec3 radiance = (light.emission.xyz / (1.+ray_dist/**ray_dist*/));
 		vec3 radiance = vec3(1., 1., 1.);
-		radiance *= float(popcnt(reached_map)) / 64.;
+//		radiance *= float(popcnt(reached_map)) / 64.;
 //		radiance *= float(64-occlude_emit_num) / 64.;
-		radiance = ((b&bit_mask) == 0) ? radiance : vec3(0.) ;
+		radiance = ((s_is_hit[0]&bit_mask) != 0) ? radiance : vec3(1., 0., 0.);
+		radiance = ((b&bit_mask) == 0) ? radiance : vec3(0., 0., 1.);
 
-//		illuminance += ((s_is_hit[0]&bit_mask) != 0) ? radiance : vec3(0.) ;
 		illuminance += radiance;
 
-		illuminance = ray_dist <= 10. ? vec3(1., 0., 1.) : illuminance;
+		illuminance = ray_dist <= 5. ? vec3(1., 1., 0.) : illuminance;
 
 	}
 
