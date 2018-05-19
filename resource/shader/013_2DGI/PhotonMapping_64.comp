@@ -99,11 +99,6 @@ void main()
 
 		int goal_index = abs(idir.x) >= abs(idir.y) ? 0: 1;
 
-		vec2 subpos = sign(idir.xy)*0.5+0.5;
-		start = start + subpixel*(subpos.xy);
-		end = end + subpixel*(1.-subpos.xy);
-
-
 		vec2 dir = normalize(end - start);
 		dir *= abs(dir.x) >= abs(dir.y) ? abs(1./dir.x) : abs(1./dir.y);
 		vec2 inv_dir = abs(1./dir);
@@ -118,34 +113,35 @@ void main()
 			// march
 			{
 				int hierarchy=0;
-				for(; hierarchy>constant.bounce_count; hierarchy--)
+				for(; hierarchy>0; hierarchy--)
 				{
-					ivec2 map_index_hie = map_index>>constant.bounce_count;
+					ivec2 map_index_hie = map_index>>hierarchy;
 					ivec4 fragment_index = ivec4(map_index_hie/8, map_index_hie%8);
-					ivec2 offset_ = ivec2(lessThan(fragment_index.zw, ivec2(4))) + 1;
-//					ivec2 offset_ = ivec2(0);
+					ivec3 offset_ = ivec3(ivec2(greaterThanEqual(fragment_index.zw%8, ivec2(4)))*2 - 1, 0);
 
-					ivec4 findex = fragment_index.xxxx + offset_.xxxx + (fragment_index.yyyy + offset_.yyyy)*(reso.zzzz);
-					int offset = getFragmentHierarchyOffset(hierarchy);
-					uint64_t b = b_fragment_hierarchy[findex.x + offset]
-					 | b_fragment_hierarchy[findex.y + offset] 
-					 | b_fragment_hierarchy[findex.z + offset]
-					 | b_fragment_hierarchy[findex.w + offset];
+					ivec4 findex = fragment_index.xxxx + offset_.xxzz + (fragment_index.yyyy + offset_.yzyz)*(reso.zzzz>>hierarchy);
+					int offset = getFragmentMapHierarchyOffset(hierarchy);
+					uint64_t b = b_fragment_map[findex.x + offset]
+					 | b_fragment_map[findex.y + offset]
+					 | b_fragment_map[findex.z + offset]
+					 | b_fragment_map[findex.w + offset];
 					if(b == 0)
 					{
+						hierarchy;
 						break;
 					}
 				}
 
+//				hierarchy-=3;
+
 				ivec2 findex2d = map_index>>hierarchy;
 				int findex = findex2d.x + findex2d.y*(reso.x>>hierarchy);
-				int offset = getFragmentHierarchyOffset(hierarchy);
 
 				ivec2 cell_origin = map_index_origin<<hierarchy;
 				ivec2 map_index_sub = map_index - (findex2d<<hierarchy);
 				vec2 cell_p = abs(cell_origin - (map_index_sub+fract(pos))) + pixel_size*0.5;
 				vec2 axis = abs(cell_p*inv_dir);
-				pos = min(axis.x, axis.y)*dir + pos;
+				pos += min(axis.x, axis.y)*dir;
 				map_index = ivec2(pos);
 			}
 
@@ -165,7 +161,11 @@ void main()
 				ivec2 map_index_hie = map_index>>constant.bounce_count;
 				ivec4 fragment_index = ivec4(map_index_hie/8, map_index_hie%8);
 				ivec2 shift = fragment_index.zw;
-				ivec4 findex = fragment_index.xxxx + ivec4(0,0,1,1) + (fragment_index.yyyy + ivec4(0,1,0,1))*(reso.zzzz>>constant.bounce_count);
+//				ivec3 offset_ = ivec3(ivec2(greaterThanEqual(fragment_index.zw, ivec2(4)))*2 - 1, 0);
+				ivec2 sub = ivec2(greaterThanEqual(map_index%8, ivec2(4)));
+//				ivec4 offset_ = ivec4(sub, sub-1);
+				ivec4 offset_ = ivec4(0,0,1,1);
+				ivec4 findex = fragment_index.xxxx + offset_.xxzz + (fragment_index.yyyy + offset_.ywyw)*(reso.zzzz>>constant.bounce_count);
 
 				uint64_t fragment_map;
 				{
@@ -175,7 +175,7 @@ void main()
 					uint64_t x_mask2 = ~x_mask_inv2;
 					uint64_t y_mask2 = ~y_mask_inv2;
 
-#if 0
+#if 1
 					uint64_t b0 = b_fragment_map[findex.x];
 					uint64_t b1 = b_fragment_map[findex.y];
 					uint64_t b2 = b_fragment_map[findex.z];
