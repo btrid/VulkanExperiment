@@ -112,7 +112,7 @@ void main()
 		{
 			// march
 			{
-				int hierarchy=0;
+				int hierarchy=7;
 				for(; hierarchy>0; hierarchy--)
 				{
 					ivec2 map_index_hie = map_index>>hierarchy;
@@ -120,19 +120,16 @@ void main()
 					ivec3 offset_ = ivec3(ivec2(greaterThanEqual(fragment_index.zw%8, ivec2(4)))*2 - 1, 0);
 
 					ivec4 findex = fragment_index.xxxx + offset_.xxzz + (fragment_index.yyyy + offset_.yzyz)*(reso.zzzz>>hierarchy);
-					int offset = getFragmentMapHierarchyOffset(hierarchy);
-					uint64_t b = b_fragment_map[findex.x + offset]
-					 | b_fragment_map[findex.y + offset]
-					 | b_fragment_map[findex.z + offset]
-					 | b_fragment_map[findex.w + offset];
+					findex +=  getFragmentMapHierarchyOffset(hierarchy);
+					uint64_t b = b_fragment_map[findex.x]
+					 | b_fragment_map[findex.y]
+					 | b_fragment_map[findex.z]
+					 | b_fragment_map[findex.w];
 					if(b == 0)
 					{
-						hierarchy;
 						break;
 					}
 				}
-
-//				hierarchy-=3;
 
 				ivec2 findex2d = map_index>>hierarchy;
 				int findex = findex2d.x + findex2d.y*(reso.x>>hierarchy);

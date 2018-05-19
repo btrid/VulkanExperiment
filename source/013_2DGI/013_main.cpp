@@ -107,6 +107,7 @@ int main()
 			std::vector<vk::CommandBuffer> cmds(cmd_num);
 
 			{
+				if(0)
 				{
 					auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 					{
@@ -149,9 +150,9 @@ int main()
 					cmds[cmd_pm_clear] = cmd;
 				}
 				{
-					std::vector<vk::CommandBuffer> cs(1);
-					cs[0] = pm_make_cmd.get();
-					cmds[cmd_pm_make_fragment] = pm_appmodel.dispatchCmd(cs);
+//					std::vector<vk::CommandBuffer> cs(1);
+	//				cs[0] = pm_make_cmd.get();
+		//			cmds[cmd_pm_make_fragment] = pm_appmodel.dispatchCmd(cs);
 				}
 				{
 					auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
