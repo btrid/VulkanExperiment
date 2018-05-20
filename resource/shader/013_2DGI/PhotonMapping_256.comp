@@ -112,22 +112,21 @@ void main()
 		{
 			// march
 			{
-				int hierarchy=0;
-				for(int hierarchy_=6; hierarchy_>2; hierarchy_-=3)
+				int hierarchy=7;
+				for(; hierarchy>0; hierarchy--)
 				{
-					ivec2 map_index_hie = map_index>>hierarchy_;
+					ivec2 map_index_hie = map_index>>hierarchy;
 					ivec4 fragment_index = ivec4(map_index_hie/8, map_index_hie%8);
-//					ivec3 offset_ = ivec3(ivec2(greaterThanEqual(fragment_index.zw%8, ivec2(4)))*2 - 1, 0);
+					ivec3 offset_ = ivec3(ivec2(greaterThanEqual(fragment_index.zw%8, ivec2(4)))*2 - 1, 0);
 
-					ivec3 offset_ = ivec3(0);
-					ivec4 findex = fragment_index.xxxx + offset_.xxzz + (fragment_index.yyyy + offset_.yzyz)*(reso.zzzz>>hierarchy_);
-					findex +=  getFragmentMapHierarchyOffset(hierarchy_);
-
-					uint64_t fragment_map = b_fragment_map[findex.x];
-
-					if(fragment_map == 0)
+					ivec4 findex = fragment_index.xxxx + offset_.xxzz + (fragment_index.yyyy + offset_.yzyz)*(reso.zzzz>>hierarchy);
+					findex +=  getFragmentMapHierarchyOffset(hierarchy);
+					uint64_t b = b_fragment_map[findex.x]
+					 | b_fragment_map[findex.y]
+					 | b_fragment_map[findex.z]
+					 | b_fragment_map[findex.w];
+					if(b == 0)
 					{
-						hierarchy = hierarchy_;
 						break;
 					}
 				}
@@ -171,7 +170,7 @@ void main()
 					uint64_t x_mask2 = ~x_mask_inv2;
 					uint64_t y_mask2 = ~y_mask_inv2;
 
-#if 1
+#if 0
 					uint64_t b0 = b_fragment_map[findex.x];
 					uint64_t b1 = b_fragment_map[findex.y];
 					uint64_t b2 = b_fragment_map[findex.z];
@@ -192,9 +191,7 @@ void main()
 
 					b3 <<= (8-shift.y)*8;
 					b3 <<= (8-shift.x);
-
 					fragment_map = (b0)|(b1)|(b2)|(b3);
-//					fragment_map = (b0);
 #else
 					u64vec4 b = u64vec4(b_fragment_map[findex.x],b_fragment_map[findex.y],b_fragment_map[findex.z],b_fragment_map[findex.w]);
 					b &= u64vec4(x_mask2 & y_mask2, x_mask2 & ~y_mask2, ~x_mask2 & y_mask2, ~x_mask2 & ~y_mask2);

@@ -110,6 +110,9 @@ layout(std430, set=USE_PM, binding=28) restrict buffer EmmisiveOcclusionBuffer {
 
 #define getFragmentHierarchyOffset(_i) (u_pm_info.m_fragment_hierarchy_offset[(_i)/4][(_i)%4])
 #define getFragmentMapHierarchyOffset(_i) (u_pm_info.m_fragment_map_hierarchy_offset[(_i)/4][(_i)%4])
+
+//int _map_offset[8] = {0, 16384, 20480, 21504, 21760, 21824, 21840, 21844};
+//#define getFragmentMapHierarchyOffset(_i) (_map_offset[_i])
 #endif
 
 #ifdef USE_PM_RENDER
