@@ -486,8 +486,12 @@ void PM2DRenderer::execute(vk::CommandBuffer cmd)
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutPhotonMapping].get(), 1, m_descriptor_set.get(), {});
 
 			cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayoutPhotonMapping].get(), vk::ShaderStageFlagBits::eCompute, 0, constant_param[i]);
-//			cmd.dispatch(m_pm2d_context->m_pm2d_info.m_emission_tile_num.x >> constant_param[i].x, m_pm2d_context->m_pm2d_info.m_emission_tile_num.y >> constant_param[i].x, 1);
-			cmd.dispatch((m_pm2d_context->m_pm2d_info.m_emission_tile_num.x/8) >>constant_param[i].x, (m_pm2d_context->m_pm2d_info.m_emission_tile_num.y/8)>>constant_param[i].x, 1);
+#define march_64
+#if defined(march_64)
+			cmd.dispatch((m_pm2d_context->m_pm2d_info.m_emission_tile_num.x / 8) >> constant_param[i].x, (m_pm2d_context->m_pm2d_info.m_emission_tile_num.y / 8) >> constant_param[i].x, 1);
+#else
+			cmd.dispatch(m_pm2d_context->m_pm2d_info.m_emission_tile_num.x >> constant_param[i].x, m_pm2d_context->m_pm2d_info.m_emission_tile_num.y >> constant_param[i].x, 1);
+#endif
 		}
 	}
 	// photon collect
@@ -503,9 +507,11 @@ void PM2DRenderer::execute(vk::CommandBuffer cmd)
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutPhotonCollect].get(), 1, m_descriptor_set.get(), {});
 
 //		cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayoutPhotonCollect].get(), vk::ShaderStageFlagBits::eCompute, 0, constant_param[i]);
-//		cmd.dispatch(m_pm2d_context->RenderWidth / 32, m_pm2d_context->RenderHeight / 32, 1);
+#if defined(march_64)
 		cmd.dispatch(m_pm2d_context->RenderWidth / 8, m_pm2d_context->RenderHeight / 8, 1);
-
+#else
+		cmd.dispatch(m_pm2d_context->RenderWidth / 32, m_pm2d_context->RenderHeight / 32, 1);
+#endif
 	}
 
 	// render_targetÇ…èëÇ≠

@@ -27,10 +27,19 @@ layout (local_size_x = 32, local_size_y = 32) in;
 
 void main()
 {
+	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
 	uint64_t is_reached = b_emission_reached[gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*u_pm_info.m_resolution.x];
 
 	vec3 illuminance = vec3(0.);
 	vec2 end = vec2(gl_GlobalInvocationID.xy);
+
+	ivec2 map_index_hie = ivec2(end);
+	ivec4 fragment_index = ivec4(map_index_hie/8, map_index_hie%8);
+	ivec2 shift = fragment_index.zw;
+
+	int findex_ = fragment_index.x + fragment_index.y*reso.z;
+	uint64_t b = b_fragment_map[findex_.x];
+
 
 	int light_count = 0;
 	const ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
@@ -50,9 +59,12 @@ void main()
 		}
 	
 		const float ray_dist = distance(end, start);
-		vec3 radiance = (light.emission.xyz / (1.+ray_dist/**ray_dist*/));
+//		vec3 radiance = (light.emission.xyz / (1.+ray_dist/**ray_dist*/));
+		vec3 radiance = vec3(1., 1., 1.);
 		uint64_t bit_mask = 1ul << light_count;
-		illuminance += ((is_reached&bit_mask) != 0) ? radiance : vec3(0.) ;
+		radiance = ((is_reached&bit_mask) != 0) ? radiance : vec3(0.) ;
+		radiance = ((b&bit_mask) == 0) ? radiance : vec3(0., 0., 1.);
+		illuminance += radiance;
 		light_count++;
 	}
 

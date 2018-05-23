@@ -46,19 +46,23 @@ void main()
 			uvec2 idx2d = gl_GlobalInvocationID.xy*2;
 			uvec4 findex = uvec4(idx2d.xy/8, idx2d.xy%8);
 			uvec2 findex_1d = findex.xz + findex.yw*uvec2(reso.x/(8<<prev_level), 8);
-			uint64_t fragment_map = b_fragment_map[findex_1d.x + foffset];
-
-			uint64_t bit = 1ul<<findex_1d.y;
-			uint64_t is_have = (fragment_map & bit);
-			is_have |= (fragment_map & (bit<<1));
-			is_have |= (fragment_map & (bit<<8));
-			is_have |= (fragment_map & (bit<<9));
-			if(is_have != 0)
+			if(findex_1d.x < getFragmentMapHierarchyOffset(level))
 			{
-				uint bit_offset = localsub.x + localsub.y*8;
-				uint hilow = bit_offset/32;
-				uint offset = bit_offset%32;
-				atomicOr(s_bit[index][hilow], 1<<offset);
+				uint64_t fragment_map = b_fragment_map[findex_1d.x + foffset];
+
+				uint64_t bit = 1ul<<findex_1d.y;
+				uint64_t is_have = (fragment_map & bit);
+				is_have |= (fragment_map & (bit<<1));
+				is_have |= (fragment_map & (bit<<8));
+				is_have |= (fragment_map & (bit<<9));
+				if(is_have != 0)
+				{
+					uint bit_offset = localsub.x + localsub.y*8;
+					uint hilow = bit_offset/32;
+					uint offset = bit_offset%32;
+					atomicOr(s_bit[index][hilow], 1<<offset);
+				}
+
 			}
 		}
 		barrier();

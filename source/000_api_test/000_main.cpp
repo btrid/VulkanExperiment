@@ -216,6 +216,74 @@ void bittest()
 		c = c;
 	}
 
+	{
+		ivec2 map_index_origin(1);
+		int hierarchy_ = 4;
+		vec2 pos(49.7, 54.6);
+		ivec2 map_index(pos);
+		vec2 dir = normalize(vec2(100, 1));
+//		vec2 inv_dir = normalize(abs(vec2(1.) / dir));
+		dir *= abs(dir.x) >= abs(dir.y) ? abs(1. / dir.x) : abs(1. / dir.y);
+		vec2 inv_dir = abs(vec2(1.) / dir);
+
+		ivec2 cell_origin = map_index_origin << 3;
+		ivec2 map_index_sub = map_index % 8;
+		vec2 cell_p = abs(vec2(cell_origin) - (vec2(map_index_sub) + glm::fract(pos))) + vec2(0.5);
+		vec2 axis = abs(cell_p*inv_dir);
+		vec2 move = glm::max<float>(axis.x, axis.y)*dir;
+//		ivec2 imove = (ivec2(move));
+		ivec2 imove(cell_p);
+		ivec2 r_begin = map_index % 8;
+		ivec2 r_end = r_begin + imove;
+		ivec2 area_begin = min(r_begin, r_end).xy;
+		ivec2 area_end = max(r_begin, r_end).xy;
+		ivec2 area = area_end - area_begin;
+		area = clamp(area, 0, 7)+1;
+
+		uint64_t x_line_mask = ((0x1ull << (area.x)) - 1) << area_begin.x;
+		uint64_t x_mask = x_line_mask | (x_line_mask << 8) | (x_line_mask << 16) | (x_line_mask << 24) | (x_line_mask << 32) | (x_line_mask << 40) | (x_line_mask << 48) | (x_line_mask << 56);
+		uint64_t y_mask = 0x1ull << (area.y*8);
+		y_mask -= 1;
+		y_mask <<= (area_begin.y * 8);
+		for (int y = 0; y < 8; y++) {
+			for (int x = 0; x < 8; x++) {
+				uint64_t map = (1ull << (y * 8 + x));
+				if ((x_mask&y_mask&map) != 0)
+					printf("@");
+				else
+					printf("_");
+			}
+			printf("\n");
+		}
+		printf("---\n");
+
+		int a = 0;
+
+	}
+	{
+		int x_shift = 2;
+		int y_shift = 6;
+		int x_m = 2;
+		int y_m = 1;
+
+		uint64_t x_line_mask = ((0x1ull<<x_m)-1) << x_shift;
+		uint64_t x_mask = x_line_mask | (x_line_mask << 8) | (x_line_mask << 16) | (x_line_mask << 24) | (x_line_mask << 32) | (x_line_mask << 40) | (x_line_mask << 48) | (x_line_mask << 56);
+		uint64_t y_mask = ((0x1ull<<(y_m*8))-1) << (y_shift * 8);
+		{
+			auto c1 = x_mask & y_mask;
+			for (int y = 0; y < 8; y++) {
+				for (int x = 0; x < 8; x++) {
+					uint64_t map = (1ull << (y * 8 + x));
+					if ((c1&map) != 0)
+						printf("@");
+					else
+						printf("_");
+				}
+				printf("\n");
+			}
+			printf("---\n");
+		}
+	}
 	int x_shift = 3;
 	int y_shift = 2;
 
