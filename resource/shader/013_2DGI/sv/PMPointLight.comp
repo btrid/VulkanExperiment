@@ -1,0 +1,40 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Common.glsl"
+#include "btrlib/Math.glsl"
+
+#define USE_SV 0
+#include "SV.glsl"
+
+layout (local_size_x = 1, local_size_y = 1) in;
+
+layout(push_constant) uniform InputLight
+{
+	vec2 pos;
+	float dir; // atan
+	float angle;
+	vec4 emission;
+	int level;
+} constant;
+
+void main()
+{
+	ivec2 reso = ivec2(u_sv_info.m_resolution.xy)>>constant.level;
+	ivec2 pos = ivec2(constant.pos)>>constant.level;
+	if(any(lessThan(pos, ivec2(0))) || any(greaterThanEqual(pos, reso)))
+	{
+		return;
+	}
+
+	int p_index = pos.x + reso.x*pos.y;
+	{
+		// list登録
+		int list_index = atomicAdd(b_emission_counter.x, 1);
+		b_emission[p_index].emission = constant.emission;
+		b_emission[p_index].dir = constant.dir;
+		b_emission[p_index].angle = constant.angle;
+		b_emission[p_index].level = constant.level;
+	}
+}

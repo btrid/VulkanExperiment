@@ -79,6 +79,9 @@
     <ClCompile Include="..\..\source\013_2DGI\PM2DDebug.cpp" />
     <ClCompile Include="..\..\source\013_2DGI\PM2DLight.cpp" />
     <ClCompile Include="..\..\source\013_2DGI\PM2DRenderer.cpp" />
+    <ClCompile Include="..\..\source\013_2DGI\SV2DDebug.cpp" />
+    <ClCompile Include="..\..\source\013_2DGI\SV2DLight.cpp" />
+    <ClCompile Include="..\..\source\013_2DGI\SV2DRenderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -101,6 +104,12 @@
     <ClInclude Include="..\..\include\013_2DGI\PM2D\PM2DDebug.h" />
     <ClInclude Include="..\..\include\013_2DGI\PM2D\PM2DLight.h" />
     <ClInclude Include="..\..\include\013_2DGI\PM2D\PM2DRenderer.h" />
+    <ClInclude Include="..\..\include\013_2DGI\SV2D\SV2D.h" />
+    <ClInclude Include="..\..\include\013_2DGI\SV2D\SV2DAppModel.h" />
+    <ClInclude Include="..\..\include\013_2DGI\SV2D\SV2DClear.h" />
+    <ClInclude Include="..\..\include\013_2DGI\SV2D\SV2DDebug.h" />
+    <ClInclude Include="..\..\include\013_2DGI\SV2D\SV2DLight.h" />
+    <ClInclude Include="..\..\include\013_2DGI\SV2D\SV2DRenderer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

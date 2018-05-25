@@ -31,6 +31,12 @@
 #include <013_2DGI/PM2D/PM2DLight.h>
 #include <013_2DGI/PM2D/PM2DDebug.h>
 #include <013_2DGI/PM2D/PM2DAppModel.h>
+
+#include <013_2DGI/SV2D/SV2DRenderer.h>
+#include <013_2DGI/SV2D/SV2DClear.h>
+#include <013_2DGI/SV2D/SV2DLight.h>
+#include <013_2DGI/SV2D/SV2DDebug.h>
+#include <013_2DGI/SV2D/SV2DAppModel.h>
 #include <applib/AppModel/AppModel.h>
 #include <applib/AppModel/AppModelPipeline.h>
 
@@ -43,7 +49,8 @@
 
 int main()
 {
-	using namespace pm2d;
+//	using namespace pm2d;
+	using namespace sv2d;
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = glm::vec3(0.f, 0.f, 1.f);
@@ -77,15 +84,14 @@ int main()
 	PresentPipeline present_pipeline(context, app.m_window->getRenderTarget(), app.m_window->getSwapchainPtr());
 
 
-	std::shared_ptr<PM2DContext> pm2d_context = std::make_shared<PM2DContext>(context);
-	PM2DRenderer pm_renderer(context, app.m_window->getRenderTarget(), pm2d_context);
-	PM2DClear pm_clear(context, pm2d_context);
-	PM2DDebug pm_debug_make_fragment_and_light(context, pm2d_context);
-	PM2DMakeHierarchy pm_make_hierarchy(context, pm2d_context);
-	PM2DAppModel pm_appmodel(context, pm2d_context);
+	std::shared_ptr<SV2DContext> sv2d_context = std::make_shared<SV2DContext>(context);
+	SV2DRenderer pm_renderer(context, app.m_window->getRenderTarget(), sv2d_context);
+	SV2DClear pm_clear(context, sv2d_context);
+	SV2DDebug pm_debug_make_fragment_and_light(context, sv2d_context);
+//	SV2DAppModel pm_appmodel(context, sv2d_context);
 
-	auto anime_cmd = animater.createCmd(player_model);
-	auto pm_make_cmd = pm_appmodel.createCmd(player_model);
+//	auto anime_cmd = animater.createCmd(player_model);
+//	auto pm_make_cmd = pm_appmodel.createCmd(player_model);
 
 	app.setup();
 	while (true)
@@ -129,7 +135,7 @@ int main()
 						cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, barrier, {});
 					}
 
-					cmd.executeCommands(1, &anime_cmd.get());
+//					cmd.executeCommands(1, &anime_cmd.get());
 
 					cmd.end();
  					cmds[cmd_model_update] = cmd;
@@ -156,7 +162,7 @@ int main()
 				}
 				{
 					auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
-					pm_make_hierarchy.execute(cmd);
+//					pm_make_hierarchy.execute(cmd);
 					pm_renderer.execute(cmd);
 					cmd.end();
 					cmds[cmd_pm_render] = cmd;
