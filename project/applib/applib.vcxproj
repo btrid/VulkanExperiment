@@ -78,12 +78,6 @@
     <ClInclude Include="..\..\include\applib\DrawHelper.h" />
     <ClInclude Include="..\..\include\applib\Geometry.h" />
     <ClInclude Include="..\..\include\applib\GraphicsResource.h" />
-    <ClInclude Include="..\..\include\applib\PM2D\PM2D.h" />
-    <ClInclude Include="..\..\include\applib\PM2D\PM2DAppModel.h" />
-    <ClInclude Include="..\..\include\applib\PM2D\PM2DClear.h" />
-    <ClInclude Include="..\..\include\applib\PM2D\PM2DDebug.h" />
-    <ClInclude Include="..\..\include\applib\PM2D\PM2DLight.h" />
-    <ClInclude Include="..\..\include\applib\PM2D\PM2DRenderer.h" />
     <ClInclude Include="..\..\include\applib\sCameraManager.h" />
     <ClInclude Include="..\..\include\applib\sImGuiRenderer.h" />
     <ClInclude Include="..\..\include\applib\sMessageSystem.h" />
@@ -98,9 +92,6 @@
     <ClCompile Include="..\..\source\applib\AppPipeline.cpp" />
     <ClCompile Include="..\..\source\applib\cLightPipeline.cpp" />
     <ClCompile Include="..\..\source\applib\Geometry.cpp" />
-    <ClCompile Include="..\..\source\applib\PM2D\PM2DDebug.cpp" />
-    <ClCompile Include="..\..\source\applib\PM2D\PM2DLight.cpp" />
-    <ClCompile Include="..\..\source\applib\PM2D\PM2DRenderer.cpp" />
     <ClCompile Include="..\..\source\applib\sImGuiRenderer.cpp" />
     <ClCompile Include="..\..\source\applib\sParticlePipeline.cpp" />
     <ClCompile Include="..\..\source\applib\sSystem.cpp" />

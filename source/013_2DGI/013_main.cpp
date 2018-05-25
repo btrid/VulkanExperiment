@@ -26,11 +26,11 @@
 
 #include <applib/sImGuiRenderer.h>
 
-#include <applib/PM2D/PM2DRenderer.h>
-#include <applib/PM2D/PM2DClear.h>
-#include <applib/PM2D/PM2DLight.h>
-#include <applib/PM2D/PM2DDebug.h>
-#include <applib/PM2D/PM2DAppModel.h>
+#include <013_2DGI/PM2D/PM2DRenderer.h>
+#include <013_2DGI/PM2D/PM2DClear.h>
+#include <013_2DGI/PM2D/PM2DLight.h>
+#include <013_2DGI/PM2D/PM2DDebug.h>
+#include <013_2DGI/PM2D/PM2DAppModel.h>
 #include <applib/AppModel/AppModel.h>
 #include <applib/AppModel/AppModelPipeline.h>
 

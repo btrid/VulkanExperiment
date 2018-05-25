@@ -114,7 +114,7 @@ void main()
 			// march
 			{
 				int hierarchy=0;
-				for(int hierarchy_=7; hierarchy_>2; hierarchy_-=1)
+/*				for(int hierarchy_=7; hierarchy_>2; hierarchy_-=1)
 				{
 					ivec2 map_index_hie = map_index>>hierarchy_;
 					ivec4 fragment_index = ivec4(map_index_hie/8, map_index_hie%8);
@@ -152,7 +152,7 @@ void main()
 
 //				is_alive = hierarchy;
 //				break;
-
+*/
 				ivec2 cell_origin = map_index_origin<<hierarchy;
 				ivec2 map_index_sub = map_index - ((map_index>>hierarchy)<<hierarchy);
 				vec2 cell_p = abs(cell_origin - (map_index_sub+fract(pos))) + pixel_size*0.5;
@@ -212,6 +212,17 @@ void main()
 					b3 <<= (8-shift.x);
 
 					fragment_map = (b0)|(b1)|(b2)|(b3);
+
+					uint64_t dead = is_alive & b0;
+					dead != 0 ? atomicOr(b_emission_occlusion[findex.x], dead) : 0;
+					dead = is_alive & b1;
+					dead != 0 ? atomicOr(b_emission_occlusion[findex.y], dead) : 0;
+					dead = is_alive & b2;
+					dead != 0 ? atomicOr(b_emission_occlusion[findex.z], dead) : 0;
+					dead = is_alive & b3;
+					dead != 0 ? atomicOr(b_emission_occlusion[findex.w], dead) : 0;
+					
+
 #else
 					u64vec4 b = u64vec4(b_fragment_map[findex.x],b_fragment_map[findex.y],b_fragment_map[findex.z],b_fragment_map[findex.w]);
 					b &= u64vec4(x_mask2 & y_mask2, x_mask2 & ~y_mask2, ~x_mask2 & y_mask2, ~x_mask2 & ~y_mask2);
@@ -226,6 +237,7 @@ void main()
 #endif
 				}
 				is_alive &= ~fragment_map;
+//				is_alive &= fragment_map == 0 ? -1ul : 0ul;
 				if(is_alive == uint64_t(0))
 				{ 
 					break;

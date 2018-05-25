@@ -62,8 +62,8 @@ void main()
 //		vec3 radiance = (light.emission.xyz / (1.+ray_dist/**ray_dist*/));
 		vec3 radiance = vec3(1., 1., 1.);
 		uint64_t bit_mask = 1ul << light_count;
-		radiance = ((is_reached&bit_mask) != 0) ? radiance : vec3(0.) ;
-		radiance = ((b&bit_mask) == 0) ? radiance : vec3(0., 0., 1.);
+		radiance = ((is_reached&bit_mask) != 0) ? radiance : vec3(0.);
+		radiance = ((b&bit_mask) == 0) ? radiance : vec3(1., 0., 0.);
 		illuminance += radiance;
 		light_count++;
 	}

@@ -81,12 +81,10 @@ void main()
 
 	ivec2 map_index_hie = ivec2(end);
 	ivec4 fragment_index = ivec4(map_index_hie/8, map_index_hie%8);
-	uint64_t bit_mask = 1ul << gl_LocalInvocationIndex;
 	ivec2 shift = fragment_index.zw;
 
 	uint64_t reached_map;
 	uint64_t occlude_map;
-	bool is_kage;
 	{
 		ivec2 f_idx_offset = ivec2(0);
 		ivec4 findex = fragment_index.xxxx + ivec4(0,0,1,1)+f_idx_offset.xxxx + (fragment_index.yyyy + ivec4(0,1,0,1)+f_idx_offset.yyyy)*(reso.zzzz);
@@ -94,7 +92,7 @@ void main()
 		uint64_t r1 = b_emission_reached[findex.y];
 		uint64_t r2 = b_emission_reached[findex.z];
 		uint64_t r3 = b_emission_reached[findex.w];
-		u64vec4 r = u64vec4(r0, r1, r2, r3);
+		u64vec4 r = u64vec4(r0, r1,r2,r3);
 		uint64_t o0 = b_emission_occlusion[findex.x];
 		uint64_t o1 = b_emission_occlusion[findex.y];
 		uint64_t o2 = b_emission_occlusion[findex.z];
@@ -119,9 +117,6 @@ void main()
 
 		reached_map = r.x|r.y|r.z|r.w;
 		occlude_map = o.x|o.y|o.z|o.w;
-
-		reached_map = r0;
-//		occlude_map = o0;
 		
 	}
 
@@ -147,10 +142,8 @@ void main()
 		const float ray_dist = distance(end, start);
 //		vec3 radiance = (light.emission.xyz / (1.+ray_dist/**ray_dist*/));
 		vec3 radiance = vec3(0.7);
-//		radiance *= float(reached_num) / (64.);
-//		radiance = is_kage ? vec3(0.) : radiance;
+		radiance *= float(reached_num) / (64.);
 //		radiance *= float(reached_num) / (64.1);
-		radiance = ((reached_map&bit_mask)!=0)? radiance : vec3(0.);
 
 		illuminance += radiance;
 		illuminance = ray_dist <= 5. ? vec3(1., 1., 0.) : illuminance;
@@ -158,7 +151,7 @@ void main()
 	}
 	int findex = fragment_index.x + fragment_index.y*reso.z;
 	uint64_t b = b_fragment_map[findex.x];
-//	uint64_t bit_mask = 1ul << gl_LocalInvocationIndex;
+	uint64_t bit_mask = 1ul << gl_LocalInvocationIndex;
 	illuminance.xyz = ((b&bit_mask) == 0) ? illuminance.xyz : vec3(0., 0., 1.);
 
 

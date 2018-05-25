@@ -13,9 +13,6 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="PM2D">
-      <UniqueIdentifier>{9ced4232-d633-41ed-b2fd-1102cbdbc6c1}</UniqueIdentifier>
-    </Filter>
     <Filter Include="AppModel">
       <UniqueIdentifier>{72f1768f-b5b8-4e0f-afd6-045a14475517}</UniqueIdentifier>
     </Filter>
@@ -54,21 +51,6 @@
     <ClInclude Include="..\..\include\applib\sSystem.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\applib\PM2D\PM2D.h">
-      <Filter>PM2D</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\applib\PM2D\PM2DRenderer.h">
-      <Filter>PM2D</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\applib\PM2D\PM2DClear.h">
-      <Filter>PM2D</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\applib\PM2D\PM2DDebug.h">
-      <Filter>PM2D</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\applib\PM2D\PM2DAppModel.h">
-      <Filter>PM2D</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\applib\AppPipeline.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
@@ -77,9 +59,6 @@
     </ClInclude>
     <ClInclude Include="..\..\include\applib\AppModel\AppModelPipeline.h">
       <Filter>AppModel</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\applib\PM2D\PM2DLight.h">
-      <Filter>PM2D</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -104,20 +83,11 @@
     <ClCompile Include="..\..\source\applib\sSystem.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\source\applib\PM2D\PM2DRenderer.cpp">
-      <Filter>PM2D</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\source\applib\AppModel\AppModel.cpp">
       <Filter>AppModel</Filter>
     </ClCompile>
     <ClCompile Include="..\..\source\applib\AppModel\AppModelPipeline.cpp">
       <Filter>AppModel</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\source\applib\PM2D\PM2DDebug.cpp">
-      <Filter>PM2D</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\source\applib\PM2D\PM2DLight.cpp">
-      <Filter>PM2D</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

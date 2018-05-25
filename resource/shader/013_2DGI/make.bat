@@ -10,10 +10,10 @@ SET exe=glslangValidator.exe
 %exe% %include% %option% -o ../binary\\MakeFragmentAppModel.vert.spv MakeFragmentAppModel.vert
 %exe% %include% %option% -o ../binary\\MakeFragmentAppModel.frag.spv MakeFragmentAppModel.frag
 
-rem %exe% %include% %option% -o ../binary\\PhotonMapping.comp.spv PhotonMapping_1.comp
-rem %exe% %include% %option% -o ../binary\\PhotonCollect.comp.spv PhotonCollect_1.comp
-%exe% %include% %option% -o ../binary\\PhotonMapping.comp.spv PhotonMapping_64.comp
-%exe% %include% %option% -o ../binary\\PhotonCollect.comp.spv PhotonCollect_64.comp
+%exe% %include% %option% -o ../binary\\PhotonMapping.comp.spv PhotonMapping_1.comp
+%exe% %include% %option% -o ../binary\\PhotonCollect.comp.spv PhotonCollect_1.comp
+rem %exe% %include% %option% -o ../binary\\PhotonMapping.comp.spv PhotonMapping_64.comp
+rem %exe% %include% %option% -o ../binary\\PhotonCollect.comp.spv PhotonCollect_64.comp
 
 %exe% %include% %option% -o ../binary\\MakeFragmentMap.comp.spv MakeFragmentMap.comp
 %exe% %include% %option% -o ../binary\\MakeFragmentMapHierarchy.comp.spv MakeFragmentMapHierarchy.comp

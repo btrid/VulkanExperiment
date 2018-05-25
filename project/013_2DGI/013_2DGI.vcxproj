@@ -46,7 +46,12 @@
     <Import Project="..\Property.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <CodeAnalysisRuleSet>NativeRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <CodeAnalysisRuleSet>NativeRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -71,9 +76,31 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\013_2DGI\013_main.cpp" />
+    <ClCompile Include="..\..\source\013_2DGI\PM2DDebug.cpp" />
+    <ClCompile Include="..\..\source\013_2DGI\PM2DLight.cpp" />
+    <ClCompile Include="..\..\source\013_2DGI\PM2DRenderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\external\imgui.vcxproj">
+      <Project>{d7234b59-605e-448a-8e53-d7e19c6cf2b6}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\applib\applib.vcxproj">
+      <Project>{4c880ffd-9ea8-4e57-a6cd-fe406e798948}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\btrlib\btrlib.vcxproj">
+      <Project>{6ab61332-963c-4d53-b5ff-04b3a9689e23}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\include\013_2DGI\PM2D\PM2D.h" />
+    <ClInclude Include="..\..\include\013_2DGI\PM2D\PM2DAppModel.h" />
+    <ClInclude Include="..\..\include\013_2DGI\PM2D\PM2DClear.h" />
+    <ClInclude Include="..\..\include\013_2DGI\PM2D\PM2DDebug.h" />
+    <ClInclude Include="..\..\include\013_2DGI\PM2D\PM2DLight.h" />
+    <ClInclude Include="..\..\include\013_2DGI\PM2D\PM2DRenderer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
