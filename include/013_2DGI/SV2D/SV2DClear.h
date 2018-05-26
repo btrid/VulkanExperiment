@@ -18,7 +18,6 @@ struct SV2DClear
 			cmd.fillBuffer(m_sv2d_context->b_fragment_buffer.getInfo().buffer, m_sv2d_context->b_fragment_buffer.getInfo().offset, m_sv2d_context->b_fragment_buffer.getInfo().range, 0u);
 
 			ivec4 emissive = ivec4{ 0,1,1,0 };
-			static_assert(array_length(emissive) == SV2DContext::_BounceNum, "");
 			cmd.updateBuffer(m_sv2d_context->b_emission_counter.getInfo().buffer, m_sv2d_context->b_emission_counter.getInfo().offset, sizeof(emissive), &emissive);
 		}
 	}

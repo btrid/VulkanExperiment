@@ -13,5 +13,8 @@ SET exe=glslangValidator.exe
 %exe% %include% %option% -o ../../binary/LightCulling.comp.spv LightCulling.comp
 
 %exe% %include% %option% -o ../../binary/PMPointLight.comp.spv PMPointLight.comp
+%exe% %include% %option% -o ../../binary/MakeShadowVolume.comp.spv MakeShadowVolume.comp
 
 
+%exe% %include% %option% -o ../../binary/DrawShadowVolume.vert.spv DrawShadowVolume.vert
+%exe% %include% %option% -o ../../binary/DrawShadowVolume.frag.spv DrawShadowVolume.frag

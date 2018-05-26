@@ -15,42 +15,26 @@ struct SV2DRenderer
 	enum Shader
 	{
 		ShaderLightCulling,
-//		ShaderPhotonMapping,
-//		ShaderPhotonCollect,
-//		ShaderRenderingVS,
-//		ShaderRenderingFS,
-//		ShaderDebugRenderFragmentMap,
+		ShaderMakeShadowVolume,
+		ShaderDrawShadowVolumeVS,
+		ShaderDrawShadowVolumeFS,
 		ShaderNum,
 	};
 	enum PipelineLayout
 	{
 		PipelineLayoutLightCulling,
-// 		PipelineLayoutPhotonMapping,
-// 		PipelineLayoutPhotonCollect,
-// 		PipelineLayoutRendering,
-// 		PipelineLayoutDebugRenderFragmentMap,
+		PipelineLayoutMakeShadowVolume,
+		PipelineLayoutDrawShadowVolume,
 		PipelineLayoutNum,
 	};
 	enum Pipeline
 	{
 		PipelineLightCulling,
-// 		PipelinePhotonMapping,
-// 		PipelinePhotonCollect,
-// 		PipelineRendering,
-// 		PipelineDebugRenderFragmentMap,
+		PipelineMakeShadowVolume,
+		PipelineDrawShadowVolume,
 		PipelineNum,
 	};
 
-	struct TextureResource
-	{
-		vk::ImageCreateInfo m_image_info;
-		vk::UniqueImage m_image;
-		vk::UniqueImageView m_image_view;
-		vk::UniqueDeviceMemory m_memory;
-		vk::UniqueSampler m_sampler;
-
-		vk::ImageSubresourceRange m_subresource_range;
-	};
 
 	SV2DRenderer(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target, const std::shared_ptr<SV2DContext>& pm2d_context);
 	void execute(vk::CommandBuffer cmd);

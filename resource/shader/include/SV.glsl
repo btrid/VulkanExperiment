@@ -6,6 +6,8 @@
 #extension GL_ARB_gpu_shader_int64 : require
 #extension GL_NV_shader_atomic_int64 : require
 
+#include "btrlib/Common.glsl"
+
 struct SVInfo
 {
 	mat4 m_camera_PV;
@@ -14,12 +16,7 @@ struct SVInfo
 	uvec2 m_emission_tile_num;
 	uvec2 _p;
 	vec4 m_position;
-	ivec4 m_fragment_hierarchy_offset[2];
-	ivec4 m_fragment_map_hierarchy_offset[2];
-	ivec4 m_emission_buffer_size;
-	ivec4 m_emission_buffer_offset;
 	int m_emission_tile_linklist_max;
-	int m_sdf_work_num;
 };
 struct Fragment
 {
@@ -38,18 +35,6 @@ struct Emission
 	int _p2;
 	int _p3;
 //	int type;
-};
-
-struct PM2DLightData
-{
-	vec2 pos;
-	float dir; // atan
-	float angle;
-	vec4 emission;
-	int level;
-	int _p1;
-	int _p2;
-	int _p3;
 };
 
 struct LinkList
@@ -79,6 +64,12 @@ layout(std430, set=USE_SV, binding=23) restrict buffer EmissiveTileLinkHeadBuffe
 };
 layout(std430, set=USE_SV, binding=24) restrict buffer EmissiveTileLinkListBuffer {
 	LinkList b_emission_tile_linklist[];
+};
+layout(std430, set=USE_SV, binding=30) restrict buffer ShadowVolumeBuffer {
+	vec2 b_shadow_volume[];
+};
+layout(std430, set=USE_SV, binding=31) restrict buffer ShadowVolumeCounter {
+	DrawIndirectCommand b_shadow_volume_counter;
 };
 
 #define getFragmentHierarchyOffset(_i) (u_pm_info.m_fragment_hierarchy_offset[(_i)/4][(_i)%4])

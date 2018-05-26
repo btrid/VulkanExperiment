@@ -19,16 +19,10 @@ struct SV2DLightData
 };
 struct SV2DContext
 {
-	enum
-	{
-		_BounceNum = 4, //!< ƒŒƒC”½ŽË‰ñ”
-		_Hierarchy_Num = 8,
-	};
+
 	int32_t RenderWidth;
 	int32_t RenderHeight;
 	int FragmentBufferSize;
-	int BounceNum = 4;
-	int Hierarchy_Num = 8;
 	struct Info
 	{
 		mat4 m_camera_PV;
@@ -69,7 +63,7 @@ struct SV2DContext
 			m_sv2d_info.m_resolution = uvec2(RenderWidth, RenderHeight);
 			m_sv2d_info.m_emission_tile_size = uvec2(32, 32);
 			m_sv2d_info.m_emission_tile_num = m_sv2d_info.m_resolution / m_sv2d_info.m_emission_tile_size;
-			m_sv2d_info.m_camera_PV = glm::ortho(RenderWidth*-0.5f, RenderWidth*0.5f, RenderHeight*-0.5f, RenderHeight*0.5f, 0.f, 2000.f) * glm::lookAt(vec3(RenderWidth*0.5f, -1000.f, RenderHeight*0.5f)+m_sv2d_info.m_position.xyz(), vec3(RenderWidth*0.5f, 0.f, RenderHeight*0.5f) + m_sv2d_info.m_position.xyz(), vec3(0.f, 0.f, 1.f));
+			m_sv2d_info.m_camera_PV = glm::ortho(RenderWidth*-0.5f, RenderWidth*0.5f, RenderHeight*-0.5f, RenderHeight*0.5f, 0.f, 2000.f) * glm::lookAt(vec3(RenderWidth*0.5f, -100.f, RenderHeight*0.5f)+m_sv2d_info.m_position.xyz(), vec3(RenderWidth*0.5f, 0.f, RenderHeight*0.5f) + m_sv2d_info.m_position.xyz(), vec3(0.f, 0.f, 1.f));
 
 			m_sv2d_info.m_emission_tile_linklist_max = 8192 * 1024;
 			cmd.updateBuffer<Info>(u_fragment_info.getInfo().buffer, u_fragment_info.getInfo().offset, m_sv2d_info);
@@ -81,7 +75,7 @@ struct SV2DContext
 		}
 		{
 			btr::BufferMemoryDescriptorEx<ivec4> desc;
-			desc.element_num = BounceNum;
+			desc.element_num = 1;
 			b_emission_counter = context->m_storage_memory.allocateMemory(desc);
 		}
 		{
@@ -102,7 +96,10 @@ struct SV2DContext
 			desc.element_num = m_sv2d_info.m_emission_tile_linklist_max;
 			b_emission_tile_linklist = context->m_storage_memory.allocateMemory(desc);
 		}
-
+		{
+			b_shadow_volume = context->m_vertex_memory.allocateMemory<vec2>({ 3 * 1024 * 1024,{} });
+			b_shadow_volume_counter = context->m_vertex_memory.allocateMemory<vk::DrawIndirectCommand>({ 1, {} });
+		}
 		{
 			{
 				auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
@@ -142,6 +139,16 @@ struct SV2DContext
 					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 					.setDescriptorCount(1)
 					.setBinding(24),
+					vk::DescriptorSetLayoutBinding()
+					.setStageFlags(stage)
+					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+					.setDescriptorCount(1)
+					.setBinding(30),
+					vk::DescriptorSetLayoutBinding()
+					.setStageFlags(stage)
+					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+					.setDescriptorCount(1)
+					.setBinding(31),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -172,6 +179,10 @@ struct SV2DContext
 					b_emission_tile_linkhead.getInfo(),
 					b_emission_tile_linklist.getInfo(),
 				};
+				vk::DescriptorBufferInfo shadow_storages[] = {
+					b_shadow_volume.getInfo(),
+					b_shadow_volume_counter.getInfo(),
+				};
 
 				vk::WriteDescriptorSet write[] = {
 					vk::WriteDescriptorSet()
@@ -192,6 +203,12 @@ struct SV2DContext
 					.setPBufferInfo(emission_storages)
 					.setDstBinding(20)
 					.setDstSet(m_descriptor_set.get()),
+					vk::WriteDescriptorSet()
+					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+					.setDescriptorCount(array_length(shadow_storages))
+					.setPBufferInfo(shadow_storages)
+					.setDstBinding(30)
+					.setDstSet(m_descriptor_set.get()),
 				};
 				context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
 			}
@@ -208,6 +225,9 @@ struct SV2DContext
 	btr::BufferMemoryEx<int32_t> b_emission_tile_linklist_counter;
 	btr::BufferMemoryEx<int32_t> b_emission_tile_linkhead;
 	btr::BufferMemoryEx<LinkList> b_emission_tile_linklist;
+
+	btr::BufferMemoryEx<vec2> b_shadow_volume;
+	btr::BufferMemoryEx<vk::DrawIndirectCommand> b_shadow_volume_counter;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
