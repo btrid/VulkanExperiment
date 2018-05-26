@@ -21,17 +21,17 @@ void main()
 	for(int i = 0; i < b_emission_counter.x; i++)
 	{
 		vec2 pos = b_emission[i].pos;
+		vec2 dir = normalize(fpos - pos);
 		vec2 tan_a;
 		vec2 tan_b;
 		{
-			vec2 dir = normalize(fpos - pos);
-			float angle = cross(vec3(fpos + vec2(-0.5, -0.5), 0), vec3(pos, 0)).z;
+			float angle = cross(vec3(fpos + vec2(-0.5, -0.5), 0), vec3(dir, 0)).z;
 			float a = angle;
 			float b = angle;
 			tan_a = fpos + vec2(-0.5, -0.5);
 			tan_b = fpos + vec2(-0.5, -0.5);
 
-			angle = cross(vec3(fpos + vec2(0.5, -0.5), 0), vec3(pos, 0)).z;
+			angle = cross(vec3(fpos + vec2(0.5, -0.5) - pos, 0), vec3(dir, 0)).z;
 			if(a <= angle){
 				a = angle;
 				tan_a = fpos + vec2(0.5, -0.5);
@@ -40,7 +40,7 @@ void main()
 				b = angle;
 				tan_b = fpos + vec2(0.5, -0.5);				
 			}
-			angle = cross(vec3(fpos + vec2(-0.5, 0.5), 0), vec3(pos, 0)).z;
+			angle = cross(vec3(fpos + vec2(-0.5, 0.5) - pos, 0), vec3(dir, 0)).z;
 			if(a <= angle){
 				a = angle;
 				tan_a = fpos + vec2(-0.5, 0.5);
@@ -50,7 +50,7 @@ void main()
 				tan_b = fpos + vec2(-0.5, 0.5);				
 			}
 
-			angle = cross(vec3(fpos + vec2(0.5, 0.5), 0), vec3(pos, 0)).z;
+			angle = cross(vec3(fpos + vec2(0.5, 0.5) - pos, 0), vec3(dir, 0)).z;
 			if(a <= angle){
 				a = angle;
 				tan_a = fpos + vec2(0.5, 0.5);
@@ -61,22 +61,34 @@ void main()
 			}
 		}
 		{
-			vec2 dir_a = normalize(tan_a - pos) * 1000.;
-			vec2 dir_b = normalize(tan_b - pos) * 1000.;
+			vec2 dir_a = normalize(tan_a - pos) * 100.;
+			vec2 dir_b = normalize(tan_b - pos) * 100.;
+//			tan_a = fpos + vec2(0.5, 0.5);
+//			tan_b = fpos - vec2(0.5,0.5);
+//			vec2 dir_a = vec2(1.) * 100.;
+//			vec2 dir_b = vec2(-1.) * 100.;
 			uint sv_index = atomicAdd(b_shadow_volume_counter.vertexCount, 6);
-			b_shadow_volume[sv_index+0] = tan_a;
-			b_shadow_volume[sv_index+1] = tan_a+dir_a;
-			b_shadow_volume[sv_index+2] = tan_b;
-			b_shadow_volume[sv_index+3] = tan_a;
-			b_shadow_volume[sv_index+4] = tan_b+tan_b;
-			b_shadow_volume[sv_index+5] = tan_b;
-//			b_shadow_volume[0] = vec2(0);
-//			b_shadow_volume[1] = vec2(100);
-//			b_shadow_volume[2] = vec2(200);
-//			b_shadow_volume[3] = vec2(300);
-//			b_shadow_volume[4] = vec2(400);
-//			b_shadow_volume[5] = vec2(500);
-		}
+			b_shadow_volume[sv_index++] = tan_a;
+			b_shadow_volume[sv_index++] = tan_a+dir_a;
+			b_shadow_volume[sv_index++] = tan_b;
+			b_shadow_volume[sv_index++] = tan_a;
+			b_shadow_volume[sv_index++] = tan_b+tan_b;
+			b_shadow_volume[sv_index++] = tan_b;
+
+/*			b_shadow_volume[sv_index++] = vec2((sv_index%2)*500, sv_index/2*100);
+			b_shadow_volume[sv_index++] = vec2((sv_index%2)*500, sv_index/2*100);
+			b_shadow_volume[sv_index++] = vec2((sv_index%2)*500, sv_index/2*100);
+			b_shadow_volume[sv_index++] = vec2((sv_index%2)*500, sv_index/2*100);
+			b_shadow_volume[sv_index++] = vec2((sv_index%2)*500, sv_index/2*100);
+			b_shadow_volume[sv_index++] = vec2((sv_index%2)*500, sv_index/2*100);
+*//*
+			b_shadow_volume[0] = vec2(100);
+			b_shadow_volume[1] = vec2(200);
+			b_shadow_volume[2] = vec2(0);
+			b_shadow_volume[3] = vec2(30);
+			b_shadow_volume[4] = vec2(400);
+			b_shadow_volume[5] = vec2(500);
+*/		}
 	}
 
 

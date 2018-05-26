@@ -32,9 +32,10 @@ void main()
 	{
 		// list登録
 		int list_index = atomicAdd(b_emission_counter.x, 1);
-		b_emission[p_index].emission = constant.emission;
-		b_emission[p_index].dir = constant.dir;
-		b_emission[p_index].angle = constant.angle;
-		b_emission[p_index].level = constant.level;
+		b_emission[list_index].pos = constant.pos;
+		b_emission[list_index].emission = constant.emission;
+		b_emission[list_index].dir = constant.dir;
+		b_emission[list_index].angle = constant.angle;
+		b_emission[list_index].level = constant.level;
 	}
 }

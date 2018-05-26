@@ -20,11 +20,10 @@ out gl_PerVertex{
 void main()
 {
 	vec4 pos = vec4(in_position.x, 0., in_position.y, 1.0);
-//	vec4 pos = vec4(gl_VertexIndex%2*1000, 0., gl_VertexIndex/2*10, 1.0);
+//	vec4 pos = vec4(in_position.xy, 0., 1.0);
+//	vec4 pos = vec4(gl_VertexIndex%2*10, 0., gl_VertexIndex/2*1000, 1.0);
 	pos = u_sv_info.m_camera_PV * pos;
-	gl_Position = vec4(pos.xyz, 1.0);
-
-//	while(true);
-//	out_modeldata.texcoord = inTexcoord.xy;
+	gl_Position = pos;
+//	gl_Position = vec4(pos.xyz, 1.0);
 
 }

@@ -176,7 +176,10 @@ SV2DRenderer::SV2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 
 		std::vector<vk::PipelineColorBlendAttachmentState> blend_state = {
 			vk::PipelineColorBlendAttachmentState()
-			.setBlendEnable(VK_TRUE)
+			.setBlendEnable(VK_FALSE)
+			.setSrcColorBlendFactor(vk::BlendFactor::eOne)
+			.setDstColorBlendFactor(vk::BlendFactor::eDstAlpha)
+			.setColorBlendOp(vk::BlendOp::eAdd)
 			.setColorWriteMask(vk::ColorComponentFlagBits::eR
 				| vk::ColorComponentFlagBits::eG
 				| vk::ColorComponentFlagBits::eB
@@ -238,6 +241,7 @@ void SV2DRenderer::execute(vk::CommandBuffer cmd)
 			m_sv2d_context->b_emission_tile_linkhead.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eShaderWrite),
 			m_sv2d_context->b_emission_tile_linklist.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eShaderWrite),
 			m_sv2d_context->b_shadow_volume_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+			m_sv2d_context->b_shadow_volume.makeMemoryBarrier(vk::AccessFlagBits::eVertexAttributeRead, vk::AccessFlagBits::eShaderRead),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eComputeShader, {},
 			0, nullptr, array_length(to_write), to_write, 0, nullptr);
@@ -249,11 +253,21 @@ void SV2DRenderer::execute(vk::CommandBuffer cmd)
 
 	// draw shadow volume
 	{
-		vk::BufferMemoryBarrier to_read[] = {
-			m_sv2d_context->b_shadow_volume_counter.makeMemoryBarrier(vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eIndirectCommandRead),
-		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, {},
-			0, nullptr, array_length(to_read), to_read, 0, nullptr);
+		{
+			vk::BufferMemoryBarrier to_read[] = {
+				m_sv2d_context->b_shadow_volume_counter.makeMemoryBarrier(vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eIndirectCommandRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, {},
+				0, nullptr, array_length(to_read), to_read, 0, nullptr);
+		}
+		{
+			vk::BufferMemoryBarrier to_read[] = {
+				m_sv2d_context->b_shadow_volume.makeMemoryBarrier(vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eVertexAttributeRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eVertexInput, {},
+				0, nullptr, array_length(to_read), to_read, 0, nullptr);
+
+		}
 
 
 		vk::RenderPassBeginInfo render_begin_info;
@@ -266,7 +280,8 @@ void SV2DRenderer::execute(vk::CommandBuffer cmd)
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PipelineDrawShadowVolume].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayoutDrawShadowVolume].get(), 0, m_sv2d_context->m_descriptor_set.get(), {});
 		cmd.bindVertexBuffers(0, { m_sv2d_context->b_shadow_volume.getInfo().buffer }, { m_sv2d_context->b_shadow_volume.getInfo().offset });
-		cmd.drawIndirect(m_sv2d_context->b_shadow_volume_counter.getInfo().buffer, m_sv2d_context->b_shadow_volume_counter.getInfo().offset, 1,sizeof(vk::DrawIndirectCommand));
+		cmd.drawIndirect(m_sv2d_context->b_shadow_volume_counter.getInfo().buffer, m_sv2d_context->b_shadow_volume_counter.getInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
+//		cmd.draw(3, 1, 0, 0);
 		cmd.endRenderPass();
 	}
 
