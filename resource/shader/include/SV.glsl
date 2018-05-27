@@ -65,7 +65,7 @@ layout(std430, set=USE_SV, binding=23) restrict buffer EmissiveTileLinkHeadBuffe
 layout(std430, set=USE_SV, binding=24) restrict buffer EmissiveTileLinkListBuffer {
 	LinkList b_emission_tile_linklist[];
 };
-layout(std430, set=USE_SV, binding=30) restrict buffer ShadowVolumeBuffer {
+layout(/*std430,*/ set=USE_SV, binding=30) restrict buffer ShadowVolumeBuffer {
 	vec2 b_shadow_volume[];
 };
 layout(std430, set=USE_SV, binding=31) restrict buffer ShadowVolumeCounter {
