@@ -80,8 +80,7 @@ layout(std430, set=USE_SV, binding=31) restrict buffer ShadowVolumeCounter {
 #endif
 
 #ifdef USE_SV_RENDER
-layout (set=USE_SV_RENDER, binding=0, rgba16f) uniform image2D t_color[4];
-layout (set=USE_SV_RENDER, binding=1) uniform sampler2D s_color[4];
+layout (set=USE_SV_RENDER, binding=0) uniform sampler2D s_color[1];
 #endif //_PM_RENDER_
 
 #ifdef USE_SV_LIGHT

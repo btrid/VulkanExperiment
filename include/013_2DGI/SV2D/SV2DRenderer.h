@@ -11,6 +11,16 @@ namespace sv2d
 
 struct SV2DRenderer
 {
+	struct TextureResource
+	{
+		vk::ImageCreateInfo m_image_info;
+		vk::UniqueImage m_image;
+		vk::UniqueImageView m_image_view;
+		vk::UniqueDeviceMemory m_memory;
+		vk::UniqueSampler m_sampler;
+
+		vk::ImageSubresourceRange m_subresource_range;
+	};
 
 	enum Shader
 	{
@@ -18,6 +28,8 @@ struct SV2DRenderer
 		ShaderMakeShadowVolume,
 		ShaderDrawShadowVolumeVS,
 		ShaderDrawShadowVolumeFS,
+		ShaderBlitShadowVolumeVS,
+		ShaderBlitShadowVolumeFS,
 		ShaderNum,
 	};
 	enum PipelineLayout
@@ -25,6 +37,7 @@ struct SV2DRenderer
 		PipelineLayoutLightCulling,
 		PipelineLayoutMakeShadowVolume,
 		PipelineLayoutDrawShadowVolume,
+		PipelineLayoutBlitShadowVolume,
 		PipelineLayoutNum,
 	};
 	enum Pipeline
@@ -32,6 +45,7 @@ struct SV2DRenderer
 		PipelineLightCulling,
 		PipelineMakeShadowVolume,
 		PipelineDrawShadowVolume,
+		PipelineBlitShadowVolume,
 		PipelineNum,
 	};
 
@@ -43,6 +57,10 @@ struct SV2DRenderer
 	std::shared_ptr<RenderTarget> m_render_target;
 	vk::UniqueRenderPass m_render_pass;
 	vk::UniqueFramebuffer m_framebuffer;
+
+	TextureResource m_output;
+	vk::UniqueRenderPass m_output_render_pass;
+	vk::UniqueFramebuffer m_output_framebuffer;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
