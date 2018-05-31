@@ -7,8 +7,6 @@
 #define USE_SV_RENDER 1
 #include "SV.glsl"
 
-layout(location = 0)in vec2 in_position;
-
 out gl_PerVertex{
 	vec4 gl_Position;
 };

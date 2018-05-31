@@ -61,8 +61,8 @@ void main()
 			}
 		}
 		{
-			vec2 dir_a = normalize(tan_a - pos) * 1000.;
-			vec2 dir_b = normalize(tan_b - pos) * 1000.;
+			vec2 dir_a = normalize(tan_a - pos) * 3000.;
+			vec2 dir_b = normalize(tan_b - pos) * 3000.;
 			uint sv_index = atomicAdd(b_shadow_volume_counter.vertexCount, 6);
 //			uint sv_index = atomicExchange(b_shadow_volume_counter.vertexCount, 6);
 			b_shadow_volume[sv_index++] = tan_a;

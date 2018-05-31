@@ -19,13 +19,13 @@ SV2DRenderer::SV2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			image_info.imageType = vk::ImageType::e2D;
 			image_info.format = vk::Format::eR16G16B16A16Sfloat;
 			image_info.mipLevels = 1;
-			image_info.arrayLayers = 2;
+			image_info.arrayLayers = 1;
 			image_info.samples = vk::SampleCountFlagBits::e1;
 			image_info.tiling = vk::ImageTiling::eOptimal;
 			image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eStorage;
 			image_info.sharingMode = vk::SharingMode::eExclusive;
 			image_info.initialLayout = vk::ImageLayout::eUndefined;
-			image_info.extent = { 512, 512, 1 };
+			image_info.extent = { 1024, 1024, 1 };
 			image_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
 
 			tex.m_image = context->m_device->createImageUnique(image_info);
@@ -338,7 +338,7 @@ SV2DRenderer::SV2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
 				.setLayout(m_pipeline_layout[PipelineLayoutDrawShadowVolume].get())
-				.setRenderPass(m_render_pass.get())
+				.setRenderPass(m_output_render_pass.get())
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
@@ -402,11 +402,11 @@ SV2DRenderer::SV2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			vk::PipelineShaderStageCreateInfo shader_info[] =
 			{
 				vk::PipelineShaderStageCreateInfo()
-				.setModule(m_shader[ShaderDrawShadowVolumeVS].get())
+				.setModule(m_shader[ShaderBlitShadowVolumeVS].get())
 				.setPName("main")
 				.setStage(vk::ShaderStageFlagBits::eVertex),
 				vk::PipelineShaderStageCreateInfo()
-				.setModule(m_shader[ShaderDrawShadowVolumeFS].get())
+				.setModule(m_shader[ShaderBlitShadowVolumeFS].get())
 				.setPName("main")
 				.setStage(vk::ShaderStageFlagBits::eFragment),
 			};
@@ -457,21 +457,6 @@ SV2DRenderer::SV2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			blend_info.setPAttachments(blend_state.data());
 
 			vk::PipelineVertexInputStateCreateInfo vertex_input_info;
-			vk::VertexInputBindingDescription vertex_desc[] =
-			{
-				vk::VertexInputBindingDescription()
-				.setBinding(0)
-				.setStride(8)
-				.setInputRate(vk::VertexInputRate::eVertex)
-			};
-			vk::VertexInputAttributeDescription vertex_attr[] = {
-				vk::VertexInputAttributeDescription().setBinding(0).setLocation(0).setFormat(vk::Format::eR32G32Sfloat).setOffset(0)
-			};
-			vertex_input_info.setVertexBindingDescriptionCount(array_length(vertex_desc));
-			vertex_input_info.setPVertexBindingDescriptions(vertex_desc);
-			vertex_input_info.setVertexAttributeDescriptionCount(array_length(vertex_attr));
-			vertex_input_info.setPVertexAttributeDescriptions(vertex_attr);
-
 			std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =
 			{
 				vk::GraphicsPipelineCreateInfo()
@@ -562,7 +547,6 @@ void SV2DRenderer::execute(vk::CommandBuffer cmd)
 		cmd.drawIndirect(m_sv2d_context->b_shadow_volume_counter.getInfo().buffer, m_sv2d_context->b_shadow_volume_counter.getInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
 		cmd.endRenderPass();
 	}
-
 	// render_targetにコピー
 	{
 		// バリア
