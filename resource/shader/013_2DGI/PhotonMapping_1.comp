@@ -125,42 +125,18 @@ void main()
 				int hierarchy=7;
 				for(; hierarchy>constant.bounce_count; hierarchy--)
 				{
-#if 1
 					ivec2 findex2d = map_index>>hierarchy;
 					int findex = findex2d.x + findex2d.y*(reso.x>>hierarchy);
-					findex += getFragmentHierarchyOffset(hierarchy);
-					uint fragment_map = b_fragment_hierarchy[findex.x];
-#else
-					ivec2 map_index_hie = map_index>>hierarchy;
-					ivec4 fragment_index = ivec4(map_index_hie/8, map_index_hie%8);
-					ivec4 findex = fragment_index.xxxx + fragment_index.yyyy*(reso.zzzz>>hierarchy);
-					findex +=  getFragmentMapHierarchyOffset(hierarchy);
-					uint64_t fragment_map = b_fragment_map[findex.x];
-
-/*					ivec2 cell_origin = map_index_origin<<3;
-					ivec2 map_index_sub = fragment_index.zw;
-					ivec2 imove = abs(cell_origin - map_index_sub);
-
-					ivec2 r_begin = map_index_sub;
-					ivec2 r_end = r_begin+imove;
-					ivec2 area_begin = min(r_begin, r_end);
-					ivec2 area_end = max(r_begin, r_end);
-					ivec2 area = area_end - area_begin+1;
-					area = clamp(area, 1, 8);
-
-					uint64_t x_line_mask = ((0x1ul<<area.x)-1);// << area_begin.x;
-					uint64_t x_mask = x_line_mask | (x_line_mask << 8) | (x_line_mask << 16) | (x_line_mask << 24) | (x_line_mask << 32) | (x_line_mask << 40) | (x_line_mask << 48) | (x_line_mask << 56);
-					uint64_t y_mask = ((0x1ul<<(area.y*8))-1);// << (area_begin.y * 8);
-*/
-//					fragment_map &= x_mask & y_mask;
-#endif					
-					if(fragment_map == 0)
+					int offset = getFragmentHierarchyOffset(hierarchy);
+					if(b_fragment_hierarchy[findex + offset] == 0)
 					{
 						break;
 					}
 				}
 
 				ivec2 findex2d = map_index>>hierarchy;
+				int findex = findex2d.x + findex2d.y*(reso.x>>hierarchy);
+				int offset = getFragmentHierarchyOffset(hierarchy);
 
 				ivec2 cell_origin = map_index_origin<<hierarchy;
 				ivec2 map_index_sub = map_index - (findex2d<<hierarchy);

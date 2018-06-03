@@ -49,7 +49,7 @@
 
 int main()
 {
-//#define use_pm
+#define use_pm
 	using namespace pm2d;
 	using namespace sv2d;
 	btr::setResourceAppPath("../../resource/");
