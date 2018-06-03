@@ -25,7 +25,8 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eStorage;
 			image_info.sharingMode = vk::SharingMode::eExclusive;
 			image_info.initialLayout = vk::ImageLayout::eUndefined;
-			image_info.extent = { render_target->m_resolution.width >> i, render_target->m_resolution.height >> i, 1 };
+//			image_info.extent = { render_target->m_resolution.width >> i, render_target->m_resolution.height >> i, 1 };
+			image_info.extent = { (uint32_t)pm2d_context->RenderWidth >> i, (uint32_t)pm2d_context->RenderHeight >> i, 1 };
 			image_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
 
 			tex.m_image = context->m_device->createImageUnique(image_info);
@@ -486,9 +487,9 @@ void PM2DRenderer::execute(vk::CommandBuffer cmd)
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutPhotonMapping].get(), 1, m_descriptor_set.get(), {});
 
 			cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayoutPhotonMapping].get(), vk::ShaderStageFlagBits::eCompute, 0, constant_param[i]);
-//#define march_64
+#define march_64
 #if defined(march_64)
-//			cmd.dispatch((m_pm2d_context->m_pm2d_info.m_emission_tile_num.x / 8) >> constant_param[i].x, (m_pm2d_context->m_pm2d_info.m_emission_tile_num.y / 8) >> constant_param[i].x, 1);
+			cmd.dispatch((m_pm2d_context->m_pm2d_info.m_emission_tile_num.x / 8) >> constant_param[i].x, (m_pm2d_context->m_pm2d_info.m_emission_tile_num.y / 8) >> constant_param[i].x, 1);
 #else
 			cmd.dispatch(m_pm2d_context->m_pm2d_info.m_emission_tile_num.x >> constant_param[i].x, m_pm2d_context->m_pm2d_info.m_emission_tile_num.y >> constant_param[i].x, 1);
 #endif
@@ -506,9 +507,8 @@ void PM2DRenderer::execute(vk::CommandBuffer cmd)
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutPhotonCollect].get(), 0, m_pm2d_context->getDescriptorSet(), {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutPhotonCollect].get(), 1, m_descriptor_set.get(), {});
 
-//		cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayoutPhotonCollect].get(), vk::ShaderStageFlagBits::eCompute, 0, constant_param[i]);
 #if defined(march_64)
-//		cmd.dispatch(m_pm2d_context->RenderWidth / 8, m_pm2d_context->RenderHeight / 8, 1);
+		cmd.dispatch(m_pm2d_context->RenderWidth / 8, m_pm2d_context->RenderHeight / 8, 1);
 #else
 		cmd.dispatch(m_pm2d_context->RenderWidth / 32, m_pm2d_context->RenderHeight / 32, 1);
 #endif

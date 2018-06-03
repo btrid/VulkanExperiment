@@ -83,10 +83,19 @@ void main()
 	ivec4 fragment_index = ivec4(map_index_hie/8, map_index_hie%8);
 	uint64_t bit_mask = 1ul << gl_LocalInvocationIndex;
 	ivec2 shift = fragment_index.zw;
+//	shift = ivec2(0);
+
+	bool is_block;
+	bool is_occlude;
+	{
+		int findex = fragment_index.x + fragment_index.y*reso.z;
+		is_block = ((b_fragment_map[findex.x]&bit_mask) != 0);
+		is_occlude = ((b_emission_occlusion[findex.x]&bit_mask) != 0);
+	}
 
 	uint64_t reached_map;
+	uint64_t fragment_map;
 	uint64_t occlude_map;
-	bool is_kage;
 	{
 		ivec2 f_idx_offset = ivec2(0);
 		ivec4 findex = fragment_index.xxxx + ivec4(0,0,1,1)+f_idx_offset.xxxx + (fragment_index.yyyy + ivec4(0,1,0,1)+f_idx_offset.yyyy)*(reso.zzzz);
@@ -119,14 +128,16 @@ void main()
 
 		reached_map = r.x|r.y|r.z|r.w;
 		occlude_map = o.x|o.y|o.z|o.w;
+		fragment_map = b_fragment_map[findex.x];
 
 		reached_map = r0;
-//		occlude_map = o0;
+		occlude_map = o0;
 		
 	}
 
 	uint64_t reached_num = popcnt(reached_map);
 	uint64_t occlude_num = popcnt(occlude_map);
+	uint64_t fragment_num = popcnt(fragment_map);
 
 	const ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
 	const ivec2 tile_index_2d = pixel / ivec2(u_pm_info.m_emission_tile_size.xy);
@@ -137,29 +148,25 @@ void main()
 		vec2 start;
 		{
 			int emission_index = b_emission_tile_linklist[i].target;
-//			int eoffset = u_pm_info.m_emission_buffer_offset[constant.bounce_count];
+//			emission_index += u_pm_info.m_emission_buffer_offset[constant.bounce_count];
 			light = b_emission[emission_index];
 //			ivec2 e_index_2d = ivec2(emission_index%bounce_reso.x, emission_index/bounce_reso.x);
-			ivec2 e_index_2d = ivec2(emission_index%u_pm_info.m_resolution.x, emission_index/u_pm_info.m_resolution.x);
+			ivec2 e_index_2d = ivec2(emission_index%reso.x, emission_index/reso.x);
 			start = vec2(e_index_2d);
 		}
 	
 		const float ray_dist = distance(end, start);
 //		vec3 radiance = (light.emission.xyz / (1.+ray_dist/**ray_dist*/));
 		vec3 radiance = vec3(0.7);
-//		radiance *= float(reached_num) / (64.);
-//		radiance = is_kage ? vec3(0.) : radiance;
-//		radiance *= float(reached_num) / (64.1);
-		radiance = ((reached_map&bit_mask)!=0)? radiance : vec3(0.);
+		radiance = ((reached_map&bit_mask)!=0) ? radiance : (radiance*float(reached_num) / 64.01);
+//		radiance = ((reached_map&bit_mask)!=0)? radiance : vec3(0., 0., 1.);
+//		radiance = !is_occlude ? radiance : vec3(1., 0., 0.);
 
 		illuminance += radiance;
-		illuminance = ray_dist <= 5. ? vec3(1., 1., 0.) : illuminance;
+		illuminance = ray_dist <= 5. ? vec3(1., 1., 1.) : illuminance;
 
 	}
-	int findex = fragment_index.x + fragment_index.y*reso.z;
-	uint64_t b = b_fragment_map[findex.x];
-//	uint64_t bit_mask = 1ul << gl_LocalInvocationIndex;
-	illuminance.xyz = ((b&bit_mask) == 0) ? illuminance.xyz : vec3(0., 0., 1.);
+	illuminance.xyz = is_block ? vec3(0.) : illuminance.xyz;
 
 
 	imageStore(t_color[0], pixel, vec4(illuminance.xyz, 1.));

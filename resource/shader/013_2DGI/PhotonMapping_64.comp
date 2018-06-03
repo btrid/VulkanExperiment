@@ -234,6 +234,16 @@ void main()
 					b <<= ls;
 
 					fragment_map = b.x|b.y|b.z|b.w;
+
+					uint64_t dead = is_alive & b.x;
+					dead != 0 ? atomicOr(b_emission_occlusion[findex.x], dead) : 0;
+					dead = is_alive & b.y;
+					dead != 0 ? atomicOr(b_emission_occlusion[findex.y], dead) : 0;
+					dead = is_alive & b.z;
+					dead != 0 ? atomicOr(b_emission_occlusion[findex.z], dead) : 0;
+					dead = is_alive & b.w;
+					dead != 0 ? atomicOr(b_emission_occlusion[findex.w], dead) : 0;
+
 #endif
 				}
 				is_alive &= ~fragment_map;
