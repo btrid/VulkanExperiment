@@ -49,7 +49,8 @@
 
 int main()
 {
-//	using namespace pm2d;
+//#define use_pm
+	using namespace pm2d;
 	using namespace sv2d;
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();
@@ -84,11 +85,20 @@ int main()
 	PresentPipeline present_pipeline(context, app.m_window->getRenderTarget(), app.m_window->getSwapchainPtr());
 
 
-	std::shared_ptr<SV2DContext> sv2d_context = std::make_shared<SV2DContext>(context);
-	SV2DRenderer pm_renderer(context, app.m_window->getRenderTarget(), sv2d_context);
-	SV2DClear pm_clear(context, sv2d_context);
-	SV2DDebug pm_debug_make_fragment_and_light(context, sv2d_context);
-//	SV2DAppModel pm_appmodel(context, sv2d_context);
+#if defined(use_pm)
+	std::shared_ptr<PM2DContext> gi2d_context = std::make_shared<PM2DContext>(context);
+	PM2DRenderer pm_renderer(context, app.m_window->getRenderTarget(), gi2d_context);
+	PM2DMakeHierarchy pm_make_hierarchy(context, gi2d_context);
+	PM2DClear pm_clear(context, gi2d_context);
+	PM2DDebug pm_debug_make_fragment_and_light(context, gi2d_context);
+#else
+	std::shared_ptr<SV2DContext> gi2d_context = std::make_shared<SV2DContext>(context);
+	SV2DRenderer pm_renderer(context, app.m_window->getRenderTarget(), gi2d_context);
+	SV2DClear pm_clear(context, gi2d_context);
+	SV2DDebug pm_debug_make_fragment_and_light(context, gi2d_context);
+#endif
+
+	//	SV2DAppModel pm_appmodel(context, sv2d_context);
 
 //	auto anime_cmd = animater.createCmd(player_model);
 //	auto pm_make_cmd = pm_appmodel.createCmd(player_model);
@@ -162,7 +172,9 @@ int main()
 				}
 				{
 					auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
-//					pm_make_hierarchy.execute(cmd);
+#if defined(use_pm)
+					pm_make_hierarchy.execute(cmd);
+#endif
 					pm_renderer.execute(cmd);
 					cmd.end();
 					cmds[cmd_pm_render] = cmd;

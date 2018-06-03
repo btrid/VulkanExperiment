@@ -5,7 +5,7 @@
 #extension GL_ARB_shader_draw_parameters : require
 #extension GL_ARB_gpu_shader_int64 : require
 #extension GL_NV_shader_atomic_int64 : require
-
+#extension GL_ARB_shader_stencil_export : require
 #include "btrlib/Common.glsl"
 
 struct SVInfo

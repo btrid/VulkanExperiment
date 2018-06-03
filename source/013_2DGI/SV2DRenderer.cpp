@@ -14,6 +14,64 @@ SV2DRenderer::SV2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 
 	{
 		{
+			auto& tex = m_light_map;
+			vk::ImageCreateInfo image_info;
+			image_info.imageType = vk::ImageType::e2D;
+			image_info.format = vk::Format::eS8Uint;
+			image_info.mipLevels = 1;
+			image_info.arrayLayers = LightNum;
+			image_info.samples = vk::SampleCountFlagBits::e1;
+			image_info.tiling = vk::ImageTiling::eOptimal;
+			image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eStorage;
+			image_info.sharingMode = vk::SharingMode::eExclusive;
+			image_info.initialLayout = vk::ImageLayout::eUndefined;
+			image_info.extent = { 1024, 1024, 1 };
+			image_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
+
+			tex.m_image = context->m_device->createImageUnique(image_info);
+			tex.m_image_info = image_info;
+
+			vk::MemoryRequirements memory_request = context->m_device->getImageMemoryRequirements(tex.m_image.get());
+			vk::MemoryAllocateInfo memory_alloc_info;
+			memory_alloc_info.allocationSize = memory_request.size;
+			memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(context->m_gpu.getHandle(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+			tex.m_memory = context->m_device->allocateMemoryUnique(memory_alloc_info);
+			context->m_device->bindImageMemory(tex.m_image.get(), tex.m_memory.get(), 0);
+
+			vk::ImageSubresourceRange subresourceRange;
+			subresourceRange.aspectMask = vk::ImageAspectFlagBits::eStencil;
+			subresourceRange.baseArrayLayer = 0;
+			subresourceRange.baseMipLevel = 0;
+			subresourceRange.layerCount = LightNum;
+			subresourceRange.levelCount = 1;
+			tex.m_subresource_range = subresourceRange;
+
+			vk::ImageViewCreateInfo view_info;
+			view_info.viewType = vk::ImageViewType::e2D;
+			view_info.components.r = vk::ComponentSwizzle::eR;
+			view_info.components.g = vk::ComponentSwizzle::eG;
+			view_info.components.b = vk::ComponentSwizzle::eB;
+			view_info.components.a = vk::ComponentSwizzle::eA;
+			view_info.flags = vk::ImageViewCreateFlags();
+			view_info.format = vk::Format::eS8Uint;
+			view_info.image = tex.m_image.get();
+			view_info.subresourceRange = subresourceRange;
+			tex.m_image_view = context->m_device->createImageViewUnique(view_info);
+
+			vk::ImageMemoryBarrier to_init[1];
+			{
+				to_init[0].image = m_light_map.m_image.get();
+				to_init[0].subresourceRange = m_light_map.m_subresource_range;
+				to_init[0].oldLayout = vk::ImageLayout::eUndefined;
+				to_init[0].newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+				to_init[0].dstAccessMask = vk::AccessFlagBits::eShaderRead;
+			}
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(),
+				0, nullptr, 0, nullptr, array_length(to_init), to_init);
+		}
+
+		{
 			auto& tex = m_output;
 			vk::ImageCreateInfo image_info;
 			image_info.imageType = vk::ImageType::e2D;
@@ -58,10 +116,6 @@ SV2DRenderer::SV2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			view_info.image = tex.m_image.get();
 			view_info.subresourceRange = subresourceRange;
 			tex.m_image_view = context->m_device->createImageViewUnique(view_info);
-
-		}
-
-		{
 			vk::ImageMemoryBarrier to_init[1];
 			{
 				to_init[0].image = m_output.m_image.get();
@@ -72,6 +126,7 @@ SV2DRenderer::SV2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			}
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(),
 				0, nullptr, 0, nullptr, array_length(to_init), to_init);
+
 		}
 
 		{
@@ -100,23 +155,23 @@ SV2DRenderer::SV2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 
 		}
 		{
-			vk::DescriptorImageInfo samplers[] = {
-				vk::DescriptorImageInfo()
-				.setImageView(m_output.m_image_view.get())
-				.setSampler(sGraphicsResource::Order().getSampler(sGraphicsResource::BASIC_SAMPLER_LINER))
-				.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal),
-			};
-
-			vk::WriteDescriptorSet write[] = {
-				vk::WriteDescriptorSet()
-				.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-				.setDescriptorCount(array_length(samplers))
-				.setPImageInfo(samplers)
-				.setDstBinding(0)
-				.setDstArrayElement(0)
-				.setDstSet(m_descriptor_set.get()),
-			};
-			context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
+ 			vk::DescriptorImageInfo samplers[] = {
+ 				vk::DescriptorImageInfo()
+ 				.setImageView(m_output.m_image_view.get())
+ 				.setSampler(sGraphicsResource::Order().getSampler(sGraphicsResource::BASIC_SAMPLER_LINER))
+ 				.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal),
+ 			};
+ 
+ 			vk::WriteDescriptorSet write[] = {
+ 				vk::WriteDescriptorSet()
+ 				.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+ 				.setDescriptorCount(array_length(samplers))
+ 				.setPImageInfo(samplers)
+ 				.setDstBinding(0)
+ 				.setDstArrayElement(0)
+ 				.setDstSet(m_descriptor_set.get()),
+ 			};
+ 			context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
 		}
 
 	}
@@ -127,6 +182,8 @@ SV2DRenderer::SV2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 		{
 			"LightCulling.comp.spv",
 			"MakeShadowVolume.comp.spv",
+			"MakeLightMap.vert.spv",
+			"MakeLightMap.frag.spv",
 			"DrawShadowVolume.vert.spv",
 			"DrawShadowVolume.frag.spv",
 			"BlitShadowVolume.vert.spv",
@@ -150,6 +207,7 @@ SV2DRenderer::SV2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 		pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 		pipeline_layout_info.setPSetLayouts(layouts);
 		m_pipeline_layout[PipelineLayoutMakeShadowVolume] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+		m_pipeline_layout[PipelineLayoutMakeLightmap] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		m_pipeline_layout[PipelineLayoutDrawShadowVolume] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 
 
@@ -160,7 +218,6 @@ SV2DRenderer::SV2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			pipeline_layout_info.setPushConstantRangeCount(array_length(constants));
 			pipeline_layout_info.setPPushConstantRanges(constants);
 			m_pipeline_layout[PipelineLayoutLightCulling] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
-//			m_pipeline_layout[PipelineLayoutPhotonMapping] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
 		vk::PushConstantRange constants[] = {
@@ -204,20 +261,165 @@ SV2DRenderer::SV2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 	}
 
 	{
-		// レンダーパス
+		// PipelineMakeLightmap
 		{
+			// sub pass
+			vk::AttachmentReference stencil_ref;
+			stencil_ref.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+			stencil_ref.setAttachment(0);
+
+			vk::SubpassDescription subpass;
+			subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+			subpass.setInputAttachmentCount(0);
+			subpass.setPInputAttachments(nullptr);
+//			subpass.setColorAttachmentCount(array_length(color_ref));
+//			subpass.setPColorAttachments(color_ref);
+			subpass.setPDepthStencilAttachment(&stencil_ref);
+
+			vk::AttachmentDescription attach_description[] =
+			{
+				// stencil
+				vk::AttachmentDescription()
+				.setFormat(vk::Format::eS8Uint)
+				.setSamples(vk::SampleCountFlagBits::e1)
+				.setLoadOp(vk::AttachmentLoadOp::eDontCare)
+				.setStoreOp(vk::AttachmentStoreOp::eStore)
+				.setInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
+				.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
+			};
+			vk::RenderPassCreateInfo renderpass_info;
+			renderpass_info.setAttachmentCount(array_length(attach_description));
+			renderpass_info.setPAttachments(attach_description);
+			renderpass_info.setSubpassCount(1);
+			renderpass_info.setPSubpasses(&subpass);
+
+			m_lightmap_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
+		}
+		{
+			vk::ImageView view[] = {
+				m_light_map.m_image_view.get(),
+			};
+			vk::FramebufferCreateInfo framebuffer_info;
+			framebuffer_info.setRenderPass(m_lightmap_render_pass.get());
+			framebuffer_info.setAttachmentCount(array_length(view));
+			framebuffer_info.setPAttachments(view);
+			framebuffer_info.setWidth(m_light_map.m_image_info.extent.width);
+			framebuffer_info.setHeight(m_light_map.m_image_info.extent.height);
+			framebuffer_info.setLayers(LightNum);
+
+			m_lightmap_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
+		}
+
+		{
+			vk::PipelineShaderStageCreateInfo shader_info[] =
+			{
+				vk::PipelineShaderStageCreateInfo()
+				.setModule(m_shader[ShaderMakeLightmapVS].get())
+				.setPName("main")
+				.setStage(vk::ShaderStageFlagBits::eVertex),
+				vk::PipelineShaderStageCreateInfo()
+				.setModule(m_shader[ShaderMakeLightmapFS].get())
+				.setPName("main")
+				.setStage(vk::ShaderStageFlagBits::eFragment),
+			};
+
+			// assembly
+			vk::PipelineInputAssemblyStateCreateInfo assembly_info;
+			assembly_info.setPrimitiveRestartEnable(VK_FALSE);
+			assembly_info.setTopology(vk::PrimitiveTopology::eTriangleList);
+
+			// viewport
+			vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)m_light_map.m_image_info.extent.width, (float)m_light_map.m_image_info.extent.height, 0.f, 1.f);
+			vk::Rect2D scissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(m_light_map.m_image_info.extent.width, m_light_map.m_image_info.extent.height));
+			vk::PipelineViewportStateCreateInfo viewportInfo;
+			viewportInfo.setViewportCount(1);
+			viewportInfo.setPViewports(&viewport);
+			viewportInfo.setScissorCount(1);
+			viewportInfo.setPScissors(&scissor);
+
+			vk::PipelineRasterizationStateCreateInfo rasterization_info;
+			rasterization_info.setPolygonMode(vk::PolygonMode::eFill);
+			rasterization_info.setFrontFace(vk::FrontFace::eCounterClockwise);
+			rasterization_info.setCullMode(vk::CullModeFlagBits::eNone);
+			rasterization_info.setLineWidth(1.f);
+
+			vk::PipelineMultisampleStateCreateInfo sample_info;
+			sample_info.setRasterizationSamples(vk::SampleCountFlagBits::e1);
+
+			vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
+			depth_stencil_info.setDepthTestEnable(VK_TRUE);
+			depth_stencil_info.setDepthWriteEnable(VK_TRUE);
+//			depth_stencil_info.setDepthCompareOp(vk::CompareOp::eGreaterOrEqual);
+//			depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
+			depth_stencil_info.setStencilTestEnable(VK_TRUE);
+			depth_stencil_info.front.setFailOp(vk::StencilOp::eKeep);
+			depth_stencil_info.front.setDepthFailOp(vk::StencilOp::eKeep);
+			depth_stencil_info.front.setPassOp(vk::StencilOp::eReplace);
+			depth_stencil_info.front.setCompareOp(vk::CompareOp::eAlways);
+			depth_stencil_info.front.setWriteMask(0xffu);
+			depth_stencil_info.front.setCompareMask(0xffu);
+			depth_stencil_info.front.setReference(0x0u);
+			depth_stencil_info.back = depth_stencil_info.front;
+
+			vk::PipelineColorBlendAttachmentState blend_state[] = {
+				vk::PipelineColorBlendAttachmentState()
+				.setBlendEnable(VK_FALSE)
+				.setSrcColorBlendFactor(vk::BlendFactor::eOne)
+				.setDstColorBlendFactor(vk::BlendFactor::eDstAlpha)
+				.setColorBlendOp(vk::BlendOp::eAdd)
+				.setColorWriteMask(vk::ColorComponentFlagBits::eR
+					| vk::ColorComponentFlagBits::eG
+					| vk::ColorComponentFlagBits::eB
+					| vk::ColorComponentFlagBits::eA)
+			};
+			vk::PipelineColorBlendStateCreateInfo blend_info;
+			blend_info.setAttachmentCount(array_length(blend_state));
+			blend_info.setPAttachments(blend_state);
+
+			vk::PipelineVertexInputStateCreateInfo vertex_input_info;
+
+			std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =
+			{
+				vk::GraphicsPipelineCreateInfo()
+				.setStageCount(array_length(shader_info))
+				.setPStages(shader_info)
+				.setPVertexInputState(&vertex_input_info)
+				.setPInputAssemblyState(&assembly_info)
+				.setPViewportState(&viewportInfo)
+				.setPRasterizationState(&rasterization_info)
+				.setPMultisampleState(&sample_info)
+				.setLayout(m_pipeline_layout[PipelineLayoutMakeLightmap].get())
+				.setRenderPass(m_lightmap_render_pass.get())
+				.setPDepthStencilState(&depth_stencil_info)
+				.setPColorBlendState(&blend_info),
+			};
+			auto graphics_pipeline = context->m_device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info);
+			m_pipeline[PipelineMakeLightmap] = std::move(graphics_pipeline[0]);
+
+		}
+	}
+
+	{
+		// PipelineDrawShadowVolume
+		{
+
+			// sub pass
 			vk::AttachmentReference color_ref[] = {
 				vk::AttachmentReference()
 				.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
 				.setAttachment(0)
 			};
-			// sub pass
+			vk::AttachmentReference stencil_ref;
+			stencil_ref.setLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+			stencil_ref.setAttachment(1);
+
 			vk::SubpassDescription subpass;
 			subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
 			subpass.setInputAttachmentCount(0);
 			subpass.setPInputAttachments(nullptr);
 			subpass.setColorAttachmentCount(array_length(color_ref));
 			subpass.setPColorAttachments(color_ref);
+			subpass.setPDepthStencilAttachment(&stencil_ref);
 
 			vk::AttachmentDescription attach_description[] =
 			{
@@ -229,6 +431,14 @@ SV2DRenderer::SV2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 				.setStoreOp(vk::AttachmentStoreOp::eStore)
 				.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
 				.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
+				// depth
+				vk::AttachmentDescription()
+				.setFormat(m_light_map.m_image_info.format)
+				.setSamples(vk::SampleCountFlagBits::e1)
+				.setLoadOp(vk::AttachmentLoadOp::eLoad)
+				.setStoreOp(vk::AttachmentStoreOp::eStore)
+				.setInitialLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
+				.setFinalLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal),
 			};
 			vk::RenderPassCreateInfo renderpass_info;
 			renderpass_info.setAttachmentCount(array_length(attach_description));
@@ -241,6 +451,7 @@ SV2DRenderer::SV2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 		{
 			vk::ImageView view[] = {
 				m_output.m_image_view.get(),
+				m_light_map.m_image_view.get(),
 			};
 			vk::FramebufferCreateInfo framebuffer_info;
 			framebuffer_info.setRenderPass(m_output_render_pass.get());
@@ -290,11 +501,19 @@ SV2DRenderer::SV2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			sample_info.setRasterizationSamples(vk::SampleCountFlagBits::e1);
 
 			vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
-			depth_stencil_info.setDepthTestEnable(VK_FALSE);
-			depth_stencil_info.setDepthWriteEnable(VK_FALSE);
-			depth_stencil_info.setDepthCompareOp(vk::CompareOp::eGreaterOrEqual);
-			depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
-			depth_stencil_info.setStencilTestEnable(VK_FALSE);
+// 			depth_stencil_info.setDepthTestEnable(VK_TRUE);
+// 			depth_stencil_info.setDepthWriteEnable(VK_TRUE);
+// 			depth_stencil_info.setDepthCompareOp(vk::CompareOp::eGreaterOrEqual);
+// 			depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
+// 			depth_stencil_info.setStencilTestEnable(VK_TRUE);
+			depth_stencil_info.front.setFailOp(vk::StencilOp::eKeep);
+			depth_stencil_info.front.setDepthFailOp(vk::StencilOp::eKeep);
+			depth_stencil_info.front.setPassOp(vk::StencilOp::eIncrementAndClamp);
+			depth_stencil_info.front.setCompareOp(vk::CompareOp::eEqual);
+			depth_stencil_info.front.setWriteMask(0xffu);
+			depth_stencil_info.front.setCompareMask(0xffu);
+			depth_stencil_info.front.setReference(0xffu);
+			depth_stencil_info.back = depth_stencil_info.front;
 
 			std::vector<vk::PipelineColorBlendAttachmentState> blend_state = {
 				vk::PipelineColorBlendAttachmentState()
@@ -349,7 +568,7 @@ SV2DRenderer::SV2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 	}
 
 	{
-		// レンダーパス
+		// PipelineBlitShadowVolume
 		{
 			vk::AttachmentReference color_ref[] = {
 				vk::AttachmentReference()
@@ -524,6 +743,21 @@ void SV2DRenderer::execute(vk::CommandBuffer cmd)
 		cmd.dispatch(m_sv2d_context->RenderWidth /32, m_sv2d_context->RenderHeight/32, 1);
 	}
 
+	// make light_map
+	{
+		vk::RenderPassBeginInfo render_begin_info;
+		render_begin_info.setRenderPass(m_lightmap_render_pass.get());
+		render_begin_info.setFramebuffer(m_lightmap_framebuffer.get());
+		render_begin_info.setRenderArea(vk::Rect2D({}, { (uint32_t)m_light_map.m_image_info.extent.width, (uint32_t)m_light_map.m_image_info.extent.height }));
+
+		cmd.beginRenderPass(render_begin_info, vk::SubpassContents::eInline);
+
+		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PipelineMakeLightmap].get());
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayoutMakeLightmap].get(), 0, m_sv2d_context->m_descriptor_set.get(), {});
+		cmd.draw(3, 1, 0, 0);
+		cmd.endRenderPass();
+	}
+
 	// draw shadow volume
 	{
 		{
@@ -532,6 +766,19 @@ void SV2DRenderer::execute(vk::CommandBuffer cmd)
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
+		}
+		{
+			vk::ImageMemoryBarrier to_read[] = {
+				vk::ImageMemoryBarrier()
+				.setImage(m_light_map.m_image.get())
+				.setSubresourceRange(m_light_map.m_subresource_range)
+				.setSrcAccessMask(vk::AccessFlagBits::eDepthStencilAttachmentWrite)
+				.setDstAccessMask(vk::AccessFlagBits::eDepthStencilAttachmentRead)
+				.setOldLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
+				.setNewLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal)
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eLateFragmentTests, vk::PipelineStageFlagBits::eEarlyFragmentTests, {},
+				0, nullptr, 0, nullptr, array_length(to_read), to_read);
 		}
 
 		vk::RenderPassBeginInfo render_begin_info;
@@ -551,17 +798,17 @@ void SV2DRenderer::execute(vk::CommandBuffer cmd)
 	{
 		// バリア
 		{
-			vk::ImageMemoryBarrier to_read[] = {
-				vk::ImageMemoryBarrier()
-				.setImage(m_output.m_image.get())
-				.setSubresourceRange(m_output.m_subresource_range)
-				.setSrcAccessMask(vk::AccessFlagBits::eColorAttachmentWrite)
-				.setDstAccessMask(vk::AccessFlagBits::eShaderRead)
-				.setOldLayout(vk::ImageLayout::eColorAttachmentOptimal)
-				.setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
-			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eFragmentShader, {},
-				0, nullptr, 0, nullptr, array_length(to_read), to_read);
+ 			vk::ImageMemoryBarrier to_read[] = {
+ 				vk::ImageMemoryBarrier()
+ 				.setImage(m_output.m_image.get())
+ 				.setSubresourceRange(m_output.m_subresource_range)
+ 				.setSrcAccessMask(vk::AccessFlagBits::eColorAttachmentWrite)
+ 				.setDstAccessMask(vk::AccessFlagBits::eShaderRead)
+ 				.setOldLayout(vk::ImageLayout::eColorAttachmentOptimal)
+ 				.setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
+ 			};
+ 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eFragmentShader, {},
+ 				0, nullptr, 0, nullptr, array_length(to_read), to_read);
 
 		}
 		vk::RenderPassBeginInfo render_begin_info;

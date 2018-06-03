@@ -26,6 +26,8 @@ struct SV2DRenderer
 	{
 		ShaderLightCulling,
 		ShaderMakeShadowVolume,
+		ShaderMakeLightmapVS,
+		ShaderMakeLightmapFS,
 		ShaderDrawShadowVolumeVS,
 		ShaderDrawShadowVolumeFS,
 		ShaderBlitShadowVolumeVS,
@@ -36,6 +38,7 @@ struct SV2DRenderer
 	{
 		PipelineLayoutLightCulling,
 		PipelineLayoutMakeShadowVolume,
+		PipelineLayoutMakeLightmap,
 		PipelineLayoutDrawShadowVolume,
 		PipelineLayoutBlitShadowVolume,
 		PipelineLayoutNum,
@@ -44,12 +47,15 @@ struct SV2DRenderer
 	{
 		PipelineLightCulling,
 		PipelineMakeShadowVolume,
+		PipelineMakeLightmap,
 		PipelineDrawShadowVolume,
 		PipelineBlitShadowVolume,
 		PipelineNum,
 	};
 
-
+	enum {
+		LightNum = 64,
+	};
 	SV2DRenderer(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target, const std::shared_ptr<SV2DContext>& pm2d_context);
 	void execute(vk::CommandBuffer cmd);
 
@@ -57,6 +63,10 @@ struct SV2DRenderer
 	std::shared_ptr<RenderTarget> m_render_target;
 	vk::UniqueRenderPass m_render_pass;
 	vk::UniqueFramebuffer m_framebuffer;
+
+	TextureResource m_light_map;
+	vk::UniqueRenderPass m_lightmap_render_pass;
+	vk::UniqueFramebuffer m_lightmap_framebuffer;
 
 	TextureResource m_output;
 	vk::UniqueRenderPass m_output_render_pass;

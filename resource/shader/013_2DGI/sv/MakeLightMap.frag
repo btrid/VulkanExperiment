@@ -5,11 +5,15 @@
 #include "btrlib/Shape.glsl"
 
 #define USE_SV 0
+#define USE_SV_RENDER 1
 #include "SV.glsl"
 
-layout(early_fragment_tests) in;
-layout(location = 0) out vec4 FragColor;
+layout(location=1) in VS
+{
+	vec2 texcoord;
+}fs_in;
+
 void main()
 {
-	FragColor = vec4(1., 0., 0., 1.);
+	gl_FragStencilRefARB = 254;
 }

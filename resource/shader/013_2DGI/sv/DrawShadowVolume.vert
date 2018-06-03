@@ -20,4 +20,6 @@ out gl_PerVertex{
 void main()
 {
 	gl_Position = u_sv_info.m_camera_PV * vec4(in_position.x, 0., in_position.y, 1.);
+//	gl_Position.xy +=1.;
+//	gl_Position = vec4(1);
 }

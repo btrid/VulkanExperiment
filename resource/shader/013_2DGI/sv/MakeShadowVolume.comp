@@ -28,49 +28,49 @@ void main()
 			float angle = cross(normalize(vec3(fpos + vec2(-0.5, -0.5) - pos, 0)), vec3(dir, 0)).z;
 			float a = angle;
 			float b = angle;
-			tan_a = fpos + vec2(-0.5, -0.5);
-			tan_b = fpos + vec2(-0.5, -0.5);
+			tan_a = fpos + vec2(0., 0.);
+			tan_b = fpos + vec2(0., 0.);
 
-			angle = cross(normalize(vec3(fpos + vec2(0.5, -0.5) - pos, 0)), vec3(dir, 0)).z;
+			angle = cross(normalize(vec3(fpos + vec2(1., 0.) - pos, 0.)), vec3(dir, 0.)).z;
 			if(a <= angle){
 				a = angle;
-				tan_a = fpos + vec2(0.5, -0.5);
+				tan_a = fpos + vec2(1., 0.);
 			}
 			if(b >= angle){
 				b = angle;
-				tan_b = fpos + vec2(0.5, -0.5);				
+				tan_b = fpos + vec2(1., -0.);				
 			}
-			angle = cross(normalize(vec3(fpos + vec2(-0.5, 0.5) - pos, 0)), vec3(dir, 0)).z;
+			angle = cross(normalize(vec3(fpos + vec2(0., 1.) - pos, 0.)), vec3(dir, 0.)).z;
 			if(a <= angle){
 				a = angle;
-				tan_a = fpos + vec2(-0.5, 0.5);
+				tan_a = fpos + vec2(0., 1.);
 			}
 			if(b >= angle){
 				b = angle;
-				tan_b = fpos + vec2(-0.5, 0.5);				
+				tan_b = fpos + vec2(0., 1.);				
 			}
 
-			angle = cross(normalize(vec3(fpos + vec2(0.5, 0.5) - pos, 0)), vec3(dir, 0)).z;
+			angle = cross(normalize(vec3(fpos + vec2(1., 1.) - pos, 0.)), vec3(dir, 0.)).z;
 			if(a <= angle){
 				a = angle;
-				tan_a = fpos + vec2(0.5, 0.5);
+				tan_a = fpos + vec2(1., 1.);
 			}
 			if(b >= angle){
 				b = angle;
-				tan_b = fpos + vec2(0.5, 0.5);				
+				tan_b = fpos + vec2(1., 1.);				
 			}
 		}
 		{
-			vec2 dir_a = normalize(tan_a - pos) * 3000.;
-			vec2 dir_b = normalize(tan_b - pos) * 3000.;
+			vec2 dir_a = normalize(tan_a - pos) * 1000.;
+			vec2 dir_b = normalize(tan_b - pos) * 1000.;
 			uint sv_index = atomicAdd(b_shadow_volume_counter.vertexCount, 6);
-//			uint sv_index = atomicExchange(b_shadow_volume_counter.vertexCount, 6);
 			b_shadow_volume[sv_index++] = tan_a;
 			b_shadow_volume[sv_index++] = tan_a+dir_a;
 			b_shadow_volume[sv_index++] = tan_b+dir_b;
 			b_shadow_volume[sv_index++] = tan_a;
 			b_shadow_volume[sv_index++] = tan_b+dir_b;
 			b_shadow_volume[sv_index++] = tan_b;
+
 		}
 	}
 
