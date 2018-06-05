@@ -23,3 +23,5 @@ SET exe=glslangValidator.exe
 
 %exe% %include% %option% -o ../../binary/BlitShadowVolume.vert.spv BlitShadowVolume.vert
 %exe% %include% %option% -o ../../binary/BlitShadowVolume.frag.spv BlitShadowVolume.frag
+
+%exe% %include% %option% -o ../../binary/MakeDistanceField.comp.spv MakeDistanceField.comp

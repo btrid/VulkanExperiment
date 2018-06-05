@@ -76,9 +76,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\013_2DGI\013_main.cpp" />
-    <ClCompile Include="..\..\source\013_2DGI\PM2DDebug.cpp" />
-    <ClCompile Include="..\..\source\013_2DGI\PM2DLight.cpp" />
-    <ClCompile Include="..\..\source\013_2DGI\PM2DRenderer.cpp" />
+    <ClCompile Include="..\..\source\013_2DGI\PM2D\PM2DDebug.cpp" />
+    <ClCompile Include="..\..\source\013_2DGI\PM2D\PM2DLight.cpp" />
+    <ClCompile Include="..\..\source\013_2DGI\PM2D\PM2DRenderer.cpp" />
+    <ClCompile Include="..\..\source\013_2DGI\PM2D\PM2DSDF.cpp" />
     <ClCompile Include="..\..\source\013_2DGI\SV2DDebug.cpp" />
     <ClCompile Include="..\..\source\013_2DGI\SV2DLight.cpp" />
     <ClCompile Include="..\..\source\013_2DGI\SV2DRenderer.cpp" />
@@ -104,6 +105,7 @@
     <ClInclude Include="..\..\include\013_2DGI\PM2D\PM2DDebug.h" />
     <ClInclude Include="..\..\include\013_2DGI\PM2D\PM2DLight.h" />
     <ClInclude Include="..\..\include\013_2DGI\PM2D\PM2DRenderer.h" />
+    <ClInclude Include="..\..\include\013_2DGI\PM2D\PM2DSDF.h" />
     <ClInclude Include="..\..\include\013_2DGI\SV2D\SV2D.h" />
     <ClInclude Include="..\..\include\013_2DGI\SV2D\SV2DAppModel.h" />
     <ClInclude Include="..\..\include\013_2DGI\SV2D\SV2DClear.h" />

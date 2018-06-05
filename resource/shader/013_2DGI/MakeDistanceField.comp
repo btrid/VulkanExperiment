@@ -1,0 +1,160 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Common.glsl"
+#include "btrlib/Math.glsl"
+
+#define USE_PM 0
+#define USE_PM_RENDER 1
+#include "PM.glsl"
+
+
+layout(push_constant) uniform BounceInfo
+{
+	int bounce_count;
+	int store_photon_index;
+} constant;
+#define u16_max (0xffff)
+#define fragment_state_non (0)
+#define fragment_state_wall (1)
+#define fragment_state_light (2)
+#define fragment_state_bounce (3)
+#define fragment_state_bounce_hit (4)
+
+
+layout (local_size_x = 32, local_size_y = 32) in;
+void main()
+{
+	const vec2 pixel_size = vec2(1., 1.);
+	const vec2 subpixel = pixel_size.xy*(1<<constant.bounce_count);
+
+	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
+	const ivec2 bounce_reso = ivec2(u_pm_info.m_resolution.xy)>>constant.bounce_count;
+	const ivec2 pixel = ivec2(gl_GlobalInvocationID.xy)<<constant.bounce_count;
+	int fragment_state = fragment_state_non;
+	vec3 albedo = vec3(0.);
+	vec3 illuminance = vec3(0.);
+	{
+		ivec4 fragment_index = ivec4(gl_GlobalInvocationID.xy/8, gl_GlobalInvocationID.xy%8);
+		ivec2 fragment_index_1d = fragment_index.xz + fragment_index.yw*ivec2(reso.z>>constant.bounce_count, 8);
+		int offset = getFragmentMapHierarchyOffset(constant.bounce_count);
+		uint64_t fragment_map = b_fragment_map[fragment_index_1d.x + offset];
+		uint64_t bit = 1ul<<fragment_index_1d.y;
+
+		fragment_state = ((fragment_map & bit) != 0) ? fragment_state_wall : fragment_state_non;
+		albedo = (fragment_state == fragment_state_wall) ? b_fragment[pixel.x + pixel.y * reso.x].albedo.xyz : vec3(0., 0., 1.);
+
+	}
+
+	int light_count = -1;
+	uint64_t reached = 0;
+	const ivec2 tile_index_2d = pixel / ivec2(u_pm_info.m_emission_tile_size.xy);
+	const int tile_index = int(tile_index_2d.x + tile_index_2d.y*u_pm_info.m_emission_tile_num.x);
+	for(int i = b_emission_tile_linkhead[tile_index]; i != -1; i= b_emission_tile_linklist[i].next)
+	{
+		light_count++;
+		vec4 start;
+		vec4 radiance;
+
+		Emission light;
+		{
+			int emission_index = b_emission_tile_linklist[i].target;
+			int eoffset = u_pm_info.m_emission_buffer_offset[constant.bounce_count];
+			light = b_emission[emission_index+eoffset];
+			radiance = light.emission;
+			ivec2 e_index_2d = ivec2(emission_index%bounce_reso.x, emission_index/bounce_reso.x);
+			start = vec2(e_index_2d<<constant.bounce_count);
+		}
+		ivec2 istart = ivec2(start+0.5);
+		float ray_num = gl_NumWorkGroups.y*gl_WorkGroupSize.x*2.;
+		float ray_NO = (gl_LocalInvocationID.x + gl_WorkGroupID.y*gl_WorkGroupSize.x)*2.;
+
+		float angle_offset = 1./ray_num*offset.x;
+		vec2 angle = ((ray_NO+vec2(0., 1.)) / ray_num) * (2.*PI) + angle_offset;
+		
+		vec4 dir = rotate2(angle);
+
+/*		vec4 l_dir = rotate2(light.dir.xx + vec2(-light.angle, light.angle));
+		vec3 a = cross(vec3(l_dir.xy, 0.), vec3(diff, 0.));
+		vec3 b = cross(vec3(l_dir.zw, 0.), vec3(diff, 0.));
+		if(light.angle>=0. && (a.z > 0. || b.z < 0.))
+		{
+			// spotlight影響範囲外
+			continue;
+		}
+*/
+#if 1
+		vec2 inv_dir;
+		inv_dir.x = dir.x == 0. ? 9999999. : (1./dir.x);
+		inv_dir.y = dir.y == 0. ? 9999999. : (1./dir.y);
+		inv_dir = abs(inv_dir);
+#else
+		vec2 inv_dir = abs(1./dir);
+#endif
+		dir *= abs(dir.x) >= abs(dir.y) ? abs(1./dir.x) : abs(1./dir.y);
+
+		vec2 pos = start;
+		ivec2 map_index = ivec2(pos / pixel_size.xy);
+
+		const ivec2 map_index_origin = ivec2(greaterThanEqual(idir, ivec2(0)));
+
+		ivec2 is_died = ivec2(0);
+		ivec2 is_hit = ivec2(0);
+		ivec4 hit_point = ivec4(-1);
+		for(int i = 0; i <50000; i++)
+		{
+			{
+				int hierarchy=0;
+				ivec2 findex2d = map_index>>hierarchy;
+				int findex = findex2d.x + findex2d.y*(reso.x>>hierarchy);
+				int offset = getFragmentHierarchyOffset(hierarchy);
+
+				ivec2 cell_origin = map_index_origin<<hierarchy;
+				ivec2 map_index_sub = map_index - (findex2d<<hierarchy);
+				vec2 cell_p = abs(cell_origin - (map_index_sub+fract(pos))) + pixel_size*0.5;
+				vec2 axis = abs(cell_p*inv_dir);
+				pos = min(axis.x, axis.y)*dir + pos;
+				map_index = ivec2(pos);
+			}
+
+			// 範囲外
+			{
+				ivec4 is_die = ivec4(greaterThanEqual(map_index, reso.xyxy)) + ivec4(lessThan(map_index, ivec4(0)));
+				is_died |= ivec2(any(notEqual(is_die.xy, ivec2(0))), any(notEqual(is_die.zw, ivec2(0))));
+			}
+
+			// hit確認
+			{
+				ivec4 fragment_index = map_index/8;
+				ivec2 fragment_index_1d = fragment_index.xz + fragment_index.yw*reso.z;
+				u64vec2 fragment_map;
+				fragment_map.x = is_died.x!=0 ? 0 : b_fragment_map[fragment_index_1d.x];
+				fragment_map.y = is_died.y!=0 ? 0 : b_fragment_map[fragment_index_1d.y];
+
+				ivec4 fragment_index_sub = map_index%8;
+				ivec2 fragment_index_sub_1d = fragment_index_sub.xz + fragment_index_sub.yw*8;
+				u64vec2 bit = u64vec2(1)<<fragment_index_sub_1d;
+
+				is_hit |= ivec2((fragment_map & bit) != u64vec2(0));
+				hit_point.xy = (is_hit.x != 0 && is_died.x == 0) ? map_index.xy : hit_point.xy;
+				hit_point.zw = (is_hit.y != 0 && is_died.y == 0) ? map_index.zw : hit_point.zw;
+				(is_hit.x != 0 && is_died.x == 0) ? atomicMin() : 0;
+				is_died |= is_hit;
+			}
+
+			// 終わり?
+			if(all(notEqual(is_died, ivec2(0))))
+			{
+				break;
+			}
+
+		}
+	}
+
+	// store
+	{
+		b_emission_reached[gl_GlobalInvocationID.x+gl_GlobalInvocationID.y*reso.x] = reached;
+	}
+
+}

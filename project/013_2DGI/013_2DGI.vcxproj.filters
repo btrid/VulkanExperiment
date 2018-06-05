@@ -2,15 +2,6 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="..\..\source\013_2DGI\013_main.cpp" />
-    <ClCompile Include="..\..\source\013_2DGI\PM2DDebug.cpp">
-      <Filter>PM2D</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\source\013_2DGI\PM2DLight.cpp">
-      <Filter>PM2D</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\source\013_2DGI\PM2DRenderer.cpp">
-      <Filter>PM2D</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\source\013_2DGI\SV2DLight.cpp">
       <Filter>SV2D</Filter>
     </ClCompile>
@@ -19,6 +10,18 @@
     </ClCompile>
     <ClCompile Include="..\..\source\013_2DGI\SV2DRenderer.cpp">
       <Filter>SV2D</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\013_2DGI\PM2D\PM2DDebug.cpp">
+      <Filter>PM2D</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\013_2DGI\PM2D\PM2DLight.cpp">
+      <Filter>PM2D</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\013_2DGI\PM2D\PM2DRenderer.cpp">
+      <Filter>PM2D</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\013_2DGI\PM2D\PM2DSDF.cpp">
+      <Filter>PM2D</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -68,6 +71,9 @@
     </ClInclude>
     <ClInclude Include="..\..\include\013_2DGI\SV2D\SV2DAppModel.h">
       <Filter>SV2D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\013_2DGI\PM2D\PM2DSDF.h">
+      <Filter>PM2D</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

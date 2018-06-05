@@ -148,9 +148,7 @@ void main()
 		vec2 start;
 		{
 			int emission_index = b_emission_tile_linklist[i].target;
-//			emission_index += u_pm_info.m_emission_buffer_offset[constant.bounce_count];
 			light = b_emission[emission_index];
-//			ivec2 e_index_2d = ivec2(emission_index%bounce_reso.x, emission_index/bounce_reso.x);
 			ivec2 e_index_2d = ivec2(emission_index%reso.x, emission_index/reso.x);
 			start = vec2(e_index_2d);
 		}

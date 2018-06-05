@@ -213,14 +213,14 @@ void main()
 
 					fragment_map = (b0)|(b1)|(b2)|(b3);
 
-					uint64_t dead = is_alive & b0;
-					dead != 0 ? atomicOr(b_emission_occlusion[findex.x], dead) : 0;
-					dead = is_alive & b1;
-					dead != 0 ? atomicOr(b_emission_occlusion[findex.y], dead) : 0;
-					dead = is_alive & b2;
-					dead != 0 ? atomicOr(b_emission_occlusion[findex.z], dead) : 0;
-					dead = is_alive & b3;
-					dead != 0 ? atomicOr(b_emission_occlusion[findex.w], dead) : 0;
+//					uint64_t dead = is_alive & b0;
+//					dead != 0 ? atomicOr(b_emission_occlusion[findex.x], dead) : 0;
+//					dead = is_alive & b1;
+//					dead != 0 ? atomicOr(b_emission_occlusion[findex.y], dead) : 0;
+//					dead = is_alive & b2;
+//					dead != 0 ? atomicOr(b_emission_occlusion[findex.z], dead) : 0;
+//					dead = is_alive & b3;
+//					dead != 0 ? atomicOr(b_emission_occlusion[findex.w], dead) : 0;
 					
 
 #else
@@ -247,7 +247,6 @@ void main()
 #endif
 				}
 				is_alive &= ~fragment_map;
-//				is_alive &= fragment_map == 0 ? -1ul : 0ul;
 				if(is_alive == uint64_t(0))
 				{ 
 					break;

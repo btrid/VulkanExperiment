@@ -128,6 +128,11 @@ layout(std430, set=USE_PM_LIGHT, binding=1) restrict buffer LightDataBuffer {
 	Emission b_light_data[];
 };
 #endif
+#ifdef USE_PM_SDF
+layout(/*std430,*/ set=USE_PM_SDF, binding=0) restrict buffer SDFBuffer {
+	float b_light_count;
+};
+#endif
 
 vec2 rotate(in float angle)
 {
@@ -141,4 +146,5 @@ vec4 rotate2(in vec2 angle)
 	vec2 s = sin(angle);
 	return vec4(-s.x, c.x, -s.y, c.y);
 }
+
 #endif //_PM_

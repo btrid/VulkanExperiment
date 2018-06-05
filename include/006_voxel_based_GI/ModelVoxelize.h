@@ -148,7 +148,7 @@ struct ModelVoxelize : public Voxelize
 				to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
 				to_copy_barrier.subresourceRange = subresourceRange;
 
-				cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
 
 			}
 
