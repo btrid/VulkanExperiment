@@ -165,6 +165,7 @@ void main()
 
 	}
 	illuminance.xyz = is_block ? vec3(0.) : illuminance.xyz;
+	illuminance.xyz = is_occlude ? vec3(1., 0., 0.) : illuminance.xyz;
 
 
 	imageStore(t_color[0], pixel, vec4(illuminance.xyz, 1.));

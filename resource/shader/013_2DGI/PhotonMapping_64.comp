@@ -149,10 +149,10 @@ void main()
 //						continue;
 					}
 				}
-
+*/
 //				is_alive = hierarchy;
 //				break;
-*/
+
 				ivec2 cell_origin = map_index_origin<<hierarchy;
 				ivec2 map_index_sub = map_index - ((map_index>>hierarchy)<<hierarchy);
 				vec2 cell_p = abs(cell_origin - (map_index_sub+fract(pos))) + pixel_size*0.5;
@@ -213,14 +213,29 @@ void main()
 
 					fragment_map = (b0)|(b1)|(b2)|(b3);
 
-//					uint64_t dead = is_alive & b0;
+					uint64_t dead = is_alive & b0;
+					dead <<= shift.x;
+					dead <<= shift.y*8;
 //					dead != 0 ? atomicOr(b_emission_occlusion[findex.x], dead) : 0;
-//					dead = is_alive & b1;
+					b_emission_occlusion[findex.x] |= (dead != 0) ? dead : 0;
+
+					dead = is_alive & b1;
+					dead <<= shift.x;
+					dead >>= (8-shift.y)*8;
 //					dead != 0 ? atomicOr(b_emission_occlusion[findex.y], dead) : 0;
-//					dead = is_alive & b2;
+					b_emission_occlusion[findex.y] |= (dead != 0) ? dead : 0;
+
+					dead = is_alive & b2;
+					dead >>= (8-shift.x);
+					dead <<= shift.y*8;
 //					dead != 0 ? atomicOr(b_emission_occlusion[findex.z], dead) : 0;
-//					dead = is_alive & b3;
+					b_emission_occlusion[findex.z] |= (dead != 0) ? dead : 0;
+
+					dead = is_alive & b3;
+					dead >>= (8-shift.x);
+					dead >>= (8-shift.y)*8;
 //					dead != 0 ? atomicOr(b_emission_occlusion[findex.w], dead) : 0;
+					b_emission_occlusion[findex.w] |= (dead != 0) ? dead : 0;
 					
 
 #else

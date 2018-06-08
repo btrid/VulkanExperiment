@@ -64,7 +64,7 @@ PM2DSDF::PM2DSDF(const std::shared_ptr<btr::Context>& context, const std::shared
 	{
 		const char* name[] =
 		{
-			"PMMakeLightList.comp.spv",
+			"MakeDistanceField.comp.spv",
 		};
 		static_assert(array_length(name) == array_length(m_shader), "not equal shader num");
 
@@ -103,7 +103,7 @@ PM2DSDF::PM2DSDF(const std::shared_ptr<btr::Context>& context, const std::shared
 			.setLayout(m_pipeline_layout[PipelineLayoutMakeSDF].get()),
 		};
 		auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
-		m_pipeline[PipelineLayoutPointLight] = std::move(compute_pipeline[0]);
+		m_pipeline[PipelineLayoutMakeSDF] = std::move(compute_pipeline[0]);
 	}
 
 }

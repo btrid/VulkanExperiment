@@ -64,13 +64,13 @@ void main()
 			light = b_emission[emission_index+eoffset];
 			radiance = light.emission;
 			ivec2 e_index_2d = ivec2(emission_index%bounce_reso.x, emission_index/bounce_reso.x);
-			start = vec2(e_index_2d<<constant.bounce_count);
+			start = vec4(e_index_2d.xyxy<<constant.bounce_count);
 		}
-		ivec2 istart = ivec2(start+0.5);
+//		ivec2 istart = ivec2(start+0.5);
 		float ray_num = gl_NumWorkGroups.y*gl_WorkGroupSize.x*2.;
 		float ray_NO = (gl_LocalInvocationID.x + gl_WorkGroupID.y*gl_WorkGroupSize.x)*2.;
 
-		float angle_offset = 1./ray_num*offset.x;
+		float angle_offset = 1./ray_num/**offset.x*/;
 		vec2 angle = ((ray_NO+vec2(0., 1.)) / ray_num) * (2.*PI) + angle_offset;
 		
 		vec4 dir = rotate2(angle);
@@ -94,28 +94,30 @@ void main()
 #endif
 		dir *= abs(dir.x) >= abs(dir.y) ? abs(1./dir.x) : abs(1./dir.y);
 
-		vec2 pos = start;
-		ivec2 map_index = ivec2(pos / pixel_size.xy);
+		vec4 pos = start;
+		ivec4 map_index = ivec4(pos / pixel_size.xyxy);
 
-		const ivec2 map_index_origin = ivec2(greaterThanEqual(idir, ivec2(0)));
+		const ivec4 map_index_origin = ivec4(greaterThanEqual(ivec4(dir), ivec4(0)));
 
 		ivec2 is_died = ivec2(0);
 		ivec2 is_hit = ivec2(0);
 		ivec4 hit_point = ivec4(-1);
+		vec2 progress = vec2(0.);
 		for(int i = 0; i <50000; i++)
 		{
 			{
 				int hierarchy=0;
-				ivec2 findex2d = map_index>>hierarchy;
-				int findex = findex2d.x + findex2d.y*(reso.x>>hierarchy);
-				int offset = getFragmentHierarchyOffset(hierarchy);
+				ivec4 findex2d = map_index>>hierarchy;
+				ivec2 findex = findex2d.xz + findex2d.yw*(reso.xx>>hierarchy);
 
-				ivec2 cell_origin = map_index_origin<<hierarchy;
-				ivec2 map_index_sub = map_index - (findex2d<<hierarchy);
-				vec2 cell_p = abs(cell_origin - (map_index_sub+fract(pos))) + pixel_size*0.5;
-				vec2 axis = abs(cell_p*inv_dir);
-				pos = min(axis.x, axis.y)*dir + pos;
-				map_index = ivec2(pos);
+				ivec4 cell_origin = map_index_origin<<hierarchy;
+				ivec4 map_index_sub = map_index - (findex2d<<hierarchy);
+				vec4 cell_p = abs(cell_origin - (map_index_sub+fract(pos))) + pixel_size.xyxy*0.5;
+				vec4 axis = abs(cell_p*inv_dir.xyxy);
+				pos = min(axis.xz, axis.yw).xyxy*dir + pos;
+				map_index = ivec4(pos);
+
+				progress += length(min(axis.xz, axis.yw).xyxy*dir);
 			}
 
 			// 範囲外
@@ -139,7 +141,7 @@ void main()
 				is_hit |= ivec2((fragment_map & bit) != u64vec2(0));
 				hit_point.xy = (is_hit.x != 0 && is_died.x == 0) ? map_index.xy : hit_point.xy;
 				hit_point.zw = (is_hit.y != 0 && is_died.y == 0) ? map_index.zw : hit_point.zw;
-				(is_hit.x != 0 && is_died.x == 0) ? atomicMin() : 0;
+//				(is_hit.x != 0 && is_died.x == 0) ? atomicMin() : 0;
 				is_died |= is_hit;
 			}
 

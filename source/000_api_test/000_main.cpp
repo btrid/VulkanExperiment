@@ -332,17 +332,75 @@ void bittest()
 		m3 &= ~x_mask2 & y_mask2;
 		m4 &= ~x_mask2 & ~y_mask2;
 
-		m1 >>= y_shift*8;
+		m1 >>= y_shift * 8;
 		m1 >>= x_shift;
 
-		m2 <<= (8-y_shift)*8;
+		m2 <<= (8 - y_shift) * 8;
 		m2 >>= x_shift;
 
-		m3 >>= y_shift*8;
-		m3 <<= (8-x_shift);
+		m3 >>= y_shift * 8;
+		m3 <<= (8 - x_shift);
 
-		m4 <<= (8-y_shift)*8;
-		m4 <<= (8-x_shift);
+		m4 <<= (8 - y_shift) * 8;
+		m4 <<= (8 - x_shift);
+		for (int y = 0; y < 8; y++) {
+			for (int x = 0; x < 8; x++) {
+				uint64_t map = (1ull << (y * 8 + x));
+				if ((m1&map) != 0)
+					printf("1");
+				else if ((m2&map) != 0)
+					printf("2");
+				else if ((m3&map) != 0)
+					printf("3");
+				else if ((m4&map) != 0)
+					printf("4");
+			}
+			printf("\n");
+		}
+		printf("---\n");
+
+	}
+	{
+		uint64_t x_line_mask2 = 0xffull & ((1 << (x_shift)) - 1);
+		uint64_t x_mask_inv2 = x_line_mask2 | (x_line_mask2 << 8) | (x_line_mask2 << 16) | (x_line_mask2 << 24) | (x_line_mask2 << 32) | (x_line_mask2 << 40) | (x_line_mask2 << 48) | (x_line_mask2 << 56);
+		uint64_t y_mask_inv2 = 0xffffffffffffffffllu & ((1ull << ((y_shift) * 8)) - 1);
+		auto x_mask2 = ~x_mask_inv2;
+		auto y_mask2 = ~y_mask_inv2;
+
+		uint64_t map0 = 0xFFFFFFFFFFFFFFFFull;
+		auto m1 = map0;
+		auto m2 = map0;
+		auto m3 = map0;
+		auto m4 = map0;
+
+		m1 &= x_mask2 & y_mask2;
+		m2 &= x_mask2 & ~y_mask2;
+		m3 &= ~x_mask2 & y_mask2;
+		m4 &= ~x_mask2 & ~y_mask2;
+
+		m1 >>= y_shift * 8;
+		m1 >>= x_shift;
+
+		m2 <<= (8 - y_shift) * 8;
+		m2 >>= x_shift;
+
+		m3 >>= y_shift * 8;
+		m3 <<= (8 - x_shift);
+
+		m4 <<= (8 - y_shift) * 8;
+		m4 <<= (8 - x_shift);
+
+		m1 <<= y_shift * 8;
+		m1 <<= x_shift;
+
+		m2 >>= (8 - y_shift) * 8;
+		m2 <<= x_shift;
+
+		m3 <<= y_shift * 8;
+		m3 >>= (8 - x_shift);
+
+		m4 >>= (8 - y_shift) * 8;
+		m4 >>= (8 - x_shift);
 		for (int y = 0; y < 8; y++) {
 			for (int x = 0; x < 8; x++) {
 				uint64_t map = (1ull << (y * 8 + x));
@@ -358,10 +416,9 @@ void bittest()
 			printf("\n");
 		}
 		printf("---\n");
-		x_shift++;
 
 	}
-	x_shift++;
+	printf("---\n");
 
 }
 int main()
