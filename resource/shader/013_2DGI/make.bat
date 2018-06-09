@@ -13,6 +13,7 @@ SET exe=glslangValidator.exe
 rem %exe% %include% %option% -o ../binary\\PhotonMapping.comp.spv PhotonMapping_1.comp
 rem %exe% %include% %option% -o ../binary\\PhotonCollect.comp.spv PhotonCollect_1.comp
 %exe% %include% %option% -o ../binary\\PhotonMapping.comp.spv PhotonMapping_64.comp
+rem %exe% %include% %option% -o ../binary\\PhotonMapping.comp.spv PhotonMapping_64_2.comp 遅い
 %exe% %include% %option% -o ../binary\\PhotonCollect.comp.spv PhotonCollect_64.comp
 
 %exe% %include% %option% -o ../binary\\MakeFragmentMap.comp.spv MakeFragmentMap.comp

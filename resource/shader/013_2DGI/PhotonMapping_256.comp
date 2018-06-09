@@ -53,7 +53,6 @@ void main()
 	for(int i = b_emission_tile_linkhead[tile_index]; i != -1; i= b_emission_tile_linklist[i].next)
 	{
 		uint64_t is_alive = uint64_t(-1);
-		uint64_t is_arrive = 0;
 		vec2 end = pixel;
 		vec2 start;
 		vec4 radiance;
@@ -106,36 +105,17 @@ void main()
 		vec2 pos = start;
 		ivec2 map_index = ivec2(pos);
 
-		const ivec2 map_index_origin = ivec2(greaterThanEqual(idir, ivec2(0)));
+//		const ivec2 map_index_origin = ivec2(greaterThanEqual(idir, ivec2(0)));
+		const ivec2 map_index_origin = ivec2(greaterThanEqual(dir, vec2(0.)));
 
 		for(int i = 0; i <50000; i++)
 		{
 			// march
 			{
-				int hierarchy=7;
-				for(; hierarchy>0; hierarchy--)
-				{
-					ivec2 map_index_hie = map_index>>hierarchy;
-					ivec4 fragment_index = ivec4(map_index_hie/8, map_index_hie%8);
-					ivec3 offset_ = ivec3(ivec2(greaterThanEqual(fragment_index.zw%8, ivec2(4)))*2 - 1, 0);
-
-					ivec4 findex = fragment_index.xxxx + offset_.xxzz + (fragment_index.yyyy + offset_.yzyz)*(reso.zzzz>>hierarchy);
-					findex +=  getFragmentMapHierarchyOffset(hierarchy);
-					uint64_t b = b_fragment_map[findex.x]
-					 | b_fragment_map[findex.y]
-					 | b_fragment_map[findex.z]
-					 | b_fragment_map[findex.w];
-					if(b == 0)
-					{
-						break;
-					}
-				}
-
-				ivec2 findex2d = map_index>>hierarchy;
-				int findex = findex2d.x + findex2d.y*(reso.x>>hierarchy);
+				int hierarchy=0;
 
 				ivec2 cell_origin = map_index_origin<<hierarchy;
-				ivec2 map_index_sub = map_index - (findex2d<<hierarchy);
+				ivec2 map_index_sub = map_index - ((map_index>>hierarchy)<<hierarchy);
 				vec2 cell_p = abs(cell_origin - (map_index_sub+fract(pos))) + pixel_size*0.5;
 				vec2 axis = abs(cell_p*inv_dir);
 				pos += min(axis.x, axis.y)*dir;
@@ -150,7 +130,6 @@ void main()
 				if(fragment_state == fragment_state_wall){
 					fragment_state = fragment_state_bounce;
 				}
-				is_arrive = 0xfffffffffffffffful;
 				break;
 			}
 			// hit確認
@@ -170,29 +149,6 @@ void main()
 					uint64_t x_mask2 = ~x_mask_inv2;
 					uint64_t y_mask2 = ~y_mask_inv2;
 
-#if 0
-					uint64_t b0 = b_fragment_map[findex.x];
-					uint64_t b1 = b_fragment_map[findex.y];
-					uint64_t b2 = b_fragment_map[findex.z];
-					uint64_t b3 = b_fragment_map[findex.w];
-					b0 &= x_mask2 & y_mask2;
-					b1 &= x_mask2 & ~y_mask2;
-					b2 &= ~x_mask2 & y_mask2;
-					b3 &= ~x_mask2 & ~y_mask2;
-
-					b0 >>= shift.y*8;
-					b0 >>= shift.x;
-
-					b1 <<= (8-shift.y)*8;
-					b1 >>= shift.x;
-
-					b2 >>= shift.y*8;
-					b2 <<= (8-shift.x);
-
-					b3 <<= (8-shift.y)*8;
-					b3 <<= (8-shift.x);
-					fragment_map = (b0)|(b1)|(b2)|(b3);
-#else
 					u64vec4 b = u64vec4(b_fragment_map[findex.x],b_fragment_map[findex.y],b_fragment_map[findex.z],b_fragment_map[findex.w]);
 					b &= u64vec4(x_mask2 & y_mask2, x_mask2 & ~y_mask2, ~x_mask2 & y_mask2, ~x_mask2 & ~y_mask2);
 
@@ -203,7 +159,18 @@ void main()
 					b <<= ls;
 
 					fragment_map = b.x|b.y|b.z|b.w;
-#endif
+
+					u64vec4 dead = u64vec4(is_alive) & b;
+					dead <<= rs;
+					dead >>= ls;
+//					dead.x != 0 ? atomicOr(b_emission_occlusion[findex.x], dead.x) : 0;
+//					dead.y != 0 ? atomicOr(b_emission_occlusion[findex.y], dead.y) : 0;
+//					dead.z != 0 ? atomicOr(b_emission_occlusion[findex.z], dead.z) : 0;
+//					dead.w != 0 ? atomicOr(b_emission_occlusion[findex.w], dead.w) : 0;
+					b_emission_occlusion[findex.x] |= (dead.x != 0) ? dead.x : 0;
+					b_emission_occlusion[findex.y] |= (dead.y != 0) ? dead.y : 0;
+					b_emission_occlusion[findex.z] |= (dead.z != 0) ? dead.z : 0;
+					b_emission_occlusion[findex.w] |= (dead.w != 0) ? dead.w : 0;
 				}
 				is_alive &= ~fragment_map;
 				if(is_alive == uint64_t(0))
@@ -213,7 +180,7 @@ void main()
 			}
 		}
 
-		b_emission_reached[gl_GlobalInvocationID.x+gl_GlobalInvocationID.y*reso.z] = is_alive;// | is_arrive;
+		b_emission_reached[gl_GlobalInvocationID.x+gl_GlobalInvocationID.y*reso.z] = is_alive;
 	}
 
 }

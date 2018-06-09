@@ -9,7 +9,6 @@
 #define USE_PM_RENDER 1
 #include "PM.glsl"
 
-
 layout(push_constant) uniform BounceInfo
 {
 	int bounce_count;
@@ -30,16 +29,14 @@ void main()
 
 	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
 	const ivec2 bounce_reso = ivec2(u_pm_info.m_resolution.xy)>>constant.bounce_count;
-	const ivec2 pixel = 8*ivec2(gl_GlobalInvocationID.xy)<<constant.bounce_count;
-
+	const ivec2 pixel = 8*ivec2(2,1)*ivec2(gl_GlobalInvocationID.xy)<<constant.bounce_count;
 
 	const ivec2 tile_index_2d = pixel / ivec2(u_pm_info.m_emission_tile_size.xy);
 	const int tile_index = int(tile_index_2d.x + tile_index_2d.y*u_pm_info.m_emission_tile_num.x);
 	for(int i = b_emission_tile_linkhead[tile_index]; i != -1; i= b_emission_tile_linklist[i].next)
 	{
-		uint64_t is_alive = uint64_t(-1);
-		vec2 end = pixel;
-		vec2 start;
+		vec4 end = pixel.xyxy + vec4(0,0,1,0);
+		vec4 start;
 		vec4 radiance;
 
 		Emission light;
@@ -48,7 +45,7 @@ void main()
 			int eoffset = u_pm_info.m_emission_buffer_offset[constant.bounce_count];
 			light = b_emission[emission_index+eoffset];
 			radiance = light.emission;
-			start = light.pos;
+			start = light.pos.xyxy;
 		}
 		ivec2 iend = ivec2(end+0.5);
 		ivec2 istart = ivec2(start+0.5);
@@ -62,7 +59,7 @@ void main()
 		}
 
 		{
-			const vec2 diff = (end - start);
+			const vec2 diff = (end - start).xy;
 			vec4 l_dir = rotate2(light.dir.xx + vec2(-light.angle, light.angle));
 			vec3 a = cross(vec3(l_dir.xy, 0.), vec3(diff, 0.));
 			vec3 b = cross(vec3(l_dir.zw, 0.), vec3(diff, 0.));
@@ -75,25 +72,29 @@ void main()
 
 		int goal_index = abs(idir.x) >= abs(idir.y) ? 0: 1;
 
-		vec2 dir = normalize(end - start);
+		vec4 dir = normalize(end - start);
 		dir.x = dir.x == 0. ? 0.000001 : dir.x;
 		dir.y = dir.y == 0. ? 0.000001 : dir.y;
-		dir *= abs(dir.x) >= abs(dir.y) ? abs(1./dir.x) : abs(1./dir.y);
-		vec2 inv_dir = abs(1./dir);
+		dir.z = dir.z == 0. ? 0.000001 : dir.z;
+		dir.w = dir.w == 0. ? 0.000001 : dir.w;
+		dir.xy *= abs(dir.x) >= abs(dir.y) ? abs(1./dir.x) : abs(1./dir.y);
+		dir.zw *= abs(dir.z) >= abs(dir.w) ? abs(1./dir.z) : abs(1./dir.w);
+		vec4 inv_dir = abs(1./dir);
 
-		vec2 pos = start;
-		ivec2 map_index = ivec2(pos);
+		vec4 pos = start;
+		ivec4 map_index = ivec4(pos);
 
-		const ivec2 map_index_origin = ivec2(greaterThanEqual(dir, vec2(0.)));
+		const ivec4 map_index_origin = ivec4(greaterThanEqual(dir, vec4(0.)));
 
+		u64vec2 is_alive = u64vec2(-1);
 		for(int i = 0; i <50000; i++)
 		{
 			// march
 			{
 				int hierarchy=0;
-				for(int hierarchy_=7; hierarchy_>2; hierarchy_-=1)
+				for(int hierarchy_=7; hierarchy_>3; hierarchy_-=1)
 				{
-					ivec2 map_index_hie = map_index>>hierarchy_;
+					ivec2 map_index_hie = map_index.xy>>hierarchy_;
 					ivec4 fragment_index = ivec4(map_index_hie/8, map_index_hie%8);
 					ivec4 findex = fragment_index.xxxx + fragment_index.yyyy*(reso.zzzz>>hierarchy_);
 					findex +=  getFragmentMapHierarchyOffset(hierarchy_);
@@ -123,12 +124,12 @@ void main()
 					}
 				}
 
-				ivec2 cell_origin = map_index_origin<<hierarchy;
-				ivec2 map_index_sub = map_index - ((map_index>>hierarchy)<<hierarchy);
-				vec2 cell_p = abs(cell_origin - (map_index_sub+fract(pos))) + pixel_size*0.5;
-				vec2 axis = abs(cell_p*inv_dir);
-				pos += min(axis.x, axis.y)*dir;
-				map_index = ivec2(pos);
+				ivec4 cell_origin = map_index_origin<<hierarchy;
+				ivec4 map_index_sub = map_index - ((map_index>>hierarchy)<<hierarchy);
+				vec4 cell_p = abs(cell_origin - (map_index_sub+fract(pos))) + pixel_size.xyxy*0.5;
+				vec4 axis = abs(cell_p*inv_dir);
+				pos += min(axis.xz, axis.yw).xxyy*dir;
+				map_index = ivec4(pos);
 			}
 
 			// 終了判定
@@ -139,33 +140,46 @@ void main()
 			}
 			// hit確認
 			{
-				ivec2 map_index_hie = map_index>>constant.bounce_count;
-				ivec4 fragment_index = ivec4(map_index_hie/8, map_index_hie%8);
-				ivec2 shift = fragment_index.zw;
+				ivec4 map_index_hie = map_index>>constant.bounce_count;
+				ivec4 fragment_index = map_index_hie/8;
+				ivec4 shift = map_index_hie%8;
 
 				ivec4 offset_ = ivec4(0,0,1,1);
 				ivec4 findex = fragment_index.xxxx + offset_.xxzz + (fragment_index.yyyy + offset_.ywyw)*(reso.zzzz>>constant.bounce_count);
+				ivec4 findex2 = fragment_index.zzzz + offset_.xxzz + (fragment_index.wwww + offset_.ywyw)*(reso.zzzz>>constant.bounce_count);
 
-				uint64_t fragment_map;
+				u64vec2 fragment_map;
 				{
-					uint64_t x_line_mask2 = 0xfful & ((1ul << (shift.x)) - 1ul);
-					uint64_t x_mask_inv2 = x_line_mask2 | (x_line_mask2 << 8) | (x_line_mask2 << 16) | (x_line_mask2 << 24) | (x_line_mask2 << 32) | (x_line_mask2 << 40) | (x_line_mask2 << 48) | (x_line_mask2 << 56);
-					uint64_t y_mask_inv2 = 0xfffffffffffffffful & ((1ul << ((shift.y) * 8)) - 1);
-					uint64_t x_mask2 = ~x_mask_inv2;
-					uint64_t y_mask2 = ~y_mask_inv2;
+					u64vec2 x_line_mask = 0xfful & ((u64vec2(1ul) << (shift.xz)) - 1ul);
+					u64vec2 x_mask_inv = x_line_mask | (x_line_mask << 8) | (x_line_mask << 16) | (x_line_mask << 24) | (x_line_mask << 32) | (x_line_mask << 40) | (x_line_mask << 48) | (x_line_mask << 56);
+					u64vec2 y_mask_inv = 0xfffffffffffffffful & ((u64vec2(1ul) << ((shift.yw) * 8)) - 1);
+					u64vec2 x_mask = ~x_mask_inv;
+					u64vec2 y_mask = ~y_mask_inv;
 
 					u64vec4 b = u64vec4(b_fragment_map[findex.x],b_fragment_map[findex.y],b_fragment_map[findex.z],b_fragment_map[findex.w]);
-					b &= u64vec4(x_mask2 & y_mask2, x_mask2 & ~y_mask2, ~x_mask2 & y_mask2, ~x_mask2 & ~y_mask2);
+					u64vec4 b2 = u64vec4(b_fragment_map[findex2.x],b_fragment_map[findex2.y],b_fragment_map[findex2.z],b_fragment_map[findex2.w]);
+
+					u64vec2 mask0 =  x_mask &  y_mask;
+					u64vec2 mask1 =  x_mask & ~y_mask;
+					u64vec2 mask2 = ~x_mask &  y_mask;
+					u64vec2 mask3 = ~x_mask & ~y_mask;
+					b &= u64vec4(mask0.x, mask1.x, mask2.x, mask3.x);
+					b2 &= u64vec4(mask0.y, mask1.y, mask2.y, mask3.y);
 
 					ivec4 rs = shift.yyyy*ivec4(8,0,8,0) + shift.xxxx*ivec4(1,1,0,0);
 					ivec4 ls = (8-shift.yyyy)*ivec4(0,8,0,8) + (8-shift.xxxx)*ivec4(0,0,1,1);
-
 					b >>= rs;
 					b <<= ls;
 
-					fragment_map = b.x|b.y|b.z|b.w;
+					ivec4 rs2 = shift.wwww*ivec4(8,0,8,0) + shift.zzzz*ivec4(1,1,0,0);
+					ivec4 ls2 = (8-shift.wwww)*ivec4(0,8,0,8) + (8-shift.zzzz)*ivec4(0,0,1,1);
+					b2 >>= rs2;
+					b2 <<= ls2;
 
-					u64vec4 dead = u64vec4(is_alive) & b;
+					fragment_map.x = b.x|b.y|b.z|b.w;
+					fragment_map.y = b2.x|b2.y|b2.z|b2.w;
+
+					u64vec4 dead = u64vec4(is_alive.x) & b;
 					dead <<= rs;
 					dead >>= ls;
 //					dead.x != 0 ? atomicOr(b_emission_occlusion[findex.x], dead.x) : 0;
@@ -176,16 +190,29 @@ void main()
 					b_emission_occlusion[findex.y] |= (dead.y != 0) ? dead.y : 0;
 					b_emission_occlusion[findex.z] |= (dead.z != 0) ? dead.z : 0;
 					b_emission_occlusion[findex.w] |= (dead.w != 0) ? dead.w : 0;
+
+					u64vec4 dead2 = u64vec4(is_alive.y) & b2;
+					dead2 <<= rs2;
+					dead2 >>= ls2;
+//					dead.x != 0 ? atomicOr(b_emission_occlusion[findex.x], dead.x) : 0;
+//					dead.y != 0 ? atomicOr(b_emission_occlusion[findex.y], dead.y) : 0;
+//					dead.z != 0 ? atomicOr(b_emission_occlusion[findex.z], dead.z) : 0;
+//					dead.w != 0 ? atomicOr(b_emission_occlusion[findex.w], dead.w) : 0;
+					b_emission_occlusion[findex2.x] |= (dead2.x != 0) ? dead2.x : 0;
+					b_emission_occlusion[findex2.y] |= (dead2.y != 0) ? dead2.y : 0;
+					b_emission_occlusion[findex2.z] |= (dead2.z != 0) ? dead2.z : 0;
+					b_emission_occlusion[findex2.w] |= (dead2.w != 0) ? dead2.w : 0;
 				}
 				is_alive &= ~fragment_map;
-				if(is_alive == uint64_t(0))
+				if(is_alive.xy == u64vec2(0))
 				{ 
 					break;
 				}
 			}
 		}
 
-		b_emission_reached[gl_GlobalInvocationID.x+gl_GlobalInvocationID.y*reso.z] = is_alive;
+		b_emission_reached[gl_GlobalInvocationID.x*2+gl_GlobalInvocationID.y*reso.z] = is_alive.x;
+		b_emission_reached[gl_GlobalInvocationID.x*2+1+gl_GlobalInvocationID.y*reso.z] = is_alive.y;
 	}
 
 }

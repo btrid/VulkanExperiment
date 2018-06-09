@@ -39,6 +39,7 @@ void main()
 			b_emission_list[e_offset + list_index] = p_index;
 		}
 		b_emission[e_offset+p_index].emission += constant.emission;
+		b_emission[e_offset+p_index].pos = constant.pos;
 		b_emission[e_offset+p_index].dir = constant.dir;
 		b_emission[e_offset+p_index].angle = constant.angle;
 		b_emission[e_offset+p_index].level = constant.level;

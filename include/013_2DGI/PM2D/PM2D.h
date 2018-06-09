@@ -60,10 +60,10 @@ struct PM2DContext
 
 	PM2DContext(const std::shared_ptr<btr::Context>& context)
 	{
-//		RenderWidth = 1024;
-//		RenderHeight = 1024;
- 		RenderWidth = 512;
- 		RenderHeight = 512;
+		RenderWidth = 1024;
+		RenderHeight = 1024;
+// 		RenderWidth = 512;
+// 		RenderHeight = 512;
 		FragmentBufferSize = RenderWidth * RenderHeight;
 
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
