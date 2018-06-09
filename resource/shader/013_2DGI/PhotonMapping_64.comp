@@ -29,7 +29,6 @@ void main()
 	const vec2 subpixel = pixel_size.xy*(1<<constant.bounce_count);
 
 	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
-	const ivec2 bounce_reso = ivec2(u_pm_info.m_resolution.xy)>>constant.bounce_count;
 	const ivec2 pixel = 8*ivec2(gl_GlobalInvocationID.xy)<<constant.bounce_count;
 
 
@@ -50,17 +49,6 @@ void main()
 			radiance = light.emission;
 			start = light.pos;
 		}
-		ivec2 iend = ivec2(end+0.5);
-		ivec2 istart = ivec2(start+0.5);
-		ivec2 idir = iend - istart;
-		if(all(equal(idir, ivec2(0))))
-		{
-			// ライト自身
-//			fragment_state = fragment_state_light;
-//			illuminance += albedo*radiance.xyz;
-//			continue;
-		}
-
 		{
 			const vec2 diff = (end - start);
 			vec4 l_dir = rotate2(light.dir.xx + vec2(-light.angle, light.angle));
@@ -73,13 +61,14 @@ void main()
 			}
 		}
 
-		int goal_index = abs(idir.x) >= abs(idir.y) ? 0: 1;
-
-		vec2 dir = normalize(end - start);
+		const vec2 distance = (end - start);
+		vec2 dir = normalize(distance);
 		dir.x = dir.x == 0. ? 0.000001 : dir.x;
 		dir.y = dir.y == 0. ? 0.000001 : dir.y;
 		dir *= abs(dir.x) >= abs(dir.y) ? abs(1./dir.x) : abs(1./dir.y);
 		vec2 inv_dir = abs(1./dir);
+
+		int goal_index = abs(dir.x) >= abs(dir.y) ? 0: 1;
 
 		vec2 pos = start;
 		ivec2 map_index = ivec2(pos);
@@ -132,7 +121,7 @@ void main()
 			}
 
 			// 終了判定
-			if(abs(idir[goal_index]) - abs(map_index[goal_index]-istart[goal_index]) < 1<<constant.bounce_count)
+			if(abs(distance[goal_index]) - abs(map_index[goal_index]-start[goal_index]) < 1<<constant.bounce_count)
 			{
 				// 距離を超えたら光がフラグメントにヒット
 				break;
