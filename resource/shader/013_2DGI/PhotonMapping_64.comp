@@ -189,7 +189,7 @@ void main()
 					uint64_t x_mask2 = ~x_mask_inv2;
 					uint64_t y_mask2 = ~y_mask_inv2;
 
-#if 1
+#if 0
 					uint64_t b0 = b_fragment_map[findex.x];
 					uint64_t b1 = b_fragment_map[findex.y];
 					uint64_t b2 = b_fragment_map[findex.z];
@@ -250,14 +250,17 @@ void main()
 
 					fragment_map = b.x|b.y|b.z|b.w;
 
-					uint64_t dead = is_alive & b.x;
-					dead != 0 ? atomicOr(b_emission_occlusion[findex.x], dead) : 0;
-					dead = is_alive & b.y;
-					dead != 0 ? atomicOr(b_emission_occlusion[findex.y], dead) : 0;
-					dead = is_alive & b.z;
-					dead != 0 ? atomicOr(b_emission_occlusion[findex.z], dead) : 0;
-					dead = is_alive & b.w;
-					dead != 0 ? atomicOr(b_emission_occlusion[findex.w], dead) : 0;
+					u64vec4 dead = u64vec4(is_alive) & b;
+					dead <<= rs;
+					dead >>= ls;
+//					dead.x != 0 ? atomicOr(b_emission_occlusion[findex.x], dead.x) : 0;
+//					dead.y != 0 ? atomicOr(b_emission_occlusion[findex.y], dead.y) : 0;
+//					dead.z != 0 ? atomicOr(b_emission_occlusion[findex.z], dead.z) : 0;
+//					dead.w != 0 ? atomicOr(b_emission_occlusion[findex.w], dead.w) : 0;
+					b_emission_occlusion[findex.x] |= (dead.x != 0) ? dead.x : 0;
+					b_emission_occlusion[findex.y] |= (dead.y != 0) ? dead.y : 0;
+					b_emission_occlusion[findex.z] |= (dead.z != 0) ? dead.z : 0;
+					b_emission_occlusion[findex.w] |= (dead.w != 0) ? dead.w : 0;
 
 #endif
 				}
