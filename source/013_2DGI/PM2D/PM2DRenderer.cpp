@@ -432,9 +432,10 @@ void PM2DRenderer::execute(vk::CommandBuffer cmd)
 #endif
 	for (int i = 0; i < 1; i++)
 	{
+		static int s_frame;
+		s_frame++;
 		ivec2 constant_param[] = {
-
-			ivec2(0, 2),
+			ivec2(0, s_frame),
 			ivec2(2, -1),
 		};
 		// light culling

@@ -173,7 +173,7 @@ struct PM2DContext
 			b_emission_tile_linklist = context->m_storage_memory.allocateMemory(desc);
 		}
 		{
-			b_emission_reached = context->m_storage_memory.allocateMemory<uint64_t>({ (uint32_t)FragmentBufferSize/64 ,{} });
+			b_emission_reached = context->m_storage_memory.allocateMemory<uint64_t>({ (uint32_t)FragmentBufferSize/64 * 4 ,{} });
 			b_emission_occlusion = context->m_storage_memory.allocateMemory<uint64_t>({ (uint32_t)FragmentBufferSize/64 ,{} });
 		}
 
