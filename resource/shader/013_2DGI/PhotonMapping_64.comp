@@ -82,7 +82,7 @@ void main()
 			// march
 			{
 				int hierarchy=0;
-				for(int hierarchy_=7; hierarchy_>2; hierarchy_-=1)
+				for(int hierarchy_=7; hierarchy_>2; hierarchy_--)
 				{
 					ivec2 map_index_hie = map_index>>hierarchy_;
 					ivec4 fragment_index = ivec4(map_index_hie/8, map_index_hie%8);
@@ -139,18 +139,17 @@ void main()
 
 				uint64_t fragment_map;
 				{
-					uint64_t x_line_mask2 = 0xfful & ((1ul << (shift.x)) - 1ul);
-					uint64_t x_mask_inv2 = x_line_mask2 | (x_line_mask2 << 8) | (x_line_mask2 << 16) | (x_line_mask2 << 24) | (x_line_mask2 << 32) | (x_line_mask2 << 40) | (x_line_mask2 << 48) | (x_line_mask2 << 56);
-					uint64_t y_mask_inv2 = 0xfffffffffffffffful & ((1ul << ((shift.y) * 8)) - 1);
-					uint64_t x_mask2 = ~x_mask_inv2;
-					uint64_t y_mask2 = ~y_mask_inv2;
+					uint64_t x_line_mask = 0xfful & ((1ul << (shift.x)) - 1ul);
+					uint64_t x_mask_inv = x_line_mask | (x_line_mask << 8) | (x_line_mask << 16) | (x_line_mask << 24) | (x_line_mask << 32) | (x_line_mask << 40) | (x_line_mask << 48) | (x_line_mask << 56);
+					uint64_t y_mask_inv = 0xfffffffffffffffful & ((1ul << ((shift.y) * 8)) - 1);
+					uint64_t x_mask = ~x_mask_inv;
+					uint64_t y_mask = ~y_mask_inv;
 
 					u64vec4 b = u64vec4(b_fragment_map[findex.x],b_fragment_map[findex.y],b_fragment_map[findex.z],b_fragment_map[findex.w]);
-					b &= u64vec4(x_mask2 & y_mask2, x_mask2 & ~y_mask2, ~x_mask2 & y_mask2, ~x_mask2 & ~y_mask2);
+					b &= u64vec4(x_mask & y_mask, x_mask & ~y_mask, ~x_mask & y_mask, ~x_mask & ~y_mask);
 
 					ivec4 rs = shift.yyyy*ivec4(8,0,8,0) + shift.xxxx*ivec4(1,1,0,0);
 					ivec4 ls = (8-shift.yyyy)*ivec4(0,8,0,8) + (8-shift.xxxx)*ivec4(0,0,1,1);
-
 					b >>= rs;
 					b <<= ls;
 
