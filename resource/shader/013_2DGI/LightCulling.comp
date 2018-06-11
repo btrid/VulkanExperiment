@@ -43,7 +43,6 @@ void main()
 	float tile_size = length(u_pm_info.m_emission_tile_size.xy);
 
 	uint data_num = b_emission_counter[constant.bounce_count].x;
-	int data_offset = u_pm_info.m_emission_buffer_offset[constant.bounce_count];
 	uint loop_count = (data_num-1) / gl_NumWorkGroups.x + 1;
 	uint loop_begin = gl_LocalInvocationID.x*loop_count;
 	uint loop_end = loop_begin + loop_count;
@@ -55,7 +54,7 @@ void main()
 //		int index1d = b_emission_list[data_offset+i];
 //		vec2 pos = vec2(ivec2(index1d%reso.x, index1d/reso.x)<<constant.bounce_count);
 
-		Emission light = b_emission_buffer[data_offset+i];
+		Emission light = b_emission_buffer[i];
 		float power = length(light.emission);
 		vec2 pos = light.pos;
 

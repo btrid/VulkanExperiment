@@ -13,10 +13,7 @@ struct PMInfo
 	uvec2 m_emission_tile_num;
 	uvec2 _p;
 	vec4 m_position;
-	ivec4 m_fragment_hierarchy_offset[2];
 	ivec4 m_fragment_map_hierarchy_offset[2];
-	ivec4 m_emission_buffer_size;
-	ivec4 m_emission_buffer_offset;
 	int m_emission_tile_linklist_max;
 	int m_emission_buffer_max;
 };
@@ -98,7 +95,6 @@ layout(std430, set=USE_PM, binding=26) restrict buffer EmmisiveOcclusionBuffer {
 	uint64_t b_emission_occlusion[];
 };
 
-#define getFragmentHierarchyOffset(_i) (u_pm_info.m_fragment_hierarchy_offset[(_i)/4][(_i)%4])
 #define getFragmentMapHierarchyOffset(_i) (u_pm_info.m_fragment_map_hierarchy_offset[(_i)/4][(_i)%4])
 
 //int _map_offset[8] = {0, 16384, 20480, 21504, 21760, 21824, 21840, 21844};

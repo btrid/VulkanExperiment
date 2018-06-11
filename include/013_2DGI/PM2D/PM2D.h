@@ -39,10 +39,7 @@ struct PM2DContext
 		uvec2 m_emission_tile_num;
 		uvec2 _p;
 		vec4 m_position;
-		int m_fragment_hierarchy_offset[_Hierarchy_Num];
 		int m_fragment_map_hierarchy_offset[_Hierarchy_Num];
-		int m_emission_buffer_size[_BounceNum];
-		int m_emission_buffer_offset[_BounceNum];
 
 		int m_emission_tile_linklist_max;
 		int m_emission_buffer_max;
@@ -79,14 +76,6 @@ struct PM2DContext
 			m_pm2d_info.m_emission_tile_size = uvec2(32, 32);
 			m_pm2d_info.m_emission_tile_num = m_pm2d_info.m_resolution / m_pm2d_info.m_emission_tile_size;
 			m_pm2d_info.m_camera_PV = glm::ortho(RenderWidth*-0.5f, RenderWidth*0.5f, RenderHeight*-0.5f, RenderHeight*0.5f, 0.f, 2000.f) * glm::lookAt(vec3(RenderWidth*0.5f, -1000.f, RenderHeight*0.5f)+m_pm2d_info.m_position.xyz(), vec3(RenderWidth*0.5f, 0.f, RenderHeight*0.5f) + m_pm2d_info.m_position.xyz(), vec3(0.f, 0.f, 1.f));
-			m_pm2d_info.m_fragment_hierarchy_offset[0] = 0;
-			m_pm2d_info.m_fragment_hierarchy_offset[1] = m_pm2d_info.m_fragment_hierarchy_offset[0] + RenderHeight * RenderWidth;
-			m_pm2d_info.m_fragment_hierarchy_offset[2] = m_pm2d_info.m_fragment_hierarchy_offset[1] + RenderHeight * RenderWidth / (2 * 2);
-			m_pm2d_info.m_fragment_hierarchy_offset[3] = m_pm2d_info.m_fragment_hierarchy_offset[2] + RenderHeight * RenderWidth / (4 * 4);
-			m_pm2d_info.m_fragment_hierarchy_offset[4] = m_pm2d_info.m_fragment_hierarchy_offset[3] + RenderHeight * RenderWidth / (8 * 8);
-			m_pm2d_info.m_fragment_hierarchy_offset[5] = m_pm2d_info.m_fragment_hierarchy_offset[4] + RenderHeight * RenderWidth / (16 * 16);
-			m_pm2d_info.m_fragment_hierarchy_offset[6] = m_pm2d_info.m_fragment_hierarchy_offset[5] + RenderHeight * RenderWidth / (32 * 32);
-			m_pm2d_info.m_fragment_hierarchy_offset[7] = m_pm2d_info.m_fragment_hierarchy_offset[6] + RenderHeight * RenderWidth / (64 * 64);
 
 			int size = RenderHeight * RenderWidth / 64;
 			m_pm2d_info.m_fragment_map_hierarchy_offset[0] = 0;
@@ -98,14 +87,7 @@ struct PM2DContext
 			m_pm2d_info.m_fragment_map_hierarchy_offset[6] = m_pm2d_info.m_fragment_map_hierarchy_offset[5] + size / (32 * 32);
 			m_pm2d_info.m_fragment_map_hierarchy_offset[7] = m_pm2d_info.m_fragment_map_hierarchy_offset[6] + size / (64 * 64);
 
-			m_pm2d_info.m_emission_buffer_size[0] = RenderWidth * RenderHeight;
-			m_pm2d_info.m_emission_buffer_offset[0] = 0;
-			for (int i = 1; i < BounceNum; i++)
-			{
-				m_pm2d_info.m_emission_buffer_size[i] = m_pm2d_info.m_emission_buffer_size[i - 1] / 4;
-				m_pm2d_info.m_emission_buffer_offset[i] = m_pm2d_info.m_emission_buffer_offset[i - 1] + m_pm2d_info.m_emission_buffer_size[i - 1];
-			}
-			m_pm2d_info.m_emission_tile_linklist_max = 8192 * 1024;
+			m_pm2d_info.m_emission_tile_linklist_max = Light_Num * m_pm2d_info.m_emission_tile_num.x * m_pm2d_info.m_emission_tile_num.y;
 			m_pm2d_info.m_emission_buffer_max = Light_Num;
 			cmd.updateBuffer<Info>(u_fragment_info.getInfo().buffer, u_fragment_info.getInfo().offset, m_pm2d_info);
 		}
