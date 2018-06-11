@@ -61,7 +61,7 @@ void main()
 		{
 			int emission_index = b_emission_tile_linklist[i].target;
 			int eoffset = u_pm_info.m_emission_buffer_offset[constant.bounce_count];
-			light = b_emission[emission_index+eoffset];
+			light = b_emission_buffer[emission_index+eoffset];
 			radiance = light.emission;
 			ivec2 e_index_2d = ivec2(emission_index%bounce_reso.x, emission_index/bounce_reso.x);
 			start = vec2(e_index_2d<<constant.bounce_count);

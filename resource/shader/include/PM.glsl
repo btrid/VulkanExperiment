@@ -83,7 +83,7 @@ layout(std430, set=USE_PM, binding=20) restrict buffer EmissiveCounter {
 	ivec4 b_emission_counter[];
 };
 layout(std430, set=USE_PM, binding=21) restrict buffer EmissiveBuffer {
-	Emission b_emission[];
+	Emission b_emission_buffer[];
 };
 layout(std430, set=USE_PM, binding=22) restrict buffer EmissiveTileLinkListCounter {
 	int b_emission_tile_counter;

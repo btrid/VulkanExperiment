@@ -23,9 +23,9 @@ layout(push_constant) uniform InputLight
 void main()
 {
 	int light_index = atomicAdd(b_emission_counter[0].x, 1);
-	b_emission[light_index].emission += constant.emission;
-	b_emission[light_index].pos = constant.pos;
-	b_emission[light_index].dir = constant.dir;
-	b_emission[light_index].angle = constant.angle;
-	b_emission[light_index].level = constant.level;
+	b_emission_buffer[light_index].emission += constant.emission;
+	b_emission_buffer[light_index].pos = constant.pos;
+	b_emission_buffer[light_index].dir = constant.dir;
+	b_emission_buffer[light_index].angle = constant.angle;
+	b_emission_buffer[light_index].level = constant.level;
 }

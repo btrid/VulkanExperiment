@@ -92,7 +92,7 @@ void main()
 	for(int i = b_emission_tile_linkhead[tile_index]; i != -1; i= b_emission_tile_linklist[i].next)
 	{
 		int emission_index = b_emission_tile_linklist[i].target;
-		Emission light = b_emission[emission_index];
+		Emission light = b_emission_buffer[emission_index];
 
 		u64vec4 reached_map;
 		uint64_t occlude_map;

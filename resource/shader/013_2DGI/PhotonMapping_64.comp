@@ -45,7 +45,7 @@ void main()
 		vec2 end = pixel;
 
 		int emission_index = b_emission_tile_linklist[i].target;
-		Emission light = b_emission[emission_index];
+		Emission light = b_emission_buffer[emission_index];
 
 		vec4 radiance = light.emission;
 		vec2 start = light.pos + start_offset;
