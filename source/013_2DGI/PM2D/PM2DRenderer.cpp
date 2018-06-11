@@ -386,42 +386,42 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 void PM2DRenderer::execute(vk::CommandBuffer cmd)
 {
 
-	// clear
-	{
-		vk::ImageMemoryBarrier to_clear[PM2DContext::_BounceNum];
-		for (int i = 0; i < m_color_tex.max_size(); i++)
-		{
-			to_clear[i].setImage(m_color_tex[i].m_image.get());
-			to_clear[i].setSubresourceRange(m_color_tex[i].m_subresource_range);
-			to_clear[i].setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
-			to_clear[i].setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
-			to_clear[i].setOldLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
-			to_clear[i].setNewLayout(vk::ImageLayout::eTransferDstOptimal);
-		}
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eTransfer, {},
-			0, nullptr, 0, nullptr, array_length(to_clear), to_clear);
-
-		vk::ClearColorValue clear_value({});
-		cmd.clearColorImage(m_color_tex[0].m_image.get(), vk::ImageLayout::eTransferDstOptimal, clear_value, m_color_tex[0].m_subresource_range);
-		cmd.clearColorImage(m_color_tex[1].m_image.get(), vk::ImageLayout::eTransferDstOptimal, clear_value, m_color_tex[1].m_subresource_range);
-		cmd.clearColorImage(m_color_tex[2].m_image.get(), vk::ImageLayout::eTransferDstOptimal, clear_value, m_color_tex[2].m_subresource_range);
-		cmd.clearColorImage(m_color_tex[3].m_image.get(), vk::ImageLayout::eTransferDstOptimal, clear_value, m_color_tex[3].m_subresource_range);
-	}
-	// クリア待ち
-	{
-		vk::ImageMemoryBarrier to_write[PM2DContext::_BounceNum];
-		for (int i = 0; i < m_color_tex.max_size(); i++)
-		{
-			to_write[i].setImage(m_color_tex[i].m_image.get());
-			to_write[i].setSubresourceRange(m_color_tex[i].m_subresource_range);
-			to_write[i].setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
-			to_write[i].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
-			to_write[i].setOldLayout(vk::ImageLayout::eTransferDstOptimal);
-			to_write[i].setNewLayout(vk::ImageLayout::eGeneral);
-		}
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {},
-			0, nullptr, 0, nullptr, array_length(to_write), to_write);
-	}
+// 	// clear いらない？
+// 	{
+// 		vk::ImageMemoryBarrier to_clear[PM2DContext::_BounceNum];
+// 		for (int i = 0; i < m_color_tex.max_size(); i++)
+// 		{
+// 			to_clear[i].setImage(m_color_tex[i].m_image.get());
+// 			to_clear[i].setSubresourceRange(m_color_tex[i].m_subresource_range);
+// 			to_clear[i].setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
+// 			to_clear[i].setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
+// 			to_clear[i].setOldLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+// 			to_clear[i].setNewLayout(vk::ImageLayout::eTransferDstOptimal);
+// 		}
+// 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eTransfer, {},
+// 			0, nullptr, 0, nullptr, array_length(to_clear), to_clear);
+// 
+// 		vk::ClearColorValue clear_value({});
+// 		cmd.clearColorImage(m_color_tex[0].m_image.get(), vk::ImageLayout::eTransferDstOptimal, clear_value, m_color_tex[0].m_subresource_range);
+// 		cmd.clearColorImage(m_color_tex[1].m_image.get(), vk::ImageLayout::eTransferDstOptimal, clear_value, m_color_tex[1].m_subresource_range);
+// 		cmd.clearColorImage(m_color_tex[2].m_image.get(), vk::ImageLayout::eTransferDstOptimal, clear_value, m_color_tex[2].m_subresource_range);
+// 		cmd.clearColorImage(m_color_tex[3].m_image.get(), vk::ImageLayout::eTransferDstOptimal, clear_value, m_color_tex[3].m_subresource_range);
+// 	}
+// 	// クリア待ち
+// 	{
+// 		vk::ImageMemoryBarrier to_write[PM2DContext::_BounceNum];
+// 		for (int i = 0; i < m_color_tex.max_size(); i++)
+// 		{
+// 			to_write[i].setImage(m_color_tex[i].m_image.get());
+// 			to_write[i].setSubresourceRange(m_color_tex[i].m_subresource_range);
+// 			to_write[i].setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+// 			to_write[i].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
+// 			to_write[i].setOldLayout(vk::ImageLayout::eTransferDstOptimal);
+// 			to_write[i].setNewLayout(vk::ImageLayout::eGeneral);
+// 		}
+// 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {},
+// 			0, nullptr, 0, nullptr, array_length(to_write), to_write);
+// 	}
 
 //#define debug_render_fragment_map
 #if defined(debug_render_fragment_map)
@@ -440,24 +440,29 @@ void PM2DRenderer::execute(vk::CommandBuffer cmd)
 		};
 		// light culling
 		{
+			{
+				vk::BufferMemoryBarrier to_read[] = {
+					m_pm2d_context->b_emission_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {},
+					0, nullptr, array_length(to_read), to_read, 0, nullptr);
+				
+
+			}
 			// clear emission link
 			{
 				vk::BufferMemoryBarrier to_clear[] = {
 					m_pm2d_context->b_emission_tile_linklist_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
-					m_pm2d_context->b_emission_tile_linkhead.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
 				};
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eTransfer, {},
 					0, nullptr, array_length(to_clear), to_clear, 0, nullptr);
 
 				cmd.fillBuffer(m_pm2d_context->b_emission_tile_linklist_counter.getInfo().buffer, m_pm2d_context->b_emission_tile_linklist_counter.getInfo().offset, m_pm2d_context->b_emission_tile_linklist_counter.getInfo().range, 0u);
-				cmd.fillBuffer(m_pm2d_context->b_emission_tile_linkhead.getInfo().buffer, m_pm2d_context->b_emission_tile_linkhead.getInfo().offset, m_pm2d_context->b_emission_tile_linkhead.getInfo().range, -1);
 
 			}
 
 			vk::BufferMemoryBarrier to_write[] = {
 				m_pm2d_context->b_emission_buffer.makeMemoryBarrier(vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eShaderRead),
-				m_pm2d_context->b_emission_list.makeMemoryBarrier(vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eShaderRead),
-				m_pm2d_context->b_emission_map.makeMemoryBarrier(vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eShaderRead),
 				m_pm2d_context->b_emission_tile_linklist_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 				m_pm2d_context->b_emission_tile_linkhead.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eShaderWrite),
 				m_pm2d_context->b_emission_tile_linklist.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eShaderWrite),

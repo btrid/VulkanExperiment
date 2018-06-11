@@ -85,25 +85,19 @@ layout(std430, set=USE_PM, binding=20) restrict buffer EmissiveCounter {
 layout(std430, set=USE_PM, binding=21) restrict buffer EmissiveBuffer {
 	Emission b_emission[];
 };
-layout(std430, set=USE_PM, binding=22) restrict buffer EmissiveListBuffer {
-	int b_emission_list[];
-};
-layout(std430, set=USE_PM, binding=23) restrict buffer EmissiveMapBuffer {
-	int b_emission_map[];
-};
-layout(std430, set=USE_PM, binding=24) restrict buffer EmissiveTileLinkListCounter {
+layout(std430, set=USE_PM, binding=22) restrict buffer EmissiveTileLinkListCounter {
 	int b_emission_tile_counter;
 };
-layout(std430, set=USE_PM, binding=25) restrict buffer EmissiveTileLinkHeadBuffer {
+layout(std430, set=USE_PM, binding=23) restrict buffer EmissiveTileLinkHeadBuffer {
 	int b_emission_tile_linkhead[];
 };
-layout(std430, set=USE_PM, binding=26) restrict buffer EmissiveTileLinkListBuffer {
+layout(std430, set=USE_PM, binding=24) restrict buffer EmissiveTileLinkListBuffer {
 	LinkList b_emission_tile_linklist[];
 };
-layout(std430, set=USE_PM, binding=27) restrict buffer EmmisiveReachedBuffer {
+layout(std430, set=USE_PM, binding=25) restrict buffer EmmisiveReachedBuffer {
 	uint64_t b_emission_reached[];
 };
-layout(std430, set=USE_PM, binding=28) restrict buffer EmmisiveOcclusionBuffer {
+layout(std430, set=USE_PM, binding=26) restrict buffer EmmisiveOcclusionBuffer {
 	uint64_t b_emission_occlusion[];
 };
 

@@ -62,10 +62,10 @@ struct PM2DContext
 
 	PM2DContext(const std::shared_ptr<btr::Context>& context)
 	{
-//		RenderWidth = 1024;
-//		RenderHeight = 1024;
- 		RenderWidth = 512;
- 		RenderHeight = 512;
+// 		RenderWidth = 1024;
+// 		RenderHeight = 1024;
+		RenderWidth = 512;
+		RenderHeight = 512;
 		FragmentBufferSize = RenderWidth * RenderHeight;
 
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
@@ -148,16 +148,6 @@ struct PM2DContext
 			btr::BufferMemoryDescriptorEx<PM2DLightData> desc;
 			desc.element_num = Light_Num;
 			b_emission_buffer = context->m_storage_memory.allocateMemory(desc);
-		}
-		{
-			btr::BufferMemoryDescriptorEx<int32_t> desc;
-			desc.element_num = m_pm2d_info.m_emission_buffer_offset[BounceNum - 1] + m_pm2d_info.m_emission_buffer_size[BounceNum - 1];
-			b_emission_list = context->m_storage_memory.allocateMemory(desc);
-		}
-		{
-			btr::BufferMemoryDescriptorEx<int32_t> desc;
-			desc.element_num = m_pm2d_info.m_emission_buffer_offset[BounceNum - 1] + m_pm2d_info.m_emission_buffer_size[BounceNum - 1];
-			b_emission_map = context->m_storage_memory.allocateMemory(desc);
 		}
 		{
 			btr::BufferMemoryDescriptorEx<int32_t> desc;
@@ -306,8 +296,6 @@ struct PM2DContext
 				vk::DescriptorBufferInfo emission_storages[] = {
 					b_emission_counter.getInfo(),
 					b_emission_buffer.getInfo(),
-					b_emission_list.getInfo(),
-					b_emission_map.getInfo(),
 					b_emission_tile_linklist_counter.getInfo(),
 					b_emission_tile_linkhead.getInfo(),
 					b_emission_tile_linklist.getInfo(),
@@ -349,8 +337,6 @@ struct PM2DContext
 	btr::BufferMemoryEx<ivec4> b_emission_counter;
 	btr::BufferMemoryEx<PM2DLightData> b_emission_buffer;
 
-	btr::BufferMemoryEx<int32_t> b_emission_list;
-	btr::BufferMemoryEx<int32_t> b_emission_map;	//!< ==-1 emitter‚ª‚È‚¢ !=0‚ ‚é
 	btr::BufferMemoryEx<int32_t> b_emission_tile_linklist_counter;
 	btr::BufferMemoryEx<int32_t> b_emission_tile_linkhead;
 	btr::BufferMemoryEx<LinkList> b_emission_tile_linklist;

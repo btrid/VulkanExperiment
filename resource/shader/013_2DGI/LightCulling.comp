@@ -31,9 +31,13 @@ void main()
 		vec2 tile_size = u_pm_info.m_emission_tile_size.xy;
 		s_area.xy = left_top + tile_size*tile_index_2d.xy - 1.1;
 		s_area.zw = s_area.xy + tile_size + 1.2;
+
+		b_emission_tile_linkhead[tile_index_1d] = -1;
+
 	}
 	barrier();
 	memoryBarrierShared();
+	memoryBarrierBuffer();
 
 	ivec2 reso = u_pm_info.m_resolution>>constant.bounce_count;
 	float tile_size = length(u_pm_info.m_emission_tile_size.xy);
