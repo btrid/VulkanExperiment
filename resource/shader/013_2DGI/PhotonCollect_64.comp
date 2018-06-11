@@ -85,8 +85,6 @@ void main()
 
 	ivec4 offset = ivec4(-1,0,-1,0) + ivec4(greaterThanEqual(gl_LocalInvocationID.xxyy, uvec4(4)));
 	ivec2 shift = (ivec2(4) + ivec2(gl_LocalInvocationID.xy)) % ivec2(8);
-//	ivec4 offset = ivec4(0, 1, 0, 1);
-//	ivec2 shift = fragment_index.zw;
 	ivec4 findex = fragment_index.xxxx + offset.xxyy + (fragment_index.yyyy + offset.zwzw)*(reso.zzzz);
 
 	uint64_t x_line_mask = 0xfful & ((1ul << (shift.x)) - 1ul);
@@ -94,8 +92,12 @@ void main()
 	uint64_t y_mask_inv = 0xfffffffffffffffful & ((1ul << ((shift.y) * 8)) - 1);
 	uint64_t x_mask = ~x_mask_inv;
 	uint64_t y_mask = ~y_mask_inv;
-	ivec4 rs = shift.yyyy*ivec4(8,0,8,0) + shift.xxxx*ivec4(1,1,0,0);
-	ivec4 ls = (8-shift.yyyy)*ivec4(0,8,0,8) + (8-shift.xxxx)*ivec4(0,0,1,1);
+	u64vec4 map_mask = u64vec4(x_mask & y_mask, x_mask & ~y_mask, ~x_mask & y_mask, ~x_mask & ~y_mask);
+	ivec4 right_shift = shift.yyyy*ivec4(8,0,8,0) + shift.xxxx*ivec4(1,1,0,0);
+	ivec4 left_shift = (8-shift.yyyy)*ivec4(0,8,0,8) + (8-shift.xxxx)*ivec4(0,0,1,1);
+
+	uint64_t bit_mask = 1ul << (8*4+4);
+	u64vec4 bit_mask4 = u64vec4(bit_mask);
 
 	uint64_t f0 = b_fragment_map[findex.x];
 	uint64_t f1 = b_fragment_map[findex.y];
@@ -103,17 +105,16 @@ void main()
 	uint64_t f3 = b_fragment_map[findex.w];
 	u64vec4 f = u64vec4(f0, f1, f2, f3);
 	f &= u64vec4(x_mask & y_mask, x_mask & ~y_mask, ~x_mask & y_mask, ~x_mask & ~y_mask);
-	f >>= rs;
-	f <<= ls;
+	f >>= right_shift;
+	f <<= left_shift;
 	uint64_t fragment_map = f.x|f.y|f.z|f.w;
 
-	uint64_t bit_mask = 1ul << (8*4+4);
-//	u64vec4 b_mask = u64vec4(1ul << (8*4+4));
-	bool is_block;
+
+	bool is_block = (fragment_map & bit_mask) != 0;
 //	bool is_occlude;
 	{
-		int findex = fragment_index.x + fragment_index.y*reso.z;
-		is_block = ((b_fragment_map[findex.x]&bit_mask) != 0);
+//		int findex = fragment_index.x + fragment_index.y*reso.z;
+//		is_block = ((b_fragment_map[findex.x]&1) != 0);
 //		is_occlude = ((b_emission_occlusion[findex.x]&bit_mask) != 0);
 	}
 
@@ -135,9 +136,9 @@ void main()
 			uint64_t o3 = b_emission_occlusion[findex.w];
 			u64vec4 o = u64vec4(o0, o1, o2, o3);
 
-			o &= u64vec4(x_mask & y_mask, x_mask & ~y_mask, ~x_mask & y_mask, ~x_mask & ~y_mask);
-			o >>= rs;
-			o <<= ls;
+			o &= map_mask;
+			o >>= right_shift;
+			o <<= left_shift;
 			occlude_map = o.x|o.y|o.z|o.w;
 		}
 		{
@@ -152,9 +153,9 @@ void main()
 			uint64_t r2 = b_emission_reached[light_offset + findex.z +map_size*0];
 			uint64_t r3 = b_emission_reached[light_offset + findex.w +map_size*0];
 			u64vec4 r = u64vec4(r0, r1, r2, r3);
-			r &= u64vec4(x_mask & y_mask, x_mask & ~y_mask, ~x_mask & y_mask, ~x_mask & ~y_mask);
-			r >>= rs;
-			r <<= ls;
+			r &= map_mask;
+			r >>= right_shift;
+			r <<= left_shift;
 			reached_map.x = r.x|r.y|r.z|r.w;
 
 
@@ -163,37 +164,29 @@ void main()
 			r2 = b_emission_reached[light_offset + findex.z +map_size*1];
 			r3 = b_emission_reached[light_offset + findex.w +map_size*1];
 			r = u64vec4(r0, r1, r2, r3);
-			r &= u64vec4(x_mask & y_mask, x_mask & ~y_mask, ~x_mask & y_mask, ~x_mask & ~y_mask);
-			r >>= rs;
-			r <<= ls;
+			r &= map_mask;
+			r >>= right_shift;
+			r <<= left_shift;
 			reached_map.y = r.x|r.y|r.z|r.w;
 			r0 = b_emission_reached[light_offset + findex.x +map_size*2];
 			r1 = b_emission_reached[light_offset + findex.y +map_size*2];
 			r2 = b_emission_reached[light_offset + findex.z +map_size*2];
 			r3 = b_emission_reached[light_offset + findex.w +map_size*2];
 			r = u64vec4(r0, r1, r2, r3);
-			r &= u64vec4(x_mask & y_mask, x_mask & ~y_mask, ~x_mask & y_mask, ~x_mask & ~y_mask);
-			r >>= rs;
-			r <<= ls;
+			r &= map_mask;
+			r >>= right_shift;
+			r <<= left_shift;
 			reached_map.z = r.x|r.y|r.z|r.w;
 			r0 = b_emission_reached[light_offset + findex.x +map_size*3];
 			r1 = b_emission_reached[light_offset + findex.y +map_size*3];
 			r2 = b_emission_reached[light_offset + findex.z +map_size*3];
 			r3 = b_emission_reached[light_offset + findex.w +map_size*3];
 			r = u64vec4(r0, r1, r2, r3);
-			r &= u64vec4(x_mask & y_mask, x_mask & ~y_mask, ~x_mask & y_mask, ~x_mask & ~y_mask);
-			r >>= rs;
-			r <<= ls;
+			r &= map_mask;
+			r >>= right_shift;
+			r <<= left_shift;
 			reached_map.w = r.x|r.y|r.z|r.w;
 
-	//		reached_map.x = b_emission_reached[findex.x+map_size*0];
-	//		reached_map.y = b_emission_reached[findex.x+map_size*1];
-	//		reached_map.z = b_emission_reached[findex.x+map_size*2];
-	//		reached_map.w = b_emission_reached[findex.x+map_size*3];
-	//		reached_map.x = b_emission_reached[findex.x+map_size*0];
-	//		reached_map.y = b_emission_reached[findex.x+map_size*1+1];
-	//		reached_map.z = b_emission_reached[findex.x+map_size*2+reso.z];
-	//		reached_map.w = b_emission_reached[findex.x+map_size*3+reso.z+1];
 		}
 
 		uint64_t reached_num4 = popcnt4(reached_map);
@@ -204,14 +197,7 @@ void main()
 		const float ray_dist = distance(end, start);
 		vec3 radiance = vec3(0.2);
 
-		u64vec4 b_mask = u64vec4(1ul << (8*4+4));
-//		u64vec4 b_mask = u64vec4(1ul << 0);
-//		u64vec4 b_mask = u64vec4(1ul << gl_LocalInvocationIndex);
-		ivec4 is_reach = ivec4(notEqual(reached_map&b_mask, u64vec4(0)));
-//		ivec4 is_frag = ivec4(notEqual(fragment_map&b_mask, u64vec4(0)));
-
-		int is_not_occ = int((is_reach.x+is_reach.y+is_reach.z+is_reach.w) == 4);
-//		radiance *= (is_reach.x+is_reach.y+is_reach.z+is_reach.w) / 4.;
+		ivec4 is_reach = ivec4(notEqual(reached_map&bit_mask4, u64vec4(0)));
 
 		radiance *= float(reached_num4) / (256.01);
 
