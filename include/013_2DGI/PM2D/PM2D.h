@@ -127,18 +127,7 @@ struct PM2DContext
 			desc.element_num += size / (128 * 128);
 			b_fragment_map = context->m_storage_memory.allocateMemory(desc);
 		}
-		{
-			btr::BufferMemoryDescriptorEx<int32_t> desc;
-			desc.element_num = RenderWidth * RenderHeight;
-			desc.element_num += RenderWidth * RenderHeight / (2 * 2);
-			desc.element_num += RenderWidth * RenderHeight / (4 * 4);
-			desc.element_num += RenderWidth * RenderHeight / (8 * 8);
-			desc.element_num += RenderWidth * RenderHeight / (16 * 16);
-			desc.element_num += RenderWidth * RenderHeight / (32 * 32);
-			desc.element_num += RenderWidth * RenderHeight / (64 * 64);
-			desc.element_num += RenderWidth * RenderHeight / (128 * 128);
-			b_fragment_hierarchy = context->m_storage_memory.allocateMemory(desc);
-		}
+
 		{
 			btr::BufferMemoryDescriptorEx<ivec4> desc;
 			desc.element_num = BounceNum;
@@ -291,7 +280,6 @@ struct PM2DContext
 				vk::DescriptorBufferInfo storages[] = {
 					b_fragment_buffer.getInfo(),
 					b_fragment_map.getInfo(),
-					b_fragment_hierarchy.getInfo(),
 				};
 				vk::DescriptorBufferInfo emission_storages[] = {
 					b_emission_counter.getInfo(),
@@ -333,7 +321,6 @@ struct PM2DContext
 	btr::BufferMemoryEx<Info> u_fragment_info;
 	btr::BufferMemoryEx<Fragment> b_fragment_buffer;
 	btr::BufferMemoryEx<int64_t> b_fragment_map;
-	btr::BufferMemoryEx<int32_t> b_fragment_hierarchy;
 	btr::BufferMemoryEx<ivec4> b_emission_counter;
 	btr::BufferMemoryEx<PM2DLightData> b_emission_buffer;
 

@@ -18,7 +18,6 @@ rem %exe% %include% %option% -o ../binary\\PhotonMapping.comp.spv PhotonMapping_
 
 %exe% %include% %option% -o ../binary\\MakeFragmentMap.comp.spv MakeFragmentMap.comp
 %exe% %include% %option% -o ../binary\\MakeFragmentMapHierarchy.comp.spv MakeFragmentMapHierarchy.comp
-%exe% %include% %option% -o ../binary\\MakeFragmentHierarchy.comp.spv MakeFragmentHierarchy.comp
 %exe% %include% %option% -o ../binary\\LightCulling.comp.spv LightCulling.comp
 %exe% %include% %option% -o ../binary\\PMRendering.vert.spv PMRendering.vert
 %exe% %include% %option% -o ../binary\\PMRendering.frag.spv PMRendering.frag

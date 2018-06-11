@@ -15,21 +15,18 @@ struct PM2DMakeHierarchy
 	{
 		ShaderMakeFragmentMap,
 		ShaderMakeFragmentMapHierarchy,
-		ShaderMakeFragmentHierarchy,
 		ShaderNum,
 	};
 	enum PipelineLayout
 	{
 		PipelineLayoutMakeFragmentMap,
 		PipelineLayoutMakeFragmentMapHierarchy,
-		PipelineLayoutMakeFragmentHierarchy,
 		PipelineLayoutNum,
 	};
 	enum Pipeline
 	{
 		PipelineMakeFragmentMap,
 		PipelineMakeFragmentMapHierarchy,
-		PipelineMakeFragmentHierarchy,
 		PipelineNum,
 	};
 
@@ -43,7 +40,6 @@ struct PM2DMakeHierarchy
 			{
 				"MakeFragmentMap.comp.spv",
 				"MakeFragmentMapHierarchy.comp.spv",
-				"MakeFragmentHierarchy.comp.spv",
 			};
 //			static_assert(array_length(name) == m_shader.max_size(), "not equal shader num");
 
@@ -69,21 +65,17 @@ struct PM2DMakeHierarchy
 			pipeline_layout_info.setPushConstantRangeCount(array_length(constants));
 			pipeline_layout_info.setPPushConstantRanges(constants);
 			m_pipeline_layout[PipelineLayoutMakeFragmentMapHierarchy] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
-			m_pipeline_layout[PipelineLayoutMakeFragmentHierarchy] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
 		// pipeline
 		{
-			std::array<vk::PipelineShaderStageCreateInfo, 3> shader_info;
+			std::array<vk::PipelineShaderStageCreateInfo, 2> shader_info;
 			shader_info[0].setModule(m_shader[ShaderMakeFragmentMap].get());
 			shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[0].setPName("main");
 			shader_info[1].setModule(m_shader[ShaderMakeFragmentMapHierarchy].get());
 			shader_info[1].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[1].setPName("main");
-			shader_info[2].setModule(m_shader[ShaderMakeFragmentHierarchy].get());
-			shader_info[2].setStage(vk::ShaderStageFlagBits::eCompute);
-			shader_info[2].setPName("main");
 			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 			{
 				vk::ComputePipelineCreateInfo()
@@ -92,14 +84,10 @@ struct PM2DMakeHierarchy
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[1])
 				.setLayout(m_pipeline_layout[PipelineLayoutMakeFragmentMapHierarchy].get()),
-				vk::ComputePipelineCreateInfo()
-				.setStage(shader_info[2])
-				.setLayout(m_pipeline_layout[PipelineLayoutMakeFragmentHierarchy].get()),
 			};
 			auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
 			m_pipeline[PipelineMakeFragmentMap] = std::move(compute_pipeline[0]);
 			m_pipeline[PipelineMakeFragmentMapHierarchy] = std::move(compute_pipeline[1]);
-			m_pipeline[PipelineMakeFragmentHierarchy] = std::move(compute_pipeline[2]);
 		}
 
 	}
@@ -109,7 +97,6 @@ struct PM2DMakeHierarchy
 		{
 			vk::BufferMemoryBarrier to_write[] = {
 				m_pm2d_context->b_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
-				m_pm2d_context->b_fragment_hierarchy.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_write), to_write, 0, nullptr);
@@ -136,25 +123,6 @@ struct PM2DMakeHierarchy
 				cmd.pushConstants<int32_t>(m_pipeline_layout[PipelineLayoutMakeFragmentMapHierarchy].get(), vk::ShaderStageFlagBits::eCompute, 0, i);
 
 				auto num = app::calcDipatchGroups(uvec3(m_pm2d_context->RenderWidth >> i, m_pm2d_context->RenderHeight >> i, 1), uvec3(32, 32, 1));
-				cmd.dispatch(num.x, num.y, num.z);
-
-			}
-		}
-		// make hierarchy
-		{
-			for (int i = 1; i < PM2DContext::_Hierarchy_Num; i++)
-			{
-				vk::BufferMemoryBarrier to_write[] = {
-					m_pm2d_context->b_fragment_hierarchy.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
-				};
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
-					0, nullptr, array_length(to_write), to_write, 0, nullptr);
-
-				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineMakeFragmentHierarchy].get());
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutMakeFragmentHierarchy].get(), 0, m_pm2d_context->getDescriptorSet(), {});
-				cmd.pushConstants<int32_t>(m_pipeline_layout[PipelineLayoutMakeFragmentHierarchy].get(), vk::ShaderStageFlagBits::eCompute, 0, i);
-
-				auto num = app::calcDipatchGroups(uvec3((m_pm2d_context->RenderWidth >> (i - 1)), (m_pm2d_context->RenderHeight >> (i - 1)), 1), uvec3(32, 32, 1));
 				cmd.dispatch(num.x, num.y, num.z);
 
 			}

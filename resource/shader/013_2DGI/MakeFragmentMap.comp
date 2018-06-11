@@ -19,16 +19,6 @@ void main()
 	vec3 albedo = b_fragment[tiled_1D_index].albedo;
 	bool is_fragment = dot(albedo, albedo) >= 0.01;
 
-	// fragment hierarchy
-	{
-		// 最初の初期化だけここで行う
-		{
-			uvec2 idx2d = gl_GlobalInvocationID.xy;
-			uint store = idx2d.x+idx2d.y*(u_pm_info.m_resolution.x);
-			b_fragment_hierarchy[store] = is_fragment ? 1 : 0;
-		}
-	}
-
 	// fragment map
 	{
 		uvec2 local = gl_LocalInvocationID.xy / 8;

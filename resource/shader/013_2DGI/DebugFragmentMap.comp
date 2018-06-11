@@ -24,18 +24,7 @@ void main()
 	ivec2 map_index = ivec2(gl_GlobalInvocationID.xy);
 
 	int hierarchy=7;
-	if(false)
-	{
-		ivec2 findex2d = map_index>>hierarchy;
-		int findex = findex2d.x + findex2d.y*(reso.x>>hierarchy);
-		int offset = getFragmentHierarchyOffset(hierarchy);
-		if(b_fragment_hierarchy[findex+offset] == 0)
-		{
-			illuminance = vec3(0., 0., 100.);
-		}else{
-			illuminance = vec3(100., 0., 0.);
-		}
-	}
+
 	// hit確認
 //	if(false)
 	{
