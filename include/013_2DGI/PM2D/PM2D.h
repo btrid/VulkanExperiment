@@ -23,12 +23,14 @@ struct PM2DContext
 	{
 		_BounceNum = 4, //!< ƒŒƒC”½ŽË‰ñ”
 		_Hierarchy_Num = 8,
+		_Light_Num = 256,
 	};
 	int32_t RenderWidth;
 	int32_t RenderHeight;
 	int FragmentBufferSize;
 	int BounceNum = 4;
 	int Hierarchy_Num = 8;
+	int Light_Num = _Light_Num;
 	struct Info
 	{
 		mat4 m_camera_PV;
@@ -43,7 +45,7 @@ struct PM2DContext
 		int m_emission_buffer_offset[_BounceNum];
 
 		int m_emission_tile_linklist_max;
-		int m_sdf_work_num;
+		int m_emission_buffer_max;
 	};
 
 	struct Fragment
@@ -60,10 +62,10 @@ struct PM2DContext
 
 	PM2DContext(const std::shared_ptr<btr::Context>& context)
 	{
-		RenderWidth = 1024;
-		RenderHeight = 1024;
-// 		RenderWidth = 512;
-// 		RenderHeight = 512;
+//		RenderWidth = 1024;
+//		RenderHeight = 1024;
+ 		RenderWidth = 512;
+ 		RenderHeight = 512;
 		FragmentBufferSize = RenderWidth * RenderHeight;
 
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
@@ -104,7 +106,7 @@ struct PM2DContext
 				m_pm2d_info.m_emission_buffer_offset[i] = m_pm2d_info.m_emission_buffer_offset[i - 1] + m_pm2d_info.m_emission_buffer_size[i - 1];
 			}
 			m_pm2d_info.m_emission_tile_linklist_max = 8192 * 1024;
-			m_pm2d_info.m_sdf_work_num = RenderWidth * RenderHeight * 30;
+			m_pm2d_info.m_emission_buffer_max = Light_Num;
 			cmd.updateBuffer<Info>(u_fragment_info.getInfo().buffer, u_fragment_info.getInfo().offset, m_pm2d_info);
 		}
 		{
@@ -144,7 +146,7 @@ struct PM2DContext
 		}
 		{
 			btr::BufferMemoryDescriptorEx<PM2DLightData> desc;
-			desc.element_num = m_pm2d_info.m_emission_buffer_offset[BounceNum - 1] + m_pm2d_info.m_emission_buffer_size[BounceNum - 1];
+			desc.element_num = Light_Num;
 			b_emission_buffer = context->m_storage_memory.allocateMemory(desc);
 		}
 		{
@@ -173,7 +175,7 @@ struct PM2DContext
 			b_emission_tile_linklist = context->m_storage_memory.allocateMemory(desc);
 		}
 		{
-			b_emission_reached = context->m_storage_memory.allocateMemory<uint64_t>({ (uint32_t)FragmentBufferSize/64 * 4 ,{} });
+			b_emission_reached = context->m_storage_memory.allocateMemory<uint64_t>({ (uint32_t)FragmentBufferSize/64 * 4 * Light_Num,{} });
 			b_emission_occlusion = context->m_storage_memory.allocateMemory<uint64_t>({ (uint32_t)FragmentBufferSize/64 ,{} });
 		}
 

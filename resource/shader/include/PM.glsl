@@ -18,7 +18,7 @@ struct PMInfo
 	ivec4 m_emission_buffer_size;
 	ivec4 m_emission_buffer_offset;
 	int m_emission_tile_linklist_max;
-	int m_sdf_work_num;
+	int m_emission_buffer_max;
 };
 struct Fragment
 {

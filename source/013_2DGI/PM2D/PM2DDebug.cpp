@@ -11,7 +11,7 @@ PM2DDebug::PM2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 	std::vector<PM2DContext::Fragment> map_data(pm2d_context->RenderWidth*pm2d_context->RenderHeight);
 	{
 		std::vector<ivec4> rect;
-#if 0
+#if 1
 		rect.emplace_back(400, 400, 200, 400);
 		rect.emplace_back(300, 200, 100, 100);
 		rect.emplace_back(80, 50, 200, 30);
@@ -140,6 +140,16 @@ void PM2DDebug::execute(vk::CommandBuffer cmd)
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutPointLight].get(), 0, m_pm2d_context->getDescriptorSet(), {});
 		cmd.pushConstants<PM2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, PM2DLightData{ light_pos, light_dir, -1.4f, vec4(2500.f, 0.f, 2500.f, 0.f), level });
 		cmd.dispatch(1, 1, 1);
+
+		{
+
+			cmd.pushConstants<PM2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, PM2DLightData{ vec2(400.f, 200.f), 0.f, -1.4f, vec4(2500.f, 0.f, 2500.f, 0.f), level });
+			cmd.dispatch(1, 1, 1);
+			cmd.pushConstants<PM2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, PM2DLightData{ vec2(60.f, 400.f), 0.f, -1.4f, vec4(2500.f, 0.f, 2500.f, 0.f), level });
+			cmd.dispatch(1, 1, 1);
+			cmd.pushConstants<PM2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, PM2DLightData{ vec2(80.f, 200.f), 0.f, -1.4f, vec4(2500.f, 0.f, 2500.f, 0.f), level });
+			cmd.dispatch(1, 1, 1);
+		}
 	}
 	vk::BufferMemoryBarrier to_read[] =
 	{

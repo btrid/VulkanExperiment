@@ -43,17 +43,12 @@ void main()
 		vec2 start_offset = start_offset_[(constant.frame) % 4]; 
 		uint64_t is_alive = uint64_t(-1);
 		vec2 end = pixel;
-		vec2 start;
-		vec4 radiance;
 
-		Emission light;
-		{
-			int emission_index = b_emission_tile_linklist[i].target;
-			int eoffset = u_pm_info.m_emission_buffer_offset[constant.bounce_count];
-			light = b_emission[emission_index+eoffset];
-			radiance = light.emission;
-			start = light.pos + start_offset;
-		}
+		int emission_index = b_emission_tile_linklist[i].target;
+		Emission light = b_emission[emission_index];
+
+		vec4 radiance = light.emission;
+		vec2 start = light.pos + start_offset;
 /*		{
 			const vec2 diff = (end - start);
 			vec4 l_dir = rotate2(light.dir.xx + vec2(-light.angle, light.angle));
@@ -82,7 +77,7 @@ void main()
 
 		const ivec2 map_index_origin = ivec2(greaterThanEqual(dir, vec2(0.)));
 
-		for(int i = 0; i <50000; i++)
+		for(int _i = 0; _i <50000; _i++)
 		{
 			// march
 			{
@@ -181,8 +176,12 @@ void main()
 			}
 		}
 
-		uint o = reso.z*reso.w*(constant.frame%4);
-		b_emission_reached[gl_GlobalInvocationID.x+gl_GlobalInvocationID.y*reso.z + o] = is_alive;
+		uint map_size = reso.z*reso.w;
+		uint frame_max = 4;
+		uint light_offset = frame_max*map_size*emission_index; 
+		uint frame_offset = map_size*(constant.frame%4);
+		uint map_index_ = gl_GlobalInvocationID.x+gl_GlobalInvocationID.y*reso.z;
+		b_emission_reached[light_offset + frame_offset + map_index_] = is_alive;
 	}
 
 }
