@@ -28,8 +28,8 @@ struct PM2DContext
 	int32_t RenderWidth;
 	int32_t RenderHeight;
 	int FragmentBufferSize;
-	int BounceNum = 4;
-	int Hierarchy_Num = 8;
+	int BounceNum = _BounceNum;
+	int Hierarchy_Num = _Hierarchy_Num;
 	int Light_Num = _Light_Num;
 	struct Info
 	{
@@ -59,10 +59,10 @@ struct PM2DContext
 
 	PM2DContext(const std::shared_ptr<btr::Context>& context)
 	{
-// 		RenderWidth = 1024;
-// 		RenderHeight = 1024;
-		RenderWidth = 512;
-		RenderHeight = 512;
+ 		RenderWidth = 1024;
+ 		RenderHeight = 1024;
+//		RenderWidth = 512;
+//		RenderHeight = 512;
 		FragmentBufferSize = RenderWidth * RenderHeight;
 
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);

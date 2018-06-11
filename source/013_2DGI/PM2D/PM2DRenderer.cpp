@@ -475,7 +475,6 @@ void PM2DRenderer::execute(vk::CommandBuffer cmd)
 			cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayoutLightCulling].get(), vk::ShaderStageFlagBits::eCompute, 0, constant_param[i]);
 			cmd.dispatch(m_pm2d_context->m_pm2d_info.m_emission_tile_num.x, m_pm2d_context->m_pm2d_info.m_emission_tile_num.y, 1);
 		}
-
 		// photonmapping
 		{
 			vk::BufferMemoryBarrier to_read[] = {
@@ -500,6 +499,7 @@ void PM2DRenderer::execute(vk::CommandBuffer cmd)
 #endif
 		}
 	}
+
 	// photon collect
 	{
 		vk::BufferMemoryBarrier to_read[] = {
@@ -512,11 +512,7 @@ void PM2DRenderer::execute(vk::CommandBuffer cmd)
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutPhotonCollect].get(), 0, m_pm2d_context->getDescriptorSet(), {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutPhotonCollect].get(), 1, m_descriptor_set.get(), {});
 
-#if defined(march_64)
-		cmd.dispatch(m_pm2d_context->RenderWidth / 8, m_pm2d_context->RenderHeight / 8, 1);
-#else
 		cmd.dispatch(m_pm2d_context->RenderWidth / 32, m_pm2d_context->RenderHeight / 32, 1);
-#endif
 	}
 
 	// render_target‚É‘‚­
