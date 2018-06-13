@@ -23,6 +23,9 @@
     <ClCompile Include="..\..\source\013_2DGI\PM2D\PM2DSDF.cpp">
       <Filter>PM2D</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\source\013_2DGI\Radiosity2D\Radiosity2DRenderer.cpp">
+      <Filter>Radiosity2D</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -33,6 +36,9 @@
     </Filter>
     <Filter Include="SV2D">
       <UniqueIdentifier>{005cd3e5-94d6-460a-98b1-0366d03ebaac}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Radiosity2D">
+      <UniqueIdentifier>{d2f04e6d-529c-4149-bf48-d9ec47fa7dd1}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -74,6 +80,12 @@
     </ClInclude>
     <ClInclude Include="..\..\include\013_2DGI\PM2D\PM2DSDF.h">
       <Filter>PM2D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\013_2DGI\Radiosity2D\Radiosity2D.h">
+      <Filter>Radiosity2D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\013_2DGI\Radiosity2D\Radiosity2DRenderer.h">
+      <Filter>Radiosity2D</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
