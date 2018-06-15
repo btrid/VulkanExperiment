@@ -72,6 +72,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\include\btrlib\AllocatedMemory.h" />
     <ClInclude Include="..\..\include\btrlib\cAudio.h" />
     <ClInclude Include="..\..\include\btrlib\cCamera.h" />
     <ClInclude Include="..\..\include\btrlib\cCmdPool.h" />

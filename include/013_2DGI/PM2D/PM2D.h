@@ -73,7 +73,7 @@ struct PM2DContext
 
 			m_pm2d_info.m_position = vec4(0.f, 0.f, 0.f, 0.f);
 			m_pm2d_info.m_resolution = uvec2(RenderWidth, RenderHeight);
-			m_pm2d_info.m_emission_tile_size = uvec2(32, 32);
+			m_pm2d_info.m_emission_tile_size = uvec2(64, 64);
 			m_pm2d_info.m_emission_tile_num = m_pm2d_info.m_resolution / m_pm2d_info.m_emission_tile_size;
 			m_pm2d_info.m_camera_PV = glm::ortho(RenderWidth*-0.5f, RenderWidth*0.5f, RenderHeight*-0.5f, RenderHeight*0.5f, 0.f, 2000.f) * glm::lookAt(vec3(RenderWidth*0.5f, -1000.f, RenderHeight*0.5f)+m_pm2d_info.m_position.xyz(), vec3(RenderWidth*0.5f, 0.f, RenderHeight*0.5f) + m_pm2d_info.m_position.xyz(), vec3(0.f, 0.f, 1.f));
 
@@ -97,7 +97,7 @@ struct PM2DContext
 			b_fragment_buffer = context->m_storage_memory.allocateMemory(desc);
 		}
 		{
-			btr::BufferMemoryDescriptorEx<int64_t> desc;
+			btr::BufferMemoryDescriptorEx<uint64_t> desc;
 			int size = RenderHeight * RenderWidth / 64;
 			desc.element_num = size;
 			desc.element_num += size / (2 * 2);
@@ -108,6 +108,8 @@ struct PM2DContext
 			desc.element_num += size / (64 * 64);
 			desc.element_num += size / (128 * 128);
 			b_fragment_map = context->m_storage_memory.allocateMemory(desc);
+
+			b_fragment_change_map = context->m_storage_memory.allocateMemory<uint64_t>({ 256 * 256, {} });
 		}
 
 		{
@@ -164,36 +166,6 @@ struct PM2DContext
 					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 					.setDescriptorCount(1)
 					.setBinding(3),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(4),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(5),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(6),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(7),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(8),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(9),
 					vk::DescriptorSetLayoutBinding()
 					.setStageFlags(stage)
 					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
@@ -262,6 +234,7 @@ struct PM2DContext
 				vk::DescriptorBufferInfo storages[] = {
 					b_fragment_buffer.getInfo(),
 					b_fragment_map.getInfo(),
+					b_fragment_change_map.getInfo(),
 				};
 				vk::DescriptorBufferInfo emission_storages[] = {
 					b_emission_counter.getInfo(),
@@ -302,7 +275,9 @@ struct PM2DContext
 
 	btr::BufferMemoryEx<Info> u_fragment_info;
 	btr::BufferMemoryEx<Fragment> b_fragment_buffer;
-	btr::BufferMemoryEx<int64_t> b_fragment_map;
+	btr::BufferMemoryEx<uint64_t> b_fragment_map;
+	btr::BufferMemoryEx<uint64_t> b_fragment_change_map;
+
 	btr::BufferMemoryEx<ivec4> b_emission_counter;
 	btr::BufferMemoryEx<PM2DLightData> b_emission_buffer;
 

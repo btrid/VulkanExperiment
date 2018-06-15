@@ -38,8 +38,6 @@ void main()
 	for(int i = b_emission_tile_linkhead[tile_index]; i != -1; i= b_emission_tile_linklist[i].next)
 	{
 		vec2 start_offset_[] = {{-1., -1.},{-1., 1.},{1., -1.},{1., 1.}, };
-//		vec2 start_offset_[] = {{0., 1.},{1., 0.},{0., -1.},{-1., 0.}, };
-//		vec2 start_offset_[] = {{0., 0.},{-0.8, 0.0},{0.5, 0.6},{0.5, -0.6}, };
 		vec2 start_offset = start_offset_[(constant.frame) % 4]; 
 		uint64_t is_alive = uint64_t(-1);
 		vec2 end = pixel;

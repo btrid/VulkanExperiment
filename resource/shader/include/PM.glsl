@@ -47,6 +47,17 @@ struct PM2DLightData
 	int _p2;
 	int _p3;
 };
+struct PM2DStaticLightData
+{
+	vec2 pos;
+	float dir; // atan
+	float angle;
+	vec4 emission;
+	int level;
+	int m_is_enable;
+	int m_;
+	int _p3;
+};
 
 struct LinkList
 {
@@ -72,6 +83,9 @@ layout(std430, set=USE_PM, binding=1) restrict buffer FragmentBuffer {
 layout(std430, set=USE_PM, binding=2) restrict buffer FragmentHierarchyBuffer {
 	uint64_t b_fragment_map[];
 };
+layout(std430, set=USE_PM, binding=3) restrict coherent buffer FragmentChangeMapBuffer {
+	uint64_t b_fragment_change_map[];
+};
 
 layout(std430, set=USE_PM, binding=20) restrict buffer EmissiveCounter {
 	ivec4 b_emission_counter[];
@@ -93,6 +107,9 @@ layout(std430, set=USE_PM, binding=25) restrict buffer EmmisiveReachedBuffer {
 };
 layout(std430, set=USE_PM, binding=26) restrict buffer EmmisiveOcclusionBuffer {
 	uint64_t b_emission_occlusion[];
+};
+layout(std430, set=USE_PM, binding=27) restrict buffer LightWorkBuffer {
+	uint64_t b_light_work[];
 };
 
 #define getFragmentMapHierarchyOffset(_i) (u_pm_info.m_fragment_map_hierarchy_offset[(_i)/4][(_i)%4])
