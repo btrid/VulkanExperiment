@@ -73,7 +73,7 @@ struct PM2DContext
 
 			m_pm2d_info.m_position = vec4(0.f, 0.f, 0.f, 0.f);
 			m_pm2d_info.m_resolution = uvec2(RenderWidth, RenderHeight);
-			m_pm2d_info.m_emission_tile_size = uvec2(64, 64);
+			m_pm2d_info.m_emission_tile_size = uvec2(32, 32);
 			m_pm2d_info.m_emission_tile_num = m_pm2d_info.m_resolution / m_pm2d_info.m_emission_tile_size;
 			m_pm2d_info.m_camera_PV = glm::ortho(RenderWidth*-0.5f, RenderWidth*0.5f, RenderHeight*-0.5f, RenderHeight*0.5f, 0.f, 2000.f) * glm::lookAt(vec3(RenderWidth*0.5f, -1000.f, RenderHeight*0.5f)+m_pm2d_info.m_position.xyz(), vec3(RenderWidth*0.5f, 0.f, RenderHeight*0.5f) + m_pm2d_info.m_position.xyz(), vec3(0.f, 0.f, 1.f));
 
