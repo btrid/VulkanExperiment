@@ -19,7 +19,7 @@ struct PMInfo
 };
 struct Fragment
 {
-	vec3 albedo;
+	vec4 albedo;
 };
 
 struct Emission 

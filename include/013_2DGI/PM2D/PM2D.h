@@ -48,7 +48,7 @@ struct PM2DContext
 	struct Fragment
 	{
 		vec3 albedo;
-		float _p;
+		float emissive;
 	};
 
 	struct LinkList
