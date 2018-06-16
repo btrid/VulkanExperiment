@@ -131,9 +131,9 @@ layout(std430, set=USE_PM_LIGHT, binding=1) restrict buffer LightDataBuffer {
 	Emission b_light_data[];
 };
 #endif
-#ifdef USE_PM_SDF
-layout(/*std430,*/ set=USE_PM_SDF, binding=0) restrict buffer SDFBuffer {
-	float b_light_count;
+#ifdef USE_PM_PRT
+layout(set=USE_PM_PRT, binding=0) restrict buffer PRTBuffer {
+	uint b_prt_data[];
 };
 #endif
 
@@ -150,4 +150,24 @@ vec4 rotate2(in vec2 angle)
 	return vec4(-s.x, c.x, -s.y, c.y);
 }
 
+uint64_t popcnt(in uint64_t n)
+{
+    uint64_t c = (n & 0x5555555555555555ul) + ((n>>1) & 0x5555555555555555ul);
+    c = (c & 0x3333333333333333ul) + ((c>>2) & 0x3333333333333333ul);
+    c = (c & 0x0f0f0f0f0f0f0f0ful) + ((c>>4) & 0x0f0f0f0f0f0f0f0ful);
+    c = (c & 0x00ff00ff00ff00fful) + ((c>>8) & 0x00ff00ff00ff00fful);
+    c = (c & 0x0000ffff0000fffful) + ((c>>16) & 0x0000ffff0000fffful);
+    c = (c & 0x00000000fffffffful) + ((c>>32) & 0x00000000fffffffful);
+    return c;
+}
+uint64_t popcnt4(in u64vec4 n)
+{
+    u64vec4 c = (n & 0x5555555555555555ul) + ((n>>1) & 0x5555555555555555ul);
+    c = (c & 0x3333333333333333ul) + ((c>>2) & 0x3333333333333333ul);
+    c = (c & 0x0f0f0f0f0f0f0f0ful) + ((c>>4) & 0x0f0f0f0f0f0f0f0ful);
+    c = (c & 0x00ff00ff00ff00fful) + ((c>>8) & 0x00ff00ff00ff00fful);
+    c = (c & 0x0000ffff0000fffful) + ((c>>16) & 0x0000ffff0000fffful);
+    c = (c & 0x00000000fffffffful) + ((c>>32) & 0x00000000fffffffful);
+    return c.x+c.y+c.z+c.w;
+}
 #endif //_PM_

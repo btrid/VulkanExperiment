@@ -25,7 +25,6 @@ rem %exe% %include% %option% -o ../binary\\PhotonMapping.comp.spv PhotonMapping_
 %exe% %include% %option% -o ../binary/PMPointLight.comp.spv PMPointLight.comp
 %exe% %include% %option% -o ../binary/PMMakeLightList.comp.spv PMMakeLightList.comp
 
-%exe% %include% %option% -o ../binary/MakeDistanceField.comp.spv MakeDistanceField.comp
-
 %exe% %include% %option% -o ../binary\\DebugFragmentMap.comp.spv DebugFragmentMap.comp
 
+%exe% %include% %option% -o ../binary\\ComputeRadianceTransfer.comp.spv ComputeRadianceTransfer.comp

@@ -1,0 +1,159 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Common.glsl"
+#include "btrlib/Math.glsl"
+
+#define USE_PM 0
+#define USE_PM_PRT 1
+#include "PM.glsl"
+
+
+layout(push_constant) uniform BounceInfo
+{
+	int start_id;
+	int frame;
+} constant;
+
+layout (local_size_x = 32, local_size_y = 32) in;
+shared uvec4 s_alive_num[32*32 / 4];
+void main()
+{
+
+	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
+
+	uint64_t is_alive = uint64_t(-1);
+	vec2 end = 8*ivec2(gl_GlobalInvocationID.xy);
+	vec2 start = vec2(8) * vec2(constant.start_id%reso.z + constant.start_id/reso.w);
+
+	vec2 distance = (end - start);
+	vec2 dir = normalize(distance);
+	dir.x = dir.x == 0. ? 0.000001 : dir.x;
+	dir.y = dir.y == 0. ? 0.000001 : dir.y;
+	dir *= abs(dir.x) >= abs(dir.y) ? abs(1./dir.x) : abs(1./dir.y);
+	vec2 inv_dir = abs(1./dir);
+
+	int goal_index = abs(dir.x) >= abs(dir.y) ? 0: 1;
+
+	vec2 pos = start;
+	ivec2 map_index = ivec2(pos);
+
+	const ivec2 map_index_origin = ivec2(greaterThanEqual(dir, vec2(0.)));
+
+	for(int _i = 0; _i <50000; _i++)
+	{
+		// march
+		{
+			int hierarchy=0;
+			for(int hierarchy_=3; hierarchy_>2; hierarchy_--)
+			{
+				ivec4 fragment_index = ivec4(map_index/8, map_index%8);
+				ivec4 findex = fragment_index.xxxx + fragment_index.yyyy*(reso.zzzz);
+				findex +=  getFragmentMapHierarchyOffset(hierarchy_);
+				uint64_t fragment_map = b_fragment_map[findex.x];
+/*
+				ivec2 cell_origin = map_index_origin<<3;
+				ivec2 map_index_sub = fragment_index.zw;
+				ivec2 imove = abs(cell_origin - map_index_sub);
+
+				ivec2 r_begin = map_index_sub;
+				ivec2 r_end = r_begin+imove;
+				ivec2 area_begin = min(r_begin, r_end);
+				ivec2 area_end = max(r_begin, r_end);
+				ivec2 area = area_end - area_begin+1;
+				area = clamp(area, 1, 8);
+
+				uint64_t x_line_mask = ((0x1ul<<area.x)-1);// << area_begin.x;
+				uint64_t x_mask = x_line_mask | (x_line_mask << 8) | (x_line_mask << 16) | (x_line_mask << 24) | (x_line_mask << 32) | (x_line_mask << 40) | (x_line_mask << 48) | (x_line_mask << 56);
+				uint64_t y_mask = ((0x1ul<<(area.y*8))-1);// << (area_begin.y * 8);
+
+				fragment_map &= x_mask & y_mask;
+*/
+				if(fragment_map == 0)
+				{
+					hierarchy = hierarchy_;
+					break;
+				}
+			}
+
+			ivec2 cell_origin = map_index_origin<<hierarchy;
+			ivec2 map_index_sub = map_index - ((map_index>>hierarchy)<<hierarchy);
+			vec2 cell_p = abs(cell_origin - (map_index_sub+fract(pos))) + 0.5;
+			vec2 axis = abs(cell_p*inv_dir);
+			pos += min(axis.x, axis.y)*dir;
+			map_index = ivec2(pos);
+		}
+
+		// 終了判定
+		if(abs(distance[goal_index]) - abs(map_index[goal_index]-start[goal_index]) < 1)
+		{
+			// 距離を超えたら光がフラグメントにヒット
+			break;
+		}
+		// hit確認
+		{
+			ivec4 fragment_index = ivec4(map_index/8, map_index%8);
+			ivec2 shift = fragment_index.zw;
+
+			ivec4 offset_ = ivec4(0,0,1,1);
+			ivec4 findex = fragment_index.xxxx + offset_.xxzz + (fragment_index.yyyy + offset_.ywyw)*(reso.zzzz);
+
+			uint64_t fragment_map;
+			{
+				uint64_t x_line_mask = 0xfful & ((1ul << (shift.x)) - 1ul);
+				uint64_t x_mask_inv = x_line_mask | (x_line_mask << 8) | (x_line_mask << 16) | (x_line_mask << 24) | (x_line_mask << 32) | (x_line_mask << 40) | (x_line_mask << 48) | (x_line_mask << 56);
+				uint64_t y_mask_inv = 0xfffffffffffffffful & ((1ul << ((shift.y) * 8)) - 1);
+				uint64_t x_mask = ~x_mask_inv;
+				uint64_t y_mask = ~y_mask_inv;
+
+				u64vec4 b = u64vec4(b_fragment_map[findex.x],b_fragment_map[findex.y],b_fragment_map[findex.z],b_fragment_map[findex.w]);
+				b &= u64vec4(x_mask & y_mask, x_mask & ~y_mask, ~x_mask & y_mask, ~x_mask & ~y_mask);
+
+				ivec4 rs = shift.yyyy*ivec4(8,0,8,0) + shift.xxxx*ivec4(1,1,0,0);
+				ivec4 ls = (8-shift.yyyy)*ivec4(0,8,0,8) + (8-shift.xxxx)*ivec4(0,0,1,1);
+				b >>= rs;
+				b <<= ls;
+
+				fragment_map = b.x|b.y|b.z|b.w;
+
+				u64vec4 dead = u64vec4(is_alive) & b;
+				dead <<= rs;
+				dead >>= ls;
+//					(dead.x != 0) ? atomicOr(b_emission_occlusion[findex.x], dead.x) : 0;
+//					(dead.y != 0) ? atomicOr(b_emission_occlusion[findex.y], dead.y) : 0;
+//					(dead.z != 0) ? atomicOr(b_emission_occlusion[findex.z], dead.z) : 0;
+//					(dead.w != 0) ? atomicOr(b_emission_occlusion[findex.w], dead.w) : 0;
+//				(dead.x != 0) ? (b_emission_occlusion[findex.x] |= dead.x) : 0;
+//				(dead.y != 0) ? (b_emission_occlusion[findex.y] |= dead.y) : 0;
+//				(dead.z != 0) ? (b_emission_occlusion[findex.z] |= dead.z) : 0;
+//				(dead.w != 0) ? (b_emission_occlusion[findex.w] |= dead.w) : 0;
+			}
+			is_alive &= ~fragment_map;
+			if(is_alive == uint64_t(0))
+			{ 
+				break;
+			}
+		}
+	}
+
+	uvec2 n = gl_LocalInvocationID.xy / 2;
+	uvec2 m = gl_LocalInvocationID.xy % 2;
+	s_alive_num[n.x + n.y*16][m.x + m.y*2] = uint(popcnt(is_alive));
+
+	barrier();
+	memoryBarrierShared();
+
+	if(all(equal(m, uvec2(0))))
+	{
+		uvec4 c = s_alive_num[n.x + n.y*16];
+		c <<= uvec4(0, 8, 16, 24);
+		uint count = c.x | c.y | c.z | c.w;
+
+		uint map_size = reso.z*reso.w;
+		uint map_index_ = gl_GlobalInvocationID.x/2 +gl_GlobalInvocationID.y*reso.z/2;
+		b_prt_data[map_size * constant.start_id + map_index_] = count;
+	}
+
+
+}

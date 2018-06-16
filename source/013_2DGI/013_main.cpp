@@ -32,6 +32,7 @@
 #include <013_2DGI/PM2D/PM2DDebug.h>
 #include <013_2DGI/PM2D/PM2DAppModel.h>
 #include <013_2DGI/PM2D/PM2DSDF.h>
+#include <013_2DGI/PM2D/PM2DPRT.h>
 
 #include <013_2DGI/SV2D/SV2DRenderer.h>
 #include <013_2DGI/SV2D/SV2DClear.h>
@@ -92,6 +93,7 @@ int main()
 	PM2DMakeHierarchy pm_make_hierarchy(context, gi2d_context);
 	PM2DClear pm_clear(context, gi2d_context);
 	PM2DDebug pm_debug_make_fragment_and_light(context, gi2d_context);
+	PM2DPRT pm_PRT(context, gi2d_context);
 #else
 	std::shared_ptr<SV2DContext> gi2d_context = std::make_shared<SV2DContext>(context);
 	SV2DRenderer pm_renderer(context, app.m_window->getRenderTarget(), gi2d_context);
@@ -117,6 +119,7 @@ int main()
 				cmd_render_clear,
 				cmd_pm_clear,
 				cmd_pm_make_fragment,
+				cmd_pm_PRT,
 				cmd_pm_render,
 				cmd_render_present,
 				cmd_num
@@ -176,6 +179,7 @@ int main()
 #if defined(use_pm)
 					pm_make_hierarchy.execute(cmd);
 #endif
+					pm_PRT.execute(cmd);
 					pm_renderer.execute(cmd);
 					cmd.end();
 					cmds[cmd_pm_render] = cmd;
