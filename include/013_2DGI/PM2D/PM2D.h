@@ -47,8 +47,7 @@ struct PM2DContext
 
 	struct Fragment
 	{
-		vec3 albedo;
-		float emissive;
+		vec4 albedo;
 	};
 
 	struct LinkList
@@ -110,6 +109,7 @@ struct PM2DContext
 			b_fragment_map = context->m_storage_memory.allocateMemory(desc);
 
 			b_fragment_change_map = context->m_storage_memory.allocateMemory<uint64_t>({ 256 * 256, {} });
+			b_light_map = context->m_storage_memory.allocateMemory<uint64_t>({ (uint32_t)RenderHeight * RenderWidth / 64,{} });
 		}
 
 		{
@@ -166,6 +166,11 @@ struct PM2DContext
 					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 					.setDescriptorCount(1)
 					.setBinding(3),
+					vk::DescriptorSetLayoutBinding()
+					.setStageFlags(stage)
+					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+					.setDescriptorCount(1)
+					.setBinding(4),
 					vk::DescriptorSetLayoutBinding()
 					.setStageFlags(stage)
 					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
@@ -235,6 +240,7 @@ struct PM2DContext
 					b_fragment_buffer.getInfo(),
 					b_fragment_map.getInfo(),
 					b_fragment_change_map.getInfo(),
+					b_light_map.getInfo(),
 				};
 				vk::DescriptorBufferInfo emission_storages[] = {
 					b_emission_counter.getInfo(),
@@ -277,6 +283,7 @@ struct PM2DContext
 	btr::BufferMemoryEx<Fragment> b_fragment_buffer;
 	btr::BufferMemoryEx<uint64_t> b_fragment_map;
 	btr::BufferMemoryEx<uint64_t> b_fragment_change_map;
+	btr::BufferMemoryEx<uint64_t> b_light_map;
 
 	btr::BufferMemoryEx<ivec4> b_emission_counter;
 	btr::BufferMemoryEx<PM2DLightData> b_emission_buffer;

@@ -80,11 +80,14 @@ layout(std140, set=USE_PM, binding=0) uniform PMInfoUniform {
 layout(std430, set=USE_PM, binding=1) restrict buffer FragmentBuffer {
 	Fragment b_fragment[];
 };
-layout(std430, set=USE_PM, binding=2) restrict buffer FragmentHierarchyBuffer {
+layout(std430, set=USE_PM, binding=2) restrict buffer FragmentMapBuffer {
 	uint64_t b_fragment_map[];
 };
 layout(std430, set=USE_PM, binding=3) restrict coherent buffer FragmentChangeMapBuffer {
 	uint64_t b_fragment_change_map[];
+};
+layout(std430, set=USE_PM, binding=4) restrict buffer LightMapBuffer {
+	uint64_t b_light_map[];
 };
 
 layout(std430, set=USE_PM, binding=20) restrict buffer EmissiveCounter {
@@ -135,6 +138,10 @@ layout(std430, set=USE_PM_LIGHT, binding=1) restrict buffer LightDataBuffer {
 layout(set=USE_PM_PRT, binding=0) restrict buffer PRTBuffer {
 	uint b_prt_data[];
 };
+layout (set=USE_PM_PRT, binding=10, rgba16f) uniform image2D t_color;
+layout (set=USE_PM_PRT, binding=11) uniform sampler2D s_color;
+
+
 #endif
 
 vec2 rotate(in float angle)

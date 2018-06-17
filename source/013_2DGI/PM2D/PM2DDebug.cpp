@@ -26,11 +26,11 @@ PM2DDebug::PM2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 			for (size_t x = 0; x < pm2d_context->RenderWidth; x++)
 			{
 				auto& m = map_data[x + y * pm2d_context->RenderWidth];
-				m.albedo = vec3(0.f);
+				m.albedo = vec4(0.f);
 				for (auto& r : rect)
 				{
 					if (x >= r.x && y >= r.y && x <= r.x + r.z && y <= r.y + r.w) {
-						m.albedo = vec3(1.f, 0., 0.);
+						m.albedo = vec4(1.f, 0.f, 0.f, 0.f);
 					}
 				}
 			}

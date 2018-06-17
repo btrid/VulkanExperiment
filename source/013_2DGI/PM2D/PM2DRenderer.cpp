@@ -25,7 +25,6 @@ PM2DRenderer::PM2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eStorage;
 			image_info.sharingMode = vk::SharingMode::eExclusive;
 			image_info.initialLayout = vk::ImageLayout::eUndefined;
-//			image_info.extent = { render_target->m_resolution.width >> i, render_target->m_resolution.height >> i, 1 };
 			image_info.extent = { (uint32_t)pm2d_context->RenderWidth >> i, (uint32_t)pm2d_context->RenderHeight >> i, 1 };
 			image_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
 

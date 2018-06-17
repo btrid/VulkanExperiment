@@ -27,4 +27,5 @@ rem %exe% %include% %option% -o ../binary\\PhotonMapping.comp.spv PhotonMapping_
 
 %exe% %include% %option% -o ../binary\\DebugFragmentMap.comp.spv DebugFragmentMap.comp
 
-%exe% %include% %option% -o ../binary\\ComputeRadianceTransfer.comp.spv ComputeRadianceTransfer.comp
+%exe% %include% %option% -o ../binary\\RTCompute.comp.spv RTCompute.comp
+%exe% %include% %option% -o ../binary\\RTRendering.comp.spv RTRendering.comp

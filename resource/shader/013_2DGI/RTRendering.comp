@@ -6,9 +6,14 @@
 #include "btrlib/Math.glsl"
 
 #define USE_PM 0
-#define USE_PM_RENDER 1
+#define USE_PM_PRT 1
 #include "PM.glsl"
 
+layout(push_constant) uniform BounceInfo
+{
+	int bounce_count;
+	int store_photon_index;
+} constant;
 
 layout (local_size_x = 32, local_size_y = 32) in;
 
@@ -126,7 +131,7 @@ void main()
 			r >>= right_shift;
 			r <<= left_shift;
 			reached_map.w = r.x|r.y|r.z|r.w;
-//			reached_map = reached_map.xxxx;
+			reached_map = reached_map;
 		}
 
 		uint64_t reached_num4 = popcnt4(reached_map);
@@ -151,5 +156,6 @@ void main()
 //	illuminance.xyz = is_occlude ? vec3(1., 0., 0.) : illuminance.xyz;
 
 
-	imageStore(t_color[0], pixel, vec4(illuminance.xyz, 1.));
+	imageStore(t_color, pixel, vec4(illuminance.xyz, 1.));
+
 }

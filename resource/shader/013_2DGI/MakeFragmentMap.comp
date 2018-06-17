@@ -12,12 +12,14 @@
 layout (local_size_x = 32, local_size_y = 32) in;
 
 shared uint s_bit[16][2];
-shared int s_fragment_num[32*32];
+shared uint s_light_bit[16][2];
 void main()
 {
 	uint tiled_1D_index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*u_pm_info.m_resolution.x; 
 	vec3 albedo = b_fragment[tiled_1D_index].albedo.xyz;
-	bool is_fragment = dot(albedo, albedo) >= 0.01;
+	float emissive = b_fragment[tiled_1D_index].albedo.w;
+	bool is_fragment = (emissive <= 0.1) &&  dot(albedo, albedo) >= 0.01;
+	bool is_emissive = (emissive > 0.1) ;
 
 	// fragment map
 	{
@@ -28,30 +30,34 @@ void main()
 		{
 			s_bit[index][0] = 0;
 			s_bit[index][1] = 0;
+			s_light_bit[index][0] = 0;
+			s_light_bit[index][1] = 0;
 		}
 		barrier();
 		memoryBarrierShared();
 
-		if(is_fragment)
-		{
-			uint bit_offset = localsub.x + localsub.y*8;
-			uint hilow = bit_offset/32;
-			uint offset = bit_offset%32;
-			atomicOr(s_bit[index][hilow], 1<<offset);
-		}
+		uint bit_offset = localsub.x + localsub.y*8;
+		uint hilow = bit_offset/32;
+		uint offset = bit_offset%32;
+		is_fragment ? atomicOr(s_bit[index][hilow], 1<<offset) : 0;
+		is_emissive ? atomicOr(s_light_bit[index][hilow], 1<<offset) : 0;
+
 		barrier();
 		memoryBarrierShared();
 
 		if(all(equal(localsub, uvec2(0))))
 		{
-			uint64_t bit =  uint64_t(s_bit[index][1]) << 32 | s_bit[index][0];
 			uvec2 global = gl_GlobalInvocationID.xy/8; 
 			uint store = global.x + global.y*u_pm_info.m_resolution.x/8;
+
+			uint64_t bit =  uint64_t(s_bit[index][1]) << 32 | s_bit[index][0];
+			uint64_t light_bit =  uint64_t(s_light_bit[index][1]) << 32 | s_light_bit[index][0];
 
 			// fragmentが変わっていた場合は再計算したいのでチェックを入れる
 			b_fragment_change_map[store/64] |= (((b_fragment_map[store] & (~bit)) != 0) ? 1 : 0) << (store % 64);
 
 			b_fragment_map[store] = bit;
+			b_light_map[store] = light_bit;
 		}
 
 	}
