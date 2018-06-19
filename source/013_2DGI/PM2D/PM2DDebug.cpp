@@ -10,11 +10,16 @@ PM2DDebug::PM2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 	m_pm2d_context = pm2d_context;
 	std::vector<PM2DContext::Fragment> map_data(pm2d_context->RenderWidth*pm2d_context->RenderHeight);
 	{
-		std::vector<ivec4> rect;
-#if 0
-		rect.emplace_back(400, 400, 200, 400);
-		rect.emplace_back(300, 200, 100, 100);
-		rect.emplace_back(80, 50, 200, 30);
+		struct Fragment
+		{
+			ivec4 rect;
+			float e;
+		};
+		std::vector<Fragment> rect;
+#if 1
+		rect.emplace_back(Fragment{ ivec4{200, 300, 20, 40}, 1.f });
+		rect.emplace_back(Fragment{ ivec4{ 300, 200, 100, 100}, 0.f });
+		rect.emplace_back(Fragment{ ivec4{ 80, 50, 200, 30 }, 0.f });
 #else
 		for (int i = 0; i < 300; i++) {
 			rect.emplace_back(std::rand() % 512, std::rand() % 512, std::rand() % 30, std::rand() % 30);
@@ -29,8 +34,9 @@ PM2DDebug::PM2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 				m.albedo = vec4(0.f);
 				for (auto& r : rect)
 				{
-					if (x >= r.x && y >= r.y && x <= r.x + r.z && y <= r.y + r.w) {
-						m.albedo = vec4(1.f, 0.f, 0.f, 0.f);
+					if (x >= r.rect.x && y >= r.rect.y && x <= r.rect.x + r.rect.z && y <= r.rect.y + r.rect.w) {
+						m.albedo = vec4(1.f, 0.f, 0.f, r.e);
+						break;
 					}
 				}
 			}

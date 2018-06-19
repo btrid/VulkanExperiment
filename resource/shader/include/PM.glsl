@@ -83,7 +83,7 @@ layout(std430, set=USE_PM, binding=1) restrict buffer FragmentBuffer {
 layout(std430, set=USE_PM, binding=2) restrict buffer FragmentMapBuffer {
 	uint64_t b_fragment_map[];
 };
-layout(std430, set=USE_PM, binding=3) restrict coherent buffer FragmentChangeMapBuffer {
+layout(std430, set=USE_PM, binding=3) restrict buffer FragmentChangeMapBuffer {
 	uint64_t b_fragment_change_map[];
 };
 layout(std430, set=USE_PM, binding=4) restrict buffer LightMapBuffer {
@@ -134,12 +134,12 @@ layout(std430, set=USE_PM_LIGHT, binding=1) restrict buffer LightDataBuffer {
 	Emission b_light_data[];
 };
 #endif
-#ifdef USE_PM_PRT
-layout(set=USE_PM_PRT, binding=0) restrict buffer PRTBuffer {
-	uint b_prt_data[];
+#ifdef USE_RT
+layout(set=USE_RT, binding=0) restrict buffer RTBuffer {
+	uint b_rt_data[];
 };
-layout (set=USE_PM_PRT, binding=10, rgba16f) uniform image2D t_color;
-layout (set=USE_PM_PRT, binding=11) uniform sampler2D s_color;
+layout (set=USE_RT, binding=10, rgba16f) uniform image2D t_color;
+layout (set=USE_RT, binding=11) uniform sampler2D s_color;
 
 
 #endif
@@ -176,5 +176,15 @@ uint64_t popcnt4(in u64vec4 n)
     c = (c & 0x0000ffff0000fffful) + ((c>>16) & 0x0000ffff0000fffful);
     c = (c & 0x00000000fffffffful) + ((c>>32) & 0x00000000fffffffful);
     return c.x+c.y+c.z+c.w;
+}
+u64vec4 popcnt44(in u64vec4 n)
+{
+    u64vec4 c = (n & 0x5555555555555555ul) + ((n>>1) & 0x5555555555555555ul);
+    c = (c & 0x3333333333333333ul) + ((c>>2) & 0x3333333333333333ul);
+    c = (c & 0x0f0f0f0f0f0f0f0ful) + ((c>>4) & 0x0f0f0f0f0f0f0f0ful);
+    c = (c & 0x00ff00ff00ff00fful) + ((c>>8) & 0x00ff00ff00ff00fful);
+    c = (c & 0x0000ffff0000fffful) + ((c>>16) & 0x0000ffff0000fffful);
+    c = (c & 0x00000000fffffffful) + ((c>>32) & 0x00000000fffffffful);
+    return c;
 }
 #endif //_PM_

@@ -97,6 +97,7 @@ struct PM2DMakeHierarchy
 		{
 			vk::BufferMemoryBarrier to_write[] = {
 				m_pm2d_context->b_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
+				m_pm2d_context->b_light_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_write), to_write, 0, nullptr);

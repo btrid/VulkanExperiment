@@ -19,7 +19,7 @@ void main()
 	vec3 albedo = b_fragment[tiled_1D_index].albedo.xyz;
 	float emissive = b_fragment[tiled_1D_index].albedo.w;
 	bool is_fragment = (emissive <= 0.1) &&  dot(albedo, albedo) >= 0.01;
-	bool is_emissive = (emissive > 0.1) ;
+	bool is_emissive = (emissive > 0.1);
 
 	// fragment map
 	{

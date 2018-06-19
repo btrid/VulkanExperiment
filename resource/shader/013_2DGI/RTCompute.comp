@@ -6,7 +6,7 @@
 #include "btrlib/Math.glsl"
 
 #define USE_PM 0
-#define USE_PM_PRT 1
+#define USE_RT 1
 #include "PM.glsl"
 
 
@@ -17,12 +17,12 @@ layout(push_constant) uniform BounceInfo
 } constant;
 
 layout (local_size_x = 32, local_size_y = 32) in;
-shared uvec4 s_alive_num[32*32 / 4];
+shared uvec4 s_alive_num[16*16];
 void main()
 {
 
 	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
-
+	ivec2 rt_reso = reso.zw/2;
 	uint64_t is_alive = uint64_t(-1);
 	vec2 end = 8*ivec2(gl_GlobalInvocationID.xy);
 	vec2 start = vec2(8) * vec2(constant.start_id%reso.z + constant.start_id/reso.w);
@@ -102,10 +102,8 @@ void main()
 			uint64_t fragment_map;
 			{
 				uint64_t x_line_mask = 0xfful & ((1ul << (shift.x)) - 1ul);
-				uint64_t x_mask_inv = x_line_mask | (x_line_mask << 8) | (x_line_mask << 16) | (x_line_mask << 24) | (x_line_mask << 32) | (x_line_mask << 40) | (x_line_mask << 48) | (x_line_mask << 56);
-				uint64_t y_mask_inv = 0xfffffffffffffffful & ((1ul << ((shift.y) * 8)) - 1);
-				uint64_t x_mask = ~x_mask_inv;
-				uint64_t y_mask = ~y_mask_inv;
+				uint64_t x_mask = ~(x_line_mask | (x_line_mask << 8) | (x_line_mask << 16) | (x_line_mask << 24) | (x_line_mask << 32) | (x_line_mask << 40) | (x_line_mask << 48) | (x_line_mask << 56));
+				uint64_t y_mask = ~(0xfffffffffffffffful & ((1ul << ((shift.y) * 8)) - 1));
 
 				u64vec4 b = u64vec4(b_fragment_map[findex.x],b_fragment_map[findex.y],b_fragment_map[findex.z],b_fragment_map[findex.w]);
 				b &= u64vec4(x_mask & y_mask, x_mask & ~y_mask, ~x_mask & y_mask, ~x_mask & ~y_mask);
@@ -150,9 +148,9 @@ void main()
 		c <<= uvec4(0, 8, 16, 24);
 		uint count = c.x | c.y | c.z | c.w;
 
-		uint map_size = reso.z*reso.w;
-		uint map_index_ = gl_GlobalInvocationID.x/2 +gl_GlobalInvocationID.y*reso.z/2;
-		b_prt_data[map_size * constant.start_id + map_index_] = count;
+		uint rt_map_size = rt_reso.x*rt_reso.y;
+		uint rt_tile_index = gl_GlobalInvocationID.x/2 +(gl_GlobalInvocationID.y/2)*rt_reso.x;
+		b_rt_data[rt_map_size * constant.start_id + rt_tile_index] = count;
 	}
 
 

@@ -18,10 +18,8 @@ void main()
 	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
 	vec3 illuminance = vec3(0.);
 
-	vec2 end = vec2(gl_GlobalInvocationID.xy);
-
-	ivec2 map_index_hie = ivec2(end);
-	ivec4 fragment_index = ivec4(map_index_hie/8, map_index_hie%8);
+	ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
+	ivec4 fragment_index = ivec4(pixel/8, pixel%8);
 
 #if 1
 	ivec4 offset = ivec4(-1,0,-1,0) + ivec4(greaterThanEqual(gl_LocalInvocationID.xxyy%8, uvec4(4)));
@@ -69,11 +67,10 @@ void main()
 		o <<= left_shift;
 		occlude_map = o.x|o.y|o.z|o.w;
 	}
-		uint64_t occlude_num = popcnt(occlude_map);
+	uint64_t occlude_num = popcnt(occlude_map);
 
 	bool is_block = (fragment_map & bit_mask) != 0;
 
-	const ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
 	const ivec2 tile_index_2d = pixel / ivec2(u_pm_info.m_emission_tile_size.xy);
 	const int tile_index = int(tile_index_2d.x + tile_index_2d.y*u_pm_info.m_emission_tile_num.x);
 	for(int i = b_emission_tile_linkhead[tile_index]; i != -1; i= b_emission_tile_linklist[i].next)
@@ -86,7 +83,6 @@ void main()
 			uint map_size = reso.z*reso.w;
 			uint frame_max = 4;
 			uint light_offset = frame_max*map_size*emission_index; 
-			uint map_index = gl_GlobalInvocationID.x+gl_GlobalInvocationID.y*reso.z;
 
 			uint64_t r0 = b_emission_reached[light_offset + findex.x +map_size*0];
 			uint64_t r1 = b_emission_reached[light_offset + findex.y +map_size*0];
@@ -133,7 +129,7 @@ void main()
 
 		vec2 start = light.pos;
 	
-		const float ray_dist = distance(end, start);
+		const float ray_dist = distance(vec2(pixel), start);
 		vec3 radiance = vec3(0.2);
 
 		ivec4 is_reach = ivec4(notEqual(reached_map&bit_mask4, u64vec4(0)));

@@ -93,7 +93,7 @@ int main()
 	PM2DMakeHierarchy pm_make_hierarchy(context, gi2d_context);
 	PM2DClear pm_clear(context, gi2d_context);
 	PM2DDebug pm_debug_make_fragment_and_light(context, gi2d_context);
-//	PM2DPRT pm_PRT(context, gi2d_context, app.m_window->getRenderTarget());
+	PM2DRT pm_RT(context, gi2d_context, app.m_window->getRenderTarget());
 #else
 	std::shared_ptr<SV2DContext> gi2d_context = std::make_shared<SV2DContext>(context);
 	SV2DRenderer pm_renderer(context, app.m_window->getRenderTarget(), gi2d_context);
@@ -179,8 +179,8 @@ int main()
 #if defined(use_pm)
 					pm_make_hierarchy.execute(cmd);
 #endif
-//					pm_PRT.execute(cmd);
-					pm_renderer.execute(cmd);
+					pm_RT.execute(cmd);
+//					pm_renderer.execute(cmd);
 					cmd.end();
 					cmds[cmd_pm_render] = cmd;
 				}
