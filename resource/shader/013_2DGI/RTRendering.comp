@@ -16,8 +16,9 @@ void main()
 {
 	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
 	const ivec2 rt_reso = reso.zw / 2;
-	uint rt_map_index = gl_LocalInvocationIndex%rt_reso.x;
 	uint rt_map_size = rt_reso.x*rt_reso.y;
+//	uint rt_tile_index = gl_GlobalInvocationID.x/8+gl_GlobalInvocationID.y/8*reso.z;
+	uint rt_tile_index = gl_GlobalInvocationID.x/16 + (gl_GlobalInvocationID.y/16)*rt_reso.x;
 
 	ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
 	ivec4 fragment_index = ivec4(pixel/8, pixel%8);
@@ -52,6 +53,7 @@ void main()
 	// 2x2マスずつ
 	for(int y = 0; y < rt_reso.y; y++)
 	{
+		// 2列とる
 		if(local_index < reso.z*2)
 		{
 			s_light_map[local_index] = b_light_map[local_index + (y*2)*reso.z];
@@ -61,7 +63,6 @@ void main()
 
 		for(int x = 0; x < rt_reso.x; x++)
 		{
-			int rt_tile_index = x / 16;
 			u64vec4 light_map;
 			light_map.x = s_light_map[x*2];
 			light_map.y = s_light_map[x*2+1];
@@ -69,20 +70,20 @@ void main()
 			light_map.w = s_light_map[x*2+1 + reso.z];
 			u64vec4 light_power = popcnt44(light_map);
 
-			uint rt = b_rt_data[y*rt_reso.x + rt_map_size*rt_map_index];
+			uint rt = b_rt_data[rt_map_size*(x+y*rt_reso.x) + rt_tile_index];
 			uvec4 rt_power = (uvec4(rt) >> uvec4(0, 8, 16, 24)) & uvec4(0xff);
 
 			vec2 pos = vec2(x, y) * 16. + 8.;
 			float dist = distance(pos, pixel);
-			illuminance += vec4(vec4(light_power) * rt_power)/(64.*16) / (dist+1);
+			illuminance += vec4(rt_power * light_power) /(32.*4.) / (dist+1);
 		}
 		barrier();
 	}
 
 	uint64_t light_map = b_light_map[findex.x];
 	bool is_light = (light_map & bit_mask) != 0;
-	float illumi = length(illuminance+0.01);
-//	illumi += float(is_light);
-	imageStore(t_color, pixel, vec4(illumi.xxx, 1.));
+	vec3 illumi = vec3(length(illuminance+0.01));
+	illumi = is_light ? vec3(1., 0., 0.) : illumi;
+	imageStore(t_color, pixel, vec4(illumi, 1.));
 
 }

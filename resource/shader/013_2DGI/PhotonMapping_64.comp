@@ -16,12 +16,7 @@ layout(push_constant) uniform BounceInfo
 //	int store_photon_index;
 	int frame;
 } constant;
-#define u16_max (0xffff)
-#define fragment_state_non (0)
-#define fragment_state_wall (1)
-#define fragment_state_light (2)
-#define fragment_state_bounce (3)
-#define fragment_state_bounce_hit (4)
+
 
 layout (local_size_x = 32, local_size_y = 32) in;
 void main()

@@ -23,9 +23,8 @@ void main()
 
 	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
 	ivec2 rt_reso = reso.zw/2;
-	uint64_t is_alive = uint64_t(-1);
-	vec2 end = 8*ivec2(gl_GlobalInvocationID.xy);
-	vec2 start = vec2(8) * vec2(constant.start_id%reso.z + constant.start_id/reso.w);
+	vec2 end = 8.*vec2(gl_GlobalInvocationID.xy);
+	vec2 start = 8. * vec2(constant.start_id%reso.z + constant.start_id/reso.w);
 
 	vec2 distance = (end - start);
 	vec2 dir = normalize(distance);
@@ -40,7 +39,7 @@ void main()
 	ivec2 map_index = ivec2(pos);
 
 	const ivec2 map_index_origin = ivec2(greaterThanEqual(dir, vec2(0.)));
-
+	uint64_t is_alive = uint64_t(-1);
 	for(int _i = 0; _i <50000; _i++)
 	{
 		// march
@@ -52,24 +51,7 @@ void main()
 				ivec4 findex = fragment_index.xxxx + fragment_index.yyyy*(reso.zzzz);
 				findex +=  getFragmentMapHierarchyOffset(hierarchy_);
 				uint64_t fragment_map = b_fragment_map[findex.x];
-/*
-				ivec2 cell_origin = map_index_origin<<3;
-				ivec2 map_index_sub = fragment_index.zw;
-				ivec2 imove = abs(cell_origin - map_index_sub);
 
-				ivec2 r_begin = map_index_sub;
-				ivec2 r_end = r_begin+imove;
-				ivec2 area_begin = min(r_begin, r_end);
-				ivec2 area_end = max(r_begin, r_end);
-				ivec2 area = area_end - area_begin+1;
-				area = clamp(area, 1, 8);
-
-				uint64_t x_line_mask = ((0x1ul<<area.x)-1);// << area_begin.x;
-				uint64_t x_mask = x_line_mask | (x_line_mask << 8) | (x_line_mask << 16) | (x_line_mask << 24) | (x_line_mask << 32) | (x_line_mask << 40) | (x_line_mask << 48) | (x_line_mask << 56);
-				uint64_t y_mask = ((0x1ul<<(area.y*8))-1);// << (area_begin.y * 8);
-
-				fragment_map &= x_mask & y_mask;
-*/
 				if(fragment_map == 0)
 				{
 					hierarchy = hierarchy_;
@@ -115,17 +97,6 @@ void main()
 
 				fragment_map = b.x|b.y|b.z|b.w;
 
-				u64vec4 dead = u64vec4(is_alive) & b;
-				dead <<= rs;
-				dead >>= ls;
-//					(dead.x != 0) ? atomicOr(b_emission_occlusion[findex.x], dead.x) : 0;
-//					(dead.y != 0) ? atomicOr(b_emission_occlusion[findex.y], dead.y) : 0;
-//					(dead.z != 0) ? atomicOr(b_emission_occlusion[findex.z], dead.z) : 0;
-//					(dead.w != 0) ? atomicOr(b_emission_occlusion[findex.w], dead.w) : 0;
-//				(dead.x != 0) ? (b_emission_occlusion[findex.x] |= dead.x) : 0;
-//				(dead.y != 0) ? (b_emission_occlusion[findex.y] |= dead.y) : 0;
-//				(dead.z != 0) ? (b_emission_occlusion[findex.z] |= dead.z) : 0;
-//				(dead.w != 0) ? (b_emission_occlusion[findex.w] |= dead.w) : 0;
 			}
 			is_alive &= ~fragment_map;
 			if(is_alive == uint64_t(0))

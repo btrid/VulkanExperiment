@@ -109,9 +109,10 @@ struct PM2DRT
 		}
 
 		{
-			uint32_t map = (m_pm2d_context->RenderWidth*m_pm2d_context->RenderHeight) / 64 / 4;
-			uint32_t mapp = map / 4 * map;
-			b_rt_data = m_context->m_storage_memory.allocateMemory<uint32_t>({ mapp,{} });
+			uint32_t rt_map_size = (m_pm2d_context->RenderWidth/16) * (m_pm2d_context->RenderHeight / 16);
+			uint32_t rt_map_num = m_pm2d_context->RenderWidth * m_pm2d_context->RenderHeight / 64;
+			uint32_t size = rt_map_size * rt_map_num;
+			b_rt_data = m_context->m_storage_memory.allocateMemory<uint32_t>({ size,{} });
 		}
 
 		{
