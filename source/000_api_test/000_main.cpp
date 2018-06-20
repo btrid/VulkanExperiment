@@ -423,6 +423,22 @@ void bittest()
 }
 int main()
 {
+	std::array<uvec4, 32*32/4> s_alive_num;
+	for (int y = 0; y < 32; y++) 
+	{
+		for (int x = 0; x < 32; x++)
+		{
+			int ii = y/2 * 16 + x/2;
+			uvec2 i = uvec2(x, y);
+			uvec2 m = i % uvec2(2);
+			uint index = (ii % 32);
+			uint offset = ii / 32 * 32;
+			//	s_alive_num[offset + n.x + n.y*16][m.x + m.y*2] = uint(popcnt(is_alive));
+			s_alive_num[offset + index][m.x + m.y * 2] = 100;
+
+		}
+	}
+
 	bittest();
 	uint32_t bit = 0;
 	btr::setBit(bit, 1257, 16, 16);

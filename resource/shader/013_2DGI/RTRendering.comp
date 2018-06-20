@@ -11,7 +11,7 @@
 
 layout (local_size_x = 32, local_size_y = 32) in;
 
-shared uint64_t s_light_map[128*2];
+shared uint64_t s_light_map[512];
 void main()
 {
 	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
@@ -54,7 +54,7 @@ void main()
 	for(int y = 0; y < rt_reso.y; y++)
 	{
 		// 2列とる
-		if(local_index < reso.z*2)
+		if(local_index < reso.z*4)
 		{
 			s_light_map[local_index] = b_light_map[local_index + (y*2)*reso.z];
 		}
@@ -75,7 +75,9 @@ void main()
 
 			vec2 pos = vec2(x, y) * 16. + 8.;
 			float dist = distance(pos, pixel);
-			illuminance += vec4(rt_power * light_power) /(32.*4.) / (dist+1);
+			illuminance += vec4(rt_power) /(64.*64*2);
+
+//			illuminance += vec4(light_power * rt_power) /(32.*4.) / (dist+1);
 		}
 		barrier();
 	}
