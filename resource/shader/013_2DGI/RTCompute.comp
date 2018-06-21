@@ -17,15 +17,14 @@ layout(push_constant) uniform BounceInfo
 } constant;
 
 layout (local_size_x = 32, local_size_y = 32) in;
-shared uvec4 s_alive_num[32*32/4];
-//shared uint s_alive_num[32*32];
+shared uvec4 s_alive_num[16*16];
 void main()
 {
 
 	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
 	ivec2 rt_reso = reso.zw/2;
 	vec2 end = 8.*vec2(gl_GlobalInvocationID.xy);
-	vec2 start = 8. * vec2(constant.start_id%reso.z + constant.start_id/reso.w);
+	vec2 start = 8. * vec2(constant.start_id%reso.z, constant.start_id/reso.z);
 
 	vec2 distance = (end - start);
 	vec2 dir = normalize(distance);
@@ -107,28 +106,18 @@ void main()
 		}
 	}
 
-	// 0  1  2  3  4  ... 31
-	//33 34  .  .  .      63
-	// .
-	// 993   .  .  .    1023
-	// 
-	// 1  2  5  6  9 10 ... 31
-	//33 34
-
-//	uvec2 i = gl_LocalInvocationID.xy;
 	uvec2 m = gl_LocalInvocationID.xy % uvec2(2);
-	uint ii = gl_LocalInvocationID.y/2 * 16 + gl_LocalInvocationID.x/2;
+	uint ii =  gl_LocalInvocationID.x/2 + (gl_LocalInvocationID.y/2)*16;
 	uint index = (ii % 32);
 	uint offset = ii / 32 * 32;
-//	s_alive_num[offset + n.x + n.y*16][m.x + m.y*2] = uint(popcnt(is_alive));
 	s_alive_num[offset + index][m.x + m.y*2]= uint(popcnt(is_alive));
 
 	barrier();
 	memoryBarrierShared();
 
-	if(all(equal(gl_LocalInvocationID.xy%2, uvec2(0))))
+	if(all(equal(m, uvec2(0))))
 	{
-		uvec4 c = s_alive_num[gl_LocalInvocationIndex/4];
+		uvec4 c = s_alive_num[ii];
 		c <<= uvec4(0, 8, 16, 24);
 		uint count = c.x | c.y | c.z | c.w;
 

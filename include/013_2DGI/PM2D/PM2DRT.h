@@ -381,6 +381,8 @@ struct PM2DRT
 	}
 	void execute(vk::CommandBuffer cmd)
 	{
+		uint32_t rt_map_size = (m_pm2d_context->RenderWidth / 16) * (m_pm2d_context->RenderHeight / 16);
+		uint32_t rt_map_num = m_pm2d_context->RenderWidth * m_pm2d_context->RenderHeight / 64;
 		static int a = 0;
 		// Ž–‘OŒvŽZ
 		if (a == 0)
@@ -398,7 +400,7 @@ struct PM2DRT
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutMakePRT].get(), 0, m_pm2d_context->getDescriptorSet(), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutMakePRT].get(), 1, m_descriptor_set.get(), {});
 			auto num = app::calcDipatchGroups(uvec3(m_pm2d_context->RenderWidth / 8, m_pm2d_context->RenderHeight / 8, 1), uvec3(32, 32, 1));
-
+			auto rt_size = m_pm2d_context->RenderSize / 8 / 2;
 			auto yy = m_pm2d_context->RenderHeight / 8;
 			auto xx = m_pm2d_context->RenderWidth / 8;
 			for (int y = 0; y < yy; y++)
@@ -424,6 +426,15 @@ struct PM2DRT
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineRendering].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutRendering].get(), 0, m_pm2d_context->getDescriptorSet(), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutRendering].get(), 1, m_descriptor_set.get(), {});
+
+			static vec2 light_pos = vec2(0, 0);
+			float move = 0.1f;
+			light_pos.x += m_context->m_window->getInput().m_keyboard.isHold(VK_RIGHT) * move;
+			light_pos.x -= m_context->m_window->getInput().m_keyboard.isHold(VK_LEFT) * move;
+			light_pos.y -= m_context->m_window->getInput().m_keyboard.isHold(VK_UP) * move;
+			light_pos.y += m_context->m_window->getInput().m_keyboard.isHold(VK_DOWN) * move;
+			cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayoutMakePRT].get(), vk::ShaderStageFlagBits::eCompute, 0, ivec2(light_pos));
+
 			auto num = app::calcDipatchGroups(uvec3(m_pm2d_context->RenderWidth, m_pm2d_context->RenderHeight, 1), uvec3(32, 32, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 		}

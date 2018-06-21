@@ -423,21 +423,45 @@ void bittest()
 }
 int main()
 {
-	std::array<uvec4, 32*32/4> s_alive_num;
-	for (int y = 0; y < 32; y++) 
+	std::array<uvec4, 16 * 16> s_alive_num;
+	std::array<uvec4, 16 * 16> b_alive_num;
+	for (int y = 0; y < 32; y++)
 	{
 		for (int x = 0; x < 32; x++)
 		{
-			int ii = y/2 * 16 + x/2;
+			int ii = y / 2 * 16 + x / 2;
 			uvec2 i = uvec2(x, y);
 			uvec2 m = i % uvec2(2);
 			uint index = (ii % 32);
 			uint offset = ii / 32 * 32;
 			//	s_alive_num[offset + n.x + n.y*16][m.x + m.y*2] = uint(popcnt(is_alive));
-			s_alive_num[offset + index][m.x + m.y * 2] = 100;
-
+			s_alive_num[offset + index][m.x + m.y * 2] = x + y * 32;
 		}
 	}
+	for (int y = 0; y < 32; y++)
+	{
+		for (int x = 0; x < 32; x++)
+		{
+			int ii = y / 2 * 16 + x / 2;
+			uvec2 i = uvec2(x, y);
+			uvec2 m = i % uvec2(2);
+			uint index = (ii % 32);
+			uint offset = ii / 32 * 32;
+
+			if (all(equal(m, uvec2(0))))
+			{
+				uvec4 c = s_alive_num[ii];
+				c <<= uvec4(0, 8, 16, 24);
+				uint count = c.x | c.y | c.z | c.w;
+
+				uint rt_map_size = 1024;
+				uint rt_tile_index = x / 2 + (y / 2)*16;
+				b_alive_num[rt_tile_index] = c;
+			}
+		}
+	}
+
+
 
 	bittest();
 	uint32_t bit = 0;

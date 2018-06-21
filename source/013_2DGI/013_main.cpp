@@ -179,8 +179,8 @@ int main()
 #if defined(use_pm)
 					pm_make_hierarchy.execute(cmd);
 #endif
-//					pm_RT.execute(cmd);
-					pm_renderer.execute(cmd);
+					pm_RT.execute(cmd);
+//					pm_renderer.execute(cmd);
 					cmd.end();
 					cmds[cmd_pm_render] = cmd;
 				}

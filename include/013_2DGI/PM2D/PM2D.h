@@ -27,6 +27,7 @@ struct PM2DContext
 	};
 	int32_t RenderWidth;
 	int32_t RenderHeight;
+	ivec2 RenderSize;
 	int FragmentBufferSize;
 	int BounceNum = _BounceNum;
 	int Hierarchy_Num = _Hierarchy_Num;
@@ -62,6 +63,7 @@ struct PM2DContext
 // 		RenderHeight = 1024;
 		RenderWidth = 512;
 		RenderHeight = 512;
+		RenderSize = ivec2(RenderWidth, RenderHeight);
 		FragmentBufferSize = RenderWidth * RenderHeight;
 
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
