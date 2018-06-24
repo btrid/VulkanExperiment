@@ -105,8 +105,8 @@
     <ClInclude Include="..\..\include\013_2DGI\PM2D\PM2DClear.h" />
     <ClInclude Include="..\..\include\013_2DGI\PM2D\PM2DDebug.h" />
     <ClInclude Include="..\..\include\013_2DGI\PM2D\PM2DLight.h" />
-    <ClInclude Include="..\..\include\013_2DGI\PM2D\PM2DPRT.h" />
     <ClInclude Include="..\..\include\013_2DGI\PM2D\PM2DRenderer.h" />
+    <ClInclude Include="..\..\include\013_2DGI\PM2D\PM2DRT.h" />
     <ClInclude Include="..\..\include\013_2DGI\PM2D\PM2DSDF.h" />
     <ClInclude Include="..\..\include\013_2DGI\Radiosity2D\Radiosity2D.h" />
     <ClInclude Include="..\..\include\013_2DGI\Radiosity2D\Radiosity2DRenderer.h" />

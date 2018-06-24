@@ -87,7 +87,7 @@
     <ClInclude Include="..\..\include\013_2DGI\Radiosity2D\Radiosity2DRenderer.h">
       <Filter>Radiosity2D</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\013_2DGI\PM2D\PM2DPRT.h">
+    <ClInclude Include="..\..\include\013_2DGI\PM2D\PM2DRT.h">
       <Filter>PM2D</Filter>
     </ClInclude>
   </ItemGroup>

@@ -82,13 +82,14 @@ void main()
 	memoryBarrierShared();
 
 //	ivec2 rt_index = ivec2((gl_LocalInvocationID.xy/8)%2);
-	ivec2 rt_index = ivec2(gl_LocalInvocationID.xy+4)/8 + 1;
+	ivec2 rt_index = ivec2(gl_LocalInvocationID.xy+4)/8+1;
 //	ivec2 rt_index = ivec2(gl_LocalInvocationID.xy)/8;
-	uint x0 = s_rt_map[rt_index.x];
-	uint x1 = s_rt_map[rt_index.x+1];
-	uint y0 = s_rt_map[rt_index.x   + (rt_index.y+0)*area.x];
+	uint x0 = s_rt_map[rt_index.x   + rt_index.y*area.x];
+	uint x1 = s_rt_map[rt_index.x+1 + rt_index.y*area.x];
+	uint y0 = s_rt_map[rt_index.x   + (rt_index.y+1)*area.x];
 	uint y1 = s_rt_map[rt_index.x+1 + (rt_index.y+1)*area.x];
-	vec2 rate = ((gl_LocalInvocationID.xy+4)%8) /8.* 0.5 + 0.25;
+	vec2 rate = ((gl_LocalInvocationID.xy+4)%8) / 8.* 0.75 + 0.25;
+//	vec2 rate = vec2(0.5);
 	float px = mix(float(x0), float(x1), rate.x);
 	float py = mix(float(y0), float(y1), rate.x);
 	float p = mix(px, py, rate.y);
