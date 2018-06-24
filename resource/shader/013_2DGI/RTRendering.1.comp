@@ -1,0 +1,145 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Common.glsl"
+#include "btrlib/Math.glsl"
+
+#define USE_PM 0
+#define USE_RT 1
+#include "PM.glsl"
+
+layout(push_constant) uniform BounceInfo
+{
+	int start_id;
+	int frame;
+} constant;
+
+layout (local_size_x = 32, local_size_y = 32) in;
+
+shared uint64_t s_light_map[512];
+shared uint s_rt_map[32*32];
+void main()
+{
+	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
+	const ivec2 rt_reso = reso.zw / 2;
+	uint rt_map_size = rt_reso.x*rt_reso.y;
+//	uint rt_tile_index = gl_GlobalInvocationID.x/16 + (gl_GlobalInvocationID.y/16)*rt_reso.x;
+
+	ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
+	ivec4 fragment_index = ivec4(pixel/8, pixel%8);
+
+#if 0
+	ivec4 offset = ivec4(-1,0,-1,0) + ivec4(greaterThanEqual(gl_LocalInvocationID.xxyy%8, uvec4(4)));
+	ivec2 shift = (ivec2(4) + ivec2(gl_LocalInvocationID.xy)) % ivec2(8);
+	uint64_t bit_mask = 1ul << (8*4+4);
+#else
+#endif
+	vec4 illuminance = vec4(0.);
+
+	// 2x2マスずつ
+/*	for(int y = 0; y < rt_reso.y; y++)
+	{
+		// 2列とる
+		if(gl_LocalInvocationIndex < reso.z*4)
+		{
+			s_light_map[gl_LocalInvocationIndex] = b_light_map[gl_LocalInvocationIndex + (y*2)*reso.z];
+		}
+		barrier();
+		memoryBarrierShared();
+
+		for(int x = 0; x < rt_reso.x; x++)
+		{
+			u64vec4 light_map;
+			light_map.x = s_light_map[x*2];
+			light_map.y = s_light_map[x*2+1];
+			light_map.z = s_light_map[x*2   + reso.z];
+			light_map.w = s_light_map[x*2+1 + reso.z];
+			u64vec4 light_power = popcnt44(light_map);
+
+			uint rt = b_rt_data[rt_map_size*(x+y*rt_reso.x) + rt_tile_index];
+			uvec4 rt_power = (uvec4(rt) >> uvec4(0, 8, 16, 24)) & uvec4(0xff);
+
+			vec2 pos = vec2(x, y) * 16. + 8.;
+			float dist = distance(pos, pixel);
+			illuminance = vec4(rt_power) /(64.);
+
+//			illuminance += vec4(light_power * rt_power) /(32.*4.) / (dist+1);
+		}
+		barrier();
+	}
+*/
+//	offset
+	uint x = constant.start_id; uint y = constant.frame;
+//	ivec4 rt_index = fragment_index.xxxx + offset.xxyy + (fragment_index.yyyy + offset.zwzw)*(reso.zzzz);
+
+//	ivec2 shift = (ivec2(4) + ivec2(gl_LocalInvocationID.xy)) % ivec2(8);
+
+	uint light_offset = rt_map_size*(x+y*reso.z);
+#if 1 // todo shared memory版
+	if(gl_LocalInvocationIndex < 64)
+	{
+		uint i = gl_LocalInvocationIndex / 4;
+		i = i + (i/4)*reso.z;
+		uvec2 rt_offset_2d = (gl_WorkGroupID*gl_NumWorkGroups).xy;
+		uint rt_offset = rt_offset_2d.x/2 + (rt_offset_2d.y/2) * rt_reso.x;
+		uint rt = b_rt_data[light_offset + rt_offset + i];
+		uvec4 rt_power = (uvec4(rt) >> uvec4(0, 8, 16, 24)) & uvec4(0xff);
+		s_rt_map[gl_LocalInvocationIndex] = rt_power[gl_LocalInvocationIndex % 4];
+	}
+
+	barrier();
+	memoryBarrierShared();
+
+	ivec2 rt_tile_index = ivec2(gl_LocalInvocationID.xy/8);
+//	ivec4 offset = ivec4(-1,0,-1,0) + ivec4(greaterThanEqual(gl_LocalInvocationID.xxyy%8, uvec4(12)));
+	ivec4 offset = ivec4(0);
+	ivec4 rt_index = rt_tile_index.xxxx + offset.xxyy + (rt_tile_index.yyyy + offset.zwzw)*4;
+	uint rt0 = s_rt_map[rt_index.x];
+//	uint rt1 = s_rt_map[rt_index.y];
+//	uint rt2 = s_rt_map[rt_index.z];
+//	uint rt3 = s_rt_map[rt_index.w];
+//	vec2 rate = (gl_LocalInvocationID.xy/8.);
+//	float rt_x = mix(float(rt0), float(rt1), rate.x);
+//	float rt_y = mix(float(rt2), float(rt3), rate.x);
+//	float rt_power = mix(rt_x, rt_y, rate.y);
+	float rt_power = float(rt0);
+#else
+	ivec2 rt_tile_index = ivec2(pixel/16);
+	ivec4 rt_offset = ivec4(-1,0,-1,0) + ivec4(greaterThanEqual(gl_LocalInvocationID.xxyy%16, uvec4(8)));
+	ivec4 rt_index = rt_tile_index.xxxx + rt_offset.xxyy + (rt_tile_index.yyyy + rt_offset.zwzw)*(rt_reso.xxxx);
+	uint rt_data0 = b_rt_data[light_offset + rt_index.x];
+	uint rt_data1 = b_rt_data[light_offset + rt_index.y];
+	uint rt_data2 = b_rt_data[light_offset + rt_index.z];
+	uint rt_data3 = b_rt_data[light_offset + rt_index.w];
+	uvec4 rt4[4];
+	rt4[0] = (uvec4(rt_data0) >> uvec4(0, 8, 16, 24)) & uvec4(0xff);
+	rt4[1] = (uvec4(rt_data1) >> uvec4(0, 8, 16, 24)) & uvec4(0xff);
+	rt4[2] = (uvec4(rt_data2) >> uvec4(0, 8, 16, 24)) & uvec4(0xff);
+	rt4[3] = (uvec4(rt_data3) >> uvec4(0, 8, 16, 24)) & uvec4(0xff);
+
+	ivec2 rt_tile_index_sub = ivec2(gl_LocalInvocationID.xy / 8);
+	ivec4 rt_offset_sub = ((gl_LocalInvocationID.xxyy%16)+4)/4;
+
+	uvec4 rt = rt4[0][];
+//	ivec2 tile_offset = ivec2(greaterThanEqual(gl_LocalInvocationID.xy%8, uvec2(4)));;
+//	ivec2 li = ivec2(greaterThanEqual(gl_LocalInvocationID.xy%8, uvec2(4)));;
+//	rt.x = rt4[]
+
+	vec2 rate = (gl_LocalInvocationID.xy%8 / 8.);
+	float rt_x = mix(float(rt.x), float(rt.y), rate.x);
+	float rt_y = mix(float(rt.z), float(rt.w), rate.x);
+	float rt_power = mix(rt_x, rt_y, rate.y);
+	
+#endif
+
+	illuminance = vec4(rt_power) /(64.);
+
+//	uint64_t light_map = b_light_map[findex.x];
+//	bool is_light = (light_map & bit_mask) != 0;
+	vec3 illumi = vec3(length(illuminance+0.01));
+//	illumi = is_light ? vec3(1., 0., 0.) : illumi;
+	illumi = all(equal(pixel/16, ivec2(x, y)*8/16)) ? vec3(0., 0., 1.) : illumi;
+	imageStore(t_color, pixel, vec4(illumi, 1.));
+
+}

@@ -18,7 +18,6 @@ layout(push_constant) uniform BounceInfo
 layout (local_size_x = 32, local_size_y = 32) in;
 
 shared uint64_t s_light_map[512];
-shared uint s_rt_map[32*32];
 void main()
 {
 	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
@@ -64,30 +63,47 @@ void main()
 */
 	uint x = constant.start_id; uint y = constant.frame;
 	uint light_offset = rt_map_size*(x+y*reso.z);
-	uvec2 area = uvec2(12);
-	if(all(lessThan(gl_LocalInvocationID.xy, area)))
+	uvec4 rt0_power;
+	uvec4 rt1_power;
+	uvec4 rt2_power;
+	uvec4 rt3_power;
+	uint rtp[16*16];
 	{
-		ivec2 index_offset_2d = (ivec2(gl_WorkGroupID*gl_WorkGroupSize).xy/16) -1 + ivec2(gl_LocalInvocationID.xy/2);
-		index_offset_2d = clamp(index_offset_2d, ivec2(0), rt_reso);
-		uint index_offset = index_offset_2d.x+ index_offset_2d.y*rt_reso.x;
-		uint rt = b_rt_data[light_offset + index_offset];
-		uvec4 rt_power = (uvec4(rt) >> uvec4(0, 8, 16, 24)) & uvec4(0xff);
-
-		uint i = gl_LocalInvocationID.x + gl_LocalInvocationID.y*area.x;
-		uvec2 sub = gl_LocalInvocationID.xy%2;
-		s_rt_map[i] = rt_power[sub.x + sub.y*2];
+		ivec4 rt_index = ivec4(pixel/16, pixel%16);
+//		ivec4 offset = ivec4(-1,0,-1,0) + ivec4(greaterThanEqual(gl_LocalInvocationID.xxyy%16, uvec4(4)))  + ivec4(greaterThanEqual(gl_LocalInvocationID.xxyy%16, uvec4(12)));
+		ivec4 offset = ivec4(-1,0,-1,0);
+		ivec4 rt_tile_index = rt_index.xxxx + offset.xxyy + (rt_index.yyyy + offset.zwzw)*(rt_reso.xxxx);
+		uint rt0 = b_rt_data[light_offset + rt_tile_index.x];
+		uint rt1 = b_rt_data[light_offset + rt_tile_index.y];
+		uint rt2 = b_rt_data[light_offset + rt_tile_index.z];
+		uint rt3 = b_rt_data[light_offset + rt_tile_index.w];
+		rt0_power = (uvec4(rt0) >> uvec4(0, 8, 16, 24)) & uvec4(0xff);
+		rt1_power = (uvec4(rt1) >> uvec4(0, 8, 16, 24)) & uvec4(0xff);
+		rt2_power = (uvec4(rt2) >> uvec4(0, 8, 16, 24)) & uvec4(0xff);
+		rt3_power = (uvec4(rt3) >> uvec4(0, 8, 16, 24)) & uvec4(0xff);
+		rtp[0] = rt0_power.x;
+		rtp[1] = rt0_power.y;
+		rtp[2] = rt1_power.x;
+		rtp[3] = rt1_power.y;
+		rtp[4] = rt0_power.z;
+		rtp[5] = rt0_power.w;
+		rtp[6] = rt1_power.z;
+		rtp[7] = rt1_power.w;
+		rtp[8] = rt2_power.x;
+		rtp[9] = rt2_power.y;
+		rtp[10] = rt3_power.x;
+		rtp[11] = rt3_power.y;
+		rtp[12] = rt2_power.z;
+		rtp[13] = rt2_power.w;
+		rtp[14] = rt3_power.z;
+		rtp[15] = rt3_power.w;
 	}
-
-	barrier();
-	memoryBarrierShared();
-
 //	ivec2 rt_index = ivec2((gl_LocalInvocationID.xy/8)%2);
-	ivec2 rt_index = ivec2(gl_LocalInvocationID.xy+4)/8 + 1;
-//	ivec2 rt_index = ivec2(gl_LocalInvocationID.xy)/8;
-	uint x0 = s_rt_map[rt_index.x];
-	uint x1 = s_rt_map[rt_index.x+1];
-	uint y0 = s_rt_map[rt_index.x   + (rt_index.y+0)*area.x];
-	uint y1 = s_rt_map[rt_index.x+1 + (rt_index.y+1)*area.x];
+	ivec2 rt_index = ivec2(gl_LocalInvocationID.xy+4)/8;
+	uint x0 = rtp[clamp(rt_index.x, 0, 15)];
+	uint x1 = rtp[clamp(rt_index.x+1, 0, 15)];
+	uint y0 = rtp[clamp(rt_index.x   + (rt_index.y+0)*4, 0, 15)];
+	uint y1 = rtp[clamp(rt_index.x+1 + (rt_index.y+1)*4, 0, 15)];
 	vec2 rate = ((gl_LocalInvocationID.xy+4)%8) /8.* 0.5 + 0.25;
 	float px = mix(float(x0), float(x1), rate.x);
 	float py = mix(float(y0), float(y1), rate.x);

@@ -64,16 +64,18 @@ void main()
 */
 	uint x = constant.start_id; uint y = constant.frame;
 	uint light_offset = rt_map_size*(x+y*reso.z);
-	uvec2 area = uvec2(12);
+	uvec2 area = uvec2(10*2);
 	if(all(lessThan(gl_LocalInvocationID.xy, area)))
 	{
-		ivec2 index_offset_2d = (ivec2(gl_WorkGroupID*gl_WorkGroupSize).xy/16) -1 + ivec2(gl_LocalInvocationID.xy/2);
+		ivec2 index_offset_2d = ivec2(gl_WorkGroupID*gl_WorkGroupSize).xy/16;
+		index_offset_2d -= 1;
+		index_offset_2d += ivec2(gl_LocalInvocationID.xy/2);
 		index_offset_2d = clamp(index_offset_2d, ivec2(0), rt_reso);
 		uint index_offset = index_offset_2d.x+ index_offset_2d.y*rt_reso.x;
 		uint rt = b_rt_data[light_offset + index_offset];
 		uvec4 rt_power = (uvec4(rt) >> uvec4(0, 8, 16, 24)) & uvec4(0xff);
 
-		uint i = gl_LocalInvocationID.x + gl_LocalInvocationID.y*area.x;
+		uint i = gl_LocalInvocationID.x/2 + gl_LocalInvocationID.y/2*area.x;
 		uvec2 sub = gl_LocalInvocationID.xy%2;
 		s_rt_map[i] = rt_power[sub.x + sub.y*2];
 	}
@@ -82,8 +84,7 @@ void main()
 	memoryBarrierShared();
 
 //	ivec2 rt_index = ivec2((gl_LocalInvocationID.xy/8)%2);
-	ivec2 rt_index = ivec2(gl_LocalInvocationID.xy+4)/8 + 1;
-//	ivec2 rt_index = ivec2(gl_LocalInvocationID.xy)/8;
+	ivec2 rt_index = ivec2(gl_LocalInvocationID.xy+4)/8;
 	uint x0 = s_rt_map[rt_index.x];
 	uint x1 = s_rt_map[rt_index.x+1];
 	uint y0 = s_rt_map[rt_index.x   + (rt_index.y+0)*area.x];
@@ -92,6 +93,7 @@ void main()
 	float px = mix(float(x0), float(x1), rate.x);
 	float py = mix(float(y0), float(y1), rate.x);
 	float p = mix(px, py, rate.y);
+	p = x0;
 
 	illuminance = vec4(p) /(64.);
 

@@ -423,7 +423,8 @@ void bittest()
 }
 int main()
 {
-	std::array<uvec4, 16 * 16> s_alive_num;
+	std::array<uvec4, 16 * 16> s_alive_num4;
+	std::array<uint, 32 * 32>  s_alive_num;
 	std::array<uvec4, 16 * 16> b_alive_num;
 	for (int y = 0; y < 32; y++)
 	{
@@ -435,9 +436,23 @@ int main()
 			uint index = (ii % 32);
 			uint offset = ii / 32 * 32;
 			//	s_alive_num[offset + n.x + n.y*16][m.x + m.y*2] = uint(popcnt(is_alive));
-			s_alive_num[offset + index][m.x + m.y * 2] = x + y * 32;
+			s_alive_num4[offset + index][m.x + m.y * 2] = x + y * 32;
 		}
 	}
+	for (int y = 0; y < 32; y++)
+	{
+		for (int x = 0; x < 32; x++)
+		{
+			int ii = y / 2 * 16 + x / 2;
+			uvec2 i = uvec2(x, y);
+			uvec2 m = i % uvec2(2);
+			uint index = (ii % 32);
+			uint offset = ii / 32 * 32;
+			//	s_alive_num[offset + n.x + n.y*16][m.x + m.y*2] = uint(popcnt(is_alive));
+			s_alive_num[(offset + index)*4 + m.x + m.y * 2] = x + y * 32;
+		}
+	}
+
 	for (int y = 0; y < 32; y++)
 	{
 		for (int x = 0; x < 32; x++)
@@ -450,7 +465,7 @@ int main()
 
 			if (all(equal(m, uvec2(0))))
 			{
-				uvec4 c = s_alive_num[ii];
+				uvec4 c = s_alive_num4[ii];
 				c <<= uvec4(0, 8, 16, 24);
 				uint count = c.x | c.y | c.z | c.w;
 

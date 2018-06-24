@@ -141,7 +141,8 @@ layout(set=USE_RT, binding=0) restrict buffer RTBuffer {
 layout (set=USE_RT, binding=10, rgba16f) uniform image2D t_color;
 layout (set=USE_RT, binding=11) uniform sampler2D s_color;
 
-
+// todo
+#define RT_Map_Size uvec2(32, 32)
 #endif
 
 vec2 rotate(in float angle)
