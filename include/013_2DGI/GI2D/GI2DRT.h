@@ -5,12 +5,12 @@
 #include <btrlib/Context.h>
 #include <applib/App.h>
 #include <applib/GraphicsResource.h>
-#include <013_2DGI/PM2D/PM2D.h>
+#include <013_2DGI/GI2D/GI2DContext.h>
 
-namespace pm2d
+namespace gi2d
 {
 
-struct PM2DRT
+struct GI2DRT
 {
 	struct TextureResource
 	{
@@ -45,10 +45,10 @@ struct PM2DRT
 		PipelineNum,
 	};
 
-	PM2DRT(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<PM2DContext>& pm2d_context, const std::shared_ptr<RenderTarget>& render_target)
+	GI2DRT(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context, const std::shared_ptr<RenderTarget>& render_target)
 	{
 		m_context = context;
-		m_pm2d_context = pm2d_context;
+		m_gi2d_context = gi2d_context;
 		m_render_target = render_target;
 
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
@@ -64,7 +64,7 @@ struct PM2DRT
 			image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eStorage;
 			image_info.sharingMode = vk::SharingMode::eExclusive;
 			image_info.initialLayout = vk::ImageLayout::eUndefined;
-			image_info.extent = { (uint32_t)pm2d_context->RenderWidth, (uint32_t)pm2d_context->RenderHeight, 1 };
+			image_info.extent = { (uint32_t)gi2d_context->RenderWidth, (uint32_t)gi2d_context->RenderHeight, 1 };
 			image_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
 
 			tex.m_image = context->m_device->createImageUnique(image_info);
@@ -109,8 +109,8 @@ struct PM2DRT
 		}
 
 		{
-			uint32_t rt_map_size = (m_pm2d_context->RenderWidth/16) * (m_pm2d_context->RenderHeight / 16);
-			uint32_t rt_map_num = m_pm2d_context->RenderWidth * m_pm2d_context->RenderHeight / 64;
+			uint32_t rt_map_size = (m_gi2d_context->RenderWidth/16) * (m_gi2d_context->RenderHeight / 16);
+			uint32_t rt_map_num = m_gi2d_context->RenderWidth * m_gi2d_context->RenderHeight / 64;
 			uint32_t size = rt_map_size * rt_map_num;
 			b_rt_data = m_context->m_storage_memory.allocateMemory<uint32_t>({ size,{} });
 		}
@@ -213,7 +213,7 @@ struct PM2DRT
 		// pipeline layout
 		{
 			vk::DescriptorSetLayout layouts[] = {
-				pm2d_context->getDescriptorSetLayout(),
+				gi2d_context->getDescriptorSetLayout(),
 				m_descriptor_set_layout.get(),
 			};
 
@@ -381,8 +381,8 @@ struct PM2DRT
 	}
 	void execute(vk::CommandBuffer cmd)
 	{
-		uint32_t rt_map_size = (m_pm2d_context->RenderWidth / 16) * (m_pm2d_context->RenderHeight / 16);
-		uint32_t rt_map_num = m_pm2d_context->RenderWidth * m_pm2d_context->RenderHeight / 64;
+		uint32_t rt_map_size = (m_gi2d_context->RenderWidth / 16) * (m_gi2d_context->RenderHeight / 16);
+		uint32_t rt_map_num = m_gi2d_context->RenderWidth * m_gi2d_context->RenderHeight / 64;
 		static int a = 0;
 		// Ž–‘OŒvŽZ
 		if (a == 0)
@@ -390,19 +390,19 @@ struct PM2DRT
 			a++;
 
 			vk::BufferMemoryBarrier to_read[] = {
-				m_pm2d_context->b_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				m_gi2d_context->b_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 //				b_rt_data.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineMakeRT].get());
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutMakePRT].get(), 0, m_pm2d_context->getDescriptorSet(), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutMakePRT].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutMakePRT].get(), 1, m_descriptor_set.get(), {});
-			auto num = app::calcDipatchGroups(uvec3(m_pm2d_context->RenderWidth / 8, m_pm2d_context->RenderHeight / 8, 1), uvec3(32, 32, 1));
-			auto rt_size = m_pm2d_context->RenderSize / 8 / 2;
-			auto yy = m_pm2d_context->RenderHeight / 8;
-			auto xx = m_pm2d_context->RenderWidth / 8;
+			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth / 8, m_gi2d_context->RenderHeight / 8, 1), uvec3(32, 32, 1));
+			auto rt_size = m_gi2d_context->RenderSize / 8 / 2;
+			auto yy = m_gi2d_context->RenderHeight / 8;
+			auto xx = m_gi2d_context->RenderWidth / 8;
 			for (int y = 0; y < yy; y++)
 			{
 				for (int x = 0; x < xx; x++)
@@ -417,14 +417,14 @@ struct PM2DRT
 		// Lighting
 		{
 			vk::BufferMemoryBarrier to_read[] = {
-				m_pm2d_context->b_light_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				m_gi2d_context->b_light_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				b_rt_data.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineRendering].get());
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutRendering].get(), 0, m_pm2d_context->getDescriptorSet(), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutRendering].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutRendering].get(), 1, m_descriptor_set.get(), {});
 
 			static vec2 light_pos = vec2(0, 0);
@@ -435,7 +435,7 @@ struct PM2DRT
 			light_pos.y += m_context->m_window->getInput().m_keyboard.isHold(VK_DOWN) * move;
 			cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayoutMakePRT].get(), vk::ShaderStageFlagBits::eCompute, 0, ivec2(light_pos));
 
-			auto num = app::calcDipatchGroups(uvec3(m_pm2d_context->RenderWidth, m_pm2d_context->RenderHeight, 1), uvec3(32, 32, 1));
+			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth, m_gi2d_context->RenderHeight, 1), uvec3(32, 32, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 		}
 
@@ -460,7 +460,7 @@ struct PM2DRT
 			cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PipelineRendering_Graphics].get());
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayoutRendering].get(), 0, m_pm2d_context->getDescriptorSet(), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayoutRendering].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayoutRendering].get(), 1, m_descriptor_set.get(), {});
 			cmd.draw(3, 1, 0, 0);
 
@@ -470,7 +470,7 @@ struct PM2DRT
 	}
 
 	std::shared_ptr<btr::Context> m_context;
-	std::shared_ptr<PM2DContext> m_pm2d_context;
+	std::shared_ptr<GI2DContext> m_gi2d_context;
 	std::shared_ptr<RenderTarget> m_render_target;
 
 	std::array<vk::UniqueShaderModule, ShaderNum> m_shader;

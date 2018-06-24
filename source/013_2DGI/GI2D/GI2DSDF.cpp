@@ -1,16 +1,16 @@
-#include <013_2DGI/PM2D/PM2DLight.h>
+#include <013_2DGI/GI2D/GI2DSDF.h>
 
-namespace pm2d
+namespace gi2d
 {
 	
-PM2DLight::PM2DLight(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<PM2DContext>& pm2d_context)
+GI2DSDF::GI2DSDF(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context)
 {
 	m_context = context;
-	m_pm2d_context = pm2d_context;
+	m_gi2d_context = gi2d_context;
 
 	{
 		b_light_count = context->m_storage_memory.allocateMemory<uvec4>({ 1,{} });
-		b_light_data = context->m_storage_memory.allocateMemory<PM2DLightData>({ 4096, {} });
+		b_light_data = context->m_storage_memory.allocateMemory<GI2DLightData>({ 4096, {} });
 	}
 	// descriptor_set
 	{
@@ -64,7 +64,7 @@ PM2DLight::PM2DLight(const std::shared_ptr<btr::Context>& context, const std::sh
 	{
 		const char* name[] =
 		{
-			"PMMakeLightList.comp.spv",
+			"MakeDistanceField.comp.spv",
 		};
 		static_assert(array_length(name) == array_length(m_shader), "not equal shader num");
 
@@ -78,12 +78,12 @@ PM2DLight::PM2DLight(const std::shared_ptr<btr::Context>& context, const std::sh
 	// pipeline layout
 	{
 		vk::DescriptorSetLayout layouts[] = {
-			m_pm2d_context->getDescriptorSetLayout(),
+			m_gi2d_context->getDescriptorSetLayout(),
 		};
 		vk::PipelineLayoutCreateInfo pipeline_layout_info;
 		pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 		pipeline_layout_info.setPSetLayouts(layouts);
-		m_pipeline_layout[PipelineLayoutPointLight] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+		m_pipeline_layout[PipelineLayoutMakeSDF] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 	}
 
 
@@ -91,7 +91,7 @@ PM2DLight::PM2DLight(const std::shared_ptr<btr::Context>& context, const std::sh
 		vk::PipelineShaderStageCreateInfo shader_info[] =
 		{
 			vk::PipelineShaderStageCreateInfo()
-			.setModule(m_shader[ShaderPointLight].get())
+			.setModule(m_shader[ShaderMakeSDF].get())
 			.setPName("main")
 			.setStage(vk::ShaderStageFlagBits::eCompute),
 		};
@@ -100,32 +100,32 @@ PM2DLight::PM2DLight(const std::shared_ptr<btr::Context>& context, const std::sh
 		{
 			vk::ComputePipelineCreateInfo()
 			.setStage(shader_info[0])
-			.setLayout(m_pipeline_layout[PipelineLayoutPointLight].get()),
+			.setLayout(m_pipeline_layout[PipelineLayoutMakeSDF].get()),
 		};
 		auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
-		m_pipeline[PipelineLayoutPointLight] = std::move(compute_pipeline[0]);
+		m_pipeline[PipelineLayoutMakeSDF] = std::move(compute_pipeline[0]);
 	}
 
 }
 
-void PM2DLight::execute(vk::CommandBuffer cmd)
+void GI2DSDF::execute(vk::CommandBuffer cmd)
 {
 	vk::BufferMemoryBarrier to_write[] =
 	{
-		m_pm2d_context->b_emission_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eIndirectCommandRead|vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eTransferWrite),
+		m_gi2d_context->b_emission_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eIndirectCommandRead|vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eTransferWrite),
 	};
 	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands, {}, 0, nullptr, array_length(to_write), to_write, 0, nullptr);
 
 	{
-		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineLayoutPointLight].get());
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutPointLight].get(), 0, m_pm2d_context->getDescriptorSet(), {});
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineMakeSDF].get());
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineMakeSDF].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 		cmd.dispatch(1, 1, 1);
 
 	}
 	vk::BufferMemoryBarrier to_read[] =
 	{
-		m_pm2d_context->b_emission_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eIndirectCommandRead),
-		m_pm2d_context->b_emission_buffer.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eIndirectCommandRead),
+		m_gi2d_context->b_emission_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eIndirectCommandRead),
+		m_gi2d_context->b_emission_buffer.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eIndirectCommandRead),
 	};
 	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);
 }

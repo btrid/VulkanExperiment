@@ -3,10 +3,10 @@
 namespace sv2d
 {
 	
-SV2DLight::SV2DLight(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<SV2DContext>& pm2d_context)
+SV2DLight::SV2DLight(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<SV2DContext>& gi2d_context)
 {
 	m_context = context;
-	m_sv2d_context = pm2d_context;
+	m_sv2d_context = gi2d_context;
 
 	{
 		b_light_count = context->m_storage_memory.allocateMemory<uvec4>({ 1,{} });

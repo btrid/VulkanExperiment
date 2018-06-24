@@ -1,11 +1,11 @@
 #pragma once
 
-#include <013_2DGI/PM2D/PM2D.h>
+#include <013_2DGI/GI2D/GI2DContext.h>
 #include <applib/AppModel/AppModel.h>
-namespace pm2d
+namespace gi2d
 {
 
-struct PM2DAppModel : public PM2DPipeline
+struct GI2DAppModel : public GI2DPipeline
 {
 	enum Shader
 	{
@@ -24,10 +24,10 @@ struct PM2DAppModel : public PM2DPipeline
 		PipelineNum,
 	};
 
-	PM2DAppModel(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<PM2DContext>& pm2d_context)
+	GI2DAppModel(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context)
 	{
 		m_context = context;
-		m_pm2d_context = pm2d_context;
+		m_gi2d_context = gi2d_context;
 		// レンダーパス
 		{
 			vk::SubpassDescription subpass;
@@ -41,8 +41,8 @@ struct PM2DAppModel : public PM2DPipeline
 
 			vk::FramebufferCreateInfo framebuffer_info;
 			framebuffer_info.setRenderPass(m_render_pass.get());
-			framebuffer_info.setWidth(pm2d_context->RenderWidth);
-			framebuffer_info.setHeight(pm2d_context->RenderHeight);
+			framebuffer_info.setWidth(gi2d_context->RenderWidth);
+			framebuffer_info.setHeight(gi2d_context->RenderHeight);
 			framebuffer_info.setLayers(1);
 
 			m_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
@@ -65,7 +65,7 @@ struct PM2DAppModel : public PM2DPipeline
 		// pipeline layout
 		{
 			vk::DescriptorSetLayout layouts[] = {
-				pm2d_context->getDescriptorSetLayout(),
+				gi2d_context->getDescriptorSetLayout(),
 				AppModel::DescriptorSet::Order().getLayout(),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
@@ -82,10 +82,10 @@ struct PM2DAppModel : public PM2DPipeline
 				.setPrimitiveRestartEnable(VK_FALSE)
 				.setTopology(vk::PrimitiveTopology::eTriangleList);
 
-			vk::Extent3D size = pm2d_context->RenderWidth;
+			vk::Extent3D size = gi2d_context->RenderWidth;
 			// viewport
-			vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)pm2d_context->RenderWidth, (float)pm2d_context->RenderHeight, 0.f, 1.f);
-			vk::Rect2D scissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(pm2d_context->RenderWidth, pm2d_context->RenderHeight));
+			vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)gi2d_context->RenderWidth, (float)gi2d_context->RenderHeight, 0.f, 1.f);
+			vk::Rect2D scissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(gi2d_context->RenderWidth, gi2d_context->RenderHeight));
 
 			vk::PipelineViewportStateCreateInfo viewport_info;
 			viewport_info.setViewportCount(1);
@@ -171,7 +171,7 @@ struct PM2DAppModel : public PM2DPipeline
 
 			cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PipelineLayoutRendering].get());
 			std::vector<vk::DescriptorSet> sets = {
-				m_pm2d_context->getDescriptorSet(),
+				m_gi2d_context->getDescriptorSet(),
 				render->getDescriptorSet(),
 			};
 			cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayoutRendering].get(), 0, sets, {});
@@ -193,7 +193,7 @@ struct PM2DAppModel : public PM2DPipeline
 		vk::RenderPassBeginInfo render_begin_info;
 		render_begin_info.setRenderPass(m_render_pass.get());
 		render_begin_info.setFramebuffer(m_framebuffer.get());
-		render_begin_info.setRenderArea(vk::Rect2D({}, { (uint32_t)m_pm2d_context->RenderWidth, (uint32_t)m_pm2d_context->RenderHeight}));
+		render_begin_info.setRenderArea(vk::Rect2D({}, { (uint32_t)m_gi2d_context->RenderWidth, (uint32_t)m_gi2d_context->RenderHeight}));
 
 		cmd.beginRenderPass(render_begin_info, vk::SubpassContents::eSecondaryCommandBuffers);
 		cmd.executeCommands(cmds.size(), cmds.data());
@@ -215,7 +215,7 @@ struct PM2DAppModel : public PM2DPipeline
 	vk::UniqueFramebuffer m_framebuffer;
 
 	std::shared_ptr<btr::Context> m_context;
-	std::shared_ptr<PM2DContext> m_pm2d_context;
+	std::shared_ptr<GI2DContext> m_gi2d_context;
 };
 
 }

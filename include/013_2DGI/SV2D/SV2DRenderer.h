@@ -56,7 +56,7 @@ struct SV2DRenderer
 	enum {
 		LightNum = 64,
 	};
-	SV2DRenderer(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target, const std::shared_ptr<SV2DContext>& pm2d_context);
+	SV2DRenderer(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target, const std::shared_ptr<SV2DContext>& gi2d_context);
 	void execute(vk::CommandBuffer cmd);
 
 

@@ -1,14 +1,14 @@
-#include <013_2DGI/PM2D/PM2DDebug.h>
+#include <013_2DGI/GI2D/GI2DDebug.h>
 #include <btrlib/cWindow.h>
 
-namespace pm2d
+namespace gi2d
 {
 	
-PM2DDebug::PM2DDebug(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<PM2DContext>& pm2d_context)
+GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context)
 {
 	m_context = context;
-	m_pm2d_context = pm2d_context;
-	std::vector<PM2DContext::Fragment> map_data(pm2d_context->RenderWidth*pm2d_context->RenderHeight);
+	m_gi2d_context = gi2d_context;
+	std::vector<GI2DContext::Fragment> map_data(gi2d_context->RenderWidth*gi2d_context->RenderHeight);
 	{
 		struct Fragment
 		{
@@ -26,11 +26,11 @@ PM2DDebug::PM2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 		}
 
 #endif
-		for (size_t y = 0; y < pm2d_context->RenderHeight; y++)
+		for (size_t y = 0; y < gi2d_context->RenderHeight; y++)
 		{
-			for (size_t x = 0; x < pm2d_context->RenderWidth; x++)
+			for (size_t x = 0; x < gi2d_context->RenderWidth; x++)
 			{
-				auto& m = map_data[x + y * pm2d_context->RenderWidth];
+				auto& m = map_data[x + y * gi2d_context->RenderWidth];
 				m.albedo = vec4(0.f);
 				for (auto& r : rect)
 				{
@@ -45,7 +45,7 @@ PM2DDebug::PM2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 	}
 
 
-	btr::BufferMemoryDescriptorEx<PM2DContext::Fragment> desc;
+	btr::BufferMemoryDescriptorEx<GI2DContext::Fragment> desc;
 	desc.element_num = map_data.size();
 	m_map_data = m_context->m_storage_memory.allocateMemory(desc);
 
@@ -78,10 +78,10 @@ PM2DDebug::PM2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 	// pipeline layout
 	{
 		vk::DescriptorSetLayout layouts[] = {
-			m_pm2d_context->getDescriptorSetLayout(),
+			m_gi2d_context->getDescriptorSetLayout(),
 		};
 		vk::PushConstantRange constants[] = {
-			vk::PushConstantRange().setOffset(0).setSize(sizeof(PM2DLightData)).setStageFlags(vk::ShaderStageFlagBits::eCompute),
+			vk::PushConstantRange().setOffset(0).setSize(sizeof(GI2DLightData)).setStageFlags(vk::ShaderStageFlagBits::eCompute),
 		};
 		vk::PipelineLayoutCreateInfo pipeline_layout_info;
 		pipeline_layout_info.setSetLayoutCount(array_length(layouts));
@@ -113,21 +113,21 @@ PM2DDebug::PM2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 
 }
 
-void PM2DDebug::execute(vk::CommandBuffer cmd)
+void GI2DDebug::execute(vk::CommandBuffer cmd)
 {
 	vk::BufferMemoryBarrier to_write[] =
 	{
-		m_pm2d_context->b_emission_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eIndirectCommandRead | vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eTransferWrite),
-		m_pm2d_context->b_fragment_buffer.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
+		m_gi2d_context->b_emission_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eIndirectCommandRead | vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eTransferWrite),
+		m_gi2d_context->b_fragment_buffer.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
 	};
 	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands, {}, 0, nullptr, array_length(to_write), to_write, 0, nullptr);
 
 	vk::BufferCopy copy;
 	copy.setSrcOffset(m_map_data.getInfo().offset);
-	copy.setDstOffset(m_pm2d_context->b_fragment_buffer.getInfo().offset);
-	copy.setSize(m_pm2d_context->b_fragment_buffer.getInfo().range);
+	copy.setDstOffset(m_gi2d_context->b_fragment_buffer.getInfo().offset);
+	copy.setSize(m_gi2d_context->b_fragment_buffer.getInfo().range);
 
-	cmd.copyBuffer(m_map_data.getInfo().buffer, m_pm2d_context->b_fragment_buffer.getInfo().buffer, copy);
+	cmd.copyBuffer(m_map_data.getInfo().buffer, m_gi2d_context->b_fragment_buffer.getInfo().buffer, copy);
 
 	// light‚Ì‚Å‚Î‚Á‚®
 //	if(0)
@@ -143,25 +143,25 @@ void PM2DDebug::execute(vk::CommandBuffer cmd)
 		light_dir += 0.02f;
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineLayoutPointLight].get());
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutPointLight].get(), 0, m_pm2d_context->getDescriptorSet(), {});
-		cmd.pushConstants<PM2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, PM2DLightData{ light_pos, light_dir, -1.4f, vec4(2500.f, 0.f, 2500.f, 0.f), level });
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutPointLight].get(), 0, m_gi2d_context->getDescriptorSet(), {});
+		cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ light_pos, light_dir, -1.4f, vec4(2500.f, 0.f, 2500.f, 0.f), level });
 		cmd.dispatch(1, 1, 1);
 
 		{
 
- 			cmd.pushConstants<PM2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, PM2DLightData{ vec2(430.f, 170.f), 0.f, -1.4f, vec4(2500.f, 0.f, 2500.f, 0.f), level });
+ 			cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ vec2(430.f, 170.f), 0.f, -1.4f, vec4(2500.f, 0.f, 2500.f, 0.f), level });
  			cmd.dispatch(1, 1, 1);
- 			cmd.pushConstants<PM2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, PM2DLightData{ vec2(60.f, 400.f), 0.f, -1.4f, vec4(2500.f, 0.f, 2500.f, 0.f), level });
+ 			cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ vec2(60.f, 400.f), 0.f, -1.4f, vec4(2500.f, 0.f, 2500.f, 0.f), level });
  			cmd.dispatch(1, 1, 1);
- 			cmd.pushConstants<PM2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, PM2DLightData{ vec2(80.f, 200.f), 0.f, -1.4f, vec4(2500.f, 0.f, 2500.f, 0.f), level });
+ 			cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ vec2(80.f, 200.f), 0.f, -1.4f, vec4(2500.f, 0.f, 2500.f, 0.f), level });
  			cmd.dispatch(1, 1, 1);
 		}
 	}
 	vk::BufferMemoryBarrier to_read[] =
 	{
-		m_pm2d_context->b_emission_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eIndirectCommandRead),
-		m_pm2d_context->b_emission_buffer.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eIndirectCommandRead),
-		m_pm2d_context->b_fragment_buffer.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eIndirectCommandRead),
+		m_gi2d_context->b_emission_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eIndirectCommandRead),
+		m_gi2d_context->b_emission_buffer.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eIndirectCommandRead),
+		m_gi2d_context->b_fragment_buffer.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eIndirectCommandRead),
 	};
 	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);
 }

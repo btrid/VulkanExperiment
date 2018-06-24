@@ -1,36 +1,35 @@
 #pragma once
 #include <memory>
 #include <btrlib/Context.h>
-#include <013_2DGI/PM2D/PM2D.h>
-namespace pm2d
+#include <013_2DGI/GI2D/GI2DContext.h>
+namespace gi2d
 {
 
 
-struct PM2DLight : public PM2DPipeline
+struct GI2DSDF : public GI2DPipeline
 {
-	PM2DLight(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<PM2DContext>& pm2d_context);
+	GI2DSDF(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context);
 	void execute(vk::CommandBuffer cmd) override;
 
-//	std::vector<PM2DContext::Emission> m_emission;
 	btr::BufferMemoryEx<uvec4> b_light_count;
-	btr::BufferMemoryEx<PM2DLightData> b_light_data;
+	btr::BufferMemoryEx<GI2DLightData> b_light_data;
 
 	enum Shader
 	{
-		ShaderPointLight,
+		ShaderMakeSDF,
 		ShaderNum,
 	};
 	enum PipelineLayout
 	{
-		PipelineLayoutPointLight,
+		PipelineLayoutMakeSDF,
 		PipelineLayoutNum,
 	};
 	enum Pipeline
 	{
-		PipelinePointLight,
+		PipelineMakeSDF,
 		PipelineNum,
 	};
-	vk::UniqueDescriptorSetLayout m_descriptor_set_layout; //!< copy用データ
+	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
 
 	std::array<vk::UniqueShaderModule, ShaderNum> m_shader;
@@ -38,7 +37,7 @@ struct PM2DLight : public PM2DPipeline
 	std::array<vk::UniquePipeline, PipelineNum> m_pipeline;
 
 	std::shared_ptr<btr::Context> m_context;
-	std::shared_ptr<PM2DContext> m_pm2d_context;
+	std::shared_ptr<GI2DContext> m_gi2d_context;
 };
 
 

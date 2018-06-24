@@ -30,10 +30,10 @@ struct Radiosity2DMakeHierarchy
 		PipelineNum,
 	};
 
-	Radiosity2DMakeHierarchy(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<Radiosity2DContext>& pm2d_context)
+	Radiosity2DMakeHierarchy(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<Radiosity2DContext>& gi2d_context)
 	{
 		m_context = context;
-		m_pm2d_context = pm2d_context;
+		m_gi2d_context = gi2d_context;
 
 		{
 			const char* name[] =
@@ -52,7 +52,7 @@ struct Radiosity2DMakeHierarchy
 		// pipeline layout
 		{
 			vk::DescriptorSetLayout layouts[] = {
-				pm2d_context->getDescriptorSetLayout()
+				gi2d_context->getDescriptorSetLayout()
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
@@ -96,15 +96,15 @@ struct Radiosity2DMakeHierarchy
 		// make fragment map
 		{
 			vk::BufferMemoryBarrier to_write[] = {
-				m_pm2d_context->b_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
+				m_gi2d_context->b_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_write), to_write, 0, nullptr);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineMakeFragmentMap].get());
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutMakeFragmentMap].get(), 0, m_pm2d_context->getDescriptorSet(), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutMakeFragmentMap].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 
-			auto num = app::calcDipatchGroups(uvec3(m_pm2d_context->RenderWidth, m_pm2d_context->RenderHeight, 1), uvec3(32, 32, 1));
+			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth, m_gi2d_context->RenderHeight, 1), uvec3(32, 32, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 		}
 
@@ -113,16 +113,16 @@ struct Radiosity2DMakeHierarchy
 			for (int i = 1; i < Radiosity2DContext::_Hierarchy_Num; i++)
 			{
 				vk::BufferMemoryBarrier to_write[] = {
-					m_pm2d_context->b_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+					m_gi2d_context->b_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 				};
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 					0, nullptr, array_length(to_write), to_write, 0, nullptr);
 
 				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineMakeFragmentMapHierarchy].get());
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutMakeFragmentMapHierarchy].get(), 0, m_pm2d_context->getDescriptorSet(), {});
+				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutMakeFragmentMapHierarchy].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 				cmd.pushConstants<int32_t>(m_pipeline_layout[PipelineLayoutMakeFragmentMapHierarchy].get(), vk::ShaderStageFlagBits::eCompute, 0, i);
 
-				auto num = app::calcDipatchGroups(uvec3(m_pm2d_context->RenderWidth >> i, m_pm2d_context->RenderHeight >> i, 1), uvec3(32, 32, 1));
+				auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth >> i, m_gi2d_context->RenderHeight >> i, 1), uvec3(32, 32, 1));
 				cmd.dispatch(num.x, num.y, num.z);
 
 			}
@@ -130,7 +130,7 @@ struct Radiosity2DMakeHierarchy
 	}
 
 	std::shared_ptr<btr::Context> m_context;
-	std::shared_ptr<Radiosity2DContext> m_pm2d_context;
+	std::shared_ptr<Radiosity2DContext> m_gi2d_context;
 
 	std::array<vk::UniqueShaderModule, ShaderNum> m_shader;
 	std::array<vk::UniquePipelineLayout, PipelineLayoutNum> m_pipeline_layout;
@@ -182,7 +182,7 @@ struct Radiosity2DRenderer
 		vk::ImageSubresourceRange m_subresource_range;
 	};
 
-	Radiosity2DRenderer(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target, const std::shared_ptr<Radiosity2DContext>& pm2d_context);
+	Radiosity2DRenderer(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target, const std::shared_ptr<Radiosity2DContext>& gi2d_context);
 	void execute(vk::CommandBuffer cmd);
 
 	std::array < TextureResource, Radiosity2DContext::_BounceNum > m_color_tex;
@@ -200,7 +200,7 @@ struct Radiosity2DRenderer
 	std::array<vk::UniquePipeline, PipelineNum> m_pipeline;
 
 	std::shared_ptr<btr::Context> m_context;
-	std::shared_ptr<Radiosity2DContext> m_pm2d_context;
+	std::shared_ptr<Radiosity2DContext> m_gi2d_context;
 };
 
 }

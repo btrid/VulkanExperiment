@@ -26,13 +26,13 @@
 
 #include <applib/sImGuiRenderer.h>
 
-#include <013_2DGI/PM2D/PM2DRenderer.h>
-#include <013_2DGI/PM2D/PM2DClear.h>
-#include <013_2DGI/PM2D/PM2DLight.h>
-#include <013_2DGI/PM2D/PM2DDebug.h>
-#include <013_2DGI/PM2D/PM2DAppModel.h>
-#include <013_2DGI/PM2D/PM2DSDF.h>
-#include <013_2DGI/PM2D/PM2DRT.h>
+#include <013_2DGI/GI2D/GI2DRenderer.h>
+#include <013_2DGI/GI2D/GI2DClear.h>
+#include <013_2DGI/GI2D/GI2DLight.h>
+#include <013_2DGI/GI2D/GI2DDebug.h>
+#include <013_2DGI/GI2D/GI2DAppModel.h>
+#include <013_2DGI/GI2D/GI2DSDF.h>
+#include <013_2DGI/GI2D/GI2DRT.h>
 
 #include <013_2DGI/SV2D/SV2DRenderer.h>
 #include <013_2DGI/SV2D/SV2DClear.h>
@@ -52,7 +52,7 @@
 int main()
 {
 #define use_pm
-	using namespace pm2d;
+	using namespace gi2d;
 	using namespace sv2d;
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();
@@ -88,12 +88,12 @@ int main()
 
 
 #if defined(use_pm)
-	std::shared_ptr<PM2DContext> gi2d_context = std::make_shared<PM2DContext>(context);
-	PM2DRenderer pm_renderer(context, app.m_window->getRenderTarget(), gi2d_context);
-	PM2DMakeHierarchy pm_make_hierarchy(context, gi2d_context);
-	PM2DClear pm_clear(context, gi2d_context);
-	PM2DDebug pm_debug_make_fragment_and_light(context, gi2d_context);
-	PM2DRT pm_RT(context, gi2d_context, app.m_window->getRenderTarget());
+	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context);
+	GI2DRenderer pm_renderer(context, app.m_window->getRenderTarget(), gi2d_context);
+	GI2DMakeHierarchy pm_make_hierarchy(context, gi2d_context);
+	GI2DClear pm_clear(context, gi2d_context);
+	GI2DDebug pm_debug_make_fragment_and_light(context, gi2d_context);
+	GI2DRT pm_RT(context, gi2d_context, app.m_window->getRenderTarget());
 #else
 	std::shared_ptr<SV2DContext> gi2d_context = std::make_shared<SV2DContext>(context);
 	SV2DRenderer pm_renderer(context, app.m_window->getRenderTarget(), gi2d_context);

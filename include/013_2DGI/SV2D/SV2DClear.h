@@ -6,10 +6,10 @@ namespace sv2d
 
 struct SV2DClear
 {
-	SV2DClear(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<SV2DContext>& pm2d_context)
+	SV2DClear(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<SV2DContext>& gi2d_context)
 	{
 		m_context = context;
-		m_sv2d_context = pm2d_context;
+		m_sv2d_context = gi2d_context;
 	}
 	void execute(vk::CommandBuffer cmd)
 	{

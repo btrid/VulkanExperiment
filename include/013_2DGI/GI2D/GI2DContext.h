@@ -3,10 +3,10 @@
 #include <memory>
 #include <btrlib/Define.h>
 #include <btrlib/Context.h>
-namespace pm2d
+namespace gi2d
 {
 
-struct PM2DLightData
+struct GI2DLightData
 {
 	vec2 m_pos;
 	float m_dir;
@@ -17,7 +17,7 @@ struct PM2DLightData
 	int _p2;
 	int _p3;
 };
-struct PM2DContext
+struct GI2DContext
 {
 	enum
 	{
@@ -57,7 +57,7 @@ struct PM2DContext
 		int32_t target;
 	};
 
-	PM2DContext(const std::shared_ptr<btr::Context>& context)
+	GI2DContext(const std::shared_ptr<btr::Context>& context)
 	{
 // 		RenderWidth = 1024;
 // 		RenderHeight = 1024;
@@ -120,7 +120,7 @@ struct PM2DContext
 			b_emission_counter = context->m_storage_memory.allocateMemory(desc);
 		}
 		{
-			btr::BufferMemoryDescriptorEx<PM2DLightData> desc;
+			btr::BufferMemoryDescriptorEx<GI2DLightData> desc;
 			desc.element_num = Light_Num;
 			b_emission_buffer = context->m_storage_memory.allocateMemory(desc);
 		}
@@ -288,7 +288,7 @@ struct PM2DContext
 	btr::BufferMemoryEx<uint64_t> b_light_map;
 
 	btr::BufferMemoryEx<ivec4> b_emission_counter;
-	btr::BufferMemoryEx<PM2DLightData> b_emission_buffer;
+	btr::BufferMemoryEx<GI2DLightData> b_emission_buffer;
 
 	btr::BufferMemoryEx<int32_t> b_emission_tile_linklist_counter;
 	btr::BufferMemoryEx<int32_t> b_emission_tile_linkhead;
@@ -302,7 +302,7 @@ struct PM2DContext
 	vk::DescriptorSetLayout getDescriptorSetLayout()const { return m_descriptor_set_layout.get(); }
 };
 
-struct PM2DPipeline
+struct GI2DPipeline
 {
 	virtual void execute(vk::CommandBuffer cmd) = 0;
 };

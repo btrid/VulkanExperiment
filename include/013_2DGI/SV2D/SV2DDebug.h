@@ -7,7 +7,7 @@ namespace sv2d
 
 struct SV2DDebug : public SV2DPipeline
 {
-	SV2DDebug(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<SV2DContext>& pm2d_context);
+	SV2DDebug(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<SV2DContext>& gi2d_context);
 	void execute(vk::CommandBuffer cmd) override;
 
 	std::shared_ptr<btr::Context> m_context;

@@ -11,55 +11,37 @@
     <ClCompile Include="..\..\source\013_2DGI\SV2DRenderer.cpp">
       <Filter>SV2D</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\source\013_2DGI\PM2D\PM2DDebug.cpp">
-      <Filter>PM2D</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\source\013_2DGI\PM2D\PM2DLight.cpp">
-      <Filter>PM2D</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\source\013_2DGI\PM2D\PM2DRenderer.cpp">
-      <Filter>PM2D</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\source\013_2DGI\PM2D\PM2DSDF.cpp">
-      <Filter>PM2D</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\source\013_2DGI\Radiosity2D\Radiosity2DRenderer.cpp">
       <Filter>Radiosity2D</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\013_2DGI\GI2D\GI2DDebug.cpp">
+      <Filter>GI2D</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\013_2DGI\GI2D\GI2DLight.cpp">
+      <Filter>GI2D</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\013_2DGI\GI2D\GI2DRenderer.cpp">
+      <Filter>GI2D</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\source\013_2DGI\GI2D\GI2DSDF.cpp">
+      <Filter>GI2D</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <Filter Include="PM2D">
-      <UniqueIdentifier>{d0b63663-3b79-40f6-9511-cdd3819825ee}</UniqueIdentifier>
-    </Filter>
     <Filter Include="SV2D">
       <UniqueIdentifier>{005cd3e5-94d6-460a-98b1-0366d03ebaac}</UniqueIdentifier>
     </Filter>
     <Filter Include="Radiosity2D">
       <UniqueIdentifier>{d2f04e6d-529c-4149-bf48-d9ec47fa7dd1}</UniqueIdentifier>
     </Filter>
+    <Filter Include="GI2D">
+      <UniqueIdentifier>{d0b63663-3b79-40f6-9511-cdd3819825ee}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\include\013_2DGI\PM2D\PM2D.h">
-      <Filter>PM2D</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\013_2DGI\PM2D\PM2DAppModel.h">
-      <Filter>PM2D</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\013_2DGI\PM2D\PM2DClear.h">
-      <Filter>PM2D</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\013_2DGI\PM2D\PM2DDebug.h">
-      <Filter>PM2D</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\013_2DGI\PM2D\PM2DLight.h">
-      <Filter>PM2D</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\013_2DGI\PM2D\PM2DRenderer.h">
-      <Filter>PM2D</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\013_2DGI\SV2D\SV2D.h">
       <Filter>SV2D</Filter>
     </ClInclude>
@@ -78,17 +60,35 @@
     <ClInclude Include="..\..\include\013_2DGI\SV2D\SV2DAppModel.h">
       <Filter>SV2D</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\013_2DGI\PM2D\PM2DSDF.h">
-      <Filter>PM2D</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\013_2DGI\Radiosity2D\Radiosity2D.h">
       <Filter>Radiosity2D</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\013_2DGI\Radiosity2D\Radiosity2DRenderer.h">
       <Filter>Radiosity2D</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\013_2DGI\PM2D\PM2DRT.h">
-      <Filter>PM2D</Filter>
+    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DAppModel.h">
+      <Filter>GI2D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DClear.h">
+      <Filter>GI2D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DDebug.h">
+      <Filter>GI2D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DLight.h">
+      <Filter>GI2D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DRenderer.h">
+      <Filter>GI2D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DRT.h">
+      <Filter>GI2D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DSDF.h">
+      <Filter>GI2D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DContext.h">
+      <Filter>GI2D</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
