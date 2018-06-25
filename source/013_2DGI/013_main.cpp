@@ -89,16 +89,16 @@ int main()
 
 #if defined(use_pm)
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context);
-	GI2DRenderer pm_renderer(context, app.m_window->getRenderTarget(), gi2d_context);
-	GI2DMakeHierarchy pm_make_hierarchy(context, gi2d_context);
-	GI2DClear pm_clear(context, gi2d_context);
-	GI2DDebug pm_debug_make_fragment_and_light(context, gi2d_context);
-	GI2DRT pm_RT(context, gi2d_context, app.m_window->getRenderTarget());
+	GI2DRenderer gi_renderer(context, app.m_window->getRenderTarget(), gi2d_context);
+	GI2DMakeHierarchy gi_make_hierarchy(context, gi2d_context);
+	GI2DClear gi_clear(context, gi2d_context);
+	GI2DDebug gi_debug_make_fragment_and_light(context, gi2d_context);
+	GI2DRT gi_RT(context, gi2d_context, app.m_window->getRenderTarget());
 #else
 	std::shared_ptr<SV2DContext> gi2d_context = std::make_shared<SV2DContext>(context);
-	SV2DRenderer pm_renderer(context, app.m_window->getRenderTarget(), gi2d_context);
-	SV2DClear pm_clear(context, gi2d_context);
-	SV2DDebug pm_debug_make_fragment_and_light(context, gi2d_context);
+	SV2DRenderer gi_renderer(context, app.m_window->getRenderTarget(), gi2d_context);
+	SV2DClear gi_clear(context, gi2d_context);
+	SV2DDebug gi_debug_make_fragment_and_light(context, gi2d_context);
 #endif
 
 	//	SV2DAppModel pm_appmodel(context, sv2d_context);
@@ -117,10 +117,10 @@ int main()
 			{
 				cmd_model_update,
 				cmd_render_clear,
-				cmd_pm_clear,
-				cmd_pm_make_fragment,
-				cmd_pm_PRT,
-				cmd_pm_render,
+				cmd_gi_clear,
+				cmd_gi_make_fragment,
+				cmd_gi_RT,
+				cmd_gi_render,
 				cmd_render_present,
 				cmd_num
 			};
@@ -164,10 +164,10 @@ int main()
 			{
 				{
 					auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
-					pm_clear.execute(cmd);
-					pm_debug_make_fragment_and_light.execute(cmd);
+					gi_clear.execute(cmd);
+					gi_debug_make_fragment_and_light.execute(cmd);
 					cmd.end();
-					cmds[cmd_pm_clear] = cmd;
+					cmds[cmd_gi_clear] = cmd;
 				}
 				{
 //					std::vector<vk::CommandBuffer> cs(1);
@@ -177,12 +177,12 @@ int main()
 				{
 					auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 #if defined(use_pm)
-					pm_make_hierarchy.execute(cmd);
+					gi_make_hierarchy.execute(cmd);
 #endif
-					pm_RT.execute(cmd);
+					gi_RT.execute(cmd);
 //					pm_renderer.execute(cmd);
 					cmd.end();
-					cmds[cmd_pm_render] = cmd;
+					cmds[cmd_gi_render] = cmd;
 				}
 			}
 			app.submit(std::move(cmds));
