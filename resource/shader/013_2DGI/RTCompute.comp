@@ -26,11 +26,20 @@ void main()
 	vec2 end = 8.*vec2(gl_GlobalInvocationID.xy);
 	vec2 start = 8. * vec2(constant.start_id%reso.z, constant.start_id/reso.z);
 
+	ivec2 iend = ivec2(end+0.5);
+	ivec2 istart = ivec2(start+0.5);
+	ivec2 idir = iend - istart;
+	{
+		vec2 subpos = sign(idir.xy)*0.5+0.5;
+		start = start + (subpos.xy)*0.5;
+		end = end + (1.-subpos.xy)*0.5;
+	}
+
 	vec2 distance = (end - start);
 	vec2 dir = normalize(distance);
-	dir.x = dir.x == 0. ? 0.000001 : dir.x;
-	dir.y = dir.y == 0. ? 0.000001 : dir.y;
-	dir *= abs(dir.x) >= abs(dir.y) ? abs(1./dir.x) : abs(1./dir.y);
+//	dir.x = dir.x == 0. ? 0.000001 : dir.x;
+//	dir.y = dir.y == 0. ? 0.000001 : dir.y;
+//	dir *= abs(dir.x) >= abs(dir.y) ? abs(1./dir.x) : abs(1./dir.y);
 	vec2 inv_dir = abs(1./dir);
 
 	int goal_index = abs(dir.x) >= abs(dir.y) ? 0: 1;
@@ -54,7 +63,7 @@ void main()
 
 				if(fragment_map == 0)
 				{
-					hierarchy = hierarchy_;
+//					hierarchy = hierarchy_;
 					break;
 				}
 			}
@@ -68,7 +77,7 @@ void main()
 		}
 
 		// 終了判定
-		if(abs(distance[goal_index]) - abs(map_index[goal_index]-start[goal_index]) < 1)
+		if(abs(idir[goal_index]) - abs(map_index[goal_index]-istart[goal_index]) < 1)
 		{
 			// 距離を超えたら光がフラグメントにヒット
 			break;

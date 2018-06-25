@@ -147,15 +147,15 @@ void GI2DDebug::execute(vk::CommandBuffer cmd)
 		cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ light_pos, light_dir, -1.4f, vec4(2500.f, 0.f, 2500.f, 0.f), level });
 		cmd.dispatch(1, 1, 1);
 
-		{
-
- 			cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ vec2(430.f, 170.f), 0.f, -1.4f, vec4(2500.f, 0.f, 2500.f, 0.f), level });
- 			cmd.dispatch(1, 1, 1);
- 			cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ vec2(60.f, 400.f), 0.f, -1.4f, vec4(2500.f, 0.f, 2500.f, 0.f), level });
- 			cmd.dispatch(1, 1, 1);
- 			cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ vec2(80.f, 200.f), 0.f, -1.4f, vec4(2500.f, 0.f, 2500.f, 0.f), level });
- 			cmd.dispatch(1, 1, 1);
-		}
+// 		{
+// 
+//  			cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ vec2(430.f, 170.f), 0.f, -1.4f, vec4(2500.f, 0.f, 2500.f, 0.f), level });
+//  			cmd.dispatch(1, 1, 1);
+//  			cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ vec2(60.f, 400.f), 0.f, -1.4f, vec4(2500.f, 0.f, 2500.f, 0.f), level });
+//  			cmd.dispatch(1, 1, 1);
+//  			cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ vec2(80.f, 200.f), 0.f, -1.4f, vec4(2500.f, 0.f, 2500.f, 0.f), level });
+//  			cmd.dispatch(1, 1, 1);
+// 		}
 	}
 	vk::BufferMemoryBarrier to_read[] =
 	{

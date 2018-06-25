@@ -41,7 +41,7 @@ void main()
 		Emission light = b_emission_buffer[emission_index];
 
 		vec4 radiance = light.emission;
-		vec2 start = light.pos + start_offset;
+		vec2 start = light.pos;
 /*		{
 			const vec2 diff = (end - start);
 			vec4 l_dir = rotate2(light.dir.xx + vec2(-light.angle, light.angle));
@@ -54,8 +54,18 @@ void main()
 			}
 		}
 */
+		ivec2 iend = ivec2(end+0.5);
+		ivec2 istart = ivec2(start+0.5);
+		ivec2 idir = iend - istart;
+		{
+				
+			vec2 subpos = sign(idir.xy)*0.5+0.5;
+			start = start + subpixel*(subpos.xy);
+			end = end + subpixel*(1.-subpos.xy);
+		}
 
 		start += start_offset * 4.;
+
 		vec2 distance = (end - start);
 		vec2 dir = normalize(distance);
 		dir.x = dir.x == 0. ? 0.000001 : dir.x;
@@ -116,7 +126,7 @@ void main()
 			}
 
 			// 終了判定
-			if(abs(distance[goal_index]) - abs(map_index[goal_index]-start[goal_index]) < 1<<constant.bounce_count)
+			if(abs(idir[goal_index]) - abs(map_index[goal_index]-istart[goal_index]) < 1<<constant.bounce_count)
 			{
 				// 距離を超えたら光がフラグメントにヒット
 				break;
@@ -133,10 +143,8 @@ void main()
 				uint64_t fragment_map;
 				{
 					uint64_t x_line_mask = 0xfful & ((1ul << (shift.x)) - 1ul);
-					uint64_t x_mask_inv = x_line_mask | (x_line_mask << 8) | (x_line_mask << 16) | (x_line_mask << 24) | (x_line_mask << 32) | (x_line_mask << 40) | (x_line_mask << 48) | (x_line_mask << 56);
-					uint64_t y_mask_inv = 0xfffffffffffffffful & ((1ul << ((shift.y) * 8)) - 1);
-					uint64_t x_mask = ~x_mask_inv;
-					uint64_t y_mask = ~y_mask_inv;
+					uint64_t x_mask = ~(x_line_mask | (x_line_mask << 8) | (x_line_mask << 16) | (x_line_mask << 24) | (x_line_mask << 32) | (x_line_mask << 40) | (x_line_mask << 48) | (x_line_mask << 56));
+					uint64_t y_mask = ~(0xfffffffffffffffful & ((1ul << ((shift.y) * 8)) - 1));
 
 					u64vec4 b = u64vec4(b_fragment_map[findex.x],b_fragment_map[findex.y],b_fragment_map[findex.z],b_fragment_map[findex.w]);
 					b &= u64vec4(x_mask & y_mask, x_mask & ~y_mask, ~x_mask & y_mask, ~x_mask & ~y_mask);

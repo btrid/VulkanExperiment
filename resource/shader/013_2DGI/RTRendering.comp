@@ -88,11 +88,13 @@ void main()
 	uint x1 = s_rt_map[rt_index.x+1 + rt_index.y*area.x];
 	uint y0 = s_rt_map[rt_index.x   + (rt_index.y+1)*area.x];
 	uint y1 = s_rt_map[rt_index.x+1 + (rt_index.y+1)*area.x];
-	vec2 rate = ((gl_LocalInvocationID.xy+4)%8) / 8.* 0.75 + 0.25;
+	vec2 rate = ((gl_LocalInvocationID.xy+4)%8) / 8.;
 //	vec2 rate = vec2(0.5);
+//	vec2 rate = ivec2(greaterThan((gl_LocalInvocationID.xy+2)%8), ivec2(4)) * 0.75 + 0.25;
 	float px = mix(float(x0), float(x1), rate.x);
 	float py = mix(float(y0), float(y1), rate.x);
 	float p = mix(px, py, rate.y);
+	p = x0;
 
 	illuminance = vec4(p) /(64.);
 
