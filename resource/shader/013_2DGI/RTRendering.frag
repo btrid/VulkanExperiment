@@ -5,9 +5,9 @@
 #include "btrlib/Common.glsl"
 #include "btrlib/Math.glsl"
 
-#define USE_PM 0
+#define USE_GI2D 0
 #define USE_RT 1
-#include "PM.glsl"
+#include "GI2D.glsl"
 
 layout(location=1) in In
 {

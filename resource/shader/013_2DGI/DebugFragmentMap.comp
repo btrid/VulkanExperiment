@@ -5,9 +5,9 @@
 #include "btrlib/Common.glsl"
 #include "btrlib/Math.glsl"
 
-#define USE_PM 0
-#define USE_PM_RENDER 1
-#include "PM.glsl"
+#define USE_GI2D 0
+#define USE_GI2D_RENDER 1
+#include "GI2D.glsl"
 
 
 #define u16_max (0xffff)
@@ -19,7 +19,7 @@ layout (local_size_x = 32, local_size_y = 32) in;
 void main()
 {
 
-	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
+	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
 	vec3 illuminance = vec3(0.);
 	ivec2 map_index = ivec2(gl_GlobalInvocationID.xy);
 

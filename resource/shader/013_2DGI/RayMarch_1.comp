@@ -5,9 +5,9 @@
 #include "btrlib/Common.glsl"
 #include "btrlib/Math.glsl"
 
-#define USE_PM 0
-#define USE_PM_RENDER 1
-#include "PM.glsl"
+#define USE_GI2D 0
+#define USE_GI2D_RENDER 1
+#include "GI2D.glsl"
 
 
 layout(push_constant) uniform BounceInfo
@@ -28,8 +28,8 @@ void main()
 	const vec2 pixel_size = vec2(1., 1.);
 	const vec2 subpixel = pixel_size.xy*(1<<constant.bounce_count);
 
-	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
-	const ivec2 bounce_reso = ivec2(u_pm_info.m_resolution.xy)>>constant.bounce_count;
+	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
+	const ivec2 bounce_reso = ivec2(u_gi2d_info.m_resolution.xy)>>constant.bounce_count;
 	const ivec2 pixel = ivec2(gl_GlobalInvocationID.xy)<<constant.bounce_count;
 	int fragment_state = fragment_state_non;
 	vec3 albedo = vec3(0.);
@@ -48,8 +48,8 @@ void main()
 
 	int light_count = -1;
 	uint64_t reached = 0;
-	const ivec2 tile_index_2d = pixel / ivec2(u_pm_info.m_emission_tile_size.xy);
-	const int tile_index = int(tile_index_2d.x + tile_index_2d.y*u_pm_info.m_emission_tile_num.x);
+	const ivec2 tile_index_2d = pixel / ivec2(u_gi2d_info.m_emission_tile_size.xy);
+	const int tile_index = int(tile_index_2d.x + tile_index_2d.y*u_gi2d_info.m_emission_tile_num.x);
 	for(int i = b_emission_tile_linkhead[tile_index]; i != -1; i= b_emission_tile_linklist[i].next)
 	{
 		light_count++;
@@ -60,7 +60,7 @@ void main()
 		Emission light;
 		{
 			int emission_index = b_emission_tile_linklist[i].target;
-			int eoffset = u_pm_info.m_emission_buffer_offset[constant.bounce_count];
+			int eoffset = u_gi2d_info.m_emission_buffer_offset[constant.bounce_count];
 			light = b_emission_buffer[emission_index+eoffset];
 			radiance = light.emission;
 			ivec2 e_index_2d = ivec2(emission_index%bounce_reso.x, emission_index/bounce_reso.x);
@@ -184,11 +184,11 @@ void main()
 	if(fragment_state == fragment_state_bounce && constant.store_photon_index>0 && /*illuminance.b !=0.*/ dot(illuminance, illuminance) >= 1.1)
 	{
 		int store_shift = constant.store_photon_index;
-		const ivec2 store_reso = ivec2(u_pm_info.m_resolution.xy)>>store_shift;
+		const ivec2 store_reso = ivec2(u_gi2d_info.m_resolution.xy)>>store_shift;
 		ivec2 store_index_2d = ivec2(gl_GlobalInvocationID.xy)>>store_shift;
 		int store_index = store_index_2d.x + store_index_2d.y*store_reso.x;
 
-		int e_offset = u_pm_info.m_emission_buffer_offset[store_shift];
+		int e_offset = u_gi2d_info.m_emission_buffer_offset[store_shift];
 		if(atomicCompSwap(b_emission_map[e_offset + store_index], -1, 0) == -1)
 		{
 			int list_index = atomicAdd(b_emission_counter[store_shift].x, 1);

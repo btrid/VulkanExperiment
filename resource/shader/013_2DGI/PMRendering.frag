@@ -5,9 +5,9 @@
 #include "btrlib/Common.glsl"
 #include "btrlib/Math.glsl"
 
-#define USE_PM 0
-#define USE_PM_RENDER 1
-#include "PM.glsl"
+#define USE_GI2D 0
+#define USE_GI2D_RENDER 1
+#include "GI2D.glsl"
 
 
 

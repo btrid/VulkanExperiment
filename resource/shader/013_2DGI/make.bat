@@ -22,7 +22,6 @@ rem %exe% %include% %option% -o ../binary\\RayCollect.comp.spv RayCollect_1.comp
 %exe% %include% %option% -o ../binary\\PMRendering.frag.spv PMRendering.frag
 
 %exe% %include% %option% -o ../binary/PMPointLight.comp.spv PMPointLight.comp
-%exe% %include% %option% -o ../binary/PMMakeLightList.comp.spv PMMakeLightList.comp
 
 %exe% %include% %option% -o ../binary\\DebugFragmentMap.comp.spv DebugFragmentMap.comp
 

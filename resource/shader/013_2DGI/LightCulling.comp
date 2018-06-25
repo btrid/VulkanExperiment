@@ -5,8 +5,8 @@
 #include "btrlib/Common.glsl"
 #include "btrlib/Math.glsl"
 
-#define USE_PM 0
-#include "PM.glsl"
+#define USE_GI2D 0
+#include "GI2D.glsl"
 
 
 layout(push_constant) uniform BounceInfo
@@ -23,13 +23,13 @@ void main()
 {
 
 	uvec2 tile_index_2d = gl_WorkGroupID.xy;
-	uint tile_index_1d = gl_WorkGroupID.x + gl_WorkGroupID.y*u_pm_info.m_emission_tile_num.x; 
+	uint tile_index_1d = gl_WorkGroupID.x + gl_WorkGroupID.y*u_gi2d_info.m_emission_tile_num.x; 
 
 	vec2 left_top = vec2(0., 0.);
-	vec2 right_bottom = vec2(u_pm_info.m_resolution.xy);
+	vec2 right_bottom = vec2(u_gi2d_info.m_resolution.xy);
 	if(gl_LocalInvocationID.x == 0)
 	{
-		vec2 tile_size = u_pm_info.m_emission_tile_size.xy;
+		vec2 tile_size = u_gi2d_info.m_emission_tile_size.xy;
 		s_area.xy = left_top + tile_size*tile_index_2d.xy - 1.1;
 		s_area.zw = s_area.xy + tile_size + 1.2;
 
@@ -42,8 +42,8 @@ void main()
 	memoryBarrierShared();
 	memoryBarrierBuffer();
 
-	ivec2 reso = u_pm_info.m_resolution>>constant.bounce_count;
-	float tile_size = length(u_pm_info.m_emission_tile_size.xy);
+	ivec2 reso = u_gi2d_info.m_resolution>>constant.bounce_count;
+	float tile_size = length(u_gi2d_info.m_emission_tile_size.xy);
 
 	uint data_num = b_emission_counter[constant.bounce_count].x;
 	uint loop_count = (data_num-1) / gl_NumWorkGroups.x + 1;
@@ -79,7 +79,7 @@ void main()
 
 
 		int linklist_index = atomicAdd(b_emission_tile_counter, 1);
-		if(linklist_index < u_pm_info.m_emission_tile_linklist_max)
+		if(linklist_index < u_gi2d_info.m_emission_tile_linklist_max)
 		{
 			int next = atomicExchange(b_emission_tile_linkhead[tile_index_1d], linklist_index);
 			b_emission_tile_linklist[linklist_index].next = next;

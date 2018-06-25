@@ -5,9 +5,9 @@
 #include "btrlib/Common.glsl"
 #include "btrlib/Math.glsl"
 
-#define USE_PM 0
-#define USE_PM_RENDER 1
-#include "PM.glsl"
+#define USE_GI2D 0
+#define USE_GI2D_RENDER 1
+#include "GI2D.glsl"
 
 /*
 layout(push_constant) uniform BounceInfo
@@ -27,7 +27,7 @@ layout (local_size_x = 32, local_size_y = 32) in;
 
 void main()
 {
-	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
+	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
 	uint64_t is_reached = b_emission_reached[gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*reso.x];
 
 	vec3 illuminance = vec3(0.);
@@ -45,8 +45,8 @@ void main()
 
 	int light_count = 0;
 	const ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
-	const ivec2 tile_index_2d = pixel / ivec2(u_pm_info.m_emission_tile_size.xy);
-	const int tile_index = int(tile_index_2d.x + tile_index_2d.y*u_pm_info.m_emission_tile_num.x);
+	const ivec2 tile_index_2d = pixel / ivec2(u_gi2d_info.m_emission_tile_size.xy);
+	const int tile_index = int(tile_index_2d.x + tile_index_2d.y*u_gi2d_info.m_emission_tile_num.x);
 	for(int i = b_emission_tile_linkhead[tile_index]; i != -1; i= b_emission_tile_linklist[i].next)
 	{
 		Emission light;
@@ -54,7 +54,7 @@ void main()
 		{
 			int emission_index = b_emission_tile_linklist[i].target;
 			light = b_emission[emission_index];
-			ivec2 e_index_2d = ivec2(emission_index%u_pm_info.m_resolution.x, emission_index/reso.x);
+			ivec2 e_index_2d = ivec2(emission_index%u_gi2d_info.m_resolution.x, emission_index/reso.x);
 			start = vec2(e_index_2d/*<<constant.bounce_count*/);
 		}
 	

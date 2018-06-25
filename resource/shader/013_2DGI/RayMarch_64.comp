@@ -5,9 +5,9 @@
 #include "btrlib/Common.glsl"
 #include "btrlib/Math.glsl"
 
-#define USE_PM 0
-#define USE_PM_RENDER 1
-#include "PM.glsl"
+#define USE_GI2D 0
+#define USE_GI2D_RENDER 1
+#include "GI2D.glsl"
 
 
 layout(push_constant) uniform BounceInfo
@@ -24,12 +24,12 @@ void main()
 	const vec2 pixel_size = vec2(1., 1.);
 	const vec2 subpixel = pixel_size.xy*(1<<constant.bounce_count);
 
-	const ivec4 reso = ivec4(u_pm_info.m_resolution.xy, u_pm_info.m_resolution.xy/8);
+	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
 	const ivec2 pixel = 8*ivec2(gl_GlobalInvocationID.xy)<<constant.bounce_count;
 
 
-	const ivec2 tile_index_2d = pixel / ivec2(u_pm_info.m_emission_tile_size.xy);
-	const int tile_index = int(tile_index_2d.x + tile_index_2d.y*u_pm_info.m_emission_tile_num.x);
+	const ivec2 tile_index_2d = pixel / ivec2(u_gi2d_info.m_emission_tile_size.xy);
+	const int tile_index = int(tile_index_2d.x + tile_index_2d.y*u_gi2d_info.m_emission_tile_num.x);
 	for(int i = b_emission_tile_linkhead[tile_index]; i != -1; i= b_emission_tile_linklist[i].next)
 	{
 		vec2 start_offset_[] = {{-1., -1.},{-1., 1.},{1., -1.},{1., 1.}, };

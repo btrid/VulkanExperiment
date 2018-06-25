@@ -90,5 +90,8 @@
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DContext.h">
       <Filter>GI2D</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DPM.h">
+      <Filter>GI2D</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
