@@ -173,8 +173,8 @@ GI2DRenderer::GI2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 			"LightCulling.comp.spv",
 			"RayMarch.comp.spv",
 			"RayCollect.comp.spv",
-			"PMRendering.vert.spv",
-			"PMRendering.frag.spv",
+			"RayMarchRendering.vert.spv",
+			"RayMarchRendering.frag.spv",
 			"DebugFragmentMap.comp.spv",
 		};
 		static_assert(array_length(name) == array_length(m_shader), "not equal shader num");

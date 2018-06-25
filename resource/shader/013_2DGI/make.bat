@@ -18,10 +18,10 @@ rem %exe% %include% %option% -o ../binary\\RayCollect.comp.spv RayCollect_1.comp
 %exe% %include% %option% -o ../binary\\MakeFragmentMap.comp.spv MakeFragmentMap.comp
 %exe% %include% %option% -o ../binary\\MakeFragmentMapHierarchy.comp.spv MakeFragmentMapHierarchy.comp
 %exe% %include% %option% -o ../binary\\LightCulling.comp.spv LightCulling.comp
-%exe% %include% %option% -o ../binary\\PMRendering.vert.spv PMRendering.vert
-%exe% %include% %option% -o ../binary\\PMRendering.frag.spv PMRendering.frag
+%exe% %include% %option% -o ../binary\\RayMarchRendering.vert.spv RayMarchRendering.vert
+%exe% %include% %option% -o ../binary\\RayMarchRendering.frag.spv RayMarchRendering.frag
 
-%exe% %include% %option% -o ../binary/PMPointLight.comp.spv PMPointLight.comp
+%exe% %include% %option% -o ../binary/GI2DDebugLight.comp.spv GI2DDebugLight.comp
 
 %exe% %include% %option% -o ../binary\\DebugFragmentMap.comp.spv DebugFragmentMap.comp
 

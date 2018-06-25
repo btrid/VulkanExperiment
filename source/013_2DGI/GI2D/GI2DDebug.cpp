@@ -64,7 +64,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 	{
 		const char* name[] =
 		{
-			"PMPointLight.comp.spv",
+			"GI2DDebugLight.comp.spv",
 		};
 		static_assert(array_length(name) == array_length(m_shader), "not equal shader num");
 
