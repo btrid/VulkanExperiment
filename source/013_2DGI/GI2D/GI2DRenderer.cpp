@@ -171,8 +171,8 @@ GI2DRenderer::GI2DRenderer(const std::shared_ptr<btr::Context>& context, const s
 		const char* name[] =
 		{
 			"LightCulling.comp.spv",
-			"PhotonMapping.comp.spv",
-			"PhotonCollect.comp.spv",
+			"RayMarch.comp.spv",
+			"RayCollect.comp.spv",
 			"PMRendering.vert.spv",
 			"PMRendering.frag.spv",
 			"DebugFragmentMap.comp.spv",
