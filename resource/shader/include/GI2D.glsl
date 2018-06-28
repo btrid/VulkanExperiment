@@ -97,7 +97,7 @@ layout(std430, set=USE_GI2D, binding=24) restrict buffer EmissiveTileLinkListBuf
 layout(std430, set=USE_GI2D, binding=25) restrict buffer EmmisiveReachedBuffer {
 	uint64_t b_emission_reached[];
 };
-layout(std430, set=USE_GI2D, binding=26) restrict buffer EmmisiveOcclusionBuffer {
+layout(std430, set=USE_GI2D, binding=26) restrict coherent buffer EmmisiveOcclusionBuffer {
 	uint64_t b_emission_occlusion[];
 };
 layout(std430, set=USE_GI2D, binding=27) restrict buffer LightWorkBuffer {
@@ -132,7 +132,15 @@ layout (set=USE_RT, binding=11) uniform sampler2D s_color;
 
 // todo
 #define RT_Map_Size uvec2(32, 32)
-#endif
+#endif // USE_RT
+
+#ifdef USE_PM
+layout(set=USE_PM, binding=0) restrict buffer PMBuffer {
+	uint64_t b_pm_data[];
+};
+layout (set=USE_PM, binding=10, rgba16f) uniform image2D t_color;
+layout (set=USE_PM, binding=11) uniform sampler2D s_color;
+#endif // USE_PM
 
 vec2 rotate(in float angle)
 {

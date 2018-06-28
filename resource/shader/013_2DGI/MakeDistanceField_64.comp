@@ -25,26 +25,6 @@ layout(push_constant) uniform BounceInfo
 
 layout (local_size_x = 32, local_size_y = 32) in;
 
-uint64_t popcnt(in uint64_t n)
-{
-    uint64_t c = (n & 0x5555555555555555ul) + ((n>>1) & 0x5555555555555555ul);
-    c = (c & 0x3333333333333333ul) + ((c>>2) & 0x3333333333333333ul);
-    c = (c & 0x0f0f0f0f0f0f0f0ful) + ((c>>4) & 0x0f0f0f0f0f0f0f0ful);
-    c = (c & 0x00ff00ff00ff00fful) + ((c>>8) & 0x00ff00ff00ff00fful);
-    c = (c & 0x0000ffff0000fffful) + ((c>>16) & 0x0000ffff0000fffful);
-    c = (c & 0x00000000fffffffful) + ((c>>32) & 0x00000000fffffffful);
-    return c;
-}
-uint64_t popcnt4(in u64vec4 n)
-{
-    u64vec4 c = (n & 0x5555555555555555ul) + ((n>>1) & 0x5555555555555555ul);
-    c = (c & 0x3333333333333333ul) + ((c>>2) & 0x3333333333333333ul);
-    c = (c & 0x0f0f0f0f0f0f0f0ful) + ((c>>4) & 0x0f0f0f0f0f0f0f0ful);
-    c = (c & 0x00ff00ff00ff00fful) + ((c>>8) & 0x00ff00ff00ff00fful);
-    c = (c & 0x0000ffff0000fffful) + ((c>>16) & 0x0000ffff0000fffful);
-    c = (c & 0x00000000fffffffful) + ((c>>32) & 0x00000000fffffffful);
-    return c.x+c.y+c.z+c.w;
-}
 
 void main()
 {

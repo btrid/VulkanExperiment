@@ -25,7 +25,7 @@ struct GI2DPM
 
 	enum Shader
 	{
-		ShaderMakePRT,
+		ShaderPhotonMapping,
 		ShaderRendering,
 		ShaderRenderingVS,
 		ShaderRenderingFS,
@@ -109,10 +109,8 @@ struct GI2DPM
 		}
 
 		{
-			uint32_t rt_map_size = (m_gi2d_context->RenderWidth/16) * (m_gi2d_context->RenderHeight / 16);
-			uint32_t rt_map_num = m_gi2d_context->RenderWidth * m_gi2d_context->RenderHeight / 64;
-			uint32_t size = rt_map_size * rt_map_num;
-			b_rt_data = m_context->m_storage_memory.allocateMemory<uint32_t>({ size,{} });
+			uint32_t size = m_gi2d_context->RenderWidth * m_gi2d_context->RenderHeight / 64;
+			b_hit_data = m_context->m_storage_memory.allocateMemory<uint64_t>({ size*3,{} });
 		}
 
 		{
@@ -153,7 +151,7 @@ struct GI2DPM
 				m_descriptor_set = std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]);
 
 				vk::DescriptorBufferInfo storages[] = {
-					b_rt_data.getInfo(),
+					b_hit_data.getInfo(),
 				};
 				vk::DescriptorImageInfo output_images[] = {
 					vk::DescriptorImageInfo().setImageView(m_color_tex.m_image_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
@@ -197,8 +195,8 @@ struct GI2DPM
 		{
 			const char* name[] =
 			{
-				"RTCompute.comp.spv",
-				"RTRendering.comp.spv",
+				"PhotonMapping.comp.spv",
+				"PhotonCollect.comp.spv",
 				"RTRendering.vert.spv",
 				"RTRendering.frag.spv",
 			};
@@ -232,7 +230,7 @@ struct GI2DPM
 		// pipeline
 		{
 			std::array<vk::PipelineShaderStageCreateInfo, 2> shader_info;
-			shader_info[0].setModule(m_shader[ShaderMakePRT].get());
+			shader_info[0].setModule(m_shader[ShaderPhotonMapping].get());
 			shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[0].setPName("main");
 			shader_info[1].setModule(m_shader[ShaderRendering].get());
@@ -381,20 +379,37 @@ struct GI2DPM
 	}
 	void execute(vk::CommandBuffer cmd)
 	{
+		static vec2 light_pos = vec2(10, 10);
+		float move = 0.03f;
+		light_pos.x += m_context->m_window->getInput().m_keyboard.isHold(VK_RIGHT) * move;
+		light_pos.x -= m_context->m_window->getInput().m_keyboard.isHold(VK_LEFT) * move;
+		light_pos.y -= m_context->m_window->getInput().m_keyboard.isHold(VK_UP) * move;
+		light_pos.y += m_context->m_window->getInput().m_keyboard.isHold(VK_DOWN) * move;
+
 		uint32_t rt_map_size = (m_gi2d_context->RenderWidth / 16) * (m_gi2d_context->RenderHeight / 16);
 		uint32_t rt_map_num = m_gi2d_context->RenderWidth * m_gi2d_context->RenderHeight / 64;
 		static int a = 0;
 		// Ž–‘OŒvŽZ
-		if (a == 0)
+//		if (a == 0)
 		{
 			a++;
 
-			vk::BufferMemoryBarrier to_read[] = {
-				m_gi2d_context->b_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-//				b_rt_data.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
-				0, nullptr, array_length(to_read), to_read, 0, nullptr);
+			{
+				vk::BufferMemoryBarrier to_clear[] = {
+					m_gi2d_context->b_emission_occlusion.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {},
+					0, nullptr, array_length(to_clear), to_clear, 0, nullptr);
+
+				cmd.fillBuffer(m_gi2d_context->b_emission_occlusion.getInfo().buffer, m_gi2d_context->b_emission_occlusion.getInfo().offset, m_gi2d_context->b_emission_occlusion.getInfo().range, 0);
+
+				vk::BufferMemoryBarrier to_read[] = {
+					m_gi2d_context->b_emission_occlusion.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite),
+					m_gi2d_context->b_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer| vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+					0, nullptr, array_length(to_read), to_read, 0, nullptr);
+			}
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineMakeRT].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutMakePRT].get(), 0, m_gi2d_context->getDescriptorSet(), {});
@@ -403,12 +418,12 @@ struct GI2DPM
 			auto rt_size = m_gi2d_context->RenderSize / 8 / 2;
 			auto yy = m_gi2d_context->RenderHeight / 8;
 			auto xx = m_gi2d_context->RenderWidth / 8;
-			for (int y = 0; y < yy; y++)
+//			for (int y = 0; y < yy; y++)
 			{
-				for (int x = 0; x < xx; x++)
+//				for (int x = 0; x < xx; x++)
 				{
- 					cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayoutMakePRT].get(), vk::ShaderStageFlagBits::eCompute, 0, ivec2(y*xx + x, 0));
- 					cmd.dispatch(num.x, num.y, num.z);
+					cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayoutMakePRT].get(), vk::ShaderStageFlagBits::eCompute, 0, ivec2(light_pos));
+					cmd.dispatch(1, 1, 1);
 				}
 
 			}
@@ -418,7 +433,8 @@ struct GI2DPM
 		{
 			vk::BufferMemoryBarrier to_read[] = {
 				m_gi2d_context->b_light_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-				b_rt_data.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				b_hit_data.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				m_gi2d_context->b_emission_occlusion.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
@@ -426,14 +442,6 @@ struct GI2DPM
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineRendering].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutRendering].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutRendering].get(), 1, m_descriptor_set.get(), {});
-
-			static vec2 light_pos = vec2(0, 0);
-			float move = 0.03f;
-			light_pos.x += m_context->m_window->getInput().m_keyboard.isHold(VK_RIGHT) * move;
-			light_pos.x -= m_context->m_window->getInput().m_keyboard.isHold(VK_LEFT) * move;
-			light_pos.y -= m_context->m_window->getInput().m_keyboard.isHold(VK_UP) * move;
-			light_pos.y += m_context->m_window->getInput().m_keyboard.isHold(VK_DOWN) * move;
-			cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayoutMakePRT].get(), vk::ShaderStageFlagBits::eCompute, 0, ivec2(light_pos));
 
 			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth, m_gi2d_context->RenderHeight, 1), uvec3(32, 32, 1));
 			cmd.dispatch(num.x, num.y, num.z);
@@ -478,7 +486,7 @@ struct GI2DPM
 	std::array<vk::UniquePipeline, PipelineNum> m_pipeline;
 
 	TextureResource m_color_tex;
-	btr::BufferMemoryEx<uint32_t> b_rt_data;
+	btr::BufferMemoryEx<uint64_t> b_hit_data;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;

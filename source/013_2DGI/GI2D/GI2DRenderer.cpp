@@ -422,13 +422,6 @@ void GI2DRenderer::execute(vk::CommandBuffer cmd)
 // 			0, nullptr, 0, nullptr, array_length(to_write), to_write);
 // 	}
 
-//#define debug_render_fragment_map
-#if defined(debug_render_fragment_map)
-	DebugRnederFragmentMap(cmd);
-//	cmd.end();
-//	return cmd;
-	return;
-#endif
 	for (int i = 0; i < 1; i++)
 	{
 		static int s_frame;
@@ -547,7 +540,7 @@ void GI2DRenderer::execute(vk::CommandBuffer cmd)
 	}
 }
 
-void GI2DRenderer::DebugRnederFragmentMap(vk::CommandBuffer &cmd)
+void GI2DRenderer::executeDebug(vk::CommandBuffer cmd)
 {
 	// fragment_hierarchy‚ÌƒeƒXƒg
 	{

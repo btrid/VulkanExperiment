@@ -29,3 +29,6 @@ rem %exe% %include% %option% -o ../binary\\RayCollect.comp.spv RayCollect_1.comp
 %exe% %include% %option% -o ../binary\\RTRendering.comp.spv RTRendering.comp
 %exe% %include% %option% -o ../binary\\RTRendering.vert.spv RTRendering.vert
 %exe% %include% %option% -o ../binary\\RTRendering.frag.spv RTRendering.frag
+
+%exe% %include% %option% -o ../binary\\PhotonMapping.comp.spv PhotonMapping_64.comp
+%exe% %include% %option% -o ../binary\\PhotonCollect.comp.spv PhotonCollect_64.comp

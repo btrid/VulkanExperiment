@@ -185,6 +185,7 @@ struct GI2DRenderer
 
 	GI2DRenderer(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target, const std::shared_ptr<GI2DContext>& gi2d_context);
 	void execute(vk::CommandBuffer cmd);
+	void executeDebug(vk::CommandBuffer cmd);
 
 	std::array < TextureResource, GI2DContext::_BounceNum > m_color_tex;
 
@@ -203,7 +204,6 @@ struct GI2DRenderer
 	std::shared_ptr<btr::Context> m_context;
 	std::shared_ptr<GI2DContext> m_gi2d_context;
 private:
-	void DebugRnederFragmentMap(vk::CommandBuffer &cmd);
 };
 
 }

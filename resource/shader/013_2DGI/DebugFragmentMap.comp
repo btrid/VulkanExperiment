@@ -23,7 +23,7 @@ void main()
 	vec3 illuminance = vec3(0.);
 	ivec2 map_index = ivec2(gl_GlobalInvocationID.xy);
 
-	int hierarchy=7;
+	int hierarchy=2;
 
 	// hit確認
 //	if(false)
