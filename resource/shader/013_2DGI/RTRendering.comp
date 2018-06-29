@@ -94,7 +94,7 @@ void main()
 	float px = mix(float(x0), float(x1), rate.x);
 	float py = mix(float(y0), float(y1), rate.x);
 	float p = mix(px, py, rate.y);
-	p = x0;
+//	p = x0;
 
 	illuminance = vec4(p) /(64.);
 
