@@ -27,6 +27,7 @@ rem %exe% %include% %option% -o ../binary\\RayCollect.comp.spv RayCollect_1.comp
 
 %exe% %include% %option% -o ../binary\\RTCompute.comp.spv RTCompute.comp
 %exe% %include% %option% -o ../binary\\RTRendering.comp.spv RTRendering.comp
+rem %exe% %include% %option% -o ../binary\\RTRendering.comp.spv RTRenderingDebug.comp
 %exe% %include% %option% -o ../binary\\RTRendering.vert.spv RTRendering.vert
 %exe% %include% %option% -o ../binary\\RTRendering.frag.spv RTRendering.frag
 

@@ -175,7 +175,7 @@ uint64_t popcnt4(in u64vec4 n)
     c = (c & 0x00000000fffffffful) + ((c>>32) & 0x00000000fffffffful);
     return c.x+c.y+c.z+c.w;
 }
-u64vec4 popcnt44(in u64vec4 n)
+uvec4 popcnt44(in u64vec4 n)
 {
     u64vec4 c = (n & 0x5555555555555555ul) + ((n>>1) & 0x5555555555555555ul);
     c = (c & 0x3333333333333333ul) + ((c>>2) & 0x3333333333333333ul);
@@ -183,6 +183,6 @@ u64vec4 popcnt44(in u64vec4 n)
     c = (c & 0x00ff00ff00ff00fful) + ((c>>8) & 0x00ff00ff00ff00fful);
     c = (c & 0x0000ffff0000fffful) + ((c>>16) & 0x0000ffff0000fffful);
     c = (c & 0x00000000fffffffful) + ((c>>32) & 0x00000000fffffffful);
-    return c;
+    return uvec4(c);
 }
 #endif //GI2D_

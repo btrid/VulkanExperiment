@@ -390,7 +390,7 @@ struct GI2DPM
 		uint32_t rt_map_num = m_gi2d_context->RenderWidth * m_gi2d_context->RenderHeight / 64;
 		static int a = 0;
 		// Ž–‘OŒvŽZ
-//		if (a == 0)
+		if (a == 0)
 		{
 			a++;
 
@@ -418,9 +418,9 @@ struct GI2DPM
 			auto rt_size = m_gi2d_context->RenderSize / 8 / 2;
 			auto yy = m_gi2d_context->RenderHeight / 8;
 			auto xx = m_gi2d_context->RenderWidth / 8;
-//			for (int y = 0; y < yy; y++)
+			for (int y = 0; y < yy; y++)
 			{
-//				for (int x = 0; x < xx; x++)
+				for (int x = 0; x < xx; x++)
 				{
 					cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayoutMakePRT].get(), vk::ShaderStageFlagBits::eCompute, 0, ivec2(light_pos));
 					cmd.dispatch(1, 1, 1);

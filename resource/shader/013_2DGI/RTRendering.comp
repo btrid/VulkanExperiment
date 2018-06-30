@@ -29,69 +29,69 @@ void main()
 	ivec4 fragment_index = ivec4(pixel/8, pixel%8);
 
 	vec4 illuminance = vec4(0.);
+	uvec2 area = uvec2((4+2)*2);
 
 	// 2x2マスずつ
-/*	for(int y = 0; y < rt_reso.y; y++)
+	for(int y = 0; y < rt_reso.y; y++)
 	{
-		// 2列とる
-		if(gl_LocalInvocationIndex < reso.z*4)
-		{
-			s_light_map[gl_LocalInvocationIndex] = b_light_map[gl_LocalInvocationIndex + (y*2)*reso.z];
-		}
 		barrier();
 		memoryBarrierShared();
+		// 2列とる
+		if(gl_LocalInvocationIndex < reso.z*2)
+		{
+			s_light_map[gl_LocalInvocationIndex] = b_light_map[gl_LocalInvocationIndex + (y*4)*reso.z];
+		}
 
 		for(int x = 0; x < rt_reso.x; x++)
 		{
+			uint light_offset = rt_map_size*(x+y*reso.z);
+			if(all(lessThan(gl_LocalInvocationID.xy, area)))
+			{
+				ivec2 index_offset_2d = (ivec2(gl_WorkGroupID*gl_WorkGroupSize).xy/16) -1 + ivec2(gl_LocalInvocationID.xy/2);
+				index_offset_2d = clamp(index_offset_2d, ivec2(0), rt_reso);
+				uint index_offset = index_offset_2d.x+ index_offset_2d.y*rt_reso.x;
+				uint rt = b_rt_data[light_offset + index_offset];
+				uvec4 rt_power = (uvec4(rt) >> uvec4(0, 8, 16, 24)) & uvec4(0xff);
+
+				uint i = gl_LocalInvocationID.x + gl_LocalInvocationID.y*area.x;
+				uvec2 sub = gl_LocalInvocationID.xy%2;
+				s_rt_map[i] = rt_power[sub.x + sub.y*2];
+			}
+
+			barrier();
+			memoryBarrierShared();
+
 			u64vec4 light_map;
 			light_map.x = s_light_map[x*2];
 			light_map.y = s_light_map[x*2+1];
 			light_map.z = s_light_map[x*2   + reso.z];
 			light_map.w = s_light_map[x*2+1 + reso.z];
-			u64vec4 light_power = popcnt44(light_map);
+			uvec4 light_power = popcnt44(light_map);
 
-			uint rt = b_rt_data[rt_map_size*(x+y*rt_reso.x) + rt_tile_index];
-			uvec4 rt_power = (uvec4(rt) >> uvec4(0, 8, 16, 24)) & uvec4(0xff);
+			ivec2 rt_index = ivec2(gl_LocalInvocationID.xy+4)/8+1;
+			uint x0 = s_rt_map[rt_index.x   + rt_index.y*area.x];
+			uint x1 = s_rt_map[rt_index.x+1 + rt_index.y*area.x];
+			uint y0 = s_rt_map[rt_index.x   + (rt_index.y+1)*area.x];
+			uint y1 = s_rt_map[rt_index.x+1 + (rt_index.y+1)*area.x];
+			uvec4 rt_power = uvec4(x0, x1, y0, y1);
+			vec4 lp = vec4(light_power) * rt_power;
+			vec2 rate = ((gl_LocalInvocationID.xy+4)%8) / 8.;
+			vec2 px = mix(lp.xz, lp.yw, rate.xx);
+			float p = mix(px.x, px.y, rate.y);
 
 			vec2 pos = vec2(x, y) * 16. + 8.;
 			float dist = distance(pos, pixel);
-			illuminance = vec4(rt_power) /(64.);
-
-//			illuminance += vec4(light_power * rt_power) /(32.*4.) / (dist+1);
+			illuminance += vec4(p) /(64.*2.);
+//			illuminance += vec4(light_power);
 		}
 		barrier();
 	}
-*/
-	uint x = constant.start_id; uint y = constant.frame;
-	uint light_offset = rt_map_size*(x+y*reso.z);
-	uvec2 area = uvec2(12);
-	if(all(lessThan(gl_LocalInvocationID.xy, area)))
-	{
-		ivec2 index_offset_2d = (ivec2(gl_WorkGroupID*gl_WorkGroupSize).xy/16) -1 + ivec2(gl_LocalInvocationID.xy/2);
-		index_offset_2d = clamp(index_offset_2d, ivec2(0), rt_reso);
-		uint index_offset = index_offset_2d.x+ index_offset_2d.y*rt_reso.x;
-		uint rt = b_rt_data[light_offset + index_offset];
-		uvec4 rt_power = (uvec4(rt) >> uvec4(0, 8, 16, 24)) & uvec4(0xff);
 
-		uint i = gl_LocalInvocationID.x + gl_LocalInvocationID.y*area.x;
-		uvec2 sub = gl_LocalInvocationID.xy%2;
-		s_rt_map[i] = rt_power[sub.x + sub.y*2];
-	}
+//	uvec2 li = gl_GlobalInvocationID.xy / 8;
+//	uint64_t light_p =  b_light_map[li.x + li.y*reso.z];
+//	illuminance = vec4(light_p) /(64.);
 
-	barrier();
-	memoryBarrierShared();
 
-	ivec2 rt_index = ivec2(gl_LocalInvocationID.xy+4)/8+1;
-	uint x0 = s_rt_map[rt_index.x   + rt_index.y*area.x];
-	uint x1 = s_rt_map[rt_index.x+1 + rt_index.y*area.x];
-	uint y0 = s_rt_map[rt_index.x   + (rt_index.y+1)*area.x];
-	uint y1 = s_rt_map[rt_index.x+1 + (rt_index.y+1)*area.x];
-	vec2 rate = ((gl_LocalInvocationID.xy+4)%8) / 8.;
-	float px = mix(float(x0), float(x1), rate.x);
-	float py = mix(float(y0), float(y1), rate.x);
-	float p = mix(px, py, rate.y);
-
-	illuminance = vec4(p) /(64.);
 
 //	ivec4 findex = fragment_index.xxxx + offset.xxyy + (fragment_index.yyyy + offset.zwzw)*(reso.zzzz);
 //	uint64_t light_map = b_light_map[findex.x];
