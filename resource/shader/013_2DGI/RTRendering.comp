@@ -32,17 +32,17 @@ void main()
 	uvec2 area = uvec2((4+2)*2);
 
 	// 2x2マスずつ
-	for(int y = 0; y < rt_reso.y; y++)
+	for(int y = 0; y < reso.w; y++)
 	{
 		barrier();
 		memoryBarrierShared();
 		// 2列とる
 		if(gl_LocalInvocationIndex < reso.z*2)
 		{
-			s_light_map[gl_LocalInvocationIndex] = b_light_map[gl_LocalInvocationIndex + (y*4)*reso.z];
+			s_light_map[gl_LocalInvocationIndex] = b_light_map[gl_LocalInvocationIndex + (y)*reso.z];
 		}
 
-		for(int x = 0; x < rt_reso.x; x++)
+		for(int x = 0; x < reso.z; x++)
 		{
 			uint light_offset = rt_map_size*(x+y*reso.z);
 			if(all(lessThan(gl_LocalInvocationID.xy, area)))
@@ -62,11 +62,11 @@ void main()
 			memoryBarrierShared();
 
 			u64vec4 light_map;
-			light_map.x = s_light_map[x*2];
-			light_map.y = s_light_map[x*2+1];
-			light_map.z = s_light_map[x*2   + reso.z];
-			light_map.w = s_light_map[x*2+1 + reso.z];
-			uvec4 light_power = popcnt44(light_map);
+			light_map.x = s_light_map[x];
+//			light_map.y = s_light_map[x+1];
+//			light_map.z = s_light_map[x   + reso.z];
+//			light_map.w = s_light_map[x+1 + reso.z];
+			uvec4 light_power = popcnt44(light_map.xxxx);
 
 			ivec2 rt_index = ivec2(gl_LocalInvocationID.xy+4)/8+1;
 			uint x0 = s_rt_map[rt_index.x   + rt_index.y*area.x];
