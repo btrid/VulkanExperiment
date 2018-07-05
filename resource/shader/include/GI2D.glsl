@@ -97,7 +97,7 @@ layout(std430, set=USE_GI2D, binding=24) restrict buffer EmissiveTileLinkListBuf
 layout(std430, set=USE_GI2D, binding=25) restrict buffer EmmisiveReachedBuffer {
 	uint64_t b_emission_reached[];
 };
-layout(std430, set=USE_GI2D, binding=26) restrict coherent buffer EmmisiveOcclusionBuffer {
+layout(std430, set=USE_GI2D, binding=26) restrict buffer EmmisiveOcclusionBuffer {
 	uint64_t b_emission_occlusion[];
 };
 layout(std430, set=USE_GI2D, binding=27) restrict buffer LightWorkBuffer {
@@ -135,9 +135,12 @@ layout (set=USE_RT, binding=11) uniform sampler2D s_color;
 #endif // USE_RT
 
 #ifdef USE_PM
-layout(set=USE_PM, binding=0) restrict buffer PMBuffer {
-	uint64_t b_pm_data[];
+layout(set=USE_PM, binding=0) restrict buffer PMReachedMapBuffer {
+	uint64_t b_reached_map[];
 };
+//layout(set=USE_PM, binding=1) restrict buffer PMLightMapBuffer {
+//	uint64_t b_light_map[];
+//};
 layout (set=USE_PM, binding=10, rgba16f) uniform image2D t_color;
 layout (set=USE_PM, binding=11) uniform sampler2D s_color;
 #endif // USE_PM
@@ -175,7 +178,7 @@ uint64_t popcnt4(in u64vec4 n)
     c = (c & 0x00000000fffffffful) + ((c>>32) & 0x00000000fffffffful);
     return c.x+c.y+c.z+c.w;
 }
-uvec4 popcnt44(in u64vec4 n)
+u64vec4 popcnt44(in u64vec4 n)
 {
     u64vec4 c = (n & 0x5555555555555555ul) + ((n>>1) & 0x5555555555555555ul);
     c = (c & 0x3333333333333333ul) + ((c>>2) & 0x3333333333333333ul);
@@ -183,6 +186,6 @@ uvec4 popcnt44(in u64vec4 n)
     c = (c & 0x00ff00ff00ff00fful) + ((c>>8) & 0x00ff00ff00ff00fful);
     c = (c & 0x0000ffff0000fffful) + ((c>>16) & 0x0000ffff0000fffful);
     c = (c & 0x00000000fffffffful) + ((c>>32) & 0x00000000fffffffful);
-    return uvec4(c);
+    return c;
 }
 #endif //GI2D_

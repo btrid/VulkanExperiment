@@ -37,7 +37,7 @@ void main()
 		barrier();
 		memoryBarrierShared();
 		// 2列とる
-		if(gl_LocalInvocationIndex < reso.z*2)
+		if(gl_LocalInvocationIndex < reso.z)
 		{
 			s_light_map[gl_LocalInvocationIndex] = b_light_map[gl_LocalInvocationIndex + (y)*reso.z];
 		}
@@ -66,7 +66,7 @@ void main()
 //			light_map.y = s_light_map[x+1];
 //			light_map.z = s_light_map[x   + reso.z];
 //			light_map.w = s_light_map[x+1 + reso.z];
-			uvec4 light_power = popcnt44(light_map.xxxx);
+			uvec4 light_power = uvec4(popcnt(light_map.x));
 
 			ivec2 rt_index = ivec2(gl_LocalInvocationID.xy+4)/8+1;
 			uint x0 = s_rt_map[rt_index.x   + rt_index.y*area.x];
