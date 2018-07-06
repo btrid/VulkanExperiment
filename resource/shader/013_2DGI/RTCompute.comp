@@ -37,9 +37,6 @@ void main()
 
 	vec2 distance = (end - start);
 	vec2 dir = normalize(distance);
-//	dir.x = dir.x == 0. ? 0.000001 : dir.x;
-//	dir.y = dir.y == 0. ? 0.000001 : dir.y;
-//	dir *= abs(dir.x) >= abs(dir.y) ? abs(1./dir.x) : abs(1./dir.y);
 	vec2 inv_dir = abs(1./dir);
 
 	int goal_index = abs(dir.x) >= abs(dir.y) ? 0: 1;
@@ -115,26 +112,8 @@ void main()
 			}
 		}
 	}
-
-	uvec2 m = gl_LocalInvocationID.xy % uvec2(2);
-	uint ii =  gl_LocalInvocationID.x/2 + (gl_LocalInvocationID.y/2)*16;
-	uint index = (ii % 32);
-	uint offset = ii / 32 * 32;
-	s_alive_num[offset + index][m.x + m.y*2]= uint(popcnt(is_alive));
-
-	barrier();
-	memoryBarrierShared();
-
-	if(all(equal(m, uvec2(0))))
-	{
-		uvec4 c = s_alive_num[ii];
-		c <<= uvec4(0, 8, 16, 24);
-		uint count = c.x | c.y | c.z | c.w;
-
-		uint rt_map_size = rt_reso.x*rt_reso.y;
-		uint rt_tile_index = gl_GlobalInvocationID.x/2 +(gl_GlobalInvocationID.y/2)*rt_reso.x;
-		b_rt_data[rt_map_size * constant.start_id + rt_tile_index] = count;
-	}
-
+	uint rt_map_size = reso.z*reso.w;
+	uint rt_tile_index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * reso.z;
+	b_rt_data[rt_map_size * constant.start_id + rt_tile_index] = is_alive;
 
 }

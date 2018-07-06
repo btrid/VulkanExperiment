@@ -125,7 +125,7 @@ layout(std430, set=USE_GI2D_LIGHT, binding=1) restrict buffer LightDataBuffer {
 #endif
 #ifdef USE_RT
 layout(set=USE_RT, binding=0) restrict buffer RTBuffer {
-	uint b_rt_data[];
+	uint64_t b_rt_data[];
 };
 layout (set=USE_RT, binding=10, rgba16f) uniform image2D t_color;
 layout (set=USE_RT, binding=11) uniform sampler2D s_color;

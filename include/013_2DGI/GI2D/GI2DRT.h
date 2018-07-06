@@ -109,10 +109,9 @@ struct GI2DRT
 		}
 
 		{
-			uint32_t rt_map_size = (m_gi2d_context->RenderWidth/16) * (m_gi2d_context->RenderHeight / 16);
-			uint32_t rt_map_num = m_gi2d_context->RenderWidth * m_gi2d_context->RenderHeight / 64;
-			uint32_t size = rt_map_size * rt_map_num;
-			b_rt_data = m_context->m_storage_memory.allocateMemory<uint32_t>({ size,{} });
+			uint32_t size = m_gi2d_context->RenderWidth * m_gi2d_context->RenderHeight / 64;
+			size = size * size;
+			b_rt_data = m_context->m_storage_memory.allocateMemory<uint64_t>({ size,{} });
 		}
 
 		{
@@ -400,7 +399,6 @@ struct GI2DRT
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutMakePRT].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutMakePRT].get(), 1, m_descriptor_set.get(), {});
 			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth / 8, m_gi2d_context->RenderHeight / 8, 1), uvec3(32, 32, 1));
-			auto rt_size = m_gi2d_context->RenderSize / 8 / 2;
 			auto yy = m_gi2d_context->RenderHeight / 8;
 			auto xx = m_gi2d_context->RenderWidth / 8;
 			for (int y = 0; y < yy; y++)
@@ -478,7 +476,7 @@ struct GI2DRT
 	std::array<vk::UniquePipeline, PipelineNum> m_pipeline;
 
 	TextureResource m_color_tex;
-	btr::BufferMemoryEx<uint32_t> b_rt_data;
+	btr::BufferMemoryEx<uint64_t> b_rt_data;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
