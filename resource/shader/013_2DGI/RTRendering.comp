@@ -27,7 +27,18 @@ void main()
 
 	ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
 	ivec4 fragment_index = ivec4(pixel/8, pixel%8);
-	uint grid_index = fragment_index.x+fragment_index.y*reso.z;
+
+
+//	ivec4 offset = ivec4(-1,0,-1,0) + ivec4(greaterThanEqual(gl_LocalInvocationID.xxyy%8, uvec4(4)));
+	ivec2 shift = (ivec2(4) + ivec2(gl_LocalInvocationID.xy)) % ivec2(8);
+	uint64_t bit_mask = 1ul << (8*4+4);
+
+	uint64_t x_line_mask = 0xfful & ((1ul << (shift.x)) - 1ul);
+	uint64_t x_mask = ~(x_line_mask | (x_line_mask << 8) | (x_line_mask << 16) | (x_line_mask << 24) | (x_line_mask << 32) | (x_line_mask << 40) | (x_line_mask << 48) | (x_line_mask << 56));
+	uint64_t y_mask = ~(0xfffffffffffffffful & ((1ul << ((shift.y) * 8)) - 1));
+	u64vec4 map_mask = u64vec4(x_mask & y_mask, x_mask & ~y_mask, ~x_mask & y_mask, ~x_mask & ~y_mask);
+	ivec4 right_shift = shift.yyyy*ivec4(8,0,8,0) + shift.xxxx*ivec4(1,1,0,0);
+	ivec4 left_shift = (8-shift.yyyy)*ivec4(0,8,0,8) + (8-shift.xxxx)*ivec4(0,0,1,1);
 
 	vec4 illuminance = vec4(0.);
 
@@ -42,13 +53,14 @@ void main()
 			s_light_map[gl_LocalInvocationIndex] = b_light_map[gl_LocalInvocationIndex + y*reso.z];
 		}
 
-		uint rt_offset = rt_map_size*(y*reso.z);
 		uvec2 rt_area = uvec2(4+2);
 		if(all(lessThan(gl_LocalInvocationID.xy, rt_area)))
 		{
 			ivec2 index_offset_2d = (ivec2(gl_WorkGroupID*gl_WorkGroupSize).xy/8) -1 + ivec2(gl_LocalInvocationID.xy);
 			index_offset_2d = clamp(index_offset_2d, ivec2(0), reso.zw);
-			uint index_offset = index_offset_2d.x+ index_offset_2d.y*reso.z;
+			int index_offset = index_offset_2d.x+ index_offset_2d.y*reso.z;
+
+			uint rt_offset = rt_map_size*(y*reso.z);
 			uint64_t rt = b_rt_data[rt_offset + index_offset];
 
 			uint i = gl_LocalInvocationID.x + gl_LocalInvocationID.y*rt_area.x;
@@ -67,24 +79,17 @@ void main()
 //			light_map.w = s_light_map[x+1 + reso.z];
 			uvec4 light_power = uvec4(popcnt(light_map.x));
 
-//			uint rt_offset = rt_map_size*(x+y*reso.z);
-			uint rt_offset = rt_map_size*(x+y*reso.z);
-			uint64_t rt = b_rt_data[rt_offset + grid_index];
-//			ivec2 rt_index = ivec2(gl_LocalInvocationID.xy+4)/8+1;
-//			uint64_t rt = s_rt_map[rt_index.x   + rt_index.y*rt_area.x];
-
-//			uint64_t rt = s_rt_map[x];
-//			uint x0 = s_rt_map[rt_index.x   + rt_index.y*area.x];
-//			uint x1 = s_rt_map[rt_index.x+1 + rt_index.y*area.x];
-//			uint y0 = s_rt_map[rt_index.x   + (rt_index.y+1)*area.x];
-//			uint y1 = s_rt_map[rt_index.x+1 + (rt_index.y+1)*area.x];
-			uvec4 rt_power = uvec4(popcnt(rt));
-//			vec4 lp = vec4(light_power);
-//			vec4 lp = rt_power;
-			vec4 lp = vec4(light_power) * rt_power;
-//			vec2 rate = ((gl_LocalInvocationID.xy+4)%8) / 8.;
-//			vec2 px = mix(lp.xz, lp.yw, rate.xx);
-//			float p = mix(px.x, px.y, rate.y);
+			ivec2 rt_local_index = ivec2(gl_LocalInvocationID.xy+4)/8;
+			uint64_t x0 = s_rt_map[rt_local_index.x   + rt_local_index.y*rt_area.x];
+			uint64_t x1 = s_rt_map[rt_local_index.x+1 + rt_local_index.y*rt_area.x];
+			uint64_t y0 = s_rt_map[rt_local_index.x   + (rt_local_index.y+1)*rt_area.x];
+			uint64_t y1 = s_rt_map[rt_local_index.x+1 + (rt_local_index.y+1)*rt_area.x];
+			u64vec4 rt = u64vec4(x0, x1, y0, y1);
+			rt &= map_mask;
+			rt >>= right_shift;
+			rt <<= left_shift;
+			uint64_t rt_power = rt.x|rt.y|rt.z|rt.w;
+			vec4 lp = vec4(light_power) * float(popcnt(rt_power));
 
 			vec2 pos = vec2(x, y) * 16. + 8.;
 			float dist = distance(pos, pixel);

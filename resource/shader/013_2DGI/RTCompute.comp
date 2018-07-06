@@ -23,8 +23,8 @@ void main()
 
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
 	ivec2 rt_reso = reso.zw/2;
-	vec2 end = 8.*vec2(gl_GlobalInvocationID.xy) + 4.;
-	vec2 start = 8. * vec2(constant.start_id%reso.z, constant.start_id/reso.z) + 4.;
+	vec2 end = 8.*vec2(gl_GlobalInvocationID.xy);
+	vec2 start = 8. * vec2(constant.start_id%reso.z, constant.start_id/reso.z);
 
 	ivec2 iend = ivec2(end+0.5);
 	ivec2 istart = ivec2(start+0.5);
