@@ -27,9 +27,8 @@ void main()
 
 	ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
 	ivec4 fragment_index = ivec4(pixel/8, pixel%8);
-
-
-//	ivec4 offset = ivec4(-1,0,-1,0) + ivec4(greaterThanEqual(gl_LocalInvocationID.xxyy%8, uvec4(4)));
+	ivec4 offset = ivec4(-1,0,-1,0) + ivec4(greaterThanEqual(gl_LocalInvocationID.xxyy%8, uvec4(4)));
+	ivec4 findex = fragment_index.xxxx + offset.xxyy + (fragment_index.yyyy + offset.zwzw)*(reso.zzzz);
 	ivec2 shift = (ivec2(4) + ivec2(gl_LocalInvocationID.xy)) % ivec2(8);
 	uint64_t bit_mask = 1ul << (8*4+4);
 
@@ -54,17 +53,20 @@ void main()
 		}
 
 		uvec2 rt_area = uvec2(4+2);
-		if(all(lessThan(gl_LocalInvocationID.xy, rt_area)))
+		uint rt_i = rt_area.x + rt_area.y*reso.z;
+//		if(all(lessThan(gl_LocalInvocationID.xy, rt_area)))
+		if(gl_LocalInvocationIndex < rt_i)
 		{
-			ivec2 index_offset_2d = (ivec2(gl_WorkGroupID*gl_WorkGroupSize).xy/8) -1 + ivec2(gl_LocalInvocationID.xy);
-			index_offset_2d = clamp(index_offset_2d, ivec2(0), reso.zw);
-			int index_offset = index_offset_2d.x+ index_offset_2d.y*reso.z;
+//			ivec2 index_offset_2d = (ivec2(gl_WorkGroupID*gl_WorkGroupSize).xy/8) -1 + ivec2(gl_LocalInvocationID.xy);
+//			index_offset_2d = clamp(index_offset_2d, ivec2(0), reso.zw);
+//			int index_offset = index_offset_2d.x+ index_offset_2d.y*reso.z;
 
-			uint rt_offset = rt_map_size*(y*reso.z);
-			uint64_t rt = b_rt_data[rt_offset + index_offset];
+//			uint rt_offset = rt_map_size*(y*reso.z);
+//			int index_offset = index_offset_2d.x+ index_offset_2d.y*reso.z;
+//			uint64_t rt = b_rt_map[rt_offset + index_offset];
 
-			uint i = gl_LocalInvocationID.x + gl_LocalInvocationID.y*rt_area.x;
-			s_rt_map[i] = rt;
+//			uint i = gl_LocalInvocationID.x + gl_LocalInvocationID.y*rt_area.x;
+//			s_rt_map[gl_LocalInvocationIndex] = rt;
 		}
 
 		barrier();
@@ -77,13 +79,23 @@ void main()
 //			light_map.y = s_light_map[x+1];
 //			light_map.z = s_light_map[x   + reso.z];
 //			light_map.w = s_light_map[x+1 + reso.z];
-			uvec4 light_power = uvec4(popcnt(light_map.x));
 
-			ivec2 rt_local_index = ivec2(gl_LocalInvocationID.xy+4)/8;
-			uint64_t x0 = s_rt_map[rt_local_index.x   + rt_local_index.y*rt_area.x];
-			uint64_t x1 = s_rt_map[rt_local_index.x+1 + rt_local_index.y*rt_area.x];
-			uint64_t y0 = s_rt_map[rt_local_index.x   + (rt_local_index.y+1)*rt_area.x];
-			uint64_t y1 = s_rt_map[rt_local_index.x+1 + (rt_local_index.y+1)*rt_area.x];
+//			light_map.x = b_light_map[x + y*reso.z];
+			uvec4 light_power = uvec4(popcnt(light_map.x));
+			if(light_power.x == 0){ continue; }
+
+//			ivec2 rt_local_index = ivec2(gl_LocalInvocationID.xy+4)/8;
+//			uint64_t x0 = s_rt_map[rt_local_index.x   + rt_local_index.y*rt_area.x];
+//			uint64_t x1 = s_rt_map[rt_local_index.x+1 + rt_local_index.y*rt_area.x];
+//			uint64_t y0 = s_rt_map[rt_local_index.x   + (rt_local_index.y+1)*rt_area.x];
+//			uint64_t y1 = s_rt_map[rt_local_index.x+1 + (rt_local_index.y+1)*rt_area.x];
+
+			uint rt_map_offset = rt_map_size * (x+y*reso.z);
+			uint64_t x0 = b_rt_map[rt_map_offset + findex.x];
+			uint64_t x1 = b_rt_map[rt_map_offset + findex.y];
+			uint64_t y0 = b_rt_map[rt_map_offset + findex.z];
+			uint64_t y1 = b_rt_map[rt_map_offset + findex.w];
+
 			u64vec4 rt = u64vec4(x0, x1, y0, y1);
 			rt &= map_mask;
 			rt >>= right_shift;
@@ -96,12 +108,6 @@ void main()
 			illuminance += vec4(lp);// /(64.*2.);
 		}
 	}
-
-//	uvec2 li = gl_GlobalInvocationID.xy / 8;
-//	uint64_t light_p =  b_light_map[li.x + li.y*reso.z];
-//	illuminance = vec4(light_p) /(64.);
-
-
 
 //	ivec4 findex = fragment_index.xxxx + offset.xxyy + (fragment_index.yyyy + offset.zwzw)*(reso.zzzz);
 //	uint64_t light_map = b_light_map[findex.x];

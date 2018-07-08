@@ -114,6 +114,6 @@ void main()
 	}
 	uint rt_map_size = reso.z*reso.w;
 	uint rt_tile_index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * reso.z;
-	b_rt_data[rt_map_size * constant.start_id + rt_tile_index] = is_alive;
+	b_rt_map[rt_map_size * constant.start_id + rt_tile_index] = is_alive;
 
 }

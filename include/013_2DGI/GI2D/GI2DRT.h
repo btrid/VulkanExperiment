@@ -111,7 +111,7 @@ struct GI2DRT
 		{
 			uint32_t size = m_gi2d_context->RenderWidth * m_gi2d_context->RenderHeight / 64;
 			size = size * size;
-			b_rt_data = m_context->m_storage_memory.allocateMemory<uint64_t>({ size,{} });
+			b_rt_map = m_context->m_storage_memory.allocateMemory<uint64_t>({ size,{} });
 		}
 
 		{
@@ -152,7 +152,7 @@ struct GI2DRT
 				m_descriptor_set = std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]);
 
 				vk::DescriptorBufferInfo storages[] = {
-					b_rt_data.getInfo(),
+					b_rt_map.getInfo(),
 				};
 				vk::DescriptorImageInfo output_images[] = {
 					vk::DescriptorImageInfo().setImageView(m_color_tex.m_image_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
@@ -416,7 +416,7 @@ struct GI2DRT
 		{
 			vk::BufferMemoryBarrier to_read[] = {
 				m_gi2d_context->b_light_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-				b_rt_data.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				b_rt_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
@@ -476,7 +476,7 @@ struct GI2DRT
 	std::array<vk::UniquePipeline, PipelineNum> m_pipeline;
 
 	TextureResource m_color_tex;
-	btr::BufferMemoryEx<uint64_t> b_rt_data;
+	btr::BufferMemoryEx<uint64_t> b_rt_map;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
