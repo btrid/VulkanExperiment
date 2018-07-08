@@ -6,7 +6,7 @@
 #include "btrlib/Math.glsl"
 
 #define USE_GI2D 0
-#define USE_Radiosity 1
+#define USE_GI2D_Radiosity 1
 #include "GI2D.glsl"
 
 
@@ -15,12 +15,11 @@ void main()
 {
 
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
-	vec2 start = vec2(8. * gl_LocalInvocationIndex, 0.);
 //	vec2 dir = rotate(gl_LocalInvocationIndex*6.28 / 1024.);
-	vec2 dir = vec2(0.00001, 1.);
-	vec2 inv_dir = abs(1./dir);
 
-	vec2 pos = start;
+	vec2 pos = vec2(8. * gl_LocalInvocationIndex, 0.);
+	vec2 dir = normalize(vec2(0.0001, 1.));
+	vec2 inv_dir = abs(1./dir);
 	ivec2 map_index = ivec2(pos);
 
 	const ivec2 map_index_origin = ivec2(greaterThanEqual(dir, vec2(0.)));
@@ -30,10 +29,7 @@ void main()
 	{
 		// march
 		{
-			int hierarchy=0;
-			ivec2 cell_origin = map_index_origin<<hierarchy;
-			ivec2 map_index_sub = map_index - ((map_index>>hierarchy)<<hierarchy);
-			vec2 cell_p = abs(cell_origin - (map_index_sub+fract(pos))) + 0.5;
+			vec2 cell_p = abs(map_index_origin - fract(pos)) + 0.5;
 			vec2 axis = abs(cell_p*inv_dir);
 			pos += min(axis.x, axis.y)*dir;
 			map_index = ivec2(pos);
@@ -85,15 +81,11 @@ void main()
 				radiance *= diffuse;
 			}
 
-			imageStore(t_color, map_index+ivec2(0,0), vec4(radiance.xxx, 1.));
-			imageStore(t_color, map_index+ivec2(2,0), vec4(radiance.yyy, 1.));
-			imageStore(t_color, map_index+ivec2(4,0), vec4(radiance.zzz, 1.));
-			imageStore(t_color, map_index+ivec2(6,0), vec4(radiance.www, 1.));
-//			uint cell = map_index.x + map_index.y * reso.x;
-//			b_radiance_map[cell] = radiance.xxxx;
-//			b_radiance_map[cell+2] = radiance.yyyy;
-//			b_radiance_map[cell+4] = radiance.zzzz;
-//			b_radiance_map[cell+6] = radiance.wwww;
+			uvec4 cell = (map_index.xxxx+uvec4(0,2,4,6)) + map_index.yyyy * reso.x;
+			b_radiance_map[cell.x] = uint(radiance.x*100);
+			b_radiance_map[cell.y] = uint(radiance.y*100);
+			b_radiance_map[cell.z] = uint(radiance.z*100);
+			b_radiance_map[cell.z] = uint(radiance.w*100);
 		}
 
 	}

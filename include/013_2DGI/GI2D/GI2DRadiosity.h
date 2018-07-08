@@ -107,7 +107,7 @@ struct GI2DRadiosity
 
 		{
 			uint32_t size = m_gi2d_context->RenderWidth * m_gi2d_context->RenderHeight;
-			b_radiosity_map = m_context->m_storage_memory.allocateMemory<vec4>({ size,{} });
+			b_radiance_map = m_context->m_storage_memory.allocateMemory<uint32_t>({ size,{} });
 		}
 
 		{
@@ -148,7 +148,7 @@ struct GI2DRadiosity
 				m_descriptor_set = std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]);
 
 				vk::DescriptorBufferInfo storages[] = {
-					b_radiosity_map.getInfo(),
+					b_radiance_map.getInfo(),
 				};
 				vk::DescriptorImageInfo output_images[] = {
 					vk::DescriptorImageInfo().setImageView(m_color_tex.m_image_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
@@ -194,7 +194,7 @@ struct GI2DRadiosity
 			{
 				"Radiosity.comp.spv",
 				"RTRendering.vert.spv",
-				"RTRendering.frag.spv",
+				"Radiosity_Render.frag.spv",
 			};
 			static_assert(array_length(name) == Shader_Num, "not equal shader num");
 
@@ -426,7 +426,7 @@ struct GI2DRadiosity
 	std::array<vk::UniquePipeline, Pipeline_Num> m_pipeline;
 
 	TextureResource m_color_tex;
-	btr::BufferMemoryEx<vec4> b_radiosity_map;
+	btr::BufferMemoryEx<uint32_t> b_radiance_map;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;

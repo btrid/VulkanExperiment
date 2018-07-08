@@ -80,7 +80,6 @@
     <ClCompile Include="..\..\source\013_2DGI\GI2D\GI2DLight.cpp" />
     <ClCompile Include="..\..\source\013_2DGI\GI2D\GI2DRenderer.cpp" />
     <ClCompile Include="..\..\source\013_2DGI\GI2D\GI2DSDF.cpp" />
-    <ClCompile Include="..\..\source\013_2DGI\Radiosity2D\Radiosity2DRenderer.cpp" />
     <ClCompile Include="..\..\source\013_2DGI\SV2DDebug.cpp" />
     <ClCompile Include="..\..\source\013_2DGI\SV2DLight.cpp" />
     <ClCompile Include="..\..\source\013_2DGI\SV2DRenderer.cpp" />
@@ -110,8 +109,6 @@
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DRenderer.h" />
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DRT.h" />
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DSDF.h" />
-    <ClInclude Include="..\..\include\013_2DGI\Radiosity2D\Radiosity2D.h" />
-    <ClInclude Include="..\..\include\013_2DGI\Radiosity2D\Radiosity2DRenderer.h" />
     <ClInclude Include="..\..\include\013_2DGI\SV2D\SV2D.h" />
     <ClInclude Include="..\..\include\013_2DGI\SV2D\SV2DAppModel.h" />
     <ClInclude Include="..\..\include\013_2DGI\SV2D\SV2DClear.h" />
