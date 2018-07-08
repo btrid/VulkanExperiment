@@ -33,3 +33,6 @@ rem %exe% %include% %option% -o ../binary\\RTRendering.comp.spv RTRenderingDebug
 
 %exe% %include% %option% -o ../binary\\PhotonMapping.comp.spv PhotonMapping_64.comp
 %exe% %include% %option% -o ../binary\\PhotonCollect.comp.spv PhotonCollect_64.comp
+
+%exe% %include% %option% -o ../binary\\Radiosity.comp.spv Radiosity_64.comp
+rem %exe% %include% %option% -o ../binary\\PhotonCollect.comp.spv PhotonCollect_64.comp

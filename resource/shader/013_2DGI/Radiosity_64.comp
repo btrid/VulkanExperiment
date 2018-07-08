@@ -1,0 +1,101 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Common.glsl"
+#include "btrlib/Math.glsl"
+
+#define USE_GI2D 0
+#define USE_Radiosity 1
+#include "GI2D.glsl"
+
+
+layout (local_size_x = 64, local_size_y = 1) in;
+void main()
+{
+
+	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
+	vec2 start = vec2(8. * gl_LocalInvocationIndex, 0.);
+//	vec2 dir = rotate(gl_LocalInvocationIndex*6.28 / 1024.);
+	vec2 dir = vec2(0.00001, 1.);
+	vec2 inv_dir = abs(1./dir);
+
+	vec2 pos = start;
+	ivec2 map_index = ivec2(pos);
+
+	const ivec2 map_index_origin = ivec2(greaterThanEqual(dir, vec2(0.)));
+
+	vec4 radiance = vec4(0.);
+	for(int _i = 0; _i <50000; _i++)
+	{
+		// march
+		{
+			int hierarchy=0;
+			ivec2 cell_origin = map_index_origin<<hierarchy;
+			ivec2 map_index_sub = map_index - ((map_index>>hierarchy)<<hierarchy);
+			vec2 cell_p = abs(cell_origin - (map_index_sub+fract(pos))) + 0.5;
+			vec2 axis = abs(cell_p*inv_dir);
+			pos += min(axis.x, axis.y)*dir;
+			map_index = ivec2(pos);
+			radiance *= 0.92;
+		}
+
+		// 範囲外?
+		{
+			ivec2 is_die = ivec2(greaterThanEqual(map_index, reso.xy)) + ivec2(lessThan(map_index, ivec2(0)));
+			if(any(notEqual(is_die.xy, ivec2(0))))
+			{
+				break;
+			}
+		}
+
+		// hit確認
+		{
+			ivec4 fragment_index = ivec4(map_index/8, map_index%8);
+			ivec2 shift = fragment_index.zw;
+
+			ivec4 offset_ = ivec4(0,0,1,1);
+			ivec4 findex = fragment_index.xxxx + offset_.xxzz + (fragment_index.yyyy + offset_.ywyw)*(reso.zzzz);
+
+			uint64_t fragment_map;
+			uint64_t light_map;
+			{
+				uint64_t x_line_mask = 0xfful & ((1ul << (shift.x)) - 1ul);
+				uint64_t x_mask = ~(x_line_mask | (x_line_mask << 8) | (x_line_mask << 16) | (x_line_mask << 24) | (x_line_mask << 32) | (x_line_mask << 40) | (x_line_mask << 48) | (x_line_mask << 56));
+				uint64_t y_mask = ~(0xfffffffffffffffful & ((1ul << ((shift.y) * 8)) - 1));
+				u64vec4 mask = u64vec4(x_mask & y_mask, x_mask & ~y_mask, ~x_mask & y_mask, ~x_mask & ~y_mask);
+				ivec4 rs = shift.yyyy*ivec4(8,0,8,0) + shift.xxxx*ivec4(1,1,0,0);
+				ivec4 ls = (8-shift.yyyy)*ivec4(0,8,0,8) + (8-shift.xxxx)*ivec4(0,0,1,1);
+
+				u64vec4 b = u64vec4(b_fragment_map[findex.x], b_fragment_map[findex.y], b_fragment_map[findex.z], b_fragment_map[findex.w]);
+				b &= mask;
+				b >>= rs;
+				b <<= ls;
+				fragment_map = b.x|b.y|b.z|b.w;
+
+				u64vec4 l = u64vec4(b_light_map[findex.x], b_light_map[findex.y], b_light_map[findex.z], b_light_map[findex.w]);
+				l &= mask;
+				l >>= rs;
+				l <<= ls;
+				light_map = l.x|l.y|l.z|l.w;
+
+				vec4 rad = vec4(notEqual(u64vec4(light_map) & (u64vec4(1ul) << u64vec4(63, 61, 59, 57)), u64vec4(0)));
+				radiance += rad;
+				vec4 diffuse = vec4(equal(u64vec4(fragment_map) & (u64vec4(1ul) << u64vec4(63, 61, 59, 57)), u64vec4(0)));
+				radiance *= diffuse;
+			}
+
+			imageStore(t_color, map_index+ivec2(0,0), vec4(radiance.xxx, 1.));
+			imageStore(t_color, map_index+ivec2(2,0), vec4(radiance.yyy, 1.));
+			imageStore(t_color, map_index+ivec2(4,0), vec4(radiance.zzz, 1.));
+			imageStore(t_color, map_index+ivec2(6,0), vec4(radiance.www, 1.));
+//			uint cell = map_index.x + map_index.y * reso.x;
+//			b_radiance_map[cell] = radiance.xxxx;
+//			b_radiance_map[cell+2] = radiance.yyyy;
+//			b_radiance_map[cell+4] = radiance.zzzz;
+//			b_radiance_map[cell+6] = radiance.wwww;
+		}
+
+	}
+
+}

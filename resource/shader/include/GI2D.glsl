@@ -138,11 +138,16 @@ layout (set=USE_RT, binding=11) uniform sampler2D s_color;
 layout(set=USE_PM, binding=0) restrict buffer PMReachedMapBuffer {
 	uint64_t b_reached_map[];
 };
-//layout(set=USE_PM, binding=1) restrict buffer PMLightMapBuffer {
-//	uint64_t b_light_map[];
-//};
 layout (set=USE_PM, binding=10, rgba16f) uniform image2D t_color;
 layout (set=USE_PM, binding=11) uniform sampler2D s_color;
+#endif // USE_PM
+
+#ifdef USE_Radiosity
+layout(set=USE_Radiosity, binding=0) restrict buffer RadianceMapBuffer {
+	vec4 b_radiance_map[];
+};
+layout (set=USE_Radiosity, binding=10, rgba16f) uniform image2D t_color;
+layout (set=USE_Radiosity, binding=11) uniform sampler2D s_color;
 #endif // USE_PM
 
 vec2 rotate(in float angle)

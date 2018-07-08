@@ -34,6 +34,7 @@
 #include <013_2DGI/GI2D/GI2DSDF.h>
 #include <013_2DGI/GI2D/GI2DRT.h>
 #include <013_2DGI/GI2D/GI2DPM.h>
+#include <013_2DGI/GI2D/GI2DRadiosity.h>
 
 #include <013_2DGI/SV2D/SV2DRenderer.h>
 #include <013_2DGI/SV2D/SV2DClear.h>
@@ -96,6 +97,7 @@ int main()
 	GI2DDebug gi_debug_make_fragment_and_light(context, gi2d_context);
 	GI2DRT gi2d_RT(context, gi2d_context, app.m_window->getRenderTarget());
 	GI2DPM gi2d_PM(context, gi2d_context, app.m_window->getRenderTarget());
+	GI2DRadiosity gi2d_Radiosity(context, gi2d_context, app.m_window->getRenderTarget());
 #else
 	std::shared_ptr<SV2DContext> gi2d_context = std::make_shared<SV2DContext>(context);
 	SV2DRenderer gi_renderer(context, app.m_window->getRenderTarget(), gi2d_context);
@@ -184,7 +186,8 @@ int main()
 //					gi2d_RT.execute(cmd);
 //					gi2d_renderer.execute(cmd);
 //					gi2d_renderer.executeDebug(cmd);
-					gi2d_PM.execute(cmd);
+//					gi2d_PM.execute(cmd);
+					gi2d_Radiosity.execute(cmd);
 					cmd.end();
 					cmds[cmd_gi_render] = cmd;
 				}
