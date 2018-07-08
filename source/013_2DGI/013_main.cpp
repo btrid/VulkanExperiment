@@ -181,10 +181,10 @@ int main()
 #if defined(use_pm)
 					gi_make_hierarchy.execute(cmd);
 #endif
-					gi2d_RT.execute(cmd);
+//					gi2d_RT.execute(cmd);
 //					gi2d_renderer.execute(cmd);
 //					gi2d_renderer.executeDebug(cmd);
-//					gi2d_PM.execute(cmd);
+					gi2d_PM.execute(cmd);
 					cmd.end();
 					cmds[cmd_gi_render] = cmd;
 				}
