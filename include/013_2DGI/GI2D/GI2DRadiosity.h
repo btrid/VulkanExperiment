@@ -26,6 +26,7 @@ struct GI2DRadiosity
 	enum Shader
 	{
 		Shader_Radiosity,
+		Shader_Radiosity_Clear,
 		Shader_RenderingVS,
 		Shader_RenderingFS,
 		Shader_Num,
@@ -38,6 +39,7 @@ struct GI2DRadiosity
 	enum Pipeline
 	{
 		Pipeline_Radiosity,
+		Pipeline_Radiosity_Clear,
 		Pipeline_Output,
 		Pipeline_Num,
 	};
@@ -193,6 +195,7 @@ struct GI2DRadiosity
 			const char* name[] =
 			{
 				"Radiosity.comp.spv",
+				"Radiosity_Clear.comp.spv",
 				"RTRendering.vert.spv",
 				"Radiosity_Render.frag.spv",
 			};
@@ -223,14 +226,21 @@ struct GI2DRadiosity
 			shader_info[0].setModule(m_shader[Shader_Radiosity].get());
 			shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[0].setPName("main");
+			shader_info[1].setModule(m_shader[Shader_Radiosity_Clear].get());
+			shader_info[1].setStage(vk::ShaderStageFlagBits::eCompute);
+			shader_info[1].setPName("main");
 			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 			{
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[0])
 				.setLayout(m_pipeline_layout[PipelineLayout_Radiosity].get()),
+				vk::ComputePipelineCreateInfo()
+				.setStage(shader_info[1])
+				.setLayout(m_pipeline_layout[PipelineLayout_Radiosity].get()),
 			};
 			auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
 			m_pipeline[Pipeline_Radiosity] = std::move(compute_pipeline[0]);
+			m_pipeline[Pipeline_Radiosity_Clear] = std::move(compute_pipeline[1]);
 		}
 
 		// レンダーパス
@@ -362,10 +372,12 @@ struct GI2DRadiosity
 	}
 	void execute(vk::CommandBuffer cmd)
 	{
+		
+
 		{
+			// データクリア
 			vk::BufferMemoryBarrier to_read[] = {
-				m_gi2d_context->b_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-//				b_rt_data.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				b_radiance_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderWrite),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
@@ -374,17 +386,21 @@ struct GI2DRadiosity
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
 			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth / 8, m_gi2d_context->RenderHeight / 8, 1), uvec3(32, 32, 1));
-			auto yy = m_gi2d_context->RenderHeight / 8;
-			auto xx = m_gi2d_context->RenderWidth / 8;
-//			for (int y = 0; y < yy; y++)
-			{
-//				for (int x = 0; x < xx; x++)
-				{
-// 					cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayoutMakePRT].get(), vk::ShaderStageFlagBits::eCompute, 0, ivec2(y*xx + x, 0));
- 					cmd.dispatch(1, 1, 1);
-				}
+			cmd.dispatch(num.x, num.y, num.z);
+		}
 
-			}
+		{
+			vk::BufferMemoryBarrier to_read[] = {
+				m_gi2d_context->b_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				b_radiance_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+				0, nullptr, array_length(to_read), to_read, 0, nullptr);
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Radiosity].get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
+			cmd.dispatch(1, 16, 1);
 		}
 
 		// render_targetに書く

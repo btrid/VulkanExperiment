@@ -15,10 +15,11 @@ void main()
 {
 
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
-//	vec2 dir = rotate(gl_LocalInvocationIndex*6.28 / 1024.);
 
 	vec2 pos = vec2(8. * gl_LocalInvocationIndex, 0.);
-	vec2 dir = normalize(vec2(0.0001, 1.));
+	vec2 dir = rotate(gl_GlobalInvocationID.y*6.28 / gl_NumWorkGroups.y);
+	dir.x = abs(dir.x) < 0.0001 ? 0.0001 : dir.x;
+	dir.y = abs(dir.y) < 0.0001 ? 0.0001 : dir.y;
 	vec2 inv_dir = abs(1./dir);
 	ivec2 map_index = ivec2(pos);
 
@@ -82,10 +83,14 @@ void main()
 			}
 
 			uvec4 cell = (map_index.xxxx+uvec4(0,2,4,6)) + map_index.yyyy * reso.x;
-			b_radiance_map[cell.x] = uint(radiance.x*100);
-			b_radiance_map[cell.y] = uint(radiance.y*100);
-			b_radiance_map[cell.z] = uint(radiance.z*100);
-			b_radiance_map[cell.z] = uint(radiance.w*100);
+			atomicAdd(b_radiance_map[cell.x], uint(radiance.x*100));
+			atomicAdd(b_radiance_map[cell.y], uint(radiance.y*100));
+			atomicAdd(b_radiance_map[cell.z], uint(radiance.z*100));
+			atomicAdd(b_radiance_map[cell.w], uint(radiance.w*100));
+//			b_radiance_map[cell.x] = uint(radiance.x*100);
+//			b_radiance_map[cell.y] = uint(radiance.y*100);
+//			b_radiance_map[cell.z] = uint(radiance.z*100);
+//			b_radiance_map[cell.w] = uint(radiance.w*100);
 		}
 
 	}
