@@ -9,11 +9,62 @@
 #define USE_GI2D_Radiosity 1
 #include "GI2D.glsl"
 
+vec2 intersectRayRay(in vec2 as, in vec2 ad, in vec2 bs, in vec2 bd)
+{
+	float u = (as.y*bd.x + bd.y*bs.x - bs.y*bd.x - bd.y*as.x) / (ad.x*bd.y - ad.y*bd.x);
+	return as + u * ad;
+}
 
-layout (local_size_x = 64, local_size_y = 1) in;
-void main()
+bool marchToAABB(inout vec2 p, in vec2 d, in vec2 bmin, in vec2 bmax)
 {
 
+	if(all(lessThan(p, bmax)) 
+	&& all(greaterThan(p, bmin)))
+	{
+		// AABBの中にいる
+		return true;
+	}
+
+	float tmin = 0.;
+	float tmax = 10e6;
+	for (int i = 0; i < 2; i++)
+	{
+		if (abs(d[i]) < 10e-6)
+		{
+			// 光線はスラブに対して平行。原点がスラブの中になければ交点無し。
+			if (p[i] < bmin[i] || p[i] > bmax[i])
+			{
+				return false;
+			}
+		}
+		else
+		{
+			float ood = 1. / d[i];
+			float t1 = (bmin[i] - p[i]) * ood;
+			float t2 = (bmax[i] - p[i]) * ood;
+
+			// t1が近い平面との交差、t2が遠い平面との交差になる
+			float near = min(t1, t2);
+			float far = max(t1, t2);
+
+			// スラブの交差している感覚との交差を計算
+			tmin = max(near, tmin);
+			tmax = max(far, tmax);
+
+			if (tmin > tmax) {
+				return false;
+			}
+		}
+	}
+	float dist = tmin;
+	p += d*dist;
+	return true;
+
+}
+
+layout (local_size_x = 128, local_size_y = 1) in;
+void main()
+{
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
 
 	vec2 pos = vec2(8. * gl_LocalInvocationIndex, 0.);
@@ -21,6 +72,29 @@ void main()
 	dir.x = abs(dir.x) < 0.0001 ? 0.0001 : dir.x;
 	dir.y = abs(dir.y) < 0.0001 ? 0.0001 : dir.y;
 	vec2 inv_dir = abs(1./dir);
+	{
+		ivec2 origin;
+		origin.x = dir.x > 0. ? 0 : reso.x;
+		origin.y = dir.y > 0. ? 0 : reso.y;
+	}
+
+	vec2 side = rotateZ(dir, 3.14*0.5);
+	{
+		side.x = abs(side.x) < 0.0001 ? 0.0001 : side.x;
+		side.y = abs(side.y) < 0.0001 ? 0.0001 : side.y;
+		vec2 invside = abs(1. / side);
+		side *= min(invside.x, invside.y);
+	}
+	u64vec4 hit_mask;
+	{
+		ivec2 origin;
+		origin.x = side.x > 0. ? 0 : 7;
+		origin.y = side.y > 0. ? 0 : 7;
+		ivec4 mask_x = ivec4(side.xxxx * vec4(0.5, 2.5, 4.5, 6.5) + origin.xxxx);
+		ivec4 mask_y = ivec4(side.yyyy * vec4(0.5, 2.5, 4.5, 6.5) + origin.yyyy);
+		hit_mask = u64vec4(1ul) << (mask_x + mask_y*8);
+	}
+
 	ivec2 map_index = ivec2(pos);
 
 	const ivec2 map_index_origin = ivec2(greaterThanEqual(dir, vec2(0.)));

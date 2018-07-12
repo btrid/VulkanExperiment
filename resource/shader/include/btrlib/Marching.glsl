@@ -1,9 +1,7 @@
-#define MARCHING_GLSL
+#ifndef MARCHING_GLSL_
+#define MARCHING_GLSL_
 
-#if !defined(SHAPE_GLSL)
-#error must include Shape.glsl
-#endif
-
+#include <>
 Ray MakeRayFromScreen(in vec3 eye, in vec3 target, in vec2 screen, in float fov_y, in float aspect)
 {
 	vec3 foward = normalize(target - eye).xyz;
@@ -75,5 +73,6 @@ Hit marchToAABB(in Ray ray, in vec3 bmin, in vec3 bmax)
 bool isInAABB(in vec3 p, in vec3 bmin, in vec3 bmax)
 {
 	return all(lessThan(p, bmax)) && all(greaterThan(p, bmin));
-
 }
+
+#endif

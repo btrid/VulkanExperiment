@@ -156,6 +156,16 @@ vec2 rotate(in float angle)
 	float s = sin(angle);
 	return vec2(-s, c);
 }
+vec2 rotateZ(in vec2 dir, in float angle)
+{
+	float c = cos(angle);
+	float s = sin(angle);
+
+	vec2 ret;
+	ret.x = dir.x * c - dir.y * s;
+	ret.y = dir.x * s + dir.y * c;
+	return ret;
+}
 vec4 rotate2(in vec2 angle)
 {
 	vec2 c = cos(angle);

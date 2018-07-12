@@ -203,7 +203,7 @@ void memoryAllocater()
 
 void bittest()
 {
-	// count
+		// count
 	{
 		uint64_t a = 0xffffffffffffffff;
 		uint64_t c = 0;
@@ -421,8 +421,97 @@ void bittest()
 	printf("---\n");
 
 }
+
+vec2 intersectRayRay(const vec2& as, const vec2& ad, const vec2& bs, const vec2& bd)
+{
+	float u = (as.y*bd.x + bd.y*bs.x - bs.y*bd.x - bd.y*as.x) / (ad.x*bd.y - ad.y*bd.x);
+	return as + u * ad;
+}
+
 int main()
 {
+	{
+		int loop = 64;
+		for (int i = 0; i < loop; i++) 
+		{
+			vec2 dir = glm::rotate(vec2(1.f, 0.f), i*6.28f / loop);
+			dir.x = abs(dir.x) < 0.0001 ? 0.0001 : dir.x;
+			dir.y = abs(dir.y) < 0.0001 ? 0.0001 : dir.y;
+
+			vec2 floorp;
+			floorp.x = dir.x >= 0 ? 0.f : 512.f;
+			floorp.y = dir.y >= 0 ? 0.f : 512.f;
+			vec2 floordir;
+			floordir.x = abs(dir.x) > abs(dir.y) ? 0.f : 1.f;
+			floordir.y = abs(dir.x) > abs(dir.y) ? 1.f : 0.f;
+
+			auto p0 = intersectRayRay(vec2(0, 0), dir, floorp, floordir);
+			auto p1 = intersectRayRay(vec2(512, 0), dir, floorp, floordir);
+			auto p2 = intersectRayRay(vec2(0, 512), dir, floorp, floordir);
+			auto p3 = intersectRayRay(vec2(512, 512), dir, floorp, floordir);
+
+			vec2 minp = glm::min(glm::min(glm::min(p0, p1), p2), p3);
+			vec2 maxp = glm::max(glm::max(glm::max(p0, p1), p2), p3);
+
+			printf("[%2d] dir=(%6.2f,%6.2f) minp=(%6.2f,%6.2f) maxp=(%6.2f,%6.2f)\n", i, dir.x, dir.y, minp.x, minp.y, maxp.x,maxp.y);
+
+			vec2 side = glm::rotate(dir, -3.14f*0.5f);
+			side.x = abs(side.x) < 0.0001 ? 0.0001 : side.x;
+			side.y = abs(side.y) < 0.0001 ? 0.0001 : side.y;
+			vec2 invside = abs(1.f / side);
+			side *= glm::min(invside.x, invside.y);
+
+			ivec2 origin;
+			origin.x = side.x > 0. ? 0 : 7;
+			origin.y = side.y > 0. ? 0 : 7;
+
+		}
+		vec2 dir = normalize(vec2(0.1f, 1.f));
+		dir.x = abs(dir.x) < 0.0001 ? 0.0001 : dir.x;
+		dir.y = abs(dir.y) < 0.0001 ? 0.0001 : dir.y;
+
+		vec2 floorp;
+		floorp.x = dir.x >= 0 ? 0.f : 512.f;
+		floorp.y = dir.y >= 0 ? 0.f : 512.f;
+		vec2 floordir;
+		floordir.x = abs(dir.x) > abs(dir.y) ? 0.f : 1.f;
+		floordir.y = abs(dir.x) > abs(dir.y) ? 1.f : 0.f;
+
+		auto p = intersectRayRay(vec2(0, 512), dir, floorp, floordir);
+
+		vec2 side = glm::rotate(dir, -3.14f*0.5f);
+		side.x = abs(side.x) < 0.0001 ? 0.0001 : side.x;
+		side.y = abs(side.y) < 0.0001 ? 0.0001 : side.y;
+		vec2 invside = abs(1.f / side);
+		side *= glm::min(invside.x, invside.y);
+
+		ivec2 origin;
+		origin.x = side.x > 0. ? 0 : 7;
+		origin.y = side.y > 0. ? 0 : 7;
+		auto s0 = (ivec2)(side * (0.5f + 0.f))+origin;
+		auto s1 = (ivec2)(side * (0.5f + 2.f))+origin;
+		auto s2 = (ivec2)(side * (0.5f + 4.f))+origin;
+		auto s3 = (ivec2)(side * (0.5f + 6.f))+origin;
+		uint64_t bit = 0;
+		bit |= (1ull << (s0.x + s0.y * 8));
+		bit |= (1ull << (s1.x + s1.y * 8));
+		bit |= (1ull << (s2.x + s2.y * 8));
+		bit |= (1ull << (s3.x + s3.y * 8));
+
+		for (int y = 0; y < 8; y++) {
+			for (int x = 0; x < 8; x++) {
+				uint64_t map = (1ull << (y * 8 + x));
+				if ((bit&map) != 0)
+					printf("@");
+				else
+					printf("_");
+			}
+			printf("\n");
+		}
+		printf("---\n");
+
+	}
+
 	std::array<uvec4, 16 * 16> s_alive_num4;
 	std::array<uint, 32 * 32>  s_alive_num;
 	std::array<uvec4, 16 * 16> b_alive_num;

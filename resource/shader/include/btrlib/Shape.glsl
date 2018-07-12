@@ -1,4 +1,6 @@
-#define SHAPE_GLSL
+#ifndef SHAPE_GLSL_
+#define SHAPE_GLSL_
+
 struct Ray
 {
 	vec3 p;
@@ -162,3 +164,4 @@ Hit intersect(in Triangle tri, in Ray r)
 	return hit;
 }
 
+#endif
