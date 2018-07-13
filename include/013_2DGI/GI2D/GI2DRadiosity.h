@@ -392,7 +392,7 @@ struct GI2DRadiosity
 		{
 			vk::BufferMemoryBarrier to_read[] = {
 				m_gi2d_context->b_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-				b_radiance_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				b_radiance_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eShaderRead),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
@@ -400,7 +400,7 @@ struct GI2DRadiosity
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Radiosity].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
-			cmd.dispatch(1, 16, 1);
+			cmd.dispatch(1, 64, 1);
 		}
 
 		// render_targetÇ…èëÇ≠
@@ -415,6 +415,13 @@ struct GI2DRadiosity
 				to_read.setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands,
 					{}, 0, nullptr, 0, nullptr, 1, &to_read);
+			}
+			{
+				vk::BufferMemoryBarrier to_read[] = {
+					b_radiance_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eFragmentShader, {},
+					0, nullptr, array_length(to_read), to_read, 0, nullptr);
 			}
 
 			vk::RenderPassBeginInfo begin_render_Info;

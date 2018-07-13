@@ -434,6 +434,7 @@ int main()
 		int loop = 64;
 		for (int i = 0; i < loop; i++) 
 		{
+//			i = 15;
 			vec2 dir = glm::rotate(vec2(1.f, 0.f), i*6.28f / loop);
 			dir.x = abs(dir.x) < 0.0001 ? 0.0001 : dir.x;
 			dir.y = abs(dir.y) < 0.0001 ? 0.0001 : dir.y;
@@ -454,16 +455,6 @@ int main()
 			vec2 maxp = glm::max(glm::max(glm::max(p0, p1), p2), p3);
 
 			printf("[%2d] dir=(%6.2f,%6.2f) minp=(%6.2f,%6.2f) maxp=(%6.2f,%6.2f)\n", i, dir.x, dir.y, minp.x, minp.y, maxp.x,maxp.y);
-
-			vec2 side = glm::rotate(dir, -3.14f*0.5f);
-			side.x = abs(side.x) < 0.0001 ? 0.0001 : side.x;
-			side.y = abs(side.y) < 0.0001 ? 0.0001 : side.y;
-			vec2 invside = abs(1.f / side);
-			side *= glm::min(invside.x, invside.y);
-
-			ivec2 origin;
-			origin.x = side.x > 0. ? 0 : 7;
-			origin.y = side.y > 0. ? 0 : 7;
 
 		}
 		vec2 dir = normalize(vec2(0.1f, 1.f));
