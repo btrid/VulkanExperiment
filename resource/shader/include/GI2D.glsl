@@ -143,9 +143,9 @@ layout (set=USE_PM, binding=11) uniform sampler2D s_color;
 #endif // USE_PM
 
 #ifdef USE_GI2D_Radiosity
-layout(set=USE_GI2D_Radiosity, binding=0) coherent restrict buffer RadianceMapBuffer {
-//	uint b_radiance_map[];
-	float b_radiance_map[];
+layout(set=USE_GI2D_Radiosity, binding=0) restrict buffer RadianceMapBuffer {
+	uint b_radiance_map[];
+//	float b_radiance_map[];
 };
 layout (set=USE_GI2D_Radiosity, binding=10, r16f) uniform image2DArray t_color;
 layout (set=USE_GI2D_Radiosity, binding=11) uniform sampler2D s_color;

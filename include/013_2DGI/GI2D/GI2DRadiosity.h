@@ -23,7 +23,8 @@ struct GI2DRadiosity
 		vk::ImageSubresourceRange m_subresource_range;
 	};
 	enum {
-		Ray_Num = 64,
+		Ray_Num = 64 * 2,
+		Ray_Group = 1,
 	};
 	enum Shader
 	{
@@ -374,7 +375,6 @@ struct GI2DRadiosity
 	}
 	void execute(vk::CommandBuffer cmd)
 	{
-		
 
 		{
 			// データクリア
@@ -392,6 +392,7 @@ struct GI2DRadiosity
 		}
 
 		{
+			static int frame;
 			vk::BufferMemoryBarrier to_read[] = {
 				m_gi2d_context->b_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				b_radiance_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eShaderRead),
@@ -402,7 +403,7 @@ struct GI2DRadiosity
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Radiosity].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
-			cmd.dispatch(1, Ray_Num, 1);
+			cmd.dispatch(1, Ray_Num, Ray_Group);
 		}
 
 		// render_targetに書く
