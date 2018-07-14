@@ -3,8 +3,8 @@
 
 #extension GL_ARB_gpu_shader_int64 : require
 #extension GL_ARB_shader_draw_parameters : require
-#extension GL_ARB_gpu_shader_int64 : require
 #extension GL_NV_shader_atomic_int64 : require
+//#extension GL_NV_gpu_program5 : require
 struct GI2DInfo
 {
 	mat4 m_camera_PV;
@@ -144,7 +144,8 @@ layout (set=USE_PM, binding=11) uniform sampler2D s_color;
 
 #ifdef USE_GI2D_Radiosity
 layout(set=USE_GI2D_Radiosity, binding=0) restrict buffer RadianceMapBuffer {
-	uint b_radiance_map[];
+//	uint b_radiance_map[];
+	float b_radiance_map[];
 };
 layout (set=USE_GI2D_Radiosity, binding=10, rgba16f) uniform image2D t_color;
 layout (set=USE_GI2D_Radiosity, binding=11) uniform sampler2D s_color;

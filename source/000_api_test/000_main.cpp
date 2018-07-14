@@ -428,6 +428,55 @@ vec2 intersectRayRay(const vec2& as, const vec2& ad, const vec2& bs, const vec2&
 	return as + u * ad;
 }
 
+bool marchToAABB(vec2& p, vec2 d, vec2 bmin, vec2 bmax)
+{
+
+	if (all(lessThan(p, bmax))
+		&& all(greaterThan(p, bmin)))
+	{
+		// AABBの中にいる
+		return true;
+	}
+
+	float tmin = 0.;
+	float tmax = 10e6;
+	for (int i = 0; i < 2; i++)
+	{
+		if (abs(d[i]) < 10e-6)
+		{
+			// 光線はスラブに対して平行。原点がスラブの中になければ交点無し。
+			if (p[i] < bmin[i] || p[i] > bmax[i])
+			{
+				p = vec2(-9999999999.f);
+				return false;
+			}
+		}
+		else
+		{
+			float ood = 1. / d[i];
+			float t1 = (bmin[i] - p[i]) * ood;
+			float t2 = (bmax[i] - p[i]) * ood;
+
+			// t1が近い平面との交差、t2が遠い平面との交差になる
+			float near_ = glm::min(t1, t2);
+			float far_ = glm::max(t1, t2);
+
+			// スラブの交差している感覚との交差を計算
+			tmin = glm::max(near_, tmin);
+			tmax = glm::max(far_, tmax);
+
+			if (tmin > tmax) {
+				p = vec2(-9999999999.f);
+				return false;
+			}
+		}
+	}
+	float dist = tmin;
+	p += d * dist;
+	return true;
+
+}
+
 int main()
 {
 	{
@@ -454,7 +503,15 @@ int main()
 			vec2 minp = glm::min(glm::min(glm::min(p0, p1), p2), p3);
 			vec2 maxp = glm::max(glm::max(glm::max(p0, p1), p2), p3);
 
-			printf("[%2d] dir=(%6.2f,%6.2f) minp=(%6.2f,%6.2f) maxp=(%6.2f,%6.2f)\n", i, dir.x, dir.y, minp.x, minp.y, maxp.x,maxp.y);
+			floorp = minp;
+			vec2 area = maxp- minp;
+			printf("[%2d] dir=(%5.2f,%5.2f) floorp=(%7.2f,%7.2f) area=[%7.2f,%7.2f] floordir=[%7.2f,%7.2f]\n", i, dir.x, dir.y, floorp.x, floorp.y, area.x, area.y, floordir.x, floordir.y);
+
+			vec2 _min = minp;
+			vec2 _max = maxp;
+			marchToAABB(_min, dir, vec2(0.f), vec2(512.f));
+			marchToAABB(_max, dir, vec2(0.f), vec2(512.f));
+//			printf(" aabbmin=[%7.2f,%7.2f] aabbmax=[%7.2f,%7.2f]\n", _min.x, _min.y, _max.x, _max.y);
 
 		}
 		vec2 dir = normalize(vec2(0.1f, 1.f));

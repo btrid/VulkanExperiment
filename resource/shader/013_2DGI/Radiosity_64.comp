@@ -62,13 +62,12 @@ bool marchToAABB(inout vec2 p, in vec2 d, in vec2 bmin, in vec2 bmax)
 
 }
 
-layout (local_size_x = 64, local_size_y = 1) in;
+layout (local_size_x = 128, local_size_y = 1) in;
 void main()
 {
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
 
-//	vec2 pos = vec2(8. * gl_LocalInvocationIndex, 0.);
-	vec2 dir = rotate(gl_GlobalInvocationID.y*6.28 / gl_NumWorkGroups.y);
+	vec2 dir = rotate(gl_GlobalInvocationID.y*6.28 / gl_NumWorkGroups.y + 3.14);
 	dir.x = abs(dir.x) < 0.0001 ? 0.0001 : dir.x;
 	dir.y = abs(dir.y) < 0.0001 ? 0.0001 : dir.y;
 	vec2 inv_dir = abs(1./dir);
@@ -89,9 +88,8 @@ void main()
 	vec2 maxp = max(max(max(p0, p1), p2), p3);
 
 	vec2 pos = minp + floordir * 8. * gl_LocalInvocationIndex;
-//	if(any(greaterThan(pos, maxp))){ return; }
 	if(!marchToAABB(pos, dir, vec2(0.), reso.xy)){return;}
-	pos += dir * 0.5;
+//	pos += dir * 0.5;
 
 	vec2 side = rotateZ(dir, 3.14*0.5);
 	{
@@ -123,7 +121,7 @@ void main()
 			vec2 axis = abs(cell_p*inv_dir);
 			pos += min(axis.x, axis.y)*dir;
 			map_index = ivec2(pos);
-			radiance *= 0.92;
+			radiance *= 0.98;
 		}
 
 		// 範囲外?
@@ -165,21 +163,21 @@ void main()
 				l <<= ls;
 				light_map = l.x|l.y|l.z|l.w;
 
-				vec4 rad = vec4(notEqual(u64vec4(light_map) & (u64vec4(1ul) << u64vec4(63, 61, 59, 57)), u64vec4(0)));
+				vec4 rad = vec4(notEqual(u64vec4(light_map) & hit_mask, u64vec4(0)));
 				radiance += rad;
-				vec4 diffuse = vec4(equal(u64vec4(fragment_map) & (u64vec4(1ul) << u64vec4(63, 61, 59, 57)), u64vec4(0)));
+				vec4 diffuse = vec4(equal(u64vec4(fragment_map) & hit_mask, u64vec4(0)));
 				radiance *= diffuse;
 			}
 
 			uvec4 cell = (map_index.xxxx+uvec4(0,2,4,6)) + map_index.yyyy * reso.x;
-			atomicAdd(b_radiance_map[cell.x], uint(radiance.x*100));
-			atomicAdd(b_radiance_map[cell.y], uint(radiance.y*100));
-			atomicAdd(b_radiance_map[cell.z], uint(radiance.z*100));
-			atomicAdd(b_radiance_map[cell.w], uint(radiance.w*100));
-//			b_radiance_map[cell.x] = uint(radiance.x*100);
-//			b_radiance_map[cell.y] = uint(radiance.y*100);
-//			b_radiance_map[cell.z] = uint(radiance.z*100);
-//			b_radiance_map[cell.w] = uint(radiance.w*100);
+//			atomicAdd(b_radiance_map[cell.x], 1.);
+//			atomicAdd(b_radiance_map[cell.y], radiance.y);
+//			atomicAdd(b_radiance_map[cell.z], radiance.z);
+//			atomicAdd(b_radiance_map[cell.w], radiance.w);
+			b_radiance_map[cell.x] += radiance.x;
+			b_radiance_map[cell.y] += radiance.y;
+			b_radiance_map[cell.z] += radiance.z;
+			b_radiance_map[cell.w] += radiance.w;
 		}
 
 	}

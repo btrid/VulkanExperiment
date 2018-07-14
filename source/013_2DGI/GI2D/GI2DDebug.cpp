@@ -18,8 +18,8 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 		std::vector<Fragment> rect;
 		rect.emplace_back(Fragment{ ivec4{ 200, 400, 40, 40 }, 1.f });
 #if 1
-//		rect.emplace_back(Fragment{ ivec4{ 200, 200, 100, 100}, 0.f });
-	//	rect.emplace_back(Fragment{ ivec4{ 80, 50, 500, 20 }, 0.f });
+		rect.emplace_back(Fragment{ ivec4{ 200, 200, 100, 100}, 0.f });
+		rect.emplace_back(Fragment{ ivec4{ 80, 50, 500, 20 }, 0.f });
 #else
 		for (int i = 0; i < 300; i++) {
 			rect.emplace_back(Fragment{ ivec4{ std::rand() % 512, std::rand() % 512, std::rand() % 30, std::rand() % 30 }, 0.f });
