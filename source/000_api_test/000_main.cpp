@@ -505,13 +505,28 @@ int main()
 
 			floorp = minp;
 			vec2 area = maxp- minp;
-			printf("[%2d] dir=(%5.2f,%5.2f) floorp=(%7.2f,%7.2f) area=[%7.2f,%7.2f] floordir=[%7.2f,%7.2f]\n", i, dir.x, dir.y, floorp.x, floorp.y, area.x, area.y, floordir.x, floordir.y);
+//			printf("[%2d] dir=[%5.2f,%5.2f] floorp=[%7.2f,%7.2f] area=[%7.2f,%7.2f] floordir=[%7.2f,%7.2f]\n", i, dir.x, dir.y, floorp.x, floorp.y, area.x, area.y, floordir.x, floordir.y);
 
 			vec2 _min = minp;
 			vec2 _max = maxp;
 			marchToAABB(_min, dir, vec2(0.f), vec2(512.f));
 			marchToAABB(_max, dir, vec2(0.f), vec2(512.f));
 //			printf(" aabbmin=[%7.2f,%7.2f] aabbmax=[%7.2f,%7.2f]\n", _min.x, _min.y, _max.x, _max.y);
+
+			vec2 side = glm::rotate(dir, -3.14f*0.5f);
+			side.x = abs(side.x) < 0.0001 ? 0.0001 : side.x;
+			side.y = abs(side.y) < 0.0001 ? 0.0001 : side.y;
+			vec2 invside = abs(1.f / side);
+			vec2 side1 = side * glm::min(invside.x, invside.y);
+
+			vec2 origin;
+			origin.x = side.x > 0.f ? 0.f : 7.f;
+			origin.y = side.y > 0.f ? 0.f : 7.f;
+			ivec4 mask_x = ivec4(side1.xxxx * vec4(0.5, 2.5, 4.5, 6.5) + origin.xxxx);
+			ivec4 mask_y = ivec4(side1.yyyy * vec4(0.5, 2.5, 4.5, 6.5) + origin.yyyy);
+			auto hit_mask = glm::u64vec4(1ul) << glm::u64vec4(mask_x + mask_y * 8);
+
+			printf("[%2d] dir=[%5.2f,%5.2f] side=[%5.2f,%5.2f], mask=[%3d%3d%3d%3d] \n", i, dir.x, dir.y, side.x, side.y, hit_mask.x, hit_mask.y, hit_mask.z, hit_mask.w);
 
 		}
 		vec2 dir = normalize(vec2(0.1f, 1.f));
