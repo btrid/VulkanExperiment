@@ -64,7 +64,7 @@ bool marchToAABB(inout vec2 p, in vec2 d, in vec2 bmin, in vec2 bmax)
 }
 
 #define Density (1)
-#define Advance (3.)
+#define Advance (1.)
 layout (local_size_x = 128*Density, local_size_y = 1) in;
 void main()
 {
@@ -185,7 +185,7 @@ void main()
 				light_map = l.x|l.y|l.z|l.w;
 
 				vec4 rad = vec4(notEqual(u64vec4(light_map) & hit_mask, u64vec4(0)));
-				radiance += rad*0.5;
+				radiance += rad;
 				vec4 diffuse = vec4(equal(u64vec4(fragment_map) & hit_mask, u64vec4(0)));
 				radiance *= min(diffuse+0., 1.);
 			}

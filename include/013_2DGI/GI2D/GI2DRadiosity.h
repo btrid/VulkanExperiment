@@ -23,7 +23,7 @@ struct GI2DRadiosity
 		vk::ImageSubresourceRange m_subresource_range;
 	};
 	enum {
-		Ray_Num = 64*16,
+		Ray_Num = 64*4,
 		Ray_Group = 1,
 	};
 	enum Shader
