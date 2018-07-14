@@ -11,10 +11,12 @@
 
 
 
+#define Block_Size (9)
+
 layout(location = 0) out vec4 FragColor;
 void main()
 {
-#if 0
+#if 1
 	ivec2 coord = ivec2(gl_FragCoord.xy);
 	uint index = uint(coord.x + coord.y * u_gi2d_info.m_resolution.x);
 //	vec3 rgb = vec3(b_radiance_map[index]);
@@ -22,14 +24,14 @@ void main()
 	FragColor = vec4(rgb, 1.);
 #else
 	float radiance = 0.;
-	for(int y = 0; y < 5; y++){
-	for(int x = 0; x < 5; x++){
+	for(int y = 0; y < Block_Size; y++){
+	for(int x = 0; x < Block_Size; x++){
 		ivec2 coord = ivec2(gl_FragCoord.xy);
-		coord += + ivec2(x-2, y-2);
+		coord += + ivec2(x-(Block_Size>>1), y-(Block_Size>>1));
 		coord = clamp(coord, ivec2(0), u_gi2d_info.m_resolution);
 		uint index = uint(coord.x + coord.y * u_gi2d_info.m_resolution.x);
-		radiance += b_radiance_map[index]/ 100.;
+		radiance += b_radiance_map[index];
 	}}
-	FragColor = vec4(radiance.xxx / 40, 1.);
+	FragColor = vec4(radiance.xxx/ 100. / 40, 1.);
 #endif
 }

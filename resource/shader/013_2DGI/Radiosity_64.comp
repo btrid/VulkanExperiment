@@ -62,12 +62,15 @@ bool marchToAABB(inout vec2 p, in vec2 d, in vec2 bmin, in vec2 bmax)
 
 }
 
-layout (local_size_x = 128, local_size_y = 1) in;
+#define Density (1)
+#define Advance (1.)
+layout (local_size_x = 128*Density, local_size_y = 1) in;
 void main()
 {
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
 
 	float angle = 6.28 / gl_NumWorkGroups.y;
+	angle += angle * (gl_GlobalInvocationID.z / gl_NumWorkGroups.z);
 	vec2 dir = rotate(angle * gl_GlobalInvocationID.y);
 	dir.x = abs(dir.x) < 0.0001 ? 0.0001 : dir.x;
 	dir.y = abs(dir.y) < 0.0001 ? 0.0001 : dir.y;
@@ -89,9 +92,9 @@ void main()
 	vec2 minp = min(min(min(p0, p1), p2), p3);
 	vec2 maxp = max(max(max(p0, p1), p2), p3);
 
-	vec2 pos = minp + floordir * 8. * gl_LocalInvocationIndex;
+	vec2 pos = minp + floordir * (8./Density) * gl_LocalInvocationIndex;
+	pos += floordir * (8./Density) * (gl_GlobalInvocationID.z / gl_NumWorkGroups.z);
 	if(!marchToAABB(pos, dir, vec2(0.), reso.xy)){return;}
-//	pos += dir * 0.5;
 
 	vec2 side = rotateZ(dir, 3.14*0.5);
 	{
@@ -112,8 +115,9 @@ void main()
 		ivec2 origin;
 		origin.x = side.x > 0. ? 0 : 7;
 		origin.y = side.y > 0. ? 0 : 7;
-		offset_x = ivec4(side.xxxx * (vec4(offset_x_)+vec4(0.5, 2.5, 4.5, 6.5)) + origin.xxxx);
-		offset_y = ivec4(side.yyyy * (vec4(offset_y_)+vec4(0.5, 2.5, 4.5, 6.5)) + origin.yyyy);
+		vec4 _offset = vec4(0., 2., 4., 6.) / Density + vec4(0.5);
+		offset_x = ivec4(side.xxxx * (vec4(offset_x_)+_offset) + origin.xxxx);
+		offset_y = ivec4(side.yyyy * (vec4(offset_y_)+_offset) + origin.yyyy);
 		hit_mask = u64vec4(1ul) << (offset_x + offset_y*8);
 	}
 
@@ -131,11 +135,11 @@ void main()
 			vec2 axis = abs(cell_p*inv_dir);
 			pos += min(axis.x, axis.y)*dir;
 #else
-			pos += dir*2.;
+			pos += dir*Advance;
+			radiance *= pow(0.98, Advance);
+
 #endif
 			map_index = ivec2(pos);
-			radiance *= 0.98;
-			radiance *= 0.98;
 		}
 
 		// 範囲外?
