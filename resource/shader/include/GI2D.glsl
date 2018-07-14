@@ -145,8 +145,27 @@ layout (set=USE_PM, binding=11) uniform sampler2D s_color;
 #ifdef USE_GI2D_Radiosity
 layout(set=USE_GI2D_Radiosity, binding=0) restrict buffer RadianceMapBuffer {
 	uint b_radiance_map[];
-//	float b_radiance_map[];
 };
+
+int getMemoryOrder(in ivec2 xy)
+{
+#if 1
+// int getMortonIndex(in ivec2 xy)
+	// 8x8のブロック
+	ivec2 n = xy>>3;
+	xy -= n<<3;
+	n = (n ^ (n << 8 )) & 0x00ff00ff;
+	n = (n ^ (n << 4 )) & 0x0f0f0f0f;
+	n = (n ^ (n << 2 )) & 0x33333333;
+	n = (n ^ (n << 1 )) & 0x55555555;
+	
+	int mi = (n.y<<1)|n.x;
+	return mi*64 + xy.x + xy.y*8;
+#else
+	return xy.x + xy.y * u_gi2d_info.m_resolution.x;
+#endif
+}
+
 layout (set=USE_GI2D_Radiosity, binding=10, r16f) uniform image2DArray t_color;
 layout (set=USE_GI2D_Radiosity, binding=11) uniform sampler2D s_color;
 #endif // USE_PM

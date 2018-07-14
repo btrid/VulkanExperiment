@@ -477,8 +477,26 @@ bool marchToAABB(vec2& p, vec2 d, vec2 bmin, vec2 bmax)
 
 }
 
+int getMortonIndex(ivec2 xy)
+{
+	// 8x8‚ÌƒuƒƒbƒN
+	ivec2 n = xy >> 3;
+	xy -= n<<3;
+	n = (n ^ (n << 8)) & 0x00ff00ff;
+	n = (n ^ (n << 4)) & 0x0f0f0f0f;
+	n = (n ^ (n << 2)) & 0x33333333;
+	n = (n ^ (n << 1)) & 0x55555555;
+
+	int mi = (n.y << 1) | n.x;
+	return mi * 64 + xy.x + xy.y * 8;
+}
+
 int main()
 {
+	{
+		auto a = getMortonIndex(ivec2(123, 256));
+		a++;
+	}
 	{
 		int loop = 64;
 		for (int i = 0; i < loop; i++) 

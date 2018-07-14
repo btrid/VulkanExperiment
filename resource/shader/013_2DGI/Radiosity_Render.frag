@@ -17,9 +17,7 @@ layout(location = 0) out vec4 FragColor;
 void main()
 {
 #if 1
-	ivec2 coord = ivec2(gl_FragCoord.xy);
-	uint index = uint(coord.x + coord.y * u_gi2d_info.m_resolution.x);
-//	vec3 rgb = vec3(b_radiance_map[index]);
+	uint index = getMemoryOrder(ivec2(gl_FragCoord.xy));
 	vec3 rgb = vec3(b_radiance_map[index] / 100.);
 	FragColor = vec4(rgb, 1.);
 #else

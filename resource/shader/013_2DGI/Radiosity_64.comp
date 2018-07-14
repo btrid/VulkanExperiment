@@ -9,6 +9,7 @@
 #define USE_GI2D_Radiosity 1
 #include "GI2D.glsl"
 
+
 vec2 intersectRayRay(in vec2 as, in vec2 ad, in vec2 bs, in vec2 bd)
 {
 	float u = (as.y*bd.x + bd.y*bs.x - bs.y*bd.x - bd.y*as.x) / (ad.x*bd.y - ad.y*bd.x);
@@ -63,7 +64,7 @@ bool marchToAABB(inout vec2 p, in vec2 d, in vec2 bmin, in vec2 bmax)
 }
 
 #define Density (1)
-#define Advance (1.)
+#define Advance (3.)
 layout (local_size_x = 128*Density, local_size_y = 1) in;
 void main()
 {
@@ -103,6 +104,8 @@ void main()
 		vec2 invside = abs(1. / side);
 		side *= min(invside.x, invside.y);
 	}
+	pos += dir * (gl_GlobalInvocationID.y%3) + side *0.4* (gl_GlobalInvocationID.y%5);
+
 	u64vec4 hit_mask;
 	ivec4 offset_x;
 	ivec4 offset_y;
@@ -184,36 +187,21 @@ void main()
 				vec4 rad = vec4(notEqual(u64vec4(light_map) & hit_mask, u64vec4(0)));
 				radiance += rad;
 				vec4 diffuse = vec4(equal(u64vec4(fragment_map) & hit_mask, u64vec4(0)));
-				radiance *= diffuse;
+				radiance *= min(diffuse+0., 1.);
 			}
 
-#if 1
-			uvec4 cell = (map_index.xxxx+offset_x) + (map_index.yyyy+offset_y) * reso.x;
-//			atomicAdd(b_radiance_map[cell.x], radiance.x);
-//			atomicAdd(b_radiance_map[cell.y], radiance.y);
-//			atomicAdd(b_radiance_map[cell.z], radiance.z);
-//			atomicAdd(b_radiance_map[cell.w], radiance.w);
-//			b_radiance_map[cell.x] += radiance.x;
-//			b_radiance_map[cell.y] += radiance.y;
-//			b_radiance_map[cell.z] += radiance.z;
-//			b_radiance_map[cell.w] += radiance.w;
-			atomicAdd(b_radiance_map[cell.x], uint(radiance.x*100.));
-			atomicAdd(b_radiance_map[cell.y], uint(radiance.y*100.));
-			atomicAdd(b_radiance_map[cell.z], uint(radiance.z*100.));
-			atomicAdd(b_radiance_map[cell.w], uint(radiance.w*100.));
-//			b_radiance_map[cell.x] += uint(radiance.x*100.);
-//			b_radiance_map[cell.y] += uint(radiance.y*100.);
-//			b_radiance_map[cell.z] += uint(radiance.z*100.);
-//			b_radiance_map[cell.w] += uint(radiance.w*100.);
-
-#else
 			uvec4 cell_x = (map_index.xxxx+offset_x);
 			uvec4 cell_y = (map_index.yyyy+offset_y);
-
-			imageStore(t_color, ivec3(cell_x.x, cell_y.x, gl_GlobalInvocationID.y), radiance.xxxx);
-			imageStore(t_color, ivec3(cell_x.y, cell_y.y, gl_GlobalInvocationID.y), radiance.yyyy);
-			imageStore(t_color, ivec3(cell_x.z, cell_y.z, gl_GlobalInvocationID.y), radiance.zzzz);
-			imageStore(t_color, ivec3(cell_x.w, cell_y.w, gl_GlobalInvocationID.y), radiance.wwww);
+#if 1
+			atomicAdd(b_radiance_map[getMemoryOrder(ivec2(cell_x.x, cell_y.x))], uint(radiance.x*100.));
+			atomicAdd(b_radiance_map[getMemoryOrder(ivec2(cell_x.y, cell_y.y))], uint(radiance.y*100.));
+			atomicAdd(b_radiance_map[getMemoryOrder(ivec2(cell_x.z, cell_y.z))], uint(radiance.z*100.));
+			atomicAdd(b_radiance_map[getMemoryOrder(ivec2(cell_x.w, cell_y.w))], uint(radiance.w*100.));
+#else
+			b_radiance_map[getMemoryOrder(ivec2(cell_x.x, cell_y.x))] += uint(radiance.x*100.);
+			b_radiance_map[getMemoryOrder(ivec2(cell_x.y, cell_y.y))] += uint(radiance.y*100.);
+			b_radiance_map[getMemoryOrder(ivec2(cell_x.z, cell_y.z))] += uint(radiance.z*100.);
+			b_radiance_map[getMemoryOrder(ivec2(cell_x.w, cell_y.w))] += uint(radiance.w*100.);
 #endif
 		}
 
