@@ -17,6 +17,7 @@ void main()
 	// なんかずれる
 	vec2 coord = gl_FragCoord.xy;
 	uint index = uint(coord.x+256 + coord.y * u_gi2d_info.m_resolution.x);
+//	vec3 rgb = vec3(b_radiance_map[index]);
 	vec3 rgb = vec3(b_radiance_map[index]);
 	FragColor = vec4(rgb, 1.);
 

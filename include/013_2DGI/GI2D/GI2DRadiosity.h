@@ -22,7 +22,9 @@ struct GI2DRadiosity
 
 		vk::ImageSubresourceRange m_subresource_range;
 	};
-
+	enum {
+		Ray_Num = 64,
+	};
 	enum Shader
 	{
 		Shader_Radiosity,
@@ -55,9 +57,9 @@ struct GI2DRadiosity
 			auto& tex = m_color_tex;
 			vk::ImageCreateInfo image_info;
 			image_info.imageType = vk::ImageType::e2D;
-			image_info.format = vk::Format::eR16G16B16A16Sfloat;
+			image_info.format = vk::Format::eR16Sfloat;
 			image_info.mipLevels = 1;
-			image_info.arrayLayers = 1;
+			image_info.arrayLayers = Ray_Num;
 			image_info.samples = vk::SampleCountFlagBits::e1;
 			image_info.tiling = vk::ImageTiling::eOptimal;
 			image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eStorage;
@@ -86,13 +88,13 @@ struct GI2DRadiosity
 			tex.m_subresource_range = subresourceRange;
 
 			vk::ImageViewCreateInfo view_info;
-			view_info.viewType = vk::ImageViewType::e2D;
+			view_info.viewType = vk::ImageViewType::e2DArray;
 			view_info.components.r = vk::ComponentSwizzle::eR;
 			view_info.components.g = vk::ComponentSwizzle::eG;
 			view_info.components.b = vk::ComponentSwizzle::eB;
 			view_info.components.a = vk::ComponentSwizzle::eA;
 			view_info.flags = vk::ImageViewCreateFlags();
-			view_info.format = vk::Format::eR16G16B16A16Sfloat;
+			view_info.format = vk::Format::eR16Sfloat;
 			view_info.image = tex.m_image.get();
 			view_info.subresourceRange = subresourceRange;
 			tex.m_image_view = context->m_device->createImageViewUnique(view_info);
@@ -382,7 +384,7 @@ struct GI2DRadiosity
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Radiosity].get());
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Radiosity_Clear].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
 			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth, m_gi2d_context->RenderHeight, 1), uvec3(32, 32, 1));
@@ -400,7 +402,7 @@ struct GI2DRadiosity
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Radiosity].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
-			cmd.dispatch(1, 1, 1);
+			cmd.dispatch(1, Ray_Num, 1);
 		}
 
 		// render_target‚É‘‚­
