@@ -18,7 +18,8 @@ void main()
 {
 #if 1
 	uint index = getMemoryOrder(ivec2(gl_FragCoord.xy));
-	vec3 rgb = vec3(b_radiance_map[index] / 100.);
+	float radiance = b_radiance_map[index] / 100.;
+	vec3 rgb = vec3(radiance);
 	FragColor = vec4(rgb, 1.);
 #else
 	float radiance = 0.;

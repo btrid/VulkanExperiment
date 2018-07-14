@@ -185,24 +185,19 @@ void main()
 				light_map = l.x|l.y|l.z|l.w;
 
 				vec4 rad = vec4(notEqual(u64vec4(light_map) & hit_mask, u64vec4(0)));
-				radiance += rad;
+				radiance += rad*0.5;
 				vec4 diffuse = vec4(equal(u64vec4(fragment_map) & hit_mask, u64vec4(0)));
 				radiance *= min(diffuse+0., 1.);
 			}
 
 			uvec4 cell_x = (map_index.xxxx+offset_x);
 			uvec4 cell_y = (map_index.yyyy+offset_y);
-#if 1
-			atomicAdd(b_radiance_map[getMemoryOrder(ivec2(cell_x.x, cell_y.x))], uint(radiance.x*100.));
-			atomicAdd(b_radiance_map[getMemoryOrder(ivec2(cell_x.y, cell_y.y))], uint(radiance.y*100.));
-			atomicAdd(b_radiance_map[getMemoryOrder(ivec2(cell_x.z, cell_y.z))], uint(radiance.z*100.));
-			atomicAdd(b_radiance_map[getMemoryOrder(ivec2(cell_x.w, cell_y.w))], uint(radiance.w*100.));
-#else
-			b_radiance_map[getMemoryOrder(ivec2(cell_x.x, cell_y.x))] += uint(radiance.x*100.);
-			b_radiance_map[getMemoryOrder(ivec2(cell_x.y, cell_y.y))] += uint(radiance.y*100.);
-			b_radiance_map[getMemoryOrder(ivec2(cell_x.z, cell_y.z))] += uint(radiance.z*100.);
-			b_radiance_map[getMemoryOrder(ivec2(cell_x.w, cell_y.w))] += uint(radiance.w*100.);
-#endif
+			uvec4 u_radiance = uvec4(radiance*100.);
+
+			u_radiance.x != 0 ? atomicAdd(b_radiance_map[getMemoryOrder(ivec2(cell_x.x, cell_y.x))], u_radiance.x) : 0;
+			u_radiance.y != 0 ? atomicAdd(b_radiance_map[getMemoryOrder(ivec2(cell_x.y, cell_y.y))], u_radiance.y) : 0;
+			u_radiance.z != 0 ? atomicAdd(b_radiance_map[getMemoryOrder(ivec2(cell_x.z, cell_y.z))], u_radiance.z) : 0;
+			u_radiance.w != 0 ? atomicAdd(b_radiance_map[getMemoryOrder(ivec2(cell_x.w, cell_y.w))], u_radiance.w) : 0;
 		}
 
 	}
