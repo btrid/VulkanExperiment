@@ -10,60 +10,6 @@
 #include "GI2D.glsl"
 
 
-vec2 intersectRayRay(in vec2 as, in vec2 ad, in vec2 bs, in vec2 bd)
-{
-	float u = (as.y*bd.x + bd.y*bs.x - bs.y*bd.x - bd.y*as.x) / (ad.x*bd.y - ad.y*bd.x);
-	return as + u * ad;
-}
-
-bool marchToAABB(inout vec2 p, in vec2 d, in vec2 bmin, in vec2 bmax)
-{
-
-	if(all(lessThan(p, bmax)) 
-	&& all(greaterThan(p, bmin)))
-	{
-		// AABBの中にいる
-		return true;
-	}
-
-	float tmin = 0.;
-	float tmax = 10e6;
-	for (int i = 0; i < 2; i++)
-	{
-		if (abs(d[i]) < 10e-6)
-		{
-			// 光線はスラブに対して平行。原点がスラブの中になければ交点無し。
-			if (p[i] < bmin[i] || p[i] > bmax[i])
-			{
-				return false;
-			}
-		}
-		else
-		{
-			float ood = 1. / d[i];
-			float t1 = (bmin[i] - p[i]) * ood;
-			float t2 = (bmax[i] - p[i]) * ood;
-
-			// t1が近い平面との交差、t2が遠い平面との交差になる
-			float near = min(t1, t2);
-			float far = max(t1, t2);
-
-			// スラブの交差している感覚との交差を計算
-			tmin = max(near, tmin);
-			tmax = max(far, tmax);
-
-			if (tmin > tmax) {
-				return false;
-			}
-		}
-	}
-	float dist = tmin;
-	p += d*dist;
-	return true;
-
-}
-
-
 #define Density (1)
 #define Advance (1.)
 #define Use_Color
@@ -192,18 +138,11 @@ void main()
 				light_map = l.x|l.y|l.z|l.w;
 
 				bvec4 is_light = bvec4(notEqual(u64vec4(light_map) & hit_mask, u64vec4(0)));
-#if defined(Use_Color)
 				ivec4 li = (map_index.xxxx + offset_x) + (map_index.yyyy + offset_y) * reso.x;
 				radiance[0] += is_light[0] ? b_fragment[li.x].albedo.xyz : vec3(0.);
 				radiance[1] += is_light[1] ? b_fragment[li.y].albedo.xyz : vec3(0.);
 				radiance[2] += is_light[2] ? b_fragment[li.z].albedo.xyz : vec3(0.);
 				radiance[3] += is_light[3] ? b_fragment[li.w].albedo.xyz : vec3(0.);
-#else
-				radiance[0] += rad[0];
-				radiance[1] += rad[1];
-				radiance[2] += rad[2];
-				radiance[3] += rad[3];
-#endif
 
 				uvec4 cell_x = (map_index.xxxx+offset_x);
 				uvec4 cell_y = (map_index.yyyy+offset_y);
@@ -213,15 +152,23 @@ void main()
 				u_radiance.z = packEmissive(radiance[2]);
 				u_radiance.w = packEmissive(radiance[3]);
 
-				u_radiance.x != 0 ? atomicAdd(b_radiance_map[getMemoryOrder(ivec2(cell_x.x, cell_y.x))], u_radiance.x) : 0;
-				u_radiance.y != 0 ? atomicAdd(b_radiance_map[getMemoryOrder(ivec2(cell_x.y, cell_y.y))], u_radiance.y) : 0;
-				u_radiance.z != 0 ? atomicAdd(b_radiance_map[getMemoryOrder(ivec2(cell_x.z, cell_y.z))], u_radiance.z) : 0;
-				u_radiance.w != 0 ? atomicAdd(b_radiance_map[getMemoryOrder(ivec2(cell_x.w, cell_y.w))], u_radiance.w) : 0;
+				u_radiance.x != 0 ? atomicAdd(b_radiance[getMemoryOrder(ivec2(cell_x.x, cell_y.x))], u_radiance.x) : 0;
+				u_radiance.y != 0 ? atomicAdd(b_radiance[getMemoryOrder(ivec2(cell_x.y, cell_y.y))], u_radiance.y) : 0;
+				u_radiance.z != 0 ? atomicAdd(b_radiance[getMemoryOrder(ivec2(cell_x.z, cell_y.z))], u_radiance.z) : 0;
+				u_radiance.w != 0 ? atomicAdd(b_radiance[getMemoryOrder(ivec2(cell_x.w, cell_y.w))], u_radiance.w) : 0;
 
 				bvec4 is_diffuse = bvec4(equal(u64vec4(fragment_map) & hit_mask, u64vec4(0)));
-//				u_radiance.x != 0
-//				b_bounce_map[findex.x] |= 
-
+//				uvec4 _findex = (cell_x.xxxx>>3) + (cell_y.yyyy>>3)*reso.zzzz;
+//				uvec4 _fshift = (cell_x.xxxx>>3)%8 + ((cell_y.yyyy>>3)%8)*8;
+				
+//				u_radiance.x != 0 ? atomicOr(b_bounce_map[_findex.x], 1<<_fshift.x) : 0ul; 
+//				u_radiance.y != 0 ? atomicOr(b_bounce_map[_findex.y], 1ul<<_fshift.y) : 0; 
+//				u_radiance.z != 0 ? atomicOr(b_bounce_map[_findex.z], 1ul<<_fshift.z) : 0; 
+//				u_radiance.w != 0 ? atomicOr(b_bounce_map[_findex.w], 1ul<<_fshift.w) : 0;
+//				u_radiance.x != 0 ? b_bounce_map[_findex.x] |= 1<<_fshift.x : 0ul; 
+//				u_radiance.y != 0 ? b_bounce_map[_findex.y] |= 1<<_fshift.y : 0ul; 
+//				u_radiance.z != 0 ? b_bounce_map[_findex.z] |= 1<<_fshift.z : 0ul; 
+//				u_radiance.w != 0 ? b_bounce_map[_findex.w] |= 1<<_fshift.w : 0ul; 
 
 				radiance[0] *= float(is_diffuse[0]);
 				radiance[1] *= float(is_diffuse[1]);

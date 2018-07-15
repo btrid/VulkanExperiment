@@ -78,9 +78,7 @@ layout(std430, set=USE_GI2D, binding=3) restrict buffer FragmentChangeMapBuffer 
 layout(std430, set=USE_GI2D, binding=4) restrict buffer LightMapBuffer {
 	uint64_t b_light_map[];
 };
-//layout(std430, set=USE_GI2D, binding=5) restrict buffer LightDataBuffer {
-//	uint b_light_source[];
-//};
+
 
 layout(std430, set=USE_GI2D, binding=20) restrict buffer EmissiveCounter {
 	ivec4 b_emission_counter[];
@@ -147,7 +145,7 @@ layout (set=USE_PM, binding=11) uniform sampler2D s_color;
 
 #ifdef USE_GI2D_Radiosity
 layout(set=USE_GI2D_Radiosity, binding=0) restrict buffer RadianceMapBuffer {
-	uint b_radiance_map[];
+	uint b_radiance[];
 };
 layout(set=USE_GI2D_Radiosity, binding=1) restrict buffer BounceMapBuffer {
 	uint64_t b_bounce_map[];
@@ -172,19 +170,72 @@ int getMemoryOrder(in ivec2 xy)
 #endif
 }
 
-#define denominator (64.)
+#define denominator (16.)
 uint packEmissive(in vec3 rgb)
 {
 	ivec3 irgb = ivec3(rgb*denominator*(1.+1./denominator*0.5));
-	irgb <<= ivec3(21, 10, 0);
+	irgb <<= ivec3(20, 10, 0);
 	return irgb.x | irgb.y | irgb.z;
 }
 vec3 unpackEmissive(in uint irgb)
 {
-	vec3 rgb = vec3((uvec3(irgb) >> uvec3(21, 10, 0)) & ((uvec3(1)<<uvec3(11, 11, 10))-1));
+//	vec3 rgb = vec3((uvec3(irgb) >> uvec3(21, 10, 0)) & ((uvec3(1)<<uvec3(11, 11, 10))-1));
+	vec3 rgb = vec3((uvec3(irgb) >> uvec3(20, 10, 0)) & ((uvec3(1)<<uvec3(10, 10, 10))-1));
 	return rgb / denominator;
 }
 
+vec2 intersectRayRay(in vec2 as, in vec2 ad, in vec2 bs, in vec2 bd)
+{
+	float u = (as.y*bd.x + bd.y*bs.x - bs.y*bd.x - bd.y*as.x) / (ad.x*bd.y - ad.y*bd.x);
+	return as + u * ad;
+}
+
+bool marchToAABB(inout vec2 p, in vec2 d, in vec2 bmin, in vec2 bmax)
+{
+
+	if(all(lessThan(p, bmax)) 
+	&& all(greaterThan(p, bmin)))
+	{
+		// AABBの中にいる
+		return true;
+	}
+
+	float tmin = 0.;
+	float tmax = 10e6;
+	for (int i = 0; i < 2; i++)
+	{
+		if (abs(d[i]) < 10e-6)
+		{
+			// 光線はスラブに対して平行。原点がスラブの中になければ交点無し。
+			if (p[i] < bmin[i] || p[i] > bmax[i])
+			{
+				return false;
+			}
+		}
+		else
+		{
+			float ood = 1. / d[i];
+			float t1 = (bmin[i] - p[i]) * ood;
+			float t2 = (bmax[i] - p[i]) * ood;
+
+			// t1が近い平面との交差、t2が遠い平面との交差になる
+			float near = min(t1, t2);
+			float far = max(t1, t2);
+
+			// スラブの交差している感覚との交差を計算
+			tmin = max(near, tmin);
+			tmax = max(far, tmax);
+
+			if (tmin > tmax) {
+				return false;
+			}
+		}
+	}
+	float dist = tmin;
+	p += d*dist;
+	return true;
+
+}
 layout (set=USE_GI2D_Radiosity, binding=10, r16f) uniform image2DArray t_color;
 layout (set=USE_GI2D_Radiosity, binding=11) uniform sampler2D s_color;
 

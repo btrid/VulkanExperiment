@@ -36,4 +36,6 @@ rem %exe% %include% %option% -o ../binary\\RTRendering.comp.spv RTRenderingDebug
 
 %exe% %include% %option% -o ../binary\\Radiosity.comp.spv Radiosity_64.comp
 %exe% %include% %option% -o ../binary\\Radiosity_Clear.comp.spv Radiosity_Clear.comp
+%exe% %include% %option% -o ../binary\\Radiosity_MakeBounceMap.comp.spv Radiosity_MakeBounceMap.comp
+%exe% %include% %option% -o ../binary\\Radiosity_Bounce.comp.spv Radiosity_Bounce.comp
 %exe% %include% %option% -o ../binary\\Radiosity_Render.frag.spv Radiosity_Render.frag

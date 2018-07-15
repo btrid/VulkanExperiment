@@ -18,8 +18,8 @@ void main()
 {
 #if Block_Size == 1
 	uint index = getMemoryOrder(ivec2(gl_FragCoord.xy));
-	vec3 rgb = unpackEmissive(b_radiance_map[index]);
-	FragColor = vec4(rgb, 1.);
+	vec3 rgb = unpackEmissive(b_radiance[index]);
+	FragColor = vec4(rgb/64., 1.);
 #else
 	float radiance = 0.;
 	for(int y = 0; y < Block_Size; y++){
@@ -28,7 +28,7 @@ void main()
 		coord += + ivec2(x-(Block_Size>>1), y-(Block_Size>>1));
 		coord = clamp(coord, ivec2(0), u_gi2d_info.m_resolution);
 		uint index = getMemoryOrder(coord);
-		radiance += b_radiance_map[index];
+		radiance += b_radiance[index];
 	}}
 	FragColor = vec4(radiance.xxx/ 100. / 40, 1.);
 #endif

@@ -213,11 +213,6 @@ struct GI2DContext
 					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 					.setDescriptorCount(1)
 					.setBinding(27),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(28),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
