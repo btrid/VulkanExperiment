@@ -13,19 +13,19 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 		struct Fragment
 		{
 			ivec4 rect;
-			float e;
+			vec4 color;
 		};
 		std::vector<Fragment> rect;
-		rect.emplace_back(Fragment{ ivec4{ 200, 400, 10, 20 }, 1.f });
-		rect.emplace_back(Fragment{ ivec4{ 300, 40, 8, 10 }, 1.f });
-		rect.emplace_back(Fragment{ ivec4{ 270, 150, 4, 10 }, 1.f });
-		rect.emplace_back(Fragment{ ivec4{ 50, 300, 12, 12 }, 1.f });
+		rect.emplace_back(Fragment{ ivec4{ 200, 400, 10, 20 }, vec4{1.f,1.f,1.f,1.f} });
+		rect.emplace_back(Fragment{ ivec4{ 300, 40, 8, 10 }, vec4{ 1.f,0.f,0.f,1.f } });
+		rect.emplace_back(Fragment{ ivec4{ 270, 150, 4, 10 }, vec4{ 0.f,0.f,1.f,1.f } });
+		rect.emplace_back(Fragment{ ivec4{ 50, 300, 12, 12 }, vec4{ 0.f,1.f,0.f,1.f } });
 #if 0
 		rect.emplace_back(Fragment{ ivec4{ 200, 200, 100, 100}, 0.f });
 		rect.emplace_back(Fragment{ ivec4{ 80, 50, 500, 20 }, 0.f });
 #else
 		for (int i = 0; i < 100; i++) {
-			rect.emplace_back(Fragment{ ivec4{ std::rand() % 512, std::rand() % 512, std::rand() % 22+5, std::rand() % 22+5 }, 0.f });
+			rect.emplace_back(Fragment{ ivec4{ std::rand() % 512, std::rand() % 512, std::rand() % 22+5, std::rand() % 22+5 }, vec4{ 1.f,1.f,1.f,0.f } });
 		}
 
 #endif
@@ -38,7 +38,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 				for (auto& r : rect)
 				{
 					if (x >= r.rect.x && y >= r.rect.y && x <= r.rect.x + r.rect.z && y <= r.rect.y + r.rect.w) {
-						m.albedo = vec4(1.f, 0.f, 0.f, r.e);
+						m.albedo = r.color;
 						break;
 					}
 				}

@@ -63,8 +63,10 @@ bool marchToAABB(inout vec2 p, in vec2 d, in vec2 bmin, in vec2 bmax)
 
 }
 
+
 #define Density (1)
 #define Advance (1.)
+#define Use_Color
 layout (local_size_x = 128*Density, local_size_y = 1) in;
 void main()
 {
@@ -104,7 +106,7 @@ void main()
 		vec2 invside = abs(1. / side);
 		side *= min(invside.x, invside.y);
 	}
-	pos += dir * (gl_GlobalInvocationID.y%3) + side *0.4* (gl_GlobalInvocationID.y%5);
+//	pos += dir * (gl_GlobalInvocationID.y%3) + side *0.4* (gl_GlobalInvocationID.y%5);
 
 	u64vec4 hit_mask;
 	ivec4 offset_x;
@@ -128,7 +130,7 @@ void main()
 
 	const ivec2 map_index_origin = ivec2(greaterThanEqual(dir, vec2(0.)));
 
-	vec4 radiance = vec4(0.);
+	vec3 radiance[4] = {vec3(0.),vec3(0.),vec3(0.),vec3(0.)};
 	for(int _i = 0; _i <50000; _i++)
 	{
 		// march
@@ -139,7 +141,10 @@ void main()
 			pos += min(axis.x, axis.y)*dir;
 #else
 			pos += dir*Advance;
-			radiance *= pow(0.98, Advance);
+			radiance[0] *= pow(0.98, Advance);
+			radiance[1] *= pow(0.98, Advance);
+			radiance[2] *= pow(0.98, Advance);
+			radiance[3] *= pow(0.98, Advance);
 
 #endif
 			map_index = ivec2(pos);
@@ -185,14 +190,32 @@ void main()
 				light_map = l.x|l.y|l.z|l.w;
 
 				vec4 rad = vec4(notEqual(u64vec4(light_map) & hit_mask, u64vec4(0)));
-				radiance += rad;
+#if defined(Use_Color)
+				ivec4 li = (map_index.xxxx + offset_x) + (map_index.yyyy + offset_y) * reso.x;
+				radiance[0] += rad[0]*b_fragment[li.x].albedo.xyz;
+				radiance[1] += rad[1]*b_fragment[li.y].albedo.xyz;
+				radiance[2] += rad[2]*b_fragment[li.z].albedo.xyz;
+				radiance[3] += rad[3]*b_fragment[li.w].albedo.xyz;
+#else
+				radiance[0] += rad[0];
+				radiance[1] += rad[1];
+				radiance[2] += rad[2];
+				radiance[3] += rad[3];
+#endif
 				vec4 diffuse = vec4(equal(u64vec4(fragment_map) & hit_mask, u64vec4(0)));
-				radiance *= min(diffuse+0., 1.);
+				radiance[0] *= diffuse[0];
+				radiance[1] *= diffuse[1];
+				radiance[2] *= diffuse[2];
+				radiance[3] *= diffuse[3];
 			}
 
 			uvec4 cell_x = (map_index.xxxx+offset_x);
 			uvec4 cell_y = (map_index.yyyy+offset_y);
-			uvec4 u_radiance = uvec4(radiance*100.);
+			uvec4 u_radiance;
+			u_radiance.x = packEmissive(radiance[0]);
+			u_radiance.y = packEmissive(radiance[1]);
+			u_radiance.z = packEmissive(radiance[2]);
+			u_radiance.w = packEmissive(radiance[3]);
 
 			u_radiance.x != 0 ? atomicAdd(b_radiance_map[getMemoryOrder(ivec2(cell_x.x, cell_y.x))], u_radiance.x) : 0;
 			u_radiance.y != 0 ? atomicAdd(b_radiance_map[getMemoryOrder(ivec2(cell_x.y, cell_y.y))], u_radiance.y) : 0;

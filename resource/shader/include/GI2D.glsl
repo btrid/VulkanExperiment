@@ -78,6 +78,9 @@ layout(std430, set=USE_GI2D, binding=3) restrict buffer FragmentChangeMapBuffer 
 layout(std430, set=USE_GI2D, binding=4) restrict buffer LightMapBuffer {
 	uint64_t b_light_map[];
 };
+layout(std430, set=USE_GI2D, binding=5) restrict buffer LightMapBuffer {
+	uint b_light_source[];
+};
 
 layout(std430, set=USE_GI2D, binding=20) restrict buffer EmissiveCounter {
 	ivec4 b_emission_counter[];
@@ -166,8 +169,22 @@ int getMemoryOrder(in ivec2 xy)
 #endif
 }
 
+#define denominator (64.)
+uint packEmissive(in vec3 rgb)
+{
+	ivec3 irgb = ivec3(rgb*denominator*(1.+1./denominator*0.5));
+	irgb <<= ivec3(21, 10, 0);
+	return irgb.x | irgb.y | irgb.z;
+}
+vec3 unpackEmissive(in uint irgb)
+{
+	vec3 rgb = vec3((uvec3(irgb) >> uvec3(21, 10, 0)) & ((uvec3(1)<<uvec3(11, 11, 10))-1));
+	return rgb / denominator;
+}
+
 layout (set=USE_GI2D_Radiosity, binding=10, r16f) uniform image2DArray t_color;
 layout (set=USE_GI2D_Radiosity, binding=11) uniform sampler2D s_color;
+
 #endif // USE_PM
 
 vec2 rotate(in float angle)
