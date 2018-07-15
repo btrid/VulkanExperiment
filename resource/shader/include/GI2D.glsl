@@ -78,9 +78,9 @@ layout(std430, set=USE_GI2D, binding=3) restrict buffer FragmentChangeMapBuffer 
 layout(std430, set=USE_GI2D, binding=4) restrict buffer LightMapBuffer {
 	uint64_t b_light_map[];
 };
-layout(std430, set=USE_GI2D, binding=5) restrict buffer LightMapBuffer {
-	uint b_light_source[];
-};
+//layout(std430, set=USE_GI2D, binding=5) restrict buffer LightMapBuffer {
+//	uint b_light_source[];
+//};
 
 layout(std430, set=USE_GI2D, binding=20) restrict buffer EmissiveCounter {
 	ivec4 b_emission_counter[];

@@ -189,13 +189,13 @@ void main()
 				l <<= ls;
 				light_map = l.x|l.y|l.z|l.w;
 
-				vec4 rad = vec4(notEqual(u64vec4(light_map) & hit_mask, u64vec4(0)));
+				bvec4 is_light = bvec4(notEqual(u64vec4(light_map) & hit_mask, u64vec4(0)));
 #if defined(Use_Color)
 				ivec4 li = (map_index.xxxx + offset_x) + (map_index.yyyy + offset_y) * reso.x;
-				radiance[0] += rad[0]*b_fragment[li.x].albedo.xyz;
-				radiance[1] += rad[1]*b_fragment[li.y].albedo.xyz;
-				radiance[2] += rad[2]*b_fragment[li.z].albedo.xyz;
-				radiance[3] += rad[3]*b_fragment[li.w].albedo.xyz;
+				radiance[0] += is_light[0] ? b_fragment[li.x].albedo.xyz : vec3(0.);
+				radiance[1] += is_light[1] ? b_fragment[li.y].albedo.xyz : vec3(0.);
+				radiance[2] += is_light[2] ? b_fragment[li.z].albedo.xyz : vec3(0.);
+				radiance[3] += is_light[3] ? b_fragment[li.w].albedo.xyz : vec3(0.);
 #else
 				radiance[0] += rad[0];
 				radiance[1] += rad[1];
