@@ -98,6 +98,7 @@ void main()
 	vec2 pos = minp + floordir * (8./Density) * gl_LocalInvocationIndex;
 	pos += floordir * (8./Density) * (gl_GlobalInvocationID.z / gl_NumWorkGroups.z);
 	if(!marchToAABB(pos, dir, vec2(0.), reso.xy)){return;}
+	vec2 origin_pos = pos;
 
 	vec2 side = rotateZ(dir, 3.14*0.5);
 	{
@@ -140,6 +141,7 @@ void main()
 			vec2 axis = abs(cell_p*inv_dir);
 			pos += min(axis.x, axis.y)*dir;
 #else
+			distance(origin_pos, pos);
 			pos += dir*Advance;
 			radiance[0] *= pow(0.98, Advance);
 			radiance[1] *= pow(0.98, Advance);
@@ -202,25 +204,31 @@ void main()
 				radiance[2] += rad[2];
 				radiance[3] += rad[3];
 #endif
-				vec4 diffuse = vec4(equal(u64vec4(fragment_map) & hit_mask, u64vec4(0)));
-				radiance[0] *= diffuse[0];
-				radiance[1] *= diffuse[1];
-				radiance[2] *= diffuse[2];
-				radiance[3] *= diffuse[3];
+
+				uvec4 cell_x = (map_index.xxxx+offset_x);
+				uvec4 cell_y = (map_index.yyyy+offset_y);
+				uvec4 u_radiance;
+				u_radiance.x = packEmissive(radiance[0]);
+				u_radiance.y = packEmissive(radiance[1]);
+				u_radiance.z = packEmissive(radiance[2]);
+				u_radiance.w = packEmissive(radiance[3]);
+
+				u_radiance.x != 0 ? atomicAdd(b_radiance_map[getMemoryOrder(ivec2(cell_x.x, cell_y.x))], u_radiance.x) : 0;
+				u_radiance.y != 0 ? atomicAdd(b_radiance_map[getMemoryOrder(ivec2(cell_x.y, cell_y.y))], u_radiance.y) : 0;
+				u_radiance.z != 0 ? atomicAdd(b_radiance_map[getMemoryOrder(ivec2(cell_x.z, cell_y.z))], u_radiance.z) : 0;
+				u_radiance.w != 0 ? atomicAdd(b_radiance_map[getMemoryOrder(ivec2(cell_x.w, cell_y.w))], u_radiance.w) : 0;
+
+				bvec4 is_diffuse = bvec4(equal(u64vec4(fragment_map) & hit_mask, u64vec4(0)));
+//				u_radiance.x != 0
+//				b_bounce_map[findex.x] |= 
+
+
+				radiance[0] *= float(is_diffuse[0]);
+				radiance[1] *= float(is_diffuse[1]);
+				radiance[2] *= float(is_diffuse[2]);
+				radiance[3] *= float(is_diffuse[3]);
 			}
 
-			uvec4 cell_x = (map_index.xxxx+offset_x);
-			uvec4 cell_y = (map_index.yyyy+offset_y);
-			uvec4 u_radiance;
-			u_radiance.x = packEmissive(radiance[0]);
-			u_radiance.y = packEmissive(radiance[1]);
-			u_radiance.z = packEmissive(radiance[2]);
-			u_radiance.w = packEmissive(radiance[3]);
-
-			u_radiance.x != 0 ? atomicAdd(b_radiance_map[getMemoryOrder(ivec2(cell_x.x, cell_y.x))], u_radiance.x) : 0;
-			u_radiance.y != 0 ? atomicAdd(b_radiance_map[getMemoryOrder(ivec2(cell_x.y, cell_y.y))], u_radiance.y) : 0;
-			u_radiance.z != 0 ? atomicAdd(b_radiance_map[getMemoryOrder(ivec2(cell_x.z, cell_y.z))], u_radiance.z) : 0;
-			u_radiance.w != 0 ? atomicAdd(b_radiance_map[getMemoryOrder(ivec2(cell_x.w, cell_y.w))], u_radiance.w) : 0;
 		}
 
 	}

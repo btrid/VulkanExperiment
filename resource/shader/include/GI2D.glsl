@@ -78,7 +78,7 @@ layout(std430, set=USE_GI2D, binding=3) restrict buffer FragmentChangeMapBuffer 
 layout(std430, set=USE_GI2D, binding=4) restrict buffer LightMapBuffer {
 	uint64_t b_light_map[];
 };
-//layout(std430, set=USE_GI2D, binding=5) restrict buffer LightMapBuffer {
+//layout(std430, set=USE_GI2D, binding=5) restrict buffer LightDataBuffer {
 //	uint b_light_source[];
 //};
 
@@ -148,6 +148,9 @@ layout (set=USE_PM, binding=11) uniform sampler2D s_color;
 #ifdef USE_GI2D_Radiosity
 layout(set=USE_GI2D_Radiosity, binding=0) restrict buffer RadianceMapBuffer {
 	uint b_radiance_map[];
+};
+layout(set=USE_GI2D_Radiosity, binding=1) restrict buffer BounceMapBuffer {
+	uint64_t b_bounce_map[];
 };
 
 int getMemoryOrder(in ivec2 xy)

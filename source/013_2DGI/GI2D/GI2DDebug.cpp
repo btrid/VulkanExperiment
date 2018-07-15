@@ -16,7 +16,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 			vec4 color;
 		};
 		std::vector<Fragment> rect;
-		rect.emplace_back(Fragment{ ivec4{ 200, 400, 10, 20 }, vec4{1.f,1.f,1.f,1.f} });
+		rect.emplace_back(Fragment{ ivec4{ 200, 400, 10, 20 }, vec4{1.f,0.f,0.f,1.f} });
 		rect.emplace_back(Fragment{ ivec4{ 300, 40, 8, 10 }, vec4{ 1.f,0.f,0.f,1.f } });
 		rect.emplace_back(Fragment{ ivec4{ 270, 150, 4, 10 }, vec4{ 0.f,0.f,1.f,1.f } });
 		rect.emplace_back(Fragment{ ivec4{ 50, 300, 12, 12 }, vec4{ 0.f,1.f,0.f,1.f } });

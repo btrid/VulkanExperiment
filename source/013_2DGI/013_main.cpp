@@ -91,7 +91,7 @@ int main()
 
 #if defined(use_pm)
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context);
-	GI2DRenderer gi2d_renderer(context, app.m_window->getRenderTarget(), gi2d_context);
+//	GI2DRenderer gi2d_renderer(context, app.m_window->getRenderTarget(), gi2d_context);
 	GI2DMakeHierarchy gi_make_hierarchy(context, gi2d_context);
 	GI2DClear gi_clear(context, gi2d_context);
 	GI2DDebug gi_debug_make_fragment_and_light(context, gi2d_context);
