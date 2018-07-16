@@ -19,7 +19,7 @@ void main()
 #if Block_Size == 1
 	uint radiance_size = u_gi2d_info.m_resolution.x*u_gi2d_info.m_resolution.y;
 	uint index = getMemoryOrder(ivec2(gl_FragCoord.xy));
-	vec3 rgb = unpackEmissive(b_radiance[index]) + unpackEmissive(b_radiance[index+radiance_size]);
+	vec3 rgb = unpackEmissive(b_radiance[index]) + unpackEmissive(b_radiance[index+radiance_size])*0.04;
 	FragColor = vec4(rgb, 1.);
 #else
 	float radiance = 0.;

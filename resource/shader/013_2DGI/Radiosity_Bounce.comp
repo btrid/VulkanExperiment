@@ -165,10 +165,10 @@ void main()
 				uint power1 = is_light[1] ? b_radiance[getMemoryOrder(ivec2(cell_x.y, cell_y.y))] : 0;
 				uint power2 = is_light[2] ? b_radiance[getMemoryOrder(ivec2(cell_x.z, cell_y.z))] : 0;
 				uint power3 = is_light[3] ? b_radiance[getMemoryOrder(ivec2(cell_x.w, cell_y.w))] : 0;
-				radiance[0] += is_light[0] ? LightPower*unpackEmissive(power0)*b_fragment[li.x].albedo.xyz/6.28 : vec3(0.);
-				radiance[1] += is_light[1] ? LightPower*unpackEmissive(power1)*b_fragment[li.y].albedo.xyz/6.28 : vec3(0.);
-				radiance[2] += is_light[2] ? LightPower*unpackEmissive(power2)*b_fragment[li.z].albedo.xyz/6.28 : vec3(0.);
-				radiance[3] += is_light[3] ? LightPower*unpackEmissive(power3)*b_fragment[li.w].albedo.xyz/6.28 : vec3(0.);
+				radiance[0] += is_light[0] ? LightPower*unpackEmissive(power0)*b_fragment[li.x].albedo.xyz : vec3(0.);
+				radiance[1] += is_light[1] ? LightPower*unpackEmissive(power1)*b_fragment[li.y].albedo.xyz : vec3(0.);
+				radiance[2] += is_light[2] ? LightPower*unpackEmissive(power2)*b_fragment[li.z].albedo.xyz : vec3(0.);
+				radiance[3] += is_light[3] ? LightPower*unpackEmissive(power3)*b_fragment[li.w].albedo.xyz : vec3(0.);
 
 			}
 
