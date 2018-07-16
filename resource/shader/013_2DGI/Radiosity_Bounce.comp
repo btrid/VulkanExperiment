@@ -18,7 +18,7 @@ void main()
 	uint store_offset = reso.x*reso.y;
 
 	float angle = 6.28 / gl_NumWorkGroups.y;
-	angle += angle*0.5;
+	angle += angle*0.5; // 同じにならないようにずらす
 	angle += angle * (gl_GlobalInvocationID.z / gl_NumWorkGroups.z);
 	vec2 dir = rotate(angle * gl_GlobalInvocationID.y);
 	dir.x = abs(dir.x) < 0.0001 ? 0.0001 : dir.x;
@@ -53,43 +53,31 @@ void main()
 		vec2 invside = abs(1. / side);
 		side *= min(invside.x, invside.y);
 	}
-//	pos += dir * (gl_GlobalInvocationID.y%3) + side *0.4* (gl_GlobalInvocationID.y%5);
 
 	u64vec4 hit_mask;
 	ivec4 offset_x;
 	ivec4 offset_y;
 	{
 		uint offset = gl_GlobalInvocationID.y % 4;
-		uint offset_x_ = 0;
-		uint offset_y_ = 0;
 		ivec2 origin;
 		origin.x = side.x > 0. ? 0 : 7;
 		origin.y = side.y > 0. ? 0 : 7;
 		vec4 _offset = vec4(0., 2., 4., 6.) / Density + vec4(0.5);
-		offset_x = ivec4(side.xxxx * (vec4(offset_x_)+_offset) + origin.xxxx);
-		offset_y = ivec4(side.yyyy * (vec4(offset_y_)+_offset) + origin.yyyy);
+		offset_x = ivec4(side.xxxx * (_offset) + origin.xxxx);
+		offset_y = ivec4(side.yyyy * (_offset) + origin.yyyy);
 		hit_mask = u64vec4(1ul) << (offset_x + offset_y*8);
 	}
 
 	ivec2 map_index = ivec2(pos);
-
-	const ivec2 map_index_origin = ivec2(greaterThanEqual(dir, vec2(0.)));
 
 	vec3 radiance[4] = {vec3(0.),vec3(0.),vec3(0.),vec3(0.)};
 	for(int _i = 0; _i <50000; _i++)
 	{
 		// march
 		{
-#if 0
-			vec2 cell_p = abs(map_index_origin - fract(pos)) + 0.5;
-			vec2 axis = abs(cell_p*inv_dir);
-			pos += min(axis.x, axis.y)*dir;
-#else
-			distance(origin_pos, pos);
 			pos += dir*Advance;
-
-#endif
 			map_index = ivec2(pos);
+
 		}
 
 		// 範囲外?
@@ -103,68 +91,62 @@ void main()
 
 		// hit確認
 		{
-			ivec4 fragment_index = ivec4(map_index/8, map_index%8);
-			ivec2 shift = fragment_index.zw;
 
+			ivec2 shift = map_index%8;
+			uint64_t x_line_mask = 0xfful & ((1ul << (shift.x)) - 1ul);
+			uint64_t x_mask = ~(x_line_mask | (x_line_mask << 8) | (x_line_mask << 16) | (x_line_mask << 24) | (x_line_mask << 32) | (x_line_mask << 40) | (x_line_mask << 48) | (x_line_mask << 56));
+			uint64_t y_mask = ~(0xfffffffffffffffful & ((1ul << ((shift.y) * 8)) - 1));
+			u64vec4 mask = u64vec4(x_mask & y_mask, x_mask & ~y_mask, ~x_mask & y_mask, ~x_mask & ~y_mask);
+			ivec4 rs = shift.yyyy*ivec4(8,0,8,0) + shift.xxxx*ivec4(1,1,0,0);
+			ivec4 ls = (8-shift.yyyy)*ivec4(0,8,0,8) + (8-shift.xxxx)*ivec4(0,0,1,1);
+
+			ivec2 _fi = map_index/8;
 			ivec4 offset_ = ivec4(0,0,1,1);
-			ivec4 findex = fragment_index.xxxx + offset_.xxzz + (fragment_index.yyyy + offset_.ywyw)*(reso.zzzz);
+			ivec4 findex = (_fi.xxxx+offset_.xxzz) + (_fi.yyyy+offset_.ywyw)*(reso.zzzz);
+			u64vec4 b = u64vec4(b_fragment_map[findex.x], b_fragment_map[findex.y], b_fragment_map[findex.z], b_fragment_map[findex.w]);
+			b &= mask;
+			b >>= rs;
+			b <<= ls;
+			uint64_t fragment_map = b.x|b.y|b.z|b.w;
 
-			uint64_t fragment_map;
-			uint64_t light_map;
-			{
-				uint64_t x_line_mask = 0xfful & ((1ul << (shift.x)) - 1ul);
-				uint64_t x_mask = ~(x_line_mask | (x_line_mask << 8) | (x_line_mask << 16) | (x_line_mask << 24) | (x_line_mask << 32) | (x_line_mask << 40) | (x_line_mask << 48) | (x_line_mask << 56));
-				uint64_t y_mask = ~(0xfffffffffffffffful & ((1ul << ((shift.y) * 8)) - 1));
-				u64vec4 mask = u64vec4(x_mask & y_mask, x_mask & ~y_mask, ~x_mask & y_mask, ~x_mask & ~y_mask);
-				ivec4 rs = shift.yyyy*ivec4(8,0,8,0) + shift.xxxx*ivec4(1,1,0,0);
-				ivec4 ls = (8-shift.yyyy)*ivec4(0,8,0,8) + (8-shift.xxxx)*ivec4(0,0,1,1);
+			u64vec4 l = u64vec4(b_bounce_map[findex.x], b_bounce_map[findex.y], b_bounce_map[findex.z], b_bounce_map[findex.w]);
+			l &= mask;
+			l >>= rs;
+			l <<= ls;
+			uint64_t light_map = l.x|l.y|l.z|l.w;
 
-				u64vec4 b = u64vec4(b_fragment_map[findex.x], b_fragment_map[findex.y], b_fragment_map[findex.z], b_fragment_map[findex.w]);
-				b &= mask;
-				b >>= rs;
-				b <<= ls;
-				fragment_map = b.x|b.y|b.z|b.w;
+			// 
+			uvec4 cell_x = (map_index.xxxx+offset_x);
+			uvec4 cell_y = (map_index.yyyy+offset_y);
+			uvec4 u_radiance;
+			u_radiance.x = packEmissive(radiance[0]);
+			u_radiance.y = packEmissive(radiance[1]);
+			u_radiance.z = packEmissive(radiance[2]);
+			u_radiance.w = packEmissive(radiance[3]);
 
-				u64vec4 l = u64vec4(b_bounce_map[findex.x], b_bounce_map[findex.y], b_bounce_map[findex.z], b_bounce_map[findex.w]);
-				l &= mask;
-				l >>= rs;
-				l <<= ls;
-				light_map = l.x|l.y|l.z|l.w;
+			u_radiance.x != 0 ? atomicAdd(b_radiance[store_offset+getMemoryOrder(ivec2(cell_x.x, cell_y.x))], u_radiance.x) : 0;
+			u_radiance.y != 0 ? atomicAdd(b_radiance[store_offset+getMemoryOrder(ivec2(cell_x.y, cell_y.y))], u_radiance.y) : 0;
+			u_radiance.z != 0 ? atomicAdd(b_radiance[store_offset+getMemoryOrder(ivec2(cell_x.z, cell_y.z))], u_radiance.z) : 0;
+			u_radiance.w != 0 ? atomicAdd(b_radiance[store_offset+getMemoryOrder(ivec2(cell_x.w, cell_y.w))], u_radiance.w) : 0;
 
-				bvec4 is_light = bvec4(notEqual(u64vec4(light_map) & hit_mask, u64vec4(0)));
-				uvec4 cell_x = (map_index.xxxx+offset_x);
-				uvec4 cell_y = (map_index.yyyy+offset_y);
+			// 拡散
+			bvec4 is_diffuse = bvec4(notEqual(u64vec4(fragment_map) & hit_mask, u64vec4(0)));
+			radiance[0] *= float(!is_diffuse[0]);
+			radiance[1] *= float(!is_diffuse[1]);
+			radiance[2] *= float(!is_diffuse[2]);
+			radiance[3] *= float(!is_diffuse[3]);
 
-				uvec4 u_radiance;
-				u_radiance.x = packEmissive(radiance[0]);
-				u_radiance.y = packEmissive(radiance[1]);
-				u_radiance.z = packEmissive(radiance[2]);
-				u_radiance.w = packEmissive(radiance[3]);
-
-				u_radiance.x != 0 ? atomicAdd(b_radiance[store_offset+getMemoryOrder(ivec2(cell_x.x, cell_y.x))], u_radiance.x) : 0;
-				u_radiance.y != 0 ? atomicAdd(b_radiance[store_offset+getMemoryOrder(ivec2(cell_x.y, cell_y.y))], u_radiance.y) : 0;
-				u_radiance.z != 0 ? atomicAdd(b_radiance[store_offset+getMemoryOrder(ivec2(cell_x.z, cell_y.z))], u_radiance.z) : 0;
-				u_radiance.w != 0 ? atomicAdd(b_radiance[store_offset+getMemoryOrder(ivec2(cell_x.w, cell_y.w))], u_radiance.w) : 0;
-
-				// 拡散
-				bvec4 is_diffuse = bvec4(notEqual(u64vec4(fragment_map) & hit_mask, u64vec4(0)));
-				radiance[0] *= float(!is_diffuse[0]);
-				radiance[1] *= float(!is_diffuse[1]);
-				radiance[2] *= float(!is_diffuse[2]);
-				radiance[3] *= float(!is_diffuse[3]);
-
-				// バウンスのパワー
-				ivec4 li = (map_index.xxxx + offset_x) + (map_index.yyyy + offset_y) * reso.x;
-				uint power0 = is_light[0] ? b_radiance[getMemoryOrder(ivec2(cell_x.x, cell_y.x))] : 0;
-				uint power1 = is_light[1] ? b_radiance[getMemoryOrder(ivec2(cell_x.y, cell_y.y))] : 0;
-				uint power2 = is_light[2] ? b_radiance[getMemoryOrder(ivec2(cell_x.z, cell_y.z))] : 0;
-				uint power3 = is_light[3] ? b_radiance[getMemoryOrder(ivec2(cell_x.w, cell_y.w))] : 0;
-				radiance[0] += is_light[0] ? LightPower*unpackEmissive(power0)*b_fragment[li.x].albedo.xyz : vec3(0.);
-				radiance[1] += is_light[1] ? LightPower*unpackEmissive(power1)*b_fragment[li.y].albedo.xyz : vec3(0.);
-				radiance[2] += is_light[2] ? LightPower*unpackEmissive(power2)*b_fragment[li.z].albedo.xyz : vec3(0.);
-				radiance[3] += is_light[3] ? LightPower*unpackEmissive(power3)*b_fragment[li.w].albedo.xyz : vec3(0.);
-
-			}
+			// バウンスのパワー
+			bvec4 is_light = bvec4(notEqual(u64vec4(light_map) & hit_mask, u64vec4(0)));
+			ivec4 li = (map_index.xxxx + offset_x) + (map_index.yyyy + offset_y) * reso.x;
+			uint power0 = is_light[0] ? b_radiance[getMemoryOrder(ivec2(cell_x.x, cell_y.x))] : 0;
+			uint power1 = is_light[1] ? b_radiance[getMemoryOrder(ivec2(cell_x.y, cell_y.y))] : 0;
+			uint power2 = is_light[2] ? b_radiance[getMemoryOrder(ivec2(cell_x.z, cell_y.z))] : 0;
+			uint power3 = is_light[3] ? b_radiance[getMemoryOrder(ivec2(cell_x.w, cell_y.w))] : 0;
+			radiance[0] += is_light[0] ? LightPower*unpackEmissive(power0)*b_fragment[li.x].albedo.xyz : vec3(0.);
+			radiance[1] += is_light[1] ? LightPower*unpackEmissive(power1)*b_fragment[li.y].albedo.xyz : vec3(0.);
+			radiance[2] += is_light[2] ? LightPower*unpackEmissive(power2)*b_fragment[li.z].albedo.xyz : vec3(0.);
+			radiance[3] += is_light[3] ? LightPower*unpackEmissive(power3)*b_fragment[li.w].albedo.xyz : vec3(0.);
 
 		}
 
