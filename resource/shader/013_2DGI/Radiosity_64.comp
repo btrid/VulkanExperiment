@@ -12,7 +12,6 @@
 
 #define Density (1)
 #define Advance (1.)
-#define Use_Color
 layout (local_size_x = 128*Density, local_size_y = 1) in;
 void main()
 {
@@ -60,8 +59,6 @@ void main()
 	ivec4 offset_y;
 	{
 		uint offset = gl_GlobalInvocationID.y % 4;
-//		uint offset_x_ = offset % 2;
-//		uint offset_y_ = offset / 2;
 		uint offset_x_ = 0;
 		uint offset_y_ = 0;
 		ivec2 origin;
@@ -89,10 +86,6 @@ void main()
 #else
 			distance(origin_pos, pos);
 			pos += dir*Advance;
-			radiance[0] *= pow(Attenuation, Advance);
-			radiance[1] *= pow(Attenuation, Advance);
-			radiance[2] *= pow(Attenuation, Advance);
-			radiance[3] *= pow(Attenuation, Advance);
 
 #endif
 			map_index = ivec2(pos);

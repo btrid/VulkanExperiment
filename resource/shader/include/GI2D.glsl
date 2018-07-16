@@ -70,9 +70,10 @@ int getMemoryOrder(in ivec2 xy)
 #endif
 }
 
-#define LightPower (1.)
-#define Attenuation (0.98)
-#define denominator (32.)
+#define LightPower (0.015)
+#define denominator (512.)
+float rate[] = {1., 0.3};
+
 uint packEmissive(in vec3 rgb)
 {
 	ivec3 irgb = ivec3(rgb*denominator*(1.+1./denominator*0.5));
