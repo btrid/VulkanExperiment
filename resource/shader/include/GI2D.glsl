@@ -5,6 +5,7 @@
 #extension GL_ARB_shader_draw_parameters : require
 #extension GL_NV_shader_atomic_int64 : require
 //#extension GL_NV_gpu_program5 : require
+
 struct GI2DInfo
 {
 	mat4 m_camera_PV;
@@ -40,8 +41,6 @@ layout(std430, set=USE_GI2D, binding=3) restrict buffer LightMapBuffer {
 
 #define getFragmentMapHierarchyOffset(_i) (u_gi2d_info.m_fragment_map_hierarchy_offset[(_i)/4][(_i)%4])
 
-//int _map_offset[8] = {0, 16384, 20480, 21504, 21760, 21824, 21840, 21844};
-//#define getFragmentMapHierarchyOffset(_i) (_map_offset[_i])
 #endif
 
 #ifdef USE_GI2D_Radiosity

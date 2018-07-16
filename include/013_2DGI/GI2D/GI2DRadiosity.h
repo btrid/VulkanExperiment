@@ -213,7 +213,7 @@ struct GI2DRadiosity
 				"Radiosity_Clear.comp.spv",
 				"Radiosity_MakeBounceMap.comp.spv",
 				"Radiosity_Bounce.comp.spv",
-				"RTRendering.vert.spv",
+				"Radiosity_Render.vert.spv",
 				"Radiosity_Render.frag.spv",
 			};
 			static_assert(array_length(name) == Shader_Num, "not equal shader num");

@@ -79,9 +79,9 @@ int main()
 
 
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context);
-	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
 	GI2DClear gi2d_clear(context, gi2d_context);
-	GI2DDebug gi2d_debug_make_fragment_and_light(context, gi2d_context);
+	GI2DDebug gi2d_debug_make_fragment(context, gi2d_context);
+	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
 	GI2DRadiosity gi2d_Radiosity(context, gi2d_context, app.m_window->getRenderTarget());
 
 //	auto anime_cmd = animater.createCmd(player_model);
@@ -142,7 +142,7 @@ int main()
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				gi2d_clear.execute(cmd);
-				gi2d_debug_make_fragment_and_light.execute(cmd);
+				gi2d_debug_make_fragment.execute(cmd);
 				gi2d_make_hierarchy.execute(cmd);
 				gi2d_Radiosity.execute(cmd);
 				cmd.end();
