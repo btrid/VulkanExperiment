@@ -32,11 +32,6 @@
 #include <013_2DGI/GI2D/GI2DAppModel.h>
 #include <013_2DGI/GI2D/GI2DRadiosity.h>
 
-#include <013_2DGI/SV2D/SV2DRenderer.h>
-#include <013_2DGI/SV2D/SV2DClear.h>
-#include <013_2DGI/SV2D/SV2DLight.h>
-#include <013_2DGI/SV2D/SV2DDebug.h>
-#include <013_2DGI/SV2D/SV2DAppModel.h>
 #include <applib/AppModel/AppModel.h>
 #include <applib/AppModel/AppModelPipeline.h>
 
@@ -49,9 +44,7 @@
 
 int main()
 {
-#define use_pm
 	using namespace gi2d;
-	using namespace sv2d;
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = glm::vec3(0.f, 0.f, 1.f);
@@ -85,19 +78,11 @@ int main()
 	PresentPipeline present_pipeline(context, app.m_window->getRenderTarget(), app.m_window->getSwapchainPtr());
 
 
-#if defined(use_pm)
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context);
-//	GI2DRenderer gi2d_renderer(context, app.m_window->getRenderTarget(), gi2d_context);
-	GI2DMakeHierarchy gi_make_hierarchy(context, gi2d_context);
-	GI2DClear gi_clear(context, gi2d_context);
-	GI2DDebug gi_debug_make_fragment_and_light(context, gi2d_context);
+	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
+	GI2DClear gi2d_clear(context, gi2d_context);
+	GI2DDebug gi2d_debug_make_fragment_and_light(context, gi2d_context);
 	GI2DRadiosity gi2d_Radiosity(context, gi2d_context, app.m_window->getRenderTarget());
-#else
-	std::shared_ptr<SV2DContext> gi2d_context = std::make_shared<SV2DContext>(context);
-	SV2DRenderer gi_renderer(context, app.m_window->getRenderTarget(), gi2d_context);
-	SV2DClear gi_clear(context, gi2d_context);
-	SV2DDebug gi_debug_make_fragment_and_light(context, gi2d_context);
-#endif
 
 	//	SV2DAppModel pm_appmodel(context, sv2d_context);
 
@@ -162,8 +147,8 @@ int main()
 			{
 				{
 					auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
-					gi_clear.execute(cmd);
-					gi_debug_make_fragment_and_light.execute(cmd);
+					gi2d_clear.execute(cmd);
+					gi2d_debug_make_fragment_and_light.execute(cmd);
 					cmd.end();
 					cmds[cmd_gi_clear] = cmd;
 				}
@@ -174,9 +159,7 @@ int main()
 				}
 				{
 					auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
-#if defined(use_pm)
-					gi_make_hierarchy.execute(cmd);
-#endif
+					gi2d_make_hierarchy.execute(cmd);
 					gi2d_Radiosity.execute(cmd);
 					cmd.end();
 					cmds[cmd_gi_render] = cmd;

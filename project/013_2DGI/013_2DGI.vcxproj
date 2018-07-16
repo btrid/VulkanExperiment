@@ -78,9 +78,6 @@
     <ClCompile Include="..\..\source\013_2DGI\013_main.cpp" />
     <ClCompile Include="..\..\source\013_2DGI\GI2D\GI2DDebug.cpp" />
     <ClCompile Include="..\..\source\013_2DGI\GI2D\GI2DMakeHierarchy.cpp" />
-    <ClCompile Include="..\..\source\013_2DGI\SV2DDebug.cpp" />
-    <ClCompile Include="..\..\source\013_2DGI\SV2DLight.cpp" />
-    <ClCompile Include="..\..\source\013_2DGI\SV2DRenderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -103,12 +100,6 @@
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DDebug.h" />
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DRadiosity.h" />
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DMakeHierarchy.h" />
-    <ClInclude Include="..\..\include\013_2DGI\SV2D\SV2D.h" />
-    <ClInclude Include="..\..\include\013_2DGI\SV2D\SV2DAppModel.h" />
-    <ClInclude Include="..\..\include\013_2DGI\SV2D\SV2DClear.h" />
-    <ClInclude Include="..\..\include\013_2DGI\SV2D\SV2DDebug.h" />
-    <ClInclude Include="..\..\include\013_2DGI\SV2D\SV2DLight.h" />
-    <ClInclude Include="..\..\include\013_2DGI\SV2D\SV2DRenderer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -2,15 +2,6 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="..\..\source\013_2DGI\013_main.cpp" />
-    <ClCompile Include="..\..\source\013_2DGI\SV2DLight.cpp">
-      <Filter>SV2D</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\source\013_2DGI\SV2DDebug.cpp">
-      <Filter>SV2D</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\source\013_2DGI\SV2DRenderer.cpp">
-      <Filter>SV2D</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\source\013_2DGI\GI2D\GI2DDebug.cpp">
       <Filter>GI2D</Filter>
     </ClCompile>
@@ -22,32 +13,11 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <Filter Include="SV2D">
-      <UniqueIdentifier>{005cd3e5-94d6-460a-98b1-0366d03ebaac}</UniqueIdentifier>
-    </Filter>
     <Filter Include="GI2D">
       <UniqueIdentifier>{d0b63663-3b79-40f6-9511-cdd3819825ee}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\include\013_2DGI\SV2D\SV2D.h">
-      <Filter>SV2D</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\013_2DGI\SV2D\SV2DClear.h">
-      <Filter>SV2D</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\013_2DGI\SV2D\SV2DDebug.h">
-      <Filter>SV2D</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\013_2DGI\SV2D\SV2DLight.h">
-      <Filter>SV2D</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\013_2DGI\SV2D\SV2DRenderer.h">
-      <Filter>SV2D</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\013_2DGI\SV2D\SV2DAppModel.h">
-      <Filter>SV2D</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DAppModel.h">
       <Filter>GI2D</Filter>
     </ClInclude>
