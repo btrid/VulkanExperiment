@@ -17,6 +17,7 @@ layout (local_size_x = 128*Density, local_size_y = 1) in;
 void main()
 {
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
+	uint store_offset = reso.x*reso.y;
 
 	float angle = 6.28 / gl_NumWorkGroups.y;
 	angle += angle*0.5;
@@ -61,8 +62,6 @@ void main()
 	ivec4 offset_y;
 	{
 		uint offset = gl_GlobalInvocationID.y % 4;
-//		uint offset_x_ = offset % 2;
-//		uint offset_y_ = offset / 2;
 		uint offset_x_ = 0;
 		uint offset_y_ = 0;
 		ivec2 origin;
@@ -90,10 +89,10 @@ void main()
 #else
 			distance(origin_pos, pos);
 			pos += dir*Advance;
-			radiance[0] *= pow(0.98, Advance);
-			radiance[1] *= pow(0.98, Advance);
-			radiance[2] *= pow(0.98, Advance);
-			radiance[3] *= pow(0.98, Advance);
+			radiance[0] *= pow(Attenuation, Advance);
+			radiance[1] *= pow(Attenuation, Advance);
+			radiance[2] *= pow(Attenuation, Advance);
+			radiance[3] *= pow(Attenuation, Advance);
 
 #endif
 			map_index = ivec2(pos);
@@ -148,24 +147,28 @@ void main()
 				u_radiance.z = packEmissive(radiance[2]);
 				u_radiance.w = packEmissive(radiance[3]);
 
-				uint power0 = u_radiance.x != 0 ? atomicAdd(b_radiance[getMemoryOrder(ivec2(cell_x.x, cell_y.x))], u_radiance.x) : 0;
-				uint power1 = u_radiance.y != 0 ? atomicAdd(b_radiance[getMemoryOrder(ivec2(cell_x.y, cell_y.y))], u_radiance.y) : 0;
-				uint power2 = u_radiance.z != 0 ? atomicAdd(b_radiance[getMemoryOrder(ivec2(cell_x.z, cell_y.z))], u_radiance.z) : 0;
-				uint power3 = u_radiance.w != 0 ? atomicAdd(b_radiance[getMemoryOrder(ivec2(cell_x.w, cell_y.w))], u_radiance.w) : 0;
+				u_radiance.x != 0 ? atomicAdd(b_radiance[store_offset+getMemoryOrder(ivec2(cell_x.x, cell_y.x))], u_radiance.x) : 0;
+				u_radiance.y != 0 ? atomicAdd(b_radiance[store_offset+getMemoryOrder(ivec2(cell_x.y, cell_y.y))], u_radiance.y) : 0;
+				u_radiance.z != 0 ? atomicAdd(b_radiance[store_offset+getMemoryOrder(ivec2(cell_x.z, cell_y.z))], u_radiance.z) : 0;
+				u_radiance.w != 0 ? atomicAdd(b_radiance[store_offset+getMemoryOrder(ivec2(cell_x.w, cell_y.w))], u_radiance.w) : 0;
 
 				// 拡散
-				bvec4 is_diffuse = bvec4(equal(u64vec4(fragment_map) & hit_mask, u64vec4(0)));
-				radiance[0] *= float(is_diffuse[0]);
-				radiance[1] *= float(is_diffuse[1]);
-				radiance[2] *= float(is_diffuse[2]);
-				radiance[3] *= float(is_diffuse[3]);
+				bvec4 is_diffuse = bvec4(notEqual(u64vec4(fragment_map) & hit_mask, u64vec4(0)));
+				radiance[0] *= float(!is_diffuse[0]);
+				radiance[1] *= float(!is_diffuse[1]);
+				radiance[2] *= float(!is_diffuse[2]);
+				radiance[3] *= float(!is_diffuse[3]);
 
 				// バウンスのパワー
 				ivec4 li = (map_index.xxxx + offset_x) + (map_index.yyyy + offset_y) * reso.x;
-				radiance[0] += is_light[0] ? b_fragment[li.x].albedo.xyz : vec3(0.);
-				radiance[1] += is_light[1] ? b_fragment[li.y].albedo.xyz : vec3(0.);
-				radiance[2] += is_light[2] ? b_fragment[li.z].albedo.xyz : vec3(0.);
-				radiance[3] += is_light[3] ? b_fragment[li.w].albedo.xyz : vec3(0.);
+				uint power0 = is_light[0] ? b_radiance[getMemoryOrder(ivec2(cell_x.x, cell_y.x))] : 0;
+				uint power1 = is_light[1] ? b_radiance[getMemoryOrder(ivec2(cell_x.y, cell_y.y))] : 0;
+				uint power2 = is_light[2] ? b_radiance[getMemoryOrder(ivec2(cell_x.z, cell_y.z))] : 0;
+				uint power3 = is_light[3] ? b_radiance[getMemoryOrder(ivec2(cell_x.w, cell_y.w))] : 0;
+				radiance[0] += is_light[0] ? LightPower*unpackEmissive(power0)*b_fragment[li.x].albedo.xyz/6.28 : vec3(0.);
+				radiance[1] += is_light[1] ? LightPower*unpackEmissive(power1)*b_fragment[li.y].albedo.xyz/6.28 : vec3(0.);
+				radiance[2] += is_light[2] ? LightPower*unpackEmissive(power2)*b_fragment[li.z].albedo.xyz/6.28 : vec3(0.);
+				radiance[3] += is_light[3] ? LightPower*unpackEmissive(power3)*b_fragment[li.w].albedo.xyz/6.28 : vec3(0.);
 
 			}
 

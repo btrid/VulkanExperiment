@@ -491,16 +491,16 @@ int getMortonIndex(ivec2 xy)
 	return mi * 64 + xy.x + xy.y * 8;
 }
 
-#define denominator (32.f)
+#define denominator (128.f)
 uint packEmissive(vec3 rgb)
 {
 	ivec3 irgb = ivec3(rgb*denominator*(1.f+1.f/denominator*0.5f));
-	irgb <<= ivec3(21, 10, 0);
+	irgb <<= ivec3(20, 10, 0);
 	return irgb.x | irgb.y | irgb.z;
 }
 vec3 unpackEmissive(uint irgb)
 {
-	vec3 rgb = vec3((ivec3(irgb) >> ivec3(21, 10, 0)) & ((1<<ivec3(11, 11, 10))-1));
+	vec3 rgb = vec3((ivec3(irgb) >> ivec3(20, 10, 0)) & ((1<<ivec3(10, 10, 10))-1));
 	return rgb / denominator;
 }
 
@@ -522,6 +522,14 @@ int main()
 		float f11_max = (1 << 11) / denominator;
 		float f10_max = (1 << 10) / denominator;
 		printf("f10=%8.5f, f11=%8.5f\n", f10_max, f11_max);
+
+		{
+			auto a = packEmissive(vec3(0.1f, 0.01f, 0.001f));
+			auto a3 = unpackEmissive(a);
+
+			printf("test=[%8.5f,%8.5f,%8.5f]\n", a3.x, a3.y, a3.z);
+
+		}
 	}
 	{
 		int loop = 64;

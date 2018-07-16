@@ -22,9 +22,7 @@ void main()
 	uint shift = sub.x + sub.y*8;
 	bool is_fragment = (b_fragment_map[store] & (1ul<<shift)) != 0ul;
 
-	uint radiance = b_radiance[getMemoryOrder(ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.x))];
-
-	bool is_bounce = (radiance != 0) && is_fragment;
+	bool is_bounce = is_fragment && (b_radiance[getMemoryOrder(ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y))] != 0);
 
 	// fragment map
 	{

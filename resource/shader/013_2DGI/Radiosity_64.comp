@@ -89,10 +89,10 @@ void main()
 #else
 			distance(origin_pos, pos);
 			pos += dir*Advance;
-			radiance[0] *= pow(0.98, Advance);
-			radiance[1] *= pow(0.98, Advance);
-			radiance[2] *= pow(0.98, Advance);
-			radiance[3] *= pow(0.98, Advance);
+			radiance[0] *= pow(Attenuation, Advance);
+			radiance[1] *= pow(Attenuation, Advance);
+			radiance[2] *= pow(Attenuation, Advance);
+			radiance[3] *= pow(Attenuation, Advance);
 
 #endif
 			map_index = ivec2(pos);
@@ -139,10 +139,10 @@ void main()
 
 				bvec4 is_light = bvec4(notEqual(u64vec4(light_map) & hit_mask, u64vec4(0)));
 				ivec4 li = (map_index.xxxx + offset_x) + (map_index.yyyy + offset_y) * reso.x;
-				radiance[0] += is_light[0] ? b_fragment[li.x].albedo.xyz : vec3(0.);
-				radiance[1] += is_light[1] ? b_fragment[li.y].albedo.xyz : vec3(0.);
-				radiance[2] += is_light[2] ? b_fragment[li.z].albedo.xyz : vec3(0.);
-				radiance[3] += is_light[3] ? b_fragment[li.w].albedo.xyz : vec3(0.);
+				radiance[0] += is_light[0] ? b_fragment[li.x].albedo.xyz*LightPower : vec3(0.);
+				radiance[1] += is_light[1] ? b_fragment[li.y].albedo.xyz*LightPower : vec3(0.);
+				radiance[2] += is_light[2] ? b_fragment[li.z].albedo.xyz*LightPower : vec3(0.);
+				radiance[3] += is_light[3] ? b_fragment[li.w].albedo.xyz*LightPower : vec3(0.);
 
 				uvec4 cell_x = (map_index.xxxx+offset_x);
 				uvec4 cell_y = (map_index.yyyy+offset_y);
@@ -157,23 +157,11 @@ void main()
 				u_radiance.z != 0 ? atomicAdd(b_radiance[getMemoryOrder(ivec2(cell_x.z, cell_y.z))], u_radiance.z) : 0;
 				u_radiance.w != 0 ? atomicAdd(b_radiance[getMemoryOrder(ivec2(cell_x.w, cell_y.w))], u_radiance.w) : 0;
 
-				bvec4 is_diffuse = bvec4(equal(u64vec4(fragment_map) & hit_mask, u64vec4(0)));
-//				uvec4 _findex = (cell_x.xxxx>>3) + (cell_y.yyyy>>3)*reso.zzzz;
-//				uvec4 _fshift = (cell_x.xxxx>>3)%8 + ((cell_y.yyyy>>3)%8)*8;
-				
-//				u_radiance.x != 0 ? atomicOr(b_bounce_map[_findex.x], 1<<_fshift.x) : 0ul; 
-//				u_radiance.y != 0 ? atomicOr(b_bounce_map[_findex.y], 1ul<<_fshift.y) : 0; 
-//				u_radiance.z != 0 ? atomicOr(b_bounce_map[_findex.z], 1ul<<_fshift.z) : 0; 
-//				u_radiance.w != 0 ? atomicOr(b_bounce_map[_findex.w], 1ul<<_fshift.w) : 0;
-//				u_radiance.x != 0 ? b_bounce_map[_findex.x] |= 1<<_fshift.x : 0ul; 
-//				u_radiance.y != 0 ? b_bounce_map[_findex.y] |= 1<<_fshift.y : 0ul; 
-//				u_radiance.z != 0 ? b_bounce_map[_findex.z] |= 1<<_fshift.z : 0ul; 
-//				u_radiance.w != 0 ? b_bounce_map[_findex.w] |= 1<<_fshift.w : 0ul; 
-
-				radiance[0] *= float(is_diffuse[0]);
-				radiance[1] *= float(is_diffuse[1]);
-				radiance[2] *= float(is_diffuse[2]);
-				radiance[3] *= float(is_diffuse[3]);
+				bvec4 is_diffuse = bvec4(notEqual(u64vec4(fragment_map) & hit_mask, u64vec4(0)));
+				radiance[0] *= float(!is_diffuse[0]);
+				radiance[1] *= float(!is_diffuse[1]);
+				radiance[2] *= float(!is_diffuse[2]);
+				radiance[3] *= float(!is_diffuse[3]);
 			}
 
 		}
