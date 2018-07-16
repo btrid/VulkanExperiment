@@ -84,8 +84,6 @@ int main()
 	GI2DDebug gi2d_debug_make_fragment_and_light(context, gi2d_context);
 	GI2DRadiosity gi2d_Radiosity(context, gi2d_context, app.m_window->getRenderTarget());
 
-	//	SV2DAppModel pm_appmodel(context, sv2d_context);
-
 //	auto anime_cmd = animater.createCmd(player_model);
 //	auto pm_make_cmd = pm_appmodel.createCmd(player_model);
 
@@ -100,10 +98,7 @@ int main()
 			{
 				cmd_model_update,
 				cmd_render_clear,
-				cmd_gi_clear,
-				cmd_gi_make_fragment,
-				cmd_gi_RT,
-				cmd_gi_render,
+				cmd_gi2d,
 				cmd_render_present,
 				cmd_num
 			};
@@ -145,25 +140,13 @@ int main()
 			}
 			// pm
 			{
-				{
-					auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
-					gi2d_clear.execute(cmd);
-					gi2d_debug_make_fragment_and_light.execute(cmd);
-					cmd.end();
-					cmds[cmd_gi_clear] = cmd;
-				}
-				{
-//					std::vector<vk::CommandBuffer> cs(1);
-	//				cs[0] = pm_make_cmd.get();
-		//			cmds[cmd_pm_make_fragment] = pm_appmodel.dispatchCmd(cs);
-				}
-				{
-					auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
-					gi2d_make_hierarchy.execute(cmd);
-					gi2d_Radiosity.execute(cmd);
-					cmd.end();
-					cmds[cmd_gi_render] = cmd;
-				}
+				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
+				gi2d_clear.execute(cmd);
+				gi2d_debug_make_fragment_and_light.execute(cmd);
+				gi2d_make_hierarchy.execute(cmd);
+				gi2d_Radiosity.execute(cmd);
+				cmd.end();
+				cmds[cmd_gi2d] = cmd;
 			}
 			app.submit(std::move(cmds));
 		}
