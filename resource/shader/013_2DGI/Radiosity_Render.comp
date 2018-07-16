@@ -9,26 +9,29 @@
 #define USE_GI2D_Radiosity 1
 #include "GI2D.glsl"
 
-
-shared float s_radiance[(32+2)*(32+2)];
 layout (local_size_x = 32, local_size_y = 32) in;
 void main()
 {
-//	uvec2 coord = gl_GlobalInvocationID.xy;
-//	uint index = uint(coord.x + coord.y * u_gi2d_info.m_resolution.x);
-//	s_radiance[gl_LocalInvocationIndex] = b_radiance_map[index];
-//	barrier();
-//	memoryBarrierShared();
-	float radiance = 0.;
-	for(int y = 0; y < 5; y++){
-	for(int x = 0; x < 5; x++){
-		ivec2 xy = ivec2(x-2, y-2);
-		ivec2 coord = ivec2(gl_GlobalInvocationID.xy) + xy;
-		coord = clamp(coord, ivec2(0), u_gi2d_info.m_resolution);
-		uint index = uint(coord.x + coord.y * u_gi2d_info.m_resolution.x);
-		radiance += b_radiance_map[index];
-	}}
-
-
-
+	uint radiance_size = u_gi2d_info.m_resolution.x*u_gi2d_info.m_resolution.y;
+	vec3 radiance = vec3(0.);
+	for(int i = 0; i<2; i++) 
+	{
+		vec3 radiance_ = vec3(0.);
+		int count = 0;
+		for(int y = 0; y < Block_Size; y++){
+		for(int x = 0; x < Block_Size; x++){
+			ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+			coord += + ivec2(x-(Block_Size>>1), y-(Block_Size>>1));
+			coord = clamp(coord, ivec2(0), u_gi2d_info.m_resolution);
+			uint index = getMemoryOrder(coord) + radiance_size*i;
+			uint rad = b_radiance[index];
+			if(rad != 0)
+			{
+				count++;
+				radiance_ += unpackEmissive(rad);
+			}
+		}}
+		radiance += count==0 ? radiance_ : (radiance_ / count) * rate[i];
+	}
+	FragColor = vec4(radiance, 1.);
 }

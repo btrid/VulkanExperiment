@@ -13,11 +13,6 @@ layout(location = 0) out vec4 FragColor;
 void main()
 {
 	uint radiance_size = u_gi2d_info.m_resolution.x*u_gi2d_info.m_resolution.y;
-#if Block_Size == 1
-	uint index = getMemoryOrder(ivec2(gl_FragCoord.xy));
-	vec3 rgb = unpackEmissive(b_radiance[index]) + unpackEmissive(b_radiance[index+radiance_size])*0.04;
-	FragColor = vec4(rgb, 1.);
-#else
 	vec3 radiance = vec3(0.);
 	for(int i = 0; i<2; i++) 
 	{
@@ -38,6 +33,35 @@ void main()
 		}}
 		radiance += count==0 ? radiance_ : (radiance_ / count) * rate[i];
 	}
-	FragColor = vec4(radiance, 1.);
-#endif
+
+	// tonemapテスト
+	{
+#define max_luminamce (32.)
+#define avg_luminamce (0.04)
+		const vec3 RGB2Y   = vec3( +0.29900, +0.58700, +0.11400);
+		const vec3 RGB2Cb  = vec3( -0.16874, -0.33126, +0.50000);
+		const vec3 RGB2Cr  = vec3( +0.50000, -0.41869, -0.08131);
+		const vec3 YCbCr2R = vec3( +1.00000, +0.00000, +1.40200);
+		const vec3 YCbCr2G = vec3( +1.00000, -0.34414, -0.71414);
+		const vec3 YCbCr2B = vec3( +1.00000, +1.77200, +0.00000);
+
+		// YCbCr系に変換
+		vec3 YCbCr;
+		YCbCr.y = dot(RGB2Cb, radiance);
+		YCbCr.z = dot(RGB2Cr, radiance);
+
+		// 色の強さは補正
+		float coeff = 0.18 * exp( -avg_luminamce ) * max_luminamce;
+		float lum = coeff * dot(RGB2Y, radiance);
+		YCbCr.x = lum * (1.+lum/(max_luminamce*max_luminamce)) / (1.+lum);
+
+		// RGB系にして出力
+		vec4 color;
+		color.r = dot( YCbCr2R,  YCbCr );
+		color.g = dot( YCbCr2G,  YCbCr );
+		color.b = dot( YCbCr2B,  YCbCr );
+		color.a = 1.;
+		FragColor = color;
+ 	}
 }
+
