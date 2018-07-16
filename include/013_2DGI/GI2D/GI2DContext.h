@@ -110,38 +110,7 @@ struct GI2DContext
 			desc.element_num += size / (128 * 128);
 			b_fragment_map = context->m_storage_memory.allocateMemory(desc);
 
-			b_fragment_change_map = context->m_storage_memory.allocateMemory<uint64_t>({ 256 * 256, {} });
 			b_light_map = context->m_storage_memory.allocateMemory<uint64_t>({ (uint32_t)RenderHeight * RenderWidth / 64,{} });
-		}
-
-		{
-			btr::BufferMemoryDescriptorEx<ivec4> desc;
-			desc.element_num = BounceNum;
-			b_emission_counter = context->m_storage_memory.allocateMemory(desc);
-		}
-		{
-			btr::BufferMemoryDescriptorEx<GI2DLightData> desc;
-			desc.element_num = Light_Num;
-			b_emission_buffer = context->m_storage_memory.allocateMemory(desc);
-		}
-		{
-			btr::BufferMemoryDescriptorEx<int32_t> desc;
-			desc.element_num = 1;
-			b_emission_tile_linklist_counter = context->m_storage_memory.allocateMemory(desc);
-		}
-		{
-			btr::BufferMemoryDescriptorEx<int32_t> desc;
-			desc.element_num = RenderHeight * RenderWidth;
-			b_emission_tile_linkhead = context->m_storage_memory.allocateMemory(desc);
-		}
-		{
-			btr::BufferMemoryDescriptorEx<LinkList> desc;
-			desc.element_num = m_pm2d_info.m_emission_tile_linklist_max;
-			b_emission_tile_linklist = context->m_storage_memory.allocateMemory(desc);
-		}
-		{
-			b_emission_reached = context->m_storage_memory.allocateMemory<uint64_t>({ (uint32_t)FragmentBufferSize/64 * 4 * Light_Num,{} });
-			b_emission_occlusion = context->m_storage_memory.allocateMemory<uint64_t>({ (uint32_t)FragmentBufferSize/64 ,{} });
 		}
 
 		{
@@ -168,51 +137,6 @@ struct GI2DContext
 					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 					.setDescriptorCount(1)
 					.setBinding(3),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(4),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(20),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(21),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(22),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(23),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(24),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(25),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(26),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(27),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -236,17 +160,7 @@ struct GI2DContext
 				vk::DescriptorBufferInfo storages[] = {
 					b_fragment_buffer.getInfo(),
 					b_fragment_map.getInfo(),
-					b_fragment_change_map.getInfo(),
 					b_light_map.getInfo(),
-				};
-				vk::DescriptorBufferInfo emission_storages[] = {
-					b_emission_counter.getInfo(),
-					b_emission_buffer.getInfo(),
-					b_emission_tile_linklist_counter.getInfo(),
-					b_emission_tile_linkhead.getInfo(),
-					b_emission_tile_linklist.getInfo(),
-					b_emission_reached.getInfo(),
-					b_emission_occlusion.getInfo(),
 				};
 
 				vk::WriteDescriptorSet write[] = {
@@ -262,12 +176,6 @@ struct GI2DContext
 					.setPBufferInfo(storages)
 					.setDstBinding(1)
 					.setDstSet(m_descriptor_set.get()),
-					vk::WriteDescriptorSet()
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(array_length(emission_storages))
-					.setPBufferInfo(emission_storages)
-					.setDstBinding(20)
-					.setDstSet(m_descriptor_set.get()),
 				};
 				context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
 			}
@@ -279,17 +187,8 @@ struct GI2DContext
 	btr::BufferMemoryEx<Info> u_fragment_info;
 	btr::BufferMemoryEx<Fragment> b_fragment_buffer;
 	btr::BufferMemoryEx<uint64_t> b_fragment_map;
-	btr::BufferMemoryEx<uint64_t> b_fragment_change_map;
 	btr::BufferMemoryEx<uint64_t> b_light_map;
 
-	btr::BufferMemoryEx<ivec4> b_emission_counter;
-	btr::BufferMemoryEx<GI2DLightData> b_emission_buffer;
-
-	btr::BufferMemoryEx<int32_t> b_emission_tile_linklist_counter;
-	btr::BufferMemoryEx<int32_t> b_emission_tile_linkhead;
-	btr::BufferMemoryEx<LinkList> b_emission_tile_linklist;
-	btr::BufferMemoryEx<uint64_t> b_emission_reached;
-	btr::BufferMemoryEx<uint64_t> b_emission_occlusion;
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
 

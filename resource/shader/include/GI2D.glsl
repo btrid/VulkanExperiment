@@ -22,45 +22,6 @@ struct Fragment
 	vec4 albedo;
 };
 
-struct Emission 
-//struct PM2DLightData
-{
-	vec2 pos;
-	float dir; // atan
-	float angle;
-	vec4 emission;
-	int level;
-	int _p1;
-	int _p2;
-	int _p3;
-//	int type;
-};
-
-struct GI2DLightData
-{
-	vec2 pos;
-	float dir; // atan
-	float angle;
-	vec4 emission;
-	int level;
-	int _p1;
-	int _p2;
-	int _p3;
-};
-
-struct LinkList
-{
-	int next;
-	int target;
-};
-
-struct SDFWork
-{
-	uint map_index;
-	uint hierarchy;
-	uint fragment_idx;
-	uint _p;
-};
 
 #ifdef USE_GI2D
 layout(std140, set=USE_GI2D, binding=0) uniform PMInfoUniform {
@@ -72,76 +33,16 @@ layout(std430, set=USE_GI2D, binding=1) restrict buffer FragmentBuffer {
 layout(std430, set=USE_GI2D, binding=2) restrict buffer FragmentMapBuffer {
 	uint64_t b_fragment_map[];
 };
-layout(std430, set=USE_GI2D, binding=3) restrict buffer FragmentChangeMapBuffer {
-	uint64_t b_fragment_change_map[];
-};
-layout(std430, set=USE_GI2D, binding=4) restrict buffer LightMapBuffer {
+layout(std430, set=USE_GI2D, binding=3) restrict buffer LightMapBuffer {
 	uint64_t b_light_map[];
 };
 
-
-layout(std430, set=USE_GI2D, binding=20) restrict buffer EmissiveCounter {
-	ivec4 b_emission_counter[];
-};
-layout(std430, set=USE_GI2D, binding=21) restrict buffer EmissiveBuffer {
-	Emission b_emission_buffer[];
-};
-layout(std430, set=USE_GI2D, binding=22) restrict buffer EmissiveTileLinkListCounter {
-	int b_emission_tile_counter;
-};
-layout(std430, set=USE_GI2D, binding=23) restrict buffer EmissiveTileLinkHeadBuffer {
-	int b_emission_tile_linkhead[];
-};
-layout(std430, set=USE_GI2D, binding=24) restrict buffer EmissiveTileLinkListBuffer {
-	LinkList b_emission_tile_linklist[];
-};
-layout(std430, set=USE_GI2D, binding=25) restrict buffer EmmisiveReachedBuffer {
-	uint64_t b_emission_reached[];
-};
-layout(std430, set=USE_GI2D, binding=26) restrict buffer EmmisiveOcclusionBuffer {
-	uint64_t b_emission_occlusion[];
-};
-layout(std430, set=USE_GI2D, binding=27) restrict buffer LightWorkBuffer {
-	uint64_t b_light_work[];
-};
 
 #define getFragmentMapHierarchyOffset(_i) (u_gi2d_info.m_fragment_map_hierarchy_offset[(_i)/4][(_i)%4])
 
 //int _map_offset[8] = {0, 16384, 20480, 21504, 21760, 21824, 21840, 21844};
 //#define getFragmentMapHierarchyOffset(_i) (_map_offset[_i])
 #endif
-
-#ifdef USE_GI2D_RENDER
-layout (set=USE_GI2D_RENDER, binding=0, rgba16f) uniform image2D t_color[4];
-layout (set=USE_GI2D_RENDER, binding=1) uniform sampler2D s_color[4];
-#endif //USE_GI2D_RENDER_
-
-#ifdef USE_GI2D_LIGHT
-layout(std430, set=USE_GI2D_LIGHT, binding=0) restrict buffer LightCounter {
-	uvec4 b_light_count;
-};
-layout(std430, set=USE_GI2D_LIGHT, binding=1) restrict buffer LightDataBuffer {
-	Emission b_light_data[];
-};
-#endif
-#ifdef USE_RT
-layout(set=USE_RT, binding=0) restrict buffer RTBuffer {
-	uint64_t b_rt_map[];
-};
-layout (set=USE_RT, binding=10, rgba16f) uniform image2D t_color;
-layout (set=USE_RT, binding=11) uniform sampler2D s_color;
-
-// todo
-#define RT_Map_Size uvec2(32, 32)
-#endif // USE_RT
-
-#ifdef USE_PM
-layout(set=USE_PM, binding=0) restrict buffer PMReachedMapBuffer {
-	uint64_t b_reached_map[];
-};
-layout (set=USE_PM, binding=10, rgba16f) uniform image2D t_color;
-layout (set=USE_PM, binding=11) uniform sampler2D s_color;
-#endif // USE_PM
 
 #ifdef USE_GI2D_Radiosity
 layout(set=USE_GI2D_Radiosity, binding=0) restrict buffer RadianceMapBuffer {

@@ -77,9 +77,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\source\013_2DGI\013_main.cpp" />
     <ClCompile Include="..\..\source\013_2DGI\GI2D\GI2DDebug.cpp" />
-    <ClCompile Include="..\..\source\013_2DGI\GI2D\GI2DLight.cpp" />
-    <ClCompile Include="..\..\source\013_2DGI\GI2D\GI2DRenderer.cpp" />
-    <ClCompile Include="..\..\source\013_2DGI\GI2D\GI2DSDF.cpp" />
+    <ClCompile Include="..\..\source\013_2DGI\GI2D\GI2DMakeHierarchy.cpp" />
     <ClCompile Include="..\..\source\013_2DGI\SV2DDebug.cpp" />
     <ClCompile Include="..\..\source\013_2DGI\SV2DLight.cpp" />
     <ClCompile Include="..\..\source\013_2DGI\SV2DRenderer.cpp" />
@@ -103,12 +101,8 @@
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DAppModel.h" />
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DClear.h" />
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DDebug.h" />
-    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DLight.h" />
-    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DPM.h" />
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DRadiosity.h" />
-    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DRenderer.h" />
-    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DRT.h" />
-    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DSDF.h" />
+    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DMakeHierarchy.h" />
     <ClInclude Include="..\..\include\013_2DGI\SV2D\SV2D.h" />
     <ClInclude Include="..\..\include\013_2DGI\SV2D\SV2DAppModel.h" />
     <ClInclude Include="..\..\include\013_2DGI\SV2D\SV2DClear.h" />
