@@ -11,7 +11,6 @@
 
 
 #define Density (1)
-#define Advance (1.)
 layout (local_size_x = 128*Density, local_size_y = 1) in;
 void main()
 {

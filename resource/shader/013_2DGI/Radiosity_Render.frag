@@ -9,8 +9,6 @@
 #define USE_GI2D_Radiosity 1
 #include "GI2D.glsl"
 
-#define Block_Size (9)
-
 layout(location = 0) out vec4 FragColor;
 void main()
 {
