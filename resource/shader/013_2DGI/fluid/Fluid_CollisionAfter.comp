@@ -1,0 +1,18 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Shape.glsl"
+
+#define USE_Fluid2D 0
+#define USE_GI2D 1
+#include "Fluid2D.glsl"
+#include "GI2D.glsl"
+
+layout (local_size_x = 1024) in;
+
+void main() 
+{
+	int p_id = int(gl_GlobalInvocationID.x);
+	b_vel[p_id] = b_acc[p_id];
+}

@@ -1,0 +1,46 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Shape.glsl"
+
+#define USE_Fluid2D 0
+#define USE_GI2D 1
+#include "Fluid2D.glsl"
+#include "GI2D.glsl"
+
+layout (local_size_x = 1024) in;
+
+
+void main() 
+{
+	int p_id = int(gl_GlobalInvocationID.x);
+//	if(imageLoad(tType, index).x != TYPE_FLUID){ return; }
+
+	const vec2 p_pos = b_pos[p_id];
+	float p_minimum = b_pressure[p_id].x;
+
+	ivec2 index = ivec2(p_pos);
+	ivec3 neighbor = ivec3(ivec2(greaterThan(fract(p_pos), vec2(0.5))) * 2 - 1, 0);
+	ivec4 access_list = (index.xxxx + neighbor.zzxx) + (index.yyyy+neighbor.zyzy)*u_gi2d_info.m_resolution.x;
+	for(int i = 0; i < 4; i++)
+	{
+		for(int target_id = b_grid_head[access_list[i]]; target_id != -1; target_id = b_grid_node[target_id])
+		{
+			if(p_id == target_id)
+			{
+				// 自分とは判定しない
+				continue; 
+			}
+			const vec2 t_pos = b_pos[target_id];
+
+			float dist = distance(p_pos, t_pos);
+			if(dist <= 1.) 
+			{
+				float value = b_pressure[target_id];
+				p_minimum = min(p_minimum, value);
+			}
+		}
+	}
+	b_minimum_pressure[p_id] = p_minimum;
+}

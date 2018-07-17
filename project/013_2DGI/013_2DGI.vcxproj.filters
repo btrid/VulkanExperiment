@@ -36,5 +36,8 @@
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DMakeHierarchy.h">
       <Filter>GI2D</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DFluid.h">
+      <Filter>GI2D</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

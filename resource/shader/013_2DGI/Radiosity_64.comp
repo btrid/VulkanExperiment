@@ -119,14 +119,14 @@ void main()
 			radiance[2] += is_light[2] ? b_fragment[li.z].albedo.xyz*LightPower : vec3(0.);
 			radiance[3] += is_light[3] ? b_fragment[li.w].albedo.xyz*LightPower : vec3(0.);
 
-			uvec4 cell_x = (map_index.xxxx+offset_x);
-			uvec4 cell_y = (map_index.yyyy+offset_y);
 			uvec4 u_radiance;
 			u_radiance.x = packEmissive(radiance[0]);
 			u_radiance.y = packEmissive(radiance[1]);
 			u_radiance.z = packEmissive(radiance[2]);
 			u_radiance.w = packEmissive(radiance[3]);
 
+			uvec4 cell_x = (map_index.xxxx+offset_x);
+			uvec4 cell_y = (map_index.yyyy+offset_y);
 			u_radiance.x != 0 ? atomicAdd(b_radiance[getMemoryOrder(ivec2(cell_x.x, cell_y.x))], u_radiance.x) : 0;
 			u_radiance.y != 0 ? atomicAdd(b_radiance[getMemoryOrder(ivec2(cell_x.y, cell_y.y))], u_radiance.y) : 0;
 			u_radiance.z != 0 ? atomicAdd(b_radiance[getMemoryOrder(ivec2(cell_x.z, cell_y.z))], u_radiance.z) : 0;

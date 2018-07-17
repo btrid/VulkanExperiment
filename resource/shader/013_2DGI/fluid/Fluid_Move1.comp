@@ -1,0 +1,30 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Shape.glsl"
+
+#define USE_Fluid2D 0
+#define USE_GI2D 1
+#include "Fluid2D.glsl"
+#include "GI2D.glsl"
+
+layout (local_size_x = 1024) in;
+
+void main() 
+{
+
+	int p_id = int(gl_GlobalInvocationID.x);
+	{ 
+		vec2 acc = b_acc[p_id];
+		b_acc[p_id] = vec2(0.);
+		vec2 vel = b_vel[p_id] += acc * DT;
+		vec2 pos = b_pos[p_id] += vel * DT;
+		
+		ivec2 map_index = ivec2(pos);
+
+		int next = atomicExchange(b_grid_head[map_index.x + map_index.y*u_gi2d_info.m_resolution.x], p_id);
+		b_grid_node[p_id] = next;
+	}
+}
+
