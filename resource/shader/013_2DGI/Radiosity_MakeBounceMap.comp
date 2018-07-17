@@ -20,11 +20,11 @@ void main()
 
 	uvec2 sub = gl_GlobalInvocationID.xy%8; 
 	uint shift = sub.x + sub.y*8;
-	bool is_fragment = (b_fragment_map[store] & (1ul<<shift)) != 0ul;
+	bool is_diffuse = (b_diffuse_map[store] & (1ul<<shift)) != 0ul;
 
-	bool is_bounce = is_fragment && (b_radiance[getMemoryOrder(ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y))] != 0);
+	bool is_bounce = is_diffuse && (b_radiance[getMemoryOrder(ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y))] != 0);
 
-	// fragment map
+	// diffuse map
 	{
 		uvec2 local = gl_LocalInvocationID.xy / 8;
 		uint index = local.x+local.y*4;

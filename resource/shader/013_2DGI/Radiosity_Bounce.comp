@@ -103,17 +103,17 @@ void main()
 			ivec2 _fi = map_index/8;
 			ivec4 offset_ = ivec4(0,0,1,1);
 			ivec4 findex = (_fi.xxxx+offset_.xxzz) + (_fi.yyyy+offset_.ywyw)*(reso.zzzz);
-			u64vec4 b = u64vec4(b_fragment_map[findex.x], b_fragment_map[findex.y], b_fragment_map[findex.z], b_fragment_map[findex.w]);
+			u64vec4 b = u64vec4(b_diffuse_map[findex.x], b_diffuse_map[findex.y], b_diffuse_map[findex.z], b_diffuse_map[findex.w]);
 			b &= mask;
 			b >>= rs;
 			b <<= ls;
-			uint64_t fragment_map = b.x|b.y|b.z|b.w;
+			uint64_t diffuse_map = b.x|b.y|b.z|b.w;
 
 			u64vec4 l = u64vec4(b_bounce_map[findex.x], b_bounce_map[findex.y], b_bounce_map[findex.z], b_bounce_map[findex.w]);
 			l &= mask;
 			l >>= rs;
 			l <<= ls;
-			uint64_t light_map = l.x|l.y|l.z|l.w;
+			uint64_t emissive_map = l.x|l.y|l.z|l.w;
 
 			// 
 			uvec4 cell_x = (map_index.xxxx+offset_x);
@@ -130,14 +130,14 @@ void main()
 			u_radiance.w != 0 ? atomicAdd(b_radiance[store_offset+getMemoryOrder(ivec2(cell_x.w, cell_y.w))], u_radiance.w) : 0;
 
 			// 拡散
-			bvec4 is_diffuse = bvec4(notEqual(u64vec4(fragment_map) & hit_mask, u64vec4(0)));
+			bvec4 is_diffuse = bvec4(notEqual(u64vec4(diffuse_map) & hit_mask, u64vec4(0)));
 			radiance[0] *= float(!is_diffuse[0]);
 			radiance[1] *= float(!is_diffuse[1]);
 			radiance[2] *= float(!is_diffuse[2]);
 			radiance[3] *= float(!is_diffuse[3]);
 
 			// バウンスのパワー
-			bvec4 is_light = bvec4(notEqual(u64vec4(light_map) & hit_mask, u64vec4(0)));
+			bvec4 is_light = bvec4(notEqual(u64vec4(emissive_map) & hit_mask, u64vec4(0)));
 			ivec4 li = (map_index.xxxx + offset_x) + (map_index.yyyy + offset_y) * reso.x;
 			uint power0 = is_light[0] ? b_radiance[getMemoryOrder(ivec2(cell_x.x, cell_y.x))] : 0;
 			uint power1 = is_light[1] ? b_radiance[getMemoryOrder(ivec2(cell_x.y, cell_y.y))] : 0;

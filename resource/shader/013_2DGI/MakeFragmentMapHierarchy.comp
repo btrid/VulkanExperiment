@@ -48,13 +48,13 @@ void main()
 			uvec2 findex_1d = findex.xz + findex.yw*uvec2(reso.x/(8<<prev_level), 8);
 			if(findex_1d.x < getFragmentMapHierarchyOffset(level))
 			{
-				uint64_t fragment_map = b_fragment_map[findex_1d.x + foffset];
+				uint64_t diffuse_map = b_diffuse_map[findex_1d.x + foffset];
 
 				uint64_t bit = 1ul<<findex_1d.y;
-				uint64_t is_have = (fragment_map & bit);
-				is_have |= (fragment_map & (bit<<1));
-				is_have |= (fragment_map & (bit<<8));
-				is_have |= (fragment_map & (bit<<9));
+				uint64_t is_have = (diffuse_map & bit);
+				is_have |= (diffuse_map & (bit<<1));
+				is_have |= (diffuse_map & (bit<<8));
+				is_have |= (diffuse_map & (bit<<9));
 				if(is_have != 0)
 				{
 					uint bit_offset = localsub.x + localsub.y*8;
@@ -75,7 +75,7 @@ void main()
 			uint store = global.x + global.y*(reso.x/(8<<level));
 
 			int offset = getFragmentMapHierarchyOffset(level);
-			b_fragment_map[store+offset] = bit;
+			b_diffuse_map[store+offset] = bit;
 
 		}
 	}

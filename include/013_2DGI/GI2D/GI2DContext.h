@@ -108,9 +108,9 @@ struct GI2DContext
 			desc.element_num += size / (32 * 32);
 			desc.element_num += size / (64 * 64);
 			desc.element_num += size / (128 * 128);
-			b_fragment_map = context->m_storage_memory.allocateMemory(desc);
+			b_diffuse_map = context->m_storage_memory.allocateMemory(desc);
 
-			b_light_map = context->m_storage_memory.allocateMemory<uint64_t>({ (uint32_t)RenderHeight * RenderWidth / 64,{} });
+			b_emissive_map = context->m_storage_memory.allocateMemory<uint64_t>({ (uint32_t)RenderHeight * RenderWidth / 64,{} });
 		}
 
 		{
@@ -159,8 +159,8 @@ struct GI2DContext
 				};
 				vk::DescriptorBufferInfo storages[] = {
 					b_fragment_buffer.getInfo(),
-					b_fragment_map.getInfo(),
-					b_light_map.getInfo(),
+					b_diffuse_map.getInfo(),
+					b_emissive_map.getInfo(),
 				};
 
 				vk::WriteDescriptorSet write[] = {
@@ -186,8 +186,8 @@ struct GI2DContext
 
 	btr::BufferMemoryEx<Info> u_fragment_info;
 	btr::BufferMemoryEx<Fragment> b_fragment_buffer;
-	btr::BufferMemoryEx<uint64_t> b_fragment_map;
-	btr::BufferMemoryEx<uint64_t> b_light_map;
+	btr::BufferMemoryEx<uint64_t> b_diffuse_map;
+	btr::BufferMemoryEx<uint64_t> b_emissive_map;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;

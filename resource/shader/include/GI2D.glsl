@@ -31,11 +31,11 @@ layout(std140, set=USE_GI2D, binding=0) uniform PMInfoUniform {
 layout(std430, set=USE_GI2D, binding=1) restrict buffer FragmentBuffer {
 	Fragment b_fragment[];
 };
-layout(std430, set=USE_GI2D, binding=2) restrict buffer FragmentMapBuffer {
-	uint64_t b_fragment_map[];
+layout(std430, set=USE_GI2D, binding=2) restrict buffer DiffuseMapBuffer {
+	uint64_t b_diffuse_map[];
 };
-layout(std430, set=USE_GI2D, binding=3) restrict buffer LightMapBuffer {
-	uint64_t b_light_map[];
+layout(std430, set=USE_GI2D, binding=3) restrict buffer EmissiveMapBuffer {
+	uint64_t b_emissive_map[];
 };
 
 
@@ -50,6 +50,8 @@ layout(set=USE_GI2D_Radiosity, binding=0) restrict buffer RadianceMapBuffer {
 layout(set=USE_GI2D_Radiosity, binding=1) restrict buffer BounceMapBuffer {
 	uint64_t b_bounce_map[];
 };
+//layout (set=USE_GI2D_Radiosity, binding=10, r16f) uniform image2DArray t_color;
+//layout (set=USE_GI2D_Radiosity, binding=11) uniform sampler2D s_color;
 
 int getMemoryOrder(in ivec2 xy)
 {
@@ -141,8 +143,6 @@ bool marchToAABB(inout vec2 p, in vec2 d, in vec2 bmin, in vec2 bmax)
 	return true;
 
 }
-//layout (set=USE_GI2D_Radiosity, binding=10, r16f) uniform image2DArray t_color;
-//layout (set=USE_GI2D_Radiosity, binding=11) uniform sampler2D s_color;
 
 #endif // USE_GI2D_Radiosity
 
