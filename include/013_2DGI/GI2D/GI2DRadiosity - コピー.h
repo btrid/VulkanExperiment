@@ -12,6 +12,16 @@ namespace gi2d
 
 struct GI2DRadiosity
 {
+	struct TextureResource
+	{
+		vk::ImageCreateInfo m_image_info;
+		vk::UniqueImage m_image;
+		vk::UniqueImageView m_image_view;
+		vk::UniqueDeviceMemory m_memory;
+		vk::UniqueSampler m_sampler;
+
+		vk::ImageSubresourceRange m_subresource_range;
+	};
 	enum {
 		Ray_Num = 64*4,
 		Ray_Group = 1,
@@ -49,6 +59,61 @@ struct GI2DRadiosity
 		m_render_target = render_target;
 
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+		{
+			auto& tex = m_color_tex;
+			vk::ImageCreateInfo image_info;
+			image_info.imageType = vk::ImageType::e2D;
+			image_info.format = vk::Format::eR16Sfloat;
+			image_info.mipLevels = 1;
+			image_info.arrayLayers = Ray_Num;
+			image_info.samples = vk::SampleCountFlagBits::e1;
+			image_info.tiling = vk::ImageTiling::eOptimal;
+			image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eStorage;
+			image_info.sharingMode = vk::SharingMode::eExclusive;
+			image_info.initialLayout = vk::ImageLayout::eUndefined;
+			image_info.extent = { (uint32_t)gi2d_context->RenderWidth, (uint32_t)gi2d_context->RenderHeight, 1 };
+			image_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
+
+			tex.m_image = context->m_device->createImageUnique(image_info);
+			tex.m_image_info = image_info;
+
+			vk::MemoryRequirements memory_request = context->m_device->getImageMemoryRequirements(tex.m_image.get());
+			vk::MemoryAllocateInfo memory_alloc_info;
+			memory_alloc_info.allocationSize = memory_request.size;
+			memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(context->m_gpu.getHandle(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+			tex.m_memory = context->m_device->allocateMemoryUnique(memory_alloc_info);
+			context->m_device->bindImageMemory(tex.m_image.get(), tex.m_memory.get(), 0);
+
+			vk::ImageSubresourceRange subresourceRange;
+			subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+			subresourceRange.baseArrayLayer = 0;
+			subresourceRange.baseMipLevel = 0;
+			subresourceRange.layerCount = 1;
+			subresourceRange.levelCount = 1;
+			tex.m_subresource_range = subresourceRange;
+
+			vk::ImageViewCreateInfo view_info;
+			view_info.viewType = vk::ImageViewType::e2DArray;
+			view_info.components.r = vk::ComponentSwizzle::eR;
+			view_info.components.g = vk::ComponentSwizzle::eG;
+			view_info.components.b = vk::ComponentSwizzle::eB;
+			view_info.components.a = vk::ComponentSwizzle::eA;
+			view_info.flags = vk::ImageViewCreateFlags();
+			view_info.format = vk::Format::eR16Sfloat;
+			view_info.image = tex.m_image.get();
+			view_info.subresourceRange = subresourceRange;
+			tex.m_image_view = context->m_device->createImageViewUnique(view_info);
+
+			vk::ImageMemoryBarrier to_init;
+			to_init.image = m_color_tex.m_image.get();
+			to_init.subresourceRange = m_color_tex.m_subresource_range;
+			to_init.oldLayout = vk::ImageLayout::eUndefined;
+			to_init.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+			to_init.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlags(),
+				0, nullptr, 0, nullptr, 1, &to_init);
+		}
 
 		{
 			uint32_t size = m_gi2d_context->RenderWidth * m_gi2d_context->RenderHeight;
@@ -102,6 +167,16 @@ struct GI2DRadiosity
 					b_radiance.getInfo(),
 					b_bounce_map.getInfo(),
 				};
+				vk::DescriptorImageInfo output_images[] = {
+					vk::DescriptorImageInfo().setImageView(m_color_tex.m_image_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
+				};
+				vk::DescriptorImageInfo samplers[] = 
+				{
+					vk::DescriptorImageInfo()
+					.setImageView(m_color_tex.m_image_view.get())
+					.setSampler(sGraphicsResource::Order().getSampler(sGraphicsResource::BASIC_SAMPLER_LINER))
+					.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal),
+				};
 
 				vk::WriteDescriptorSet write[] = 
 				{
@@ -110,6 +185,20 @@ struct GI2DRadiosity
 					.setDescriptorCount(array_length(storages))
 					.setPBufferInfo(storages)
 					.setDstBinding(0)
+					.setDstSet(m_descriptor_set.get()),
+					vk::WriteDescriptorSet()
+					.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+					.setDescriptorCount(array_length(samplers))
+					.setPImageInfo(samplers)
+					.setDstBinding(10)
+					.setDstArrayElement(0)
+					.setDstSet(m_descriptor_set.get()),
+					vk::WriteDescriptorSet()
+					.setDescriptorType(vk::DescriptorType::eStorageImage)
+					.setDescriptorCount(array_length(output_images))
+					.setPImageInfo(output_images)
+					.setDstBinding(11)
+					.setDstArrayElement(0)
 					.setDstSet(m_descriptor_set.get()),
 				};
 				context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
@@ -380,6 +469,17 @@ struct GI2DRadiosity
 		// render_targetÇ…èëÇ≠
 		{
 			{
+				vk::ImageMemoryBarrier to_read;
+				to_read.setImage(m_color_tex.m_image.get());
+				to_read.setSubresourceRange(m_color_tex.m_subresource_range);
+				to_read.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+				to_read.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+				to_read.setOldLayout(vk::ImageLayout::eGeneral);
+				to_read.setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands,
+					{}, 0, nullptr, 0, nullptr, 1, &to_read);
+			}
+			{
 				vk::BufferMemoryBarrier to_read[] = {
 					b_radiance.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				};
@@ -411,6 +511,7 @@ struct GI2DRadiosity
 	std::array<vk::UniquePipelineLayout, PipelineLayout_Num> m_pipeline_layout;
 	std::array<vk::UniquePipeline, Pipeline_Num> m_pipeline;
 
+	TextureResource m_color_tex;
 	btr::BufferMemoryEx<uint32_t> b_radiance;
 	btr::BufferMemoryEx<uint64_t> b_bounce_map;
 

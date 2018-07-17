@@ -141,10 +141,10 @@ bool marchToAABB(inout vec2 p, in vec2 d, in vec2 bmin, in vec2 bmax)
 	return true;
 
 }
-layout (set=USE_GI2D_Radiosity, binding=10, r16f) uniform image2DArray t_color;
-layout (set=USE_GI2D_Radiosity, binding=11) uniform sampler2D s_color;
+//layout (set=USE_GI2D_Radiosity, binding=10, r16f) uniform image2DArray t_color;
+//layout (set=USE_GI2D_Radiosity, binding=11) uniform sampler2D s_color;
 
-#endif // USE_PM
+#endif // USE_GI2D_Radiosity
 
 vec2 rotate(in float angle)
 {

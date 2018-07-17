@@ -34,8 +34,17 @@ void main()
 		radiance += count==0 ? radiance_ : (radiance_ / count) * rate[i];
 	}
 
-//	ivec2 coord = ivec2(gl_FragCoord.xy);
-	
+/*	ivec2 map_index = ivec2(gl_FragCoord.xy);
+	ivec2 shift = map_index%8;
+	ivec2 _fi = map_index/8;
+	int findex = _fi.x + _fi.y*(u_gi2d_info.m_resolution.x/8);
+	uint64_t fragment_map = b_fragment_map[findex.x];
+	bool is_fragment = (fragment_map & 1ul<<(shift.x+shift.y*8)) != 0;
+	int fragment_index = map_index.x + map_index.y * u_gi2d_info.m_resolution.x;
+
+	radiance = is_fragment ? b_fragment[fragment_index].albedo.xyz : radiance;
+*/
+	FragColor = vec4(radiance, 1.);
 
 	// tonemapテスト
 	{
