@@ -74,7 +74,7 @@ int getMemoryOrder(in ivec2 xy)
 #define Advance (1.)
 #define denominator (512.)
 #define Block_Size (9)
-float rate[] = {1., 0.3};
+float rate[] = {1., 1.};
 
 uint packEmissive(in vec3 rgb)
 {

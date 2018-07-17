@@ -34,6 +34,9 @@ void main()
 		radiance += count==0 ? radiance_ : (radiance_ / count) * rate[i];
 	}
 
+//	ivec2 coord = ivec2(gl_FragCoord.xy);
+	
+
 	// tonemapテスト
 	{
 #define max_luminamce (32.)
