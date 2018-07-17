@@ -17,4 +17,5 @@ SET output=../../binary
 %exe% %include% %option% -o %output%/Fluid_Collision.comp.spv Fluid_Collision.comp
 %exe% %include% %option% -o %output%/Fluid_CollisionAfter.comp.spv Fluid_CollisionAfter.comp
 
+%exe% %include% %option% -o %output%/Fluid_ToFragment.comp.spv Fluid_ToFragment.comp
 

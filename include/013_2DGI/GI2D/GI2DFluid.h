@@ -26,6 +26,7 @@ struct GI2DFluid
 		Shader_PressureMinimum,
 		Shader_PressureGradient,
 		Shader_Move2,
+		Shader_ToFragment,
 		Shader_Num,
 	};
 
@@ -44,6 +45,7 @@ struct GI2DFluid
 		Pipeline_PressureMinimum,
 		Pipeline_PressureGradient,
 		Pipeline_Move2,
+		Pipeline_ToFragment,
 		Pipeline_Num,
 	};
 
@@ -79,16 +81,17 @@ struct GI2DFluid
 			cmd.fillBuffer(b_grid_head.getInfo().buffer, b_grid_head.getInfo().offset, b_grid_head.getInfo().range, -1);
 
 			{
+				// debug用初期データ
 				std::vector<vec2> pos(Particle_Num);
 				for (auto& p : pos) {
-					p.x = std::rand() % 440 + 50;
-					p.y = std::rand() % 40 + 30;
+					p.x = std::rand() % 450 + 50;
+					p.y = std::rand() % 20 + 30;
 				}
 				cmd.updateBuffer<vec2>(b_pos.getInfo().buffer, b_pos.getInfo().offset, pos);
 				vk::BufferMemoryBarrier to_read[] = {
 					b_pos.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 				};
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllCommands, {},
 					0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 			}
@@ -192,6 +195,7 @@ struct GI2DFluid
 				"Fluid_CalcPressureMinimum.comp.spv",
 				"Fluid_CalcPressureGradient.comp.spv",
 				"Fluid_Move2.comp.spv",
+				"Fluid_ToFragment.comp.spv",
 			};
 			static_assert(array_length(name) == Shader_Num, "not equal shader num");
 
@@ -241,6 +245,9 @@ struct GI2DFluid
 			shader_info[7].setModule(m_shader[Shader_Move2].get());
 			shader_info[7].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[7].setPName("main");
+			shader_info[8].setModule(m_shader[Shader_ToFragment].get());
+			shader_info[8].setStage(vk::ShaderStageFlagBits::eCompute);
+			shader_info[8].setPName("main");
 			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 			{
 				vk::ComputePipelineCreateInfo()
@@ -267,6 +274,9 @@ struct GI2DFluid
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[7])
 				.setLayout(m_pipeline_layout[PipelineLayout_Fluid].get()),
+				vk::ComputePipelineCreateInfo()
+				.setStage(shader_info[8])
+				.setLayout(m_pipeline_layout[PipelineLayout_Fluid].get()),
 			};
 			auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
 			m_pipeline[Pipeline_Viscosity] = std::move(compute_pipeline[0]);
@@ -277,6 +287,7 @@ struct GI2DFluid
 			m_pipeline[Pipeline_PressureMinimum] = std::move(compute_pipeline[5]);
 			m_pipeline[Pipeline_PressureGradient] = std::move(compute_pipeline[6]);
 			m_pipeline[Pipeline_Move2] = std::move(compute_pipeline[7]);
+			m_pipeline[Pipeline_ToFragment] = std::move(compute_pipeline[8]);
 		}
 
 
@@ -285,12 +296,6 @@ struct GI2DFluid
 	{
 
 		{
-			vk::BufferMemoryBarrier to_read[] = {
-				b_pos.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-				b_vel.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
-				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Viscosity].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Fluid].get(), 0, m_descriptor_set.get(), {});
@@ -421,6 +426,21 @@ struct GI2DFluid
 
 		}
 
+		// fragment_dataに書き込む
+		{
+			vk::BufferMemoryBarrier to_read[] = {
+				b_pos.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				m_gi2d_context->b_fragment_buffer.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eIndirectCommandRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eComputeShader, {},
+				0, nullptr, array_length(to_read), to_read, 0, nullptr);
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_ToFragment].get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Fluid].get(), 0, m_descriptor_set.get(), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Fluid].get(), 1, m_gi2d_context->getDescriptorSet(), {});
+			cmd.dispatch(1, 1, 1);
+
+		}
 	}
 
 	std::shared_ptr<btr::Context> m_context;
