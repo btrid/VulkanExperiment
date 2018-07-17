@@ -21,6 +21,7 @@ void main()
 	float p_minimum = b_pressure[p_id].x;
 
 	ivec2 index = ivec2(p_pos);
+	if(any(greaterThan(index, ivec2(0))) || any(greaterThanEqual(index, u_gi2d_info.m_resolution))){ return; }
 	ivec3 neighbor = ivec3(ivec2(greaterThan(fract(p_pos), vec2(0.5))) * 2 - 1, 0);
 	ivec4 access_list = (index.xxxx + neighbor.zzxx) + (index.yyyy+neighbor.zyzy)*u_gi2d_info.m_resolution.x;
 	for(int i = 0; i < 4; i++)

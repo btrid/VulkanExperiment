@@ -19,11 +19,13 @@ void main()
 //	if(imageLoad(tType, index).x != TYPE_FLUID){ return; }
 
 	const vec2 p_pos = b_pos[p_id];
-
-	float ni = 0.;
 	ivec2 index = ivec2(p_pos);
+	if(any(greaterThan(index, ivec2(0))) || any(greaterThanEqual(index, u_gi2d_info.m_resolution))){ return; }
+
 	ivec3 neighbor = ivec3(ivec2(greaterThan(fract(p_pos), vec2(0.5))) * 2 - 1, 0);
 	ivec4 access_list = (index.xxxx + neighbor.zzxx) + (index.yyyy+neighbor.zyzy)*u_gi2d_info.m_resolution.x;
+
+	float ni = 0.;
 	for(int i = 0; i < 4; i++)
 	{
 		for(int target_id = b_grid_head[access_list[i]]; target_id != -1; target_id = b_grid_node[target_id])
