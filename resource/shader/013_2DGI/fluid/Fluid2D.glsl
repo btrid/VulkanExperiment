@@ -20,15 +20,15 @@ struct ParticleInfo
 
 //#define Grid_Size (2)
 #define SND (22.)
-#define Scale (3.)
+#define Scale (10.)
 //#define DT 0.016
   #define DT 0.0005
-#define DefaultDensity (0.1)
-#define InfluenceRadius (1.*Scale)
-#define CollisionRadius (1.*Scale)
-#define WallPressure (3.)
-const float p_mass = 1000.; // 質量
-const float w_mass = 1000.;
+#define DefaultDensity (4.1)
+#define InfluenceRadius (1./**Scale*/)
+#define CollisionRadius (1./**Scale*/)
+#define WallPressure (100.)
+const float p_mass = 100.; // 質量
+const float w_mass = 100000.;
 
 /*
 layout(std140, binding=0) uniform ParticleInfoUniform {

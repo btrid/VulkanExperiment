@@ -65,17 +65,17 @@ struct GI2DFluid
 		m_gi2d_context = gi2d_context;
 
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-#define Scale (3.)
+#define Scale (10.)
 
 		{
 			b_pos = m_context->m_storage_memory.allocateMemory<vec2>({ Particle_Num,{} });
 			b_vel = m_context->m_storage_memory.allocateMemory<vec2>({ Particle_Num,{} });
 			b_acc = m_context->m_storage_memory.allocateMemory<vec2>({ Particle_Num,{} });
-			b_type = m_context->m_storage_memory.allocateMemory<int32_t>({ Particle_Num,{} });
 			b_pressure = m_context->m_storage_memory.allocateMemory<float>({ Particle_Num,{} });
 			b_minimum_pressure = m_context->m_storage_memory.allocateMemory<float>({ Particle_Num,{} });
 			b_grid_head = m_context->m_storage_memory.allocateMemory<int32_t>({ (uint32_t)m_gi2d_context->RenderWidth*m_gi2d_context->RenderHeight,{} });
 			b_grid_node = m_context->m_storage_memory.allocateMemory<int32_t>({ Particle_Num,{} });
+			b_type = m_context->m_storage_memory.allocateMemory<int32_t>({ Particle_Num,{} });
 
 			cmd.fillBuffer(b_vel.getInfo().buffer, b_vel.getInfo().offset, b_vel.getInfo().range, 0);
 			cmd.fillBuffer(b_acc.getInfo().buffer, b_acc.getInfo().offset, b_acc.getInfo().range, 0);
@@ -88,8 +88,10 @@ struct GI2DFluid
 				for (int i = 0; i < Particle_Num; i++)
 				{
 					auto& p = pos[i];
-					p.x = std::rand() % 90 + 55;
-					p.y = std::rand() % 8 + 40;
+					p.x = std::rand() % 6000 + 5500;
+					p.y = std::rand() % 3000 + 1500;
+					p.x /= 100.f;
+					p.y /= 100.f;
 					p.x /= Scale;
 					p.y /= Scale;
 				}
