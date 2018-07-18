@@ -65,6 +65,7 @@ struct GI2DFluid
 		m_gi2d_context = gi2d_context;
 
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+#define Scale (3.)
 
 		{
 			b_pos = m_context->m_storage_memory.allocateMemory<vec2>({ Particle_Num,{} });
@@ -82,10 +83,15 @@ struct GI2DFluid
 
 			{
 				// debug用初期データ
-				std::vector<vec2> pos(Particle_Num);
-				for (auto& p : pos) {
-					p.x = std::rand() % 450 + 50;
-					p.y = std::rand() % 20 + 30;
+				std::array<vec2, Particle_Num> pos;
+				pos.fill(vec2(10.f));
+				for (int i = 0; i < Particle_Num; i++)
+				{
+					auto& p = pos[i];
+					p.x = std::rand() % 90 + 55;
+					p.y = std::rand() % 8 + 40;
+					p.x /= Scale;
+					p.y /= Scale;
 				}
 				cmd.updateBuffer<vec2>(b_pos.getInfo().buffer, b_pos.getInfo().offset, pos);
 				vk::BufferMemoryBarrier to_read[] = {
@@ -295,11 +301,11 @@ struct GI2DFluid
 	void execute(vk::CommandBuffer cmd)
 	{
 
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Fluid].get(), 0, m_descriptor_set.get(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Fluid].get(), 1, m_gi2d_context->getDescriptorSet(), {});
 		{
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Viscosity].get());
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Fluid].get(), 0, m_descriptor_set.get(), {});
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Fluid].get(), 1, m_gi2d_context->getDescriptorSet(), {});
 			cmd.dispatch(1, 1, 1);
 		}
 
@@ -321,8 +327,6 @@ struct GI2DFluid
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Move1_Viscosity_Gravity_Grid].get());
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Fluid].get(), 0, m_descriptor_set.get(), {});
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Fluid].get(), 1, m_gi2d_context->getDescriptorSet(), {});
 			cmd.dispatch(1, 1, 1);
 		}
 
@@ -334,8 +338,6 @@ struct GI2DFluid
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Collision].get());
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Fluid].get(), 0, m_descriptor_set.get(), {});
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Fluid].get(), 1, m_gi2d_context->getDescriptorSet(), {});
 			cmd.dispatch(1, 1, 1);
 		}
 		{
@@ -346,15 +348,11 @@ struct GI2DFluid
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_CollisionAfter].get());
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Fluid].get(), 0, m_descriptor_set.get(), {});
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Fluid].get(), 1, m_gi2d_context->getDescriptorSet(), {});
 			cmd.dispatch(1, 1, 1);
 		}
 		{
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Pressure].get());
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Fluid].get(), 0, m_descriptor_set.get(), {});
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Fluid].get(), 1, m_gi2d_context->getDescriptorSet(), {});
 			cmd.dispatch(1, 1, 1);
 		}
 		{
@@ -365,8 +363,6 @@ struct GI2DFluid
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_PressureMinimum].get());
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Fluid].get(), 0, m_descriptor_set.get(), {});
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Fluid].get(), 1, m_gi2d_context->getDescriptorSet(), {});
 			cmd.dispatch(1, 1, 1);
 		}
 		{
@@ -390,8 +386,6 @@ struct GI2DFluid
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_PressureGradient].get());
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Fluid].get(), 0, m_descriptor_set.get(), {});
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Fluid].get(), 1, m_gi2d_context->getDescriptorSet(), {});
 			cmd.dispatch(1, 1, 1);
 		}
 		{
@@ -415,13 +409,12 @@ struct GI2DFluid
 			vk::BufferMemoryBarrier to_read[] = {
 				b_vel.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				b_acc.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				b_pos.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
 			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Move2].get());
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Fluid].get(), 0, m_descriptor_set.get(), {});
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Fluid].get(), 1, m_gi2d_context->getDescriptorSet(), {});
 			cmd.dispatch(1, 1, 1);
 
 		}
@@ -430,17 +423,20 @@ struct GI2DFluid
 		{
 			vk::BufferMemoryBarrier to_read[] = {
 				b_pos.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-				m_gi2d_context->b_fragment_buffer.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eIndirectCommandRead),
+				m_gi2d_context->b_fragment_buffer.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_ToFragment].get());
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Fluid].get(), 0, m_descriptor_set.get(), {});
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Fluid].get(), 1, m_gi2d_context->getDescriptorSet(), {});
 			cmd.dispatch(1, 1, 1);
-
 		}
+
+		vk::BufferMemoryBarrier to_read[] = {
+			m_gi2d_context->b_fragment_buffer.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+		};
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eComputeShader, {},
+			0, nullptr, array_length(to_read), to_read, 0, nullptr);
 	}
 
 	std::shared_ptr<btr::Context> m_context;

@@ -6,8 +6,8 @@
 
 #define USE_Fluid2D 0
 #define USE_GI2D 1
-#include "Fluid2D.glsl"
 #include "GI2D.glsl"
+#include "Fluid2D.glsl"
 
 layout (local_size_x = 1024) in;
 
@@ -21,7 +21,7 @@ void main()
 		vec2 vel = b_vel[p_id] += acc * DT;
 		vec2 pos = b_pos[p_id] += vel * DT;
 		
-		ivec2 index = ivec2(pos);
+		ivec2 index = ivec2(pos*Scale);
 		if(any(lessThan(index, ivec2(0))) || any(greaterThanEqual(index, u_gi2d_info.m_resolution))){ return; }
 
 		int next = atomicExchange(b_grid_head[index.x + index.y*u_gi2d_info.m_resolution.x], p_id);

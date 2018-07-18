@@ -48,8 +48,8 @@ void main()
 
 	// tonemapテスト
 	{
-#define max_luminamce (32.)
-#define avg_luminamce (0.04)
+#define max_luminamce (0.009)
+#define avg_luminamce (0.000004)
 		const vec3 RGB2Y   = vec3( +0.29900, +0.58700, +0.11400);
 		const vec3 RGB2Cb  = vec3( -0.16874, -0.33126, +0.50000);
 		const vec3 RGB2Cr  = vec3( +0.50000, -0.41869, -0.08131);

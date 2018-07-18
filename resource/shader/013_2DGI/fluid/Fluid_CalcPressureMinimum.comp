@@ -6,8 +6,8 @@
 
 #define USE_Fluid2D 0
 #define USE_GI2D 1
-#include "Fluid2D.glsl"
 #include "GI2D.glsl"
+#include "Fluid2D.glsl"
 
 layout (local_size_x = 1024) in;
 
@@ -15,15 +15,15 @@ layout (local_size_x = 1024) in;
 void main() 
 {
 	int p_id = int(gl_GlobalInvocationID.x);
-//	if(imageLoad(tType, index).x != TYPE_FLUID){ return; }
-
-	const vec2 p_pos = b_pos[p_id];
-
-	ivec2 index = ivec2(p_pos);
+	const vec2 p_pos = b_pos[p_id]*Scale;
+	ivec2 index = ivec2(p_pos/Scale);
 	if(any(lessThan(index, ivec2(0))) || any(greaterThanEqual(index, u_gi2d_info.m_resolution))){ return; }
 
 	ivec3 neighbor = ivec3(ivec2(greaterThan(fract(p_pos), vec2(0.5))) * 2 - 1, 0);
-	ivec4 access_list = (index.xxxx + neighbor.zzxx) + (index.yyyy+neighbor.zyzy)*u_gi2d_info.m_resolution.x;
+	ivec4 access_list_x = (index.xxxx + neighbor.zzxx);
+	ivec4 access_list_y = (index.yyyy + neighbor.zyzy);
+	ivec4 access_list = access_list_x + access_list_y * u_gi2d_info.m_resolution.x;
+	bvec4 is_wall = getWall(index);
 
 	float p_minimum = b_pressure[p_id].x;
 	for(int i = 0; i < 4; i++)
@@ -35,15 +35,26 @@ void main()
 				// 自分とは判定しない
 				continue; 
 			}
-			const vec2 t_pos = b_pos[target_id];
+			const vec2 t_pos = b_pos[target_id]*Scale;
 
 			float dist = distance(p_pos, t_pos);
-			if(dist <= 1.) 
+			if(dist <= InfluenceRadius) 
 			{
-				float value = b_pressure[target_id];
-				p_minimum = min(p_minimum, value);
+				p_minimum = min(p_minimum, b_pressure[target_id]);
 			}
 		}
+
+		if(is_wall[i])
+		{
+			vec2 w_pos = vec2(access_list_x[i], access_list_y[i]) + vec2(0.5);
+			float dist = distance(p_pos, w_pos);
+			if(dist <= InfluenceRadius) 
+			{
+				p_minimum = min(p_minimum, WallPressure);
+			}
+
+		}
+
 	}
 	b_minimum_pressure[p_id] = p_minimum;
 }
