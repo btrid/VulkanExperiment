@@ -50,14 +50,13 @@ struct GI2DFluid
 	};
 
 	// calc viscosity
-	// premove
-	// grid 
+	// move1
 	// collision
 	// collision after
 	// calc pressure
 	// calc minimum pressure
 	// calc pressure gradient
-	// move
+	// move2
 
 	GI2DFluid(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context)
 	{
@@ -86,11 +85,11 @@ struct GI2DFluid
 				pos.fill(vec2(10.f));
 				for (int i = 0; i < Particle_Num; i++)
 				{
-#define Scale (1.)
-#define x_area (40)
+#define Scale (100.)
+#define x_area (100)
 					auto& p = pos[i];
-					p.x = 50*100 + std::rand() % ((x_area-20)*100) + 10*100;
-					p.y = std::rand() % (100*100) + 500;
+					p.x = 65*100 + std::rand() % ((x_area-20)*100) + 10*100;
+					p.y = 65 * 100 + std::rand() % (100*100) + 500;
 					p.x /= 100.f;
 					p.y /= 100.f;
 					p.x /= Scale;
@@ -323,7 +322,7 @@ struct GI2DFluid
 			cmd.fillBuffer(b_grid_head.getInfo().buffer, b_grid_head.getInfo().offset, b_grid_head.getInfo().range, -1);
 
 			vk::BufferMemoryBarrier to_read[] = {
-				b_grid_head.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+				b_grid_head.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead| vk::AccessFlagBits::eShaderWrite),
 				b_acc.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer|vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
@@ -353,19 +352,9 @@ struct GI2DFluid
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_CollisionAfter].get());
 			cmd.dispatch(1, 1, 1);
 		}
-		{
 
+		{
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Pressure].get());
-			cmd.dispatch(1, 1, 1);
-		}
-		{
-			vk::BufferMemoryBarrier to_read[] = {
-				b_pressure.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
-				0, nullptr, array_length(to_read), to_read, 0, nullptr);
-
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_PressureMinimum].get());
 			cmd.dispatch(1, 1, 1);
 		}
 		{
@@ -376,8 +365,6 @@ struct GI2DFluid
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_PressureMinimum].get());
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Fluid].get(), 0, m_descriptor_set.get(), {});
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Fluid].get(), 1, m_gi2d_context->getDescriptorSet(), {});
 			cmd.dispatch(1, 1, 1);
 		}
 		{

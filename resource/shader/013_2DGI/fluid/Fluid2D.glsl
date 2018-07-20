@@ -18,12 +18,12 @@ struct ParticleInfo
 
 #if defined(USE_Fluid2D)
 
-#define Scale (1.)
+#define Scale (100.)
 #define Grid_Size (1.)
-//#define DT 0.016
-  #define DT 0.0005
-#define InfluenceRadius (1.1/**Scale*/)
-#define CollisionRadius (1.1/**Scale*/)
+  #define DT 0.016
+//#define DT 0.0005
+#define InfluenceRadius (1.*Grid_Size)
+#define CollisionRadius (1.*Grid_Size)
 #define WallPressure (100.)
 const float p_mass = 100.; // 質量
 const float w_mass = 100.;
@@ -62,10 +62,17 @@ float calcWeight(in float distance, in float influenceRadius)
 bvec4 getWall(in ivec2 index)
 {
 	ivec4 _fi = ivec4(index/8, index%8);
-	ivec4 f_neighbor = ivec4(_fi.z==0 ? -1 : 0, _fi.z==7 ? 1 : 0, _fi.w==0 ? -1 : 0, _fi.w==7 ? 1 : 0);
+	ivec4 f_neighbor = ivec4(0, 0, _fi.z==7?1:0, _fi.w==7?1:0);
+	ivec4 f_bit =      ivec4(_fi.zw, (_fi.zw+1)%8);
+
 	ivec4 fi = (_fi.xxxx+f_neighbor.xxzz) + (_fi.yyyy+f_neighbor.ywyw)*(u_gi2d_info.m_resolution.x/8);
-	ivec4 bit = (_fi.zzzz+ivec2(0,1).xxyy)%8 + ((_fi.wwww+ivec2(0,1).xyxy)%8)*8;
+	ivec4 bit = f_bit.xxzz + f_bit.ywyw*8;
+
 	bvec4 is_wall;
+//	is_wall.x = false;//(b_diffuse_map[fi.x] & (1ul<<bit.x)) != 0;
+//	is_wall.y = false;//(b_diffuse_map[fi.y] & (1ul<<bit.y)) != 0;
+//	is_wall.z = false;//(b_diffuse_map[fi.z] & (1ul<<bit.z)) != 0;
+//	is_wall.w = false;//(b_diffuse_map[fi.w] & (1ul<<bit.w)) != 0;
 	is_wall.x = (b_diffuse_map[fi.x] & (1ul<<bit.x)) != 0;
 	is_wall.y = (b_diffuse_map[fi.y] & (1ul<<bit.y)) != 0;
 	is_wall.z = (b_diffuse_map[fi.z] & (1ul<<bit.z)) != 0;

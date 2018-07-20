@@ -18,13 +18,16 @@ void main()
 	{ 
 		vec2 acc = b_acc[p_id];
 		b_acc[p_id] = vec2(0.);
-		vec2 vel = b_vel[p_id] += acc * DT;
+		vec2 vel = b_vel[p_id] += (acc /*+ vec2(0., 9.8)*/) * DT;
 		vec2 pos = b_pos[p_id] += vel * DT;
 		
-		ivec2 index = ivec2(pos*Scale);
-		if(any(lessThan(index, ivec2(0))) || any(greaterThanEqual(index, u_gi2d_info.m_resolution))){ return; }
+		vec2 index_f = pos*Scale / Grid_Size;
+		ivec2 index = ivec2(index_f);
+		ivec2 reso = ivec2(u_gi2d_info.m_resolution/Grid_Size);
+		if(any(lessThan(index, ivec2(0))) || any(greaterThanEqual(index, reso))){ return; }
+		int i = index.x + index.y*reso.x;
 
-		int next = atomicExchange(b_grid_head[index.x + index.y*u_gi2d_info.m_resolution.x], p_id);
+		int next = atomicExchange(b_grid_head[i], p_id);
 		b_grid_node[p_id] = next;
 	}
 }
