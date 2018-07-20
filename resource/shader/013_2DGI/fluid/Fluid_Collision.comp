@@ -18,13 +18,14 @@ void main()
 	int p_id = int(gl_GlobalInvocationID.x);
 	const vec2 p_pos = b_pos[p_id]*Scale;
 
-	ivec2 index = ivec2(p_pos);
-	if(any(lessThan(index, ivec2(0))) || any(greaterThanEqual(index, u_gi2d_info.m_resolution))){ return; }
+	ivec2 index = ivec2(p_pos/Grid_Size);
+	ivec2 reso = ivec2(u_gi2d_info.m_resolution/Grid_Size);
+	if(any(lessThan(index, ivec2(0))) || any(greaterThanEqual(index, reso))){ return; }
 
 	ivec3 neighbor = ivec3(ivec2(greaterThan(fract(p_pos), vec2(0.5))) * 2 - 1, 0);
 	ivec4 access_list_x = (index.xxxx + neighbor.zzxx);
 	ivec4 access_list_y = (index.yyyy + neighbor.zyzy);
-	ivec4 access_list = access_list_x + access_list_y * u_gi2d_info.m_resolution.x;
+	ivec4 access_list = access_list_x + access_list_y * reso.x;
 	bvec4 is_wall = getWall(index);
 
 	float e = 0.2; // 反発係数
@@ -48,8 +49,8 @@ void main()
 				vec2 forceDT = (p_vel - b_vel[target_id]) * (t_pos-p_pos);
 				if(dot(forceDT, vec2(1.)) > 0.)
 				{
-					forceDT *= (1.0+e)*p_mass / (p_mass+p_mass) / ((dist)*(dist) + 0.00001);
-					calc_vel -= forceDT * (t_pos - p_pos);
+					forceDT *= (1.0+e)*p_mass / (p_mass+p_mass) / ((dist+1.)*(dist+1.));
+					calc_vel -= forceDT * normalize(t_pos - p_pos);
 				}
 			}
 		}
@@ -58,13 +59,13 @@ void main()
 		{
 			vec2 w_pos = vec2(access_list_x[i], access_list_y[i]) + vec2(0.5);
 			float dist = distance(p_pos, w_pos);
-			if(dist < CollisionRadius) 
+			if(dist < CollisionRadius)
 			{
 				vec2 forceDT = (p_vel) * (w_pos-p_pos);
 				if(dot(forceDT, vec2(1.)) > 0.)
 				{
-					forceDT *= (1.0+e)*w_mass / (p_mass+w_mass) / ((dist)*(dist) + 0.00001);
-					calc_vel -= forceDT * (w_pos - p_pos);
+					forceDT *= (1.0+e)*w_mass / (p_mass+w_mass) / ((dist+1.)*(dist+1.));
+					calc_vel -= forceDT * normalize(w_pos - p_pos);
 				}
 			}
 
@@ -72,5 +73,6 @@ void main()
 	}
 	// 加速度のバッファを借りる
 	b_acc[p_id] = calc_vel;
+//	b_acc[p_id] = vec2(0.);
 
 }

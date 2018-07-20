@@ -18,26 +18,16 @@ struct ParticleInfo
 
 #if defined(USE_Fluid2D)
 
-//#define Grid_Size (2)
-#define SND (22.)
-#define Scale (10.)
+#define Scale (1.)
+#define Grid_Size (1.)
 //#define DT 0.016
   #define DT 0.0005
-#define DefaultDensity (4.1)
-#define InfluenceRadius (1./**Scale*/)
-#define CollisionRadius (1./**Scale*/)
+#define InfluenceRadius (1.1/**Scale*/)
+#define CollisionRadius (1.1/**Scale*/)
 #define WallPressure (100.)
 const float p_mass = 100.; // 質量
-const float w_mass = 100000.;
+const float w_mass = 100.;
 
-/*
-layout(std140, binding=0) uniform ParticleInfoUniform {
-	ParticleInfo uParticleInfo;
-};
-layout(std140, binding = 1) uniform  GridInfoUniform {
-	GridInfo uGridInfo;
-};
-*/
 layout(set=USE_Fluid2D, binding=0, std430) restrict buffer PosBuffer {
 	vec2 b_pos[];
 };

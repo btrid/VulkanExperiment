@@ -15,13 +15,14 @@ void main()
 {
 	int p_id = int(gl_GlobalInvocationID.x);
 	const vec2 p_pos = b_pos[p_id]*Scale;
-	ivec2 index = ivec2(p_pos);
-	if(any(lessThan(index, ivec2(0))) || any(greaterThanEqual(index, u_gi2d_info.m_resolution))){ return; }
+	ivec2 index = ivec2(p_pos/Grid_Size);
+	ivec2 reso = ivec2(u_gi2d_info.m_resolution/Grid_Size);
+	if(any(lessThan(index, ivec2(0))) || any(greaterThanEqual(index, reso))){ return; }
 
 	ivec3 neighbor = ivec3(ivec2(greaterThan(fract(p_pos), vec2(0.5))) * 2 - 1, 0);
 	ivec4 access_list_x = (index.xxxx + neighbor.zzxx);
 	ivec4 access_list_y = (index.yyyy + neighbor.zyzy);
-	ivec4 access_list = access_list_x + access_list_y * u_gi2d_info.m_resolution.x;
+	ivec4 access_list = access_list_x + access_list_y * reso.x;
 	bvec4 is_wall = getWall(index);
 
 	const vec2 p_vel = b_vel[p_id];
@@ -43,17 +44,23 @@ void main()
 			acc += (b_vel[target_id] - p_vel) * w;
 		}
 
-		if(is_wall[i])
+		// 壁に粘着性はいらない
+/*		if(is_wall[i])
 		{
 			vec2 w_pos = vec2(access_list_x[i], access_list_y[i]) + vec2(0.5);
 			float dist = distance(p_pos, w_pos);
 			float w = calcWeight(dist, InfluenceRadius);
 			acc += (-p_vel) * w;
 		}
-
+*/
 	}
 	// 粘着力の計算と一緒に重力も計算
-	acc = acc*0.0005 + vec2(0., 9.8);
+#define KNM_VSC 0.000001	//動粘性係数
+//	float A = 2.0*KNM_VSC*Dimension / DefaultDensity / (1.*DefaultDensity)/*lamdaN0*/;//粘性項の計算に用いる係数
+	float A = 0.00001;
+//	float A = 0.0;
+	acc = acc*A + vec2(0., 9.8);
+//	acc = vec2(0.);
 	b_acc[p_id] = acc;
 }
 
