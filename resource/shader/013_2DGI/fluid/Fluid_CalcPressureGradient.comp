@@ -56,21 +56,19 @@ void main()
 	{
 		if(is_wall[i])
 		{
-			vec2 w_pos = vec2(access_list_x[i], access_list_y[i]) + vec2(0.5);
+			vec2 w_pos = ivec2(p_pos) + ivec2(i/2, i%2);
 			float dist = distance(p_pos, w_pos);
 			if(dist < InfluenceRadius) 
 			{
 				float w = calcWeight(dist, InfluenceRadius);
 				w *= (pressure);
-				acc -= normalize(w_pos-p_pos)*(p+1);
+				acc -= normalize(w_pos-p_pos)*(w+p+1);
 			}
-
 		}
 	}
 
-
 	float p2 = length(acc);
-	p2 = min(p2, 3.);
+	p2 = min(length(acc), 3.);
 	b_acc[p_id] = p2 == 0. ? vec2(0.) : (normalize(acc) * p2);
 
 }

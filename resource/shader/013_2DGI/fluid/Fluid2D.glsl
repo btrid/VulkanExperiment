@@ -19,9 +19,9 @@ struct ParticleInfo
 #if defined(USE_Fluid2D)
 
 #define Scale (100.)
-#define Grid_Size (1.)
-  #define DT 0.016
-//#define DT 0.0005
+#define Grid_Size (4.)
+//  #define DT 0.016
+#define DT 0.0005
 #define InfluenceRadius (1.*Grid_Size)
 #define CollisionRadius (1.*Grid_Size)
 #define WallPressure (100.)
@@ -64,6 +64,8 @@ bvec4 getWall(in ivec2 index)
 	ivec4 _fi = ivec4(index/8, index%8);
 	ivec4 f_neighbor = ivec4(0, 0, _fi.z==7?1:0, _fi.w==7?1:0);
 	ivec4 f_bit =      ivec4(_fi.zw, (_fi.zw+1)%8);
+//	ivec4 f_neighbor = ivec4(_fi.z==0?-1:0, _fi.w==0?-1:0, 0, 0);
+//	ivec4 f_bit =      ivec4(_fi.z==0?7:(_fi.z-1), _fi.w==0?7:(_fi.w-1), _fi.zw);
 
 	ivec4 fi = (_fi.xxxx+f_neighbor.xxzz) + (_fi.yyyy+f_neighbor.ywyw)*(u_gi2d_info.m_resolution.x/8);
 	ivec4 bit = f_bit.xxzz + f_bit.ywyw*8;

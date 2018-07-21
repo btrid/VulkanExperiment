@@ -48,7 +48,7 @@ void main()
 		// 壁に粘着性はいらない
 /*		if(is_wall[i])
 		{
-			vec2 w_pos = vec2(access_list_x[i], access_list_y[i]) + vec2(0.5);
+			vec2 w_pos = ivec2(p_pos) + ivec2(i/2, i%2) + vec2(0.5);
 			float dist = distance(p_pos, w_pos);
 			float w = calcWeight(dist, InfluenceRadius);
 			acc += (-p_vel) * w;
