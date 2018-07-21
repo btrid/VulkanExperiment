@@ -20,8 +20,8 @@ struct ParticleInfo
 
 #define Scale (100.)
 #define Grid_Size (4.)
-//  #define DT 0.016
-#define DT 0.0005
+  #define DT 0.016
+//#define DT 0.0005
 #define InfluenceRadius (1.*Grid_Size)
 #define CollisionRadius (1.*Grid_Size)
 #define WallPressure (100.)
