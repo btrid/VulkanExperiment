@@ -22,8 +22,6 @@ struct ParticleInfo
 #define Grid_Size (4.)
 //  #define DT 0.016
 #define DT 0.0005
-#define InfluenceRadius (0.5*Grid_Size)
-#define CollisionRadius (0.5*Grid_Size)
 
 layout(set=USE_Boid2D, binding=0, std430) restrict buffer PosBuffer {
 	vec2 b_pos[];
@@ -37,19 +35,13 @@ layout(set=USE_Boid2D, binding=2, std430) restrict buffer AccBuffer {
 layout(set=USE_Boid2D, binding=3, std430) restrict buffer TypeBuffer {
 	int b_type[];
 };
-layout(set=USE_Boid2D, binding=4, std430) restrict buffer PressureBuffer {
-	float b_pressure[];
-};
-layout(set=USE_Boid2D, binding=5, std430) restrict buffer MinimumPressureBuffer {
-	float b_minimum_pressure[];
-};
-layout(set=USE_Boid2D, binding=6) restrict buffer GridCellBuffer {
+layout(set=USE_Boid2D, binding=4) restrict buffer GridCellBuffer {
 	int b_grid_head[];
 };
-layout(set=USE_Boid2D, binding=7) restrict buffer GridNodeBuffer {
+layout(set=USE_Boid2D, binding=5) restrict buffer GridNodeBuffer {
 	int b_grid_node[];
 };
-layout(set=USE_Boid2D, binding=8) restrict buffer GridCounter {
+layout(set=USE_Boid2D, binding=6) restrict buffer GridCounter {
 	int b_grid_counter[];
 };
 #endif

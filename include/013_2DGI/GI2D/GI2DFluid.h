@@ -48,8 +48,6 @@ struct GI2DFluid2
 			b_pos = m_context->m_storage_memory.allocateMemory<vec2>({ Particle_Num,{} });
 			b_vel = m_context->m_storage_memory.allocateMemory<vec2>({ Particle_Num,{} });
 			b_acc = m_context->m_storage_memory.allocateMemory<vec2>({ Particle_Num,{} });
-			b_pressure = m_context->m_storage_memory.allocateMemory<float>({ Particle_Num,{} });
-			b_minimum_pressure = m_context->m_storage_memory.allocateMemory<float>({ Particle_Num,{} });
 			b_grid_head = m_context->m_storage_memory.allocateMemory<int32_t>({ (uint32_t)m_gi2d_context->RenderWidth*m_gi2d_context->RenderHeight,{} });
 			b_grid_node = m_context->m_storage_memory.allocateMemory<int32_t>({ Particle_Num,{} });
 			b_grid_counter = m_context->m_storage_memory.allocateMemory<int32_t>({ (uint32_t)m_gi2d_context->RenderWidth*m_gi2d_context->RenderHeight,{} });
@@ -125,16 +123,6 @@ struct GI2DFluid2
 					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 					.setDescriptorCount(1)
 					.setBinding(6),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(7),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(8),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -157,8 +145,6 @@ struct GI2DFluid2
 					b_vel.getInfo(),
 					b_acc.getInfo(),
 					b_type.getInfo(),
-					b_pressure.getInfo(),
-					b_minimum_pressure.getInfo(),
 					b_grid_head.getInfo(),
 					b_grid_node.getInfo(),
 					b_grid_counter.getInfo(),
@@ -313,8 +299,6 @@ struct GI2DFluid2
 	btr::BufferMemoryEx<vec2> b_vel;
 	btr::BufferMemoryEx<vec2> b_acc;
 	btr::BufferMemoryEx<int32_t> b_type;
-	btr::BufferMemoryEx<float> b_pressure;
-	btr::BufferMemoryEx<float> b_minimum_pressure;
 	btr::BufferMemoryEx<int32_t> b_grid_head;
 	btr::BufferMemoryEx<int32_t> b_grid_node;
 	btr::BufferMemoryEx<int32_t> b_grid_counter;

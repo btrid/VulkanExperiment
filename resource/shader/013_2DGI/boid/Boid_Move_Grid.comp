@@ -21,24 +21,30 @@ void main()
 	vec2 dir = vel;
 
 	pos *= Scale;
-	dir *= Scale;
+//	dir *= Scale;
 
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
 
 	float distance = length(dir);
-	if(distance > 0.)
+	if(distance > 0.4)
 	{ 
 
 		dir = normalize(dir);
-		dir.x = dir.x == 0. ? 0.000001 : dir.x;
-		dir.y = dir.y == 0. ? 0.000001 : dir.y;
+//		dir.x = dir.x == 0. ? 0.000001 : dir.x;
+//		dir.y = dir.y == 0. ? 0.000001 : dir.y;
 //		dir *= abs(dir.x) >= abs(dir.y) ? abs(1./dir.x) : abs(1./dir.y);
-		vec2 inv_dir = abs(1./dir);
+		vec2 inv_dir;
+		inv_dir.x = abs(dir.x) <= 0.0001 ? 9999999999. : abs(1./dir.x);
+		inv_dir.y = abs(dir.y) <= 0.0001 ? 9999999999. : abs(1./dir.y);
+		vec2 offset_dir;
+		offset_dir.x = abs(dir.x) <= 0.0001 ? 9999999999. : 0.;
+		offset_dir.y = abs(dir.y) <= 0.0001 ? 9999999999. : 0.;
 
 		ivec2 map_index = ivec2(pos);
 		ivec2 map_index_origin = ivec2(greaterThanEqual(dir, vec2(0.)));
 
 		// hit確認
+		if(false)
 		{
 			ivec4 fragment_index = ivec4(map_index/8, map_index%8);
 			ivec2 shift = fragment_index.zw;
@@ -80,14 +86,14 @@ void main()
 				ivec2 cell_origin = map_index_origin<<hierarchy;
 				ivec2 map_index_sub = map_index - ((map_index>>hierarchy)<<hierarchy);
 				vec2 cell_p = abs(cell_origin - (map_index_sub+fract(pos))) + 0.5;
-				vec2 axis = abs(cell_p*inv_dir);
+				vec2 axis = abs(cell_p*inv_dir) + offset_dir;
 				float prog = min(axis.x, axis.y);
 				progress += prog;
 				if(progress >= distance)
 				{
 					pos = pos + (progress - distance)*dir;
 					b_pos[p_id] = pos/Scale;
-					b_vel[p_id] = normalize(dir)*_dist;
+					b_vel[p_id] = 0.25*normalize(dir)*_dist;
 					break;
 				}
 				pos = pos + prog*dir;
@@ -107,7 +113,7 @@ void main()
 				if((fragment_map & bit) != 0)
 				{
 //					dir = reflect(normalize(dir), normalize(advance_dir.yx)); 
-					dir = reflect(normalize(dir), normalize(dir.yx)); 
+					dir = -dir; 
 					map_index_origin = ivec2(greaterThanEqual(dir, vec2(0.)));
 				}
 			}

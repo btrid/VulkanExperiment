@@ -18,48 +18,23 @@ void main()
 	ivec2 reso_grid = ivec2(u_gi2d_info.m_resolution/Grid_Size);
 	if(any(lessThan(index_grid, ivec2(0))) || any(greaterThanEqual(index_grid, reso_grid))){ return; }
 
-//	ivec3 neighbor = ivec3(ivec2(greaterThan(index_f, vec2(Grid_Size)*0.5)) * 2 - 1, 0);
-//	ivec4 access_list_x = (index.xxxx + neighbor.zzxx);
-//	ivec4 access_list_y = (index.yyyy + neighbor.zyzy);
-//	ivec4 access_list = access_list_x + access_list_y * reso.x;
-	vec2 rate = mod(index_grid_f, vec2(Grid_Size)) / vec2(Grid_Size);
+//	vec2 rate = mod(index_grid_f, vec2(Grid_Size)) / vec2(Grid_Size);
 	ivec4 neighbor = ivec4(0, 0, 1, 1);
-	ivec4 access_list_x = (index_grid.xxxx + neighbor.xzxz);
-	ivec4 access_list_y = (index_grid.yyyy + neighbor.yyww);
+	ivec4 access_list_x = (index_grid.xxxx + neighbor.xxzz);
+	ivec4 access_list_y = (index_grid.yyyy + neighbor.ywyw);
 	ivec4 access_list = access_list_x + access_list_y * reso_grid.x;
 
-#if 0
-	for(int i = 0; i < 4; i++)
-	{
-		for(int target_id = b_grid_head[access_list[i]]; target_id != -1; target_id = b_grid_node[target_id])
-		{
-			if(p_id == target_id)
-			{
-				// 自分とは判定しない
-				continue;
-			}
-			const vec2 t_pos = b_pos[target_id]*Scale;
-			float dist = distance(p_pos, t_pos);
-			if(dist <= InfluenceRadius)
-			{
-				float w = calcWeight(dist, InfluenceRadius);
-				pressure += w;
-			}
-		}
-	}
-#else
-	vec2 w_pos0 = ivec2(p_pos) + ivec2(0, 0)*Grid_Size;
-	vec2 w_pos1 = ivec2(p_pos) + ivec2(1, 0)*Grid_Size;
-	vec2 w_pos2 = ivec2(p_pos) + ivec2(0, 1)*Grid_Size;
-	vec2 w_pos3 = ivec2(p_pos) + ivec2(1, 1)*Grid_Size;
+	vec2 w_pos0 = ivec2(p_pos) + neighbor.xy*Grid_Size;
+	vec2 w_pos1 = ivec2(p_pos) + neighbor.xw*Grid_Size;
+	vec2 w_pos2 = ivec2(p_pos) + neighbor.zy*Grid_Size;
+	vec2 w_pos3 = ivec2(p_pos) + neighbor.zw*Grid_Size;
 
 	vec2 d = vec2(0.);
-	d += b_grid_counter[access_list[0]] / ((w_pos0 - p_pos));
-	d += b_grid_counter[access_list[1]] / ((w_pos1 - p_pos));
-	d += b_grid_counter[access_list[2]] / ((w_pos2 - p_pos));
-	d += b_grid_counter[access_list[3]] / ((w_pos3 - p_pos));
+	d += b_grid_counter[access_list[0]] / ((w_pos0 - p_pos) + 1.);
+	d += b_grid_counter[access_list[1]] / ((w_pos1 - p_pos) + 1.);
+	d += b_grid_counter[access_list[2]] / ((w_pos2 - p_pos) + 1.);
+	d += b_grid_counter[access_list[3]] / ((w_pos3 - p_pos) + 1.);
 
-#endif
 	b_vel[p_id] = d*0.001;
 //	b_vel[p_id] = vec2(0.);
 
