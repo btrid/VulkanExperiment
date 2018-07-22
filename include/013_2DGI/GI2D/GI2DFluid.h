@@ -10,7 +10,7 @@
 namespace gi2d
 {
 
-struct GI2DFluid
+struct GI2DFluid2
 {
 	enum
 	{
@@ -18,14 +18,8 @@ struct GI2DFluid
 	};
 	enum Shader
 	{
-		Shader_Viscosity,
-		Shader_Move1,
-		Shader_Collision,
-		Shader_CollisionAfter,
+		Shader_Move_Grid,
 		Shader_Pressure,
-		Shader_PressureMinimum,
-		Shader_PressureGradient,
-		Shader_Move2,
 		Shader_ToFragment,
 		Shader_Num,
 	};
@@ -37,28 +31,13 @@ struct GI2DFluid
 	};
 	enum Pipeline
 	{
-		Pipeline_Viscosity,
-		Pipeline_Move1_Viscosity_Gravity_Grid,
-		Pipeline_Collision,
-		Pipeline_CollisionAfter,
+		Pipeline_Move_Grid,
 		Pipeline_Pressure,
-		Pipeline_PressureMinimum,
-		Pipeline_PressureGradient,
-		Pipeline_Move2,
 		Pipeline_ToFragment,
 		Pipeline_Num,
 	};
 
-	// calc viscosity
-	// move1
-	// collision
-	// collision after
-	// calc pressure
-	// calc minimum pressure
-	// calc pressure gradient
-	// move2
-
-	GI2DFluid(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context)
+	GI2DFluid2(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context)
 	{
 		m_context = context;
 		m_gi2d_context = gi2d_context;
@@ -73,6 +52,7 @@ struct GI2DFluid
 			b_minimum_pressure = m_context->m_storage_memory.allocateMemory<float>({ Particle_Num,{} });
 			b_grid_head = m_context->m_storage_memory.allocateMemory<int32_t>({ (uint32_t)m_gi2d_context->RenderWidth*m_gi2d_context->RenderHeight,{} });
 			b_grid_node = m_context->m_storage_memory.allocateMemory<int32_t>({ Particle_Num,{} });
+			b_grid_counter = m_context->m_storage_memory.allocateMemory<int32_t>({ (uint32_t)m_gi2d_context->RenderWidth*m_gi2d_context->RenderHeight,{} });
 			b_type = m_context->m_storage_memory.allocateMemory<int32_t>({ Particle_Num,{} });
 
 			cmd.fillBuffer(b_vel.getInfo().buffer, b_vel.getInfo().offset, b_vel.getInfo().range, 0);
@@ -86,10 +66,10 @@ struct GI2DFluid
 				for (int i = 0; i < Particle_Num; i++)
 				{
 #define Scale (100.)
-#define x_area (100)
+#define area (20)
 					auto& p = pos[i];
-					p.x = 65*100 + std::rand() % ((x_area-20)*100) + 10*100;
-					p.y = 75 * 100 + std::rand() % (100*100) + 500;
+					p.x = 65*100 + std::rand() % (area*100) + 10*100;
+					p.y = 75 * 100 + std::rand() % (area*100) + 500;
 					p.x /= 100.f;
 					p.y /= 100.f;
 					p.x /= Scale;
@@ -150,6 +130,11 @@ struct GI2DFluid
 					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 					.setDescriptorCount(1)
 					.setBinding(7),
+					vk::DescriptorSetLayoutBinding()
+					.setStageFlags(stage)
+					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+					.setDescriptorCount(1)
+					.setBinding(8),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -176,6 +161,7 @@ struct GI2DFluid
 					b_minimum_pressure.getInfo(),
 					b_grid_head.getInfo(),
 					b_grid_node.getInfo(),
+					b_grid_counter.getInfo(),
 				};
 
 				vk::WriteDescriptorSet write[] = 
@@ -195,15 +181,9 @@ struct GI2DFluid
 		{
 			const char* name[] =
 			{
-				"Fluid_CalcViscosity.comp.spv",
-				"Fluid_Move1.comp.spv",
-				"Fluid_Collision.comp.spv",
-				"Fluid_CollisionAfter.comp.spv",
-				"Fluid_CalcPressure.comp.spv",
-				"Fluid_CalcPressureMinimum.comp.spv",
-				"Fluid_CalcPressureGradient.comp.spv",
-				"Fluid_Move2.comp.spv",
-				"Fluid_ToFragment.comp.spv",
+				"Boid_Move_Grid.comp.spv",
+				"Boid_CalcPressure.comp.spv",
+				"Boid_ToFragment.comp.spv",
 			};
 			static_assert(array_length(name) == Shader_Num, "not equal shader num");
 
@@ -229,33 +209,15 @@ struct GI2DFluid
 		// pipeline
 		{
 			std::array<vk::PipelineShaderStageCreateInfo, Shader_Num> shader_info;
-			shader_info[0].setModule(m_shader[Shader_Viscosity].get());
+			shader_info[0].setModule(m_shader[Shader_Move_Grid].get());
 			shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[0].setPName("main");
-			shader_info[1].setModule(m_shader[Shader_Move1].get());
+			shader_info[1].setModule(m_shader[Shader_Pressure].get());
 			shader_info[1].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[1].setPName("main");
-			shader_info[2].setModule(m_shader[Shader_Collision].get());
+			shader_info[2].setModule(m_shader[Shader_ToFragment].get());
 			shader_info[2].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[2].setPName("main");
-			shader_info[3].setModule(m_shader[Shader_CollisionAfter].get());
-			shader_info[3].setStage(vk::ShaderStageFlagBits::eCompute);
-			shader_info[3].setPName("main");
-			shader_info[4].setModule(m_shader[Shader_Pressure].get());
-			shader_info[4].setStage(vk::ShaderStageFlagBits::eCompute);
-			shader_info[4].setPName("main");
-			shader_info[5].setModule(m_shader[Shader_PressureMinimum].get());
-			shader_info[5].setStage(vk::ShaderStageFlagBits::eCompute);
-			shader_info[5].setPName("main");
-			shader_info[6].setModule(m_shader[Shader_PressureGradient].get());
-			shader_info[6].setStage(vk::ShaderStageFlagBits::eCompute);
-			shader_info[6].setPName("main");
-			shader_info[7].setModule(m_shader[Shader_Move2].get());
-			shader_info[7].setStage(vk::ShaderStageFlagBits::eCompute);
-			shader_info[7].setPName("main");
-			shader_info[8].setModule(m_shader[Shader_ToFragment].get());
-			shader_info[8].setStage(vk::ShaderStageFlagBits::eCompute);
-			shader_info[8].setPName("main");
 			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 			{
 				vk::ComputePipelineCreateInfo()
@@ -267,37 +229,12 @@ struct GI2DFluid
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[2])
 				.setLayout(m_pipeline_layout[PipelineLayout_Fluid].get()),
-				vk::ComputePipelineCreateInfo()
-				.setStage(shader_info[3])
-				.setLayout(m_pipeline_layout[PipelineLayout_Fluid].get()),
-				vk::ComputePipelineCreateInfo()
-				.setStage(shader_info[4])
-				.setLayout(m_pipeline_layout[PipelineLayout_Fluid].get()),
-				vk::ComputePipelineCreateInfo()
-				.setStage(shader_info[5])
-				.setLayout(m_pipeline_layout[PipelineLayout_Fluid].get()),
-				vk::ComputePipelineCreateInfo()
-				.setStage(shader_info[6])
-				.setLayout(m_pipeline_layout[PipelineLayout_Fluid].get()),
-				vk::ComputePipelineCreateInfo()
-				.setStage(shader_info[7])
-				.setLayout(m_pipeline_layout[PipelineLayout_Fluid].get()),
-				vk::ComputePipelineCreateInfo()
-				.setStage(shader_info[8])
-				.setLayout(m_pipeline_layout[PipelineLayout_Fluid].get()),
 			};
 			auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
-			m_pipeline[Pipeline_Viscosity] = std::move(compute_pipeline[0]);
-			m_pipeline[Pipeline_Move1_Viscosity_Gravity_Grid] = std::move(compute_pipeline[1]);
-			m_pipeline[Pipeline_Collision] = std::move(compute_pipeline[2]);
-			m_pipeline[Pipeline_CollisionAfter] = std::move(compute_pipeline[3]);
-			m_pipeline[Pipeline_Pressure] = std::move(compute_pipeline[4]);
-			m_pipeline[Pipeline_PressureMinimum] = std::move(compute_pipeline[5]);
-			m_pipeline[Pipeline_PressureGradient] = std::move(compute_pipeline[6]);
-			m_pipeline[Pipeline_Move2] = std::move(compute_pipeline[7]);
-			m_pipeline[Pipeline_ToFragment] = std::move(compute_pipeline[8]);
+			m_pipeline[Pipeline_Move_Grid] = std::move(compute_pipeline[0]);
+			m_pipeline[Pipeline_Pressure] = std::move(compute_pipeline[1]);
+			m_pipeline[Pipeline_ToFragment] = std::move(compute_pipeline[2]);
 		}
-
 
 	}
 	void execute(vk::CommandBuffer cmd)
@@ -305,110 +242,46 @@ struct GI2DFluid
 
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Fluid].get(), 0, m_descriptor_set.get(), {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Fluid].get(), 1, m_gi2d_context->getDescriptorSet(), {});
-		{
-
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Viscosity].get());
-			cmd.dispatch(1, 1, 1);
-		}
 
 		{
 			// linklist更新のため初期化
 			vk::BufferMemoryBarrier to_write[] = {
 				b_grid_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
+				b_grid_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {},
 				0, nullptr, array_length(to_write), to_write, 0, nullptr);
 
 			cmd.fillBuffer(b_grid_head.getInfo().buffer, b_grid_head.getInfo().offset, b_grid_head.getInfo().range, -1);
+			cmd.fillBuffer(b_grid_counter.getInfo().buffer, b_grid_counter.getInfo().offset, b_grid_counter.getInfo().range, 0);
 
+		}
+
+		{
 			vk::BufferMemoryBarrier to_read[] = {
-				b_grid_head.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead| vk::AccessFlagBits::eShaderWrite),
+				b_grid_head.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+				b_grid_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 				b_acc.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer|vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Move1_Viscosity_Gravity_Grid].get());
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Move_Grid].get());
 			cmd.dispatch(1, 1, 1);
+
 		}
 
 		{
 			vk::BufferMemoryBarrier to_read[] = {
 				b_grid_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				b_grid_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Collision].get());
-			cmd.dispatch(1, 1, 1);
-		}
-		{
-			vk::BufferMemoryBarrier to_read[] = {
-				b_acc.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
-				0, nullptr, array_length(to_read), to_read, 0, nullptr);
-
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_CollisionAfter].get());
-			cmd.dispatch(1, 1, 1);
-		}
-
-		{
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Pressure].get());
 			cmd.dispatch(1, 1, 1);
 		}
-		{
-			vk::BufferMemoryBarrier to_read[] = {
-				b_pressure.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
-				0, nullptr, array_length(to_read), to_read, 0, nullptr);
-
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_PressureMinimum].get());
-			cmd.dispatch(1, 1, 1);
-		}
-		{
-			vk::BufferMemoryBarrier to_read[] = {
-				b_minimum_pressure.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-				b_acc.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
-			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
-				0, nullptr, array_length(to_read), to_read, 0, nullptr);
-
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_PressureGradient].get());
-			cmd.dispatch(1, 1, 1);
-		}
-		{
-			if(0)
-			{
-				// linklist更新のため初期化
-				vk::BufferMemoryBarrier to_write[] = {
-					b_grid_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
-				};
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {},
-					0, nullptr, array_length(to_write), to_write, 0, nullptr);
-
-				cmd.fillBuffer(b_grid_head.getInfo().buffer, b_grid_head.getInfo().offset, b_grid_head.getInfo().range, -1);
-
-				vk::BufferMemoryBarrier to_read[] = {
-					b_grid_head.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-				};
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
-					0, nullptr, array_length(to_read), to_read, 0, nullptr);
-			}
-			vk::BufferMemoryBarrier to_read[] = {
-				b_vel.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-				b_acc.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-				b_pos.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
-			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
-				0, nullptr, array_length(to_read), to_read, 0, nullptr);
-
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Move2].get());
-			cmd.dispatch(1, 1, 1);
-
-		}
-
 		// fragment_dataに書き込む
 		{
 			vk::BufferMemoryBarrier to_read[] = {
@@ -444,6 +317,7 @@ struct GI2DFluid
 	btr::BufferMemoryEx<float> b_minimum_pressure;
 	btr::BufferMemoryEx<int32_t> b_grid_head;
 	btr::BufferMemoryEx<int32_t> b_grid_node;
+	btr::BufferMemoryEx<int32_t> b_grid_counter;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
