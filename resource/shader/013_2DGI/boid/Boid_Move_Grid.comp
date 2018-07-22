@@ -13,7 +13,8 @@ void main()
 
 	int p_id = int(gl_GlobalInvocationID.x);
 
-	vec2 vel = b_vel[p_id];// + vec2(0., 0.08)*DT;
+	vec2 acc = b_acc[p_id];// + vec2(0., 0.08)*DT;
+	vec2 vel = b_vel[p_id] + acc * DT;//+ vec2(0., 0.08)*DT;
 
 	float _dist = length(vel);
 
@@ -21,13 +22,13 @@ void main()
 	vec2 dir = vel;
 
 	pos *= Scale;
-//	dir *= Scale;
+	dir *= Scale;
 
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
 
-	float distance = length(dir);
-	if(distance > 0.4)
+	if(dot(dir, dir) > 0.1)
 	{ 
+	float distance = length(dir);
 
 		dir = normalize(dir);
 //		dir.x = dir.x == 0. ? 0.000001 : dir.x;
@@ -62,7 +63,7 @@ void main()
 		}
 
 		float progress = 0.;
-		for(int _i = 0; _i <50000; _i++)
+		for(int _i = 0; _i <500; _i++)
 		{
 			// march
 			vec2 advance_dir = vec2(0.);
@@ -93,7 +94,7 @@ void main()
 				{
 					pos = pos + (progress - distance)*dir;
 					b_pos[p_id] = pos/Scale;
-					b_vel[p_id] = 0.25*normalize(dir)*_dist;
+					b_vel[p_id] = 0.95*normalize(dir)*_dist;
 					break;
 				}
 				pos = pos + prog*dir;
