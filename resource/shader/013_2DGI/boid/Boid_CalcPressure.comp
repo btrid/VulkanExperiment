@@ -59,7 +59,7 @@ void main()
 //	d += b_grid_counter[access_list[3]] / (((w_pos3 - p_pos) + 1.)*((w_pos3 - p_pos) + 1.));
 
 	if(dot(d, d) < 1.0){ b_acc[p_id] = vec2(0.); }// ? vec2(0.) : d;
-	b_acc[p_id] = normalize(d)*2.;
+	else {b_acc[p_id] = normalize(d)*2.;}
 
 
 }

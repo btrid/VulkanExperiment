@@ -8,6 +8,66 @@
 
 layout (local_size_x = 1024) in;
 
+struct MarchResult
+{
+	vec2 next_pos;
+	ivec2 next_map_index;
+	float progress;
+	bool is_end;
+};
+
+#define FLT_EPSIRON (0.00001)
+MarchResult marchEx(in vec2 pos, in ivec2 map_index, in float progress, in vec2 dir)
+{
+	float particle_size = 0.;
+	vec2 cell_origin = vec2(map_index);
+	vec2 cell_p = pos - cell_origin;
+	float x = dir.x < 0. ? cell_p.x : (1. - cell_p.x);
+	float y = dir.y < 0. ? cell_p.y : (1. - cell_p.y);
+	x = (x <= particle_size ? 1. + x : x) - particle_size;
+	y = (y <= particle_size ? 1. + y : y) - particle_size;
+
+	vec2 dist = vec2(9999.);
+	dist.x = abs(dir.x) < FLT_EPSIRON ? 9999.9 : abs(x / dir.x);
+	dist.y = abs(dir.y) < FLT_EPSIRON ? 9999.9 : abs(y / dir.y);
+	float rate = min(dist.x, dist.y);
+	rate = abs(dir.x) < FLT_EPSIRON ? dist.y : rate;
+	rate = abs(dir.y) < FLT_EPSIRON ? dist.x : rate;
+
+	vec2 prog = dir * rate;
+	float progLength = length(prog);
+	if(progress < progLength)
+	{
+		// 移動完了
+		pos += dir * progress;
+		MarchResult result;
+		result.next_pos = pos;
+		result.next_map_index = map_index;
+		result.progress = 0.;
+		result.is_end = true;
+		return result;
+	}
+
+	ivec2 next = ivec2(0);
+	if(dist.x < dist.y){
+		next.x = dir.x < 0. ? -1 : 1;
+	}
+	else
+	{
+		next.y = dir.y < 0. ? -1 : 1;
+	}
+
+	pos += prog;
+	progress -= progLength;
+
+	MarchResult result;
+	result.next_pos = pos;
+	result.next_map_index = map_index + next;
+	result.progress = progress;
+	result.is_end = false;
+	return result;
+}
+
 void main() 
 {
 
@@ -15,14 +75,14 @@ void main()
 
 	vec2 acc = b_acc[p_id];// + vec2(0., 0.08)*DT;
 	b_acc[p_id] = vec2(0);
-	vec2 vel = b_vel[p_id] + acc * DT;//+ vec2(0., 0.08)*DT;
+	vec2 vel = b_vel[p_id] + acc * DT+ vec2(0., 1.8)*DT;
 
 	float _dist = length(vel);
 
 	vec2 pos = b_pos[p_id];
 	vec2 dir = vel;
 
-	pos *= Scale;
+//	pos *= Scale;
 //	dir *= Scale;
 
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
@@ -30,82 +90,25 @@ void main()
 	if(dot(dir, dir) > 0.001)
 	{ 
 		float distance = length(dir);
-		distance = 0.5;
 		dir = normalize(dir);
-//		dir.x = dir.x == 0. ? 0.000001 : dir.x;
-//		dir.y = dir.y == 0. ? 0.000001 : dir.y;
-//		dir *= abs(dir.x) >= abs(dir.y) ? abs(1./dir.x) : abs(1./dir.y);
-		vec2 inv_dir;
-		inv_dir.x = abs(dir.x) <= 0.000001 ? 9999999999. : abs(1./dir.x);
-		inv_dir.y = abs(dir.y) <= 0.009901 ? 9999999999. : abs(1./dir.y);
-		vec2 offset_dir;
-		offset_dir.x = abs(dir.x) <= 0.000001 ? 9999999999. : 0.;
-		offset_dir.y = abs(dir.y) <= 0.000001 ? 9999999999. : 0.;
 
 		ivec2 map_index = ivec2(pos);
-		ivec2 map_index_origin = ivec2(greaterThanEqual(dir, vec2(0.)));
 
-		// hit確認
-		if(false)
+		float progress = _dist;
+		for(;;)
 		{
-			ivec4 fragment_index = ivec4(map_index/8, map_index%8);
-			ivec2 shift = fragment_index.zw;
-
-			int findex = fragment_index.x + fragment_index.y*reso.z;
-			uint64_t fragment_map = b_diffuse_map[findex];
-
-			uint64_t bit = 1ul<<(shift.x+shift.y*8);
-			if((fragment_map & bit) != 0)
+			MarchResult result = marchEx(pos, map_index, progress, dir);
+			if(result.is_end)
 			{
-//					dir = reflect(normalize(dir), normalize(advance_dir.yx)); 
-				dir = reflect(normalize(dir), normalize(dir.yx)); 
-				map_index_origin = ivec2(greaterThanEqual(dir, vec2(0.)));
+				b_pos[p_id] = result.next_pos;
+				b_vel[p_id] = dir * _dist;
+				break;
 			}
-		}
-
-		float progress = 0.;
-		for(int _i = 0; _i <500; _i++)
-		{
-			// march
-			vec2 advance_dir = vec2(0.);
-			{
-				int hierarchy=0;
-				for(int hierarchy_=3; hierarchy_>2; hierarchy_--)
-				{
-					ivec2 map_index_hie = map_index>>hierarchy_;
-					ivec4 fragment_index = ivec4(map_index_hie/8, map_index_hie%8);
-					ivec4 findex = fragment_index.xxxx + fragment_index.yyyy*(reso.zzzz>>hierarchy_);
-					findex +=  getFragmentMapHierarchyOffset(hierarchy_);
-					uint64_t fragment_map = b_diffuse_map[findex.x];
-
-					if(fragment_map == 0)
-					{
-						hierarchy = hierarchy_;
-						break;
-					}
-				}
-
-				ivec2 cell_origin = map_index_origin<<hierarchy;
-				ivec2 map_index_sub = map_index - ((map_index>>hierarchy)<<hierarchy);
-				vec2 cell_p = abs(cell_origin - (map_index_sub+fract(pos))) + 0.5;
-				vec2 axis = abs(cell_p*inv_dir) + offset_dir;
-				float prog = min(axis.x, axis.y);
-				progress += prog;
-				if(progress >= distance)
-				{
-					pos = pos + (progress - distance)*dir;
-					b_pos[p_id] = pos/Scale;
-					b_vel[p_id] = 0.99*normalize(dir)*_dist;
-					break;
-				}
-				pos = pos + prog*dir;
-				advance_dir = vec2(ivec2(pos) - map_index);
-				map_index = ivec2(pos);
-			}
+			progress = result.progress;
 
 			// hit確認
 			{
-				ivec4 fragment_index = ivec4(map_index/8, map_index%8);
+				ivec4 fragment_index = ivec4(result.next_map_index/8, result.next_map_index%8);
 				ivec2 shift = fragment_index.zw;
 
 				int findex = fragment_index.x + fragment_index.y*reso.z;
@@ -114,13 +117,18 @@ void main()
 				uint64_t bit = 1ul<<(shift.x+shift.y*8);
 				if((fragment_map & bit) != 0)
 				{
-//					dir = reflect(normalize(dir), normalize(advance_dir.yx)); 
-					dir = -dir; 
-					map_index_origin = ivec2(greaterThanEqual(dir, vec2(0.)));
+					// 壁にぶつかったので反射
+					vec2 next = vec2(result.next_map_index - map_index);
+					vec2 wall = vec2(next.x, next.y);
+					dir = normalize(reflect(dir, wall));
+				}
+				else
+				{
+					// 何もないのでそのまま進む
+					map_index = result.next_map_index;
 				}
 			}
 		}
-
 	}
 
 
