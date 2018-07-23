@@ -16,7 +16,7 @@ void main()
 {
 
 	int p_id = int(gl_GlobalInvocationID.x);
-	const vec2 p_pos = b_pos[p_id]*Scale;
+	const vec2 p_pos = b_pos[p_id];
 	vec2 index_grid_f = p_pos / Grid_Size;
 	ivec2 index_grid = ivec2(index_grid_f);
 	ivec2 reso_grid = ivec2(u_gi2d_info.m_resolution/Grid_Size);

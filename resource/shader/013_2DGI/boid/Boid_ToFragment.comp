@@ -18,7 +18,7 @@ void main()
 
 #if !defined(debug)
 	int p_id = int(gl_GlobalInvocationID.x);
-	vec2 pos = b_pos[p_id]*Scale;
+	vec2 pos = b_pos[p_id];
 		
 	ivec2 index = ivec2(pos);
 	if(any(lessThan(index, ivec2(0))) || any(greaterThanEqual(index, u_gi2d_info.m_resolution))){ return; }
@@ -27,7 +27,7 @@ void main()
 #else
 	for(int p_id = 0; p_id < 1024; p_id++)
 	{
-		vec2 pos = b_pos[p_id]*Scale;
+		vec2 pos = b_pos[p_id];
 			
 		ivec2 index = ivec2(pos);
 		if(any(lessThan(index, ivec2(0))) || any(greaterThanEqual(index, u_gi2d_info.m_resolution))){ continue; }

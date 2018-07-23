@@ -28,6 +28,11 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 		rect.emplace_back(Fragment{ ivec4{ 0, 50, 500, 1 }, vec4{ 1.f,0.f,0.f,0.f } });
 		rect.emplace_back(Fragment{ ivec4{ 0, 420, 500, 1 }, vec4{ 1.f,0.f,0.f,0.f } });
 
+		rect.emplace_back(Fragment{ ivec4{ 150, 250, 1, 55 }, vec4{ 1.f,0.f,0.f,0.f } });
+		rect.emplace_back(Fragment{ ivec4{ 200, 250, 1, 55 }, vec4{ 1.f,0.f,0.f,0.f } });
+		rect.emplace_back(Fragment{ ivec4{ 150, 250, 55, 1 }, vec4{ 1.f,0.f,0.f,0.f } });
+		rect.emplace_back(Fragment{ ivec4{ 150, 300, 55, 1 }, vec4{ 1.f,0.f,0.f,0.f } });
+
 		rect.emplace_back(Fragment{ ivec4{ 250, 250, 1, 55 }, vec4{ 1.f,0.f,0.f,0.f } });
 		rect.emplace_back(Fragment{ ivec4{ 300, 250, 1, 55 }, vec4{ 1.f,0.f,0.f,0.f } });
 		rect.emplace_back(Fragment{ ivec4{ 250, 250, 55, 1 }, vec4{ 1.f,0.f,0.f,0.f } });

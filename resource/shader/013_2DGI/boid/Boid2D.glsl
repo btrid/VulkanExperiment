@@ -18,7 +18,6 @@ struct ParticleInfo
 
 #if defined(USE_Boid2D)
 
-#define Scale (1.)
 #define Grid_Size (1.)
   #define DT 0.016
 //#define DT 0.0005
