@@ -14,6 +14,7 @@ void main()
 	int p_id = int(gl_GlobalInvocationID.x);
 
 	vec2 acc = b_acc[p_id];// + vec2(0., 0.08)*DT;
+	b_acc[p_id] = vec2(0);
 	vec2 vel = b_vel[p_id] + acc * DT;//+ vec2(0., 0.08)*DT;
 
 	float _dist = length(vel);
@@ -22,24 +23,24 @@ void main()
 	vec2 dir = vel;
 
 	pos *= Scale;
-	dir *= Scale;
+//	dir *= Scale;
 
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
 
-	if(dot(dir, dir) > 0.1)
+	if(dot(dir, dir) > 0.001)
 	{ 
-	float distance = length(dir);
-
+		float distance = length(dir);
+		distance = 0.5;
 		dir = normalize(dir);
 //		dir.x = dir.x == 0. ? 0.000001 : dir.x;
 //		dir.y = dir.y == 0. ? 0.000001 : dir.y;
 //		dir *= abs(dir.x) >= abs(dir.y) ? abs(1./dir.x) : abs(1./dir.y);
 		vec2 inv_dir;
-		inv_dir.x = abs(dir.x) <= 0.0001 ? 9999999999. : abs(1./dir.x);
-		inv_dir.y = abs(dir.y) <= 0.0001 ? 9999999999. : abs(1./dir.y);
+		inv_dir.x = abs(dir.x) <= 0.000001 ? 9999999999. : abs(1./dir.x);
+		inv_dir.y = abs(dir.y) <= 0.009901 ? 9999999999. : abs(1./dir.y);
 		vec2 offset_dir;
-		offset_dir.x = abs(dir.x) <= 0.0001 ? 9999999999. : 0.;
-		offset_dir.y = abs(dir.y) <= 0.0001 ? 9999999999. : 0.;
+		offset_dir.x = abs(dir.x) <= 0.000001 ? 9999999999. : 0.;
+		offset_dir.y = abs(dir.y) <= 0.000001 ? 9999999999. : 0.;
 
 		ivec2 map_index = ivec2(pos);
 		ivec2 map_index_origin = ivec2(greaterThanEqual(dir, vec2(0.)));
@@ -94,7 +95,7 @@ void main()
 				{
 					pos = pos + (progress - distance)*dir;
 					b_pos[p_id] = pos/Scale;
-					b_vel[p_id] = 0.95*normalize(dir)*_dist;
+					b_vel[p_id] = 0.99*normalize(dir)*_dist;
 					break;
 				}
 				pos = pos + prog*dir;
@@ -123,9 +124,9 @@ void main()
 	}
 
 
+	ivec2 reso_grid = ivec2(reso.xy/Grid_Size);
 	vec2 index_grid_f = pos / Grid_Size;
 	ivec2 index_grid = ivec2(index_grid_f);
-	ivec2 reso_grid = ivec2(reso.xy/Grid_Size);
 	if(any(lessThan(index_grid, ivec2(0))) || any(greaterThanEqual(index_grid, reso_grid.xy))){ return; }
 	int i = index_grid.x + index_grid.y*reso_grid.x;
 

@@ -18,10 +18,10 @@ struct ParticleInfo
 
 #if defined(USE_Boid2D)
 
-#define Scale (100.)
+#define Scale (1.)
 #define Grid_Size (1.)
-//  #define DT 0.016
-#define DT 0.0005
+  #define DT 0.016
+//#define DT 0.0005
 
 layout(set=USE_Boid2D, binding=0, std430) restrict buffer PosBuffer {
 	vec2 b_pos[];

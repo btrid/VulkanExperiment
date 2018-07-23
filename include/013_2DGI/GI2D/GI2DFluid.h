@@ -63,13 +63,13 @@ struct GI2DFluid2
 				pos.fill(vec2(10.f));
 				for (int i = 0; i < Particle_Num; i++)
 				{
-#define Scale (100.)
-#define area (20)
+#define Scale (1.f)
+#define area (2)
 					auto& p = pos[i];
-					p.x = 65*100 + std::rand() % (area*100) + 10*100;
-					p.y = 75 * 100 + std::rand() % (area*100) + 500;
-					p.x /= 100.f;
-					p.y /= 100.f;
+					p.x = 165*Scale + std::rand() % (int)(area*Scale) + (std::rand() % 10000) / 10000.f;
+					p.y = 105*Scale + std::rand() % (int)(area*Scale) + (std::rand() % 10000) / 10000.f;
+//					p.x /= 100.f;
+	//				p.y /= 100.f;
 					p.x /= Scale;
 					p.y /= Scale;
 				}

@@ -8,6 +8,10 @@
 
 layout (local_size_x = 1024) in;
 
+float rand(vec2 co)
+{
+    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+}
 void main() 
 {
 
@@ -27,6 +31,10 @@ void main()
 	ivec4 access_list_y = (index_grid.yyyy + neighbor.ywyw);
 	ivec4 access_list = access_list_x + access_list_y * reso_grid.x;
 
+	float r0 = rand(vec2(p_id)*vec2(0.345, 0.128));
+	float r1 = rand(vec2(p_id)*vec2(0.120, 0.673));
+	float r2 = rand(vec2(p_id)*vec2(0.471, 0.932));
+	float r3 = rand(vec2(p_id)*vec2(0.022, 0.545));
 	vec2 w_pos0 = (vec2(access_list_x.x, access_list_y.x) + vec2(0.45, 0.45))*Grid_Size;
 	vec2 w_pos1 = (vec2(access_list_x.y, access_list_y.y) + vec2(0.45, 0.55))*Grid_Size;
 	vec2 w_pos2 = (vec2(access_list_x.z, access_list_y.z) + vec2(0.55, 0.45))*Grid_Size;
@@ -35,22 +43,23 @@ void main()
 	vec2 d = vec2(0.);
 	float len = distance(w_pos0, p_pos);
 	vec2 dir = normalize(w_pos0 - p_pos);
-	d += b_grid_counter[access_list[0]] / (dir * (len+1.));
+	d -= b_grid_counter[access_list[0]] / (dir * (len+1.+r0));
 	len = distance(w_pos1, p_pos);
 	dir = normalize(w_pos1 - p_pos);
-	d += b_grid_counter[access_list[1]] / (dir * (len+1.));
+	d -= b_grid_counter[access_list[1]] / (dir * (len+1.+r1));
 	len = distance(w_pos2, p_pos);
 	dir = normalize(w_pos2 - p_pos);
-	d += b_grid_counter[access_list[2]] / (dir * (len+1.));
+	d -= b_grid_counter[access_list[2]] / (dir * (len+1.+r2));
 	len = distance(w_pos3, p_pos);
 	dir = normalize(w_pos3 - p_pos);
-	d += b_grid_counter[access_list[3]] / (dir * (len+1.));
+	d -= b_grid_counter[access_list[3]] / (dir * (len+1.+r3));
 //	d += b_grid_counter[access_list[0]] / (((w_pos0 - p_pos) + 1.)*((w_pos0 - p_pos) + 1.));
 //	d += b_grid_counter[access_list[1]] / (((w_pos1 - p_pos) + 1.)*((w_pos1 - p_pos) + 1.));
 //	d += b_grid_counter[access_list[2]] / (((w_pos2 - p_pos) + 1.)*((w_pos2 - p_pos) + 1.));
 //	d += b_grid_counter[access_list[3]] / (((w_pos3 - p_pos) + 1.)*((w_pos3 - p_pos) + 1.));
 
-	b_acc[p_id] = d*0.2;
+	if(dot(d, d) < 1.0){ b_acc[p_id] = vec2(0.); }// ? vec2(0.) : d;
+	b_acc[p_id] = normalize(d)*2.;
 
 
 }
