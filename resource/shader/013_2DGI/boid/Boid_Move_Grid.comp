@@ -118,6 +118,9 @@ void main()
 					vec2 wall = vec2(next.x, next.y);
 					dir = normalize(reflect(dir, wall));
 					_dist *= 0.5;
+
+					// なんか抜けてしまう
+//					pos = result.next_pos + dir*0.001;
 				}
 				else
 				{
