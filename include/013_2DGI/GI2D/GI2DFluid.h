@@ -67,7 +67,7 @@ struct GI2DFluid2
 #define area (20)
 					auto& p = pos[i];
 					p.x = 165*Scale + std::rand() % (int)(area*Scale) + (std::rand() % 10000) / 10000.f;
-					p.y = 105*Scale + std::rand() % (int)(area*Scale) + (std::rand() % 10000) / 10000.f;
+					p.y = 145*Scale + std::rand() % (int)(area*Scale) + (std::rand() % 10000) / 10000.f;
 //					p.x /= 100.f;
 	//				p.y /= 100.f;
 					p.x /= Scale;

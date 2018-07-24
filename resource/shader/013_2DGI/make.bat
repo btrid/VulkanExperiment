@@ -22,3 +22,5 @@ rem %exe% %include% %option% -o ../binary\\DebugFragmentMap.comp.spv DebugFragme
 %exe% %include% %option% -o ../binary\\Radiosity_Bounce.comp.spv Radiosity_Bounce.comp
 %exe% %include% %option% -o ../binary\\Radiosity_Render.frag.spv Radiosity_Render.frag
 %exe% %include% %option% -o ../binary\\Radiosity_Render.vert.spv Radiosity_Render.vert
+
+call boid/make.bat
