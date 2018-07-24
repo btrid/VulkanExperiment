@@ -73,7 +73,7 @@ void main()
 
 	int p_id = int(gl_GlobalInvocationID.x);
 
-	vec2 acc = b_acc[p_id];// + vec2(0., 0.08)*DT;
+	vec2 acc = b_acc[p_id];
 	vec2 vel = b_vel[p_id] + acc * DT+ vec2(0., 4.8)*DT;
 
 	float _dist = length(vel);

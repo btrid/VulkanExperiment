@@ -14,7 +14,7 @@ struct GI2DFluid2
 {
 	enum
 	{
-		Particle_Num = 10240,
+		Particle_Num = 102400,
 	};
 	enum Shader
 	{
@@ -64,7 +64,7 @@ struct GI2DFluid2
 				for (int i = 0; i < Particle_Num; i++)
 				{
 #define Scale (1.f)
-#define area (2)
+#define area (20)
 					auto& p = pos[i];
 					p.x = 165*Scale + std::rand() % (int)(area*Scale) + (std::rand() % 10000) / 10000.f;
 					p.y = 105*Scale + std::rand() % (int)(area*Scale) + (std::rand() % 10000) / 10000.f;
@@ -277,7 +277,6 @@ struct GI2DFluid2
 		// fragment_data‚É‘‚«ž‚Þ
 		{
 			vk::BufferMemoryBarrier to_read[] = {
-				b_pos.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				m_gi2d_context->b_fragment_buffer.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eComputeShader, {},
