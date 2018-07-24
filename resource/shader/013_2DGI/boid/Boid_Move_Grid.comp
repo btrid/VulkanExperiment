@@ -113,11 +113,11 @@ void main()
 			// hit確認
 			{
 				ivec4 fragment_index = ivec4(result.next_map_index/8, result.next_map_index%8);
-				ivec2 shift = fragment_index.zw;
 
 				int findex = fragment_index.x + fragment_index.y*reso.z;
 				uint64_t fragment_map = b_diffuse_map[findex];
 
+				ivec2 shift = fragment_index.zw;
 				uint64_t bit = 1ul<<(shift.x+shift.y*8);
 				if((fragment_map & bit) != 0)
 				{
@@ -129,7 +129,7 @@ void main()
 					progress *= 0.5;
 
 					// 更新はしない?
-//					pos = result.next_pos;
+					// pos = result.next_pos;
 
 				}
 				else

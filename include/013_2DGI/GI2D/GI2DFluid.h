@@ -66,7 +66,7 @@ struct GI2DFluid2
 #define area (20)
 					auto& p = pos[i];
 					p.x = 165 + std::rand() % area + (std::rand() % 10000) / 10000.f;
-					p.y = 245 + std::rand() % area + (std::rand() % 10000) / 10000.f;
+					p.y = 145 + std::rand() % area + (std::rand() % 10000) / 10000.f;
 				}
 				cmd.updateBuffer<vec2>(b_pos.getInfo().buffer, b_pos.getInfo().offset, pos);
 				vk::BufferMemoryBarrier to_read[] = {

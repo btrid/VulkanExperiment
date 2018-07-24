@@ -40,36 +40,36 @@ void main()
 	vec2 w_pos2 = (vec2(access_list_x.z, access_list_y.z) + vec2(0.55, 0.45))*Grid_Size;
 	vec2 w_pos3 = (vec2(access_list_x.w, access_list_y.w) + vec2(0.55, 0.55))*Grid_Size;
 
-	vec2 d = vec2(0.);
-	float len = distance(w_pos0, p_pos);
-	vec2 dir = normalize(w_pos0 - p_pos);
-	d -= b_grid_counter[access_list[0]] / (dir * (len+1.+r0));
-	len = distance(w_pos1, p_pos);
-	dir = normalize(w_pos1 - p_pos);
-	d -= b_grid_counter[access_list[1]] / (dir * (len+1.+r1));
-	len = distance(w_pos2, p_pos);
-	dir = normalize(w_pos2 - p_pos);
-	d -= b_grid_counter[access_list[2]] / (dir * (len+1.+r2));
-	len = distance(w_pos3, p_pos);
-	dir = normalize(w_pos3 - p_pos);
-	d -= b_grid_counter[access_list[3]] / (dir * (len+1.+r3));
-//	d += b_grid_counter[access_list[0]] / (((w_pos0 - p_pos) + 1.)*((w_pos0 - p_pos) + 1.));
-//	d += b_grid_counter[access_list[1]] / (((w_pos1 - p_pos) + 1.)*((w_pos1 - p_pos) + 1.));
-//	d += b_grid_counter[access_list[2]] / (((w_pos2 - p_pos) + 1.)*((w_pos2 - p_pos) + 1.));
-//	d += b_grid_counter[access_list[3]] / (((w_pos3 - p_pos) + 1.)*((w_pos3 - p_pos) + 1.));
+	ivec4 density;
+	density.x = b_grid_counter[access_list[0]];
+	density.y = b_grid_counter[access_list[1]];
+	density.z = b_grid_counter[access_list[2]];
+	density.w = b_grid_counter[access_list[3]];
+//	density = min(density, ivec4(1));
 
-	if(dot(d, d) < 1.0)
+	vec2 p0 = density[0] / ((w_pos0 - p_pos) * (1.+r0));
+	vec2 p1 = density[1] / ((w_pos1 - p_pos) * (1.+r1));
+	vec2 p2 = density[2] / ((w_pos2 - p_pos) * (1.+r2));
+	vec2 p3 = density[3] / ((w_pos3 - p_pos) * (1.+r3));
+//	p0 = dot(p0, p0) >= 1. ? -(normalize(p0) * min(length(p0), 20.)) : vec2(0.);
+//	p1 = dot(p1, p1) >= 1. ? -(normalize(p1) * min(length(p1), 20.)) : vec2(0.);
+//	p2 = dot(p2, p2) >= 1. ? -(normalize(p2) * min(length(p2), 20.)) : vec2(0.);
+//	p3 = dot(p3, p3) >= 1. ? -(normalize(p3) * min(length(p3), 20.)) : vec2(0.);
+
+	vec2 pressure = (p0 + p1 + p2 + p3);
+
+	if(dot(pressure, pressure) < 1.0)
 	{
 		b_acc[p_id] = vec2(0.); 
 	}
 	else 
 	{
-		float dist = length(d);
-		b_acc[p_id] = normalize(d)*min(dist, 100);
+//		float dist = length(pressure);
+//		b_acc[p_id] = normalize(pressure)*min(dist, 5);
 
-//		b_acc[p_id] = d;
+		b_acc[p_id] = pressure;
 
-//		b_acc[p_id] = normalize(d)*2.;
+//		b_acc[p_id] = normalize(pressure)*2.;
 	}
 
 }
