@@ -46,19 +46,21 @@ void main()
 	vec2 w_pos2 = (vec2(access_list_x.z, access_list_y.z) + vec2(0.45, 0.55))*Grid_Size;
 	vec2 w_pos3 = (vec2(access_list_x.w, access_list_y.w) + vec2(0.55, 0.55))*Grid_Size;
 
+	int d = b_grid_counter[index_grid.x + index_grid.y * reso_grid.x];
+//	int d = 0;
 	ivec4 density;
-	density.x = b_grid_counter[access_list[0]];
-	density.y = b_grid_counter[access_list[1]];
-	density.z = b_grid_counter[access_list[2]];
-	density.w = b_grid_counter[access_list[3]];
+	density.x = b_grid_counter[access_list[0]] - d;
+	density.y = b_grid_counter[access_list[1]] - d;
+	density.z = b_grid_counter[access_list[2]] - d;
+	density.w = b_grid_counter[access_list[3]] - d;
 
-/*	bvec4 is_wall;
+	bvec4 is_wall;
 	is_wall.x = getFragmentState(ivec2(p_pos) + ivec2(-1, -1));
 	is_wall.y = getFragmentState(ivec2(p_pos) + ivec2( 1, -1));
 	is_wall.z = getFragmentState(ivec2(p_pos) + ivec2(-1,  1));
 	is_wall.w = getFragmentState(ivec2(p_pos) + ivec2( 1,  1));
-	density += ivec4(is_wall)*20;
-*/
+	density += ivec4(is_wall)*50;
+
 	vec2 p0 = density[0] / normalize(p_pos - w_pos0);
 	vec2 p1 = density[1] / normalize(p_pos - w_pos1);
 	vec2 p2 = density[2] / normalize(p_pos - w_pos2);

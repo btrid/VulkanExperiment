@@ -14,7 +14,7 @@ struct GI2DFluid2
 {
 	enum
 	{
-		Particle_Num = 102400,
+		Particle_Num = 1024000,
 	};
 	enum Shader
 	{
