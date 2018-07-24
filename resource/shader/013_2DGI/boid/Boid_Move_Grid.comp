@@ -73,8 +73,8 @@ MarchResult marchEx(in vec2 pos, in ivec2 map_index, in float progress, in vec2 
 // 軽量版
 MarchResult marchEx(in vec2 pos, in ivec2 map_index, in float progress, in vec2 dir)
 {
+	pos += dir * clamp(progress, 0., 1.);
 	progress = max(progress-1., 0.);
-	pos += dir * clamp(progress-1., 0., 1.);
 
 	MarchResult result;
 	result.next_pos = pos;
