@@ -16,7 +16,7 @@ struct MarchResult
 	bool is_end;
 };
 
-#define FLT_EPSIRON (0.00001)
+#define FLT_EPSIRON (0.00000001)
 MarchResult marchEx(in vec2 pos, in ivec2 map_index, in float progress, in vec2 dir)
 {
 	float particle_size = 0.;
@@ -123,6 +123,8 @@ void main()
 				{
 					// 何もないのでそのまま進む
 					map_index = result.next_map_index;
+					pos = result.next_pos;
+
 				}
 			}
 		}
