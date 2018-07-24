@@ -14,7 +14,7 @@ struct GI2DFluid2
 {
 	enum
 	{
-		Particle_Num = 1024,
+		Particle_Num = 10240,
 	};
 	enum Shader
 	{
@@ -253,7 +253,9 @@ struct GI2DFluid2
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Move_Grid].get());
-			cmd.dispatch(1, 1, 1);
+
+			auto num = app::calcDipatchGroups(uvec3(Particle_Num, 1, 1), uvec3(1024, 1, 1));
+			cmd.dispatch(num.x, num.y, num.z);
 
 		}
 
@@ -267,7 +269,8 @@ struct GI2DFluid2
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Pressure].get());
-			cmd.dispatch(1, 1, 1);
+			auto num = app::calcDipatchGroups(uvec3(Particle_Num, 1, 1), uvec3(1024, 1, 1));
+			cmd.dispatch(num.x, num.y, num.z);
 		}
 		// fragment_dataÇ…èëÇ´çûÇﬁ
 		{
@@ -279,7 +282,8 @@ struct GI2DFluid2
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_ToFragment].get());
-			cmd.dispatch(1, 1, 1);
+			auto num = app::calcDipatchGroups(uvec3(Particle_Num, 1, 1), uvec3(1024, 1, 1));
+			cmd.dispatch(num.x, num.y, num.z);
 		}
 
 		vk::BufferMemoryBarrier to_read[] = {

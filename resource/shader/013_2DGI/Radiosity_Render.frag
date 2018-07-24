@@ -42,7 +42,8 @@ void main()
 	bool is_fragment = (fragment_map & 1ul<<(shift.x+shift.y*8)) != 0;
 	int fragment_index = map_index.x + map_index.y * u_gi2d_info.m_resolution.x;
 
-	radiance = is_fragment ? b_fragment[fragment_index].albedo.xyz : radiance;
+//	radiance = is_fragment ? b_fragment[fragment_index].albedo.xyz : radiance;
+	radiance = b_fragment[fragment_index].albedo.xyz * radiance;
 
 	FragColor = vec4(radiance, 1.);
 

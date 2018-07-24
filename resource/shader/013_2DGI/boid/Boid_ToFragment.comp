@@ -6,7 +6,7 @@
 #include "GI2D.glsl"
 #include "Boid2D.glsl"
 
-#define debug
+//#define debug
 
 #if !defined(debug)
 layout (local_size_x = 1024) in;
@@ -25,7 +25,7 @@ void main()
 
 	b_fragment[index.x+index.y*u_gi2d_info.m_resolution.x].albedo += vec4(float(p_id%3==0), float(p_id%3==1), float(p_id%3==2), 1.);
 #else
-	for(int p_id = 0; p_id < 1024; p_id++)
+	for(int p_id = 0; p_id < 10240; p_id++)
 	{
 		vec2 pos = b_pos[p_id];
 			
