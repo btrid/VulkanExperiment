@@ -1,10 +1,10 @@
 #version 460
 #extension GL_GOOGLE_include_directive : require
 
-#define USE_Boid2D 0
+#define USE_Fluid2D 0
 #define USE_GI2D 1
 #include "GI2D.glsl"
-#include "Boid2D.glsl"
+#include "Fluid2D.glsl"
 
 layout (local_size_x = 1024) in;
 
@@ -15,60 +15,6 @@ struct MarchResult
 	float progress;
 	bool is_end;
 };
-
-#if 0
-#define FLT_EPSIRON (0.01)
-MarchResult marchEx(in vec2 pos, in ivec2 map_index, in float progress, in vec2 dir)
-{
-	float particle_size = 0.;
-	vec2 cell_origin = vec2(map_index);
-	vec2 cell_p = pos - cell_origin;
-	float x = dir.x < 0. ? cell_p.x : (1. - cell_p.x);
-	float y = dir.y < 0. ? cell_p.y : (1. - cell_p.y);
-	x = (x <= particle_size ? 1. + x : x) - particle_size;
-	y = (y <= particle_size ? 1. + y : y) - particle_size;
-
-	vec2 dist = vec2(9999.);
-	dist.x = abs(dir.x) < FLT_EPSIRON ? 9999.9 : abs(x / dir.x);
-	dist.y = abs(dir.y) < FLT_EPSIRON ? 9999.9 : abs(y / dir.y);
-	float rate = min(dist.x, dist.y);
-	rate = abs(dir.x) < FLT_EPSIRON ? dist.y : rate;
-	rate = abs(dir.y) < FLT_EPSIRON ? dist.x : rate;
-
-	vec2 prog = dir * rate;
-	float progLength = length(prog);
-	if(progress < progLength)
-	{
-		// 移動完了
-		pos += dir * progress;
-		MarchResult result;
-		result.next_pos = pos;
-		result.next_map_index = map_index;
-		result.progress = 0.;
-		result.is_end = true;
-		return result;
-	}
-
-	ivec2 next = ivec2(0);
-	if(dist.x < dist.y){
-		next.x = dir.x < 0. ? -1 : 1;
-	}
-	else
-	{
-		next.y = dir.y < 0. ? -1 : 1;
-	}
-
-	pos += prog;
-	progress -= progLength;
-
-	MarchResult result;
-	result.next_pos = pos;
-	result.next_map_index = map_index + next;
-	result.progress = progress;
-	result.is_end = false;
-	return result;
-}
-#else
 
 // 軽量版
 MarchResult marchEx(in vec2 pos, in ivec2 map_index, in float progress, in vec2 dir)
@@ -84,8 +30,6 @@ MarchResult marchEx(in vec2 pos, in ivec2 map_index, in float progress, in vec2 
 	return result;
 }
 
-#endif
-
 void main() 
 {
 
@@ -93,7 +37,6 @@ void main()
 
 	vec2 acc = b_acc[p_id];
 	vec2 vel = b_vel[p_id] + (acc + vec2(0., 9.8))*DT;
-//	vec2 vel = b_vel[p_id] + (acc)*DT;
 
 	vec2 dir = vel;
 	vec2 pos = b_pos[p_id];

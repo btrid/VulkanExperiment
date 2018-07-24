@@ -1,0 +1,69 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Shape.glsl"
+
+#define USE_Fluid2D 0
+#define USE_GI2D 1
+#include "GI2D.glsl"
+#include "Fluid2D.glsl"
+
+layout (local_size_x = 1024) in;
+
+
+void main() 
+{
+
+	int p_id = int(gl_GlobalInvocationID.x);
+	const vec2 p_pos = b_pos[p_id]*Scale;
+	vec2 index_f = p_pos / Grid_Size;
+	ivec2 index = ivec2(index_f);
+	ivec2 reso = ivec2(u_gi2d_info.m_resolution/Grid_Size);
+	if(any(lessThan(index, ivec2(0))) || any(greaterThanEqual(index, reso))){ return; }
+
+	ivec3 neighbor = ivec3(ivec2(greaterThan(index_f, vec2(Grid_Size)*0.5)) * 2 - 1, 0);
+	ivec4 access_list_x = (index.xxxx + neighbor.zzxx);
+	ivec4 access_list_y = (index.yyyy + neighbor.zyzy);
+	ivec4 access_list = access_list_x + access_list_y * reso.x;
+	bvec4 is_wall = getWall(ivec2(p_pos));
+
+	float pressure = 0.;
+	for(int i = 0; i < 4; i++)
+	{
+		for(int target_id = b_grid_head[access_list[i]]; target_id != -1; target_id = b_grid_node[target_id])
+		{
+			if(p_id == target_id)
+			{
+				// 自分とは判定しない
+				continue; 
+			}
+			const vec2 t_pos = b_pos[target_id]*Scale;
+			float dist = distance(p_pos, t_pos);
+			if(dist <= InfluenceRadius)
+			{
+				float w = calcWeight(dist, InfluenceRadius);
+				pressure += w;
+			}
+		}
+
+		if(is_wall[i])
+		{
+			vec2 w_pos = ivec2(p_pos) + ivec2(i/2, i%2);
+			float dist = distance(p_pos, w_pos);
+			if(dist < InfluenceRadius) 
+			{
+				float w = calcWeight(dist, InfluenceRadius);
+				pressure += w*32.; //抜けないように壁からは強めの圧力をかける
+			}
+
+		}
+
+	}
+
+//	float A = SND*SND / DefaultDensity;				//圧力の計算に用いる係数
+//	float value = (pressure > (DefaultDensity) ? 1. : 0.) * (pressure - DefaultDensity)/* * A * 1000.*/;
+	b_pressure[p_id] = pressure;
+
+
+}

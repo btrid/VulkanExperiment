@@ -10,7 +10,7 @@
 namespace gi2d
 {
 
-struct GI2DFluid2
+struct GI2DFluid
 {
 	enum
 	{
@@ -18,7 +18,7 @@ struct GI2DFluid2
 	};
 	enum Shader
 	{
-		Shader_Move_Grid,
+		Shader_Update,
 		Shader_Pressure,
 		Shader_ToFragment,
 		Shader_Num,
@@ -31,13 +31,13 @@ struct GI2DFluid2
 	};
 	enum Pipeline
 	{
-		Pipeline_Move_Grid,
+		Pipeline_Update,
 		Pipeline_Pressure,
 		Pipeline_ToFragment,
 		Pipeline_Num,
 	};
 
-	GI2DFluid2(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context)
+	GI2DFluid(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context)
 	{
 		m_context = context;
 		m_gi2d_context = gi2d_context;
@@ -60,7 +60,6 @@ struct GI2DFluid2
 			{
 				// debug用初期データ
 				std::vector<vec2> pos(Particle_Num);
-//				pos.fill(vec2(10.f));
 				for (int i = 0; i < Particle_Num; i++)
 				{
 #define area (20)
@@ -164,9 +163,9 @@ struct GI2DFluid2
 		{
 			const char* name[] =
 			{
-				"Boid_Move_Grid.comp.spv",
-				"Boid_CalcPressure.comp.spv",
-				"Boid_ToFragment.comp.spv",
+				"Fluid_Update.comp.spv",
+				"Fluid_CalcPressure.comp.spv",
+				"Fluid_ToFragment.comp.spv",
 			};
 			static_assert(array_length(name) == Shader_Num, "not equal shader num");
 
@@ -192,7 +191,7 @@ struct GI2DFluid2
 		// pipeline
 		{
 			std::array<vk::PipelineShaderStageCreateInfo, Shader_Num> shader_info;
-			shader_info[0].setModule(m_shader[Shader_Move_Grid].get());
+			shader_info[0].setModule(m_shader[Shader_Update].get());
 			shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[0].setPName("main");
 			shader_info[1].setModule(m_shader[Shader_Pressure].get());
@@ -214,7 +213,7 @@ struct GI2DFluid2
 				.setLayout(m_pipeline_layout[PipelineLayout_Fluid].get()),
 			};
 			auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
-			m_pipeline[Pipeline_Move_Grid] = std::move(compute_pipeline[0]);
+			m_pipeline[Pipeline_Update] = std::move(compute_pipeline[0]);
 			m_pipeline[Pipeline_Pressure] = std::move(compute_pipeline[1]);
 			m_pipeline[Pipeline_ToFragment] = std::move(compute_pipeline[2]);
 		}
@@ -250,7 +249,7 @@ struct GI2DFluid2
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Move_Grid].get());
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Update].get());
 
 			auto num = app::calcDipatchGroups(uvec3(Particle_Num, 1, 1), uvec3(1024, 1, 1));
 			cmd.dispatch(num.x, num.y, num.z);

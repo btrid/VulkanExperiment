@@ -84,7 +84,7 @@ int main()
 	GI2DDebug gi2d_debug_make_fragment(context, gi2d_context);
 	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
 	GI2DRadiosity gi2d_Radiosity(context, gi2d_context, app.m_window->getRenderTarget());
-	GI2DFluid2 gi2d_Fluid(context, gi2d_context);
+	GI2DFluid gi2d_Fluid(context, gi2d_context);
 
 //	auto anime_cmd = animater.createCmd(player_model);
 //	auto pm_make_cmd = pm_appmodel.createCmd(player_model);

@@ -1,9 +1,6 @@
 #version 460
 #extension GL_GOOGLE_include_directive : require
 
-#include "btrlib/ConvertDimension.glsl"
-#include "btrlib/Shape.glsl"
-
 #define USE_Fluid2D 0
 #define USE_GI2D 1
 #include "GI2D.glsl"
@@ -11,59 +8,64 @@
 
 layout (local_size_x = 1024) in;
 
+float rand(vec2 co)
+{
+    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+}
 
+bool getFragmentState(in ivec2 i_pos)
+{
+	ivec4 fi = ivec4(i_pos/8, i_pos%8);
+	int findex = fi.x + fi.y*(u_gi2d_info.m_resolution.x/8);
+	uint64_t fragment_map = b_diffuse_map[findex];
+
+	uint64_t bit = 1ul<<(fi.z+fi.w*8);
+	return (fragment_map & bit) != 0;
+}
 void main() 
 {
 
 	int p_id = int(gl_GlobalInvocationID.x);
-	const vec2 p_pos = b_pos[p_id]*Scale;
-	vec2 index_f = p_pos / Grid_Size;
-	ivec2 index = ivec2(index_f);
-	ivec2 reso = ivec2(u_gi2d_info.m_resolution/Grid_Size);
-	if(any(lessThan(index, ivec2(0))) || any(greaterThanEqual(index, reso))){ return; }
-
-	ivec3 neighbor = ivec3(ivec2(greaterThan(index_f, vec2(Grid_Size)*0.5)) * 2 - 1, 0);
-	ivec4 access_list_x = (index.xxxx + neighbor.zzxx);
-	ivec4 access_list_y = (index.yyyy + neighbor.zyzy);
-	ivec4 access_list = access_list_x + access_list_y * reso.x;
-	bvec4 is_wall = getWall(ivec2(p_pos));
-
-	float pressure = 0.;
-	for(int i = 0; i < 4; i++)
+	vec2 p_pos = b_pos[p_id];
+	vec2 index_grid_f = p_pos / Grid_Size;
+	ivec2 index_grid = ivec2(index_grid_f);
+	ivec2 reso_grid = ivec2(u_gi2d_info.m_resolution/Grid_Size);
+	if(any(lessThan(index_grid, ivec2(0))) || any(greaterThanEqual(index_grid, reso_grid)))
 	{
-		for(int target_id = b_grid_head[access_list[i]]; target_id != -1; target_id = b_grid_node[target_id])
-		{
-			if(p_id == target_id)
-			{
-				// 自分とは判定しない
-				continue; 
-			}
-			const vec2 t_pos = b_pos[target_id]*Scale;
-			float dist = distance(p_pos, t_pos);
-			if(dist <= InfluenceRadius)
-			{
-				float w = calcWeight(dist, InfluenceRadius);
-				pressure += w;
-			}
-		}
-
-		if(is_wall[i])
-		{
-			vec2 w_pos = ivec2(p_pos) + ivec2(i/2, i%2);
-			float dist = distance(p_pos, w_pos);
-			if(dist < InfluenceRadius) 
-			{
-				float w = calcWeight(dist, InfluenceRadius);
-				pressure += w*32.; //抜けないように壁からは強めの圧力をかける
-			}
-
-		}
-
+		b_acc[p_id] = vec2(0);
+		return; 
 	}
 
-//	float A = SND*SND / DefaultDensity;				//圧力の計算に用いる係数
-//	float value = (pressure > (DefaultDensity) ? 1. : 0.) * (pressure - DefaultDensity)/* * A * 1000.*/;
-	b_pressure[p_id] = pressure;
+	ivec4 neighbor = ivec4(-1, -1, 1, 1);
+	ivec4 access_list_x = (index_grid.xxxx + neighbor.xzxz);
+	ivec4 access_list_y = (index_grid.yyyy + neighbor.yyww);
+	ivec4 access_list = access_list_x + access_list_y * reso_grid.x;
 
+	vec2 w_pos0 = (vec2(access_list_x.x, access_list_y.x) + vec2(0.45, 0.45))*Grid_Size;
+	vec2 w_pos1 = (vec2(access_list_x.y, access_list_y.y) + vec2(0.55, 0.45))*Grid_Size;
+	vec2 w_pos2 = (vec2(access_list_x.z, access_list_y.z) + vec2(0.45, 0.55))*Grid_Size;
+	vec2 w_pos3 = (vec2(access_list_x.w, access_list_y.w) + vec2(0.55, 0.55))*Grid_Size;
+
+	int d = b_grid_counter[index_grid.x + index_grid.y * reso_grid.x];
+	ivec4 density;
+	density.x = b_grid_counter[access_list[0]] - d;
+	density.y = b_grid_counter[access_list[1]] - d;
+	density.z = b_grid_counter[access_list[2]] - d;
+	density.w = b_grid_counter[access_list[3]] - d;
+
+	bvec4 is_wall;
+	is_wall.x = getFragmentState(ivec2(p_pos) + ivec2(-1, -1));
+	is_wall.y = getFragmentState(ivec2(p_pos) + ivec2( 1, -1));
+	is_wall.z = getFragmentState(ivec2(p_pos) + ivec2(-1,  1));
+	is_wall.w = getFragmentState(ivec2(p_pos) + ivec2( 1,  1));
+	density += ivec4(is_wall)*50;
+
+	vec2 p0 = density[0] / normalize(p_pos - w_pos0);
+	vec2 p1 = density[1] / normalize(p_pos - w_pos1);
+	vec2 p2 = density[2] / normalize(p_pos - w_pos2);
+	vec2 p3 = density[3] / normalize(p_pos - w_pos3);
+	vec2 pressure = (p0 + p1 + p2 + p3);
+
+	b_acc[p_id] = pressure;
 
 }

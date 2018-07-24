@@ -1,5 +1,5 @@
-#ifndef FLUID_H_
-#define FLUID_H_
+#ifndef Fluid_H_
+#define Fluid_H_
 
 //#extension GL_NV_shader_atomic_float : require
 
@@ -18,15 +18,9 @@ struct ParticleInfo
 
 #if defined(USE_Fluid2D)
 
-#define Scale (100.)
-#define Grid_Size (4.)
+#define Grid_Size (1.)
   #define DT 0.016
 //#define DT 0.0005
-#define InfluenceRadius (1.*Grid_Size)
-#define CollisionRadius (1.*Grid_Size)
-#define WallPressure (100.)
-const float p_mass = 100.; // 質量
-const float w_mass = 100.;
 
 layout(set=USE_Fluid2D, binding=0, std430) restrict buffer PosBuffer {
 	vec2 b_pos[];
@@ -40,17 +34,14 @@ layout(set=USE_Fluid2D, binding=2, std430) restrict buffer AccBuffer {
 layout(set=USE_Fluid2D, binding=3, std430) restrict buffer TypeBuffer {
 	int b_type[];
 };
-layout(set=USE_Fluid2D, binding=4, std430) restrict buffer PressureBuffer {
-	float b_pressure[];
-};
-layout(set=USE_Fluid2D, binding=5, std430) restrict buffer MinimumPressureBuffer {
-	float b_minimum_pressure[];
-};
-layout(set=USE_Fluid2D, binding=6, std430) restrict buffer GridCellBuffer {
+layout(set=USE_Fluid2D, binding=4) restrict buffer GridCellBuffer {
 	int b_grid_head[];
 };
-layout(set=USE_Fluid2D, binding=7, std430) restrict buffer GridNodeBuffer {
+layout(set=USE_Fluid2D, binding=5) restrict buffer GridNodeBuffer {
 	int b_grid_node[];
+};
+layout(set=USE_Fluid2D, binding=6) restrict buffer GridCounter {
+	int b_grid_counter[];
 };
 #endif
 
