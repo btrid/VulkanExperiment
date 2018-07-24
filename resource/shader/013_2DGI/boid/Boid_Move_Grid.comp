@@ -93,12 +93,14 @@ void main()
 
 	vec2 acc = b_acc[p_id];
 	vec2 vel = b_vel[p_id] + (acc + vec2(0., 9.8))*DT;
+//	vec2 vel = b_vel[p_id] + (acc)*DT;
 
 	vec2 dir = vel;
 	vec2 pos = b_pos[p_id];
 
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
 
+	if(dot(vel, vel) != 0.)
 	{ 
 
 		float advance = length(dir);
@@ -144,7 +146,7 @@ void main()
 			if(result.is_end)
 			{
 				b_pos[p_id] = pos;
-				b_vel[p_id] = dir * advance;
+				b_vel[p_id] = dir * advance * 0.95;
 				break;
 			}
 

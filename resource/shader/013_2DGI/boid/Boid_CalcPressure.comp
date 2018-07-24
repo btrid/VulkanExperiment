@@ -12,11 +12,21 @@ float rand(vec2 co)
 {
     return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
 }
+
+bool getFragmentState(in ivec2 i_pos)
+{
+	ivec4 fi = ivec4(i_pos/8, i_pos%8);
+	int findex = fi.x + fi.y*(u_gi2d_info.m_resolution.x/8);
+	uint64_t fragment_map = b_diffuse_map[findex];
+
+	uint64_t bit = 1ul<<(fi.z+fi.w*8);
+	return (fragment_map & bit) != 0;
+}
 void main() 
 {
 
 	int p_id = int(gl_GlobalInvocationID.x);
-	const vec2 p_pos = b_pos[p_id];
+	vec2 p_pos = b_pos[p_id];
 	vec2 index_grid_f = p_pos / Grid_Size;
 	ivec2 index_grid = ivec2(index_grid_f);
 	ivec2 reso_grid = ivec2(u_gi2d_info.m_resolution/Grid_Size);
@@ -26,18 +36,15 @@ void main()
 		return; 
 	}
 
-	ivec4 neighbor = ivec4(-1, -1, 0, 0) + ivec2(greaterThanEqual(index_grid_f, vec2(Grid_Size)*0.5)).xyxy;
-	ivec4 access_list_x = (index_grid.xxxx + neighbor.xxzz);
-	ivec4 access_list_y = (index_grid.yyyy + neighbor.ywyw);
+//	ivec4 neighbor = ivec4(-1, -1, 0, 0) + ivec2(greaterThanEqual(index_grid_f, vec2(Grid_Size)*0.5)).xyxy;
+	ivec4 neighbor = ivec4(-1, -1, 1, 1);// + ivec2(greaterThanEqual(index_grid_f, vec2(Grid_Size)*0.5)).xyxy;
+	ivec4 access_list_x = (index_grid.xxxx + neighbor.xzxz);
+	ivec4 access_list_y = (index_grid.yyyy + neighbor.yyww);
 	ivec4 access_list = access_list_x + access_list_y * reso_grid.x;
 
-	float r0 = rand(vec2(p_id)*vec2(0.345, 0.128));
-	float r1 = rand(vec2(p_id)*vec2(0.120, 0.673));
-	float r2 = rand(vec2(p_id)*vec2(0.471, 0.932));
-	float r3 = rand(vec2(p_id)*vec2(0.022, 0.545));
 	vec2 w_pos0 = (vec2(access_list_x.x, access_list_y.x) + vec2(0.45, 0.45))*Grid_Size;
-	vec2 w_pos1 = (vec2(access_list_x.y, access_list_y.y) + vec2(0.45, 0.55))*Grid_Size;
-	vec2 w_pos2 = (vec2(access_list_x.z, access_list_y.z) + vec2(0.55, 0.45))*Grid_Size;
+	vec2 w_pos1 = (vec2(access_list_x.y, access_list_y.y) + vec2(0.55, 0.45))*Grid_Size;
+	vec2 w_pos2 = (vec2(access_list_x.z, access_list_y.z) + vec2(0.45, 0.55))*Grid_Size;
 	vec2 w_pos3 = (vec2(access_list_x.w, access_list_y.w) + vec2(0.55, 0.55))*Grid_Size;
 
 	ivec4 density;
@@ -45,31 +52,24 @@ void main()
 	density.y = b_grid_counter[access_list[1]];
 	density.z = b_grid_counter[access_list[2]];
 	density.w = b_grid_counter[access_list[3]];
-//	density = min(density, ivec4(1));
 
-	vec2 p0 = density[0] / ((w_pos0 - p_pos) * (1.+r0));
-	vec2 p1 = density[1] / ((w_pos1 - p_pos) * (1.+r1));
-	vec2 p2 = density[2] / ((w_pos2 - p_pos) * (1.+r2));
-	vec2 p3 = density[3] / ((w_pos3 - p_pos) * (1.+r3));
-//	p0 = dot(p0, p0) >= 1. ? -(normalize(p0) * min(length(p0), 20.)) : vec2(0.);
-//	p1 = dot(p1, p1) >= 1. ? -(normalize(p1) * min(length(p1), 20.)) : vec2(0.);
-//	p2 = dot(p2, p2) >= 1. ? -(normalize(p2) * min(length(p2), 20.)) : vec2(0.);
-//	p3 = dot(p3, p3) >= 1. ? -(normalize(p3) * min(length(p3), 20.)) : vec2(0.);
+	bool is_wall_x0 = getFragmentState(ivec2(p_pos) + ivec2(-1, -1));
+	bool is_wall_x1 = getFragmentState(ivec2(p_pos) + ivec2( 1, -1));
+	bool is_wall_y0 = getFragmentState(ivec2(p_pos) + ivec2(-1,  1));
+	bool is_wall_y1 = getFragmentState(ivec2(p_pos) + ivec2( 1,  1));
+	density.x += int(is_wall_x0)*20;
+	density.y += int(is_wall_x1)*20;
+	density.z += int(is_wall_y0)*20;
+	density.w += int(is_wall_y1)*20;
+//	density = min(density, ivec4(5));
 
+
+	vec2 p0 = density[0] / normalize(p_pos - w_pos0);
+	vec2 p1 = density[1] / normalize(p_pos - w_pos1);
+	vec2 p2 = density[2] / normalize(p_pos - w_pos2);
+	vec2 p3 = density[3] / normalize(p_pos - w_pos3);
 	vec2 pressure = (p0 + p1 + p2 + p3);
 
-	if(dot(pressure, pressure) < 1.0)
-	{
-		b_acc[p_id] = vec2(0.); 
-	}
-	else 
-	{
-//		float dist = length(pressure);
-//		b_acc[p_id] = normalize(pressure)*min(dist, 5);
-
-		b_acc[p_id] = pressure;
-
-//		b_acc[p_id] = normalize(pressure)*2.;
-	}
+	b_acc[p_id] = pressure;
 
 }
