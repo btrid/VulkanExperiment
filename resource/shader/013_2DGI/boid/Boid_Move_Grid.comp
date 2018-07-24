@@ -16,7 +16,8 @@ struct MarchResult
 	bool is_end;
 };
 
-#define FLT_EPSIRON (0.00000001)
+#if 0
+#define FLT_EPSIRON (0.01)
 MarchResult marchEx(in vec2 pos, in ivec2 map_index, in float progress, in vec2 dir)
 {
 	float particle_size = 0.;
@@ -67,6 +68,23 @@ MarchResult marchEx(in vec2 pos, in ivec2 map_index, in float progress, in vec2 
 	result.is_end = false;
 	return result;
 }
+#else
+
+// 軽量版
+MarchResult marchEx(in vec2 pos, in ivec2 map_index, in float progress, in vec2 dir)
+{
+	progress = max(progress-1., 0.);
+	pos += dir * clamp(progress-1., 0., 1.);
+
+	MarchResult result;
+	result.next_pos = pos;
+	result.next_map_index = ivec2(pos);
+	result.progress = progress;
+	result.is_end = progress <= 1.;
+	return result;
+}
+
+#endif
 
 void main() 
 {
@@ -74,30 +92,27 @@ void main()
 	int p_id = int(gl_GlobalInvocationID.x);
 
 	vec2 acc = b_acc[p_id];
-	vec2 vel = b_vel[p_id] + acc * DT+ vec2(0., 4.8)*DT;
+	vec2 vel = (b_vel[p_id]) + (acc + vec2(0., 9.8))*DT;
 
-	float _dist = length(vel);
+	float advance = length(vel);
 
 	vec2 pos = b_pos[p_id];
 	vec2 dir = vel;
 
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
 
-	if(dot(dir, dir) > 0.001)
 	{ 
-		float distance = length(dir);
+
 		dir = normalize(dir);
-
 		ivec2 map_index = ivec2(pos);
-
-		float progress = _dist;
-		for(;;)
+		float progress = advance;
+		for(int _i = 0; _i < 500; _i++)
 		{
 			MarchResult result = marchEx(pos, map_index, progress, dir);
 			if(result.is_end)
 			{
 				b_pos[p_id] = result.next_pos;
-				b_vel[p_id] = dir * _dist;
+				b_vel[p_id] = dir * advance;
 				break;
 			}
 			progress = result.progress;
@@ -117,10 +132,12 @@ void main()
 					vec2 next = vec2(result.next_map_index - map_index);
 					vec2 wall = vec2(next.x, next.y);
 					dir = normalize(reflect(dir, wall));
-					_dist *= 0.5;
+					advance *= 0.5;
+//					progress *= 0.5;
 
-					// なんか抜けてしまう
-//					pos = result.next_pos + dir*0.001;
+					// 更新はしない?
+					// pos = result.next_pos;
+
 				}
 				else
 				{
