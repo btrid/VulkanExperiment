@@ -53,16 +53,13 @@ void main()
 	density.z = b_grid_counter[access_list[2]];
 	density.w = b_grid_counter[access_list[3]];
 
-	bool is_wall_x0 = getFragmentState(ivec2(p_pos) + ivec2(-1, -1));
-	bool is_wall_x1 = getFragmentState(ivec2(p_pos) + ivec2( 1, -1));
-	bool is_wall_y0 = getFragmentState(ivec2(p_pos) + ivec2(-1,  1));
-	bool is_wall_y1 = getFragmentState(ivec2(p_pos) + ivec2( 1,  1));
-	density.x += int(is_wall_x0)*20;
-	density.y += int(is_wall_x1)*20;
-	density.z += int(is_wall_y0)*20;
-	density.w += int(is_wall_y1)*20;
+	bvec4 is_wall;
+	is_wall.x = getFragmentState(ivec2(p_pos) + ivec2(-1, -1));
+	is_wall.y = getFragmentState(ivec2(p_pos) + ivec2( 1, -1));
+	is_wall.z = getFragmentState(ivec2(p_pos) + ivec2(-1,  1));
+	is_wall.w = getFragmentState(ivec2(p_pos) + ivec2( 1,  1));
+	density += ivec4(is_wall)*20;
 //	density = min(density, ivec4(5));
-
 
 	vec2 p0 = density[0] / normalize(p_pos - w_pos0);
 	vec2 p1 = density[1] / normalize(p_pos - w_pos1);
