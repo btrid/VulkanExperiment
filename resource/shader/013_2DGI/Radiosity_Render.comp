@@ -33,5 +33,7 @@ void main()
 		}}
 		radiance += count==0 ? radiance_ : (radiance_ / count) * rate[i];
 	}
+
+	
 	FragColor = vec4(radiance, 1.);
 }
