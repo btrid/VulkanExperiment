@@ -65,7 +65,9 @@ void main()
 	else 
 	{
 		float dist = length(d);
-		b_acc[p_id] = normalize(d)*min(dist, 2.);
+		b_acc[p_id] = normalize(d)*min(dist, 100);
+
+//		b_acc[p_id] = d;
 
 //		b_acc[p_id] = normalize(d)*2.;
 	}

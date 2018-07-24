@@ -63,15 +63,10 @@ struct GI2DFluid2
 //				pos.fill(vec2(10.f));
 				for (int i = 0; i < Particle_Num; i++)
 				{
-#define Scale (1.f)
 #define area (20)
 					auto& p = pos[i];
-					p.x = 165*Scale + std::rand() % (int)(area*Scale) + (std::rand() % 10000) / 10000.f;
-					p.y = 245*Scale + std::rand() % (int)(area*Scale) + (std::rand() % 10000) / 10000.f;
-//					p.x /= 100.f;
-	//				p.y /= 100.f;
-					p.x /= Scale;
-					p.y /= Scale;
+					p.x = 165 + std::rand() % area + (std::rand() % 10000) / 10000.f;
+					p.y = 245 + std::rand() % area + (std::rand() % 10000) / 10000.f;
 				}
 				cmd.updateBuffer<vec2>(b_pos.getInfo().buffer, b_pos.getInfo().offset, pos);
 				vk::BufferMemoryBarrier to_read[] = {

@@ -92,29 +92,22 @@ void main()
 	int p_id = int(gl_GlobalInvocationID.x);
 
 	vec2 acc = b_acc[p_id];
-	vec2 vel = (b_vel[p_id]) + (acc + vec2(0., 9.8))*DT;
+	vec2 vel = b_vel[p_id] + (acc + vec2(0., 9.8))*DT;
 
-	float advance = length(vel);
-
-	vec2 pos = b_pos[p_id];
 	vec2 dir = vel;
+	vec2 pos = b_pos[p_id];
 
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
 
 	{ 
 
+		float advance = length(dir);
 		dir = normalize(dir);
 		ivec2 map_index = ivec2(pos);
 		float progress = advance;
 		for(int _i = 0; _i < 500; _i++)
 		{
 			MarchResult result = marchEx(pos, map_index, progress, dir);
-			if(result.is_end)
-			{
-				b_pos[p_id] = result.next_pos;
-				b_vel[p_id] = dir * advance;
-				break;
-			}
 			progress = result.progress;
 
 			// hit確認
@@ -133,10 +126,10 @@ void main()
 					vec2 wall = vec2(next.x, next.y);
 					dir = normalize(reflect(dir, wall));
 					advance *= 0.5;
-//					progress *= 0.5;
+					progress *= 0.5;
 
 					// 更新はしない?
-					// pos = result.next_pos;
+//					pos = result.next_pos;
 
 				}
 				else
@@ -147,6 +140,14 @@ void main()
 
 				}
 			}
+
+			if(result.is_end)
+			{
+				b_pos[p_id] = pos;
+				b_vel[p_id] = dir * advance;
+				break;
+			}
+
 		}
 	}
 
