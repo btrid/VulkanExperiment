@@ -50,8 +50,6 @@ layout(set=USE_GI2D_Radiosity, binding=0) restrict buffer RadianceMapBuffer {
 layout(set=USE_GI2D_Radiosity, binding=1) restrict buffer BounceMapBuffer {
 	uint64_t b_bounce_map[];
 };
-//layout (set=USE_GI2D_Radiosity, binding=10, r16f) uniform image2DArray t_color;
-//layout (set=USE_GI2D_Radiosity, binding=11) uniform sampler2D s_color;
 
 int getMemoryOrder(in ivec2 xy)
 {
@@ -74,9 +72,8 @@ int getMemoryOrder(in ivec2 xy)
 
 #define LightPower (0.015)
 #define Advance (1.)
-#define denominator (512.)
-#define Block_Size (5)
-float rate[] = {1., 1.};
+//#define denominator (512.)
+#define denominator (16.)
 
 uint packEmissive(in vec3 rgb)
 {
