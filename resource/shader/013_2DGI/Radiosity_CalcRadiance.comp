@@ -11,11 +11,11 @@ void main()
 {
 	uint tiled_1D_index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*u_gi2d_info.m_resolution.x; 
 	vec4 fragment = b_fragment[tiled_1D_index].albedo;
-	bool is_emissive = (fragment.w > 0.1);
+	bool is_emissive = (fragment.w >= 1.);
 
 	{
 		uint packed = packEmissive(fragment.xyz*LightPower);
-//		is_emissive ? (b_radiance[getMemoryOrder(ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y))] = packed) : 0;
+		b_radiance[getMemoryOrder(ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y))] = packed;
 	}
 }
 
