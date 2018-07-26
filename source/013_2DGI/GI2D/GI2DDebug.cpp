@@ -16,11 +16,11 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 			vec4 color;
 		};
 		std::vector<Fragment> rect;
-		rect.emplace_back(Fragment{ ivec4{ 200, 400, 10, 4 }, vec4{0.0f,0.0f,0.6f,1.f} });
-		rect.emplace_back(Fragment{ ivec4{ 300, 40, 8, 10 }, vec4{ 0.6f,0.0f,0.f,1.f } });
-		rect.emplace_back(Fragment{ ivec4{ 270, 150, 4, 10 }, vec4{ 0.f,0.6f,0.f,1.f } });
-		rect.emplace_back(Fragment{ ivec4{ 50, 200, 6, 6 }, vec4{ 0.5f,0.5f,0.5f,1.f } });
-#if 0
+// 		rect.emplace_back(Fragment{ ivec4{ 200, 400, 10, 4 }, vec4{0.0f,0.0f,0.6f,1.f} });
+// 		rect.emplace_back(Fragment{ ivec4{ 300, 40, 8, 10 }, vec4{ 0.6f,0.0f,0.f,1.f } });
+// 		rect.emplace_back(Fragment{ ivec4{ 270, 150, 4, 10 }, vec4{ 0.f,0.6f,0.f,1.f } });
+// 		rect.emplace_back(Fragment{ ivec4{ 50, 200, 6, 6 }, vec4{ 0.5f,0.5f,0.5f,1.f } });
+#if 1
 //		rect.emplace_back(Fragment{ ivec4{ 200, 150, 100, 100}, vec4{ 1.f,0.f,0.f,0.f } });
 //		rect.emplace_back(Fragment{ ivec4{ 80, 50, 500, 20 }, vec4{ 1.f,0.f,0.f,0.f } });
 		rect.emplace_back(Fragment{ ivec4{ 20, 0, 1, 550 }, vec4{ 1.f,0.f,0.f,0.f } });
@@ -53,7 +53,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 			for (size_t x = 0; x < gi2d_context->RenderWidth; x++)
 			{
 				auto& m = map_data[x + y * gi2d_context->RenderWidth];
-				m.albedo = vec4(0.5f, 0.5f, 1.f, 0.1f);
+				m.albedo = vec4(0.f, 0.f, 0.f, 0.1f);
 				for (auto& r : rect)
 				{
 					if (x >= r.rect.x && y >= r.rect.y && x <= r.rect.x + r.rect.z && y <= r.rect.y + r.rect.w) {

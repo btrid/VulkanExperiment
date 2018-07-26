@@ -70,10 +70,10 @@ int getMemoryOrder(in ivec2 xy)
 #endif
 }
 
-#define LightPower (0.065)
+#define LightPower (0.015)
 #define Advance (1.)
-//#define denominator (512.)
-#define denominator (16.)
+#define denominator (512.)
+//#define denominator (16.)
 
 uint packEmissive(in vec3 rgb)
 {

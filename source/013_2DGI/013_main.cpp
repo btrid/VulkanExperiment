@@ -145,7 +145,7 @@ int main()
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				gi2d_clear.execute(cmd);
 				gi2d_debug_make_fragment.execute(cmd);
-//				gi2d_Fluid.execute(cmd);
+				gi2d_Fluid.execute(cmd);
 				gi2d_make_hierarchy.execute(cmd);
 				gi2d_Radiosity.execute(cmd);
 				cmd.end();
