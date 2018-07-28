@@ -1,26 +1,9 @@
 #ifndef Fluid_H_
 #define Fluid_H_
 
-//#extension GL_NV_shader_atomic_float : require
-
-//#define BOUNDS_CHECK(v) 
-
-struct ParticleInfo
-{
-	float lambdaN0;
-	float numberDensityN0;
-	float influenceRadius;
-	float collisionRadius;
-
-	int particleNum;
-	int fluidNum;
-};
 
 #if defined(USE_Fluid2D)
 
-#define Grid_Size (1.)
-  #define DT 0.016
-//#define DT 0.0005
 
 layout(set=USE_Fluid2D, binding=0, std430) restrict buffer PosBuffer {
 	vec2 b_pos[];
@@ -39,9 +22,6 @@ layout(set=USE_Fluid2D, binding=4) restrict buffer GridCellBuffer {
 };
 layout(set=USE_Fluid2D, binding=5) restrict buffer GridNodeBuffer {
 	int b_grid_node[];
-};
-layout(set=USE_Fluid2D, binding=6) restrict buffer GridCounter {
-	int b_grid_counter[];
 };
 #endif
 

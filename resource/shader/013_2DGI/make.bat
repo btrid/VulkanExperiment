@@ -29,3 +29,5 @@ rem %exe% %include% %option% -o ../binary\\DebugFragmentMap.comp.spv DebugFragme
 
 call fluid/make.bat
 cd /d %~dp0
+call rigidbody/make.bat
+cd /d %~dp0

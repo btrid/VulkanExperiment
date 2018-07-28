@@ -14,8 +14,16 @@ struct GI2DClear
 	void execute(vk::CommandBuffer cmd)
 	{
 		{
+			vk::BufferMemoryBarrier to_write[] = {
+				m_gi2d_context->b_grid_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {},
+				0, nullptr, array_length(to_write), to_write, 0, nullptr);
+
 			// clear
 			cmd.fillBuffer(m_gi2d_context->b_fragment_buffer.getInfo().buffer, m_gi2d_context->b_fragment_buffer.getInfo().offset, m_gi2d_context->b_fragment_buffer.getInfo().range, 0u);
+			cmd.fillBuffer(m_gi2d_context->b_grid_counter.getInfo().buffer, m_gi2d_context->b_grid_counter.getInfo().offset, m_gi2d_context->b_grid_counter.getInfo().range, 0);
+
 		}
 	}
 	std::shared_ptr<btr::Context> m_context;

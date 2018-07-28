@@ -113,6 +113,8 @@ struct GI2DContext
 			b_emissive_map = context->m_storage_memory.allocateMemory<uint64_t>({ (uint32_t)RenderHeight * RenderWidth / 64,{} });
 		}
 
+		b_grid_counter = context->m_storage_memory.allocateMemory<int32_t>({ (uint32_t)RenderWidth*RenderHeight,{} });
+
 		{
 			{
 				auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
@@ -137,6 +139,11 @@ struct GI2DContext
 					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 					.setDescriptorCount(1)
 					.setBinding(3),
+					vk::DescriptorSetLayoutBinding()
+					.setStageFlags(stage)
+					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+					.setDescriptorCount(1)
+					.setBinding(4),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -161,6 +168,7 @@ struct GI2DContext
 					b_fragment_buffer.getInfo(),
 					b_diffuse_map.getInfo(),
 					b_emissive_map.getInfo(),
+					b_grid_counter.getInfo(),
 				};
 
 				vk::WriteDescriptorSet write[] = {
@@ -188,6 +196,7 @@ struct GI2DContext
 	btr::BufferMemoryEx<Fragment> b_fragment_buffer;
 	btr::BufferMemoryEx<uint64_t> b_diffuse_map;
 	btr::BufferMemoryEx<uint64_t> b_emissive_map;
+	btr::BufferMemoryEx<int32_t> b_grid_counter;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;

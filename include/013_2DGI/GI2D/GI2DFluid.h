@@ -50,7 +50,6 @@ struct GI2DFluid
 			b_acc = m_context->m_storage_memory.allocateMemory<vec2>({ Particle_Num,{} });
 			b_grid_head = m_context->m_storage_memory.allocateMemory<int32_t>({ (uint32_t)m_gi2d_context->RenderWidth*m_gi2d_context->RenderHeight,{} });
 			b_grid_node = m_context->m_storage_memory.allocateMemory<int32_t>({ Particle_Num,{} });
-			b_grid_counter = m_context->m_storage_memory.allocateMemory<int32_t>({ (uint32_t)m_gi2d_context->RenderWidth*m_gi2d_context->RenderHeight,{} });
 			b_type = m_context->m_storage_memory.allocateMemory<int32_t>({ Particle_Num,{} });
 
 			cmd.fillBuffer(b_vel.getInfo().buffer, b_vel.getInfo().offset, b_vel.getInfo().range, 0);
@@ -114,11 +113,6 @@ struct GI2DFluid
 					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 					.setDescriptorCount(1)
 					.setBinding(5),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(6),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -143,7 +137,6 @@ struct GI2DFluid
 					b_type.getInfo(),
 					b_grid_head.getInfo(),
 					b_grid_node.getInfo(),
-					b_grid_counter.getInfo(),
 				};
 
 				vk::WriteDescriptorSet write[] = 
@@ -229,13 +222,11 @@ struct GI2DFluid
 			// linklist更新のため初期化
 			vk::BufferMemoryBarrier to_write[] = {
 				b_grid_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
-				b_grid_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {},
 				0, nullptr, array_length(to_write), to_write, 0, nullptr);
 
 			cmd.fillBuffer(b_grid_head.getInfo().buffer, b_grid_head.getInfo().offset, b_grid_head.getInfo().range, -1);
-			cmd.fillBuffer(b_grid_counter.getInfo().buffer, b_grid_counter.getInfo().offset, b_grid_counter.getInfo().range, 0);
 
 		}
 
@@ -243,7 +234,7 @@ struct GI2DFluid
 			// 位置の更新
 			vk::BufferMemoryBarrier to_read[] = {
 				b_grid_head.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
-				b_grid_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+				m_gi2d_context->b_grid_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 				b_acc.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
@@ -260,7 +251,7 @@ struct GI2DFluid
 			// 圧力の更新
 			vk::BufferMemoryBarrier to_read[] = {
 				b_grid_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-				b_grid_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				m_gi2d_context->b_grid_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				b_pos.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
@@ -303,7 +294,6 @@ struct GI2DFluid
 	btr::BufferMemoryEx<int32_t> b_type;
 	btr::BufferMemoryEx<int32_t> b_grid_head;
 	btr::BufferMemoryEx<int32_t> b_grid_node;
-	btr::BufferMemoryEx<int32_t> b_grid_counter;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;

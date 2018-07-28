@@ -1,0 +1,109 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_Rigidbody2D 0
+#define USE_GI2D 1
+#include "GI2D.glsl"
+#include "Rigidbody2D.glsl"
+
+layout (local_size_x = 1024) in;
+
+struct MarchResult
+{
+	vec2 next_pos;
+	ivec2 next_map_index;
+	float progress;
+	bool is_end;
+};
+
+// 軽量版
+MarchResult marchEx(in vec2 pos, in ivec2 map_index, in float progress, in vec2 dir)
+{
+	pos += dir * clamp(progress, 0., 1.);
+	progress = max(progress-1., 0.);
+
+	MarchResult result;
+	result.next_pos = pos;
+	result.next_map_index = ivec2(pos);
+	result.progress = progress;
+	result.is_end = progress <= 1.;
+	return result;
+}
+
+void main() 
+{
+
+	int p_id = int(gl_GlobalInvocationID.x);
+
+	vec2 acc = b_rbacc[p_id];
+	vec2 vel = b_rbvel[p_id] + (acc /*+ vec2(0., 9.8)*/)*DT;
+
+	vec2 dir = vel;
+	vec2 pos = b_rbpos[p_id];
+
+	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
+
+	if(dot(vel, vel) != 0.)
+	{ 
+
+		float advance = length(dir);
+		dir = normalize(dir);
+		ivec2 map_index = ivec2(pos);
+		float progress = advance;
+		for(int _i = 0; _i < 500; _i++)
+		{
+			MarchResult result = marchEx(pos, map_index, progress, dir);
+			progress = result.progress;
+
+			// hit確認
+			{
+				ivec4 fragment_index = ivec4(result.next_map_index/8, result.next_map_index%8);
+
+				int findex = fragment_index.x + fragment_index.y*reso.z;
+				uint64_t fragment_map = b_diffuse_map[findex];
+
+				ivec2 shift = fragment_index.zw;
+				uint64_t bit = 1ul<<(shift.x+shift.y*8);
+				if((fragment_map & bit) != 0)
+				{
+					// 壁にぶつかったので反射
+					vec2 next = vec2(result.next_map_index - map_index);
+					vec2 wall = vec2(next.x, next.y);
+					dir = normalize(reflect(dir, wall));
+					advance *= 0.5;
+					progress *= 0.5;
+
+					// 更新はしない?
+					// pos = result.next_pos;
+
+				}
+				else
+				{
+					// 何もないのでそのまま進む
+					map_index = result.next_map_index;
+					pos = result.next_pos;
+
+				}
+			}
+
+			if(result.is_end)
+			{
+				b_rbpos[p_id] = pos;
+				b_rbvel[p_id] = dir * advance * 0.95;
+				break;
+			}
+
+		}
+	}
+
+
+	ivec2 reso_grid = ivec2(reso.xy/Grid_Size);
+	vec2 index_grid_f = pos / Grid_Size;
+	ivec2 index_grid = ivec2(index_grid_f);
+	if(any(lessThan(index_grid, ivec2(0))) || any(greaterThanEqual(index_grid, reso_grid.xy))){ return; }
+	int i = index_grid.x + index_grid.y*reso_grid.x;
+
+	atomicAdd(b_grid_counter[i], 1);
+
+}
+

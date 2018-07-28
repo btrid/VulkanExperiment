@@ -23,6 +23,9 @@ struct Fragment
 	vec4 albedo;
 };
 
+#define Grid_Size (1.)
+  #define DT 0.016
+//#define DT 0.0005
 
 #ifdef USE_GI2D
 layout(std140, set=USE_GI2D, binding=0) uniform PMInfoUniform {
@@ -36,6 +39,9 @@ layout(std430, set=USE_GI2D, binding=2) restrict buffer DiffuseMapBuffer {
 };
 layout(std430, set=USE_GI2D, binding=3) restrict buffer EmissiveMapBuffer {
 	uint64_t b_emissive_map[];
+};
+layout(set=USE_GI2D, binding=4) restrict buffer GridCounter {
+	int b_grid_counter[];
 };
 
 
