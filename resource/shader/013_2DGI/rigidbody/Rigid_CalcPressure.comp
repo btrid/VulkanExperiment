@@ -52,17 +52,14 @@ void main()
 	density.y = b_grid_counter[access_list[1]] - d;
 	density.z = b_grid_counter[access_list[2]] - d;
 	density.w = b_grid_counter[access_list[3]] - d;
-	density *= ivec4(density*0.05);
+//	density *= ivec4(density*0.05);
 	
 	bvec4 is_wall;
 	is_wall.x = getFragmentState(ivec2(p_pos) + ivec2(-1, -1));
 	is_wall.y = getFragmentState(ivec2(p_pos) + ivec2( 1, -1));
 	is_wall.z = getFragmentState(ivec2(p_pos) + ivec2(-1,  1));
 	is_wall.w = getFragmentState(ivec2(p_pos) + ivec2( 1,  1));
-	density += ivec4(is_wall)*5;
-
-//	float viscosity = 5.;
-//	density -= ivec4(5);
+	density += ivec4(is_wall)*50;
 
 	vec2 p0 = density[0] / normalize(p_pos - w_pos0);
 	vec2 p1 = density[1] / normalize(p_pos - w_pos1);

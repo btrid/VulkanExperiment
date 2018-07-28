@@ -32,6 +32,7 @@
 #include <013_2DGI/GI2D/GI2DAppModel.h>
 #include <013_2DGI/GI2D/GI2DRadiosity.h>
 #include <013_2DGI/GI2D/GI2DFluid.h>
+#include <013_2DGI/GI2D/GI2DRigidbody.h>
 
 #include <applib/AppModel/AppModel.h>
 #include <applib/AppModel/AppModelPipeline.h>
@@ -85,6 +86,7 @@ int main()
 	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
 	GI2DRadiosity gi2d_Radiosity(context, gi2d_context, app.m_window->getRenderTarget());
 	GI2DFluid gi2d_Fluid(context, gi2d_context);
+	GI2DRigidbody gi2d_Rigidbody(context, gi2d_context);
 
 //	auto anime_cmd = animater.createCmd(player_model);
 //	auto pm_make_cmd = pm_appmodel.createCmd(player_model);
@@ -145,7 +147,8 @@ int main()
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				gi2d_clear.execute(cmd);
 				gi2d_debug_make_fragment.execute(cmd);
-				gi2d_Fluid.execute(cmd);
+//				gi2d_Fluid.execute(cmd);
+				gi2d_Rigidbody.execute(cmd);
 				gi2d_make_hierarchy.execute(cmd);
 				gi2d_Radiosity.execute(cmd);
 				cmd.end();

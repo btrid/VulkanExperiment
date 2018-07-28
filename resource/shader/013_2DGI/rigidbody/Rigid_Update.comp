@@ -36,7 +36,7 @@ void main()
 	int p_id = int(gl_GlobalInvocationID.x);
 
 	vec2 acc = b_rbacc[p_id];
-	vec2 vel = b_rbvel[p_id] + (acc /*+ vec2(0., 9.8)*/)*DT;
+	vec2 vel = b_rbvel[p_id] + (acc + vec2(0., 9.8))*DT;
 
 	vec2 dir = vel;
 	vec2 pos = b_rbpos[p_id];
