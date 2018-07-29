@@ -186,7 +186,7 @@ struct GI2DRigidbody
 					vec2 center = vec2(0.f);
 
 					for (auto& p : pos) {
-						p = glm::diskRand(50.f) + 150.f;
+						p = glm::diskRand(12.f) + 150.f;
 					}
 					for (auto& p : pos) {
 						center += p;
