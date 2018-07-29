@@ -14,12 +14,17 @@ struct GI2DRigidbody
 {
 	struct Rigidbody
 	{
+		int32_t pnum;
+		int32_t solver_count;
+		int32_t _p;
+		int32_t _p2;
 		vec2 pos;
 		vec2 vel;
-		int pnum;
+		ivec2 pos_work;
+		ivec2 vel_work;
 		float angle;
 		float angle_vel;
-		float _p;
+		float angle_vel_work;
 	};
 	enum
 	{
@@ -29,6 +34,7 @@ struct GI2DRigidbody
 	{
 		Shader_Update,
 		Shader_Pressure,
+		Shader_CenterOfGravity,
 		Shader_ToFragment,
 		Shader_Num,
 	};
@@ -42,6 +48,7 @@ struct GI2DRigidbody
 	{
 		Pipeline_Update,
 		Pipeline_Pressure,
+		Pipeline_CenterOfGravity,
 		Pipeline_ToFragment,
 		Pipeline_Num,
 	};
@@ -96,6 +103,7 @@ struct GI2DRigidbody
 				{
 					"Rigid_Update.comp.spv",
 					"Rigid_CalcPressure.comp.spv",
+					"Rigid_CalcCenterOfGravity.comp.spv",
 					"Rigid_ToFragment.comp.spv",
 				};
 				static_assert(array_length(name) == Shader_Num, "not equal shader num");
@@ -128,9 +136,12 @@ struct GI2DRigidbody
 				shader_info[1].setModule(m_shader[Shader_Pressure].get());
 				shader_info[1].setStage(vk::ShaderStageFlagBits::eCompute);
 				shader_info[1].setPName("main");
-				shader_info[2].setModule(m_shader[Shader_ToFragment].get());
+				shader_info[2].setModule(m_shader[Shader_CenterOfGravity].get());
 				shader_info[2].setStage(vk::ShaderStageFlagBits::eCompute);
 				shader_info[2].setPName("main");
+				shader_info[3].setModule(m_shader[Shader_ToFragment].get());
+				shader_info[3].setStage(vk::ShaderStageFlagBits::eCompute);
+				shader_info[3].setPName("main");
 				std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 				{
 					vk::ComputePipelineCreateInfo()
@@ -142,11 +153,15 @@ struct GI2DRigidbody
 					vk::ComputePipelineCreateInfo()
 					.setStage(shader_info[2])
 					.setLayout(m_pipeline_layout[PipelineLayout_Rigid].get()),
+					vk::ComputePipelineCreateInfo()
+					.setStage(shader_info[3])
+					.setLayout(m_pipeline_layout[PipelineLayout_Rigid].get()),
 				};
 				auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
 				m_pipeline[Pipeline_Update] = std::move(compute_pipeline[0]);
 				m_pipeline[Pipeline_Pressure] = std::move(compute_pipeline[1]);
-				m_pipeline[Pipeline_ToFragment] = std::move(compute_pipeline[2]);
+				m_pipeline[Pipeline_CenterOfGravity] = std::move(compute_pipeline[2]);
+				m_pipeline[Pipeline_ToFragment] = std::move(compute_pipeline[3]);
 			}
 
 		}
@@ -189,6 +204,8 @@ struct GI2DRigidbody
 					Rigidbody rb;
 					rb.pos = center;
 					rb.vel = vec2(0.);
+					rb.pos_work = ivec2(0.);
+					rb.vel_work = ivec2(0.);
 					rb.pnum = Particle_Num;
 					rb.angle = 0.f;
 					rb.angle_vel = 0.f;
@@ -268,6 +285,7 @@ struct GI2DRigidbody
 			vk::BufferMemoryBarrier to_read[] = {
 				m_gi2d_context->b_grid_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				b_rbpos.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				b_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
@@ -276,8 +294,21 @@ struct GI2DRigidbody
 			auto num = app::calcDipatchGroups(uvec3(Particle_Num, 1, 1), uvec3(1024, 1, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 		}
-		// fragment_data‚É‘‚«ž‚Þ
+
 		{
+			// „‘Ì‚ÌXV
+			vk::BufferMemoryBarrier to_read[] = {
+				b_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead| vk::AccessFlagBits::eShaderWrite),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+				0, nullptr, array_length(to_read), to_read, 0, nullptr);
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_CenterOfGravity].get());
+			cmd.dispatch(1, 1, 1);
+		}
+
+		{
+			// fragment_data‚É‘‚«ž‚Þ
 			vk::BufferMemoryBarrier to_read[] = {
 				m_gi2d_context->b_fragment_buffer.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 			};

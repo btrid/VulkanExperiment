@@ -1,0 +1,28 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_Rigidbody2D 0
+#define USE_GI2D 1
+#include "GI2D.glsl"
+#include "Rigidbody2D.glsl"
+
+layout (local_size_x = 1) in;
+
+void main() 
+{
+	if(b_rigidbody.solver_count != 0)
+	{
+//		b_rigidbody.pos += vec2(b_rigidbody.pos_work) / 65535. / b_rigidbody.solver_count;
+		b_rigidbody.vel = vec2(b_rigidbody.vel_work) / 65535. / b_rigidbody.solver_count;
+		b_rigidbody.pos_work = ivec2(0);
+		b_rigidbody.vel_work = ivec2(0);
+
+		b_rigidbody.solver_count = 0;
+	}
+	else
+	{
+		b_rigidbody.pos += b_rigidbody.vel;
+		b_rigidbody.vel += vec2(0., 9.8)*DT;
+
+	}
+}

@@ -35,11 +35,13 @@ void main()
 
 	int p_id = int(gl_GlobalInvocationID.x);
 
-	vec2 acc = b_rbacc[p_id];
-	vec2 vel = b_rbvel[p_id] + (acc + vec2(0., 9.8))*DT;
-
+//	vec2 acc = b_rbacc[p_id];
+//	vec2 vel = b_rbvel[p_id] + (acc + vec2(0., 9.8))*DT;
+	vec2 vel = b_rigidbody.vel;
+//	vec2 vel = b_rigidbody.vel + vec2(0., 9.8)*DT;
 	vec2 dir = vel;
-	vec2 pos = b_rbpos[p_id];
+//	vec2 pos = b_rbpos[p_id];
+	vec2 pos = b_rigidbody.pos + b_relative_pos[p_id];
 
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
 
@@ -70,11 +72,15 @@ void main()
 					vec2 next = vec2(result.next_map_index - map_index);
 					vec2 wall = vec2(next.x, next.y);
 					dir = normalize(reflect(dir, wall));
+
+//					atomicAdd(b_rigidbody.pos_work.x, int(dir.x*advance*65535. * 0.8));
+//					atomicAdd(b_rigidbody.pos_work.y, int(dir.y*advance*65535. * 0.8));
+					atomicAdd(b_rigidbody.vel_work.x, int(dir.x*advance*65535. * 0.8));
+					atomicAdd(b_rigidbody.vel_work.y, int(dir.y*advance*65535. * 0.8));
+					atomicAdd(b_rigidbody.solver_count, 1);
+
 					advance *= 0.5;
 					progress *= 0.5;
-
-					// 更新はしない?
-					// pos = result.next_pos;
 
 				}
 				else
@@ -88,14 +94,15 @@ void main()
 
 			if(result.is_end)
 			{
+				vel = dir * advance * 0.95;
+
 				b_rbpos[p_id] = pos;
-				b_rbvel[p_id] = dir * advance * 0.95;
+				b_rbvel[p_id] = vel;
 				break;
 			}
 
 		}
 	}
-
 
 	ivec2 reso_grid = ivec2(reso.xy/Grid_Size);
 	vec2 index_grid_f = pos / Grid_Size;
@@ -104,6 +111,8 @@ void main()
 	int i = index_grid.x + index_grid.y*reso_grid.x;
 
 	atomicAdd(b_grid_counter[i], 1);
+
+
 
 }
 

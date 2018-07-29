@@ -11,4 +11,4 @@ SET output=../../binary
 %exe% %include% %option% -o %output%/Rigid_CalcPressure.comp.spv Rigid_CalcPressure.comp
 %exe% %include% %option% -o %output%/Rigid_Update.comp.spv Rigid_Update.comp
 %exe% %include% %option% -o %output%/Rigid_ToFragment.comp.spv Rigid_ToFragment.comp
-
+%exe% %include% %option% -o %output%/Rigid_CalcCenterOfGravity.comp.spv Rigid_CalcCenterOfGravity.comp

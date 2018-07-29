@@ -3,14 +3,22 @@
 
 #if defined(USE_Rigidbody2D)
 
+//#extension GL_ARB_gpu_shader5 : enable
+//#extension GL_NV_shader_atomic_float : require
 struct Rigidbody
 {
+	int pnum;
+	int solver_count;
+	int _p;
+	int _p2;
 	vec2 pos;
 	vec2 vel;
-	int pnum;
+	ivec2 pos_work;
+	ivec2 vel_work;
 	float angle;
 	float angle_vel;
-	float rate;
+	float angle_vel_work;
+
 };
 
 layout(set=USE_Rigidbody2D, binding=0, std430) restrict buffer RigidbodyData {
