@@ -10,19 +10,23 @@ layout (local_size_x = 1) in;
 
 void main() 
 {
-	if(b_rigidbody.solver_count != 0)
+//	if(b_rigidbody.solver_count != 0)
 	{
 //		b_rigidbody.pos += vec2(b_rigidbody.pos_work) / 65535. / b_rigidbody.solver_count;
-		b_rigidbody.vel = vec2(b_rigidbody.vel_work) / 65535. / b_rigidbody.solver_count;
+		b_rigidbody.vel += vec2(b_rigidbody.vel_work) / 65535. /*/ b_rigidbody.solver_count*/;
 		b_rigidbody.pos_work = ivec2(0);
 		b_rigidbody.vel_work = ivec2(0);
 
+		b_rigidbody.angle_vel += b_rigidbody.angle_vel_work / 65535./* / b_rigidbody.solver_count*/;
+		b_rigidbody.angle_vel_work = 0;
+
 		b_rigidbody.solver_count = 0;
 	}
-	else
+//	else
 	{
 		b_rigidbody.pos += b_rigidbody.vel;
 		b_rigidbody.vel += vec2(0., 9.8)*DT;
-
+		b_rigidbody.angle += b_rigidbody.angle_vel*DT;
 	}
+
 }

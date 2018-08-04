@@ -46,6 +46,11 @@
 
 int main()
 {
+	vec3 a = normalize(vec3(1.f, 1.f, 0.f));
+	vec3 b = normalize(vec3(0.f, 0.f, 1.f));
+//	auto c = cross(vec3(a.x, 0.f, a.y), vec3(b.x, 0.f, b.y));
+	auto c = cross(a, b);
+
 	using namespace gi2d;
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();

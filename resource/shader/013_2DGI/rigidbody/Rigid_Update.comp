@@ -30,25 +30,75 @@ MarchResult marchEx(in vec2 pos, in ivec2 map_index, in float progress, in vec2 
 	return result;
 }
 
+vec2 rotate(in vec2 v, in float angle)
+{
+	float c = cos(angle);
+	float s = sin(angle);
+
+	vec2 Result;
+	Result.x = v.x * c - v.y * s;
+	Result.y = v.x * s + v.y * c;
+	return Result;
+}
+
+mat3 crossMatrix(in vec3 v)
+{
+    return mat3(
+          0.,  v.z, -v.y, 
+        -v.z,   0.,  v.x,
+         v.y, -v.x,   0. );
+}
+
+vec2 calcTangent(in vec2 normal)
+{
+	vec3 vec = vec3(0.,0.,1.);
+	vec3 n = vec3(normal, 0.);
+//	n.x = 0.;
+//	if(dot(n, n) < 0.000001) {
+//		vec = vec3(0.,1.,0.);
+//	}
+	return normalize(cross(vec3(normal, 0.),vec)).xy;
+}
+
+/// 拘束
+struct Constraint 
+{
+	vec2 axis; ///< 拘束軸
+	float jacDiagInv; ///< 拘束式の分母
+	float rhs; ///< 初期拘束力
+//	float lowerLimit; ///< 拘束力の下限
+//	float upperLimit; ///< 拘束力の上限
+//	float accumImpulse; ///< 蓄積される拘束力
+};
+
+/// 衝突点
+struct ContactPoint 
+{
+	float distance; ///< 貫通深度
+	vec3 pointA; ///< 衝突点（剛体Aのローカル座標系）
+	vec3 pointB; ///< 衝突点（剛体Bのローカル座標系）
+	vec3 normal; ///< 衝突点の法線ベクトル（ワールド座標系）
+	Constraint constraints[2]; ///< 拘束
+};
+
 void main() 
 {
 
 	int p_id = int(gl_GlobalInvocationID.x);
 
-//	vec2 acc = b_rbacc[p_id];
-//	vec2 vel = b_rbvel[p_id] + (acc + vec2(0., 9.8))*DT;
-	vec2 vel = b_rigidbody.vel;
-//	vec2 vel = b_rigidbody.vel + vec2(0., 9.8)*DT;
-	vec2 dir = vel;
-//	vec2 pos = b_rbpos[p_id];
 	vec2 rela_pos = b_relative_pos[p_id];
-	vec2 pos = b_rigidbody.pos + rela_pos;
+	vec2 local_pos = rotate(rela_pos, b_rigidbody.angle);
+	vec2 pos = b_rigidbody.pos + local_pos;
+
+	vec2 vel = b_rigidbody.vel;
+	vec2 angular_vel = cross(vec3(rela_pos, 0.), vec3(0., 0., b_rigidbody.angle_vel*DT)).xy;
+
 
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
 
-	if(dot(vel, vel) != 0.)
+	vec2 dir = vel;// + angular_vel;
+	if(dot(dir, dir) != 0.)
 	{ 
-
 		float advance = length(dir);
 		dir = normalize(dir);
 		ivec2 map_index = ivec2(pos);
@@ -69,20 +119,92 @@ void main()
 				uint64_t bit = 1ul<<(shift.x+shift.y*8);
 				if((fragment_map & bit) != 0)
 				{
-					// 壁にぶつかったので反射
+/*					// 壁にぶつかったので反射
 					vec2 next = vec2(result.next_map_index - map_index);
 					vec2 wall = vec2(next.x, next.y);
 					dir = normalize(reflect(dir, wall));
-					vec2 ref = normalize(reflect(normalize(dir + rela_pos), wall));
 
-//					atomicAdd(b_rigidbody.pos_work.x, int(dir.x*advance*65535. * 0.8));
-//					atomicAdd(b_rigidbody.pos_work.y, int(dir.y*advance*65535. * 0.8));
+					// 並進運動の計算
+					vec2 ref = normalize(reflect(normalize(dir), wall));
 					atomicAdd(b_rigidbody.vel_work.x, int(ref.x*advance*65535. * 0.8));
 					atomicAdd(b_rigidbody.vel_work.y, int(ref.y*advance*65535. * 0.8));
+
 					atomicAdd(b_rigidbody.solver_count, 1);
 
 					advance *= 0.5;
 					progress *= 0.5;
+*/
+					ContactPoint point;
+					// 衝突ペアの計算
+					vec2 vel_ = vel + angular_vel;
+
+					float mass = 100.;
+					float mass_inv = 1. / mass;
+					float inertia_inv = 0.001;
+					mat3 K = mat3(mass_inv) - 
+							crossMatrix(vec3(pos, 0.)) * inertia_inv * crossMatrix(vec3(pos, 0.));
+					{
+						// normal
+						vec2 axis = normalize(rela_pos - b_rigidbody.pos); // 拘束軸
+						vec3 axis3 = vec3(axis, 0.);
+						float denom = dot(K*axis3, axis3);
+						float rhs = -(1. + 0.2) * dot(vel_, axis); // 速度の補正
+						rhs -= (0.5); // 位置の補正
+						rhs *= 1. / denom;
+
+						point.constraints[0].axis = axis;
+						point.constraints[0].rhs = rhs;
+						point.constraints[0].jacDiagInv = 1. / denom;
+
+					}
+					{
+						// tangent 
+						vec2 axis = calcTangent(normalize(rela_pos - b_rigidbody.pos)); // 拘束軸
+						vec3 axis3 = vec3(axis, 0.);
+						float denom = dot(K*axis3, axis3);
+						float rhs = -(1. + 0.2) * dot(vel_, axis); // 速度の補正
+						rhs -= (0.5); // 位置の補正
+						rhs *= 1. / denom;
+
+						point.constraints[1].axis = axis;
+						point.constraints[1].rhs = rhs;
+						point.constraints[1].jacDiagInv = 1. / denom;
+					}
+
+
+					vec2 delta_linear_vel = vec2(0.);
+					float delta_angular_vel = 0.;
+					float friction = 0.;
+					// 拘束の解決
+					{
+						Constraint constraint = point.constraints[0];
+						float deltaImpulse = constraint.rhs;
+						deltaImpulse -= constraint.jacDiagInv * dot(constraint.axis, vel_);
+//						deltaImpulse = constraint.accumImpulse - oldImpulse;
+						delta_linear_vel  += deltaImpulse * mass_inv * constraint.axis;
+						delta_angular_vel += deltaImpulse * inertia_inv * cross(vec3(rela_pos, 0.),vec3(constraint.axis, 0.)).z;
+
+						friction = 0.5 * abs(deltaImpulse);
+					}
+//					EpxFloat maxFriction = pair.contact->m_friction * fabs(cp.constraints[0].accumImpulse);
+//					cp.constraints[1].lowerLimit = -maxFriction;
+//					cp.constraints[1].upperLimit =  maxFriction;
+					{
+						Constraint constraint = point.constraints[1];
+						float deltaImpulse = constraint.rhs;
+						deltaImpulse -= constraint.jacDiagInv * dot(constraint.axis, vel_);
+//						EpxFloat oldImpulse = constraint.accumImpulse;
+//						constraint.accumImpulse = EPX_CLAMP(oldImpulse + deltaImpulse,constraint.lowerLimit,constraint.upperLimit);
+//						deltaImpulse = constraint.accumImpulse - oldImpulse;
+						delta_linear_vel  += deltaImpulse * mass_inv * constraint.axis;
+						delta_angular_vel += deltaImpulse * inertia_inv * cross(vec3(rela_pos, 0.),vec3(constraint.axis, 0.)).z;
+					}
+
+//					b_rigidbody.vel = vec2(b_rigidbody.vel_work) / 65535. / b_rigidbody.solver_count;
+
+					atomicAdd(b_rigidbody.vel_work.x, int(delta_linear_vel.x * 65535.));
+					atomicAdd(b_rigidbody.vel_work.y, int(delta_linear_vel.y * 65535.));
+					atomicAdd(b_rigidbody.angle_vel_work, int(delta_angular_vel * 65535.));
 
 				}
 				else

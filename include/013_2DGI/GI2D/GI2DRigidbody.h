@@ -7,6 +7,12 @@
 #include <applib/GraphicsResource.h>
 #include <013_2DGI/GI2D/GI2DContext.h>
 
+
+mat2 crossMatrix2(float a)
+{
+	return mat2(0.f, a, -a, 0.f);
+}
+
 namespace gi2d
 {
 
@@ -16,7 +22,7 @@ struct GI2DRigidbody
 	{
 		int32_t pnum;
 		int32_t solver_count;
-		int32_t _p;
+		int32_t inertia;
 		int32_t _p2;
 		vec2 pos;
 		vec2 vel;
@@ -34,7 +40,7 @@ struct GI2DRigidbody
 	{
 		Shader_Update,
 		Shader_Pressure,
-		Shader_CenterOfGravity,
+		Shader_Integrate,
 		Shader_ToFragment,
 		Shader_Num,
 	};
@@ -48,7 +54,7 @@ struct GI2DRigidbody
 	{
 		Pipeline_Update,
 		Pipeline_Pressure,
-		Pipeline_CenterOfGravity,
+		Pipeline_Integrate,
 		Pipeline_ToFragment,
 		Pipeline_Num,
 	};
@@ -103,7 +109,7 @@ struct GI2DRigidbody
 				{
 					"Rigid_Update.comp.spv",
 					"Rigid_CalcPressure.comp.spv",
-					"Rigid_CalcCenterOfGravity.comp.spv",
+					"Rigid_Integrate.comp.spv",
 					"Rigid_ToFragment.comp.spv",
 				};
 				static_assert(array_length(name) == Shader_Num, "not equal shader num");
@@ -136,7 +142,7 @@ struct GI2DRigidbody
 				shader_info[1].setModule(m_shader[Shader_Pressure].get());
 				shader_info[1].setStage(vk::ShaderStageFlagBits::eCompute);
 				shader_info[1].setPName("main");
-				shader_info[2].setModule(m_shader[Shader_CenterOfGravity].get());
+				shader_info[2].setModule(m_shader[Shader_Integrate].get());
 				shader_info[2].setStage(vk::ShaderStageFlagBits::eCompute);
 				shader_info[2].setPName("main");
 				shader_info[3].setModule(m_shader[Shader_ToFragment].get());
@@ -160,7 +166,7 @@ struct GI2DRigidbody
 				auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
 				m_pipeline[Pipeline_Update] = std::move(compute_pipeline[0]);
 				m_pipeline[Pipeline_Pressure] = std::move(compute_pipeline[1]);
-				m_pipeline[Pipeline_CenterOfGravity] = std::move(compute_pipeline[2]);
+				m_pipeline[Pipeline_Integrate] = std::move(compute_pipeline[2]);
 				m_pipeline[Pipeline_ToFragment] = std::move(compute_pipeline[3]);
 			}
 
@@ -184,10 +190,16 @@ struct GI2DRigidbody
 					std::vector<vec2> pos(Particle_Num);
 					std::vector<vec2> rela_pos(Particle_Num);
 					vec2 center = vec2(0.f);
-
+#if 1
+					for (auto& p : pos) {
+						p.x = std::rand() % 30 + 150.f + (std::rand() % 10000) / 10000.f;
+						p.y = std::rand() % 3 + 150.f + (std::rand() % 10000) / 10000.f;
+					}
+#else
 					for (auto& p : pos) {
 						p = glm::diskRand(12.f) + 150.f;
 					}
+#endif
 					for (auto& p : pos) {
 						center += p;
 					}
@@ -196,6 +208,25 @@ struct GI2DRigidbody
 					{
 						rela_pos[i] = pos[i] - center;
 					}
+					float I = (1.f/12.f)*(30*3*3*3+30*30*30*3);
+
+					float I2 = 0.f;
+					for (int32_t i = 0; i < rela_pos.size(); i++)
+					{
+						auto rp = rela_pos[i];
+						I2 += rp.x*rp.x + rp.y*rp.y;
+					}
+					I2 /= rela_pos.size();
+//					{
+// 						float angle = 0.5f;
+// 						float c = cos(angle);
+//						float s = sin(angle);
+//						mat2 r = mat2(c, s, -s, c);
+//						auto i = glm::transpose(r) * I * r;
+
+//						auto d = glm::rotate(vec2(0.f, 1.f), angle);
+//						auto ii = glm::transpose(d) * I * d;
+//					}
 
 					cmd.updateBuffer<vec2>(b_rbpos.getInfo().buffer, b_rbpos.getInfo().offset, pos);
 					cmd.updateBuffer<vec2>(b_relative_pos.getInfo().buffer, b_relative_pos.getInfo().offset, rela_pos);
@@ -207,6 +238,7 @@ struct GI2DRigidbody
 					rb.pos_work = ivec2(0.);
 					rb.vel_work = ivec2(0.);
 					rb.pnum = Particle_Num;
+					rb.inertia = I2;
 					rb.angle = 0.f;
 					rb.angle_vel = 0.f;
 
@@ -303,7 +335,7 @@ struct GI2DRigidbody
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_CenterOfGravity].get());
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Integrate].get());
 			cmd.dispatch(1, 1, 1);
 		}
 

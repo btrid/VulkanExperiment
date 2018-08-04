@@ -24,8 +24,8 @@ struct Fragment
 };
 
 #define Grid_Size (1.)
-  #define DT 0.016
-//#define DT 0.0005
+//  #define DT 0.016
+#define DT 0.0005
 
 #ifdef USE_GI2D
 layout(std140, set=USE_GI2D, binding=0) uniform PMInfoUniform {

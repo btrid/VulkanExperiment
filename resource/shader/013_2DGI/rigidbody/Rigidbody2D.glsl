@@ -17,7 +17,7 @@ struct Rigidbody
 	ivec2 vel_work;
 	float angle;
 	float angle_vel;
-	float angle_vel_work;
+	int angle_vel_work;
 
 };
 
