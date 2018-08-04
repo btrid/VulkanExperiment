@@ -231,16 +231,17 @@ struct GI2DRigidbody
 					cmd.updateBuffer<vec2>(b_rbpos.getInfo().buffer, b_rbpos.getInfo().offset, pos);
 					cmd.updateBuffer<vec2>(b_relative_pos.getInfo().buffer, b_relative_pos.getInfo().offset, rela_pos);
 
-
 					Rigidbody rb;
 					rb.pos = center;
 					rb.vel = vec2(0.);
 					rb.pos_work = ivec2(0.);
 					rb.vel_work = ivec2(0.);
+					rb.angle_vel_work = 0.;
 					rb.pnum = Particle_Num;
 					rb.inertia = I2;
 					rb.angle = 0.f;
 					rb.angle_vel = 0.f;
+					rb.solver_count = 0;
 
 					cmd.updateBuffer<Rigidbody>(b_rigidbody.getInfo().buffer, b_rigidbody.getInfo().offset, rb);
 
@@ -255,7 +256,12 @@ struct GI2DRigidbody
 						0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 				}
+				mat3 inertia_inv = inverse(mat3(vec3(1., 0., 0.), vec3(0., 1., 0.), vec3(0., 0., 1.)));
 
+				auto angular_vel = cross(vec3(10.f, 2.f, 0.), vec3(0., 0., 31.14f));
+				angular_vel /= angular_vel.z;
+				int a;
+				a = 0;
 
 
 			}
