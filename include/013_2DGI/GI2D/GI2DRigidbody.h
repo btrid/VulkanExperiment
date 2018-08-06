@@ -34,7 +34,7 @@ struct GI2DRigidbody
 	};
 	enum
 	{
-		Particle_Num = 1024,
+		Particle_Num = 120,
 	};
 	enum Shader
 	{
@@ -59,6 +59,55 @@ struct GI2DRigidbody
 		Pipeline_Num,
 	};
 
+	vec2 calcTangent(vec2 normal)
+	{
+		vec3 vec = vec3(0., 0., 1.);
+		return normalize(cross(vec3(normal, 0.), vec)).xy;
+	}
+	void calc(Rigidbody rb, vec2 p, vec2& l, float& a)
+	{
+		float DT = 0.016f;
+		vec2 local_pos = rotate(p, rb.angle);
+		vec2 pos = rb.pos + local_pos;
+		float mass = 1.;
+		float mass_inv = 1. / mass;
+		float inertia = 1.;
+
+		vec2 vel = rb.vel + vec2(0., 9.8)*DT;
+		vec2 angular_vel = cross(vec3(p, 0.), vec3(0., 0., rb.angle_vel*DT)).xy;
+		vec2 vel_ = normalize(vel + angular_vel);
+		float length = glm::length(vel + angular_vel);
+
+		mat3 m = glm::mat3(glm::rotate(rb.angle, vec3(0.f, 0.f, 1.f)));
+		mat3 inertia_inv = inverse(mat3(vec3(1., 0., 0.), vec3(0., 1., 0.), vec3(0., 0., 1.f)));
+		inertia_inv = m * inertia_inv * transpose(m);
+		mat3 aa = glm::matrixCross3(vec3(local_pos, 0.));
+		mat3 K = mat3(mass_inv) - aa * inertia_inv * aa;
+
+		{
+			// normal
+			vec2 axis = normalize(rb.vel); // çSë©é≤
+			vec3 axis3 = vec3(axis, 0.);
+			float denom = dot(K*axis3, axis3);
+			float impulse = -(1. + 0.2) * dot(vel_*length, axis); // ë¨ìxÇÃï‚ê≥
+//			impulse -= (0.5); // à íuÇÃï‚ê≥
+			impulse *= 1. / denom;
+			l += impulse * mass_inv * axis;
+			a += impulse * (inertia_inv * cross(vec3(local_pos, 0.), vec3(axis, 0.))).z;
+		}
+		{
+			// tangent 
+			vec2 axis = calcTangent(normalize(rb.vel)); // çSë©é≤
+			vec3 axis3 = vec3(axis, 0.);
+			float denom = dot(K*axis3, axis3);
+			float impulse = -(1. + 0.2) * dot(vel_*length, axis); // ë¨ìxÇÃï‚ê≥
+			impulse *= 1. / denom;
+//			impulse -= (1. / denom) * dot(axis, vel_);
+			l += impulse * mass_inv * axis;
+			a += impulse * (inertia_inv * cross(vec3(local_pos, 0.), vec3(axis, 0.))).z;
+		}
+
+	}
 	GI2DRigidbody(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context)
 	{
 		m_context = context;
@@ -191,9 +240,14 @@ struct GI2DRigidbody
 					std::vector<vec2> rela_pos(Particle_Num);
 					vec2 center = vec2(0.f);
 #if 1
-					for (auto& p : pos) {
-						p.x = std::rand() % 30 + 150.f + (std::rand() % 10000) / 10000.f;
-						p.y = std::rand() % 3 + 150.f + (std::rand() % 10000) / 10000.f;
+
+					for (int y = 0; y < 4; y++) 
+					{
+						for (int x = 0; x < 30; x++)
+						{
+							pos[x + y * 30].x = 130.f + x;
+							pos[x + y * 30].y = 220.f + y;
+						}
 					}
 #else
 					for (auto& p : pos) {
@@ -217,16 +271,6 @@ struct GI2DRigidbody
 						I2 += rp.x*rp.x + rp.y*rp.y;
 					}
 					I2 /= rela_pos.size();
-//					{
-// 						float angle = 0.5f;
-// 						float c = cos(angle);
-//						float s = sin(angle);
-//						mat2 r = mat2(c, s, -s, c);
-//						auto i = glm::transpose(r) * I * r;
-
-//						auto d = glm::rotate(vec2(0.f, 1.f), angle);
-//						auto ii = glm::transpose(d) * I * d;
-//					}
 
 					cmd.updateBuffer<vec2>(b_rbpos.getInfo().buffer, b_rbpos.getInfo().offset, pos);
 					cmd.updateBuffer<vec2>(b_relative_pos.getInfo().buffer, b_relative_pos.getInfo().offset, rela_pos);
@@ -255,13 +299,49 @@ struct GI2DRigidbody
 					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllCommands, {},
 						0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
+
+					rb.vel = vec2(0.f, 9.8f);
+//					rb.angle = 1.1f;
+//					rb.angle_vel = 0.4f;
+
+//					for(;;)
+					{
+						vec2 delta_linear_vel = vec2(0.);
+						float delta_angular_vel = 0.;
+						int count = 0;
+						for (int i = 0; i < Particle_Num; i++)
+						{
+							vec2 p = rela_pos[i];
+							vec2 local_pos = rotate(p, rb.angle);
+							vec2 pos = rb.pos + local_pos;
+
+							if (pos.y >= 240.f)
+							{
+								calc(rb, p, delta_linear_vel, delta_angular_vel);
+								count++;
+
+							}
+
+						}
+						delta_linear_vel /= (count !=0) ? count : 1;
+//						delta_angular_vel /= (count != 0) ? count : 1;
+
+						rb.vel += delta_linear_vel;
+						rb.angle_vel += delta_angular_vel;
+
+						rb.pos += rb.vel;
+						rb.vel += vec2(0., 9.8)*0.016f;
+						rb.angle += rb.angle_vel*0.016f;
+
+					}
+
 				}
 				mat3 inertia_inv = inverse(mat3(vec3(1., 0., 0.), vec3(0., 1., 0.), vec3(0., 0., 1.)));
 
 				auto angular_vel = cross(vec3(10.f, 2.f, 0.), vec3(0., 0., 31.14f));
 				angular_vel /= angular_vel.z;
-				int a;
-				a = 0;
+				int aa;
+				aa = 0;
 
 
 			}

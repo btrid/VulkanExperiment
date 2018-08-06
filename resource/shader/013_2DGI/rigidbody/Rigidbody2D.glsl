@@ -9,7 +9,7 @@ struct Rigidbody
 {
 	int pnum;
 	int solver_count;
-	int _p;
+	int inertia;
 	int _p2;
 	vec2 pos;
 	vec2 vel;

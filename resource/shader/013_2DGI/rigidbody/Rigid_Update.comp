@@ -49,7 +49,7 @@ mat3 rotateMat(in float angle)
 	return mat3(c, -s, 0., s, c, 0., 0., 0., 1.);
 }
 
-mat3 crossMatrix(in vec3 v)
+mat3 matrixCross3(in vec3 v)
 {
     return mat3(
           0.,  v.z, -v.y, 
@@ -73,7 +73,7 @@ void main()
 	vec2 pos = b_rigidbody.pos + local_pos;
 
 	vec2 vel = b_rigidbody.vel;
-	vec2 angular_vel = cross(vec3(rela_pos, 0.), vec3(0., 0., b_rigidbody.angle_vel)).xy;
+	vec2 angular_vel = cross(vec3(rela_pos, 0.), vec3(0., 0., b_rigidbody.angle_vel*DT)).xy;
 
 
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
@@ -104,52 +104,61 @@ void main()
 
 					// 衝突ペアの計算
 					vec2 vel_ = normalize(vel + angular_vel);
+					float move = length(vel + angular_vel);
 
 					float mass = 1.;
 					float mass_inv = 1. / mass;
-					float inertia = 1.;
+					float I = 1.;
 
 					mat3 m = rotateMat(b_rigidbody.angle);
-					mat3 inertia_inv = inverse(mat3(vec3(1.,0.,0.), vec3(0.,1.,0.), vec3(0.,0.,inertia)));
-					inertia_inv = m * inertia_inv * transpose(m);
-					mat3 a = crossMatrix(vec3(local_pos, 0.));
-					mat3 K = mat3(mass_inv) - a * inertia_inv * a;
+					mat3 I_inv = inverse(mat3(vec3(1.,0.,0.), vec3(0.,1.,0.), vec3(0.,0.,I)));
+					I_inv = m * I_inv * transpose(m);
+					mat3 a = matrixCross3(vec3(local_pos, 0.));
+					mat3 K = mat3(mass_inv) - a * I_inv * a;
 
 					vec2 delta_linear_vel = vec2(0.);
 					float delta_angular_vel = 0.;
+					float friction = 0.;
 					{
 						// normal
-						vec2 axis = normalize(b_rigidbody.vel); // 拘束軸
+						vec2 axis = vec2(result.next_map_index - map_index); // 拘束軸
 						vec3 axis3 = vec3(axis, 0.);
 						float denom = dot(K*axis3, axis3);
-						float impulse = -(1. + 0.2) * dot(vel_, axis); // 速度の補正
-						impulse -= (0.5); // 位置の補正
+						float impulse = 0.;
+						impulse -= (1. + 0.2) * dot(vel_*advance, axis); // 速度の補正
+						impulse -= 0.1*advance-progress; // 位置の補正
 						impulse *= 1. / denom;
 
-						impulse -= (1./denom) * dot(axis, vel_);
-						delta_linear_vel  += impulse * mass_inv * axis;
-						delta_angular_vel += impulse * (inertia_inv * cross(vec3(local_pos, 0.),vec3(axis, 0.))).z;
+						impulse -= 1. / denom * dot(axis,vel_*advance);
 
+						delta_linear_vel  += impulse * mass_inv * axis;
+						delta_angular_vel += impulse * (I_inv * cross(vec3(local_pos, 0.),vec3(axis, 0.))).z;
+
+						friction = abs(impulse) * 0.6;
 					}
 					{
 						// tangent 
-						vec2 axis = calcTangent(normalize(b_rigidbody.vel)); // 拘束軸
+						vec2 axis = calcTangent(vec2(result.next_map_index - map_index)); // 拘束軸
 						vec3 axis3 = vec3(axis, 0.);
 						float denom = dot(K*axis3, axis3);
-						float impulse = -(1. + 0.2) * dot(vel_, axis); // 速度の補正
-						impulse -= (0.5); // 位置の補正
+						float impulse = 0.;
+						impulse -= dot(vel_*advance, axis); // 速度の補正
 						impulse *= 1. / denom;
 
-						impulse -= (1./denom) * dot(axis, vel_);
+						impulse = clamp(impulse, -friction, friction);
+
 						delta_linear_vel  += impulse * mass_inv * axis;
-						delta_angular_vel += impulse * (inertia_inv * cross(vec3(local_pos, 0.),vec3(axis, 0.))).z;
+						delta_angular_vel += impulse * (I_inv * cross(vec3(local_pos, 0.),vec3(axis, 0.))).z;
 
 					}
 
-					atomicAdd(b_rigidbody.vel_work.x, int(delta_linear_vel.x * 65535.));
-					atomicAdd(b_rigidbody.vel_work.y, int(delta_linear_vel.y * 65535.));
-					atomicAdd(b_rigidbody.angle_vel_work, int(delta_angular_vel * 65535.));
-					atomicAdd(b_rigidbody.solver_count, 1);
+					int aa = atomicAdd(b_rigidbody.solver_count, 1);
+					{
+						atomicAdd(b_rigidbody.vel_work.x, int(delta_linear_vel.x * 65535.));
+						atomicAdd(b_rigidbody.vel_work.y, int(delta_linear_vel.y * 65535.));
+						atomicAdd(b_rigidbody.angle_vel_work, int(delta_angular_vel * 65535.));
+
+					}
 
 					break;
 
