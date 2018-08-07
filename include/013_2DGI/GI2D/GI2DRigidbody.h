@@ -68,6 +68,7 @@ struct GI2DRigidbody
 	{
 		float DT = 0.016f;
 		vec2 local_pos = rotate(p, rb.angle);
+		vec2 local_pos2 = rotate(p, rb.angle + rb.angle_vel*DT);
 		vec2 pos = rb.pos + local_pos;
 		float mass = 1.;
 		float mass_inv = 1. / mass;
@@ -75,15 +76,23 @@ struct GI2DRigidbody
 
 		vec2 vel = rb.vel + vec2(0., 9.8)*DT;
 		vec2 angular_vel = cross(vec3(p, 0.), vec3(0., 0., rb.angle_vel*DT)).xy;
+		vec2 angular_vel2 = cross(vec3(p, 0.), vec3(0., 0., rb.angle + rb.angle_vel*DT)).xy;
+		vec2 angular_vel4 = cross(vec3(local_pos, 0.), vec3(0., 0., rb.angle_vel*DT)).xy;
+		vec2 angular_vel3 = local_pos2-local_pos;
+
 		vec2 vel_ = normalize(vel + angular_vel);
 		float length = glm::length(vel + angular_vel);
 
 		mat3 m = glm::mat3(glm::rotate(rb.angle, vec3(0.f, 0.f, 1.f)));
 		mat3 inertia_inv = inverse(mat3(vec3(1., 0., 0.), vec3(0., 1., 0.), vec3(0., 0., 1.f)));
+		inertia_inv[0] = vec3(0.f);
+		inertia_inv[1] = vec3(0.f);
+
 		inertia_inv = m * inertia_inv * transpose(m);
 		mat3 aa = glm::matrixCross3(vec3(local_pos, 0.));
 		mat3 K = mat3(mass_inv) - aa * inertia_inv * aa;
-
+//		K[0] = vec3(0.f);
+	//	K[1] = vec3(0.f);
 		{
 			// normal
 			vec2 axis = normalize(rb.vel); // çSë©é≤
@@ -245,7 +254,7 @@ struct GI2DRigidbody
 					{
 						for (int x = 0; x < 30; x++)
 						{
-							pos[x + y * 30].x = 130.f + x;
+							pos[x + y * 30].x = 123.f + x;
 							pos[x + y * 30].y = 220.f + y;
 						}
 					}
@@ -262,15 +271,14 @@ struct GI2DRigidbody
 					{
 						rela_pos[i] = pos[i] - center;
 					}
-					float I = (1.f/12.f)*(30*3*3*3+30*30*30*3);
 
-					float I2 = 0.f;
+					float I = 0.f;
 					for (int32_t i = 0; i < rela_pos.size(); i++)
 					{
 						auto rp = rela_pos[i];
-						I2 += rp.x*rp.x + rp.y*rp.y;
+						I += rp.x*rp.x + rp.y*rp.y;
 					}
-					I2 /= rela_pos.size();
+					I /= rela_pos.size();
 
 					cmd.updateBuffer<vec2>(b_rbpos.getInfo().buffer, b_rbpos.getInfo().offset, pos);
 					cmd.updateBuffer<vec2>(b_relative_pos.getInfo().buffer, b_relative_pos.getInfo().offset, rela_pos);
@@ -282,7 +290,7 @@ struct GI2DRigidbody
 					rb.vel_work = ivec2(0.);
 					rb.angle_vel_work = 0.;
 					rb.pnum = Particle_Num;
-					rb.inertia = I2;
+					rb.inertia = I;
 					rb.angle = 0.f;
 					rb.angle_vel = 0.f;
 					rb.solver_count = 0;
@@ -301,8 +309,8 @@ struct GI2DRigidbody
 
 
 					rb.vel = vec2(0.f, 9.8f);
-//					rb.angle = 1.1f;
-//					rb.angle_vel = 0.4f;
+// 					rb.angle = 1.1f;
+// 					rb.angle_vel = 0.4f;
 
 //					for(;;)
 					{

@@ -10,6 +10,7 @@ layout (local_size_x = 1) in;
 
 void main() 
 {
+//	if(p_id >= b_rigidbody.pnum){ return; }
 	if(b_rigidbody.solver_count != 0)
 	{
 //		b_rigidbody.pos += vec2(b_rigidbody.pos_work) / 65535. / b_rigidbody.solver_count;
