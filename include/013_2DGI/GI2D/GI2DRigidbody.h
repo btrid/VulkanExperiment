@@ -24,6 +24,8 @@ struct GI2DRigidbody
 		int32_t solver_count;
 		int32_t inertia;
 		int32_t _p2;
+		vec2 center;
+		vec2 size;
 		vec2 pos;
 		vec2 vel;
 		ivec2 pos_work;
@@ -70,9 +72,6 @@ struct GI2DRigidbody
 		vec2 local_pos = rotate(p, rb.angle);
 		vec2 local_pos2 = rotate(p, rb.angle + rb.angle_vel*DT);
 		vec2 pos = rb.pos + local_pos;
-		float mass = 1.;
-		float mass_inv = 1. / mass;
-		float inertia = 1.;
 
 		vec2 vel = rb.vel + vec2(0., 9.8)*DT;
 		vec2 angular_vel = cross(vec3(p, 0.), vec3(0., 0., rb.angle_vel*DT)).xy;
@@ -82,39 +81,6 @@ struct GI2DRigidbody
 
 		vec2 vel_ = normalize(vel + angular_vel);
 		float length = glm::length(vel + angular_vel);
-
-		mat3 m = glm::mat3(glm::rotate(rb.angle, vec3(0.f, 0.f, 1.f)));
-		mat3 inertia_inv = inverse(mat3(vec3(1., 0., 0.), vec3(0., 1., 0.), vec3(0., 0., 1.f)));
-		inertia_inv[0] = vec3(0.f);
-		inertia_inv[1] = vec3(0.f);
-
-		inertia_inv = m * inertia_inv * transpose(m);
-		mat3 aa = glm::matrixCross3(vec3(local_pos, 0.));
-		mat3 K = mat3(mass_inv) - aa * inertia_inv * aa;
-//		K[0] = vec3(0.f);
-	//	K[1] = vec3(0.f);
-		{
-			// normal
-			vec2 axis = normalize(rb.vel); // çSë©é≤
-			vec3 axis3 = vec3(axis, 0.);
-			float denom = dot(K*axis3, axis3);
-			float impulse = -(1. + 0.2) * dot(vel_*length, axis); // ë¨ìxÇÃï‚ê≥
-//			impulse -= (0.5); // à íuÇÃï‚ê≥
-			impulse *= 1. / denom;
-			l += impulse * mass_inv * axis;
-			a += impulse * (inertia_inv * cross(vec3(local_pos, 0.), vec3(axis, 0.))).z;
-		}
-		{
-			// tangent 
-			vec2 axis = calcTangent(normalize(rb.vel)); // çSë©é≤
-			vec3 axis3 = vec3(axis, 0.);
-			float denom = dot(K*axis3, axis3);
-			float impulse = -(1. + 0.2) * dot(vel_*length, axis); // ë¨ìxÇÃï‚ê≥
-			impulse *= 1. / denom;
-//			impulse -= (1. / denom) * dot(axis, vel_);
-			l += impulse * mass_inv * axis;
-			a += impulse * (inertia_inv * cross(vec3(local_pos, 0.), vec3(axis, 0.))).z;
-		}
 
 	}
 	GI2DRigidbody(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context)
@@ -267,30 +233,30 @@ struct GI2DRigidbody
 						center += p;
 					}
 					center /= pos.size();
+
+					vec2 size = vec2(0.f);
+					vec2 size_max = vec2(0.f);
 					for (int32_t i = 0; i < rela_pos.size(); i++)
 					{
 						rela_pos[i] = pos[i] - center;
+						size += rela_pos[i];
+						size_max = glm::max(abs(rela_pos[i]), size_max);
 					}
 
-					float I = 0.f;
-					for (int32_t i = 0; i < rela_pos.size(); i++)
-					{
-						auto rp = rela_pos[i];
-						I += rp.x*rp.x + rp.y*rp.y;
-					}
-					I /= rela_pos.size();
-
+					size /= pos.size();
 					cmd.updateBuffer<vec2>(b_rbpos.getInfo().buffer, b_rbpos.getInfo().offset, pos);
 					cmd.updateBuffer<vec2>(b_relative_pos.getInfo().buffer, b_relative_pos.getInfo().offset, rela_pos);
 
 					Rigidbody rb;
 					rb.pos = center;
+					rb.center = size/2.f;
+					rb.size = size_max;
 					rb.vel = vec2(0.);
 					rb.pos_work = ivec2(0.);
 					rb.vel_work = ivec2(0.);
 					rb.angle_vel_work = 0.;
 					rb.pnum = Particle_Num;
-					rb.inertia = I;
+//					rb.inertia = I;
 					rb.angle = 0.f;
 					rb.angle_vel = 0.f;
 					rb.solver_count = 0;

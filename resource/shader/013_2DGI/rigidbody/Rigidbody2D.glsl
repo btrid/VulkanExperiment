@@ -11,6 +11,8 @@ struct Rigidbody
 	int solver_count;
 	int inertia;
 	int _p2;
+	vec2 center;
+	vec2 size;
 	vec2 pos;
 	vec2 vel;
 	ivec2 pos_work;
