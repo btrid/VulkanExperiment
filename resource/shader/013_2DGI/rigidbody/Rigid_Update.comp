@@ -41,21 +41,6 @@ vec2 rotate(in vec2 v, in float angle)
 	return Result;
 }
 
-mat3 rotateMat(in float angle)
-{
-	float c = cos(angle);
-	float s = sin(angle);
-
-	return mat3(c, -s, 0., s, c, 0., 0., 0., 1.);
-}
-
-mat3 matrixCross3(in vec3 v)
-{
-    return mat3(
-          0.,  v.z, -v.y, 
-        -v.z,   0.,  v.x,
-         v.y, -v.x,   0. );
-}
 
 vec2 calcTangent(in vec2 normal)
 {
@@ -102,16 +87,28 @@ void main()
 				uint64_t bit = 1ul<<(shift.x+shift.y*8);
 				if((fragment_map & bit) != 0)
 				{
+					vec2 vel_ = normalize(vel);
 					vec2 r = dir;
-					float spring = 0.2;
+					float spring = 1.25;
 					float decay = 0.5;
-					vec2 restitution = -spring*dir;// * progress; // 反発力
-					vec2 damping = -decay * dir * advance;
+					vec2 delta_linear_vel = vec2(0.);
+					float delta_angular_vel = 0.;
+					{
+						vec2 restitution = -spring* vel_*progress; // 反発力 めり込んだ量を戻す
+						vec2 damping = decay * -dir * advance; //減衰力
+						delta_linear_vel += restitution + damping;
+						delta_angular_vel += cross(vec3(local_pos, 0.), vec3(restitution + damping, 0.)).z;
+					}
+					{
+						vec2 tangent_dir = dir-dot(dir,r)*r;
+						vec2 restitution = -spring*tangent_dir;// * progress; // 反発力
+						vec2 damping = -decay * tangent_dir * advance;
+//						delta_linear_vel += restitution + damping;
+//						delta_angular_vel += cross(vec3(local_pos, 0.), vec3(restitution + damping, 0.)).z;
 
-					vec2 tangent_dir = dir-dot(dir,r)*r;
+					}
 
-					vec2 delta_linear_vel = restitution + damping;
-					float delta_angular_vel = cross(vec3(local_pos, 0.), vec3(restitution + damping, 0.)).z;
+
 					int aa = atomicAdd(b_rigidbody.solver_count, 1);
 					{
 						atomicAdd(b_rigidbody.vel_work.x, int(delta_linear_vel.x * 65535.));
