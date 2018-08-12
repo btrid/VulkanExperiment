@@ -10,7 +10,25 @@ layout (local_size_x = 1) in;
 
 void main() 
 {
-//	if(p_id >= b_rigidbody.pnum){ return; }
+#if 1
+	{
+		b_rigidbody.vel += b_rigidbody.vel_delta;
+		b_rigidbody.angle_vel += b_rigidbody.angle_vel_delta;
+
+		b_rigidbody.vel_delta = vec2(0.);
+		b_rigidbody.angle_vel_delta = 0.;
+//		b_rigidbody.angle_vel_delta = 0.;
+	}
+
+	{
+		b_rigidbody.pos += b_rigidbody.vel;
+		b_rigidbody.vel += vec2(0., 9.8)*DT;
+		b_rigidbody.angle += b_rigidbody.angle_vel*DT;
+		b_rigidbody.angle_vel *= 0.98;
+
+	}
+
+#else
 	if(b_rigidbody.solver_count != 0)
 	{
 		vec2 vel = vec2(b_rigidbody.vel_work) / 65535.;
@@ -25,22 +43,28 @@ void main()
 			vel *= min(rate + 0.05, 1.);
 		}
 
-		
-		b_rigidbody.vel += vel;
-		b_rigidbody.angle_vel += angle_vel;
-
-		b_rigidbody.pos_work = ivec2(0);
-		b_rigidbody.vel_work = ivec2(0);
-		b_rigidbody.angle_vel_work = 0;
+		b_rigidbody.vel_delta += vel;
+		b_rigidbody.angle_vel_delta += angle_vel;
 
 		b_rigidbody.solver_count = 0;
 	}
 
 	{
+		b_rigidbody.vel += b_rigidbody.vel_delta;
+		b_rigidbody.angle_vel += b_rigidbody.angle_vel_delta;
+
 		b_rigidbody.pos += b_rigidbody.vel;
 		b_rigidbody.vel += vec2(0., 9.8)*DT;
+
 		b_rigidbody.angle += b_rigidbody.angle_vel*DT;
 		b_rigidbody.angle_vel *= 0.98;
-	}
 
+		b_rigidbody.vel_delta = vec2(0.);
+		b_rigidbody.angle_vel_delta = 0.;
+
+		b_rigidbody.pos_work = ivec2(0);
+		b_rigidbody.vel_work = ivec2(0);
+		b_rigidbody.angle_vel_work = 0;
+	}
+	#endif
 }

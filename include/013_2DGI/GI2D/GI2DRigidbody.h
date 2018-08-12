@@ -24,15 +24,36 @@ struct GI2DRigidbody
 		int32_t solver_count;
 		int32_t inertia;
 		int32_t _p2;
+
 		vec2 center;
 		vec2 size;
+
 		vec2 pos;
 		vec2 vel;
+
 		ivec2 pos_work;
 		ivec2 vel_work;
+
 		float angle;
 		float angle_vel;
-		float angle_vel_work;
+		int32_t angle_vel_work;
+		float _pp1;
+
+		vec2 vel_delta;
+		float angle_vel_delta;
+		float _pp2;
+
+	};
+	struct Constraint
+	{
+		int32_t r_id;
+		float sinking;
+		int32_t _p2;
+		int32_t _p3;
+		vec2 ri;
+		vec2 rj;
+		vec2 vi;
+		vec2 vj;
 	};
 	enum
 	{
@@ -42,6 +63,8 @@ struct GI2DRigidbody
 	{
 		Shader_Update,
 		Shader_Pressure,
+		Shader_Solve,
+		Shader_SolveIntegrate,
 		Shader_Integrate,
 		Shader_ToFragment,
 		Shader_Num,
@@ -56,6 +79,8 @@ struct GI2DRigidbody
 	{
 		Pipeline_Update,
 		Pipeline_Pressure,
+		Pipeline_Solve,
+		Pipeline_SolveIntegrate,
 		Pipeline_Integrate,
 		Pipeline_ToFragment,
 		Pipeline_Num,
@@ -81,8 +106,8 @@ struct GI2DRigidbody
 
 		vec2 vel_ = normalize(vel + angular_vel);
 		float length = glm::length(vel + angular_vel);
-
 	}
+
 	GI2DRigidbody(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context)
 	{
 		m_context = context;
@@ -120,6 +145,16 @@ struct GI2DRigidbody
 					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 					.setDescriptorCount(1)
 					.setBinding(4),
+					vk::DescriptorSetLayoutBinding()
+					.setStageFlags(stage)
+					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+					.setDescriptorCount(1)
+					.setBinding(5),
+					vk::DescriptorSetLayoutBinding()
+					.setStageFlags(stage)
+					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+					.setDescriptorCount(1)
+					.setBinding(6),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -133,6 +168,8 @@ struct GI2DRigidbody
 				{
 					"Rigid_Update.comp.spv",
 					"Rigid_CalcPressure.comp.spv",
+					"Rigid_Solve.comp.spv",
+					"Rigid_SolveIntegrate.comp.spv",
 					"Rigid_Integrate.comp.spv",
 					"Rigid_ToFragment.comp.spv",
 				};
@@ -166,12 +203,18 @@ struct GI2DRigidbody
 				shader_info[1].setModule(m_shader[Shader_Pressure].get());
 				shader_info[1].setStage(vk::ShaderStageFlagBits::eCompute);
 				shader_info[1].setPName("main");
-				shader_info[2].setModule(m_shader[Shader_Integrate].get());
+				shader_info[2].setModule(m_shader[Shader_Solve].get());
 				shader_info[2].setStage(vk::ShaderStageFlagBits::eCompute);
 				shader_info[2].setPName("main");
-				shader_info[3].setModule(m_shader[Shader_ToFragment].get());
+				shader_info[3].setModule(m_shader[Shader_SolveIntegrate].get());
 				shader_info[3].setStage(vk::ShaderStageFlagBits::eCompute);
 				shader_info[3].setPName("main");
+				shader_info[4].setModule(m_shader[Shader_Integrate].get());
+				shader_info[4].setStage(vk::ShaderStageFlagBits::eCompute);
+				shader_info[4].setPName("main");
+				shader_info[5].setModule(m_shader[Shader_ToFragment].get());
+				shader_info[5].setStage(vk::ShaderStageFlagBits::eCompute);
+				shader_info[5].setPName("main");
 				std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 				{
 					vk::ComputePipelineCreateInfo()
@@ -186,12 +229,20 @@ struct GI2DRigidbody
 					vk::ComputePipelineCreateInfo()
 					.setStage(shader_info[3])
 					.setLayout(m_pipeline_layout[PipelineLayout_Rigid].get()),
+					vk::ComputePipelineCreateInfo()
+					.setStage(shader_info[4])
+					.setLayout(m_pipeline_layout[PipelineLayout_Rigid].get()),
+					vk::ComputePipelineCreateInfo()
+					.setStage(shader_info[5])
+					.setLayout(m_pipeline_layout[PipelineLayout_Rigid].get()),
 				};
 				auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
 				m_pipeline[Pipeline_Update] = std::move(compute_pipeline[0]);
 				m_pipeline[Pipeline_Pressure] = std::move(compute_pipeline[1]);
-				m_pipeline[Pipeline_Integrate] = std::move(compute_pipeline[2]);
-				m_pipeline[Pipeline_ToFragment] = std::move(compute_pipeline[3]);
+				m_pipeline[Pipeline_Solve] = std::move(compute_pipeline[2]);
+				m_pipeline[Pipeline_SolveIntegrate] = std::move(compute_pipeline[3]);
+				m_pipeline[Pipeline_Integrate] = std::move(compute_pipeline[4]);
+				m_pipeline[Pipeline_ToFragment] = std::move(compute_pipeline[5]);
 			}
 
 		}
@@ -204,9 +255,12 @@ struct GI2DRigidbody
 				b_rbvel = m_context->m_storage_memory.allocateMemory<vec2>({ Particle_Num,{} });
 				b_rbacc = m_context->m_storage_memory.allocateMemory<vec2>({ Particle_Num,{} });
 				b_relative_pos = m_context->m_storage_memory.allocateMemory<vec2>({ Particle_Num,{} });
+				b_constraint_count = m_context->m_storage_memory.allocateMemory<ivec4>({ 1,{} });;
+				b_constraint = m_context->m_storage_memory.allocateMemory<Constraint>({ Particle_Num,{} });;
 
 				cmd.fillBuffer(b_rbvel.getInfo().buffer, b_rbvel.getInfo().offset, b_rbvel.getInfo().range, 0);
 				cmd.fillBuffer(b_rbacc.getInfo().buffer, b_rbacc.getInfo().offset, b_rbacc.getInfo().range, 0);
+				cmd.fillBuffer(b_constraint_count.getInfo().buffer, b_constraint_count.getInfo().offset, b_constraint_count.getInfo().range, 0);
 
 
 				{
@@ -251,14 +305,16 @@ struct GI2DRigidbody
 					rb.pos = center;
 					rb.center = size/2.f;
 					rb.size = size_max;
-					rb.vel = vec2(0.);
-					rb.pos_work = ivec2(0.);
-					rb.vel_work = ivec2(0.);
+					rb.vel = vec2(0.f);
+					rb.pos_work = ivec2(0.f);
+					rb.vel_work = ivec2(0.f);
 					rb.angle_vel_work = 0.;
 					rb.pnum = Particle_Num;
 					rb.angle = 0.f;
 					rb.angle_vel = 0.f;
 					rb.solver_count = 0;
+					rb.vel_delta = vec2(0.f);
+					rb.angle_vel_delta = 0.f;
 
 					cmd.updateBuffer<Rigidbody>(b_rigidbody.getInfo().buffer, b_rigidbody.getInfo().offset, rb);
 
@@ -268,6 +324,7 @@ struct GI2DRigidbody
 						b_rbpos.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 						b_rbvel.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 						b_rbacc.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+						b_constraint_count.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eIndirectCommandRead),
 					};
 					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllCommands, {},
 						0, nullptr, array_length(to_read), to_read, 0, nullptr);
@@ -334,6 +391,8 @@ struct GI2DRigidbody
 					b_rbpos.getInfo(),
 					b_rbvel.getInfo(),
 					b_rbacc.getInfo(),
+					b_constraint_count.getInfo(),
+					b_constraint.getInfo(),
 				};
 
 				vk::WriteDescriptorSet write[] =
@@ -357,9 +416,18 @@ struct GI2DRigidbody
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Rigid].get(), 1, m_gi2d_context->getDescriptorSet(), {});
 
 		{
+			vk::BufferMemoryBarrier to_read[] = {
+				b_constraint_count.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {},
+				0, nullptr, array_length(to_read), to_read, 0, nullptr);
+			cmd.updateBuffer<ivec4>(b_constraint_count.getInfo().buffer, b_constraint_count.getInfo().offset, ivec4(0, 1, 1, 0));
+		}
+		{
 			// 位置の更新
 			vk::BufferMemoryBarrier to_read[] = {
 				b_rbacc.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				b_constraint_count.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eIndirectCommandRead),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
@@ -387,15 +455,52 @@ struct GI2DRigidbody
 		}
 
 		{
-			// 剛体の更新
-			vk::BufferMemoryBarrier to_read[] = {
-				b_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead| vk::AccessFlagBits::eShaderWrite),
-			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
-				0, nullptr, array_length(to_read), to_read, 0, nullptr);
+			{
+				vk::BufferMemoryBarrier to_read[] = {
+					b_constraint_count.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
+					b_constraint.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect| vk::PipelineStageFlagBits::eComputeShader, {},
+					0, nullptr, array_length(to_read), to_read, 0, nullptr);
+			}
 
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Integrate].get());
-			cmd.dispatch(1, 1, 1);
+			for (int32_t i = 0; i < 1; i++)
+			{
+				{
+					// 拘束の解決
+					vk::BufferMemoryBarrier to_read[] = {
+						b_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+					};
+					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+						0, nullptr, array_length(to_read), to_read, 0, nullptr);
+
+					cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Solve].get());
+					cmd.dispatchIndirect(b_constraint_count.getInfo().buffer, b_constraint_count.getInfo().offset);
+				}
+				{
+					// 剛体の更新
+					vk::BufferMemoryBarrier to_read[] = {
+						b_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+					};
+					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+						0, nullptr, array_length(to_read), to_read, 0, nullptr);
+
+					cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_SolveIntegrate].get());
+					cmd.dispatch(1, 1, 1);
+				}
+			}
+
+			{
+				// 剛体の更新
+				vk::BufferMemoryBarrier to_read[] = {
+					b_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+					0, nullptr, array_length(to_read), to_read, 0, nullptr);
+
+				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Integrate].get());
+				cmd.dispatch(1, 1, 1);
+			}
 		}
 
 		{
@@ -430,6 +535,8 @@ struct GI2DRigidbody
 	btr::BufferMemoryEx<vec2> b_rbpos;
 	btr::BufferMemoryEx<vec2> b_rbvel;
 	btr::BufferMemoryEx<vec2> b_rbacc;
+	btr::BufferMemoryEx<ivec4> b_constraint_count;
+	btr::BufferMemoryEx<Constraint> b_constraint;
 
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
