@@ -10,7 +10,7 @@ layout (local_size_x = 1) in;
 
 void main() 
 {
-	if( b_constraint_count.w != 0)
+	if( b_rigidbody.solver_count != 0)
 	{
 		vec2 vel = vec2(b_rigidbody.vel_work) / 65535.;
 		float angle_vel = b_rigidbody.angle_vel_work / 65535.;

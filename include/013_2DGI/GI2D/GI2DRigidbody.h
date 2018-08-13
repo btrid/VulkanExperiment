@@ -137,16 +137,6 @@ struct GI2DRigidbody
 					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 					.setDescriptorCount(1)
 					.setBinding(4),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(5),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(6),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -231,12 +221,9 @@ struct GI2DRigidbody
 				b_rbvel = m_context->m_storage_memory.allocateMemory<vec2>({ Particle_Num,{} });
 				b_rbacc = m_context->m_storage_memory.allocateMemory<vec2>({ Particle_Num,{} });
 				b_relative_pos = m_context->m_storage_memory.allocateMemory<vec2>({ Particle_Num,{} });
-				b_constraint_count = m_context->m_storage_memory.allocateMemory<ivec4>({ 1,{} });;
-				b_constraint = m_context->m_storage_memory.allocateMemory<Constraint>({ Particle_Num,{} });;
 
 				cmd.fillBuffer(b_rbvel.getInfo().buffer, b_rbvel.getInfo().offset, b_rbvel.getInfo().range, 0);
 				cmd.fillBuffer(b_rbacc.getInfo().buffer, b_rbacc.getInfo().offset, b_rbacc.getInfo().range, 0);
-				cmd.fillBuffer(b_constraint_count.getInfo().buffer, b_constraint_count.getInfo().offset, b_constraint_count.getInfo().range, 0);
 
 
 				{
@@ -298,7 +285,6 @@ struct GI2DRigidbody
 						b_rbpos.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 						b_rbvel.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 						b_rbacc.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-						b_constraint_count.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eIndirectCommandRead),
 					};
 					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllCommands, {},
 						0, nullptr, array_length(to_read), to_read, 0, nullptr);
@@ -365,8 +351,6 @@ struct GI2DRigidbody
 					b_rbpos.getInfo(),
 					b_rbvel.getInfo(),
 					b_rbacc.getInfo(),
-					b_constraint_count.getInfo(),
-					b_constraint.getInfo(),
 				};
 
 				vk::WriteDescriptorSet write[] =
@@ -390,18 +374,9 @@ struct GI2DRigidbody
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Rigid].get(), 1, m_gi2d_context->getDescriptorSet(), {});
 
 		{
-			vk::BufferMemoryBarrier to_read[] = {
-				b_constraint_count.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
-			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {},
-				0, nullptr, array_length(to_read), to_read, 0, nullptr);
-			cmd.updateBuffer<ivec4>(b_constraint_count.getInfo().buffer, b_constraint_count.getInfo().offset, ivec4(0, 1, 1, 0));
-		}
-		{
 			// 位置の更新
 			vk::BufferMemoryBarrier to_read[] = {
 				b_rbacc.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-				b_constraint_count.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eIndirectCommandRead),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
@@ -429,15 +404,6 @@ struct GI2DRigidbody
 		}
 
 		{
-			{
-				vk::BufferMemoryBarrier to_read[] = {
-					b_constraint_count.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
-					b_constraint.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-				};
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect| vk::PipelineStageFlagBits::eComputeShader, {},
-					0, nullptr, array_length(to_read), to_read, 0, nullptr);
-			}
-
 
 			{
 				// 剛体の更新
@@ -484,8 +450,6 @@ struct GI2DRigidbody
 	btr::BufferMemoryEx<vec2> b_rbpos;
 	btr::BufferMemoryEx<vec2> b_rbvel;
 	btr::BufferMemoryEx<vec2> b_rbacc;
-	btr::BufferMemoryEx<ivec4> b_constraint_count;
-	btr::BufferMemoryEx<Constraint> b_constraint;
 
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;

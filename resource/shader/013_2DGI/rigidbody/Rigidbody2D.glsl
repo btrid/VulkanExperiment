@@ -28,18 +28,6 @@ struct Rigidbody
 
 };
 
-struct Constraint
-{
-	int r_id;
-	int p_id;
-	float impulse;
-	int _p3;
-	vec2 ri;
-	vec2 rj;
-	vec2 vi;
-	vec2 vj;
-};
-
 layout(set=USE_Rigidbody2D, binding=0, std430) restrict buffer RigidbodyData {
 	Rigidbody b_rigidbody;
 };
@@ -54,12 +42,6 @@ layout(set=USE_Rigidbody2D, binding=3, std430) restrict buffer rbVelBuffer {
 };
 layout(set=USE_Rigidbody2D, binding=4, std430) restrict buffer rbAccBuffer {
 	vec2 b_rbacc[];
-};
-layout(set=USE_Rigidbody2D, binding=5, std430) restrict buffer rbConstraintCounter {
-	ivec4 b_constraint_count;
-};
-layout(set=USE_Rigidbody2D, binding=6, std430) restrict buffer rbConstraintBuffer {
-	Constraint b_constraint[];
 };
 
 #endif
