@@ -26,10 +26,6 @@ struct Rigidbody
 	int angle_vel_work;
 	float _pp1;
 
-	vec2 vel_delta;
-	float angle_vel_delta;
-	float _pp2;
-
 };
 
 struct Constraint

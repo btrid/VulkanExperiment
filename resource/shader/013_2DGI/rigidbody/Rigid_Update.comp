@@ -50,7 +50,6 @@ vec2 calcTangent(in vec2 normal)
 
 void main() 
 {
-
 	int p_id = int(gl_GlobalInvocationID.x);
 	if(p_id >= b_rigidbody.pnum){ return; }
 
@@ -92,7 +91,6 @@ void main()
 //					vec2 pi = result.next_pos;
 //					vec2 pj = vec2(result.next_map_index) + (sign(dir)*0.5 + 0.5);
 //					vec2 r_ij = pj-pi;
-					vec2 r = dir;
 					float spring = 1.2;
 					float decay = 0.1;
 					vec2 delta_linear_vel = vec2(0.);
@@ -132,7 +130,7 @@ void main()
 
 		}
 	}
-
+/*
 	ivec2 reso_grid = ivec2(reso.xy/Grid_Size);
 	vec2 index_grid_f = pos / Grid_Size;
 	ivec2 index_grid = ivec2(index_grid_f);
@@ -140,7 +138,7 @@ void main()
 	int i = index_grid.x + index_grid.y*reso_grid.x;
 
 	atomicAdd(b_grid_counter[i], 1);
-
+*/
 
 
 }

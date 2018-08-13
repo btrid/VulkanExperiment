@@ -39,10 +39,6 @@ struct GI2DRigidbody
 		int32_t angle_vel_work;
 		float _pp1;
 
-		vec2 vel_delta;
-		float angle_vel_delta;
-		float _pp2;
-
 	};
 	struct Constraint
 	{
@@ -293,8 +289,6 @@ struct GI2DRigidbody
 					rb.angle = 0.f;
 					rb.angle_vel = 0.f;
 					rb.solver_count = 0;
-					rb.vel_delta = vec2(0.f);
-					rb.angle_vel_delta = 0.f;
 
 					cmd.updateBuffer<Rigidbody>(b_rigidbody.getInfo().buffer, b_rigidbody.getInfo().offset, rb);
 

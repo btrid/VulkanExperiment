@@ -15,35 +15,18 @@ void main()
 		vec2 vel = vec2(b_rigidbody.vel_work) / 65535.;
 		float angle_vel = b_rigidbody.angle_vel_work / 65535.;
 
-//		vel /= b_constraint_count.w;
-//		angle_vel /= b_constraint_count.w;
-
-		{
-//			float force = abs(cross(vec3(b_rigidbody.size, 0.), vec3(vel, 0.)).z);
-//			float rate = (force - abs(angle_vel)) / force;
-//			vel *= min(rate + 0.05, 1.);
-		}
-
-//		b_rigidbody.vel_delta += vel;
-//		b_rigidbody.angle_vel_delta += angle_vel;
-		b_rigidbody.vel_delta = vel;
-		b_rigidbody.angle_vel_delta = angle_vel;
+		b_rigidbody.vel = vel;
+		b_rigidbody.angle_vel = angle_vel;
 
 		b_rigidbody.solver_count = 0;
 	}
 
 	{
-		b_rigidbody.vel += b_rigidbody.vel_delta;
-		b_rigidbody.angle_vel += b_rigidbody.angle_vel_delta;
-
 		b_rigidbody.pos += b_rigidbody.vel*DT;
 		b_rigidbody.vel += vec2(0., 9.8)*DT;
 
 		b_rigidbody.angle += b_rigidbody.angle_vel*DT;
 		b_rigidbody.angle_vel *= 0.98;
-
-		b_rigidbody.vel_delta = vec2(0.);
-		b_rigidbody.angle_vel_delta = 0.;
 
 		b_rigidbody.pos_work = ivec2(0);
 		b_rigidbody.vel_work = ivec2(0);
