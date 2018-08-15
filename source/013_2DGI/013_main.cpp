@@ -23,6 +23,7 @@
 #include <applib/App.h>
 #include <applib/AppPipeline.h>
 #include <btrlib/Context.h>
+#include <btrlib/System.h>
 
 #include <applib/sImGuiRenderer.h>
 
@@ -86,6 +87,7 @@ int main()
 
 
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context);
+	btr::System btr_system(context);
 	GI2DClear gi2d_clear(context, gi2d_context);
 	GI2DDebug gi2d_debug_make_fragment(context, gi2d_context);
 	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
@@ -152,8 +154,8 @@ int main()
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				gi2d_clear.execute(cmd);
 				gi2d_debug_make_fragment.execute(cmd);
-//				gi2d_Fluid.execute(cmd);
-				gi2d_Rigidbody.execute(cmd);
+				gi2d_Fluid.execute(cmd);
+//				gi2d_Rigidbody.execute(cmd);
 				gi2d_make_hierarchy.execute(cmd);
 				gi2d_Radiosity.execute(cmd);
 				cmd.end();
