@@ -23,7 +23,6 @@
 #include <applib/App.h>
 #include <applib/AppPipeline.h>
 #include <btrlib/Context.h>
-#include <btrlib/System.h>
 
 #include <applib/sImGuiRenderer.h>
 
@@ -33,7 +32,7 @@
 #include <013_2DGI/GI2D/GI2DAppModel.h>
 #include <013_2DGI/GI2D/GI2DRadiosity.h>
 #include <013_2DGI/GI2D/GI2DFluid.h>
-#include <013_2DGI/GI2D/GI2DRigidbody.h>
+#include <013_2DGI/GI2D/GI2DRigidbody_dem.h>
 
 #include <applib/AppModel/AppModel.h>
 #include <applib/AppModel/AppModelPipeline.h>
@@ -87,13 +86,12 @@ int main()
 
 
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context);
-	btr::System btr_system(context);
 	GI2DClear gi2d_clear(context, gi2d_context);
 	GI2DDebug gi2d_debug_make_fragment(context, gi2d_context);
 	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
 	GI2DRadiosity gi2d_Radiosity(context, gi2d_context, app.m_window->getRenderTarget());
 	GI2DFluid gi2d_Fluid(context, gi2d_context);
-	GI2DRigidbody gi2d_Rigidbody(context, gi2d_context);
+	GI2DRigidbody_dem gi2d_Rigidbody(context, gi2d_context);
 
 //	auto anime_cmd = animater.createCmd(player_model);
 //	auto pm_make_cmd = pm_appmodel.createCmd(player_model);

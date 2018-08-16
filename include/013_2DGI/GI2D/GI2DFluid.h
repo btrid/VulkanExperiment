@@ -4,6 +4,7 @@
 #include <btrlib/DefineMath.h>
 #include <btrlib/Context.h>
 #include <applib/App.h>
+#include <applib/sSystem.h>
 #include <applib/GraphicsResource.h>
 #include <013_2DGI/GI2D/GI2DContext.h>
 

@@ -101,7 +101,7 @@
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DFluid.h" />
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DRadiosity.h" />
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DMakeHierarchy.h" />
-    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DRigidbody.h" />
+    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DRigidbody_dem.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

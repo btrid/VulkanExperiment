@@ -16,7 +16,7 @@ mat2 crossMatrix2(float a)
 namespace gi2d
 {
 
-struct GI2DRigidbody
+struct GI2DRigidbody_dem
 {
 	struct Rigidbody
 	{
@@ -100,7 +100,7 @@ struct GI2DRigidbody
 		float length = glm::length(vel + angular_vel);
 	}
 
-	GI2DRigidbody(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context)
+	GI2DRigidbody_dem(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context)
 	{
 		m_context = context;
 		m_gi2d_context = gi2d_context;
