@@ -46,32 +46,28 @@ struct GI2DFluid
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
 		{
-			b_pos = m_context->m_storage_memory.allocateMemory<vec2>({ Particle_Num,{} });
-			b_vel = m_context->m_storage_memory.allocateMemory<vec2>({ Particle_Num,{} });
-			b_acc = m_context->m_storage_memory.allocateMemory<vec2>({ Particle_Num,{} });
+			b_pos = m_context->m_storage_memory.allocateMemory<vec2>({ Particle_Num*2,{} });
 			b_grid_head = m_context->m_storage_memory.allocateMemory<int32_t>({ (uint32_t)m_gi2d_context->RenderWidth*m_gi2d_context->RenderHeight,{} });
 			b_grid_node = m_context->m_storage_memory.allocateMemory<int32_t>({ Particle_Num,{} });
 			b_type = m_context->m_storage_memory.allocateMemory<int32_t>({ Particle_Num,{} });
 
-			cmd.fillBuffer(b_vel.getInfo().buffer, b_vel.getInfo().offset, b_vel.getInfo().range, 0);
-			cmd.fillBuffer(b_acc.getInfo().buffer, b_acc.getInfo().offset, b_acc.getInfo().range, 0);
 			cmd.fillBuffer(b_grid_head.getInfo().buffer, b_grid_head.getInfo().offset, b_grid_head.getInfo().range, -1);
 
 			{
 				// debug用初期データ
-				std::vector<vec2> pos(Particle_Num);
+				std::vector<vec4> pos(Particle_Num);
 				for (int i = 0; i < Particle_Num; i++)
 				{
 #define area (20)
 					auto& p = pos[i];
 					p.x = 165 + std::rand() % area + (std::rand() % 10000) / 10000.f;
 					p.y = 145 + std::rand() % area + (std::rand() % 10000) / 10000.f;
+					p.z = p.x;
+					p.w = p.y;
 				}
-				cmd.updateBuffer<vec2>(b_pos.getInfo().buffer, b_pos.getInfo().offset, pos);
+				cmd.updateBuffer<vec4>(b_pos.getInfo().buffer, b_pos.getInfo().offset, pos);
 				vk::BufferMemoryBarrier to_read[] = {
 					b_pos.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-					b_vel.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-					b_acc.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 				};
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllCommands, {},
 					0, nullptr, array_length(to_read), to_read, 0, nullptr);
@@ -104,16 +100,6 @@ struct GI2DFluid
 					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 					.setDescriptorCount(1)
 					.setBinding(3),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(4),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(5),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -133,8 +119,6 @@ struct GI2DFluid
 
 				vk::DescriptorBufferInfo storages[] = {
 					b_pos.getInfo(),
-					b_vel.getInfo(),
-					b_acc.getInfo(),
 					b_type.getInfo(),
 					b_grid_head.getInfo(),
 					b_grid_node.getInfo(),
@@ -174,6 +158,7 @@ struct GI2DFluid
 			vk::DescriptorSetLayout layouts[] = {
 				m_descriptor_set_layout.get(),
 				gi2d_context->getDescriptorSetLayout(),
+				sSystem::Order().getSystemDescriptorLayout(),
 			};
 
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
@@ -218,6 +203,7 @@ struct GI2DFluid
 
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Fluid].get(), 0, m_descriptor_set.get(), {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Fluid].get(), 1, m_gi2d_context->getDescriptorSet(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Fluid].get(), 2, sSystem::Order().getSystemDescriptorSet(), { 0 * sSystem::Order().getSystemDescriptorStride() });
 
 		{
 			// linklist更新のため初期化
@@ -236,7 +222,6 @@ struct GI2DFluid
 			vk::BufferMemoryBarrier to_read[] = {
 				b_grid_head.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 				m_gi2d_context->b_grid_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
-				b_acc.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
@@ -266,6 +251,7 @@ struct GI2DFluid
 		{
 			vk::BufferMemoryBarrier to_read[] = {
 				m_gi2d_context->b_fragment_buffer.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+				b_pos.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
@@ -290,8 +276,6 @@ struct GI2DFluid
 	std::array<vk::UniquePipeline, Pipeline_Num> m_pipeline;
 
 	btr::BufferMemoryEx<vec2> b_pos;
-	btr::BufferMemoryEx<vec2> b_vel;
-	btr::BufferMemoryEx<vec2> b_acc;
 	btr::BufferMemoryEx<int32_t> b_type;
 	btr::BufferMemoryEx<int32_t> b_grid_head;
 	btr::BufferMemoryEx<int32_t> b_grid_node;

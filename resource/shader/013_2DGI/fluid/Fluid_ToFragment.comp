@@ -5,14 +5,16 @@
 #define USE_GI2D 1
 #include "GI2D.glsl"
 #include "Fluid2D.glsl"
+#define USE_SYSTEM 2
+#include "applib/system.glsl"
 
 layout (local_size_x = 1024) in;
 void main() 
 {
 
 	int p_id = int(gl_GlobalInvocationID.x);
-	vec2 pos = b_pos[p_id];
-		
+	vec2 pos = b_pos[p_id*2 + gpu_index()];
+
 	ivec2 index = ivec2(pos);
 	if(any(lessThan(index, ivec2(0))) || any(greaterThanEqual(index, u_gi2d_info.m_resolution))){ return; }
 

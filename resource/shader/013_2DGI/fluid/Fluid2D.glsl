@@ -8,19 +8,13 @@
 layout(set=USE_Fluid2D, binding=0, std430) restrict buffer PosBuffer {
 	vec2 b_pos[];
 };
-layout(set=USE_Fluid2D, binding=1, std430) restrict buffer VelBuffer {
-	vec2 b_vel[];
-};
-layout(set=USE_Fluid2D, binding=2, std430) restrict buffer AccBuffer {
-	vec2 b_acc[];
-};
-layout(set=USE_Fluid2D, binding=3, std430) restrict buffer TypeBuffer {
+layout(set=USE_Fluid2D, binding=1, std430) restrict buffer TypeBuffer {
 	int b_type[];
 };
-layout(set=USE_Fluid2D, binding=4) restrict buffer GridCellBuffer {
+layout(set=USE_Fluid2D, binding=2) restrict buffer GridCellBuffer {
 	int b_grid_head[];
 };
-layout(set=USE_Fluid2D, binding=5) restrict buffer GridNodeBuffer {
+layout(set=USE_Fluid2D, binding=3) restrict buffer GridNodeBuffer {
 	int b_grid_node[];
 };
 #endif

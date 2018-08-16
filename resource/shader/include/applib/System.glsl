@@ -61,6 +61,9 @@ struct SystemData
 layout(set=USE_SYSTEM, binding=0, std140) uniform SystemUniform {
 	SystemData u_system_data;
 };
+
+#define cpu_index() (1-u_system_data.m_gpu_index)
+#define gpu_index() (u_system_data.m_gpu_index)
 #endif
 
 #endif
