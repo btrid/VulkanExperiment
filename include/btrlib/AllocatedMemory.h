@@ -197,6 +197,12 @@ struct BufferMemoryDescriptorEx
 		: element_num(num)
 		, attribute(attribute)
 	{}
+
+	template<typename I>
+	BufferMemoryDescriptorEx(I num, BufferMemoryAttributeFlags attr)
+		: element_num((uint32_t)num)
+		, attribute(attribute)
+	{}
 };
 
 struct BufferMemory

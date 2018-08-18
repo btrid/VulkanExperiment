@@ -1,0 +1,22 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_GI2D 0
+#include "GI2D.glsl"
+
+layout (local_size_x = 32, local_size_y = 32) in;
+
+void main() 
+{
+	uvec2 id = gl_GlobalInvocationID.xy*2;
+	if(any(greaterThanEqual(gl_GlobalInvocationID.xy>>1, u_gi2d_info.m_resolution.xy)))
+	{
+		return; 
+	}
+	int d = 0;
+	d += b_grid_counter[id.x + id.y*u_gi2d_info.m_resolution.x];
+	d += b_grid_counter[id.x+1 + id.y*u_gi2d_info.m_resolution.x];
+	d += b_grid_counter[id.x + (id.y+1)*u_gi2d_info.m_resolution.x];
+	d += b_grid_counter[id.x+1 + (id.y+1)*u_gi2d_info.m_resolution.x];
+	b_grid_counter[u_gi2d_info.m_resolution.x * u_gi2d_info.m_resolution.y + gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * (u_gi2d_info.m_resolution.x>>1)] = d;
+}

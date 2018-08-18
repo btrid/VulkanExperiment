@@ -113,7 +113,9 @@ struct GI2DContext
 			b_emissive_map = context->m_storage_memory.allocateMemory<uint64_t>({ (uint32_t)RenderHeight * RenderWidth / 64,{} });
 		}
 
-		b_grid_counter = context->m_storage_memory.allocateMemory<int32_t>({ (uint32_t)RenderWidth*RenderHeight,{} });
+		uint32_t size = RenderWidth * RenderHeight;
+		size += (RenderWidth * RenderHeight)/4;
+		b_grid_counter = context->m_storage_memory.allocateMemory<int32_t>( {size,{} });
 
 		{
 			{

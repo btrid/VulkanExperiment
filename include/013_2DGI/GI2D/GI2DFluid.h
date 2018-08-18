@@ -37,6 +37,12 @@ struct GI2DFluid
 		Pipeline_ToFragment,
 		Pipeline_Num,
 	};
+	struct Joint {
+		int32_t depth;
+		int32_t parent;
+		float rate;
+		float angle_limit;
+	};
 
 	GI2DFluid(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context)
 	{

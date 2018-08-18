@@ -6,7 +6,7 @@ rem SET option=-w -x glsl
 SET include=-I../../include/
 SET option=--target-env vulkan1.1 -V
 SET exe=glslangValidator.exe
-SET output=../../binary
+SET output=../../binary/
 
 %exe% %include% %option% -o %output%/Fluid_CalcPressure.comp.spv Fluid_CalcPressure.comp
 %exe% %include% %option% -o %output%/Fluid_Update.comp.spv Fluid_Update.comp
