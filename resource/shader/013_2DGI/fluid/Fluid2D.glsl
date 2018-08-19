@@ -4,6 +4,13 @@
 
 #if defined(USE_Fluid2D)
 
+struct Joint
+{
+	int parent;
+	float rate;
+	float linear_limit;
+	float angle_limit;
+};
 
 layout(set=USE_Fluid2D, binding=0, std430) restrict buffer PosBuffer {
 	vec2 b_pos[];
@@ -11,10 +18,13 @@ layout(set=USE_Fluid2D, binding=0, std430) restrict buffer PosBuffer {
 layout(set=USE_Fluid2D, binding=1, std430) restrict buffer TypeBuffer {
 	int b_type[];
 };
-layout(set=USE_Fluid2D, binding=2) restrict buffer GridCellBuffer {
+layout(set=USE_Fluid2D, binding=2, std430) restrict buffer JointBuffer {
+	Joint b_joint[];
+};
+layout(set=USE_Fluid2D, binding=3) restrict buffer GridCellBuffer {
 	int b_grid_head[];
 };
-layout(set=USE_Fluid2D, binding=3) restrict buffer GridNodeBuffer {
+layout(set=USE_Fluid2D, binding=4) restrict buffer GridNodeBuffer {
 	int b_grid_node[];
 };
 #endif

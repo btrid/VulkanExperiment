@@ -15,7 +15,7 @@ struct GI2DFluid
 {
 	enum
 	{
-		Particle_Num = 1024000,
+		Particle_Num = 10240,
 	};
 	enum Shader
 	{
@@ -37,10 +37,11 @@ struct GI2DFluid
 		Pipeline_ToFragment,
 		Pipeline_Num,
 	};
-	struct Joint {
-		int32_t depth;
+	struct Joint
+	{
 		int32_t parent;
 		float rate;
+		float linear_limit;
 		float angle_limit;
 	};
 
@@ -56,12 +57,14 @@ struct GI2DFluid
 			b_grid_head = m_context->m_storage_memory.allocateMemory<int32_t>({ (uint32_t)m_gi2d_context->RenderWidth*m_gi2d_context->RenderHeight,{} });
 			b_grid_node = m_context->m_storage_memory.allocateMemory<int32_t>({ Particle_Num,{} });
 			b_type = m_context->m_storage_memory.allocateMemory<int32_t>({ Particle_Num,{} });
+			b_joint = m_context->m_storage_memory.allocateMemory<Joint>({ Particle_Num,{} });
 
 			cmd.fillBuffer(b_grid_head.getInfo().buffer, b_grid_head.getInfo().offset, b_grid_head.getInfo().range, -1);
 
 			{
 				// debug用初期データ
 				std::vector<vec4> pos(Particle_Num);
+#if 0
 				for (int i = 0; i < Particle_Num; i++)
 				{
 #define area (20)
@@ -71,7 +74,36 @@ struct GI2DFluid
 					p.z = p.x;
 					p.w = p.y;
 				}
+#else
+				{
+					auto& p = pos[0];
+					p.x = 165.f;
+					p.y = 145.f;
+					p.z = p.x;
+					p.w = p.y;
+
+				}
+				for (int n = 0; n < 10; n++)
+				{
+					#define Angle_Num (30)
+					for (int m = 0; m < Angle_Num; m++)
+					{
+						auto angle = m * (glm::two_pi<float>() / Angle_Num);
+						auto r = vec2(0.f, 2.f + n * 2.f);
+						r = glm::rotate(r, angle);
+
+						auto i = n * Angle_Num + m + 1;
+						auto& p = pos[i];
+						p.x = 165 + r.x;
+						p.y = 145 + r.y;
+						p.z = p.x;
+						p.w = p.y;
+					}
+				}
+#endif
+
 				cmd.updateBuffer<vec4>(b_pos.getInfo().buffer, b_pos.getInfo().offset, pos);
+
 				vk::BufferMemoryBarrier to_read[] = {
 					b_pos.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 				};
@@ -106,6 +138,11 @@ struct GI2DFluid
 					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 					.setDescriptorCount(1)
 					.setBinding(3),
+					vk::DescriptorSetLayoutBinding()
+					.setStageFlags(stage)
+					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+					.setDescriptorCount(1)
+					.setBinding(4),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -126,6 +163,7 @@ struct GI2DFluid
 				vk::DescriptorBufferInfo storages[] = {
 					b_pos.getInfo(),
 					b_type.getInfo(),
+					b_joint.getInfo(),
 					b_grid_head.getInfo(),
 					b_grid_node.getInfo(),
 				};
@@ -283,6 +321,7 @@ struct GI2DFluid
 
 	btr::BufferMemoryEx<vec2> b_pos;
 	btr::BufferMemoryEx<int32_t> b_type;
+	btr::BufferMemoryEx<Joint> b_joint;
 	btr::BufferMemoryEx<int32_t> b_grid_head;
 	btr::BufferMemoryEx<int32_t> b_grid_node;
 
