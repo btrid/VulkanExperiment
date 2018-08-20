@@ -30,9 +30,9 @@ public:
 	struct U : public T {};
 public:
 	static T& Order() {
-// 		static T instance;
-//		return instance;
-		return Storage::Get<U>();
+		thread_local U instance;
+		return instance;
+//		return Storage::Get<U>();
 	}
 
 protected:

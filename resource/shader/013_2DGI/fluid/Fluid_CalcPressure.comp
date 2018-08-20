@@ -70,6 +70,6 @@ void main()
 	vec2 pressure = (p0 + p1 + p2 + p3);
 
 	vec2 pos_old = b_pos[p_id*2 + cpu_index()];
-//	b_pos[p_id*2 + cpu_index()] = pos + (pos-pos_old) + (pressure + vec2(0., 9.8))*DT;
+	b_pos[p_id*2 + cpu_index()] = pos + (pos-pos_old) + (pressure + vec2(0., 9.8))*DT;
 
 }

@@ -139,21 +139,21 @@ public:
 		descriptor_layout_info.setPBindings(binding.data());
 		return context->m_device->createDescriptorSetLayoutUnique(descriptor_layout_info);
 	}
-	template<typename T>
-	static TypedDescriptorSet<T> allocateDescriptorSet(const std::shared_ptr<btr::Context>& context, vk::DescriptorPool pool, TypedDescriptorSetLayout<T> layout)
-	{
-		auto& device = context->m_device;
-		vk::DescriptorSetLayout layouts[] =
-		{
-			layout.get();
-		};
-		vk::DescriptorSetAllocateInfo descriptor_set_alloc_info;
-		descriptor_set_alloc_info.setDescriptorPool(pool);
-		descriptor_set_alloc_info.setDescriptorSetCount(array_length(layouts));
-		descriptor_set_alloc_info.setPSetLayouts(layouts);
-		auto descriptor_set = std::move(device->allocateDescriptorSetsUnique(descriptor_set_alloc_info)[0]);
-		return descriptor_set;
-	}
+// 	template<typename T>
+// 	static TypedDescriptorSet<T> allocateDescriptorSet(const std::shared_ptr<btr::Context>& context, vk::DescriptorPool pool, TypedDescriptorSetLayout<T> layout)
+// 	{
+// 		auto& device = context->m_device;
+// 		vk::DescriptorSetLayout layouts[] =
+// 		{
+// 			layout.get();
+// 		};
+// 		vk::DescriptorSetAllocateInfo descriptor_set_alloc_info;
+// 		descriptor_set_alloc_info.setDescriptorPool(pool);
+// 		descriptor_set_alloc_info.setDescriptorSetCount(array_length(layouts));
+// 		descriptor_set_alloc_info.setPSetLayouts(layouts);
+// 		auto descriptor_set = std::move(device->allocateDescriptorSetsUnique(descriptor_set_alloc_info)[0]);
+// 		return descriptor_set;
+// 	}
 	template<typename T>
 	static TypedDescriptorSetLayout<T> createDescriptorSetLayout(const std::shared_ptr<btr::Context>& context, const std::vector<vk::DescriptorSetLayoutBinding>& binding)
 	{

@@ -668,13 +668,13 @@ struct UpdateBuffer2
 
 		flushSubBuffer(data_num, offset_num, cpu_index);
 	}
-	void subupdate(const T& data, uint32_t cpu_index)
-	{
-		auto* ptr = m_staging_buffer.getMappedPtr<T>(cpu_index * (sizeof(T) + sizeof(U)*desc.element_num));
-		memcpy_s(ptr, data_size, data, data_size);
-
-		flushSubBuffer(data_num, offset_num, cpu_index);
-	}
+// 	void subupdate(const T& data, uint32_t cpu_index)
+// 	{
+// 		auto* ptr = m_staging_buffer.getMappedPtr<T>(cpu_index * (sizeof(T) + sizeof(U)*desc.element_num));
+// 		memcpy_s(ptr, data_size, data, data_size);
+// 
+// 		flushSubBuffer(data_num, offset_num, cpu_index);
+// 	}
 
 	/**
 	* subupdateのstagingバッファを自分で更新する

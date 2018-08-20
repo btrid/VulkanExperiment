@@ -75,12 +75,15 @@ struct GI2DFluid
 					p.w = p.y;
 				}
 #else
+				std::vector<Joint> joint(Particle_Num);
 				{
 					auto& p = pos[0];
 					p.x = 165.f;
 					p.y = 145.f;
 					p.z = p.x;
 					p.w = p.y;
+
+					joint[0].parent = -1;
 
 				}
 				for (int n = 0; n < 10; n++)
@@ -98,14 +101,21 @@ struct GI2DFluid
 						p.y = 145 + r.y;
 						p.z = p.x;
 						p.w = p.y;
+
+						joint[i].parent = n == 0 ? 0 : (n - 1)* Angle_Num + m;
+						joint[i].rate = 0.5f;
+						joint[i].angle_limit = 0.f;
+						joint[i].linear_limit = 5.f;
 					}
 				}
 #endif
 
 				cmd.updateBuffer<vec4>(b_pos.getInfo().buffer, b_pos.getInfo().offset, pos);
+				cmd.updateBuffer<Joint>(b_joint.getInfo().buffer, b_joint.getInfo().offset, joint);
 
 				vk::BufferMemoryBarrier to_read[] = {
 					b_pos.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+					b_joint.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 				};
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllCommands, {},
 					0, nullptr, array_length(to_read), to_read, 0, nullptr);
