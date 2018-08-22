@@ -16,7 +16,9 @@ struct GI2DSoftbody
 {
 	enum 
 	{
-		Particle_Num = 120,
+		xx = 4,
+		yy = 30,
+		Particle_Num = xx*yy,
 	};
 	struct Softbody
 	{
@@ -153,8 +155,6 @@ struct GI2DSoftbody
 					std::vector<vec2> rela_pos(Particle_Num);
 					vec2 center = vec2(0.f);
 #if 1
-#define xx 4
-#define yy 30
 					for (int y = 0; y < yy; y++)
 					{
 						for (int x = 0; x < xx; x++)
