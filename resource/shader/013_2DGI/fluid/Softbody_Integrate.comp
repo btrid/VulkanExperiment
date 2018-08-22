@@ -1,10 +1,18 @@
 #version 460
 #extension GL_GOOGLE_include_directive : require
 
-#define USE_Rigidbody2D 0
+#define USE_Softbody2D 0
+#include "Softbody2D.glsl"
+
 #define USE_GI2D 1
 #include "GI2D.glsl"
-#include "Rigidbody2D.glsl"
+
+#define USE_Fluid2D 2
+#include "Fluid2D.glsl"
+
+#define USE_SYSTEM 3
+#include "applib/system.glsl"
+
 
 layout (local_size_x = 1) in;
 

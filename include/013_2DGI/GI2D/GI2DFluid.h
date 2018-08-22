@@ -332,6 +332,7 @@ struct GI2DFluid
 	btr::BufferMemoryEx<vec2> b_pos;
 	btr::BufferMemoryEx<int32_t> b_type;
 	btr::BufferMemoryEx<Joint> b_joint;
+	btr::BufferMemoryEx<Softbody> b_softbody;
 	btr::BufferMemoryEx<int32_t> b_grid_head;
 	btr::BufferMemoryEx<int32_t> b_grid_node;
 

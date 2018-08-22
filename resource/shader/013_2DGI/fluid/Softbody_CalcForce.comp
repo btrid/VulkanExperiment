@@ -1,0 +1,34 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_Softbody2D 0
+#include "Softbody2D.glsl"
+
+#define USE_GI2D 1
+#include "GI2D.glsl"
+
+#define USE_Fluid2D 2
+#include "Fluid2D.glsl"
+
+#define USE_SYSTEM 3
+#include "applib/system.glsl"
+
+layout (local_size_x = 1024) in;
+
+void main() 
+{
+
+	int p_id = int(gl_GlobalInvocationID.x);
+	vec2 p_pos = b_rbpos[p_id];
+	vec2 index_grid_f = p_pos / Grid_Size;
+	ivec2 index_grid = ivec2(index_grid_f);
+	ivec2 reso_grid = ivec2(u_gi2d_info.m_resolution/Grid_Size);
+	if(any(lessThan(index_grid, ivec2(0))) || any(greaterThanEqual(index_grid, reso_grid)))
+	{
+		b_rbacc[p_id] = vec2(0);
+		return;
+	}
+
+	b_rbacc[p_id] = pressure;
+
+}
