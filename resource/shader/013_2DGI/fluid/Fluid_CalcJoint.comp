@@ -20,10 +20,10 @@ void main()
 	{
 		return;
 	}
-	vec2 pos = b_pos[p_id*2 + gpu_index()];
 	vec2 pos_old = b_pos[p_id*2 + gpu_index()];
 	vec2 parent_pos = b_pos[joint.parent*2 + gpu_index()];
-	float dist = distance(parent_pos, pos);
-	mix(pos,);
+	float dist = distance(parent_pos, pos_old);
+//	mix(pos,);
+//	vec2 pos = b_pos[p_id*2 + gpu_index()];
 
 }

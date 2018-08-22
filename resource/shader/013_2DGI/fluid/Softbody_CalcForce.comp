@@ -17,18 +17,24 @@ layout (local_size_x = 1024) in;
 
 void main() 
 {
-
-	int p_id = int(gl_GlobalInvocationID.x);
-	vec2 p_pos = b_rbpos[p_id];
-	vec2 index_grid_f = p_pos / Grid_Size;
-	ivec2 index_grid = ivec2(index_grid_f);
-	ivec2 reso_grid = ivec2(u_gi2d_info.m_resolution/Grid_Size);
-	if(any(lessThan(index_grid, ivec2(0))) || any(greaterThanEqual(index_grid, reso_grid)))
+	if(b_softbody[0].pnum <= 0 )
 	{
-		b_rbacc[p_id] = vec2(0);
-		return;
+		 return;
 	}
+	int p_id = int(gl_GlobalInvocationID.x);
+	if(p_id >= b_softbody[0].pnum)
+	{
+		 return;
+	}
+	p_id += b_softbody[0].particle_offset;
+	vec2 pos = b_pos[p_id*2 + cpu_index()];
+	vec2 dir = (b_softbody[0].center + b_softbody_pos[b_softbody[0].softbody_offset+p_id]) - pos;
+	if(dot(dir, dir) > 0.)
+	{
+		float move = min(length(dir), 0.19);
+		dir = normalize(dir);
+//		b_pos[p_id*2 + cpu_index()] = b_softbody[0].center + b_softbody_pos[b_softbody[0].softbody_offset+p_id];
+		b_pos[p_id*2 + cpu_index()] += dir * move;
 
-	b_rbacc[p_id] = pressure;
-
+	}
 }

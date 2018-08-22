@@ -33,6 +33,7 @@
 #include <013_2DGI/GI2D/GI2DRadiosity.h>
 #include <013_2DGI/GI2D/GI2DFluid.h>
 #include <013_2DGI/GI2D/GI2DRigidbody_dem.h>
+#include <013_2DGI/GI2D/GI2DSoftbody.h>
 
 #include <applib/AppModel/AppModel.h>
 #include <applib/AppModel/AppModelPipeline.h>
@@ -46,10 +47,6 @@
 
 int main()
 {
-	vec3 a = normalize(vec3(1.f, 1.f, 0.f));
-	vec3 b = normalize(vec3(0.f, 0.f, 1.f));
-//	auto c = cross(vec3(a.x, 0.f, a.y), vec3(b.x, 0.f, b.y));
-	auto c = cross(a, b);
 
 	using namespace gi2d;
 	btr::setResourceAppPath("../../resource/");
@@ -90,7 +87,8 @@ int main()
 	GI2DDebug gi2d_debug_make_fragment(context, gi2d_context);
 	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
 	GI2DRadiosity gi2d_Radiosity(context, gi2d_context, app.m_window->getRenderTarget());
-	GI2DFluid gi2d_Fluid(context, gi2d_context);
+	std::shared_ptr<GI2DFluid> gi2d_Fluid = std::make_shared<GI2DFluid>(context, gi2d_context);
+	GI2DSoftbody gi2d_Softbody(context, gi2d_context, gi2d_Fluid);
 	GI2DRigidbody_dem gi2d_Rigidbody(context, gi2d_context);
 
 //	auto anime_cmd = animater.createCmd(player_model);
@@ -152,8 +150,10 @@ int main()
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				gi2d_clear.execute(cmd);
 				gi2d_debug_make_fragment.execute(cmd);
-				gi2d_Fluid.execute(cmd);
-//				gi2d_Rigidbody.execute(cmd);
+				gi2d_Fluid->execute(cmd);
+				gi2d_Softbody.execute(cmd);
+				gi2d_Fluid->executePost(cmd);
+				//				gi2d_Rigidbody.execute(cmd);
 				gi2d_make_hierarchy.execute(cmd);
 				gi2d_Radiosity.execute(cmd);
 				cmd.end();

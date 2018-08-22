@@ -6,12 +6,12 @@
 
 struct Softbody
 {
-	int32_t pnum;
-	int32_t particle_offset;
-	int32_t softbody_offset;
-	int32_t _p;
+	int pnum;
+	int particle_offset;
+	int softbody_offset;
+	int _p;
 	vec2 center;
-	uvec2 center_work;
+	ivec2 center_work;
 };
 
 

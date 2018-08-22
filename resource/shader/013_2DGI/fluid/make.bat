@@ -13,3 +13,6 @@ SET output=../../binary/
 %exe% %include% %option% -o %output%/Fluid_Update.comp.spv Fluid_Update.comp
 %exe% %include% %option% -o %output%/Fluid_ToFragment.comp.spv Fluid_ToFragment.comp
 
+%exe% %include% %option% -o %output%/Softbody_CalcCenter.comp.spv Softbody_CalcCenter.comp
+%exe% %include% %option% -o %output%/Softbody_CalcCenter_Post.comp.spv Softbody_CalcCenter_Post.comp
+%exe% %include% %option% -o %output%/Softbody_CalcForce.comp.spv Softbody_CalcForce.comp

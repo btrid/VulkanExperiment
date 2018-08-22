@@ -61,6 +61,7 @@ struct GI2DFluid
 
 			cmd.fillBuffer(b_grid_head.getInfo().buffer, b_grid_head.getInfo().offset, b_grid_head.getInfo().range, -1);
 
+			if(0)
 			{
 				// debug用初期データ
 				std::vector<vec4> pos(Particle_Num);
@@ -301,6 +302,13 @@ struct GI2DFluid
 			auto num = app::calcDipatchGroups(uvec3(Particle_Num, 1, 1), uvec3(1024, 1, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 		}
+	}
+
+	void executePost(vk::CommandBuffer cmd)
+	{
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Fluid].get(), 0, m_descriptor_set.get(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Fluid].get(), 1, m_gi2d_context->getDescriptorSet(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Fluid].get(), 2, sSystem::Order().getSystemDescriptorSet(), { 0 * sSystem::Order().getSystemDescriptorStride() });
 		// fragment_dataに書き込む
 		{
 			vk::BufferMemoryBarrier to_read[] = {
@@ -320,6 +328,7 @@ struct GI2DFluid
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eComputeShader, {},
 			0, nullptr, array_length(to_read), to_read, 0, nullptr);
+
 	}
 
 	std::shared_ptr<btr::Context> m_context;
@@ -332,12 +341,16 @@ struct GI2DFluid
 	btr::BufferMemoryEx<vec2> b_pos;
 	btr::BufferMemoryEx<int32_t> b_type;
 	btr::BufferMemoryEx<Joint> b_joint;
-	btr::BufferMemoryEx<Softbody> b_softbody;
+//	btr::BufferMemoryEx<Softbody> b_softbody;
 	btr::BufferMemoryEx<int32_t> b_grid_head;
 	btr::BufferMemoryEx<int32_t> b_grid_node;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
+public:
+	vk::DescriptorSet getDescriptorSet()const { return m_descriptor_set.get(); }
+	vk::DescriptorSetLayout getDescriptorSetLayout()const { return m_descriptor_set_layout.get(); }
+
 
 
 };
