@@ -21,7 +21,6 @@ struct GI2DMakeHierarchy
 	enum PipelineLayout
 	{
 		PipelineLayout_Hierarchy,
-		PipelineLayout_MakeFragmentMapHierarchy,
 		PipelineLayout_Num,
 	};
 	enum Pipeline
@@ -60,14 +59,13 @@ struct GI2DMakeHierarchy
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 			pipeline_layout_info.setPSetLayouts(layouts);
-			m_pipeline_layout[PipelineLayout_Hierarchy] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 
 			vk::PushConstantRange constants[] = {
 				vk::PushConstantRange().setOffset(0).setSize(4).setStageFlags(vk::ShaderStageFlagBits::eCompute),
 			};
 			pipeline_layout_info.setPushConstantRangeCount(array_length(constants));
 			pipeline_layout_info.setPPushConstantRanges(constants);
-			m_pipeline_layout[PipelineLayout_MakeFragmentMapHierarchy] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PipelineLayout_Hierarchy] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
 		// pipeline
@@ -89,7 +87,7 @@ struct GI2DMakeHierarchy
 				.setLayout(m_pipeline_layout[PipelineLayout_Hierarchy].get()),
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[1])
-				.setLayout(m_pipeline_layout[PipelineLayout_MakeFragmentMapHierarchy].get()),
+				.setLayout(m_pipeline_layout[PipelineLayout_Hierarchy].get()),
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[2])
 				.setLayout(m_pipeline_layout[PipelineLayout_Hierarchy].get()),
@@ -103,6 +101,7 @@ struct GI2DMakeHierarchy
 	}
 	void execute(vk::CommandBuffer cmd)
 	{
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Hierarchy].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 		// make fragment map
 		{
 			vk::BufferMemoryBarrier to_write[] = {
@@ -113,7 +112,7 @@ struct GI2DMakeHierarchy
 				0, nullptr, array_length(to_write), to_write, 0, nullptr);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeFragmentMap].get());
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Hierarchy].get(), 0, m_gi2d_context->getDescriptorSet(), {});
+
 
 			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth, m_gi2d_context->RenderHeight, 1), uvec3(32, 32, 1));
 			cmd.dispatch(num.x, num.y, num.z);
@@ -121,6 +120,7 @@ struct GI2DMakeHierarchy
 
 		// make map_hierarchy
 		{
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeFragmentMapHierarchy].get());
 			for (int i = 1; i < GI2DContext::_Hierarchy_Num; i++)
 			{
 				vk::BufferMemoryBarrier to_write[] = {
@@ -129,9 +129,7 @@ struct GI2DMakeHierarchy
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 					0, nullptr, array_length(to_write), to_write, 0, nullptr);
 
-				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeFragmentMapHierarchy].get());
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MakeFragmentMapHierarchy].get(), 0, m_gi2d_context->getDescriptorSet(), {});
-				cmd.pushConstants<int32_t>(m_pipeline_layout[PipelineLayout_MakeFragmentMapHierarchy].get(), vk::ShaderStageFlagBits::eCompute, 0, i);
+				cmd.pushConstants<int32_t>(m_pipeline_layout[PipelineLayout_Hierarchy].get(), vk::ShaderStageFlagBits::eCompute, 0, i);
 
 				auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth >> i, m_gi2d_context->RenderHeight >> i, 1), uvec3(32, 32, 1));
 				cmd.dispatch(num.x, num.y, num.z);
@@ -150,11 +148,14 @@ struct GI2DMakeHierarchy
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeDensityHierarchy].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Hierarchy].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 
-		auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth >> 1, m_gi2d_context->RenderHeight >> 1, 1), uvec3(32, 32, 1));
-		cmd.dispatch(num.x, num.y, num.z);
+		for (int i = 1; i < GI2DContext::_Hierarchy_Num; i++)
+		{
+			cmd.pushConstants<int32_t>(m_pipeline_layout[PipelineLayout_Hierarchy].get(), vk::ShaderStageFlagBits::eCompute, 0, i);
+			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth >> 1, m_gi2d_context->RenderHeight >> 1, 1), uvec3(32, 32, 1));
+			cmd.dispatch(num.x, num.y, num.z);
+		}
 
 	}
-
 
 
 	std::shared_ptr<btr::Context> m_context;

@@ -15,7 +15,8 @@ struct GI2DFluid
 {
 	enum
 	{
-		Particle_Num = 10240,
+		Particle_Num = 102400,
+		Particle_Type_Num = 128,
 	};
 	enum Shader
 	{
@@ -44,6 +45,13 @@ struct GI2DFluid
 		float linear_limit;
 		float angle_limit;
 	};
+	struct ParticleData
+	{
+		int mass;
+		float viscosity;
+		float linear_limit;
+		float _p;
+	};
 
 	GI2DFluid(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context)
 	{
@@ -57,15 +65,15 @@ struct GI2DFluid
 			b_grid_head = m_context->m_storage_memory.allocateMemory<int32_t>({ (uint32_t)m_gi2d_context->RenderWidth*m_gi2d_context->RenderHeight,{} });
 			b_grid_node = m_context->m_storage_memory.allocateMemory<int32_t>({ Particle_Num,{} });
 			b_type = m_context->m_storage_memory.allocateMemory<int32_t>({ Particle_Num,{} });
-			b_joint = m_context->m_storage_memory.allocateMemory<Joint>({ Particle_Num,{} });
+			b_data = m_context->m_storage_memory.allocateMemory<ParticleData>({ Particle_Type_Num,{} });
 
 			cmd.fillBuffer(b_grid_head.getInfo().buffer, b_grid_head.getInfo().offset, b_grid_head.getInfo().range, -1);
 
-			if(0)
+//			if(0)
 			{
 				// debug用初期データ
 				std::vector<vec4> pos(Particle_Num);
-#if 0
+#if 1
 				for (int i = 0; i < Particle_Num; i++)
 				{
 #define area (20)
@@ -112,11 +120,16 @@ struct GI2DFluid
 #endif
 
 				cmd.updateBuffer<vec4>(b_pos.getInfo().buffer, b_pos.getInfo().offset, pos);
-				cmd.updateBuffer<Joint>(b_joint.getInfo().buffer, b_joint.getInfo().offset, joint);
+				cmd.fillBuffer(b_type.getInfo().buffer, b_type.getInfo().offset, b_type.getInfo().range, 0);
+				std::vector<ParticleData> pdata(Particle_Type_Num);
+				pdata[0].mass = 10.f;
+				pdata[0].linear_limit = 10.f;
+				pdata[0].viscosity = 10.f;
+				cmd.updateBuffer<ParticleData>(b_data.getInfo().buffer, b_data.getInfo().offset, pdata);
 
 				vk::BufferMemoryBarrier to_read[] = {
 					b_pos.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-					b_joint.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+					b_data.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 				};
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllCommands, {},
 					0, nullptr, array_length(to_read), to_read, 0, nullptr);
@@ -174,7 +187,7 @@ struct GI2DFluid
 				vk::DescriptorBufferInfo storages[] = {
 					b_pos.getInfo(),
 					b_type.getInfo(),
-					b_joint.getInfo(),
+					b_data.getInfo(),
 					b_grid_head.getInfo(),
 					b_grid_node.getInfo(),
 				};
@@ -340,7 +353,7 @@ struct GI2DFluid
 
 	btr::BufferMemoryEx<vec2> b_pos;
 	btr::BufferMemoryEx<int32_t> b_type;
-	btr::BufferMemoryEx<Joint> b_joint;
+	btr::BufferMemoryEx<ParticleData> b_data;
 //	btr::BufferMemoryEx<Softbody> b_softbody;
 	btr::BufferMemoryEx<int32_t> b_grid_head;
 	btr::BufferMemoryEx<int32_t> b_grid_node;

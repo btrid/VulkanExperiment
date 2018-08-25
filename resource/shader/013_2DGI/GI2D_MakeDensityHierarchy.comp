@@ -6,17 +6,30 @@
 
 layout (local_size_x = 32, local_size_y = 32) in;
 
+layout(push_constant) uniform Input
+{
+	int level;
+} constant;
+
 void main() 
 {
-	uvec2 id = gl_GlobalInvocationID.xy*2;
-	if(any(greaterThanEqual(gl_GlobalInvocationID.xy>>1, u_gi2d_info.m_resolution.xy)))
+	uvec2 src = gl_GlobalInvocationID.xy*2;
+	uvec2 dst = gl_GlobalInvocationID.xy;
+	uvec2 reso = u_gi2d_info.m_resolution.xy>>(constant.level-1);
+	if(any(greaterThanEqual(dst.xy, reso.xy)))
 	{
 		return; 
 	}
 	int d = 0;
-	d += b_grid_counter[id.x + id.y*u_gi2d_info.m_resolution.x];
-	d += b_grid_counter[id.x+1 + id.y*u_gi2d_info.m_resolution.x];
-	d += b_grid_counter[id.x + (id.y+1)*u_gi2d_info.m_resolution.x];
-	d += b_grid_counter[id.x+1 + (id.y+1)*u_gi2d_info.m_resolution.x];
-	b_grid_counter[u_gi2d_info.m_resolution.x * u_gi2d_info.m_resolution.y + gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * (u_gi2d_info.m_resolution.x>>1)] = d;
+	d += b_grid_counter[src.x + src.y*reso.x];
+	d += b_grid_counter[src.x+1 + src.y*reso.x];
+	d += b_grid_counter[src.x + (src.y+1)*reso.x];
+	d += b_grid_counter[src.x+1 + (src.y+1)*reso.x];
+	uint offset = 0;
+	for(int i = 0; i < constant.level; i++)
+	{
+		offset += (u_gi2d_info.m_resolution.x>>i) * (u_gi2d_info.m_resolution.y>>i);
+
+	}
+	b_grid_counter[offset + dst.x + dst.y * (reso.x>>1)] = d/4;
 }

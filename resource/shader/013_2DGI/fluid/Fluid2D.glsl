@@ -4,12 +4,12 @@
 
 #if defined(USE_Fluid2D)
 
-struct Joint
+struct ParticleData
 {
-	int parent;
-	float rate;
+	int mass;
+	float viscosity;
 	float linear_limit;
-	float angle_limit;
+	float _p;
 };
 
 layout(set=USE_Fluid2D, binding=0, std430) restrict buffer PosBuffer {
@@ -18,8 +18,8 @@ layout(set=USE_Fluid2D, binding=0, std430) restrict buffer PosBuffer {
 layout(set=USE_Fluid2D, binding=1, std430) restrict buffer TypeBuffer {
 	int b_type[];
 };
-layout(set=USE_Fluid2D, binding=2, std430) restrict buffer JointBuffer {
-	Joint b_joint[];
+layout(set=USE_Fluid2D, binding=2, std430) restrict buffer DataBuffer {
+	ParticleData b_data[];
 };
 layout(set=USE_Fluid2D, binding=3) restrict buffer GridCellBuffer {
 	int b_grid_head[];

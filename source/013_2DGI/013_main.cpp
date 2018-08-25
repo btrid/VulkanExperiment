@@ -88,8 +88,8 @@ int main()
 	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
 	GI2DRadiosity gi2d_Radiosity(context, gi2d_context, app.m_window->getRenderTarget());
 	std::shared_ptr<GI2DFluid> gi2d_Fluid = std::make_shared<GI2DFluid>(context, gi2d_context);
-	GI2DSoftbody gi2d_Softbody(context, gi2d_context, gi2d_Fluid);
-	GI2DRigidbody_dem gi2d_Rigidbody(context, gi2d_context);
+//	GI2DSoftbody gi2d_Softbody(context, gi2d_context, gi2d_Fluid);
+//	GI2DRigidbody_dem gi2d_Rigidbody(context, gi2d_context);
 
 //	auto anime_cmd = animater.createCmd(player_model);
 //	auto pm_make_cmd = pm_appmodel.createCmd(player_model);
@@ -151,9 +151,9 @@ int main()
 				gi2d_clear.execute(cmd);
 				gi2d_debug_make_fragment.execute(cmd);
 				gi2d_Fluid->execute(cmd);
-				gi2d_Softbody.execute(cmd);
+//				gi2d_Softbody.execute(cmd);
 				gi2d_Fluid->executePost(cmd);
-				//				gi2d_Rigidbody.execute(cmd);
+//				gi2d_Rigidbody.execute(cmd);
 				gi2d_make_hierarchy.execute(cmd);
 				gi2d_Radiosity.execute(cmd);
 				cmd.end();

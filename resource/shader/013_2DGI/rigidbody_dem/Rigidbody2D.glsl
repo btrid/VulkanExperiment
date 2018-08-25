@@ -37,12 +37,6 @@ layout(set=USE_Rigidbody2D, binding=1, std430) restrict buffer rbRelaPosBuffer {
 layout(set=USE_Rigidbody2D, binding=2, std430) restrict buffer rbPosBuffer {
 	vec2 b_rbpos[];
 };
-layout(set=USE_Rigidbody2D, binding=3, std430) restrict buffer rbVelBuffer {
-	vec2 b_rbvel[];
-};
-layout(set=USE_Rigidbody2D, binding=4, std430) restrict buffer rbAccBuffer {
-	vec2 b_rbacc[];
-};
 
 #endif
 

@@ -39,6 +39,8 @@ void main()
 		return; 
 	}
 
+	ParticleData data = b_data[b_type[p_id]];
+
 	ivec4 neighbor = ivec4(-1, -1, 1, 1);
 	ivec4 access_list_x = (index_grid.xxxx + neighbor.xzxz);
 	ivec4 access_list_y = (index_grid.yyyy + neighbor.yyww);
@@ -63,6 +65,8 @@ void main()
 	is_wall.w = getFragmentState(ivec2(pos) + ivec2( 1,  1));
 	density += ivec4(is_wall)*50;
 
+	density /= data.mass;
+
 	vec2 p0 = density[0] / normalize(pos - w_pos0);
 	vec2 p1 = density[1] / normalize(pos - w_pos1);
 	vec2 p2 = density[2] / normalize(pos - w_pos2);
@@ -70,6 +74,6 @@ void main()
 	vec2 pressure = (p0 + p1 + p2 + p3);
 
 	vec2 pos_old = b_pos[p_id*2 + cpu_index()];
-	b_pos[p_id*2 + cpu_index()] = pos + (pos-pos_old) + (pressure + vec2(0., 9.8))*DT;
+	b_pos[p_id*2 + cpu_index()] = pos + (pos-pos_old)*0.98 + (pressure /*+ vec2(0., 9.8)*/)*DT;
 
 }

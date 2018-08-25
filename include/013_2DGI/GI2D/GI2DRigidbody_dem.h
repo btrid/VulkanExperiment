@@ -127,16 +127,6 @@ struct GI2DRigidbody_dem
 					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 					.setDescriptorCount(1)
 					.setBinding(2),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(3),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(4),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -218,13 +208,7 @@ struct GI2DRigidbody_dem
 				b_rigidbody = m_context->m_storage_memory.allocateMemory<Rigidbody>({ 1,{} });
 
 				b_rbpos = m_context->m_storage_memory.allocateMemory<vec2>({ Particle_Num,{} });
-				b_rbvel = m_context->m_storage_memory.allocateMemory<vec2>({ Particle_Num,{} });
-				b_rbacc = m_context->m_storage_memory.allocateMemory<vec2>({ Particle_Num,{} });
 				b_relative_pos = m_context->m_storage_memory.allocateMemory<vec2>({ Particle_Num,{} });
-
-				cmd.fillBuffer(b_rbvel.getInfo().buffer, b_rbvel.getInfo().offset, b_rbvel.getInfo().range, 0);
-				cmd.fillBuffer(b_rbacc.getInfo().buffer, b_rbacc.getInfo().offset, b_rbacc.getInfo().range, 0);
-
 
 				{
 
@@ -283,8 +267,6 @@ struct GI2DRigidbody_dem
 						b_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 						b_relative_pos.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 						b_rbpos.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-						b_rbvel.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-						b_rbacc.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 					};
 					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllCommands, {},
 						0, nullptr, array_length(to_read), to_read, 0, nullptr);
@@ -349,8 +331,6 @@ struct GI2DRigidbody_dem
 					b_rigidbody.getInfo(),
 					b_relative_pos.getInfo(),
 					b_rbpos.getInfo(),
-					b_rbvel.getInfo(),
-					b_rbacc.getInfo(),
 				};
 
 				vk::WriteDescriptorSet write[] =
@@ -375,11 +355,11 @@ struct GI2DRigidbody_dem
 
 		{
 			// à íuÇÃçXêV
-			vk::BufferMemoryBarrier to_read[] = {
-				b_rbacc.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
-				0, nullptr, array_length(to_read), to_read, 0, nullptr);
+// 			vk::BufferMemoryBarrier to_read[] = {
+// 				b_rbacc.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+// 			};
+// 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+// 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Update].get());
 
@@ -448,8 +428,6 @@ struct GI2DRigidbody_dem
 	btr::BufferMemoryEx<Rigidbody> b_rigidbody;
 	btr::BufferMemoryEx<vec2> b_relative_pos;
 	btr::BufferMemoryEx<vec2> b_rbpos;
-	btr::BufferMemoryEx<vec2> b_rbvel;
-	btr::BufferMemoryEx<vec2> b_rbacc;
 
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;

@@ -15,14 +15,14 @@ void main()
 {
 	int p_id = int(gl_GlobalInvocationID.x);
 
-	Joint joint = b_joint[p_id];
-	if(joint.parent == -1)
-	{
-		return;
-	}
-	vec2 pos_old = b_pos[p_id*2 + gpu_index()];
-	vec2 parent_pos = b_pos[joint.parent*2 + gpu_index()];
-	float dist = distance(parent_pos, pos_old);
+//	Joint joint = b_joint[p_id];
+//	if(joint.parent == -1)
+//	{
+//		return;
+//	}
+//	vec2 pos_old = b_pos[p_id*2 + gpu_index()];
+//	vec2 parent_pos = b_pos[joint.parent*2 + gpu_index()];
+//	float dist = distance(parent_pos, pos_old);
 //	mix(pos,);
 //	vec2 pos = b_pos[p_id*2 + gpu_index()];
 
