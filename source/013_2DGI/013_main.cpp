@@ -151,10 +151,12 @@ int main()
 				gi2d_clear.execute(cmd);
 				gi2d_debug_make_fragment.execute(cmd);
 				gi2d_Fluid->execute(cmd);
-//				gi2d_Softbody.execute(cmd);
+				gi2d_make_hierarchy.execute(cmd);
+				gi2d_make_hierarchy.executeDensityHierarchy(cmd);
+				gi2d_Fluid->executeCalc(cmd);
+				//				gi2d_Softbody.execute(cmd);
 				gi2d_Fluid->executePost(cmd);
 //				gi2d_Rigidbody.execute(cmd);
-				gi2d_make_hierarchy.execute(cmd);
 				gi2d_Radiosity.execute(cmd);
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;

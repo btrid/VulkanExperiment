@@ -122,7 +122,7 @@ struct GI2DFluid
 				cmd.updateBuffer<vec4>(b_pos.getInfo().buffer, b_pos.getInfo().offset, pos);
 				cmd.fillBuffer(b_type.getInfo().buffer, b_type.getInfo().offset, b_type.getInfo().range, 0);
 				std::vector<ParticleData> pdata(Particle_Type_Num);
-				pdata[0].mass = 10.f;
+				pdata[0].mass = 1.f;
 				pdata[0].linear_limit = 10.f;
 				pdata[0].viscosity = 10.f;
 				cmd.updateBuffer<ParticleData>(b_data.getInfo().buffer, b_data.getInfo().offset, pdata);
@@ -301,6 +301,14 @@ struct GI2DFluid
 
 		}
 
+	}
+
+	void executeCalc(vk::CommandBuffer cmd)
+	{
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Fluid].get(), 0, m_descriptor_set.get(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Fluid].get(), 1, m_gi2d_context->getDescriptorSet(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Fluid].get(), 2, sSystem::Order().getSystemDescriptorSet(), { 0 * sSystem::Order().getSystemDescriptorStride() });
+
 		{
 			// à≥óÕÇÃçXêV
 			vk::BufferMemoryBarrier to_read[] = {
@@ -315,6 +323,7 @@ struct GI2DFluid
 			auto num = app::calcDipatchGroups(uvec3(Particle_Num, 1, 1), uvec3(1024, 1, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 		}
+
 	}
 
 	void executePost(vk::CommandBuffer cmd)

@@ -139,19 +139,20 @@ struct GI2DMakeHierarchy
 	}
 	void executeDensityHierarchy(vk::CommandBuffer cmd)
 	{
-		vk::BufferMemoryBarrier to_write[] = {
-			m_gi2d_context->b_grid_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
-		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
-			0, nullptr, array_length(to_write), to_write, 0, nullptr);
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeDensityHierarchy].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Hierarchy].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 
 		for (int i = 1; i < GI2DContext::_Hierarchy_Num; i++)
 		{
+			vk::BufferMemoryBarrier to_write[] = {
+				m_gi2d_context->b_grid_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+				0, nullptr, array_length(to_write), to_write, 0, nullptr);
+
 			cmd.pushConstants<int32_t>(m_pipeline_layout[PipelineLayout_Hierarchy].get(), vk::ShaderStageFlagBits::eCompute, 0, i);
-			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth >> 1, m_gi2d_context->RenderHeight >> 1, 1), uvec3(32, 32, 1));
+			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth >> i, m_gi2d_context->RenderHeight >> i, 1), uvec3(32, 32, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 		}
 
