@@ -64,10 +64,10 @@ void main()
 		ivec4 access_list_y = (index_grid.yyyy + neighbor.yyww);
 		ivec4 access_list = offset + access_list_x + access_list_y * reso_.x;
 
-		vec2 w_pos0 = (vec2(access_list_x.x, access_list_y.x) + vec2(0.45, 0.45))*Grid_Size * (1<<level);
-		vec2 w_pos1 = (vec2(access_list_x.y, access_list_y.y) + vec2(0.55, 0.45))*Grid_Size * (1<<level);
-		vec2 w_pos2 = (vec2(access_list_x.z, access_list_y.z) + vec2(0.45, 0.55))*Grid_Size * (1<<level);
-		vec2 w_pos3 = (vec2(access_list_x.w, access_list_y.w) + vec2(0.55, 0.55))*Grid_Size * (1<<level);
+		vec2 w_pos0 = (vec2(access_list_x.x, access_list_y.x))*Grid_Size * (1<<level);
+		vec2 w_pos1 = (vec2(access_list_x.y, access_list_y.y))*Grid_Size * (1<<level);
+		vec2 w_pos2 = (vec2(access_list_x.z, access_list_y.z))*Grid_Size * (1<<level);
+		vec2 w_pos3 = (vec2(access_list_x.w, access_list_y.w))*Grid_Size * (1<<level);
 
 		int d = b_grid_counter[ offset + index_grid.x + index_grid.y * reso_.x];
 		ivec4 density;
@@ -83,7 +83,8 @@ void main()
 		is_wall.w = getFragmentState(ivec2(pos) + ivec2( 1,  1));
 		density += ivec4(is_wall)*50;
 
-		density /= data.mass;
+		density = density / data.mass;
+		density = sign(density) * max(ivec4(0), abs(density) - data.mass);
 		density = ivec4(greaterThan(abs(density), vec4(data.mass))) * density;
 
 
