@@ -6,7 +6,7 @@
 
 struct ParticleData
 {
-	int mass;
+	float mass;
 	float viscosity;
 	float linear_limit;
 	float _p;

@@ -47,7 +47,7 @@ struct GI2DFluid
 	};
 	struct ParticleData
 	{
-		int mass;
+		float mass;
 		float viscosity;
 		float linear_limit;
 		float _p;
@@ -122,7 +122,7 @@ struct GI2DFluid
 				cmd.updateBuffer<vec4>(b_pos.getInfo().buffer, b_pos.getInfo().offset, pos);
 				cmd.fillBuffer(b_type.getInfo().buffer, b_type.getInfo().offset, b_type.getInfo().range, 0);
 				std::vector<ParticleData> pdata(Particle_Type_Num);
-				pdata[0].mass = 1.f;
+				pdata[0].mass = 10.f;
 				pdata[0].linear_limit = 10.f;
 				pdata[0].viscosity = 10.f;
 				cmd.updateBuffer<ParticleData>(b_data.getInfo().buffer, b_data.getInfo().offset, pdata);
