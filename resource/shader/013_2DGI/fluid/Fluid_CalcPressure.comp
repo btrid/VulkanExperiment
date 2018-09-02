@@ -111,8 +111,8 @@ void main()
 	
 
 	vec2 new_vel = vel*0.98 + (pressure + viscosity/*+ vec2(0., 9.8)*/)*DT;
-//	float move = dot(new_vel, new_vel) >= 0.0001 ? min(length(new_vel), data.linear_limit) : 0.;
-	float move = dot(new_vel, new_vel) >= 0.0001 ? length(new_vel) : 0.;
+	float move = dot(new_vel, new_vel) >= 0.0001 ? min(length(new_vel), data.linear_limit) : 0.;
+//	float move = dot(new_vel, new_vel) >= 0.0001 ? length(new_vel) : 0.;
 	new_vel = dot(new_vel, new_vel) >= 0.0001 ? normalize(new_vel) : vec2(0.);
 
 	b_pos[p_id*2 + cpu_index()] = pos + new_vel * move;

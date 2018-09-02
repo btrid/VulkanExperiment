@@ -1,0 +1,78 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_PM 0
+#include "PM.glsl"
+
+layout (local_size_x = 1024, local_size_y = 1, local_size_z = 1) in;
+
+
+shared int sIndex;
+shared vec3 sTriangle[3];
+void main() 
+{
+	for(uint i = 0; i < 1; i++)
+	{
+		Vertex va = b_vertex[bLightElement[i].x];
+		Material material = b_material[va.MaterialIndex];
+		if(material.is_emissive == 0){ continue; }
+
+		float seed = sqrt(float(convert3DTo1D(ivec3(gl_GlobalInvocationID.xyz), uParam.num1)));
+		{
+#if 1
+			ivec3 indexMap0;
+			if(gl_LocalInvocationID.x == 0)
+			{
+				Vertex a = b_vertex[b_element[i].x];
+				Vertex b = b_vertex[b_element[i].y];
+				Vertex c = b_vertex[b_element[i].z];
+				vec3 w = vec3(rand(vec2(seed, b.Position.x)), rand(vec2(seed, b.Position.y)), rand(vec2(seed, b.Position.z))) + vec3(0., 0., 0.001);
+				w /= w.x + w.y + w.z;
+				vec3 p = w.x * a.Position + w.y * b.Position + w.z * c.Position;
+				indexMap0 = getIndexBrick0(uParam, p);
+
+				vec3 cellMin = indexMap0 * getCellSize0(uParam) + uParam.areaMin;
+				vec3 cellMax = (indexMap0+ivec3(1)) * getCellSize0(uParam) + uParam.areaMin;
+				sTriangle[0] = max(min(a.Position, cellMax), cellMin);
+				sTriangle[1] = max(min(b.Position, cellMax), cellMin);
+				sTriangle[2] = max(min(c.Position, cellMax), cellMin);
+			}
+
+			memoryBarrierShared();
+			barrier();
+
+			vec3 a = sTriangle[0];
+			vec3 b = sTriangle[1];
+			vec3 c = sTriangle[2];
+#else
+			vec3 a = bLightVertex[bLightElement[i].x].Position;
+			vec3 b = bLightVertex[bLightElement[i].y].Position;
+			vec3 c = bLightVertex[bLightElement[i].z].Position;
+
+#endif
+			vec3 w = vec3(rand(vec2(seed, b.x)), rand(vec2(seed, c.y)), rand(vec2(seed, a.z))) + vec3(0., 0., 0.001);
+			w /= w.x + w.y + w.z;
+			vec3 p = a*w.x + b*w.y + c*w.z;
+			vec3 n = normalize(cross(normalize(b-a), normalize(c-a)));
+			vec3 d = normalize(vec3(0., -1., 0.));
+
+			Photon emit;
+			emit.Position = p + d*0.1;
+			emit.Power = material.Emissive.xyz;
+			setDirection(emit, d);
+
+			if(gl_LocalInvocationID.x == 0)
+			{
+				sIndex = int(atomicAdd(b_photon_count.w, gl_WorkGroupSize.x));
+				atomicAdd(b_photon_count.x, 1);
+				
+			}
+			memoryBarrierShared();
+			barrier();
+
+			bPhoton[sIndex + gl_LocalInvocationID.x] = emit;
+
+		}
+
+	}
+}

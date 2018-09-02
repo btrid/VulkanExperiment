@@ -24,15 +24,12 @@
 #include <applib/App.h>
 #include <btrlib/Context.h>
 
-#pragma comment(lib, "btrlib.lib")
-#pragma comment(lib, "applib.lib")
-//#pragma comment(lib, "FreeImage.lib")
 #pragma comment(lib, "vulkan-1.lib")
-//#pragma comment(lib, "imgui.lib")
 
 struct TriangleList 
 {
 };
+
 
 int main()
 {
@@ -48,11 +45,14 @@ int main()
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
 
-	app::App app;
-	app.setup(gpu);
+	app::AppDescriptor app_desc;
+	app_desc.m_gpu = gpu;
+	app_desc.m_window_size = uvec2(512, 512);
+	app::App app(app_desc);
 
 	auto context = app.m_context;
 
+	app.setup();
 	while (true)
 	{
 		cStopWatch time;

@@ -81,8 +81,8 @@ int main()
 
 	std::shared_ptr<AppModel> appModel = std::make_shared<AppModel>(context, model->getResource(), 1000);
 
-	auto drawCmd = renderer.createCmd(context, appModel);
-	auto animeCmd = animater.createCmd(context, appModel);
+	auto drawCmd = renderer.createCmd(appModel);
+	auto animeCmd = animater.createCmd(appModel);
 
 	ClearPipeline clear_render_target(context, app.m_window->getRenderTarget());
 	PresentPipeline present_pipeline(context, app.m_window->getRenderTarget(), context->m_window->getSwapchainPtr());
@@ -118,7 +118,7 @@ int main()
 					{
 						std::vector<vk::CommandBuffer> cmds(1);
 						cmds[0] = animeCmd.get();
-						render_cmds[1] = animater.dispach(context, cmds);
+						render_cmds[1] = animater.dispach(cmds);
 					}
 					{
 						render_cmds[2] = renderer.getLight()->execute(context);
@@ -126,7 +126,7 @@ int main()
 					{
 						std::vector<vk::CommandBuffer> cmds(1);
 						cmds[0] = drawCmd.get();
-						render_cmds[3] = renderer.draw(context, cmds);
+						render_cmds[3] = renderer.draw(cmds);
 					}
 					render_syncronized_point.arrive();
 				}

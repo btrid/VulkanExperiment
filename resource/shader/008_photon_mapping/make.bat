@@ -1,0 +1,36 @@
+@echo off
+cd /d %~dp0
+rem SET exe=glslc.exe
+rem SET include=-I ../include
+rem SET option=-w -x glsl
+SET include=-I../include/
+SET option=--target-env vulkan1.1 -V
+SET exe=glslangValidator.exe
+SET output=../binary
+
+%exe% %include% %option% -o %output%/MakeFragmentAppModel.vert.spv MakeFragmentAppModel.vert
+%exe% %include% %option% -o %output%/MakeFragmentAppModel.frag.spv MakeFragmentAppModel.frag
+
+%exe% %include% %option% -o %output%/MakeFragmentMap.comp.spv MakeFragmentMap.comp
+%exe% %include% %option% -o %output%/MakeFragmentMapHierarchy.comp.spv MakeFragmentMapHierarchy.comp
+
+%exe% %include% %option% -o %output%/GI2D_MakeDensityHierarchy.comp.spv GI2D_MakeDensityHierarchy.comp
+
+rem %exe% %include% %option% -o ../binary\\DebugFragmentMap.comp.spv DebugFragmentMap.comp
+
+
+%exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity_64.comp
+%exe% %include% %option% -o %output%/Radiosity_Clear.comp.spv Radiosity_Clear.comp
+%exe% %include% %option% -o %output%/Radiosity_MakeBounceMap.comp.spv Radiosity_MakeBounceMap.comp
+%exe% %include% %option% -o %output%/Radiosity_Bounce.comp.spv Radiosity_Bounce.comp
+%exe% %include% %option% -o %output%/Radiosity_Render.frag.spv Radiosity_Render.frag
+%exe% %include% %option% -o %output%/Radiosity_Render.vert.spv Radiosity_Render.vert
+
+%exe% %include% %option% -o %output%/Radiosity_CalcRadiance.comp.spv Radiosity_CalcRadiance.comp
+%exe% %include% %option% -o %output%/Radiosity2.comp.spv Radiosity2.comp
+
+
+call fluid/make.bat
+cd /d %~dp0
+call rigidbody_dem/make.bat
+cd /d %~dp0

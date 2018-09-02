@@ -1,0 +1,60 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_PM 0
+#include "PM.glsl"
+
+layout (local_size_x = 1024, local_size_y = 1, local_size_z = 1) in;
+
+layout(push_constant) uniform Constant
+{
+	int level;
+} constant;
+
+#include </Marching.glsl>
+
+
+void main() 
+{
+	ivec3 index = ivec3(gl_GlobalInvocationID.xyz);
+	for(uint i = 0; i < 1; i++)
+	{
+		ivec3 light_index = b_element[i];
+		Vertex a = b_vertex[light_index.x];
+		Vertex b = b_vertex[light_index.y];
+		Vertex c = b_vertex[light_index.z];
+		Material material = b_material[a.MaterialIndex];
+
+		float area = getArea(a.Position, b.Position, c.Position);
+		float seed = sqrt(area * float(convert3DTo1D(index, uParam.num1)));
+		{
+			vec3 w = vec3(rand(vec2(seed, b.Position.x)), rand(vec2(seed, c.Position.y)), rand(vec2(seed, a.Position.z))) + vec3(0., 0., 0.001);
+			w /= w.x + w.y + w.z;
+			vec3 p = w.x * a.Position + w.y * b.Position + w.z * c.Position;
+			vec3 n = normalize(cross(normalize(b.Position-a.Position), normalize(c.Position-a.Position)));
+			vec3 d = calcDir(n, seed);
+			Ray ray = MakeRay(p+d*0.001, d);
+
+			MarchResult result = marching(uParam, ray);
+			if(result.HitResult.IsHit == 0){
+ 				continue;
+			}
+
+			Photon photon;
+			photon.Position = result.HitResult.HitPoint;
+			setDirection(photon, ray.d);
+			Material hitMaterial = b_material[result.HitTriangle.a.MaterialIndex];
+			photon.Power = material.Emissive.xyz * sampling(hitMaterial, ray.d, result);
+			photon.TriangleLLIndex = result.TriangleLLIndex;
+			
+			uint photonIndex = atomicCounterIncrement(b_photon_count[constant.level].w);
+			bPhoton[photonIndex] = photon;
+
+			int index1d = convert3DTo1D(getIndexBrick1(uParam, photon.Position), uParam.num1);
+			uint old = atomicExchange(bPhotonLLHead[index1d], photonIndex);
+			bPhotonLL[photonIndex] = old;
+			
+			seed *= 2.3456;
+		}
+	}
+}

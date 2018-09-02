@@ -192,42 +192,43 @@ struct AppModel
 			descriptor_layout_info.setBindingCount((uint32_t)binding.size());
 			descriptor_layout_info.setPBindings(binding.data());
 			m_descriptor_set_layout = context->m_device->createDescriptorSetLayoutUnique(descriptor_layout_info);
-//			m_descriptor_pool = createDescriptorPool(context, binding, 30);
-//			m_context = context;
 		}
-//		std::shared_ptr<btr::Context> m_context;
 	protected:
 		vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
-//		vk::UniqueDescriptorPool m_descriptor_pool;
 	public:
 		vk::DescriptorSetLayout getLayout()const { return m_descriptor_set_layout.get(); }
-	protected:
-//		vk::DescriptorPool getPool()const { return m_descriptor_pool.get(); }
 	};
 
 	AppModel(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<cModel::Resource>& resource, uint32_t instanceNum);
 
 	std::shared_ptr<cModel::Resource> m_resource;
 	uint32_t m_instance_max_num;
+
 	std::vector<MotionTexture> m_motion_texture;
 	btr::BufferMemoryEx<uvec3> b_animation_indirect;
 
 	btr::BufferMemoryEx<cModel::ModelInfo> b_model_info;
-	btr::BufferMemoryEx<ModelInstancingInfo> b_model_instancing_info;
-
-	btr::BufferMemoryEx<mat4> b_worlds;
 	btr::BufferMemoryEx<NodeInfo> b_node_info;
 	btr::BufferMemoryEx<BoneInfo> b_bone_info;
+
+	btr::BufferMemoryEx<ModelInstancingInfo> b_model_instancing_info;
+	btr::BufferMemoryEx<cModel::Mesh> b_draw_indirect;
+	btr::BufferMemoryEx<u32> b_instance_map;
+
 	btr::BufferMemoryEx<AnimationInfo> b_animation_info;
 	btr::BufferMemoryEx<AnimationWorker> b_animation_work;
-	btr::BufferMemoryEx<mat4> b_node_transforms;
-	btr::BufferMemoryEx<mat4> b_bone_transforms;
-	btr::BufferMemoryEx<u32> b_instance_map;
-	btr::BufferMemoryEx<cModel::Mesh> b_draw_indirect;
 
+	//! material
 	btr::BufferMemoryEx<uint32_t> m_material_index;
 	btr::BufferMemoryEx<MaterialBuffer> m_material;
 	std::vector<ResourceTexture> m_texture;
+
+	//! 作業用バッファ
+	btr::BufferMemoryEx<mat4> b_node_transforms;
+	btr::BufferMemoryEx<mat4> b_bone_transforms;
+
+	//! 好きにしていいバッファ
+	btr::BufferMemoryEx<mat4> b_worlds;
 
 	struct AppModelRender : public Drawable
 	{
