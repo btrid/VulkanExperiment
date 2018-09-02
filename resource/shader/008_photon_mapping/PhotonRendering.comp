@@ -6,9 +6,14 @@
 
 layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 
-#include </Marching.glsl>
+#include "Marching.glsl"
 
 
+layout(push_constant) uniform Constant
+{
+	vec3 eye;
+	vec3 target;
+} constant;
 
 struct QueryPhoton
 {
@@ -37,7 +42,7 @@ QueryResult queryPhoton(in QueryPhoton query)
 	QueryResult result;
 	result.num = 0;
 	result.far_dist = 0.;
-	ivec3 org = getIndexBrick1(uParam, query.pos);
+	ivec3 org = ivec3((query.pos + u_pm_info.area_min.xyz) / u_pm_info.cell_size.xyz);
 
 #if 0
 	// unrollできないので封印。単純に重い
@@ -55,7 +60,7 @@ QueryResult queryPhoton(in QueryPhoton query)
 #endif
 		ivec3 index = org + ivec3(x, y, z);
 //		if(!isInRange(index, uParam.num1)) { continue; }
-		for(uint pIndex = bPhotonLLHead[convert3DTo1D(index, uParam.num1)]; pIndex != 0xFFFFFFFF; pIndex = bPhotonLL[pIndex])
+		for(uint pIndex = bPhotonLLHead[convert3DTo1D(uvec3(index), u_pm_info.num0.xyz)]; pIndex != 0xFFFFFFFF; pIndex = bPhotonLL[pIndex])
 		{
 			Photon photon = bPhoton[pIndex];
 			float dist = distance(query.pos, photon.Position);
@@ -95,14 +100,14 @@ vec3 radiance(in MarchResult marchResult, in Ray ray)
 	QueryResult queryResult = queryPhoton(query);
 
 	vec3 accumIndirect = vec3(0.);
-	Material material = bMaterial[marchResult.HitTriangle.a.MaterialIndex];
+	Material material = b_material[marchResult.HitTriangle.a.MaterialIndex];
 	float max_dist = queryResult.far_dist;
 	float max_dist2 = max_dist*max_dist;
 	for (int i = 0; i < queryResult.num; i++)
 	{
 		float dist = queryResult.photon[i].dist;
 		float weight = 1. - (dist / (1.1*max_dist));
-//		vec3 brdf = sampling(material, ray.d, marchResult);
+//		vec3 brdf = sampling(material, ray.normalized_d, marchResult);
 		accumIndirect += queryResult.photon[i].data.Power * /*brdf * */weight;
 	}
 	accumIndirect = accumIndirect / (1.0 - 2.0 / (3.0 * 1.1));
@@ -110,14 +115,12 @@ vec3 radiance(in MarchResult marchResult, in Ray ray)
 
 }
 
-layout(location=0) uniform vec3 eye;
-layout(location=1) uniform vec3 target;
 void main() 
 {
 	ivec2 index = ivec2(gl_GlobalInvocationID.xy);
 
 	vec2 resolution = vec2(640., 480.);
-	vec3 foward = normalize(target - eye);
+	vec3 foward = normalize(constant.target - constant.eye);
 	vec3 side = cross(foward, vec3(0., 1., 0.));
 	side = dot(side, side) <= 0.1 ? vec3(-1., 0., 0.) : normalize(side);
 	vec3 up = normalize(cross(side, foward));
@@ -125,13 +128,13 @@ void main()
 	vec2 r = vec2(0.5);
 	// イメージセンサー上の位置。
 	vec3 position_on_sensor =
-		(eye + foward)
+		(foward)
 		+ side * (float(r.x + index.x) / resolution.x - 0.5)*2.
 		+ up * (float(r.y + index.y) / resolution.y - 0.5)*2.;
 	// レイを飛ばす方向。
-	vec3 dir = normalize(position_on_sensor - eye);
+	vec3 dir = normalize(position_on_sensor);
 	Ray ray = MakeRay(position_on_sensor, dir);
-	MarchResult result = marching(uParam, ray);
+	MarchResult result = marching(ray);
 	if (result.HitResult.IsHit == 0)
 	{
 		// 何も当たらなかったら終了

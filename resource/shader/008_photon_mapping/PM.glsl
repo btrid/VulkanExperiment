@@ -2,6 +2,13 @@
 #ifndef PM_GLSL_
 #define PM_GLSL_
 
+#extension GL_ARB_gpu_shader_int64 : require
+#extension GL_ARB_shader_draw_parameters : require
+#extension GL_NV_shader_atomic_int64 : require
+
+#include "btrlib/convertDimension.glsl"
+#include "PMShape.glsl"
+
 struct Vertex{
 	vec3 Position;
 	int MaterialIndex;
@@ -23,11 +30,11 @@ struct Material
 	float	m_rough; //!< ざらざら
 	float	m_metalic;
 
-	int		is_emissive;
-//	uvec2	m_diffuse_tex;
-//	uvec2	m_ambient_tex;
-//	uvec2	m_specular_tex;
-//	uvec2	m_emissive_tex;
+	uint	is_emissive;
+	uint	m_diffuse_tex;
+	uint	m_ambient_tex;
+	uint	m_specular_tex;
+	uint	m_emissive_tex;
 
 };
 
@@ -46,6 +53,16 @@ struct DrawCommand// : public DrawElementsIndirectCommand
 	vec4 aabb_min;
 };
 
+struct TriangleLL
+{
+	uint next;
+	uint drawID;
+	uint instanceID;
+	uint _p;
+	uint index[3];
+	uint _p2;
+};
+
 struct BounceData{
 	int count;
 	int startOffset;
@@ -60,11 +77,20 @@ struct PMInfo
 	vec4 area_max;
 };
 
+struct Photon
+{
+	vec3 Position;
+	uint Dir_16_16; //!< 極座標[theta, phi]
+	vec3 Power; //!< flux 放射束
+//	uint Power10_11_11; //!< @todo
+	uint TriangleLLIndex; //!< hitした三角形のインデックス
+};
+
+
 #ifdef USE_PM
 layout(set=USE_PM, binding=0, std140) uniform PMUniform {
 	PMInfo u_pm_info;
 };
-
 
 layout(set=USE_PM, binding=1, std430) restrict buffer  CMDBuffer{
 	DrawCommand b_cmd[];
@@ -87,12 +113,15 @@ layout(set=USE_PM, binding=11, std430) restrict buffer TriangleLLHeadBuffer{
 layout(set=USE_PM, binding=12, std430) restrict buffer TriangleLLBuffer{
 	TriangleLL bTriangleLL[];
 };
+layout(set=USE_PM, binding=13, std430) restrict buffer TriangleHierarchyBuffer{
+	uint64_t b_triangle_hierarchy[];
+};
 layout(set=USE_PM, binding=20, std430) restrict buffer  PhotonBuffer{
 	Photon bPhoton[];
 };
 layout(set=USE_PM, binding=21, std430) buffer  PhotonCounter{
 	uvec4 b_photon_counter[];
-}
+};
 layout(set=USE_PM, binding=22, std430) restrict buffer PhotonLLHeadBuffer{
 	uint bPhotonLLHead[];
 };
@@ -103,8 +132,7 @@ layout(set=USE_PM, binding=24, std430) restrict buffer PhotonBounceBuffer{
 	BounceData bPhotonBounce[];
 };
 
-layout(set=USE_PM, binding=1, r8ui) uniform readonly uimage3D tBrickMap0;
-layout(binding = 1, rgba32f) uniform image2D tRender;
+layout(set=USE_PM, binding = 1, rgba32f) uniform image2D tRender;
 
 #endif
 
@@ -126,7 +154,8 @@ vec3 getDiffuse(in Material m, in MarchResult result)
 		+ result.HitTriangle.b.m_texcoord*result.HitResult.Weight.y
 		+ result.HitTriangle.c.m_texcoord*result.HitResult.Weight.z;
 
-	return texture(sampler2D(m.m_diffuse_tex), texcoord).xyz;
+//	return texture(sampler2D(m.m_diffuse_tex), texcoord).xyz;
+	return m.Diffuse.xyz;
 }
 
 vec3 sampling(in Material material, in vec3 inDir, in MarchResult hit)
@@ -134,14 +163,6 @@ vec3 sampling(in Material material, in vec3 inDir, in MarchResult hit)
 //	return material.Diffuse.xyz / 3.1415;
 	return getDiffuse(material, hit) / 3.1415;
 }
-struct Photon
-{
-	vec3 Position;
-	uint Dir_16_16; //!< 極座標[theta, phi]
-	vec3 Power; //!< flux 放射束
-//	uint Power10_11_11; //!< @todo
-	uint TriangleLLIndex; //!< hitした三角形のインデックス
-};
 
 int compressDirection(in vec3 dir)
 {
@@ -184,16 +205,6 @@ vec3 getDirection(in Photon p){
 		sin(theta*pi / intmax)*sin(phi*pi / intmax),
 		cos(theta*pi / intmax));
 }
-
-struct TriangleLL
-{
-	uint next;
-	uint drawID;
-	uint instanceID;
-	uint _p;
-	uint index[3];
-	uint _p2;
-};
 
 float getArea(in vec3 a, in vec3 b, in vec3 c)
 {

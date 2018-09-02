@@ -1,97 +1,18 @@
-
-
-Hit marchToAABB(in Ray ray, in vec3 bmin, in vec3 bmax)
+/*
+ivec3 getIndexBrick0(in BrickParam param, in vec3 pos)
 {
-	Hit ret = MakeHit();
-
-	if(all(lessThan(ray.p, bmax)) 
-	&& all(greaterThan(ray.p, bmin)))
-	{
-		// AABBの中にいる
-		ret.IsHit = 1;
-		ret.HitPoint = ray.p;
-		ret.Distance = 0;
-		return ret;
-	}
-
-#if 1
-	float tmin = 0.;
-	float tmax = 10e6;
-	for (int i = 0; i < 3; i++)
-	{
-		if (abs(ray.d[i]) < 10e-6)
-		{
-			// 光線はスラブに対して平行。原点がスラブの中になければ交点無し。
-			if (ray.p[i] < bmin[i] || ray.p[i] > bmax[i])
-			{
-				return ret;
-			}
-		}
-		else
-		{
-			float ood = 1. / ray.d[i];
-			float t1 = (bmin[i] - ray.p[i]) * ood;
-			float t2 = (bmax[i] - ray.p[i]) * ood;
-
-			// t1が近い平面との交差、t2が遠い平面との交差になる
-			float near = min(t1, t2);
-			float far = max(t1, t2);
-
-			// スラブの交差している感覚との交差を計算
-			tmin = max(near, tmin);
-			tmax = max(far, tmax);
-
-			if (tmin > tmax) {
-				return ret;
-			}
-		}
-	}
-	float dist = tmin;
-#else
-//	vec3 tmin = vec3(0.);
-//	vec3 tmax = vec3(10e6);
-	// 光線はスラブに対して平行。原点がスラブの中になければ交点無し。
-//	abs(ray.d[i]) < 10e-6
-//	if (any(less(ray.p[i], bmin)) || any(greater(ray.p[i], bmax))) 
-//	if (ray.p[i] < bmin[i] || ray.p[i] > bmax[i])
-//	{
-//		return ret;
-//	}
-	vec3 ood = 1. / ray.d;
-	vec3 t1 = (bmin - ray.p) * ood;
-	vec3 t2 = (bmax - ray.p) * ood;
-
-	// t1が近い平面との交差、t2が遠い平面との交差になる
-	vec3 near = min(t1, t2);
-	vec3 far = max(t1, t2);
-
-	// スラブの交差している感覚との交差を計算
-//	vec3 tmin = max(near, tmin);
-//	vec3 tmax = max(far, tmax);
-//	if (any(greaterThan(tmin, tmax))) {
-//		return ret;
-//	}
-//	float dist = min(min(tmin.x, tmin.y), tmin.z);
-
-	float tmin = 0.;
-	float tmax = 10e6;
-	for (int i = 0; i < 3; i++)
-	{
-		tmin = max(near[i], tmin);
-		tmax = max(far[i], tmax);
-	}
-	if (tmin > tmax) {
-		return ret;
-	}
-	float dist = tmin;
-#endif
-	ret.IsHit = 1;
-	ret.HitPoint = ray.p + ray.d*dist;
-	ret.Distance = dist;
-	return ret;
-
+	vec3 cell = getCellSize0(param);
+	return ivec3((pos - param.areaMin) / cell);
 }
 
+int getTiledIndexBrick1(in BrickParam param, in ivec3 index1)
+{
+	ivec3 index0 = index1 / param.scale1;
+	ivec3 index01 = index1 - index0*param.scale1;
+	int z = convert3DTo1D(index01, ivec3(param.scale1));
+	return convert3DTo1D(index0, param.num0)*param.scale1*param.scale1*param.scale1 + z;
+}
+*/
 MarchResult marching(in Ray ray)
 {
 	MarchResult result;
@@ -99,40 +20,53 @@ MarchResult marching(in Ray ray)
 
 	{
 		// そもそもVoxelにヒットするかチェック
-		Hit start = marchToAABB(ray, u_pm_info.area_min, u_pm_info.area_max);
+		Hit start = marchToAABB(ray, u_pm_info.area_min.xyz, u_pm_info.area_max.xyz);
 		if(start.IsHit == 0 ){
 			return result;
 		}
 		ray.p = start.HitPoint + ray.d*0.0001;
 	}
 
-	vec3 cellSize0 = getCellSize0(param);
-	ivec3 cellNum0 = param.num0;
-	vec3 cellSize1 = getCellSize1(param);
-	ivec3 cellNum1 = param.num1;
-
+//	vec3 cellSize0 = getCellSize0(param);
+//	ivec3 cellNum0 = param.num0;
+//	vec3 cellSize1 = getCellSize1(param);
+//	ivec3 cellNum1 = param.num1;
 	vec3 current  = ray.p;
-	ivec3 index0 = getIndexBrick0(param, current);
+	vec3 inv_dir;
+	inv_dir.x = abs(ray.d.x) < 0.0001 ? 9999999. : abs(1./ray.d.x);
+	inv_dir.y = abs(ray.d.y) < 0.0001 ? 9999999. : abs(1./ray.d.y);
+	inv_dir.z = abs(ray.d.z) < 0.0001 ? 9999999. : abs(1./ray.d.z);
+	vec3 dir = ray.d * min(inv_dir.z, min(inv_dir.x, inv_dir.y)) * u_pm_info.cell_size.xyz;
+	
 	for(int i = 0; i < 500; i++)
 	{
-		for(; isInRange(index0, cellNum0) && imageLoad(tBrickMap0, index0).x == 0;)
+		ivec3 index0 = ivec3(current / u_pm_info.cell_size.xyz);
+		ivec3 index1 = index0 >> 2;
+		uint hierarchy_index = convert3DTo1D(index1, u_pm_info.num0.xyz>>2);
+		uint64_t hierarchy = b_triangle_hierarchy[hierarchy_index];
+		if(hierarchy == 0)
 		{
-			current += ray.d;
+			while(all(equal(index0>>2, index1)))
+			{
+				current += dir;
+				index0 = ivec3(current / u_pm_info.cell_size.xyz);
+			}
+			continue;
 		}
 
-		ivec3 index1 = getIndexBrick1(param, current);
-		while(all(greaterThanEqual(index1, ivec3(0))) && all(equal(index1/param.scale1, index0)))
+		while(all(greaterThanEqual(index0, ivec3(0))) && all(equal(index0>>2, index1)))
 		{
 			Hit hitResult = MakeHit();
 			TriangleMesh near;
-			for(uint triIndex = bTriangleLLHead[getTiledIndexBrick1(param, index1)]; triIndex != 0xFFFFFFFF; )
+
+			for(uint triIndex = bTriangleLLHead[convert3DTo1D(index0, u_pm_info.num0.xyz)]; triIndex != 0xFFFFFFFF; )
 			{
 				TriangleLL triangle_LL = bTriangleLL[triIndex];
 				triIndex = triangle_LL.next;
 
-				Vertex a = bVertex[triangle_LL.index[0]];
-				Vertex b = bVertex[triangle_LL.index[1]];
-				Vertex c = bVertex[triangle_LL.index[2]];
+				Vertex a = b_vertex[triangle_LL.index[0]];
+				Vertex b = b_vertex[triangle_LL.index[1]];
+				Vertex c = b_vertex[triangle_LL.index[2]];
 				Triangle t = MakeTriangle(a.Position, b.Position, c.Position);
 				t = scaleTriangle(t, 0.5); // 計算誤差?でポリゴンの間が当たらないことがあるので大きくする
 				Hit hit = intersect(t, ray);
@@ -150,7 +84,8 @@ MarchResult marching(in Ray ray)
 			if(hitResult.IsHit == 0)
 			{
 				// 当たらなかったらmarch
-				current += ray.d;
+				current += dir;
+				index0 = ivec3(current / u_pm_info.cell_size.xyz);
 				continue;
 			}
 			// ヒット
@@ -158,8 +93,6 @@ MarchResult marching(in Ray ray)
 			result.HitTriangle = near;
 			return result;
 		}
-
-		current += ray.d;
 	}
 	return result;
 }

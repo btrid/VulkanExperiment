@@ -57,7 +57,7 @@ void main()
 			vec3 d = normalize(vec3(0., -1., 0.));
 
 			Photon emit;
-			emit.Position = p + d*0.1;
+			emit.Position = p + d*0.001;
 			emit.Power = material.Emissive.xyz;
 			setDirection(emit, d);
 

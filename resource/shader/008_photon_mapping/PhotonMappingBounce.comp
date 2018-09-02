@@ -7,7 +7,12 @@
 layout (local_size_x = 1024, local_size_y = 1, local_size_z = 1) in;
 
 
-#include </Marching.glsl>
+#include "Marching.glsl"
+
+layout(push_constant) uniform Constant
+{
+	int level;
+} constant;
 
 
 void main() 
@@ -15,9 +20,9 @@ void main()
 	int index = int(gl_GlobalInvocationID.x);
 	float seed = sqrt(float(index));
 	float probabry = rand(vec2(seed, sqrt(seed)));
-	BounceData prev = bPhotonBounce[gBounceCount-1];
+	BounceData prev = bPhotonBounce[constant.level-1];
 	{
-		int index = atomicAdd(bPhotonBounce[gBounceCount].calced, 1);
+		int index = atomicAdd(bPhotonBounce[constant.level].calced, 1);
 		if(index >= prev.count)
 		{
 			// 計算する数を超えた
@@ -37,15 +42,15 @@ void main()
 		}
 
 		TriangleLL tLL = bTriangleLL[stored.TriangleLLIndex];
-		Vertex a = bVertex[tLL.index[0]];
-		Vertex b = bVertex[tLL.index[1]];
-		Vertex c = bVertex[tLL.index[2]];
+		Vertex a = b_vertex[tLL.index[0]];
+		Vertex b = b_vertex[tLL.index[1]];
+		Vertex c = b_vertex[tLL.index[2]];
 
 		vec3 n = normalize(cross(normalize(b.Position-a.Position), normalize(c.Position-a.Position)));
 		vec3 d = calcDir(n, seed);
 		Ray ray = MakeRay(stored.Position+d*0.001, d);
 
-		MarchResult result = marching(uParam, ray);
+		MarchResult result = marching(ray);
 		if(result.HitResult.IsHit == 0){
 			return;
 		}
@@ -53,19 +58,19 @@ void main()
 		Photon photon;
 		photon.Position = result.HitResult.HitPoint;
 		setDirection(photon, ray.d);
-		Material material = bMaterial[result.HitTriangle.a.MaterialIndex];
+		Material material = b_material[result.HitTriangle.a.MaterialIndex];
 		vec3 brdf = sampling(material, getDirection(stored), result);
 		photon.Power = stored.Power * brdf;
 		photon.TriangleLLIndex = result.TriangleLLIndex;
 		
-		uint photonIndex = atomicCounterIncrement(aPhotonCount);
+		uint photonIndex = atomicAdd(b_photon_counter[0].w, 1);
 		bPhoton[photonIndex] = photon;
 
-		int index1d = convert3DTo1D(getIndexBrick1(uParam, photon.Position), uParam.num1);
-		uint old = atomicExchange(bPhotonLLHead[index1d], photonIndex);
+		uint index0 = convert3DTo1D(uvec3((photon.Position + u_pm_info.area_min.xyz) / u_pm_info.cell_size.xyz), u_pm_info.num0.xyz);
+		uint old = atomicExchange(bPhotonLLHead[index0], photonIndex);
 		bPhotonLL[photonIndex] = old;
 
-		atomicAdd(bPhotonBounce[gBounceCount].count, 1);
+		atomicAdd(bPhotonBounce[constant.level].count, 1);
 
 	}
 }
