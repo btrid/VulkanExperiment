@@ -75,6 +75,7 @@ struct PMInfo
 	vec4 cell_size;
 	vec4 area_min;
 	vec4 area_max;
+
 };
 
 struct Photon
@@ -92,47 +93,47 @@ layout(set=USE_PM, binding=0, std140) uniform PMUniform {
 	PMInfo u_pm_info;
 };
 
-layout(set=USE_PM, binding=1, std430) restrict buffer  CMDBuffer{
+layout(set=USE_PM, binding=10, std430) restrict buffer  CMDBuffer{
 	DrawCommand b_cmd[];
 };
-layout(set=USE_PM, binding=2, std430) restrict buffer  VertexBuffer{
+layout(set=USE_PM, binding=11, std430) restrict buffer  VertexBuffer{
 	Vertex b_vertex[];
 };
-layout(set=USE_PM, binding=3, std430) restrict buffer  ElementBuffer{
+layout(set=USE_PM, binding=12, std430) restrict buffer  ElementBuffer{
 	ivec3 b_element[];
 };
-layout(set=USE_PM, binding=4, std430) restrict buffer MaterialBuffer {
+layout(set=USE_PM, binding=13, std430) restrict buffer MaterialBuffer {
 	Material b_material[];
 };
-layout(set=USE_PM, binding=10, std430) restrict buffer TriangleCounter{
+layout(set=USE_PM, binding=20, std430) restrict buffer TriangleCounter{
 	uvec4 b_triangle_count[];
 };
-layout(set=USE_PM, binding=11, std430) restrict buffer TriangleLLHeadBuffer{
+layout(set=USE_PM, binding=21, std430) restrict buffer TriangleLLHeadBuffer{
 	uint bTriangleLLHead[];
 };
-layout(set=USE_PM, binding=12, std430) restrict buffer TriangleLLBuffer{
+layout(set=USE_PM, binding=22, std430) restrict buffer TriangleLLBuffer{
 	TriangleLL bTriangleLL[];
 };
-layout(set=USE_PM, binding=13, std430) restrict buffer TriangleHierarchyBuffer{
+layout(set=USE_PM, binding=23, std430) restrict buffer TriangleHierarchyBuffer{
 	uint64_t b_triangle_hierarchy[];
 };
-layout(set=USE_PM, binding=20, std430) restrict buffer  PhotonBuffer{
+layout(set=USE_PM, binding=30, std430) restrict buffer  PhotonBuffer{
 	Photon bPhoton[];
 };
-layout(set=USE_PM, binding=21, std430) buffer  PhotonCounter{
+layout(set=USE_PM, binding=31, std430) buffer  PhotonCounter{
 	uvec4 b_photon_counter[];
 };
-layout(set=USE_PM, binding=22, std430) restrict buffer PhotonLLHeadBuffer{
+layout(set=USE_PM, binding=32, std430) restrict buffer PhotonLLHeadBuffer{
 	uint bPhotonLLHead[];
 };
-layout(set=USE_PM, binding=23, std430) restrict buffer PhotonLLBuffer{
+layout(set=USE_PM, binding=33, std430) restrict buffer PhotonLLBuffer{
 	uint bPhotonLL[];
 };
-layout(set=USE_PM, binding=24, std430) restrict buffer PhotonBounceBuffer{
+layout(set=USE_PM, binding=34, std430) restrict buffer PhotonBounceBuffer{
 	BounceData bPhotonBounce[];
 };
 
-layout(set=USE_PM, binding = 1, rgba32f) uniform image2D tRender;
+layout(set=USE_PM, binding = 40, rgba32f) uniform image2D tRender;
 
 #endif
 

@@ -11,8 +11,8 @@ layout (local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 
 layout(push_constant) uniform Constant
 {
-	vec3 eye;
-	vec3 target;
+	layout(offset = 0) vec3 eye;
+	layout(offset = 16) vec3 target;
 } constant;
 
 struct QueryPhoton
@@ -29,6 +29,7 @@ struct ResultPhoton
 	Photon data;
 	float dist;
 };
+
 struct QueryResult
 {
 #define RESULT_PHOTON_NUM (4)
@@ -128,12 +129,12 @@ void main()
 	vec2 r = vec2(0.5);
 	// イメージセンサー上の位置。
 	vec3 position_on_sensor =
-		(foward)
+		foward
 		+ side * (float(r.x + index.x) / resolution.x - 0.5)*2.
 		+ up * (float(r.y + index.y) / resolution.y - 0.5)*2.;
 	// レイを飛ばす方向。
 	vec3 dir = normalize(position_on_sensor);
-	Ray ray = MakeRay(position_on_sensor, dir);
+	Ray ray = MakeRay(position_on_sensor+constant.eye, dir);
 	MarchResult result = marching(ray);
 	if (result.HitResult.IsHit == 0)
 	{
