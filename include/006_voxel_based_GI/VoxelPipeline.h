@@ -2,6 +2,8 @@
 #include <memory>
 #include <btrlib/Define.h>
 #include <btrlib/Context.h>
+#include <applib/App.h>
+#include <applib/sCameraManager.h>
 
 struct VoxelInfo
 {
@@ -60,7 +62,9 @@ struct VoxelPipeline
 		PIPELINE_NUM,
 	};
 
-	std::shared_ptr<RenderPassModule> m_draw_render_pass;
+	std::shared_ptr<RenderTarget> m_render_target;
+	vk::UniqueRenderPass m_render_pass;
+	vk::UniqueFramebuffer m_framebuffer;
 
 	std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_list;
 	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_stage_info;
@@ -80,14 +84,65 @@ struct VoxelPipeline
 	vk::UniqueSampler m_voxel_sampler;
 
 	std::vector<std::shared_ptr<Voxelize>> m_voxelize_list;
-	void setup(std::shared_ptr<btr::Context>& context, const VoxelInfo& info)
+	void setup(std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target, const VoxelInfo& info)
 	{
+		m_render_target = render_target;
+
 		auto& gpu = context->m_gpu;
 		auto& device = gpu.getDevice();
 
 		m_voxelize_info_cpu = info;
 		int mipnum = 5;
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+
+		// レンダーパス
+		{
+			// sub pass
+			vk::AttachmentReference color_ref[] =
+			{
+				vk::AttachmentReference()
+				.setAttachment(0)
+				.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
+			};
+			vk::SubpassDescription subpass;
+			subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+			subpass.setInputAttachmentCount(0);
+			subpass.setPInputAttachments(nullptr);
+			subpass.setColorAttachmentCount(array_length(color_ref));
+			subpass.setPColorAttachments(color_ref);
+			vk::AttachmentDescription attach_description[] =
+			{
+				// color1
+				vk::AttachmentDescription()
+				.setFormat(render_target->m_info.format)
+				.setSamples(vk::SampleCountFlagBits::e1)
+				.setLoadOp(vk::AttachmentLoadOp::eLoad)
+				.setStoreOp(vk::AttachmentStoreOp::eStore)
+				.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
+				.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
+			};
+			vk::RenderPassCreateInfo renderpass_info;
+			renderpass_info.setAttachmentCount(array_length(attach_description));
+			renderpass_info.setPAttachments(attach_description);
+			renderpass_info.setSubpassCount(1);
+			renderpass_info.setPSubpasses(&subpass);
+
+			m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
+
+			{
+				vk::ImageView view[] = {
+					render_target->m_view,
+				};
+				vk::FramebufferCreateInfo framebuffer_info;
+				framebuffer_info.setRenderPass(m_render_pass.get());
+				framebuffer_info.setAttachmentCount(array_length(view));
+				framebuffer_info.setPAttachments(view);
+				framebuffer_info.setWidth(render_target->m_info.extent.width);
+				framebuffer_info.setHeight(render_target->m_info.extent.height);
+				framebuffer_info.setLayers(1);
+				m_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
+			}
+		}
 
 		// resource setup
 		{
@@ -192,13 +247,6 @@ struct VoxelPipeline
 			}
 
 		}
-
-
-		// レンダーパス
-		{
-			m_draw_render_pass = app::g_app_instance->m_window->getRenderBackbufferPass();
-		}
-
 
 		// setup shader
 		{
@@ -434,7 +482,7 @@ struct VoxelPipeline
 					.setPRasterizationState(&rasterization_info)
 					.setPMultisampleState(&sample_info)
 					.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_VOXEL].get())
-					.setRenderPass(m_draw_render_pass->getRenderPass())
+					.setRenderPass(m_render_pass.get())
 					.setPDepthStencilState(&depth_stencil_info)
 					.setPColorBlendState(&blend_info),
 				};
@@ -544,8 +592,8 @@ struct VoxelPipeline
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eVertexShader, vk::DependencyFlags(), {}, {}, { to_read_barrier });
 			}
 			vk::RenderPassBeginInfo begin_render_info;
-			begin_render_info.setFramebuffer(m_draw_render_pass->getFramebuffer(context->getGPUFrame()));
-			begin_render_info.setRenderPass(m_draw_render_pass->getRenderPass());
+			begin_render_info.setFramebuffer(m_framebuffer.get());
+			begin_render_info.setRenderPass(m_render_pass.get());
 			begin_render_info.setRenderArea(vk::Rect2D({}, context->m_window->getClientSize<vk::Extent2D>()));
 
 			cmd.beginRenderPass(begin_render_info, vk::SubpassContents::eInline);

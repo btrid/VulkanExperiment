@@ -106,7 +106,7 @@ layout(set=USE_PM, binding=13, std430) restrict buffer MaterialBuffer {
 	Material b_material[];
 };
 layout(set=USE_PM, binding=20, std430) restrict buffer TriangleCounter{
-	uvec4 b_triangle_count[];
+	uvec4 b_triangle_count;
 };
 layout(set=USE_PM, binding=21, std430) restrict buffer TriangleLLHeadBuffer{
 	uint bTriangleLLHead[];

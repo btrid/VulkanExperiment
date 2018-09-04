@@ -22,14 +22,13 @@
 #include <btrlib/AllocatedMemory.h>
 
 #include <applib/App.h>
+#include <applib/AppPipeline.h>
 #include <applib/cModelPipeline.h>
 #include <applib/DrawHelper.h>
 #include <btrlib/Context.h>
 #include <applib/Geometry.h>
-// #define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-// #include <imgui/imgui.h>
 
-#include <btrlib/VoxelPipeline.h>
+#include <006_voxel_based_GI/VoxelPipeline.h>
 #include <006_voxel_based_GI/ModelVoxelize.h>
 
 #pragma comment(lib, "btrlib.lib")
@@ -54,21 +53,22 @@ int main()
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
 
-	app::App app;
-	{
-		app::AppDescriptor desc;
-		desc.m_gpu = gpu;
-		desc.m_window_size = uvec2(640, 480);
-		app.setup(desc);
-	}
+	app::AppDescriptor app_desc;
+	app_desc.m_gpu = gpu;
+	app_desc.m_window_size = uvec2(512, 512);
+	app::App app(app_desc);
 
 	auto context = app.m_context;
+
+	ClearPipeline clear_render_target(context, app.m_window->getRenderTarget());
+	PresentPipeline present_pipeline(context, app.m_window->getRenderTarget(), context->m_window->getSwapchainPtr());
+
 
 	VoxelPipeline voxelize_pipeline;
 	VoxelInfo info;
 	info.u_cell_num = uvec4(64, 16, 64, 1);
 	info.u_cell_size = (info.u_area_max - info.u_area_min) / vec4(info.u_cell_num);
-	voxelize_pipeline.setup(context, info);
+	voxelize_pipeline.setup(context, app.m_window->getRenderTarget(), info);
 	{
 		auto model_voxelize = voxelize_pipeline.createPipeline<ModelVoxelize>(context);
 		auto setup_cmd = context->m_cmd_pool->allocCmdTempolary(0);
@@ -90,7 +90,7 @@ int main()
 			model.m_material[0].albedo = glm::vec4(1.f, 0.f, 0.f, 1.f);
 			model.m_material[0].emission = glm::vec4(0.f, 0.f, 0.f, 1.f);
 
-			model_voxelize->addModel(context, setup_cmd.get(), model);
+			model_voxelize->addModel(context, setup_cmd, model);
 		}
 		{
 			std::vector<glm::vec3> v;
@@ -118,11 +118,12 @@ int main()
 			model.m_material[4].albedo = glm::vec4(1.f, 1.f, 1.0f, 1.f);
 			model.m_material[5].albedo = glm::vec4(1.f, 0.f, 0.4f, 1.f);
 
-			model_voxelize->addModel(context, setup_cmd.get(), model);
+			model_voxelize->addModel(context, setup_cmd, model);
 		}
 
 	}
 
+	app.setup();
 	while (true)
 	{
 		cStopWatch time;
@@ -135,17 +136,29 @@ int main()
 // 				DrawHelper::Order().drawOrder(DrawHelper::SPHERE, dcmd);
 			}
 
+			enum
+			{
+				cmd_render_clear,
+				cmd_voxel_make_bv,
+				cmd_voxel_make_bvh,
+				cmd_voxel_draw,
+				cmd_render_present,
+				cmd_num
+			};
+			std::vector<vk::CommandBuffer> cmds(cmd_num);
 			SynchronizedPoint render_syncronized_point(1);
-			std::vector<vk::CommandBuffer> render_cmds(3);
 
 			{
 				cThreadJob job;
 				job.mJob.emplace_back(
 					[&]()
 				{
-					render_cmds[0] = voxelize_pipeline.make(context);
-					render_cmds[1] = voxelize_pipeline.makeHierarchy(context);
-					render_cmds[2] = voxelize_pipeline.draw(context);
+					cmds[cmd_voxel_make_bv] = voxelize_pipeline.make(context);
+					cmds[cmd_voxel_make_bvh] = voxelize_pipeline.makeHierarchy(context);
+					cmds[cmd_voxel_draw] = voxelize_pipeline.draw(context);
+
+					cmds[cmd_render_clear] = clear_render_target.execute();
+					cmds[cmd_render_present] = present_pipeline.execute();
 					render_syncronized_point.arrive();
 				}
 				);
@@ -153,7 +166,7 @@ int main()
 			}
 
 			render_syncronized_point.wait();
-			app.submit(std::move(render_cmds));
+			app.submit(std::move(cmds));
 		}
 		app.postUpdate();
 		printf("%6.4fs\n", time.getElapsedTimeAsSeconds());

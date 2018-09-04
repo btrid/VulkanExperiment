@@ -37,6 +37,9 @@ struct PhotonMapping
 
 	enum Shader
 	{
+		Shader_MakeBV_VS,
+		Shader_MakeBV_GS,
+		Shader_MakeBV_PS,
 		Shader_Emit,
 		Shader_Bounce,
 		Shader_Render,
@@ -51,6 +54,7 @@ struct PhotonMapping
 	};
 	enum Pipeline
 	{
+		Pipeline_MakeBV,
 		Pipeline_Emit,
 		Pipeline_Bounce,
 		Pipeline_Render,
@@ -137,8 +141,6 @@ struct PhotonMapping
 
 	PhotonMapping(const std::shared_ptr<btr::Context>& context)
 	{
-		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-
 		{
 
 			{
@@ -179,6 +181,9 @@ struct PhotonMapping
 			{
 				const char* name[] =
 				{
+					"PM_MakeVoxel.vert.spv",
+					"PM_MakeVoxel.geom.spv",
+					"PM_MakeVoxel.frag.spv",
 					"PhotonMapping.comp.spv",
 					"PhotonMappingBounce.comp.spv",
 					"PhotonRendering.comp.spv",
@@ -222,7 +227,7 @@ struct PhotonMapping
 
 			// pipeline
 			{
-				std::array<vk::PipelineShaderStageCreateInfo, Shader_Num> shader_info;
+				std::array<vk::PipelineShaderStageCreateInfo, 3> shader_info;
 				shader_info[0].setModule(m_shader[Shader_Emit].get());
 				shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 				shader_info[0].setPName("main");
@@ -250,22 +255,36 @@ struct PhotonMapping
 				m_pipeline[Pipeline_Render] = std::move(compute_pipeline[2]);
 			}
 
+			// graphics pipeline
+			{
+
+			}
 		}
+
+		PMInfo info;
+		info.area_max = vec4(1000.f);
+		info.area_min = vec4(0.f);
+		info.num0 = uvec4(256);
+		info.num0.w = info.num0.x*info.num0.y*info.num0.z;
+		info.cell_size = (info.area_max - info.area_min) / info.cell_size;
 
 		u_pm_info = context->m_uniform_memory.allocateMemory<PMInfo>({ 1, {} });
 		b_cmd = context->m_storage_memory.allocateMemory<DrawCommand>({ 100, {} });
 		b_vertex = context->m_storage_memory.allocateMemory<Vertex>({ 10000, {} });
 		b_element = context->m_storage_memory.allocateMemory<uvec3>({ 10000, {} });
 		b_material = context->m_storage_memory.allocateMemory<Material>({ 100, {} });
-		b_triangle_count = context->m_storage_memory.allocateMemory<uvec4>({ 100, {} });
-		bTriangleLLHead = context->m_storage_memory.allocateMemory<uint32_t>({ 100, {} });
-		bTriangleLL = context->m_storage_memory.allocateMemory<TriangleLL>({ 100, {} });
-		b_triangle_hierarchy = context->m_storage_memory.allocateMemory<uint64_t>({ 100, {} });
-		bPhoton = context->m_storage_memory.allocateMemory<Photon>({ 10000, {} });
-		b_photon_counter = context->m_storage_memory.allocateMemory<uvec4>({ 10000, {} });
-		bPhotonLLHead = context->m_storage_memory.allocateMemory<uint32_t>({ 10000, {} });
-		bPhotonLL = context->m_storage_memory.allocateMemory<uint32_t>({ 10000, {} });
-		bPhotonBounce = context->m_storage_memory.allocateMemory<BounceData>({ 10, {} });
+		b_triangle_count = context->m_storage_memory.allocateMemory<uvec4>({ 1, {} });
+		bTriangleLLHead = context->m_storage_memory.allocateMemory<uint32_t>({ info.num0.w, {} });
+		bTriangleLL = context->m_storage_memory.allocateMemory<TriangleLL>({ 10000, {} });
+		b_triangle_hierarchy = context->m_storage_memory.allocateMemory<uint64_t>({ info.num0.w, {} });
+		bPhoton = context->m_storage_memory.allocateMemory<Photon>({ 100000, {} });
+		b_photon_counter = context->m_storage_memory.allocateMemory<uvec4>({ 1, {} });
+		bPhotonLLHead = context->m_storage_memory.allocateMemory<uint32_t>({ info.num0.w, {} });
+		bPhotonLL = context->m_storage_memory.allocateMemory<uint32_t>({ 100000, {} });
+		bPhotonBounce = context->m_storage_memory.allocateMemory<BounceData>({ 1, {} });
+
+		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+		cmd.updateBuffer<PMInfo>(u_pm_info.getInfo().buffer, u_pm_info.getInfo().offset, info);
 
 		{
 			vk::DescriptorSetLayout layouts[] = {
@@ -318,6 +337,12 @@ struct PhotonMapping
 				.setPBufferInfo(triangles)
 				.setDstBinding(20)
 				.setDstSet(m_descriptor_set.get()),
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(array_length(photons))
+				.setPBufferInfo(photons)
+				.setDstBinding(30)
+				.setDstSet(m_descriptor_set.get()),
 			};
 			context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
 		}
@@ -325,6 +350,39 @@ struct PhotonMapping
 
 	void execute(vk::CommandBuffer cmd)
 	{
+		{
+			vk::BufferMemoryBarrier to_write[] = {
+				b_triangle_count.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
+				bTriangleLLHead.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
+				b_photon_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {},
+				0, nullptr, array_length(to_write), to_write, 0, nullptr);
+
+			cmd.fillBuffer(b_triangle_count.getInfo().buffer, b_triangle_count.getInfo().offset, b_triangle_count.getInfo().range, 0);
+			cmd.fillBuffer(bTriangleLLHead.getInfo().buffer, bTriangleLLHead.getInfo().offset, bTriangleLLHead.getInfo().range, -1);
+			cmd.fillBuffer(b_photon_counter.getInfo().buffer, b_photon_counter.getInfo().offset, b_photon_counter.getInfo().range, 0);
+
+		}
+
+		{
+			// Make Bounding Volume
+			vk::BufferMemoryBarrier to_read[] = {
+				b_triangle_count.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+				bTriangleLLHead.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {},
+				0, nullptr, array_length(to_read), to_read, 0, nullptr);
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Update].get());
+
+			auto num = app::calcDipatchGroups(uvec3(Particle_Num, 1, 1), uvec3(1024, 1, 1));
+			cmd.dispatch(num.x, num.y, num.z);
+
+		}
+
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_PM].get(), 0, m_descriptor_set.get(), {});
+
 
 	}
 	btr::BufferMemoryEx<PMInfo> u_pm_info;

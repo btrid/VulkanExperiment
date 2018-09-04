@@ -1,7 +1,7 @@
 #pragma once
 #include <btrlib/Define.h>
 #include <btrlib/Context.h>
-#include <btrlib/VoxelPipeline.h>
+#include <006_voxel_based_GI/VoxelPipeline.h>
 
 struct ModelVoxelize : public Voxelize
 {
@@ -79,7 +79,7 @@ struct ModelVoxelize : public Voxelize
 	};
 
 	vk::UniqueRenderPass m_make_voxel_pass;
-	std::vector<vk::UniqueFramebuffer> m_make_voxel_framebuffer;
+	vk::UniqueFramebuffer m_make_voxel_framebuffer;
 
 	std::vector<std::shared_ptr<Resource>> m_model_list;
 
@@ -201,7 +201,6 @@ struct ModelVoxelize : public Voxelize
 				.setPSubpasses(&subpass);
 			m_make_voxel_pass = context->m_device->createRenderPassUnique(renderpass_info);
 
-			m_make_voxel_framebuffer.resize(context->m_window->getSwapchain().getBackbufferNum());
 			{
 				vk::FramebufferCreateInfo framebuffer_info;
 				framebuffer_info.setRenderPass(m_make_voxel_pass.get());
@@ -210,10 +209,7 @@ struct ModelVoxelize : public Voxelize
 				framebuffer_info.setWidth(parent->getVoxelInfo().u_cell_num.x);
 				framebuffer_info.setHeight(parent->getVoxelInfo().u_cell_num.z);
 				framebuffer_info.setLayers(3);
-
-				for (size_t i = 0; i < m_make_voxel_framebuffer.size(); i++) {
-					m_make_voxel_framebuffer[i] = context->m_device->createFramebufferUnique(framebuffer_info);
-				}
+				m_make_voxel_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
 			}
 		}
 
@@ -503,7 +499,7 @@ struct ModelVoxelize : public Voxelize
 
 			// make voxel
 			vk::RenderPassBeginInfo begin_render_info;
-			begin_render_info.setFramebuffer(m_make_voxel_framebuffer[context->getGPUFrame()].get());
+			begin_render_info.setFramebuffer(m_make_voxel_framebuffer.get());
 			begin_render_info.setRenderPass(m_make_voxel_pass.get());
 			begin_render_info.setRenderArea(vk::Rect2D({}, { parent->getVoxelInfo().u_cell_num.x, parent->getVoxelInfo().u_cell_num.z }));
 

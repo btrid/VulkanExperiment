@@ -1,19 +1,8 @@
-#version 450
-#pragma optionNV (unroll all)
-#pragma optionNV (inline all)
-#pragma optionNV(fastmath on)
-//#pragma optionNV(fastprecision on)
-//#pragma optionNV(ifcvt all)
-#pragma optionNV(strict on)
-#extension GL_ARB_shader_draw_parameters : require
-#extension GL_ARB_bindless_texture : require
-#extension GL_ARB_shading_language_include : require
-
-#include </convertDimension.glsl>
-#include </Shape.glsl>
-#include </PMDefine.glsl>
-#include </Brick.glsl>
-#include </PM.glsl>
+#version 460
+#extension GL_GOOGLE_include_directive : require
+//#extension NV_conservative_raster : require
+#define USE_PM 0
+#include "PM.glsl"
 
 
 layout(triangles) in;
@@ -27,31 +16,26 @@ in gl_PerVertex
 //	float gl_ClipDistance[];
 } gl_in[];
 
-out gl_PerVertex
-{
-	vec4 gl_Position;
-	float gl_PointSize;
-	float gl_ClipDistance[];
-};
-
-in InVertex{
+layout(location=1) in InVertex{
 	vec3 Position;
 	flat int DrawID;
 	flat int InstanceID;
 	flat int VertexID;
 }In[];
 
-out Transform{
+layout(location=0) out gl_PerVertex
+{
+	vec4 gl_Position;
+	float gl_PointSize;
+	float gl_ClipDistance[];
+};
+
+layout(location=1) out Transform{
 	vec3 Position;
 	flat int DrawID;
 	flat int InstanceID;
 	flat int VertexID[3];
 }transform;
-
-layout(std140, binding = 0) uniform BrickUniform
-{
-	BrickParam uParam;
-};
 
 vec4 toQuat(vec3 eular)
 {
@@ -77,20 +61,21 @@ vec3 rotate(vec4 q, vec3 v)
 	return v + uv + uuv;
 }
 
-mat4 ortho(float l, float r, float b, float t, float n, float f)
+mat4 orthoLH01(float l, float r, float b, float t, float n, float f)
 {
 	mat4 o = mat4(1.);
 	o[0][0] = 2. / (r - l);
 	o[1][1] = 2. / (t - b);
-	o[2][2] = -2. / (f - n);
+	o[2][2] = 2. / (f - n);
 	o[3][0] = - (r + l) / (r - l);
 	o[3][1] = - (t + b) / (t - b);
-	o[3][2] = - (f + n) / (f - n);
+	o[3][2] = - n / (f - n);
 	return o;
 }
+
 mat4 orthoVec(in vec3 min, in vec3 max)
 {
-	return ortho(min.x, max.x, min.y, max.y, min.z, max.z);
+	return orthoLH01(min.x, max.x, min.y, max.y, min.z, max.z);
 }
 
 mat4 perspectiveFovRH(in float fov, in float width, in float height, in float zNear, in float zFar)
@@ -108,7 +93,7 @@ mat4 perspectiveFovRH(in float fov, in float width, in float height, in float zN
 	return Result;
 }
 
-mat4 lookat(vec3 eye, vec3 target, vec3 up)
+mat4 lookAtLH(vec3 eye, vec3 target, vec3 up)
 {
 	vec3 f = normalize(target - eye);
 	vec3 s = normalize(cross(f, up)); 
@@ -127,7 +112,6 @@ mat4 lookat(vec3 eye, vec3 target, vec3 up)
 	view[3][0] =-dot(s, eye);
 	view[3][1] =-dot(u, eye);
 	view[3][2] = dot(f, eye);
-
 	return view;
 
 }
@@ -141,8 +125,8 @@ void main()
 	float y = dot(n, vec3(0., 1., 0.));
 	float z = dot(n, vec3(0., 0., 1.));
 
-	vec3 areaMin = uParam.areaMin;
-	vec3 areaMax = uParam.areaMax;
+	vec3 areaMin = u_pm_info.area_min.xyz;
+	vec3 areaMax = u_pm_info.area_max.xyz;
 	vec3 size = (areaMax - areaMin);
 	vec3 center = size/2. + areaMin;
 	vec3 eye = center;
@@ -151,20 +135,20 @@ void main()
 
 	if(abs(x) > abs(y) && abs(x) > abs(z)){
 		eye.x = x > 0 ? areaMax.x : areaMin.x;
-		projection = ortho(areaMin.z, areaMax.z, areaMin.y, areaMax.y, 0, size.x);
+		projection = orthoLH01(areaMin.z, areaMax.z, areaMin.y, areaMax.y, 0, size.x);
 	}
 	else if(abs(y) > abs(z))
 	{
 		eye.y = y > 0 ? areaMax.y : areaMin.y;
 		up = normalize(vec3(0., 0., 1.));
-		projection = ortho(areaMin.x, areaMax.x, areaMin.z, areaMax.z, 0, size.y);
+		projection = orthoLH01(areaMin.x, areaMax.x, areaMin.z, areaMax.z, 0, size.y);
 	}
 	else
 	{
 		eye.z = z > 0 ? areaMax.z : areaMin.z;
-		projection = ortho(areaMin.x, areaMax.x, areaMin.y, areaMax.y, 0, size.z);
+		projection = orthoLH01(areaMin.x, areaMax.x, areaMin.y, areaMax.y, 0, size.z);
 	}
-	mat4 view = lookat(eye, center, up);
+	mat4 view = lookAtLH(eye, center, up);
 
 	transform.VertexID[0] = In[0].VertexID;
 	transform.VertexID[1] = In[1].VertexID;
@@ -174,7 +158,7 @@ void main()
 
 	// 三角形を大きくしてフラグメントシェーダのテストに入るようにする.なくてもいい？
 	Triangle t = MakeTriangle(In[0].Position, In[1].Position, In[2].Position);
-	t = scaleTriangleV(t, getCellSize1(uParam)*0.5);
+	t = scaleTriangleV(t, vec3(0.5));
 
 	gl_Position = projection * view * vec4(t.a, 1.);
 	transform.Position = t.a;
