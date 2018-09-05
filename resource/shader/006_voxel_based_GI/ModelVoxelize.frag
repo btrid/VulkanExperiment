@@ -1,14 +1,15 @@
-#version 450
-
-#extension GL_GOOGLE_cpp_style_line_directive : require
-
-#include <btrlib/ConvertDimension.glsl>
+#version 460
+#extension GL_GOOGLE_include_directive : require
 
 #define USE_VOXEL 0
-#include <btrlib/Voxelize/Voxelize.glsl>
+#include "Voxelize.glsl"
+
 #define USE_VOXELIZE 1
 #define SETPOINT_VOXEL_MODEL 2
-#include <ModelVoxelize.glsl>
+#include "ModelVoxelize.glsl"
+
+#include "btrlib/ConvertDimension.glsl"
+
 
 layout(location=1)in Transform{
 	vec3 Position;
@@ -21,9 +22,7 @@ void main()
 	ivec3 index = getVoxelIndex(info, transform.Position.xyz);
 	{
 		vec3 albedo = transform.Albedo;
-		// 1<<11=2048 1<<10=1024 1<<9=512 1<<5=32
-		// r=9,g=9,b=9,count=5
-		uint packd_albedo = uint(albedo.r*64)<<23 | uint(albedo.g*64)<<14 | uint(albedo.b*64)<<5 | 1;
+		uint packd_albedo = packRGB(albedo);
 		imageAtomicAdd(t_voxel_albedo, index, packd_albedo);
 	}
 

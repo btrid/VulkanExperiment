@@ -1,8 +1,6 @@
-#version 450
-
-#extension GL_GOOGLE_cpp_style_line_directive : require
-
-//#include <btrlib/Voxelize/Voxelize.glsl>
+#version 460
+#extension GL_GOOGLE_include_directive : require
+//#include "btrlib/Voxelize/Voxelize.glsl"
 
 layout(location=1)in Vertex{
 	vec3 albedo;

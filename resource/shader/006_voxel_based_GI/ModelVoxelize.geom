@@ -1,15 +1,14 @@
-#version 450
+#version 460
+#extension GL_GOOGLE_include_directive : require
 
-#extension GL_GOOGLE_cpp_style_line_directive : require
-
-#include <btrlib/ConvertDimension.glsl>
-#include <btrlib/Shape.glsl>
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Shape.glsl"
 
 #define USE_VOXEL 0
-#include <btrlib/Voxelize/Voxelize.glsl>
+#include "Voxelize.glsl"
 #define USE_VOXELIZE 1
 #define SETPOINT_VOXEL_MODEL 2
-#include </ModelVoxelize.glsl>
+#include "ModelVoxelize.glsl"
 
 layout(triangles) in;
 layout(triangle_strip, max_vertices = 4) out;

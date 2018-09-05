@@ -1,14 +1,13 @@
-#version 450
+#version 460
+#extension GL_GOOGLE_include_directive : require
 
-#extension GL_GOOGLE_cpp_style_line_directive : require
-
-#include <btrlib/ConvertDimension.glsl>
+#include "btrlib/ConvertDimension.glsl"
 
 #define USE_VOXEL 0
-#include <btrlib/Voxelize/Voxelize.glsl>
+#include "Voxelize.glsl"
 
 #define SETPOINT_CAMERA 1
-#include <btrlib/Camera.glsl>
+#include "btrlib/Camera.glsl"
 
 layout(location=0)out gl_PerVertex
 {
@@ -53,7 +52,7 @@ void main()
 	if(dot(value.xyz, value.xyz) >= 0.0003)
 	{
 		vec3 size = u_voxel_info.u_cell_size.xyz*(1<<mipmap);
-		Out.albedo = value.xyz;
+		Out.albedo = vec3(1.);
 		vec3 vertex = box[gl_VertexIndex]*0.3;
 		gl_Position = u_camera[0].u_projection * u_camera[0].u_view * vec4((vertex+vec3(index))*size + size*0.5 + u_voxel_info.u_area_min.xyz, 1.0);
 	}

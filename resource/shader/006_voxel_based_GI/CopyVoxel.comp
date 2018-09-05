@@ -1,0 +1,18 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_VOXEL 0
+#include "Voxelize.glsl"
+
+#define USE_VOXELIZE 1
+#include "ModelVoxelize.glsl"
+
+layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+
+void main()
+{
+	uint packed_value = imageLoad(t_voxel_albedo, ivec3(gl_GlobalInvocationID)).r;
+	vec3 value = unpackRGB(packed_value);
+	imageStore(t_voxel_image[0], ivec3(gl_GlobalInvocationID), vec4(value, 1.));
+}

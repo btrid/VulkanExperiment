@@ -3,7 +3,7 @@
 #include <btrlib/Context.h>
 #include <006_voxel_based_GI/VoxelPipeline.h>
 
-struct ModelVoxelize : public Voxelize
+struct ModelVoxelize
 {
 	struct Resource
 	{
@@ -78,6 +78,7 @@ struct ModelVoxelize : public Voxelize
 		PIPELINE_NUM,
 	};
 
+	std::shared_ptr<VoxelContext> m_voxel_context;
 	vk::UniqueRenderPass m_make_voxel_pass;
 	vk::UniqueFramebuffer m_make_voxel_framebuffer;
 
@@ -102,8 +103,9 @@ struct ModelVoxelize : public Voxelize
 	vk::UniqueImageView m_voxel_imageview;
 	vk::UniqueDeviceMemory m_voxel_imagememory;
 
-	void setup(std::shared_ptr<btr::Context>& context, VoxelPipeline const * const parent)
+	ModelVoxelize(std::shared_ptr<btr::Context>& context, std::shared_ptr<VoxelContext>& voxel_context)
 	{
+		m_voxel_context = voxel_context;
 		auto& gpu = context->m_gpu;
 		auto& device = gpu.getDevice();
 
@@ -121,7 +123,7 @@ struct ModelVoxelize : public Voxelize
 			image_info.usage = vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eTransferDst;
 			image_info.sharingMode = vk::SharingMode::eExclusive;
 			image_info.initialLayout = vk::ImageLayout::eUndefined;
-			image_info.extent = { parent->m_voxelize_info_cpu.u_cell_num.x, parent->m_voxelize_info_cpu.u_cell_num.y, parent->m_voxelize_info_cpu.u_cell_num.z };
+			image_info.extent = { voxel_context->m_voxelize_info_cpu.u_cell_num.x, voxel_context->m_voxelize_info_cpu.u_cell_num.y, voxel_context->m_voxelize_info_cpu.u_cell_num.z };
 			auto image = device->createImageUnique(image_info);
 
 			vk::MemoryRequirements memory_request = device->getImageMemoryRequirements(image.get());
@@ -206,8 +208,8 @@ struct ModelVoxelize : public Voxelize
 				framebuffer_info.setRenderPass(m_make_voxel_pass.get());
 				framebuffer_info.setAttachmentCount(0);
 				framebuffer_info.setPAttachments(nullptr);
-				framebuffer_info.setWidth(parent->getVoxelInfo().u_cell_num.x);
-				framebuffer_info.setHeight(parent->getVoxelInfo().u_cell_num.z);
+				framebuffer_info.setWidth(voxel_context->getVoxelInfo().u_cell_num.x);
+				framebuffer_info.setHeight(voxel_context->getVoxelInfo().u_cell_num.z);
 				framebuffer_info.setLayers(3);
 				m_make_voxel_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
 			}
@@ -228,7 +230,7 @@ struct ModelVoxelize : public Voxelize
 			};
 			static_assert(array_length(shader_info) == SHADER_NUM, "not equal shader num");
 
-			std::string path = btr::getResourceAppPath() + "shader\\binary\\";
+			std::string path = btr::getResourceShaderPath() + "../006_voxel_based_GI/binary/";
 			for (size_t i = 0; i < SHADER_NUM; i++) {
 				m_shader_list[i] = std::move(loadShaderUnique(device.getHandle(), path + shader_info[i].name));
 				m_stage_info[i].setStage(shader_info[i].stage);
@@ -306,7 +308,7 @@ struct ModelVoxelize : public Voxelize
 		{
 			{
 				vk::DescriptorSetLayout layouts[] = {
-					parent->getDescriptorSetLayout(VoxelPipeline::DESCRIPTOR_SET_LAYOUT_VOXEL),
+					voxel_context->getDescriptorSetLayout(),
 					m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_VOXEL].get(),
 					m_model_descriptor_set_layout.get()
 				};
@@ -318,7 +320,7 @@ struct ModelVoxelize : public Voxelize
 			}
 			{
 				vk::DescriptorSetLayout layouts[] = {
-					parent->getDescriptorSetLayout(VoxelPipeline::DESCRIPTOR_SET_LAYOUT_VOXEL),
+					voxel_context->getDescriptorSetLayout(),
 					m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_VOXEL].get(),
 				};
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
@@ -349,9 +351,9 @@ struct ModelVoxelize : public Voxelize
 
 			// viewport
 			vk::Extent3D size;
-			size.setWidth(parent->getVoxelInfo().u_cell_num.x);
-			size.setHeight(parent->getVoxelInfo().u_cell_num.y);
-			size.setDepth(parent->getVoxelInfo().u_cell_num.z);
+			size.setWidth(voxel_context->getVoxelInfo().u_cell_num.x);
+			size.setHeight(voxel_context->getVoxelInfo().u_cell_num.y);
+			size.setDepth(voxel_context->getVoxelInfo().u_cell_num.z);
 			vk::Viewport viewports[] = {
 				vk::Viewport(0.f, 0.f, (float)size.depth, (float)size.height, 0.f, 1.f),
 				vk::Viewport(0.f, 0.f, (float)size.width, (float)size.depth, 0.f, 1.f),
@@ -457,7 +459,7 @@ struct ModelVoxelize : public Voxelize
 
 	}
 
-	void draw(std::shared_ptr<btr::Context>& context, VoxelPipeline const * const parent, vk::CommandBuffer cmd)
+	void execute(vk::CommandBuffer cmd)
 	{
 		vk::ImageSubresourceRange range;
 		range.setLayerCount(1);
@@ -480,7 +482,6 @@ struct ModelVoxelize : public Voxelize
 
 			vk::ClearColorValue clear_value;
 			clear_value.setUint32(std::array<uint32_t, 4>{0u});
-//			clear_value.setUint32(std::array<uint32_t, 4>{0xFFFFFFFFu});
 			cmd.clearColorImage(m_voxel_image.get(), vk::ImageLayout::eTransferDstOptimal, clear_value, range);
 		}
 
@@ -501,13 +502,13 @@ struct ModelVoxelize : public Voxelize
 			vk::RenderPassBeginInfo begin_render_info;
 			begin_render_info.setFramebuffer(m_make_voxel_framebuffer.get());
 			begin_render_info.setRenderPass(m_make_voxel_pass.get());
-			begin_render_info.setRenderArea(vk::Rect2D({}, { parent->getVoxelInfo().u_cell_num.x, parent->getVoxelInfo().u_cell_num.z }));
+			begin_render_info.setRenderArea(vk::Rect2D({}, { m_voxel_context->getVoxelInfo().u_cell_num.x, m_voxel_context->getVoxelInfo().u_cell_num.z }));
 
 			cmd.beginRenderPass(begin_render_info, vk::SubpassContents::eInline);
 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_MAKE_VOXEL].get());
 
 			std::vector<vk::DescriptorSet> descriptor_sets = {
-				parent->getDescriptorSet(VoxelPipeline::DESCRIPTOR_SET_VOXEL),
+				m_voxel_context->getDescriptorSet(),
 				m_descriptor_set[DESCRIPTOR_SET_VOXEL].get(),
 			};
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_MAKE_VOXEL].get(), 0, descriptor_sets, {});
@@ -540,12 +541,12 @@ struct ModelVoxelize : public Voxelize
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COPY_VOXEL].get());
 			std::vector<vk::DescriptorSet> descriptor_sets = {
-				parent->getDescriptorSet(VoxelPipeline::DESCRIPTOR_SET_VOXEL),
+				m_voxel_context->getDescriptorSet(),
 				m_descriptor_set[DESCRIPTOR_SET_VOXEL].get(),
 			};
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_COPY_VOXEL].get(), 0, descriptor_sets, {});
 
-			auto group = parent->m_voxelize_info_cpu.u_cell_num;
+			auto group = m_voxel_context->m_voxelize_info_cpu.u_cell_num;
 			cmd.dispatch(group.x, group.y, group.z);
 		}
 

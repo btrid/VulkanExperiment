@@ -31,11 +31,7 @@
 #include <006_voxel_based_GI/VoxelPipeline.h>
 #include <006_voxel_based_GI/ModelVoxelize.h>
 
-#pragma comment(lib, "btrlib.lib")
-#pragma comment(lib, "applib.lib")
-//#pragma comment(lib, "FreeImage.lib")
 #pragma comment(lib, "vulkan-1.lib")
-//#pragma comment(lib, "imgui.lib")
 
 
 int main()
@@ -63,14 +59,13 @@ int main()
 	ClearPipeline clear_render_target(context, app.m_window->getRenderTarget());
 	PresentPipeline present_pipeline(context, app.m_window->getRenderTarget(), context->m_window->getSwapchainPtr());
 
-
-	VoxelPipeline voxelize_pipeline;
 	VoxelInfo info;
 	info.u_cell_num = uvec4(64, 16, 64, 1);
 	info.u_cell_size = (info.u_area_max - info.u_area_min) / vec4(info.u_cell_num);
-	voxelize_pipeline.setup(context, app.m_window->getRenderTarget(), info);
+	std::shared_ptr<VoxelContext> vx_context = std::make_shared<VoxelContext>(context, info);
+	VoxelPipeline voxelize_pipeline(context, vx_context, app.m_window->getRenderTarget());
+	ModelVoxelize model_voxelize(context, vx_context);
 	{
-		auto model_voxelize = voxelize_pipeline.createPipeline<ModelVoxelize>(context);
 		auto setup_cmd = context->m_cmd_pool->allocCmdTempolary(0);
 		{
 			std::vector<glm::vec3> v;
@@ -90,7 +85,7 @@ int main()
 			model.m_material[0].albedo = glm::vec4(1.f, 0.f, 0.f, 1.f);
 			model.m_material[0].emission = glm::vec4(0.f, 0.f, 0.f, 1.f);
 
-			model_voxelize->addModel(context, setup_cmd, model);
+			model_voxelize.addModel(context, setup_cmd, model);
 		}
 		{
 			std::vector<glm::vec3> v;
@@ -118,7 +113,7 @@ int main()
 			model.m_material[4].albedo = glm::vec4(1.f, 1.f, 1.0f, 1.f);
 			model.m_material[5].albedo = glm::vec4(1.f, 0.f, 0.4f, 1.f);
 
-			model_voxelize->addModel(context, setup_cmd, model);
+			model_voxelize.addModel(context, setup_cmd, model);
 		}
 
 	}
@@ -130,18 +125,10 @@ int main()
 
 		app.preUpdate();
 		{
-			{
-// 				DrawCommand dcmd;
-// 				dcmd.world = glm::scale(vec3(200.f));
-// 				DrawHelper::Order().drawOrder(DrawHelper::SPHERE, dcmd);
-			}
-
 			enum
 			{
 				cmd_render_clear,
-				cmd_voxel_make_bv,
-				cmd_voxel_make_bvh,
-				cmd_voxel_draw,
+				cmd_voxelize,
 				cmd_render_present,
 				cmd_num
 			};
@@ -153,9 +140,13 @@ int main()
 				job.mJob.emplace_back(
 					[&]()
 				{
-					cmds[cmd_voxel_make_bv] = voxelize_pipeline.make(context);
-					cmds[cmd_voxel_make_bvh] = voxelize_pipeline.makeHierarchy(context);
-					cmds[cmd_voxel_draw] = voxelize_pipeline.draw(context);
+					auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
+					voxelize_pipeline.execute(cmd);
+					model_voxelize.execute(cmd);
+					voxelize_pipeline.executeMakeHierarchy(cmd);
+					voxelize_pipeline.executeDraw(cmd);
+					cmd.end();
+					cmds[cmd_voxelize] = cmd;
 
 					cmds[cmd_render_clear] = clear_render_target.execute();
 					cmds[cmd_render_present] = present_pipeline.execute();
