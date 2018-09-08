@@ -27,7 +27,7 @@ void main()
 	uvec3 bv_index3d = uvec3(transform.Position.xyz / u_pm_info.num0.xyz);
 	uint bv_index1d = convert3DTo1D(bv_index3d, u_pm_info.num0.xyz);
 	uint t_index = atomicAdd(b_triangle_count.x, 1);
-	uint old = atomicExchange(bTriangleLLHead[bv_index1d], t_index);
+	uint old = atomicExchange(b_triangle_LL_head[bv_index1d], t_index);
 
 	TriangleLL t;
 	t.next = old;
@@ -37,5 +37,5 @@ void main()
 	t.index[1] = transform.VertexID[1];
 	t.index[2] = transform.VertexID[2];
 
-	bTriangleLL[t_index] = t;
+	b_triangle_LL[t_index] = t;
 }

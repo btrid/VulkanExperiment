@@ -275,8 +275,8 @@ struct PhotonMapping
 		b_element = context->m_storage_memory.allocateMemory<uvec3>({ 10000, {} });
 		b_material = context->m_storage_memory.allocateMemory<Material>({ 100, {} });
 		b_triangle_count = context->m_storage_memory.allocateMemory<uvec4>({ 1, {} });
-		bTriangleLLHead = context->m_storage_memory.allocateMemory<uint32_t>({ info.num0.w, {} });
-		bTriangleLL = context->m_storage_memory.allocateMemory<TriangleLL>({ 10000, {} });
+		b_triangle_LL_head = context->m_storage_memory.allocateMemory<uint32_t>({ info.num0.w, {} });
+		b_triangle_LL = context->m_storage_memory.allocateMemory<TriangleLL>({ 10000, {} });
 		b_triangle_hierarchy = context->m_storage_memory.allocateMemory<uint64_t>({ info.num0.w, {} });
 		bPhoton = context->m_storage_memory.allocateMemory<Photon>({ 100000, {} });
 		b_photon_counter = context->m_storage_memory.allocateMemory<uvec4>({ 1, {} });
@@ -308,8 +308,8 @@ struct PhotonMapping
 			};
 			vk::DescriptorBufferInfo triangles[] = {
 				b_triangle_count.getInfo(),
-				bTriangleLLHead.getInfo(),
-				bTriangleLL.getInfo(),
+				b_triangle_LL_head.getInfo(),
+				b_triangle_LL.getInfo(),
 				b_triangle_hierarchy.getInfo(),
 			};
 			vk::DescriptorBufferInfo photons[] = {
@@ -354,14 +354,14 @@ struct PhotonMapping
 		{
 			vk::BufferMemoryBarrier to_write[] = {
 				b_triangle_count.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
-				bTriangleLLHead.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
+				b_triangle_LL_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
 				b_photon_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {},
 				0, nullptr, array_length(to_write), to_write, 0, nullptr);
 
 			cmd.fillBuffer(b_triangle_count.getInfo().buffer, b_triangle_count.getInfo().offset, b_triangle_count.getInfo().range, 0);
-			cmd.fillBuffer(bTriangleLLHead.getInfo().buffer, bTriangleLLHead.getInfo().offset, bTriangleLLHead.getInfo().range, -1);
+			cmd.fillBuffer(b_triangle_LL_head.getInfo().buffer, b_triangle_LL_head.getInfo().offset, b_triangle_LL_head.getInfo().range, -1);
 			cmd.fillBuffer(b_photon_counter.getInfo().buffer, b_photon_counter.getInfo().offset, b_photon_counter.getInfo().range, 0);
 
 		}
@@ -370,7 +370,7 @@ struct PhotonMapping
 			// Make Bounding Volume
 			vk::BufferMemoryBarrier to_read[] = {
 				b_triangle_count.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
-				bTriangleLLHead.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+				b_triangle_LL_head.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
@@ -396,8 +396,8 @@ struct PhotonMapping
 	btr::BufferMemoryEx<uvec3> b_element;
 	btr::BufferMemoryEx<Material> b_material;
 	btr::BufferMemoryEx<uvec4> b_triangle_count;
-	btr::BufferMemoryEx<uint32_t> bTriangleLLHead;
-	btr::BufferMemoryEx<TriangleLL> bTriangleLL;
+	btr::BufferMemoryEx<uint32_t> b_triangle_LL_head;
+	btr::BufferMemoryEx<TriangleLL> b_triangle_LL;
 	btr::BufferMemoryEx<uint64_t> b_triangle_hierarchy;
 	btr::BufferMemoryEx<Photon> bPhoton;
 	btr::BufferMemoryEx<uvec4> b_photon_counter;

@@ -121,22 +121,17 @@ struct VoxelContext_Old
 
 		// resource setup
 		{
-			btr::BufferMemoryDescriptor desc;
-			desc.size = sizeof(VoxelInfo);
-			m_voxel_info = context->m_uniform_memory.allocateMemory(desc);
+			m_voxel_info = context->m_uniform_memory.allocateMemory<VoxelInfo>({ 1, {} });
+			auto staging = context->m_staging_memory.allocateMemory<VoxelInfo>({ 1, btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT });
 
-			desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
-			auto staging = context->m_staging_memory.allocateMemory(desc);
-
-			*staging.getMappedPtr<VoxelInfo>() = m_voxelize_info_cpu;
+			*staging.getMappedPtr() = m_voxelize_info_cpu;
 
 			vk::BufferCopy copy;
 			copy.setSrcOffset(staging.getInfo().offset);
 			copy.setDstOffset(m_voxel_info.getInfo().offset);
-			copy.setSize(desc.size);
+			copy.setSize(staging.getInfo().range);
 			cmd.copyBuffer(staging.getInfo().buffer, m_voxel_info.getInfo().buffer, copy);
 		}
-
 
 		{
 			vk::ImageCreateInfo image_info;
@@ -311,7 +306,8 @@ struct VoxelContext_Old
 	vk::UniqueDescriptorSet m_descriptor_set;
 
 	VoxelInfo m_voxelize_info_cpu;
-	btr::BufferMemory m_voxel_info;
+	btr::BufferMemoryEx<VoxelInfo> m_voxel_info;
+
 
 	vk::UniqueImage m_voxel_hierarchy_image;
 	vk::UniqueDeviceMemory m_voxel_hierarchy_imagememory;

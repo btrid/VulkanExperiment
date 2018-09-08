@@ -40,7 +40,7 @@ struct Material
 
 struct DrawCommand// : public DrawElementsIndirectCommand
 {
-	uint count;
+	uint indexCount;
 	uint instanceCount;
 	uint firstIndex;
 	uint baseVertex;
@@ -109,10 +109,10 @@ layout(set=USE_PM, binding=20, std430) restrict buffer TriangleCounter{
 	uvec4 b_triangle_count;
 };
 layout(set=USE_PM, binding=21, std430) restrict buffer TriangleLLHeadBuffer{
-	uint bTriangleLLHead[];
+	uint b_triangle_LL_head[];
 };
 layout(set=USE_PM, binding=22, std430) restrict buffer TriangleLLBuffer{
-	TriangleLL bTriangleLL[];
+	TriangleLL b_triangle_LL[];
 };
 layout(set=USE_PM, binding=23, std430) restrict buffer TriangleHierarchyBuffer{
 	uint64_t b_triangle_hierarchy[];
@@ -236,6 +236,46 @@ vec3 calcDir(in vec3 n, in float v)
 	dir = normalize(dir);
 
 	return dir;
+}
+
+uint morton3D(in uvec3 n)
+{
+	n = (n * 0x00010001u) & 0xFF0000FFu;
+	n = (n * 0x00000101u) & 0x0F00F00Fu;
+	n = (n * 0x00000011u) & 0xC30C30C3u;
+	n = (n * 0x00000005u) & 0x49249249u;
+//	n = (n ^ (n << 16)) & 0xff0000ff;
+//	n = (n ^ (n << 8)) & 0x0300f00f;
+//	n = (n ^ (n << 4)) & 0x030c30c3;
+//	n = (n ^ (n << 2)) & 0x09249249;
+
+    n <<= uvec3(2, 1, 0);
+	return n.x|n.y|n.z;
+}
+
+uint getMortonKey(in vec3 min_p, in vec3 max_p)
+{
+	uint min_morton = morton3D(min_p);
+	uint max_morton = morton3D(max_p);
+
+	uint difference = max_morton ^ min_morton;
+	uint depth = 0;
+	for (uint i = 0; i<u_pm_info.depth; i++)
+	{
+		uint check = (difference >> (i * 3)) & 0x7;
+		if (check != 0){
+			depth = i+1;
+		}
+	}
+
+	uint key = max_morton >> (depth * 3);
+//	uint offset = (offset_[u_pm_info.depth - depth]) / 7;
+	uint offset = uint(pow(8, u_pm_info.depth - 1 - depth));
+	offset = (offset - 1) / 3;
+
+	key += offset;
+
+	return key;
 }
 
 #endif // PM_GLSL_
