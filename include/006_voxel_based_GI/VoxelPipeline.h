@@ -3,7 +3,6 @@
 #include <btrlib/Define.h>
 #include <btrlib/Context.h>
 #include <applib/App.h>
-#include <applib/sCameraManager.h>
 
 struct VoxelInfo
 {
@@ -30,6 +29,95 @@ struct VoxelContext
 		auto& device = context->m_device;
 
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+		// resource setup
+		{
+			m_voxel_info = context->m_uniform_memory.allocateMemory<VoxelInfo>({ 1, {} });
+			auto staging = context->m_staging_memory.allocateMemory<VoxelInfo>({ 1, btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT });
+
+			*staging.getMappedPtr() = m_voxelize_info_cpu;
+
+			vk::BufferCopy copy;
+			copy.setSrcOffset(staging.getInfo().offset);
+			copy.setDstOffset(m_voxel_info.getInfo().offset);
+			copy.setSize(staging.getInfo().range);
+			cmd.copyBuffer(staging.getInfo().buffer, m_voxel_info.getInfo().buffer, copy);
+		}
+
+		{
+			// Create descriptor set layout
+			vk::DescriptorSetLayoutBinding bindings[] =
+			{
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute)
+				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+				.setDescriptorCount(1)
+				.setBinding(0),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute)
+				.setDescriptorType(vk::DescriptorType::eStorageImage)
+				.setDescriptorCount(8)
+				.setBinding(1),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute)
+				.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+				.setDescriptorCount(1)
+				.setBinding(2),
+			};
+			vk::DescriptorSetLayoutCreateInfo descriptor_layout_info;
+			descriptor_layout_info.setBindingCount(array_length(bindings));
+			descriptor_layout_info.setPBindings(bindings);
+			m_descriptor_set_layout = device->createDescriptorSetLayoutUnique(descriptor_layout_info);
+		}
+
+		// descriptor set
+		{
+			vk::DescriptorSetLayout layouts[] = {
+				m_descriptor_set_layout.get(),
+			};
+			vk::DescriptorSetAllocateInfo alloc_info;
+			alloc_info.descriptorPool = context->m_descriptor_pool.get();
+			alloc_info.descriptorSetCount = array_length(layouts);
+			alloc_info.pSetLayouts = layouts;
+			m_descriptor_set = std::move(device->allocateDescriptorSetsUnique(alloc_info)[0]);
+
+			std::vector<vk::DescriptorBufferInfo> uniforms = {
+				m_voxel_info.getInfo(),
+			};
+
+			std::vector<vk::WriteDescriptorSet> write_descriptor_set =
+			{
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+				.setDescriptorCount(uniforms.size())
+				.setPBufferInfo(uniforms.data())
+				.setDstBinding(0)
+				.setDstSet(m_descriptor_set.get()),
+			};
+			device->updateDescriptorSets(write_descriptor_set, {});
+		}
+	}
+	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
+	vk::UniqueDescriptorSet m_descriptor_set;
+
+	VoxelInfo m_voxelize_info_cpu;
+	btr::BufferMemoryEx<VoxelInfo> m_voxel_info;
+	btr::BufferMemoryEx<uint32_t> m_albedo;
+	btr::BufferMemoryEx<uint32_t> m_normal;
+
+	const VoxelInfo& getVoxelInfo()const { return m_voxelize_info_cpu; }
+	vk::DescriptorSetLayout getDescriptorSetLayout()const { return m_descriptor_set_layout.get(); }
+	vk::DescriptorSet getDescriptorSet()const { return m_descriptor_set.get(); }
+
+};
+struct VoxelContext_Old
+{
+	VoxelContext_Old(std::shared_ptr<btr::Context>& context, const VoxelInfo& info)
+	{
+		m_voxelize_info_cpu = info;
+		int mipnum = 5;
+		auto& device = context->m_device;
+
+		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
 		// resource setup
 		{
@@ -43,10 +131,10 @@ struct VoxelContext
 			*staging.getMappedPtr<VoxelInfo>() = m_voxelize_info_cpu;
 
 			vk::BufferCopy copy;
-			copy.setSrcOffset(staging.getBufferInfo().offset);
-			copy.setDstOffset(m_voxel_info.getBufferInfo().offset);
+			copy.setSrcOffset(staging.getInfo().offset);
+			copy.setDstOffset(m_voxel_info.getInfo().offset);
 			copy.setSize(desc.size);
-			cmd.copyBuffer(staging.getBufferInfo().buffer, m_voxel_info.getBufferInfo().buffer, copy);
+			cmd.copyBuffer(staging.getInfo().buffer, m_voxel_info.getInfo().buffer, copy);
 		}
 
 
@@ -173,7 +261,7 @@ struct VoxelContext
 			m_descriptor_set = std::move(device->allocateDescriptorSetsUnique(alloc_info)[0]);
 
 			std::vector<vk::DescriptorBufferInfo> uniforms = {
-				m_voxel_info.getBufferInfo(),
+				m_voxel_info.getInfo(),
 			};
 
 			auto param = vk::DescriptorImageInfo().setImageLayout(vk::ImageLayout::eGeneral).setImageView(m_voxel_hierarchy_imageview[0].get());
@@ -241,31 +329,23 @@ struct VoxelPipeline
 {
 	enum SHADER
 	{
-		SHADER_DRAW_VOXEL_VERTEX,
-		SHADER_DRAW_VOXEL_FRAGMENT,
 		SHADER_MAKE_VOXEL_HIERARCHY_COMPUTE,
 		SHADER_NUM,
 	};
 
 	enum PipelineLayout
 	{
-		PIPELINE_LAYOUT_DRAW_VOXEL,
 		PIPELINE_LAYOUT_MAKE_HIERARCHY_VOXEL,
 		PIPELINE_LAYOUT_NUM,
 	};
 	enum Pipeline
 	{
-		PIPELINE_DRAW_VOXEL,
 		PIPELINE_MAKE_HIERARCHY_VOXEL,
 		PIPELINE_NUM,
 	};
 
 	std::shared_ptr<btr::Context> m_context;
-	std::shared_ptr<VoxelContext> m_vx_context;
-	std::shared_ptr<RenderTarget> m_render_target;
-
-	vk::UniqueRenderPass m_render_pass;
-	vk::UniqueFramebuffer m_framebuffer;
+	std::shared_ptr<VoxelContext_Old> m_vx_context;
 
 	std::array<vk::UniqueShaderModule, SHADER_NUM> m_shader_list;
 	std::array<vk::PipelineShaderStageCreateInfo, SHADER_NUM> m_stage_info;
@@ -273,66 +353,15 @@ struct VoxelPipeline
 	std::array<vk::UniquePipeline, PIPELINE_NUM> m_pipeline;
 	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM> m_pipeline_layout;
 
-	VoxelPipeline(std::shared_ptr<btr::Context>& context, std::shared_ptr<VoxelContext>& vx_context, const std::shared_ptr<RenderTarget>& render_target)
+	VoxelPipeline(std::shared_ptr<btr::Context>& context, std::shared_ptr<VoxelContext_Old>& vx_context)
 	{
 		m_context = context;
 		m_vx_context = vx_context;
-		m_render_target = render_target;
 
 		auto& gpu = context->m_gpu;
 		auto& device = gpu.getDevice();
 
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-
-		// レンダーパス
-		{
-			// sub pass
-			vk::AttachmentReference color_ref[] =
-			{
-				vk::AttachmentReference()
-				.setAttachment(0)
-				.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
-			};
-			vk::SubpassDescription subpass;
-			subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
-			subpass.setInputAttachmentCount(0);
-			subpass.setPInputAttachments(nullptr);
-			subpass.setColorAttachmentCount(array_length(color_ref));
-			subpass.setPColorAttachments(color_ref);
-			vk::AttachmentDescription attach_description[] =
-			{
-				// color1
-				vk::AttachmentDescription()
-				.setFormat(render_target->m_info.format)
-				.setSamples(vk::SampleCountFlagBits::e1)
-				.setLoadOp(vk::AttachmentLoadOp::eLoad)
-				.setStoreOp(vk::AttachmentStoreOp::eStore)
-				.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
-				.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
-			};
-			vk::RenderPassCreateInfo renderpass_info;
-			renderpass_info.setAttachmentCount(array_length(attach_description));
-			renderpass_info.setPAttachments(attach_description);
-			renderpass_info.setSubpassCount(1);
-			renderpass_info.setPSubpasses(&subpass);
-
-			m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
-
-			{
-				vk::ImageView view[] = {
-					render_target->m_view,
-				};
-				vk::FramebufferCreateInfo framebuffer_info;
-				framebuffer_info.setRenderPass(m_render_pass.get());
-				framebuffer_info.setAttachmentCount(array_length(view));
-				framebuffer_info.setPAttachments(view);
-				framebuffer_info.setWidth(render_target->m_info.extent.width);
-				framebuffer_info.setHeight(render_target->m_info.extent.height);
-				framebuffer_info.setLayers(1);
-				m_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
-			}
-		}
-
 
 		// setup shader
 		{
@@ -342,8 +371,6 @@ struct VoxelPipeline
 				vk::ShaderStageFlagBits stage;
 			}shader_info[] =
 			{
-				{ "DrawVoxel.vert.spv",vk::ShaderStageFlagBits::eVertex },
-				{ "DrawVoxel.frag.spv",vk::ShaderStageFlagBits::eFragment },
 				{ "MakeVoxelHierarchy.comp.spv",vk::ShaderStageFlagBits::eCompute },
 			};
 			static_assert(array_length(shader_info) == SHADER_NUM, "not equal shader num");
@@ -359,23 +386,6 @@ struct VoxelPipeline
 
 		// pipeline layout
 		{
-			{
-				vk::DescriptorSetLayout layouts[] = {
-					m_vx_context->getDescriptorSetLayout(),
-					sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
-				};
-				vk::PushConstantRange constants[] = {
-					vk::PushConstantRange()
-					.setStageFlags(vk::ShaderStageFlagBits::eVertex)
-					.setSize(4)
-				};
-				vk::PipelineLayoutCreateInfo pipeline_layout_info;
-				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
-				pipeline_layout_info.setPSetLayouts(layouts);
-				pipeline_layout_info.setPushConstantRangeCount(array_length(constants));
-				pipeline_layout_info.setPPushConstantRanges(constants);
-				m_pipeline_layout[PIPELINE_LAYOUT_DRAW_VOXEL] = device->createPipelineLayoutUnique(pipeline_layout_info);
-			}
 			{
 				vk::DescriptorSetLayout layouts[] = {
 					vx_context->getDescriptorSetLayout(),
@@ -408,83 +418,6 @@ struct VoxelPipeline
 				m_pipeline[PIPELINE_MAKE_HIERARCHY_VOXEL] = std::move(compute_pipeline[0]);
 
 			}
-
-			{
-				// assembly
-				vk::PipelineInputAssemblyStateCreateInfo assembly_info = vk::PipelineInputAssemblyStateCreateInfo()
-					.setPrimitiveRestartEnable(VK_FALSE)
-					.setTopology(vk::PrimitiveTopology::eTriangleStrip);
-
-				// viewport
-				vk::Viewport viewports[] = {
-					vk::Viewport(0.f, 0.f, (float)context->m_window->getClientSize().x, (float)context->m_window->getClientSize().y),
-				};
-				vk::Rect2D scissors[] = {
-					vk::Rect2D(vk::Offset2D(0, 0), context->m_window->getClientSize<vk::Extent2D>()),
-				};
-				vk::PipelineViewportStateCreateInfo viewport_info;
-				viewport_info.setViewportCount(array_length(viewports));
-				viewport_info.setPViewports(viewports);
-				viewport_info.setScissorCount(array_length(scissors));
-				viewport_info.setPScissors(scissors);
-
-				// ラスタライズ
-				vk::PipelineRasterizationStateCreateInfo rasterization_info;
-				rasterization_info.setPolygonMode(vk::PolygonMode::eFill);
-				rasterization_info.setCullMode(vk::CullModeFlagBits::eNone);
-				rasterization_info.setFrontFace(vk::FrontFace::eCounterClockwise);
-				rasterization_info.setLineWidth(1.f);
-
-				// サンプリング
-				vk::PipelineMultisampleStateCreateInfo sample_info;
-				sample_info.setRasterizationSamples(vk::SampleCountFlagBits::e1);
-
-				// デプスステンシル
-				vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
-				depth_stencil_info.setDepthTestEnable(VK_TRUE);
-				depth_stencil_info.setDepthWriteEnable(VK_TRUE);
-				depth_stencil_info.setDepthCompareOp(vk::CompareOp::eGreaterOrEqual);
-				depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
-				depth_stencil_info.setStencilTestEnable(VK_FALSE);
-
-				// ブレンド
-				vk::PipelineColorBlendAttachmentState blend_states[] = {
-					vk::PipelineColorBlendAttachmentState()
-					.setBlendEnable(VK_FALSE)
-					.setColorWriteMask(vk::ColorComponentFlagBits::eR
-						| vk::ColorComponentFlagBits::eG
-						| vk::ColorComponentFlagBits::eB
-						| vk::ColorComponentFlagBits::eA)
-				};
-				vk::PipelineColorBlendStateCreateInfo blend_info;
-				blend_info.setAttachmentCount(array_length(blend_states));
-				blend_info.setPAttachments(blend_states);
-
-				vk::PipelineVertexInputStateCreateInfo vertex_input_info;
-
-				vk::PipelineShaderStageCreateInfo stage_infos[] =
-				{
-					m_stage_info[SHADER_DRAW_VOXEL_VERTEX],
-					m_stage_info[SHADER_DRAW_VOXEL_FRAGMENT],
-				};
-				std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =
-				{
-					vk::GraphicsPipelineCreateInfo()
-					.setStageCount(array_length(stage_infos))
-					.setPStages(stage_infos)
-					.setPVertexInputState(&vertex_input_info)
-					.setPInputAssemblyState(&assembly_info)
-					.setPViewportState(&viewport_info)
-					.setPRasterizationState(&rasterization_info)
-					.setPMultisampleState(&sample_info)
-					.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_VOXEL].get())
-					.setRenderPass(m_render_pass.get())
-					.setPDepthStencilState(&depth_stencil_info)
-					.setPColorBlendState(&blend_info),
-				};
-				m_pipeline[PIPELINE_DRAW_VOXEL] = std::move(device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info)[0]);
-			}
-
 		}
 
 	}
@@ -548,46 +481,6 @@ struct VoxelPipeline
 			groups /= 2;
 			groups = glm::max(groups, uvec4(1));
 			cmd.dispatch(groups.x, groups.y, groups.z);
-		}
-	}
-
-	void executeDraw(vk::CommandBuffer cmd)
-	{
-		vk::ImageSubresourceRange range;
-		range.setLayerCount(1);
-		range.setLevelCount(5);
-		range.setAspectMask(vk::ImageAspectFlagBits::eColor);
-		range.setBaseArrayLayer(0);
-		range.setBaseMipLevel(0);
-		{
-			// draw voxel
-			{
-				vk::ImageMemoryBarrier to_read_barrier;
-				to_read_barrier.image = m_vx_context->m_voxel_hierarchy_image.get();
-				to_read_barrier.oldLayout = vk::ImageLayout::eGeneral;
-				to_read_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-				to_read_barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
-				to_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-				to_read_barrier.subresourceRange = range;
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eVertexShader, vk::DependencyFlags(), {}, {}, { to_read_barrier });
-			}
-			vk::RenderPassBeginInfo begin_render_info;
-			begin_render_info.setFramebuffer(m_framebuffer.get());
-			begin_render_info.setRenderPass(m_render_pass.get());
-			begin_render_info.setRenderArea(vk::Rect2D({}, m_context->m_window->getClientSize<vk::Extent2D>()));
-
-			cmd.beginRenderPass(begin_render_info, vk::SubpassContents::eInline);
-			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW_VOXEL].get());
-			std::vector<vk::DescriptorSet> descriptor_sets = {
-				m_vx_context->getDescriptorSet(),
-				sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA),
-			};
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_DRAW_VOXEL].get(), 0, descriptor_sets, {});
-			uint32_t miplevel = 0;
-			cmd.pushConstants<uint32_t>(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_VOXEL].get(), vk::ShaderStageFlagBits::eVertex, 0, miplevel);
-
-			cmd.draw(14, m_vx_context->m_voxelize_info_cpu.u_cell_num.x *m_vx_context->m_voxelize_info_cpu.u_cell_num.y*m_vx_context->m_voxelize_info_cpu.u_cell_num.z / (1<<(3*miplevel)), 0, 0);
-			cmd.endRenderPass();
 		}
 	}
 };

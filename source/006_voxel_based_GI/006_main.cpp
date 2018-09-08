@@ -30,6 +30,7 @@
 
 #include <006_voxel_based_GI/VoxelPipeline.h>
 #include <006_voxel_based_GI/ModelVoxelize.h>
+#include <006_voxel_based_GI/VoxelRender.h>
 
 #pragma comment(lib, "vulkan-1.lib")
 
@@ -62,9 +63,10 @@ int main()
 	VoxelInfo info;
 	info.u_cell_num = uvec4(64, 16, 64, 1);
 	info.u_cell_size = (info.u_area_max - info.u_area_min) / vec4(info.u_cell_num);
-	std::shared_ptr<VoxelContext> vx_context = std::make_shared<VoxelContext>(context, info);
-	VoxelPipeline voxelize_pipeline(context, vx_context, app.m_window->getRenderTarget());
+	std::shared_ptr<VoxelContext_Old> vx_context = std::make_shared<VoxelContext_Old>(context, info);
+	VoxelPipeline voxelize_pipeline(context, vx_context);
 	ModelVoxelize model_voxelize(context, vx_context);
+	VoxelRender voxel_render(context, vx_context, app.m_window->getRenderTarget());
 	{
 		auto setup_cmd = context->m_cmd_pool->allocCmdTempolary(0);
 		{
@@ -144,7 +146,7 @@ int main()
 					voxelize_pipeline.execute(cmd);
 					model_voxelize.execute(cmd);
 					voxelize_pipeline.executeMakeHierarchy(cmd);
-					voxelize_pipeline.executeDraw(cmd);
+					voxel_render.execute(cmd);
 					cmd.end();
 					cmds[cmd_voxelize] = cmd;
 

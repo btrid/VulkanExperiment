@@ -78,9 +78,7 @@ struct ModelVoxelize
 		PIPELINE_NUM,
 	};
 
-	std::shared_ptr<VoxelContext> m_voxel_context;
-	vk::UniqueRenderPass m_make_voxel_pass;
-	vk::UniqueFramebuffer m_make_voxel_framebuffer;
+	std::shared_ptr<VoxelContext_Old> m_voxel_context;
 
 	std::vector<std::shared_ptr<Resource>> m_model_list;
 
@@ -99,11 +97,13 @@ struct ModelVoxelize
 	vk::UniqueDescriptorPool m_model_descriptor_pool;
 
 
+	vk::UniqueRenderPass m_make_voxel_pass;
+	vk::UniqueFramebuffer m_make_voxel_framebuffer;
 	vk::UniqueImage m_voxel_image;
 	vk::UniqueImageView m_voxel_imageview;
 	vk::UniqueDeviceMemory m_voxel_imagememory;
 
-	ModelVoxelize(std::shared_ptr<btr::Context>& context, std::shared_ptr<VoxelContext>& voxel_context)
+	ModelVoxelize(std::shared_ptr<btr::Context>& context, std::shared_ptr<VoxelContext_Old>& voxel_context)
 	{
 		m_voxel_context = voxel_context;
 		auto& gpu = context->m_gpu;

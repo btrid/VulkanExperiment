@@ -185,6 +185,7 @@ struct PhotonMapping
 					"PM_MakeVoxel.geom.spv",
 					"PM_MakeVoxel.frag.spv",
 					"PhotonMapping.comp.spv",
+					"PhotonMapping.comp.spv",
 					"PhotonMappingBounce.comp.spv",
 					"PhotonRendering.comp.spv",
 				};
@@ -374,10 +375,13 @@ struct PhotonMapping
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Update].get());
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeBV].get());
 
-			auto num = app::calcDipatchGroups(uvec3(Particle_Num, 1, 1), uvec3(1024, 1, 1));
-			cmd.dispatch(num.x, num.y, num.z);
+// 			for (int i = 0; i < m_cmd.)
+// 			{
+// 			}
+// 			auto num = app::calcDipatchGroups(uvec3(Particle_Num, 1, 1), uvec3(1024, 1, 1));
+// 			cmd.dispatch(num.x, num.y, num.z);
 
 		}
 
@@ -385,6 +389,7 @@ struct PhotonMapping
 
 
 	}
+
 	btr::BufferMemoryEx<PMInfo> u_pm_info;
 	btr::BufferMemoryEx<DrawCommand> b_cmd;
 	btr::BufferMemoryEx<Vertex> b_vertex;
