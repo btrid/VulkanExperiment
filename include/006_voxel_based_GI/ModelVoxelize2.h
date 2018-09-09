@@ -3,7 +3,7 @@
 #include <btrlib/Context.h>
 #include <006_voxel_based_GI/VoxelPipeline.h>
 
-struct ModelVoxelize
+struct ModelVoxelize2
 {
 	struct Resource
 	{
@@ -18,25 +18,60 @@ struct ModelVoxelize
 		vk::UniqueDescriptorSet m_model_descriptor_set;
 	};
 
-
-	struct Vertex
-	{
-		glm::vec3 pos;
+	struct Vertex {
+		vec3 Position;
+		int32_t MaterialIndex;
+		vec2 m_texcoord;
+		vec2 m_texcoord1;
 	};
+
+	struct Material
+	{
+		vec4 	Albedo;
+		vec4 	Emissive;
+		float	m_diffuse;
+		float	m_specular; //!< åıëÚ
+		float	m_rough; //!< Ç¥ÇÁÇ¥ÇÁ
+		float	m_metalic;
+
+		uint32_t	is_emissive;
+		uint32_t	m_diffuse_tex;
+		uint32_t	m_ambient_tex;
+		uint32_t	m_specular_tex;
+		uint32_t	m_emissive_tex;
+
+	};
+
+	struct DrawCommand// : public DrawElementsIndirectCommand
+	{
+		uint32_t count;
+		uint32_t instanceCount;
+		uint32_t firstIndex;
+		uint32_t baseVertex;
+
+		uint32_t baseInstance;
+		uint32_t is_emissive;
+		uint32_t _p[2];
+
+		vec4 aabb_max;
+		vec4 aabb_min;
+	};
+
+	struct TriangleLL
+	{
+		uint32_t next;
+		uint32_t drawID;
+		uint32_t instanceID;
+		uint32_t _p;
+		uint32_t index[3];
+		uint32_t _p2;
+	};
+
 	struct Mesh
 	{
 		std::vector<Vertex> vertex;
-		std::vector<glm::uvec3> index;
+		std::vector<uvec3> index;
 		uint32_t m_material_index;
-	};
-	struct Material
-	{
-		vec4 albedo;
-		vec4 emission;
-	};
-	struct MeshInfo
-	{
-		uint32_t material_index;
 	};
 
 	struct Model
@@ -90,8 +125,6 @@ struct ModelVoxelize
 	std::array<vk::UniqueDescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
 	std::array<vk::UniqueDescriptorSet, DESCRIPTOR_SET_NUM> m_descriptor_set;
 
-	std::vector<vk::UniqueCommandBuffer> m_make_cmd;
-
 	// modelóp
 	vk::UniqueDescriptorSetLayout m_model_descriptor_set_layout;
 	vk::UniqueDescriptorPool m_model_descriptor_pool;
@@ -100,7 +133,7 @@ struct ModelVoxelize
 	vk::UniqueRenderPass m_make_voxel_pass;
 	vk::UniqueFramebuffer m_make_voxel_framebuffer;
 
-	ModelVoxelize(std::shared_ptr<btr::Context>& context, std::shared_ptr<VoxelContext_Old>& voxel_context)
+	ModelVoxelize2(std::shared_ptr<btr::Context>& context, std::shared_ptr<VoxelContext_Old>& voxel_context)
 	{
 		m_voxel_context = voxel_context;
 		auto& gpu = context->m_gpu;
@@ -390,8 +423,15 @@ struct ModelVoxelize
 		range.setAspectMask(vk::ImageAspectFlagBits::eColor);
 		range.setBaseArrayLayer(0);
 		range.setBaseMipLevel(0);
+		{
+			// clear
+			{
+			}
+		}
+
 
 		{
+
 			// make voxel
 			vk::RenderPassBeginInfo begin_render_info;
 			begin_render_info.setFramebuffer(m_make_voxel_framebuffer.get());
@@ -419,6 +459,23 @@ struct ModelVoxelize
 			}
 			cmd.endRenderPass();
 		}
+
+		{
+			// r32uiÇ…ç\ízÇµÇΩvoxelÇrgba32fÇ…ìWäJ
+			{
+			}
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PIPELINE_COPY_VOXEL].get());
+			std::vector<vk::DescriptorSet> descriptor_sets = {
+				m_voxel_context->getDescriptorSet(),
+				m_descriptor_set[DESCRIPTOR_SET_VOXEL].get(),
+			};
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PIPELINE_LAYOUT_COPY_VOXEL].get(), 0, descriptor_sets, {});
+
+			auto group = m_voxel_context->m_voxelize_info_cpu.u_cell_num;
+			cmd.dispatch(group.x, group.y, group.z);
+		}
+
 	}
 	void addModel(std::shared_ptr<btr::Context>& context, vk::CommandBuffer cmd, const Model& model)
 	{

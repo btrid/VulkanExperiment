@@ -15,7 +15,7 @@ struct GI2DFluid
 {
 	enum
 	{
-		Particle_Num = 102400,
+		Particle_Num = 1024,
 		Particle_Type_Num = 128,
 	};
 	enum Shader
@@ -76,10 +76,10 @@ struct GI2DFluid
 #if 1
 				for (int i = 0; i < Particle_Num; i++)
 				{
-#define area (20)
+#define area (400)
 					auto& p = pos[i];
-					p.x = 165 + std::rand() % area + (std::rand() % 10000) / 10000.f;
-					p.y = 145 + std::rand() % area + (std::rand() % 10000) / 10000.f;
+					p.x = 65 + std::rand() % area + (std::rand() % 10000) / 10000.f;
+					p.y = 45 + std::rand() % area + (std::rand() % 10000) / 10000.f;
 					p.z = p.x;
 					p.w = p.y;
 				}

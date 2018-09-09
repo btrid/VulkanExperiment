@@ -337,7 +337,7 @@ struct GI2DRadiosity
 	}
 	void execute(vk::CommandBuffer cmd)
 	{
-#if 0
+#if 1
 
 		{
 			{
