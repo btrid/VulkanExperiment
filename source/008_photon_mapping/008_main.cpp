@@ -39,7 +39,7 @@ struct PhotonMapping
 	{
 		Shader_MakeBV_VS,
 		Shader_MakeBV_GS,
-		Shader_MakeBV_PS,
+		Shader_MakeBV_FS,
 		Shader_Emit,
 		Shader_Bounce,
 		Shader_Render,
@@ -141,6 +141,13 @@ struct PhotonMapping
 
 	PhotonMapping(const std::shared_ptr<btr::Context>& context)
 	{
+		PMInfo info;
+		info.area_max = vec4(1000.f);
+		info.area_min = vec4(0.f);
+		info.num0 = uvec4(256);
+		info.num0.w = info.num0.x*info.num0.y*info.num0.z;
+		info.cell_size = (info.area_max - info.area_min) / info.cell_size;
+
 		{
 
 			{
@@ -184,7 +191,7 @@ struct PhotonMapping
 					"PM_MakeVoxel.vert.spv",
 					"PM_MakeVoxel.geom.spv",
 					"PM_MakeVoxel.frag.spv",
-					"PhotonMapping.comp.spv",
+//					"PhotonMapping.comp.spv",
 					"PhotonMapping.comp.spv",
 					"PhotonMappingBounce.comp.spv",
 					"PhotonRendering.comp.spv",
@@ -258,16 +265,105 @@ struct PhotonMapping
 
 			// graphics pipeline
 			{
+				// assembly
+				vk::PipelineInputAssemblyStateCreateInfo assembly_info = vk::PipelineInputAssemblyStateCreateInfo()
+					.setPrimitiveRestartEnable(VK_FALSE)
+					.setTopology(vk::PrimitiveTopology::eTriangleList);
+
+				// viewport
+				vk::Extent3D size;
+				size.setWidth(info.num0.x);
+				size.setHeight(info.num0.y);
+				size.setDepth(info.num0.z);
+				vk::Viewport viewports[] = {
+					vk::Viewport(0.f, 0.f, (float)size.depth, (float)size.height, 0.f, 1.f),
+					vk::Viewport(0.f, 0.f, (float)size.width, (float)size.depth, 0.f, 1.f),
+					vk::Viewport(0.f, 0.f, (float)size.width, (float)size.height, 0.f, 1.f),
+				};
+				std::vector<vk::Rect2D> scissor = {
+					vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(size.depth, size.height)),
+					vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(size.width, size.depth)),
+					vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(size.width, size.height)),
+				};
+				vk::PipelineViewportStateCreateInfo viewport_info;
+				viewport_info.setViewportCount(array_length(viewports));
+				viewport_info.setPViewports(viewports);
+				viewport_info.setScissorCount((uint32_t)scissor.size());
+				viewport_info.setPScissors(scissor.data());
+
+				// ラスタライズ
+				vk::PipelineRasterizationStateCreateInfo rasterization_info;
+				rasterization_info.setPolygonMode(vk::PolygonMode::eFill);
+				rasterization_info.setCullMode(vk::CullModeFlagBits::eNone);
+				rasterization_info.setFrontFace(vk::FrontFace::eCounterClockwise);
+				rasterization_info.setLineWidth(1.f);
+				// サンプリング
+				vk::PipelineMultisampleStateCreateInfo sample_info;
+				sample_info.setRasterizationSamples(vk::SampleCountFlagBits::e1);
+
+				// デプスステンシル
+				vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
+				depth_stencil_info.setDepthTestEnable(VK_FALSE);
+				depth_stencil_info.setDepthWriteEnable(VK_FALSE);
+				depth_stencil_info.setDepthCompareOp(vk::CompareOp::eGreaterOrEqual);
+				depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
+				depth_stencil_info.setStencilTestEnable(VK_FALSE);
+
+				// ブレンド
+				std::vector<vk::PipelineColorBlendAttachmentState> blend_state = {
+				};
+				vk::PipelineColorBlendStateCreateInfo blend_info;
+				blend_info.setAttachmentCount(blend_state.size());
+				blend_info.setPAttachments(blend_state.data());
+
+				std::vector<vk::VertexInputBindingDescription> vertex_input_binding =
+				{
+					vk::VertexInputBindingDescription()
+					.setBinding(0)
+					.setInputRate(vk::VertexInputRate::eVertex)
+					.setStride(sizeof(Vertex))
+				};
+
+				std::vector<vk::VertexInputAttributeDescription> vertex_input_attribute =
+				{
+					// pos
+					vk::VertexInputAttributeDescription()
+					.setBinding(0)
+					.setLocation(0)
+					.setFormat(vk::Format::eR32G32B32Sfloat)
+					.setOffset(0),
+				};
+				vk::PipelineVertexInputStateCreateInfo vertex_input_info;
+				vertex_input_info.setVertexBindingDescriptionCount((uint32_t)vertex_input_binding.size());
+				vertex_input_info.setPVertexBindingDescriptions(vertex_input_binding.data());
+				vertex_input_info.setVertexAttributeDescriptionCount((uint32_t)vertex_input_attribute.size());
+				vertex_input_info.setPVertexAttributeDescriptions(vertex_input_attribute.data());
+
+				std::array<vk::PipelineShaderStageCreateInfo, 3> stage_info =
+				{
+					vk::PipelineShaderStageCreateInfo({}, vk::ShaderStageFlagBits::eVertex, m_shader[Shader_MakeBV_VS].get(), "main"),
+					vk::PipelineShaderStageCreateInfo({}, vk::ShaderStageFlagBits::eVertex, m_shader[Shader_MakeBV_GS].get(), "main"),
+					vk::PipelineShaderStageCreateInfo({}, vk::ShaderStageFlagBits::eVertex, m_shader[Shader_MakeBV_FS].get(), "main"),
+				};
+				std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =
+				{
+					vk::GraphicsPipelineCreateInfo()
+					.setStageCount((uint32_t)stage_info.size())
+					.setPStages(stage_info.data())
+					.setPVertexInputState(&vertex_input_info)
+					.setPInputAssemblyState(&assembly_info)
+					.setPViewportState(&viewport_info)
+					.setPRasterizationState(&rasterization_info)
+					.setPMultisampleState(&sample_info)
+					.setLayout(m_pipeline_layout[Pipeline_MakeBV].get())
+					.setRenderPass(m_make_voxel_pass.get())
+					.setPDepthStencilState(&depth_stencil_info)
+					.setPColorBlendState(&blend_info),
+				};
+				m_pipeline[Pipeline_MakeBV] = std::move(device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info)[0]);
 
 			}
 		}
-
-		PMInfo info;
-		info.area_max = vec4(1000.f);
-		info.area_min = vec4(0.f);
-		info.num0 = uvec4(256);
-		info.num0.w = info.num0.x*info.num0.y*info.num0.z;
-		info.cell_size = (info.area_max - info.area_min) / info.cell_size;
 
 		u_pm_info = context->m_uniform_memory.allocateMemory<PMInfo>({ 1, {} });
 		b_cmd = context->m_storage_memory.allocateMemory<DrawCommand>({ 100, {} });
@@ -377,11 +473,11 @@ struct PhotonMapping
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeBV].get());
 
-// 			for (int i = 0; i < m_cmd.)
-// 			{
-// 			}
-// 			auto num = app::calcDipatchGroups(uvec3(Particle_Num, 1, 1), uvec3(1024, 1, 1));
-// 			cmd.dispatch(num.x, num.y, num.z);
+			for (int i = 0; i < m_m)
+			{
+			}
+			auto num = app::calcDipatchGroups(uvec3(Particle_Num, 1, 1), uvec3(1024, 1, 1));
+			cmd.dispatch(num.x, num.y, num.z);
 
 		}
 

@@ -41,7 +41,7 @@ void main()
 			return;
 		}
 
-		TriangleLL tLL = bTriangleLL[stored.TriangleLLIndex];
+		TriangleLL tLL = b_triangle_LL[stored.TriangleLLIndex];
 		Vertex a = b_vertex[tLL.index[0]];
 		Vertex b = b_vertex[tLL.index[1]];
 		Vertex c = b_vertex[tLL.index[2]];

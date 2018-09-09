@@ -59,9 +59,9 @@ MarchResult marching(in Ray ray)
 			Hit hitResult = MakeHit();
 			TriangleMesh near;
 
-			for(uint triIndex = bTriangleLLHead[convert3DTo1D(index0, u_pm_info.num0.xyz)]; triIndex != 0xFFFFFFFF; )
+			for(uint triIndex = b_triangle_LL_head[convert3DTo1D(index0, u_pm_info.num0.xyz)]; triIndex != 0xFFFFFFFF; )
 			{
-				TriangleLL triangle_LL = bTriangleLL[triIndex];
+				TriangleLL triangle_LL = b_triangle_LL[triIndex];
 				triIndex = triangle_LL.next;
 
 				Vertex a = b_vertex[triangle_LL.index[0]];

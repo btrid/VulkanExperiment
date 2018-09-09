@@ -40,7 +40,7 @@ struct Material
 
 struct DrawCommand// : public DrawElementsIndirectCommand
 {
-	uint indexCount;
+	uint count;
 	uint instanceCount;
 	uint firstIndex;
 	uint baseVertex;
@@ -253,7 +253,7 @@ uint morton3D(in uvec3 n)
 	return n.x|n.y|n.z;
 }
 
-uint getMortonKey(in vec3 min_p, in vec3 max_p)
+uint getMortonKey(in uvec3 min_p, in uvec3 max_p)
 {
 	uint min_morton = morton3D(min_p);
 	uint max_morton = morton3D(max_p);
