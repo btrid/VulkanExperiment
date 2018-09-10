@@ -68,8 +68,8 @@ void main()
 
 	ivec2 map_index = ivec2(pos);
 
-	vec3 radiance[4] = {vec3(0.),vec3(0.),vec3(0.),vec3(0.)};
-	uvec4 u_radiance = uvec4(0.);
+//	i64vec4 radiance = i64vec4(0.);
+	uvec4 radiance = uvec4(0.);
 	for(int _i = 0; _i <50000; _i++)
 	{
 		// march
@@ -113,35 +113,21 @@ void main()
 			l <<= ls;
 			uint64_t emissive_map = l.x|l.y|l.z|l.w;
 
-			bvec4 is_light = bvec4(notEqual(u64vec4(emissive_map) & hit_mask, u64vec4(0)));
 			uvec4 cell_x = (map_index.xxxx+offset_x);
 			uvec4 cell_y = (map_index.yyyy+offset_y);
-//			radiance[0] += is_light[0] ? unpackEmissive(b_radiance[getMemoryOrder(ivec2(cell_x.x, cell_y.x))]) : vec3(0.);
-//			radiance[1] += is_light[1] ? unpackEmissive(b_radiance[getMemoryOrder(ivec2(cell_x.y, cell_y.y))]) : vec3(0.);
-//			radiance[2] += is_light[2] ? unpackEmissive(b_radiance[getMemoryOrder(ivec2(cell_x.z, cell_y.z))]) : vec3(0.);
-//			radiance[3] += is_light[3] ? unpackEmissive(b_radiance[getMemoryOrder(ivec2(cell_x.w, cell_y.w))]) : vec3(0.);
-//			radiance[0] += is_light[0] ? vec3(0.5) : vec3(0.);
-//			radiance[1] += is_light[1] ? vec3(0.5) : vec3(0.);
-//			radiance[2] += is_light[2] ? vec3(0.5) : vec3(0.);
-//			radiance[3] += is_light[3] ? vec3(0.5) : vec3(0.);
 
-//			u_radiance.x = packEmissive(radiance[0]);
-//			u_radiance.y = packEmissive(radiance[1]);
-//			u_radiance.z = packEmissive(radiance[2]);
-//			u_radiance.w = packEmissive(radiance[3]);
+			bvec4 is_light = bvec4(notEqual(u64vec4(emissive_map) & hit_mask, u64vec4(0)));
+			bvec4 is_light_power = notEqual(radiance, uvec4(0));
+			bvec4 calc = notEqual(ivec4(is_light)+ivec4(is_light_power), ivec4(0));
 
-			u_radiance.x = atomicAdd(b_radiance[getMemoryOrder(ivec2(cell_x.x, cell_y.x))], u_radiance.x);
-			u_radiance.y = atomicAdd(b_radiance[getMemoryOrder(ivec2(cell_x.y, cell_y.y))], u_radiance.y);
-			u_radiance.z = atomicAdd(b_radiance[getMemoryOrder(ivec2(cell_x.z, cell_y.z))], u_radiance.z);
-			u_radiance.w = atomicAdd(b_radiance[getMemoryOrder(ivec2(cell_x.w, cell_y.w))], u_radiance.w);
+			radiance.x = calc.x ? atomicAdd(b_radiance[getMemoryOrder(ivec2(cell_x.x, cell_y.x))], radiance.x) : 0;
+			radiance.y = calc.y ? atomicAdd(b_radiance[getMemoryOrder(ivec2(cell_x.y, cell_y.y))], radiance.y) : 0;
+			radiance.z = calc.z ? atomicAdd(b_radiance[getMemoryOrder(ivec2(cell_x.z, cell_y.z))], radiance.z) : 0;
+			radiance.w = calc.w ? atomicAdd(b_radiance[getMemoryOrder(ivec2(cell_x.w, cell_y.w))], radiance.w) : 0;
 
 			// 拡散
 			bvec4 is_diffuse = bvec4(notEqual(u64vec4(diffuse_map) & hit_mask, u64vec4(0)));
-			radiance[0] *= float(!is_diffuse[0]);
-			radiance[1] *= float(!is_diffuse[1]);
-			radiance[2] *= float(!is_diffuse[2]);
-			radiance[3] *= float(!is_diffuse[3]);
-			u_radiance *= ivec4(1) - ivec4(is_diffuse);
+			radiance *= ivec4(1) - ivec4(is_diffuse);
 		}
 
 	}

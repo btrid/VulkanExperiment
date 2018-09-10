@@ -49,6 +49,12 @@ layout(set=USE_GI2D, binding=4) restrict buffer GridCounter {
 
 #endif
 
+
+#define LightPower (0.015)
+#define Advance (1.)
+#define denominator (512.)
+//#define denominator (16.)
+
 #ifdef USE_GI2D_Radiosity
 layout(set=USE_GI2D_Radiosity, binding=0) restrict buffer RadianceMapBuffer {
 	uint b_radiance[];
@@ -56,6 +62,44 @@ layout(set=USE_GI2D_Radiosity, binding=0) restrict buffer RadianceMapBuffer {
 layout(set=USE_GI2D_Radiosity, binding=1) restrict buffer BounceMapBuffer {
 	uint64_t b_bounce_map[];
 };
+
+uint packEmissive(in vec3 rgb)
+{
+	ivec3 irgb = ivec3(rgb*denominator*(1.+1./denominator*0.5));
+	irgb <<= ivec3(20, 10, 0);
+	return irgb.x | irgb.y | irgb.z;
+}
+vec3 unpackEmissive(in uint irgb)
+{
+//	vec3 rgb = vec3((uvec3(irgb) >> uvec3(21, 10, 0)) & ((uvec3(1)<<uvec3(11, 11, 10))-1));
+	vec3 rgb = vec3((uvec3(irgb) >> uvec3(20, 10, 0)) & ((uvec3(1)<<uvec3(10, 10, 10))-1));
+	return rgb / denominator;
+}
+#endif
+
+#ifdef USE_GI2D_Radiosity2
+
+layout(set=USE_GI2D_Radiosity2, binding=0) restrict buffer RadianceMapBuffer {
+	int64_t b_radiance[];
+};
+layout(set=USE_GI2D_Radiosity2, binding=1) restrict buffer BounceMapBuffer {
+	uint64_t b_bounce_map[];
+};
+
+int64_t packEmissive(in vec3 rgb)
+{
+	i64vec3 irgb = i64vec3(rgb*denominator*(1.+1./denominator*0.5));
+	irgb <<= i64vec3(40, 20, 0);
+	return irgb.x | irgb.y | irgb.z;
+}
+vec3 unpackEmissive(in int64_t irgb)
+{
+//	vec3 rgb = vec3((uvec3(irgb) >> uvec3(21, 10, 0)) & ((uvec3(1)<<uvec3(11, 11, 10))-1));
+	vec3 rgb = vec3((uvec3(irgb) >> u64vec3(40, 20, 0)) & ((u64vec3(1)<<u64vec3(20, 20, 20))-1));
+	return rgb / denominator;
+}
+#endif
+
 
 int getMemoryOrder(in ivec2 xy)
 {
@@ -74,24 +118,6 @@ int getMemoryOrder(in ivec2 xy)
 #else
 	return xy.x + xy.y * u_gi2d_info.m_resolution.x;
 #endif
-}
-
-#define LightPower (0.015)
-#define Advance (1.)
-
-#define denominator (512.)
-//#define denominator (16.)
-uint packEmissive(in vec3 rgb)
-{
-	ivec3 irgb = ivec3(rgb*denominator*(1.+1./denominator*0.5));
-	irgb <<= ivec3(20, 10, 0);
-	return irgb.x | irgb.y | irgb.z;
-}
-vec3 unpackEmissive(in uint irgb)
-{
-//	vec3 rgb = vec3((uvec3(irgb) >> uvec3(21, 10, 0)) & ((uvec3(1)<<uvec3(11, 11, 10))-1));
-	vec3 rgb = vec3((uvec3(irgb) >> uvec3(20, 10, 0)) & ((uvec3(1)<<uvec3(10, 10, 10))-1));
-	return rgb / denominator;
 }
 
 vec2 intersectRayRay(in vec2 as, in vec2 ad, in vec2 bs, in vec2 bd)
@@ -146,8 +172,6 @@ bool marchToAABB(inout vec2 p, in vec2 d, in vec2 bmin, in vec2 bmax)
 	return true;
 
 }
-
-#endif // USE_GI2D_Radiosity
 
 vec2 rotate(in float angle)
 {
