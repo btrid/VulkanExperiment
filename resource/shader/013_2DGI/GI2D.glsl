@@ -56,11 +56,23 @@ layout(set=USE_GI2D, binding=4) restrict buffer GridCounter {
 //#define denominator (16.)
 
 #ifdef USE_GI2D_Radiosity
+struct D2Ray
+{
+	vec2 origin;
+	vec2 dir;
+};
+
 layout(set=USE_GI2D_Radiosity, binding=0) restrict buffer RadianceMapBuffer {
 	uint b_radiance[];
 };
 layout(set=USE_GI2D_Radiosity, binding=1) restrict buffer BounceMapBuffer {
 	uint64_t b_bounce_map[];
+};
+layout(set=USE_GI2D_Radiosity, binding=1) restrict buffer RayBuffer {
+	D2Ray b_ray[];
+};
+layout(set=USE_GI2D_Radiosity, binding=1) restrict buffer RayCounter {
+	ivec4 b_ray_count;
 };
 
 uint packEmissive(in vec3 rgb)

@@ -52,7 +52,6 @@ struct GI2DRadiosity
 	{
 		vec2 origin;
 		vec2 dir;
-		float length;
 	};
 
 	GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context, const std::shared_ptr<RenderTarget>& render_target)

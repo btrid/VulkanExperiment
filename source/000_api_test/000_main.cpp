@@ -430,13 +430,13 @@ vec2 intersectRayRay(const vec2& as, const vec2& ad, const vec2& bs, const vec2&
 
 bool marchToAABB(vec2& p, vec2 d, vec2 bmin, vec2 bmax)
 {
-
-	if (all(lessThan(p, bmax))
-		&& all(greaterThan(p, bmin)))
-	{
-		// AABB‚Ì’†‚É‚¢‚é
-		return true;
-	}
+ 
+ 	if (all(lessThan(p, bmax))
+ 		&& all(greaterThan(p, bmin)))
+ 	{
+ 		// AABB‚Ì’†‚É‚¢‚é
+ 		return true;
+ 	}
 
 	float tmin = 0.;
 	float tmax = 10e6;
@@ -517,21 +517,22 @@ int main()
 			auto a = packEmissive(o);
 			auto a3 = unpackEmissive(a);
 
-			printf("original=[%8.5f,%8.5f,%8.5f] test=[%8.5f,%8.5f,%8.5f]\n", o.x, o.y, o.z, a3.x,a3.y,a3.z);
+//			printf("original=[%8.5f,%8.5f,%8.5f] test=[%8.5f,%8.5f,%8.5f]\n", o.x, o.y, o.z, a3.x,a3.y,a3.z);
 		}
 		float f11_max = (1 << 11) / denominator;
 		float f10_max = (1 << 10) / denominator;
-		printf("f10=%8.5f, f11=%8.5f\n", f10_max, f11_max);
+//		printf("f10=%8.5f, f11=%8.5f\n", f10_max, f11_max);
 
 		{
 			auto a = packEmissive(vec3(0.1f, 0.01f, 0.001f));
 			auto a3 = unpackEmissive(a);
 
-			printf("test=[%8.5f,%8.5f,%8.5f]\n", a3.x, a3.y, a3.z);
+//			printf("test=[%8.5f,%8.5f,%8.5f]\n", a3.x, a3.y, a3.z);
 
 		}
 	}
 	{
+#define gl_LocalInvocationIndex (16)
 		int loop = 64;
 		for (int i = 0; i < loop; i++) 
 		{
@@ -540,30 +541,46 @@ int main()
 			dir.x = abs(dir.x) < 0.0001 ? 0.0001 : dir.x;
 			dir.y = abs(dir.y) < 0.0001 ? 0.0001 : dir.y;
 
-			vec2 floorp;
-			floorp.x = dir.x >= 0 ? 0.f : 512.f;
-			floorp.y = dir.y >= 0 ? 0.f : 512.f;
-			vec2 floordir;
-			floordir.x = abs(dir.x) > abs(dir.y) ? 0.f : 1.f;
-			floordir.y = abs(dir.x) > abs(dir.y) ? 1.f : 0.f;
+			vec2 begin;
+			vec2 end;
+			{
+				vec2 floorp;
+				floorp.x = dir.x >= 0 ? 0.f : 512.f;
+				floorp.y = dir.y >= 0 ? 0.f : 512.f;
+				vec2 floordir;
+				floordir.x = abs(dir.x) > abs(dir.y) ? 0.f : 1.f;
+				floordir.y = abs(dir.x) > abs(dir.y) ? 1.f : 0.f;
 
-			auto p0 = intersectRayRay(vec2(0, 0), dir, floorp, floordir);
-			auto p1 = intersectRayRay(vec2(512, 0), dir, floorp, floordir);
-			auto p2 = intersectRayRay(vec2(0, 512), dir, floorp, floordir);
-			auto p3 = intersectRayRay(vec2(512, 512), dir, floorp, floordir);
+				auto p0 = intersectRayRay(vec2(0, 0), dir, floorp, floordir);
+				auto p1 = intersectRayRay(vec2(512, 0), dir, floorp, floordir);
+				auto p2 = intersectRayRay(vec2(0, 512), dir, floorp, floordir);
+				auto p3 = intersectRayRay(vec2(512, 512), dir, floorp, floordir);
 
-			vec2 minp = glm::min(glm::min(glm::min(p0, p1), p2), p3);
-			vec2 maxp = glm::max(glm::max(glm::max(p0, p1), p2), p3);
+				vec2 minp = glm::min(glm::min(glm::min(p0, p1), p2), p3);
+				begin = minp + floordir * (8.) * gl_LocalInvocationIndex;
+				marchToAABB(begin, dir, vec2(0.f), vec2(512.f));
+			}
+			{
+				vec2 inv_floorp;
+				inv_floorp.x = dir.x < 0 ? 0.f : 512.f;
+				inv_floorp.y = dir.y < 0 ? 0.f : 512.f;
+				vec2 inv_floordir;
+				inv_floordir.x = abs(dir.x) > abs(dir.y) ? 0.f : 1.f;
+				inv_floordir.y = abs(dir.x) > abs(dir.y) ? 1.f : 0.f;
 
-			floorp = minp;
-			vec2 area = maxp- minp;
-//			printf("[%2d] dir=[%5.2f,%5.2f] floorp=[%7.2f,%7.2f] area=[%7.2f,%7.2f] floordir=[%7.2f,%7.2f]\n", i, dir.x, dir.y, floorp.x, floorp.y, area.x, area.y, floordir.x, floordir.y);
+				auto p0 = intersectRayRay(vec2(0, 0), -dir, inv_floorp, inv_floordir);
+				auto p1 = intersectRayRay(vec2(512, 0), -dir, inv_floorp, inv_floordir);
+				auto p2 = intersectRayRay(vec2(0, 512), -dir, inv_floorp, inv_floordir);
+				auto p3 = intersectRayRay(vec2(512, 512), -dir, inv_floorp, inv_floordir);
 
-			vec2 _min = minp;
-			vec2 _max = maxp;
-			marchToAABB(_min, dir, vec2(0.f), vec2(512.f));
-			marchToAABB(_max, dir, vec2(0.f), vec2(512.f));
-//			printf(" aabbmin=[%7.2f,%7.2f] aabbmax=[%7.2f,%7.2f]\n", _min.x, _min.y, _max.x, _max.y);
+				vec2 maxp = glm::min(glm::min(glm::min(p0, p1), p2), p3);
+				end = maxp + inv_floordir * (8.) * gl_LocalInvocationIndex;
+				marchToAABB(end, dir, vec2(0.f), vec2(512.f));
+			}
+			printf(" aabbmin=[%7.2f,%7.2f] aabbmax=[%7.2f,%7.2f]\n", begin.x, begin.y, end.x, end.y);
+			printf("  length=[%7.2f]\n", distance(begin, end));
+
+
 
 			vec2 side = glm::rotate(dir, -3.14f*0.5f);
 			side.x = abs(side.x) < 0.0001 ? 0.0001 : side.x;
@@ -578,7 +595,7 @@ int main()
 			ivec4 mask_y = ivec4(side1.yyyy * vec4(0.5, 2.5, 4.5, 6.5) + origin.yyyy);
 			auto hit_mask = glm::u64vec4(1ul) << glm::u64vec4(mask_x + mask_y * 8);
 
-			printf("[%2d] dir=[%5.2f,%5.2f] side=[%5.2f,%5.2f], mask=[%3d%3d%3d%3d] \n", i, dir.x, dir.y, side.x, side.y, hit_mask.x, hit_mask.y, hit_mask.z, hit_mask.w);
+//			printf("[%2d] dir=[%5.2f,%5.2f] side=[%5.2f,%5.2f], mask=[%3d%3d%3d%3d] \n", i, dir.x, dir.y, side.x, side.y, hit_mask.x, hit_mask.y, hit_mask.z, hit_mask.w);
 
 		}
 		vec2 dir = normalize(vec2(0.1f, 1.f));
