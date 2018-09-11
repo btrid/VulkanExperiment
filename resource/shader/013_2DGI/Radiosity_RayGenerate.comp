@@ -66,4 +66,10 @@ void main()
 	ray.origin = begin;
 	ray.dir = dir * progress;
 
+	int index = atomicAdd(b_ray_counter.w, 1);
+	if((index % 1024) == 0)
+	{
+		atomicAdd(b_ray_counter.x, 1);
+	}
+	b_ray[index] = ray;
 }

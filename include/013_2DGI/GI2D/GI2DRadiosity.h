@@ -14,6 +14,7 @@ struct GI2DRadiosity
 {
 	enum {
 		Ray_Num = 64*4,
+		Ray_All_Num = Ray_Num * 128,
 		Ray_Group = 1,
 		Bounce_Num = 1,
 	};
@@ -28,11 +29,16 @@ struct GI2DRadiosity
 
 		Shader_CalcRadiance,
 		Shader_Radiosity2,
+
+		Shader_RayGenerate,
+		Shader_RaySort,
+
 		Shader_Num,
 	};
 	enum PipelineLayout
 	{
 		PipelineLayout_Radiosity,
+		PipelineLayout_Sort,
 		PipelineLayout_Num,
 	};
 	enum Pipeline
@@ -45,6 +51,9 @@ struct GI2DRadiosity
 
 		Pipeline_CalcRadiance,
 		Pipeline_Radiosity2,
+
+		Pipeline_RayGenerate,
+		Pipeline_RaySort,
 		Pipeline_Num,
 	};
 
@@ -155,6 +164,9 @@ struct GI2DRadiosity
 
 				"Radiosity_CalcRadiance.comp.spv",
 				"Radiosity2.comp.spv",
+
+				"Radiosity_RayGenerate.comp.spv",
+				"Radiosity_RaySort.comp.spv",
 			};
 			static_assert(array_length(name) == Shader_Num, "not equal shader num");
 
@@ -172,7 +184,7 @@ struct GI2DRadiosity
 			};
 
 			vk::PushConstantRange constants[] = {
-				vk::PushConstantRange().setStageFlags(vk::ShaderStageFlagBits::eCompute).setSize(4).setOffset(0),
+				vk::PushConstantRange().setStageFlags(vk::ShaderStageFlagBits::eCompute).setSize(8).setOffset(0),
 
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
@@ -185,7 +197,7 @@ struct GI2DRadiosity
 
 		// pipeline
 		{
-			std::array<vk::PipelineShaderStageCreateInfo, 6> shader_info;
+			std::array<vk::PipelineShaderStageCreateInfo, 8> shader_info;
 			shader_info[0].setModule(m_shader[Shader_Radiosity].get());
 			shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[0].setPName("main");
@@ -204,6 +216,12 @@ struct GI2DRadiosity
 			shader_info[5].setModule(m_shader[Shader_Radiosity2].get());
 			shader_info[5].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[5].setPName("main");
+			shader_info[6].setModule(m_shader[Shader_RayGenerate].get());
+			shader_info[6].setStage(vk::ShaderStageFlagBits::eCompute);
+			shader_info[6].setPName("main");
+			shader_info[7].setModule(m_shader[Shader_RaySort].get());
+			shader_info[7].setStage(vk::ShaderStageFlagBits::eCompute);
+			shader_info[7].setPName("main");
 			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 			{
 				vk::ComputePipelineCreateInfo()
@@ -224,6 +242,12 @@ struct GI2DRadiosity
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[5])
 				.setLayout(m_pipeline_layout[PipelineLayout_Radiosity].get()),
+				vk::ComputePipelineCreateInfo()
+				.setStage(shader_info[6])
+				.setLayout(m_pipeline_layout[PipelineLayout_Radiosity].get()),
+				vk::ComputePipelineCreateInfo()
+				.setStage(shader_info[7])
+				.setLayout(m_pipeline_layout[PipelineLayout_Radiosity].get()),
 			};
 			auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
 			m_pipeline[Pipeline_Radiosity] = std::move(compute_pipeline[0]);
@@ -232,6 +256,8 @@ struct GI2DRadiosity
 			m_pipeline[Pipeline_Radiosity_Bounce] = std::move(compute_pipeline[3]);
 			m_pipeline[Pipeline_CalcRadiance] = std::move(compute_pipeline[4]);
 			m_pipeline[Pipeline_Radiosity2] = std::move(compute_pipeline[5]);
+			m_pipeline[Pipeline_RayGenerate] = std::move(compute_pipeline[6]);
+			m_pipeline[Pipeline_RaySort] = std::move(compute_pipeline[7]);
 		}
 
 		// レンダーパス
@@ -361,8 +387,69 @@ struct GI2DRadiosity
 		}
 
 	}
+	void executeSetup(vk::CommandBuffer cmd)
+	{
+		{
+			// データクリア
+			cmd.updateBuffer<ivec4>(b_ray_count.getInfo().buffer, b_ray_count.getInfo().offset, ivec4(0, 1, 1, 0));
+		}
+
+		{
+			// レイの生成
+			vk::BufferMemoryBarrier to_read[] = {
+				b_ray_count.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {},
+				0, nullptr, array_length(to_read), to_read, 0, nullptr);
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RayGenerate].get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
+			auto num = app::calcDipatchGroups(uvec3(Ray_Num * 128, 1, 1), uvec3(1024, 1, 1));
+			cmd.dispatch(num.x, num.y, num.z);
+		}
+
+		{
+			// レイの生成
+			{
+				vk::BufferMemoryBarrier to_read[] = {
+					b_ray_count.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+					b_ray.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+					0, nullptr, array_length(to_read), to_read, 0, nullptr);
+
+			}
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RaySort].get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
+
+			for (int step = 2; step <= Ray_All_Num; step <<= 1) {
+				for (int offset = step >> 1; offset > 0; offset = offset >> 1) {
+					cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayout_Radiosity].get(), vk::ShaderStageFlagBits::eCompute, 0, ivec2(step, offset));
+					auto num = app::calcDipatchGroups(uvec3(Ray_Num * 128, 1, 1), uvec3(1024, 1, 1));
+					cmd.dispatch(num.x, num.y, num.z);
+//					glDispatchCompute(mDataNum / 512, 512, 1);
+
+					vk::BufferMemoryBarrier to_read[] = {
+						b_ray.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite),
+					};
+					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+						0, nullptr, array_length(to_read), to_read, 0, nullptr);
+				}
+			}
+
+		}
+	}
 	void execute(vk::CommandBuffer cmd)
 	{
+		static int32_t is_init;
+		if (!is_init)
+		{
+			is_init = true;
+			executeSetup(cmd);
+		}
 		{
 			// データクリア
 			vk::BufferMemoryBarrier to_read[] = {

@@ -72,7 +72,7 @@ layout(set=USE_GI2D_Radiosity, binding=1) restrict buffer RayBuffer {
 	D2Ray b_ray[];
 };
 layout(set=USE_GI2D_Radiosity, binding=1) restrict buffer RayCounter {
-	ivec4 b_ray_count;
+	ivec4 b_ray_counter;
 };
 
 uint packEmissive(in vec3 rgb)
