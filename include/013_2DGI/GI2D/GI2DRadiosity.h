@@ -76,7 +76,7 @@ struct GI2DRadiosity
 			b_radiance = m_context->m_storage_memory.allocateMemory<uint32_t>({ size * (Bounce_Num +1),{} });
 			b_bounce_map = m_context->m_storage_memory.allocateMemory<uint64_t>({ size/64,{} });
 			b_ray = m_context->m_storage_memory.allocateMemory<Ray>({ Ray_Num * 128,{} });
-			b_ray_count = m_context->m_storage_memory.allocateMemory<ivec4>({ 1,{} });
+			b_ray_counter = m_context->m_storage_memory.allocateMemory<ivec4>({ 1,{} });
 		}
 
 		{
@@ -135,7 +135,7 @@ struct GI2DRadiosity
 					b_radiance.getInfo(),
 					b_bounce_map.getInfo(),
 					b_ray.getInfo(),
-					b_ray_count.getInfo(),
+					b_ray_counter.getInfo(),
 				};
 
 				vk::WriteDescriptorSet write[] = 
@@ -391,13 +391,13 @@ struct GI2DRadiosity
 	{
 		{
 			// データクリア
-			cmd.updateBuffer<ivec4>(b_ray_count.getInfo().buffer, b_ray_count.getInfo().offset, ivec4(0, 1, 1, 0));
+			cmd.updateBuffer<ivec4>(b_ray_counter.getInfo().buffer, b_ray_counter.getInfo().offset, ivec4(0, 1, 1, 0));
 		}
 
 		{
 			// レイの生成
 			vk::BufferMemoryBarrier to_read[] = {
-				b_ray_count.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+				b_ray_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
@@ -405,15 +405,14 @@ struct GI2DRadiosity
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RayGenerate].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
-			auto num = app::calcDipatchGroups(uvec3(Ray_Num * 128, 1, 1), uvec3(1024, 1, 1));
-			cmd.dispatch(num.x, num.y, num.z);
+			cmd.dispatch(1, Ray_Num, Ray_Group);
 		}
 
 		{
-			// レイの生成
+			// レイのソート
 			{
 				vk::BufferMemoryBarrier to_read[] = {
-					b_ray_count.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+					b_ray_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 					b_ray.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 				};
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
@@ -439,7 +438,6 @@ struct GI2DRadiosity
 						0, nullptr, array_length(to_read), to_read, 0, nullptr);
 				}
 			}
-
 		}
 	}
 	void execute(vk::CommandBuffer cmd)
@@ -478,7 +476,8 @@ struct GI2DRadiosity
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Radiosity].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
-			cmd.dispatch(1, Ray_Num, Ray_Group);
+//			cmd.dispatch(1, Ray_Num, Ray_Group);
+			cmd.dispatchIndirect(b_ray_counter.getInfo().buffer, b_ray_counter.getInfo().offset);
 		}
 
 		// make bounce map
@@ -548,7 +547,7 @@ struct GI2DRadiosity
 	btr::BufferMemoryEx<uint32_t> b_radiance;
 	btr::BufferMemoryEx<uint64_t> b_bounce_map;
 	btr::BufferMemoryEx<Ray> b_ray;
-	btr::BufferMemoryEx<ivec4> b_ray_count;
+	btr::BufferMemoryEx<ivec4> b_ray_counter;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
