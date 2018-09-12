@@ -28,37 +28,37 @@ void main()
 	vec2 end;
 	{
 		vec2 floorp;
-		floorp.x = dir.x >= 0 ? 0.f : 512.f;
-		floorp.y = dir.y >= 0 ? 0.f : 512.f;
+		floorp.x = dir.x >= 0 ? 0. : reso.x;
+		floorp.y = dir.y >= 0 ? 0. : reso.y;
 		vec2 floordir;
-		floordir.x = abs(dir.x) > abs(dir.y) ? 0.f : 1.f;
-		floordir.y = abs(dir.x) > abs(dir.y) ? 1.f : 0.f;
+		floordir.x = abs(dir.x) > abs(dir.y) ? 0. : 1.;
+		floordir.y = abs(dir.x) > abs(dir.y) ? 1. : 0.;
 
 		vec2 p0 = intersectRayRay(vec2(0, 0), dir, floorp, floordir);
-		vec2 p1 = intersectRayRay(vec2(512, 0), dir, floorp, floordir);
-		vec2 p2 = intersectRayRay(vec2(0, 512), dir, floorp, floordir);
-		vec2 p3 = intersectRayRay(vec2(512, 512), dir, floorp, floordir);
+		vec2 p1 = intersectRayRay(vec2(reso.x, 0), dir, floorp, floordir);
+		vec2 p2 = intersectRayRay(vec2(0, reso.y), dir, floorp, floordir);
+		vec2 p3 = intersectRayRay(vec2(reso.x, reso.y), dir, floorp, floordir);
 
 		vec2 minp = min(min(min(p0, p1), p2), p3);
 		begin = minp + floordir * (8.) * gl_LocalInvocationIndex;
-		if(!marchToAABB(begin, dir, vec2(0.f), vec2(512.f))){ return; }
+		if(!marchToAABB(begin, dir, vec2(0.), reso.xy)){ return; }
 	}
 	{
 		vec2 inv_floorp;
-		inv_floorp.x = dir.x < 0 ? 0.f : 512.f;
-		inv_floorp.y = dir.y < 0 ? 0.f : 512.f;
+		inv_floorp.x = dir.x < 0 ? 0. : reso.x;
+		inv_floorp.y = dir.y < 0 ? 0. : reso.y;
 		vec2 inv_floordir;
-		inv_floordir.x = abs(dir.x) > abs(dir.y) ? 0.f : 1.f;
-		inv_floordir.y = abs(dir.x) > abs(dir.y) ? 1.f : 0.f;
+		inv_floordir.x = abs(dir.x) > abs(dir.y) ? 0. : 1.;
+		inv_floordir.y = abs(dir.x) > abs(dir.y) ? 1. : 0.;
 
 		vec2 p0 = intersectRayRay(vec2(0, 0), -dir, inv_floorp, inv_floordir);
-		vec2 p1 = intersectRayRay(vec2(512, 0), -dir, inv_floorp, inv_floordir);
-		vec2 p2 = intersectRayRay(vec2(0, 512), -dir, inv_floorp, inv_floordir);
-		vec2 p3 = intersectRayRay(vec2(512, 512), -dir, inv_floorp, inv_floordir);
+		vec2 p1 = intersectRayRay(vec2(reso.x, 0), -dir, inv_floorp, inv_floordir);
+		vec2 p2 = intersectRayRay(vec2(0, reso.y), -dir, inv_floorp, inv_floordir);
+		vec2 p3 = intersectRayRay(vec2(reso.x, reso.y), -dir, inv_floorp, inv_floordir);
 
 		vec2 maxp = min(min(min(p0, p1), p2), p3);
 		end = maxp + inv_floordir * (8.) * gl_LocalInvocationIndex;
-//		if(!marchToAABB(end, dir, vec2(0.f), vec2(512.f))){ return; }
+		if(!marchToAABB(end, -dir, vec2(0.), reso.xy)){ return; }
 	}
 
 	float progress = distance(begin, end);
@@ -67,7 +67,7 @@ void main()
 	ray.dir = dir * progress;
 
 	int index = atomicAdd(b_ray_counter.w, 1);
-	if((index % 1024) == 0)
+	if((index % 512) == 0)
 	{
 		atomicAdd(b_ray_counter.x, 1);
 	}

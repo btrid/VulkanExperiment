@@ -75,7 +75,7 @@ struct GI2DRadiosity
 			uint32_t size = m_gi2d_context->RenderWidth * m_gi2d_context->RenderHeight;
 			b_radiance = m_context->m_storage_memory.allocateMemory<uint32_t>({ size * (Bounce_Num +1),{} });
 			b_bounce_map = m_context->m_storage_memory.allocateMemory<uint64_t>({ size/64,{} });
-			b_ray = m_context->m_storage_memory.allocateMemory<Ray>({ Ray_Num * 128,{} });
+			b_ray = m_context->m_storage_memory.allocateMemory<Ray>({ Ray_All_Num,{} });
 			b_ray_counter = m_context->m_storage_memory.allocateMemory<ivec4>({ 1,{} });
 		}
 
@@ -427,9 +427,8 @@ struct GI2DRadiosity
 			for (int step = 2; step <= Ray_All_Num; step <<= 1) {
 				for (int offset = step >> 1; offset > 0; offset = offset >> 1) {
 					cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayout_Radiosity].get(), vk::ShaderStageFlagBits::eCompute, 0, ivec2(step, offset));
-					auto num = app::calcDipatchGroups(uvec3(Ray_Num * 128, 1, 1), uvec3(1024, 1, 1));
+					auto num = app::calcDipatchGroups(uvec3(Ray_All_Num, 1, 1), uvec3(1024, 1, 1));
 					cmd.dispatch(num.x, num.y, num.z);
-//					glDispatchCompute(mDataNum / 512, 512, 1);
 
 					vk::BufferMemoryBarrier to_read[] = {
 						b_ray.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite),

@@ -31,16 +31,18 @@ void main()
 	uint index_a = gl_GlobalInvocationID.x;
 	uint index_b = index_a^constant.distance;
 
-	if(index_a >= b_ray_counter.w ||index_b >= b_ray_counter.w)
-	{
-		return;
-	}
-
 	// 自分より上のものだけチェックする
 	if (index_a<index_b)
 	{
 		return;
 	}
+
+	//データないよ
+	if(index_a >= b_ray_counter.w ||index_b >= b_ray_counter.w)
+	{
+		return;
+	}
+
 
 	D2Ray a = b_ray[index_a];
 	D2Ray b = b_ray[index_b];

@@ -504,8 +504,53 @@ vec3 unpackEmissive(uint irgb)
 	return rgb / denominator;
 }
 
+void bitonic_sort()
+{
+	std::vector<int> buffer(1024<<2);
+	for (auto& b : buffer)
+	{
+		b = std::rand() % 10000;
+	}
+
+	for (int step = 2; step <= buffer.size(); step <<= 1) {
+		for (int offset = step >> 1; offset > 0; offset = offset >> 1) {
+
+			for (int i = 0; i < buffer.size(); i++)
+			{
+				uint index_a = i;
+				uint index_b = index_a ^ offset;
+
+				if (index_a >= buffer.size() || index_b >= buffer.size())
+				{
+					continue;
+				}
+				// 自分より上のものだけチェックする
+				if (index_a < index_b)
+				{
+					continue;
+				}
+
+				auto a = buffer[index_a];
+				auto b = buffer[index_b];
+				if (((index_a&step) == 0) == a<b)
+				{
+					buffer[index_a] = b;
+					buffer[index_b] = a;
+				}
+			}
+		}
+	}
+
+	for (auto& b : buffer)
+	{
+		printf("%6d ", b);
+	}
+	printf("\n");
+}
+
 int main()
 {
+	bitonic_sort();
 	{
 		auto a = getMortonIndex(ivec2(123, 256));
 		a++;
@@ -538,8 +583,8 @@ int main()
 		{
 //			i = 15;
 			vec2 dir = glm::rotate(vec2(1.f, 0.f), i*6.28f / loop);
-			dir.x = abs(dir.x) < 0.0001 ? 0.0001 : dir.x;
-			dir.y = abs(dir.y) < 0.0001 ? 0.0001 : dir.y;
+// 			dir.x = abs(dir.x) < 0.0001 ? 0.0001 : dir.x;
+// 			dir.y = abs(dir.y) < 0.0001 ? 0.0001 : dir.y;
 
 			vec2 begin;
 			vec2 end;
@@ -573,9 +618,10 @@ int main()
 				auto p2 = intersectRayRay(vec2(0, 512), -dir, inv_floorp, inv_floordir);
 				auto p3 = intersectRayRay(vec2(512, 512), -dir, inv_floorp, inv_floordir);
 
-				vec2 maxp = glm::min(glm::min(glm::min(p0, p1), p2), p3);
-				end = maxp + inv_floordir * (8.) * gl_LocalInvocationIndex;
-				marchToAABB(end, dir, vec2(0.f), vec2(512.f));
+//				vec2 maxp = glm::max(glm::max(glm::max(p0, p1), p2), p3);
+				vec2 minp = glm::min(glm::min(glm::min(p0, p1), p2), p3);
+				end = minp + inv_floordir * (8.) * gl_LocalInvocationIndex;
+				marchToAABB(end, -dir, vec2(0.f), vec2(512.f));
 			}
 			printf(" aabbmin=[%7.2f,%7.2f] aabbmax=[%7.2f,%7.2f]\n", begin.x, begin.y, end.x, end.y);
 			printf("  length=[%7.2f]\n", distance(begin, end));
