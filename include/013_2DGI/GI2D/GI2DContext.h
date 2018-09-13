@@ -32,7 +32,7 @@ struct GI2DContext
 	int BounceNum = _BounceNum;
 	int Hierarchy_Num = _Hierarchy_Num;
 	int Light_Num = _Light_Num;
-	struct Info
+	struct GI2DInfo
 	{
 		mat4 m_camera_PV;
 		uvec2 m_resolution;
@@ -44,6 +44,10 @@ struct GI2DContext
 
 		int m_emission_tile_linklist_max;
 		int m_emission_buffer_max;
+	};
+	struct GI2DScene
+	{
+		int32_t m_frame;
 	};
 
 	struct Fragment
@@ -66,31 +70,32 @@ struct GI2DContext
 		RenderSize = ivec2(RenderWidth, RenderHeight);
 		FragmentBufferSize = RenderWidth * RenderHeight;
 
+		m_gi2d_scene.m_frame = 0;
+
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 		{
-			btr::BufferMemoryDescriptorEx<Info> desc;
-			desc.element_num = 1;
-			u_fragment_info = context->m_uniform_memory.allocateMemory(desc);
+			u_gi2d_info = context->m_uniform_memory.allocateMemory<GI2DInfo>({ 1, {} });
+			u_gi2d_scene = context->m_uniform_memory.allocateMemory<GI2DScene>({ 1, {} });
 
-			m_pm2d_info.m_position = vec4(0.f, 0.f, 0.f, 0.f);
-			m_pm2d_info.m_resolution = uvec2(RenderWidth, RenderHeight);
-			m_pm2d_info.m_emission_tile_size = uvec2(32, 32);
-			m_pm2d_info.m_emission_tile_num = m_pm2d_info.m_resolution / m_pm2d_info.m_emission_tile_size;
-			m_pm2d_info.m_camera_PV = glm::ortho(RenderWidth*-0.5f, RenderWidth*0.5f, RenderHeight*-0.5f, RenderHeight*0.5f, 0.f, 2000.f) * glm::lookAt(vec3(RenderWidth*0.5f, -1000.f, RenderHeight*0.5f)+m_pm2d_info.m_position.xyz(), vec3(RenderWidth*0.5f, 0.f, RenderHeight*0.5f) + m_pm2d_info.m_position.xyz(), vec3(0.f, 0.f, 1.f));
+			m_gi2d_info.m_position = vec4(0.f, 0.f, 0.f, 0.f);
+			m_gi2d_info.m_resolution = uvec2(RenderWidth, RenderHeight);
+			m_gi2d_info.m_emission_tile_size = uvec2(32, 32);
+			m_gi2d_info.m_emission_tile_num = m_gi2d_info.m_resolution / m_gi2d_info.m_emission_tile_size;
+			m_gi2d_info.m_camera_PV = glm::ortho(RenderWidth*-0.5f, RenderWidth*0.5f, RenderHeight*-0.5f, RenderHeight*0.5f, 0.f, 2000.f) * glm::lookAt(vec3(RenderWidth*0.5f, -1000.f, RenderHeight*0.5f)+m_gi2d_info.m_position.xyz(), vec3(RenderWidth*0.5f, 0.f, RenderHeight*0.5f) + m_gi2d_info.m_position.xyz(), vec3(0.f, 0.f, 1.f));
 
 			int size = RenderHeight * RenderWidth / 64;
-			m_pm2d_info.m_fragment_map_hierarchy_offset[0] = 0;
-			m_pm2d_info.m_fragment_map_hierarchy_offset[1] = m_pm2d_info.m_fragment_map_hierarchy_offset[0] + size;
-			m_pm2d_info.m_fragment_map_hierarchy_offset[2] = m_pm2d_info.m_fragment_map_hierarchy_offset[1] + size / (2 * 2);
-			m_pm2d_info.m_fragment_map_hierarchy_offset[3] = m_pm2d_info.m_fragment_map_hierarchy_offset[2] + size / (4 * 4);
-			m_pm2d_info.m_fragment_map_hierarchy_offset[4] = m_pm2d_info.m_fragment_map_hierarchy_offset[3] + size / (8 * 8);
-			m_pm2d_info.m_fragment_map_hierarchy_offset[5] = m_pm2d_info.m_fragment_map_hierarchy_offset[4] + size / (16 * 16);
-			m_pm2d_info.m_fragment_map_hierarchy_offset[6] = m_pm2d_info.m_fragment_map_hierarchy_offset[5] + size / (32 * 32);
-			m_pm2d_info.m_fragment_map_hierarchy_offset[7] = m_pm2d_info.m_fragment_map_hierarchy_offset[6] + size / (64 * 64);
+			m_gi2d_info.m_fragment_map_hierarchy_offset[0] = 0;
+			m_gi2d_info.m_fragment_map_hierarchy_offset[1] = m_gi2d_info.m_fragment_map_hierarchy_offset[0] + size;
+			m_gi2d_info.m_fragment_map_hierarchy_offset[2] = m_gi2d_info.m_fragment_map_hierarchy_offset[1] + size / (2 * 2);
+			m_gi2d_info.m_fragment_map_hierarchy_offset[3] = m_gi2d_info.m_fragment_map_hierarchy_offset[2] + size / (4 * 4);
+			m_gi2d_info.m_fragment_map_hierarchy_offset[4] = m_gi2d_info.m_fragment_map_hierarchy_offset[3] + size / (8 * 8);
+			m_gi2d_info.m_fragment_map_hierarchy_offset[5] = m_gi2d_info.m_fragment_map_hierarchy_offset[4] + size / (16 * 16);
+			m_gi2d_info.m_fragment_map_hierarchy_offset[6] = m_gi2d_info.m_fragment_map_hierarchy_offset[5] + size / (32 * 32);
+			m_gi2d_info.m_fragment_map_hierarchy_offset[7] = m_gi2d_info.m_fragment_map_hierarchy_offset[6] + size / (64 * 64);
 
-			m_pm2d_info.m_emission_tile_linklist_max = Light_Num * m_pm2d_info.m_emission_tile_num.x * m_pm2d_info.m_emission_tile_num.y;
-			m_pm2d_info.m_emission_buffer_max = Light_Num;
-			cmd.updateBuffer<Info>(u_fragment_info.getInfo().buffer, u_fragment_info.getInfo().offset, m_pm2d_info);
+			m_gi2d_info.m_emission_tile_linklist_max = Light_Num * m_gi2d_info.m_emission_tile_num.x * m_gi2d_info.m_emission_tile_num.y;
+			m_gi2d_info.m_emission_buffer_max = Light_Num;
+			cmd.updateBuffer<GI2DInfo>(u_gi2d_info.getInfo().buffer, u_gi2d_info.getInfo().offset, m_gi2d_info);
 		}
 		{
 			btr::BufferMemoryDescriptorEx<Fragment> desc;
@@ -131,7 +136,7 @@ struct GI2DContext
 					.setBinding(0),
 					vk::DescriptorSetLayoutBinding()
 					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+					.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 					.setDescriptorCount(1)
 					.setBinding(1),
 					vk::DescriptorSetLayoutBinding()
@@ -149,6 +154,11 @@ struct GI2DContext
 					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 					.setDescriptorCount(1)
 					.setBinding(4),
+					vk::DescriptorSetLayoutBinding()
+					.setStageFlags(stage)
+					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+					.setDescriptorCount(1)
+					.setBinding(5),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -167,7 +177,8 @@ struct GI2DContext
 				m_descriptor_set = std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]);
 
 				vk::DescriptorBufferInfo uniforms[] = {
-					u_fragment_info.getInfo(),
+					u_gi2d_info.getInfo(),
+					u_gi2d_scene.getInfo(),
 				};
 				vk::DescriptorBufferInfo storages[] = {
 					b_fragment_buffer.getInfo(),
@@ -187,7 +198,7 @@ struct GI2DContext
 					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 					.setDescriptorCount(array_length(storages))
 					.setPBufferInfo(storages)
-					.setDstBinding(1)
+					.setDstBinding(2)
 					.setDstSet(m_descriptor_set.get()),
 				};
 				context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
@@ -195,9 +206,34 @@ struct GI2DContext
 
 		}
 	}
-	Info m_pm2d_info;
 
-	btr::BufferMemoryEx<Info> u_fragment_info;
+	void execute(vk::CommandBuffer cmd)
+	{
+		m_gi2d_scene.m_frame = m_gi2d_scene.m_frame++ % 4;
+
+		{
+			vk::BufferMemoryBarrier to_write[] = {
+				u_gi2d_scene.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {},
+				0, nullptr, array_length(to_write), to_write, 0, nullptr);
+		}
+
+		cmd.updateBuffer<GI2DScene>(u_gi2d_scene.getInfo().buffer, u_gi2d_scene.getInfo().offset, m_gi2d_scene);
+		{
+			vk::BufferMemoryBarrier to_read[] = {
+				u_gi2d_scene.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {},
+				0, nullptr, array_length(to_read), to_read, 0, nullptr);
+
+		}
+	}
+	GI2DInfo m_gi2d_info;
+	GI2DScene m_gi2d_scene;
+
+	btr::BufferMemoryEx<GI2DInfo> u_gi2d_info;
+	btr::BufferMemoryEx<GI2DScene> u_gi2d_scene;
 	btr::BufferMemoryEx<Fragment> b_fragment_buffer;
 	btr::BufferMemoryEx<uint64_t> b_diffuse_map;
 	btr::BufferMemoryEx<uint64_t> b_emissive_map;

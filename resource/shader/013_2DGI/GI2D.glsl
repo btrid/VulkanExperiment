@@ -18,6 +18,10 @@ struct GI2DInfo
 	int m_emission_tile_linklist_max;
 	int m_emission_buffer_max;
 };
+struct GI2DScene
+{
+	int m_frame;
+};
 struct Fragment
 {
 	vec4 albedo;
@@ -28,19 +32,22 @@ struct Fragment
 //#define DT 0.0005
 
 #ifdef USE_GI2D
-layout(std140, set=USE_GI2D, binding=0) uniform PMInfoUniform {
+layout(std140, set=USE_GI2D, binding=0) uniform GI2DInfoUniform {
 	GI2DInfo u_gi2d_info;
 };
-layout(std430, set=USE_GI2D, binding=1) restrict buffer FragmentBuffer {
+layout(std140, set=USE_GI2D, binding=1) uniform GI2DSceneUniform {
+	GI2DScene u_gi2d_scene;
+};
+layout(std430, set=USE_GI2D, binding=2) restrict buffer FragmentBuffer {
 	Fragment b_fragment[];
 };
-layout(std430, set=USE_GI2D, binding=2) restrict buffer DiffuseMapBuffer {
+layout(std430, set=USE_GI2D, binding=3) restrict buffer DiffuseMapBuffer {
 	uint64_t b_diffuse_map[];
 };
-layout(std430, set=USE_GI2D, binding=3) restrict buffer EmissiveMapBuffer {
+layout(std430, set=USE_GI2D, binding=4) restrict buffer EmissiveMapBuffer {
 	uint64_t b_emissive_map[];
 };
-layout(set=USE_GI2D, binding=4) restrict buffer GridCounter {
+layout(set=USE_GI2D, binding=5) restrict buffer GridCounter {
 	int b_grid_counter[];
 };
 
