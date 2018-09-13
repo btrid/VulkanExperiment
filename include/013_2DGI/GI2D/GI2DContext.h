@@ -70,7 +70,6 @@ struct GI2DContext
 		RenderSize = ivec2(RenderWidth, RenderHeight);
 		FragmentBufferSize = RenderWidth * RenderHeight;
 
-		m_gi2d_scene.m_frame = 0;
 
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 		{
@@ -96,6 +95,9 @@ struct GI2DContext
 			m_gi2d_info.m_emission_tile_linklist_max = Light_Num * m_gi2d_info.m_emission_tile_num.x * m_gi2d_info.m_emission_tile_num.y;
 			m_gi2d_info.m_emission_buffer_max = Light_Num;
 			cmd.updateBuffer<GI2DInfo>(u_gi2d_info.getInfo().buffer, u_gi2d_info.getInfo().offset, m_gi2d_info);
+
+			m_gi2d_scene.m_frame = 0;
+			cmd.updateBuffer<GI2DScene>(u_gi2d_scene.getInfo().buffer, u_gi2d_scene.getInfo().offset, m_gi2d_scene);
 		}
 		{
 			btr::BufferMemoryDescriptorEx<Fragment> desc;
@@ -209,7 +211,7 @@ struct GI2DContext
 
 	void execute(vk::CommandBuffer cmd)
 	{
-		m_gi2d_scene.m_frame = m_gi2d_scene.m_frame++ % 4;
+		m_gi2d_scene.m_frame = (m_gi2d_scene.m_frame+1) % 4;
 
 		{
 			vk::BufferMemoryBarrier to_write[] = {

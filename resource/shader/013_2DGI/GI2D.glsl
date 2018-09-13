@@ -94,6 +94,22 @@ vec3 unpackEmissive(in uint irgb)
 	vec3 rgb = vec3((uvec3(irgb) >> uvec3(20, 10, 0)) & ((uvec3(1)<<uvec3(10, 10, 10))-1));
 	return rgb / denominator;
 }
+
+/*uvec4 packEmissiveR4(in vec3 rgb)
+{
+	ivec3 irgb = ivec3(rgb*denominator*(1.+1./denominator*0.5));
+	irgb <<= ivec3(20, 10, 0);
+	return irgb.x | irgb.y | irgb.z;
+}
+*/
+vec3 unpackEmissive4(in uvec4 irgb)
+{
+	vec4 rrrr = vec4((irgb >> uvec4(20)) & ((uvec4(1)<<uvec4(10))-1));
+	vec4 gggg = vec4((irgb >> uvec4(10)) & ((uvec4(1)<<uvec4(10))-1));
+	vec4 bbbb = vec4((irgb >> uvec4(0)) & ((uvec4(1)<<uvec4(10))-1));
+	vec3 rgb = vec3(dot(rrrr, vec4(1.)), dot(gggg, vec4(1.)),dot(bbbb, vec4(1.)));
+	return rgb / denominator;
+}
 #endif
 
 #ifdef USE_GI2D_Radiosity2

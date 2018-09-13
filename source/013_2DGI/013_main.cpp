@@ -148,6 +148,7 @@ int main()
 			// pm
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
+				gi2d_context->execute(cmd);
 				gi2d_clear.execute(cmd);
 				gi2d_debug_make_fragment.execute(cmd);
 				gi2d_Fluid->execute(cmd);

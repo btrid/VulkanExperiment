@@ -17,7 +17,8 @@ void main()
 {
 	uint radiance_size = u_gi2d_info.m_resolution.x*u_gi2d_info.m_resolution.y;
 	vec3 radiance = vec3(0.);
-	for(int i = 0; i<2; i++) 
+
+//	for(int i = 0; i<2; i++) 
 	{
 		vec3 radiance_ = vec3(0.);
 		int count = 0;
@@ -26,15 +27,15 @@ void main()
 			ivec2 coord = ivec2(gl_FragCoord.xy);
 			coord += + ivec2(x-(Block_Size>>1), y-(Block_Size>>1));
 			coord = clamp(coord, ivec2(0), u_gi2d_info.m_resolution);
-			uint index = getMemoryOrder(coord) + radiance_size*i;
-			uint rad = b_radiance[index];
-			if(rad != 0)
-			{
-				count++;
-				radiance_ += unpackEmissive(rad);
-			}
+			uvec4 rad = uvec4(0);
+			rad[0] = b_radiance[getMemoryOrder(coord)];
+			rad[1] = b_radiance[getMemoryOrder(coord+ivec2(1, 0))+radiance_size*1];
+			rad[2] = b_radiance[getMemoryOrder(coord+ivec2(0, 1))+radiance_size*2];
+			rad[3] = b_radiance[getMemoryOrder(coord+ivec2(1, 1))+radiance_size*3];
+			radiance_ += unpackEmissive4(rad);
+			count += int(dot(vec4(notEqual(rad, uvec4(0))), vec4(1.)) + 0.5);
 		}}
-		radiance += count==0 ? radiance_ : (radiance_ / count) * rate[i];
+		radiance += count==0 ? radiance_ : (radiance_ / count)*4;
 	}
 
 	ivec2 map_index = ivec2(gl_FragCoord.xy);
