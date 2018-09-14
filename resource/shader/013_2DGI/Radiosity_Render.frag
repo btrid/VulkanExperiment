@@ -29,11 +29,18 @@ void main()
 			coord = clamp(coord, ivec2(0), u_gi2d_info.m_resolution);
 			uvec4 rad = uvec4(0);
 			rad[0] = b_radiance[getMemoryOrder(coord)];
+#if 0
+			rad[1] = b_radiance[getMemoryOrder(coord)+radiance_size*1];
+			rad[2] = b_radiance[getMemoryOrder(coord)+radiance_size*2];
+			rad[3] = b_radiance[getMemoryOrder(coord)+radiance_size*3];
+#else
 			rad[1] = b_radiance[getMemoryOrder(coord+ivec2(1, 0))+radiance_size*1];
 			rad[2] = b_radiance[getMemoryOrder(coord+ivec2(0, 1))+radiance_size*2];
 			rad[3] = b_radiance[getMemoryOrder(coord+ivec2(1, 1))+radiance_size*3];
+#endif
 			radiance_ += unpackEmissive4(rad);
-			count += int(dot(vec4(notEqual(rad, uvec4(0))), vec4(1.)) + 0.5);
+//			count += int(dot(vec4(notEqual(rad, uvec4(0))), vec4(1.)) + 0.5);
+			count += 4;
 		}}
 		radiance += count==0 ? radiance_ : (radiance_ / count)*4;
 	}

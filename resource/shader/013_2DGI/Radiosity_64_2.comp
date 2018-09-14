@@ -48,19 +48,19 @@ void main()
 		hit_mask = u64vec4(1ul) << (offset_x + offset_y*8);
 	}
 
+	int radiance_offset = reso.x*reso.y*u_gi2d_scene.m_frame;
 	ivec2 pos_offset = ivec2(u_gi2d_scene.m_frame%2, u_gi2d_scene.m_frame/2);
 //	pos += dir * pos_offset;
 	pos += pos_offset;
 	ivec2 map_index = ivec2(pos);
 
-	int radiance_offset = reso.x*reso.y*u_gi2d_scene.m_frame;
 
 	vec3 radiance[4] = {vec3(0.),vec3(0.),vec3(0.),vec3(0.)};
 	for(int _i = 0; _i <50000; _i++)
 	{
 		// march
 		{
-			pos += dir*2.;
+			pos += dir*Advance;
 			map_index = ivec2(pos);
 		}
 

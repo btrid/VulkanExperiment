@@ -19,8 +19,8 @@ SET output=../binary
 rem %exe% %include% %option% -o ../binary\\DebugFragmentMap.comp.spv DebugFragmentMap.comp
 
 
-rem %exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity_64.comp
-%exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity_64_2.comp
+%exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity_64.comp
+rem %exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity_64_2.comp
 %exe% %include% %option% -o %output%/Radiosity_Clear.comp.spv Radiosity_Clear.comp
 %exe% %include% %option% -o %output%/Radiosity_MakeBounceMap.comp.spv Radiosity_MakeBounceMap.comp
 %exe% %include% %option% -o %output%/Radiosity_Bounce.comp.spv Radiosity_Bounce.comp
