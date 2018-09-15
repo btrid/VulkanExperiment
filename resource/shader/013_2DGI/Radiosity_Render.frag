@@ -9,7 +9,6 @@
 #define USE_GI2D_Radiosity 1
 #include "GI2D.glsl"
 
-#define Block_Size (1)
 float rate[] = {1., 1.};
 
 layout(location = 0) out vec4 FragColor;
@@ -29,7 +28,7 @@ void main()
 			coord = clamp(coord, ivec2(0), u_gi2d_info.m_resolution);
 			uvec4 rad = uvec4(0);
 			rad[0] = b_radiance[getMemoryOrder(coord)];
-#if 0
+#if 1
 			rad[1] = b_radiance[getMemoryOrder(coord)+radiance_size*1];
 			rad[2] = b_radiance[getMemoryOrder(coord)+radiance_size*2];
 			rad[3] = b_radiance[getMemoryOrder(coord)+radiance_size*3];

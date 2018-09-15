@@ -21,10 +21,6 @@ void main()
 	angle += a * 0.25*u_gi2d_scene.m_frame;
 
 	vec2 dir = rotate(angle);
-	dir.x = abs(dir.x) < 0.0001 ? 0.0001 : dir.x;
-	dir.y = abs(dir.y) < 0.0001 ? 0.0001 : dir.y;
-	vec2 inv_dir = abs(1./dir);
-	dir *= min(inv_dir.x, inv_dir.y);
 
 	vec2 floorp;
 	floorp.x = dir.x >= 0 ? 0. : reso.x;
@@ -48,10 +44,10 @@ void main()
 
 	vec2 side = rotateZ(dir, 3.14*0.5);
 	{
-		side.x = abs(side.x) < 0.0001 ? 0.0001 : side.x;
-		side.y = abs(side.y) < 0.0001 ? 0.0001 : side.y;
-		vec2 invside = abs(1. / side);
-		side *= min(invside.x, invside.y);
+		vec2 inv_side;
+		inv_side.x = side.x ==  0. ? 99999. : abs(1./side.x);
+		inv_side.y = side.y ==  0. ? 99999. : abs(1./side.y);
+		side *= min(inv_side.x, inv_side.y);
 	}
 
 	u64vec4 hit_mask;
@@ -71,7 +67,12 @@ void main()
 	int radiance_offset = reso.x*reso.y*u_gi2d_scene.m_frame;
 	ivec2 pos_offset = ivec2(u_gi2d_scene.m_frame%2, u_gi2d_scene.m_frame/2);
 //	pos += dir * pos_offset;
-//	pos += pos_offset;
+	pos += pos_offset*0.5+0.25;
+
+	vec2 inv_dir;
+	inv_dir.x = dir.x == 0. ? 999999. : abs(1./dir.x);
+	inv_dir.y = dir.y == 0. ? 999999. : abs(1./dir.y);
+	dir *= min(inv_dir.x, inv_dir.y);
 
 	ivec2 map_index = ivec2(pos);
 

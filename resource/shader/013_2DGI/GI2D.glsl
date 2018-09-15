@@ -59,7 +59,9 @@ layout(set=USE_GI2D, binding=5) restrict buffer GridCounter {
 
 #define LightPower (0.015)
 #define Advance (1.)
-#define denominator (512.)
+#define Block_Size (1)
+//#define denominator (512.)
+#define denominator (2048.)
 //#define denominator (16.)
 
 #ifdef USE_GI2D_Radiosity
