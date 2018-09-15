@@ -9,7 +9,6 @@
 #define USE_GI2D_Radiosity 1
 #include "GI2D.glsl"
 
-
 layout (local_size_x = 128*Ray_Density, local_size_y = 1) in;
 void main()
 {

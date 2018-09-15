@@ -214,7 +214,7 @@ bool marchToAABB(inout vec2 p, in vec2 d, in vec2 bmin, in vec2 bmax)
 bool intersectRayAABB(in vec2 p, in vec2 d, in vec2 bmin, in vec2 bmax, out float d_min, out float d_max)
 {
 	vec2 tmin = vec2(0.);
-	vec2 tmax = vec2(10e6);
+	vec2 tmax = vec2(0.);
 	for (int i = 0; i < 2; i++)
 	{
 		if (abs(d[i]) < 10e-6)
@@ -225,6 +225,8 @@ bool intersectRayAABB(in vec2 p, in vec2 d, in vec2 bmin, in vec2 bmax, out floa
 				p = vec2(-9999999999.f);
 				return false;
 			}
+			tmin[i] = 0.;
+			tmax[i] = 99999.;
 		}
 		else
 		{
@@ -232,11 +234,8 @@ bool intersectRayAABB(in vec2 p, in vec2 d, in vec2 bmin, in vec2 bmax, out floa
 			float t1 = (bmin[i] - p[i]) * ood;
 			float t2 = (bmax[i] - p[i]) * ood;
 
-			float near_ = min(t1, t2);
-			float far_ = max(t1, t2);
-
-			tmin[i] = max(near_, tmin[i]);
-			tmax[i] = min(far_, tmax[i]);
+			tmin[i] = min(t1, t2);
+			tmax[i] = max(t1, t2);
 		}
 	}
 	d_min = max(tmin[0], tmin[1]);

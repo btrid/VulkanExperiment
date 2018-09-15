@@ -481,7 +481,7 @@ bool intersectRayAABB(vec2 p, vec2 d, vec2 bmin, vec2 bmax, float& d_min, float&
 {
 
 	vec2 tmin = vec2(0.f);
-	vec2 tmax = vec2(10e6);
+	vec2 tmax = vec2(0.f);
 	for (int i = 0; i < 2; i++)
 	{
 		if (abs(d[i]) < 10e-6)
@@ -492,6 +492,8 @@ bool intersectRayAABB(vec2 p, vec2 d, vec2 bmin, vec2 bmax, float& d_min, float&
 				p = vec2(-9999999999.f);
 				return false;
 			}
+			tmin[i] = 0.f;
+			tmax[i] = 99999.f;
 		}
 		else
 		{
@@ -499,11 +501,8 @@ bool intersectRayAABB(vec2 p, vec2 d, vec2 bmin, vec2 bmax, float& d_min, float&
 			float t1 = (bmin[i] - p[i]) * ood;
 			float t2 = (bmax[i] - p[i]) * ood;
 
-			float near_ = glm::min(t1, t2);
-			float far_ = glm::max(t1, t2);
-
-			tmin[i] = glm::max(near_, tmin[i]);
-			tmax[i] = glm::min(far_, tmax[i]);
+			tmin[i] = glm::min(t1, t2);
+			tmax[i] = glm::max(t1, t2);
 		}
 	}
 	d_min = glm::max(tmin[0], tmin[1]);
@@ -613,7 +612,7 @@ int main()
 		}
 	}
 	{
-#define gl_LocalInvocationIndex (7)
+#define gl_LocalInvocationIndex (3)
 		int loop = 64;
 		for (int i = 0; i < loop; i++) 
 		{
@@ -636,9 +635,14 @@ int main()
 				vec2 minp = glm::min(glm::min(glm::min(p0, p1), p2), p3);
 				begin = minp + floordir * (8.) * gl_LocalInvocationIndex;
 				float _min, _max;
-				intersectRayAABB(begin, dir, vec2(0.f), vec2(512.f), _min, _max);
-				end = begin + dir * _max;
-				begin = begin + dir * _min;
+				if (intersectRayAABB(begin, dir, vec2(0.f), vec2(512.f), _min, _max))
+				{
+					end = begin + dir * _max;
+					begin = begin + dir * _min;
+				}
+				else {
+					begin = end = vec2(99999.f);
+				}
 			}
 			printf("min=[%6.1f,%6.1f] max=[%6.1f,%6.1f] dir=[%3.1f,%3.1f]\n", begin.x, begin.y, end.x, end.y, dir.x, dir.y);
 			printf("  length=[%6.2f]\n", distance(begin, end));
