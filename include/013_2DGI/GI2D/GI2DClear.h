@@ -21,7 +21,7 @@ struct GI2DClear
 				0, nullptr, array_length(to_write), to_write, 0, nullptr);
 
 			// clear
-			cmd.fillBuffer(m_gi2d_context->b_fragment_buffer.getInfo().buffer, m_gi2d_context->b_fragment_buffer.getInfo().offset, m_gi2d_context->b_fragment_buffer.getInfo().range, 0u);
+			cmd.fillBuffer(m_gi2d_context->b_fragment.getInfo().buffer, m_gi2d_context->b_fragment.getInfo().offset, m_gi2d_context->b_fragment.getInfo().range, 0u);
 			cmd.fillBuffer(m_gi2d_context->b_grid_counter.getInfo().buffer, m_gi2d_context->b_grid_counter.getInfo().offset, m_gi2d_context->b_grid_counter.getInfo().range, 0);
 
 		}

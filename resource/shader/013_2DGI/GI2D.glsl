@@ -50,6 +50,9 @@ layout(std430, set=USE_GI2D, binding=4) restrict buffer EmissiveMapBuffer {
 layout(set=USE_GI2D, binding=5) restrict buffer GridCounter {
 	int b_grid_counter[];
 };
+layout(set=USE_GI2D, binding=6) restrict buffer LightBuffer {
+	uint b_light[];
+};
 
 
 #define getFragmentMapHierarchyOffset(_i) (u_gi2d_info.m_fragment_map_hierarchy_offset[(_i)/4][(_i)%4])
@@ -64,6 +67,20 @@ layout(set=USE_GI2D, binding=5) restrict buffer GridCounter {
 //#define denominator (512.)
 #define denominator (2048.)
 //#define denominator (16.)
+
+
+uint packEmissive(in vec3 rgb)
+{
+	ivec3 irgb = ivec3(rgb*denominator*(1.+1./denominator*0.5));
+	irgb <<= ivec3(20, 10, 0);
+	return irgb.x | irgb.y | irgb.z;
+}
+vec3 unpackEmissive(in uint irgb)
+{
+//	vec3 rgb = vec3((uvec3(irgb) >> uvec3(21, 10, 0)) & ((uvec3(1)<<uvec3(11, 11, 10))-1));
+	vec3 rgb = vec3((uvec3(irgb) >> uvec3(20, 10, 0)) & ((uvec3(1)<<uvec3(10, 10, 10))-1));
+	return rgb / denominator;
+}
 
 #ifdef USE_GI2D_Radiosity
 struct D2Ray
@@ -84,19 +101,6 @@ layout(set=USE_GI2D_Radiosity, binding=2) restrict buffer RayBuffer {
 layout(set=USE_GI2D_Radiosity, binding=3) restrict buffer RayCounter {
 	ivec4 b_ray_counter;
 };
-
-uint packEmissive(in vec3 rgb)
-{
-	ivec3 irgb = ivec3(rgb*denominator*(1.+1./denominator*0.5));
-	irgb <<= ivec3(20, 10, 0);
-	return irgb.x | irgb.y | irgb.z;
-}
-vec3 unpackEmissive(in uint irgb)
-{
-//	vec3 rgb = vec3((uvec3(irgb) >> uvec3(21, 10, 0)) & ((uvec3(1)<<uvec3(11, 11, 10))-1));
-	vec3 rgb = vec3((uvec3(irgb) >> uvec3(20, 10, 0)) & ((uvec3(1)<<uvec3(10, 10, 10))-1));
-	return rgb / denominator;
-}
 
 /*uvec4 packEmissiveR4(in vec3 rgb)
 {

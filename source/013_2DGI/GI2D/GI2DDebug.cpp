@@ -139,16 +139,16 @@ void GI2DDebug::execute(vk::CommandBuffer cmd)
 {
 	vk::BufferMemoryBarrier to_write[] =
 	{
-		m_gi2d_context->b_fragment_buffer.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
+		m_gi2d_context->b_fragment.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
 	};
 	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands, {}, 0, nullptr, array_length(to_write), to_write, 0, nullptr);
 
 	vk::BufferCopy copy;
 	copy.setSrcOffset(m_map_data.getInfo().offset);
-	copy.setDstOffset(m_gi2d_context->b_fragment_buffer.getInfo().offset);
-	copy.setSize(m_gi2d_context->b_fragment_buffer.getInfo().range);
+	copy.setDstOffset(m_gi2d_context->b_fragment.getInfo().offset);
+	copy.setSize(m_gi2d_context->b_fragment.getInfo().range);
 
-	cmd.copyBuffer(m_map_data.getInfo().buffer, m_gi2d_context->b_fragment_buffer.getInfo().buffer, copy);
+	cmd.copyBuffer(m_map_data.getInfo().buffer, m_gi2d_context->b_fragment.getInfo().buffer, copy);
 
 // 	// light‚Ì‚Å‚Î‚Á‚®
 // //	if(0)
@@ -180,7 +180,7 @@ void GI2DDebug::execute(vk::CommandBuffer cmd)
 // 	}
 	vk::BufferMemoryBarrier to_read[] =
 	{
-		m_gi2d_context->b_fragment_buffer.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eIndirectCommandRead),
+		m_gi2d_context->b_fragment.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eIndirectCommandRead),
 	};
 	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);
 }
