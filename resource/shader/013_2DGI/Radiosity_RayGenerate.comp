@@ -10,7 +10,7 @@
 #include "GI2D.glsl"
 
 
-layout (local_size_x = 128, local_size_y = 1) in;
+layout (local_size_x = 256, local_size_y = 1) in;
 void main()
 {
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);

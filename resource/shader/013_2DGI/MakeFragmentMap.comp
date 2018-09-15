@@ -20,7 +20,7 @@ void main()
 	bool is_fragment = (emissive <= 0.0) &&  dot(albedo, albedo) >= 0.01;
 	bool is_emissive = (emissive >= 1.);
 
-	b_light[tiled_1D_index] = is_emissive ? packEmissive(albedo*LightPower) : 0;
+	b_light[getMemoryOrder(ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y))] = is_emissive ? packEmissive(albedo*LightPower) : 0;
 	// fragment map
 	{
 		uvec2 local = gl_LocalInvocationID.xy / 8;

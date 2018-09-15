@@ -60,7 +60,7 @@ layout(set=USE_GI2D, binding=6) restrict buffer LightBuffer {
 #endif
 
 
-#define LightPower (0.015)
+#define LightPower (0.035)
 #define Ray_Density (1)
 #define Ray_Advance (1.)
 #define Block_Size (1)
