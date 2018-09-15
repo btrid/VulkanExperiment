@@ -477,6 +477,40 @@ bool marchToAABB(vec2& p, vec2 d, vec2 bmin, vec2 bmax)
 
 }
 
+bool intersectRayAABB(vec2 p, vec2 d, vec2 bmin, vec2 bmax, float& d_min, float& d_max)
+{
+
+	vec2 tmin = vec2(0.f);
+	vec2 tmax = vec2(10e6);
+	for (int i = 0; i < 2; i++)
+	{
+		if (abs(d[i]) < 10e-6)
+		{
+			// 光線はスラブに対して平行。原点がスラブの中になければ交点無し。
+			if (p[i] < bmin[i] || p[i] > bmax[i])
+			{
+				p = vec2(-9999999999.f);
+				return false;
+			}
+		}
+		else
+		{
+			float ood = 1. / d[i];
+			float t1 = (bmin[i] - p[i]) * ood;
+			float t2 = (bmax[i] - p[i]) * ood;
+
+			float near_ = glm::min(t1, t2);
+			float far_ = glm::max(t1, t2);
+
+			tmin[i] = glm::max(near_, tmin[i]);
+			tmax[i] = glm::min(far_, tmax[i]);
+		}
+	}
+	d_min = glm::max(tmin[0], tmin[1]);
+	d_max = glm::min(tmax[0], tmax[1]);
+	return d_min <= d_max;
+}
+
 int getMortonIndex(ivec2 xy)
 {
 	// 8x8のブロック
@@ -550,10 +584,12 @@ void bitonic_sort()
 
 int main()
 {
-	bitonic_sort();
 	{
-		auto a = getMortonIndex(ivec2(123, 256));
-		a++;
+//		bitonic_sort();
+	}
+	{
+//		auto a = getMortonIndex(ivec2(123, 256));
+//		a++;
 	}
 	{
 		for (int i = 0; i < 100; i++)
@@ -577,15 +613,11 @@ int main()
 		}
 	}
 	{
-#define gl_LocalInvocationIndex (16)
+#define gl_LocalInvocationIndex (7)
 		int loop = 64;
 		for (int i = 0; i < loop; i++) 
 		{
-//			i = 15;
 			vec2 dir = glm::rotate(vec2(1.f, 0.f), i*6.28f / loop);
-// 			dir.x = abs(dir.x) < 0.0001 ? 0.0001 : dir.x;
-// 			dir.y = abs(dir.y) < 0.0001 ? 0.0001 : dir.y;
-
 			vec2 begin;
 			vec2 end;
 			{
@@ -603,30 +635,13 @@ int main()
 
 				vec2 minp = glm::min(glm::min(glm::min(p0, p1), p2), p3);
 				begin = minp + floordir * (8.) * gl_LocalInvocationIndex;
-				marchToAABB(begin, dir, vec2(0.f), vec2(512.f));
+				float _min, _max;
+				intersectRayAABB(begin, dir, vec2(0.f), vec2(512.f), _min, _max);
+				end = begin + dir * _max;
+				begin = begin + dir * _min;
 			}
-			{
-				vec2 inv_floorp;
-				inv_floorp.x = dir.x < 0 ? 0.f : 512.f;
-				inv_floorp.y = dir.y < 0 ? 0.f : 512.f;
-				vec2 inv_floordir;
-				inv_floordir.x = abs(dir.x) > abs(dir.y) ? 0.f : 1.f;
-				inv_floordir.y = abs(dir.x) > abs(dir.y) ? 1.f : 0.f;
-
-				auto p0 = intersectRayRay(vec2(0, 0), -dir, inv_floorp, inv_floordir);
-				auto p1 = intersectRayRay(vec2(512, 0), -dir, inv_floorp, inv_floordir);
-				auto p2 = intersectRayRay(vec2(0, 512), -dir, inv_floorp, inv_floordir);
-				auto p3 = intersectRayRay(vec2(512, 512), -dir, inv_floorp, inv_floordir);
-
-//				vec2 maxp = glm::max(glm::max(glm::max(p0, p1), p2), p3);
-				vec2 minp = glm::min(glm::min(glm::min(p0, p1), p2), p3);
-				end = minp + inv_floordir * (8.) * gl_LocalInvocationIndex;
-				marchToAABB(end, -dir, vec2(0.f), vec2(512.f));
-			}
-			printf(" aabbmin=[%7.2f,%7.2f] aabbmax=[%7.2f,%7.2f]\n", begin.x, begin.y, end.x, end.y);
-			printf("  length=[%7.2f]\n", distance(begin, end));
-
-
+			printf("min=[%6.1f,%6.1f] max=[%6.1f,%6.1f] dir=[%3.1f,%3.1f]\n", begin.x, begin.y, end.x, end.y, dir.x, dir.y);
+			printf("  length=[%6.2f]\n", distance(begin, end));
 
 			vec2 side = glm::rotate(dir, -3.14f*0.5f);
 			side.x = abs(side.x) < 0.0001 ? 0.0001 : side.x;

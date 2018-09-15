@@ -10,8 +10,7 @@
 #include "GI2D.glsl"
 
 
-#define Density (1)
-layout (local_size_x = 128*Density, local_size_y = 1) in;
+layout (local_size_x = 128*Ray_Density, local_size_y = 1) in;
 void main()
 {
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
@@ -37,8 +36,8 @@ void main()
 	vec2 minp = min(min(min(p0, p1), p2), p3);
 	vec2 maxp = max(max(max(p0, p1), p2), p3);
 
-	vec2 pos = minp + floordir * (8./Density) * gl_LocalInvocationIndex;
-	pos += floordir * (8./Density) * (gl_GlobalInvocationID.z / gl_NumWorkGroups.z);
+	vec2 pos = minp + floordir * (8./Ray_Density) * gl_LocalInvocationIndex;
+	pos += floordir * (8./Ray_Density) * (gl_GlobalInvocationID.z / gl_NumWorkGroups.z);
 	if(!marchToAABB(pos, dir, vec2(0.), reso.xy)){return;}
 	vec2 origin_pos = pos;
 
@@ -58,7 +57,7 @@ void main()
 		ivec2 origin;
 		origin.x = side.x > 0. ? 0 : 7;
 		origin.y = side.y > 0. ? 0 : 7;
-		vec4 _offset = vec4(0., 2., 4., 6.) / Density + vec4(0.5);
+		vec4 _offset = (vec4(0., 2., 4., 6.) + vec4(0.5)) / Ray_Density;
 		offset_x = ivec4(side.xxxx * (_offset) + origin.xxxx);
 		offset_y = ivec4(side.yyyy * (_offset) + origin.yyyy);
 		hit_mask = u64vec4(1ul) << (offset_x + offset_y*8);
@@ -67,7 +66,7 @@ void main()
 	int radiance_offset = reso.x*reso.y*u_gi2d_scene.m_frame;
 	ivec2 pos_offset = ivec2(u_gi2d_scene.m_frame%2, u_gi2d_scene.m_frame/2);
 //	pos += dir * pos_offset;
-	pos += pos_offset*0.5+0.25;
+	pos += pos_offset*0.5*Ray_Density;
 
 	vec2 inv_dir;
 	inv_dir.x = dir.x == 0. ? 999999. : abs(1./dir.x);
@@ -81,7 +80,7 @@ void main()
 	{
 		// march
 		{
-			pos += dir*Advance;
+			pos += dir*Ray_Advance;
 			map_index = ivec2(pos);
 		}
 

@@ -58,7 +58,8 @@ layout(set=USE_GI2D, binding=5) restrict buffer GridCounter {
 
 
 #define LightPower (0.015)
-#define Advance (1.)
+#define Ray_Density (1)
+#define Ray_Advance (1.)
 #define Block_Size (1)
 //#define denominator (512.)
 #define denominator (2048.)
@@ -210,6 +211,38 @@ bool marchToAABB(inout vec2 p, in vec2 d, in vec2 bmin, in vec2 bmax)
 
 }
 
+bool intersectRayAABB(in vec2 p, in vec2 d, in vec2 bmin, in vec2 bmax, out float d_min, out float d_max)
+{
+	vec2 tmin = vec2(0.);
+	vec2 tmax = vec2(10e6);
+	for (int i = 0; i < 2; i++)
+	{
+		if (abs(d[i]) < 10e-6)
+		{
+			// 光線はスラブに対して平行。原点がスラブの中になければ交点無し。
+			if (p[i] < bmin[i] || p[i] > bmax[i])
+			{
+				p = vec2(-9999999999.f);
+				return false;
+			}
+		}
+		else
+		{
+			float ood = 1. / d[i];
+			float t1 = (bmin[i] - p[i]) * ood;
+			float t2 = (bmax[i] - p[i]) * ood;
+
+			float near_ = min(t1, t2);
+			float far_ = max(t1, t2);
+
+			tmin[i] = max(near_, tmin[i]);
+			tmax[i] = min(far_, tmax[i]);
+		}
+	}
+	d_min = max(tmin[0], tmin[1]);
+	d_max = min(tmax[0], tmax[1]);
+	return d_min <= d_max;
+}
 vec2 rotate(in float angle)
 {
 	float c = cos(angle);
