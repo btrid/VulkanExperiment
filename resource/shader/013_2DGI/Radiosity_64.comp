@@ -75,6 +75,11 @@ void main()
 	ivec2 map_index = ivec2(pos);
 
 	uvec4 u_radiance = uvec4(0);
+
+	u64vec4 b;
+	u64vec4 l;
+	ivec2 old_fi = ivec2(999999);
+
 	for(int _i = 0; _i <50000; _i++)
 	{
 		// march
@@ -104,19 +109,23 @@ void main()
 			ivec4 ls = (8-shift.yyyy)*ivec4(0,8,0,8) + (8-shift.xxxx)*ivec4(0,0,1,1);
 
 			ivec2 _fi = map_index/8;
-			ivec4 offset_ = ivec4(0,0,1,1);
-			ivec4 findex = (_fi.xxxx+offset_.xxzz) + (_fi.yyyy+offset_.ywyw)*(reso.zzzz);
-			u64vec4 b = u64vec4(b_diffuse_map[findex.x], b_diffuse_map[findex.y], b_diffuse_map[findex.z], b_diffuse_map[findex.w]);
-			b &= mask;
-			b >>= rs;
-			b <<= ls;
-			uint64_t diffuse_map = b.x|b.y|b.z|b.w;
-
-			u64vec4 l = u64vec4(b_emissive_map[findex.x], b_emissive_map[findex.y], b_emissive_map[findex.z], b_emissive_map[findex.w]);
-			l &= mask;
-			l >>= rs;
-			l <<= ls;
-			uint64_t emissive_map = l.x|l.y|l.z|l.w;
+			if(any(notEqual(old_fi, _fi)))
+			{
+				// 更新
+				ivec4 offset_ = ivec4(0,0,1,1);
+				ivec4 findex = (_fi.xxxx+offset_.xxzz) + (_fi.yyyy+offset_.ywyw)*(reso.zzzz);
+				b = u64vec4(b_diffuse_map[findex.x], b_diffuse_map[findex.y], b_diffuse_map[findex.z], b_diffuse_map[findex.w]);
+				l = u64vec4(b_emissive_map[findex.x], b_emissive_map[findex.y], b_emissive_map[findex.z], b_emissive_map[findex.w]);
+				old_fi = _fi;
+			}
+			u64vec4 _b = b & mask;
+			_b >>= rs;
+			_b <<= ls;
+			u64vec4 _l = l & mask;
+			_l >>= rs;
+			_l <<= ls;
+			uint64_t diffuse_map = _b.x|_b.y|_b.z|_b.w;
+			uint64_t emissive_map = _l.x|_l.y|_l.z|_l.w;
 
 			bvec4 is_light = bvec4(notEqual(u64vec4(emissive_map) & hit_mask, u64vec4(0)));
 			ivec4 li = (map_index.xxxx + offset_x) + (map_index.yyyy + offset_y) * reso.x;
@@ -139,14 +148,4 @@ void main()
 		}
 
 	}
-//	uvec4 u_radiance;
-//			u_radiance.x = packEmissive(radiance[0]);
-//			u_radiance.y = packEmissive(radiance[1]);
-//			u_radiance.z = packEmissive(radiance[2]);
-//			u_radiance.w = packEmissive(radiance[3]);
-//	u_radiance.x != 0 ? atomicAdd(b_radiance[gl_GlobalInvocationID.x+0], u_radiance.x) : 0;
-//	u_radiance.y != 0 ? atomicAdd(b_radiance[gl_GlobalInvocationID.x+1], u_radiance.y) : 0;
-//	u_radiance.z != 0 ? atomicAdd(b_radiance[gl_GlobalInvocationID.x+2], u_radiance.z) : 0;
-//	u_radiance.w != 0 ? atomicAdd(b_radiance[gl_GlobalInvocationID.x+3], u_radiance.w) : 0;
-
 }
