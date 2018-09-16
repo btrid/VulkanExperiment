@@ -65,8 +65,6 @@ struct GI2DContext
 	{
  		RenderWidth = 1024;
  		RenderHeight = 1024;
-//		RenderWidth = 512;
-//		RenderHeight = 512;
 		RenderSize = ivec2(RenderWidth, RenderHeight);
 		FragmentBufferSize = RenderWidth * RenderHeight;
 
@@ -101,7 +99,7 @@ struct GI2DContext
 		}
 		{
 			b_fragment = context->m_storage_memory.allocateMemory<Fragment>({ FragmentBufferSize , {} });
-			b_light = context->m_storage_memory.allocateMemory<uint32_t>({ FragmentBufferSize, {} });
+			b_light = context->m_storage_memory.allocateMemory<uint32_t>({ FragmentBufferSize+ FragmentBufferSize*0.5f, {} });
 		}
 		{
 			btr::BufferMemoryDescriptorEx<uint64_t> desc;

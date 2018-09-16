@@ -80,8 +80,15 @@ struct GI2DFluid
 					auto& p = pos[i];
 					p.x = 65 + std::rand() % area + (std::rand() % 10000) / 10000.f;
 					p.y = 45 + std::rand() % area + (std::rand() % 10000) / 10000.f;
-					if (std::rand() % 100 > 40)
-//					if (i > 15)
+//					if (std::rand() % 100 > 40)
+					int size = 1;
+ 					if (i < size*size)
+					{
+						p.x = 5 + (i / size);
+						p.y = 5 + (i %size);
+					}
+					else
+//					if (i >= 4)
 					{
 						p.x = -1000.f;
 						p.y = -1000.f;

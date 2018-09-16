@@ -64,8 +64,7 @@ void main()
 
 	int radiance_offset = reso.x*reso.y*u_gi2d_scene.m_frame;
 	ivec2 pos_offset = ivec2(u_gi2d_scene.m_frame%2, u_gi2d_scene.m_frame/2);
-//	pos += dir * pos_offset;
-	pos += pos_offset*0.5*Ray_Density;
+	pos += pos_offset/Ray_Density;
 
 	vec2 inv_dir;
 	inv_dir.x = dir.x == 0. ? 999999. : abs(1./dir.x);

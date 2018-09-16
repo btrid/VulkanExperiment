@@ -1,0 +1,31 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Common.glsl"
+#include "btrlib/Math.glsl"
+
+#define USE_GI2D 0
+#include "GI2D.glsl"
+
+layout (local_size_x = 32, local_size_y = 32) in;
+
+shared uint s_bit[16][2];
+shared uint s_light_bit[16][2];
+void main()
+{
+	ivec2 id = ivec2(gl_GlobalInvocationID.xy);
+	ivec2 src = ivec2(id*2 + uvec2(u_gi2d_scene.m_frame%2, u_gi2d_scene.m_frame/2)) - ivec2(1);
+	uvec4 l;
+	l.x = b_light[getMemoryOrder(src)];
+	l.y = b_light[getMemoryOrder(src+ivec2(1, 0))];
+	l.z = b_light[getMemoryOrder(src+ivec2(0, 1))];
+	l.w = b_light[getMemoryOrder(src+ivec2(1, 1))];
+
+	uint ll = packEmissive(unpackEmissive4(l)*0.25);
+
+	int offset = u_gi2d_info.m_resolution.x*u_gi2d_info.m_resolution.y;
+	b_light[offset+getMemoryOrder(id)] = ll;
+
+}
+
