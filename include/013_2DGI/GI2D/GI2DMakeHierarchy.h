@@ -181,7 +181,7 @@ struct GI2DMakeHierarchy
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 			0, nullptr, array_length(to_write), to_write, 0, nullptr);
 
-		auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth, m_gi2d_context->RenderHeight, 1), uvec3(32, 32, 1));
+		auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth/2, m_gi2d_context->RenderHeight/2, 1), uvec3(32, 32, 1));
 		cmd.dispatch(num.x, num.y, num.z);
 	}
 

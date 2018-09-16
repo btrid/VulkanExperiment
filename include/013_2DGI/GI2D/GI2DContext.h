@@ -113,8 +113,7 @@ struct GI2DContext
 			desc.element_num += size / (64 * 64);
 			desc.element_num += size / (128 * 128);
 			b_diffuse_map = context->m_storage_memory.allocateMemory(desc);
-
-			b_emissive_map = context->m_storage_memory.allocateMemory<uint64_t>({ (uint32_t)RenderHeight * RenderWidth / 64,{} });
+			b_emissive_map = context->m_storage_memory.allocateMemory(desc);
 		}
 
 		uint32_t size = 0;

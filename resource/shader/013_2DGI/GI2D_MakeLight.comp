@@ -10,8 +10,6 @@
 
 layout (local_size_x = 32, local_size_y = 32) in;
 
-shared uint s_bit[16][2];
-shared uint s_light_bit[16][2];
 void main()
 {
 	ivec2 id = ivec2(gl_GlobalInvocationID.xy);
@@ -22,7 +20,7 @@ void main()
 	l.z = b_light[getMemoryOrder(src+ivec2(0, 1))];
 	l.w = b_light[getMemoryOrder(src+ivec2(1, 1))];
 
-	uint ll = packEmissive(unpackEmissive4(l)*0.25);
+	uint ll = packEmissive(unpackEmissive4(l));
 
 	int offset = u_gi2d_info.m_resolution.x*u_gi2d_info.m_resolution.y;
 	b_light[offset+getMemoryOrder(id)] = ll;
