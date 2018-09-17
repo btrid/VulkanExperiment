@@ -85,7 +85,7 @@ struct GI2DFluid
 						p.y = 45 + std::rand() % area + (std::rand() % 10000) / 10000.f;
 					}
 #else
-					int size = 2;
+					int size = 3;
  					if (i < size*size)
 					{
 						p.x = 32 + (i / size);
