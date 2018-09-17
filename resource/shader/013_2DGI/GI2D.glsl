@@ -54,6 +54,9 @@ layout(set=USE_GI2D, binding=6) restrict buffer LightBuffer {
 	uint b_light[];
 };
 
+ivec2 frame_offset(){
+	return ivec2(u_gi2d_scene.m_frame%2,u_gi2d_scene.m_frame/2);
+}
 
 #define getFragmentMapHierarchyOffset(_i) (u_gi2d_info.m_fragment_map_hierarchy_offset[(_i)/4][(_i)%4])
 
@@ -63,7 +66,7 @@ layout(set=USE_GI2D, binding=6) restrict buffer LightBuffer {
 #define LightPower (0.015)
 #define Ray_Density (1)
 #define Ray_Advance (1.)
-#define Block_Size (1)
+#define Block_Size (5)
 //#define denominator (512.)
 #define denominator (2048.)
 //#define denominator (16.)

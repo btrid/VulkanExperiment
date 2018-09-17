@@ -11,8 +11,8 @@ SET output=../binary
 %exe% %include% %option% -o %output%/MakeFragmentAppModel.vert.spv MakeFragmentAppModel.vert
 %exe% %include% %option% -o %output%/MakeFragmentAppModel.frag.spv MakeFragmentAppModel.frag
 
-rem %exe% %include% %option% -o %output%/MakeFragmentMap.comp.spv MakeFragmentMap.comp
-%exe% %include% %option% -o %output%/MakeFragmentMap.comp.spv MakeFragmentMap_2.comp
+%exe% %include% %option% -o %output%/MakeFragmentMap.comp.spv MakeFragmentMap.comp
+rem %exe% %include% %option% -o %output%/MakeFragmentMap.comp.spv MakeFragmentMap_2.comp
 %exe% %include% %option% -o %output%/MakeFragmentMapHierarchy.comp.spv MakeFragmentMapHierarchy.comp
 
 %exe% %include% %option% -o %output%/GI2D_MakeDensityHierarchy.comp.spv GI2D_MakeDensityHierarchy.comp
@@ -21,10 +21,10 @@ rem %exe% %include% %option% -o %output%/MakeFragmentMap.comp.spv MakeFragmentMa
 rem %exe% %include% %option% -o ../binary\\DebugFragmentMap.comp.spv DebugFragmentMap.comp
 
 
-rem %exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity_64.comp
-%exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity_64_4.comp
-rem %exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity_64_3.comp
+%exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity_64.comp
 rem %exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity_64_2.comp
+rem %exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity_64_3.comp
+rem %exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity_64_4.comp
 %exe% %include% %option% -o %output%/Radiosity_Clear.comp.spv Radiosity_Clear.comp
 %exe% %include% %option% -o %output%/Radiosity_MakeBounceMap.comp.spv Radiosity_MakeBounceMap.comp
 %exe% %include% %option% -o %output%/Radiosity_Bounce.comp.spv Radiosity_Bounce.comp

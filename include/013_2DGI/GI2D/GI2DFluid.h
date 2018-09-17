@@ -76,19 +76,23 @@ struct GI2DFluid
 #if 1
 				for (int i = 0; i < Particle_Num; i++)
 				{
-#define area (800)
 					auto& p = pos[i];
-					p.x = 65 + std::rand() % area + (std::rand() % 10000) / 10000.f;
-					p.y = 45 + std::rand() % area + (std::rand() % 10000) / 10000.f;
-//					if (std::rand() % 100 > 40)
-					int size = 1;
+#if 0
+					if (std::rand() % 100 > 90)
+					{
+#define area (800)
+						p.x = 65 + std::rand() % area + (std::rand() % 10000) / 10000.f;
+						p.y = 45 + std::rand() % area + (std::rand() % 10000) / 10000.f;
+					}
+#else
+					int size = 2;
  					if (i < size*size)
 					{
-						p.x = 5 + (i / size);
-						p.y = 5 + (i %size);
+						p.x = 32 + (i / size);
+						p.y = 32 + (i % size);
 					}
+#endif
 					else
-//					if (i >= 4)
 					{
 						p.x = -1000.f;
 						p.y = -1000.f;
