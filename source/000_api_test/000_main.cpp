@@ -581,8 +581,55 @@ void bitonic_sort()
 	printf("\n");
 }
 
+vec2 rotateslerp(float angle)
+{
+	float a = angle / glm::two_pi<float>() * 4.f;
+	float t = fmod(a, 1.f);
+	int index = (int)a;
+	vec3 pp[] = {
+		vec3(1., 0., 0.),
+		vec3(0., 1., 0.),
+		vec3(-1.,0., 0.),
+		vec3(0.,-1., 0.),
+	};
+	vec3 p0 = pp[index];
+	vec3 p1 = pp[(index + 1) % 4];
+	auto p = glm::slerp(p0, p1, t);
+	return p.xy();
+}
+vec2 rotatelerp(float angle)
+{
+	float a = angle / glm::two_pi<float>() * 4.f;
+	float t = fmod(a, 1.f);
+	int index = (int)a;
+	vec3 pp[] = {
+		vec3(1., 0., 0.),
+		vec3(0., 1., 0.),
+		vec3(-1.,0., 0.),
+		vec3(0.,-1., 0.),
+	};
+	vec3 p0 = pp[index];
+	vec3 p1 = pp[(index + 1) % 4];
+	auto p = glm::lerp(p0, p1, t);
+	return glm::normalize(p.xy());
+}
+
 int main()
 {
+	{
+		int loop = 360;
+		for (size_t i = 0; i < loop; i++)
+		{
+//			vec2 sdir = rotateslerp(glm::two_pi<float>() *  i / loop);
+			vec2 dir = glm::rotate(vec2(1.f, 0.f), glm::two_pi<float>() *  i / loop);
+			vec2 ldir = rotatelerp(glm::two_pi<float>() *  i / loop);
+//			printf("[%3d] [x,y]=[%7.5f,%7.5f]=[%7.5f,%7.5f]\n", i, sdir.x, sdir.y, dir.x, dir.y);
+			printf("[%3d] [x,y]=[%7.5f,%7.5f]=[%7.5f,%7.5f]\n", i, ldir.x, ldir.y, dir.x, dir.y);
+		}
+		int iyyi = 0;
+		iyyi++;
+
+	}
 	{
 //		bitonic_sort();
 	}

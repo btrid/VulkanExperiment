@@ -24,11 +24,14 @@ rem %exe% %include% %option% -o ../binary\\DebugFragmentMap.comp.spv DebugFragme
 rem %exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity_64.comp
 rem %exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity_64_2.comp
 rem %exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity_64_3.comp
- %exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity_64_4.comp
-%exe% %include% %option% -o %output%/Radiosity_Clear.comp.spv Radiosity_Clear.comp
+rem %exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity_64_4.comp
+ %exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity_64_5.comp
+rem %exe% %include% %option% -o %output%/Radiosity_Clear.comp.spv Radiosity_Clear.comp
+%exe% %include% %option% -o %output%/Radiosity_Clear.comp.spv Radiosity_Clear_5.comp
 %exe% %include% %option% -o %output%/Radiosity_MakeBounceMap.comp.spv Radiosity_MakeBounceMap.comp
 %exe% %include% %option% -o %output%/Radiosity_Bounce.comp.spv Radiosity_Bounce.comp
-%exe% %include% %option% -o %output%/Radiosity_Render.frag.spv Radiosity_Render.frag
+rem %exe% %include% %option% -o %output%/Radiosity_Render.frag.spv Radiosity_Render.frag
+%exe% %include% %option% -o %output%/Radiosity_Render.frag.spv Radiosity_Render_5.frag
 %exe% %include% %option% -o %output%/Radiosity_Render.vert.spv Radiosity_Render.vert
 
 %exe% %include% %option% -o %output%/Radiosity_CalcRadiance.comp.spv Radiosity_CalcRadiance.comp
