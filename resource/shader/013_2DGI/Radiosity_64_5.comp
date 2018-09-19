@@ -9,12 +9,12 @@
 #define USE_GI2D_Radiosity 1
 #include "GI2D.glsl"
 
-layout (local_size_x = 256*Ray_Density, local_size_y = 1) in;
+layout (local_size_x = 256*4*Ray_Density, local_size_y = 1) in;
 void main()
 {
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
 
-	float a = 6.283 / gl_NumWorkGroups.y;
+	float a = 6.28318530717958647692528676655900576 / gl_NumWorkGroups.y;
 	float angle = a * gl_GlobalInvocationID.y;
 	angle += a * 0.25*u_gi2d_scene.m_frame;
 
@@ -36,7 +36,7 @@ void main()
 	vec2 minp = min(min(min(p0, p1), p2), p3);
 	vec2 maxp = max(max(max(p0, p1), p2), p3);
 
-	vec2 pos = minp + floordir * (8./Ray_Density) * gl_LocalInvocationIndex;
+	vec2 pos = minp + floordir * (2./Ray_Density) * gl_LocalInvocationIndex;
 	pos += floordir * (8./Ray_Density) * (u_gi2d_scene.m_frame %2);
 	if(!marchToAABB(pos, dir, vec2(0.), reso.xy)){return;}
 
@@ -44,18 +44,18 @@ void main()
 	ivec4 offset_x;
 	ivec4 offset_y;
 	{
-		vec2 side = rotateZ(dir, 3.14*0.5);
+		vec2 side = normalize(rotateZ(dir, 3.14*0.5));
 		{
 			vec2 inv_side;
-			inv_side.x = side.x ==  0. ? 99999. : abs(1./side.x);
-			inv_side.y = side.y ==  0. ? 99999. : abs(1./side.y);
+			inv_side.x = side.x == 0. ? 99999. : abs(1./side.x);
+			inv_side.y = side.y == 0. ? 99999. : abs(1./side.y);
 			side *= min(inv_side.x, inv_side.y);
 		}
-		ivec2 origin = ivec2(greaterThan(side, vec2(0.))) * 7;
-		vec4 _offset = (vec4(0., 2., 4., 6.) + vec4(1.)) / Ray_Density;
-		offset_x = ivec4(side.xxxx * (_offset) + origin.xxxx);
-		offset_y = ivec4(side.yyyy * (_offset) + origin.yyyy);
-		hit_mask = u64vec4(1ul) << (offset_x/2 + offset_y/2*8);
+//		ivec2 origin = ivec2(greaterThan(side, vec2(0.))) * 8;
+		vec4 _offset = vec4(1., 3., 5., 7.) / Ray_Density;
+		offset_x = ivec4(side.xxxx * (_offset)) / 2;
+		offset_y = ivec4(side.yyyy * (_offset)) / 2;
+		hit_mask = u64vec4(1ul) << (offset_x + offset_y*8);
 	}
 
 	int buf_offset = reso.x*reso.y;
@@ -64,24 +64,41 @@ void main()
 	vec2 inv_dir;
 	inv_dir.x = dir.x == 0. ? 999999. : abs(1./dir.x);
 	inv_dir.y = dir.y == 0. ? 999999. : abs(1./dir.y);
-	dir *= min(inv_dir.x, inv_dir.y);
+//	dir *= min(inv_dir.x, inv_dir.y);
 
 //	ivec2 pos_offset = ivec2(u_gi2d_scene.m_frame%2, u_gi2d_scene.m_frame/2);
 //	pos += dir*pos_offset;
 //	pos += pos_offset*sign(dir);
 
+	const ivec2 map_index_origin = ivec2(greaterThanEqual(dir, vec2(0.)));
+	ivec3 next_step = ivec3((dir.x < 0. ? -1 : 1), (dir.y < 0. ? -1 : 1), 0);
 	ivec2 map_index = ivec2(pos);
 
 	uvec4 u_radiance = uvec4(0);
 	u64vec4 b;
 	u64vec4 l;
 	ivec2 old_fi = ivec2(999999);
-	for(int _i = 0; _i <50000; _i++)
+	for(int _i = 0; _i <5000; _i++)
 	{
 		// march
 		{
-			pos += dir*Ray_Advance;
+			int hierarchy = 0;
+			ivec2 cell_origin = map_index_origin<<hierarchy;
+			ivec2 map_index_sub = map_index - ((map_index>>hierarchy)<<hierarchy);
+			vec2 cell_p = abs(cell_origin - (map_index_sub+fract(pos)));
+			cell_p += vec2(lessThanEqual(cell_p, vec2(FLT_EPSIRON)));
+
+			vec2 dist = abs(cell_p*inv_dir);
+			pos += min(dist.x, dist.y)*dir;
 			map_index = ivec2(pos);
+
+			int next_ = dist.x < dist.y ? 0 : 1;
+			pos += dir * dist[next_];
+
+			ivec4 next;
+			next.xy = next_ == 0 ? next_step.xz : next_step.zy;
+	//		next.zw = next2_ == 2 ? next_step2.xz : next_step2.zy;
+			map_index = ivec2(pos + next.xy);		
 		}
 
 		// 範囲外?
@@ -128,8 +145,8 @@ void main()
 			uint64_t emissive_map = _l.x|_l.y|_l.z|_l.w;
 
 			bvec4 is_light = bvec4(notEqual(u64vec4(emissive_map) & hit_mask, u64vec4(0)));
-			uvec4 cell_x = (map_index.xxxx+offset_x/2);
-			uvec4 cell_y = (map_index.yyyy+offset_y/2);
+			uvec4 cell_x = (map_index.xxxx+offset_x);
+			uvec4 cell_y = (map_index.yyyy+offset_y);
 #if 0
 			u_radiance[0] += is_light[0] ? b_light[buf_offset+getMemoryOrder(ivec2(cell_x.x,cell_y.x))] : 0;
 			u_radiance[1] += is_light[1] ? b_light[buf_offset+getMemoryOrder(ivec2(cell_x.y,cell_y.y))] : 0;
@@ -137,17 +154,17 @@ void main()
 			u_radiance[3] += is_light[3] ? b_light[buf_offset+getMemoryOrder(ivec2(cell_x.w,cell_y.w))] : 0;
 #else
 			u_radiance[0] += b_light[buf_offset+getMemoryOrder(ivec2(cell_x.x,cell_y.x))];
-			u_radiance[1] += b_light[buf_offset+getMemoryOrder(ivec2(cell_x.y,cell_y.y))];
-			u_radiance[2] += b_light[buf_offset+getMemoryOrder(ivec2(cell_x.z,cell_y.z))];
-			u_radiance[3] += b_light[buf_offset+getMemoryOrder(ivec2(cell_x.w,cell_y.w))];
+//			u_radiance[1] += b_light[buf_offset+getMemoryOrder(ivec2(cell_x.y,cell_y.y))];
+//			u_radiance[2] += b_light[buf_offset+getMemoryOrder(ivec2(cell_x.z,cell_y.z))];
+//			u_radiance[3] += b_light[buf_offset+getMemoryOrder(ivec2(cell_x.w,cell_y.w))];
 #endif
 //			map_index = ivec2(pos);
 //			cell_x = (map_index.xxxx+offset_x);
 //			cell_y = (map_index.yyyy+offset_y);
-			u_radiance.x != 0 ? atomicAdd(b_radiance[radiance_offset + getMemoryOrder(ivec2(cell_x.x, cell_y.x))], u_radiance.x) : 0;
-			u_radiance.y != 0 ? atomicAdd(b_radiance[radiance_offset + getMemoryOrder(ivec2(cell_x.y, cell_y.y))], u_radiance.y) : 0;
-			u_radiance.z != 0 ? atomicAdd(b_radiance[radiance_offset + getMemoryOrder(ivec2(cell_x.z, cell_y.z))], u_radiance.z) : 0;
-			u_radiance.w != 0 ? atomicAdd(b_radiance[radiance_offset + getMemoryOrder(ivec2(cell_x.w, cell_y.w))], u_radiance.w) : 0;
+			u_radiance.x != 0 ? atomicAdd(b_radiance[radiance_offset + getMemoryOrder(ivec2(cell_x.x, cell_y.x))], packEmissive(vec3(100., 100., 100.))) : 0;
+//			u_radiance.y != 0 ? atomicAdd(b_radiance[radiance_offset + getMemoryOrder(ivec2(cell_x.y, cell_y.y))], packEmissive(vec3(100., 100., 100.))) : 0;
+//			u_radiance.z != 0 ? atomicAdd(b_radiance[radiance_offset + getMemoryOrder(ivec2(cell_x.z, cell_y.z))], packEmissive(vec3(100., 100., 100.))) : 0;
+//			u_radiance.w != 0 ? atomicAdd(b_radiance[radiance_offset + getMemoryOrder(ivec2(cell_x.w, cell_y.w))], packEmissive(vec3(100., 100., 100.))) : 0;
 
 			// 拡散
 			bvec4 is_diffuse = bvec4(notEqual(u64vec4(diffuse_map) & hit_mask, u64vec4(0)));

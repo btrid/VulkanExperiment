@@ -425,6 +425,10 @@ void bittest()
 vec2 intersectRayRay(const vec2& as, const vec2& ad, const vec2& bs, const vec2& bd)
 {
 	float u = (as.y*bd.x + bd.y*bs.x - bs.y*bd.x - bd.y*as.x) / (ad.x*bd.y - ad.y*bd.x);
+	if (u < 0.f)
+	{
+		return vec2(999999999.f);
+	}
 	return as + u * ad;
 }
 
@@ -624,7 +628,7 @@ int main()
 			vec2 dir = glm::rotate(vec2(1.f, 0.f), glm::two_pi<float>() *  i / loop);
 			vec2 ldir = rotatelerp(glm::two_pi<float>() *  i / loop);
 //			printf("[%3d] [x,y]=[%7.5f,%7.5f]=[%7.5f,%7.5f]\n", i, sdir.x, sdir.y, dir.x, dir.y);
-			printf("[%3d] [x,y]=[%7.5f,%7.5f]=[%7.5f,%7.5f]\n", i, ldir.x, ldir.y, dir.x, dir.y);
+//			printf("[%3d] [x,y]=[%7.5f,%7.5f]=[%7.5f,%7.5f]\n", i, ldir.x, ldir.y, dir.x, dir.y);
 		}
 		int iyyi = 0;
 		iyyi++;
@@ -682,14 +686,23 @@ int main()
 				vec2 minp = glm::min(glm::min(glm::min(p0, p1), p2), p3);
 				begin = minp + floordir * (8.) * gl_LocalInvocationIndex;
 				float _min, _max;
-				if (intersectRayAABB(begin, dir, vec2(0.f), vec2(512.f), _min, _max))
+// 				if (intersectRayAABB(begin, dir, vec2(0.f), vec2(512.f), _min, _max))
+// 				{
+// 					end = begin + dir * _max;
+// 					begin = begin + dir * _min;
+// 				}
+// 				else {
+// 					begin = end = vec2(99999.f);
+// 				}
+				if (marchToAABB(begin, dir, vec2(0.), vec2(512.f)))
 				{
-					end = begin + dir * _max;
-					begin = begin + dir * _min;
+					end = vec2(0.f);
 				}
-				else {
+				else
+				{
 					begin = end = vec2(99999.f);
 				}
+
 			}
 			printf("min=[%6.1f,%6.1f] max=[%6.1f,%6.1f] dir=[%3.1f,%3.1f]\n", begin.x, begin.y, end.x, end.y, dir.x, dir.y);
 			printf("  length=[%6.2f]\n", distance(begin, end));
