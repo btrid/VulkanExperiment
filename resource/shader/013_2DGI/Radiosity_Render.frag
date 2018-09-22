@@ -14,18 +14,19 @@ float rate[] = {1., 1.};
 layout(location = 0) out vec4 FragColor;
 void main()
 {
-	uint radiance_size = u_gi2d_info.m_resolution.x*u_gi2d_info.m_resolution.y;
+	uint radiance_size = u_gi2d_info.m_resolution.x*u_gi2d_info.m_resolution.y/4;
 	vec3 radiance = vec3(0.);
 
 //	for(int i = 0; i<2; i++) 
 	{
+		ivec2 coord = ivec2(gl_FragCoord.xy)/2;
+		ivec2 subcoord = ivec2(gl_FragCoord.xy)%2;
 		vec3 radiance_ = vec3(0.);
 		int count = 0;
 		for(int y = 0; y < Block_Size; y++){
 		for(int x = 0; x < Block_Size; x++){
-			ivec2 coord = ivec2(gl_FragCoord.xy);
 			coord += + ivec2(x-(Block_Size>>1), y-(Block_Size>>1));
-			coord = clamp(coord, ivec2(0), u_gi2d_info.m_resolution);
+			coord = clamp(coord, ivec2(0), u_gi2d_info.m_resolution/2);
 			uvec4 rad = uvec4(0);
 			rad[0] = b_radiance[getMemoryOrder(coord)];
 #if 1

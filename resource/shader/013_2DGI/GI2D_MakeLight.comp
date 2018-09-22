@@ -23,7 +23,7 @@ void makeLight(in int frame)
 	uint ll = packEmissive(unpackEmissive4(l));
 
 	int offset = u_gi2d_info.m_resolution.x*u_gi2d_info.m_resolution.y;
-	offset += u_gi2d_info.m_resolution.x*u_gi2d_info.m_resolution.y / 4 * frame;
+	offset += (offset / 4) * frame;
 	b_light[offset+getMemoryOrder(id)] = ll;
 }
 
