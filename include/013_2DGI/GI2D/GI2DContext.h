@@ -99,7 +99,7 @@ struct GI2DContext
 		}
 		{
 			b_fragment = context->m_storage_memory.allocateMemory<Fragment>({ FragmentBufferSize , {} });
-			b_light = context->m_storage_memory.allocateMemory<uint32_t>({ FragmentBufferSize+ FragmentBufferSize*0.5f, {} });
+			b_light = context->m_storage_memory.allocateMemory<uint32_t>({ FragmentBufferSize*4, {} });
 		}
 		{
 			btr::BufferMemoryDescriptorEx<uint64_t> desc;

@@ -25,7 +25,7 @@ rem %exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity_64.comp
 rem %exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity_64_2.comp
 rem %exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity_64_3.comp
 rem %exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity_64_4.comp
- %exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity_64_5.comp
+%exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity_64_5.comp
 rem %exe% %include% %option% -o %output%/Radiosity_Clear.comp.spv Radiosity_Clear.comp
 %exe% %include% %option% -o %output%/Radiosity_Clear.comp.spv Radiosity_Clear_5.comp
 %exe% %include% %option% -o %output%/Radiosity_MakeBounceMap.comp.spv Radiosity_MakeBounceMap.comp

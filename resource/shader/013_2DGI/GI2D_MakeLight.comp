@@ -10,10 +10,10 @@
 
 layout (local_size_x = 32, local_size_y = 32) in;
 
-void main()
+void makeLight(in int frame)
 {
 	ivec2 id = ivec2(gl_GlobalInvocationID.xy);
-	ivec2 src = ivec2(id*2 + uvec2(u_gi2d_scene.m_frame%2, u_gi2d_scene.m_frame/2)) - ivec2(1);
+	ivec2 src = ivec2(id*2 + uvec2(frame%2, frame/2)) - ivec2(1);
 	uvec4 l;
 	l.x = b_light[getMemoryOrder(src)];
 	l.y = b_light[getMemoryOrder(src+ivec2(1, 0))];
@@ -23,7 +23,15 @@ void main()
 	uint ll = packEmissive(unpackEmissive4(l));
 
 	int offset = u_gi2d_info.m_resolution.x*u_gi2d_info.m_resolution.y;
+	offset += u_gi2d_info.m_resolution.x*u_gi2d_info.m_resolution.y / 4 * frame;
 	b_light[offset+getMemoryOrder(id)] = ll;
+}
 
+void main()
+{
+	makeLight(0);
+	makeLight(1);
+	makeLight(2);
+	makeLight(3);
 }
 

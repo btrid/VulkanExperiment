@@ -31,9 +31,9 @@ void main()
 			uvec4 rad = uvec4(0);
 			rad[0] = b_radiance[getMemoryOrder(coord)];
 #if 1
-			rad[1] = b_radiance[getMemoryOrder(coord+subcoord.xz)+radiance_size*1];
-			rad[2] = b_radiance[getMemoryOrder(coord+subcoord.zy)+radiance_size*2];
-			rad[3] = b_radiance[getMemoryOrder(coord+subcoord.xy)+radiance_size*3];
+//			rad[1] = b_radiance[getMemoryOrder(coord+subcoord.xz)+radiance_size*1];
+//			rad[2] = b_radiance[getMemoryOrder(coord+subcoord.zy)+radiance_size*2];
+//			rad[3] = b_radiance[getMemoryOrder(coord+subcoord.xy)+radiance_size*3];
 #elif 1
 //			rad[1] = b_radiance[getMemoryOrder(coord+subcoord.xz)+radiance_size*1];
 //			rad[2] = b_radiance[getMemoryOrder(coord+subcoord.zy)+radiance_size*2];
