@@ -1,3 +1,4 @@
+// セルをスキップしないレイトレ
 #version 450
 #extension GL_GOOGLE_include_directive : require
 
@@ -21,8 +22,12 @@ void main()
 	vec2 dir = rotate(angle);
 
 
-	vec2 floorp = vec2(lessThan(dir, vec2(0.))) * reso.xy;
-	vec2 floordir = abs(dir.x) > abs(dir.y) ? vec2(0., 1.) : vec2(1., 0.);
+	vec2 floorp;
+	floorp.x = dir.x >= 0 ? 0. : reso.x;
+	floorp.y = dir.y >= 0 ? 0. : reso.y;
+	vec2 floordir;
+	floordir.x = abs(dir.x) > abs(dir.y) ? 0. : 1.;
+	floordir.y = abs(dir.x) > abs(dir.y) ? 1. : 0.;
 
 	vec2 p0 = intersectRayRay(vec2(0, 0), dir, floorp, floordir);
 	vec2 p1 = intersectRayRay(vec2(reso.x, 0), dir, floorp, floordir);
@@ -58,18 +63,20 @@ void main()
 	}
 
 	int buf_offset = reso.x*reso.y;
-	int radiance_offset = (reso.x*reso.y/4)*u_gi2d_scene.m_frame;
+	int radiance_offset = 0;
 
 	vec2 inv_dir;
 	inv_dir.x = dir.x == 0. ? 999999. : abs(1./dir.x);
 	inv_dir.y = dir.y == 0. ? 999999. : abs(1./dir.y);
-	dir = dir*min(inv_dir.x, inv_dir.y);
+
+	ivec3 next_step = ivec3((dir.x < 0. ? -1 : 1), (dir.y < 0. ? -1 : 1), 0);
+//	ivec2 map_index = ivec2(pos);
 
 	uvec4 u_radiance = uvec4(0);
 	u64vec4 b;
 	u64vec4 l;
 	ivec2 old_fi = ivec2(999999);
-
+	ivec2 old_bufi = ivec2(999999);
 	for(int _i = 0; _i <5000; _i++)
 	{
 		ivec2 map_index_sub = ivec2(greaterThanEqual(dir, vec2(0.)));
@@ -77,12 +84,30 @@ void main()
 		ivec4 cell_y = ivec4((pos.yyyy+side_y) / 2.);
 		ivec4 map_index_sub_x = cell_x % ivec4(2);
 		ivec4 map_index_sub_y = cell_y % ivec4(2);
-		map_index_sub_x = ivec4(equal(map_index_sub.xxxx, map_index_sub_x));
-		map_index_sub_y = ivec4(equal(map_index_sub.yyyy, map_index_sub_y));
+		map_index_sub_x = ivec4(notEqual(map_index_sub.xxxx, map_index_sub_x));
+		map_index_sub_y = ivec4(notEqual(map_index_sub.yyyy, map_index_sub_y));
 
 		// march
 		{
-			pos += dir*Ray_Advance;
+#if 1
+			pos += dir*min(inv_dir.x, inv_dir.y)*Ray_Advance;
+//			map_index = ivec2(pos);
+#else
+			int hierarchy = 1;
+			ivec2 cell_origin = ivec2(greaterThanEqual(dir, vec2(0.)))<<hierarchy;
+			ivec2 map_index_sub = map_index - ((map_index>>hierarchy)<<hierarchy);
+			vec2 cell_p = abs(cell_origin - (map_index_sub+fract(pos)));
+			cell_p += vec2(lessThanEqual(cell_p, vec2(FLT_EPSIRON)));
+
+			vec2 dist = abs(cell_p*inv_dir);
+			int next_ = dist.x < dist.y ? 0 : 1;
+			pos += dir * dist[next_];
+
+			ivec4 next;
+			next.xy = next_ == 0 ? next_step.xz : next_step.zy;
+	//		next.zw = next2_ == 2 ? next_step2.xz : next_step2.zy;
+			map_index = ivec2(pos + next.xy);		
+#endif
 		}
 		// 範囲外?
 		{
@@ -141,17 +166,20 @@ void main()
 //			u_radiance[3] += is_light[3] ? b_light[buf_offset+getMemoryOrder(ivec2(cell_x.w,cell_y.w))] : 0;
 #else
 			ivec4 bo2 = (buf_offset/4) * (map_index_sub_x + map_index_sub_y*2);
+//			ivec4 bo2 = ivec4(u_gi2d_scene.m_frame);
 			u_radiance[0] += b_light[buf_offset+bo2.x+getMemoryOrder(ivec2(cell_x.x,cell_y.x))];
 			u_radiance[1] += b_light[buf_offset+bo2.y+getMemoryOrder(ivec2(cell_x.y,cell_y.y))];
 			u_radiance[2] += b_light[buf_offset+bo2.z+getMemoryOrder(ivec2(cell_x.z,cell_y.z))];
 			u_radiance[3] += b_light[buf_offset+bo2.w+getMemoryOrder(ivec2(cell_x.w,cell_y.w))];
 #endif
 
-			u_radiance.x != 0 ? atomicAdd(b_radiance[radiance_offset + getMemoryOrder(ivec2(cell_x.x, cell_y.x))], u_radiance[0]) : 0;
-			u_radiance.y != 0 ? atomicAdd(b_radiance[radiance_offset + getMemoryOrder(ivec2(cell_x.y, cell_y.y))], u_radiance[1]) : 0;
-			u_radiance.z != 0 ? atomicAdd(b_radiance[radiance_offset + getMemoryOrder(ivec2(cell_x.z, cell_y.z))], u_radiance[2]) : 0;
-			u_radiance.w != 0 ? atomicAdd(b_radiance[radiance_offset + getMemoryOrder(ivec2(cell_x.w, cell_y.w))], u_radiance[3]) : 0;
-
+//			if(any(notEqual(old_bufi, map_index)))
+			{
+				u_radiance.x != 0 ? atomicAdd(b_radiance[radiance_offset + getMemoryOrder(ivec2(cell_x.x, cell_y.x))], u_radiance[0]) : 0;
+				u_radiance.y != 0 ? atomicAdd(b_radiance[radiance_offset + getMemoryOrder(ivec2(cell_x.y, cell_y.y))], u_radiance[1]) : 0;
+				u_radiance.z != 0 ? atomicAdd(b_radiance[radiance_offset + getMemoryOrder(ivec2(cell_x.z, cell_y.z))], u_radiance[2]) : 0;
+				u_radiance.w != 0 ? atomicAdd(b_radiance[radiance_offset + getMemoryOrder(ivec2(cell_x.w, cell_y.w))], u_radiance[3]) : 0;
+			}
 			// 拡散
 //			bvec4 is_diffuse = bvec4(notEqual(u64vec4(diffuse_map) & hit_mask, u64vec4(0)));
 //			u_radiance *= uvec4(equal(is_diffuse, bvec4(false)));
