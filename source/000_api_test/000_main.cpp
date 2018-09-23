@@ -618,8 +618,35 @@ vec2 rotatelerp(float angle)
 	return glm::normalize(p.xy());
 }
 
+void raymarch()
+{
+	vec2 pos(123.f, 145.f);
+	vec2 dir = normalize(vec2(-0.7f, 2.f));
+	vec2 inv_dir;
+	inv_dir.x = dir.x == 0. ? 999999. : abs(1. / dir.x);
+	inv_dir.y = dir.y == 0. ? 999999. : abs(1. / dir.y);
+
+	ivec2 map_index = ivec2(pos);
+	int hierarchy = 1;
+	ivec2 cell_origin = ivec2(greaterThanEqual(dir, vec2(0.))) << hierarchy;
+	ivec2 map_index_sub = map_index - ((map_index >> hierarchy) << hierarchy);
+	vec2 tp = abs(vec2(cell_origin) - (vec2(map_index_sub) + fract(pos))) * inv_dir;
+	vec2 delta = abs((1 << hierarchy)*inv_dir);
+
+	for (int _i = 0; _i < 50; _i++)
+	{
+		int axis = int(tp.x > tp.y);
+		tp[axis] += delta[axis];
+		map_index[axis] += ivec2(greaterThanEqual(dir, vec2(0.)))[axis] * 2 - 1;
+
+		printf("[%5d,%5d]\n", map_index.x, map_index.y);
+	}
+}
+
 int main()
 {
+//	raymarch();
+
 	{
 		int loop = 360;
 		for (size_t i = 0; i < loop; i++)

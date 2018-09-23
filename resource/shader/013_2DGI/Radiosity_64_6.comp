@@ -69,8 +69,12 @@ void main()
 	inv_dir.x = dir.x == 0. ? 999999. : abs(1./dir.x);
 	inv_dir.y = dir.y == 0. ? 999999. : abs(1./dir.y);
 
-	ivec3 next_step = ivec3((dir.x < 0. ? -1 : 1), (dir.y < 0. ? -1 : 1), 0);
-//	ivec2 map_index = ivec2(pos);
+	ivec2 map_index = ivec2(pos);
+	int hierarchy = 1;
+	ivec2 cell_origin = ivec2(greaterThanEqual(dir, vec2(0.)))<<hierarchy;
+	ivec2 map_index_sub = map_index - ((map_index>>hierarchy)<<hierarchy);
+	vec2 tp = abs(cell_origin - (map_index_sub+fract(pos))) * inv_dir;
+	vec2 delta = abs((1<<hierarchy)*inv_dir);
 
 	uvec4 u_radiance = uvec4(0);
 	u64vec4 b;
@@ -79,39 +83,15 @@ void main()
 	ivec2 old_bufi = ivec2(999999);
 	for(int _i = 0; _i <5000; _i++)
 	{
-		ivec2 map_index_sub = ivec2(greaterThanEqual(dir, vec2(0.)));
-		ivec4 cell_x = ivec4((pos.xxxx+side_x) / 2.);
-		ivec4 cell_y = ivec4((pos.yyyy+side_y) / 2.);
-		ivec4 map_index_sub_x = cell_x % ivec4(2);
-		ivec4 map_index_sub_y = cell_y % ivec4(2);
-		map_index_sub_x = ivec4(notEqual(map_index_sub.xxxx, map_index_sub_x));
-		map_index_sub_y = ivec4(notEqual(map_index_sub.yyyy, map_index_sub_y));
-
 		// march
 		{
-#if 1
-			pos += dir*min(inv_dir.x, inv_dir.y)*Ray_Advance;
-//			map_index = ivec2(pos);
-#else
-			int hierarchy = 1;
-			ivec2 cell_origin = ivec2(greaterThanEqual(dir, vec2(0.)))<<hierarchy;
-			ivec2 map_index_sub = map_index - ((map_index>>hierarchy)<<hierarchy);
-			vec2 cell_p = abs(cell_origin - (map_index_sub+fract(pos)));
-			cell_p += vec2(lessThanEqual(cell_p, vec2(FLT_EPSIRON)));
-
-			vec2 dist = abs(cell_p*inv_dir);
-			int next_ = dist.x < dist.y ? 0 : 1;
-			pos += dir * dist[next_];
-
-			ivec4 next;
-			next.xy = next_ == 0 ? next_step.xz : next_step.zy;
-	//		next.zw = next2_ == 2 ? next_step2.xz : next_step2.zy;
-			map_index = ivec2(pos + next.xy);		
-#endif
+			int axis = int(tp.x > tp.y);
+			tp[axis] += delta[axis];
+			map_index[axis] += (ivec2(greaterThanEqual(dir, vec2(0.)))[axis] * 2 - 1) *2;
 		}
 		// 範囲外?
 		{
-			ivec2 is_die = ivec2(greaterThanEqual(pos, vec2(reso.xy))) + ivec2(lessThan(pos, vec2(0.)));
+			ivec2 is_die = ivec2(greaterThanEqual(map_index, reso.xy)) + ivec2(lessThan(map_index, ivec2(0.)));
 			if(any(notEqual(is_die.xy, ivec2(0))))
 			{
 				break;
@@ -120,58 +100,13 @@ void main()
 
 		// hit確認
 		{
-//			ivec2 map_index_sub = map_index % 2;
-//			map_index /= 2;
-/*			int hie_offset = reso.z*reso.w;
-			ivec2 hie_reso = reso.zw / 2;
+			uvec4 cell_x = (map_index.xxxx+offset_x)/2;
+			uvec4 cell_y = (map_index.yyyy+offset_y)/2;
 
-			ivec2 _fi = map_index/8;
-			if(any(notEqual(old_fi, _fi)))
-			{
-				// 更新
-				ivec4 offset_ = ivec4(0,0,1,1);
-				ivec4 findex = (_fi.xxxx+offset_.xxzz) + (_fi.yyyy+offset_.ywyw)*(hie_reso.xxxx) + ivec4(hie_offset);
-				b = u64vec4(b_diffuse_map[findex.x], b_diffuse_map[findex.y], b_diffuse_map[findex.z], b_diffuse_map[findex.w]);
-				l = u64vec4(b_emissive_map[findex.x], b_emissive_map[findex.y], b_emissive_map[findex.z], b_emissive_map[findex.w]);
-				old_fi = _fi;
-			}
-
-			ivec2 shift = map_index%8;
-			uint64_t x_line_mask = 0xfful & ((1ul << (shift.x)) - 1ul);
-			uint64_t x_mask = ~(x_line_mask | (x_line_mask << 8) | (x_line_mask << 16) | (x_line_mask << 24) | (x_line_mask << 32) | (x_line_mask << 40) | (x_line_mask << 48) | (x_line_mask << 56));
-			uint64_t y_mask = ~(0xfffffffffffffffful & ((1ul << ((shift.y) * 8)) - 1));
-			u64vec4 mask = u64vec4(x_mask & y_mask, x_mask & ~y_mask, ~x_mask & y_mask, ~x_mask & ~y_mask);
-			ivec4 rs = shift.yyyy*ivec4(8,0,8,0) + shift.xxxx*ivec4(1,1,0,0);
-			ivec4 ls = (8-shift.yyyy)*ivec4(0,8,0,8) + (8-shift.xxxx)*ivec4(0,0,1,1);
-
-			u64vec4 _b = b & mask;
-			_b >>= rs;
-			_b <<= ls;
-			u64vec4 _l = l & mask;
-			_l >>= rs;
-			_l <<= ls;
-			uint64_t diffuse_map = _b.x|_b.y|_b.z|_b.w;
-			uint64_t emissive_map = _l.x|_l.y|_l.z|_l.w;
-*/
-//			bvec4 is_light = bvec4(notEqual(u64vec4(emissive_map) & hit_mask, u64vec4(0)));
-//			ivec4 cell_x = (map_index.xxxx+offset_x);
-//			ivec4 cell_y = (map_index.yyyy+offset_y);
-//			ivec4 cell_x = ivec4((pos.xxxx+side_x) / 2.);
-//			ivec4 cell_y = ivec4((pos.yyyy+side_y) / 2.);
-
-#if 0
-			u_radiance[0] += is_light[0] ? b_light[buf_offset+getMemoryOrder(ivec2(cell_x.x,cell_y.x))] : 0;
-//			u_radiance[1] += is_light[1] ? b_light[buf_offset+getMemoryOrder(ivec2(cell_x.y,cell_y.y))] : 0;
-//			u_radiance[2] += is_light[2] ? b_light[buf_offset+getMemoryOrder(ivec2(cell_x.z,cell_y.z))] : 0;
-//			u_radiance[3] += is_light[3] ? b_light[buf_offset+getMemoryOrder(ivec2(cell_x.w,cell_y.w))] : 0;
-#else
-			ivec4 bo2 = (buf_offset/4) * (map_index_sub_x + map_index_sub_y*2);
-//			ivec4 bo2 = ivec4(u_gi2d_scene.m_frame);
-			u_radiance[0] += b_light[buf_offset+bo2.x+getMemoryOrder(ivec2(cell_x.x,cell_y.x))];
-			u_radiance[1] += b_light[buf_offset+bo2.y+getMemoryOrder(ivec2(cell_x.y,cell_y.y))];
-			u_radiance[2] += b_light[buf_offset+bo2.z+getMemoryOrder(ivec2(cell_x.z,cell_y.z))];
-			u_radiance[3] += b_light[buf_offset+bo2.w+getMemoryOrder(ivec2(cell_x.w,cell_y.w))];
-#endif
+			u_radiance[0] += b_light[buf_offset+getMemoryOrder(ivec2(cell_x.x,cell_y.x))];
+			u_radiance[1] += b_light[buf_offset+getMemoryOrder(ivec2(cell_x.y,cell_y.y))];
+			u_radiance[2] += b_light[buf_offset+getMemoryOrder(ivec2(cell_x.z,cell_y.z))];
+			u_radiance[3] += b_light[buf_offset+getMemoryOrder(ivec2(cell_x.w,cell_y.w))];
 
 //			if(any(notEqual(old_bufi, map_index)))
 			{
@@ -180,11 +115,6 @@ void main()
 				u_radiance.z != 0 ? atomicAdd(b_radiance[radiance_offset + getMemoryOrder(ivec2(cell_x.z, cell_y.z))], u_radiance[2]) : 0;
 				u_radiance.w != 0 ? atomicAdd(b_radiance[radiance_offset + getMemoryOrder(ivec2(cell_x.w, cell_y.w))], u_radiance[3]) : 0;
 			}
-			// 拡散
-//			bvec4 is_diffuse = bvec4(notEqual(u64vec4(diffuse_map) & hit_mask, u64vec4(0)));
-//			u_radiance *= uvec4(equal(is_diffuse, bvec4(false)));
-
 		}
 	}
-//	u_radiance.x != 0 ? atomicAdd(b_radiance[0], packEmissive(vec3(100., 100., 100.))) : 0;
 }
