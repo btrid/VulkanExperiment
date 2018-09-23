@@ -124,7 +124,6 @@ struct GI2DMakeHierarchy
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeFragmentMap].get());
 
-
 			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth, m_gi2d_context->RenderHeight, 1), uvec3(32, 32, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 		}
@@ -175,14 +174,26 @@ struct GI2DMakeHierarchy
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeLight].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Hierarchy].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 
-		vk::BufferMemoryBarrier to_write[] = {
-			m_gi2d_context->b_light.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+		for (int i = 1; i < GI2DContext::_Hierarchy_Num; i++)
+		{
+			vk::BufferMemoryBarrier to_write[] = {
+				m_gi2d_context->b_light.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+				0, nullptr, array_length(to_write), to_write, 0, nullptr);
+
+			cmd.pushConstants<int32_t>(m_pipeline_layout[PipelineLayout_Hierarchy].get(), vk::ShaderStageFlagBits::eCompute, 0, i);
+
+			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth >> i, m_gi2d_context->RenderHeight >> i, 1), uvec3(32, 32, 1));
+			cmd.dispatch(num.x, num.y, num.z);
+
+		}
+
+		vk::BufferMemoryBarrier to_read[] = {
+			m_gi2d_context->b_light.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
-			0, nullptr, array_length(to_write), to_write, 0, nullptr);
-
-		auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth/2, m_gi2d_context->RenderHeight/2, 1), uvec3(32, 32, 1));
-		cmd.dispatch(num.x, num.y, num.z);
+			0, nullptr, array_length(to_read), to_read, 0, nullptr);
 	}
 
 

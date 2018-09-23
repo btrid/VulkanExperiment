@@ -171,8 +171,8 @@ uvec4 getMemoryOrder4(in uvec4 x, in uvec4 y)
 // int getMortonIndex(in ivec2 xy)
 	// 8x8のブロック
 	uvec4 nx = x>>3;
-	x -= nx<<3;
 	uvec4 ny = y>>3;
+	x -= nx<<3;
 	y -= ny<<3;
 
 	nx = (nx ^ (nx << 8 )) & 0x00ff00ff;
