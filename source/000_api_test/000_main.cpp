@@ -621,7 +621,7 @@ vec2 rotatelerp(float angle)
 void raymarch()
 {
 	vec2 pos(123.f, 145.f);
-	vec2 dir = normalize(vec2(-0.7f, 2.f));
+	vec2 dir = normalize(vec2(-0.7f, -2.f));
 	vec2 inv_dir;
 	inv_dir.x = dir.x == 0. ? 999999. : abs(1. / dir.x);
 	inv_dir.y = dir.y == 0. ? 999999. : abs(1. / dir.y);
@@ -645,7 +645,7 @@ void raymarch()
 
 int main()
 {
-//	raymarch();
+	raymarch();
 
 	{
 		int loop = 360;
