@@ -69,7 +69,9 @@ void main()
 	int hierarchy = 0;
 	ivec2 cell_origin = (ivec2(greaterThanEqual(dir, vec2(0.)))<<hierarchy);
 	ivec2 map_index_sub = map_index - ((map_index>>hierarchy)<<hierarchy);
-	vec2 tp = (abs(cell_origin - (map_index_sub+fract(pos))) + (0.5*(1<<hierarchy))) * inv_dir;
+	vec2 tp = abs(cell_origin - (map_index_sub+fract(pos)));
+	tp = tp + (0.5*(1<<hierarchy));
+	tp *= inv_dir;
 	vec2 delta = abs((1<<hierarchy)*inv_dir);
 
 	uvec4 u_radiance = uvec4(0);
@@ -83,7 +85,8 @@ void main()
 		{
 			int axis = int(tp.x > tp.y);
 			tp[axis] += delta[axis];
-			map_index[axis] += (ivec2(greaterThanEqual(dir, vec2(0.)))[axis] * 2 - 1);
+			int dir = (ivec2(greaterThanEqual(dir, vec2(0.)))[axis] * 2 - 1);
+			map_index[axis] += dir * (1<<hierarchy);
 		}
 		// 範囲外?
 		{
