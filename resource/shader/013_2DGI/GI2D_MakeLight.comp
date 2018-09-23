@@ -13,8 +13,8 @@ layout (local_size_x = 32, local_size_y = 32) in;
 void makeLight(in int frame)
 {
 	ivec2 id = ivec2(gl_GlobalInvocationID.xy);
-//	ivec2 src = ivec2(id*2 + ivec2(frame%2, frame/2)) - ivec2(1);
-	ivec2 src = ivec2(id*2);
+	ivec2 src = ivec2(id*2 + ivec2(frame%2, frame/2)) - ivec2(1);
+//	ivec2 src = ivec2(id*2);
 	uvec4 l;
 	l.x = b_light[getMemoryOrder(src)];
 	l.y = b_light[getMemoryOrder(src+ivec2(1, 0))];

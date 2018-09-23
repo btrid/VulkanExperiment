@@ -88,8 +88,8 @@ struct GI2DFluid
 					int size = 1;
  					if (i < size*size)
 					{
-						p.x = 513 + (i / size);
-						p.y = 513 + (i % size);
+						p.x = 512 + (i / size);
+						p.y = 512 + (i % size);
 					}
 #endif
 					else
