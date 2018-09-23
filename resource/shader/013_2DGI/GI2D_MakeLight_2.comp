@@ -19,7 +19,7 @@ void makeLight(in int frame)
 {
 	ivec2 reso = u_gi2d_info.m_resolution;
 	uint offset = 0;
-	for(int i = 0; i < constant.level; i++)
+	for(int i = 0; i < constant.level-1; i++)
 	{
 		offset += reso.x*reso.y;
 		reso >> 1;

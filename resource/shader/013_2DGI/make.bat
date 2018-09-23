@@ -16,8 +16,8 @@ rem %exe% %include% %option% -o %output%/MakeFragmentMap.comp.spv MakeFragmentMa
 %exe% %include% %option% -o %output%/MakeFragmentMapHierarchy.comp.spv MakeFragmentMapHierarchy.comp
 
 %exe% %include% %option% -o %output%/GI2D_MakeDensityHierarchy.comp.spv GI2D_MakeDensityHierarchy.comp
- %exe% %include% %option% -o %output%/GI2D_MakeLight.comp.spv GI2D_MakeLight.comp
-rem %exe% %include% %option% -o %output%/GI2D_MakeLight.comp.spv GI2D_MakeLight_2.comp
+rem %exe% %include% %option% -o %output%/GI2D_MakeLight.comp.spv GI2D_MakeLight.comp
+ %exe% %include% %option% -o %output%/GI2D_MakeLight.comp.spv GI2D_MakeLight_2.comp
 
 rem %exe% %include% %option% -o ../binary\\DebugFragmentMap.comp.spv DebugFragmentMap.comp
 
