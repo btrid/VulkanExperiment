@@ -66,7 +66,6 @@ ivec2 frame_offset(){
 
 #define LightPower (0.015)
 #define Ray_Density (1)
-#define Ray_Advance (2.)
 #define Block_Size (1)
 //#define denominator (512.)
 #define denominator (2048.)
@@ -148,7 +147,7 @@ vec3 unpackEmissive(in int64_t irgb)
 }
 #endif
 
-
+#if 0
 uint getMemoryOrder(in uvec2 xy)
 {
 #if 1
@@ -189,7 +188,31 @@ uvec4 getMemoryOrder4(in uvec4 x, in uvec4 y)
 	uvec4 mi = (ny<<1)|nx;
 	return mi*64 + x + y*8;
 }
+#else
+uint getMemoryOrder(in uvec2 xy)
+{
+	xy = (xy ^ (xy << 8 )) & 0x00ff00ff;
+	xy = (xy ^ (xy << 4 )) & 0x0f0f0f0f;
+	xy = (xy ^ (xy << 2 )) & 0x33333333;
+	xy = (xy ^ (xy << 1 )) & 0x55555555;
+	
+	return (xy.y<<1)|xy.x;
+}
+uvec4 getMemoryOrder4(in uvec4 x, in uvec4 y)
+{
+	x = (x ^ (x << 8 )) & 0x00ff00ff;
+	x = (x ^ (x << 4 )) & 0x0f0f0f0f;
+	x = (x ^ (x << 2 )) & 0x33333333;
+	x = (x ^ (x << 1 )) & 0x55555555;
 
+	y = (y ^ (y << 8 )) & 0x00ff00ff;
+	y = (y ^ (y << 4 )) & 0x0f0f0f0f;
+	y = (y ^ (y << 2 )) & 0x33333333;
+	y = (y ^ (y << 1 )) & 0x55555555;
+	
+	return (y<<1)|x;
+}
+#endif
 vec2 intersectRayRay(in vec2 as, in vec2 ad, in vec2 bs, in vec2 bd)
 {
 	float u = (as.y*bd.x + bd.y*bs.x - bs.y*bd.x - bd.y*as.x) / (ad.x*bd.y - ad.y*bd.x);

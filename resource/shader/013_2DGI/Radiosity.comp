@@ -14,13 +14,13 @@ layout (local_size_x = 256*Ray_Density, local_size_y = 1) in;
 void main()
 {
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
+	int hierarchy = u_gi2d_scene.m_hierarchy;
 
 	float a = 6.28318530717958647692528676655900576 / gl_NumWorkGroups.y;
 	float angle = a * gl_GlobalInvocationID.y;
 	angle += a * 0.25*u_gi2d_scene.m_frame;
 
 	vec2 dir = rotate(angle);
-
 
 	vec2 floorp = vec2(lessThan(dir, vec2(0.))) * reso.xy;
 	vec2 floordir = abs(dir.x) > abs(dir.y) ? vec2(0., 1.) : vec2(1., 0.);
@@ -34,7 +34,7 @@ void main()
 	vec2 maxp = max(max(max(p0, p1), p2), p3);
 
 	vec2 pos = minp + floordir * (8./Ray_Density) * gl_LocalInvocationIndex;
-//	pos += floordir * (8./Ray_Density) * (u_gi2d_scene.m_frame %2);
+	pos += floordir * (8./Ray_Density) * (u_gi2d_scene.m_frame %2);
 	if(!marchToAABB(pos, dir, vec2(0.), reso.xy)){return;}
 
 	ivec4 offset_x;
@@ -52,7 +52,6 @@ void main()
 		offset_y = ivec4(side.yyyy * _offset);
 	}
 
-	int hierarchy = u_gi2d_scene.m_hierarchy;
 	uint light_offset = 0;
 	uint radiance_offset = reso.x*reso.y;
 	for(int i = 0; i < hierarchy; i++)
@@ -100,14 +99,18 @@ void main()
 			cell_x >>= hierarchy;
 			cell_y >>= hierarchy;
 
-			u_radiance[0] += b_light[light_offset+getMemoryOrder(ivec2(cell_x.x,cell_y.x))];
-			u_radiance[1] += b_light[light_offset+getMemoryOrder(ivec2(cell_x.y,cell_y.y))];
-			u_radiance[2] += b_light[light_offset+getMemoryOrder(ivec2(cell_x.z,cell_y.z))];
-			u_radiance[3] += b_light[light_offset+getMemoryOrder(ivec2(cell_x.w,cell_y.w))];
-			u_radiance.x != 0 ? atomicAdd(b_radiance[radiance_offset + getMemoryOrder(ivec2(cell_x.x, cell_y.x))], u_radiance[0]) : 0;
-			u_radiance.y != 0 ? atomicAdd(b_radiance[radiance_offset + getMemoryOrder(ivec2(cell_x.y, cell_y.y))], u_radiance[1]) : 0;
-			u_radiance.z != 0 ? atomicAdd(b_radiance[radiance_offset + getMemoryOrder(ivec2(cell_x.z, cell_y.z))], u_radiance[2]) : 0;
-			u_radiance.w != 0 ? atomicAdd(b_radiance[radiance_offset + getMemoryOrder(ivec2(cell_x.w, cell_y.w))], u_radiance[3]) : 0;
+			// hierarchyが2なら2つでいいかな
+			uvec4 cell = getMemoryOrder4(cell_x,cell_y);
+			uvec4 light_cell = uvec4(light_offset)+cell;
+			u_radiance[0] += b_light[light_cell.x];
+//			u_radiance[1] += b_light[light_cell.y];
+			u_radiance[2] += b_light[light_cell.z];
+//			u_radiance[3] += b_light[light_cell.w];
+			uvec4 radiance_cell = uvec4(radiance_offset)+cell;
+			u_radiance.x != 0 ? atomicAdd(b_radiance[radiance_cell.x], u_radiance[0]) : 0;
+//			u_radiance.y != 0 ? atomicAdd(b_radiance[radiance_cell.y], u_radiance[1]) : 0;
+			u_radiance.z != 0 ? atomicAdd(b_radiance[radiance_cell.z], u_radiance[2]) : 0;
+//			u_radiance.w != 0 ? atomicAdd(b_radiance[radiance_cell.w], u_radiance[3]) : 0;
 		}
 	}
 }
