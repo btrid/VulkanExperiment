@@ -114,7 +114,7 @@ void main()
 		{
 			ivec2 mi = map_index>>hierarchy;
 			ivec2 _fi = mi/8;
-//			if(any(notEqual(old_fi, _fi)))
+			if(any(notEqual(old_fi, _fi)))
 			{
 				// 更新
 				ivec4 offset_ = ivec4(0,0,1,1);
@@ -160,15 +160,15 @@ void main()
 			u_radiance[2] += b_light[light_cell.z];
 			u_radiance[3] += b_light[light_cell.w];
 #endif
+			// 拡散
+			bvec4 is_diffuse = bvec4(notEqual(u64vec4(diffuse_map) & hit_mask, u64vec4(0)));
+			u_radiance *= uvec4(equal(is_diffuse, bvec4(false)));
+
 			uvec4 radiance_cell = uvec4(radiance_offset)+cell;
 			u_radiance.x != 0 ? atomicAdd(b_radiance[radiance_cell.x], u_radiance[0]) : 0;
 			u_radiance.y != 0 ? atomicAdd(b_radiance[radiance_cell.y], u_radiance[1]) : 0;
 			u_radiance.z != 0 ? atomicAdd(b_radiance[radiance_cell.z], u_radiance[2]) : 0;
 			u_radiance.w != 0 ? atomicAdd(b_radiance[radiance_cell.w], u_radiance[3]) : 0;
-
-			// 拡散
-			bvec4 is_diffuse = bvec4(notEqual(u64vec4(diffuse_map) & hit_mask, u64vec4(0)));
-			u_radiance *= uvec4(equal(is_diffuse, bvec4(false)));
 		}
 	}
 }
