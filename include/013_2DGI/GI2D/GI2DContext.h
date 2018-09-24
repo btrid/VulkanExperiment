@@ -48,6 +48,7 @@ struct GI2DContext
 	struct GI2DScene
 	{
 		int32_t m_frame;
+		int32_t m_hierarchy;
 	};
 
 	struct Fragment
@@ -95,11 +96,12 @@ struct GI2DContext
 			cmd.updateBuffer<GI2DInfo>(u_gi2d_info.getInfo().buffer, u_gi2d_info.getInfo().offset, m_gi2d_info);
 
 			m_gi2d_scene.m_frame = 0;
+			m_gi2d_scene.m_hierarchy = 1;
 			cmd.updateBuffer<GI2DScene>(u_gi2d_scene.getInfo().buffer, u_gi2d_scene.getInfo().offset, m_gi2d_scene);
 		}
 		{
 			b_fragment = context->m_storage_memory.allocateMemory<Fragment>({ FragmentBufferSize , {} });
-			b_light = context->m_storage_memory.allocateMemory<uint32_t>({ FragmentBufferSize*4, {} });
+			b_light = context->m_storage_memory.allocateMemory<uint32_t>({ FragmentBufferSize*2, {} });
 		}
 		{
 			btr::BufferMemoryDescriptorEx<uint64_t> desc;

@@ -186,7 +186,6 @@ struct GI2DMakeHierarchy
 
 			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth >> i, m_gi2d_context->RenderHeight >> i, 1), uvec3(32, 32, 1));
 			cmd.dispatch(num.x, num.y, num.z);
-
 		}
 
 		vk::BufferMemoryBarrier to_read[] = {

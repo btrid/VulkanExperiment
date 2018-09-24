@@ -21,6 +21,7 @@ struct GI2DInfo
 struct GI2DScene
 {
 	int m_frame;
+	int m_hierarchy;
 };
 struct Fragment
 {

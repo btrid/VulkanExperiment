@@ -14,12 +14,14 @@ float rate[] = {1., 1.};
 layout(location = 0) out vec4 FragColor;
 void main()
 {
-	uint radiance_size = u_gi2d_info.m_resolution.x*u_gi2d_info.m_resolution.y/4;
+	ivec2 reso = u_gi2d_info.m_resolution;
+	int hierarchy = u_gi2d_scene.m_hierarchy;
+	uint radiance_size = (reso.x*reso.y)>>(hierarchy*2);
 	vec3 radiance = vec3(0.);
 
 //	for(int i = 0; i<2; i++) 
 	{
-		ivec2 coord = ivec2(gl_FragCoord.xy)/2;
+		ivec2 coord = ivec2(gl_FragCoord.xy)>>hierarchy;
 		ivec3 subcoord = ivec3(1)-ivec3(gl_FragCoord.xy, 0)%2;
 //		ivec2 framecoord = ivec2(u_gi2d_scene.m_frame%2, u_gi2d_scene.m_frame/2) - ivec2(1);
 		vec3 radiance_ = vec3(0.);
@@ -27,7 +29,7 @@ void main()
 		for(int y = 0; y < Block_Size; y++){
 		for(int x = 0; x < Block_Size; x++){
 			coord += + ivec2(x-(Block_Size>>1), y-(Block_Size>>1));
-			coord = clamp(coord, ivec2(0), u_gi2d_info.m_resolution/2);
+			coord = clamp(coord, ivec2(0), reso>>hierarchy);
 			uvec4 rad = uvec4(0);
 			rad[0] = b_radiance[getMemoryOrder(coord)];
 #if 0

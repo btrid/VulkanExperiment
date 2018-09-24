@@ -648,6 +648,18 @@ int main()
 	raymarch();
 
 	{
+		int hierarchy = 5;
+		uint buf_offset = 0;
+		ivec2 reso(256);
+		uint radiance_offset = reso.x*reso.y;
+		for (int i = 0; i < hierarchy; i++) {
+			buf_offset += reso.x*reso.y >> (2 * i);
+			radiance_offset >>= 2;
+		}
+		hierarchy++;
+
+	}
+	{
 		int loop = 360;
 		for (size_t i = 0; i < loop; i++)
 		{

@@ -13,7 +13,7 @@ layout (local_size_x = 1024, local_size_y = 1) in;
 void main()
 {
 	int i = int(gl_GlobalInvocationID.x);
-	int size = u_gi2d_info.m_resolution.x*u_gi2d_info.m_resolution.y/4;
+	int size = (u_gi2d_info.m_resolution.x*u_gi2d_info.m_resolution.y) >> (2*u_gi2d_scene.m_hierarchy);
 	if(i >= size){ return; }
 
 	int offset = size*u_gi2d_scene.m_frame;
