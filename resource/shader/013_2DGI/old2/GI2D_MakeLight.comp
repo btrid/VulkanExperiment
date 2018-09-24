@@ -1,0 +1,56 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Common.glsl"
+#include "btrlib/Math.glsl"
+
+#define USE_GI2D 0
+#include "GI2D.glsl"
+
+layout (local_size_x = 32, local_size_y = 32) in;
+
+void makeLight(in int frame)
+{
+	ivec2 id = ivec2(gl_GlobalInvocationID.xy);
+//	ivec2 src = ivec2(id*2 + ivec2(frame%2, frame/2)) - ivec2(1);
+	ivec2 src = ivec2(id*2);
+	uvec4 l;
+	l.x = b_light[getMemoryOrder(src)];
+	l.y = b_light[getMemoryOrder(src+ivec2(1, 0))];
+	l.z = b_light[getMemoryOrder(src+ivec2(0, 1))];
+	l.w = b_light[getMemoryOrder(src+ivec2(1, 1))];
+
+	uint ll = packEmissive(unpackEmissive4(l));
+
+	int offset = u_gi2d_info.m_resolution.x*u_gi2d_info.m_resolution.y;
+	offset += (offset / 4) * frame;
+	b_light[offset+getMemoryOrder(id)] = ll;
+}
+void makeLight2()
+{
+	int offset = u_gi2d_info.m_resolution.x*u_gi2d_info.m_resolution.y;
+	offset += (offset / 4);
+	ivec2 id = ivec2(gl_GlobalInvocationID.xy);
+	ivec2 src = id*2;
+	uvec4 l;
+	l.x = b_light[offset + getMemoryOrder(src)];
+	l.y = b_light[offset + getMemoryOrder(src+ivec2(1, 0))];
+	l.z = b_light[offset + getMemoryOrder(src+ivec2(0, 1))];
+	l.w = b_light[offset + getMemoryOrder(src+ivec2(1, 1))];
+
+	uint ll = packEmissive(unpackEmissive4(l));
+
+	offset += (offset / 4);
+	b_light[offset+getMemoryOrder(id)] = ll;
+}
+
+void main()
+{
+	makeLight(0);
+//	makeLight(1);
+//	makeLight(2);
+//	makeLight(3);
+	makeLight2();
+}
+
