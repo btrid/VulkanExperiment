@@ -87,19 +87,27 @@ void main()
 	tp = tp + (0.5*(1<<hierarchy));
 	tp *= inv_dir;
 	vec2 delta = abs((1<<hierarchy)*inv_dir);
+	ivec2 next = ivec2(greaterThanEqual(dir, vec2(0.))) * 2 - 1;
+//	vec3 delta = vec3(abs((1<<hierarchy)*inv_dir), 0.);
+//	ivec3 next = ivec3(ivec2(greaterThanEqual(dir, vec2(0.))) * 2 - 1, 0);
 
 	uvec4 u_radiance = uvec4(0);
 	u64vec4 d;
 	u64vec4 l;
-	ivec2 old_fi = ivec2(999999);
 	for(int _i = 0; _i <5000; _i++)
 	{
 		// march
 		{
+#if 0
+			bool axis = tp.x < tp.y;
+			tp += axis ? delta.xz : delta.zy;
+			map_index += (axis ? next.xz : next.zy) * (1<<hierarchy);
+#else
 			int axis = int(tp.x > tp.y);
 			tp[axis] += delta[axis];
 			int dir = (ivec2(greaterThanEqual(dir, vec2(0.)))[axis] * 2 - 1);
 			map_index[axis] += dir * (1<<hierarchy);
+#endif
 		}
 		// 範囲外?
 		{
@@ -114,14 +122,12 @@ void main()
 		{
 			ivec2 mi = map_index>>hierarchy;
 			ivec2 _fi = mi/8;
-//			if(any(notEqual(old_fi, _fi)))
 			{
 				// 更新
 				ivec4 offset_ = ivec4(0,0,1,1);
 				ivec4 findex = (_fi.xxxx+offset_.xxzz) + (_fi.yyyy+offset_.ywyw)*(map_reso.xxxx) + ivec4(map_offset);
 				d = u64vec4(b_diffuse_map[findex.x], b_diffuse_map[findex.y], b_diffuse_map[findex.z], b_diffuse_map[findex.w]);
 				l = u64vec4(b_emissive_map[findex.x], b_emissive_map[findex.y], b_emissive_map[findex.z], b_emissive_map[findex.w]);
-				old_fi = _fi;
 			}
 
 			ivec2 shift = mi%8;
