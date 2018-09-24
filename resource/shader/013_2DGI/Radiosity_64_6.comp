@@ -37,7 +37,6 @@ void main()
 //	pos += floordir * (8./Ray_Density) * (u_gi2d_scene.m_frame %2);
 	if(!marchToAABB(pos, dir, vec2(0.), reso.xy)){return;}
 
-	u64vec4 hit_mask;
 	ivec4 offset_x;
 	ivec4 offset_y;
 	{
@@ -51,18 +50,18 @@ void main()
 		vec4 _offset = vec4(0., 2., 4., 6.) / Ray_Density;
 		offset_x = ivec4(side.xxxx * _offset);
 		offset_y = ivec4(side.yyyy * _offset);
-		hit_mask = u64vec4(1ul) << (offset_x + offset_y*8);
 	}
 
 	int hierarchy = u_gi2d_scene.m_hierarchy;
-	uint buf_offset = 0;
+	uint light_offset = 0;
 	uint radiance_offset = reso.x*reso.y;
 	for(int i = 0; i < hierarchy; i++)
 	{
-		buf_offset += (reso.x*reso.y)>>(2*i);
+		light_offset += (reso.x>>i)*(reso.y>>i);
 		radiance_offset >>= 2;
 	}
 	radiance_offset *= u_gi2d_scene.m_frame;
+
 	vec2 inv_dir;
 	inv_dir.x = dir.x == 0. ? 999999. : abs(1./dir.x);
 	inv_dir.y = dir.y == 0. ? 999999. : abs(1./dir.y);
@@ -98,13 +97,13 @@ void main()
 		{
 			uvec4 cell_x = (map_index.xxxx+offset_x);
 			uvec4 cell_y = (map_index.yyyy+offset_y);
-			cell_x >>=hierarchy;
-			cell_y >>=hierarchy;
+			cell_x >>= hierarchy;
+			cell_y >>= hierarchy;
 
-			u_radiance[0] += b_light[buf_offset+getMemoryOrder(ivec2(cell_x.x,cell_y.x))];
-			u_radiance[1] += b_light[buf_offset+getMemoryOrder(ivec2(cell_x.y,cell_y.y))];
-			u_radiance[2] += b_light[buf_offset+getMemoryOrder(ivec2(cell_x.z,cell_y.z))];
-			u_radiance[3] += b_light[buf_offset+getMemoryOrder(ivec2(cell_x.w,cell_y.w))];
+			u_radiance[0] += b_light[light_offset+getMemoryOrder(ivec2(cell_x.x,cell_y.x))];
+			u_radiance[1] += b_light[light_offset+getMemoryOrder(ivec2(cell_x.y,cell_y.y))];
+			u_radiance[2] += b_light[light_offset+getMemoryOrder(ivec2(cell_x.z,cell_y.z))];
+			u_radiance[3] += b_light[light_offset+getMemoryOrder(ivec2(cell_x.w,cell_y.w))];
 			u_radiance.x != 0 ? atomicAdd(b_radiance[radiance_offset + getMemoryOrder(ivec2(cell_x.x, cell_y.x))], u_radiance[0]) : 0;
 			u_radiance.y != 0 ? atomicAdd(b_radiance[radiance_offset + getMemoryOrder(ivec2(cell_x.y, cell_y.y))], u_radiance[1]) : 0;
 			u_radiance.z != 0 ? atomicAdd(b_radiance[radiance_offset + getMemoryOrder(ivec2(cell_x.z, cell_y.z))], u_radiance[2]) : 0;

@@ -21,8 +21,7 @@ void makeLight(in int frame)
 	uint offset = 0;
 	for(int i = 0; i < constant.level-1; i++)
 	{
-		offset += reso.x*reso.y;
-		reso >> 1;
+		offset += (reso.x>>i)*(reso.y>>i);
 	}
 	ivec2 id = ivec2(gl_GlobalInvocationID.xy);
 	ivec2 src = ivec2(id*2);
@@ -32,7 +31,7 @@ void makeLight(in int frame)
 	l.z = b_light[offset + getMemoryOrder(src+ivec2(0, 1))];
 	l.w = b_light[offset + getMemoryOrder(src+ivec2(1, 1))];
 	uint ll = packEmissive(unpackEmissive4(l));
-	offset += reso.x*reso.y;
+	offset += (reso.x>>(constant.level-1))*(reso.y>>(constant.level-1));
 	b_light[offset+getMemoryOrder(id)] = ll;
 }
 void main()
