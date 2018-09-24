@@ -21,6 +21,9 @@ void main()
 	angle += a * 0.25*u_gi2d_scene.m_frame;
 
 	vec2 dir = rotate(angle);
+	vec2 inv_dir;
+	inv_dir.x = dir.x == 0. ? 999999. : abs(1./dir.x);
+	inv_dir.y = dir.y == 0. ? 999999. : abs(1./dir.y);
 
 	vec2 floorp = vec2(lessThan(dir, vec2(0.))) * reso.xy;
 	vec2 floordir = abs(dir.x) > abs(dir.y) ? vec2(0., 1.) : vec2(1., 0.);
@@ -32,10 +35,6 @@ void main()
 
 	vec2 minp = min(min(min(p0, p1), p2), p3);
 	vec2 maxp = max(max(max(p0, p1), p2), p3);
-
-	vec2 pos = minp + floordir * (8./Ray_Density) * gl_LocalInvocationIndex;
-	pos += floordir * (8./Ray_Density) * (u_gi2d_scene.m_frame %2);
-	if(!marchToAABB(pos, dir, vec2(0.), reso.xy)){return;}
 
 	ivec4 offset_x;
 	ivec4 offset_y;
@@ -52,6 +51,13 @@ void main()
 		offset_y = ivec4(side.yyyy * _offset);
 	}
 
+//	float ray_space_rate = min(inv_dir.x, inv_dir.y);
+	float ray_space_rate = 1.;
+	vec2 pos = minp + floordir * ray_space_rate * (8./Ray_Density) * gl_LocalInvocationIndex;
+	pos += floordir * ray_space_rate * (8./Ray_Density) * (u_gi2d_scene.m_frame %2);
+	if(!marchToAABB(pos, dir, vec2(0.), reso.xy)){return;}
+
+
 	uint light_offset = 0;
 	uint radiance_offset = reso.x*reso.y;
 	for(int i = 0; i < hierarchy; i++)
@@ -60,10 +66,6 @@ void main()
 		radiance_offset >>= 2;
 	}
 	radiance_offset *= u_gi2d_scene.m_frame;
-
-	vec2 inv_dir;
-	inv_dir.x = dir.x == 0. ? 999999. : abs(1./dir.x);
-	inv_dir.y = dir.y == 0. ? 999999. : abs(1./dir.y);
 
 	ivec2 map_index = ivec2(pos);
 	ivec2 cell_origin = (ivec2(greaterThanEqual(dir, vec2(0.)))<<hierarchy);
@@ -103,14 +105,14 @@ void main()
 			uvec4 cell = getMemoryOrder4(cell_x,cell_y);
 			uvec4 light_cell = uvec4(light_offset)+cell;
 			u_radiance[0] += b_light[light_cell.x];
-//			u_radiance[1] += b_light[light_cell.y];
+			u_radiance[1] += b_light[light_cell.y];
 			u_radiance[2] += b_light[light_cell.z];
-//			u_radiance[3] += b_light[light_cell.w];
+			u_radiance[3] += b_light[light_cell.w];
 			uvec4 radiance_cell = uvec4(radiance_offset)+cell;
 			u_radiance.x != 0 ? atomicAdd(b_radiance[radiance_cell.x], u_radiance[0]) : 0;
-//			u_radiance.y != 0 ? atomicAdd(b_radiance[radiance_cell.y], u_radiance[1]) : 0;
+			u_radiance.y != 0 ? atomicAdd(b_radiance[radiance_cell.y], u_radiance[1]) : 0;
 			u_radiance.z != 0 ? atomicAdd(b_radiance[radiance_cell.z], u_radiance[2]) : 0;
-//			u_radiance.w != 0 ? atomicAdd(b_radiance[radiance_cell.w], u_radiance[3]) : 0;
+			u_radiance.w != 0 ? atomicAdd(b_radiance[radiance_cell.w], u_radiance[3]) : 0;
 		}
 	}
 }

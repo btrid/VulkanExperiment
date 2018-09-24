@@ -147,48 +147,6 @@ vec3 unpackEmissive(in int64_t irgb)
 }
 #endif
 
-#if 0
-uint getMemoryOrder(in uvec2 xy)
-{
-#if 1
-// int getMortonIndex(in ivec2 xy)
-	// 8x8のブロック
-	uvec2 n = xy>>3;
-	xy -= n<<3;
-	n = (n ^ (n << 8 )) & 0x00ff00ff;
-	n = (n ^ (n << 4 )) & 0x0f0f0f0f;
-	n = (n ^ (n << 2 )) & 0x33333333;
-	n = (n ^ (n << 1 )) & 0x55555555;
-	
-	uint mi = (n.y<<1)|n.x;
-	return mi*64 + xy.x + xy.y*8;
-#else
-	return xy.x + xy.y * u_gi2d_info.m_resolution.x;
-#endif
-}
-uvec4 getMemoryOrder4(in uvec4 x, in uvec4 y)
-{
-// int getMortonIndex(in ivec2 xy)
-	// 8x8のブロック
-	uvec4 nx = x>>3;
-	uvec4 ny = y>>3;
-	x -= nx<<3;
-	y -= ny<<3;
-
-	nx = (nx ^ (nx << 8 )) & 0x00ff00ff;
-	nx = (nx ^ (nx << 4 )) & 0x0f0f0f0f;
-	nx = (nx ^ (nx << 2 )) & 0x33333333;
-	nx = (nx ^ (nx << 1 )) & 0x55555555;
-
-	ny = (ny ^ (ny << 8 )) & 0x00ff00ff;
-	ny = (ny ^ (ny << 4 )) & 0x0f0f0f0f;
-	ny = (ny ^ (ny << 2 )) & 0x33333333;
-	ny = (ny ^ (ny << 1 )) & 0x55555555;
-	
-	uvec4 mi = (ny<<1)|nx;
-	return mi*64 + x + y*8;
-}
-#else
 uint getMemoryOrder(in uvec2 xy)
 {
 	xy = (xy ^ (xy << 8 )) & 0x00ff00ff;
@@ -212,7 +170,7 @@ uvec4 getMemoryOrder4(in uvec4 x, in uvec4 y)
 	
 	return (y<<1)|x;
 }
-#endif
+
 vec2 intersectRayRay(in vec2 as, in vec2 ad, in vec2 bs, in vec2 bd)
 {
 	float u = (as.y*bd.x + bd.y*bs.x - bs.y*bd.x - bd.y*as.x) / (ad.x*bd.y - ad.y*bd.x);
