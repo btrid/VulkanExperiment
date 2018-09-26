@@ -96,7 +96,7 @@ struct GI2DContext
 			cmd.updateBuffer<GI2DInfo>(u_gi2d_info.getInfo().buffer, u_gi2d_info.getInfo().offset, m_gi2d_info);
 
 			m_gi2d_scene.m_frame = 0;
-			m_gi2d_scene.m_hierarchy = 0;
+			m_gi2d_scene.m_hierarchy = 2;
 			cmd.updateBuffer<GI2DScene>(u_gi2d_scene.getInfo().buffer, u_gi2d_scene.getInfo().offset, m_gi2d_scene);
 		}
 		{

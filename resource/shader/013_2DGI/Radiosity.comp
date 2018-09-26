@@ -54,8 +54,7 @@ void main()
 		offset_x = ivec4(side.xxxx * _offset + origin.xxxx);
 		offset_y = ivec4(side.yyyy * _offset + origin.yyyy);
 
-		// todo hierarchy対応
-		hit_mask = u64vec4(1ul) << (offset_x + offset_y*8);
+		hit_mask = u64vec4(1ul) << ((offset_x>>hierarchy) + (offset_y>>hierarchy)*8);
 	}
 
 //	float ray_space_rate = min(inv_dir.x, inv_dir.y);
@@ -86,10 +85,10 @@ void main()
 	vec2 tp = abs(cell_origin - (map_index_sub+fract(pos)));
 	tp = tp + (0.5*(1<<hierarchy));
 	tp *= inv_dir;
-	vec2 delta = abs((1<<hierarchy)*inv_dir);
-	ivec2 next = ivec2(greaterThanEqual(dir, vec2(0.))) * 2 - 1;
-//	vec3 delta = vec3(abs((1<<hierarchy)*inv_dir), 0.);
-//	ivec3 next = ivec3(ivec2(greaterThanEqual(dir, vec2(0.))) * 2 - 1, 0);
+//	vec2 delta = abs((1<<hierarchy)*inv_dir);
+//	ivec2 next = ivec2(greaterThanEqual(dir, vec2(0.))) * 2 - 1;
+	vec3 delta = vec3(abs((1<<hierarchy)*inv_dir), 0.);
+	ivec3 next = ivec3(ivec2(greaterThanEqual(dir, vec2(0.))) * 2 - 1, 0);
 
 	uvec4 u_radiance = uvec4(0);
 	u64vec4 d;
@@ -102,13 +101,13 @@ void main()
 			bool axis = tp.x < tp.y;
 			tp += axis ? delta.xz : delta.zy;
 			map_index += (axis ? next.xz : next.zy) * (1<<hierarchy);
-#elif 1
+#elif 0
 			int axis = int(tp.x > tp.y);
 			tp[axis] += delta[axis];
 			int dir = (ivec2(greaterThanEqual(dir, vec2(0.)))[axis] * 2 - 1);
 			map_index[axis] += dir * (1<<hierarchy);
 #else
-			pos += dir * min(inv_dir.x, inv_dir.y);
+			pos += dir * min(inv_dir.x, inv_dir.y) * (1<<hierarchy);
 			map_index = ivec2(pos);
 
 #endif
@@ -170,15 +169,17 @@ void main()
 			u_radiance[2] += b_light[light_cell.z];
 			u_radiance[3] += b_light[light_cell.w];
 #endif
+
+			// 拡散
+			bvec4 is_diffuse = bvec4(notEqual(u64vec4(diffuse_map) & hit_mask, u64vec4(0)));
+			u_radiance *= uvec4(equal(is_diffuse, bvec4(false)));
+
 			uvec4 radiance_cell = uvec4(radiance_offset)+cell;
 			u_radiance.x != 0 ? atomicAdd(b_radiance[radiance_cell.x], u_radiance[0]) : 0;
 			u_radiance.y != 0 ? atomicAdd(b_radiance[radiance_cell.y], u_radiance[1]) : 0;
 			u_radiance.z != 0 ? atomicAdd(b_radiance[radiance_cell.z], u_radiance[2]) : 0;
 			u_radiance.w != 0 ? atomicAdd(b_radiance[radiance_cell.w], u_radiance[3]) : 0;
 
-			// 拡散
-			bvec4 is_diffuse = bvec4(notEqual(u64vec4(diffuse_map) & hit_mask, u64vec4(0)));
-			u_radiance *= uvec4(equal(is_diffuse, bvec4(false)));
 		}
 	}
 }
