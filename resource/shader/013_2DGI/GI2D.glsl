@@ -67,8 +67,8 @@ ivec2 frame_offset(){
 #define LightPower (0.015)
 #define Ray_Density (1)
 #define Block_Size (1)
-//#define denominator (512.)
-#define denominator (2048.)
+#define denominator (512.)
+//#define denominator (2048.)
 //#define denominator (16.)
 
 

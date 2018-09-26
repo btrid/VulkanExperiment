@@ -85,28 +85,24 @@ void main()
 	vec2 tp = abs(cell_origin - (map_index_sub+fract(pos)));
 	tp = tp + (0.5*(1<<hierarchy));
 	tp *= inv_dir;
-//	vec2 delta = abs((1<<hierarchy)*inv_dir);
-//	ivec2 next = ivec2(greaterThanEqual(dir, vec2(0.))) * 2 - 1;
 	vec3 delta = vec3(abs((1<<hierarchy)*inv_dir), 0.);
 	ivec3 next = ivec3(ivec2(greaterThanEqual(dir, vec2(0.))) * 2 - 1, 0);
 
 	uvec4 u_radiance = uvec4(0);
 	u64vec4 d;
 	u64vec4 l;
+	ivec2 old_fi = ivec2(-1);
 	for(int _i = 0; _i <5000; _i++)
 	{
 		// march
 		{
-#if 0
+#if 1
+			// ちゃんとしたレイマーチ
 			bool axis = tp.x < tp.y;
 			tp += axis ? delta.xz : delta.zy;
 			map_index += (axis ? next.xz : next.zy) * (1<<hierarchy);
-#elif 0
-			int axis = int(tp.x > tp.y);
-			tp[axis] += delta[axis];
-			int dir = (ivec2(greaterThanEqual(dir, vec2(0.)))[axis] * 2 - 1);
-			map_index[axis] += dir * (1<<hierarchy);
 #else
+			// DDA
 			pos += dir * min(inv_dir.x, inv_dir.y) * (1<<hierarchy);
 			map_index = ivec2(pos);
 
@@ -125,6 +121,7 @@ void main()
 		{
 			ivec2 mi = map_index>>hierarchy;
 			ivec2 _fi = mi/8;
+			if(any(notEqual(old_fi, _fi)))
 			{
 				// 更新
 				ivec4 offset_ = ivec4(0,0,1,1);

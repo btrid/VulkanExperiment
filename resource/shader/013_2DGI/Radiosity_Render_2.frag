@@ -21,8 +21,8 @@ void main()
 
 //	for(int i = 0; i<2; i++) 
 	{
-		uvec4 coord_x = (ivec4(gl_FragCoord.x)>>hierarchy) + ivec4(-1,1,-1,1);
-		uvec4 coord_y = (ivec4(gl_FragCoord.y)>>hierarchy) + ivec4(-1,-1,1,1);
+		uvec4 coord_x = (ivec4(gl_FragCoord.x)>>hierarchy) + ivec4(0,1,0,1);
+		uvec4 coord_y = (ivec4(gl_FragCoord.y)>>hierarchy) + ivec4(0,0,1,1);
 		uvec4 coord = getMemoryOrder4(coord_x, coord_y);
 		ivec3 subcoord_i = ivec3(gl_FragCoord.xy, 0)%(1<<hierarchy);
 		vec3 subcoord =  subcoord_i / float(1<<hierarchy);
