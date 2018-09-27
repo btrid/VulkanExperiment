@@ -25,8 +25,8 @@ rem %exe% %include% %option% -o ../binary\\DebugFragmentMap.comp.spv DebugFragme
 rem %exe% %include% %option% -o %output%/Radiosity_MakeBounceMap.comp.spv Radiosity_MakeBounceMap.comp
 rem %exe% %include% %option% -o %output%/Radiosity_Bounce.comp.spv Radiosity_Bounce.comp
 
-rem %exe% %include% %option% -o %output%/Radiosity_Render.frag.spv Radiosity_Render.frag
-%exe% %include% %option% -o %output%/Radiosity_Render.frag.spv Radiosity_Render_2.frag
+%exe% %include% %option% -o %output%/Radiosity_Render.frag.spv Radiosity_Render.frag
+rem %exe% %include% %option% -o %output%/Radiosity_Render.frag.spv Radiosity_Render_2.frag
 %exe% %include% %option% -o %output%/Radiosity_Render.vert.spv Radiosity_Render.vert
 
 rem %exe% %include% %option% -o %output%/Radiosity_CalcRadiance.comp.spv Radiosity_CalcRadiance.comp
