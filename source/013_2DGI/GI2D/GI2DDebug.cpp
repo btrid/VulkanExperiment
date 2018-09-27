@@ -43,7 +43,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 		rect.emplace_back(Fragment{ ivec4{ 350, 350, 55, 1 }, vec4{ 1.f,0.f,0.f,0.f } });
 		rect.emplace_back(Fragment{ ivec4{ 350, 400, 55, 1 }, vec4{ 1.f,0.f,0.f,0.f } });
 #else
-		for (int i = 0; i < 0; i++) {
+		for (int i = 0; i < 300; i++) {
 			rect.emplace_back(Fragment{ ivec4{ std::rand() % 1024, std::rand() % 1024, std::rand() % 44+5, std::rand() % 44+5 }, vec4{ 1.f,0.5f,0.5f,0.f } });
 		}
 
