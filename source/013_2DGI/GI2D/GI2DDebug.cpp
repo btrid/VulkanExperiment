@@ -43,7 +43,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 		rect.emplace_back(Fragment{ ivec4{ 350, 350, 55, 1 }, vec4{ 1.f,0.f,0.f,0.f } });
 		rect.emplace_back(Fragment{ ivec4{ 350, 400, 55, 1 }, vec4{ 1.f,0.f,0.f,0.f } });
 #else
-		for (int i = 0; i < 300; i++) {
+		for (int i = 0; i < 0; i++) {
 			rect.emplace_back(Fragment{ ivec4{ std::rand() % 1024, std::rand() % 1024, std::rand() % 44+5, std::rand() % 44+5 }, vec4{ 1.f,0.5f,0.5f,0.f } });
 		}
 
@@ -153,7 +153,7 @@ void GI2DDebug::execute(vk::CommandBuffer cmd)
 // 	// light‚Ì‚Å‚Î‚Á‚®
 // //	if(0)
 	{
-		static vec4 light_pos = vec4(200.f);
+		static vec4 light_pos = vec4(500.f);
 		float move = 1.f;
 		light_pos.x += m_context->m_window->getInput().m_keyboard.isHold(VK_RIGHT) * move;
 		light_pos.x -= m_context->m_window->getInput().m_keyboard.isHold(VK_LEFT) * move;
@@ -162,7 +162,7 @@ void GI2DDebug::execute(vk::CommandBuffer cmd)
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineLayoutPointLight].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutPointLight].get(), 0, m_gi2d_context->getDescriptorSet(), {});
-		cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ light_pos, vec4(0.f, 0.f, 1.f, 1.f) });
+		cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ light_pos, vec4(1.f, 1.f, 1.f, 1.f) });
 		cmd.dispatch(1, 1, 1);
 
 // 		{

@@ -158,7 +158,7 @@ void main()
 			uvec4 cell_x = (map_index.xxxx+offset_x);
 			uvec4 cell_y = (map_index.yyyy+offset_y);
 			uvec4 light_cell = uvec4(light_offset)+getMemoryOrder4(cell_x>>hierarchy_light,cell_y>>hierarchy_light);
-#if 1
+#if 0
 			u_radiance[0] += is_light[0] ? b_light[light_cell.x] : 0;
 			u_radiance[1] += is_light[1] ? b_light[light_cell.y] : 0;
 			u_radiance[2] += is_light[2] ? b_light[light_cell.z] : 0;
@@ -180,9 +180,9 @@ void main()
 				radiance_cell_old = radiance_cell;
 
 				u_radiance.x != 0 ? atomicAdd(b_radiance[radiance_cell.x], u_radiance[0]) : 0;
-				u_radiance.y != 0 ? atomicAdd(b_radiance[radiance_cell.y], u_radiance[1]) : 0;
+//				u_radiance.y != 0 ? atomicAdd(b_radiance[radiance_cell.y], u_radiance[1]) : 0;
 				u_radiance.z != 0 ? atomicAdd(b_radiance[radiance_cell.z], u_radiance[2]) : 0;
-				u_radiance.w != 0 ? atomicAdd(b_radiance[radiance_cell.w], u_radiance[3]) : 0;
+//				u_radiance.w != 0 ? atomicAdd(b_radiance[radiance_cell.w], u_radiance[3]) : 0;
 			}
 
 		}
