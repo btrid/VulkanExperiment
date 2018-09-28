@@ -86,7 +86,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 	{
 		const char* name[] =
 		{
-			"GI2DDebugLight.comp.spv",
+			"GI2D_DebugMakeLight.comp.spv",
 		};
 		static_assert(array_length(name) == array_length(m_shader), "not equal shader num");
 
@@ -152,32 +152,29 @@ void GI2DDebug::execute(vk::CommandBuffer cmd)
 
 // 	// light‚Ì‚Å‚Î‚Á‚®
 // //	if(0)
-// 	{
-// 		static vec2 light_pos = vec2(200.f);
-// 		static float light_dir = 0.f;
-// 		static int level = 0;
-// 		float move = 1.f;
-// 		light_pos.x += m_context->m_window->getInput().m_keyboard.isHold(VK_RIGHT) * move;
-// 		light_pos.x -= m_context->m_window->getInput().m_keyboard.isHold(VK_LEFT) * move;
-// 		light_pos.y -= m_context->m_window->getInput().m_keyboard.isHold(VK_UP) * move;
-// 		light_pos.y += m_context->m_window->getInput().m_keyboard.isHold(VK_DOWN) * move;
-// 		light_dir += 0.02f;
+	{
+		static vec4 light_pos = vec4(200.f);
+		float move = 1.f;
+		light_pos.x += m_context->m_window->getInput().m_keyboard.isHold(VK_RIGHT) * move;
+		light_pos.x -= m_context->m_window->getInput().m_keyboard.isHold(VK_LEFT) * move;
+		light_pos.y -= m_context->m_window->getInput().m_keyboard.isHold(VK_UP) * move;
+		light_pos.y += m_context->m_window->getInput().m_keyboard.isHold(VK_DOWN) * move;
+
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineLayoutPointLight].get());
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutPointLight].get(), 0, m_gi2d_context->getDescriptorSet(), {});
+		cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ light_pos, vec4(0.f, 0.f, 1.f, 1.f) });
+		cmd.dispatch(1, 1, 1);
+
+// 		{
 // 
-// 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineLayoutPointLight].get());
-// 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutPointLight].get(), 0, m_gi2d_context->getDescriptorSet(), {});
-// 		cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ light_pos, light_dir, -1.4f, vec4(2500.f, 0.f, 2500.f, 0.f), level });
-// 		cmd.dispatch(1, 1, 1);
-// 
-// // 		{
-// // 
-// //  			cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ vec2(430.f, 170.f), 0.f, -1.4f, vec4(2500.f, 0.f, 2500.f, 0.f), level });
-// //  			cmd.dispatch(1, 1, 1);
-// //  			cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ vec2(60.f, 400.f), 0.f, -1.4f, vec4(2500.f, 0.f, 2500.f, 0.f), level });
-// //  			cmd.dispatch(1, 1, 1);
-// //  			cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ vec2(80.f, 200.f), 0.f, -1.4f, vec4(2500.f, 0.f, 2500.f, 0.f), level });
-// //  			cmd.dispatch(1, 1, 1);
-// // 		}
-// 	}
+//  			cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ vec2(430.f, 170.f), 0.f, -1.4f, vec4(2500.f, 0.f, 2500.f, 0.f), level });
+//  			cmd.dispatch(1, 1, 1);
+//  			cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ vec2(60.f, 400.f), 0.f, -1.4f, vec4(2500.f, 0.f, 2500.f, 0.f), level });
+//  			cmd.dispatch(1, 1, 1);
+//  			cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ vec2(80.f, 200.f), 0.f, -1.4f, vec4(2500.f, 0.f, 2500.f, 0.f), level });
+//  			cmd.dispatch(1, 1, 1);
+// 		}
+	}
 	vk::BufferMemoryBarrier to_read[] =
 	{
 		m_gi2d_context->b_fragment.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eIndirectCommandRead),

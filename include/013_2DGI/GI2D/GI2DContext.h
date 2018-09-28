@@ -8,14 +8,8 @@ namespace gi2d
 
 struct GI2DLightData
 {
-	vec2 m_pos;
-	float m_dir;
-	float m_angle;
+	vec4 m_pos;
 	vec4 m_emissive;
-	int level;
-	int _p1;
-	int _p2;
-	int _p3;
 };
 struct GI2DContext
 {
