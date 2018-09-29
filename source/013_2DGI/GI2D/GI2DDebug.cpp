@@ -153,6 +153,12 @@ void GI2DDebug::execute(vk::CommandBuffer cmd)
 // 	// light‚Ì‚Å‚Î‚Á‚®
 // //	if(0)
 	{
+		vk::BufferMemoryBarrier to_read[] =
+		{
+			m_gi2d_context->b_fragment.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead| vk::AccessFlagBits::eShaderWrite),
+		};
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);
+
 		static vec4 light_pos = vec4(500.f);
 		float move = 1.f;
 		light_pos.x += m_context->m_window->getInput().m_keyboard.isHold(VK_RIGHT) * move;
@@ -165,21 +171,7 @@ void GI2DDebug::execute(vk::CommandBuffer cmd)
 		cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ light_pos, vec4(1.f, 1.f, 1.f, 1.f) });
 		cmd.dispatch(1, 1, 1);
 
-// 		{
-// 
-//  			cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ vec2(430.f, 170.f), 0.f, -1.4f, vec4(2500.f, 0.f, 2500.f, 0.f), level });
-//  			cmd.dispatch(1, 1, 1);
-//  			cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ vec2(60.f, 400.f), 0.f, -1.4f, vec4(2500.f, 0.f, 2500.f, 0.f), level });
-//  			cmd.dispatch(1, 1, 1);
-//  			cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ vec2(80.f, 200.f), 0.f, -1.4f, vec4(2500.f, 0.f, 2500.f, 0.f), level });
-//  			cmd.dispatch(1, 1, 1);
-// 		}
 	}
-	vk::BufferMemoryBarrier to_read[] =
-	{
-		m_gi2d_context->b_fragment.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eIndirectCommandRead),
-	};
-	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);
 }
 
 }
