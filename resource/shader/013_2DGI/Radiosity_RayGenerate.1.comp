@@ -10,7 +10,7 @@
 #include "GI2D.glsl"
 
 
-layout (local_size_x = 256, local_size_y = 4) in;
+layout (local_size_x = 128, local_size_y = 4) in;
 void main()
 {
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
@@ -29,8 +29,8 @@ void main()
 	pos.y = gl_LocalInvocationID.y==1 ? reso.y-1 : 0;
 //	pos += 0.5;
 	vec2 pdir;
-	pdir.x = gl_LocalInvocationID.y%2==0 ? 1 : 0;
-	pdir.y = gl_LocalInvocationID.y%2==1 ? 1 : 0;
+	pdir.x = gl_LocalInvocationID.y/2==0 ? 1 : 0;
+	pdir.y = gl_LocalInvocationID.y/2==1 ? 1 : 0;
 
 	pos += pdir * gl_LocalInvocationID.x * 8;
 	vec2 begin = pos;
