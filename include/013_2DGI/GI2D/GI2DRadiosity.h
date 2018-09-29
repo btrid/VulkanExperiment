@@ -14,7 +14,7 @@ struct GI2DRadiosity
 {
 	enum {
 		Ray_Num = 256,
-		Ray_All_Num = Ray_Num * 256,
+		Ray_All_Num = 2*Ray_Num * 256,
 		Ray_Group = 1,
 		Bounce_Num = 1,
 	};
@@ -76,8 +76,8 @@ struct GI2DRadiosity
 			uint32_t size = m_gi2d_context->RenderWidth * m_gi2d_context->RenderHeight;
 			b_radiance = m_context->m_storage_memory.allocateMemory<uint32_t>({ size * 4,{} });
 			b_bounce_map = m_context->m_storage_memory.allocateMemory<uint64_t>({ size/64,{} });
-			b_ray = m_context->m_storage_memory.allocateMemory<Ray>({ Ray_All_Num,{} });
 			b_ray_counter = m_context->m_storage_memory.allocateMemory<ivec4>({ 1,{} });
+			b_ray = m_context->m_storage_memory.allocateMemory<Ray>({ Ray_All_Num,{} });
 		}
 
 		{

@@ -27,7 +27,7 @@ void main()
 	vec2 pos;
 	pos.x = gl_LocalInvocationID.y==3 ? reso.x-1 : 0;
 	pos.y = gl_LocalInvocationID.y==1 ? reso.y-1 : 0;
-//	pos += 0.5;
+	pos += 0.5;
 	vec2 pdir;
 	pdir.x = gl_LocalInvocationID.y/2==0 ? 1 : 0;
 	pdir.y = gl_LocalInvocationID.y/2==1 ? 1 : 0;
