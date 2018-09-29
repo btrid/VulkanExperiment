@@ -41,8 +41,8 @@ struct GI2DMakeHierarchy
 		{
 			const char* name[] =
 			{
-				"MakeFragmentMap.comp.spv",
-				"MakeFragmentMapHierarchy.comp.spv",
+				"GI2D_MakeFragmentMap.comp.spv",
+				"GI2D_MakeFragmentMapHierarchy.comp.spv",
 				"GI2D_MakeDensityHierarchy.comp.spv",
 				"GI2D_MakeLight.comp.spv",
 			};
