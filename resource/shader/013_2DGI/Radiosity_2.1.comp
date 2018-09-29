@@ -21,7 +21,7 @@ void main()
 
 	D2Ray ray = b_ray[gl_GlobalInvocationID.x];
 	vec2 pos = ray.origin;
-	vec2 dir = rotate(ray.angle);
+	vec2 dir = rotate(ray.angle + (6.28318530717958647692528676655900576 / 256) * (0.25*u_gi2d_scene.m_frame));
 	vec2 inv_dir;
 	inv_dir.x = dir.x == 0. ? 99999999. : abs(1./dir.x);
 	inv_dir.y = dir.y == 0. ? 99999999. : abs(1./dir.y);
