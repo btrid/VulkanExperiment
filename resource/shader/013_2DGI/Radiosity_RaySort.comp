@@ -18,7 +18,7 @@ layout(push_constant) uniform Input
 } constant;
 
 bool compare(in D2Ray a, in D2Ray b){
-	return length(a.dir) < length(b.dir);
+	return a.march < b.march;
 }
 
 

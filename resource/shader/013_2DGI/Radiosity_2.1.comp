@@ -10,32 +10,29 @@
 #define USE_GI2D_Radiosity 1
 #include "GI2D.glsl"
 
-layout (local_size_x = 256*Ray_Density, local_size_y = 1) in;
+layout (local_size_x = 512, local_size_y = 1) in;
 void main()
 {
+	if(gl_GlobalInvocationID.x >= b_ray_counter.w){ return; }
+
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
 	int hierarchy = u_gi2d_scene.m_hierarchy;
 	int hierarchy_light = u_gi2d_scene.m_hierarchy+1;
 
-	float a = 6.28318530717958647692528676655900576 / gl_NumWorkGroups.y;
-	float angle = a * gl_GlobalInvocationID.y;
-	angle += a * 0.25*u_gi2d_scene.m_frame;
-
-	vec2 dir = rotate(angle);
+	D2Ray ray = b_ray[gl_GlobalInvocationID.x];
+	vec2 pos = ray.origin;
+	vec2 dir = rotate(ray.angle);
 	vec2 inv_dir;
-	inv_dir.x = dir.x == 0. ? 999999. : abs(1./dir.x);
-	inv_dir.y = dir.y == 0. ? 999999. : abs(1./dir.y);
+	inv_dir.x = dir.x == 0. ? 99999999. : abs(1./dir.x);
+	inv_dir.y = dir.y == 0. ? 99999999. : abs(1./dir.y);
 
-	vec2 floorp = vec2(lessThan(dir, vec2(0.))) * reso.xy;
-	vec2 floordir = abs(dir.x) > abs(dir.y) ? vec2(0., 1.) : vec2(1., 0.);
-
-	vec2 p0 = intersectRayRay(vec2(0, 0), dir, floorp, floordir);
-	vec2 p1 = intersectRayRay(vec2(reso.x, 0), dir, floorp, floordir);
-	vec2 p2 = intersectRayRay(vec2(0, reso.y), dir, floorp, floordir);
-	vec2 p3 = intersectRayRay(vec2(reso.x, reso.y), dir, floorp, floordir);
-
-	vec2 minp = min(min(min(p0, p1), p2), p3);
-	vec2 maxp = max(max(max(p0, p1), p2), p3);
+	vec2 side = rotateZ(dir, 3.14*0.5);
+	{
+		vec2 inv_side;
+		inv_side.x = side.x == 0. ? 99999999. : abs(1./side.x);
+		inv_side.y = side.y == 0. ? 99999999. : abs(1./side.y);
+		side *= min(inv_side.x, inv_side.y);
+	}
 
 	u64vec4 hit_mask;
 	ivec4 offset_x;
@@ -57,13 +54,6 @@ void main()
 
 		hit_mask = u64vec4(1ul) << ((offset_x>>hierarchy_light) + (offset_y>>hierarchy_light)*8);
 	}
-
-//	float ray_space_rate = min(inv_dir.x, inv_dir.y);
-	float ray_space_rate = 1.;
-	vec2 pos = minp + floordir * ray_space_rate * (8./Ray_Density) * gl_LocalInvocationIndex;
-	pos += floordir * ray_space_rate * (8./Ray_Density) * (u_gi2d_scene.m_frame %2);
-	if(!marchToAABB(pos, dir, vec2(0.), reso.xy)){return;}
-
 
 	// gpuで事前計算
 	uint radiance_offset = reso.x*reso.y;
@@ -100,31 +90,8 @@ void main()
 	u64vec4 l;
 	ivec2 old_fi = ivec2(-1);
 	uvec4 radiance_cell_old = uvec4(-1);
-	for(int _i = 0; _i <5000; _i++)
+	for(int _i = 0; _i < 5000; _i++)
 	{
-		// march
-		{
-#if 1
-			// ちゃんとしたレイマーチ
-			bool axis = tp.x < tp.y;
-			tp += axis ? delta.xz : delta.zy;
-			map_index += (axis ? next.xz : next.zy) * (1<<hierarchy);
-#else
-			// DDA
-			pos += dir * min(inv_dir.x, inv_dir.y) * (1<<hierarchy);
-			map_index = ivec2(pos);
-
-#endif
-		}
-		// 範囲外?
-		{
-			ivec2 is_die = ivec2(greaterThanEqual(map_index, reso.xy)) + ivec2(lessThan(map_index, ivec2(0.)));
-			if(any(notEqual(is_die.xy, ivec2(0))))
-			{
-				break;
-			}
-		}
-
 		// hit確認
 		{
 			ivec2 mi = map_index>>hierarchy_light;
@@ -175,7 +142,7 @@ void main()
 			// 拡散
 			bvec4 is_diffuse = bvec4(notEqual(u64vec4(diffuse_map) & hit_mask, u64vec4(0)));
 			u_radiance *= uvec4(equal(is_diffuse, bvec4(false)));
-;
+
 			uvec4 radiance_cell = uvec4(radiance_offset)+getMemoryOrder4(cell_x>>hierarchy,cell_y>>hierarchy);
 			if(any(notEqual(radiance_cell_old, radiance_cell)))
 			{
@@ -187,6 +154,28 @@ void main()
 //				u_radiance.w != 0 ? atomicAdd(b_radiance[radiance_cell.w], u_radiance[3]) : 0;
 			}
 
+		}
+		// march
+		{
+#if 1
+			// ちゃんとしたレイマーチ
+			bool axis = tp.x < tp.y;
+			tp += axis ? delta.xz : delta.zy;
+			map_index += (axis ? next.xz : next.zy) * (1<<hierarchy);
+#else
+			// DDA
+			pos += dir * min(inv_dir.x, inv_dir.y) * (1<<hierarchy);
+			map_index = ivec2(pos);
+
+#endif
+		}
+		// 範囲外?
+		{
+			ivec2 is_die = ivec2(greaterThanEqual(map_index, reso.xy)) + ivec2(lessThan(map_index, ivec2(0)));
+			if(any(notEqual(is_die.xy, ivec2(0))))
+			{
+				break;
+			}
 		}
 	}
 }

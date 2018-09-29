@@ -18,10 +18,6 @@ void main()
 	float angle = 6.28 / gl_NumWorkGroups.y;
 	angle += angle * (gl_GlobalInvocationID.z / gl_NumWorkGroups.z);
 	vec2 dir = rotate(angle * gl_GlobalInvocationID.y);
-//	dir.x = abs(dir.x) < 0.0001 ? 0.0001 : dir.x;
-//	dir.y = abs(dir.y) < 0.0001 ? 0.0001 : dir.y;
-//	vec2 inv_dir = abs(1./dir);
-//	dir *= min(inv_dir.x, inv_dir.y);
 
 	vec2 begin;
 	vec2 end;

@@ -60,7 +60,8 @@ struct GI2DRadiosity
 	struct Ray
 	{
 		vec2 origin;
-		vec2 dir;
+		float angle;
+		uint32_t march;
 	};
 
 	GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context, const std::shared_ptr<RenderTarget>& render_target)
@@ -405,7 +406,8 @@ struct GI2DRadiosity
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RayGenerate].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
-			cmd.dispatch(1, Ray_Num, Ray_Group);
+//			cmd.dispatch(1, Ray_Num, Ray_Group);
+			cmd.dispatch(256, 1, 1);
 		}
 
 		{
@@ -476,8 +478,8 @@ struct GI2DRadiosity
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Radiosity].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
-			cmd.dispatch(1, Ray_Num, Ray_Group);
-//			cmd.dispatchIndirect(b_ray_counter.getInfo().buffer, b_ray_counter.getInfo().offset);
+//			cmd.dispatch(1, Ray_Num, Ray_Group);
+			cmd.dispatchIndirect(b_ray_counter.getInfo().buffer, b_ray_counter.getInfo().offset);
 		}
 
 		// make bounce map
