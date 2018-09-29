@@ -24,9 +24,8 @@ void main()
 		uvec4 coord_x = (ivec4(gl_FragCoord.x)>>hierarchy) + ivec4(0,1,0,1);
 		uvec4 coord_y = (ivec4(gl_FragCoord.y)>>hierarchy) + ivec4(0,0,1,1);
 		uvec4 coord = getMemoryOrder4(coord_x, coord_y);
-		ivec3 subcoord_i = ivec3(gl_FragCoord.xy, 0)%(1<<hierarchy);
-		vec3 subcoord =  subcoord_i / float(1<<hierarchy);
-//		ivec2 framecoord = ivec2(u_gi2d_scene.m_frame%2, u_gi2d_scene.m_frame/2) - ivec2(1);
+		ivec2 subcoord_i = ivec2(gl_FragCoord.xy)%(1<<hierarchy);
+		vec2 subcoord =  subcoord_i / float(1<<hierarchy);
 		vec3 radiance_ = vec3(0.);
 		int count = 0;
 //		for(int y = 0; y < Block_Size; y++){

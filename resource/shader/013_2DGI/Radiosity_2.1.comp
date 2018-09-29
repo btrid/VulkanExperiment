@@ -21,7 +21,8 @@ void main()
 
 	D2Ray ray = b_ray[gl_GlobalInvocationID.x];
 	vec2 pos = ray.origin;
-	vec2 dir = rotate(ray.angle + (6.28318530717958647692528676655900576 / 256) * (0.25*u_gi2d_scene.m_frame));
+//	vec2 dir = rotate(ray.angle + (6.28318530717958647692528676655900576 / 256) * (0.25*u_gi2d_scene.m_frame));
+	vec2 dir = rotate(ray.angle);
 	vec2 inv_dir;
 	inv_dir.x = dir.x == 0. ? 99999999. : abs(1./dir.x);
 	inv_dir.y = dir.y == 0. ? 99999999. : abs(1./dir.y);
@@ -90,6 +91,7 @@ void main()
 	u64vec4 l;
 	ivec2 old_fi = ivec2(-1);
 	uvec4 radiance_cell_old = uvec4(-1);
+	uvec4 is_diffuse = uvec4(0);
 	for(int _i = 0; _i < 5000; _i++)
 	{
 		// hit確認
@@ -139,10 +141,6 @@ void main()
 			u_radiance[3] += b_light[light_cell.w];
 #endif
 
-			// 拡散
-			bvec4 is_diffuse = bvec4(notEqual(u64vec4(diffuse_map) & hit_mask, u64vec4(0)));
-			u_radiance *= uvec4(equal(is_diffuse, bvec4(false)));
-
 			uvec4 radiance_cell = uvec4(radiance_offset)+getMemoryOrder4(cell_x>>hierarchy,cell_y>>hierarchy);
 			if(any(notEqual(radiance_cell_old, radiance_cell)))
 			{
@@ -152,8 +150,15 @@ void main()
 //				u_radiance.y != 0 ? atomicAdd(b_radiance[radiance_cell.y], u_radiance[1]) : 0;
 				u_radiance.z != 0 ? atomicAdd(b_radiance[radiance_cell.z], u_radiance[2]) : 0;
 //				u_radiance.w != 0 ? atomicAdd(b_radiance[radiance_cell.w], u_radiance[3]) : 0;
+
+				vec4 rate = vec4(equal(is_diffuse, uvec4(0)));
+				u_radiance *= uvec4(rate);
+				is_diffuse = uvec4(0);
 			}
 
+			// 拡散
+			is_diffuse += uvec4(notEqual(u64vec4(diffuse_map) & hit_mask, u64vec4(0)));
+//			rate = min(vec4(1.), rate + vec4(0.7));
 		}
 		// march
 		{

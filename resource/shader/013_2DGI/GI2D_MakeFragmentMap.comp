@@ -14,14 +14,15 @@ shared uint s_bit[16][2];
 shared uint s_light_bit[16][2];
 void main()
 {
-	ivec2 id = ivec2(gl_GlobalInvocationID.xy) + ivec2(u_gi2d_scene.m_frame%2,u_gi2d_scene.m_frame/2) - ivec2(1);
+//	ivec2 id = ivec2(gl_GlobalInvocationID.xy) + ivec2(u_gi2d_scene.m_frame%2,u_gi2d_scene.m_frame/2) - ivec2(1);
+	ivec2 id = ivec2(gl_GlobalInvocationID.xy);
 	id = clamp(id, ivec2(0), u_gi2d_info.m_resolution);
 
 	int tiled_1D_index = id.x + id.y*u_gi2d_info.m_resolution.x; 
 	vec3 albedo = b_fragment[tiled_1D_index].albedo.xyz;
 	float emissive = b_fragment[tiled_1D_index].albedo.w;
 	bool is_fragment = (emissive <= 0.0) &&  dot(albedo, albedo) >= 0.01;
-	bool is_emissive = (emissive >= 1.);
+	bool is_emissive = (emissive >= 0.5);
 
 	uint power = packEmissive(albedo*LightPower*4);
 	b_light[getMemoryOrder(ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y))] = is_emissive ? power : 0;

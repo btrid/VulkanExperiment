@@ -46,7 +46,7 @@ struct GI2DMakeHierarchy
 				"GI2D_MakeDensityHierarchy.comp.spv",
 				"GI2D_MakeLight.comp.spv",
 			};
-//			static_assert(array_length(name) == m_shader.max_size(), "not equal shader num");
+			static_assert(array_length(name) == Shader_Num, "not equal shader num");
 
 			std::string path = btr::getResourceShaderPath();
 			for (size_t i = 0; i < array_length(name); i++) {
@@ -115,6 +115,7 @@ struct GI2DMakeHierarchy
 		// make fragment map
 		{
 			vk::BufferMemoryBarrier to_write[] = {
+				m_gi2d_context->b_fragment.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				m_gi2d_context->b_diffuse_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
 				m_gi2d_context->b_emissive_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
 				m_gi2d_context->b_light.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
