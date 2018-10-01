@@ -18,6 +18,7 @@ void main()
 
 	float a = 6.2831 / gl_WorkGroupSize.x;
 	float angle = a * gl_LocalInvocationID.x;
+	angle += a * (0.25*u_gi2d_scene.m_frame);
 
 	vec2 dir = rotate(angle);
 	vec2 inv_dir;

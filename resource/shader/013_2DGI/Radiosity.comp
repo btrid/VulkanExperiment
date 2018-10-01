@@ -29,6 +29,7 @@ void main()
 	vec3 delta = vec3(inv_dir, 0.);
 	ivec3 next = ivec3(ivec2(greaterThanEqual(dir, vec2(0.))) * 2 - 1, 0);
 
+	uint radiance_offset = reso.x*reso.y*u_gi2d_scene.m_frame;
 	uint radiance = b_light[getMemoryOrder(map_index)];
 	for(int _i = 0; _i < ray.march; _i++)
 	{
@@ -48,7 +49,7 @@ void main()
 		}
 
 		{
-			atomicAdd(b_radiance[getMemoryOrder(map_index)], radiance);
+			atomicAdd(b_radiance[getMemoryOrder(map_index)+radiance_offset], radiance);
 		}
 	}
 }
