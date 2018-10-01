@@ -10,48 +10,52 @@
 #include "GI2D.glsl"
 
 
-layout (local_size_x = 256) in;
+layout (local_size_x = 128, local_size_y = 4) in;
 void main()
 {
-	if(b_ray_counter.w >= u_radiosity_info.ray_num_max){ return; }
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
+	int hierarchy = 0;
 
-	float a = 6.2831 / gl_WorkGroupSize.x;
-	float angle = a * gl_LocalInvocationID.x;
-	angle += a * (0.25*u_gi2d_scene.m_frame);
+	float a = 6.28318530717958647692528676655900576 / gl_NumWorkGroups.x;
+	float angle = a * gl_WorkGroupID.x;
 
 	vec2 dir = rotate(angle);
 	vec2 inv_dir;
 	inv_dir.x = dir.x == 0. ? 999999. : abs(1./dir.x);
 	inv_dir.y = dir.y == 0. ? 999999. : abs(1./dir.y);
 
+	vec2 pos;
+	pos.x = gl_LocalInvocationID.y==3 ? reso.x-1 : 0;
+	pos.y = gl_LocalInvocationID.y==1 ? reso.y-1 : 0;
+	pos += 0.5;
+	vec2 pdir;
+	pdir.x = gl_LocalInvocationID.y/2==0 ? 1 : 0;
+	pdir.y = gl_LocalInvocationID.y/2==1 ? 1 : 0;
 
-	vec2 pos = vec2(b_light_index[gl_WorkGroupID.x]%reso.x, b_light_index[gl_WorkGroupID.x]/reso.x) + 0.5;
-	ivec2 map_index = ivec2(pos);
+	pos += pdir * gl_LocalInvocationID.x * 8;
+	vec2 begin = pos;
+
 
 	// raymarch用事前計算
-	vec2 tp = 0.5*inv_dir;
-	vec3 delta = vec3(inv_dir, 0.);
-	ivec3 next = ivec3(ivec2(greaterThanEqual(dir, vec2(0.))) * 2. - 1., 0);
+	ivec2 map_index = ivec2(pos);
+	ivec2 cell_origin = (ivec2(greaterThanEqual(dir, vec2(0.)))<<hierarchy);
+	ivec2 map_index_sub = map_index - ((map_index>>hierarchy)<<hierarchy);
+	vec2 tp = abs(cell_origin - (map_index_sub+fract(pos)));
+	tp = tp + (0.5*(1<<hierarchy));
+	tp *= inv_dir;
+	vec3 delta = vec3(abs((1<<hierarchy)*inv_dir), 0.);
+	ivec3 next = ivec3(ivec2(greaterThanEqual(dir, vec2(0.))) * 2 - 1, 0);
 
-	uint64_t d;
-	uint old_diffuse_index = -1;
 	int march_count = 0;
 	for(; march_count <5000; march_count++)
 	{
-		ivec2 cell = map_index/8;
-		uint dindex = cell.x + cell.y*reso.z;
-		if(old_diffuse_index != dindex) { d = b_diffuse_map[dindex]; old_diffuse_index = dindex; }
-		ivec2 cell_sub = map_index - cell*8;
-		if((d & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0){ break; }
-
 		// march
 		{
 #if 1
 			// ちゃんとしたレイマーチ
 			bool axis = tp.x < tp.y;
 			tp += axis ? delta.xz : delta.zy;
-			map_index += (axis ? next.xz : next.zy);
+			map_index += (axis ? next.xz : next.zy) * (1<<hierarchy);
 #else
 			// DDA
 			pos += dir * min(inv_dir.x, inv_dir.y) * (1<<hierarchy);
@@ -69,14 +73,13 @@ void main()
 		}
 	}
 
-	if(march_count <= 1) { return; }
+	if(march_count < 5) { return; }
 	D2Ray ray;
-	ray.origin = pos;
+	ray.origin = begin;
 	ray.angle = angle;
 	ray.march = march_count;
 
 	int index = atomicAdd(b_ray_counter.w, 1);
-	if(index >= u_radiosity_info.ray_num_max){ return; }
 	if((index % 512) == 0)
 	{
 		atomicAdd(b_ray_counter.x, 1);

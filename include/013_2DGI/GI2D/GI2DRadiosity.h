@@ -57,6 +57,11 @@ struct GI2DRadiosity
 		Pipeline_Num,
 	};
 
+	struct GI2DRadiosityInfo
+	{
+		uint ray_num_max;
+		uint a[3];
+	};
 	struct Ray
 	{
 		vec2 origin;
@@ -73,11 +78,22 @@ struct GI2DRadiosity
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
 		{
+			GI2DRadiosityInfo info;
+			info.ray_num_max = Ray_All_Num;
+			u_radiosity_info = m_context->m_storage_memory.allocateMemory<GI2DRadiosityInfo>({1,{} });
+			cmd.updateBuffer<GI2DRadiosityInfo>(u_radiosity_info.getInfo().buffer, u_radiosity_info.getInfo().offset, info);
+			vk::BufferMemoryBarrier to_read[] = {
+				u_radiosity_info.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {},
+				0, nullptr, array_length(to_read), to_read, 0, nullptr);
+
+
 			uint32_t size = m_gi2d_context->RenderWidth * m_gi2d_context->RenderHeight;
 			b_radiance = m_context->m_storage_memory.allocateMemory<uint32_t>({ size * 4,{} });
 			b_bounce_map = m_context->m_storage_memory.allocateMemory<uint64_t>({ size/64,{} });
 			b_ray_counter = m_context->m_storage_memory.allocateMemory<ivec4>({ 1,{} });
-			b_ray = m_context->m_storage_memory.allocateMemory<Ray>({ Ray_All_Num,{} });
+			b_ray = m_context->m_storage_memory.allocateMemory<Ray>({ info.ray_num_max,{} });
 		}
 
 		{
@@ -87,7 +103,7 @@ struct GI2DRadiosity
 				vk::DescriptorSetLayoutBinding binding[] = {
 					vk::DescriptorSetLayoutBinding()
 					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+					.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 					.setDescriptorCount(1)
 					.setBinding(0),
 					vk::DescriptorSetLayoutBinding()
@@ -105,6 +121,11 @@ struct GI2DRadiosity
 					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 					.setDescriptorCount(1)
 					.setBinding(3),
+					vk::DescriptorSetLayoutBinding()
+					.setStageFlags(stage)
+					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+					.setDescriptorCount(1)
+					.setBinding(4),
 					vk::DescriptorSetLayoutBinding()
 					.setStageFlags(stage)
 					.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
@@ -132,6 +153,9 @@ struct GI2DRadiosity
 				desc_info.setPSetLayouts(layouts);
 				m_descriptor_set = std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]);
 
+				vk::DescriptorBufferInfo uniforms[] = {
+					u_radiosity_info.getInfo(),
+				};
 				vk::DescriptorBufferInfo storages[] = {
 					b_radiance.getInfo(),
 					b_bounce_map.getInfo(),
@@ -142,10 +166,16 @@ struct GI2DRadiosity
 				vk::WriteDescriptorSet write[] = 
 				{
 					vk::WriteDescriptorSet()
+					.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+					.setDescriptorCount(array_length(uniforms))
+					.setPBufferInfo(uniforms)
+					.setDstBinding(0)
+					.setDstSet(m_descriptor_set.get()),
+					vk::WriteDescriptorSet()
 					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 					.setDescriptorCount(array_length(storages))
 					.setPBufferInfo(storages)
-					.setDstBinding(0)
+					.setDstBinding(1)
 					.setDstSet(m_descriptor_set.get()),
 				};
 				context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
@@ -548,6 +578,7 @@ struct GI2DRadiosity
 	std::array<vk::UniquePipelineLayout, PipelineLayout_Num> m_pipeline_layout;
 	std::array<vk::UniquePipeline, Pipeline_Num> m_pipeline;
 
+	btr::BufferMemoryEx<GI2DRadiosityInfo> u_radiosity_info;
 	btr::BufferMemoryEx<uint32_t> b_radiance;
 	btr::BufferMemoryEx<uint64_t> b_bounce_map;
 	btr::BufferMemoryEx<Ray> b_ray;

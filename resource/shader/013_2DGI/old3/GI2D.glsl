@@ -108,40 +108,28 @@ vec3 unpackEmissive4(in uvec4 irgb)
 }
 
 #ifdef USE_GI2D_Radiosity
-struct GI2DRadiosityInfo
-{
-	uint ray_num_max;
-	uint a1;
-	uint a2;
-	uint a3;
-};
-	
 /*struct D2Ray
 {
 	vec2 origin;
 	vec2 dir;
 };
-*/
-struct D2Ray
+*/struct D2Ray
 {
 	vec2 origin;
 	float angle;
 	uint march;
 };
 
-layout(set=USE_GI2D_Radiosity, binding=0, std140) uniform GI2DGI2DRadiosityInfoUniform {
-	GI2DRadiosityInfo u_radiosity_info;
-};
-layout(set=USE_GI2D_Radiosity, binding=1) restrict buffer RadianceMapBuffer {
+layout(set=USE_GI2D_Radiosity, binding=0) restrict buffer RadianceMapBuffer {
 	uint b_radiance[];
 };
-layout(set=USE_GI2D_Radiosity, binding=2) restrict buffer BounceMapBuffer {
+layout(set=USE_GI2D_Radiosity, binding=1) restrict buffer BounceMapBuffer {
 	uint64_t b_bounce_map[];
 };
-layout(set=USE_GI2D_Radiosity, binding=3, std430) restrict buffer RayBuffer {
+layout(set=USE_GI2D_Radiosity, binding=2, std430) restrict buffer RayBuffer {
 	D2Ray b_ray[];
 };
-layout(set=USE_GI2D_Radiosity, binding=4) restrict buffer RayCounter {
+layout(set=USE_GI2D_Radiosity, binding=3) restrict buffer RayCounter {
 	ivec4 b_ray_counter;
 };
 

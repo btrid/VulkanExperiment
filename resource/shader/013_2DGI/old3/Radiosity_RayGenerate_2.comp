@@ -13,7 +13,7 @@
 layout (local_size_x = 256) in;
 void main()
 {
-	if(b_ray_counter.w >= u_radiosity_info.ray_num_max){ return; }
+//	if(b_ray_counter.w >= )
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
 
 	float a = 6.2831 / gl_WorkGroupSize.x;
@@ -76,7 +76,6 @@ void main()
 	ray.march = march_count;
 
 	int index = atomicAdd(b_ray_counter.w, 1);
-	if(index >= u_radiosity_info.ray_num_max){ return; }
 	if((index % 512) == 0)
 	{
 		atomicAdd(b_ray_counter.x, 1);
