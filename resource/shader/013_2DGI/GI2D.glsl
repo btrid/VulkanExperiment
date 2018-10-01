@@ -54,6 +54,12 @@ layout(set=USE_GI2D, binding=5) restrict buffer GridCounter {
 layout(set=USE_GI2D, binding=6) restrict buffer LightBuffer {
 	uint b_light[];
 };
+layout(set=USE_GI2D, binding=7) restrict buffer LightCounter {
+	uvec4 b_light_counter;
+};
+layout(set=USE_GI2D, binding=8) restrict buffer LightIndexBuffer {
+	uint b_light_index[];
+};
 
 ivec2 frame_offset(){
 	return ivec2(u_gi2d_scene.m_frame%2,u_gi2d_scene.m_frame/2);

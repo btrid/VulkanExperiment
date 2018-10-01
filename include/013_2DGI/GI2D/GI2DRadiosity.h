@@ -398,16 +398,18 @@ struct GI2DRadiosity
 		{
 			// ƒŒƒC‚Ì¶¬
 			vk::BufferMemoryBarrier to_read[] = {
-				b_ray_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+				m_gi2d_context->b_light_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				b_ray_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eIndirectCommandRead),
 			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {},
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader | vk::PipelineStageFlagBits::eDrawIndirect, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RayGenerate].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
 //			cmd.dispatch(1, Ray_Num, Ray_Group);
-			cmd.dispatch(256, 1, 1);
+//			cmd.dispatch(256, 1, 1);
+			cmd.dispatchIndirect(m_gi2d_context->b_light_counter.getInfo().buffer, m_gi2d_context->b_light_counter.getInfo().offset);
 		}
 
 		{
@@ -446,7 +448,7 @@ struct GI2DRadiosity
 		static int32_t is_init;
 		if (!is_init)
 		{
-			is_init = true;
+//			is_init = true;
 			executeSetup(cmd);
 		}
 		{
