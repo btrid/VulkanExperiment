@@ -15,6 +15,7 @@ void main()
 {
 	if(gl_GlobalInvocationID.x >= b_ray_counter.w){ return; }
 
+	const int hierarchy = 1;
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
 	D2Ray ray = b_ray[gl_GlobalInvocationID.x];
 	vec2 pos = ray.origin;
@@ -25,13 +26,14 @@ void main()
 
 	// raymarch用事前計算
 	ivec2 map_index = ivec2(pos);
-	vec2 tp = 0.5*inv_dir;
-	vec3 delta = vec3(inv_dir, 0.);
+	vec2 tp = 0.5* (1<<hierarchy)*inv_dir;
+//	vec2 tp = (vec2(u_gi2d_scene.m_frame%2, u_gi2d_scene.m_frame/2) *0.5 + 0.25)*inv_dir;
+	vec3 delta = vec3(inv_dir, 0.) * (1<<hierarchy);
 	ivec3 next = ivec3(ivec2(greaterThanEqual(dir, vec2(0.))) * 2 - 1, 0);
 
 	uint radiance_offset = reso.x*reso.y*u_gi2d_scene.m_frame;
 	uint radiance = b_light[getMemoryOrder(map_index)];
-	for(int _i = 0; _i < ray.march; _i++)
+	for(int _i = 0; _i < ray.march/(1<<hierarchy); _i++)
 	{
 		// march
 		{
@@ -39,7 +41,7 @@ void main()
 			// ちゃんとしたレイマーチ
 			bool axis = tp.x < tp.y;
 			tp += axis ? delta.xz : delta.zy;
-			map_index += (axis ? next.xz : next.zy);
+			map_index += (axis ? next.xz : next.zy) * (1<<hierarchy);
 #else
 			// DDA
 			pos += dir * min(inv_dir.x, inv_dir.y) * (1<<hierarchy);
