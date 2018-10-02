@@ -43,6 +43,12 @@ struct GI2DContext
 	{
 		int32_t m_frame;
 		int32_t m_hierarchy;
+		int32_t _p;
+		int32_t _p2;
+
+		uint32_t m_radiance_offset;
+		uint32_t m_map_offset;
+		uvec2 m_map_reso;
 	};
 
 	struct Fragment
@@ -224,6 +230,20 @@ struct GI2DContext
 	void execute(vk::CommandBuffer cmd)
 	{
 		m_gi2d_scene.m_frame = (m_gi2d_scene.m_frame+1) % 4;
+		auto reso = uvec4(m_gi2d_info.m_resolution, m_gi2d_info.m_resolution/8);
+
+		uint radiance_offset = reso.x*reso.y;
+		int map_offset = 0;
+		uvec2 map_reso = reso.zw();
+		for (int i = 0; i < m_gi2d_scene.m_hierarchy; i++)
+		{
+			radiance_offset >>= 2;
+			map_offset += (reso.z >> i)*(reso.w >> i);
+			map_reso >>= 1;
+		}
+		m_gi2d_scene.m_radiance_offset = radiance_offset;
+		m_gi2d_scene.m_map_offset = map_offset;
+		m_gi2d_scene.m_map_reso = map_reso;
 
 		{
 			vk::BufferMemoryBarrier to_write[] = {

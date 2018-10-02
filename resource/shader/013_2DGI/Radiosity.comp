@@ -15,7 +15,7 @@ void main()
 {
 	if(gl_GlobalInvocationID.x >= b_ray_counter.w){ return; }
 
-	const int hierarchy = 1;
+	const int hierarchy = u_gi2d_scene.m_hierarchy;
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
 	D2Ray ray = b_ray[gl_GlobalInvocationID.x];
 	vec2 pos = ray.origin;
@@ -31,9 +31,9 @@ void main()
 	vec3 delta = vec3(inv_dir, 0.) * (1<<hierarchy);
 	ivec3 next = ivec3(ivec2(greaterThanEqual(dir, vec2(0.))) * 2 - 1, 0)* (1<<hierarchy);
 
-	uint radiance_offset = reso.x*reso.y*u_gi2d_scene.m_frame;
+	uint radiance_offset = u_gi2d_scene.m_radiance_offset*u_gi2d_scene.m_frame;
 	uint radiance = b_light[getMemoryOrder(map_index)];
-	for(int _i = 0; _i < ray.march/(1<<hierarchy); _i++)
+	for(int _i = 0; _i < ray.march; _i++)
 	{
 		// march
 		{
@@ -51,7 +51,7 @@ void main()
 		}
 
 		{
-			atomicAdd(b_radiance[getMemoryOrder(map_index)+radiance_offset], radiance);
+			atomicAdd(b_radiance[getMemoryOrder(map_index>>hierarchy)+radiance_offset], radiance);
 		}
 	}
 }

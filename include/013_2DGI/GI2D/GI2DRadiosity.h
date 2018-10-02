@@ -14,7 +14,7 @@ struct GI2DRadiosity
 {
 	enum {
 		Ray_Num = 256,
-		Ray_All_Num = 2*Ray_Num * 256,
+		Ray_All_Num = 1024*256,
 		Ray_Group = 1,
 		Bounce_Num = 1,
 	};

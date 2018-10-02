@@ -14,6 +14,8 @@ layout (local_size_x = 256) in;
 void main()
 {
 	if(b_ray_counter.w >= u_radiosity_info.ray_num_max){ return; }
+
+	const int hierarchy = u_gi2d_scene.m_hierarchy;
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
 
 	float a = 6.2831 / gl_WorkGroupSize.x;
@@ -25,24 +27,28 @@ void main()
 	inv_dir.x = dir.x == 0. ? 999999. : abs(1./dir.x);
 	inv_dir.y = dir.y == 0. ? 999999. : abs(1./dir.y);
 
+	uint map_offset = u_gi2d_scene.m_map_offset;
+	uvec2 map_reso = u_gi2d_scene.m_map_reso;
 
 	vec2 pos = vec2(b_light_index[gl_WorkGroupID.x]%reso.x, b_light_index[gl_WorkGroupID.x]/reso.x) + 0.5;
 	ivec2 map_index = ivec2(pos);
 
 	// raymarch用事前計算
-	vec2 tp = 0.5*inv_dir;
-	vec3 delta = vec3(inv_dir, 0.);
-	ivec3 next = ivec3(ivec2(greaterThanEqual(dir, vec2(0.))) * 2. - 1., 0);
+	vec2 tp = 0.5* (1<<hierarchy)*inv_dir;
+	vec3 delta = vec3(inv_dir, 0.) * (1<<hierarchy);
+	ivec3 next = ivec3(ivec2(greaterThanEqual(dir, vec2(0.))) * 2 - 1, 0)* (1<<hierarchy);
 
 	uint64_t d;
 	uint old_diffuse_index = -1;
 	int march_count = 0;
 	for(; march_count <5000; march_count++)
 	{
-		ivec2 cell = map_index/8;
-		uint dindex = cell.x + cell.y*reso.z;
-		if(old_diffuse_index != dindex) { d = b_diffuse_map[dindex]; old_diffuse_index = dindex; }
-		ivec2 cell_sub = map_index - cell*8;
+		ivec2 mi = map_index>>hierarchy;
+
+		ivec2 cell = mi/8;
+		uint dindex = cell.x + cell.y*map_reso.x;
+		if(old_diffuse_index != dindex) { d = b_diffuse_map[map_offset+dindex]; old_diffuse_index = dindex; }
+		ivec2 cell_sub = mi - cell*8;
 		if((d & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0){ break; }
 
 		// march

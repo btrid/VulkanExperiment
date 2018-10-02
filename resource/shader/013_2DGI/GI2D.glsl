@@ -22,6 +22,12 @@ struct GI2DScene
 {
 	int m_frame;
 	int m_hierarchy;
+	int _p;
+	int _p2;
+
+	uint m_radiance_offset;
+	uint m_map_offset;
+	uvec2 m_map_reso;
 };
 struct Fragment
 {
