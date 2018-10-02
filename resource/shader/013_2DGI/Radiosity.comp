@@ -37,17 +37,18 @@ void main()
 	{
 		// march
 		{
-#if 1
+#ifdef USE_MARCH_DDA
+			// DDA
+			pos += dir * min(inv_dir.x, inv_dir.y) * (1<<hierarchy);
+			map_index = ivec2(pos);
+#else
 			// ちゃんとしたレイマーチ
 			bool axis = tp.x < tp.y;
 			tp += axis ? delta.xz : delta.zy;
 			map_index += (axis ? next.xz : next.zy);
-#else
-			// DDA
-			pos += dir * min(inv_dir.x, inv_dir.y) * (1<<hierarchy);
-			map_index = ivec2(pos);
 
 #endif
+
 		}
 
 		{

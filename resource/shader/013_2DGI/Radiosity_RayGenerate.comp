@@ -31,6 +31,7 @@ void main()
 	uvec2 map_reso = u_gi2d_scene.m_map_reso;
 
 	vec2 pos = vec2(b_light_index[gl_WorkGroupID.x]%reso.x, b_light_index[gl_WorkGroupID.x]/reso.x) + 0.5;
+	vec2 begin = pos;
 	ivec2 map_index = ivec2(pos);
 
 	// raymarch用事前計算
@@ -53,15 +54,15 @@ void main()
 
 		// march
 		{
-#if 1
+#ifdef USE_MARCH_DDA
+			// DDA
+			pos += dir * min(inv_dir.x, inv_dir.y) * (1<<hierarchy);
+			map_index = ivec2(pos);
+#else
 			// ちゃんとしたレイマーチ
 			bool axis = tp.x < tp.y;
 			tp += axis ? delta.xz : delta.zy;
 			map_index += (axis ? next.xz : next.zy);
-#else
-			// DDA
-			pos += dir * min(inv_dir.x, inv_dir.y) * (1<<hierarchy);
-			map_index = ivec2(pos);
 
 #endif
 		}
@@ -77,7 +78,7 @@ void main()
 
 	if(march_count <= 1) { return; }
 	D2Ray ray;
-	ray.origin = pos;
+	ray.origin = begin;
 	ray.angle = angle;
 	ray.march = march_count;
 

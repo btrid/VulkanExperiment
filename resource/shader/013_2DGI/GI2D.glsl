@@ -80,6 +80,7 @@ ivec2 frame_offset(){
 #define Ray_Density (1)
 #define Block_Size (1)
 #define denominator (512.)
+#define USE_MARCH_DDA
 //#define denominator (2048.)
 //#define denominator (16.)
 
