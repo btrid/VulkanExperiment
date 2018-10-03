@@ -1,0 +1,89 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Common.glsl"
+#include "btrlib/Math.glsl"
+
+#define USE_GI2D 0
+#define USE_GI2D_Radiosity 1
+#include "GI2D.glsl"
+
+
+layout (local_size_x=256, local_size_y=4) in;
+void main()
+{
+	if(b_ray_counter.w >= u_radiosity_info.ray_num_max){ return; }
+
+	const int hierarchy = u_gi2d_scene.m_hierarchy;
+	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
+
+	float a = 6.28318530717958647692528676655900576 / gl_WorkGroupSize.x;
+	float angle = a * gl_LocalInvocationID.x;
+
+	vec2 dir = rotate(angle);
+	vec2 inv_dir;
+	inv_dir.x = dir.x == 0. ? 999999. : abs(1./dir.x);
+	inv_dir.y = dir.y == 0. ? 999999. : abs(1./dir.y);
+	vec2 segment = dir * min(inv_dir.x, inv_dir.y) * reso.xy;
+	vec2 inv_segment;
+	inv_segment.x = segment.x == 0. ? 0. : abs(1. / segment.x);
+	inv_segment.y = segment.y == 0. ? 0. : abs(1. / segment.y);
+	vec2 segment_one = segment * max(inv_segment.x, inv_segment.y);
+
+	vec2 pos;
+	pos.x = gl_GlobalInvocationID.y==3 ? reso.x-1 : 0;
+	pos.y = gl_GlobalInvocationID.y==1 ? reso.y-1 : 0;
+	vec2 pdir;
+	pdir.x = gl_GlobalInvocationID.y/2==0 ? 1 : 0;
+	pdir.y = gl_GlobalInvocationID.y/2==1 ? 1 : 0;
+
+	pos += pdir * abs(segment_one)*gl_WorkGroupID.x;
+	vec2 begin = pos;
+	ivec2 map_index = ivec2(pos);
+
+	uint map_offset = u_gi2d_scene.m_map_offset;
+	uvec2 map_reso = u_gi2d_scene.m_map_reso;
+	uint64_t d;
+	uint old_diffuse_index = -1;
+	int march_count = 0;
+	for(; march_count <5000; march_count++)
+	{
+/*		ivec2 mi = map_index>>hierarchy;
+
+		ivec2 cell = mi/8;
+		uint dindex = cell.x + cell.y*map_reso.x;
+		if(old_diffuse_index != dindex) { d = b_diffuse_map[map_offset+dindex]; old_diffuse_index = dindex; }
+		ivec2 cell_sub = mi - cell*8;
+		if((d & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0){ break; }
+*/
+		// march
+		{
+			// DDA
+			pos += dir * min(inv_dir.x, inv_dir.y) * (1<<hierarchy);
+			map_index = ivec2(pos);
+		}
+		// 範囲外?
+		{
+			ivec2 is_die = ivec2(greaterThanEqual(map_index, reso.xy)) + ivec2(lessThan(map_index, ivec2(0)));
+			if(any(notEqual(is_die.xy, ivec2(0))))
+			{
+				break;
+			}
+		}
+	}
+
+	if(march_count <= 5) { return; }
+	D2Ray ray;
+	ray.origin = begin;
+	ray.angle = angle;
+	ray.march = march_count;
+
+	int index = atomicAdd(b_ray_counter.w, 1);
+	if(index >= u_radiosity_info.ray_num_max){ return; }
+	if((index % 512) == 0)
+	{
+		atomicAdd(b_ray_counter.x, 1);
+	}
+	b_ray[index] = ray;
+}

@@ -645,6 +645,28 @@ void raymarch()
 
 int main()
 {
+	{
+		for (int i = 0; i < 256; i++)
+		{
+			auto dir = glm::rotate(glm::vec2(1.f, 0.f), (6.28f / 256.f) * i);
+			vec2 inv_dir;
+			inv_dir.x = dir.x == 0. ? 999999. : abs(1. / dir.x);
+			inv_dir.y = dir.y == 0. ? 999999. : abs(1. / dir.y);
+			vec2 segment = dir * glm::min(inv_dir.x, inv_dir.y) * 1024;
+			vec2 inv_segment;
+			inv_segment.x = segment.x == 0. ? 0. : abs(1. / segment.x);
+			inv_segment.y = segment.y == 0. ? 0. : abs(1. / segment.y);
+			vec2 segment_one = segment * glm::max(inv_segment.x, inv_segment.y);
+
+			ivec2 idir = ivec2(dir);
+			printf("%3d =[%f, %f]\n", i, dir.x, dir.y);
+			printf(" segment_one=[%f, %f]\n", segment_one.x, segment_one.y);
+		}
+
+		int a = 0;
+		a++;
+	}
+
 	raymarch();
 
 	{

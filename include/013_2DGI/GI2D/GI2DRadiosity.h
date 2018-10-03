@@ -14,7 +14,7 @@ struct GI2DRadiosity
 {
 	enum {
 		Ray_Num = 256,
-		Ray_All_Num = 1024*256,
+		Ray_All_Num = 4*1024*256,
 		Ray_Group = 1,
 		Bounce_Num = 1,
 	};
@@ -444,8 +444,8 @@ struct GI2DRadiosity
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
 //			cmd.dispatch(1, Ray_Num, Ray_Group);
-//			cmd.dispatch(256, 1, 1);
-			cmd.dispatchIndirect(m_gi2d_context->b_light_counter.getInfo().buffer, m_gi2d_context->b_light_counter.getInfo().offset);
+			cmd.dispatch(1024, 1, 1);
+//			cmd.dispatchIndirect(m_gi2d_context->b_light_counter.getInfo().buffer, m_gi2d_context->b_light_counter.getInfo().offset);
 		}
 
 		{
@@ -484,7 +484,7 @@ struct GI2DRadiosity
 		static int32_t is_init;
 		if (!is_init)
 		{
-//			is_init = true;
+			is_init = true;
 			executeSetup(cmd);
 		}
 		{
