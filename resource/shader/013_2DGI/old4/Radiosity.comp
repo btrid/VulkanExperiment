@@ -1,0 +1,59 @@
+// セルをスキップしないレイトレ
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Common.glsl"
+#include "btrlib/Math.glsl"
+
+#define USE_GI2D 0
+#define USE_GI2D_Radiosity 1
+#include "GI2D.glsl"
+
+layout (local_size_x = 512, local_size_y = 1) in;
+void main()
+{
+	if(gl_GlobalInvocationID.x >= b_ray_counter.w){ return; }
+
+	const int hierarchy = u_gi2d_scene.m_hierarchy;
+	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
+	D2Ray ray = b_ray[gl_GlobalInvocationID.x];
+	vec2 pos = ray.origin;
+	vec2 dir = rotate(ray.angle);
+	vec2 inv_dir;
+	inv_dir.x = dir.x == 0. ? 99999999. : abs(1./dir.x);
+	inv_dir.y = dir.y == 0. ? 99999999. : abs(1./dir.y);
+
+	// raymarch用事前計算
+	ivec2 map_index = ivec2(pos);
+	vec2 tp = 0.5*(1<<hierarchy)*(1<<u_gi2d_scene.m_skip)*inv_dir;
+//	vec2 tp = (vec2(u_gi2d_scene.m_frame%2, u_gi2d_scene.m_frame/2) *0.5 + 0.25)*inv_dir;
+	vec3 delta = vec3(inv_dir, 0.) * (1<<hierarchy) * (1<<u_gi2d_scene.m_skip);
+	ivec3 next = ivec3(ivec2(greaterThanEqual(dir, vec2(0.))) * 2 - 1, 0)* (1<<hierarchy) * (1<<u_gi2d_scene.m_skip);
+
+	uint radiance_offset = u_gi2d_scene.m_radiance_offset*u_gi2d_scene.m_frame;
+	uint skip = u_gi2d_scene.m_skip;
+	uint radiance = b_light[getMemoryOrder(map_index)];
+	for(int _i = 0; _i < ray.march>>skip; _i++)
+	{
+		// march
+		{
+#ifdef USE_MARCH_DDA
+			// DDA
+			pos += dir * min(inv_dir.x, inv_dir.y) * (1<<hierarchy)*(1<<skip);
+			map_index = ivec2(pos);
+#else
+			// ちゃんとしたレイマーチ
+			bool axis = tp.x < tp.y;
+			tp += axis ? delta.xz : delta.zy;
+			map_index += (axis ? next.xz : next.zy);
+
+#endif
+
+		}
+
+		{
+			atomicAdd(b_radiance[getMemoryOrder(map_index>>hierarchy)+radiance_offset], radiance);
+		}
+	}
+}

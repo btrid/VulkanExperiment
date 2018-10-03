@@ -68,6 +68,12 @@ struct GI2DRadiosity
 		float angle;
 		uint32_t march;
 	};
+	struct Ray2
+	{
+		ivec2 dir;
+		float angle;
+		uint32_t march;
+	};
 
 	GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context, const std::shared_ptr<RenderTarget>& render_target)
 	{

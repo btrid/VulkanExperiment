@@ -1,0 +1,34 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Common.glsl"
+#include "btrlib/Math.glsl"
+
+#define USE_GI2D 0
+#define USE_GI2D_Radiosity 1
+#include "GI2D.glsl"
+
+
+shared float s_radiance[(32+2)*(32+2)];
+layout (local_size_x = 32, local_size_y = 32) in;
+void main()
+{
+//	uvec2 coord = gl_GlobalInvocationID.xy;
+//	uint index = uint(coord.x + coord.y * u_gi2d_info.m_resolution.x);
+//	s_radiance[gl_LocalInvocationIndex] = b_radiance_map[index];
+//	barrier();
+//	memoryBarrierShared();
+	float radiance = 0.;
+	for(int y = 0; y < 5; y++){
+	for(int x = 0; x < 5; x++){
+		ivec2 xy = ivec2(x-2, y-2);
+		ivec2 coord = ivec2(gl_GlobalInvocationID.xy) + xy;
+		coord = clamp(coord, ivec2(0), u_gi2d_info.m_resolution);
+		uint index = uint(coord.x + coord.y * u_gi2d_info.m_resolution.x);
+		radiance += b_radiance_map[index];
+	}}
+
+
+
+}
