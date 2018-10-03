@@ -43,7 +43,7 @@ struct GI2DContext
 	{
 		int32_t m_frame;
 		int32_t m_hierarchy;
-		int32_t _p;
+		uint32_t m_skip;
 		int32_t _p2;
 
 		uint32_t m_radiance_offset;
@@ -97,6 +97,7 @@ struct GI2DContext
 
 			m_gi2d_scene.m_frame = 0;
 			m_gi2d_scene.m_hierarchy = 0;
+			m_gi2d_scene.m_skip = 1;
 			cmd.updateBuffer<GI2DScene>(u_gi2d_scene.getInfo().buffer, u_gi2d_scene.getInfo().offset, m_gi2d_scene);
 		}
 		{

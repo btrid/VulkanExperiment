@@ -22,7 +22,7 @@ struct GI2DScene
 {
 	int m_frame;
 	int m_hierarchy;
-	int _p;
+	uint m_skip;
 	int _p2;
 
 	uint m_radiance_offset;
