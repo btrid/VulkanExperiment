@@ -20,6 +20,7 @@ void main()
 
 	float a = 6.28318530717958647692528676655900576 / gl_WorkGroupSize.x;
 	float angle = a * gl_LocalInvocationID.x;
+//	angle += a*0.25*gl_WorkGroupID.z;
 
 	vec2 dir = rotate(angle);
 	vec2 inv_dir;
@@ -42,21 +43,9 @@ void main()
 	vec2 begin = pos;
 	ivec2 map_index = ivec2(pos);
 
-	uint map_offset = u_gi2d_scene.m_map_offset;
-	uvec2 map_reso = u_gi2d_scene.m_map_reso;
-	uint64_t d;
-	uint old_diffuse_index = -1;
 	int march_count = 0;
 	for(; march_count <5000; march_count++)
 	{
-/*		ivec2 mi = map_index>>hierarchy;
-
-		ivec2 cell = mi/8;
-		uint dindex = cell.x + cell.y*map_reso.x;
-		if(old_diffuse_index != dindex) { d = b_diffuse_map[map_offset+dindex]; old_diffuse_index = dindex; }
-		ivec2 cell_sub = mi - cell*8;
-		if((d & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0){ break; }
-*/
 		// march
 		{
 			// DDA
@@ -73,7 +62,7 @@ void main()
 		}
 	}
 
-	if(march_count <= 5) { return; }
+	if(march_count <= 1) { return; }
 	D2Ray ray;
 	ray.origin = begin;
 	ray.angle = angle;
@@ -81,7 +70,7 @@ void main()
 
 	int index = atomicAdd(b_ray_counter.w, 1);
 	if(index >= u_radiosity_info.ray_num_max){ return; }
-	if((index % 512) == 0)
+	if((index % 1024) == 0)
 	{
 		atomicAdd(b_ray_counter.x, 1);
 	}

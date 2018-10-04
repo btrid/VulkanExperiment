@@ -10,7 +10,7 @@
 #define USE_GI2D_Radiosity 1
 #include "GI2D.glsl"
 
-layout (local_size_x = 512, local_size_y = 1) in;
+layout (local_size_x = 1024, local_size_y = 1) in;
 void main()
 {
 	if(gl_GlobalInvocationID.x >= b_ray_counter.w){ return; }
@@ -32,7 +32,9 @@ void main()
 	uint old_diffuse_index = -1;
 	uint skip = u_gi2d_scene.m_skip;
 	uint radiance_offset = u_gi2d_scene.m_radiance_offset*u_gi2d_scene.m_frame;
-	for(int _i = 0; _i < 1000; _i++)
+	dir *= min(inv_dir.x, inv_dir.y) * (1<<hierarchy);
+
+	for(int _i = 0; _i < 5000; _i++)
 	{
 		// hit確認
 		{
@@ -59,7 +61,7 @@ void main()
 		// march
 		{
 			// DDA
-			pos += dir * min(inv_dir.x, inv_dir.y) * (1<<hierarchy);
+			pos += dir;
 			map_index = ivec2(pos);
 		}
 		// 範囲外?
