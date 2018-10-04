@@ -113,13 +113,27 @@ vec3 unpackEmissive4(in uvec4 irgb)
 	vec2 origin;
 	vec2 dir;
 };
-*/struct D2Ray
+*/
+struct D2Ray
 {
 	vec2 origin;
 	float angle;
 	uint march;
 };
+struct D2Segment
+{
+	uint ray_index;
+	uint begin;
+	uint march;
+	uint radiance;
+};
 
+struct D2LL
+{
+	uint begin;
+	uint end;
+
+}
 layout(set=USE_GI2D_Radiosity, binding=0) restrict buffer RadianceMapBuffer {
 	uint b_radiance[];
 };
@@ -131,6 +145,12 @@ layout(set=USE_GI2D_Radiosity, binding=2, std430) restrict buffer RayBuffer {
 };
 layout(set=USE_GI2D_Radiosity, binding=3) restrict buffer RayCounter {
 	ivec4 b_ray_counter;
+};
+layout(set=USE_GI2D_Radiosity, binding=4) restrict buffer SegmentBuffer {
+	D2Segment b_segment[];
+};
+layout(set=USE_GI2D_Radiosity, binding=5) restrict buffer SegmentCounter {
+	ivec4 b_segment_counter;
 };
 
 

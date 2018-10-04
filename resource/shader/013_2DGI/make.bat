@@ -33,8 +33,11 @@ rem %exe% %include% %option% -o %output%/Radiosity_CalcRadiance.comp.spv Radiosi
 rem %exe% %include% %option% -o %output%/Radiosity_RayGenerate.comp.spv Radiosity_RayGenerate.comp
 %exe% %include% %option% -o %output%/Radiosity_RayGenerate.comp.spv Radiosity_RayGenerate.2.comp
 %exe% %include% %option% -o %output%/Radiosity_RaySort.comp.spv Radiosity_RaySort.comp
+%exe% %include% %option% -o %output%/Radiosity_RayMarch.comp.spv Radiosity_RayMarch.comp
+%exe% %include% %option% -o %output%/Radiosity_RayMarch2.comp.spv Radiosity_RayMarch2.comp
 rem %exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity.comp
-%exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity.2.comp
+rem %exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity.2.comp
+%exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity.3.comp
 
 
 %exe% %include% %option% -o %output%/GI2D_DebugMakeLight.comp.spv GI2D_DebugMakeLight.comp

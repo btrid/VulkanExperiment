@@ -1,0 +1,103 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Common.glsl"
+#include "btrlib/Math.glsl"
+
+#define USE_GI2D 0
+#define USE_GI2D_Radiosity 1
+#include "GI2D.glsl"
+
+struct Seg
+{
+	uint begin;
+	uint march;
+};
+
+layout (local_size_x=1024) in;
+void main()
+{
+	if(b_ray_counter.w >= u_radiosity_info.ray_num_max){ return; }
+
+	const int hierarchy = u_gi2d_scene.m_hierarchy;
+	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
+
+	D2Ray ray = b_ray[gl_GlobalInvocationID.x];
+	vec2 pos = ray.origin;
+	vec2 dir = rotate(ray.angle);
+	vec2 inv_dir;
+	inv_dir.x = dir.x == 0. ? 99999999. : abs(1./dir.x);
+	inv_dir.y = dir.y == 0. ? 99999999. : abs(1./dir.y);
+	dir *= min(inv_dir.x, inv_dir.y);
+	ivec2 map_index = ivec2(pos);
+
+	u64vec2 dl;
+	uint old_diffuse_index = -1;
+	int march = 0;
+	int begin_march = -1;
+
+	D2Segment seg;
+	seg.ray_index = gl_GlobalInvocationID.x;
+	seg.begin = -1;
+	seg.march = 0;
+	seg.radiance = 0;
+	for(int march_count = 0; march_count < ray.march; march_count++)
+	{
+		{
+			ivec2 cell = map_index>>3;
+			uint dindex = cell.x + cell.y*reso.z;
+			if(old_diffuse_index != dindex)
+			{
+				dl.x = b_diffuse_map[dindex];
+				dl.y = b_emissive_map[dindex];
+				old_diffuse_index = dindex;
+			}
+			ivec2 cell_sub = map_index - cell*8;
+			bvec2 attr = notEqual((dl & (1ul<<(cell_sub.x+cell_sub.y*8))), u64vec2(0));
+			if(attr.y)
+			{
+				seg.radiance += b_light[getMemoryOrder(map_index)];
+			}
+			if(attr.x)
+			{
+				if(seg.march > 0)
+				{
+					if(seg.radiance != 0)
+					{
+						int index = atomicAdd(b_segment_counter.w, 1);
+						if(index%1024==0){
+							atomicAdd(b_segment_counter.x, 1);
+						}
+						b_segment[index] = seg;
+					}
+					seg.begin = -1;
+					seg.march = 0;
+					seg.radiance = 0;
+				}
+			}
+			else
+			{
+				if(seg.begin == -1)
+				{
+					seg.begin = march_count;
+				}
+				else
+				{
+					seg.march++;
+				}
+			}
+
+		}
+		// march
+		{
+			// DDA
+			pos += dir;
+			map_index = ivec2(pos);
+		}
+	}
+
+//	pos = ray.origin;
+//	map_index = ivec2(pos);
+
+}

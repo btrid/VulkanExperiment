@@ -135,6 +135,13 @@ struct D2Ray
 	float angle;
 	uint march;
 };
+struct D2Segment
+{
+	uint ray_index;
+	uint begin;
+	uint march;
+	uint radiance;
+};
 
 layout(set=USE_GI2D_Radiosity, binding=0, std140) uniform GI2DGI2DRadiosityInfoUniform {
 	GI2DRadiosityInfo u_radiosity_info;
@@ -150,6 +157,12 @@ layout(set=USE_GI2D_Radiosity, binding=3, std430) restrict buffer RayBuffer {
 };
 layout(set=USE_GI2D_Radiosity, binding=4) restrict buffer RayCounter {
 	ivec4 b_ray_counter;
+};
+layout(set=USE_GI2D_Radiosity, binding=5) restrict buffer SegmentBuffer {
+	D2Segment b_segment[];
+};
+layout(set=USE_GI2D_Radiosity, binding=6) restrict buffer SegmentCounter {
+	ivec4 b_segment_counter;
 };
 
 
