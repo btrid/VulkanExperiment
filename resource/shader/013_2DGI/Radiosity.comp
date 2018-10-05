@@ -16,6 +16,7 @@ void main()
 	if(gl_GlobalInvocationID.x >= b_ray_counter.w){ return; }
 
 	const int hierarchy = u_gi2d_scene.m_hierarchy;
+	const uint skip = u_gi2d_scene.m_skip;
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
 	D2Ray ray = b_ray[gl_GlobalInvocationID.x];
 	vec2 pos = ray.origin;
@@ -24,16 +25,16 @@ void main()
 	inv_dir.x = dir.x == 0. ? 99999999. : abs(1./dir.x);
 	inv_dir.y = dir.y == 0. ? 99999999. : abs(1./dir.y);
 	dir *= min(inv_dir.x, inv_dir.y);
+	dir *= (1<<hierarchy)*(1<<skip);
 
 	uint radiance_offset = u_gi2d_scene.m_radiance_offset*u_gi2d_scene.m_frame;
-	uint skip = u_gi2d_scene.m_skip;
 	uint radiance = b_light[getMemoryOrder(map_index)];
 	for(int _i = 0; _i < ray.march>>skip; _i++)
 	{
 		// march
 		{
 			// DDA
-			pos += dir * (1<<hierarchy)*(1<<skip);
+			pos += dir;
 			map_index = ivec2(pos);
 
 		}

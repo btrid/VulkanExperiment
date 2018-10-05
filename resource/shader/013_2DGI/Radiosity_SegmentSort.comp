@@ -17,7 +17,7 @@ layout(push_constant) uniform Input
 	int distance;
 } constant;
 
-bool compare(in D2Ray a, in D2Ray b){
+bool compare(in D2Segment a, in D2Segment b){
 	return a.march < b.march;
 }
 
@@ -37,17 +37,17 @@ void main()
 	}
 
 	//データないよ
-	if(index_a >= b_ray_counter.w ||index_b >= b_ray_counter.w)
+	if(index_a >= b_segment_counter.w ||index_b >= b_segment_counter.w)
 	{
 		return;
 	}
 
 
-	D2Ray a = b_ray[index_a];
-	D2Ray b = b_ray[index_b];
+	D2Segment a = b_segment[index_a];
+	D2Segment b = b_segment[index_b];
 	if (((index_a&constant.compare_bit)==0) == compare(a,b)) 
 	{
-		b_ray[index_a] = b;
-		b_ray[index_b] = a;
+		b_segment[index_a] = b;
+		b_segment[index_b] = a;
 	}
 }

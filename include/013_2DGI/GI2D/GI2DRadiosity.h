@@ -33,6 +33,7 @@ struct GI2DRadiosity
 		Shader_RayGenerate,
 		Shader_RaySort,
 		Shader_RayMarch,
+		Shader_SegmentSort,
 
 		Shader_Num,
 	};
@@ -56,6 +57,7 @@ struct GI2DRadiosity
 		Pipeline_RayGenerate,
 		Pipeline_RaySort,
 		Pipeline_RayMarch,
+		Pipeline_SegmentSort,
 		Pipeline_Num,
 	};
 
@@ -221,6 +223,7 @@ struct GI2DRadiosity
 				"Radiosity_RayGenerate.comp.spv",
 				"Radiosity_RaySort.comp.spv",
 				"Radiosity_RayMarch.comp.spv",
+				"Radiosity_SegmentSort.comp.spv",
 			};
 			static_assert(array_length(name) == Shader_Num, "not equal shader num");
 
@@ -251,7 +254,7 @@ struct GI2DRadiosity
 
 		// pipeline
 		{
-			std::array<vk::PipelineShaderStageCreateInfo, 9> shader_info;
+			std::array<vk::PipelineShaderStageCreateInfo, 10> shader_info;
 			shader_info[0].setModule(m_shader[Shader_Radiosity].get());
 			shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[0].setPName("main");
@@ -279,6 +282,9 @@ struct GI2DRadiosity
 			shader_info[8].setModule(m_shader[Shader_RayMarch].get());
 			shader_info[8].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[8].setPName("main");
+			shader_info[9].setModule(m_shader[Shader_SegmentSort].get());
+			shader_info[9].setStage(vk::ShaderStageFlagBits::eCompute);
+			shader_info[9].setPName("main");
 			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 			{
 				vk::ComputePipelineCreateInfo()
@@ -308,6 +314,9 @@ struct GI2DRadiosity
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[8])
 				.setLayout(m_pipeline_layout[PipelineLayout_Radiosity].get()),
+				vk::ComputePipelineCreateInfo()
+				.setStage(shader_info[9])
+				.setLayout(m_pipeline_layout[PipelineLayout_Radiosity].get()),
 			};
 			auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
 			m_pipeline[Pipeline_Radiosity] = std::move(compute_pipeline[0]);
@@ -319,6 +328,7 @@ struct GI2DRadiosity
 			m_pipeline[Pipeline_RayGenerate] = std::move(compute_pipeline[6]);
 			m_pipeline[Pipeline_RaySort] = std::move(compute_pipeline[7]);
 			m_pipeline[Pipeline_RayMarch] = std::move(compute_pipeline[8]);
+			m_pipeline[Pipeline_SegmentSort] = std::move(compute_pipeline[9]);
 		}
 
 		// レンダーパス
@@ -533,6 +543,36 @@ struct GI2DRadiosity
 				cmd.dispatchIndirect(b_ray_counter.getInfo().buffer, b_ray_counter.getInfo().offset);
 			}
 
+			{
+// 				// レイのソート
+// 				{
+// 					vk::BufferMemoryBarrier to_read[] = {
+// 						b_segment_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+// 						b_segment.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+// 					};
+// 					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+// 						0, nullptr, array_length(to_read), to_read, 0, nullptr);
+// 				}
+// 
+// 				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_SegmentSort].get());
+// 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
+// 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
+// 
+// 				for (int step = 2; step <= Ray_All_Num; step <<= 1) {
+// 					for (int offset = step >> 1; offset > 0; offset = offset >> 1) {
+// 						cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayout_Radiosity].get(), vk::ShaderStageFlagBits::eCompute, 0, ivec2(step, offset));
+// 						auto num = app::calcDipatchGroups(uvec3(Ray_All_Num, 1, 1), uvec3(1024, 1, 1));
+// 						cmd.dispatch(num.x, num.y, num.z);
+// 
+// 						vk::BufferMemoryBarrier to_read[] = {
+// 							b_ray.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+// 						};
+// 						cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+// 							0, nullptr, array_length(to_read), to_read, 0, nullptr);
+// 					}
+// 				}
+
+			}
 		}
 		{
 			// データクリア
@@ -551,12 +591,12 @@ struct GI2DRadiosity
 		}
 		// radiance
 		{
-		
+
 			vk::BufferMemoryBarrier to_read[] = {
 				b_radiance.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderWrite | vk::AccessFlagBits::eShaderRead),
 				b_segment_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
 			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader| vk::PipelineStageFlagBits::eDrawIndirect, {},
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader|vk::PipelineStageFlagBits::eDrawIndirect, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Radiosity].get());

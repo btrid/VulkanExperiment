@@ -34,6 +34,7 @@ rem %exe% %include% %option% -o %output%/Radiosity_RayGenerate.comp.spv Radiosit
 %exe% %include% %option% -o %output%/Radiosity_RayGenerate.comp.spv Radiosity_RayGenerate.2.comp
 %exe% %include% %option% -o %output%/Radiosity_RaySort.comp.spv Radiosity_RaySort.comp
 %exe% %include% %option% -o %output%/Radiosity_RayMarch.comp.spv Radiosity_RayMarch.comp
+%exe% %include% %option% -o %output%/Radiosity_SegmentSort.comp.spv Radiosity_SegmentSort.comp
 rem %exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity.comp
 rem %exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity.2.comp
 %exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity.3.comp
