@@ -139,7 +139,7 @@ struct D2Segment
 {
 	uint ray_index;
 	uint begin;
-	uint march;
+	int march;
 	uint radiance;
 };
 
