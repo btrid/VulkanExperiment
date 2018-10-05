@@ -13,14 +13,14 @@
 layout (local_size_x=127, local_size_y=4) in;
 void main()
 {
-	if(b_ray_counter.w >= u_radiosity_info.ray_num_max){ return; }
+	if(b_ray_counter[4].w >= u_radiosity_info.ray_num_max){ return; }
 
 	const int hierarchy = u_gi2d_scene.m_hierarchy;
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
 
 	float a = 6.28318530717958647692528676655900576 / gl_WorkGroupSize.x;
 	float angle = a * gl_LocalInvocationID.x;
-//	angle += a*0.25*gl_WorkGroupID.z;
+	angle += a*0.25*gl_WorkGroupID.z;
 
 	vec2 dir = rotate(angle);
 	vec2 inv_dir;
@@ -70,11 +70,12 @@ void main()
 	ray.march = march_count;
 	
 
-	int index = atomicAdd(b_ray_counter.w, 1);
-	if(index >= u_radiosity_info.ray_num_max){ return; }
-	if((index % 1024) == 0)
-	{
-		atomicAdd(b_ray_counter.x, 1);
+	int buffer_index = atomicAdd(, 1);
+	if(buffer_index >= u_radiosity_info.ray_num_max){ return; }
+	b_ray[buffer_index] = ray;
+
+	int index = atomicAdd(b_ray_counter[gl_WorkGroupID.z].w, 1);
+	if(index%1024 == 0){
+		atomicAdd(b_ray_counter[gl_WorkGroupID.z].x, 1);
 	}
-	b_ray[index] = ray;
 }

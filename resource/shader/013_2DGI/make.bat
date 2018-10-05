@@ -30,14 +30,12 @@ rem %exe% %include% %option% -o %output%/Radiosity_Render.frag.spv Radiosity_Ren
 
 rem %exe% %include% %option% -o %output%/Radiosity_CalcRadiance.comp.spv Radiosity_CalcRadiance.comp
 
-rem %exe% %include% %option% -o %output%/Radiosity_RayGenerate.comp.spv Radiosity_RayGenerate.comp
 %exe% %include% %option% -o %output%/Radiosity_RayGenerate.comp.spv Radiosity_RayGenerate.comp
+%exe% %include% %option% -o %output%/Radiosity_RaySetup.comp.spv Radiosity_RaySetup.comp
 %exe% %include% %option% -o %output%/Radiosity_RaySort.comp.spv Radiosity_RaySort.comp
 %exe% %include% %option% -o %output%/Radiosity_RayMarch.comp.spv Radiosity_RayMarch.comp
 %exe% %include% %option% -o %output%/Radiosity_SegmentSort.comp.spv Radiosity_SegmentSort.comp
-rem %exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity.comp
-rem %exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity.2.comp
-%exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity.3.comp
+%exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity.comp
 
 
 %exe% %include% %option% -o %output%/GI2D_DebugMakeLight.comp.spv GI2D_DebugMakeLight.comp

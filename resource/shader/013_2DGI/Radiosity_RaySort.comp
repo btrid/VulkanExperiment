@@ -37,15 +37,33 @@ void main()
 	}
 
 	//データないよ
-	if(index_a >= b_ray_counter.w ||index_b >= b_ray_counter.w)
+	if(index_a >= ActiveRayAllNum() ||index_b >= ActiveRayAllNum())
 	{
 		return;
 	}
 
+	// フレームを超えてはソートしない
+	int frame_a = 0;
+	int frame_b = 0;
+	frame_a = index_a >= GetRayOffset(1) ? 1:frame_a;
+	frame_b = index_b >= GetRayOffset(1) ? 1:frame_b;
+	frame_a = index_a >= GetRayOffset(2) ? 2:frame_a;
+	frame_b = index_b >= GetRayOffset(2) ? 2:frame_b;
+	frame_a = index_a >= GetRayOffset(3) ? 3:frame_a;
+	frame_b = index_b >= GetRayOffset(3) ? 3:frame_b;
+/*	if(frame_a != frame_b)
+	{
+		return;
+	}
+		
+	}
+*/
 
 	D2Ray a = b_ray[index_a];
 	D2Ray b = b_ray[index_b];
-	if (((index_a&constant.compare_bit)==0) == compare(a,b)) 
+	bool sort_dir = (index_a&constant.compare_bit)==0;
+	if ( (sort_dir == compare(a,b) && frame_a==frame_b)
+	|| (sort_dir ==frame_a<frame_b)) 
 	{
 		b_ray[index_a] = b;
 		b_ray[index_b] = a;

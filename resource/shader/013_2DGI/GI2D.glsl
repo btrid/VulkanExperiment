@@ -156,7 +156,7 @@ layout(set=USE_GI2D_Radiosity, binding=3, std430) restrict buffer RayBuffer {
 	D2Ray b_ray[];
 };
 layout(set=USE_GI2D_Radiosity, binding=4) restrict buffer RayCounter {
-	ivec4 b_ray_counter;
+	ivec4 b_ray_counter[];
 };
 layout(set=USE_GI2D_Radiosity, binding=5) restrict buffer SegmentBuffer {
 	D2Segment b_segment[];
@@ -165,6 +165,8 @@ layout(set=USE_GI2D_Radiosity, binding=6) restrict buffer SegmentCounter {
 	ivec4 b_segment_counter;
 };
 
+#define ActiveRayAllNum() (b_ray_counter[4].x)
+#define GetRayOffset(_i) ((_i)==0?0:b_ray_counter[4][(_i)])
 
 #endif
 

@@ -1,0 +1,20 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Common.glsl"
+#include "btrlib/Math.glsl"
+
+#define USE_GI2D 0
+#define USE_GI2D_Radiosity 1
+#include "GI2D.glsl"
+
+
+layout (local_size_x=1) in;
+void main()
+{
+	b_ray_counter[4][3] = b_ray_counter[4][0] - b_ray_counter[3].w;
+	b_ray_counter[4][2] = b_ray_counter[4][3] - b_ray_counter[2].w;
+	b_ray_counter[4][1] = b_ray_counter[4][2] - b_ray_counter[1].w;
+//	b_ray_counter[0][0] = 0;
+}
