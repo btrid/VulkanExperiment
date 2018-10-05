@@ -53,7 +53,7 @@ void main()
 				dl.y = b_emissive_map[dindex];
 				old_diffuse_index = dindex;
 			}
-			ivec2 cell_sub = map_index - cell*8;
+			ivec2 cell_sub = map_index%8;
 			bvec2 attr = notEqual((dl & (1ul<<(cell_sub.x+cell_sub.y*8))), u64vec2(0));
 			if(attr.y)
 			{
@@ -72,7 +72,7 @@ void main()
 						b_segment[index] = seg;
 					}
 					seg.begin = -1;
-					seg.march = -1;
+					seg.march = 0;
 					seg.radiance = 0;
 				}
 			}

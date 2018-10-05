@@ -10,37 +10,43 @@
 #define USE_GI2D_Radiosity 1
 #include "GI2D.glsl"
 
-layout (local_size_x = 512, local_size_y = 1) in;
+layout (local_size_x = 1024, local_size_y = 1) in;
 void main()
 {
-	if(gl_GlobalInvocationID.x >= b_ray_counter.w){ return; }
+	if(gl_GlobalInvocationID.x >= b_segment_counter.w){ return; }
 
 	const int hierarchy = u_gi2d_scene.m_hierarchy;
-	const uint skip = u_gi2d_scene.m_skip;
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
-	D2Ray ray = b_ray[gl_GlobalInvocationID.x];
-	vec2 pos = ray.origin;
+
+	D2Segment segment = b_segment[gl_GlobalInvocationID.x];
+	D2Ray ray = b_ray[segment.ray_index];
 	vec2 dir = rotate(ray.angle);
 	vec2 inv_dir;
 	inv_dir.x = dir.x == 0. ? 99999999. : abs(1./dir.x);
 	inv_dir.y = dir.y == 0. ? 99999999. : abs(1./dir.y);
-	dir *= min(inv_dir.x, inv_dir.y);
-	dir *= (1<<hierarchy)*(1<<skip);
+	dir *= min(inv_dir.x, inv_dir.y) * (1<<hierarchy);
+	vec2 pos = ray.origin + segment.begin*dir;
 
+	ivec2 map_index = ivec2(pos);
+
+	uint u_radiance = uint(0);
+	uint64_t d;
+	uint old_diffuse_index = -1;
+	uint skip = u_gi2d_scene.m_skip;
 	uint radiance_offset = u_gi2d_scene.m_radiance_offset*u_gi2d_scene.m_frame;
-	uint radiance = b_light[getMemoryOrder(map_index)];
-	for(int _i = 0; _i < ray.march>>skip; _i++)
+
+	for(int _i = 0; _i < segment.march; _i++)
 	{
+		// lighting
+		{
+			uint radiance_cell = getMemoryOrder(map_index);
+			atomicAdd(b_radiance[radiance_offset + radiance_cell], segment.radiance);
+		}
 		// march
 		{
 			// DDA
 			pos += dir;
 			map_index = ivec2(pos);
-
-		}
-
-		{
-			atomicAdd(b_radiance[getMemoryOrder(map_index>>hierarchy)+radiance_offset], radiance);
 		}
 	}
 }

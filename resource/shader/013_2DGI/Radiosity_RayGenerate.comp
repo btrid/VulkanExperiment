@@ -10,7 +10,7 @@
 #include "GI2D.glsl"
 
 
-layout (local_size_x = 256) in;
+layout (local_size_x=127, local_size_y=4) in;
 void main()
 {
 	if(b_ray_counter.w >= u_radiosity_info.ray_num_max){ return; }
@@ -18,53 +18,40 @@ void main()
 	const int hierarchy = u_gi2d_scene.m_hierarchy;
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
 
-	float a = 6.2831 / gl_WorkGroupSize.x;
+	float a = 6.28318530717958647692528676655900576 / gl_WorkGroupSize.x;
 	float angle = a * gl_LocalInvocationID.x;
-	angle += a * (0.25*u_gi2d_scene.m_frame);
+//	angle += a*0.25*gl_WorkGroupID.z;
 
 	vec2 dir = rotate(angle);
 	vec2 inv_dir;
 	inv_dir.x = dir.x == 0. ? 999999. : abs(1./dir.x);
 	inv_dir.y = dir.y == 0. ? 999999. : abs(1./dir.y);
+	dir *= min(inv_dir.x, inv_dir.y);
+	vec2 segment = dir * reso.xy;
+	vec2 inv_segment;
+	inv_segment.x = segment.x == 0. ? 0. : abs(1. / segment.x);
+	inv_segment.y = segment.y == 0. ? 0. : abs(1. / segment.y);
+	vec2 segment_one = segment * max(inv_segment.x, inv_segment.y);
 
-	uint map_offset = u_gi2d_scene.m_map_offset;
-	uvec2 map_reso = u_gi2d_scene.m_map_reso;
+	vec2 pos;
+	pos.x = gl_GlobalInvocationID.y==3 ? reso.x-1 : 0;
+	pos.y = gl_GlobalInvocationID.y==1 ? reso.y-1 : 0;
+	vec2 pdir;
+	pdir.x = gl_GlobalInvocationID.y/2==0 ? 1 : 0;
+	pdir.y = gl_GlobalInvocationID.y/2==1 ? 1 : 0;
 
-	vec2 pos = vec2(b_light_index[gl_WorkGroupID.x]%reso.x, b_light_index[gl_WorkGroupID.x]/reso.x) + 0.5;
+	pos += pdir * abs(segment_one)*gl_WorkGroupID.x;
 	vec2 begin = pos;
 	ivec2 map_index = ivec2(pos);
 
-	// raymarch用事前計算
-	vec2 tp = 0.5* (1<<hierarchy)*inv_dir;
-	vec3 delta = vec3(inv_dir, 0.) * (1<<hierarchy);
-	ivec3 next = ivec3(ivec2(greaterThanEqual(dir, vec2(0.))) * 2 - 1, 0)* (1<<hierarchy);
-
-	uint64_t d;
-	uint old_diffuse_index = -1;
 	int march_count = 0;
 	for(; march_count <5000; march_count++)
 	{
-		ivec2 mi = map_index>>hierarchy;
-
-		ivec2 cell = mi/8;
-		uint dindex = cell.x + cell.y*map_reso.x;
-		if(old_diffuse_index != dindex) { d = b_diffuse_map[map_offset+dindex]; old_diffuse_index = dindex; }
-		ivec2 cell_sub = mi - cell*8;
-		if((d & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0){ break; }
-
 		// march
 		{
-#ifdef USE_MARCH_DDA
 			// DDA
-			pos += dir * min(inv_dir.x, inv_dir.y) * (1<<hierarchy);
+			pos += dir;
 			map_index = ivec2(pos);
-#else
-			// ちゃんとしたレイマーチ
-			bool axis = tp.x < tp.y;
-			tp += axis ? delta.xz : delta.zy;
-			map_index += (axis ? next.xz : next.zy);
-
-#endif
 		}
 		// 範囲外?
 		{
@@ -81,10 +68,11 @@ void main()
 	ray.origin = begin;
 	ray.angle = angle;
 	ray.march = march_count;
+	
 
 	int index = atomicAdd(b_ray_counter.w, 1);
 	if(index >= u_radiosity_info.ray_num_max){ return; }
-	if((index % 512) == 0)
+	if((index % 1024) == 0)
 	{
 		atomicAdd(b_ray_counter.x, 1);
 	}
