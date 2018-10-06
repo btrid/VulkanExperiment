@@ -1,0 +1,22 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Common.glsl"
+#include "btrlib/Math.glsl"
+
+#define USE_GI2D 0
+#define USE_GI2D_Radiosity 1
+#include "GI2D.glsl"
+
+layout (local_size_x = 32, local_size_y = 32) in;
+
+
+void main() 
+{
+	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
+	ivec2 current = ivec2(gl_GlobalInvocationID.xy);
+	D2JFACell cell = b_jfa[current.x + current.y*reso.x];
+
+	b_sdf[current.x + current.y*reso.x].x = cell.distance;
+}

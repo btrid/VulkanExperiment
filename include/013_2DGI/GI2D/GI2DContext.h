@@ -62,6 +62,15 @@ struct GI2DContext
 		int32_t target;
 	};
 
+	// https://postd.cc/voronoi-diagrams/
+	struct D2JFACell
+	{
+		int nearest_index;
+		float distance;		
+		int attr;
+		int _p;
+	};
+
 	GI2DContext(const std::shared_ptr<btr::Context>& context)
 	{
  		RenderWidth = 1024;
@@ -127,6 +136,8 @@ struct GI2DContext
 		}
 		b_grid_counter = context->m_storage_memory.allocateMemory<int32_t>( {size,{} });
 
+		b_jfa = context->m_storage_memory.allocateMemory<D2JFACell>({ RenderHeight*RenderWidth,{} });
+		b_sdf = context->m_storage_memory.allocateMemory<vec2>({ RenderHeight*RenderWidth,{} });
 		{
 			{
 				auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
@@ -171,6 +182,8 @@ struct GI2DContext
 					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 					.setDescriptorCount(1)
 					.setBinding(7),
+					vk::DescriptorSetLayoutBinding(8, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(9, vk::DescriptorType::eStorageBuffer, 1, stage),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -199,6 +212,8 @@ struct GI2DContext
 					b_light.getInfo(),
 					b_light_counter.getInfo(),
 					b_light_index.getInfo(),
+					b_jfa.getInfo(),
+					b_sdf.getInfo(),
 				};
 
 				vk::WriteDescriptorSet write[] = {
@@ -272,6 +287,8 @@ struct GI2DContext
 	btr::BufferMemoryEx<uint32_t> b_light;
 	btr::BufferMemoryEx<uvec4> b_light_counter;
 	btr::BufferMemoryEx<uint32_t> b_light_index;
+	btr::BufferMemoryEx<D2JFACell> b_jfa;
+	btr::BufferMemoryEx<vec2> b_sdf;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;

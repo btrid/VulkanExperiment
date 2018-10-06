@@ -1,0 +1,53 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Common.glsl"
+#include "btrlib/Math.glsl"
+
+#define USE_GI2D 0
+#define USE_GI2D_Radiosity 1
+#include "GI2D.glsl"
+
+layout (local_size_x = 32, local_size_y = 32) in;
+
+layout(push_constant) uniform Input
+{
+	int distance;
+} constant;
+
+
+void nearest(inout D2JFACell new_cell, in ivec4 reso, in vec2 current, in ivec2 target)
+{
+	if(all(greaterThanEqual(target, ivec2(0))) && all(lessThan(target, reso.xy)))
+	{
+		D2JFACell target_cell = b_jfa[target.x + target.y*reso.x];
+		if(target_cell.distance < new_cell.distance)
+		{
+			new_cell.distance = distance(vec2(target_cell.nearest_index), vec2(current));
+			new_cell.nearest_index = target_cell.nearest_index;
+		}
+	}
+
+}
+void main() 
+{
+	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
+	ivec2 current = ivec2(gl_GlobalInvocationID.xy);
+	D2JFACell current_cell = b_jfa[current.x + current.y*reso.x];
+	D2JFACell new_cell = current_cell;
+	nearest(new_cell, reso, current, current + ivec2(-constant.distance, -constant.distance));
+	nearest(new_cell, reso, current, current + ivec2(0, -constant.distance));
+	nearest(new_cell, reso, current, current + ivec2(constant.distance, -constant.distance));
+	nearest(new_cell, reso, current, current + ivec2(-constant.distance, 0));
+	//nearest(new_cell, reso, current, current + ivec2(0, 0));
+	nearest(new_cell, reso, current, current + ivec2(constant.distance, 0));
+	nearest(new_cell, reso, current, current + ivec2(-constant.distance, constant.distance));
+	nearest(new_cell, reso, current, current + ivec2(0, constant.distance));
+	nearest(new_cell, reso, current, current + ivec2(constant.distance, constant.distance));
+
+	if(new_cell.distance < current_cell.distance)
+	{
+		b_jfa[current.x + current.y*reso.x] = new_cell;
+	}
+}

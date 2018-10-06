@@ -33,7 +33,13 @@ struct Fragment
 {
 	vec4 albedo;
 };
+struct D2JFACell
+{
+	ivec2 nearest_index;
+	float distance;
+	int attr;
 
+};
 #define Grid_Size (1.)
   #define DT 0.016
 //#define DT 0.0005
@@ -62,6 +68,12 @@ layout(set=USE_GI2D, binding=6) restrict buffer LightCounter {
 };
 layout(set=USE_GI2D, binding=7) restrict buffer LightIndexBuffer {
 	uint b_light_index[];
+};
+layout(set=USE_GI2D, binding=8, std430) restrict buffer JFABuffer {
+	D2JFACell b_jfa[];
+};
+layout(set=USE_GI2D, binding=9, std430) restrict buffer SDFBuffer {
+	vec2 b_sdf[];
 };
 
 ivec2 frame_offset(){
@@ -134,6 +146,7 @@ struct D2Segment
 	uint radiance;
 };
 
+
 layout(set=USE_GI2D_Radiosity, binding=0, std140) uniform GI2DGI2DRadiosityInfoUniform {
 	GI2DRadiosityInfo u_radiosity_info;
 };
@@ -149,7 +162,7 @@ layout(set=USE_GI2D_Radiosity, binding=3, std430) restrict buffer RayBuffer {
 layout(set=USE_GI2D_Radiosity, binding=4) restrict buffer RayCounter {
 	ivec4 b_ray_counter[];
 };
-layout(set=USE_GI2D_Radiosity, binding=5) restrict buffer SegmentBuffer {
+layout(set=USE_GI2D_Radiosity, binding=5, std430) restrict buffer SegmentBuffer {
 	D2Segment b_segment[];
 };
 layout(set=USE_GI2D_Radiosity, binding=6) restrict buffer SegmentCounter {

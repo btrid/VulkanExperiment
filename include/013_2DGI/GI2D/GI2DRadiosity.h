@@ -13,7 +13,6 @@ namespace gi2d
 struct GI2DRadiosity
 {
 	enum {
-		Ray_Num = 256,
 		Frame = 4,
 		Ray_All_Num = 1024*4*127*Frame,
 		Ray_Group = 1,
@@ -69,7 +68,7 @@ struct GI2DRadiosity
 		uint ray_num_max;
 		uint a[3];
 	};
-	struct Ray
+	struct D2Ray
 	{
 		vec2 origin;
 		float angle;
@@ -82,6 +81,8 @@ struct GI2DRadiosity
 		uint march;
 		uint radiance;
 	};
+
+
 	GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context, const std::shared_ptr<RenderTarget>& render_target)
 	{
 		m_context = context;
@@ -107,7 +108,7 @@ struct GI2DRadiosity
 			b_bounce_map = m_context->m_storage_memory.allocateMemory<uint64_t>({ size/64,{} });
 			b_ray_counter = m_context->m_storage_memory.allocateMemory<ivec4>({ Frame+1,{} });
 			b_segment_counter = m_context->m_storage_memory.allocateMemory<ivec4>({ 1,{} });
-			b_ray = m_context->m_storage_memory.allocateMemory<Ray>({ info.ray_num_max,{} });
+			b_ray = m_context->m_storage_memory.allocateMemory<D2Ray>({ info.ray_num_max,{} });
 			b_segment = m_context->m_storage_memory.allocateMemory<D2Segment>({ info.ray_num_max,{} });
 		}
 
@@ -697,11 +698,11 @@ struct GI2DRadiosity
 	btr::BufferMemoryEx<GI2DRadiosityInfo> u_radiosity_info;
 	btr::BufferMemoryEx<uint32_t> b_radiance;
 	btr::BufferMemoryEx<uint64_t> b_bounce_map;
-	btr::BufferMemoryEx<Ray> b_ray;
+	btr::BufferMemoryEx<D2Ray> b_ray;
 	btr::BufferMemoryEx<ivec4> b_ray_counter;
 	btr::BufferMemoryEx<D2Segment> b_segment;
 	btr::BufferMemoryEx<ivec4> b_segment_counter;
-	
+
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
 
