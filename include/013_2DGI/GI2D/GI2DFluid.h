@@ -78,7 +78,7 @@ struct GI2DFluid
 				{
 					auto& p = pos[i];
 #if 1
-					if (std::rand() % 100 > 190)
+					if (std::rand() % 100 >= 90)
 					{
 #define area (800)
 						p.x = 65 + std::rand() % area + (std::rand() % 10000) / 10000.f;
