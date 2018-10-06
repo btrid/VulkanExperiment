@@ -122,13 +122,7 @@ struct GI2DRadiosityInfo
 	uint a2;
 	uint a3;
 };
-	
-/*struct D2Ray
-{
-	vec2 origin;
-	vec2 dir;
-};
-*/
+
 struct D2Ray
 {
 	vec2 origin;

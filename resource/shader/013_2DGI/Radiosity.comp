@@ -35,7 +35,7 @@ void main()
 	uint skip = u_gi2d_scene.m_skip;
 	uint radiance_offset = u_gi2d_scene.m_radiance_offset*u_gi2d_scene.m_frame;
 
-	for(int _i = 0; _i < segment.march; _i++)
+	for(int _i = 1; _i < segment.march; _i++)
 	{
 		// lighting
 		{
@@ -45,7 +45,7 @@ void main()
 		// march
 		{
 			// DDA
-			pos += dir;
+			pos = ray.origin + (segment.begin+_i)*dir;
 			map_index = ivec2(pos);
 		}
 	}

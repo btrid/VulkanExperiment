@@ -43,7 +43,7 @@ void main()
 	seg.begin = 0;
 	seg.march = 0;
 	seg.radiance = 0;
-	for(int march_count = 0; march_count < ray.march; march_count++)
+	for(int march_count = 1; march_count < ray.march; march_count++)
 	{
 		{
 			ivec2 cell = map_index>>3;
@@ -93,7 +93,7 @@ void main()
 		// march
 		{
 			// DDA
-			pos += dir;
+			pos = ray.origin + dir*march_count;
 			map_index = ivec2(pos);
 		}
 	}
@@ -110,7 +110,5 @@ void main()
 		}
 	}
 
-//	pos = ray.origin;
-//	map_index = ivec2(pos);
 
 }
