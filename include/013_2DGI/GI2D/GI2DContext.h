@@ -88,21 +88,14 @@ struct GI2DContext
 			cmd.updateBuffer<GI2DScene>(u_gi2d_scene.getInfo().buffer, u_gi2d_scene.getInfo().offset, m_gi2d_scene);
 		}
 		{
-			b_fragment = context->m_storage_memory.allocateMemory<Fragment>({ FragmentBufferSize , {} });
+			b_fragment = context->m_storage_memory.allocateMemory<Fragment>({ FragmentBufferSize, {} });
+			b_fragment_map = context->m_storage_memory.allocateMemory<u64vec2>({ FragmentBufferSize / 64, {} });
 			b_light = context->m_storage_memory.allocateMemory<uint32_t>({ FragmentBufferSize, {} });
-		}
-		{
-			btr::BufferMemoryDescriptorEx<u64vec2> desc;
-			int size = RenderHeight * RenderWidth / 64;
-			desc.element_num = size;
-			b_fragment_map = context->m_storage_memory.allocateMemory(desc);
+			b_grid_counter = context->m_storage_memory.allocateMemory<int32_t>({ FragmentBufferSize,{} });
+// 			b_jfa = context->m_storage_memory.allocateMemory<D2JFACell>({ FragmentBufferSize,{} });
+// 			b_sdf = context->m_storage_memory.allocateMemory<vec2>({ FragmentBufferSize,{} });
 		}
 
-		uint32_t size = RenderWidth* RenderHeight;
-		b_grid_counter = context->m_storage_memory.allocateMemory<int32_t>( {size,{} });
-
-		b_jfa = context->m_storage_memory.allocateMemory<D2JFACell>({ RenderHeight*RenderWidth,{} });
-		b_sdf = context->m_storage_memory.allocateMemory<vec2>({ RenderHeight*RenderWidth,{} });
 		{
 			{
 				auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
@@ -141,8 +134,8 @@ struct GI2DContext
 					b_fragment_map.getInfo(),
 					b_grid_counter.getInfo(),
 					b_light.getInfo(),
-					b_jfa.getInfo(),
-					b_sdf.getInfo(),
+					//b_jfa.getInfo(),
+					//b_sdf.getInfo(),
 				};
 
 				vk::WriteDescriptorSet write[] = {
