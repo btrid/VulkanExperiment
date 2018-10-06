@@ -230,8 +230,8 @@ struct GI2DContext
 
 	void execute(vk::CommandBuffer cmd)
 	{
-//		m_gi2d_scene.m_frame = (m_gi2d_scene.m_frame + 1) % 4;
-		m_gi2d_scene.m_frame = 0;
+		m_gi2d_scene.m_frame = (m_gi2d_scene.m_frame + 1) % 4;
+//		m_gi2d_scene.m_frame = 1;
 		auto reso = uvec4(m_gi2d_info.m_resolution, m_gi2d_info.m_resolution/8);
 
 		uint radiance_offset = reso.x*reso.y;

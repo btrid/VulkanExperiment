@@ -473,7 +473,8 @@ struct GI2DRadiosity
 	{
 		{
 			// データクリア
-			cmd.updateBuffer<ivec4>(b_ray_counter.getInfo().buffer, b_ray_counter.getInfo().offset, ivec4(0, 1, 1, 0));
+			std::array<ivec4, Frame+1> data = { ivec4(0, 1, 1, 0), ivec4(0, 1, 1, 0) , ivec4(0, 1, 1, 0) , ivec4(0, 1, 1, 0) , ivec4(0, 0, 0, 0) };
+			cmd.updateBuffer(b_ray_counter.getInfo().buffer, b_ray_counter.getInfo().offset, vector_sizeof(data), data.data());
 		}
 
 		{
@@ -495,7 +496,7 @@ struct GI2DRadiosity
 			vk::BufferMemoryBarrier to_read[] = {
 				b_ray_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite),
 			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RaySetup].get());
@@ -565,8 +566,7 @@ struct GI2DRadiosity
 				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RayMarch].get());
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
-				cmd.dispatchIndirect(b_ray_counter.getInfo().buffer, b_ray_counter.getInfo().offset);
-				//				cmd.dispatchIndirect(b_ray_counter.getInfo().buffer, b_ray_counter.getInfo().offset + sizeof(ivec4)*(m_gi2d_context->m_gi2d_scene.m_frame));
+				cmd.dispatchIndirect(b_ray_counter.getInfo().buffer, b_ray_counter.getInfo().offset + sizeof(ivec4)*m_gi2d_context->m_gi2d_scene.m_frame);
 			}
 
 			{

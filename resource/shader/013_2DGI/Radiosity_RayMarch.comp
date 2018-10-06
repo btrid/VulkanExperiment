@@ -9,16 +9,10 @@
 #define USE_GI2D_Radiosity 1
 #include "GI2D.glsl"
 
-struct Seg
-{
-	uint begin;
-	uint march;
-};
-
 layout (local_size_x=1024) in;
 void main()
 {
-	if(gl_GlobalInvocationID.x >= b_ray_counter[u_gi2d_scene.m_frame].w){ return; }
+//	if(gl_GlobalInvocationID.x >= b_ray_counter[u_gi2d_scene.m_frame].w){ return; }
 
 	const int hierarchy = u_gi2d_scene.m_hierarchy;
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);

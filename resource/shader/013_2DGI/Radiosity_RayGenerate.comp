@@ -70,7 +70,7 @@ void main()
 	ray.angle = angle;
 	ray.march = march_count;
 	
-	int buffer_index = atomicAdd(ActiveRayAllNum(), 1);
+	int buffer_index = atomicAdd(b_ray_counter[4].x, 1);
 	if(buffer_index >= u_radiosity_info.ray_num_max){ return; }
 	b_ray[buffer_index] = ray;
 
