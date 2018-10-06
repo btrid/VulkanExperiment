@@ -27,10 +27,8 @@ void main()
 	dir *= min(inv_dir.x, inv_dir.y);
 	ivec2 map_index = ivec2(pos);
 
-	u64vec2 dl;
-	uint old_diffuse_index = -1;
-	int march = 0;
-	int begin_march = -1;
+	u64vec2 map;
+	uint old_map_index = -1;
 
 	D2Segment seg;
 	seg.ray_index = ray_index;
@@ -42,13 +40,13 @@ void main()
 		{
 			ivec2 cell = map_index>>3;
 			uint dindex = cell.x + cell.y*reso.z;
-			if(old_diffuse_index != dindex)
+			if(old_map_index != dindex)
 			{
-				dl = b_fragment_map[dindex];
-				old_diffuse_index = dindex;
+				map = b_fragment_map[dindex];
+				old_map_index = dindex;
 			}
 			ivec2 cell_sub = map_index%8;
-			bvec2 attr = notEqual((dl & (1ul<<(cell_sub.x+cell_sub.y*8))), u64vec2(0));
+			bvec2 attr = notEqual((map & (1ul<<(cell_sub.x+cell_sub.y*8))), u64vec2(0));
 			if(attr.y)
 			{
 				seg.radiance += b_light[getMemoryOrder(map_index)];
@@ -65,10 +63,10 @@ void main()
 						}
 						b_segment[index] = seg;
 					}
-					seg.begin = -1;
-					seg.march = 0;
-					seg.radiance = 0;
 				}
+				seg.begin = -1;
+				seg.march = 0;
+				seg.radiance = 0;
 			}
 			else
 			{
