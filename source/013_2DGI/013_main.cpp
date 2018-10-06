@@ -154,8 +154,6 @@ int main()
 				gi2d_Fluid->execute(cmd);
 				gi2d_Fluid->executePost(cmd);
 				gi2d_make_hierarchy.execute(cmd);
-				gi2d_make_hierarchy.executeDensityHierarchy(cmd);
-				gi2d_make_hierarchy.executeLight(cmd);
 //				gi2d_Fluid->executeCalc(cmd);
 //				gi2d_Softbody.execute(cmd);
 //				gi2d_Rigidbody.execute(cmd);

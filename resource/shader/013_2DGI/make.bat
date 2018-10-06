@@ -12,10 +12,6 @@ SET output=../binary
 %exe% %include% %option% -o %output%/MakeFragmentAppModel.frag.spv MakeFragmentAppModel.frag
 
 %exe% %include% %option% -o %output%/GI2D_MakeFragmentMap.comp.spv GI2D_MakeFragmentMap.comp
-%exe% %include% %option% -o %output%/GI2D_MakeFragmentMapHierarchy.comp.spv GI2D_MakeFragmentMapHierarchy.comp
-
-%exe% %include% %option% -o %output%/GI2D_MakeDensityHierarchy.comp.spv GI2D_MakeDensityHierarchy.comp
-%exe% %include% %option% -o %output%/GI2D_MakeLight.comp.spv GI2D_MakeLight.comp
 
 %exe% %include% %option% -o %output%/GI2D_MakeJFA.comp.spv GI2D_MakeJFA.comp
 %exe% %include% %option% -o %output%/GI2D_MakeSDF.comp.spv GI2D_MakeSDF.comp

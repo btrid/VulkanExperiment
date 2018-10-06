@@ -16,7 +16,6 @@ struct GI2DContext
 	enum
 	{
 		_BounceNum = 4, //!< ƒŒƒC”½ŽË‰ñ”
-		_Hierarchy_Num = 8,
 		_Light_Num = 256,
 	};
 	int32_t RenderWidth;
@@ -24,20 +23,13 @@ struct GI2DContext
 	ivec2 RenderSize;
 	int FragmentBufferSize;
 	int BounceNum = _BounceNum;
-	int Hierarchy_Num = _Hierarchy_Num;
 	int Light_Num = _Light_Num;
 	struct GI2DInfo
 	{
 		mat4 m_camera_PV;
 		uvec2 m_resolution;
-		uvec2 m_emission_tile_size;
-		uvec2 m_emission_tile_num;
 		uvec2 _p;
 		vec4 m_position;
-		int m_fragment_map_hierarchy_offset[_Hierarchy_Num];
-
-		int m_emission_tile_linklist_max;
-		int m_emission_buffer_max;
 	};
 	struct GI2DScene
 	{
@@ -86,22 +78,8 @@ struct GI2DContext
 
 			m_gi2d_info.m_position = vec4(0.f, 0.f, 0.f, 0.f);
 			m_gi2d_info.m_resolution = uvec2(RenderWidth, RenderHeight);
-			m_gi2d_info.m_emission_tile_size = uvec2(32, 32);
-			m_gi2d_info.m_emission_tile_num = m_gi2d_info.m_resolution / m_gi2d_info.m_emission_tile_size;
 			m_gi2d_info.m_camera_PV = glm::ortho(RenderWidth*-0.5f, RenderWidth*0.5f, RenderHeight*-0.5f, RenderHeight*0.5f, 0.f, 2000.f) * glm::lookAt(vec3(RenderWidth*0.5f, -1000.f, RenderHeight*0.5f)+m_gi2d_info.m_position.xyz(), vec3(RenderWidth*0.5f, 0.f, RenderHeight*0.5f) + m_gi2d_info.m_position.xyz(), vec3(0.f, 0.f, 1.f));
 
-			int size = RenderHeight * RenderWidth / 64;
-			m_gi2d_info.m_fragment_map_hierarchy_offset[0] = 0;
-			m_gi2d_info.m_fragment_map_hierarchy_offset[1] = m_gi2d_info.m_fragment_map_hierarchy_offset[0] + size;
-			m_gi2d_info.m_fragment_map_hierarchy_offset[2] = m_gi2d_info.m_fragment_map_hierarchy_offset[1] + size / (2 * 2);
-			m_gi2d_info.m_fragment_map_hierarchy_offset[3] = m_gi2d_info.m_fragment_map_hierarchy_offset[2] + size / (4 * 4);
-			m_gi2d_info.m_fragment_map_hierarchy_offset[4] = m_gi2d_info.m_fragment_map_hierarchy_offset[3] + size / (8 * 8);
-			m_gi2d_info.m_fragment_map_hierarchy_offset[5] = m_gi2d_info.m_fragment_map_hierarchy_offset[4] + size / (16 * 16);
-			m_gi2d_info.m_fragment_map_hierarchy_offset[6] = m_gi2d_info.m_fragment_map_hierarchy_offset[5] + size / (32 * 32);
-			m_gi2d_info.m_fragment_map_hierarchy_offset[7] = m_gi2d_info.m_fragment_map_hierarchy_offset[6] + size / (64 * 64);
-
-			m_gi2d_info.m_emission_tile_linklist_max = Light_Num * m_gi2d_info.m_emission_tile_num.x * m_gi2d_info.m_emission_tile_num.y;
-			m_gi2d_info.m_emission_buffer_max = Light_Num;
 			cmd.updateBuffer<GI2DInfo>(u_gi2d_info.getInfo().buffer, u_gi2d_info.getInfo().offset, m_gi2d_info);
 
 			m_gi2d_scene.m_frame = 0;
@@ -111,29 +89,16 @@ struct GI2DContext
 		}
 		{
 			b_fragment = context->m_storage_memory.allocateMemory<Fragment>({ FragmentBufferSize , {} });
-			b_light_counter = context->m_storage_memory.allocateMemory<uvec4>({1, {} });
-			b_light_index = context->m_storage_memory.allocateMemory<uint32_t>({ FragmentBufferSize, {} });
-			b_light = context->m_storage_memory.allocateMemory<uint32_t>({ FragmentBufferSize * 2, {} });
+			b_light = context->m_storage_memory.allocateMemory<uint32_t>({ FragmentBufferSize, {} });
 		}
 		{
 			btr::BufferMemoryDescriptorEx<u64vec2> desc;
 			int size = RenderHeight * RenderWidth / 64;
 			desc.element_num = size;
-			desc.element_num += size / (2 * 2);
-			desc.element_num += size / (4 * 4);
-			desc.element_num += size / (8 * 8);
-			desc.element_num += size / (16 * 16);
-			desc.element_num += size / (32 * 32);
-			desc.element_num += size / (64 * 64);
-			desc.element_num += size / (128 * 128);
 			b_fragment_map = context->m_storage_memory.allocateMemory(desc);
 		}
 
-		uint32_t size = 0;
-		for (int i = 0; i < _Hierarchy_Num; i++)
-		{
-			size += (RenderWidth>>i) * (RenderHeight>>i);
-		}
+		uint32_t size = RenderWidth* RenderHeight;
 		b_grid_counter = context->m_storage_memory.allocateMemory<int32_t>( {size,{} });
 
 		b_jfa = context->m_storage_memory.allocateMemory<D2JFACell>({ RenderHeight*RenderWidth,{} });
@@ -142,48 +107,14 @@ struct GI2DContext
 			{
 				auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
 				vk::DescriptorSetLayoutBinding binding[] = {
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-					.setDescriptorCount(1)
-					.setBinding(0),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-					.setDescriptorCount(1)
-					.setBinding(1),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(2),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(3),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(4),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(5),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(6),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(7),
-					vk::DescriptorSetLayoutBinding(8, vk::DescriptorType::eStorageBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(9, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eUniformBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eUniformBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(6, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(7, vk::DescriptorType::eStorageBuffer, 1, stage),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -210,8 +141,6 @@ struct GI2DContext
 					b_fragment_map.getInfo(),
 					b_grid_counter.getInfo(),
 					b_light.getInfo(),
-					b_light_counter.getInfo(),
-					b_light_index.getInfo(),
 					b_jfa.getInfo(),
 					b_sdf.getInfo(),
 				};
@@ -239,7 +168,6 @@ struct GI2DContext
 	void execute(vk::CommandBuffer cmd)
 	{
 		m_gi2d_scene.m_frame = (m_gi2d_scene.m_frame + 1) % 4;
-//		m_gi2d_scene.m_frame = 1;
 		auto reso = uvec4(m_gi2d_info.m_resolution, m_gi2d_info.m_resolution/8);
 
 		uint radiance_offset = reso.x*reso.y;
@@ -258,19 +186,16 @@ struct GI2DContext
 		{
 			vk::BufferMemoryBarrier to_write[] = {
 				u_gi2d_scene.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
-				b_light_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {},
 				0, nullptr, array_length(to_write), to_write, 0, nullptr);
 		}
 
 		cmd.updateBuffer<GI2DScene>(u_gi2d_scene.getInfo().buffer, u_gi2d_scene.getInfo().offset, m_gi2d_scene);
-		cmd.updateBuffer<uvec4>(b_light_counter.getInfo().buffer, b_light_counter.getInfo().offset, uvec4(0, 1, 1, 0));
 
 		{
 			vk::BufferMemoryBarrier to_read[] = {
 				u_gi2d_scene.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-				b_light_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
@@ -285,8 +210,6 @@ struct GI2DContext
 	btr::BufferMemoryEx<u64vec2> b_fragment_map;
 	btr::BufferMemoryEx<int32_t> b_grid_counter;
 	btr::BufferMemoryEx<uint32_t> b_light;
-	btr::BufferMemoryEx<uvec4> b_light_counter;
-	btr::BufferMemoryEx<uint32_t> b_light_index;
 	btr::BufferMemoryEx<D2JFACell> b_jfa;
 	btr::BufferMemoryEx<vec2> b_sdf;
 
