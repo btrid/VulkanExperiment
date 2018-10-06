@@ -61,7 +61,7 @@ void main()
 			ivec4 fragment_index = ivec4(map_index/8, map_index%8);
 
 			int findex = fragment_index.x + fragment_index.y*reso.z;
-			uint64_t fragment_map = b_diffuse_map[findex];
+			uint64_t fragment_map = b_fragment_map[findex].x;
 
 			ivec2 shift = fragment_index.zw;
 			uint64_t bit = 1ul<<(shift.x+shift.y*8);
@@ -83,7 +83,7 @@ void main()
 				ivec4 fragment_index = ivec4(result.next_map_index/8, result.next_map_index%8);
 
 				int findex = fragment_index.x + fragment_index.y*reso.z;
-				uint64_t fragment_map = b_diffuse_map[findex];
+				uint64_t fragment_map = b_fragment_map[findex].x;
 
 				ivec2 shift = fragment_index.zw;
 				uint64_t bit = 1ul<<(shift.x+shift.y*8);

@@ -107,7 +107,7 @@ struct GI2DContext
 			b_light = context->m_storage_memory.allocateMemory<uint32_t>({ FragmentBufferSize * 2, {} });
 		}
 		{
-			btr::BufferMemoryDescriptorEx<uint64_t> desc;
+			btr::BufferMemoryDescriptorEx<u64vec2> desc;
 			int size = RenderHeight * RenderWidth / 64;
 			desc.element_num = size;
 			desc.element_num += size / (2 * 2);
@@ -117,8 +117,7 @@ struct GI2DContext
 			desc.element_num += size / (32 * 32);
 			desc.element_num += size / (64 * 64);
 			desc.element_num += size / (128 * 128);
-			b_diffuse_map = context->m_storage_memory.allocateMemory(desc);
-			b_emissive_map = context->m_storage_memory.allocateMemory(desc);
+			b_fragment_map = context->m_storage_memory.allocateMemory(desc);
 		}
 
 		uint32_t size = 0;
@@ -172,11 +171,6 @@ struct GI2DContext
 					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 					.setDescriptorCount(1)
 					.setBinding(7),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(8),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -200,8 +194,7 @@ struct GI2DContext
 				};
 				vk::DescriptorBufferInfo storages[] = {
 					b_fragment.getInfo(),
-					b_diffuse_map.getInfo(),
-					b_emissive_map.getInfo(),
+					b_fragment_map.getInfo(),
 					b_grid_counter.getInfo(),
 					b_light.getInfo(),
 					b_light_counter.getInfo(),
@@ -274,8 +267,7 @@ struct GI2DContext
 	btr::BufferMemoryEx<GI2DInfo> u_gi2d_info;
 	btr::BufferMemoryEx<GI2DScene> u_gi2d_scene;
 	btr::BufferMemoryEx<Fragment> b_fragment;
-	btr::BufferMemoryEx<uint64_t> b_diffuse_map;
-	btr::BufferMemoryEx<uint64_t> b_emissive_map;
+	btr::BufferMemoryEx<u64vec2> b_fragment_map;
 	btr::BufferMemoryEx<int32_t> b_grid_counter;
 	btr::BufferMemoryEx<uint32_t> b_light;
 	btr::BufferMemoryEx<uvec4> b_light_counter;

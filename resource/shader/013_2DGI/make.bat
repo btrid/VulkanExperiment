@@ -42,5 +42,5 @@ rem %exe% %include% %option% -o %output%/Radiosity_CalcRadiance.comp.spv Radiosi
 
 call fluid/make.bat
 cd /d %~dp0
-call rigidbody_dem/make.bat
-cd /d %~dp0
+rem call rigidbody_dem/make.bat
+rem cd /d %~dp0

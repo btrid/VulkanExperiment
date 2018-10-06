@@ -20,7 +20,7 @@ bool getFragmentState(in ivec2 i_pos)
 {
 	ivec4 fi = ivec4(i_pos/8, i_pos%8);
 	int findex = fi.x + fi.y*(u_gi2d_info.m_resolution.x/8);
-	uint64_t fragment_map = b_diffuse_map[findex];
+	uint64_t fragment_map = b_fragment_map[findex].x;
 
 	uint64_t bit = 1ul<<(fi.z+fi.w*8);
 	return (fragment_map & bit) != 0;

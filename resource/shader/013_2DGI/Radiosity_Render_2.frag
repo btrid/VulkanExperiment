@@ -51,7 +51,7 @@ void main()
 	ivec2 shift = map_index%8;
 	ivec2 _fi = map_index/8;
 	int findex = _fi.x + _fi.y*(u_gi2d_info.m_resolution.x/8);
-	uint64_t fragment_map = b_diffuse_map[findex.x];
+	uint64_t fragment_map = b_fragment_map[findex.x].x;
 	bool is_fragment = (fragment_map & 1ul<<(shift.x+shift.y*8)) != 0;
 	int fragment_index = map_index.x + map_index.y * u_gi2d_info.m_resolution.x;
 

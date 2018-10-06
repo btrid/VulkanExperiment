@@ -44,8 +44,7 @@ void main()
 			uint dindex = cell.x + cell.y*reso.z;
 			if(old_diffuse_index != dindex)
 			{
-				dl.x = b_diffuse_map[dindex];
-				dl.y = b_emissive_map[dindex];
+				dl = b_fragment_map[dindex];
 				old_diffuse_index = dindex;
 			}
 			ivec2 cell_sub = map_index%8;

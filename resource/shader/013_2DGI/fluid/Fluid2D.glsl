@@ -46,14 +46,14 @@ bvec4 getWall(in ivec2 index)
 	ivec4 bit = f_bit.xxzz + f_bit.ywyw*8;
 
 	bvec4 is_wall;
-//	is_wall.x = false;//(b_diffuse_map[fi.x] & (1ul<<bit.x)) != 0;
-//	is_wall.y = false;//(b_diffuse_map[fi.y] & (1ul<<bit.y)) != 0;
-//	is_wall.z = false;//(b_diffuse_map[fi.z] & (1ul<<bit.z)) != 0;
-//	is_wall.w = false;//(b_diffuse_map[fi.w] & (1ul<<bit.w)) != 0;
-	is_wall.x = (b_diffuse_map[fi.x] & (1ul<<bit.x)) != 0;
-	is_wall.y = (b_diffuse_map[fi.y] & (1ul<<bit.y)) != 0;
-	is_wall.z = (b_diffuse_map[fi.z] & (1ul<<bit.z)) != 0;
-	is_wall.w = (b_diffuse_map[fi.w] & (1ul<<bit.w)) != 0;
+//	is_wall.x = false;//(b_fragment_map[fi.x].x & (1ul<<bit.x)) != 0;
+//	is_wall.y = false;//(b_fragment_map[fi.y].x & (1ul<<bit.y)) != 0;
+//	is_wall.z = false;//(b_fragment_map[fi.z].x & (1ul<<bit.z)) != 0;
+//	is_wall.w = false;//(b_fragment_map[fi.w].x & (1ul<<bit.w)) != 0;
+	is_wall.x = (b_fragment_map[fi.x].x & (1ul<<bit.x)) != 0;
+	is_wall.y = (b_fragment_map[fi.y].x & (1ul<<bit.y)) != 0;
+	is_wall.z = (b_fragment_map[fi.z].x & (1ul<<bit.z)) != 0;
+	is_wall.w = (b_fragment_map[fi.w].x & (1ul<<bit.w)) != 0;
 	return is_wall;
 }
 #endif

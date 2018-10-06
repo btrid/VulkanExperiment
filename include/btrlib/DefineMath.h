@@ -33,6 +33,8 @@ using mat3 = glm::mat3;
 using mat2 = glm::mat2;
 using i64vec4 = glm::i64vec4;
 using u64vec4 = glm::u64vec4;
+using i64vec2 = glm::i64vec2;
+using u64vec2 = glm::u64vec2;
 
 using f16x2 = uint16_t;
 using s8x4 = glm::i8vec4;
