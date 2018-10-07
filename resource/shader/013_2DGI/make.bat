@@ -36,6 +36,11 @@ rem %exe% %include% %option% -o %output%/Radiosity_CalcRadiance.comp.spv Radiosi
 %exe% %include% %option% -o %output%/Radiosity_SegmentSort.comp.spv Radiosity_SegmentSort.comp
 %exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity.comp
 
+rem バウンス対応版（重い）
+%exe% %include% %option% -o %output%/Radiosity_RayMarch_Space.comp.spv Radiosity_RayMarch_Space.comp
+%exe% %include% %option% -o %output%/Radiosity_RayMarch_Light.comp.spv Radiosity_RayMarch_Light.comp
+%exe% %include% %option% -o %output%/Radiosity2.comp.spv Radiosity2.comp
+
 %exe% %include% %option% -o %output%/GI2D_DebugMakeLight.comp.spv GI2D_DebugMakeLight.comp
 
 call fluid/make.bat

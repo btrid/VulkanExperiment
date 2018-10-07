@@ -132,7 +132,13 @@ struct D2Segment
 	int march;
 	uint radiance;
 };
-
+struct D2Photon
+{
+	uint ray_index;
+	uint begin;
+	int march;
+	uint radiance;
+};
 
 layout(set=USE_GI2D_Radiosity, binding=0, std140) uniform GI2DGI2DRadiosityInfoUniform {
 	GI2DRadiosityInfo u_radiosity_info;
@@ -154,6 +160,12 @@ layout(set=USE_GI2D_Radiosity, binding=5, std430) restrict buffer SegmentBuffer 
 };
 layout(set=USE_GI2D_Radiosity, binding=6) restrict buffer SegmentCounter {
 	ivec4 b_segment_counter;
+};
+layout(set=USE_GI2D_Radiosity, binding=7, std430) restrict buffer PhotonBuffer {
+	D2Photon b_photon[];
+};
+layout(set=USE_GI2D_Radiosity, binding=8) restrict buffer PhotonCounter {
+	ivec4 b_photon_counter;
 };
 
 #define ActiveRayAllNum() (b_ray_counter[4].x)
