@@ -57,10 +57,13 @@ struct GI2DContext
 	// https://postd.cc/voronoi-diagrams/
 	struct D2JFACell
 	{
-		int nearest_index;
-		float distance;		
-		int attr;
+		ivec2 nearest_index;
+		float distance;
 		int _p;
+		ivec2 e_nearest_index;
+		float e_distance;
+		int _ep;
+
 	};
 
 	GI2DContext(const std::shared_ptr<btr::Context>& context)
@@ -134,8 +137,8 @@ struct GI2DContext
 					b_fragment_map.getInfo(),
 					b_grid_counter.getInfo(),
 					b_light.getInfo(),
-					//b_jfa.getInfo(),
-					//b_sdf.getInfo(),
+					b_jfa.getInfo(),
+					b_sdf.getInfo(),
 				};
 
 				vk::WriteDescriptorSet write[] = {

@@ -27,16 +27,17 @@ void main()
 	dir *= min(inv_dir.x, inv_dir.y);
 	ivec2 map_index = ivec2(pos);
 
-	u64vec2 map;
-	uint old_map_index = -1;
-
 	D2Segment seg;
 	seg.ray_index = ray_index;
 	seg.begin = 0;
 	seg.march = 0;
 	seg.radiance = 0;
-	for(int march_count = 1; march_count < ray.march; march_count++)
+
+	float distance = min(inv_dir.x, inv_dir.y)*ray.march;
+	float progress = 0.;
+	for(;progress < distance;)
 	{
+		vec2 d = b_sdf[map_index.x + map_index.y*reso.x];
 		{
 			ivec2 cell = map_index>>3;
 			uint dindex = cell.x + cell.y*reso.z;

@@ -197,6 +197,7 @@ struct GI2DRadiosity
 				"Radiosity_Bounce.comp.spv",
 				"Radiosity_Render.vert.spv",
 				"Radiosity_Render.frag.spv",
+//				"GI2D_RenderSDF.frag.spv",
 
 				"Radiosity_CalcRadiance.comp.spv",
 
@@ -475,6 +476,7 @@ struct GI2DRadiosity
 		{
 			// ƒŒƒC‚Ì¶¬
 			vk::BufferMemoryBarrier to_read[] = {
+				m_gi2d_context->b_sdf.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				b_ray_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
@@ -547,7 +549,7 @@ struct GI2DRadiosity
 				cmd.updateBuffer<ivec4>(b_photon_counter.getInfo().buffer, b_photon_counter.getInfo().offset, ivec4(0, 1, 1, 0));
 			}
 
-			if (0)
+//			if (0)
 			{
 				// bounce‘Î‰ž—\’è”Å
 				_execute2(cmd);

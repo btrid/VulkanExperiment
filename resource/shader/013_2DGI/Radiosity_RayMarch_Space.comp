@@ -25,7 +25,7 @@ void main()
 	vec2 inv_dir;
 	inv_dir.x = dir.x == 0. ? 99999999. : abs(1./dir.x);
 	inv_dir.y = dir.y == 0. ? 99999999. : abs(1./dir.y);
-	dir *= min(inv_dir.x, inv_dir.y);
+//	dir *= min(inv_dir.x, inv_dir.y);
 	ivec2 map_index = ivec2(pos);
 
 	D2Segment seg;
@@ -68,7 +68,7 @@ void main()
 		// march
 		{
 			// DDA
-			progress+=d;
+			progress += d;
 			pos = ray.origin + dir*progress;
 			map_index = ivec2(pos);
 		}
