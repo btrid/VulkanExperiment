@@ -92,8 +92,8 @@ struct GI2DContext
 			b_fragment_map = context->m_storage_memory.allocateMemory<u64vec2>({ FragmentBufferSize / 64, {} });
 			b_light = context->m_storage_memory.allocateMemory<uint32_t>({ FragmentBufferSize, {} });
 			b_grid_counter = context->m_storage_memory.allocateMemory<int32_t>({ FragmentBufferSize,{} });
-// 			b_jfa = context->m_storage_memory.allocateMemory<D2JFACell>({ FragmentBufferSize,{} });
-// 			b_sdf = context->m_storage_memory.allocateMemory<vec2>({ FragmentBufferSize,{} });
+			b_jfa = context->m_storage_memory.allocateMemory<D2JFACell>({ FragmentBufferSize,{} });
+			b_sdf = context->m_storage_memory.allocateMemory<vec2>({ FragmentBufferSize,{} });
 		}
 
 		{

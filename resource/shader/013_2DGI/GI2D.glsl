@@ -32,7 +32,11 @@ struct D2JFACell
 {
 	ivec2 nearest_index;
 	float distance;
-	int attr;
+	int _p;
+	ivec2 e_nearest_index;
+	float e_distance;
+	int _ep;
+//	int attr;
 
 };
 #define Grid_Size (1.)
@@ -125,21 +129,39 @@ struct D2Ray
 	float angle;
 	uint march;
 };
+#ifdef RAY_TYPE_FLOAT
+struct D2Segment
+{
+	uint ray_index;
+	float begin;
+	float march;
+	uint radiance;
+};
+
+struct D2Photon
+{
+	uint ray_index;
+	float begin;
+	float march;
+	uint radiance;
+};
+#else
 struct D2Segment
 {
 	uint ray_index;
 	uint begin;
-	int march;
+	uint march;
 	uint radiance;
 };
+
 struct D2Photon
 {
 	uint ray_index;
 	uint begin;
-	int march;
+	uint march;
 	uint radiance;
 };
-
+#endif
 layout(set=USE_GI2D_Radiosity, binding=0, std140) uniform GI2DGI2DRadiosityInfoUniform {
 	GI2DRadiosityInfo u_radiosity_info;
 };

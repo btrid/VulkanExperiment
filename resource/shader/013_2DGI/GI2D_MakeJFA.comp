@@ -22,10 +22,17 @@ void nearest(inout D2JFACell new_cell, in ivec4 reso, in vec2 current, in ivec2 
 	if(all(greaterThanEqual(target, ivec2(0))) && all(lessThan(target, reso.xy)))
 	{
 		D2JFACell target_cell = b_jfa[target.x + target.y*reso.x];
+		float dd = dot(vec2(target_cell.nearest_index), vec2(current));
+		float d = dd == 0. ? 0. : length(dd);
 		if(target_cell.distance < new_cell.distance)
 		{
-			new_cell.distance = distance(vec2(target_cell.nearest_index), vec2(current));
+			new_cell.distance = d;
 			new_cell.nearest_index = target_cell.nearest_index;
+		}
+		if(target_cell.e_distance < new_cell.e_distance)
+		{
+			new_cell.e_distance = d;
+			new_cell.e_nearest_index = target_cell.nearest_index;
 		}
 	}
 

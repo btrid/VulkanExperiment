@@ -18,5 +18,5 @@ void main()
 	ivec2 current = ivec2(gl_GlobalInvocationID.xy);
 	D2JFACell cell = b_jfa[current.x + current.y*reso.x];
 
-	b_sdf[current.x + current.y*reso.x].x = cell.distance;
+	b_sdf[current.x + current.y*reso.x] = vec2(cell.distance, cell.e_distance);
 }

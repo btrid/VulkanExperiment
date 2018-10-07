@@ -27,9 +27,10 @@ void main()
 	uint power = packEmissive(albedo*LightPower);
 	b_light[getMemoryOrder(ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y))] = is_emissive ? power : 0;
 
-	b_jfa[tiled_1D_index].nearest_index = id;
+	b_jfa[tiled_1D_index].nearest_index = is_fragment ? id : ivec2(-1);
 	b_jfa[tiled_1D_index].distance = is_fragment ? 0. : 999999999999.;
-	b_jfa[tiled_1D_index].attr = is_fragment ? 1 : 0;
+	b_jfa[tiled_1D_index].e_nearest_index = is_emissive ? id : ivec2(-1);
+	b_jfa[tiled_1D_index].e_distance = is_emissive ? 0. : 999999999999.;
 
 	// fragment map
 	{

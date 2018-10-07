@@ -6,6 +6,7 @@
 #include "btrlib/Common.glsl"
 #include "btrlib/Math.glsl"
 
+#define RAY_TYPE_FLOAT
 #define USE_GI2D 0
 #define USE_GI2D_Radiosity 1
 #include "GI2D.glsl"

@@ -5,7 +5,6 @@
 #include "btrlib/Common.glsl"
 #include "btrlib/Math.glsl"
 
-#define RAY_TYPE_FLOAT
 #define USE_GI2D 0
 #define USE_GI2D_Radiosity 1
 #include "GI2D.glsl"
@@ -28,59 +27,78 @@ void main()
 	dir *= min(inv_dir.x, inv_dir.y);
 	ivec2 map_index = ivec2(pos);
 
+	u64vec2 map;
+	uint old_map_index = -1;
+
 	D2Segment seg;
 	seg.ray_index = ray_index;
-	seg.begin = 0.;
-	seg.march = 0.;
+	seg.begin = 0;
+	seg.march = 0;
 	seg.radiance = 0;
-	float distance = min(inv_dir.x, inv_dir.y)*ray.march;
-	float progress = 0.;
-
-	for(;progress < distance;)
+	for(int march_count = 1; march_count < ray.march; march_count++)
 	{
-		float d = b_sdf[map_index.x + map_index.y*reso.x].x;
 		{
-			if(d <= 0.1)
+			ivec2 cell = map_index>>3;
+			uint dindex = cell.x + cell.y*reso.z;
+			if(old_map_index != dindex)
+			{
+				map = b_fragment_map[dindex];
+				old_map_index = dindex;
+			}
+			ivec2 cell_sub = map_index%8;
+			bvec2 attr = notEqual((map & (1ul<<(cell_sub.x+cell_sub.y*8))), u64vec2(0));
+			if(attr.y)
+			{
+				seg.radiance += b_light[getMemoryOrder(map_index)];
+			}
+			else if(attr.x)
 			{
 				if(seg.march > 0)
 				{
-					int index = atomicAdd(b_segment_counter.w, 1);
-					if(index%1024==0){
-						atomicAdd(b_segment_counter.x, 1);
+					if(seg.radiance != 0)
+					{
+						int index = atomicAdd(b_segment_counter.w, 1);
+						if(index%1024==0){
+							atomicAdd(b_segment_counter.x, 1);
+						}
+						b_segment[index] = seg;
 					}
-					b_segment[index] = seg;
 				}
-				seg.begin = -1.;
-				seg.march = 0.;
-
-				d = 1.;
+				seg.begin = -1;
+				seg.march = 0;
+				seg.radiance = 0;
 			}
 			else
 			{
-				if(seg.begin <= 0.)
+				if(seg.begin == -1)
 				{
-					seg.begin = progress;
+					seg.begin = march_count;
 				}
-				seg.march += d;
+				else
+				{
+					seg.march++;
+				}
 			}
 
 		}
 		// march
 		{
 			// DDA
-			progress+=d;
-			pos = ray.origin + dir*progress;
+			pos = ray.origin + dir*march_count;
 			map_index = ivec2(pos);
 		}
 	}
 
 	if(seg.march > 0)
 	{
-		int index = atomicAdd(b_segment_counter.w, 1);
-		if(index%1024==0){
-			atomicAdd(b_segment_counter.x, 1);
+		if(seg.radiance != 0)
+		{
+			int index = atomicAdd(b_segment_counter.w, 1);
+			if(index%1024==0){
+				atomicAdd(b_segment_counter.x, 1);
+			}
+			b_segment[index] = seg;
 		}
-		b_segment[index] = seg;
 	}
 
 
