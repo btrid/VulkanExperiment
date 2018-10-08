@@ -25,7 +25,7 @@ void main()
 	vec2 inv_dir;
 	inv_dir.x = dir.x == 0. ? 99999999. : abs(1./dir.x);
 	inv_dir.y = dir.y == 0. ? 99999999. : abs(1./dir.y);
-	dir *= min(inv_dir.x, inv_dir.y) * (1<<hierarchy);
+//	dir *= min(inv_dir.x, inv_dir.y);
 
 	vec2 pos = ray.origin + photon.begin*dir;
 	ivec2 map_index = ivec2(pos);
@@ -33,7 +33,8 @@ void main()
 	uint skip = u_gi2d_scene.m_skip;
 	uint radiance_offset = u_gi2d_scene.m_radiance_offset*u_gi2d_scene.m_frame;
 
-	for(int march_count = 1; march_count < photon.march; march_count++)
+	float progress = 0.;
+	for(;progress < photon.march;)
 	{
 		// lighting
 		{
@@ -43,7 +44,8 @@ void main()
 		// march
 		{
 			// DDA
-			pos = ray.origin + (photon.begin+march_count)*dir;
+			progress += min(inv_dir.x, inv_dir.y);
+			pos = ray.origin + (photon.begin+progress)*dir;
 			map_index = ivec2(pos);
 		}
 	}

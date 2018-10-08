@@ -34,9 +34,7 @@ void main()
 	uint old_map_index = -1;
 
 	seg.radiance = 0;
-//	float distance = min(inv_dir.x, inv_dir.y)*seg.march;
 	float progress = 0.;
-
 	for(;progress < seg.march;)
 	{
 		float d = b_sdf[map_index.x + map_index.y*reso.x].y;
@@ -44,7 +42,7 @@ void main()
 			if(d <= 0.1)
 			{
 				seg.radiance += b_light[getMemoryOrder(map_index)];
-				d = 1.;
+				d = min(inv_dir.x, inv_dir.y);
 			}
 		}
 

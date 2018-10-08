@@ -33,10 +33,9 @@ void main()
 	seg.begin = 0.;
 	seg.march = 0.;
 	seg.radiance = 0;
-	float distance = min(inv_dir.x, inv_dir.y)*ray.march;
 	float progress = 0.;
 
-	for(;progress < distance;)
+	for(;progress < ray.march;)
 	{
 		float d = b_sdf[map_index.x + map_index.y*reso.x].x;
 		{
@@ -53,7 +52,7 @@ void main()
 				seg.begin = -1.;
 				seg.march = 0.;
 
-				d = 1.;
+				d = min(inv_dir.x, inv_dir.y);
 			}
 			else
 			{

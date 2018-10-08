@@ -123,13 +123,14 @@ struct GI2DRadiosityInfo
 	uint a3;
 };
 
+#define RAY_TYPE_FLOAT
+#ifdef RAY_TYPE_FLOAT
 struct D2Ray
 {
 	vec2 origin;
 	float angle;
-	uint march;
+	float march;
 };
-#ifdef RAY_TYPE_FLOAT
 struct D2Segment
 {
 	uint ray_index;
@@ -146,6 +147,12 @@ struct D2Photon
 	uint radiance;
 };
 #else
+struct D2Ray
+{
+	vec2 origin;
+	float angle;
+	uint march;
+};
 struct D2Segment
 {
 	uint ray_index;
