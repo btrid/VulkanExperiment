@@ -149,7 +149,7 @@ struct GI2DMakeHierarchy
 		}
 
 		// make sdf
-//		if(0)
+		if(0)
 		{
 			{
 				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeJFA].get());

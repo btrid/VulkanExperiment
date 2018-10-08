@@ -542,7 +542,7 @@ struct GI2DRadiosity
 			executeSetup(cmd);
 		}
 
-//		if (0)
+		if (0)
 		{
 			// bounce‘Î‰ž—\’è”Å
 			_execute2(cmd);
