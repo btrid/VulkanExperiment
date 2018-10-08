@@ -154,8 +154,8 @@ struct GI2DMakeHierarchy
 			{
 				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeJFA].get());
 				auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth, m_gi2d_context->RenderHeight, 1), uvec3(32, 32, 1));
-//				for (int distance = m_gi2d_context->RenderWidth >> 1; distance != 0; distance >>= 1)
-				for (int distance = 1; distance < m_gi2d_context->RenderWidth; distance <<= 1)
+				for (int distance = m_gi2d_context->RenderWidth >> 1; distance != 0; distance >>= 1)
+//				for (int distance = 1; distance < m_gi2d_context->RenderWidth; distance <<= 1)
 				{
 					vk::BufferMemoryBarrier to_read[] = {
 						m_gi2d_context->b_jfa.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),

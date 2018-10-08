@@ -542,19 +542,20 @@ struct GI2DRadiosity
 			executeSetup(cmd);
 		}
 
+//		if (0)
 		{
-			{
-				// データクリア
-				cmd.updateBuffer<ivec4>(b_segment_counter.getInfo().buffer, b_segment_counter.getInfo().offset, ivec4(0, 1, 1, 0));
-				cmd.updateBuffer<ivec4>(b_photon_counter.getInfo().buffer, b_photon_counter.getInfo().offset, ivec4(0, 1, 1, 0));
-			}
+			// bounce対応予定版
+			_execute2(cmd);
+			return;
+		}
 
-//			if (0)
-			{
-				// bounce対応予定版
-				_execute2(cmd);
-				return;
-			}
+		{
+			// データクリア
+			cmd.updateBuffer<ivec4>(b_segment_counter.getInfo().buffer, b_segment_counter.getInfo().offset, ivec4(0, 1, 1, 0));
+			cmd.updateBuffer<ivec4>(b_photon_counter.getInfo().buffer, b_photon_counter.getInfo().offset, ivec4(0, 1, 1, 0));
+		}
+		{
+
 			{
 				// レイの範囲の生成
 				vk::BufferMemoryBarrier to_read[] = {
@@ -672,11 +673,17 @@ struct GI2DRadiosity
 	void _execute2(vk::CommandBuffer &cmd)
 	{
 		{
+			// データクリア
+			cmd.updateBuffer<ivec4>(b_segment_counter.getInfo().buffer, b_segment_counter.getInfo().offset, ivec4(0, 1, 1, 0));
+			cmd.updateBuffer<ivec4>(b_photon_counter.getInfo().buffer, b_photon_counter.getInfo().offset, ivec4(0, 1, 1, 0));
+		}
+		{
 			{
 				// レイの範囲の生成
 				vk::BufferMemoryBarrier to_read[] = {
 					m_gi2d_context->b_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 					m_gi2d_context->b_light.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+					m_gi2d_context->b_sdf.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 					b_ray_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
 					b_segment_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 				};
