@@ -34,12 +34,14 @@ rem %exe% %include% %option% -o %output%/Radiosity_CalcRadiance.comp.spv Radiosi
 %exe% %include% %option% -o %output%/Radiosity_RaySetup.comp.spv Radiosity_RaySetup.comp
 %exe% %include% %option% -o %output%/Radiosity_RaySort.comp.spv Radiosity_RaySort.comp
 %exe% %include% %option% -o %output%/Radiosity_RayMarch.comp.spv Radiosity_RayMarch.comp
+%exe% %include% %option% -o %output%/Radiosity_RayMarch_Space.comp.spv Radiosity_RayMarch_Space.comp
+%exe% %include% %option% -o %output%/Radiosity_RayMarch_Light.comp.spv Radiosity_RayMarch_Light.comp
 %exe% %include% %option% -o %output%/Radiosity_SegmentSort.comp.spv Radiosity_SegmentSort.comp
 %exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity.comp
 
-rem バウンス対応版（重い）
-%exe% %include% %option% -o %output%/Radiosity_RayMarch_Space.comp.spv Radiosity_RayMarch_Space.comp
-%exe% %include% %option% -o %output%/Radiosity_RayMarch_Light.comp.spv Radiosity_RayMarch_Light.comp
+rem SDF版（重い）
+%exe% %include% %option% -o %output%/Radiosity_RayMarch_Space_SDF.comp.spv Radiosity_RayMarch_Space_SDF.comp
+%exe% %include% %option% -o %output%/Radiosity_RayMarch_Light_SDF.comp.spv Radiosity_RayMarch_Light_SDF.comp
 %exe% %include% %option% -o %output%/Radiosity2.comp.spv Radiosity2.comp
 
 %exe% %include% %option% -o %output%/GI2D_DebugMakeLight.comp.spv GI2D_DebugMakeLight.comp

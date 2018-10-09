@@ -661,9 +661,9 @@ int main()
 			ivec2 cell = map_index >> 3;
 			ivec2 cell_sub = map_index % 8;
 
-			ivec2 cell_origin = ivec2(greaterThanEqual(dir, vec2(0.))) * ivec2(8);
+			vec2 cell_origin = vec2(greaterThanEqual(dir, vec2(0.))) * vec2(8);
 			vec2 pos_sub = vec2(pos - vec2(cell << 3));
-			vec2 tp = vec2(abs(vec2(cell_origin) - pos_sub) + 0.5f) / abs(dir);
+			vec2 tp = vec2(abs(cell_origin - pos_sub) + 0.5f) / abs(dir);
 			vec2 delta = dir*vec2(tp);
 			bool axis = tp.x < tp.y;
 			float skip = ((tp[axis ? 0 : 1]));

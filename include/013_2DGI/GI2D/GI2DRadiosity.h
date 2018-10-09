@@ -36,8 +36,8 @@ struct GI2DRadiosity
 		Shader_RayMarch,
 		Shader_SegmentSort,
 
-		Shader_RayMarch_Space,
-		Shader_RayMarch_Light,
+		Shader_RayMarch_Space_SDF,
+		Shader_RayMarch_Light_SDF,
 		Shader_Radiosity2,
 
 		Shader_Num,
@@ -64,8 +64,8 @@ struct GI2DRadiosity
 		Pipeline_RayMarch,
 		Pipeline_SegmentSort,
 
-		Pipeline_RayMarch_Space,
-		Pipeline_RayMarch_Light,
+		Pipeline_RayMarch_Space_SDF,
+		Pipeline_RayMarch_Light_SDF,
 		Pipeline_Radiosity2,
 		Pipeline_Num,
 	};
@@ -207,8 +207,8 @@ struct GI2DRadiosity
 				"Radiosity_RayMarch.comp.spv",
 				"Radiosity_SegmentSort.comp.spv",
 
-				"Radiosity_RayMarch_Space.comp.spv",
-				"Radiosity_RayMarch_Light.comp.spv",
+				"Radiosity_RayMarch_Space_SDF.comp.spv",
+				"Radiosity_RayMarch_Light_SDF.comp.spv",
 				"Radiosity2.comp.spv",
 			};
 			static_assert(array_length(name) == Shader_Num, "not equal shader num");
@@ -271,10 +271,10 @@ struct GI2DRadiosity
 			shader_info[9].setModule(m_shader[Shader_SegmentSort].get());
 			shader_info[9].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[9].setPName("main");
-			shader_info[10].setModule(m_shader[Shader_RayMarch_Space].get());
+			shader_info[10].setModule(m_shader[Shader_RayMarch_Space_SDF].get());
 			shader_info[10].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[10].setPName("main");
-			shader_info[11].setModule(m_shader[Shader_RayMarch_Light].get());
+			shader_info[11].setModule(m_shader[Shader_RayMarch_Light_SDF].get());
 			shader_info[11].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[11].setPName("main");
 			shader_info[12].setModule(m_shader[Shader_Radiosity2].get());
@@ -333,8 +333,8 @@ struct GI2DRadiosity
 			m_pipeline[Pipeline_RaySort] = std::move(compute_pipeline[7]);
 			m_pipeline[Pipeline_RayMarch] = std::move(compute_pipeline[8]);
 			m_pipeline[Pipeline_SegmentSort] = std::move(compute_pipeline[9]);
-			m_pipeline[Pipeline_RayMarch_Space] = std::move(compute_pipeline[10]);
-			m_pipeline[Pipeline_RayMarch_Light] = std::move(compute_pipeline[11]);
+			m_pipeline[Pipeline_RayMarch_Space_SDF] = std::move(compute_pipeline[10]);
+			m_pipeline[Pipeline_RayMarch_Light_SDF] = std::move(compute_pipeline[11]);
 			m_pipeline[Pipeline_Radiosity2] = std::move(compute_pipeline[12]);
 		}
 
@@ -691,7 +691,7 @@ struct GI2DRadiosity
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader | vk::PipelineStageFlagBits::eDrawIndirect, {},
 					0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
-				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RayMarch_Space].get());
+				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RayMarch_Space_SDF].get());
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
 				cmd.dispatchIndirect(b_ray_counter.getInfo().buffer, b_ray_counter.getInfo().offset + sizeof(ivec4)*m_gi2d_context->m_gi2d_scene.m_frame);
@@ -706,7 +706,7 @@ struct GI2DRadiosity
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader | vk::PipelineStageFlagBits::eDrawIndirect, {},
 					0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
-				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RayMarch_Light].get());
+				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RayMarch_Light_SDF].get());
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
 				cmd.dispatchIndirect(b_segment_counter.getInfo().buffer, b_segment_counter.getInfo().offset);

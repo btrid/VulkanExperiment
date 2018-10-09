@@ -20,13 +20,12 @@ void main()
 
 	float a = 6.283 / gl_WorkGroupSize.x;
 	float angle = a * gl_LocalInvocationID.x;
-	angle += a*0.25*gl_WorkGroupID.z;
+	angle += a*(0.25*gl_WorkGroupID.z + 0.125);// 0除算回避の0.125
 
 	vec2 dir = rotate(angle);
-	vec2 inv_dir;
-	inv_dir.x = dir.x == 0. ? 999999. : abs(1./dir.x);
-	inv_dir.y = dir.y == 0. ? 999999. : abs(1./dir.y);
+	vec2 inv_dir = abs(1./dir);
 	dir *= min(inv_dir.x, inv_dir.y);
+
 	vec2 segment = dir * reso.xy;
 	vec2 inv_segment;
 	inv_segment.x = segment.x == 0. ? 0. : abs(1. / segment.x);

@@ -21,9 +21,7 @@ void main()
 	D2Ray ray = b_ray[ray_index];
 	vec2 pos = ray.origin;
 	vec2 dir = rotate(ray.angle);
-	vec2 inv_dir;
-	inv_dir.x = dir.x == 0. ? 99999999. : abs(1./dir.x);
-	inv_dir.y = dir.y == 0. ? 99999999. : abs(1./dir.y);
+	vec2 inv_dir = abs(1./dir);
 	dir *= min(inv_dir.x, inv_dir.y);
 	ivec2 map_index = ivec2(pos);
 
@@ -51,14 +49,11 @@ void main()
 			{
 				if(seg.march > 0)
 				{
-					if(seg.radiance != 0)
-					{
-						int index = atomicAdd(b_segment_counter.w, 1);
-						if(index%1024==0){
-							atomicAdd(b_segment_counter.x, 1);
-						}
-						b_segment[index] = seg;
+					int index = atomicAdd(b_segment_counter.w, 1);
+					if(index%1024==0){
+						atomicAdd(b_segment_counter.x, 1);
 					}
+					b_segment[index] = seg;
 				}
 				seg.begin = -1;
 				seg.march = 0;
@@ -87,14 +82,11 @@ void main()
 
 	if(seg.march > 0)
 	{
-		if(seg.radiance != 0)
-		{
-			int index = atomicAdd(b_segment_counter.w, 1);
-			if(index%1024==0){
-				atomicAdd(b_segment_counter.x, 1);
-			}
-			b_segment[index] = seg;
+		int index = atomicAdd(b_segment_counter.w, 1);
+		if(index%1024==0){
+			atomicAdd(b_segment_counter.x, 1);
 		}
+		b_segment[index] = seg;
 	}
 
 
