@@ -93,6 +93,8 @@ struct GI2DContext
 		{
 			b_fragment = context->m_storage_memory.allocateMemory<Fragment>({ FragmentBufferSize, {} });
 			b_fragment_map = context->m_storage_memory.allocateMemory<u64vec2>({ FragmentBufferSize / 64, {} });
+			b_diffuse_map = context->m_storage_memory.allocateMemory<uint64_t>({ FragmentBufferSize / 64, {} });
+			b_emissive_map = context->m_storage_memory.allocateMemory<uint64_t>({ FragmentBufferSize / 64, {} });
 			b_light = context->m_storage_memory.allocateMemory<uint32_t>({ FragmentBufferSize, {} });
 			b_grid_counter = context->m_storage_memory.allocateMemory<int32_t>({ FragmentBufferSize,{} });
 			b_jfa = context->m_storage_memory.allocateMemory<D2JFACell>({ FragmentBufferSize,{} });
@@ -111,6 +113,8 @@ struct GI2DContext
 					vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(6, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(7, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(8, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(9, vk::DescriptorType::eStorageBuffer, 1, stage),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -139,6 +143,8 @@ struct GI2DContext
 					b_light.getInfo(),
 					b_jfa.getInfo(),
 					b_sdf.getInfo(),
+					b_diffuse_map.getInfo(),
+					b_emissive_map.getInfo(),
 				};
 
 				vk::WriteDescriptorSet write[] = {
@@ -204,6 +210,8 @@ struct GI2DContext
 	btr::BufferMemoryEx<GI2DScene> u_gi2d_scene;
 	btr::BufferMemoryEx<Fragment> b_fragment;
 	btr::BufferMemoryEx<u64vec2> b_fragment_map;
+	btr::BufferMemoryEx<uint64_t> b_diffuse_map;
+	btr::BufferMemoryEx<uint64_t> b_emissive_map;
 	btr::BufferMemoryEx<int32_t> b_grid_counter;
 	btr::BufferMemoryEx<uint32_t> b_light;
 	btr::BufferMemoryEx<D2JFACell> b_jfa;

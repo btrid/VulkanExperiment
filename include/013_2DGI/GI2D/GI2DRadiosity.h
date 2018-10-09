@@ -620,6 +620,7 @@ struct GI2DRadiosity
 			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth*m_gi2d_context->RenderHeight, 1, 1), uvec3(1024, 1, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 		}
+
 		// radiance
 		{
 

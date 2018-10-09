@@ -645,6 +645,41 @@ void raymarch()
 
 int main()
 {
+	
+	{
+		auto origin = vec2(80.f, 80.f);
+		auto pos = origin;
+		auto dir = normalize(vec2(-7.f, -3.f));
+		vec2 inv_dir;
+		inv_dir.x = dir.x == 0. ? 999999. : abs(1. / dir.x);
+		inv_dir.y = dir.y == 0. ? 999999. : abs(1. / dir.y);
+		dir *= glm::min(inv_dir.x, inv_dir.y);
+		float march_count = 0;
+		for (int i = 0; i < 100; i++)
+		{
+			ivec2 map_index = ivec2(pos);
+			ivec2 cell = map_index >> 3;
+			ivec2 cell_sub = map_index % 8;
+
+			ivec2 cell_origin = ivec2(greaterThanEqual(dir, vec2(0.))) * ivec2(8);
+			vec2 pos_sub = vec2(pos - vec2(cell << 3));
+			vec2 tp = vec2(abs(vec2(cell_origin) - pos_sub) + 0.5f) / abs(dir);
+			vec2 delta = dir*vec2(tp);
+			bool axis = tp.x < tp.y;
+			float skip = ((tp[axis ? 0 : 1]));
+			march_count += skip;
+			pos = origin + dir * march_count;
+			map_index = ivec2(pos);
+
+			printf("%3d =[%f, %f] [%5d, %5d]\n", i, pos.x, pos.y, map_index.x, map_index.y);
+
+//			vec2 tp = 0.5*(1 << hierarchy)*(1 << u_gi2d_scene.m_skip)*inv_dir;
+	//		//	vec2 tp = (vec2(u_gi2d_scene.m_frame%2, u_gi2d_scene.m_frame/2) *0.5 + 0.25)*inv_dir;
+		//	vec3 delta = vec3(inv_dir, 0.) * (1 << hierarchy) * (1 << u_gi2d_scene.m_skip);
+			//ivec3 next = ivec3(ivec2(greaterThanEqual(dir, vec2(0.))) * 2 - 1, 0)* (1 << hierarchy) * (1 << u_gi2d_scene.m_skip);
+
+		}
+	}
 	{
 		for (int i = 0; i < 256; i++)
 		{

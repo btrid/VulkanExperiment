@@ -53,7 +53,7 @@ layout(std140, set=USE_GI2D, binding=1) uniform GI2DSceneUniform {
 layout(std430, set=USE_GI2D, binding=2) restrict buffer FragmentBuffer {
 	Fragment b_fragment[];
 };
-layout(std430, set=USE_GI2D, binding=3) restrict buffer DiffuseMapBuffer {
+layout(std430, set=USE_GI2D, binding=3) restrict buffer FragmentMapBuffer {
 	u64vec2 b_fragment_map[];
 };
 layout(set=USE_GI2D, binding=4) restrict buffer GridCounter {
@@ -67,6 +67,12 @@ layout(set=USE_GI2D, binding=6, std430) restrict buffer JFABuffer {
 };
 layout(set=USE_GI2D, binding=7, std430) restrict buffer SDFBuffer {
 	vec2 b_sdf[];
+};
+layout(set=USE_GI2D, binding=8, std430) restrict buffer DiffuseMapBuffer {
+	uint64_t b_diffuse_map[];
+};
+layout(set=USE_GI2D, binding=9, std430) restrict buffer EmissiveMapBuffer {
+	uint64_t b_emissive_map[];
 };
 
 ivec2 frame_offset(){
