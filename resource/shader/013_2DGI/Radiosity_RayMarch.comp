@@ -44,7 +44,9 @@ void main()
 			uint dindex = cell.x + cell.y*reso.z;
 			if(old_map_index != dindex)
 			{
-				map = b_fragment_map[dindex];
+//				map = b_fragment_map[dindex];
+				map.x = b_diffuse_map[dindex];
+				map.y = b_emissive_map[dindex];
 				old_map_index = dindex;
 			}
 

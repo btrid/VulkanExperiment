@@ -1,0 +1,45 @@
+// セルをスキップしないレイトレ
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Common.glsl"
+#include "btrlib/Math.glsl"
+
+#define USE_GI2D 0
+#define USE_GI2D_Radiosity 1
+#include "GI2D.glsl"
+
+layout (local_size_x = 1024, local_size_y = 1) in;
+void main()
+{
+	if(gl_GlobalInvocationID.x >= b_segment_counter.w){ return; }
+
+	const int hierarchy = u_gi2d_scene.m_hierarchy;
+	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
+
+	D2Segment segment = b_segment[gl_GlobalInvocationID.x];
+	if(segment.radiance == 0){ return; }
+	D2Ray ray = b_ray[segment.ray_index];
+	vec2 dir = rotate(ray.angle);
+	vec2 inv_dir = abs(1./dir);
+	dir *= min(inv_dir.x, inv_dir.y);
+
+	{
+		vec4 pos = ray.origin.xyxy + vec4(segment.begin.xx, (segment.begin+segment.march).xx)*dir.xyxy;
+		ivec4 map_index = ivec4(pos);
+
+		atomicAdd(b_light[getMemoryOrder(map_index.xy)], segment.radiance);
+		atomicAdd(b_light[getMemoryOrder(map_index.zw)], segment.radiance);
+
+
+		ivec4 cell = map_index>>3;
+		ivec4 cell_sub = map_index%8;
+		uvec2 dindex = cell.xz + cell.yw*reso.z;
+
+		u64vec2 bit = u64vec2(1ul)<<(cell_sub.xy+cell_sub.yw*8);
+		atomicOr(b_emissive_map[dindex.x], bit.x);
+		atomicOr(b_emissive_map[dindex.y], bit.y);
+		
+	}
+}

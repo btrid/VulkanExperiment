@@ -21,8 +21,6 @@ rem %exe% %include% %option% -o ../binary\\DebugFragmentMap.comp.spv DebugFragme
 
 
 %exe% %include% %option% -o %output%/Radiosity_Clear.comp.spv Radiosity_Clear.comp
-rem %exe% %include% %option% -o %output%/Radiosity_MakeBounceMap.comp.spv Radiosity_MakeBounceMap.comp
-rem %exe% %include% %option% -o %output%/Radiosity_Bounce.comp.spv Radiosity_Bounce.comp
 
 rem %exe% %include% %option% -o %output%/Radiosity_Render.frag.spv Radiosity_Render.frag
  %exe% %include% %option% -o %output%/Radiosity_Render.frag.spv Radiosity_Render_2.frag
@@ -34,6 +32,9 @@ rem %exe% %include% %option% -o %output%/Radiosity_CalcRadiance.comp.spv Radiosi
 %exe% %include% %option% -o %output%/Radiosity_RaySetup.comp.spv Radiosity_RaySetup.comp
 %exe% %include% %option% -o %output%/Radiosity_RaySort.comp.spv Radiosity_RaySort.comp
 %exe% %include% %option% -o %output%/Radiosity_RayMarch.comp.spv Radiosity_RayMarch.comp
+%exe% %include% %option% -o %output%/Radiosity_RayHit.comp.spv Radiosity_RayHit.comp
+%exe% %include% %option% -o %output%/Radiosity_RayBounce.comp.spv Radiosity_RayBounce.comp
+
 %exe% %include% %option% -o %output%/Radiosity_RayMarch_Space.comp.spv Radiosity_RayMarch_Space.comp
 %exe% %include% %option% -o %output%/Radiosity_RayMarch_Light.comp.spv Radiosity_RayMarch_Light.comp
 %exe% %include% %option% -o %output%/Radiosity_SegmentSort.comp.spv Radiosity_SegmentSort.comp
