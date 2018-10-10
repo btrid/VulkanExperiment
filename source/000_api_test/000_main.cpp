@@ -647,9 +647,9 @@ int main()
 {
 	
 	{
-		auto origin = vec2(80.f, 80.f);
+		auto origin = vec2(84.f, 81.6f);
 		auto pos = origin;
-		auto dir = normalize(vec2(-7.f, -3.f));
+		auto dir = normalize(vec2(-0.2f, 3.f));
 		vec2 inv_dir;
 		inv_dir.x = dir.x == 0. ? 999999. : abs(1. / dir.x);
 		inv_dir.y = dir.y == 0. ? 999999. : abs(1. / dir.y);
@@ -663,10 +663,9 @@ int main()
 
 			vec2 cell_origin = vec2(greaterThanEqual(dir, vec2(0.))) * vec2(8);
 			vec2 pos_sub = vec2(pos - vec2(cell << 3));
-			vec2 tp = vec2(abs(cell_origin - pos_sub) + 0.5f) / abs(dir);
-			vec2 delta = dir*vec2(tp);
-			bool axis = tp.x < tp.y;
-			float skip = ((tp[axis ? 0 : 1]));
+			vec2 tp = vec2(abs(cell_origin - pos_sub)) / abs(dir);
+			int axis = tp.x < tp.y ? 0 : 1;
+			float skip = tp[axis] <= 0.0001f ? tp[1-axis] : tp[axis];
 			march_count += skip;
 			pos = origin + dir * march_count;
 			map_index = ivec2(pos);

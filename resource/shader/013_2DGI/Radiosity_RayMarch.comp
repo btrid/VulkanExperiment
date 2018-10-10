@@ -27,24 +27,37 @@ void main()
 
 	u64vec2 map;
 	uint old_map_index = -1;
+	vec2 cell_origin = vec2(greaterThanEqual(dir, vec2(0.))) * vec2(8.);
 
 	D2Segment seg;
 	seg.ray_index = ray_index;
 	seg.begin = 0;
 	seg.march = 0;
 	seg.radiance = 0;
-	for(float march_count = 1.; march_count < ray.march; )
+	for(float march_count = 0; march_count < ray.march; )
 	{
 		float skip = 1.;
 		{
 			ivec2 cell = map_index>>3;
+			ivec2 cell_sub = map_index%8;
 			uint dindex = cell.x + cell.y*reso.z;
 			if(old_map_index != dindex)
 			{
 				map = b_fragment_map[dindex];
 				old_map_index = dindex;
+
+				if(all(equal(map, u64vec2(0))))
+				{
+					vec2 pos_sub = vec2(pos - vec2(cell << 3));
+//					vec2 tp = vec2(abs(cell_origin - pos_sub)) / abs(dir);
+//					int axis = tp.x < tp.y ? 0 : 1;
+//					skip = tp[axis] <= 0.0001 ? tp[1-axis] : tp[axis];
+
+					vec2 tp = vec2(abs(cell_origin - pos_sub)+0.05) / abs(dir);
+					skip = min(tp.x, tp.y);
+				}
 			}
-			ivec2 cell_sub = map_index%8;
+
 			bvec2 attr = notEqual((map & (1ul<<(cell_sub.x+cell_sub.y*8))), u64vec2(0));
 			if(attr.y)
 			{
@@ -63,27 +76,20 @@ void main()
 						b_segment[index] = seg;
 					}
 				}
-				seg.begin = -1;
+				seg.begin = march_count;
 				seg.march = 0;
 				seg.radiance = 0;
 			}
-			else
+			else 
 			{
-				if(seg.begin == -1)
-				{
-					seg.begin = int(march_count);
-				}
-				else
-				{
-					seg.march++;
-				}
+				seg.march+=skip;
 			}
 
 		}
 		// march
 		{
 			// DDA
-			march_count+= skip;
+			march_count += skip;
 			pos = ray.origin + dir*march_count;
 			map_index = ivec2(pos);
 		}

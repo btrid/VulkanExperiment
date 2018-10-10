@@ -129,6 +129,7 @@ struct GI2DRadiosityInfo
 	uint a3;
 };
 
+#define RAY_TYPE_FLOAT
 #ifdef RAY_TYPE_FLOAT
 struct D2Ray
 {
