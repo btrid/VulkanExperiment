@@ -34,6 +34,8 @@ struct GI2DRadiosity
 		Shader_RaySetup,
 		Shader_RaySort,
 		Shader_RayMarch,
+		Shader_RayHit,
+		Shader_RayBounce,
 		Shader_SegmentSort,
 
 		Shader_RayMarch_Space_SDF,
@@ -62,6 +64,8 @@ struct GI2DRadiosity
 		Pipeline_RaySetup,
 		Pipeline_RaySort,
 		Pipeline_RayMarch,
+		Pipeline_RayHit,
+		Pipeline_RayBounce,
 		Pipeline_SegmentSort,
 
 		Pipeline_RayMarch_Space_SDF,
@@ -205,6 +209,8 @@ struct GI2DRadiosity
 				"Radiosity_RaySetup.comp.spv",
 				"Radiosity_RaySort.comp.spv",
 				"Radiosity_RayMarch.comp.spv",
+				"Radiosity_RayHit.comp.spv",
+				"Radiosity_RayBounce.comp.spv",
 				"Radiosity_SegmentSort.comp.spv",
 
 				"Radiosity_RayMarch_Space_SDF.comp.spv",
@@ -240,7 +246,7 @@ struct GI2DRadiosity
 
 		// pipeline
 		{
-			std::array<vk::PipelineShaderStageCreateInfo, 13> shader_info;
+			std::array<vk::PipelineShaderStageCreateInfo, 15> shader_info;
 			shader_info[0].setModule(m_shader[Shader_Radiosity].get());
 			shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[0].setPName("main");
@@ -268,18 +274,24 @@ struct GI2DRadiosity
 			shader_info[8].setModule(m_shader[Shader_RayMarch].get());
 			shader_info[8].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[8].setPName("main");
-			shader_info[9].setModule(m_shader[Shader_SegmentSort].get());
+			shader_info[9].setModule(m_shader[Shader_RayHit].get());
 			shader_info[9].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[9].setPName("main");
-			shader_info[10].setModule(m_shader[Shader_RayMarch_Space_SDF].get());
+			shader_info[10].setModule(m_shader[Shader_RayBounce].get());
 			shader_info[10].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[10].setPName("main");
-			shader_info[11].setModule(m_shader[Shader_RayMarch_Light_SDF].get());
+			shader_info[11].setModule(m_shader[Shader_SegmentSort].get());
 			shader_info[11].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[11].setPName("main");
-			shader_info[12].setModule(m_shader[Shader_Radiosity2].get());
+			shader_info[12].setModule(m_shader[Shader_RayMarch_Space_SDF].get());
 			shader_info[12].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[12].setPName("main");
+			shader_info[13].setModule(m_shader[Shader_RayMarch_Light_SDF].get());
+			shader_info[13].setStage(vk::ShaderStageFlagBits::eCompute);
+			shader_info[13].setPName("main");
+			shader_info[14].setModule(m_shader[Shader_Radiosity2].get());
+			shader_info[14].setStage(vk::ShaderStageFlagBits::eCompute);
+			shader_info[14].setPName("main");
 			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 			{
 				vk::ComputePipelineCreateInfo()
@@ -321,6 +333,12 @@ struct GI2DRadiosity
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[12])
 				.setLayout(m_pipeline_layout[PipelineLayout_Radiosity].get()),
+				vk::ComputePipelineCreateInfo()
+				.setStage(shader_info[13])
+				.setLayout(m_pipeline_layout[PipelineLayout_Radiosity].get()),
+				vk::ComputePipelineCreateInfo()
+				.setStage(shader_info[14])
+				.setLayout(m_pipeline_layout[PipelineLayout_Radiosity].get()),
 			};
 			auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
 			m_pipeline[Pipeline_Radiosity] = std::move(compute_pipeline[0]);
@@ -332,10 +350,12 @@ struct GI2DRadiosity
 			m_pipeline[Pipeline_RaySetup] = std::move(compute_pipeline[6]);
 			m_pipeline[Pipeline_RaySort] = std::move(compute_pipeline[7]);
 			m_pipeline[Pipeline_RayMarch] = std::move(compute_pipeline[8]);
-			m_pipeline[Pipeline_SegmentSort] = std::move(compute_pipeline[9]);
-			m_pipeline[Pipeline_RayMarch_Space_SDF] = std::move(compute_pipeline[10]);
-			m_pipeline[Pipeline_RayMarch_Light_SDF] = std::move(compute_pipeline[11]);
-			m_pipeline[Pipeline_Radiosity2] = std::move(compute_pipeline[12]);
+			m_pipeline[Pipeline_RayHit] = std::move(compute_pipeline[9]);
+			m_pipeline[Pipeline_RayBounce] = std::move(compute_pipeline[10]);
+			m_pipeline[Pipeline_SegmentSort] = std::move(compute_pipeline[11]);
+			m_pipeline[Pipeline_RayMarch_Space_SDF] = std::move(compute_pipeline[12]);
+			m_pipeline[Pipeline_RayMarch_Light_SDF] = std::move(compute_pipeline[13]);
+			m_pipeline[Pipeline_Radiosity2] = std::move(compute_pipeline[14]);
 		}
 
 		// レンダーパス
@@ -621,12 +641,58 @@ struct GI2DRadiosity
 			cmd.dispatch(num.x, num.y, num.z);
 		}
 
+		// bounce
+		{
+
+			{
+				vk::BufferMemoryBarrier to_read[] = {
+					b_segment_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader | vk::PipelineStageFlagBits::eDrawIndirect, {},
+					0, nullptr, array_length(to_read), to_read, 0, nullptr);
+			}
+
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
+			for (int i = 0; i<1; i++)
+			{
+
+				{
+					vk::BufferMemoryBarrier to_read[] = {
+						b_segment.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+						m_gi2d_context->b_light.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+					};
+					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+						0, nullptr, array_length(to_read), to_read, 0, nullptr);
+
+
+					cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RayHit].get());
+					cmd.dispatchIndirect(b_segment_counter.getInfo().buffer, b_segment_counter.getInfo().offset);
+				}
+
+				{
+					vk::BufferMemoryBarrier to_read[] = {
+						m_gi2d_context->b_light.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+						b_segment.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite),
+					};
+					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+						0, nullptr, array_length(to_read), to_read, 0, nullptr);
+
+					cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RayBounce].get());
+					cmd.dispatchIndirect(b_segment_counter.getInfo().buffer, b_segment_counter.getInfo().offset);
+				}
+
+
+			}
+
+		}
+
 		// radiance
 		{
 
 			vk::BufferMemoryBarrier to_read[] = {
 				b_radiance.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderWrite | vk::AccessFlagBits::eShaderRead),
-				b_segment_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
+				b_segment.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead| vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader|vk::PipelineStageFlagBits::eDrawIndirect, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);

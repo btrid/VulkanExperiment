@@ -59,7 +59,7 @@ void main()
 			{
 				if(seg.march > 1.)
 				{
-					if(seg.radiance != 0)
+//					if(seg.radiance != 0)
 					{
 						int index = atomicAdd(b_segment_counter.w, 1);
 						if(index%1024==0){
@@ -95,7 +95,7 @@ void main()
 
 	if(seg.march > 1.)
 	{
-		if(seg.radiance != 0)
+//		if(seg.radiance != 0)
 		{
 			int index = atomicAdd(b_segment_counter.w, 1);
 			if(index%1024==0){

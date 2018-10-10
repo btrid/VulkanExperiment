@@ -10,7 +10,7 @@
 #include "GI2D.glsl"
 
 
-layout (local_size_x = 128*Ray_Density, local_size_y = 1) in;
+layout (local_size_x = 1024, local_size_y = 1) in;
 void main()
 {
 	if(gl_GlobalInvocationID.x >= b_segment_counter.w){ return; }
@@ -33,7 +33,7 @@ void main()
 		ivec4 cell_sub = map_index%8;
 		uvec2 dindex = cell.xz + cell.yw*reso.z;
 
-		u64vec2 bit = u64vec2(1ul)<<(cell_sub.xy+cell_sub.yw*8);
+		u64vec2 bit = u64vec2(1ul)<<(cell_sub.xz+cell_sub.yw*8);
 		bvec2 attr = notEqual(u64vec2(b_emissive_map[dindex.x], b_emissive_map[dindex.y]) & bit, u64vec2(0));
 		if(attr.x)
 		{
