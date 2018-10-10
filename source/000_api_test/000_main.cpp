@@ -647,14 +647,15 @@ int main()
 {
 	
 	{
-		auto origin = vec2(84.f, 81.6f);
+		auto origin = vec2(84.123f, 8.f);
 		auto pos = origin;
-		auto dir = normalize(vec2(-0.2f, 3.f));
+		auto dir = normalize(vec2(-0.247f, 2.1f));
 		vec2 inv_dir;
 		inv_dir.x = dir.x == 0. ? 999999. : abs(1. / dir.x);
 		inv_dir.y = dir.y == 0. ? 999999. : abs(1. / dir.y);
 		dir *= glm::min(inv_dir.x, inv_dir.y);
-		float march_count = 0;
+		int axis = inv_dir.x < inv_dir.y ? 0 : 1;
+		int march_count = 0;
 		for (int i = 0; i < 100; i++)
 		{
 			ivec2 map_index = ivec2(pos);
@@ -664,9 +665,9 @@ int main()
 			vec2 cell_origin = vec2(greaterThanEqual(dir, vec2(0.))) * vec2(8);
 			vec2 pos_sub = vec2(pos - vec2(cell << 3));
 			vec2 tp = vec2(abs(cell_origin - pos_sub)) / abs(dir);
-			int axis = tp.x < tp.y ? 0 : 1;
-			float skip = tp[axis] <= 0.0001f ? tp[1-axis] : tp[axis];
-			march_count += skip;
+			int _axis = tp.x < tp.y ? 0 : 1;
+			float skip = tp[_axis];
+			march_count += (axis == _axis) ? ((skip) + 0.5f) : (ceil(skip)+0.5f);
 			pos = origin + dir * march_count;
 			map_index = ivec2(pos);
 

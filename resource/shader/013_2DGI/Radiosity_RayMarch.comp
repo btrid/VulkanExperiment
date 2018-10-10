@@ -34,7 +34,8 @@ void main()
 	seg.begin = 0;
 	seg.march = 0;
 	seg.radiance = 0;
-	for(float march_count = 0; march_count < ray.march; )
+	float march_count = 0.;
+	for(; march_count < ray.march; )
 	{
 		float skip = 1.;
 		{
@@ -45,17 +46,6 @@ void main()
 			{
 				map = b_fragment_map[dindex];
 				old_map_index = dindex;
-
-				if(all(equal(map, u64vec2(0))))
-				{
-					vec2 pos_sub = vec2(pos - vec2(cell << 3));
-//					vec2 tp = vec2(abs(cell_origin - pos_sub)) / abs(dir);
-//					int axis = tp.x < tp.y ? 0 : 1;
-//					skip = tp[axis] <= 0.0001 ? tp[1-axis] : tp[axis];
-
-					vec2 tp = vec2(abs(cell_origin - pos_sub)+0.05) / abs(dir);
-					skip = min(tp.x, tp.y);
-				}
 			}
 
 			bvec2 attr = notEqual((map & (1ul<<(cell_sub.x+cell_sub.y*8))), u64vec2(0));
@@ -65,7 +55,7 @@ void main()
 			}
 			else if(attr.x)
 			{
-				if(seg.march > 0)
+				if(seg.march > 1.)
 				{
 					if(seg.radiance != 0)
 					{
@@ -82,6 +72,12 @@ void main()
 			}
 			else 
 			{
+				if(all(equal(map, u64vec2(0))))
+				{
+					vec2 pos_sub = vec2(pos - vec2(cell << 3));
+					vec2 tp = vec2(abs(cell_origin - pos_sub)+0.5) / abs(dir);
+					skip = min(tp.x, tp.y);
+				}
 				seg.march+=skip;
 			}
 
@@ -95,7 +91,7 @@ void main()
 		}
 	}
 
-	if(seg.march > 0)
+	if(seg.march > 1.)
 	{
 		if(seg.radiance != 0)
 		{
@@ -103,6 +99,8 @@ void main()
 			if(index%1024==0){
 				atomicAdd(b_segment_counter.x, 1);
 			}
+			// 行きすぎたら戻す
+			seg.march -= march_count-ray.march;
 			b_segment[index] = seg;
 		}
 	}
