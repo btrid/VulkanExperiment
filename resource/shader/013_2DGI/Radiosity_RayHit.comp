@@ -33,6 +33,7 @@ void main()
 		atomicAdd(b_light[getMemoryOrder(map_index.zw)], segment.radiance);
 
 
+#if 1
 		ivec4 cell = map_index>>3;
 		ivec4 cell_sub = map_index%8;
 		uvec2 dindex = cell.xz + cell.yw*reso.z;
@@ -40,6 +41,7 @@ void main()
 		u64vec2 bit = u64vec2(1ul)<<(cell_sub.xz+cell_sub.yw*8);
 		atomicOr(b_emissive_map[dindex.x], bit.x);
 		atomicOr(b_emissive_map[dindex.y], bit.y);
+#endif
 		
 	}
 }
