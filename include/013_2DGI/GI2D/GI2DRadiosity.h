@@ -627,7 +627,6 @@ struct GI2DRadiosity
 			// データクリア
 			vk::BufferMemoryBarrier to_read[] = {
 				b_radiance.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderWrite),
-				b_bounce_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderWrite),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
@@ -781,7 +780,6 @@ struct GI2DRadiosity
 					// データクリア
 					vk::BufferMemoryBarrier to_read[] = {
 						b_radiance.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderWrite),
-						b_bounce_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderWrite),
 					};
 					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 						0, nullptr, array_length(to_read), to_read, 0, nullptr);
