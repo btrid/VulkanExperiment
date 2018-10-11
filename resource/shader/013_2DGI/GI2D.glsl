@@ -193,39 +193,10 @@ layout(set=USE_GI2D_Radiosity, binding=4, std430) restrict buffer SegmentBuffer 
 layout(set=USE_GI2D_Radiosity, binding=5) restrict buffer SegmentCounter {
 	ivec4 b_segment_counter;
 };
-layout(set=USE_GI2D_Radiosity, binding=6, std430) restrict buffer PhotonBuffer {
-	D2Photon b_photon[];
-};
-layout(set=USE_GI2D_Radiosity, binding=7) restrict buffer PhotonCounter {
-	ivec4 b_photon_counter;
-};
 
 #define ActiveRayAllNum() (b_ray_counter[4].x)
 #define GetRayOffset(_i) ((_i)==0?0:b_ray_counter[4][(_i)])
 
-#endif
-
-#ifdef USE_GI2D_Radiosity2
-
-layout(set=USE_GI2D_Radiosity2, binding=0) restrict buffer RadianceMapBuffer {
-	int64_t b_radiance[];
-};
-layout(set=USE_GI2D_Radiosity2, binding=1) restrict buffer BounceMapBuffer {
-	uint64_t b_bounce_map[];
-};
-
-int64_t packEmissive(in vec3 rgb)
-{
-	i64vec3 irgb = i64vec3(rgb*denominator*(1.+1./denominator*0.5));
-	irgb <<= i64vec3(40, 20, 0);
-	return irgb.x | irgb.y | irgb.z;
-}
-vec3 unpackEmissive(in int64_t irgb)
-{
-//	vec3 rgb = vec3((uvec3(irgb) >> uvec3(21, 10, 0)) & ((uvec3(1)<<uvec3(11, 11, 10))-1));
-	vec3 rgb = vec3((uvec3(irgb) >> u64vec3(40, 20, 0)) & ((u64vec3(1)<<u64vec3(20, 20, 20))-1));
-	return rgb / denominator;
-}
 #endif
 
 uint getMemoryOrder(in uvec2 xy)
