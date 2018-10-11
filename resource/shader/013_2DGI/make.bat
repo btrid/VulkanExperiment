@@ -22,8 +22,7 @@ rem %exe% %include% %option% -o ../binary\\DebugFragmentMap.comp.spv DebugFragme
 
 %exe% %include% %option% -o %output%/Radiosity_Clear.comp.spv Radiosity_Clear.comp
 
-rem %exe% %include% %option% -o %output%/Radiosity_Render.frag.spv Radiosity_Render.frag
- %exe% %include% %option% -o %output%/Radiosity_Render.frag.spv Radiosity_Render_2.frag
+%exe% %include% %option% -o %output%/Radiosity_Render.frag.spv Radiosity_Render.frag
 %exe% %include% %option% -o %output%/Radiosity_Render.vert.spv Radiosity_Render.vert
 
 rem %exe% %include% %option% -o %output%/Radiosity_CalcRadiance.comp.spv Radiosity_CalcRadiance.comp

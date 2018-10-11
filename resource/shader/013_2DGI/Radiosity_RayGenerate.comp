@@ -9,8 +9,8 @@
 #define USE_GI2D_Radiosity 1
 #include "GI2D.glsl"
 
-
-layout (local_size_x=127, local_size_y=4) in;
+#define RAY_PER_PIXEL (127)
+layout (local_size_x=RAY_PER_PIXEL, local_size_y=4) in;
 void main()
 {
 	if(ActiveRayAllNum() >= u_radiosity_info.ray_num_max){ return; }
