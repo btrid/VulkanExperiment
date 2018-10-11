@@ -116,7 +116,6 @@ struct GI2DRadiosity
 
 			uint32_t size = m_gi2d_context->RenderWidth * m_gi2d_context->RenderHeight;
 			b_radiance = m_context->m_storage_memory.allocateMemory<uint32_t>({ size * 4,{} });
-			b_bounce_map = m_context->m_storage_memory.allocateMemory<uint64_t>({ size/64,{} });
 			b_ray_counter = m_context->m_storage_memory.allocateMemory<ivec4>({ Frame+1,{} });
 			b_segment_counter = m_context->m_storage_memory.allocateMemory<ivec4>({ 1,{} });
 			b_photon_counter = m_context->m_storage_memory.allocateMemory<ivec4>({ 1,{} });
@@ -163,7 +162,6 @@ struct GI2DRadiosity
 				};
 				vk::DescriptorBufferInfo storages[] = {
 					b_radiance.getInfo(),
-					b_bounce_map.getInfo(),
 					b_ray.getInfo(),
 					b_ray_counter.getInfo(),
 					b_segment.getInfo(),
@@ -682,7 +680,6 @@ struct GI2DRadiosity
 					cmd.dispatchIndirect(b_segment_counter.getInfo().buffer, b_segment_counter.getInfo().offset);
 				}
 
-
 			}
 
 		}
@@ -853,7 +850,6 @@ struct GI2DRadiosity
 
 	btr::BufferMemoryEx<GI2DRadiosityInfo> u_radiosity_info;
 	btr::BufferMemoryEx<uint32_t> b_radiance;
-	btr::BufferMemoryEx<uint64_t> b_bounce_map;
 	btr::BufferMemoryEx<D2Ray> b_ray;
 	btr::BufferMemoryEx<ivec4> b_ray_counter;
 	btr::BufferMemoryEx<D2Segment> b_segment;

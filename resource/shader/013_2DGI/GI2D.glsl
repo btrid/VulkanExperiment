@@ -181,25 +181,22 @@ layout(set=USE_GI2D_Radiosity, binding=0, std140) uniform GI2DGI2DRadiosityInfoU
 layout(set=USE_GI2D_Radiosity, binding=1) restrict buffer RadianceMapBuffer {
 	uint b_radiance[];
 };
-layout(set=USE_GI2D_Radiosity, binding=2) restrict buffer BounceMapBuffer {
-	uint64_t b_bounce_map[];
-};
-layout(set=USE_GI2D_Radiosity, binding=3, std430) restrict buffer RayBuffer {
+layout(set=USE_GI2D_Radiosity, binding=2, std430) restrict buffer RayBuffer {
 	D2Ray b_ray[];
 };
-layout(set=USE_GI2D_Radiosity, binding=4) restrict buffer RayCounter {
+layout(set=USE_GI2D_Radiosity, binding=3) restrict buffer RayCounter {
 	ivec4 b_ray_counter[];
 };
-layout(set=USE_GI2D_Radiosity, binding=5, std430) restrict buffer SegmentBuffer {
+layout(set=USE_GI2D_Radiosity, binding=4, std430) restrict buffer SegmentBuffer {
 	D2Segment b_segment[];
 };
-layout(set=USE_GI2D_Radiosity, binding=6) restrict buffer SegmentCounter {
+layout(set=USE_GI2D_Radiosity, binding=5) restrict buffer SegmentCounter {
 	ivec4 b_segment_counter;
 };
-layout(set=USE_GI2D_Radiosity, binding=7, std430) restrict buffer PhotonBuffer {
+layout(set=USE_GI2D_Radiosity, binding=6, std430) restrict buffer PhotonBuffer {
 	D2Photon b_photon[];
 };
-layout(set=USE_GI2D_Radiosity, binding=8) restrict buffer PhotonCounter {
+layout(set=USE_GI2D_Radiosity, binding=7) restrict buffer PhotonCounter {
 	ivec4 b_photon_counter;
 };
 
