@@ -145,13 +145,7 @@ struct D2Segment
 	uint radiance;
 };
 
-struct D2Photon
-{
-	uint ray_index;
-	float begin;
-	float march;
-	uint radiance;
-};
+
 #else
 struct D2Ray
 {
@@ -167,13 +161,6 @@ struct D2Segment
 	uint radiance;
 };
 
-struct D2Photon
-{
-	uint ray_index;
-	uint begin;
-	uint march;
-	uint radiance;
-};
 #endif
 layout(set=USE_GI2D_Radiosity, binding=0, std140) uniform GI2DGI2DRadiosityInfoUniform {
 	GI2DRadiosityInfo u_radiosity_info;

@@ -35,15 +35,7 @@ rem %exe% %include% %option% -o %output%/Radiosity_CalcRadiance.comp.spv Radiosi
 %exe% %include% %option% -o %output%/Radiosity_RayHit.comp.spv Radiosity_RayHit.comp
 %exe% %include% %option% -o %output%/Radiosity_RayBounce.comp.spv Radiosity_RayBounce.comp
 
-%exe% %include% %option% -o %output%/Radiosity_RayMarch_Space.comp.spv Radiosity_RayMarch_Space.comp
-%exe% %include% %option% -o %output%/Radiosity_RayMarch_Light.comp.spv Radiosity_RayMarch_Light.comp
-%exe% %include% %option% -o %output%/Radiosity_SegmentSort.comp.spv Radiosity_SegmentSort.comp
 %exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity.comp
-
-rem SDF版（重い）
-rem %exe% %include% %option% -o %output%/Radiosity_RayMarch_Space_SDF.comp.spv Radiosity_RayMarch_Space_SDF.comp
-rem %exe% %include% %option% -o %output%/Radiosity_RayMarch_Light_SDF.comp.spv Radiosity_RayMarch_Light_SDF.comp
-rem %exe% %include% %option% -o %output%/Radiosity2.comp.spv Radiosity2.comp
 
 %exe% %include% %option% -o %output%/GI2D_DebugMakeLight.comp.spv GI2D_DebugMakeLight.comp
 

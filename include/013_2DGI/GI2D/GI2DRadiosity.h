@@ -35,10 +35,6 @@ struct GI2DRadiosity
 		Shader_RayHit,
 		Shader_RayBounce,
 
-		Shader_RayMarch_Space_SDF,
-		Shader_RayMarch_Light_SDF,
-		Shader_Radiosity2,
-
 		Shader_Num,
 	};
 	enum PipelineLayout
@@ -62,9 +58,6 @@ struct GI2DRadiosity
 		Pipeline_RayHit,
 		Pipeline_RayBounce,
 
-		Pipeline_RayMarch_Space_SDF,
-		Pipeline_RayMarch_Light_SDF,
-		Pipeline_Radiosity2,
 		Pipeline_Num,
 	};
 
@@ -195,9 +188,6 @@ struct GI2DRadiosity
 				"Radiosity_RayHit.comp.spv",
 				"Radiosity_RayBounce.comp.spv",
 
-				"Radiosity_RayMarch_Space_SDF.comp.spv",
-				"Radiosity_RayMarch_Light_SDF.comp.spv",
-				"Radiosity2.comp.spv",
 			};
 			static_assert(array_length(name) == Shader_Num, "not equal shader num");
 
@@ -228,7 +218,7 @@ struct GI2DRadiosity
 
 		// pipeline
 		{
-			std::array<vk::PipelineShaderStageCreateInfo, 12> shader_info;
+			std::array<vk::PipelineShaderStageCreateInfo, 9> shader_info;
 			shader_info[0].setModule(m_shader[Shader_Radiosity].get());
 			shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[0].setPName("main");
@@ -256,15 +246,6 @@ struct GI2DRadiosity
 			shader_info[8].setModule(m_shader[Shader_RayBounce].get());
 			shader_info[8].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[8].setPName("main");
-			shader_info[9].setModule(m_shader[Shader_RayMarch_Space_SDF].get());
-			shader_info[9].setStage(vk::ShaderStageFlagBits::eCompute);
-			shader_info[9].setPName("main");
-			shader_info[10].setModule(m_shader[Shader_RayMarch_Light_SDF].get());
-			shader_info[10].setStage(vk::ShaderStageFlagBits::eCompute);
-			shader_info[10].setPName("main");
-			shader_info[11].setModule(m_shader[Shader_Radiosity2].get());
-			shader_info[11].setStage(vk::ShaderStageFlagBits::eCompute);
-			shader_info[11].setPName("main");
 			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 			{
 				vk::ComputePipelineCreateInfo()
@@ -294,15 +275,6 @@ struct GI2DRadiosity
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[8])
 				.setLayout(m_pipeline_layout[PipelineLayout_Radiosity].get()),
-				vk::ComputePipelineCreateInfo()
-				.setStage(shader_info[9])
-				.setLayout(m_pipeline_layout[PipelineLayout_Radiosity].get()),
-				vk::ComputePipelineCreateInfo()
-				.setStage(shader_info[10])
-				.setLayout(m_pipeline_layout[PipelineLayout_Radiosity].get()),
-				vk::ComputePipelineCreateInfo()
-				.setStage(shader_info[11])
-				.setLayout(m_pipeline_layout[PipelineLayout_Radiosity].get()),
 			};
 			auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
 			m_pipeline[Pipeline_Radiosity] = std::move(compute_pipeline[0]);
@@ -314,9 +286,6 @@ struct GI2DRadiosity
 			m_pipeline[Pipeline_RayMarch] = std::move(compute_pipeline[6]);
 			m_pipeline[Pipeline_RayHit] = std::move(compute_pipeline[7]);
 			m_pipeline[Pipeline_RayBounce] = std::move(compute_pipeline[8]);
-			m_pipeline[Pipeline_RayMarch_Space_SDF] = std::move(compute_pipeline[9]);
-			m_pipeline[Pipeline_RayMarch_Light_SDF] = std::move(compute_pipeline[10]);
-			m_pipeline[Pipeline_Radiosity2] = std::move(compute_pipeline[11]);
 		}
 
 		// レンダーパス
