@@ -23,6 +23,7 @@ void main()
 	vec2 dir = rotate(ray.angle);
 	vec2 inv_dir = abs(1./dir);
 	dir *= min(inv_dir.x, inv_dir.y);
+	int axis = inv_dir.x < inv_dir.y ? 0 : 1;
 	ivec2 map_index = ivec2(pos);
 
 	u64vec2 map;
@@ -34,10 +35,10 @@ void main()
 	seg.begin = 0;
 	seg.march = 0;
 	seg.radiance = 0;
-	float march_count = 0.;
+	int march_count = 0;
 	for(; march_count < ray.march; )
 	{
-		float skip = 1.;
+		int skip = 1;
 		{
 			ivec2 cell = map_index>>3;
 			ivec2 cell_sub = map_index%8;
@@ -55,9 +56,10 @@ void main()
 			{
 				seg.radiance += b_light[getMemoryOrder(map_index)];
 			}
-			else if(attr.x)
+
+			if(attr.x)
 			{
-				if(seg.march > 1.)
+				if(seg.march > 1)
 				{
 //					if(seg.radiance != 0)
 					{
@@ -72,13 +74,14 @@ void main()
 				seg.march = 0;
 				seg.radiance = 0;
 			}
-			else 
+//			else 
 			{
 				if(all(equal(map, u64vec2(0))))
 				{
 					vec2 pos_sub = vec2(pos - vec2(cell << 3));
 					vec2 tp = vec2(abs(cell_origin - pos_sub)+0.5) / abs(dir);
-					skip = min(tp.x, tp.y);
+					int _axis = tp.x < tp.y ? 0 : 1;
+					skip = (axis == _axis) ? int(max(tp[_axis], 1.)) : int((ceil(tp[_axis])+0.5));
 				}
 				seg.march+=skip;
 			}
@@ -93,7 +96,7 @@ void main()
 		}
 	}
 
-	if(seg.march > 1.)
+	if(seg.march > 1)
 	{
 //		if(seg.radiance != 0)
 		{

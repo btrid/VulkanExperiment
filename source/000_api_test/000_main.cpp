@@ -647,9 +647,9 @@ int main()
 {
 	
 	{
-		auto origin = vec2(84.123f, 8.f);
+		auto origin = vec2(8.5f, 15.5f);
 		auto pos = origin;
-		auto dir = normalize(vec2(-0.247f, 2.1f));
+		auto dir = normalize(vec2(4.247f, 2.1f));
 		vec2 inv_dir;
 		inv_dir.x = dir.x == 0. ? 999999. : abs(1. / dir.x);
 		inv_dir.y = dir.y == 0. ? 999999. : abs(1. / dir.y);
@@ -664,10 +664,10 @@ int main()
 
 			vec2 cell_origin = vec2(greaterThanEqual(dir, vec2(0.))) * vec2(8);
 			vec2 pos_sub = vec2(pos - vec2(cell << 3));
-			vec2 tp = vec2(abs(cell_origin - pos_sub)) / abs(dir);
+			vec2 tp = vec2(abs(cell_origin - pos_sub) + 0.5f) / abs(dir);
 			int _axis = tp.x < tp.y ? 0 : 1;
 			float skip = tp[_axis];
-			march_count += (axis == _axis) ? ((skip) + 0.5f) : (ceil(skip)+0.5f);
+			march_count += (axis == _axis) ? glm::max(skip, 1.f) : (ceil(skip)+0.5f);
 			pos = origin + dir * march_count;
 			map_index = ivec2(pos);
 

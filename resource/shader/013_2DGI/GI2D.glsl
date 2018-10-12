@@ -82,7 +82,7 @@ ivec2 frame_offset(){
 #endif
 
 
-#define LightPower (0.005)
+#define LightPower (0.015)
 #define Ray_Density (1)
 #define Block_Size (1)
 #define denominator (512.)
@@ -122,24 +122,6 @@ struct GI2DRadiosityInfo
 	uint a3;
 };
 
-#define RAY_TYPE_FLOAT
-#ifdef RAY_TYPE_FLOAT
-struct D2Ray
-{
-	vec2 origin;
-	float angle;
-	float march;
-};
-struct D2Segment
-{
-	uint ray_index;
-	float begin;
-	float march;
-	uint radiance;
-};
-
-
-#else
 struct D2Ray
 {
 	vec2 origin;
@@ -154,7 +136,6 @@ struct D2Segment
 	uint radiance;
 };
 
-#endif
 layout(set=USE_GI2D_Radiosity, binding=0, std140) uniform GI2DGI2DRadiosityInfoUniform {
 	GI2DRadiosityInfo u_radiosity_info;
 };
