@@ -98,16 +98,13 @@ void main()
 
 	if(seg.march > 1)
 	{
-//		if(seg.radiance != 0)
-		{
-			int index = atomicAdd(b_segment_counter.w, 1);
-			if(index%1024==0){
-				atomicAdd(b_segment_counter.x, 1);
-			}
-			// 行きすぎたら戻す
-			seg.march -= march_count-ray.march;
-			b_segment[index] = seg;
+		int index = atomicAdd(b_segment_counter.w, 1);
+		if(index%1024==0){
+			atomicAdd(b_segment_counter.x, 1);
 		}
+		// 行きすぎたら戻す
+		seg.march -= march_count-ray.march;
+		b_segment[index] = seg;
 	}
 
 

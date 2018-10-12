@@ -32,14 +32,15 @@ void main()
 //		for(int x = 0; x < Block_Size; x++){
 //			coord += + ivec2(x-(Block_Size>>1), y-(Block_Size>>1));
 //			coord = clamp(coord, ivec2(0), reso>>hierarchy);
-			for(int i = 0; i < 4; i++)
+			for(int i = 0; i < 1; i++)
 			{
 				vec3 rad[4];
 				rad[0] = unpackEmissive(b_radiance[coord.x]);
 				rad[1] = unpackEmissive(b_radiance[coord.y]);
 				rad[2] = unpackEmissive(b_radiance[coord.z]);
 				rad[3] = unpackEmissive(b_radiance[coord.w]);
-				radiance_ += mix(mix(rad[0], rad[1], subcoord.x), mix(rad[2], rad[3], subcoord.x), subcoord.y);
+//				radiance_ += mix(mix(rad[0], rad[1], subcoord.x), mix(rad[2], rad[3], subcoord.x), subcoord.y);
+				radiance_ += rad[0];
 				coord += radiance_size;
 			}
 			count += 8;

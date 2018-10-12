@@ -29,27 +29,6 @@ void main()
 		vec4 pos = ray.origin.xyxy + vec4(segment.begin.xx, (segment.begin+segment.march).xx)*dir.xyxy;
 		ivec4 map_index = ivec4(pos);
 
-#if 1
-		ivec4 cell = map_index>>3;
-		ivec4 cell_sub = map_index%8;
-		uvec2 dindex = cell.xz + cell.yw*reso.z;
-
-		u64vec2 bit = u64vec2(1ul)<<(cell_sub.xz+cell_sub.yw*8);
-		bvec2 attr = notEqual(u64vec2(b_emissive_map[dindex.x], b_emissive_map[dindex.y]) & bit, u64vec2(0));
-		if(attr.x)
-		{
-			segment.radiance += b_light[getMemoryOrder(map_index.xy)];
-		}
-		if(attr.y)
-		{
-			segment.radiance += b_light[getMemoryOrder(map_index.zw)];
-		}
-
-		if(any(attr))
-		{
-			b_segment[gl_GlobalInvocationID.x].radiance = segment.radiance;
-		}
-#else
 		uint radiance = 0;
 		radiance += b_light[getMemoryOrder(map_index.xy)];
 		radiance += b_light[getMemoryOrder(map_index.zw)];
@@ -58,7 +37,6 @@ void main()
 		{
 			b_segment[gl_GlobalInvocationID.x].radiance += radiance;
 		}
-#endif
 	}
 
 }

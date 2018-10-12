@@ -649,7 +649,7 @@ int main()
 	{
 		auto origin = vec2(8.5f, 15.5f);
 		auto pos = origin;
-		auto dir = normalize(vec2(4.247f, 2.1f));
+		auto dir = normalize(vec2(0.0247f, -2.1f));
 		vec2 inv_dir;
 		inv_dir.x = dir.x == 0. ? 999999. : abs(1. / dir.x);
 		inv_dir.y = dir.y == 0. ? 999999. : abs(1. / dir.y);
