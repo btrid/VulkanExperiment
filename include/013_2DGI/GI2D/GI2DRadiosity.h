@@ -544,7 +544,7 @@ struct GI2DRadiosity
 
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
-			for (int i = 0; i<1; i++)
+			for (int i = 0; i<2; i++)
 			{
 
 				{

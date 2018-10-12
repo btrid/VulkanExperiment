@@ -49,6 +49,14 @@ void main()
 				map.x = b_diffuse_map[dindex];
 				map.y = b_emissive_map[dindex];
 				old_map_index = dindex;
+
+				if(all(equal(map, u64vec2(0))))
+				{
+					vec2 pos_sub = vec2(pos - vec2(cell << 3));
+					vec2 tp = vec2(abs(cell_origin - pos_sub)+0.5) / abs(dir);
+					int _axis = tp.x < tp.y ? 0 : 1;
+					skip = int(max(tp[_axis], 1.));
+				}
 			}
 
 			bvec2 attr = notEqual((map & (1ul<<(cell_sub.x+cell_sub.y*8))), u64vec2(0));
@@ -76,13 +84,6 @@ void main()
 			}
 //			else 
 			{
-				if(all(equal(map, u64vec2(0))))
-				{
-					vec2 pos_sub = vec2(pos - vec2(cell << 3));
-					vec2 tp = vec2(abs(cell_origin - pos_sub)+0.5) / abs(dir);
-					int _axis = tp.x < tp.y ? 0 : 1;
-					skip = (axis == _axis) ? int(max(tp[_axis], 1.)) : int((ceil(tp[_axis])+0.5));
-				}
 				seg.march+=skip;
 			}
 
