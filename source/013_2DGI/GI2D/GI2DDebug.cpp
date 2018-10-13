@@ -4,6 +4,13 @@
 namespace gi2d
 {
 	
+
+struct GI2DLightData
+{
+	vec4 m_pos;
+	vec4 m_emissive;
+}; 
+
 GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context)
 {
 	m_context = context;

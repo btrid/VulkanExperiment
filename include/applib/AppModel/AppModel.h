@@ -109,83 +109,23 @@ struct AppModel
 			auto stage = vk::ShaderStageFlagBits::eVertex| vk::ShaderStageFlagBits::eFragment| vk::ShaderStageFlagBits::eCompute;
 			std::vector<vk::DescriptorSetLayoutBinding> binding =
 			{
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(stage)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(0),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(stage)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(1),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(stage)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(2),
+				vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageBuffer, 1, stage),
 
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(stage)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(10),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(stage)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(11),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(stage)
-				.setDescriptorCount(DESCRIPTOR_ALBEDO_TEXTURE_NUM)
-				.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-				.setBinding(12),
+				vk::DescriptorSetLayoutBinding(10, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(11, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(12, vk::DescriptorType::eCombinedImageSampler, DESCRIPTOR_ALBEDO_TEXTURE_NUM, stage),
 
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(stage)
-				.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-				.setDescriptorCount(1)
-				.setBinding(20),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(stage)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(21),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(stage)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(22),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(stage)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(23),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(stage)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(24),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(stage)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(25),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(stage)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(26),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(stage)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(27),
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(stage)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(1)
-				.setBinding(28),
+				vk::DescriptorSetLayoutBinding(20, vk::DescriptorType::eCombinedImageSampler, 1, stage),
+				vk::DescriptorSetLayoutBinding(21, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(22, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(23, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(24, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(25, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(26, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(27, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(28, vk::DescriptorType::eStorageBuffer, 1, stage),
 
 			};
 			vk::DescriptorSetLayoutCreateInfo descriptor_layout_info;

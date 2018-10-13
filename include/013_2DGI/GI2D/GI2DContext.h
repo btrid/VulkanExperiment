@@ -6,7 +6,6 @@
 namespace gi2d
 {
 
-
 struct GI2DContext
 {
 	enum

@@ -14,7 +14,6 @@ struct GI2DDebug : public GI2DPipeline
 	std::shared_ptr<btr::Context> m_context;
 	std::shared_ptr<GI2DContext> m_gi2d_context;
 
-	std::vector<GI2DLightData> m_emission;
 	btr::BufferMemoryEx<GI2DContext::Fragment> m_map_data;
 
 	enum Shader

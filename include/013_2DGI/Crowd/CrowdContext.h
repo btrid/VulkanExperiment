@@ -20,16 +20,7 @@ struct CrowdContext
 			{
 				auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
 				vk::DescriptorSetLayoutBinding binding[] = {
-					vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eUniformBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eUniformBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(6, vk::DescriptorType::eStorageBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(7, vk::DescriptorType::eStorageBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(8, vk::DescriptorType::eStorageBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(9, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eStorageBuffer, 1, stage),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -46,39 +37,23 @@ struct CrowdContext
 				desc_info.setDescriptorSetCount(array_length(layouts));
 				desc_info.setPSetLayouts(layouts);
 				m_descriptor_set = std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]);
-
-// 				vk::DescriptorBufferInfo uniforms[] = {
-// 					u_gi2d_info.getInfo(),
-// 					u_gi2d_scene.getInfo(),
-// 				};
-// 				vk::DescriptorBufferInfo storages[] = {
-// 					b_fragment.getInfo(),
-// 					b_fragment_map.getInfo(),
-// 					b_grid_counter.getInfo(),
-// 					b_light.getInfo(),
-// 					b_jfa.getInfo(),
-// 					b_sdf.getInfo(),
-// 					b_diffuse_map.getInfo(),
-// 					b_emissive_map.getInfo(),
-// 				};
-// 
-// 				vk::WriteDescriptorSet write[] = {
-// 					vk::WriteDescriptorSet()
-// 					.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-// 					.setDescriptorCount(array_length(uniforms))
-// 					.setPBufferInfo(uniforms)
-// 					.setDstBinding(0)
-// 					.setDstSet(m_descriptor_set.get()),
-// 					vk::WriteDescriptorSet()
-// 					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-// 					.setDescriptorCount(array_length(storages))
-// 					.setPBufferInfo(storages)
-// 					.setDstBinding(2)
-// 					.setDstSet(m_descriptor_set.get()),
-// 				};
-// 				context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
 			}
+		}
 
+		{
+			b_grid_counter = m_context->m_storage_memory.allocateMemory<uint32_t>({ m_gi2d_context->FragmentBufferSize, {} });
+			vk::DescriptorBufferInfo storages[] = {
+				b_grid_counter.getInfo(),
+			};
+			vk::WriteDescriptorSet write[] = {
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(array_length(storages))
+				.setPBufferInfo(storages)
+				.setDstBinding(0)
+				.setDstSet(m_descriptor_set.get()),
+			};
+			context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
 		}
 	}
 
@@ -88,6 +63,8 @@ struct CrowdContext
 
 	std::shared_ptr<btr::Context> m_context;
 	std::shared_ptr<gi2d::GI2DContext> m_gi2d_context;
+
+	btr::BufferMemoryEx<uint32_t> b_grid_counter;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
