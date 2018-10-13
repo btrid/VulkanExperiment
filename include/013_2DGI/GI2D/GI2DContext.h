@@ -6,11 +6,7 @@
 namespace gi2d
 {
 
-struct GI2DLightData
-{
-	vec4 m_pos;
-	vec4 m_emissive;
-};
+
 struct GI2DContext
 {
 	enum

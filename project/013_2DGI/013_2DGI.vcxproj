@@ -94,6 +94,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\include\013_2DGI\Crowd\CrowdContext.h" />
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DContext.h" />
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DAppModel.h" />
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DClear.h" />
