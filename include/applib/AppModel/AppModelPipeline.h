@@ -10,8 +10,9 @@
 #include <btrlib/Context.h>
 #include <btrlib/cMotion.h>
 #include <applib/cLightPipeline.h>
-#include <applib/cModelPipeline.h>
 #include <applib/AppModel/AppModel.h>
+#include <applib/AppModel/AppModelPipeline.h>
+#include <applib/sCameraManager.h>
 
 struct AppModelAnimationStage
 {
@@ -105,26 +106,30 @@ struct AppModelAnimationStage
 				}
 				if (i == SHADER_COMPUTE_MOTION_UPDATE)
 				{
-					vk::BufferMemoryBarrier barrier[2];
-					barrier[0] = render->b_animation_work.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead);
-					barrier[1] = render->b_node_transform.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite);
+					vk::BufferMemoryBarrier barrier[] = {
+						render->b_animation_work.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+						render->b_node_transform.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite)
+					};
 					cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
 						vk::DependencyFlags(), 0, nullptr, array_length(barrier), barrier, 0, nullptr);
 				}
 				if (i == SHADER_COMPUTE_NODE_TRANSFORM)
 				{
-					vk::BufferMemoryBarrier barrier[2];
-					barrier[0] = render->b_node_transform.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead);
-					barrier[1] = render->b_instance_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
+					vk::BufferMemoryBarrier barrier[] = {
+						render->b_node_transform.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+						render->b_instance_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+					};
 					cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
 						vk::DependencyFlags(), 0, nullptr, array_length(barrier), barrier, 0, nullptr);
 				}
 				if (i == SHADER_COMPUTE_BONE_TRANSFORM)
 				{
-					vk::BufferMemoryBarrier barrier[3];
-					barrier[0] = render->b_node_transform.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead);
-					barrier[1] = render->b_instance_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead);
-					barrier[2] = render->b_model_instancing_info.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead);
+					vk::BufferMemoryBarrier barrier[] = 
+					{
+						render->b_node_transform.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+						render->b_instance_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+						render->b_model_instancing_info.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+					};
 					cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
 						vk::DependencyFlags(), 0, nullptr, array_length(barrier), barrier, 0, nullptr);
 				}
@@ -132,7 +137,7 @@ struct AppModelAnimationStage
 				cmd->bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[i].get());
 				vk::DescriptorSet descriptors[] = {
 					render->getDescriptorSet(AppModel::DescriptorLayout_Model),
-					render->getDescriptorSet(AppModel::DescriptorLayout_Render),
+					render->getDescriptorSet(AppModel::DescriptorLayout_Update),
 				};
 				cmd->bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout.get(), 0, array_length(descriptors), descriptors, 0, {});
 				cmd->dispatchIndirect(render->b_animation_indirect.getInfo().buffer, render->b_animation_indirect.getInfo().offset + i * 12);
@@ -149,15 +154,9 @@ struct AppModelAnimationStage
 		}
 		return cmd;
 	}
-	vk::CommandBuffer dispach(std::vector<vk::CommandBuffer>& cmds)
+	void dispach(vk::CommandBuffer cmd, std::vector<vk::CommandBuffer>& cmds)
 	{
-		auto cmd = m_context->m_cmd_pool->allocCmdOnetime(0);
-
 		cmd.executeCommands(cmds.size(), cmds.data());
-		cmd.end();
-
-		return cmd;
-
 	}
 
 	enum Shader
@@ -319,7 +318,7 @@ struct AppModelRenderStage
 
 			// デプスステンシル
 			vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
-			depth_stencil_info.setDepthTestEnable(VK_TRUE);
+			depth_stencil_info.setDepthTestEnable(VK_FALSE);
 			depth_stencil_info.setDepthWriteEnable(VK_TRUE);
 			depth_stencil_info.setDepthCompareOp(vk::CompareOp::eGreaterOrEqual);
 			depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
@@ -391,7 +390,7 @@ struct AppModelRenderStage
 				render->getDescriptorSet(AppModel::DescriptorLayout_Model),
 				render->getDescriptorSet(AppModel::DescriptorLayout_Render),
 				sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA),
-//				m_light_pipeline->getDescriptorSet(cFowardPlusPipeline::DESCRIPTOR_SET_LIGHT),
+				m_light_pipeline->getDescriptorSet(cFowardPlusPipeline::DESCRIPTOR_SET_LIGHT),
 			};
 			cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 0, sets, {});
 
@@ -403,11 +402,11 @@ struct AppModelRenderStage
 
 	}
 
-	vk::CommandBuffer draw(std::vector<vk::CommandBuffer>& cmds)
+	void dispach(vk::CommandBuffer cmd, std::vector<vk::CommandBuffer>& cmds)
 	{
 
-		auto cmd = m_context->m_cmd_pool->allocCmdOnetime(0);
-		m_context->m_device.DebugMarkerSetObjectName(cmd, "ModelInstancingPipeline", cmd);
+// 		auto cmd = m_context->m_cmd_pool->allocCmdOnetime(0);
+// 		m_context->m_device.DebugMarkerSetObjectName(cmd, "ModelInstancingPipeline", cmd);
 
 		vk::RenderPassBeginInfo render_begin_info;
 		render_begin_info.setRenderPass(m_render_pass.get());
@@ -417,9 +416,9 @@ struct AppModelRenderStage
 		cmd.beginRenderPass(render_begin_info, vk::SubpassContents::eSecondaryCommandBuffers);
 		cmd.executeCommands(cmds.size(), cmds.data());
 		cmd.endRenderPass();
-		cmd.end();
-
-		return cmd;
+// 		cmd.end();
+// 
+// 		return cmd;
 	}
 private:
 	enum 

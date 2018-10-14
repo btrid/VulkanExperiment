@@ -1,6 +1,6 @@
 ﻿#include <applib/AppModel/AppModel.h>
-#include <applib/cModelPipeline.h>
 #include <applib/DrawHelper.h>
+#include <applib/GraphicsResource.h>
 
 AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<AppModelContext>& appmodel_context, const std::shared_ptr<cModel::Resource>& resource, uint32_t instanceNum)
 {
@@ -54,6 +54,7 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 		cmd.copyBuffer(staging.getInfo().buffer, buffer.getInfo().buffer, copy_info);
 	}
 
+	b_model_info = context->m_storage_memory.allocateMemory<cModel::ModelInfo>({ 1, {} });
 	b_bone_transform = context->m_storage_memory.allocateMemory<mat4>({ resource->mBone.size() * instanceNum, {} });
 	b_node_transform = context->m_storage_memory.allocateMemory<mat4>({ resource->mNodeRoot.mNodeList.size() * instanceNum, {} });
 	b_world = context->m_storage_memory.allocateMemory<mat4>({ instanceNum, {} });
@@ -62,14 +63,8 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 
 	// ModelInfo
 	{
-		btr::BufferMemoryDescriptorEx<cModel::ModelInfo> desc;
-		desc.element_num = 1;
 
-		auto& buffer = b_model_info;
-		buffer = context->m_storage_memory.allocateMemory(desc);
-
-		desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
-		auto staging = context->m_staging_memory.allocateMemory(desc);
+		auto staging = context->m_staging_memory.allocateMemory<cModel::ModelInfo>({1, btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT });
 
 		auto& mi = *static_cast<cModel::ModelInfo*>(staging.getMappedPtr());
 		mi = resource->m_model_info;
@@ -77,8 +72,8 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 		vk::BufferCopy copy_info;
 		copy_info.setSize(staging.getInfo().range);
 		copy_info.setSrcOffset(staging.getInfo().offset);
-		copy_info.setDstOffset(buffer.getInfo().offset);
-		cmd.copyBuffer(staging.getInfo().buffer, buffer.getInfo().buffer, copy_info);
+		copy_info.setDstOffset(b_model_info.getInfo().offset);
+		cmd.copyBuffer(staging.getInfo().buffer, b_model_info.getInfo().buffer, copy_info);
 
 	}
 	// draw indirect

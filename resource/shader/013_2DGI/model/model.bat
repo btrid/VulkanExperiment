@@ -15,3 +15,4 @@ SET output=../../binary/
 
 %exe% %include% %option% -o %output%/Render.vert.spv Render.vert
 %exe% %include% %option% -o %output%/Render.frag.spv Render.frag
+%exe% %include% %option% -o %output%/RenderFowardPlus.frag.spv RenderFowardPlus.frag

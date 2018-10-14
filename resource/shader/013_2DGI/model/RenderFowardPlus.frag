@@ -1,14 +1,14 @@
-#version 450
-#extension GL_GOOGLE_cpp_style_line_directive : require
-#extension GL_ARB_shader_image_load_store : require
+#version 460
+#extension GL_GOOGLE_include_directive : require
 
-#include <btrlib/ConvertDimension.glsl>
+#define USE_AppModel 0
+#define USE_AppModel_Render 1
+#include "AppModel.glsl"
 
-#define USE_MODEL_INFO_SET 0
-#include <applib/model/MultiModel.glsl>
+#include "btrlib/ConvertDimension.glsl"
 
-#define USE_LIGHT 2
-#include <applib/Light.glsl>
+#define USE_LIGHT 3
+#include "applib/Light.glsl"
 
 layout(early_fragment_tests) in;
 layout(origin_upper_left) in vec4 gl_FragCoord;
@@ -32,7 +32,7 @@ vec3 getColor()
 	vec3 pos = FSIn.Position;
 	vec3 norm = FSIn.Normal;
 	uint material_index = b_material_index[FSIn.DrawID];
-	vec3 albedo = texture(tDiffuse[material_index], FSIn.Texcoord.xy).xyz;
+	vec3 albedo = texture(t_albedo_texture[material_index], FSIn.Texcoord.xy).xyz;
 	vec3 diffuse = vec3(0.);
 
 	for(uint i = b_light_LL_head[tile_index_1D]; i != INVALID_LIGHT_INDEX;)
