@@ -13,7 +13,7 @@ void main()
 {
 	uint index = gl_GlobalInvocationID.x;
 	ModelInfo model_info = u_model_info;
-	if(index >= model_info.nodeNum * u_model_instancing_info.instanceAliveNum){ return; }
+	if(index >= model_info.nodeNum * b_model_instancing_info.instanceAliveNum){ return; }
 
 	uint modelIndex = index / model_info.nodeNum;
 	PlayingAnimation pm = playingMotion[modelIndex];

@@ -17,7 +17,7 @@ struct GI2DRadiosity
 		Ray_All_Num = 1024 * 4 * 127 * Frame,
 		Segment_Num = 1024 * 4 * 127 * 8,
 		Ray_Group = 1,
-		Bounce_Num = 1,
+		Bounce_Num = 0,
 	};
 	enum Shader
 	{

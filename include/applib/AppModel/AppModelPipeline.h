@@ -15,10 +15,10 @@
 
 struct AppModelAnimationStage
 {
-	AppModelAnimationStage(const std::shared_ptr<btr::Context>& context)
+	AppModelAnimationStage(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<AppModelContext>& appmodel_context)
 	{
 		m_context = context;
-
+		m_appmodel_context = appmodel_context;
 		std::string path = btr::getResourceShaderPath();
 		std::vector<ShaderDescriptor> shader_desc =
 		{
@@ -35,7 +35,8 @@ struct AppModelAnimationStage
 		// pipeline layout
 		{
 			vk::DescriptorSetLayout layouts[] = {
-				AppModel::DescriptorSet::Order().getLayout(),
+				appmodel_context->getLayout(AppModelContext::DescriptorLayout_Model),
+				appmodel_context->getLayout(AppModelContext::DescriptorLayout_Update),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info = vk::PipelineLayoutCreateInfo()
 				.setSetLayoutCount(array_length(layouts))
@@ -106,14 +107,14 @@ struct AppModelAnimationStage
 				{
 					vk::BufferMemoryBarrier barrier[2];
 					barrier[0] = render->b_animation_work.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead);
-					barrier[1] = render->b_node_transforms.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite);
+					barrier[1] = render->b_node_transform.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite);
 					cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
 						vk::DependencyFlags(), 0, nullptr, array_length(barrier), barrier, 0, nullptr);
 				}
 				if (i == SHADER_COMPUTE_NODE_TRANSFORM)
 				{
 					vk::BufferMemoryBarrier barrier[2];
-					barrier[0] = render->b_node_transforms.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead);
+					barrier[0] = render->b_node_transform.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead);
 					barrier[1] = render->b_instance_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite);
 					cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
 						vk::DependencyFlags(), 0, nullptr, array_length(barrier), barrier, 0, nullptr);
@@ -121,7 +122,7 @@ struct AppModelAnimationStage
 				if (i == SHADER_COMPUTE_BONE_TRANSFORM)
 				{
 					vk::BufferMemoryBarrier barrier[3];
-					barrier[0] = render->b_node_transforms.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead);
+					barrier[0] = render->b_node_transform.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead);
 					barrier[1] = render->b_instance_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead);
 					barrier[2] = render->b_model_instancing_info.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead);
 					cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
@@ -129,11 +130,15 @@ struct AppModelAnimationStage
 				}
 
 				cmd->bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[i].get());
-				cmd->bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout.get(), 0, render->getDescriptorSet(), {});
+				vk::DescriptorSet descriptors[] = {
+					render->getDescriptorSet(AppModel::DescriptorLayout_Model),
+					render->getDescriptorSet(AppModel::DescriptorLayout_Render),
+				};
+				cmd->bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout.get(), 0, array_length(descriptors), descriptors, 0, {});
 				cmd->dispatchIndirect(render->b_animation_indirect.getInfo().buffer, render->b_animation_indirect.getInfo().offset + i * 12);
 
 			}
-			vk::BufferMemoryBarrier barrier = render->b_bone_transforms.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead);
+			vk::BufferMemoryBarrier barrier = render->b_bone_transform.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead);
 			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eVertexShader,
 				{}, {}, barrier, {});
 
@@ -172,14 +177,16 @@ struct AppModelAnimationStage
 	vk::UniquePipelineLayout m_pipeline_layout;
 
 	std::shared_ptr<btr::Context> m_context;
+	std::shared_ptr<AppModelContext> m_appmodel_context;
 };
 
 struct AppModelRenderStage
 {
-	AppModelRenderStage(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target)
+	AppModelRenderStage(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<AppModelContext>& appmodel_context, const std::shared_ptr<RenderTarget>& render_target)
 	{
 		auto& device = context->m_device;
 		m_context = context;
+		m_appmodel_context = appmodel_context;
 		m_light_pipeline = std::make_shared<cFowardPlusPipeline>();
 		m_light_pipeline->setup(context);
 		{
@@ -259,7 +266,8 @@ struct AppModelRenderStage
 			std::vector<ShaderDescriptor> shader_desc =
 			{
 				{ path+"Render.vert.spv",vk::ShaderStageFlagBits::eVertex },
-				{ path+"RenderFowardPlus.frag.spv",vk::ShaderStageFlagBits::eFragment },
+				{ path+ "Render.frag.spv",vk::ShaderStageFlagBits::eFragment },
+//				{ path+ "RenderFowardPlus.frag.spv",vk::ShaderStageFlagBits::eFragment },
 			};
 			assert(shader_desc.size() == SHADER_NUM);
 			m_shader = std::make_shared<ShaderModule>(context, shader_desc);
@@ -267,8 +275,10 @@ struct AppModelRenderStage
 
 
 		{
-			vk::DescriptorSetLayout layouts[] = {
-				AppModel::DescriptorSet::Order().getLayout(),
+			vk::DescriptorSetLayout layouts[] = 
+			{
+				appmodel_context->getLayout(AppModelContext::DescriptorLayout_Model),
+				appmodel_context->getLayout(AppModelContext::DescriptorLayout_Render),
 				sCameraManager::Order().getDescriptorSetLayout(sCameraManager::DESCRIPTOR_SET_LAYOUT_CAMERA),
 				m_light_pipeline->getDescriptorSetLayout(cFowardPlusPipeline::DESCRIPTOR_SET_LAYOUT_LIGHT),
 			};
@@ -378,9 +388,10 @@ struct AppModelRenderStage
 
 			cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline.get());
 			std::vector<vk::DescriptorSet> sets = {
-				render->getDescriptorSet(),
+				render->getDescriptorSet(AppModel::DescriptorLayout_Model),
+				render->getDescriptorSet(AppModel::DescriptorLayout_Render),
 				sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA),
-				m_light_pipeline->getDescriptorSet(cFowardPlusPipeline::DESCRIPTOR_SET_LIGHT),
+//				m_light_pipeline->getDescriptorSet(cFowardPlusPipeline::DESCRIPTOR_SET_LIGHT),
 			};
 			cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 0, sets, {});
 
@@ -428,7 +439,8 @@ private:
 
 	std::shared_ptr<cFowardPlusPipeline> m_light_pipeline;
 	std::shared_ptr<btr::Context> m_context;
-public:
+	std::shared_ptr<AppModelContext> m_appmodel_context;
+ public:
 	std::shared_ptr<cFowardPlusPipeline> getLight() { return m_light_pipeline; }
 
 };

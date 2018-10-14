@@ -29,7 +29,7 @@
 #include <013_2DGI/GI2D/GI2DMakeHierarchy.h>
 #include <013_2DGI/GI2D/GI2DClear.h>
 #include <013_2DGI/GI2D/GI2DDebug.h>
-#include <013_2DGI/GI2D/GI2DAppModel.h>
+#include <013_2DGI/GI2D/GI2DModelRender.h>
 #include <013_2DGI/GI2D/GI2DRadiosity.h>
 #include <013_2DGI/GI2D/GI2DFluid.h>
 #include <013_2DGI/GI2D/GI2DRigidbody_dem.h>
@@ -69,13 +69,13 @@ int main()
 
 	auto context = app.m_context;
 
-	AppModel::DescriptorSet::Create(context);
-	AppModelRenderStage renderer(context, app.m_window->getRenderTarget());
-	AppModelAnimationStage animater(context);
+	auto appmodel_context = std::make_shared<AppModelContext>(context);
+//	AppModelRenderStage renderer(context, appmodel_context, app.m_window->getRenderTarget());
+	AppModelAnimationStage animater(context, appmodel_context);
 
 	cModel model;
 	model.load(context, "..\\..\\resource\\tiny.x");
-	std::shared_ptr<AppModel> player_model = std::make_shared<AppModel>(context, model.getResource(), 1);
+	std::shared_ptr<AppModel> player_model = std::make_shared<AppModel>(context, appmodel_context, model.getResource(), 1);
 
 
 	ClearPipeline clear_pipeline(context, app.m_window->getRenderTarget());
@@ -90,6 +90,8 @@ int main()
 	std::shared_ptr<GI2DFluid> gi2d_Fluid = std::make_shared<GI2DFluid>(context, gi2d_context);
 
 	auto anime_cmd = animater.createCmd(player_model);
+//	auto render_cmd = renderer.createCmd(player_model);
+	GI2DModelRender renderer(context, appmodel_context, gi2d_context);
 	auto render_cmd = renderer.createCmd(player_model);
 
 	app.setup();
@@ -114,7 +116,7 @@ int main()
 				{
 					auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 					{
-						vk::BufferMemoryBarrier barrier = player_model->b_worlds.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite);
+						vk::BufferMemoryBarrier barrier = player_model->b_world.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite);
 						cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, barrier, {});
 					}
 
@@ -122,13 +124,13 @@ int main()
 					*staging.getMappedPtr() = glm::translate(vec3(200.f, 0.f, 400.f)) * glm::scale(vec3(0.05f));
 					vk::BufferCopy copy;
 					copy.setSrcOffset(staging.getInfo().offset);
-					copy.setDstOffset(player_model->b_worlds.getInfo().offset);
+					copy.setDstOffset(player_model->b_world.getInfo().offset);
 					copy.setSize(sizeof(mat4));
 
-					cmd.copyBuffer(staging.getInfo().buffer, player_model->b_worlds.getInfo().buffer, copy);
+					cmd.copyBuffer(staging.getInfo().buffer, player_model->b_world.getInfo().buffer, copy);
 
 					{
-						vk::BufferMemoryBarrier barrier = player_model->b_worlds.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead);
+						vk::BufferMemoryBarrier barrier = player_model->b_world.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead);
 						cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, barrier, {});
 					}
 
@@ -149,6 +151,8 @@ int main()
 				gi2d_context->execute(cmd);
 				gi2d_clear.execute(cmd);
 				gi2d_debug_make_fragment.execute(cmd);
+				std::vector<vk::CommandBuffer> render_cmds{ render_cmd.get() };
+				renderer.dispatchCmd(cmd, render_cmds);
 				gi2d_Fluid->execute(cmd);
 				gi2d_Fluid->executePost(cmd);
 				gi2d_make_hierarchy.execute(cmd);
@@ -156,6 +160,7 @@ int main()
 //				gi2d_Softbody.execute(cmd);
 //				gi2d_Rigidbody.execute(cmd);
 				gi2d_Radiosity.execute(cmd);
+
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;
 			}

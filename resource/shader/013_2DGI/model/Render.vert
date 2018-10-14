@@ -1,14 +1,14 @@
-#version 450
+#version 460
+#extension GL_GOOGLE_include_directive : require
 
-#extension GL_ARB_shader_draw_parameters : require
-#extension GL_GOOGLE_cpp_style_line_directive : require
+#define USE_AppModel 0
+#define USE_AppModel_Render 1
+#include "AppModel.glsl"
 
-#include <btrlib/Math.glsl>
-#define SETPOINT_CAMERA 1
-#include <btrlib/Camera.glsl>
+#include "btrlib/Math.glsl"
+#define SETPOINT_CAMERA 2
+#include "btrlib/Camera.glsl"
 
-#define USE_MODEL_INFO_SET 0
-#include <applib/model/MultiModel.glsl>
 
 layout(location = 0)in vec3 inPosition;
 layout(location = 1)in vec3 inNormal;
@@ -53,5 +53,5 @@ void main()
 	VSOut.Position = pos.xyz;
 	VSOut.Normal = mat3(skinningMat) * inNormal.xyz;
 	VSOut.Texcoord = inTexcoord.xyz;
-	VSOut.DrawID = gl_DrawIDARB;
+	VSOut.DrawID = gl_DrawID;
 }

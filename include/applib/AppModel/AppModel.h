@@ -37,18 +37,6 @@ struct NodeInfo
 	int32_t		mBoneIndex;
 	int32_t		m_depth;	//!< RootNodeからの深さ
 
-	static void createNodeInfoRecurcive(const RootNode& rootnode, const Node& node, std::vector<NodeInfo>& nodeBuffer, int parentIndex)
-	{
-		nodeBuffer.emplace_back();
-		auto& n = nodeBuffer.back();
-		n.mNodeNo = (s32)nodeBuffer.size() - 1;
-		n.mParent = parentIndex;
-		n.m_depth = nodeBuffer[parentIndex].m_depth + 1;
-		for (size_t i = 0; i < node.mChildren.size(); i++) {
-			createNodeInfoRecurcive(rootnode, rootnode.mNodeList[node.mChildren[i]], nodeBuffer, n.mNodeNo);
-		}
-	}
-
 	static std::vector<NodeInfo> createNodeInfo(const RootNode& rootnode)
 	{
 		std::vector<NodeInfo> nodeBuffer;
@@ -64,6 +52,20 @@ struct NodeInfo
 
 		return nodeBuffer;
 	}
+
+private:
+	static void createNodeInfoRecurcive(const RootNode& rootnode, const Node& node, std::vector<NodeInfo>& nodeBuffer, int parentIndex)
+	{
+		nodeBuffer.emplace_back();
+		auto& n = nodeBuffer.back();
+		n.mNodeNo = (s32)nodeBuffer.size() - 1;
+		n.mParent = parentIndex;
+		n.m_depth = nodeBuffer[parentIndex].m_depth + 1;
+		for (size_t i = 0; i < node.mChildren.size(); i++) {
+			createNodeInfoRecurcive(rootnode, rootnode.mNodeList[node.mChildren[i]], nodeBuffer, n.mNodeNo);
+		}
+	}
+
 
 };
 struct AnimationInfo
@@ -95,51 +97,73 @@ struct MaterialBuffer {
 	float			__p2;
 };
 
-
-struct AppModel
+struct AppModelContext
 {
-	struct DescriptorSet : public SingletonEx<DescriptorSet>
+	enum {
+		DESCRIPTOR_ALBEDO_TEXTURE_NUM = 16,
+	};
+	enum DescriptorLayout
 	{
-		enum {
-			DESCRIPTOR_ALBEDO_TEXTURE_NUM = 16,
-		};
-
-		DescriptorSet(const std::shared_ptr<btr::Context>& context)
+		DescriptorLayout_Model,
+		DescriptorLayout_Render,
+		DescriptorLayout_Update,
+		DescriptorLayout_Num,
+	};
+	AppModelContext(const std::shared_ptr<btr::Context>& context)
+	{
+		auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
 		{
-			auto stage = vk::ShaderStageFlagBits::eVertex| vk::ShaderStageFlagBits::eFragment| vk::ShaderStageFlagBits::eCompute;
-			std::vector<vk::DescriptorSetLayoutBinding> binding =
+			vk::DescriptorSetLayoutBinding binding[] =
 			{
 				vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageBuffer, 1, stage),
-
-				vk::DescriptorSetLayoutBinding(10, vk::DescriptorType::eStorageBuffer, 1, stage),
-				vk::DescriptorSetLayoutBinding(11, vk::DescriptorType::eStorageBuffer, 1, stage),
-				vk::DescriptorSetLayoutBinding(12, vk::DescriptorType::eCombinedImageSampler, DESCRIPTOR_ALBEDO_TEXTURE_NUM, stage),
-
-				vk::DescriptorSetLayoutBinding(20, vk::DescriptorType::eCombinedImageSampler, 1, stage),
-				vk::DescriptorSetLayoutBinding(21, vk::DescriptorType::eStorageBuffer, 1, stage),
-				vk::DescriptorSetLayoutBinding(22, vk::DescriptorType::eStorageBuffer, 1, stage),
-				vk::DescriptorSetLayoutBinding(23, vk::DescriptorType::eStorageBuffer, 1, stage),
-				vk::DescriptorSetLayoutBinding(24, vk::DescriptorType::eStorageBuffer, 1, stage),
-				vk::DescriptorSetLayoutBinding(25, vk::DescriptorType::eStorageBuffer, 1, stage),
-				vk::DescriptorSetLayoutBinding(26, vk::DescriptorType::eStorageBuffer, 1, stage),
-				vk::DescriptorSetLayoutBinding(27, vk::DescriptorType::eStorageBuffer, 1, stage),
-				vk::DescriptorSetLayoutBinding(28, vk::DescriptorType::eStorageBuffer, 1, stage),
-
 			};
 			vk::DescriptorSetLayoutCreateInfo descriptor_layout_info;
-			descriptor_layout_info.setBindingCount((uint32_t)binding.size());
-			descriptor_layout_info.setPBindings(binding.data());
-			m_descriptor_set_layout = context->m_device->createDescriptorSetLayoutUnique(descriptor_layout_info);
+			descriptor_layout_info.setBindingCount(array_length(binding));
+			descriptor_layout_info.setPBindings(binding);
+			m_descriptor_set_layout[DescriptorLayout_Model] = context->m_device->createDescriptorSetLayoutUnique(descriptor_layout_info);
 		}
-	protected:
-		vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
-	public:
-		vk::DescriptorSetLayout getLayout()const { return m_descriptor_set_layout.get(); }
-	};
+		{
+			vk::DescriptorSetLayoutBinding binding[] =
+			{
+				vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eCombinedImageSampler, DESCRIPTOR_ALBEDO_TEXTURE_NUM, stage),
+			};
+			vk::DescriptorSetLayoutCreateInfo descriptor_layout_info;
+			descriptor_layout_info.setBindingCount(array_length(binding));
+			descriptor_layout_info.setPBindings(binding);
+			m_descriptor_set_layout[DescriptorLayout_Render] = context->m_device->createDescriptorSetLayoutUnique(descriptor_layout_info);
+		}
+		{
+			vk::DescriptorSetLayoutBinding binding[] =
+			{
+			vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eCombinedImageSampler, 1, stage),
+			vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(6, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(7, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(8, vk::DescriptorType::eStorageBuffer, 1, stage),
+			};
+			vk::DescriptorSetLayoutCreateInfo descriptor_layout_info;
+			descriptor_layout_info.setBindingCount(array_length(binding));
+			descriptor_layout_info.setPBindings(binding);
+			m_descriptor_set_layout[DescriptorLayout_Update] = context->m_device->createDescriptorSetLayoutUnique(descriptor_layout_info);
+		}
+	}
+	std::array<vk::UniqueDescriptorSetLayout, DescriptorLayout_Num> m_descriptor_set_layout;
 
-	AppModel(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<cModel::Resource>& resource, uint32_t instanceNum);
+	vk::DescriptorSetLayout getLayout(DescriptorLayout layout)const { return m_descriptor_set_layout[layout].get(); }
+};
+
+struct AppModel
+{
+
+	AppModel(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<AppModelContext>& appmodel_context, const std::shared_ptr<cModel::Resource>& resource, uint32_t instanceNum);
 
 	std::shared_ptr<cModel::Resource> m_resource;
 	uint32_t m_instance_max_num;
@@ -159,16 +183,16 @@ struct AppModel
 	btr::BufferMemoryEx<AnimationWorker> b_animation_work;
 
 	//! material
-	btr::BufferMemoryEx<uint32_t> m_material_index;
-	btr::BufferMemoryEx<MaterialBuffer> m_material;
-	std::vector<ResourceTexture> m_texture;
+	btr::BufferMemoryEx<uint32_t> b_material_index;
+	btr::BufferMemoryEx<MaterialBuffer> b_material;
+	std::vector<ResourceTexture> m_albedo_texture;
 
 	//! 作業用バッファ
-	btr::BufferMemoryEx<mat4> b_node_transforms;
-	btr::BufferMemoryEx<mat4> b_bone_transforms;
+	btr::BufferMemoryEx<mat4> b_node_transform;
+	btr::BufferMemoryEx<mat4> b_bone_transform;
 
 	//! 好きにしていいバッファ
-	btr::BufferMemoryEx<mat4> b_worlds;
+	btr::BufferMemoryEx<mat4> b_world;
 
 	struct AppModelRender : public Drawable
 	{
@@ -187,8 +211,15 @@ struct AppModel
 	};
 	AppModelRender m_render;
 
-	vk::UniqueDescriptorSet m_descriptor_set;
+	enum DescriptorLayout
+	{
+		DescriptorLayout_Model,
+		DescriptorLayout_Render,
+		DescriptorLayout_Update,
+		DescriptorLayout_Num,
+	};
+	std::array<vk::UniqueDescriptorSet, DescriptorLayout_Num> m_descriptor_set;
 
-	vk::DescriptorSet getDescriptorSet()const { return m_descriptor_set.get(); }
+	vk::DescriptorSet getDescriptorSet(DescriptorLayout layout)const { return m_descriptor_set[layout].get(); }
 
 };

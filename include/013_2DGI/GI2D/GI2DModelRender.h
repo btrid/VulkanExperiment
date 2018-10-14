@@ -5,7 +5,7 @@
 namespace gi2d
 {
 
-struct GI2DAppModel : public GI2DPipeline
+struct GI2DModelRender
 {
 	enum Shader
 	{
@@ -24,7 +24,7 @@ struct GI2DAppModel : public GI2DPipeline
 		PipelineNum,
 	};
 
-	GI2DAppModel(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context)
+	GI2DModelRender(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<AppModelContext>& appmodel_context, const std::shared_ptr<GI2DContext>& gi2d_context)
 	{
 		m_context = context;
 		m_gi2d_context = gi2d_context;
@@ -66,7 +66,8 @@ struct GI2DAppModel : public GI2DPipeline
 		{
 			vk::DescriptorSetLayout layouts[] = {
 				gi2d_context->getDescriptorSetLayout(),
-				AppModel::DescriptorSet::Order().getLayout(),
+				appmodel_context->getLayout(AppModelContext::DescriptorLayout_Model),
+				appmodel_context->getLayout(AppModelContext::DescriptorLayout_Render),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
@@ -172,7 +173,7 @@ struct GI2DAppModel : public GI2DPipeline
 			cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PipelineLayoutRendering].get());
 			std::vector<vk::DescriptorSet> sets = {
 				m_gi2d_context->getDescriptorSet(),
-				render->getDescriptorSet(),
+				render->getDescriptorSet(AppModel::DescriptorLayout_Model),
 			};
 			cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayoutRendering].get(), 0, sets, {});
 
@@ -184,11 +185,12 @@ struct GI2DAppModel : public GI2DPipeline
 
 	}
 
-	vk::CommandBuffer dispatchCmd(std::vector<vk::CommandBuffer>& cmds)
+	void dispatchCmd(vk::CommandBuffer cmd, std::vector<vk::CommandBuffer>& cmds)
 	{
 
-		auto cmd = m_context->m_cmd_pool->allocCmdOnetime(0);
-		m_context->m_device.DebugMarkerSetObjectName(cmd, "PM_Make_Fragment", cmd);
+		vk::DebugMarkerMarkerInfoEXT marker;
+		marker.setPMarkerName("PM_Make_Fragment");
+//		m_context->m_device.CmdDebugMarkerInsert(cmd, &marker);
 
 		vk::RenderPassBeginInfo render_begin_info;
 		render_begin_info.setRenderPass(m_render_pass.get());
@@ -198,12 +200,10 @@ struct GI2DAppModel : public GI2DPipeline
 		cmd.beginRenderPass(render_begin_info, vk::SubpassContents::eSecondaryCommandBuffers);
 		cmd.executeCommands(cmds.size(), cmds.data());
 		cmd.endRenderPass();
-		cmd.end();
 
-		return cmd;
 	}
 
-	void execute(vk::CommandBuffer cmd)override
+	void execute(vk::CommandBuffer cmd)
 	{
 
 	}

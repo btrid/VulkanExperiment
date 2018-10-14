@@ -2,7 +2,7 @@
 #include <applib/cModelPipeline.h>
 #include <applib/DrawHelper.h>
 
-AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<cModel::Resource>& resource, uint32_t instanceNum)
+AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<AppModelContext>& appmodel_context, const std::shared_ptr<cModel::Resource>& resource, uint32_t instanceNum)
 {
 	assert(!resource->mBone.empty());
 	m_resource = resource;
@@ -54,22 +54,11 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 		cmd.copyBuffer(staging.getInfo().buffer, buffer.getInfo().buffer, copy_info);
 	}
 
-	// BoneTransform
-	{
-		btr::BufferMemoryDescriptorEx<mat4> desc;
-		desc.element_num = resource->mBone.size() * instanceNum;
-
-		auto& buffer = b_bone_transforms;
-		buffer = context->m_storage_memory.allocateMemory(desc);
-	}
-	// NodeTransform
-	{
-		btr::BufferMemoryDescriptorEx<mat4> desc;
-		desc.element_num = resource->mNodeRoot.mNodeList.size() * instanceNum;
-
-		auto& buffer = b_node_transforms;
-		buffer = context->m_storage_memory.allocateMemory(desc);
-	}
+	b_bone_transform = context->m_storage_memory.allocateMemory<mat4>({ resource->mBone.size() * instanceNum, {} });
+	b_node_transform = context->m_storage_memory.allocateMemory<mat4>({ resource->mNodeRoot.mNodeList.size() * instanceNum, {} });
+	b_world = context->m_storage_memory.allocateMemory<mat4>({ instanceNum, {} });
+	b_model_instancing_info = context->m_storage_memory.allocateMemory<ModelInstancingInfo>({ 1, {} });
+	b_instance_map = context->m_storage_memory.allocateMemory<uint32_t>({ instanceNum, {} });
 
 	// ModelInfo
 	{
@@ -91,30 +80,6 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 		copy_info.setDstOffset(buffer.getInfo().offset);
 		cmd.copyBuffer(staging.getInfo().buffer, buffer.getInfo().buffer, copy_info);
 
-	}
-
-	//ModelInstancingInfo
-	{
-		btr::BufferMemoryDescriptorEx<ModelInstancingInfo> desc;
-		desc.element_num = 1;
-
-		b_model_instancing_info = context->m_storage_memory.allocateMemory(desc);
-	}
-	// world
-	{
-		btr::BufferMemoryDescriptorEx<mat4> desc;
-		desc.element_num = instanceNum;
-
-		b_worlds = context->m_storage_memory.allocateMemory(desc);
-	}
-
-	// InstanceMap
-	{
-		btr::BufferMemoryDescriptorEx<u32> desc;
-		desc.element_num = instanceNum;
-
-		auto& buffer = b_instance_map;
-		buffer = context->m_storage_memory.allocateMemory(desc);
 	}
 	// draw indirect
 	{
@@ -246,7 +211,7 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 	{
 		btr::BufferMemoryDescriptorEx<uint32_t> desc;
 		desc.element_num = resource->m_mesh.size();
-		m_material_index = context->m_storage_memory.allocateMemory(desc);
+		b_material_index = context->m_storage_memory.allocateMemory(desc);
 		desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 		auto staging = context->m_staging_memory.allocateMemory(desc);
 
@@ -260,8 +225,8 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 		vk::BufferCopy copy_info;
 		copy_info.setSize(staging.getInfo().range);
 		copy_info.setSrcOffset(staging.getInfo().offset);
-		copy_info.setDstOffset(m_material_index.getInfo().offset);
-		cmd.copyBuffer(staging.getInfo().buffer, m_material_index.getInfo().buffer, copy_info);
+		copy_info.setDstOffset(b_material_index.getInfo().offset);
+		cmd.copyBuffer(staging.getInfo().buffer, b_material_index.getInfo().buffer, copy_info);
 
 	}
 
@@ -269,7 +234,7 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 	{
 		btr::BufferMemoryDescriptorEx<MaterialBuffer> desc;
 		desc.element_num = resource->m_material.size();
-		m_material = context->m_storage_memory.allocateMemory(desc);
+		b_material = context->m_storage_memory.allocateMemory(desc);
 		desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 		auto staging = context->m_staging_memory.allocateMemory(desc);
 		auto* mb = static_cast<MaterialBuffer*>(staging.getMappedPtr());
@@ -286,16 +251,16 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 		vk::BufferCopy copy_info;
 		copy_info.setSize(staging.getInfo().range);
 		copy_info.setSrcOffset(staging.getInfo().offset);
-		copy_info.setDstOffset(m_material.getInfo().offset);
-		cmd.copyBuffer(staging.getInfo().buffer, m_material.getInfo().buffer, copy_info);
+		copy_info.setDstOffset(b_material.getInfo().offset);
+		cmd.copyBuffer(staging.getInfo().buffer, b_material.getInfo().buffer, copy_info);
 	}
 
 	// todo 結構適当
-	m_texture.resize(resource->m_material.size() * 1);
+	m_albedo_texture.resize(resource->m_material.size() * 1);
 	for (size_t i = 0; i < resource->m_material.size(); i++)
 	{
 		auto& m = resource->m_material[i];
-		m_texture[i * 1 + 0] = m.mDiffuseTex.isReady() ? m.mDiffuseTex : ResourceTexture();
+		m_albedo_texture[i * 1 + 0] = m.mDiffuseTex.isReady() ? m.mDiffuseTex : ResourceTexture();
 	}
 
 	m_render.m_vertex_buffer = resource->m_mesh_resource.m_vertex_buffer;
@@ -338,9 +303,9 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 
 			vk::BufferCopy copy;
 			copy.setSrcOffset(staging.getInfo().offset);
-			copy.setDstOffset(b_worlds.getInfo().offset);
+			copy.setDstOffset(b_world.getInfo().offset);
 			copy.setSize(staging.getInfo().range);
-			cmd.copyBuffer(staging.getInfo().buffer, b_worlds.getInfo().buffer, copy);
+			cmd.copyBuffer(staging.getInfo().buffer, b_world.getInfo().buffer, copy);
 		}
 	}
 
@@ -348,22 +313,27 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 	{
 		vk::DescriptorSetLayout layouts[] =
 		{
-			DescriptorSet::Order().getLayout(),
+			appmodel_context->getLayout(AppModelContext::DescriptorLayout_Model),
+			appmodel_context->getLayout(AppModelContext::DescriptorLayout_Render),
+			appmodel_context->getLayout(AppModelContext::DescriptorLayout_Update),
 		};
 		vk::DescriptorSetAllocateInfo descriptor_set_alloc_info;
 		descriptor_set_alloc_info.setDescriptorPool(context->m_descriptor_pool.get());
 		descriptor_set_alloc_info.setDescriptorSetCount(array_length(layouts));
 		descriptor_set_alloc_info.setPSetLayouts(layouts);
-		m_descriptor_set = std::move(context->m_device->allocateDescriptorSetsUnique(descriptor_set_alloc_info)[0]);
+		auto descriptor = context->m_device->allocateDescriptorSetsUnique(descriptor_set_alloc_info);
+		m_descriptor_set[0] = std::move(descriptor[0]);
+		m_descriptor_set[1] = std::move(descriptor[1]);
+		m_descriptor_set[2] = std::move(descriptor[2]);
 
 		vk::DescriptorBufferInfo common_storages[] = {
 			b_model_info.getInfo(),
 			b_model_instancing_info.getInfo(),
-			b_bone_transforms.getInfo(),
+			b_bone_transform.getInfo(),
 		};
 		vk::DescriptorBufferInfo render_storages[] = {
-			m_material_index.getInfo(),
-			m_material.getInfo(),
+			b_material_index.getInfo(),
+			b_material.getInfo(),
 		};
 
 		vk::DescriptorBufferInfo execute_storages[] = {
@@ -371,16 +341,16 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 			b_animation_work.getInfo(),
 			b_node_info.getInfo(),
 			b_bone_info.getInfo(),
-			b_node_transforms.getInfo(),
-			b_worlds.getInfo(),
+			b_node_transform.getInfo(),
+			b_world.getInfo(),
 			b_instance_map.getInfo(),
 			b_draw_indirect.getInfo(),
 		};
-		std::array<vk::DescriptorImageInfo, DescriptorSet::DESCRIPTOR_ALBEDO_TEXTURE_NUM> albedo_images;
+		std::array<vk::DescriptorImageInfo, AppModelContext::DESCRIPTOR_ALBEDO_TEXTURE_NUM> albedo_images;
 		albedo_images.fill(vk::DescriptorImageInfo(sGraphicsResource::Order().getWhiteTexture().m_sampler.get(), sGraphicsResource::Order().getWhiteTexture().m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal));
-		for (size_t i = 0; i < m_texture.size(); i++)
+		for (size_t i = 0; i < m_albedo_texture.size(); i++)
 		{
-			const auto& tex = m_texture[i];
+			const auto& tex = m_albedo_texture[i];
 			if (tex.isReady()) {
 				albedo_images[i] = vk::DescriptorImageInfo(tex.getSampler(), tex.getImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
 			}
@@ -397,31 +367,31 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 			.setDescriptorCount(array_length(common_storages))
 			.setPBufferInfo(common_storages)
 			.setDstBinding(0)
-			.setDstSet(m_descriptor_set.get()),
+			.setDstSet(m_descriptor_set[DescriptorLayout_Model].get()),
 			vk::WriteDescriptorSet()
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setDescriptorCount(array_length(render_storages))
 			.setPBufferInfo(render_storages)
-			.setDstBinding(10)
-			.setDstSet(m_descriptor_set.get()),
+			.setDstBinding(0)
+			.setDstSet(m_descriptor_set[DescriptorLayout_Render].get()),
 			vk::WriteDescriptorSet()
 			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
 			.setDescriptorCount(albedo_images.size())
 			.setPImageInfo(albedo_images.data())
-			.setDstBinding(12)
-			.setDstSet(m_descriptor_set.get()),
+			.setDstBinding(2)
+			.setDstSet(m_descriptor_set[DescriptorLayout_Render].get()),
 			vk::WriteDescriptorSet()
 			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
 			.setDescriptorCount(animation_images.size())
 			.setPImageInfo(animation_images.data())
-			.setDstBinding(20)
-			.setDstSet(m_descriptor_set.get()),
+			.setDstBinding(0)
+			.setDstSet(m_descriptor_set[DescriptorLayout_Update].get()),
 			vk::WriteDescriptorSet()
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setDescriptorCount(array_length(execute_storages))
 			.setPBufferInfo(execute_storages)
-			.setDstBinding(21)
-			.setDstSet(m_descriptor_set.get()),
+			.setDstBinding(1)
+			.setDstSet(m_descriptor_set[DescriptorLayout_Update].get()),
 		};
 		context->m_device->updateDescriptorSets(write, {});
 
