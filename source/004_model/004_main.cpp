@@ -35,7 +35,7 @@ int main()
 {
 	btr::setResourceAppPath("..\\..\\resource/");
 	auto camera = cCamera::sCamera::Order().create();
-	camera->getData().m_position = glm::vec3(0.f, -500.f, -800.f);
+	camera->getData().m_position = glm::vec3(0.f, -500.f, 800.f);
 	camera->getData().m_target = glm::vec3(0.f, -100.f, 0.f);
 	camera->getData().m_up = glm::vec3(0.f, -1.f, 0.f);
 	camera->getData().m_width = 640;
@@ -107,7 +107,7 @@ int main()
 		}
 
 		app.postUpdate();
-		printf("%6.3fs\n", time.getElapsedTimeAsSeconds());
+		printf("%-6.4fms\n", time.getElapsedTimeAsMilliSeconds());
 	}
 
 	return 0;
