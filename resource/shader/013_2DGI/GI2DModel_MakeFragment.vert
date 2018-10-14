@@ -6,8 +6,10 @@
 #define USE_GI2D 0
 #include "GI2D.glsl"
 
-#define USE_APPMODEL 1
-#include "applib/model/MultiModel.glsl"
+#define USE_AppModel 0
+#define USE_AppModel_Render 1
+#include "model/AppModel.glsl"
+
 
 layout(location = 0)in vec3 inPosition;
 layout(location = 1)in vec3 inNormal;
@@ -31,7 +33,7 @@ mat4 skinning()
 	{
 		if(inBoneID[i] != 255) 
 		{
-			transMat += inWeight[i] * b_bone_transforms[inBoneID[i]];
+			transMat += inWeight[i] * b_bone_transform[inBoneID[i]];
 		}
 	}
 	return transMat;

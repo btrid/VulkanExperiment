@@ -1,19 +1,15 @@
 #version 460
 #extension GL_GOOGLE_include_directive : require
 
-#include "btrlib/ConvertDimension.glsl"
-#include "btrlib/Shape.glsl"
 
 #define USE_GI2D 0
 #include "GI2D.glsl"
 
-#define USE_APPMODEL 1
-#include "applib/model/MultiModel.glsl"
-/*
-in gl_PerFragment{
-	vec4 gl_FragCoord;
-};
-*/
+#define USE_AppModel 0
+#define USE_AppModel_Render 1
+#include "model/AppModel.glsl"
+
+
 layout(location=1) in ModelData
 {
 	vec2 texcoord;
@@ -41,7 +37,7 @@ void setEmission(in vec3 emissive)
 
 void main()
 {
-	vec3 diffuse = texture(tDiffuse[0], in_modeldata.texcoord.xy).xyz;
+	vec3 diffuse = texture(t_albedo_texture[0], in_modeldata.texcoord.xy).xyz;
 	setAlbedo(diffuse);
 	setEmission(diffuse);
 }

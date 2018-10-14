@@ -28,6 +28,7 @@ struct GI2DModelRender
 	{
 		m_context = context;
 		m_gi2d_context = gi2d_context;
+		m_appmodel_context = appmodel_context;
 		// レンダーパス
 		{
 			vk::SubpassDescription subpass;
@@ -51,8 +52,8 @@ struct GI2DModelRender
 		{
 			const char* name[] =
 			{
-				"MakeFragmentAppModel.vert.spv",
-				"MakeFragmentAppModel.frag.spv",
+				"GI2DModel_MakeFragment.vert.spv",
+				"GI2DModel_MakeFragment.frag.spv",
 			};
 			static_assert(array_length(name) == array_length(m_shader), "not equal shader num");
 
@@ -174,6 +175,7 @@ struct GI2DModelRender
 			std::vector<vk::DescriptorSet> sets = {
 				m_gi2d_context->getDescriptorSet(),
 				render->getDescriptorSet(AppModel::DescriptorLayout_Model),
+				render->getDescriptorSet(AppModel::DescriptorLayout_Render),
 			};
 			cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayoutRendering].get(), 0, sets, {});
 
@@ -216,6 +218,7 @@ struct GI2DModelRender
 
 	std::shared_ptr<btr::Context> m_context;
 	std::shared_ptr<GI2DContext> m_gi2d_context;
+	std::shared_ptr<AppModelContext> m_appmodel_context;
 };
 
 }
