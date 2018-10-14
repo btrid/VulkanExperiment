@@ -293,7 +293,7 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 			auto staging = context->m_staging_memory.allocateMemory(desc);
 			for (uint32_t i = 0; i < m_instance_max_num; i++)
 			{
-				*staging.getMappedPtr(i) = glm::scale(glm::translate(glm::ballRand(700.f)), vec3(0.2f));
+				*staging.getMappedPtr(i) = glm::scale(glm::translate(glm::ballRand(700.f)), vec3(.2f));
 			}
 
 			vk::BufferCopy copy;

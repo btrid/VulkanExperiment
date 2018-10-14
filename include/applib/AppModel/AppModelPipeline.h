@@ -83,6 +83,12 @@ struct AppModelAnimationStage
 		cmd_buffer_info.level = vk::CommandBufferLevel::eSecondary;
 		auto cmd = std::move(m_context->m_device->allocateCommandBuffersUnique(cmd_buffer_info)[0]);
 
+		vk::DescriptorSet descriptors[] = {
+			render->getDescriptorSet(AppModel::DescriptorLayout_Model),
+			render->getDescriptorSet(AppModel::DescriptorLayout_Update),
+		};
+		cmd->bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout.get(), 0, array_length(descriptors), descriptors, 0, {});
+
 		{
 			vk::CommandBufferBeginInfo begin_info;
 			begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
@@ -135,25 +141,20 @@ struct AppModelAnimationStage
 				}
 
 				cmd->bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[i].get());
-				vk::DescriptorSet descriptors[] = {
-					render->getDescriptorSet(AppModel::DescriptorLayout_Model),
-					render->getDescriptorSet(AppModel::DescriptorLayout_Update),
-				};
-				cmd->bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout.get(), 0, array_length(descriptors), descriptors, 0, {});
 				cmd->dispatchIndirect(render->b_animation_indirect.getInfo().buffer, render->b_animation_indirect.getInfo().offset + i * 12);
 
 			}
-			vk::BufferMemoryBarrier barrier = render->b_bone_transform.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead);
-			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eVertexShader,
-				{}, {}, barrier, {});
-
-			barrier = render->b_draw_indirect.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead);
-			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect,
-				{}, {}, barrier, {});
+			vk::BufferMemoryBarrier barrier[] = {
+				render->b_bone_transform.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				render->b_draw_indirect.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
+			};
+			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect|vk::PipelineStageFlagBits::eVertexShader,
+				{}, 0, {}, array_length(barrier), barrier, 0, {});
 			cmd->end();
 		}
 		return cmd;
 	}
+
 	void dispach(vk::CommandBuffer cmd, std::vector<vk::CommandBuffer>& cmds)
 	{
 		cmd.executeCommands(cmds.size(), cmds.data());
@@ -318,7 +319,7 @@ struct AppModelRenderStage
 
 			// デプスステンシル
 			vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
-			depth_stencil_info.setDepthTestEnable(VK_FALSE);
+			depth_stencil_info.setDepthTestEnable(VK_TRUE);
 			depth_stencil_info.setDepthWriteEnable(VK_TRUE);
 			depth_stencil_info.setDepthCompareOp(vk::CompareOp::eGreaterOrEqual);
 			depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
@@ -404,10 +405,6 @@ struct AppModelRenderStage
 
 	void dispach(vk::CommandBuffer cmd, std::vector<vk::CommandBuffer>& cmds)
 	{
-
-// 		auto cmd = m_context->m_cmd_pool->allocCmdOnetime(0);
-// 		m_context->m_device.DebugMarkerSetObjectName(cmd, "ModelInstancingPipeline", cmd);
-
 		vk::RenderPassBeginInfo render_begin_info;
 		render_begin_info.setRenderPass(m_render_pass.get());
 		render_begin_info.setFramebuffer(m_framebuffer.get());
@@ -416,10 +413,8 @@ struct AppModelRenderStage
 		cmd.beginRenderPass(render_begin_info, vk::SubpassContents::eSecondaryCommandBuffers);
 		cmd.executeCommands(cmds.size(), cmds.data());
 		cmd.endRenderPass();
-// 		cmd.end();
-// 
-// 		return cmd;
 	}
+
 private:
 	enum 
 	{
