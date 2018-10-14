@@ -5,8 +5,8 @@
 #define USE_GI2D 0
 #include "GI2D.glsl"
 
-#define USE_AppModel 0
-#define USE_AppModel_Render 1
+#define USE_AppModel 1
+#define USE_AppModel_Render 2
 #include "model/AppModel.glsl"
 
 
@@ -17,10 +17,9 @@ layout(location=1) in ModelData
 
 void setAlbedo(in vec3 albedo)
 {
-	vec2 vpos = gl_FragCoord.xy / gl_FragCoord.w;
+	ivec2 vpos = ivec2(gl_FragCoord.xy);
 	int index1D = int(vpos.x + vpos.y * u_gi2d_info.m_resolution.x);
-//	int index1D = 0;
-	b_fragment[index1D].albedo = vec4(100.,100.,100.,0);
+	b_fragment[index1D].albedo = vec4(0.5,0.,0.,0);
 }
 void setEmission(in vec3 emissive)
 {

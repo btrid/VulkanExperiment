@@ -134,7 +134,6 @@ int main()
 						cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, barrier, {});
 					}
 
-//					cmd.executeCommands(1, &anime_cmd.get());
 
 					cmd.end();
  					cmds[cmd_model_update] = cmd;
@@ -151,6 +150,8 @@ int main()
 				gi2d_context->execute(cmd);
 				gi2d_clear.execute(cmd);
 				gi2d_debug_make_fragment.execute(cmd);
+				std::vector<vk::CommandBuffer> anime_cmds{ anime_cmd.get() };
+				animater.dispatchCmd(cmd, anime_cmds);
 				std::vector<vk::CommandBuffer> render_cmds{ render_cmd.get() };
 				renderer.dispatchCmd(cmd, render_cmds);
 				gi2d_Fluid->execute(cmd);

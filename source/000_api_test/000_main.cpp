@@ -646,6 +646,7 @@ void raymarch()
 int main()
 {
 	
+	if(0)
 	{
 		auto origin = vec2(7.99f, 8.99f);
 		auto pos = origin;

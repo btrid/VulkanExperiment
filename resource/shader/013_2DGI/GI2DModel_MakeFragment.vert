@@ -6,8 +6,8 @@
 #define USE_GI2D 0
 #include "GI2D.glsl"
 
-#define USE_AppModel 0
-#define USE_AppModel_Render 1
+#define USE_AppModel 1
+#define USE_AppModel_Render 2
 #include "model/AppModel.glsl"
 
 

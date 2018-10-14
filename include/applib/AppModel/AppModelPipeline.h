@@ -155,7 +155,7 @@ struct AppModelAnimationStage
 		return cmd;
 	}
 
-	void dispach(vk::CommandBuffer cmd, std::vector<vk::CommandBuffer>& cmds)
+	void dispatchCmd(vk::CommandBuffer cmd, std::vector<vk::CommandBuffer>& cmds)
 	{
 		cmd.executeCommands(cmds.size(), cmds.data());
 	}
