@@ -14,7 +14,7 @@ struct Vertex
 	vec3 Normal;
 	vec3 Texcoord;
 };
-layout(location = 0) in Vertex FSIn;
+layout(location = 1) in Vertex FSIn;
 
 layout(location=0) out vec4 FragColor;
 
