@@ -34,6 +34,7 @@
 #include <013_2DGI/GI2D/GI2DFluid.h>
 #include <013_2DGI/GI2D/GI2DRigidbody_dem.h>
 #include <013_2DGI/GI2D/GI2DSoftbody.h>
+#include <013_2DGI/Crowd/Crowd.h>
 
 #include <applib/AppModel/AppModel.h>
 #include <applib/AppModel/AppModelPipeline.h>
@@ -70,8 +71,6 @@ int main()
 	auto context = app.m_context;
 
 	auto appmodel_context = std::make_shared<AppModelContext>(context);
-//	AppModelRenderStage renderer(context, appmodel_context, app.m_window->getRenderTarget());
-	AppModelAnimationStage animater(context, appmodel_context);
 
 	cModel model;
 	model.load(context, "..\\..\\resource\\tiny.x");
@@ -81,18 +80,21 @@ int main()
 	ClearPipeline clear_pipeline(context, app.m_window->getRenderTarget());
 	PresentPipeline present_pipeline(context, app.m_window->getRenderTarget(), app.m_window->getSwapchainPtr());
 
-
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context);
+	std::shared_ptr<CrowdContext> crowd_context = std::make_shared<CrowdContext>(context);
+
 	GI2DClear gi2d_clear(context, gi2d_context);
 	GI2DDebug gi2d_debug_make_fragment(context, gi2d_context);
 	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
 	GI2DRadiosity gi2d_Radiosity(context, gi2d_context, app.m_window->getRenderTarget());
 	std::shared_ptr<GI2DFluid> gi2d_Fluid = std::make_shared<GI2DFluid>(context, gi2d_context);
 
-	auto anime_cmd = animater.createCmd(player_model);
-//	auto render_cmd = renderer.createCmd(player_model);
+	Crowd crowd_updater(crowd_context);
+	AppModelAnimationStage animater(context, appmodel_context);
 	GI2DModelRender renderer(context, appmodel_context, gi2d_context);
+	auto anime_cmd = animater.createCmd(player_model);
 	auto render_cmd = renderer.createCmd(player_model);
+
 
 	app.setup();
 	while (true)
@@ -105,6 +107,7 @@ int main()
 			{
 				cmd_model_update,
 				cmd_render_clear,
+				cmd_crowd,
 				cmd_gi2d,
 				cmd_render_present,
 				cmd_num
@@ -144,7 +147,14 @@ int main()
 //				cmds[cmd_render_clear] = clear_pipeline.execute();
 				cmds[cmd_render_present] = present_pipeline.execute();
 			}
-			// pm
+			// crowd
+			{
+				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
+				crowd_updater.execute(cmd);
+				cmd.end();
+				cmds[cmd_crowd] = cmd;
+			}
+			// gi2d
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				gi2d_context->execute(cmd);

@@ -1,0 +1,83 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Common.glsl"
+#include "btrlib/Math.glsl"
+
+#define USE_Crowd2D 0
+#include "Crowd.glsl"
+
+#define USE_SYSTEM 1
+#include "applib/System.glsl"
+
+layout (local_size_x = 1024, local_size_y = 1) in;
+
+void main()
+{
+	uint index = gl_GlobalInvocationID.x;
+	if(index >= u_crowd_info.unit_max_num){
+		return;
+	}
+	uvec2 data_offset = ivec2(1-u_system_data.m_gpu_index, u_system_data.m_gpu_index) * u_crowd_info.unit_max_num;
+	float deltatime = u_system_data.m_deltatime;
+
+	UnitData unit = b_unit[data_offset.x + index];
+//	b_unit[src_offset + index].m_life = -1.;
+//	unit.m_life -= deltatime;
+//	if(unit.m_life <= 0.){
+//		return;
+//	}
+
+//	uint old_offset = desc.m_cell_num.x*desc.m_cell_num.y*(1-u_system_data.m_gpu_index);
+//	uint old_map_index = calcMapIndex1D(unit.m_map_index)+old_offset;
+	UnitInfo unit_info = u_unit_info[unit.crowd_type];
+
+	{
+	
+//		march(unit.m_pos.xz, unit.m_map_index, unit.m_inertia.xz * deltatime);	
+//		unit.m_inertia *= pow(0.92, 1. + deltatime);
+	}
+
+//	vec2 next_dir = unit.m_vel.xy;
+//	float vel = dot(unit.m_vel, unit.m_vel);
+	{
+
+		// march
+		vec2 inv_dir;
+		inv_dir.x = unit.m_dir.x == 0. ? 99999. : abs(1./unit.m_dir.x);
+		inv_dir.y = unit.m_dir.y == 0. ? 99999. : abs(1./unit.m_dir.y);
+		vec2 dir = unit.m_dir * inv_dir;
+		ivec2 ipos = ivec2(unit.m_pos);
+		vec2 tp = abs(vec2(greaterThanEqual(unit.m_dir, vec2(0.))) - floor(unit.m_pos)) * inv_dir;
+		vec3 delta = vec3(inv_dir, 0.);
+		ivec3 next = ivec3(ivec2(greaterThanEqual(unit.m_dir, vec2(0.))) * 2 - 1, 0);
+
+	//	vec2 dir = unit.m_dir * min(inv_dir.x, inv_dir.y);
+		float progress = dot(unit.m_dir, unit.m_dir);
+		progress = progress == 0. ? 0. : sqrt(progress);
+		for(int _i = 0; _i < 500; _i++)
+		{
+			// ちゃんとしたレイマーチ
+			bool axis = tp.x < tp.y;
+			vec2 advance_ = axis ? delta.xz : delta.zy;
+			float advance = max(progress - dot(advance_, vec2(1.)), 0.);
+			unit.m_pos = unit.m_pos + dir * advance;
+			if(advance <= 0.){
+				break;
+			}
+			tp += advance_;
+			ipos += (axis ? next.xz : next.zy);
+
+			progress -= advance;
+		}
+	}
+	uint dst_index = atomicAdd(b_unit_counter.w, 1);
+
+//	uint offset = desc.m_cell_num.x*desc.m_cell_num.y*(u_system_data.m_gpu_index);
+//	uint map_index_1D = calcMapIndex1D(unit.m_map_index) + offset;
+//	uint old = atomicExchange(b_unit_head[map_index_1D], dst_index);
+//	unit.m_ll_next = old;
+
+	b_unit[data_offset.y + dst_index] = unit;
+}
