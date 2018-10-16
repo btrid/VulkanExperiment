@@ -35,6 +35,7 @@
 #include <013_2DGI/GI2D/GI2DRigidbody_dem.h>
 #include <013_2DGI/GI2D/GI2DSoftbody.h>
 #include <013_2DGI/Crowd/Crowd.h>
+#include <013_2DGI/Crowd/CrowdModelUpdater.h>
 
 #include <applib/AppModel/AppModel.h>
 #include <applib/AppModel/AppModelPipeline.h>
@@ -90,6 +91,7 @@ int main()
 	std::shared_ptr<GI2DFluid> gi2d_Fluid = std::make_shared<GI2DFluid>(context, gi2d_context);
 
 	Crowd crowd_updater(crowd_context);
+	CrowdModelUpdater model_updater(crowd_context, appmodel_context);
 	AppModelAnimationStage animater(context, appmodel_context);
 	GI2DModelRender renderer(context, appmodel_context, gi2d_context);
 	auto anime_cmd = animater.createCmd(player_model);
@@ -115,32 +117,6 @@ int main()
 			std::vector<vk::CommandBuffer> cmds(cmd_num);
 
 			{
-//				if(0)
-				{
-					auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
-					{
-						vk::BufferMemoryBarrier barrier = player_model->b_world.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite);
-						cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, barrier, {});
-					}
-
-					auto staging = context->m_staging_memory.allocateMemory<mat4>({ 1, {} });
-					*staging.getMappedPtr() = glm::translate(vec3(200.f, 0.f, 400.f)) * glm::scale(vec3(0.05f));
-					vk::BufferCopy copy;
-					copy.setSrcOffset(staging.getInfo().offset);
-					copy.setDstOffset(player_model->b_world.getInfo().offset);
-					copy.setSize(sizeof(mat4));
-
-					cmd.copyBuffer(staging.getInfo().buffer, player_model->b_world.getInfo().buffer, copy);
-
-					{
-						vk::BufferMemoryBarrier barrier = player_model->b_world.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead);
-						cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, barrier, {});
-					}
-
-
-					cmd.end();
- 					cmds[cmd_model_update] = cmd;
-				}
 			}
 
 			{
@@ -160,8 +136,14 @@ int main()
 				gi2d_context->execute(cmd);
 				gi2d_clear.execute(cmd);
 				gi2d_debug_make_fragment.execute(cmd);
-				std::vector<vk::CommandBuffer> anime_cmds{ anime_cmd.get() };
-				animater.dispatchCmd(cmd, anime_cmds);
+
+				{
+					model_updater.execute(cmd, player_model);
+
+					std::vector<vk::CommandBuffer> anime_cmds{ anime_cmd.get() };
+					animater.dispatchCmd(cmd, anime_cmds);
+
+				}
 				std::vector<vk::CommandBuffer> render_cmds{ render_cmd.get() };
 				renderer.dispatchCmd(cmd, render_cmds);
 				gi2d_Fluid->execute(cmd);
@@ -171,7 +153,6 @@ int main()
 //				gi2d_Softbody.execute(cmd);
 //				gi2d_Rigidbody.execute(cmd);
 				gi2d_Radiosity.execute(cmd);
-
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;
 			}

@@ -174,8 +174,8 @@ struct GI2DModelRender
 			cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PipelineLayoutRendering].get());
 			std::vector<vk::DescriptorSet> sets = {
 				m_gi2d_context->getDescriptorSet(),
-				render->getDescriptorSet(AppModel::DescriptorLayout_Model),
-				render->getDescriptorSet(AppModel::DescriptorLayout_Render),
+				render->getDescriptorSet(AppModel::DescriptorSet_Model),
+				render->getDescriptorSet(AppModel::DescriptorSet_Render),
 			};
 			cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayoutRendering].get(), 0, sets, {});
 

@@ -362,31 +362,31 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 			.setDescriptorCount(array_length(common_storages))
 			.setPBufferInfo(common_storages)
 			.setDstBinding(0)
-			.setDstSet(m_descriptor_set[DescriptorLayout_Model].get()),
+			.setDstSet(m_descriptor_set[DescriptorSet_Model].get()),
 			vk::WriteDescriptorSet()
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setDescriptorCount(array_length(render_storages))
 			.setPBufferInfo(render_storages)
 			.setDstBinding(0)
-			.setDstSet(m_descriptor_set[DescriptorLayout_Render].get()),
+			.setDstSet(m_descriptor_set[DescriptorSet_Render].get()),
 			vk::WriteDescriptorSet()
 			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
 			.setDescriptorCount(albedo_images.size())
 			.setPImageInfo(albedo_images.data())
 			.setDstBinding(2)
-			.setDstSet(m_descriptor_set[DescriptorLayout_Render].get()),
+			.setDstSet(m_descriptor_set[DescriptorSet_Render].get()),
 			vk::WriteDescriptorSet()
 			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
 			.setDescriptorCount(animation_images.size())
 			.setPImageInfo(animation_images.data())
 			.setDstBinding(0)
-			.setDstSet(m_descriptor_set[DescriptorLayout_Update].get()),
+			.setDstSet(m_descriptor_set[DescriptorSet_Update].get()),
 			vk::WriteDescriptorSet()
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setDescriptorCount(array_length(execute_storages))
 			.setPBufferInfo(execute_storages)
 			.setDstBinding(1)
-			.setDstSet(m_descriptor_set[DescriptorLayout_Update].get()),
+			.setDstSet(m_descriptor_set[DescriptorSet_Update].get()),
 		};
 		context->m_device->updateDescriptorSets(write, {});
 

@@ -9,8 +9,9 @@ struct CrowdContext
 {
 	struct CrowdInfo
 	{
-		uint32_t crowd_max_num;
-		uint32_t unit_max_num;
+		uint32_t crowd_type_max;
+		uint32_t crowd_max;
+		uint32_t unit_max;
 	};
 	struct CrowdData
 	{
@@ -38,7 +39,13 @@ struct CrowdContext
 	{
 		m_context = context;
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+
 		{
+			m_crowd_info.crowd_type_max = 16;
+			m_crowd_info.crowd_max = 16;
+			m_crowd_info.unit_max = 1024;
+
+//			m_unit_info[].angler_speed
 		}
 
 		{
@@ -74,9 +81,9 @@ struct CrowdContext
 
 		{
 			u_crowd_info = m_context->m_uniform_memory.allocateMemory<CrowdInfo>({ 1, {} });
-			u_unit_info = m_context->m_uniform_memory.allocateMemory<UnitInfo>({ 16, {} });
-			b_crowd = m_context->m_storage_memory.allocateMemory<CrowdData>({ 16, {} });
-			b_unit = m_context->m_storage_memory.allocateMemory<UnitData>({ 1024, {} });
+			u_unit_info = m_context->m_uniform_memory.allocateMemory<UnitInfo>({ m_crowd_info.crowd_max, {} });
+			b_crowd = m_context->m_storage_memory.allocateMemory<CrowdData>({ m_crowd_info.crowd_max, {} });
+			b_unit = m_context->m_storage_memory.allocateMemory<UnitData>({ m_crowd_info.unit_max*2, {} });
 			b_unit_counter = m_context->m_storage_memory.allocateMemory<uvec4>({ 1, {} });
 			b_grid_counter = m_context->m_storage_memory.allocateMemory<uint32_t>({ 1024*1024/*m_gi2d_context->FragmentBufferSize*/, {} });
 
@@ -108,13 +115,19 @@ struct CrowdContext
 		}
 
 
+		// initialize
+		{
+		}
 	}
 
 	void execute(vk::CommandBuffer cmd)
 	{
+
 	}
 
 	std::shared_ptr<btr::Context> m_context;
+	CrowdInfo m_crowd_info;
+//	std::array<UnitInfo, 16> m_unit_info;
 
 	btr::BufferMemoryEx<CrowdInfo> u_crowd_info;
 	btr::BufferMemoryEx<UnitInfo> u_unit_info;

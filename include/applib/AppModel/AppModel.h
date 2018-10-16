@@ -211,15 +211,15 @@ struct AppModel
 	};
 	AppModelRender m_render;
 
-	enum DescriptorLayout
+	enum DescriptorSet
 	{
-		DescriptorLayout_Model,
-		DescriptorLayout_Render,
-		DescriptorLayout_Update,
-		DescriptorLayout_Num,
+		DescriptorSet_Model,
+		DescriptorSet_Render,
+		DescriptorSet_Update,
+		DescriptorSet_Num,
 	};
-	std::array<vk::UniqueDescriptorSet, DescriptorLayout_Num> m_descriptor_set;
+	std::array<vk::UniqueDescriptorSet, DescriptorSet_Num> m_descriptor_set;
 
-	vk::DescriptorSet getDescriptorSet(DescriptorLayout layout)const { return m_descriptor_set[layout].get(); }
+	vk::DescriptorSet getDescriptorSet(DescriptorSet layout)const { return m_descriptor_set[layout].get(); }
 
 };

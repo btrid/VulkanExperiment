@@ -84,8 +84,8 @@ struct AppModelAnimationStage
 		auto cmd = std::move(m_context->m_device->allocateCommandBuffersUnique(cmd_buffer_info)[0]);
 
 		vk::DescriptorSet descriptors[] = {
-			render->getDescriptorSet(AppModel::DescriptorLayout_Model),
-			render->getDescriptorSet(AppModel::DescriptorLayout_Update),
+			render->getDescriptorSet(AppModel::DescriptorSet_Model),
+			render->getDescriptorSet(AppModel::DescriptorSet_Update),
 		};
 		cmd->bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout.get(), 0, array_length(descriptors), descriptors, 0, {});
 
@@ -388,8 +388,8 @@ struct AppModelRenderStage
 
 			cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline.get());
 			std::vector<vk::DescriptorSet> sets = {
-				render->getDescriptorSet(AppModel::DescriptorLayout_Model),
-				render->getDescriptorSet(AppModel::DescriptorLayout_Render),
+				render->getDescriptorSet(AppModel::DescriptorSet_Model),
+				render->getDescriptorSet(AppModel::DescriptorSet_Render),
 				sCameraManager::Order().getDescriptorSet(sCameraManager::DESCRIPTOR_SET_CAMERA),
 				m_light_pipeline->getDescriptorSet(cFowardPlusPipeline::DESCRIPTOR_SET_LIGHT),
 			};

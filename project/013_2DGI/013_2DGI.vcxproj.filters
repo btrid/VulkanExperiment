@@ -51,5 +51,11 @@
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DModelRender.h">
       <Filter>GI2D</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\013_2DGI\Crowd\Crowd.h">
+      <Filter>Crowd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\013_2DGI\Crowd\CrowdModelUpdater.h">
+      <Filter>Crowd</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

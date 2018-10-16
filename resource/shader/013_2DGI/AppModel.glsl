@@ -136,7 +136,7 @@ layout(std430, set=USE_AppModel_Update, binding=4) readonly restrict buffer Bone
 layout(std430, set=USE_AppModel_Update, binding=5) restrict buffer NodeLocalTransformBuffer {
 	mat4 b_node_transform[];
 };
-layout(std430, set=USE_AppModel_Update, binding=6) readonly restrict buffer WorldTransform {
+layout(std430, set=USE_AppModel_Update, binding=6) restrict buffer WorldTransform {
 	mat4 b_world[];
 };
 

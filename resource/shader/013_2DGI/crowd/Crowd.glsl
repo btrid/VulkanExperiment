@@ -6,8 +6,9 @@
 
 struct CrowdInfo
 {
-	uint crowd_max_num;
-	uint unit_max_num;
+	uint crowd_type_max;
+	uint crowd_max;
+	uint unit_max;
 };
 struct CrowdData
 {
