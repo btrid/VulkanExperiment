@@ -31,7 +31,7 @@ struct CrowdContext
 		vec2 m_pos;
 		vec2 m_vel;
 		int32_t crowd_id;
-		int32_t unit_id;
+		int32_t unit_type;
 		vec2 _p;
 	};
 
@@ -117,6 +117,35 @@ struct CrowdContext
 
 		// initialize
 		{
+			{
+				auto staging = m_context->m_staging_memory.allocateMemory<CrowdInfo>({ 1, btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT });
+				*staging.getMappedPtr() = m_crowd_info;
+
+				vk::BufferCopy copy;
+				copy.setSrcOffset(staging.getInfo().offset);
+				copy.setDstOffset(u_crowd_info.getInfo().offset);
+				copy.setSize(staging.getInfo().range);
+				cmd.copyBuffer(staging.getInfo().buffer, u_crowd_info.getInfo().buffer, copy);
+
+			}
+
+			{
+				auto staging = m_context->m_staging_memory.allocateMemory<UnitData>({ m_crowd_info.unit_max * 2, btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT });
+				for (int32_t i = 0; i < m_crowd_info.unit_max * 2; i++)
+				{
+					staging.getMappedPtr(i)->m_pos = glm::ballRand(1000.f).xy();
+					staging.getMappedPtr(i)->m_vel = glm::ballRand(2.f).xy();
+					staging.getMappedPtr(i)->unit_type = 0;
+					staging.getMappedPtr(i)->crowd_id = 0;
+				}
+
+				vk::BufferCopy copy;
+				copy.setSrcOffset(staging.getInfo().offset);
+				copy.setDstOffset(b_unit.getInfo().offset);
+				copy.setSize(staging.getInfo().range);
+				cmd.copyBuffer(staging.getInfo().buffer, b_unit.getInfo().buffer, copy);
+
+			}
 		}
 	}
 

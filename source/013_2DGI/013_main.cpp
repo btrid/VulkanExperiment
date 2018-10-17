@@ -75,7 +75,7 @@ int main()
 
 	cModel model;
 	model.load(context, "..\\..\\resource\\tiny.x");
-	std::shared_ptr<AppModel> player_model = std::make_shared<AppModel>(context, appmodel_context, model.getResource(), 1);
+	std::shared_ptr<AppModel> player_model = std::make_shared<AppModel>(context, appmodel_context, model.getResource(), 1024);
 
 
 	ClearPipeline clear_pipeline(context, app.m_window->getRenderTarget());
@@ -91,7 +91,7 @@ int main()
 	std::shared_ptr<GI2DFluid> gi2d_Fluid = std::make_shared<GI2DFluid>(context, gi2d_context);
 
 	Crowd crowd_updater(crowd_context);
-	CrowdModelUpdater model_updater(crowd_context, appmodel_context);
+	CrowdModelUpdater crowd_model_updater(crowd_context, appmodel_context);
 	AppModelAnimationStage animater(context, appmodel_context);
 	GI2DModelRender renderer(context, appmodel_context, gi2d_context);
 	auto anime_cmd = animater.createCmd(player_model);
@@ -126,7 +126,7 @@ int main()
 			// crowd
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
-				crowd_updater.execute(cmd);
+//				crowd_updater.execute(cmd);
 				cmd.end();
 				cmds[cmd_crowd] = cmd;
 			}
@@ -138,14 +138,17 @@ int main()
 				gi2d_debug_make_fragment.execute(cmd);
 
 				{
-					model_updater.execute(cmd, player_model);
+//					crowd_updater.execute(cmd);
+					crowd_model_updater.execute(cmd, player_model);
 
 					std::vector<vk::CommandBuffer> anime_cmds{ anime_cmd.get() };
 					animater.dispatchCmd(cmd, anime_cmds);
 
 				}
-				std::vector<vk::CommandBuffer> render_cmds{ render_cmd.get() };
-				renderer.dispatchCmd(cmd, render_cmds);
+				{
+					std::vector<vk::CommandBuffer> render_cmds{ render_cmd.get() };
+					renderer.dispatchCmd(cmd, render_cmds);
+				}
 				gi2d_Fluid->execute(cmd);
 				gi2d_Fluid->executePost(cmd);
 				gi2d_make_hierarchy.execute(cmd);

@@ -7,7 +7,7 @@
 
 #define USE_AppModel 1
 #define USE_AppModel_Render 2
-#include "model/AppModel.glsl"
+#include "AppModel.glsl"
 
 
 layout(location=1) in ModelData

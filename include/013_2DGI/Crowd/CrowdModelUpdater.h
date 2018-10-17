@@ -49,7 +49,13 @@ struct CrowdModelUpdater
 
 	void execute(vk::CommandBuffer cmd, const std::shared_ptr<AppModel>& model)
 	{
-		vk::DescriptorSet descriptors[] = 
+		vk::BufferMemoryBarrier to_write[] = {
+			model->b_world.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
+		};
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
+			{}, 0, {}, array_length(to_write), to_write, 0, {});
+
+		vk::DescriptorSet descriptors[] =
 		{
 			m_crowd_context->getDescriptorSet(),
 			sSystem::Order().getSystemDescriptorSet(),
@@ -60,6 +66,12 @@ struct CrowdModelUpdater
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline.get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout.get(), 0, array_length(descriptors), descriptors, array_length(offset), offset);
 		cmd.dispatch(1, 1, 1);
+
+		vk::BufferMemoryBarrier to_read[] = {
+			model->b_world.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+		};
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
+			{}, 0, {}, array_length(to_read), to_read, 0, {});
 
 	}
 	std::shared_ptr<CrowdContext> m_crowd_context;

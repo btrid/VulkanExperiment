@@ -8,7 +8,7 @@
 
 #define USE_AppModel 1
 #define USE_AppModel_Render 2
-#include "model/AppModel.glsl"
+#include "AppModel.glsl"
 
 
 layout(location = 0)in vec3 inPosition;

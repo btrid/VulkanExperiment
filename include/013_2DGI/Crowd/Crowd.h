@@ -78,8 +78,16 @@ struct Crowd
 
 	void execute(vk::CommandBuffer cmd) 
 	{
+		vk::DescriptorSet descriptors[] =
+		{
+			m_context->getDescriptorSet(),
+			sSystem::Order().getSystemDescriptorSet(),
+		};
 
-
+		uint32_t offset[array_length(descriptors)] = {};
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_UnitUpdate].get());
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Crowd].get(), 0, array_length(descriptors), descriptors, array_length(offset), offset);
+		cmd.dispatch(1, 1, 1);
 
 	}
 
