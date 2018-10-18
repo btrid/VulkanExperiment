@@ -28,7 +28,7 @@ struct UnitData
 	vec2 m_pos;
 	vec2 m_dir;
 	int crowd_type;
-	int _p1;
+	int unit_type;
 	int _p2;
 	int _p3;
 };

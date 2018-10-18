@@ -16,14 +16,14 @@
 
 layout (local_size_x = 1024, local_size_y = 1) in;
 
-mat4 RotateZ(in float angle)
+mat4 eulerAngleY(in float angle)
 {
 	float s = sin(angle);
 	float c = cos(angle);
 	return mat4(
-		vec4(  c, -s,  0., 0.),
-        vec4(  s,  c,  0., 0.),
-        vec4( 0., 0.,  1., 0.),
+		vec4(  c, 0.,  -s, 0.),
+        vec4( 0., 1.,  0., 0.),
+        vec4(  s, 0.,   c, 0.),
         vec4( 0., 0.,  0., 1.));
 }
 void main()
@@ -34,15 +34,11 @@ void main()
 	}
 	uvec2 data_offset = ivec2(1-u_system_data.m_gpu_index, u_system_data.m_gpu_index) * u_crowd_info.unit_max;
 
-	UnitData unit = b_unit[data_offset.y + index];
-//	unit.m_pos;
-//	vec2 dir = unit.m_dir;
-//	dir = dot(dir, dir) == 0. ? vec2(0., 1.) : normalize(dir);
-//	float angle = atan(dir.y, dir.x);
-	
-	mat4 mat = translate(mat4(1.), vec3(200., 0., 400.)) * mat4(0.05);
-//	mat *= RotateZ(angle);
-//	mat[3].xz = unit.m_pos;
+	UnitData unit = b_unit[index];
+	vec2 dir = unit.m_dir;
+	dir = dot(dir, dir) == 0. ? vec2(0., 1.) : normalize(dir);
+	float angle = atan(dir.y, dir.x);	
+	mat4 mat = mat4(0.05) * translate(eulerAngleY(angle), vec3(unit.m_pos.x, 0., unit.m_pos.y));
 
 	b_world[index] = mat;
 }

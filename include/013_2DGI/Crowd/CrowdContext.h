@@ -43,11 +43,10 @@ struct CrowdContext
 		{
 			m_crowd_info.crowd_type_max = 16;
 			m_crowd_info.crowd_max = 16;
-			m_crowd_info.unit_max = 1024;
+			m_crowd_info.unit_max = 128;
 
 //			m_unit_info[].angler_speed
 		}
-
 		{
 			{
 				auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
@@ -133,7 +132,8 @@ struct CrowdContext
 				auto staging = m_context->m_staging_memory.allocateMemory<UnitData>({ m_crowd_info.unit_max * 2, btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT });
 				for (int32_t i = 0; i < m_crowd_info.unit_max * 2; i++)
 				{
-					staging.getMappedPtr(i)->m_pos = glm::ballRand(1000.f).xy();
+					staging.getMappedPtr(i)->m_pos = abs(glm::ballRand(4000.f).xy());
+//					staging.getMappedPtr(i)->m_pos = vec2(250.f);
 					staging.getMappedPtr(i)->m_vel = glm::ballRand(2.f).xy();
 					staging.getMappedPtr(i)->unit_type = 0;
 					staging.getMappedPtr(i)->crowd_id = 0;

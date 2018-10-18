@@ -39,10 +39,24 @@ mat4 skinning()
 	return transMat;
 }
 
+mat4 skinning_instancing()
+{
+	mat4 transMat = mat4(0.0);
+	uint bone_offset = u_model_info.boneNum * gl_InstanceIndex;
+	for(uint i=0; i<4; i++)
+	{
+		if(inBoneID[i] != 255) 
+		{
+			transMat += inWeight[i] * b_bone_transform[bone_offset + inBoneID[i]];
+		}
+	}
+	return transMat;
+}
+
 void main()
 {
 	vec4 pos = vec4((inPosition).xyz, 1.0);
-	mat4 skinningMat = skinning();
+	mat4 skinningMat = skinning_instancing();
 	pos = u_gi2d_info.m_camera_PV * skinningMat * pos;
 	gl_Position = vec4(pos.xyz, 1.0);
 
