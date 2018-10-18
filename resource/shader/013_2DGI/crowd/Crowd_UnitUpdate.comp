@@ -53,7 +53,6 @@ void main()
 		vec3 delta = vec3(inv_dir, 0.);
 		ivec3 next = ivec3(ivec2(greaterThanEqual(unit.m_dir, vec2(0.))) * 2 - 1, 0);
 
-	//	vec2 dir = unit.m_dir * min(inv_dir.x, inv_dir.y);
 		float progress = dot(unit.m_dir, unit.m_dir);
 		progress = progress == 0. ? 0. : sqrt(progress);
 		for(int _i = 0; _i < 500; _i++)
@@ -79,5 +78,6 @@ void main()
 //	uint old = atomicExchange(b_unit_head[map_index_1D], dst_index);
 //	unit.m_ll_next = old;
 
+//	unit.m_pos += vec2(1000.);
 	b_unit[data_offset.y + dst_index] = unit;
 }

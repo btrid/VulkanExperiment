@@ -134,7 +134,7 @@ struct CrowdContext
 				{
 					staging.getMappedPtr(i)->m_pos = abs(glm::ballRand(4000.f).xy());
 //					staging.getMappedPtr(i)->m_pos = vec2(250.f);
-					staging.getMappedPtr(i)->m_vel = glm::ballRand(2.f).xy();
+					staging.getMappedPtr(i)->m_vel = glm::ballRand(20.f).xy();
 					staging.getMappedPtr(i)->unit_type = 0;
 					staging.getMappedPtr(i)->crowd_id = 0;
 				}
@@ -151,6 +151,7 @@ struct CrowdContext
 
 	void execute(vk::CommandBuffer cmd)
 	{
+
 
 	}
 

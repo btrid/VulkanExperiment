@@ -47,15 +47,9 @@ struct Crowd
 				context->getDescriptorSetLayout(),
 				sSystem::Order().getSystemDescriptorLayout(),
 			};
-
-// 			vk::PushConstantRange constants[] = {
-// 				vk::PushConstantRange().setStageFlags(vk::ShaderStageFlagBits::eCompute).setSize(8).setOffset(0),
-// 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 			pipeline_layout_info.setPSetLayouts(layouts);
-// 			pipeline_layout_info.setPushConstantRangeCount(array_length(constants));
-// 			pipeline_layout_info.setPPushConstantRanges(constants);
 			m_pipeline_layout[PipelineLayout_Crowd] = context->m_context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
@@ -78,6 +72,14 @@ struct Crowd
 
 	void execute(vk::CommandBuffer cmd) 
 	{
+		{
+			cmd.updateBuffer<uvec4>(m_context->b_unit_counter.getInfo().buffer, m_context->b_unit_counter.getInfo().offset, uvec4(0));
+			vk::BufferMemoryBarrier to_read[] = {
+				m_context->b_unit_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, 0, {}, array_length(to_read), to_read, 0, {});
+		}
+
 		vk::DescriptorSet descriptors[] =
 		{
 			m_context->getDescriptorSet(),

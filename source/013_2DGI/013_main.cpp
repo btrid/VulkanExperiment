@@ -138,7 +138,7 @@ int main()
 				gi2d_debug_make_fragment.execute(cmd);
 
 				{
-//					crowd_updater.execute(cmd);
+					crowd_updater.execute(cmd);
 					crowd_model_updater.execute(cmd, player_model);
 
 					std::vector<vk::CommandBuffer> anime_cmds{ anime_cmd.get() };
