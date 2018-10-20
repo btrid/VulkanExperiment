@@ -19,24 +19,11 @@ void setAlbedo(in vec3 albedo)
 {
 	ivec2 vpos = ivec2(gl_FragCoord.xy);
 	int index1D = int(vpos.x + vpos.y * u_gi2d_info.m_resolution.x);
-	b_fragment[index1D].albedo = vec4(0.,0.,0.1,0);
-}
-void setEmission(in vec3 emissive)
-{
-/*	vec2 vpos = gl_FragCoord.xy / gl_FragCoord.w;
-	int index1D = int(vpos.x + vpos.y * u_gi2d_info.m_resolution.x);
-	if(atomicCompSwap(b_emissive_map[index1D], 0, 1) == 0)
-	{
-		int emissive_index = atomicAdd(b_emissive_counter[0].x, 1);
-		b_emissive[emissive_index] = emissive;
-		b_emissive_map[index1D] = emissive_index;
-	}
-*/
+	b_fragment[index1D].albedo = vec4(albedo*5.,0);
 }
 
 void main()
 {
 	vec3 diffuse = texture(t_albedo_texture[0], in_modeldata.texcoord.xy).xyz;
 	setAlbedo(diffuse);
-	setEmission(diffuse);
 }

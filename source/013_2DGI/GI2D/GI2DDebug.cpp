@@ -55,19 +55,31 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 		}
 
 #endif
+
+// 		for (size_t y = 0; y < gi2d_context->RenderHeight; y++)
+// 		{
+// 			for (size_t x = 0; x < gi2d_context->RenderWidth; x++)
+// 			{
+// 				auto& m = map_data[x + y * gi2d_context->RenderWidth];
+// 				m.albedo = vec4(1.f, 1.0f, 1.0f, 0.1f);
+// 				for (auto& r : rect)
+// 				{
+// 					if (x >= r.rect.x && y >= r.rect.y && x <= r.rect.x + r.rect.z && y <= r.rect.y + r.rect.w) {
+// 						m.albedo = r.color;
+// 						break;
+// 					}
+// 				}
+// 			}
+// 
+// 		}
+
 		for (size_t y = 0; y < gi2d_context->RenderHeight; y++)
 		{
 			for (size_t x = 0; x < gi2d_context->RenderWidth; x++)
 			{
 				auto& m = map_data[x + y * gi2d_context->RenderWidth];
 				m.albedo = vec4(1.f, 1.0f, 1.0f, 0.1f);
-				for (auto& r : rect)
-				{
-					if (x >= r.rect.x && y >= r.rect.y && x <= r.rect.x + r.rect.z && y <= r.rect.y + r.rect.w) {
-						m.albedo = r.color;
-						break;
-					}
-				}
+				m.albedo = x==0||x== gi2d_context->RenderWidth-1||y==0||y==gi2d_context->RenderHeight-1 ? vec4{ 0.8f,0.2f,0.2f,0.f } : vec4(1.f, 1.0f, 1.0f, 0.1f);
 			}
 
 		}

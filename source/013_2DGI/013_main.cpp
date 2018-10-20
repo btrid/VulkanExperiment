@@ -90,7 +90,7 @@ int main()
 	GI2DRadiosity gi2d_Radiosity(context, gi2d_context, app.m_window->getRenderTarget());
 	std::shared_ptr<GI2DFluid> gi2d_Fluid = std::make_shared<GI2DFluid>(context, gi2d_context);
 
-	Crowd crowd_updater(crowd_context);
+	Crowd crowd_updater(crowd_context, gi2d_context);
 	CrowdModelUpdater crowd_model_updater(crowd_context, appmodel_context);
 	AppModelAnimationStage animater(context, appmodel_context);
 	GI2DModelRender renderer(context, appmodel_context, gi2d_context);
@@ -137,6 +137,11 @@ int main()
 				gi2d_clear.execute(cmd);
 				gi2d_debug_make_fragment.execute(cmd);
 
+				gi2d_Fluid->execute(cmd);
+				gi2d_Fluid->executePost(cmd);
+
+
+				gi2d_make_hierarchy.execute(cmd);
 				{
 					crowd_updater.execute(cmd);
 					crowd_model_updater.execute(cmd, player_model);
@@ -149,9 +154,8 @@ int main()
 					std::vector<vk::CommandBuffer> render_cmds{ render_cmd.get() };
 					renderer.dispatchCmd(cmd, render_cmds);
 				}
-				gi2d_Fluid->execute(cmd);
-				gi2d_Fluid->executePost(cmd);
-				gi2d_make_hierarchy.execute(cmd);
+
+
 //				gi2d_Fluid->executeCalc(cmd);
 //				gi2d_Softbody.execute(cmd);
 //				gi2d_Rigidbody.execute(cmd);

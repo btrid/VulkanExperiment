@@ -11,7 +11,33 @@
 #define USE_SYSTEM 1
 #include "applib/System.glsl"
 
+#define USE_GI2D 2
+#include "GI2D.glsl"
+
+
 layout (local_size_x = 1024, local_size_y = 1) in;
+
+struct MarchResult
+{
+	vec2 next_pos;
+	ivec2 next_ipos;
+	float progress;
+	bool is_end;
+};
+
+// 軽量版
+MarchResult march(in vec2 pos, in vec2 dir, in float progress, in float advance)
+{
+	pos += dir * clamp(progress, 0., advance);
+	progress = max(progress-advance, 0.);
+
+	MarchResult result;
+	result.next_pos = pos;
+	result.next_ipos = ivec2(pos);
+	result.progress = progress;
+	result.is_end = progress <= 0.;
+	return result;
+}
 
 void main()
 {
@@ -19,6 +45,8 @@ void main()
 	if(index >= u_crowd_info.unit_max){
 		return;
 	}
+	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
+
 	uvec2 data_offset = ivec2(1-u_system_data.m_gpu_index, u_system_data.m_gpu_index) * u_crowd_info.unit_max;
 	float deltatime = u_system_data.m_deltatime;
 
@@ -29,8 +57,6 @@ void main()
 //		return;
 //	}
 
-//	uint old_offset = desc.m_cell_num.x*desc.m_cell_num.y*(1-u_system_data.m_gpu_index);
-//	uint old_map_index = calcMapIndex1D(unit.m_map_index)+old_offset;
 	UnitInfo unit_info = u_unit_info[unit.crowd_type];
 
 	{
@@ -38,38 +64,54 @@ void main()
 //		march(unit.m_pos.xz, unit.m_map_index, unit.m_inertia.xz * deltatime);	
 //		unit.m_inertia *= pow(0.92, 1. + deltatime);
 	}
-
-//	vec2 next_dir = unit.m_vel.xy;
-//	float vel = dot(unit.m_vel, unit.m_vel);
 	{
 
 		// march
-		vec2 inv_dir;
-		inv_dir.x = unit.m_dir.x == 0. ? 99999. : abs(1./unit.m_dir.x);
-		inv_dir.y = unit.m_dir.y == 0. ? 99999. : abs(1./unit.m_dir.y);
-		vec2 dir = unit.m_dir * inv_dir;
-		ivec2 ipos = ivec2(unit.m_pos);
-		vec2 tp = abs(vec2(greaterThanEqual(unit.m_dir, vec2(0.))) - floor(unit.m_pos)) * inv_dir;
-		vec3 delta = vec3(inv_dir, 0.);
-		ivec3 next = ivec3(ivec2(greaterThanEqual(unit.m_dir, vec2(0.))) * 2 - 1, 0);
+//		vec2 dir = unit.m_dir;
 
+		ivec2 ipos = ivec2(unit.m_pos);
 		float progress = dot(unit.m_dir, unit.m_dir);
 		progress = progress == 0. ? 0. : sqrt(progress);
-		for(int _i = 0; _i < 500; _i++)
+
+		for(int _i = 0; _i < 2000; _i++)
 		{
-			// ちゃんとしたレイマーチ
-			bool axis = tp.x < tp.y;
-			vec2 advance_ = axis ? delta.xz : delta.zy;
-			float advance = max(progress - dot(advance_, vec2(1.)), 0.);
-			unit.m_pos = unit.m_pos + dir * advance;
-			if(advance <= 0.){
+			MarchResult result = march(unit.m_pos, unit.m_dir, progress, 1.);
+
+			// hit確認
+			ivec4 fragment_index = ivec4(result.next_ipos/8, result.next_ipos%8);
+			int findex = fragment_index.x + fragment_index.y*reso.z;
+			uint64_t fragment_map = b_fragment_map[findex].x;
+
+			ivec2 shift = fragment_index.zw;
+			uint64_t bit = 1ul<<(shift.x+shift.y*8);
+			if((fragment_map & bit) != 0)
+			{
+				// 壁にぶつかったので反射
+				vec2 next = vec2(result.next_ipos - ipos);
+				vec2 wall = vec2(next.x, next.y);
+				unit.m_dir = normalize(reflect(unit.m_dir, wall));
+
+				progress *= 0.5;
+
+				// 更新はしない?
+				// pos = result.next_pos;
+
+			}
+			else
+			{
+				// 何もないのでそのまま進む
+				unit.m_pos = result.next_pos;
+				ipos = result.next_ipos;				
+
+			}
+
+			if(result.is_end)
+			{
+//				b_pos[p_id*2 + gpu_index()] = pos;
 				break;
 			}
-			tp += advance_;
-			ipos += (axis ? next.xz : next.zy);
-
-			progress -= advance;
 		}
+
 	}
 	uint dst_index = atomicAdd(b_unit_counter.w, 1);
 

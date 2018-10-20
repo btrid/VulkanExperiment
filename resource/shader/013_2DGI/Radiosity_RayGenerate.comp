@@ -25,8 +25,6 @@ void main()
 	vec2 dir = rotate(angle);
 	vec2 inv_dir = abs(1./dir);
 
-	vec2 segment_one = dir*max(inv_dir.x, inv_dir.y);
-
 	vec2 pos;
 	pos.x = gl_GlobalInvocationID.y==3 ? reso.x-1 : 0;
 	pos.y = gl_GlobalInvocationID.y==1 ? reso.y-1 : 0;
@@ -35,6 +33,7 @@ void main()
 	pdir.x = gl_GlobalInvocationID.y/2==0 ? 1 : 0;
 	pdir.y = gl_GlobalInvocationID.y/2==1 ? 1 : 0;
 
+	vec2 segment_one = dir*max(inv_dir.x, inv_dir.y);
 	pos += pdir * abs(segment_one)*gl_WorkGroupID.x;
 	vec2 begin = pos;
 	ivec2 map_index = ivec2(pos);

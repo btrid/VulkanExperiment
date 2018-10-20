@@ -1,6 +1,7 @@
 #pragma once
 #include <013_2DGI/Crowd/CrowdContext.h>
 #include <applib/sSystem.h>
+#include <013_2DGI/GI2D/GI2DContext.h>
 
 
 struct Crowd 
@@ -22,9 +23,11 @@ struct Crowd
 
 		Pipeline_Num,
 	};
-	Crowd(const std::shared_ptr<CrowdContext>& context)
+	Crowd(const std::shared_ptr<CrowdContext>& context, const std::shared_ptr<gi2d::GI2DContext>& gi2d_context)
 	{
 		m_context = context;
+		m_gi2d_context = gi2d_context;
+
 		auto cmd = context->m_context->m_cmd_pool->allocCmdTempolary(0);
 
 		{
@@ -46,6 +49,7 @@ struct Crowd
 			vk::DescriptorSetLayout layouts[] = {
 				context->getDescriptorSetLayout(),
 				sSystem::Order().getSystemDescriptorLayout(),
+				gi2d_context->getDescriptorSetLayout(),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
@@ -84,6 +88,7 @@ struct Crowd
 		{
 			m_context->getDescriptorSet(),
 			sSystem::Order().getSystemDescriptorSet(),
+			m_gi2d_context->getDescriptorSet(),
 		};
 
 		uint32_t offset[array_length(descriptors)] = {};
@@ -94,6 +99,7 @@ struct Crowd
 	}
 
 	std::shared_ptr<CrowdContext> m_context;
+	std::shared_ptr<gi2d::GI2DContext> m_gi2d_context;
 
 	std::array<vk::UniquePipeline, Pipeline_Num> m_pipeline;
 	std::array<vk::UniquePipelineLayout, PipelineLayout_Num> m_pipeline_layout;

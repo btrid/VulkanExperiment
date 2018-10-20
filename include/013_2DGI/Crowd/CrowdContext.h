@@ -133,8 +133,8 @@ struct CrowdContext
 				for (int32_t i = 0; i < m_crowd_info.unit_max * 2; i++)
 				{
 					staging.getMappedPtr(i)->m_pos = abs(glm::ballRand(4000.f).xy());
-//					staging.getMappedPtr(i)->m_pos = vec2(250.f);
 					staging.getMappedPtr(i)->m_vel = glm::ballRand(20.f).xy();
+					staging.getMappedPtr(i)->m_vel = dot(staging.getMappedPtr(i)->m_vel, staging.getMappedPtr(i)->m_vel) == 0.f ? vec2(0.f, 1.f) : normalize(staging.getMappedPtr(i)->m_vel) * (rand()%4 + 1.f);
 					staging.getMappedPtr(i)->unit_type = 0;
 					staging.getMappedPtr(i)->crowd_id = 0;
 				}
