@@ -76,6 +76,7 @@ struct Crowd
 
 	void execute(vk::CommandBuffer cmd) 
 	{
+		// カウンターのclear
 		{
 			cmd.updateBuffer<uvec4>(m_context->b_unit_counter.getInfo().buffer, m_context->b_unit_counter.getInfo().offset, uvec4(0));
 			vk::BufferMemoryBarrier to_read[] = {
@@ -84,17 +85,21 @@ struct Crowd
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, 0, {}, array_length(to_read), to_read, 0, {});
 		}
 
-		vk::DescriptorSet descriptors[] =
+		// 更新
 		{
-			m_context->getDescriptorSet(),
-			sSystem::Order().getSystemDescriptorSet(),
-			m_gi2d_context->getDescriptorSet(),
-		};
+			vk::DescriptorSet descriptors[] =
+			{
+				m_context->getDescriptorSet(),
+				sSystem::Order().getSystemDescriptorSet(),
+				m_gi2d_context->getDescriptorSet(),
+			};
 
-		uint32_t offset[array_length(descriptors)] = {};
-		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_UnitUpdate].get());
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Crowd].get(), 0, array_length(descriptors), descriptors, array_length(offset), offset);
-		cmd.dispatch(1, 1, 1);
+			uint32_t offset[array_length(descriptors)] = {};
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_UnitUpdate].get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Crowd].get(), 0, array_length(descriptors), descriptors, array_length(offset), offset);
+			cmd.dispatch(1, 1, 1);
+
+		}
 
 	}
 
