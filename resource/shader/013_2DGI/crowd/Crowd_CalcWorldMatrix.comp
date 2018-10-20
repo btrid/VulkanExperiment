@@ -38,7 +38,9 @@ void main()
 	vec2 dir = unit.m_dir;
 	dir = dot(dir, dir) == 0. ? vec2(0., 1.) : normalize(dir);
 	float angle = atan(dir.y, dir.x);	
-	mat4 mat = translate(eulerAngleY(angle), vec3(unit.m_pos.x, 0., unit.m_pos.y)) * mat4(0.05);
+	mat4 mat = mat4(0.05);
+	mat[3][3] = 1.;
+	mat[3].xyzw = vec4(unit.m_pos.x, 0., unit.m_pos.y, 1.);
 
 	b_world[index] = mat;
 }

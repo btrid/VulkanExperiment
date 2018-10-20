@@ -59,6 +59,7 @@ void main()
 	mat4 skinningMat = skinning_instancing();
 	pos = u_gi2d_info.m_camera_PV * skinningMat * pos;
 	gl_Position = vec4(pos.xyz, 1.0);
+//	gl_Position.y = 1.-gl_Position.y;
 
 	out_modeldata.texcoord = inTexcoord.xy;
 

@@ -50,6 +50,7 @@ struct CrowdModelUpdater
 	void execute(vk::CommandBuffer cmd, const std::shared_ptr<AppModel>& model)
 	{
 		vk::BufferMemoryBarrier to_write[] = {
+			m_crowd_context->b_unit.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
 			model->b_world.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,

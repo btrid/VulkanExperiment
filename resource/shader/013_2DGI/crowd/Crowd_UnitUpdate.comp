@@ -72,45 +72,51 @@ void main()
 		ivec2 ipos = ivec2(unit.m_pos);
 		float progress = dot(unit.m_dir, unit.m_dir);
 		progress = progress == 0. ? 0. : sqrt(progress);
-
-		for(int _i = 0; _i < 2000; _i++)
+		progress = 1.;
+		float advance = progress;
+		if(progress != 0.)
 		{
-			MarchResult result = march(unit.m_pos, unit.m_dir, progress, 1.);
 
-			// hit確認
-			ivec4 fragment_index = ivec4(result.next_ipos/8, result.next_ipos%8);
-			int findex = fragment_index.x + fragment_index.y*reso.z;
-			uint64_t fragment_map = b_fragment_map[findex].x;
-
-			ivec2 shift = fragment_index.zw;
-			uint64_t bit = 1ul<<(shift.x+shift.y*8);
-			if((fragment_map & bit) != 0)
+			for(int _i = 0; _i < 2000; _i++)
 			{
-				// 壁にぶつかったので反射
-				vec2 next = vec2(result.next_ipos - ipos);
-				vec2 wall = vec2(next.x, next.y);
-				unit.m_dir = normalize(reflect(unit.m_dir, wall));
+				MarchResult result = march(unit.m_pos, unit.m_dir, progress, 1.);
 
-				progress *= 0.5;
+				// hit確認
+				ivec4 fragment_index = ivec4(result.next_ipos/8, result.next_ipos%8);
+				int findex = fragment_index.x + fragment_index.y*reso.z;
+				uint64_t fragment_map = b_fragment_map[findex].x;
 
-				// 更新はしない?
-				// pos = result.next_pos;
+				ivec2 shift = fragment_index.zw;
+				uint64_t bit = 1ul<<(shift.x+shift.y*8);
+				if((fragment_map & bit) != 0)
+				{
+					// 壁にぶつかったので反射
+					vec2 next = vec2(result.next_ipos - ipos);
+					vec2 wall = vec2(next.x, next.y);
+//					unit.m_dir = normalize(reflect(next, wall)) * advance;
+					unit.m_dir = -unit.m_dir;
+//					progress *= 0.5;
 
-			}
-			else
-			{
-				// 何もないのでそのまま進む
-				unit.m_pos = result.next_pos;
-				ipos = result.next_ipos;				
+					// 更新はしない?
+					// pos = result.next_pos;
 
-			}
+				}
+				else
+				{
+					// 何もないのでそのまま進む
+					unit.m_pos = result.next_pos;
+					ipos = result.next_ipos;				
 
-			if(result.is_end)
-			{
-//				b_pos[p_id*2 + gpu_index()] = pos;
-				break;
+				}
+
+				if(result.is_end)
+				{
+	//				b_pos[p_id*2 + gpu_index()] = pos;
+					break;
+				}
 			}
 		}
+
 
 	}
 	uint dst_index = atomicAdd(b_unit_counter.w, 1);

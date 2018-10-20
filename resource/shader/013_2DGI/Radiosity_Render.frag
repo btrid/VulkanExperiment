@@ -58,6 +58,7 @@ void main()
 
 //	radiance *= is_fragment ? b_fragment[fragment_index].albedo.xyz : vec3(0.3, 0.2, 0.2);
 	radiance *= b_fragment[fragment_index].albedo.xyz;
+//	radiance = is_fragment ? vec3(100., 0., 0.) : vec3(0., 0., 1000.2);
 
 	FragColor = vec4(radiance, 1.);
 
