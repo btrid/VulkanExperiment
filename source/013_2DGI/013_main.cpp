@@ -36,6 +36,7 @@
 #include <013_2DGI/GI2D/GI2DSoftbody.h>
 #include <013_2DGI/Crowd/Crowd.h>
 #include <013_2DGI/Crowd/Crowd_CalcWorldMatrix.h>
+#include <013_2DGI/Crowd/Crowd_Debug.h>
 
 #include <applib/AppModel/AppModel.h>
 #include <applib/AppModel/AppModelPipeline.h>
@@ -92,6 +93,7 @@ int main()
 
 	Crowd crowd_updater(crowd_context, gi2d_context);
 	Crowd_CalcWorldMatrix crowd_calc_world_matrix(crowd_context, appmodel_context);
+	Crowd_Debug crowd_debug(crowd_context);
 	AppModelAnimationStage animater(context, appmodel_context);
 	GI2DModelRender renderer(context, appmodel_context, gi2d_context);
 	auto anime_cmd = animater.createCmd(player_model);
@@ -146,6 +148,7 @@ int main()
 
 				gi2d_make_hierarchy.execute(cmd);
 				{
+					crowd_debug.execute(cmd);
 					crowd_updater.execute(cmd);
 					crowd_calc_world_matrix.execute(cmd, player_model);
 
