@@ -35,7 +35,7 @@
 #include <013_2DGI/GI2D/GI2DRigidbody_dem.h>
 #include <013_2DGI/GI2D/GI2DSoftbody.h>
 #include <013_2DGI/Crowd/Crowd.h>
-#include <013_2DGI/Crowd/CrowdModelUpdater.h>
+#include <013_2DGI/Crowd/Crowd_CalcWorldMatrix.h>
 
 #include <applib/AppModel/AppModel.h>
 #include <applib/AppModel/AppModelPipeline.h>
@@ -91,13 +91,16 @@ int main()
 	std::shared_ptr<GI2DFluid> gi2d_Fluid = std::make_shared<GI2DFluid>(context, gi2d_context);
 
 	Crowd crowd_updater(crowd_context, gi2d_context);
-	CrowdModelUpdater crowd_model_updater(crowd_context, appmodel_context);
+	Crowd_CalcWorldMatrix crowd_calc_world_matrix(crowd_context, appmodel_context);
 	AppModelAnimationStage animater(context, appmodel_context);
 	GI2DModelRender renderer(context, appmodel_context, gi2d_context);
 	auto anime_cmd = animater.createCmd(player_model);
 	auto render_cmd = renderer.createCmd(player_model);
 
-
+	vec2 a = normalize(vec2(1465.f, 1577.f));
+	auto inv = abs(1.f/a);
+	auto mi = a * glm::min(inv.x, inv.y);
+	auto ma = a * glm::max(inv.x, inv.y);
 	app.setup();
 	while (true)
 	{
@@ -144,7 +147,7 @@ int main()
 				gi2d_make_hierarchy.execute(cmd);
 				{
 					crowd_updater.execute(cmd);
-					crowd_model_updater.execute(cmd, player_model);
+					crowd_calc_world_matrix.execute(cmd, player_model);
 
 					std::vector<vk::CommandBuffer> anime_cmds{ anime_cmd.get() };
 					animater.dispatchCmd(cmd, anime_cmds);

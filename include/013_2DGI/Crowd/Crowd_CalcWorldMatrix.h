@@ -3,9 +3,9 @@
 #include <applib/AppModel/AppModel.h>
 #include <applib/sSystem.h>
 
-struct CrowdModelUpdater
+struct Crowd_CalcWorldMatrix
 {
-	CrowdModelUpdater(const std::shared_ptr<CrowdContext>& crowd_context, const std::shared_ptr<AppModelContext>& appmodel_context)
+	Crowd_CalcWorldMatrix(const std::shared_ptr<CrowdContext>& crowd_context, const std::shared_ptr<AppModelContext>& appmodel_context)
 	{
 		m_crowd_context = crowd_context;
 		m_appmodel_context = appmodel_context;

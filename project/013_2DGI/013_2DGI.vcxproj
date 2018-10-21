@@ -96,7 +96,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\include\013_2DGI\Crowd\CrowdContext.h" />
     <ClInclude Include="..\..\include\013_2DGI\Crowd\Crowd.h" />
-    <ClInclude Include="..\..\include\013_2DGI\Crowd\CrowdModelUpdater.h" />
+    <ClInclude Include="..\..\include\013_2DGI\Crowd\Crowd_CalcWorldMatrix.h" />
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DContext.h" />
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DModelRender.h" />
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DClear.h" />

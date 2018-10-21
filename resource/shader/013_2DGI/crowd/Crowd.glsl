@@ -49,7 +49,7 @@ layout(set=USE_Crowd2D, binding=4, std430) restrict buffer UnitCounter {
 	ivec4 b_unit_counter;
 };
 layout(set=USE_Crowd2D, binding=5, std430) restrict buffer SoftbodyInfo {
-	uint b_unit_density_counter[];
+	uint b_unit_density[];
 };
 
 #endif

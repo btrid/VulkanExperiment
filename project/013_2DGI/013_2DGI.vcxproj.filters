@@ -54,7 +54,7 @@
     <ClInclude Include="..\..\include\013_2DGI\Crowd\Crowd.h">
       <Filter>Crowd</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\013_2DGI\Crowd\CrowdModelUpdater.h">
+    <ClInclude Include="..\..\include\013_2DGI\Crowd\Crowd_CalcWorldMatrix.h">
       <Filter>Crowd</Filter>
     </ClInclude>
   </ItemGroup>
