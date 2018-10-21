@@ -57,5 +57,14 @@
     <ClInclude Include="..\..\include\013_2DGI\Crowd\Crowd_CalcWorldMatrix.h">
       <Filter>Crowd</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\013_2DGI\Crowd\Crowd_CalcDensityMap.h">
+      <Filter>Crowd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\013_2DGI\Crowd\Crowd_Debug.h">
+      <Filter>Crowd</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\013_2DGI\Crowd\Crowd_UpdateCrowd.h">
+      <Filter>Crowd</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

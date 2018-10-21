@@ -187,7 +187,16 @@ void GI2DDebug::execute(vk::CommandBuffer cmd)
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineLayoutPointLight].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayoutPointLight].get(), 0, m_gi2d_context->getDescriptorSet(), {});
-		cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ light_pos, vec4(1.f, 1.f, 1.f, 1.f) });
+//		cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ light_pos, vec4(1.f, 1.f, 1.f, 1.f) });
+//		cmd.dispatch(1, 1, 1);
+
+		cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ vec4(2.f, 2.f, 0.f, 0.f), vec4(1.f, 1.f, 1.f, 1.f) });
+		cmd.dispatch(1, 1, 1);
+		cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ vec4(2.f, 1021.f, 0.f, 0.f), vec4(1.f, 1.f, 1.f, 1.f) });
+		cmd.dispatch(1, 1, 1);
+		cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ vec4(1021.f, 2.f, 0.f, 0.f), vec4(1.f, 1.f, 1.f, 1.f) });
+		cmd.dispatch(1, 1, 1);
+		cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayoutPointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ vec4(1021.f, 1021.f, 0.f, 0.f), vec4(1.f, 1.f, 1.f, 1.f) });
 		cmd.dispatch(1, 1, 1);
 
 	}
