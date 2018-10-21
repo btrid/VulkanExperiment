@@ -17,6 +17,17 @@
 
 layout (local_size_x = 1024, local_size_y = 1) in;
 
+float calcAngle2(in vec2 x, in vec2 y)
+{
+	return acos(clamp(dot(x, y), -1., 1));
+}
+
+vec3 normalize_safe(in vec3 v, in vec3 a)
+{
+	return dot(v, v) != 0. ? normalize(v) : a; 
+}
+
+float acos_safe(in float a){ return acos(clamp(a, -1., 1.));}
 struct MarchResult
 {
 	vec2 next_pos;
@@ -42,12 +53,12 @@ MarchResult march(in vec2 pos, in vec2 dir, in float progress, in float advance)
 void main()
 {
 	uint index = gl_GlobalInvocationID.x;
-	if(index >= u_crowd_info.unit_max){
+	if(index >= u_crowd_info.unit_data_max){
 		return;
 	}
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
 
-	uvec2 data_offset = ivec2(1-u_system_data.m_gpu_index, u_system_data.m_gpu_index) * u_crowd_info.unit_max;
+	uvec2 data_offset = ivec2(1-u_system_data.m_gpu_index, u_system_data.m_gpu_index) * u_crowd_info.unit_data_max;
 	float deltatime = u_system_data.m_deltatime;
 
 	UnitData unit = b_unit[data_offset.x + index];
@@ -56,8 +67,26 @@ void main()
 //	if(unit.m_life <= 0.){
 //		return;
 //	}
+	CrowdData crowd = b_crowd[unit.crowd_type];
+	UnitInfo unit_info = u_unit_info[unit.unit_type];
 
-	UnitInfo unit_info = u_unit_info[unit.crowd_type];
+	vec2 dir = rotate(unit.m_rotate_angle);
+
+	// 目的地に向かう
+	{
+		// todo 0除算
+		vec3 target_dir = normalize_safe(vec3(crowd.target - unit.m_pos, 0.), vec3(0., 1., 0.));
+		float c = cross(vec3(dir, 0.), target_dir).z;
+		float rotate_rad = dot(vec3(dir, 0.), target_dir);
+		float rotate_angle = acos(rotate_rad);
+		rotate_angle = min(rotate_angle, unit_info.angler_speed);
+
+		unit.m_rotate_angle += sign(c) * rotate_angle*deltatime;
+	
+		// 方向転換の時は減速する
+//		unit.m_dir = clamp(unit.m_dir* pow(0.99, 1.+deltatime), unit_info.linear_speed * 0.3, unit_info.linear_speed*0.7);
+
+	}
 
 	{
 	
@@ -70,16 +99,14 @@ void main()
 //		vec2 dir = unit.m_dir;
 
 		ivec2 ipos = ivec2(unit.m_pos);
-		float progress = dot(unit.m_dir, unit.m_dir);
-		progress = progress == 0. ? 0. : sqrt(progress);
-		progress = 1.;
+		float progress = unit_info.linear_speed*deltatime;
 		float advance = progress;
 		if(progress != 0.)
 		{
 
 			for(int _i = 0; _i < 2000; _i++)
 			{
-				MarchResult result = march(unit.m_pos, unit.m_dir, progress, 1.);
+				MarchResult result = march(unit.m_pos, dir, progress, 1.);
 
 				// hit確認
 				ivec4 fragment_index = ivec4(result.next_ipos/8, result.next_ipos%8);
@@ -94,7 +121,9 @@ void main()
 					vec2 next = vec2(result.next_ipos - ipos);
 					vec2 wall = vec2(next.x, next.y);
 //					unit.m_dir = normalize(reflect(normalize(unit.m_dir), wall)) * advance;
-					unit.m_dir = -unit.m_dir;
+//					unit.m_dir = -unit.m_dir;
+					unit.m_rotate_angle = mod(3.14+unit.m_rotate_angle, 6.28);
+					dir = rotate(unit.m_rotate_angle);
 //					progress *= 0.5;
 
 					// 更新はしない?

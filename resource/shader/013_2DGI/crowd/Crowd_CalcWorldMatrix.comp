@@ -29,15 +29,15 @@ mat4 eulerAngleY(in float angle)
 void main()
 {
 	uint index = gl_GlobalInvocationID.x;
-	if(index >= u_crowd_info.unit_max){
+	if(index >= u_crowd_info.unit_data_max){
 		return;
 	}
-	uvec2 data_offset = ivec2(1-u_system_data.m_gpu_index, u_system_data.m_gpu_index) * u_crowd_info.unit_max;
+	uvec2 data_offset = ivec2(1-u_system_data.m_gpu_index, u_system_data.m_gpu_index) * u_crowd_info.unit_data_max;
 
 	UnitData unit = b_unit[index];
-	vec2 dir = unit.m_dir;
-	dir = dot(dir, dir) == 0. ? vec2(0., 1.) : normalize(dir);
-	float angle = atan(dir.y, dir.x);	
+//	vec2 dir = unit.m_dir;
+//	dir = dot(dir, dir) == 0. ? vec2(0., 1.) : normalize(dir);
+//	float angle = atan(dir.y, dir.x);	
 	mat4 mat = mat4(0.05);
 	mat[3][3] = 1.;
 	mat[3].xyzw = vec4(unit.m_pos.x, 0., unit.m_pos.y, 1.);

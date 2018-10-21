@@ -9,9 +9,10 @@ struct CrowdContext
 {
 	struct CrowdInfo
 	{
-		uint32_t crowd_type_max;
-		uint32_t crowd_max;
-		uint32_t unit_max;
+		uint32_t crowd_info_max;
+		uint32_t unit_info_max;
+		uint32_t crowd_data_max;
+		uint32_t unit_data_max;
 	};
 	struct CrowdData
 	{
@@ -41,11 +42,11 @@ struct CrowdContext
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
 		{
-			m_crowd_info.crowd_type_max = 16;
-			m_crowd_info.crowd_max = 16;
-			m_crowd_info.unit_max = 128;
+			m_crowd_info.crowd_info_max = 1;
+			m_crowd_info.unit_info_max = 16;
+			m_crowd_info.crowd_data_max = 16;
+			m_crowd_info.unit_data_max = 128;
 
-//			m_unit_info[].angler_speed
 		}
 		{
 			{
@@ -80,9 +81,9 @@ struct CrowdContext
 
 		{
 			u_crowd_info = m_context->m_uniform_memory.allocateMemory<CrowdInfo>({ 1, {} });
-			u_unit_info = m_context->m_uniform_memory.allocateMemory<UnitInfo>({ m_crowd_info.crowd_max, {} });
-			b_crowd = m_context->m_storage_memory.allocateMemory<CrowdData>({ m_crowd_info.crowd_max, {} });
-			b_unit = m_context->m_storage_memory.allocateMemory<UnitData>({ m_crowd_info.unit_max*2, {} });
+			u_unit_info = m_context->m_uniform_memory.allocateMemory<UnitInfo>({ m_crowd_info.unit_info_max, {} });
+			b_crowd = m_context->m_storage_memory.allocateMemory<CrowdData>({ m_crowd_info.crowd_data_max, {} });
+			b_unit = m_context->m_storage_memory.allocateMemory<UnitData>({ m_crowd_info.unit_data_max*2, {} });
 			b_unit_counter = m_context->m_storage_memory.allocateMemory<uvec4>({ 1, {} });
 			b_grid_counter = m_context->m_storage_memory.allocateMemory<uint32_t>({ 1024*1024/*m_gi2d_context->FragmentBufferSize*/, {} });
 
@@ -129,8 +130,8 @@ struct CrowdContext
 			}
 
 			{
-				auto staging = m_context->m_staging_memory.allocateMemory<UnitData>({ m_crowd_info.unit_max * 2, btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT });
-				for (int32_t i = 0; i < m_crowd_info.unit_max * 2; i++)
+				auto staging = m_context->m_staging_memory.allocateMemory<UnitData>({ m_crowd_info.unit_data_max * 2, btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT });
+				for (int32_t i = 0; i < m_crowd_info.unit_data_max * 2; i++)
 				{
 					staging.getMappedPtr(i)->m_pos = abs(glm::ballRand(4000.f).xy());
 					staging.getMappedPtr(i)->m_vel = glm::ballRand(20.f).xy();
@@ -144,6 +145,23 @@ struct CrowdContext
 				copy.setDstOffset(b_unit.getInfo().offset);
 				copy.setSize(staging.getInfo().range);
 				cmd.copyBuffer(staging.getInfo().buffer, b_unit.getInfo().buffer, copy);
+
+			}
+
+			{
+				auto staging = m_context->m_staging_memory.allocateMemory<UnitInfo>({ m_crowd_info.unit_info_max, btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT });
+				for (int32_t i = 0; i < m_crowd_info.unit_info_max; i++)
+				{
+					auto& info = *staging.getMappedPtr(i);
+					info.linear_speed = 30.f;
+					info.angler_speed = 100.5f;
+				}
+
+				vk::BufferCopy copy;
+				copy.setSrcOffset(staging.getInfo().offset);
+				copy.setDstOffset(u_unit_info.getInfo().offset);
+				copy.setSize(staging.getInfo().range);
+				cmd.copyBuffer(staging.getInfo().buffer, u_unit_info.getInfo().buffer, copy);
 
 			}
 		}

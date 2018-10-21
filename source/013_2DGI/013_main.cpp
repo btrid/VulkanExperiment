@@ -99,10 +99,12 @@ int main()
 	auto anime_cmd = animater.createCmd(player_model);
 	auto render_cmd = renderer.createCmd(player_model);
 
-	vec2 a = normalize(vec2(1465.f, 1577.f));
-	auto inv = abs(1.f/a);
-	auto mi = a * glm::min(inv.x, inv.y);
-	auto ma = a * glm::max(inv.x, inv.y);
+	vec3 a = normalize(vec3(1.f, 1.f, 0.f));
+	vec3 b = normalize(vec3(-1.f, 1.f, 0.f));
+	auto c = cross(a, b);
+	auto d = dot(a, b);
+	auto dc = acos(d);
+	auto ds = asin(d);
 	app.setup();
 	while (true)
 	{
@@ -135,6 +137,7 @@ int main()
 				cmd.end();
 				cmds[cmd_crowd] = cmd;
 			}
+
 			// gi2d
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);

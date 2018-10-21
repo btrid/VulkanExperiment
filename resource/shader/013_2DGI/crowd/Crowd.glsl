@@ -6,9 +6,10 @@
 
 struct CrowdInfo
 {
-	uint crowd_type_max;
-	uint crowd_max;
-	uint unit_max;
+	uint crowd_info_max;
+	uint unit_info_max;
+	uint crowd_data_max;
+	uint unit_data_max;
 };
 struct CrowdData
 {
@@ -26,7 +27,8 @@ struct UnitInfo
 struct UnitData
 {
 	vec2 m_pos;
-	vec2 m_dir;
+	float m_rotate_angle;
+	float m_move;
 	int crowd_type;
 	int unit_type;
 	int _p2;
