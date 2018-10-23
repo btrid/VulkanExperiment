@@ -14,8 +14,9 @@ struct GI2DRadiosity
 {
 	enum {
 		Frame = 4,
-		Ray_All_Num = 1024 * 4 * 127 * Frame,
-		Segment_Num = 1024 * 4 * 127 * 8,
+		Ray_Num = 1024 * 127*4,
+		Ray_All_Num = Ray_Num * Frame,
+		Segment_Num = 1024 * 127 * 8,
 		Ray_Group = 1,
 		Bounce_Num = 0,
 	};
@@ -64,7 +65,9 @@ struct GI2DRadiosity
 	struct GI2DRadiosityInfo
 	{
 		uint ray_num_max;
-		uint a[3];
+		uint ray_scene_num;
+		uint frame_max;
+		uint a[2];
 	};
 	struct D2Ray
 	{
@@ -92,6 +95,8 @@ struct GI2DRadiosity
 		{
 			GI2DRadiosityInfo info;
 			info.ray_num_max = Ray_All_Num;
+			info.ray_scene_num = Ray_Num;
+			info.frame_max = Frame;
 			u_radiosity_info = m_context->m_storage_memory.allocateMemory<GI2DRadiosityInfo>({1,{} });
 			cmd.updateBuffer<GI2DRadiosityInfo>(u_radiosity_info.getInfo().buffer, u_radiosity_info.getInfo().offset, info);
 			vk::BufferMemoryBarrier to_read[] = {
@@ -426,22 +431,21 @@ struct GI2DRadiosity
 		{
 			// レイの生成
 			vk::BufferMemoryBarrier to_read[] = {
-				m_gi2d_context->b_sdf.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				b_ray_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite),
 			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RayGenerate].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
-			cmd.dispatch(1024, 1, Frame);
+			cmd.dispatch(1024, 1, 1);
 		}
 
 		{
 			// レイのバッファの計算
 			vk::BufferMemoryBarrier to_read[] = {
-				b_ray_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite),
+				b_ray_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
@@ -472,7 +476,7 @@ struct GI2DRadiosity
 				for (int offset = step >> 1; offset > 0; offset = offset >> 1) {
 					cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayout_Radiosity].get(), vk::ShaderStageFlagBits::eCompute, 0, ivec2(step, offset));
 					auto num = app::calcDipatchGroups(uvec3(Ray_All_Num, 1, 1), uvec3(1024, 1, 1));
-					cmd.dispatch(num.x, num.y, num.z);
+//					cmd.dispatch(num.x, num.y, num.z);
 
 					vk::BufferMemoryBarrier to_read[] = {
 						b_ray.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite),

@@ -99,12 +99,12 @@ int main()
 	auto anime_cmd = animater.createCmd(player_model);
 	auto render_cmd = renderer.createCmd(player_model);
 
-	vec3 a = normalize(vec3(1.f, 1.f, 0.f));
-	vec3 b = normalize(vec3(-1.f, 1.f, 0.f));
-	auto c = cross(a, b);
-	auto d = dot(a, b);
-	auto dc = acos(d);
-	auto ds = asin(d);
+	float angle = 0.f;
+	float angle2 = angle + (3.14 / 2);
+	float angle3 = angle2 + (3.14 / 2);
+	vec2 a = vec2(-sin(angle), cos(angle));
+	vec2 b = vec2(-sin(angle2), cos(angle2));
+	vec2 c = vec2(-sin(angle3), cos(angle3));
 	app.setup();
 	while (true)
 	{

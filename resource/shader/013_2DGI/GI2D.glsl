@@ -117,7 +117,8 @@ vec3 unpackEmissive4(in uvec4 irgb)
 struct GI2DRadiosityInfo
 {
 	uint ray_num_max;
-	uint a1;
+	uint ray_scene_max;
+	uint frame_max;
 	uint a2;
 	uint a3;
 };

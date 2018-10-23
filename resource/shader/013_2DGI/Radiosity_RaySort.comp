@@ -53,12 +53,17 @@ void main()
 	frame_a = index_a >= GetRayOffset(3) ? 3:frame_a;
 	frame_b = index_b >= GetRayOffset(3) ? 3:frame_b;
 
+	if(frame_a != frame_b)
+	{
+		return;
+	}
+
 
 	D2Ray a = b_ray[index_a];
 	D2Ray b = b_ray[index_b];
 	bool sort_dir = (index_a&constant.compare_bit)==0;
-	if ( (sort_dir == compare(a,b) && frame_a==frame_b)
-	/*|| (sort_dir == (frame_a<frame_b))*/) 
+	if ( (sort_dir == compare(a,b))
+	/*|| (sort_dir == (frame_a<frame_b))*/)
 	{
 		b_ray[index_a] = b;
 		b_ray[index_b] = a;
