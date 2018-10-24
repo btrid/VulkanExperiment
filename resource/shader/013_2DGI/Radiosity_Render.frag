@@ -32,7 +32,7 @@ void main()
 //		for(int x = 0; x < Block_Size; x++){
 //			coord += + ivec2(x-(Block_Size>>1), y-(Block_Size>>1));
 //			coord = clamp(coord, ivec2(0), reso>>hierarchy);
-			for(int i = 0; i < 1; i++)
+			for(int i = 0; i < 4; i++)
 			{
 				vec3 rad[4];
 				rad[0] = unpackEmissive(b_radiance[coord.x]);

@@ -26,9 +26,6 @@ void main()
 	vec2 inv_dir = abs(1./dir);
 
 	vec2 pos;
-//	pos.x = gl_GlobalInvocationID.y==3 ? reso.x-1 : 0;
-//	pos.y = gl_GlobalInvocationID.y==1 ? reso.y-1 : 0;
-//	pos += 0.5;
 	pos.x = gl_GlobalInvocationID.y==3 ? reso.x : 0;
 	pos.y = gl_GlobalInvocationID.y==1 ? reso.y : 0;
 	vec2 pdir;
