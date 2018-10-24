@@ -53,7 +53,7 @@ void main()
 				if(all(equal(map, u64vec2(0))))
 				{
 					vec2 pos_sub = vec2(pos - vec2(cell << 3));
-					vec2 tp = vec2(abs(cell_origin - pos_sub)+0.5) / abs(dir);
+					vec2 tp = vec2(abs(cell_origin - pos_sub)) / abs(dir);
 					int _axis = tp.x < tp.y ? 0 : 1;
 					skip = int(max(tp[_axis], 1.));
 				}
@@ -69,20 +69,17 @@ void main()
 			{
 				if(seg.march > 1)
 				{
-//					if(seg.radiance != 0)
-					{
-						int index = atomicAdd(b_segment_counter.w, 1);
-						if(index%1024==0){
-							atomicAdd(b_segment_counter.x, 1);
-						}
-						b_segment[index] = seg;
+					int index = atomicAdd(b_segment_counter.w, 1);
+					if(index%1024==0){
+						atomicAdd(b_segment_counter.x, 1);
 					}
+					b_segment[index] = seg;
 				}
 				seg.begin = march_count;
 				seg.march = 0;
 				seg.radiance = 0;
 			}
-//			else 
+
 			{
 				seg.march+=skip;
 			}
