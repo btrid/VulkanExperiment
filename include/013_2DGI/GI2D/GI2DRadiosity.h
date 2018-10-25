@@ -14,9 +14,9 @@ struct GI2DRadiosity
 {
 	enum {
 		Frame = 4,
-		Ray_Num = 1024 * 127*4,
+		Ray_Num = 1024 * 256, // ŽÀÛ‚Í‚à‚¤­‚µ­‚È‚¢
 		Ray_All_Num = Ray_Num * Frame,
-		Segment_Num = 1024 * 127 * 8,
+		Segment_Num = Ray_Num * 8,// ‚Æ‚è‚ ‚¦‚¸‚Ì’l
 		Ray_Group = 1,
 		Bounce_Num = 0,
 	};
@@ -476,7 +476,7 @@ struct GI2DRadiosity
 				for (int offset = step >> 1; offset > 0; offset = offset >> 1) {
 					cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayout_Radiosity].get(), vk::ShaderStageFlagBits::eCompute, 0, ivec2(step, offset));
 					auto num = app::calcDipatchGroups(uvec3(Ray_All_Num, 1, 1), uvec3(1024, 1, 1));
-					cmd.dispatch(num.x, num.y, num.z);
+//					cmd.dispatch(num.x, num.y, num.z);
 
 					vk::BufferMemoryBarrier to_read[] = {
 						b_ray.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite),
