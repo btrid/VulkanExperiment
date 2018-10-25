@@ -30,7 +30,6 @@ struct GI2DRadiosity
 		Shader_CalcRadiance,
 
 		Shader_RayGenerate,
-		Shader_RaySetup,
 		Shader_RaySort,
 		Shader_RayMarch,
 		Shader_RayHit,
@@ -53,7 +52,6 @@ struct GI2DRadiosity
 		Pipeline_CalcRadiance,
 
 		Pipeline_RayGenerate,
-		Pipeline_RaySetup,
 		Pipeline_RaySort,
 		Pipeline_RayMarch,
 		Pipeline_RayHit,
@@ -108,7 +106,7 @@ struct GI2DRadiosity
 
 			uint32_t size = m_gi2d_context->RenderWidth * m_gi2d_context->RenderHeight;
 			b_radiance = m_context->m_storage_memory.allocateMemory<uint32_t>({ size * 4,{} });
-			b_ray_counter = m_context->m_storage_memory.allocateMemory<ivec4>({ Frame+1,{} });
+			b_ray_counter = m_context->m_storage_memory.allocateMemory<ivec4>({ Frame,{} });
 			b_segment_counter = m_context->m_storage_memory.allocateMemory<ivec4>({ 1,{} });
 			b_ray = m_context->m_storage_memory.allocateMemory<D2Ray>({ info.ray_num_max,{} });
 			b_segment = m_context->m_storage_memory.allocateMemory<D2Segment>({ Segment_Num,{} });
@@ -187,7 +185,6 @@ struct GI2DRadiosity
 				"Radiosity_CalcRadiance.comp.spv",
 
 				"Radiosity_RayGenerate.comp.spv",
-				"Radiosity_RaySetup.comp.spv",
 				"Radiosity_RaySort.comp.spv",
 				"Radiosity_RayMarch.comp.spv",
 				"Radiosity_RayHit.comp.spv",
@@ -236,21 +233,18 @@ struct GI2DRadiosity
 			shader_info[3].setModule(m_shader[Shader_RayGenerate].get());
 			shader_info[3].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[3].setPName("main");
-			shader_info[4].setModule(m_shader[Shader_RaySetup].get());
+			shader_info[4].setModule(m_shader[Shader_RaySort].get());
 			shader_info[4].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[4].setPName("main");
-			shader_info[5].setModule(m_shader[Shader_RaySort].get());
+			shader_info[5].setModule(m_shader[Shader_RayMarch].get());
 			shader_info[5].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[5].setPName("main");
-			shader_info[6].setModule(m_shader[Shader_RayMarch].get());
+			shader_info[6].setModule(m_shader[Shader_RayHit].get());
 			shader_info[6].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[6].setPName("main");
-			shader_info[7].setModule(m_shader[Shader_RayHit].get());
+			shader_info[7].setModule(m_shader[Shader_RayBounce].get());
 			shader_info[7].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[7].setPName("main");
-			shader_info[8].setModule(m_shader[Shader_RayBounce].get());
-			shader_info[8].setStage(vk::ShaderStageFlagBits::eCompute);
-			shader_info[8].setPName("main");
 			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 			{
 				vk::ComputePipelineCreateInfo()
@@ -277,20 +271,16 @@ struct GI2DRadiosity
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[7])
 				.setLayout(m_pipeline_layout[PipelineLayout_Radiosity].get()),
-				vk::ComputePipelineCreateInfo()
-				.setStage(shader_info[8])
-				.setLayout(m_pipeline_layout[PipelineLayout_Radiosity].get()),
 			};
 			auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
 			m_pipeline[Pipeline_Radiosity] = std::move(compute_pipeline[0]);
 			m_pipeline[Pipeline_Radiosity_Clear] = std::move(compute_pipeline[1]);
 			m_pipeline[Pipeline_CalcRadiance] = std::move(compute_pipeline[2]);
 			m_pipeline[Pipeline_RayGenerate] = std::move(compute_pipeline[3]);
-			m_pipeline[Pipeline_RaySetup] = std::move(compute_pipeline[4]);
-			m_pipeline[Pipeline_RaySort] = std::move(compute_pipeline[5]);
-			m_pipeline[Pipeline_RayMarch] = std::move(compute_pipeline[6]);
-			m_pipeline[Pipeline_RayHit] = std::move(compute_pipeline[7]);
-			m_pipeline[Pipeline_RayBounce] = std::move(compute_pipeline[8]);
+			m_pipeline[Pipeline_RaySort] = std::move(compute_pipeline[4]);
+			m_pipeline[Pipeline_RayMarch] = std::move(compute_pipeline[5]);
+			m_pipeline[Pipeline_RayHit] = std::move(compute_pipeline[6]);
+			m_pipeline[Pipeline_RayBounce] = std::move(compute_pipeline[7]);
 		}
 
 		// レンダーパス
@@ -424,7 +414,7 @@ struct GI2DRadiosity
 	{
 		{
 			// データクリア
-			std::array<ivec4, Frame+1> data = { ivec4(0, 1, 1, 0), ivec4(0, 1, 1, 0) , ivec4(0, 1, 1, 0) , ivec4(0, 1, 1, 0) , ivec4(0, 0, 0, 0) };
+			std::array<ivec4, Frame> data = { ivec4(0, 1, 1, 0), ivec4(0, 1, 1, 0) , ivec4(0, 1, 1, 0) , ivec4(0, 1, 1, 0) };
 			cmd.updateBuffer(b_ray_counter.getInfo().buffer, b_ray_counter.getInfo().offset, vector_sizeof(data), data.data());
 		}
 
@@ -440,20 +430,6 @@ struct GI2DRadiosity
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
 			cmd.dispatch(1024, 1, Frame);
-		}
-
-		{
-			// レイのバッファの計算
-			vk::BufferMemoryBarrier to_read[] = {
-				b_ray_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
-			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
-				0, nullptr, array_length(to_read), to_read, 0, nullptr);
-
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RaySetup].get());
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
-			cmd.dispatch(1, 1, 1);
 		}
 
 		{
@@ -476,7 +452,7 @@ struct GI2DRadiosity
 				for (int offset = step >> 1; offset > 0; offset = offset >> 1) {
 					cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayout_Radiosity].get(), vk::ShaderStageFlagBits::eCompute, 0, ivec2(step, offset));
 					auto num = app::calcDipatchGroups(uvec3(Ray_All_Num, 1, 1), uvec3(1024, 1, 1));
-//					cmd.dispatch(num.x, num.y, num.z);
+					cmd.dispatch(num.x, num.y, num.z);
 
 					vk::BufferMemoryBarrier to_read[] = {
 						b_ray.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite),

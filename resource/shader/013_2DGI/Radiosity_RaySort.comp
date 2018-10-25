@@ -36,27 +36,29 @@ void main()
 		return;
 	}
 
-	//データないよ
-	if(index_a >= ActiveRayAllNum() ||index_b >= ActiveRayAllNum())
-	{
-		return;
-	}
-
 	// フレームを超えてはソートしない
 
 	int frame_a = 0;
 	int frame_b = 0;
-	frame_a = index_a >= GetRayOffset(1) ? 1:frame_a;
-	frame_b = index_b >= GetRayOffset(1) ? 1:frame_b;
-	frame_a = index_a >= GetRayOffset(2) ? 2:frame_a;
-	frame_b = index_b >= GetRayOffset(2) ? 2:frame_b;
-	frame_a = index_a >= GetRayOffset(3) ? 3:frame_a;
-	frame_b = index_b >= GetRayOffset(3) ? 3:frame_b;
+	frame_a = index_a >= u_radiosity_info.ray_num_max ? 1:frame_a;
+	frame_b = index_b >= u_radiosity_info.ray_num_max ? 1:frame_b;
+	frame_a = index_a >= u_radiosity_info.ray_num_max*2 ? 2:frame_a;
+	frame_b = index_b >= u_radiosity_info.ray_num_max*2 ? 2:frame_b;
+	frame_a = index_a >= u_radiosity_info.ray_num_max*3 ? 3:frame_a;
+	frame_b = index_b >= u_radiosity_info.ray_num_max*2 ? 3:frame_b;
 
 	if(frame_a != frame_b)
 	{
 		return;
 	}
+
+	//データないよ
+	uint num = u_radiosity_info.ray_num_max*frame_a + b_ray_counter[frame_a].w;
+	if(index_a >= num ||index_b >= num)
+	{
+		return;
+	}
+
 
 
 	D2Ray a = b_ray[index_a];

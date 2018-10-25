@@ -9,34 +9,35 @@
 #define USE_GI2D_Radiosity 1
 #include "GI2D.glsl"
 
-#define RAY_PER_PIXEL (127)
-layout (local_size_x=RAY_PER_PIXEL, local_size_y=4) in;
+#define TWO_PI (PI*2)
+layout (local_size_x=256, local_size_y=1) in;
 void main()
 {
-	if(ActiveRayAllNum() >= u_radiosity_info.ray_num_max){ return; }
 
 	const int hierarchy = u_gi2d_scene.m_hierarchy;
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
 
-	float a = 6.283 / gl_WorkGroupSize.x;
-	float angle = a * (gl_LocalInvocationID.x+0.125);
-	angle += a*(0.25*gl_WorkGroupID.z);// 0除算回避の0.125
+	float a = TWO_PI / gl_WorkGroupSize.x;
+	float angle = a * (gl_LocalInvocationID.x);
+	angle += a*(0.25*gl_WorkGroupID.z + 0.125);
 
-	vec2 dir = rotate(angle);
-	vec2 inv_dir = abs(1./dir);
+//	uint y = uint(angle / (PI / 2.));
+	uint y = uint(gl_LocalInvocationID.x / (gl_WorkGroupSize.x / 4));
 
 	vec2 pos;
-	pos.x = gl_GlobalInvocationID.y==3 ? reso.x : 0;
-	pos.y = gl_GlobalInvocationID.y==1 ? reso.y : 0;
+	pos.x = (y==1) ? reso.x : 0;
+	pos.y = (y==2) ? reso.y : 0;
 	vec2 pdir;
-	pdir.x = gl_GlobalInvocationID.y/2==0 ? 1 : 0;
-	pdir.y = gl_GlobalInvocationID.y/2==1 ? 1 : 0;
+	pdir.x = (y%2==0) ? 1 : 0;
+	pdir.y = (y%2==1) ? 1 : 0;
 
-	vec2 segment_one = dir*max(inv_dir.x, inv_dir.y);
-	ivec2 segment = ivec2(segment_one*reso.xy);
-	pos += pdir * abs(vec2(segment) / reso.xy)*gl_WorkGroupID.x;
+	pos += pdir*gl_WorkGroupID.x;
 	vec2 begin = pos;
 	ivec2 map_index = ivec2(pos);
+
+	angle -= PI/4.;
+	vec2 dir = rotate(angle);
+	vec2 inv_dir = abs(1./dir);
 	dir *= min(inv_dir.x, inv_dir.y);
 
 	int march_count = 1;
@@ -59,21 +60,23 @@ void main()
 	}
 
 	if(march_count <= 1) { return; }
+
+	// 2重になるのを禁止
+	switch(y)
+	{
+		case 2:
+			if(map_index.y==-1){ return; }
+			break;
+		case 3:
+			if(map_index.x==reso.x){ return; }
+			break;
+	}
+
 	D2Ray ray;
 	ray.origin = begin;
 	ray.angle = angle;
 	ray.march = march_count;
 	
-/*	int buffer_index = atomicAdd(b_ray_counter[4].x, 1);
-	if(buffer_index >= u_radiosity_info.ray_num_max){ return; }
-	b_ray[buffer_index] = ray;
-
-	int index = atomicAdd(b_ray_counter[gl_WorkGroupID.z].w, 1);
-	if(index%1024 == 0){
-		atomicAdd(b_ray_counter[gl_WorkGroupID.z].x, 1);
-	}
-*/
-
 	int buffer_index = atomicAdd(b_ray_counter[gl_WorkGroupID.z].w, 1);
 	if(buffer_index >= u_radiosity_info.ray_scene_max){ while(true); }
 	uint buffer_offset = u_radiosity_info.ray_scene_max*gl_WorkGroupID.z;
