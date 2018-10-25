@@ -220,7 +220,7 @@ struct GI2DRadiosity
 
 		// pipeline
 		{
-			std::array<vk::PipelineShaderStageCreateInfo, 9> shader_info;
+			std::array<vk::PipelineShaderStageCreateInfo, 8> shader_info;
 			shader_info[0].setModule(m_shader[Shader_Radiosity].get());
 			shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[0].setPName("main");

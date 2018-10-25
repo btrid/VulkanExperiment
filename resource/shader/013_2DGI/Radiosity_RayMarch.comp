@@ -23,7 +23,6 @@ void main()
 	vec2 dir = rotate(ray.angle);
 	vec2 inv_dir = abs(1./dir);
 	dir *= min(inv_dir.x, inv_dir.y);
-	int axis = inv_dir.x < inv_dir.y ? 0 : 1;
 	ivec2 map_index = ivec2(pos);
 
 	u64vec2 map;
