@@ -21,12 +21,14 @@ void main()
 	float angle = a * (gl_LocalInvocationID.x);
 	angle += a*(0.25*gl_WorkGroupID.z + 0.125);
 
-//	uint y = uint(angle / (PI / 2.));
-	uint y = uint(gl_LocalInvocationID.x / (gl_WorkGroupSize.x / 4));
+	uint y = uint(angle / (PI / 2.));
+//	uint y = uint(gl_LocalInvocationID.x / (gl_WorkGroupSize.x / 4));
 
 	vec2 pos;
 	pos.x = (y==1) ? reso.x : 0;
 	pos.y = (y==2) ? reso.y : 0;
+//	pos.x = (y==1) ? reso.x-0.5 : 0.5;
+//	pos.y = (y==2) ? reso.y-0.5 : 0.5;
 	vec2 pdir;
 	pdir.x = (y%2==0) ? 1 : 0;
 	pdir.y = (y%2==1) ? 1 : 0;
@@ -66,9 +68,11 @@ void main()
 	{
 		case 2:
 			if(map_index.y==-1){ return; }
+//			if(map_index.y==-1 && (map_index.x>=0&&map_index.x<reso.x)){ return; }
 			break;
 		case 3:
 			if(map_index.x==reso.x){ return; }
+//			if(map_index.x==reso.x && (map_index.y>=0&&map_index.y<reso.y)){ return; }
 			break;
 	}
 
