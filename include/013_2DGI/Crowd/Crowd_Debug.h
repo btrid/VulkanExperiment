@@ -52,34 +52,50 @@ struct Crowd_Debug
 
 	void execute(vk::CommandBuffer cmd)
 	{
-		static vec2 s_pos = vec2(512.f, 512.f);
-		float move = 1.f;
-		s_pos.x += m_crowd_context->m_context->m_window->getInput().m_keyboard.isHold(VK_RIGHT) * move;
-		s_pos.x -= m_crowd_context->m_context->m_window->getInput().m_keyboard.isHold(VK_LEFT) * move;
-		s_pos.y -= m_crowd_context->m_context->m_window->getInput().m_keyboard.isHold(VK_UP) * move;
-		s_pos.y += m_crowd_context->m_context->m_window->getInput().m_keyboard.isHold(VK_DOWN) * move;
+		static vec2 s_pos0 = vec2(512.f, 512.f);
+		static vec2 s_pos1 = vec2(777.f, 777.f);
+		float move = 3.f;
+		if (m_crowd_context->m_context->m_window->getInput().m_keyboard.isHold(VK_SPACE))
+		{
+			s_pos1.x += m_crowd_context->m_context->m_window->getInput().m_keyboard.isHold(VK_RIGHT) * move;
+			s_pos1.x -= m_crowd_context->m_context->m_window->getInput().m_keyboard.isHold(VK_LEFT) * move;
+			s_pos1.y -= m_crowd_context->m_context->m_window->getInput().m_keyboard.isHold(VK_UP) * move;
+			s_pos1.y += m_crowd_context->m_context->m_window->getInput().m_keyboard.isHold(VK_DOWN) * move;
+		}
+		else 
+		{
+			s_pos0.x += m_crowd_context->m_context->m_window->getInput().m_keyboard.isHold(VK_RIGHT) * move;
+			s_pos0.x -= m_crowd_context->m_context->m_window->getInput().m_keyboard.isHold(VK_LEFT) * move;
+			s_pos0.y -= m_crowd_context->m_context->m_window->getInput().m_keyboard.isHold(VK_UP) * move;
+			s_pos0.y += m_crowd_context->m_context->m_window->getInput().m_keyboard.isHold(VK_DOWN) * move;
+		}
+
 
 		vk::BufferMemoryBarrier to_write[] = {
-			m_crowd_context->b_crowd.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
+			m_crowd_context->b_crowd.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
 		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer,
 			{}, 0, {}, array_length(to_write), to_write, 0, {});
 
 		vk::DescriptorSet descriptors[] =
 		{
 			m_crowd_context->getDescriptorSet(),
 		};
-		
-		uint32_t offset[array_length(descriptors)] = {};
-		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline.get());
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout.get(), 0, array_length(descriptors), descriptors, array_length(offset), offset);
-		cmd.pushConstants<vec2>(m_pipeline_layout.get(), vk::ShaderStageFlagBits::eCompute, 0, s_pos);
-		cmd.dispatch(1, 1, 1);
 
+		std::array<CrowdContext::CrowdData, 2> data;
+		data[0].target = s_pos0;
+		data[1].target = s_pos1;
+		cmd.updateBuffer<decltype(data)>(m_crowd_context->b_crowd.getInfo().buffer, m_crowd_context->b_crowd.getInfo().offset, data);
+// 		uint32_t offset[array_length(descriptors)] = {};
+// 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline.get());
+// 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout.get(), 0, array_length(descriptors), descriptors, array_length(offset), offset);
+// 		cmd.pushConstants<vec2>(m_pipeline_layout.get(), vk::ShaderStageFlagBits::eCompute, 0, s_pos0);
+// 		cmd.dispatch(1, 1, 1);
+// 
 		vk::BufferMemoryBarrier to_read[] = {
-			m_crowd_context->b_crowd.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			m_crowd_context->b_crowd.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader,
 			{}, 0, {}, array_length(to_read), to_read, 0, {});
 
 	}

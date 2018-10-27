@@ -76,7 +76,7 @@ int main()
 
 	cModel model;
 	model.load(context, "..\\..\\resource\\tiny.x");
-	std::shared_ptr<AppModel> player_model = std::make_shared<AppModel>(context, appmodel_context, model.getResource(), 128);
+	std::shared_ptr<AppModel> player_model = std::make_shared<AppModel>(context, appmodel_context, model.getResource(), 1024);
 
 
 	ClearPipeline clear_pipeline(context, app.m_window->getRenderTarget());

@@ -45,7 +45,7 @@ struct CrowdContext
 			m_crowd_info.crowd_info_max = 1;
 			m_crowd_info.unit_info_max = 16;
 			m_crowd_info.crowd_data_max = 16;
-			m_crowd_info.unit_data_max = 128;
+			m_crowd_info.unit_data_max = 1024;
 
 		}
 		{
@@ -137,7 +137,7 @@ struct CrowdContext
 					staging.getMappedPtr(i)->m_vel = glm::ballRand(20.f).xy();
 					staging.getMappedPtr(i)->m_vel = dot(staging.getMappedPtr(i)->m_vel, staging.getMappedPtr(i)->m_vel) == 0.f ? vec2(0.f, 1.f) : normalize(staging.getMappedPtr(i)->m_vel) * (rand()%4 + 1.f);
 					staging.getMappedPtr(i)->unit_type = 0;
-					staging.getMappedPtr(i)->crowd_id = 0;
+					staging.getMappedPtr(i)->crowd_id = std::rand()%2;
 				}
 
 				vk::BufferCopy copy;
