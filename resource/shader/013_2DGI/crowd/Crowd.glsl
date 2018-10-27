@@ -50,8 +50,8 @@ layout(set=USE_Crowd2D, binding=3, std430) restrict buffer UnitBuffer {
 layout(set=USE_Crowd2D, binding=4, std430) restrict buffer UnitCounter {
 	ivec4 b_unit_counter;
 };
-layout(set=USE_Crowd2D, binding=5, std430) restrict buffer SoftbodyInfo {
-	uint b_unit_density[];
+layout(set=USE_Crowd2D, binding=5, std430) restrict buffer CrowdDensityMapBuffer {
+	uint b_crowd_density_map[];
 };
 
 #endif

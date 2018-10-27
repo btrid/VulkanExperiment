@@ -102,6 +102,9 @@ int main()
 	auto render_cmd = renderer.createCmd(player_model);
 
 	app.setup();
+
+ 	auto a = glm::cross(vec3(1.f, 0.f, 0.f), normalize(vec3(-1.f, 0.0f, 0.f)));
+ 	auto b = glm::dot(vec3(1.f, 0.f, 0.f), (vec3(0.f, 0.0f, 0.f)));
 	while (true)
 	{
 		cStopWatch time;

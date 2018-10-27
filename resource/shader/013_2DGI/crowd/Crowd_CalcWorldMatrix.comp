@@ -34,7 +34,7 @@ void main()
 	}
 	uvec2 data_offset = ivec2(1-u_system_data.m_gpu_index, u_system_data.m_gpu_index) * u_crowd_info.unit_data_max;
 
-	UnitData unit = b_unit[index];
+	UnitData unit = b_unit[data_offset.y + index];
 //	vec2 dir = unit.m_dir;
 //	dir = dot(dir, dir) == 0. ? vec2(0., 1.) : normalize(dir);
 //	float angle = atan(dir.y, dir.x);	

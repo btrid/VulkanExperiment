@@ -17,115 +17,28 @@
 
 layout (local_size_x = 1024, local_size_y = 1) in;
 
-struct MarchResult
-{
-	vec2 next_pos;
-	ivec2 next_ipos;
-	float progress;
-	bool is_end;
-};
-
-// 軽量版
-MarchResult march(in vec2 pos, in vec2 dir, in float progress, in float advance)
-{
-	pos += dir * clamp(progress, 0., advance);
-	progress = max(progress-advance, 0.);
-
-	MarchResult result;
-	result.next_pos = pos;
-	result.next_ipos = ivec2(pos);
-	result.progress = progress;
-	result.is_end = progress <= 0.;
-	return result;
-}
-
 void main()
 {
 	uint index = gl_GlobalInvocationID.x;
-	if(index >= u_crowd_info.unit_max){
+	if(index >= u_crowd_info.unit_data_max){
 		return;
 	}
-	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
 
-	uvec2 data_offset = ivec2(1-u_system_data.m_gpu_index, u_system_data.m_gpu_index) * u_crowd_info.unit_max;
+	const ivec4 reso = u_gi2d_info.m_resolution;
+	uvec2 data_offset = ivec2(1-u_system_data.m_gpu_index, u_system_data.m_gpu_index) * u_crowd_info.unit_data_max;
 	float deltatime = u_system_data.m_deltatime;
 
-	UnitData unit = b_unit[data_offset.x + index];
-//	b_unit[src_offset + index].m_life = -1.;
-//	unit.m_life -= deltatime;
-//	if(unit.m_life <= 0.){
-//		return;
-//	}
+	UnitData unit = b_unit[data_offset.y + index];
 
-	UnitInfo unit_info = u_unit_info[unit.crowd_type];
+	ivec2 ipos = ivec2(unit.m_pos);
+	vec2 dir = rotate(unit.m_rotate_angle) * unit.m_move;
 
+	for(int i = 0; i < 4; i++)
 	{
+		ivec2 p = ivec2(unit.m_pos + dir*(3+i));
+		int dindex = p.x + p.y * reso.x;
+		atomicAdd(b_crowd_density_map[dindex], 1);
+	}
+
 	
-//		march(unit.m_pos.xz, unit.m_map_index, unit.m_inertia.xz * deltatime);	
-//		unit.m_inertia *= pow(0.92, 1. + deltatime);
-	}
-	{
-
-		// march
-//		vec2 dir = unit.m_dir;
-
-		ivec2 ipos = ivec2(unit.m_pos);
-		float progress = dot(unit.m_dir, unit.m_dir);
-		progress = progress == 0. ? 0. : sqrt(progress);
-		progress = 1.;
-		float advance = progress;
-		if(progress != 0.)
-		{
-
-			for(int _i = 0; _i < 2000; _i++)
-			{
-				MarchResult result = march(unit.m_pos, unit.m_dir, progress, 1.);
-
-				// hit確認
-				ivec4 fragment_index = ivec4(result.next_ipos/8, result.next_ipos%8);
-				int findex = fragment_index.x + fragment_index.y*reso.z;
-				uint64_t fragment_map = b_fragment_map[findex].x;
-
-				ivec2 shift = fragment_index.zw;
-				uint64_t bit = 1ul<<(shift.x+shift.y*8);
-				if((fragment_map & bit) != 0)
-				{
-					// 壁にぶつかったので反射
-					vec2 next = vec2(result.next_ipos - ipos);
-					vec2 wall = vec2(next.x, next.y);
-//					unit.m_dir = normalize(reflect(normalize(unit.m_dir), wall)) * advance;
-					unit.m_dir = -unit.m_dir;
-//					progress *= 0.5;
-
-					// 更新はしない?
-					// pos = result.next_pos;
-
-				}
-				else
-				{
-					// 何もないのでそのまま進む
-					unit.m_pos = result.next_pos;
-					ipos = result.next_ipos;				
-
-				}
-
-				if(result.is_end)
-				{
-	//				b_pos[p_id*2 + gpu_index()] = pos;
-					break;
-				}
-			}
-		}
-
-
-	}
-	uint dst_index = atomicAdd(b_unit_counter.w, 1);
-
-//	uint offset = desc.m_cell_num.x*desc.m_cell_num.y*(u_system_data.m_gpu_index);
-//	uint map_index_1D = calcMapIndex1D(unit.m_map_index) + offset;
-//	uint old = atomicExchange(b_unit_head[map_index_1D], dst_index);
-//	unit.m_ll_next = old;
-
-//	unit.m_pos += vec2(1000.);
-	b_unit[data_offset.y + dst_index] = unit;
 }

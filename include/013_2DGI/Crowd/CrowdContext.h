@@ -85,7 +85,7 @@ struct CrowdContext
 			b_crowd = m_context->m_storage_memory.allocateMemory<CrowdData>({ m_crowd_info.crowd_data_max, {} });
 			b_unit = m_context->m_storage_memory.allocateMemory<UnitData>({ m_crowd_info.unit_data_max*2, {} });
 			b_unit_counter = m_context->m_storage_memory.allocateMemory<uvec4>({ 1, {} });
-			b_grid_counter = m_context->m_storage_memory.allocateMemory<uint32_t>({ 1024*1024/*m_gi2d_context->FragmentBufferSize*/, {} });
+			b_crowd_density_map = m_context->m_storage_memory.allocateMemory<uint32_t>({ 1024*1024/*m_gi2d_context->FragmentBufferSize*/, {} });
 
 			vk::DescriptorBufferInfo uniforms[] = {
 				u_crowd_info.getInfo(),
@@ -95,7 +95,7 @@ struct CrowdContext
 				b_crowd.getInfo(),
 				b_unit.getInfo(),
 				b_unit_counter.getInfo(),
-				b_grid_counter.getInfo(),
+				b_crowd_density_map.getInfo(),
 			};
 			vk::WriteDescriptorSet write[] = {
 				vk::WriteDescriptorSet()
@@ -153,7 +153,7 @@ struct CrowdContext
 				for (int32_t i = 0; i < m_crowd_info.unit_info_max; i++)
 				{
 					auto& info = *staging.getMappedPtr(i);
-					info.linear_speed = 30.f;
+					info.linear_speed = 150.f;
 					info.angler_speed = 100.5f;
 				}
 
@@ -182,7 +182,7 @@ struct CrowdContext
 	btr::BufferMemoryEx<CrowdData> b_crowd;
 	btr::BufferMemoryEx<UnitData> b_unit;
 	btr::BufferMemoryEx<uvec4> b_unit_counter;
-	btr::BufferMemoryEx<uint32_t> b_grid_counter;
+	btr::BufferMemoryEx<uint32_t> b_crowd_density_map;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
