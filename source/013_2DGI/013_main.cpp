@@ -89,6 +89,8 @@ int main()
 	GI2DDebug gi2d_debug_make_fragment(context, gi2d_context);
 	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
 	GI2DRadiosity gi2d_Radiosity(context, gi2d_context, app.m_window->getRenderTarget());
+	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+	gi2d_Radiosity.executeGenerateRay(cmd);
 	std::shared_ptr<GI2DFluid> gi2d_Fluid = std::make_shared<GI2DFluid>(context, gi2d_context);
 
 	Crowd crowd_updater(crowd_context, gi2d_context);
@@ -99,12 +101,6 @@ int main()
 	auto anime_cmd = animater.createCmd(player_model);
 	auto render_cmd = renderer.createCmd(player_model);
 
-	float angle = 0.f;
-	float angle2 = angle + (3.14 / 2);
-	float angle3 = angle2 + (3.14 / 2);
-	vec2 a = vec2(-sin(angle), cos(angle));
-	vec2 b = vec2(-sin(angle2), cos(angle2));
-	vec2 c = vec2(-sin(angle3), cos(angle3));
 	app.setup();
 	while (true)
 	{

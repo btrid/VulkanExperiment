@@ -410,7 +410,7 @@ struct GI2DRadiosity
 		}
 
 	}
-	void executeSetup(vk::CommandBuffer cmd)
+	void executeGenerateRay(vk::CommandBuffer cmd)
 	{
 		{
 			// データクリア
@@ -465,13 +465,6 @@ struct GI2DRadiosity
 	}
 	void execute(vk::CommandBuffer cmd)
 	{
-		static int32_t is_init;
-		if (!is_init)
-		{
-			is_init = true;
-			executeSetup(cmd);
-		}
-
 		{
 			// データクリア
 			cmd.updateBuffer<ivec4>(b_segment_counter.getInfo().buffer, b_segment_counter.getInfo().offset, ivec4(0, 1, 1, 0));
