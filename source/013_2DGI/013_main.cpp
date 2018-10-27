@@ -146,6 +146,7 @@ int main()
 
 
 				gi2d_make_hierarchy.execute(cmd);
+				gi2d_make_hierarchy.executeHierarchy(cmd);
 				{
 					crowd_debug.execute(cmd);
 					crowd_updater.execute(cmd);

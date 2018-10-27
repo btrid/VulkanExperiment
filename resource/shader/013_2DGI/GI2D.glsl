@@ -9,9 +9,10 @@
 struct GI2DInfo
 {
 	mat4 m_camera_PV;
-	ivec2 m_resolution;
-	uvec2 _p;
+	ivec4 m_resolution;
 	vec4 m_position;
+	ivec4 m_fragment_map_hierarchy_offset[2];
+	uint m_hierarchy_num;
 };
 struct GI2DScene
 {
@@ -79,6 +80,8 @@ ivec2 frame_offset(){
 	return ivec2(u_gi2d_scene.m_frame%2,u_gi2d_scene.m_frame/2);
 }
 
+
+#define getFragmentMapHierarchyOffset(_i) (u_gi2d_info.m_fragment_map_hierarchy_offset[(_i)/4][(_i)%4])
 #endif
 
 

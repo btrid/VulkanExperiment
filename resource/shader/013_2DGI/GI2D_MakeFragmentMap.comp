@@ -16,7 +16,7 @@ void main()
 {
 //	ivec2 id = ivec2(gl_GlobalInvocationID.xy) + ivec2(u_gi2d_scene.m_frame%2,u_gi2d_scene.m_frame/2) - ivec2(1);
 	ivec2 id = ivec2(gl_GlobalInvocationID.xy);
-	id = clamp(id, ivec2(0), u_gi2d_info.m_resolution);
+	id = clamp(id, ivec2(0), u_gi2d_info.m_resolution.xy);
 
 	int tiled_1D_index = id.x + id.y*u_gi2d_info.m_resolution.x; 
 	vec3 albedo = b_fragment[tiled_1D_index].albedo.xyz;

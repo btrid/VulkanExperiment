@@ -22,9 +22,10 @@ struct GI2DContext
 	struct GI2DInfo
 	{
 		mat4 m_camera_PV;
-		uvec2 m_resolution;
-		uvec2 _p;
+		uvec4 m_resolution;
 		vec4 m_position;
+		uint32_t m_fragment_map_hierarchy_offset[8];
+		uint32_t m_hierarchy_num;
 	};
 	struct GI2DScene
 	{
@@ -75,8 +76,19 @@ struct GI2DContext
 			u_gi2d_scene = context->m_uniform_memory.allocateMemory<GI2DScene>({ 1, {} });
 
 			m_gi2d_info.m_position = vec4(0.f, 0.f, 0.f, 0.f);
-			m_gi2d_info.m_resolution = uvec2(RenderWidth, RenderHeight);
+			m_gi2d_info.m_resolution = uvec4(RenderWidth, RenderHeight, RenderWidth/8, RenderHeight/8);
 			m_gi2d_info.m_camera_PV = glm::ortho(RenderWidth*-0.5f, RenderWidth*0.5f, RenderHeight*-0.5f, RenderHeight*0.5f, 0.f, 2000.f) * glm::lookAt(vec3(RenderWidth*0.5f, 1000.f, RenderHeight*0.5f) + m_gi2d_info.m_position.xyz(), vec3(RenderWidth*0.5f, 0.f, RenderHeight*0.5f) + m_gi2d_info.m_position.xyz(), vec3(0.f, 0.f, 1.f));
+			m_gi2d_info.m_hierarchy_num = 8;
+
+			int size = RenderHeight * RenderWidth / 64;
+			m_gi2d_info.m_fragment_map_hierarchy_offset[0] = 0;
+			m_gi2d_info.m_fragment_map_hierarchy_offset[1] = m_gi2d_info.m_fragment_map_hierarchy_offset[0] + size;
+			m_gi2d_info.m_fragment_map_hierarchy_offset[2] = m_gi2d_info.m_fragment_map_hierarchy_offset[1] + size / (2 * 2);
+			m_gi2d_info.m_fragment_map_hierarchy_offset[3] = m_gi2d_info.m_fragment_map_hierarchy_offset[2] + size / (4 * 4);
+			m_gi2d_info.m_fragment_map_hierarchy_offset[4] = m_gi2d_info.m_fragment_map_hierarchy_offset[3] + size / (8 * 8);
+			m_gi2d_info.m_fragment_map_hierarchy_offset[5] = m_gi2d_info.m_fragment_map_hierarchy_offset[4] + size / (16 * 16);
+			m_gi2d_info.m_fragment_map_hierarchy_offset[6] = m_gi2d_info.m_fragment_map_hierarchy_offset[5] + size / (32 * 32);
+			m_gi2d_info.m_fragment_map_hierarchy_offset[7] = m_gi2d_info.m_fragment_map_hierarchy_offset[6] + size / (64 * 64);
 
 			cmd.updateBuffer<GI2DInfo>(u_gi2d_info.getInfo().buffer, u_gi2d_info.getInfo().offset, m_gi2d_info);
 
@@ -87,9 +99,9 @@ struct GI2DContext
 		}
 		{
 			b_fragment = context->m_storage_memory.allocateMemory<Fragment>({ FragmentBufferSize, {} });
-			b_fragment_map = context->m_storage_memory.allocateMemory<u64vec2>({ FragmentBufferSize / 64, {} });
-			b_diffuse_map = context->m_storage_memory.allocateMemory<uint64_t>({ FragmentBufferSize / 64, {} });
-			b_emissive_map = context->m_storage_memory.allocateMemory<uint64_t>({ FragmentBufferSize / 64, {} });
+			b_fragment_map = context->m_storage_memory.allocateMemory<u64vec2>({ m_gi2d_info.m_fragment_map_hierarchy_offset[m_gi2d_info.m_hierarchy_num-1], {} });
+			b_diffuse_map = context->m_storage_memory.allocateMemory<uint64_t>({ m_gi2d_info.m_fragment_map_hierarchy_offset[m_gi2d_info.m_hierarchy_num - 1], {} });
+			b_emissive_map = context->m_storage_memory.allocateMemory<uint64_t>({ m_gi2d_info.m_fragment_map_hierarchy_offset[m_gi2d_info.m_hierarchy_num - 1], {} });
 			b_light = context->m_storage_memory.allocateMemory<uint32_t>({ FragmentBufferSize, {} });
 			b_grid_counter = context->m_storage_memory.allocateMemory<int32_t>({ FragmentBufferSize,{} });
 			b_jfa = context->m_storage_memory.allocateMemory<D2JFACell>({ FragmentBufferSize,{} });
@@ -165,7 +177,7 @@ struct GI2DContext
 	void execute(vk::CommandBuffer cmd)
 	{
 		m_gi2d_scene.m_frame = (m_gi2d_scene.m_frame + 1) % 4;
-		auto reso = uvec4(m_gi2d_info.m_resolution, m_gi2d_info.m_resolution/8);
+		auto reso = m_gi2d_info.m_resolution;
 
 		uint radiance_offset = reso.x*reso.y;
 		int map_offset = 0;

@@ -16,7 +16,7 @@ void main()
 	vec2 pos = b_pos[p_id*2 + gpu_index()];
 
 	ivec2 index = ivec2(pos);
-	if(any(lessThan(index, ivec2(0))) || any(greaterThanEqual(index, u_gi2d_info.m_resolution))){ return; }
+	if(any(lessThan(index, ivec2(0))) || any(greaterThanEqual(index, u_gi2d_info.m_resolution.xy))){ return; }
 
 	b_fragment[index.x+index.y*u_gi2d_info.m_resolution.x].albedo += vec4(float(p_id%3==0), float(p_id%3==1), float(p_id%3==2), 1.);
 //	b_fragment[index.x+index.y*u_gi2d_info.m_resolution.x].albedo += vec4(1.);
