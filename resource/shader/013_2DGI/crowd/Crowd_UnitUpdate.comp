@@ -71,9 +71,7 @@ void main()
 	UnitInfo unit_info = u_unit_info[unit.unit_type];
 
 	vec2 dir = rotate(unit.m_rot);
-	unit.m_rot_prev = unit.m_rot;
-
-
+	float rot_prev = unit.m_rot;
 
 	{
 		// 目的地に向かう
@@ -180,5 +178,6 @@ void main()
 //	unit.m_ll_next = old;
 
 //	unit.m_pos += vec2(1000.);
+	unit.m_rot_prev = rot_prev;
 	b_unit[data_offset.y + dst_index] = unit;
 }

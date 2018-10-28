@@ -34,7 +34,7 @@
 #include <013_2DGI/GI2D/GI2DFluid.h>
 #include <013_2DGI/GI2D/GI2DRigidbody_dem.h>
 #include <013_2DGI/GI2D/GI2DSoftbody.h>
-#include <013_2DGI/Crowd/Crowd.h>
+#include <013_2DGI/Crowd/Crowd_Procedure.h>
 #include <013_2DGI/Crowd/Crowd_CalcWorldMatrix.h>
 #include <013_2DGI/Crowd/Crowd_Debug.h>
 
@@ -93,7 +93,7 @@ int main()
 	gi2d_Radiosity.executeGenerateRay(cmd);
 	std::shared_ptr<GI2DFluid> gi2d_Fluid = std::make_shared<GI2DFluid>(context, gi2d_context);
 
-	Crowd crowd_updater(crowd_context, gi2d_context);
+	Crowd_Procedure crowd_procedure(crowd_context, gi2d_context);
 	Crowd_CalcWorldMatrix crowd_calc_world_matrix(crowd_context, appmodel_context);
 	Crowd_Debug crowd_debug(crowd_context);
 	AppModelAnimationStage animater(context, appmodel_context);
@@ -152,7 +152,7 @@ int main()
 				gi2d_make_hierarchy.executeHierarchy(cmd);
 				{
 					crowd_debug.execute(cmd);
-					crowd_updater.execute(cmd);
+					crowd_procedure.executeUpdateUnit(cmd);
 					crowd_calc_world_matrix.execute(cmd, player_model);
 
 					std::vector<vk::CommandBuffer> anime_cmds{ anime_cmd.get() };
@@ -168,7 +168,8 @@ int main()
 //				gi2d_Fluid->executeCalc(cmd);
 //				gi2d_Softbody.execute(cmd);
 //				gi2d_Rigidbody.execute(cmd);
-				gi2d_Radiosity.execute(cmd);
+				gi2d_Radiosity.executeRadiosity(cmd);
+				gi2d_Radiosity.executeRendering(cmd);
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;
 			}

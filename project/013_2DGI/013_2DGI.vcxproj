@@ -95,7 +95,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\013_2DGI\Crowd\CrowdContext.h" />
-    <ClInclude Include="..\..\include\013_2DGI\Crowd\Crowd.h" />
+    <ClInclude Include="..\..\include\013_2DGI\Crowd\CrowdProcedure.h" />
     <ClInclude Include="..\..\include\013_2DGI\Crowd\Crowd_CalcDensityMap.h" />
     <ClInclude Include="..\..\include\013_2DGI\Crowd\Crowd_CalcWorldMatrix.h" />
     <ClInclude Include="..\..\include\013_2DGI\Crowd\Crowd_Debug.h" />

@@ -4,12 +4,13 @@
 #include <013_2DGI/GI2D/GI2DContext.h>
 
 
-struct Crowd 
+struct Crowd_Procedure
 {
 	enum Shader
 	{
 		Shader_UnitUpdate,
 		Shader_MakeDensity,
+		Shader_DrawDensity,
 
 		Shader_Num,
 	};
@@ -22,10 +23,11 @@ struct Crowd
 	{
 		Pipeline_UnitUpdate,
 		Pipeline_MakeDensity,
+		Pipeline_DrawDensity,
 
 		Pipeline_Num,
 	};
-	Crowd(const std::shared_ptr<CrowdContext>& context, const std::shared_ptr<gi2d::GI2DContext>& gi2d_context)
+	Crowd_Procedure(const std::shared_ptr<CrowdContext>& context, const std::shared_ptr<gi2d::GI2DContext>& gi2d_context)
 	{
 		m_context = context;
 		m_gi2d_context = gi2d_context;
@@ -36,7 +38,8 @@ struct Crowd
 			const char* name[] =
 			{
 				"Crowd_UnitUpdate.comp.spv",
-				"Crowd_MakeDensityMap.comp.spv"
+				"Crowd_MakeDensityMap.comp.spv",
+				"Crowd_DrawDensityMap.comp.spv",
 			};
 			static_assert(array_length(name) == Shader_Num, "not equal shader num");
 
@@ -61,13 +64,16 @@ struct Crowd
 
 		// pipeline
 		{
-			std::array<vk::PipelineShaderStageCreateInfo, 2> shader_info;
+			std::array<vk::PipelineShaderStageCreateInfo, 3> shader_info;
 			shader_info[0].setModule(m_shader_module[Shader_UnitUpdate].get());
 			shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[0].setPName("main");
 			shader_info[1].setModule(m_shader_module[Shader_MakeDensity].get());
 			shader_info[1].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[1].setPName("main");
+			shader_info[2].setModule(m_shader_module[Shader_DrawDensity].get());
+			shader_info[2].setStage(vk::ShaderStageFlagBits::eCompute);
+			shader_info[2].setPName("main");
 			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 			{
 				vk::ComputePipelineCreateInfo()
@@ -76,14 +82,18 @@ struct Crowd
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[1])
 				.setLayout(m_pipeline_layout[PipelineLayout_Crowd].get()),
+				vk::ComputePipelineCreateInfo()
+				.setStage(shader_info[2])
+				.setLayout(m_pipeline_layout[PipelineLayout_Crowd].get()),
 			};
 			auto compute_pipeline = context->m_context->m_device->createComputePipelinesUnique(context->m_context->m_cache.get(), compute_pipeline_info);
 			m_pipeline[Pipeline_UnitUpdate] = std::move(compute_pipeline[0]);
 			m_pipeline[Pipeline_MakeDensity] = std::move(compute_pipeline[1]);
+			m_pipeline[Pipeline_DrawDensity] = std::move(compute_pipeline[2]);
 		}
 	}
 
-	void execute(vk::CommandBuffer cmd) 
+	void executeUpdateUnit(vk::CommandBuffer cmd) 
 	{
 		// カウンターのclear
 		{
@@ -112,6 +122,33 @@ struct Crowd
 	}
 
 	void executeMakeDensity(vk::CommandBuffer cmd)
+	{
+		// カウンターのclear
+		{
+			cmd.updateBuffer<uvec4>(m_context->b_crowd_density_map.getInfo().buffer, m_context->b_crowd_density_map.getInfo().offset, uvec4(0));
+			vk::BufferMemoryBarrier to_read[] = {
+				m_context->b_crowd_density_map.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, 0, {}, array_length(to_read), to_read, 0, {});
+		}
+
+		// 更新
+		{
+			vk::DescriptorSet descriptors[] =
+			{
+				m_context->getDescriptorSet(),
+				sSystem::Order().getSystemDescriptorSet(),
+				m_gi2d_context->getDescriptorSet(),
+			};
+
+			uint32_t offset[array_length(descriptors)] = {};
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeDensity].get());
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Crowd].get(), 0, array_length(descriptors), descriptors, array_length(offset), offset);
+			cmd.dispatch(1, 1, 1);
+		}
+
+	}
+	void executeDrawDensity(vk::CommandBuffer cmd)
 	{
 		// カウンターのclear
 		{

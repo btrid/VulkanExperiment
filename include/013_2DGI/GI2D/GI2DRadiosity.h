@@ -463,7 +463,7 @@ struct GI2DRadiosity
 			}
 		}
 	}
-	void execute(vk::CommandBuffer cmd)
+	void executeRadiosity(vk::CommandBuffer cmd)
 	{
 		{
 			// データクリア
@@ -566,14 +566,10 @@ struct GI2DRadiosity
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
 			cmd.dispatchIndirect(b_segment_counter.getInfo().buffer, b_segment_counter.getInfo().offset);
 		}
-
-
-		_executeRender(cmd);
-
 	}
 
 
-	void _executeRender(vk::CommandBuffer &cmd)
+	void executeRendering(vk::CommandBuffer &cmd)
 	{
 		// render_targetに書く
 		{
