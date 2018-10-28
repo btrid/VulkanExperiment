@@ -70,25 +70,47 @@ void main()
 	CrowdData crowd = b_crowd[unit.crowd_type];
 	UnitInfo unit_info = u_unit_info[unit.unit_type];
 
-	vec2 dir = rotate(unit.m_rotate_angle);
+	vec2 dir = rotate(unit.m_rot);
+	unit.m_rot_prev = unit.m_rot;
 
-	// 目的地に向かう
-	vec3 target_dir = normalize_safe(vec3(crowd.target - unit.m_pos, 0.), vec3(dir, 0.));
-	float rotate_rad = dot(vec3(dir, 0.), target_dir);
-	if(rotate_rad <= 0.95)
-	{
-		float rotate_angle = acos(rotate_rad);
-		rotate_angle = min(rotate_angle, unit_info.angler_speed);
 
-		float c = cross(vec3(dir, 0.), target_dir).z;
-		unit.m_rotate_angle += sign(c) * rotate_angle*deltatime;
-	
-		// 方向転換の時は減速する
-		unit.m_move = clamp(unit.m_move * pow(0.98, 1.+deltatime), unit_info.linear_speed * 0.05, unit_info.linear_speed*1.);
-	}
-	else
+
 	{
-		unit.m_move	= min(unit.m_move+deltatime*10., unit_info.linear_speed);
+		// 目的地に向かう
+		vec3 target_dir = normalize_safe(vec3(crowd.target - unit.m_pos, 0.), vec3(dir, 0.));
+		float rotate_rad = dot(vec3(dir, 0.), target_dir);
+		if(rotate_rad <= 0.95)
+		{
+			float rotate_angle = acos(rotate_rad);
+			rotate_angle = min(rotate_angle, unit_info.angler_speed);
+
+			float c = cross(vec3(dir, 0.), target_dir).z;
+			unit.m_rot += sign(c) * rotate_angle*deltatime;
+		
+			// 方向転換の時は減速する
+			unit.m_move = clamp(unit.m_move * pow(0.98, 1.+deltatime), unit_info.linear_speed * 0.05, unit_info.linear_speed*1.);
+		}
+		else
+		{
+			const int size = 4;
+			ivec2 ip = ivec2(unit.m_pos + dir*size) / size;
+			int dindex = ip.x + ip.y * (reso.x/size);
+			uint density = b_crowd_density_map[dindex];
+			if(density >= 2)
+			{
+				// 障害物を避ける
+				
+
+			}
+			else
+			{
+
+				// そうじゃなかったら加速？
+				unit.m_move	= min(unit.m_move+deltatime*10., unit_info.linear_speed);
+			
+			}
+		}
+
 	}
 	{
 	
@@ -124,8 +146,8 @@ void main()
 					vec2 wall = vec2(next.x, next.y);
 //					unit.m_dir = normalize(reflect(normalize(unit.m_dir), wall)) * advance;
 //					unit.m_dir = -unit.m_dir;
-					unit.m_rotate_angle = mod(3.14+unit.m_rotate_angle, 6.28);
-					dir = rotate(unit.m_rotate_angle);
+					unit.m_rot = mod(3.14+unit.m_rot, 6.28);
+					dir = rotate(unit.m_rot);
 //					progress *= 0.5;
 
 					// 更新はしない?

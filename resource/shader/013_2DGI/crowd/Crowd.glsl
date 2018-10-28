@@ -27,12 +27,13 @@ struct UnitInfo
 struct UnitData
 {
 	vec2 m_pos;
-	float m_rotate_angle;
+	float m_rot;
+	float m_rot_prev;
+
 	float m_move;
 	int crowd_type;
 	int unit_type;
 	int _p2;
-	int _p3;
 };
 
 layout(set=USE_Crowd2D, binding=0, std140) uniform CrowdInfoUniform {

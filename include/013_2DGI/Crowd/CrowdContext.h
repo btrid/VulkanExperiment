@@ -30,7 +30,10 @@ struct CrowdContext
 	struct UnitData
 	{
 		vec2 m_pos;
-		vec2 m_vel;
+		float m_rot;
+		float m_rot_prev;
+
+		float m_move;
 		int32_t crowd_id;
 		int32_t unit_type;
 		vec2 _p;
@@ -134,8 +137,9 @@ struct CrowdContext
 				for (int32_t i = 0; i < m_crowd_info.unit_data_max * 2; i++)
 				{
 					staging.getMappedPtr(i)->m_pos = abs(glm::ballRand(4000.f).xy());
-					staging.getMappedPtr(i)->m_vel = glm::ballRand(20.f).xy();
-					staging.getMappedPtr(i)->m_vel = dot(staging.getMappedPtr(i)->m_vel, staging.getMappedPtr(i)->m_vel) == 0.f ? vec2(0.f, 1.f) : normalize(staging.getMappedPtr(i)->m_vel) * (rand()%4 + 1.f);
+					staging.getMappedPtr(i)->m_move = 4.f;
+					staging.getMappedPtr(i)->m_rot = 0.f;
+					staging.getMappedPtr(i)->m_rot_prev = 0.f;
 					staging.getMappedPtr(i)->unit_type = 0;
 					staging.getMappedPtr(i)->crowd_id = std::rand()%2;
 				}
@@ -153,7 +157,7 @@ struct CrowdContext
 				for (int32_t i = 0; i < m_crowd_info.unit_info_max; i++)
 				{
 					auto& info = *staging.getMappedPtr(i);
-					info.linear_speed = 150.f;
+					info.linear_speed = 50.f;
 					info.angler_speed = 100.5f;
 				}
 
