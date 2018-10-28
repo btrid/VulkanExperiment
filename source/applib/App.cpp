@@ -30,6 +30,7 @@ App::App(const AppDescriptor& desc)
 	auto device = sGlobal::Order().getGPU(0).getDevice();
 
 	m_context = std::make_shared<btr::Context>();
+//	m_context = std::make_shared<AppContext>();
 	{
 		m_context->m_gpu = m_gpu;
 		m_context->m_device = device;
@@ -295,7 +296,7 @@ glm::uvec3 calcDipatchGroups(const glm::uvec3& num, const glm::uvec3& local_size
 
 AppWindow::ImguiRenderPipeline::ImguiRenderPipeline(const std::shared_ptr<btr::Context>& context, AppWindow* const window)
 {
-	const auto& render_target = window->getRenderTarget();
+	const auto& render_target = window->getFrontBuffer();
 
 	// レンダーパス
 	{
@@ -534,7 +535,7 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 		vk::SurfaceCapabilitiesKHR capability = context->m_gpu->getSurfaceCapabilitiesKHR(m_surface.get());
 		vk::ImageCreateInfo image_info;
 		image_info.format = vk::Format::eR16G16B16A16Sfloat;
-		image_info.usage = vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst;
+		image_info.usage = vk::ImageUsageFlagBits::eStorage|vk::ImageUsageFlagBits::eSampled|vk::ImageUsageFlagBits::eColorAttachment|vk::ImageUsageFlagBits::eTransferSrc|vk::ImageUsageFlagBits::eTransferDst;
 		image_info.arrayLayers = 1;
 		image_info.mipLevels = 1;
 		image_info.extent.width = capability.currentExtent.width;
@@ -542,28 +543,28 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 		image_info.extent.depth = 1;
 		image_info.imageType = vk::ImageType::e2D;
 		image_info.initialLayout = vk::ImageLayout::eUndefined;
-		m_render_target_image = context->m_device->createImageUnique(image_info);
-		m_render_target_info = image_info;
+		m_front_buffer_image = context->m_device->createImageUnique(image_info);
+		m_front_buffer_info = image_info;
 		// メモリ確保
-		auto memory_request = context->m_device->getImageMemoryRequirements(m_render_target_image.get());
+		auto memory_request = context->m_device->getImageMemoryRequirements(m_front_buffer_image.get());
 		uint32_t memory_index = cGPU::Helper::getMemoryTypeIndex(context->m_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
 		vk::MemoryAllocateInfo memory_info;
 		memory_info.allocationSize = memory_request.size;
 		memory_info.memoryTypeIndex = memory_index;
-		m_render_target_memory = context->m_device->allocateMemoryUnique(memory_info);
-		context->m_device->bindImageMemory(m_render_target_image.get(), m_render_target_memory.get(), 0);
+		m_front_buffer_memory = context->m_device->allocateMemoryUnique(memory_info);
+		context->m_device->bindImageMemory(m_front_buffer_image.get(), m_front_buffer_memory.get(), 0);
 
 		vk::ImageViewCreateInfo view_info;
 		view_info.format = image_info.format;
-		view_info.image = m_render_target_image.get();
+		view_info.image = m_front_buffer_image.get();
 		view_info.viewType = vk::ImageViewType::e2D;
 		view_info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
 		view_info.subresourceRange.baseArrayLayer = 0;
 		view_info.subresourceRange.baseMipLevel = 0;
 		view_info.subresourceRange.layerCount = 1;
 		view_info.subresourceRange.levelCount = 1;
-		m_render_target_view = context->m_device->createImageViewUnique(view_info);
+		m_front_buffer_view = context->m_device->createImageViewUnique(view_info);
 
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 		vk::ImageSubresourceRange subresource_range;
@@ -577,7 +578,7 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 		barrier.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
 		barrier.setOldLayout(vk::ImageLayout::eUndefined);
 		barrier.setNewLayout(vk::ImageLayout::eTransferDstOptimal);
-		barrier.setImage(m_render_target_image.get());
+		barrier.setImage(m_front_buffer_image.get());
 
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eAllCommands, vk::DependencyFlags(), {}, {}, barrier);
 
@@ -620,18 +621,18 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 
 	}
 
-	m_render_target = std::make_shared<RenderTarget>();
-	m_render_target->m_info = m_render_target_info;
-	m_render_target->m_image = m_render_target_image.get();
-	m_render_target->m_view = m_render_target_view.get();
-	m_render_target->m_memory = m_render_target_memory.get();
-	m_render_target->m_depth_info = m_depth_info;
-	m_render_target->m_depth_image = m_depth_image.get();
-	m_render_target->m_depth_memory = m_depth_memory.get();
-	m_render_target->m_depth_view = m_depth_view.get();
-	m_render_target->is_dynamic_resolution = false;
-	m_render_target->m_resolution.width = m_render_target_info.extent.width;
-	m_render_target->m_resolution.height = m_render_target_info.extent.height;
+	m_front_buffer = std::make_shared<RenderTarget>();
+	m_front_buffer->m_info = m_front_buffer_info;
+	m_front_buffer->m_image = m_front_buffer_image.get();
+	m_front_buffer->m_view = m_front_buffer_view.get();
+	m_front_buffer->m_memory = m_front_buffer_memory.get();
+	m_front_buffer->m_depth_info = m_depth_info;
+	m_front_buffer->m_depth_image = m_depth_image.get();
+	m_front_buffer->m_depth_memory = m_depth_memory.get();
+	m_front_buffer->m_depth_view = m_depth_view.get();
+	m_front_buffer->is_dynamic_resolution = false;
+	m_front_buffer->m_resolution.width = m_front_buffer_info.extent.width;
+	m_front_buffer->m_resolution.height = m_front_buffer_info.extent.height;
 
 	m_imgui_pipeline = std::make_unique<ImguiRenderPipeline>(context, this);
 

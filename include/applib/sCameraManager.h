@@ -27,7 +27,7 @@ struct sCameraManager : public Singleton<sCameraManager>
 	std::array<vk::DescriptorSetLayout, DESCRIPTOR_SET_LAYOUT_NUM> m_descriptor_set_layout;
 	std::array<vk::DescriptorSet, DESCRIPTOR_SET_NUM> m_descriptor_set;
 
-	void setup(std::shared_ptr<btr::Context>& context)
+	void setup(const std::shared_ptr<btr::Context>& context)
 	{
 		{
 			btr::UpdateBufferDescriptor update_desc;
@@ -96,7 +96,7 @@ struct sCameraManager : public Singleton<sCameraManager>
 		}
 		
 	}
-	vk::CommandBuffer draw(std::shared_ptr<btr::Context>& context)
+	vk::CommandBuffer draw(const std::shared_ptr<btr::Context>& context)
 	{
 		auto& device = context->m_gpu.getDevice();
 		auto cmd = context->m_cmd_pool->allocCmdOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));

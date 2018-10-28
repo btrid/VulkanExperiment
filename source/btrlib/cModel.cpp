@@ -53,7 +53,7 @@ namespace {
 
 ResourceManager<cModel::Resource> cModel::s_manager;
 
-std::vector<cModel::Material> loadMaterial(const aiScene* scene, const std::string& filename, std::shared_ptr<btr::Context>& context, vk::CommandBuffer cmd)
+std::vector<cModel::Material> loadMaterial(const aiScene* scene, const std::string& filename, const std::shared_ptr<btr::Context>& context, vk::CommandBuffer cmd)
 {
 	std::string path = std::experimental::filesystem::path(filename).remove_filename().string();
 	std::vector<cModel::Material> material(scene->mNumMaterials);
@@ -123,7 +123,7 @@ RootNode loadNode(const aiScene* scene)
 	return root;
 }
 
-void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& root, std::shared_ptr<btr::Context>& context)
+void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& root, const std::shared_ptr<btr::Context>& context)
 {
 	if (!scene->HasAnimations()) {
 		return;
@@ -176,7 +176,7 @@ void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& r
 	}
 }
 
-void cModel::load(std::shared_ptr<btr::Context>& context, const std::string& filename)
+void cModel::load(const std::shared_ptr<btr::Context>& context, const std::string& filename)
 {
 
 	if (s_manager.manage(m_resource, filename)) {

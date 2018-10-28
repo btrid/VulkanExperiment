@@ -13,17 +13,6 @@
 struct ImGuiContext;
 
 
-
-using PipelineFlags = std::bitset<8>;
-struct PipelineFlagBits
-{
-	enum {
-		IS_SETUP,
-	};
-};
-struct RenderContext 
-{
-};
 struct RenderTarget
 {
 	vk::ImageCreateInfo m_info;
@@ -51,13 +40,13 @@ struct AppWindow : public cWindow
 	vk::UniqueDeviceMemory m_depth_memory;
 	vk::ImageCreateInfo m_depth_info;
 
-	vk::ImageCreateInfo m_render_target_info;
-	vk::UniqueImage m_render_target_image;
-	vk::UniqueImageView m_render_target_view;
-	vk::UniqueDeviceMemory m_render_target_memory;
+	vk::ImageCreateInfo m_front_buffer_info;
+	vk::UniqueImage m_front_buffer_image;
+	vk::UniqueImageView m_front_buffer_view;
+	vk::UniqueDeviceMemory m_front_buffer_memory;
 
-	std::shared_ptr<RenderTarget> m_render_target;
-	const std::shared_ptr<RenderTarget>& getRenderTarget()const { return m_render_target; }
+	std::shared_ptr<RenderTarget> m_front_buffer;
+	const std::shared_ptr<RenderTarget>& getFrontBuffer()const { return m_front_buffer; }
 
 	struct ImguiRenderPipeline
 	{
@@ -86,6 +75,10 @@ struct AppWindow : public cWindow
 	ImguiRenderPipeline* getImguiPipeline() { return m_imgui_pipeline.get(); }
 };
 
+struct AppContext : public btr::Context
+{
+	std::shared_ptr<AppWindow> m_app_window;
+};
 namespace app
 {
 
@@ -94,6 +87,8 @@ struct AppDescriptor
 	cGPU m_gpu;
 	uvec2 m_window_size;
 };
+
+
 struct App
 {
 	cGPU m_gpu;
@@ -102,6 +97,7 @@ struct App
 	std::vector<std::shared_ptr<AppWindow>> m_window_list;
 	std::vector<cWindowDescriptor> m_window_request;
 	std::shared_ptr<btr::Context> m_context;
+//	std::shared_ptr<AppContext> m_context;
 
 	std::vector<vk::CommandBuffer> m_system_cmds;
 	SynchronizedPoint m_sync_point;

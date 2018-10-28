@@ -78,9 +78,8 @@ int main()
 	model.load(context, "..\\..\\resource\\tiny.x");
 	std::shared_ptr<AppModel> player_model = std::make_shared<AppModel>(context, appmodel_context, model.getResource(), 1024);
 
-
-	ClearPipeline clear_pipeline(context, app.m_window->getRenderTarget());
-	PresentPipeline present_pipeline(context, app.m_window->getRenderTarget(), app.m_window->getSwapchainPtr());
+	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
+	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchainPtr());
 
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context);
 	std::shared_ptr<CrowdContext> crowd_context = std::make_shared<CrowdContext>(context);
@@ -88,7 +87,7 @@ int main()
 	GI2DClear gi2d_clear(context, gi2d_context);
 	GI2DDebug gi2d_debug_make_fragment(context, gi2d_context);
 	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
-	GI2DRadiosity gi2d_Radiosity(context, gi2d_context, app.m_window->getRenderTarget());
+	GI2DRadiosity gi2d_Radiosity(context, gi2d_context, app.m_window->getFrontBuffer());
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 	gi2d_Radiosity.executeGenerateRay(cmd);
 	std::shared_ptr<GI2DFluid> gi2d_Fluid = std::make_shared<GI2DFluid>(context, gi2d_context);
@@ -168,8 +167,8 @@ int main()
 //				gi2d_Fluid->executeCalc(cmd);
 //				gi2d_Softbody.execute(cmd);
 //				gi2d_Rigidbody.execute(cmd);
-//				gi2d_Radiosity.executeRadiosity(cmd);
-				crowd_procedure.executeDrawDensity(cmd);
+				gi2d_Radiosity.executeRadiosity(cmd);
+//				crowd_procedure.executeDrawDensity(cmd);
 				gi2d_Radiosity.executeRendering(cmd);
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;
