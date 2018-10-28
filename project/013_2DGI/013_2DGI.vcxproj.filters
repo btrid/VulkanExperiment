@@ -63,7 +63,7 @@
     <ClInclude Include="..\..\include\013_2DGI\Crowd\Crowd_UpdateCrowd.h">
       <Filter>Crowd</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\013_2DGI\Crowd\CrowdProcedure.h">
+    <ClInclude Include="..\..\include\013_2DGI\Crowd\Crowd_Procedure.h">
       <Filter>Crowd</Filter>
     </ClInclude>
   </ItemGroup>

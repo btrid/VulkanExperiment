@@ -150,16 +150,6 @@ struct Crowd_Procedure
 	}
 	void executeDrawDensity(vk::CommandBuffer cmd)
 	{
-		// カウンターのclear
-		{
-			cmd.updateBuffer<uvec4>(m_context->b_crowd_density_map.getInfo().buffer, m_context->b_crowd_density_map.getInfo().offset, uvec4(0));
-			vk::BufferMemoryBarrier to_read[] = {
-				m_context->b_crowd_density_map.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, 0, {}, array_length(to_read), to_read, 0, {});
-		}
-
-		// 更新
 		{
 			vk::DescriptorSet descriptors[] =
 			{
@@ -169,7 +159,7 @@ struct Crowd_Procedure
 			};
 
 			uint32_t offset[array_length(descriptors)] = {};
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeDensity].get());
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_DrawDensity].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Crowd].get(), 0, array_length(descriptors), descriptors, array_length(offset), offset);
 			cmd.dispatch(1, 1, 1);
 		}
