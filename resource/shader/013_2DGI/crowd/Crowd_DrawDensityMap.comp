@@ -9,38 +9,38 @@
 #include "Crowd.glsl"
 
 #define USE_SYSTEM 1
+#define USE_RenderTarget 3
 #include "applib/System.glsl"
 
 #define USE_GI2D 2
 #include "GI2D.glsl"
 
 
-layout (local_size_x = 1024, local_size_y = 1) in;
+layout (local_size_x = 32, local_size_y = 32) in;
 
 void main()
 {
-	uint index = gl_GlobalInvocationID.x;
-	if(index >= u_crowd_info.unit_data_max){
-		return;
-	}
+	ivec2 index = ivec2(gl_GlobalInvocationID.xy);
+	const int color_map_size = 4;
+	vec3 color_map[color_map_size] = {
+		vec3(0., 0., 0.),
+		vec3(0., 0., 1.),
+		vec3(0., 1., 0.),
+		vec3(1., 0., 0.),
+	};
+	const int color_scale = 3;
 
 	const ivec4 reso = u_gi2d_info.m_resolution;
-	uvec2 data_offset = ivec2(1-u_system_data.m_gpu_index, u_system_data.m_gpu_index) * u_crowd_info.unit_data_max;
-	float deltatime = u_system_data.m_deltatime;
-
-	UnitData unit = b_unit[data_offset.y + index];
-
-	ivec2 ipos = ivec2(unit.m_pos);
-	vec2 dir = rotate(unit.m_rot) * unit.m_move;
-
 	const int size = 4;
-	ivec2 ip = ivec2(unit.m_pos + dir*2*size) / size;
-	for(int i = 0; i < 4; i++)
-	{
-		int dindex = ip.x + ip.y * (reso.x/size);
-		atomicAdd(b_crowd_density_map[dindex], 1);
-		ip += ivec2(dir * size);
-	}
+	ivec2 di = index / size;
+	int dindex = di.x + di.y * (reso.x/size);
+	uint density = b_crowd_density_map[dindex];
+	uint density0 = min(density/color_scale, color_map_size-1);
+	uint density1 = min(density0+1, color_map_size-1);
+	float rate = float(density-density0*color_scale) / color_scale;
+	vec3 color = mix(color_map[density0], color_map[density1], rate);
+
+	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(color, 1.));
 
 	
 }

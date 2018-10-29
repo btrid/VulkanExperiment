@@ -27,6 +27,10 @@ struct RenderTarget
 
 	bool is_dynamic_resolution; //!< ‰Â•Ï‰ð‘œ“xH
 	vk::Extent2D m_resolution;
+
+	vk::UniqueDescriptorSet m_descriptor;
+
+	static vk::UniqueDescriptorSetLayout s_descriptor_set_layout;
 };
 
 struct AppWindow : public cWindow

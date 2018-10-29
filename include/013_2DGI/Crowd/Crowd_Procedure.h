@@ -55,6 +55,7 @@ struct Crowd_Procedure
 				context->getDescriptorSetLayout(),
 				sSystem::Order().getSystemDescriptorLayout(),
 				gi2d_context->getDescriptorSetLayout(),
+				RenderTarget::s_descriptor_set_layout.get(),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
@@ -125,7 +126,7 @@ struct Crowd_Procedure
 	{
 		// カウンターのclear
 		{
-			cmd.updateBuffer<uvec4>(m_context->b_crowd_density_map.getInfo().buffer, m_context->b_crowd_density_map.getInfo().offset, uvec4(0));
+			cmd.fillBuffer(m_context->b_crowd_density_map.getInfo().buffer, m_context->b_crowd_density_map.getInfo().offset, m_context->b_crowd_density_map.getInfo().range, 0);
 			vk::BufferMemoryBarrier to_read[] = {
 				m_context->b_crowd_density_map.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 			};
@@ -148,7 +149,7 @@ struct Crowd_Procedure
 		}
 
 	}
-	void executeDrawDensity(vk::CommandBuffer cmd)
+	void executeDrawDensity(vk::CommandBuffer cmd, const std::shared_ptr<RenderTarget>& render_target)
 	{
 		{
 			vk::DescriptorSet descriptors[] =
@@ -156,12 +157,14 @@ struct Crowd_Procedure
 				m_context->getDescriptorSet(),
 				sSystem::Order().getSystemDescriptorSet(),
 				m_gi2d_context->getDescriptorSet(),
+				render_target->m_descriptor.get(),
 			};
 
 			uint32_t offset[array_length(descriptors)] = {};
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_DrawDensity].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Crowd].get(), 0, array_length(descriptors), descriptors, array_length(offset), offset);
-			cmd.dispatch(1, 1, 1);
+			auto num = app::calcDipatchGroups(uvec3(1024, 1024, 1), uvec3(32, 32, 1));
+			cmd.dispatch(num.x, num.y, num.z);
 		}
 
 	}

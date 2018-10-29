@@ -10,6 +10,8 @@
 #include <applib/GraphicsResource.h>
 #include <applib/sImGuiRenderer.h>
 
+vk::UniqueDescriptorSetLayout RenderTarget::s_descriptor_set_layout;
+
 namespace app
 {
 App* g_app_instance = nullptr;
@@ -78,6 +80,19 @@ App::App(const AppDescriptor& desc)
 			m_fence_list.emplace_back(m_context->m_gpu.getDevice()->createFenceUnique(fence_info));
 		}
 	}
+
+	{
+		auto stage = vk::ShaderStageFlagBits::eAll;
+		vk::DescriptorSetLayoutBinding binding[] = {
+			vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eStorageImage, 1, stage),
+		};
+		vk::DescriptorSetLayoutCreateInfo desc_layout_info;
+		desc_layout_info.setBindingCount(array_length(binding));
+		desc_layout_info.setPBindings(binding);
+		RenderTarget::s_descriptor_set_layout = m_context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
+
+	}
+
 	sSystem::Create(m_context);
 	sCameraManager::Order().setup(m_context);
 	sGraphicsResource::Order().setup(m_context);
@@ -93,6 +108,8 @@ App::App(const AppDescriptor& desc)
 	m_window_list.emplace_back(window);
 	m_context->m_window = window;
 
+
+	
 //	sParticlePipeline::Order().setup(m_context);
 //	DrawHelper::Order().setup(m_context);
 
@@ -633,6 +650,31 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 	m_front_buffer->is_dynamic_resolution = false;
 	m_front_buffer->m_resolution.width = m_front_buffer_info.extent.width;
 	m_front_buffer->m_resolution.height = m_front_buffer_info.extent.height;
+
+	{
+		vk::DescriptorSetLayout layouts[] = {
+			RenderTarget::s_descriptor_set_layout.get(),
+		};
+		vk::DescriptorSetAllocateInfo desc_info;
+		desc_info.setDescriptorPool(context->m_descriptor_pool.get());
+		desc_info.setDescriptorSetCount(array_length(layouts));
+		desc_info.setPSetLayouts(layouts);
+		m_front_buffer->m_descriptor = std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]);
+
+		vk::DescriptorImageInfo images[] = {
+			vk::DescriptorImageInfo().setImageLayout(vk::ImageLayout::eGeneral).setImageView(m_front_buffer->m_view),
+		};
+
+		vk::WriteDescriptorSet write[] = {
+			vk::WriteDescriptorSet()
+			.setDescriptorType(vk::DescriptorType::eStorageImage)
+			.setDescriptorCount(array_length(images))
+			.setPImageInfo(images)
+			.setDstBinding(0)
+			.setDstSet(m_front_buffer->m_descriptor.get()),
+		};
+		context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
+	}
 
 	m_imgui_pipeline = std::make_unique<ImguiRenderPipeline>(context, this);
 

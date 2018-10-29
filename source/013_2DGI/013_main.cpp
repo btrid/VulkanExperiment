@@ -152,6 +152,7 @@ int main()
 				{
 					crowd_debug.execute(cmd);
 					crowd_procedure.executeUpdateUnit(cmd);
+					crowd_procedure.executeMakeDensity(cmd);
 					crowd_calc_world_matrix.execute(cmd, player_model);
 
 					std::vector<vk::CommandBuffer> anime_cmds{ anime_cmd.get() };
@@ -167,9 +168,9 @@ int main()
 //				gi2d_Fluid->executeCalc(cmd);
 //				gi2d_Softbody.execute(cmd);
 //				gi2d_Rigidbody.execute(cmd);
-				gi2d_Radiosity.executeRadiosity(cmd);
-//				crowd_procedure.executeDrawDensity(cmd);
-				gi2d_Radiosity.executeRendering(cmd);
+//				gi2d_Radiosity.executeRadiosity(cmd);
+//				gi2d_Radiosity.executeRendering(cmd);
+				crowd_procedure.executeDrawDensity(cmd, app.m_window->getFrontBuffer());
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;
 			}

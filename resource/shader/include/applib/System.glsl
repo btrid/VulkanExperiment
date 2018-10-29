@@ -61,9 +61,13 @@ struct SystemData
 layout(set=USE_SYSTEM, binding=0, std140) uniform SystemUniform {
 	SystemData u_system_data;
 };
-
 #define cpu_index() (1-u_system_data.m_gpu_index)
 #define gpu_index() (u_system_data.m_gpu_index)
+#endif
+
+#ifdef USE_RenderTarget
+layout(set=USE_RenderTarget, binding=0, rgba16f) uniform image2D i_render_target;
+
 #endif
 
 #endif
