@@ -136,7 +136,7 @@ struct CrowdContext
 				auto staging = m_context->m_staging_memory.allocateMemory<UnitData>({ m_crowd_info.unit_data_max * 2, btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT });
 				for (int32_t i = 0; i < m_crowd_info.unit_data_max * 2; i++)
 				{
-					staging.getMappedPtr(i)->m_pos = abs(glm::ballRand(4000.f).xy());
+					staging.getMappedPtr(i)->m_pos = abs(glm::ballRand(800.f).xy()) + vec2(30.f);
 					staging.getMappedPtr(i)->m_move = 4.f;
 					staging.getMappedPtr(i)->m_rot = 0.f;
 					staging.getMappedPtr(i)->m_rot_prev = 0.f;

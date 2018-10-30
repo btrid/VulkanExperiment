@@ -17,7 +17,7 @@
 #endif
 
 #ifndef HALF_PI
-#define HALF_PI 3.141592 / 2. 
+#define HALF_PI (1.570796) 
 #endif
 
 float rand(in vec2 co){

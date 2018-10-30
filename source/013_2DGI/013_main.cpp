@@ -161,16 +161,16 @@ int main()
 				}
 				{
 					std::vector<vk::CommandBuffer> render_cmds{ render_cmd.get() };
-					renderer.dispatchCmd(cmd, render_cmds);
+//					renderer.dispatchCmd(cmd, render_cmds);
 				}
 
 
 //				gi2d_Fluid->executeCalc(cmd);
 //				gi2d_Softbody.execute(cmd);
 //				gi2d_Rigidbody.execute(cmd);
-//				gi2d_Radiosity.executeRadiosity(cmd);
-//				gi2d_Radiosity.executeRendering(cmd);
-				crowd_procedure.executeDrawDensity(cmd, app.m_window->getFrontBuffer());
+				gi2d_Radiosity.executeRadiosity(cmd);
+				gi2d_Radiosity.executeRendering(cmd);
+//				crowd_procedure.executeDrawDensity(cmd, app.m_window->getFrontBuffer());
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;
 			}
