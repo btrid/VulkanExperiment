@@ -11,7 +11,7 @@
 
 #define TWO_PI (6.28318530)
 #define QUARTER_PI (0.7853981633)
-layout (local_size_x=256, local_size_y=1) in;
+layout (local_size_x=255, local_size_y=1) in;
 void main()
 {
 
@@ -29,6 +29,8 @@ void main()
 	vec2 inv_dir = abs(1./dir);
 	dir *= min(inv_dir.x, inv_dir.y);
 
+	sign(dir);
+
 //	if(y==0){ return;}
 //	if(y==1){ return;}
 //	if(y==2){ return;}
@@ -37,13 +39,15 @@ void main()
 	vec2 pos;
 	pos.x = (y==0) ? reso.x-0.5 : 0.5;
 	pos.y = (y==1) ? reso.y-0.5 : 0.5;
-//	pos.x = (y==1) ? reso.x : 0;
-//	pos.y = (y==2) ? reso.y : 0;
+//	pos.x = (y==0) ? reso.x : 0.;
+//	pos.y = (y==1) ? reso.y : 0.;
 	vec2 pdir;
 	pdir.x = (y%2==1) ? 1 : 0;
 	pdir.y = (y%2==0) ? 1 : 0;
+//	pos.x += (y%2==1) ? 0. : 0.5;
+//	pos.y += (y%2==0) ? 0. : 0.5;
 
-	pos += pdir*gl_WorkGroupID.x;
+	pos += pdir*(gl_WorkGroupID.x);
 	vec2 begin = pos;
 	ivec2 map_index = ivec2(pos);
 
@@ -75,9 +79,11 @@ void main()
 	{
 		case 2:
 			if(map_index.x==reso.x){ return; }
+//			if(map_index.y==reso.y||map_index.y==-1){}else{ return; }
 			break;
 		case 3:
 			if(map_index.y==reso.y){ return; }
+//			if(map_index.x==reso.x||map_index.x==-1){}else{ return; }
 			break;
 	}
 
