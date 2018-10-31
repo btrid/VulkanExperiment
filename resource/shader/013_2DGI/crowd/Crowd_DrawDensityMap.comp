@@ -31,7 +31,7 @@ void main()
 	const int color_scale = 3;
 
 	const ivec4 reso = u_gi2d_info.m_resolution;
-	const int size = 4;
+	const int size = 8;
 	ivec2 di = index / size;
 	int dindex = di.x + di.y * (reso.x/size);
 	uint density = b_crowd_density_map[dindex];

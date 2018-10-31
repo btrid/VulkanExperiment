@@ -34,9 +34,9 @@ struct CrowdContext
 		float m_rot_prev;
 
 		float m_move;
-		int32_t crowd_id;
+		int32_t crowd_type;
 		int32_t unit_type;
-		vec2 _p;
+		float _p;
 	};
 
 	CrowdContext(const std::shared_ptr<btr::Context>& context)
@@ -134,14 +134,14 @@ struct CrowdContext
 
 			{
 				auto staging = m_context->m_staging_memory.allocateMemory<UnitData>({ m_crowd_info.unit_data_max * 2, btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT });
-				for (int32_t i = 0; i < m_crowd_info.unit_data_max * 2; i++)
+				for (int32_t i = 0; i < m_crowd_info.unit_data_max*2; i++)
 				{
-					staging.getMappedPtr(i)->m_pos = abs(glm::ballRand(800.f).xy()) + vec2(30.f);
+					staging.getMappedPtr(i)->m_pos = abs(glm::ballRand(600.f).xy()) + vec2(200.f);
 					staging.getMappedPtr(i)->m_move = 4.f;
-					staging.getMappedPtr(i)->m_rot = 0.f;
+					staging.getMappedPtr(i)->m_rot = (std::rand() % 314) * 0.01f;
 					staging.getMappedPtr(i)->m_rot_prev = 0.f;
 					staging.getMappedPtr(i)->unit_type = 0;
-					staging.getMappedPtr(i)->crowd_id = std::rand()%2;
+					staging.getMappedPtr(i)->crowd_type = std::rand()%2;
 				}
 
 				vk::BufferCopy copy;
@@ -168,6 +168,13 @@ struct CrowdContext
 				cmd.copyBuffer(staging.getInfo().buffer, u_unit_info.getInfo().buffer, copy);
 
 			}
+
+			vk::BufferMemoryBarrier to_read[] = {
+				u_crowd_info.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+				u_unit_info.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+				b_unit.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, 0, {}, array_length(to_read), to_read, 0, {});
 		}
 	}
 
