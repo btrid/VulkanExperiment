@@ -56,6 +56,7 @@ layout(set=USE_Crowd2D, binding=5, std430) restrict buffer CrowdDensityMapBuffer
 };
 
 #endif
+const int g_crowd_density_cell_size = 4;
 
 
 #endif

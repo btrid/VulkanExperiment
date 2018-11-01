@@ -73,23 +73,38 @@ void main()
 	vec2 dir = rotate(unit.m_rot);
 	float rot_prev = unit.m_rot;
 
-	const int size = 4;
+	const int size = g_crowd_density_cell_size;
 	ivec2 ip = ivec2(unit.m_pos + dir*size) / size;
 	int dindex = ip.x + ip.y * (reso.x/size);
 	uint density = b_crowd_density_map[dindex];
-/*	if(density >= 2)
+	if(density >= 2)
 	{
 		// 障害物を避ける
-		ivec2 ip = ivec2(unit.m_pos + dir*size) / size;
-		int dindex = ip.x + ip.y * (reso.x/size);
-		uint density = b_crowd_density_map[dindex];
+		vec2 side = cross(vec3(dir*size, 0.), vec3(0., 0., 1.)).xy;
+//		ivec4 offset_x = ivec4(-1, 1, -1, 1);
+//		ivec4 offset_y = ivec4(-1, -1, 1, 1);
+		ivec4 offset_x = ivec4(vec2(side.xx)*vec2(1., -1.), 0, 0);
+		ivec4 offset_y = ivec4(vec2(side.yy)*vec2(1., -1.), 0, 0);
+
+		ivec4 dindex_around = (ip.xxxx+offset_x) + (ip.yyyy+offset_y) * (reso.x/size);
+		uint density0 = b_crowd_density_map[dindex_around.x];
+		uint density1 = b_crowd_density_map[dindex_around.y];
+//		uint density2 = b_crowd_density_map[dindex_around.z];
+//		uint density3 = b_crowd_density_map[dindex_around.w];
+
+		int move_dir = density0 < density1 ? -1 : 1;
+		move_dir = min(min(density0, density1), density) >= 10 ? 0 : move_dir;
+		unit.m_rot += move_dir * unit_info.angler_speed * deltatime;
+//		unit.m_move	= move_dir == 0 ? min(unit.m_move+deltatime*10., unit_info.linear_speed);
+		unit.m_move	= move_dir == 0 ? maunit.m_move * pow(0.98, 1.+deltatime) : unit.m_move;
+
 	}
 	else 
-*/	{
+	{
 		// 目的地に向かう
 		vec3 target_dir = normalize_safe(vec3(crowd.target - unit.m_pos, 0.), vec3(dir, 0.));
 		float rotate_rad = dot(vec3(dir, 0.), target_dir);
-		if(rotate_rad <= 0.99)
+		if(rotate_rad <= 0.8)
 		{
 			float rotate_angle = acos(rotate_rad);
 			rotate_angle = min(rotate_angle, unit_info.angler_speed);

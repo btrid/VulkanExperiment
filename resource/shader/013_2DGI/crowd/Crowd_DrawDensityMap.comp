@@ -23,7 +23,7 @@ void main()
 	ivec2 index = ivec2(gl_GlobalInvocationID.xy);
 	const int color_map_size = 4;
 	vec3 color_map[color_map_size] = {
-		vec3(0., 0., 0.),
+		vec3(1., 1., 1.),
 		vec3(0., 0., 1.),
 		vec3(0., 1., 0.),
 		vec3(1., 0., 0.),
@@ -31,7 +31,7 @@ void main()
 	const int color_scale = 3;
 
 	const ivec4 reso = u_gi2d_info.m_resolution;
-	const int size = 8;
+	const int size = g_crowd_density_cell_size;
 	ivec2 di = index / size;
 	int dindex = di.x + di.y * (reso.x/size);
 	uint density = b_crowd_density_map[dindex];
@@ -39,6 +39,7 @@ void main()
 	uint density1 = min(density0+1, color_map_size-1);
 	float rate = float(density-density0*color_scale) / color_scale;
 	vec3 color = mix(color_map[density0], color_map[density1], rate);
+	color = density == 0 ? vec3(0.) : color;
 
 	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(color, 1.));
 

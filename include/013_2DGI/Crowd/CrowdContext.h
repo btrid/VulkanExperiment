@@ -48,7 +48,7 @@ struct CrowdContext
 			m_crowd_info.crowd_info_max = 1;
 			m_crowd_info.unit_info_max = 16;
 			m_crowd_info.crowd_data_max = 16;
-			m_crowd_info.unit_data_max = 1024;
+			m_crowd_info.unit_data_max = 128;
 
 		}
 		{
@@ -157,8 +157,8 @@ struct CrowdContext
 				for (int32_t i = 0; i < m_crowd_info.unit_info_max; i++)
 				{
 					auto& info = *staging.getMappedPtr(i);
-					info.linear_speed = 50.f;
-					info.angler_speed = 100.5f;
+					info.linear_speed = 5.f;
+					info.angler_speed = 10.5f;
 				}
 
 				vk::BufferCopy copy;

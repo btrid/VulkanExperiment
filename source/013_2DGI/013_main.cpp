@@ -104,6 +104,8 @@ int main()
 
  	auto a = glm::cross(vec3(1.f, 0.f, 0.f), normalize(vec3(-1.f, 0.0f, 0.f)));
  	auto b = glm::dot(vec3(1.f, 0.f, 0.f), (vec3(0.f, 0.0f, 0.f)));
+//	vec2 side = cross(vec3(1.f, 0.f, 0.f), vec3(0., 0., 1.)).xy();
+
 	while (true)
 	{
 		cStopWatch time;
