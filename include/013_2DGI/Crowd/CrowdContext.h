@@ -141,7 +141,7 @@ struct CrowdContext
 					staging.getMappedPtr(i)->m_rot = (std::rand() % 314) * 0.01f;
 					staging.getMappedPtr(i)->m_rot_prev = 0.f;
 					staging.getMappedPtr(i)->unit_type = 0;
-					staging.getMappedPtr(i)->crowd_type = std::rand()%2;
+					staging.getMappedPtr(i)->crowd_type = std::rand()%1;
 				}
 
 				vk::BufferCopy copy;
@@ -157,8 +157,8 @@ struct CrowdContext
 				for (int32_t i = 0; i < m_crowd_info.unit_info_max; i++)
 				{
 					auto& info = *staging.getMappedPtr(i);
-					info.linear_speed = 5.f;
-					info.angler_speed = 10.5f;
+					info.linear_speed = 20.f;
+					info.angler_speed = 30.5f;
 				}
 
 				vk::BufferCopy copy;

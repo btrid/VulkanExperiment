@@ -32,12 +32,15 @@ void main()
 
 	ivec2 ipos = ivec2(unit.m_pos);
 	vec2 dir = rotate(unit.m_rot);
-//	unit.m_move;
+	vec2 inv_dir;
+	inv_dir.x = dir.x == 0? 99999. : abs(1./dir.x);
+	inv_dir.y = dir.y == 0? 99999. : abs(1./dir.y);
+	dir *= min(inv_dir.x, inv_dir.y);
 
 	const int size = g_crowd_density_cell_size;
 	for(int i = 0; i < 2; i++)
 	{
-		ivec2 ip = ivec2(unit.m_pos + dir*(2+i)*size) / size;
+		ivec2 ip = ivec2(unit.m_pos + dir*(i)*size) / size;
 		int dindex = ip.x + ip.y * (reso.x/size);
 		atomicAdd(b_crowd_density_map[dindex], 1);
 	}

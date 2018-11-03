@@ -56,7 +56,15 @@ layout(set=USE_Crowd2D, binding=5, std430) restrict buffer CrowdDensityMapBuffer
 };
 
 #endif
-const int g_crowd_density_cell_size = 4;
+const int g_crowd_density_cell_size = 8;
 
 
+vec2 inverse_safe(in vec2 v)
+{
+	vec2 inv;
+	inv.x = v.x == 0 ? 99999. : 1./v.x;
+	inv.y = v.y == 0 ? 99999. : 1./v.y;
+	return inv;
+
+}
 #endif

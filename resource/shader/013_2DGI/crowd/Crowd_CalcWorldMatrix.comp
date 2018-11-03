@@ -21,9 +21,9 @@ mat4 eulerAngleY(in float angle)
 	float s = sin(angle);
 	float c = cos(angle);
 	return mat4(
-		vec4(  c, 0.,  -s, 0.),
+		vec4(  c, 0.,  s, 0.),
         vec4( 0., 1.,  0., 0.),
-        vec4(  s, 0.,   c, 0.),
+        vec4(  s, 0.,  -c, 0.),
         vec4( 0., 0.,  0., 1.));
 }
 void main()
@@ -40,6 +40,7 @@ void main()
 //	float angle = atan(dir.y, dir.x);	
 	mat4 mat = mat4(0.05);
 	mat[3][3] = 1.;
+	mat = eulerAngleY(unit.m_rot) * mat;
 	mat[3].xyzw = vec4(unit.m_pos.x, 0., unit.m_pos.y, 1.);
 
 	b_world[index] = mat;

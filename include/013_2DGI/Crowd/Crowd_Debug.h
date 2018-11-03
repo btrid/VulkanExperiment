@@ -73,7 +73,7 @@ struct Crowd_Debug
 
 		vk::BufferMemoryBarrier to_write[] = {
 			m_crowd_context->b_crowd.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
-		};
+		}; 
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer,
 			{}, 0, {}, array_length(to_write), to_write, 0, {});
 
