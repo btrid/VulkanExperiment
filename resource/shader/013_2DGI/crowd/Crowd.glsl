@@ -33,7 +33,7 @@ struct UnitData
 	float m_move;
 	int crowd_type;
 	int unit_type;
-	int _p2;
+	int user;
 };
 
 layout(set=USE_Crowd2D, binding=0, std140) uniform CrowdInfoUniform {
@@ -52,11 +52,11 @@ layout(set=USE_Crowd2D, binding=4, std430) restrict buffer UnitCounter {
 	ivec4 b_unit_counter;
 };
 layout(set=USE_Crowd2D, binding=5, std430) restrict buffer CrowdDensityMapBuffer {
-	uint b_crowd_density_map[];
+	int b_crowd_density_map[];
 };
 
 #endif
-const int g_crowd_density_cell_size = 8;
+const int g_crowd_density_cell_size = 16;
 
 
 vec2 inverse_safe(in vec2 v)

@@ -48,7 +48,7 @@ struct CrowdContext
 			m_crowd_info.crowd_info_max = 1;
 			m_crowd_info.unit_info_max = 16;
 			m_crowd_info.crowd_data_max = 16;
-			m_crowd_info.unit_data_max = 128;
+			m_crowd_info.unit_data_max = 16;
 
 		}
 		{
@@ -136,12 +136,14 @@ struct CrowdContext
 				auto staging = m_context->m_staging_memory.allocateMemory<UnitData>({ m_crowd_info.unit_data_max * 2, btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT });
 				for (int32_t i = 0; i < m_crowd_info.unit_data_max*2; i++)
 				{
-					staging.getMappedPtr(i)->m_pos = abs(glm::ballRand(600.f).xy()) + vec2(200.f);
+					staging.getMappedPtr(i)->m_pos = abs(glm::ballRand(300.f).xy()) + vec2(100.f);
 					staging.getMappedPtr(i)->m_move = 4.f;
 					staging.getMappedPtr(i)->m_rot = (std::rand() % 314) * 0.01f;
 					staging.getMappedPtr(i)->m_rot_prev = 0.f;
 					staging.getMappedPtr(i)->unit_type = 0;
-					staging.getMappedPtr(i)->crowd_type = std::rand()%1;
+//					staging.getMappedPtr(i)->crowd_type = std::rand() % 2;
+					staging.getMappedPtr(i)->crowd_type = i%2;
+					staging.getMappedPtr(i)->m_pos += staging.getMappedPtr(i)->crowd_type * vec2(600.f);
 				}
 
 				vk::BufferCopy copy;
@@ -157,8 +159,8 @@ struct CrowdContext
 				for (int32_t i = 0; i < m_crowd_info.unit_info_max; i++)
 				{
 					auto& info = *staging.getMappedPtr(i);
-					info.linear_speed = 20.f;
-					info.angler_speed = 30.5f;
+					info.linear_speed = 50.f;
+					info.angler_speed = 5.5f;
 				}
 
 				vk::BufferCopy copy;

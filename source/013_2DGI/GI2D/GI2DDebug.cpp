@@ -178,7 +178,7 @@ void GI2DDebug::execute(vk::CommandBuffer cmd)
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
-		static vec4 light_pos = vec4(512.f, 512.f, 777.f, 777.f);
+		static vec4 light_pos = vec4(800.f, 800.f, 200.f, 200.f);
 		float move = 3.f;
 		if (m_context->m_window->getInput().m_keyboard.isHold(VK_SPACE))
 		{

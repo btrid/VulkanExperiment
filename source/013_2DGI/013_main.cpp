@@ -76,7 +76,7 @@ int main()
 
 	cModel model;
 	model.load(context, "..\\..\\resource\\tiny.x");
-	std::shared_ptr<AppModel> player_model = std::make_shared<AppModel>(context, appmodel_context, model.getResource(), 128);
+	std::shared_ptr<AppModel> player_model = std::make_shared<AppModel>(context, appmodel_context, model.getResource(), 16);
 
 	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
 	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchainPtr());
@@ -171,7 +171,7 @@ int main()
 //				gi2d_Softbody.execute(cmd);
 //				gi2d_Rigidbody.execute(cmd);
  				gi2d_Radiosity.executeRadiosity(cmd);
- 				gi2d_Radiosity.executeRendering(cmd);
+				gi2d_Radiosity.executeRendering(cmd);
 //				crowd_procedure.executeDrawDensity(cmd, app.m_window->getFrontBuffer());
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;
