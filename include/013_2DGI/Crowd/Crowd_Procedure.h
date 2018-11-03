@@ -9,6 +9,7 @@ struct Crowd_Procedure
 	enum Shader
 	{
 		Shader_UnitUpdate,
+		Shader_MakeLinkList,
 		Shader_MakeDensity,
 		Shader_DrawDensity,
 
@@ -22,6 +23,7 @@ struct Crowd_Procedure
 	enum Pipeline
 	{
 		Pipeline_UnitUpdate,
+		Pipeline_MakeLinkList,
 		Pipeline_MakeDensity,
 		Pipeline_DrawDensity,
 
@@ -38,6 +40,7 @@ struct Crowd_Procedure
 			const char* name[] =
 			{
 				"Crowd_UnitUpdate.comp.spv",
+				"Crowd_MakeLinkList.comp.spv",				
 				"Crowd_MakeDensityMap.comp.spv",
 				"Crowd_DrawDensityMap.comp.spv",
 			};
@@ -65,16 +68,19 @@ struct Crowd_Procedure
 
 		// pipeline
 		{
-			std::array<vk::PipelineShaderStageCreateInfo, 3> shader_info;
+			std::array<vk::PipelineShaderStageCreateInfo, 4> shader_info;
 			shader_info[0].setModule(m_shader_module[Shader_UnitUpdate].get());
 			shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[0].setPName("main");
-			shader_info[1].setModule(m_shader_module[Shader_MakeDensity].get());
+			shader_info[1].setModule(m_shader_module[Shader_MakeLinkList].get());
 			shader_info[1].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[1].setPName("main");
-			shader_info[2].setModule(m_shader_module[Shader_DrawDensity].get());
+			shader_info[2].setModule(m_shader_module[Shader_MakeDensity].get());
 			shader_info[2].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[2].setPName("main");
+			shader_info[3].setModule(m_shader_module[Shader_DrawDensity].get());
+			shader_info[3].setStage(vk::ShaderStageFlagBits::eCompute);
+			shader_info[3].setPName("main");
 			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 			{
 				vk::ComputePipelineCreateInfo()
@@ -86,23 +92,28 @@ struct Crowd_Procedure
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[2])
 				.setLayout(m_pipeline_layout[PipelineLayout_Crowd].get()),
+				vk::ComputePipelineCreateInfo()
+				.setStage(shader_info[3])
+				.setLayout(m_pipeline_layout[PipelineLayout_Crowd].get()),
 			};
 			auto compute_pipeline = context->m_context->m_device->createComputePipelinesUnique(context->m_context->m_cache.get(), compute_pipeline_info);
 			m_pipeline[Pipeline_UnitUpdate] = std::move(compute_pipeline[0]);
-			m_pipeline[Pipeline_MakeDensity] = std::move(compute_pipeline[1]);
-			m_pipeline[Pipeline_DrawDensity] = std::move(compute_pipeline[2]);
+			m_pipeline[Pipeline_MakeLinkList] = std::move(compute_pipeline[1]);
+			m_pipeline[Pipeline_MakeDensity] = std::move(compute_pipeline[2]);
+			m_pipeline[Pipeline_DrawDensity] = std::move(compute_pipeline[3]);
 		}
 	}
 
-	void executeUpdateUnit(vk::CommandBuffer cmd) 
+	void executeUpdateUnit(vk::CommandBuffer cmd)
 	{
 		// カウンターのclear
 		{
 			cmd.updateBuffer<uvec4>(m_context->b_unit_counter.getInfo().buffer, m_context->b_unit_counter.getInfo().offset, uvec4(0));
 			vk::BufferMemoryBarrier to_read[] = {
 				m_context->b_unit_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderWrite),
+				m_context->b_unit_link_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, 0, {}, array_length(to_read), to_read, 0, {});
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer| vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, 0, {}, array_length(to_read), to_read, 0, {});
 		}
 
 		// 更新
@@ -121,19 +132,15 @@ struct Crowd_Procedure
 		}
 
 	}
-
-	void executeMakeDensity(vk::CommandBuffer cmd)
+	void executeMakeLinkList(vk::CommandBuffer cmd)
 	{
 		// カウンターのclear
 		{
-			cmd.fillBuffer(m_context->b_crowd_density_map.getInfo().buffer, m_context->b_crowd_density_map.getInfo().offset, m_context->b_crowd_density_map.getInfo().range, 0);
-
+			cmd.fillBuffer(m_context->b_unit_link_head.getInfo().buffer, m_context->b_unit_link_head.getInfo().offset, m_context->b_unit_link_head.getInfo().range, -1);
 			vk::BufferMemoryBarrier to_read[] = {
-				m_context->b_crowd_density_map.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-				m_context->b_unit_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-				m_context->b_unit.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				m_context->b_unit_link_head.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderWrite),
 			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer| vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, 0, {}, array_length(to_read), to_read, 0, {});
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, 0, {}, array_length(to_read), to_read, 0, {});
 		}
 
 		// 更新
@@ -146,35 +153,66 @@ struct Crowd_Procedure
 			};
 
 			uint32_t offset[array_length(descriptors)] = {};
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeDensity].get());
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeLinkList].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Crowd].get(), 0, array_length(descriptors), descriptors, array_length(offset), offset);
 			cmd.dispatch(1, 1, 1);
 		}
 
 	}
+
+	void executeMakeDensity(vk::CommandBuffer cmd)
+	{
+// 		// カウンターのclear
+// 		{
+// 			cmd.fillBuffer(m_context->b_crowd_density_map.getInfo().buffer, m_context->b_crowd_density_map.getInfo().offset, m_context->b_crowd_density_map.getInfo().range, 0);
+// 
+// 			vk::BufferMemoryBarrier to_read[] = {
+// 				m_context->b_crowd_density_map.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+// 				m_context->b_unit_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+// 				m_context->b_unit.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+// 			};
+// 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer| vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, 0, {}, array_length(to_read), to_read, 0, {});
+// 		}
+// 
+// 		// 更新
+// 		{
+// 			vk::DescriptorSet descriptors[] =
+// 			{
+// 				m_context->getDescriptorSet(),
+// 				sSystem::Order().getSystemDescriptorSet(),
+// 				m_gi2d_context->getDescriptorSet(),
+// 			};
+// 
+// 			uint32_t offset[array_length(descriptors)] = {};
+// 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeDensity].get());
+// 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Crowd].get(), 0, array_length(descriptors), descriptors, array_length(offset), offset);
+// 			cmd.dispatch(1, 1, 1);
+// 		}
+
+	}
 	void executeDrawDensity(vk::CommandBuffer cmd, const std::shared_ptr<RenderTarget>& render_target)
 	{
-		{
-			vk::BufferMemoryBarrier to_read[] = {
-				m_context->b_crowd_density_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, 0, {}, array_length(to_read), to_read, 0, {});
-		}
-		{
-			vk::DescriptorSet descriptors[] =
-			{
-				m_context->getDescriptorSet(),
-				sSystem::Order().getSystemDescriptorSet(),
-				m_gi2d_context->getDescriptorSet(),
-				render_target->m_descriptor.get(),
-			};
-
-			uint32_t offset[array_length(descriptors)] = {};
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_DrawDensity].get());
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Crowd].get(), 0, array_length(descriptors), descriptors, array_length(offset), offset);
-			auto num = app::calcDipatchGroups(uvec3(1024, 1024, 1), uvec3(32, 32, 1));
-			cmd.dispatch(num.x, num.y, num.z);
-		}
+// 		{
+// 			vk::BufferMemoryBarrier to_read[] = {
+// 				m_context->b_crowd_density_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+// 			};
+// 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, 0, {}, array_length(to_read), to_read, 0, {});
+// 		}
+// 		{
+// 			vk::DescriptorSet descriptors[] =
+// 			{
+// 				m_context->getDescriptorSet(),
+// 				sSystem::Order().getSystemDescriptorSet(),
+// 				m_gi2d_context->getDescriptorSet(),
+// 				render_target->m_descriptor.get(),
+// 			};
+// 
+// 			uint32_t offset[array_length(descriptors)] = {};
+// 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_DrawDensity].get());
+// 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Crowd].get(), 0, array_length(descriptors), descriptors, array_length(offset), offset);
+// 			auto num = app::calcDipatchGroups(uvec3(1024, 1024, 1), uvec3(32, 32, 1));
+// 			cmd.dispatch(num.x, num.y, num.z);
+// 		}
 
 	}
 

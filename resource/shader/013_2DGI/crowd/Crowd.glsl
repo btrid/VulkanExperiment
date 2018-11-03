@@ -33,7 +33,7 @@ struct UnitData
 	float m_move;
 	int crowd_type;
 	int unit_type;
-	int user;
+	int link_next;
 };
 
 layout(set=USE_Crowd2D, binding=0, std140) uniform CrowdInfoUniform {
@@ -51,8 +51,8 @@ layout(set=USE_Crowd2D, binding=3, std430) restrict buffer UnitBuffer {
 layout(set=USE_Crowd2D, binding=4, std430) restrict buffer UnitCounter {
 	ivec4 b_unit_counter;
 };
-layout(set=USE_Crowd2D, binding=5, std430) restrict buffer CrowdDensityMapBuffer {
-	int b_crowd_density_map[];
+layout(set=USE_Crowd2D, binding=5, std430) restrict buffer UnitLinkList {
+	int b_unit_link_head[];
 };
 
 #endif

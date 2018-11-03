@@ -48,7 +48,7 @@ struct CrowdContext
 			m_crowd_info.crowd_info_max = 1;
 			m_crowd_info.unit_info_max = 16;
 			m_crowd_info.crowd_data_max = 16;
-			m_crowd_info.unit_data_max = 16;
+			m_crowd_info.unit_data_max = 1024;
 
 		}
 		{
@@ -88,7 +88,7 @@ struct CrowdContext
 			b_crowd = m_context->m_storage_memory.allocateMemory<CrowdData>({ m_crowd_info.crowd_data_max, {} });
 			b_unit = m_context->m_storage_memory.allocateMemory<UnitData>({ m_crowd_info.unit_data_max*2, {} });
 			b_unit_counter = m_context->m_storage_memory.allocateMemory<uvec4>({ 1, {} });
-			b_crowd_density_map = m_context->m_storage_memory.allocateMemory<uint32_t>({ 1024*1024/*m_gi2d_context->FragmentBufferSize*/, {} });
+			b_unit_link_head = m_context->m_storage_memory.allocateMemory<int32_t>({ 1024*1024/*m_gi2d_context->FragmentBufferSize*/, {} });
 
 			vk::DescriptorBufferInfo uniforms[] = {
 				u_crowd_info.getInfo(),
@@ -98,7 +98,7 @@ struct CrowdContext
 				b_crowd.getInfo(),
 				b_unit.getInfo(),
 				b_unit_counter.getInfo(),
-				b_crowd_density_map.getInfo(),
+				b_unit_link_head.getInfo(),
 			};
 			vk::WriteDescriptorSet write[] = {
 				vk::WriteDescriptorSet()
@@ -142,7 +142,7 @@ struct CrowdContext
 					staging.getMappedPtr(i)->m_rot_prev = 0.f;
 					staging.getMappedPtr(i)->unit_type = 0;
 //					staging.getMappedPtr(i)->crowd_type = std::rand() % 2;
-					staging.getMappedPtr(i)->crowd_type = i%2;
+					staging.getMappedPtr(i)->crowd_type = 0;
 					staging.getMappedPtr(i)->m_pos += staging.getMappedPtr(i)->crowd_type * vec2(600.f);
 				}
 
@@ -171,10 +171,15 @@ struct CrowdContext
 
 			}
 
+			{
+				cmd.fillBuffer(b_unit_link_head.getInfo().buffer, b_unit_link_head.getInfo().offset, b_unit_link_head.getInfo().range, -1);
+
+			}
 			vk::BufferMemoryBarrier to_read[] = {
 				u_crowd_info.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 				u_unit_info.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 				b_unit.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+				b_unit_link_head.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, 0, {}, array_length(to_read), to_read, 0, {});
 		}
@@ -195,7 +200,7 @@ struct CrowdContext
 	btr::BufferMemoryEx<CrowdData> b_crowd;
 	btr::BufferMemoryEx<UnitData> b_unit;
 	btr::BufferMemoryEx<uvec4> b_unit_counter;
-	btr::BufferMemoryEx<uint32_t> b_crowd_density_map;
+	btr::BufferMemoryEx<int32_t> b_unit_link_head;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;

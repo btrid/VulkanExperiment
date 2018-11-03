@@ -11,37 +11,26 @@
 #define USE_SYSTEM 1
 #include "applib/System.glsl"
 
-#define USE_AppModel_Update 2
-#include "AppModel.glsl"
+#define USE_GI2D 2
+#include "GI2D.glsl"
+
 
 layout (local_size_x = 1024, local_size_y = 1) in;
 
-mat4 eulerAngleY(in float angle)
-{
-	float s = sin(angle);
-	float c = cos(angle);
-	return mat4(
-		vec4(  c, 0.,  s, 0.),
-        vec4( 0., 1.,  0., 0.),
-        vec4(  s, 0.,  -c, 0.),
-        vec4( 0., 0.,  0., 1.));
-}
 void main()
 {
 	uint index = gl_GlobalInvocationID.x;
 	if(index >= b_unit_counter.w){
 		return;
 	}
+
+	const ivec4 reso = u_gi2d_info.m_resolution;
+	const int size = g_crowd_density_cell_size;
 	uvec2 data_offset = ivec2(1-u_system_data.m_gpu_index, u_system_data.m_gpu_index) * u_crowd_info.unit_data_max;
 
 	UnitData unit = b_unit[data_offset.y + index];
-//	vec2 dir = unit.m_dir;
-//	dir = dot(dir, dir) == 0. ? vec2(0., 1.) : normalize(dir);
-//	float angle = atan(dir.y, dir.x);	
-	mat4 mat = mat4(0.05);
-	mat[3][3] = 1.;
-	mat = eulerAngleY(unit.m_rot) * mat;
-	mat[3].xyzw = vec4(unit.m_pos.x, 0., unit.m_pos.y, 1.);
-
-	b_world[index] = mat;
+	ivec2 ipos = ivec2(unit.m_pos) / g_crowd_density_cell_size;
+	int lindex = ipos.x + ipos.y * (reso.x/size);
+	int link_next = atomicExchange(b_unit_link_head[lindex], int(index));
+	b_unit[data_offset.y + index].link_next = link_next;
 }
