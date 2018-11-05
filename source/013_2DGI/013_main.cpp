@@ -76,7 +76,7 @@ int main()
 
 	cModel model;
 	model.load(context, "..\\..\\resource\\tiny.x");
-	std::shared_ptr<AppModel> player_model = std::make_shared<AppModel>(context, appmodel_context, model.getResource(), 1024);
+	std::shared_ptr<AppModel> player_model = std::make_shared<AppModel>(context, appmodel_context, model.getResource(), 128);
 
 	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
 	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchainPtr());
@@ -153,8 +153,8 @@ int main()
 				gi2d_make_hierarchy.executeHierarchy(cmd);
 				{
 					crowd_debug.execute(cmd);
-					crowd_procedure.executeUpdateUnit(cmd);
-					crowd_procedure.executeMakeLinkList(cmd);
+ 					crowd_procedure.executeUpdateUnit(cmd);
+ 					crowd_procedure.executeMakeLinkList(cmd);
 					//					crowd_procedure.executeMakeDensity(cmd);
 					crowd_calc_world_matrix.execute(cmd, player_model);
 

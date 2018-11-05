@@ -73,9 +73,7 @@ void main()
 	ivec2 ip = ivec2(unit.m_pos) / size;
 	int dindex = ip.x + ip.y * (reso.x/size);
 	UnitData nearest = unit;
-	float nearest_dist = 99999.;
-//	SoldierData nearest_astar;
-//	float nearest_astar_dist = 99999.;
+	float nearest_dist = 999999.;
 	uint count = 0;
 	vec2 group_center = vec2(0.);
 	float group_rot = 0.;
@@ -92,39 +90,38 @@ void main()
 		count++;
 
 		float d = distance(u.m_pos, unit.m_pos);
-		if(d < nearest_dist && d >= 0.00001)
+		if(d < nearest_dist && d >= 0.01)
 		{
 			nearest_dist = d;
 			nearest = u;
 		}
 		
 	}
+	group_center /= count;
+	group_rot /= count;
 	group_move /= count;
 
-	float NEAR_DIST = g_crowd_density_cell_size / 1.;
-	float FAR_DIST = g_crowd_density_cell_size / 1.;
+	float NEAR_DIST = 4.;
+	float FAR_DIST = 32.;
+
+	vec2 move = vec2(0.);
 	if(count > 1)
 	{
-		vec2 target_dir = rotate(nearest.m_rot);
-		float rotate_rad = dot(dir, target_dir);
-		float rotate_angle = min(acos(rotate_rad), unit_info.angler_speed);
-		float c = cross(vec3(dir, 0.), vec3(target_dir, 0.)).z;
-		bool is_target_front = dot(dir, nearest.m_pos-unit.m_pos) >= 0.;
-		if(is_target_front && nearest_dist < NEAR_DIST && rotate_rad >= 0.)
+//		vec2 target_dir = rotate(nearest.m_rot);
+//		float rotate_rad = dot(dir, target_dir);
+//		float rotate_angle = min(acos(rotate_rad), unit_info.angler_speed);
+//		float c = cross(vec3(dir, 0.), vec3(target_dir, 0.)).z;
+		vec2 to_target = nearest.m_pos-unit.m_pos;
+		if(nearest_dist < NEAR_DIST)
 		{
 			// 一番近い相手から離れる
-			unit.m_rot += sign(c) * rotate_angle*deltatime;
-
-			unit.m_move = max(unit.m_move*pow(0.98, 1.+deltatime), unit_info.linear_speed*0.8);
+			move += normalize(to_target) * deltatime;
+//			unit.m_rot += sign(c) * rotate_angle*deltatime;
+//			unit.m_move = max(unit.m_move*pow(0.98, 1.+deltatime), unit_info.linear_speed*0.8);
+		}else if(nearest_dist >= FAR_DIST)
+		{
+			move -= normalize(to_target) * deltatime;
 		}
-//		else if(is_target_front && nearest_dist > FAR_DIST && rotate_rad < 0.)
-//		{
-			// 一番近い相手に近づく
-//			unit.m_rot -= sign(c) * rotate_angle*deltatime;
-
-//			unit.m_move = min(unit.m_move*pow(1.01, 1.+deltatime), unit_info.linear_speed*1.3);
-
-//		}
 		else
 		{
 			unit.m_rot = mix(unit.m_rot, group_rot, 0.5);
@@ -160,13 +157,14 @@ void main()
 	{
 
 		// march
-//		vec2 dir = unit.m_dir;
+		dir = rotate(unit.m_rot)*unit.m_move*deltatime + move;
 
 		ivec2 ipos = ivec2(unit.m_pos);
-		float progress = unit.m_move*deltatime;
-		float advance = progress;
+		float progress = dot(dir, dir);
 		if(progress != 0.)
 		{
+			progress = sqrt(progress);
+			dir = normalize(dir);
 
 			for(int _i = 0; _i < 2000; _i++)
 			{

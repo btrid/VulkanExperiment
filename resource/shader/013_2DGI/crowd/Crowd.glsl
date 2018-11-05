@@ -56,7 +56,7 @@ layout(set=USE_Crowd2D, binding=5, std430) restrict buffer UnitLinkList {
 };
 
 #endif
-const int g_crowd_density_cell_size = 16;
+const int g_crowd_density_cell_size = 64;
 
 
 vec2 inverse_safe(in vec2 v)
