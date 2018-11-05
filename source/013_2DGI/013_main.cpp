@@ -105,6 +105,11 @@ int main()
  	auto a = glm::cross(vec3(1.f, 0.f, 0.f), normalize(vec3(-1.f, 0.0f, 0.f)));
  	auto b = glm::dot(vec3(1.f, 0.f, 0.f), (vec3(0.f, 0.0f, 0.f)));
 //	vec2 side = cross(vec3(1.f, 0.f, 0.f), vec3(0., 0., 1.)).xy();
+	auto c = glm::dot(vec3(0.f, 1.f, 0.f), vec3(0.f, 0.0f, 0.f));
+	auto d = glm::dot(vec3(0.f, 1.f, 0.f), vec3(1.f, 0.0f, 0.f));
+	auto e = glm::dot(vec3(0.f, 1.f, 0.f), vec3(-1.f, 0.0f, 0.f));
+	auto f = glm::dot(vec3(0.f, 1.f, 0.f), vec3(99.1f, 9.9f, 0.f));
+	auto g = glm::dot(vec3(0.f, 1.f, 0.f), vec3(0.f, -31.0f, 0.f));
 
 	while (true)
 	{

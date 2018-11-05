@@ -137,7 +137,7 @@ struct CrowdContext
 				for (int32_t i = 0; i < m_crowd_info.unit_data_max*2; i++)
 				{
 					staging.getMappedPtr(i)->m_pos = abs(glm::ballRand(300.f).xy()) + vec2(100.f);
-					staging.getMappedPtr(i)->m_move = 4.f;
+					staging.getMappedPtr(i)->m_move = 50.f;
 					staging.getMappedPtr(i)->m_rot = (std::rand() % 314) * 0.01f;
 					staging.getMappedPtr(i)->m_rot_prev = 0.f;
 					staging.getMappedPtr(i)->unit_type = 0;
