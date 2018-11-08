@@ -5,14 +5,15 @@
 #include "btrlib/Common.glsl"
 #include "btrlib/Math.glsl"
 
+#define USE_GI2D 2
+#include "GI2D.glsl"
+
 #define USE_Crowd2D 0
 #include "Crowd.glsl"
 
 #define USE_SYSTEM 1
 #include "applib/System.glsl"
 
-#define USE_GI2D 2
-#include "GI2D.glsl"
 
 
 layout (local_size_x = 1024) in;
@@ -117,19 +118,24 @@ void main()
 		group_move /= count;
 
 		vec2 to_target = nearest.m_pos-unit.m_pos;
+		// Separate
 		if(nearest_dist < NEAR_DIST)
 		{
 			// 一番近い相手から離れる
 			move += normalize(to_target) * deltatime;
 		}
-//		else if(nearest_dist >= FAR_DIST)
-//		{
-//			move -= normalize(to_target) * deltatime;
-//		}
-		else
+		else if(nearest_dist >= FAR_DIST)
 		{
-			unit.m_rot = mix(unit.m_rot, group_rot, 0.5);
-//			unit.m_move = mix(unit.m_move, group_move, 0.5);			
+			move -= normalize(to_target) * deltatime;
+		}
+
+		// Alignment
+		// Cohesion
+		{
+			unit.m_rot = mix(unit.m_rot, group_rot, 0.1);
+			unit.m_move = mix(unit.m_move, group_move, 0.1);			
+
+			move += normalize2_safe(group_center - unit.m_pos, vec2(0.)) * deltatime;
 		}
 
 	}

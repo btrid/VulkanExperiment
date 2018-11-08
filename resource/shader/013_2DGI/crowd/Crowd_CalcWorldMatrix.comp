@@ -5,6 +5,8 @@
 #include "btrlib/Common.glsl"
 #include "btrlib/Math.glsl"
 
+#include "GI2D.glsl"
+
 #define USE_Crowd2D 0
 #include "Crowd.glsl"
 

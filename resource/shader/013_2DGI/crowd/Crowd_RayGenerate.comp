@@ -1,24 +1,34 @@
-#version 450
+#version 460
 #extension GL_GOOGLE_include_directive : require
 
 #include "btrlib/ConvertDimension.glsl"
 #include "btrlib/Common.glsl"
 #include "btrlib/Math.glsl"
 
-#define USE_GI2D 0
-#define USE_GI2D_Radiosity 1
+#define USE_GI2D 2
 #include "GI2D.glsl"
+
+#define USE_Crowd2D 0
+#include "Crowd.glsl"
+
+#define USE_SYSTEM 1
+#include "applib/System.glsl"
 
 #define TWO_PI (6.28318530)
 #define QUARTER_PI (0.7853981633)
+
+layout(push_constant) uniform Input
+{
+	int distance;
+} constant;
+
 layout (local_size_x=255, local_size_y=1) in;
 void main()
 {
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution);
 
 	float a = TWO_PI / gl_WorkGroupSize.x;
-	float angle = a * (gl_LocalInvocationID.x);
-	angle += a*((1. / u_radiosity_info.frame_max)*gl_WorkGroupID.z + (0.5 / u_radiosity_info.frame_max));
+	float angle = a * (gl_LocalInvocationID.x+0.5);
 
 	uint y = uint(angle / HALF_PI);
 
@@ -59,9 +69,6 @@ void main()
 		}
 	}
 
-//	if(march_count <= 1) { return; }
-//	if(march_count <= 1) { march_count =100; }
-
 	// 2重になるのを禁止
 	switch(y)
 	{
@@ -80,12 +87,9 @@ void main()
 	ray.angle = angle;
 	ray.march = march_count;
 	
-	int buffer_index = atomicAdd(b_ray_counter[gl_WorkGroupID.z].w, 1);
-	if(buffer_index >= u_radiosity_info.ray_scene_max){ while(true); }
-	uint buffer_offset = u_radiosity_info.ray_scene_max*gl_WorkGroupID.z;
-	b_ray[buffer_index+buffer_offset] = ray;
-
+	int buffer_index = atomicAdd(b_ray_counter.w, 1);
+	b_ray[buffer_index] = ray;
 	if(buffer_index%1024 == 0){
-		atomicAdd(b_ray_counter[gl_WorkGroupID.z].x, 1);
+		atomicAdd(b_ray_counter.x, 1);
 	}
 }

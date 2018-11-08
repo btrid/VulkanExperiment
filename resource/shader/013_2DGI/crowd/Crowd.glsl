@@ -55,6 +55,14 @@ layout(set=USE_Crowd2D, binding=5, std430) restrict buffer UnitLinkList {
 	int b_unit_link_head[];
 };
 
+layout(set=USE_Crowd2D, binding=6, std430) restrict buffer RayBuffer {
+	D2Ray b_ray[];
+};
+layout(set=USE_Crowd2D, binding=7) restrict buffer RayCounter {
+	ivec4 b_ray_counter;
+};
+
+
 #endif
 const int g_crowd_density_cell_size = 64;
 

@@ -38,8 +38,22 @@ struct D2JFACell
 	float e_distance;
 	int _ep;
 //	int attr;
-
 };
+
+struct D2Ray
+{
+	vec2 origin;
+	float angle;
+	uint march;
+};
+struct D2Segment
+{
+	uint ray_index;
+	uint begin;
+	uint march;
+	uint radiance;
+};
+
 #define Grid_Size (1.)
   #define DT 0.016
 //#define DT 0.0005
@@ -126,24 +140,11 @@ struct GI2DRadiosityInfo
 	uint a3;
 };
 
-struct D2Ray
-{
-	vec2 origin;
-	float angle;
-	uint march;
-};
-struct D2Segment
-{
-	uint ray_index;
-	uint begin;
-	uint march;
-	uint radiance;
-};
 
 layout(set=USE_GI2D_Radiosity, binding=0, std140) uniform GI2DGI2DRadiosityInfoUniform {
 	GI2DRadiosityInfo u_radiosity_info;
 };
-layout(set=USE_GI2D_Radiosity, binding=1) restrict buffer RadianceMapBuffer {
+layout(set=USE_GI2D_Radiosity, binding=1) restrict buffer RadianceBuffer {
 	uint b_radiance[];
 };
 layout(set=USE_GI2D_Radiosity, binding=2, std430) restrict buffer RayBuffer {
