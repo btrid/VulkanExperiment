@@ -41,6 +41,7 @@
 #include <applib/AppModel/AppModel.h>
 #include <applib/AppModel/AppModelPipeline.h>
 
+#include <013_2DGI/TestField.h>
 
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
@@ -50,6 +51,9 @@
 
 int main()
 {
+	TestField field;
+	field.write();
+
 
 	using namespace gi2d;
 	btr::setResourceAppPath("../../resource/");
