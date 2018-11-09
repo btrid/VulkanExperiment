@@ -52,8 +52,9 @@
 int main()
 {
 	TestField field;
-	field.write();
-
+//	field.write();
+	auto path = field.solve();
+	field.writeSolvePath(path);
 
 	using namespace gi2d;
 	btr::setResourceAppPath("../../resource/");
