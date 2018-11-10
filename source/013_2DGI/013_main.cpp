@@ -53,11 +53,8 @@ int main()
 {
 	PathFinding field;
 	Solver solver;
-	Solver2 solver2;
-//	auto path = solver.executeSolve(field);
-	auto path2 = solver2.executeSolve(field);
-//	field.writeSolvePath(path, "path.txt");
-	field.writeSolvePath(path2, "path2.txt");
+	auto path = solver.executeSolve(field);
+	field.writeSolvePath(path, "path.txt");
 
 	using namespace gi2d;
 	btr::setResourceAppPath("../../resource/");

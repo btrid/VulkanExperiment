@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <queue>
+#include <unordered_map>
 #include <random>
 #include <cstdint>
 #include<fstream>
@@ -14,7 +15,7 @@ struct PathFinding
 		cStopWatch time;
 //		auto a = 1 << 15;
 //		auto a = 1 << 8;
-		auto a = 1024;
+		auto a = 1024*8;
 		auto aa = a >> 3;
 		m_info.m_size = ivec2(a);
 //		m_start = ivec2(256, 4);
@@ -102,41 +103,88 @@ struct PathFinding
 
 struct Solver
 {
-
-	struct OpenNode
-	{
-		int32_t x;
-		int32_t y;
-		int32_t cost;
-		int32_t parent;
-	};
-	struct CloseNode
+#define SIMPLE_FAST
+	#define offset_def ivec2 offset[4] = { {1, 0}, {-1, 0}, {0, 1}, {0, -1}, }
+	struct Node
 	{
 		int32_t cost;
 		int32_t parent;
-		CloseNode()
+		uint32_t is_open : 1;
+		uint32_t condition : 5; //!< 探索する必要があるか
+		uint32_t p : 28;
+		Node()
 			: cost(-1)
 			, parent(-1)
+			, is_open(0)
+			, condition(0)
 		{}
+
+		void precompute(const ivec2& c, const PathFinding& path)
+		{
+			offset_def;
+			// 事前計算
+			condition = 1 << 4;
+#if 1
+			if (c.x + 1 >= path.m_info.m_size.x)
+			{
+				condition |= 1 << 0;
+			}
+			else if (c.x - 1 < 0)
+			{
+				condition |= 1 << 1;
+			}
+			if (c.y + 1 >= path.m_info.m_size.y)
+			{
+				condition |= 1 << 2;
+			}
+			else if (c.y - 1 < 0)
+			{
+				condition |= 1 << 3;
+			}
+#else
+			for (int i = 0; i < 4; i++)
+			{
+				auto _n = c + offset[i];
+				if (any(lessThan(_n, ivec2(0))) || any(greaterThanEqual(_n, path.m_info.m_size)))
+				{
+					condition |= 1 << i;
+					continue;
+				}
+				if (!path.isPath(_n))
+				{
+					condition |= 1 << i;
+					continue;
+				}
+			}
+
+#endif
+
+
+		}
+
 	};
 
 	std::vector<uint64_t> executeSolve(const PathFinding& path)const
 	{
 		cStopWatch time;
 
+		offset_def;
+
 		auto aa = path.m_info.m_size >> 3;
 		std::vector<uint64_t> result(aa.x*aa.y);
 
-		std::vector<CloseNode> close(path.m_info.m_size.x * path.m_info.m_size.y);
-		std::deque<OpenNode> open;
-		open.push_back({ path.m_info.m_start.x, path.m_info.m_start.y, 0, -1 });
+		std::vector<Node> close(path.m_info.m_size.x * path.m_info.m_size.y);
+		std::deque<Node*> open;
+		open.push_back(&close[path.m_info.m_start.x + path.m_info.m_start.y * path.m_info.m_size.x]);
+		open.front()->is_open = 1;
+		open.front()->precompute(path.m_info.m_start, path);
 		while (!open.empty())
 		{
-			OpenNode n = open.front();
+			Node* node = open.front();
 			open.pop_front();
 
-			// 右
-			auto current = n.x + n.y*path.m_info.m_size.x;
+			intptr_t current = node - close.data();
+			ivec2 n = ivec2(current%path.m_info.m_size.x, current /path.m_info.m_size.x);
 
 			if (all(equal(ivec2(n.x, n.y), path.m_info.m_finish)))
 			{
@@ -166,33 +214,48 @@ struct Solver
 					map_index_sub = index2 - (map_index << 3);
 				}
 			}
+
+#if defined(SIMPLE_FAST)
+			// 右
 			if (n.x < path.m_info.m_size.x - 1)
 			{
-				_setNode(path, n.x + 1, n.y, current, n.cost + 1, open, close);
+				_setNode(path, n.x + 1, n.y, current, node->cost + 1, open, close);
 			}
 			// 左
 			if (n.x > 0)
 			{
-				_setNode(path, n.x - 1, n.y, current, n.cost + 1, open, close);
+				_setNode(path, n.x - 1, n.y, current, node->cost + 1, open, close);
 			}
 			// 下
 			if (n.y < path.m_info.m_size.y - 1)
 			{
-				_setNode(path, n.x, n.y + 1, current, n.cost + 1, open, close);
+				_setNode(path, n.x, n.y + 1, current, node->cost + 1, open, close);
 			}
 			// 上
 			if (n.y > 0)
 			{
-				_setNode(path, n.x, n.y - 1, current, n.cost + 1, open, close);
+				_setNode(path, n.x, n.y - 1, current, node->cost + 1, open, close);
 			}
+#else
+			for (int i = 0; i < 4; i++)
+			{
+				if ((node->condition & (1 << i)) != 0) {
+					continue;
+				}
+				_setNode(path, n.x + offset[i].x, n.y + offset[i].y, current, node->cost + 1, open, close);
+			}
+#endif
+			node->is_open = 0;
+
 		}
 
 		// 見つからなかった
 		printf("failed\n");
 		return result;
 	}
-	void _setNode(const PathFinding& path, int x, int y, int parent, int cost, std::deque<OpenNode>& open, std::vector<CloseNode>& close)const
+	void _setNode(const PathFinding& path, int x, int y, int parent, int cost, std::deque<Node*>& open, std::vector<Node>& close)const
 	{
+#if defined(SIMPLE_FAST)
 		{
 			auto wh_m = path.m_info.m_size >> 3;
 			ivec2 m = ivec2(x, y) >> 3;
@@ -204,26 +267,24 @@ struct Solver
 			}
 
 		}
-
+#endif
 		do
 		{
-			auto it = std::find_if(open.begin(), open.end(), [x, y](const OpenNode& n) { return x == n.x && y == n.y; });
-			if (it != open.end())
+			auto& cn = close[x + y * path.m_info.m_size.x];
+			if (cn.is_open==1)
 			{
 				// openの中に見つかった
-				if (cost >= it->cost)
+				if (cost >= cn.cost)
 				{
 					break;
 				}
 				else
 				{
-					it->cost = cost;
-					it->parent = parent;
+					cn.cost = cost;
+					cn.parent = parent;
 					break;
 				}
 			}
-
-			auto& cn = close[x + y * path.m_info.m_size.x];
 			if (cn.cost >= 0 && cost >= cn.cost)
 			{
 				break;
@@ -234,161 +295,17 @@ struct Solver
 				cn.cost = cost;
 				cn.parent = parent;
 			}
-			open.push_back({ x, y, cost, parent });
+			cn.is_open = 1;
+#if !defined(SIMPLE_FAST)
+			if (cn.condition == 0)
+			{
+				cn.precompute(ivec2(x, y), path);
+			}
+#endif
+			open.push_back(&cn);
 
 		} while (false);
 
-	}
-
-};
-
-struct Solver2
-{
-
-
-	struct Node
-	{
-		int32_t cost;
-		int32_t parent;
-		uint32_t searched : 4; //!<上下左右の探索を行ったか？
-		uint32_t condition : 5;
-		uint32_t p : 23;
-		Node()
-			: cost(-1)
-			, parent(-1)
-			, searched(0)
-			, condition(0)
-		{}
-
-		void precompute(const ivec2& c, const PathFinding& path)
-		{
-			ivec2 offset[4] = { {-1, 0}, {1, 0}, {0, 1}, {0, -1}, };
-			// 事前計算
-			condition = 1 << 4;
-			for (int i = 0; i < 4; i++)
-			{
-				auto _n = c + offset[i];
-				if (any(lessThan(_n, ivec2(0))) || any(greaterThanEqual(_n, path.m_info.m_size)))
-				{
-					condition |= 1 << i;
-					continue;
-				}
-				if (!path.isPath(_n))
-				{
-					condition |= 1 << i;
-					continue;
-				}
-			}
-
-		}
-	};
-
-	std::vector<uint64_t> executeSolve(const PathFinding& path)const
-	{
-		cStopWatch time;
-
-		ivec2 offset[4] = { {-1, 0}, {1, 0}, {0, 1}, {0, -1}, };
-
-		auto aa = path.m_info.m_size >> 3;
-		std::vector<uint64_t> result(aa.x*aa.y);
-		std::vector<Node> node(path.m_info.m_size.x * path.m_info.m_size.y);
-
-		ivec2 current = path.m_info.m_start;
-		node[current.x + current.y * path.m_info.m_size.x].cost = 0;
-		node[current.x + current.y * path.m_info.m_size.x].precompute(current, path);
-		node[current.x + current.y * path.m_info.m_size.x].searched |= node[current.x + current.y * path.m_info.m_size.x].condition & 0b1111;
-
-		for (;;)
-		{
-			if (all(equal(current, path.m_info.m_finish)))
-			{
-				printf("solve time %6.4fs\n", time.getElapsedTimeAsSeconds());
-
-				auto map_size = path.m_info.m_size >> 3;
-
-				// ゴール着いた
-				int32_t index = path.m_info.m_finish.x + path.m_info.m_finish.y*path.m_info.m_size.x;
-				ivec2 index2 = ivec2(index % path.m_info.m_size.x, index / path.m_info.m_size.y);
-				auto map_index = index2 >> 3;
-				auto map_index_sub = index2 - (map_index << 3);
-
-				for (;;)
-				{
-
-					result[map_index.x + map_index.y*map_size.x] |= 1ull << (map_index_sub.x + map_index_sub.y * 8);
-
-					index = node[index].parent;
-					index2 = ivec2(index % path.m_info.m_size.x, index / path.m_info.m_size.x);
-					if (all(equal(path.m_info.m_start, index2)))
-					{
-						printf("succeed\n");
-						return result;
-					}
-					map_index = index2 >> 3;
-					map_index_sub = index2 - (map_index << 3);
-				}
-			}
-
-			auto& current_node = node[current.x + current.y * path.m_info.m_size.x];
-			if ((current_node.searched & 0b1111) == 0b1111)
-			{
-				// 全部探索済みなので親を辿る
-				if (current_node.parent == -1)
-				{
-					// 親がないならもうない
-					break;
-				}
-				current = ivec2(current_node.parent%path.m_info.m_size.x, current_node.parent/ path.m_info.m_size.x);
-			}
-			else
-			{
-				uvec4 dist = uvec4(-1);
-				for (int i = 0; i < 4; i++)
-				{
-					if ((current_node.searched & (1 << i)) != 0) {
-						continue;
-					}
-					auto d = glm::abs(current + offset[i] - path.m_info.m_finish);
-					dist[i] = d.x + d.y;
-				}
-
-				int32_t dir = dist[0] < dist[1] ? 0 : 1;
-				dir = dist[dir] < dist[2] ? dir : 2;
-				dir = dist[dir] < dist[3] ? dir : 3;
-
-				current_node.searched |= 1 << dir;
-
-				auto next = current + offset[dir];
-				auto& next_node = node[next.x + next.y * path.m_info.m_size.x];
-				if (next_node.cost >= 0 && current_node.cost+1 >= next_node.cost)
-				{
-					// すでに調査済み
-				}
-				else
-				{
-					// もっと早くアクセスする方法が見つかったor新しく探索するので更新
-					next_node.cost = current_node.cost+1;
-					next_node.parent = current.x + current.y * path.m_info.m_size.x;
-
-					// 親はアクセスする必要ない
-					next_node.searched = 1 << (dir ^ 1);
-					if (next_node.condition == 0)
-					{
-						next_node.precompute(next, path);
-					}
-					next_node.searched |= next_node.condition&0b1111;
-
-					current = next;
-				}
-
-
-
-			}
-		}
-
-		// 見つからなかった
-		printf("failed\n");
-		return result;
 	}
 
 };
