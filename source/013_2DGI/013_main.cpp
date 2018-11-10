@@ -41,7 +41,7 @@
 #include <applib/AppModel/AppModel.h>
 #include <applib/AppModel/AppModelPipeline.h>
 
-#include <013_2DGI/TestField.h>
+#include <013_2DGI/PathFinding.h>
 
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
@@ -51,10 +51,13 @@
 
 int main()
 {
-	TestField field;
-//	field.write();
-	auto path = field.solve();
-	field.writeSolvePath(path);
+	PathFinding field;
+	Solver solver;
+	Solver2 solver2;
+//	auto path = solver.executeSolve(field);
+	auto path2 = solver2.executeSolve(field);
+//	field.writeSolvePath(path, "path.txt");
+	field.writeSolvePath(path2, "path2.txt");
 
 	using namespace gi2d;
 	btr::setResourceAppPath("../../resource/");

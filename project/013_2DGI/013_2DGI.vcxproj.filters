@@ -66,6 +66,6 @@
     <ClInclude Include="..\..\include\013_2DGI\Crowd\Crowd_Procedure.h">
       <Filter>Crowd</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\013_2DGI\TestField.h" />
+    <ClInclude Include="..\..\include\013_2DGI\PathFinding.h" />
   </ItemGroup>
 </Project>
