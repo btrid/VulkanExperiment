@@ -1,26 +1,32 @@
-#version 450
+#version 460
 #extension GL_GOOGLE_include_directive : require
 
 #include "btrlib/ConvertDimension.glsl"
 #include "btrlib/Common.glsl"
 #include "btrlib/Math.glsl"
 
-#define USE_GI2D 0
-#define USE_GI2D_Radiosity 1
+#define USE_Crowd2D 0
+#include "Crowd.glsl"
+
+#define USE_SYSTEM 1
+#include "applib/System.glsl"
+
+#define USE_GI2D 2
 #include "GI2D.glsl"
 
+#define TWO_PI (6.28318530)
+#define QUARTER_PI (0.7853981633)
 layout (local_size_x=1024) in;
 void main()
 {
-	if(gl_GlobalInvocationID.x >= b_ray_counter[u_gi2d_scene.m_frame].w){ return; }
+	if(gl_GlobalInvocationID.x >= b_ray_counter[u_crowd_scene.m_frame].w){ return; }
 
-	const int hierarchy = u_gi2d_scene.m_hierarchy;
 	const ivec4 reso = u_gi2d_info.m_resolution;
 
-	uint ray_index = gl_GlobalInvocationID.x + u_radiosity_info.ray_frame_max*u_gi2d_scene.m_frame;
-	D2Ray ray = b_ray[ray_index];
+	uint ray_index = gl_GlobalInvocationID.x + u_crowd_info.ray_frame_max*u_crowd_scene.m_frame;
+	CrowdRay ray = b_ray[ray_index];
 	vec2 pos = ray.origin;
-	vec2 dir = rotate(ray.angle);
+	vec2 dir = MakeRayDir(ray.angle);
 	vec2 inv_dir = abs(1./dir);
 	dir *= min(inv_dir.x, inv_dir.y);
 	ivec2 map_index = ivec2(pos);
@@ -29,7 +35,7 @@ void main()
 	uint old_map_index = -1;
 	vec2 cell_origin = vec2(greaterThanEqual(dir, vec2(0.))) * vec2(8.);
 
-	D2Segment seg;
+	CrowdSegment seg;
 	seg.ray_index = ray_index;
 	seg.begin = 0;
 	seg.march = 0;
@@ -45,8 +51,8 @@ void main()
 			if(old_map_index != dindex)
 			{
 //				map = b_fragment_map[dindex];
-				map.x = b_diffuse_map[dindex];
-				map.y = b_emissive_map[dindex];
+//				map.x = b_diffuse_map[dindex];
+//				map.y = b_emissive_map[dindex];
 				old_map_index = dindex;
 
 				if(all(equal(map, u64vec2(0))))

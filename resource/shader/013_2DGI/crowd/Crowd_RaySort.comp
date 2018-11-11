@@ -5,9 +5,9 @@
 #include "btrlib/Common.glsl"
 #include "btrlib/Math.glsl"
 
-#define USE_GI2D 0
-#define USE_GI2D_Radiosity 1
-#include "GI2D.glsl"
+
+#define USE_Crowd2D 0
+#include "Crowd.glsl"
 
 layout (local_size_x = 1024) in;
 
@@ -17,16 +17,13 @@ layout(push_constant) uniform Input
 	int distance;
 } constant;
 
-bool compare(in D2Ray a, in D2Ray b){
+bool compare(in CrowdRay a, in CrowdRay b){
 	return a.march < b.march;
 }
 
 
 void main() 
 {
-	// http://http.developer.nvidia.com/GPUGems2/gpugems2_chapter46.html
-	// http://t-pot.com/program/90_BitonicSort/index.html
-	// https://gist.github.com/mre/1392067
 	uint index_a = gl_GlobalInvocationID.x;
 	uint index_b = index_a^constant.distance;
 
@@ -36,9 +33,10 @@ void main()
 		return;
 	}
 
+
 	// フレームを超えてはソートしない
-	uint frame_a = index_a / u_radiosity_info.ray_frame_max;
-	uint frame_b = index_b / u_radiosity_info.ray_frame_max;
+	uint frame_a = index_a / u_crowd_info.ray_frame_max;
+	uint frame_b = index_b / u_crowd_info.ray_frame_max;
 
 	if(frame_a != frame_b)
 	{
@@ -46,19 +44,17 @@ void main()
 	}
 
 	//データないよ
-	uint num = u_radiosity_info.ray_frame_max*frame_a + b_ray_counter[frame_a].w;
+	uint num = u_crowd_info.ray_frame_max + b_ray_counter[frame_a].w;
 	if(index_a >= num ||index_b >= num)
 	{
 		return;
 	}
 
 
-
-	D2Ray a = b_ray[index_a];
-	D2Ray b = b_ray[index_b];
+	CrowdRay a = b_ray[index_a];
+	CrowdRay b = b_ray[index_b];
 	bool sort_dir = (index_a&constant.compare_bit)==0;
-	if ( (sort_dir == compare(a,b))
-	/*|| (sort_dir == (frame_a<frame_b))*/)
+	if ( (sort_dir == compare(a,b)))
 	{
 		b_ray[index_a] = b;
 		b_ray[index_b] = a;

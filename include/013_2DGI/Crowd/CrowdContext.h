@@ -7,13 +7,34 @@
 
 struct CrowdContext
 {
+	enum {
+		Frame = 1,
+		Ray_Frame_Num = 1024 * 256, // é¿ç€ÇÕÇ‡Ç§è≠Çµè≠Ç»Ç¢
+		Ray_All_Num = Ray_Frame_Num * Frame,
+		Segment_Num = Ray_Frame_Num * 8,// Ç∆ÇËÇ†Ç¶Ç∏ÇÃíl
+		Bounce_Num = 0,
+	};
+
 	struct CrowdInfo
 	{
 		uint32_t crowd_info_max;
 		uint32_t unit_info_max;
 		uint32_t crowd_data_max;
 		uint32_t unit_data_max;
+
+		uint ray_num_max;
+		uint ray_frame_max;
+		uint frame_max;
 	};
+
+	struct CrowdScene
+	{
+		int m_frame;
+		int m_hierarchy;
+		uint m_skip;
+		int _p2;
+	};
+
 	struct CrowdData
 	{
 		vec2 target;
@@ -38,6 +59,19 @@ struct CrowdContext
 		int32_t unit_type;
 		float _p;
 	};
+	struct CrowdRay
+	{
+		vec2 origin;
+		float angle;
+		uint march;
+	};
+	struct CrowdSegment
+	{
+		uint ray_index;
+		uint begin;
+		uint march;
+		uint radiance;
+	};
 
 	CrowdContext(const std::shared_ptr<btr::Context>& context)
 	{
@@ -50,6 +84,12 @@ struct CrowdContext
 			m_crowd_info.crowd_data_max = 16;
 			m_crowd_info.unit_data_max = 128;
 
+			m_crowd_info.frame_max = Frame;
+			m_crowd_info.ray_num_max = Ray_All_Num;
+			m_crowd_info.ray_frame_max = Ray_Frame_Num;
+
+			m_crowd_scene.m_frame = 0;
+			m_crowd_scene.m_skip = 0;
 		}
 		{
 			{
@@ -84,14 +124,20 @@ struct CrowdContext
 
 		{
 			u_crowd_info = m_context->m_uniform_memory.allocateMemory<CrowdInfo>({ 1, {} });
+			u_crowd_scene = m_context->m_uniform_memory.allocateMemory<CrowdScene>({ 1, {} });
 			u_unit_info = m_context->m_uniform_memory.allocateMemory<UnitInfo>({ m_crowd_info.unit_info_max, {} });
 			b_crowd = m_context->m_storage_memory.allocateMemory<CrowdData>({ m_crowd_info.crowd_data_max, {} });
 			b_unit = m_context->m_storage_memory.allocateMemory<UnitData>({ m_crowd_info.unit_data_max*2, {} });
 			b_unit_counter = m_context->m_storage_memory.allocateMemory<uvec4>({ 1, {} });
 			b_unit_link_head = m_context->m_storage_memory.allocateMemory<int32_t>({ 1024*1024/*m_gi2d_context->FragmentBufferSize*/, {} });
+			b_ray_counter = m_context->m_storage_memory.allocateMemory<ivec4>({ Frame,{} });
+			b_segment_counter = m_context->m_storage_memory.allocateMemory<ivec4>({ 1,{} });
+			b_ray = m_context->m_storage_memory.allocateMemory<CrowdRay>({ m_crowd_info.ray_num_max,{} });
+			b_segment = m_context->m_storage_memory.allocateMemory<CrowdSegment>({ Segment_Num,{} });
 
 			vk::DescriptorBufferInfo uniforms[] = {
 				u_crowd_info.getInfo(),
+				u_crowd_scene.getInfo(),
 				u_unit_info.getInfo(),
 			};
 			vk::DescriptorBufferInfo storages[] = {
@@ -111,7 +157,7 @@ struct CrowdContext
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 				.setDescriptorCount(array_length(storages))
 				.setPBufferInfo(storages)
-				.setDstBinding(2)
+				.setDstBinding(3)
 				.setDstSet(m_descriptor_set.get()),
 			};
 			context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
@@ -188,19 +234,29 @@ struct CrowdContext
 	void execute(vk::CommandBuffer cmd)
 	{
 
+		m_crowd_scene.m_frame = (m_crowd_scene.m_frame+1)%4;
+		cmd.updateBuffer<CrowdScene>(u_crowd_scene.getInfo().buffer, u_crowd_scene.getInfo().offset, m_crowd_scene);
 
 	}
 
 	std::shared_ptr<btr::Context> m_context;
 	CrowdInfo m_crowd_info;
+	CrowdScene m_crowd_scene;
+ 
 //	std::array<UnitInfo, 16> m_unit_info;
 
 	btr::BufferMemoryEx<CrowdInfo> u_crowd_info;
+	btr::BufferMemoryEx<CrowdScene> u_crowd_scene;
 	btr::BufferMemoryEx<UnitInfo> u_unit_info;
 	btr::BufferMemoryEx<CrowdData> b_crowd;
 	btr::BufferMemoryEx<UnitData> b_unit;
 	btr::BufferMemoryEx<uvec4> b_unit_counter;
 	btr::BufferMemoryEx<int32_t> b_unit_link_head;
+
+	btr::BufferMemoryEx<CrowdRay> b_ray;
+	btr::BufferMemoryEx<ivec4> b_ray_counter;
+	btr::BufferMemoryEx<CrowdSegment> b_segment;
+	btr::BufferMemoryEx<ivec4> b_segment_counter;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;

@@ -8,17 +8,10 @@ namespace gi2d
 
 struct GI2DContext
 {
-	enum
-	{
-		_BounceNum = 4, //!< ƒŒƒC”½ŽË‰ñ”
-		_Light_Num = 256,
-	};
 	int32_t RenderWidth;
 	int32_t RenderHeight;
 	ivec2 RenderSize;
 	int FragmentBufferSize;
-	int BounceNum = _BounceNum;
-	int Light_Num = _Light_Num;
 	struct GI2DInfo
 	{
 		mat4 m_camera_PV;

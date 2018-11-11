@@ -14,7 +14,7 @@
 layout (local_size_x=255, local_size_y=1) in;
 void main()
 {
-	const ivec4 reso = ivec4(u_gi2d_info.m_resolution);
+	const ivec4 reso = u_gi2d_info.m_resolution;
 
 	float a = TWO_PI / gl_WorkGroupSize.x;
 	float angle = a * (gl_LocalInvocationID.x);
@@ -81,8 +81,8 @@ void main()
 	ray.march = march_count;
 	
 	int buffer_index = atomicAdd(b_ray_counter[gl_WorkGroupID.z].w, 1);
-	if(buffer_index >= u_radiosity_info.ray_scene_max){ while(true); }
-	uint buffer_offset = u_radiosity_info.ray_scene_max*gl_WorkGroupID.z;
+	if(buffer_index >= u_radiosity_info.ray_frame_max){ while(true); }
+	uint buffer_offset = u_radiosity_info.ray_frame_max*gl_WorkGroupID.z;
 	b_ray[buffer_index+buffer_offset] = ray;
 
 	if(buffer_index%1024 == 0){

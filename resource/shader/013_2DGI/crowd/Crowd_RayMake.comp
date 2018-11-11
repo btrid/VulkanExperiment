@@ -5,28 +5,32 @@
 #include "btrlib/Common.glsl"
 #include "btrlib/Math.glsl"
 
-#define USE_GI2D 2
-#include "GI2D.glsl"
-
 #define USE_Crowd2D 0
 #include "Crowd.glsl"
 
 #define USE_SYSTEM 1
 #include "applib/System.glsl"
 
+#define USE_GI2D 2
+#include "GI2D.glsl"
+
+
 #define TWO_PI (6.28318530)
 #define QUARTER_PI (0.7853981633)
+
 
 layout(push_constant) uniform Input
 {
 	ivec2 reso;
+	float scale;
 } constant;
+
 
 layout (local_size_x=255, local_size_y=1) in;
 void main()
 {
 
-	ivec2 reso = constant.reso;
+	ivec4 reso = u_gi2d_info.m_resolution;
 
 	float a = TWO_PI / gl_WorkGroupSize.x;
 	float angle = a * (gl_LocalInvocationID.x+0.5);
@@ -35,7 +39,7 @@ void main()
 
 	angle -= QUARTER_PI;
 	angle += HALF_PI;
-	vec2 dir = rotate(angle);
+	vec2 dir = MakeRayDir(angle);
 	vec2 inv_dir = abs(1./dir);
 	dir *= min(inv_dir.x, inv_dir.y);
 
@@ -83,14 +87,14 @@ void main()
 			break;
 	}
 
-	D2Ray ray;
+	CrowdRay ray;
 	ray.origin = begin;
 	ray.angle = angle;
 	ray.march = march_count;
 	
-	int buffer_index = atomicAdd(b_ray_counter.w, 1);
+	int buffer_index = atomicAdd(b_ray_counter[gl_WorkGroupID.z].w, 1);
 	b_ray[buffer_index] = ray;
 	if(buffer_index%1024 == 0){
-		atomicAdd(b_ray_counter.x, 1);
+		atomicAdd(b_ray_counter[gl_WorkGroupID.z].x, 1);
 	}
 }

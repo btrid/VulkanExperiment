@@ -10,6 +10,11 @@ struct CrowdInfo
 	uint unit_info_max;
 	uint crowd_data_max;
 	uint unit_data_max;
+
+	uint ray_num_max;
+	uint ray_frame_max; //!< 1frameにおけるRayの最大の数
+	uint frame_max;
+
 };
 struct CrowdData
 {
@@ -36,31 +41,72 @@ struct UnitData
 	int link_next;
 };
 
+struct CrowdRay
+{
+	vec2 origin;
+	float angle;
+	uint march;
+};
+struct CrowdSegment
+{
+	uint ray_index;
+	uint begin;
+	uint march;
+	uint radiance;
+};
+
+struct CrowdScene
+{
+	int m_frame;
+	int m_hierarchy;
+	uint m_skip;
+	int _p2;
+};
+
+vec2 MakeRayDir(in float angle)
+{
+	float c = cos(angle);
+	float s = sin(angle);
+	return vec2(-s, c);
+}
+
+
 layout(set=USE_Crowd2D, binding=0, std140) uniform CrowdInfoUniform {
 	CrowdInfo u_crowd_info;
 };
-layout(set=USE_Crowd2D, binding=1, std140) uniform UnitInfoUniform {
+layout(set=USE_Crowd2D, binding=1, std140) uniform CrowdSceneUniform {
+	CrowdScene u_crowd_scene;
+};
+layout(set=USE_Crowd2D, binding=2, std140) uniform UnitInfoUniform {
 	UnitInfo u_unit_info[16];
 };
-layout(set=USE_Crowd2D, binding=2, std430) restrict buffer CrowdBuffer {
+layout(set=USE_Crowd2D, binding=3, std430) restrict buffer CrowdBuffer {
 	CrowdData b_crowd[];
 };
-layout(set=USE_Crowd2D, binding=3, std430) restrict buffer UnitBuffer {
+layout(set=USE_Crowd2D, binding=4, std430) restrict buffer UnitBuffer {
 	UnitData b_unit[];
 };
-layout(set=USE_Crowd2D, binding=4, std430) restrict buffer UnitCounter {
+layout(set=USE_Crowd2D, binding=5, std430) restrict buffer UnitCounter {
 	ivec4 b_unit_counter;
 };
-layout(set=USE_Crowd2D, binding=5, std430) restrict buffer UnitLinkList {
+layout(set=USE_Crowd2D, binding=6, std430) restrict buffer UnitLinkList {
 	int b_unit_link_head[];
 };
 
-layout(set=USE_Crowd2D, binding=6, std430) restrict buffer RayBuffer {
-	D2Ray b_ray[];
+layout(set=USE_Crowd2D, binding=7, std430) restrict buffer CRayBuffer {
+	CrowdRay b_ray[];
 };
-layout(set=USE_Crowd2D, binding=7) restrict buffer RayCounter {
-	ivec4 b_ray_counter;
+layout(set=USE_Crowd2D, binding=8) restrict buffer CRayCounter {
+	ivec4 b_ray_counter[];
 };
+
+layout(set=USE_Crowd2D, binding=9, std430) restrict buffer CSegmentBuffer {
+	CrowdSegment b_segment[];
+};
+layout(set=USE_Crowd2D, binding=10) restrict buffer CSegmentCounter {
+	ivec4 b_segment_counter;
+};
+
 
 
 #endif

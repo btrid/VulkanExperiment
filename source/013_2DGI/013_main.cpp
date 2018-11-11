@@ -51,10 +51,10 @@
 
 int main()
 {
-	PathFinding field;
-	Solver solver;
-	auto path = solver.executeSolve(field);
-	field.writeSolvePath(path, "path.txt");
+// 	PathFinding field;
+// 	Solver solver;
+// 	auto path = solver.executeSolve(field);
+// 	field.writeSolvePath(path, "path.txt");
 
 	using namespace gi2d;
 	btr::setResourceAppPath("../../resource/");
@@ -155,8 +155,8 @@ int main()
 				gi2d_clear.execute(cmd);
 				gi2d_debug_make_fragment.execute(cmd);
 
-				gi2d_Fluid->execute(cmd);
-				gi2d_Fluid->executePost(cmd);
+// 				gi2d_Fluid->execute(cmd);
+// 				gi2d_Fluid->executePost(cmd);
 
 
 				gi2d_make_hierarchy.execute(cmd);
@@ -165,7 +165,7 @@ int main()
 					crowd_debug.execute(cmd);
  					crowd_procedure.executeUpdateUnit(cmd);
  					crowd_procedure.executeMakeLinkList(cmd);
-					//					crowd_procedure.executeMakeDensity(cmd);
+					crowd_procedure.executeMakeDensity(cmd);
 					crowd_calc_world_matrix.execute(cmd, player_model);
 
 					std::vector<vk::CommandBuffer> anime_cmds{ anime_cmd.get() };

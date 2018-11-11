@@ -5,8 +5,7 @@
 #include "btrlib/Common.glsl"
 #include "btrlib/Math.glsl"
 
-#define USE_GI2D 2
-#include "GI2D.glsl"
+
 
 #define USE_Crowd2D 0
 #include "Crowd.glsl"
@@ -14,7 +13,8 @@
 #define USE_SYSTEM 1
 #include "applib/System.glsl"
 
-
+#define USE_GI2D 2
+#include "GI2D.glsl"
 
 layout (local_size_x = 1024) in;
 

@@ -14,9 +14,9 @@ struct GI2DRadiosity
 {
 	enum {
 		Frame = 4,
-		Ray_Num = 1024 * 256, // ŽÀÛ‚Í‚à‚¤­‚µ­‚È‚¢
-		Ray_All_Num = Ray_Num * Frame,
-		Segment_Num = Ray_Num * 8,// ‚Æ‚è‚ ‚¦‚¸‚Ì’l
+		Ray_Frame_Num = 1024 * 256, // ŽÀÛ‚Í‚à‚¤­‚µ­‚È‚¢
+		Ray_All_Num = Ray_Frame_Num * Frame,
+		Segment_Num = Ray_Frame_Num * 8,// ‚Æ‚è‚ ‚¦‚¸‚Ì’l
 		Ray_Group = 1,
 		Bounce_Num = 0,
 	};
@@ -63,7 +63,7 @@ struct GI2DRadiosity
 	struct GI2DRadiosityInfo
 	{
 		uint ray_num_max;
-		uint ray_scene_num;
+		uint ray_frame_max;
 		uint frame_max;
 		uint a[2];
 	};
@@ -93,7 +93,7 @@ struct GI2DRadiosity
 		{
 			GI2DRadiosityInfo info;
 			info.ray_num_max = Ray_All_Num;
-			info.ray_scene_num = Ray_Num;
+			info.ray_frame_max = Ray_Frame_Num;
 			info.frame_max = Frame;
 			u_radiosity_info = m_context->m_storage_memory.allocateMemory<GI2DRadiosityInfo>({1,{} });
 			cmd.updateBuffer<GI2DRadiosityInfo>(u_radiosity_info.getInfo().buffer, u_radiosity_info.getInfo().offset, info);

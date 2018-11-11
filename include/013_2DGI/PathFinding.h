@@ -21,7 +21,8 @@ struct PathFinding
 //		m_start = ivec2(256, 4);
 //		m_finish = ivec2(667, 1000);
 		m_info.m_start = ivec2(11, 4);
-		m_info.m_finish = ivec2(a - 10, a - 10);
+//		m_info.m_finish = ivec2(a - 10, a - 10);
+		m_info.m_finish = ivec2(a + 10, a + 10);
 		m_field.resize(aa*aa);
 		for (int y = 0; y < aa; y++)
 		{
@@ -250,6 +251,7 @@ struct Solver
 		}
 
 		// 見つからなかった
+		printf("solve time %6.4fs\n", time.getElapsedTimeAsSeconds());
 		printf("failed\n");
 		return result;
 	}
@@ -257,12 +259,7 @@ struct Solver
 	{
 #if defined(SIMPLE_FAST)
 		{
-			auto wh_m = path.m_info.m_size >> 3;
-			ivec2 m = ivec2(x, y) >> 3;
-			ivec2 c = ivec2(x, y) - (m << 3);
-			if ((path.m_field[m.x + m.y*wh_m.x] & (1ull << (c.x + c.y * 8))) != 0)
-			{
-				// ふさがれてるのでダメ
+			if (!path.isPath(ivec2(x, y))) {
 				return;
 			}
 
