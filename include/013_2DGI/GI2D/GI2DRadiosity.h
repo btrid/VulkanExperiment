@@ -94,7 +94,7 @@ struct GI2DRadiosity
 			GI2DRadiosityInfo info;
 			info.ray_num_max = Ray_All_Num;
 			info.ray_frame_max = Ray_Frame_Num;
-			info.frame_max = Frame;
+			info.frame_max = 4;
 			u_radiosity_info = m_context->m_storage_memory.allocateMemory<GI2DRadiosityInfo>({1,{} });
 			cmd.updateBuffer<GI2DRadiosityInfo>(u_radiosity_info.getInfo().buffer, u_radiosity_info.getInfo().offset, info);
 			vk::BufferMemoryBarrier to_read[] = {

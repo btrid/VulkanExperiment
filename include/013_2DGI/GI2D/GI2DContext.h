@@ -6,6 +6,11 @@
 namespace gi2d
 {
 
+struct GI2DDescriptor
+{
+	int32_t RenderWidth;
+	int32_t RenderHeight;
+};
 struct GI2DContext
 {
 	int32_t RenderWidth;
@@ -55,10 +60,10 @@ struct GI2DContext
 
 	};
 
-	GI2DContext(const std::shared_ptr<btr::Context>& context)
+	GI2DContext(const std::shared_ptr<btr::Context>& context, const GI2DDescriptor& desc)
 	{
- 		RenderWidth = 1024;
- 		RenderHeight = 1024;
+ 		RenderWidth = desc.RenderHeight;
+ 		RenderHeight = desc.RenderWidth;
 		RenderSize = ivec2(RenderWidth, RenderHeight);
 		FragmentBufferSize = RenderWidth * RenderHeight;
 

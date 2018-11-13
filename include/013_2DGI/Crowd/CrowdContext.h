@@ -8,7 +8,10 @@
 struct CrowdContext
 {
 	enum {
-		Frame = 1,
+		Frame = 4,
+		Reso = 8192,
+
+		Rot_Num = 64,
 		Ray_Frame_Num = 1024 * 256, // é¿ç€ÇÕÇ‡Ç§è≠Çµè≠Ç»Ç¢
 		Ray_All_Num = Ray_Frame_Num * Frame,
 		Segment_Num = Ray_Frame_Num * 8,// Ç∆ÇËÇ†Ç¶Ç∏ÇÃíl
@@ -22,9 +25,14 @@ struct CrowdContext
 		uint32_t crowd_data_max;
 		uint32_t unit_data_max;
 
+		ivec2 resolution;
+
 		uint ray_num_max;
 		uint ray_frame_max;
 		uint frame_max;
+		uint _p;
+
+
 	};
 
 	struct CrowdScene
@@ -97,12 +105,15 @@ struct CrowdContext
 				vk::DescriptorSetLayoutBinding binding[] = {
 					vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eUniformBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eUniformBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eUniformBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(6, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(7, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(8, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(9, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(10, vk::DescriptorType::eStorageBuffer, 1, stage),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
