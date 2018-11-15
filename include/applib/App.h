@@ -29,6 +29,7 @@ struct RenderTarget
 	vk::Extent2D m_resolution;
 
 	vk::UniqueDescriptorSet m_descriptor;
+	btr::BufferMemoryEx<ivec2> u_render_info;
 
 	static vk::UniqueDescriptorSetLayout s_descriptor_set_layout;
 };

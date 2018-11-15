@@ -85,6 +85,7 @@ App::App(const AppDescriptor& desc)
 		auto stage = vk::ShaderStageFlagBits::eAll;
 		vk::DescriptorSetLayoutBinding binding[] = {
 			vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eStorageImage, 1, stage),
+			vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eUniformBuffer, 1, stage),
 		};
 		vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 		desc_layout_info.setBindingCount(array_length(binding));
@@ -652,6 +653,10 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 	m_front_buffer->m_resolution.height = m_front_buffer_info.extent.height;
 
 	{
+		m_front_buffer->u_render_info = context->m_uniform_memory.allocateMemory<ivec2>({ 1, {} });
+		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+		cmd.updateBuffer<ivec2>(m_front_buffer->u_render_info.getInfo().buffer, m_front_buffer->u_render_info.getInfo().range, ivec2(m_front_buffer->m_info.extent.width, m_front_buffer->m_info.extent.height));
+
 		vk::DescriptorSetLayout layouts[] = {
 			RenderTarget::s_descriptor_set_layout.get(),
 		};
@@ -665,6 +670,10 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 			vk::DescriptorImageInfo().setImageLayout(vk::ImageLayout::eGeneral).setImageView(m_front_buffer->m_view),
 		};
 
+		vk::DescriptorBufferInfo uniforms[] = {
+			m_front_buffer->u_render_info.getInfo()
+		};
+
 		vk::WriteDescriptorSet write[] = {
 			vk::WriteDescriptorSet()
 			.setDescriptorType(vk::DescriptorType::eStorageImage)
@@ -672,8 +681,14 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 			.setPImageInfo(images)
 			.setDstBinding(0)
 			.setDstSet(m_front_buffer->m_descriptor.get()),
+			vk::WriteDescriptorSet()
+			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+			.setDescriptorCount(std::size(uniforms))
+			.setPBufferInfo(uniforms)
+			.setDstBinding(1)
+			.setDstSet(m_front_buffer->m_descriptor.get()),
 		};
-		context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
+		context->m_device->updateDescriptorSets(std::size(write), write, 0, nullptr);
 	}
 
 	m_imgui_pipeline = std::make_unique<ImguiRenderPipeline>(context, this);

@@ -19,3 +19,5 @@ rem %exe% %include% %option% -o %output%/Crowd_DrawDensityMap.comp.spv Crowd_Dra
 
 %exe% %include% %option% -o %output%/Crowd_CalcWorldMatrix.comp.spv Crowd_CalcWorldMatrix.comp
 %exe% %include% %option% -o %output%/Crowd_CrowdDebug.comp.spv Crowd_CrowdDebug.comp
+
+%exe% %include% %option% -o %output%/Crowd_DrawField.comp.spv Crowd_DrawField.comp

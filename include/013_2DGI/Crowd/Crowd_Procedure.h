@@ -17,12 +17,14 @@ struct Crowd_Procedure
 		Shader_SortRay,
 		Shader_MakeSegment,
 
+		Shader_DrawField,
 		Shader_Num,
 	};
 	enum PipelineLayout
 	{
 		PipelineLayout_Crowd,
 		PipelineLayout_MakeRay,
+		PipelineLayout_DrawField,
 		PipelineLayout_Num,
 	};
 	enum Pipeline
@@ -35,6 +37,8 @@ struct Crowd_Procedure
 		Pipeline_MakeRay,
 		Pipeline_SortRay,
 		Pipeline_MakeSegment,
+
+		Pipeline_DrawField,
 
 		Pipeline_Num,
 	};
@@ -56,6 +60,8 @@ struct Crowd_Procedure
 				"Crowd_RayMake.comp.spv",
 				"Crowd_RaySort.comp.spv",
 				"Crowd_SegmentMake.comp.spv",
+
+				"Crowd_DrawField.comp.spv",
 			};
 			static_assert(array_length(name) == Shader_Num, "not equal shader num");
 
@@ -78,6 +84,7 @@ struct Crowd_Procedure
 				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 				pipeline_layout_info.setPSetLayouts(layouts);
 				m_pipeline_layout[PipelineLayout_Crowd] = context->m_context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+				m_pipeline_layout[PipelineLayout_DrawField] = context->m_context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 
 			}
 
@@ -102,7 +109,7 @@ struct Crowd_Procedure
 
 		// pipeline
 		{
-			std::array<vk::PipelineShaderStageCreateInfo, 7> shader_info;
+			std::array<vk::PipelineShaderStageCreateInfo, 8> shader_info;
 			shader_info[0].setModule(m_shader_module[Shader_UnitUpdate].get());
 			shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[0].setPName("main");
@@ -124,6 +131,9 @@ struct Crowd_Procedure
 			shader_info[6].setModule(m_shader_module[Shader_MakeSegment].get());
 			shader_info[6].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[6].setPName("main");
+			shader_info[7].setModule(m_shader_module[Shader_DrawField].get());
+			shader_info[7].setStage(vk::ShaderStageFlagBits::eCompute);
+			shader_info[7].setPName("main");
 			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 			{
 				vk::ComputePipelineCreateInfo()
@@ -147,6 +157,9 @@ struct Crowd_Procedure
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[6])
 				.setLayout(m_pipeline_layout[PipelineLayout_Crowd].get()),
+				vk::ComputePipelineCreateInfo()
+				.setStage(shader_info[6])
+				.setLayout(m_pipeline_layout[PipelineLayout_DrawField].get()),
 			};
 			auto compute_pipeline = context->m_context->m_device->createComputePipelinesUnique(context->m_context->m_cache.get(), compute_pipeline_info);
 			m_pipeline[Pipeline_UnitUpdate] = std::move(compute_pipeline[0]);
@@ -156,6 +169,7 @@ struct Crowd_Procedure
 			m_pipeline[Pipeline_MakeRay] = std::move(compute_pipeline[4]);
 			m_pipeline[Pipeline_SortRay] = std::move(compute_pipeline[5]);
 			m_pipeline[Pipeline_MakeSegment] = std::move(compute_pipeline[6]);
+			m_pipeline[Pipeline_DrawField] = std::move(compute_pipeline[7]);
 		}
 	}
 
@@ -271,6 +285,10 @@ struct Crowd_Procedure
 		}
 	}
 
+	void executeDrawField(vk::CommandBuffer cmd)
+	{
+
+	}
 	void executePathFinding(vk::CommandBuffer cmd)
 	{
 
