@@ -118,8 +118,8 @@ struct GI2DContext
 					vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(6, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(7, vk::DescriptorType::eStorageBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(8, vk::DescriptorType::eStorageBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(9, vk::DescriptorType::eStorageBuffer, 1, stage),
+ 					vk::DescriptorSetLayoutBinding(8, vk::DescriptorType::eStorageBuffer, 1, stage),
+ 					vk::DescriptorSetLayoutBinding(9, vk::DescriptorType::eStorageBuffer, 1, stage),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -146,10 +146,10 @@ struct GI2DContext
 					b_fragment_map.getInfo(),
 					b_grid_counter.getInfo(),
 					b_light.getInfo(),
-					b_jfa.getInfo(),
-					b_sdf.getInfo(),
 					b_diffuse_map.getInfo(),
 					b_emissive_map.getInfo(),
+					b_jfa.getInfo(),
+					b_sdf.getInfo(),
 				};
 
 				vk::WriteDescriptorSet write[] = {

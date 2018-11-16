@@ -87,8 +87,8 @@ int main()
 	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchainPtr());
 
 	GI2DDescriptor gi2d_desc;
-	gi2d_desc.RenderWidth = 1024;
-	gi2d_desc.RenderHeight = 1024;
+	gi2d_desc.RenderWidth = 1024*4;
+	gi2d_desc.RenderHeight = 1024*4;
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context, gi2d_desc);
 	std::shared_ptr<CrowdContext> crowd_context = std::make_shared<CrowdContext>(context);
 
@@ -177,7 +177,7 @@ int main()
 //				gi2d_Rigidbody.execute(cmd);
 // 				gi2d_Radiosity.executeRadiosity(cmd);
 //				gi2d_Radiosity.executeRendering(cmd);
-//				crowd_procedure.executeDrawDensity(cmd, app.m_window->getFrontBuffer());
+				crowd_procedure.executeDrawField(cmd, app.m_window->getFrontBuffer());
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;
 			}

@@ -285,8 +285,23 @@ struct Crowd_Procedure
 		}
 	}
 
-	void executeDrawField(vk::CommandBuffer cmd)
+	void executeDrawField(vk::CommandBuffer cmd, const std::shared_ptr<RenderTarget>& render_target)
 	{
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_DrawField].get());
+
+		vk::DescriptorSet descriptors[] =
+		{
+			m_context->getDescriptorSet(),
+			sSystem::Order().getSystemDescriptorSet(),
+			m_gi2d_context->getDescriptorSet(),
+			render_target->m_descriptor.get(),
+		};
+
+		uint32_t offset[array_length(descriptors)] = {};
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Crowd].get(), 0, array_length(descriptors), descriptors, array_length(offset), offset);
+
+		auto num = app::calcDipatchGroups(uvec3(render_target->m_info.extent.width, render_target->m_info.extent.height, 1), uvec3(32, 32, 1));
+		cmd.dispatch(num.x, num.y, num.z);
 
 	}
 	void executePathFinding(vk::CommandBuffer cmd)

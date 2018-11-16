@@ -77,17 +77,17 @@ layout(set=USE_GI2D, binding=4) restrict buffer GridCounter {
 layout(set=USE_GI2D, binding=5) restrict buffer LightBuffer {
 	uint b_light[];
 };
-layout(set=USE_GI2D, binding=6, std430) restrict buffer JFABuffer {
-	D2JFACell b_jfa[];
-};
-layout(set=USE_GI2D, binding=7, std430) restrict buffer SDFBuffer {
-	vec2 b_sdf[];
-};
-layout(set=USE_GI2D, binding=8, std430) restrict buffer DiffuseMapBuffer {
+layout(set=USE_GI2D, binding=6, std430) restrict buffer DiffuseMapBuffer {
 	uint64_t b_diffuse_map[];
 };
-layout(set=USE_GI2D, binding=9, std430) restrict buffer EmissiveMapBuffer {
+layout(set=USE_GI2D, binding=7, std430) restrict buffer EmissiveMapBuffer {
 	uint64_t b_emissive_map[];
+};
+layout(set=USE_GI2D, binding=8, std430) restrict buffer JFABuffer {
+	D2JFACell b_jfa[];
+};
+layout(set=USE_GI2D, binding=9, std430) restrict buffer SDFBuffer {
+	vec2 b_sdf[];
 };
 
 ivec2 frame_offset(){
