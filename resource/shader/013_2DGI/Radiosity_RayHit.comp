@@ -41,13 +41,13 @@ void main()
 //		ivec4 outside = ivec4(greaterThanEqual(map_index, reso.xyxy)) + ivec4(lessThan(map_index, ivec4(0)));
 		if(outside.xy == ivec2(0))
 		{
-			vec3 radiance = f_radiance * b_fragment[findex.x].albedo.xyz / 3.14;
+			vec3 radiance = f_radiance * getRGB(b_fragment[findex.x]) / 3.14;
 			atomicAdd(b_light[getMemoryOrder(map_index.xy)], packEmissive(radiance));
 //			atomicOr(b_emissive_map[dindex.x], bit.x);
 		}
 		if(outside.zw == ivec2(0))
 		{
-			vec3 radiance = f_radiance * b_fragment[findex.y].albedo.xyz / 3.14;
+			vec3 radiance = f_radiance * getRGB(b_fragment[findex.y]) / 3.14;
 			atomicAdd(b_light[getMemoryOrder(map_index.zw)], packEmissive(radiance));
 //			atomicOr(b_emissive_map[dindex.y], bit.y);
 		}

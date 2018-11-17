@@ -25,10 +25,63 @@ struct GI2DScene
 	uint m_map_offset;
 	uvec2 m_map_reso;
 };
+
+#define _maxf (1023.)
+#define _maxi (1023)
+uint packRGB(in vec3 rgb)
+{
+	ivec3 irgb = ivec3(rgb*_maxf);
+	irgb = min(irgb, ivec3(_maxi));
+	irgb <<= ivec3(20, 10, 0);
+	return irgb.x | irgb.y | irgb.z;
+}
+vec3 unpackRGB(in uint irgb)
+{
+	vec3 rgb = vec3((uvec3(irgb) >> uvec3(20, 10, 0)) & ((uvec3(1) << uvec3(10, 10, 10)) - uvec3(1)));
+	return rgb / _maxf;
+}
 struct Fragment
 {
-	vec4 albedo;
+//	uint32_t data : 30;
+//	uint32_t is_diffuse : 1;
+//	uint32_t is_emissive : 1;
+
+	uint data;
 };
+void setRGB(inout Fragment f, in vec3 rgb)
+{
+	f.data = (f.data & (3<<30)) | packRGB(rgb);
+}
+vec3 getRGB(inout Fragment f)
+{
+	return unpackRGB(f.data);
+}
+void setEmissive(inout Fragment f, in bool b)
+{
+	f.data = (f.data & ~(1<<31)) | (b?(1<<31):0);
+}
+void setDiffuse(inout Fragment f, in bool b)
+{
+	f.data = (f.data & ~(1<<30)) | (b?(1<<30):0);
+}
+bool isEmissive(in Fragment f)
+{
+	return (f.data & (1<<31)) != 0;
+}
+bool isDiffuse(in Fragment f)
+{
+	return (f.data & (1<<30)) != 0;
+}
+
+Fragment makeFragment(in vec3 color, in bool d, in bool e)
+{
+	Fragment f;
+	setRGB(f, color);
+	setDiffuse(f, d);
+	setEmissive(f, e);
+	return f;
+}
+
 struct D2JFACell
 {
 	ivec2 nearest_index;

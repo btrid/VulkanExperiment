@@ -39,7 +39,32 @@ struct GI2DContext
 
 	struct Fragment
 	{
-		vec4 albedo;
+		uint32_t data : 30;
+		uint32_t is_diffuse : 1;
+		uint32_t is_emissive : 1;
+#define _maxf (1023.f)
+#define _maxi (1023)
+		static uint packRGB(const vec3& rgb)
+		{
+			ivec3 irgb = ivec3(rgb*_maxf);
+			irgb = glm::min(irgb, ivec3(_maxi));
+			irgb <<= ivec3(20, 10, 0);
+			return irgb.x | irgb.y | irgb.z;
+		}
+		static vec3 unpackRGB(uint irgb)
+		{
+			vec3 rgb = vec3((uvec3(irgb) >> uvec3(20, 10, 0)) & ((uvec3(1) << uvec3(10, 10, 10)) - uvec3(1)));
+			return rgb / _maxf;
+		}
+
+		void setRGB(const vec3& rgb)
+		{
+			data = packRGB(rgb);
+		}
+		vec3 getRGB()const
+		{
+			return unpackRGB(data);
+		}
 	};
 
 	struct LinkList

@@ -19,7 +19,7 @@ void setAlbedo(in vec3 albedo)
 {
 	ivec2 vpos = ivec2(gl_FragCoord.xy);
 	int index1D = int(vpos.x + vpos.y * u_gi2d_info.m_resolution.x);
-	b_fragment[index1D].albedo = vec4(albedo*5.,0);
+	b_fragment[index1D] = makeFragment(albedo, true, false);
 }
 
 void main()

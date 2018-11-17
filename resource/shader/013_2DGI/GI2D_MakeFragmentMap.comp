@@ -19,10 +19,9 @@ void main()
 	id = clamp(id, ivec2(0), u_gi2d_info.m_resolution.xy);
 
 	int tiled_1D_index = id.x + id.y*u_gi2d_info.m_resolution.x; 
-	vec3 albedo = b_fragment[tiled_1D_index].albedo.xyz;
-	float emissive = b_fragment[tiled_1D_index].albedo.w;
-	bool is_fragment = (emissive <= 0.0) &&  dot(albedo, albedo) >= 0.01;
-	bool is_emissive = (emissive >= 1.);
+	vec3 albedo = getRGB(b_fragment[tiled_1D_index]);
+	bool is_fragment = isDiffuse(b_fragment[tiled_1D_index]);
+	bool is_emissive = isEmissive(b_fragment[tiled_1D_index]);
 
 	uint power = packEmissive(albedo*LightPower);
 	b_light[getMemoryOrder(ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y))] = is_emissive ? power : 0;
