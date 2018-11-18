@@ -13,6 +13,10 @@
 struct ImGuiContext;
 
 
+struct RenderTargetInfo
+{
+	ivec2 m_size;
+};
 struct RenderTarget
 {
 	vk::ImageCreateInfo m_info;
@@ -29,7 +33,7 @@ struct RenderTarget
 	vk::Extent2D m_resolution;
 
 	vk::UniqueDescriptorSet m_descriptor;
-	btr::BufferMemoryEx<ivec2> u_render_info;
+	btr::BufferMemoryEx<RenderTargetInfo> u_render_info;
 
 	static vk::UniqueDescriptorSetLayout s_descriptor_set_layout;
 };

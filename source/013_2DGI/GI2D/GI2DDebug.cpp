@@ -52,45 +52,59 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 		rect.emplace_back(Fragment{ ivec4{ 350, 350, 55, 1 }, vec4{ 1.f,0.f,0.f,0.f } });
 		rect.emplace_back(Fragment{ ivec4{ 350, 400, 55, 1 }, vec4{ 1.f,0.f,0.f,0.f } });
 #else
-		for (int i = 0; i < 0; i++) {
+		for (int i = 0; i < 300; i++) {
 			rect.emplace_back(Fragment{ ivec4{ std::rand() % 1024, std::rand() % 1024, std::rand() % 44+5, std::rand() % 44+5 }, vec4{ 0.8f,0.2f,0.2f,0.f } });
 		}
 
 #endif
-
-// 		for (size_t y = 0; y < gi2d_context->RenderHeight; y++)
-// 		{
-// 			for (size_t x = 0; x < gi2d_context->RenderWidth; x++)
-// 			{
-// 				auto& m = map_data[x + y * gi2d_context->RenderWidth];
-// 				m.albedo = vec4(1.f, 1.0f, 1.0f, 0.1f);
-// 				for (auto& r : rect)
-// 				{
-// 					if (x >= r.rect.x && y >= r.rect.y && x <= r.rect.x + r.rect.z && y <= r.rect.y + r.rect.w) {
-// 						m.albedo = r.color;
-// 						break;
-// 					}
-// 				}
-// 			}
-// 
-// 		}
 
 		for (size_t y = 0; y < gi2d_context->RenderHeight; y++)
 		{
 			for (size_t x = 0; x < gi2d_context->RenderWidth; x++)
 			{
 				auto& m = map_data[x + y * gi2d_context->RenderWidth];
-				m.setRGB(vec3(1.f, 1.0f, 1.0f));
-				m.is_diffuse = 0;
-				m.is_emissive = 0;
-				if (x == 0 || x == gi2d_context->RenderWidth - 1 || y == 0 || y == gi2d_context->RenderHeight - 1) 
+ 				m.setRGB(vec3(1.f, 1.0f, 1.0f));
+ 				m.is_diffuse = 0;
+ 				m.is_emissive = 0;
+
+ 				if (x == 0 || x == gi2d_context->RenderWidth - 1 || y == 0 || y == gi2d_context->RenderHeight - 1) 
+ 				{
+ 					m.setRGB(vec3(0.8f, 0.2f, 0.2f));
+ 					m.is_diffuse = 1;
+ 				}
+				else
 				{
-					m.setRGB(vec3(0.8f, 0.2f, 0.2f));
-					m.is_diffuse = 1;
+					for (auto& r : rect)
+					{
+						if (x >= r.rect.x && y >= r.rect.y && x <= r.rect.x + r.rect.z && y <= r.rect.y + r.rect.w) {
+							m.setRGB(vec3(0.8f, 0.2f, 0.2f));
+							m.is_diffuse = 1;
+							break;
+						}
+					}
+
 				}
+
 			}
 
 		}
+
+// 		for (size_t y = 0; y < gi2d_context->RenderHeight; y++)
+// 		{
+// 			for (size_t x = 0; x < gi2d_context->RenderWidth; x++)
+// 			{
+// 				auto& m = map_data[x + y * gi2d_context->RenderWidth];
+// 				m.setRGB(vec3(1.f, 1.0f, 1.0f));
+// 				m.is_diffuse = 0;
+// 				m.is_emissive = 0;
+// 				if (x == 0 || x == gi2d_context->RenderWidth - 1 || y == 0 || y == gi2d_context->RenderHeight - 1) 
+// 				{
+// 					m.setRGB(vec3(0.8f, 0.2f, 0.2f));
+// 					m.is_diffuse = 1;
+// 				}
+// 			}
+// 
+// 		}
 	}
 
 

@@ -148,7 +148,7 @@ struct GI2DMakeHierarchy
 			cmd.dispatch(num.x, num.y, num.z);
 		}
 
-		// make sdf
+/*		// make sdf
 		if(0)
 		{
 			{
@@ -182,6 +182,7 @@ struct GI2DMakeHierarchy
 				cmd.dispatch(num.x, num.y, num.z);
 			}
 		}
+*/
 	}
 
 	void executeHierarchy(vk::CommandBuffer cmd)

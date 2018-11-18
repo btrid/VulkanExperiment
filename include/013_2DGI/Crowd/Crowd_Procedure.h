@@ -158,7 +158,7 @@ struct Crowd_Procedure
 				.setStage(shader_info[6])
 				.setLayout(m_pipeline_layout[PipelineLayout_Crowd].get()),
 				vk::ComputePipelineCreateInfo()
-				.setStage(shader_info[6])
+				.setStage(shader_info[7])
 				.setLayout(m_pipeline_layout[PipelineLayout_DrawField].get()),
 			};
 			auto compute_pipeline = context->m_context->m_device->createComputePipelinesUnique(context->m_context->m_cache.get(), compute_pipeline_info);
@@ -298,7 +298,7 @@ struct Crowd_Procedure
 		};
 
 		uint32_t offset[array_length(descriptors)] = {};
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Crowd].get(), 0, array_length(descriptors), descriptors, array_length(offset), offset);
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_DrawField].get(), 0, array_length(descriptors), descriptors, array_length(offset), offset);
 
 		auto num = app::calcDipatchGroups(uvec3(render_target->m_info.extent.width, render_target->m_info.extent.height, 1), uvec3(32, 32, 1));
 		cmd.dispatch(num.x, num.y, num.z);

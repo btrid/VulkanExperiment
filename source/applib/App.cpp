@@ -653,10 +653,20 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 	m_front_buffer->m_resolution.height = m_front_buffer_info.extent.height;
 
 	{
-		m_front_buffer->u_render_info = context->m_uniform_memory.allocateMemory<ivec2>({ 1, {} });
-		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-		cmd.updateBuffer<ivec2>(m_front_buffer->u_render_info.getInfo().buffer, m_front_buffer->u_render_info.getInfo().range, ivec2(m_front_buffer->m_info.extent.width, m_front_buffer->m_info.extent.height));
+		m_front_buffer->u_render_info = context->m_uniform_memory.allocateMemory<RenderTargetInfo>({ 1, {} });
 
+		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+
+		auto staging = context->m_staging_memory.allocateMemory<RenderTargetInfo>({ 1, btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT });
+		staging.getMappedPtr()->m_size = ivec2(m_front_buffer->m_info.extent.width, m_front_buffer->m_info.extent.height);
+
+		vk::BufferCopy copy;
+		copy.setSrcOffset(staging.getInfo().offset);
+		copy.setDstOffset(m_front_buffer->u_render_info.getInfo().offset);
+		copy.setSize(staging.getInfo().range);
+		cmd.copyBuffer(staging.getInfo().buffer, m_front_buffer->u_render_info.getInfo().buffer, copy);
+	}
+	{
 		vk::DescriptorSetLayout layouts[] = {
 			RenderTarget::s_descriptor_set_layout.get(),
 		};

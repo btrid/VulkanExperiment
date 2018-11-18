@@ -66,10 +66,15 @@ layout(set=USE_SYSTEM, binding=0, std140) uniform SystemUniform {
 #endif
 
 #ifdef USE_RenderTarget
+struct RenderTargetInfo
+{
+	ivec2 m_size;
+};
+
 layout(set=USE_RenderTarget, binding=0, rgba16f) uniform image2D i_render_target;
 layout(set=USE_RenderTarget, binding=1, std140) uniform RenderInfo
 {
-	ivec2 u_render_size;
+	RenderTargetInfo u_render_info;
 
 };
 

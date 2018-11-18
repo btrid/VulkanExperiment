@@ -6,10 +6,10 @@
 namespace gi2d
 {
 
-struct GI2DDebug : public GI2DPipeline
+struct GI2DDebug
 {
 	GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context);
-	void execute(vk::CommandBuffer cmd) override;
+	void execute(vk::CommandBuffer cmd);
 
 	std::shared_ptr<btr::Context> m_context;
 	std::shared_ptr<GI2DContext> m_gi2d_context;
