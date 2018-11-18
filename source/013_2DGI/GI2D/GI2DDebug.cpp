@@ -15,8 +15,39 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 {
 	m_context = context;
 	m_gi2d_context = gi2d_context;
-	std::vector<GI2DContext::Fragment> map_data(gi2d_context->RenderWidth*gi2d_context->RenderHeight);
+	GI2DContext::Fragment wall(vec3(0.8f, 0.2f, 0.2f), true, false);
+	GI2DContext::Fragment path(vec3(1.f), false, false);
+	std::vector<GI2DContext::Fragment> map_data(gi2d_context->RenderWidth*gi2d_context->RenderHeight, path);
 	{
+
+#if 1
+		for (int y = 0; y < gi2d_context->RenderHeight; y++)
+		{
+			for (int x = 0; x < gi2d_context->RenderWidth; x++)
+			{
+//				uint64_t m = 0;
+//				for (int i = 0; i < 64; i++)
+				auto& m = map_data[x + y * gi2d_context->RenderWidth];
+				{
+					//m |= glm::simplex(vec2(x * 8 + i % 8, y * 8 + i / 8) / 80.f) >= abs(0.2f) ? (1ull << i) : 0ull;
+					m = glm::simplex(vec2(x,y) / 256.f) >= abs(0.5f) ? wall : path;
+				}
+			}
+		}
+
+		//ŽlŠp‚ÅˆÍ‚Þ
+		for (int32_t y = 0; y < gi2d_context->RenderHeight; y++)
+		{
+			map_data[0 + y * gi2d_context->RenderWidth] = wall;
+			map_data[(gi2d_context->RenderWidth - 1) + y * gi2d_context->RenderWidth] = wall;
+		}
+		for (int32_t x = 0; x < gi2d_context->RenderWidth; x++)
+		{
+			map_data[x + 0 * gi2d_context->RenderWidth] = wall;
+			map_data[x + (gi2d_context->RenderHeight - 1) * gi2d_context->RenderWidth] = wall;
+		}
+
+#else
 		struct Fragment
 		{
 			ivec4 rect;
@@ -25,60 +56,26 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 			bool is_emissive;
 		};
 		std::vector<Fragment> rect;
-// 		rect.emplace_back(Fragment{ ivec4{ 200, 400, 10, 4 }, vec4{0.0f,0.0f,0.6f,1.f} });
-// 		rect.emplace_back(Fragment{ ivec4{ 300, 40, 8, 10 }, vec4{ 0.6f,0.0f,0.f,1.f } });
-// 		rect.emplace_back(Fragment{ ivec4{ 270, 150, 4, 10 }, vec4{ 0.f,0.6f,0.f,1.f } });
-// 		rect.emplace_back(Fragment{ ivec4{ 50, 200, 6, 6 }, vec4{ 0.5f,0.5f,0.5f,1.f } });
-#if 0
-//		rect.emplace_back(Fragment{ ivec4{ 200, 150, 100, 100}, vec4{ 1.f,0.f,0.f,0.f } });
-//		rect.emplace_back(Fragment{ ivec4{ 80, 50, 500, 20 }, vec4{ 1.f,0.f,0.f,0.f } });
-		rect.emplace_back(Fragment{ ivec4{ 20, 0, 1, 550 }, vec4{ 1.f,0.f,0.f,0.f } });
-		rect.emplace_back(Fragment{ ivec4{ 500, 0, 1, 550 }, vec4{ 1.f,0.f,0.f,0.f } });
-		rect.emplace_back(Fragment{ ivec4{ 0, 50, 500, 1 }, vec4{ 1.f,0.f,0.f,0.f } });
-		rect.emplace_back(Fragment{ ivec4{ 0, 420, 500, 1 }, vec4{ 1.f,0.f,0.f,0.f } });
-
-		rect.emplace_back(Fragment{ ivec4{ 150, 250, 1, 55 }, vec4{ 1.f,0.f,0.f,0.f } });
-		rect.emplace_back(Fragment{ ivec4{ 200, 250, 1, 55 }, vec4{ 1.f,0.f,0.f,0.f } });
-//		rect.emplace_back(Fragment{ ivec4{ 150, 250, 55, 1 }, vec4{ 1.f,0.f,0.f,0.f } });
-		rect.emplace_back(Fragment{ ivec4{ 150, 300, 55, 1 }, vec4{ 1.f,0.f,0.f,0.f } });
-
-		rect.emplace_back(Fragment{ ivec4{ 250, 250, 1, 55 }, vec4{ 1.f,0.f,0.f,0.f } });
-		rect.emplace_back(Fragment{ ivec4{ 300, 250, 1, 55 }, vec4{ 1.f,0.f,0.f,0.f } });
-		rect.emplace_back(Fragment{ ivec4{ 250, 250, 55, 1 }, vec4{ 1.f,0.f,0.f,0.f } });
-		rect.emplace_back(Fragment{ ivec4{ 250, 300, 55, 1 }, vec4{ 1.f,0.f,0.f,0.f } });
-
-		rect.emplace_back(Fragment{ ivec4{ 350, 350, 1, 55 }, vec4{ 1.f,0.f,0.f,0.f } });
-		rect.emplace_back(Fragment{ ivec4{ 400, 350, 1, 55 }, vec4{ 1.f,0.f,0.f,0.f } });
-		rect.emplace_back(Fragment{ ivec4{ 350, 350, 55, 1 }, vec4{ 1.f,0.f,0.f,0.f } });
-		rect.emplace_back(Fragment{ ivec4{ 350, 400, 55, 1 }, vec4{ 1.f,0.f,0.f,0.f } });
-#else
 		for (int i = 0; i < 300; i++) {
 			rect.emplace_back(Fragment{ ivec4{ std::rand() % 1024, std::rand() % 1024, std::rand() % 44+5, std::rand() % 44+5 }, vec4{ 0.8f,0.2f,0.2f,0.f } });
 		}
-
-#endif
-
 		for (size_t y = 0; y < gi2d_context->RenderHeight; y++)
 		{
 			for (size_t x = 0; x < gi2d_context->RenderWidth; x++)
 			{
 				auto& m = map_data[x + y * gi2d_context->RenderWidth];
- 				m.setRGB(vec3(1.f, 1.0f, 1.0f));
- 				m.is_diffuse = 0;
- 				m.is_emissive = 0;
 
- 				if (x == 0 || x == gi2d_context->RenderWidth - 1 || y == 0 || y == gi2d_context->RenderHeight - 1) 
- 				{
- 					m.setRGB(vec3(0.8f, 0.2f, 0.2f));
- 					m.is_diffuse = 1;
- 				}
+				if (x == 0 || x == gi2d_context->RenderWidth - 1 || y == 0 || y == gi2d_context->RenderHeight - 1)
+				{
+			 		//ŽlŠp‚ÅˆÍ‚Þ
+					m = wall;
+				}
 				else
 				{
 					for (auto& r : rect)
 					{
 						if (x >= r.rect.x && y >= r.rect.y && x <= r.rect.x + r.rect.z && y <= r.rect.y + r.rect.w) {
-							m.setRGB(vec3(0.8f, 0.2f, 0.2f));
-							m.is_diffuse = 1;
+							m = wall;
 							break;
 						}
 					}
@@ -89,22 +86,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 
 		}
 
-// 		for (size_t y = 0; y < gi2d_context->RenderHeight; y++)
-// 		{
-// 			for (size_t x = 0; x < gi2d_context->RenderWidth; x++)
-// 			{
-// 				auto& m = map_data[x + y * gi2d_context->RenderWidth];
-// 				m.setRGB(vec3(1.f, 1.0f, 1.0f));
-// 				m.is_diffuse = 0;
-// 				m.is_emissive = 0;
-// 				if (x == 0 || x == gi2d_context->RenderWidth - 1 || y == 0 || y == gi2d_context->RenderHeight - 1) 
-// 				{
-// 					m.setRGB(vec3(0.8f, 0.2f, 0.2f));
-// 					m.is_diffuse = 1;
-// 				}
-// 			}
-// 
-// 		}
+#endif
 	}
 
 

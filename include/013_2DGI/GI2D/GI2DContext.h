@@ -42,6 +42,14 @@ struct GI2DContext
 		uint32_t data : 30;
 		uint32_t is_diffuse : 1;
 		uint32_t is_emissive : 1;
+		Fragment()
+		{}
+		Fragment(const vec3& rgb, bool d, bool e)
+		{
+			data = packRGB(rgb);
+			is_diffuse = d ? 1 : 0;
+			is_emissive = e ? 1 : 0;
+		}
 #define _maxf (1023.f)
 #define _maxi (1023)
 		static uint packRGB(const vec3& rgb)
