@@ -95,6 +95,8 @@ int pathFinding()
 	auto anime_cmd = animater.createCmd(player_model);
 	auto render_cmd = renderer.createCmd(player_model);
 
+	crowd_procedure.executeMakeRay(cmd);
+
 	app.setup();
 
 	while (true)
@@ -107,7 +109,6 @@ int pathFinding()
 			{
 				cmd_model_update,
 				cmd_render_clear,
-				cmd_crowd,
 				cmd_gi2d,
 				cmd_render_present,
 				cmd_num
@@ -115,18 +116,8 @@ int pathFinding()
 			std::vector<vk::CommandBuffer> cmds(cmd_num);
 
 			{
-			}
-
-			{
 //				cmds[cmd_render_clear] = clear_pipeline.execute();
 				cmds[cmd_render_present] = present_pipeline.execute();
-			}
-			// crowd
-			{
-				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
-//				crowd_updater.execute(cmd);
-				cmd.end();
-				cmds[cmd_crowd] = cmd;
 			}
 
 			// gi2d
@@ -152,9 +143,9 @@ int pathFinding()
 					std::vector<vk::CommandBuffer> render_cmds{ render_cmd.get() };
 					renderer.dispatchCmd(cmd, render_cmds);
 				}
-
-
+				crowd_procedure.executePathFinding(cmd);
 				crowd_procedure.executeDrawField(cmd, app.m_window->getFrontBuffer());
+
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;
 			}

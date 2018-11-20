@@ -1,0 +1,71 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Common.glsl"
+#include "btrlib/Math.glsl"
+
+#define USE_Crowd2D 0
+#include "Crowd.glsl"
+
+#define USE_GI2D 1
+#include "GI2D.glsl"
+
+#define TWO_PI (6.28318530)
+#define QUARTER_PI (0.7853981633)
+layout (local_size_x=256) in;
+void main()
+{
+	vec2 pos = b_crowd[0].m_target;
+
+	vec2 dir = MakeRayDir((TWO_PI / gl_WorkGroupSize.x) * (gl_GlobalInvocationID.x+0.5));
+	vec2 inv_dir = abs(1./dir);
+	dir *= min(inv_dir.x, inv_dir.y);
+
+	ivec2 map_index = ivec2(pos);
+	if(gl_GlobalInvocationID.x == 0)
+	{
+		atomicMin(b_light[getMemoryOrder(map_index.xy)], 1);
+	}
+
+	uint64_t map;
+	uint old_map_index = -1;
+	vec2 cell_origin = vec2(greaterThanEqual(dir, vec2(0.))) * vec2(8.);
+
+	for(; march_count < 10000; )
+	{
+		int skip = 1;
+		{
+			ivec2 cell = map_index>>3;
+			ivec2 cell_sub = map_index%8;
+			uint dindex = cell.x + cell.y*reso.z;
+			if(old_map_index != dindex)
+			{
+				map.x = b_diffuse_map[dindex];
+				old_map_index = dindex;
+
+				if(map == 0ul)
+				{
+					vec2 pos_sub = vec2(pos - vec2(cell << 3));
+					vec2 tp = vec2(abs(cell_origin - pos_sub)) / abs(dir);
+					int _axis = tp.x < tp.y ? 0 : 1;
+					skip = int(max(tp[_axis], 1.));
+				}
+			}
+
+			bool attr = (map & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0ul;
+			if(attr.x)
+			{
+				// 当たったところに印
+				atomicMin(b_light[getMemoryOrder(map_index.xy)], 1<<1);
+				break;
+			}
+
+		}
+		{
+			march_count += skip;
+			pos = ray.origin + dir*march_count;
+			map_index = ivec2(pos);
+		}
+	}
+}
