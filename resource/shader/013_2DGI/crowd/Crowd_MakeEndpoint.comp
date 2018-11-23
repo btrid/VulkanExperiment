@@ -16,7 +16,9 @@
 layout (local_size_x=256) in;
 void main()
 {
-	vec2 pos = b_crowd[0].m_target;
+	vec2 begin = b_crowd[0].target;
+	ivec4 reso = u_gi2d_info.m_resolution;
+	vec2 pos = b_crowd[0].target;
 
 	vec2 dir = MakeRayDir((TWO_PI / gl_WorkGroupSize.x) * (gl_GlobalInvocationID.x+0.5));
 	vec2 inv_dir = abs(1./dir);
@@ -25,14 +27,15 @@ void main()
 	ivec2 map_index = ivec2(pos);
 	if(gl_GlobalInvocationID.x == 0)
 	{
-		atomicMin(b_light[getMemoryOrder(map_index.xy)], 1);
+		// 初期位置に印
+		atomicMin(b_node[getMemoryOrder(map_index.xy)].value, 0);
 	}
 
 	uint64_t map;
 	uint old_map_index = -1;
 	vec2 cell_origin = vec2(greaterThanEqual(dir, vec2(0.))) * vec2(8.);
 
-	for(; march_count < 10000; )
+	for(uint march_count = 0; march_count < 10000; )
 	{
 		int skip = 1;
 		{
@@ -57,15 +60,21 @@ void main()
 			if(attr.x)
 			{
 				// 当たったところに印
-				atomicMin(b_light[getMemoryOrder(map_index.xy)], 1<<1);
+				atomicMin(b_node[getMemoryOrder(map_index.xy)].value, march_count);
 				break;
 			}
 
 		}
 		{
 			march_count += skip;
-			pos = ray.origin + dir*march_count;
+			pos = begin + dir*march_count;
 			map_index = ivec2(pos);
+
+			ivec2 is_die = ivec2(greaterThanEqual(map_index, reso.xy)) + ivec2(lessThan(map_index, ivec2(0)));
+			if(any(notEqual(is_die.xy, ivec2(0))))
+			{
+				break;
+			}
 		}
 	}
 }

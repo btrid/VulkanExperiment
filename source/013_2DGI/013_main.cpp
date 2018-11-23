@@ -197,7 +197,7 @@ int main()
 	gi2d_desc.RenderWidth = 1024*4;
 	gi2d_desc.RenderHeight = 1024*4;
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context, gi2d_desc);
-	std::shared_ptr<CrowdContext> crowd_context = std::make_shared<CrowdContext>(context);
+	std::shared_ptr<CrowdContext> crowd_context = std::make_shared<CrowdContext>(context, gi2d_context);
 
 	GI2DClear gi2d_clear(context, gi2d_context);
 	GI2DDebug gi2d_debug_make_fragment(context, gi2d_context);

@@ -81,7 +81,11 @@ struct CrowdContext
 		uint radiance;
 	};
 
-	CrowdContext(const std::shared_ptr<btr::Context>& context)
+	struct PathNode
+	{
+		uint value;
+	};
+	CrowdContext(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<gi2d::GI2DContext>& gi2d_context)
 	{
 		m_context = context;
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
@@ -114,6 +118,7 @@ struct CrowdContext
 					vk::DescriptorSetLayoutBinding(8, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(9, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(10, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(11, vk::DescriptorType::eStorageBuffer, 1, stage),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -140,11 +145,12 @@ struct CrowdContext
 			b_crowd = m_context->m_storage_memory.allocateMemory<CrowdData>({ m_crowd_info.crowd_data_max, {} });
 			b_unit = m_context->m_storage_memory.allocateMemory<UnitData>({ m_crowd_info.unit_data_max*2, {} });
 			b_unit_counter = m_context->m_storage_memory.allocateMemory<uvec4>({ 1, {} });
-			b_unit_link_head = m_context->m_storage_memory.allocateMemory<int32_t>({ 1024*1024/*m_gi2d_context->FragmentBufferSize*/, {} });
+			b_unit_link_head = m_context->m_storage_memory.allocateMemory<int32_t>({ gi2d_context->RenderWidth*gi2d_context->RenderHeight, {} });
 			b_ray_counter = m_context->m_storage_memory.allocateMemory<ivec4>({ Frame,{} });
 			b_segment_counter = m_context->m_storage_memory.allocateMemory<ivec4>({ 1,{} });
 			b_ray = m_context->m_storage_memory.allocateMemory<CrowdRay>({ m_crowd_info.ray_num_max,{} });
 			b_segment = m_context->m_storage_memory.allocateMemory<CrowdSegment>({ Segment_Num,{} });
+			b_node = m_context->m_storage_memory.allocateMemory<PathNode>({ gi2d_context->RenderWidth*gi2d_context->RenderHeight,{} });
 
 			vk::DescriptorBufferInfo uniforms[] = {
 				u_crowd_info.getInfo(),
@@ -156,6 +162,11 @@ struct CrowdContext
 				b_unit.getInfo(),
 				b_unit_counter.getInfo(),
 				b_unit_link_head.getInfo(),
+				b_ray.getInfo(),
+				b_ray_counter.getInfo(),
+				b_segment.getInfo(),
+				b_segment_counter.getInfo(),
+				b_node.getInfo(),
 			};
 			vk::WriteDescriptorSet write[] = {
 				vk::WriteDescriptorSet()
@@ -268,6 +279,7 @@ struct CrowdContext
 	btr::BufferMemoryEx<ivec4> b_ray_counter;
 	btr::BufferMemoryEx<CrowdSegment> b_segment;
 	btr::BufferMemoryEx<ivec4> b_segment_counter;
+	btr::BufferMemoryEx<PathNode> b_node;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;

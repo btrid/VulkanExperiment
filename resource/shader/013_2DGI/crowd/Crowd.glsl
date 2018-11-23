@@ -63,6 +63,11 @@ struct CrowdScene
 	int _p2;
 };
 
+struct PathNode
+{
+	uint value;
+};
+
 vec2 MakeRayDir(in float angle)
 {
 	float c = cos(angle);
@@ -106,7 +111,9 @@ layout(set=USE_Crowd2D, binding=9, std430) restrict buffer CSegmentBuffer {
 layout(set=USE_Crowd2D, binding=10) restrict buffer CSegmentCounter {
 	ivec4 b_segment_counter;
 };
-
+layout(set=USE_Crowd2D, binding=11) restrict buffer CPathNodeBuffer {
+	PathNode b_node[];
+};
 
 
 #endif

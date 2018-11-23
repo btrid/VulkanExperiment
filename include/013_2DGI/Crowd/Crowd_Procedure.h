@@ -66,6 +66,7 @@ struct Crowd_Procedure
 				"Crowd_RaySort.comp.spv",
 				"Crowd_SegmentMake.comp.spv",
 
+				"Crowd_MakeEndpoint.comp.spv",
 				"Crowd_SegmentBounce.comp.spv",
 
 				"Crowd_DrawField.comp.spv",
