@@ -51,10 +51,7 @@
 
 int pathFinding()
 {
-// 	PathFinding field;
-// 	Solver solver;
-// 	auto path = solver.executeSolve(field);
-// 	field.writeSolvePath(path, "path.txt");
+
 
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();

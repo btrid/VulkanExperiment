@@ -299,9 +299,12 @@ struct Crowd_Procedure
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
-			auto num = app::calcDipatchGroups(uvec3(8192, 64, m_context->m_crowd_info.frame_max), uvec3(64, 16, 1));
+			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth, 64, m_context->m_crowd_info.frame_max), uvec3(64, 16, 1));
 
-			cmd.pushConstants<std::tuple<ivec2, float, uint>>(m_pipeline_layout[PipelineLayout_MakeRay].get(), vk::ShaderStageFlagBits::eCompute, 0, { std::make_tuple(ivec2(8192), 4.f, 64) });
+			cmd.pushConstants<std::tuple<ivec2, float, uint>>(m_pipeline_layout[PipelineLayout_MakeRay].get(), vk::ShaderStageFlagBits::eCompute, 0,
+				{ std::make_tuple(ivec2(m_gi2d_context->RenderWidth), 4.f, 64) });
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RayMake].get());
 			cmd.dispatch(num.x, num.y, num.z);
 		}
 
@@ -317,6 +320,7 @@ struct Crowd_Procedure
 
 			}
 
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RaySort].get());
 			for (int step = 2; step <= m_context->m_crowd_info.ray_num_max; step <<= 1) {
 				for (int offset = step >> 1; offset > 0; offset = offset >> 1) {
 					cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayout_MakeRay].get(), vk::ShaderStageFlagBits::eCompute, 0, ivec2(step, offset));
@@ -350,13 +354,12 @@ struct Crowd_Procedure
 
 		auto num = app::calcDipatchGroups(uvec3(render_target->m_info.extent.width, render_target->m_info.extent.height, 1), uvec3(32, 32, 1));
 		cmd.dispatch(num.x, num.y, num.z);
-
 	}
+
 	void executePathFinding(vk::CommandBuffer cmd)
 	{
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_PathFinding].get(), 0, m_context->m_descriptor_set.get(), {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_PathFinding].get(), 1, m_gi2d_context->getDescriptorSet(), {});
-
 		{
 			// データクリア
 			cmd.updateBuffer<ivec4>(m_context->b_segment_counter.getInfo().buffer, m_context->b_segment_counter.getInfo().offset, ivec4(0, 1, 1, 0));
