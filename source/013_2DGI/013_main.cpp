@@ -51,7 +51,6 @@
 
 int pathFinding()
 {
-	using namespace gi2d;
 // 	PathFinding field;
 // 	Solver solver;
 // 	auto path = solver.executeSolve(field);
@@ -80,7 +79,7 @@ int pathFinding()
 	gi2d_desc.RenderWidth = 1024*4;
 	gi2d_desc.RenderHeight = 1024*4;
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context, gi2d_desc);
-	std::shared_ptr<CrowdContext> crowd_context = std::make_shared<CrowdContext>(context);
+	std::shared_ptr<CrowdContext> crowd_context = std::make_shared<CrowdContext>(context, gi2d_context);
 
 	GI2DClear gi2d_clear(context, gi2d_context);
 	GI2DDebug gi2d_debug_make_fragment(context, gi2d_context);
@@ -161,7 +160,6 @@ int pathFinding()
 int main()
 {
 
-	using namespace gi2d;
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = glm::vec3(0.f, 0.f, 1.f);
@@ -189,7 +187,7 @@ int main()
 	cModel model;
 	model.load(context, "..\\..\\resource\\tiny.x");
 	std::shared_ptr<AppModel> player_model = std::make_shared<AppModel>(context, appmodel_context, model.getResource(), 128);
-
+	
 	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
 	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchainPtr());
 

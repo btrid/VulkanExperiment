@@ -3,9 +3,6 @@
 #include <btrlib/Context.h>
 #include <013_2DGI/GI2D/GI2DContext.h>
 
-namespace gi2d
-{
-
 struct GI2DDebug
 {
 	GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context);
@@ -36,6 +33,3 @@ struct GI2DDebug
 	std::array<vk::UniquePipeline, PipelineNum> m_pipeline;
 
 };
-
-
-}

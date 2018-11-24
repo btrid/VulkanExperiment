@@ -2,8 +2,6 @@
 
 #include <013_2DGI/GI2D/GI2DContext.h>
 #include <applib/AppModel/AppModel.h>
-namespace gi2d
-{
 
 struct GI2DModelRender
 {
@@ -220,5 +218,3 @@ struct GI2DModelRender
 	std::shared_ptr<GI2DContext> m_gi2d_context;
 	std::shared_ptr<AppModelContext> m_appmodel_context;
 };
-
-}

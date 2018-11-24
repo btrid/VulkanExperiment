@@ -9,9 +9,6 @@
 #include <013_2DGI/GI2D/GI2DFluid.h>
 
 
-namespace gi2d
-{
-
 struct GI2DSoftbody
 {
 	enum 
@@ -301,5 +298,3 @@ struct GI2DSoftbody
 
 
 };
-
-}

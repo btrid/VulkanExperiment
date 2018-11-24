@@ -6,9 +6,6 @@
 #include <applib/App.h>
 #include <013_2DGI/GI2D/GI2DContext.h>
 
-namespace gi2d
-{
-
 struct GI2DMakeHierarchy
 {
 	enum Shader
@@ -217,4 +214,3 @@ struct GI2DMakeHierarchy
 
 };
 
-}

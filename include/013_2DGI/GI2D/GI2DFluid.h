@@ -8,9 +8,6 @@
 #include <applib/GraphicsResource.h>
 #include <013_2DGI/GI2D/GI2DContext.h>
 
-namespace gi2d
-{
-
 struct GI2DFluid
 {
 	enum
@@ -387,5 +384,3 @@ public:
 
 
 };
-
-}

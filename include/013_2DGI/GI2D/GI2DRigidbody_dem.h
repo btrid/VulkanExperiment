@@ -13,9 +13,6 @@ mat2 crossMatrix2(float a)
 	return mat2(0.f, a, -a, 0.f);
 }
 
-namespace gi2d
-{
-
 struct GI2DRigidbody_dem
 {
 	struct Rigidbody
@@ -435,5 +432,3 @@ struct GI2DRigidbody_dem
 
 
 };
-
-}

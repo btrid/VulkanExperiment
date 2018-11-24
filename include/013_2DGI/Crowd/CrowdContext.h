@@ -85,7 +85,8 @@ struct CrowdContext
 	{
 		uint value;
 	};
-	CrowdContext(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<gi2d::GI2DContext>& gi2d_context)
+
+	CrowdContext(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context)
 	{
 		m_context = context;
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);

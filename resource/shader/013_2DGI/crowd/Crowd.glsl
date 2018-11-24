@@ -50,9 +50,9 @@ struct CrowdRay
 struct CrowdSegment
 {
 	uint ray_index;
-	uint begin;
-	uint march;
-	uint radiance;
+	uint begin_march;
+	uint weight_a;
+	uint weight_b;
 };
 
 struct CrowdScene

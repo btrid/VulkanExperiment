@@ -1,9 +1,6 @@
 #include <013_2DGI/GI2D/GI2DDebug.h>
 #include <btrlib/cWindow.h>
 
-namespace gi2d
-{
-	
 
 struct GI2DLightData
 {
@@ -233,6 +230,4 @@ void GI2DDebug::execute(vk::CommandBuffer cmd)
 //   		cmd.dispatch(1, 1, 1);
 
 	}
-}
-
 }

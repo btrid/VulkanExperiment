@@ -3,8 +3,6 @@
 #include <memory>
 #include <btrlib/Define.h>
 #include <btrlib/Context.h>
-namespace gi2d
-{
 
 struct GI2DDescriptor
 {
@@ -266,5 +264,3 @@ struct GI2DPipeline
 {
 	virtual void execute(vk::CommandBuffer cmd) = 0;
 };
-
-}

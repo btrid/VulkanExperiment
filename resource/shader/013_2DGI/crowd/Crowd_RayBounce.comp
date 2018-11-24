@@ -16,27 +16,28 @@ void main()
 {
 	if(gl_GlobalInvocationID.x >= b_segment_counter.w){ return; }
 
-//	const int hierarchy = u_gi2d_scene.m_hierarchy;
-//	const ivec4 reso = u_gi2d_info.m_resolution;
-
 	CrowdSegment segment = b_segment[gl_GlobalInvocationID.x];
-//	if(segment.radiance == 0){ return; }
 	CrowdRay ray = b_ray[segment.ray_index];
 	vec2 dir = rotate(ray.angle);
 	vec2 inv_dir = abs(1./dir);
 	dir *= min(inv_dir.x, inv_dir.y);
 
 	{
-		vec4 pos = ray.origin.xyxy + vec4(segment.begin.xx, (segment.begin+segment.march).xx)*dir.xyxy;
+		uint begin = segment.begin_march>>16;
+		uint march = segment.begin_march&0xffff;
+		vec4 pos = ray.origin.xyxy + vec4(begin.xx, (begin+march).xx)*dir.xyxy;
 		ivec4 map_index = ivec4(pos);
 
-		uint radiance = 0;
-		radiance += b_light[getMemoryOrder(map_index.xy)];
-		radiance += b_light[getMemoryOrder(map_index.zw)];
+		uint a = b_node[getMemoryOrder(map_index.xy)].value;
+		uint b = b_node[getMemoryOrder(map_index.zw)].value;
 		
-		if(radiance != 0)
+		if(b!=-1 && a > b+march)
 		{
-			b_segment[gl_GlobalInvocationID.x].radiance += radiance;
+			b_segment[gl_GlobalInvocationID.x].weight_a = b+march;
+		}
+		else if(a!= -1 && b > a+march)
+		{
+			b_segment[gl_GlobalInvocationID.x].weight_b = a+march;
 		}
 	}
 

@@ -21,38 +21,21 @@ void main()
 	const ivec4 reso = u_gi2d_info.m_resolution;
 
 	CrowdSegment segment = b_segment[gl_GlobalInvocationID.x];
-	if(segment.radiance == 0){ return; }
-	vec3 f_radiance = unpackEmissive(segment.radiance);
+	if(segment.weight_a == -1 && segment.weight_b == -1){ return; }
+
 	CrowdRay ray = b_ray[segment.ray_index];
 	vec2 dir = rotate(ray.angle);
 	vec2 inv_dir = abs(1./dir);
 	dir *= min(inv_dir.x, inv_dir.y);
 
+	uint begin = segment.begin_march>>16;
+	uint march = segment.begin_march&0xffff;
 	{
-		vec4 pos = ray.origin.xyxy + vec4(segment.begin.xx, (segment.begin+segment.march).xx)*dir.xyxy;
+		vec4 pos = ray.origin.xyxy + vec4(begin.xx, (begin+march).xx)*dir.xyxy;
 		ivec4 map_index = ivec4(pos);
-		ivec4 cell = map_index>>3;
-		ivec4 cell_sub = map_index%8;
-		uvec2 dindex = cell.xz + cell.yw*reso.z;
-		ivec2 findex = map_index.xz + map_index.yw*reso.x;
 
-		u64vec2 bit = u64vec2(1ul)<<(cell_sub.xz+cell_sub.yw*8);
-
-		// 画面端では反射しない強引な実装
-		ivec4 outside = ivec4(greaterThanEqual(map_index, reso.xyxy-1)) + ivec4(lessThanEqual(map_index, ivec4(0)));
-//		ivec4 outside = ivec4(greaterThanEqual(map_index, reso.xyxy)) + ivec4(lessThan(map_index, ivec4(0)));
-		if(outside.xy == ivec2(0))
-		{
-			vec3 radiance = f_radiance * getRGB(b_fragment[findex.x]) / 3.14;
-			atomicAdd(b_light[getMemoryOrder(map_index.xy)], packEmissive(radiance));
-//			atomicOr(b_emissive_map[dindex.x], bit.x);
-		}
-		if(outside.zw == ivec2(0))
-		{
-			vec3 radiance = f_radiance * getRGB(b_fragment[findex.y]) / 3.14;
-			atomicAdd(b_light[getMemoryOrder(map_index.zw)], packEmissive(radiance));
-//			atomicOr(b_emissive_map[dindex.y], bit.y);
-		}
-		
+		(segment.weight_a != -1) ? atomicMin(b_node[getMemoryOrder(map_index.xy)].value, segment.weight_a): 0;
+		(segment.weight_b != -1) ? atomicMin(b_node[getMemoryOrder(map_index.zw)].value, segment.weight_b): 0;
 	}
+		
 }
