@@ -280,7 +280,7 @@ struct Crowd_Procedure
 
 		{
 			// データクリア
-			std::vector<ivec4> data = std::vector<ivec4>(m_context->m_crowd_info.frame_max, ivec4(0, 1, 1, 0));
+			std::vector<ivec4> data(m_context->m_crowd_info.frame_max, ivec4(0, 1, 1, 0));
 			cmd.updateBuffer(m_context->b_ray_counter.getInfo().buffer, m_context->b_ray_counter.getInfo().offset, vector_sizeof(data), data.data());
 		}
 
@@ -299,10 +299,10 @@ struct Crowd_Procedure
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
-			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth, 64, m_context->m_crowd_info.frame_max), uvec3(64, 16, 1));
+			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth, 256, m_context->m_crowd_info.frame_max), uvec3(64, 16, 1));
 
 			cmd.pushConstants<std::tuple<ivec2, float, uint>>(m_pipeline_layout[PipelineLayout_MakeRay].get(), vk::ShaderStageFlagBits::eCompute, 0,
-				{ std::make_tuple(ivec2(m_gi2d_context->RenderWidth), 4.f, 64) });
+				{ std::make_tuple(ivec2(m_gi2d_context->RenderWidth), 1.f, 256) });
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RayMake].get());
 			cmd.dispatch(num.x, num.y, num.z);
@@ -335,6 +335,14 @@ struct Crowd_Procedure
 				}
 			}
 		}
+
+		// 完了
+		vk::BufferMemoryBarrier to_read[] = {
+			m_context->b_ray_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			m_context->b_ray.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+		};
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+			0, nullptr, array_length(to_read), to_read, 0, nullptr);
 	}
 
 	void executeDrawField(vk::CommandBuffer cmd, const std::shared_ptr<RenderTarget>& render_target)
@@ -370,7 +378,6 @@ struct Crowd_Procedure
 				// レイの範囲の生成
 				vk::BufferMemoryBarrier to_read[] = {
 					m_gi2d_context->b_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-					m_gi2d_context->b_light.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 					m_context->b_ray_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
 					m_context->b_segment_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 				};
@@ -378,8 +385,6 @@ struct Crowd_Procedure
 					0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_SegmentMake].get());
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_PathFinding].get(), 0, m_context->m_descriptor_set.get(), {});
-				cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_PathFinding].get(), 1, m_gi2d_context->getDescriptorSet(), {});
 				cmd.dispatchIndirect(m_context->b_ray_counter.getInfo().buffer, m_context->b_ray_counter.getInfo().offset /*+ sizeof(ivec4)*m_gi2d_context->m_gi2d_scene.m_frame*/);
 			}
 		}
@@ -389,7 +394,7 @@ struct Crowd_Procedure
 				m_context->b_node.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderWrite),
 			};
 
-			cmd.fillBuffer(m_context->b_node.getInfo().buffer, m_context->b_node.getInfo().offset, m_context->b_node.getInfo().range, 0);
+			cmd.fillBuffer(m_context->b_node.getInfo().buffer, m_context->b_node.getInfo().offset, m_context->b_node.getInfo().range, -1);
 
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, std::size(to_write), to_write, 0, nullptr);

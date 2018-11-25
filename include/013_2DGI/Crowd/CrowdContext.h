@@ -9,13 +9,7 @@ struct CrowdContext
 {
 	enum {
 		Frame = 4,
-		Reso = 8192,
-
 		Rot_Num = 64,
-		Ray_Frame_Num = 1024 * 256, // é¿ç€ÇÕÇ‡Ç§è≠Çµè≠Ç»Ç¢
-		Ray_All_Num = Ray_Frame_Num * Frame,
-		Segment_Num = Ray_Frame_Num * 8,// Ç∆ÇËÇ†Ç¶Ç∏ÇÃíl
-		Bounce_Num = 0,
 	};
 
 	struct CrowdInfo
@@ -91,6 +85,9 @@ struct CrowdContext
 		m_context = context;
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
+		auto Ray_Frame_Num = gi2d_context->RenderWidth * Rot_Num; // é¿ç€ÇÕÇ‡Ç§è≠Çµè≠Ç»Ç¢
+		auto Ray_All_Num = Ray_Frame_Num * Frame;
+		auto Segment_Num = Ray_Frame_Num * 8; // Ç∆ÇËÇ†Ç¶Ç∏ÇÃíl
 		{
 			m_crowd_info.crowd_info_max = 1;
 			m_crowd_info.unit_info_max = 16;

@@ -8,10 +8,7 @@
 #define USE_Crowd2D 0
 #include "Crowd.glsl"
 
-#define USE_SYSTEM 1
-#include "applib/System.glsl"
-
-#define USE_GI2D 2
+#define USE_GI2D 1
 #include "GI2D.glsl"
 
 #define TWO_PI (6.28318530)
@@ -23,85 +20,25 @@ void main()
 
 	const ivec4 reso = u_gi2d_info.m_resolution;
 
-	uint ray_index = gl_GlobalInvocationID.x + u_crowd_info.ray_frame_max*u_crowd_scene.m_frame;
-	CrowdRay ray = b_ray[ray_index];
-	vec2 pos = ray.origin;
+	CrowdSegment segment = b_segment[gl_GlobalInvocationID.x];
+	if(segment.weight_a == -1 && segment.weight_b == -1){ return; }
+
+	CrowdRay ray = b_ray[segment.ray_index];
+
 	vec2 dir = MakeRayDir(ray.angle);
 	vec2 inv_dir = abs(1./dir);
 	dir *= min(inv_dir.x, inv_dir.y);
-	ivec2 map_index = ivec2(pos);
 
-	uint64_t map;
-	uint old_map_index = -1;
-	vec2 cell_origin = vec2(greaterThanEqual(dir, vec2(0.))) * vec2(8.);
-
-	CrowdSegment seg;
-	seg.ray_index = ray_index;
-	seg.begin = 0;
-	seg.march = 0;
-	seg.radiance = 0;
-	int march_count = 0;
-	for(; march_count < ray.march; )
+	uint begin = segment.begin_march>>16;
+	uint march = segment.begin_march&0xffff;
+	uint march_count = 0;
+	do 
 	{
-		int skip = 1;
-		{
-			ivec2 cell = map_index>>3;
-			ivec2 cell_sub = map_index%8;
-			uint dindex = cell.x + cell.y*reso.z;
-			if(old_map_index != dindex)
-			{
-				map.x = b_diffuse_map[dindex];
-				old_map_index = dindex;
+		vec2 pos = ray.origin + (begin+march_count)*dir;
+		ivec2 map_index = ivec2(pos);
 
-				if(map == 0ul)
-				{
-					vec2 pos_sub = vec2(pos - vec2(cell << 3));
-					vec2 tp = vec2(abs(cell_origin - pos_sub)) / abs(dir);
-					int _axis = tp.x < tp.y ? 0 : 1;
-					skip = int(max(tp[_axis], 1.));
-				}
-			}
+//		b_node[];
 
-			bool attr = (map & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0ul;
-			if(attr.x)
-			{
-				if(seg.march > 1)
-				{
-					int index = atomicAdd(b_segment_counter.w, 1);
-					if(index%1024==0){
-						atomicAdd(b_segment_counter.x, 1);
-					}
-					b_segment[index] = seg;
-				}
-				seg.begin = march_count;
-				seg.march = 0;
-				seg.radiance = 0;
-			}
-
-			{
-				seg.march+=skip;
-			}
-
-		}
-		// march
-		{
-			// DDA
-			march_count += skip;
-			pos = ray.origin + dir*march_count;
-			map_index = ivec2(pos);
-		}
 	}
-
-	// 行きすぎたら戻す
-	seg.march -= march_count-ray.march;
-	if(seg.march > 1)
-	{
-		int index = atomicAdd(b_segment_counter.w, 1);
-		if(index%1024==0){
-			atomicAdd(b_segment_counter.x, 1);
-		}
-		b_segment[index] = seg;
-	}
-
-
+	while(++march_count < march);
 }

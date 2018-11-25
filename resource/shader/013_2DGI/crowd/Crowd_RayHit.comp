@@ -28,9 +28,9 @@ void main()
 	vec2 inv_dir = abs(1./dir);
 	dir *= min(inv_dir.x, inv_dir.y);
 
-	uint begin = segment.begin_march>>16;
-	uint march = segment.begin_march&0xffff;
 	{
+		uint begin = segment.begin_march>>16;
+		uint march = segment.begin_march&0xffff;
 		vec4 pos = ray.origin.xyxy + vec4(begin.xx, (begin+march).xx)*dir.xyxy;
 		ivec4 map_index = ivec4(pos);
 

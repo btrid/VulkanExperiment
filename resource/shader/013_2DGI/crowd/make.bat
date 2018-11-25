@@ -20,8 +20,9 @@ rem %exe% %include% %option% -o %output%/Crowd_DrawDensityMap.comp.spv Crowd_Dra
 %exe% %include% %option% -o %output%/Crowd_MakeEndpoint.comp.spv Crowd_MakeEndpoint.comp
 %exe% %include% %option% -o %output%/Crowd_RayHit.comp.spv Crowd_RayHit.comp
 %exe% %include% %option% -o %output%/Crowd_RayBounce.comp.spv Crowd_RayBounce.comp
+%exe% %include% %option% -o %output%/Crowd_PathFinding.comp.spv Crowd_PathFinding.comp
 
 %exe% %include% %option% -o %output%/Crowd_CalcWorldMatrix.comp.spv Crowd_CalcWorldMatrix.comp
 %exe% %include% %option% -o %output%/Crowd_CrowdDebug.comp.spv Crowd_CrowdDebug.comp
 
-%exe% %include% %option% -o %output%/Crowd_DrawField.comp.spv Crowd_DrawField.comp
+%exe% %include% %option% -o %output%/Crowd_DrawField.comp.spv Crowd_DrawField.1.comp
