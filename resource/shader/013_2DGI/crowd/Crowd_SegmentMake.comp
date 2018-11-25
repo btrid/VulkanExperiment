@@ -8,7 +8,7 @@
 #define USE_Crowd2D 0
 #include "Crowd.glsl"
 
-#define USE_GI2D 2
+#define USE_GI2D 1
 #include "GI2D.glsl"
 
 #define TWO_PI (6.28318530)
@@ -86,17 +86,5 @@ void main()
 			map_index = ivec2(pos);
 		}
 	}
-
-/*	// 行きすぎたら戻す
-	seg.march -= march_count-ray.march;
-	if(seg.march > 1)
-	{
-		int index = atomicAdd(b_segment_counter.w, 1);
-		if(index%1024==0){
-			atomicAdd(b_segment_counter.x, 1);
-		}
-		b_segment[index] = seg;
-	}
-*/
 
 }

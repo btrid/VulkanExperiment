@@ -19,8 +19,6 @@ struct CrowdContext
 		uint32_t crowd_data_max;
 		uint32_t unit_data_max;
 
-		ivec2 resolution;
-
 		uint ray_num_max;
 		uint ray_frame_max;
 		uint frame_max;
