@@ -373,32 +373,42 @@ struct Crowd_Procedure
 			cmd.updateBuffer<ivec4>(m_context->b_segment_counter.getInfo().buffer, m_context->b_segment_counter.getInfo().offset, ivec4(0, 1, 1, 0));
 		}
 		{
+			// レイの範囲の生成
+			vk::BufferMemoryBarrier to_read[] = {
+				m_gi2d_context->b_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				m_context->b_segment_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader | vk::PipelineStageFlagBits::eDrawIndirect, {},
+				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
-			{
-				// レイの範囲の生成
-				vk::BufferMemoryBarrier to_read[] = {
-					m_gi2d_context->b_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-					m_context->b_segment_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-				};
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader | vk::PipelineStageFlagBits::eDrawIndirect, {},
-					0, nullptr, array_length(to_read), to_read, 0, nullptr);
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_SegmentMake].get());
+			cmd.dispatchIndirect(m_context->b_ray_counter.getInfo().buffer, m_context->b_ray_counter.getInfo().offset /*+ sizeof(ivec4)*m_gi2d_context->m_gi2d_scene.m_frame*/);
 
-				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_SegmentMake].get());
-				cmd.dispatchIndirect(m_context->b_ray_counter.getInfo().buffer, m_context->b_ray_counter.getInfo().offset /*+ sizeof(ivec4)*m_gi2d_context->m_gi2d_scene.m_frame*/);
-			}
 		}
 		{
 			// データクリア
 			vk::BufferMemoryBarrier to_write[] = {
-				m_context->b_node.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderWrite),
+				m_context->b_node.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eTransferWrite),
 			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+				0, nullptr, std::size(to_write), to_write, 0, nullptr);
 
 			cmd.fillBuffer(m_context->b_node.getInfo().buffer, m_context->b_node.getInfo().offset, m_context->b_node.getInfo().range, -1);
 
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
-				0, nullptr, std::size(to_write), to_write, 0, nullptr);
 		}
 
+		{
+			// ゴールの印をつける
+			vk::BufferMemoryBarrier to_read[] = {
+				m_context->b_node.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader | vk::PipelineStageFlagBits::eDrawIndirect, {},
+				0, nullptr, array_length(to_read), to_read, 0, nullptr);
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_EndpointMake].get());
+			cmd.dispatch(1, 1, 1);
+
+		}
 		// bounce
 		{
 

@@ -18,17 +18,17 @@ void main()
 {
 	vec2 begin = b_crowd[0].target;
 	ivec4 reso = u_gi2d_info.m_resolution;
-	vec2 pos = b_crowd[0].target;
 
 	vec2 dir = MakeRayDir((TWO_PI / gl_WorkGroupSize.x) * (gl_GlobalInvocationID.x+0.5));
 	vec2 inv_dir = abs(1./dir);
 	dir *= min(inv_dir.x, inv_dir.y);
 
+	vec2 pos = begin;
 	ivec2 map_index = ivec2(pos);
 	if(gl_GlobalInvocationID.x == 0)
 	{
 		// 初期位置に印
-		atomicMin(b_node[getMemoryOrder(map_index.xy)].value, 0);
+//		atomicMin(b_node[getMemoryOrder(map_index.xy)].value, 0);
 	}
 
 	uint64_t map;
@@ -63,6 +63,7 @@ void main()
 				atomicMin(b_node[getMemoryOrder(map_index.xy)].value, march_count);
 				break;
 			}
+//				atomicMin(b_node[getMemoryOrder(map_index.xy)].value, march_count);
 
 		}
 		{

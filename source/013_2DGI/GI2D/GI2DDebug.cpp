@@ -22,11 +22,8 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 		{
 			for (int x = 0; x < gi2d_context->RenderWidth; x++)
 			{
-//				uint64_t m = 0;
-//				for (int i = 0; i < 64; i++)
 				auto& m = map_data[x + y * gi2d_context->RenderWidth];
 				{
-					//m |= glm::simplex(vec2(x * 8 + i % 8, y * 8 + i / 8) / 80.f) >= abs(0.2f) ? (1ull << i) : 0ull;
 					m = glm::simplex(vec2(x,y) / 256.f) >= abs(0.5f) ? wall : path;
 				}
 			}
