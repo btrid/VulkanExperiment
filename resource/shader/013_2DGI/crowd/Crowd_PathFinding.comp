@@ -11,17 +11,15 @@
 #define USE_GI2D 1
 #include "GI2D.glsl"
 
-#define TWO_PI (6.28318530)
-#define QUARTER_PI (0.7853981633)
 layout (local_size_x=1024) in;
 void main()
 {
-	if(gl_GlobalInvocationID.x >= b_ray_counter[u_crowd_scene.m_frame].w){ return; }
+	if(gl_GlobalInvocationID.x >= b_segment_counter.w){ return; }
 
 	const ivec4 reso = u_gi2d_info.m_resolution;
 
 	CrowdSegment segment = b_segment[gl_GlobalInvocationID.x];
-	if(segment.weight_a == -1 && segment.weight_b == -1){ return; }
+//	if(segment.weight_a == 0xffffffff && segment.weight_b == 0xffffffff){ return; }
 
 	CrowdRay ray = b_ray[segment.ray_index];
 
@@ -31,14 +29,13 @@ void main()
 
 	uint begin = segment.begin_march>>16;
 	uint march = segment.begin_march&0xffff;
-	uint march_count = 0;
-	do 
+	uint march_count = 1;
+	do
 	{
 		vec2 pos = ray.origin + (begin+march_count)*dir;
 		ivec2 map_index = ivec2(pos);
 
-//		b_node[];
-
+		atomicMin(b_node[getMemoryOrder(map_index)].value, 1);
 	}
 	while(++march_count < march);
 }

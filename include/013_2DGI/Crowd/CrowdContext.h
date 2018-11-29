@@ -22,7 +22,7 @@ struct CrowdContext
 		uint ray_num_max;
 		uint ray_frame_max;
 		uint frame_max;
-		uint _p;
+		uint ray_angle_num;
 
 
 	};
@@ -95,7 +95,7 @@ struct CrowdContext
 			m_crowd_info.frame_max = Frame;
 			m_crowd_info.ray_num_max = Ray_All_Num;
 			m_crowd_info.ray_frame_max = Ray_Frame_Num;
-
+			m_crowd_info.ray_angle_num = Rot_Num;
 			m_crowd_scene.m_frame = 0;
 			m_crowd_scene.m_skip = 0;
 		}

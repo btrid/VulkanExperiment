@@ -11,7 +11,7 @@
 #define USE_GI2D 1
 #include "GI2D.glsl"
 
-layout (local_size_x = 1024, local_size_y = 1) in;
+layout (local_size_x = 1024) in;
 void main()
 {
 	if(gl_GlobalInvocationID.x >= b_segment_counter.w){ return; }
@@ -30,14 +30,17 @@ void main()
 
 		uint a = b_node[getMemoryOrder(map_index.xy)].value;
 		uint b = b_node[getMemoryOrder(map_index.zw)].value;
-		
-		if(b!=-1 && a > b+march)
+		a = segment.weight_b!=0xffffffff ? min(a, segment.weight_b+march) : a;
+		b = segment.weight_a!=0xffffffff ? min(a, segment.weight_a+march) : b;
+		if(b!=0xffffffff)
 		{
 			b_segment[gl_GlobalInvocationID.x].weight_a = b+march;
+			b_segment[gl_GlobalInvocationID.x].weight_b = b;
 		}
-		else if(a!= -1 && b > a+march)
+		if(a!=0xffffffff)
 		{
 			b_segment[gl_GlobalInvocationID.x].weight_b = a+march;
+			b_segment[gl_GlobalInvocationID.x].weight_a = a;
 		}
 	}
 

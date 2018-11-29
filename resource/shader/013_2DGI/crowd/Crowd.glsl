@@ -14,6 +14,7 @@ struct CrowdInfo
 	uint ray_num_max;
 	uint ray_frame_max; //!< 1frameにおけるRayの最大の数
 	uint frame_max;
+	uint ray_angle_num;
 
 };
 struct CrowdData

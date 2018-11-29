@@ -31,7 +31,6 @@ void main()
 	float angle = a * (gl_GlobalInvocationID.y+0.5);
 
 	uint y = uint(angle / HALF_PI);
-	if((gl_GlobalInvocationID.x+0.5) * constant.pos_scale > constant.reso[y%2]){ return; }
 
 	angle -= QUARTER_PI;
 	angle += HALF_PI;
@@ -40,13 +39,13 @@ void main()
 	dir *= min(inv_dir.x, inv_dir.y);
 
 	vec2 pos;
-	pos.x = (y==0) ? reso.x-0.1 : 0.1;
-	pos.y = (y==1) ? reso.y-0.1 : 0.1;
+	pos.x = (y==0) ? (reso.x-0.5) : 0.5;
+	pos.y = (y==1) ? (reso.y-0.5) : 0.5;
 	vec2 pdir;
 	pdir.x = (y%2==1) ? 1 : 0;
 	pdir.y = (y%2==0) ? 1 : 0;
 
-	pos += pdir*(gl_GlobalInvocationID.x + gl_WorkGroupID.z*(constant.pos_scale/gl_NumWorkGroups.z)) * constant.pos_scale;
+	pos += pdir*gl_GlobalInvocationID.x*constant.pos_scale;
 	vec2 begin = pos;
 	ivec2 map_index = ivec2(pos);
 
@@ -70,16 +69,15 @@ void main()
 		}
 	}
 
+	if(march_count <= 1) { return; }
 	// 2重になるのを禁止
 	switch(y)
 	{
 		case 2:
-//			if(map_index.x==reso.x){ return; }
-			if(map_index.y>=reso.y-1||map_index.y<=0){}else{ return; }
+			if(map_index.x==reso.x){ return; }
 			break;
 		case 3:
-//			if(map_index.y==reso.y){ return; }
-			if(map_index.x>=reso.x-1||map_index.x<=0){}else{ return; }
+			if(map_index.y==reso.y){ return; }
 			break;
 	}
 

@@ -11,8 +11,6 @@
 #define USE_GI2D 1
 #include "GI2D.glsl"
 
-#define TWO_PI (6.28318530)
-#define QUARTER_PI (0.7853981633)
 layout (local_size_x=1024) in;
 void main()
 {

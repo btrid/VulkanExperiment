@@ -1,4 +1,3 @@
-// セルをスキップしないレイトレ
 #version 450
 #extension GL_GOOGLE_include_directive : require
 
@@ -12,16 +11,15 @@
 #define USE_GI2D 1
 #include "GI2D.glsl"
 
-layout (local_size_x = 1024, local_size_y = 1) in;
+layout (local_size_x=1024) in;
 void main()
 {
 	if(gl_GlobalInvocationID.x >= b_segment_counter.w){ return; }
 
-	const int hierarchy = u_gi2d_scene.m_hierarchy;
 	const ivec4 reso = u_gi2d_info.m_resolution;
 
 	CrowdSegment segment = b_segment[gl_GlobalInvocationID.x];
-	if(segment.weight_a == -1 && segment.weight_b == -1){ return; }
+	if(segment.weight_a == 0xffffffff && segment.weight_b == 0xffffffff){ return; }
 
 	CrowdRay ray = b_ray[segment.ray_index];
 	vec2 dir = rotate(ray.angle);
@@ -34,8 +32,10 @@ void main()
 		vec4 pos = ray.origin.xyxy + vec4(begin.xx, (begin+march).xx)*dir.xyxy;
 		ivec4 map_index = ivec4(pos);
 
-		(segment.weight_a != -1) ? atomicMin(b_node[getMemoryOrder(map_index.xy)].value, segment.weight_a): 0;
-		(segment.weight_b != -1) ? atomicMin(b_node[getMemoryOrder(map_index.zw)].value, segment.weight_b): 0;
+//		(segment.weight_a != -1) ? atomicMin(b_node[getMemoryOrder(map_index.xy)].value, segment.weight_a): segment.weight_a;
+//		(segment.weight_b != -1) ? atomicMin(b_node[getMemoryOrder(map_index.zw)].value, segment.weight_b): segment.weight_b;
+		(segment.weight_a != 0xffffffff) ? atomicMin(b_node[getMemoryOrder(map_index.xy)].value, 1): segment.weight_a;
+		(segment.weight_b != 0xffffffff) ? atomicMin(b_node[getMemoryOrder(map_index.zw)].value, 1): segment.weight_b;
 	}
 		
 }
