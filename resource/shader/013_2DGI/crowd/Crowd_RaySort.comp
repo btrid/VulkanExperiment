@@ -44,7 +44,7 @@ void main()
 	}
 
 	//データないよ
-	uint num = u_crowd_info.ray_frame_max + b_ray_counter[frame_a].w;
+	uint num = frame_a*u_crowd_info.ray_frame_max + b_ray_counter[frame_a].w;
 	if(index_a >= num ||index_b >= num)
 	{
 		return;

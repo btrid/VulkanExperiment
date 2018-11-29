@@ -324,7 +324,7 @@ struct Crowd_Procedure
 			cmd.dispatch(num.x, num.y, num.z);
 		}
 
-/*		{
+		{
 			// レイのソート
 			{
 				vk::BufferMemoryBarrier to_read[] = {
@@ -336,22 +336,22 @@ struct Crowd_Procedure
 
 			}
 
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RaySort].get());
-			for (int step = 2; step <= m_context->m_crowd_info.ray_num_max; step <<= 1) {
-				for (int offset = step >> 1; offset > 0; offset = offset >> 1) {
-					cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayout_MakeRay].get(), vk::ShaderStageFlagBits::eCompute, 0, ivec2(step, offset));
-					auto num = app::calcDipatchGroups(uvec3(m_context->m_crowd_info.ray_num_max, 1, 1), uvec3(1024, 1, 1));
-					cmd.dispatch(num.x, num.y, num.z);
-
-					vk::BufferMemoryBarrier to_read[] = {
-						m_context->b_ray.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
-					};
-					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
-						0, nullptr, array_length(to_read), to_read, 0, nullptr);
-				}
-			}
+// 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RaySort].get());
+// 			for (int step = 2; step <= m_context->m_crowd_info.ray_num_max; step <<= 1) {
+// 				for (int offset = step >> 1; offset > 0; offset = offset >> 1) {
+// 					cmd.pushConstants<ivec2>(m_pipeline_layout[PipelineLayout_MakeRay].get(), vk::ShaderStageFlagBits::eCompute, 0, ivec2(step, offset));
+// 					auto num = app::calcDipatchGroups(uvec3(m_context->m_crowd_info.ray_num_max, 1, 1), uvec3(1024, 1, 1));
+// 					cmd.dispatch(num.x, num.y, num.z);
+// 
+// 					vk::BufferMemoryBarrier to_read[] = {
+// 						m_context->b_ray.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+// 					};
+// 					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+// 						0, nullptr, array_length(to_read), to_read, 0, nullptr);
+// 				}
+// 			}
 		}
-		*/
+
 		// 完了
 		vk::BufferMemoryBarrier to_read[] = {
 			m_context->b_ray_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
