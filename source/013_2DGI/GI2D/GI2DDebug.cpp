@@ -17,7 +17,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 	std::vector<GI2DContext::Fragment> map_data(gi2d_context->RenderWidth*gi2d_context->RenderHeight, path);
 	{
 
-#if 1
+#if 0
 		for (int y = 0; y < gi2d_context->RenderHeight; y++)
 		{
 			for (int x = 0; x < gi2d_context->RenderWidth; x++)
@@ -27,18 +27,6 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 					m = glm::simplex(vec2(x,y) / 256.f) >= abs(0.5f) ? wall : path;
 				}
 			}
-		}
-
-		//ŽlŠp‚ÅˆÍ‚Þ
-		for (int32_t y = 0; y < gi2d_context->RenderHeight; y++)
-		{
-			map_data[0 + y * gi2d_context->RenderWidth] = wall;
-			map_data[(gi2d_context->RenderWidth - 1) + y * gi2d_context->RenderWidth] = wall;
-		}
-		for (int32_t x = 0; x < gi2d_context->RenderWidth; x++)
-		{
-			map_data[x + 0 * gi2d_context->RenderWidth] = wall;
-			map_data[x + (gi2d_context->RenderHeight - 1) * gi2d_context->RenderWidth] = wall;
 		}
 
 #else
@@ -51,7 +39,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 		};
 		std::vector<Fragment> rect;
 		for (int i = 0; i < 300; i++) {
-			rect.emplace_back(Fragment{ ivec4{ std::rand() % 1024, std::rand() % 1024, std::rand() % 44+5, std::rand() % 44+5 }, vec4{ 0.8f,0.2f,0.2f,0.f } });
+			rect.emplace_back(Fragment{ ivec4{ std::rand() % gi2d_context->RenderWidth, std::rand() % gi2d_context->RenderHeight, std::rand() % 44+5, std::rand() % 44+5 }, vec4{ 0.8f,0.2f,0.2f,0.f } });
 		}
 		for (size_t y = 0; y < gi2d_context->RenderHeight; y++)
 		{
@@ -59,21 +47,12 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 			{
 				auto& m = map_data[x + y * gi2d_context->RenderWidth];
 
-				if (x == 0 || x == gi2d_context->RenderWidth - 1 || y == 0 || y == gi2d_context->RenderHeight - 1)
+				for (auto& r : rect)
 				{
-			 		//ŽlŠp‚ÅˆÍ‚Þ
-					m = wall;
-				}
-				else
-				{
-					for (auto& r : rect)
-					{
-						if (x >= r.rect.x && y >= r.rect.y && x <= r.rect.x + r.rect.z && y <= r.rect.y + r.rect.w) {
-							m = wall;
-							break;
-						}
+					if (x >= r.rect.x && y >= r.rect.y && x <= r.rect.x + r.rect.z && y <= r.rect.y + r.rect.w) {
+						m = wall;
+						break;
 					}
-
 				}
 
 			}
@@ -81,6 +60,18 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 		}
 
 #endif
+	}
+
+	//ŽlŠp‚ÅˆÍ‚Þ
+	for (int32_t y = 0; y < gi2d_context->RenderHeight; y++)
+	{
+		map_data[0 + y * gi2d_context->RenderWidth] = wall;
+		map_data[(gi2d_context->RenderWidth - 1) + y * gi2d_context->RenderWidth] = wall;
+	}
+	for (int32_t x = 0; x < gi2d_context->RenderWidth; x++)
+	{
+		map_data[x + 0 * gi2d_context->RenderWidth] = wall;
+		map_data[x + (gi2d_context->RenderHeight - 1) * gi2d_context->RenderWidth] = wall;
 	}
 
 
@@ -176,7 +167,7 @@ void GI2DDebug::execute(vk::CommandBuffer cmd)
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
-		static vec4 light_pos = vec4(800.f, 800.f, 200.f, 200.f);
+		static vec4 light_pos = vec4(800.f, 850.f, 200.f, 200.f);
 		float move = 3.f;
 		if (m_context->m_window->getInput().m_keyboard.isHold(VK_SPACE))
 		{

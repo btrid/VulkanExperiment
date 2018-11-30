@@ -391,7 +391,7 @@ struct Crowd_Procedure
 
 		}
 
-/*		{
+		{
 			// ƒS[ƒ‹‚Ìˆó‚ð‚Â‚¯‚é
 			vk::BufferMemoryBarrier to_read[] = {
 				m_context->b_node.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
@@ -403,6 +403,7 @@ struct Crowd_Procedure
 			cmd.dispatch(1, 1, 1);
 
 		}
+
 		// bounce
 		{
 
@@ -415,7 +416,7 @@ struct Crowd_Procedure
 					0, nullptr, array_length(to_read), to_read, 0, nullptr);
 			}
 
-			for (int i = 0; i < 100; i++)
+			for (int i = 0; i < 10; i++)
 			{
 				{
 					vk::BufferMemoryBarrier to_read[] =
@@ -445,7 +446,7 @@ struct Crowd_Procedure
 			}
 
 		}
-*/
+
 		{
 			vk::BufferMemoryBarrier to_read[] =
 			{

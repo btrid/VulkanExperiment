@@ -34,8 +34,8 @@ void main()
 
 //		(segment.weight_a != -1) ? atomicMin(b_node[getMemoryOrder(map_index.xy)].value, segment.weight_a): segment.weight_a;
 //		(segment.weight_b != -1) ? atomicMin(b_node[getMemoryOrder(map_index.zw)].value, segment.weight_b): segment.weight_b;
-		(segment.weight_a != 0xffffffff) ? atomicMin(b_node[getMemoryOrder(map_index.xy)].value, 1): segment.weight_a;
-		(segment.weight_b != 0xffffffff) ? atomicMin(b_node[getMemoryOrder(map_index.zw)].value, 1): segment.weight_b;
+		(segment.weight_a != 0xffffffff) ? atomicMin(b_node[getMemoryOrder(map_index.xy)].value, segment.weight_a): segment.weight_a;
+		(segment.weight_b != 0xffffffff) ? atomicMin(b_node[getMemoryOrder(map_index.zw)].value, segment.weight_b): segment.weight_b;
 	}
 		
 }

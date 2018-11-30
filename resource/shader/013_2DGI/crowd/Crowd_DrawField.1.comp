@@ -15,7 +15,15 @@
 #define USE_GI2D 2
 #include "GI2D.glsl"
 
-
+vec3 g_color[7] = {
+	vec3(0., 0., 0.),
+	vec3(0., 0., 1.),
+	vec3(0., 1., 1.),
+	vec3(0., 1., 0.),
+	vec3(1., 0., 1.),
+	vec3(1., 1., 0.),
+	vec3(1., 1., 1.),
+};
 layout (local_size_x=32, local_size_y=32) in;
 void main()
 {
@@ -25,7 +33,16 @@ void main()
 	ivec2 map_index = ivec2(index*rate);
 
 //	vec3 color = (b_diffuse_map[map_index.x + map_index.y*u_gi2d_info.m_resolution.z] & (1ul<<(map_bit.x+map_bit.y*8))) != 0 ? vec3(1.) : vec3(0.);
-	vec3 color = b_node[getMemoryOrder(map_index.xy)].value != -1 ? vec3(1.) : vec3(0.);
+	uint value = b_node[getMemoryOrder(map_index.xy)].value;
+	float fci = value == -1 ? 0. : (value/200.);
+	uint c0 = uint(floor(fci));
+	uint c1 = min(c0+1, 6);
+	float r = fci - c0;
+
+	vec3 color = mix(g_color[c0], g_color[c1], r);
+	color = value == 0 ? vec3(3.) : color;
+//	vec3 color = b_node[getMemoryOrder(map_index.xy)].value != -1 ? vec3(1.) : vec3(0.);
+
 	imageStore(i_render_target, index, vec4(color, 1.));
 
 }

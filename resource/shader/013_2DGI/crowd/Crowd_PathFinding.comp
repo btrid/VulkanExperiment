@@ -19,7 +19,7 @@ void main()
 	const ivec4 reso = u_gi2d_info.m_resolution;
 
 	CrowdSegment segment = b_segment[gl_GlobalInvocationID.x];
-//	if(segment.weight_a == 0xffffffff && segment.weight_b == 0xffffffff){ return; }
+	if(segment.weight_a == -1 && segment.weight_b == -1){ return; }
 
 	CrowdRay ray = b_ray[segment.ray_index];
 
@@ -35,7 +35,7 @@ void main()
 		vec2 pos = ray.origin + (begin+march_count)*dir;
 		ivec2 map_index = ivec2(pos);
 
-		atomicMin(b_node[getMemoryOrder(map_index)].value, 1);
+		atomicMin(b_node[getMemoryOrder(map_index)].value, segment.weight_a);
 	}
 	while(++march_count < march);
 }

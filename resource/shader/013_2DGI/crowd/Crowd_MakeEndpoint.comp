@@ -27,7 +27,7 @@ void main()
 	if(gl_GlobalInvocationID.x == 0)
 	{
 		// 初期位置に印
-//		atomicMin(b_node[getMemoryOrder(map_index.xy)].value, 0);
+		atomicMin(b_node[getMemoryOrder(map_index.xy)].value, 0);
 	}
 
 	uint64_t map;
@@ -51,7 +51,7 @@ void main()
 					vec2 pos_sub = vec2(pos - vec2(cell << 3));
 					vec2 tp = vec2(abs(cell_origin - pos_sub)) / abs(dir);
 					int _axis = tp.x < tp.y ? 0 : 1;
-					skip = int(max(tp[_axis], 1.));
+//					skip = int(max(tp[_axis], 1.));
 				}
 			}
 
@@ -62,7 +62,7 @@ void main()
 				atomicMin(b_node[getMemoryOrder(map_index.xy)].value, march_count);
 				break;
 			}
-//			atomicMin(b_node[getMemoryOrder(map_index.xy)].value, march_count);
+				atomicMin(b_node[getMemoryOrder(map_index.xy)].value, march_count);
 		}
 		{
 			march_count += skip;

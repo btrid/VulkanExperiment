@@ -52,7 +52,7 @@ struct Crowd_Debug
 
 	void execute(vk::CommandBuffer cmd)
 	{
-		static vec2 s_pos0 = vec2(800.f, 800.f);
+		static vec2 s_pos0 = vec2(1020.f, 1020.f);
 		static vec2 s_pos1 = vec2(200.f, 200.f);
 		float move = 3.f;
 		if (m_crowd_context->m_context->m_window->getInput().m_keyboard.isHold(VK_SPACE))
