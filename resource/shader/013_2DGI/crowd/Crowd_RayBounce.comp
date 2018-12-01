@@ -30,18 +30,16 @@ void main()
 
 		uint a = b_node[getMemoryOrder(map_index.xy)].value;
 		uint b = b_node[getMemoryOrder(map_index.zw)].value;
-//		a = segment.weight_b!=-1 ? min(a, segment.weight_b+march) : a;
-//		b = segment.weight_a!=-1 ? min(b, segment.weight_a+march) : b;
+		a = min(a, segment.weight_a);
+		b = min(b, segment.weight_b);
 
 		if(b!=-1 && a > b+march)
 		{
 			b_segment[gl_GlobalInvocationID.x].weight_a = b+march;
-//			b_segment[gl_GlobalInvocationID.x].weight_b = b;
 		}
-		else if(a!=-1 && b > a+march)
+		if(a!=-1 && b > a+march)
 		{
 			b_segment[gl_GlobalInvocationID.x].weight_b = a+march;
-//			b_segment[gl_GlobalInvocationID.x].weight_a = a;
 		}
 	}
 

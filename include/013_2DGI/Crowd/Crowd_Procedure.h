@@ -416,7 +416,7 @@ struct Crowd_Procedure
 					0, nullptr, array_length(to_read), to_read, 0, nullptr);
 			}
 
-			for (int i = 0; i < 10; i++)
+			for (int i = 0; i < 20; i++)
 			{
 				{
 					vk::BufferMemoryBarrier to_read[] =

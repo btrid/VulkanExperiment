@@ -28,8 +28,7 @@ void main()
 	ivec2 reso = constant.reso;
 
 	float a = TWO_PI / constant.rot_num;
-	float angle = a * (gl_GlobalInvocationID.y+0.5);
-
+	float angle = a * (gl_GlobalInvocationID.y+((gl_WorkGroupID.z+0.5) / gl_NumWorkGroups.z));
 	uint y = uint(angle / HALF_PI);
 
 	angle -= QUARTER_PI;

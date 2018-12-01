@@ -59,10 +59,10 @@ void main()
 			if(attr.x)
 			{
 				// 当たったところに印
-				atomicMin(b_node[getMemoryOrder(map_index.xy)].value, march_count);
+//				atomicMin(b_node[getMemoryOrder(map_index.xy)].value, march_count);
 				break;
 			}
-				atomicMin(b_node[getMemoryOrder(map_index.xy)].value, march_count);
+			atomicMin(b_node[getMemoryOrder(map_index.xy)].value, march_count);
 		}
 		{
 			march_count += skip;

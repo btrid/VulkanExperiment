@@ -19,7 +19,7 @@ void main()
 	const ivec4 reso = u_gi2d_info.m_resolution;
 
 	CrowdSegment segment = b_segment[gl_GlobalInvocationID.x];
-	if(segment.weight_a == 0xffffffff && segment.weight_b == 0xffffffff){ return; }
+	if(segment.weight_a == -1 && segment.weight_b == -1){ return; }
 
 	CrowdRay ray = b_ray[segment.ray_index];
 	vec2 dir = rotate(ray.angle);
@@ -32,10 +32,8 @@ void main()
 		vec4 pos = ray.origin.xyxy + vec4(begin.xx, (begin+march).xx)*dir.xyxy;
 		ivec4 map_index = ivec4(pos);
 
-//		(segment.weight_a != -1) ? atomicMin(b_node[getMemoryOrder(map_index.xy)].value, segment.weight_a): segment.weight_a;
-//		(segment.weight_b != -1) ? atomicMin(b_node[getMemoryOrder(map_index.zw)].value, segment.weight_b): segment.weight_b;
-		(segment.weight_a != 0xffffffff) ? atomicMin(b_node[getMemoryOrder(map_index.xy)].value, segment.weight_a): segment.weight_a;
-		(segment.weight_b != 0xffffffff) ? atomicMin(b_node[getMemoryOrder(map_index.zw)].value, segment.weight_b): segment.weight_b;
+		(segment.weight_a != -1) ? atomicMin(b_node[getMemoryOrder(map_index.xy)].value, segment.weight_a): segment.weight_a;
+		(segment.weight_b != -1) ? atomicMin(b_node[getMemoryOrder(map_index.zw)].value, segment.weight_b): segment.weight_b;
 	}
 		
 }
