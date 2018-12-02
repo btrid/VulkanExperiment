@@ -4,7 +4,7 @@
 #include <btrlib/Define.h>
 #include <btrlib/Context.h>
 
-struct GI2DDescriptor
+struct GI2DDescription
 {
 	int32_t RenderWidth;
 	int32_t RenderHeight;
@@ -85,7 +85,7 @@ struct GI2DContext
 		int32_t target;
 	};
 
-	GI2DContext(const std::shared_ptr<btr::Context>& context, const GI2DDescriptor& desc)
+	GI2DContext(const std::shared_ptr<btr::Context>& context, const GI2DDescription& desc)
 	{
  		RenderWidth = desc.RenderHeight;
  		RenderHeight = desc.RenderWidth;

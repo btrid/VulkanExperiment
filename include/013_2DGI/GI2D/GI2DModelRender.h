@@ -64,7 +64,7 @@ struct GI2DModelRender
 		// pipeline layout
 		{
 			vk::DescriptorSetLayout layouts[] = {
-				gi2d_context->getDescriptorSetLayout(),
+				gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data),
 				appmodel_context->getLayout(AppModelContext::DescriptorLayout_Model),
 				appmodel_context->getLayout(AppModelContext::DescriptorLayout_Render),
 			};

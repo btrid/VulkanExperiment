@@ -239,7 +239,7 @@ struct GI2DFluid
 		{
 			vk::DescriptorSetLayout layouts[] = {
 				m_descriptor_set_layout.get(),
-				gi2d_context->getDescriptorSetLayout(),
+				gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data),
 				sSystem::Order().getSystemDescriptorLayout(),
 			};
 

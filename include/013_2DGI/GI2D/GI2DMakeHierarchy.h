@@ -64,7 +64,7 @@ struct GI2DMakeHierarchy
 		// pipeline layout
 		{
 			vk::DescriptorSetLayout layouts[] = {
-				gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data)
+				gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
@@ -79,7 +79,8 @@ struct GI2DMakeHierarchy
 		}
 		{
 			vk::DescriptorSetLayout layouts[] = {
-				gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data)
+				gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data),
+				gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_SDF),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
@@ -90,7 +91,7 @@ struct GI2DMakeHierarchy
 			};
 			pipeline_layout_info.setPushConstantRangeCount(array_length(constants));
 			pipeline_layout_info.setPPushConstantRanges(constants);
-			m_pipeline_layout[PipelineLayout_Hierarchy] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PipelineLayout_SDF] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
 		// pipeline
@@ -130,10 +131,10 @@ struct GI2DMakeHierarchy
 				.setLayout(m_pipeline_layout[PipelineLayout_Hierarchy].get()),
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[4])
-				.setLayout(m_pipeline_layout[PipelineLayout_Hierarchy].get()),
+				.setLayout(m_pipeline_layout[PipelineLayout_SDF].get()),
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[5])
-				.setLayout(m_pipeline_layout[PipelineLayout_Hierarchy].get()),
+				.setLayout(m_pipeline_layout[PipelineLayout_SDF].get()),
 			};
 			auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
 			m_pipeline[Pipeline_MakeFragmentMap] = std::move(compute_pipeline[0]);
@@ -190,6 +191,8 @@ struct GI2DMakeHierarchy
 
 	void executeMakeSDF(vk::CommandBuffer cmd, const std::shared_ptr<GI2DSDF>& sdf_context)
 	{
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_SDF].get(), 0, sdf_context->getDescriptorSet(), {});
+
 		// make sdf
 		{
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeJFA].get());
@@ -204,7 +207,7 @@ struct GI2DMakeHierarchy
 					0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 
-				cmd.pushConstants<int32_t>(m_pipeline_layout[PipelineLayout_Hierarchy].get(), vk::ShaderStageFlagBits::eCompute, 0, distance);
+				cmd.pushConstants<int32_t>(m_pipeline_layout[PipelineLayout_SDF].get(), vk::ShaderStageFlagBits::eCompute, 0, distance);
 				cmd.dispatch(num.x, num.y, num.z);
 
 			}

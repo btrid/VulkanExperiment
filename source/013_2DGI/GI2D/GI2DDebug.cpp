@@ -108,7 +108,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 	// pipeline layout
 	{
 		vk::DescriptorSetLayout layouts[] = {
-			m_gi2d_context->getDescriptorSetLayout(),
+			m_gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data),
 		};
 		vk::PushConstantRange constants[] = {
 			vk::PushConstantRange().setOffset(0).setSize(sizeof(GI2DLightData)).setStageFlags(vk::ShaderStageFlagBits::eCompute),

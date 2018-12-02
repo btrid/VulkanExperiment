@@ -152,7 +152,7 @@ struct GI2DRigidbody_dem
 			{
 				vk::DescriptorSetLayout layouts[] = {
 					m_descriptor_set_layout.get(),
-					gi2d_context->getDescriptorSetLayout(),
+					gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data),
 				};
 
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;

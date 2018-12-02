@@ -198,7 +198,7 @@ struct GI2DRadiosity
 		// pipeline layout
 		{
 			vk::DescriptorSetLayout layouts[] = {
-				gi2d_context->getDescriptorSetLayout(),
+				gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data),
 				m_descriptor_set_layout.get(),
 			};
 

@@ -98,7 +98,7 @@ struct GI2DSoftbody
 			{
 				vk::DescriptorSetLayout layouts[] = {
 					m_descriptor_set_layout.get(),
-					m_gi2d_context->getDescriptorSetLayout(),
+					m_gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data),
 					m_gi2d_fluid->getDescriptorSetLayout(),
 					sSystem::Order().getSystemDescriptorLayout(),
 				};

@@ -72,7 +72,7 @@ int pathFinding()
 	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
 	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchainPtr());
 
-	GI2DDescriptor gi2d_desc;
+	GI2DDescription gi2d_desc;
 	gi2d_desc.RenderWidth = 1024;
 	gi2d_desc.RenderHeight = 1024;
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context, gi2d_desc);
@@ -188,7 +188,7 @@ int main()
 	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
 	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchainPtr());
 
-	GI2DDescriptor gi2d_desc;
+	GI2DDescription gi2d_desc;
 	gi2d_desc.RenderWidth = 1024;
 	gi2d_desc.RenderHeight = 1024;
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context, gi2d_desc);

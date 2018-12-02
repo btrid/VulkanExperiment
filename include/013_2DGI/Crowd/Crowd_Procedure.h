@@ -94,7 +94,7 @@ struct Crowd_Procedure
 				vk::DescriptorSetLayout layouts[] = {
 					context->getDescriptorSetLayout(),
 					sSystem::Order().getSystemDescriptorLayout(),
-					gi2d_context->getDescriptorSetLayout(),
+					gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data),
 					RenderTarget::s_descriptor_set_layout.get(),
 				};
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
@@ -126,7 +126,7 @@ struct Crowd_Procedure
 			{
 				vk::DescriptorSetLayout layouts[] = {
 					context->getDescriptorSetLayout(),
-					gi2d_context->getDescriptorSetLayout(),
+					gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data),
 					RenderTarget::s_descriptor_set_layout.get(),
 				};
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
