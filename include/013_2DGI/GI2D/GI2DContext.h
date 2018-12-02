@@ -79,18 +79,6 @@ struct GI2DContext
 		int32_t target;
 	};
 
-	// https://postd.cc/voronoi-diagrams/
-	struct D2JFACell
-	{
-		ivec2 nearest_index;
-		float distance;
-		int _p;
-		ivec2 e_nearest_index;
-		float e_distance;
-		int _ep;
-
-	};
-
 	GI2DContext(const std::shared_ptr<btr::Context>& context, const GI2DDescriptor& desc)
 	{
  		RenderWidth = desc.RenderHeight;
@@ -98,6 +86,7 @@ struct GI2DContext
 		RenderSize = ivec2(RenderWidth, RenderHeight);
 		FragmentBufferSize = RenderWidth * RenderHeight;
 
+		m_context = context;
 
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 		{
@@ -133,8 +122,6 @@ struct GI2DContext
 			b_emissive_map = context->m_storage_memory.allocateMemory<uint64_t>({ m_gi2d_info.m_fragment_map_hierarchy_offset[m_gi2d_info.m_hierarchy_num - 1], {} });
 			b_light = context->m_storage_memory.allocateMemory<uint32_t>({ FragmentBufferSize, {} });
 			b_grid_counter = context->m_storage_memory.allocateMemory<int32_t>({ FragmentBufferSize,{} });
-// 			b_jfa = context->m_storage_memory.allocateMemory<D2JFACell>({ FragmentBufferSize,{} });
-// 			b_sdf = context->m_storage_memory.allocateMemory<vec2>({ FragmentBufferSize,{} });
 		}
 
 		{
@@ -149,8 +136,6 @@ struct GI2DContext
 					vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(6, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(7, vk::DescriptorType::eStorageBuffer, 1, stage),
-//  					vk::DescriptorSetLayoutBinding(8, vk::DescriptorType::eStorageBuffer, 1, stage),
-//  					vk::DescriptorSetLayoutBinding(9, vk::DescriptorType::eStorageBuffer, 1, stage),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -179,8 +164,6 @@ struct GI2DContext
 					b_light.getInfo(),
 					b_diffuse_map.getInfo(),
 					b_emissive_map.getInfo(),
-// 					b_jfa.getInfo(),
-// 					b_sdf.getInfo(),
 				};
 
 				vk::WriteDescriptorSet write[] = {
@@ -239,6 +222,8 @@ struct GI2DContext
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 		}
 	}
+	std::shared_ptr<btr::Context> m_context;
+	
 	GI2DInfo m_gi2d_info;
 	GI2DScene m_gi2d_scene;
 
@@ -250,8 +235,6 @@ struct GI2DContext
 	btr::BufferMemoryEx<uint64_t> b_emissive_map;
 	btr::BufferMemoryEx<int32_t> b_grid_counter;
 	btr::BufferMemoryEx<uint32_t> b_light;
-// 	btr::BufferMemoryEx<D2JFACell> b_jfa;
-// 	btr::BufferMemoryEx<vec2> b_sdf;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
@@ -260,7 +243,81 @@ struct GI2DContext
 	vk::DescriptorSetLayout getDescriptorSetLayout()const { return m_descriptor_set_layout.get(); }
 };
 
-struct GI2DPipeline
+struct GI2DSDFContext
 {
-	virtual void execute(vk::CommandBuffer cmd) = 0;
+	// https://postd.cc/voronoi-diagrams/
+	struct D2JFACell
+	{
+		ivec2 nearest_index;
+		float distance;
+		int _p;
+		ivec2 e_nearest_index;
+		float e_distance;
+		int _ep;
+
+	};
+
+	GI2DSDFContext(const std::shared_ptr<GI2DContext>& gi2d_context)
+	{
+		m_gi2d_context = gi2d_context;
+		const auto& context = gi2d_context->m_context;
+		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+		{
+ 			b_jfa = context->m_storage_memory.allocateMemory<D2JFACell>({ gi2d_context->FragmentBufferSize,{} });
+ 			b_sdf = context->m_storage_memory.allocateMemory<vec2>({ gi2d_context->FragmentBufferSize,{} });
+		}
+
+		{
+			{
+				auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
+				vk::DescriptorSetLayoutBinding binding[] = {
+					vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eUniformBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eUniformBuffer, 1, stage),
+				};
+				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
+				desc_layout_info.setBindingCount(array_length(binding));
+				desc_layout_info.setPBindings(binding);
+				m_descriptor_set_layout = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
+
+			}
+			{
+				vk::DescriptorSetLayout layouts[] = {
+					m_descriptor_set_layout.get(),
+				};
+				vk::DescriptorSetAllocateInfo desc_info;
+				desc_info.setDescriptorPool(context->m_descriptor_pool.get());
+				desc_info.setDescriptorSetCount(array_length(layouts));
+				desc_info.setPSetLayouts(layouts);
+				m_descriptor_set = std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]);
+
+				vk::DescriptorBufferInfo storages[] = {
+ 					b_jfa.getInfo(),
+ 					b_sdf.getInfo(),
+				};
+
+				vk::WriteDescriptorSet write[] = {
+					vk::WriteDescriptorSet()
+					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+					.setDescriptorCount(array_length(storages))
+					.setPBufferInfo(storages)
+					.setDstBinding(0)
+					.setDstSet(m_descriptor_set.get()),
+				};
+				context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
+			}
+		}
+	}
+	void execute(vk::CommandBuffer cmd)
+	{
+	}
+	std::shared_ptr<GI2DContext> m_gi2d_context;
+
+ 	btr::BufferMemoryEx<D2JFACell> b_jfa;
+ 	btr::BufferMemoryEx<vec2> b_sdf;
+
+	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
+	vk::UniqueDescriptorSet m_descriptor_set;
+
+	vk::DescriptorSet getDescriptorSet()const { return m_descriptor_set.get(); }
+	vk::DescriptorSetLayout getDescriptorSetLayout()const { return m_descriptor_set_layout.get(); }
 };
