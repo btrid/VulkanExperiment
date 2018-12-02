@@ -10,7 +10,7 @@
 #include "GI2D.glsl"
 
 
-layout (local_size_x = 1024, local_size_y = 1) in;
+layout (local_size_x = 1024) in;
 void main()
 {
 	if(gl_GlobalInvocationID.x >= b_segment_counter.w){ return; }
@@ -19,7 +19,6 @@ void main()
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
 
 	D2Segment segment = b_segment[gl_GlobalInvocationID.x];
-//	if(segment.radiance == 0){ return; }
 	D2Ray ray = b_ray[segment.ray_index];
 	vec2 dir = rotate(ray.angle);
 	vec2 inv_dir = abs(1./dir);

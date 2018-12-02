@@ -167,7 +167,7 @@ int main()
 	camera->getData().m_far = 5000.f;
 	camera->getData().m_near = 0.01f;
 
-	return pathFinding();
+//	return pathFinding();
 
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
@@ -189,8 +189,8 @@ int main()
 	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchainPtr());
 
 	GI2DDescriptor gi2d_desc;
-	gi2d_desc.RenderWidth = 1024*4;
-	gi2d_desc.RenderHeight = 1024*4;
+	gi2d_desc.RenderWidth = 1024;
+	gi2d_desc.RenderHeight = 1024;
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context, gi2d_desc);
 	std::shared_ptr<CrowdContext> crowd_context = std::make_shared<CrowdContext>(context, gi2d_context);
 
@@ -258,19 +258,19 @@ int main()
 				gi2d_make_hierarchy.execute(cmd);
 				gi2d_make_hierarchy.executeHierarchy(cmd);
 				{
-					crowd_debug.execute(cmd);
- 					crowd_procedure.executeUpdateUnit(cmd);
- 					crowd_procedure.executeMakeLinkList(cmd);
+//					crowd_debug.execute(cmd);
+// 					crowd_procedure.executeUpdateUnit(cmd);
+// 					crowd_procedure.executeMakeLinkList(cmd);
 //					crowd_procedure.executeMakeDensity(cmd);
-					crowd_calc_world_matrix.execute(cmd, player_model);
+//					crowd_calc_world_matrix.execute(cmd, player_model);
 
 					std::vector<vk::CommandBuffer> anime_cmds{ anime_cmd.get() };
-					animater.dispatchCmd(cmd, anime_cmds);
+//					animater.dispatchCmd(cmd, anime_cmds);
 
 				}
 				{
 					std::vector<vk::CommandBuffer> render_cmds{ render_cmd.get() };
-					renderer.dispatchCmd(cmd, render_cmds);
+//					renderer.dispatchCmd(cmd, render_cmds);
 				}
 
 
