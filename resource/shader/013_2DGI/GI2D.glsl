@@ -82,17 +82,6 @@ Fragment makeFragment(in vec3 color, in bool d, in bool e)
 	return f;
 }
 
-struct D2JFACell
-{
-	ivec2 nearest_index;
-	float distance;
-	int _p;
-	ivec2 e_nearest_index;
-	float e_distance;
-	int _ep;
-//	int attr;
-};
-
 struct D2Ray
 {
 	vec2 origin;
@@ -136,13 +125,8 @@ layout(set=USE_GI2D, binding=6, std430) restrict buffer DiffuseMapBuffer {
 layout(set=USE_GI2D, binding=7, std430) restrict buffer EmissiveMapBuffer {
 	uint64_t b_emissive_map[];
 };
-/*layout(set=USE_GI2D, binding=8, std430) restrict buffer JFABuffer {
-	D2JFACell b_jfa[];
-};
-layout(set=USE_GI2D, binding=9, std430) restrict buffer SDFBuffer {
-	vec2 b_sdf[];
-};
-*/
+
+
 ivec2 frame_offset(){
 	return ivec2(u_gi2d_scene.m_frame%2,u_gi2d_scene.m_frame/2);
 }

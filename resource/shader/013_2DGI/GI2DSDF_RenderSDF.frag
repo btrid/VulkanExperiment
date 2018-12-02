@@ -6,8 +6,10 @@
 #include "btrlib/Math.glsl"
 
 #define USE_GI2D 0
-#define USE_GI2D_RENDER 1
 #include "GI2D.glsl"
+#define USE_GI2D_SDF 1
+#include "GI2D_SDF.glsl"
+
 
 layout(location = 0) out vec4 o_FragColor;
 void main()

@@ -14,9 +14,9 @@ SET output=../binary
 %exe% %include% %option% -o %output%/GI2D_MakeFragmentMap.comp.spv GI2D_MakeFragmentMap.comp
 %exe% %include% %option% -o %output%/GI2D_MakeFragmentMapHierarchy.comp.spv GI2D_MakeFragmentMapHierarchy.comp
 
-rem %exe% %include% %option% -o %output%/GI2D_MakeJFA.comp.spv GI2D_MakeJFA.comp
-rem %exe% %include% %option% -o %output%/GI2D_MakeSDF.comp.spv GI2D_MakeSDF.comp
-rem %exe% %include% %option% -o %output%/GI2D_RenderSDF.frag.spv GI2D_RenderSDF.frag
+%exe% %include% %option% -o %output%/GI2DSDF_MakeJFA.comp.spv GI2DSDF_MakeJFA.comp
+%exe% %include% %option% -o %output%/GI2DSDF_MakeSDF.comp.spv GI2DSDF_MakeSDF.comp
+%exe% %include% %option% -o %output%/GI2DSDF_RenderSDF.frag.spv GI2DSDF_RenderSDF.frag
 
 rem %exe% %include% %option% -o ../binary\\DebugFragmentMap.comp.spv DebugFragmentMap.comp
 

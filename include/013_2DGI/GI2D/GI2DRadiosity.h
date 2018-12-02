@@ -177,7 +177,6 @@ struct GI2DRadiosity
 				"Radiosity_Clear.comp.spv",
 				"Radiosity_Render.vert.spv",
 				"Radiosity_Render.frag.spv",
-//				"GI2D_RenderSDF.frag.spv",
 
 				"Radiosity_CalcRadiance.comp.spv",
 

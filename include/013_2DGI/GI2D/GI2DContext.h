@@ -11,6 +11,12 @@ struct GI2DDescriptor
 };
 struct GI2DContext
 {
+	enum Layout
+	{
+		Layout_Data,
+		Layout_SDF,
+		Layout_Num,
+	};
 	int32_t RenderWidth;
 	int32_t RenderHeight;
 	ivec2 RenderSize;
@@ -140,12 +146,25 @@ struct GI2DContext
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
 				desc_layout_info.setPBindings(binding);
-				m_descriptor_set_layout = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
+				m_descriptor_set_layout[Layout_Data] = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
 
 			}
 			{
+				auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
+				vk::DescriptorSetLayoutBinding binding[] = {
+					vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eUniformBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eUniformBuffer, 1, stage),
+				};
+				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
+				desc_layout_info.setBindingCount(array_length(binding));
+				desc_layout_info.setPBindings(binding);
+				m_descriptor_set_layout[Layout_SDF] = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
+
+			}
+
+			{
 				vk::DescriptorSetLayout layouts[] = {
-					m_descriptor_set_layout.get(),
+					m_descriptor_set_layout[Layout_Data].get(),
 				};
 				vk::DescriptorSetAllocateInfo desc_info;
 				desc_info.setDescriptorPool(context->m_descriptor_pool.get());
@@ -236,14 +255,14 @@ struct GI2DContext
 	btr::BufferMemoryEx<int32_t> b_grid_counter;
 	btr::BufferMemoryEx<uint32_t> b_light;
 
-	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
+	std::array<vk::UniqueDescriptorSetLayout, Layout_Num> m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
 
 	vk::DescriptorSet getDescriptorSet()const { return m_descriptor_set.get(); }
-	vk::DescriptorSetLayout getDescriptorSetLayout()const { return m_descriptor_set_layout.get(); }
+	vk::DescriptorSetLayout getDescriptorSetLayout(Layout i)const { return m_descriptor_set_layout[i].get(); }
 };
 
-struct GI2DSDFContext
+struct GI2DSDF
 {
 	// https://postd.cc/voronoi-diagrams/
 	struct D2JFACell
@@ -257,7 +276,7 @@ struct GI2DSDFContext
 
 	};
 
-	GI2DSDFContext(const std::shared_ptr<GI2DContext>& gi2d_context)
+	GI2DSDF(const std::shared_ptr<GI2DContext>& gi2d_context)
 	{
 		m_gi2d_context = gi2d_context;
 		const auto& context = gi2d_context->m_context;
@@ -269,20 +288,8 @@ struct GI2DSDFContext
 
 		{
 			{
-				auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
-				vk::DescriptorSetLayoutBinding binding[] = {
-					vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eUniformBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eUniformBuffer, 1, stage),
-				};
-				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
-				desc_layout_info.setBindingCount(array_length(binding));
-				desc_layout_info.setPBindings(binding);
-				m_descriptor_set_layout = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
-
-			}
-			{
 				vk::DescriptorSetLayout layouts[] = {
-					m_descriptor_set_layout.get(),
+					gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_SDF),
 				};
 				vk::DescriptorSetAllocateInfo desc_info;
 				desc_info.setDescriptorPool(context->m_descriptor_pool.get());
@@ -315,9 +322,7 @@ struct GI2DSDFContext
  	btr::BufferMemoryEx<D2JFACell> b_jfa;
  	btr::BufferMemoryEx<vec2> b_sdf;
 
-	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
 
 	vk::DescriptorSet getDescriptorSet()const { return m_descriptor_set.get(); }
-	vk::DescriptorSetLayout getDescriptorSetLayout()const { return m_descriptor_set_layout.get(); }
 };

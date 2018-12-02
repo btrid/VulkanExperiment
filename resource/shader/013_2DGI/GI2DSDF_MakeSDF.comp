@@ -6,8 +6,9 @@
 #include "btrlib/Math.glsl"
 
 #define USE_GI2D 0
-#define USE_GI2D_Radiosity 1
 #include "GI2D.glsl"
+#define USE_GI2D_SDF 1
+#include "GI2D_SDF.glsl"
 
 layout (local_size_x = 32, local_size_y = 32) in;
 

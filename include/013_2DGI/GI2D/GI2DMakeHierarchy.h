@@ -16,11 +16,13 @@ struct GI2DMakeHierarchy
 		Shader_MakeLight,
 		Shader_MakeJFA,
 		Shader_MakeSDF,
+		Shader_RenderSDF,
 		Shader_Num,
 	};
 	enum PipelineLayout
 	{
 		PipelineLayout_Hierarchy,
+		PipelineLayout_SDF,
 		PipelineLayout_Num,
 	};
 	enum Pipeline
@@ -31,6 +33,7 @@ struct GI2DMakeHierarchy
 		Pipeline_MakeLight,
 		Pipeline_MakeJFA,
 		Pipeline_MakeSDF,
+		Pipeline_RenderSDF,
 		Pipeline_Num,
 	};
 
@@ -46,8 +49,9 @@ struct GI2DMakeHierarchy
 				"GI2D_MakeFragmentMapHierarchy.comp.spv",
 				"GI2D_MakeDensityHierarchy.comp.spv",
 				"GI2D_MakeLight.comp.spv",
-				"GI2D_MakeJFA.comp.spv",
-				"GI2D_MakeSDF.comp.spv",
+				"GI2DSDF_MakeJFA.comp.spv",
+				"GI2DSDF_MakeSDF.comp.spv",
+				"GI2DSDF_RenderSDF.frag.spv",
 			};
 			static_assert(array_length(name) == Shader_Num, "not equal shader num");
 
@@ -60,7 +64,22 @@ struct GI2DMakeHierarchy
 		// pipeline layout
 		{
 			vk::DescriptorSetLayout layouts[] = {
-				gi2d_context->getDescriptorSetLayout()
+				gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data)
+			};
+			vk::PipelineLayoutCreateInfo pipeline_layout_info;
+			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
+			pipeline_layout_info.setPSetLayouts(layouts);
+
+			vk::PushConstantRange constants[] = {
+				vk::PushConstantRange().setOffset(0).setSize(4).setStageFlags(vk::ShaderStageFlagBits::eCompute),
+			};
+			pipeline_layout_info.setPushConstantRangeCount(array_length(constants));
+			pipeline_layout_info.setPPushConstantRanges(constants);
+			m_pipeline_layout[PipelineLayout_Hierarchy] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+		}
+		{
+			vk::DescriptorSetLayout layouts[] = {
+				gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data)
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
@@ -169,13 +188,13 @@ struct GI2DMakeHierarchy
 
 	}
 
-	void executeMakeSDF(vk::CommandBuffer cmd, const std::shared_ptr<GI2DSDFContext>& sdf_context)
+	void executeMakeSDF(vk::CommandBuffer cmd, const std::shared_ptr<GI2DSDF>& sdf_context)
 	{
 		// make sdf
 		{
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeJFA].get());
-			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth, m_gi2d_context->RenderHeight, 1), uvec3(32, 32, 1));
-			for (int distance = m_gi2d_context->RenderWidth >> 1; distance != 0; distance >>= 1)
+			auto num = app::calcDipatchGroups(uvec3(sdf_context->m_gi2d_context->RenderWidth, sdf_context->m_gi2d_context->RenderHeight, 1), uvec3(32, 32, 1));
+			for (int distance = sdf_context->m_gi2d_context->RenderWidth >> 1; distance != 0; distance >>= 1)
 			//for (int distance = 1; distance < m_gi2d_context->RenderWidth; distance <<= 1)
 			{
 				vk::BufferMemoryBarrier to_read[] = {
@@ -199,7 +218,7 @@ struct GI2DMakeHierarchy
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeSDF].get());
-			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth, m_gi2d_context->RenderHeight, 1), uvec3(32, 32, 1));
+			auto num = app::calcDipatchGroups(uvec3(sdf_context->m_gi2d_context->RenderWidth, sdf_context->m_gi2d_context->RenderHeight, 1), uvec3(32, 32, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 		}
 	}
