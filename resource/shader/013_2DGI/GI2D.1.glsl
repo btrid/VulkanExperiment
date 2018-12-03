@@ -82,7 +82,6 @@ Fragment makeFragment(in vec3 color, in bool d, in bool e)
 	return f;
 }
 
-#if 0
 struct D2Ray
 {
 	ivec2 origin;
@@ -96,21 +95,6 @@ struct D2Segment
 	uint march;
 	uint radiance;
 };
-#else
-struct D2Ray
-{
-	vec2 origin;
-	float angle;
-	uint march;
-};
-struct D2Segment
-{
-	uint ray_index;
-	uint begin;
-	uint march;
-	uint radiance;
-};
-#endif
 
 #define Grid_Size (1.)
   #define DT 0.016
