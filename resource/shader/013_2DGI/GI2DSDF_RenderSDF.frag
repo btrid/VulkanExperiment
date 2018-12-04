@@ -8,7 +8,7 @@
 #define USE_GI2D 0
 #include "GI2D.glsl"
 #define USE_GI2D_SDF 1
-#include "GI2D_SDF.glsl"
+#include "GI2DSDF.glsl"
 
 
 layout(location = 0) out vec4 o_FragColor;

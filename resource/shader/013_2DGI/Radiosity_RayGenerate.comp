@@ -29,8 +29,8 @@ void main()
 	dir *= min(inv_dir.x, inv_dir.y);
 
 	vec2 pos;
-	pos.x = (y==0) ? reso.x-0.1 : 0.1;
-	pos.y = (y==1) ? reso.y-0.1 : 0.1;
+	pos.x = (y==0) ? reso.x-0. : 0.;
+	pos.y = (y==1) ? reso.y-0. : 0.;
 	vec2 pdir;
 	pdir.x = (y%2==1) ? 1 : 0;
 	pdir.y = (y%2==0) ? 1 : 0;

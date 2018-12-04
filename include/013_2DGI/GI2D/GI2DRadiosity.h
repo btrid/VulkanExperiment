@@ -428,6 +428,7 @@ struct GI2DRadiosity
 			cmd.dispatch(1024, 1, Frame);
 		}
 
+//		if(0)
 		{
 			// レイのソート
 			{
