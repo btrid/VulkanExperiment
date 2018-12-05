@@ -8,7 +8,7 @@
 struct CrowdContext
 {
 	enum {
-		Frame = 4,
+		Frame = 1,
 		Rot_Num = 64,
 	};
 
@@ -251,7 +251,7 @@ struct CrowdContext
 
 	void execute(vk::CommandBuffer cmd)
 	{
-		m_crowd_scene.m_frame = (m_crowd_scene.m_frame+1)%4;
+		m_crowd_scene.m_frame = (m_crowd_scene.m_frame+1)% Frame;
 		cmd.updateBuffer<CrowdScene>(u_crowd_scene.getInfo().buffer, u_crowd_scene.getInfo().offset, m_crowd_scene);
 
 	}
