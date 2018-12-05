@@ -380,6 +380,7 @@ struct Crowd_Procedure
 		{
 			// ƒŒƒC‚Ì”ÍˆÍ‚Ì¶¬
 			vk::BufferMemoryBarrier to_read[] = {
+				m_context->b_segment.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
 				m_gi2d_context->b_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				m_context->b_segment_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead| vk::AccessFlagBits::eShaderWrite),
 			};
@@ -467,6 +468,13 @@ struct Crowd_Procedure
 	void executeDrawField(vk::CommandBuffer cmd, const std::shared_ptr<RenderTarget>& render_target)
 	{
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_DrawField].get());
+
+		vk::BufferMemoryBarrier to_read[] =
+		{
+			m_context->b_node.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+		};
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+			0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 		vk::DescriptorSet descriptors[] =
 		{

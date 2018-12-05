@@ -120,6 +120,7 @@ int pathFinding()
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				gi2d_context->execute(cmd);
+				crowd_context->execute(cmd);
 				gi2d_clear.execute(cmd);
 				gi2d_debug_make_fragment.execute(cmd);
 
@@ -167,7 +168,7 @@ int main()
 	camera->getData().m_far = 5000.f;
 	camera->getData().m_near = 0.01f;
 
-//	return pathFinding();
+	return pathFinding();
 
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();

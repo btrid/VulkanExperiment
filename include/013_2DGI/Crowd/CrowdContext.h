@@ -251,7 +251,6 @@ struct CrowdContext
 
 	void execute(vk::CommandBuffer cmd)
 	{
-
 		m_crowd_scene.m_frame = (m_crowd_scene.m_frame+1)%4;
 		cmd.updateBuffer<CrowdScene>(u_crowd_scene.getInfo().buffer, u_crowd_scene.getInfo().offset, m_crowd_scene);
 
@@ -261,8 +260,6 @@ struct CrowdContext
 	CrowdInfo m_crowd_info;
 	CrowdScene m_crowd_scene;
  
-//	std::array<UnitInfo, 16> m_unit_info;
-
 	btr::BufferMemoryEx<CrowdInfo> u_crowd_info;
 	btr::BufferMemoryEx<CrowdScene> u_crowd_scene;
 	btr::BufferMemoryEx<UnitInfo> u_unit_info;

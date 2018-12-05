@@ -38,9 +38,9 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 			bool is_emissive;
 		};
 		std::vector<Fragment> rect;
-// 		for (int i = 0; i < 300; i++) {
-// 			rect.emplace_back(Fragment{ ivec4{ std::rand() % gi2d_context->RenderWidth, std::rand() % gi2d_context->RenderHeight, std::rand() % 44+5, std::rand() % 44+5 }, vec4{ 0.8f,0.2f,0.2f,0.f } });
-// 		}
+		for (int i = 0; i < 0; i++) {
+			rect.emplace_back(Fragment{ ivec4{ std::rand() % gi2d_context->RenderWidth, std::rand() % gi2d_context->RenderHeight, std::rand() % 44+5, std::rand() % 44+5 }, vec4{ 0.8f,0.2f,0.2f,0.f } });
+		}
 		for (size_t y = 0; y < gi2d_context->RenderHeight; y++)
 		{
 			for (size_t x = 0; x < gi2d_context->RenderWidth; x++)
