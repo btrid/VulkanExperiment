@@ -388,7 +388,7 @@ struct Crowd_Procedure
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_SegmentMake].get());
-			cmd.dispatchIndirect(m_context->b_ray_counter.getInfo().buffer, m_context->b_ray_counter.getInfo().offset + sizeof(ivec4)*m_gi2d_context->m_gi2d_scene.m_frame);
+			cmd.dispatchIndirect(m_context->b_ray_counter.getInfo().buffer, m_context->b_ray_counter.getInfo().offset + sizeof(ivec4)*m_context->m_crowd_scene.m_frame);
 
 		}
 
