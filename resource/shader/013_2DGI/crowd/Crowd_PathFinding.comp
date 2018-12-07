@@ -20,13 +20,14 @@ void main()
 
 	CrowdSegment segment = b_segment[gl_GlobalInvocationID.x];
 //	if(segment.weight_a == -1 && segment.weight_b == -1){ return; }
-	if(segment.weight_a == -1 || segment.weight_b == -1){ return; }
+//	if(segment.weight_a == -1 || segment.weight_b == -1){ return; }
 
 	CrowdRay ray = b_ray[segment.ray_index];
 
 	vec2 dir = MakeRayDir(ray.angle);
 	vec2 inv_dir = abs(1./dir);
-	dir *= min(inv_dir.x, inv_dir.y);
+	float dir_rate = min(inv_dir.x, inv_dir.y);
+	dir *= dir_rate;
 
 	uint begin = segment.begin_march>>16;
 	uint march = segment.begin_march&0xffff;
@@ -38,7 +39,7 @@ void main()
 		vec2 pos = ray.origin + (begin+march_count)*dir;
 		ivec2 map_index = ivec2(pos);
 
-		atomicMin(b_node[getMemoryOrder(map_index)].value, a+march_count);
+		atomicMin(b_node[getMemoryOrder(map_index)].value, uint(a + march_count*dir_rate));
 	}
 	while(++march_count < march);
 }

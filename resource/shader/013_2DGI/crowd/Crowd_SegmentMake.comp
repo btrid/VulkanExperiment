@@ -60,17 +60,17 @@ void main()
 			bool attr = (map & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0ul;
 			if(attr.x)
 			{
-				if((seg.begin_march&0xffff) > 2)
+				if((seg.begin_march&0xffff) > 1)
 				{
-					seg.begin_march -= 2;
+//					seg.begin_march -= 2;
 					int index = atomicAdd(b_segment_counter.w, 1);
 					if(index%1024==0){
 						atomicAdd(b_segment_counter.x, 1);
 					}
 					b_segment[index] = seg;
 				}
-				seg.begin_march = (march_count+1)<<16;
-//				seg.begin_march = (march_count)<<16;
+//				seg.begin_march = (march_count+1)<<16;
+				seg.begin_march = (march_count)<<16;
 			}
 
 			{
