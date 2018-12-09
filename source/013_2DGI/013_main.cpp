@@ -41,7 +41,8 @@
 #include <applib/AppModel/AppModel.h>
 #include <applib/AppModel/AppModelPipeline.h>
 
-#include <013_2DGI/PathFinding.h>
+#include <013_2DGI/PathContext.h>
+#include <013_2DGI/PathSolver.h>
 
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
@@ -51,13 +52,16 @@
 
 int pathFinding()
 {
-// 	PathFinding::Description desc;
-// 	desc.m_size = ivec2(1024);
-// 	desc.m_start = ivec2(11, 4);
-// 	desc.m_finish = ivec2(120 + 10, 222 + 10);
-// 	PathFinding pf(desc);
-// 	Solver solver;
-// 	auto solve = solver.executeSolve(pf);
+	PathContext::Description desc;
+	desc.m_size = ivec2(1024);
+	desc.m_start = ivec2(11, 4);
+	desc.m_finish = ivec2(120 + 10, 222 + 10);
+	PathContext pf(desc);
+	pf.m_field = pathmake_maze(1024, 1024);
+//	pf.m_field = pathmake_noise(1024, 1024);
+	PathSolver solver;
+	solver.write(pf);
+	auto solve = solver.executeSolve(pf);
 
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();

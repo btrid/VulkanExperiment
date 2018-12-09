@@ -8,6 +8,7 @@
     <ClCompile Include="..\..\source\013_2DGI\GI2D\GI2DMakeHierarchy.cpp">
       <Filter>GI2D</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\source\013_2DGI\PathContext.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -66,6 +67,7 @@
     <ClInclude Include="..\..\include\013_2DGI\Crowd\Crowd_Procedure.h">
       <Filter>Crowd</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\013_2DGI\PathFinding.h" />
+    <ClInclude Include="..\..\include\013_2DGI\PathContext.h" />
+    <ClInclude Include="..\..\include\013_2DGI\PathSolver.h" />
   </ItemGroup>
 </Project>

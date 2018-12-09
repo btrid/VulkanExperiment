@@ -78,6 +78,7 @@
     <ClCompile Include="..\..\source\013_2DGI\013_main.cpp" />
     <ClCompile Include="..\..\source\013_2DGI\GI2D\GI2DDebug.cpp" />
     <ClCompile Include="..\..\source\013_2DGI\GI2D\GI2DMakeHierarchy.cpp" />
+    <ClCompile Include="..\..\source\013_2DGI\PathContext.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -109,7 +110,8 @@
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DMakeHierarchy.h" />
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DRigidbody_dem.h" />
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DSoftbody.h" />
-    <ClInclude Include="..\..\include\013_2DGI\PathFinding.h" />
+    <ClInclude Include="..\..\include\013_2DGI\PathContext.h" />
+    <ClInclude Include="..\..\include\013_2DGI\PathSolver.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
