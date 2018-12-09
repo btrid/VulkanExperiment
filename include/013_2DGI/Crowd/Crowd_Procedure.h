@@ -318,7 +318,7 @@ struct Crowd_Procedure
 				uint32_t c;
 			};
 			cmd.pushConstants<MakeRayConstant>(m_pipeline_layout[PipelineLayout_MakeRay].get(), vk::ShaderStageFlagBits::eCompute, 0,
-				MakeRayConstant{ ivec2(m_gi2d_context->RenderWidth), 1.f, m_context->m_crowd_info.ray_angle_num });
+				MakeRayConstant{ ivec2(m_gi2d_context->RenderWidth), 2.f, m_context->m_crowd_info.ray_angle_num });
 
 			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth, m_context->m_crowd_info.ray_angle_num, m_context->m_crowd_info.frame_max), uvec3(64, 16, 1));
 			cmd.dispatch(num.x, num.y, num.z);
@@ -417,7 +417,7 @@ struct Crowd_Procedure
 					0, nullptr, array_length(to_read), to_read, 0, nullptr);
 			}
 
-			for (int i = 0; i < 20; i++)
+			for (int i = 0; i < 200; i++)
 			{
 				{
 					vk::BufferMemoryBarrier to_read[] =

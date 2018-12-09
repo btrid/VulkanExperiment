@@ -20,7 +20,7 @@ void main()
 
 	CrowdSegment segment = b_segment[gl_GlobalInvocationID.x];
 //	if(segment.weight_a == -1 && segment.weight_b == -1){ return; }
-//	if(segment.weight_a == -1 || segment.weight_b == -1){ return; }
+	if(segment.weight_a == -1 || segment.weight_b == -1){ return; }
 
 	CrowdRay ray = b_ray[segment.ray_index];
 

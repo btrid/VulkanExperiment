@@ -51,7 +51,13 @@
 
 int pathFinding()
 {
-
+// 	PathFinding::Description desc;
+// 	desc.m_size = ivec2(1024);
+// 	desc.m_start = ivec2(11, 4);
+// 	desc.m_finish = ivec2(120 + 10, 222 + 10);
+// 	PathFinding pf(desc);
+// 	Solver solver;
+// 	auto solve = solver.executeSolve(pf);
 
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();

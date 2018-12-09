@@ -39,8 +39,6 @@ public:
 			}
 			return map_[y*x_ + x];
 		}
-
-
 	};
 	typedef std::vector<CELL_TYPE> Maze;
 

@@ -33,10 +33,11 @@ void main()
 		uint b = b_node[getMemoryOrder(map_index.zw)].value;
 		a = min(a, segment.weight_a);
 		b = min(b, segment.weight_b);
-//		if(b!=-1 && a > b+march)
-//			b_segment[gl_GlobalInvocationID.x].weight_a = b+march;
-//		if(a!=-1 && b > a+march)
-//			b_segment[gl_GlobalInvocationID.x].weight_b = a+march;
+		
+//		if(b!=-1 && a > b+march*dir_rate)
+//			b_segment[gl_GlobalInvocationID.x].weight_a = uint(b+march*dir_rate);
+//		if(a!=-1 && b > a+march*dir_rate)
+//			b_segment[gl_GlobalInvocationID.x].weight_b = uint(a+march*dir_rate);
 
 		if(b!=-1)
 			atomicMin(b_segment[gl_GlobalInvocationID.x].weight_a, uint(b+march*dir_rate));
