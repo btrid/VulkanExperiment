@@ -5,6 +5,7 @@
 struct PathSolver
 {
 #define SIMPLE_FAST
+//	static inline const ivec2 offset[4] = { {1, 0}, {-1, 0}, {0, 1}, {0, -1}, };
 #define offset_def ivec2 offset[4] = { {1, 0}, {-1, 0}, {0, 1}, {0, -1}, }
 	struct Node
 	{
@@ -70,7 +71,6 @@ struct PathSolver
 		cStopWatch time;
 
 		offset_def;
-
 		auto aa = path.m_desc.m_size >> 3;
 		std::vector<uint64_t> result(aa.x*aa.y);
 
@@ -155,6 +155,72 @@ struct PathSolver
 		printf("failed\n");
 		return result;
 	}
+
+	std::vector<uint32_t> executeMakeVectorField(const PathContext& path)const
+	{
+		cStopWatch time;
+		offset_def;
+
+		std::vector<Node> close(path.m_desc.m_size.x * path.m_desc.m_size.y);
+		std::deque<Node*> open;
+		open.push_back(&close[path.m_desc.m_start.x + path.m_desc.m_start.y * path.m_desc.m_size.x]);
+		open.front()->is_open = 1;
+		open.front()->precompute(path.m_desc.m_start, path);
+		while (!open.empty())
+		{
+			Node* node = open.front();
+			open.pop_front();
+
+			intptr_t current = node - close.data();
+			ivec2 n = ivec2(current%path.m_desc.m_size.x, current / path.m_desc.m_size.x);
+
+
+#if defined(SIMPLE_FAST)
+			// ‰E
+			if (n.x < path.m_desc.m_size.x - 1)
+			{
+				_setNode(path, n.x + 1, n.y, current, node->cost + 1, open, close);
+			}
+			// ¶
+			if (n.x > 0)
+			{
+				_setNode(path, n.x - 1, n.y, current, node->cost + 1, open, close);
+			}
+			// ‰º
+			if (n.y < path.m_desc.m_size.y - 1)
+			{
+				_setNode(path, n.x, n.y + 1, current, node->cost + 1, open, close);
+			}
+			// ã
+			if (n.y > 0)
+			{
+				_setNode(path, n.x, n.y - 1, current, node->cost + 1, open, close);
+			}
+#else
+			for (int i = 0; i < 4; i++)
+			{
+				if ((node->condition & (1 << i)) != 0) {
+					continue;
+				}
+				_setNode(path, n.x + offset[i].x, n.y + offset[i].y, current, node->cost + 1, open, close);
+			}
+#endif
+			node->is_open = 0;
+
+		}
+
+		printf("solve time %6.4fms\n", time.getElapsedTimeAsMilliSeconds());
+		std::vector<uint32_t> result(path.m_desc.m_size.x*path.m_desc.m_size.y);
+		for (uint32_t y = 0; y < path.m_desc.m_size.y; y++)
+		{
+			for (uint32_t x = 0; x < path.m_desc.m_size.x; x++)
+			{
+				uint32_t i = y * path.m_desc.m_size.x + x;
+				result[i] = close[i].cost;
+			}
+		}
+		return result;
+	}
 	void _setNode(const PathContext& path, int x, int y, int parent, int cost, std::deque<Node*>& open, std::vector<Node>& close)const
 	{
 #if defined(SIMPLE_FAST)
@@ -213,7 +279,7 @@ struct PathSolver
 		for (uint32_t y = 0; y < path.m_desc.m_size.y; y++)
 		{
 			std::vector<char> output(path.m_desc.m_size.x + 1);
-			for (uint32_t x = 0; x < path.m_desc.m_size.y; x++)
+			for (uint32_t x = 0; x < path.m_desc.m_size.x; x++)
 			{
 				ivec2 m = ivec2(x, y) >> 3;
 				ivec2 c = ivec2(x, y) - (m << 3);

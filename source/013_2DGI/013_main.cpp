@@ -54,14 +54,14 @@ int pathFinding()
 {
 	PathContext::Description desc;
 	desc.m_size = ivec2(1024);
-	desc.m_start = ivec2(11, 4);
+	desc.m_start = ivec2(111, 411);
 	desc.m_finish = ivec2(120 + 10, 222 + 10);
 	PathContext pf(desc);
-	pf.m_field = pathmake_maze(1024, 1024);
-//	pf.m_field = pathmake_noise(1024, 1024);
+//	pf.m_field = pathmake_maze(1024, 1024);
+	pf.m_field = pathmake_noise(1024, 1024);
 	PathSolver solver;
-	solver.write(pf);
-	auto solve = solver.executeSolve(pf);
+//	solver.write(pf);
+	auto solve = solver.executeMakeVectorField(pf);
 
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
