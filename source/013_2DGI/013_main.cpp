@@ -58,9 +58,8 @@ int pathFinding()
 	desc.m_finish = ivec2(120 + 10, 222 + 10);
 	PathContext pf(desc);
 //	pf.m_field = pathmake_maze(1024, 1024);
-	pf.m_field = pathmake_noise(1024, 1024);
-	PathSolver solver;
-//	solver.write(pf);
+ 	pf.m_field = pathmake_noise(1024, 1024);
+ 	PathSolver solver;
 	auto solve = solver.executeMakeVectorField(pf);
 
 	auto gpu = sGlobal::Order().getGPU(0);

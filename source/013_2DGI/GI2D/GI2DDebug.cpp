@@ -54,18 +54,32 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 // 
 // 		}
 
-		auto map = pathmake_maze_(size.x, size.y);
-		for (size_t y = 0; y < gi2d_context->RenderSize.y; y++)
+// 		auto map = pathmake_maze_(size.x, size.y);
+// 		for (size_t y = 0; y < gi2d_context->RenderSize.y; y++)
+// 		{
+// 			for (size_t x = 0; x < gi2d_context->RenderSize.x; x++)
+// 			{
+// 				auto ii = x/8 + y/8 * size.x;
+// 				auto type = (map[ii] == 0) ? wall : path;
+// 
+// 				auto di = ivec2(x, y);
+// 				map_data[di.x + di.y*gi2d_context->RenderSize.x] = type;
+// 			}
+// 
+// 		}
+
+		auto map = pathmake_noise(gi2d_context->RenderSize.x, gi2d_context->RenderSize.y);
+		for (int y = 0; y < size.y; y++)
 		{
-			for (size_t x = 0; x < gi2d_context->RenderSize.x; x++)
+			for (int x = 0; x < size.x; x++)
 			{
-				auto ii = x/8 + y/8 * size.x;
-				auto type = (map[ii] == 0) ? wall : path;
-
-				auto di = ivec2(x, y);
-				map_data[di.x + di.y*gi2d_context->RenderSize.x] = type;
+				auto& m = map[x + y * size.x];
+				for (int32_t i = 0; i < 64; i++)
+				{
+					ivec2 xy = ivec2(x, y)*8 + ivec2(i%8, i/8);
+					map_data[xy.x + xy.y*gi2d_context->RenderSize.x] = (m & (1ull << i)) != 0 ? wall : path;
+				}
 			}
-
 		}
 
 #else
