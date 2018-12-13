@@ -4,8 +4,6 @@
 
 struct PathSolver
 {
-#define SIMPLE_FAST
-//	static inline const ivec2 offset[4] = { {1, 0}, {-1, 0}, {0, 1}, {0, -1}, };
 #define offset_def ivec2 offset[4] = { {1, 0}, {-1, 0}, {0, 1}, {0, -1}, }
 	struct Node
 	{
@@ -26,24 +24,6 @@ struct PathSolver
 			offset_def;
 			// 事前計算
 			condition = 1 << 4;
-#if 1
-			if (c.x + 1 >= path.m_desc.m_size.x)
-			{
-				condition |= 1 << 0;
-			}
-			else if (c.x - 1 < 0)
-			{
-				condition |= 1 << 1;
-			}
-			if (c.y + 1 >= path.m_desc.m_size.y)
-			{
-				condition |= 1 << 2;
-			}
-			else if (c.y - 1 < 0)
-			{
-				condition |= 1 << 3;
-			}
-#else
 			for (int i = 0; i < 4; i++)
 			{
 				auto _n = c + offset[i];
@@ -58,10 +38,6 @@ struct PathSolver
 					continue;
 				}
 			}
-
-#endif
-
-
 		}
 
 	};
@@ -116,28 +92,6 @@ struct PathSolver
 				}
 			}
 
-#if defined(SIMPLE_FAST)
-			// 右
-			if (n.x < path.m_desc.m_size.x - 1)
-			{
-				_setNode(path, n.x + 1, n.y, current, node->cost + 1, open, close);
-			}
-			// 左
-			if (n.x > 0)
-			{
-				_setNode(path, n.x - 1, n.y, current, node->cost + 1, open, close);
-			}
-			// 下
-			if (n.y < path.m_desc.m_size.y - 1)
-			{
-				_setNode(path, n.x, n.y + 1, current, node->cost + 1, open, close);
-			}
-			// 上
-			if (n.y > 0)
-			{
-				_setNode(path, n.x, n.y - 1, current, node->cost + 1, open, close);
-			}
-#else
 			for (int i = 0; i < 4; i++)
 			{
 				if ((node->condition & (1 << i)) != 0) {
@@ -145,7 +99,7 @@ struct PathSolver
 				}
 				_setNode(path, n.x + offset[i].x, n.y + offset[i].y, current, node->cost + 1, open, close);
 			}
-#endif
+
 			node->is_open = 0;
 
 		}
@@ -175,28 +129,6 @@ struct PathSolver
 			ivec2 n = ivec2(current%path.m_desc.m_size.x, current / path.m_desc.m_size.x);
 
 
-#if defined(SIMPLE_FAST)
-			// 右
-			if (n.x < path.m_desc.m_size.x - 1)
-			{
-				_setNode(path, n.x + 1, n.y, current, node->cost + 1, open, close);
-			}
-			// 左
-			if (n.x > 0)
-			{
-				_setNode(path, n.x - 1, n.y, current, node->cost + 1, open, close);
-			}
-			// 下
-			if (n.y < path.m_desc.m_size.y - 1)
-			{
-				_setNode(path, n.x, n.y + 1, current, node->cost + 1, open, close);
-			}
-			// 上
-			if (n.y > 0)
-			{
-				_setNode(path, n.x, n.y - 1, current, node->cost + 1, open, close);
-			}
-#else
 			for (int i = 0; i < 4; i++)
 			{
 				if ((node->condition & (1 << i)) != 0) {
@@ -204,7 +136,6 @@ struct PathSolver
 				}
 				_setNode(path, n.x + offset[i].x, n.y + offset[i].y, current, node->cost + 1, open, close);
 			}
-#endif
 			node->is_open = 0;
 
 		}
@@ -223,51 +154,33 @@ struct PathSolver
 	}
 	void _setNode(const PathContext& path, int x, int y, int parent, int cost, std::deque<Node*>& open, std::vector<Node>& close)const
 	{
-#if defined(SIMPLE_FAST)
-		{
-			if (!path.isPath(ivec2(x, y))) {
-				return;
-			}
+		auto& cn = close[x + y * path.m_desc.m_size.x];
 
-		}
-#endif
-		do
+		// 既に探索済み
+		if (cost >= cn.cost)
 		{
-			auto& cn = close[x + y * path.m_desc.m_size.x];
-			if (cn.is_open == 1)
-			{
-				// openの中に見つかった
-				if (cost >= cn.cost)
-				{
-					break;
-				}
-				else
-				{
-					cn.cost = cost;
-					cn.parent = parent;
-					break;
-				}
-			}
-			if (cn.cost >= 0 && cost >= cn.cost)
-			{
-				break;
-			}
-			else
-			{
-				// もっと早くアクセスする方法が見つかったので更新
-				cn.cost = cost;
-				cn.parent = parent;
-			}
+			return;
+		}
+
+		if (cn.is_open == 1)
+		{
+			// openの中に見つかった
+			cn.cost = cost;
+			cn.parent = parent;
+			return;
+		}
+		else
+		{
+			// もっと早くアクセスする方法が見つかったので更新
+			cn.cost = cost;
+			cn.parent = parent;
 			cn.is_open = 1;
-#if !defined(SIMPLE_FAST)
 			if (cn.condition == 0)
 			{
 				cn.precompute(ivec2(x, y), path);
 			}
-#endif
 			open.push_back(&cn);
-
-		} while (false);
+		}
 
 	}
 
