@@ -157,7 +157,7 @@ struct PathSolver
 		auto& cn = close[x + y * path.m_desc.m_size.x];
 
 		// Šù‚É’TõÏ‚İ
-		if (cost >= cn.cost)
+		if (cn.cost >= 0 && cost >= cn.cost)
 		{
 			return;
 		}
