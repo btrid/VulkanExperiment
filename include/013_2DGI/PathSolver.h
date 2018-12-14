@@ -7,8 +7,8 @@ struct PathSolver
 #define offset_def ivec2 offset[4] = { {1, 0}, {-1, 0}, {0, 1}, {0, -1}, }
 	struct Node
 	{
-		int32_t cost;
-		int32_t parent;
+		uint32_t cost;
+		uint32_t parent;
 		uint32_t is_open : 1;
 		uint32_t condition : 5; //!< ’Tõ‚·‚é•K—v‚ª‚ ‚é‚©
 		uint32_t p : 28;
@@ -51,17 +51,20 @@ struct PathSolver
 		std::vector<uint64_t> result(aa.x*aa.y);
 
 		std::vector<Node> close(path.m_desc.m_size.x * path.m_desc.m_size.y);
-		std::deque<Node*> open;
-		open.push_back(&close[path.m_desc.m_start.x + path.m_desc.m_start.y * path.m_desc.m_size.x]);
-		open.front()->is_open = 1;
-		open.front()->precompute(path.m_desc.m_start, path);
+		std::deque<uint32_t> open;
+		open.push_back(path.m_desc.m_start.x + path.m_desc.m_start.y * path.m_desc.m_size.x);
+		{
+			auto& start = close[open.front()];
+			start.is_open = 1;
+			start.precompute(path.m_desc.m_start, path);
+		}
 		while (!open.empty())
 		{
-			Node* node = open.front();
+			uint32_t node_index = open.front();
+			Node& node = close[node_index];
 			open.pop_front();
 
-			intptr_t current = node - close.data();
-			ivec2 n = ivec2(current%path.m_desc.m_size.x, current / path.m_desc.m_size.x);
+			ivec2 n = ivec2(node_index%path.m_desc.m_size.x, node_index / path.m_desc.m_size.x);
 
 			if (all(equal(ivec2(n.x, n.y), path.m_desc.m_finish)))
 			{
@@ -94,13 +97,13 @@ struct PathSolver
 
 			for (int i = 0; i < 4; i++)
 			{
-				if ((node->condition & (1 << i)) != 0) {
+				if ((node.condition & (1 << i)) != 0) {
 					continue;
 				}
-				_setNode(path, n.x + offset[i].x, n.y + offset[i].y, current, node->cost + 1, open, close);
+				_setNode(path, n.x + offset[i].x, n.y + offset[i].y, node_index, node.cost + 1, open, close);
 			}
 
-			node->is_open = 0;
+			node.is_open = 0;
 
 		}
 
@@ -116,27 +119,29 @@ struct PathSolver
 		offset_def;
 
 		std::vector<Node> close(path.m_desc.m_size.x * path.m_desc.m_size.y);
-		std::deque<Node*> open;
-		open.push_back(&close[path.m_desc.m_start.x + path.m_desc.m_start.y * path.m_desc.m_size.x]);
-		open.front()->is_open = 1;
-		open.front()->precompute(path.m_desc.m_start, path);
+		std::deque<uint32_t> open;
+		open.push_back(path.m_desc.m_start.x + path.m_desc.m_start.y * path.m_desc.m_size.x);
+		{
+			auto& start = close[open.front()];
+			start.is_open = 1;
+			start.precompute(path.m_desc.m_start, path);
+		}
 		while (!open.empty())
 		{
-			Node* node = open.front();
+			uint32_t node_index = open.front();
+			Node& node = close[node_index];
 			open.pop_front();
 
-			intptr_t current = node - close.data();
-			ivec2 n = ivec2(current%path.m_desc.m_size.x, current / path.m_desc.m_size.x);
-
+			ivec2 n = ivec2(node_index%path.m_desc.m_size.x, node_index / path.m_desc.m_size.x);
 
 			for (int i = 0; i < 4; i++)
 			{
-				if ((node->condition & (1 << i)) != 0) {
+				if ((node.condition & (1 << i)) != 0) {
 					continue;
 				}
-				_setNode(path, n.x + offset[i].x, n.y + offset[i].y, current, node->cost + 1, open, close);
+				_setNode(path, n.x + offset[i].x, n.y + offset[i].y, node_index, node.cost + 1, open, close);
 			}
-			node->is_open = 0;
+			node.is_open = 0;
 
 		}
 
@@ -152,12 +157,12 @@ struct PathSolver
 		}
 		return result;
 	}
-	void _setNode(const PathContext& path, int x, int y, int parent, int cost, std::deque<Node*>& open, std::vector<Node>& close)const
+	void _setNode(const PathContext& path, int x, int y, uint32_t parent, uint32_t cost, std::deque<uint32_t>& open, std::vector<Node>& close)const
 	{
 		auto& cn = close[x + y * path.m_desc.m_size.x];
 
 		// Šù‚É’TõÏ‚Ý
-		if (cn.cost >= 0 && cost >= cn.cost)
+		if (cost >= cn.cost)
 		{
 			return;
 		}
@@ -179,7 +184,7 @@ struct PathSolver
 			{
 				cn.precompute(ivec2(x, y), path);
 			}
-			open.push_back(&cn);
+			open.push_back(x + y * path.m_desc.m_size.x);
 		}
 
 	}
