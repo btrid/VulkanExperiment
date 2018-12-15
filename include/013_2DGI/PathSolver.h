@@ -10,12 +10,14 @@ struct PathSolver
 		uint32_t cost;
 		uint32_t parent;
 		uint32_t is_open : 1;
-		uint32_t condition : 5; //!< ’Tõ‚·‚é•K—v‚ª‚ ‚é‚©
-		uint32_t p : 28;
+		uint32_t is_precomputed : 1;
+		uint32_t condition : 4; //!< ’Tõ‚·‚é•K—v‚ª‚ ‚é‚©
+		uint32_t p : 26;
 		Node()
 			: cost(-1)
 			, parent(-1)
 			, is_open(0)
+			, is_precomputed(0)
 			, condition(0)
 		{}
 
@@ -23,7 +25,7 @@ struct PathSolver
 		{
 			offset_def;
 			// –‘OŒvZ
-			condition = 1 << 4;
+			is_precomputed = 1;
 			for (int i = 0; i < 4; i++)
 			{
 				auto _n = c + offset[i];
@@ -180,7 +182,7 @@ struct PathSolver
 			cn.cost = cost;
 			cn.parent = parent;
 			cn.is_open = 1;
-			if (cn.condition == 0)
+			if (cn.is_precomputed == 0)
 			{
 				cn.precompute(ivec2(x, y), path);
 			}
