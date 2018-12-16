@@ -21,7 +21,7 @@ struct PathSolver
 			, condition(0)
 		{}
 
-		void precompute(const ivec2& c, const PathContext& path)
+		void precompute(const ivec2& c, const PathContextCPU& path)
 		{
 			offset_def;
 			// Ž–‘OŒvŽZ
@@ -44,7 +44,7 @@ struct PathSolver
 
 	};
 
-	std::vector<uint64_t> executeSolve(const PathContext& path)const
+	std::vector<uint64_t> executeSolve(const PathContextCPU& path)const
 	{
 		cStopWatch time;
 
@@ -115,7 +115,7 @@ struct PathSolver
 		return result;
 	}
 
-	std::vector<uint32_t> executeMakeVectorField(const PathContext& path)const
+	std::vector<uint32_t> executeMakeVectorField(const PathContextCPU& path)const
 	{
 		cStopWatch time;
 		offset_def;
@@ -159,7 +159,7 @@ struct PathSolver
 		}
 		return result;
 	}
-	void _setNode(const PathContext& path, int x, int y, uint32_t parent, uint32_t cost, std::deque<uint32_t>& open, std::vector<Node>& close)const
+	void _setNode(const PathContextCPU& path, int x, int y, uint32_t parent, uint32_t cost, std::deque<uint32_t>& open, std::vector<Node>& close)const
 	{
 		auto& cn = close[x + y * path.m_desc.m_size.x];
 
@@ -191,7 +191,7 @@ struct PathSolver
 
 	}
 
-	void write(const PathContext& path)
+	void write(const PathContextCPU& path)
 	{
 		auto map_size = path.m_desc.m_size >> 3;
 		FILE* file;
@@ -210,7 +210,7 @@ struct PathSolver
 		}
 		fclose(file);
 	}
-	void writeSolvePath(const PathContext& path, const std::vector<uint64_t>& solver, const std::string& filename)
+	void writeSolvePath(const PathContextCPU& path, const std::vector<uint64_t>& solver, const std::string& filename)
 	{
 		auto map_size = path.m_desc.m_size >> 3;
 		FILE* file;

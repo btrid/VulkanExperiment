@@ -52,11 +52,11 @@
 
 int pathFinding()
 {
-	PathContext::Description desc;
+	PathContextCPU::Description desc;
 	desc.m_size = ivec2(1024);
 	desc.m_start = ivec2(11, 11);
 	desc.m_finish = ivec2(1002, 1000);
-	PathContext pf(desc);
+	PathContextCPU pf(desc);
 //	pf.m_field = pathmake_maze(1024*8, 1024*8);
  	pf.m_field = pathmake_noise(1024, 1024);
  	PathSolver solver;

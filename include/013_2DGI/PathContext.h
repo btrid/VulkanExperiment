@@ -11,7 +11,7 @@
 #include <btrlib/cStopWatch.h>
 
 
-struct PathContext
+struct PathContextCPU
 {
 	struct Description
 	{
@@ -19,7 +19,7 @@ struct PathContext
 		ivec2 m_start;
 		ivec2 m_finish;
 	};
-	PathContext(const Description& desc)
+	PathContextCPU(const Description& desc)
 	{
 		m_desc = desc;
 	}
