@@ -8,7 +8,6 @@
 struct PathNode
 {
 	uint cost;
-	uint flag;
 };
 
 layout(set=USE_PathFinding, binding=0, std430) restrict buffer PathNodeBuffer {

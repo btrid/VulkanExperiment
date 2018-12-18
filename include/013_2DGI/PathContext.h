@@ -8,6 +8,7 @@
 #include<fstream>
 
 #include <btrlib/DefineMath.h>
+#include <btrlib/Context.h>
 #include <btrlib/cStopWatch.h>
 
 
@@ -36,6 +37,29 @@ struct PathContextCPU
 	Description m_desc;
 	std::vector<uint64_t> m_field;
 
+};
+
+struct PathContext
+{
+	struct PathNode
+	{
+		uint cost;
+	};
+
+	PathContext(const std::shared_ptr<btr::Context>& context, const PathContextCPU& path)
+	{
+		m_context = context;
+// 		b_node = context->m_storage_memory.allocateMemory<PathNode>({ path.m_desc.m_size.x*path.m_desc.m_size.y, {} });
+// 		b_open = context->m_storage_memory.allocateMemory<uint32_t>({ 1, {} });
+// 		b_open_counter = context->m_storage_memory.allocateMemory<uvec4>({ 1024, {} });
+
+	}
+
+	std::shared_ptr<btr::Context> m_context;
+
+	btr::BufferMemoryEx<PathNode> b_node;
+	btr::BufferMemoryEx<uint32_t> b_space;
+	btr::BufferMemoryEx<uvec4> b_space_counter;
 };
 
 std::vector<uint64_t> pathmake_noise(int sizex, int sizey);
