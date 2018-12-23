@@ -26,7 +26,7 @@ struct GI2DContext
 		mat4 m_camera_PV;
 		uvec4 m_resolution;
 		vec4 m_position;
-		uint32_t m_fragment_map_hierarchy_offset[8];
+		uint32_t m_fragment_map_hierarchy_offset[4];
 		uint32_t m_hierarchy_num;
 	};
 	struct GI2DScene
@@ -102,17 +102,15 @@ struct GI2DContext
 			m_gi2d_info.m_position = vec4(0.f, 0.f, 0.f, 0.f);
 			m_gi2d_info.m_resolution = uvec4(RenderWidth, RenderHeight, RenderWidth/8, RenderHeight/8);
 			m_gi2d_info.m_camera_PV = glm::ortho(RenderWidth*-0.5f, RenderWidth*0.5f, RenderHeight*-0.5f, RenderHeight*0.5f, 0.f, 2000.f) * glm::lookAt(vec3(RenderWidth*0.5f, 1000.f, RenderHeight*0.5f) + m_gi2d_info.m_position.xyz(), vec3(RenderWidth*0.5f, 0.f, RenderHeight*0.5f) + m_gi2d_info.m_position.xyz(), vec3(0.f, 0.f, 1.f));
-			m_gi2d_info.m_hierarchy_num = 8;
+			m_gi2d_info.m_hierarchy_num = 4;
 
-			int size = RenderHeight * RenderWidth / 64;
 			m_gi2d_info.m_fragment_map_hierarchy_offset[0] = 0;
+			int size = RenderHeight * RenderWidth / 64;
 			m_gi2d_info.m_fragment_map_hierarchy_offset[1] = m_gi2d_info.m_fragment_map_hierarchy_offset[0] + size;
-			m_gi2d_info.m_fragment_map_hierarchy_offset[2] = m_gi2d_info.m_fragment_map_hierarchy_offset[1] + size / (2 * 2);
-			m_gi2d_info.m_fragment_map_hierarchy_offset[3] = m_gi2d_info.m_fragment_map_hierarchy_offset[2] + size / (4 * 4);
-			m_gi2d_info.m_fragment_map_hierarchy_offset[4] = m_gi2d_info.m_fragment_map_hierarchy_offset[3] + size / (8 * 8);
-			m_gi2d_info.m_fragment_map_hierarchy_offset[5] = m_gi2d_info.m_fragment_map_hierarchy_offset[4] + size / (16 * 16);
-			m_gi2d_info.m_fragment_map_hierarchy_offset[6] = m_gi2d_info.m_fragment_map_hierarchy_offset[5] + size / (32 * 32);
-			m_gi2d_info.m_fragment_map_hierarchy_offset[7] = m_gi2d_info.m_fragment_map_hierarchy_offset[6] + size / (64 * 64);
+			size /= 64;
+			m_gi2d_info.m_fragment_map_hierarchy_offset[2] = m_gi2d_info.m_fragment_map_hierarchy_offset[1] + size;
+			size /= 64;
+			m_gi2d_info.m_fragment_map_hierarchy_offset[3] = m_gi2d_info.m_fragment_map_hierarchy_offset[2] + size;
 
 			cmd.updateBuffer<GI2DInfo>(u_gi2d_info.getInfo().buffer, u_gi2d_info.getInfo().offset, m_gi2d_info);
 

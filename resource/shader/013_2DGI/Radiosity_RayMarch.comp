@@ -41,7 +41,9 @@ void main()
 		{
 			ivec2 cell = map_index>>3;
 			ivec2 cell_sub = map_index%8;
-			uint dindex = cell.x + cell.y*reso.z;
+//			uint dindex = cell.x + cell.y*reso.z;
+			uint dindex = getMemoryOrder(cell);
+			
 			if(old_map_index != dindex)
 			{
 //				map = b_fragment_map[dindex];
@@ -88,7 +90,7 @@ void main()
 		{
 			// DDA
 			march_count += skip;
-			pos = ray.origin + dir*march_count;
+			pos = fma(dir, float(march_count).xx, ray.origin);
 			map_index = ivec2(pos);
 		}
 	}
