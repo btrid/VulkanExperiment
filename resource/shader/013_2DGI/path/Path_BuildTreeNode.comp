@@ -1,0 +1,63 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_PathFinding 0
+#include "Path.glsl"
+
+#define USE_GI2D 1
+#include "GI2D.glsl"
+
+
+layout(push_constant) uniform Input
+{
+	uint level;
+	uint hierarchy;
+} constant;
+
+shared uint s_node_index; 
+shared PathNode s_node; 
+layout (local_size_x=64) in;
+void main()
+{
+	if(gl_LocalInvlocationIndex == 0)
+	{
+		s_node_index = 0;
+	}
+	barrier();
+	sharedMemoryBarrier();
+
+	if(gl_LocalInvlocationIndex < constant.level)
+	{
+		atomicAdd(s_node_index, b_node_hierarchy_counter[gl_LocalInvlocationIndex].x);
+	}
+	barrier();
+	sharedMemoryBarrier();
+
+	if(gl_LocalInvlocationIndex == 0)
+	{
+		s_node = b_node[s_node_index];
+	}
+	barrier();
+	sharedMemoryBarrier();
+
+	uint map_offset = getFragmentMapHierarchyOffset(constant.hierarchy*3);
+
+	PathNode node;
+	node.cost = -1;
+	node.norton_index = s_node.norton_index*64 + gl_LocalInvlocationIndex;
+	node.child_node_index = -1;
+	if(b_fragment_map[map_offset + s_node.child_node_index + gl_LocalInvlocationIndex] == 0)
+	{
+		// 子は必要ない
+	}
+	else
+	{
+		uint child_index = atomicAdd(b_node_counter, 64);
+		node.child_node_index = child_index;
+
+		atomicAdd(b_node_hierarchy_counter[constant.level].x, 1);
+	}
+	b_node[s_node.child_node_index + gl_LocalInvlocationIndex] = node;
+
+
+}

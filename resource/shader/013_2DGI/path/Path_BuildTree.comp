@@ -1,0 +1,42 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_PathFinding 0
+#include "Path.glsl"
+
+#define USE_GI2D 1
+#include "GI2D.glsl"
+
+
+layout(push_constant) uniform Input
+{
+	uint level;
+	uint hierarchy;
+} constant;
+
+layout (local_size_x=64) in;
+void main()
+{
+	uint map_offset = getFragmentMapHierarchyOffset(constant.hierarchy*3);
+	uint map_size = getFragmentMapHierarchyOffset(constant.hierarchy*3+1) - map_offset;
+
+	if(gl_GlobalInvlocationID.x >= map_size){ return; }
+
+	PathNode node;
+	node.cost = -1;
+	node.norton_index = gl_GlobalInvlocationID.x;
+	node.child_node_index = -1;
+
+	if(b_fragment_map[map_offset + gl_GlobalInvlocationID.x] == 0)
+	{
+		// 子は必要ない
+	}
+	else
+	{
+		uint child_index = atomicAdd(b_node_counter, 64);
+		node.child_node_index = child_index;
+		atomicAdd(b_node_hierarchy_counter[0].x, 1);
+	}
+	b_node[gl_GlobalInvlocationID.x] = node;
+
+}

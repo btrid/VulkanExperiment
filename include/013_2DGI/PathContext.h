@@ -2,14 +2,14 @@
 
 #include <vector>
 #include <queue>
-#include <unordered_map>
 #include <random>
 #include <cstdint>
-#include<fstream>
 
 #include <btrlib/DefineMath.h>
 #include <btrlib/Context.h>
 #include <btrlib/cStopWatch.h>
+
+#include <013_2DGI/GI2D/GI2DContext.h>
 
 
 struct PathContextCPU
@@ -43,23 +43,24 @@ struct PathContext
 {
 	struct PathNode
 	{
-		uint cost;
+		uint32_t cost;
+		uint32_t child_index;
 	};
 
-	PathContext(const std::shared_ptr<btr::Context>& context, const PathContextCPU& path)
+	PathContext(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context)
 	{
 		m_context = context;
-// 		b_node = context->m_storage_memory.allocateMemory<PathNode>({ path.m_desc.m_size.x*path.m_desc.m_size.y, {} });
-// 		b_open = context->m_storage_memory.allocateMemory<uint32_t>({ 1, {} });
-// 		b_open_counter = context->m_storage_memory.allocateMemory<uvec4>({ 1024, {} });
+ 		b_node = context->m_storage_memory.allocateMemory<PathNode>({ gi2d_context->RenderSize.x*gi2d_context->RenderSize.y, {} });
+		b_node_counter = context->m_storage_memory.allocateMemory<uint32_t>({ 1, {} });
+		b_node_hierarchy_counter = context->m_storage_memory.allocateMemory<uvec4>({ 4, {} });
 
 	}
 
 	std::shared_ptr<btr::Context> m_context;
 
 	btr::BufferMemoryEx<PathNode> b_node;
-	btr::BufferMemoryEx<uint32_t> b_space;
-	btr::BufferMemoryEx<uvec4> b_space_counter;
+	btr::BufferMemoryEx<uint32_t> b_node_counter;
+	btr::BufferMemoryEx<uvec4> b_node_hierarchy_counter;
 };
 
 std::vector<uint64_t> pathmake_noise(int sizex, int sizey);
