@@ -26,7 +26,8 @@ struct GI2DContext
 		mat4 m_camera_PV;
 		uvec4 m_resolution;
 		vec4 m_position;
-		uint32_t m_fragment_map_hierarchy_offset[4];
+		uint32_t m_fragment_map_hierarchy_size[4];
+//		uint32_t m_fragment_map_hierarchy_size[4];
 		uint32_t m_hierarchy_num;
 	};
 	struct GI2DScene
@@ -104,13 +105,14 @@ struct GI2DContext
 			m_gi2d_info.m_camera_PV = glm::ortho(RenderWidth*-0.5f, RenderWidth*0.5f, RenderHeight*-0.5f, RenderHeight*0.5f, 0.f, 2000.f) * glm::lookAt(vec3(RenderWidth*0.5f, 1000.f, RenderHeight*0.5f) + m_gi2d_info.m_position.xyz(), vec3(RenderWidth*0.5f, 0.f, RenderHeight*0.5f) + m_gi2d_info.m_position.xyz(), vec3(0.f, 0.f, 1.f));
 			m_gi2d_info.m_hierarchy_num = 4;
 
-			m_gi2d_info.m_fragment_map_hierarchy_offset[0] = 0;
 			int size = RenderHeight * RenderWidth / 64;
-			m_gi2d_info.m_fragment_map_hierarchy_offset[1] = m_gi2d_info.m_fragment_map_hierarchy_offset[0] + size;
+			m_gi2d_info.m_fragment_map_hierarchy_size[0] = size;
 			size /= 64;
-			m_gi2d_info.m_fragment_map_hierarchy_offset[2] = m_gi2d_info.m_fragment_map_hierarchy_offset[1] + size;
+			m_gi2d_info.m_fragment_map_hierarchy_size[1] = m_gi2d_info.m_fragment_map_hierarchy_size[0] + size;
 			size /= 64;
-			m_gi2d_info.m_fragment_map_hierarchy_offset[3] = m_gi2d_info.m_fragment_map_hierarchy_offset[2] + size;
+			m_gi2d_info.m_fragment_map_hierarchy_size[2] = m_gi2d_info.m_fragment_map_hierarchy_size[1] + size;
+			size /= 64;
+			m_gi2d_info.m_fragment_map_hierarchy_size[3] = m_gi2d_info.m_fragment_map_hierarchy_size[2] + size;
 
 			cmd.updateBuffer<GI2DInfo>(u_gi2d_info.getInfo().buffer, u_gi2d_info.getInfo().offset, m_gi2d_info);
 
@@ -121,9 +123,9 @@ struct GI2DContext
 		}
 		{
 			b_fragment = context->m_storage_memory.allocateMemory<Fragment>({ FragmentBufferSize, {} });
-			b_fragment_map = context->m_storage_memory.allocateMemory<u64vec2>({ m_gi2d_info.m_fragment_map_hierarchy_offset[m_gi2d_info.m_hierarchy_num-1], {} });
-			b_diffuse_map = context->m_storage_memory.allocateMemory<uint64_t>({ m_gi2d_info.m_fragment_map_hierarchy_offset[m_gi2d_info.m_hierarchy_num - 1], {} });
-			b_emissive_map = context->m_storage_memory.allocateMemory<uint64_t>({ m_gi2d_info.m_fragment_map_hierarchy_offset[m_gi2d_info.m_hierarchy_num - 1], {} });
+			b_fragment_map = context->m_storage_memory.allocateMemory<u64vec2>({ m_gi2d_info.m_fragment_map_hierarchy_size[m_gi2d_info.m_hierarchy_num-1], {} });
+			b_diffuse_map = context->m_storage_memory.allocateMemory<uint64_t>({ m_gi2d_info.m_fragment_map_hierarchy_size[m_gi2d_info.m_hierarchy_num - 1], {} });
+			b_emissive_map = context->m_storage_memory.allocateMemory<uint64_t>({ m_gi2d_info.m_fragment_map_hierarchy_size[m_gi2d_info.m_hierarchy_num - 1], {} });
 			b_light = context->m_storage_memory.allocateMemory<uint32_t>({ FragmentBufferSize, {} });
 			b_grid_counter = context->m_storage_memory.allocateMemory<int32_t>({ FragmentBufferSize,{} });
 		}

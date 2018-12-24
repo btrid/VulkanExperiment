@@ -10,7 +10,6 @@
 
 layout(push_constant) uniform Input
 {
-	uint level;
 	uint hierarchy;
 } constant;
 

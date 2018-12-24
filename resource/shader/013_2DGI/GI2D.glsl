@@ -132,7 +132,7 @@ ivec2 frame_offset(){
 }
 
 
-#define getFragmentMapHierarchyOffset(_i) (u_gi2d_info.m_fragment_map_hierarchy_offset[(_i)])
+#define getFragmentMapHierarchyOffset(_i) (((_i)==0) ? 0 : u_gi2d_info.m_fragment_map_hierarchy_offset[(_i)-1])
 #endif
 
 
