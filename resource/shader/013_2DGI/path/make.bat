@@ -9,5 +9,4 @@ SET exe=glslangValidator.exe
 SET output=../../binary/
 
 %exe% %include% %option% -o %output%/Path_BuildTree.comp.spv Path_BuildTree.comp
-%exe% %include% %option% -o %output%/Path_Precompute.comp.spv Path_Precompute.comp
-%exe% %include% %option% -o %output%/Path_PathFinding.comp.spv Path_PathFinding.comp
+%exe% %include% %option% -o %output%/Path_BuildTreeNode.comp.spv Path_BuildTreeNode.comp

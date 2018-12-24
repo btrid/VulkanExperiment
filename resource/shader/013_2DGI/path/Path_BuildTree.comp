@@ -17,26 +17,26 @@ layout(push_constant) uniform Input
 layout (local_size_x=64) in;
 void main()
 {
-	uint map_offset = getFragmentMapHierarchyOffset(constant.hierarchy*3);
-	uint map_size = getFragmentMapHierarchyOffset(constant.hierarchy*3+1) - map_offset;
+	uint map_offset = getFragmentMapHierarchyOffset(constant.hierarchy);
+	uint map_size = getFragmentMapHierarchyOffset(constant.hierarchy+1) - map_offset;
 
-	if(gl_GlobalInvlocationID.x >= map_size){ return; }
+	if(gl_GlobalInvocationID.x >= map_size){ return; }
 
-	PathNode node;
-	node.cost = -1;
-	node.norton_index = gl_GlobalInvlocationID.x;
+	SparseMap node;
+	node.norton_index = gl_GlobalInvocationID.x;
 	node.child_node_index = -1;
+	node.map = b_diffuse_map[map_offset + node.norton_index];
 
-	if(b_fragment_map[map_offset + gl_GlobalInvlocationID.x] == 0)
+	if(node.map == 0)
 	{
 		// 子は必要ない
 	}
 	else
 	{
-		uint child_index = atomicAdd(b_node_counter, 64);
+		uint child_index = atomicAdd(b_sparse_map_counter, 64);
 		node.child_node_index = child_index;
-		atomicAdd(b_node_hierarchy_counter[0].x, 1);
+		atomicAdd(b_sparse_map_hierarchy_counter[0].x, 1);
 	}
-	b_node[gl_GlobalInvlocationID.x] = node;
+	b_sparse_map[gl_GlobalInvocationID.x] = node;
 
 }

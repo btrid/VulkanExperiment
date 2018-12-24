@@ -41,10 +41,15 @@ struct PathContextCPU
 
 struct PathContext
 {
+	struct SparseMap
+	{
+		uint32_t index;
+		uint32_t child_index;
+		uint64_t map;
+	};
 	struct PathNode
 	{
 		uint32_t cost;
-		uint32_t child_index;
 	};
 
 	PathContext(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context)

@@ -41,5 +41,7 @@ call fluid/make.bat
 cd /d %~dp0
 call crowd/make.bat
 cd /d %~dp0
+call path/make.bat
+cd /d %~dp0
 rem call rigidbody_dem/make.bat
 rem cd /d %~dp0

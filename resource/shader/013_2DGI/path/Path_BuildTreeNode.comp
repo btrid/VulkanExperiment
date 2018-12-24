@@ -15,49 +15,50 @@ layout(push_constant) uniform Input
 } constant;
 
 shared uint s_node_index; 
-shared PathNode s_node; 
+shared uint s_map_offset; 
+shared SparseMap s_node; 
 layout (local_size_x=64) in;
 void main()
 {
-	if(gl_LocalInvlocationIndex == 0)
+	if(gl_LocalInvocationIndex == 0)
 	{
 		s_node_index = 0;
+		s_map_offset = getFragmentMapHierarchyOffset(constant.hierarchy);
 	}
 	barrier();
-	sharedMemoryBarrier();
+	memoryBarrierShared();
 
-	if(gl_LocalInvlocationIndex < constant.level)
+	if(gl_LocalInvocationIndex < constant.level)
 	{
-		atomicAdd(s_node_index, b_node_hierarchy_counter[gl_LocalInvlocationIndex].x);
+		atomicAdd(s_node_index, b_sparse_map_hierarchy_counter[gl_LocalInvocationIndex].x);
 	}
 	barrier();
-	sharedMemoryBarrier();
+	memoryBarrierShared();
 
-	if(gl_LocalInvlocationIndex == 0)
+	if(gl_LocalInvocationIndex == 0)
 	{
-		s_node = b_node[s_node_index];
+		s_node = b_sparse_map[s_node_index];
 	}
 	barrier();
-	sharedMemoryBarrier();
+	memoryBarrierShared();
 
-	uint map_offset = getFragmentMapHierarchyOffset(constant.hierarchy*3);
 
-	PathNode node;
-	node.cost = -1;
-	node.norton_index = s_node.norton_index*64 + gl_LocalInvlocationIndex;
+	SparseMap node;
+	node.norton_index = s_node.norton_index*64 + gl_LocalInvocationIndex;
 	node.child_node_index = -1;
-	if(b_fragment_map[map_offset + s_node.child_node_index + gl_LocalInvlocationIndex] == 0)
+	node.map = b_diffuse_map[s_map_offset + node.norton_index];
+	if(node.map == 0 || constant.hierarchy == 0)
 	{
 		// 子は必要ない
 	}
 	else
 	{
-		uint child_index = atomicAdd(b_node_counter, 64);
+		uint child_index = atomicAdd(b_sparse_map_counter, 64);
 		node.child_node_index = child_index;
 
-		atomicAdd(b_node_hierarchy_counter[constant.level].x, 1);
+		atomicAdd(b_sparse_map_hierarchy_counter[constant.level].x, 1);
 	}
-	b_node[s_node.child_node_index + gl_LocalInvlocationIndex] = node;
+	b_sparse_map[s_node.child_node_index + gl_LocalInvocationIndex] = node;
 
 
 }
