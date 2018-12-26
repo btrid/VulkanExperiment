@@ -59,8 +59,8 @@ int pathFinding()
 	PathContextCPU pf(desc);
 //	pf.m_field = pathmake_maze(1024*8, 1024*8);
  	pf.m_field = pathmake_noise(1024, 1024);
- 	PathSolver solver;
-	auto solve = solver.executeMakeVectorField(pf);
+// 	PathSolver solver;
+//	auto solve = solver.executeMakeVectorField(pf);
 //	auto solve = solver.executeSolve(pf);
 //	solver.writeSolvePath(pf, solve, "hoge.txt");
 	auto gpu = sGlobal::Order().getGPU(0);
@@ -97,6 +97,9 @@ int pathFinding()
 	Crowd_Procedure crowd_procedure(crowd_context, gi2d_context);
 	Crowd_CalcWorldMatrix crowd_calc_world_matrix(crowd_context, appmodel_context);
 	Crowd_Debug crowd_debug(crowd_context);
+
+	Path_Process path_process(context, path_context, gi2d_context);
+
 	AppModelAnimationStage animater(context, appmodel_context);
 	GI2DModelRender renderer(context, appmodel_context, gi2d_context);
 	auto anime_cmd = animater.createCmd(player_model);
@@ -137,6 +140,8 @@ int pathFinding()
 
 				gi2d_make_hierarchy.execute(cmd);
 				gi2d_make_hierarchy.executeHierarchy(cmd);
+
+				if (0)
 				{
 					crowd_debug.execute(cmd);
  					crowd_procedure.executeUpdateUnit(cmd);
@@ -145,14 +150,17 @@ int pathFinding()
 
 					std::vector<vk::CommandBuffer> anime_cmds{ anime_cmd.get() };
 					animater.dispatchCmd(cmd, anime_cmds);
-
-				}
-				{
 					std::vector<vk::CommandBuffer> render_cmds{ render_cmd.get() };
 					renderer.dispatchCmd(cmd, render_cmds);
 				}
-				crowd_procedure.executePathFinding(cmd);
-				crowd_procedure.executeDrawField(cmd, app.m_window->getFrontBuffer());
+
+				if (0)
+				{
+					crowd_procedure.executePathFinding(cmd);
+					crowd_procedure.executeDrawField(cmd, app.m_window->getFrontBuffer());
+				}
+
+				path_process.executeBuildMap(cmd);
 
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;
@@ -179,7 +187,7 @@ int main()
 	camera->getData().m_far = 5000.f;
 	camera->getData().m_near = 0.01f;
 
-//	return pathFinding();
+	return pathFinding();
 
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();

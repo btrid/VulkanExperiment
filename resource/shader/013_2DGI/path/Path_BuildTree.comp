@@ -26,7 +26,7 @@ void main()
 	node.child_node_index = -1;
 	node.map = b_diffuse_map[map_offset + node.norton_index];
 
-	if(node.map == 0)
+	if(node.map == 0 /*|| node.map == -1*/)
 	{
 		// 子は必要ない
 	}
@@ -34,7 +34,7 @@ void main()
 	{
 		uint child_index = atomicAdd(b_sparse_map_counter, 64);
 		node.child_node_index = child_index;
-		atomicAdd(b_sparse_map_hierarchy_counter[0].x, 1);
+		atomicAdd(b_sparse_map_hierarchy_counter[1].x, 1);
 	}
 	b_sparse_map[gl_GlobalInvocationID.x] = node;
 

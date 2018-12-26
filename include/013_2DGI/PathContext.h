@@ -9,6 +9,7 @@
 #include <btrlib/Context.h>
 #include <btrlib/cStopWatch.h>
 
+#include <applib/App.h>
 #include <013_2DGI/GI2D/GI2DContext.h>
 
 
@@ -194,11 +195,47 @@ struct Path_Process
 		};
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_BuildMap].get(), 0, std::size(descriptorsets), descriptorsets, 0, nullptr);
 
-// 		{
-// 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_BuildMap].get());
-// 			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth*m_gi2d_context->RenderHeight, 1, 1), uvec3(1024, 1, 1));
-// 			cmd.dispatch(num.x, num.y, num.z);
-// 		}
+		{
+			cmd.updateBuffer<uint32_t>(m_path_context->b_sparse_map_counter.getInfo().buffer, m_path_context->b_sparse_map_counter.getInfo().offset, m_gi2d_context->m_gi2d_info.m_fragment_map_size_hierarchy[3]);
+
+			std::array<uvec4, 4> v = {
+				uvec4{m_gi2d_context->m_gi2d_info.m_fragment_map_size_hierarchy[3], 1, 1, 0},
+				uvec4{0, 1, 1, 0},
+				uvec4{0, 1, 1, 0},
+				uvec4{0, 1, 1, 0},
+			};
+			cmd.updateBuffer<std::array<uvec4, 4>>(m_path_context->b_sparse_map_hierarchy_counter.getInfo().buffer, m_path_context->b_sparse_map_hierarchy_counter.getInfo().offset, v);
+
+
+			vk::BufferMemoryBarrier barrier[] = {
+				m_path_context->b_sparse_map_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+				m_path_context->b_sparse_map_hierarchy_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, 
+				{}, 0, nullptr, std::size(barrier), barrier, 0, nullptr);
+		}
+
+
+		{
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_BuildMap].get());
+			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->m_gi2d_info.m_fragment_map_size_hierarchy[3], 1, 1), uvec3(64, 1, 1));
+			cmd.dispatch(num.x, num.y, num.z);
+		}
+
+		for (uint32_t i = 1; i < 4; i++)
+		{
+			vk::BufferMemoryBarrier barrier[] = {
+				m_path_context->b_sparse_map_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				m_path_context->b_sparse_map_hierarchy_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect | vk::PipelineStageFlagBits::eComputeShader,
+				{}, 0, nullptr, std::size(barrier), barrier, 0, nullptr);
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_BuildMapNode].get());
+//			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->m_gi2d_info.m_fragment_map_size_hierarchy[3-i], 1, 1), uvec3(64, 1, 1));
+	//		cmd.dispatch(num.x, num.y, num.z);
+			cmd.dispatchIndirect(m_path_context->b_sparse_map_hierarchy_counter.getInfo().buffer, m_path_context->b_sparse_map_hierarchy_counter.getInfo().offset + i * sizeof(vec4));
+		}
 
 	}
 	std::shared_ptr<btr::Context> m_context;
