@@ -218,6 +218,9 @@ struct Path_Process
 
 		{
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_BuildMap].get());
+
+			cmd.pushConstants<uint32_t>(m_pipeline_layout[PipelineLayout_BuildMap].get(), vk::ShaderStageFlagBits::eCompute, 0, { 0 });
+
 			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->m_gi2d_info.m_fragment_map_size_hierarchy[3], 1, 1), uvec3(64, 1, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 		}
@@ -232,8 +235,9 @@ struct Path_Process
 				{}, 0, nullptr, std::size(barrier), barrier, 0, nullptr);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_BuildMapNode].get());
-//			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->m_gi2d_info.m_fragment_map_size_hierarchy[3-i], 1, 1), uvec3(64, 1, 1));
-	//		cmd.dispatch(num.x, num.y, num.z);
+
+			cmd.pushConstants<uint32_t>(m_pipeline_layout[PipelineLayout_BuildMap].get(), vk::ShaderStageFlagBits::eCompute, 0, { i });
+
 			cmd.dispatchIndirect(m_path_context->b_sparse_map_hierarchy_counter.getInfo().buffer, m_path_context->b_sparse_map_hierarchy_counter.getInfo().offset + i * sizeof(vec4));
 		}
 

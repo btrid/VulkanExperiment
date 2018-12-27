@@ -10,7 +10,7 @@
 
 layout(push_constant) uniform Input
 {
-	uint hierarchy;
+	uint level;
 } constant;
 
 shared uint s_node_index; 
@@ -19,11 +19,12 @@ shared SparseMap s_node;
 layout (local_size_x=64) in;
 void main()
 {
-	uint level = 3-constant.hierarchy;
+	uint level = constant.level;
+	uint hierarchy = 3-constant.level;
 	if(gl_LocalInvocationIndex == 0)
 	{
 		s_node_index = 0;
-		s_map_offset = getFragmentMapHierarchyOffset(constant.hierarchy);
+		s_map_offset = getFragmentMapHierarchyOffset(hierarchy);
 	}
 	barrier();
 	memoryBarrierShared();
@@ -47,7 +48,7 @@ void main()
 	node.norton_index = s_node.norton_index*64 + gl_LocalInvocationIndex;
 	node.child_node_index = -1;
 	node.map = b_diffuse_map[s_map_offset + node.norton_index];
-	if(node.map == 0 || level == 0)
+	if(node.map == 0 || hierarchy == 0)
 	{
 		// 子は必要ない
 	}

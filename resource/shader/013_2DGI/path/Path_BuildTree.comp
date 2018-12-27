@@ -10,14 +10,15 @@
 
 layout(push_constant) uniform Input
 {
-	uint hierarchy;
+	uint level;
 } constant;
 
 layout (local_size_x=64) in;
 void main()
 {
-	uint map_offset = getFragmentMapHierarchyOffset(constant.hierarchy);
-	uint map_size = getFragmentMapHierarchyOffset(constant.hierarchy+1) - map_offset;
+	uint hierarchy = 3-level;
+	uint map_offset = getFragmentMapHierarchyOffset(hierarchy);
+	uint map_size = getFragmentMapHierarchyOffset(hierarchy+1) - map_offset;
 
 	if(gl_GlobalInvocationID.x >= map_size){ return; }
 

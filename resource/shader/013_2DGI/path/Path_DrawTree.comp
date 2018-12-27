@@ -7,57 +7,11 @@
 #define USE_GI2D 1
 #include "GI2D.glsl"
 
+#define USE_RenderTarget 3
+#include "applib/System.glsl"
 
-layout(push_constant) uniform Input
-{
-	uint hierarchy;
-} constant;
-
-shared uint s_node_index; 
-shared uint s_map_offset; 
-shared SparseMap s_node; 
 layout (local_size_x=64) in;
 void main()
 {
-	if(gl_LocalInvocationIndex == 0)
-	{
-		s_node_index = 0;
-		s_map_offset = getFragmentMapHierarchyOffset(constant.hierarchy);
-	}
-	barrier();
-	memoryBarrierShared();
-
-	if(gl_LocalInvocationIndex < constant.level)
-	{
-		atomicAdd(s_node_index, b_sparse_map_hierarchy_counter[gl_LocalInvocationIndex].x);
-	}
-	barrier();
-	memoryBarrierShared();
-
-	if(gl_LocalInvocationIndex == 0)
-	{
-		s_node = b_sparse_map[s_node_index];
-	}
-	barrier();
-	memoryBarrierShared();
-
-
-	SparseMap node;
-	node.norton_index = s_node.norton_index*64 + gl_LocalInvocationIndex;
-	node.child_node_index = -1;
-	node.map = b_diffuse_map[s_map_offset + node.norton_index];
-	if(node.map == 0 || constant.hierarchy == 0)
-	{
-		// 子は必要ない
-	}
-	else
-	{
-		uint child_index = atomicAdd(b_sparse_map_counter, 64);
-		node.child_node_index = child_index;
-
-		atomicAdd(b_sparse_map_hierarchy_counter[constant.level].x, 1);
-	}
-	b_sparse_map[s_node.child_node_index + gl_LocalInvocationIndex] = node;
-
 
 }
