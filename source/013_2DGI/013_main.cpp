@@ -160,7 +160,7 @@ int pathFinding()
 					crowd_procedure.executeDrawField(cmd, app.m_window->getFrontBuffer());
 				}
 
-				path_process.executeBuildMap(cmd);
+				path_process.executeBuildTree(cmd);
 
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;

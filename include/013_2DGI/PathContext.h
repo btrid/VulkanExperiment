@@ -134,6 +134,8 @@ struct Path_Process
 			{
 				"Path_BuildTree.comp.spv",
 				"Path_BuildTreeNode.comp.spv",
+
+				"Path_DrawTree.comp.spv",
 			};
 			static_assert(array_length(name) == Shader_Num, "not equal shader num");
 
@@ -145,55 +147,82 @@ struct Path_Process
 
 		// pipeline layout
 		{
-			vk::DescriptorSetLayout layouts[] = {
-				m_path_context->m_descriptor_set_layout.get(),
-				m_gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data),
-			};
+			{
+				vk::DescriptorSetLayout layouts[] = {
+					m_path_context->m_descriptor_set_layout.get(),
+					m_gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data),
+				};
 
-			vk::PushConstantRange constants[] = {
-				vk::PushConstantRange().setStageFlags(vk::ShaderStageFlagBits::eCompute).setSize(4).setOffset(0),
+				vk::PushConstantRange constants[] = {
+					vk::PushConstantRange().setStageFlags(vk::ShaderStageFlagBits::eCompute).setSize(4).setOffset(0),
 
-			};
-			vk::PipelineLayoutCreateInfo pipeline_layout_info;
-			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
-			pipeline_layout_info.setPSetLayouts(layouts);
-			pipeline_layout_info.setPushConstantRangeCount(array_length(constants));
-			pipeline_layout_info.setPPushConstantRanges(constants);
-			m_pipeline_layout[PipelineLayout_BuildMap] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+				};
+				vk::PipelineLayoutCreateInfo pipeline_layout_info;
+				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
+				pipeline_layout_info.setPSetLayouts(layouts);
+				pipeline_layout_info.setPushConstantRangeCount(array_length(constants));
+				pipeline_layout_info.setPPushConstantRanges(constants);
+				m_pipeline_layout[PipelineLayout_BuildTree] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+
+			}
+			{
+				vk::DescriptorSetLayout layouts[] = {
+					m_path_context->m_descriptor_set_layout.get(),
+					m_gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data),
+					RenderTarget::s_descriptor_set_layout.get(),
+				};
+
+// 				vk::PushConstantRange constants[] = {
+// 					vk::PushConstantRange().setStageFlags(vk::ShaderStageFlagBits::eCompute).setSize(4).setOffset(0),
+// 				};
+				vk::PipelineLayoutCreateInfo pipeline_layout_info;
+				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
+				pipeline_layout_info.setPSetLayouts(layouts);
+//				pipeline_layout_info.setPushConstantRangeCount(array_length(constants));
+//				pipeline_layout_info.setPPushConstantRanges(constants);
+				m_pipeline_layout[PipelineLayout_DrawTree] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			}
 		}
 
 		// pipeline
 		{
-			std::array<vk::PipelineShaderStageCreateInfo, 8> shader_info;
-			shader_info[0].setModule(m_shader[Shader_BuildMap].get());
+			std::array<vk::PipelineShaderStageCreateInfo, 3> shader_info;
+			shader_info[0].setModule(m_shader[Shader_BuildTree].get());
 			shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[0].setPName("main");
-			shader_info[1].setModule(m_shader[Shader_BuildMapNode].get());
+			shader_info[1].setModule(m_shader[Shader_BuildTreeNode].get());
 			shader_info[1].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[1].setPName("main");
+			shader_info[2].setModule(m_shader[Shader_DrawTree].get());
+			shader_info[2].setStage(vk::ShaderStageFlagBits::eCompute);
+			shader_info[2].setPName("main");
 			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 			{
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[0])
-				.setLayout(m_pipeline_layout[PipelineLayout_BuildMap].get()),
+				.setLayout(m_pipeline_layout[PipelineLayout_BuildTree].get()),
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[1])
-				.setLayout(m_pipeline_layout[PipelineLayout_BuildMap].get()),
+				.setLayout(m_pipeline_layout[PipelineLayout_BuildTree].get()),
+				vk::ComputePipelineCreateInfo()
+				.setStage(shader_info[2])
+				.setLayout(m_pipeline_layout[PipelineLayout_DrawTree].get()),
 			};
 			auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
-			m_pipeline[Pipeline_BuildMap] = std::move(compute_pipeline[0]);
-			m_pipeline[Pipeline_BuildMapNode] = std::move(compute_pipeline[1]);
+			m_pipeline[Pipeline_BuildTree] = std::move(compute_pipeline[0]);
+			m_pipeline[Pipeline_BuildTreeNode] = std::move(compute_pipeline[1]);
+			m_pipeline[Pipeline_DrawTree] = std::move(compute_pipeline[2]);
 		}
 
 	}
 
-	void executeBuildMap(vk::CommandBuffer cmd)
+	void executeBuildTree(vk::CommandBuffer cmd)
 	{
 		vk::DescriptorSet descriptorsets[] = {
 			m_path_context->m_descriptor_set.get(),
 			m_gi2d_context->getDescriptorSet(),
 		};
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_BuildMap].get(), 0, std::size(descriptorsets), descriptorsets, 0, nullptr);
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_BuildTree].get(), 0, std::size(descriptorsets), descriptorsets, 0, nullptr);
 
 		{
 			cmd.updateBuffer<uint32_t>(m_path_context->b_sparse_map_counter.getInfo().buffer, m_path_context->b_sparse_map_counter.getInfo().offset, m_gi2d_context->m_gi2d_info.m_fragment_map_size_hierarchy[3]);
@@ -217,9 +246,9 @@ struct Path_Process
 
 
 		{
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_BuildMap].get());
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_BuildTree].get());
 
-			cmd.pushConstants<uint32_t>(m_pipeline_layout[PipelineLayout_BuildMap].get(), vk::ShaderStageFlagBits::eCompute, 0, { 0 });
+			cmd.pushConstants<uint32_t>(m_pipeline_layout[PipelineLayout_BuildTree].get(), vk::ShaderStageFlagBits::eCompute, 0, { 0 });
 
 			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->m_gi2d_info.m_fragment_map_size_hierarchy[3], 1, 1), uvec3(64, 1, 1));
 			cmd.dispatch(num.x, num.y, num.z);
@@ -234,33 +263,93 @@ struct Path_Process
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect | vk::PipelineStageFlagBits::eComputeShader,
 				{}, 0, nullptr, std::size(barrier), barrier, 0, nullptr);
 
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_BuildMapNode].get());
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_BuildTreeNode].get());
 
-			cmd.pushConstants<uint32_t>(m_pipeline_layout[PipelineLayout_BuildMap].get(), vk::ShaderStageFlagBits::eCompute, 0, { i });
+			cmd.pushConstants<uint32_t>(m_pipeline_layout[PipelineLayout_BuildTree].get(), vk::ShaderStageFlagBits::eCompute, 0, { i });
 
 			cmd.dispatchIndirect(m_path_context->b_sparse_map_hierarchy_counter.getInfo().buffer, m_path_context->b_sparse_map_hierarchy_counter.getInfo().offset + i * sizeof(vec4));
 		}
-
 	}
+	void executeDrawTree(vk::CommandBuffer cmd, const RenderTarget& render_target)
+	{
+		vk::DescriptorSet descriptorsets[] = {
+			m_path_context->m_descriptor_set.get(),
+			m_gi2d_context->getDescriptorSet(),
+			render_target.m_descriptor.get(),
+		};
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_BuildTree].get(), 0, std::size(descriptorsets), descriptorsets, 0, nullptr);
+
+		{
+			cmd.updateBuffer<uint32_t>(m_path_context->b_sparse_map_counter.getInfo().buffer, m_path_context->b_sparse_map_counter.getInfo().offset, m_gi2d_context->m_gi2d_info.m_fragment_map_size_hierarchy[3]);
+
+			std::array<uvec4, 4> v = {
+				uvec4{m_gi2d_context->m_gi2d_info.m_fragment_map_size_hierarchy[3], 1, 1, 0},
+				uvec4{0, 1, 1, 0},
+				uvec4{0, 1, 1, 0},
+				uvec4{0, 1, 1, 0},
+			};
+			cmd.updateBuffer<std::array<uvec4, 4>>(m_path_context->b_sparse_map_hierarchy_counter.getInfo().buffer, m_path_context->b_sparse_map_hierarchy_counter.getInfo().offset, v);
+
+
+			vk::BufferMemoryBarrier barrier[] = {
+				m_path_context->b_sparse_map_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+				m_path_context->b_sparse_map_hierarchy_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader,
+				{}, 0, nullptr, std::size(barrier), barrier, 0, nullptr);
+		}
+
+
+		{
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_BuildTree].get());
+
+			cmd.pushConstants<uint32_t>(m_pipeline_layout[PipelineLayout_BuildTree].get(), vk::ShaderStageFlagBits::eCompute, 0, { 0 });
+
+			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->m_gi2d_info.m_fragment_map_size_hierarchy[3], 1, 1), uvec3(64, 1, 1));
+			cmd.dispatch(num.x, num.y, num.z);
+		}
+
+		for (uint32_t i = 1; i < 4; i++)
+		{
+			vk::BufferMemoryBarrier barrier[] = {
+				m_path_context->b_sparse_map_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				m_path_context->b_sparse_map_hierarchy_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect | vk::PipelineStageFlagBits::eComputeShader,
+				{}, 0, nullptr, std::size(barrier), barrier, 0, nullptr);
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_BuildTreeNode].get());
+
+			cmd.pushConstants<uint32_t>(m_pipeline_layout[PipelineLayout_BuildTree].get(), vk::ShaderStageFlagBits::eCompute, 0, { i });
+
+			cmd.dispatchIndirect(m_path_context->b_sparse_map_hierarchy_counter.getInfo().buffer, m_path_context->b_sparse_map_hierarchy_counter.getInfo().offset + i * sizeof(vec4));
+		}
+	}
+
+
 	std::shared_ptr<btr::Context> m_context;
 	std::shared_ptr<PathContext> m_path_context;
 	std::shared_ptr<GI2DContext> m_gi2d_context;
 
 	enum Shader
 	{
-		Shader_BuildMap,
-		Shader_BuildMapNode,
+		Shader_BuildTree,
+		Shader_BuildTreeNode,
+
+		Shader_DrawTree,
 		Shader_Num,
 	};
 	enum PipelineLayout
 	{
-		PipelineLayout_BuildMap,
+		PipelineLayout_BuildTree,
+		PipelineLayout_DrawTree,
 		PipelineLayout_Num,
 	};
 	enum Pipeline
 	{
-		Pipeline_BuildMap,
-		Pipeline_BuildMapNode,
+		Pipeline_BuildTree,
+		Pipeline_BuildTreeNode,
+		Pipeline_DrawTree,
 		Pipeline_Num,
 	};
 
