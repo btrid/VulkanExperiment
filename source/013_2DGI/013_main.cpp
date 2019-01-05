@@ -90,7 +90,7 @@ int pathFinding()
 	std::shared_ptr<PathContext> path_context = std::make_shared<PathContext>(context, gi2d_context);
 
 	GI2DClear gi2d_clear(context, gi2d_context);
-	GI2DDebug gi2d_debug_make_fragment(context, gi2d_context);
+	GI2DDebug gi2d_debug(context, gi2d_context);
 	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
@@ -136,7 +136,7 @@ int pathFinding()
 				gi2d_context->execute(cmd);
 				crowd_context->execute(cmd);
 				gi2d_clear.execute(cmd);
-				gi2d_debug_make_fragment.execute(cmd);
+				gi2d_debug.executeMakeFragmentMap(cmd);
 
 				gi2d_make_hierarchy.execute(cmd);
 				gi2d_make_hierarchy.executeHierarchy(cmd);
@@ -160,8 +160,9 @@ int pathFinding()
 					crowd_procedure.executeDrawField(cmd, app.m_window->getFrontBuffer());
 				}
 
-				path_process.executeBuildTree(cmd);
-				path_process.executeDrawTree(cmd, app.m_window->getFrontBuffer());
+				gi2d_debug.executeDrawFragmentMap(cmd, app.m_window->getFrontBuffer());
+//				path_process.executeBuildTree(cmd);
+//				path_process.executeDrawTree(cmd, app.m_window->getFrontBuffer());
 
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;
@@ -270,7 +271,7 @@ int main()
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				gi2d_context->execute(cmd);
 				gi2d_clear.execute(cmd);
-				gi2d_debug_make_fragment.execute(cmd);
+				gi2d_debug_make_fragment.executeMakeFragmentMap(cmd);
 
 // 				gi2d_Fluid->execute(cmd);
 // 				gi2d_Fluid->executePost(cmd);

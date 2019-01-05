@@ -18,7 +18,7 @@ SET output=../binary
 %exe% %include% %option% -o %output%/GI2DSDF_MakeSDF.comp.spv GI2DSDF_MakeSDF.comp
 %exe% %include% %option% -o %output%/GI2DSDF_RenderSDF.frag.spv GI2DSDF_RenderSDF.frag
 
-rem %exe% %include% %option% -o ../binary\\DebugFragmentMap.comp.spv DebugFragmentMap.comp
+%exe% %include% %option% -o ../binary\\GI2DDebug_DrawFragmentMap.comp.spv GI2DDebug_DrawFragmentMap.comp
 
 
 %exe% %include% %option% -o %output%/Radiosity_Clear.comp.spv Radiosity_Clear.comp
