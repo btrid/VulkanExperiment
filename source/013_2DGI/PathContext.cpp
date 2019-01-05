@@ -169,7 +169,7 @@ std::vector<uint64_t> pathmake_noise(int sizex, int sizey)
 			uint64_t m = 0;
 			for (int i = 0; i < 64; i++)
 			{
-				m |= glm::simplex(vec2(x * 8 + i % 8, y * 8 + i / 8) / 256.f) >= abs(0.5f) ? (1ull << i) : 0ull;
+//				m |= glm::simplex(vec2(x * 8 + i % 8, y * 8 + i / 8) / 2.f/*256.f*/) >= abs(0.5f) ? (1ull << i) : 0ull;
 			}
 			data[y*aa.x + x] = m;
 		}

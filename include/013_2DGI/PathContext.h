@@ -56,7 +56,7 @@ struct PathContext
 	PathContext(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context)
 	{
 		m_context = context;
-		auto size = gi2d_context->RenderSize.x*gi2d_context->RenderSize.y / 1000;
+		auto size = gi2d_context->RenderSize.x*gi2d_context->RenderSize.y / 10;
  		b_sparse_map = context->m_storage_memory.allocateMemory<SparseMap>({ size, {} });
 		b_sparse_map_counter = context->m_storage_memory.allocateMemory<uint32_t>({ 1, {} });
 		b_sparse_map_hierarchy_counter = context->m_storage_memory.allocateMemory<uvec4>({ 4, {} });
@@ -172,14 +172,9 @@ struct Path_Process
 					RenderTarget::s_descriptor_set_layout.get(),
 				};
 
-// 				vk::PushConstantRange constants[] = {
-// 					vk::PushConstantRange().setStageFlags(vk::ShaderStageFlagBits::eCompute).setSize(4).setOffset(0),
-// 				};
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
 				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 				pipeline_layout_info.setPSetLayouts(layouts);
-//				pipeline_layout_info.setPushConstantRangeCount(array_length(constants));
-//				pipeline_layout_info.setPPushConstantRanges(constants);
 				m_pipeline_layout[PipelineLayout_DrawTree] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 			}
 		}
@@ -225,104 +220,83 @@ struct Path_Process
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_BuildTree].get(), 0, std::size(descriptorsets), descriptorsets, 0, nullptr);
 
 		{
-			cmd.updateBuffer<uint32_t>(m_path_context->b_sparse_map_counter.getInfo().buffer, m_path_context->b_sparse_map_counter.getInfo().offset, m_gi2d_context->m_gi2d_info.m_fragment_map_size_hierarchy[3]);
+
+			vk::BufferMemoryBarrier to_write[] = {
+				m_gi2d_context->b_diffuse_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				m_gi2d_context->b_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+				0, nullptr, array_length(to_write), to_write, 0, nullptr);
+
+		}
+		{
+			auto count = m_gi2d_context->m_gi2d_info.getsize(2);
 
 			std::array<uvec4, 4> v = {
-				uvec4{m_gi2d_context->m_gi2d_info.m_fragment_map_size_hierarchy[3], 1, 1, 0},
+				uvec4{count, 1, 1, 0},
 				uvec4{0, 1, 1, 0},
 				uvec4{0, 1, 1, 0},
 				uvec4{0, 1, 1, 0},
 			};
 			cmd.updateBuffer<std::array<uvec4, 4>>(m_path_context->b_sparse_map_hierarchy_counter.getInfo().buffer, m_path_context->b_sparse_map_hierarchy_counter.getInfo().offset, v);
+			cmd.updateBuffer<uint32_t>(m_path_context->b_sparse_map_counter.getInfo().buffer, m_path_context->b_sparse_map_counter.getInfo().offset, count);
 
 
 			vk::BufferMemoryBarrier barrier[] = {
 				m_path_context->b_sparse_map_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 				m_path_context->b_sparse_map_hierarchy_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+				m_path_context->b_sparse_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
 			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, 
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader|vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader,
 				{}, 0, nullptr, std::size(barrier), barrier, 0, nullptr);
-		}
 
+		}
 
 		{
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_BuildTree].get());
 
 			cmd.pushConstants<uint32_t>(m_pipeline_layout[PipelineLayout_BuildTree].get(), vk::ShaderStageFlagBits::eCompute, 0, { 0 });
 
-			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->m_gi2d_info.m_fragment_map_size_hierarchy[3], 1, 1), uvec3(64, 1, 1));
+			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->m_gi2d_info.getsize(2), 1, 1), uvec3(64, 1, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 		}
 
-		for (uint32_t i = 1; i < 4; i++)
-		{
-			vk::BufferMemoryBarrier barrier[] = {
-				m_path_context->b_sparse_map_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-				m_path_context->b_sparse_map_hierarchy_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
-			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect | vk::PipelineStageFlagBits::eComputeShader,
-				{}, 0, nullptr, std::size(barrier), barrier, 0, nullptr);
-
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_BuildTreeNode].get());
-
-			cmd.pushConstants<uint32_t>(m_pipeline_layout[PipelineLayout_BuildTree].get(), vk::ShaderStageFlagBits::eCompute, 0, { i });
-
-			cmd.dispatchIndirect(m_path_context->b_sparse_map_hierarchy_counter.getInfo().buffer, m_path_context->b_sparse_map_hierarchy_counter.getInfo().offset + i * sizeof(vec4));
-		}
+// 		for (uint32_t i = 1; i < 4; i++)
+// 		{
+// 			vk::BufferMemoryBarrier barrier[] = {
+// 				m_path_context->b_sparse_map_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+// 				m_path_context->b_sparse_map_hierarchy_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
+// 			};
+// 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect | vk::PipelineStageFlagBits::eComputeShader,
+// 				{}, 0, nullptr, std::size(barrier), barrier, 0, nullptr);
+// 
+// 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_BuildTreeNode].get());
+// 
+// 			cmd.pushConstants<uint32_t>(m_pipeline_layout[PipelineLayout_BuildTree].get(), vk::ShaderStageFlagBits::eCompute, 0, { i });
+// 
+// 			cmd.dispatchIndirect(m_path_context->b_sparse_map_hierarchy_counter.getInfo().buffer, m_path_context->b_sparse_map_hierarchy_counter.getInfo().offset + i * sizeof(vec4));
+// 		}
 	}
-	void executeDrawTree(vk::CommandBuffer cmd, const RenderTarget& render_target)
+	void executeDrawTree(vk::CommandBuffer cmd, const std::shared_ptr<RenderTarget>& render_target)
 	{
+		vk::BufferMemoryBarrier barrier[] = {
+			m_path_context->b_sparse_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+		};
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
+			{}, 0, nullptr, std::size(barrier), barrier, 0, nullptr);
+
 		vk::DescriptorSet descriptorsets[] = {
 			m_path_context->m_descriptor_set.get(),
 			m_gi2d_context->getDescriptorSet(),
-			render_target.m_descriptor.get(),
+			render_target->m_descriptor.get(),
 		};
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_BuildTree].get(), 0, std::size(descriptorsets), descriptorsets, 0, nullptr);
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_DrawTree].get(), 0, std::size(descriptorsets), descriptorsets, 0, nullptr);
 
 		{
-			cmd.updateBuffer<uint32_t>(m_path_context->b_sparse_map_counter.getInfo().buffer, m_path_context->b_sparse_map_counter.getInfo().offset, m_gi2d_context->m_gi2d_info.m_fragment_map_size_hierarchy[3]);
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_DrawTree].get());
 
-			std::array<uvec4, 4> v = {
-				uvec4{m_gi2d_context->m_gi2d_info.m_fragment_map_size_hierarchy[3], 1, 1, 0},
-				uvec4{0, 1, 1, 0},
-				uvec4{0, 1, 1, 0},
-				uvec4{0, 1, 1, 0},
-			};
-			cmd.updateBuffer<std::array<uvec4, 4>>(m_path_context->b_sparse_map_hierarchy_counter.getInfo().buffer, m_path_context->b_sparse_map_hierarchy_counter.getInfo().offset, v);
-
-
-			vk::BufferMemoryBarrier barrier[] = {
-				m_path_context->b_sparse_map_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-				m_path_context->b_sparse_map_hierarchy_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader,
-				{}, 0, nullptr, std::size(barrier), barrier, 0, nullptr);
-		}
-
-
-		{
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_BuildTree].get());
-
-			cmd.pushConstants<uint32_t>(m_pipeline_layout[PipelineLayout_BuildTree].get(), vk::ShaderStageFlagBits::eCompute, 0, { 0 });
-
-			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->m_gi2d_info.m_fragment_map_size_hierarchy[3], 1, 1), uvec3(64, 1, 1));
+			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderSize.x, m_gi2d_context->RenderSize.y, 1), uvec3(32, 32, 1));
 			cmd.dispatch(num.x, num.y, num.z);
-		}
-
-		for (uint32_t i = 1; i < 4; i++)
-		{
-			vk::BufferMemoryBarrier barrier[] = {
-				m_path_context->b_sparse_map_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-				m_path_context->b_sparse_map_hierarchy_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
-			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect | vk::PipelineStageFlagBits::eComputeShader,
-				{}, 0, nullptr, std::size(barrier), barrier, 0, nullptr);
-
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_BuildTreeNode].get());
-
-			cmd.pushConstants<uint32_t>(m_pipeline_layout[PipelineLayout_BuildTree].get(), vk::ShaderStageFlagBits::eCompute, 0, { i });
-
-			cmd.dispatchIndirect(m_path_context->b_sparse_map_hierarchy_counter.getInfo().buffer, m_path_context->b_sparse_map_hierarchy_counter.getInfo().offset + i * sizeof(vec4));
 		}
 	}
 

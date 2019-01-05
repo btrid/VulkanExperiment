@@ -17,8 +17,8 @@ layout (local_size_x=64) in;
 void main()
 {
 	uint hierarchy = 3-constant.level;
-	uint map_offset = getFragmentMapHierarchyOffset(hierarchy);
-	uint map_size = getFragmentMapHierarchyOffset(hierarchy+1) - map_offset;
+	uint map_offset = u_gi2d_info.m_fragment_map_size_hierarchy[hierarchy-1];
+	uint map_size = u_gi2d_info.m_fragment_map_size_hierarchy[hierarchy] - map_offset;
 
 	if(gl_GlobalInvocationID.x >= map_size){ return; }
 
@@ -30,6 +30,7 @@ void main()
 	if(node.map == 0 /*|| node.map == -1*/)
 	{
 		// 子は必要ない
+		while(true){}
 	}
 	else
 	{

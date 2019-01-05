@@ -26,8 +26,12 @@ struct GI2DContext
 		mat4 m_camera_PV;
 		uvec4 m_resolution;
 		vec4 m_position;
-		uint32_t m_fragment_map_size_hierarchy[4];
+		std::array<uint32_t, 4> m_fragment_map_size_hierarchy;
 		uint32_t m_hierarchy_num;
+
+		uint32_t  getsize(int32_t hierarchy) {
+			return m_fragment_map_size_hierarchy[hierarchy] - m_fragment_map_size_hierarchy[hierarchy-1];
+		}
 	};
 	struct GI2DScene
 	{
@@ -111,7 +115,7 @@ struct GI2DContext
 			size /= 64;
 			m_gi2d_info.m_fragment_map_size_hierarchy[2] = m_gi2d_info.m_fragment_map_size_hierarchy[1] + size;
 			size /= 64;
-			m_gi2d_info.m_fragment_map_size_hierarchy[3] = m_gi2d_info.m_fragment_map_size_hierarchy[2] + size;
+			m_gi2d_info.m_fragment_map_size_hierarchy[3] = m_gi2d_info.m_fragment_map_size_hierarchy[2] + glm::max(size,1);
 
 			cmd.updateBuffer<GI2DInfo>(u_gi2d_info.getInfo().buffer, u_gi2d_info.getInfo().offset, m_gi2d_info);
 

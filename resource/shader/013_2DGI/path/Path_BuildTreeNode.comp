@@ -24,7 +24,7 @@ void main()
 	if(gl_LocalInvocationIndex == 0)
 	{
 		s_node_index = 0;
-		s_map_offset = getFragmentMapHierarchyOffset(hierarchy);
+		s_map_offset = getFragmentMapHierarchyOffset(hierarchy-1);
 	}
 	barrier();
 	memoryBarrierShared();
@@ -38,7 +38,7 @@ void main()
 
 	if(gl_LocalInvocationIndex == 0)
 	{
-		s_node = b_sparse_map[s_node_index];
+		s_node = b_sparse_map[s_node_index + gl_WorkGroupID.x];
 	}
 	barrier();
 	memoryBarrierShared();
@@ -56,10 +56,10 @@ void main()
 	{
 		uint child_index = atomicAdd(b_sparse_map_counter, 64);
 		node.child_node_index = child_index;
+		b_sparse_map[s_node.child_node_index + gl_LocalInvocationIndex] = node;
 
 		atomicAdd(b_sparse_map_hierarchy_counter[level].x, 1);
 	}
-	b_sparse_map[s_node.child_node_index + gl_LocalInvocationIndex] = node;
 
 
 }
