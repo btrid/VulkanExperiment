@@ -160,9 +160,9 @@ int pathFinding()
 					crowd_procedure.executeDrawField(cmd, app.m_window->getFrontBuffer());
 				}
 
-				gi2d_debug.executeDrawFragmentMap(cmd, app.m_window->getFrontBuffer());
-//				path_process.executeBuildTree(cmd);
-//				path_process.executeDrawTree(cmd, app.m_window->getFrontBuffer());
+//				gi2d_debug.executeDrawFragmentMap(cmd, app.m_window->getFrontBuffer());
+ 				path_process.executeBuildTree(cmd);
+				path_process.executeDrawTree(cmd, app.m_window->getFrontBuffer());
 
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;

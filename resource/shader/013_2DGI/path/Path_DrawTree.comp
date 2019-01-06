@@ -10,20 +10,31 @@
 #define USE_RenderTarget 2
 #include "applib/System.glsl"
 
+vec3 colors[] = {
+	vec3(0., 0., 1.),
+	vec3(0., 1., 0.),
+	vec3(1., 0., 0.),
+	vec3(1., 1., 1.),
+};
+
 layout (local_size_x=32, local_size_y=32) in;
 void main()
 {
 	vec3 color = vec3(0.);
-	uvec2 index = gl_GlobalInvocationID.xy >> (3*3);
-	SparseMap map = b_sparse_map[0];
-//	for(int i = 0; i < 3; i++)
+	uint hierarchy = 3;
+
+	uint index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*(u_gi2d_info.m_resolution.z>>(hierarchy*3));
+	SparseMap map = b_sparse_map[index];
+	for(int i = 0; i < 3; i++)
 	{
 		if(map.child_node_index==-1)
 		{
-			color = vec3(1.);
-//			break;
+			color = colors[i];
+			break;
 		}
-//		map = b_sparse_map[map.child_node_index];
+		uvec2 index     = gl_GlobalInvocationID.xy >> ((hierarchy-1-i)*3);
+		uvec2 sub = index - ((index>>3)<<3);
+		map = b_sparse_map[map.child_node_index + sub.x+sub.y*8];
 	}
 
 	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(color, 1.));

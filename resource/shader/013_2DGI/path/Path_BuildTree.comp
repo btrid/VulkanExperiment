@@ -13,24 +13,24 @@ layout(push_constant) uniform Input
 	uint level;
 } constant;
 
-layout (local_size_x=64) in;
+layout (local_size_x=8, local_size_y=8) in;
 void main()
 {
-	uint hierarchy = 3-constant.level;
-	uint map_offset = u_gi2d_info.m_fragment_map_size_hierarchy[hierarchy-1];
-	uint map_size = u_gi2d_info.m_fragment_map_size_hierarchy[hierarchy] - map_offset;
+	uint hierarchy = 2-constant.level;
+	uint map_offset = getFragmentMapHierarchyOffset(hierarchy);
 
-	if(gl_GlobalInvocationID.x >= map_size){ return; }
+	uvec2 map_reso = u_gi2d_info.m_resolution.zw>>(hierarchy*3);
+	if(any(greaterThan(gl_GlobalInvocationID.xy, map_reso))){ return; }
 
+	uint index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * map_reso.x;
 	SparseMap node;
-	node.norton_index = gl_GlobalInvocationID.x;
+	node.norton_index = gl_GlobalInvocationID.x | (gl_GlobalInvocationID.y<<16);
 	node.child_node_index = -1;
-	node.map = b_diffuse_map[map_offset + node.norton_index];
+	node.map = b_diffuse_map[map_offset + index];
 
 	if(node.map == 0 /*|| node.map == -1*/)
 	{
 		// 子は必要ない
-		while(true){}
 	}
 	else
 	{
@@ -38,6 +38,6 @@ void main()
 		node.child_node_index = child_index;
 		atomicAdd(b_sparse_map_hierarchy_counter[1].x, 1);
 	}
-	b_sparse_map[gl_GlobalInvocationID.x] = node;
+	b_sparse_map[index] = node;
 
 }

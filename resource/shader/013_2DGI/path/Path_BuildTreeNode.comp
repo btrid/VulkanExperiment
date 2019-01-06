@@ -13,41 +13,46 @@ layout(push_constant) uniform Input
 	uint level;
 } constant;
 
-shared uint s_node_index; 
+shared uint s_parent_node_index; 
 shared uint s_map_offset; 
-shared SparseMap s_node; 
-layout (local_size_x=64) in;
+shared SparseMap s_parent_node; 
+layout (local_size_x=8, local_size_y=8) in;
+
 void main()
 {
 	uint level = constant.level;
-	uint hierarchy = 3-constant.level;
+	uint hierarchy = 2-constant.level;
 	if(gl_LocalInvocationIndex == 0)
 	{
-		s_node_index = 0;
-		s_map_offset = getFragmentMapHierarchyOffset(hierarchy-1);
+		s_parent_node_index = 0;
+		s_map_offset = getFragmentMapHierarchyOffset(hierarchy);
 	}
 	barrier();
 	memoryBarrierShared();
 
 	if(gl_LocalInvocationIndex < level)
 	{
-		atomicAdd(s_node_index, b_sparse_map_hierarchy_counter[gl_LocalInvocationIndex].x);
+		atomicAdd(s_parent_node_index, b_sparse_map_hierarchy_counter[gl_LocalInvocationIndex].x);
 	}
 	barrier();
 	memoryBarrierShared();
 
 	if(gl_LocalInvocationIndex == 0)
 	{
-		s_node = b_sparse_map[s_node_index + gl_WorkGroupID.x];
+		s_parent_node = b_sparse_map[s_parent_node_index + gl_WorkGroupID.x];
 	}
 	barrier();
 	memoryBarrierShared();
 
+	uvec2 ni = (uvec2(s_parent_node.norton_index) >> uvec2(0, 16)) & uvec2(16);
+	ni = ni*8 + gl_LocalInvocationID.xy;
+	uint index = ni.x + ni.y * (u_gi2d_info.m_resolution.z>>(hierarchy*3));
+
 
 	SparseMap node;
-	node.norton_index = s_node.norton_index*64 + gl_LocalInvocationIndex;
+	node.norton_index = ni.x | (ni.y<<16);
 	node.child_node_index = -1;
-	node.map = b_diffuse_map[s_map_offset + node.norton_index];
+	node.map = b_diffuse_map[s_map_offset + index];
 	if(node.map == 0 || hierarchy == 0)
 	{
 		// 子は必要ない
@@ -56,10 +61,10 @@ void main()
 	{
 		uint child_index = atomicAdd(b_sparse_map_counter, 64);
 		node.child_node_index = child_index;
-		b_sparse_map[s_node.child_node_index + gl_LocalInvocationIndex] = node;
 
 		atomicAdd(b_sparse_map_hierarchy_counter[level].x, 1);
 	}
+	b_sparse_map[s_parent_node.child_node_index + gl_LocalInvocationIndex] = node;
 
 
 }
