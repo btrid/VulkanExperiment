@@ -20,7 +20,7 @@ void main()
 	uint map_offset = getFragmentMapHierarchyOffset(hierarchy);
 
 	uvec2 map_reso = u_gi2d_info.m_resolution.zw>>(hierarchy*3);
-	if(any(greaterThan(gl_GlobalInvocationID.xy, map_reso))){ return; }
+	if(any(greaterThanEqual(gl_GlobalInvocationID.xy, map_reso))){ return; }
 
 	uint index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * map_reso.x;
 	SparseMap node;

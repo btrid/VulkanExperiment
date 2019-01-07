@@ -18,13 +18,15 @@ vec3 colors[] = {
 };
 
 layout (local_size_x=32, local_size_y=32) in;
+
 void main()
 {
 	vec3 color = vec3(0.);
 	uint hierarchy = 3;
 
-	uint index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*(u_gi2d_info.m_resolution.z>>(hierarchy*3));
-	SparseMap map = b_sparse_map[index];
+	uvec2 index2 = gl_GlobalInvocationID.xy>>(hierarchy*3);
+	uint _index = index2.x + index2.y*(u_gi2d_info.m_resolution.z>>((hierarchy-1)*3));
+	SparseMap map = b_sparse_map[_index];
 	for(int i = 0; i < 3; i++)
 	{
 		if(map.child_node_index==-1)
@@ -32,7 +34,7 @@ void main()
 			color = colors[i];
 			break;
 		}
-		uvec2 index     = gl_GlobalInvocationID.xy >> ((hierarchy-1-i)*3);
+		uvec2 index     = gl_GlobalInvocationID.xy >> ((hierarchy-i)*3);
 		uvec2 sub = index - ((index>>3)<<3);
 		map = b_sparse_map[map.child_node_index + sub.x+sub.y*8];
 	}

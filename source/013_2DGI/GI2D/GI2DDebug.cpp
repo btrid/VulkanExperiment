@@ -116,16 +116,16 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 	}
 
 	//ŽlŠp‚ÅˆÍ‚Þ
-// 	for (int32_t y = 0; y < gi2d_context->RenderHeight; y++)
-// 	{
-// 		map_data[0 + y * gi2d_context->RenderWidth] = wall;
-// 		map_data[(gi2d_context->RenderWidth - 1) + y * gi2d_context->RenderWidth] = wall;
-// 	}
-// 	for (int32_t x = 0; x < gi2d_context->RenderWidth; x++)
-// 	{
-// 		map_data[x + 0 * gi2d_context->RenderWidth] = wall;
+//	for (int32_t y = 0; y < gi2d_context->RenderHeight; y++)
+	{
+//		map_data[0 + y * gi2d_context->RenderWidth] = wall;
+//		map_data[(gi2d_context->RenderWidth - 1) + y * gi2d_context->RenderWidth] = wall;
+	}
+ 	for (int32_t x = 0; x < gi2d_context->RenderWidth; x++)
+ 	{
+ 		map_data[x + 0 * gi2d_context->RenderWidth] = wall;
 // 		map_data[x + (gi2d_context->RenderHeight - 1) * gi2d_context->RenderWidth] = wall;
-// 	}
+ 	}
 
 
 	btr::BufferMemoryDescriptorEx<GI2DContext::Fragment> desc;
