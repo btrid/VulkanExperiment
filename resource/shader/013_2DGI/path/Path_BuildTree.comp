@@ -16,13 +16,14 @@ layout(push_constant) uniform Input
 layout (local_size_x=8, local_size_y=8) in;
 void main()
 {
-	uint hierarchy = 2-constant.level;
+	uint hierarchy = 1-constant.level;
 	uint map_offset = getFragmentMapHierarchyOffset(hierarchy);
 
 	uvec2 map_reso = u_gi2d_info.m_resolution.zw>>(hierarchy*3);
 	if(any(greaterThanEqual(gl_GlobalInvocationID.xy, map_reso))){ return; }
 
-	uint index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * map_reso.x;
+//	uint index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * map_reso.x;
+	uint index = getMemoryOrder(gl_GlobalInvocationID.xy);
 	SparseMap node;
 	node.norton_index = gl_GlobalInvocationID.x | (gl_GlobalInvocationID.y<<16);
 	node.child_node_index = -1;
