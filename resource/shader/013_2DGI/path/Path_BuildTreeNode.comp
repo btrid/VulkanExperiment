@@ -30,7 +30,7 @@ void main()
 	barrier();
 	memoryBarrierShared();
 
-	if(gl_LocalInvocationIndex < level)
+	if(gl_LocalInvocationIndex < level-1)
 	{
 		atomicAdd(s_parent_node_index, b_sparse_map_hierarchy_counter[gl_LocalInvocationIndex].x);
 	}
@@ -43,6 +43,11 @@ void main()
 	}
 	barrier();
 	memoryBarrierShared();
+
+	if(s_parent_node.child_node_index == -1)
+	{
+		return;
+	}
 
 	uvec2 ni = (uvec2(s_parent_node.norton_index) >> uvec2(0, 16)) & uvec2(16);
 	ni = ni*8 + gl_LocalInvocationID.xy;
@@ -64,7 +69,7 @@ void main()
 
 		atomicAdd(b_sparse_map_hierarchy_counter[level].x, 1);
 	}
-	b_sparse_map[s_parent_node.child_node_index + gl_LocalInvocationIndex] = node;
+	b_sparse_map[s_parent_node.child_node_index + getMemoryOrder(gl_LocalInvocationID.xy)] = node;
 
 
 }

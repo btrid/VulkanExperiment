@@ -260,21 +260,22 @@ struct Path_Process
 			cmd.dispatch(num.x, num.y, num.z);
 		}
 
-// 		for (uint32_t i = 1; i < 2; i++)
-// 		{
-// 			vk::BufferMemoryBarrier barrier[] = {
-// 				m_path_context->b_sparse_map_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-// 				m_path_context->b_sparse_map_hierarchy_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
-// 			};
-// 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect | vk::PipelineStageFlagBits::eComputeShader,
-// 				{}, 0, nullptr, std::size(barrier), barrier, 0, nullptr);
-// 
-// 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_BuildTreeNode].get());
-// 
-// 			cmd.pushConstants<uint32_t>(m_pipeline_layout[PipelineLayout_BuildTree].get(), vk::ShaderStageFlagBits::eCompute, 0, { i });
-// 
-// 			cmd.dispatchIndirect(m_path_context->b_sparse_map_hierarchy_counter.getInfo().buffer, m_path_context->b_sparse_map_hierarchy_counter.getInfo().offset + (i) * sizeof(vec4));
-// 		}
+		for (uint32_t i = 1; i < 2; i++)
+		{
+			vk::BufferMemoryBarrier barrier[] = {
+				m_path_context->b_sparse_map_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				m_path_context->b_sparse_map_hierarchy_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
+				m_path_context->b_sparse_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect | vk::PipelineStageFlagBits::eComputeShader,
+				{}, 0, nullptr, std::size(barrier), barrier, 0, nullptr);
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_BuildTreeNode].get());
+
+			cmd.pushConstants<uint32_t>(m_pipeline_layout[PipelineLayout_BuildTree].get(), vk::ShaderStageFlagBits::eCompute, 0, { i });
+
+			cmd.dispatchIndirect(m_path_context->b_sparse_map_hierarchy_counter.getInfo().buffer, m_path_context->b_sparse_map_hierarchy_counter.getInfo().offset + (i-1) * sizeof(vec4));
+		}
 	}
 
 	void executeDrawTree(vk::CommandBuffer cmd, const std::shared_ptr<RenderTarget>& render_target)
