@@ -21,7 +21,7 @@ layout (local_size_x=8, local_size_y=8) in;
 void main()
 {
 	uint level = constant.level;
-	uint hierarchy = 2-constant.level;
+	uint hierarchy = 1-constant.level;
 	if(gl_LocalInvocationIndex == 0)
 	{
 		s_parent_node_index = 0;
@@ -46,8 +46,8 @@ void main()
 
 	uvec2 ni = (uvec2(s_parent_node.norton_index) >> uvec2(0, 16)) & uvec2(16);
 	ni = ni*8 + gl_LocalInvocationID.xy;
-	uint index = ni.x + ni.y * (u_gi2d_info.m_resolution.z>>(hierarchy*3));
-
+//	uint index = ni.x + ni.y * (u_gi2d_info.m_resolution.z>>(hierarchy*3));
+	uint index = getMemoryOrder(ni);
 
 	SparseMap node;
 	node.norton_index = ni.x | (ni.y<<16);

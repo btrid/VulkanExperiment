@@ -25,7 +25,6 @@ void main()
 	uint hierarchy = 1;
 
 	uvec2 index2 = gl_GlobalInvocationID.xy>>(hierarchy*3+3);
-//	uint _index = index2.x + index2.y*(u_gi2d_info.m_resolution.x>>(hierarchy*3));
 	uint _index = getMemoryOrder(index2);
 	SparseMap map = b_sparse_map[_index];
 	for(int i = 0; i < 2; i++)
@@ -35,9 +34,9 @@ void main()
 			color = colors[i];
 			break;
 		}
-		uvec2 index     = gl_GlobalInvocationID.xy >> ((hierarchy-1-i)*3);
+		uvec2 index     = gl_GlobalInvocationID.xy >> ((hierarchy-i)*3+3);
 		uvec2 sub = index - ((index>>3)<<3);
-//		map = b_sparse_map[map.child_node_index + 0];
+//		map = b_sparse_map[map.child_node_index + sub.x+sub.y*8];
 	}
 
 	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(color, 1.));

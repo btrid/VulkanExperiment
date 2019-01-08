@@ -240,14 +240,11 @@ struct Path_Process
 			cmd.updateBuffer<std::array<uvec4, 4>>(m_path_context->b_sparse_map_hierarchy_counter.getInfo().buffer, m_path_context->b_sparse_map_hierarchy_counter.getInfo().offset, v);
 			cmd.updateBuffer<uint32_t>(m_path_context->b_sparse_map_counter.getInfo().buffer, m_path_context->b_sparse_map_counter.getInfo().offset, count);
 
-// 			std::vector<PathContext::SparseMap> maps(m_path_context->b_sparse_map.getInfo().range / sizeof(PathContext::SparseMap), { 0, 0xffffffffu, 0 });
-// 			cmd.updateBuffer<PathContext::SparseMap>(m_path_context->b_sparse_map.getInfo().buffer, m_path_context->b_sparse_map.getInfo().offset, maps);
-
 
 			vk::BufferMemoryBarrier barrier[] = {
 				m_path_context->b_sparse_map_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 				m_path_context->b_sparse_map_hierarchy_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-				m_path_context->b_sparse_map.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite|vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
+				m_path_context->b_sparse_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader|vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader,
 				{}, 0, nullptr, std::size(barrier), barrier, 0, nullptr);
