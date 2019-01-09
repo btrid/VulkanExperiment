@@ -260,7 +260,7 @@ struct Path_Process
 			cmd.dispatch(num.x, num.y, num.z);
 		}
 
-		for (uint32_t i = 1; i < 2; i++)
+		for (uint32_t i = 1; i < 3; i++)
 		{
 			vk::BufferMemoryBarrier barrier[] = {
 				m_path_context->b_sparse_map_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
@@ -281,6 +281,8 @@ struct Path_Process
 	void executeDrawTree(vk::CommandBuffer cmd, const std::shared_ptr<RenderTarget>& render_target)
 	{
 		vk::BufferMemoryBarrier barrier[] = {
+				m_path_context->b_sparse_map_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+//				m_path_context->b_sparse_map_hierarchy_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
 			m_path_context->b_sparse_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,

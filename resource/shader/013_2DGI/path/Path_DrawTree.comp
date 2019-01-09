@@ -27,15 +27,18 @@ void main()
 	uvec2 index2 = gl_GlobalInvocationID.xy>>(hierarchy*3+3);
 	uint _index = getMemoryOrder(index2);
 	SparseMap map = b_sparse_map[_index];
-	for(int i = 0; i < 2; i++)
+	for(int i = 0; i < 3; i++)
 	{
-		if(map.child_node_index==-1)
+		uvec2 index     = gl_GlobalInvocationID.xy >> ((hierarchy-1-i)*3+3);
+		uvec2 sub = index - ((index>>3)<<3);
+		
+		if((map.map & (1ul<<sub.x+sub.y*8)) == 0)
 		{
 			color = colors[i];
 			break;
 		}
-		uvec2 index     = gl_GlobalInvocationID.xy >> ((hierarchy-1-i)*3+3);
-		uvec2 sub = index - ((index>>3)<<3);
+//		uvec2 index     = gl_GlobalInvocationID.xy >> ((hierarchy-1-i)*3+3);
+//		uvec2 sub = index - ((index>>3)<<3);
 		map = b_sparse_map[map.child_node_index + sub.x+sub.y*8];
 	}
 
