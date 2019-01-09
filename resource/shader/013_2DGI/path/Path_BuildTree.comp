@@ -16,7 +16,7 @@ layout(push_constant) uniform Input
 layout (local_size_x=8, local_size_y=8) in;
 void main()
 {
-	uint hierarchy = 1-constant.level;
+	uint hierarchy = 2-constant.level;
 
 	uvec2 map_reso = u_gi2d_info.m_resolution.zw>>(hierarchy*3);
 	if(any(greaterThanEqual(gl_GlobalInvocationID.xy, map_reso))){ return; }

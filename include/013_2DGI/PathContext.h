@@ -228,7 +228,7 @@ struct Path_Process
 				0, nullptr, array_length(to_write), to_write, 0, nullptr);
 
 		}
-		auto count = m_gi2d_context->m_gi2d_info.getsize(1);
+		auto count = m_gi2d_context->m_gi2d_info.getsize(2);
 		{
 
 			std::array<uvec4, 4> v = {

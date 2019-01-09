@@ -21,7 +21,7 @@ layout (local_size_x=8, local_size_y=8) in;
 void main()
 {
 	uint level = constant.level;
-	uint hierarchy = 1-constant.level;
+	uint hierarchy = 2-constant.level;
 	if(gl_LocalInvocationIndex == 0)
 	{
 		s_parent_node_index = 0;
@@ -49,9 +49,8 @@ void main()
 		return;
 	}
 
-	uvec2 ni = (uvec2(s_parent_node.norton_index) >> uvec2(0, 16)) & uvec2(16);
+	uvec2 ni = (uvec2(s_parent_node.norton_index) >> uvec2(0, 16)) & uvec2(0xffff);
 	ni = ni*8 + gl_LocalInvocationID.xy;
-//	uint index = ni.x + ni.y * (u_gi2d_info.m_resolution.z>>(hierarchy*3));
 	uint index = getMemoryOrder(ni);
 
 	SparseMap node;
@@ -69,7 +68,7 @@ void main()
 
 		atomicAdd(b_sparse_map_hierarchy_counter[level].x, 1);
 	}
-	b_sparse_map[s_parent_node.child_node_index + getMemoryOrder(gl_LocalInvocationID.xy)] = node;
+	b_sparse_map[s_parent_node.child_node_index + gl_LocalInvocationID.x+gl_LocalInvocationID.y*8] = node;
 
 
 }
