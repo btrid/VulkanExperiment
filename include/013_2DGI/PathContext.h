@@ -274,9 +274,8 @@ struct Path_Process
 
 			cmd.pushConstants<uint32_t>(m_pipeline_layout[PipelineLayout_BuildTree].get(), vk::ShaderStageFlagBits::eCompute, 0, { i });
 
-			cmd.dispatchIndirect(m_path_context->b_sparse_map_hierarchy_counter.getInfo().buffer, m_path_context->b_sparse_map_hierarchy_counter.getInfo().offset + (i-1) * sizeof(vec4));
+			cmd.dispatchIndirect(m_path_context->b_sparse_map_hierarchy_counter.getInfo().buffer, m_path_context->b_sparse_map_hierarchy_counter.getInfo().offset + (i) * sizeof(vec4));
 		}
-
 	}
 
 	void executeDrawTree(vk::CommandBuffer cmd, const std::shared_ptr<RenderTarget>& render_target)
