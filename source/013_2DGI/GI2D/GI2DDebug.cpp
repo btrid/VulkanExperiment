@@ -77,7 +77,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 				for (int32_t i = 0; i < 64; i++)
 				{
 					ivec2 xy = ivec2(x, y)*8 + ivec2(i%8, i/8);
-					map_data[xy.x + xy.y*gi2d_context->RenderSize.x] = /*(m & (1ull << i)) != 0 ? wall :*/ path;
+					map_data[xy.x + xy.y*gi2d_context->RenderSize.x] = (m & (1ull << i)) != 0 ? wall : path;
 				}
 			}
 		}
