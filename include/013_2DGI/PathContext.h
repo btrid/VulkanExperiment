@@ -56,7 +56,7 @@ struct PathContext
 	PathContext(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context)
 	{
 		m_context = context;
-		auto size = gi2d_context->RenderSize.x*gi2d_context->RenderSize.y / 1;
+		auto size = gi2d_context->RenderSize.x*gi2d_context->RenderSize.y / 64;
  		b_sparse_map = context->m_storage_memory.allocateMemory<SparseMap>({ size, {} });
 		b_sparse_map_counter = context->m_storage_memory.allocateMemory<uint32_t>({ 1, {} });
 		b_sparse_map_hierarchy_counter = context->m_storage_memory.allocateMemory<uvec4>({ 4, {} });
@@ -276,13 +276,12 @@ struct Path_Process
 
 			cmd.dispatchIndirect(m_path_context->b_sparse_map_hierarchy_counter.getInfo().buffer, m_path_context->b_sparse_map_hierarchy_counter.getInfo().offset + (i-1) * sizeof(vec4));
 		}
+
 	}
 
 	void executeDrawTree(vk::CommandBuffer cmd, const std::shared_ptr<RenderTarget>& render_target)
 	{
 		vk::BufferMemoryBarrier barrier[] = {
-				m_path_context->b_sparse_map_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-//				m_path_context->b_sparse_map_hierarchy_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
 			m_path_context->b_sparse_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
