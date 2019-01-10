@@ -32,12 +32,13 @@ void main()
 		uvec2 index     = gl_GlobalInvocationID.xy >> ((hierarchy-i)*3);
 		uvec2 sub = index - ((index>>3)<<3);
 		
-		if((map.map & (1ul<<(sub.x+sub.y*8))) == 0)
+		if((map.map & (1ul<<(sub.x+sub.y*8))) == 0ul || map.child_node_index==-1)
 		{
 			color = colors[i];
 			break;
 		}
 		map = b_sparse_map[map.child_node_index + sub.x+sub.y*8];
+//		map = b_sparse_map[map.child_node_index + getMemoryOrder(sub)];
 	}
 
 	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(color, 1.));

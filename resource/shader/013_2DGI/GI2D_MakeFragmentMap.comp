@@ -15,7 +15,7 @@ shared uint s_light_bit[2];
 void main()
 {
 	ivec2 id = ivec2(gl_GlobalInvocationID.xy);
-	id = clamp(id, ivec2(0), u_gi2d_info.m_resolution.xy);
+//	id = clamp(id, ivec2(0), u_gi2d_info.m_resolution.xy);
 
 	int tiled_1D_index = id.x + id.y*u_gi2d_info.m_resolution.x; 
 	vec3 albedo = getRGB(b_fragment[tiled_1D_index]);
@@ -47,8 +47,8 @@ void main()
 		{
 			uint store = getMemoryOrder(gl_WorkGroupID.xy);
 
-			uint64_t bit =  uint64_t(s_bit[1]) << 32 | s_bit[0];
-			uint64_t light_bit =  uint64_t(s_light_bit[1]) << 32 | s_light_bit[0];
+			uint64_t bit =  (uint64_t(s_bit[1]) << 32) | s_bit[0];
+			uint64_t light_bit =  (uint64_t(s_light_bit[1]) << 32) | s_light_bit[0];
 
 			b_fragment_map[store] = u64vec2(bit, light_bit);
 			b_diffuse_map[store] = bit;

@@ -44,8 +44,10 @@ void main()
 			uint64_t albedo_map = b_diffuse_map[findex_1d + foffset];
 			uint64_t emissive_map = b_emissive_map[findex_1d + foffset];
 
-			bool is_albedo = (albedo_map & (1ul<<gl_LocalInvocationIndex)) != 0ul;
-			bool is_emissive = (emissive_map & (1ul<<gl_LocalInvocationIndex)) != 0ul;
+//			bool is_albedo = (albedo_map & (1ul<<gl_LocalInvocationIndex)) != 0ul;
+//			bool is_emissive = (emissive_map & (1ul<<gl_LocalInvocationIndex)) != 0ul;
+			bool is_albedo = albedo_map != 0ul;
+			bool is_emissive = emissive_map != 0ul;
 
 			uint hilow = gl_LocalInvocationIndex/32;
 			uint offset = gl_LocalInvocationIndex%32;
@@ -60,8 +62,8 @@ void main()
 			uint store = getMemoryOrder(gl_WorkGroupID.xy);
 			int offset = getFragmentMapHierarchyOffset(level);
 
-			uint64_t bit =  uint64_t(s_bit[1]) << 32 | s_bit[0];
-			uint64_t light_bit =  uint64_t(s_light_bit[1]) << 32 | s_light_bit[0];
+			uint64_t bit =  (uint64_t(s_bit[1]) << 32ul) | s_bit[0];
+			uint64_t light_bit =  (uint64_t(s_light_bit[1]) << 32ul) | s_light_bit[0];
 
 			b_diffuse_map[store+offset] = bit;
 			b_emissive_map[store+offset] = light_bit;

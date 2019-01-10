@@ -123,8 +123,8 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 	}
  	for (int32_t x = 0; x < gi2d_context->RenderWidth; x++)
  	{
- 		map_data[x + 0 * gi2d_context->RenderWidth] = wall;
- 		map_data[x + (gi2d_context->RenderHeight - 1) * gi2d_context->RenderWidth] = wall;
+		map_data[x + 0 * gi2d_context->RenderWidth] = wall;
+		map_data[x + (gi2d_context->RenderHeight - 1) * gi2d_context->RenderWidth] = wall;
  	}
 
 
