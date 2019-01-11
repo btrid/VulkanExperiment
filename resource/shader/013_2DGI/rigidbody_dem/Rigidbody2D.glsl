@@ -28,6 +28,10 @@ struct Rigidbody
 
 };
 
+struct rbParticle
+{
+	bool use_collision_detective;
+};
 layout(set=USE_Rigidbody2D, binding=0, std430) restrict buffer RigidbodyData {
 	Rigidbody b_rigidbody;
 };
@@ -37,7 +41,27 @@ layout(set=USE_Rigidbody2D, binding=1, std430) restrict buffer rbRelaPosBuffer {
 layout(set=USE_Rigidbody2D, binding=2, std430) restrict buffer rbPosBuffer {
 	vec2 b_rbpos[];
 };
+layout(set=USE_Rigidbody2D, binding=3, std430) restrict buffer rbParticleBuffer {
+	rbParticle b_rbParticle[];
+};
 
+vec2 rotateRBParticle(in vec2 v, in float angle)
+{
+	float c = cos(angle);
+	float s = sin(angle);
+
+	vec2 Result;
+	Result.x = v.x * c - v.y * s;
+	Result.y = v.x * s + v.y * c;
+	return Result;
+}
 #endif
 
+
+bool closestPointSegment(in vec2 origin, in vec2 dir, in vec2 p)
+{
+	float t = dot(p - origin, dir) / dot(dir, dir);
+	vec2 l = origin + dir * clamp(t, 0., 1.); 
+	return dot(l, l) < 1.;
+}
 #endif

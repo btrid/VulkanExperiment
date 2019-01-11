@@ -6,30 +6,26 @@
 #include "GI2D.glsl"
 #include "Rigidbody2D.glsl"
 
-vec2 rotate(in vec2 v, in float angle)
-{
-	float c = cos(angle);
-	float s = sin(angle);
-
-	vec2 Result;
-	Result.x = v.x * c - v.y * s;
-	Result.y = v.x * s + v.y * c;
-	return Result;
-}
-
 layout (local_size_x = 1024) in;
 void main() 
 {
 	int p_id = int(gl_GlobalInvocationID.x);
 	if(p_id >= b_rigidbody.pnum){ return; }
 	vec2 rela_pos = b_relative_pos[p_id];
-	vec2 local_pos = rotate(rela_pos, b_rigidbody.angle);
+	vec2 local_pos = rotateRBParticle(rela_pos, b_rigidbody.angle);
 	vec2 pos = b_rigidbody.pos + local_pos;
 //	vec2 pos = b_rbpos[p_id];
 		
 	ivec2 index = ivec2(pos);
-	if(any(lessThan(index, ivec2(0))) || any(greaterThanEqual(index, u_gi2d_info.m_resolution))){ return; }
+	if(any(lessThan(index, ivec2(0))) || any(greaterThanEqual(index, u_gi2d_info.m_resolution.xy))){ return; }
 
-	b_fragment[index.x+index.y*u_gi2d_info.m_resolution.x].albedo = vec4(0., 0., 10., 1.);
+	vec3 color = vec3(0., 0., 1.);
+	if(b_rbParticle[p_id].use_collision_detective){ color = vec3(1., 0., 0.); }
+	Fragment f;
+	setEmissive(f, false);
+	setDiffuse(f, true);
+	setRGB(f, color);
+
+	b_fragment[index.x+index.y*u_gi2d_info.m_resolution.x] = f;
 }
 

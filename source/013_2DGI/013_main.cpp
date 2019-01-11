@@ -176,6 +176,94 @@ int pathFinding()
 	return 0;
 
 }
+
+
+int rigidbody()
+{
+	auto gpu = sGlobal::Order().getGPU(0);
+	auto device = sGlobal::Order().getGPU(0).getDevice();
+
+	app::AppDescriptor app_desc;
+	app_desc.m_gpu = gpu;
+	app_desc.m_window_size = uvec2(1024, 1024);
+	app::App app(app_desc);
+
+	auto context = app.m_context;
+
+	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
+	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchainPtr());
+
+	GI2DDescription gi2d_desc;
+	gi2d_desc.RenderWidth = 1024;
+	gi2d_desc.RenderHeight = 1024;
+	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context, gi2d_desc);
+
+	GI2DClear gi2d_clear(context, gi2d_context);
+	GI2DDebug gi2d_debug_make_fragment(context, gi2d_context);
+	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
+	GI2DRigidbody_dem gi2d_rigidbody(context, gi2d_context);
+	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+	std::shared_ptr<GI2DFluid> gi2d_Fluid = std::make_shared<GI2DFluid>(context, gi2d_context);
+
+	app.setup();
+
+	while (true)
+	{
+		cStopWatch time;
+
+		app.preUpdate();
+		{
+			enum
+			{
+				cmd_model_update,
+				cmd_render_clear,
+				cmd_crowd,
+				cmd_gi2d,
+				cmd_render_present,
+				cmd_num
+			};
+			std::vector<vk::CommandBuffer> cmds(cmd_num);
+
+			{
+			}
+
+			{
+				//				cmds[cmd_render_clear] = clear_pipeline.execute();
+				cmds[cmd_render_present] = present_pipeline.execute();
+			}
+			// crowd
+			{
+				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
+				//				crowd_updater.execute(cmd);
+				cmd.end();
+				cmds[cmd_crowd] = cmd;
+			}
+
+			// gi2d
+			{
+				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
+				gi2d_context->execute(cmd);
+				gi2d_clear.execute(cmd);
+				gi2d_debug_make_fragment.executeMakeFragmentMap(cmd);
+
+				gi2d_make_hierarchy.execute(cmd);
+				gi2d_make_hierarchy.executeHierarchy(cmd);
+
+//				gi2d_Fluid->executeCalc(cmd);
+//				gi2d_Softbody.execute(cmd);
+				gi2d_rigidbody.execute(cmd);
+
+				cmd.end();
+				cmds[cmd_gi2d] = cmd;
+			}
+			app.submit(std::move(cmds));
+		}
+		app.postUpdate();
+		printf("%-6.4fms\n", time.getElapsedTimeAsMilliSeconds());
+	}
+
+	return 0;
+}
 int main()
 {
 
@@ -189,7 +277,8 @@ int main()
 	camera->getData().m_far = 5000.f;
 	camera->getData().m_near = 0.01f;
 
-	return pathFinding();
+//	return pathFinding();
+	return rigidbody();
 
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
