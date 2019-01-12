@@ -28,12 +28,12 @@ void main()
 
 		vec2 pos_b = b_rigidbody.pos + rotateRBParticle(b_relative_pos[i], b_rigidbody.angle);
 
-		if(distance(pos, pos_b) < 1.)
+		if(closestPointSegment(pos + normalize(dir)*2, dir, pos_b) < 0.5)
 		{
 			use = 0;
 			break;
 		}
 	}
-//	b_rbParticle[p_id].use_collision_detective = use;
+	b_rbParticle[p_id].use_collision_detective = use;
 
 }

@@ -12,4 +12,5 @@ SET output=../../binary
 %exe% %include% %option% -o %output%/Rigid_Update.comp.spv Rigid_Update.comp
 %exe% %include% %option% -o %output%/Rigid_ToFragment.comp.spv Rigid_ToFragment.comp
 %exe% %include% %option% -o %output%/Rigid_Integrate.comp.spv Rigid_Integrate.comp
-%exe% %include% %option% -o %output%/Rigid_PreCollisionDetective.comp.spv Rigid_PreCollisionDetective.comp
+%exe% %include% %option% -o %output%/Rigid_CollisionDetective.comp.spv Rigid_CollisionDetective.comp
+%exe% %include% %option% -o %output%/Rigid_CollisionDetectiveBefore.comp.spv Rigid_CollisionDetectiveBefore.comp

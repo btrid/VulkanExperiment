@@ -61,7 +61,7 @@ struct GI2DRigidbody_dem
 	{
 		Shader_Update,
 		Shader_Pressure,
-		Shader_PreCollisionDetective,
+		Shader_CollisionDetectiveBefore,
 		Shader_Integrate,
 		Shader_ToFragment,
 		Shader_Num,
@@ -76,7 +76,7 @@ struct GI2DRigidbody_dem
 	{
 		Pipeline_Update,
 		Pipeline_Pressure,
-		Pipeline_PreCollisionDetective,
+		Pipeline_CollisionDetectiveBefore,
 		Pipeline_Integrate,
 		Pipeline_ToFragment,
 		Pipeline_Num,
@@ -127,7 +127,7 @@ struct GI2DRigidbody_dem
 				{
 					"Rigid_Update.comp.spv",
 					"Rigid_CalcPressure.comp.spv",
-					"Rigid_PreCollisionDetective.comp.spv",
+					"Rigid_CollisionDetectiveBefore.comp.spv",
 					"Rigid_Integrate.comp.spv",
 					"Rigid_ToFragment.comp.spv",
 				};
@@ -161,7 +161,7 @@ struct GI2DRigidbody_dem
 				shader_info[1].setModule(m_shader[Shader_Pressure].get());
 				shader_info[1].setStage(vk::ShaderStageFlagBits::eCompute);
 				shader_info[1].setPName("main");
-				shader_info[2].setModule(m_shader[Shader_PreCollisionDetective].get());
+				shader_info[2].setModule(m_shader[Shader_CollisionDetectiveBefore].get());
 				shader_info[2].setStage(vk::ShaderStageFlagBits::eCompute);
 				shader_info[2].setPName("main");
 				shader_info[3].setModule(m_shader[Shader_Integrate].get());
@@ -191,7 +191,7 @@ struct GI2DRigidbody_dem
 				auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
 				m_pipeline[Pipeline_Update] = std::move(compute_pipeline[0]);
 				m_pipeline[Pipeline_Pressure] = std::move(compute_pipeline[1]);
-				m_pipeline[Pipeline_PreCollisionDetective] = std::move(compute_pipeline[2]);
+				m_pipeline[Pipeline_CollisionDetectiveBefore] = std::move(compute_pipeline[2]);
 				m_pipeline[Pipeline_Integrate] = std::move(compute_pipeline[3]);
 				m_pipeline[Pipeline_ToFragment] = std::move(compute_pipeline[4]);
 			}
@@ -325,7 +325,7 @@ struct GI2DRigidbody_dem
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_PreCollisionDetective].get());
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_CollisionDetectiveBefore].get());
 			auto num = app::calcDipatchGroups(uvec3(Particle_Num, 1, 1), uvec3(1024, 1, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 		}
