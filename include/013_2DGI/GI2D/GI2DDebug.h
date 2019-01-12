@@ -9,6 +9,7 @@ struct GI2DDebug
 	GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context);
 	void executeMakeFragmentMap(vk::CommandBuffer cmd);
 	void executeDrawFragmentMap(vk::CommandBuffer cmd, const std::shared_ptr<RenderTarget>& render_target);
+	void executeDrawFragment(vk::CommandBuffer cmd, const std::shared_ptr<RenderTarget>& render_target);
 
 	std::shared_ptr<btr::Context> m_context;
 	std::shared_ptr<GI2DContext> m_gi2d_context;
@@ -19,6 +20,7 @@ struct GI2DDebug
 	{
 		Shader_PointLight,
 		Shader_DrawFragmentMap,
+		Shader_DrawFragment,
 		Shader_Num,
 	};
 	enum PipelineLayout
@@ -31,6 +33,7 @@ struct GI2DDebug
 	{
 		Pipeline_PointLight,
 		Pipeline_DrawFragmentMap,
+		Pipeline_DrawFragment,
 		Pipeline_Num,
 	};
 	vk::UniqueShaderModule m_shader[Shader_Num];

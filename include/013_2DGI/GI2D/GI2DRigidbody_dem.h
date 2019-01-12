@@ -55,7 +55,7 @@ struct GI2DRigidbody_dem
 	};
 	enum
 	{
-		Particle_Num = 120,
+		Particle_Num = 900,
 	};
 	enum Shader
 	{
@@ -209,14 +209,20 @@ struct GI2DRigidbody_dem
 
 					std::vector<vec2> pos(Particle_Num);
 					std::vector<vec2> rela_pos(Particle_Num);
+					std::vector<rbParticle> pstate(Particle_Num);
 					vec2 center = vec2(0.f);
 
-					for (int y = 0; y < 4; y++) 
+					for (int y = 0; y < 30; y++) 
 					{
 						for (int x = 0; x < 30; x++)
 						{
 							pos[x + y * 30].x = 123.f + x;
 							pos[x + y * 30].y = 220.f + y;
+
+							if (y == 0 || y == 29 || x == 0 || x==29)
+							{
+								pstate[x + y * 30].use_collision_detective = 1;
+							}
 						}
 					}
 					for (auto& p : pos) {
@@ -236,6 +242,7 @@ struct GI2DRigidbody_dem
 					size /= pos.size();
 					cmd.updateBuffer<vec2>(b_rbpos.getInfo().buffer, b_rbpos.getInfo().offset, pos);
 					cmd.updateBuffer<vec2>(b_relative_pos.getInfo().buffer, b_relative_pos.getInfo().offset, rela_pos);
+					cmd.updateBuffer<rbParticle>(b_rbparticle.getInfo().buffer, b_rbparticle.getInfo().offset, pstate);
 
 
 					float inertia = 0.f;
@@ -247,7 +254,7 @@ struct GI2DRigidbody_dem
 
 					Rigidbody rb;
 					rb.pos = center;
-					rb.center = center;
+					rb.center = size / 2.f;
 					rb.inertia = inertia;
 					rb.size = size_max;
 					rb.vel = vec2(0.f);
@@ -255,7 +262,7 @@ struct GI2DRigidbody_dem
 					rb.vel_work = ivec2(0.f);
 					rb.angle_vel_work = 0.;
 					rb.pnum = Particle_Num;
-					rb.angle = 0.f;
+					rb.angle = 2.0f;
 					rb.angle_vel = 0.f;
 					rb.solver_count = 0;
 
@@ -328,7 +335,7 @@ struct GI2DRigidbody_dem
 				b_rbparticle.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				
 			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Update].get());

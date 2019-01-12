@@ -30,7 +30,7 @@ struct Rigidbody
 
 struct rbParticle
 {
-	bool use_collision_detective;
+	uint use_collision_detective;
 };
 layout(set=USE_Rigidbody2D, binding=0, std430) restrict buffer RigidbodyData {
 	Rigidbody b_rigidbody;
@@ -58,10 +58,10 @@ vec2 rotateRBParticle(in vec2 v, in float angle)
 #endif
 
 
-bool closestPointSegment(in vec2 origin, in vec2 dir, in vec2 p)
+float closestPointSegment(in vec2 origin, in vec2 dir, in vec2 p)
 {
 	float t = dot(p - origin, dir) / dot(dir, dir);
 	vec2 l = origin + dir * clamp(t, 0., 1.); 
-	return dot(l, l) < 1.;
+	return distance(l, p);
 }
 #endif

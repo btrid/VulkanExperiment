@@ -149,6 +149,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 		{
 			"GI2D_DebugMakeLight.comp.spv",
 			"GI2DDebug_DrawFragmentMap.comp.spv",
+			"GI2DDebug_DrawFragment.comp.spv",
 		};
 		static_assert(array_length(name) == array_length(m_shader), "not equal shader num");
 
@@ -200,6 +201,10 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 			.setModule(m_shader[Shader_DrawFragmentMap].get())
 			.setPName("main")
 			.setStage(vk::ShaderStageFlagBits::eCompute),
+			vk::PipelineShaderStageCreateInfo()
+			.setModule(m_shader[Shader_DrawFragment].get())
+			.setPName("main")
+			.setStage(vk::ShaderStageFlagBits::eCompute),
 		};
 
 		std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
@@ -210,10 +215,14 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 			vk::ComputePipelineCreateInfo()
 			.setStage(shader_info[1])
 			.setLayout(m_pipeline_layout[PipelineLayout_DrawFragmentMap].get()),
+			vk::ComputePipelineCreateInfo()
+			.setStage(shader_info[2])
+			.setLayout(m_pipeline_layout[PipelineLayout_DrawFragmentMap].get()),
 		};
 		auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
 		m_pipeline[Pipeline_PointLight] = std::move(compute_pipeline[0]);
 		m_pipeline[Pipeline_DrawFragmentMap] = std::move(compute_pipeline[1]);
+		m_pipeline[Pipeline_DrawFragment] = std::move(compute_pipeline[2]);
 	}
 
 }
@@ -235,6 +244,29 @@ void GI2DDebug::executeDrawFragmentMap(vk::CommandBuffer cmd, const std::shared_
 
 	{
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_DrawFragmentMap].get());
+
+		auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderSize.x, m_gi2d_context->RenderSize.y, 1), uvec3(32, 32, 1));
+		cmd.dispatch(num.x, num.y, num.z);
+	}
+
+}
+
+void GI2DDebug::executeDrawFragment(vk::CommandBuffer cmd, const std::shared_ptr<RenderTarget>& render_target)
+{
+	vk::BufferMemoryBarrier barrier[] = {
+		m_gi2d_context->b_fragment.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+	};
+	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
+		{}, 0, nullptr, std::size(barrier), barrier, 0, nullptr);
+
+	vk::DescriptorSet descriptorsets[] = {
+		m_gi2d_context->getDescriptorSet(),
+		render_target->m_descriptor.get(),
+	};
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_DrawFragmentMap].get(), 0, std::size(descriptorsets), descriptorsets, 0, nullptr);
+
+	{
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_DrawFragment].get());
 
 		auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderSize.x, m_gi2d_context->RenderSize.y, 1), uvec3(32, 32, 1));
 		cmd.dispatch(num.x, num.y, num.z);

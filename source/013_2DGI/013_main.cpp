@@ -199,7 +199,7 @@ int rigidbody()
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context, gi2d_desc);
 
 	GI2DClear gi2d_clear(context, gi2d_context);
-	GI2DDebug gi2d_debug_make_fragment(context, gi2d_context);
+	GI2DDebug gi2d_debug(context, gi2d_context);
 	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
 	GI2DRigidbody_dem gi2d_rigidbody(context, gi2d_context);
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
@@ -244,7 +244,7 @@ int rigidbody()
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				gi2d_context->execute(cmd);
 				gi2d_clear.execute(cmd);
-				gi2d_debug_make_fragment.executeMakeFragmentMap(cmd);
+				gi2d_debug.executeMakeFragmentMap(cmd);
 
 				gi2d_make_hierarchy.execute(cmd);
 				gi2d_make_hierarchy.executeHierarchy(cmd);
@@ -253,6 +253,7 @@ int rigidbody()
 //				gi2d_Softbody.execute(cmd);
 				gi2d_rigidbody.execute(cmd);
 
+				gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;
 			}
