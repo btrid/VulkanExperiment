@@ -26,6 +26,8 @@ struct Rigidbody
 	int angle_vel_work;
 	float _pp1;
 
+	ivec2 pos_bit_size;
+
 };
 
 struct rbParticle
@@ -43,6 +45,9 @@ layout(set=USE_Rigidbody2D, binding=2, std430) restrict buffer rbPosBuffer {
 };
 layout(set=USE_Rigidbody2D, binding=3, std430) restrict buffer rbParticleBuffer {
 	rbParticle b_rbParticle[];
+};
+layout(set=USE_Rigidbody2D, binding=4, std430) restrict buffer rbPosBitBuffer {
+	uint64_t b_rbpos_bit[];
 };
 
 vec2 rotateRBParticle(in vec2 v, in float angle)

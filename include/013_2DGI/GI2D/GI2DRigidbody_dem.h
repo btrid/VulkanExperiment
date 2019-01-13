@@ -36,6 +36,7 @@ struct GI2DRigidbody_dem
 		int32_t angle_vel_work;
 		float _pp1;
 
+		ivec2 pos_bit_size;
 	};
 
 	struct rbParticle
@@ -114,6 +115,11 @@ struct GI2DRigidbody_dem
 					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 					.setDescriptorCount(1)
 					.setBinding(3),
+					vk::DescriptorSetLayoutBinding()
+					.setStageFlags(stage)
+					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+					.setDescriptorCount(1)
+					.setBinding(4),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -205,11 +211,13 @@ struct GI2DRigidbody_dem
 				b_rbpos = m_context->m_storage_memory.allocateMemory<vec2>({ Particle_Num,{} });
 				b_relative_pos = m_context->m_storage_memory.allocateMemory<vec2>({ Particle_Num,{} });
 				b_rbparticle = m_context->m_storage_memory.allocateMemory<rbParticle>({ Particle_Num,{} });
+				b_rbpos_bit = m_context->m_storage_memory.allocateMemory<uint64_t>({ 4*4,{} });
 				{
 
 					std::vector<vec2> pos(Particle_Num);
 					std::vector<vec2> rela_pos(Particle_Num);
 					std::vector<rbParticle> pstate(Particle_Num);
+					std::vector<uint64_t> bit(4*4);
 					vec2 center = vec2(0.f);
 
 					for (int y = 0; y < 30; y++) 
@@ -223,6 +231,7 @@ struct GI2DRigidbody_dem
 							{
 								pstate[x + y * 30].use_collision_detective = 1;
 							}
+							bit[x / 8 + y / 8 * 4] |= 1ull << (x % 8 + (y % 8) * 8);
 						}
 					}
 					for (auto& p : pos) {
@@ -263,7 +272,7 @@ struct GI2DRigidbody_dem
 					rb.angle_vel_work = 0.;
 					rb.pnum = Particle_Num;
 					rb.angle = 2.0f;
-					rb.angle_vel = 0.f;
+					rb.angle_vel = 2.f;
 					rb.solver_count = 0;
 
 					cmd.updateBuffer<Rigidbody>(b_rigidbody.getInfo().buffer, b_rigidbody.getInfo().offset, rb);
@@ -292,6 +301,7 @@ struct GI2DRigidbody_dem
 					b_relative_pos.getInfo(),
 					b_rbpos.getInfo(),
 					b_rbparticle.getInfo(),
+					b_rbpos_bit.getInfo(),
 				};
 
 				vk::WriteDescriptorSet write[] =
@@ -391,6 +401,7 @@ struct GI2DRigidbody_dem
 	btr::BufferMemoryEx<vec2> b_relative_pos;
 	btr::BufferMemoryEx<vec2> b_rbpos;
 	btr::BufferMemoryEx<rbParticle> b_rbparticle;
+	btr::BufferMemoryEx<uint64_t> b_rbpos_bit;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
