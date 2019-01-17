@@ -6,7 +6,7 @@
 #include "GI2D.glsl"
 #include "Rigidbody2D.glsl"
 
-layout (local_size_x = 8, 8) in;
+layout (local_size_x = 1024) in;
 
 void main() 
 {

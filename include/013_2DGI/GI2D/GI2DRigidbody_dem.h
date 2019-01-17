@@ -337,7 +337,7 @@ struct GI2DRigidbody_dem
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_CollisionDetectiveBefore].get());
 			auto num = app::calcDipatchGroups(uvec3(Particle_Num, 1, 1), uvec3(1024, 1, 1));
-			cmd.dispatch(num.x, num.y, num.z);
+//			cmd.dispatch(num.x, num.y, num.z);
 		}
 		{
 			// ˆÊ’u‚ÌXV
