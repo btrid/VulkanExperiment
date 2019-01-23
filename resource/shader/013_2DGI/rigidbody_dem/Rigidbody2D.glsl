@@ -30,6 +30,15 @@ struct Rigidbody
 
 };
 
+struct SolverBody
+{
+	vec2 deltaLinearVelocity; ///< 並進速度差分
+	float deltaAngularVelocity; ///< 回転速度差分
+	float orientation; ///< 姿勢
+	float inertiaInv; ///< 慣性テンソルの逆行列
+	float massInv; ///< 質量の逆数
+};
+
 /// 拘束
 struct Constraint 
 {
