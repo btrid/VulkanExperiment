@@ -82,22 +82,6 @@ void main()
 				uint64_t bit = 1ul<<(fragment_index.z+fragment_index.w*8);
 				if((fragment_map & bit) != 0)
 				{
-					float spring = 1.2;
-					float decay = 0.1;
-					vec2 delta_linear_vel = vec2(0.);
-					float delta_angular_vel = 0.;
-					{
-						vec2 restitution = -spring * dir; // 反発力 めり込んだ量を戻す
-						vec2 damping = decay * -dir;// * advance; //減衰力
-//						vec2 tangent_dir = calcTangent(dir);
-						delta_linear_vel += restitution + damping;
-						delta_angular_vel += cross(vec3(local_pos, 0.), vec3(restitution + damping, 0.)).z;
-					}
-					int index = atomicAdd(b_rigidbody.solver_count, 1);
-					atomicAdd(b_rigidbody.vel_work.x, int(delta_linear_vel.x * 65535.));
-					atomicAdd(b_rigidbody.vel_work.y, int(delta_linear_vel.y * 65535.));
-					atomicAdd(b_rigidbody.angle_vel_work, int(delta_angular_vel * 65535.));
-
 					break;
 
 				}

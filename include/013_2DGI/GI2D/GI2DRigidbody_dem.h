@@ -76,7 +76,7 @@ struct GI2DRigidbody_dem
 	};
 	enum Shader
 	{
-		Shader_Update,
+		Shader_CollisionDetective,
 		Shader_CollisionDetectiveBefore,
 		Shader_Integrate,
 		Shader_ToFragment,
@@ -90,7 +90,7 @@ struct GI2DRigidbody_dem
 	};
 	enum Pipeline
 	{
-		Pipeline_Update,
+		Pipeline_CollisionDetective,
 		Pipeline_CollisionDetectiveBefore,
 		Pipeline_Integrate,
 		Pipeline_ToFragment,
@@ -150,7 +150,7 @@ struct GI2DRigidbody_dem
 			{
 				const char* name[] =
 				{
-					"Rigid_Update.comp.spv",
+					"Rigid_CollisionDetective.comp.spv",
 					"Rigid_CollisionDetectiveBefore.comp.spv",
 					"Rigid_Integrate.comp.spv",
 					"Rigid_ToFragment.comp.spv",
@@ -179,7 +179,7 @@ struct GI2DRigidbody_dem
 			// pipeline
 			{
 				std::array<vk::PipelineShaderStageCreateInfo, Shader_Num> shader_info;
-				shader_info[0].setModule(m_shader[Shader_Update].get());
+				shader_info[0].setModule(m_shader[Shader_CollisionDetective].get());
 				shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 				shader_info[0].setPName("main");
 				shader_info[1].setModule(m_shader[Shader_CollisionDetectiveBefore].get());
@@ -207,7 +207,7 @@ struct GI2DRigidbody_dem
 					.setLayout(m_pipeline_layout[PipelineLayout_Rigid].get()),
 				};
 				auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
-				m_pipeline[Pipeline_Update] = std::move(compute_pipeline[0]);
+				m_pipeline[Pipeline_CollisionDetective] = std::move(compute_pipeline[0]);
 				m_pipeline[Pipeline_CollisionDetectiveBefore] = std::move(compute_pipeline[1]);
 				m_pipeline[Pipeline_Integrate] = std::move(compute_pipeline[2]);
 				m_pipeline[Pipeline_ToFragment] = std::move(compute_pipeline[3]);
@@ -357,8 +357,9 @@ struct GI2DRigidbody_dem
 			auto num = app::calcDipatchGroups(uvec3(Particle_Num, 1, 1), uvec3(1024, 1, 1));
 //			cmd.dispatch(num.x, num.y, num.z);
 		}
+
 		{
-			// 位置の更新
+			// 衝突判定
 			vk::BufferMemoryBarrier to_read[] = {
 				b_rbparticle.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				
@@ -366,7 +367,7 @@ struct GI2DRigidbody_dem
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Update].get());
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_CollisionDetective].get());
 
 			auto num = app::calcDipatchGroups(uvec3(Particle_Num, 1, 1), uvec3(1024, 1, 1));
 			cmd.dispatch(num.x, num.y, num.z);
@@ -374,18 +375,15 @@ struct GI2DRigidbody_dem
 		}
 
 		{
+			// 剛体の更新
+			vk::BufferMemoryBarrier to_read[] = {
+				b_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
-			{
-				// 剛体の更新
-				vk::BufferMemoryBarrier to_read[] = {
-					b_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
-				};
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
-					0, nullptr, array_length(to_read), to_read, 0, nullptr);
-
-				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Integrate].get());
-				cmd.dispatch(1, 1, 1);
-			}
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Integrate].get());
+			cmd.dispatch(1, 1, 1);
 		}
 
 		{
