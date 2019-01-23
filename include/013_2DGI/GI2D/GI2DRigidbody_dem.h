@@ -39,21 +39,37 @@ struct GI2DRigidbody_dem
 		ivec2 pos_bit_size;
 	};
 
-	struct rbParticle
-	{
-		uint32_t use_collision_detective;
-	};
+	/// çSë©
 	struct Constraint
 	{
-		int32_t r_id;
-		float sinking;
-		int32_t _p2;
-		int32_t _p3;
-		vec2 ri;
-		vec2 rj;
-		vec2 vi;
-		vec2 vj;
+		vec2 axis; ///< çSë©é≤
+		float jacDiagInv; ///< çSë©éÆÇÃï™ïÍ
+		float rhs; ///< èâä˙çSë©óÕ
+
+		float lowerLimit; ///< çSë©óÕÇÃâ∫å¿
+		float upperLimit; ///< çSë©óÕÇÃè„å¿
+		float accumImpulse; ///< í~êœÇ≥ÇÍÇÈçSë©óÕ
+		float _p;
 	};
+
+	/// è’ìÀèÓïÒ
+	struct Contact
+	{
+		float distance; ///< ä—í ê[ìx
+		float friction; ///< ñÄéC
+		vec2 pointA; ///< è’ìÀì_ÅiçÑëÃAÇÃÉçÅ[ÉJÉãç¿ïWånÅj
+		vec2 pointB; ///< è’ìÀì_ÅiçÑëÃBÇÃÉçÅ[ÉJÉãç¿ïWånÅj
+		vec2 normal; ///< è’ìÀì_ÇÃñ@ê¸ÉxÉNÉgÉãÅiÉèÅ[ÉãÉhç¿ïWånÅj
+		Constraint constraints[2]; ///< çSë©
+	};
+
+	struct rbParticle
+	{
+//		uint32_t use_collision_detective;
+		uint32_t contact_index;
+		uint32_t is_contact;
+	};
+
 	enum
 	{
 		Particle_Num = 900,
@@ -120,6 +136,11 @@ struct GI2DRigidbody_dem
 					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 					.setDescriptorCount(1)
 					.setBinding(4),
+					vk::DescriptorSetLayoutBinding()
+					.setStageFlags(stage)
+					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+					.setDescriptorCount(1)
+					.setBinding(5),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -212,6 +233,7 @@ struct GI2DRigidbody_dem
 				b_relative_pos = m_context->m_storage_memory.allocateMemory<vec2>({ Particle_Num,{} });
 				b_rbparticle = m_context->m_storage_memory.allocateMemory<rbParticle>({ Particle_Num,{} });
 				b_rbpos_bit = m_context->m_storage_memory.allocateMemory<uint64_t>({ 4*4,{} });
+				b_rbcontact = m_context->m_storage_memory.allocateMemory<Contact>({ Particle_Num,{} });
 				{
 
 					std::vector<vec2> pos(Particle_Num);
@@ -220,6 +242,7 @@ struct GI2DRigidbody_dem
 					std::vector<uint64_t> bit(4*4);
 					vec2 center = vec2(0.f);
 
+					uint32_t contact_index = 0;
 					for (int y = 0; y < 30; y++) 
 					{
 						for (int x = 0; x < 30; x++)
@@ -229,8 +252,13 @@ struct GI2DRigidbody_dem
 
 							if (y == 0 || y == 29 || x == 0 || x==29)
 							{
-								pstate[x + y * 30].use_collision_detective = 1;
+								pstate[x + y * 30].contact_index = contact_index++;
 							}
+							else
+							{
+								pstate[x + y * 30].contact_index = -1;
+							}
+							pstate[x + y * 30].is_contact = 0;
 							bit[x / 8 + y / 8 * 4] |= 1ull << (x % 8 + (y % 8) * 8);
 						}
 					}
@@ -252,7 +280,6 @@ struct GI2DRigidbody_dem
 					cmd.updateBuffer<vec2>(b_rbpos.getInfo().buffer, b_rbpos.getInfo().offset, pos);
 					cmd.updateBuffer<vec2>(b_relative_pos.getInfo().buffer, b_relative_pos.getInfo().offset, rela_pos);
 					cmd.updateBuffer<rbParticle>(b_rbparticle.getInfo().buffer, b_rbparticle.getInfo().offset, pstate);
-
 
 					float inertia = 0.f;
 					for (int32_t i = 0; i < rela_pos.size(); i++)
@@ -302,6 +329,7 @@ struct GI2DRigidbody_dem
 					b_rbpos.getInfo(),
 					b_rbparticle.getInfo(),
 					b_rbpos_bit.getInfo(),
+					b_rbcontact.getInfo(),
 				};
 
 				vk::WriteDescriptorSet write[] =
@@ -402,6 +430,7 @@ struct GI2DRigidbody_dem
 	btr::BufferMemoryEx<vec2> b_rbpos;
 	btr::BufferMemoryEx<rbParticle> b_rbparticle;
 	btr::BufferMemoryEx<uint64_t> b_rbpos_bit;
+	btr::BufferMemoryEx<Contact> b_rbcontact;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;

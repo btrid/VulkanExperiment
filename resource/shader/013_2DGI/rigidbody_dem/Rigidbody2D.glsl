@@ -30,9 +30,33 @@ struct Rigidbody
 
 };
 
+/// 拘束
+struct Constraint 
+{
+	vec2 axis; ///< 拘束軸
+	float jacDiagInv; ///< 拘束式の分母
+	float rhs; ///< 初期拘束力
+
+	float lowerLimit; ///< 拘束力の下限
+	float upperLimit; ///< 拘束力の上限
+	float accumImpulse; ///< 蓄積される拘束力
+	float _p;
+};
+
+/// 衝突情報
+struct Contact 
+{
+	float distance; ///< 貫通深度
+	float friction; ///< 摩擦
+	vec2 pointA; ///< 衝突点（剛体Aのローカル座標系）
+	vec2 pointB; ///< 衝突点（剛体Bのローカル座標系）
+	vec2 normal; ///< 衝突点の法線ベクトル（ワールド座標系）
+	Constraint constraints[2]; ///< 拘束
+};
+
 struct rbParticle
 {
-	uint use_collision_detective;
+	uint contact_index;
 };
 layout(set=USE_Rigidbody2D, binding=0, std430) restrict buffer RigidbodyData {
 	Rigidbody b_rigidbody;
@@ -49,6 +73,10 @@ layout(set=USE_Rigidbody2D, binding=3, std430) restrict buffer rbParticleBuffer 
 layout(set=USE_Rigidbody2D, binding=4, std430) restrict buffer rbPosBitBuffer {
 	uint64_t b_rbpos_bit[];
 };
+layout(set=USE_Rigidbody2D, binding=5, std430) restrict buffer rbContactBuffer {
+	Contact b_rbcontact[];
+};
+
 
 vec2 rotateRBParticle(in vec2 v, in float angle)
 {
