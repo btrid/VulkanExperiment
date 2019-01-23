@@ -77,7 +77,6 @@ struct GI2DRigidbody_dem
 	enum Shader
 	{
 		Shader_Update,
-		Shader_Pressure,
 		Shader_CollisionDetectiveBefore,
 		Shader_Integrate,
 		Shader_ToFragment,
@@ -92,7 +91,6 @@ struct GI2DRigidbody_dem
 	enum Pipeline
 	{
 		Pipeline_Update,
-		Pipeline_Pressure,
 		Pipeline_CollisionDetectiveBefore,
 		Pipeline_Integrate,
 		Pipeline_ToFragment,
@@ -153,7 +151,6 @@ struct GI2DRigidbody_dem
 				const char* name[] =
 				{
 					"Rigid_Update.comp.spv",
-					"Rigid_CalcPressure.comp.spv",
 					"Rigid_CollisionDetectiveBefore.comp.spv",
 					"Rigid_Integrate.comp.spv",
 					"Rigid_ToFragment.comp.spv",
@@ -185,18 +182,15 @@ struct GI2DRigidbody_dem
 				shader_info[0].setModule(m_shader[Shader_Update].get());
 				shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 				shader_info[0].setPName("main");
-				shader_info[1].setModule(m_shader[Shader_Pressure].get());
+				shader_info[1].setModule(m_shader[Shader_CollisionDetectiveBefore].get());
 				shader_info[1].setStage(vk::ShaderStageFlagBits::eCompute);
 				shader_info[1].setPName("main");
-				shader_info[2].setModule(m_shader[Shader_CollisionDetectiveBefore].get());
+				shader_info[2].setModule(m_shader[Shader_Integrate].get());
 				shader_info[2].setStage(vk::ShaderStageFlagBits::eCompute);
 				shader_info[2].setPName("main");
-				shader_info[3].setModule(m_shader[Shader_Integrate].get());
+				shader_info[3].setModule(m_shader[Shader_ToFragment].get());
 				shader_info[3].setStage(vk::ShaderStageFlagBits::eCompute);
 				shader_info[3].setPName("main");
-				shader_info[4].setModule(m_shader[Shader_ToFragment].get());
-				shader_info[4].setStage(vk::ShaderStageFlagBits::eCompute);
-				shader_info[4].setPName("main");
 				std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 				{
 					vk::ComputePipelineCreateInfo()
@@ -211,16 +205,12 @@ struct GI2DRigidbody_dem
 					vk::ComputePipelineCreateInfo()
 					.setStage(shader_info[3])
 					.setLayout(m_pipeline_layout[PipelineLayout_Rigid].get()),
-					vk::ComputePipelineCreateInfo()
-					.setStage(shader_info[4])
-					.setLayout(m_pipeline_layout[PipelineLayout_Rigid].get()),
 				};
 				auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
 				m_pipeline[Pipeline_Update] = std::move(compute_pipeline[0]);
-				m_pipeline[Pipeline_Pressure] = std::move(compute_pipeline[1]);
-				m_pipeline[Pipeline_CollisionDetectiveBefore] = std::move(compute_pipeline[2]);
-				m_pipeline[Pipeline_Integrate] = std::move(compute_pipeline[3]);
-				m_pipeline[Pipeline_ToFragment] = std::move(compute_pipeline[4]);
+				m_pipeline[Pipeline_CollisionDetectiveBefore] = std::move(compute_pipeline[1]);
+				m_pipeline[Pipeline_Integrate] = std::move(compute_pipeline[2]);
+				m_pipeline[Pipeline_ToFragment] = std::move(compute_pipeline[3]);
 			}
 
 		}

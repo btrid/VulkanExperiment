@@ -25,7 +25,7 @@ void main()
 //	else
 	{
 		b_rigidbody.pos += b_rigidbody.vel;
-		b_rigidbody.vel += vec2(0., 9.8)*DT;
+		b_rigidbody.vel += vec2(0., 0.98)*DT;
 //		b_rigidbody.angle_vel *= 0.98;
 		b_rigidbody.angle += b_rigidbody.angle_vel*DT;
 	}

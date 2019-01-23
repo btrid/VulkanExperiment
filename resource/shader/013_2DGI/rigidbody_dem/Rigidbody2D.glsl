@@ -57,6 +57,7 @@ struct Contact
 struct rbParticle
 {
 	uint contact_index;
+	uint is_contact;
 };
 layout(set=USE_Rigidbody2D, binding=0, std430) restrict buffer RigidbodyData {
 	Rigidbody b_rigidbody;

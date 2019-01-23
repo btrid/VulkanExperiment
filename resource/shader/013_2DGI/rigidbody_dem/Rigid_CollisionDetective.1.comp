@@ -78,10 +78,19 @@ void main()
 			// hit確認
 			{
 				ivec4 fragment_index = ivec4(result.next_map_index/8, result.next_map_index%8);
+
+//				int findex = fragment_index.x + fragment_index.y*reso.z;
 				uint64_t fragment_map = b_diffuse_map[getMemoryOrder(fragment_index.xy)];
-				uint64_t bit = 1ul<<(fragment_index.z+fragment_index.w*8);
+
+				ivec2 shift = fragment_index.zw;
+				uint64_t bit = 1ul<<(shift.x+shift.y*8);
 				if((fragment_map & bit) != 0)
 				{
+
+//					vec2 vel_ = normalize(vel);
+//					vec2 pi = result.next_pos;
+//					vec2 pj = vec2(result.next_map_index) + (sign(dir)*0.5 + 0.5);
+//					vec2 r_ij = pj-pi;
 					float spring = 1.2;
 					float decay = 0.1;
 					vec2 delta_linear_vel = vec2(0.);
@@ -117,5 +126,16 @@ void main()
 
 		}
 	}
+/*
+	ivec2 reso_grid = ivec2(reso.xy/Grid_Size);
+	vec2 index_grid_f = pos / Grid_Size;
+	ivec2 index_grid = ivec2(index_grid_f);
+	if(any(lessThan(index_grid, ivec2(0))) || any(greaterThanEqual(index_grid, reso_grid.xy))){ return; }
+	int i = index_grid.x + index_grid.y*reso_grid.x;
+
+	atomicAdd(b_grid_counter[i], 1);
+*/
+
+
 }
 
