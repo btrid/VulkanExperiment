@@ -97,7 +97,7 @@ struct D2Segment
 };
 
 #define Grid_Size (1.)
-  #define DT 0.0016
+  #define DT 0.00016
 //#define DT 0.0005
 
 #ifdef USE_GI2D

@@ -19,14 +19,16 @@ struct GI2DRigidbody_dem
 	{
 		int32_t pnum;
 		int32_t solver_count;
-		int32_t inertia;
+		float inertia;
 		int32_t _p2;
 
 		vec2 center;
 		vec2 size;
 
 		vec2 pos;
+		vec2 pos_old;
 		vec2 vel;
+		vec2 vel_old;
 
 		ivec2 pos_work;
 		ivec2 vel_work;
@@ -72,7 +74,9 @@ struct GI2DRigidbody_dem
 
 	enum
 	{
-		Particle_Num = 900,
+		PX = 16,
+		PY = 16,
+		Particle_Num = PX*PY,
 	};
 	enum Shader
 	{
@@ -233,22 +237,22 @@ struct GI2DRigidbody_dem
 					vec2 center = vec2(0.f);
 
 					uint32_t contact_index = 0;
-					for (int y = 0; y < 30; y++) 
+					for (int y = 0; y < PY; y++) 
 					{
-						for (int x = 0; x < 30; x++)
+						for (int x = 0; x < PX; x++)
 						{
-							pos[x + y * 30].x = 123.f + x;
-							pos[x + y * 30].y = 220.f + y;
+							pos[x + y * PX].x = 123.f + x;
+							pos[x + y * PX].y = 220.f + y;
 
-							if (y == 0 || y == 29 || x == 0 || x==29)
+							if (y == 0 || y == PY-1 || x == 0 || x== PX-1)
 							{
-								pstate[x + y * 30].contact_index = contact_index++;
+								pstate[x + y * PX].contact_index = contact_index++;
 							}
 							else
 							{
-								pstate[x + y * 30].contact_index = -1;
+								pstate[x + y * PX].contact_index = -1;
 							}
-							pstate[x + y * 30].is_contact = 0;
+							pstate[x + y * PX].is_contact = 0;
 							bit[x / 8 + y / 8 * 4] |= 1ull << (x % 8 + (y % 8) * 8);
 						}
 					}
@@ -274,12 +278,13 @@ struct GI2DRigidbody_dem
 					float inertia = 0.f;
 					for (int32_t i = 0; i < rela_pos.size(); i++)
 					{
-						vec2 r = pos[i] - center;
-						inertia += dot(r, r) /** mass*/;
+//						vec2 r = pos[i] - center;
+						inertia += dot(rela_pos[i], rela_pos[i]) /** mass*/;
 					}
 
 					Rigidbody rb;
 					rb.pos = center;
+					rb.pos_old = rb.pos;
 					rb.center = size / 2.f;
 					rb.inertia = inertia;
 					rb.size = size_max;
