@@ -62,8 +62,8 @@ void main()
 	vec2 local_pos = rotateRBParticle(rela_pos, b_rigidbody.angle);
 	vec2 pos = b_rigidbody.pos_old + local_pos;
 
-	vec2 vel = b_rigidbody.vel;
-	vec2 angular_vel = cross(vec3(local_pos, 0.), vec3(0., 0., b_rigidbody.angle_vel)).xy;
+	vec2 vel = b_rigidbody.vel*DT;
+	vec2 angular_vel = cross(vec3(local_pos, 0.), vec3(0., 0., b_rigidbody.angle_vel*DT)).xy;
 
 	uint ishit = 0;
 //	vec2 dir = vel + angular_vel;
@@ -88,17 +88,7 @@ void main()
 				{
 					ishit = 1;
 
-/*					Contact contact;
-					contact.distance = progress;
-					contact.friction = 0.;
-					contact.pointA = rela_pos;
-					contact.pointB = vec2(0.);
-//					contact.normal = reflect(map_index - result.next_map_index);
-					contact.normal = normalize(vec2(map_index - result.next_map_index));
-					contact.constraints
-*/
-
-					float spring = 1.2;
+					float spring = 1.1;
 					float decay = 0.1;
 					vec2 delta_linear_vel = vec2(0.);
 					float delta_angular_vel = 0.;
@@ -109,12 +99,13 @@ void main()
 						delta_linear_vel += restitution;
 //						delta_angular_vel += cross(vec3(restitution, 0.), vec3(rela_pos, 0.)).z/ b_rigidbody.inertia;
 //						delta_angular_vel += cross(vec3(rela_pos, 0.), vec3(restitution, 0.)).z;
-						delta_angular_vel += cross(vec3(rela_pos, 0.), vec3(restitution, 0.)).z / b_rigidbody.inertia;
+						delta_angular_vel += cross(vec3(local_pos, 0.), vec3(restitution, 0.)).z;
 					}
 					int index = atomicAdd(b_rigidbody.solver_count, 1);
-					atomicAdd(b_rigidbody.vel_work.x, int(delta_linear_vel.x * 65535.));
-					atomicAdd(b_rigidbody.vel_work.y, int(delta_linear_vel.y * 65535.));
-					atomicAdd(b_rigidbody.angle_vel_work, int(delta_angular_vel * 65535.*255.));
+					atomicAdd(b_rigidbody.vel_work.x, int(ceil(delta_linear_vel.x * 65535.)));
+					atomicAdd(b_rigidbody.vel_work.y, int(ceil(delta_linear_vel.y * 65535.)));
+					atomicAdd(b_rigidbody.angle_vel_work, int(delta_angular_vel * 65535.));
+//					atomicAdd(b_rigidbody.angle_vel_work, delta_angular_vel >= 0 ? 1 : -1);
 					break;
 
 				}

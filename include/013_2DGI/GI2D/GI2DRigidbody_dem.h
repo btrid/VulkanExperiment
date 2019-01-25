@@ -13,6 +13,7 @@ mat2 crossMatrix2(float a)
 	return mat2(0.f, a, -a, 0.f);
 }
 
+// ŒÂ•Ê—v‘f–@, —£ŽU—v‘f–@ DEM
 struct GI2DRigidbody_dem
 {
 	struct Rigidbody
@@ -293,9 +294,13 @@ struct GI2DRigidbody_dem
 					rb.vel_work = ivec2(0.f);
 					rb.angle_vel_work = 0.;
 					rb.pnum = Particle_Num;
-					rb.angle = 2.0f;
-					rb.angle_vel = 2.f;
+					rb.angle = 1.4f;
+					rb.angle_vel = 0.f;
 					rb.solver_count = 0;
+
+					vec3 delta_angular_vel_ = cross(vec3(0.f, -10.f, 0.), vec3(0.f, 10.f, 0.));
+					float delta_angular_vel = delta_angular_vel_.z;
+					delta_angular_vel /= rb.inertia;
 
 					cmd.updateBuffer<Rigidbody>(b_rigidbody.getInfo().buffer, b_rigidbody.getInfo().offset, rb);
 
