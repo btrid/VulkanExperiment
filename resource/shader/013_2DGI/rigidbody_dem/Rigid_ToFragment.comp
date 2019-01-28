@@ -21,6 +21,7 @@ void main()
 
 	vec3 color = vec3(0., 0., 1.);
 	if(b_rbParticle[p_id].contact_index != -1){ color = vec3(1., 0., 0.); }
+	if(b_rbParticle[p_id].is_contact != 0){ color = vec3(0., 10., 0.); }
 	Fragment f;
 	setEmissive(f, false);
 	setDiffuse(f, true);

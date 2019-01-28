@@ -17,7 +17,7 @@ void main()
 //		int a = b_rigidbody.angle_vel_work;
 //		while(a==0){ }
 //		b_rigidbody.angle_vel += float(b_rigidbody.angle_vel_work) / 65535. / b_rigidbody.inertia / b_rigidbody.solver_count;
-		b_rigidbody.angle_vel += float(b_rigidbody.angle_vel_work) / 65535. / b_rigidbody.inertia / b_rigidbody.solver_count;
+		b_rigidbody.angle_vel += float(b_rigidbody.angle_vel_work) / 65535. / b_rigidbody.inertia;
 //		b_rigidbody.vel += vec2(b_rigidbody.vel_work) / 65535.;
 //		b_rigidbody.angle_vel += b_rigidbody.angle_vel_work / 65535.;
 //b_rigidbody.vel = vec2(0.);
