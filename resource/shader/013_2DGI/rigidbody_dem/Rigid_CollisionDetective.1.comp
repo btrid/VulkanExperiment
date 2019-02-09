@@ -87,7 +87,23 @@ void main()
 				if((fragment_map & bit) != 0)
 				{
 					ishit = 1;
-					atomicMin(b_rigidbody.dist, uint((depth-progress) * 65535.));
+
+					float spring = 1.2;
+					float decay = 0.1;
+					vec2 delta_linear_vel = vec2(0.);
+					float delta_angular_vel = 0.;
+					{
+						vec2 restitution = -dir*(spring*(depth+(progress+1.))); // 反発力 めり込んだ量を戻す
+						vec2 damping = decay * -dir; //減衰力
+						vec2 tangent_dir = calcTangent(dir);
+						delta_linear_vel += restitution;
+						delta_angular_vel += cross(vec3(local_pos, 0.), vec3(restitution, 0.)).z;
+					}
+					int index = atomicAdd(b_rigidbody.solver_count, 1);
+					atomicAdd(b_rigidbody.vel_work.x, int(round(delta_linear_vel.x * 65535.)));
+					atomicAdd(b_rigidbody.vel_work.y, int(round(delta_linear_vel.y * 65535.)));
+					atomicAdd(b_rigidbody.angle_vel_work, int(round(delta_angular_vel * 65535.)));
+//					atomicAdd(b_rigidbody.angle_vel_work, delta_angular_vel >= 0 ? 1 : -1);
 					break;
 
 				}

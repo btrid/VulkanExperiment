@@ -68,46 +68,38 @@ void main()
 	uint ishit = 0;
 //	vec2 dir = vel + angular_vel;
 	vec2 dir = vel;
-	if(dot(dir, dir) != 0.)
+	if(b_rigidbody.dist != -1)
 	{ 
-		float progress = length(dir);
-		float depth = progress;
 		dir = normalize(dir);
-		ivec2 map_index = ivec2(pos);
-		for(int _i = 0; _i < 50000; _i++)
+		float progress = float(b_rigidbody.dist) / 65535.;
+		ivec2 map_index = ivec2(pos + dir*progress);
+		// hit確認
 		{
-			MarchResult result = marchEx(pos, map_index, progress, dir);
-			progress = result.progress;
-
-			// hit確認
+			ivec4 fragment_index = ivec4(map_index/8, map_index%8);
+			uint64_t fragment_map = b_diffuse_map[getMemoryOrder(fragment_index.xy)];
+			uint64_t bit = 1ul<<(fragment_index.z+fragment_index.w*8);
+			if((fragment_map & bit) != 0)
 			{
-				ivec4 fragment_index = ivec4(result.next_map_index/8, result.next_map_index%8);
-				uint64_t fragment_map = b_diffuse_map[getMemoryOrder(fragment_index.xy)];
-				uint64_t bit = 1ul<<(fragment_index.z+fragment_index.w*8);
-				if((fragment_map & bit) != 0)
+				ishit = 1;
+
+				float spring = 1.2;
+				float decay = 0.1;
+				vec2 delta_linear_vel = vec2(0.);
+				float delta_angular_vel = 0.;
 				{
-					ishit = 1;
-					atomicMin(b_rigidbody.dist, uint((depth-progress) * 65535.));
-					break;
-
+					vec2 restitution = -dir*(spring*progress); // 反発力 めり込んだ量を戻す
+					vec2 damping = decay * -dir; //減衰力
+					vec2 tangent_dir = calcTangent(dir);
+					delta_linear_vel += restitution;
+					delta_angular_vel += cross(vec3(local_pos, 0.), vec3(restitution, 0.)).z;
 				}
-				else
-				{
-					// 何もないのでそのまま進む
-					map_index = result.next_map_index;
-					pos = result.next_pos;
+				int index = atomicAdd(b_rigidbody.solver_count, 1);
+				atomicAdd(b_rigidbody.vel_work.x, int(round(delta_linear_vel.x * 65535.)));
+				atomicAdd(b_rigidbody.vel_work.y, int(round(delta_linear_vel.y * 65535.)));
+				atomicAdd(b_rigidbody.angle_vel_work, int(round(delta_angular_vel * 65535.)));
 
-				}
 			}
-
-			if(result.is_end)
-			{
-				break;
-			}
-
 		}
 	}
-
-	b_rbParticle[p_id].is_contact = ishit;
 }
 

@@ -37,7 +37,7 @@ struct GI2DRigidbody_dem
 		float angle;
 		float angle_vel;
 		int32_t angle_vel_work;
-		float _pp1;
+		uint32_t dist;
 
 		ivec2 pos_bit_size;
 	};
@@ -83,6 +83,7 @@ struct GI2DRigidbody_dem
 	{
 		Shader_CollisionDetective,
 		Shader_CollisionDetectiveBefore,
+		Shader_CalcForce,
 		Shader_Integrate,
 		Shader_ToFragment,
 		Shader_Num,
@@ -97,6 +98,7 @@ struct GI2DRigidbody_dem
 	{
 		Pipeline_CollisionDetective,
 		Pipeline_CollisionDetectiveBefore,
+		Pipeline_CalcForce,
 		Pipeline_Integrate,
 		Pipeline_ToFragment,
 		Pipeline_Num,
@@ -157,6 +159,7 @@ struct GI2DRigidbody_dem
 				{
 					"Rigid_CollisionDetective.comp.spv",
 					"Rigid_CollisionDetectiveBefore.comp.spv",
+					"Rigid_CalcForce.comp.spv",
 					"Rigid_Integrate.comp.spv",
 					"Rigid_ToFragment.comp.spv",
 				};
@@ -190,12 +193,15 @@ struct GI2DRigidbody_dem
 				shader_info[1].setModule(m_shader[Shader_CollisionDetectiveBefore].get());
 				shader_info[1].setStage(vk::ShaderStageFlagBits::eCompute);
 				shader_info[1].setPName("main");
-				shader_info[2].setModule(m_shader[Shader_Integrate].get());
+				shader_info[2].setModule(m_shader[Shader_CalcForce].get());
 				shader_info[2].setStage(vk::ShaderStageFlagBits::eCompute);
 				shader_info[2].setPName("main");
-				shader_info[3].setModule(m_shader[Shader_ToFragment].get());
+				shader_info[3].setModule(m_shader[Shader_Integrate].get());
 				shader_info[3].setStage(vk::ShaderStageFlagBits::eCompute);
 				shader_info[3].setPName("main");
+				shader_info[4].setModule(m_shader[Shader_ToFragment].get());
+				shader_info[4].setStage(vk::ShaderStageFlagBits::eCompute);
+				shader_info[4].setPName("main");
 				std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 				{
 					vk::ComputePipelineCreateInfo()
@@ -210,12 +216,16 @@ struct GI2DRigidbody_dem
 					vk::ComputePipelineCreateInfo()
 					.setStage(shader_info[3])
 					.setLayout(m_pipeline_layout[PipelineLayout_Rigid].get()),
+					vk::ComputePipelineCreateInfo()
+					.setStage(shader_info[4])
+					.setLayout(m_pipeline_layout[PipelineLayout_Rigid].get()),
 				};
 				auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
 				m_pipeline[Pipeline_CollisionDetective] = std::move(compute_pipeline[0]);
 				m_pipeline[Pipeline_CollisionDetectiveBefore] = std::move(compute_pipeline[1]);
-				m_pipeline[Pipeline_Integrate] = std::move(compute_pipeline[2]);
-				m_pipeline[Pipeline_ToFragment] = std::move(compute_pipeline[3]);
+				m_pipeline[Pipeline_CalcForce] = std::move(compute_pipeline[2]);
+				m_pipeline[Pipeline_Integrate] = std::move(compute_pipeline[3]);
+				m_pipeline[Pipeline_ToFragment] = std::move(compute_pipeline[4]);
 			}
 
 		}
@@ -294,9 +304,10 @@ struct GI2DRigidbody_dem
 					rb.vel_work = ivec2(0.f);
 					rb.angle_vel_work = 0.;
 					rb.pnum = Particle_Num;
-					rb.angle = 3.14f/4.f;
+					rb.angle = 3.14f/2.f;
 					rb.angle_vel = 0.f;
 					rb.solver_count = 0;
+					rb.dist = -1;
 
 					auto _p = glm::rotate(rela_pos[0], 3.14f / 4.f);
 					vec3 delta_angular_vel_ = cross(vec3(0.f, -10.f, 0.), vec3(0.f, 10.f, 0.));
@@ -373,12 +384,26 @@ struct GI2DRigidbody_dem
 			// è’ìÀîªíË
 			vk::BufferMemoryBarrier to_read[] = {
 				b_rbparticle.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-				
+
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_CollisionDetective].get());
+
+			auto num = app::calcDipatchGroups(uvec3(Particle_Num, 1, 1), uvec3(1024, 1, 1));
+			cmd.dispatch(num.x, num.y, num.z);
+
+		}
+		{
+			// è’ìÀåvéZ
+			vk::BufferMemoryBarrier to_read[] = {
+				b_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+				0, nullptr, array_length(to_read), to_read, 0, nullptr);
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_CalcForce].get());
 
 			auto num = app::calcDipatchGroups(uvec3(Particle_Num, 1, 1), uvec3(1024, 1, 1));
 			cmd.dispatch(num.x, num.y, num.z);

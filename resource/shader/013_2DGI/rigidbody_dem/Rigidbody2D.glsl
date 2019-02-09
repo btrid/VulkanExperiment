@@ -27,7 +27,7 @@ struct Rigidbody
 	float angle;
 	float angle_vel;
 	int angle_vel_work;
-	float _pp1;
+	uint dist;
 
 	ivec2 pos_bit_size;
 
