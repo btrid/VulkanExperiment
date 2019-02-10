@@ -60,67 +60,36 @@ void main()
 
 	vec2 rela_pos = b_relative_pos[p_id];
 	vec2 local_pos = rotateRBParticle(rela_pos, b_rigidbody.angle);
-	vec2 pos = b_rigidbody.pos_old + local_pos;
+	vec2 pos = b_rigidbody.pos + local_pos;
 
 	vec2 vel = b_rigidbody.vel*DT;
 	vec2 angular_vel = cross(vec3(local_pos, 0.), vec3(0., 0., b_rigidbody.angle_vel*DT)).xy;
 
 	uint ishit = 0;
-//	vec2 dir = vel + angular_vel;
-	vec2 dir = vel;
+	vec2 dir = vel + angular_vel;
+//	vec2 dir = vel;
 	if(dot(dir, dir) != 0.)
-	{ 
+	{
 		float progress = length(dir);
-		float depth = progress;
 		dir = normalize(dir);
-		ivec2 map_index = ivec2(pos);
-		for(int _i = 0; _i < 50000; _i++)
+		for(int i = 0; i < int(progress+1.); i++)
 		{
-			MarchResult result = marchEx(pos, map_index, progress, dir);
-			progress = result.progress;
+			vec2 next_pos = pos + dir * min(float(i), progress);
+			ivec2 next_map_index = ivec2(next_pos);
+			ivec2 map_index = ivec2(pos);
 
 			// hit確認
 			{
-				ivec4 fragment_index = ivec4(result.next_map_index/8, result.next_map_index%8);
+				ivec4 fragment_index = ivec4(next_map_index/8, next_map_index%8);
 				uint64_t fragment_map = b_diffuse_map[getMemoryOrder(fragment_index.xy)];
 				uint64_t bit = 1ul<<(fragment_index.z+fragment_index.w*8);
 				if((fragment_map & bit) != 0)
 				{
 					ishit = 1;
-
-					float spring = 1.2;
-					float decay = 0.1;
-					vec2 delta_linear_vel = vec2(0.);
-					float delta_angular_vel = 0.;
-					{
-						vec2 restitution = -dir*(spring*(depth+(progress+1.))); // 反発力 めり込んだ量を戻す
-						vec2 damping = decay * -dir; //減衰力
-						vec2 tangent_dir = calcTangent(dir);
-						delta_linear_vel += restitution;
-						delta_angular_vel += cross(vec3(local_pos, 0.), vec3(restitution, 0.)).z;
-					}
-					int index = atomicAdd(b_rigidbody.solver_count, 1);
-					atomicAdd(b_rigidbody.vel_work.x, int(round(delta_linear_vel.x * 65535.)));
-					atomicAdd(b_rigidbody.vel_work.y, int(round(delta_linear_vel.y * 65535.)));
-					atomicAdd(b_rigidbody.angle_vel_work, int(round(delta_angular_vel * 65535.)));
-//					atomicAdd(b_rigidbody.angle_vel_work, delta_angular_vel >= 0 ? 1 : -1);
+					atomicMin(b_rigidbody.dist, uint(min(float(i), progress) / progress * 65535.));
 					break;
-
-				}
-				else
-				{
-					// 何もないのでそのまま進む
-					map_index = result.next_map_index;
-					pos = result.next_pos;
-
 				}
 			}
-
-			if(result.is_end)
-			{
-				break;
-			}
-
 		}
 	}
 
