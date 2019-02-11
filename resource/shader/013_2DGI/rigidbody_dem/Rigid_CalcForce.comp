@@ -8,41 +8,6 @@
 
 layout (local_size_x = 1024) in;
 
-struct MarchResult
-{
-	vec2 next_pos;
-	ivec2 next_map_index;
-	float progress;
-	bool is_end;
-};
-
-// 軽量版
-MarchResult marchEx(in vec2 pos, in ivec2 map_index, in float progress, in vec2 dir)
-{
-	pos += dir * clamp(progress, 0., 1.);
-//	progress = max(progress-1., 0.);
-	progress = progress-1.;
-
-	MarchResult result;
-	result.next_pos = pos;
-	result.next_map_index = ivec2(pos);
-	result.progress = progress;
-	result.is_end = progress <= 1.;
-	return result;
-}
-
-vec2 rotate(in vec2 v, in float angle)
-{
-	float c = cos(angle);
-	float s = sin(angle);
-
-	vec2 Result;
-	Result.x = v.x * c - v.y * s;
-	Result.y = v.x * s + v.y * c;
-	return Result;
-}
-
-
 vec2 calcTangent(in vec2 normal)
 {
 	vec3 vec = vec3(0.,0.,1.);
@@ -58,22 +23,25 @@ void main()
 
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
 
-	vec2 rela_pos = b_relative_pos[p_id];
-	vec2 local_pos = rotateRBParticle(rela_pos, b_rigidbody.angle);
-	vec2 pos = b_rigidbody.pos + local_pos;
-
-	vec2 vel = b_rigidbody.vel*DT;
-	vec2 angular_vel = cross(vec3(local_pos, 0.), vec3(0., 0., b_rigidbody.angle_vel*DT)).xy;
-
-	uint ishit = 0;
-	vec2 dir = vel + angular_vel;
-//	vec2 dir = vel;
 	if(b_rigidbody.dist != -1)
 	{ 
+		float step = float(b_rigidbody.dist) / (65535.*255);
+
+		vec2 rela_pos = b_relative_pos[p_id];
+		vec2 local_pos = rotateRBParticle(rela_pos, b_rigidbody.angle+b_rigidbody.angle_vel*DT*step);
+		vec2 pos = b_rigidbody.pos;
+
+		vec2 vel = b_rigidbody.vel*DT;
+		vec2 angular_vel = cross(vec3(rela_pos, 0.), vec3(0., 0., b_rigidbody.angle_vel*DT)).xy;
+
+		vec2 dir = vel + angular_vel;
+
 		float advance = length(dir);
-		float progress = length(dir) * float(b_rigidbody.dist) / 65535.;
 		dir = normalize(dir);
-		ivec2 map_index = ivec2(pos + dir*progress);
+
+		vec2 next_pos = pos + vel*step + local_pos;
+		ivec2 map_index = ivec2(next_pos);
+
 		// hit確認
 		{
 			ivec4 fragment_index = ivec4(map_index/8, map_index%8);
@@ -81,23 +49,20 @@ void main()
 			uint64_t bit = 1ul<<(fragment_index.z+fragment_index.w*8);
 			if((fragment_map & bit) != 0)
 			{
-				ishit = 1;
-
-				float spring = 1.2;
+				float spring = 1.5;
 				float decay = 0.;
-				vec2 delta_linear_vel = vec2(0.);
-				float delta_angular_vel = 0.;
 				{
 					vec2 restitution = -dir*(spring*advance); // 反発力 めり込んだ量を戻す
 					vec2 damping = decay * -dir*advance; //減衰力
 					vec2 tangent_dir = calcTangent(dir);
-					delta_linear_vel += restitution + damping;
-					delta_angular_vel += cross(vec3(local_pos, 0.), vec3(restitution, 0.)).z;
+					vec2 delta_linear_vel = restitution + damping;
+					float delta_angular_vel = cross(vec3(local_pos, 0.), vec3(0., length(restitution), 0.)).z;
+
+					int index = atomicAdd(b_rigidbody.solver_count, 1);
+					atomicAdd(b_rigidbody.vel_work.x, int(round(delta_linear_vel.x * 65535.)));
+					atomicAdd(b_rigidbody.vel_work.y, int(round(delta_linear_vel.y * 65535.)));
+					atomicAdd(b_rigidbody.angle_vel_work, int(round(delta_angular_vel * 65535.)));
 				}
-				int index = atomicAdd(b_rigidbody.solver_count, 1);
-				atomicAdd(b_rigidbody.vel_work.x, int(round(delta_linear_vel.x * 65535.)));
-				atomicAdd(b_rigidbody.vel_work.y, int(round(delta_linear_vel.y * 65535.)));
-				atomicAdd(b_rigidbody.angle_vel_work, int(round(delta_angular_vel * 65535.)));
 
 			}
 		}
