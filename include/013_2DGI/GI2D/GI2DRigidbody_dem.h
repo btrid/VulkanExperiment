@@ -304,13 +304,14 @@ struct GI2DRigidbody_dem
 					rb.vel_work = ivec2(0.f);
 					rb.angle_vel_work = 0.;
 					rb.pnum = Particle_Num;
-					rb.angle = 3.14f/4.f + 0.02;
+					rb.angle = 3.14f/4.f + 0.2;
 					rb.angle_vel = 0.f;
 					rb.solver_count = 0;
 					rb.dist = -1;
 
 					auto _p = glm::rotate(rela_pos[0], 3.14f / 4.f);
-					vec3 delta_angular_vel_ = cross(vec3(0.f, -10.f, 0.), vec3(0.f, 10.f, 0.));
+					vec3 delta_angular_vel_ = cross(vec3(5.f, 5.f, 0.), vec3(0.f, 10.f, 0.));
+					vec3 delta_angular_vel1 = cross(vec3(-5.f, -5.f, 0.), vec3(0.f, 10.f, 0.));
 					float delta_angular_vel = delta_angular_vel_.z;
 					delta_angular_vel /= rb.inertia;
 
