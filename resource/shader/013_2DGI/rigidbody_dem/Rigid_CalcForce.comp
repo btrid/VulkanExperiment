@@ -14,6 +14,9 @@ vec2 calcTangent(in vec2 normal)
 	return normalize(cross(vec3(normal, 0.),vec)).xy;
 }
 
+float atan2(in float y, in float x){
+    return x == 0.0 ? sign(y)*3.1415/2 : atan(y, x);
+}
 void main() 
 {
 	int p_id = int(gl_GlobalInvocationID.x);
@@ -56,7 +59,10 @@ void main()
 					vec2 damping = decay * -dir*advance; //減衰力
 					vec2 tangent_dir = calcTangent(dir);
 					vec2 delta_linear_vel = restitution + damping;
-					float delta_angular_vel = cross(vec3(local_pos, 0.), vec3(0., length(restitution), 0.)).z;
+//					vec2 d = cross(vec3(local_pos, 0.), vec3(restitution, 0.)).xy;
+//					float delta_angular_vel = atan2(d.y,d.x);
+//					float delta_angular_vel = cross(vec3(local_pos, 0.), vec3(0., length(restitution), 0.)).z;
+					float delta_angular_vel = cross(vec3(local_pos, 0.), vec3(restitution, 0.)).z;
 
 					int index = atomicAdd(b_rigidbody.solver_count, 1);
 					atomicAdd(b_rigidbody.vel_work.x, int(round(delta_linear_vel.x * 65535.)));
