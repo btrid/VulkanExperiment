@@ -8,10 +8,22 @@
 
 layout (local_size_x = 1024) in;
 
+vec2 rotate(in vec2 v, in float angle)
+{
+	float c = cos(angle);
+	float s = sin(angle);
+
+	vec2 Result;
+	Result.x = v.x * c - v.y * s;
+	Result.y = v.x * s + v.y * c;
+	return Result;
+}
+
 vec2 calcTangent(in vec2 normal)
 {
-	vec3 vec = vec3(0.,0.,1.);
-	return normalize(cross(vec3(normal, 0.),vec)).xy;
+//	vec3 vec = vec3(0.,0.,1.);
+//	return normalize(cross(vec3(normal, 0.),vec)).xy;
+	return rotate(normal, radians(90.));
 }
 
 float atan2(in float y, in float x){
@@ -35,7 +47,7 @@ void main()
 		vec2 pos = b_rigidbody.pos;
 
 		vec2 vel = b_rigidbody.vel*DT;
-		vec2 angular_vel = local_pos - rotateRBParticle(rela_pos, b_rigidbody.angle);
+		vec2 angular_vel = rotateRBParticle(rela_pos, b_rigidbody.angle+b_rigidbody.angle_vel*DT) - rotateRBParticle(rela_pos, b_rigidbody.angle);
 
 		vec2 dir = vel + angular_vel;
 
@@ -53,13 +65,14 @@ void main()
 			if((fragment_map & bit) != 0)
 			{
 				float spring = 1.2;
+				float spring_t = 0.;
 				float decay = 0.2;
 				{
 					vec2 restitution = -dir*(spring*advance); // 反発力 めり込んだ量を戻す
 					vec2 damping = decay * -dir; //減衰力
-					vec2 tangent_dir = calcTangent(dir);
-					vec2 delta_linear_vel = restitution + damping;
-					float delta_angular_vel = cross(vec3(local_pos, 0.), vec3(restitution, 0.)).z;
+					vec2 tangent_dir = -calcTangent(dir) * advance * spring_t;
+					vec2 delta_linear_vel = restitution + damping + tangent_dir;
+					float delta_angular_vel = cross(vec3(local_pos, 0.), vec3(delta_linear_vel, 0.)).z;
 
 					int index = atomicAdd(b_rigidbody.solver_count, 1);
 					atomicAdd(b_rigidbody.vel_work.x, int(round(delta_linear_vel.x * 65535.)));
