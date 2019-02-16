@@ -291,8 +291,12 @@ struct GI2DRigidbody_dem
 					{
 //						vec2 r = pos[i] - center;
 						inertia += dot(rela_pos[i], rela_pos[i]) /** mass*/;
+// 						if (pstate[i].contact_index >= 0)
+// 						{
+// 							inertia += dot(rela_pos[i], rela_pos[i]) /** mass*/;
+// 						}
 					}
-
+					inertia /= 12.f;
 					Rigidbody rb;
 					rb.pos = center;
 					rb.pos_old = rb.pos;

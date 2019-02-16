@@ -65,12 +65,12 @@ void main()
 			if((fragment_map & bit) != 0)
 			{
 				float spring = 1.2;
-				float spring_t = 0.;
+				float spring_t = 1.;
 				float decay = 0.2;
 				{
 					vec2 restitution = -dir*(spring*advance); // 反発力 めり込んだ量を戻す
 					vec2 damping = decay * -dir; //減衰力
-					vec2 tangent_dir = -calcTangent(dir) * advance * spring_t;
+					vec2 tangent_dir = calcTangent(-dir) * advance * spring_t;
 					vec2 delta_linear_vel = restitution + damping + tangent_dir;
 					float delta_angular_vel = cross(vec3(local_pos, 0.), vec3(delta_linear_vel, 0.)).z;
 
