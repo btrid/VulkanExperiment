@@ -75,8 +75,8 @@ struct GI2DRigidbody_dem
 
 	enum
 	{
-		PX = 16,
-		PY = 16,
+		PX = 64,
+		PY = 4,
 		Particle_Num = PX*PY,
 	};
 	enum Shader

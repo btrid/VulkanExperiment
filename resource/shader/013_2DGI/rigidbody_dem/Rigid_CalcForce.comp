@@ -28,7 +28,9 @@ vec2 calcTangent(in vec2 normal)
 
 vec2 calcNormal(in vec2 pos, in vec2 dir/*, in uint64_t map*/)
 {
-	ivec4 map_index = ivec4(pos.xyxy) + ivec4(0, 0, 1, 1) * ivec4(round(fract(pos.xyxy)) * 2. - 1.);
+//	ivec4 map_index = ivec4(pos.xyxy) + ivec4(0, 0, 1, 1) * ivec4(round(fract(pos.xyxy)) * 2. - 1.);
+//	ivec4 map_index = ivec4(pos.xyxy) + ivec4(-1, -1, 1, 1);
+	ivec4 map_index = ivec4(pos.xyxy) + ivec4(sign(-dir.xyxy));
 	ivec4 fragment_index = ivec4(map_index/8);
 	ivec4 fragment_index_sub = ivec4(map_index%8);
 	u64vec4 map;
@@ -84,15 +86,14 @@ void main()
 			uint64_t bit = 1ul<<(fragment_index.z+fragment_index.w*8);
 			if((fragment_map & bit) != 0)
 			{
-				float spring = 0.;
-				float spring_t = 1.2;
-				float decay = 1.2;
+				float spring = 1.5;
+				float spring_t = 0.;
+				float decay = 0.5;
 				{
 					vec2 restitution = -dir*(spring*advance); // 反発力 めり込んだ量を戻す
-					vec2 damping = decay * -dir; //減衰力
 					vec3 n = vec3(calcNormal(next_pos, dir), 0.);
-//					vec2 restitution_t = cross(cross(n, vec3(-dir, 0.)), n).xy * advance * spring_t;
-					vec2 restitution_t = n.xy * advance * spring_t;
+					vec2 restitution_t = cross(cross(n, vec3(-dir, 0.)), n).xy * advance * spring_t;
+					vec2 damping = decay * -dir; //減衰力
 					vec2 delta_linear_vel = restitution + damping + restitution_t;
 					float delta_angular_vel = cross(vec3(local_pos, 0.), vec3(delta_linear_vel, 0.)).z;
 
