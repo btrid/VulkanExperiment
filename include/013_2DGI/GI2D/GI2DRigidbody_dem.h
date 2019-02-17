@@ -319,6 +319,7 @@ struct GI2DRigidbody_dem
 					vec3 delta_angular_vel2 = cross(vec3(-5.f, 5.f, 0.), vec3(0.f, 3.f, 0.));
 					vec3 delta_angular_vel22 = cross(vec3(5.f, 5.f, 0.), vec3(0.f, 3.f, 0.));
 					vec3 delta_angular_vel3 = cross(vec3(-5.f, -5.f, 0.), vec3(0.f, 0.f, 2.f));
+					vec3 t = cross(cross(normalize(vec3(-5.f, -5.f, 0.)), vec3(0.f, 1.f, 0.f)), normalize(vec3(-5.f, -5.f, 0.)));
 
 					float delta_angular_vel = delta_angular_vel_.z;
 					delta_angular_vel /= rb.inertia;
