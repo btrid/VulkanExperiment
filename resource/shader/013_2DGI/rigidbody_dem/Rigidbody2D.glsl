@@ -29,6 +29,7 @@ struct Rigidbody
 	int angle_vel_work;
 	uint dist;
 
+	ivec2 damping_work;
 	ivec2 pos_bit_size;
 
 };

@@ -39,6 +39,7 @@ struct GI2DRigidbody_dem
 		int32_t angle_vel_work;
 		uint32_t dist;
 
+		ivec2 damping_work;
 		ivec2 pos_bit_size;
 	};
 
@@ -289,12 +290,10 @@ struct GI2DRigidbody_dem
 					float inertia = 0.f;
 					for (int32_t i = 0; i < rela_pos.size(); i++)
 					{
-//						vec2 r = pos[i] - center;
-						inertia += dot(rela_pos[i], rela_pos[i]) /** mass*/;
-// 						if (pstate[i].contact_index >= 0)
-// 						{
-// 							inertia += dot(rela_pos[i], rela_pos[i]) /** mass*/;
-// 						}
+//						if (pstate[i].contact_index >= 0)
+						{
+							inertia += dot(rela_pos[i], rela_pos[i]) /** mass*/;
+						}
 					}
 					inertia /= 12.f;
 					Rigidbody rb;
@@ -312,7 +311,7 @@ struct GI2DRigidbody_dem
 					rb.angle_vel = 0.f;
 					rb.solver_count = 0;
 					rb.dist = -1;
-
+					rb.damping_work = ivec2(0.f);
 					auto _p = glm::rotate(rela_pos[0], 3.14f / 4.f);
 					vec3 delta_angular_vel_ = cross(vec3(5.f, 5.f, 0.), vec3(0.f, 10.f, 0.));
 					vec3 delta_angular_vel1 = cross(vec3(-5.f, -5.f, 0.), vec3(0.f, 10.f, 0.));
@@ -409,6 +408,7 @@ struct GI2DRigidbody_dem
 			// Õ“ËŒvŽZ
 			vk::BufferMemoryBarrier to_read[] = {
 				b_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+				b_rbparticle.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
@@ -436,6 +436,7 @@ struct GI2DRigidbody_dem
 			// fragment_data‚É‘‚«ž‚Þ
 			vk::BufferMemoryBarrier to_read[] = {
 				m_gi2d_context->b_fragment.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+				b_rbparticle.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);

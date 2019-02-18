@@ -15,9 +15,9 @@ void main()
 	{
 		vec2 vel = b_rigidbody.vel*DT;
 		float step = float(b_rigidbody.dist) / (65535.*255.);
-//		step = max(step - (1. / length(vel)), 0.);
 
 		b_rigidbody.pos += vel * step;
+//		b_rigidbody.pos += vec2(b_rigidbody.damping_work)/65535.;
 		b_rigidbody.angle += b_rigidbody.angle_vel*DT;
 
 		b_rigidbody.vel += vec2(b_rigidbody.vel_work) / 65535.;
@@ -26,6 +26,7 @@ void main()
 		b_rigidbody.pos_work = ivec2(0);
 		b_rigidbody.vel_work = ivec2(0);
 		b_rigidbody.angle_vel_work = 0;
+		b_rigidbody.damping_work = ivec2(0);
 
 		b_rigidbody.solver_count = 0;
 	}
