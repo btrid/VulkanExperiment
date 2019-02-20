@@ -30,14 +30,18 @@ void main()
 	uint ishit = 0;
 	if(dot(vel, vel) != 0. || angular_vel != 0.)
 	{
-		vec2 rela_pos = b_relative_pos[p_id];
 		float angle = b_rigidbody.angle;
 		vec2 pos = b_rigidbody.pos;
+		vec2 rela_pos = b_relative_pos[p_id];
 
-		float progress = length(vel);
-		for(int i = 0; i < int(progress+1.); i++)
+		vec2 angle_vel = cross(vec3(rela_pos, 0.), vec3(0., 0., angular_vel)).xy;
+
+//		float progress = length(vel+angle_vel);
+		float progress = 100.;
+		float inv_progress = 1. / progress;
+		for(int i = 0; i <= int(progress+1.); i++)
 		{
-			float step = min(float(i), progress) / progress;
+			float step = min(float(i), progress) * inv_progress;
 			vec2 local_pos = rotateRBParticle(rela_pos, angle+angular_vel*step);
 			vec2 next_pos = pos + vel*step + local_pos;
 			ivec2 map_index = ivec2(next_pos);
@@ -50,7 +54,8 @@ void main()
 				if((fragment_map & bit) != 0)
 				{
 					ishit = 1;
-					atomicMin(b_rigidbody.dist, uint(step * (65535.*255)));
+//					step = max(float(i-2), 0.) * inv_progress;
+					atomicMin(b_rigidbody.dist, uint(step * (65535.*255.)));
 					break;
 				}
 			}

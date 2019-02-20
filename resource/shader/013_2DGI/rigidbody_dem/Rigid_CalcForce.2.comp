@@ -62,13 +62,20 @@ void main()
 
 	if(b_rigidbody.dist != -1)
 	{ 
-		float step = float(b_rigidbody.dist) / (65535.*255.);
+		float step = float(b_rigidbody.dist) / (65535.*255);
 
 		vec2 rela_pos = b_relative_pos[p_id];
 		vec2 local_pos = rotateRBParticle(rela_pos, b_rigidbody.angle+b_rigidbody.angle_vel*DT*step);
 		vec2 pos = b_rigidbody.pos;
 
 		vec2 vel = b_rigidbody.vel*DT;
+		vec2 angular_vel = rotateRBParticle(rela_pos, b_rigidbody.angle+b_rigidbody.angle_vel*DT) - rotateRBParticle(rela_pos, b_rigidbody.angle);
+
+		vec2 dir = vel + angular_vel;
+
+		float advance = length(dir);
+		dir = normalize(dir);
+
 		vec2 next_pos = pos + vel*step + local_pos;
 		ivec2 map_index = ivec2(next_pos);
 
@@ -79,32 +86,23 @@ void main()
 			uint64_t bit = 1ul<<(fragment_index.z+fragment_index.w*8);
 			if((fragment_map & bit) != 0)
 			{
-				vec2 angular_vel = rotateRBParticle(rela_pos, b_rigidbody.angle+b_rigidbody.angle_vel*DT*step) - rotateRBParticle(rela_pos, b_rigidbody.angle);
-
-				vec2 dir = vel + angular_vel;
-
-				float advance = length(dir);
-				dir = normalize(dir);
-
 				float spring = 1.5;
 				float spring_t = 0.;
-				float decay = 1.5;
+				float decay = 0.5;
 				{
-					vec2 restitution = -dir*advance*spring; // 反発力 めり込んだ量を戻す
+					vec2 restitution = -dir*(spring*advance); // 反発力 めり込んだ量を戻す
 					vec3 n = vec3(calcNormal(next_pos, dir), 0.);
 					vec2 restitution_t = cross(cross(n, vec3(-dir, 0.)), n).xy * advance * spring_t;
-					vec2 damping = -dir * decay; //減衰力
-					vec2 delta_linear_vel = restitution /*+ damping*/ + restitution_t;
+					vec2 damping = decay * -dir; //減衰力
+					vec2 delta_linear_vel = restitution + damping + restitution_t;
 					float delta_angular_vel = cross(vec3(local_pos, 0.), vec3(delta_linear_vel, 0.)).z;
 
 					int index = atomicAdd(b_rigidbody.solver_count, 1);
 					atomicAdd(b_rigidbody.vel_work.x, int(round(delta_linear_vel.x * 65535.)));
 					atomicAdd(b_rigidbody.vel_work.y, int(round(delta_linear_vel.y * 65535.)));
-					atomicMax(b_rigidbody.damping_work.x, int(abs(round(damping.x * 32765.)))*2 + int(damping.x >= 0.));
-					atomicMax(b_rigidbody.damping_work.y, int(abs(round(damping.y * 32765.)))*2 + int(damping.y >= 0.));
 					atomicAdd(b_rigidbody.angle_vel_work, int(round(delta_angular_vel * 65535.*255.)));
 				}
-				b_rbParticle[p_id].is_contact = 2;
+
 			}
 		}
 	}
