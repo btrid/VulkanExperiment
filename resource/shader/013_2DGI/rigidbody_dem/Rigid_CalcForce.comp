@@ -30,7 +30,7 @@ vec2 calcNormal(in vec2 pos, in vec2 dir/*, in uint64_t map*/)
 {
 //	ivec4 map_index = ivec4(pos.xyxy) + ivec4(0, 0, 1, 1) * ivec4(round(fract(pos.xyxy)) * 2. - 1.);
 //	ivec4 map_index = ivec4(pos.xyxy) + ivec4(-1, -1, 1, 1);
-	ivec4 map_index = ivec4(pos.xyxy) + ivec4(sign(-dir.xyxy));
+	ivec4 map_index = ivec4(pos.xyxy) + ivec4(sign(-dir.xyxy)) * ivec4(1, 1, 0, 0);
 	ivec4 fragment_index = ivec4(map_index/8);
 	ivec4 fragment_index_sub = ivec4(map_index%8);
 	u64vec4 map;
@@ -79,15 +79,15 @@ void main()
 			uint64_t bit = 1ul<<(fragment_index.z+fragment_index.w*8);
 			if((fragment_map & bit) != 0)
 			{
-				vec2 angular_vel = rotateRBParticle(rela_pos, b_rigidbody.angle+b_rigidbody.angle_vel*DT*step) - rotateRBParticle(rela_pos, b_rigidbody.angle);
+				vec2 angular_vel = rotateRBParticle(rela_pos, b_rigidbody.angle+b_rigidbody.angle_vel*step) - rotateRBParticle(rela_pos, b_rigidbody.angle);
 
-				vec2 dir = vel + angular_vel;
+				vec2 dir = b_rigidbody.vel + angular_vel;
 
 				float advance = length(dir);
 				dir = normalize(dir);
 
-				float spring = 1.5;
-				float spring_t = 0.;
+				float spring = 0.5;
+				float spring_t = 0.5;
 				float decay = 1.5;
 				{
 					vec2 restitution = -dir*advance*spring; // 反発力 めり込んだ量を戻す
