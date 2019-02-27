@@ -76,8 +76,8 @@ struct GI2DRigidbody_dem
 
 	enum
 	{
-		PX = 64,
-		PY = 4,
+		PX = 16,
+		PY = 16,
 		Particle_Num = PX*PY,
 	};
 	enum Shader
@@ -265,7 +265,7 @@ struct GI2DRigidbody_dem
 								pstate[x + y * PX].contact_index = -1;
 							}
 							pstate[x + y * PX].is_contact = 0;
-							bit[x / 8 + y / 8 * 4] |= 1ull << (x % 8 + (y % 8) * 8);
+//							bit[x / 8 + y / 8 * 4] |= 1ull << (x % 8 + (y % 8) * 8);
 						}
 					}
 					for (auto& p : pos) {
@@ -318,7 +318,8 @@ struct GI2DRigidbody_dem
 					vec3 delta_angular_vel2 = cross(vec3(-5.f, 5.f, 0.), vec3(0.f, 3.f, 0.));
 					vec3 delta_angular_vel22 = cross(vec3(5.f, 5.f, 0.), vec3(0.f, 3.f, 0.));
 					vec3 delta_angular_vel3 = cross(vec3(-5.f, -5.f, 0.), vec3(0.f, 0.f, 2.f));
-					vec3 t = cross(cross(normalize(vec3(-5.f, -5.f, 0.)), vec3(0.f, 1.f, 0.f)), normalize(vec3(-5.f, -5.f, 0.)));
+					auto n = normalize(vec3(0.f, -1.f, 0.));
+					vec3 t = cross(cross(n, normalize(vec3(1.f, 1.f, 0.f))), n);
 
 					float delta_angular_vel = delta_angular_vel_.z;
 					delta_angular_vel /= rb.inertia;

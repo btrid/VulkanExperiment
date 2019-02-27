@@ -28,19 +28,19 @@ vec2 calcTangent(in vec2 normal)
 
 vec2 calcNormal(in vec2 pos, in vec2 dir/*, in uint64_t map*/)
 {
-//	ivec4 map_index = ivec4(pos.xyxy) + ivec4(0, 0, 1, 1) * ivec4(round(fract(pos.xyxy)) * 2. - 1.);
-//	ivec4 map_index = ivec4(pos.xyxy) + ivec4(-1, -1, 1, 1);
-	ivec4 map_index = ivec4(pos.xyxy) + ivec4(sign(-dir.xyxy)) * ivec4(1, 1, 0, 0);
+	ivec4 map_index = ivec4(pos.xyxy) + ivec4(sign(dir.xyxy)) * -ivec4(0, 0, 1, 1);
 	ivec4 fragment_index = ivec4(map_index/8);
 	ivec4 fragment_index_sub = ivec4(map_index%8);
+
 	u64vec4 map;
 	map[0] = b_diffuse_map[getMemoryOrder(fragment_index.xy)];
 	map[1] = b_diffuse_map[getMemoryOrder(fragment_index.zy)];
 	map[2] = b_diffuse_map[getMemoryOrder(fragment_index.xw)];
 	map[3] = 0;
+
 	u64vec4 bit = u64vec4(1ul)<<(fragment_index_sub.xxzz+fragment_index_sub.yyww*8);
 	ivec4 iswall = ivec4(notEqual((map & bit), u64vec4(0ul)));
-	vec2 n = abs(vec2(iswall[2]-iswall[0], iswall[1]-iswall[0]))*vec2(sign(-dir.xy));
+	vec2 n = abs(vec2(iswall[2], iswall[1]))*vec2(sign(-dir.xy));
 	n = dot(n , n) == 0. ? -dir : n;
 	while(dot(n , n) == 0.);
 
@@ -79,7 +79,7 @@ void main()
 			uint64_t bit = 1ul<<(fragment_index.z+fragment_index.w*8);
 			if((fragment_map & bit) != 0)
 			{
-				vec2 angular_vel = rotateRBParticle(rela_pos, b_rigidbody.angle+b_rigidbody.angle_vel*step) - rotateRBParticle(rela_pos, b_rigidbody.angle);
+				vec2 angular_vel = rotateRBParticle(rela_pos, b_rigidbody.angle+b_rigidbody.angle_vel) - rotateRBParticle(rela_pos, b_rigidbody.angle);
 
 				vec2 dir = b_rigidbody.vel + angular_vel;
 
@@ -90,12 +90,13 @@ void main()
 				float spring_t = 0.5;
 				float decay = 1.5;
 				{
-					vec2 restitution = -dir*advance*spring; // 反発力 めり込んだ量を戻す
+					vec2 restitution = -dir*advance*spring; // 反発力
 					vec3 n = vec3(calcNormal(next_pos, dir), 0.);
 					vec2 restitution_t = cross(cross(n, vec3(-dir, 0.)), n).xy * advance * spring_t;
-					vec2 damping = -dir * decay; //減衰力
 					vec2 delta_linear_vel = restitution /*+ damping*/ + restitution_t;
 					float delta_angular_vel = cross(vec3(local_pos, 0.), vec3(delta_linear_vel, 0.)).z;
+
+					vec2 damping = -dir * decay; // めり込んだ量を戻す
 
 					int index = atomicAdd(b_rigidbody.solver_count, 1);
 					atomicAdd(b_rigidbody.vel_work.x, int(round(delta_linear_vel.x * 65535.)));
