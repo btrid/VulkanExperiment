@@ -78,16 +78,13 @@ layout(set=USE_Rigidbody2D, binding=0, std430) restrict buffer RigidbodyData {
 layout(set=USE_Rigidbody2D, binding=1, std430) restrict buffer rbRelaPosBuffer {
 	vec2 b_relative_pos[];
 };
-layout(set=USE_Rigidbody2D, binding=2, std430) restrict buffer rbPosBuffer {
-	vec2 b_rbpos[];
-};
-layout(set=USE_Rigidbody2D, binding=3, std430) restrict buffer rbParticleBuffer {
+layout(set=USE_Rigidbody2D, binding=2, std430) restrict buffer rbParticleBuffer {
 	rbParticle b_rbParticle[];
 };
-layout(set=USE_Rigidbody2D, binding=4, std430) restrict buffer rbPosBitBuffer {
+layout(set=USE_Rigidbody2D, binding=3, std430) restrict buffer rbPosBitBuffer {
 	uint64_t b_rbpos_bit[];
 };
-layout(set=USE_Rigidbody2D, binding=5, std430) restrict buffer rbContactBuffer {
+layout(set=USE_Rigidbody2D, binding=4, std430) restrict buffer rbContactBuffer {
 	Contact b_rbcontact[];
 };
 

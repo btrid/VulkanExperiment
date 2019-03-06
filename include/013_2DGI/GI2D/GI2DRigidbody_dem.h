@@ -7,15 +7,14 @@
 #include <applib/GraphicsResource.h>
 #include <013_2DGI/GI2D/GI2DContext.h>
 
-
-mat2 crossMatrix2(float a)
-{
-	return mat2(0.f, a, -a, 0.f);
-}
-
 // ŒÂ•Ê—v‘f–@, —£ŽU—v‘f–@ DEM
 struct GI2DRigidbody_dem
 {
+	struct World
+	{
+		float deltatime;
+	};
+
 	struct Rigidbody
 	{
 		int32_t pnum;
@@ -76,8 +75,10 @@ struct GI2DRigidbody_dem
 
 	enum
 	{
-		PX = 16,
-		PY = 16,
+//		PX = 16,
+//		PY = 16,
+		PX = 64,
+		PY = 4,
 		Particle_Num = PX*PY,
 	};
 	enum Shader
@@ -142,11 +143,6 @@ struct GI2DRigidbody_dem
 					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 					.setDescriptorCount(1)
 					.setBinding(4),
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(5),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -235,7 +231,6 @@ struct GI2DRigidbody_dem
 			{
 				b_rigidbody = m_context->m_storage_memory.allocateMemory<Rigidbody>({ 1,{} });
 
-				b_rbpos = m_context->m_storage_memory.allocateMemory<vec2>({ Particle_Num,{} });
 				b_relative_pos = m_context->m_storage_memory.allocateMemory<vec2>({ Particle_Num,{} });
 				b_rbparticle = m_context->m_storage_memory.allocateMemory<rbParticle>({ Particle_Num,{} });
 				b_rbpos_bit = m_context->m_storage_memory.allocateMemory<uint64_t>({ 4*4,{} });
@@ -283,7 +278,6 @@ struct GI2DRigidbody_dem
 					}
 
 					size /= pos.size();
-					cmd.updateBuffer<vec2>(b_rbpos.getInfo().buffer, b_rbpos.getInfo().offset, pos);
 					cmd.updateBuffer<vec2>(b_relative_pos.getInfo().buffer, b_relative_pos.getInfo().offset, rela_pos);
 					cmd.updateBuffer<rbParticle>(b_rbparticle.getInfo().buffer, b_rbparticle.getInfo().offset, pstate);
 
@@ -312,24 +306,12 @@ struct GI2DRigidbody_dem
 					rb.solver_count = 0;
 					rb.dist = -1;
 					rb.damping_work = ivec2(0.f);
-					auto _p = glm::rotate(rela_pos[0], 3.14f / 4.f);
-					vec3 delta_angular_vel_ = cross(vec3(5.f, 5.f, 0.), vec3(0.f, 10.f, 0.));
-					vec3 delta_angular_vel1 = cross(vec3(-5.f, -5.f, 0.), vec3(0.f, 10.f, 0.));
-					vec3 delta_angular_vel2 = cross(vec3(-5.f, 5.f, 0.), vec3(0.f, 3.f, 0.));
-					vec3 delta_angular_vel22 = cross(vec3(5.f, 5.f, 0.), vec3(0.f, 3.f, 0.));
-					vec3 delta_angular_vel3 = cross(vec3(-5.f, -5.f, 0.), vec3(0.f, 0.f, 2.f));
-					auto n = normalize(vec3(0.f, -1.f, 0.));
-					vec3 t = cross(cross(n, normalize(vec3(1.f, 1.f, 0.f))), n);
-
-					float delta_angular_vel = delta_angular_vel_.z;
-					delta_angular_vel /= rb.inertia;
 
 					cmd.updateBuffer<Rigidbody>(b_rigidbody.getInfo().buffer, b_rigidbody.getInfo().offset, rb);
 
 					vk::BufferMemoryBarrier to_read[] = {
 						b_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 						b_relative_pos.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-						b_rbpos.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 					};
 					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllCommands, {},
 						0, nullptr, array_length(to_read), to_read, 0, nullptr);
@@ -348,7 +330,6 @@ struct GI2DRigidbody_dem
 				vk::DescriptorBufferInfo storages[] = {
 					b_rigidbody.getInfo(),
 					b_relative_pos.getInfo(),
-					b_rbpos.getInfo(),
 					b_rbparticle.getInfo(),
 					b_rbpos_bit.getInfo(),
 					b_rbcontact.getInfo(),
@@ -379,7 +360,6 @@ struct GI2DRigidbody_dem
 			// XV‘OŒvŽZ
 			vk::BufferMemoryBarrier to_read[] = {
 				m_gi2d_context->b_grid_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-				b_rbpos.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				b_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
@@ -463,7 +443,6 @@ struct GI2DRigidbody_dem
 
 	btr::BufferMemoryEx<Rigidbody> b_rigidbody;
 	btr::BufferMemoryEx<vec2> b_relative_pos;
-	btr::BufferMemoryEx<vec2> b_rbpos;
 	btr::BufferMemoryEx<rbParticle> b_rbparticle;
 	btr::BufferMemoryEx<uint64_t> b_rbpos_bit;
 	btr::BufferMemoryEx<Contact> b_rbcontact;
