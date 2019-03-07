@@ -10,6 +10,13 @@
 
 struct PhysicsWorld
 {
+	struct World
+	{
+		float DT;
+		uint step;
+		uint STEP;
+
+	};
 	PhysicsWorld(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context)
 	{
 		m_context = context;
@@ -45,6 +52,75 @@ struct PhysicsWorld
 			desc_layout_info.setPBindings(binding);
 			m_rigitbody_desc_layout = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
 		}
+		{
+
+			auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
+			vk::DescriptorSetLayoutBinding binding[] = {
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(stage)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(1)
+				.setBinding(0),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(stage)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(1)
+				.setBinding(1),
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(stage)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(1)
+				.setBinding(2),
+			};
+			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
+			desc_layout_info.setBindingCount(array_length(binding));
+			desc_layout_info.setPBindings(binding);
+			m_physics_world_desc_layout = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
+		}
+
+
+		{
+			b_world = m_context->m_storage_memory.allocateMemory<World>({ 1,{} });
+			b_linklist = m_context->m_storage_memory.allocateMemory<uint32_t>({ gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
+			b_rb = m_context->m_storage_memory.allocateMemory<uint32_t>({ 1000,{} });
+
+			{
+				vk::DescriptorSetLayout layouts[] = {
+					m_physics_world_desc_layout.get(),
+				};
+				vk::DescriptorSetAllocateInfo desc_info;
+				desc_info.setDescriptorPool(context->m_descriptor_pool.get());
+				desc_info.setDescriptorSetCount(array_length(layouts));
+				desc_info.setPSetLayouts(layouts);
+				m_physics_world_desc = std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]);
+
+				vk::DescriptorBufferInfo storages[] = {
+					b_world.getInfo(),
+					b_linklist.getInfo(),
+					b_rb.getInfo(),
+				};
+
+				vk::WriteDescriptorSet write[] =
+				{
+					vk::WriteDescriptorSet()
+					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+					.setDescriptorCount(array_length(storages))
+					.setPBufferInfo(storages)
+					.setDstBinding(0)
+					.setDstSet(m_physics_world_desc.get()),
+				};
+				context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
+			}
+
+		}
+
+		{
+			World w;
+			w.DT = 0.016f;
+			w.STEP = 100;
+			w.step = 0;
+			m_context->m_cmd_pool->allocCmdTempolary(0).updateBuffer<World>(b_world.getInfo().buffer, b_world.getInfo().offset, w);
+		}
 
 	}
 
@@ -53,9 +129,12 @@ struct PhysicsWorld
 
 	vk::UniqueDescriptorSetLayout m_rigitbody_desc_layout;
 
-	btr::BufferMemoryEx<uint32_t> b_linklist;
-	btr::BufferMemoryEx<uint64_t> b_rb;
+	vk::UniqueDescriptorSetLayout m_physics_world_desc_layout;
+	vk::UniqueDescriptorSet m_physics_world_desc;
 
+	btr::BufferMemoryEx<World> b_world;
+	btr::BufferMemoryEx<uint32_t> b_linklist;
+	btr::BufferMemoryEx<uint32_t> b_rb;
 };
 
 struct GI2DRigidbody
@@ -281,6 +360,7 @@ struct GI2DRigidbody_procedure
 		// pipeline layout
 		{
 			vk::DescriptorSetLayout layouts[] = {
+				m_world->m_physics_world_desc_layout.get(),
 				m_world->m_rigitbody_desc_layout.get(),
 				m_world->m_gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data),
 			};
@@ -339,8 +419,9 @@ struct GI2DRigidbody_procedure
 	void execute(vk::CommandBuffer cmd, const GI2DRigidbody* rb)
 	{
 
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Rigid].get(), 0, rb->m_descriptor_set.get(), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Rigid].get(), 1, m_world->m_gi2d_context->getDescriptorSet(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Rigid].get(), 0, m_world->m_physics_world_desc.get(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Rigid].get(), 1, rb->m_descriptor_set.get(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Rigid].get(), 2, m_world->m_gi2d_context->getDescriptorSet(), {});
 
 
 // 		{
@@ -354,7 +435,7 @@ struct GI2DRigidbody_procedure
 // 
 // 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_CollisionDetectiveBefore].get());
 // 			auto num = app::calcDipatchGroups(uvec3(rb->m_particle_num, 1, 1), uvec3(1024, 1, 1));
-// 			cmd.dispatch(num.x, num.y, num.z);
+// // 			cmd.dispatch(num.x, num.y, num.z);
 // 		}
 
 		{

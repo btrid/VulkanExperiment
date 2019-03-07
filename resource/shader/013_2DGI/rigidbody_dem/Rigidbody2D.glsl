@@ -1,10 +1,24 @@
 #ifndef Rigidbody2D_H_
 #define Rigidbody2D_H_
 
+#if defined(USE_Rigidbody2D_World)
+
+struct World
+{
+	float DeltaTime;
+	uint step;
+	uint STEP;
+};
+
+layout(set=USE_Rigidbody2D_World, binding=0, std430) restrict buffer WorldData {
+	World b_world;
+};
+
+
+#endif
+
 #if defined(USE_Rigidbody2D)
 
-//#extension GL_ARB_gpu_shader5 : enable
-//#extension GL_NV_shader_atomic_float : require
 struct Rigidbody
 {
 	int pnum;
@@ -34,21 +48,12 @@ struct Rigidbody
 
 };
 
-struct SolverBody
-{
-	vec2 deltaLinearVelocity; ///< 並進速度差分
-	float deltaAngularVelocity; ///< 回転速度差分
-	float orientation; ///< 姿勢
-	float inertiaInv; ///< 慣性テンソルの逆行列
-	float massInv; ///< 質量の逆数
-};
-
-
 struct rbParticle
 {
 	uint contact_index;
 	uint is_contact;
 };
+
 layout(set=USE_Rigidbody2D, binding=0, std430) restrict buffer RigidbodyData {
 	Rigidbody b_rigidbody;
 };
