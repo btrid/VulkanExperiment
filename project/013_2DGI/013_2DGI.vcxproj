@@ -108,7 +108,7 @@
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DFluid.h" />
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DRadiosity.h" />
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DMakeHierarchy.h" />
-    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DRigidbody_dem.h" />
+    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DRigidbody.h" />
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DSoftbody.h" />
     <ClInclude Include="..\..\include\013_2DGI\PathContext.h" />
     <ClInclude Include="..\..\include\013_2DGI\PathSolver.h" />

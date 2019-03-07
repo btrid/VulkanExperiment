@@ -239,7 +239,7 @@ struct GI2DRigidbody
 
 };
 // ŒÂ•Ê—v‘f–@, —£ŽU—v‘f–@ DEM
-struct GI2DRigidbody_dem
+struct GI2DRigidbody_procedure
 {
 
 	enum Shader
@@ -267,7 +267,7 @@ struct GI2DRigidbody_dem
 		Pipeline_Num,
 	};
 
-	GI2DRigidbody_dem(const std::shared_ptr<PhysicsWorld>& world)
+	GI2DRigidbody_procedure(const std::shared_ptr<PhysicsWorld>& world)
 	{
 		m_world = world;
 		{
