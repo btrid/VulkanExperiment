@@ -278,7 +278,7 @@ public:
 	T* getMappedPtr(size_t offset_num = 0)const { assert(offset_num < m_resource->m_buffer_descriptor.element_num); return m_resource->m_mapped_memory + offset_num; }
 	uint32_t getDataSizeof()const { return sizeof(T); }
 
-	vk::BufferMemoryBarrier makeMemoryBarrier(vk::AccessFlags srcAccessFlag = vk::AccessFlags(), vk::AccessFlags dstAccessFlag = vk::AccessFlags()) {
+	vk::BufferMemoryBarrier makeMemoryBarrier(vk::AccessFlags srcAccessFlag = vk::AccessFlags(), vk::AccessFlags dstAccessFlag = vk::AccessFlags())const {
 		vk::BufferMemoryBarrier barrier;
 		barrier.buffer = m_resource->m_buffer_info.buffer;
 		barrier.size = m_resource->m_buffer_info.range;
