@@ -94,53 +94,44 @@ struct GI2DRigidbody
 		uint32_t is_contact;
 	};
 
-	enum
-	{
-		//		PX = 16,
-		//		PY = 16,
-		PX = 64,
-		PY = 4,
-		Particle_Num = PX * PY,
-	};
-
-	GI2DRigidbody(const std::shared_ptr<PhysicsWorld>& world)
+	GI2DRigidbody(const std::shared_ptr<PhysicsWorld>& world, int32_t px, int32_t py)
 	{
 		auto cmd = world->m_context->m_cmd_pool->allocCmdTempolary(0);
 
-		m_particle_num = Particle_Num;
+		m_particle_num = px * py;
 
 		{
 			{
 				b_rigidbody = world->m_context->m_storage_memory.allocateMemory<Rigidbody>({ 1,{} });
 
-				b_relative_pos = world->m_context->m_storage_memory.allocateMemory<vec2>({ Particle_Num,{} });
-				b_rbparticle = world->m_context->m_storage_memory.allocateMemory<rbParticle>({ Particle_Num,{} });
+				b_relative_pos = world->m_context->m_storage_memory.allocateMemory<vec2>({ m_particle_num,{} });
+				b_rbparticle = world->m_context->m_storage_memory.allocateMemory<rbParticle>({ m_particle_num,{} });
 				b_rbpos_bit = world->m_context->m_storage_memory.allocateMemory<uint64_t>({ 4 * 4,{} });
 				{
 
-					std::vector<vec2> pos(Particle_Num);
-					std::vector<vec2> rela_pos(Particle_Num);
-					std::vector<rbParticle> pstate(Particle_Num);
+					std::vector<vec2> pos(m_particle_num);
+					std::vector<vec2> rela_pos(m_particle_num);
+					std::vector<rbParticle> pstate(m_particle_num);
 					std::vector<uint64_t> bit(4 * 4);
 					vec2 center = vec2(0.f);
 
 					uint32_t contact_index = 0;
-					for (int y = 0; y < PY; y++)
+					for (int y = 0; y < py; y++)
 					{
-						for (int x = 0; x < PX; x++)
+						for (int x = 0; x < px; x++)
 						{
-							pos[x + y * PX].x = 123.f + x;
-							pos[x + y * PX].y = 220.f + y;
+							pos[x + y * px].x = 123.f + x;
+							pos[x + y * px].y = 220.f + y;
 
-							if (y == 0 || y == PY - 1 || x == 0 || x == PX - 1)
+							if (y == 0 || y == py - 1 || x == 0 || x == px - 1)
 							{
-								pstate[x + y * PX].contact_index = contact_index++;
+								pstate[x + y * px].contact_index = contact_index++;
 							}
 							else
 							{
-								pstate[x + y * PX].contact_index = -1;
+								pstate[x + y * px].contact_index = -1;
 							}
-							pstate[x + y * PX].is_contact = 0;
+							pstate[x + y * px].is_contact = 0;
 							//							bit[x / 8 + y / 8 * 4] |= 1ull << (x % 8 + (y % 8) * 8);
 						}
 					}
@@ -181,7 +172,7 @@ struct GI2DRigidbody
 					rb.pos_work = ivec2(0.f);
 					rb.vel_work = ivec2(0.f);
 					rb.angle_vel_work = 0.;
-					rb.pnum = Particle_Num;
+					rb.pnum = m_particle_num;
 					rb.angle = 3.14f / 4.f + 0.2;
 					rb.angle_vel = 0.f;
 					rb.solver_count = 0;
@@ -352,19 +343,19 @@ struct GI2DRigidbody_procedure
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Rigid].get(), 1, m_world->m_gi2d_context->getDescriptorSet(), {});
 
 
-		{
-			// 更新前計算
-			vk::BufferMemoryBarrier to_read[] = {
-				m_world->m_gi2d_context->b_grid_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-				rb->b_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
-			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
-				0, nullptr, array_length(to_read), to_read, 0, nullptr);
-
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_CollisionDetectiveBefore].get());
-			auto num = app::calcDipatchGroups(uvec3(rb->m_particle_num, 1, 1), uvec3(1024, 1, 1));
-//			cmd.dispatch(num.x, num.y, num.z);
-		}
+// 		{
+// 			// 更新前計算
+// 			vk::BufferMemoryBarrier to_read[] = {
+// 				m_world->m_gi2d_context->b_grid_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+// 				rb->b_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+// 			};
+// 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+// 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
+// 
+// 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_CollisionDetectiveBefore].get());
+// 			auto num = app::calcDipatchGroups(uvec3(rb->m_particle_num, 1, 1), uvec3(1024, 1, 1));
+// 			cmd.dispatch(num.x, num.y, num.z);
+// 		}
 
 		{
 			// 衝突判定
