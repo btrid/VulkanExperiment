@@ -81,15 +81,14 @@ void main()
 			if((fragment_map & bit) != 0)
 			{
 				vec2 angular_vel = rotateRBParticle(rela_pos, b_rigidbody.angle+b_rigidbody.angle_vel) - rotateRBParticle(rela_pos, b_rigidbody.angle);
-
 				vec2 dir = b_rigidbody.vel + angular_vel;
 
-				float advance = length(dir);
+				float advance = length(b_rigidbody.vel);
 				dir = normalize(dir);
 
 				float spring = 0.5;
 				float spring_t = 0.5;
-				float decay = 1.5;
+				float decay = 1.;
 				{
 					vec2 restitution = -dir*advance*spring; // 反発力
 					vec3 n = vec3(calcNormal(next_pos, dir), 0.);

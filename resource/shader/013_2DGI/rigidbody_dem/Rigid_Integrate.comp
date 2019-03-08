@@ -24,8 +24,8 @@ void main()
 		//押し返す
 		b_rigidbody.pos += vec2(b_rigidbody.damping_work)/(32765.*2.) * (vec2(notEqual(b_rigidbody.damping_work & ivec2(1), ivec2(0)))*2. - 1.);
 
-		b_rigidbody.vel += vec2(b_rigidbody.vel_work) / 65535.;
-		b_rigidbody.angle_vel += float(b_rigidbody.angle_vel_work) / (65535.*255.) / b_rigidbody.inertia;
+		b_rigidbody.vel += vec2(b_rigidbody.vel_work) / 65535.  / b_rigidbody.solver_count;
+		b_rigidbody.angle_vel += float(b_rigidbody.angle_vel_work) / (65535.*255.) / b_rigidbody.inertia  / b_rigidbody.solver_count;
 
 
 		b_rigidbody.pos_work = ivec2(0);

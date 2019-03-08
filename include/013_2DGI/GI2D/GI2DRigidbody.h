@@ -252,7 +252,8 @@ struct GI2DRigidbody
 					rb.vel_work = ivec2(0.f);
 					rb.angle_vel_work = 0.;
 					rb.pnum = m_particle_num;
-					rb.angle = 3.14f / 4.f + 0.2;
+					rb.angle = 3.14f / 4.f + 0.2f;
+//					rb.angle = 0.f;
 					rb.angle_vel = 0.f;
 					rb.solver_count = 0;
 					rb.dist = -1;
