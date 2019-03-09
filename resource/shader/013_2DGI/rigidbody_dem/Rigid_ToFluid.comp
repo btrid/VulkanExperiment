@@ -1,0 +1,35 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_Rigidbody2D_World 0
+#define USE_Rigidbody2D 1
+#define USE_GI2D 2
+#include "GI2D.glsl"
+#include "Rigidbody2D.glsl"
+
+layout (local_size_x = 1024) in;
+void main() 
+{
+	int p_id = int(gl_GlobalInvocationID.x);
+	if(p_id >= b_rigidbody.pnum){ return; }
+	vec2 rela_pos = b_relative_pos[p_id];
+	vec2 local_pos = rotateRBParticle(rela_pos, b_rigidbody.angle);
+	vec2 pos = b_rigidbody.pos + local_pos;
+		
+	ivec2 index = ivec2(pos);
+	if(any(lessThan(index, ivec2(0))) || any(greaterThanEqual(index, u_gi2d_info.m_resolution.xy))){ return; }
+
+	vec2 vel_dt = b_rigidbody.vel*DT;
+	float angular_vel_dt = b_rigidbody.angle_vel*DT;
+	vec2 angle_vel = cross(vec3(rela_pos, 0.), vec3(0., 0., angular_vel_dt)).xy;
+
+	rbFluid f;
+	f.id = gl_GlobalInvocationID.y;
+	f.mass = b_rigidbody.mass;
+	f.vel = vel_dt+angle_vel;
+
+	uint i = index.x+index.y*u_gi2d_info.m_resolution.x;
+	uint ii = atomicAdd(b_fluid_count[i], 1);
+	b_fluid[i + ii] = f;
+}
+

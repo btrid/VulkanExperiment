@@ -10,12 +10,35 @@
 
 struct PhysicsWorld
 {
+	enum Shader
+	{
+		Shader_ToFluid,
+		Shader_Num,
+	};
+
+	enum PipelineLayout
+	{
+		PipelineLayout_ToFluid,
+		PipelineLayout_Num,
+	};
+	enum Pipeline
+	{
+		Pipeline_ToFluid,
+		Pipeline_Num,
+	};
+
 	struct World
 	{
 		float DT;
 		uint step;
 		uint STEP;
+	};
 
+	struct rbFluid
+	{
+		uint id;
+		float mass;
+		vec2 vel;
 	};
 	PhysicsWorld(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context)
 	{
@@ -78,11 +101,27 @@ struct PhysicsWorld
 			m_physics_world_desc_layout = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
 		}
 
+		{
+
+			auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
+			vk::DescriptorSetLayoutBinding binding[] = {
+				vk::DescriptorSetLayoutBinding()
+				.setStageFlags(stage)
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(100)
+				.setBinding(0),
+			};
+			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
+			desc_layout_info.setBindingCount(array_length(binding));
+			desc_layout_info.setPBindings(binding);
+			m_physics_world_desc_layout = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
+		}
+
 
 		{
 			b_world = m_context->m_storage_memory.allocateMemory<World>({ 1,{} });
-			b_linklist = m_context->m_storage_memory.allocateMemory<uint32_t>({ gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
-			b_rb = m_context->m_storage_memory.allocateMemory<uint32_t>({ 1000,{} });
+			b_fluid_counter = m_context->m_storage_memory.allocateMemory<uint32_t>({ gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
+			b_fluid = m_context->m_storage_memory.allocateMemory<rbFluid>({ 4 * gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
 
 			{
 				vk::DescriptorSetLayout layouts[] = {
@@ -96,8 +135,8 @@ struct PhysicsWorld
 
 				vk::DescriptorBufferInfo storages[] = {
 					b_world.getInfo(),
-					b_linklist.getInfo(),
-					b_rb.getInfo(),
+					b_fluid_counter.getInfo(),
+					b_fluid.getInfo(),
 				};
 
 				vk::WriteDescriptorSet write[] =
@@ -124,6 +163,12 @@ struct PhysicsWorld
 
 	}
 
+	void execute(vk::CommandBuffer cmd)
+	{
+		uint32_t data = 0;
+		cmd.fillBuffer(b_fluid_counter.getInfo().buffer, b_fluid_counter.getInfo().offset, b_fluid_counter.getInfo().range, data);
+	}
+
 	std::shared_ptr<btr::Context> m_context;
 	std::shared_ptr<GI2DContext> m_gi2d_context;
 
@@ -132,9 +177,12 @@ struct PhysicsWorld
 	vk::UniqueDescriptorSetLayout m_physics_world_desc_layout;
 	vk::UniqueDescriptorSet m_physics_world_desc;
 
+	vk::UniqueDescriptorSetLayout m_rigitbodys_desc_layout;
+	vk::UniqueDescriptorSet m_rigitbodys_desc;
+
 	btr::BufferMemoryEx<World> b_world;
-	btr::BufferMemoryEx<uint32_t> b_linklist;
-	btr::BufferMemoryEx<uint32_t> b_rb;
+	btr::BufferMemoryEx<uint32_t> b_fluid_counter;
+	btr::BufferMemoryEx<rbFluid> b_fluid;
 };
 
 struct GI2DRigidbody
@@ -259,7 +307,6 @@ struct GI2DRigidbody
 					rb.damping_work = ivec2(0.f);
 
 					cmd.updateBuffer<Rigidbody>(b_rigidbody.getInfo().buffer, b_rigidbody.getInfo().offset, rb);
-
 					vk::BufferMemoryBarrier to_read[] = {
 						b_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 						b_relative_pos.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),

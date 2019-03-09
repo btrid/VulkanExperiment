@@ -1,30 +1,12 @@
 #ifndef Rigidbody2D_H_
 #define Rigidbody2D_H_
 
-#if defined(USE_Rigidbody2D_World)
-
-struct World
-{
-	float DeltaTime;
-	uint step;
-	uint STEP;
-};
-
-layout(set=USE_Rigidbody2D_World, binding=0, std430) restrict buffer WorldData {
-	World b_world;
-};
-
-
-#endif
-
-#if defined(USE_Rigidbody2D)
-
 struct Rigidbody
 {
 	int pnum;
 	int solver_count;
 	float inertia;
-	int _p2;
+	float mass;
 
 	vec2 center;
 	vec2 size;
@@ -47,6 +29,38 @@ struct Rigidbody
 	ivec2 pos_bit_size;
 
 };
+
+#if defined(USE_Rigidbody2D_World)
+
+struct World
+{
+	float DeltaTime;
+	uint step;
+	uint STEP;
+};
+
+struct rbFluid
+{
+	uint id;
+	float mass;
+	vec2 vel;
+};
+
+layout(set=USE_Rigidbody2D_World, binding=0, std430) restrict buffer WorldData {
+	World b_world;
+};
+layout(set=USE_Rigidbody2D_World, binding=1, std430) restrict buffer rbFluidCounter {
+	uint b_fluid_count[];
+};
+layout(set=USE_Rigidbody2D_World, binding=2, std430) restrict buffer rbFluidData {
+	rbFluid b_fluid[];
+};
+
+#endif
+
+
+#if defined(USE_Rigidbody2D)
+
 
 struct rbParticle
 {
