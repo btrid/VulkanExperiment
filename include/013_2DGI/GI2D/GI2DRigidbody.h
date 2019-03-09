@@ -168,7 +168,6 @@ struct GI2DRigidbody
 
 	struct rbParticle
 	{
-		//		uint32_t use_collision_detective;
 		uint32_t contact_index;
 		uint32_t is_contact;
 	};

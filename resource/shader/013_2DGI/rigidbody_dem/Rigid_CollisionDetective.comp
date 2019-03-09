@@ -38,8 +38,8 @@ void main()
 
 		vec2 angle_vel = cross(vec3(rela_pos, 0.), vec3(0., 0., angular_vel_dt)).xy;
 
-//		float progress = length(vel_dt+angle_vel);
-		float progress = 100.;
+		float progress = length(vel_dt+angle_vel);
+//		float progress = 100.;
 		float inv_progress = 1. / progress;
 		for(int i = 0; i <= int(progress+1.); i++)
 		{

@@ -83,20 +83,19 @@ void main()
 				vec2 angular_vel = rotateRBParticle(rela_pos, b_rigidbody.angle+b_rigidbody.angle_vel) - rotateRBParticle(rela_pos, b_rigidbody.angle);
 				vec2 dir = b_rigidbody.vel + angular_vel;
 
-				float advance = length(b_rigidbody.vel);
+				float advance = length(dir);
 				dir = normalize(dir);
 
-				float spring = 0.5;
-				float spring_t = 0.5;
+				float spring = 0.05;
+				float spring_t = 0.05;
 				float decay = 1.;
 				{
+					vec2 damping = -dir * decay; // めり込んだ量を戻す
 					vec2 restitution = -dir*advance*spring; // 反発力
 					vec3 n = vec3(calcNormal(next_pos, dir), 0.);
 					vec2 restitution_t = cross(cross(n, vec3(-dir, 0.)), n).xy * advance * spring_t;
 					vec2 delta_linear_vel = restitution /*+ damping*/ + restitution_t;
 					float delta_angular_vel = cross(vec3(local_pos, 0.), vec3(delta_linear_vel, 0.)).z;
-
-					vec2 damping = -dir * decay; // めり込んだ量を戻す
 
 					int index = atomicAdd(b_rigidbody.solver_count, 1);
 					atomicAdd(b_rigidbody.vel_work.x, int(round(delta_linear_vel.x * 65535.)));
