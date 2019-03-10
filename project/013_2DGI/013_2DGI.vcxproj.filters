@@ -9,6 +9,15 @@
       <Filter>GI2D</Filter>
     </ClCompile>
     <ClCompile Include="..\..\source\013_2DGI\PathContext.cpp" />
+    <ClCompile Include="..\..\include\013_2DGI\GI2D\GI2DRigidbody.cpp">
+      <Filter>GI2D</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\include\013_2DGI\GI2D\GI2DPhysicsWorld.cpp">
+      <Filter>GI2D</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\include\013_2DGI\GI2D\GI2DRigidbody_procedure.cpp">
+      <Filter>GI2D</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -67,6 +76,12 @@
     <ClInclude Include="..\..\include\013_2DGI\PathContext.h" />
     <ClInclude Include="..\..\include\013_2DGI\PathSolver.h" />
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DRigidbody.h">
+      <Filter>GI2D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DPhysicsWorld.h">
+      <Filter>GI2D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DRigidbody_procedure.h">
       <Filter>GI2D</Filter>
     </ClInclude>
   </ItemGroup>

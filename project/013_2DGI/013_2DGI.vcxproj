@@ -75,6 +75,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\include\013_2DGI\GI2D\GI2DPhysicsWorld.cpp" />
+    <ClCompile Include="..\..\include\013_2DGI\GI2D\GI2DRigidbody.cpp" />
+    <ClCompile Include="..\..\include\013_2DGI\GI2D\GI2DRigidbody_procedure.cpp" />
     <ClCompile Include="..\..\source\013_2DGI\013_main.cpp" />
     <ClCompile Include="..\..\source\013_2DGI\GI2D\GI2DDebug.cpp" />
     <ClCompile Include="..\..\source\013_2DGI\GI2D\GI2DMakeHierarchy.cpp" />
@@ -106,9 +109,11 @@
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DClear.h" />
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DDebug.h" />
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DFluid.h" />
+    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DPhysicsWorld.h" />
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DRadiosity.h" />
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DMakeHierarchy.h" />
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DRigidbody.h" />
+    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DRigidbody_procedure.h" />
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DSoftbody.h" />
     <ClInclude Include="..\..\include\013_2DGI\PathContext.h" />
     <ClInclude Include="..\..\include\013_2DGI\PathSolver.h" />
