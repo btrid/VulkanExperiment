@@ -71,6 +71,8 @@ GI2DRigidbody::GI2DRigidbody(const std::shared_ptr<PhysicsWorld>& world, const u
 				}
 				inertia /= 12.f;
 				Rigidbody rb;
+				static uint32_t s_id;
+				rb.id = ++s_id;
 				rb.pos = center;
 				rb.pos_old = rb.pos;
 				rb.center = size / 2.f;

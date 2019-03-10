@@ -28,6 +28,8 @@ struct Rigidbody
 	ivec2 damping_work;
 	ivec2 pos_bit_size;
 
+	uint id;
+
 };
 
 #if defined(USE_Rigidbody2D_World)

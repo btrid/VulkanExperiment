@@ -37,6 +37,9 @@ struct GI2DRigidbody
 
 		ivec2 damping_work;
 		ivec2 pos_bit_size;
+
+		uint32_t id;
+
 	};
 
 	struct rbParticle

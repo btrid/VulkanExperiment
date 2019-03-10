@@ -210,7 +210,7 @@ int rigidbody()
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 	std::shared_ptr<GI2DFluid> gi2d_Fluid = std::make_shared<GI2DFluid>(context, gi2d_context);
 
-	GI2DRigidbody rb0(physics_world, uvec4(123, 246, 64, 4));
+	GI2DRigidbody rb0(physics_world, uvec4(423, 146, 64, 4));
 	GI2DRigidbody rb1(physics_world, uvec4(423, 346, 16, 16));
 	app.setup();
 
@@ -258,12 +258,13 @@ int rigidbody()
 
 //				gi2d_Fluid->executeCalc(cmd);
 //				gi2d_Softbody.execute(cmd);
+
+				std::vector<const GI2DRigidbody*> rbs = { &rb0, &rb1 };
+
 				physics_world->execute(cmd);
 				physics_world->executeMakeFluidWall(cmd);
-				physics_world->executeMakeFluid(cmd, &rb0);
-				physics_world->executeMakeFluid(cmd, &rb1);
+				physics_world->executeMakeFluid(cmd, rbs);
 
-				std::vector<const GI2DRigidbody*> rbs = {&rb0, &rb1};
 				gi2d_rigidbody.execute(cmd, rbs);
 				gi2d_rigidbody.executeToFragment(cmd, rbs);
 

@@ -187,16 +187,17 @@ void PhysicsWorld::execute(vk::CommandBuffer cmd)
 
 }
 
-void PhysicsWorld::executeMakeFluid(vk::CommandBuffer cmd, const GI2DRigidbody* rb)
+void PhysicsWorld::executeMakeFluid(vk::CommandBuffer cmd, const std::vector<const GI2DRigidbody*>& rb)
 {
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_ToFluid].get(), 0, m_physics_world_desc.get(), {});
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_ToFluid].get(), 1, rb->m_descriptor_set.get(), {});
+//	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_ToFluid].get(), 1, rb->m_descriptor_set.get(), {});
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_ToFluid].get(), 2, m_gi2d_context->getDescriptorSet(), {});
 
+	cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_ToFluid].get());
+	for (const auto* r : rb)
 	{
-		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_ToFluid].get());
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_ToFluid].get(), 1, rb->m_descriptor_set.get(), {});
-		auto num = app::calcDipatchGroups(uvec3(rb->m_particle_num, 1, 1), uvec3(1024, 1, 1));
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_ToFluid].get(), 1, r->m_descriptor_set.get(), {});
+		auto num = app::calcDipatchGroups(uvec3(r->m_particle_num, 1, 1), uvec3(1024, 1, 1));
 		cmd.dispatch(num.x, num.y, num.z);
 	}
 
