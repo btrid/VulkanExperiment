@@ -262,9 +262,9 @@ int rigidbody()
 				physics_world->executeMakeFluidWall(cmd);
 				physics_world->executeMakeFluid(cmd, &rb0);
 				physics_world->executeMakeFluid(cmd, &rb1);
-				gi2d_rigidbody.execute(cmd, &rb0);
 
-				std::vector<GI2DRigidbody*> rbs = {&rb0, &rb1};
+				std::vector<const GI2DRigidbody*> rbs = {&rb0, &rb1};
+				gi2d_rigidbody.execute(cmd, rbs);
 				gi2d_rigidbody.executeToFragment(cmd, rbs);
 
 				gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
