@@ -2,11 +2,11 @@
 #include "GI2DRigidbody.h"
 #include "GI2DPhysicsWorld.h"
 
-GI2DRigidbody::GI2DRigidbody(const std::shared_ptr<PhysicsWorld>& world, int32_t px, int32_t py)
+GI2DRigidbody::GI2DRigidbody(const std::shared_ptr<PhysicsWorld>& world, const uvec4& box)
 {
 	auto cmd = world->m_context->m_cmd_pool->allocCmdTempolary(0);
 
-	m_particle_num = px * py;
+	m_particle_num = box.z * box.w;
 
 	{
 		{
@@ -24,22 +24,22 @@ GI2DRigidbody::GI2DRigidbody(const std::shared_ptr<PhysicsWorld>& world, int32_t
 				vec2 center = vec2(0.f);
 
 				uint32_t contact_index = 0;
-				for (int y = 0; y < py; y++)
+				for (int y = 0; y < box.w; y++)
 				{
-					for (int x = 0; x < px; x++)
+					for (int x = 0; x < box.z; x++)
 					{
-						pos[x + y * px].x = 123.f + x;
-						pos[x + y * px].y = 220.f + y;
+						pos[x + y * box.z].x = box.x + x;
+						pos[x + y * box.z].y = box.y + y;
 
-						if (y == 0 || y == py - 1 || x == 0 || x == px - 1)
+						if (y == 0 || y == box.w - 1 || x == 0 || x == box.z - 1)
 						{
-							pstate[x + y * px].contact_index = contact_index++;
+							pstate[x + y * box.z].contact_index = contact_index++;
 						}
 						else
 						{
-							pstate[x + y * px].contact_index = -1;
+							pstate[x + y * box.z].contact_index = -1;
 						}
-						pstate[x + y * px].is_contact = 0;
+						pstate[x + y * box.z].is_contact = 0;
 						//							bit[x / 8 + y / 8 * 4] |= 1ull << (x % 8 + (y % 8) * 8);
 					}
 				}

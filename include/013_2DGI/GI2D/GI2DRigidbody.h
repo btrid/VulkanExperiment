@@ -45,7 +45,7 @@ struct GI2DRigidbody
 		uint32_t is_contact;
 	};
 
-	GI2DRigidbody(const std::shared_ptr<PhysicsWorld>& world, int32_t px, int32_t py);
+	GI2DRigidbody(const std::shared_ptr<PhysicsWorld>& world, const uvec4& box);
 	btr::BufferMemoryEx<Rigidbody> b_rigidbody;
 	btr::BufferMemoryEx<vec2> b_relative_pos;
 	btr::BufferMemoryEx<rbParticle> b_rbparticle;
