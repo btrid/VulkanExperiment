@@ -32,5 +32,5 @@ void main()
 
 	uint i = index.x+index.y*u_gi2d_info.m_resolution.x;
 	uint ii = atomicAdd(b_fluid_count[i], 1);
-	b_fluid[i*4 + ii] = f;
+	b_fluid[i*FLUID_NUM + ii] = f;
 }

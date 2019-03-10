@@ -210,8 +210,8 @@ int rigidbody()
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 	std::shared_ptr<GI2DFluid> gi2d_Fluid = std::make_shared<GI2DFluid>(context, gi2d_context);
 
-	GI2DRigidbody rb0(physics_world, uvec4(423, 146, 64, 4));
-	GI2DRigidbody rb1(physics_world, uvec4(423, 346, 16, 16));
+	GI2DRigidbody rb0(physics_world, uvec4(423, 546, 64, 4));
+	GI2DRigidbody rb1(physics_world, uvec4(423, 646, 16, 16));
 	app.setup();
 
 	while (true)

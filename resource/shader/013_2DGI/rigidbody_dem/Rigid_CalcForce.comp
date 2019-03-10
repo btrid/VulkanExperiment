@@ -75,11 +75,20 @@ void main()
 
 		// hit確認
 		{
-			ivec4 fragment_index = ivec4(map_index/8, map_index%8);
-			uint64_t fragment_map = b_diffuse_map[getMemoryOrder(fragment_index.xy)];
-			uint64_t bit = 1ul<<(fragment_index.z+fragment_index.w*8);
-			if((fragment_map & bit) != 0)
+//			ivec4 fragment_index = ivec4(map_index/8, map_index%8);
+//			uint64_t fragment_map = b_diffuse_map[getMemoryOrder(fragment_index.xy)];
+//			uint64_t bit = 1ul<<(fragment_index.z+fragment_index.w*8);
+//			if((fragment_map & bit) != 0)
+
+			uint index = map_index.x + map_index.y * u_gi2d_info.m_resolution.x;
+			uint count = b_fluid_count[index];
+			for(uint ii = 0; ii < count; ii++)
 			{
+				if( b_fluid[index*4 + ii].id == b_rigidbody.id)
+				{
+					continue;
+				}
+
 				vec2 angular_vel = rotateRBParticle(rela_pos, b_rigidbody.angle+b_rigidbody.angle_vel) - rotateRBParticle(rela_pos, b_rigidbody.angle);
 				vec2 dir = b_rigidbody.vel + angular_vel;
 
@@ -105,6 +114,7 @@ void main()
 					atomicAdd(b_rigidbody.angle_vel_work, int(round(delta_angular_vel * 65535.*255.)));
 				}
 				b_rbParticle[p_id].is_contact = 2;
+				break;
 			}
 		}
 	}

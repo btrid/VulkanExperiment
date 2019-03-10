@@ -31,7 +31,7 @@ struct Rigidbody
 	uint id;
 
 };
-
+#define FLUID_NUM (4)
 #if defined(USE_Rigidbody2D_World)
 
 struct World
