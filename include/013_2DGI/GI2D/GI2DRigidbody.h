@@ -102,21 +102,48 @@ struct PhysicsWorld
 		}
 
 		{
-
-			auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
-			vk::DescriptorSetLayoutBinding binding[] = {
-				vk::DescriptorSetLayoutBinding()
-				.setStageFlags(stage)
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(100)
-				.setBinding(0),
+			const char* name[] =
+			{
+				"Rigid_ToFluid.comp.spv",
 			};
-			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
-			desc_layout_info.setBindingCount(array_length(binding));
-			desc_layout_info.setPBindings(binding);
-			m_physics_world_desc_layout = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
+			static_assert(array_length(name) == Shader_Num, "not equal shader num");
+
+			std::string path = btr::getResourceShaderPath();
+			for (size_t i = 0; i < array_length(name); i++) {
+				m_shader[i] = loadShaderUnique(m_context->m_device.getHandle(), path + name[i]);
+			}
 		}
 
+		// pipeline layout
+		{
+			vk::DescriptorSetLayout layouts[] = {
+				m_physics_world_desc_layout.get(),
+				m_rigitbody_desc_layout.get(),
+				m_gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data),
+			};
+
+			vk::PipelineLayoutCreateInfo pipeline_layout_info;
+			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
+			pipeline_layout_info.setPSetLayouts(layouts);
+			m_pipeline_layout[PipelineLayout_ToFluid] = m_context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+		}
+
+		// pipeline
+		{
+			std::array<vk::PipelineShaderStageCreateInfo, Shader_Num> shader_info;
+			shader_info[0].setModule(m_shader[Shader_ToFluid].get());
+			shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
+			shader_info[0].setPName("main");
+			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
+			{
+				vk::ComputePipelineCreateInfo()
+				.setStage(shader_info[0])
+				.setLayout(m_pipeline_layout[PipelineLayout_ToFluid].get()),
+				vk::ComputePipelineCreateInfo()
+			};
+			auto compute_pipeline = m_context->m_device->createComputePipelinesUnique(m_context->m_cache.get(), compute_pipeline_info);
+			m_pipeline[Pipeline_ToFluid] = std::move(compute_pipeline[0]);
+		}
 
 		{
 			b_world = m_context->m_storage_memory.allocateMemory<World>({ 1,{} });
@@ -169,6 +196,10 @@ struct PhysicsWorld
 		cmd.fillBuffer(b_fluid_counter.getInfo().buffer, b_fluid_counter.getInfo().offset, b_fluid_counter.getInfo().range, data);
 	}
 
+	void addWorld(GI2DRigidbody* rb)
+	{
+
+	}
 	std::shared_ptr<btr::Context> m_context;
 	std::shared_ptr<GI2DContext> m_gi2d_context;
 
@@ -179,6 +210,10 @@ struct PhysicsWorld
 
 	vk::UniqueDescriptorSetLayout m_rigitbodys_desc_layout;
 	vk::UniqueDescriptorSet m_rigitbodys_desc;
+
+	std::array<vk::UniqueShaderModule, Shader_Num> m_shader;
+	std::array<vk::UniquePipelineLayout, PipelineLayout_Num> m_pipeline_layout;
+	std::array<vk::UniquePipeline, Pipeline_Num> m_pipeline;
 
 	btr::BufferMemoryEx<World> b_world;
 	btr::BufferMemoryEx<uint32_t> b_fluid_counter;
@@ -192,7 +227,7 @@ struct GI2DRigidbody
 		int32_t pnum;
 		int32_t solver_count;
 		float inertia;
-		int32_t _p2;
+		float mass;
 
 		vec2 center;
 		vec2 size;

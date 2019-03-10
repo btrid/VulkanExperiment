@@ -32,4 +32,3 @@ void main()
 	uint ii = atomicAdd(b_fluid_count[i], 1);
 	b_fluid[i + ii] = f;
 }
-
