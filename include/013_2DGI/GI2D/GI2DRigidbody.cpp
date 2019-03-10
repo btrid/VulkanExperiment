@@ -77,16 +77,16 @@ GI2DRigidbody::GI2DRigidbody(const std::shared_ptr<PhysicsWorld>& world, int32_t
 				rb.inertia = inertia;
 				rb.size = size_max;
 				rb.vel = vec2(0.f);
-				rb.pos_work = ivec2(0.f);
-				rb.vel_work = ivec2(0.f);
-				rb.angle_vel_work = 0.f;
+				rb.pos_work = ivec2(0);
+				rb.vel_work = ivec2(0);
+				rb.angle_vel_work = 0;
 				rb.pnum = m_particle_num;
 				rb.angle = 3.14f / 4.f + 0.2f;
 //					rb.angle = 0.f;
 				rb.angle_vel = 0.f;
 				rb.solver_count = 0;
 				rb.dist = -1;
-				rb.damping_work = ivec2(0.f);
+				rb.damping_work = ivec2(0);
 
 				cmd.updateBuffer<Rigidbody>(b_rigidbody.getInfo().buffer, b_rigidbody.getInfo().offset, rb);
 				vk::BufferMemoryBarrier to_read[] = {

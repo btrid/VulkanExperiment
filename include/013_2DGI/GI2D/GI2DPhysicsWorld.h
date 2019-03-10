@@ -21,6 +21,7 @@ struct PhysicsWorld
 	enum PipelineLayout
 	{
 		PipelineLayout_ToFluid,
+		PipelineLayout_ToFluidWall,
 		PipelineLayout_Num,
 	};
 	enum Pipeline
@@ -45,8 +46,8 @@ struct PhysicsWorld
 	};
 	PhysicsWorld(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context);
 	void execute(vk::CommandBuffer cmd);
-	void executeMakeFluid(vk::CommandBuffer cmd);
-	void addWorld(GI2DRigidbody* rb);
+	void executeMakeFluid(vk::CommandBuffer cmd, const GI2DRigidbody* rb);
+	void executeMakeFluidWall(vk::CommandBuffer cmd);
 
 	std::shared_ptr<btr::Context> m_context;
 	std::shared_ptr<GI2DContext> m_gi2d_context;
@@ -66,7 +67,5 @@ struct PhysicsWorld
 	btr::BufferMemoryEx<World> b_world;
 	btr::BufferMemoryEx<uint32_t> b_fluid_counter;
 	btr::BufferMemoryEx<rbFluid> b_fluid;
-
-	std::vector<GI2DRigidbody*> m_rigidbody_list;
 };
 
