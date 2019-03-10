@@ -24,8 +24,6 @@ void main()
 	
 	if(b_rbParticle[p_id].contact_index == -1){ return; }
 
-	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
-
 	vec2 vel_dt = b_rigidbody.vel*DT;
 	float angular_vel_dt = b_rigidbody.angle_vel*DT;
 
@@ -39,7 +37,7 @@ void main()
 		vec2 angle_vel = cross(vec3(rela_pos, 0.), vec3(0., 0., angular_vel_dt)).xy;
 
 		float progress = length(vel_dt+angle_vel);
-//		float progress = 100.;
+//		float progress = 2.;
 		float inv_progress = 1. / progress;
 		for(int i = 0; i <= int(progress+1.); i++)
 		{
