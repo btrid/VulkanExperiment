@@ -15,10 +15,10 @@ void main()
 	b_rigidbody.pos_old = b_rigidbody.pos;
 	if(b_rigidbody.solver_count != 0)
 	{
-		vec2 vel = b_rigidbody.vel*DT;
+		vec2 vel_dt = b_rigidbody.vel*DT;
 		float step = float(b_rigidbody.dist) / (65535.*255.);
 
-		b_rigidbody.pos += vel * step;
+		b_rigidbody.pos += vel_dt * step;
 		b_rigidbody.angle += b_rigidbody.angle_vel*DT * step;
 
 		//押し返す
