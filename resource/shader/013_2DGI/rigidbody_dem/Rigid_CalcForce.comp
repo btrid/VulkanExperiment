@@ -84,13 +84,14 @@ void main()
 			uint count = b_fluid_count[index];
 			for(uint ii = 0; ii < count; ii++)
 			{
-				if( b_fluid[index*4 + ii].id == b_rigidbody.id)
+				if( b_fluid[index*FLUID_NUM + ii].id == b_rigidbody.id)
 				{
 					continue;
 				}
 
 				vec2 angular_vel = rotateRBParticle(rela_pos, b_rigidbody.angle+b_rigidbody.angle_vel) - rotateRBParticle(rela_pos, b_rigidbody.angle);
 				vec2 dir = b_rigidbody.vel + angular_vel;
+				dir -= b_fluid[index*4 + ii].vel;
 
 				float advance = length(dir);
 				dir = normalize(dir);
