@@ -212,6 +212,17 @@ int rigidbody()
 
 	GI2DRigidbody rb0(physics_world, uvec4(423, 546, 64, 4));
 	GI2DRigidbody rb1(physics_world, uvec4(423, 646, 16, 16));
+	GI2DRigidbody rb2(physics_world, uvec4(393, 446, 16, 16));
+	GI2DRigidbody rb3(physics_world, uvec4(443, 346, 16, 16));
+	GI2DRigidbody rb4(physics_world, uvec4(463, 246, 16, 16));
+	GI2DRigidbody rb5(physics_world, uvec4(473, 146, 16, 16));
+	GI2DRigidbody rb6(physics_world, uvec4(493, 446, 16, 16));
+	GI2DRigidbody rb7(physics_world, uvec4(383, 546, 16, 16));
+
+//	std::vector<const GI2DRigidbody*> rbs = { &rb0, &rb1, &rb2, &rb3, &rb4, &rb5, &rb6, &rb7, };
+	std::vector<const GI2DRigidbody*> rbs = { &rb0, &rb1, };
+//	std::vector<const GI2DRigidbody*> rbs = { &rb1, };
+
 	app.setup();
 
 	while (true)
@@ -259,7 +270,6 @@ int rigidbody()
 //				gi2d_Fluid->executeCalc(cmd);
 //				gi2d_Softbody.execute(cmd);
 
-				std::vector<const GI2DRigidbody*> rbs = { &rb0, &rb1 };
 
 				physics_world->execute(cmd);
 				physics_world->executeMakeFluidWall(cmd);
