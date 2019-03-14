@@ -29,6 +29,11 @@ struct Rigidbody
 	ivec2 pos_bit_size;
 
 	uint id;
+	uint contact_count;
+	uint _p2;
+	uint _p3;
+
+	uint contact_list[16];
 
 };
 #define FLUID_NUM (4)
@@ -81,6 +86,9 @@ layout(set=USE_Rigidbody2D, binding=2, std430) restrict buffer rbParticleBuffer 
 };
 layout(set=USE_Rigidbody2D, binding=3, std430) restrict buffer rbPosBitBuffer {
 	uint64_t b_rbpos_bit[];
+};
+layout(set=USE_Rigidbody2D, binding=4, std430) restrict buffer rbContactBitBuffer {
+	uint b_contact_bit[];
 };
 
 vec2 rotateRBParticle(in vec2 v, in float angle)

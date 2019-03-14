@@ -15,6 +15,7 @@ GI2DRigidbody::GI2DRigidbody(const std::shared_ptr<PhysicsWorld>& world, const u
 			b_relative_pos = world->m_context->m_storage_memory.allocateMemory<vec2>({ m_particle_num,{} });
 			b_rbparticle = world->m_context->m_storage_memory.allocateMemory<rbParticle>({ m_particle_num,{} });
 			b_rbpos_bit = world->m_context->m_storage_memory.allocateMemory<uint64_t>({ 4 * 4,{} });
+			b_contact_bit = world->m_context->m_storage_memory.allocateMemory<uint32_t>({ 512/sizeof(uint32_t),{} });
 			{
 
 				std::vector<vec2> pos(m_particle_num);
@@ -114,6 +115,7 @@ GI2DRigidbody::GI2DRigidbody(const std::shared_ptr<PhysicsWorld>& world, const u
 				b_relative_pos.getInfo(),
 				b_rbparticle.getInfo(),
 				b_rbpos_bit.getInfo(),
+				b_contact_bit.getInfo(),
 			};
 
 			vk::WriteDescriptorSet write[] =

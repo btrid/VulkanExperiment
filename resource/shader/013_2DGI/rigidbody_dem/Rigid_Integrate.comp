@@ -36,6 +36,8 @@ void main()
 		b_rigidbody.damping_work = ivec2(0);
 
 		b_rigidbody.solver_count = 0;
+
+		b_rigidbody.contact_count = 0;
 	}
 	else
 	{

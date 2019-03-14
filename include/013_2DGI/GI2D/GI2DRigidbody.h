@@ -39,6 +39,11 @@ struct GI2DRigidbody
 		ivec2 pos_bit_size;
 
 		uint32_t id;
+		uint32_t contact_count;
+		uint32_t _p2;
+		uint32_t _p3;
+
+		uint32_t contact_list[16];
 
 	};
 
@@ -48,11 +53,16 @@ struct GI2DRigidbody
 		uint32_t is_contact;
 	};
 
+	struct rbContact
+	{
+		uint32_t contact_id;
+	};
 	GI2DRigidbody(const std::shared_ptr<PhysicsWorld>& world, const uvec4& box);
 	btr::BufferMemoryEx<Rigidbody> b_rigidbody;
 	btr::BufferMemoryEx<vec2> b_relative_pos;
 	btr::BufferMemoryEx<rbParticle> b_rbparticle;
 	btr::BufferMemoryEx<uint64_t> b_rbpos_bit;
+	btr::BufferMemoryEx<uint32_t> b_contact_bit;
 	int32_t m_particle_num;
 	vk::UniqueDescriptorSet m_descriptor_set;
 
