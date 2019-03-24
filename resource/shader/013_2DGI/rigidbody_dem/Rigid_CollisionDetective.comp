@@ -27,6 +27,7 @@ void main()
 	vec2 vel_dt = b_rigidbody.vel*DT;
 	float angular_vel_dt = b_rigidbody.angle_vel*DT;
 
+	float step = 1.;
 	uint ishit = 0;
 	if(dot(vel_dt, vel_dt) != 0. || angular_vel_dt != 0.)
 	{
@@ -36,44 +37,47 @@ void main()
 
 		vec2 angle_vel = cross(vec3(rela_pos, 0.), vec3(0., 0., angular_vel_dt)).xy;
 
-		float progress = length(vel_dt+angle_vel);
-//		float progress = 3.;
+//		float progress = length(vel_dt+angle_vel);
+		float progress = 30.;
 		float inv_progress = 1. / progress;
 		for(int i = 1; i <= int(progress+1.); i++)
 		{
-			float step = min(float(i), progress) * inv_progress;
+			step = min(float(i), progress) * inv_progress;
 			vec2 local_pos = rotateRBParticle(rela_pos, angle+angular_vel_dt*step);
 			vec2 next_pos = pos + vel_dt*step + local_pos;
 			ivec2 map_index = ivec2(next_pos);
 
 			// hit確認
-#if 0
-			ivec4 fragment_index = ivec4(map_index/8, map_index%8);
-			uint64_t fragment_map = b_diffuse_map[getMemoryOrder(fragment_index.xy)];
-			uint64_t bit = 1ul<<(fragment_index.z+fragment_index.w*8);
-			if((fragment_map & bit) != 0)
-			{
-				ishit = 1;
-				atomicMin(b_rigidbody.dist, uint(step * (65535.*255.)));
-				break;
-			}
-#else
 			uint index = map_index.x + map_index.y * u_gi2d_info.m_resolution.x;
 			uint count = b_fluid_count[index];
 			for(uint ii = 0; ii < count; ii++)
 			{
-				if( b_fluid[index*FLUID_NUM + ii].id == b_rigidbody.id)
+				uint target_id = b_fluid[index*FLUID_NUM + ii].id;
+				if( target_id == b_rigidbody.id)
 				{
 					continue;
 				}
+
+				uint iid = target_id / 32;
+				uint bit = target_id % 32;
+
+				uint prev = atomicOr(b_contact_bit[iid], 1<<bit);
+				if((prev & (1<<bit)) == 0)
+				{
+					uint contact_index = atomicAdd(b_rigidbody.contact_count, 1);
+					if(contact_index < 16)
+					{
+						b_rigidbody.contact_list[contact_index] = target_id;
+					}
+				}
 				ishit = 1;
-				atomicMin(b_rigidbody.dist, uint(step * (65535.*255.)));
-				break;
+//				break;
 			}
-#endif				
 		}
 	}
 
+	if(ishit != 0)
+		atomicMin(b_rigidbody.dist, uint(step * (65535.*255.)));
 	b_rbParticle[p_id].is_contact = ishit;
 }
 

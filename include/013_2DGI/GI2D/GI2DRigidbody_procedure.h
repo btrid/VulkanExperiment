@@ -20,7 +20,13 @@ struct GI2DRigidbody_procedure
 		Shader_CollisionDetectiveBefore,
 		Shader_CalcForce,
 		Shader_Integrate,
+		Shader_IntegrateAfter,
+
+		Shader_CalcConstraint,
+		Shader_SolveConstraint,
+
 		Shader_ToFragment,
+
 		Shader_Num,
 	};
 
@@ -35,6 +41,11 @@ struct GI2DRigidbody_procedure
 		Pipeline_CollisionDetectiveBefore,
 		Pipeline_CalcForce,
 		Pipeline_Integrate,
+		Pipeline_IntegrateAfter,
+
+		Pipeline_CalcConstraint,
+		Pipeline_SolveConstraint,
+
 		Pipeline_ToFragment,
 		Pipeline_Num,
 	};

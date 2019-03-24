@@ -184,6 +184,7 @@ int pathFinding()
 
 int rigidbody()
 {
+	auto p = glm::reflect(vec2(0.f, 1.0f), vec2(0.f, -1.0f));
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
 
@@ -210,14 +211,14 @@ int rigidbody()
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 	std::shared_ptr<GI2DFluid> gi2d_Fluid = std::make_shared<GI2DFluid>(context, gi2d_context);
 
-	GI2DRigidbody rb0(physics_world, uvec4(423, 546, 64, 4));
-	GI2DRigidbody rb1(physics_world, uvec4(423, 646, 16, 16));
-	GI2DRigidbody rb2(physics_world, uvec4(393, 446, 16, 16));
-	GI2DRigidbody rb3(physics_world, uvec4(443, 346, 16, 16));
-	GI2DRigidbody rb4(physics_world, uvec4(463, 246, 16, 16));
-	GI2DRigidbody rb5(physics_world, uvec4(473, 146, 16, 16));
-	GI2DRigidbody rb6(physics_world, uvec4(493, 446, 16, 16));
-	GI2DRigidbody rb7(physics_world, uvec4(383, 546, 16, 16));
+	GI2DRigidbody rb0(physics_world, uvec4(423, 806, 64, 4));
+	GI2DRigidbody rb1(physics_world, uvec4(423, 826, 16, 16));
+	GI2DRigidbody rb2(physics_world, uvec4(393, 816, 16, 16));
+	GI2DRigidbody rb3(physics_world, uvec4(443, 836, 16, 16));
+	GI2DRigidbody rb4(physics_world, uvec4(463, 846, 16, 16));
+	GI2DRigidbody rb5(physics_world, uvec4(473, 836, 16, 16));
+	GI2DRigidbody rb6(physics_world, uvec4(493, 866, 16, 16));
+	GI2DRigidbody rb7(physics_world, uvec4(383, 846, 16, 16));
 
 //	std::vector<const GI2DRigidbody*> rbs = { &rb0, &rb1, &rb2, &rb3, &rb4, &rb5, &rb6, &rb7, };
 	std::vector<const GI2DRigidbody*> rbs = { &rb0, &rb1, };

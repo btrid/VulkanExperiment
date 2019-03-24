@@ -1,0 +1,18 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_Rigidbody2D_World 0
+#define USE_Rigidbody2D 1
+#define USE_GI2D 2
+#include "GI2D.glsl"
+#include "Rigidbody2D.glsl"
+
+
+layout (local_size_x = 1) in;
+
+void main() 
+{
+	//押し返す
+	b_rigidbody.pos += vec2(b_rigidbody.damping_work)/(32765.*2.) * (vec2(notEqual(b_rigidbody.damping_work & ivec2(1), ivec2(0)))*2. - 1.);
+	b_rigidbody.damping_work = ivec2(0);
+}

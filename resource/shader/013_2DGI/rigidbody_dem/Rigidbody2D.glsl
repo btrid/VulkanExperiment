@@ -12,7 +12,7 @@ struct Rigidbody
 	vec2 size;
 
 	vec2 pos;
-	vec2 pos_old;
+	vec2 pos_predict;
 
 	vec2 vel;
 	vec2 vel_old;
