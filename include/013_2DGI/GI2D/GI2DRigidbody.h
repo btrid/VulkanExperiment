@@ -49,8 +49,14 @@ struct GI2DRigidbody
 
 	struct rbParticle
 	{
-		uint32_t contact_index;
-		uint32_t is_contact;
+		vec2 pos;
+		vec2 pos_predict;
+		vec2 pos_old;
+		vec2 vel;
+		uint contact_index;
+		uint is_contact;
+		uint _p2;
+		uint _p3;
 	};
 
 	struct rbContact

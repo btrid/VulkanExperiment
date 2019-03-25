@@ -179,6 +179,13 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 
 void PhysicsWorld::execute(vk::CommandBuffer cmd)
 {
+	{
+		vk::BufferMemoryBarrier to_write[] = {
+			b_fluid_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
+		};
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {},
+			0, nullptr, array_length(to_write), to_write, 0, nullptr);
+	}
 	uint32_t data = 0;
 	cmd.fillBuffer(b_fluid_counter.getInfo().buffer, b_fluid_counter.getInfo().offset, b_fluid_counter.getInfo().range, data);
 

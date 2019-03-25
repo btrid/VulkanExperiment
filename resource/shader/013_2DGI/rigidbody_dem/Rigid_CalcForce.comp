@@ -93,8 +93,8 @@ void main()
 				float advance = length(dir);
 				dir = normalize(dir);
 
-				float spring = 1.55;
-				float spring_t = 0.;
+				float spring = 1.15;
+				float spring_t = 0.15;
 				{
 					vec2 restitution = -dir*advance*spring; // 反発力
 					vec3 n = vec3(calcNormal(next_pos, dir), 0.);

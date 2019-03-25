@@ -71,8 +71,14 @@ layout(set=USE_Rigidbody2D_World, binding=2, std430) restrict buffer rbFluidData
 
 struct rbParticle
 {
+	vec2 pos;
+	vec2 pos_predict;
+	vec2 pos_old;
+	vec2 vel;
 	uint contact_index;
 	uint is_contact;
+	uint _p2;
+	uint _p3;
 };
 
 layout(set=USE_Rigidbody2D, binding=0, std430) restrict buffer RigidbodyData {

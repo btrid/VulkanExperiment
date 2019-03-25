@@ -27,6 +27,9 @@ struct GI2DRigidbody_procedure
 
 		Shader_ToFragment,
 
+		Shader_MakeParticle,
+		Shader_MakeFluid,
+
 		Shader_Num,
 	};
 
@@ -47,11 +50,16 @@ struct GI2DRigidbody_procedure
 		Pipeline_SolveConstraint,
 
 		Pipeline_ToFragment,
+
+		Pipeline_MakeParticle,
+		Pipeline_MakeFluid,
+
 		Pipeline_Num,
 	};
 
 	GI2DRigidbody_procedure(const std::shared_ptr<PhysicsWorld>& world);
 	void execute(vk::CommandBuffer cmd, const std::vector<const GI2DRigidbody*>& rb);
+	void executeMakeParticle(vk::CommandBuffer cmd, const std::vector<const GI2DRigidbody*>& rb);
 	void executeToFragment(vk::CommandBuffer cmd, const std::vector<const GI2DRigidbody*>& rb);
 
 	std::shared_ptr<PhysicsWorld> m_world;

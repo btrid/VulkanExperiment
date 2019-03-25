@@ -1,0 +1,46 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_Rigidbody2D_World 0
+#define USE_Rigidbody2D 1
+#define USE_GI2D 2
+#include "GI2D.glsl"
+#include "Rigidbody2D.glsl"
+
+
+layout (local_size_x = 1024) in;
+
+
+vec2 calcTangent(in vec2 normal)
+{
+	vec3 vec = vec3(0.,0.,1.);
+	return normalize(cross(vec3(normal, 0.),vec)).xy;
+}
+
+void main() 
+{
+	int p_id = int(gl_GlobalInvocationID.x);
+	if(p_id >= b_rigidbody.pnum){ return; }
+	if(b_rbParticle[p_id].contact_index == -1){ return; }
+
+	vec2 vel_dt = b_rigidbody.vel*DT;
+	float angular_vel_dt = b_rigidbody.angle_vel*DT;
+	float angle = b_rigidbody.angle;
+	vec2 pos = b_rigidbody.pos;
+	vec2 rela_pos = b_relative_pos[p_id];
+
+	vec2 angle_vel = cross(vec3(rela_pos, 0.), vec3(0., 0., angular_vel_dt)).xy;
+
+	vec2 local_pos = rotateRBParticle(rela_pos, angle+angular_vel_dt);
+	vec2 next_pos = pos + vel_dt + local_pos;
+
+	b_rbParticle[p_id].pos_old = b_rbParticle[p_id].pos;
+	b_rbParticle[p_id].pos = next_pos;
+	b_rbParticle[p_id].pos_predict = next_pos;
+
+	vec2 angular_vel = rotateRBParticle(rela_pos, b_rigidbody.angle+b_rigidbody.angle_vel) - rotateRBParticle(rela_pos, b_rigidbody.angle);
+	vec2 vel = b_rigidbody.vel + angular_vel;//cross(vec3(rela_pos, 0.), vec3(0., 0., b_rigidbody.angle_vel)).xy;
+	b_rbParticle[p_id].vel = vel;
+
+}
+

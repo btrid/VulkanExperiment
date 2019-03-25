@@ -274,8 +274,9 @@ int rigidbody()
 
 				physics_world->execute(cmd);
 				physics_world->executeMakeFluidWall(cmd);
-				physics_world->executeMakeFluid(cmd, rbs);
+//				physics_world->executeMakeFluid(cmd, rbs);
 
+				gi2d_rigidbody.executeMakeParticle(cmd, rbs);
 				gi2d_rigidbody.execute(cmd, rbs);
 				gi2d_rigidbody.executeToFragment(cmd, rbs);
 
