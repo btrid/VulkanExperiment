@@ -181,10 +181,14 @@ int pathFinding()
 
 }
 
+vec2 calcTangent(const vec2& I, const vec2& N)
+{
+	return I - N * dot(N, I);
+}
 
 int rigidbody()
 {
-	auto p = glm::reflect(vec2(0.f, 1.0f), vec2(0.f, -1.0f));
+	auto p = calcTangent(vec2(1.f, 1.0f), vec2(0.f, -1.0f));
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
 
@@ -212,16 +216,16 @@ int rigidbody()
 	std::shared_ptr<GI2DFluid> gi2d_Fluid = std::make_shared<GI2DFluid>(context, gi2d_context);
 
 	GI2DRigidbody rb0(physics_world, uvec4(423, 806, 64, 4));
-	GI2DRigidbody rb1(physics_world, uvec4(423, 826, 16, 16));
-	GI2DRigidbody rb2(physics_world, uvec4(393, 816, 16, 16));
+	GI2DRigidbody rb1(physics_world, uvec4(393, 826, 16, 16));
+	GI2DRigidbody rb2(physics_world, uvec4(393, 796, 16, 16));
 	GI2DRigidbody rb3(physics_world, uvec4(443, 836, 16, 16));
-	GI2DRigidbody rb4(physics_world, uvec4(463, 846, 16, 16));
-	GI2DRigidbody rb5(physics_world, uvec4(473, 836, 16, 16));
-	GI2DRigidbody rb6(physics_world, uvec4(493, 866, 16, 16));
-	GI2DRigidbody rb7(physics_world, uvec4(383, 846, 16, 16));
+	GI2DRigidbody rb4(physics_world, uvec4(463, 716, 16, 16));
+	GI2DRigidbody rb5(physics_world, uvec4(473, 756, 16, 16));
+	GI2DRigidbody rb6(physics_world, uvec4(493, 736, 16, 16));
+	GI2DRigidbody rb7(physics_world, uvec4(383, 776, 16, 16));
 
-//	std::vector<const GI2DRigidbody*> rbs = { &rb0, &rb1, &rb2, &rb3, &rb4, &rb5, &rb6, &rb7, };
-	std::vector<const GI2DRigidbody*> rbs = { &rb0, &rb1, };
+	std::vector<const GI2DRigidbody*> rbs = { &rb0, &rb1, &rb2, &rb3, &rb4, &rb5, &rb6, &rb7, };
+//	std::vector<const GI2DRigidbody*> rbs = { &rb0, &rb1, };
 //	std::vector<const GI2DRigidbody*> rbs = { &rb1, };
 
 	app.setup();
@@ -272,11 +276,11 @@ int rigidbody()
 //				gi2d_Softbody.execute(cmd);
 
 
-				physics_world->execute(cmd);
-				physics_world->executeMakeFluidWall(cmd);
+// 				physics_world->execute(cmd);
+// 				physics_world->executeMakeFluidWall(cmd);
 //				physics_world->executeMakeFluid(cmd, rbs);
 
-				gi2d_rigidbody.executeMakeParticle(cmd, rbs);
+//				gi2d_rigidbody.executeMakeParticle(cmd, rbs);
 				gi2d_rigidbody.execute(cmd, rbs);
 				gi2d_rigidbody.executeToFragment(cmd, rbs);
 

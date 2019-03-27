@@ -43,6 +43,8 @@ struct PhysicsWorld
 		uint id;
 		float mass;
 		vec2 vel;
+		vec2 pos;
+		vec2 _p;
 	};
 	PhysicsWorld(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context);
 	void execute(vk::CommandBuffer cmd);
@@ -52,13 +54,13 @@ struct PhysicsWorld
 	std::shared_ptr<btr::Context> m_context;
 	std::shared_ptr<GI2DContext> m_gi2d_context;
 
-	vk::UniqueDescriptorSetLayout m_rigitbody_desc_layout;
+	vk::UniqueDescriptorSetLayout m_rigidbody_desc_layout;
 
 	vk::UniqueDescriptorSetLayout m_physics_world_desc_layout;
 	vk::UniqueDescriptorSet m_physics_world_desc;
 
-	vk::UniqueDescriptorSetLayout m_rigitbodys_desc_layout;
-	vk::UniqueDescriptorSet m_rigitbodys_desc;
+	vk::UniqueDescriptorSetLayout m_rigidbodys_desc_layout;
+	vk::UniqueDescriptorSet m_rigidbodys_desc;
 
 	std::array<vk::UniqueShaderModule, Shader_Num> m_shader;
 	std::array<vk::UniquePipelineLayout, PipelineLayout_Num> m_pipeline_layout;

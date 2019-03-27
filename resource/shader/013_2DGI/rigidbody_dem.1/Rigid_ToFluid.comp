@@ -7,38 +7,30 @@
 #include "GI2D.glsl"
 #include "Rigidbody2D.glsl"
 
-
 layout (local_size_x = 1024) in;
-
-
-vec2 calcTangent(in vec2 normal)
-{
-	vec3 vec = vec3(0.,0.,1.);
-	return normalize(cross(vec3(normal, 0.),vec)).xy;
-}
-
 void main() 
 {
 	int p_id = int(gl_GlobalInvocationID.x);
 	if(p_id >= b_rigidbody.pnum){ return; }
 	if(b_rbParticle[p_id].contact_index == -1){ return; }
 
-	vec2 pos = b_rbParticle[p_id].pos_predict;
+	vec2 rela_pos = b_relative_pos[p_id];
+	vec2 local_pos = rotateRBParticle(rela_pos, b_rigidbody.angle);
+	vec2 pos = b_rigidbody.pos + local_pos;
 		
 	ivec2 index = ivec2(pos);
 	if(any(lessThan(index, ivec2(0))) || any(greaterThanEqual(index, u_gi2d_info.m_resolution.xy))){ return; }
 
+	vec2 vel = b_rigidbody.vel;
+//	vec2 angular_vel = cross(vec3(rela_pos, 0.), vec3(0., 0., b_rigidbody.angle_vel)).xy;
+	vec2 angular_vel = rotateRBParticle(rela_pos, b_rigidbody.angle+b_rigidbody.angle_vel) - local_pos;
+
 	rbFluid f;
 	f.id = b_rigidbody.id;
 	f.mass = b_rigidbody.mass;
-	f.vel = b_rbParticle[p_id].vel;
-	f.pos = pos;
+	f.vel = vel+angular_vel;
 
 	uint i = index.x+index.y*u_gi2d_info.m_resolution.x;
 	uint ii = atomicAdd(b_fluid_count[i], 1);
-	if(ii < FLUID_NUM)
-	{
-		b_fluid[i*FLUID_NUM + ii] = f;
-	}
+	b_fluid[i*FLUID_NUM + ii] = f;
 }
-

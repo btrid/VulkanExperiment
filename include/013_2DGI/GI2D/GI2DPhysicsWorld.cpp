@@ -38,11 +38,16 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setDescriptorCount(1)
 			.setBinding(4),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(stage)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(5),
 		};
 		vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 		desc_layout_info.setBindingCount(array_length(binding));
 		desc_layout_info.setPBindings(binding);
-		m_rigitbody_desc_layout = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
+		m_rigidbody_desc_layout = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
 	}
 	{
 
@@ -88,7 +93,7 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 	{
 		vk::DescriptorSetLayout layouts[] = {
 			m_physics_world_desc_layout.get(),
-			m_rigitbody_desc_layout.get(),
+			m_rigidbody_desc_layout.get(),
 			m_gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data),
 		};
 

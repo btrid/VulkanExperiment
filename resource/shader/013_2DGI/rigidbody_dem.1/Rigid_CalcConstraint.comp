@@ -1,0 +1,99 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_Rigidbody2D_World 0
+#define USE_Rigidbody2D 1
+#define USE_GI2D 2
+#include "GI2D.glsl"
+#include "Rigidbody2D.glsl"
+
+layout (local_size_x = 1024) in;
+
+layout(push_constant) uniform Input
+{
+	int contact_no;
+} constant;
+
+vec2 rotate(in vec2 v, in float angle)
+{
+	float c = cos(angle);
+	float s = sin(angle);
+
+	vec2 Result;
+	Result.x = v.x * c - v.y * s;
+	Result.y = v.x * s + v.y * c;
+	return Result;
+}
+
+vec2 calcTangent(in vec2 normal)
+{
+//	vec3 vec = vec3(0.,0.,1.);
+//	return normalize(cross(vec3(normal, 0.),vec)).xy;
+	return rotate(normal, radians(90.));
+}
+
+vec2 calcNormal(in vec2 pos, in vec2 dir/*, in uint64_t map*/)
+{
+	ivec4 map_index = ivec4(pos.xyxy) + ivec4(sign(dir.xyxy)) * -ivec4(0, 0, 1, 1);
+	ivec4 fragment_index = ivec4(map_index/8);
+	ivec4 fragment_index_sub = ivec4(map_index%8);
+
+	u64vec4 map;
+	map[0] = b_diffuse_map[getMemoryOrder(fragment_index.xy)];
+	map[1] = b_diffuse_map[getMemoryOrder(fragment_index.zy)];
+	map[2] = b_diffuse_map[getMemoryOrder(fragment_index.xw)];
+	map[3] = 0;
+
+	u64vec4 bit = u64vec4(1ul)<<(fragment_index_sub.xxzz+fragment_index_sub.yyww*8);
+	ivec4 iswall = ivec4(notEqual((map & bit), u64vec4(0ul)));
+	vec2 n = abs(vec2(iswall[2], iswall[1]))*vec2(sign(-dir.xy));
+	n = dot(n , n) == 0. ? -dir : n;
+	while(dot(n , n) == 0.);
+
+	return normalize(n);
+}
+
+float atan2(in float y, in float x){
+    return x == 0.0 ? sign(y)*3.1415/2 : atan(y, x);
+}
+
+void main() 
+{
+	int p_id = int(gl_GlobalInvocationID.x);
+	if(p_id >= b_rigidbody.pnum){ return; }
+	if(b_rbParticle[p_id].contact_index == -1){ return; }
+	if(b_rigidbody.contact_count<constant.contact_no){ return; }
+//	if(b_rigidbody.dist != -1)
+	{ 
+		ivec2 map_index = ivec2(b_rbParticle[p_id].pos);
+//		uint target_id = b_rigidbody.contact_list[constant.contact_no];
+		// hit確認
+		{
+			uint index = map_index.x + map_index.y * u_gi2d_info.m_resolution.x;
+			uint count = min(b_fluid_count[index], FLUID_NUM);
+			for(uint ii = 0; ii < count; ii++)
+			{
+//				if( b_fluid[index*FLUID_NUM + ii].id != target_id)
+				if( b_fluid[index*FLUID_NUM + ii].id == b_rigidbody.id)
+				{
+					continue;
+				}
+
+				vec2 dir = b_rbParticle[p_id].vel;
+				float advance = length(dir);
+				dir = normalize(dir);
+
+				float decay = 1.;
+				{
+					vec2 damping = -dir * decay; // めり込んだ量を戻す
+					b_rbParticle[p_id].pos.xy += damping;
+//					atomicMax(b_rigidbody.damping_work.x, int(abs(round(damping.x * 32765.)))*2 + int(damping.x >= 0.));
+//					atomicMax(b_rigidbody.damping_work.y, int(abs(round(damping.y * 32765.)))*2 + int(damping.y >= 0.));
+				}
+				b_rbParticle[p_id].is_contact = 2;
+				break;
+			}
+		}
+	}
+}
+

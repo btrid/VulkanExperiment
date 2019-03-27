@@ -16,6 +16,8 @@ GI2DRigidbody::GI2DRigidbody(const std::shared_ptr<PhysicsWorld>& world, const u
 			b_rbparticle = world->m_context->m_storage_memory.allocateMemory<rbParticle>({ m_particle_num,{} });
 			b_rbpos_bit = world->m_context->m_storage_memory.allocateMemory<uint64_t>({ 4 * 4,{} });
 			b_contact_bit = world->m_context->m_storage_memory.allocateMemory<uint32_t>({ 512/sizeof(uint32_t),{} });
+			b_sdf = world->m_context->m_storage_memory.allocateMemory<float>({ box.z * box.w,{} });
+
 			{
 
 				std::vector<vec2> pos(m_particle_num);
@@ -102,7 +104,7 @@ GI2DRigidbody::GI2DRigidbody(const std::shared_ptr<PhysicsWorld>& world, const u
 		}
 		{
 			vk::DescriptorSetLayout layouts[] = {
-				world->m_rigitbody_desc_layout.get(),
+				world->m_rigidbody_desc_layout.get(),
 			};
 			vk::DescriptorSetAllocateInfo desc_info;
 			desc_info.setDescriptorPool(world->m_context->m_descriptor_pool.get());
@@ -130,6 +132,5 @@ GI2DRigidbody::GI2DRigidbody(const std::shared_ptr<PhysicsWorld>& world, const u
 			world->m_context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
 		}
 	}
-
 }
 

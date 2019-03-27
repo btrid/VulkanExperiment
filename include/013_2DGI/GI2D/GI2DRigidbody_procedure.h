@@ -16,19 +16,13 @@ struct GI2DRigidbody_procedure
 
 	enum Shader
 	{
-		Shader_CollisionDetective,
-		Shader_CollisionDetectiveBefore,
-		Shader_CalcForce,
-		Shader_Integrate,
-		Shader_IntegrateAfter,
-
-		Shader_CalcConstraint,
-		Shader_SolveConstraint,
-
-		Shader_ToFragment,
-
 		Shader_MakeParticle,
 		Shader_MakeFluid,
+
+		Shader_CalcForce,
+		Shader_Integrate,
+
+		Shader_ToFragment,
 
 		Shader_Num,
 	};
@@ -40,19 +34,13 @@ struct GI2DRigidbody_procedure
 	};
 	enum Pipeline
 	{
-		Pipeline_CollisionDetective,
-		Pipeline_CollisionDetectiveBefore,
-		Pipeline_CalcForce,
-		Pipeline_Integrate,
-		Pipeline_IntegrateAfter,
-
-		Pipeline_CalcConstraint,
-		Pipeline_SolveConstraint,
-
-		Pipeline_ToFragment,
-
 		Pipeline_MakeParticle,
 		Pipeline_MakeFluid,
+
+		Pipeline_CalcForce,
+		Pipeline_Integrate,
+
+		Pipeline_ToFragment,
 
 		Pipeline_Num,
 	};

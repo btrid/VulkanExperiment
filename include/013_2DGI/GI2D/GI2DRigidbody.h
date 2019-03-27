@@ -52,23 +52,25 @@ struct GI2DRigidbody
 		vec2 pos;
 		vec2 pos_predict;
 		vec2 pos_old;
+		vec2 local_pos;
 		vec2 vel;
 		uint contact_index;
 		uint is_contact;
-		uint _p2;
-		uint _p3;
 	};
 
 	struct rbContact
 	{
 		uint32_t contact_id;
 	};
+
+
 	GI2DRigidbody(const std::shared_ptr<PhysicsWorld>& world, const uvec4& box);
 	btr::BufferMemoryEx<Rigidbody> b_rigidbody;
 	btr::BufferMemoryEx<vec2> b_relative_pos;
 	btr::BufferMemoryEx<rbParticle> b_rbparticle;
 	btr::BufferMemoryEx<uint64_t> b_rbpos_bit;
 	btr::BufferMemoryEx<uint32_t> b_contact_bit;
+	btr::BufferMemoryEx<float> b_sdf;
 	int32_t m_particle_num;
 	vk::UniqueDescriptorSet m_descriptor_set;
 

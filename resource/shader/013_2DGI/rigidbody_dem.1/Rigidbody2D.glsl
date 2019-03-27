@@ -37,7 +37,6 @@ struct Rigidbody
 
 };
 #define FLUID_NUM (4)
-#define RB_DT (0.0016)
 #if defined(USE_Rigidbody2D_World)
 
 struct World
@@ -51,9 +50,7 @@ struct rbFluid
 {
 	uint id;
 	float mass;
-	vec2 pos;
 	vec2 vel;
-	vec2 _p;
 };
 
 layout(set=USE_Rigidbody2D_World, binding=0, std430) restrict buffer WorldData {
