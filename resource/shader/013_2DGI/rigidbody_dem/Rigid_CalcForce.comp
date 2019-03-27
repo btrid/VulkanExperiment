@@ -83,7 +83,6 @@ void main()
 			vec2 Pj = b_fluid[findex[i]*FLUID_NUM + ii].pos;
 			float k_radius = 1.;
 
-//			float d = distance(Pj, pos);
 			vec2 rela_pos = Pj - pos;
 			if(dot(rela_pos, rela_pos) >= k_radius*2.*k_radius*2.)
 			{
@@ -99,6 +98,7 @@ void main()
 			{
 				vec2 restitution = rela_vel*k_spring; // 反発力
 				vec2 restitution_t = calcTangent(rela_vel, rela_pos) *k_spring_t;
+//				restitution += -rela_pos*0.2;
 				delta_linear_vel += restitution + restitution_t;
 				delta_angular_vel += cross(vec3(b_rbParticle[p_id].local_pos, 0.), vec3(restitution + restitution_t, 0.)).z;
 

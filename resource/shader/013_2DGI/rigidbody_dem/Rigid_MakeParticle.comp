@@ -10,13 +10,6 @@
 
 layout (local_size_x = 1024) in;
 
-
-vec2 calcTangent(in vec2 normal)
-{
-	vec3 vec = vec3(0.,0.,1.);
-	return normalize(cross(vec3(normal, 0.),vec)).xy;
-}
-
 void main() 
 {
 	int p_id = int(gl_GlobalInvocationID.x);
