@@ -219,13 +219,13 @@ int rigidbody()
 	GI2DRigidbody rb1(physics_world, uvec4(393, 826, 16, 16));
 	GI2DRigidbody rb2(physics_world, uvec4(393, 796, 16, 16));
 	GI2DRigidbody rb3(physics_world, uvec4(443, 836, 16, 16));
-	GI2DRigidbody rb4(physics_world, uvec4(463, 716, 16, 16));
+	GI2DRigidbody rb4(physics_world, uvec4(513, 716, 16, 16));
 	GI2DRigidbody rb5(physics_world, uvec4(473, 756, 16, 16));
 	GI2DRigidbody rb6(physics_world, uvec4(493, 736, 16, 16));
 	GI2DRigidbody rb7(physics_world, uvec4(383, 776, 16, 16));
 
 	std::vector<const GI2DRigidbody*> rbs = { &rb0, &rb1, &rb2, &rb3, &rb4, &rb5, &rb6, &rb7, };
-//	std::vector<const GI2DRigidbody*> rbs = { &rb0, &rb1, };
+//	std::vector<const GI2DRigidbody*> rbs = { &rb0, &rb4, };
 //	std::vector<const GI2DRigidbody*> rbs = { &rb1, };
 
 	app.setup();

@@ -21,18 +21,17 @@ void main()
 	if(b_rbParticle[p_id].contact_index == -1){ return; }
 
 	vec2 pos = b_rbParticle[p_id].pos;
-//	vec2 pos_old = b_rbParticle[p_id].pos_old;
-//	vec2 dir = pos - pos_old;
+	vec2 pos_old = b_rbParticle[p_id].pos_old;
+	vec2 dir = pos - pos_old;
 	vec2 vel = b_rbParticle[p_id].vel;
-
-	ivec4 map_index = ivec4(pos.xyxy) + ivec4(ivec2(0), step(vec2(0.5), pos-floor(pos)));
-	ivec4 findex = map_index.xzxz + map_index.yyww * u_gi2d_info.m_resolution.x;
 
 	vec2 delta_linear_vel = vec2(0.0);
 	float delta_angular_vel = 0.0;
 	bool ishit = false;
 	for(uint i = 0; i < 4; i++)
 	{
+		ivec4 map_index = ivec4(pos.xyxy) + ivec4(ivec2(0), step(vec2(0.5), pos-floor(pos)));
+		ivec4 findex = map_index.xzxz + map_index.yyww * u_gi2d_info.m_resolution.x;
 		uint index = findex[i];
 		uint count = min(b_fluid_count[index], FLUID_NUM);
 		for(uint ii = 0; ii < count; ii++)
