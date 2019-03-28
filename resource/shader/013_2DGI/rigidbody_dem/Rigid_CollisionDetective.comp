@@ -7,12 +7,9 @@
 #include "GI2D.glsl"
 #include "Rigidbody2D.glsl"
 
+
 layout (local_size_x = 1024) in;
 
-vec2 calcTangent(in vec2 I, in vec2 N)
-{
-	return I - N * dot(N, I);
-}
 
 void main() 
 {
@@ -20,57 +17,48 @@ void main()
 	if(p_id >= b_rigidbody.pnum){ return; }
 	if(b_rbParticle[p_id].contact_index == -1){ return; }
 
-	vec2 pos = b_rbParticle[p_id].pos;
-	vec2 pos_old = b_rbParticle[p_id].pos_old;
-	vec2 dir = pos - pos_old;
-	vec2 vel = b_rbParticle[p_id].vel;
+	vec2 vel_dt = b_rigidbody.vel*DT;
+	float angular_vel_dt = b_rigidbody.angle_vel*DT;
 
-	vec2 delta_linear_vel = vec2(0.0);
-	float delta_angular_vel = 0.0;
-	bool ishit = false;
-	for(uint i = 0; i < 4; i++)
+	float step = 1.;
+	uint ishit = 0;
+//	if(dot(vel_dt, vel_dt) != 0. || angular_vel_dt != 0.)
 	{
-		ivec4 map_index = ivec4(pos.xyxy) + ivec4(ivec2(0), step(vec2(0.5), pos-floor(pos)));
-		ivec4 findex = map_index.xzxz + map_index.yyww * u_gi2d_info.m_resolution.x;
-		uint index = findex[i];
-		uint count = min(b_fluid_count[index], FLUID_NUM);
-		for(uint ii = 0; ii < count; ii++)
+		float angle = b_rigidbody.angle;
+		vec2 pos = b_rigidbody.pos;
+		vec2 rela_pos = b_relative_pos[p_id];
+
+		vec2 angle_vel = cross(vec3(rela_pos, 0.), vec3(0., 0., angular_vel_dt)).xy;
+
+//		float progress = length(vel_dt+angle_vel);
+		float progress = 30.;
+		float inv_progress = 1. / progress;
+		for(int i = 1; i <= int(progress+1.); i++)
 		{
-			if( b_fluid[index*FLUID_NUM + ii].id == b_rigidbody.id)
-			{
-				// 自分とは判定しない
-				continue;
-			}
-			vec2 Pj = b_fluid[index*FLUID_NUM + ii].pos;
-			float k_radius = 1.;
+			step = min(float(i), progress) * inv_progress;
+			vec2 local_pos = rotateRBParticle(rela_pos, angle+angular_vel_dt*step);
+			vec2 next_pos = pos + vel_dt*step + local_pos;
+			ivec2 map_index = ivec2(next_pos);
 
-			vec2 rela_pos = Pj - pos;
-			if(dot(rela_pos, rela_pos) >= k_radius*2.*k_radius*2.)
+			// hit確認
+			uint index = map_index.x + map_index.y * u_gi2d_info.m_resolution.x;
+			uint count = b_fluid_count[index];
+			for(uint ii = 0; ii < count; ii++)
 			{
-				// 
-				continue;
-			}
-			rela_pos = normalize(rela_pos);
-			vec2 rela_vel = b_fluid[index*FLUID_NUM + ii].vel - vel;
-			vec2 rela_dir = normalize(rela_vel);
+				uint target_id = b_fluid[index*FLUID_NUM + ii].id;
+				if( target_id == b_rigidbody.id)
+				{
+					continue;
+				}
 
-			float k_spring = 0.15;
-			float k_spring_t = 0.15;
-			{
-				vec2 restitution = rela_vel*k_spring; // 反発力
-				vec2 restitution_t = calcTangent(rela_vel, rela_pos) *k_spring_t;
-				delta_linear_vel += restitution + restitution_t;
-				delta_angular_vel += cross(vec3(b_rbParticle[p_id].local_pos, 0.), vec3(restitution + restitution_t, 0.)).z;
-
-			}
-			{
-				int index = atomicAdd(b_rigidbody.solver_count, 1);
-				atomicAdd(b_rigidbody.vel_work.x, int(round(delta_linear_vel.x * 65535.)));
-				atomicAdd(b_rigidbody.vel_work.y, int(round(delta_linear_vel.y * 65535.)));
-				atomicAdd(b_rigidbody.angle_vel_work, int(round(delta_angular_vel * 65535.*255.)));
-				return;
+				ishit = 1;
+				break;
 			}
 		}
 	}
+
+	if(ishit != 0)
+		atomicMin(b_rigidbody.dist, uint(step * (65535.*255.)));
+	b_rbParticle[p_id].is_contact = ishit;
 }
 

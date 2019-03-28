@@ -14,7 +14,7 @@ void main()
 	if(p_id >= b_rigidbody.pnum){ return; }
 	if(b_rbParticle[p_id].contact_index == -1){ return; }
 
-	vec2 rela_pos = b_relative_pos[p_id];
+	vec2 rela_pos = b_rbParticle[p_id].relative_pos;
 	vec2 local_pos = rotateRBParticle(rela_pos, b_rigidbody.angle);
 	vec2 pos = b_rigidbody.pos + local_pos;
 		

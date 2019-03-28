@@ -20,7 +20,7 @@ void main()
 	float angular_vel_dt = b_rigidbody.angle_vel*RB_DT;
 	float angle = b_rigidbody.angle;
 	vec2 pos = b_rigidbody.pos;
-	vec2 rela_pos = b_relative_pos[p_id];
+	vec2 rela_pos = b_rbParticle[p_id].relative_pos;
 
 	vec2 angle_vel = cross(vec3(rela_pos, 0.), vec3(0., 0., angular_vel_dt)).xy;
 
@@ -29,7 +29,6 @@ void main()
 
 	b_rbParticle[p_id].pos_old = b_rbParticle[p_id].pos;
 	b_rbParticle[p_id].pos = next_pos;
-	b_rbParticle[p_id].pos_predict = next_pos;
 	b_rbParticle[p_id].local_pos = local_pos;
 
 	vec2 angular_vel = rotateRBParticle(rela_pos, b_rigidbody.angle+b_rigidbody.angle_vel) - rotateRBParticle(rela_pos, b_rigidbody.angle);

@@ -17,7 +17,7 @@ void main()
 	if(p_id >= b_rigidbody.pnum){ return; }
 	if(b_rbParticle[p_id].contact_index == -1){ return; }
 
-	vec2 pos = b_rbParticle[p_id].pos_predict;
+	vec2 pos = b_rbParticle[p_id].pos;
 		
 	ivec2 index = ivec2(pos);
 	if(any(lessThan(index, ivec2(0))) || any(greaterThanEqual(index, u_gi2d_info.m_resolution.xy))){ return; }

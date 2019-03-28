@@ -12,7 +12,7 @@ void main()
 {
 	int p_id = int(gl_GlobalInvocationID.x);
 	if(p_id >= b_rigidbody.pnum){ return; }
-	vec2 rela_pos = b_relative_pos[p_id];
+	vec2 rela_pos = b_rbParticle[p_id].relative_pos;
 	vec2 local_pos = rotateRBParticle(rela_pos, b_rigidbody.angle);
 	vec2 pos = b_rigidbody.pos + local_pos;
 //	vec2 pos = b_rbpos[p_id];

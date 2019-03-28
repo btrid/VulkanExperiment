@@ -11,17 +11,11 @@ GI2DRigidbody::GI2DRigidbody(const std::shared_ptr<PhysicsWorld>& world, const u
 	{
 		{
 			b_rigidbody = world->m_context->m_storage_memory.allocateMemory<Rigidbody>({ 1,{} });
-
-			b_relative_pos = world->m_context->m_storage_memory.allocateMemory<vec2>({ m_particle_num,{} });
 			b_rbparticle = world->m_context->m_storage_memory.allocateMemory<rbParticle>({ m_particle_num,{} });
-			b_rbpos_bit = world->m_context->m_storage_memory.allocateMemory<uint64_t>({ 4 * 4,{} });
-			b_contact_bit = world->m_context->m_storage_memory.allocateMemory<uint32_t>({ 512/sizeof(uint32_t),{} });
-			b_sdf = world->m_context->m_storage_memory.allocateMemory<float>({ box.z * box.w,{} });
 
 			{
 
 				std::vector<vec2> pos(m_particle_num);
-				std::vector<vec2> rela_pos(m_particle_num);
 				std::vector<rbParticle> pstate(m_particle_num);
 				std::vector<uint64_t> bit(4 * 4);
 				vec2 center = vec2(0.f);
@@ -43,7 +37,6 @@ GI2DRigidbody::GI2DRigidbody(const std::shared_ptr<PhysicsWorld>& world, const u
 							pstate[x + y * box.z].contact_index = -1;
 						}
 						pstate[x + y * box.z].is_contact = 0;
-						//							bit[x / 8 + y / 8 * 4] |= 1ull << (x % 8 + (y % 8) * 8);
 					}
 				}
 				for (auto& p : pos) {
@@ -53,23 +46,22 @@ GI2DRigidbody::GI2DRigidbody(const std::shared_ptr<PhysicsWorld>& world, const u
 
 				vec2 size = vec2(0.f);
 				vec2 size_max = vec2(0.f);
-				for (int32_t i = 0; i < rela_pos.size(); i++)
+				for (int32_t i = 0; i < pstate.size(); i++)
 				{
-					rela_pos[i] = pos[i] - center;
-					size += rela_pos[i];
-					size_max = glm::max(abs(rela_pos[i]), size_max);
+					pstate[i].relative_pos = pos[i] - center;
+					size += pstate[i].relative_pos;
+					size_max = glm::max(abs(pstate[i].relative_pos), size_max);
 				}
 
 				size /= pos.size();
-				cmd.updateBuffer<vec2>(b_relative_pos.getInfo().buffer, b_relative_pos.getInfo().offset, rela_pos);
 				cmd.updateBuffer<rbParticle>(b_rbparticle.getInfo().buffer, b_rbparticle.getInfo().offset, pstate);
 
 				float inertia = 0.f;
-				for (int32_t i = 0; i < rela_pos.size(); i++)
+				for (int32_t i = 0; i < pstate.size(); i++)
 				{
 					//						if (pstate[i].contact_index >= 0)
 					{
-						inertia += dot(rela_pos[i], rela_pos[i]) /** mass*/;
+						inertia += dot(pstate[i].relative_pos, pstate[i].relative_pos) /** mass*/;
 					}
 				}
 				inertia /= 12.f;
@@ -96,7 +88,7 @@ GI2DRigidbody::GI2DRigidbody(const std::shared_ptr<PhysicsWorld>& world, const u
 				cmd.updateBuffer<Rigidbody>(b_rigidbody.getInfo().buffer, b_rigidbody.getInfo().offset, rb);
 				vk::BufferMemoryBarrier to_read[] = {
 					b_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-					b_relative_pos.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+					b_rbparticle.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 				};
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllCommands, {},
 					0, nullptr, array_length(to_read), to_read, 0, nullptr);
@@ -114,10 +106,7 @@ GI2DRigidbody::GI2DRigidbody(const std::shared_ptr<PhysicsWorld>& world, const u
 
 			vk::DescriptorBufferInfo storages[] = {
 				b_rigidbody.getInfo(),
-				b_relative_pos.getInfo(),
 				b_rbparticle.getInfo(),
-				b_rbpos_bit.getInfo(),
-				b_contact_bit.getInfo(),
 			};
 
 			vk::WriteDescriptorSet write[] =
