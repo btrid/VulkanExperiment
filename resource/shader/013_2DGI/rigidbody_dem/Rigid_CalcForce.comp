@@ -67,7 +67,6 @@ void main()
 
 	if(ishit)
 	{
-//		uint r_id = b_rbParticle[p_id].r_id;
 		uint index = atomicAdd(b_rigidbody[r_id].solver_count, 1);
 		atomicAdd(b_rigidbody[r_id].vel_work.x, int(round(delta_linear_vel.x * 65535.)));
 		atomicAdd(b_rigidbody[r_id].vel_work.y, int(round(delta_linear_vel.y * 65535.)));

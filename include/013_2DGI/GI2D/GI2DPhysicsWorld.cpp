@@ -174,14 +174,15 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 	rbParticle _def;
 	_def.contact_index = -1;
 	_def.r_id = r_id;
+	_def.is_active = false;
 	std::vector<vec2> pos(particle_num);
 	std::vector<rbParticle> pstate((particle_num+63)/64*64, _def);
 	vec2 center = vec2(0.f);
 
 	uint32_t contact_index = 0;
-	for (int y = 0; y < box.w; y++)
+	for (uint32_t y = 0; y < box.w; y++)
 	{
-		for (int x = 0; x < box.z; x++)
+		for (uint32_t x = 0; x < box.z; x++)
 		{
 			pos[x + y * box.z].x = box.x + x;
 			pos[x + y * box.z].y = box.y + y;
@@ -192,6 +193,7 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 				pstate[x + y * box.z].contact_index = contact_index++;
 			}
 			pstate[x + y * box.z].is_contact = 0;
+			pstate[x + y * box.z].is_active = true;
 		}
 	}
 	for (int32_t i = 0; i < particle_num; i++)
@@ -213,11 +215,46 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 	size /= particle_num;
 
 	float inertia = 0.f;
-	for (int32_t i = 0; i < particle_num; i++)
+	for (uint32_t i = 0; i < particle_num; i++)
 	{
 		{
 			inertia += dot(pstate[i].relative_pos, pstate[i].relative_pos) /** mass*/;
 		}
+	}
+
+	auto p = pstate[0].relative_pos;
+	vec2 v = vec2(9999999.f);
+	float distsq = 9999999999999.f;
+	auto f = [&](const vec2& n)
+	{
+		auto sq = dot(p - n, p - n);
+		if (sq < distsq) {
+			distsq = sq;
+			v = n - p;
+		}
+	};
+	for (uint32_t i = 0; i < particle_num; i++)
+	{
+		p = pstate[i].relative_pos;
+		v = vec2(9999999.f);
+		distsq = 9999999999999.f;
+
+		f(vec2(size_max.x + 1.f, p.y));
+		f(vec2(size_min.x - 1.f, p.y));
+		f(vec2(p.x, size_max.y + 1.f));
+		f(vec2(p.x, size_min.y - 1.f));
+
+// 		for (uint32_t y = 0; y < box.w; y++)
+// 		{
+// 			for (uint32_t x = 0; x < box.z; x++)
+// 			{
+// 				auto pid = x + y * box.z;
+// 				if (pid == i){ continue;}
+// 				if (pstate[pid].is_active){ continue; }
+// 				f(pstate[pid].relative_pos);
+// 			}
+// 		}
+		pstate[i].sdf = v;
 	}
 
 	inertia /= 12.f;

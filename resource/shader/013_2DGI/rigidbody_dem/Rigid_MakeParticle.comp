@@ -13,7 +13,7 @@ shared Rigidbody s_rb;
 void main() 
 {
 	uint p_id = gl_WorkGroupID.x*RB_PARTICLE_BLOCK_SIZE + gl_LocalInvocationID.x;
-	if(b_rbParticle[p_id].contact_index == -1){ return; }
+//	if(b_rbParticle[p_id].contact_index == -1){ return; }
 
 	if(gl_LocalInvocationID.x == 0)
 	{
@@ -38,6 +38,7 @@ void main()
 	b_rbParticle[p_id].pos_old = b_rbParticle[p_id].pos;
 	b_rbParticle[p_id].pos = next_pos;
 	b_rbParticle[p_id].local_pos = local_pos;
+	b_rbParticle[p_id].local_sdf = rotateRBParticle(b_rbParticle[p_id].sdf, angle+angular_vel_dt);
 
 	vec2 angular_vel = rotateRBParticle(rela_pos, s_rb.angle+s_rb.angle_vel) - rotateRBParticle(rela_pos, s_rb.angle);
 	vec2 vel = s_rb.vel + angular_vel;//cross(vec3(rela_pos, 0.), vec3(0., 0., s_rb.angle_vel)).xy;

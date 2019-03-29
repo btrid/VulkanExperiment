@@ -54,12 +54,15 @@ struct rbParticle
 	vec2 pos_old;
 
 	vec2 local_pos;
+	vec2 local_sdf;
+
 	vec2 vel;
+	vec2 _p;
 
 	uint contact_index;
 	uint is_contact;
 	uint r_id;
-	uint _p1;
+	uint is_active;
 };
 
 struct rbFluid
@@ -67,7 +70,9 @@ struct rbFluid
 	uint id;
 	float mass;
 	vec2 pos;
+
 	vec2 vel;
+	vec2 sdf;
 };
 
 layout(set=USE_Rigidbody2D, binding=0, std430) restrict buffer WorldData {

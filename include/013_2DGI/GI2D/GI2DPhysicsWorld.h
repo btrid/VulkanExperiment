@@ -45,7 +45,7 @@ struct PhysicsWorld
 		float mass;
 		vec2 vel;
 		vec2 pos;
-		vec2 _p;
+		vec2 sdf;
 	};
 
 	struct Rigidbody
@@ -84,12 +84,15 @@ struct PhysicsWorld
 		vec2 pos_old;
 
 		vec2 local_pos;
+		vec2 local_sdf;
+
 		vec2 vel;
+		vec2 _p;
 
 		uint contact_index;
 		uint is_contact;
 		uint r_id;
-		uint _p1;
+		uint is_active;
 	};
 
 	enum
