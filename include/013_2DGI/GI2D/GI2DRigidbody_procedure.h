@@ -46,9 +46,9 @@ struct GI2DRigidbody_procedure
 	};
 
 	GI2DRigidbody_procedure(const std::shared_ptr<PhysicsWorld>& world);
-	void execute(vk::CommandBuffer cmd, const std::vector<const GI2DRigidbody*>& rb);
-	void executeMakeParticle(vk::CommandBuffer cmd, const std::vector<const GI2DRigidbody*>& rb);
-	void executeToFragment(vk::CommandBuffer cmd, const std::vector<const GI2DRigidbody*>& rb);
+	void execute(vk::CommandBuffer cmd, const std::shared_ptr<PhysicsWorld>& world);
+	void executeMakeParticle(vk::CommandBuffer cmd, const std::shared_ptr<PhysicsWorld>& world);
+	void executeToFragment(vk::CommandBuffer cmd, const std::shared_ptr<PhysicsWorld>& world);
 
 	std::shared_ptr<PhysicsWorld> m_world;
 

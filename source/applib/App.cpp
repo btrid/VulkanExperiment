@@ -50,7 +50,7 @@ App::App(const AppDescriptor& desc)
 			pool_size[0].setType(vk::DescriptorType::eUniformBuffer);
 			pool_size[0].setDescriptorCount(200);
 			pool_size[1].setType(vk::DescriptorType::eStorageBuffer);
-			pool_size[1].setDescriptorCount(300);
+			pool_size[1].setDescriptorCount(3000);
 			pool_size[2].setType(vk::DescriptorType::eCombinedImageSampler);
 			pool_size[2].setDescriptorCount(300);
 			pool_size[3].setType(vk::DescriptorType::eStorageImage);
@@ -61,7 +61,7 @@ App::App(const AppDescriptor& desc)
 			vk::DescriptorPoolCreateInfo pool_info;
 			pool_info.setPoolSizeCount(array_length(pool_size));
 			pool_info.setPPoolSizes(pool_size);
-			pool_info.setMaxSets(20);
+			pool_info.setMaxSets(2000);
 			m_context->m_descriptor_pool = device->createDescriptorPoolUnique(pool_info);
 
 			vk::PipelineCacheCreateInfo cacheInfo = vk::PipelineCacheCreateInfo();

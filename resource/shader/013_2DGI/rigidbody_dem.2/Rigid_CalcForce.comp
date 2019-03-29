@@ -1,12 +1,13 @@
 #version 460
 #extension GL_GOOGLE_include_directive : require
 
-#define USE_Rigidbody2D 0
-#define USE_GI2D 1
+#define USE_Rigidbody2D_World 0
+#define USE_Rigidbody2D 1
+#define USE_GI2D 2
 #include "GI2D.glsl"
 #include "Rigidbody2D.glsl"
 
-layout (local_size_x = RB_PARTICLE_BLOCK_SIZE) in;
+layout (local_size_x = 1024) in;
 
 vec2 calcTangent(in vec2 I, in vec2 N)
 {
@@ -15,8 +16,8 @@ vec2 calcTangent(in vec2 I, in vec2 N)
 
 void main() 
 {
-	uint r_id = b_rbParticle_map[gl_WorkGroupID.x];
-	uint p_id = gl_WorkGroupID.x*RB_PARTICLE_BLOCK_SIZE + gl_LocalInvocationID.x;
+	int p_id = int(gl_GlobalInvocationID.x);
+	if(p_id >= b_rigidbody.pnum){ return; }
 	if(b_rbParticle[p_id].contact_index == -1){ return; }
 
 	vec2 pos = b_rbParticle[p_id].pos;
@@ -34,7 +35,7 @@ void main()
 		uint count = min(b_fluid_count[index], FLUID_NUM);
 		for(uint ii = 0; ii < count; ii++)
 		{
-			if( b_fluid[index*FLUID_NUM + ii].id == r_id)
+			if( b_fluid[index*FLUID_NUM + ii].id == b_rigidbody.id)
 			{
 				// 自分とは判定しない
 				continue;
@@ -67,11 +68,10 @@ void main()
 
 	if(ishit)
 	{
-//		uint r_id = b_rbParticle[p_id].r_id;
-		uint index = atomicAdd(b_rigidbody[r_id].solver_count, 1);
-		atomicAdd(b_rigidbody[r_id].vel_work.x, int(round(delta_linear_vel.x * 65535.)));
-		atomicAdd(b_rigidbody[r_id].vel_work.y, int(round(delta_linear_vel.y * 65535.)));
-		atomicAdd(b_rigidbody[r_id].angle_vel_work, int(round(delta_angular_vel * 65535.*255.)));
+		int index = atomicAdd(b_rigidbody.solver_count, 1);
+		atomicAdd(b_rigidbody.vel_work.x, int(round(delta_linear_vel.x * 65535.)));
+		atomicAdd(b_rigidbody.vel_work.y, int(round(delta_linear_vel.y * 65535.)));
+		atomicAdd(b_rigidbody.angle_vel_work, int(round(delta_angular_vel * 65535.*255.)));
 	}
 }
 

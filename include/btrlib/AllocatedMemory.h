@@ -273,7 +273,6 @@ struct BufferMemoryEx
 public:
 	bool isValid()const { return !!m_resource; }
 	vk::DescriptorBufferInfo getInfo()const { return m_resource->m_buffer_info; }
-	TypedBufferInfo<T> getInfoEx()const { return m_resource->m_buffer_info; }
 	const btr::BufferMemoryDescriptorEx<T>& getDescriptor()const { return m_resource->m_buffer_descriptor; }
 	T* getMappedPtr(size_t offset_num = 0)const { assert(offset_num < m_resource->m_buffer_descriptor.element_num); return m_resource->m_mapped_memory + offset_num; }
 	uint32_t getDataSizeof()const { return sizeof(T); }
@@ -601,7 +600,6 @@ struct UpdateBuffer
 	}
 
 	vk::DescriptorBufferInfo getBufferInfo()const { return m_device_buffer.getBufferInfo(); }
-	TypedBufferInfo<T> getInfoEx()const { return m_device_buffer.getInfo(); }
 	vk::DescriptorBufferInfo getStagingBufferInfo()const { return m_staging_buffer.getBufferInfo(); }
 	const UpdateBufferDescriptor& getDescriptor()const { return m_desc; }
 	BufferMemory& getBufferMemory() { return m_device_buffer; }

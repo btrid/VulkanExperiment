@@ -1,10 +1,25 @@
 #ifndef Rigidbody2D_H_
 #define Rigidbody2D_H_
 
+#if defined(USE_Rigidbody2D)
+
+#define RB_PARTICLE_BLOCK_SIZE (64)
+#define FLUID_NUM (4)
+#define RB_DT (0.0016)
+
+struct rbWorld
+{
+	float DeltaTime;
+	uint step;
+	uint STEP;
+	uint rigidbody_num;
+	uint particle_block_num;
+};
+
 struct Rigidbody
 {
-	int pnum;
-	int solver_count;
+	uint pnum;
+	uint solver_count;
 	float inertia;
 	float mass;
 
@@ -28,49 +43,7 @@ struct Rigidbody
 	ivec2 damping_work;
 	ivec2 pos_bit_size;
 
-	uint id;
-	uint contact_count;
-	uint _p2;
-	uint _p3;
-
-	uint contact_list[16];
-
 };
-#define FLUID_NUM (4)
-#define RB_DT (0.0016)
-#if defined(USE_Rigidbody2D_World)
-
-struct World
-{
-	float DeltaTime;
-	uint step;
-	uint STEP;
-};
-
-struct rbFluid
-{
-	uint id;
-	float mass;
-	vec2 pos;
-	vec2 vel;
-	vec2 _p;
-};
-
-layout(set=USE_Rigidbody2D_World, binding=0, std430) restrict buffer WorldData {
-	World b_world;
-};
-layout(set=USE_Rigidbody2D_World, binding=1, std430) restrict buffer rbFluidCounter {
-	uint b_fluid_count[];
-};
-layout(set=USE_Rigidbody2D_World, binding=2, std430) restrict buffer rbFluidData {
-	rbFluid b_fluid[];
-};
-
-#endif
-
-
-#if defined(USE_Rigidbody2D)
-
 
 struct rbParticle
 {
@@ -81,16 +54,41 @@ struct rbParticle
 	vec2 vel;
 	uint contact_index;
 	uint is_contact;
+	uint r_id;
+	uint _p1;
 	uint _p2;
 	uint _p3;
 };
 
-layout(set=USE_Rigidbody2D, binding=0, std430) restrict buffer RigidbodyData {
-	Rigidbody b_rigidbody;
+struct rbFluid
+{
+	uint id;
+	float mass;
+	vec2 pos;
+	vec2 vel;
 };
-layout(set=USE_Rigidbody2D, binding=1, std430) restrict buffer rbParticleBuffer {
+
+layout(set=USE_Rigidbody2D, binding=0, std430) restrict buffer WorldData {
+	rbWorld b_world;
+};
+layout(set=USE_Rigidbody2D, binding=1, std430) restrict buffer rbInfoBuffer {
+	Rigidbody b_rigidbody[];
+};
+layout(set=USE_Rigidbody2D, binding=2, std430) restrict buffer rbParticleBuffer {
 	rbParticle b_rbParticle[];
 };
+layout(set=USE_Rigidbody2D, binding=3) restrict buffer rbParticleMappingBuffer {
+	uint b_rbParticle_map[];
+};
+layout(set=USE_Rigidbody2D, binding=4) restrict buffer rbFluidCounter {
+	uint b_fluid_count[];
+};
+layout(set=USE_Rigidbody2D, binding=5, std430) restrict buffer rbFluidData {
+	rbFluid b_fluid[];
+};
+
+#endif
+
 
 vec2 rotateRBParticle(in vec2 v, in float angle)
 {
@@ -102,7 +100,7 @@ vec2 rotateRBParticle(in vec2 v, in float angle)
 	Result.y = v.x * s + v.y * c;
 	return Result;
 }
-#endif
+
 
 
 float closestPointSegment(in vec2 origin, in vec2 dir, in vec2 p)

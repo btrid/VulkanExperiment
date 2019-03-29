@@ -9,26 +9,8 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 	m_context = context;
 	m_gi2d_context = gi2d_context;
 
-	{
-
-		auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
-		vk::DescriptorSetLayoutBinding binding[] = {
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(stage)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(1)
-			.setBinding(0),
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(stage)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(1)
-			.setBinding(1),
-		};
-		vk::DescriptorSetLayoutCreateInfo desc_layout_info;
-		desc_layout_info.setBindingCount(array_length(binding));
-		desc_layout_info.setPBindings(binding);
-		m_rigidbody_desc_layout = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
-	}
+	m_rigidbody_id = 0;
+	m_particle_id = 0;
 	{
 
 		auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
@@ -48,6 +30,21 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 			.setDescriptorCount(1)
 			.setBinding(2),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(stage)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(3),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(stage)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(4),
+			vk::DescriptorSetLayoutBinding()
+			.setStageFlags(stage)
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(1)
+			.setBinding(5),
 		};
 		vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 		desc_layout_info.setBindingCount(array_length(binding));
@@ -73,7 +70,6 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 	{
 		vk::DescriptorSetLayout layouts[] = {
 			m_physics_world_desc_layout.get(),
-			m_rigidbody_desc_layout.get(),
 			m_gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data),
 		};
 
@@ -119,6 +115,9 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 
 	{
 		b_world = m_context->m_storage_memory.allocateMemory<World>({ 1,{} });
+		b_rbinfo = m_context->m_storage_memory.allocateMemory<rbInfo>({ RB_NUM,{} });
+		b_rbparticle = m_context->m_storage_memory.allocateMemory<rbParticle>({ RB_PARTICLE_NUM,{} });
+		b_rbparticle_map = m_context->m_storage_memory.allocateMemory<uint32_t>({ RB_PARTICLE_NUM / 64,{} });
 		b_fluid_counter = m_context->m_storage_memory.allocateMemory<uint32_t>({ gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
 		b_fluid = m_context->m_storage_memory.allocateMemory<rbFluid>({ 4 * gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
 
@@ -134,6 +133,9 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 
 			vk::DescriptorBufferInfo storages[] = {
 				b_world.getInfo(),
+				b_rbinfo.getInfo(),
+				b_rbparticle.getInfo(),
+				b_rbparticle_map.getInfo(),
 				b_fluid_counter.getInfo(),
 				b_fluid.getInfo(),
 			};
@@ -157,7 +159,100 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 		w.DT = 0.016f;
 		w.STEP = 100;
 		w.step = 0;
+		w.rigidbody_num = m_rigidbody_id;
 		m_context->m_cmd_pool->allocCmdTempolary(0).updateBuffer<World>(b_world.getInfo().buffer, b_world.getInfo().offset, w);
+	}
+
+}
+
+void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
+{
+	auto particle_num = box.z * box.w;
+	rbInfo rb;
+	auto r_id = m_rigidbody_id++;
+
+	rbParticle _def;
+	_def.contact_index = -1;
+	_def.r_id = r_id;
+	std::vector<vec2> pos(particle_num);
+	std::vector<rbParticle> pstate((particle_num+63)/64*64, _def);
+	vec2 center = vec2(0.f);
+
+	uint32_t contact_index = 0;
+	for (int y = 0; y < box.w; y++)
+	{
+		for (int x = 0; x < box.z; x++)
+		{
+			pos[x + y * box.z].x = box.x + x;
+			pos[x + y * box.z].y = box.y + y;
+
+			pstate[x + y * box.z].contact_index = -1;
+			if (y == 0 || y == box.w - 1 || x == 0 || x == box.z - 1) 
+			{
+				pstate[x + y * box.z].contact_index = contact_index++;
+			}
+			pstate[x + y * box.z].is_contact = 0;
+		}
+	}
+	for (int32_t i = 0; i < particle_num; i++)
+	{
+		center += pos[i];
+	}
+	center /= particle_num;
+
+	vec2 size = vec2(0.f);
+	vec2 size_max = vec2(0.f);
+	vec2 size_min = vec2(0.f);
+	for (int32_t i = 0; i < particle_num; i++)
+	{
+		pstate[i].relative_pos = pos[i] - center;
+		size += pstate[i].relative_pos;
+		size_max = glm::max(pstate[i].relative_pos, size_max);
+		size_min = glm::min(pstate[i].relative_pos, size_min);
+	}
+	size /= particle_num;
+
+	float inertia = 0.f;
+	for (int32_t i = 0; i < particle_num; i++)
+	{
+		{
+			inertia += dot(pstate[i].relative_pos, pstate[i].relative_pos) /** mass*/;
+		}
+	}
+
+	inertia /= 12.f;
+	rb.pos = center;
+	rb.pos_old = rb.pos;
+	rb.center = size / 2.f;
+	rb.inertia = inertia;
+	rb.size = ceil(size_max - size_min);
+	rb.vel = vec2(0.f);
+	rb.pos_work = ivec2(0);
+	rb.vel_work = ivec2(0);
+	rb.angle_vel_work = 0;
+	rb.pnum = particle_num;
+	rb.angle = 3.14f / 4.f + 0.2f;
+	rb.angle_vel = 0.f;
+	rb.solver_count = 0;
+	rb.dist = -1;
+	rb.damping_work = ivec2(0);
+	cmd.updateBuffer<rbInfo>(b_rbinfo.getInfo().buffer, b_rbinfo.getInfo().offset + r_id * sizeof(rbInfo), rb);
+
+	uint32_t block_num = pstate.size() / 64;
+	for (uint32_t i = 0; i < block_num; i++)
+	{
+		cmd.updateBuffer(b_rbparticle.getInfo().buffer, b_rbparticle.getInfo().offset + m_particle_id * sizeof(rbParticle) * 64, sizeof(rbParticle) * 64, &pstate[i * 64]);
+		cmd.updateBuffer<uint32_t>(b_rbparticle_map.getInfo().buffer, b_rbparticle_map.getInfo().offset + m_particle_id * sizeof(uint32_t), r_id);
+		m_particle_id++;
+	}
+	{
+		vk::BufferMemoryBarrier to_read[] = {
+			b_rbinfo.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+			b_rbparticle.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+			b_rbparticle_map.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+		};
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {},
+			0, nullptr, array_length(to_read), to_read, 0, nullptr);
 	}
 
 }
@@ -167,6 +262,7 @@ void PhysicsWorld::execute(vk::CommandBuffer cmd)
 	{
 		vk::BufferMemoryBarrier to_write[] = {
 			b_fluid_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
+			b_world.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {},
 			0, nullptr, array_length(to_write), to_write, 0, nullptr);
@@ -175,8 +271,18 @@ void PhysicsWorld::execute(vk::CommandBuffer cmd)
 	cmd.fillBuffer(b_fluid_counter.getInfo().buffer, b_fluid_counter.getInfo().offset, b_fluid_counter.getInfo().range, data);
 
 	{
+		World w;
+		w.DT = 0.016f;
+		w.STEP = 100;
+		w.step = 0;
+		w.rigidbody_num = m_rigidbody_id;
+		cmd.updateBuffer<World>(b_world.getInfo().buffer, b_world.getInfo().offset, w);
+	}
+
+	{
 		vk::BufferMemoryBarrier to_read[] = {
 			b_fluid_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+			b_world.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {},
 			0, nullptr, array_length(to_read), to_read, 0, nullptr);
@@ -184,19 +290,14 @@ void PhysicsWorld::execute(vk::CommandBuffer cmd)
 
 }
 
-void PhysicsWorld::executeMakeFluid(vk::CommandBuffer cmd, const std::vector<const GI2DRigidbody*>& rb)
+void PhysicsWorld::executeMakeFluid(vk::CommandBuffer cmd)
 {
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_ToFluid].get(), 0, m_physics_world_desc.get(), {});
-//	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_ToFluid].get(), 1, rb->m_descriptor_set.get(), {});
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_ToFluid].get(), 2, m_gi2d_context->getDescriptorSet(), {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_ToFluid].get(), 1, m_gi2d_context->getDescriptorSet(), {});
 
 	cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_ToFluid].get());
-	for (const auto* r : rb)
-	{
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_ToFluid].get(), 1, r->m_descriptor_set.get(), {});
-		auto num = app::calcDipatchGroups(uvec3(r->m_particle_num, 1, 1), uvec3(1024, 1, 1));
-		cmd.dispatch(num.x, num.y, num.z);
-	}
+// 	auto num = app::calcDipatchGroups(uvec3(r->m_particle_num, 1, 1), uvec3(1, 1, 1));
+// 	cmd.dispatch(num.x, num.y, num.z);
 
 	{
 		vk::BufferMemoryBarrier to_read[] = {
@@ -206,7 +307,6 @@ void PhysicsWorld::executeMakeFluid(vk::CommandBuffer cmd, const std::vector<con
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 			0, nullptr, array_length(to_read), to_read, 0, nullptr);
 	}
-
 }
 void PhysicsWorld::executeMakeFluidWall(vk::CommandBuffer cmd)
 {
