@@ -47,17 +47,19 @@ struct Rigidbody
 
 struct rbParticle
 {
+	vec2 relative_pos;
+	vec2 sdf;
+
 	vec2 pos;
 	vec2 pos_old;
-	vec2 relative_pos;
+
 	vec2 local_pos;
 	vec2 vel;
+
 	uint contact_index;
 	uint is_contact;
 	uint r_id;
 	uint _p1;
-	uint _p2;
-	uint _p3;
 };
 
 struct rbFluid

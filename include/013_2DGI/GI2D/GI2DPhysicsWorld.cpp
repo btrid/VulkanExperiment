@@ -115,7 +115,7 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 
 	{
 		b_world = m_context->m_storage_memory.allocateMemory<World>({ 1,{} });
-		b_rbinfo = m_context->m_storage_memory.allocateMemory<rbInfo>({ RB_NUM,{} });
+		b_rigidbody = m_context->m_storage_memory.allocateMemory<Rigidbody>({ RB_NUM,{} });
 		b_rbparticle = m_context->m_storage_memory.allocateMemory<rbParticle>({ RB_PARTICLE_NUM,{} });
 		b_rbparticle_map = m_context->m_storage_memory.allocateMemory<uint32_t>({ RB_PARTICLE_NUM / 64,{} });
 		b_fluid_counter = m_context->m_storage_memory.allocateMemory<uint32_t>({ gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
@@ -133,7 +133,7 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 
 			vk::DescriptorBufferInfo storages[] = {
 				b_world.getInfo(),
-				b_rbinfo.getInfo(),
+				b_rigidbody.getInfo(),
 				b_rbparticle.getInfo(),
 				b_rbparticle_map.getInfo(),
 				b_fluid_counter.getInfo(),
@@ -168,7 +168,7 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 {
 	auto particle_num = box.z * box.w;
-	rbInfo rb;
+	Rigidbody rb;
 	auto r_id = m_rigidbody_id++;
 
 	rbParticle _def;
@@ -236,7 +236,7 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 	rb.solver_count = 0;
 	rb.dist = -1;
 	rb.damping_work = ivec2(0);
-	cmd.updateBuffer<rbInfo>(b_rbinfo.getInfo().buffer, b_rbinfo.getInfo().offset + r_id * sizeof(rbInfo), rb);
+	cmd.updateBuffer<Rigidbody>(b_rigidbody.getInfo().buffer, b_rigidbody.getInfo().offset + r_id * sizeof(Rigidbody), rb);
 
 	uint32_t block_num = pstate.size() / 64;
 	for (uint32_t i = 0; i < block_num; i++)
@@ -247,7 +247,7 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 	}
 	{
 		vk::BufferMemoryBarrier to_read[] = {
-			b_rbinfo.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+			b_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 			b_rbparticle.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 			b_rbparticle_map.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 		};

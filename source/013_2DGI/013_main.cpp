@@ -231,7 +231,7 @@ int rigidbody()
 		for (int x = 0; x < 20; x++)
 		{
 //			rbs.push_back(new GI2DRigidbody(physics_world, uvec4(250 + y * 20, 200 + x * 24, 16, 16)));
-			physics_world->make(cmd, uvec4(250 + y * 20, 200 + x * 24, 16, 16));
+			physics_world->make(cmd, uvec4(250 + y * 24, 200 + x * 26, 16, 16));
 
 		}
 	}

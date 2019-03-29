@@ -48,7 +48,7 @@ struct PhysicsWorld
 		vec2 _p;
 	};
 
-	struct rbInfo
+	struct Rigidbody
 	{
 		int32_t pnum;
 		int32_t solver_count;
@@ -77,20 +77,19 @@ struct PhysicsWorld
 
 	struct rbParticle
 	{
+		vec2 relative_pos;
+		vec2 sdf;
+
 		vec2 pos;
 		vec2 pos_old;
 
-		vec2 relative_pos;
 		vec2 local_pos;
-
 		vec2 vel;
+
 		uint contact_index;
 		uint is_contact;
-
 		uint r_id;
 		uint _p1;
-		uint _p2;
-		uint _p3;
 	};
 
 	enum
@@ -117,7 +116,7 @@ struct PhysicsWorld
 	std::array<vk::UniquePipeline, Pipeline_Num> m_pipeline;
 
 	btr::BufferMemoryEx<World> b_world;
-	btr::BufferMemoryEx<rbInfo> b_rbinfo;
+	btr::BufferMemoryEx<Rigidbody> b_rigidbody;
 	btr::BufferMemoryEx<rbParticle> b_rbparticle;
 	btr::BufferMemoryEx<uint32_t> b_rbparticle_map;
 	btr::BufferMemoryEx<uint32_t> b_fluid_counter;
