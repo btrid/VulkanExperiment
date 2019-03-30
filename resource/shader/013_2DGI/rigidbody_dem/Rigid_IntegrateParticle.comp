@@ -1,0 +1,30 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_Rigidbody2D 0
+#define USE_GI2D 1
+#include "GI2D.glsl"
+#include "Rigidbody2D.glsl"
+
+
+layout (local_size_x = RB_PARTICLE_BLOCK_SIZE) in;
+
+void main() 
+{
+	uint p_id = gl_WorkGroupID.x*RB_PARTICLE_BLOCK_SIZE + gl_LocalInvocationID.x;
+	if(b_rbParticle[p_id].contact_index == -1){ return; }
+
+	vec2 pos = b_rbParticle[p_id].pos;
+	vec2 exclusion = pos - b_rbParticle[p_id].pos_predict;
+	if(dot(exclusion, exclusion) == 0.){
+		return;
+	}
+
+	float exclusion_angle = cross(vec3(b_rbParticle[p_id].local_pos, 0.), vec3(exclusion, 0.)).z;
+
+	uint r_id = b_rbParticle_map[gl_WorkGroupID.x];
+	atomicMax(b_rigidbody[r_id].exclusion.x, int(abs(round(exclusion.x * 32765.)))*2 + int(exclusion.x >= 0.));
+	atomicMax(b_rigidbody[r_id].exclusion.y, int(abs(round(exclusion.y * 32765.)))*2 + int(exclusion.y >= 0.));
+	atomicMax(b_rigidbody[r_id].exclusion_angle, int(abs(round(exclusion_angle * 65535.*127.)))*2 + int(exclusion_angle >= 0.));
+}
+

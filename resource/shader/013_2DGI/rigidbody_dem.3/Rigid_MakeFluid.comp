@@ -22,8 +22,11 @@ void main()
 	if(any(lessThan(index, ivec2(0))) || any(greaterThanEqual(index, u_gi2d_info.m_resolution.xy))){ return; }
 
 	rbFluid f;
+//	f.id = b_rigidbody.id;
+//	f.mass = b_rigidbody.mass;
 	f.id = r_id;
 	f.mass = 1; 
+	f.vel = b_rbParticle[p_id].vel;
 	f.pos = pos;
 	f.sdf = b_rbParticle[p_id].local_sdf;
 

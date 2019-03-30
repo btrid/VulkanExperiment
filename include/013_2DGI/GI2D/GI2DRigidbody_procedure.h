@@ -20,7 +20,9 @@ struct GI2DRigidbody_procedure
 		Shader_MakeFluid,
 
 		Shader_CalcForce,
+		Shader_IntegrateParticle,
 		Shader_Integrate,
+		Shader_UpdateRigidbody,
 
 		Shader_ToFragment,
 
@@ -38,7 +40,9 @@ struct GI2DRigidbody_procedure
 		Pipeline_MakeFluid,
 
 		Pipeline_CalcForce,
+		Pipeline_IntegrateParticle,
 		Pipeline_Integrate,
+		Pipeline_UpdateRigidbody,
 
 		Pipeline_ToFragment,
 

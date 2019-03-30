@@ -1,0 +1,43 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_Rigidbody2D 0
+#define USE_GI2D 1
+
+#include "GI2D.glsl"
+#include "Rigidbody2D.glsl"
+
+
+layout (local_size_x = 1) in;
+
+void main() 
+{
+	uint rbid = gl_GlobalInvocationID.x;
+	if(rbid >= b_world.rigidbody_num){ return; }
+
+	vec2 pos = b_rigidbody[rbid].pos;
+	vec2 pos_old = b_rigidbody[rbid].pos_old;
+
+	float angle = b_rigidbody[rbid].angle;
+	float angle_old = b_rigidbody[rbid].angle_old;
+
+	vec2 vel = pos - pos_old;
+	float a_vel = angle - angle_old;
+	if(b_rigidbody[rbid].is_exclusive != 0)
+	{
+		vel *= RB_DT;
+		a_vel *= RB_DT;
+		b_rigidbody[rbid].is_exclusive = 0;
+	}
+	b_rigidbody[rbid].pos += vel;
+
+//	b_rigidbody[rbid].angle_vel = a_vel;
+	b_rigidbody[rbid].angle += a_vel;
+
+	b_rigidbody[rbid].pos_old = b_rigidbody[rbid].pos;
+	b_rigidbody[rbid].angle_old = b_rigidbody[rbid].angle;
+
+//	b_rigidbody[rbid].vel = vel + vec2(0., 9.8)*RB_DT;
+	b_rigidbody[rbid].pos += vec2(0., 9.8)*RB_DT;
+
+}

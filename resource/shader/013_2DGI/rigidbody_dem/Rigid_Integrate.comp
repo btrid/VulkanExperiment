@@ -14,24 +14,20 @@ void main()
 {
 	uint rbid = gl_GlobalInvocationID.x;
 	if(rbid >= b_world.rigidbody_num){ return; }
+	ivec2 exclusion = b_rigidbody[rbid].exclusion;
 
-	if(b_rigidbody[rbid].solver_count != 0)
-	{
-		b_rigidbody[rbid].vel += vec2(b_rigidbody[rbid].vel_work) / 65535. / b_rigidbody[rbid].solver_count;
-		b_rigidbody[rbid].angle_vel += float(b_rigidbody[rbid].angle_vel_work) / (65535.*255.) / b_rigidbody[rbid].inertia  / b_rigidbody[rbid].solver_count;
-
-		b_rigidbody[rbid].vel_work = ivec2(0);
-		b_rigidbody[rbid].angle_vel_work = 0;
-
-		b_rigidbody[rbid].solver_count = 0;
-	}
-	else
-	{
-		b_rigidbody[rbid].angle += b_rigidbody[rbid].angle_vel*RB_DT;
-		b_rigidbody[rbid].vel += vec2(0., 9.8)*RB_DT;
+	if(all(equal(exclusion, ivec2(0)))){
+		return;
 	}
 
-	b_rigidbody[rbid].pos += b_rigidbody[rbid].vel*RB_DT;
-	b_rigidbody[rbid].angle += b_rigidbody[rbid].angle_vel*RB_DT;
+	vec2 ex = vec2(exclusion)/(32765.*2.) * (vec2(notEqual(exclusion & ivec2(1), ivec2(0)))*2. - 1.);
+	b_rigidbody[rbid].pos += ex;
+	int exclusion_angle = b_rigidbody[rbid].exclusion_angle;
+	float ex_a = float(exclusion_angle)/(65535.*127.*2.) * float((exclusion_angle & 1) != 0)*2. - 1.;
+	b_rigidbody[rbid].angle += ex_a / b_rigidbody[rbid].inertia;
+
+	b_rigidbody[rbid].exclusion = ivec2(0);
+	b_rigidbody[rbid].exclusion_angle = 0;
+	b_rigidbody[rbid].is_exclusive = 1;
 
 }

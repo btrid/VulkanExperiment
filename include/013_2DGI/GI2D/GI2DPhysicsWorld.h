@@ -38,20 +38,10 @@ struct PhysicsWorld
 		uint rigidbody_num;
 		uint particle_block_num;
 	};
-
-	struct rbFluid
-	{
-		uint id;
-		float mass;
-		vec2 vel;
-		vec2 pos;
-		vec2 sdf;
-	};
-
 	struct Rigidbody
 	{
-		int32_t pnum;
-		int32_t solver_count;
+		uint pnum;
+		uint solver_count;
 		float inertia;
 		float mass;
 
@@ -60,19 +50,16 @@ struct PhysicsWorld
 
 		vec2 pos;
 		vec2 pos_old;
-		vec2 vel;
-		vec2 vel_old;
-
-		ivec2 pos_work;
-		ivec2 vel_work;
 
 		float angle;
-		float angle_vel;
-		int32_t angle_vel_work;
-		uint32_t dist;
+		float angle_old;
+		ivec2 exclusion;
 
-		ivec2 damping_work;
-		ivec2 pos_bit_size;
+		int exclusion_angle;
+		int is_exclusive;
+		int _p1;
+		int _p2;
+
 	};
 
 	struct rbParticle
@@ -81,18 +68,25 @@ struct PhysicsWorld
 		vec2 sdf;
 
 		vec2 pos;
-		vec2 pos_old;
+		vec2 pos_predict;
 
 		vec2 local_pos;
 		vec2 local_sdf;
-
-		vec2 vel;
-		vec2 _p;
 
 		uint contact_index;
 		uint is_contact;
 		uint r_id;
 		uint is_active;
+	};
+
+
+	struct rbFluid
+	{
+		uint id;
+		float mass;
+		vec2 pos;
+		vec2 vel;
+		vec2 sdf;
 	};
 
 	enum

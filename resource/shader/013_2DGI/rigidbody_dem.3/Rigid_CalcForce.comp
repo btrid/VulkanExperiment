@@ -20,11 +20,14 @@ void main()
 	if(b_rbParticle[p_id].contact_index == -1){ return; }
 
 	vec2 pos = b_rbParticle[p_id].pos;
+	vec2 pos_old = b_rbParticle[p_id].pos_old;
+	vec2 vel = b_rbParticle[p_id].vel;
 	ivec4 map_index = ivec4(pos.xyxy) + ivec4(ivec2(0), step(vec2(0.5), pos-floor(pos)));
 	ivec4 findex = map_index.xzxz + map_index.yyww * u_gi2d_info.m_resolution.x;
 
+	vec2 delta_linear_vel = vec2(0.0);
+	float delta_angular_vel = 0.0;
 	bool ishit = false;
-	vec2 ex = vec2(0.);
 	for(uint i = 0; i < 4; i++)
 	{
 		uint index = findex[i];
@@ -37,7 +40,7 @@ void main()
 				continue;
 			}
 			vec2 Pj = b_fluid[index*FLUID_NUM + ii].pos;
-			float k_radius = 0.5;
+			float k_radius = 1.;
 
 			vec2 rela_pos = Pj - pos;
 			if(dot(rela_pos, rela_pos) >= k_radius*2.*k_radius*2.)
@@ -45,19 +48,29 @@ void main()
 				// 
 				continue;
 			}
+			rela_pos = normalize(rela_pos);
+			vec2 rela_vel = b_fluid[index*FLUID_NUM + ii].vel - vel;
+			vec2 rela_dir = normalize(rela_vel);
 
-			vec2 sdf = b_fluid[index*FLUID_NUM + ii].sdf + rela_pos;
-//			vec2 sdf = b_fluid[index*FLUID_NUM + ii].sdf;
-//			ex += sdf;
-			pos += sdf;
+			float k_spring = 0.15;
+			float k_spring_t = 0.15;
+			{
+				vec2 restitution = (b_fluid[index*FLUID_NUM + ii].sdf + rela_vel)*k_spring; // 反発力
+				vec2 restitution_t = calcTangent(rela_vel, rela_pos) *k_spring_t;
+				delta_linear_vel += restitution + restitution_t;
+				delta_angular_vel += cross(vec3(b_rbParticle[p_id].local_pos, 0.), vec3(restitution + restitution_t, 0.)).z;
+
+			}
 			ishit = true;
 		}
 	}
 
 	if(ishit)
 	{
-		b_rbParticle[p_id].pos = pos;
-//		b_rbParticle[p_id].pos += ex;
+		uint index = atomicAdd(b_rigidbody[r_id].solver_count, 1);
+		atomicAdd(b_rigidbody[r_id].vel_work.x, int(round(delta_linear_vel.x * 65535.)));
+		atomicAdd(b_rigidbody[r_id].vel_work.y, int(round(delta_linear_vel.y * 65535.)));
+		atomicAdd(b_rigidbody[r_id].angle_vel_work, int(round(delta_angular_vel * 65535.*255.)));
 	}
 }
 

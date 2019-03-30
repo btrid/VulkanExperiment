@@ -27,16 +27,21 @@ struct Rigidbody
 	vec2 size;
 
 	vec2 pos;
-	vec2 pos_old;
+	vec2 pos_predict;
+
+	vec2 vel;
+	vec2 vel_old;
+
+	ivec2 pos_work;
+	ivec2 vel_work;
 
 	float angle;
-	float angle_old;
-	ivec2 exclusion;
+	float angle_vel;
+	int angle_vel_work;
+	uint dist;
 
-	int exclusion_angle;
-	int is_exclusive;
-	int _p1;
-	int _p2;
+	ivec2 damping_work;
+	ivec2 pos_bit_size;
 
 };
 
@@ -46,10 +51,13 @@ struct rbParticle
 	vec2 sdf;
 
 	vec2 pos;
-	vec2 pos_predict;
+	vec2 pos_old;
 
 	vec2 local_pos;
 	vec2 local_sdf;
+
+	vec2 vel;
+	vec2 _p;
 
 	uint contact_index;
 	uint is_contact;

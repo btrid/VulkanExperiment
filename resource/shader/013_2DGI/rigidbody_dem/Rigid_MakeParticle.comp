@@ -24,25 +24,13 @@ void main()
 	barrier();
 	memoryBarrierShared();
 
-	vec2 vel_dt = s_rb.vel*RB_DT;
-	float angular_vel_dt = s_rb.angle_vel*RB_DT;
-	float angle = s_rb.angle;
-	vec2 pos = s_rb.pos;
-	vec2 rela_pos = b_rbParticle[p_id].relative_pos;
+	vec2 local_pos = rotateRBParticle(b_rbParticle[p_id].relative_pos, s_rb.angle);
+	vec2 pos = s_rb.pos + local_pos;
 
-	vec2 angle_vel = cross(vec3(rela_pos, 0.), vec3(0., 0., angular_vel_dt)).xy;
-
-	vec2 local_pos = rotateRBParticle(rela_pos, angle+angular_vel_dt);
-	vec2 next_pos = pos + vel_dt + local_pos;
-
-	b_rbParticle[p_id].pos_old = b_rbParticle[p_id].pos;
-	b_rbParticle[p_id].pos = next_pos;
+	b_rbParticle[p_id].pos = pos;
+	b_rbParticle[p_id].pos_predict = pos;
 	b_rbParticle[p_id].local_pos = local_pos;
-	b_rbParticle[p_id].local_sdf = rotateRBParticle(b_rbParticle[p_id].sdf, angle+angular_vel_dt);
-
-	vec2 angular_vel = rotateRBParticle(rela_pos, s_rb.angle+s_rb.angle_vel) - rotateRBParticle(rela_pos, s_rb.angle);
-	vec2 vel = s_rb.vel + angular_vel;//cross(vec3(rela_pos, 0.), vec3(0., 0., s_rb.angle_vel)).xy;
-	b_rbParticle[p_id].vel = vel;
+	b_rbParticle[p_id].local_sdf = rotateRBParticle(b_rbParticle[p_id].sdf, s_rb.angle);
 
 }
 

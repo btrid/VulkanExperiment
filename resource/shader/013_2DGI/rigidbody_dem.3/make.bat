@@ -12,9 +12,7 @@ SET output=../../binary
 rem %exe% %include% %option% -o %output%/Rigid_CollisionDetective.comp.spv Rigid_CollisionDetective.comp
 rem %exe% %include% %option% -o %output%/Rigid_CollisionDetectiveBefore.comp.spv Rigid_CollisionDetectiveBefore.comp
 %exe% %include% %option% -o %output%/Rigid_CalcForce.comp.spv Rigid_CalcForce.comp
-%exe% %include% %option% -o %output%/Rigid_IntegrateParticle.comp.spv Rigid_IntegrateParticle.comp
 %exe% %include% %option% -o %output%/Rigid_Integrate.comp.spv Rigid_Integrate.comp
-%exe% %include% %option% -o %output%/Rigid_UpdateRigidbody.comp.spv Rigid_UpdateRigidbody.comp
 
 %exe% %include% %option% -o %output%/Rigid_ToFluid.comp.spv Rigid_ToFluid.comp
 %exe% %include% %option% -o %output%/Rigid_ToFluidWall.comp.spv Rigid_ToFluidWall.comp

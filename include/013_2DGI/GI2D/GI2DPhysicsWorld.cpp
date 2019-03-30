@@ -258,21 +258,23 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 	}
 
 	inertia /= 12.f;
+
+	rb.pnum = particle_num;
+	rb.solver_count = 0;
+	rb.inertia = inertia;
+	rb.mass = 1;
+
+	rb.center = size / 2.f;
+	rb.size = ceil(size_max - size_min);
+
 	rb.pos = center;
 	rb.pos_old = rb.pos;
-	rb.center = size / 2.f;
-	rb.inertia = inertia;
-	rb.size = ceil(size_max - size_min);
-	rb.vel = vec2(0.f);
-	rb.pos_work = ivec2(0);
-	rb.vel_work = ivec2(0);
-	rb.angle_vel_work = 0;
-	rb.pnum = particle_num;
 	rb.angle = 3.14f / 4.f + 0.2f;
-	rb.angle_vel = 0.f;
-	rb.solver_count = 0;
-	rb.dist = -1;
-	rb.damping_work = ivec2(0);
+	rb.angle_old = rb.angle;
+
+	rb.exclusion = ivec2(0);
+	rb.exclusion_angle = 0;
+	rb.is_exclusive = 0;
 	cmd.updateBuffer<Rigidbody>(b_rigidbody.getInfo().buffer, b_rigidbody.getInfo().offset + r_id * sizeof(Rigidbody), rb);
 
 	uint32_t block_num = pstate.size() / 64;
