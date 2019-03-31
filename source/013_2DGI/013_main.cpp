@@ -226,12 +226,12 @@ int rigidbody()
 //	std::vector<const GI2DRigidbody*> rbs = { &rb0, &rb1, &rb2, &rb3, &rb4, &rb5, &rb6, &rb7, };
 //	std::vector<const GI2DRigidbody*> rbs = { &rb0, &rb4, };
 //	std::vector<const GI2DRigidbody*> rbs = { &rb1, };
-	for (int y = 0; y < 25; y++)
+	for (int y = 0; y < 20; y++)
 	{
 		for (int x = 0; x < 20; x++)
 		{
 //			rbs.push_back(new GI2DRigidbody(physics_world, uvec4(250 + y * 20, 200 + x * 24, 16, 16)));
-			physics_world->make(cmd, uvec4(250 + y * 24, 200 + x * 26, 16, 16));
+			physics_world->make(cmd, uvec4(250 + x * 24, 200 + y * 26, 16, 16));
 
 		}
 	}

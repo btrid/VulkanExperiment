@@ -188,7 +188,7 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 			pos[x + y * box.z].y = box.y + y;
 
 			pstate[x + y * box.z].contact_index = -1;
-			if (y == 0 || y == box.w - 1 || x == 0 || x == box.z - 1) 
+//			if (y == 0 || y == box.w - 1 || x == 0 || x == box.z - 1) 
 			{
 				pstate[x + y * box.z].contact_index = contact_index++;
 			}
@@ -269,7 +269,8 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 
 	rb.pos = center;
 	rb.pos_old = rb.pos;
-	rb.angle = 3.14f / 4.f + 0.2f;
+//	rb.angle = 3.14f / 4.f + 0.2f;
+	rb.angle = 0.f;
 	rb.angle_old = rb.angle;
 
 	rb.exclusion = ivec2(0);

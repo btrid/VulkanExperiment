@@ -13,7 +13,7 @@ shared Rigidbody s_rb;
 void main() 
 {
 	uint p_id = gl_WorkGroupID.x*RB_PARTICLE_BLOCK_SIZE + gl_LocalInvocationID.x;
-//	if(b_rbParticle[p_id].contact_index == -1){ return; }
+	if(b_rbParticle[p_id].contact_index == -1){ return; }
 
 	if(gl_LocalInvocationID.x == 0)
 	{

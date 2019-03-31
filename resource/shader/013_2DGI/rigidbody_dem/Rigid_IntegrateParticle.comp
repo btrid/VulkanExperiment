@@ -20,11 +20,12 @@ void main()
 		return;
 	}
 
-	float exclusion_angle = cross(vec3(b_rbParticle[p_id].local_pos, 0.), vec3(exclusion, 0.)).z;
 
 	uint r_id = b_rbParticle_map[gl_WorkGroupID.x];
 	atomicMax(b_rigidbody[r_id].exclusion.x, int(abs(round(exclusion.x * 32765.)))*2 + int(exclusion.x >= 0.));
 	atomicMax(b_rigidbody[r_id].exclusion.y, int(abs(round(exclusion.y * 32765.)))*2 + int(exclusion.y >= 0.));
+
+	float exclusion_angle = cross(vec3(b_rbParticle[p_id].local_pos, 0.), vec3(exclusion, 0.)).z;
 	atomicMax(b_rigidbody[r_id].exclusion_angle, int(abs(round(exclusion_angle * 65535.*127.)))*2 + int(exclusion_angle >= 0.));
 }
 

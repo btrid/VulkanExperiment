@@ -36,7 +36,7 @@ struct PhysicsWorld
 		uint step;
 		uint STEP;
 		uint rigidbody_num;
-		uint particle_block_num;
+//		uint particle_block_num;
 	};
 	struct Rigidbody
 	{
