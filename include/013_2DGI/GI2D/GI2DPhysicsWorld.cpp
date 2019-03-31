@@ -268,9 +268,11 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 	rb.size = ceil(size_max - size_min);
 
 	rb.pos = center;
+	rb.pos_predict = rb.pos;
 	rb.pos_old = rb.pos;
 //	rb.angle = 3.14f / 4.f + 0.2f;
 	rb.angle = 0.f;
+	rb.angle_predict = rb.angle;
 	rb.angle_old = rb.angle;
 
 	rb.exclusion = ivec2(0);

@@ -23,7 +23,7 @@ void main()
 
 	vec2 ex = vec2(exclusion/2)/(32765.) * (vec2(notEqual(exclusion & ivec2(1), ivec2(0)))*2. - 1.);
 	b_rigidbody[rbid].pos += ex;
-	float ex_a = float(exclusion_angle/2)/(65535.*127.) * float((exclusion_angle & 1) != 0)*2. - 1.;
+	float ex_a = float(exclusion_angle/2)/(65535.*127.) * (float((exclusion_angle & 1) != 0)*2. - 1.);
 	b_rigidbody[rbid].angle += ex_a / b_rigidbody[rbid].inertia;
 
 	b_rigidbody[rbid].exclusion = ivec2(0);

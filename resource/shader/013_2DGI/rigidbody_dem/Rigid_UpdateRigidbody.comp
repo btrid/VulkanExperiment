@@ -16,28 +16,29 @@ void main()
 	if(rbid >= b_world.rigidbody_num){ return; }
 
 	vec2 pos = b_rigidbody[rbid].pos;
+	vec2 pos_predict = b_rigidbody[rbid].pos_predict;
 	vec2 pos_old = b_rigidbody[rbid].pos_old;
 
 	float angle = b_rigidbody[rbid].angle;
+	float angle_predict = b_rigidbody[rbid].angle_predict;
 	float angle_old = b_rigidbody[rbid].angle_old;
 
-	vec2 vel = pos - pos_old;
-	float a_vel = angle - angle_old;
+	vec2 vel = pos - pos_old + (pos_predict - pos) * RB_DT;
+	float a_vel = angle - angle_old + (angle_predict - angle) * RB_DT;
 	if(b_rigidbody[rbid].is_exclusive != 0)
 	{
-		vel *= RB_DT;
-		a_vel *= RB_DT;
+//		vel *= RB_DT;
+//		a_vel *= RB_DT;
 		b_rigidbody[rbid].is_exclusive = 0;
 	}
 
 	b_rigidbody[rbid].pos_old = pos;
 	b_rigidbody[rbid].angle_old = angle;
 
-	pos += vel;
+	pos += vel + RB_GRAVITY_DT;
 	angle += a_vel;
-//	pos += vec2(0., 9.8)*RB_DT*RB_DT;
-	pos += RB_GRAVITY_DT;
 	b_rigidbody[rbid].pos = pos;
+	b_rigidbody[rbid].pos_predict = pos;
 	b_rigidbody[rbid].angle = angle;
-
+	b_rigidbody[rbid].angle_predict = angle;
 }

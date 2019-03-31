@@ -57,8 +57,12 @@ struct PhysicsWorld
 
 		int exclusion_angle;
 		int is_exclusive;
-		int _p1;
-		int _p2;
+		vec2 pos_predict;
+
+		float angle_predict;
+		float _p1;
+		float _p2;
+		float _p3;
 
 	};
 
