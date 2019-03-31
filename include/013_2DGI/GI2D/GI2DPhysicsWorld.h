@@ -92,7 +92,8 @@ struct PhysicsWorld
 	enum
 	{
 		RB_NUM = 1024,
-		RB_PARTICLE_NUM = RB_NUM * 64 * 16,
+		RB_PARTICLE_BLOCK_SIZE = 64,
+		RB_PARTICLE_NUM = RB_NUM * RB_PARTICLE_BLOCK_SIZE * 16,
 
 	};
 

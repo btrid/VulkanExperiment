@@ -16,7 +16,7 @@ void main()
 
 	vec2 pos = b_rbParticle[p_id].pos;
 	vec2 exclusion = pos - b_rbParticle[p_id].pos_predict;
-	if(dot(exclusion, exclusion) == 0.){
+	if(dot(exclusion, exclusion) <= 0.05){
 		return;
 	}
 

@@ -20,16 +20,15 @@ void main()
 	ivec2 index = ivec2(pos);
 	if(any(lessThan(index, ivec2(0))) || any(greaterThanEqual(index, u_gi2d_info.m_resolution.xy))){ return; }
 
-	rbFluid f;
-	f.id = b_rbParticle_map[gl_WorkGroupID.x];
-	f.mass = 1;
-	f.pos = pos;
-	f.sdf = b_rbParticle[p_id].local_sdf;
-
 	uint i = index.x+index.y*u_gi2d_info.m_resolution.x;
 	uint ii = atomicAdd(b_fluid_count[i], 1);
 	if(ii < FLUID_NUM)
 	{
+		rbFluid f;
+		f.id = b_rbParticle_map[gl_WorkGroupID.x];
+		f.mass = 1;
+		f.pos = pos;
+		f.sdf = b_rbParticle[p_id].local_sdf;
 		b_fluid[i*FLUID_NUM + ii] = f;
 	}
 }

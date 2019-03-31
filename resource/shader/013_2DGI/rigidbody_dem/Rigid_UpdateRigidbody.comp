@@ -35,7 +35,8 @@ void main()
 
 	pos += vel;
 	angle += a_vel;
-	pos += vec2(0., 9.8)*RB_DT*RB_DT;
+//	pos += vec2(0., 9.8)*RB_DT*RB_DT;
+	pos += RB_GRAVITY_DT;
 	b_rigidbody[rbid].pos = pos;
 	b_rigidbody[rbid].angle = angle;
 

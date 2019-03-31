@@ -117,7 +117,7 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 		b_world = m_context->m_storage_memory.allocateMemory<World>({ 1,{} });
 		b_rigidbody = m_context->m_storage_memory.allocateMemory<Rigidbody>({ RB_NUM,{} });
 		b_rbparticle = m_context->m_storage_memory.allocateMemory<rbParticle>({ RB_PARTICLE_NUM,{} });
-		b_rbparticle_map = m_context->m_storage_memory.allocateMemory<uint32_t>({ RB_PARTICLE_NUM / 64,{} });
+		b_rbparticle_map = m_context->m_storage_memory.allocateMemory<uint32_t>({ RB_PARTICLE_NUM / RB_PARTICLE_BLOCK_SIZE,{} });
 		b_fluid_counter = m_context->m_storage_memory.allocateMemory<uint32_t>({ gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
 		b_fluid = m_context->m_storage_memory.allocateMemory<rbFluid>({ 4 * gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
 
@@ -278,7 +278,7 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 	rb.is_exclusive = 0;
 	cmd.updateBuffer<Rigidbody>(b_rigidbody.getInfo().buffer, b_rigidbody.getInfo().offset + r_id * sizeof(Rigidbody), rb);
 
-	uint32_t block_num = pstate.size() / 64;
+	uint32_t block_num = pstate.size() / RB_PARTICLE_BLOCK_SIZE;
 	for (uint32_t i = 0; i < block_num; i++)
 	{
 		cmd.updateBuffer(b_rbparticle.getInfo().buffer, b_rbparticle.getInfo().offset + m_particle_id * sizeof(rbParticle) * 64, sizeof(rbParticle) * 64, &pstate[i * 64]);

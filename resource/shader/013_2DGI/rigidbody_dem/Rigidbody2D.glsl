@@ -5,8 +5,9 @@
 
 #define RB_PARTICLE_BLOCK_SIZE (64)
 #define FLUID_NUM (4)
-#define RB_DT (0.0016)
-
+#define RB_DT (0.016)
+// 0.016*0.016*9.8
+#define RB_GRAVITY_DT (vec2(0., 0.0025))
 struct rbWorld
 {
 	float DeltaTime;

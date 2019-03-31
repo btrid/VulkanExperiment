@@ -107,7 +107,7 @@ GI2DRigidbody_procedure::GI2DRigidbody_procedure(const std::shared_ptr<PhysicsWo
 void GI2DRigidbody_procedure::execute(vk::CommandBuffer cmd, const std::shared_ptr<PhysicsWorld>& world)
 {
 
-	for (int32_t i = 0; i < 10; i++)
+	for (int32_t i = 0; i < 1; i++)
 	{
 		executeMakeParticle(cmd, world);
 		{
