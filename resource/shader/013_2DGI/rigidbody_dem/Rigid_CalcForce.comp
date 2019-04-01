@@ -23,7 +23,7 @@ void main()
 	ivec4 map_index = ivec4(pos.xyxy) + ivec4(ivec2(0), step(vec2(0.5), pos-floor(pos)));
 	ivec4 findex = map_index.xzxz + map_index.yyww * u_gi2d_info.m_resolution.x;
 
-	bool ishit = false;
+	int hit = 0;
 	vec2 ex = vec2(0.);
 	for(uint i = 0; i < 4; i++)
 	{
@@ -47,18 +47,19 @@ void main()
 			}
 
 			vec2 sdf = b_fluid[index*FLUID_NUM + ii].sdf;
-//			vec2 sdf = b_fluid[index*FLUID_NUM + ii].sdf;
-//			ex += sdf;
-			pos += sdf;
-			ishit = true;
+//			sdf -= rela_pos;
+//			sdf = dot(normalize(sdf), normalize(rela_pos))*sdf;
+			ex += sdf;
+//			pos += sdf;
+			hit++;
 //			break;
 		}
 	}
 
-	if(ishit)
+	if(hit!=0)
 	{
-		b_rbParticle[p_id].pos = pos;
-//		b_rbParticle[p_id].pos += ex;
+//		b_rbParticle[p_id].pos = pos;
+		b_rbParticle[p_id].pos += ex / float(hit);
 	}
 }
 

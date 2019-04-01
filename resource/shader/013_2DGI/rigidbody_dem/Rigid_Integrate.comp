@@ -21,13 +21,21 @@ void main()
 		return;
 	}
 
-	vec2 ex = vec2(exclusion/2)/(32765.) * (vec2(notEqual(exclusion & ivec2(1), ivec2(0)))*2. - 1.);
-	b_rigidbody[rbid].pos += ex;
-	float ex_a = float(exclusion_angle/2)/(65535.*127.) * (float((exclusion_angle & 1) != 0)*2. - 1.);
-	b_rigidbody[rbid].angle += ex_a / b_rigidbody[rbid].inertia;
+	if(b_rigidbody[rbid].solver_count == 0)
+	{
+		return;
+	}
+
+//	vec2 ex = vec2(exclusion/2)/(32765.) * (vec2(notEqual(exclusion & ivec2(1), ivec2(0)))*2. - 1.);
+	vec2 ex = vec2(exclusion)/65535.;
+	b_rigidbody[rbid].pos += ex / float(b_rigidbody[rbid].solver_count);
+//	float ex_a = float(exclusion_angle/2)/(65535.*127.) * (float((exclusion_angle & 1) != 0)*2. - 1.);
+	float ex_a = float(exclusion_angle)/(65535.*255.);
+	b_rigidbody[rbid].angle += ex_a / b_rigidbody[rbid].inertia/ float(b_rigidbody[rbid].solver_count);
 
 	b_rigidbody[rbid].exclusion = ivec2(0);
 	b_rigidbody[rbid].exclusion_angle = 0;
 	b_rigidbody[rbid].is_exclusive = 1;
+	b_rigidbody[rbid].solver_count = 0;
 
 }
