@@ -50,7 +50,6 @@
 
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
-#pragma comment(lib, "FreeImage.lib")
 #pragma comment(lib, "vulkan-1.lib")
 #pragma comment(lib, "imgui.lib")
 
@@ -226,7 +225,7 @@ int rigidbody()
 //	std::vector<const GI2DRigidbody*> rbs = { &rb0, &rb1, &rb2, &rb3, &rb4, &rb5, &rb6, &rb7, };
 //	std::vector<const GI2DRigidbody*> rbs = { &rb0, &rb4, };
 //	std::vector<const GI2DRigidbody*> rbs = { &rb1, };
-	for (int y = 0; y < 1; y++)
+	for (int y = 0; y < 20; y++)
 	{
 		for (int x = 0; x < 20; x++)
 		{

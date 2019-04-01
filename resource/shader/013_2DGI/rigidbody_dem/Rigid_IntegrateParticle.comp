@@ -22,8 +22,6 @@ void main()
 
 
 	uint r_id = b_rbParticle_map[gl_WorkGroupID.x];
-//	atomicMax(b_rigidbody[r_id].exclusion.x, int(abs(round(exclusion.x * 32765.)))*2 + int(exclusion.x >= 0.));
-//	atomicMax(b_rigidbody[r_id].exclusion.y, int(abs(round(exclusion.y * 32765.)))*2 + int(exclusion.y >= 0.));
 	atomicAdd(b_rigidbody[r_id].exclusion.x, int(round(exclusion.x * 65535.)));
 	atomicAdd(b_rigidbody[r_id].exclusion.y, int(round(exclusion.y * 65535.)));
 

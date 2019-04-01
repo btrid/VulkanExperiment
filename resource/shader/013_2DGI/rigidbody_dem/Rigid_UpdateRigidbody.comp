@@ -25,12 +25,6 @@ void main()
 
 	vec2 vel = pos - pos_old + (pos_predict - pos) * RB_DT;
 	float a_vel = angle - angle_old + (angle_predict - angle) * RB_DT;
-	if(b_rigidbody[rbid].is_exclusive != 0)
-	{
-//		vel *= RB_DT;
-//		a_vel *= RB_DT;
-		b_rigidbody[rbid].is_exclusive = 0;
-	}
 
 	b_rigidbody[rbid].pos_old = pos;
 	b_rigidbody[rbid].angle_old = angle;

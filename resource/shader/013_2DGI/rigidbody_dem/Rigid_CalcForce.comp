@@ -45,8 +45,8 @@ void main()
 				// 
 				continue;
 			}
-
-			vec2 sdf = b_fluid[index*FLUID_NUM + ii].sdf;
+			float dist = length(rela_pos);
+			vec2 sdf = b_fluid[index*FLUID_NUM + ii].sdf * (k_radius*2.-dist) / (k_radius*2.);
 //			sdf -= rela_pos;
 //			sdf = dot(normalize(sdf), normalize(rela_pos))*sdf;
 			ex += sdf;

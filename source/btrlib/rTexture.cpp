@@ -3,11 +3,10 @@
 #include <memory>
 #include <functional>
 
-#define USE_FREEIMAGE
+//#define USE_FREEIMAGE
 //#define USE_DEVIL
 
 #ifdef USE_FREEIMAGE
-
 #include <FreeImage.h>
 
 struct Init
@@ -142,7 +141,7 @@ rTexture::Data rTexture::LoadTextureEx(const std::string& file, const LoadParam&
 }
 #else
 
-rTexture::Data rTexture::LoadTextureEx(const std::string& file, const LoadParam& param /*= LoadParam()*/)
+rTexture::Data rTexture::LoadTexture(const std::string& file, const LoadParam& param /*= LoadParam()*/)
 {
 	rTexture::Data data;
 	data.m_data.push_back(glm::vec4{ 1.f, 0.5f, 0.5f, 1.f });
