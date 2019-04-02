@@ -23,7 +23,7 @@ void main()
 	if(b_rbParticle[p_id].contact_index == -1){ return; }
 
 	vec2 pos = b_rbParticle[p_id].pos;
-	ivec4 map_index = ivec4(pos.xyxy) + ivec4(ivec2(0), step(vec2(0.5), pos-floor(pos) * 2. - 1.));
+	ivec4 map_index = ivec4(pos.xyxy) + ivec4(ivec2(0), step(vec2(0.5), pos-floor(pos)) * 2. - 1.);
 	ivec4 findex = map_index.xzxz + map_index.yyww * u_gi2d_info.m_resolution.x;
 
 	int hit = 0;
