@@ -33,8 +33,8 @@ void main()
 	if(any(lessThan(index, ivec2(0))) || any(greaterThanEqual(index, u_gi2d_info.m_resolution.xy))){ return; }
 
 	rbFluid f;
-	f.id = r_id;
-	f.mass = s_rb.mass;
+	f.r_id = r_id;
+	f.p_id = p_id;
 	f.pos = pos;
 	f.sdf = vec2(0.);
 

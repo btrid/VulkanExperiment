@@ -63,12 +63,18 @@ struct rbParticle
 
 struct rbFluid
 {
-	uint id;
-	float mass;
+	uint r_id;
+	uint p_id;
 	vec2 pos;
 
 	vec2 vel;
 	vec2 sdf;
+};
+
+struct rbConstraint
+{
+	uint f_id1;
+	uint f_id2;
 };
 
 layout(set=USE_Rigidbody2D, binding=0, std430) restrict buffer WorldData {
@@ -88,6 +94,12 @@ layout(set=USE_Rigidbody2D, binding=4, std430) restrict buffer rbFluidCounter {
 };
 layout(set=USE_Rigidbody2D, binding=5, std430) restrict buffer rbFluidData {
 	rbFluid b_fluid[];
+};
+layout(set=USE_Rigidbody2D, binding=6, std430) restrict buffer rbConstraintCounter {
+	uint b_constraint_counter;
+};
+layout(set=USE_Rigidbody2D, binding=7, std430) restrict buffer rbConstraintData {
+	rbConstraint b_constraint[];
 };
 
 #endif

@@ -34,7 +34,7 @@ void main()
 		uint count = min(b_fluid_count[index], FLUID_NUM);
 		for(uint ii = 0; ii < count; ii++)
 		{
-			if( b_fluid[index*FLUID_NUM + ii].r_id == r_id)
+			if( b_fluid[index*FLUID_NUM + ii].id == r_id)
 			{
 				// 自分とは判定しない
 				continue;

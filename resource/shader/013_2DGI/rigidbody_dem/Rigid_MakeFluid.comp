@@ -25,8 +25,8 @@ void main()
 	if(ii < FLUID_NUM)
 	{
 		rbFluid f;
-		f.id = b_rbParticle_map[gl_WorkGroupID.x];
-		f.mass = 1;
+		f.r_id = b_rbParticle_map[gl_WorkGroupID.x];
+		f.p_id = p_id;
 		f.pos = pos;
 		f.sdf = b_rbParticle[p_id].local_sdf;
 		b_fluid[i*FLUID_NUM + ii] = f;

@@ -18,8 +18,8 @@ void main()
 	}
 		
 	rbFluid f;
-	f.id = -1;
-	f.mass = 0.;
+	f.r_id = -1;
+	f.p_id = -1;
 	f.vel = vec2(0.);
 	f.pos = vec2(gl_GlobalInvocationID.xy) + vec2(0.5);
 	f.sdf = vec2(0., -1.);
