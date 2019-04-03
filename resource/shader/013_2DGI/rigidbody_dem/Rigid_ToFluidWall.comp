@@ -20,9 +20,11 @@ void main()
 	rbFluid f;
 	f.r_id = -1;
 	f.p_id = -1;
-	f.vel = vec2(0.);
 	f.pos = vec2(gl_GlobalInvocationID.xy) + vec2(0.5);
 	f.sdf = vec2(0., -1.);
+	f.mass = 1.;
+	f.move = ivec2(0);
+	f.integrate_flag = 0;
 
 	uint i = gl_GlobalInvocationID.x+gl_GlobalInvocationID.y*u_gi2d_info.m_resolution.x;
 	uint ii = atomicAdd(b_fluid_count[i], 1);

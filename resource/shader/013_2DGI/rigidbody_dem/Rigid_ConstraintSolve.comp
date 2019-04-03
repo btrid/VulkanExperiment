@@ -1,0 +1,50 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_Rigidbody2D 0
+#define USE_GI2D 1
+#include "GI2D.glsl"
+#include "Rigidbody2D.glsl"
+
+layout (local_size_x = 64) in;
+
+vec2 calcTangent(in vec2 I, in vec2 N)
+{
+	return I - N * dot(N, I);
+}
+
+const float k_radius = 0.5;
+const float k_delimiter = 1.;
+
+void main() 
+{
+	uint c_id = gl_GlobalInvocationID.x;
+	if(c_id >= b_constraint_counter.w){ return; }
+	rbConstraint constraint = b_constraint[c_id];
+
+	rbFluid f1 = b_fluid[constraint.f_id1];
+	rbFluid f2 = b_fluid[constraint.f_id2];
+
+	vec2 rela_pos = f1.pos - f2.pos;
+	if(dot(rela_pos, rela_pos) >= k_delimiter*k_delimiter)
+	{
+		return;
+	}
+
+	float mass = f1.mass + f2.mass;
+	if(f1.r_id != -1)
+	{
+		vec2 move1 = (f1.sdf - rela_pos) * (f1.mass / mass);
+		atomicAdd(b_fluid[constraint.f_id1].move.x, int(move1.x*65535.));
+		atomicAdd(b_fluid[constraint.f_id1].move.y, int(move1.y*65535.));
+	}
+	if(f2.r_id != -1)
+	{
+		vec2 move2 = (f2.sdf + rela_pos) * (f2.mass / mass);
+		atomicAdd(b_fluid[constraint.f_id2].move.x, int(move2.x*65535.));
+		atomicAdd(b_fluid[constraint.f_id2].move.y, int(move2.y*65535.));
+	}
+
+
+}
+

@@ -11,6 +11,10 @@ SET output=../../binary
 %exe% %include% %option% -o %output%/Rigid_ToFragment.comp.spv Rigid_ToFragment.comp
 rem %exe% %include% %option% -o %output%/Rigid_CollisionDetective.comp.spv Rigid_CollisionDetective.comp
 rem %exe% %include% %option% -o %output%/Rigid_CollisionDetectiveBefore.comp.spv Rigid_CollisionDetectiveBefore.comp
+%exe% %include% %option% -o %output%/Rigid_ConstraintMake.comp.spv Rigid_ConstraintMake.comp
+%exe% %include% %option% -o %output%/Rigid_ConstraintSolve.comp.spv Rigid_ConstraintSolve.comp
+%exe% %include% %option% -o %output%/Rigid_ConstraintIntegrate.comp.spv Rigid_ConstraintIntegrate.comp
+
 %exe% %include% %option% -o %output%/Rigid_CalcForce.comp.spv Rigid_CalcForce.comp
 %exe% %include% %option% -o %output%/Rigid_IntegrateParticle.comp.spv Rigid_IntegrateParticle.comp
 %exe% %include% %option% -o %output%/Rigid_Integrate.comp.spv Rigid_Integrate.comp

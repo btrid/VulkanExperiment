@@ -81,16 +81,28 @@ struct PhysicsWorld
 		uint is_contact;
 		uint r_id;
 		uint is_active;
+
+		uint f_id;
+		uint _p1;
+		uint _p2;
+		uint _p3;
 	};
 
 
 	struct rbFluid
 	{
-		uint id;
-		float mass;
+		uint r_id;
+		uint p_id;
 		vec2 pos;
-		vec2 vel;
+
+		vec2 local_pos;
 		vec2 sdf;
+
+		float mass;
+		uint _p1;
+		uint _p2;
+		uint _p3;
+
 	};
 
 	struct rbConstraint
@@ -129,7 +141,7 @@ struct PhysicsWorld
 	btr::BufferMemoryEx<uint32_t> b_rbparticle_map;
 	btr::BufferMemoryEx<uint32_t> b_fluid_counter;
 	btr::BufferMemoryEx<rbFluid> b_fluid;
-	btr::BufferMemoryEx<uint> b_constraint_counter;
+	btr::BufferMemoryEx<uvec4> b_constraint_counter;
 	btr::BufferMemoryEx<rbConstraint> b_constraint;
 
 	uint32_t m_rigidbody_id;

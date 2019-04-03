@@ -59,6 +59,11 @@ struct rbParticle
 	uint is_contact;
 	uint r_id;
 	uint is_active;
+
+	uint f_id;
+	uint _p1;
+	uint _p2;
+	uint _p3;
 };
 
 struct rbFluid
@@ -67,8 +72,12 @@ struct rbFluid
 	uint p_id;
 	vec2 pos;
 
-	vec2 vel;
+	vec2 local_pos;
 	vec2 sdf;
+
+	float mass;
+	uint integrate_flag;
+	ivec2 move;
 };
 
 struct rbConstraint
@@ -96,7 +105,7 @@ layout(set=USE_Rigidbody2D, binding=5, std430) restrict buffer rbFluidData {
 	rbFluid b_fluid[];
 };
 layout(set=USE_Rigidbody2D, binding=6, std430) restrict buffer rbConstraintCounter {
-	uint b_constraint_counter;
+	uvec4 b_constraint_counter;
 };
 layout(set=USE_Rigidbody2D, binding=7, std430) restrict buffer rbConstraintData {
 	rbConstraint b_constraint[];

@@ -30,6 +30,7 @@ void main()
 	b_rbParticle[p_id].pos_predict = pos;
 	b_rbParticle[p_id].local_pos = local_pos;
 	b_rbParticle[p_id].local_sdf = rotateRBParticle(b_rbParticle[p_id].sdf, s_rb.angle);
+	b_rbParticle[p_id].f_id = -1;
 
 }
 
