@@ -23,6 +23,7 @@ void main()
 
 	uint f_id = b_rbParticle[p_id].f_id;
 	uint r_id = b_rbParticle[p_id].r_id;
+	uint is_active = b_rbParticle[p_id].is_active;
 	vec2 pos = b_rbParticle[p_id].pos;
 	ivec4 map_index = ivec4(pos.xyxy) + ivec4(ivec2(0), step(vec2(0.5), pos-floor(pos)) * 2. - 1.);
 	ivec4 findex = map_index.xzxz + map_index.yyww * u_gi2d_info.m_resolution.x;
@@ -42,10 +43,12 @@ void main()
 				continue;
 			}
 
-			if(fj_id >= f_id)
+			if(is_active != 0 && b_fluid[fj_id].is_active != 0)
 			{
-				// 
-				continue;
+				if( fj_id >= f_id)
+				{
+//					continue;
+				}
 			}
 
 			uint c_index = atomicAdd(b_constraint_counter.w, 1);

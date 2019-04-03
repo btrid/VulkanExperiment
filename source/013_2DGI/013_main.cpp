@@ -219,7 +219,7 @@ int rigidbody()
 	{
 		for (int x = 0; x < 20; x++)
 		{
-			physics_world->make(cmd, uvec4(250 + x * 24, 200 + y * 26, 16, 16));
+			physics_world->make(cmd, uvec4(250 + x * 24, 820 - y * 26, 16, 16));
 
 		}
 	}

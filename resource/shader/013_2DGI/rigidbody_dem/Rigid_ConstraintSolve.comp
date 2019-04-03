@@ -34,13 +34,13 @@ void main()
 	float mass = f1.mass + f2.mass;
 	if(f1.r_id != -1)
 	{
-		vec2 move1 = (f1.sdf - rela_pos) * (f1.mass / mass);
+		vec2 move1 = (f2.sdf - rela_pos) * (f1.mass / mass);
 		atomicAdd(b_fluid[constraint.f_id1].move.x, int(move1.x*65535.));
 		atomicAdd(b_fluid[constraint.f_id1].move.y, int(move1.y*65535.));
 	}
 	if(f2.r_id != -1)
 	{
-		vec2 move2 = (f2.sdf + rela_pos) * (f2.mass / mass);
+		vec2 move2 = (f1.sdf + rela_pos) * (f2.mass / mass);
 		atomicAdd(b_fluid[constraint.f_id2].move.x, int(move2.x*65535.));
 		atomicAdd(b_fluid[constraint.f_id2].move.y, int(move2.y*65535.));
 	}

@@ -76,7 +76,7 @@ struct rbFluid
 	vec2 sdf;
 
 	float mass;
-	uint integrate_flag;
+	uint is_active;
 	ivec2 move;
 };
 

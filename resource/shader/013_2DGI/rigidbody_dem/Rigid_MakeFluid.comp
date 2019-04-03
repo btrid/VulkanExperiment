@@ -31,7 +31,8 @@ void main()
 		f.sdf = b_rbParticle[p_id].local_sdf;
 		f.mass = 1.;
 		f.move = ivec2(0);
-		f.integrate_flag = 0;
+//		f.is_active = b_rbParticle[p_id].is_active;
+		f.is_active = 1;
 
 		b_fluid[i*FLUID_NUM + ii] = f;
 		b_rbParticle[p_id].f_id = i*FLUID_NUM + ii;
