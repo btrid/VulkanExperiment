@@ -97,10 +97,15 @@ public:
 		assert(m_thread.empty());
 		m_thread.clear();
 		m_thread.resize(num);
+		if (initialize) {
+			InitParam param;
+			param.m_index = 0;
+			initialize(param);
+		}
 
 		for (int i = 0; i < num; i++)
 		{
-			m_thread[i] = std::thread([&, i]()
+			m_thread[i] = std::thread([=]()
 			{
 				if (initialize) {
 					InitParam param;
@@ -109,11 +114,6 @@ public:
 				}
 				this->work();
 			});
-		}
-		if (initialize) {
-			InitParam param;
-			param.m_index = 0;
-			initialize(param);
 		}
 		// ‰Šú‰»Š®—¹‚ğ‘Ò‚Â
 		wait();

@@ -215,22 +215,10 @@ int rigidbody()
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 	std::shared_ptr<GI2DFluid> gi2d_Fluid = std::make_shared<GI2DFluid>(context, gi2d_context);
 
-// 	GI2DRigidbody rb0(physics_world, uvec4(423, 806, 64, 4));
-// 	GI2DRigidbody rb1(physics_world, uvec4(393, 826, 16, 16));
-// 	GI2DRigidbody rb2(physics_world, uvec4(393, 796, 16, 16));
-// 	GI2DRigidbody rb3(physics_world, uvec4(443, 836, 16, 16));
-// 	GI2DRigidbody rb4(physics_world, uvec4(513, 716, 16, 16));
-// 	GI2DRigidbody rb5(physics_world, uvec4(473, 756, 16, 16));
-// 	GI2DRigidbody rb6(physics_world, uvec4(493, 736, 16, 16));
-// 	GI2DRigidbody rb7(physics_world, uvec4(383, 776, 16, 16));
-//	std::vector<const GI2DRigidbody*> rbs = { &rb0, &rb1, &rb2, &rb3, &rb4, &rb5, &rb6, &rb7, };
-//	std::vector<const GI2DRigidbody*> rbs = { &rb0, &rb4, };
-//	std::vector<const GI2DRigidbody*> rbs = { &rb1, };
-	for (int y = 0; y < 1; y++)
+	for (int y = 0; y < 20; y++)
 	{
 		for (int x = 0; x < 20; x++)
 		{
-//			rbs.push_back(new GI2DRigidbody(physics_world, uvec4(250 + y * 20, 200 + x * 24, 16, 16)));
 			physics_world->make(cmd, uvec4(250 + x * 24, 200 + y * 26, 16, 16));
 
 		}
