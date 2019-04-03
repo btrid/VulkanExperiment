@@ -17,6 +17,10 @@ GI2DRigidbody_procedure::GI2DRigidbody_procedure(const std::shared_ptr<PhysicsWo
 			"Rigid_Integrate.comp.spv",
 			"Rigid_UpdateRigidbody.comp.spv",
 
+			"Rigid_ConstraintMake.comp.spv",
+			"Rigid_ConstraintSolve.comp.spv",
+			"Rigid_ConstraintIntegrate.comp.spv",
+
 			"Rigid_ToFragment.comp.spv",
 
 		};
@@ -66,9 +70,18 @@ GI2DRigidbody_procedure::GI2DRigidbody_procedure(const std::shared_ptr<PhysicsWo
 		shader_info[5].setModule(m_shader[Shader_UpdateRigidbody].get());
 		shader_info[5].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[5].setPName("main");
-		shader_info[6].setModule(m_shader[Shader_ToFragment].get());
+		shader_info[6].setModule(m_shader[Shader_ConstraintMake].get());
 		shader_info[6].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[6].setPName("main");
+		shader_info[7].setModule(m_shader[Shader_ConstraintSolve].get());
+		shader_info[7].setStage(vk::ShaderStageFlagBits::eCompute);
+		shader_info[7].setPName("main");
+		shader_info[8].setModule(m_shader[Shader_ConstraintIntegrate].get());
+		shader_info[8].setStage(vk::ShaderStageFlagBits::eCompute);
+		shader_info[8].setPName("main");
+		shader_info[9].setModule(m_shader[Shader_ToFragment].get());
+		shader_info[9].setStage(vk::ShaderStageFlagBits::eCompute);
+		shader_info[9].setPName("main");
 		std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 		{
 			vk::ComputePipelineCreateInfo()
@@ -92,6 +105,15 @@ GI2DRigidbody_procedure::GI2DRigidbody_procedure(const std::shared_ptr<PhysicsWo
 			vk::ComputePipelineCreateInfo()
 			.setStage(shader_info[6])
 			.setLayout(m_pipeline_layout[PipelineLayout_Rigid].get()),
+			vk::ComputePipelineCreateInfo()
+			.setStage(shader_info[7])
+			.setLayout(m_pipeline_layout[PipelineLayout_Rigid].get()),
+			vk::ComputePipelineCreateInfo()
+			.setStage(shader_info[8])
+			.setLayout(m_pipeline_layout[PipelineLayout_Rigid].get()),
+			vk::ComputePipelineCreateInfo()
+			.setStage(shader_info[9])
+			.setLayout(m_pipeline_layout[PipelineLayout_Rigid].get()),
 		};
 		auto compute_pipeline = m_world->m_context->m_device->createComputePipelinesUnique(m_world->m_context->m_cache.get(), compute_pipeline_info);
 		m_pipeline[Pipeline_MakeParticle] = std::move(compute_pipeline[0]);
@@ -100,16 +122,37 @@ GI2DRigidbody_procedure::GI2DRigidbody_procedure(const std::shared_ptr<PhysicsWo
 		m_pipeline[Pipeline_IntegrateParticle] = std::move(compute_pipeline[3]);
 		m_pipeline[Pipeline_Integrate] = std::move(compute_pipeline[4]);
 		m_pipeline[Pipeline_UpdateRigidbody] = std::move(compute_pipeline[5]);
-		m_pipeline[Pipeline_ToFragment] = std::move(compute_pipeline[6]);
+		m_pipeline[Pipeline_ConstraintMake] = std::move(compute_pipeline[6]);
+		m_pipeline[Pipeline_ConstraintSolve] = std::move(compute_pipeline[7]);
+		m_pipeline[Pipeline_ConstraintIntegrate] = std::move(compute_pipeline[8]);
+		m_pipeline[Pipeline_ToFragment] = std::move(compute_pipeline[9]);
 	}
 
 }
 void GI2DRigidbody_procedure::execute(vk::CommandBuffer cmd, const std::shared_ptr<PhysicsWorld>& world)
 {
+	{
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Rigid].get(), 0, m_world->m_physics_world_desc.get(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Rigid].get(), 1, m_world->m_gi2d_context->getDescriptorSet(), {});
+
+		// 剛体をパーティクルにして離散化
+		vk::BufferMemoryBarrier to_read[] = {
+			world->b_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+			world->b_rbparticle.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+		};
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+			0, nullptr, array_length(to_read), to_read, 0, nullptr);
+
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeParticle].get());
+
+		auto num = app::calcDipatchGroups(uvec3(world->m_particle_id, 1, 1), uvec3(1, 1, 1));
+		cmd.dispatch(num.x, num.y, num.z);
+
+	}
 
 	for (int32_t i = 0; i < 1; i++)
 	{
-		executeMakeParticle(cmd, world);
+		executeMakeFluid(cmd, world);
 		{
 			vk::BufferMemoryBarrier to_read[] = {
 				world->b_fluid_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
@@ -185,7 +228,81 @@ void GI2DRigidbody_procedure::execute(vk::CommandBuffer cmd, const std::shared_p
 	}
 }
 
-void GI2DRigidbody_procedure::executeMakeParticle(vk::CommandBuffer cmd, const std::shared_ptr<PhysicsWorld>& world)
+void GI2DRigidbody_procedure::_executeConstraint(vk::CommandBuffer cmd, const std::shared_ptr<PhysicsWorld>& world)
+{
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Rigid].get(), 0, m_world->m_physics_world_desc.get(), {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Rigid].get(), 1, m_world->m_gi2d_context->getDescriptorSet(), {});
+
+	{
+		// 初期化
+		{
+			vk::BufferMemoryBarrier to_clear[] = {
+				world->b_constraint_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {},
+				0, nullptr, array_length(to_clear), to_clear, 0, nullptr);
+		}
+		cmd.updateBuffer<uvec4>(world->b_constraint_counter.getInfo().buffer, world->b_constraint_counter.getInfo().offset, uvec4(0, 1, 1, 0));
+	}
+
+
+	{
+		// 拘束生成
+		{
+			vk::BufferMemoryBarrier to_read[] = {
+				world->b_constraint_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {},
+				0, nullptr, array_length(to_read), to_read, 0, nullptr);
+		}
+
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_ConstraintMake].get());
+
+		auto num = app::calcDipatchGroups(uvec3(world->m_particle_id, 1, 1), uvec3(1, 1, 1));
+		cmd.dispatch(num.x, num.y, num.z);
+	}
+	{
+		// 拘束解く
+		{
+			vk::BufferMemoryBarrier to_read[] = {
+				world->b_constraint_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
+				world->b_constraint.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader | vk::PipelineStageFlagBits::eDrawIndirect, {},
+				0, nullptr, array_length(to_read), to_read, 0, nullptr);
+		}
+
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_ConstraintSolve].get());
+
+		cmd.dispatchIndirect(world->b_constraint_counter.getInfo().buffer, world->b_constraint_counter.getInfo().offset);
+	}
+	{
+		// 解いたものを統合
+		{
+			vk::BufferMemoryBarrier to_read[] = {
+				world->b_fluid.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+				0, nullptr, array_length(to_read), to_read, 0, nullptr);
+		}
+
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_ConstraintIntegrate].get());
+
+		auto num = app::calcDipatchGroups(uvec3(world->m_particle_id, 1, 1), uvec3(1, 1, 1));
+		cmd.dispatch(num.x, num.y, num.z);
+	}
+
+	{
+		vk::BufferMemoryBarrier to_read[] = {
+			world->b_rbparticle.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+		};
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+			0, nullptr, array_length(to_read), to_read, 0, nullptr);
+	}
+
+}
+
+void GI2DRigidbody_procedure::executeMakeFluid(vk::CommandBuffer cmd, const std::shared_ptr<PhysicsWorld>& world)
 {
 
 	m_world->execute(cmd);
@@ -193,21 +310,6 @@ void GI2DRigidbody_procedure::executeMakeParticle(vk::CommandBuffer cmd, const s
 
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Rigid].get(), 0, m_world->m_physics_world_desc.get(), {});
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Rigid].get(), 1, m_world->m_gi2d_context->getDescriptorSet(), {});
-	{
-		// 剛体をパーティクルにして離散化
-		vk::BufferMemoryBarrier to_read[] = {
-			world->b_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
-			world->b_rbparticle.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
-		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
-			0, nullptr, array_length(to_read), to_read, 0, nullptr);
-
-		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeParticle].get());
-
-		auto num = app::calcDipatchGroups(uvec3(world->m_particle_id, 1, 1), uvec3(1, 1, 1));
-		cmd.dispatch(num.x, num.y, num.z);
-
-	}
 
 	{
 		// 衝突判定用
