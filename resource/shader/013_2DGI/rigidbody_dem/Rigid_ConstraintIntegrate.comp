@@ -16,6 +16,9 @@ void main()
 
 	vec2 move = b_fluid[b_rbParticle[p_id].f_id].move / vec2(65535.) / b_fluid[b_rbParticle[p_id].f_id].solver_count;
 	b_rbParticle[p_id].pos += move;
+	b_fluid[b_rbParticle[p_id].f_id].pos = b_rbParticle[p_id].pos;
+	b_fluid[b_rbParticle[p_id].f_id].move = ivec2(0);
+	b_fluid[b_rbParticle[p_id].f_id].solver_count = 0;
 
 }
 

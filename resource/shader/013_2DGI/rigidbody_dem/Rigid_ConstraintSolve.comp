@@ -25,16 +25,12 @@ void main()
 	rbFluid f1 = b_fluid[constraint.f_id1];
 	rbFluid f2 = b_fluid[constraint.f_id2];
 
-	vec2 rela_pos = f1.pos - f2.pos;
-	if(dot(rela_pos, rela_pos) >= k_delimiter*k_delimiter)
-	{
-		return;
-	}
-
 	float mass = f1.mass + f2.mass;
 	if(f1.r_id != -1)
 	{
-		vec2 move1 = (f2.sdf - rela_pos) * (f1.mass / mass);
+		vec2 collect_vec = f2.pos + f2.sdf - f1.pos;
+		vec2 move1 = dot(collect_vec, normalize(f2.sdf)) * normalize(f2.sdf);
+		move1 *= (f1.mass / mass);
 		atomicAdd(b_fluid[constraint.f_id1].move.x, int(move1.x*65535.));
 		atomicAdd(b_fluid[constraint.f_id1].move.y, int(move1.y*65535.));
 		atomicAdd(b_fluid[constraint.f_id1].solver_count, 1);
@@ -42,7 +38,9 @@ void main()
 	}
 	if(f2.r_id != -1)
 	{
-		vec2 move2 = (f1.sdf + rela_pos) * (f2.mass / mass);
+		vec2 collect_vec = f1.pos + f1.sdf - f2.pos;
+		vec2 move2 = dot(collect_vec, normalize(f1.sdf)) * normalize(f1.sdf);
+		move2 *= (f2.mass / mass);
 		atomicAdd(b_fluid[constraint.f_id2].move.x, int(move2.x*65535.));
 		atomicAdd(b_fluid[constraint.f_id2].move.y, int(move2.y*65535.));
 		atomicAdd(b_fluid[constraint.f_id2].solver_count, 1);

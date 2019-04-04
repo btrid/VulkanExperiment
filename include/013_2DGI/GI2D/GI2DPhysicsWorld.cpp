@@ -129,7 +129,7 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 		b_rbparticle = m_context->m_storage_memory.allocateMemory<rbParticle>({ RB_PARTICLE_NUM,{} });
 		b_rbparticle_map = m_context->m_storage_memory.allocateMemory<uint32_t>({ RB_PARTICLE_NUM / RB_PARTICLE_BLOCK_SIZE,{} });
 		b_fluid_counter = m_context->m_storage_memory.allocateMemory<uint32_t>({ gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
-		b_fluid = m_context->m_storage_memory.allocateMemory<rbFluid>({ 4 * gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
+		b_fluid = m_context->m_storage_memory.allocateMemory<rbFluid>({ 8 * gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
 		b_constraint_counter = m_context->m_storage_memory.allocateMemory<uvec4>({ 1,{} });
 		b_constraint = m_context->m_storage_memory.allocateMemory<rbConstraint>({ RB_PARTICLE_NUM,{} });
 

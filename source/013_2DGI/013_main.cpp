@@ -186,8 +186,32 @@ vec2 calcTangent(const vec2& I, const vec2& N)
 	return I - N * dot(N, I);
 }
 
+void y(vec2 p1, vec2 p2, vec2 sdf)
+{
+// 	vec2 p1 = vec2(10.f);
+// 	vec2 p2 = vec2(11.f);
+// 	vec2 sdf = vec2(0.f, -1.f);
+	vec2 a = p1 + sdf - p2;
+	auto c1 = dot(a, normalize(sdf)) * normalize(sdf);
+	vec2 collect = p1 + sdf;
+	vec2 predict = p2 + c1;
+
+	printf("p1={%5.2f,%5.2f} p2={%5.2f,%5.2f} sdf={%5.2f,%5.2f}\n", p1.x, p1.y, p2.x, p2.y, sdf.x, sdf.y);
+	printf("c ={%5.2f,%5.2f} p ={%5.2f,%5.2f}\n", collect.x, collect.y, predict.x, predict.y);
+}
 int rigidbody()
 {
+// 	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(-1.f, 0.f));
+// 	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(-1.f, 0.f));
+// 	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(-1.f, 0.f));
+// 	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(0.f, -1.f));
+// 	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(0.f, -1.f));
+// 	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(2.f, 0.f));
+// 	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(2.f, 0.f));
+// 	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(2.f, 0.f));
+// 	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(0.f, 1.f));
+// 	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(0.f, 2.f));
+
 	auto p = calcTangent(vec2(1.f, 1.0f), vec2(0.f, -1.0f));
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
@@ -219,7 +243,7 @@ int rigidbody()
 	{
 		for (int x = 0; x < 20; x++)
 		{
-			physics_world->make(cmd, uvec4(250 + x * 24, 820 - y * 26, 16, 16));
+			physics_world->make(cmd, uvec4(250 + x * 34, 870 - y * 18, 16, 16));
 
 		}
 	}
