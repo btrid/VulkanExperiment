@@ -283,7 +283,7 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 
 	rb.pos = center;
 	rb.pos_predict = rb.pos;
-	rb.pos_old = rb.pos;
+	rb.pos_old = rb.pos - vec2(0.f, 0.5f);
 //	rb.angle = 3.14f / 4.f + 0.2f;
 	rb.angle = 0.f;
 	rb.angle_predict = rb.angle;

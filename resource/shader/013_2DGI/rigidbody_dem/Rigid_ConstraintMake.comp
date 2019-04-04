@@ -49,7 +49,6 @@ void main()
 				continue;
 			}
 
-
 			if(is_active != 0 && b_fluid[fj_id].is_active != 0)
 			{
 				if( fj_id >= f_id)
