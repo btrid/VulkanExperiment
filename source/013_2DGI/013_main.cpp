@@ -212,6 +212,10 @@ int rigidbody()
 // 	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(0.f, 1.f));
 // 	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(0.f, 2.f));
 
+	auto a = cross(vec3(1.f, 0.f, 0.f), vec3(1.f, 0.f, 0.f));
+	auto b = cross(vec3(1.f, 0.f, 0.f), vec3(0.f, 1.f, 0.f));
+	auto b1 = cross(vec3(0.f, 1.f, 0.f), vec3(0.f, 1.f, 0.f));
+	auto b2 = cross(vec3(0.f, 1.f, 0.f), vec3(0.f, -1.f, 0.f));
 	auto p = calcTangent(vec2(1.f, 1.0f), vec2(0.f, -1.0f));
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
@@ -243,7 +247,7 @@ int rigidbody()
 	{
 		for (int x = 0; x < 20; x++)
 		{
-			physics_world->make(cmd, uvec4(250 + x * 34, 870 - y * 18, 16, 16));
+			physics_world->make(cmd, uvec4(250 + x * 16, 870 - y * 18, 16, 16));
 
 		}
 	}
@@ -268,6 +272,7 @@ int rigidbody()
 			std::vector<vk::CommandBuffer> cmds(cmd_num);
 
 			{
+
 			}
 
 			{
@@ -285,6 +290,11 @@ int rigidbody()
 			// gi2d
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
+				if (context->m_window->getInput().m_keyboard.isOn('A'))
+				{
+					physics_world->make(cmd, uvec4(255, 500, 24, 24));
+				}
+
 				gi2d_context->execute(cmd);
 				gi2d_clear.execute(cmd);
 				gi2d_debug.executeMakeFragmentMap(cmd);

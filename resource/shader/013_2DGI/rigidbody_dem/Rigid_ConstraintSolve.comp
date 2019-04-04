@@ -25,7 +25,8 @@ void main()
 	rbFluid f1 = b_fluid[constraint.f_id1];
 	rbFluid f2 = b_fluid[constraint.f_id2];
 
-	float w = dot(-normalize(f1.sdf), normalize(f2.sdf));
+	float w = max(dot(-normalize(f1.sdf), normalize(f2.sdf)), 0.);
+//	float w = abs(cross(vec3(normalize(f1.sdf), 0.), vec3(normalize(f2.sdf), 0.)).z);
 	float mass = f1.mass + f2.mass;
 	if(f1.r_id != -1)
 	{
@@ -46,7 +47,5 @@ void main()
 		atomicAdd(b_fluid[constraint.f_id2].move.y, int(move2.y*65535.));
 		atomicAdd(b_fluid[constraint.f_id2].solver_count, 1);
 	}
-
-
 }
 
