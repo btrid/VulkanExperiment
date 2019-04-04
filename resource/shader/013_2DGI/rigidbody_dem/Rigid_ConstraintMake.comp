@@ -43,11 +43,18 @@ void main()
 				continue;
 			}
 
+			vec2 rela_pos = pos - b_fluid[fj_id].pos;
+			if(dot(rela_pos, rela_pos) >= k_delimiter*k_delimiter)
+			{
+				continue;
+			}
+
+
 			if(is_active != 0 && b_fluid[fj_id].is_active != 0)
 			{
 				if( fj_id >= f_id)
 				{
-//					continue;
+					continue;
 				}
 			}
 

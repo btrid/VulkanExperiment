@@ -72,7 +72,8 @@ struct rbFluid
 	uint p_id;
 	vec2 pos;
 
-	vec2 local_pos;
+	uint solver_count;
+	uint _p1;
 	vec2 sdf;
 
 	float mass;

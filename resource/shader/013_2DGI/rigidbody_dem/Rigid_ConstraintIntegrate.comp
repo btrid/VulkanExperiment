@@ -12,9 +12,9 @@ void main()
 {
 	uint p_id = gl_WorkGroupID.x*RB_PARTICLE_BLOCK_SIZE + gl_LocalInvocationID.x;
 	if(b_rbParticle[p_id].contact_index == -1){ return; }
+	if(b_fluid[b_rbParticle[p_id].f_id].solver_count == 0){ return;}
 
-	vec2 move = b_fluid[b_rbParticle[p_id].f_id].move / vec2(65535.);
-
+	vec2 move = b_fluid[b_rbParticle[p_id].f_id].move / vec2(65535.) / b_fluid[b_rbParticle[p_id].f_id].solver_count;
 	b_rbParticle[p_id].pos += move;
 
 }

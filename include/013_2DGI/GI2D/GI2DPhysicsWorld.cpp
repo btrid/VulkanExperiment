@@ -131,7 +131,7 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 		b_fluid_counter = m_context->m_storage_memory.allocateMemory<uint32_t>({ gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
 		b_fluid = m_context->m_storage_memory.allocateMemory<rbFluid>({ 4 * gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
 		b_constraint_counter = m_context->m_storage_memory.allocateMemory<uvec4>({ 1,{} });
-		b_constraint = m_context->m_storage_memory.allocateMemory<rbConstraint>({ RB_PARTICLE_NUM / 64,{} });
+		b_constraint = m_context->m_storage_memory.allocateMemory<rbConstraint>({ RB_PARTICLE_NUM,{} });
 
 		{
 			vk::DescriptorSetLayout layouts[] = {
