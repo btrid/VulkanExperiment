@@ -198,8 +198,8 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 	{
 		for (uint32_t x = 0; x < box.z; x++)
 		{
-			pos[x + y * box.z].x = box.x + x;
-			pos[x + y * box.z].y = box.y + y;
+			pos[x + y * box.z].x = box.x + x + 0.5f;
+			pos[x + y * box.z].y = box.y + y + 0.5f;
 
 			pstate[x + y * box.z].contact_index = -1;
 //			if (y == 0 || y == box.w - 1 || x == 0 || x == box.z - 1) 

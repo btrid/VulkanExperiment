@@ -8,6 +8,10 @@
 #define RB_DT (0.016)
 // 0.016*0.016*9.8
 #define RB_GRAVITY_DT (vec2(0., 0.0025))
+
+
+#define k_radius (0.5)
+#define k_delimiter (1.)
 struct rbWorld
 {
 	float DeltaTime;
