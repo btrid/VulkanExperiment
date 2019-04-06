@@ -1,0 +1,21 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_Rigidbody2D 0
+#define USE_GI2D 1
+#include "GI2D.glsl"
+#include "Rigidbody2D.glsl"
+
+layout (local_size_x = 1) in;
+
+void main() 
+{
+	uint rbid = gl_GlobalInvocationID.x;
+	if(rbid >= b_world.rigidbody_num){ return; }
+
+	b_rigidbody[rbid].cm = b_rigidbody[rbid].cm_integral / 255. + b_rigidbody[rbid].cm_decimal / 1024.;
+	b_rigidbody[rbid].cm /= b_rigidbody[rbid].pnum;
+	b_rigidbody[rbid].cm_integral = ivec2(0);
+	b_rigidbody[rbid].cm_decimal = ivec2(0);
+
+}

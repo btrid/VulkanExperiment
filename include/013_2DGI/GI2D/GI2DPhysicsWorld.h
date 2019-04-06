@@ -64,6 +64,11 @@ struct PhysicsWorld
 		float _p2;
 		float _p3;
 
+		// q == local_pos
+		// p == current_local_pos
+		vec4 Aqq;
+		vec4 Apq;
+		mat2 Aqq_inv;
 	};
 
 	struct rbParticle

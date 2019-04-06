@@ -258,7 +258,7 @@ int rigidbody()
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 	std::shared_ptr<GI2DFluid> gi2d_Fluid = std::make_shared<GI2DFluid>(context, gi2d_context);
 
-	for (int y = 0; y < 20; y++)
+	for (int y = 0; y < 2; y++)
 	{
 		for (int x = 0; x < 20; x++)
 		{

@@ -210,6 +210,7 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 			pstate[x + y * box.z].is_active = true;
 		}
 	}
+
 	for (int32_t i = 0; i < particle_num; i++)
 	{
 		center += pos[i];
@@ -235,6 +236,7 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 			inertia += dot(pstate[i].relative_pos, pstate[i].relative_pos) /** mass*/;
 		}
 	}
+	inertia /= 12.f;
 
 	auto p = pstate[0].relative_pos;
 	vec2 v = vec2(9999999.f);
@@ -242,9 +244,15 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 	auto f = [&](const vec2& n)
 	{
 		auto sq = dot(p - n, p - n);
-		if (sq < distsq) {
+		if (sq < distsq) 
+		{
 			distsq = sq;
 			v = n - p;
+		}
+		else if (sq - FLT_EPSILON < distsq)
+		{
+			v += n - p;
+			v = normalize(v);
 		}
 	};
 	for (uint32_t i = 0; i < particle_num; i++)
@@ -271,7 +279,13 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 		pstate[i].sdf = v;
 	}
 
-	inertia /= 12.f;
+	rb.Aqq = vec4(0.f);
+	for (uint32_t i = 0; i < particle_num; i++)
+	{
+		auto& q = pstate[i].relative_pos;
+		rb.Aqq += q.xxyy() * q.xyxy();
+	}
+	rb.Aqq_inv = inverse(mat2(rb.Aqq.xy(), rb.Aqq.zw()));
 
 	rb.pnum = particle_num;
 	rb.solver_count = 0;

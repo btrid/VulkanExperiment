@@ -45,8 +45,21 @@ struct Rigidbody
 
 	float angle_predict;
 	float _p1;
-	float _p2;
-	float _p3;
+	vec2 cm;
+
+	mat2 Aqq;
+	mat2 Apq;
+	mat2 Aqq_inv;
+
+	mat2 R;
+	mat2 S;
+
+	ivec2 cm_integral;
+	ivec2 cm_decimal;
+
+	ivec4 Apq_integral;
+	ivec4 Apq_decimal;
+
 };
 
 struct rbParticle
@@ -67,8 +80,7 @@ struct rbParticle
 
 	uint f_id;
 	uint _p1;
-	uint _p2;
-	uint _p3;
+	vec2 pos_old;
 };
 
 struct rbFluid
