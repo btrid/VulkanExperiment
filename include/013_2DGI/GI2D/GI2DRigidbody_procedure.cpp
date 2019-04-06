@@ -190,7 +190,7 @@ void GI2DRigidbody_procedure::execute(vk::CommandBuffer cmd, const std::shared_p
 		cmd.dispatch(num.x, num.y, num.z);
 	}
 
-	for (int32_t i = 0; i < 1; i++)
+	for (int32_t i = 0; i < 10; i++)
 	{
 
 		_executeConstraint(cmd, world);

@@ -225,6 +225,7 @@ int rigidbody()
 // 	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(0.f, 1.f));
 //	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(0.f, 2.f));
 //	y(vec2(20), vec2(20), vec2(1.f, -1.f), vec2(1.f, 1.f));
+	y(vec2(0), vec2(1, 0), vec2(0.f, 1.f), vec2(0.f, -1.f));
 
 	auto a = cross(vec3(1.f, 0.f, 0.f), vec3(1.f, 0.f, 0.f));
 	auto b = cross(vec3(1.f, 0.f, 0.f), vec3(0.f, 1.f, 0.f));
@@ -257,11 +258,11 @@ int rigidbody()
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 	std::shared_ptr<GI2DFluid> gi2d_Fluid = std::make_shared<GI2DFluid>(context, gi2d_context);
 
-	for (int y = 0; y < 2; y++)
+	for (int y = 0; y < 20; y++)
 	{
 		for (int x = 0; x < 20; x++)
 		{
-			physics_world->make(cmd, uvec4(250 + x * 16, 870 - y * 16, 16, 16));
+			physics_world->make(cmd, uvec4(250 + x * 16, 880 - y * 24, 16, 16));
 
 		}
 	}

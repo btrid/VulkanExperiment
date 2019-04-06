@@ -25,7 +25,6 @@ void main()
 	{
 		return;
 	}
-
 	vec2 ex = vec2(exclusion)/65535.;
 	b_rigidbody[rbid].pos += ex / float(b_rigidbody[rbid].solver_count);
 	float ex_a = float(exclusion_angle)/(65535.*255.);

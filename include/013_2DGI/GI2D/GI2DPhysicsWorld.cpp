@@ -253,10 +253,10 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 		v = vec2(9999999.f);
 		distsq = 9999999999999.f;
 
-		f(vec2(size_max.x + 1.f, p.y));
-		f(vec2(size_min.x - 1.f, p.y));
 		f(vec2(p.x, size_max.y + 1.f));
 		f(vec2(p.x, size_min.y - 1.f));
+		f(vec2(size_max.x + 1.f, p.y));
+		f(vec2(size_min.x - 1.f, p.y));
 
 // 		for (uint32_t y = 0; y < box.w; y++)
 // 		{
@@ -283,8 +283,9 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 
 	rb.pos = center;
 	rb.pos_predict = rb.pos;
-	rb.pos_old = rb.pos - vec2(0.f, 0.5f);
-//	rb.angle = 3.14f / 4.f + 0.2f;
+//	rb.pos_old = rb.pos - vec2(0.f, 0.5f);
+	rb.pos_old = rb.pos;
+	//	rb.angle = 3.14f / 4.f + 0.2f;
 	rb.angle = 0.f;
 	rb.angle_predict = rb.angle;
 	rb.angle_old = rb.angle;

@@ -24,7 +24,7 @@ void main()
 	{
 		vec2 collect_vec = f2.pos + f2.sdf - f1.pos;
 		vec2 move1 = dot(collect_vec, normalize(f2.sdf)) * normalize(f2.sdf);
-//		move1 *= (f1.mass / mass) * w;
+		move1 *= (f1.mass / mass) * w;
 		ivec2 movei = ivec2(trunc(move1 * 65535.));
 		atomicAdd(b_fluid[constraint.f_id1].move.x, movei.x);
 		atomicAdd(b_fluid[constraint.f_id1].move.y, movei.y);
@@ -35,7 +35,7 @@ void main()
 	{
 		vec2 collect_vec = f1.pos + f1.sdf - f2.pos;
 		vec2 move2 = dot(collect_vec, normalize(f1.sdf)) * normalize(f1.sdf);
-//		move2 *= (f2.mass / mass) * w;
+		move2 *= (f2.mass / mass) * w;
 		ivec2 movei = ivec2(trunc(move2 * 65535.));
 		atomicAdd(b_fluid[constraint.f_id2].move.x, movei.x);
 		atomicAdd(b_fluid[constraint.f_id2].move.y, movei.y);
