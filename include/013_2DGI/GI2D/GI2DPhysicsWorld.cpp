@@ -319,10 +319,8 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 	rb.angle = 0.f;
 	rb.angle_predict = rb.angle;
 	rb.angle_old = rb.angle;
-	rb.cm_integral = ivec2(0);
-	rb.cm_decimal = ivec2(0);
-	rb.Apq_integral = ivec4(0);
-	rb.Apq_decimal = ivec4(0);
+	rb.cm_work = ivec2(0);
+	rb.Apq_work= ivec4(0);
 
 	rb.exclusion = ivec2(0);
 	rb.exclusion_angle = 0;

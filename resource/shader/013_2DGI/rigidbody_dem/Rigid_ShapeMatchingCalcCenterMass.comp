@@ -13,11 +13,9 @@ void main()
 	uint rbid = gl_GlobalInvocationID.x;
 	if(rbid >= b_world.rigidbody_num){ return; }
 
-	vec2 cm = b_rigidbody[rbid].cm_integral / 65535.;// + b_rigidbody[rbid].cm_decimal / 65535.;
-//	cm = trunc(cm / b_rigidbody[rbid].pnum);
+	vec2 cm = b_rigidbody[rbid].cm_work / 65535.;
 	b_rigidbody[rbid].cm = cm;
 
-	b_rigidbody[rbid].cm_integral = ivec2(0);
-	b_rigidbody[rbid].cm_decimal = ivec2(0);
+	b_rigidbody[rbid].cm_work = ivec2(0);
 
 }
