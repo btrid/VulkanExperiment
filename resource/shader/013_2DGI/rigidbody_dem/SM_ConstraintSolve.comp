@@ -14,9 +14,9 @@ void main()
 	uint p_id = gl_WorkGroupID.x*RB_PARTICLE_BLOCK_SIZE + gl_LocalInvocationID.x;
 	if(b_rbParticle[p_id].contact_index == -1){ return; }
 
-	uint f_id = b_rbParticle[p_id].f_id;
-	uint r_id = b_rbParticle[p_id].r_id;
-	uint is_active = b_rbParticle[p_id].is_active;
+//	uint f_id = b_rbParticle[p_id].f_id;
+	uint r_id = b_rbParticle_map[gl_WorkGroupID.x];
+//	uint is_active = b_rbParticle[p_id].is_active;
 	vec2 pos = b_rbParticle[p_id].pos;
 	vec2 sdf = b_rbParticle[p_id].local_sdf;
 	ivec4 map_index = ivec4(pos.xyxy) + ivec4(ivec2(0), step(vec2(0.5), pos-floor(pos)) * 2. - 1.);
@@ -38,8 +38,9 @@ void main()
 			}
 
 			vec2 pos_j = b_fluid[fj_id].pos;
-			vec2 rela_pos = pos - pos_j;
-			if(dot(rela_pos, rela_pos) > k_delimiter*k_delimiter)
+			vec2 rela_pos = pos_j - pos;
+			float distsq = dot(rela_pos, rela_pos);
+			if(distsq >= k_delimiter*k_delimiter)
 			{
 				continue;
 			}
@@ -49,12 +50,19 @@ void main()
 			float w = max(dot(-normalize(sdf), normalize(sdf_j)), 0.);
 			float total_mass = mass + mass_j;
 			{
-				vec2 collect_vec = pos_j + sdf_j - pos;
-				move += dot(collect_vec, normalize(sdf_j)) * normalize(sdf_j) * ((mass /total_mass) * w);
+//				vec2 collect_vec = (abs(distsq) <= 0.1 ? vec2(0.) : normalize(rela_pos)) + sdf_j;
+//				move += dot(collect_vec, normalize(sdf_j)) * normalize(sdf_j) * ((mass /total_mass) * w);
+				move += sdf_j  * ((mass /total_mass) * w);
 			}
 		}
 	}
 
-	b_rbParticle[p_id].pos += move;
+	pos += move;
+	b_rbParticle[p_id].pos = pos;
+	ivec2 pos_integer = ivec2(round(pos * 65535. / b_rigidbody[r_id].pnum));
+	atomicAdd(b_rigidbody[r_id].cm_work.x, pos_integer.x);
+	atomicAdd(b_rigidbody[r_id].cm_work.y, pos_integer.y);
+
+
 }
 

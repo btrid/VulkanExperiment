@@ -98,22 +98,21 @@ struct PhysicsWorld
 		vec2 pos_old;
 	};
 
-
 	struct rbFluid
 	{
 		uint r_id;
 		uint p_id;
 		vec2 pos;
 
-		vec2 local_pos;
+		uint solver_count;
+		uint _p1;
 		vec2 sdf;
 
 		float mass;
-		uint _p1;
-		uint _p2;
-		uint _p3;
-
+		uint is_active;
+		ivec2 move;
 	};
+
 
 	struct rbConstraint
 	{

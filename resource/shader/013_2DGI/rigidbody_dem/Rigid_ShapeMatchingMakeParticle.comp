@@ -21,7 +21,7 @@ void main()
 	vec2 pos_predict = b_rbParticle[p_id].pos_predict;
 
 	vec2 vel = pos - pos_old + RB_GRAVITY_DT;
-//	vel += pos - pos_predict;
+//	vel += (pos - pos_predict) * RB_DT;
 
 	b_rbParticle[p_id].pos_old = pos;
 	pos += vel;
@@ -30,9 +30,9 @@ void main()
 	b_rbParticle[p_id].f_id = -1;
 	b_rbParticle[p_id].is_contact = 0;
 
-	ivec2 pos_integer = ivec2(round(pos / b_rigidbody[r_id].pnum * 65535.));
-	atomicAdd(b_rigidbody[r_id].cm_work.x, pos_integer.x);
-	atomicAdd(b_rigidbody[r_id].cm_work.y, pos_integer.y);
+//	ivec2 pos_integer = ivec2(round(pos / b_rigidbody[r_id].pnum * 65535.));
+//	atomicAdd(b_rigidbody[r_id].cm_work.x, pos_integer.x);
+//	atomicAdd(b_rigidbody[r_id].cm_work.y, pos_integer.y);
 
 
 }
