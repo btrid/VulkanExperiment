@@ -17,6 +17,7 @@ void main()
 	uint r_id = b_rbParticle_map[gl_WorkGroupID.x];
 
 	b_rbParticle[p_id].pos = b_rigidbody[r_id].R * b_rbParticle[p_id].relative_pos + b_rigidbody[r_id].cm;
+	b_rbParticle[p_id].local_sdf = b_rigidbody[r_id].R * b_rbParticle[p_id].sdf;
 
 }
 

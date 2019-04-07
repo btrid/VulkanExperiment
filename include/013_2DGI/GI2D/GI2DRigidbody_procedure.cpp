@@ -26,6 +26,8 @@ GI2DRigidbody_procedure::GI2DRigidbody_procedure(const std::shared_ptr<PhysicsWo
 			"Rigid_ShapeMatchingApqAccum.comp.spv",
 			"Rigid_ShapeMatchingApqCalc.comp.spv",
 			"Rigid_ShapeMatchingIntegrate.comp.spv",
+			"SM_MakeFluid.comp.spv",
+			"SM_ConstraintSolve.comp.spv",
 
 			"Rigid_ToFragment.comp.spv",
 
@@ -100,9 +102,15 @@ GI2DRigidbody_procedure::GI2DRigidbody_procedure(const std::shared_ptr<PhysicsWo
 		shader_info[13].setModule(m_shader[Shader_SMIntegrate].get());
 		shader_info[13].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[13].setPName("main");
-		shader_info[14].setModule(m_shader[Shader_ToFragment].get());
+		shader_info[14].setModule(m_shader[Shader_SMMakeFluid].get());
 		shader_info[14].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[14].setPName("main");
+		shader_info[15].setModule(m_shader[Shader_SMConstraintSolve].get());
+		shader_info[15].setStage(vk::ShaderStageFlagBits::eCompute);
+		shader_info[15].setPName("main");
+		shader_info[16].setModule(m_shader[Shader_ToFragment].get());
+		shader_info[16].setStage(vk::ShaderStageFlagBits::eCompute);
+		shader_info[16].setPName("main");
 		std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 		{
 			vk::ComputePipelineCreateInfo()
@@ -150,6 +158,12 @@ GI2DRigidbody_procedure::GI2DRigidbody_procedure(const std::shared_ptr<PhysicsWo
 			vk::ComputePipelineCreateInfo()
 			.setStage(shader_info[14])
 			.setLayout(m_pipeline_layout[PipelineLayout_Rigid].get()),
+			vk::ComputePipelineCreateInfo()
+			.setStage(shader_info[15])
+			.setLayout(m_pipeline_layout[PipelineLayout_Rigid].get()),
+			vk::ComputePipelineCreateInfo()
+			.setStage(shader_info[16])
+			.setLayout(m_pipeline_layout[PipelineLayout_Rigid].get()),
 		};
 		auto compute_pipeline = m_world->m_context->m_device->createComputePipelinesUnique(m_world->m_context->m_cache.get(), compute_pipeline_info);
 		m_pipeline[Pipeline_MakeParticle] = std::move(compute_pipeline[0]);
@@ -166,7 +180,9 @@ GI2DRigidbody_procedure::GI2DRigidbody_procedure(const std::shared_ptr<PhysicsWo
 		m_pipeline[Pipeline_SMApqAccum] = std::move(compute_pipeline[11]);
 		m_pipeline[Pipeline_SMApqCalc] = std::move(compute_pipeline[12]);
 		m_pipeline[Pipeline_SMIntegrate] = std::move(compute_pipeline[13]);
-		m_pipeline[Pipeline_ToFragment] = std::move(compute_pipeline[14]);
+		m_pipeline[Pipeline_SMMakeFluid] = std::move(compute_pipeline[14]);
+		m_pipeline[Pipeline_SMConstraintSolve] = std::move(compute_pipeline[15]);
+		m_pipeline[Pipeline_ToFragment] = std::move(compute_pipeline[16]);
 	}
 
 }
@@ -189,6 +205,33 @@ void GI2DRigidbody_procedure::executeSM(vk::CommandBuffer cmd, const std::shared
 		auto num = app::calcDipatchGroups(uvec3(world->m_particle_id, 1, 1), uvec3(1, 1, 1));
 		cmd.dispatch(num.x, num.y, num.z);
 	}
+
+	{
+		{
+			vk::BufferMemoryBarrier to_read[] = {
+				world->b_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+				world->b_rbparticle.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+				0, nullptr, array_length(to_read), to_read, 0, nullptr);
+			executeMakeFluid(cmd, world);
+
+		}
+		{
+			vk::BufferMemoryBarrier to_read[] = {
+				world->b_fluid_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				world->b_fluid.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+				0, nullptr, array_length(to_read), to_read, 0, nullptr);
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_SMConstraintSolve].get());
+
+			auto num = app::calcDipatchGroups(uvec3(world->m_particle_id, 1, 1), uvec3(1, 1, 1));
+			cmd.dispatch(num.x, num.y, num.z);
+		}
+	}
+
 
 	{
 		vk::BufferMemoryBarrier to_read[] = {

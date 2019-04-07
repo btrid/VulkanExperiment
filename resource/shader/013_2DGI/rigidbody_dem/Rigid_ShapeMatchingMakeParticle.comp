@@ -16,23 +16,19 @@ void main()
 
 
 	uint r_id = b_rbParticle_map[gl_WorkGroupID.x];
-//	vec2 local_pos = rotateRBParticle(b_rbParticle[p_id].relative_pos, s_rb.angle);
-//	vec2 pos = s_rb.pos + local_pos;
 	vec2 pos = b_rbParticle[p_id].pos;
 	vec2 pos_old = b_rbParticle[p_id].pos_old;
+	vec2 pos_predict = b_rbParticle[p_id].pos_predict;
 
 	vec2 vel = pos - pos_old + RB_GRAVITY_DT;
+//	vel += pos - pos_predict;
 
 	b_rbParticle[p_id].pos_old = pos;
 	pos += vel;
 	b_rbParticle[p_id].pos = pos;
 	b_rbParticle[p_id].pos_predict = pos;
-//	b_rbParticle[p_id].local_pos = local_pos;
-//	b_rbParticle[p_id].local_sdf = rotateRBParticle(b_rbParticle[p_id].sdf, s_rb.angle);
 	b_rbParticle[p_id].f_id = -1;
 	b_rbParticle[p_id].is_contact = 0;
-
-
 
 	ivec2 pos_integer = ivec2(round(pos / b_rigidbody[r_id].pnum * 65535.));
 	atomicAdd(b_rigidbody[r_id].cm_work.x, pos_integer.x);

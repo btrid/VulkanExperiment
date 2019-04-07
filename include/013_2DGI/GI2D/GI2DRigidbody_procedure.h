@@ -34,6 +34,9 @@ struct GI2DRigidbody_procedure
 		Shader_SMApqCalc,
 		Shader_SMIntegrate,
 
+		Shader_SMMakeFluid,
+		Shader_SMConstraintSolve,
+
 		Shader_ToFragment,
 
 		Shader_Num,
@@ -63,6 +66,8 @@ struct GI2DRigidbody_procedure
 		Pipeline_SMApqAccum,
 		Pipeline_SMApqCalc,
 		Pipeline_SMIntegrate,
+		Pipeline_SMMakeFluid,
+		Pipeline_SMConstraintSolve,
 
 		Pipeline_ToFragment,
 
