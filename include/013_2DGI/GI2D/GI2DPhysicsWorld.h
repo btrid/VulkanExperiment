@@ -153,6 +153,7 @@ struct PhysicsWorld
 	btr::BufferMemoryEx<rbFluid> b_fluid;
 	btr::BufferMemoryEx<uvec4> b_constraint_counter;
 	btr::BufferMemoryEx<rbConstraint> b_constraint;
+	btr::BufferMemoryEx<vec2> b_centermass;
 
 	uint32_t m_rigidbody_id;
 	uint32_t m_particle_id;

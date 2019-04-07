@@ -216,17 +216,17 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 	ivec2 pos_decimal = ivec2(0);
 	for (int32_t i = 0; i < particle_num; i++)
 	{
-		pos_integer += ivec2(round(pos[i]*255.f));
+		pos_integer += ivec2(round(pos[i]/ particle_num * 65535.f));
 		pos_decimal += ivec2((pos[i] - trunc(pos[i]))*65535.f);
 	}
-	vec2 _center = vec2(pos_integer) / 255.f + vec2(pos_decimal) / 65535.f;
+	vec2 _center = vec2(pos_integer) / 65535.f;// + vec2(pos_decimal) / 65535.f;
 	vec2 center = vec2(0.f);
 	for (int32_t i = 0; i < particle_num; i++)
 	{
 		center += pos[i];
 	}
 	center /= particle_num;
-	_center = trunc(_center / particle_num);
+//	_center = trunc(_center / particle_num);
 
 
 	vec2 size = vec2(0.f);

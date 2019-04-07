@@ -34,7 +34,7 @@ void main()
 
 
 
-	ivec2 pos_integer = ivec2(round(pos*255.));
+	ivec2 pos_integer = ivec2(round(pos / b_rigidbody[r_id].pnum * 65535.));
 	ivec2 pos_decimal = ivec2((pos-trunc(pos))*65535.);
 	atomicAdd(b_rigidbody[r_id].cm_integral.x, pos_integer.x);
 	atomicAdd(b_rigidbody[r_id].cm_integral.y, pos_integer.y);
