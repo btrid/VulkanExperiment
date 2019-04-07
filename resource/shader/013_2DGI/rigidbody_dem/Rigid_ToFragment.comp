@@ -19,7 +19,7 @@ void main()
 	ivec2 index = ivec2(pos);
 	if(any(lessThan(index, ivec2(0))) || any(greaterThanEqual(index, u_gi2d_info.m_resolution.xy))){ return; }
 
-	vec3 color = vec3(10., 10., 10.);
+	vec3 color = vec3(0., 0., 0.);
 	if(b_rbParticle[p_id].contact_index != -1){ color = vec3(0., 0., 10.); }
 	if(b_rbParticle[p_id].is_contact == 1){ color = vec3(1., 1.0, 0.); }
 	if(b_rbParticle[p_id].is_contact == 2){ color = vec3(10., 0., 0.); }

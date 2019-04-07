@@ -14,47 +14,9 @@ void main()
 	uint p_id = gl_WorkGroupID.x*RB_PARTICLE_BLOCK_SIZE + gl_LocalInvocationID.x;
 	if(b_rbParticle[p_id].contact_index == -1){ return; }
 
-	uint f_id = b_rbParticle[p_id].f_id;
-	uint r_id = b_rbParticle[p_id].r_id;
-	uint is_active = b_rbParticle[p_id].is_active;
-	vec2 pos = b_rbParticle[p_id].pos;
-	ivec4 map_index = ivec4(pos.xyxy) + ivec4(ivec2(0), step(vec2(0.5), pos-floor(pos)) * 2. - 1.);
-	ivec4 findex = map_index.xzxz + map_index.yyww * u_gi2d_info.m_resolution.x;
+	uint r_id = b_rbParticle_map[gl_WorkGroupID.x];
 
-	for(uint i = 0; i < 4; i++)
-	{
-		uint index = findex[i];
-		uint count = min(b_fluid_count[index], FLUID_NUM);
-		for(uint ii = 0; ii < count; ii++)
-		{
-			uint fj_id = index*FLUID_NUM + ii;
-			if( b_fluid[fj_id].r_id == r_id)
-			{
-				// 自分とは判定しない
-				continue;
-			}
+	b_rbParticle[p_id].pos = b_rigidbody[r_id].R * b_rbParticle[p_id].relative_pos + b_rigidbody[r_id].cm;
 
-			vec2 rela_pos = pos - b_fluid[fj_id].pos;
-			if(dot(rela_pos, rela_pos) > k_delimiter*k_delimiter)
-			{
-				continue;
-			}
-
-			if(is_active != 0 && b_fluid[fj_id].is_active != 0)
-			{
-				if( fj_id >= f_id)
-				{
-					continue;
-				}
-			}
-
-			uint c_index = atomicAdd(b_constraint_counter.w, 1);
-			if(c_index % 64 == 0){ atomicAdd(b_constraint_counter.x, 1);}
-			rbConstraint c;
-			c.f_id1 = f_id;
-			c.f_id2 = fj_id;
-			b_constraint[c_index] = c;
-		}
-	}
 }
 

@@ -28,6 +28,12 @@ struct GI2DRigidbody_procedure
 		Shader_ConstraintSolve,
 		Shader_ConstraintIntegrate,
 
+		Shader_SMMakeParticle,
+		Shader_SMCalcCenterMass,
+		Shader_SMApqAccum,
+		Shader_SMApqCalc,
+		Shader_SMIntegrate,
+
 		Shader_ToFragment,
 
 		Shader_Num,
@@ -52,12 +58,19 @@ struct GI2DRigidbody_procedure
 		Pipeline_ConstraintSolve,
 		Pipeline_ConstraintIntegrate,
 
+		Pipeline_SMMakeParticle,
+		Pipeline_SMCalcCenterMass,
+		Pipeline_SMApqAccum,
+		Pipeline_SMApqCalc,
+		Pipeline_SMIntegrate,
+
 		Pipeline_ToFragment,
 
 		Pipeline_Num,
 	};
 
 	GI2DRigidbody_procedure(const std::shared_ptr<PhysicsWorld>& world);
+	void executeSM(vk::CommandBuffer cmd, const std::shared_ptr<PhysicsWorld>& world);
 	void execute(vk::CommandBuffer cmd, const std::shared_ptr<PhysicsWorld>& world);
 	void executeMakeFluid(vk::CommandBuffer cmd, const std::shared_ptr<PhysicsWorld>& world);
 	void executeToFragment(vk::CommandBuffer cmd, const std::shared_ptr<PhysicsWorld>& world);

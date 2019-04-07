@@ -41,21 +41,6 @@ void main()
 	atomicAdd(b_rigidbody[r_id].cm_decimal.x, pos_decimal.x);
 	atomicAdd(b_rigidbody[r_id].cm_decimal.y, pos_decimal.y);
 
-/*	vec2 q = b_rbParticle[p_id].relative_pos.xy;
-	vec4 pq = p.xxyy * q.xyxy;
-	ivec4 Aqpi_integer = ivec4(round(pq*255.));
-	ivec4 Aqpi_decimal = ivec4(pq-trunc(pq)*1024.);
 
-	uint r_id = b_rbParticle_map[gl_WorkGroupID.x];
-	atomicAdd(b_rigidbody[r_id].Apq_integral.x, Aqpi_integer.x);
-	atomicAdd(b_rigidbody[r_id].Apq_integral.y, Aqpi_integer.y);
-	atomicAdd(b_rigidbody[r_id].Apq_integral.z, Aqpi_integer.z);
-	atomicAdd(b_rigidbody[r_id].Apq_integral.w, Aqpi_integer.w);
-
-	atomicAdd(b_rigidbody[r_id].Apq_decimal.x, Aqpi_decimal.x);
-	atomicAdd(b_rigidbody[r_id].Apq_decimal.y, Aqpi_decimal.y);
-	atomicAdd(b_rigidbody[r_id].Apq_decimal.z, Aqpi_decimal.z);
-	atomicAdd(b_rigidbody[r_id].Apq_decimal.w, Aqpi_decimal.w);
-*/
 }
 

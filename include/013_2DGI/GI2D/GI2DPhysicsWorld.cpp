@@ -279,13 +279,17 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 		pstate[i].sdf = v;
 	}
 
-	rb.Aqq = vec4(0.f);
+	rb.Aqq = mat2(0.f);
 	for (uint32_t i = 0; i < particle_num; i++)
 	{
-		auto& q = pstate[i].relative_pos;
-		rb.Aqq += q.xxyy() * q.xyxy();
+		const auto& q = pstate[i].relative_pos;
+		auto qq = q.xxyy() * q.xyxy();
+		rb.Aqq[0][0] += qq.x;
+		rb.Aqq[0][1] += qq.y;
+		rb.Aqq[1][0] += qq.z;
+		rb.Aqq[1][1] += qq.w;
 	}
-	rb.Aqq_inv = inverse(mat2(rb.Aqq.xy(), rb.Aqq.zw()));
+	rb.Aqq_inv = inverse(rb.Aqq);
 
 	rb.pnum = particle_num;
 	rb.solver_count = 0;
@@ -303,6 +307,10 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 	rb.angle = 0.f;
 	rb.angle_predict = rb.angle;
 	rb.angle_old = rb.angle;
+	rb.cm_integral = ivec2(0);
+	rb.cm_decimal = ivec2(0);
+	rb.Apq_integral = ivec4(0);
+	rb.Apq_decimal = ivec4(0);
 
 	rb.exclusion = ivec2(0);
 	rb.exclusion_angle = 0;

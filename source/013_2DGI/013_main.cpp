@@ -258,11 +258,11 @@ int rigidbody()
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 	std::shared_ptr<GI2DFluid> gi2d_Fluid = std::make_shared<GI2DFluid>(context, gi2d_context);
 
-	for (int y = 0; y < 2; y++)
+	for (int y = 0; y < 1; y++)
 	{
-		for (int x = 0; x < 20; x++)
+		for (int x = 0; x < 1; x++)
 		{
-			physics_world->make(cmd, uvec4(250 + x * 16, 880 - y * 24, 16, 16));
+			physics_world->make(cmd, uvec4(250 + x * 16, 780 - y * 24, 16, 16));
 
 		}
 	}
@@ -326,7 +326,8 @@ int rigidbody()
 //				physics_world->executeMakeFluid(cmd, rbs);
 
 //				gi2d_rigidbody.executeMakeParticle(cmd, rbs);
-				gi2d_rigidbody.execute(cmd, physics_world);
+//				gi2d_rigidbody.execute(cmd, physics_world);
+				gi2d_rigidbody.executeSM(cmd, physics_world);
 				gi2d_rigidbody.executeToFragment(cmd, physics_world);
 
 				gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
