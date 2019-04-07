@@ -20,7 +20,7 @@ void main()
 	vec2 p = b_rbParticle[p_id].pos - b_rigidbody[r_id].cm;
 	vec4 pq = p.xxyy * q.xyxy;
 	ivec4 Aqpi_integer = ivec4(round(pq*255.));
-	ivec4 Aqpi_decimal = ivec4(pq-trunc(pq)*1024.);
+	ivec4 Aqpi_decimal = ivec4((pq-trunc(pq))*65535.);
 
 	atomicAdd(b_rigidbody[r_id].Apq_integral.x, Aqpi_integer.x);
 	atomicAdd(b_rigidbody[r_id].Apq_integral.y, Aqpi_integer.y);

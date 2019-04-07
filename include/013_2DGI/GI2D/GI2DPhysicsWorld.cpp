@@ -191,7 +191,6 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 	_def.is_active = false;
 	std::vector<vec2> pos(particle_num);
 	std::vector<rbParticle> pstate((particle_num+63)/64*64, _def);
-	vec2 center = vec2(0.f);
 
 	uint32_t contact_index = 0;
 	for (uint32_t y = 0; y < box.w; y++)
@@ -200,6 +199,8 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 		{
 			pos[x + y * box.z].x = box.x + x + 0.5f;
 			pos[x + y * box.z].y = box.y + y + 0.5f;
+			pstate[x + y * box.z].pos = pos[x + y * box.z];
+			pstate[x + y * box.z].pos_old = pos[x + y * box.z];
 
 			pstate[x + y * box.z].contact_index = -1;
 //			if (y == 0 || y == box.w - 1 || x == 0 || x == box.z - 1) 
@@ -211,11 +212,22 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 		}
 	}
 
+	ivec2 pos_integer = ivec2(0);
+	ivec2 pos_decimal = ivec2(0);
+	for (int32_t i = 0; i < particle_num; i++)
+	{
+		pos_integer += ivec2(round(pos[i]*255.f));
+		pos_decimal += ivec2((pos[i] - trunc(pos[i]))*65535.f);
+	}
+	vec2 _center = vec2(pos_integer) / 255.f + vec2(pos_decimal) / 65535.f;
+	vec2 center = vec2(0.f);
 	for (int32_t i = 0; i < particle_num; i++)
 	{
 		center += pos[i];
 	}
 	center /= particle_num;
+	_center = trunc(_center / particle_num);
+
 
 	vec2 size = vec2(0.f);
 	vec2 size_max = vec2(0.f);

@@ -72,7 +72,7 @@ void main()
 	uint r_id = gl_GlobalInvocationID.x;
 	if(r_id >= b_world.rigidbody_num){ return; }
 
-	vec4 Apq = b_rigidbody[r_id].Apq_integral / 255. + b_rigidbody[r_id].Apq_decimal / 1024.;
+	vec4 Apq = b_rigidbody[r_id].Apq_integral / 255. + b_rigidbody[r_id].Apq_decimal / 65535.;
 	polarDecomposition(mat2(Apq), b_rigidbody[r_id].R, b_rigidbody[r_id].S);
 
 	b_rigidbody[r_id].Apq_integral = ivec4(0);
