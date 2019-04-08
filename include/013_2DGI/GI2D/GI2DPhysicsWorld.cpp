@@ -253,10 +253,10 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 		v = vec2(9999999.f);
 		distsq = 9999999999999.f;
 
-		f(vec2(p.x, size_max.y + 1.f));
-		f(vec2(p.x, size_min.y - 1.f));
 		f(vec2(size_max.x + 1.f, p.y));
 		f(vec2(size_min.x - 1.f, p.y));
+		f(vec2(p.x, size_max.y + 1.f));
+		f(vec2(p.x, size_min.y - 1.f));
 
 // 		for (uint32_t y = 0; y < box.w; y++)
 // 		{

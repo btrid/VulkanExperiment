@@ -13,6 +13,9 @@ vec2 calcTangent(in vec2 I, in vec2 N)
 	return I - N * dot(N, I);
 }
 
+const float k_radius = 0.5;
+const float k_delimiter = 1.;
+
 void main() 
 {
 	uint r_id = b_rbParticle_map[gl_WorkGroupID.x];

@@ -87,9 +87,6 @@ struct rbConstraint
 	uint f_id2;
 };
 
-#define k_radius (0.5)
-#define k_delimiter (1.)
-
 layout(set=USE_Rigidbody2D, binding=0, std430) restrict buffer WorldData {
 	rbWorld b_world;
 };
