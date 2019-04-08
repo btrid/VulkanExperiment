@@ -129,7 +129,7 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 		b_rbparticle = m_context->m_storage_memory.allocateMemory<rbParticle>({ RB_PARTICLE_NUM,{} });
 		b_rbparticle_map = m_context->m_storage_memory.allocateMemory<uint32_t>({ RB_PARTICLE_NUM / RB_PARTICLE_BLOCK_SIZE,{} });
 		b_fluid_counter = m_context->m_storage_memory.allocateMemory<uint32_t>({ gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
-		b_fluid = m_context->m_storage_memory.allocateMemory<rbFluid>({ 4 * gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
+		b_fluid = m_context->m_storage_memory.allocateMemory<rbFluid>({ 8 * gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
 		b_constraint_counter = m_context->m_storage_memory.allocateMemory<uvec4>({ 1,{} });
 		b_constraint = m_context->m_storage_memory.allocateMemory<rbConstraint>({ RB_PARTICLE_NUM,{} });
 
@@ -191,16 +191,17 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 	_def.is_active = false;
 	std::vector<vec2> pos(particle_num);
 	std::vector<rbParticle> pstate((particle_num+63)/64*64, _def);
-	vec2 center = vec2(0.f);
 
 	uint32_t contact_index = 0;
 	for (uint32_t y = 0; y < box.w; y++)
 	{
 		for (uint32_t x = 0; x < box.z; x++)
 		{
-			pos[x + y * box.z].x = box.x + x;
-			pos[x + y * box.z].y = box.y + y;
-
+			pos[x + y * box.z].x = box.x + x + 0.5f;
+			pos[x + y * box.z].y = box.y + y + 0.5f;
+			pstate[x + y * box.z].pos = pos[x + y * box.z];
+			pstate[x + y * box.z].pos_old = pos[x + y * box.z];
+			pstate[x + y * box.z].pos_predict = pos[x + y * box.z];
 			pstate[x + y * box.z].contact_index = -1;
 //			if (y == 0 || y == box.w - 1 || x == 0 || x == box.z - 1) 
 			{
@@ -210,11 +211,23 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 			pstate[x + y * box.z].is_active = true;
 		}
 	}
+
+	ivec2 pos_integer = ivec2(0);
+	ivec2 pos_decimal = ivec2(0);
+	for (int32_t i = 0; i < particle_num; i++)
+	{
+		pos_integer += ivec2(round(pos[i]/ particle_num * 65535.f));
+		pos_decimal += ivec2((pos[i] - trunc(pos[i]))*65535.f);
+	}
+	vec2 _center = vec2(pos_integer) / 65535.f;// + vec2(pos_decimal) / 65535.f;
+	vec2 center = vec2(0.f);
 	for (int32_t i = 0; i < particle_num; i++)
 	{
 		center += pos[i];
 	}
 	center /= particle_num;
+//	_center = trunc(_center / particle_num);
+
 
 	vec2 size = vec2(0.f);
 	vec2 size_max = vec2(0.f);
@@ -235,6 +248,7 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 			inertia += dot(pstate[i].relative_pos, pstate[i].relative_pos) /** mass*/;
 		}
 	}
+	inertia /= 12.f;
 
 	auto p = pstate[0].relative_pos;
 	vec2 v = vec2(9999999.f);
@@ -242,9 +256,15 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 	auto f = [&](const vec2& n)
 	{
 		auto sq = dot(p - n, p - n);
-		if (sq < distsq) {
+		if (sq < distsq) 
+		{
 			distsq = sq;
 			v = n - p;
+		}
+		else if (sq - FLT_EPSILON < distsq)
+		{
+			v += n - p;
+			v = normalize(v);
 		}
 	};
 	for (uint32_t i = 0; i < particle_num; i++)
@@ -253,10 +273,10 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 		v = vec2(9999999.f);
 		distsq = 9999999999999.f;
 
-		f(vec2(size_max.x + 1.f, p.y));
-		f(vec2(size_min.x - 1.f, p.y));
 		f(vec2(p.x, size_max.y + 1.f));
 		f(vec2(p.x, size_min.y - 1.f));
+		f(vec2(size_max.x + 1.f, p.y));
+		f(vec2(size_min.x - 1.f, p.y));
 
 // 		for (uint32_t y = 0; y < box.w; y++)
 // 		{
@@ -271,7 +291,17 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 		pstate[i].sdf = v;
 	}
 
-	inertia /= 12.f;
+	rb.Aqq = mat2(0.f);
+	for (uint32_t i = 0; i < particle_num; i++)
+	{
+		const auto& q = pstate[i].relative_pos;
+		auto qq = q.xxyy() * q.xyxy();
+		rb.Aqq[0][0] += qq.x;
+		rb.Aqq[0][1] += qq.y;
+		rb.Aqq[1][0] += qq.z;
+		rb.Aqq[1][1] += qq.w;
+	}
+	rb.Aqq_inv = inverse(rb.Aqq);
 
 	rb.pnum = particle_num;
 	rb.solver_count = 0;
@@ -283,11 +313,14 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 
 	rb.pos = center;
 	rb.pos_predict = rb.pos;
+//	rb.pos_old = rb.pos - vec2(0.f, 0.5f);
 	rb.pos_old = rb.pos;
-//	rb.angle = 3.14f / 4.f + 0.2f;
+	//	rb.angle = 3.14f / 4.f + 0.2f;
 	rb.angle = 0.f;
 	rb.angle_predict = rb.angle;
 	rb.angle_old = rb.angle;
+	rb.cm_work = ivec2(0);
+	rb.Apq_work= ivec4(0);
 
 	rb.exclusion = ivec2(0);
 	rb.exclusion_angle = 0;

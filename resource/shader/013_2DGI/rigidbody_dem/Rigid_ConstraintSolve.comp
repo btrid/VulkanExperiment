@@ -8,14 +8,6 @@
 
 layout (local_size_x = 64) in;
 
-vec2 calcTangent(in vec2 I, in vec2 N)
-{
-	return I - N * dot(N, I);
-}
-
-const float k_radius = 0.5;
-const float k_delimiter = 1.;
-
 void main() 
 {
 	uint c_id = gl_GlobalInvocationID.x;
@@ -25,29 +17,29 @@ void main()
 	rbFluid f1 = b_fluid[constraint.f_id1];
 	rbFluid f2 = b_fluid[constraint.f_id2];
 
-	vec2 rela_pos = f1.pos - f2.pos;
-	if(dot(rela_pos, rela_pos) >= k_delimiter*k_delimiter)
-	{
-		return;
-	}
-
+	float w = max(dot(-normalize(f1.sdf), normalize(f2.sdf)), 0.);
+//	float w = abs(cross(vec3(normalize(f1.sdf), 0.), vec3(normalize(f2.sdf), 0.)).z);
 	float mass = f1.mass + f2.mass;
 	if(f1.r_id != -1)
 	{
-		vec2 move1 = (f2.sdf - rela_pos) * (f1.mass / mass);
-		atomicAdd(b_fluid[constraint.f_id1].move.x, int(move1.x*65535.));
-		atomicAdd(b_fluid[constraint.f_id1].move.y, int(move1.y*65535.));
+		vec2 collect_vec = f2.pos + f2.sdf - f1.pos;
+		vec2 move1 = dot(collect_vec, normalize(f2.sdf)) * normalize(f2.sdf);
+		move1 *= (f1.mass / mass) * w;
+		ivec2 movei = ivec2(trunc(move1 * 65535.));
+		atomicAdd(b_fluid[constraint.f_id1].move.x, movei.x);
+		atomicAdd(b_fluid[constraint.f_id1].move.y, movei.y);
 		atomicAdd(b_fluid[constraint.f_id1].solver_count, 1);
 
 	}
 	if(f2.r_id != -1)
 	{
-		vec2 move2 = (f1.sdf + rela_pos) * (f2.mass / mass);
-		atomicAdd(b_fluid[constraint.f_id2].move.x, int(move2.x*65535.));
-		atomicAdd(b_fluid[constraint.f_id2].move.y, int(move2.y*65535.));
+		vec2 collect_vec = f1.pos + f1.sdf - f2.pos;
+		vec2 move2 = dot(collect_vec, normalize(f1.sdf)) * normalize(f1.sdf);
+		move2 *= (f2.mass / mass) * w;
+		ivec2 movei = ivec2(trunc(move2 * 65535.));
+		atomicAdd(b_fluid[constraint.f_id2].move.x, movei.x);
+		atomicAdd(b_fluid[constraint.f_id2].move.y, movei.y);
 		atomicAdd(b_fluid[constraint.f_id2].solver_count, 1);
 	}
-
-
 }
 

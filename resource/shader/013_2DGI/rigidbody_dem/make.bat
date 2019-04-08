@@ -26,3 +26,14 @@ rem %exe% %include% %option% -o %output%/Rigid_CollisionDetectiveBefore.comp.spv
 %exe% %include% %option% -o %output%/Rigid_MakeParticle.comp.spv Rigid_MakeParticle.comp
 %exe% %include% %option% -o %output%/Rigid_MakeFluid.comp.spv Rigid_MakeFluid.comp
 
+%exe% %include% %option% -o %output%/Rigid_ShapeMatchingMakeParticle.comp.spv Rigid_ShapeMatchingMakeParticle.comp
+%exe% %include% %option% -o %output%/Rigid_ShapeMatchingCalcCenterMass.comp.spv Rigid_ShapeMatchingCalcCenterMass.comp
+%exe% %include% %option% -o %output%/Rigid_ShapeMatchingApqAccum.comp.spv Rigid_ShapeMatchingApqAccum.comp
+%exe% %include% %option% -o %output%/Rigid_ShapeMatchingApqCalc.comp.spv Rigid_ShapeMatchingApqCalc.comp
+%exe% %include% %option% -o %output%/Rigid_ShapeMatchingIntegrate.comp.spv Rigid_ShapeMatchingIntegrate.comp
+%exe% %include% %option% -o %output%/SM_MakeFluid.comp.spv SM_MakeFluid.comp
+%exe% %include% %option% -o %output%/SM_ConstraintSolve.comp.spv SM_ConstraintSolve.comp
+
+
+
+

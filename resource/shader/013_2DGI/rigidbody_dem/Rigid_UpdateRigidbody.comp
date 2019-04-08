@@ -23,8 +23,12 @@ void main()
 	float angle_predict = b_rigidbody[rbid].angle_predict;
 	float angle_old = b_rigidbody[rbid].angle_old;
 
-	vec2 vel = pos - pos_old + (pos_predict - pos) * RB_DT;
-	float a_vel = angle - angle_old + (angle_predict - angle) * RB_DT;
+	vec2 vel = pos - pos_old;
+	float a_vel = angle - angle_old;
+//	vec2 vel = pos_predict - pos_old;
+//	float a_vel = angle_predict - angle_old;
+	vel += (pos_predict - pos) * RB_DT;
+	a_vel +=  (angle_predict - angle) * RB_DT;
 
 	b_rigidbody[rbid].pos_old = pos;
 	b_rigidbody[rbid].angle_old = angle;

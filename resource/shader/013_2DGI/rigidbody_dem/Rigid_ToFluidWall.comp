@@ -22,7 +22,7 @@ void main()
 	f.p_id = -1;
 	f.pos = vec2(gl_GlobalInvocationID.xy) + vec2(0.5);
 	f.sdf = vec2(0., -1.);
-	f.mass = 1.;
+	f.mass = 0.;
 	f.move = ivec2(0);
 	f.is_active = 0;
 	f.solver_count = 0;

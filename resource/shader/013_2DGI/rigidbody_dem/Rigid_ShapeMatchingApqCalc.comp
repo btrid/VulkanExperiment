@@ -1,0 +1,80 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_Rigidbody2D 0
+#define USE_GI2D 1
+#include "GI2D.glsl"
+#include "Rigidbody2D.glsl"
+
+
+layout (local_size_x = 1) in;
+
+void jacobiRotate(inout mat2 A, inout mat2 R)
+{
+	// rotates A through phi in 01-plane to set A(0,1) = 0
+	// rotation stored in R whose columns are eigenvectors of A
+	float d = (A[0][0] - A[1][1])/(2.0*A[0][1]);
+	float t = 1.0 / (abs(d) + sqrt(d*d + 1.0));
+	if (d < 0.0) t = -t;
+	float c = 1.0/sqrt(t*t + 1);
+	float s = t*c;
+	A[0][0] += t*A[0][1];
+	A[1][1] -= t*A[0][1];
+	A[0][1] = A[1][0] = 0.0;
+	// store rotation in R
+	for (int k = 0; k < 2; k++) {
+		float Rkp = c*R[k][0] + s*R[k][1];
+		float Rkq =-s*R[k][0] + c*R[k][1];
+		R[k][0] = Rkp;
+		R[k][1] = Rkq;
+	}
+}
+
+
+// --------------------------------------------------
+void eigenDecomposition(inout mat2 A, inout mat2 R)
+{
+	// only for symmetric matrices!
+	// A = R A' R^T, where A' is diagonal and R orthonormal
+
+	R = mat2(1.0);	// unit matrix
+	jacobiRotate(A, R);
+}
+
+
+// --------------------------------------------------
+void polarDecomposition(in mat2 A, out mat2 R, out mat2 S)
+{
+	// A = RS, where S is symmetric and R is orthonormal
+	// -> S = (A^T A)^(1/2)
+
+	mat2 ATA = transpose(A) * A;
+//	ATA.multiplyTransposedLeft(A, A);
+
+	mat2 U = mat2(1.0);
+	eigenDecomposition(ATA, U);
+
+	float l0 = ATA[0][0]; if (l0 <= 0.0) l0 = 0.0; else l0 = 1.0 / sqrt(l0);
+	float l1 = ATA[1][1]; if (l1 <= 0.0) l1 = 0.0; else l1 = 1.0 / sqrt(l1);
+
+	mat2 S1;
+	S1[0][0] = l0*U[0][0]*U[0][0] + l1*U[0][1]*U[0][1];
+	S1[0][1] = l0*U[0][0]*U[1][0] + l1*U[0][1]*U[1][1];
+	S1[1][0] = S1[0][1];
+	S1[1][1] = l0*U[1][0]*U[1][0] + l1*U[1][1]*U[1][1];
+	R = A * S1;
+	S = transpose(R)*A;
+//	S.multiplyTransposedLeft(R, A);
+}
+
+void main() 
+{
+	uint r_id = gl_GlobalInvocationID.x;
+	if(r_id >= b_world.rigidbody_num){ return; }
+
+	vec4 Apq = b_rigidbody[r_id].Apq_work / 255.;
+	polarDecomposition(mat2(Apq), b_rigidbody[r_id].R, b_rigidbody[r_id].S);
+
+	b_rigidbody[r_id].Apq_work = ivec4(0);
+}
+

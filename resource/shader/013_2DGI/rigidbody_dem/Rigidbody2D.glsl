@@ -4,10 +4,15 @@
 #if defined(USE_Rigidbody2D)
 
 #define RB_PARTICLE_BLOCK_SIZE (64)
-#define FLUID_NUM (4)
+#define FLUID_NUM (8)
 #define RB_DT (0.016)
-// 0.016*0.016*9.8
 #define RB_GRAVITY_DT (vec2(0., 0.0025))
+//#define RB_DT (0.0016)
+//#define RB_GRAVITY_DT (vec2(0., 0.000025))
+
+
+#define k_radius (0.5)
+#define k_delimiter (1.)
 struct rbWorld
 {
 	float DeltaTime;
@@ -40,8 +45,20 @@ struct Rigidbody
 
 	float angle_predict;
 	float _p1;
-	float _p2;
-	float _p3;
+	vec2 cm;
+
+	mat2 Aqq;
+	mat2 Apq;
+	mat2 Aqq_inv;
+
+	mat2 R;
+	mat2 S;
+
+	ivec2 cm_work;
+	ivec2 _pp;
+
+	ivec4 Apq_work;
+
 };
 
 struct rbParticle
@@ -62,8 +79,7 @@ struct rbParticle
 
 	uint f_id;
 	uint _p1;
-	uint _p2;
-	uint _p3;
+	vec2 pos_old;
 };
 
 struct rbFluid

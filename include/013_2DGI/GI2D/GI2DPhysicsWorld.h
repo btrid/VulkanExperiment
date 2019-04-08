@@ -61,8 +61,19 @@ struct PhysicsWorld
 
 		float angle_predict;
 		float _p1;
-		float _p2;
-		float _p3;
+		vec2 cm;
+
+		mat2 Aqq;
+		mat2 Apq;
+		mat2 Aqq_inv;
+
+		mat2 R;
+		mat2 S;
+
+		ivec2 cm_work;
+		ivec2 _pp;
+
+		ivec4 Apq_work;
 
 	};
 
@@ -84,10 +95,8 @@ struct PhysicsWorld
 
 		uint f_id;
 		uint _p1;
-		uint _p2;
-		uint _p3;
+		vec2 pos_old;
 	};
-
 
 	struct rbFluid
 	{
@@ -95,15 +104,15 @@ struct PhysicsWorld
 		uint p_id;
 		vec2 pos;
 
-		vec2 local_pos;
+		uint solver_count;
+		uint _p1;
 		vec2 sdf;
 
 		float mass;
-		uint _p1;
-		uint _p2;
-		uint _p3;
-
+		uint is_active;
+		ivec2 move;
 	};
+
 
 	struct rbConstraint
 	{
@@ -143,6 +152,7 @@ struct PhysicsWorld
 	btr::BufferMemoryEx<rbFluid> b_fluid;
 	btr::BufferMemoryEx<uvec4> b_constraint_counter;
 	btr::BufferMemoryEx<rbConstraint> b_constraint;
+	btr::BufferMemoryEx<vec2> b_centermass;
 
 	uint32_t m_rigidbody_id;
 	uint32_t m_particle_id;

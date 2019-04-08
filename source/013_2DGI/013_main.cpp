@@ -186,8 +186,51 @@ vec2 calcTangent(const vec2& I, const vec2& N)
 	return I - N * dot(N, I);
 }
 
+void y(vec2 p1, vec2 p2, vec2 sdf)
+{
+	vec2 a = p1 + sdf - p2;
+	auto c1 = dot(a, normalize(sdf)) * normalize(sdf);
+	vec2 collect = p1 + sdf;
+	vec2 predict = p2 + c1;
+
+	printf("p1={%5.2f,%5.2f} p2={%5.2f,%5.2f} sdf={%5.2f,%5.2f}\n", p1.x, p1.y, p2.x, p2.y, sdf.x, sdf.y);
+	printf("c ={%5.2f,%5.2f} p ={%5.2f,%5.2f}\n", collect.x, collect.y, predict.x, predict.y);
+}
+
+void y(vec2 p1, vec2 p2, vec2 sdf1, vec2 sdf2)
+{
+	vec2 a1 = p2 + sdf2 - p1;
+	vec2 a2 = p1 + sdf1 - p2;
+	auto v1 = dot(a1, normalize(sdf2)) * normalize(sdf2);
+	auto v2 = dot(a2, normalize(sdf1)) * normalize(sdf1);
+	vec2 pr1 = p2 + sdf2;
+	vec2 pr2 = p1 + sdf1;
+	vec2 c1 = p1 + v1;
+	vec2 c2 = p2 + v2;
+
+	printf("p1={%5.2f,%5.2f} p2={%5.2f,%5.2f} sdf={%5.2f,%5.2f}\n", p1.x, p1.y, p2.x, p2.y, sdf1.x, sdf1.y);
+	printf("p1 ={%5.2f,%5.2f} p2 ={%5.2f,%5.2f}\n", pr1.x, pr1.y, pr2.x, pr2.y);
+	printf("c2 ={%5.2f,%5.2f} c2 ={%5.2f,%5.2f}\n", c1.x, c1.y, c2.x, c2.y);
+}
 int rigidbody()
 {
+// 	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(-1.f, 0.f));
+// 	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(-1.f, 0.f));
+// 	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(-1.f, 0.f));
+// 	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(0.f, -1.f));
+// 	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(0.f, -1.f));
+// 	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(2.f, 0.f));
+// 	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(2.f, 0.f));
+// 	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(2.f, 0.f));
+// 	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(0.f, 1.f));
+//	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(0.f, 2.f));
+//	y(vec2(20), vec2(20), vec2(1.f, -1.f), vec2(1.f, 1.f));
+	y(vec2(0), vec2(1, 0), vec2(0.f, 1.f), vec2(0.f, -1.f));
+
+	auto a = cross(vec3(1.f, 0.f, 0.f), vec3(1.f, 0.f, 0.f));
+	auto b = cross(vec3(1.f, 0.f, 0.f), vec3(0.f, 1.f, 0.f));
+	auto b1 = cross(vec3(0.f, 1.f, 0.f), vec3(0.f, 1.f, 0.f));
+	auto b2 = cross(vec3(0.f, 1.f, 0.f), vec3(0.f, -1.f, 0.f));
 	auto p = calcTangent(vec2(1.f, 1.0f), vec2(0.f, -1.0f));
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
@@ -215,11 +258,11 @@ int rigidbody()
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 	std::shared_ptr<GI2DFluid> gi2d_Fluid = std::make_shared<GI2DFluid>(context, gi2d_context);
 
-	for (int y = 0; y < 20; y++)
+	for (int y = 0; y < 1; y++)
 	{
-		for (int x = 0; x < 20; x++)
+		for (int x = 0; x < 1; x++)
 		{
-			physics_world->make(cmd, uvec4(250 + x * 24, 820 - y * 26, 16, 16));
+			physics_world->make(cmd, uvec4(250 + x * 16, 780 - y * 24, 16, 16));
 
 		}
 	}
@@ -244,6 +287,7 @@ int rigidbody()
 			std::vector<vk::CommandBuffer> cmds(cmd_num);
 
 			{
+
 			}
 
 			{
@@ -261,6 +305,11 @@ int rigidbody()
 			// gi2d
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
+				if (context->m_window->getInput().m_keyboard.isOn('A'))
+				{
+					physics_world->make(cmd, uvec4(255, 500, 24, 24));
+				}
+
 				gi2d_context->execute(cmd);
 				gi2d_clear.execute(cmd);
 				gi2d_debug.executeMakeFragmentMap(cmd);
@@ -277,7 +326,8 @@ int rigidbody()
 //				physics_world->executeMakeFluid(cmd, rbs);
 
 //				gi2d_rigidbody.executeMakeParticle(cmd, rbs);
-				gi2d_rigidbody.execute(cmd, physics_world);
+//				gi2d_rigidbody.execute(cmd, physics_world);
+				gi2d_rigidbody.executeSM(cmd, physics_world);
 				gi2d_rigidbody.executeToFragment(cmd, physics_world);
 
 				gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
