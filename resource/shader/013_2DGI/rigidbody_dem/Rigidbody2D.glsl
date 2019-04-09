@@ -54,10 +54,8 @@ struct Rigidbody
 	mat2 R;
 	mat2 S;
 
-	ivec2 cm_work;
-	ivec2 _pp;
-
-	ivec4 Apq_work;
+	i64vec2 cm_work;
+	i64vec4 Apq_work;
 
 };
 

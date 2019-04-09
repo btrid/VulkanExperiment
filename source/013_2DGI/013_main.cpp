@@ -262,11 +262,10 @@ int rigidbody()
 	{
 		for (int x = 0; x < 1; x++)
 		{
-			physics_world->make(cmd, uvec4(250 + x * 16, 780 - y * 24, 16, 16));
+			physics_world->make(cmd, uvec4(250 + x * 16, 540 - y * 24, 16, 16));
 
 		}
 	}
-
 	app.setup();
 
 	while (true)
