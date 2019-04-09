@@ -74,15 +74,9 @@ void main()
 	if(r_id >= b_world.rigidbody_num){ return; }
 
 	mat2 Apq = mat2(dvec4(b_rigidbody[r_id].Apq_work) / 65535.);
-
-/*	if(determinant(Apq) < 0.)
-	{
-		// 反転を許さない
-		Apq[0][1] = -Apq[0][1];
-		Apq[1][1] = -Apq[1][1];
-	}
-*/
-	polarDecomposition(Apq, b_rigidbody[r_id].R, b_rigidbody[r_id].S);
+	mat2 R, S;
+	polarDecomposition(Apq, R, S);
+	b_rigidbody[r_id].R = vec4(R[0][0], R[1][0], R[0][1], R[1][1]);
 
 	b_rigidbody[r_id].Apq_work = i64vec4(0);
 }

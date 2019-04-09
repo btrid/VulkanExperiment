@@ -47,15 +47,11 @@ struct Rigidbody
 	float _p1;
 	vec2 cm;
 
-	mat2 Aqq;
-	mat2 Apq;
-	mat2 Aqq_inv;
-
-	mat2 R;
-	mat2 S;
-
 	i64vec2 cm_work;
 	i64vec4 Apq_work;
+
+	vec4 R;
+
 
 };
 

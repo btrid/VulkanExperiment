@@ -265,7 +265,7 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 			pos[x + y * box.z] = vec2(box) + rotate(vec2(x, y) + 0.5f, 0.2f);
 //			pos[x + y * box.z] = vec2(box) + rotate(vec2(x, y) + 0.5f, 0.f);
 			pstate[x + y * box.z].pos = pos[x + y * box.z];
-			pstate[x + y * box.z].pos_old = pos[x + y * box.z];‚µ‚ã
+			pstate[x + y * box.z].pos_old = pos[x + y * box.z];
 			pstate[x + y * box.z].pos_predict = pos[x + y * box.z];
 			pstate[x + y * box.z].contact_index = -1;
 //			if (y == 0 || y == box.w - 1 || x == 0 || x == box.z - 1) 
@@ -358,24 +358,21 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 		pstate[i].sdf = v;
 	}
 
-	rb.Aqq = mat2(0.f);
+	mat2 Aqq = mat2(0.f);
 	for (uint32_t i = 0; i < particle_num; i++)
 	{
 		const auto& q = pstate[i].relative_pos;
 		auto qq = q.xxyy() * q.xyxy();
-		rb.Aqq[0][0] += qq.x;
-		rb.Aqq[0][1] += qq.y;
-		rb.Aqq[1][0] += qq.z;
-		rb.Aqq[1][1] += qq.w;
+		Aqq[0][0] += qq.x;
+		Aqq[0][1] += qq.y;
+		Aqq[1][0] += qq.z;
+		Aqq[1][1] += qq.w;
 	}
 //	rb.Aqq_inv = inverse(rb.Aqq);
 
-	if (determinant(rb.Aqq) < 0.0f) {  	// prevent from flipping
-		rb.Aqq[0][1] = -rb.Aqq[0][1];
-		rb.Aqq[1][1] = -rb.Aqq[1][1];
-	}
-
-	polarDecomposition(rb.Aqq, rb.R, rb.S);
+	mat2 S, R;
+	polarDecomposition(Aqq, R, S);
+	rb.R = vec4(R[0][0], R[1][0], R[0][1], R[1][1]);
 	rb.cm = cm/ particle_num;
 	rb.pnum = particle_num;
 	rb.solver_count = 0;

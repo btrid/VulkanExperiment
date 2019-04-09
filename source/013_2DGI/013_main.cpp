@@ -227,6 +227,10 @@ int rigidbody()
 //	y(vec2(20), vec2(20), vec2(1.f, -1.f), vec2(1.f, 1.f));
 	y(vec2(0), vec2(1, 0), vec2(0.f, 1.f), vec2(0.f, -1.f));
 
+	auto aa = mat2{ 0.00166025921, -0.999998391, 0.999998450, 0.00166024233 } *vec2(-1.f, -1.f);
+	auto bb = mat2{ 0.00166025921, -0.999998391, 0.999998450, 0.00166024233 } *vec2(2.f, 2.f);
+	auto cc = mat2{ 0.00166025921, -0.999998391, 0.999998450, 0.00166024233 } *vec2(200.f, 200.f);
+
 	auto a = cross(vec3(1.f, 0.f, 0.f), vec3(1.f, 0.f, 0.f));
 	auto b = cross(vec3(1.f, 0.f, 0.f), vec3(0.f, 1.f, 0.f));
 	auto b1 = cross(vec3(0.f, 1.f, 0.f), vec3(0.f, 1.f, 0.f));
@@ -262,7 +266,7 @@ int rigidbody()
 	{
 		for (int x = 0; x < 1; x++)
 		{
-			physics_world->make(cmd, uvec4(250 + x * 16, 540 - y * 24, 16, 16));
+			physics_world->make(cmd, uvec4(250 + x * 16, 840 - y * 24, 16, 16));
 
 		}
 	}
