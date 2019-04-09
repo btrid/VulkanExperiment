@@ -3,6 +3,68 @@
 #include "GI2DContext.h"
 #include "GI2DRigidbody.h"
 
+namespace
+{
+
+void jacobiRotate(mat2& A, mat2& R)
+{
+	// rotates A through phi in 01-plane to set A(0,1) = 0
+	// rotation stored in R whose columns are eigenvectors of A
+	float d = (A[0][0] - A[1][1]) / (2.0*A[0][1]);
+	float t = 1.0 / (abs(d) + sqrt(d*d + 1.0));
+	if (d < 0.0) t = -t;
+	float c = 1.0 / sqrt(t*t + 1);
+	float s = t * c;
+	A[0][0] += t * A[0][1];
+	A[1][1] -= t * A[0][1];
+	A[0][1] = A[1][0] = 0.0;
+	// store rotation in R
+	for (int k = 0; k < 2; k++) {
+		float Rkp = c * R[k][0] + s * R[k][1];
+		float Rkq = -s * R[k][0] + c * R[k][1];
+		R[k][0] = Rkp;
+		R[k][1] = Rkq;
+	}
+}
+
+
+// --------------------------------------------------
+void eigenDecomposition(mat2& A, mat2& R)
+{
+	// only for symmetric matrices!
+	// A = R A' R^T, where A' is diagonal and R orthonormal
+
+	R = mat2(1.0);	// unit matrix
+	jacobiRotate(A, R);
+}
+
+
+// --------------------------------------------------
+void polarDecomposition(const mat2& A, mat2& R, mat2& S)
+{
+	// A = RS, where S is symmetric and R is orthonormal
+	// -> S = (A^T A)^(1/2)
+
+	mat2 ATA = transpose(A) * A;
+	//	ATA.multiplyTransposedLeft(A, A);
+
+	mat2 U = mat2(1.0);
+	eigenDecomposition(ATA, U);
+
+	float l0 = ATA[0][0]; if (l0 <= 0.0) l0 = 0.0; else l0 = 1.0 / sqrt(l0);
+	float l1 = ATA[1][1]; if (l1 <= 0.0) l1 = 0.0; else l1 = 1.0 / sqrt(l1);
+
+	mat2 S1;
+	S1[0][0] = l0 * U[0][0] * U[0][0] + l1 * U[0][1] * U[0][1];
+	S1[0][1] = l0 * U[0][0] * U[1][0] + l1 * U[0][1] * U[1][1];
+	S1[1][0] = S1[0][1];
+	S1[1][1] = l0 * U[1][0] * U[1][0] + l1 * U[1][1] * U[1][1];
+	R = A * S1;
+	S = transpose(R)*A;
+	//	S.multiplyTransposedLeft(R, A);
+}
+
+}
 
 PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context)
 {
@@ -303,7 +365,8 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 		rb.Aqq[1][1] += qq.w;
 	}
 	rb.Aqq_inv = inverse(rb.Aqq);
-
+	polarDecomposition(rb.Aqq, rb.R, rb.S);
+	rb.cm = center;
 	rb.pnum = particle_num;
 	rb.solver_count = 0;
 	rb.inertia = inertia;
