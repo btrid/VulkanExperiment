@@ -265,7 +265,7 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 			pos[x + y * box.z] = vec2(box) + rotate(vec2(x, y) + 0.5f, 0.2f);
 //			pos[x + y * box.z] = vec2(box) + rotate(vec2(x, y) + 0.5f, 0.f);
 			pstate[x + y * box.z].pos = pos[x + y * box.z];
-			pstate[x + y * box.z].pos_old = pos[x + y * box.z];‚µ‚ã
+			pstate[x + y * box.z].pos_old = pos[x + y * box.z];
 			pstate[x + y * box.z].pos_predict = pos[x + y * box.z];
 			pstate[x + y * box.z].contact_index = -1;
 //			if (y == 0 || y == box.w - 1 || x == 0 || x == box.z - 1) 

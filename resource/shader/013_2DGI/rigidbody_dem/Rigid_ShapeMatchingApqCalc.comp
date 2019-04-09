@@ -13,6 +13,7 @@ void jacobiRotate(inout mat2 A, inout mat2 R)
 {
 	// rotates A through phi in 01-plane to set A(0,1) = 0
 	// rotation stored in R whose columns are eigenvectors of A
+	if(dot(A[0][1], A[0][1]) <= 0.0001) return;
 	float d = (A[0][0] - A[1][1])/(2.0*A[0][1]);
 	float t = 1.0 / (abs(d) + sqrt(d*d + 1.0));
 	if (d < 0.0) t = -t;
