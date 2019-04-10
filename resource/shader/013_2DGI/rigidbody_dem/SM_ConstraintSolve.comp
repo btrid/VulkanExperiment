@@ -49,9 +49,12 @@ void main()
 			float w = max(dot(-normalize(sdf), normalize(sdf_j)), 0.);
 			float total_mass = mass + mass_j;
 			{
-				vec2 collect_vec = (abs(distsq) <= 0.1 ? vec2(0.) : normalize(rela_pos)) + sdf_j;
-				move += dot(collect_vec, normalize(sdf_j)) * normalize(sdf_j) * ((mass /total_mass) * w);
-				hit++;
+//				vec2 collect_vec = (abs(distsq) <= 0.1 ? vec2(0.) : normalize(rela_pos)) + sdf_j;
+	//			vec2 collect_vec = normalize(rela_pos) + sdf_j;
+				vec2 collect_vec = pos_j + sdf_j - pos;
+//				move += dot(collect_vec, normalize(sdf_j)) * normalize(sdf_j) * ((mass /total_mass) * w);
+				pos += dot(collect_vec, normalize(sdf_j)) * normalize(sdf_j) * ((mass /total_mass) * w);
+//				hit++;
 //				move += sdf_j  * ((mass /total_mass) * w);
 //				move += vec2(0., -1.);
 //				break;
@@ -60,7 +63,7 @@ void main()
 
 		if(hit != 0)
 		{
-			pos += move / hit;
+//			pos += move / hit;
 		}
 	}
 
