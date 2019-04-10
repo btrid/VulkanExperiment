@@ -19,11 +19,12 @@ void main()
 	vec2 sdf = b_rbParticle[p_id].local_sdf;
 	ivec4 map_index = ivec4(pos.xyxy) + ivec4(ivec2(0), step(vec2(0.5), pos-floor(pos)) * 2. - 1.);
 	ivec4 findex = map_index.xzxz + map_index.yyww * u_gi2d_info.m_resolution.x;
-	vec2 move = vec2(0.);
 	float mass = 1.;
 
 	for(uint i = 0; i < 4; i++)
 	{
+		int hit = 0;
+		vec2 move = vec2(0.);
 		uint index = findex[i];
 		uint count = min(b_fluid_count[index], FLUID_NUM);
 		for(uint ii = 0; ii < count; ii++)
@@ -50,14 +51,20 @@ void main()
 			{
 				vec2 collect_vec = (abs(distsq) <= 0.1 ? vec2(0.) : normalize(rela_pos)) + sdf_j;
 				move += dot(collect_vec, normalize(sdf_j)) * normalize(sdf_j) * ((mass /total_mass) * w);
+				hit++;
 //				move += sdf_j  * ((mass /total_mass) * w);
 //				move += vec2(0., -1.);
 //				break;
 			}
 		}
+
+		if(hit != 0)
+		{
+			pos += move / hit;
+		}
 	}
 
-	pos += move;
+//	pos += move;
 	b_rbParticle[p_id].pos = pos;
 	ivec2 pos_integer = ivec2(round(pos * 65535.  / b_rigidbody[r_id].pnum));
 	atomicAdd(b_rigidbody[r_id].cm_work.x, pos_integer.x);

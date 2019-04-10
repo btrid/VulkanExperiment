@@ -63,10 +63,11 @@ struct PhysicsWorld
 		float _p1;
 		vec2 cm;
 
+		vec4 R;
+
 		i64vec2 cm_work;
 		i64vec4 Apq_work;
 
-		vec4 R;
 
 	};
 

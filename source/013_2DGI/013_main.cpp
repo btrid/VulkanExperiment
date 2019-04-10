@@ -338,6 +338,7 @@ int rigidbody()
 				cmds[cmd_gi2d] = cmd;
 			}
 			app.submit(std::move(cmds));
+			device->waitIdle();
 		}
 		app.postUpdate();
 		printf("%-6.4fms\n", time.getElapsedTimeAsMilliSeconds());

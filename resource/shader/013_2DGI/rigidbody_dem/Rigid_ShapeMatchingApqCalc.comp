@@ -77,6 +77,7 @@ void main()
 	mat2 R, S;
 	polarDecomposition(Apq, R, S);
 	b_rigidbody[r_id].R = vec4(R[0][0], R[1][0], R[0][1], R[1][1]);
+//	b_rigidbody[r_id].R = vec4(1., 0., 0., 1.);
 
 	b_rigidbody[r_id].Apq_work = i64vec4(0);
 }
