@@ -31,6 +31,7 @@ void main()
 		f.sdf = b_rbParticle[p_id].local_sdf;
 		f.mass = 1.;
 		f.move = ivec2(0);
+		f.vel = pos - b_rbParticle[p_id].pos_old;
 //		f.is_active = b_rbParticle[p_id].is_active;
 		f.is_active = 1;
 		f.solver_count = 0;

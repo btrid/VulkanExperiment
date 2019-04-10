@@ -4,7 +4,7 @@
 #if defined(USE_Rigidbody2D)
 
 #define RB_PARTICLE_BLOCK_SIZE (64)
-#define FLUID_NUM (8)
+#define FLUID_NUM (4)
 #define RB_DT (0.016)
 #define RB_GRAVITY_DT (vec2(0., 0.0025))
 //#define RB_DT (0.0016)
@@ -90,6 +90,9 @@ struct rbFluid
 	float mass;
 	uint is_active;
 	ivec2 move;
+	
+	vec2 vel;
+	vec2 _p2;
 };
 
 struct rbConstraint

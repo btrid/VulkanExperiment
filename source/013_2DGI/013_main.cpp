@@ -225,17 +225,15 @@ int rigidbody()
 // 	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(0.f, 1.f));
 //	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(0.f, 2.f));
 //	y(vec2(20), vec2(20), vec2(1.f, -1.f), vec2(1.f, 1.f));
-	y(vec2(0), vec2(1, 0), vec2(0.f, 1.f), vec2(0.f, -1.f));
+//	y(vec2(0), vec2(1, 0), vec2(0.f, 1.f), vec2(0.f, -1.f));
 
-	auto aa = mat2{ 0.00166025921, -0.999998391, 0.999998450, 0.00166024233 } *vec2(-1.f, -1.f);
-	auto bb = mat2{ 0.00166025921, -0.999998391, 0.999998450, 0.00166024233 } *vec2(2.f, 2.f);
-	auto cc = mat2{ 0.00166025921, -0.999998391, 0.999998450, 0.00166024233 } *vec2(200.f, 200.f);
 
 	auto a = cross(vec3(1.f, 0.f, 0.f), vec3(1.f, 0.f, 0.f));
 	auto b = cross(vec3(1.f, 0.f, 0.f), vec3(0.f, 1.f, 0.f));
 	auto b1 = cross(vec3(0.f, 1.f, 0.f), vec3(0.f, 1.f, 0.f));
 	auto b2 = cross(vec3(0.f, 1.f, 0.f), vec3(0.f, -1.f, 0.f));
-	auto p = calcTangent(vec2(1.f, 1.0f), vec2(0.f, -1.0f));
+	auto t = calcTangent(vec2(5.f, -6.0f), vec2(0.f, -1.0f));
+
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
 

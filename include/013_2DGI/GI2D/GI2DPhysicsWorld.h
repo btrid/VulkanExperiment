@@ -105,6 +105,9 @@ struct PhysicsWorld
 		float mass;
 		uint is_active;
 		ivec2 move;
+
+		vec2 vel;
+		vec2 _p2;
 	};
 
 
@@ -116,9 +119,9 @@ struct PhysicsWorld
 
 	enum
 	{
-		RB_NUM = 1024,
+		RB_NUM = 512,
 		RB_PARTICLE_BLOCK_SIZE = 64,
-		RB_PARTICLE_NUM = RB_NUM * RB_PARTICLE_BLOCK_SIZE * 16,
+		RB_PARTICLE_NUM = RB_NUM * RB_PARTICLE_BLOCK_SIZE * 8,
 
 	};
 
