@@ -233,7 +233,7 @@ int rigidbody()
 	auto b1 = cross(vec3(0.f, 1.f, 0.f), vec3(0.f, 1.f, 0.f));
 	auto b2 = cross(vec3(0.f, 1.f, 0.f), vec3(0.f, -1.f, 0.f));
 	auto t = calcTangent(vec2(5.f, -6.0f), vec2(0.f, -1.0f));
-	auto t1 = calcTangent(vec2(0.f, 1.f), vec2(-1.f, 0.f));
+	auto t1 = calcTangent(vec2(1.f, 1.f), vec2(-1.f, 0.f));
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
 
@@ -264,7 +264,7 @@ int rigidbody()
 	{
 		for (int x = 0; x < 20; x++)
 		{
-			physics_world->make(cmd, uvec4(250 + x * 16, 840 - y * 24, 16, 16));
+			physics_world->make(cmd, uvec4(250 + x * 16, 870 - y * 24, 16, 16));
 
 		}
 	}
