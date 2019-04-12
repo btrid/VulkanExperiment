@@ -213,14 +213,14 @@ struct GI2DMakeHierarchy
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_SDF].get(), 1, sdf_context->getDescriptorSet(), {});
 
 		{
-// 			std::vector<GI2DSDF::D2JFACell> data(sdf_context->m_gi2d_context->FragmentBufferSize, GI2DSDF::D2JFACell{ivec2(-1), 99999.f, 0, ivec2(-1), 99999.f, 0 });
-// 			cmd.updateBuffer<GI2DSDF::D2JFACell>(sdf_context->b_jfa.getInfo().buffer, sdf_context->b_jfa.getInfo().offset, data);
-// 
-// 			vk::BufferMemoryBarrier to_read[] = {
-// 				sdf_context->b_jfa.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
-// 			};
-// 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
-// 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
+			std::vector<GI2DSDF::D2JFACell> data(sdf_context->m_gi2d_context->FragmentBufferSize, GI2DSDF::D2JFACell{ivec2(-1), 99999.f, 0, ivec2(-1), 99999.f, 0 });
+			cmd.updateBuffer<GI2DSDF::D2JFACell>(sdf_context->b_jfa.getInfo().buffer, sdf_context->b_jfa.getInfo().offset, data);
+
+			vk::BufferMemoryBarrier to_read[] = {
+				sdf_context->b_jfa.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 		}
 
