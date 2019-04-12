@@ -105,7 +105,7 @@ GI2DRigidbody_procedure::GI2DRigidbody_procedure(const std::shared_ptr<PhysicsWo
 	}
 
 }
-void GI2DRigidbody_procedure::executeSM(vk::CommandBuffer cmd, const std::shared_ptr<PhysicsWorld>& world)
+void GI2DRigidbody_procedure::execute(vk::CommandBuffer cmd, const std::shared_ptr<PhysicsWorld>& world)
 {
 	m_world->execute(cmd);
 

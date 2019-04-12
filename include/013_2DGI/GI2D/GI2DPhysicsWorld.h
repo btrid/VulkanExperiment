@@ -79,13 +79,6 @@ struct PhysicsWorld
 		vec2 sdf;
 	};
 
-
-	struct rbConstraint
-	{
-		uint f_id1;
-		uint f_id2;
-	};
-
 	enum
 	{
 		RB_NUM = 512,
@@ -116,9 +109,6 @@ struct PhysicsWorld
 	btr::BufferMemoryEx<uint32_t> b_rbparticle_map;
 	btr::BufferMemoryEx<uint32_t> b_fluid_counter;
 	btr::BufferMemoryEx<rbFluid> b_fluid;
-	btr::BufferMemoryEx<uvec4> b_constraint_counter;
-	btr::BufferMemoryEx<rbConstraint> b_constraint;
-	btr::BufferMemoryEx<vec2> b_centermass;
 
 	uint32_t m_rigidbody_id;
 	uint32_t m_particle_id;

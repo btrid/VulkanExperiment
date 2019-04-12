@@ -87,12 +87,7 @@ layout(set=USE_Rigidbody2D, binding=4, std430) restrict buffer rbFluidCounter {
 layout(set=USE_Rigidbody2D, binding=5, std430) restrict buffer rbFluidData {
 	rbFluid b_fluid[];
 };
-layout(set=USE_Rigidbody2D, binding=6, std430) restrict buffer rbConstraintCounter {
-	uvec4 b_constraint_counter;
-};
-layout(set=USE_Rigidbody2D, binding=7, std430) restrict buffer rbConstraintData {
-	rbConstraint b_constraint[];
-};
+
 
 #endif
 

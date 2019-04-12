@@ -50,7 +50,7 @@ struct GI2DRigidbody_procedure
 	};
 
 	GI2DRigidbody_procedure(const std::shared_ptr<PhysicsWorld>& world);
-	void executeSM(vk::CommandBuffer cmd, const std::shared_ptr<PhysicsWorld>& world);
+	void execute(vk::CommandBuffer cmd, const std::shared_ptr<PhysicsWorld>& world);
 	void executeMakeFluid(vk::CommandBuffer cmd, const std::shared_ptr<PhysicsWorld>& world);
 	void executeToFragment(vk::CommandBuffer cmd, const std::shared_ptr<PhysicsWorld>& world);
 
