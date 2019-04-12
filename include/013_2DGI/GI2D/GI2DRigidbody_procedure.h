@@ -16,28 +16,15 @@ struct GI2DRigidbody_procedure
 
 	enum Shader
 	{
-		Shader_MakeParticle,
-		Shader_MakeFluid,
-
-		Shader_CalcForce,
-		Shader_IntegrateParticle,
-		Shader_Integrate,
-		Shader_UpdateRigidbody,
-
-		Shader_ConstraintMake,
-		Shader_ConstraintSolve,
-		Shader_ConstraintIntegrate,
-
-		Shader_SMMakeParticle,
-		Shader_SMCalcCenterMass,
-		Shader_SMApqAccum,
-		Shader_SMApqCalc,
-		Shader_SMIntegrate,
-
-		Shader_SMMakeFluid,
-		Shader_SMConstraintSolve,
-
 		Shader_ToFragment,
+
+		Shader_RBMakeParticle,
+		Shader_RBMakeFluid,
+		Shader_RBConstraintSolve,
+		Shader_RBCalcCenterMass,
+		Shader_RBApqAccum,
+		Shader_RBApqCalc,
+
 
 		Shader_Num,
 	};
@@ -49,38 +36,24 @@ struct GI2DRigidbody_procedure
 	};
 	enum Pipeline
 	{
-		Pipeline_MakeParticle,
-		Pipeline_MakeFluid,
-
-		Pipeline_CalcForce,
-		Pipeline_IntegrateParticle,
-		Pipeline_Integrate,
-		Pipeline_UpdateRigidbody,
-
-		Pipeline_ConstraintMake,
-		Pipeline_ConstraintSolve,
-		Pipeline_ConstraintIntegrate,
-
-		Pipeline_SMMakeParticle,
-		Pipeline_SMCalcCenterMass,
-		Pipeline_SMApqAccum,
-		Pipeline_SMApqCalc,
-		Pipeline_SMIntegrate,
-		Pipeline_SMMakeFluid,
-		Pipeline_SMConstraintSolve,
-
 		Pipeline_ToFragment,
+
+		Pipeline_RBMakeParticle,
+		Pipeline_RBMakeFluid,
+		Pipeline_RBConstraintSolve,
+		Pipeline_RBCalcCenterMass,
+		Pipeline_RBApqAccum,
+		Pipeline_RBApqCalc,
+
 
 		Pipeline_Num,
 	};
 
 	GI2DRigidbody_procedure(const std::shared_ptr<PhysicsWorld>& world);
 	void executeSM(vk::CommandBuffer cmd, const std::shared_ptr<PhysicsWorld>& world);
-	void execute(vk::CommandBuffer cmd, const std::shared_ptr<PhysicsWorld>& world);
 	void executeMakeFluid(vk::CommandBuffer cmd, const std::shared_ptr<PhysicsWorld>& world);
 	void executeToFragment(vk::CommandBuffer cmd, const std::shared_ptr<PhysicsWorld>& world);
 
-	void _executeConstraint(vk::CommandBuffer cmd, const std::shared_ptr<PhysicsWorld>& world);
 
 	std::shared_ptr<PhysicsWorld> m_world;
 

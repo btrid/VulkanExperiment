@@ -368,7 +368,6 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 		Aqq[1][0] += qq.z;
 		Aqq[1][1] += qq.w;
 	}
-//	rb.Aqq_inv = inverse(rb.Aqq);
 
 	mat2 S, R;
 	polarDecomposition(Aqq, R, S);
