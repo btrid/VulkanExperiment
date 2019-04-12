@@ -33,7 +33,7 @@ void nearest(inout D2JFACell new_cell, in ivec4 reso, in vec2 current, in ivec2 
 			}
 		}
 
-		if(target_cell.e_nearest_index.x >= 0)
+/*		if(target_cell.e_nearest_index.x >= 0)
 		{
 			float d = distance(vec2(target_cell.e_nearest_index), vec2(current));
 			if(d < new_cell.e_distance)
@@ -42,7 +42,7 @@ void nearest(inout D2JFACell new_cell, in ivec4 reso, in vec2 current, in ivec2 
 				new_cell.e_nearest_index = target_cell.e_nearest_index;
 			}
 		}
-	}
+*/	}
 
 }
 void main() 
@@ -62,7 +62,7 @@ void main()
 	nearest(new_cell, reso, current, current + ivec2(0, constant.distance));
 	nearest(new_cell, reso, current, current + ivec2(constant.distance, constant.distance));
 
-	if(new_cell.distance < current_cell.distance || new_cell.e_distance < current_cell.e_distance)
+	if(new_cell.distance < current_cell.distance /*|| new_cell.e_distance < current_cell.e_distance*/)
 	{
 		b_jfa[current.x + current.y*reso.x] = new_cell;
 	}

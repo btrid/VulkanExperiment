@@ -7,13 +7,10 @@
 
 struct D2JFACell
 {
-	ivec2 nearest_index;
+	i16vec2 nearest_index;
+//	i16vec2 e_nearest_index;
 	float distance;
-	int _p;
-	ivec2 e_nearest_index;
-	float e_distance;
-	int _ep;
-//	int attr;
+//	float e_distance;
 };
 
 
