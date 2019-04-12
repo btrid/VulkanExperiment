@@ -266,7 +266,6 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 			pos[x + y * box.z] = vec2(box) + rotate(vec2(x, y) + 0.5f, 0.f);
 			pstate[x + y * box.z].pos = pos[x + y * box.z];
 			pstate[x + y * box.z].pos_old = pos[x + y * box.z];
-			pstate[x + y * box.z].pos_predict = pos[x + y * box.z];
 			pstate[x + y * box.z].contact_index = -1;
 //			if (y == 0 || y == box.w - 1 || x == 0 || x == box.z - 1) 
 			{
@@ -277,124 +276,55 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 		}
 	}
 
-	ivec2 pos_integer = ivec2(0);
-	ivec2 pos_decimal = ivec2(0);
-	for (int32_t i = 0; i < particle_num; i++)
-	{
-		pos_integer += ivec2(round(pos[i]/ particle_num * 65535.f));
-		pos_decimal += ivec2((pos[i] - trunc(pos[i]))*65535.f);
-	}
-	vec2 _center = vec2(pos_integer) / 65535.f;// + vec2(pos_decimal) / 65535.f;
 	vec2 center = vec2(0.f);
 	for (int32_t i = 0; i < particle_num; i++)
 	{
 		center += pos[i];
 	}
 	center /= particle_num;
-//	_center = trunc(_center / particle_num);
 
 
-	vec2 size = vec2(0.f);
-	vec2 cm = vec2(0.f);
 	vec2 size_max = vec2(0.f);
 	vec2 size_min = vec2(0.f);
 	for (int32_t i = 0; i < particle_num; i++)
 	{
 		pstate[i].relative_pos = pos[i] - center;
-		cm += pos[i];
-		size += pstate[i].relative_pos;
 		size_max = glm::max(pstate[i].relative_pos, size_max);
 		size_min = glm::min(pstate[i].relative_pos, size_min);
 	}
-	size /= particle_num;
 
-	float inertia = 0.f;
-	for (uint32_t i = 0; i < particle_num; i++)
+	auto f = [&](const vec2& p, const vec2& target, float& distsq, vec2& sdf)
 	{
-		{
-			inertia += dot(pstate[i].relative_pos, pstate[i].relative_pos) /** mass*/;
-		}
-	}
-	inertia /= 12.f;
-
-	auto p = pstate[0].relative_pos;
-	vec2 v = vec2(9999999.f);
-	float distsq = 9999999999999.f;
-	auto f = [&](const vec2& n)
-	{
-		auto sq = dot(p - n, p - n);
+		auto sq = dot(p - target, p - target);
 		if (sq < distsq) 
 		{
 			distsq = sq;
-			v = n - p;
+			sdf = target - p;
 		}
-		else if (sq - FLT_EPSILON < distsq)
-		{
-			v += n - p;
-			v = normalize(v);
-		}
+// 		else if (sq - FLT_EPSILON < distsq)
+// 		{
+// 			sdf += target - p;
+// 		}
 	};
 	for (uint32_t i = 0; i < particle_num; i++)
 	{
-		p = pstate[i].relative_pos;
-		v = vec2(9999999.f);
-		distsq = 9999999999999.f;
+		const auto& p = pstate[i].relative_pos;
+		auto sdf = vec2(0.f);
+		auto distsq = 9999999999999.f;
 
-		f(vec2(p.x, size_max.y + 1.f));
-		f(vec2(p.x, size_min.y - 1.f));
-		f(vec2(size_max.x + 1.f, p.y));
-		f(vec2(size_min.x - 1.f, p.y));
-
-// 		for (uint32_t y = 0; y < box.w; y++)
-// 		{
-// 			for (uint32_t x = 0; x < box.z; x++)
-// 			{
-// 				auto pid = x + y * box.z;
-// 				if (pid == i){ continue;}
-// 				if (pstate[pid].is_active){ continue; }
-// 				f(pstate[pid].relative_pos);
-// 			}
-// 		}
-		pstate[i].sdf = normalize(v);
+		f(p, vec2(p.x, size_max.y + 1.f), distsq, sdf);
+		f(p, vec2(p.x, size_min.y - 1.f), distsq, sdf);
+		f(p, vec2(size_max.x + 1.f, p.y), distsq, sdf);
+		f(p, vec2(size_min.x - 1.f, p.y), distsq, sdf);
+		pstate[i].sdf = normalize(sdf);
 	}
-
-	mat2 Aqq = mat2(0.f);
-	for (uint32_t i = 0; i < particle_num; i++)
-	{
-		const auto& q = pstate[i].relative_pos;
-		auto qq = q.xxyy() * q.xyxy();
-		Aqq[0][0] += qq.x;
-		Aqq[0][1] += qq.y;
-		Aqq[1][0] += qq.z;
-		Aqq[1][1] += qq.w;
-	}
-
-	mat2 S, R;
-	polarDecomposition(Aqq, R, S);
-	rb.R = vec4(R[0][0], R[1][0], R[0][1], R[1][1]);
-	rb.cm = cm/ particle_num;
+	rb.R = vec4(1.f, 0.f, 0.f, 1.f);
+	rb.cm = center;
 	rb.pnum = particle_num;
-	rb.solver_count = 0;
-	rb.inertia = inertia;
-	rb.mass = 1;
 
-	rb.center = size / 2.f;
-	rb.size = ceil(size_max - size_min);
-
-	rb.pos = center;
-	rb.pos_predict = rb.pos;
-//	rb.pos_old = rb.pos - vec2(0.f, 0.5f);
-	rb.pos_old = rb.pos;
-	//	rb.angle = 3.14f / 4.f + 0.2f;
-	rb.angle = 0.f;
-	rb.angle_predict = rb.angle;
-	rb.angle_old = rb.angle;
 	rb.cm_work = ivec2(0);
 	rb.Apq_work= ivec4(0);
 
-	rb.exclusion = ivec2(0);
-	rb.exclusion_angle = 0;
-	rb.is_exclusive = 0;
 	cmd.updateBuffer<Rigidbody>(b_rigidbody.getInfo().buffer, b_rigidbody.getInfo().offset + r_id * sizeof(Rigidbody), rb);
 
 	uint32_t block_num = pstate.size() / RB_PARTICLE_BLOCK_SIZE;

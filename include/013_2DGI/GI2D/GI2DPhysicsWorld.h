@@ -41,34 +41,14 @@ struct PhysicsWorld
 	struct Rigidbody
 	{
 		uint pnum;
-		uint solver_count;
-		float inertia;
-		float mass;
-
-		vec2 center;
-		vec2 size;
-
-		vec2 pos;
-		vec2 pos_old;
-
-		float angle;
-		float angle_old;
-		ivec2 exclusion;
-
-		int exclusion_angle;
-		int is_exclusive;
-		vec2 pos_predict;
-
-		float angle_predict;
-		float _p1;
+		uint _p;
 		vec2 cm;
 
 		vec4 R;
 
 		i64vec2 cm_work;
+		i64vec2 _pp;
 		i64vec4 Apq_work;
-
-
 	};
 
 	struct rbParticle
@@ -77,7 +57,7 @@ struct PhysicsWorld
 		vec2 sdf;
 
 		vec2 pos;
-		vec2 pos_predict;
+		vec2 pos_old;
 
 		vec2 local_pos;
 		vec2 local_sdf;
@@ -87,27 +67,16 @@ struct PhysicsWorld
 		uint r_id;
 		uint is_active;
 
-		uint f_id;
-		uint _p1;
-		vec2 pos_old;
 	};
 
 	struct rbFluid
 	{
 		uint r_id;
-		uint p_id;
+		float mass;
 		vec2 pos;
 
-		uint solver_count;
-		uint _p1;
-		vec2 sdf;
-
-		float mass;
-		uint is_active;
-		ivec2 move;
-
 		vec2 vel;
-		vec2 _p2;
+		vec2 sdf;
 	};
 
 
