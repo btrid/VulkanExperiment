@@ -355,7 +355,7 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 // 				f(pstate[pid].relative_pos);
 // 			}
 // 		}
-		pstate[i].sdf = v;
+		pstate[i].sdf = normalize(v);
 	}
 
 	mat2 Aqq = mat2(0.f);

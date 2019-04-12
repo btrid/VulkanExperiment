@@ -70,10 +70,6 @@ void main()
 
 				// 摩擦
 				vec2 vel_unit = isZero(vel) ? vec2(0.) : normalize(vel);
-//				vec2 vel_unit = vel;
-//				float t = cross(vec3(vel_unit, 0.), vec3(n_vec, 0.)).z;
-//				float t = cross(vec3(vel_unit, 0.), vec3(n_vec, 0.)).z;
-//				float t = max(dot(-vel, normalize(sdf_j)), 0.);
 				vec2 t_vec = calcTangent(vel_unit, sdf_j) * s;
 				pos -= t_vec*0.2;
 			}
