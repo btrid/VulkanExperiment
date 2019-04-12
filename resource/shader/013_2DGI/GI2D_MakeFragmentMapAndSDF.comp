@@ -25,9 +25,7 @@ void main()
 	bool is_emissive = isEmissive(b_fragment[tiled_1D_index]);
 
 	b_jfa[tiled_1D_index].nearest_index = is_fragment ? i16vec2(id) : i16vec2(-1);
-	b_jfa[tiled_1D_index].distance = is_fragment ? 0. : 99999999.;
 //	b_jfa[tiled_1D_index].e_nearest_index = is_emissive ? i16vec2(id) : i16vec2(-1);
-//	b_jfa[tiled_1D_index].e_distance = is_emissive ? 0. : 99999999.;
 
 	uint power = packEmissive(albedo*LightPower);
 	b_light[getMemoryOrder(ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y))] = is_emissive ? power : 0;

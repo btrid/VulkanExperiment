@@ -18,17 +18,17 @@ layout(push_constant) uniform Input
 } constant;
 
 
-void nearest(inout D2JFACell new_cell, in ivec4 reso, in vec2 current, in ivec2 target)
+void nearest(inout D2JFACell new_cell, inout vec4 current_d, in ivec4 reso, in vec2 current, in ivec2 target)
 {
 	if(all(greaterThanEqual(target, ivec2(0))) && all(lessThan(target, reso.xy)))
 	{
 		D2JFACell target_cell = b_jfa[target.x + target.y*reso.x];
-		if(target_cell.nearest_index.x >= 0)
+//		if(target_cell.nearest_index.x >= 0)
 		{
 			float d = distance(vec2(target_cell.nearest_index), vec2(current));
-			if(d < new_cell.distance)
+			if(d < current_d.x)
 			{
-				new_cell.distance = d;
+				current_d.x = d;
 				new_cell.nearest_index = target_cell.nearest_index;
 			}
 		}
@@ -36,33 +36,39 @@ void nearest(inout D2JFACell new_cell, in ivec4 reso, in vec2 current, in ivec2 
 /*		if(target_cell.e_nearest_index.x >= 0)
 		{
 			float d = distance(vec2(target_cell.e_nearest_index), vec2(current));
-			if(d < new_cell.e_distance)
+			if(d < current_d.y)
 			{
-				new_cell.e_distance = d;
+				current_d.y = d;
 				new_cell.e_nearest_index = target_cell.e_nearest_index;
 			}
 		}
-*/	}
+*/		
+	}
 
 }
 void main() 
 {
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
-	ivec2 current = ivec2(gl_GlobalInvocationID.xy);
+	const ivec2 current = ivec2(gl_GlobalInvocationID.xy);
+	const ivec3 cd = ivec3(constant.distance) * ivec3(-1, 0, 1);
 
-	D2JFACell current_cell = b_jfa[current.x + current.y*reso.x];
+	const D2JFACell current_cell = b_jfa[current.x + current.y*reso.x];
+	vec4 d;
+	d.x = current_cell.nearest_index.x >= 0 ? distance(vec2(current), vec2(current_cell.nearest_index)) : 99999999.;
+//	d.y = current_cell.e_nearest_index.x >= 0 ? distance(vec2(current), vec2(current_cell.e_nearest_index)) : 99999999.;
 	D2JFACell new_cell = current_cell;
-	nearest(new_cell, reso, current, current + ivec2(-constant.distance, -constant.distance));
-	nearest(new_cell, reso, current, current + ivec2(0, -constant.distance));
-	nearest(new_cell, reso, current, current + ivec2(constant.distance, -constant.distance));
-	nearest(new_cell, reso, current, current + ivec2(-constant.distance, 0));
-	//nearest(new_cell, reso, current, current + ivec2(0, 0));
-	nearest(new_cell, reso, current, current + ivec2(constant.distance, 0));
-	nearest(new_cell, reso, current, current + ivec2(-constant.distance, constant.distance));
-	nearest(new_cell, reso, current, current + ivec2(0, constant.distance));
-	nearest(new_cell, reso, current, current + ivec2(constant.distance, constant.distance));
+	const vec4 old_d = d;
+	nearest(new_cell, d, reso, current, current + cd.xx);
+	nearest(new_cell, d, reso, current, current + cd.xy);
+	nearest(new_cell, d, reso, current, current + cd.xz);
+	nearest(new_cell, d, reso, current, current + cd.yx);
+	//nearest(new_cell, d, reso, current, current + cd.yy);
+	nearest(new_cell, d, reso, current, current + cd.yz);
+	nearest(new_cell, d, reso, current, current + cd.zx);
+	nearest(new_cell, d, reso, current, current + cd.zy);
+	nearest(new_cell, d, reso, current, current + cd.zz);
 
-	if(new_cell.distance < current_cell.distance /*|| new_cell.e_distance < current_cell.e_distance*/)
+	if(any(notEqual(d, old_d)) /*|| new_cell.e_distance < current_cell.e_distance*/)
 	{
 		b_jfa[current.x + current.y*reso.x] = new_cell;
 	}

@@ -271,9 +271,9 @@ struct GI2DSDF
 	struct D2JFACell
 	{
 		i16vec2 nearest_index;
-		i16vec2 e_nearest_index;
-		float distance;
-		float e_distance;
+//		i16vec2 e_nearest_index;
+//		float distance;
+//		float e_distance;
 
 	};
 

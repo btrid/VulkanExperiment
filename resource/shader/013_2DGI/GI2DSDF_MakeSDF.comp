@@ -18,6 +18,7 @@ void main()
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
 	ivec2 current = ivec2(gl_GlobalInvocationID.xy);
 	D2JFACell cell = b_jfa[current.x + current.y*reso.x];
+	float d = distance(vec2(current), vec2(cell.nearest_index));
 
-	b_sdf[current.x + current.y*reso.x] = vec2(cell.distance);
+	b_sdf[current.x + current.y*reso.x] = vec2(d);
 }

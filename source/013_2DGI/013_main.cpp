@@ -274,7 +274,7 @@ int rigidbody()
 	while (true)
 	{
 		cStopWatch time;
-
+		
 		app.preUpdate();
 		{
 			enum
