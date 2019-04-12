@@ -1,10 +1,8 @@
 #ifndef GI2D_
 #define GI2D_
 
-#extension GL_ARB_gpu_shader_int64 : require
-#extension GL_ARB_shader_draw_parameters : require
+#extension GL_EXT_shader_explicit_arithmetic_types : require
 #extension GL_NV_shader_atomic_int64 : require
-//#extension GL_NV_gpu_program5 : require
 
 struct GI2DInfo
 {
