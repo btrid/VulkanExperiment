@@ -257,7 +257,7 @@ int rigidbody()
 	GI2DClear gi2d_clear(context, gi2d_context);
 	GI2DDebug gi2d_debug(context, gi2d_context);
 	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
-	GI2DRigidbody_procedure gi2d_rigidbody(physics_world);
+	GI2DRigidbody_procedure gi2d_rigidbody(physics_world, gi2d_sdf_context);
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 	std::shared_ptr<GI2DFluid> gi2d_Fluid = std::make_shared<GI2DFluid>(context, gi2d_context);
 
@@ -321,13 +321,13 @@ int rigidbody()
 				gi2d_make_hierarchy.executeHierarchy(cmd);
 				gi2d_make_hierarchy.executeMakeSDF(cmd, gi2d_sdf_context);
 				gi2d_make_hierarchy.executeRenderSDF(cmd, gi2d_sdf_context, app.m_window->getFrontBuffer());
-				//				gi2d_Fluid->executeCalc(cmd);
+
+//				gi2d_Fluid->executeCalc(cmd);
 //				gi2d_Softbody.execute(cmd);
 
-// 				gi2d_rigidbody.execute(cmd, physics_world);
-// 				gi2d_rigidbody.executeToFragment(cmd, physics_world);
-
-//				gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
+  				gi2d_rigidbody.execute(cmd, physics_world, gi2d_sdf_context);
+  				gi2d_rigidbody.executeToFragment(cmd, physics_world);
+ 				gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;
 			}

@@ -25,6 +25,7 @@ struct GI2DRigidbody_procedure
 		Shader_RBApqAccum,
 		Shader_RBApqCalc,
 
+		Shader_MakeWallCollision,
 
 		Shader_Num,
 	};
@@ -32,6 +33,7 @@ struct GI2DRigidbody_procedure
 	enum PipelineLayout
 	{
 		PipelineLayout_Rigid,
+		PipelineLayout_MakeWallCollision,
 		PipelineLayout_Num,
 	};
 	enum Pipeline
@@ -45,13 +47,18 @@ struct GI2DRigidbody_procedure
 		Pipeline_RBApqAccum,
 		Pipeline_RBApqCalc,
 
+		Pipeline_MakeWallCollision,
 
 		Pipeline_Num,
 	};
 
-	GI2DRigidbody_procedure(const std::shared_ptr<PhysicsWorld>& world);
-	void execute(vk::CommandBuffer cmd, const std::shared_ptr<PhysicsWorld>& world);
+	GI2DRigidbody_procedure(const std::shared_ptr<PhysicsWorld>& world, const std::shared_ptr<GI2DSDF>& sdf);
+	void execute(vk::CommandBuffer cmd, const std::shared_ptr<PhysicsWorld>& world, const std::shared_ptr<GI2DSDF>& sdf);
 	void executeMakeFluid(vk::CommandBuffer cmd, const std::shared_ptr<PhysicsWorld>& world);
+
+	void _executeMakeFluidParticle(vk::CommandBuffer &cmd, const std::shared_ptr<PhysicsWorld>& world);
+	void _executeMakeFluidWall(vk::CommandBuffer &cmd, const std::shared_ptr<PhysicsWorld>& world, const std::shared_ptr<GI2DSDF>& sdf);
+
 	void executeToFragment(vk::CommandBuffer cmd, const std::shared_ptr<PhysicsWorld>& world);
 
 
@@ -62,3 +69,4 @@ struct GI2DRigidbody_procedure
 	std::array<vk::UniquePipeline, Pipeline_Num> m_pipeline;
 
 };
+

@@ -270,7 +270,8 @@ struct GI2DSDF
 	// https://postd.cc/voronoi-diagrams/
 	struct D2JFACell
 	{
-		i16vec2 nearest[2];
+		i16vec2 nearest_inner;
+		i16vec2 nearest_outer;
 	};
 
 	GI2DSDF(const std::shared_ptr<GI2DContext>& gi2d_context)

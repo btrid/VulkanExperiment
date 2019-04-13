@@ -10,6 +10,7 @@ SET output=../../binary
 
 %exe% %include% %option% -o %output%/Rigid_ToFragment.comp.spv Rigid_ToFragment.comp
 %exe% %include% %option% -o %output%/Rigid_ToFluidWall.comp.spv Rigid_ToFluidWall.comp
+%exe% %include% %option% -o %output%/Rigid_ToFluidWall2.comp.spv Rigid_ToFluidWall2.comp
 
 %exe% %include% %option% -o %output%/Rigid_MakeParticle.comp.spv Rigid_MakeParticle.comp
 %exe% %include% %option% -o %output%/Rigid_MakeFluid.comp.spv Rigid_MakeFluid.comp

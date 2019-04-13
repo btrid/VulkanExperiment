@@ -7,7 +7,6 @@
 #include "Rigidbody2D.glsl"
 
 
-
 layout (local_size_x = RB_PARTICLE_BLOCK_SIZE) in;
 void main() 
 {
