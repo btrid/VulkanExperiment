@@ -19,5 +19,5 @@ void main()
 {
 	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
 	ivec2 current = ivec2(gl_GlobalInvocationID.xy);
-	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(b_sdf[current.x + current.y*reso.x] / 100., 0., 1.));
+	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(b_sdf[current.x + current.y*reso.x], 0., 1.));
 }

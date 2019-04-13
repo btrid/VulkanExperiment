@@ -75,7 +75,7 @@ struct GI2DMakeHierarchy
 			pipeline_layout_info.setPSetLayouts(layouts);
 
 			vk::PushConstantRange constants[] = {
-				vk::PushConstantRange().setOffset(0).setSize(4).setStageFlags(vk::ShaderStageFlagBits::eCompute),
+				vk::PushConstantRange().setOffset(0).setSize(8).setStageFlags(vk::ShaderStageFlagBits::eCompute),
 			};
 			pipeline_layout_info.setPushConstantRangeCount(array_length(constants));
 			pipeline_layout_info.setPPushConstantRanges(constants);
@@ -245,6 +245,7 @@ struct GI2DMakeHierarchy
 
 		// make sdf
 		{
+			uint src = 1;
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeJFA].get());
 			auto num = app::calcDipatchGroups(uvec3(sdf_context->m_gi2d_context->RenderWidth, sdf_context->m_gi2d_context->RenderHeight, 1), uvec3(16, 16, 1));
 			//for (int distance = sdf_context->m_gi2d_context->RenderWidth >> 1; distance != 0; distance >>= 1)
@@ -256,8 +257,9 @@ struct GI2DMakeHierarchy
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 					0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
+				src = (src+1)%2;
 
-				cmd.pushConstants<int32_t>(m_pipeline_layout[PipelineLayout_SDF].get(), vk::ShaderStageFlagBits::eCompute, 0, distance);
+				cmd.pushConstants<uvec2>(m_pipeline_layout[PipelineLayout_SDF].get(), vk::ShaderStageFlagBits::eCompute, 0, uvec2{ distance, src });
 				cmd.dispatch(num.x, num.y, num.z);
 
 			}

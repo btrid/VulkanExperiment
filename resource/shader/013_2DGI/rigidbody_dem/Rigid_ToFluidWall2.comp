@@ -25,8 +25,10 @@ void main()
 	f.r_id = -1;
 	f.mass = 0.;
 	f.pos = vec2(gl_GlobalInvocationID.xy) + vec2(0.5);
-	f.sdf = normalize(vec2(b_jfa[i].nearest[0] - gl_GlobalInvocationID.xy));
+//	f.sdf = normalize(vec2(b_jfa[i].nearest[0] - gl_GlobalInvocationID.xy));
 //	f.sdf = normalize(vec2(b_jfa[i].nearest[1] - gl_GlobalInvocationID.xy));
+	f.sdf = b_sdf[i];
+
 	f.vel = vec2(0.);
 
 	uint ii = atomicAdd(b_fluid_count[i], 1);

@@ -14,7 +14,8 @@ layout (local_size_x = 16, local_size_y = 16) in;
 
 layout(push_constant) uniform Input
 {
-	int distance;
+	uint distance;
+	uint src;
 } constant;
 
 
@@ -44,8 +45,10 @@ void main()
 	const uvec2 reso = uvec2(u_gi2d_info.m_resolution.xy);
 	const uvec2 current = uvec2(gl_GlobalInvocationID.xy);
 	const ivec3 cd = ivec3(constant.distance) * ivec3(-1, 0, 1);
+	const uint src_offset = reso.x*reso.y * constant.src;
+	const uint dst_offset = reso.x*reso.y * (1-constant.src);
 
-	const D2JFACell current_cell = b_jfa[current.x + current.y*reso.x];
+	const D2JFACell current_cell = b_jfa[current.x + current.y*reso.x + src_offset];
 	vec4 d;
 	d.x = current_cell.nearest[0].x >= 0 ? distance(vec2(current), vec2(current_cell.nearest[0])) : 99999999.;
 	d.y = current_cell.nearest[1].x >= 0 ? distance(vec2(current), vec2(current_cell.nearest[1])) : 99999999.;
@@ -61,8 +64,8 @@ void main()
 	nearest(new_cell, d, reso, current, current + cd.zy);
 	nearest(new_cell, d, reso, current, current + cd.zz);
 
-	if(any(notEqual(d, old_d)) /*|| new_cell.e_distance < current_cell.e_distance*/)
+//	if(any(notEqual(d, old_d)))
 	{
-		b_jfa[current.x + current.y*reso.x] = new_cell;
+		b_jfa[current.x + current.y*reso.x + dst_offset] = new_cell;
 	}
 }

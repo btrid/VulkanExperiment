@@ -326,12 +326,13 @@ int rigidbody()
 //				gi2d_Softbody.execute(cmd);
 
   				gi2d_rigidbody.execute(cmd, physics_world, gi2d_sdf_context);
-  				gi2d_rigidbody.executeToFragment(cmd, physics_world);
- 				gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
+				gi2d_rigidbody.executeToFragment(cmd, physics_world);
+			gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;
 			}
 			app.submit(std::move(cmds));
+			device->waitIdle();
 		}
 		app.postUpdate();
 		printf("%-6.4fms\n", time.getElapsedTimeAsMilliSeconds());
