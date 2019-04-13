@@ -10,7 +10,7 @@
 #define USE_GI2D_SDF 1
 #include "GI2DSDF.glsl"
 
-layout (local_size_x = 32, local_size_y = 32) in;
+layout (local_size_x = 16, local_size_y = 16) in;
 
 layout(push_constant) uniform Input
 {
@@ -18,44 +18,37 @@ layout(push_constant) uniform Input
 } constant;
 
 
-void nearest(inout D2JFACell new_cell, inout vec4 current_d, in ivec4 reso, in vec2 current, in ivec2 target)
+void nearest(inout D2JFACell new_cell, inout vec4 current_d, in uvec2 reso, in vec2 current, in uvec2 target)
 {
-	if(all(greaterThanEqual(target, ivec2(0))) && all(lessThan(target, reso.xy)))
+	if(any(greaterThanEqual(target, reso.xy))){ return; }
+	D2JFACell target_cell = b_jfa[target.x + target.y*reso.x];
+//	if(target_cell.nearest_index.x >= 0)
 	{
-		D2JFACell target_cell = b_jfa[target.x + target.y*reso.x];
-//		if(target_cell.nearest_index.x >= 0)
+		float d = distance(vec2(target_cell.nearest[0]), current);
+		if(d < current_d.x)
 		{
-			float d = distance(vec2(target_cell.nearest_index), vec2(current));
-			if(d < current_d.x)
-			{
-				current_d.x = d;
-				new_cell.nearest_index = target_cell.nearest_index;
-			}
+			current_d.x = d;
+			new_cell.nearest[0] = target_cell.nearest[0];
 		}
-
-/*		if(target_cell.e_nearest_index.x >= 0)
+		d = distance(vec2(target_cell.nearest[1]), current);
+		if(d < current_d.y)
 		{
-			float d = distance(vec2(target_cell.e_nearest_index), vec2(current));
-			if(d < current_d.y)
-			{
-				current_d.y = d;
-				new_cell.e_nearest_index = target_cell.e_nearest_index;
-			}
+			current_d.y = d;
+			new_cell.nearest[1] = target_cell.nearest[1];
 		}
-*/		
 	}
 
 }
 void main() 
 {
-	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
-	const ivec2 current = ivec2(gl_GlobalInvocationID.xy);
+	const uvec2 reso = uvec2(u_gi2d_info.m_resolution.xy);
+	const uvec2 current = uvec2(gl_GlobalInvocationID.xy);
 	const ivec3 cd = ivec3(constant.distance) * ivec3(-1, 0, 1);
 
 	const D2JFACell current_cell = b_jfa[current.x + current.y*reso.x];
 	vec4 d;
-	d.x = current_cell.nearest_index.x >= 0 ? distance(vec2(current), vec2(current_cell.nearest_index)) : 99999999.;
-//	d.y = current_cell.e_nearest_index.x >= 0 ? distance(vec2(current), vec2(current_cell.e_nearest_index)) : 99999999.;
+	d.x = current_cell.nearest[0].x >= 0 ? distance(vec2(current), vec2(current_cell.nearest[0])) : 99999999.;
+	d.y = current_cell.nearest[1].x >= 0 ? distance(vec2(current), vec2(current_cell.nearest[1])) : 99999999.;
 	D2JFACell new_cell = current_cell;
 	const vec4 old_d = d;
 	nearest(new_cell, d, reso, current, current + cd.xx);
