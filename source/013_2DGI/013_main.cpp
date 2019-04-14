@@ -227,6 +227,29 @@ int rigidbody()
 //	y(vec2(20), vec2(20), vec2(1.f, -1.f), vec2(1.f, 1.f));
 //	y(vec2(0), vec2(1, 0), vec2(0.f, 1.f), vec2(0.f, -1.f));
 
+// 	auto xaxis = glm::rotate(vec2(1.f, 0.f), glm::radians(30.f));
+// 	auto yaxis = glm::rotate(vec2(0.f, 1.f), glm::radians(30.f));
+// 
+// 	vec2 p1 = xaxis * vec2(0.25) + yaxis * vec2(0.25);
+// 	vec2 p2 = xaxis * vec2(-0.25) + yaxis * vec2(0.25);
+// 	vec2 p3 = xaxis * vec2(0.25) + yaxis * vec2(-0.25);
+// 	vec2 p4 = xaxis * vec2(-0.25) + yaxis * vec2(-0.25);
+
+//	vec2 p1 = vec2(p_x.x, p_y.x);
+//	vec2 p2 = vec2(p_x.y, p_y.y);
+//	vec2 p3 = vec2(p_x.z, p_y.z);
+//	vec2 p4 = vec2(p_x.w, p_y.w);
+
+	vec4 xaxis = glm::rotate(vec2(1.f, 0.f), glm::radians(30.f)).xyxy() * vec2(0.25, -0.25).xxyy();
+	vec4 yaxis = glm::rotate(vec2(0.f, 1.f), glm::radians(30.f)).xyxy() * vec2(0.25, -0.25).xxyy();
+
+	vec4 px = xaxis.xxzz() + yaxis.xzxz();
+	vec4 py = xaxis.yyww() + yaxis.ywyw();
+
+	vec2 p1 = vec2(px.x, py.x);
+	vec2 p2 = vec2(px.y, py.y);
+	vec2 p3 = vec2(px.z, py.z);
+	vec2 p4 = vec2(px.w, py.w);
 
 	auto a = cross(vec3(1.f, 0.f, 0.f), vec3(1.f, 0.f, 0.f));
 	auto b = cross(vec3(1.f, 0.f, 0.f), vec3(0.f, 1.f, 0.f));

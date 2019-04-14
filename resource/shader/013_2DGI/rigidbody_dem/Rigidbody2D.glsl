@@ -47,7 +47,7 @@ struct rbParticle
 
 	uint contact_index;
 	uint is_contact;
-	uint r_id;
+	uint color;
 	uint is_active;
 
 };

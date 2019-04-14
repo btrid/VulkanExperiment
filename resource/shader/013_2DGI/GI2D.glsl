@@ -2,7 +2,7 @@
 #define GI2D_
 
 #extension GL_EXT_shader_explicit_arithmetic_types : require
-#extension GL_NV_shader_atomic_int64 : require
+#extension GL_EXT_shader_atomic_int64 : require
 
 struct GI2DInfo
 {

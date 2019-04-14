@@ -91,11 +91,10 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 			bool is_emissive;
 		};
 		std::vector<Fragment> rect;
-// 		for (int i = 0; i < 300; i++) {
-// 			rect.emplace_back(Fragment{ ivec4{ std::rand() % gi2d_context->RenderWidth, std::rand() % gi2d_context->RenderHeight, std::rand() % 44 + 5, std::rand() % 44 + 5 }, vec4{ 0.8f,0.2f,0.2f,0.f } });
-// 		}
-			
-		rect.emplace_back(Fragment{ ivec4{ 30, 900, 2000, 10, }, vec4{ 0.8f,0.2f,0.2f,0.f } });
+// 		for (int i = 0; i < 20; i++) {
+// 			rect.emplace_back(Fragment{ ivec4{ std::rand() % gi2d_context->RenderWidth , std::rand() % gi2d_context->RenderHeight, std::rand() % 10 + 25, std::rand() % 10 + 25 }, vec4{ 0.8f,0.2f,0.2f,0.f } });
+// 		}		
+		rect.emplace_back(Fragment{ ivec4{ 70, 900, 900, 10, }, vec4{ 0.8f,0.2f,0.2f,0.f } });
 
 		for (size_t y = 0; y < gi2d_context->RenderHeight; y++)
 		{
@@ -121,14 +120,20 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 	//ŽlŠp‚ÅˆÍ‚Þ
 	for (int32_t y = 0; y < gi2d_context->RenderHeight; y++)
 	{
-		map_data[0 + y * gi2d_context->RenderWidth] = wall;
-		map_data[(gi2d_context->RenderWidth - 1) + y * gi2d_context->RenderWidth] = wall;
+		for (int32_t x = 0; x < 4; x++)
+		{
+			map_data[x + y * gi2d_context->RenderWidth] = wall;
+			map_data[(gi2d_context->RenderWidth -1 - x) + y * gi2d_context->RenderWidth] = wall;
+		}
 	}
  	for (int32_t x = 0; x < gi2d_context->RenderWidth; x++)
  	{
-		map_data[x + 0 * gi2d_context->RenderWidth] = wall;
-		map_data[x + (gi2d_context->RenderHeight - 1) * gi2d_context->RenderWidth] = wall;
- 	}
+		for (int32_t y = 0; y < 4; y++)
+		{
+			map_data[x + y * gi2d_context->RenderWidth] = wall;
+			map_data[x + (gi2d_context->RenderHeight - 1 - y) * gi2d_context->RenderWidth] = wall;
+		}
+	}
 
 
 	btr::BufferMemoryDescriptorEx<GI2DContext::Fragment> desc;

@@ -171,9 +171,12 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 	Rigidbody rb;
 	auto r_id = m_rigidbody_id++;
 
+	uint color = glm::packUnorm4x8(vec4(0.f, 0.f, 1.f, 1.f));
+	uint edgecolor = glm::packUnorm4x8(vec4(1.f, 0.f, 0.f, 1.f));
+
 	rbParticle _def;
 	_def.contact_index = -1;
-	_def.r_id = r_id;
+	_def.color = color;
 	_def.is_active = false;
 	std::vector<vec2> pos(particle_num);
 	std::vector<rbParticle> pstate((particle_num+63)/64*64, _def);
@@ -189,10 +192,12 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 			pos[x + y * box.z] = vec2(box) + rotate(vec2(x, y) + 0.5f, 0.f);
 			pstate[x + y * box.z].pos = pos[x + y * box.z];
 			pstate[x + y * box.z].pos_old = pos[x + y * box.z];
-			pstate[x + y * box.z].contact_index = -1;
-//			if (y == 0 || y == box.w - 1 || x == 0 || x == box.z - 1) 
+//			pstate[x + y * box.z].contact_index = -1;
+			pstate[x + y * box.z].contact_index = contact_index++;
+			if (y == 0 || y == box.w - 1 || x == 0 || x == box.z - 1)
 			{
-				pstate[x + y * box.z].contact_index = contact_index++;
+				pstate[x + y * box.z].color = edgecolor;
+//				unpackUnorm4x8()
 			}
 			pstate[x + y * box.z].is_contact = 0;
 			pstate[x + y * box.z].is_active = true;
