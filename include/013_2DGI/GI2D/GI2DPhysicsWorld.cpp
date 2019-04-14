@@ -173,6 +173,7 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 
 	uint color = glm::packUnorm4x8(vec4(0.f, 0.f, 1.f, 1.f));
 	uint edgecolor = glm::packUnorm4x8(vec4(1.f, 0.f, 0.f, 1.f));
+	uint linecolor = glm::packUnorm4x8(vec4(0.f, 1.f, 0.f, 1.f));
 
 	rbParticle _def;
 	_def.contact_index = -1;
@@ -194,10 +195,13 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 			pstate[x + y * box.z].pos_old = pos[x + y * box.z];
 //			pstate[x + y * box.z].contact_index = -1;
 			pstate[x + y * box.z].contact_index = contact_index++;
+			if (x%2 == 0)
+			{
+				pstate[x + y * box.z].color = linecolor;
+			}
 			if (y == 0 || y == box.w - 1 || x == 0 || x == box.z - 1)
 			{
 				pstate[x + y * box.z].color = edgecolor;
-//				unpackUnorm4x8()
 			}
 			pstate[x + y * box.z].is_contact = 0;
 			pstate[x + y * box.z].is_active = true;
