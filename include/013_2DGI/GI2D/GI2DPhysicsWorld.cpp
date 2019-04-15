@@ -28,7 +28,7 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 		vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 		desc_layout_info.setBindingCount(array_length(binding));
 		desc_layout_info.setPBindings(binding);
-		m_physics_world_desc_layout = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
+		m_desc_layout[DescLayout_Data] = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
 	}
 
 	{
@@ -48,7 +48,7 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 	// pipeline layout
 	{
 		vk::DescriptorSetLayout layouts[] = {
-			m_physics_world_desc_layout.get(),
+			m_desc_layout[DescLayout_Data].get(),
 			m_gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data),
 		};
 
@@ -59,7 +59,7 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 	}
 	{
 		vk::DescriptorSetLayout layouts[] = {
-			m_physics_world_desc_layout.get(),
+			m_desc_layout[DescLayout_Data].get(),
 			m_gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data),
 		};
 
@@ -107,13 +107,13 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 		b_jfa_cell = m_context->m_storage_memory.allocateMemory<u16vec2>({ MAKE_RB_SIZE_MAX* MAKE_RB_SIZE_MAX,{} });
 		{
 			vk::DescriptorSetLayout layouts[] = {
-				m_physics_world_desc_layout.get(),
+				m_desc_layout[DescLayout_Data].get(),
 			};
 			vk::DescriptorSetAllocateInfo desc_info;
 			desc_info.setDescriptorPool(context->m_descriptor_pool.get());
 			desc_info.setDescriptorSetCount(array_length(layouts));
 			desc_info.setPSetLayouts(layouts);
-			m_physics_world_desc = std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]);
+			m_descset[DescLayout_Data] = std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]);
 
 			vk::DescriptorBufferInfo storages[] = {
 				b_world.getInfo(),
@@ -134,7 +134,7 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 				.setDescriptorCount(array_length(storages))
 				.setPBufferInfo(storages)
 				.setDstBinding(0)
-				.setDstSet(m_physics_world_desc.get()),
+				.setDstSet(m_descset[DescLayout_Data].get()),
 			};
 			context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
 		}
@@ -308,7 +308,7 @@ void PhysicsWorld::execute(vk::CommandBuffer cmd)
 
 void PhysicsWorld::executeMakeFluid(vk::CommandBuffer cmd)
 {
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_ToFluid].get(), 0, m_physics_world_desc.get(), {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_ToFluid].get(), 0, m_descset[DescLayout_Data].get(), {});
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_ToFluid].get(), 1, m_gi2d_context->getDescriptorSet(), {});
 
 	cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_ToFluid].get());
@@ -327,9 +327,8 @@ void PhysicsWorld::executeMakeFluid(vk::CommandBuffer cmd)
 void PhysicsWorld::executeMakeFluidWall(vk::CommandBuffer cmd)
 {
 
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_ToFluidWall].get(), 0, m_physics_world_desc.get(), {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_ToFluidWall].get(), 0, m_descset[DescLayout_Data].get(), {});
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_ToFluidWall].get(), 1, m_gi2d_context->getDescriptorSet(), {});
-
 
 	{
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_ToFluidWall].get());

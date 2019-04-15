@@ -30,6 +30,12 @@ struct PhysicsWorld
 		Pipeline_Num,
 	};
 
+	enum DescriptorLayout
+	{
+		DescLayout_Data,
+		DescLayout_Make,
+		DescLayout_Num,
+	};
 	struct World
 	{
 		float DT;
@@ -96,6 +102,9 @@ struct PhysicsWorld
 		MAKE_RB_BIT_SIZE = MAKE_RB_SIZE_MAX/8,
 	};
 
+	vk::DescriptorSetLayout getDescriptorSetLayout(DescriptorLayout i)const { return m_desc_layout[i].get(); }
+	vk::DescriptorSet getDescriptorSet(DescriptorLayout i)const { return m_descset[i].get(); }
+
 	PhysicsWorld(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context);
 	void make(vk::CommandBuffer cmd, const uvec4& box);
 	void execute(vk::CommandBuffer cmd);
@@ -105,8 +114,8 @@ struct PhysicsWorld
 	std::shared_ptr<btr::Context> m_context;
 	std::shared_ptr<GI2DContext> m_gi2d_context;
 
-	vk::UniqueDescriptorSetLayout m_physics_world_desc_layout;
-	vk::UniqueDescriptorSet m_physics_world_desc;
+	std::array<vk::UniqueDescriptorSetLayout, DescLayout_Num> m_desc_layout;
+	std::array<vk::UniqueDescriptorSet, DescLayout_Num> m_descset;
 
 	std::array<vk::UniqueShaderModule, Shader_Num> m_shader;
 	std::array<vk::UniquePipelineLayout, PipelineLayout_Num> m_pipeline_layout;

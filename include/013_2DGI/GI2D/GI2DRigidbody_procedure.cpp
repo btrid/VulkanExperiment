@@ -33,7 +33,7 @@ GI2DRigidbody_procedure::GI2DRigidbody_procedure(const std::shared_ptr<PhysicsWo
 	// pipeline layout
 	{
 		vk::DescriptorSetLayout layouts[] = {
-			m_world->m_physics_world_desc_layout.get(),
+			m_world->getDescriptorSetLayout(PhysicsWorld::DescLayout_Data),
 			m_world->m_gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data),
 		};
 		vk::PushConstantRange ranges[] = {
@@ -48,7 +48,7 @@ GI2DRigidbody_procedure::GI2DRigidbody_procedure(const std::shared_ptr<PhysicsWo
 	}
 	{
 		vk::DescriptorSetLayout layouts[] = {
-			m_world->m_physics_world_desc_layout.get(),
+			m_world->getDescriptorSetLayout(PhysicsWorld::DescLayout_Data),
 			m_world->m_gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data),
 			m_world->m_gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_SDF),
 		};
@@ -128,7 +128,7 @@ void GI2DRigidbody_procedure::execute(vk::CommandBuffer cmd, const std::shared_p
 {
 	m_world->execute(cmd);
 
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Rigid].get(), 0, m_world->m_physics_world_desc.get(), {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Rigid].get(), 0, m_world->getDescriptorSet(PhysicsWorld::DescLayout_Data), {});
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Rigid].get(), 1, m_world->m_gi2d_context->getDescriptorSet(), {});
 	{
 		vk::BufferMemoryBarrier to_read[] = {
@@ -153,7 +153,7 @@ void GI2DRigidbody_procedure::execute(vk::CommandBuffer cmd, const std::shared_p
 			_executeMakeFluidParticle(cmd, world);
 		}
 		{
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Rigid].get(), 0, m_world->m_physics_world_desc.get(), {});
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Rigid].get(), 0, m_world->getDescriptorSet(PhysicsWorld::DescLayout_Data), {});
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Rigid].get(), 1, m_world->m_gi2d_context->getDescriptorSet(), {});
 
 			vk::BufferMemoryBarrier to_read[] = {
@@ -224,7 +224,7 @@ void GI2DRigidbody_procedure::executeMakeFluid(vk::CommandBuffer cmd, const std:
 
 void GI2DRigidbody_procedure::_executeMakeFluidParticle(vk::CommandBuffer &cmd, const std::shared_ptr<PhysicsWorld>& world)
 {
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Rigid].get(), 0, m_world->m_physics_world_desc.get(), {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Rigid].get(), 0, m_world->getDescriptorSet(PhysicsWorld::DescLayout_Data), {});
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Rigid].get(), 1, m_world->m_gi2d_context->getDescriptorSet(), {});
 
 	{
@@ -246,7 +246,7 @@ void GI2DRigidbody_procedure::_executeMakeFluidParticle(vk::CommandBuffer &cmd, 
 }
 void GI2DRigidbody_procedure::_executeMakeFluidWall(vk::CommandBuffer &cmd, const std::shared_ptr<PhysicsWorld>& world, const std::shared_ptr<GI2DSDF>& sdf)
 {
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MakeWallCollision].get(), 0, m_world->m_physics_world_desc.get(), {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MakeWallCollision].get(), 0, m_world->getDescriptorSet(PhysicsWorld::DescLayout_Data), {});
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MakeWallCollision].get(), 1, m_world->m_gi2d_context->getDescriptorSet(), {});
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MakeWallCollision].get(), 2, sdf->getDescriptorSet(), {});
 
@@ -282,7 +282,7 @@ void GI2DRigidbody_procedure::executeToFragment(vk::CommandBuffer cmd, const std
 			0, nullptr, array_length(to_read), to_read, 0, nullptr);
 	}
 
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Rigid].get(), 0, world->m_physics_world_desc.get(), {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Rigid].get(), 0, m_world->getDescriptorSet(PhysicsWorld::DescLayout_Data), {});
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Rigid].get(), 1, world->m_gi2d_context->getDescriptorSet(), {});
 
 	cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_ToFragment].get());
