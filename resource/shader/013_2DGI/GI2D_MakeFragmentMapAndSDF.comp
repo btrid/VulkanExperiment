@@ -24,8 +24,8 @@ void main()
 	bool is_fragment = isDiffuse(b_fragment[tiled_1D_index]);
 	bool is_emissive = isEmissive(b_fragment[tiled_1D_index]);
 
-	b_jfa[tiled_1D_index].nearest[1] = is_fragment ? i16vec2(id) : i16vec2(-1);
 	b_jfa[tiled_1D_index].nearest[0] = is_fragment ? i16vec2(-1) : i16vec2(id);
+	b_jfa[tiled_1D_index].nearest[1] = is_fragment ? i16vec2(id) : i16vec2(-1);
 //	b_jfa[tiled_1D_index].e_nearest_index = is_emissive ? i16vec2(id) : i16vec2(-1);
 
 	uint power = packEmissive(albedo*LightPower);

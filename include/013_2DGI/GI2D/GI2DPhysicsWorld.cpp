@@ -15,36 +15,15 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 
 		auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
 		vk::DescriptorSetLayoutBinding binding[] = {
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(stage)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(1)
-			.setBinding(0),
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(stage)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(1)
-			.setBinding(1),
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(stage)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(1)
-			.setBinding(2),
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(stage)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(1)
-			.setBinding(3),
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(stage)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(1)
-			.setBinding(4),
-			vk::DescriptorSetLayoutBinding()
-			.setStageFlags(stage)
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(1)
-			.setBinding(5),
+			vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(6, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(7, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(8, vk::DescriptorType::eStorageBuffer, 1, stage),
 		};
 		vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 		desc_layout_info.setBindingCount(array_length(binding));
@@ -120,7 +99,12 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 		b_rbparticle_map = m_context->m_storage_memory.allocateMemory<uint32_t>({ RB_PARTICLE_NUM / RB_PARTICLE_BLOCK_SIZE,{} });
 		b_fluid_counter = m_context->m_storage_memory.allocateMemory<uint32_t>({ gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
 		b_fluid = m_context->m_storage_memory.allocateMemory<rbFluid>({ 4 * gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
+		b_manager = m_context->m_storage_memory.allocateMemory<uvec4>({ 1,{} });
+		b_rb_freelist = m_context->m_storage_memory.allocateMemory<uint>({ RB_NUM,{} });
+		b_particle_freelist = m_context->m_storage_memory.allocateMemory<uint>({ RB_NUM,{} });
 
+		b_posbit = m_context->m_storage_memory.allocateMemory<uint64_t>({ MAKE_RB_BIT_SIZE * MAKE_RB_BIT_SIZE,{} });
+		b_jfa_cell = m_context->m_storage_memory.allocateMemory<u16vec2>({ MAKE_RB_SIZE_MAX* MAKE_RB_SIZE_MAX,{} });
 		{
 			vk::DescriptorSetLayout layouts[] = {
 				m_physics_world_desc_layout.get(),
@@ -138,6 +122,9 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 				b_rbparticle_map.getInfo(),
 				b_fluid_counter.getInfo(),
 				b_fluid.getInfo(),
+				b_manager.getInfo(),
+				b_rb_freelist.getInfo(),
+				b_particle_freelist.getInfo(),
 			};
 
 			vk::WriteDescriptorSet write[] =
@@ -154,15 +141,36 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 
 	}
 
+	auto cmd = m_context->m_cmd_pool->allocCmdTempolary(0);
 	{
 		World w;
 		w.DT = 0.016f;
 		w.STEP = 100;
 		w.step = 0;
 		w.rigidbody_num = m_rigidbody_id;
-		m_context->m_cmd_pool->allocCmdTempolary(0).updateBuffer<World>(b_world.getInfo().buffer, b_world.getInfo().offset, w);
+		cmd.updateBuffer<World>(b_world.getInfo().buffer, b_world.getInfo().offset, w);
 	}
 
+	{
+		{
+			std::vector<uint> freelist(RB_NUM);
+			for (uint i = 0; i < freelist.size(); i++)
+			{
+				freelist[i] = i;
+			}
+			cmd.updateBuffer<uint>(b_rb_freelist.getInfo().buffer, b_rb_freelist.getInfo().offset, freelist);
+		}
+		{
+			std::vector<uint> freelist(RB_PARTICLE_NUM);
+			for (uint i = 0; i < freelist.size(); i++)
+			{
+				freelist[i] = i;
+			}
+			cmd.updateBuffer<uint>(b_particle_freelist.getInfo().buffer, b_particle_freelist.getInfo().offset, freelist);
+		}
+
+		cmd.fillBuffer(b_manager.getInfo().buffer, b_manager.getInfo().offset, b_manager.getInfo().range, 0);
+	}
 }
 
 void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
@@ -187,18 +195,10 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 	{
 		for (uint32_t x = 0; x < box.z; x++)
 		{
-//			pos[x + y * box.z].x = box.x + x + 0.5f;
-//			pos[x + y * box.z].y = box.y + y + 0.5f;
-//			pos[x + y * box.z] = vec2(box) + rotate(vec2(x, y) + 0.5f, 0.2f);
 			pos[x + y * box.z] = vec2(box) + rotate(vec2(x, y) + 0.5f, 0.f);
 			pstate[x + y * box.z].pos = pos[x + y * box.z];
 			pstate[x + y * box.z].pos_old = pos[x + y * box.z];
-//			pstate[x + y * box.z].contact_index = -1;
 			pstate[x + y * box.z].contact_index = contact_index++;
-			if (x%2 == 0)
-			{
-				pstate[x + y * box.z].color = linecolor;
-			}
 			if (y == 0 || y == box.w - 1 || x == 0 || x == box.z - 1)
 			{
 				pstate[x + y * box.z].color = edgecolor;
@@ -233,10 +233,6 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 			distsq = sq;
 			sdf = target - p;
 		}
-// 		else if (sq - FLT_EPSILON < distsq)
-// 		{
-// 			sdf += target - p;
-// 		}
 	};
 	for (uint32_t i = 0; i < particle_num; i++)
 	{
@@ -253,7 +249,6 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 	rb.R = vec4(1.f, 0.f, 0.f, 1.f);
 	rb.cm = center;
 	rb.pnum = particle_num;
-
 	rb.cm_work = ivec2(0);
 	rb.Apq_work= ivec4(0);
 

@@ -288,7 +288,7 @@ int rigidbody()
 	{
 		for (int x = 0; x < 20; x++)
 		{
-			physics_world->make(cmd, uvec4(250 + x * 16, 870 - y * 24, 16, 16));
+			physics_world->make(cmd, uvec4(250 + x * 24, 870 - y * 24, 16, 16));
 
 		}
 	}
@@ -343,19 +343,19 @@ int rigidbody()
 				gi2d_make_hierarchy.executeMakeFragmentMapAndSDF(cmd, gi2d_sdf_context);
 				gi2d_make_hierarchy.executeHierarchy(cmd);
 				gi2d_make_hierarchy.executeMakeSDF(cmd, gi2d_sdf_context);
-				gi2d_make_hierarchy.executeRenderSDF(cmd, gi2d_sdf_context, app.m_window->getFrontBuffer());
+//				gi2d_make_hierarchy.executeRenderSDF(cmd, gi2d_sdf_context, app.m_window->getFrontBuffer());
 
 //				gi2d_Fluid->executeCalc(cmd);
 //				gi2d_Softbody.execute(cmd);
 
-  				gi2d_rigidbody.execute(cmd, physics_world, gi2d_sdf_context);
+   				gi2d_rigidbody.execute(cmd, physics_world, gi2d_sdf_context);
 				gi2d_rigidbody.executeToFragment(cmd, physics_world);
-			gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
+				gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;
 			}
 			app.submit(std::move(cmds));
-			device->waitIdle();
+//			device->waitIdle();
 		}
 		app.postUpdate();
 		printf("%-6.4fms\n", time.getElapsedTimeAsMilliSeconds());

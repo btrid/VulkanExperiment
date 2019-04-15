@@ -66,7 +66,6 @@ struct PhysicsWorld
 		uint is_contact;
 		uint color;
 		uint is_active;
-
 	};
 
 	struct rbFluid
@@ -79,12 +78,22 @@ struct PhysicsWorld
 		vec2 sdf;
 	};
 
+// 	struct BufferManage
+// 	{
+// 		uint rb_active_index;
+// 		uint rb_free_index;
+// 		uint particle_active_index;
+// 		uint particle_free_index;
+// 	};
+
 	enum
 	{
 		RB_NUM = 512,
 		RB_PARTICLE_BLOCK_SIZE = 64,
 		RB_PARTICLE_NUM = RB_NUM * RB_PARTICLE_BLOCK_SIZE * 8,
 
+		MAKE_RB_SIZE_MAX = 128,
+		MAKE_RB_BIT_SIZE = MAKE_RB_SIZE_MAX/8,
 	};
 
 	PhysicsWorld(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context);
@@ -109,6 +118,14 @@ struct PhysicsWorld
 	btr::BufferMemoryEx<uint32_t> b_rbparticle_map;
 	btr::BufferMemoryEx<uint32_t> b_fluid_counter;
 	btr::BufferMemoryEx<rbFluid> b_fluid;
+
+	btr::BufferMemoryEx<uvec4> b_manager;
+	btr::BufferMemoryEx<uint> b_rb_freelist;
+	btr::BufferMemoryEx<uint> b_particle_freelist;
+
+	btr::BufferMemoryEx<rbParticle> b_make_particle;
+	btr::BufferMemoryEx<uint64_t> b_posbit;
+	btr::BufferMemoryEx<u16vec2> b_jfa_cell;
 
 	uint32_t m_rigidbody_id;
 	uint32_t m_particle_id;
