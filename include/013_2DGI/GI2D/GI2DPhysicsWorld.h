@@ -108,7 +108,6 @@ struct PhysicsWorld
 	PhysicsWorld(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context);
 	void make(vk::CommandBuffer cmd, const uvec4& box);
 	void execute(vk::CommandBuffer cmd);
-	void executeMakeFluid(vk::CommandBuffer cmd);
 	void executeMakeFluidWall(vk::CommandBuffer cmd);
 
 	std::shared_ptr<btr::Context> m_context;
