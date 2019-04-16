@@ -21,12 +21,11 @@ void main()
 
 	int tiled_1D_index = id.x + id.y*u_gi2d_info.m_resolution.x; 
 	vec3 albedo = getRGB(b_fragment[tiled_1D_index]);
-	bool is_fragment = isDiffuse(b_fragment[tiled_1D_index]);
+	bool is_diffuse = isDiffuse(b_fragment[tiled_1D_index]);
 	bool is_emissive = isEmissive(b_fragment[tiled_1D_index]);
 
-	b_jfa[tiled_1D_index].nearest[0] = is_fragment ? i16vec2(-1) : i16vec2(id);
-	b_jfa[tiled_1D_index].nearest[1] = is_fragment ? i16vec2(id) : i16vec2(-1);
-//	b_jfa[tiled_1D_index].e_nearest_index = is_emissive ? i16vec2(id) : i16vec2(-1);
+	b_jfa[tiled_1D_index].nearest[0] = is_diffuse ? i16vec2(-1) : i16vec2(id);
+	b_jfa[tiled_1D_index].nearest[1] = is_diffuse ? i16vec2(id) : i16vec2(-1);
 
 	uint power = packEmissive(albedo*LightPower);
 	b_light[getMemoryOrder(ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y))] = is_emissive ? power : 0;
@@ -43,7 +42,7 @@ void main()
 
 		uint hilow = gl_LocalInvocationIndex/32;
 		uint offset = gl_LocalInvocationIndex%32;
-		is_fragment ? atomicOr(s_bit[hilow], 1<<offset) : 0;
+		is_diffuse ? atomicOr(s_bit[hilow], 1<<offset) : 0;
 		is_emissive ? atomicOr(s_light_bit[hilow], 1<<offset) : 0;
 
 		barrier();

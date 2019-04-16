@@ -402,6 +402,7 @@ int main()
 	gi2d_desc.RenderWidth = 1024;
 	gi2d_desc.RenderHeight = 1024;
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context, gi2d_desc);
+	std::shared_ptr<GI2DSDF> gi2d_sdf_context = std::make_shared<GI2DSDF>(gi2d_context);
 	std::shared_ptr<CrowdContext> crowd_context = std::make_shared<CrowdContext>(context, gi2d_context);
 
 	GI2DClear gi2d_clear(context, gi2d_context);
@@ -461,12 +462,15 @@ int main()
 				gi2d_clear.execute(cmd);
 				gi2d_debug_make_fragment.executeMakeFragmentMap(cmd);
 
-// 				gi2d_Fluid->execute(cmd);
-// 				gi2d_Fluid->executePost(cmd);
-
-
+#define use_sdf
+#if defined(use_sdf)
+				gi2d_make_hierarchy.executeMakeFragmentMapAndSDF(cmd, gi2d_sdf_context);
+				gi2d_make_hierarchy.executeHierarchy(cmd);
+				gi2d_make_hierarchy.executeMakeSDF(cmd, gi2d_sdf_context);
+#else
 				gi2d_make_hierarchy.execute(cmd);
 				gi2d_make_hierarchy.executeHierarchy(cmd);
+#endif
 				{
 //					crowd_debug.execute(cmd);
 // 					crowd_procedure.executeUpdateUnit(cmd);
