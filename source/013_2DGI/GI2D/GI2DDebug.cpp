@@ -11,7 +11,7 @@ struct GI2DLightData
 	vec4 m_emissive;
 }; 
 
-GI2DLightData g_data[10];
+GI2DLightData g_data[50];
 GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context)
 {
 	for (int i = 0; i < std::size(g_data); i++)
@@ -352,7 +352,7 @@ void GI2DDebug::executeMakeFragmentMap(vk::CommandBuffer cmd)
 // 		cmd.dispatch(1, 1, 1);
 
 
-		for (int i = 0; i < 10; i++)
+		for (int i = 0; i < std::size(g_data); i++)
 		{
 			cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayout_PointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, g_data[i]);
 	 		cmd.dispatch(1, 1, 1);

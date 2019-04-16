@@ -14,6 +14,9 @@ struct PhysicsWorld
 	{
 		Shader_ToFluid,
 		Shader_ToFluidWall,
+
+		Shader_MakeRB_MakeJFCell,
+		Shader_MakeRB_MakeSDF,
 		Shader_Num,
 	};
 
@@ -21,12 +24,18 @@ struct PhysicsWorld
 	{
 		PipelineLayout_ToFluid,
 		PipelineLayout_ToFluidWall,
+
+		PipelineLayout_MakeRB,
 		PipelineLayout_Num,
 	};
 	enum Pipeline
 	{
 		Pipeline_ToFluid,
 		Pipeline_ToFluidWall,
+
+		Pipeline_MakeRB_MakeJFCell,
+		Pipeline_MakeRB_MakeSDF,
+
 		Pipeline_Num,
 	};
 
@@ -42,7 +51,6 @@ struct PhysicsWorld
 		uint step;
 		uint STEP;
 		uint rigidbody_num;
-//		uint particle_block_num;
 	};
 	struct Rigidbody
 	{

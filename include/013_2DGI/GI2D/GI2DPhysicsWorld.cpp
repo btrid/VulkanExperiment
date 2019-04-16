@@ -47,6 +47,9 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 		{
 			"Rigid_ToFluid.comp.spv",
 			"Rigid_ToFluidWall.comp.spv",
+
+			"RigidMake_MakeJFA.comp.spv",
+			"RigidMake_MakeSDF.comp.spv",
 		};
 		static_assert(array_length(name) == Shader_Num, "not equal shader num");
 

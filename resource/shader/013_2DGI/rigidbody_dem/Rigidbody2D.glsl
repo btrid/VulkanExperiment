@@ -63,12 +63,6 @@ struct rbFluid
 };
 
 
-struct rbConstraint
-{
-	uint f_id1;
-	uint f_id2;
-};
-
 layout(set=USE_Rigidbody2D, binding=0, std430) restrict buffer WorldData {
 	rbWorld b_world;
 };
@@ -90,6 +84,18 @@ layout(set=USE_Rigidbody2D, binding=5, std430) restrict buffer rbFluidData {
 
 
 #endif
+#if defined(USE_MakeRigidbody)
+
+layout(set=USE_MakeRigidbody, binding=0, std430) restrict buffer MakeParticleBuffer {
+	rbParticle b_make_particle;
+};
+layout(set=USE_MakeRigidbody, binding=1, std430) restrict buffer MakePosBitBuffer {
+	uint64_t b_posbit[];
+};
+layout(set=USE_MakeRigidbody, binding=2, std430) restrict buffer MakeJFABuffer {
+	i16vec2 b_jfa_cell[];
+};
+#endif
 
 
 vec2 rotateRBParticle(in vec2 v, in float angle)
@@ -101,14 +107,5 @@ vec2 rotateRBParticle(in vec2 v, in float angle)
 	Result.x = v.x * c - v.y * s;
 	Result.y = v.x * s + v.y * c;
 	return Result;
-}
-
-
-
-float closestPointSegment(in vec2 origin, in vec2 dir, in vec2 p)
-{
-	float t = dot(p - origin, dir) / dot(dir, dir);
-	vec2 l = origin + dir * clamp(t, 0., 1.); 
-	return distance(l, p);
 }
 #endif

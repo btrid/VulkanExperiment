@@ -19,6 +19,9 @@ SET output=../../binary
 %exe% %include% %option% -o %output%/Rigid_ApqAccum.comp.spv Rigid_ApqAccum.comp
 %exe% %include% %option% -o %output%/Rigid_ApqCalc.comp.spv Rigid_ApqCalc.comp
 
+%exe% %include% %option% -o %output%/RigidMake_MakeJFA.comp.spv RigidMake_MakeJFA.comp
+%exe% %include% %option% -o %output%/RigidMake_MakeSDF.comp.spv RigidMake_MakeSDF.comp
+
 
 
 

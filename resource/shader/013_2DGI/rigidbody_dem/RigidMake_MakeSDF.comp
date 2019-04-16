@@ -1,0 +1,29 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_Rigidbody2D 0
+#define USE_GI2D 1
+#define USE_MakeRigidbody 2
+#include "GI2D.glsl"
+#include "Rigidbody2D.glsl"
+
+layout (local_size_x = 32, local_size_y = 32) in;
+
+layout(push_constant) uniform Input
+{
+	uint distance;
+} constant;
+
+void main() 
+{
+	const ivec2 reso = ivec2(u_gi2d_info.m_resolution.xy);
+
+	ivec2 current = ivec2(gl_GlobalInvocationID.xy);
+	i16vec2 cell = b_jfa_cell[current.x + current.y*reso.x];
+//	float d = distance(vec2(current), vec2(cell.nearest[0]));
+//	float d1 = distance(vec2(current), vec2(cell.nearest[1]));
+//	b_sdf[current.x + current.y*reso.x] = vec2(d, d1);
+//	float d1 = distance(vec2(current), vec2(cell.nearest[1]));
+
+//	b_sdf[current.x + current.y*reso.x] = normalize(vec2(cell - ivec2(gl_GlobalInvocationID.xy)));
+}
