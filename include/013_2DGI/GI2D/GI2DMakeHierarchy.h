@@ -255,8 +255,10 @@ struct GI2DMakeHierarchy
 					vk::BufferMemoryBarrier to_read[] = {
 						sdf_context->b_jfa.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 					};
+					to_read[0].offset += i * sdf_context->m_gi2d_context->FragmentBufferSize * sizeof(i16vec2);
 					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 						0, nullptr, array_length(to_read), to_read, 0, nullptr);
+
 					cmd.pushConstants<uvec2>(m_pipeline_layout[PipelineLayout_SDF].get(), vk::ShaderStageFlagBits::eCompute, 0, uvec2{distance, i*sdf_context->m_gi2d_context->FragmentBufferSize});
 					cmd.dispatch(num.x, num.y, num.z);
 				}
