@@ -273,13 +273,17 @@ struct GI2DSDF
 		i16vec2 nearest_inner;
 	};
 
+	enum
+	{
+		SDF_USE_NUM = 3,
+	};
 	GI2DSDF(const std::shared_ptr<GI2DContext>& gi2d_context)
 	{
 		m_gi2d_context = gi2d_context;
 		const auto& context = gi2d_context->m_context;
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 		{
- 			b_jfa = context->m_storage_memory.allocateMemory<D2JFACell>({ gi2d_context->FragmentBufferSize * 2,{} });
+ 			b_jfa = context->m_storage_memory.allocateMemory<D2JFACell>({ gi2d_context->FragmentBufferSize * SDF_USE_NUM,{} });
  			b_sdf = context->m_storage_memory.allocateMemory<vec2>({ gi2d_context->FragmentBufferSize,{} });
 		}
 

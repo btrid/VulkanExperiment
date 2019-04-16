@@ -250,7 +250,7 @@ struct GI2DMakeHierarchy
 
 			for (int distance = 1; distance < m_gi2d_context->RenderWidth; distance <<= 1)
 			{
-				for (uint i = 0; i < 2; i++)
+				for (uint i = 0; i < GI2DSDF::SDF_USE_NUM; i++)
 				{
 					vk::BufferMemoryBarrier to_read[] = {
 						sdf_context->b_jfa.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),

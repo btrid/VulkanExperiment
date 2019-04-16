@@ -17,7 +17,6 @@ shared uint s_light_bit[2];
 void main()
 {
 	ivec2 id = ivec2(gl_GlobalInvocationID.xy);
-//	id = clamp(id, ivec2(0), u_gi2d_info.m_resolution.xy);
 
 	int tiled_1D_index = id.x + id.y*u_gi2d_info.m_resolution.x; 
 	vec3 albedo = getRGB(b_fragment[tiled_1D_index]);
@@ -26,6 +25,7 @@ void main()
 
 	b_jfa[tiled_1D_index].nearest = is_diffuse ? i16vec2(-1) : i16vec2(id);
 	b_jfa[tiled_1D_index + u_gi2d_info.m_resolution.x*u_gi2d_info.m_resolution.y].nearest = is_diffuse ? i16vec2(id) : i16vec2(-1);
+	b_jfa[tiled_1D_index + u_gi2d_info.m_resolution.x*u_gi2d_info.m_resolution.y*2].nearest = is_emissive ? i16vec2(id) : i16vec2(-1);
 
 	uint power = packEmissive(albedo*LightPower);
 	b_light[getMemoryOrder(ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y))] = is_emissive ? power : 0;
