@@ -7,7 +7,7 @@
 
 struct D2JFACell
 {
-	i16vec2 nearest[2];
+	i16vec2 nearest;
 //	i16vec2 e_nearest_index;
 //	float distance;
 //	float e_distance;

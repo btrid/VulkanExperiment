@@ -10,31 +10,27 @@
 #define USE_GI2D_SDF 1
 #include "GI2DSDF.glsl"
 
-layout (local_size_x = 16, local_size_y = 16) in;
+layout (local_size_x = 8, local_size_y = 8) in;
 
 layout(push_constant) uniform Input
 {
 	uint distance;
+	uint offset;
 } constant;
 
 
-void nearest(inout D2JFACell new_cell, inout vec4 current_d, in uvec2 reso, in vec2 current, in uvec2 target)
+void nearest(inout D2JFACell new_cell, inout float current_d, in uvec2 reso, in vec2 current, in uvec2 target)
 {
 	if(any(greaterThanEqual(target, reso.xy))){ return; }
-	D2JFACell target_cell = b_jfa[target.x + target.y*reso.x];
+
+	D2JFACell target_cell = b_jfa[target.x + target.y*reso.x + constant.offset];
 //	if(target_cell.nearest_index.x >= 0)
 	{
-		float d = distance(vec2(target_cell.nearest[0]), current);
-		if(d < current_d.x)
+		float d = distance(vec2(target_cell.nearest), current);
+		if(d < current_d)
 		{
-			current_d.x = d;
-			new_cell.nearest[0] = target_cell.nearest[0];
-		}
-		d = distance(vec2(target_cell.nearest[1]), current);
-		if(d < current_d.y)
-		{
-			current_d.y = d;
-			new_cell.nearest[1] = target_cell.nearest[1];
+			current_d = d;
+			new_cell.nearest = target_cell.nearest;
 		}
 	}
 
@@ -44,12 +40,14 @@ void main()
 	const uvec2 reso = uvec2(u_gi2d_info.m_resolution.xy);
 	const uvec2 current = uvec2(gl_GlobalInvocationID.xy);
 	const ivec3 cd = ivec3(constant.distance) * ivec3(-1, 0, 1);
-	const D2JFACell current_cell = b_jfa[current.x + current.y*reso.x];
-	vec4 d;
-	d.x = current_cell.nearest[0].x >= 0 ? distance(vec2(current), vec2(current_cell.nearest[0])) : 99999999.;
-	d.y = current_cell.nearest[1].x >= 0 ? distance(vec2(current), vec2(current_cell.nearest[1])) : 99999999.;
+	const D2JFACell current_cell = b_jfa[current.x + current.y*reso.x + constant.offset];
+
+	if(all(equal(current, current_cell.nearest))){ return; }
+
+	float d = current_cell.nearest.x >= 0 ? distance(vec2(current), vec2(current_cell.nearest)) : 99999999.;
+
 	D2JFACell new_cell = current_cell;
-	const vec4 old_d = d;
+	const float old_d = d;
 	nearest(new_cell, d, reso, current, current + cd.xx);
 	nearest(new_cell, d, reso, current, current + cd.xy);
 	nearest(new_cell, d, reso, current, current + cd.xz);
@@ -60,8 +58,8 @@ void main()
 	nearest(new_cell, d, reso, current, current + cd.zy);
 	nearest(new_cell, d, reso, current, current + cd.zz);
 
-	if(any(notEqual(d, old_d)))
+	if(d != old_d)
 	{
-		b_jfa[current.x + current.y*reso.x] = new_cell;
+		b_jfa[current.x + current.y*reso.x + constant.offset] = new_cell;
 	}
 }
