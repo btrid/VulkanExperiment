@@ -377,7 +377,7 @@ int main()
 	camera->getData().m_near = 0.01f;
 
 //	return pathFinding();
-	return rigidbody();
+//	return rigidbody();
 
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
