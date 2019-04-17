@@ -6,24 +6,25 @@
 #define USE_MakeRigidbody 2
 #include "GI2D.glsl"
 #include "Rigidbody2D.glsl"
-layout (local_size_x = 16, local_size_y = 16) in;
+layout (local_size_x = 8, local_size_y = 8) in;
 
 layout(push_constant) uniform Input
 {
 	uint distance;
+	uvec2 reso;
 } constant;
 
 
-void nearest(inout i16vec2 new_cell, inout vec4 current_d, in uvec2 reso, in vec2 current, in uvec2 target)
+void nearest(inout i16vec2 new_cell, inout float current_d, in vec2 current, in uvec2 target)
 {
-	if(any(greaterThanEqual(target, reso.xy))){ return; }
-	i16vec2 target_cell = b_jfa_cell[target.x + target.y*reso.x];
+	if(any(greaterThanEqual(target, constant.reso))){ return; }
+	i16vec2 target_cell = b_jfa_cell[target.x + target.y*constant.reso.x];
 
 	{
 		float d = distance(vec2(target_cell), current);
-		if(d < current_d.x)
+		if(d < current_d)
 		{
-			current_d.x = d;
+			current_d = d;
 			new_cell = target_cell;
 		}
 	}
@@ -31,27 +32,23 @@ void nearest(inout i16vec2 new_cell, inout vec4 current_d, in uvec2 reso, in vec
 }
 void main() 
 {
-	const uvec2 reso = uvec2(u_gi2d_info.m_resolution.xy);
 	const uvec2 current = uvec2(gl_GlobalInvocationID.xy);
 	const ivec3 cd = ivec3(constant.distance) * ivec3(-1, 0, 1);
-	const i16vec2 current_cell = b_jfa_cell[current.x + current.y*reso.x];
-	vec4 d;
-	d.x = current_cell.x >= 0 ? distance(vec2(current), vec2(current_cell)) : 99999999.;
-	i16vec2 new_cell = current_cell;
-	const vec4 old_d = d;
-	nearest(new_cell, d, reso, current, current + cd.xx);
-	nearest(new_cell, d, reso, current, current + cd.xy);
-	nearest(new_cell, d, reso, current, current + cd.xz);
-	nearest(new_cell, d, reso, current, current + cd.yx);
-	//nearest(new_cell, d, reso, current, current + cd.yy);
-	nearest(new_cell, d, reso, current, current + cd.yz);
-	nearest(new_cell, d, reso, current, current + cd.zx);
-	nearest(new_cell, d, reso, current, current + cd.zy);
-	nearest(new_cell, d, reso, current, current + cd.zz);
+	i16vec2 cell = b_jfa_cell[current.x + current.y*constant.reso.x];
+	float d = cell.x >= 0 ? distance(vec2(current), vec2(cell)) : 99999999.;
+	const float old_d = d;
+	nearest(cell, d, current, current + cd.xx);
+	nearest(cell, d, current, current + cd.xy);
+	nearest(cell, d, current, current + cd.xz);
+	nearest(cell, d, current, current + cd.yx);
+	//nearest(new_cell, d, current, current + cd.yy);
+	nearest(cell, d, current, current + cd.yz);
+	nearest(cell, d, current, current + cd.zx);
+	nearest(cell, d, current, current + cd.zy);
+	nearest(cell, d, current, current + cd.zz);
 
-	if(any(notEqual(d, old_d)))
+	if(d != old_d)
 	{
-		b_jfa_cell
-		[current.x + current.y*reso.x] = new_cell;
+		b_jfa_cell[current.x + current.y*constant.reso.x] = cell;
 	}
 }

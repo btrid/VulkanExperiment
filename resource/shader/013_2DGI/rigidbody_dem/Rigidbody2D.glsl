@@ -19,7 +19,9 @@ struct rbWorld
 	uint step;
 	uint STEP;
 	uint rigidbody_num;
-//	uint particle_block_num;
+
+	uint rigidbody_max;
+	uint particle_block_max;
 };
 
 struct Rigidbody
@@ -27,6 +29,9 @@ struct Rigidbody
 	uint pnum;
 	uint _p;
 	vec2 cm;
+
+	vec2 size_min;
+	vec2 size_max;
 
 	vec4 R;
 
@@ -81,16 +86,25 @@ layout(set=USE_Rigidbody2D, binding=4, std430) restrict buffer rbFluidCounter {
 layout(set=USE_Rigidbody2D, binding=5, std430) restrict buffer rbFluidData {
 	rbFluid b_fluid[];
 };
+layout(set=USE_Rigidbody2D, binding=6, std430) restrict buffer rbBufferManageData {
+	uvec4 b_manager;
+};
+layout(set=USE_Rigidbody2D, binding=7, std430) restrict buffer rbRigidbodyFreelist {
+	uint b_rb_freelist[];
+};
+layout(set=USE_Rigidbody2D, binding=8, std430) restrict buffer rbParticleBlockFreelist {
+	uint b_particle_freelist[];
+};
 
 
 #endif
 #if defined(USE_MakeRigidbody)
 
-layout(set=USE_MakeRigidbody, binding=0, std430) restrict buffer MakeParticleBuffer {
-	rbParticle b_make_particle;
+layout(set=USE_MakeRigidbody, binding=0, std430) restrict buffer MakeRigidbodyBuffer {
+	Rigidbody b_make_rigidbody;
 };
-layout(set=USE_MakeRigidbody, binding=1, std430) restrict buffer MakePosBitBuffer {
-	uint64_t b_posbit[];
+layout(set=USE_MakeRigidbody, binding=1, std430) restrict buffer MakeParticleBuffer {
+	rbParticle b_make_particle[];
 };
 layout(set=USE_MakeRigidbody, binding=2, std430) restrict buffer MakeJFABuffer {
 	i16vec2 b_jfa_cell[];

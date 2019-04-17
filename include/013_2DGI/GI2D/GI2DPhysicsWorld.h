@@ -15,6 +15,7 @@ struct PhysicsWorld
 		Shader_ToFluid,
 		Shader_ToFluidWall,
 
+		Shader_MakeRB_Register,
 		Shader_MakeRB_MakeJFCell,
 		Shader_MakeRB_MakeSDF,
 		Shader_Num,
@@ -33,6 +34,7 @@ struct PhysicsWorld
 		Pipeline_ToFluid,
 		Pipeline_ToFluidWall,
 
+		Pipeline_MakeRB_Register,
 		Pipeline_MakeRB_MakeJFCell,
 		Pipeline_MakeRB_MakeSDF,
 
@@ -51,12 +53,18 @@ struct PhysicsWorld
 		uint step;
 		uint STEP;
 		uint rigidbody_num;
+
+		uint rigidbody_max;
+		uint particleblock_max;
 	};
 	struct Rigidbody
 	{
 		uint pnum;
 		uint _p;
 		vec2 cm;
+
+		vec2 size_min;
+		vec2 size_max;
 
 		vec4 R;
 
@@ -91,7 +99,6 @@ struct PhysicsWorld
 		vec2 vel;
 		vec2 sdf;
 	};
-
 // 	struct BufferManage
 // 	{
 // 		uint rb_active_index;
@@ -100,13 +107,15 @@ struct PhysicsWorld
 // 		uint particle_free_index;
 // 	};
 
+
 	enum
 	{
-		RB_NUM = 512,
-		RB_PARTICLE_BLOCK_SIZE = 64,
-		RB_PARTICLE_NUM = RB_NUM * RB_PARTICLE_BLOCK_SIZE * 8,
+		RB_NUM_MAX = 512,
+		RB_PARTICLE_BLOCK_NUM_MAX = RB_NUM_MAX * 8,
+		RB_PARTICLE_BLOCK_SIZE = 64, // shader‚à64‘O’ñ‚Ì•”•ª‚ª‚ ‚é
+		RB_PARTICLE_NUM = RB_PARTICLE_BLOCK_NUM_MAX * RB_PARTICLE_BLOCK_SIZE,
 
-		MAKE_RB_SIZE_MAX = 128,
+		MAKE_RB_SIZE_MAX = RB_PARTICLE_BLOCK_SIZE * 16*16,
 		MAKE_RB_BIT_SIZE = MAKE_RB_SIZE_MAX/8,
 	};
 
@@ -139,8 +148,8 @@ struct PhysicsWorld
 	btr::BufferMemoryEx<uint> b_rb_freelist;
 	btr::BufferMemoryEx<uint> b_particle_freelist;
 
+	btr::BufferMemoryEx<Rigidbody> b_make_rigidbody;
 	btr::BufferMemoryEx<rbParticle> b_make_particle;
-	btr::BufferMemoryEx<uint64_t> b_posbit;
 	btr::BufferMemoryEx<u16vec2> b_jfa_cell;
 
 	uint32_t m_rigidbody_id;
