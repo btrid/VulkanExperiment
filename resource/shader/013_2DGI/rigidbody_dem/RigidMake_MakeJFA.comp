@@ -42,15 +42,16 @@ void main()
 
 	float d = (cell.x >= 0) ? distance(vec2(current), vec2(cell)) : 99999999.;
 	const float old_d = d;
-	nearest(cell, d, current, current + cd.xx);
+	// 重力のY方向優先
 	nearest(cell, d, current, current + cd.xy);
+	nearest(cell, d, current, current + cd.xx);
 	nearest(cell, d, current, current + cd.xz);
-	nearest(cell, d, current, current + cd.yx);
-	//nearest(new_cell, d, current, current + cd.yy);
-	nearest(cell, d, current, current + cd.yz);
 	nearest(cell, d, current, current + cd.zx);
 	nearest(cell, d, current, current + cd.zy);
 	nearest(cell, d, current, current + cd.zz);
+	nearest(cell, d, current, current + cd.yx);
+	//nearest(new_cell, d, current, current + cd.yy);
+	nearest(cell, d, current, current + cd.yz);
 
 	if(d != old_d)
 	{
