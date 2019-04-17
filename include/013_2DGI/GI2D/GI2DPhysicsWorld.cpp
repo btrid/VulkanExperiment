@@ -406,6 +406,7 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer|vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
+			cmd.pushConstants<uvec4>(m_pipeline_layout[PipelineLayout_MakeRB].get(), vk::ShaderStageFlagBits::eCompute, 0, uvec4{ block_num, 0, area });
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeRB_MakeSDF].get());
 			cmd.dispatch(block_num, 1, 1);
 

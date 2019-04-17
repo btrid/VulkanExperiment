@@ -28,6 +28,9 @@ void main()
 //	f.sdf = normalize(vec2(b_jfa[i].nearest[0] - gl_GlobalInvocationID.xy));
 //	f.sdf = normalize(vec2(b_jfa[i].nearest[1] - gl_GlobalInvocationID.xy));
 	f.sdf = b_sdf[i];
+//	D2JFACell cell = b_jfa[gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*u_gi2d_info.m_resolution.x];
+//	ivec2 v = ivec2(cell.nearest - gl_GlobalInvocationID.xy);
+//	f.sdf = all(notEqual(v, ivec2(0))) ? normalize(vec2(v)) : vec2(0., -1);
 
 	f.vel = vec2(0.);
 

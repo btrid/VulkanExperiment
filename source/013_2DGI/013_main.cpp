@@ -284,11 +284,11 @@ int rigidbody()
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 	std::shared_ptr<GI2DFluid> gi2d_Fluid = std::make_shared<GI2DFluid>(context, gi2d_context);
 
-	for (int y = 0; y < 1; y++)
+	for (int y = 0; y < 20; y++)
 	{
-		for (int x = 0; x < 1; x++)
+		for (int x = 0; x < 20; x++)
 		{
-			physics_world->make(cmd, uvec4(250 + x * 24, 870 - y * 24, 16, 16));
+			physics_world->make(cmd, uvec4(250 + x * 16, 870 - y * 24, 16, 16));
 
 		}
 	}

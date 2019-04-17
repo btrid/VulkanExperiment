@@ -22,7 +22,7 @@ void main()
 	const ivec2 reso = ivec2(u_gi2d_info.m_resolution.xy);
 
 	ivec2 current = ivec2(gl_GlobalInvocationID.xy);
-	D2JFACell cell = b_jfa[current.x + current.y*reso.x + reso.x*reso.y*2];
+	D2JFACell cell = b_jfa[current.x + current.y*reso.x];
 
 	b_sdf[current.x + current.y*reso.x] = normalize(vec2(cell.nearest - ivec2(gl_GlobalInvocationID.xy)));
 }
