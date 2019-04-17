@@ -12,13 +12,14 @@ layout (local_size_x = 64) in;
 layout(push_constant) uniform Input
 {
 	uint particle_block_num;
+	int p;
 	uvec2 reso;
 } constant;
 
 void main()
 {
 	rbParticle p = b_make_particle[gl_GlobalInvocationID.x];
-	vec2 pos = p.local_pos + b_make_rigidbody.size_min;
+	vec2 pos = p.local_pos;
 	ivec2 posi = ivec2(pos);
 
 	vec2 sdf = vec2(b_jfa_cell[posi.x + posi.y*constant.reso.x] - posi);

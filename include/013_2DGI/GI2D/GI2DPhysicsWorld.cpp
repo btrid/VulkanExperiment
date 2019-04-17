@@ -90,7 +90,7 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 			m_desc_layout[DescLayout_Make].get(),
 		};
 		vk::PushConstantRange ranges[] = {
-			vk::PushConstantRange(vk::ShaderStageFlagBits::eCompute, 0, 12),
+			vk::PushConstantRange(vk::ShaderStageFlagBits::eCompute, 0, 16),
 		};
 
 		vk::PipelineLayoutCreateInfo pipeline_layout_info;
@@ -192,7 +192,7 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 
 		b_make_rigidbody = m_context->m_storage_memory.allocateMemory<Rigidbody>({ 1,{} });
 		b_make_particle = m_context->m_storage_memory.allocateMemory<rbParticle>({ MAKE_RB_SIZE_MAX,{} });
-		b_jfa_cell = m_context->m_storage_memory.allocateMemory<u16vec2>({ 128*128, {} });
+		b_jfa_cell = m_context->m_storage_memory.allocateMemory<i16vec2>({ 128*128, {} });
 		{
 			vk::DescriptorSetLayout layouts[] = {
 				m_desc_layout[DescLayout_Make].get(),
@@ -308,22 +308,31 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 	}
 	center_of_mass /= particle_num;
 
-	auto area = glm::powerOfTwoAbove(ivec2(size_max - size_min));
-	std::vector<i16vec2> jfa_cell(area.x*area.y, i16vec2(-1));
+	auto jfa_max = size_max + vec2(1.f);
+	auto jfa_min = size_min - vec2(1.f);
+	auto area = glm::powerOfTwoAbove(ivec2(jfa_max - jfa_min));
+	std::vector<i16vec2> jfa_cell(area.x*area.y);
+	for (int y = 0; y<area.y; y++)
+	{
+		for (int x = 0; x < area.x; x++)
+		{
+			jfa_cell[x + y * area.x] = i16vec2(x, y);
+		}
+	}
 	for (int32_t i = 0; i < particle_num; i++)
 	{
 		pstate[i].relative_pos = pos[i] - center_of_mass;
-		pstate[i].local_pos = pos[i] - size_min;
+		pstate[i].local_pos = pos[i] - jfa_min;
 
 		ivec2 local_pos = ivec2(pstate[i].local_pos);
-		jfa_cell[local_pos.x + local_pos.y*area.x] = local_pos;
+		jfa_cell[local_pos.x + local_pos.y*area.x] = i16vec2(-1);
 	}
 
 	Rigidbody rb;
 	rb.R = vec4(1.f, 0.f, 0.f, 1.f);
 	rb.cm = center_of_mass;
-	rb.size_min = size_min;
-	rb.size_max = size_max;
+	rb.size_min = jfa_min;
+	rb.size_max = jfa_max;
 	rb.pnum = particle_num;
 	rb.cm_work = ivec2(0);
 	rb.Apq_work= ivec4(0);
@@ -374,7 +383,7 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 			auto num = app::calcDipatchGroups(uvec3(area, 1), uvec3(8, 8, 1));
 
 			uint area_max = glm::max(area.x, area.y);
-			for (int distance = 1; distance < area_max; distance <<= 1)
+			for (uint distance = 1; distance < area_max; distance <<= 1)
 			{
 				vk::BufferMemoryBarrier to_read[] = {
 					b_jfa_cell.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
@@ -382,7 +391,7 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 					0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
-				cmd.pushConstants<uvec3>(m_pipeline_layout[PipelineLayout_MakeRB].get(), vk::ShaderStageFlagBits::eCompute, 0, uvec3{ distance, area });
+				cmd.pushConstants<uvec4>(m_pipeline_layout[PipelineLayout_MakeRB].get(), vk::ShaderStageFlagBits::eCompute, 0, uvec4{ distance, 0, area });
 				cmd.dispatch(num.x, num.y, num.z);
 			}
 		}

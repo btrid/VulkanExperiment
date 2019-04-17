@@ -6,19 +6,22 @@
 #define USE_MakeRigidbody 2
 #include "GI2D.glsl"
 #include "Rigidbody2D.glsl"
+
 layout (local_size_x = 8, local_size_y = 8) in;
 
 layout(push_constant) uniform Input
 {
-	uint distance;
+	int distance;
+	int p;
 	uvec2 reso;
 } constant;
 
 
-void nearest(inout i16vec2 new_cell, inout float current_d, in vec2 current, in uvec2 target)
+void nearest(inout i16vec2 new_cell, inout float current_d, in uvec2 current, in uvec2 target)
 {
 	if(any(greaterThanEqual(target, constant.reso))){ return; }
 	i16vec2 target_cell = b_jfa_cell[target.x + target.y*constant.reso.x];
+	if(target_cell.x<0){ return; }
 
 	{
 		float d = distance(vec2(target_cell), current);
@@ -28,7 +31,6 @@ void nearest(inout i16vec2 new_cell, inout float current_d, in vec2 current, in 
 			new_cell = target_cell;
 		}
 	}
-
 }
 void main() 
 {
@@ -37,7 +39,8 @@ void main()
 	i16vec2 cell = b_jfa_cell[current.x + current.y*constant.reso.x];
 	if(all(equal(current, cell))){ return; }
 
-	float d = cell.x >= 0 ? distance(vec2(current), vec2(cell)) : 99999999.;
+
+	float d = (cell.x >= 0) ? distance(vec2(current), vec2(cell)) : 99999999.;
 	const float old_d = d;
 	nearest(cell, d, current, current + cd.xx);
 	nearest(cell, d, current, current + cd.xy);
