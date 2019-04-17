@@ -268,7 +268,6 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 {
 	auto particle_num = box.z * box.w;
-	Rigidbody rb;
 	auto r_id = m_rigidbody_id++;
 
 	uint color = glm::packUnorm4x8(vec4(0.f, 0.f, 1.f, 1.f));
@@ -320,6 +319,7 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 		jfa_cell[local_pos.x + local_pos.y*area.x] = local_pos;
 	}
 
+	Rigidbody rb;
 	rb.R = vec4(1.f, 0.f, 0.f, 1.f);
 	rb.cm = center_of_mass;
 	rb.size_min = size_min;
@@ -365,8 +365,6 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 			// make sdf
 			vk::BufferMemoryBarrier to_read[] = 
 			{
-//				b_make_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-//				b_make_particle.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 				b_jfa_cell.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {},
@@ -378,17 +376,14 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 			uint area_max = glm::max(area.x, area.y);
 			for (int distance = 1; distance < area_max; distance <<= 1)
 			{
-				for (uint i = 0; i < GI2DSDF::SDF_USE_NUM; i++)
-				{
-					vk::BufferMemoryBarrier to_read[] = {
-						b_jfa_cell.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
-					};
-					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
-						0, nullptr, array_length(to_read), to_read, 0, nullptr);
+				vk::BufferMemoryBarrier to_read[] = {
+					b_jfa_cell.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+					0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
-					cmd.pushConstants<uvec3>(m_pipeline_layout[PipelineLayout_MakeRB].get(), vk::ShaderStageFlagBits::eCompute, 0, uvec3{ distance, area });
-					cmd.dispatch(num.x, num.y, num.z);
-				}
+				cmd.pushConstants<uvec3>(m_pipeline_layout[PipelineLayout_MakeRB].get(), vk::ShaderStageFlagBits::eCompute, 0, uvec3{ distance, area });
+				cmd.dispatch(num.x, num.y, num.z);
 			}
 		}
 
@@ -418,7 +413,7 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 		0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 
-
+	m_particle_id += block_num;
 }
 
 void PhysicsWorld::execute(vk::CommandBuffer cmd)

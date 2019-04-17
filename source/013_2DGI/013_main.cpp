@@ -348,7 +348,7 @@ int rigidbody()
 //				gi2d_Fluid->executeCalc(cmd);
 //				gi2d_Softbody.execute(cmd);
 
-//				gi2d_rigidbody.execute(cmd, physics_world, gi2d_sdf_context);
+				gi2d_rigidbody.execute(cmd, physics_world, gi2d_sdf_context);
 				gi2d_rigidbody.executeToFragment(cmd, physics_world);
  				gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
 				cmd.end();
