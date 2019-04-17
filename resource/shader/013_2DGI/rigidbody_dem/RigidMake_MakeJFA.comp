@@ -35,6 +35,8 @@ void main()
 	const uvec2 current = uvec2(gl_GlobalInvocationID.xy);
 	const ivec3 cd = ivec3(constant.distance) * ivec3(-1, 0, 1);
 	i16vec2 cell = b_jfa_cell[current.x + current.y*constant.reso.x];
+	if(all(equal(current, cell))){ return; }
+
 	float d = cell.x >= 0 ? distance(vec2(current), vec2(cell)) : 99999999.;
 	const float old_d = d;
 	nearest(cell, d, current, current + cd.xx);
