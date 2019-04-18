@@ -192,7 +192,7 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 
 		b_make_rigidbody = m_context->m_storage_memory.allocateMemory<Rigidbody>({ 1,{} });
 		b_make_particle = m_context->m_storage_memory.allocateMemory<rbParticle>({ MAKE_RB_SIZE_MAX,{} });
-		b_jfa_cell = m_context->m_storage_memory.allocateMemory<i16vec2>({ 128*128, {} });
+		b_jfa_cell = m_context->m_storage_memory.allocateMemory<i16vec2>({ MAKE_RB_JFA_CELL, {} });
 		{
 			vk::DescriptorSetLayout layouts[] = {
 				m_desc_layout[DescLayout_Make].get(),
@@ -308,9 +308,11 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 	}
 	center_of_mass /= particle_num;
 
-	auto jfa_max = size_max + vec2(1.f);
-	auto jfa_min = size_min - vec2(1.f);
-	auto area = glm::powerOfTwoAbove(ivec2(jfa_max - jfa_min));
+	ivec2 jfa_max = ivec2(ceil(size_max)) + ivec2(1);
+	ivec2 jfa_min = ivec2(trunc(size_min)) - ivec2(1);
+	auto area = glm::powerOfTwoAbove(jfa_max - jfa_min);
+	assert(area.x*area.y < MAKE_RB_JFA_CELL);
+
 	std::vector<i16vec2> jfa_cell(area.x*area.y);
 	for (int y = 0; y<area.y; y++)
 	{
@@ -322,7 +324,7 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 	for (int32_t i = 0; i < particle_num; i++)
 	{
 		pstate[i].relative_pos = pos[i] - center_of_mass;
-		pstate[i].local_pos = pos[i] - jfa_min;
+		pstate[i].local_pos = pos[i] - vec2(jfa_min);
 
 		ivec2 local_pos = ivec2(pstate[i].local_pos);
 		jfa_cell[local_pos.x + local_pos.y*area.x] = i16vec2(-1);
@@ -383,7 +385,6 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 			auto num = app::calcDipatchGroups(uvec3(area, 1), uvec3(8, 8, 1));
 
 			uint area_max = glm::max(area.x, area.y);
-//			for (uint distance = 1; distance < area_max; distance <<= 1)
 			for (int distance = area_max >> 1; distance != 0; distance >>= 1)
 			{
 				vk::BufferMemoryBarrier to_read[] = {

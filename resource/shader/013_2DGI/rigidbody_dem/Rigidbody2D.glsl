@@ -30,8 +30,8 @@ struct Rigidbody
 	uint _p;
 	vec2 cm;
 
-	vec2 size_min;
-	vec2 size_max;
+	ivec2 size_min;
+	ivec2 size_max;
 
 	vec4 R;
 

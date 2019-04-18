@@ -63,8 +63,8 @@ struct PhysicsWorld
 		uint _p;
 		vec2 cm;
 
-		vec2 size_min;
-		vec2 size_max;
+		ivec2 size_min;
+		ivec2 size_max;
 
 		vec4 R;
 
@@ -117,6 +117,7 @@ struct PhysicsWorld
 
 		MAKE_RB_SIZE_MAX = RB_PARTICLE_BLOCK_SIZE * 16*16,
 		MAKE_RB_BIT_SIZE = MAKE_RB_SIZE_MAX/8,
+		MAKE_RB_JFA_CELL = 128*128,
 	};
 
 	vk::DescriptorSetLayout getDescriptorSetLayout(DescriptorLayout i)const { return m_desc_layout[i].get(); }
