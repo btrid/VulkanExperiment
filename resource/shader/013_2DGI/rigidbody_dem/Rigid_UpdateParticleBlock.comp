@@ -7,13 +7,15 @@
 #include "Rigidbody2D.glsl"
 
 
-layout (local_size_x = RB_PARTICLE_BLOCK_SIZE) in;
+layout (local_size_x = 1) in;
 
 void main() 
 {
-	uint pb_id = b_pb_activelist[b_world.cpu_index*b_world.particle_block_max+gl_WorkGroupID.x];
-	uint p_id = pb_id*RB_PARTICLE_BLOCK_SIZE + gl_LocalInvocationID.x;
-	if(b_rbParticle[p_id].contact_index == -1){ return; }
+//	uint pb_id = b_pb_activelist[b_world.cpu_index*b_world.particle_block_max+gl_WorkGroupID.x];
+//	uint p_id = pb_id*RB_PARTICLE_BLOCK_SIZE + gl_LocalInvocationID.x;
+//	if(b_rbParticle[p_id].contact_index == -1){ return; }
+
+	uint pb_id = b_pb_activelist[b_world.cpu_index*b_world.particle_block_max+gl_GlobalInvocationID.x];
 
 	uint r_id = b_rbParticle_map[pb_id];
 /*	if(b_rigidbody[r_id].life <= 0.)
