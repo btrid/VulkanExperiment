@@ -325,11 +325,11 @@ int rigidbody()
 				if (context->m_window->getInput().m_keyboard.isOn('A'))
 				{
 //					physics_world->make(cmd, uvec4(255, 500, 32, 32));
-					for (int y = 0; y < 5; y++)
+					for (int y = 0; y < 20; y++)
 					{
-						for (int x = 0; x < 5; x++)
+						for (int x = 0; x < 20; x++)
 						{
-							physics_world->make(cmd, uvec4(200 + x * 70, 770 - y * 70, 64, 64));
+							physics_world->make(cmd, uvec4(200 + x * 16, 770 - y * 16, 16, 16));
 
 						}
 					}
@@ -355,7 +355,7 @@ int rigidbody()
 				cmds[cmd_gi2d] = cmd;
 			}
 			app.submit(std::move(cmds));
-			device->waitIdle();
+//			device->waitIdle();
 		}
 		app.postUpdate();
 		printf("%-6.4fms\n", time.getElapsedTimeAsMilliSeconds());

@@ -7,7 +7,7 @@
 #include "GI2D.glsl"
 #include "Rigidbody2D.glsl"
 
-layout (local_size_x = 64) in;
+layout (local_size_x = RB_PARTICLE_BLOCK_SIZE) in;
 
 layout(push_constant) uniform Input
 {
@@ -27,8 +27,10 @@ void main()
 
 	p.sdf = sdf;
 
-	uint pb_id = (b_manager.particle_active_index+b_manager.pb_list_size-gl_NumWorkGroups.x + gl_WorkGroupID.x)% b_manager.pb_list_size;
-	uint p_index  = pb_id * 64 + gl_LocalInvocationIndex;
-	b_rbParticle[p_index] = p;
+	uint freelist_index = (b_manager.particle_active_index+b_manager.pb_list_size-gl_NumWorkGroups.x + gl_WorkGroupID.x)% b_manager.pb_list_size;
+	uint pb_id = b_particle_freelist[freelist_index];
+	uint p_id  = pb_id * RB_PARTICLE_BLOCK_SIZE + gl_LocalInvocationIndex;
+	b_rbParticle[p_id] = p;
+
 
 }
