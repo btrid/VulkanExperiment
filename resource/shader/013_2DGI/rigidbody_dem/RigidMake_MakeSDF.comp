@@ -27,7 +27,14 @@ void main()
 
 	p.sdf = sdf;
 
-	uint p_index  = ((b_manager.particle_active_index+b_manager.pb_list_size-gl_NumWorkGroups.x + gl_WorkGroupID.x) % b_manager.pb_list_size) * 64 + gl_LocalInvocationIndex;
+	uint pb_id = b_manager.particle_active_index+b_manager.pb_list_size-gl_NumWorkGroups.x + gl_WorkGroupID.x;
+	uint p_index  = (pb_id % b_manager.pb_list_size) * 64 + gl_LocalInvocationIndex;
 	b_rbParticle[p_index] = p;
+
+	if(gl_LocalInvocationIndex == 0)
+	{
+		uint active_index = atomicAdd(b_active_counter[b_world.gpu_index*2+1].x, 1);
+		b_pb_activelist[b_world.gpu_index*b_world.particle_block_max + active_index] = pb_id;
+	}
 
 }

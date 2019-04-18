@@ -10,7 +10,8 @@
 layout (local_size_x = RB_PARTICLE_BLOCK_SIZE) in;
 void main() 
 {
-	uint p_id = gl_WorkGroupID.x*RB_PARTICLE_BLOCK_SIZE + gl_LocalInvocationID.x;
+	uint pb_id = b_pb_activelist[b_world.cpu_index*b_world.particle_block_max+gl_WorkGroupID.x];
+	uint p_id = pb_id*RB_PARTICLE_BLOCK_SIZE + gl_LocalInvocationID.x;
 	if(b_rbParticle[p_id].contact_index == -1){ return; }
 
 	vec2 pos = b_rbParticle[p_id].pos;
@@ -28,7 +29,7 @@ void main()
 	setDiffuse(f, true);
 	setRGB(f, color);
 
-	uint r_id = b_rbParticle_map[gl_WorkGroupID.x];
+	uint r_id = b_rbParticle_map[pb_id];
 	vec4 xaxis = (mat2(b_rigidbody[r_id].R.xy, b_rigidbody[r_id].R.zw) * vec2(1., 0.)).xyxy * vec2(0.25, -0.25).xxyy;
 	vec4 yaxis = (mat2(b_rigidbody[r_id].R.xy, b_rigidbody[r_id].R.zw) * vec2(0., 1.)).xyxy * vec2(0.25, -0.25).xxyy;
 

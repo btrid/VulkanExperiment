@@ -159,8 +159,8 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 		b_rb_freelist = m_context->m_storage_memory.allocateMemory<uint>({ RB_NUM_MAX,{} });
 		b_particle_freelist = m_context->m_storage_memory.allocateMemory<uint>({ RB_PARTICLE_BLOCK_NUM_MAX,{} });
 		b_active_counter = m_context->m_storage_memory.allocateMemory<uvec4>({ 4,{} });
-		b_rb_activelist = m_context->m_storage_memory.allocateMemory<uint>({ RB_NUM_MAX,{} });
-		b_pb_activelist = m_context->m_storage_memory.allocateMemory<uint>({ RB_PARTICLE_BLOCK_NUM_MAX,{} });
+		b_rb_activelist = m_context->m_storage_memory.allocateMemory<uint>({ RB_NUM_MAX*2,{} });
+		b_pb_activelist = m_context->m_storage_memory.allocateMemory<uint>({ RB_PARTICLE_BLOCK_NUM_MAX*2,{} });
 		{
 			vk::DescriptorSetLayout layouts[] = {
 				m_desc_layout[DescLayout_Data].get(),
@@ -234,15 +234,15 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 
 	auto cmd = m_context->m_cmd_pool->allocCmdTempolary(0);
 	{
-		World w;
-		w.DT = 0.016f;
-		w.STEP = 100;
-		w.step = 0;
-		w.rigidbody_num = m_rigidbody_id;
-		w.rigidbody_max = RB_NUM_MAX;
-		w.particleblock_max = RB_PARTICLE_BLOCK_NUM_MAX;
-		w.scene_index = 0;
-		cmd.updateBuffer<World>(b_world.getInfo().buffer, b_world.getInfo().offset, w);
+		m_world.DT = 0.016f;
+		m_world.STEP = 100;
+		m_world.step = 0;
+		m_world.rigidbody_num = m_rigidbody_id;
+		m_world.rigidbody_max = RB_NUM_MAX;
+		m_world.particleblock_max = RB_PARTICLE_BLOCK_NUM_MAX;
+		m_world.gpu_index = 0;
+		m_world.cpu_index = 1;
+		cmd.updateBuffer<World>(b_world.getInfo().buffer, b_world.getInfo().offset, m_world);
 	}
 
 	{
@@ -264,7 +264,7 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 		}
 		cmd.updateBuffer<BufferManage>(b_manager.getInfo().buffer, b_manager.getInfo().offset, BufferManage{ RB_NUM_MAX, RB_PARTICLE_BLOCK_NUM_MAX, 0, 0, 0, 0 });
 		std::array<uvec4, 4> ac;
-		ac.fill(uvec4(0, 0, 0, 1));
+		ac.fill(uvec4(0, 1, 1, 0));
 		cmd.updateBuffer<std::array<uvec4, 4>>(b_active_counter.getInfo().buffer, b_active_counter.getInfo().offset, ac);
 
 		vk::BufferMemoryBarrier to_read[] = {
@@ -387,6 +387,7 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 					b_manager.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 					b_make_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 					b_rbparticle_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+					b_active_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite | vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 				};
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer|vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 					0, nullptr, array_length(to_read), to_read, 0, nullptr);
@@ -448,6 +449,7 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 		b_make_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 		b_make_particle.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 		b_jfa_cell.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+//		b_active_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 	};
 	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 		0, nullptr, array_length(to_read), to_read, 0, nullptr);
@@ -470,16 +472,17 @@ void PhysicsWorld::execute(vk::CommandBuffer cmd)
 	cmd.fillBuffer(b_fluid_counter.getInfo().buffer, b_fluid_counter.getInfo().offset, b_fluid_counter.getInfo().range, data);
 
 	{
-		static uint a;
-		World w;
-		w.DT = 0.016f;
-		w.STEP = 100;
-		w.step = 0;
-		w.rigidbody_num = m_rigidbody_id;
-		w.rigidbody_max = RB_NUM_MAX;
-		w.particleblock_max = RB_PARTICLE_BLOCK_NUM_MAX;
-		w.scene_index = (a + 1) % 2;
-		cmd.updateBuffer<World>(b_world.getInfo().buffer, b_world.getInfo().offset, w);
+// 		static uint a;
+// 		World w;
+// 		w.DT = 0.016f;
+// 		w.STEP = 100;
+// 		w.step = 0;
+// 		w.rigidbody_num = m_rigidbody_id;
+// 		w.rigidbody_max = RB_NUM_MAX;
+// 		w.particleblock_max = RB_PARTICLE_BLOCK_NUM_MAX;
+		m_world.gpu_index = (m_world.gpu_index + 1) % 2;
+		m_world.cpu_index = (m_world.cpu_index + 1) % 2;
+		cmd.updateBuffer<World>(b_world.getInfo().buffer, b_world.getInfo().offset, m_world);
 	}
 
 	{

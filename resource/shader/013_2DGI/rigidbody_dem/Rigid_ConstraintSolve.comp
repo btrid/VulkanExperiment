@@ -19,10 +19,12 @@ vec2 calcTangent(in vec2 I, in vec2 N)
 
 void main() 
 {
-	uint p_id = gl_WorkGroupID.x*RB_PARTICLE_BLOCK_SIZE + gl_LocalInvocationID.x;
+	uint pb_id = b_pb_activelist[b_world.cpu_index*b_world.particle_block_max+gl_WorkGroupID.x];
+	uint p_id = pb_id*RB_PARTICLE_BLOCK_SIZE + gl_LocalInvocationID.x;
 	if(b_rbParticle[p_id].contact_index == -1){ return; }
 
-	uint r_id = b_rbParticle_map[gl_WorkGroupID.x];
+
+	uint r_id = b_rbParticle_map[pb_id];
 	vec2 pos = b_rbParticle[p_id].pos;
 	vec2 sdf = b_rbParticle[p_id].local_sdf;
 	ivec4 map_index = ivec4(pos.xyxy) + ivec4(ivec2(0), step(vec2(0.5), pos-floor(pos)) * 2. - 1.);

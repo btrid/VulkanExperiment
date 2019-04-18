@@ -23,6 +23,7 @@ struct GI2DRigidbody_procedure
 		Shader_RBConstraintSolve,
 		Shader_RBCalcCenterMass,
 		Shader_RBApqAccum,
+		Shader_RBUpdateParticleBlock,
 		Shader_RBApqCalc,
 
 		Shader_MakeWallCollision,
@@ -45,7 +46,7 @@ struct GI2DRigidbody_procedure
 		Pipeline_RBConstraintSolve,
 		Pipeline_RBCalcCenterMass,
 		Pipeline_RBApqAccum,
-//		Pipeline_RBUpdateParticleBlock,
+		Pipeline_RBUpdateParticleBlock,
 		Pipeline_RBApqCalc,
 
 		Pipeline_MakeWallCollision,

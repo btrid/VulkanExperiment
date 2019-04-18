@@ -16,29 +16,35 @@ layout(push_constant) uniform Input
 } constant;
 
 
-shared uint s_rb_index;
-shared uint s_pb_index;
+shared uint s_rb_id;
+shared uint s_pb_id;
 void main() 
 {
 	if(gl_LocalInvocationIndex >= constant.particle_block_num) { return; }
 
 	if(gl_LocalInvocationIndex == 0)
 	{
-		s_rb_index = b_manager.rb_active_index;
+		// bufferからメモリを取得
+		s_rb_id = b_manager.rb_active_index;
 		b_manager.rb_active_index = (b_manager.rb_active_index+1)%b_world.rigidbody_max;
 
-		b_rigidbody[s_rb_index] = b_make_rigidbody;
+		b_rigidbody[s_rb_id] = b_make_rigidbody;
 
-		s_pb_index = b_manager.particle_active_index;
+		s_pb_id = b_manager.particle_active_index;
 		b_manager.particle_active_index = (b_manager.particle_active_index+constant.particle_block_num)%b_world.particle_block_max;
+
+		// 更新フラグを立てる
+		uint active_index = atomicAdd(b_active_counter[b_world.gpu_index*2+0].x, 1);
+		b_rb_activelist[b_world.gpu_index*b_world.rigidbody_max + active_index] = s_rb_id;
 
 	}
 
 	barrier();
 	memoryBarrierShared();
 
-	uint freelist_index  = (s_pb_index + gl_LocalInvocationIndex) % b_manager.pb_list_size;
+		// bufferからメモリを取得
+	uint freelist_index  = (s_pb_id + gl_LocalInvocationIndex) % b_manager.pb_list_size;
 	uint pb_index = b_rb_freelist[freelist_index];
-	b_rbParticle_map[pb_index] = s_rb_index;
+	b_rbParticle_map[pb_index] = s_rb_id;
 }
  

@@ -22,7 +22,8 @@ struct rbWorld
 
 	uint rigidbody_max;
 	uint particle_block_max;
-	uint scene_index;
+	uint gpu_index;
+	uint cpu_index;
 
 };
 

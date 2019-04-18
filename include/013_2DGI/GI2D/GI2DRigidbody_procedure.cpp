@@ -17,6 +17,7 @@ GI2DRigidbody_procedure::GI2DRigidbody_procedure(const std::shared_ptr<PhysicsWo
 			"Rigid_ConstraintSolve.comp.spv",
 			"Rigid_CalcCenterMass.comp.spv",
 			"Rigid_ApqAccum.comp.spv",
+			"Rigid_UpdateParticleBlock.comp.spv",
 			"Rigid_ApqCalc.comp.spv",
 
 			"Rigid_ToFluidWall2.comp.spv"
@@ -79,12 +80,15 @@ GI2DRigidbody_procedure::GI2DRigidbody_procedure(const std::shared_ptr<PhysicsWo
 		shader_info[5].setModule(m_shader[Shader_RBApqAccum].get());
 		shader_info[5].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[5].setPName("main");
-		shader_info[6].setModule(m_shader[Shader_RBApqCalc].get());
+		shader_info[6].setModule(m_shader[Shader_RBUpdateParticleBlock].get());
 		shader_info[6].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[6].setPName("main");
-		shader_info[7].setModule(m_shader[Shader_MakeWallCollision].get());
+		shader_info[7].setModule(m_shader[Shader_RBApqCalc].get());
 		shader_info[7].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[7].setPName("main");
+		shader_info[8].setModule(m_shader[Shader_MakeWallCollision].get());
+		shader_info[8].setStage(vk::ShaderStageFlagBits::eCompute);
+		shader_info[8].setPName("main");
 		std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 		{
 			vk::ComputePipelineCreateInfo()
@@ -110,6 +114,9 @@ GI2DRigidbody_procedure::GI2DRigidbody_procedure(const std::shared_ptr<PhysicsWo
 			.setLayout(m_pipeline_layout[PipelineLayout_Rigid].get()),
 			vk::ComputePipelineCreateInfo()
 			.setStage(shader_info[7])
+			.setLayout(m_pipeline_layout[PipelineLayout_Rigid].get()),
+			vk::ComputePipelineCreateInfo()
+			.setStage(shader_info[8])
 			.setLayout(m_pipeline_layout[PipelineLayout_MakeWallCollision].get()),
 		};
 		auto compute_pipeline = m_world->m_context->m_device->createComputePipelinesUnique(m_world->m_context->m_cache.get(), compute_pipeline_info);
@@ -119,8 +126,9 @@ GI2DRigidbody_procedure::GI2DRigidbody_procedure(const std::shared_ptr<PhysicsWo
 		m_pipeline[Pipeline_RBConstraintSolve] = std::move(compute_pipeline[3]);
 		m_pipeline[Pipeline_RBCalcCenterMass] = std::move(compute_pipeline[4]);
 		m_pipeline[Pipeline_RBApqAccum] = std::move(compute_pipeline[5]);
-		m_pipeline[Pipeline_RBApqCalc] = std::move(compute_pipeline[6]);
-		m_pipeline[Pipeline_MakeWallCollision] = std::move(compute_pipeline[7]);
+		m_pipeline[Pipeline_RBUpdateParticleBlock] = std::move(compute_pipeline[6]);
+		m_pipeline[Pipeline_RBApqCalc] = std::move(compute_pipeline[7]);
+		m_pipeline[Pipeline_MakeWallCollision] = std::move(compute_pipeline[8]);
 	}
 
 }
@@ -134,16 +142,19 @@ void GI2DRigidbody_procedure::execute(vk::CommandBuffer cmd, const std::shared_p
 		vk::BufferMemoryBarrier to_read[] = {
 			world->b_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 			world->b_rbparticle.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+			world->b_active_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
 		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader|vk::PipelineStageFlagBits::eDrawIndirect, {},
 			0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RBMakeParticle].get());
 
-		auto num = app::calcDipatchGroups(uvec3(world->m_particle_id, 1, 1), uvec3(1, 1, 1));
-		cmd.dispatch(num.x, num.y, num.z);
+// 		auto num = app::calcDipatchGroups(uvec3(world->m_particle_id, 1, 1), uvec3(1, 1, 1));
+// 		cmd.dispatch(num.x, num.y, num.z);
+		cmd.dispatchIndirect(world->b_active_counter.getInfo().buffer, world->b_active_counter.getInfo().offset + world->m_world.cpu_index * sizeof(uvec4) * 2 + sizeof(uvec4));
 	}
 
+	// collision
 	{
 		{
 
@@ -165,12 +176,13 @@ void GI2DRigidbody_procedure::execute(vk::CommandBuffer cmd, const std::shared_p
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RBConstraintSolve].get());
 
-			auto num = app::calcDipatchGroups(uvec3(world->m_particle_id, 1, 1), uvec3(1, 1, 1));
-			cmd.dispatch(num.x, num.y, num.z);
+//			auto num = app::calcDipatchGroups(uvec3(world->m_particle_id, 1, 1), uvec3(1, 1, 1));
+//			cmd.dispatch(num.x, num.y, num.z);
+			cmd.dispatchIndirect(world->b_active_counter.getInfo().buffer, world->b_active_counter.getInfo().offset + world->m_world.cpu_index *sizeof(uvec4)*2 + sizeof(uvec4));
 		}
 	}
 
-
+	// calc center_of_mass
 	{
 		vk::BufferMemoryBarrier to_read[] = {
 			world->b_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
@@ -181,9 +193,12 @@ void GI2DRigidbody_procedure::execute(vk::CommandBuffer cmd, const std::shared_p
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RBCalcCenterMass].get());
 
-		auto num = app::calcDipatchGroups(uvec3(world->m_rigidbody_id, 1, 1), uvec3(1, 1, 1));
-		cmd.dispatch(num.x, num.y, num.z);
+//		auto num = app::calcDipatchGroups(uvec3(world->m_rigidbody_id, 1, 1), uvec3(1, 1, 1));
+//		cmd.dispatch(num.x, num.y, num.z);
+		cmd.dispatchIndirect(world->b_active_counter.getInfo().buffer, world->b_active_counter.getInfo().offset + world->m_world.cpu_index * sizeof(uvec4) * 2);
 	}
+
+	// calc Apq
 	{
 		vk::BufferMemoryBarrier to_read[] = {
 			world->b_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
@@ -194,9 +209,25 @@ void GI2DRigidbody_procedure::execute(vk::CommandBuffer cmd, const std::shared_p
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RBApqAccum].get());
 
-		auto num = app::calcDipatchGroups(uvec3(world->m_particle_id, 1, 1), uvec3(1, 1, 1));
-		cmd.dispatch(num.x, num.y, num.z);
+//		auto num = app::calcDipatchGroups(uvec3(world->m_particle_id, 1, 1), uvec3(1, 1, 1));
+//		cmd.dispatch(num.x, num.y, num.z);
+		cmd.dispatchIndirect(world->b_active_counter.getInfo().buffer, world->b_active_counter.getInfo().offset + world->m_world.cpu_index * sizeof(uvec4) * 2 + sizeof(uvec4));
 	}
+	// update particle_block
+	{
+		vk::BufferMemoryBarrier to_read[] = {
+			world->b_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+			world->b_rbparticle.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+		};
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+			0, nullptr, array_length(to_read), to_read, 0, nullptr);
+
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RBUpdateParticleBlock].get());
+
+		cmd.dispatchIndirect(world->b_active_counter.getInfo().buffer, world->b_active_counter.getInfo().offset + world->m_world.cpu_index * sizeof(uvec4) * 2 + sizeof(uvec4));
+	}
+
+	// update rigidbody
 	{
 		vk::BufferMemoryBarrier to_read[] = {
 			world->b_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
@@ -207,9 +238,14 @@ void GI2DRigidbody_procedure::execute(vk::CommandBuffer cmd, const std::shared_p
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RBApqCalc].get());
 
-		auto num = app::calcDipatchGroups(uvec3(world->m_rigidbody_id, 1, 1), uvec3(1, 1, 1));
-		cmd.dispatch(num.x, num.y, num.z);
+//		auto num = app::calcDipatchGroups(uvec3(world->m_rigidbody_id, 1, 1), uvec3(1, 1, 1));
+//		cmd.dispatch(num.x, num.y, num.z);
+		cmd.dispatchIndirect(world->b_active_counter.getInfo().buffer, world->b_active_counter.getInfo().offset + world->m_world.cpu_index * sizeof(uvec4) * 2);
 	}
+
+	cmd.updateBuffer<uvec4>(world->b_active_counter.getInfo().buffer, world->b_active_counter.getInfo().offset + world->m_world.cpu_index * sizeof(uvec4) * 2, uvec4(0, 1, 1, 0));
+	cmd.updateBuffer<uvec4>(world->b_active_counter.getInfo().buffer, world->b_active_counter.getInfo().offset + world->m_world.cpu_index * sizeof(uvec4) * 2 + sizeof(uvec4), uvec4(0, 1, 1, 0));
+
 
 }
 void GI2DRigidbody_procedure::executeMakeFluid(vk::CommandBuffer cmd, const std::shared_ptr<PhysicsWorld>& world)

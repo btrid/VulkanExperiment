@@ -56,7 +56,8 @@ struct PhysicsWorld
 
 		uint rigidbody_max;
 		uint particleblock_max;
-		uint scene_index;
+		uint gpu_index;
+		uint cpu_index;
 	};
 	struct Rigidbody
 	{
@@ -160,6 +161,7 @@ struct PhysicsWorld
 
 	uint32_t m_rigidbody_id;
 	uint32_t m_particle_id;
+	World m_world;
 
 };
 
