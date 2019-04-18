@@ -10,12 +10,12 @@ layout (local_size_x = 1) in;
 
 void main() 
 {
-	uint rbid = gl_GlobalInvocationID.x;
-	if(rbid >= b_world.rigidbody_num){ return; }
+	uint r_id = gl_GlobalInvocationID.x;
+	if(r_id >= b_world.rigidbody_num){ return; }
 
-	dvec2 cm = dvec2(b_rigidbody[rbid].cm_work) / 65535.;
-	b_rigidbody[rbid].cm = vec2(cm);
+	dvec2 cm = dvec2(b_rigidbody[r_id].cm_work) / 65535. / b_rigidbody[r_id].pnum + b_rigidbody[r_id].cm;
+	b_rigidbody[r_id].cm = vec2(cm);
 
-	b_rigidbody[rbid].cm_work = i64vec2(0);
+	b_rigidbody[r_id].cm_work = i64vec2(0);
 
 }

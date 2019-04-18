@@ -268,6 +268,8 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 {
 	auto particle_num = box.z * box.w;
+	assert(particle_num <= MAKE_RB_SIZE_MAX);
+
 	auto r_id = m_rigidbody_id++;
 
 	uint color = glm::packUnorm4x8(vec4(0.f, 0.f, 1.f, 1.f));
@@ -311,7 +313,7 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 	ivec2 jfa_max = ivec2(ceil(size_max)) + ivec2(1);
 	ivec2 jfa_min = ivec2(trunc(size_min)) - ivec2(1);
 	auto area = glm::powerOfTwoAbove(jfa_max - jfa_min);
-	assert(area.x*area.y < MAKE_RB_JFA_CELL);
+	assert(area.x*area.y <= MAKE_RB_JFA_CELL);
 
 	std::vector<i16vec2> jfa_cell(area.x*area.y);
 	for (int y = 0; y<area.y; y++)
@@ -330,6 +332,23 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 		jfa_cell[local_pos.x + local_pos.y*area.x] = i16vec2(-1);
 	}
 
+
+	// テストコード
+// 	i64vec4 Aqq_work = i64vec4(0);
+// 	for (uint32_t i = 0; i < particle_num; i++)
+// 	{
+// 		const auto& q = pstate[i].relative_pos;
+// 		auto qq = q.xxyy() * q.xyxy();
+// 		auto iqq = i64vec4(round(qq * 65535.f));
+// 		Aqq_work[0] += iqq.x;
+// 		Aqq_work[1] += iqq.y;
+// 		Aqq_work[2] += iqq.z;
+// 		Aqq_work[3] += iqq.w;
+// 	}
+// 
+// 	vec4 aqq = vec4(glm::dvec4(Aqq_work) / 65535.);
+// 	mat2 Aqq = mat2(aqq.xy(), aqq.zw());
+
 	Rigidbody rb;
 	rb.R = vec4(1.f, 0.f, 0.f, 1.f);
 	rb.cm = center_of_mass;
@@ -344,9 +363,7 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 	cmd.updateBuffer<rbParticle>(b_make_particle.getInfo().buffer, b_make_particle.getInfo().offset, pstate);
 
 
-
-
-	uint32_t block_num = pstate.size() / RB_PARTICLE_BLOCK_SIZE;
+	uint32_t block_num =  ceil(pstate.size() / (float)RB_PARTICLE_BLOCK_SIZE);
 	{
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MakeRB].get(), 0, getDescriptorSet(PhysicsWorld::DescLayout_Data), {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MakeRB].get(), 1, m_gi2d_context->getDescriptorSet(), {});

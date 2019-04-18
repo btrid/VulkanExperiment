@@ -77,7 +77,7 @@ void main()
 	}
 
 	b_rbParticle[p_id].pos = pos;
-	ivec2 pos_integer = ivec2(round(pos * 65535.  / b_rigidbody[r_id].pnum));
+	ivec2 pos_integer = ivec2(round((pos-b_rigidbody[r_id].cm) * 65535.));
 	atomicAdd(b_rigidbody[r_id].cm_work.x, pos_integer.x);
 	atomicAdd(b_rigidbody[r_id].cm_work.y, pos_integer.y);
 

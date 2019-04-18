@@ -324,12 +324,12 @@ int rigidbody()
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				if (context->m_window->getInput().m_keyboard.isOn('A'))
 				{
-//					physics_world->make(cmd, uvec4(255, 500, 24, 24));
-					for (int y = 0; y < 20; y++)
+//					physics_world->make(cmd, uvec4(255, 500, 32, 32));
+					for (int y = 0; y < 5; y++)
 					{
-						for (int x = 0; x < 10; x++)
+						for (int x = 0; x < 5; x++)
 						{
-							physics_world->make(cmd, uvec4(250 + x * 32, 870 - y * 24, 16, 16));
+							physics_world->make(cmd, uvec4(200 + x * 70, 770 - y * 70, 64, 8));
 
 						}
 					}
