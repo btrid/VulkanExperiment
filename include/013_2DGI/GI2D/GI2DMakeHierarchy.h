@@ -248,7 +248,8 @@ struct GI2DMakeHierarchy
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeJFA].get());
 			auto num = app::calcDipatchGroups(uvec3(sdf_context->m_gi2d_context->RenderWidth, sdf_context->m_gi2d_context->RenderHeight, 1), uvec3(8, 8, 1));
 
-			for (int distance = 1; distance < m_gi2d_context->RenderWidth; distance <<= 1)
+			for (int distance = sdf_context->m_gi2d_context->RenderWidth >> 1; distance != 0; distance >>= 1)
+//			for (int distance = 1; distance < m_gi2d_context->RenderWidth; distance <<= 1)
 			{
 				for (uint i = 0; i < 1; i++)
 				{

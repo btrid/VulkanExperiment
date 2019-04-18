@@ -383,7 +383,8 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 			auto num = app::calcDipatchGroups(uvec3(area, 1), uvec3(8, 8, 1));
 
 			uint area_max = glm::max(area.x, area.y);
-			for (uint distance = 1; distance < area_max; distance <<= 1)
+//			for (uint distance = 1; distance < area_max; distance <<= 1)
+			for (int distance = area_max >> 1; distance != 0; distance >>= 1)
 			{
 				vk::BufferMemoryBarrier to_read[] = {
 					b_jfa_cell.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
