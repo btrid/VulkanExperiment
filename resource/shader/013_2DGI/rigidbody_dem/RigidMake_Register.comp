@@ -44,7 +44,11 @@ void main()
 
 		// bufferからメモリを取得
 	uint freelist_index  = (s_pb_id + gl_LocalInvocationIndex) % b_manager.pb_list_size;
-	uint pb_index = b_rb_freelist[freelist_index];
-	b_rbParticle_map[pb_index] = s_rb_id;
+	uint pb_id = b_rb_freelist[freelist_index];
+	b_rbParticle_map[pb_id] = s_rb_id;
+
+	uint active_index = atomicAdd(b_active_counter[b_world.gpu_index*2+1].x, 1);
+	b_pb_activelist[b_world.gpu_index*b_world.particle_block_max + active_index] = pb_id;
+
 }
  

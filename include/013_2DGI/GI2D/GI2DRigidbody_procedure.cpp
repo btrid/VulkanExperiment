@@ -158,7 +158,7 @@ void GI2DRigidbody_procedure::execute(vk::CommandBuffer cmd, const std::shared_p
 	{
 		{
 
-			m_world->execute(cmd);
+//			m_world->execute(cmd);
 
 			_executeMakeFluidWall(cmd, world, sdf);
 			_executeMakeFluidParticle(cmd, world);
