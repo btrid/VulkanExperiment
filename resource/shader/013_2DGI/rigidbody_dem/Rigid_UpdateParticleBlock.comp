@@ -1,0 +1,36 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_Rigidbody2D 0
+#define USE_GI2D 1
+#include "GI2D.glsl"
+#include "Rigidbody2D.glsl"
+
+
+layout (local_size_x = RB_PARTICLE_BLOCK_SIZE) in;
+
+void main() 
+{
+	uint pb_id = gl_GlobalInvocationID.x;
+	if(b_rbParticle_map[pb_id] == -1){ return; }
+
+	uint r_id = b_rbParticle_map[pb_id];
+	if(b_rigidbody[r_id].life <= 0.)
+	{
+		// 削除
+		b_rbParticle_map[pb_id] = -1;
+
+		// freelistに追加
+		uint free_pb_index = atomicAdd(b_manager.rb_free_index, 1);
+		if(free_pb_index == b_manager.rb_free_index){ atomicAdd(b_manager.rb_free_index, -int(b_manager.pb_list_size));}
+		b_particle_freelist[free_pb_index % b_manager.pb_list_size] = pb_id;
+	}
+	else
+	{
+		uint active_index = atomicAdd(b_active_counter[b_world.scene_index*2+1].x, 1);
+//		if(active_index%64 == 0) {atomicAdd(b_active_counter[b_world.scene_index*2+1].x, 1); }
+		b_pb_activelist[active_index] = pb_id;
+	}
+
+}
+

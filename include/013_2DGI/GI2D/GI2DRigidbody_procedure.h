@@ -45,6 +45,7 @@ struct GI2DRigidbody_procedure
 		Pipeline_RBConstraintSolve,
 		Pipeline_RBCalcCenterMass,
 		Pipeline_RBApqAccum,
+//		Pipeline_RBUpdateParticleBlock,
 		Pipeline_RBApqCalc,
 
 		Pipeline_MakeWallCollision,

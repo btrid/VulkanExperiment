@@ -22,12 +22,14 @@ struct rbWorld
 
 	uint rigidbody_max;
 	uint particle_block_max;
+	uint scene_index;
+
 };
 
 struct Rigidbody
 {
 	uint pnum;
-	uint _p;
+	float life;
 	vec2 cm;
 
 	ivec2 size_min;
@@ -67,6 +69,16 @@ struct rbFluid
 	vec2 sdf;
 };
 
+struct BufferManage
+{
+	uint rb_list_size;
+	uint pb_list_size;
+	uint rb_active_index;
+	uint rb_free_index;
+	uint particle_active_index;
+	uint particle_free_index;
+};
+
 
 layout(set=USE_Rigidbody2D, binding=0, std430) restrict buffer WorldData {
 	rbWorld b_world;
@@ -87,13 +99,22 @@ layout(set=USE_Rigidbody2D, binding=5, std430) restrict buffer rbFluidData {
 	rbFluid b_fluid[];
 };
 layout(set=USE_Rigidbody2D, binding=6, std430) restrict buffer rbBufferManageData {
-	uvec4 b_manager;
+	BufferManage b_manager;
 };
 layout(set=USE_Rigidbody2D, binding=7, std430) restrict buffer rbRigidbodyFreelist {
 	uint b_rb_freelist[];
 };
 layout(set=USE_Rigidbody2D, binding=8, std430) restrict buffer rbParticleBlockFreelist {
 	uint b_particle_freelist[];
+};
+layout(set=USE_Rigidbody2D, binding=9, std430) restrict buffer rbActiveCounter {
+	uvec4 b_active_counter[];
+};
+layout(set=USE_Rigidbody2D, binding=10, std430) restrict buffer rbRBActiveBuffer {
+	uint b_rb_activelist[];
+};
+layout(set=USE_Rigidbody2D, binding=11, std430) restrict buffer rbPBActiveBuffer {
+	uint b_pb_activelist[];
 };
 
 

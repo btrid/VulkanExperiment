@@ -27,7 +27,7 @@ void main()
 
 	p.sdf = sdf;
 
-	uint p_index  = ((b_manager.z+b_world.particle_block_max-gl_NumWorkGroups.x + gl_WorkGroupID.x) % b_world.particle_block_max) * 64 + gl_LocalInvocationIndex;
+	uint p_index  = ((b_manager.particle_active_index+b_manager.pb_list_size-gl_NumWorkGroups.x + gl_WorkGroupID.x) % b_manager.pb_list_size) * 64 + gl_LocalInvocationIndex;
 	b_rbParticle[p_index] = p;
 
 }

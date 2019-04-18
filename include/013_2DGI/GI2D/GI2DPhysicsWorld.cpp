@@ -23,6 +23,9 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 			vk::DescriptorSetLayoutBinding(6, vk::DescriptorType::eStorageBuffer, 1, stage),
 			vk::DescriptorSetLayoutBinding(7, vk::DescriptorType::eStorageBuffer, 1, stage),
 			vk::DescriptorSetLayoutBinding(8, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(9, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(10, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(11, vk::DescriptorType::eStorageBuffer, 1, stage),
 		};
 		vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 		desc_layout_info.setBindingCount(array_length(binding));
@@ -152,10 +155,12 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 		b_rbparticle_map = m_context->m_storage_memory.allocateMemory<uint32_t>({ RB_PARTICLE_NUM / RB_PARTICLE_BLOCK_SIZE,{} });
 		b_fluid_counter = m_context->m_storage_memory.allocateMemory<uint32_t>({ gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
 		b_fluid = m_context->m_storage_memory.allocateMemory<rbFluid>({ 4 * gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
-		b_manager = m_context->m_storage_memory.allocateMemory<uvec4>({ 1,{} });
+		b_manager = m_context->m_storage_memory.allocateMemory<BufferManage>({ 1,{} });
 		b_rb_freelist = m_context->m_storage_memory.allocateMemory<uint>({ RB_NUM_MAX,{} });
-		b_particle_freelist = m_context->m_storage_memory.allocateMemory<uint>({ RB_NUM_MAX,{} });
-
+		b_particle_freelist = m_context->m_storage_memory.allocateMemory<uint>({ RB_PARTICLE_BLOCK_NUM_MAX,{} });
+		b_active_counter = m_context->m_storage_memory.allocateMemory<uvec4>({ 4,{} });
+		b_rb_activelist = m_context->m_storage_memory.allocateMemory<uint>({ RB_NUM_MAX,{} });
+		b_pb_activelist = m_context->m_storage_memory.allocateMemory<uint>({ RB_PARTICLE_BLOCK_NUM_MAX,{} });
 		{
 			vk::DescriptorSetLayout layouts[] = {
 				m_desc_layout[DescLayout_Data].get(),
@@ -176,6 +181,9 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 				b_manager.getInfo(),
 				b_rb_freelist.getInfo(),
 				b_particle_freelist.getInfo(),
+				b_active_counter.getInfo(),
+				b_rb_activelist.getInfo(),
+				b_pb_activelist.getInfo(),
 			};
 
 			vk::WriteDescriptorSet write[] =
@@ -233,6 +241,7 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 		w.rigidbody_num = m_rigidbody_id;
 		w.rigidbody_max = RB_NUM_MAX;
 		w.particleblock_max = RB_PARTICLE_BLOCK_NUM_MAX;
+		w.scene_index = 0;
 		cmd.updateBuffer<World>(b_world.getInfo().buffer, b_world.getInfo().offset, w);
 	}
 
@@ -253,8 +262,10 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 			}
 			cmd.updateBuffer<uint>(b_particle_freelist.getInfo().buffer, b_particle_freelist.getInfo().offset, freelist);
 		}
-
-		cmd.fillBuffer(b_manager.getInfo().buffer, b_manager.getInfo().offset, b_manager.getInfo().range, 0);
+		cmd.updateBuffer<BufferManage>(b_manager.getInfo().buffer, b_manager.getInfo().offset, BufferManage{ RB_NUM_MAX, RB_PARTICLE_BLOCK_NUM_MAX, 0, 0, 0, 0 });
+		std::array<uvec4, 4> ac;
+		ac.fill(uvec4(0, 0, 0, 1));
+		cmd.updateBuffer<std::array<uvec4, 4>>(b_active_counter.getInfo().buffer, b_active_counter.getInfo().offset, ac);
 
 		vk::BufferMemoryBarrier to_read[] = {
 			b_world.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
@@ -459,6 +470,7 @@ void PhysicsWorld::execute(vk::CommandBuffer cmd)
 	cmd.fillBuffer(b_fluid_counter.getInfo().buffer, b_fluid_counter.getInfo().offset, b_fluid_counter.getInfo().range, data);
 
 	{
+		static uint a;
 		World w;
 		w.DT = 0.016f;
 		w.STEP = 100;
@@ -466,6 +478,7 @@ void PhysicsWorld::execute(vk::CommandBuffer cmd)
 		w.rigidbody_num = m_rigidbody_id;
 		w.rigidbody_max = RB_NUM_MAX;
 		w.particleblock_max = RB_PARTICLE_BLOCK_NUM_MAX;
+		w.scene_index = (a + 1) % 2;
 		cmd.updateBuffer<World>(b_world.getInfo().buffer, b_world.getInfo().offset, w);
 	}
 

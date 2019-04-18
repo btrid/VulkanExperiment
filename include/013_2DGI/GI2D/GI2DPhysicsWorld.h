@@ -56,6 +56,7 @@ struct PhysicsWorld
 
 		uint rigidbody_max;
 		uint particleblock_max;
+		uint scene_index;
 	};
 	struct Rigidbody
 	{
@@ -99,13 +100,15 @@ struct PhysicsWorld
 		vec2 vel;
 		vec2 sdf;
 	};
-// 	struct BufferManage
-// 	{
-// 		uint rb_active_index;
-// 		uint rb_free_index;
-// 		uint particle_active_index;
-// 		uint particle_free_index;
-// 	};
+	struct BufferManage
+	{
+		uint rb_list_size;
+		uint pb_list_size;
+		uint rb_active_index;
+		uint rb_free_index;
+		uint particle_active_index;
+		uint particle_free_index;
+	};
 
 
 	enum
@@ -144,9 +147,12 @@ struct PhysicsWorld
 	btr::BufferMemoryEx<uint32_t> b_fluid_counter;
 	btr::BufferMemoryEx<rbFluid> b_fluid;
 
-	btr::BufferMemoryEx<uvec4> b_manager;
+	btr::BufferMemoryEx<BufferManage> b_manager;
 	btr::BufferMemoryEx<uint> b_rb_freelist;
 	btr::BufferMemoryEx<uint> b_particle_freelist;
+	btr::BufferMemoryEx<uvec4> b_active_counter;
+	btr::BufferMemoryEx<uint> b_rb_activelist;
+	btr::BufferMemoryEx<uint> b_pb_activelist;
 
 	btr::BufferMemoryEx<Rigidbody> b_make_rigidbody;
 	btr::BufferMemoryEx<rbParticle> b_make_particle;
