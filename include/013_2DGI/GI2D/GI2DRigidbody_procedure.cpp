@@ -275,8 +275,7 @@ void GI2DRigidbody_procedure::_executeMakeFluidParticle(vk::CommandBuffer &cmd, 
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RBMakeFluid].get());
 
-		auto num = app::calcDipatchGroups(uvec3(world->m_particle_id, 1, 1), uvec3(1, 1, 1));
-		cmd.dispatch(num.x, num.y, num.z);
+		cmd.dispatchIndirect(world->b_update_counter.getInfo().buffer, world->b_update_counter.getInfo().offset + world->m_world.cpu_index * sizeof(uvec4) * 2 + sizeof(uvec4));
 	}
 }
 void GI2DRigidbody_procedure::_executeMakeFluidWall(vk::CommandBuffer &cmd, const std::shared_ptr<PhysicsWorld>& world, const std::shared_ptr<GI2DSDF>& sdf)
