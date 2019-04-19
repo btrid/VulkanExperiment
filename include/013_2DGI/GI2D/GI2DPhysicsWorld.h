@@ -149,11 +149,11 @@ struct PhysicsWorld
 	btr::BufferMemoryEx<rbFluid> b_fluid;
 
 	btr::BufferMemoryEx<BufferManage> b_manager;
-	btr::BufferMemoryEx<uint> b_rb_freelist;
-	btr::BufferMemoryEx<uint> b_particle_freelist;
-	btr::BufferMemoryEx<uvec4> b_active_counter;
-	btr::BufferMemoryEx<uint> b_rb_activelist;
-	btr::BufferMemoryEx<uint> b_pb_activelist;
+	btr::BufferMemoryEx<uint> b_rb_memory_list;
+	btr::BufferMemoryEx<uint> b_pb_memory_list;
+	btr::BufferMemoryEx<uvec4> b_update_counter;
+	btr::BufferMemoryEx<uint> b_rb_update_list;
+	btr::BufferMemoryEx<uint> b_pb_update_list;
 
 	btr::BufferMemoryEx<Rigidbody> b_make_rigidbody;
 	btr::BufferMemoryEx<rbParticle> b_make_particle;

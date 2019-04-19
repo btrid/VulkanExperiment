@@ -11,7 +11,7 @@ layout (local_size_x = 1) in;
 
 void main() 
 {
-	uint pb_id = b_pb_activelist[b_world.cpu_index*b_manager.pb_list_size+gl_GlobalInvocationID.x];
+	uint pb_id = b_pb_update_list[b_world.cpu_index*b_manager.pb_list_size+gl_GlobalInvocationID.x];
 	uint r_id = b_rbParticle_map[pb_id];
 
 	if(b_rigidbody[r_id].life <= 0.)
@@ -19,15 +19,15 @@ void main()
 		// 削除
 //		b_rbParticle_map[pb_id] = -1;
 
-		// freelistに追加
-		uint free_pb_index = atomicAdd(b_manager.pb_free_index, 1);
-		if(free_pb_index != 0 && (free_pb_index % b_manager.pb_list_size) == 0){ atomicAdd(b_manager.pb_free_index, -int(b_manager.pb_list_size)); }
-		b_particle_freelist[free_pb_index % b_manager.pb_list_size] = pb_id;
+		// 使用しているメモリを返す
+		uint pb_memory_index = atomicAdd(b_manager.pb_free_index, 1);
+		if(pb_memory_index != 0 && (pb_memory_index % b_manager.pb_list_size) == 0){ atomicAdd(b_manager.pb_free_index, -int(b_manager.pb_list_size)); }
+		b_pb_memory_list[pb_memory_index % b_manager.pb_list_size] = pb_id;
 	}
 	else
 	{
-		uint active_index = atomicAdd(b_active_counter[b_world.gpu_index*2+1].x, 1);
-		b_pb_activelist[b_world.gpu_index*b_manager.pb_list_size + active_index] = pb_id;
+		uint update_index = atomicAdd(b_update_counter[b_world.gpu_index*2+1].x, 1);
+		b_pb_update_list[b_world.gpu_index*b_manager.pb_list_size + update_index] = pb_id;
 	}
 
 }

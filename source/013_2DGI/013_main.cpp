@@ -325,11 +325,11 @@ int rigidbody()
 				if (context->m_window->getInput().m_keyboard.isOn('A'))
 				{
 //					physics_world->make(cmd, uvec4(255, 500, 32, 32));
-					for (int y = 0; y < 1; y++)
+					for (int y = 0; y < 20; y++)
 					{
-						for (int x = 0; x < 2; x++)
+						for (int x = 0; x < 20; x++)
 						{
-							physics_world->make(cmd, uvec4(200 + x * 16, 770 - y * 16, 16, 16));
+							physics_world->make(cmd, uvec4(200 + x * 16, 570 - y * 16, 16, 16));
 
 						}
 					}

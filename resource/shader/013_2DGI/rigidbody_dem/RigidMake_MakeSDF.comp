@@ -27,8 +27,8 @@ void main()
 
 	p.sdf = sdf;
 
-	uint freelist_index = (b_manager.pb_active_index+b_manager.pb_list_size-gl_NumWorkGroups.x + gl_WorkGroupID.x)% b_manager.pb_list_size;
-	uint pb_id = b_particle_freelist[freelist_index];
+	uint memory_index = (b_manager.pb_active_index+b_manager.pb_list_size-gl_NumWorkGroups.x + gl_WorkGroupID.x)% b_manager.pb_list_size;
+	uint pb_id = b_pb_memory_list[memory_index];
 	uint p_id  = pb_id * RB_PARTICLE_BLOCK_SIZE + gl_LocalInvocationIndex;
 	b_rbParticle[p_id] = p;
 

@@ -36,12 +36,12 @@ void main()
 		b_rigidbody[s_rb_id] = b_make_rigidbody;
 
 		// rigidbody更新フラグを立てる
-		uint active_index = b_active_counter[b_world.gpu_index*2+0].x;
-		b_active_counter[b_world.gpu_index*2+0].x += 1;
-		b_rb_activelist[b_world.gpu_index*b_manager.rb_list_size + active_index] = s_rb_id;
+		uint update_index = b_update_counter[b_world.gpu_index*2+0].x;
+		b_update_counter[b_world.gpu_index*2+0].x += 1;
+		b_rb_update_list[b_world.gpu_index*b_manager.rb_list_size + update_index] = s_rb_id;
 
-		s_pb_update_index = b_active_counter[b_world.gpu_index*2+1].x;
-		b_active_counter[b_world.gpu_index*2+1].x += constant.pb_num;
+		s_pb_update_index = b_update_counter[b_world.gpu_index*2+1].x;
+		b_update_counter[b_world.gpu_index*2+1].x += constant.pb_num;
 
 	}
 
@@ -50,12 +50,12 @@ void main()
 
 		// bufferからメモリを取得
 	uint freelist_index  = (s_pb_id + gl_LocalInvocationIndex) % b_manager.pb_list_size;
-	uint pb_id = b_particle_freelist[freelist_index];
+	uint pb_id = b_pb_memory_list[freelist_index];
 	b_rbParticle_map[pb_id] = s_rb_id;
 
 	// particle更新フラグを立てる
-	uint active_index = s_pb_update_index + gl_LocalInvocationIndex);
-	b_pb_activelist[b_world.gpu_index*b_manager.pb_list_size + active_index] = pb_id;
+	uint update_index = s_pb_update_index + gl_LocalInvocationIndex;
+	b_pb_update_list[b_world.gpu_index*b_manager.pb_list_size + update_index] = pb_id;
 
 }
  

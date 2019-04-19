@@ -103,19 +103,19 @@ layout(set=USE_Rigidbody2D, binding=6, std430) restrict buffer rbBufferManageDat
 	BufferManage b_manager;
 };
 layout(set=USE_Rigidbody2D, binding=7, std430) restrict buffer rbRigidbodyFreelist {
-	uint b_rb_freelist[];
+	uint b_rb_memory_list[];
 };
 layout(set=USE_Rigidbody2D, binding=8, std430) restrict buffer rbParticleBlockFreelist {
-	uint b_particle_freelist[];
+	uint b_pb_memory_list[];
 };
 layout(set=USE_Rigidbody2D, binding=9, std430) restrict buffer rbActiveCounter {
-	uvec4 b_active_counter[];
+	uvec4 b_update_counter[];
 };
 layout(set=USE_Rigidbody2D, binding=10, std430) restrict buffer rbRBActiveBuffer {
-	uint b_rb_activelist[];
+	uint b_rb_update_list[];
 };
 layout(set=USE_Rigidbody2D, binding=11, std430) restrict buffer rbPBActiveBuffer {
-	uint b_pb_activelist[];
+	uint b_pb_update_list[];
 };
 
 

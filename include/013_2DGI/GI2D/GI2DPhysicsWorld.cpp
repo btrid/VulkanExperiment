@@ -156,11 +156,11 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 		b_fluid_counter = m_context->m_storage_memory.allocateMemory<uint32_t>({ gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
 		b_fluid = m_context->m_storage_memory.allocateMemory<rbFluid>({ 4 * gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
 		b_manager = m_context->m_storage_memory.allocateMemory<BufferManage>({ 1,{} });
-		b_rb_freelist = m_context->m_storage_memory.allocateMemory<uint>({ RB_NUM_MAX,{} });
-		b_particle_freelist = m_context->m_storage_memory.allocateMemory<uint>({ RB_PARTICLE_BLOCK_NUM_MAX,{} });
-		b_active_counter = m_context->m_storage_memory.allocateMemory<uvec4>({ 4,{} });
-		b_rb_activelist = m_context->m_storage_memory.allocateMemory<uint>({ RB_NUM_MAX*2,{} });
-		b_pb_activelist = m_context->m_storage_memory.allocateMemory<uint>({ RB_PARTICLE_BLOCK_NUM_MAX*2,{} });
+		b_rb_memory_list = m_context->m_storage_memory.allocateMemory<uint>({ RB_NUM_MAX,{} });
+		b_pb_memory_list = m_context->m_storage_memory.allocateMemory<uint>({ RB_PARTICLE_BLOCK_NUM_MAX,{} });
+		b_update_counter = m_context->m_storage_memory.allocateMemory<uvec4>({ 4,{} });
+		b_rb_update_list = m_context->m_storage_memory.allocateMemory<uint>({ RB_NUM_MAX*2,{} });
+		b_pb_update_list = m_context->m_storage_memory.allocateMemory<uint>({ RB_PARTICLE_BLOCK_NUM_MAX*2,{} });
 		{
 			vk::DescriptorSetLayout layouts[] = {
 				m_desc_layout[DescLayout_Data].get(),
@@ -179,11 +179,11 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 				b_fluid_counter.getInfo(),
 				b_fluid.getInfo(),
 				b_manager.getInfo(),
-				b_rb_freelist.getInfo(),
-				b_particle_freelist.getInfo(),
-				b_active_counter.getInfo(),
-				b_rb_activelist.getInfo(),
-				b_pb_activelist.getInfo(),
+				b_rb_memory_list.getInfo(),
+				b_pb_memory_list.getInfo(),
+				b_update_counter.getInfo(),
+				b_rb_update_list.getInfo(),
+				b_pb_update_list.getInfo(),
 			};
 
 			vk::WriteDescriptorSet write[] =
@@ -252,7 +252,7 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 			{
 				freelist[i] = i;
 			}
-			cmd.updateBuffer<uint>(b_rb_freelist.getInfo().buffer, b_rb_freelist.getInfo().offset, freelist);
+			cmd.updateBuffer<uint>(b_rb_memory_list.getInfo().buffer, b_rb_memory_list.getInfo().offset, freelist);
 		}
 		{
 			std::vector<uint> freelist(RB_PARTICLE_BLOCK_NUM_MAX);
@@ -260,12 +260,12 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 			{
 				freelist[i] = i;
 			}
-			cmd.updateBuffer<uint>(b_particle_freelist.getInfo().buffer, b_particle_freelist.getInfo().offset, freelist);
+			cmd.updateBuffer<uint>(b_pb_memory_list.getInfo().buffer, b_pb_memory_list.getInfo().offset, freelist);
 		}
 		cmd.updateBuffer<BufferManage>(b_manager.getInfo().buffer, b_manager.getInfo().offset, BufferManage{ RB_NUM_MAX, RB_PARTICLE_BLOCK_NUM_MAX, 0, 0, 0, 0 });
 		std::array<uvec4, 4> ac;
 		ac.fill(uvec4(0, 1, 1, 0));
-		cmd.updateBuffer<std::array<uvec4, 4>>(b_active_counter.getInfo().buffer, b_active_counter.getInfo().offset, ac);
+		cmd.updateBuffer<std::array<uvec4, 4>>(b_update_counter.getInfo().buffer, b_update_counter.getInfo().offset, ac);
 
 		vk::BufferMemoryBarrier to_read[] = {
 			b_world.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
@@ -365,7 +365,7 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 	rb.cm = center_of_mass;
 	rb.size_min = jfa_min;
 	rb.size_max = jfa_max;
-	rb.life = (std::rand() % 2) * 1 + 1;
+	rb.life = (std::rand() % 10)  + 2;
 	rb.pnum = particle_num;
 	rb.cm_work = ivec2(0);
 	rb.Apq_work= ivec4(0);
@@ -413,7 +413,7 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 					b_manager.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 					b_make_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 					b_rbparticle_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
-					b_active_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite | vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+					b_update_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite | vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 				};
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer|vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 					0, nullptr, array_length(to_read), to_read, 0, nullptr);
@@ -450,7 +450,7 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 		b_make_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 		b_make_particle.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 //		b_jfa_cell.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-		b_active_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+		b_update_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 	};
 	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 		0, nullptr, array_length(to_read), to_read, 0, nullptr);
