@@ -62,7 +62,7 @@ struct PhysicsWorld
 	struct Rigidbody
 	{
 		uint pnum;
-		uint _p;
+		float life;
 		vec2 cm;
 
 		ivec2 size_min;

@@ -11,27 +11,22 @@ layout (local_size_x = 1) in;
 
 void main() 
 {
-//	uint pb_id = b_pb_activelist[b_world.cpu_index*b_world.particle_block_max+gl_WorkGroupID.x];
-//	uint p_id = pb_id*RB_PARTICLE_BLOCK_SIZE + gl_LocalInvocationID.x;
-//	if(b_rbParticle[p_id].contact_index == -1){ return; }
-
 	uint pb_id = b_pb_activelist[b_world.cpu_index*b_world.particle_block_max+gl_GlobalInvocationID.x];
-
 	uint r_id = b_rbParticle_map[pb_id];
-/*	if(b_rigidbody[r_id].life <= 0.)
+
+	if(b_rigidbody[r_id].life <= 0.)
 	{
 		// 削除
-		b_rbParticle_map[pb_id] = -1;
+//		b_rbParticle_map[pb_id] = -1;
 
 		// freelistに追加
-		uint free_pb_index = atomicAdd(b_manager.rb_free_index, 1);
-		if(free_pb_index == b_manager.rb_free_index){ atomicAdd(b_manager.rb_free_index, -int(b_manager.pb_list_size));}
+		uint free_pb_index = atomicAdd(b_manager.pb_free_index, 1);
+		if(free_pb_index != 0 && (free_pb_index % b_manager.pb_list_size) == 0){ atomicAdd(b_manager.pb_free_index, -int(b_manager.pb_list_size)); }
 		b_particle_freelist[free_pb_index % b_manager.pb_list_size] = pb_id;
 	}
 	else
-*/	{
+	{
 		uint active_index = atomicAdd(b_active_counter[b_world.gpu_index*2+1].x, 1);
-//		if(active_index%64 == 0) {atomicAdd(b_active_counter[b_world.scene_index*2+1].x, 1); }
 		b_pb_activelist[b_world.gpu_index*b_world.particle_block_max + active_index] = pb_id;
 	}
 

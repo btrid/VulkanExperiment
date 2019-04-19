@@ -75,20 +75,19 @@ void main()
 	mat2 R, S;
 	polarDecomposition(Apq, R, S);
 	b_rigidbody[r_id].R = vec4(R[0][0], R[1][0], R[0][1], R[1][1]);
-
 	b_rigidbody[r_id].Apq_work = i64vec4(0);
 
 
 	// 削除
-/*	if(b_rigidbody[r_id].life <= 0.)
+	if(b_rigidbody[r_id].life <= 0.)
 	{
 		// freelistに追加
 		uint free_rb_index = atomicAdd(b_manager.rb_free_index, 1);
-		if(free_rb_index == b_manager.rb_free_index){ atomicAdd(b_manager.rb_free_index, -int(b_manager.rb_list_size));}
+		if(free_rb_index !=0 && (free_rb_index % b_manager.rb_list_size) == 0 ){ atomicAdd(b_manager.rb_free_index, -int(b_manager.rb_list_size));}
 		b_rb_freelist[free_rb_index % b_manager.rb_list_size] = r_id;
 	}
 	else
-*/	{
+	{
 		uint active_index = atomicAdd(b_active_counter[b_world.gpu_index*2+0].x, 1);
 //		if(active_index%64 == 0) {atomicAdd(b_active_counter[b_world.scene_index*2+0].x, 1); }
 		b_rb_activelist[b_world.gpu_index*b_world.particle_block_max+active_index] = r_id;

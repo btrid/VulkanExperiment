@@ -76,8 +76,8 @@ struct BufferManage
 	uint pb_list_size;
 	uint rb_active_index;
 	uint rb_free_index;
-	uint particle_active_index;
-	uint particle_free_index;
+	uint pb_active_index;
+	uint pb_free_index;
 };
 
 

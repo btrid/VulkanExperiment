@@ -10,7 +10,7 @@ layout (local_size_x = 256) in;
 
 layout(push_constant) uniform Input
 {
-	uint particle_block_num;
+	uint pb_num;
 	int p;
 	uvec2 reso;
 } constant;
@@ -20,7 +20,7 @@ shared uint s_rb_id;
 shared uint s_pb_id;
 void main() 
 {
-	if(gl_LocalInvocationIndex >= constant.particle_block_num) { return; }
+	if(gl_LocalInvocationIndex >= constant.pb_num) { return; }
 
 	if(gl_LocalInvocationIndex == 0)
 	{
@@ -30,13 +30,14 @@ void main()
 
 		b_rigidbody[s_rb_id] = b_make_rigidbody;
 
-		s_pb_id = b_manager.particle_active_index;
-		b_manager.particle_active_index = (b_manager.particle_active_index+constant.particle_block_num)%b_world.particle_block_max;
+		s_pb_id = b_manager.pb_active_index;
+		b_manager.pb_active_index = (b_manager.pb_active_index+constant.pb_num)%b_world.particle_block_max;
 
 		// 更新フラグを立てる
-		uint active_index = atomicAdd(b_active_counter[b_world.gpu_index*2+0].x, 1);
+		uint active_index = b_active_counter[b_world.gpu_index*2+0].x;
 		b_rb_activelist[b_world.gpu_index*b_world.rigidbody_max + active_index] = s_rb_id;
 
+		b_active_counter[b_world.gpu_index*2+0].x += 1;
 	}
 
 	barrier();
