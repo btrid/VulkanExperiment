@@ -17,30 +17,32 @@ layout(push_constant) uniform Input
 } constant;
 
 
-void nearest(inout i16vec2 new_cell, inout float current_d, in uvec2 current, in uvec2 target)
+void nearest(inout i16vec2 new_cell, inout float current_d, in i16vec2 current, in i16vec2 target)
 {
-	if(any(greaterThanEqual(target, constant.reso))){ return; }
-	i16vec2 target_cell = b_jfa_cell[target.x + target.y*constant.reso.x];
-	if(target_cell.x<0){ return; }
+	if(all(greaterThanEqual(target, i16vec2(0))) && all(lessThan(target, constant.reso)))
+	{
+		target = b_jfa_cell[target.x + target.y*constant.reso.x];
+		if(target.x== -32768){ return; }
+	}
 
 	{
-		float d = distance(vec2(target_cell), current);
+		float d = distance(vec2(target), current);
 		if(d < current_d)
 		{
 			current_d = d;
-			new_cell = target_cell;
+			new_cell = target;
 		}
 	}
 }
 void main() 
 {
-	const uvec2 current = uvec2(gl_GlobalInvocationID.xy);
-	const ivec3 cd = ivec3(constant.distance) * ivec3(-1, 0, 1);
+	const i16vec2 current = i16vec2(gl_GlobalInvocationID.xy);
+	const i16vec3 cd = i16vec3(constant.distance) * i16vec3(-1, 0, 1);
 	i16vec2 cell = b_jfa_cell[current.x + current.y*constant.reso.x];
 	if(all(equal(current, cell))){ return; }
 
 
-	float d = (cell.x >= 0) ? distance(vec2(current), vec2(cell)) : 99999999.;
+	float d = (cell.x != -32768) ? distance(vec2(current), vec2(cell)) : 99999999.;
 	const float old_d = d;
 	// 重力のY方向優先
 	nearest(cell, d, current, current + cd.xy);

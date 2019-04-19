@@ -329,7 +329,7 @@ int rigidbody()
 					{
 						for (int x = 0; x < 20; x++)
 						{
-							physics_world->make(cmd, uvec4(200 + x * 16, 570 - y * 16, 16, 16));
+							physics_world->make(cmd, uvec4(200 + x * 16, 570 - y * 16, 13, 13));
 
 						}
 					}
@@ -355,7 +355,7 @@ int rigidbody()
 				cmds[cmd_gi2d] = cmd;
 			}
 			app.submit(std::move(cmds));
-//			device->waitIdle();
+			device->waitIdle();
 		}
 		app.postUpdate();
 		printf("%-6.4fms\n", time.getElapsedTimeAsMilliSeconds());
