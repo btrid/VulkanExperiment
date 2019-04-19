@@ -71,7 +71,6 @@ struct PhysicsWorld
 		vec4 R;
 
 		i64vec2 cm_work;
-		i64vec2 _pp;
 		i64vec4 Apq_work;
 	};
 

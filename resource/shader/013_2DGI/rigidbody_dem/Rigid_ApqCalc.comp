@@ -78,7 +78,7 @@ void main()
 
 
 	// 削除
-	if(b_rigidbody[r_id].life <= 0.)
+	if(b_rigidbody[r_id].life < 0.)
 	{
 		// メモリを返却
 		uint rb_memory_index = atomicAdd(b_manager.rb_free_index, 1);
