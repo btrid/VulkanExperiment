@@ -324,8 +324,8 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 	}
 	center_of_mass /= particle_num;
 
-	ivec2 jfa_max = ivec2(ceil(size_max)) + ivec2(1);
-	ivec2 jfa_min = ivec2(trunc(size_min)) - ivec2(1);
+	ivec2 jfa_max = ivec2(ceil(size_max));
+	ivec2 jfa_min = ivec2(trunc(size_min));
 	auto area = glm::powerOfTwoAbove(jfa_max - jfa_min);
 	assert(area.x*area.y <= MAKE_RB_JFA_CELL);
 
@@ -343,25 +343,9 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 		pstate[i].local_pos = pos[i] - vec2(jfa_min);
 
 		ivec2 local_pos = ivec2(pstate[i].local_pos);
-		jfa_cell[local_pos.x + local_pos.y*area.x] = i16vec2(-1);
+		jfa_cell[local_pos.x + local_pos.y*area.x] = i16vec2(-32768);
 	}
 
-
-	// テストコード
-// 	i64vec4 Aqq_work = i64vec4(0);
-// 	for (uint32_t i = 0; i < particle_num; i++)
-// 	{
-// 		const auto& q = pstate[i].relative_pos;
-// 		auto qq = q.xxyy() * q.xyxy();
-// 		auto iqq = i64vec4(round(qq * 65535.f));
-// 		Aqq_work[0] += iqq.x;
-// 		Aqq_work[1] += iqq.y;
-// 		Aqq_work[2] += iqq.z;
-// 		Aqq_work[3] += iqq.w;
-// 	}
-// 
-// 	vec4 aqq = vec4(glm::dvec4(Aqq_work) / 65535.);
-// 	mat2 Aqq = mat2(aqq.xy(), aqq.zw());
 
 	Rigidbody rb;
 	rb.R = vec4(1.f, 0.f, 0.f, 1.f);
