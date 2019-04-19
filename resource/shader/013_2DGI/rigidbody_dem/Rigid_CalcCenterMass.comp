@@ -10,7 +10,7 @@ layout (local_size_x = 1) in;
 
 void main() 
 {
-	uint r_id = gl_GlobalInvocationID.x;
+	uint r_id = b_rb_activelist[b_world.cpu_index*b_manager.rb_list_size+gl_GlobalInvocationID.x];
 //	if(r_id >= b_world.rigidbody_num){ return; }
 
 	dvec2 cm = dvec2(b_rigidbody[r_id].cm_work) / 65535. / b_rigidbody[r_id].pnum + b_rigidbody[r_id].cm;

@@ -12,7 +12,7 @@ layout (local_size_x = RB_PARTICLE_BLOCK_SIZE) in;
 
 void main() 
 {
-	uint pb_id = b_pb_activelist[b_world.cpu_index*b_world.particle_block_max+gl_WorkGroupID.x];
+	uint pb_id = b_pb_activelist[b_world.cpu_index*b_manager.pb_list_size+gl_WorkGroupID.x];
 	uint p_id = pb_id*RB_PARTICLE_BLOCK_SIZE + gl_LocalInvocationID.x;
 	if(b_rbParticle[p_id].contact_index == -1){ return; }
 
