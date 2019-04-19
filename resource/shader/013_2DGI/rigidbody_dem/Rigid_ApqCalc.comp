@@ -68,8 +68,7 @@ void polarDecomposition(in mat2 A, out mat2 R, out mat2 S)
 
 void main() 
 {
-	uint r_id = gl_GlobalInvocationID.x;
-//	if(r_id >= b_world.rigidbody_num){ return; }
+	uint r_id = b_rb_activelist[b_world.cpu_index*b_manager.rb_list_size+gl_GlobalInvocationID.x];
 
 	mat2 Apq = mat2(dvec4(b_rigidbody[r_id].Apq_work) / 65535.);
 	mat2 R, S;
@@ -90,7 +89,7 @@ void main()
 	{
 		uint active_index = atomicAdd(b_active_counter[b_world.gpu_index*2+0].x, 1);
 //		if(active_index%64 == 0) {atomicAdd(b_active_counter[b_world.scene_index*2+0].x, 1); }
-		b_rb_activelist[b_world.gpu_index*b_world.particle_block_max+active_index] = r_id;
+		b_rb_activelist[b_world.gpu_index*b_manager.rb_list_size+active_index] = r_id;
 	}
 	b_rigidbody[r_id].life -= RB_DT;
 

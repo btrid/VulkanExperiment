@@ -365,7 +365,7 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 	rb.cm = center_of_mass;
 	rb.size_min = jfa_min;
 	rb.size_max = jfa_max;
-	rb.life = std::rand() % 2 + 3;
+	rb.life = std::rand() % 10 + 3;
 	rb.pnum = particle_num;
 	rb.cm_work = ivec2(0);
 	rb.Apq_work= ivec4(0);
