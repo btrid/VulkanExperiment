@@ -326,7 +326,7 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 
 	ivec2 jfa_max = ivec2(ceil(size_max));
 	ivec2 jfa_min = ivec2(trunc(size_min));
-	auto area = glm::powerOfTwoAbove(jfa_max - jfa_min);
+	auto area = jfa_max - jfa_min;
 	assert(area.x*area.y <= MAKE_RB_JFA_CELL);
 
 	std::vector<i16vec2> jfa_cell(area.x*area.y);
@@ -352,7 +352,7 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 	rb.cm = center_of_mass;
 	rb.size_min = jfa_min;
 	rb.size_max = jfa_max;
-	rb.life = (std::rand() % 10)  + 2;
+	rb.life = (std::rand() % 10)  + 55;
 	rb.pnum = particle_num;
 	rb.cm_work = ivec2(0);
 	rb.Apq_work= ivec4(0);
@@ -376,7 +376,7 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeRB_MakeJFCell].get());
 			auto num = app::calcDipatchGroups(uvec3(area, 1), uvec3(8, 8, 1));
 
-			uint area_max = glm::max(area.x, area.y);
+			uint area_max = glm::powerOfTwoAbove(glm::max(area.x, area.y));
 			for (int distance = area_max >> 1; distance != 0; distance >>= 1)
 			{
 				vk::BufferMemoryBarrier to_read[] = {
