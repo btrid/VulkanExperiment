@@ -38,6 +38,7 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 			vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eStorageBuffer, 1, stage),
 			vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
 			vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
 		};
 		vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 		desc_layout_info.setBindingCount(array_length(binding));
@@ -201,6 +202,7 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 		b_make_rigidbody = m_context->m_storage_memory.allocateMemory<Rigidbody>({ 1,{} });
 		b_make_particle = m_context->m_storage_memory.allocateMemory<rbParticle>({ MAKE_RB_SIZE_MAX,{} });
 		b_jfa_cell = m_context->m_storage_memory.allocateMemory<i16vec2>({ MAKE_RB_JFA_CELL, {} });
+		b_make_dispatch_param = m_context->m_storage_memory.allocateMemory<uvec4>({ 1,{} });
 		{
 			vk::DescriptorSetLayout layouts[] = {
 				m_desc_layout[DescLayout_Make].get(),
@@ -215,6 +217,7 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 				b_make_rigidbody.getInfo(),
 				b_make_particle.getInfo(),
 				b_jfa_cell.getInfo(),
+				b_make_dispatch_param.getInfo(),
 			};
 
 			vk::WriteDescriptorSet write[] =
@@ -434,14 +437,14 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 			{
 				b_make_particle.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 				b_jfa_cell.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				b_make_dispatch_param.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
 			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer|vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer|vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader|vk::PipelineStageFlagBits::eDrawIndirect, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 			cmd.pushConstants<uvec4>(m_pipeline_layout[PipelineLayout_MakeRB].get(), vk::ShaderStageFlagBits::eCompute, 0, uvec4{ block_num, 0, area });
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeRB_MakeSDF].get());
-			cmd.dispatch(block_num, 1, 1);
-
+			cmd.dispatchIndirect(b_make_dispatch_param.getInfo().buffer, b_make_dispatch_param.getInfo().offset);
 		}
 	}
 

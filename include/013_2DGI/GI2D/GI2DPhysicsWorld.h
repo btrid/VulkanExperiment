@@ -158,6 +158,7 @@ struct PhysicsWorld
 	btr::BufferMemoryEx<Rigidbody> b_make_rigidbody;
 	btr::BufferMemoryEx<rbParticle> b_make_particle;
 	btr::BufferMemoryEx<i16vec2> b_jfa_cell;
+	btr::BufferMemoryEx<uvec4> b_make_dispatch_param;
 
 	uint32_t m_rigidbody_id;
 	uint32_t m_particle_id;

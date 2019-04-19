@@ -131,6 +131,9 @@ layout(set=USE_MakeRigidbody, binding=1, std430) restrict buffer MakeParticleBuf
 layout(set=USE_MakeRigidbody, binding=2, std430) restrict buffer MakeJFABuffer {
 	i16vec2 b_jfa_cell[];
 };
+layout(set=USE_MakeRigidbody, binding=3, std430) restrict buffer MakeDispatchParam {
+	uvec4 b_make_dispatch_param;
+};
 #endif
 
 

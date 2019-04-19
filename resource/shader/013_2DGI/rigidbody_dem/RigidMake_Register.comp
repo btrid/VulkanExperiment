@@ -18,10 +18,39 @@ layout(push_constant) uniform Input
 
 shared uint s_rb_id;
 shared uint s_pb_id;
+shared uint s_rb_update_index;
 shared uint s_pb_update_index;
+shared bool s_ok;
 void main() 
 {
 	if(gl_LocalInvocationIndex >= constant.pb_num) { return; }
+
+	if(gl_LocalInvocationIndex == 0)
+	{
+		// 追加できるかチェック
+		s_rb_update_index = b_update_counter[b_world.gpu_index*2+0].x;
+		s_pb_update_index = b_update_counter[b_world.gpu_index*2+1].x;
+
+		if(s_rb_update_index >= b_manager.rb_list_size || s_pb_update_index + constant.pb_num >= b_manager.pb_list_size)
+		{
+			// 追加できない
+			s_ok =false;
+			b_make_dispatch_param = uvec4(0);
+		}
+		else
+		{
+			s_ok =true;
+			b_make_dispatch_param = uvec4(constant.pb_num, 1, 1, 0);
+		}
+	}
+	barrier();
+	memoryBarrierShared();
+
+	if(!s_ok)
+	{
+		// 追加できないので終わり
+		return;
+	}
 
 	if(gl_LocalInvocationIndex == 0)
 	{
@@ -36,11 +65,9 @@ void main()
 		b_rigidbody[s_rb_id] = b_make_rigidbody;
 
 		// rigidbody更新フラグを立てる
-		uint update_index = b_update_counter[b_world.gpu_index*2+0].x;
 		b_update_counter[b_world.gpu_index*2+0].x += 1;
-		b_rb_update_list[b_world.gpu_index*b_manager.rb_list_size + update_index] = s_rb_id;
+		b_rb_update_list[b_world.gpu_index*b_manager.rb_list_size + s_rb_update_index] = s_rb_id;
 
-		s_pb_update_index = b_update_counter[b_world.gpu_index*2+1].x;
 		b_update_counter[b_world.gpu_index*2+1].x += constant.pb_num;
 
 	}
