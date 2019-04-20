@@ -36,17 +36,17 @@ void main()
 	for(uint i = 0; i < 4; i++)
 	{
 		uint index = findex[i];
-		uint count = min(b_fluid_count[index], FLUID_NUM);
+		uint count = min(b_collidable_count[index], COLLIDABLE_NUM);
 		for(uint ii = 0; ii < count; ii++)
 		{
-			uint fj_id = index*FLUID_NUM + ii;
-			if( b_fluid[fj_id].r_id == r_id)
+			uint fj_id = index*COLLIDABLE_NUM + ii;
+			if( b_collidable[fj_id].r_id == r_id)
 			{
 				// 自分とは判定しない
 				continue;
 			}
 
-			vec2 pos_j = b_fluid[fj_id].pos;
+			vec2 pos_j = b_collidable[fj_id].pos;
 			vec2 rela_pos = pos-pos_j;
 			if(dot(rela_pos, rela_pos) >= k_delimiter*k_delimiter)
 			{
@@ -54,15 +54,15 @@ void main()
 				continue;
 			}
 
-			vec2 vel_j = b_fluid[fj_id].vel;
+			vec2 vel_j = b_collidable[fj_id].vel;
 			if(dot(rela_pos, vel-vel_j) <= 0.)
 			{
 				// 離れていくので接触しない
 //				continue;
 			}
 
-			vec2 sdf_j = b_fluid[fj_id].sdf;
-			float mass_j = b_fluid[fj_id].mass;
+			vec2 sdf_j = b_collidable[fj_id].sdf;
+			float mass_j = b_collidable[fj_id].mass;
 			float c = max(dot(-normalize(sdf), normalize(sdf_j)), 0.);
 			float s = max(cross(vec3(-normalize(sdf), 0.0), vec3(normalize(sdf_j), 0.0)).z, 0.);
 			float total_mass = mass + mass_j;

@@ -21,20 +21,20 @@ void main()
 		
 	uint i = gl_GlobalInvocationID.x+gl_GlobalInvocationID.y*u_gi2d_info.m_resolution.x;
 
-	rbFluid f;
-	f.r_id = -1;
-	f.mass = 0.;
-	f.pos = vec2(gl_GlobalInvocationID.xy) + vec2(0.5);
+	rbCollidable c;
+	c.r_id = -1;
+	c.mass = 0.;
+	c.pos = vec2(gl_GlobalInvocationID.xy) + vec2(0.5);
 //	f.sdf = normalize(vec2(b_jfa[i].nearest[0] - gl_GlobalInvocationID.xy));
 //	f.sdf = normalize(vec2(b_jfa[i].nearest[1] - gl_GlobalInvocationID.xy));
-	f.sdf = b_sdf[i];
+	c.sdf = b_sdf[i];
 //	D2JFACell cell = b_jfa[gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*u_gi2d_info.m_resolution.x];
 //	ivec2 v = ivec2(cell.nearest - gl_GlobalInvocationID.xy);
 //	f.sdf = all(notEqual(v, ivec2(0))) ? normalize(vec2(v)) : vec2(0., -1);
 
-	f.vel = vec2(0.);
+	c.vel = vec2(0.);
 
-	uint ii = atomicAdd(b_fluid_count[i], 1);
-	b_fluid[i*FLUID_NUM + ii] = f;
+	uint ii = atomicAdd(b_collidable_count[i], 1);
+	b_collidable[i*COLLIDABLE_NUM + ii] = c;
 }
 

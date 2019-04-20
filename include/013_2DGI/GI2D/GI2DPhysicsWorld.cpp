@@ -154,8 +154,8 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 		b_rigidbody = m_context->m_storage_memory.allocateMemory<Rigidbody>({ RB_NUM_MAX,{} });
 		b_rbparticle = m_context->m_storage_memory.allocateMemory<rbParticle>({ RB_PARTICLE_NUM,{} });
 		b_rbparticle_map = m_context->m_storage_memory.allocateMemory<uint32_t>({ RB_PARTICLE_BLOCK_NUM_MAX,{} });
-		b_fluid_counter = m_context->m_storage_memory.allocateMemory<uint32_t>({ gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
-		b_fluid = m_context->m_storage_memory.allocateMemory<rbFluid>({ 4 * gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
+		b_collidable_counter = m_context->m_storage_memory.allocateMemory<uint32_t>({ gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
+		b_collidable = m_context->m_storage_memory.allocateMemory<rbCollidable>({ 4 * gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
 		b_manager = m_context->m_storage_memory.allocateMemory<BufferManage>({ 1,{} });
 		b_rb_memory_list = m_context->m_storage_memory.allocateMemory<uint>({ RB_NUM_MAX,{} });
 		b_pb_memory_list = m_context->m_storage_memory.allocateMemory<uint>({ RB_PARTICLE_BLOCK_NUM_MAX,{} });
@@ -177,8 +177,8 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 				b_rigidbody.getInfo(),
 				b_rbparticle.getInfo(),
 				b_rbparticle_map.getInfo(),
-				b_fluid_counter.getInfo(),
-				b_fluid.getInfo(),
+				b_collidable_counter.getInfo(),
+				b_collidable.getInfo(),
 				b_manager.getInfo(),
 				b_rb_memory_list.getInfo(),
 				b_pb_memory_list.getInfo(),
@@ -450,14 +450,14 @@ void PhysicsWorld::execute(vk::CommandBuffer cmd)
 {
 	{
 		vk::BufferMemoryBarrier to_write[] = {
-			b_fluid_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
+			b_collidable_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
 			b_world.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {},
 			0, nullptr, array_length(to_write), to_write, 0, nullptr);
 	}
 	uint32_t data = 0;
-	cmd.fillBuffer(b_fluid_counter.getInfo().buffer, b_fluid_counter.getInfo().offset, b_fluid_counter.getInfo().range, data);
+	cmd.fillBuffer(b_collidable_counter.getInfo().buffer, b_collidable_counter.getInfo().offset, b_collidable_counter.getInfo().range, data);
 
 	{
 // 		static uint a;
@@ -475,7 +475,7 @@ void PhysicsWorld::execute(vk::CommandBuffer cmd)
 
 	{
 		vk::BufferMemoryBarrier to_read[] = {
-			b_fluid_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+			b_collidable_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 			b_world.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {},

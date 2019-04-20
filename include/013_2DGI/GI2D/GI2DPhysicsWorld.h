@@ -91,7 +91,7 @@ struct PhysicsWorld
 		uint is_active;
 	};
 
-	struct rbFluid
+	struct rbCollidable
 	{
 		uint r_id;
 		float mass;
@@ -144,8 +144,8 @@ struct PhysicsWorld
 	btr::BufferMemoryEx<Rigidbody> b_rigidbody;
 	btr::BufferMemoryEx<rbParticle> b_rbparticle;
 	btr::BufferMemoryEx<uint32_t> b_rbparticle_map;
-	btr::BufferMemoryEx<uint32_t> b_fluid_counter;
-	btr::BufferMemoryEx<rbFluid> b_fluid;
+	btr::BufferMemoryEx<uint32_t> b_collidable_counter;
+	btr::BufferMemoryEx<rbCollidable> b_collidable;
 
 	btr::BufferMemoryEx<BufferManage> b_manager;
 	btr::BufferMemoryEx<uint> b_rb_memory_list;

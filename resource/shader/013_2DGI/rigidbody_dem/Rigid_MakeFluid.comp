@@ -22,18 +22,18 @@ void main()
 	if(any(lessThan(index, ivec2(0))) || any(greaterThanEqual(index, u_gi2d_info.m_resolution.xy))){ return; }
 
 	uint i = index.x+index.y*u_gi2d_info.m_resolution.x;
-	uint ii = atomicAdd(b_fluid_count[i], 1);
-	if(ii < FLUID_NUM)
+	uint ii = atomicAdd(b_collidable_count[i], 1);
+	if(ii < COLLIDABLE_NUM)
 	{
-		rbFluid f;
-		f.r_id = b_rbParticle_map[pb_id];
-		f.mass = 1.;
+		rbCollidable c;
+		c.r_id = b_rbParticle_map[pb_id];
+		c.mass = 1.;
 
-		f.pos = pos;
-		f.sdf = b_rbParticle[p_id].local_sdf;
-		f.vel = pos - b_rbParticle[p_id].pos_old;
+		c.pos = pos;
+		c.sdf = b_rbParticle[p_id].local_sdf;
+		c.vel = pos - b_rbParticle[p_id].pos_old;
 
-		b_fluid[i*FLUID_NUM + ii] = f;
+		b_collidable[i*COLLIDABLE_NUM + ii] = c;
 	}
 }
 

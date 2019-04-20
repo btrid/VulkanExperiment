@@ -45,7 +45,7 @@ struct GI2DRigidbody_procedure
 		Pipeline_RBMakeFluid,
 		Pipeline_RBConstraintSolve,
 		Pipeline_RBCalcCenterMass,
-		Pipeline_RBMakeTransformMatrix,
+		Pipeline_RBApqAccum,
 		Pipeline_RBUpdateParticleBlock,
 		Pipeline_RBUpdateRigidbody,
 
@@ -58,8 +58,8 @@ struct GI2DRigidbody_procedure
 	void execute(vk::CommandBuffer cmd, const std::shared_ptr<PhysicsWorld>& world, const std::shared_ptr<GI2DSDF>& sdf);
 	void executeMakeFluid(vk::CommandBuffer cmd, const std::shared_ptr<PhysicsWorld>& world);
 
-	void _executeMakeFluidParticle(vk::CommandBuffer &cmd, const std::shared_ptr<PhysicsWorld>& world);
-	void _executeMakeFluidWall(vk::CommandBuffer &cmd, const std::shared_ptr<PhysicsWorld>& world, const std::shared_ptr<GI2DSDF>& sdf);
+	void _executeMakeCollidableParticle(vk::CommandBuffer &cmd, const std::shared_ptr<PhysicsWorld>& world);
+	void _executeMakeCollidableWall(vk::CommandBuffer &cmd, const std::shared_ptr<PhysicsWorld>& world, const std::shared_ptr<GI2DSDF>& sdf);
 
 	void executeToFragment(vk::CommandBuffer cmd, const std::shared_ptr<PhysicsWorld>& world);
 

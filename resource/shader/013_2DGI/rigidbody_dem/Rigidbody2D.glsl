@@ -4,7 +4,7 @@
 #if defined(USE_Rigidbody2D)
 
 #define RB_PARTICLE_BLOCK_SIZE (64)
-#define FLUID_NUM (4)
+#define COLLIDABLE_NUM (4)
 #define RB_DT (0.016)
 #define RB_GRAVITY_DT (vec2(0., 0.0025))
 //#define RB_DT (0.0016)
@@ -60,7 +60,7 @@ struct rbParticle
 
 };
 
-struct rbFluid
+struct rbCollidable
 {
 	uint r_id;
 	float mass;
@@ -93,11 +93,11 @@ layout(set=USE_Rigidbody2D, binding=2, std430) restrict buffer rbParticleBuffer 
 layout(set=USE_Rigidbody2D, binding=3, std430) restrict buffer rbParticleMappingBuffer {
 	uint b_rbParticle_map[];
 };
-layout(set=USE_Rigidbody2D, binding=4, std430) restrict buffer rbFluidCounter {
-	uint b_fluid_count[];
+layout(set=USE_Rigidbody2D, binding=4, std430) restrict buffer rbCollidableCounter {
+	uint b_collidable_count[];
 };
-layout(set=USE_Rigidbody2D, binding=5, std430) restrict buffer rbFluidData {
-	rbFluid b_fluid[];
+layout(set=USE_Rigidbody2D, binding=5, std430) restrict buffer rbCollidableBuffer {
+	rbCollidable b_collidable[];
 };
 layout(set=USE_Rigidbody2D, binding=6, std430) restrict buffer rbBufferManageData {
 	BufferManage b_manager;
