@@ -45,7 +45,7 @@ struct GI2DRigidbody_procedure
 		Pipeline_RBMakeCollidable,
 		Pipeline_RBConstraintSolve,
 		Pipeline_RBCalcCenterMass,
-		Pipeline_RBApqAccum,
+		Pipeline_RBMakeTransformMatrix,
 		Pipeline_RBUpdateParticleBlock,
 		Pipeline_RBUpdateRigidbody,
 

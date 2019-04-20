@@ -125,7 +125,7 @@ GI2DRigidbody_procedure::GI2DRigidbody_procedure(const std::shared_ptr<PhysicsWo
 		m_pipeline[Pipeline_RBMakeCollidable] = std::move(compute_pipeline[2]);
 		m_pipeline[Pipeline_RBConstraintSolve] = std::move(compute_pipeline[3]);
 		m_pipeline[Pipeline_RBCalcCenterMass] = std::move(compute_pipeline[4]);
-		m_pipeline[Pipeline_RBApqAccum] = std::move(compute_pipeline[5]);
+		m_pipeline[Pipeline_RBMakeTransformMatrix] = std::move(compute_pipeline[5]);
 		m_pipeline[Pipeline_RBUpdateParticleBlock] = std::move(compute_pipeline[6]);
 		m_pipeline[Pipeline_RBUpdateRigidbody] = std::move(compute_pipeline[7]);
 		m_pipeline[Pipeline_MakeWallCollision] = std::move(compute_pipeline[8]);
@@ -192,7 +192,7 @@ void GI2DRigidbody_procedure::execute(vk::CommandBuffer cmd, const std::shared_p
 		cmd.dispatchIndirect(world->b_update_counter.getInfo().buffer, world->b_update_counter.getInfo().offset + world->m_world.cpu_index * sizeof(uvec4) * 2);
 	}
 
-	// calc Apq
+	// calc transform matrix
 	{
 		vk::BufferMemoryBarrier to_read[] = {
 			world->b_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
@@ -201,7 +201,7 @@ void GI2DRigidbody_procedure::execute(vk::CommandBuffer cmd, const std::shared_p
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 			0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
-		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RBApqAccum].get());
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RBMakeTransformMatrix].get());
 
 		cmd.dispatchIndirect(world->b_update_counter.getInfo().buffer, world->b_update_counter.getInfo().offset + world->m_world.cpu_index * sizeof(uvec4) * 2 + sizeof(uvec4));
 	}
