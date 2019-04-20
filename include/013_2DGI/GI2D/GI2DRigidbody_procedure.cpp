@@ -16,9 +16,9 @@ GI2DRigidbody_procedure::GI2DRigidbody_procedure(const std::shared_ptr<PhysicsWo
 			"Rigid_MakeFluid.comp.spv",
 			"Rigid_ConstraintSolve.comp.spv",
 			"Rigid_CalcCenterMass.comp.spv",
-			"Rigid_ApqAccum.comp.spv",
+			"Rigid_MakeTransformMatrix.comp.spv",
 			"Rigid_UpdateParticleBlock.comp.spv",
-			"Rigid_ApqCalc.comp.spv",
+			"Rigid_UpdateRigidbody.comp.spv",
 
 			"Rigid_ToFluidWall2.comp.spv"
 
@@ -77,13 +77,13 @@ GI2DRigidbody_procedure::GI2DRigidbody_procedure(const std::shared_ptr<PhysicsWo
 		shader_info[4].setModule(m_shader[Shader_RBCalcCenterMass].get());
 		shader_info[4].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[4].setPName("main");
-		shader_info[5].setModule(m_shader[Shader_RBApqAccum].get());
+		shader_info[5].setModule(m_shader[Shader_RBMakeTransformMatrix].get());
 		shader_info[5].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[5].setPName("main");
 		shader_info[6].setModule(m_shader[Shader_RBUpdateParticleBlock].get());
 		shader_info[6].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[6].setPName("main");
-		shader_info[7].setModule(m_shader[Shader_RBApqCalc].get());
+		shader_info[7].setModule(m_shader[Shader_RBUpdateRigidbody].get());
 		shader_info[7].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[7].setPName("main");
 		shader_info[8].setModule(m_shader[Shader_MakeWallCollision].get());
@@ -125,9 +125,9 @@ GI2DRigidbody_procedure::GI2DRigidbody_procedure(const std::shared_ptr<PhysicsWo
 		m_pipeline[Pipeline_RBMakeFluid] = std::move(compute_pipeline[2]);
 		m_pipeline[Pipeline_RBConstraintSolve] = std::move(compute_pipeline[3]);
 		m_pipeline[Pipeline_RBCalcCenterMass] = std::move(compute_pipeline[4]);
-		m_pipeline[Pipeline_RBApqAccum] = std::move(compute_pipeline[5]);
+		m_pipeline[Pipeline_RBMakeTransformMatrix] = std::move(compute_pipeline[5]);
 		m_pipeline[Pipeline_RBUpdateParticleBlock] = std::move(compute_pipeline[6]);
-		m_pipeline[Pipeline_RBApqCalc] = std::move(compute_pipeline[7]);
+		m_pipeline[Pipeline_RBUpdateRigidbody] = std::move(compute_pipeline[7]);
 		m_pipeline[Pipeline_MakeWallCollision] = std::move(compute_pipeline[8]);
 	}
 
@@ -201,7 +201,7 @@ void GI2DRigidbody_procedure::execute(vk::CommandBuffer cmd, const std::shared_p
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 			0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
-		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RBApqAccum].get());
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RBMakeTransformMatrix].get());
 
 		cmd.dispatchIndirect(world->b_update_counter.getInfo().buffer, world->b_update_counter.getInfo().offset + world->m_world.cpu_index * sizeof(uvec4) * 2 + sizeof(uvec4));
 	}
@@ -228,7 +228,7 @@ void GI2DRigidbody_procedure::execute(vk::CommandBuffer cmd, const std::shared_p
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 			0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
-		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RBApqCalc].get());
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RBUpdateRigidbody].get());
 
 		cmd.dispatchIndirect(world->b_update_counter.getInfo().buffer, world->b_update_counter.getInfo().offset + world->m_world.cpu_index * sizeof(uvec4) * 2);
 	}

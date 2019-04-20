@@ -22,9 +22,9 @@ struct GI2DRigidbody_procedure
 		Shader_RBMakeFluid,
 		Shader_RBConstraintSolve,
 		Shader_RBCalcCenterMass,
-		Shader_RBApqAccum,
+		Shader_RBMakeTransformMatrix,
 		Shader_RBUpdateParticleBlock,
-		Shader_RBApqCalc,
+		Shader_RBUpdateRigidbody,
 
 		Shader_MakeWallCollision,
 
@@ -45,9 +45,9 @@ struct GI2DRigidbody_procedure
 		Pipeline_RBMakeFluid,
 		Pipeline_RBConstraintSolve,
 		Pipeline_RBCalcCenterMass,
-		Pipeline_RBApqAccum,
+		Pipeline_RBMakeTransformMatrix,
 		Pipeline_RBUpdateParticleBlock,
-		Pipeline_RBApqCalc,
+		Pipeline_RBUpdateRigidbody,
 
 		Pipeline_MakeWallCollision,
 

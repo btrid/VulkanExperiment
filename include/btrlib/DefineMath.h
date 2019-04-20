@@ -39,8 +39,9 @@ using i16vec2 = glm::i16vec2;
 using u16vec2 = glm::u16vec2;
 using i8vec4 = glm::i8vec4;
 using u8vec4 = glm::u8vec4;
+using f16vec2 = uint32_t;
 
-using f16x2 = uint16_t;
+using f16x2 = uint32_t;
 using s8x4 = glm::i8vec4;
 using u8x4 = glm::u8vec4;
 namespace btr

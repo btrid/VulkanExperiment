@@ -26,27 +26,6 @@ void main()
 	atomicAdd(b_rigidbody[r_id].Apq_work.y, Aqpi_integer.y);
 	atomicAdd(b_rigidbody[r_id].Apq_work.z, Aqpi_integer.z);
 	atomicAdd(b_rigidbody[r_id].Apq_work.w, Aqpi_integer.w);
-
-	if(gl_LocalInvocationIndex == 0)
-	{
-
-	if(b_rigidbody[r_id].life < 0.)
-	{
-		// 削除
-//		b_rbParticle_map[pb_id] = -1;
-
-		// 使用しているメモリを返す
-		uint pb_memory_index = atomicAdd(b_manager.pb_free_index, 1);
-		if(pb_memory_index != 0 && (pb_memory_index % b_manager.pb_list_size) == 0){ atomicAdd(b_manager.pb_free_index, -int(b_manager.pb_list_size)); }
-		b_pb_memory_list[pb_memory_index % b_manager.pb_list_size] = pb_id;
-	}
-	else
-	{
-		uint update_index = atomicAdd(b_update_counter[b_world.gpu_index*2+1].x, 1);
-		b_pb_update_list[b_world.gpu_index*b_manager.pb_list_size + update_index] = pb_id;
-	}
-	}
-
 }
 
 
