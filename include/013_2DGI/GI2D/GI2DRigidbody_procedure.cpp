@@ -13,14 +13,14 @@ GI2DRigidbody_procedure::GI2DRigidbody_procedure(const std::shared_ptr<PhysicsWo
 			"Rigid_ToFragment.comp.spv",
 
 			"Rigid_MakeParticle.comp.spv",
-			"Rigid_MakeFluid.comp.spv",
+			"Rigid_MakeCollidable.comp.spv",
 			"Rigid_ConstraintSolve.comp.spv",
 			"Rigid_CalcCenterMass.comp.spv",
 			"Rigid_MakeTransformMatrix.comp.spv",
 			"Rigid_UpdateParticleBlock.comp.spv",
 			"Rigid_UpdateRigidbody.comp.spv",
 
-			"Rigid_ToFluidWall2.comp.spv"
+			"Rigid_MakeCollidableWall.comp.spv"
 
 		};
 		static_assert(array_length(name) == Shader_Num, "not equal shader num");
@@ -68,7 +68,7 @@ GI2DRigidbody_procedure::GI2DRigidbody_procedure(const std::shared_ptr<PhysicsWo
 		shader_info[1].setModule(m_shader[Shader_RBMakeParticle].get());
 		shader_info[1].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[1].setPName("main");
-		shader_info[2].setModule(m_shader[Shader_RBMakeFluid].get());
+		shader_info[2].setModule(m_shader[Shader_RBMakeCollidable].get());
 		shader_info[2].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[2].setPName("main");
 		shader_info[3].setModule(m_shader[Shader_RBConstraintSolve].get());
@@ -122,7 +122,7 @@ GI2DRigidbody_procedure::GI2DRigidbody_procedure(const std::shared_ptr<PhysicsWo
 		auto compute_pipeline = m_world->m_context->m_device->createComputePipelinesUnique(m_world->m_context->m_cache.get(), compute_pipeline_info);
 		m_pipeline[Pipeline_ToFragment] = std::move(compute_pipeline[0]);
 		m_pipeline[Pipeline_RBMakeParticle] = std::move(compute_pipeline[1]);
-		m_pipeline[Pipeline_RBMakeFluid] = std::move(compute_pipeline[2]);
+		m_pipeline[Pipeline_RBMakeCollidable] = std::move(compute_pipeline[2]);
 		m_pipeline[Pipeline_RBConstraintSolve] = std::move(compute_pipeline[3]);
 		m_pipeline[Pipeline_RBCalcCenterMass] = std::move(compute_pipeline[4]);
 		m_pipeline[Pipeline_RBApqAccum] = std::move(compute_pipeline[5]);
@@ -273,7 +273,7 @@ void GI2DRigidbody_procedure::_executeMakeCollidableParticle(vk::CommandBuffer &
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 			0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
-		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RBMakeFluid].get());
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RBMakeCollidable].get());
 
 		cmd.dispatchIndirect(world->b_update_counter.getInfo().buffer, world->b_update_counter.getInfo().offset + world->m_world.cpu_index * sizeof(uvec4) * 2 + sizeof(uvec4));
 	}

@@ -19,7 +19,7 @@ struct GI2DRigidbody_procedure
 		Shader_ToFragment,
 
 		Shader_RBMakeParticle,
-		Shader_RBMakeFluid,
+		Shader_RBMakeCollidable,
 		Shader_RBConstraintSolve,
 		Shader_RBCalcCenterMass,
 		Shader_RBMakeTransformMatrix,
@@ -42,7 +42,7 @@ struct GI2DRigidbody_procedure
 		Pipeline_ToFragment,
 
 		Pipeline_RBMakeParticle,
-		Pipeline_RBMakeFluid,
+		Pipeline_RBMakeCollidable,
 		Pipeline_RBConstraintSolve,
 		Pipeline_RBCalcCenterMass,
 		Pipeline_RBApqAccum,

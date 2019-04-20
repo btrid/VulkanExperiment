@@ -9,11 +9,10 @@ SET exe=glslangValidator.exe
 SET output=../../binary
 
 %exe% %include% %option% -o %output%/Rigid_ToFragment.comp.spv Rigid_ToFragment.comp
-%exe% %include% %option% -o %output%/Rigid_ToFluidWall.comp.spv Rigid_ToFluidWall.comp
-%exe% %include% %option% -o %output%/Rigid_ToFluidWall2.comp.spv Rigid_ToFluidWall2.comp
+%exe% %include% %option% -o %output%/Rigid_MakeCollidableWall.comp.spv Rigid_MakeCollidableWall.comp
 
 %exe% %include% %option% -o %output%/Rigid_MakeParticle.comp.spv Rigid_MakeParticle.comp
-%exe% %include% %option% -o %output%/Rigid_MakeFluid.comp.spv Rigid_MakeFluid.comp
+%exe% %include% %option% -o %output%/Rigid_MakeCollidable.comp.spv Rigid_MakeCollidable.comp
 %exe% %include% %option% -o %output%/Rigid_ConstraintSolve.comp.spv Rigid_ConstraintSolve.comp
 %exe% %include% %option% -o %output%/Rigid_CalcCenterMass.comp.spv Rigid_CalcCenterMass.comp
 %exe% %include% %option% -o %output%/Rigid_MakeTransformMatrix.comp.spv Rigid_MakeTransformMatrix.comp
