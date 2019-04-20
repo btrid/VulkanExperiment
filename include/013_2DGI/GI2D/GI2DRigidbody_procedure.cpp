@@ -247,15 +247,7 @@ void GI2DRigidbody_procedure::execute(vk::CommandBuffer cmd, const std::shared_p
 
 
 }
-void GI2DRigidbody_procedure::executeMakeFluid(vk::CommandBuffer cmd, const std::shared_ptr<PhysicsWorld>& world)
-{
 
-	m_world->execute(cmd);
-	m_world->executeMakeFluidWall(cmd);
-
-	_executeMakeCollidableParticle(cmd, world);
-
-}
 
 void GI2DRigidbody_procedure::_executeMakeCollidableParticle(vk::CommandBuffer &cmd, const std::shared_ptr<PhysicsWorld>& world)
 {

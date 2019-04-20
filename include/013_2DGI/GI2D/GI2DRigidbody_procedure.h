@@ -56,7 +56,6 @@ struct GI2DRigidbody_procedure
 
 	GI2DRigidbody_procedure(const std::shared_ptr<PhysicsWorld>& world, const std::shared_ptr<GI2DSDF>& sdf);
 	void execute(vk::CommandBuffer cmd, const std::shared_ptr<PhysicsWorld>& world, const std::shared_ptr<GI2DSDF>& sdf);
-	void executeMakeFluid(vk::CommandBuffer cmd, const std::shared_ptr<PhysicsWorld>& world);
 
 	void _executeMakeCollidableParticle(vk::CommandBuffer &cmd, const std::shared_ptr<PhysicsWorld>& world);
 	void _executeMakeCollidableWall(vk::CommandBuffer &cmd, const std::shared_ptr<PhysicsWorld>& world, const std::shared_ptr<GI2DSDF>& sdf);
