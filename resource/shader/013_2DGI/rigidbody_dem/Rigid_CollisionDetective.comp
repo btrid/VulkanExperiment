@@ -62,7 +62,7 @@ void main()
 			}
 
 			vec2 sdf_j = b_collidable[fj_id].sdf;
-			float mass_j = b_collidable[fj_id].mass;
+			float mass_j = b_collidable[fj_id].mass_inv;
 			float c = max(dot(-normalize(sdf), normalize(sdf_j)), 0.);
 			float s = max(cross(vec3(-normalize(sdf), 0.0), vec3(normalize(sdf_j), 0.0)).z, 0.);
 			float total_mass = mass + mass_j;

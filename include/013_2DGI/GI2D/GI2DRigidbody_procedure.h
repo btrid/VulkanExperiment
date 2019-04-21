@@ -20,7 +20,7 @@ struct GI2DRigidbody_procedure
 
 		Shader_RBMakeParticle,
 		Shader_RBMakeCollidable,
-		Shader_RBConstraintSolve,
+		Shader_RBCollisionDetective,
 		Shader_RBCalcCenterMass,
 		Shader_RBMakeTransformMatrix,
 		Shader_RBUpdateParticleBlock,
@@ -43,7 +43,7 @@ struct GI2DRigidbody_procedure
 
 		Pipeline_RBMakeParticle,
 		Pipeline_RBMakeCollidable,
-		Pipeline_RBConstraintSolve,
+		Pipeline_RBCollisionDetective,
 		Pipeline_RBCalcCenterMass,
 		Pipeline_RBMakeTransformMatrix,
 		Pipeline_RBUpdateParticleBlock,

@@ -23,7 +23,7 @@ void main()
 
 	rbCollidable c;
 	c.r_id = -1;
-	c.mass = 0.;
+	c.mass_inv = 0.;
 	c.pos = vec2(gl_GlobalInvocationID.xy) + vec2(0.5);
 //	f.sdf = normalize(vec2(b_jfa[i].nearest[0] - gl_GlobalInvocationID.xy));
 //	f.sdf = normalize(vec2(b_jfa[i].nearest[1] - gl_GlobalInvocationID.xy));

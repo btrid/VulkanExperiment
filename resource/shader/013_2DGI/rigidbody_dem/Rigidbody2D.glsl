@@ -63,7 +63,7 @@ struct rbParticle
 struct rbCollidable
 {
 	uint r_id;
-	float mass;
+	float mass_inv;
 	vec2 pos;
 
 	vec2 vel;

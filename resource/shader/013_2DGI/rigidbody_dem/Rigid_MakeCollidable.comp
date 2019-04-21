@@ -27,7 +27,7 @@ void main()
 	{
 		rbCollidable c;
 		c.r_id = b_rbParticle_map[pb_id];
-		c.mass = 1.;
+		c.mass_inv = 1.;
 
 		c.pos = pos;
 		c.sdf = b_rbParticle[p_id].local_sdf;
