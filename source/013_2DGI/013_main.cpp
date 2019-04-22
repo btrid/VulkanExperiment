@@ -212,6 +212,10 @@ void y(vec2 p1, vec2 p2, vec2 sdf1, vec2 sdf2)
 	printf("p1 ={%5.2f,%5.2f} p2 ={%5.2f,%5.2f}\n", pr1.x, pr1.y, pr2.x, pr2.y);
 	printf("c2 ={%5.2f,%5.2f} c2 ={%5.2f,%5.2f}\n", c1.x, c1.y, c2.x, c2.y);
 }
+vec2 normalize_safe(vec2 v)
+{
+	return dot(v, v) == 0.f ? vec2(0.) : normalize(v);
+}
 int rigidbody()
 {
 // 	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(-1.f, 0.f));
@@ -249,6 +253,9 @@ int rigidbody()
 	auto pos2 = vec2(0.2f, 1.f);
 	auto rela_pos = pos2 - pos1;
 	auto rela_vel = vel2 - vel1;
+	vec2 vel_unit = normalize_safe(rela_vel);
+	vec2 pos_unit = normalize_safe(rela_pos);
+
 	float w1 = glm::max(dot(-rela_pos, rela_vel), 0.f);
 
 	auto rela_pos2 = pos1 - pos2;

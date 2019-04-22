@@ -91,7 +91,7 @@ void main()
 //		if(active_index%64 == 0) {atomicAdd(b_active_counter[b_world.scene_index*2+0].x, 1); }
 		b_rb_update_list[b_world.gpu_index*b_manager.rb_list_size+update_index] = r_id;
 	}
-	b_rigidbody[r_id].life -= RB_DT;
+//	b_rigidbody[r_id].life -= RB_DT;
 
 }
 

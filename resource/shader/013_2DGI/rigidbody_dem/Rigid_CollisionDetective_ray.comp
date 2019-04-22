@@ -21,6 +21,10 @@ vec2 normalize_safe(in vec2 v)
 {
 	return isZero(v) ? vec2(0.) : normalize(v);
 }
+float length_safe(in vec2 v)
+{
+	return isZero(v) ? 0. : length(v);
+}
 void main() 
 {
 	uint pb_id = b_pb_update_list[b_world.cpu_index*b_manager.pb_list_size+gl_WorkGroupID.x];
@@ -45,54 +49,60 @@ void main()
 //	inv_dir.y = abs(dir.y) < FLT_EPSIRON ? 0. : abs(1./dir.y);
 //	float progress = max(inv_dir.x, inv_dir.y);
 
-	for(int iter = 1; iter < len+1.; iter+=1)
+	for(int iter = 0; iter < len+1.; iter+=1)
 	{
 		float rate = min(iter/len, 1.);
-		pos = pos_old + vel * rate;
-		ivec2 p = ivec2(pos);
-		int index = p.x+p.y*u_gi2d_info.m_resolution.x;
-		uint count = min(b_collidable_count[index], COLLIDABLE_NUM);
-		for(uint ii = 0; ii < count; ii++)
+		pos = fma(vel, vec2(rate), pos_old);
+//		ivec2 p = ivec2(pos);
+//		int index = p.x+p.y*u_gi2d_info.m_resolution.x;
+//		uint count = min(b_collidable_count[index], COLLIDABLE_NUM);
+
+		ivec4 map_index = ivec4(pos.xyxy) + ivec4(ivec2(0), step(vec2(0.5), pos-floor(pos)) * 2. - 1.);
+		ivec4 findex = map_index.xzxz + map_index.yyww * u_gi2d_info.m_resolution.x;
+		uvec4 counts;
+		counts.x = min(b_collidable_count[findex.x], COLLIDABLE_NUM);
+		counts.y = min(b_collidable_count[findex.y], COLLIDABLE_NUM);
+		counts.z = min(b_collidable_count[findex.z], COLLIDABLE_NUM);
+		counts.w = min(b_collidable_count[findex.w], COLLIDABLE_NUM);
+		
+		if(all(equal(counts, uvec4(0)))){ continue; }
+
+		for(uint _i = 0; _i < 4; _i++)
 		{
-			uint fj_id = index*COLLIDABLE_NUM + ii;
-			if( b_collidable[fj_id].r_id == p_id)
+			for(uint ii = 0; ii < counts[_i]; ii++)
 			{
-				// 自分とは判定しない
-				continue;
+				uint fj_id = findex[_i]*COLLIDABLE_NUM + ii;
+				if( b_collidable[fj_id].r_id == p_id)
+				{
+					// 自分とは判定しない
+					continue;
+				}
+
+				vec2 pos_j = b_collidable[fj_id].pos;
+				vec2 vel_j = b_collidable[fj_id].vel;
+				pos_j = fma(-vel_j, vec2(1.-rate), pos_j);
+				vec2 rela_pos = pos-pos_j;
+				vec2 rela_vel = vel-vel_j;
+				float lw = dot(rela_pos, rela_pos) / k_delimiter*k_delimiter;
+				if(lw >= 1.)
+				{
+					// 距離が離れている
+					continue;
+				}
+
+				vec2 pos_unit = normalize_safe(rela_pos);
+				vec2 force = lw * pos_unit;
+
+				vec2 sdf_j = b_collidable[fj_id].sdf;
+				sdf_j = isZero(sdf_j) ? force : sdf_j;
+//				sdf_j = isZero(sdf_j) ? -vel_unit : sdf_j;
+				{
+//					vec2 n_vec = pos_j + sdf_j - pos;
+//					pos += dot(n_vec, sdf_j) * sdf_j * ((mass /(mass + b_collidable[fj_id].mass_inv)));
+					pos += force * (mass /(mass + b_collidable[fj_id].mass_inv));
+				}
+				iter = 99999;
 			}
-
-			vec2 pos_j = b_collidable[fj_id].pos;
-			vec2 vel_j = b_collidable[fj_id].vel;
-			pos_j = fma(-vel_j, vec2(1.-rate), pos_j);
-			vec2 rela_pos = pos-pos_j;
-			if(dot(rela_pos, rela_pos) >= k_delimiter*k_delimiter)
-			{
-				// 距離が離れている
-				continue;
-			}
-
-			vec2 rela_vel = vel-vel_j;
-			vec2 vel_unit = normalize_safe(rela_vel);
-			vec2 pos_unit = normalize_safe(rela_pos);
-			float w = max(dot(-pos_unit, vel_unit), 0.);
-
-			vec2 sdf_j = b_collidable[fj_id].sdf;
-			sdf_j = isZero(sdf_j) ? -rela_pos : sdf_j;
-			float mass_j = b_collidable[fj_id].mass_inv;
-
-			float c = w;
-			float s = w;
-			float total_mass = mass + mass_j;
-			{
-				vec2 n_vec = pos_j + sdf_j - pos;
-				pos += dot(n_vec, sdf_j) * sdf_j * ((mass /total_mass) * c);
-
-				// 摩擦
-//				vec2 vel_unit = isZero(vel) ? vec2(0.) : normalize(vel);
-//				vec2 t_vec = calcTangent(vel_unit, sdf_j) * s;
-//				pos -= t_vec*0.2;
-			}
-			iter = 99999;
 		}
 	}
 
