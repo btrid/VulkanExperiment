@@ -240,23 +240,20 @@ int rigidbody()
 //	vec2 p3 = vec2(p_x.z, p_y.z);
 //	vec2 p4 = vec2(p_x.w, p_y.w);
 
-	vec4 xaxis = glm::rotate(vec2(1.f, 0.f), glm::radians(30.f)).xyxy() * vec2(0.25, -0.25).xxyy();
-	vec4 yaxis = glm::rotate(vec2(0.f, 1.f), glm::radians(30.f)).xyxy() * vec2(0.25, -0.25).xxyy();
+// 	vec4 xaxis = glm::rotate(vec2(1.f, 0.f), glm::radians(30.f)).xyxy() * vec2(0.25, -0.25).xxyy();
+// 	vec4 yaxis = glm::rotate(vec2(0.f, 1.f), glm::radians(30.f)).xyxy() * vec2(0.25, -0.25).xxyy();
 
-	vec4 px = xaxis.xxzz() + yaxis.xzxz();
-	vec4 py = xaxis.yyww() + yaxis.ywyw();
+	auto vel1 = vec2(0.1f, 1.f);
+	auto vel2 = vec2(-0.1f, 1.f);
+	auto pos1 = vec2(0.f, 1.f);
+	auto pos2 = vec2(0.2f, 1.f);
+	auto rela_pos = pos2 - pos1;
+	auto rela_vel = vel2 - vel1;
+	float w1 = glm::max(dot(-rela_pos, rela_vel), 0.f);
 
-	vec2 p1 = vec2(px.x, py.x);
-	vec2 p2 = vec2(px.y, py.y);
-	vec2 p3 = vec2(px.z, py.z);
-	vec2 p4 = vec2(px.w, py.w);
-
-	auto a = cross(vec3(1.f, 0.f, 0.f), vec3(1.f, 0.f, 0.f));
-	auto b = cross(vec3(1.f, 0.f, 0.f), vec3(0.f, 1.f, 0.f));
-	auto b1 = cross(vec3(0.f, 1.f, 0.f), vec3(0.f, 1.f, 0.f));
-	auto b2 = cross(vec3(0.f, 1.f, 0.f), vec3(0.f, -1.f, 0.f));
-	auto t = calcTangent(vec2(5.f, -6.0f), vec2(0.f, -1.0f));
-	auto t1 = calcTangent(vec2(1.f, 1.f), vec2(-1.f, 0.f));
+	auto rela_pos2 = pos1 - pos2;
+	auto rela_vel2 = vel1 - vel2;
+	float w2 = glm::max(dot(-rela_pos2, rela_vel2), 0.f);
 
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();

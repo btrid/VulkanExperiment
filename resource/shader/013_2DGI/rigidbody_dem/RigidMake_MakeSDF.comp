@@ -7,6 +7,9 @@
 #include "GI2D.glsl"
 #include "Rigidbody2D.glsl"
 
+float rand(vec2 co){
+    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+}
 layout (local_size_x = RB_PARTICLE_BLOCK_SIZE) in;
 
 layout(push_constant) uniform Input
@@ -31,6 +34,7 @@ void main()
 	uint pb_id = b_pb_memory_list[memory_index];
 	uint p_id  = pb_id * RB_PARTICLE_BLOCK_SIZE + gl_LocalInvocationIndex;
 	b_rbParticle[p_id] = p;
+	b_rbParticle[p_id].pos_old -= vec2(rand(vec2(p_id)), rand(vec2(p_id*12.3123+123.))) * 0.03;
 
 
 }
