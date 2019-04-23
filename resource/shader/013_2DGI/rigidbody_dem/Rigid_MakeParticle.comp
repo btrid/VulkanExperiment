@@ -22,7 +22,7 @@ void main()
 
 	b_rbParticle[p_id].pos_old = pos;
 
-	vec2 vel = (pos - pos_old) + RB_GRAVITY_DT;
+	vec2 vel = (pos - pos_old) * 0.999 + RB_GRAVITY_DT;
 	b_rbParticle[p_id].pos = pos + vel;
 	b_rbParticle[p_id].is_contact = 0;
 
