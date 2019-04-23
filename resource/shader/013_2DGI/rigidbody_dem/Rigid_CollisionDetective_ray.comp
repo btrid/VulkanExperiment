@@ -83,23 +83,30 @@ void main()
 				pos_j = fma(-vel_j, vec2(1.-rate), pos_j);
 				vec2 rela_pos = pos-pos_j;
 				vec2 rela_vel = vel-vel_j;
-				float lw = dot(rela_pos, rela_pos) / k_delimiter*k_delimiter;
-				if(lw >= 1.)
+//				float lw = dot(rela_pos, rela_pos) / k_delimiter*k_delimiter;
+//				if(lw >= 1.)
+				if(dot(rela_pos, rela_pos) >= k_delimiter*k_delimiter)
 				{
 					// 距離が離れている
 					continue;
 				}
 
 				vec2 pos_unit = normalize_safe(rela_pos);
-				vec2 force = lw * pos_unit;
-
+				vec2 vel_unit = normalize_safe(rela_vel);
+//				float vel_f = length_safe(rela_vel);
+				float pos_l = length_safe(rela_pos);
+//				float lw = dot(rela_pos, rela_vel) * vel_f;
+//				vec2 fs = lw * pos_unit;
+//				vec2 fi = rela_vel - dot(rela_pos, rela_vel)*pos_l;
 				vec2 sdf_j = b_collidable[fj_id].sdf;
-				sdf_j = isZero(sdf_j) ? force : sdf_j;
-//				sdf_j = isZero(sdf_j) ? -vel_unit : sdf_j;
+				if(!isZero(sdf_j))
 				{
-//					vec2 n_vec = pos_j + sdf_j - pos;
-//					pos += dot(n_vec, sdf_j) * sdf_j * ((mass /(mass + b_collidable[fj_id].mass_inv)));
-					pos += force * (mass /(mass + b_collidable[fj_id].mass_inv));
+					vec2 n_vec = pos_j + sdf_j - pos;
+					pos += dot(n_vec, sdf_j) * sdf_j * ((mass /(mass + b_collidable[fj_id].mass_inv)));
+				}
+				else
+				{
+					pos += rela_pos * (mass /(mass + b_collidable[fj_id].mass_inv));
 				}
 				iter = 99999;
 			}
