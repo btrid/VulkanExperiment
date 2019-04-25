@@ -117,6 +117,9 @@ layout(set=USE_Rigidbody2D, binding=10, std430) restrict buffer rbRBActiveBuffer
 layout(set=USE_Rigidbody2D, binding=11, std430) restrict buffer rbPBActiveBuffer {
 	uint b_pb_update_list[];
 };
+layout(set=USE_Rigidbody2D, binding=12, std430) restrict buffer rbVoronoiBuffer {
+	i16vec2 b_voronoi[];
+};
 
 
 #endif
@@ -135,7 +138,6 @@ layout(set=USE_MakeRigidbody, binding=3, std430) restrict buffer MakeDispatchPar
 	uvec4 b_make_dispatch_param;
 };
 #endif
-
 
 vec2 rotateRBParticle(in vec2 v, in float angle)
 {

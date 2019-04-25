@@ -26,6 +26,7 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 			vk::DescriptorSetLayoutBinding(9, vk::DescriptorType::eStorageBuffer, 1, stage),
 			vk::DescriptorSetLayoutBinding(10, vk::DescriptorType::eStorageBuffer, 1, stage),
 			vk::DescriptorSetLayoutBinding(11, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(12, vk::DescriptorType::eStorageBuffer, 1, stage),
 		};
 		vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 		desc_layout_info.setBindingCount(array_length(binding));
@@ -55,6 +56,8 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 			"RigidMake_Register.comp.spv",
 			"RigidMake_MakeJFA.comp.spv",
 			"RigidMake_MakeSDF.comp.spv",
+
+			"Voronoi_Make.comp.spv",
 		};
 		static_assert(array_length(name) == Shader_Num, "not equal shader num");
 
@@ -104,6 +107,21 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 		pipeline_layout_info.setPPushConstantRanges(ranges);
 		m_pipeline_layout[PipelineLayout_MakeRB] = m_context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 	}
+	{
+		vk::DescriptorSetLayout layouts[] = {
+			m_desc_layout[DescLayout_Data].get(),
+		};
+		vk::PushConstantRange ranges[] = {
+			vk::PushConstantRange(vk::ShaderStageFlagBits::eCompute, 0, 16),
+		};
+
+		vk::PipelineLayoutCreateInfo pipeline_layout_info;
+		pipeline_layout_info.setSetLayoutCount(array_length(layouts));
+		pipeline_layout_info.setPSetLayouts(layouts);
+		pipeline_layout_info.setPushConstantRangeCount(array_length(ranges));
+		pipeline_layout_info.setPPushConstantRanges(ranges);
+		m_pipeline_layout[PipelineLayout_Voronoi] = m_context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+	}
 
 	// pipeline
 	{
@@ -123,6 +141,9 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 		shader_info[4].setModule(m_shader[Shader_MakeRB_MakeSDF].get());
 		shader_info[4].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[4].setPName("main");
+		shader_info[5].setModule(m_shader[Shader_Voronoi_Make].get());
+		shader_info[5].setStage(vk::ShaderStageFlagBits::eCompute);
+		shader_info[5].setPName("main");
 		std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 		{
 			vk::ComputePipelineCreateInfo()
@@ -140,6 +161,9 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 			vk::ComputePipelineCreateInfo()
 			.setStage(shader_info[4])
 			.setLayout(m_pipeline_layout[PipelineLayout_MakeRB].get()),
+			vk::ComputePipelineCreateInfo()
+			.setStage(shader_info[5])
+			.setLayout(m_pipeline_layout[PipelineLayout_Voronoi].get()),
 		};
 		auto compute_pipeline = m_context->m_device->createComputePipelinesUnique(m_context->m_cache.get(), compute_pipeline_info);
 		m_pipeline[Pipeline_ToFluid] = std::move(compute_pipeline[0]);
@@ -147,6 +171,7 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 		m_pipeline[Pipeline_MakeRB_Register] = std::move(compute_pipeline[2]);
 		m_pipeline[Pipeline_MakeRB_MakeJFCell] = std::move(compute_pipeline[3]);
 		m_pipeline[Pipeline_MakeRB_MakeSDF] = std::move(compute_pipeline[4]);
+		m_pipeline[Pipeline_Voronoi_Make] = std::move(compute_pipeline[5]);
 	}
 
 	{
@@ -162,6 +187,7 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 		b_update_counter = m_context->m_storage_memory.allocateMemory<uvec4>({ 4,{} });
 		b_rb_update_list = m_context->m_storage_memory.allocateMemory<uint>({ RB_NUM_MAX*2,{} });
 		b_pb_update_list = m_context->m_storage_memory.allocateMemory<uint>({ RB_PARTICLE_BLOCK_NUM_MAX*2,{} });
+		b_voronoi = m_context->m_storage_memory.allocateMemory<i16vec2>({ gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
 		{
 			vk::DescriptorSetLayout layouts[] = {
 				m_desc_layout[DescLayout_Data].get(),
@@ -185,6 +211,7 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 				b_update_counter.getInfo(),
 				b_rb_update_list.getInfo(),
 				b_pb_update_list.getInfo(),
+				b_voronoi.getInfo(),
 			};
 
 			vk::WriteDescriptorSet write[] =
@@ -496,4 +523,58 @@ void PhysicsWorld::executeMakeFluidWall(vk::CommandBuffer cmd)
 	}
 
 }
+
+void PhysicsWorld::executeMakeVoronoi(vk::CommandBuffer cmd)
+{
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Voronoi].get(), 0, getDescriptorSet(PhysicsWorld::DescLayout_Data), {});
+
+	uvec2 reso = uvec2(1024);
+	{
+		{
+			{
+				vk::BufferMemoryBarrier to_write[] = { b_voronoi.makeMemoryBarrier(vk::AccessFlagBits::eMemoryRead, vk::AccessFlagBits::eTransferWrite), };
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eTransfer, {}, 0, nullptr, array_length(to_write), to_write, 0, nullptr);
+			}
+
+			cmd.fillBuffer(b_voronoi.getInfo().buffer, b_voronoi.getInfo().offset, b_voronoi.getInfo().range, -1);
+
+			{
+				vk::BufferMemoryBarrier to_read[] = { b_voronoi.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eTransferWrite),};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eTransfer, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);
+			}
+
+			// “K“–‚É“_‚ð‘Å‚Â
+			for (uint y = 0; y < reso.y; y+=16)
+			{
+				for (uint x = 0; x < reso.x; x += 16)
+				{
+					uint xx = x+std::rand() % 12 +4;
+					uint yy = (y + std::rand() % 12 + 4);
+					uint offset = xx + yy * reso.x;
+					cmd.updateBuffer<i16vec2>(b_voronoi.getInfo().buffer, b_voronoi.getInfo().offset + sizeof(i16vec2)*offset, i16vec2(xx, yy));
+				}
+
+			}
+			vk::BufferMemoryBarrier to_read[] = { b_voronoi.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead), };
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);
+
+		}
+
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Voronoi_Make].get());
+		auto num = app::calcDipatchGroups(uvec3(reso, 1), uvec3(8, 8, 1));
+
+		for (int distance = 1024 >> 1; distance != 0; distance >>= 1)
+		{
+			vk::BufferMemoryBarrier to_read[] = {
+				b_voronoi.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+				0, nullptr, array_length(to_read), to_read, 0, nullptr);
+
+			cmd.pushConstants<uvec4>(m_pipeline_layout[PipelineLayout_Voronoi].get(), vk::ShaderStageFlagBits::eCompute, 0, uvec4{ distance, 0, reso });
+			cmd.dispatch(num.x, num.y, num.z);
+		}
+	}
+}
+
 

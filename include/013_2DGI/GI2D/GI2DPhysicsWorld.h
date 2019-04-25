@@ -18,6 +18,8 @@ struct PhysicsWorld
 		Shader_MakeRB_Register,
 		Shader_MakeRB_MakeJFCell,
 		Shader_MakeRB_MakeSDF,
+
+		Shader_Voronoi_Make,
 		Shader_Num,
 	};
 
@@ -27,6 +29,8 @@ struct PhysicsWorld
 		PipelineLayout_ToFluidWall,
 
 		PipelineLayout_MakeRB,
+
+		PipelineLayout_Voronoi,
 		PipelineLayout_Num,
 	};
 	enum Pipeline
@@ -38,6 +42,7 @@ struct PhysicsWorld
 		Pipeline_MakeRB_MakeJFCell,
 		Pipeline_MakeRB_MakeSDF,
 
+		Pipeline_Voronoi_Make,
 		Pipeline_Num,
 	};
 
@@ -129,6 +134,7 @@ struct PhysicsWorld
 	void make(vk::CommandBuffer cmd, const uvec4& box);
 	void execute(vk::CommandBuffer cmd);
 	void executeMakeFluidWall(vk::CommandBuffer cmd);
+	void executeMakeVoronoi(vk::CommandBuffer cmd);
 
 	std::shared_ptr<btr::Context> m_context;
 	std::shared_ptr<GI2DContext> m_gi2d_context;
@@ -153,6 +159,7 @@ struct PhysicsWorld
 	btr::BufferMemoryEx<uvec4> b_update_counter;
 	btr::BufferMemoryEx<uint> b_rb_update_list;
 	btr::BufferMemoryEx<uint> b_pb_update_list;
+	btr::BufferMemoryEx<i16vec2> b_voronoi;
 
 	btr::BufferMemoryEx<Rigidbody> b_make_rigidbody;
 	btr::BufferMemoryEx<rbParticle> b_make_particle;

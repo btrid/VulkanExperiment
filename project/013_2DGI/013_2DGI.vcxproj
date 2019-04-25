@@ -115,6 +115,7 @@
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DRigidbody.h" />
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DRigidbody_procedure.h" />
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DSoftbody.h" />
+    <ClInclude Include="..\..\include\013_2DGI\GI2D\VoronoiContext.h" />
     <ClInclude Include="..\..\include\013_2DGI\PathContext.h" />
     <ClInclude Include="..\..\include\013_2DGI\PathSolver.h" />
   </ItemGroup>

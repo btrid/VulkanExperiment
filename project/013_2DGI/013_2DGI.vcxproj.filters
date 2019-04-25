@@ -84,5 +84,8 @@
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DRigidbody_procedure.h">
       <Filter>GI2D</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\013_2DGI\GI2D\VoronoiContext.h">
+      <Filter>GI2D</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

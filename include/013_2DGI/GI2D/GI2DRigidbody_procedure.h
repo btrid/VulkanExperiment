@@ -29,6 +29,8 @@ struct GI2DRigidbody_procedure
 
 		Shader_MakeWallCollision,
 
+		Shader_DrawVoronoi,
+
 		Shader_Num,
 	};
 
@@ -53,6 +55,8 @@ struct GI2DRigidbody_procedure
 
 		Pipeline_MakeWallCollision,
 
+		Pipeline_DrawVoronoi,
+
 		Pipeline_Num,
 	};
 
@@ -63,6 +67,7 @@ struct GI2DRigidbody_procedure
 	void _executeMakeCollidableWall(vk::CommandBuffer &cmd, const std::shared_ptr<PhysicsWorld>& world, const std::shared_ptr<GI2DSDF>& sdf);
 
 	void executeToFragment(vk::CommandBuffer cmd, const std::shared_ptr<PhysicsWorld>& world);
+	void executeDrawVoronoi(vk::CommandBuffer cmd, const std::shared_ptr<PhysicsWorld>& world);
 
 
 	std::shared_ptr<PhysicsWorld> m_world;
