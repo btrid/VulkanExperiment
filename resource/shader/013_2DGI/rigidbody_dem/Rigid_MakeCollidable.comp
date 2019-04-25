@@ -26,13 +26,13 @@ void main()
 	if(ii < COLLIDABLE_NUM)
 	{
 		rbCollidable c;
-//		c.r_id = b_rbParticle_map[pb_id];
-		c.r_id = p_id;
-		c.mass_inv = 64.;
+		c.r_id = b_rbParticle_map[pb_id];
+//		c.r_id = p_id;
+		c.mass_inv = 1.;
 
 		c.pos = pos;
-//		c.sdf = b_rbParticle[p_id].local_sdf;
-		c.sdf = vec2(0.);
+		c.sdf = b_rbParticle[p_id].local_sdf;
+//		c.sdf = vec2(0.);
 		c.vel = pos - b_rbParticle[p_id].pos_old;
 
 		b_collidable[i*COLLIDABLE_NUM + ii] = c;

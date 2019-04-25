@@ -16,13 +16,13 @@ void main()
 	if(b_rbParticle[p_id].contact_index == -1){ return; }
 
 	uint r_id = b_rbParticle_map[pb_id];
-//	vec2 pos = mat2(b_rigidbody[r_id].R) * b_rbParticle[p_id].relative_pos + b_rigidbody[r_id].cm;
-	vec2 pos = b_rbParticle[p_id].pos;
+	vec2 pos = mat2(b_rigidbody[r_id].R) * b_rbParticle[p_id].relative_pos + b_rigidbody[r_id].cm;
+//	vec2 pos = b_rbParticle[p_id].pos;
 	vec2 pos_old = b_rbParticle[p_id].pos_old;
 
 	b_rbParticle[p_id].pos_old = pos;
 
-	vec2 vel = (pos - pos_old) * 0.999 + RB_GRAVITY_DT;
+	vec2 vel = (pos - pos_old) + RB_GRAVITY_DT;
 	b_rbParticle[p_id].pos = pos + vel;
 	b_rbParticle[p_id].is_contact = 0;
 
