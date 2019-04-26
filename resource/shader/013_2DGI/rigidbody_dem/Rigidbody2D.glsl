@@ -120,7 +120,12 @@ layout(set=USE_Rigidbody2D, binding=11, std430) restrict buffer rbPBActiveBuffer
 layout(set=USE_Rigidbody2D, binding=12, std430) restrict buffer rbVoronoiBuffer {
 	i16vec2 b_voronoi[];
 };
-
+layout(set=USE_Rigidbody2D, binding=13, std430) restrict buffer rbDelaunayVertexCounter {
+	uvec4 b_delaunay_vertex_couter;
+};
+layout(set=USE_Rigidbody2D, binding=14, std430) restrict buffer rbDelaunayVertexBuffer {
+	i16vec2 b_delaunay_vertex[];
+};
 
 #endif
 #if defined(USE_MakeRigidbody)

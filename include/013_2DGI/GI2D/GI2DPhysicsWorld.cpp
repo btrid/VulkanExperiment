@@ -27,6 +27,8 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 			vk::DescriptorSetLayoutBinding(10, vk::DescriptorType::eStorageBuffer, 1, stage),
 			vk::DescriptorSetLayoutBinding(11, vk::DescriptorType::eStorageBuffer, 1, stage),
 			vk::DescriptorSetLayoutBinding(12, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(13, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(14, vk::DescriptorType::eStorageBuffer, 1, stage),
 		};
 		vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 		desc_layout_info.setBindingCount(array_length(binding));
@@ -188,6 +190,8 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 		b_rb_update_list = m_context->m_storage_memory.allocateMemory<uint>({ RB_NUM_MAX*2,{} });
 		b_pb_update_list = m_context->m_storage_memory.allocateMemory<uint>({ RB_PARTICLE_BLOCK_NUM_MAX*2,{} });
 		b_voronoi = m_context->m_storage_memory.allocateMemory<i16vec2>({ gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
+		b_delaunay_vertex_couter = m_context->m_storage_memory.allocateMemory<uvec4>({ 1,{} });
+		b_delaunay_vertex = m_context->m_storage_memory.allocateMemory<i16vec2>({ 1000*3,{} });
 		{
 			vk::DescriptorSetLayout layouts[] = {
 				m_desc_layout[DescLayout_Data].get(),
@@ -212,6 +216,8 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 				b_rb_update_list.getInfo(),
 				b_pb_update_list.getInfo(),
 				b_voronoi.getInfo(),
+				b_delaunay_vertex_couter.getInfo(),
+				b_delaunay_vertex.getInfo(),
 			};
 
 			vk::WriteDescriptorSet write[] =
@@ -509,6 +515,7 @@ void PhysicsWorld::execute(vk::CommandBuffer cmd)
 			0, nullptr, array_length(to_read), to_read, 0, nullptr);
 	}
 
+	cmd.updateBuffer<uvec4>(b_delaunay_vertex_couter.getInfo().buffer, b_delaunay_vertex_couter.getInfo().offset, uvec4(0,1,1,0));
 }
 
 void PhysicsWorld::executeMakeFluidWall(vk::CommandBuffer cmd)
@@ -544,14 +551,17 @@ void PhysicsWorld::executeMakeVoronoi(vk::CommandBuffer cmd)
 			}
 
 			// “K“–‚É“_‚ð‘Å‚Â
-			for (uint y = 0; y < reso.y; y+=16)
+			uint step = 32;
+			uint area = step * 0.6f;
+			uint offset = step * 0.2f;
+			for (uint y = 0; y < reso.y; y+= step)
 			{
-				for (uint x = 0; x < reso.x; x += 16)
+				for (uint x = 0; x < reso.x; x += step)
 				{
-					uint xx = x+std::rand() % 12 +4;
-					uint yy = (y + std::rand() % 12 + 4);
-					uint offset = xx + yy * reso.x;
-					cmd.updateBuffer<i16vec2>(b_voronoi.getInfo().buffer, b_voronoi.getInfo().offset + sizeof(i16vec2)*offset, i16vec2(xx, yy));
+					uint xx = x+std::rand() % area + offset;
+					uint yy = (y + std::rand() % area + offset);
+					uint moffset = xx + yy * reso.x;
+					cmd.updateBuffer<i16vec2>(b_voronoi.getInfo().buffer, b_voronoi.getInfo().offset + sizeof(i16vec2)*moffset, i16vec2(xx, yy));
 				}
 
 			}
@@ -563,7 +573,8 @@ void PhysicsWorld::executeMakeVoronoi(vk::CommandBuffer cmd)
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Voronoi_Make].get());
 		auto num = app::calcDipatchGroups(uvec3(reso, 1), uvec3(8, 8, 1));
 
-		for (int distance = 1024 >> 1; distance != 0; distance >>= 1)
+		uint reso_max = glm::max(reso.x, reso.y);
+		for (int distance = reso_max >> 1; distance != 0; distance >>= 1)
 		{
 			vk::BufferMemoryBarrier to_read[] = {
 				b_voronoi.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),

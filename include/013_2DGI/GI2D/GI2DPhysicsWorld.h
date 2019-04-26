@@ -160,6 +160,8 @@ struct PhysicsWorld
 	btr::BufferMemoryEx<uint> b_rb_update_list;
 	btr::BufferMemoryEx<uint> b_pb_update_list;
 	btr::BufferMemoryEx<i16vec2> b_voronoi;
+	btr::BufferMemoryEx<uvec4> b_delaunay_vertex_couter;
+	btr::BufferMemoryEx<i16vec2> b_delaunay_vertex;
 
 	btr::BufferMemoryEx<Rigidbody> b_make_rigidbody;
 	btr::BufferMemoryEx<rbParticle> b_make_particle;
