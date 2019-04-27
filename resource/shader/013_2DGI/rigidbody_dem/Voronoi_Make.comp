@@ -24,9 +24,10 @@ void nearest(inout int16_t id, inout float d, in i16vec2 current, in i16vec2 tar
 	}
 	int16_t target_id = b_voronoi[target.x + target.y*constant.reso.x];
 	if(target_id == 0xffff){ return; }
+	if(target_id == id){ return; }
 
 	{
-		i16vec2 target_point = b_voronoi_data[int(target_id)].point;
+		i16vec2 target_point = b_voronoi_point[int(target_id)];
 		float target_d = distance(vec2(target_point), current);
 		if(target_d < d)
 		{
@@ -40,12 +41,12 @@ void main()
 	if(any(greaterThanEqual(gl_GlobalInvocationID.xy, constant.reso))){ return; }
 	const i16vec2 current = i16vec2(gl_GlobalInvocationID.xy);
 	int16_t id = b_voronoi[current.x + current.y*constant.reso.x];
-//	VoronoiData data = b_voronoi_data[int(id)];
+//	VoronoiData data = b_voronoi_point[int(id)];
 //	if(all(equal(current, data.point))){ return; }
 
 
 //	float d = (id != -1) ? distance(vec2(current), vec2(data.point)) : 99999999.;
-	float d = (id != 0xffff) ? distance(vec2(current), vec2(b_voronoi_data[int(id)].point)) : 99999999.;
+	float d = (id != 0xffff) ? distance(vec2(current), vec2(b_voronoi_point[int(id)])) : 99999999.;
 	const float old_d = d;
 	// 重力のY方向優先
 	const i16vec3 cd = i16vec3(constant.distance) * i16vec3(-1, 0, 1);

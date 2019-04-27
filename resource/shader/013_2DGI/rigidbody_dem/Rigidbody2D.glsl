@@ -80,10 +80,19 @@ struct BufferManage
 	uint pb_free_index;
 };
 
-struct VoronoiData
+struct VoronoiPoint
 {
 	i16vec2 point;
-	uint vertex_num;
+//	uint vertex_num;
+//	i16vec2 vertex[16];
+};
+
+struct VoronoiVertex
+{
+	int num;
+	int _p1;
+	int _p2;
+	int _p3;
 	i16vec2 vertex[16];
 };
 
@@ -123,16 +132,19 @@ layout(set=USE_Rigidbody2D, binding=10, std430) restrict buffer rbRBActiveBuffer
 layout(set=USE_Rigidbody2D, binding=11, std430) restrict buffer rbPBActiveBuffer {
 	uint b_pb_update_list[];
 };
-layout(set=USE_Rigidbody2D, binding=12, std430) restrict buffer rbVoronoiData {
-	VoronoiData b_voronoi_data[];
+layout(set=USE_Rigidbody2D, binding=12, std430) restrict buffer rbVoronoiPointBuffer {
+	i16vec2 b_voronoi_point[];
 };
-layout(set=USE_Rigidbody2D, binding=13, std430) restrict buffer rbVoronoiBuffer {
+layout(set=USE_Rigidbody2D, binding=13, std430) restrict buffer rbVoronoiVertexBuffer {
+	VoronoiVertex b_voronoi_vertex[];
+};
+layout(set=USE_Rigidbody2D, binding=14, std430) restrict buffer rbVoronoiBuffer {
 	int16_t b_voronoi[];
 };
-layout(set=USE_Rigidbody2D, binding=14, std430) restrict buffer rbDelaunayVertexCounter {
+layout(set=USE_Rigidbody2D, binding=15, std430) restrict buffer rbDelaunayVertexCounter {
 	uvec4 b_delaunay_vertex_couter;
 };
-layout(set=USE_Rigidbody2D, binding=15, std430) restrict buffer rbDelaunayVertexBuffer {
+layout(set=USE_Rigidbody2D, binding=16, std430) restrict buffer rbDelaunayVertexBuffer {
 	i16vec2 b_delaunay_vertex[];
 };
 
