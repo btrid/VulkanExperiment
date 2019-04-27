@@ -115,12 +115,7 @@ struct PhysicsWorld
 		uint particle_free_index;
 	};
 
-	struct VoronoiData
-	{
-		i16vec2 point;
-		int vertex_num;
-		i16vec2 vertex[16];
-	};
+
 	enum
 	{
 		RB_NUM_MAX = 1024,
@@ -164,8 +159,7 @@ struct PhysicsWorld
 	btr::BufferMemoryEx<uvec4> b_update_counter;
 	btr::BufferMemoryEx<uint> b_rb_update_list;
 	btr::BufferMemoryEx<uint> b_pb_update_list;
-	btr::BufferMemoryEx<VoronoiData> b_voronoi_data;
-	btr::BufferMemoryEx<int16_t> b_voronoi;
+	btr::BufferMemoryEx<i16vec2> b_voronoi;
 	btr::BufferMemoryEx<uvec4> b_delaunay_vertex_couter;
 	btr::BufferMemoryEx<i16vec2> b_delaunay_vertex;
 
