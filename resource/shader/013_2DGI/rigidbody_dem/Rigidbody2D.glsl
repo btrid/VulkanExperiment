@@ -93,7 +93,7 @@ struct VoronoiVertex
 	int _p1;
 	int _p2;
 	int _p3;
-	i16vec2 vertex[16];
+	i16vec2 vertex[12];
 };
 
 layout(set=USE_Rigidbody2D, binding=0, std430) restrict buffer WorldData {

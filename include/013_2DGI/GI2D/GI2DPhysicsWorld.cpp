@@ -62,6 +62,7 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 			"RigidMake_MakeSDF.comp.spv",
 
 			"Voronoi_Make.comp.spv",
+			"Voronoi_MakeTriangle.comp.spv",
 		};
 		static_assert(array_length(name) == Shader_Num, "not equal shader num");
 
@@ -148,6 +149,9 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 		shader_info[5].setModule(m_shader[Shader_Voronoi_Make].get());
 		shader_info[5].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[5].setPName("main");
+		shader_info[6].setModule(m_shader[Shader_Voronoi_MakeTriangle].get());
+		shader_info[6].setStage(vk::ShaderStageFlagBits::eCompute);
+		shader_info[6].setPName("main");
 		std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 		{
 			vk::ComputePipelineCreateInfo()
@@ -168,6 +172,9 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 			vk::ComputePipelineCreateInfo()
 			.setStage(shader_info[5])
 			.setLayout(m_pipeline_layout[PipelineLayout_Voronoi].get()),
+			vk::ComputePipelineCreateInfo()
+			.setStage(shader_info[6])
+			.setLayout(m_pipeline_layout[PipelineLayout_Voronoi].get()),
 		};
 		auto compute_pipeline = m_context->m_device->createComputePipelinesUnique(m_context->m_cache.get(), compute_pipeline_info);
 		m_pipeline[Pipeline_ToFluid] = std::move(compute_pipeline[0]);
@@ -176,6 +183,7 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 		m_pipeline[Pipeline_MakeRB_MakeJFCell] = std::move(compute_pipeline[3]);
 		m_pipeline[Pipeline_MakeRB_MakeSDF] = std::move(compute_pipeline[4]);
 		m_pipeline[Pipeline_Voronoi_Make] = std::move(compute_pipeline[5]);
+		m_pipeline[Pipeline_Voronoi_MakeTriangle] = std::move(compute_pipeline[6]);
 	}
 
 	{
@@ -545,14 +553,21 @@ void PhysicsWorld::executeMakeVoronoi(vk::CommandBuffer cmd)
 	{
 		{
 			{
-				vk::BufferMemoryBarrier to_write[] = { b_voronoi.makeMemoryBarrier(vk::AccessFlagBits::eMemoryRead, vk::AccessFlagBits::eTransferWrite), };
+				vk::BufferMemoryBarrier to_write[] = { 
+					b_voronoi.makeMemoryBarrier(vk::AccessFlagBits::eMemoryRead, vk::AccessFlagBits::eTransferWrite), 
+					b_voronoi_vertex.makeMemoryBarrier(vk::AccessFlagBits::eMemoryRead, vk::AccessFlagBits::eTransferWrite),
+				};
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eTransfer, {}, 0, nullptr, array_length(to_write), to_write, 0, nullptr);
 			}
 
 			cmd.fillBuffer(b_voronoi.getInfo().buffer, b_voronoi.getInfo().offset, b_voronoi.getInfo().range, -1);
+			cmd.fillBuffer(b_voronoi_vertex.getInfo().buffer, b_voronoi_vertex.getInfo().offset, b_voronoi_vertex.getInfo().range, 0);
 
 			{
-				vk::BufferMemoryBarrier to_read[] = { b_voronoi.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eTransferWrite),};
+				vk::BufferMemoryBarrier to_read[] = { 
+					b_voronoi.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eTransferWrite),
+					b_voronoi_vertex.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eTransferWrite),
+				};
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eTransfer, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);
 			}
 
@@ -578,6 +593,7 @@ void PhysicsWorld::executeMakeVoronoi(vk::CommandBuffer cmd)
 			assert(points.capacity() == 4096);
 			cmd.updateBuffer<i16vec2>(b_voronoi_point.getInfo().buffer, b_voronoi_point.getInfo().offset, points);
 
+			
 			vk::BufferMemoryBarrier to_read[] = { 
 				b_voronoi_point.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead), 
 				b_voronoi.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead), 
@@ -603,6 +619,21 @@ void PhysicsWorld::executeMakeVoronoi(vk::CommandBuffer cmd)
 			cmd.dispatch(num.x, num.y, num.z);
 		}
 	}
+
+	// make triangle
+	{
+		vk::BufferMemoryBarrier to_read[] = {
+			b_voronoi.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+		};
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+			0, nullptr, array_length(to_read), to_read, 0, nullptr);
+
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Voronoi_MakeTriangle].get());
+		auto num = app::calcDipatchGroups(uvec3(reso, 1), uvec3(8, 8, 1));
+
+		cmd.dispatch(num.x, num.y, num.z);
+	}
+
 }
 
 

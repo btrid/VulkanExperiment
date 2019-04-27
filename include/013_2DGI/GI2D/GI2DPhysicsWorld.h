@@ -20,6 +20,7 @@ struct PhysicsWorld
 		Shader_MakeRB_MakeSDF,
 
 		Shader_Voronoi_Make,
+		Shader_Voronoi_MakeTriangle,
 		Shader_Num,
 	};
 
@@ -43,6 +44,7 @@ struct PhysicsWorld
 		Pipeline_MakeRB_MakeSDF,
 
 		Pipeline_Voronoi_Make,
+		Pipeline_Voronoi_MakeTriangle,
 		Pipeline_Num,
 	};
 
