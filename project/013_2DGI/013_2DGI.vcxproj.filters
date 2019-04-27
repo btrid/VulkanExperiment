@@ -12,10 +12,10 @@
     <ClCompile Include="..\..\include\013_2DGI\GI2D\GI2DRigidbody.cpp">
       <Filter>GI2D</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\include\013_2DGI\GI2D\GI2DPhysicsWorld.cpp">
+    <ClCompile Include="..\..\include\013_2DGI\GI2D\GI2DPhysics.cpp">
       <Filter>GI2D</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\include\013_2DGI\GI2D\GI2DRigidbody_procedure.cpp">
+    <ClCompile Include="..\..\include\013_2DGI\GI2D\GI2DPhysics_procedure.cpp">
       <Filter>GI2D</Filter>
     </ClCompile>
   </ItemGroup>
@@ -78,13 +78,13 @@
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DRigidbody.h">
       <Filter>GI2D</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DPhysicsWorld.h">
-      <Filter>GI2D</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DRigidbody_procedure.h">
-      <Filter>GI2D</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\013_2DGI\GI2D\VoronoiContext.h">
+      <Filter>GI2D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DPhysics.h">
+      <Filter>GI2D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DPhysics_procedure.h">
       <Filter>GI2D</Filter>
     </ClInclude>
   </ItemGroup>

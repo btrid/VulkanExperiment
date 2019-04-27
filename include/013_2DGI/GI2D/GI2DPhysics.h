@@ -8,7 +8,7 @@
 #include <013_2DGI/GI2D/GI2DContext.h>
 #include <013_2DGI/GI2D/GI2DRigidbody.h>
 
-struct PhysicsWorld
+struct GI2DPhysics
 {
 	enum Shader
 	{
@@ -143,7 +143,7 @@ struct PhysicsWorld
 	vk::DescriptorSetLayout getDescriptorSetLayout(DescriptorLayout i)const { return m_desc_layout[i].get(); }
 	vk::DescriptorSet getDescriptorSet(DescriptorLayout i)const { return m_descset[i].get(); }
 
-	PhysicsWorld(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context);
+	GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context);
 	void make(vk::CommandBuffer cmd, const uvec4& box);
 	void execute(vk::CommandBuffer cmd);
 	void executeMakeFluidWall(vk::CommandBuffer cmd);
@@ -189,3 +189,41 @@ struct PhysicsWorld
 
 };
 
+
+struct GI2DPhysicsDebug
+{
+// 	GI2DPhysicsDebug(const std::shared_ptr<GI2DContext>& gi2d_context);
+// 	void executeMakeFragmentMap(vk::CommandBuffer cmd);
+// 	void executeDrawFragmentMap(vk::CommandBuffer cmd, const std::shared_ptr<RenderTarget>& render_target);
+// 	void executeDrawFragment(vk::CommandBuffer cmd, const std::shared_ptr<RenderTarget>& render_target);
+// 
+// 	std::shared_ptr<btr::Context> m_context;
+// 	std::shared_ptr<GI2DContext> m_gi2d_context;
+// 
+// 	btr::BufferMemoryEx<GI2DContext::Fragment> m_map_data;
+// 
+// 	enum Shader
+// 	{
+// 		Shader_PointLight,
+// 		Shader_DrawFragmentMap,
+// 		Shader_DrawFragment,
+// 		Shader_Num,
+// 	};
+// 	enum PipelineLayout
+// 	{
+// 		PipelineLayout_PointLight,
+// 		PipelineLayout_DrawFragmentMap,
+// 		PipelineLayout_Num,
+// 	};
+// 	enum Pipeline
+// 	{
+// 		Pipeline_PointLight,
+// 		Pipeline_DrawFragmentMap,
+// 		Pipeline_DrawFragment,
+// 		Pipeline_Num,
+// 	};
+// 	vk::UniqueShaderModule m_shader[Shader_Num];
+// 	std::array<vk::UniquePipelineLayout, PipelineLayout_Num> m_pipeline_layout;
+// 	std::array<vk::UniquePipeline, Pipeline_Num> m_pipeline;
+
+};

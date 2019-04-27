@@ -35,8 +35,8 @@
 #include <013_2DGI/GI2D/GI2DSoftbody.h>
 
 #include <013_2DGI/GI2D/GI2DRigidbody.h>
-#include <013_2DGI/GI2D/GI2DPhysicsWorld.h>
-#include <013_2DGI/GI2D/GI2DRigidbody_procedure.h>
+#include <013_2DGI/GI2D/GI2DPhysics.h>
+#include <013_2DGI/GI2D/GI2DPhysics_procedure.h>
 
 #include <013_2DGI/Crowd/Crowd_Procedure.h>
 #include <013_2DGI/Crowd/Crowd_CalcWorldMatrix.h>
@@ -280,12 +280,12 @@ int rigidbody()
 	gi2d_desc.RenderHeight = 1024;
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context, gi2d_desc);
 	std::shared_ptr<GI2DSDF> gi2d_sdf_context = std::make_shared<GI2DSDF>(gi2d_context);
-	std::shared_ptr<PhysicsWorld> physics_world = std::make_shared<PhysicsWorld>(context, gi2d_context);
+	std::shared_ptr<GI2DPhysics> physics_world = std::make_shared<GI2DPhysics>(context, gi2d_context);
 
 	GI2DClear gi2d_clear(context, gi2d_context);
 	GI2DDebug gi2d_debug(context, gi2d_context);
 	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
-	GI2DRigidbody_procedure gi2d_rigidbody(physics_world, gi2d_sdf_context);
+	GI2DPhysics_procedure gi2d_rigidbody(physics_world, gi2d_sdf_context);
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 	std::shared_ptr<GI2DFluid> gi2d_Fluid = std::make_shared<GI2DFluid>(context, gi2d_context);
 

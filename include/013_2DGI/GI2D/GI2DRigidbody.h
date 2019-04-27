@@ -8,7 +8,7 @@
 #include <013_2DGI/GI2D/GI2DContext.h>
 
 
-struct PhysicsWorld;
+struct GI2DPhysics;
 
 struct GI2DRigidbody
 {

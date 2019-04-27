@@ -1,10 +1,10 @@
 #pragma once
-#include "GI2DPhysicsWorld.h"
+#include "GI2DPhysics.h"
 #include "GI2DContext.h"
 #include "GI2DRigidbody.h"
 
 
-PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context)
+GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context)
 {
 	m_context = context;
 	m_gi2d_context = gi2d_context;
@@ -326,7 +326,7 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 	}
 }
 
-void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
+void GI2DPhysics::make(vk::CommandBuffer cmd, const uvec4& box)
 {
 	auto particle_num = box.z * box.w;
 	assert(particle_num <= MAKE_RB_SIZE_MAX);
@@ -407,9 +407,9 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 
 	uint32_t block_num =  ceil(pstate.size() / (float)RB_PARTICLE_BLOCK_SIZE);
 	{
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MakeRB].get(), 0, getDescriptorSet(PhysicsWorld::DescLayout_Data), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MakeRB].get(), 0, getDescriptorSet(GI2DPhysics::DescLayout_Data), {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MakeRB].get(), 1, m_gi2d_context->getDescriptorSet(), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MakeRB].get(), 2, getDescriptorSet(PhysicsWorld::DescLayout_Make), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MakeRB].get(), 2, getDescriptorSet(GI2DPhysics::DescLayout_Make), {});
 		{
 			// éûä‘ÇÃÇ©Ç©ÇÈjfaÇêÊÇ…é¿çsÇµÇΩÇ¢
 			// make sdf
@@ -493,7 +493,7 @@ void PhysicsWorld::make(vk::CommandBuffer cmd, const uvec4& box)
 	m_particle_id += block_num;
 }
 
-void PhysicsWorld::execute(vk::CommandBuffer cmd)
+void GI2DPhysics::execute(vk::CommandBuffer cmd)
 {
 	{
 		vk::BufferMemoryBarrier to_write[] = {
@@ -532,7 +532,7 @@ void PhysicsWorld::execute(vk::CommandBuffer cmd)
 	cmd.updateBuffer<uvec4>(b_delaunay_vertex_couter.getInfo().buffer, b_delaunay_vertex_couter.getInfo().offset, uvec4(0,1,1,0));
 }
 
-void PhysicsWorld::executeMakeFluidWall(vk::CommandBuffer cmd)
+void GI2DPhysics::executeMakeFluidWall(vk::CommandBuffer cmd)
 {
 
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_ToFluidWall].get(), 0, m_descset[DescLayout_Data].get(), {});
@@ -545,9 +545,9 @@ void PhysicsWorld::executeMakeFluidWall(vk::CommandBuffer cmd)
 
 }
 
-void PhysicsWorld::executeMakeVoronoi(vk::CommandBuffer cmd)
+void GI2DPhysics::executeMakeVoronoi(vk::CommandBuffer cmd)
 {
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Voronoi].get(), 0, getDescriptorSet(PhysicsWorld::DescLayout_Data), {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Voronoi].get(), 0, getDescriptorSet(GI2DPhysics::DescLayout_Data), {});
 
 	uvec2 reso = uvec2(1024);
 	{
