@@ -16,24 +16,22 @@ layout(push_constant) uniform Input
 } constant;
 
 
-void nearest(inout i16vec2 new_cell, inout float current_d, in i16vec2 current, in i16vec2 target)
+void nearest(inout int16_t id, inout float d, in i16vec2 current, in i16vec2 target)
 {
-	if(all(greaterThanEqual(target, i16vec2(0))) && all(lessThan(target, constant.reso)))
-	{
-		target = b_voronoi[target.x + target.y*constant.reso.x];
-		if(target.x== -32768){ return; }
-	}
-	else
+	if(any(greaterThanEqual(target, constant.reso)) || any(lessThan(target, i16vec2(0))))
 	{
 		return;
 	}
+	int16_t target_id = b_voronoi[target.x + target.y*constant.reso.x];
+	if(target_id == 0xffff){ return; }
 
 	{
-		float d = distance(vec2(target), current);
-		if(d < current_d)
+		i16vec2 target_point = b_voronoi_data[int(target_id)].point;
+		float target_d = distance(vec2(target_point), current);
+		if(target_d < d)
 		{
-			current_d = d;
-			new_cell = target;
+			d = target_d;
+			id = target_id;
 		}
 	}
 }
@@ -41,26 +39,28 @@ void main()
 {
 	if(any(greaterThanEqual(gl_GlobalInvocationID.xy, constant.reso))){ return; }
 	const i16vec2 current = i16vec2(gl_GlobalInvocationID.xy);
-	const i16vec3 cd = i16vec3(constant.distance) * i16vec3(-1, 0, 1);
-	i16vec2 cell = b_voronoi[current.x + current.y*constant.reso.x];
-	if(all(equal(current, cell))){ return; }
+	int16_t id = b_voronoi[current.x + current.y*constant.reso.x];
+//	VoronoiData data = b_voronoi_data[int(id)];
+//	if(all(equal(current, data.point))){ return; }
 
 
-	float d = (cell.x != -32768) ? distance(vec2(current), vec2(cell)) : 99999999.;
+//	float d = (id != -1) ? distance(vec2(current), vec2(data.point)) : 99999999.;
+	float d = (id != 0xffff) ? distance(vec2(current), vec2(b_voronoi_data[int(id)].point)) : 99999999.;
 	const float old_d = d;
 	// 重力のY方向優先
-	nearest(cell, d, current, current + cd.xy);
-	nearest(cell, d, current, current + cd.xx);
-	nearest(cell, d, current, current + cd.xz);
-	nearest(cell, d, current, current + cd.zx);
-	nearest(cell, d, current, current + cd.zy);
-	nearest(cell, d, current, current + cd.zz);
-	nearest(cell, d, current, current + cd.yx);
-	//nearest(new_cell, d, current, current + cd.yy);
-	nearest(cell, d, current, current + cd.yz);
+	const i16vec3 cd = i16vec3(constant.distance) * i16vec3(-1, 0, 1);
+	nearest(id, d, current, current + cd.xy);
+	nearest(id, d, current, current + cd.xx);
+	nearest(id, d, current, current + cd.xz);
+	nearest(id, d, current, current + cd.zx);
+	nearest(id, d, current, current + cd.zy);
+	nearest(id, d, current, current + cd.zz);
+	nearest(id, d, current, current + cd.yx);
+	//nearest(id, d, current, current + cd.yy);
+	nearest(id, d, current, current + cd.yz);
 
 	if(d != old_d)
 	{
-		b_voronoi[current.x + current.y*constant.reso.x] = cell;
+		b_voronoi[current.x + current.y*constant.reso.x] = id;
 	}
 }

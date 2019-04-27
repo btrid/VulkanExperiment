@@ -29,6 +29,7 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 			vk::DescriptorSetLayoutBinding(12, vk::DescriptorType::eStorageBuffer, 1, stage),
 			vk::DescriptorSetLayoutBinding(13, vk::DescriptorType::eStorageBuffer, 1, stage),
 			vk::DescriptorSetLayoutBinding(14, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(15, vk::DescriptorType::eStorageBuffer, 1, stage),
 		};
 		vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 		desc_layout_info.setBindingCount(array_length(binding));
@@ -189,7 +190,8 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 		b_update_counter = m_context->m_storage_memory.allocateMemory<uvec4>({ 4,{} });
 		b_rb_update_list = m_context->m_storage_memory.allocateMemory<uint>({ RB_NUM_MAX*2,{} });
 		b_pb_update_list = m_context->m_storage_memory.allocateMemory<uint>({ RB_PARTICLE_BLOCK_NUM_MAX*2,{} });
-		b_voronoi = m_context->m_storage_memory.allocateMemory<i16vec2>({ gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
+		b_voronoi_data = m_context->m_storage_memory.allocateMemory<VoronoiData>({ 4096,{} });
+		b_voronoi = m_context->m_storage_memory.allocateMemory<int16_t>({ gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
 		b_delaunay_vertex_couter = m_context->m_storage_memory.allocateMemory<uvec4>({ 1,{} });
 		b_delaunay_vertex = m_context->m_storage_memory.allocateMemory<i16vec2>({ 1000*3,{} });
 		{
@@ -215,6 +217,7 @@ PhysicsWorld::PhysicsWorld(const std::shared_ptr<btr::Context>& context, const s
 				b_update_counter.getInfo(),
 				b_rb_update_list.getInfo(),
 				b_pb_update_list.getInfo(),
+				b_voronoi_data.getInfo(),
 				b_voronoi.getInfo(),
 				b_delaunay_vertex_couter.getInfo(),
 				b_delaunay_vertex.getInfo(),
@@ -554,18 +557,31 @@ void PhysicsWorld::executeMakeVoronoi(vk::CommandBuffer cmd)
 			uint step = 32;
 			uint area = step * 0.6f;
 			uint offset = step * 0.2f;
+			std::vector<VoronoiData> data;
+			data.reserve(4096);
 			for (uint y = 0; y < reso.y; y+= step)
 			{
 				for (uint x = 0; x < reso.x; x += step)
 				{
-					uint xx = x+std::rand() % area + offset;
+					uint xx = x + std::rand() % area + offset;
 					uint yy = (y + std::rand() % area + offset);
+					VoronoiData d;
+					d.point = i16vec2(xx, yy);
+					d.vertex_num = 0;
+					data.push_back(d);
+
 					uint moffset = xx + yy * reso.x;
-					cmd.updateBuffer<i16vec2>(b_voronoi.getInfo().buffer, b_voronoi.getInfo().offset + sizeof(i16vec2)*moffset, i16vec2(xx, yy));
+					cmd.updateBuffer<int16_t>(b_voronoi.getInfo().buffer, b_voronoi.getInfo().offset + sizeof(int16_t)*moffset, data.size()-1);
 				}
 
 			}
-			vk::BufferMemoryBarrier to_read[] = { b_voronoi.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead), };
+			assert(data.capacity() == 4096);
+			cmd.updateBuffer<VoronoiData>(b_voronoi_data.getInfo().buffer, b_voronoi_data.getInfo().offset, data);
+
+			vk::BufferMemoryBarrier to_read[] = { 
+				b_voronoi_data.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead), 
+				b_voronoi.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead), 
+			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 		}
@@ -577,6 +593,7 @@ void PhysicsWorld::executeMakeVoronoi(vk::CommandBuffer cmd)
 		for (int distance = reso_max >> 1; distance != 0; distance >>= 1)
 		{
 			vk::BufferMemoryBarrier to_read[] = {
+				b_voronoi_data.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 				b_voronoi.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
