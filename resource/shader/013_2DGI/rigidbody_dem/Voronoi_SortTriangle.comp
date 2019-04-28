@@ -19,6 +19,7 @@ void main()
 {
 	VoronoiVertex vv = b_voronoi_vertex[gl_GlobalInvocationID.x];
 	int num = vv.num;
+	if(num <= 1) { return;}
 	vec2 center =  vec2(b_voronoi_point[gl_GlobalInvocationID.x]);
 	vec2 value[12];
 	for(int i = 0; i < num; i++)
@@ -29,17 +30,17 @@ void main()
 	}
 
 	vec2 tmp;
-	for(int n = num; n!=0; --n)
+	for(int i = 0; i < num; i++)
 	{
-		for(int i = 0; i < n; ++i)
+		for(int j = num-1; j>i; j--)
 		{
 //			#define TwoSort(a,b) { tmp = min (a, b); b = a + b - tmp; a = tmp; }
 //			TwoSort (c[i], c[i+1]);
-			if(value[i].y < value[i+1].y)
+			if(value[j].y > value[j-1].y)
 			{
-				tmp = value[i+1];
-				value[i+1] = value[i];
-				value[i] = tmp;
+				tmp = value[j-1];
+				value[j-1] = value[j];
+				value[j] = tmp;
 			}
 		}
 	}

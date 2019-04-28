@@ -21,6 +21,7 @@ struct GI2DPhysics
 
 		Shader_Voronoi_Make,
 		Shader_Voronoi_MakeTriangle,
+		Shader_Voronoi_SortTriangleVertex,
 		Shader_Num,
 	};
 
@@ -45,6 +46,7 @@ struct GI2DPhysics
 
 		Pipeline_Voronoi_Make,
 		Pipeline_Voronoi_MakeTriangle,
+		Pipeline_Voronoi_SortTriangleVertex,
 		Pipeline_Num,
 	};
 

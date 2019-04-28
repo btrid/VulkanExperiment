@@ -60,6 +60,6 @@ void main()
 	{
 		int n = atomicAdd(b_voronoi_vertex[diff[i]].num, 1);
 		if(n < 12)
-			b_voronoi_vertex[diff[i]].vertex[n] = i16vec2(current.x+1, current.y+1);
+			b_voronoi_vertex[diff[i]].vertex[n] = i16vec2(current.x, current.y);
 	}
 }
