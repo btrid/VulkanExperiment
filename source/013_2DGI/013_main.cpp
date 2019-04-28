@@ -316,7 +316,7 @@ int rigidbody()
 			}
 
 			{
-				//				cmds[cmd_render_clear] = clear_pipeline.execute();
+				//cmds[cmd_render_clear] = clear_pipeline.execute();
 				cmds[cmd_render_present] = present_pipeline.execute();
 			}
 			// crowd

@@ -361,6 +361,7 @@ struct GI2DPhysicsDebug
 
 	void executeDrawVoronoiTriangle(vk::CommandBuffer cmd)
 	{
+		static int s_id;
 		{
 			vk::RenderPassBeginInfo render_begin_info;
 			render_begin_info.setRenderPass(m_render_pass.get());
@@ -369,7 +370,7 @@ struct GI2DPhysicsDebug
 			cmd.beginRenderPass(render_begin_info, vk::SubpassContents::eInline);
 
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayout_DrawVoronoiTriangle].get(), 0, m_context->getDescriptorSet(GI2DPhysics::DescLayout_Data), {});
-			cmd.pushConstants<uint>(m_pipeline_layout[PipelineLayout_DrawVoronoiTriangle].get(), vk::ShaderStageFlagBits::eGeometry, 0, 555);
+			cmd.pushConstants<uint>(m_pipeline_layout[PipelineLayout_DrawVoronoiTriangle].get(), vk::ShaderStageFlagBits::eGeometry, 0, (s_id++ / 30) % 1024);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_DrawVoronoiTriangle].get());
 

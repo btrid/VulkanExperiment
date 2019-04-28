@@ -3,7 +3,6 @@
 #include "GI2DContext.h"
 #include "GI2DRigidbody.h"
 
-
 GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context)
 {
 	m_context = context;

@@ -1,0 +1,53 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+#extension GL_EXT_shader_explicit_arithmetic_types : require
+#extension GL_EXT_shader_atomic_int64 : require
+
+#define USE_Rigidbody2D 0
+#include "Rigidbody2D.glsl"
+
+layout (local_size_x = 64) in;
+
+layout(push_constant) uniform Input
+{
+	int distance;
+	int p;
+	uvec2 reso;
+} constant;
+
+void main() 
+{
+	VoronoiVertex vv = b_voronoi_vertex[gl_GlobalInvocationID.x];
+	int num = vv.num;
+	vec2 center =  vec2(b_voronoi_point[gl_GlobalInvocationID.x]);
+	vec2 value[12];
+	for(int i = 0; i < num; i++)
+	{
+		vec2 a = normalize(vec2(vv.vertex[i]) - center);
+		value[i].x = float(i);
+		value[i].y = atan(a.y, a.x);
+	}
+
+	vec2 tmp;
+	for(int n = num; n!=0; --n)
+	{
+		for(int i = 0; i < n; ++i)
+		{
+//			#define TwoSort(a,b) { tmp = min (a, b); b = a + b - tmp; a = tmp; }
+//			TwoSort (c[i], c[i+1]);
+			if(value[i].y < value[i+1].y)
+			{
+				tmp = value[i+1];
+				value[i+1] = value[i];
+				value[i] = tmp;
+			}
+		}
+	}
+
+	for(int i = 0; i < num; i++)
+	{
+		b_voronoi_vertex[gl_GlobalInvocationID.x].vertex[i] = vv.vertex[int(value[i].x+0.5)];
+	}	
+
+
+}

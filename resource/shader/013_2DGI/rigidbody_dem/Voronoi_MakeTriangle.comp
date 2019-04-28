@@ -55,6 +55,7 @@ void main()
 
 	if(count <= 2){ return; }
 
+	// 4pixel中3pixel以上違うものがあるならそこは頂点になる
 	for(int i = 0; i < count; i++)
 	{
 		int n = atomicAdd(b_voronoi_vertex[diff[i]].num, 1);
