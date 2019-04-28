@@ -87,13 +87,14 @@ struct VoronoiPoint
 //	i16vec2 vertex[16];
 };
 
+#define VoronoiVertex_MAX (12)
 struct VoronoiVertex
 {
 	int num;
 	int _p1;
 	int _p2;
 	int _p3;
-	i16vec2 vertex[12];
+	i16vec2 vertex[VoronoiVertex_MAX];
 };
 
 layout(set=USE_Rigidbody2D, binding=0, std430) restrict buffer WorldData {

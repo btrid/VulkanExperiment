@@ -651,7 +651,7 @@ void GI2DPhysics::executeMakeVoronoi(vk::CommandBuffer cmd)
 			0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Voronoi_SortTriangleVertex].get());
-		auto num = app::calcDipatchGroups(uvec3(reso, 1), uvec3(8, 8, 1));
+		auto num = app::calcDipatchGroups(uvec3(4096, 1, 1), uvec3(64, 1, 1));
 
 		cmd.dispatch(num.x, num.y, num.z);
 	}

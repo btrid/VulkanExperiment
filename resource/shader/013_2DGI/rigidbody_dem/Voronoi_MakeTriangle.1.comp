@@ -5,7 +5,7 @@
 #define USE_Rigidbody2D 0
 #include "Rigidbody2D.glsl"
 
-#extension GL_NV_conservative_raster : require
+#extension VK_EXT_conservative_rasterization  : require
 
 layout (local_size_x = 8, local_size_y = 8) in;
 

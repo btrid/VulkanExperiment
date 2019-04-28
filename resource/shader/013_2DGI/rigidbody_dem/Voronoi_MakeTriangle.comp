@@ -6,6 +6,9 @@
 #define USE_Rigidbody2D 0
 #include "Rigidbody2D.glsl"
 
+//#extension VK_EXT_conservative_rasterization : require
+
+
 layout (local_size_x = 8, local_size_y = 8) in;
 
 layout(push_constant) uniform Input
@@ -21,19 +24,20 @@ void main()
 	uvec2 current = gl_GlobalInvocationID.xy;
 	s_cell[gl_LocalInvocationID.y][gl_LocalInvocationID.x] = b_voronoi[current.x + current.y*constant.reso.x];
 
-	if( gl_LocalInvocationIndex < 9)
-	{
-		// 下辺を埋める
-		uint xx = min((gl_WorkGroupID.x)*8 + gl_LocalInvocationIndex, constant.reso.x-1);
-		uint yy = min((gl_WorkGroupID.y+1)*8, constant.reso.y-1);
-		s_cell[8][gl_LocalInvocationIndex] = b_voronoi[xx + yy*constant.reso.x];
-	}
 	if( gl_LocalInvocationIndex < 8)
 	{
 		// 右辺を埋める
 		uint xx = min((gl_WorkGroupID.x+1)*8, constant.reso.x-1);
-		uint yy = min((gl_WorkGroupID.y)*8 + gl_LocalInvocationIndex, constant.reso.y-1);
+		uint yy = min(gl_WorkGroupID.y*8 + gl_LocalInvocationIndex, constant.reso.y-1);
 		s_cell[gl_LocalInvocationIndex][8] = b_voronoi[xx + yy*constant.reso.x];
+	}
+
+	if( gl_LocalInvocationIndex < 9)
+	{
+		// 下辺を埋める
+		uint xx = min(gl_WorkGroupID.x*8 + gl_LocalInvocationIndex, constant.reso.x-1);
+		uint yy = min((gl_WorkGroupID.y+1)*8, constant.reso.y-1);
+		s_cell[8][gl_LocalInvocationIndex] = b_voronoi[xx + yy*constant.reso.x];
 	}
 
 	barrier();
@@ -59,7 +63,7 @@ void main()
 	for(int i = 0; i < count; i++)
 	{
 		int n = atomicAdd(b_voronoi_vertex[diff[i]].num, 1);
-		if(n < 12)
-			b_voronoi_vertex[diff[i]].vertex[n] = i16vec2(current.x, current.y);
+		if(n < VoronoiVertex_MAX)
+			b_voronoi_vertex[diff[i]].vertex[n] = i16vec2(current.x+1, current.y+1);
 	}
 }

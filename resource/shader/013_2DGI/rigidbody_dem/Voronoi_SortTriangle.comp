@@ -21,7 +21,7 @@ void main()
 	int num = vv.num;
 	if(num <= 1) { return;}
 	vec2 center =  vec2(b_voronoi_point[gl_GlobalInvocationID.x]);
-	vec2 value[12];
+	vec2 value[VoronoiVertex_MAX];
 	for(int i = 0; i < num; i++)
 	{
 		vec2 a = normalize(vec2(vv.vertex[i]) - center);
@@ -29,7 +29,6 @@ void main()
 		value[i].y = atan(a.y, a.x);
 	}
 
-	vec2 tmp;
 	for(int i = 0; i < num; i++)
 	{
 		for(int j = num-1; j>i; j--)
@@ -38,7 +37,7 @@ void main()
 //			TwoSort (c[i], c[i+1]);
 			if(value[j].y > value[j-1].y)
 			{
-				tmp = value[j-1];
+				vec2 tmp = value[j-1];
 				value[j-1] = value[j];
 				value[j] = tmp;
 			}

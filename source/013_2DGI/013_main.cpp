@@ -359,9 +359,15 @@ int rigidbody()
 //				gi2d_rigidbody.execute(cmd, physics_world, gi2d_sdf_context);
 //				gi2d_rigidbody.executeToFragment(cmd, physics_world);
 
-//				gi2d_rigidbody.executeDrawVoronoi(cmd, physics_world);
-	//			gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
-				physics_debug->executeDrawVoronoiTriangle(cmd);
+				if (app.m_window->getInput().m_keyboard.isHold('A'))
+				{
+					gi2d_rigidbody.executeDrawVoronoi(cmd, physics_world);
+					gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
+				}
+				else {
+					physics_debug->executeDrawVoronoiTriangle(cmd);
+
+				}
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;
 			}
