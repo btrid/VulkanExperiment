@@ -127,7 +127,7 @@ struct GI2DPhysics
 	{
  		int num;
 		int _p[3];
- 		i16vec2 vertex[16];
+ 		i16vec2 vertex[12];
 	};
 	enum
 	{
@@ -192,38 +192,218 @@ struct GI2DPhysics
 
 struct GI2DPhysicsDebug
 {
-// 	GI2DPhysicsDebug(const std::shared_ptr<GI2DContext>& gi2d_context);
-// 	void executeMakeFragmentMap(vk::CommandBuffer cmd);
-// 	void executeDrawFragmentMap(vk::CommandBuffer cmd, const std::shared_ptr<RenderTarget>& render_target);
-// 	void executeDrawFragment(vk::CommandBuffer cmd, const std::shared_ptr<RenderTarget>& render_target);
-// 
-// 	std::shared_ptr<btr::Context> m_context;
-// 	std::shared_ptr<GI2DContext> m_gi2d_context;
-// 
-// 	btr::BufferMemoryEx<GI2DContext::Fragment> m_map_data;
-// 
-// 	enum Shader
-// 	{
-// 		Shader_PointLight,
-// 		Shader_DrawFragmentMap,
-// 		Shader_DrawFragment,
-// 		Shader_Num,
-// 	};
-// 	enum PipelineLayout
-// 	{
-// 		PipelineLayout_PointLight,
-// 		PipelineLayout_DrawFragmentMap,
-// 		PipelineLayout_Num,
-// 	};
-// 	enum Pipeline
-// 	{
-// 		Pipeline_PointLight,
-// 		Pipeline_DrawFragmentMap,
-// 		Pipeline_DrawFragment,
-// 		Pipeline_Num,
-// 	};
-// 	vk::UniqueShaderModule m_shader[Shader_Num];
-// 	std::array<vk::UniquePipelineLayout, PipelineLayout_Num> m_pipeline_layout;
-// 	std::array<vk::UniquePipeline, Pipeline_Num> m_pipeline;
+	GI2DPhysicsDebug(const std::shared_ptr<GI2DPhysics>& physics_context, const std::shared_ptr<RenderTarget>& render_target)
+	{
+		m_context = physics_context;
+		m_render_target = render_target;
+
+		auto& context = m_context->m_context;
+		{
+			const char* name[] =
+			{
+				"Debug_DrawVoronoiTriangle.vert.spv",
+				"Debug_DrawVoronoiTriangle.geom.spv",
+				"Debug_DrawVoronoiTriangle.frag.spv",
+
+			};
+			static_assert(array_length(name) == Shader_Num, "not equal shader num");
+
+			std::string path = btr::getResourceShaderPath();
+			for (size_t i = 0; i < array_length(name); i++) {
+				m_shader[i] = loadShaderUnique(context->m_device.getHandle(), path + name[i]);
+			}
+		}
+
+		{
+			vk::DescriptorSetLayout layouts[] = {
+				m_context->getDescriptorSetLayout(GI2DPhysics::DescLayout_Data),
+			};
+			vk::PushConstantRange ranges[] = {
+				vk::PushConstantRange().setSize(4).setStageFlags(vk::ShaderStageFlagBits::eGeometry),
+			};
+			vk::PipelineLayoutCreateInfo pipeline_layout_info;
+			pipeline_layout_info.setSetLayoutCount(std::size(layouts));
+			pipeline_layout_info.setPSetLayouts(layouts);
+			pipeline_layout_info.setPushConstantRangeCount(std::size(ranges));
+			pipeline_layout_info.setPPushConstantRanges(ranges);
+			m_pipeline_layout[PipelineLayout_DrawVoronoiTriangle] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+		}
+
+
+		// レンダーパス
+		{
+			// sub pass
+			vk::AttachmentReference color_ref[] =
+			{
+				vk::AttachmentReference()
+				.setAttachment(0)
+				.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
+			};
+
+			vk::SubpassDescription subpass;
+			subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+			subpass.setInputAttachmentCount(0);
+			subpass.setPInputAttachments(nullptr);
+			subpass.setColorAttachmentCount(std::size(color_ref));
+			subpass.setPColorAttachments(color_ref);
+
+			vk::AttachmentDescription attach_description[] =
+			{
+				// color1
+				vk::AttachmentDescription()
+				.setFormat(render_target->m_info.format)
+				.setSamples(vk::SampleCountFlagBits::e1)
+				.setLoadOp(vk::AttachmentLoadOp::eLoad)
+				.setStoreOp(vk::AttachmentStoreOp::eStore)
+				.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
+				.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
+			};
+			vk::RenderPassCreateInfo renderpass_info;
+			renderpass_info.setAttachmentCount(std::size(attach_description));
+			renderpass_info.setPAttachments(attach_description);
+			renderpass_info.setSubpassCount(1);
+			renderpass_info.setPSubpasses(&subpass);
+
+			m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
+		}
+
+		{
+			vk::ImageView view[] = {
+				render_target->m_view,
+			};
+			vk::FramebufferCreateInfo framebuffer_info;
+			framebuffer_info.setRenderPass(m_render_pass.get());
+			framebuffer_info.setAttachmentCount(std::size(view));
+			framebuffer_info.setPAttachments(view);
+			framebuffer_info.setWidth(render_target->m_info.extent.width);
+			framebuffer_info.setHeight(render_target->m_info.extent.height);
+			framebuffer_info.setLayers(1);
+
+			m_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
+		}
+
+		// pipeline
+		{
+			// assembly
+			vk::PipelineInputAssemblyStateCreateInfo assembly_info = vk::PipelineInputAssemblyStateCreateInfo()
+				.setPrimitiveRestartEnable(VK_FALSE)
+				.setTopology(vk::PrimitiveTopology::ePointList);
+
+			vk::Extent3D size = render_target->m_info.extent;
+			// viewport
+			vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)size.width, (float)size.height, 0.f, 1.f);
+			vk::Rect2D scissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(size.width, size.height));
+
+			vk::PipelineViewportStateCreateInfo viewport_info;
+			viewport_info.setViewportCount(1);
+			viewport_info.setPViewports(&viewport);
+			viewport_info.setScissorCount(1);
+			viewport_info.setPScissors(&scissor);
+
+			// ラスタライズ
+			vk::PipelineRasterizationStateCreateInfo rasterization_info;
+			rasterization_info.setPolygonMode(vk::PolygonMode::eFill);
+			rasterization_info.setCullMode(vk::CullModeFlagBits::eBack);
+			rasterization_info.setFrontFace(vk::FrontFace::eCounterClockwise);
+			rasterization_info.setLineWidth(1.f);
+			// サンプリング
+			vk::PipelineMultisampleStateCreateInfo sample_info;
+			sample_info.setRasterizationSamples(vk::SampleCountFlagBits::e1);
+
+			// デプスステンシル
+			vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
+			depth_stencil_info.setDepthTestEnable(VK_FALSE);
+			depth_stencil_info.setDepthWriteEnable(VK_FALSE);
+			depth_stencil_info.setDepthCompareOp(vk::CompareOp::eGreaterOrEqual);
+			depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
+			depth_stencil_info.setStencilTestEnable(VK_FALSE);
+
+			// ブレンド
+			std::vector<vk::PipelineColorBlendAttachmentState> blend_state = {
+				vk::PipelineColorBlendAttachmentState()
+				.setBlendEnable(VK_FALSE)
+				.setColorWriteMask(vk::ColorComponentFlagBits::eR
+					| vk::ColorComponentFlagBits::eG
+					| vk::ColorComponentFlagBits::eB
+					| vk::ColorComponentFlagBits::eA)
+			};
+			vk::PipelineColorBlendStateCreateInfo blend_info;
+			blend_info.setAttachmentCount(blend_state.size());
+			blend_info.setPAttachments(blend_state.data());
+
+			// vertexinput
+			vk::PipelineVertexInputStateCreateInfo vertex_input_info;
+
+			vk::PipelineShaderStageCreateInfo shader_info[] =
+			{
+				vk::PipelineShaderStageCreateInfo({}, vk::ShaderStageFlagBits::eVertex, m_shader[Shader_DrawVoronoiTriangle_VS].get(), "main"),
+				vk::PipelineShaderStageCreateInfo({}, vk::ShaderStageFlagBits::eGeometry, m_shader[Shader_DrawVoronoiTriangle_GS].get(), "main"),
+				vk::PipelineShaderStageCreateInfo({}, vk::ShaderStageFlagBits::eFragment, m_shader[Shader_DrawVoronoiTriangle_FS].get(), "main"),
+			};
+			std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =
+			{
+				vk::GraphicsPipelineCreateInfo()
+				.setStageCount(std::size(shader_info))
+				.setPStages(shader_info)
+				.setPVertexInputState(&vertex_input_info)
+				.setPInputAssemblyState(&assembly_info)
+				.setPViewportState(&viewport_info)
+				.setPRasterizationState(&rasterization_info)
+				.setPMultisampleState(&sample_info)
+				.setLayout(m_pipeline_layout[PipelineLayout_DrawVoronoiTriangle].get())
+				.setRenderPass(m_render_pass.get())
+				.setPDepthStencilState(&depth_stencil_info)
+				.setPColorBlendState(&blend_info),
+			};
+			m_pipeline[Pipeline_DrawVoronoiTriangle] = std::move(context->m_device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info)[0]);
+		}
+	}
+
+	void executeDrawVoronoiTriangle(vk::CommandBuffer cmd)
+	{
+		{
+			vk::RenderPassBeginInfo render_begin_info;
+			render_begin_info.setRenderPass(m_render_pass.get());
+			render_begin_info.setFramebuffer(m_framebuffer.get());
+			render_begin_info.setRenderArea(vk::Rect2D({}, m_render_target->m_resolution));
+			cmd.beginRenderPass(render_begin_info, vk::SubpassContents::eInline);
+
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayout_DrawVoronoiTriangle].get(), 0, m_context->getDescriptorSet(GI2DPhysics::DescLayout_Data), {});
+			cmd.pushConstants<uint>(m_pipeline_layout[PipelineLayout_DrawVoronoiTriangle].get(), vk::ShaderStageFlagBits::eGeometry, 0, 555);
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_DrawVoronoiTriangle].get());
+
+			cmd.draw(1, 1, 0, 0);
+
+			cmd.endRenderPass();
+
+		}
+	}
+
+	enum Shader
+	{
+		Shader_DrawVoronoiTriangle_VS,
+		Shader_DrawVoronoiTriangle_GS,
+		Shader_DrawVoronoiTriangle_FS,
+		Shader_Num,
+	};
+	enum PipelineLayout
+	{
+		PipelineLayout_DrawVoronoiTriangle,
+		PipelineLayout_Num,
+	};
+	enum Pipeline
+	{
+		Pipeline_DrawVoronoiTriangle,
+		Pipeline_Num,
+	};
+	std::array < vk::UniqueShaderModule, Shader_Num> m_shader;
+ 	std::array<vk::UniquePipelineLayout, PipelineLayout_Num> m_pipeline_layout;
+ 	std::array<vk::UniquePipeline, Pipeline_Num> m_pipeline;
+
+	std::shared_ptr<GI2DPhysics> m_context;
+	std::shared_ptr<RenderTarget> m_render_target;
+	vk::UniqueRenderPass m_render_pass;
+	vk::UniqueFramebuffer m_framebuffer;
 
 };

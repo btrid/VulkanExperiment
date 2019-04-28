@@ -12,7 +12,7 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 	m_rigidbody_id = 0;
 	m_particle_id = 0;
 	{
-		auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
+		auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
 		vk::DescriptorSetLayoutBinding binding[] = {
 			vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eStorageBuffer, 1, stage),
 			vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
@@ -634,6 +634,12 @@ void GI2DPhysics::executeMakeVoronoi(vk::CommandBuffer cmd)
 		cmd.dispatch(num.x, num.y, num.z);
 	}
 
+
+	vk::BufferMemoryBarrier to_read[] = {
+		b_voronoi_vertex.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+	};
+	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+		0, nullptr, array_length(to_read), to_read, 0, nullptr);
 }
 
 

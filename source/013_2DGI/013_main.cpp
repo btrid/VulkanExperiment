@@ -281,6 +281,7 @@ int rigidbody()
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context, gi2d_desc);
 	std::shared_ptr<GI2DSDF> gi2d_sdf_context = std::make_shared<GI2DSDF>(gi2d_context);
 	std::shared_ptr<GI2DPhysics> physics_world = std::make_shared<GI2DPhysics>(context, gi2d_context);
+	std::shared_ptr<GI2DPhysicsDebug> physics_debug = std::make_shared<GI2DPhysicsDebug>(physics_world, app.m_window->getFrontBuffer());
 
 	GI2DClear gi2d_clear(context, gi2d_context);
 	GI2DDebug gi2d_debug(context, gi2d_context);
@@ -358,8 +359,9 @@ int rigidbody()
 //				gi2d_rigidbody.execute(cmd, physics_world, gi2d_sdf_context);
 //				gi2d_rigidbody.executeToFragment(cmd, physics_world);
 
-				gi2d_rigidbody.executeDrawVoronoi(cmd, physics_world);
- 				gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
+//				gi2d_rigidbody.executeDrawVoronoi(cmd, physics_world);
+ //				gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
+				physics_debug->executeDrawVoronoiTriangle(cmd);
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;
 			}

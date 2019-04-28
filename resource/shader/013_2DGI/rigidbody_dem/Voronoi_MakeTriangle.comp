@@ -19,21 +19,21 @@ shared int16_t s_cell[8+1][8+1];
 void main() 
 {
 	uvec2 current = gl_GlobalInvocationID.xy;
-	s_cell[current.x][current.y] = b_voronoi[current.x + current.y*constant.reso.x];
+	s_cell[gl_LocalInvocationID.y][gl_LocalInvocationID.x] = b_voronoi[current.x + current.y*constant.reso.x];
 
 	if( gl_LocalInvocationIndex < 9)
 	{
 		// 下辺を埋める
 		uint xx = min((gl_WorkGroupID.x)*8 + gl_LocalInvocationIndex, constant.reso.x-1);
-		uint yy = min((gl_WorkGroupID.y+1)*8 + gl_LocalInvocationIndex, constant.reso.y-1);
-		s_cell[gl_LocalInvocationIndex][8] = b_voronoi[xx + yy*constant.reso.x];
+		uint yy = min((gl_WorkGroupID.y+1)*8, constant.reso.y-1);
+		s_cell[8][gl_LocalInvocationIndex] = b_voronoi[xx + yy*constant.reso.x];
 	}
 	if( gl_LocalInvocationIndex < 8)
 	{
 		// 右辺を埋める
 		uint xx = min((gl_WorkGroupID.x+1)*8, constant.reso.x-1);
 		uint yy = min((gl_WorkGroupID.y)*8 + gl_LocalInvocationIndex, constant.reso.y-1);
-		s_cell[8][gl_LocalInvocationIndex] = b_voronoi[xx + yy*constant.reso.x];
+		s_cell[gl_LocalInvocationIndex][8] = b_voronoi[xx + yy*constant.reso.x];
 	}
 
 	barrier();
@@ -42,14 +42,10 @@ void main()
 	uvec4 index_x = gl_LocalInvocationID.xxxx + uvec4(0,1,0,1);
 	uvec4 index_y = gl_LocalInvocationID.yyyy + uvec4(0,0,1,1);
 	int v[4];
-	v[0] = s_cell[index_x.x][index_y.x];
-	v[1] = s_cell[index_x.y][index_y.y];
-	v[2] = s_cell[index_x.z][index_y.z];
-	v[3] = s_cell[index_x.w][index_y.w];
-//	uint a =  v[0].x+v[0].y*constant.reso.x;
-//	uint b =  v[1].x+v[1].y*constant.reso.x;
-//	uint c =  v[2].x+v[2].y*constant.reso.x;
-//	uint d =  v[3].x+v[3].y*constant.reso.x;
+	v[0] = s_cell[index_y.x][index_x.x];
+	v[1] = s_cell[index_y.y][index_x.y];
+	v[2] = s_cell[index_y.z][index_x.z];
+	v[3] = s_cell[index_y.w][index_x.w];
 
 	int count = 1;
 	int diff[4] = {v[0],0,0,0};
@@ -61,7 +57,8 @@ void main()
 
 	for(int i = 0; i < count; i++)
 	{
-		int n = atomicAdd(b_voronoi_vertex[v[i]].num, 1);
-		b_voronoi_vertex[v[i]].vertex[n] = i16vec2(index_x.w, index_y.w);
+		int n = atomicAdd(b_voronoi_vertex[diff[i]].num, 1);
+		if(n < 12)
+			b_voronoi_vertex[diff[i]].vertex[n] = i16vec2(current.x+1, current.y+1);
 	}
 }
