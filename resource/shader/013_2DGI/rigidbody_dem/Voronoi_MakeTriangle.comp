@@ -57,13 +57,17 @@ void main()
 	if(v[2]!=v[0] && v[2]!=v[1]){ diff[count++] = v[2]; }
 	if(v[3]!=v[0] && v[3]!=v[1] && v[3]!=v[2]){ diff[count++] = v[3]; }
 
-	if(count <= 2){ return; }
+	int check = 2;
+	ivec4 edge = ivec4(equal(current.xyxy, uvec4(0,0, constant.reso-1)));
+	check -= (edge.x+edge.y+edge.z+edge.w);
+	if(count <= check){ return; }
 
 	// 4pixel中3pixel以上違うものがあるならそこは頂点になる
+	// 端は頂点とする
 	for(int i = 0; i < count; i++)
 	{
 		int n = atomicAdd(b_voronoi_vertex[diff[i]].num, 1);
 		if(n < VoronoiVertex_MAX)
-			b_voronoi_vertex[diff[i]].vertex[n] = i16vec2(current.x+1, current.y+1);
+			b_voronoi_vertex[diff[i]].vertex[n] = i16vec2(current.x, current.y);
 	}
 }

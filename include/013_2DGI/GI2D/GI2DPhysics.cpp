@@ -616,7 +616,6 @@ void GI2DPhysics::executeMakeVoronoi(vk::CommandBuffer cmd)
 		for (int distance = reso_max >> 1; distance != 0; distance >>= 1)
 		{
 			vk::BufferMemoryBarrier to_read[] = {
-				b_voronoi_point.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 				b_voronoi.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},

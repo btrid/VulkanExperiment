@@ -23,17 +23,15 @@ void nearest(inout int16_t id, inout float d, in i16vec2 current, in i16vec2 tar
 		return;
 	}
 	int16_t target_id = b_voronoi[target.x + target.y*constant.reso.x];
-	if(target_id == 0xffff){ return; }
+	if(target_id < 0){ return; }
 	if(target_id == id){ return; }
 
+	i16vec2 target_point = b_voronoi_point[int(target_id)];
+	float target_d = distance(vec2(target_point), current);
+	if(target_d < d)
 	{
-		i16vec2 target_point = b_voronoi_point[int(target_id)];
-		float target_d = distance(vec2(target_point), current);
-		if(target_d < d)
-		{
-			d = target_d;
-			id = target_id;
-		}
+		d = target_d;
+		id = target_id;
 	}
 }
 void main() 
@@ -46,12 +44,12 @@ void main()
 
 
 //	float d = (id != -1) ? distance(vec2(current), vec2(data.point)) : 99999999.;
-	float d = (id != 0xffff) ? distance(vec2(current), vec2(b_voronoi_point[int(id)])) : 99999999.;
+	float d = (id >= 0) ? distance(vec2(current), vec2(b_voronoi_point[int(id)])) : 99999999.;
 	const float old_d = d;
 	// 重力のY方向優先
 	const i16vec3 cd = i16vec3(constant.distance) * i16vec3(-1, 0, 1);
-	nearest(id, d, current, current + cd.xy);
 	nearest(id, d, current, current + cd.xx);
+	nearest(id, d, current, current + cd.xy);
 	nearest(id, d, current, current + cd.xz);
 	nearest(id, d, current, current + cd.zx);
 	nearest(id, d, current, current + cd.zy);
@@ -60,7 +58,7 @@ void main()
 	//nearest(id, d, current, current + cd.yy);
 	nearest(id, d, current, current + cd.yz);
 
-	if(d != old_d)
+	if(d < old_d)
 	{
 		b_voronoi[current.x + current.y*constant.reso.x] = id;
 	}
