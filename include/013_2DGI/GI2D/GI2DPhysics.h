@@ -127,9 +127,8 @@ struct GI2DPhysics
 	};
 	struct VoronoiVertex
 	{
- 		int num;
-		int _p[3];
- 		i16vec2 vertex[12];
+		i16vec2 vertex[11];
+		int num;
 	};
 	enum
 	{
