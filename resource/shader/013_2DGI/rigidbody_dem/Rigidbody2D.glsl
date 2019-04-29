@@ -89,7 +89,6 @@ struct VoronoiCell
 #define VoronoiVertex_MAX (10)
 struct VoronoiPolygon
 {
-//	i16vec2 vertex[VoronoiVertex_MAX];
 	int16_t vertex_index[VoronoiVertex_MAX];
 	int num;
 };
@@ -98,11 +97,6 @@ struct VoronoiVertex
 {
 	i16vec2 point;
 	int16_t	cell[4];
-};
-
-struct VoronoiVertexConnect
-{
-	i16vec4 point_id;
 };
 
 layout(set=USE_Rigidbody2D, binding=0, std430) restrict buffer WorldData {
