@@ -29,18 +29,19 @@ void main()
 {
 	vec2 center = vec2(b_voronoi_cell[constant.id].point) / 1024. * 2. - 1.;
 	int num = b_voronoi_polygon[constant.id].num;
-//	for(int i = 0; i < num; i+=1)
+
 	int i = gl_InvocationID;
 	if(i >= num) { return; }
 	{
 		gl_Position = vec4(center, 0., 1.);
 		EmitVertex();
 
-		vec2 v1 = vec2(b_voronoi_polygon[constant.id].vertex[i]) / 1024.;
+		vec2 v1 = vec2(b_voronoi_vertex[int(b_voronoi_polygon[constant.id].vertex_index[i])].point) / 1024.;
+		vec2 v2 = vec2(b_voronoi_vertex[int(b_voronoi_polygon[constant.id].vertex_index[(i+1)%num])].point) / 1024.;
+
 		gl_Position = vec4(v1*2. - 1., 0., 1.);
 		EmitVertex();
 
-		vec2 v2 = vec2(b_voronoi_polygon[constant.id].vertex[(i+1)%num]) / 1024.;
 		gl_Position = vec4(v2*2. - 1., 0., 1.);
 		EmitVertex();
 	}

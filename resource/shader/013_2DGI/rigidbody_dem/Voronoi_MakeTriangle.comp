@@ -64,10 +64,21 @@ void main()
 
 	// 4pixel中3pixel以上違うものがあるならそこは頂点になる
 	// 端は頂点とする
+	uint v_index = atomicAdd(b_voronoi_vertex_counter.x, 1);
+
 	for(int i = 0; i < count; i++)
 	{
 		int n = atomicAdd(b_voronoi_polygon[diff[i]].num, 1);
 		if(n < VoronoiVertex_MAX)
-			b_voronoi_polygon[diff[i]].vertex[n] = i16vec2(current.x, current.y);
+			b_voronoi_polygon[diff[i]].vertex_index[n] = int16_t(v_index);
+	}
+
+	{
+		VoronoiVertex vv;
+		vv.point = i16vec2(current.x, current.y);
+		for(int i = 0; i < count; i++){ vv.cell[i] = int16_t(diff[i]); }
+		for(int i = count; i < 4; i++){ vv.cell[i] = -1s;}
+
+		b_voronoi_vertex[v_index] = vv;
 	}
 }

@@ -86,18 +86,18 @@ struct VoronoiCell
 	i16vec2 point;
 };
 
-struct VoronoiTriangle
-{
-	int16_t	vertex[10];
-	int vertex_num;
-	i16vec2 point;
-};
-
-#define VoronoiVertex_MAX (11)
+#define VoronoiVertex_MAX (10)
 struct VoronoiPolygon
 {
-	i16vec2 vertex[VoronoiVertex_MAX];
+//	i16vec2 vertex[VoronoiVertex_MAX];
+	int16_t vertex_index[VoronoiVertex_MAX];
 	int num;
+};
+
+struct VoronoiVertex
+{
+	i16vec2 point;
+	int16_t	cell[4];
 };
 
 struct VoronoiVertexConnect
@@ -150,16 +150,22 @@ layout(set=USE_Rigidbody2D, binding=13, std430) restrict buffer rbVoronoiPolygon
 layout(set=USE_Rigidbody2D, binding=14, std430) restrict buffer rbVoronoiBuffer {
 	int16_t b_voronoi[];
 };
-//layout(set=USE_Rigidbody2D, binding=13, std430) restrict buffer rbVoronoiCellVertexBuffer {
-//	VoronoiVertex b_voronoi_vertex[];
-//};
+layout(set=USE_Rigidbody2D, binding=15, std430) restrict buffer rbVoronoiVertexCounter {
+	uvec4 b_voronoi_vertex_counter;
+};
+layout(set=USE_Rigidbody2D, binding=16, std430) restrict buffer rbVoronoiVertexMapBuffer {
+	uint b_voronoi_vertex_map[];
+};
+layout(set=USE_Rigidbody2D, binding=17, std430) restrict buffer rbVoronoiVertexBuffer {
+	VoronoiVertex b_voronoi_vertex[];
+};
 
-layout(set=USE_Rigidbody2D, binding=15, std430) restrict buffer rbDelaunayVertexCounter {
-	uvec4 b_delaunay_vertex_couter;
-};
-layout(set=USE_Rigidbody2D, binding=16, std430) restrict buffer rbDelaunayVertexBuffer {
-	i16vec2 b_delaunay_vertex[];
-};
+//layout(set=USE_Rigidbody2D, binding=15, std430) restrict buffer rbDelaunayVertexCounter {
+//	uvec4 b_delaunay_vertex_couter;
+//};
+//layout(set=USE_Rigidbody2D, binding=16, std430) restrict buffer rbDelaunayVertexBuffer {
+//	i16vec2 b_delaunay_vertex[];
+//};
 
 #endif
 #if defined(USE_MakeRigidbody)

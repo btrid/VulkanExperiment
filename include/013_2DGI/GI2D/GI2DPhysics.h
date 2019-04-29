@@ -121,19 +121,19 @@ struct GI2DPhysics
 
 	struct VoronoiCell
 	{
-//		int16_t	vertex[10];
 		i16vec2 point;
-	//	int vertex_num;
+	};
+
+#define VoronoiVertex_MAX (11)
+	struct VoronoiPolygon
+	{
+		i16vec2 vertex[VoronoiVertex_MAX];
+		int num;
 	};
 	struct VoronoiVertex
 	{
-		i16vec2 vertex[11];
-		int num;
-	};
-	struct VoronoiVertex2
-	{
+		i16vec2 point;
 		int16_t cell[4];
-		int num;
 	};
 	enum
 	{
@@ -179,11 +179,13 @@ struct GI2DPhysics
 	btr::BufferMemoryEx<uint> b_rb_update_list;
 	btr::BufferMemoryEx<uint> b_pb_update_list;
 	btr::BufferMemoryEx<VoronoiCell> b_voronoi_cell;
-	btr::BufferMemoryEx<VoronoiVertex> b_voronoi_vertex;
+	btr::BufferMemoryEx<VoronoiPolygon> b_voronoi_polygon;
 	btr::BufferMemoryEx<int16_t> b_voronoi;
-	btr::BufferMemoryEx<int32_t> b_voronoi_vertex_count;
-	btr::BufferMemoryEx<uvec4> b_delaunay_vertex_couter;
-	btr::BufferMemoryEx<i16vec2> b_delaunay_vertex;
+	btr::BufferMemoryEx<uvec4> b_voronoi_vertex_counter;
+	btr::BufferMemoryEx<uint> b_voronoi_vertex_map;
+	btr::BufferMemoryEx<VoronoiVertex> b_voronoi_vertex;
+	//	btr::BufferMemoryEx<uvec4> b_delaunay_vertex_couter;
+//	btr::BufferMemoryEx<i16vec2> b_delaunay_vertex;
 
 	btr::BufferMemoryEx<Rigidbody> b_make_rigidbody;
 	btr::BufferMemoryEx<rbParticle> b_make_particle;

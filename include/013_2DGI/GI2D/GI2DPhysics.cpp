@@ -30,6 +30,7 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 			vk::DescriptorSetLayoutBinding(14, vk::DescriptorType::eStorageBuffer, 1, stage),
 			vk::DescriptorSetLayoutBinding(15, vk::DescriptorType::eStorageBuffer, 1, stage),
 			vk::DescriptorSetLayoutBinding(16, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(17, vk::DescriptorType::eStorageBuffer, 1, stage),
 		};
 		vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 		desc_layout_info.setBindingCount(array_length(binding));
@@ -207,10 +208,13 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 		b_rb_update_list = m_context->m_storage_memory.allocateMemory<uint>({ RB_NUM_MAX*2,{} });
 		b_pb_update_list = m_context->m_storage_memory.allocateMemory<uint>({ RB_PARTICLE_BLOCK_NUM_MAX*2,{} });
 		b_voronoi_cell = m_context->m_storage_memory.allocateMemory<VoronoiCell>({ 4096,{} });
-		b_voronoi_vertex = m_context->m_storage_memory.allocateMemory<VoronoiVertex>({ 4096,{} });
+		b_voronoi_polygon = m_context->m_storage_memory.allocateMemory<VoronoiPolygon>({ 4096,{} });
 		b_voronoi = m_context->m_storage_memory.allocateMemory<int16_t>({ gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
-		b_delaunay_vertex_couter = m_context->m_storage_memory.allocateMemory<uvec4>({ 1,{} });
-		b_delaunay_vertex = m_context->m_storage_memory.allocateMemory<i16vec2>({ 1000*3,{} });
+		b_voronoi_vertex_counter = m_context->m_storage_memory.allocateMemory<uvec4>({ 1,{} });
+		b_voronoi_vertex_map = m_context->m_storage_memory.allocateMemory<uint32_t>({ 4096 * 6,{} });
+		b_voronoi_vertex = m_context->m_storage_memory.allocateMemory<VoronoiVertex>({ 4096*6,{} });
+		//		b_delaunay_vertex_couter = m_context->m_storage_memory.allocateMemory<uvec4>({ 1,{} });
+//		b_delaunay_vertex = m_context->m_storage_memory.allocateMemory<i16vec2>({ 1000*3,{} });
 		{
 			vk::DescriptorSetLayout layouts[] = {
 				m_desc_layout[DescLayout_Data].get(),
@@ -235,10 +239,13 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 				b_rb_update_list.getInfo(),
 				b_pb_update_list.getInfo(),
 				b_voronoi_cell.getInfo(),
-				b_voronoi_vertex.getInfo(),
+				b_voronoi_polygon.getInfo(),
 				b_voronoi.getInfo(),
-				b_delaunay_vertex_couter.getInfo(),
-				b_delaunay_vertex.getInfo(),
+				b_voronoi_vertex_counter.getInfo(),
+				b_voronoi_vertex_map.getInfo(),
+				b_voronoi_vertex.getInfo(),
+//				b_delaunay_vertex_couter.getInfo(),
+//				b_delaunay_vertex.getInfo(),
 			};
 
 			vk::WriteDescriptorSet write[] =
@@ -323,6 +330,8 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 		std::array<uvec4, 4> ac;
 		ac.fill(uvec4(0, 1, 1, 0));
 		cmd.updateBuffer<std::array<uvec4, 4>>(b_update_counter.getInfo().buffer, b_update_counter.getInfo().offset, ac);
+
+		cmd.fillBuffer(b_voronoi_vertex_counter.getInfo().buffer, b_voronoi_vertex_counter.getInfo().offset, b_voronoi_vertex_counter.getInfo().range, 0);
 
 		vk::BufferMemoryBarrier to_read[] = {
 			b_world.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
@@ -535,8 +544,6 @@ void GI2DPhysics::execute(vk::CommandBuffer cmd)
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {},
 			0, nullptr, array_length(to_read), to_read, 0, nullptr);
 	}
-
-	cmd.updateBuffer<uvec4>(b_delaunay_vertex_couter.getInfo().buffer, b_delaunay_vertex_couter.getInfo().offset, uvec4(0,1,1,0));
 }
 
 void GI2DPhysics::executeMakeFluidWall(vk::CommandBuffer cmd)
@@ -562,18 +569,18 @@ void GI2DPhysics::executeMakeVoronoi(vk::CommandBuffer cmd)
 			{
 				vk::BufferMemoryBarrier to_write[] = { 
 					b_voronoi.makeMemoryBarrier(vk::AccessFlagBits::eMemoryRead, vk::AccessFlagBits::eTransferWrite), 
-					b_voronoi_vertex.makeMemoryBarrier(vk::AccessFlagBits::eMemoryRead, vk::AccessFlagBits::eTransferWrite),
+					b_voronoi_polygon.makeMemoryBarrier(vk::AccessFlagBits::eMemoryRead, vk::AccessFlagBits::eTransferWrite),
 				};
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eTransfer, {}, 0, nullptr, array_length(to_write), to_write, 0, nullptr);
 			}
 
 			cmd.fillBuffer(b_voronoi.getInfo().buffer, b_voronoi.getInfo().offset, b_voronoi.getInfo().range, -1);
-			cmd.fillBuffer(b_voronoi_vertex.getInfo().buffer, b_voronoi_vertex.getInfo().offset, b_voronoi_vertex.getInfo().range, 0);
+			cmd.fillBuffer(b_voronoi_polygon.getInfo().buffer, b_voronoi_polygon.getInfo().offset, b_voronoi_polygon.getInfo().range, 0);
 
 			{
 				vk::BufferMemoryBarrier to_read[] = { 
 					b_voronoi.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eTransferWrite),
-					b_voronoi_vertex.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eTransferWrite),
+					b_voronoi_polygon.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eTransferWrite),
 				};
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eTransfer, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);
 			}
@@ -647,7 +654,7 @@ void GI2DPhysics::executeMakeVoronoi(vk::CommandBuffer cmd)
 	// sort triangle vertex
 	{
 		vk::BufferMemoryBarrier to_read[] = {
-			b_voronoi_vertex.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			b_voronoi_polygon.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 			0, nullptr, array_length(to_read), to_read, 0, nullptr);
@@ -659,7 +666,7 @@ void GI2DPhysics::executeMakeVoronoi(vk::CommandBuffer cmd)
 	}
 
 	vk::BufferMemoryBarrier to_read[] = {
-		b_voronoi_vertex.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+		b_voronoi_polygon.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 	};
 	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 		0, nullptr, array_length(to_read), to_read, 0, nullptr);

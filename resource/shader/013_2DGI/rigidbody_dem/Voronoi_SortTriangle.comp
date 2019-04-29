@@ -24,7 +24,7 @@ void main()
 	vec2 value[VoronoiVertex_MAX];
 	for(int i = 0; i < num; i++)
 	{
-		vec2 a = normalize(vec2(vv.vertex[i]) - center);
+		vec2 a = normalize(vec2(b_voronoi_vertex[int(vv.vertex_index[i])].point) - center);
 		value[i].x = float(i);
 		value[i].y = atan(a.y, a.x);
 	}
@@ -46,7 +46,7 @@ void main()
 
 	for(int i = 0; i < num; i++)
 	{
-		b_voronoi_polygon[gl_GlobalInvocationID.x].vertex[i] = vv.vertex[int(value[i].x+0.5)];
+		b_voronoi_polygon[gl_GlobalInvocationID.x].vertex_index[i] = vv.vertex_index[int(value[i].x+0.5)];
 	}	
 
 
