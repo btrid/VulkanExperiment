@@ -576,11 +576,13 @@ void GI2DPhysics::executeMakeVoronoi(vk::CommandBuffer cmd)
 
 			cmd.fillBuffer(b_voronoi.getInfo().buffer, b_voronoi.getInfo().offset, b_voronoi.getInfo().range, -1);
 			cmd.fillBuffer(b_voronoi_polygon.getInfo().buffer, b_voronoi_polygon.getInfo().offset, b_voronoi_polygon.getInfo().range, 0);
+			cmd.fillBuffer(b_voronoi_vertex_counter.getInfo().buffer, b_voronoi_vertex_counter.getInfo().offset, b_voronoi_vertex_counter.getInfo().range, 0);
 
 			{
 				vk::BufferMemoryBarrier to_read[] = { 
 					b_voronoi.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eTransferWrite),
 					b_voronoi_polygon.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eTransferWrite),
+					b_voronoi_vertex_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eTransferWrite),
 				};
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eTransfer, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);
 			}
