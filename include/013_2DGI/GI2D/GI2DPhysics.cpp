@@ -206,7 +206,7 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 		b_update_counter = m_context->m_storage_memory.allocateMemory<uvec4>({ 4,{} });
 		b_rb_update_list = m_context->m_storage_memory.allocateMemory<uint>({ RB_NUM_MAX*2,{} });
 		b_pb_update_list = m_context->m_storage_memory.allocateMemory<uint>({ RB_PARTICLE_BLOCK_NUM_MAX*2,{} });
-		b_voronoi_point = m_context->m_storage_memory.allocateMemory<i16vec2>({ 4096,{} });
+		b_voronoi_cell = m_context->m_storage_memory.allocateMemory<VoronoiCell>({ 4096,{} });
 		b_voronoi_vertex = m_context->m_storage_memory.allocateMemory<VoronoiVertex>({ 4096,{} });
 		b_voronoi = m_context->m_storage_memory.allocateMemory<int16_t>({ gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
 		b_delaunay_vertex_couter = m_context->m_storage_memory.allocateMemory<uvec4>({ 1,{} });
@@ -234,7 +234,7 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 				b_update_counter.getInfo(),
 				b_rb_update_list.getInfo(),
 				b_pb_update_list.getInfo(),
-				b_voronoi_point.getInfo(),
+				b_voronoi_cell.getInfo(),
 				b_voronoi_vertex.getInfo(),
 				b_voronoi.getInfo(),
 				b_delaunay_vertex_couter.getInfo(),
@@ -582,7 +582,7 @@ void GI2DPhysics::executeMakeVoronoi(vk::CommandBuffer cmd)
 			uint step = 32;
 			uint area = step * 0.6f;
 			uint offset = step * 0.2f;
-			std::vector<i16vec2> points;
+			std::vector<VoronoiCell> points;
 			points.reserve(4096);
 			for (uint y = 0; y < reso.y; y+= step)
 			{
@@ -590,7 +590,10 @@ void GI2DPhysics::executeMakeVoronoi(vk::CommandBuffer cmd)
 				{
 					uint xx = x + std::rand() % area + offset;
 					uint yy = (y + std::rand() % area + offset);
-					points.push_back(i16vec2(xx, yy));
+					VoronoiCell cell;
+					cell.point = i16vec2(xx, yy);
+					cell.vertex_num = 0;
+					points.push_back(cell);
 
 					uint moffset = xx + yy * reso.x;
 					cmd.updateBuffer<int16_t>(b_voronoi.getInfo().buffer, b_voronoi.getInfo().offset + sizeof(int16_t)*moffset, points.size()-1);
@@ -598,11 +601,11 @@ void GI2DPhysics::executeMakeVoronoi(vk::CommandBuffer cmd)
 
 			}
 			assert(points.capacity() == 4096);
-			cmd.updateBuffer<i16vec2>(b_voronoi_point.getInfo().buffer, b_voronoi_point.getInfo().offset, points);
+			cmd.updateBuffer<VoronoiCell>(b_voronoi_cell.getInfo().buffer, b_voronoi_cell.getInfo().offset, points);
 
 			
 			vk::BufferMemoryBarrier to_read[] = { 
-				b_voronoi_point.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead), 
+				b_voronoi_cell.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead), 
 				b_voronoi.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead), 
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);

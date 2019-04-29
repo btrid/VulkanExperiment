@@ -27,7 +27,7 @@ layout(push_constant) uniform Input
 
 void main() 
 {
-	vec2 center = vec2(b_voronoi_point[constant.id]) / 1024. * 2. - 1.;
+	vec2 center = vec2(b_voronoi_cell[constant.id].point) / 1024. * 2. - 1.;
 	int num = b_voronoi_vertex[constant.id].num;
 //	for(int i = 0; i < num; i+=1)
 	int i = gl_InvocationID;

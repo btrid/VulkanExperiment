@@ -80,11 +80,12 @@ struct BufferManage
 	uint pb_free_index;
 };
 
-struct VoronoiPoint
+
+struct VoronoiCell
 {
+	int16_t	vertex[10];
 	i16vec2 point;
-//	uint vertex_num;
-//	i16vec2 vertex[16];
+	int vertex_num;
 };
 
 #define VoronoiVertex_MAX (11)
@@ -135,8 +136,8 @@ layout(set=USE_Rigidbody2D, binding=10, std430) restrict buffer rbRBActiveBuffer
 layout(set=USE_Rigidbody2D, binding=11, std430) restrict buffer rbPBActiveBuffer {
 	uint b_pb_update_list[];
 };
-layout(set=USE_Rigidbody2D, binding=12, std430) restrict buffer rbVoronoiPointBuffer {
-	i16vec2 b_voronoi_point[];
+layout(set=USE_Rigidbody2D, binding=12, std430) restrict buffer rbVoronoiCellBuffer {
+	VoronoiCell b_voronoi_cell[];
 };
 layout(set=USE_Rigidbody2D, binding=13, std430) restrict buffer rbVoronoiVertexBuffer {
 	VoronoiVertex b_voronoi_vertex[];
