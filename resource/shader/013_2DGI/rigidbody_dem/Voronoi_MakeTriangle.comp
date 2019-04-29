@@ -66,8 +66,8 @@ void main()
 	// 端は頂点とする
 	for(int i = 0; i < count; i++)
 	{
-		int n = atomicAdd(b_voronoi_vertex[diff[i]].num, 1);
+		int n = atomicAdd(b_voronoi_polygon[diff[i]].num, 1);
 		if(n < VoronoiVertex_MAX)
-			b_voronoi_vertex[diff[i]].vertex[n] = i16vec2(current.x, current.y);
+			b_voronoi_polygon[diff[i]].vertex[n] = i16vec2(current.x, current.y);
 	}
 }

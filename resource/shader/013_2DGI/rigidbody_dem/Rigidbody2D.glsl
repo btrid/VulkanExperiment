@@ -94,7 +94,7 @@ struct VoronoiTriangle
 };
 
 #define VoronoiVertex_MAX (11)
-struct VoronoiVertex
+struct VoronoiPolygon
 {
 	i16vec2 vertex[VoronoiVertex_MAX];
 	int num;
@@ -144,12 +144,16 @@ layout(set=USE_Rigidbody2D, binding=11, std430) restrict buffer rbPBActiveBuffer
 layout(set=USE_Rigidbody2D, binding=12, std430) restrict buffer rbVoronoiCellBuffer {
 	VoronoiCell b_voronoi_cell[];
 };
-layout(set=USE_Rigidbody2D, binding=13, std430) restrict buffer rbVoronoiVertexBuffer {
-	VoronoiVertex b_voronoi_vertex[];
+layout(set=USE_Rigidbody2D, binding=13, std430) restrict buffer rbVoronoiPolygonBuffer {
+	VoronoiPolygon b_voronoi_polygon[];
 };
 layout(set=USE_Rigidbody2D, binding=14, std430) restrict buffer rbVoronoiBuffer {
 	int16_t b_voronoi[];
 };
+//layout(set=USE_Rigidbody2D, binding=13, std430) restrict buffer rbVoronoiCellVertexBuffer {
+//	VoronoiVertex b_voronoi_vertex[];
+//};
+
 layout(set=USE_Rigidbody2D, binding=15, std430) restrict buffer rbDelaunayVertexCounter {
 	uvec4 b_delaunay_vertex_couter;
 };

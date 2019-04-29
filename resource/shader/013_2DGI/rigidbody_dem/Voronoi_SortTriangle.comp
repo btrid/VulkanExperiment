@@ -17,7 +17,7 @@ layout(push_constant) uniform Input
 
 void main() 
 {
-	VoronoiVertex vv = b_voronoi_vertex[gl_GlobalInvocationID.x];
+	VoronoiPolygon vv = b_voronoi_polygon[gl_GlobalInvocationID.x];
 	int num = vv.num;
 	if(num <= 1) { return;}
 	vec2 center =  vec2(b_voronoi_cell[gl_GlobalInvocationID.x].point);
@@ -46,7 +46,7 @@ void main()
 
 	for(int i = 0; i < num; i++)
 	{
-		b_voronoi_vertex[gl_GlobalInvocationID.x].vertex[i] = vv.vertex[int(value[i].x+0.5)];
+		b_voronoi_polygon[gl_GlobalInvocationID.x].vertex[i] = vv.vertex[int(value[i].x+0.5)];
 	}	
 
 
