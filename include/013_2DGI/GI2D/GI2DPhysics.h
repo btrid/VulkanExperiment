@@ -121,9 +121,9 @@ struct GI2DPhysics
 
 	struct VoronoiCell
 	{
-		int16_t	vertex[10];
+//		int16_t	vertex[10];
 		i16vec2 point;
-		int vertex_num;
+	//	int vertex_num;
 	};
 	struct VoronoiVertex
 	{

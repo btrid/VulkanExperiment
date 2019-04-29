@@ -83,9 +83,14 @@ struct BufferManage
 
 struct VoronoiCell
 {
-	int16_t	vertex[10];
 	i16vec2 point;
+};
+
+struct VoronoiTriangle
+{
+	int16_t	vertex[10];
 	int vertex_num;
+	i16vec2 point;
 };
 
 #define VoronoiVertex_MAX (11)

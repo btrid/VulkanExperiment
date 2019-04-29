@@ -592,7 +592,7 @@ void GI2DPhysics::executeMakeVoronoi(vk::CommandBuffer cmd)
 					uint yy = (y + std::rand() % area + offset);
 					VoronoiCell cell;
 					cell.point = i16vec2(xx, yy);
-					cell.vertex_num = 0;
+//					cell.vertex_num = 0;
 					points.push_back(cell);
 
 					uint moffset = xx + yy * reso.x;
