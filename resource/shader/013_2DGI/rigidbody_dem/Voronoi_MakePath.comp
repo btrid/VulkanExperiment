@@ -1,0 +1,82 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+#extension GL_EXT_shader_explicit_arithmetic_types : require
+#extension GL_EXT_shader_atomic_int64 : require
+
+#define USE_Rigidbody2D 0
+#include "Rigidbody2D.glsl"
+
+layout (local_size_x = 256) in;
+
+layout(push_constant) uniform Input
+{
+	int target[2];
+	uvec2 reso;
+} constant;
+
+shared uint s_closed[4096 / 32];
+shared int16_t s_active[256];
+shared int s_active_counter;
+void main() 
+{
+	if(gl_LocalInvocationIndex < s_closed.length())
+	{
+		s_closed[gl_LocalInvocationIndex] = 0;
+	}
+	s_active_counter = 0;
+
+	barrier();
+	memoryBarrierShared();
+
+	if(gl_LocalInvocationIndex < 2)
+	{
+		int prev_cell = constant.target[gl_LocalInvocationIndex];
+		int vertex_num = b_voronoi_polygon[prev_cell].num;
+		for(int v = 0; v<vertex_num; v++)
+		{
+			int vindex = int(b_voronoi_polygon[prev_cell].vertex_index[v]);
+			for(int i = 0; i < 4; i++)
+			{
+				int16_t access_cell = b_voronoi_vertex[vindex].cell[i];
+				if(access_cell == -1s) { break; }
+				if((atomicXor(s_closed[access_cell/32], 1<<(access_cell%32)) & 1<<(access_cell%32)) == 0){ continue; }
+
+				s_active[atomicAdd(s_active_counter, 1)] = access_cell;
+				b_voronoi_path[int(access_cell)] = int16_t(prev_cell);
+			}
+		}
+		b_voronoi_path[prev_cell] = -1s;
+	}
+
+	for(int i = 0; i < 1000; i++)
+	{
+		barrier();
+		memoryBarrierShared();
+		if(s_active_counter==0){ break; }
+		if(gl_LocalInvocationIndex >= s_active_counter){ continue;}
+		barrier();
+		s_active_counter = 0;
+		int close_cell = int(s_active[gl_LocalInvocationIndex]);
+
+		barrier();
+		memoryBarrierShared();
+
+		int vertex_num = b_voronoi_polygon[close_cell].num;
+		for(int v = 0; v<vertex_num; v++)
+		{
+			int vindex = int(b_voronoi_polygon[close_cell].vertex_index[v]);
+			for(int i = 0; i < 4; i++)
+			{
+				int16_t access_cell = b_voronoi_vertex[vindex].cell[i];
+				if(access_cell == -1s) { break; }
+				if((atomicXor(s_closed[access_cell/32], 1<<(access_cell%32)) & 1<<(access_cell%32)) == 0){ continue; }
+
+				s_active[atomicAdd(s_active_counter, 1)] = access_cell;
+				b_voronoi_path[int(access_cell)] = int16_t(close_cell);
+			}
+		}
+
+	}
+
+
+}

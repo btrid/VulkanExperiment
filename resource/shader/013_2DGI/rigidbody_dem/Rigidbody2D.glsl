@@ -153,6 +153,9 @@ layout(set=USE_Rigidbody2D, binding=16, std430) restrict buffer rbVoronoiVertexM
 layout(set=USE_Rigidbody2D, binding=17, std430) restrict buffer rbVoronoiVertexBuffer {
 	VoronoiVertex b_voronoi_vertex[];
 };
+layout(set=USE_Rigidbody2D, binding=18, std430) restrict buffer rbVoronoiPathBuffer {
+	int16_t b_voronoi_path[];
+};
 
 //layout(set=USE_Rigidbody2D, binding=15, std430) restrict buffer rbDelaunayVertexCounter {
 //	uvec4 b_delaunay_vertex_couter;

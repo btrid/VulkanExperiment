@@ -39,11 +39,6 @@ void main()
 	if(any(greaterThanEqual(gl_GlobalInvocationID.xy, constant.reso))){ return; }
 	const i16vec2 current = i16vec2(gl_GlobalInvocationID.xy);
 	int16_t id = b_voronoi[current.x + current.y*constant.reso.x];
-//	VoronoiData data = b_voronoi_point[int(id)];
-//	if(all(equal(current, data.point))){ return; }
-
-
-//	float d = (id != -1) ? distance(vec2(current), vec2(data.point)) : 99999999.;
 	float d = (id >= 0) ? distance(vec2(current), vec2(b_voronoi_cell[int(id)].point)) : 99999999.;
 	const float old_d = d;
 	// 重力のY方向優先

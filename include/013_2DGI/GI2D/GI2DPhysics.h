@@ -22,6 +22,8 @@ struct GI2DPhysics
 		Shader_Voronoi_Make,
 		Shader_Voronoi_MakeTriangle,
 		Shader_Voronoi_SortTriangleVertex,
+
+		Shader_Voronoi_MakePath,
 		Shader_Num,
 	};
 
@@ -47,6 +49,7 @@ struct GI2DPhysics
 		Pipeline_Voronoi_Make,
 		Pipeline_Voronoi_MakeTriangle,
 		Pipeline_Voronoi_SortTriangleVertex,
+		Pipeline_Voronoi_MakePath,
 		Pipeline_Num,
 	};
 
@@ -156,6 +159,7 @@ struct GI2DPhysics
 	void execute(vk::CommandBuffer cmd);
 	void executeMakeFluidWall(vk::CommandBuffer cmd);
 	void executeMakeVoronoi(vk::CommandBuffer cmd);
+	void executeMakeVoronoiPath(vk::CommandBuffer cmd);
 
 	std::shared_ptr<btr::Context> m_context;
 	std::shared_ptr<GI2DContext> m_gi2d_context;
@@ -186,6 +190,7 @@ struct GI2DPhysics
 	btr::BufferMemoryEx<uvec4> b_voronoi_vertex_counter;
 	btr::BufferMemoryEx<uint> b_voronoi_vertex_map;
 	btr::BufferMemoryEx<VoronoiVertex> b_voronoi_vertex;
+	btr::BufferMemoryEx<int16_t> b_voronoi_path;
 	//	btr::BufferMemoryEx<uvec4> b_delaunay_vertex_couter;
 //	btr::BufferMemoryEx<i16vec2> b_delaunay_vertex;
 
