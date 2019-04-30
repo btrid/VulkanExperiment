@@ -351,7 +351,7 @@ int rigidbody()
 				gi2d_make_hierarchy.executeMakeFragmentMapAndSDF(cmd, gi2d_sdf_context);
 				gi2d_make_hierarchy.executeHierarchy(cmd);
 				gi2d_make_hierarchy.executeMakeSDF(cmd, gi2d_sdf_context);
-//				gi2d_make_hierarchy.executeRenderSDF(cmd, gi2d_sdf_context, app.m_window->getFrontBuffer());
+				gi2d_make_hierarchy.executeRenderSDF(cmd, gi2d_sdf_context, app.m_window->getFrontBuffer());
 
 //				gi2d_rigidbody.execute(cmd, physics_world, gi2d_sdf_context);
 //				gi2d_rigidbody.executeToFragment(cmd, physics_world);

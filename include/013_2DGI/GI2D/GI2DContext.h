@@ -268,11 +268,6 @@ struct GI2DContext
 struct GI2DSDF
 {
 	// https://postd.cc/voronoi-diagrams/
-	struct D2JFACell
-	{
-		i16vec2 nearest_inner;
-	};
-
 	enum
 	{
 		SDF_USE_NUM = 3,
@@ -283,7 +278,7 @@ struct GI2DSDF
 		const auto& context = gi2d_context->m_context;
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 		{
- 			b_jfa = context->m_storage_memory.allocateMemory<D2JFACell>({ gi2d_context->FragmentBufferSize * SDF_USE_NUM,{} });
+			b_jfa = context->m_storage_memory.allocateMemory<i16vec2>({ gi2d_context->FragmentBufferSize * SDF_USE_NUM,{} });
  			b_sdf = context->m_storage_memory.allocateMemory<vec2>({ gi2d_context->FragmentBufferSize,{} });
 		}
 
@@ -320,7 +315,7 @@ struct GI2DSDF
 	}
 	std::shared_ptr<GI2DContext> m_gi2d_context;
 
- 	btr::BufferMemoryEx<D2JFACell> b_jfa;
+ 	btr::BufferMemoryEx<i16vec2> b_jfa;
  	btr::BufferMemoryEx<vec2> b_sdf;
 
 	vk::UniqueDescriptorSet m_descriptor_set;
