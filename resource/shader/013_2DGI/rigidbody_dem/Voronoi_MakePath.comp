@@ -6,7 +6,7 @@
 #define USE_Rigidbody2D 0
 #include "Rigidbody2D.glsl"
 
-layout (local_size_x = 256) in;
+layout (local_size_x = 1024) in;
 
 layout(push_constant) uniform Input
 {
@@ -15,37 +15,47 @@ layout(push_constant) uniform Input
 } constant;
 
 shared uint s_closed[4096 / 32];
-shared int16_t s_active[256];
+shared int16_t s_active[1024];
 shared int s_active_counter;
+
+void path(in int current)
+{
+	int vertex_num = b_voronoi_polygon[current].num;
+	for(int v = 0; v<vertex_num; v++)
+	{
+		int vindex = int(b_voronoi_polygon[current].vertex_index[v]);
+		for(int i = 0; i < 4; i++)
+		{
+			int16_t access_cell = b_voronoi_vertex[vindex].cell[i];
+			if(access_cell == -1s) { break; }
+			if((atomicXor(s_closed[access_cell/32], (1<<(access_cell%32))) & (1<<(access_cell%32))) == 0){ continue; }
+
+			s_active[atomicAdd(s_active_counter, 1)] = access_cell;
+			b_voronoi_path[int(access_cell)] = int16_t(current);
+		}
+	}
+}
 void main() 
 {
 	if(gl_LocalInvocationIndex < s_closed.length())
 	{
 		s_closed[gl_LocalInvocationIndex] = 0;
 	}
-	s_active_counter = 0;
+	if(gl_LocalInvocationIndex == 0)
+	{
+		s_active_counter = 0;
+	}
 
 	barrier();
 	memoryBarrierShared();
 
 	if(gl_LocalInvocationIndex < 2)
 	{
-		int prev_cell = constant.target[gl_LocalInvocationIndex];
-		int vertex_num = b_voronoi_polygon[prev_cell].num;
-		for(int v = 0; v<vertex_num; v++)
-		{
-			int vindex = int(b_voronoi_polygon[prev_cell].vertex_index[v]);
-			for(int i = 0; i < 4; i++)
-			{
-				int16_t access_cell = b_voronoi_vertex[vindex].cell[i];
-				if(access_cell == -1s) { break; }
-				if((atomicXor(s_closed[access_cell/32], 1<<(access_cell%32)) & 1<<(access_cell%32)) == 0){ continue; }
+		int begin = constant.target[gl_LocalInvocationIndex];
+		path(begin);
 
-				s_active[atomicAdd(s_active_counter, 1)] = access_cell;
-				b_voronoi_path[int(access_cell)] = int16_t(prev_cell);
-			}
-		}
-		b_voronoi_path[prev_cell] = -1s;
+		s_closed[begin/32] |= (1<<(begin%32));
+		b_voronoi_path[begin] = -1s;
 	}
 
 	for(int i = 0; i < 1000; i++)
@@ -53,29 +63,23 @@ void main()
 		barrier();
 		memoryBarrierShared();
 		if(s_active_counter==0){ break; }
-		if(gl_LocalInvocationIndex >= s_active_counter){ continue;}
+		bool is_active = gl_LocalInvocationIndex < s_active_counter;
+
 		barrier();
-		s_active_counter = 0;
+
+		if(gl_LocalInvocationIndex == 0)
+		{
+			s_active_counter = 0;
+		}
 		int close_cell = int(s_active[gl_LocalInvocationIndex]);
 
 		barrier();
 		memoryBarrierShared();
 
-		int vertex_num = b_voronoi_polygon[close_cell].num;
-		for(int v = 0; v<vertex_num; v++)
+		if(is_active)
 		{
-			int vindex = int(b_voronoi_polygon[close_cell].vertex_index[v]);
-			for(int i = 0; i < 4; i++)
-			{
-				int16_t access_cell = b_voronoi_vertex[vindex].cell[i];
-				if(access_cell == -1s) { break; }
-				if((atomicXor(s_closed[access_cell/32], 1<<(access_cell%32)) & 1<<(access_cell%32)) == 0){ continue; }
-
-				s_active[atomicAdd(s_active_counter, 1)] = access_cell;
-				b_voronoi_path[int(access_cell)] = int16_t(close_cell);
-			}
+			path(close_cell);
 		}
-
 	}
 
 

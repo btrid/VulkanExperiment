@@ -291,7 +291,7 @@ int rigidbody()
 	std::shared_ptr<GI2DFluid> gi2d_Fluid = std::make_shared<GI2DFluid>(context, gi2d_context);
 
 	physics_world->executeMakeVoronoi(cmd);
-
+	physics_world->executeMakeVoronoiPath(cmd);
 	app.setup();
 
 	while (true)
@@ -356,15 +356,16 @@ int rigidbody()
 //				gi2d_rigidbody.execute(cmd, physics_world, gi2d_sdf_context);
 //				gi2d_rigidbody.executeToFragment(cmd, physics_world);
 
-				physics_world->executeMakeVoronoi(cmd);
+//				physics_world->executeMakeVoronoi(cmd);
 //				if (app.m_window->getInput().m_keyboard.isHold('A'))
 				{
-					gi2d_rigidbody.executeDrawVoronoi(cmd, physics_world);
-					gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
+//					gi2d_rigidbody.executeDrawVoronoi(cmd, physics_world);
+//					gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
 				}
 //				else 
 				{
 //					physics_debug->executeDrawVoronoiTriangle(cmd);
+					physics_debug->executeDrawVoronoiPath(cmd);
 				}
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;

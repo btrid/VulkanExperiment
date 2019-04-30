@@ -322,7 +322,7 @@ struct GI2DPhysicsDebug
 			rasterization_info.setPolygonMode(vk::PolygonMode::eFill);
 			rasterization_info.setCullMode(vk::CullModeFlagBits::eBack);
 			rasterization_info.setFrontFace(vk::FrontFace::eCounterClockwise);
-			rasterization_info.setLineWidth(1.f);
+			rasterization_info.setLineWidth(2.f);
 			// ƒTƒ“ƒvƒŠƒ“ƒO
 			vk::PipelineMultisampleStateCreateInfo sample_info;
 			sample_info.setRasterizationSamples(vk::SampleCountFlagBits::e1);

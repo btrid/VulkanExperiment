@@ -688,11 +688,12 @@ void GI2DPhysics::executeMakeVoronoiPath(vk::CommandBuffer cmd)
 {
 	// make path
 	{
-//		vk::BufferMemoryBarrier to_read[] = {
-//			b_voronoi_polygon.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-//		};
-//		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
-//			0, nullptr, array_length(to_read), to_read, 0, nullptr);
+		vk::BufferMemoryBarrier to_read[] = {
+			b_voronoi_polygon.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			b_voronoi_vertex.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+		};
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+			0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Voronoi].get(), 0, getDescriptorSet(GI2DPhysics::DescLayout_Data), {});
 		cmd.pushConstants<uvec4>(m_pipeline_layout[PipelineLayout_Voronoi].get(), vk::ShaderStageFlagBits::eCompute, 0, uvec4{ 123, 345, uvec2(0) });

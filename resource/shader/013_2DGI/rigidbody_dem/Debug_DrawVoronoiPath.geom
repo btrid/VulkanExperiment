@@ -20,10 +20,10 @@ layout(location=0)out gl_PerVertex
 	vec4 gl_Position;
 };
 
-layout(location=1) out A
+layout(location=1) in A
 {
 	flat uint vertex_index;
-};
+}gsin[];
 
 layout(push_constant) uniform Input
 {
@@ -34,8 +34,8 @@ void main()
 {
 
 	{
-		int16_t a = int16_t(vertex_index);
-		int16_t b = b_voronoi_path[vertex_index];
+		int16_t a = int16_t(gsin[0].vertex_index);
+		int16_t b = b_voronoi_path[gsin[0].vertex_index];
 		b = b == -1s ? a : b;
 
 		vec2 v1 = vec2(b_voronoi_cell[int(a)].point) / 1024.;
