@@ -18,6 +18,8 @@ layout(push_constant) uniform Input
 	uint offset;
 } constant;
 
+// state.x = invalid cell
+// state.y = inner or outer
 
 void nearest(inout i16vec2 cell, inout float current_d, in bvec2 state, in uvec2 reso, in vec2 current, in uvec2 target)
 {
@@ -26,16 +28,13 @@ void nearest(inout i16vec2 cell, inout float current_d, in bvec2 state, in uvec2
 	i16vec2 target_cell = b_jfa[target.x + target.y*reso.x/* + constant.offset*/];
 	bvec2 target_state = notEqual(target_cell & i16vec2(0x8000), i16vec2(0));
 
-	if(target_state.y != state.y)
+	if(target_state.y == state.y)
 	{
-	}
-	else if(!target_state.x)
-	{
+		if(target_state.x)
+		{
+			return;
+		}
 		target = target_cell & i16vec2(0x7fff);
-	}
-	else
-	{
-		return;
 	}
 
 	{
@@ -74,6 +73,5 @@ void main()
 	if(d != old_d)
 	{
 		b_jfa[current.x + current.y*reso.x/* + constant.offset*/] = cell | i16vec2(0, int16_t(state.y)<<15);
-
 	}
 }
