@@ -249,7 +249,6 @@ struct GI2DMakeHierarchy
 			auto num = app::calcDipatchGroups(uvec3(sdf_context->m_gi2d_context->RenderWidth, sdf_context->m_gi2d_context->RenderHeight, 1), uvec3(8, 8, 1));
 
 			for (int distance = sdf_context->m_gi2d_context->RenderWidth >> 1; distance != 0; distance >>= 1)
-//			for (int distance = 1; distance < m_gi2d_context->RenderWidth; distance <<= 1)
 			{
 				vk::BufferMemoryBarrier to_read[] = {
 					sdf_context->b_jfa.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
