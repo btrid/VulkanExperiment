@@ -19,18 +19,18 @@ layout(push_constant) uniform Input
 } constant;
 
 
-void nearest(inout D2JFACell new_cell, inout float current_d, in uvec2 reso, in vec2 current, in uvec2 target)
+void nearest(inout i16vec2 new_cell, inout float current_d, in uvec2 reso, in vec2 current, in uvec2 target)
 {
 	if(any(greaterThanEqual(target, reso.xy))){ return; }
 
-	D2JFACell target_cell = b_jfa[target.x + target.y*reso.x + constant.offset];
-//	if(target_cell.nearest_index.x >= 0)
+	i16vec2 target_cell = b_jfa[target.x + target.y*reso.x + constant.offset];
+//	if(target_cell_index.x >= 0)
 	{
-		float d = distance(vec2(target_cell.nearest), current);
+		float d = distance(vec2(target_cell), current);
 		if(d < current_d)
 		{
 			current_d = d;
-			new_cell.nearest = target_cell.nearest;
+			new_cell = target_cell;
 		}
 	}
 
@@ -40,13 +40,13 @@ void main()
 	const uvec2 reso = uvec2(u_gi2d_info.m_resolution.xy);
 	const uvec2 current = uvec2(gl_GlobalInvocationID.xy);
 	const ivec3 cd = ivec3(constant.distance) * ivec3(-1, 0, 1);
-	const D2JFACell current_cell = b_jfa[current.x + current.y*reso.x + constant.offset];
+	const i16vec2 current_cell = b_jfa[current.x + current.y*reso.x + constant.offset];
 
-	if(all(equal(current, current_cell.nearest))){ return; }
+	if(all(equal(current, current_cell))){ return; }
 
-	float d = current_cell.nearest.x >= 0 ? distance(vec2(current), vec2(current_cell.nearest)) : 99999999.;
+	float d = current_cell.x >= 0 ? distance(vec2(current), vec2(current_cell)) : 99999999.;
 
-	D2JFACell new_cell = current_cell;
+	i16vec2 new_cell = current_cell;
 	const float old_d = d;
 	nearest(new_cell, d, reso, current, current + cd.xx);
 	nearest(new_cell, d, reso, current, current + cd.xy);
