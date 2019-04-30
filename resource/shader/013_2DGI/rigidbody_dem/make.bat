@@ -34,5 +34,8 @@ SET output=../../binary
 %exe% %include% %option% -o %output%/Debug_DrawVoronoiTriangle.geom.spv Debug_DrawVoronoiTriangle.geom
 %exe% %include% %option% -o %output%/Debug_DrawVoronoiTriangle.frag.spv Debug_DrawVoronoiTriangle.frag
 
+%exe% %include% %option% -o %output%/Debug_DrawVoronoiPath.geom.spv Debug_DrawVoronoiPath.geom
+
+
 
 

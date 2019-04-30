@@ -221,6 +221,7 @@ struct GI2DPhysicsDebug
 				"Debug_DrawVoronoiTriangle.geom.spv",
 				"Debug_DrawVoronoiTriangle.frag.spv",
 
+				"Debug_DrawVoronoiPath.geom.spv",
 			};
 			static_assert(array_length(name) == Shader_Num, "not equal shader num");
 
@@ -350,17 +351,36 @@ struct GI2DPhysicsDebug
 			// vertexinput
 			vk::PipelineVertexInputStateCreateInfo vertex_input_info;
 
-			vk::PipelineShaderStageCreateInfo shader_info[] =
+			vk::PipelineShaderStageCreateInfo drawtriangle_shader[] =
 			{
 				vk::PipelineShaderStageCreateInfo({}, vk::ShaderStageFlagBits::eVertex, m_shader[Shader_DrawVoronoiTriangle_VS].get(), "main"),
 				vk::PipelineShaderStageCreateInfo({}, vk::ShaderStageFlagBits::eGeometry, m_shader[Shader_DrawVoronoiTriangle_GS].get(), "main"),
 				vk::PipelineShaderStageCreateInfo({}, vk::ShaderStageFlagBits::eFragment, m_shader[Shader_DrawVoronoiTriangle_FS].get(), "main"),
 			};
+			vk::PipelineShaderStageCreateInfo drawpath_shader[] =
+			{
+				vk::PipelineShaderStageCreateInfo({}, vk::ShaderStageFlagBits::eVertex, m_shader[Shader_DrawVoronoiTriangle_VS].get(), "main"),
+				vk::PipelineShaderStageCreateInfo({}, vk::ShaderStageFlagBits::eGeometry, m_shader[Shader_DrawVoronoiPath_GS].get(), "main"),
+				vk::PipelineShaderStageCreateInfo({}, vk::ShaderStageFlagBits::eFragment, m_shader[Shader_DrawVoronoiTriangle_FS].get(), "main"),
+			};
 			std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =
 			{
 				vk::GraphicsPipelineCreateInfo()
-				.setStageCount(std::size(shader_info))
-				.setPStages(shader_info)
+				.setStageCount(std::size(drawtriangle_shader))
+				.setPStages(drawtriangle_shader)
+				.setPVertexInputState(&vertex_input_info)
+				.setPInputAssemblyState(&assembly_info)
+				.setPViewportState(&viewport_info)
+				.setPRasterizationState(&rasterization_info)
+				.setPMultisampleState(&sample_info)
+				.setLayout(m_pipeline_layout[PipelineLayout_DrawVoronoiTriangle].get())
+				.setRenderPass(m_render_pass.get())
+				.setPDepthStencilState(&depth_stencil_info)
+				.setPColorBlendState(&blend_info),
+
+				vk::GraphicsPipelineCreateInfo()
+				.setStageCount(std::size(drawpath_shader))
+				.setPStages(drawpath_shader)
 				.setPVertexInputState(&vertex_input_info)
 				.setPInputAssemblyState(&assembly_info)
 				.setPViewportState(&viewport_info)
@@ -371,7 +391,9 @@ struct GI2DPhysicsDebug
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			m_pipeline[Pipeline_DrawVoronoiTriangle] = std::move(context->m_device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info)[0]);
+			auto pipelines = context->m_device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info);
+			m_pipeline[Pipeline_DrawVoronoiTriangle] = std::move(pipelines[0]);
+			m_pipeline[Pipeline_DrawVoronoiPath] = std::move(pipelines[1]);
 		}
 	}
 
@@ -380,8 +402,8 @@ struct GI2DPhysicsDebug
 		static int s_id;
 		static int s_id_sub;
 
-//		if (app::g_app_instance->m_window->getInput().m_keyboard.isHold('B'))
-			s_id = (s_id_sub++ / 3) % 1024;
+		//		if (app::g_app_instance->m_window->getInput().m_keyboard.isHold('B'))
+		s_id = (s_id_sub++ / 3) % 1024;
 		{
 			vk::RenderPassBeginInfo render_begin_info;
 			render_begin_info.setRenderPass(m_render_pass.get());
@@ -401,11 +423,34 @@ struct GI2DPhysicsDebug
 		}
 	}
 
+	void executeDrawVoronoiPath(vk::CommandBuffer cmd)
+	{
+		{
+			vk::RenderPassBeginInfo render_begin_info;
+			render_begin_info.setRenderPass(m_render_pass.get());
+			render_begin_info.setFramebuffer(m_framebuffer.get());
+			render_begin_info.setRenderArea(vk::Rect2D({}, m_render_target->m_resolution));
+			cmd.beginRenderPass(render_begin_info, vk::SubpassContents::eInline);
+
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayout_DrawVoronoiTriangle].get(), 0, m_context->getDescriptorSet(GI2DPhysics::DescLayout_Data), {});
+//			cmd.pushConstants<uint>(m_pipeline_layout[PipelineLayout_DrawVoronoiTriangle].get(), vk::ShaderStageFlagBits::eGeometry, 0, 0u);
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_DrawVoronoiPath].get());
+
+			cmd.draw(1024, 1, 0, 0);
+
+			cmd.endRenderPass();
+
+		}
+	}
+
 	enum Shader
 	{
 		Shader_DrawVoronoiTriangle_VS,
 		Shader_DrawVoronoiTriangle_GS,
 		Shader_DrawVoronoiTriangle_FS,
+
+		Shader_DrawVoronoiPath_GS,
 		Shader_Num,
 	};
 	enum PipelineLayout
@@ -416,6 +461,7 @@ struct GI2DPhysicsDebug
 	enum Pipeline
 	{
 		Pipeline_DrawVoronoiTriangle,
+		Pipeline_DrawVoronoiPath,
 		Pipeline_Num,
 	};
 	std::array < vk::UniqueShaderModule, Shader_Num> m_shader;

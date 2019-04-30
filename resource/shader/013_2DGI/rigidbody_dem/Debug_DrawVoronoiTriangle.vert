@@ -12,7 +12,14 @@ layout(location=0) out gl_PerVertex
 	vec4 gl_Position;
 };
 
+layout(location=1) out A
+{
+	flat uint vertex_index;
+};
+
+
 void main()
 {
 	gl_Position = vec4(1.0);
+	vertex_index = gl_VertexIndex;
 }
