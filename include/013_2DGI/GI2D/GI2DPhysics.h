@@ -422,7 +422,6 @@ struct GI2DPhysicsDebug
 
 		}
 	}
-
 	void executeDrawVoronoiPath(vk::CommandBuffer cmd)
 	{
 		{
