@@ -14,7 +14,7 @@ layout(push_constant) uniform Input
 	uvec2 reso;
 } constant;
 
-shared uint s_closed[4096 / 32];
+shared uint s_closed[4096];
 shared int16_t s_active[1024];
 shared int s_active_counter;
 
@@ -28,7 +28,10 @@ void path(in int current)
 		{
 			int16_t access_cell = b_voronoi_vertex[vindex].cell[i];
 			if(access_cell == -1s) { break; }
-			if((atomicXor(s_closed[access_cell/32], (1<<(access_cell%32))) & (1<<(access_cell%32))) == 0){ continue; }
+			if(atomicCompSwap(s_closed[int(access_cell)], 0, 1) == 1)
+			{
+				continue;
+			}
 
 			s_active[atomicAdd(s_active_counter, 1)] = access_cell;
 			b_voronoi_path[int(access_cell)] = int16_t(current);
@@ -49,12 +52,12 @@ void main()
 	barrier();
 	memoryBarrierShared();
 
-	if(gl_LocalInvocationIndex < 2)
+	if(gl_LocalInvocationIndex < 1)
 	{
 		int begin = constant.target[gl_LocalInvocationIndex];
 		path(begin);
 
-		s_closed[begin/32] |= (1<<(begin%32));
+		s_closed[begin] = 1;
 		b_voronoi_path[begin] = -1s;
 	}
 
