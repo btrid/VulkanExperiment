@@ -365,8 +365,8 @@ int rigidbody()
 //				else 
 				{
 //					physics_debug->executeDrawVoronoiTriangle(cmd);
-					physics_world->executeMakeVoronoiPath(cmd);
-					physics_debug->executeDrawVoronoiPath(cmd);
+//					physics_world->executeMakeVoronoiPath(cmd);
+//					physics_debug->executeDrawVoronoiPath(cmd);
 				}
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;

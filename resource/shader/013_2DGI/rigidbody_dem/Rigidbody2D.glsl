@@ -147,22 +147,12 @@ layout(set=USE_Rigidbody2D, binding=14, std430) restrict buffer rbVoronoiBuffer 
 layout(set=USE_Rigidbody2D, binding=15, std430) restrict buffer rbVoronoiVertexCounter {
 	uvec4 b_voronoi_vertex_counter;
 };
-layout(set=USE_Rigidbody2D, binding=16, std430) restrict buffer rbVoronoiVertexMapBuffer {
-	uint b_voronoi_vertex_map[];
-};
-layout(set=USE_Rigidbody2D, binding=17, std430) restrict buffer rbVoronoiVertexBuffer {
+layout(set=USE_Rigidbody2D, binding=16, std430) restrict buffer rbVoronoiVertexBuffer {
 	VoronoiVertex b_voronoi_vertex[];
 };
-layout(set=USE_Rigidbody2D, binding=18, std430) restrict buffer rbVoronoiPathBuffer {
+layout(set=USE_Rigidbody2D, binding=17, std430) restrict buffer rbVoronoiPathBuffer {
 	int16_t b_voronoi_path[];
 };
-
-//layout(set=USE_Rigidbody2D, binding=15, std430) restrict buffer rbDelaunayVertexCounter {
-//	uvec4 b_delaunay_vertex_couter;
-//};
-//layout(set=USE_Rigidbody2D, binding=16, std430) restrict buffer rbDelaunayVertexBuffer {
-//	i16vec2 b_delaunay_vertex[];
-//};
 
 #endif
 #if defined(USE_MakeRigidbody)

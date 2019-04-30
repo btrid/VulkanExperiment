@@ -31,7 +31,6 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 			vk::DescriptorSetLayoutBinding(15, vk::DescriptorType::eStorageBuffer, 1, stage),
 			vk::DescriptorSetLayoutBinding(16, vk::DescriptorType::eStorageBuffer, 1, stage),
 			vk::DescriptorSetLayoutBinding(17, vk::DescriptorType::eStorageBuffer, 1, stage),
-			vk::DescriptorSetLayoutBinding(18, vk::DescriptorType::eStorageBuffer, 1, stage),
 		};
 		vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 		desc_layout_info.setBindingCount(array_length(binding));
@@ -220,11 +219,8 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 		b_voronoi_polygon = m_context->m_storage_memory.allocateMemory<VoronoiPolygon>({ 4096,{} });
 		b_voronoi = m_context->m_storage_memory.allocateMemory<int16_t>({ gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
 		b_voronoi_vertex_counter = m_context->m_storage_memory.allocateMemory<uvec4>({ 1,{} });
-		b_voronoi_vertex_map = m_context->m_storage_memory.allocateMemory<uint32_t>({ 4096 * 6,{} });
 		b_voronoi_vertex = m_context->m_storage_memory.allocateMemory<VoronoiVertex>({ 4096 * 6,{} });
 		b_voronoi_path = m_context->m_storage_memory.allocateMemory<int16_t>({ 4096,{} });
-		//		b_delaunay_vertex_couter = m_context->m_storage_memory.allocateMemory<uvec4>({ 1,{} });
-//		b_delaunay_vertex = m_context->m_storage_memory.allocateMemory<i16vec2>({ 1000*3,{} });
 		{
 			vk::DescriptorSetLayout layouts[] = {
 				m_desc_layout[DescLayout_Data].get(),
@@ -252,11 +248,8 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 				b_voronoi_polygon.getInfo(),
 				b_voronoi.getInfo(),
 				b_voronoi_vertex_counter.getInfo(),
-				b_voronoi_vertex_map.getInfo(),
 				b_voronoi_vertex.getInfo(),
 				b_voronoi_path.getInfo(),
-//				b_delaunay_vertex_couter.getInfo(),
-//				b_delaunay_vertex.getInfo(),
 			};
 
 			vk::WriteDescriptorSet write[] =

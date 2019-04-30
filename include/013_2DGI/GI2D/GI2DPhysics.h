@@ -188,11 +188,8 @@ struct GI2DPhysics
 	btr::BufferMemoryEx<VoronoiPolygon> b_voronoi_polygon;
 	btr::BufferMemoryEx<int16_t> b_voronoi;
 	btr::BufferMemoryEx<uvec4> b_voronoi_vertex_counter;
-	btr::BufferMemoryEx<uint> b_voronoi_vertex_map;
 	btr::BufferMemoryEx<VoronoiVertex> b_voronoi_vertex;
 	btr::BufferMemoryEx<int16_t> b_voronoi_path;
-	//	btr::BufferMemoryEx<uvec4> b_delaunay_vertex_couter;
-//	btr::BufferMemoryEx<i16vec2> b_delaunay_vertex;
 
 	btr::BufferMemoryEx<Rigidbody> b_make_rigidbody;
 	btr::BufferMemoryEx<rbParticle> b_make_particle;
