@@ -37,9 +37,9 @@ void path(in int current)
 }
 void main() 
 {
-	if(gl_LocalInvocationIndex < s_closed.length())
+	for(uint i = gl_LocalInvocationIndex; i < s_closed.length(); i+=gl_NumWorkGroups.x)
 	{
-		s_closed[gl_LocalInvocationIndex] = 0;
+		s_closed[i] = 0;
 	}
 	if(gl_LocalInvocationIndex == 0)
 	{
