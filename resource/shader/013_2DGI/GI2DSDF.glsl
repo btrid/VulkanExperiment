@@ -7,7 +7,11 @@
 
 #if defined(USE_GI2D_SDF)
 layout(set=USE_GI2D_SDF, binding=0, std430) restrict buffer JFABuffer {
+#if defined(USE_GI2D_SDFEX) 
+	ivec4 b_jfa_ex[];
+#else
 	i16vec2 b_jfa[];
+#endif
 };
 layout(set=USE_GI2D_SDF, binding=1, std430) restrict buffer SDFBuffer {
 	vec2 b_sdf[];

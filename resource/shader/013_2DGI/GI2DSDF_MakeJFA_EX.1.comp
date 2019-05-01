@@ -1,0 +1,89 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Common.glsl"
+#include "btrlib/Math.glsl"
+
+#define USE_GI2D 0
+#include "GI2D.glsl"
+#define USE_GI2D_SDF 1
+#define USE_GI2D_SDFEX
+#include "GI2DSDF.glsl"
+
+layout (local_size_x = 64, local_size_y = 1) in;
+
+layout(push_constant) uniform Input
+{
+	uint distance;
+	uint offset;
+} constant;
+
+// state.x = invalid cell
+// state.y = inner or outer
+
+void nearest(inout ivec4 cell, inout vec4 current_d, in bvec4 state_inner, in uvec2 reso, in uvec2 target_index, in ivec2 offset)
+{
+	if(any(greaterThanEqual(target_index, reso.xy))){ return; }
+
+	ivec4 target_cell = b_jfa_ex[target_index.x + target_index.y*reso.x];
+	bvec4 target_state_invalid = notEqual(target_cell & ivec4(0x80000000), ivec4(0));
+	bvec4 target_state_inner = notEqual(target_cell & ivec4(0x00008000), ivec4(0));
+	target_cell = target_cell & ivec4(0x7fff7fff);
+
+	ivec4 cell_x = cell&0xffff;
+	ivec4 cell_y = cell>>16;
+	ivec4 target_cell_x = target_cell & 0xffff;
+	ivec4 target_cell_y = target_cell >>16;
+
+
+	ivec4 same = ivec4(equal(target_state_inner, state_inner));
+	vec4 valid = vec4(not(target_state_invalid));
+
+//	ivec4 state = ivec4(0);
+//	state = (1-same)*(1-valid) * 1;
+//	state = (1-same)*(valid);
+
+	vec4 d = length(vec2(offset)).xxxx;
+
+	d = (1-same)*(1-valid)*d + same*valid*sqrt(vec4((cell_x-target_cell_x) * (cell_y-target_cell_y)));
+	d = (1-same)*(valid)*d + same*(1-valid)*99999999.;
+
+	{
+		ivec4 is_update = ivec4(lessThan(d, current_d));
+		ivec4 target = ivec4((target_index.yyyy<<16) | target_index.xxxx*4 + ivec4(0,1,2,3));
+		cell = is_update*target + (1-is_update)*cell;
+		current_d = min(current_d,d);
+	}
+}
+void main() 
+{
+	const uvec2 reso = uvec2(u_gi2d_info.m_resolution.xy)/uvec2(4,1);
+	const ivec2 current = ivec2(gl_GlobalInvocationID.xy);
+	ivec4 cell = b_jfa_ex[current.x + current.y*reso.x];
+	bvec4 state_invalid = notEqual(cell & ivec4(0x80000000), ivec4(0));
+	bvec4 state_inner = notEqual(cell & ivec4(0x00008000), ivec4(0));
+	cell = cell & ivec4(0x7fff7fff);
+	ivec4 cell_x = cell&0xffff;
+	ivec4 cell_y = cell>>16;
+	vec4 dist = sqrt(vec4((cell_x-(current.xxxx*4+ivec4(0,1,2,3))) * (cell_y-current.yyyy)));
+
+	vec4 d = vec4(not(state_invalid)) * dist + vec4(state_invalid) * 99999999.;
+	const vec4 old_d = d;
+
+	const ivec3 cd = ivec3(constant.distance) * ivec3(-1, 0, 1);
+	nearest(cell, d, state_inner, reso, current + cd.xx/uvec2(4,1), cd.xx);
+	nearest(cell, d, state_inner, reso, current + cd.yx/uvec2(4,1), cd.yx);
+	nearest(cell, d, state_inner, reso, current + cd.zx/uvec2(4,1), cd.zx);
+	nearest(cell, d, state_inner, reso, current + cd.xz/uvec2(4,1), cd.xz);
+	nearest(cell, d, state_inner, reso, current + cd.yz/uvec2(4,1), cd.yz);
+	nearest(cell, d, state_inner, reso, current + cd.zz/uvec2(4,1), cd.zz);
+	nearest(cell, d, state_inner, reso, current + cd.xy/uvec2(4,1), cd.xy);
+	nearest(cell, d, state_inner, reso, current + cd.zy/uvec2(4,1), cd.zy);
+
+	if(d != old_d)
+	{
+		bvec4 is_update = bvec4(d != old_d);
+		b_jfa_ex[current.x + current.y*reso.x] = cell | (ivec4(state_inner)<<15) | (ivec4(not(is_update))*ivec4(state_invalid)<<31);
+	}
+}

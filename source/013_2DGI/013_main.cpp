@@ -246,6 +246,9 @@ int rigidbody()
 
 // 	vec4 xaxis = glm::rotate(vec2(1.f, 0.f), glm::radians(30.f)).xyxy() * vec2(0.25, -0.25).xxyy();
 // 	vec4 yaxis = glm::rotate(vec2(0.f, 1.f), glm::radians(30.f)).xyxy() * vec2(0.25, -0.25).xxyy();
+	auto a = glm::sqrt(vec4(1, 2, 3, 4)*vec4(1, 2, 3, 4)+ vec4(2, 4, 6, 8)*vec4(2, 4, 6, 8));
+	auto b = vec4(glm::length(vec2(1.f, 2.f)), glm::length(vec2(2.f, 4.f)), glm::length(vec2(3.f, 6.f)), glm::length(vec2(4.f, 8.f)));
+	auto c = glm::length(vec2(512));
 
 	auto vel1 = vec2(0.1f, 1.f);
 	auto vel2 = vec2(-0.1f, 1.f);
