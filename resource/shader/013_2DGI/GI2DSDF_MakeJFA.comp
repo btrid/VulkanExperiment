@@ -10,7 +10,7 @@
 #define USE_GI2D_SDF 1
 #include "GI2DSDF.glsl"
 
-layout (local_size_x = 8, local_size_y = 8) in;
+layout (local_size_x = 64, local_size_y = 1) in;
 
 layout(push_constant) uniform Input
 {
@@ -59,14 +59,20 @@ void main()
 	float d = !state.x ? distance(vec2(current), vec2(cell)) : 99999999.;
 	const float old_d = d;
 
-	nearest(cell, d, state, reso, current, current + cd.xx);
+//	if(current.y + cd.x>= 0)
+	{
+		nearest(cell, d, state, reso, current, current + cd.xx);
+		nearest(cell, d, state, reso, current, current + cd.yx);
+		nearest(cell, d, state, reso, current, current + cd.zx);
+	}
+//	if(current.y + cd.z < reso.y)
+	{
+		nearest(cell, d, state, reso, current, current + cd.xz);
+		nearest(cell, d, state, reso, current, current + cd.yz);
+		nearest(cell, d, state, reso, current, current + cd.zz);
+	}
 	nearest(cell, d, state, reso, current, current + cd.xy);
-	nearest(cell, d, state, reso, current, current + cd.xz);
-	nearest(cell, d, state, reso, current, current + cd.yx);
-	nearest(cell, d, state, reso, current, current + cd.yz);
-	nearest(cell, d, state, reso, current, current + cd.zx);
 	nearest(cell, d, state, reso, current, current + cd.zy);
-	nearest(cell, d, state, reso, current, current + cd.zz);
 
 	if(d != old_d)
 	{
