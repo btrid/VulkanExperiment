@@ -21,7 +21,7 @@ void main()
 	ivec2 current = ivec2(gl_GlobalInvocationID.xy);
 
 	i16vec2 cell = b_jfa[current.x + current.y*reso.x];
-	vec2 sdf = ((cell.y & 0x8000) == 0) ? vec2(0.) : vec2((cell&0x7fff) - ivec2(gl_GlobalInvocationID.xy)) * 0.2;
+	vec2 sdf = ((cell.y & 0x8000) != 0) ? vec2(0.) : vec2((cell&0x7fff) - ivec2(gl_GlobalInvocationID.xy)) * 0.01;
 
 	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(abs(sdf), 0., 1.));
 }
