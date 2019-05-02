@@ -397,7 +397,7 @@ int main()
 	camera->getData().m_near = 0.01f;
 
 //	return pathFinding();
-	return rigidbody();
+//	return rigidbody();
 
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
@@ -422,7 +422,7 @@ int main()
 	gi2d_desc.RenderWidth = 1024;
 	gi2d_desc.RenderHeight = 1024;
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context, gi2d_desc);
-	std::shared_ptr<GI2DSDF> gi2d_sdf_context = std::make_shared<GI2DSDF>(gi2d_context);
+//	std::shared_ptr<GI2DSDF> gi2d_sdf_context = std::make_shared<GI2DSDF>(gi2d_context);
 	std::shared_ptr<CrowdContext> crowd_context = std::make_shared<CrowdContext>(context, gi2d_context);
 
 	GI2DClear gi2d_clear(context, gi2d_context);
@@ -431,15 +431,15 @@ int main()
 	GI2DRadiosity gi2d_Radiosity(context, gi2d_context, app.m_window->getFrontBuffer());
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 	gi2d_Radiosity.executeGenerateRay(cmd);
-	std::shared_ptr<GI2DFluid> gi2d_Fluid = std::make_shared<GI2DFluid>(context, gi2d_context);
+//	std::shared_ptr<GI2DFluid> gi2d_Fluid = std::make_shared<GI2DFluid>(context, gi2d_context);
 
-	Crowd_Procedure crowd_procedure(crowd_context, gi2d_context);
-	Crowd_CalcWorldMatrix crowd_calc_world_matrix(crowd_context, appmodel_context);
-	Crowd_Debug crowd_debug(crowd_context);
-	AppModelAnimationStage animater(context, appmodel_context);
-	GI2DModelRender renderer(context, appmodel_context, gi2d_context);
-	auto anime_cmd = animater.createCmd(player_model);
-	auto render_cmd = renderer.createCmd(player_model);
+//	Crowd_Procedure crowd_procedure(crowd_context, gi2d_context);
+//	Crowd_CalcWorldMatrix crowd_calc_world_matrix(crowd_context, appmodel_context);
+//	Crowd_Debug crowd_debug(crowd_context);
+//	AppModelAnimationStage animater(context, appmodel_context);
+//	GI2DModelRender renderer(context, appmodel_context, gi2d_context);
+//	auto anime_cmd = animater.createCmd(player_model);
+//	auto render_cmd = renderer.createCmd(player_model);
 
 	app.setup();
 
@@ -498,12 +498,12 @@ int main()
 //					crowd_procedure.executeMakeDensity(cmd);
 //					crowd_calc_world_matrix.execute(cmd, player_model);
 
-					std::vector<vk::CommandBuffer> anime_cmds{ anime_cmd.get() };
+//					std::vector<vk::CommandBuffer> anime_cmds{ anime_cmd.get() };
 //					animater.dispatchCmd(cmd, anime_cmds);
 
 				}
 				{
-					std::vector<vk::CommandBuffer> render_cmds{ render_cmd.get() };
+//					std::vector<vk::CommandBuffer> render_cmds{ render_cmd.get() };
 //					renderer.dispatchCmd(cmd, render_cmds);
 				}
 

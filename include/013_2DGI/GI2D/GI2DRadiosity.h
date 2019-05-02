@@ -485,6 +485,7 @@ struct GI2DRadiosity
 				cmd.dispatchIndirect(b_ray_counter.getInfo().buffer, b_ray_counter.getInfo().offset + sizeof(ivec4)*m_gi2d_context->m_gi2d_scene.m_frame);
 			}
 		}
+		
 		{
 			// データクリア
 			vk::BufferMemoryBarrier to_read[] = {
