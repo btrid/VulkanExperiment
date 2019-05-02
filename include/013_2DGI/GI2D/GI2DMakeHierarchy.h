@@ -255,31 +255,11 @@ struct GI2DMakeHierarchy
 
 		// make sdf
 		{
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeJFA_EX].get());
-			{
-				auto num = app::calcDipatchGroups(uvec3(sdf_context->m_gi2d_context->RenderWidth>>2, sdf_context->m_gi2d_context->RenderHeight, 1), uvec3(64, 1, 1));
-
-				for (int distance = sdf_context->m_gi2d_context->RenderWidth >> 1; distance >= 4; distance >>= 1)
-				{
-					vk::BufferMemoryBarrier to_read[] = {
-						sdf_context->b_jfa.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
-					};
-					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
-						0, nullptr, array_length(to_read), to_read, 0, nullptr);
-					for (uint i = 0; i < 1; i++)
-					{
-						cmd.pushConstants<uvec2>(m_pipeline_layout[PipelineLayout_SDF].get(), vk::ShaderStageFlagBits::eCompute, 0, uvec2{ distance, i*sdf_context->m_gi2d_context->FragmentBufferSize });
-						cmd.dispatch(num.x, num.y, num.z);
-					}
-				}
-
-			}
-
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeJFA].get());
 			{
 				auto num = app::calcDipatchGroups(uvec3(sdf_context->m_gi2d_context->RenderWidth, sdf_context->m_gi2d_context->RenderHeight, 1), uvec3(64, 1, 1));
 
-				for (int distance = 2; distance != 0; distance >>= 1)
+				for (int distance = sdf_context->m_gi2d_context->RenderWidth >> 1; distance != 0; distance >>= 1)
 				{
 					vk::BufferMemoryBarrier to_read[] = {
 						sdf_context->b_jfa.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
