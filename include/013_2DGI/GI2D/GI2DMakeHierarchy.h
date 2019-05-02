@@ -257,7 +257,7 @@ struct GI2DMakeHierarchy
 		{
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeJFA_EX].get());
 			{
-				auto num = app::calcDipatchGroups(uvec3(sdf_context->m_gi2d_context->RenderWidth / 4, sdf_context->m_gi2d_context->RenderHeight, 1), uvec3(64, 1, 1));
+				auto num = app::calcDipatchGroups(uvec3(sdf_context->m_gi2d_context->RenderWidth>>2, sdf_context->m_gi2d_context->RenderHeight, 1), uvec3(64, 1, 1));
 
 				for (int distance = sdf_context->m_gi2d_context->RenderWidth >> 1; distance >= 4; distance >>= 1)
 				{
@@ -318,6 +318,7 @@ struct GI2DMakeHierarchy
 		{
 			vk::BufferMemoryBarrier to_read[] = {
 				sdf_context->b_sdf.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				sdf_context->b_jfa.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);

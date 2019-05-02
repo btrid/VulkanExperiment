@@ -17,7 +17,7 @@ layout (local_size_x = 32, local_size_y = 32) in;
 
 void main() 
 {
-	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
+	const ivec2 reso = ivec2(u_gi2d_info.m_resolution.xy);
 	ivec2 current = ivec2(gl_GlobalInvocationID.xy);
 
 	i16vec2 cell = b_jfa[current.x + current.y*reso.x];
