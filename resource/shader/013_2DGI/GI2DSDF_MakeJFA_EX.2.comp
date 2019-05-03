@@ -35,22 +35,28 @@ void nearest(inout vec4 cell_x, inout vec4 cell_y, inout vec4 current_d, in vec4
 	if(any(greaterThanEqual(target_index, reso.xy))){ return; }
 
 	ivec4 target_cell = b_jfa_ex[target_index.x + target_index.y*reso.x];
+	vec4 target_state_invalid = isInvalid(target_cell);
+	vec4 target_state_inner = isInner(target_cell);
+	vec4 target_cell_x = target_cell & 0x00007fff;
+	vec4 target_cell_y = (target_cell>>16) & 0x00007fff;
 
-	vec4 same = vec4(equal(isInner(target_cell), state_inner));
+	vec4 same = vec4(equal(target_state_inner, state_inner));
 
-	vec4 target_cell_x = mix(vec4(target_index.xxxx)*4.+vec4(0.,1.,2.,3.), target_cell & 0x00007fff, same);
-	vec4 target_cell_y = mix(vec4(target_index.yyyy), (target_cell>>16) & 0x00007fff, same);
+	target_cell_x = same*target_cell_x + (1.-same)*(vec4(target_index.xxxx)*4.+vec4(0.,1.,2.,3.));
+	target_cell_y = same*target_cell_y + (1.-same)*vec4(target_index.yyyy);
 
 	vec4 x = cell_pos_x-target_cell_x;
 	vec4 y = cell_pos_y-target_cell_y;
 
-	d = mix(d, vec4(99999999.), same*isInvalid(target_cell));
-	d = mix(d, sqrt(x*x+y*y), same*(1.-isInvalid(target_cell)));
+	vec4 ignore = same*isInvalid(target_cell);
+	vec4 use_cell = same*(1.-isInvalid(target_cell));
+	d = (1.-ignore)*d + ignore*99999999.;
+	d = (1.-use_cell)*d + use_cell*sqrt(x*x+y*y);
 
 	{
 		vec4 is_update = vec4(lessThan(d, current_d));
-		cell_x = mix(cell_x, target_cell_x, is_update);
-		cell_y = mix(cell_y, target_cell_y, is_update);
+		cell_x = is_update*target_cell_x + (1.-is_update)*cell_x;
+		cell_y = is_update*target_cell_y + (1.-is_update)*cell_y;
 		current_d = min(current_d,d);
 	}
 }
@@ -60,7 +66,7 @@ void main()
 	const ivec2 current = ivec2(gl_GlobalInvocationID.xy);
 
 	ivec4 cell = b_jfa_ex[int(current.x + current.y*reso.x)];
-//	vec4 state_invalid = isInvalid(cell);
+	vec4 state_invalid = isInvalid(cell);
 	vec4 state_inner = isInner(cell);
 
 	vec4 cell_pos_x = current.xxxx*4.+ivec4(0.,1.,2.,3.);
@@ -71,8 +77,7 @@ void main()
 
 	vec4 x = vec4(cell_x-cell_pos_x);
 	vec4 y = vec4(cell_y-cell_pos_y);
-//	vec4 d = (1.-state_invalid)*sqrt(x*x+y*y) + state_invalid*9999999.;
-	vec4 d = mix(sqrt(x*x+y*y), vec4(9999999.), isInvalid(cell));
+	vec4 d = (1.-state_invalid)*sqrt(x*x+y*y) + state_invalid*9999999.;
 	const vec4 old_d = d;
 
 	const ivec3 cd = ivec3(constant.distance) * ivec3(-1, 0, 1);
@@ -87,7 +92,7 @@ void main()
 	nearest(cell_x, cell_y, d, state_inner, cell_pos_x, cell_pos_y, reso, current + (cd.zy>>uvec2(2,0)), offset.yyyy);
 
 	ivec4 is_update = ivec4(d != old_d);
-	ivec4 write = (ivec4(cell_y)<<16) | ivec4(cell_x) | (ivec4(state_inner)<<31) | ((1-ivec4(is_update))*(ivec4(isInvalid(cell))<<15));
+	ivec4 write = (ivec4(cell_y)<<16) | ivec4(cell_x) | (ivec4(state_inner)<<31) | ((1-ivec4(is_update))*(ivec4(state_invalid)<<15));
 //	for(int i = 0; i < 4; i++)
 //	{
 //		if(is_update[i] != 0){
