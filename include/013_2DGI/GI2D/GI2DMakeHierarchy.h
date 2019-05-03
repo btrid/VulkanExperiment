@@ -256,6 +256,7 @@ struct GI2DMakeHierarchy
 		// make sdf
 		{
 #if	1
+			// ˆê“x‚É4—v‘fŒvŽZ‚·‚éÅ“K‰»‚ð‚µ‚½
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeJFA_EX].get());
 			{
 				auto num = app::calcDipatchGroups(uvec3(sdf_context->m_gi2d_context->RenderWidth>>2, sdf_context->m_gi2d_context->RenderHeight, 1), uvec3(64, 1, 1));
