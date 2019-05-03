@@ -19,45 +19,44 @@ layout(push_constant) uniform Input
 	uint offset;
 } constant;
 
-ivec4 isInvalid(in ivec4 a)
+vec4 isInvalid(in ivec4 a)
 {
-	return ivec4(notEqual(a & ivec4(0x00008000), ivec4(0)));
+	return vec4(notEqual(a & ivec4(0x00008000), ivec4(0)));
 }
-ivec4 isInner(in ivec4 a)
+vec4 isInner(in ivec4 a)
 {
-	return ivec4(notEqual(a & ivec4(0x80000000), ivec4(0)));
+	return vec4(notEqual(a & ivec4(0x80000000), ivec4(0)));
 }
 
 // state.x = invalid cell
 // state.y = inner or outer
-void nearest(inout ivec4 cell_x, inout ivec4 cell_y, inout vec4 current_d, in ivec4 state_inner, in ivec4 cell_pos_x, in ivec4 cell_pos_y, in uvec2 reso, in uvec2 target_index, in ivec2 offset)
+void nearest(inout vec4 cell_x, inout vec4 cell_y, inout vec4 current_d, in vec4 state_inner, in vec4 cell_pos_x, in vec4 cell_pos_y, in uvec2 reso, in ivec2 target_index, in vec4 d)
 {
 	if(any(greaterThanEqual(target_index, reso.xy))){ return; }
 
 	ivec4 target_cell = b_jfa_ex[target_index.x + target_index.y*reso.x];
-	ivec4 target_state_invalid = isInvalid(target_cell);
-	ivec4 target_state_inner = isInner(target_cell);
-	ivec4 target_cell_x = target_cell & 0x00007fff;
-	ivec4 target_cell_y = (target_cell>>16) & 0x00007fff;
+	vec4 target_state_invalid = isInvalid(target_cell);
+	vec4 target_state_inner = isInner(target_cell);
+	vec4 target_cell_x = target_cell & 0x00007fff;
+	vec4 target_cell_y = (target_cell>>16) & 0x00007fff;
 
-	ivec4 same = ivec4(equal(target_state_inner, state_inner));
+	vec4 same = vec4(equal(target_state_inner, state_inner));
 
-	target_cell_x = same*target_cell_x + (1-same)*(ivec4(target_index.xxxx)*4+ivec4(0,1,2,3));
-	target_cell_y = same*target_cell_y + (1-same)*ivec4(target_index.yyyy);
+	target_cell_x = same*target_cell_x + (1.-same)*(vec4(target_index.xxxx)*4.+vec4(0.,1.,2.,3.));
+	target_cell_y = same*target_cell_y + (1.-same)*vec4(target_index.yyyy);
 
-	vec4 x = vec4(cell_pos_x-target_cell_x);
-	vec4 y = vec4(cell_pos_y-target_cell_y);
+	vec4 x = cell_pos_x-target_cell_x;
+	vec4 y = cell_pos_y-target_cell_y;
 
-	ivec4 ignore = same*target_state_invalid;
-	ivec4 use_cell = same*(1-target_state_invalid);
-	vec4 d = length(vec2(offset)).xxxx;
-	d = (1-ignore)*d + ignore*99999999.;
-	d = (1-use_cell)*d + use_cell*sqrt(x*x+y*y);
+	vec4 ignore = same*isInvalid(target_cell);
+	vec4 use_cell = same*(1.-isInvalid(target_cell));
+	d = (1.-ignore)*d + ignore*99999999.;
+	d = (1.-use_cell)*d + use_cell*sqrt(x*x+y*y);
 
 	{
-		ivec4 is_update = ivec4(lessThan(d, current_d));
-		cell_x = is_update*target_cell_x + (1-is_update)*cell_x;
-		cell_y = is_update*target_cell_y + (1-is_update)*cell_y;
+		vec4 is_update = vec4(lessThan(d, current_d));
+		cell_x = is_update*target_cell_x + (1.-is_update)*cell_x;
+		cell_y = is_update*target_cell_y + (1.-is_update)*cell_y;
 		current_d = min(current_d,d);
 	}
 }
@@ -66,34 +65,42 @@ void main()
 	const uvec2 reso = uvec2(u_gi2d_info.m_resolution.xy)>>uvec2(2,0);
 	const ivec2 current = ivec2(gl_GlobalInvocationID.xy);
 
-	ivec4 cell = b_jfa_ex[current.x + current.y*reso.x];
-	ivec4 state_invalid = isInvalid(cell);
-	ivec4 state_inner = isInner(cell);
+	ivec4 cell = b_jfa_ex[int(current.x + current.y*reso.x)];
+	vec4 state_invalid = isInvalid(cell);
+	vec4 state_inner = isInner(cell);
 
-	ivec4 cell_pos_x = current.xxxx*4+ivec4(0,1,2,3);
-	ivec4 cell_pos_y = current.yyyy;
+	vec4 cell_pos_x = current.xxxx*4.+ivec4(0.,1.,2.,3.);
+	vec4 cell_pos_y = current.yyyy;
 
-	ivec4 cell_x = cell&0x00007fff;
-	ivec4 cell_y = (cell>>16)&0x00007fff;
+	vec4 cell_x = cell&0x00007fff;
+	vec4 cell_y = (cell>>16)&0x00007fff;
 
 	vec4 x = vec4(cell_x-cell_pos_x);
 	vec4 y = vec4(cell_y-cell_pos_y);
-	vec4 d = vec4(1-state_invalid)*sqrt(x*x+y*y) + vec4(state_invalid)*9999999.;
+	vec4 d = (1.-state_invalid)*sqrt(x*x+y*y) + state_invalid*9999999.;
 	const vec4 old_d = d;
 
 	const ivec3 cd = ivec3(constant.distance) * ivec3(-1, 0, 1);
-	nearest(cell_x, cell_y, d, state_inner, cell_pos_x, cell_pos_y, reso, current + (cd.xx>>uvec2(2,0)), cd.xx);
-	nearest(cell_x, cell_y, d, state_inner, cell_pos_x, cell_pos_y, reso, current + (cd.yx>>uvec2(2,0)), cd.yx);
-	nearest(cell_x, cell_y, d, state_inner, cell_pos_x, cell_pos_y, reso, current + (cd.zx>>uvec2(2,0)), cd.zx);
-	nearest(cell_x, cell_y, d, state_inner, cell_pos_x, cell_pos_y, reso, current + (cd.xz>>uvec2(2,0)), cd.xz);
-	nearest(cell_x, cell_y, d, state_inner, cell_pos_x, cell_pos_y, reso, current + (cd.yz>>uvec2(2,0)), cd.yz);
-	nearest(cell_x, cell_y, d, state_inner, cell_pos_x, cell_pos_y, reso, current + (cd.zz>>uvec2(2,0)), cd.zz);
-	nearest(cell_x, cell_y, d, state_inner, cell_pos_x, cell_pos_y, reso, current + (cd.xy>>uvec2(2,0)), cd.xy);
-	nearest(cell_x, cell_y, d, state_inner, cell_pos_x, cell_pos_y, reso, current + (cd.zy>>uvec2(2,0)), cd.zy);
+	vec2 offset = vec2(length(vec2(cd.xx)), length(vec2(cd.xy)));
+	nearest(cell_x, cell_y, d, state_inner, cell_pos_x, cell_pos_y, reso, current + (cd.xx>>uvec2(2,0)), offset.xxxx);
+	nearest(cell_x, cell_y, d, state_inner, cell_pos_x, cell_pos_y, reso, current + (cd.yx>>uvec2(2,0)), offset.yyyy);
+	nearest(cell_x, cell_y, d, state_inner, cell_pos_x, cell_pos_y, reso, current + (cd.zx>>uvec2(2,0)), offset.xxxx);
+	nearest(cell_x, cell_y, d, state_inner, cell_pos_x, cell_pos_y, reso, current + (cd.xz>>uvec2(2,0)), offset.xxxx);
+	nearest(cell_x, cell_y, d, state_inner, cell_pos_x, cell_pos_y, reso, current + (cd.yz>>uvec2(2,0)), offset.yyyy);
+	nearest(cell_x, cell_y, d, state_inner, cell_pos_x, cell_pos_y, reso, current + (cd.zz>>uvec2(2,0)), offset.xxxx);
+	nearest(cell_x, cell_y, d, state_inner, cell_pos_x, cell_pos_y, reso, current + (cd.xy>>uvec2(2,0)), offset.yyyy);
+	nearest(cell_x, cell_y, d, state_inner, cell_pos_x, cell_pos_y, reso, current + (cd.zy>>uvec2(2,0)), offset.yyyy);
 
 	ivec4 is_update = ivec4(d != old_d);
+	ivec4 write = (ivec4(cell_y)<<16) | ivec4(cell_x) | (ivec4(state_inner)<<31) | ((1-ivec4(is_update))*(ivec4(state_invalid)<<15));
+//	for(int i = 0; i < 4; i++)
+//	{
+//		if(is_update[i] != 0){
+//			b_jfa_ex[current.x + current.y*reso.x][i] = write[i];
+//		}
+//	}
 	if(any(notEqual(is_update, ivec4(0))))
 	{
-		b_jfa_ex[current.x + current.y*reso.x] = (cell_y<<16) | cell_x | (state_inner<<31) | ((1-is_update)*(state_invalid<<15));
+		b_jfa_ex[current.x + current.y*reso.x] = write;
 	}
 }
