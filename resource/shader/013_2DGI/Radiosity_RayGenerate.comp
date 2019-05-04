@@ -57,7 +57,7 @@ void main()
 		}
 	}
 
-//	if(march_count <= 1) { return; }
+	if(march_count <= 1) { return; }
 //	if(march_count <= 1) { march_count =100; }
 
 	// 2重になるのを禁止

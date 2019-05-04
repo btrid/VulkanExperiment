@@ -421,9 +421,8 @@ void GI2DRadiosity::executeGenerateRay(vk::CommandBuffer cmd)
 	}
 
 }
-void GI2DRadiosity::executeRadiosity(vk::CommandBuffer cmd, const std::shared_ptr<GI2DSDF>& sdf)
+void GI2DRadiosity::executeRadiosity(vk::CommandBuffer cmd, const std::shared_ptr<GI2DSDF>& sdf_context)
 {
-
 	{
 		// データクリア
 		cmd.updateBuffer<ivec4>(b_segment_counter.getInfo().buffer, b_segment_counter.getInfo().offset, ivec4(0, 1, 1, 0));
@@ -437,7 +436,7 @@ void GI2DRadiosity::executeRadiosity(vk::CommandBuffer cmd, const std::shared_pt
 			0, nullptr, array_length(to_read), to_read, 0, nullptr);
 	}
 	{
-#if 1
+#if 0
 		{
 			// レイの範囲の生成
 
@@ -449,10 +448,10 @@ void GI2DRadiosity::executeRadiosity(vk::CommandBuffer cmd, const std::shared_pt
 #else
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_RadiositySDF].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_RadiositySDF].get(), 1, m_descriptor_set.get(), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_RadiositySDF].get(), 2, sdf->m_descriptor_set.get(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_RadiositySDF].get(), 2, sdf_context->m_descriptor_set.get(), {});
 		{
 			vk::BufferMemoryBarrier to_read[] = {
-				sdf->b_sdf.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				sdf_context->b_sdf.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);

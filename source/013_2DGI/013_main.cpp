@@ -431,7 +431,6 @@ int main()
 	GI2DRadiosity gi2d_Radiosity(context, gi2d_context, app.m_window->getFrontBuffer());
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 	gi2d_Radiosity.executeGenerateRay(cmd);
-//	std::shared_ptr<GI2DFluid> gi2d_Fluid = std::make_shared<GI2DFluid>(context, gi2d_context);
 
 //	Crowd_Procedure crowd_procedure(crowd_context, gi2d_context);
 //	Crowd_CalcWorldMatrix crowd_calc_world_matrix(crowd_context, appmodel_context);

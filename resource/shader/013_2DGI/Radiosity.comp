@@ -18,7 +18,11 @@ void main()
 	D2Segment segment = b_segment[gl_GlobalInvocationID.x];
 	if(segment.radiance == 0){ return; }
 	D2Ray ray = b_ray[segment.ray_index];
-	vec2 dir = calcDir(ray.angle);
+//	vec2 dir = calcDir(ray.angle);
+	vec2 dir = rotate(ray.angle);
+	vec2 inv_dir = 1./dir;
+	dir * min(abs(inv_dir.x), abs(inv_dir.y));
+	segment.march /= length(dir);
 
 	vec2 pos = ray.origin + segment.begin*dir;
 	ivec2 map_index = ivec2(pos);
@@ -26,7 +30,7 @@ void main()
 	uint skip = u_gi2d_scene.m_skip;
 	uint radiance_offset = u_gi2d_scene.m_radiance_offset*u_gi2d_scene.m_frame;
 
-	for(int march_count = 1; march_count < segment.march; march_count++)
+	for(int march_count = 0; march_count < segment.march; march_count++)
 	{
 		// lighting
 		{

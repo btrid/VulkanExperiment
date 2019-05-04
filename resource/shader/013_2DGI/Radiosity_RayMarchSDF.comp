@@ -29,34 +29,38 @@ void main()
 	float march_count = abs(old_sdf);
 	map_index = ivec2(fma(dir, vec2(march_count), ray.origin));
 
-	for(; march_count < ray.march; )
+	for(; march_count < ray.march-1; )
 	{
 		ivec2 is_die = ivec2(greaterThanEqual(map_index, reso.xy)) + ivec2(lessThan(map_index, ivec2(0)));
 		if(any(notEqual(is_die.xy, ivec2(0))))
 		{
 			break;
 		}
+
 		float sdf = b_sdf[map_index.x + map_index.y*reso.x];
 
-		// 中へ入った
-		if(sign(old_sdf) != sign(sdf) && sign(sdf) < 0.)
+		if(sign(old_sdf) != sign(sdf))
 		{
-			int index = atomicAdd(b_segment_counter.w, 1);
-			if(index%1024==0){
-				atomicAdd(b_segment_counter.x, 1);
+			if(sign(sdf) < 0.)
+			{
+				// 中へ入った
+				int index = atomicAdd(b_segment_counter.w, 1);
+				if(index%1024==0){
+					atomicAdd(b_segment_counter.x, 1);
+				}
+				b_segment[index] = seg;
 			}
-			b_segment[index] = seg;
+			else
+			{
+				// 外へ出た
+				seg.begin = march_count - 1.;
+				seg.march = 1.;
+
+			}
 		}
-		if(sign(sdf) > 0.)
+		else if(sign(sdf) > 0.)
 		{
 			seg.march += abs(sdf);
-		}
-
-		// 外へ出た
-		if(sign(old_sdf) != sign(sdf) && sign(sdf) > 0.)
-		{
-			seg.begin = march_count - 1.;
-			seg.march = 1.;
 		}
 
 		// march
@@ -65,6 +69,7 @@ void main()
 			march_count += abs(sdf);
 			map_index = ivec2(fma(dir, vec2(march_count), ray.origin));
 		}
+
 	}
 
 	// 行きすぎたら戻す

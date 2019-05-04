@@ -85,7 +85,7 @@ struct GI2DRadiosity
 
 	GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context, const std::shared_ptr<RenderTarget>& render_target);
 	void executeGenerateRay(vk::CommandBuffer cmd);
-	void executeRadiosity(vk::CommandBuffer cmd, const std::shared_ptr<GI2DSDF>& sdf);
+	void executeRadiosity(vk::CommandBuffer cmd, const std::shared_ptr<GI2DSDF>& sdf_context);
 	void executeRendering(vk::CommandBuffer cmd);
 
 	std::shared_ptr<btr::Context> m_context;

@@ -109,7 +109,6 @@ App::App(const AppDescriptor& desc)
 	m_window_list.emplace_back(window);
 	m_context->m_window = window;
 
-
 	
 //	sParticlePipeline::Order().setup(m_context);
 //	DrawHelper::Order().setup(m_context);
