@@ -567,7 +567,7 @@ void GI2DPhysics::executeMakeVoronoi(vk::CommandBuffer cmd)
 {
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Voronoi].get(), 0, getDescriptorSet(GI2DPhysics::DescLayout_Data), {});
 
-	uvec2 reso = uvec2(1024);
+	ivec2 reso = m_gi2d_context->RenderSize;
 	{
 		{
 			{

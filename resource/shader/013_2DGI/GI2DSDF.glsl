@@ -14,7 +14,7 @@ layout(set=USE_GI2D_SDF, binding=0, std430) restrict buffer JFABuffer {
 #endif
 };
 layout(set=USE_GI2D_SDF, binding=1, std430) restrict buffer SDFBuffer {
-	vec2 b_sdf[];
+	float b_sdf[];
 };
 #endif
 

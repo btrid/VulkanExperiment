@@ -25,8 +25,8 @@ void main()
 	angle -= QUARTER_PI;
 	angle += HALF_PI;
 	vec2 dir = rotate(angle);
-	vec2 inv_dir = abs(1./dir);
-	dir *= min(inv_dir.x, inv_dir.y);
+//	vec2 inv_dir = abs(1./dir);
+//	dir *= min(inv_dir.x, inv_dir.y);
 
 	vec2 pos;
 	pos.x = (y==0) ? reso.x-0. : 0.;

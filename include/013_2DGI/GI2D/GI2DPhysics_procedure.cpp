@@ -355,7 +355,7 @@ void GI2DPhysics_procedure::executeDrawVoronoi(vk::CommandBuffer cmd, const std:
 
 	cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_DrawVoronoi].get());
 
-	auto num = app::calcDipatchGroups(uvec3(1024, 1024, 1), uvec3(8, 8, 1));
+	auto num = app::calcDipatchGroups(uvec3(world->m_gi2d_context->RenderSize, 1), uvec3(8, 8, 1));
 	cmd.dispatch(num.x, num.y, num.z);
 
 }

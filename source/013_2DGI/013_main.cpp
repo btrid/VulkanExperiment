@@ -397,7 +397,7 @@ int main()
 	camera->getData().m_near = 0.01f;
 
 //	return pathFinding();
-	return rigidbody();
+//	return rigidbody();
 
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
@@ -419,10 +419,10 @@ int main()
 	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchainPtr());
 
 	GI2DDescription gi2d_desc;
-	gi2d_desc.RenderWidth = 1024;
-	gi2d_desc.RenderHeight = 1024;
+	gi2d_desc.RenderWidth = app_desc.m_window_size.x;
+	gi2d_desc.RenderHeight = app_desc.m_window_size.y;
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context, gi2d_desc);
-//	std::shared_ptr<GI2DSDF> gi2d_sdf_context = std::make_shared<GI2DSDF>(gi2d_context);
+	std::shared_ptr<GI2DSDF> gi2d_sdf_context = std::make_shared<GI2DSDF>(gi2d_context);
 	std::shared_ptr<CrowdContext> crowd_context = std::make_shared<CrowdContext>(context, gi2d_context);
 
 	GI2DClear gi2d_clear(context, gi2d_context);
@@ -451,9 +451,9 @@ int main()
 		{
 			enum 
 			{
-				cmd_model_update,
-				cmd_render_clear,
-				cmd_crowd,
+//				cmd_model_update,
+//				cmd_render_clear,
+//				cmd_crowd,
 				cmd_gi2d,
 				cmd_render_present,
 				cmd_num
@@ -469,10 +469,10 @@ int main()
 			}
 			// crowd
 			{
-				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
+//				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 //				crowd_updater.execute(cmd);
-				cmd.end();
-				cmds[cmd_crowd] = cmd;
+//				cmd.end();
+//				cmds[cmd_crowd] = cmd;
 			}
 
 			// gi2d
@@ -487,6 +487,7 @@ int main()
 				gi2d_make_hierarchy.executeMakeFragmentMapAndSDF(cmd, gi2d_sdf_context);
 				gi2d_make_hierarchy.executeHierarchy(cmd);
 				gi2d_make_hierarchy.executeMakeSDF(cmd, gi2d_sdf_context);
+//				gi2d_make_hierarchy.executeRenderSDF(cmd, gi2d_sdf_context, app.m_window->getFrontBuffer());
 #else
 				gi2d_make_hierarchy.execute(cmd);
 				gi2d_make_hierarchy.executeHierarchy(cmd);
@@ -507,11 +508,10 @@ int main()
 //					renderer.dispatchCmd(cmd, render_cmds);
 				}
 
-
 //				gi2d_Fluid->executeCalc(cmd);
 //				gi2d_Softbody.execute(cmd);
 //				gi2d_Rigidbody.execute(cmd);
- 				gi2d_Radiosity.executeRadiosity(cmd);
+				gi2d_Radiosity.executeRadiosity(cmd, gi2d_sdf_context);
 				gi2d_Radiosity.executeRendering(cmd);
 //				crowd_procedure.executeDrawField(cmd, app.m_window->getFrontBuffer());
 				cmd.end();

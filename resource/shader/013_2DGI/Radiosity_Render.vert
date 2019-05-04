@@ -6,7 +6,6 @@
 #include "btrlib/Math.glsl"
 
 #define USE_GI2D 0
-#define USE_RT 1
 #include "GI2D.glsl"
 
 out gl_PerVertex{

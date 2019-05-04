@@ -270,7 +270,7 @@ struct GI2DSDF
 	// https://postd.cc/voronoi-diagrams/
 	enum
 	{
-		SDF_USE_NUM = 1,
+		SDF_USE_NUM = 2,
 	};
 	GI2DSDF(const std::shared_ptr<GI2DContext>& gi2d_context)
 	{
@@ -279,7 +279,7 @@ struct GI2DSDF
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 		{
 			b_jfa = context->m_storage_memory.allocateMemory<i16vec2>({ gi2d_context->FragmentBufferSize * SDF_USE_NUM,{} });
- 			b_sdf = context->m_storage_memory.allocateMemory<vec2>({ gi2d_context->FragmentBufferSize,{} });
+ 			b_sdf = context->m_storage_memory.allocateMemory<float>({ gi2d_context->FragmentBufferSize * SDF_USE_NUM,{} });
 		}
 
 		{
@@ -316,7 +316,7 @@ struct GI2DSDF
 	std::shared_ptr<GI2DContext> m_gi2d_context;
 
  	btr::BufferMemoryEx<i16vec2> b_jfa;
- 	btr::BufferMemoryEx<vec2> b_sdf;
+ 	btr::BufferMemoryEx<float> b_sdf;
 
 	vk::UniqueDescriptorSet m_descriptor_set;
 
