@@ -482,7 +482,7 @@ int main()
 				gi2d_clear.execute(cmd);
 				gi2d_debug_make_fragment.executeMakeFragmentMap(cmd);
 
-//#define use_sdf
+#define use_sdf
 #if defined(use_sdf)
 				gi2d_make_hierarchy.executeMakeFragmentMapAndSDF(cmd, gi2d_sdf_context);
 				gi2d_make_hierarchy.executeHierarchy(cmd);
@@ -508,9 +508,6 @@ int main()
 //					renderer.dispatchCmd(cmd, render_cmds);
 				}
 
-//				gi2d_Fluid->executeCalc(cmd);
-//				gi2d_Softbody.execute(cmd);
-//				gi2d_Rigidbody.execute(cmd);
 				gi2d_Radiosity.executeRadiosity(cmd, gi2d_sdf_context);
 				gi2d_Radiosity.executeRendering(cmd);
 //				crowd_procedure.executeDrawField(cmd, app.m_window->getFrontBuffer());
@@ -518,6 +515,7 @@ int main()
 				cmds[cmd_gi2d] = cmd;
 			}
 			app.submit(std::move(cmds));
+			device->waitIdle();
 		}
 		app.postUpdate();
 		printf("%-6.4fms\n", time.getElapsedTimeAsMilliSeconds());

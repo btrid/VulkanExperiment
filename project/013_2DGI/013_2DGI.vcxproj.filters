@@ -18,6 +18,9 @@
     <ClCompile Include="..\..\include\013_2DGI\GI2D\GI2DPhysics_procedure.cpp">
       <Filter>GI2D</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\include\013_2DGI\GI2D\GI2DRadiosity.cpp">
+      <Filter>GI2D</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

@@ -2,9 +2,6 @@
 #version 450
 #extension GL_GOOGLE_include_directive : require
 
-#include "btrlib/ConvertDimension.glsl"
-#include "btrlib/Common.glsl"
-#include "btrlib/Math.glsl"
 
 #define USE_GI2D 0
 #define USE_GI2D_Radiosity 1
@@ -21,9 +18,7 @@ void main()
 	D2Segment segment = b_segment[gl_GlobalInvocationID.x];
 	if(segment.radiance == 0){ return; }
 	D2Ray ray = b_ray[segment.ray_index];
-	vec2 dir = rotate(ray.angle);
-	vec2 inv_dir = abs(1./dir);
-	dir *= min(inv_dir.x, inv_dir.y) * (1<<hierarchy);
+	vec2 dir = calcDir(ray.angle);
 
 	vec2 pos = ray.origin + segment.begin*dir;
 	ivec2 map_index = ivec2(pos);

@@ -328,7 +328,16 @@ vec4 rotate2(in vec2 angle)
 	vec2 s = sin(angle);
 	return vec4(-s.x, c.x, -s.y, c.y);
 }
-
+vec2 calcDir(in float angle)
+{
+#if 1
+	vec2 dir = rotate(angle);
+	vec2 inv_dir = 1./dir;
+	return dir * min(abs(inv_dir.x), abs(inv_dir.y));
+#else
+	return rotate(angle);
+#endif
+}
 uint64_t popcnt(in uint64_t n)
 {
     uint64_t c = (n & 0x5555555555555555ul) + ((n>>1) & 0x5555555555555555ul);

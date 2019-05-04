@@ -1,10 +1,6 @@
 #version 450
 #extension GL_GOOGLE_include_directive : require
 
-#include "btrlib/ConvertDimension.glsl"
-#include "btrlib/Common.glsl"
-#include "btrlib/Math.glsl"
-
 #define USE_GI2D 0
 #define USE_GI2D_Radiosity 1
 #define USE_GI2D_SDF 2
@@ -20,23 +16,29 @@ void main()
 
 	uint ray_index = gl_GlobalInvocationID.x + u_radiosity_info.ray_frame_max*u_gi2d_scene.m_frame;
 	D2Ray ray = b_ray[ray_index];
-	vec2 dir = rotate(ray.angle);
+	vec2 dir = calcDir(ray.angle);
 
 	ivec2 map_index = ivec2(ray.origin);
 	float old_sdf = b_sdf[map_index.x + map_index.y*reso.x];
 
 	D2Segment seg;
 	seg.ray_index = ray_index;
-	seg.begin = 0;
-	seg.march = 0;
-	seg.radiance = 9999999;
+	seg.begin = 0.;
+	seg.march = 0.;
+	seg.radiance = 0;
 	float march_count = abs(old_sdf);
 	map_index = ivec2(fma(dir, vec2(march_count), ray.origin));
 
 	for(; march_count < ray.march; )
 	{
+		ivec2 is_die = ivec2(greaterThanEqual(map_index, reso.xy)) + ivec2(lessThan(map_index, ivec2(0)));
+		if(any(notEqual(is_die.xy, ivec2(0))))
+		{
+			break;
+		}
 		float sdf = b_sdf[map_index.x + map_index.y*reso.x];
 
+		// 中へ入った
 		if(sign(old_sdf) != sign(sdf) && sign(sdf) < 0.)
 		{
 			int index = atomicAdd(b_segment_counter.w, 1);
@@ -44,14 +46,17 @@ void main()
 				atomicAdd(b_segment_counter.x, 1);
 			}
 			b_segment[index] = seg;
-
-			seg.begin = march_count - 1.;
-			seg.march = 1.;
 		}
-
 		if(sign(sdf) > 0.)
 		{
 			seg.march += abs(sdf);
+		}
+
+		// 外へ出た
+		if(sign(old_sdf) != sign(sdf) && sign(sdf) > 0.)
+		{
+			seg.begin = march_count - 1.;
+			seg.march = 1.;
 		}
 
 		// march

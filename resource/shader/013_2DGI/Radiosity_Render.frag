@@ -1,10 +1,6 @@
 #version 450
 #extension GL_GOOGLE_include_directive : require
 
-#include "btrlib/ConvertDimension.glsl"
-#include "btrlib/Common.glsl"
-#include "btrlib/Math.glsl"
-
 #define USE_GI2D 0
 #define USE_GI2D_Radiosity 1
 #include "GI2D.glsl"
@@ -51,7 +47,7 @@ void main()
 	ivec2 map_index = ivec2(gl_FragCoord.xy);
 	ivec2 shift = map_index%8;
 	ivec2 _fi = map_index/8;
-	int findex = _fi.x + _fi.y*(u_gi2d_info.m_resolution.x/8);
+	int findex = _fi.x + _fi.y*u_gi2d_info.m_resolution.z;
 	uint64_t fragment_map = b_fragment_map[findex.x].x;
 	bool is_fragment = (fragment_map & 1ul<<(shift.x+shift.y*8)) != 0;
 	int fragment_index = map_index.x + map_index.y * u_gi2d_info.m_resolution.x;

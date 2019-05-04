@@ -14,7 +14,7 @@
 layout (local_size_x=1024) in;
 void main()
 {
-	if(gl_GlobalInvocationID.x >= b_ray_counter[u_gi2d_scene.m_frame].w){ return; }
+	if(gl_GlobalInvocationID.x >= b_segment_counter.w){ return; }
 
 	const ivec4 reso = u_gi2d_info.m_resolution;
 
@@ -23,13 +23,18 @@ void main()
 	vec2 dir = rotate(ray.angle);
 
 	vec2 origin = ray.origin + dir * segment.begin;
-	ivec2 map_index = ivec2(ray.origin + dir * segment.begin);
+	ivec2 map_index = ivec2(origin);
 	uint sdf_offset = reso.x*reso.y;
 
 	uint radiance = 0;
 
-	for(float march_count = 0.; march_count < ray.march; )
+	for(float march_count = 0.; march_count < segment.march; )
 	{
+		ivec2 is_die = ivec2(greaterThanEqual(map_index, reso.xy)) + ivec2(lessThan(map_index, ivec2(0)));
+		if(any(notEqual(is_die.xy, ivec2(0))))
+		{
+			break;
+		}
 		float sdf = b_sdf[map_index.x + map_index.y*reso.x + sdf_offset];
 
 		if(sign(sdf) < 0.)
