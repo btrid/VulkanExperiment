@@ -124,14 +124,14 @@ vk::CommandBuffer cCmdPool::allocCmdOnetime(int device_family_index)
 {
 	auto cmd = allocCmdImpl();
 
-#if _DEBUG
+#if USE_DEBUG_REPORT
 	char buf[256];
 	sprintf_s(buf, "Onetime CMD %d", m_cmd[sThreadLocal::Order().getThreadIndex()][sGlobal::Order().getCurrentFrame()].m_cmd_onetime_deleter.size());
-	vk::DebugMarkerObjectNameInfoEXT name_info;
-	name_info.objectType = VULKAN_HPP_NAMESPACE::DebugReportObjectTypeEXT::eCommandBuffer;
+	vk::DebugUtilsObjectNameInfoEXT name_info;
+	name_info.objectType = vk::ObjectType::eCommandBuffer;
 	name_info.pObjectName = buf;
-	name_info.object = reinterpret_cast<uint64_t &>(cmd);
-	m_context->m_device->debugMarkerSetObjectNameEXT(name_info, m_context->m_dispach);
+	name_info.objectHandle = reinterpret_cast<uint64_t &>(cmd);
+	m_context->m_device->setDebugUtilsObjectNameEXT(name_info, m_context->m_dispach);
 #endif
 
 	return cmd;
@@ -144,14 +144,14 @@ vk::CommandBuffer cCmdPool::allocCmdTempolary(uint32_t device_family_index)
 	{
 		cmd = allocCmdImpl();
 
-#if _DEBUG
+#if USE_DEBUG_REPORT
 		char buf[256];
 		sprintf_s(buf, "TlsTempolary CMD %d", m_cmd[sThreadLocal::Order().getThreadIndex()][sGlobal::Order().getCurrentFrame()].m_cmd_onetime_deleter.size());
-		vk::DebugMarkerObjectNameInfoEXT name_info;
-		name_info.objectType = VULKAN_HPP_NAMESPACE::DebugReportObjectTypeEXT::eCommandBuffer;
+		vk::DebugUtilsObjectNameInfoEXT name_info;
+		name_info.objectType = vk::ObjectType::eCommandBuffer;
 		name_info.pObjectName = buf;
-		name_info.object = reinterpret_cast<uint64_t &>(cmd);
-		m_context->m_device->debugMarkerSetObjectNameEXT(name_info, m_context->m_dispach);
+		name_info.objectHandle = reinterpret_cast<uint64_t &>(cmd);
+		m_context->m_device->setDebugUtilsObjectNameEXT(name_info, m_context->m_dispach);
 #endif
 	}
 	return cmd;

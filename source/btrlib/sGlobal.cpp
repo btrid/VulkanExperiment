@@ -35,6 +35,93 @@ void VKAPI_PTR InternalFreeNotification(void* pUserData, size_t size, VkInternal
 
 }
 
+VKAPI_ATTR VkBool32 VKAPI_CALL debug_messenger_callback(
+	VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+	VkDebugUtilsMessageTypeFlagsEXT messageType,
+	const VkDebugUtilsMessengerCallbackDataEXT* callbackData,
+	void* userData)
+{
+	char prefix[64];
+	auto message_size = strlen(callbackData->pMessage) + 500;
+	char *message = (char *)malloc(message_size);
+	assert(message);
+	if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT)
+	{
+		strcpy_s(prefix, "VERBOSE : ");
+	}
+	else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
+	{
+		strcpy_s(prefix, "INFO : ");
+	}
+	else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+	{
+		strcpy_s(prefix, "WARNING : ");
+	}
+	else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+	{
+		strcpy_s(prefix, "ERROR : ");
+	}
+	if (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT)
+	{
+		strcat_s(prefix, "GENERAL");
+	}
+	else
+	{
+		// 		if (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_SPECIFICATION_BIT_EXT) {
+		// 			strcat_s(prefix, "SPEC");
+		// 			validation_error = 1;
+		// 		}
+		// 		if (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) {
+		// 			if (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_SPECIFICATION_BIT_EXT) {
+		// 				strcat(prefix, "|");
+		// 			}
+		// 			strcat_s(prefix, "PERF");
+		// 		}
+	}
+	sprintf_s(message, message_size,
+		"%s - Message ID Number %d, Message ID Name %s\n %s",
+		prefix,
+		callbackData->messageIdNumber,
+		callbackData->pMessageIdName,
+		callbackData->pMessage);
+	if (callbackData->objectCount > 0) {
+		char tmp_message[500];
+		sprintf_s(tmp_message, "\n Object Num is %d\n", callbackData->objectCount);
+		strcat_s(message, message_size, tmp_message);
+		for (uint32_t object = 0; object < callbackData->objectCount; ++object) {
+			sprintf_s(tmp_message,
+				" Object[%d] - Type %s, Value %p, Name \"%s\"\n",
+				object,
+				vk::to_string((vk::ObjectType)callbackData->pObjects[object].objectType).c_str(),
+				(void*)(callbackData->pObjects[object].objectHandle),
+				callbackData->pObjects[object].pObjectName ? callbackData->pObjects[object].pObjectName : "no name");
+			strcat_s(message, message_size, tmp_message);
+		}
+	}
+	if (callbackData->cmdBufLabelCount > 0) {
+		char tmp_message[500];
+		sprintf_s(tmp_message, message_size,
+			"\n Command Buffer Labels - %d\n",
+			callbackData->cmdBufLabelCount);
+		strcat_s(message, message_size, tmp_message);
+		for (uint32_t label = 0; label < callbackData->cmdBufLabelCount; ++label) {
+			sprintf_s(tmp_message, message_size,
+				" Label[%d] - %s { %f, %f, %f, %f}\n",
+				label,
+				callbackData->pCmdBufLabels[label].pLabelName,
+				callbackData->pCmdBufLabels[label].color[0],
+				callbackData->pCmdBufLabels[label].color[1],
+				callbackData->pCmdBufLabels[label].color[2],
+				callbackData->pCmdBufLabels[label].color[3]);
+			strcat_s(message, message_size, tmp_message);
+		}
+	}
+	printf("%s\n", message);
+	fflush(stdout);
+	free(message);
+	// Don't bail out, but keep going.
+	return false;
+}
 
 sGlobal::sGlobal()
 	: m_current_frame(0)
@@ -45,13 +132,37 @@ sGlobal::sGlobal()
 	m_deltatime = 0.016f;
 	{
 		vk::ApplicationInfo appInfo = { "Vulkan Test", 1, "EngineName", 0, VK_API_VERSION_1_1 };
+		std::vector<const char*> LayerName =
+		{
+#if _DEBUG
+			"VK_LAYER_LUNARG_standard_validation"
+#endif
+		};
+		std::vector<const char*> ExtensionName =
+		{
+			VK_KHR_SURFACE_EXTENSION_NAME,
+			VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
+#if USE_DEBUG_REPORT
+			VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+#endif
+		};
+
 		vk::InstanceCreateInfo instanceInfo = {};
 		instanceInfo.setPApplicationInfo(&appInfo);
-		instanceInfo.setEnabledExtensionCount((uint32_t)btr::sValidationLayer::Order().getExtensionName().size());
-		instanceInfo.setPpEnabledExtensionNames(btr::sValidationLayer::Order().getExtensionName().data());
-		instanceInfo.setEnabledLayerCount((uint32_t)btr::sValidationLayer::Order().getLayerName().size());
-		instanceInfo.setPpEnabledLayerNames(btr::sValidationLayer::Order().getLayerName().data());
+		instanceInfo.setEnabledExtensionCount((uint32_t)ExtensionName.size());
+		instanceInfo.setPpEnabledExtensionNames(ExtensionName.data());
+		instanceInfo.setEnabledLayerCount((uint32_t)LayerName.size());
+		instanceInfo.setPpEnabledLayerNames(LayerName.data());
 		m_instance = vk::createInstance(instanceInfo);
+
+#if USE_DEBUG_REPORT
+		m_dispatch = vk::DispatchLoaderDynamic(m_instance);
+		vk::DebugUtilsMessengerCreateInfoEXT debug_create_info;
+		debug_create_info.setMessageSeverity(vk::DebugUtilsMessageSeverityFlagBitsEXT::eError | vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning/* | vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose*/);
+		debug_create_info.setMessageType(vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation);
+		debug_create_info.setPfnUserCallback(debug_messenger_callback);
+		m_debug_messenger = m_instance.createDebugUtilsMessengerEXTUnique(debug_create_info, nullptr, m_dispatch);
+#endif
 	}
 
 	{

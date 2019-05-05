@@ -88,11 +88,11 @@ ClearPipeline::ClearPipeline(const std::shared_ptr<btr::Context>& context, const
 	m_cmd->end();
 
 #if _DEBUG
-	vk::DebugMarkerObjectNameInfoEXT name_info;
-	name_info.object = reinterpret_cast<uint64_t &>(m_cmd.get());
-	name_info.objectType = VULKAN_HPP_NAMESPACE::DebugReportObjectTypeEXT::eCommandBuffer;
+	vk::DebugUtilsObjectNameInfoEXT name_info;
+	name_info.objectHandle = reinterpret_cast<uint64_t &>(m_cmd.get());
+	name_info.objectType = vk::ObjectType::eCommandBuffer;
 	name_info.pObjectName = "ClearPipeline CMD";
-	context->m_device->debugMarkerSetObjectNameEXT(name_info, context->m_dispach);
+	context->m_device->setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
 #endif
 
 
@@ -389,16 +389,16 @@ PresentPipeline::PresentPipeline(const std::shared_ptr<btr::Context>& context, c
 		cmd->end();
 	}
 
-#if _DEBUG
+#if USE_DEBUG_REPORT
 	char buf[256];
-	vk::DebugMarkerObjectNameInfoEXT name_info;
-	name_info.objectType = VULKAN_HPP_NAMESPACE::DebugReportObjectTypeEXT::eCommandBuffer;
+	vk::DebugUtilsObjectNameInfoEXT name_info;
+	name_info.objectType = vk::ObjectType::eCommandBuffer;
 	name_info.pObjectName = buf;
 	for (int i = 0; i < m_cmd.size(); i++)
 	{
-		name_info.object = reinterpret_cast<uint64_t &>(m_cmd[i].get());
+		name_info.objectHandle = reinterpret_cast<uint64_t &>(m_cmd[i].get());
 		sprintf_s(buf, "PresentPipeline CMD[%d]", i);
-		context->m_device->debugMarkerSetObjectNameEXT(name_info, context->m_dispach);
+		context->m_device->setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
 	}
 #endif
 }

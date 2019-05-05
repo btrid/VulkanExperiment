@@ -2,15 +2,13 @@
 #include <btrlib/GPU.h>
 #include <btrlib/sGlobal.h>
 
+
 void cGPU::setup(vk::PhysicalDevice pd)
 {
 	m_handle = pd;
 	std::vector<const char*> extensionName = {
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 		VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME,
-#if _DEBUG
-		VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
-#endif
 	};
 
 	auto gpu_propaty = m_handle.getProperties();
@@ -56,6 +54,7 @@ void cGPU::setup(vk::PhysicalDevice pd)
 	m_device.m_handle = device;
 	m_device.m_queue_priority = queue_priority;
 	m_device.m_family_index = family_index;
+
 }
 
 std::vector<uint32_t> cGPU::getQueueFamilyIndexList(vk::QueueFlags flag, const std::vector<uint32_t>& useIndex)

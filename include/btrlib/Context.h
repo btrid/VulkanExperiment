@@ -11,6 +11,7 @@ namespace btr
 {
 struct Context
 {
+	vk::Instance m_instance;
 	cGPU m_gpu;
 	cDevice m_device;
 

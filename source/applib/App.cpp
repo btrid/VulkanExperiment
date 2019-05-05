@@ -24,14 +24,11 @@ App::App(const AppDescriptor& desc)
 
 	vk::Instance instance = sGlobal::Order().getVKInstance();
 
-#if _DEBUG
-	static cDebug debug(instance);
-#endif
-
 	m_gpu = desc.m_gpu;
 	auto device = sGlobal::Order().getGPU(0).getDevice();
 
 	m_context = std::make_shared<btr::Context>();
+	m_context->m_instance = instance;
 	m_context->m_dispach.init(sGlobal::Order().getVKInstance(), device.getHandle());
 	
 	//	m_context = std::make_shared<AppContext>();
@@ -605,7 +602,7 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 		barrier[0].setSubresourceRange(subresource_range);
 		barrier[0].setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
 		barrier[0].setOldLayout(vk::ImageLayout::eUndefined);
-		barrier[0].setNewLayout(vk::ImageLayout::eTransferDstOptimal);
+		barrier[0].setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
 
 		vk::ImageSubresourceRange subresource_depth_range;
 		subresource_depth_range.aspectMask = vk::ImageAspectFlagBits::eDepth;
@@ -714,37 +711,48 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 	m_imgui_pipeline = std::make_unique<ImguiRenderPipeline>(context, this);
 
 
-#if _DEBUG
-	vk::DebugMarkerObjectNameInfoEXT name_info;
-	name_info.object = reinterpret_cast<uint64_t &>(m_front_buffer->m_image);
-	name_info.objectType = VULKAN_HPP_NAMESPACE::DebugReportObjectTypeEXT::eImage;
+#if USE_DEBUG_REPORT
+	vk::DebugUtilsObjectNameInfoEXT name_info;
+
+	char buf[256];
+	for (int i = 0; i < m_swapchain->m_backbuffer_image.size(); i++)
+	{
+		sprintf_s(buf, "AppWindow Backbuffer[i]", i);
+		name_info.objectHandle = reinterpret_cast<uint64_t &>(m_front_buffer->m_image);
+		name_info.objectType = vk::ObjectType::eImage;
+		name_info.pObjectName = buf;
+		context->m_device->setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
+	}
+
+	name_info.objectHandle = reinterpret_cast<uint64_t &>(m_front_buffer->m_image);
+	name_info.objectType = vk::ObjectType::eImage;
 	name_info.pObjectName = "AppWindow FrontBufferImage";
-	context->m_device->debugMarkerSetObjectNameEXT(name_info, context->m_dispach);
+	context->m_device->setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
 
-	name_info.object = reinterpret_cast<uint64_t &>(m_front_buffer->m_view);
-	name_info.objectType = VULKAN_HPP_NAMESPACE::DebugReportObjectTypeEXT::eImageView;
+	name_info.objectHandle = reinterpret_cast<uint64_t &>(m_front_buffer->m_view);
+	name_info.objectType = vk::ObjectType::eImageView;
 	name_info.pObjectName = "AppWindow FrontBufferImageView";
-	context->m_device->debugMarkerSetObjectNameEXT(name_info, context->m_dispach);
+	context->m_device->setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
 
-	name_info.object = reinterpret_cast<uint64_t &>(m_front_buffer->m_memory);
-	name_info.objectType = VULKAN_HPP_NAMESPACE::DebugReportObjectTypeEXT::eDeviceMemory;
+	name_info.objectHandle = reinterpret_cast<uint64_t &>(m_front_buffer->m_memory);
+	name_info.objectType = vk::ObjectType::eDeviceMemory;
 	name_info.pObjectName = "AppWindow FrontBufferImageMemory";
-	context->m_device->debugMarkerSetObjectNameEXT(name_info, context->m_dispach);
+	context->m_device->setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
 
-	name_info.object = reinterpret_cast<uint64_t &>(m_depth_image.get());
-	name_info.objectType = VULKAN_HPP_NAMESPACE::DebugReportObjectTypeEXT::eImage;
+	name_info.objectHandle = reinterpret_cast<uint64_t &>(m_depth_image.get());
+	name_info.objectType = vk::ObjectType::eImage;
 	name_info.pObjectName = "AppWindow DepthImage";
-	context->m_device->debugMarkerSetObjectNameEXT(name_info, context->m_dispach);
+	context->m_device->setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
 
-	name_info.object = reinterpret_cast<uint64_t &>(m_depth_view.get());
-	name_info.objectType = VULKAN_HPP_NAMESPACE::DebugReportObjectTypeEXT::eImageView;
+	name_info.objectHandle = reinterpret_cast<uint64_t &>(m_depth_view.get());
+	name_info.objectType = vk::ObjectType::eImageView;
 	name_info.pObjectName = "AppWindow DepthImageView";
-	context->m_device->debugMarkerSetObjectNameEXT(name_info, context->m_dispach);
+	context->m_device->setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
 
-	name_info.object = reinterpret_cast<uint64_t &>(m_depth_memory.get());
-	name_info.objectType = VULKAN_HPP_NAMESPACE::DebugReportObjectTypeEXT::eDeviceMemory;
+	name_info.objectHandle = reinterpret_cast<uint64_t &>(m_depth_memory.get());
+	name_info.objectType = vk::ObjectType::eDeviceMemory;
 	name_info.pObjectName = "AppWindow DepthImageMemory";
-	context->m_device->debugMarkerSetObjectNameEXT(name_info, context->m_dispach);
+	context->m_device->setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
 #endif
 
 }

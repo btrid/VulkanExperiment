@@ -16,6 +16,7 @@
 
 using GameFrame = uint32_t;
 
+#define USE_DEBUG_REPORT _DEBUG
 
 
 class sGlobal : public Singleton<sGlobal>
@@ -56,6 +57,9 @@ public:
 	cThreadPool& getThreadPoolSound() { return m_thread_pool_sound; }
 private:
 	vk::Instance m_instance;
+	vk::DispatchLoaderDynamic m_dispatch;
+	vk::UniqueHandle<vk::DebugUtilsMessengerEXT, vk::DispatchLoaderDynamic> m_debug_messenger;
+
 	std::vector<cGPU> m_gpu;
 
 	GameFrame m_current_frame;
