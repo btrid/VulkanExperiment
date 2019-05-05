@@ -436,7 +436,7 @@ void GI2DRadiosity::executeRadiosity(vk::CommandBuffer cmd, const std::shared_pt
 			0, nullptr, array_length(to_read), to_read, 0, nullptr);
 	}
 	{
-#if 0
+#if 1
 		{
 			// ƒŒƒC‚Ì”ÍˆÍ‚Ì¶¬
 

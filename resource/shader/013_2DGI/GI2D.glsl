@@ -4,7 +4,7 @@
 #extension GL_EXT_shader_explicit_arithmetic_types : require
 #extension GL_EXT_shader_atomic_int64 : require
 
-#define USE_SDF
+//#define USE_SDF
 struct GI2DInfo
 {
 	mat4 m_camera_PV;
