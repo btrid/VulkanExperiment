@@ -19,7 +19,7 @@ void main()
 	vec2 dir = calcDir(ray.angle);
 
 	ivec2 map_index = ivec2(ray.origin);
-	float old_sdf = b_sdf[map_index.x + map_index.y*reso.x];
+	float old_sdf = b_sdf[getMemoryOrder(map_index)];
 
 	D2Segment seg;
 	seg.ray_index = ray_index;
@@ -31,36 +31,26 @@ void main()
 
 	for(; march_count < ray.march-1; )
 	{
-		ivec2 is_die = ivec2(greaterThanEqual(map_index, reso.xy)) + ivec2(lessThan(map_index, ivec2(0)));
-		if(any(notEqual(is_die.xy, ivec2(0))))
-		{
-			break;
-		}
 
-		float sdf = b_sdf[map_index.x + map_index.y*reso.x];
-
-		if(sign(old_sdf) != sign(sdf))
+		float sdf = b_sdf[getMemoryOrder(map_index)];
+		float s = sign(sdf);
+		if(sign(old_sdf) != s)
 		{
-			if(sign(sdf) < 0.)
+			if(s < 0.)
 			{
 				// 中へ入った
 				int index = atomicAdd(b_segment_counter.w, 1);
 				if(index%1024==0){
 					atomicAdd(b_segment_counter.x, 1);
 				}
+				seg.march = march_count - seg.begin;
 				b_segment[index] = seg;
 			}
 			else
 			{
 				// 外へ出た
 				seg.begin = march_count - 1.;
-				seg.march = 1.;
-
 			}
-		}
-		else if(sign(sdf) > 0.)
-		{
-			seg.march += abs(sdf);
 		}
 
 		// march
@@ -68,6 +58,7 @@ void main()
 			old_sdf = sdf;
 			march_count += abs(sdf);
 			map_index = ivec2(fma(dir, vec2(march_count), ray.origin));
+//			map_index = ivec2(dir*march_count+ray.origin);
 		}
 
 	}

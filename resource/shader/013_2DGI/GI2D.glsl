@@ -336,12 +336,12 @@ vec4 rotate2(in vec2 angle)
 }
 vec2 calcDir(in float angle)
 {
-#if !defined(USE_SDF)
+#if defined(USE_SDF)
+	return rotate(angle);
+#else
 	vec2 dir = rotate(angle);
 	vec2 inv_dir = 1./dir;
 	return dir * min(abs(inv_dir.x), abs(inv_dir.y));
-#else
-	return rotate(angle);
 #endif
 }
 uint64_t popcnt(in uint64_t n)

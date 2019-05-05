@@ -19,7 +19,7 @@ void main()
 	const ivec4 reso = u_gi2d_info.m_resolution;
 
 	D2Segment segment = b_segment[gl_GlobalInvocationID.x];
-	D2Ray ray = b_ray[segment.ray_index+u_radiosity_info.ray_frame_max*u_gi2d_scene.m_frame];
+	D2Ray ray = b_ray[segment.ray_index];
 	vec2 dir = rotate(ray.angle);
 
 	vec2 origin = ray.origin + dir * segment.begin;
@@ -30,12 +30,12 @@ void main()
 
 	for(float march_count = 0.; march_count < segment.march; )
 	{
-		ivec2 is_die = ivec2(greaterThanEqual(map_index, reso.xy)) + ivec2(lessThan(map_index, ivec2(0)));
-		if(any(notEqual(is_die.xy, ivec2(0))))
-		{
-			break;
-		}
-		float sdf = b_sdf[map_index.x + map_index.y*reso.x + sdf_offset];
+//		ivec2 is_die = ivec2(greaterThanEqual(map_index, reso.xy)) + ivec2(lessThan(map_index, ivec2(0)));
+//		if(any(notEqual(is_die.xy, ivec2(0))))
+//		{
+//			break;
+//		}
+		float sdf = b_sdf[getMemoryOrder(map_index) + sdf_offset];
 
 		if(sign(sdf) < 0.)
 		{

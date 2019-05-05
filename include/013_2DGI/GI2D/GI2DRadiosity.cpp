@@ -459,7 +459,6 @@ void GI2DRadiosity::executeRadiosity(vk::CommandBuffer cmd, const std::shared_pt
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RayMarchSDF].get());
 			cmd.dispatchIndirect(b_ray_counter.getInfo().buffer, b_ray_counter.getInfo().offset + sizeof(ivec4)*m_gi2d_context->m_gi2d_scene.m_frame);
 		}
-
 		{
 			vk::BufferMemoryBarrier to_read[] = {
 				b_segment.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
