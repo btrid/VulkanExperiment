@@ -718,7 +718,7 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 	for (int i = 0; i < m_swapchain->m_backbuffer_image.size(); i++)
 	{
 		sprintf_s(buf, "AppWindow Backbuffer[i]", i);
-		name_info.objectHandle = reinterpret_cast<uint64_t &>(m_front_buffer->m_image);
+		name_info.objectHandle = reinterpret_cast<uint64_t &>(m_swapchain->m_backbuffer_image[i]);
 		name_info.objectType = vk::ObjectType::eImage;
 		name_info.pObjectName = buf;
 		context->m_device->setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
