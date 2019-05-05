@@ -10,23 +10,20 @@ ClearPipeline::ClearPipeline(const std::shared_ptr<btr::Context>& context, const
 	m_cmd = std::move(context->m_device->allocateCommandBuffersUnique(cmd_buffer_info)[0]);
 	context->m_device.DebugMarkerSetObjectName(m_cmd.get(), "clear cmd");
 
-	auto cmd = m_cmd.get();
 	vk::CommandBufferBeginInfo begin_info;
 	begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
 	vk::CommandBufferInheritanceInfo inheritance_info;
 	begin_info.setPInheritanceInfo(&inheritance_info);
-	cmd.begin(begin_info);
+	m_cmd->begin(begin_info);
 
 	{
 
 		vk::ImageMemoryBarrier present_to_clear;
-		//present_to_clear.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 		present_to_clear.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
-		//present_to_clear.setOldLayout(vk::ImageLayout::eTransferDstOptimal);
 		present_to_clear.setNewLayout(vk::ImageLayout::eTransferDstOptimal);
 		present_to_clear.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
 		present_to_clear.setImage(render_target->m_image);
-		cmd.pipelineBarrier(
+		m_cmd->pipelineBarrier(
 			vk::PipelineStageFlagBits::eAllCommands,
 			vk::PipelineStageFlagBits::eTransfer,
 			vk::DependencyFlags(),
@@ -34,7 +31,7 @@ ClearPipeline::ClearPipeline(const std::shared_ptr<btr::Context>& context, const
 
 		vk::ClearColorValue clear_color;
 		clear_color.setFloat32(std::array<float, 4>{0.8f, 0.8f, 1.f, 0.f});
-		cmd.clearColorImage(render_target->m_image, vk::ImageLayout::eTransferDstOptimal, clear_color, vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+		m_cmd->clearColorImage(render_target->m_image, vk::ImageLayout::eTransferDstOptimal, clear_color, vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
 
 	}
 
@@ -46,7 +43,7 @@ ClearPipeline::ClearPipeline(const std::shared_ptr<btr::Context>& context, const
 		clear_to_render.setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
 		clear_to_render.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
 		clear_to_render.setImage(render_target->m_image);
-		cmd.pipelineBarrier(
+		m_cmd->pipelineBarrier(
 			vk::PipelineStageFlagBits::eTransfer,
 			vk::PipelineStageFlagBits::eColorAttachmentOutput,
 			vk::DependencyFlags(),
@@ -61,7 +58,7 @@ ClearPipeline::ClearPipeline(const std::shared_ptr<btr::Context>& context, const
 		render_to_clear_depth.setNewLayout(vk::ImageLayout::eTransferDstOptimal);
 		render_to_clear_depth.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1 });
 		render_to_clear_depth.setImage(render_target->m_depth_image);
-		cmd.pipelineBarrier(
+		m_cmd->pipelineBarrier(
 			vk::PipelineStageFlagBits::eLateFragmentTests,
 			vk::PipelineStageFlagBits::eTransfer,
 			vk::DependencyFlags(),
@@ -69,7 +66,7 @@ ClearPipeline::ClearPipeline(const std::shared_ptr<btr::Context>& context, const
 
 		vk::ClearDepthStencilValue clear_depth;
 		clear_depth.setDepth(0.f);
-		cmd.clearDepthStencilImage(render_target->m_depth_image, vk::ImageLayout::eTransferDstOptimal, clear_depth, vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1 });
+		m_cmd->clearDepthStencilImage(render_target->m_depth_image, vk::ImageLayout::eTransferDstOptimal, clear_depth, vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1 });
 	}
 
 	{
@@ -80,14 +77,14 @@ ClearPipeline::ClearPipeline(const std::shared_ptr<btr::Context>& context, const
 		clear_to_render_depth.setNewLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
 		clear_to_render_depth.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1 });
 		clear_to_render_depth.setImage(render_target->m_depth_image);
-		cmd.pipelineBarrier(
+		m_cmd->pipelineBarrier(
 			vk::PipelineStageFlagBits::eTransfer,
 			vk::PipelineStageFlagBits::eLateFragmentTests,
 			vk::DependencyFlags(),
 			nullptr, nullptr, clear_to_render_depth);
 
 	}
-	cmd.end();
+	m_cmd->end();
 }
 
 PresentPipeline::PresentPipeline(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target, const std::shared_ptr<Swapchain>& swapchain)

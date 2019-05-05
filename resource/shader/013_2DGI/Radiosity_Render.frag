@@ -10,6 +10,8 @@ float rate[] = {1., 1.};
 layout(location = 0) out vec4 FragColor;
 void main()
 {
+//	FragColor = vec4(1.);
+//	return;
 	ivec2 reso = u_gi2d_info.m_resolution.xy;
 	int hierarchy = u_gi2d_scene.m_hierarchy;
 	uint radiance_size = (reso.x*reso.y)>>(hierarchy*2);

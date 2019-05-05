@@ -15,7 +15,7 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 		info.ray_num_max = Ray_All_Num;
 		info.ray_frame_max = Ray_Frame_Num;
 		info.frame_max = Frame;
-		u_radiosity_info = m_context->m_storage_memory.allocateMemory<GI2DRadiosityInfo>({1,{} });
+		u_radiosity_info = m_context->m_uniform_memory.allocateMemory<GI2DRadiosityInfo>({1,{} });
 		cmd.updateBuffer<GI2DRadiosityInfo>(u_radiosity_info.getInfo().buffer, u_radiosity_info.getInfo().offset, info);
 		vk::BufferMemoryBarrier to_read[] = {
 			u_radiosity_info.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
@@ -43,8 +43,6 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 				vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
-				vk::DescriptorSetLayoutBinding(10, vk::DescriptorType::eCombinedImageSampler, 1, stage),
-				vk::DescriptorSetLayoutBinding(11, vk::DescriptorType::eStorageImage, 1, stage),
 			};
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 			desc_layout_info.setBindingCount(array_length(binding));
@@ -101,8 +99,6 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 			"Radiosity_Render.vert.spv",
 			"Radiosity_Render.frag.spv",
 
-			"Radiosity_CalcRadiance.comp.spv",
-
 			"Radiosity_RayGenerate.comp.spv",
 			"Radiosity_RaySort.comp.spv",
 			"Radiosity_RayMarch.comp.spv",
@@ -129,8 +125,7 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 
 		vk::PushConstantRange constants[] = {
 			vk::PushConstantRange().setStageFlags(vk::ShaderStageFlagBits::eCompute).setSize(8).setOffset(0),
-
-		};
+	};
 		vk::PipelineLayoutCreateInfo pipeline_layout_info;
 		pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 		pipeline_layout_info.setPSetLayouts(layouts);
@@ -160,30 +155,27 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 		shader_info[1].setModule(m_shader[Shader_Radiosity_Clear].get());
 		shader_info[1].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[1].setPName("main");
-		shader_info[2].setModule(m_shader[Shader_CalcRadiance].get());
+		shader_info[2].setModule(m_shader[Shader_RayGenerate].get());
 		shader_info[2].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[2].setPName("main");
-		shader_info[3].setModule(m_shader[Shader_RayGenerate].get());
+		shader_info[3].setModule(m_shader[Shader_RaySort].get());
 		shader_info[3].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[3].setPName("main");
-		shader_info[4].setModule(m_shader[Shader_RaySort].get());
+		shader_info[4].setModule(m_shader[Shader_RayMarch].get());
 		shader_info[4].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[4].setPName("main");
-		shader_info[5].setModule(m_shader[Shader_RayMarch].get());
+		shader_info[5].setModule(m_shader[Shader_RayMarchSDF].get());
 		shader_info[5].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[5].setPName("main");
-		shader_info[6].setModule(m_shader[Shader_RayMarchSDF].get());
+		shader_info[6].setModule(m_shader[Shader_RayMarchSDF2].get());
 		shader_info[6].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[6].setPName("main");
-		shader_info[7].setModule(m_shader[Shader_RayMarchSDF2].get());
+		shader_info[7].setModule(m_shader[Shader_RayHit].get());
 		shader_info[7].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[7].setPName("main");
-		shader_info[8].setModule(m_shader[Shader_RayHit].get());
+		shader_info[8].setModule(m_shader[Shader_RayBounce].get());
 		shader_info[8].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[8].setPName("main");
-		shader_info[9].setModule(m_shader[Shader_RayBounce].get());
-		shader_info[9].setStage(vk::ShaderStageFlagBits::eCompute);
-		shader_info[9].setPName("main");
 		std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 		{
 			vk::ComputePipelineCreateInfo()
@@ -203,31 +195,27 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 			.setLayout(m_pipeline_layout[PipelineLayout_Radiosity].get()),
 			vk::ComputePipelineCreateInfo()
 			.setStage(shader_info[5])
-			.setLayout(m_pipeline_layout[PipelineLayout_Radiosity].get()),
+			.setLayout(m_pipeline_layout[PipelineLayout_RadiositySDF].get()),
 			vk::ComputePipelineCreateInfo()
 			.setStage(shader_info[6])
 			.setLayout(m_pipeline_layout[PipelineLayout_RadiositySDF].get()),
 			vk::ComputePipelineCreateInfo()
 			.setStage(shader_info[7])
-			.setLayout(m_pipeline_layout[PipelineLayout_RadiositySDF].get()),
-			vk::ComputePipelineCreateInfo()
-			.setStage(shader_info[8])
 			.setLayout(m_pipeline_layout[PipelineLayout_Radiosity].get()),
 			vk::ComputePipelineCreateInfo()
-			.setStage(shader_info[9])
+			.setStage(shader_info[8])
 			.setLayout(m_pipeline_layout[PipelineLayout_Radiosity].get()),
 		};
 		auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
 		m_pipeline[Pipeline_Radiosity] = std::move(compute_pipeline[0]);
 		m_pipeline[Pipeline_Radiosity_Clear] = std::move(compute_pipeline[1]);
-		m_pipeline[Pipeline_CalcRadiance] = std::move(compute_pipeline[2]);
-		m_pipeline[Pipeline_RayGenerate] = std::move(compute_pipeline[3]);
-		m_pipeline[Pipeline_RaySort] = std::move(compute_pipeline[4]);
-		m_pipeline[Pipeline_RayMarch] = std::move(compute_pipeline[5]);
-		m_pipeline[Pipeline_RayMarchSDF] = std::move(compute_pipeline[6]);
-		m_pipeline[Pipeline_RayMarchSDF2] = std::move(compute_pipeline[7]);
-		m_pipeline[Pipeline_RayHit] = std::move(compute_pipeline[8]);
-		m_pipeline[Pipeline_RayBounce] = std::move(compute_pipeline[9]);
+		m_pipeline[Pipeline_RayGenerate] = std::move(compute_pipeline[2]);
+		m_pipeline[Pipeline_RaySort] = std::move(compute_pipeline[3]);
+		m_pipeline[Pipeline_RayMarch] = std::move(compute_pipeline[4]);
+		m_pipeline[Pipeline_RayMarchSDF] = std::move(compute_pipeline[5]);
+		m_pipeline[Pipeline_RayMarchSDF2] = std::move(compute_pipeline[6]);
+		m_pipeline[Pipeline_RayHit] = std::move(compute_pipeline[7]);
+		m_pipeline[Pipeline_RayBounce] = std::move(compute_pipeline[8]);
 	}
 
 	// レンダーパス
@@ -242,7 +230,7 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 		subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
 		subpass.setInputAttachmentCount(0);
 		subpass.setPInputAttachments(nullptr);
-		subpass.setColorAttachmentCount(array_length(color_ref));
+		subpass.setColorAttachmentCount(std::size(color_ref));
 		subpass.setPColorAttachments(color_ref);
 
 		vk::AttachmentDescription attach_description[] =
@@ -257,7 +245,7 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 			.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
 		};
 		vk::RenderPassCreateInfo renderpass_info;
-		renderpass_info.setAttachmentCount(array_length(attach_description));
+		renderpass_info.setAttachmentCount(std::size(attach_description));
 		renderpass_info.setPAttachments(attach_description);
 		renderpass_info.setSubpassCount(1);
 		renderpass_info.setPSubpasses(&subpass);
@@ -270,7 +258,7 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 		};
 		vk::FramebufferCreateInfo framebuffer_info;
 		framebuffer_info.setRenderPass(m_render_pass.get());
-		framebuffer_info.setAttachmentCount(array_length(view));
+		framebuffer_info.setAttachmentCount(std::size(view));
 		framebuffer_info.setPAttachments(view);
 		framebuffer_info.setWidth(render_target->m_info.extent.width);
 		framebuffer_info.setHeight(render_target->m_info.extent.height);
@@ -357,7 +345,7 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 	}
 
 }
-void GI2DRadiosity::executeGenerateRay(vk::CommandBuffer cmd)
+void GI2DRadiosity::executeGenerateRay(const vk::CommandBuffer& cmd)
 {
 	{
 		// データクリア
@@ -421,7 +409,7 @@ void GI2DRadiosity::executeGenerateRay(vk::CommandBuffer cmd)
 	}
 
 }
-void GI2DRadiosity::executeRadiosity(vk::CommandBuffer cmd, const std::shared_ptr<GI2DSDF>& sdf_context)
+void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd, const std::shared_ptr<GI2DSDF>& sdf_context)
 {
 	{
 		// データクリア
@@ -539,8 +527,7 @@ void GI2DRadiosity::executeRadiosity(vk::CommandBuffer cmd, const std::shared_pt
 	{
 
 		vk::BufferMemoryBarrier to_read[] = {
-			b_radiance.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderWrite | vk::AccessFlagBits::eShaderRead),
-//			b_segment.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead| vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			b_radiance.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, 0, nullptr, std::size(to_read), to_read, 0, nullptr);
 
@@ -552,7 +539,7 @@ void GI2DRadiosity::executeRadiosity(vk::CommandBuffer cmd, const std::shared_pt
 }
 
 
-void GI2DRadiosity::executeRendering(vk::CommandBuffer cmd)
+void GI2DRadiosity::executeRendering(const vk::CommandBuffer& cmd)
 {
 	// render_targetに書く
 	{

@@ -24,6 +24,7 @@ void main()
 //	b_fragment[index.x+index.y*u_gi2d_info.m_resolution.x].albedo *= constant.m_emissive;
 //	b_fragment[index.x+index.y*u_gi2d_info.m_resolution.x].albedo.w = 1.;
 
-	b_fragment[index.x+index.y*u_gi2d_info.m_resolution.x] = makeFragment(constant.m_emissive.xyz, false, true);
+	if(!isDiffuse(b_fragment[index.x+index.y*u_gi2d_info.m_resolution.x]))
+		b_fragment[index.x+index.y*u_gi2d_info.m_resolution.x] = makeFragment(constant.m_emissive.xyz, false, true);
 }
 

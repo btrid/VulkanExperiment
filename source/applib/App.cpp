@@ -126,10 +126,17 @@ void App::setup()
 	};
 
 	auto queue = m_context->m_device->getQueue(0, 0);
-	queue.submit(submitInfo, nullptr);
 
-	// “K“–‚ÈÀ‘•‚È‚Ì‚Åâ‘Î‘Ò‚Â
-	queue.waitIdle();
+	vk::FenceCreateInfo fence_info;
+//	fence_info.setFlags(vk::FenceCreateFlagBits::eSignaled);
+	auto fence = m_context->m_gpu.getDevice()->createFenceUnique(fence_info);
+	queue.submit(submitInfo, fence.get());
+
+	sDebug::Order().waitFence(m_context->m_device.getHandle(), fence.get());
+//	m_context->m_device->resetFences({ m_fence_list[index].get() });
+
+//	// “K“–‚ÈÀ‘•‚È‚Ì‚Åâ‘Î‘Ò‚Â
+//	queue.waitIdle();
 }
 
 

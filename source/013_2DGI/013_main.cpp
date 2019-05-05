@@ -354,7 +354,7 @@ int rigidbody()
 				gi2d_make_hierarchy.executeMakeFragmentMapAndSDF(cmd, gi2d_sdf_context);
 				gi2d_make_hierarchy.executeHierarchy(cmd);
 				gi2d_make_hierarchy.executeMakeSDF(cmd, gi2d_sdf_context);
-				gi2d_make_hierarchy.executeRenderSDF(cmd, gi2d_sdf_context, app.m_window->getFrontBuffer());
+//				gi2d_make_hierarchy.executeRenderSDF(cmd, gi2d_sdf_context, app.m_window->getFrontBuffer());
 
 //				gi2d_rigidbody.execute(cmd, physics_world, gi2d_sdf_context);
 //				gi2d_rigidbody.executeToFragment(cmd, physics_world);
@@ -362,8 +362,8 @@ int rigidbody()
 //				physics_world->executeMakeVoronoi(cmd);
 //				if (app.m_window->getInput().m_keyboard.isHold('A'))
 				{
-//					gi2d_rigidbody.executeDrawVoronoi(cmd, physics_world);
-//					gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
+					gi2d_rigidbody.executeDrawVoronoi(cmd, physics_world);
+					gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
 				}
 //				else 
 				{
@@ -453,7 +453,7 @@ int main()
 			enum 
 			{
 //				cmd_model_update,
-//				cmd_render_clear,
+				cmd_render_clear,
 //				cmd_crowd,
 				cmd_gi2d,
 				cmd_render_present,
@@ -465,7 +465,7 @@ int main()
 			}
 
 			{
-//				cmds[cmd_render_clear] = clear_pipeline.execute();
+				cmds[cmd_render_clear] = clear_pipeline.execute();
 				cmds[cmd_render_present] = present_pipeline.execute();
 			}
 			// crowd
@@ -488,7 +488,7 @@ int main()
 				gi2d_make_hierarchy.executeMakeFragmentMapAndSDF(cmd, gi2d_sdf_context);
 				gi2d_make_hierarchy.executeHierarchy(cmd);
 				gi2d_make_hierarchy.executeMakeSDF(cmd, gi2d_sdf_context);
-//				gi2d_make_hierarchy.executeRenderSDF(cmd, gi2d_sdf_context, app.m_window->getFrontBuffer());
+				gi2d_make_hierarchy.executeRenderSDF(cmd, gi2d_sdf_context, app.m_window->getFrontBuffer());
 #else
 				gi2d_make_hierarchy.execute(cmd);
 				gi2d_make_hierarchy.executeHierarchy(cmd);
@@ -512,11 +512,11 @@ int main()
 				gi2d_Radiosity.executeRadiosity(cmd, gi2d_sdf_context);
 				gi2d_Radiosity.executeRendering(cmd);
 //				crowd_procedure.executeDrawField(cmd, app.m_window->getFrontBuffer());
-				cmd.end();
-				cmds[cmd_gi2d] = cmd;
+//				cmd.end();
+//				cmds[cmd_gi2d] = cmd;
 			}
 			app.submit(std::move(cmds));
-			device->waitIdle();
+//			device->waitIdle();
 		}
 		app.postUpdate();
 		printf("%-6.4fms\n", time.getElapsedTimeAsMilliSeconds());

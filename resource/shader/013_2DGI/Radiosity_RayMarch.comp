@@ -49,7 +49,9 @@ void main()
 				map.y = b_emissive_map[dindex];
 				old_map_index = dindex;
 
-				if(all(equal(map, u64vec2(0))))
+				bvec3 check = equal(map.xxy, u64vec3(0,-1ul,0));
+//				if((check.x||check.y) && check.z)
+				if(check.x && check.z)
 				{
 					vec2 pos_sub = vec2(pos - vec2(cell << 3));
 					vec2 tp = vec2(abs(cell_origin - pos_sub)) * inv_dir;

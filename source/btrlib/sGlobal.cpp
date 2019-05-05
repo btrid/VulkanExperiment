@@ -44,7 +44,7 @@ sGlobal::sGlobal()
 {
 	m_deltatime = 0.016f;
 	{
-		vk::ApplicationInfo appInfo = { "Vulkan Test", 1, "EngineName", 0, VK_API_VERSION_1_0 };
+		vk::ApplicationInfo appInfo = { "Vulkan Test", 1, "EngineName", 0, VK_API_VERSION_1_1 };
 		vk::InstanceCreateInfo instanceInfo = {};
 		instanceInfo.setPApplicationInfo(&appInfo);
 		instanceInfo.setEnabledExtensionCount((uint32_t)btr::sValidationLayer::Order().getExtensionName().size());

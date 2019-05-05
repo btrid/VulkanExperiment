@@ -24,8 +24,6 @@ struct GI2DRadiosity
 		Shader_RenderingVS,
 		Shader_RenderingFS,
 
-		Shader_CalcRadiance,
-
 		Shader_RayGenerate,
 		Shader_RaySort,
 		Shader_RayMarch,
@@ -47,8 +45,6 @@ struct GI2DRadiosity
 		Pipeline_Radiosity,
 		Pipeline_Radiosity_Clear,
 		Pipeline_Output,
-
-		Pipeline_CalcRadiance,
 
 		Pipeline_RayGenerate,
 		Pipeline_RaySort,
@@ -84,9 +80,9 @@ struct GI2DRadiosity
 
 
 	GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context, const std::shared_ptr<RenderTarget>& render_target);
-	void executeGenerateRay(vk::CommandBuffer cmd);
-	void executeRadiosity(vk::CommandBuffer cmd, const std::shared_ptr<GI2DSDF>& sdf_context);
-	void executeRendering(vk::CommandBuffer cmd);
+	void executeGenerateRay(const vk::CommandBuffer& cmd);
+	void executeRadiosity(const vk::CommandBuffer& cmd, const std::shared_ptr<GI2DSDF>& sdf_context);
+	void executeRendering(const vk::CommandBuffer& cmd);
 
 	std::shared_ptr<btr::Context> m_context;
 	std::shared_ptr<GI2DContext> m_gi2d_context;

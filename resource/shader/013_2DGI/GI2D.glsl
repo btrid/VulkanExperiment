@@ -4,7 +4,7 @@
 #extension GL_EXT_shader_explicit_arithmetic_types : require
 #extension GL_EXT_shader_atomic_int64 : require
 
-//#define USE_SDF
+#define USE_SDF
 struct GI2DInfo
 {
 	mat4 m_camera_PV;
@@ -182,22 +182,22 @@ struct GI2DRadiosityInfo
 };
 
 
-layout(set=USE_GI2D_Radiosity, binding=0, std140) uniform GI2DGI2DRadiosityInfoUniform {
+layout(set=USE_GI2D_Radiosity, binding=0, std140) uniform GI2DRadiosityInfoUniform {
 	GI2DRadiosityInfo u_radiosity_info;
 };
-layout(set=USE_GI2D_Radiosity, binding=1) restrict buffer RadianceBuffer {
+layout(set=USE_GI2D_Radiosity, binding=1, std430) restrict buffer RadianceBuffer {
 	uint b_radiance[];
 };
 layout(set=USE_GI2D_Radiosity, binding=2, std430) restrict buffer RayBuffer {
 	D2Ray b_ray[];
 };
-layout(set=USE_GI2D_Radiosity, binding=3) restrict buffer RayCounter {
+layout(set=USE_GI2D_Radiosity, binding=3, std430) restrict buffer RayCounter {
 	ivec4 b_ray_counter[];
 };
 layout(set=USE_GI2D_Radiosity, binding=4, std430) restrict buffer SegmentBuffer {
 	D2Segment b_segment[];
 };
-layout(set=USE_GI2D_Radiosity, binding=5) restrict buffer SegmentCounter {
+layout(set=USE_GI2D_Radiosity, binding=5, std430) restrict buffer SegmentCounter {
 	ivec4 b_segment_counter;
 };
 
