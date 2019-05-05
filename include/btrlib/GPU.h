@@ -39,54 +39,11 @@ public:
 	const vk::Device& operator*()const { return m_handle; }
 	const vk::PhysicalDevice& getGPU()const { return m_gpu; }
 
-	void DebugMarkerSetObjectTag(vk::DebugMarkerObjectTagInfoEXT* pTagInfo)const
-	{
-		m_vk_debug_marker_set_object_tag(m_handle, (VkDebugMarkerObjectTagInfoEXT*)pTagInfo);
-	}
-
-	template<typename T, typename... Args>
-	void DebugMarkerSetObjectName(T, const char*, Args...)const { assert(false); }
-
-	template<typename... Args>
-	void DebugMarkerSetObjectNameImpl(uint64_t obj, vk::DebugReportObjectTypeEXT type, const char* name, Args... args)const
-	{
-		return;
-		char buf[256];
-		sprintf_s(buf, name, args...);
-
-		vk::DebugMarkerObjectNameInfoEXT name_info;
-		name_info.setObject(obj);
-		name_info.setObjectType(type);
-		name_info.setPObjectName(buf);
-		m_vk_debug_marker_set_object_name(m_handle, (VkDebugMarkerObjectNameInfoEXT*)&name_info);
-	}
-
-	template<typename... Args> 
-	void DebugMarkerSetObjectName(vk::CommandBuffer obj, const char* name, Args... args)const{
-		DebugMarkerSetObjectNameImpl((uint64_t)(VkCommandBuffer)obj, vk::DebugReportObjectTypeEXT::eCommandBuffer, name, args...);
-	}
-	void CmdDebugMarkerBegin(vk::CommandBuffer cmd, vk::DebugMarkerMarkerInfoEXT* pTagInfo)const
-	{
-		m_vk_cmd_debug_marker_begin(cmd, (VkDebugMarkerMarkerInfoEXT*)pTagInfo);
-	}
-	void CmdDebugMarkerEnd(vk::CommandBuffer cmd)const
-	{
-		m_vk_cmd_debug_marker_end(cmd);
-	}
-	void CmdDebugMarkerInsert(vk::CommandBuffer cmd, vk::DebugMarkerMarkerInfoEXT* pTagInfo)const
-	{
-		m_vk_cmd_debug_marker_insert(cmd, (VkDebugMarkerMarkerInfoEXT*)pTagInfo);
-	}
 private:
 	vk::PhysicalDevice m_gpu;
 	vk::Device m_handle;
 	std::vector<uint32_t> m_family_index;
 	std::vector<std::vector<float>> m_queue_priority;
-	PFN_vkDebugMarkerSetObjectTagEXT m_vk_debug_marker_set_object_tag;
-	PFN_vkDebugMarkerSetObjectNameEXT m_vk_debug_marker_set_object_name;
-	PFN_vkCmdDebugMarkerBeginEXT m_vk_cmd_debug_marker_begin;
-	PFN_vkCmdDebugMarkerEndEXT m_vk_cmd_debug_marker_end;
-	PFN_vkCmdDebugMarkerInsertEXT m_vk_cmd_debug_marker_insert;
 
 };
 

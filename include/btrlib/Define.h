@@ -40,4 +40,5 @@ size_t alignment(T size, T align)
 // 	return SIZE;
 // }
 
-#define array_length(_a) ((uint32_t)(sizeof(_a) / sizeof(_a[0])))
+#define array_length(_a) ((uint32_t)std::size(_a))
+#define array_size(_a) ((uint32_t)std::size(_a))

@@ -8,7 +8,6 @@ ClearPipeline::ClearPipeline(const std::shared_ptr<btr::Context>& context, const
 	cmd_buffer_info.commandBufferCount = 1;
 	cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
 	m_cmd = std::move(context->m_device->allocateCommandBuffersUnique(cmd_buffer_info)[0]);
-	context->m_device.DebugMarkerSetObjectName(m_cmd.get(), "clear cmd");
 
 	vk::CommandBufferBeginInfo begin_info;
 	begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
@@ -17,7 +16,7 @@ ClearPipeline::ClearPipeline(const std::shared_ptr<btr::Context>& context, const
 	m_cmd->begin(begin_info);
 
 	{
-
+		// clear
 		vk::ImageMemoryBarrier present_to_clear;
 		present_to_clear.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
 		present_to_clear.setNewLayout(vk::ImageLayout::eTransferDstOptimal);
@@ -36,6 +35,7 @@ ClearPipeline::ClearPipeline(const std::shared_ptr<btr::Context>& context, const
 	}
 
 	{
+		// render target—p
 		vk::ImageMemoryBarrier clear_to_render;
 		clear_to_render.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 		clear_to_render.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
@@ -84,7 +84,18 @@ ClearPipeline::ClearPipeline(const std::shared_ptr<btr::Context>& context, const
 			nullptr, nullptr, clear_to_render_depth);
 
 	}
+
 	m_cmd->end();
+
+#if _DEBUG
+	vk::DebugMarkerObjectNameInfoEXT name_info;
+	name_info.object = reinterpret_cast<uint64_t &>(m_cmd.get());
+	name_info.objectType = VULKAN_HPP_NAMESPACE::DebugReportObjectTypeEXT::eCommandBuffer;
+	name_info.pObjectName = "ClearPipeline CMD";
+	context->m_device->debugMarkerSetObjectNameEXT(name_info, context->m_dispach);
+#endif
+
+
 }
 
 PresentPipeline::PresentPipeline(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target, const std::shared_ptr<Swapchain>& swapchain)
@@ -336,11 +347,6 @@ PresentPipeline::PresentPipeline(const std::shared_ptr<btr::Context>& context, c
 		cmd_buffer_info.commandBufferCount = sGlobal::FRAME_MAX;
 		cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
 		m_cmd = context->m_device->allocateCommandBuffersUnique(cmd_buffer_info);
-
-		for (size_t i = 0; i < m_cmd.size(); i++)
-		{
-			context->m_device.DebugMarkerSetObjectName(m_cmd[i].get(), "present cmd %d", i);
-		}
 	}
 
 
@@ -382,5 +388,18 @@ PresentPipeline::PresentPipeline(const std::shared_ptr<btr::Context>& context, c
 
 		cmd->end();
 	}
+
+#if _DEBUG
+	char buf[256];
+	vk::DebugMarkerObjectNameInfoEXT name_info;
+	name_info.objectType = VULKAN_HPP_NAMESPACE::DebugReportObjectTypeEXT::eCommandBuffer;
+	name_info.pObjectName = buf;
+	for (int i = 0; i < m_cmd.size(); i++)
+	{
+		name_info.object = reinterpret_cast<uint64_t &>(m_cmd[i].get());
+		sprintf_s(buf, "PresentPipeline CMD[%d]", i);
+		context->m_device->debugMarkerSetObjectNameEXT(name_info, context->m_dispach);
+	}
+#endif
 }
 

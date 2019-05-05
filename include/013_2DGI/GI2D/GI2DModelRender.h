@@ -53,7 +53,7 @@ struct GI2DModelRender
 				"GI2DModel_MakeFragment.vert.spv",
 				"GI2DModel_MakeFragment.frag.spv",
 			};
-			static_assert(array_length(name) == array_length(m_shader), "not equal shader num");
+			static_assert(array_length(name) == ShaderNum, "not equal shader num");
 
 			std::string path = btr::getResourceShaderPath();
 			for (size_t i = 0; i < array_length(name); i++) {

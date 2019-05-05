@@ -36,7 +36,7 @@ struct GI2DDebug
 		Pipeline_DrawFragment,
 		Pipeline_Num,
 	};
-	vk::UniqueShaderModule m_shader[Shader_Num];
+	std::array<vk::UniqueShaderModule, Shader_Num> m_shader;
 	std::array<vk::UniquePipelineLayout, PipelineLayout_Num> m_pipeline_layout;
 	std::array<vk::UniquePipeline, Pipeline_Num> m_pipeline;
 

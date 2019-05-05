@@ -32,7 +32,9 @@ App::App(const AppDescriptor& desc)
 	auto device = sGlobal::Order().getGPU(0).getDevice();
 
 	m_context = std::make_shared<btr::Context>();
-//	m_context = std::make_shared<AppContext>();
+	m_context->m_dispach.init(sGlobal::Order().getVKInstance(), device.getHandle());
+	
+	//	m_context = std::make_shared<AppContext>();
 	{
 		m_context->m_gpu = m_gpu;
 		m_context->m_device = device;
@@ -108,10 +110,6 @@ App::App(const AppDescriptor& desc)
 	m_window = window;
 	m_window_list.emplace_back(window);
 	m_context->m_window = window;
-
-	
-//	sParticlePipeline::Order().setup(m_context);
-//	DrawHelper::Order().setup(m_context);
 
 }
 
@@ -518,10 +516,11 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 {
 	auto& device = context->m_device;
 
+	vk::ImageCreateInfo depth_info;
+	vk::ImageCreateInfo image_info;
+	vk::SurfaceCapabilitiesKHR capability = context->m_gpu->getSurfaceCapabilitiesKHR(m_surface.get());
 	{
-		vk::SurfaceCapabilitiesKHR capability = context->m_gpu->getSurfaceCapabilitiesKHR(m_surface.get());
 		// ÉfÉvÉXê∂ê¨
-		vk::ImageCreateInfo depth_info;
 		depth_info.format = vk::Format::eD32Sfloat;
 		depth_info.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eTransferDst;
 		depth_info.arrayLayers = 1;
@@ -556,12 +555,11 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 		depth_view_info.subresourceRange.layerCount = 1;
 		depth_view_info.subresourceRange.levelCount = 1;
 		m_depth_view = context->m_device->createImageViewUnique(depth_view_info);
+
 	}
 	{
-		vk::SurfaceCapabilitiesKHR capability = context->m_gpu->getSurfaceCapabilitiesKHR(m_surface.get());
-		vk::ImageCreateInfo image_info;
 		image_info.format = vk::Format::eR16G16B16A16Sfloat;
-		image_info.usage = vk::ImageUsageFlagBits::eStorage|vk::ImageUsageFlagBits::eSampled|vk::ImageUsageFlagBits::eColorAttachment|vk::ImageUsageFlagBits::eTransferSrc|vk::ImageUsageFlagBits::eTransferDst;
+		image_info.usage = vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst;
 		image_info.arrayLayers = 1;
 		image_info.mipLevels = 1;
 		image_info.extent.width = capability.currentExtent.width;
@@ -591,6 +589,8 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 		view_info.subresourceRange.layerCount = 1;
 		view_info.subresourceRange.levelCount = 1;
 		m_front_buffer_view = context->m_device->createImageViewUnique(view_info);
+	}
+	{
 
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 		vk::ImageSubresourceRange subresource_range;
@@ -599,18 +599,34 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 		subresource_range.setLayerCount(1);
 		subresource_range.setBaseMipLevel(0);
 		subresource_range.setLevelCount(1);
-		vk::ImageMemoryBarrier barrier;
-		barrier.setSubresourceRange(subresource_range);
-		barrier.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
-		barrier.setOldLayout(vk::ImageLayout::eUndefined);
-		barrier.setNewLayout(vk::ImageLayout::eTransferDstOptimal);
-		barrier.setImage(m_front_buffer_image.get());
 
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eAllCommands, vk::DependencyFlags(), {}, {}, barrier);
+		vk::ImageMemoryBarrier barrier[2];
+		barrier[0].setImage(m_front_buffer_image.get());
+		barrier[0].setSubresourceRange(subresource_range);
+		barrier[0].setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
+		barrier[0].setOldLayout(vk::ImageLayout::eUndefined);
+		barrier[0].setNewLayout(vk::ImageLayout::eTransferDstOptimal);
+
+		vk::ImageSubresourceRange subresource_depth_range;
+		subresource_depth_range.aspectMask = vk::ImageAspectFlagBits::eDepth;
+		subresource_depth_range.baseArrayLayer = 0;
+		subresource_depth_range.baseMipLevel = 0;
+		subresource_depth_range.layerCount = 1;
+		subresource_depth_range.levelCount = 1;
+
+		barrier[1].setImage(m_depth_image.get());
+		barrier[1].setSubresourceRange(subresource_depth_range);
+		barrier[1].setDstAccessMask(vk::AccessFlagBits::eDepthStencilAttachmentWrite);
+		barrier[1].setOldLayout(vk::ImageLayout::eUndefined);
+		barrier[1].setNewLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
+
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eAllCommands, {}, {}, {}, { array_size(barrier), barrier });
+
 
 	}
 
 	{
+		// buckbufferÇÃèâä˙âª
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 		vk::ImageSubresourceRange subresource_range;
 		subresource_range.setAspectMask(vk::ImageAspectFlagBits::eColor);
@@ -618,7 +634,7 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 		subresource_range.setLayerCount(1);
 		subresource_range.setBaseMipLevel(0);
 		subresource_range.setLevelCount(1);
-		std::vector<vk::ImageMemoryBarrier> barrier(getSwapchain().getBackbufferNum() + 1);
+		std::vector<vk::ImageMemoryBarrier> barrier(getSwapchain().getBackbufferNum());
 		barrier[0].setSubresourceRange(subresource_range);
 		barrier[0].setDstAccessMask(vk::AccessFlagBits::eMemoryRead);
 		barrier[0].setOldLayout(vk::ImageLayout::eUndefined);
@@ -629,21 +645,7 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 			barrier[i] = barrier[0];
 			barrier[i].setImage(getSwapchain().m_backbuffer_image[i]);
 		}
-
-		vk::ImageSubresourceRange subresource_depth_range;
-		subresource_depth_range.aspectMask = vk::ImageAspectFlagBits::eDepth;
-		subresource_depth_range.baseArrayLayer = 0;
-		subresource_depth_range.baseMipLevel = 0;
-		subresource_depth_range.layerCount = 1;
-		subresource_depth_range.levelCount = 1;
-
-		barrier.back().setImage(m_depth_image.get());
-		barrier.back().setSubresourceRange(subresource_depth_range);
-		barrier.back().setDstAccessMask(vk::AccessFlagBits::eDepthStencilAttachmentWrite);
-		barrier.back().setOldLayout(vk::ImageLayout::eUndefined);
-		barrier.back().setNewLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal);
-
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eEarlyFragmentTests, vk::DependencyFlags(), {}, {}, barrier);
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eAllCommands, vk::DependencyFlags(), {}, {}, barrier);
 
 	}
 
@@ -710,5 +712,39 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 	}
 
 	m_imgui_pipeline = std::make_unique<ImguiRenderPipeline>(context, this);
+
+
+#if _DEBUG
+	vk::DebugMarkerObjectNameInfoEXT name_info;
+	name_info.object = reinterpret_cast<uint64_t &>(m_front_buffer->m_image);
+	name_info.objectType = VULKAN_HPP_NAMESPACE::DebugReportObjectTypeEXT::eImage;
+	name_info.pObjectName = "AppWindow FrontBufferImage";
+	context->m_device->debugMarkerSetObjectNameEXT(name_info, context->m_dispach);
+
+	name_info.object = reinterpret_cast<uint64_t &>(m_front_buffer->m_view);
+	name_info.objectType = VULKAN_HPP_NAMESPACE::DebugReportObjectTypeEXT::eImageView;
+	name_info.pObjectName = "AppWindow FrontBufferImageView";
+	context->m_device->debugMarkerSetObjectNameEXT(name_info, context->m_dispach);
+
+	name_info.object = reinterpret_cast<uint64_t &>(m_front_buffer->m_memory);
+	name_info.objectType = VULKAN_HPP_NAMESPACE::DebugReportObjectTypeEXT::eDeviceMemory;
+	name_info.pObjectName = "AppWindow FrontBufferImageMemory";
+	context->m_device->debugMarkerSetObjectNameEXT(name_info, context->m_dispach);
+
+	name_info.object = reinterpret_cast<uint64_t &>(m_depth_image.get());
+	name_info.objectType = VULKAN_HPP_NAMESPACE::DebugReportObjectTypeEXT::eImage;
+	name_info.pObjectName = "AppWindow DepthImage";
+	context->m_device->debugMarkerSetObjectNameEXT(name_info, context->m_dispach);
+
+	name_info.object = reinterpret_cast<uint64_t &>(m_depth_view.get());
+	name_info.objectType = VULKAN_HPP_NAMESPACE::DebugReportObjectTypeEXT::eImageView;
+	name_info.pObjectName = "AppWindow DepthImageView";
+	context->m_device->debugMarkerSetObjectNameEXT(name_info, context->m_dispach);
+
+	name_info.object = reinterpret_cast<uint64_t &>(m_depth_memory.get());
+	name_info.objectType = VULKAN_HPP_NAMESPACE::DebugReportObjectTypeEXT::eDeviceMemory;
+	name_info.pObjectName = "AppWindow DepthImageMemory";
+	context->m_device->debugMarkerSetObjectNameEXT(name_info, context->m_dispach);
+#endif
 
 }

@@ -166,7 +166,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 			"GI2DDebug_DrawFragmentMap.comp.spv",
 			"GI2DDebug_DrawFragment.comp.spv",
 		};
-		static_assert(array_length(name) == array_length(m_shader), "not equal shader num");
+		static_assert(array_length(name) == Shader_Num, "not equal shader num");
 
 		std::string path = btr::getResourceShaderPath();
 		for (size_t i = 0; i < array_length(name); i++) {

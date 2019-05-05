@@ -9,7 +9,7 @@ void cGPU::setup(vk::PhysicalDevice pd)
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 		VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME,
 #if _DEBUG
-//		VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
+		VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
 #endif
 	};
 
@@ -56,11 +56,6 @@ void cGPU::setup(vk::PhysicalDevice pd)
 	m_device.m_handle = device;
 	m_device.m_queue_priority = queue_priority;
 	m_device.m_family_index = family_index;
-	m_device.m_vk_debug_marker_set_object_tag = (PFN_vkDebugMarkerSetObjectTagEXT)device.getProcAddr("vkDebugMarkerSetObjectTagEXT");
-	m_device.m_vk_debug_marker_set_object_name = (PFN_vkDebugMarkerSetObjectNameEXT)device.getProcAddr("vkDebugMarkerSetObjectNameEXT");
-	m_device.m_vk_cmd_debug_marker_begin = (PFN_vkCmdDebugMarkerBeginEXT)device.getProcAddr("vkCmdDebugMarkerBeginEXT");
-	m_device.m_vk_cmd_debug_marker_end = (PFN_vkCmdDebugMarkerEndEXT)device.getProcAddr("vkCmdDebugMarkerEndEXT");
-	m_device.m_vk_cmd_debug_marker_insert = (PFN_vkCmdDebugMarkerInsertEXT)device.getProcAddr("vkCmdDebugMarkerInsertEXT");
 }
 
 std::vector<uint32_t> cGPU::getQueueFamilyIndexList(vk::QueueFlags flag, const std::vector<uint32_t>& useIndex)

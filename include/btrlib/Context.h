@@ -25,6 +25,8 @@ struct Context
 	std::shared_ptr<cWindow> m_window;
 	std::shared_ptr<cCmdPool> m_cmd_pool;
 
+	vk::DispatchLoaderDynamic m_dispach;
+
 //	uint32_t getCPUFrame()const { return (m_window->getSwapchain().m_backbuffer_index + 1) % m_window->getSwapchain().getBackbufferNum(); }
 //	uint32_t getGPUFrame()const { return m_window->getSwapchain().m_backbuffer_index; }
 	uint32_t getCPUFrame()const { return sGlobal::Order().getWorkerFrame(); }
