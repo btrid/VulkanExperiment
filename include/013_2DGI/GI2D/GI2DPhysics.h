@@ -25,6 +25,8 @@ struct GI2DPhysics
 		Shader_Voronoi_MakeTriangle2,
 		Shader_Voronoi_SortTriangleVertex,
 
+//		Shader_RB_DestructWall,
+
 		Shader_Voronoi_MakePath,
 		Shader_Num,
 	};
@@ -404,8 +406,15 @@ struct GI2DPhysicsDebug
 		static int s_id;
 		static int s_id_sub;
 
-		//		if (app::g_app_instance->m_window->getInput().m_keyboard.isHold('B'))
 		s_id = (s_id_sub++ / 3) % 1024;
+
+		vk::ImageMemoryBarrier image_barrier;
+		image_barrier.setImage(m_render_target->m_image);
+		image_barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+		image_barrier.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+		image_barrier.setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eBottomOfPipe, vk::PipelineStageFlagBits::eColorAttachmentOutput, {}, {}, {}, { image_barrier });
+
 		{
 			vk::RenderPassBeginInfo render_begin_info;
 			render_begin_info.setRenderPass(m_render_pass.get());
@@ -426,6 +435,13 @@ struct GI2DPhysicsDebug
 	}
 	void executeDrawVoronoiPath(vk::CommandBuffer cmd)
 	{
+		vk::ImageMemoryBarrier image_barrier;
+		image_barrier.setImage(m_render_target->m_image);
+		image_barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+		image_barrier.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+		image_barrier.setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eBottomOfPipe, vk::PipelineStageFlagBits::eColorAttachmentOutput, {}, {}, {}, { image_barrier });
+
 		{
 			vk::RenderPassBeginInfo render_begin_info;
 			render_begin_info.setRenderPass(m_render_pass.get());

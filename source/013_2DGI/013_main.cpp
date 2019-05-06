@@ -281,12 +281,12 @@ int rigidbody()
 //				physics_world->executeMakeVoronoi(cmd);
 //				if (app.m_window->getInput().m_keyboard.isHold('A'))
 				{
-					gi2d_rigidbody.executeDrawVoronoi(cmd, physics_world);
-					gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
+//					gi2d_rigidbody.executeDrawVoronoi(cmd, physics_world);
+//					gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
 				}
 //				else 
 				{
-//					physics_debug->executeDrawVoronoiTriangle(cmd);
+					physics_debug->executeDrawVoronoiTriangle(cmd);
 //					physics_world->executeMakeVoronoiPath(cmd);
 //					physics_debug->executeDrawVoronoiPath(cmd);
 				}
