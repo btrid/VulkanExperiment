@@ -6,6 +6,7 @@
 #include <btrlib/AllocatedMemory.h>
 #include <btrlib/cCmdPool.h>
 
+
 class cWindow;
 namespace btr
 {

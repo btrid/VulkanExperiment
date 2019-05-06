@@ -181,89 +181,8 @@ int pathFinding()
 
 }
 
-vec2 calcTangent(const vec2& I, const vec2& N)
-{
-	return I - N * dot(N, I);
-}
-
-void y(vec2 p1, vec2 p2, vec2 sdf)
-{
-	vec2 a = p1 + sdf - p2;
-	auto c1 = dot(a, normalize(sdf)) * normalize(sdf);
-	vec2 collect = p1 + sdf;
-	vec2 predict = p2 + c1;
-
-	printf("p1={%5.2f,%5.2f} p2={%5.2f,%5.2f} sdf={%5.2f,%5.2f}\n", p1.x, p1.y, p2.x, p2.y, sdf.x, sdf.y);
-	printf("c ={%5.2f,%5.2f} p ={%5.2f,%5.2f}\n", collect.x, collect.y, predict.x, predict.y);
-}
-
-void y(vec2 p1, vec2 p2, vec2 sdf1, vec2 sdf2)
-{
-	vec2 a1 = p2 + sdf2 - p1;
-	vec2 a2 = p1 + sdf1 - p2;
-	auto v1 = dot(a1, normalize(sdf2)) * normalize(sdf2);
-	auto v2 = dot(a2, normalize(sdf1)) * normalize(sdf1);
-	vec2 pr1 = p2 + sdf2;
-	vec2 pr2 = p1 + sdf1;
-	vec2 c1 = p1 + v1;
-	vec2 c2 = p2 + v2;
-
-	printf("p1={%5.2f,%5.2f} p2={%5.2f,%5.2f} sdf={%5.2f,%5.2f}\n", p1.x, p1.y, p2.x, p2.y, sdf1.x, sdf1.y);
-	printf("p1 ={%5.2f,%5.2f} p2 ={%5.2f,%5.2f}\n", pr1.x, pr1.y, pr2.x, pr2.y);
-	printf("c2 ={%5.2f,%5.2f} c2 ={%5.2f,%5.2f}\n", c1.x, c1.y, c2.x, c2.y);
-}
-vec2 normalize_safe(vec2 v)
-{
-	return dot(v, v) == 0.f ? vec2(0.) : normalize(v);
-}
 int rigidbody()
 {
-// 	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(-1.f, 0.f));
-// 	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(-1.f, 0.f));
-// 	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(-1.f, 0.f));
-// 	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(0.f, -1.f));
-// 	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(0.f, -1.f));
-// 	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(2.f, 0.f));
-// 	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(2.f, 0.f));
-// 	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(2.f, 0.f));
-// 	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(0.f, 1.f));
-//	y(vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(rand() % 10 - 20, rand() % 10 - 20), vec2(0.f, 2.f));
-//	y(vec2(20), vec2(20), vec2(1.f, -1.f), vec2(1.f, 1.f));
-//	y(vec2(0), vec2(1, 0), vec2(0.f, 1.f), vec2(0.f, -1.f));
-
-// 	auto xaxis = glm::rotate(vec2(1.f, 0.f), glm::radians(30.f));
-// 	auto yaxis = glm::rotate(vec2(0.f, 1.f), glm::radians(30.f));
-// 
-// 	vec2 p1 = xaxis * vec2(0.25) + yaxis * vec2(0.25);
-// 	vec2 p2 = xaxis * vec2(-0.25) + yaxis * vec2(0.25);
-// 	vec2 p3 = xaxis * vec2(0.25) + yaxis * vec2(-0.25);
-// 	vec2 p4 = xaxis * vec2(-0.25) + yaxis * vec2(-0.25);
-
-//	vec2 p1 = vec2(p_x.x, p_y.x);
-//	vec2 p2 = vec2(p_x.y, p_y.y);
-//	vec2 p3 = vec2(p_x.z, p_y.z);
-//	vec2 p4 = vec2(p_x.w, p_y.w);
-
-// 	vec4 xaxis = glm::rotate(vec2(1.f, 0.f), glm::radians(30.f)).xyxy() * vec2(0.25, -0.25).xxyy();
-// 	vec4 yaxis = glm::rotate(vec2(0.f, 1.f), glm::radians(30.f)).xyxy() * vec2(0.25, -0.25).xxyy();
-	auto a = glm::sqrt(vec4(1, 2, 3, 4)*vec4(1, 2, 3, 4)+ vec4(2, 4, 6, 8)*vec4(2, 4, 6, 8));
-	auto b = vec4(glm::length(vec2(1.f, 2.f)), glm::length(vec2(2.f, 4.f)), glm::length(vec2(3.f, 6.f)), glm::length(vec2(4.f, 8.f)));
-	auto c = glm::length(vec2(512));
-
-	auto vel1 = vec2(0.1f, 1.f);
-	auto vel2 = vec2(-0.1f, 1.f);
-	auto pos1 = vec2(0.f, 1.f);
-	auto pos2 = vec2(0.2f, 1.f);
-	auto rela_pos = pos2 - pos1;
-	auto rela_vel = vel2 - vel1;
-	vec2 vel_unit = normalize_safe(rela_vel);
-	vec2 pos_unit = normalize_safe(rela_pos);
-
-	float w1 = glm::max(dot(-rela_pos, rela_vel), 0.f);
-
-	auto rela_pos2 = pos1 - pos2;
-	auto rela_vel2 = vel1 - vel2;
-	float w2 = glm::max(dot(-rela_pos2, rela_vel2), 0.f);
 
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
@@ -397,7 +316,7 @@ int main()
 	camera->getData().m_near = 0.01f;
 
 //	return pathFinding();
-//	return rigidbody();
+	return rigidbody();
 
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();

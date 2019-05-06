@@ -350,7 +350,6 @@ struct GI2DMakeHierarchy
 			barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
 			barrier.setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
 			barrier.setNewLayout(vk::ImageLayout::eGeneral);
-
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(to_read), to_read }, { barrier });
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RenderSDF].get());

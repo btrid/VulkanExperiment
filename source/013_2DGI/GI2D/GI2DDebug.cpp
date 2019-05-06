@@ -271,8 +271,12 @@ void GI2DDebug::executeDrawFragment(vk::CommandBuffer cmd, const std::shared_ptr
 	vk::BufferMemoryBarrier barrier[] = {
 		m_gi2d_context->b_fragment.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 	};
-	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
-		{}, 0, nullptr, std::size(barrier), barrier, 0, nullptr);
+	vk::ImageMemoryBarrier image_barrier;
+	image_barrier.setImage(render_target->m_image);
+	image_barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+	image_barrier.setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
+	image_barrier.setNewLayout(vk::ImageLayout::eGeneral);
+	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, { image_barrier });
 
 	vk::DescriptorSet descriptorsets[] = {
 		m_gi2d_context->getDescriptorSet(),

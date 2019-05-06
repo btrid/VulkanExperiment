@@ -19,7 +19,8 @@ struct GI2DPhysics
 		Shader_MakeRB_MakeJFCell,
 		Shader_MakeRB_MakeSDF,
 
-		Shader_Voronoi_Make,
+		Shader_Voronoi_SetupJFA,
+		Shader_Voronoi_MakeJFA,
 		Shader_Voronoi_MakeTriangle,
 		Shader_Voronoi_SortTriangleVertex,
 
@@ -46,7 +47,8 @@ struct GI2DPhysics
 		Pipeline_MakeRB_MakeJFCell,
 		Pipeline_MakeRB_MakeSDF,
 
-		Pipeline_Voronoi_Make,
+		Pipeline_Voronoi_SetupJFA,
+		Pipeline_Voronoi_MakeJFA,
 		Pipeline_Voronoi_MakeTriangle,
 		Pipeline_Voronoi_SortTriangleVertex,
 		Pipeline_Voronoi_MakePath,

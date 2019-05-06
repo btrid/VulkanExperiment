@@ -15,6 +15,7 @@
 #include <btrlib/DefineMath.h>
 
 #include <string>
+#include <cstring>
 namespace btr {
 	std::string getResourceAppPath();
 	std::string getResourceLibPath();
@@ -23,6 +24,33 @@ namespace btr {
 	void setResourceAppPath(const std::string& str);
 	void setResourceLibPath(const std::string& str);
 }
+
+struct DebugLabel
+{
+	DebugLabel(vk::CommandBuffer cmd, vk::DispatchLoaderDynamic& dispatcher, const char* label, const std::array<float, 4>& color)
+		: m_cmd(cmd)
+		, m_dispatcher(dispatcher)
+
+	{
+#if USE_DEBUG_REPORT
+		vk::DebugUtilsLabelEXT label_info;
+		memcpy_s(label_info.color, sizeof(label_info.color), color.data(), sizeof(label_info.color));
+		label_info.pLabelName = label;
+		cmd.beginDebugUtilsLabelEXT(label_info, dispatcher);
+#endif
+	}
+
+	~DebugLabel()
+	{
+#if USE_DEBUG_REPORT
+		m_cmd.endDebugUtilsLabelEXT(m_dispatcher);
+#endif
+	}
+	vk::CommandBuffer m_cmd;
+	vk::DispatchLoaderDynamic m_dispatcher;
+
+};
+
 
 template<typename T>
 size_t vector_sizeof(const T& v) {
