@@ -20,8 +20,9 @@ SET output=../binary
 %exe% %include% %option% -o %output%/GI2DSDF_MakeSDF.comp.spv GI2DSDF_MakeSDF.comp
 %exe% %include% %option% -o %output%/GI2DSDF_RenderSDF.comp.spv GI2DSDF_RenderSDF.comp
 
-%exe% %include% %option% -o ../binary\\GI2DDebug_DrawFragment.comp.spv GI2DDebug_DrawFragment.comp
-%exe% %include% %option% -o ../binary\\GI2DDebug_DrawFragmentMap.comp.spv GI2DDebug_DrawFragmentMap.comp
+%exe% %include% %option% -o %output%/GI2DDebug_DrawFragment.comp.spv GI2DDebug_DrawFragment.comp
+%exe% %include% %option% -o %output%/GI2DDebug_DrawFragmentMap.comp.spv GI2DDebug_DrawFragmentMap.comp
+%exe% %include% %option% -o %output%/GI2DDebug_MakeLight.comp.spv GI2DDebug_MakeLight.comp
 
 
 %exe% %include% %option% -o %output%/Radiosity_Clear.comp.spv Radiosity_Clear.comp
@@ -41,7 +42,6 @@ rem %exe% %include% %option% -o %output%/Radiosity_CalcRadiance.comp.spv Radiosi
 
 %exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity.comp
 
-%exe% %include% %option% -o %output%/GI2D_DebugMakeLight.comp.spv GI2D_DebugMakeLight.comp
 
 call fluid/make.bat
 cd /d %~dp0

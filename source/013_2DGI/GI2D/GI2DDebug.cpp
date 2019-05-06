@@ -162,7 +162,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 	{
 		const char* name[] =
 		{
-			"GI2D_DebugMakeLight.comp.spv",
+			"GI2DDebug_MakeLight.comp.spv",
 			"GI2DDebug_DrawFragmentMap.comp.spv",
 			"GI2DDebug_DrawFragment.comp.spv",
 		};
