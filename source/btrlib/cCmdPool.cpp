@@ -120,7 +120,7 @@ vk::CommandBuffer cCmdPool::allocCmdImpl()
 	return cmd;
 }
 
-vk::CommandBuffer cCmdPool::allocCmdOnetime(int device_family_index)
+vk::CommandBuffer cCmdPool::allocCmdOnetime(int device_family_index, const char* name /*= nullptr*/)
 {
 	auto cmd = allocCmdImpl();
 
@@ -129,7 +129,7 @@ vk::CommandBuffer cCmdPool::allocCmdOnetime(int device_family_index)
 	sprintf_s(buf, "Onetime CMD %d", m_cmd[sThreadLocal::Order().getThreadIndex()][sGlobal::Order().getCurrentFrame()].m_cmd_onetime_deleter.size());
 	vk::DebugUtilsObjectNameInfoEXT name_info;
 	name_info.objectType = vk::ObjectType::eCommandBuffer;
-	name_info.pObjectName = buf;
+	name_info.pObjectName = name ? name : buf;
 	name_info.objectHandle = reinterpret_cast<uint64_t &>(cmd);
 	m_context->m_device->setDebugUtilsObjectNameEXT(name_info, m_context->m_dispach);
 #endif
@@ -137,7 +137,7 @@ vk::CommandBuffer cCmdPool::allocCmdOnetime(int device_family_index)
 	return cmd;
 }
 
-vk::CommandBuffer cCmdPool::allocCmdTempolary(uint32_t device_family_index)
+vk::CommandBuffer cCmdPool::allocCmdTempolary(uint32_t device_family_index, const char* name /*= nullptr*/)
 {
 	auto& cmd = m_tls_cmds[sThreadLocal::Order().getThreadIndex()];
 	if (!cmd)
@@ -149,7 +149,7 @@ vk::CommandBuffer cCmdPool::allocCmdTempolary(uint32_t device_family_index)
 		sprintf_s(buf, "TlsTempolary CMD %d", m_cmd[sThreadLocal::Order().getThreadIndex()][sGlobal::Order().getCurrentFrame()].m_cmd_onetime_deleter.size());
 		vk::DebugUtilsObjectNameInfoEXT name_info;
 		name_info.objectType = vk::ObjectType::eCommandBuffer;
-		name_info.pObjectName = buf;
+		name_info.pObjectName = name ? name : buf;
 		name_info.objectHandle = reinterpret_cast<uint64_t &>(cmd);
 		m_context->m_device->setDebugUtilsObjectNameEXT(name_info, m_context->m_dispach);
 #endif

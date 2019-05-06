@@ -120,6 +120,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_messenger_callback(
 	fflush(stdout);
 	free(message);
 	// Don't bail out, but keep going.
+	DebugBreak();
 	return false;
 }
 

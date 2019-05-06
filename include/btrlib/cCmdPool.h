@@ -30,8 +30,8 @@ struct cCmdPool
 	std::shared_ptr<btr::Context> m_context;
 
 	vk::CommandBuffer allocCmdImpl();
-	vk::CommandBuffer allocCmdOnetime(int device_family_index);
-	vk::CommandBuffer allocCmdTempolary(uint32_t device_family_index);
+	vk::CommandBuffer allocCmdOnetime(int device_family_index, const char* name = nullptr);
+	vk::CommandBuffer allocCmdTempolary(uint32_t device_family_index, const char* name = nullptr);
 
 	void resetPool();
 	std::vector<vk::CommandBuffer> submit();

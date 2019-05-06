@@ -87,7 +87,7 @@ ClearPipeline::ClearPipeline(const std::shared_ptr<btr::Context>& context, const
 
 	m_cmd->end();
 
-#if _DEBUG
+#if USE_DEBUG_REPORT
 	vk::DebugUtilsObjectNameInfoEXT name_info;
 	name_info.objectHandle = reinterpret_cast<uint64_t &>(m_cmd.get());
 	name_info.objectType = vk::ObjectType::eCommandBuffer;
@@ -327,7 +327,7 @@ PresentPipeline::PresentPipeline(const std::shared_ptr<btr::Context>& context, c
 			vk::DescriptorImageInfo()
 			.setImageView(render_target->m_view)
 			.setSampler(sGraphicsResource::Order().getSampler(sGraphicsResource::BASIC_SAMPLER_LINER))
-			.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal),
+			.setImageLayout(vk::ImageLayout::eGeneral),
 		};
 		vk::WriteDescriptorSet write[] = {
 			vk::WriteDescriptorSet()
@@ -347,6 +347,19 @@ PresentPipeline::PresentPipeline(const std::shared_ptr<btr::Context>& context, c
 		cmd_buffer_info.commandBufferCount = sGlobal::FRAME_MAX;
 		cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
 		m_cmd = context->m_device->allocateCommandBuffersUnique(cmd_buffer_info);
+
+#if USE_DEBUG_REPORT
+		char buf[256];
+		vk::DebugUtilsObjectNameInfoEXT name_info;
+		name_info.objectType = vk::ObjectType::eCommandBuffer;
+		name_info.pObjectName = buf;
+		for (int i = 0; i < m_cmd.size(); i++)
+		{
+			name_info.objectHandle = reinterpret_cast<uint64_t &>(m_cmd[i].get());
+			sprintf_s(buf, "PresentPipeline CMD[%d]", i);
+			context->m_device->setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
+		}
+#endif
 	}
 
 
@@ -361,15 +374,22 @@ PresentPipeline::PresentPipeline(const std::shared_ptr<btr::Context>& context, c
 		cmd->begin(begin_info);
 
 		{
-			vk::ImageMemoryBarrier present_to_dstcopy;
-			present_to_dstcopy.setSrcAccessMask(vk::AccessFlagBits::eMemoryRead);
-			present_to_dstcopy.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
-			present_to_dstcopy.setOldLayout(vk::ImageLayout::ePresentSrcKHR);
-			present_to_dstcopy.setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
-			present_to_dstcopy.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-			present_to_dstcopy.setImage(swapchain->m_backbuffer_image[i]);
-			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eColorAttachmentOutput, {},
-				nullptr, nullptr, present_to_dstcopy);
+			vk::ImageMemoryBarrier to_present[2];
+			to_present[0].setSrcAccessMask(vk::AccessFlagBits::eMemoryRead);
+			to_present[0].setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+			to_present[0].setOldLayout(vk::ImageLayout::ePresentSrcKHR);
+			to_present[0].setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
+			to_present[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+			to_present[0].setImage(swapchain->m_backbuffer_image[i]);
+//			to_present[1].setSrcAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+			to_present[1].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+//			to_present[1].setOldLayout(vk::ImageLayout::eColorAttachmentOptimal);
+			to_present[1].setNewLayout(vk::ImageLayout::eGeneral);
+//			to_present[1].setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+			to_present[1].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+			to_present[1].setImage(render_target->m_image);
+			cmd->pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput|vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader|vk::PipelineStageFlagBits::eColorAttachmentOutput, {},
+				nullptr, nullptr, { array_size(to_present), to_present });
 		}
 
 		{
@@ -389,17 +409,5 @@ PresentPipeline::PresentPipeline(const std::shared_ptr<btr::Context>& context, c
 		cmd->end();
 	}
 
-#if USE_DEBUG_REPORT
-	char buf[256];
-	vk::DebugUtilsObjectNameInfoEXT name_info;
-	name_info.objectType = vk::ObjectType::eCommandBuffer;
-	name_info.pObjectName = buf;
-	for (int i = 0; i < m_cmd.size(); i++)
-	{
-		name_info.objectHandle = reinterpret_cast<uint64_t &>(m_cmd[i].get());
-		sprintf_s(buf, "PresentPipeline CMD[%d]", i);
-		context->m_device->setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
-	}
-#endif
 }
 

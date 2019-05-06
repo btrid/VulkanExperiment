@@ -460,6 +460,7 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd, const std::sh
 
 #endif
 	}
+
 	{
 		// データクリア
 		vk::BufferMemoryBarrier to_read[] = {
@@ -548,19 +549,12 @@ void GI2DRadiosity::executeRendering(const vk::CommandBuffer& cmd)
 			b_radiance.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 		};
 
-		vk::ImageSubresourceRange subresource_range;
-		subresource_range.setAspectMask(vk::ImageAspectFlagBits::eColor);
-		subresource_range.setBaseArrayLayer(0);
-		subresource_range.setLayerCount(1);
-		subresource_range.setBaseMipLevel(0);
-		subresource_range.setLevelCount(1);
-
 		vk::ImageMemoryBarrier barrier;
 		barrier.setImage(m_render_target->m_image);
-		barrier.setSubresourceRange(subresource_range);
+		barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
 		barrier.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
-//		barrier.setOldLayout(vk::ImageLayout::eUndefined);
 		barrier.setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
+
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eFragmentShader| vk::PipelineStageFlagBits::eColorAttachmentOutput, {}, {}, { array_size(to_read), to_read }, {barrier});
 	}
 

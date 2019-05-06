@@ -478,17 +478,17 @@ int main()
 
 			// gi2d
 			{
-				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
+				auto cmd = context->m_cmd_pool->allocCmdOnetime(0, "cmd_gi2d");
 				gi2d_context->execute(cmd);
 				gi2d_clear.execute(cmd);
 				gi2d_debug_make_fragment.executeMakeFragmentMap(cmd);
 
-#define use_sdf
+//#define use_sdf
 #if defined(use_sdf)
 				gi2d_make_hierarchy.executeMakeFragmentMapAndSDF(cmd, gi2d_sdf_context);
 				gi2d_make_hierarchy.executeHierarchy(cmd);
 				gi2d_make_hierarchy.executeMakeSDF(cmd, gi2d_sdf_context);
-				gi2d_make_hierarchy.executeRenderSDF(cmd, gi2d_sdf_context, app.m_window->getFrontBuffer());
+//				gi2d_make_hierarchy.executeRenderSDF(cmd, gi2d_sdf_context, app.m_window->getFrontBuffer());
 #else
 				gi2d_make_hierarchy.execute(cmd);
 				gi2d_make_hierarchy.executeHierarchy(cmd);
@@ -512,8 +512,8 @@ int main()
 				gi2d_Radiosity.executeRadiosity(cmd, gi2d_sdf_context);
 				gi2d_Radiosity.executeRendering(cmd);
 //				crowd_procedure.executeDrawField(cmd, app.m_window->getFrontBuffer());
-//				cmd.end();
-//				cmds[cmd_gi2d] = cmd;
+				cmd.end();
+				cmds[cmd_gi2d] = cmd;
 			}
 			app.submit(std::move(cmds));
 //			device->waitIdle();

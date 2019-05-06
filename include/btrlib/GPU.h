@@ -10,7 +10,7 @@ public:
 	cDevice() {}
 	~cDevice(){}
 
-_	vk::Device*			operator->() { return &m_handle; }
+	vk::Device*			operator->() { return &m_handle; }
 	const vk::Device*	operator->()const { return &m_handle; }
 
 
