@@ -484,6 +484,7 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd, const std::sh
 	// bounce
 	{
 
+		_label.insert("GI2DRadiosity::executeBounce", { 1.f });
 		{
 			vk::BufferMemoryBarrier to_read[] = 
 			{
@@ -531,6 +532,7 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd, const std::sh
 
 	// radiance
 	{
+		_label.insert("GI2DRadiosity::executeCollectRadiant", { 1.f });
 
 		vk::BufferMemoryBarrier to_read[] = {
 			b_radiance.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),

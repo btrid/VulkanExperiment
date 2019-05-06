@@ -142,7 +142,7 @@ int pathFinding()
 				gi2d_clear.execute(cmd);
 				gi2d_debug.executeMakeFragmentMap(cmd);
 
-				gi2d_make_hierarchy.execute(cmd);
+				gi2d_make_hierarchy.executeMakeFragmentMap(cmd);
 				gi2d_make_hierarchy.executeHierarchy(cmd);
 
 				if (0)
@@ -269,10 +269,10 @@ int rigidbody()
 				gi2d_clear.execute(cmd);
 				gi2d_debug.executeMakeFragmentMap(cmd);
 
-//				gi2d_make_hierarchy.execute(cmd);
-				gi2d_make_hierarchy.executeMakeFragmentMapAndSDF(cmd, gi2d_sdf_context);
+				gi2d_make_hierarchy.executeMakeFragmentMap(cmd);
+//				gi2d_make_hierarchy.executeMakeFragmentMapAndSDF(cmd, gi2d_sdf_context);
 				gi2d_make_hierarchy.executeHierarchy(cmd);
-				gi2d_make_hierarchy.executeMakeSDF(cmd, gi2d_sdf_context);
+//				gi2d_make_hierarchy.executeMakeSDF(cmd, gi2d_sdf_context);
 //				gi2d_make_hierarchy.executeRenderSDF(cmd, gi2d_sdf_context, app.m_window->getFrontBuffer());
 
 //				gi2d_rigidbody.execute(cmd, physics_world, gi2d_sdf_context);
@@ -316,7 +316,7 @@ int main()
 	camera->getData().m_near = 0.01f;
 
 //	return pathFinding();
-//	return rigidbody();
+	return rigidbody();
 
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
@@ -409,7 +409,7 @@ int main()
 				gi2d_make_hierarchy.executeMakeSDF(cmd, gi2d_sdf_context);
 //				gi2d_make_hierarchy.executeRenderSDF(cmd, gi2d_sdf_context, app.m_window->getFrontBuffer());
 #else
-				gi2d_make_hierarchy.execute(cmd);
+				gi2d_make_hierarchy.executeMakeFragmentMap(cmd);
 				gi2d_make_hierarchy.executeHierarchy(cmd);
 #endif
 				{
