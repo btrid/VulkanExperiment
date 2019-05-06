@@ -210,6 +210,8 @@ struct GI2DContext
 
 	void execute(vk::CommandBuffer cmd)
 	{
+		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__, { 1.f });
+
 		m_gi2d_scene.m_frame = (m_gi2d_scene.m_frame + 1) % 4;
 		auto reso = m_gi2d_info.m_resolution;
 
@@ -244,6 +246,7 @@ struct GI2DContext
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 		}
 	}
+
 	std::shared_ptr<btr::Context> m_context;
 	
 	GI2DInfo m_gi2d_info;

@@ -291,13 +291,17 @@ struct GI2DFluid
 			// linklist更新のため初期化
 			vk::BufferMemoryBarrier to_write[] = {
 				b_grid_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
+				m_gi2d_context->b_grid_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {},
 				0, nullptr, array_length(to_write), to_write, 0, nullptr);
 
 			cmd.fillBuffer(b_grid_head.getInfo().buffer, b_grid_head.getInfo().offset, b_grid_head.getInfo().range, -1);
+			cmd.fillBuffer(m_gi2d_context->b_grid_counter.getInfo().buffer, m_gi2d_context->b_grid_counter.getInfo().offset, m_gi2d_context->b_grid_counter.getInfo().range, 0);
 
 		}
+
+		// clear
 
 		{
 			// 位置の更新

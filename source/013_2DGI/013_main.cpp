@@ -27,7 +27,6 @@
 #include <applib/sImGuiRenderer.h>
 
 #include <013_2DGI/GI2D/GI2DMakeHierarchy.h>
-#include <013_2DGI/GI2D/GI2DClear.h>
 #include <013_2DGI/GI2D/GI2DDebug.h>
 #include <013_2DGI/GI2D/GI2DModelRender.h>
 #include <013_2DGI/GI2D/GI2DRadiosity.h>
@@ -93,7 +92,6 @@ int pathFinding()
 	std::shared_ptr<CrowdContext> crowd_context = std::make_shared<CrowdContext>(context, gi2d_context);
 	std::shared_ptr<PathContext> path_context = std::make_shared<PathContext>(context, gi2d_context);
 
-	GI2DClear gi2d_clear(context, gi2d_context);
 	GI2DDebug gi2d_debug(context, gi2d_context);
 	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
@@ -139,7 +137,6 @@ int pathFinding()
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				gi2d_context->execute(cmd);
 				crowd_context->execute(cmd);
-				gi2d_clear.execute(cmd);
 				gi2d_debug.executeMakeFragmentMap(cmd);
 
 				gi2d_make_hierarchy.executeMakeFragmentMap(cmd);
@@ -205,7 +202,6 @@ int rigidbody()
 	std::shared_ptr<GI2DPhysics> physics_world = std::make_shared<GI2DPhysics>(context, gi2d_context);
 	std::shared_ptr<GI2DPhysicsDebug> physics_debug = std::make_shared<GI2DPhysicsDebug>(physics_world, app.m_window->getFrontBuffer());
 
-	GI2DClear gi2d_clear(context, gi2d_context);
 	GI2DDebug gi2d_debug(context, gi2d_context);
 	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
 	GI2DPhysics_procedure gi2d_rigidbody(physics_world, gi2d_sdf_context);
@@ -252,6 +248,8 @@ int rigidbody()
 			// gi2d
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
+				gi2d_context->execute(cmd);
+
 				if (context->m_window->getInput().m_keyboard.isOn('A'))
 				{
 //					physics_world->make(cmd, uvec4(255, 500, 32, 32));
@@ -265,8 +263,6 @@ int rigidbody()
 					}
 				}
 
-				gi2d_context->execute(cmd);
-				gi2d_clear.execute(cmd);
 				gi2d_debug.executeMakeFragmentMap(cmd);
 
 				gi2d_make_hierarchy.executeMakeFragmentMap(cmd);
@@ -344,7 +340,6 @@ int main()
 	std::shared_ptr<GI2DSDF> gi2d_sdf_context = std::make_shared<GI2DSDF>(gi2d_context);
 	std::shared_ptr<CrowdContext> crowd_context = std::make_shared<CrowdContext>(context, gi2d_context);
 
-	GI2DClear gi2d_clear(context, gi2d_context);
 	GI2DDebug gi2d_debug_make_fragment(context, gi2d_context);
 	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
 	GI2DRadiosity gi2d_Radiosity(context, gi2d_context, app.m_window->getFrontBuffer());
@@ -399,7 +394,6 @@ int main()
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0, "cmd_gi2d");
 				gi2d_context->execute(cmd);
-				gi2d_clear.execute(cmd);
 				gi2d_debug_make_fragment.executeMakeFragmentMap(cmd);
 
 //#define use_sdf
