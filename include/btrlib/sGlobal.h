@@ -16,9 +16,6 @@
 
 using GameFrame = uint32_t;
 
-#define USE_DEBUG_REPORT _DEBUG
-
-
 class sGlobal : public Singleton<sGlobal>
 {
 	friend Singleton<sGlobal>;

@@ -25,6 +25,7 @@ namespace btr {
 	void setResourceLibPath(const std::string& str);
 }
 
+#define USE_DEBUG_REPORT 1
 struct DebugLabel
 {
 	DebugLabel(vk::CommandBuffer cmd, vk::DispatchLoaderDynamic& dispatcher, const char* label, const std::array<float, 4>& color)
@@ -40,6 +41,15 @@ struct DebugLabel
 #endif
 	}
 
+	void insert(const char* label, const std::array<float, 4>& color)
+	{
+#if USE_DEBUG_REPORT
+		vk::DebugUtilsLabelEXT label_info;
+		memcpy_s(label_info.color, sizeof(label_info.color), color.data(), sizeof(label_info.color));
+		label_info.pLabelName = label;
+		m_cmd.insertDebugUtilsLabelEXT(label_info, m_dispatcher);
+#endif
+	}
 	~DebugLabel()
 	{
 #if USE_DEBUG_REPORT
