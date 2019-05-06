@@ -586,6 +586,7 @@ void GI2DPhysics::executeMakeVoronoi(vk::CommandBuffer cmd)
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Voronoi].get(), 0, getDescriptorSet(GI2DPhysics::DescLayout_Data), {});
 
 	ivec2 reso = m_gi2d_context->RenderSize;
+	int voronoi_cell_num = 0;
 	{
 		{
 			{
@@ -629,6 +630,7 @@ void GI2DPhysics::executeMakeVoronoi(vk::CommandBuffer cmd)
 
 			}
 			assert(points.capacity() == 4096);
+			voronoi_cell_num = points.size();
 			cmd.updateBuffer<VoronoiCell>(b_voronoi_cell.getInfo().buffer, b_voronoi_cell.getInfo().offset, points);
 
 			
@@ -643,8 +645,8 @@ void GI2DPhysics::executeMakeVoronoi(vk::CommandBuffer cmd)
 		{
 			// voronoiÇ…èâä˙ÇÃì_Çë≈Ç¬
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Voronoi_SetupJFA].get());
-			cmd.pushConstants<uvec4>(m_pipeline_layout[PipelineLayout_Voronoi].get(), vk::ShaderStageFlagBits::eCompute, 0, uvec4{ 4096, 0, reso });
-			auto num = app::calcDipatchGroups(uvec3(4096, 1, 1), uvec3(1024, 1, 1));
+			cmd.pushConstants<uvec4>(m_pipeline_layout[PipelineLayout_Voronoi].get(), vk::ShaderStageFlagBits::eCompute, 0, uvec4{ voronoi_cell_num, 0, reso });
+			auto num = app::calcDipatchGroups(uvec3(voronoi_cell_num, 1, 1), uvec3(1024, 1, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 
 		}
