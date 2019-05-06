@@ -210,6 +210,7 @@ int rigidbody()
 
 	physics_world->executeMakeVoronoi(cmd);
 	physics_world->executeMakeVoronoiPath(cmd);
+	gi2d_debug.executeMakeFragmentMap(cmd);
 	app.setup();
 
 	while (true)
@@ -263,7 +264,6 @@ int rigidbody()
 					}
 				}
 
-				gi2d_debug.executeMakeFragmentMap(cmd);
 
 				gi2d_make_hierarchy.executeMakeFragmentMap(cmd);
 //				gi2d_make_hierarchy.executeMakeFragmentMapAndSDF(cmd, gi2d_sdf_context);
