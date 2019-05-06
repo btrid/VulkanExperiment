@@ -64,6 +64,7 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 			"Voronoi_SetupJFA.comp.spv",
 			"Voronoi_MakeJFA.comp.spv",
 			"Voronoi_MakeTriangle.comp.spv",
+			"Voronoi_MakeTriangle2.comp.spv",
 			"Voronoi_SortTriangle.comp.spv",
 			"Voronoi_MakePath.comp.spv",
 		};
@@ -158,12 +159,15 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 		shader_info[7].setModule(m_shader[Shader_Voronoi_MakeTriangle].get());
 		shader_info[7].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[7].setPName("main");
-		shader_info[8].setModule(m_shader[Shader_Voronoi_SortTriangleVertex].get());
+		shader_info[8].setModule(m_shader[Shader_Voronoi_MakeTriangle].get());
 		shader_info[8].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[8].setPName("main");
-		shader_info[9].setModule(m_shader[Shader_Voronoi_MakePath].get());
+		shader_info[9].setModule(m_shader[Shader_Voronoi_SortTriangleVertex].get());
 		shader_info[9].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[9].setPName("main");
+		shader_info[10].setModule(m_shader[Shader_Voronoi_MakePath].get());
+		shader_info[10].setStage(vk::ShaderStageFlagBits::eCompute);
+		shader_info[10].setPName("main");
 		std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 		{
 			vk::ComputePipelineCreateInfo()
@@ -196,6 +200,9 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 			vk::ComputePipelineCreateInfo()
 			.setStage(shader_info[9])
 			.setLayout(m_pipeline_layout[PipelineLayout_Voronoi].get()),
+			vk::ComputePipelineCreateInfo()
+			.setStage(shader_info[10])
+			.setLayout(m_pipeline_layout[PipelineLayout_Voronoi].get()),
 		};
 		auto compute_pipeline = m_context->m_device->createComputePipelinesUnique(m_context->m_cache.get(), compute_pipeline_info);
 		m_pipeline[Pipeline_ToFluid] = std::move(compute_pipeline[0]);
@@ -206,8 +213,9 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 		m_pipeline[Pipeline_Voronoi_SetupJFA] = std::move(compute_pipeline[5]);
 		m_pipeline[Pipeline_Voronoi_MakeJFA] = std::move(compute_pipeline[6]);
 		m_pipeline[Pipeline_Voronoi_MakeTriangle] = std::move(compute_pipeline[7]);
-		m_pipeline[Pipeline_Voronoi_SortTriangleVertex] = std::move(compute_pipeline[8]);
-		m_pipeline[Pipeline_Voronoi_MakePath] = std::move(compute_pipeline[9]);
+		m_pipeline[Pipeline_Voronoi_MakeTriangle2] = std::move(compute_pipeline[8]);
+		m_pipeline[Pipeline_Voronoi_SortTriangleVertex] = std::move(compute_pipeline[9]);
+		m_pipeline[Pipeline_Voronoi_MakePath] = std::move(compute_pipeline[10]);
 	}
 
 	{
@@ -672,6 +680,20 @@ void GI2DPhysics::executeMakeVoronoi(vk::CommandBuffer cmd)
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Voronoi_MakeTriangle].get());
 		auto num = app::calcDipatchGroups(uvec3(reso, 1), uvec3(8, 8, 1));
+
+		cmd.dispatch(num.x, num.y, num.z);
+	}
+
+	// triangle‚Ìaabb‚ðŒvŽZ
+	{
+		vk::BufferMemoryBarrier to_read[] = {
+			b_voronoi_polygon.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite),
+		};
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+			0, nullptr, array_length(to_read), to_read, 0, nullptr);
+
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Voronoi_MakeTriangle2].get());
+		auto num = app::calcDipatchGroups(uvec3(4096, 1, 1), uvec3(64, 1, 1));
 
 		cmd.dispatch(num.x, num.y, num.z);
 	}

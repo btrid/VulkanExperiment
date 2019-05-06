@@ -91,6 +91,7 @@ struct VoronoiPolygon
 {
 	int16_t vertex_index[VoronoiVertex_MAX];
 	int num;
+	i16vec4 minmax;
 };
 
 struct VoronoiVertex
