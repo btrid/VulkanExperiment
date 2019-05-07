@@ -39,5 +39,7 @@ SET output=../../binary
 %exe% %include% %option% -o %output%/Debug_DrawVoronoiPath.geom.spv Debug_DrawVoronoiPath.geom
 
 
+rem particle test
+rem %exe% %include% %option% -o %output%/Rigid_CollisionDetective.comp.spv Rigid_CollisionDetective_ray.comp
 
 
