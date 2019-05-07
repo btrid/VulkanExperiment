@@ -122,7 +122,8 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_messenger_callback(
 	// Don't bail out, but keep going.
 	DebugBreak();
 	return false;
-}
+}
+
 
 sGlobal::sGlobal()
 	: m_current_frame(0)

@@ -172,8 +172,6 @@ void GI2DPhysics_procedure::execute(vk::CommandBuffer cmd, const std::shared_ptr
 	{
 		{
 
-//			m_world->execute(cmd);
-
 			_executeMakeCollidableWall(cmd, world, sdf);
 			_executeMakeCollidableParticle(cmd, world);
 		}

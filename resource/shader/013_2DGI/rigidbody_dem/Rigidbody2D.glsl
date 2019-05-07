@@ -18,7 +18,7 @@ struct rbWorld
 	float DeltaTime;
 	uint step;
 	uint STEP;
-	uint rigidbody_num;
+	uint rigidbody_num_notuse;
 
 	uint rigidbody_max;
 	uint particle_block_max;
@@ -165,7 +165,7 @@ layout(set=USE_MakeRigidbody, binding=1, std430) restrict buffer MakeParticleBuf
 	rbParticle b_make_particle[];
 };
 layout(set=USE_MakeRigidbody, binding=2, std430) restrict buffer MakeJFABuffer {
-	i16vec2 b_jfa_cell[];
+	i16vec2 b_make_jfa_cell[];
 };
 layout(set=USE_MakeRigidbody, binding=3, std430) restrict buffer MakeDispatchParam {
 	uvec4 b_make_dispatch_param;

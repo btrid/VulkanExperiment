@@ -21,7 +21,7 @@ void nearest(inout i16vec2 new_cell, inout float current_d, in i16vec2 current, 
 {
 	if(all(greaterThanEqual(target, i16vec2(0))) && all(lessThan(target, constant.reso)))
 	{
-		target = b_jfa_cell[target.x + target.y*constant.reso.x];
+		target = b_make_jfa_cell[target.x + target.y*constant.reso.x];
 		if(target.x== -32768){ return; }
 	}
 
@@ -39,7 +39,7 @@ void main()
 	if(any(greaterThanEqual(gl_GlobalInvocationID.xy, constant.reso))){ return; }
 	const i16vec2 current = i16vec2(gl_GlobalInvocationID.xy);
 	const i16vec3 cd = i16vec3(constant.distance) * i16vec3(-1, 0, 1);
-	i16vec2 cell = b_jfa_cell[current.x + current.y*constant.reso.x];
+	i16vec2 cell = b_make_jfa_cell[current.x + current.y*constant.reso.x];
 	if(all(equal(current, cell))){ return; }
 
 
@@ -58,6 +58,6 @@ void main()
 
 	if(d != old_d)
 	{
-		b_jfa_cell[current.x + current.y*constant.reso.x] = cell;
+		b_make_jfa_cell[current.x + current.y*constant.reso.x] = cell;
 	}
 }

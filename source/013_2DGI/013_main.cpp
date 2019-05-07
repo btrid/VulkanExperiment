@@ -137,7 +137,7 @@ int pathFinding()
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				gi2d_context->execute(cmd);
 				crowd_context->execute(cmd);
-				gi2d_debug.executeMakeFragmentMap(cmd);
+				gi2d_debug.executeMakeFragment(cmd);
 
 				gi2d_make_hierarchy.executeMakeFragmentMap(cmd);
 				gi2d_make_hierarchy.executeHierarchy(cmd);
@@ -210,7 +210,6 @@ int rigidbody()
 
 	physics_world->executeMakeVoronoi(cmd);
 	physics_world->executeMakeVoronoiPath(cmd);
-	gi2d_debug.executeMakeFragmentMap(cmd);
 	app.setup();
 
 	while (true)
@@ -265,20 +264,22 @@ int rigidbody()
 				}
 
 
-				gi2d_make_hierarchy.executeMakeFragmentMap(cmd);
-//				gi2d_make_hierarchy.executeMakeFragmentMapAndSDF(cmd, gi2d_sdf_context);
+				gi2d_debug.executeMakeFragment(cmd);
+//				gi2d_make_hierarchy.executeMakeFragmentMap(cmd);
+				gi2d_make_hierarchy.executeMakeFragmentMapAndSDF(cmd, gi2d_sdf_context);
 				gi2d_make_hierarchy.executeHierarchy(cmd);
-//				gi2d_make_hierarchy.executeMakeSDF(cmd, gi2d_sdf_context);
+				gi2d_make_hierarchy.executeMakeSDF(cmd, gi2d_sdf_context);
 //				gi2d_make_hierarchy.executeRenderSDF(cmd, gi2d_sdf_context, app.m_window->getFrontBuffer());
 
-//				gi2d_rigidbody.execute(cmd, physics_world, gi2d_sdf_context);
-//				gi2d_rigidbody.executeToFragment(cmd, physics_world);
+				gi2d_rigidbody.execute(cmd, physics_world, gi2d_sdf_context);
+				gi2d_rigidbody.executeToFragment(cmd, physics_world);
+				gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
 
 //				physics_world->executeMakeVoronoi(cmd);
 //				if (app.m_window->getInput().m_keyboard.isHold('A'))
 				{
-					gi2d_rigidbody.executeDrawVoronoi(cmd, physics_world);
-					gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
+//					gi2d_rigidbody.executeDrawVoronoi(cmd, physics_world);
+//					gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
 				}
 //				else 
 				{
@@ -290,7 +291,6 @@ int rigidbody()
 				cmds[cmd_gi2d] = cmd;
 			}
 			app.submit(std::move(cmds));
-			device->waitIdle();
 		}
 		app.postUpdate();
 		printf("%-6.4fms\n", time.getElapsedTimeAsMilliSeconds());
@@ -394,7 +394,7 @@ int main()
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0, "cmd_gi2d");
 				gi2d_context->execute(cmd);
-				gi2d_debug_make_fragment.executeMakeFragmentMap(cmd);
+				gi2d_debug_make_fragment.executeMakeFragment(cmd);
 
 //#define use_sdf
 #if defined(use_sdf)
