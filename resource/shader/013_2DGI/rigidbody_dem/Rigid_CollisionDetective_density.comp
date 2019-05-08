@@ -80,12 +80,14 @@ void main()
 
 		len *= density;
 		float rate = isZero(len) ? 1. : min(iter/len, 1.);
-		pos += dir * density;
+//		pos += dir * density;
 
 		if(all(equal(counts, uvec4(0)))){ continue; }
 
-		for(uint _i = 0; _i < 4; _i++)
-		{
+		for(int i = -1; i < 1; i++)
+		for(int j = -1; j < 1; j++)
+		for(int k = -1; k < 1; k++)
+		{{{
 			for(uint ii = 0; ii < counts[_i]; ii++)
 			{
 				uint fj_id = findex[_i]*COLLIDABLE_NUM + ii;
@@ -130,7 +132,7 @@ void main()
 //					len -= dot(pos_unit, vel_unit) * (mass /(mass + b_collidable[fj_id].mass_inv));
 				}
 			}
-		}
+		}}}
 	}
 
 	b_rbParticle[p_id].pos = pos;
