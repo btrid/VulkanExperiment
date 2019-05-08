@@ -93,9 +93,14 @@ void main()
 	}
 
 	b_rbParticle[p_id].pos = pos;
-//	ivec2 pos_integer = ivec2(round((pos-b_rigidbody[r_id].cm) * 65535.));
-//	atomicAdd(b_rigidbody[r_id].cm_work.x, pos_integer.x);
-//	atomicAdd(b_rigidbody[r_id].cm_work.y, pos_integer.y);
+
+	uint i = index.x+index.y*u_gi2d_info.m_resolution.x;
+	uint ii = atomicAdd(b_fluid_count[i], 1);
+	if(ii < COLLIDABLE_NUM)
+	{
+		b_fluid[i*COLLIDABLE_NUM + ii].pos = pos;
+	}
+
 
 
 }
