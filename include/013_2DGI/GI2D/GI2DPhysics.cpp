@@ -429,6 +429,8 @@ void GI2DPhysics::make(vk::CommandBuffer cmd, const uvec4& box)
 	Rigidbody rb;
 	rb.R = vec4(1.f, 0.f, 0.f, 1.f);
 	rb.cm = center_of_mass;
+	rb.flag = 0;
+	rb.flag |= RB_FLAG_FLUID;
 	rb.size_min = jfa_min;
 	rb.size_max = jfa_max;
 	rb.life = (std::rand() % 10)  + 55;

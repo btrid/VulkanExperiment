@@ -27,12 +27,17 @@ struct rbWorld
 
 };
 
+#define RB_FLAG_FLUID (1)
 struct Rigidbody
 {
 	uint pnum;
 	float life;
 	vec2 cm;
 
+	uint flag;
+	uint _p1;
+	uint _p2;
+	uint _p3;
 	ivec2 size_min;
 	ivec2 size_max;
 
