@@ -163,10 +163,10 @@ layout(set=USE_Rigidbody2D, binding=16, std430) restrict buffer rbVoronoiVertexB
 layout(set=USE_Rigidbody2D, binding=17, std430) restrict buffer rbVoronoiPathBuffer {
 	int16_t b_voronoi_path[];
 };
-layout(set=USE_Rigidbody2D, binding=19, std430) restrict buffer rbFluidCounter {
+layout(set=USE_Rigidbody2D, binding=18, std430) restrict buffer rbFluidCounter {
 	ivec4 b_fluid_counter[];
 };
-layout(set=USE_Rigidbody2D, binding=20, std430) restrict buffer rbFluidBuffer {
+layout(set=USE_Rigidbody2D, binding=19, std430) restrict buffer rbFluidBuffer {
 	rbFluid b_fluid[];
 };
 

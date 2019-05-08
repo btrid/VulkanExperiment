@@ -123,6 +123,11 @@ struct GI2DPhysics
 		vec2 vel;
 		vec2 sdf;
 	};
+	struct rbFluid
+	{
+		vec2 pos;
+	};
+
 	struct BufferManage
 	{
 		uint rb_list_size;
@@ -202,6 +207,8 @@ struct GI2DPhysics
 	btr::BufferMemoryEx<uvec4> b_voronoi_vertex_counter;
 	btr::BufferMemoryEx<VoronoiVertex> b_voronoi_vertex;
 	btr::BufferMemoryEx<int16_t> b_voronoi_path;
+	btr::BufferMemoryEx<ivec4> b_fluid_counter;
+	btr::BufferMemoryEx<rbFluid> b_fluid;
 
 	btr::BufferMemoryEx<Rigidbody> b_make_rigidbody;
 	btr::BufferMemoryEx<rbParticle> b_make_particle;

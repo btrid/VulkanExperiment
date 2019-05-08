@@ -29,6 +29,8 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 			vk::DescriptorSetLayoutBinding(15, vk::DescriptorType::eStorageBuffer, 1, stage),
 			vk::DescriptorSetLayoutBinding(16, vk::DescriptorType::eStorageBuffer, 1, stage),
 			vk::DescriptorSetLayoutBinding(17, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(18, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(19, vk::DescriptorType::eStorageBuffer, 1, stage),
 		};
 		vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 		desc_layout_info.setBindingCount(array_length(binding));
@@ -235,6 +237,8 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 		b_voronoi_vertex_counter = m_context->m_storage_memory.allocateMemory<uvec4>({ 1,{} });
 		b_voronoi_vertex = m_context->m_storage_memory.allocateMemory<VoronoiVertex>({ 4096 * 6,{} });
 		b_voronoi_path = m_context->m_storage_memory.allocateMemory<int16_t>({ 4096,{} });
+		b_fluid_counter = m_context->m_storage_memory.allocateMemory<ivec4>({ 1, {} });
+		b_fluid = m_context->m_storage_memory.allocateMemory<rbFluid>({ 1, {} });
 		{
 			vk::DescriptorSetLayout layouts[] = {
 				m_desc_layout[DescLayout_Data].get(),
@@ -264,6 +268,8 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 				b_voronoi_vertex_counter.getInfo(),
 				b_voronoi_vertex.getInfo(),
 				b_voronoi_path.getInfo(),
+				b_fluid_counter.getInfo(),
+				b_fluid.getInfo(),
 			};
 
 			vk::WriteDescriptorSet write[] =
