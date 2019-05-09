@@ -10,6 +10,7 @@
 
 struct GI2DPhysics
 {
+#define COLLIDABLE_NUM (4)
 	enum Shader
 	{
 		Shader_ToFluid,
@@ -207,7 +208,7 @@ struct GI2DPhysics
 	btr::BufferMemoryEx<uvec4> b_voronoi_vertex_counter;
 	btr::BufferMemoryEx<VoronoiVertex> b_voronoi_vertex;
 	btr::BufferMemoryEx<int16_t> b_voronoi_path;
-	btr::BufferMemoryEx<ivec4> b_fluid_counter;
+	btr::BufferMemoryEx<uint> b_fluid_counter;
 	btr::BufferMemoryEx<rbFluid> b_fluid;
 
 	btr::BufferMemoryEx<Rigidbody> b_make_rigidbody;

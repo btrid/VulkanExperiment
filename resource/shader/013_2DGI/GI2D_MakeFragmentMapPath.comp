@@ -1,60 +1,80 @@
 #version 450
 #extension GL_GOOGLE_include_directive : require
 
-#include "btrlib/ConvertDimension.glsl"
-#include "btrlib/Common.glsl"
-#include "btrlib/Math.glsl"
-
 #define USE_GI2D 0
 #include "GI2D.glsl"
 
-layout (local_size_x = 8, local_size_y = 8) in;
+layout (local_size_x = 1024) in;
 
-shared uint s_bit[2];
-shared uint s_light_bit[2];
-void main()
+void path(in int current)
 {
-	ivec2 id = ivec2(gl_GlobalInvocationID.xy);
-//	id = clamp(id, ivec2(0), u_gi2d_info.m_resolution.xy);
-
-	int tiled_1D_index = id.x + id.y*u_gi2d_info.m_resolution.x; 
-	vec3 albedo = getRGB(b_fragment[tiled_1D_index]);
-	bool is_fragment = isDiffuse(b_fragment[tiled_1D_index]);
-	bool is_emissive = isEmissive(b_fragment[tiled_1D_index]);
-
-	uint power = packEmissive(albedo*LightPower);
-	b_light[getMemoryOrder(ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y))] = is_emissive ? power : 0;
-
-	// fragment map
+	int vertex_num = b_voronoi_polygon[current].num;
+	for(int v = 0; v<vertex_num; v++)
 	{
-		if(gl_LocalInvocationIndex <=1)
+		int vindex = int(b_voronoi_polygon[current].vertex_index[v]);
+		for(int i = 0; i < 4; i++)
 		{
-			s_bit[gl_LocalInvocationIndex] = 0;
-			s_light_bit[gl_LocalInvocationIndex] = 0;
+			int16_t access_cell = b_voronoi_vertex[vindex].cell[i];
+			if(access_cell == -1s) { break; }
+			if(atomicCompSwap(s_closed[int(access_cell)], 0, 1) == 1)
+			{
+				continue;
+			}
+
+			s_active[atomicAdd(s_active_counter, 1)] = access_cell;
+			b_voronoi_path[int(access_cell)] = int16_t(current);
 		}
+	}
+}
+void main() 
+{
+	for(uint i = gl_LocalInvocationIndex; i < s_closed.length(); i+=gl_NumWorkGroups.x)
+	{
+		s_closed[i] = 0;
+	}
+	if(gl_LocalInvocationIndex == 0)
+	{
+		s_active_counter = 0;
+	}
+
+	barrier();
+	memoryBarrierShared();
+
+	if(gl_LocalInvocationIndex < 1)
+	{
+		int begin = constant.target[gl_LocalInvocationIndex];
+		path(begin);
+
+		s_closed[begin] = 1;
+		b_voronoi_path[begin] = -1s;
+	}
+
+	for(int i = 0; i < 1000; i++)
+	{
 		barrier();
 		memoryBarrierShared();
-
-		uint hilow = gl_LocalInvocationIndex/32;
-		uint offset = gl_LocalInvocationIndex%32;
-		is_fragment ? atomicOr(s_bit[hilow], 1<<offset) : 0;
-		is_emissive ? atomicOr(s_light_bit[hilow], 1<<offset) : 0;
+		if(s_active_counter==0){ break; }
+		bool is_active = gl_LocalInvocationIndex < s_active_counter;
 
 		barrier();
-		memoryBarrierShared();
 
 		if(gl_LocalInvocationIndex == 0)
 		{
-			uint store = getMemoryOrder(gl_WorkGroupID.xy);
-
-			uint64_t bit =  (uint64_t(s_bit[1]) << 32) | s_bit[0];
-			uint64_t light_bit =  (uint64_t(s_light_bit[1]) << 32) | s_light_bit[0];
-
-			b_fragment_map[store] = u64vec2(bit, light_bit);
-			b_diffuse_map[store] = bit;
-			b_emissive_map[store] = light_bit;
+			s_active_counter = 0;
 		}
+		int close_cell = int(s_active[gl_LocalInvocationIndex]);
 
+		barrier();
+		memoryBarrierShared();
+
+		if(is_active)
+		{
+			path(close_cell);
+		}
 	}
+
+
 }
+
+//b_diffuse_map[store]
 

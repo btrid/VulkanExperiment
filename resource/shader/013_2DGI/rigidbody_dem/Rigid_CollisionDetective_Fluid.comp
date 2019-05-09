@@ -94,8 +94,9 @@ void main()
 
 	b_rbParticle[p_id].pos = pos;
 
+	ivec2 index = ivec2(pos);
 	uint i = index.x+index.y*u_gi2d_info.m_resolution.x;
-	uint ii = atomicAdd(b_fluid_count[i], 1);
+	uint ii = atomicAdd(b_fluid_counter[i], 1);
 	if(ii < COLLIDABLE_NUM)
 	{
 		b_fluid[i*COLLIDABLE_NUM + ii].pos = pos;

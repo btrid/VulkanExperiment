@@ -224,7 +224,9 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 		b_rbparticle = m_context->m_storage_memory.allocateMemory<rbParticle>({ RB_PARTICLE_NUM,{} });
 		b_rbparticle_map = m_context->m_storage_memory.allocateMemory<uint32_t>({ RB_PARTICLE_BLOCK_NUM_MAX,{} });
 		b_collidable_counter = m_context->m_storage_memory.allocateMemory<uint32_t>({ gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
-		b_collidable = m_context->m_storage_memory.allocateMemory<rbCollidable>({ 4 * gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
+		b_collidable = m_context->m_storage_memory.allocateMemory<rbCollidable>({ COLLIDABLE_NUM * gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
+		b_fluid_counter = m_context->m_storage_memory.allocateMemory<uint>({ gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
+		b_fluid = m_context->m_storage_memory.allocateMemory<rbFluid>({ COLLIDABLE_NUM * gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
 		b_manager = m_context->m_storage_memory.allocateMemory<BufferManage>({ 1,{} });
 		b_rb_memory_list = m_context->m_storage_memory.allocateMemory<uint>({ RB_NUM_MAX,{} });
 		b_pb_memory_list = m_context->m_storage_memory.allocateMemory<uint>({ RB_PARTICLE_BLOCK_NUM_MAX,{} });
@@ -237,8 +239,6 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 		b_voronoi_vertex_counter = m_context->m_storage_memory.allocateMemory<uvec4>({ 1,{} });
 		b_voronoi_vertex = m_context->m_storage_memory.allocateMemory<VoronoiVertex>({ 4096 * 6,{} });
 		b_voronoi_path = m_context->m_storage_memory.allocateMemory<int16_t>({ 4096,{} });
-		b_fluid_counter = m_context->m_storage_memory.allocateMemory<ivec4>({ 1, {} });
-		b_fluid = m_context->m_storage_memory.allocateMemory<rbFluid>({ 1, {} });
 		{
 			vk::DescriptorSetLayout layouts[] = {
 				m_desc_layout[DescLayout_Data].get(),
@@ -256,6 +256,8 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 				b_rbparticle_map.getInfo(),
 				b_collidable_counter.getInfo(),
 				b_collidable.getInfo(),
+				b_fluid_counter.getInfo(),
+				b_fluid.getInfo(),
 				b_manager.getInfo(),
 				b_rb_memory_list.getInfo(),
 				b_pb_memory_list.getInfo(),
@@ -268,8 +270,6 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 				b_voronoi_vertex_counter.getInfo(),
 				b_voronoi_vertex.getInfo(),
 				b_voronoi_path.getInfo(),
-				b_fluid_counter.getInfo(),
-				b_fluid.getInfo(),
 			};
 
 			vk::WriteDescriptorSet write[] =
