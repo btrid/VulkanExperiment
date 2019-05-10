@@ -25,7 +25,7 @@ void main()
 	if(((b_rigidbody[r_id].flag & RB_FLAG_FLUID) != 0)){ return; }
 
 	uint i = index.x+index.y*u_gi2d_info.m_resolution.x;
-	uint ii = atomicAdd(b_collidable_count[i], 1);
+	uint ii = atomicAdd(b_collidable_counter[i], 1);
 	if(ii < COLLIDABLE_NUM)
 	{
 		rbCollidable c;

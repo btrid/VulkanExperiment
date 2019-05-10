@@ -37,7 +37,7 @@ void main()
 	for(uint i = 0; i < 4; i++)
 	{
 		uint index = findex[i];
-		uint count = min(b_collidable_count[index], COLLIDABLE_NUM);
+		uint count = min(b_collidable_counter[index], COLLIDABLE_NUM);
 		for(uint ii = 0; ii < count; ii++)
 		{
 			uint fj_id = index*COLLIDABLE_NUM + ii;

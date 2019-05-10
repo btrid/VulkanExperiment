@@ -59,7 +59,7 @@ struct rbParticle
 	vec2 local_sdf;
 
 	uint contact_index;
-	uint is_contact;
+	float density;
 	uint color;
 	uint is_active;
 
@@ -122,7 +122,7 @@ layout(set=USE_Rigidbody2D, binding=3, std430) restrict buffer rbParticleMapping
 	uint b_rbParticle_map[];
 };
 layout(set=USE_Rigidbody2D, binding=4, std430) restrict buffer rbCollidableCounter {
-	uint b_collidable_count[];
+	uint b_collidable_counter[];
 };
 layout(set=USE_Rigidbody2D, binding=5, std430) restrict buffer rbCollidableBuffer {
 	rbCollidable b_collidable[];

@@ -6,6 +6,10 @@
 
 layout (local_size_x = 1024) in;
 
+shared uint s_closed[4096];
+shared int16_t s_active[1024];
+shared int s_active_counter;
+
 void path(in int current)
 {
 	int vertex_num = b_voronoi_polygon[current].num;
@@ -16,7 +20,7 @@ void path(in int current)
 		{
 			int16_t access_cell = b_voronoi_vertex[vindex].cell[i];
 			if(access_cell == -1s) { break; }
-			if(atomicCompSwap(s_closed[int(access_cell)], 0, 1) == 1)
+			if(atomicOr(s_closed[int(access_cell)], 0, 1) == 1)
 			{
 				continue;
 			}
@@ -72,7 +76,6 @@ void main()
 			path(close_cell);
 		}
 	}
-
 
 }
 

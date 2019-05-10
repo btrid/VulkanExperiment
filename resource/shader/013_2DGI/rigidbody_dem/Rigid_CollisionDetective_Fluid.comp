@@ -52,7 +52,7 @@ void main()
 
 		ivec2 map_index = ivec2(pos);
 		int findex = map_index.x + map_index.y * u_gi2d_info.m_resolution.x;
-		int count = int(min(b_collidable_count[findex], COLLIDABLE_NUM));
+		int count = int(min(b_collidable_counter[findex], COLLIDABLE_NUM));
 
 		for(uint ii = 0; ii < count; ii++)
 		{

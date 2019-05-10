@@ -27,7 +27,7 @@ void main()
 	vec2 vel = (pos - pos_old) + RB_GRAVITY_DT;
 //	vel = clamp(vel, -vec2(0.5), vec2(0.5));
 	b_rbParticle[p_id].pos = pos + vel;
-	b_rbParticle[p_id].is_contact = 0;
+//	b_rbParticle[p_id].is_contact = 0;
 
 	b_rbParticle[p_id].local_sdf = mat2(b_rigidbody[r_id].R) * b_rbParticle[p_id].sdf;
 
