@@ -83,11 +83,6 @@ struct AppModelAnimationStage
 		cmd_buffer_info.level = vk::CommandBufferLevel::eSecondary;
 		auto cmd = std::move(m_context->m_device->allocateCommandBuffersUnique(cmd_buffer_info)[0]);
 
-		vk::DescriptorSet descriptors[] = {
-			render->getDescriptorSet(AppModel::DescriptorSet_Model),
-			render->getDescriptorSet(AppModel::DescriptorSet_Update),
-		};
-		cmd->bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout.get(), 0, array_length(descriptors), descriptors, 0, {});
 
 		{
 			vk::CommandBufferBeginInfo begin_info;
@@ -95,6 +90,12 @@ struct AppModelAnimationStage
 			vk::CommandBufferInheritanceInfo inheritance_info;
 			begin_info.setPInheritanceInfo(&inheritance_info);
 			cmd->begin(begin_info);
+
+			vk::DescriptorSet descriptors[] = {
+				render->getDescriptorSet(AppModel::DescriptorSet_Model),
+				render->getDescriptorSet(AppModel::DescriptorSet_Update),
+			};
+			cmd->bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout.get(), 0, array_length(descriptors), descriptors, 0, {});
 
 			for (size_t i = 0; i < m_pipeline.size(); i++)
 			{

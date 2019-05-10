@@ -283,8 +283,14 @@ struct Path_Process
 		vk::BufferMemoryBarrier barrier[] = {
 			m_path_context->b_sparse_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 		};
+		vk::ImageMemoryBarrier image_barrier;
+		image_barrier.setImage(render_target->m_image);
+		image_barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+		image_barrier.setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
+		image_barrier.setNewLayout(vk::ImageLayout::eGeneral);
+
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader,
-			{}, 0, nullptr, std::size(barrier), barrier, 0, nullptr);
+			{}, {}, { array_size(barrier), barrier }, { image_barrier });
 
 		vk::DescriptorSet descriptorsets[] = {
 			m_path_context->m_descriptor_set.get(),
@@ -297,7 +303,6 @@ struct Path_Process
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_DrawTree].get());
 
 			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderSize.x, m_gi2d_context->RenderSize.y, 1), uvec3(32, 32, 1));
-//			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderSize.x*m_gi2d_context->RenderSize.y, 1, 1), uvec3(1024, 1, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 		}
 	}
