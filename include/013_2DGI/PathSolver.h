@@ -191,43 +191,40 @@ struct PathSolver
 
 	}
 
-	// 0 1 2
-	// 7 x 3
-	// 6 5 4
 	enum Direction
 	{
-		UL,
 		U,
-		UR,
 		R,
-		DR,
 		D,
-		DL,
 		L,
+		UL,
+		UR,
+		DR,
+		DL,
 		All,
 		Num,
 
-		Bit_UL = 1 << UL,
 		Bit_U = 1 << U,
-		Bit_UR = 1 << UR,
 		Bit_R = 1 << R,
-		Bit_DR = 1 << DR,
 		Bit_D = 1 << D,
-		Bit_DL = 1 << DL,
 		Bit_L = 1 << L,
+		Bit_UL = 1 << UL,
+		Bit_UR = 1 << UR,
+		Bit_DR = 1 << DR,
+		Bit_DL = 1 << DL,
 
 	};
 
 	std::array<i16vec2, 8> neighor_list =
 	{
-		i16vec2{-1, -1},
 		i16vec2{ 0, -1},
-		i16vec2{ 1, -1},
 		i16vec2{ 1,  0},
-		i16vec2{ 1,  1},
 		i16vec2{ 0,  1},
-		i16vec2{-1,  1},
 		i16vec2{-1,  0},
+		i16vec2{-1, -1},
+		i16vec2{ 1, -1},
+		i16vec2{ 1,  1},
+		i16vec2{-1,  1},
 	};
 	struct Explorer
 	{
@@ -237,36 +234,36 @@ struct PathSolver
 	std::array<Explorer, Num> explorer_list = 
 	{
 		Explorer{
-			Bit_U | Bit_L | Bit_UR | Bit_UL | Bit_DR,
-			Bit_UL,
-		},
-		Explorer{
 			Bit_U | Bit_R | Bit_L,
 			Bit_U,
-		},
-		Explorer{
-			Bit_U | Bit_R | Bit_UR | Bit_UL | Bit_DR,
-			Bit_UR,
 		},
 		Explorer{
 			Bit_R | Bit_U | Bit_D,
 			Bit_R,
 		},
 		Explorer{
-			Bit_D | Bit_R | Bit_DR | Bit_UR | Bit_DL,
-			Bit_DR,
-		},
-		Explorer{
 			Bit_D | Bit_R | Bit_L,
 			Bit_D,
 		},
 		Explorer{
-			Bit_D | Bit_L | Bit_DL | Bit_UL | Bit_DR,
-			Bit_DL,
-		},
-		Explorer{
 			Bit_L | Bit_U | Bit_D,
 			Bit_L,
+		},
+		Explorer{
+			Bit_U | Bit_L | Bit_UR | Bit_UL | Bit_DR,
+			Bit_UL| Bit_U | Bit_L,
+		},
+		Explorer{
+			Bit_U | Bit_R | Bit_UR | Bit_UL | Bit_DR,
+			Bit_UR| Bit_U | Bit_R ,
+		},
+		Explorer{
+			Bit_D | Bit_R | Bit_DR | Bit_UR | Bit_DL,
+			Bit_DR| Bit_D | Bit_R,
+		},
+		Explorer{
+			Bit_D | Bit_L | Bit_DL | Bit_UL | Bit_DR,
+			Bit_DL| Bit_D | Bit_L,
 		},
 		Explorer{
 			255,
@@ -281,6 +278,10 @@ struct PathSolver
 	struct CloseNode2
 	{
 		i16vec2 parent;
+		uint32_t is_open : 1;
+		uint32_t is_closed: 1;
+		uint32_t p : 30;
+		float cost;
 	};
 	char getNeighborWall(const PathContextCPU& path, Direction dir, const i16vec2& pos)
 	{
@@ -311,39 +312,52 @@ struct PathSolver
 		return ~getNeighborWall(path, dir, pos);
 	}
 
+	bool exploreStraight(const PathContextCPU& path, std::deque<OpenNode2>& open, const OpenNode2& node, int dir_type)
+	{
+		const auto& dir_ = neighor_list[dir_type];
+		auto current = node.index;
+		for (int i = 0; true; i++)
+		{
+			current += dir_;
+			auto neighbor = getNeighborWall(path, (Direction)dir_type, current);
 
-	void explore(const PathContextCPU& path, const OpenNode2& node)
+			if (btr::isOn(neighbor, explorer_list[dir_type].deny_bit))
+			{
+				// 直線は進行方向に進めなければ終了
+				break;
+			}
+			btr::setOff(neighbor, explorer_list[dir_type].deny_bit);
+
+			if (neighbor != 0)
+			{
+				// forced neighbor
+				// 遮蔽物があるのでここから再捜査
+				open.push_back({ current,  neighbor});
+				return true;
+			}
+		}
+
+		return false;
+
+	}
+	void exploreDiagonal(const PathContextCPU& path, const OpenNode2& node, int dir_type)
+	{
+
+	}
+	void explore(const PathContextCPU& path, std::deque<OpenNode2>& open, const OpenNode2& node)
 	{
 		for (char path_ = getNeighborPath(path, node.dir, node.index) ; path_ != 0;)
 		{
 			int dir_type = glm::findLSB(path_);
-			path_ &= ~(1<<dir_type);
+			btr::setOff(path_, 1 << dir_type);
 
-			const auto& dir_ = neighor_list[dir_type];
-			auto current = node.index;
-			for (;;)
+			if (dir_type <= 3)
 			{
-				current += dir_;
-				auto current_neighbor = getNeighborPath(path, (Direction)dir_type, current);
-
-				if (explorer_list[dir_type].deny_bit & current_neighbor != 0) {
-					// 探索終了
-					break;
-				}
-
-				current_neighbor &= ~(explorer_list[dir_type].deny_bit);
-
-				for (; current_neighbor != 0;)
-				{
-					int check = glm::findLSB(current_neighbor);
-					current_neighbor &= ~(1 << check);
-
-					if (check != 0)
-					{
-						auto jump_point = (1 << dir_type) | (1 << check);
-					}
-
-				}
+				exploreStraight(path, open, node, dir_type);
+			}
+			else 
+			{
+				exploreDiagonal(path, node, dir_type);
 			}
 		}
 	}
@@ -351,23 +365,23 @@ struct PathSolver
 	{
 		cStopWatch time;
 
-		std::vector<Node> close(path.m_desc.m_size.x * path.m_desc.m_size.y);
+		std::vector<CloseNode2> close(path.m_desc.m_size.x * path.m_desc.m_size.y);
 		std::deque<OpenNode2> open;
 		open.push_back(OpenNode2{ i16vec2(path.m_desc.m_start.x, path.m_desc.m_start.y), All});
 		{
 			auto& start = close[open.front().index.x+ open.front().index.y*path.m_desc.m_size.x];
 			start.is_open = 1;
-			start.precompute(path.m_desc.m_start, path);
 		}
 		while (!open.empty())
 		{
 			const OpenNode2& open_node = open.front();
-			Node& node = close[open_node.index.x + open_node.index.y * path.m_desc.m_size.x];
+			CloseNode2& node = close[open_node.index.x + open_node.index.y * path.m_desc.m_size.x];
 			for (int i = 0; i < 4; i++)
 			{
 
 			}
 			node.is_open = 0;
+			node.is_closed = 1;
 			open.pop_front();
 
 		}
