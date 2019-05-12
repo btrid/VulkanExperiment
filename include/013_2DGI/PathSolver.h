@@ -203,7 +203,10 @@ struct PathSolver
 		L,
 		All,
 		Num,
+	};
 
+	enum DirectionBit : unsigned char
+	{
 		Bit_UL = 1 << UL,
 		Bit_U = 1 << U,
 		Bit_UR = 1 << UR,
@@ -236,7 +239,7 @@ struct PathSolver
 	std::array<Explorer, Num> explorer_list = 
 	{
 		Explorer{
-			Bit_U | Bit_L | Bit_UR | Bit_UL | Bit_DR,
+			Bit_UL | Bit_U | Bit_R | Bit_D | Bit_L,
 			Bit_UL | Bit_U | Bit_L,
 		},
 		Explorer{
@@ -244,7 +247,7 @@ struct PathSolver
 			Bit_U,
 		},
 		Explorer{
-			Bit_U | Bit_R | Bit_UR | Bit_UL | Bit_DR,
+			Bit_UR | Bit_U | Bit_R | Bit_D | Bit_L,
 			Bit_UR | Bit_U | Bit_R ,
 		},
 		Explorer{
@@ -252,7 +255,7 @@ struct PathSolver
 			Bit_R,
 		},
 		Explorer{
-			Bit_D | Bit_R | Bit_DR | Bit_UR | Bit_DL,
+			Bit_DR | Bit_U | Bit_R | Bit_D | Bit_L,
 			Bit_DR | Bit_D | Bit_R,
 		},
 		Explorer{
@@ -260,7 +263,7 @@ struct PathSolver
 			Bit_D,
 		},
 		Explorer{
-			Bit_D | Bit_L | Bit_DL | Bit_UL | Bit_DR,
+			Bit_DL | Bit_U | Bit_R | Bit_D | Bit_L,
 			Bit_DL | Bit_D | Bit_L,
 		},
 		Explorer{
@@ -285,9 +288,9 @@ struct PathSolver
 		uint32_t p : 30;
 		float cost;
 	};
-	char getNeighborWall(const PathContextCPU& path, char dir, const i16vec2& pos)
+	u8vec2 getNeighbor(const PathContextCPU& path, DirectionBit dir, const i16vec2& pos) const
 	{
-		char neighor = 0;
+		u8vec2 neighor = u8vec2(0);
 		for (int i = 0; i < 8;)
 		{
 			if (dir & (1 << i) == 0) 
@@ -299,48 +302,50 @@ struct PathSolver
 			if (any(lessThan(neighor_list[i] + pos, i16vec2(0))) || any(greaterThanEqual(neighor_list[i] + pos, i16vec2(path.m_desc.m_size))))
 			{
 				// map外は壁としておく
-				neighor |= (1 << i);
+				neighor.y |= (1 << i);
 			}
 			else
 			{
 				// 壁ならダメ
-				neighor |= (!path.isPath(neighor_list[i] + pos)) ? (1 << i) : 0;
+				bool is_path = path.isPath(neighor_list[i] + pos);
+				neighor.x |= is_path ? (1 << i) : 0;
+				neighor.y |= !is_path ? (1 << i) : 0;
 			}
 		}
 		return neighor;
 	}
-	char getNeighborPath(const PathContextCPU& path, char dir, const i16vec2& pos)
+	u8vec2 getNeighbor(const PathContextCPU& path, Direction dir, const i16vec2& pos) const
 	{
-		return ~getNeighborWall(path, dir, pos);
+		return getNeighbor(path, (DirectionBit)explorer_list[dir].access_bit, pos);
 	}
 
-	bool exploreStraight(const PathContextCPU& path, std::deque<OpenNode2>& open, const OpenNode2& node, int dir_type)
+	bool exploreStraight(const PathContextCPU& path, std::deque<OpenNode2>& open, const OpenNode2& node, Direction dir_type)const
 	{
 		const auto& dir_ = neighor_list[dir_type];
 		auto current = node.index;
 		for (int i = 0; true; i++)
 		{
 			current += dir_;
-			auto neighbor = getNeighborWall(path, (Direction)dir_type, current);
+			auto neighbor = getNeighbor(path, dir_type, current);
 
-			if (btr::isOn(neighbor, explorer_list[dir_type].deny_bit))
+			if (btr::isOn(neighbor.y, explorer_list[dir_type].deny_bit))
 			{
 				// 直線は進行方向に進めなければ終了
 				break;
 			}
-			btr::setOff(neighbor, explorer_list[dir_type].deny_bit);
+			btr::setOff(neighbor.y, explorer_list[dir_type].deny_bit);
 
-			if (neighbor != 0)
+			if (neighbor.x != 0)
 			{
 				// forced neighbor
 				// 遮蔽物があるのでここから再捜査
 				OpenNode2 open_node;
 				open_node.index = current;
 				open_node.dir_bit = (1<<dir_type);
-				while(neighbor != 0)
+				while(neighbor.x != 0)
 				{
-					int n_dir_type = glm::findLSB(neighbor);
-					btr::setOff(neighbor, 1 << n_dir_type);
+					int n_dir_type = glm::findLSB(neighbor.x);
+					btr::setOff(neighbor.x, 1 << n_dir_type);
 
 					open_node.dir_bit |= 1 << glm::min((dir_type + 1) % 8, (n_dir_type + 1) % 8);
 				}
@@ -350,26 +355,70 @@ struct PathSolver
 		}
 
 		return false;
-
 	}
-	void exploreDiagonal(const PathContextCPU& path, const OpenNode2& node, int dir_type)
+	void exploreDiagonal(const PathContextCPU& path, std::deque<OpenNode2>& open, OpenNode2 node, int dir_type)const
 	{
-
-	}
-	void explore(const PathContextCPU& path, std::deque<OpenNode2>& open, const OpenNode2& node)
-	{
-		for (char path_ = getNeighborPath(path, node.dir_bit, node.index) ; path_ != 0;)
+		const auto& dir_ = neighor_list[dir_type];
+		auto current = node.index;
+		for (int i = 0; true; i++)
 		{
-			int dir_type = glm::findLSB(path_);
-			btr::setOff(path_, 1 << dir_type);
+			current += dir_;
+			auto neighbor = getNeighbor(path, (Direction)dir_type, current);
+
+			if (btr::isOn(neighbor.y, 1 << dir_type))
+			{
+				// 進行方向に進めなければ終了
+				break;
+			}
+			ivec4 straight = (ivec4(dir_type) + ivec4(7,9,11,13)) % 8;
+			ivec4 straight_bit = 1<<straight;
+			if (btr::isOn(neighbor.y, straight_bit.x | straight_bit.y))
+			{
+				// 進行方向に進めなければ終了
+				break;
+			}
+
+			bvec2 is_opend = bvec2(false);
+			if (btr::isOn(neighbor.x, straight_bit.x))
+			{
+				is_opend.x = exploreStraight(path, open, node, (Direction)straight.x);
+			}
+			if (btr::isOn(neighbor.x, straight_bit.y))
+			{
+				is_opend.y = exploreStraight(path, open, node, (Direction)straight.y);
+			}
+			btr::setOff(neighbor.x, straight_bit.x| straight_bit.y);
+			if (any(is_opend) || btr::isOn(neighbor.y, straight_bit.z|straight_bit.w))
+			{
+				OpenNode2 open_node;
+				open_node.index = current;
+				open_node.dir_bit = (1 << dir_type);
+				while (neighbor.x != 0)
+				{
+					int n_dir_type = glm::findLSB(neighbor.x);
+					btr::setOff(neighbor.x, 1 << n_dir_type);
+
+					open_node.dir_bit |= 1 << glm::min((dir_type + 1) % 8, (n_dir_type + 1) % 8);
+				}
+				open.push_back(open_node);
+				return;
+			}
+		}
+	}
+	void explore(const PathContextCPU& path, std::deque<OpenNode2>& open, const OpenNode2& node)const
+	{
+		for (auto path_ = getNeighbor(path, (DirectionBit)node.dir_bit, node.index) ; path_.x != 0;)
+		{
+			int dir_type = glm::findLSB(path_.x);
+			btr::setOff(path_.x, 1 << dir_type);
 
 			if ((dir_type %2) == 1)
 			{
-				exploreStraight(path, open, node, dir_type);
+				exploreStraight(path, open, node, (Direction)dir_type);
 			}
 			else 
 			{
-				exploreDiagonal(path, node, dir_type);
+				exploreDiagonal(path, open, node, (Direction)dir_type);
 			}
 		}
 	}
@@ -387,6 +436,8 @@ struct PathSolver
 		while (!open.empty())
 		{
 			const OpenNode2& open_node = open.front();
+			explore(path, open, open_node);
+
 			CloseNode2& node = close[open_node.index.x + open_node.index.y * path.m_desc.m_size.x];
 			node.is_open = 0;
 			node.is_closed = 1;
