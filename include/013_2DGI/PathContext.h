@@ -27,8 +27,9 @@ struct PathContextCPU
 	}
 
 
-	bool isPath(const ivec2 i)const
-	{
+	bool isPath(const ivec2& i)const
+	{		
+		assert(all(greaterThanEqual(i, ivec2(0))) && all(lessThan(i, m_desc.m_size)));
 		auto wh_m = m_desc.m_size >> 3;
 		ivec2 m = i >> 3;
 		ivec2 c = i - (m << 3);

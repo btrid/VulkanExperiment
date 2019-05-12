@@ -191,6 +191,200 @@ struct PathSolver
 
 	}
 
+	// 0 1 2
+	// 7 x 3
+	// 6 5 4
+	enum Direction
+	{
+		UL,
+		U,
+		UR,
+		R,
+		DR,
+		D,
+		DL,
+		L,
+		All,
+		Num,
+
+		Bit_UL = 1 << UL,
+		Bit_U = 1 << U,
+		Bit_UR = 1 << UR,
+		Bit_R = 1 << R,
+		Bit_DR = 1 << DR,
+		Bit_D = 1 << D,
+		Bit_DL = 1 << DL,
+		Bit_L = 1 << L,
+
+	};
+
+	std::array<i16vec2, 8> neighor_list =
+	{
+		i16vec2{-1, -1},
+		i16vec2{ 0, -1},
+		i16vec2{ 1, -1},
+		i16vec2{ 1,  0},
+		i16vec2{ 1,  1},
+		i16vec2{ 0,  1},
+		i16vec2{-1,  1},
+		i16vec2{-1,  0},
+	};
+	struct Explorer
+	{
+		uint8_t access_bit;
+		uint8_t deny_bit;
+	};
+	std::array<Explorer, Num> explorer_list = 
+	{
+		Explorer{
+			Bit_U | Bit_L | Bit_UR | Bit_UL | Bit_DR,
+			Bit_UL,
+		},
+		Explorer{
+			Bit_U | Bit_R | Bit_L,
+			Bit_U,
+		},
+		Explorer{
+			Bit_U | Bit_R | Bit_UR | Bit_UL | Bit_DR,
+			Bit_UR,
+		},
+		Explorer{
+			Bit_R | Bit_U | Bit_D,
+			Bit_R,
+		},
+		Explorer{
+			Bit_D | Bit_R | Bit_DR | Bit_UR | Bit_DL,
+			Bit_DR,
+		},
+		Explorer{
+			Bit_D | Bit_R | Bit_L,
+			Bit_D,
+		},
+		Explorer{
+			Bit_D | Bit_L | Bit_DL | Bit_UL | Bit_DR,
+			Bit_DL,
+		},
+		Explorer{
+			Bit_L | Bit_U | Bit_D,
+			Bit_L,
+		},
+		Explorer{
+			255,
+			0,
+		},
+	};
+	struct OpenNode2
+	{
+		i16vec2 index;
+		Direction dir;
+	};
+	struct CloseNode2
+	{
+		i16vec2 parent;
+	};
+	char getNeighborWall(const PathContextCPU& path, Direction dir, const i16vec2& pos)
+	{
+		char neighor = 0;
+		for (int i = 0; i < 8;)
+		{
+			if (explorer_list[dir].access_bit & (1 << i) == 0) 
+			{
+				// 見る必要ない
+				continue; 
+			}
+
+			if (any(lessThan(neighor_list[i] + pos, i16vec2(0))) || any(greaterThanEqual(neighor_list[i] + pos, i16vec2(path.m_desc.m_size))))
+			{
+				// map外は壁としておく
+				neighor |= (1 << i);
+			}
+			else
+			{
+				// 壁ならダメ
+				neighor |= (!path.isPath(neighor_list[i] + pos)) ? (1 << i) : 0;
+			}
+		}
+		return neighor;
+	}
+	char getNeighborPath(const PathContextCPU& path, Direction dir, const i16vec2& pos)
+	{
+		return ~getNeighborWall(path, dir, pos);
+	}
+
+
+	void explore(const PathContextCPU& path, const OpenNode2& node)
+	{
+		for (char path_ = getNeighborPath(path, node.dir, node.index) ; path_ != 0;)
+		{
+			int dir_type = glm::findLSB(path_);
+			path_ &= ~(1<<dir_type);
+
+			const auto& dir_ = neighor_list[dir_type];
+			auto current = node.index;
+			for (;;)
+			{
+				current += dir_;
+				auto current_neighbor = getNeighborPath(path, (Direction)dir_type, current);
+
+				if (explorer_list[dir_type].deny_bit & current_neighbor != 0) {
+					// 探索終了
+					break;
+				}
+
+				current_neighbor &= ~(explorer_list[dir_type].deny_bit);
+
+				for (; current_neighbor != 0;)
+				{
+					int check = glm::findLSB(current_neighbor);
+					current_neighbor &= ~(1 << check);
+
+					if (check != 0)
+					{
+						auto jump_point = (1 << dir_type) | (1 << check);
+					}
+
+				}
+			}
+		}
+	}
+	std::vector<uint32_t> executeMakeVectorField2(const PathContextCPU& path)const
+	{
+		cStopWatch time;
+
+		std::vector<Node> close(path.m_desc.m_size.x * path.m_desc.m_size.y);
+		std::deque<OpenNode2> open;
+		open.push_back(OpenNode2{ i16vec2(path.m_desc.m_start.x, path.m_desc.m_start.y), All});
+		{
+			auto& start = close[open.front().index.x+ open.front().index.y*path.m_desc.m_size.x];
+			start.is_open = 1;
+			start.precompute(path.m_desc.m_start, path);
+		}
+		while (!open.empty())
+		{
+			const OpenNode2& open_node = open.front();
+			Node& node = close[open_node.index.x + open_node.index.y * path.m_desc.m_size.x];
+			for (int i = 0; i < 4; i++)
+			{
+
+			}
+			node.is_open = 0;
+			open.pop_front();
+
+		}
+
+		printf("solve time %6.4fms\n", time.getElapsedTimeAsMilliSeconds());
+		std::vector<uint32_t> result(path.m_desc.m_size.x*path.m_desc.m_size.y);
+		for (uint32_t y = 0; y < path.m_desc.m_size.y; y++)
+		{
+			for (uint32_t x = 0; x < path.m_desc.m_size.x; x++)
+			{
+				uint32_t i = y * path.m_desc.m_size.x + x;
+				result[i] = close[i].cost;
+			}
+		}
+		return result;
+	}
+
 	void write(const PathContextCPU& path)
 	{
 		auto map_size = path.m_desc.m_size >> 3;

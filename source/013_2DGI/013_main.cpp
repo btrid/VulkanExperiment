@@ -62,8 +62,8 @@ int pathFinding()
 	PathContextCPU pf(desc);
 //	pf.m_field = pathmake_maze(1024*8, 1024*8);
  	pf.m_field = pathmake_noise(1024, 1024);
-// 	PathSolver solver;
-//	auto solve = solver.executeMakeVectorField(pf);
+ 	PathSolver solver;
+	auto solve = solver.executeMakeVectorField(pf);
 //	auto solve = solver.executeSolve(pf);
 //	solver.writeSolvePath(pf, solve, "hoge.txt");
 	auto gpu = sGlobal::Order().getGPU(0);

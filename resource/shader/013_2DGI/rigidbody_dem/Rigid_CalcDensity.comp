@@ -25,6 +25,11 @@ float length_safe(in vec2 v)
 {
 	return isZero(v) ? 0. : length(v);
 }
+
+float weight(in float distance, in float influence_radian)
+{
+	return max(influence_radian /  distance - 1., 0.);
+}
 void main() 
 {
 	uint pb_id = b_pb_update_list[b_world.cpu_index*b_manager.pb_list_size+gl_WorkGroupID.x];
