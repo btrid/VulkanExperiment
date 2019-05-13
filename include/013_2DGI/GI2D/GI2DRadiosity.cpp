@@ -411,7 +411,7 @@ void GI2DRadiosity::executeGenerateRay(const vk::CommandBuffer& cmd)
 }
 void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd, const std::shared_ptr<GI2DSDF>& sdf_context)
 {
-	DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__, { 1.f });
+	DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
 
 	{
 		// データクリア
@@ -429,7 +429,7 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd, const std::sh
 #if 1
 		{
 			// レイの範囲の生成
-			_label.insert("GI2DRadiosity::executeRayMarch", { 1.f });
+			_label.insert("GI2DRadiosity::executeRayMarch");
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RayMarch].get());
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
@@ -465,7 +465,7 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd, const std::sh
 	}
 
 	{
-		_label.insert("GI2DRadiosity::executeClearRadiance", { 1.f });
+		_label.insert("GI2DRadiosity::executeClearRadiance");
 
 		// データクリア
 		vk::BufferMemoryBarrier to_read[] = {
@@ -484,7 +484,7 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd, const std::sh
 	// bounce
 	{
 
-		_label.insert("GI2DRadiosity::executeBounce", { 1.f });
+		_label.insert("GI2DRadiosity::executeBounce");
 		{
 			vk::BufferMemoryBarrier to_read[] = 
 			{
@@ -532,7 +532,7 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd, const std::sh
 
 	// radiance
 	{
-		_label.insert("GI2DRadiosity::executeCollectRadiant", { 1.f });
+		_label.insert("GI2DRadiosity::executeCollectRadiant");
 
 		vk::BufferMemoryBarrier to_read[] = {
 			b_radiance.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
@@ -549,7 +549,7 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd, const std::sh
 
 void GI2DRadiosity::executeRendering(const vk::CommandBuffer& cmd)
 {
-	DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__, { 1.f });
+	DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
 
 	// render_targetに書く
 	{

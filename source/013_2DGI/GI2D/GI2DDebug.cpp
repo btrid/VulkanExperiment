@@ -165,6 +165,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 			"GI2DDebug_MakeLight.comp.spv",
 			"GI2DDebug_DrawFragmentMap.comp.spv",
 			"GI2DDebug_DrawFragment.comp.spv",
+			"GI2DDebug_DrawReachMap.comp.spv",
 		};
 		static_assert(array_length(name) == Shader_Num, "not equal shader num");
 
@@ -202,6 +203,19 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 			m_pipeline_layout[PipelineLayout_DrawFragmentMap] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 
 		}
+
+		{
+			vk::DescriptorSetLayout layouts[] = {
+				m_gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data),
+				m_gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Path),
+				RenderTarget::s_descriptor_set_layout.get(),
+			};
+			vk::PipelineLayoutCreateInfo pipeline_layout_info;
+			pipeline_layout_info.setSetLayoutCount(std::size(layouts));
+			pipeline_layout_info.setPSetLayouts(layouts);
+			m_pipeline_layout[PipelineLayout_DrawReachMap] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+
+		}
 	}
 
 
@@ -220,6 +234,10 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 			.setModule(m_shader[Shader_DrawFragment].get())
 			.setPName("main")
 			.setStage(vk::ShaderStageFlagBits::eCompute),
+			vk::PipelineShaderStageCreateInfo()
+			.setModule(m_shader[Shader_DrawReachMap].get())
+			.setPName("main")
+			.setStage(vk::ShaderStageFlagBits::eCompute),
 		};
 
 		std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
@@ -233,11 +251,15 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 			vk::ComputePipelineCreateInfo()
 			.setStage(shader_info[2])
 			.setLayout(m_pipeline_layout[PipelineLayout_DrawFragmentMap].get()),
+			vk::ComputePipelineCreateInfo()
+			.setStage(shader_info[2])
+			.setLayout(m_pipeline_layout[PipelineLayout_DrawReachMap].get()),
 		};
 		auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
 		m_pipeline[Pipeline_PointLight] = std::move(compute_pipeline[0]);
 		m_pipeline[Pipeline_DrawFragmentMap] = std::move(compute_pipeline[1]);
 		m_pipeline[Pipeline_DrawFragment] = std::move(compute_pipeline[2]);
+		m_pipeline[PipelineLayout_DrawReachMap] = std::move(compute_pipeline[3]);
 	}
 
 }
@@ -363,4 +385,10 @@ void GI2DDebug::executeMakeFragment(vk::CommandBuffer cmd)
 //	 		cmd.dispatch(1, 1, 1);
 		}
 	}
+}
+
+void GI2DDebug::executeDrawReachMap(vk::CommandBuffer cmd, const std::shared_ptr<GI2DPathContext>& gi2d_path_context, const std::shared_ptr<RenderTarget>& render_target)
+{
+	DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__, DebugLabel::k_color_debug);
+
 }

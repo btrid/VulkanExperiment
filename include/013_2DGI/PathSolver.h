@@ -149,7 +149,7 @@ struct PathSolver
 
 		}
 
-		printf("solve time %6.4fms open_maxnum %ld\n", time.getElapsedTimeAsMilliSeconds(), open_maxsize);
+		printf("solve time %6.4fms open_maxnum %zd\n", time.getElapsedTimeAsMilliSeconds(), open_maxsize);
 		std::vector<uint32_t> result(path.m_desc.m_size.x*path.m_desc.m_size.y);
 		for (uint32_t y = 0; y < path.m_desc.m_size.y; y++)
 		{

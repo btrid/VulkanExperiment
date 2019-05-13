@@ -13,7 +13,7 @@ struct GI2DMakeHierarchy
 		Shader_MakeFragmentMap,
 		Shader_MakeFragmentMapAndSDF,
 		Shader_MakeFragmentMapHierarchy,
-		Shader_MakeFragmentMapPath,
+		Shader_MakeReachMap,
 		Shader_MakeLight,
 		Shader_MakeJFA,
 		Shader_MakeJFA_EX,
@@ -34,7 +34,7 @@ struct GI2DMakeHierarchy
 		Pipeline_MakeFragmentMap,
 		Pipeline_MakeFragmentMapAndSDF,
 		Pipeline_MakeFragmentMapHierarchy,
-		Pipeline_MakeFragmentMapPath,
+		Pipeline_MakeReachMap,
 		Pipeline_MakeLight,
 		Pipeline_MakeJFA,
 		Pipeline_MakeJFA_EX,
@@ -54,7 +54,7 @@ struct GI2DMakeHierarchy
 				"GI2D_MakeFragmentMap.comp.spv",
 				"GI2D_MakeFragmentMapAndSDF.comp.spv",
 				"GI2D_MakeFragmentMapHierarchy.comp.spv",
-				"GI2D_MakeFragmentMapPath.comp.spv",
+				"GI2DPath_MakeReachMap.comp.spv",
 				"GI2D_MakeLight.comp.spv",
 				"GI2DSDF_MakeJFA.comp.spv",
 				"GI2DSDF_MakeJFA_EX.comp.spv",
@@ -140,7 +140,7 @@ struct GI2DMakeHierarchy
 			shader_info[2].setModule(m_shader[Shader_MakeFragmentMapHierarchy].get());
 			shader_info[2].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[2].setPName("main");
-			shader_info[3].setModule(m_shader[Shader_MakeFragmentMapPath].get());
+			shader_info[3].setModule(m_shader[Shader_MakeReachMap].get());
 			shader_info[3].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[3].setPName("main");
 			shader_info[4].setModule(m_shader[Shader_MakeLight].get());
@@ -192,7 +192,7 @@ struct GI2DMakeHierarchy
 			m_pipeline[Pipeline_MakeFragmentMap] = std::move(compute_pipeline[0]);
 			m_pipeline[Pipeline_MakeFragmentMapAndSDF] = std::move(compute_pipeline[1]);
 			m_pipeline[Pipeline_MakeFragmentMapHierarchy] = std::move(compute_pipeline[2]);
-			m_pipeline[Pipeline_MakeFragmentMapPath] = std::move(compute_pipeline[3]);
+			m_pipeline[Pipeline_MakeReachMap] = std::move(compute_pipeline[3]);
 			m_pipeline[Pipeline_MakeLight] = std::move(compute_pipeline[4]);
 			m_pipeline[Pipeline_MakeJFA] = std::move(compute_pipeline[5]);
 			m_pipeline[Pipeline_MakeJFA_EX] = std::move(compute_pipeline[6]);
@@ -203,7 +203,7 @@ struct GI2DMakeHierarchy
 	}
 	void executeMakeFragmentMap(vk::CommandBuffer cmd)
 	{
-		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__, { 1.f });
+		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
 
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Hierarchy].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 		// make fragment map
@@ -225,7 +225,7 @@ struct GI2DMakeHierarchy
 	}
 	void executeMakeFragmentMapAndSDF(vk::CommandBuffer cmd, const std::shared_ptr<GI2DSDF>& sdf_context)
 	{
-		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__, { 1.f });
+		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
 
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_SDF].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_SDF].get(), 1, sdf_context->getDescriptorSet(), {});
@@ -250,7 +250,7 @@ struct GI2DMakeHierarchy
 
 	void executeHierarchy(vk::CommandBuffer cmd)
 	{
-		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__, { 1.f });
+		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeFragmentMapHierarchy].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Hierarchy].get(), 0, m_gi2d_context->getDescriptorSet(), {});
@@ -272,14 +272,14 @@ struct GI2DMakeHierarchy
 
 	void executeMakeSDF(vk::CommandBuffer cmd, const std::shared_ptr<GI2DSDF>& sdf_context)
 	{
-		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__, { 1.f });
+		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
 
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_SDF].get(), 0, sdf_context->m_gi2d_context->getDescriptorSet(), {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_SDF].get(), 1, sdf_context->getDescriptorSet(), {});
 
 		// make sdf
 		{
-			_label.insert("Make JFA", { 1.f });
+			_label.insert("Make JFA");
 #if	0
 			// ˆê“x‚É4—v‘fŒvŽZ‚·‚éÅ“K‰»‚ð‚µ‚½
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeJFA_EX].get());
@@ -340,7 +340,7 @@ struct GI2DMakeHierarchy
 #endif
 		}
 
-		_label.insert("Make SDF", { 1.f });
+		_label.insert("Make SDF");
 		{
 			vk::BufferMemoryBarrier to_read[] = {
 				sdf_context->b_jfa.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
@@ -360,7 +360,7 @@ struct GI2DMakeHierarchy
 	}
 	void executeRenderSDF(vk::CommandBuffer cmd, const std::shared_ptr<GI2DSDF>& sdf_context, const std::shared_ptr<RenderTarget>& render_target)
 	{
-		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__, { 1.f });
+		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
 
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_RenderSDF].get(), 0, sdf_context->m_gi2d_context->getDescriptorSet(), {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_RenderSDF].get(), 1, sdf_context->getDescriptorSet(), {});
@@ -385,9 +385,9 @@ struct GI2DMakeHierarchy
 		}
 	}
 
-	void executeMakePath(vk::CommandBuffer cmd, const std::shared_ptr<GI2DPathContext>& path_context)
+	void executeMakeReachMap(vk::CommandBuffer cmd, const std::shared_ptr<GI2DPathContext>& path_context)
 	{
-		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__, { 1.f });
+		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
 
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Path].get(), 0, path_context->m_gi2d_context->getDescriptorSet(), {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Path].get(), 1, path_context->getDescriptorSet(), {});
@@ -405,7 +405,7 @@ struct GI2DMakeHierarchy
 // 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(to_read), to_read }, { barrier });
 // 
 
- 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeFragmentMapPath].get());
+ 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeReachMap].get());
 
 			struct  
 			{

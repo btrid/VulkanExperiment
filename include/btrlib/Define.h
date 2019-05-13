@@ -28,24 +28,31 @@ namespace btr {
 #define USE_DEBUG_REPORT 1
 struct DebugLabel
 {
-	DebugLabel(vk::CommandBuffer cmd, vk::DispatchLoaderDynamic& dispatcher, const char* label, const std::array<float, 4>& color)
+	static const uint32_t k_color_default = uint32_t(0xffffffffu);
+	static const uint32_t k_color_debug = uint32_t(0x000000ffu);
+
+	DebugLabel(vk::CommandBuffer cmd, vk::DispatchLoaderDynamic& dispatcher, const char* label, uint32_t color = k_color_default)
 		: m_cmd(cmd)
 		, m_dispatcher(dispatcher)
 
 	{
 #if USE_DEBUG_REPORT
+		vec4 color_f4 = vec4((uvec4(color) >> uvec4(24, 16, 8, 0)) & uvec4(0xff)) / vec4(255.f);
+
 		vk::DebugUtilsLabelEXT label_info;
-		memcpy_s(label_info.color, sizeof(label_info.color), color.data(), sizeof(label_info.color));
+		memcpy_s(label_info.color, sizeof(label_info.color), &color_f4, sizeof(color_f4));
 		label_info.pLabelName = label;
 		cmd.beginDebugUtilsLabelEXT(label_info, dispatcher);
 #endif
 	}
 
-	void insert(const char* label, const std::array<float, 4>& color)
+	void insert(const char* label, uint32_t color = k_color_default)
 	{
 #if USE_DEBUG_REPORT
+		vec4 color_f4 = vec4((uvec4(color) >> uvec4(24, 16, 8, 0)) & uvec4(0xff)) / vec4(255.f);
+
 		vk::DebugUtilsLabelEXT label_info;
-		memcpy_s(label_info.color, sizeof(label_info.color), color.data(), sizeof(label_info.color));
+		memcpy_s(label_info.color, sizeof(label_info.color), &color_f4, sizeof(color_f4));
 		label_info.pLabelName = label;
 		m_cmd.insertDebugUtilsLabelEXT(label_info, m_dispatcher);
 #endif

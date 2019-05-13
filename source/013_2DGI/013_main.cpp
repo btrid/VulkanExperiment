@@ -211,7 +211,7 @@ int pathFinding()
 //				gi2d_debug.executeDrawFragmentMap(cmd, app.m_window->getFrontBuffer());
 //  				path_process.executeBuildTree(cmd);
 //				path_process.executeDrawTree(cmd, app.m_window->getFrontBuffer());
-				gi2d_make_hierarchy.executeMakePath(cmd, gi2d_path_context);
+				gi2d_make_hierarchy.executeMakeReachMap(cmd, gi2d_path_context);
 				
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;

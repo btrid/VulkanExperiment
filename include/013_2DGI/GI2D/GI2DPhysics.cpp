@@ -582,7 +582,7 @@ void GI2DPhysics::executeMakeFluidWall(vk::CommandBuffer cmd)
 
 void GI2DPhysics::executeMakeVoronoi(vk::CommandBuffer cmd)
 {
-	DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__, { 1.f });
+	DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
 
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Voronoi].get(), 0, getDescriptorSet(GI2DPhysics::DescLayout_Data), {});
 
