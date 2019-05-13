@@ -210,7 +210,6 @@ struct GI2DPhysics
 	btr::BufferMemoryEx<uvec4> b_voronoi_vertex_counter;
 	btr::BufferMemoryEx<VoronoiVertex> b_voronoi_vertex;
 	btr::BufferMemoryEx<int16_t> b_voronoi_path;
-	btr::BufferMemoryEx<int16_t> b_voronoi_path;
 
 
 	btr::BufferMemoryEx<Rigidbody> b_make_rigidbody;

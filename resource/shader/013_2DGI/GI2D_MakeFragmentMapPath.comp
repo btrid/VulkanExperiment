@@ -2,78 +2,85 @@
 #extension GL_GOOGLE_include_directive : require
 
 #define USE_GI2D 0
+#define USE_GI2D_Path 1
 #include "GI2D.glsl"
+#include "GI2DPath.glsl"
 
 layout (local_size_x = 1024) in;
 
-shared uint s_closed[4096];
-shared int16_t s_active[1024];
-shared int s_active_counter;
-
-void path(in int current)
+layout(push_constant) uniform InputVertex
 {
-	int vertex_num = b_voronoi_polygon[current].num;
-	for(int v = 0; v<vertex_num; v++)
-	{
-		int vindex = int(b_voronoi_polygon[current].vertex_index[v]);
-		for(int i = 0; i < 4; i++)
-		{
-			int16_t access_cell = b_voronoi_vertex[vindex].cell[i];
-			if(access_cell == -1s) { break; }
-			if(atomicOr(s_closed[int(access_cell)], 0, 1) == 1)
-			{
-				continue;
-			}
+	ivec2 reso;
+	i16vec2 target[1];
+} constant;
 
-			s_active[atomicAdd(s_active_counter, 1)] = access_cell;
-			b_voronoi_path[int(access_cell)] = int16_t(current);
+i16vec2 g_offset[4] = { {1, 0}, {-1, 0}, {0, 1}, {0, -1} };
+
+shared i16vec2 s_active[4096];
+shared int s_active_counter[2];
+
+void path(in i16vec2 current)
+{
+	for(int i = 0; i < 4; i++)
+	{
+		i16vec2 access = current + g_offset[i];
+		if (any(lessThan(access, ivec2(0))) || any(greaterThanEqual(access, constant.reso)))
+		{
+			continue;
 		}
+
+		int access_1d = access.x + access.y * constant.reso.x;
+		if(atomicOr(b_close[access_1d / 32], 1<<(access_1d % 32)) != 0)
+		{
+			continue;
+		}
+
+		s_active[atomicAdd(s_active_counter[0], 1) % s_active.length()] = access;
 	}
 }
 void main() 
 {
-	for(uint i = gl_LocalInvocationIndex; i < s_closed.length(); i+=gl_NumWorkGroups.x)
+	for(uint i = gl_LocalInvocationIndex; i < constant.reso.x*constant.reso.y/32; i+=gl_NumWorkGroups.x)
 	{
-		s_closed[i] = 0;
+		b_close[i] = 0;
 	}
-	if(gl_LocalInvocationIndex == 0)
+	if(gl_LocalInvocationIndex < 2)
 	{
-		s_active_counter = 0;
+		s_active_counter[gl_LocalInvocationIndex] = 0;
 	}
 
 	barrier();
 	memoryBarrierShared();
+	memoryBarrierBuffer();
 
 	if(gl_LocalInvocationIndex < 1)
 	{
-		int begin = constant.target[gl_LocalInvocationIndex];
-		path(begin);
-
-		s_closed[begin] = 1;
-		b_voronoi_path[begin] = -1s;
+		path(constant.target[gl_LocalInvocationIndex]);
 	}
 
 	for(int i = 0; i < 1000; i++)
 	{
 		barrier();
 		memoryBarrierShared();
-		if(s_active_counter==0){ break; }
-		bool is_active = gl_LocalInvocationIndex < s_active_counter;
+		int accum = s_active_counter[0];
+		int consume = s_active_counter[1];
+		if(accum==consume){ break; }
+		bool is_active = gl_LocalInvocationIndex < (accum - consume);
 
 		barrier();
 
 		if(gl_LocalInvocationIndex == 0)
 		{
-			s_active_counter = 0;
+			s_active_counter[1] += (accum - consume);
 		}
-		int close_cell = int(s_active[gl_LocalInvocationIndex]);
+		i16vec2 open = s_active[(consume + gl_LocalInvocationIndex) % s_active.length()];
 
 		barrier();
 		memoryBarrierShared();
 
 		if(is_active)
 		{
-			path(close_cell);
+			path(open);
 		}
 	}
 

@@ -118,6 +118,7 @@ struct PathSolver
 	std::vector<uint32_t> executeMakeVectorField(const PathContextCPU& path)const
 	{
 		cStopWatch time;
+		size_t open_maxsize = 0;
 		offset_def;
 
 		std::vector<Node> close(path.m_desc.m_size.x * path.m_desc.m_size.y);
@@ -130,6 +131,7 @@ struct PathSolver
 		}
 		while (!open.empty())
 		{
+			open_maxsize = glm::max(open.size(), open_maxsize);
 			uint32_t node_index = open.front();
 			Node& node = close[node_index];
 			open.pop_front();
@@ -147,7 +149,7 @@ struct PathSolver
 
 		}
 
-		printf("solve time %6.4fms\n", time.getElapsedTimeAsMilliSeconds());
+		printf("solve time %6.4fms open_maxnum %ld\n", time.getElapsedTimeAsMilliSeconds(), open_maxsize);
 		std::vector<uint32_t> result(path.m_desc.m_size.x*path.m_desc.m_size.y);
 		for (uint32_t y = 0; y < path.m_desc.m_size.y; y++)
 		{
