@@ -30,7 +30,8 @@ void path(in i16vec2 current)
 		}
 
 		int access_1d = access.x + access.y * constant.reso.x;
-		if(atomicOr(b_close[access_1d / 32], 1<<(access_1d % 32)) != 0)
+		int bit = 1<<(access_1d % 32);
+		if((atomicOr(b_close[access_1d / 32], bit) & bit) != 0)
 		{
 			continue;
 		}
@@ -66,6 +67,7 @@ void main()
 		int consume = s_active_counter[1];
 		if(accum==consume){ break; }
 		bool is_active = gl_LocalInvocationIndex < (accum - consume);
+		i16vec2 open = s_active[(consume + gl_LocalInvocationIndex) % s_active.length()];
 
 		barrier();
 
@@ -73,7 +75,6 @@ void main()
 		{
 			s_active_counter[1] += (accum - consume);
 		}
-		i16vec2 open = s_active[(consume + gl_LocalInvocationIndex) % s_active.length()];
 
 		barrier();
 		memoryBarrierShared();
