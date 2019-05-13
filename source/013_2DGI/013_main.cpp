@@ -53,6 +53,47 @@
 #pragma comment(lib, "vulkan-1.lib")
 #pragma comment(lib, "imgui.lib")
 
+
+PathContextCPU pathmake_file()
+{
+	PathContextCPU::Description desc;
+	desc.m_size = ivec2(64);
+//	desc.m_start = ivec2(11, 11);
+//	desc.m_finish = ivec2(1002, 1000);
+
+	auto aa = ivec2(64, 64) >> 3;
+	std::vector<uint64_t> data(aa.x*aa.y);
+
+	FILE* f = nullptr;
+	fopen_s(&f, "..\\..\\resource\\testmap.txt", "r");
+	char b[64];
+	for (int y = 0; y < 64; y++)
+	{
+		fread_s(b, 64, 1, 64, f);
+		for (int x = 0; x < 64; x++)
+		{
+			switch (b[x]) 
+			{
+			case '-':
+				break;
+			case 'X':
+				data[x/8 + y/8 * aa.x] |= 1ull << (x%8 + (y%8)*8);
+				break;
+			case '#':
+				desc.m_start = ivec2(x, y);
+				break;
+			case '*':
+				desc.m_finish = ivec2(x, y);
+				break;
+			}
+		}
+
+	}
+	PathContextCPU pf(desc);
+	pf.m_field = data;
+	return pf;
+
+}
 int pathFinding()
 {
 	PathContextCPU::Description desc;
@@ -61,10 +102,13 @@ int pathFinding()
 	desc.m_finish = ivec2(1002, 1000);
 	PathContextCPU pf(desc);
 //	pf.m_field = pathmake_maze(1024*8, 1024*8);
- 	pf.m_field = pathmake_noise(1024, 1024);
- 	PathSolver solver;
-	auto solve = solver.executeMakeVectorField(pf);
-//	auto solve = solver.executeSolve(pf);
+//	pf.m_field = pathmake_noise(1024, 1024);
+	pf = pathmake_file();
+	PathSolver solver;
+	solver.writeConsole(pf);
+	//	auto solve = solver.executeMakeVectorField(pf);
+	auto solve = solver.executeMakeVectorField2(pf);
+	//	auto solve = solver.executeSolve(pf);
 //	solver.writeSolvePath(pf, solve, "hoge.txt");
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();

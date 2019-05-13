@@ -278,7 +278,7 @@ struct PathSolver
 	struct OpenNode2
 	{
 		i16vec2 index;
-		char dir_bit;
+		unsigned char dir_bit;
 	};
 	struct CloseNode2
 	{
@@ -291,13 +291,11 @@ struct PathSolver
 	u8vec2 getNeighbor(const PathContextCPU& path, DirectionBit dir, const i16vec2& pos) const
 	{
 		u8vec2 neighor = u8vec2(0);
-		for (int i = 0; i < 8;)
+		int _dir = dir;
+		while (_dir != 0)
 		{
-			if (dir & (1 << i) == 0) 
-			{
-				// Œ©‚é•K—v‚È‚¢
-				continue; 
-			}
+			int i = glm::findLSB(_dir);
+			_dir &= ~(1<<i);
 
 			if (any(lessThan(neighor_list[i] + pos, i16vec2(0))) || any(greaterThanEqual(neighor_list[i] + pos, i16vec2(path.m_desc.m_size))))
 			{
@@ -335,7 +333,7 @@ struct PathSolver
 			}
 			btr::setOff(neighbor.y, explorer_list[dir_type].deny_bit);
 
-			if (neighbor.x != 0)
+			if (neighbor.y != 0)
 			{
 				// forced neighbor
 				// ŽÕ•Á•¨‚ª‚ ‚é‚Ì‚Å‚±‚±‚©‚çÄ‘{¸
@@ -359,11 +357,10 @@ struct PathSolver
 	void exploreDiagonal(const PathContextCPU& path, std::deque<OpenNode2>& open, OpenNode2 node, int dir_type)const
 	{
 		const auto& dir_ = neighor_list[dir_type];
-		auto current = node.index;
 		for (int i = 0; true; i++)
 		{
-			current += dir_;
-			auto neighbor = getNeighbor(path, (Direction)dir_type, current);
+			node.index += dir_;
+			auto neighbor = getNeighbor(path, (Direction)dir_type, node.index);
 
 			if (btr::isOn(neighbor.y, 1 << dir_type))
 			{
@@ -391,7 +388,7 @@ struct PathSolver
 			if (any(is_opend) || btr::isOn(neighbor.y, straight_bit.z|straight_bit.w))
 			{
 				OpenNode2 open_node;
-				open_node.index = current;
+				open_node.index = node.index;
 				open_node.dir_bit = (1 << dir_type);
 				while (neighbor.x != 0)
 				{
@@ -428,8 +425,13 @@ struct PathSolver
 
 		std::vector<CloseNode2> close(path.m_desc.m_size.x * path.m_desc.m_size.y);
 		std::deque<OpenNode2> open;
-		open.push_back(OpenNode2{ i16vec2(path.m_desc.m_start.x, path.m_desc.m_start.y), BIT_ALL});
+
 		{
+			OpenNode2 start_node;
+			start_node.index = i16vec2(path.m_desc.m_start.x, path.m_desc.m_start.y);
+			start_node.dir_bit = getNeighbor(path, BIT_ALL, start_node.index).x;
+			open.push_back(start_node);
+
 			auto& start = close[open.front().index.x+ open.front().index.y*path.m_desc.m_size.x];
 			start.is_open = 1;
 		}
@@ -438,9 +440,9 @@ struct PathSolver
 			const OpenNode2& open_node = open.front();
 			explore(path, open, open_node);
 
-			CloseNode2& node = close[open_node.index.x + open_node.index.y * path.m_desc.m_size.x];
-			node.is_open = 0;
-			node.is_closed = 1;
+//			CloseNode2& node = close[open_node.index.x + open_node.index.y * path.m_desc.m_size.x];
+//			node.is_open = 0;
+//			node.is_closed = 1;
 			open.pop_front();
 
 		}
@@ -458,6 +460,22 @@ struct PathSolver
 		return result;
 	}
 
+	void writeConsole(const PathContextCPU& path)
+	{
+		auto map_size = path.m_desc.m_size >> 3;
+		for (uint32_t y = 0; y < path.m_desc.m_size.y; y++)
+		{
+			std::vector<char> output(path.m_desc.m_size.x + 1);
+			for (uint32_t x = 0; x < path.m_desc.m_size.x; x++)
+			{
+				ivec2 m = ivec2(x, y) >> 3;
+				ivec2 c = ivec2(x, y) - (m << 3);
+				output[x] = (path.m_field[m.x + m.y*map_size.x] & (1ull << (c.x + c.y * 8))) != 0 ? '#' : ' ';
+			}
+			output[path.m_desc.m_size.x] = '\0';
+			printf("%s\n", output.data());
+		}
+	}
 	void write(const PathContextCPU& path)
 	{
 		auto map_size = path.m_desc.m_size >> 3;
