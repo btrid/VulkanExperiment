@@ -137,6 +137,7 @@ int pathFinding()
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context, gi2d_desc);
 	std::shared_ptr<CrowdContext> crowd_context = std::make_shared<CrowdContext>(context, gi2d_context);
 	std::shared_ptr<PathContext> path_context = std::make_shared<PathContext>(context, gi2d_context);
+	std::shared_ptr<GI2DPathContext> gi2d_path_context = std::make_shared<GI2DPathContext>(gi2d_context);
 
 	GI2DDebug gi2d_debug(context, gi2d_context);
 	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
@@ -208,9 +209,10 @@ int pathFinding()
 				}
 
 //				gi2d_debug.executeDrawFragmentMap(cmd, app.m_window->getFrontBuffer());
-  				path_process.executeBuildTree(cmd);
-				path_process.executeDrawTree(cmd, app.m_window->getFrontBuffer());
-
+//  				path_process.executeBuildTree(cmd);
+//				path_process.executeDrawTree(cmd, app.m_window->getFrontBuffer());
+				gi2d_make_hierarchy.executeMakePath(cmd, gi2d_path_context);
+				
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;
 			}

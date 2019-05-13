@@ -13,7 +13,7 @@ struct GI2DMakeHierarchy
 		Shader_MakeFragmentMap,
 		Shader_MakeFragmentMapAndSDF,
 		Shader_MakeFragmentMapHierarchy,
-		Shader_MakeDensityHierarchy,
+		Shader_MakeFragmentMapPath,
 		Shader_MakeLight,
 		Shader_MakeJFA,
 		Shader_MakeJFA_EX,
@@ -26,6 +26,7 @@ struct GI2DMakeHierarchy
 		PipelineLayout_Hierarchy,
 		PipelineLayout_SDF,
 		PipelineLayout_RenderSDF,
+		PipelineLayout_Path,
 		PipelineLayout_Num,
 	};
 	enum Pipeline
@@ -33,7 +34,7 @@ struct GI2DMakeHierarchy
 		Pipeline_MakeFragmentMap,
 		Pipeline_MakeFragmentMapAndSDF,
 		Pipeline_MakeFragmentMapHierarchy,
-		Pipeline_MakeDensityHierarchy,
+		Pipeline_MakeFragmentMapPath,
 		Pipeline_MakeLight,
 		Pipeline_MakeJFA,
 		Pipeline_MakeJFA_EX,
@@ -53,7 +54,7 @@ struct GI2DMakeHierarchy
 				"GI2D_MakeFragmentMap.comp.spv",
 				"GI2D_MakeFragmentMapAndSDF.comp.spv",
 				"GI2D_MakeFragmentMapHierarchy.comp.spv",
-				"GI2D_MakeDensityHierarchy.comp.spv",
+				"GI2D_MakeFragmentMapPath.comp.spv",
 				"GI2D_MakeLight.comp.spv",
 				"GI2DSDF_MakeJFA.comp.spv",
 				"GI2DSDF_MakeJFA_EX.comp.spv",
@@ -111,6 +112,21 @@ struct GI2DMakeHierarchy
 			pipeline_layout_info.setPSetLayouts(layouts);
 			m_pipeline_layout[PipelineLayout_RenderSDF] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
+		{
+			vk::DescriptorSetLayout layouts[] = {
+				gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data),
+				gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Path),
+			};
+			vk::PushConstantRange constants[] = {
+				vk::PushConstantRange().setOffset(0).setSize(16).setStageFlags(vk::ShaderStageFlagBits::eCompute),
+			};
+			vk::PipelineLayoutCreateInfo pipeline_layout_info;
+			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
+			pipeline_layout_info.setPSetLayouts(layouts);
+			pipeline_layout_info.setPushConstantRangeCount(array_length(constants));
+			pipeline_layout_info.setPPushConstantRanges(constants);
+			m_pipeline_layout[PipelineLayout_Path] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+		}
 
 		// pipeline
 		{
@@ -124,7 +140,7 @@ struct GI2DMakeHierarchy
 			shader_info[2].setModule(m_shader[Shader_MakeFragmentMapHierarchy].get());
 			shader_info[2].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[2].setPName("main");
-			shader_info[3].setModule(m_shader[Shader_MakeDensityHierarchy].get());
+			shader_info[3].setModule(m_shader[Shader_MakeFragmentMapPath].get());
 			shader_info[3].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[3].setPName("main");
 			shader_info[4].setModule(m_shader[Shader_MakeLight].get());
@@ -155,7 +171,7 @@ struct GI2DMakeHierarchy
 				.setLayout(m_pipeline_layout[PipelineLayout_Hierarchy].get()),
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[3])
-				.setLayout(m_pipeline_layout[PipelineLayout_Hierarchy].get()),
+				.setLayout(m_pipeline_layout[PipelineLayout_Path].get()),
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[4])
 				.setLayout(m_pipeline_layout[PipelineLayout_Hierarchy].get()),
@@ -176,7 +192,7 @@ struct GI2DMakeHierarchy
 			m_pipeline[Pipeline_MakeFragmentMap] = std::move(compute_pipeline[0]);
 			m_pipeline[Pipeline_MakeFragmentMapAndSDF] = std::move(compute_pipeline[1]);
 			m_pipeline[Pipeline_MakeFragmentMapHierarchy] = std::move(compute_pipeline[2]);
-			m_pipeline[Pipeline_MakeDensityHierarchy] = std::move(compute_pipeline[3]);
+			m_pipeline[Pipeline_MakeFragmentMapPath] = std::move(compute_pipeline[3]);
 			m_pipeline[Pipeline_MakeLight] = std::move(compute_pipeline[4]);
 			m_pipeline[Pipeline_MakeJFA] = std::move(compute_pipeline[5]);
 			m_pipeline[Pipeline_MakeJFA_EX] = std::move(compute_pipeline[6]);
@@ -366,6 +382,39 @@ struct GI2DMakeHierarchy
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RenderSDF].get());
 			auto num = app::calcDipatchGroups(uvec3(sdf_context->m_gi2d_context->RenderWidth, sdf_context->m_gi2d_context->RenderHeight, 1), uvec3(32, 32, 1));
 			cmd.dispatch(num.x, num.y, num.z);
+		}
+	}
+
+	void executeMakePath(vk::CommandBuffer cmd, const std::shared_ptr<GI2DPathContext>& path_context)
+	{
+		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__, { 1.f });
+
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Path].get(), 0, path_context->m_gi2d_context->getDescriptorSet(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Path].get(), 1, path_context->getDescriptorSet(), {});
+
+		{
+// 			vk::BufferMemoryBarrier to_read[] = {
+// 				sdf_context->b_sdf.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+// 				sdf_context->b_jfa.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+// 			};
+// 			vk::ImageMemoryBarrier barrier;
+// 			barrier.setImage(render_target->m_image);
+// 			barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+// 			barrier.setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
+// 			barrier.setNewLayout(vk::ImageLayout::eGeneral);
+// 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(to_read), to_read }, { barrier });
+// 
+
+ 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeFragmentMapPath].get());
+
+			struct  
+			{
+				ivec2 reso;
+				i16vec2 target1;
+				i16vec2 target2;
+			} constant{ path_context->m_gi2d_context->RenderSize, i16vec2(11, 11), i16vec2(0) };
+			cmd.pushConstants(m_pipeline_layout[PipelineLayout_Path].get(), vk::ShaderStageFlagBits::eCompute, 0, sizeof(constant), &constant);
+			cmd.dispatch(1, 1, 1);
 		}
 	}
 	std::shared_ptr<btr::Context> m_context;

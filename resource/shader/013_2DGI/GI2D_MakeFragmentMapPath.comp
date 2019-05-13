@@ -11,12 +11,11 @@ layout (local_size_x = 1024) in;
 layout(push_constant) uniform InputVertex
 {
 	ivec2 reso;
-	i16vec2 target[1];
+	i16vec2 target[2];
 } constant;
 
 i16vec2 g_offset[4] = { {1, 0}, {-1, 0}, {0, 1}, {0, -1} };
 
-//shared i16vec2 s_active[4096];
 shared i16vec2 s_active[4000];
 shared int s_active_counter[2];
 

@@ -346,9 +346,9 @@ struct GI2DSDF
 	vk::DescriptorSet getDescriptorSet()const { return m_descriptor_set.get(); }
 };
 
-struct GI2DPath
+struct GI2DPathContext
 {
-	GI2DPath(const std::shared_ptr<GI2DContext>& gi2d_context)
+	GI2DPathContext(const std::shared_ptr<GI2DContext>& gi2d_context)
 	{
 		m_gi2d_context = gi2d_context;
 		const auto& context = gi2d_context->m_context;
