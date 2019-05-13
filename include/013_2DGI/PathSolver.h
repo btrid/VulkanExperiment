@@ -239,7 +239,7 @@ struct PathSolver
 	std::array<Explorer, Num> explorer_list = 
 	{
 		Explorer{
-			Bit_UL | Bit_U | Bit_R | Bit_D | Bit_L,
+			Bit_UL | Bit_U | Bit_R | Bit_D | Bit_L | Bit_UR | Bit_DL,
 			Bit_UL | Bit_U | Bit_L,
 		},
 		Explorer{
@@ -247,7 +247,7 @@ struct PathSolver
 			Bit_U,
 		},
 		Explorer{
-			Bit_UR | Bit_U | Bit_R | Bit_D | Bit_L,
+			Bit_UR | Bit_U | Bit_R | Bit_D | Bit_L | Bit_DR | Bit_UL,
 			Bit_UR | Bit_U | Bit_R ,
 		},
 		Explorer{
@@ -255,7 +255,7 @@ struct PathSolver
 			Bit_R,
 		},
 		Explorer{
-			Bit_DR | Bit_U | Bit_R | Bit_D | Bit_L,
+			Bit_DR | Bit_U | Bit_R | Bit_D | Bit_L | Bit_DL | Bit_UR,
 			Bit_DR | Bit_D | Bit_R,
 		},
 		Explorer{
@@ -263,7 +263,7 @@ struct PathSolver
 			Bit_D,
 		},
 		Explorer{
-			Bit_DL | Bit_U | Bit_R | Bit_D | Bit_L,
+			Bit_DL | Bit_U | Bit_R | Bit_D | Bit_L | Bit_UL | Bit_DR,
 			Bit_DL | Bit_D | Bit_L,
 		},
 		Explorer{
@@ -327,16 +327,10 @@ struct PathSolver
 			auto neighbor = getNeighbor(path, dir_type, current);
 			close[current.x + current.y * path.m_desc.m_size.x].is_closed = 1;
 
-			if (btr::isOn(neighbor.y, 1<<dir_type))
-			{
-				// 直線は進行方向に進めなければ終了
-				break;
-			}
-
-			u8vec4 bit_mask = u8vec4(1) << ((u8vec4(dir_type) + u8vec4(8) + u8vec4(-1,-2,1,2)) % u8vec4(8));
+			u8vec4 bit_mask = u8vec4(1) << ((u8vec4(dir_type) + u8vec4(1,2,7,6)) % u8vec4(8));
 			bvec4 is_biton = notEqual(neighbor.xyxy() & bit_mask, u8vec4(0));
 			bvec2 is_forcedneighbor = bvec2(all(is_biton.xy()), all(is_biton.zw()));
-			if (any(is_forcedneighbor))
+			if (any(is_forcedneighbor) && !close[current.x + current.y * path.m_desc.m_size.x].is_open)
 			{
 				// forced neighbor
 				// 遮蔽物があるのでここから再捜査
@@ -349,6 +343,12 @@ struct PathSolver
 				close[current.x + current.y * path.m_desc.m_size.x].is_open = 1;
 				return true;
 			}
+			if (btr::isOn(neighbor.y, 1 << dir_type))
+			{
+				// 直線は進行方向に進めなければ終了
+				break;
+			}
+
 		}
 
 		return false;
@@ -362,18 +362,13 @@ struct PathSolver
 			auto neighbor = getNeighbor(path, (Direction)dir_type, node.index);
 			close[node.index.x + node.index.y * path.m_desc.m_size.x].is_closed = 1;
 
-			if (btr::isOn(neighbor.y, 1 << dir_type))
-			{
-				// 進行方向に進めなければ終了
-				break;
-			}
 			ivec2 straight = (ivec2(dir_type) + ivec2(8) + ivec2(-1,1)) % 8;
 			ivec2 straight_bit = 1<<straight;
-			if (btr::isOn(neighbor.y, straight_bit.x | straight_bit.y))
-			{
-				// 進行方向に進めなければ終了
-				break;
-			}
+// 			if (btr::isOn(neighbor.y, straight_bit.x | straight_bit.y))
+// 			{
+// 				// 進行方向に進めなければ終了
+// 				break;
+// 			}
 
 			bvec2 is_opend = bvec2(false);
 			if (btr::isOn(neighbor.x, straight_bit.x))
@@ -385,10 +380,10 @@ struct PathSolver
 				is_opend.y = exploreStraight(path, open, close, node, (Direction)straight.y);
 			}
 
-			u8vec4 bit_mask = u8vec4(1) << ((u8vec4(dir_type) + u8vec4(5, 6, 2, 3)) % u8vec4(8));
+			u8vec4 bit_mask = u8vec4(1) << ((u8vec4(dir_type) + u8vec4(6, 5, 2, 3)) % u8vec4(8));
 			bvec4 is_biton = notEqual(neighbor.xyxy() & bit_mask, u8vec4(0));
 			bvec2 is_forcedneighbor = bvec2(all(is_biton.xy()), all(is_biton.zw()));
-			if (any(is_opend) || any(is_forcedneighbor))
+			if ((any(is_opend) || any(is_forcedneighbor)) && !close[node.index.x + node.index.y * path.m_desc.m_size.x].is_open)
 			{
 				OpenNode2 open_node;
 				open_node.index = node.index;
@@ -400,6 +395,13 @@ struct PathSolver
 				close[node.index.x + node.index.y * path.m_desc.m_size.x].is_open = 1;
 				return;
 			}
+
+			if (btr::isOn(neighbor.y, 1 << dir_type))
+			{
+				// 進行方向に進めなければ終了
+				break;
+			}
+
 		}
 	}
 	void explore(const PathContextCPU& path, std::deque<OpenNode2>& open, std::vector<CloseNode2>& close, const OpenNode2& node)const
@@ -449,11 +451,11 @@ struct PathSolver
 
 		printf("solve time %6.4fms\n", time.getElapsedTimeAsMilliSeconds());
 		std::vector<uint32_t> result(path.m_desc.m_size.x*path.m_desc.m_size.y);
-		for (uint32_t y = 0; y < path.m_desc.m_size.y; y++)
+		for (int32_t y = 0; y < path.m_desc.m_size.y; y++)
 		{
-			for (uint32_t x = 0; x < path.m_desc.m_size.x; x++)
+			for (int32_t x = 0; x < path.m_desc.m_size.x; x++)
 			{
-				uint32_t i = y * path.m_desc.m_size.x + x;
+				int32_t i = y * path.m_desc.m_size.x + x;
 				if (close[i].is_open)
 				{
 					result[i] = 1;
@@ -474,10 +476,10 @@ struct PathSolver
 	void writeConsole(const PathContextCPU& path)
 	{
 		auto map_size = path.m_desc.m_size >> 3;
-		for (uint32_t y = 0; y < path.m_desc.m_size.y; y++)
+		for (int32_t y = 0; y < path.m_desc.m_size.y; y++)
 		{
 			std::vector<char> output(path.m_desc.m_size.x + 1);
-			for (uint32_t x = 0; x < path.m_desc.m_size.x; x++)
+			for (int32_t x = 0; x < path.m_desc.m_size.x; x++)
 			{
 				ivec2 m = ivec2(x, y) >> 3;
 				ivec2 c = ivec2(x, y) - (m << 3);
@@ -491,9 +493,9 @@ struct PathSolver
 	{
 		auto map_size = path.m_desc.m_size >> 3;
 		std::vector<char> output(path.m_desc.m_size.x + 1);
-		for (uint32_t y = 0; y < path.m_desc.m_size.y; y++)
+		for (int32_t y = 0; y < path.m_desc.m_size.y; y++)
 		{
-			for (uint32_t x = 0; x < path.m_desc.m_size.x; x++)
+			for (int32_t x = 0; x < path.m_desc.m_size.x; x++)
 			{
 				int value = solve[x + y * path.m_desc.m_size.x];
 				switch (value)
@@ -520,13 +522,14 @@ struct PathSolver
 	}
 	void write(const PathContextCPU& path)
 	{
-		auto map_size = path.m_desc.m_size >> 3;
 		FILE* file;
 		fopen_s(&file, "test.txt", "w");
-		for (uint32_t y = 0; y < path.m_desc.m_size.y; y++)
+		std::vector<char> output(path.m_desc.m_size.x + 1);
+
+		auto map_size = path.m_desc.m_size >> 3;
+		for (int32_t y = 0; y < path.m_desc.m_size.y; y++)
 		{
-			std::vector<char> output(path.m_desc.m_size.x + 1);
-			for (uint32_t x = 0; x < path.m_desc.m_size.x; x++)
+			for (int32_t x = 0; x < path.m_desc.m_size.x; x++)
 			{
 				ivec2 m = ivec2(x, y) >> 3;
 				ivec2 c = ivec2(x, y) - (m << 3);
@@ -537,15 +540,52 @@ struct PathSolver
 		}
 		fclose(file);
 	}
+
+	void write(const PathContextCPU& path, const std::vector<uint32_t>& solve)
+	{
+		FILE* file;
+		fopen_s(&file, "test.txt", "w");
+		std::vector<char> output(path.m_desc.m_size.x + 1);
+
+		auto map_size = path.m_desc.m_size >> 3;
+		for (int32_t y = 0; y < path.m_desc.m_size.y; y++)
+		{
+			for (int32_t x = 0; x < path.m_desc.m_size.x; x++)
+			{
+				int value = solve[x + y * path.m_desc.m_size.x];
+				switch (value)
+				{
+				case 0:
+				{
+					ivec2 m = ivec2(x, y) >> 3;
+					ivec2 c = ivec2(x, y) - (m << 3);
+					output[x] = (path.m_field[m.x + m.y*map_size.x] & (1ull << (c.x + c.y * 8))) != 0 ? '#' : ' ';
+
+				}
+				break;
+				case 1:
+					output[x] = '@';
+					break;
+				case 2:
+					output[x] = 'x';
+					break;
+				}
+			}
+			output[path.m_desc.m_size.x] = '\0';
+			fprintf(file, "%s\n", output.data());
+		}
+		fclose(file);
+	}
+
 	void writeSolvePath(const PathContextCPU& path, const std::vector<uint64_t>& solver, const std::string& filename)
 	{
 		auto map_size = path.m_desc.m_size >> 3;
 		FILE* file;
 		fopen_s(&file, filename.c_str(), "w");
-		for (uint32_t y = 0; y < path.m_desc.m_size.y; y++)
+		for (int32_t y = 0; y < path.m_desc.m_size.y; y++)
 		{
 			std::vector<char> output(path.m_desc.m_size.x + 1);
-			for (uint32_t x = 0; x < path.m_desc.m_size.y; x++)
+			for (int32_t x = 0; x < path.m_desc.m_size.y; x++)
 			{
 				ivec2 m = ivec2(x, y) >> 3;
 				ivec2 c = ivec2(x, y) - (m << 3);
