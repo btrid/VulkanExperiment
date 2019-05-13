@@ -16,7 +16,8 @@ layout(push_constant) uniform InputVertex
 
 i16vec2 g_offset[4] = { {1, 0}, {-1, 0}, {0, 1}, {0, -1} };
 
-shared i16vec2 s_active[4096];
+//shared i16vec2 s_active[4096];
+shared i16vec2 s_active[4000];
 shared int s_active_counter[2];
 
 void path(in i16vec2 current)
