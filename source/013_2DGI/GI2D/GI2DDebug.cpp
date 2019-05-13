@@ -186,9 +186,9 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 				vk::PushConstantRange().setOffset(0).setSize(sizeof(GI2DLightData)).setStageFlags(vk::ShaderStageFlagBits::eCompute),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
-			pipeline_layout_info.setSetLayoutCount(std::size(layouts));
+			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 			pipeline_layout_info.setPSetLayouts(layouts);
-			pipeline_layout_info.setPushConstantRangeCount(std::size(constants));
+			pipeline_layout_info.setPushConstantRangeCount(array_length(constants));
 			pipeline_layout_info.setPPushConstantRanges(constants);
 			m_pipeline_layout[PipelineLayout_PointLight] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
@@ -198,7 +198,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 				RenderTarget::s_descriptor_set_layout.get(),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
-			pipeline_layout_info.setSetLayoutCount(std::size(layouts));
+			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 			pipeline_layout_info.setPSetLayouts(layouts);
 			m_pipeline_layout[PipelineLayout_DrawFragmentMap] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 
@@ -211,7 +211,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 				RenderTarget::s_descriptor_set_layout.get(),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
-			pipeline_layout_info.setSetLayoutCount(std::size(layouts));
+			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 			pipeline_layout_info.setPSetLayouts(layouts);
 			m_pipeline_layout[PipelineLayout_DrawReachMap] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 
@@ -252,14 +252,14 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 			.setStage(shader_info[2])
 			.setLayout(m_pipeline_layout[PipelineLayout_DrawFragmentMap].get()),
 			vk::ComputePipelineCreateInfo()
-			.setStage(shader_info[2])
+			.setStage(shader_info[3])
 			.setLayout(m_pipeline_layout[PipelineLayout_DrawReachMap].get()),
 		};
 		auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
 		m_pipeline[Pipeline_PointLight] = std::move(compute_pipeline[0]);
 		m_pipeline[Pipeline_DrawFragmentMap] = std::move(compute_pipeline[1]);
 		m_pipeline[Pipeline_DrawFragment] = std::move(compute_pipeline[2]);
-		m_pipeline[PipelineLayout_DrawReachMap] = std::move(compute_pipeline[3]);
+		m_pipeline[Pipeline_DrawReachMap] = std::move(compute_pipeline[3]);
 	}
 
 }
@@ -390,5 +390,30 @@ void GI2DDebug::executeMakeFragment(vk::CommandBuffer cmd)
 void GI2DDebug::executeDrawReachMap(vk::CommandBuffer cmd, const std::shared_ptr<GI2DPathContext>& gi2d_path_context, const std::shared_ptr<RenderTarget>& render_target)
 {
 	DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__, DebugLabel::k_color_debug);
+
+	vk::BufferMemoryBarrier barrier[] = {
+		gi2d_path_context->b_access.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+	};
+	vk::ImageMemoryBarrier image_barrier;
+	image_barrier.setImage(render_target->m_image);
+	image_barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+	image_barrier.setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
+	image_barrier.setNewLayout(vk::ImageLayout::eGeneral);
+	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, { image_barrier });
+
+
+	vk::DescriptorSet descriptorsets[] = {
+		m_gi2d_context->getDescriptorSet(),
+		gi2d_path_context->getDescriptorSet(),
+		render_target->m_descriptor.get(),
+	};
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_DrawReachMap].get(), 0, array_length(descriptorsets), descriptorsets, 0, nullptr);
+
+	{
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_DrawReachMap].get());
+
+		auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderSize.x, m_gi2d_context->RenderSize.y, 1), uvec3(32, 32, 1));
+		cmd.dispatch(num.x, num.y, num.z);
+	}
 
 }

@@ -105,13 +105,13 @@ int pathFinding()
 	pf.m_field = pathmake_noise(1024, 1024);
 //	pf = pathmake_file();
 	PathSolver solver;
-	auto solve1 = solver.executeMakeVectorField(pf);
-	auto solve2 = solver.executeMakeVectorField2(pf);
+// 	auto solve1 = solver.executeMakeVectorField(pf);
+// 	auto solve2 = solver.executeMakeVectorField2(pf);
 	//	auto solve = solver.executeSolve(pf);
 //	solver.writeConsole(pf);
 //	solver.writeSolvePath(pf, solve, "hoge.txt");
 //	solver.writeConsole(pf, solve);
-	solver.write(pf, solve1);
+//	solver.write(pf, solve1);
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
 
@@ -212,7 +212,8 @@ int pathFinding()
 //  				path_process.executeBuildTree(cmd);
 //				path_process.executeDrawTree(cmd, app.m_window->getFrontBuffer());
 				gi2d_make_hierarchy.executeMakeReachMap(cmd, gi2d_path_context);
-				
+				gi2d_debug.executeDrawReachMap(cmd, gi2d_path_context, app.m_window->getFrontBuffer());
+
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;
 			}
