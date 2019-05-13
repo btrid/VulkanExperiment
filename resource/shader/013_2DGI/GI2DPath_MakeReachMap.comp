@@ -59,7 +59,7 @@ void main()
 		path(constant.target[gl_LocalInvocationIndex]);
 	}
 
-	for(int i = 0; i < 1000; i++)
+	for(int i = 0; i < 10000; i++)
 	{
 		barrier();
 		memoryBarrierShared();
@@ -73,11 +73,11 @@ void main()
 
 		if(gl_LocalInvocationIndex == 0)
 		{
-			s_active_counter[1] += (accum - consume);
+			s_active_counter[1] += min(accum - consume, int(gl_NumWorkGroups.x));
 		}
 
-		barrier();
-		memoryBarrierShared();
+//		barrier();
+//		memoryBarrierShared();
 
 		if(is_active)
 		{
