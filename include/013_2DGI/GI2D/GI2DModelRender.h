@@ -190,7 +190,6 @@ struct GI2DModelRender
 
 		vk::DebugMarkerMarkerInfoEXT marker;
 		marker.setPMarkerName("PM_Make_Fragment");
-//		m_context->m_device.CmdDebugMarkerInsert(cmd, &marker);
 
 		vk::RenderPassBeginInfo render_begin_info;
 		render_begin_info.setRenderPass(m_render_pass.get());

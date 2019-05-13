@@ -298,8 +298,7 @@ struct Crowd_Procedure
 		{
 			m_context->getDescriptorSet(),
 		};
-		uint32_t offset[array_length(descriptors)] = {};
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MakeRay].get(), 0, array_length(descriptors), descriptors, array_length(offset), offset);
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MakeRay].get(), 0, array_length(descriptors), descriptors, 0, nullptr);
 
 		{
 			// ƒŒƒC‚Ì¶¬

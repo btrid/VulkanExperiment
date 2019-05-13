@@ -62,8 +62,8 @@ int pathFinding()
 	PathContextCPU pf(desc);
 //	pf.m_field = pathmake_maze(1024*8, 1024*8);
  	pf.m_field = pathmake_noise(1024, 1024);
-// 	PathSolver solver;
-//	auto solve = solver.executeMakeVectorField(pf);
+ 	PathSolver solver;
+	auto solve = solver.executeMakeVectorField(pf);
 //	auto solve = solver.executeSolve(pf);
 //	solver.writeSolvePath(pf, solve, "hoge.txt");
 	auto gpu = sGlobal::Order().getGPU(0);
@@ -311,8 +311,8 @@ int main()
 	camera->getData().m_far = 5000.f;
 	camera->getData().m_near = 0.01f;
 
-//	return pathFinding();
-	return rigidbody();
+	return pathFinding();
+//	return rigidbody();
 
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
