@@ -110,6 +110,7 @@ int pathFinding()
 	auto solve = solver.executeMakeVectorField2(pf);
 	//	auto solve = solver.executeSolve(pf);
 //	solver.writeSolvePath(pf, solve, "hoge.txt");
+	solver.writeConsole(pf, solve);
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
 
