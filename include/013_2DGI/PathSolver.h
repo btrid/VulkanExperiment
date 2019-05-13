@@ -11,14 +11,14 @@ struct PathSolver
 		uint32_t parent;
 		uint32_t is_open : 1;
 		uint32_t is_precomputed : 1;
-		uint32_t condition : 4; //!< ’Tõ‚·‚é•K—v‚ª‚ ‚é‚©
+		uint32_t is_bad_condition : 4; //!< ’Tõ‚·‚é•K—v‚ª‚ ‚é‚©
 		uint32_t p : 26;
 		Node()
 			: cost(-1)
 			, parent(-1)
 			, is_open(0)
 			, is_precomputed(0)
-			, condition(0)
+			, is_bad_condition(0)
 		{}
 
 		void precompute(const ivec2& c, const PathContextCPU& path)
@@ -31,12 +31,12 @@ struct PathSolver
 				auto _n = c + offset[i];
 				if (any(lessThan(_n, ivec2(0))) || any(greaterThanEqual(_n, path.m_desc.m_size)))
 				{
-					condition |= 1 << i;
+					is_bad_condition |= 1 << i;
 					continue;
 				}
 				if (!path.isPath(_n))
 				{
-					condition |= 1 << i;
+					is_bad_condition |= 1 << i;
 					continue;
 				}
 			}
@@ -99,7 +99,7 @@ struct PathSolver
 
 			for (int i = 0; i < 4; i++)
 			{
-				if ((node.condition & (1 << i)) != 0) {
+				if ((node.is_bad_condition & (1 << i)) != 0) {
 					continue;
 				}
 				_setNode(path, n.x + offset[i].x, n.y + offset[i].y, node_index, node.cost + 1, open, close);
@@ -138,7 +138,7 @@ struct PathSolver
 
 			for (int i = 0; i < 4; i++)
 			{
-				if ((node.condition & (1 << i)) != 0) {
+				if ((node.is_bad_condition & (1 << i)) != 0) {
 					continue;
 				}
 				_setNode(path, n.x + offset[i].x, n.y + offset[i].y, node_index, node.cost + 1, open, close);

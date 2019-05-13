@@ -195,6 +195,8 @@ struct GI2DPhysics
 	btr::BufferMemoryEx<uint32_t> b_rbparticle_map;
 	btr::BufferMemoryEx<uint32_t> b_collidable_counter;
 	btr::BufferMemoryEx<rbCollidable> b_collidable;
+	btr::BufferMemoryEx<uint> b_fluid_counter;
+	btr::BufferMemoryEx<rbFluid> b_fluid;
 
 	btr::BufferMemoryEx<BufferManage> b_manager;
 	btr::BufferMemoryEx<uint> b_rb_memory_list;
@@ -208,8 +210,8 @@ struct GI2DPhysics
 	btr::BufferMemoryEx<uvec4> b_voronoi_vertex_counter;
 	btr::BufferMemoryEx<VoronoiVertex> b_voronoi_vertex;
 	btr::BufferMemoryEx<int16_t> b_voronoi_path;
-	btr::BufferMemoryEx<uint> b_fluid_counter;
-	btr::BufferMemoryEx<rbFluid> b_fluid;
+	btr::BufferMemoryEx<int16_t> b_voronoi_path;
+
 
 	btr::BufferMemoryEx<Rigidbody> b_make_rigidbody;
 	btr::BufferMemoryEx<rbParticle> b_make_particle;
