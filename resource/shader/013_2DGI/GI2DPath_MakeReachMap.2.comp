@@ -18,7 +18,7 @@ layout(push_constant, std430) uniform InputVertex
 } constant;
 
 
-shared i16vec2 s_active[1024*4];
+shared i16vec2 s_active[1024*11];
 shared uvec2 s_active_counter;
 
 void path(in i16vec2 current)
@@ -48,31 +48,55 @@ void path(in i16vec2 current)
 	}
 #else
 	// ほんのちょっと高速化 
-	ivec4 ok = ivec4(equal(u8vec4(state)&(u8vec4(1)<<u8vec4(1,3,5,7)), u8vec4(0)));
 
-	ivec4 access_x = ivec4(current.xxxx) + ivec4(0, 1, 0, -1);
-	ivec4 access_y = ivec4(current.yyyy) + ivec4(-1, 0, 1, 0);
-	ivec4 access_1d = access_x + access_y * constant.reso.xxxx;
+	ivec4 access_x1 = ivec4(current.xxxx) + ivec4(0, 1, 0, -1);
+	ivec4 access_y1 = ivec4(current.yyyy) + ivec4(-1, 0, 1, 0);
+//	ivec4 access_x2 = ivec4(current.xxxx) + ivec4(1, 1, -1, -1);
+//	ivec4 access_y2 = ivec4(current.yyyy) + ivec4(-1, 1, 1, -1);
 
-	ivec4 map_index = access_1d / 32;
-	ivec4 bit = ivec4(1)<<(access_1d % 32);
-	for(int i = 0; i < 4; i ++)
+//	ivec4 ok1 = ivec4(equal(u8vec4(state)&(u8vec4(1)<<u8vec4(0,1,2,3)), u8vec4(0)));
+	ivec4 ok1 = ivec4(equal(u8vec4(state)&(u8vec4(1)<<u8vec4(1,3,5,7)), u8vec4(0)));
+//	ivec4 ok2 = ivec4(equal(u8vec4(state)&(u8vec4(1)<<u8vec4(4,5,6,7)), u8vec4(0)));
+	ivec4 ok2 = ivec4(0);
 	{
-		if(ok[i]==0){continue;}
-		ok[i] = int((atomicOr(b_close[map_index[i]], bit[i]) & bit[i]) == 0);
+		ivec4 access_1d = access_x1 + access_y1 * constant.reso.xxxx;
+		ivec4 map_index = access_1d / 32;
+		ivec4 bit = ivec4(1)<<(access_1d % 32);
+		for(int i = 0; i < 4; i ++)
+		{
+			if(ok1[i]==0){continue;}
+			ok1[i] = int((atomicOr(b_close[map_index[i]], bit[i]) & bit[i]) == 0);
+		}
+		
 	}
-
-	int num = ok.x+ok.y+ok.z+ok.w;
+/*	{
+		ivec4 access_1d = access_x2 + access_y2 * constant.reso.xxxx;
+		ivec4 map_index = access_1d / 32;
+		ivec4 bit = ivec4(1)<<(access_1d % 32);
+		for(int i = 0; i < 4; i ++)
+		{
+			if(ok2[i]==0){continue;}
+			ok2[i] = int((atomicOr(b_close[map_index[i]], bit[i]) & bit[i]) == 0);
+		}
+		
+	}
+*/
+	int num = ok1.x+ok1.y+ok1.z+ok1.w;
+	num += ok2.x+ok2.y+ok2.z+ok2.w;
 	if(num == 0) { return; }
 	uint index = atomicAdd(s_active_counter[0], num);
 
-	uint count = 0;
 	for(int i = 0; i < 4; i++)
 	{
-		if(ok[i]==0){continue;}
-		s_active[(index+count) % s_active.length()] = i16vec2(access_x[i], access_y[i]);
-		count++;
+		if(ok1[i]==0){continue;}
+		s_active[index++ % s_active.length()] = i16vec2(access_x1[i], access_y1[i]);
 	}
+/*	for(int i = 0; i < 4; i++)
+	{
+		if(ok2[i]==0){continue;}
+		s_active[index++ % s_active.length()] = i16vec2(access_x2[i], access_y2[i]);
+	}
+*/
 #endif
 }
 void main() 

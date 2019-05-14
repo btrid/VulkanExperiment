@@ -46,9 +46,22 @@ void main()
 		ivec2 map_bit = ii % 8;
 		if((s_map[map_index.x+map_index.y*6] & (1ul<<(map_bit.x+map_bit.y*8))) != 0ul)
 		{
-			state |= uint8_t(1<<i);
+//			state |= uint8_t(1<<i);
+			state |= uint8_t(1<<(i*2)+1);
 		}
 	}
-	b_state[gl_GlobalInvocationID.x+gl_GlobalInvocationID.y*constant.reso.x] = state;
+	for(int i = 0; i < 4; i++)
+	{
+		uint8_t bitmask = uint8_t((1<<i) | (1<<((i+1)%4)));
+		if((state & bitmask) != 0) {continue; }
+		ivec2 ii = ivec2(gl_LocalInvocationID.xy) + g_offset[(i+3)%4]+g_offset[i] + ivec2(8);
+		ivec2 map_index = ii / 8;
+		ivec2 map_bit = ii % 8;
+		if((s_map[map_index.x+map_index.y*6] & (1ul<<(map_bit.x+map_bit.y*8))) != 0ul)
+		{
+			state |= uint8_t(1<<(i*2));
+		}
+	}
 
+	b_state[gl_GlobalInvocationID.x+gl_GlobalInvocationID.y*constant.reso.x] = state;
 }
