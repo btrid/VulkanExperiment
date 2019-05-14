@@ -15,8 +15,9 @@ layout(push_constant) uniform InputVertex
 } constant;
 
 
-shared i16vec2 s_active[1024*2];
+shared i16vec2 s_active[1024][2];
 shared ivec2 s_active_counter;
+shared int s_frame;
 
 void path(in i16vec2 current)
 {
@@ -39,7 +40,7 @@ void path(in i16vec2 current)
 			continue;
 		}
 
-		s_active[atomicAdd(s_active_counter[0], 1) % s_active.length()] = i16vec2(access);
+		s_active[s_frame][atomicAdd(s_active_counter[s_frame], 1)] = i16vec2(access);
 	}
 /*
 
@@ -79,6 +80,7 @@ void main()
 	if(gl_LocalInvocationIndex == 0)
 	{
 		s_active_counter = ivec2(0);
+		s_frame = 0;
 	}
 
 	barrier();
@@ -95,20 +97,23 @@ void main()
 		barrier();
 		memoryBarrierShared();
 
-		int accum = s_active_counter[0];
-		int consume = s_active_counter[1];
-		int count = min(accum-consume, 1024);
+		int count = s_active_counter[s_frame];
 		if(count == 0){ break; }
 
 		bool is_active = gl_LocalInvocationIndex < count;
-		i16vec2 open = is_active ? s_active[(consume+gl_LocalInvocationIndex) % s_active.length()] : i16vec2(0);
+		i16vec2 open = s_active[s_frame][gl_LocalInvocationIndex];
 
 		barrier();
+//		memoryBarrierShared();
 
 		if(gl_LocalInvocationIndex == 0)
 		{
-			s_active_counter[1] += count;
+			s_frame = (s_frame + 1) % 2;
+			s_active_counter[s_frame] = 0;
 		}
+
+		barrier();
+		memoryBarrierShared();
 
 		if(is_active)
 		{
