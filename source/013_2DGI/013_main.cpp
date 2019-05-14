@@ -101,8 +101,8 @@ int pathFinding()
 	desc.m_start = ivec2(11, 11);
 	desc.m_finish = ivec2(1002, 1000);
 	PathContextCPU pf(desc);
-//	pf.m_field = pathmake_maze(1024*8, 1024*8);
-	pf.m_field = pathmake_noise(1024, 1024);
+	pf.m_field = pathmake_maze(1024, 1024);
+//	pf.m_field = pathmake_noise(1024, 1024);
 //	pf = pathmake_file();
 	PathSolver solver;
 // 	auto solve1 = solver.executeMakeVectorField(pf);

@@ -79,9 +79,8 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_messenger_callback(
 		// 		}
 	}
 	sprintf_s(message, message_size,
-		"%s Message ID Number %d, Message ID Name %s\n %s",
+		"%s Message ID Name %s\n %s",
 		prefix,
-		callbackData->messageIdNumber,
 		callbackData->pMessageIdName,
 		callbackData->pMessage);
 	if (callbackData->objectCount > 0) {

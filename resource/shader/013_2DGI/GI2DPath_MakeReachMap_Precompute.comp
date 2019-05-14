@@ -37,7 +37,7 @@ void main()
 	barrier();
 	memoryBarrierShared();
 
-	const i16vec2 g_offset[4] = { i16vec2(1, 0), i16vec2(-1, 0), i16vec2(0, 1), i16vec2(0, -1) };
+	const i16vec2 g_offset[4] = { i16vec2(0, -1), i16vec2(1, 0), i16vec2(0, 1), i16vec2(-1, 0) };
 	uint8_t state = uint8_t(0);
 	for(int i = 0; i < 4; i++)
 	{

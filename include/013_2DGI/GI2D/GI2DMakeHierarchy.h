@@ -412,7 +412,7 @@ struct GI2DMakeHierarchy
 			i16vec2 random[3];
 //			std::array<i16vec2, 4> target;
 //			std::array<i16vec2, 4> random;
-		} constant{ path_context->m_gi2d_context->RenderSize, i16vec2(4, 3), {},  {i16vec2(11, 11), i16vec2(1002, 1002), i16vec2(144, 844), i16vec2(855, 255)}, {{343, 32}, {923, 33}, {555, 555}} };
+		} constant{ path_context->m_gi2d_context->RenderSize, i16vec2(1, 0), {},  {i16vec2(11, 11), i16vec2(1002, 1002), i16vec2(144, 844), i16vec2(855, 255)}, {i16vec2(765, 354), {923, 33}, {555, 555}} };
 		cmd.pushConstants(m_pipeline_layout[PipelineLayout_Path].get(), vk::ShaderStageFlagBits::eCompute, 0, sizeof(constant), &constant);
 
 		_label.insert("executeMakeReachMap_Precompute");
