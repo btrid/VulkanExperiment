@@ -14,16 +14,17 @@ layout(push_constant) uniform InputVertex
 	i16vec2 target[2];
 } constant;
 
-i16vec2 g_offset[4] = { {1, 0}, {-1, 0}, {0, 1}, {0, -1} };
 
-shared i16vec2 s_active[4000];
-shared int s_active_counter[2];
+shared i16vec2 s_active[1024][4];
+shared ivec4 s_active_counter;
+shared int s_frame;
 
 void path(in i16vec2 current)
 {
+	const i16vec2 g_offset[4] = { i16vec2(1, 0), i16vec2(-1, 0), i16vec2(0, 1), i16vec2(0, -1) };
 	for(int i = 0; i < 4; i++)
 	{
-		i16vec2 access = current + g_offset[i];
+		ivec2 access = ivec2(current + g_offset[i]);
 		if (any(lessThan(access, ivec2(0))) || any(greaterThanEqual(access, constant.reso)))
 		{
 			continue;
@@ -36,7 +37,7 @@ void path(in i16vec2 current)
 			continue;
 		}
 
-		s_active[atomicAdd(s_active_counter[0], 1) % s_active.length()] = access;
+		s_active[s_frame][atomicAdd(s_active_counter[s_frame], 1)] = i16vec2(access);
 	}
 }
 void main() 
@@ -45,39 +46,43 @@ void main()
 	{
 		b_close[i] = 0;
 	}
-	if(gl_LocalInvocationIndex < 2)
+	if(gl_LocalInvocationIndex == 0)
 	{
-		s_active_counter[gl_LocalInvocationIndex] = 0;
+		s_active_counter = ivec4(0);
+		s_frame = 0;
 	}
 
 	barrier();
 	memoryBarrierShared();
 	memoryBarrierBuffer();
 
-	if(gl_LocalInvocationIndex < 1)
+	if(gl_LocalInvocationIndex < 2)
 	{
 		path(constant.target[gl_LocalInvocationIndex]);
 	}
 
-	for(int i = 0; i < 10000; i++)
+	for(int i = 0; i < 1000; i++)
 	{
 		barrier();
 		memoryBarrierShared();
-		int accum = s_active_counter[0];
-		int consume = s_active_counter[1];
-		if(accum==consume){ break; }
-		bool is_active = gl_LocalInvocationIndex < (accum - consume);
-		i16vec2 open = s_active[(consume + gl_LocalInvocationIndex) % s_active.length()];
+		int count = s_active_counter[s_frame];
+		if(count == 0){ break; }
+
+		bool is_active = gl_LocalInvocationIndex < count;
+
+		i16vec2 open = s_active[s_frame][gl_LocalInvocationIndex];
 
 		barrier();
+//		memoryBarrierShared();
 
 		if(gl_LocalInvocationIndex == 0)
 		{
-			s_active_counter[1] += min(accum - consume, int(gl_NumWorkGroups.x));
+			s_frame = (s_frame + 1) % 4;
+			s_active_counter[s_frame] = 0;
 		}
 
-//		barrier();
-//		memoryBarrierShared();
+		barrier();
+		memoryBarrierShared();
 
 		if(is_active)
 		{
@@ -86,6 +91,3 @@ void main()
 	}
 
 }
-
-//b_diffuse_map[store]
-

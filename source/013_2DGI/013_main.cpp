@@ -112,6 +112,7 @@ int pathFinding()
 //	solver.writeSolvePath(pf, solve, "hoge.txt");
 //	solver.writeConsole(pf, solve);
 //	solver.write(pf, solve1);
+
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
 
