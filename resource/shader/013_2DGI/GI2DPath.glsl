@@ -11,6 +11,9 @@ layout(std430, set=USE_GI2D_Path, binding=0) restrict buffer PathConnectBuffer {
 layout(std430, set=USE_GI2D_Path, binding=1) restrict buffer PathAccessBuffer {
 	uint b_close[];
 };
+layout(std430, set=USE_GI2D_Path, binding=2) restrict buffer PathStateBuffer {
+	uint8_t b_state[];
+};
 
 #endif
 

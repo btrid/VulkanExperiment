@@ -136,6 +136,7 @@ struct GI2DContext
 				vk::DescriptorSetLayoutBinding binding[] = {
 					vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageBuffer, 1, stage),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -358,6 +359,7 @@ struct GI2DPathContext
 		{
 			b_connect = context->m_storage_memory.allocateMemory<uint32_t>({ 1,{} });
 			b_access = context->m_storage_memory.allocateMemory<uint32_t>({ gi2d_context->FragmentBufferSize / 32,{} });
+			b_state = context->m_storage_memory.allocateMemory<uint8_t>({ gi2d_context->FragmentBufferSize,{} });
 		}
 
 		// descriptor set
@@ -375,6 +377,7 @@ struct GI2DPathContext
 				vk::DescriptorBufferInfo storages[] = {
 					b_connect.getInfo(),
 					b_access.getInfo(),
+					b_state.getInfo(),
 				};
 
 				vk::WriteDescriptorSet write[] = {
@@ -393,7 +396,7 @@ struct GI2DPathContext
 
 	btr::BufferMemoryEx<uint32_t> b_connect;
 	btr::BufferMemoryEx<uint32_t> b_access;
-
+	btr::BufferMemoryEx<uint8_t> b_state;
 	vk::UniqueDescriptorSet m_descriptor_set;
 
 	vk::DescriptorSet getDescriptorSet()const { return m_descriptor_set.get(); }
