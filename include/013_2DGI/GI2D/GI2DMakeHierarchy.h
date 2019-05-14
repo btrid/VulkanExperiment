@@ -399,10 +399,6 @@ struct GI2DMakeHierarchy
 	{
 		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
 
-		vk::BufferMemoryBarrier barrier[] = {
-			path_context->b_access.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
-		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(barrier), barrier }, {});
 
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Path].get(), 0, path_context->m_gi2d_context->getDescriptorSet(), {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Path].get(), 1, path_context->getDescriptorSet(), {});
@@ -426,7 +422,12 @@ struct GI2DMakeHierarchy
 
 		_label.insert("executeMakeReachMap");
 		{
- 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeReachMap].get());
+			vk::BufferMemoryBarrier barrier[] = {
+				path_context->b_access.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_length(barrier), barrier }, {});
+			
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeReachMap].get());
 
 			cmd.dispatch(1, 1, 1);
 		}

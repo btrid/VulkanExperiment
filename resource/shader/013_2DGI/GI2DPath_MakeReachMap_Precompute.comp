@@ -19,22 +19,19 @@ shared uint64_t s_map[36];
 
 void main() 
 {
-//	if(gl_LocalInvocationIndex < 36)
+
 	if(gl_LocalInvocationID.x < 6 && gl_LocalInvocationID.y < 6)
 	{
 		uint i = gl_LocalInvocationID.x+gl_LocalInvocationID.y*6;
-		ivec2 offset_xy = ivec2(gl_LocalInvocationID.xy)-1;
-		ivec2 index = ivec2(gl_NumWorkGroups.xy*4) + offset_xy;
+		uvec2 offset_xy = gl_LocalInvocationID.xy-1;
+		uvec2 index = gl_WorkGroupID.xy*4 + offset_xy;
 
-		if(any(greaterThanEqual(index, u_gi2d_info.m_resolution.zw)) || any(lessThan(index, ivec2(0))))
+		uint64_t map = -1ul;
+		if(all(lessThan(index, u_gi2d_info.m_resolution.zw)))
 		{
-			// 範囲外は壁
-			s_map[i] = -1ul;
+			map = b_diffuse_map[getMemoryOrder(index)];
 		}
-		else
-		{
-			s_map[i] = b_diffuse_map[getMemoryOrder(index)];
-		}
+		s_map[i] = map;
 	}
 
 	barrier();
@@ -44,22 +41,14 @@ void main()
 	uint8_t state = uint8_t(0);
 	for(int i = 0; i < 4; i++)
 	{
-		ivec2 access = ivec2(gl_GlobalInvocationID.xy) + g_offset[i];
-		if (any(lessThan(access, ivec2(0))) || any(greaterThanEqual(access, constant.reso)))
+		ivec2 ii = ivec2(gl_LocalInvocationID.xy) + g_offset[i] + ivec2(8);
+		ivec2 map_index = ii / 8;
+		ivec2 map_bit = ii % 8;
+		if((s_map[map_index.x+map_index.y*6] & (1ul<<(map_bit.x+map_bit.y*8))) != 0ul)
 		{
 			state |= uint8_t(1<<i);
-			continue;
-		}
-
-		ivec2 map_index = ivec2(gl_LocalInvocationID.xy + g_offset[i] + ivec2(8))/8;
-		ivec2 map_bit = ivec2(gl_LocalInvocationID.xy + g_offset[i] + ivec2(8))%8;
-		if((s_map[map_index.x+map_index.y*6] & (1<<(map_bit.x+map_bit.y*8))) != 0)
-		{
-			state |= uint8_t(1<<i);
-			continue;
 		}
 	}
-
-	b_state[gl_GlobalInvocationID.x*gl_GlobalInvocationID.y] = state;
+	b_state[gl_GlobalInvocationID.x+gl_GlobalInvocationID.y*constant.reso.x] = state;
 
 }

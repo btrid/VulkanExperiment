@@ -10,6 +10,8 @@ void cGPU::setup(vk::PhysicalDevice pd)
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 		VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME,
 		VK_KHR_SHADER_ATOMIC_INT64_EXTENSION_NAME,
+		VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME,
+		VK_KHR_8BIT_STORAGE_EXTENSION_NAME,
 	};
 
 	auto gpu_propaty = m_handle.getProperties();
@@ -41,14 +43,22 @@ void cGPU::setup(vk::PhysicalDevice pd)
 		family_index.push_back((uint32_t)i);
 	}
 
-	vk::PhysicalDeviceFeatures feature = gpu_feature;
-
 	vk::DeviceCreateInfo device_info;
 	device_info.setQueueCreateInfoCount((uint32_t)queue_info.size());
 	device_info.setPQueueCreateInfos(queue_info.data());
-	device_info.setPEnabledFeatures(&feature);
+	device_info.setPEnabledFeatures(&gpu_feature);
 	device_info.setEnabledExtensionCount((uint32_t)extensionName.size());
 	device_info.setPpEnabledExtensionNames(extensionName.data());
+
+	vk::PhysicalDevice8BitStorageFeaturesKHR  storage8bit_feature;
+	storage8bit_feature.setStorageBuffer8BitAccess(VK_TRUE);
+	device_info.setPNext(&storage8bit_feature);
+
+	vk::PhysicalDeviceFloat16Int8FeaturesKHR  f16s8_feature;
+	f16s8_feature.setShaderInt8(VK_TRUE);
+	f16s8_feature.setShaderFloat16(VK_TRUE);
+	storage8bit_feature.setPNext(&f16s8_feature);
+
 
 	auto device = m_handle.createDevice(device_info, nullptr);
 	m_device.m_gpu = m_handle;

@@ -19,7 +19,7 @@ void main()
 
 	int tiled_1D_index = id.x + id.y*u_gi2d_info.m_resolution.x; 
 	vec3 albedo = getRGB(b_fragment[tiled_1D_index]);
-	bool is_fragment = isDiffuse(b_fragment[tiled_1D_index]);
+	bool is_diffuse = isDiffuse(b_fragment[tiled_1D_index]);
 	bool is_emissive = isEmissive(b_fragment[tiled_1D_index]);
 
 	uint power = packEmissive(albedo*LightPower);
@@ -37,7 +37,7 @@ void main()
 
 		uint hilow = gl_LocalInvocationIndex/32;
 		uint offset = gl_LocalInvocationIndex%32;
-		is_fragment ? atomicOr(s_bit[hilow], 1<<offset) : 0;
+		is_diffuse ? atomicOr(s_bit[hilow], 1<<offset) : 0;
 		is_emissive ? atomicOr(s_light_bit[hilow], 1<<offset) : 0;
 
 		barrier();
