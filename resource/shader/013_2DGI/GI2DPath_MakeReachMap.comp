@@ -11,11 +11,14 @@ layout (local_size_x = 1024) in;
 layout(push_constant) uniform InputVertex
 {
 	ivec2 reso;
-	i16vec2 target[2];
+	i16vec2 num;
+	i16vec2 _p;
+	i16vec2 target[4];
+	i16vec2 random_serch[3];
 } constant;
 
 
-shared i16vec2 s_active[1024*2];
+shared i16vec2 s_active[1024*4];
 shared uvec2 s_active_counter;
 
 void path(in i16vec2 current)
@@ -44,6 +47,7 @@ void path(in i16vec2 current)
 		s_active[atomicAdd(s_active_counter[0], 1) % s_active.length()] = i16vec2(access);
 	}
 #else
+	// ほんのちょっと高速化 
 	ivec4 ok = ivec4(equal(u8vec4(state)&(u8vec4(1)<<u8vec4(0,1,2,3)), u8vec4(0)));
 
 	ivec4 access_x = ivec4(current.xxxx) + ivec4(1, -1, 0, 0);
@@ -86,9 +90,13 @@ void main()
 	memoryBarrierShared();
 	memoryBarrierBuffer();
 
-	if(gl_LocalInvocationIndex < 1)
+	if(gl_LocalInvocationIndex < constant.num.x)
 	{
 		path(constant.target[gl_LocalInvocationIndex]);
+	}
+	if(gl_LocalInvocationIndex < constant.num.y)
+	{
+		path(constant.random_serch[gl_LocalInvocationIndex]);
 	}
 
 	for(int i = 0; i < 10000; i++)

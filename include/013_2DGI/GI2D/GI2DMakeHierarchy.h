@@ -121,7 +121,7 @@ struct GI2DMakeHierarchy
 				gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Path),
 			};
 			vk::PushConstantRange constants[] = {
-				vk::PushConstantRange().setOffset(0).setSize(16).setStageFlags(vk::ShaderStageFlagBits::eCompute),
+				vk::PushConstantRange().setOffset(0).setSize(48).setStageFlags(vk::ShaderStageFlagBits::eCompute),
 			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
@@ -406,9 +406,13 @@ struct GI2DMakeHierarchy
 		struct
 		{
 			ivec2 reso;
-			i16vec2 target1;
-			i16vec2 target2;
-		} constant{ path_context->m_gi2d_context->RenderSize, i16vec2(11, 11), i16vec2(0) };
+			i16vec2 num;
+			i16vec2 _p;
+			i16vec2 target[4];
+			i16vec2 random[3];
+//			std::array<i16vec2, 4> target;
+//			std::array<i16vec2, 4> random;
+		} constant{ path_context->m_gi2d_context->RenderSize, i16vec2(4, 3), {},  {i16vec2(11, 11), i16vec2(1002, 1002), i16vec2(144, 844), i16vec2(855, 255)}, {{343, 32}, {923, 33}, {555, 555}} };
 		cmd.pushConstants(m_pipeline_layout[PipelineLayout_Path].get(), vk::ShaderStageFlagBits::eCompute, 0, sizeof(constant), &constant);
 
 		_label.insert("executeMakeReachMap_Precompute");
