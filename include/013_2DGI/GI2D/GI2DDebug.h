@@ -7,6 +7,7 @@
 struct GI2DDebug
 {
 	GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context);
+	void executeUpdateMap(vk::CommandBuffer cmd, const std::vector<uint64_t>& map);
 	void executeMakeFragment(vk::CommandBuffer cmd);
 	void executeDrawFragmentMap(vk::CommandBuffer cmd, const std::shared_ptr<RenderTarget>& render_target);
 	void executeDrawFragment(vk::CommandBuffer cmd, const std::shared_ptr<RenderTarget>& render_target);

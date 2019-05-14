@@ -12,6 +12,9 @@ struct GI2DLightData
 }; 
 
 GI2DLightData g_data[50];
+GI2DContext::Fragment g_wall(vec3(0.8f, 0.2f, 0.2f), true, false);
+GI2DContext::Fragment g_path(vec3(1.f), false, false);
+
 GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context)
 {
 	for (int i = 0; i < std::size(g_data); i++)
@@ -21,9 +24,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 
 	m_context = context;
 	m_gi2d_context = gi2d_context;
-	GI2DContext::Fragment wall(vec3(0.8f, 0.2f, 0.2f), true, false);
-	GI2DContext::Fragment path(vec3(1.f), false, false);
-	std::vector<GI2DContext::Fragment> map_data(gi2d_context->RenderWidth*gi2d_context->RenderHeight, path);
+	std::vector<GI2DContext::Fragment> map_data(gi2d_context->RenderWidth*gi2d_context->RenderHeight, g_path);
 	{
 
 #if 0
@@ -112,7 +113,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 				for (auto& r : rect)
 				{
 					if (x >= r.rect.x && y >= r.rect.y && x <= r.rect.x + r.rect.z && y <= r.rect.y + r.rect.w) {
-						m = wall;
+						m = g_wall;
 						break;
 					}
 				}
@@ -129,16 +130,16 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 	{
 		for (int32_t x = 0; x < 4; x++)
 		{
-			map_data[x + y * gi2d_context->RenderWidth] = wall;
-			map_data[(gi2d_context->RenderWidth -1 - x) + y * gi2d_context->RenderWidth] = wall;
+			map_data[x + y * gi2d_context->RenderWidth] = g_wall;
+			map_data[(gi2d_context->RenderWidth -1 - x) + y * gi2d_context->RenderWidth] = g_wall;
 		}
 	}
  	for (int32_t x = 0; x < gi2d_context->RenderWidth; x++)
  	{
 		for (int32_t y = 0; y < 4; y++)
 		{
-			map_data[x + y * gi2d_context->RenderWidth] = wall;
-			map_data[x + (gi2d_context->RenderHeight - 1 - y) * gi2d_context->RenderWidth] = wall;
+			map_data[x + y * gi2d_context->RenderWidth] = g_wall;
+			map_data[x + (gi2d_context->RenderHeight - 1 - y) * gi2d_context->RenderWidth] = g_wall;
 		}
 	}
 
@@ -264,6 +265,27 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 
 }
 
+void GI2DDebug::executeUpdateMap(vk::CommandBuffer cmd, const std::vector<uint64_t>& map)
+{
+	auto staging = m_context->m_staging_memory.allocateMemory<GI2DContext::Fragment>({ m_gi2d_context->RenderSize.x*m_gi2d_context->RenderSize.y, btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT });
+
+
+	for (int y = 0; y < m_gi2d_context->RenderSize.y; y++)
+	{
+		for (int x = 0; x < m_gi2d_context->RenderSize.x; x++)
+		{
+			auto mi = ivec2(x, y) >> 3;
+			auto mbit = ivec2(x, y) % 8;
+			*staging.getMappedPtr(x + y * m_gi2d_context->RenderSize.x) = (map[mi.x + mi.y*(m_gi2d_context->RenderSize.x >> 3)] & (1ull << (mbit.x + mbit.y * 8))) != 0 ? g_wall : g_path;
+		}
+	}
+
+	vk::BufferCopy copy;
+	copy.setSrcOffset(staging.getInfo().offset);
+	copy.setDstOffset(m_map_data.getInfo().offset);
+	copy.setSize(m_map_data.getInfo().range);
+	cmd.copyBuffer(staging.getInfo().buffer, m_map_data.getInfo().buffer, copy);
+}
 
 void GI2DDebug::executeDrawFragmentMap(vk::CommandBuffer cmd, const std::shared_ptr<RenderTarget>& render_target)
 {

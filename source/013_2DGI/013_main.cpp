@@ -156,7 +156,7 @@ int pathFinding()
 	auto render_cmd = renderer.createCmd(player_model);
 
 	crowd_procedure.executeMakeRay(cmd);
-
+	gi2d_debug.executeUpdateMap(cmd, pf.m_field),
 	app.setup();
 
 	while (true)
