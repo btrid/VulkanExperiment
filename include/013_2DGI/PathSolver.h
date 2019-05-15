@@ -265,7 +265,8 @@ struct PathSolver
 				// Õ•Á•¨‚ª‚ ‚é‚Ì‚Å‚±‚±‚©‚çÄ‘{¸
 				OpenNode2 open_node;
 				open_node.index = current;
-				open_node.dir_bit = (1<<dir_type);
+				open_node.dir_bit = 0;
+//				open_node.dir_bit = (1<<dir_type);
 				open_node.dir_bit |= is_forcedneighbor.x ? bit_mask.x : 0;
 				open_node.dir_bit |= is_forcedneighbor.y ? bit_mask.z : 0;
 				open.push_back(open_node);
@@ -312,7 +313,8 @@ struct PathSolver
 			{
 				OpenNode2 open_node;
 				open_node.index = node.index;
-				open_node.dir_bit = (1 << dir_type);
+				open_node.dir_bit = 0;
+//				open_node.dir_bit = (1 << dir_type);
 				open_node.dir_bit |= is_forcedneighbor.x ? bit_mask.x : 0;
 				open_node.dir_bit |= is_forcedneighbor.y ? bit_mask.z : 0;
 

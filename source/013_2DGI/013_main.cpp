@@ -105,7 +105,7 @@ int pathFinding()
 	pf.m_field = pathmake_noise(1024, 1024);
 //	pf = pathmake_file();
 	PathSolver solver;
-//	auto solve1 = solver.executeMakeVectorField(pf);
+	auto solve1 = solver.executeMakeVectorField(pf);
  	auto solve2 = solver.executeMakeVectorField2(pf);
 	//	auto solve = solver.executeSolve(pf);
 //	solver.writeConsole(pf);
