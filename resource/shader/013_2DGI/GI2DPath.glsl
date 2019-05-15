@@ -9,10 +9,11 @@ layout(std430, set=USE_GI2D_Path, binding=0) restrict buffer PathConnectBuffer {
 	uint b_connect;
 };
 layout(std430, set=USE_GI2D_Path, binding=1) restrict buffer PathAccessBuffer {
-	uint b_close[];
+	uint b_closed[];
 };
-layout(std430, set=USE_GI2D_Path, binding=2) restrict buffer PathStateBuffer {
-	uint8_t b_state[];
+layout(std430, set=USE_GI2D_Path, binding=2) restrict buffer PathNeibghborStateBuffer {
+	// 壁ならbitが立つ
+	uint8_t b_neighbor[];
 };
 
 #endif

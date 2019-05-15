@@ -414,7 +414,7 @@ void GI2DDebug::executeDrawReachMap(vk::CommandBuffer cmd, const std::shared_ptr
 	DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__, DebugLabel::k_color_debug);
 
 	vk::BufferMemoryBarrier barrier[] = {
-		gi2d_path_context->b_access.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+		gi2d_path_context->b_closed.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 	};
 	vk::ImageMemoryBarrier image_barrier;
 	image_barrier.setImage(render_target->m_image);

@@ -427,7 +427,7 @@ struct GI2DMakeHierarchy
 		_label.insert("executeMakeReachMap");
 		{
 			vk::BufferMemoryBarrier barrier[] = {
-				path_context->b_access.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
+				path_context->b_closed.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_length(barrier), barrier }, {});
 			

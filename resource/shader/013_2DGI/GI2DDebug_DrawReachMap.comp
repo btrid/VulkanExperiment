@@ -12,7 +12,7 @@ layout (local_size_x = 32, local_size_y = 32) in;
 void main() 
 {
 	uint index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*gl_WorkGroupSize.x*gl_NumWorkGroups.x;
-	bool is_reach = (b_close[index / 32] & (1<<(index%32))) != 0;
+	bool is_reach = (b_closed[index / 32] & (1<<(index%32))) != 0;
 	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(is_reach ? vec3(1.) : vec3(0.), 1.));
 }
 
