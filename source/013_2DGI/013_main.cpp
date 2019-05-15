@@ -101,8 +101,8 @@ int pathFinding()
 	desc.m_start = ivec2(11, 11);
 	desc.m_finish = ivec2(1002, 1000);
 	PathContextCPU pf(desc);
-//	pf.m_field = pathmake_maze(1024, 1024);
-	pf.m_field = pathmake_noise(1024, 1024);
+	pf.m_field = pathmake_maze(1024, 1024);
+//	pf.m_field = pathmake_noise(1024, 1024);
 //	pf = pathmake_file();
 	PathSolver solver;
 	auto solve1 = solver.executeMakeVectorField(pf);
@@ -111,7 +111,7 @@ int pathFinding()
 //	solver.writeConsole(pf);
 //	solver.writeSolvePath(pf, solve, "hoge.txt");
 //	solver.writeConsole(pf, solve);
-	solver.write(pf, solve2);
+	solver.write(pf, solve1);
 
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();

@@ -243,7 +243,8 @@ struct PathSolver
 		uint32_t neighbor_state : 8;
 		uint32_t is_open : 1;
 		uint32_t is_closed: 1;
-		uint32_t p : 22;
+		uint32_t closed_state : 4;
+		uint32_t _p : 18;
 	};
 	bool exploreStraight(const PathContextCPU& path, std::deque<OpenNode2>& open, std::vector<CloseNode2>& close, i16vec2 index, Direction dir_type)const
 	{
@@ -253,11 +254,13 @@ struct PathSolver
 		{
 			index += dir_;
 			node = &close[index.x + index.y * path.m_desc.m_size.x];
-// 			if (cnode->is_closed)
-// 			{
-// 				continue;
-// 			}
+			if (btr::isOn(node->closed_state, 1<<(dir_type%4)))
+			{
+				continue;
+			}
 			node->is_closed = 1;
+			node->closed_state |= 1 << (dir_type % 4);
+
 			u8vec2 neighbor(~node->neighbor_state, node->neighbor_state);
 
 			u8vec4 bit_mask = u8vec4(1) << ((u8vec4(dir_type) + u8vec4(1,2,7,6)) % u8vec4(8));
@@ -290,11 +293,12 @@ struct PathSolver
 		{
 			index += dir_;
 			node = &close[index.x + index.y * path.m_desc.m_size.x];
-// 			if (cnode->is_closed)
-// 			{
-// 				continue;
-// 			}
+			if (btr::isOn(node->closed_state, 1 << (dir_type % 4)))
+			{
+				continue;
+			}
 			node->is_closed = 1;
+			node->closed_state |= 1 << (dir_type % 4);
 
 			u8vec2 neighbor(~node->neighbor_state, node->neighbor_state);
 
