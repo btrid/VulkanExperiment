@@ -124,7 +124,8 @@ void main()
 //		explore(constant.random_search[gl_LocalInvocationIndex]);
 	}
 
-	for(int i = 0; i < 100; i++)
+//	for(int i = 0; i < constant._p.x; i++)
+	for(int i = 0; i < 150; i++)
 	{
 		barrier();
 		memoryBarrierShared();

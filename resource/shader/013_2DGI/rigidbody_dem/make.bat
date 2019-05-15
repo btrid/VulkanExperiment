@@ -4,7 +4,8 @@ rem SET exe=glslc.exe
 rem SET include=-I ../include
 rem SET option=-w -x glsl
 SET include=-I../ -I../../include/
-SET option=--target-env vulkan1.1 -V -w
+SET option=--target-env spirv1.3 -V -w
+rem SET option=--target-env vulkan1.1 -V -w
 SET exe=glslangValidator.exe
 SET output=../../binary
 
@@ -14,8 +15,7 @@ SET output=../../binary
 %exe% %include% %option% -o %output%/Rigid_MakeParticle.comp.spv Rigid_MakeParticle.comp
 %exe% %include% %option% -o %output%/Rigid_MakeCollidable.comp.spv Rigid_MakeCollidable.comp
 %exe% %include% %option% -o %output%/Rigid_CollisionDetective.comp.spv Rigid_CollisionDetective.comp
-%exe% %include% %option% -o %output%/Rigid_CollisionDetective_Fluid.comp.spv Rigid_CollisionDetective_Fluid.comp
-%exe% %include% %option% -o %output%/Rigid_CalcDensity.comp.spv Rigid_CalcDensity.comp
+%exe% %include% %option% -o %output%/Rigid_CollisionDetective_ray.comp.spv Rigid_CollisionDetective_ray.comp
 %exe% %include% %option% -o %output%/Rigid_CalcCenterMass.comp.spv Rigid_CalcCenterMass.comp
 %exe% %include% %option% -o %output%/Rigid_MakeTransformMatrix.comp.spv Rigid_MakeTransformMatrix.comp
 %exe% %include% %option% -o %output%/Rigid_UpdateParticleBlock.comp.spv Rigid_UpdateParticleBlock.comp
@@ -38,6 +38,7 @@ SET output=../../binary
 %exe% %include% %option% -o %output%/Debug_DrawVoronoiTriangle.frag.spv Debug_DrawVoronoiTriangle.frag
 
 %exe% %include% %option% -o %output%/Debug_DrawVoronoiPath.geom.spv Debug_DrawVoronoiPath.geom
+
 
 
 
