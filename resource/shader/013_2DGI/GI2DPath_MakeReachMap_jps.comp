@@ -67,6 +67,7 @@ void exploreImpl(in ivec2 pos, in uint dir_type)
 
 			bvec4 is_path = notEqual((~neighbor.xxxx) & path_bit, uvec4(0));
 			bvec4 is_wall = notEqual(neighbor.xxxx & wall_bit, uvec4(0));
+			is_wall.zw = bvec2((dir_type%2)==0); 
 			uvec4 is_open = uvec4(is_path) * uvec4(is_wall);
 			uint num = is_open.x+is_open.y+is_open.z+is_open.w;
 			if(num != 0)
@@ -114,7 +115,7 @@ void main()
 	memoryBarrierShared();
 	memoryBarrierBuffer();
 
-	if(gl_LocalInvocationIndex < 1)
+	if(gl_LocalInvocationIndex < constant.num.x)
 	{
 		explore(ivec2(constant.target[gl_LocalInvocationIndex]));
 	}
@@ -123,7 +124,7 @@ void main()
 //		explore(constant.random_search[gl_LocalInvocationIndex]);
 	}
 
-	for(int i = 0; i < 1; i++)
+	for(int i = 0; i < 100; i++)
 	{
 		barrier();
 		memoryBarrierShared();
