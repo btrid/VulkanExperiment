@@ -233,50 +233,6 @@ struct PathSolver
 		i16vec2{-1,  1},
 		i16vec2{-1,  0},
 	};
-	struct Explorer
-	{
-		uint8_t access_bit;
-		uint8_t deny_bit;
-	};
-	std::array<Explorer, Num> explorer_list = 
-	{
-		Explorer{
-			Bit_UL | Bit_U | Bit_R | Bit_D | Bit_L | Bit_UR | Bit_DL,
-			Bit_UL | Bit_U | Bit_L,
-		},
-		Explorer{
-			Bit_U | Bit_R | Bit_L | Bit_UR | Bit_UL,
-			Bit_U,
-		},
-		Explorer{
-			Bit_UR | Bit_U | Bit_R | Bit_D | Bit_L | Bit_DR | Bit_UL,
-			Bit_UR | Bit_U | Bit_R ,
-		},
-		Explorer{
-			Bit_R | Bit_U | Bit_D | Bit_UR | Bit_DR,
-			Bit_R,
-		},
-		Explorer{
-			Bit_DR | Bit_U | Bit_R | Bit_D | Bit_L | Bit_DL | Bit_UR,
-			Bit_DR | Bit_D | Bit_R,
-		},
-		Explorer{
-			Bit_D | Bit_R | Bit_L | Bit_DR | Bit_DL,
-			Bit_D,
-		},
-		Explorer{
-			Bit_DL | Bit_U | Bit_R | Bit_D | Bit_L | Bit_UL | Bit_DR,
-			Bit_DL | Bit_D | Bit_L,
-		},
-		Explorer{
-			Bit_L | Bit_U | Bit_D | Bit_DL | Bit_UL,
-			Bit_L,
-		},
-		Explorer{
-			255,
-			0,
-		},
-	};
 	struct OpenNode2
 	{
 		i16vec2 index;
@@ -314,7 +270,7 @@ struct PathSolver
 				open_node.dir_bit |= is_forcedneighbor.y ? bit_mask.z : 0;
 				open.push_back(open_node);
 				close[current.x + current.y * path.m_desc.m_size.x].is_open = 1;
-				return true;
+//				return true;
 			}
 			if (btr::isOn(neighbor.y, 1 << dir_type))
 			{
@@ -362,7 +318,7 @@ struct PathSolver
 
 				open.push_back(open_node);
 				close[node.index.x + node.index.y * path.m_desc.m_size.x].is_open = 1;
-				return;
+//				return;
 			}
 
 			if (btr::isOn(neighbor.y, 1 << dir_type))
