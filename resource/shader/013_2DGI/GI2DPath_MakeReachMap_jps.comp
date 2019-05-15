@@ -8,6 +8,8 @@
 
 layout (local_size_x = 1024) in;
 
+#define isOn(_bit, _test) (((_bit) & (_test)) != 0)
+
 layout(push_constant, std430) uniform InputVertex
 {
 	ivec2 reso;
@@ -39,32 +41,32 @@ shared uint s_diagonal[128];
 shared uint s_straight[1024*4];
 shared uvec4 s_active_counter;
 
-void exploreStraight(in ivec2 pos, in ivec2 dir)
+void exploreStraight(in ivec2 pos, in uint8_t dir_type)
 {
-	auto current = node.index;
+	ivec2 dir = neighor_list[dir_type];
 	for (int i = 0; true; i++)
 	{
-		current += dir_;
-		uint n = close[current.x + current.y * path.m_desc.m_size.x].neighbor_state;
+		pos += dir;
+		int index = pos.x + pos.y * constant.reso.x;
+		uint n = b_neighbor[index].neighbor_state;
 		u8vec2 neighbor(~n, n);
-		close[current.x + current.y * path.m_desc.m_size.x].is_closed = 1;
 
-		u8vec4 bit_mask = u8vec4(1) << ((u8vec4(dir_type) + u8vec4(1,2,7,6)) % u8vec4(8));
-		bvec4 is_biton = notEqual(neighbor.xyxy() & bit_mask, u8vec4(0));
-		bvec2 is_forcedneighbor = bvec2(all(is_biton.xy()), all(is_biton.zw()));
+//		b_closed[node.index.x + node.index.y * path.m_desc.m_size.x].is_closed = 1;
+
+		u8vec4 bit_mask = u8vec4(1) << ((dir_type.xxxx + u8vec4(1,2,7,6)) % u8vec4(8));
+		bvec4 is_biton = notEqual(neighbor.xyxy & bit_mask, u8vec4(0));
+		bvec2 is_forcedneighbor = bvec2(all(is_biton.xy), all(is_biton.zw));
 		if (any(is_forcedneighbor) && !close[current.x + current.y * path.m_desc.m_size.x].is_open)
 		{
 			// forced neighbor
 			// 遮蔽物があるのでここから再捜査
-			OpenNode2 open_node;
-			open_node.index = current;
-			open_node.dir_bit = (1<<dir_type);
-			open_node.dir_bit |= is_forcedneighbor.x ? bit_mask.x : 0;
-			open_node.dir_bit |= is_forcedneighbor.y ? bit_mask.z : 0;
-			open.push_back(open_node);
-			close[current.x + current.y * path.m_desc.m_size.x].is_open = 1;
+			uint open_node = pos.x | (pos.y<<14);
+			open_node.dir_bit |= is_forcedneighbor.x ? bit_mask.x/2 : 0;
+			open_node.dir_bit |= is_forcedneighbor.y ? bit_mask.z/2 : 0;
+//			open.push_back(open_node);
+//			close[current.x + current.y * path.m_desc.m_size.x].is_open = 1;
 		}
-		if (btr::isOn(neighbor.y, 1 << dir_type))
+		if (isOn(neighbor.y, 1 << dir_type))
 		{
 			// 直線は進行方向に進めなければ終了
 			break;
@@ -73,6 +75,46 @@ void exploreStraight(in ivec2 pos, in ivec2 dir)
 	}
 
 }
+	void exploreDiagonal(in ivec2 pos, in uint8_t dir_type)
+	{
+		ivec2 dir = neighor_list[dir_type];
+		for (int i = 0; true; i++)
+		{
+			pos += dir;
+			int index = pos.x + pos.y * constant.reso.x;
+			uint n = b_neighbor[index].neighbor_state;
+			u8vec2 neighbor(~n, n);
+
+//			b_closed[node.index.x + node.index.y * path.m_desc.m_size.x].is_closed = 1;
+
+			ivec2 straight_type = (ivec2(dir_type) + ivec2(8) + ivec2(-1,1)) % 8;
+			ivec2 straight = ivec2(notEqual(neighbor.xx & (1<<straight_type), u8vec2(0)));
+
+
+			u8vec4 bit_mask = u8vec4(1) << ((u8vec4(dir_type) + u8vec4(6, 5, 2, 3)) % u8vec4(8));
+			bvec4 is_biton = notEqual(neighbor.xyxy() & bit_mask, u8vec4(0));
+			bvec2 is_forcedneighbor = bvec2(all(is_biton.xy()), all(is_biton.zw()));
+			if (any(is_forcedneighbor) && !b_closed[node.index.x + node.index.y * path.m_desc.m_size.x].is_open)
+			{
+				OpenNode2 open_node;
+				open_node.index = node.index;
+				open_node.dir_bit = 0;
+//				open_node.dir_bit = (1 << dir_type);
+				open_node.dir_bit |= is_forcedneighbor.x ? bit_mask.x : 0;
+				open_node.dir_bit |= is_forcedneighbor.y ? bit_mask.z : 0;
+
+//				open.push_back(open_node);
+//				close[node.index.x + node.index.y * path.m_desc.m_size.x].is_open = 1;
+			}
+
+			if (isOn(neighbor.y, 1 << dir_type))
+			{
+				// 進行方向に進めなければ終了
+				break;
+			}
+
+		}
+	}
 
 void main() 
 {

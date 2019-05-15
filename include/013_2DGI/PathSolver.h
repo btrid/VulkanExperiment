@@ -245,53 +245,59 @@ struct PathSolver
 		uint32_t is_closed: 1;
 		uint32_t p : 22;
 	};
-	bool exploreStraight(const PathContextCPU& path, std::deque<OpenNode2>& open, std::vector<CloseNode2>& close, const OpenNode2& node, Direction dir_type)const
+	bool exploreStraight(const PathContextCPU& path, std::deque<OpenNode2>& open, std::vector<CloseNode2>& close, i16vec2 index, Direction dir_type)const
 	{
 		const auto& dir_ = neighor_list[dir_type];
-		auto current = node.index;
-		for (int i = 0; true; i++)
+		CloseNode2* node = nullptr;
+		do
 		{
-			current += dir_;
-			uint n = close[current.x + current.y * path.m_desc.m_size.x].neighbor_state;
-			u8vec2 neighbor(~n, n);
-			close[current.x + current.y * path.m_desc.m_size.x].is_closed = 1;
+			index += dir_;
+			node = &close[index.x + index.y * path.m_desc.m_size.x];
+// 			if (cnode->is_closed)
+// 			{
+// 				continue;
+// 			}
+			node->is_closed = 1;
+			u8vec2 neighbor(~node->neighbor_state, node->neighbor_state);
 
 			u8vec4 bit_mask = u8vec4(1) << ((u8vec4(dir_type) + u8vec4(1,2,7,6)) % u8vec4(8));
 			bvec4 is_biton = notEqual(neighbor.xyxy() & bit_mask, u8vec4(0));
 			bvec2 is_forcedneighbor = bvec2(all(is_biton.xy()), all(is_biton.zw()));
-			if (any(is_forcedneighbor) && !close[current.x + current.y * path.m_desc.m_size.x].is_open)
+			if (any(is_forcedneighbor) && !node->is_open)
 			{
 				// forced neighbor
 				// 遮蔽物があるのでここから再捜査
 				OpenNode2 open_node;
-				open_node.index = current;
+				open_node.index = index;
 				open_node.dir_bit = 0;
 //				open_node.dir_bit = (1<<dir_type);
 				open_node.dir_bit |= is_forcedneighbor.x ? bit_mask.x : 0;
 				open_node.dir_bit |= is_forcedneighbor.y ? bit_mask.z : 0;
 				open.push_back(open_node);
-				close[current.x + current.y * path.m_desc.m_size.x].is_open = 1;
+				node->is_open = 1;
 //				return true;
 			}
-			if (btr::isOn(neighbor.y, 1 << dir_type))
-			{
-				// 直線は進行方向に進めなければ終了
-				break;
-			}
 
-		}
+		} while (!btr::isOn(node->neighbor_state, 1 << dir_type));
 
 		return false;
 	}
-	void exploreDiagonal(const PathContextCPU& path, std::deque<OpenNode2>& open, std::vector<CloseNode2>& close, OpenNode2 node, int dir_type)const
+	void exploreDiagonal(const PathContextCPU& path, std::deque<OpenNode2>& open, std::vector<CloseNode2>& close, i16vec2 index, int dir_type)const
 	{
 		const auto& dir_ = neighor_list[dir_type];
-		for (int i = 0; true; i++)
+		CloseNode2* node = nullptr;
+		do
 		{
-			node.index += dir_;
-			uint n = close[node.index.x + node.index.y * path.m_desc.m_size.x].neighbor_state;
-			u8vec2 neighbor(~n, n);
-			close[node.index.x + node.index.y * path.m_desc.m_size.x].is_closed = 1;
+			index += dir_;
+			node = &close[index.x + index.y * path.m_desc.m_size.x];
+// 			if (cnode->is_closed)
+// 			{
+// 				continue;
+// 			}
+			node->is_closed = 1;
+
+			u8vec2 neighbor(~node->neighbor_state, node->neighbor_state);
+
 
 			ivec2 straight = (ivec2(dir_type) + ivec2(8) + ivec2(-1,1)) % 8;
 			ivec2 straight_bit = 1<<straight;
@@ -299,37 +305,31 @@ struct PathSolver
 			bvec2 is_opend = bvec2(false);
 			if (btr::isOn(neighbor.x, straight_bit.x))
 			{
-				is_opend.x = exploreStraight(path, open, close, node, (Direction)straight.x);
+				is_opend.x = exploreStraight(path, open, close, index, (Direction)straight.x);
 			}
 			if (btr::isOn(neighbor.x, straight_bit.y))
 			{
-				is_opend.y = exploreStraight(path, open, close, node, (Direction)straight.y);
+				is_opend.y = exploreStraight(path, open, close, index, (Direction)straight.y);
 			}
 
 			u8vec4 bit_mask = u8vec4(1) << ((u8vec4(dir_type) + u8vec4(6, 5, 2, 3)) % u8vec4(8));
 			bvec4 is_biton = notEqual(neighbor.xyxy() & bit_mask, u8vec4(0));
 			bvec2 is_forcedneighbor = bvec2(all(is_biton.xy()), all(is_biton.zw()));
-			if ((any(is_opend) || any(is_forcedneighbor)) && !close[node.index.x + node.index.y * path.m_desc.m_size.x].is_open)
+			if ((/*any(is_opend) || */any(is_forcedneighbor)) && !node->is_open)
 			{
 				OpenNode2 open_node;
-				open_node.index = node.index;
+				open_node.index = index;
 				open_node.dir_bit = 0;
 //				open_node.dir_bit = (1 << dir_type);
 				open_node.dir_bit |= is_forcedneighbor.x ? bit_mask.x : 0;
 				open_node.dir_bit |= is_forcedneighbor.y ? bit_mask.z : 0;
 
 				open.push_back(open_node);
-				close[node.index.x + node.index.y * path.m_desc.m_size.x].is_open = 1;
+				node->is_open = 1;
 //				return;
 			}
 
-			if (btr::isOn(neighbor.y, 1 << dir_type))
-			{
-				// 進行方向に進めなければ終了
-				break;
-			}
-
-		}
+		} while (!btr::isOn(node->neighbor_state, 1 << dir_type));
 	}
 	void explore(const PathContextCPU& path, std::deque<OpenNode2>& open, std::vector<CloseNode2>& close, const OpenNode2& node)const
 	{
@@ -341,11 +341,11 @@ struct PathSolver
 
 			if ((dir_type %2) == 1)
 			{
-				exploreStraight(path, open, close, node, (Direction)dir_type);
+				exploreStraight(path, open, close, node.index, (Direction)dir_type);
 			}
 			else 
 			{
-				exploreDiagonal(path, open, close, node, (Direction)dir_type);
+				exploreDiagonal(path, open, close, node.index, (Direction)dir_type);
 			}
 		}
 	}
