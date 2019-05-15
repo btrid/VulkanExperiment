@@ -15,7 +15,9 @@ layout(std430, set=USE_GI2D_Path, binding=2) restrict buffer PathNeibghborStateB
 	// 壁ならbitが立つ
 	uint8_t b_neighbor[];
 };
-
+layout(std430, set=USE_GI2D_Path, binding=3) restrict buffer PathCloseStateBuffer {
+	uint b_closed_state[];
+};
 #endif
 
 #endif //GI2D_Path_

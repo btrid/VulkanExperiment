@@ -246,14 +246,14 @@ struct PathSolver
 		uint32_t closed_state : 4;
 		uint32_t _p : 18;
 	};
-	bool exploreStraight(const PathContextCPU& path, std::deque<OpenNode2>& open, std::vector<CloseNode2>& close, i16vec2 index, Direction dir_type)const
+	bool exploreStraight(const PathContextCPU& path, std::deque<OpenNode2>& open, std::vector<CloseNode2>& close, i16vec2 pos, Direction dir_type)const
 	{
-		const auto& dir_ = neighor_list[dir_type];
+		const auto& dir = neighor_list[dir_type];
 		CloseNode2* node = nullptr;
 		do
 		{
-			index += dir_;
-			node = &close[index.x + index.y * path.m_desc.m_size.x];
+			pos += dir;
+			node = &close[pos.x + pos.y * path.m_desc.m_size.x];
 			if (btr::isOn(node->closed_state, 1<<(dir_type%4)))
 			{
 				continue;
@@ -266,12 +266,12 @@ struct PathSolver
 			u8vec4 bit_mask = u8vec4(1) << ((u8vec4(dir_type) + u8vec4(1,2,7,6)) % u8vec4(8));
 			bvec4 is_biton = notEqual(neighbor.xyxy() & bit_mask, u8vec4(0));
 			bvec2 is_forcedneighbor = bvec2(all(is_biton.xy()), all(is_biton.zw()));
-			if (any(is_forcedneighbor) && !node->is_open)
+			if (any(is_forcedneighbor))
 			{
 				// forced neighbor
 				// é’ï¡ï®Ç™Ç†ÇÈÇÃÇ≈Ç±Ç±Ç©ÇÁçƒë{ç∏
 				OpenNode2 open_node;
-				open_node.index = index;
+				open_node.index = pos;
 				open_node.dir_bit = 0;
 //				open_node.dir_bit = (1<<dir_type);
 				open_node.dir_bit |= is_forcedneighbor.x ? bit_mask.x : 0;
@@ -285,14 +285,14 @@ struct PathSolver
 
 		return false;
 	}
-	void exploreDiagonal(const PathContextCPU& path, std::deque<OpenNode2>& open, std::vector<CloseNode2>& close, i16vec2 index, int dir_type)const
+	void exploreDiagonal(const PathContextCPU& path, std::deque<OpenNode2>& open, std::vector<CloseNode2>& close, i16vec2 pos, int dir_type)const
 	{
-		const auto& dir_ = neighor_list[dir_type];
+		const auto& dir = neighor_list[dir_type];
 		CloseNode2* node = nullptr;
 		do
 		{
-			index += dir_;
-			node = &close[index.x + index.y * path.m_desc.m_size.x];
+			pos += dir;
+			node = &close[pos.x + pos.y * path.m_desc.m_size.x];
 			if (btr::isOn(node->closed_state, 1 << (dir_type % 4)))
 			{
 				continue;
@@ -309,20 +309,20 @@ struct PathSolver
 			bvec2 is_opend = bvec2(false);
 			if (btr::isOn(neighbor.x, straight_bit.x))
 			{
-				is_opend.x = exploreStraight(path, open, close, index, (Direction)straight.x);
+				is_opend.x = exploreStraight(path, open, close, pos, (Direction)straight.x);
 			}
 			if (btr::isOn(neighbor.x, straight_bit.y))
 			{
-				is_opend.y = exploreStraight(path, open, close, index, (Direction)straight.y);
+				is_opend.y = exploreStraight(path, open, close, pos, (Direction)straight.y);
 			}
 
-			u8vec4 bit_mask = u8vec4(1) << ((u8vec4(dir_type) + u8vec4(6, 5, 2, 3)) % u8vec4(8));
+			u8vec4 bit_mask = u8vec4(1) << ((u8vec4(dir_type) + u8vec4(2, 3, 6, 5)) % u8vec4(8));
 			bvec4 is_biton = notEqual(neighbor.xyxy() & bit_mask, u8vec4(0));
 			bvec2 is_forcedneighbor = bvec2(all(is_biton.xy()), all(is_biton.zw()));
-			if ((/*any(is_opend) || */any(is_forcedneighbor)) && !node->is_open)
+			if ((/*any(is_opend) || */any(is_forcedneighbor)))
 			{
 				OpenNode2 open_node;
-				open_node.index = index;
+				open_node.index = pos;
 				open_node.dir_bit = 0;
 //				open_node.dir_bit = (1 << dir_type);
 				open_node.dir_bit |= is_forcedneighbor.x ? bit_mask.x : 0;
