@@ -417,6 +417,11 @@ struct GI2DMakeHierarchy
 
 		_label.insert("executeMakeReachMap_Precompute");
 		{
+			vk::BufferMemoryBarrier barrier[] = {
+				path_context->b_neighbor.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_length(barrier), barrier }, {});
+
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeReachMap_Precompute].get());
 
 			auto num = app::calcDipatchGroups(uvec3(path_context->m_gi2d_context->RenderWidth, path_context->m_gi2d_context->RenderHeight, 1), uvec3(32, 32, 1));
@@ -427,7 +432,9 @@ struct GI2DMakeHierarchy
 		_label.insert("executeMakeReachMap");
 		{
 			vk::BufferMemoryBarrier barrier[] = {
+				path_context->b_neighbor.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				path_context->b_closed.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
+				path_context->b_closed_state.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_length(barrier), barrier }, {});
 			

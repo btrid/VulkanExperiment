@@ -65,7 +65,7 @@ void exploreImpl(in ivec2 pos, in uint8_t dir_type)
 
 		if((dir_type % 2) == 0)
 		{
-			// 縦方向にもチェック
+			// 縦横方向にもチェック
 			u8vec2 straight_type = u8vec2((ivec2(dir_type) + ivec2(7,9)) % 8);
 			u8vec2 straight_bit = u8vec2(1)<<straight_type;
 
@@ -85,7 +85,7 @@ void exploreImpl(in ivec2 pos, in uint8_t dir_type)
 
 		{
 			u8vec4 diagonal_type = ((u8vec4(dir_type) + neighor_check_list[dir_type%2]) % u8vec4(8));
-			bvec4 is_biton = notEqual(neighbor.xyxy & u8vec4(1) << diagonal_type, u8vec4(0));
+			bvec4 is_biton = notEqual(neighbor.xyxy & (u8vec4(1) << diagonal_type), u8vec4(0));
 			uvec2 is_forcedneighbor = uvec2(all(is_biton.xy), all(is_biton.zw));
 			uint num = is_forcedneighbor.x + is_forcedneighbor.y;
 			if (num != 0)
@@ -169,7 +169,7 @@ void main()
 		if(is_active)
 		{
 			ivec2 pos = ivec2(open, open>>14) & ((1<<14)-1);
-			uint8_t dir_type = uint8_t(open>>28);
+			uint8_t dir_type = uint8_t((open>>28)& 7);
 			exploreImpl(pos, dir_type);
 		}
 	}
