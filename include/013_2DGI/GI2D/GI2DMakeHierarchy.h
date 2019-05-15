@@ -405,7 +405,7 @@ struct GI2DMakeHierarchy
 
 		static int iter = 10;
 		iter = iter+1;
-		iter %= 1000;
+		iter %= 100000;
 		struct
 		{
 			ivec2 reso;
