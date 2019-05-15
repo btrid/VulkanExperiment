@@ -284,41 +284,11 @@ struct PathSolver
 	};
 	struct CloseNode2
 	{
-		i16vec2 parent;
+		uint32_t neighbor_state : 8;
 		uint32_t is_open : 1;
 		uint32_t is_closed: 1;
-		uint32_t p : 30;
-		float cost;
+		uint32_t p : 22;
 	};
-	u8vec2 getNeighbor(const PathContextCPU& path, DirectionBit dir, const i16vec2& pos) const
-	{
-		u8vec2 neighor = u8vec2(0);
-		int _dir = dir;
-		while (_dir != 0)
-		{
-			int i = glm::findLSB(_dir);
-			_dir &= ~(1<<i);
-
-			if (any(lessThan(neighor_list[i] + pos, i16vec2(0))) || any(greaterThanEqual(neighor_list[i] + pos, i16vec2(path.m_desc.m_size))))
-			{
-				// map外は壁としておく
-				neighor.y |= (1 << i);
-			}
-			else
-			{
-				// 壁ならダメ
-				bool is_path = path.isPath(neighor_list[i] + pos);
-				neighor.x |= is_path ? (1 << i) : 0;
-				neighor.y |= !is_path ? (1 << i) : 0;
-			}
-		}
-		return neighor;
-	}
-	u8vec2 getNeighbor(const PathContextCPU& path, Direction dir, const i16vec2& pos) const
-	{
-		return getNeighbor(path, (DirectionBit)explorer_list[dir].access_bit, pos);
-	}
-
 	bool exploreStraight(const PathContextCPU& path, std::deque<OpenNode2>& open, std::vector<CloseNode2>& close, const OpenNode2& node, Direction dir_type)const
 	{
 		const auto& dir_ = neighor_list[dir_type];
@@ -326,7 +296,8 @@ struct PathSolver
 		for (int i = 0; true; i++)
 		{
 			current += dir_;
-			auto neighbor = getNeighbor(path, dir_type, current);
+			uint n = close[current.x + current.y * path.m_desc.m_size.x].neighbor_state;
+			u8vec2 neighbor(~n, n);
 			close[current.x + current.y * path.m_desc.m_size.x].is_closed = 1;
 
 			u8vec4 bit_mask = u8vec4(1) << ((u8vec4(dir_type) + u8vec4(1,2,7,6)) % u8vec4(8));
@@ -361,16 +332,12 @@ struct PathSolver
 		for (int i = 0; true; i++)
 		{
 			node.index += dir_;
-			auto neighbor = getNeighbor(path, (Direction)dir_type, node.index);
+			uint n = close[node.index.x + node.index.y * path.m_desc.m_size.x].neighbor_state;
+			u8vec2 neighbor(~n, n);
 			close[node.index.x + node.index.y * path.m_desc.m_size.x].is_closed = 1;
 
 			ivec2 straight = (ivec2(dir_type) + ivec2(8) + ivec2(-1,1)) % 8;
 			ivec2 straight_bit = 1<<straight;
-// 			if (btr::isOn(neighbor.y, straight_bit.x | straight_bit.y))
-// 			{
-// 				// 進行方向に進めなければ終了
-// 				break;
-// 			}
 
 			bvec2 is_opend = bvec2(false);
 			if (btr::isOn(neighbor.x, straight_bit.x))
@@ -408,10 +375,11 @@ struct PathSolver
 	}
 	void explore(const PathContextCPU& path, std::deque<OpenNode2>& open, std::vector<CloseNode2>& close, const OpenNode2& node)const
 	{
-		for (auto path_ = getNeighbor(path, (DirectionBit)node.dir_bit, node.index) ; path_.x != 0;)
+		uint n = close[node.index.x + node.index.y * path.m_desc.m_size.x].neighbor_state;
+		for (auto path_ = (~n) & node.dir_bit; path_ != 0;)
 		{
-			int dir_type = glm::findLSB(path_.x);
-			btr::setOff(path_.x, 1 << dir_type);
+			int dir_type = glm::findLSB(path_);
+			btr::setOff(path_, 1 << dir_type);
 
 			if ((dir_type %2) == 1)
 			{
@@ -426,32 +394,65 @@ struct PathSolver
 	std::vector<uint32_t> executeMakeVectorField2(const PathContextCPU& path)const
 	{
 		cStopWatch time;
-
+		float precomp = 0.f;
+		float solvetime = 0.f;
+		int openmax = 0;
 		std::vector<CloseNode2> close(path.m_desc.m_size.x * path.m_desc.m_size.y);
 		std::deque<OpenNode2> open;
 
+		// precompute
+		{
+			for (int y = 0; y < path.m_desc.m_size.y; y++)
+			{
+				for (int x = 0; x < path.m_desc.m_size.x; x++)
+				{
+					char neighor = 0;
+					i16vec2 pos = i16vec2(x, y);
+					for (char i = 0; i < 8; i++)
+					{
+						if (any(lessThan(neighor_list[i] + pos, i16vec2(0))) || any(greaterThanEqual(neighor_list[i] + pos, i16vec2(path.m_desc.m_size))))
+						{
+							// map外は壁としておく
+							neighor |= 1 << i;
+						}
+						else
+						{
+							// 壁ならダメ
+							bool is_path = path.isPath(neighor_list[i] + pos);
+							neighor |= !is_path ? (1 << i) : 0;
+						}
+
+					}
+					close[x + y * path.m_desc.m_size.x].neighbor_state = neighor;
+				}
+			}
+			precomp = time.getElapsedTimeAsMilliSeconds();
+
+		}
+
+		// initialize
 		{
 			OpenNode2 start_node;
 			start_node.index = i16vec2(path.m_desc.m_start.x, path.m_desc.m_start.y);
-			start_node.dir_bit = getNeighbor(path, BIT_ALL, start_node.index).x;
+			start_node.dir_bit = ~close[start_node.index.x + start_node.index.y * path.m_desc.m_size.x].neighbor_state;
 			open.push_back(start_node);
 
 			auto& start = close[open.front().index.x+ open.front().index.y*path.m_desc.m_size.x];
 			start.is_open = 1;
 		}
+
+		// run
 		while (!open.empty())
 		{
-			OpenNode2 open_node = open.front();
-			open.pop_front();
+			openmax = glm::max<int>(open.size(), openmax);
+			// dequeはpush_back()されても参照は無効にならないらしい
+			OpenNode2& open_node = open.front();
 			explore(path, open, close, open_node);
-
-//			CloseNode2& node = close[open_node.index.x + open_node.index.y * path.m_desc.m_size.x];
-//			node.is_open = 0;
-//			node.is_closed = 1;
-
+			open.pop_front();
 		}
 
-		printf("solve time %6.4fms\n", time.getElapsedTimeAsMilliSeconds());
+		solvetime = time.getElapsedTimeAsMilliSeconds();
+		printf("precomp %6.4fms, solve %6.4fms, all %6.4fms, open_max %d\n", precomp, solvetime, precomp + solvetime, openmax);
 		std::vector<uint32_t> result(path.m_desc.m_size.x*path.m_desc.m_size.y);
 		for (int32_t y = 0; y < path.m_desc.m_size.y; y++)
 		{
