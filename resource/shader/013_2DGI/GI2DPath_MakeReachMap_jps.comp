@@ -33,28 +33,26 @@ ivec2 neighor_list[] =
 };
 u8vec4 neighor_check_list[] =
 {
-	u8vec4(2,3,6,5), // diagonal
-	u8vec4(1,2,7,6), // straight
+	u8vec4(2,6,1,7), // diagonal_path
+	u8vec4(3,5,4,4), // diagonal_wall
+	u8vec4(1,7,0,0), // straight_path
+	u8vec4(2,6,0,0), // straight_wall
 };
 
-//shared uint s_diagonal[128];
-//shared uint s_straight[1024*4];
-//shared uvec4 s_active_counter;
 shared uint s_active[1024*11+1000];
 shared uvec2 s_active_counter;
 
 void exploreImpl(in ivec2 pos, in uint8_t dir_type)
 {
 	ivec2 dir = neighor_list[int(dir_type)];
-	uint8_t n = uint8_t(0);
-//	do
-	while ((n & (1 << dir_type)) == 0)
+	uint8_t neighbor = uint8_t(0);
+
+	while ((neighbor & (1 << dir_type)) == 0)
 	{
 		pos += dir;
 
 		int index = pos.x + pos.y * constant.reso.x;
-		n = b_neighbor[index];
-		u8vec2 neighbor = u8vec2(~n, n);
+		neighbor = b_neighbor[index];
 
 		uint8_t close_bit = uint8_t(1) << (dir_type % 4);
 		if ((atomicOr(b_closed_state[index], close_bit) & close_bit) != 0)
@@ -62,47 +60,27 @@ void exploreImpl(in ivec2 pos, in uint8_t dir_type)
 			continue;
 		}
 
-
-		if((dir_type % 2) == 0)
+		// 新しい探索のチェック
 		{
-			// 縦横方向にもチェック
-			u8vec2 straight_type = u8vec2((ivec2(dir_type) + ivec2(7,9)) % 8);
-			u8vec2 straight_bit = u8vec2(1)<<straight_type;
+			u8vec4 path_check = (dir_type.xxxx + neighor_check_list[(dir_type%2)*2]) % u8vec4(8);
+			u8vec4 wall_check = (dir_type.xxxx + neighor_check_list[(dir_type%2)*2+1]) % u8vec4(8);
+			u8vec4 path_bit = u8vec4(1)<<path_check;
+			u8vec4 wall_bit = u8vec4(1)<<wall_check;
 
-			uvec2 is_open = uvec2(notEqual(neighbor.xx & straight_bit, u8vec2(0)));
-			uint num = is_open.x+is_open.y;
+			bvec4 is_path = notEqual((~neighbor.xxxx) & path_bit, u8vec4(0));
+			bvec4 is_wall = notEqual(neighbor.xxxx & wall_bit, u8vec4(0));
+			uvec4 is_open = uvec4(equal(is_path, is_wall));
+			uint num = is_open.x+is_open.y+is_open.z+is_open.w;
 			if(num != 0)
 			{
 				uint active_index = atomicAdd(s_active_counter[0], num);
-				for(int i = 0; i < 2; i++)
-				{
-					if(is_open[i]==0){ continue; }
-					s_active[active_index++ % s_active.length()] = pos.x | (pos.y<<14) | (straight_type[i] << 28);
-				}
+//				for(int i = 0; i < 4; i++)
+//				{
+//					if(is_open[i]==0){ continue; }
+//					s_active[active_index++ % s_active.length()] = pos.x | (pos.y<<14) | (path_check[i] << 28);
+//				}
 			}
-
 		}
-
-		{
-			u8vec4 diagonal_type = ((u8vec4(dir_type) + neighor_check_list[dir_type%2]) % u8vec4(8));
-			bvec4 is_biton = notEqual(neighbor.xyxy & (u8vec4(1) << diagonal_type), u8vec4(0));
-			uvec2 is_forcedneighbor = uvec2(all(is_biton.xy), all(is_biton.zw));
-			uint num = is_forcedneighbor.x + is_forcedneighbor.y;
-			if (num != 0)
-			{
-				uint active_index = atomicAdd(s_active_counter[0], num);
-				for(int i = 0; i < 2; i++)
-				{
-					if(is_forcedneighbor[i]==0){ continue; }
-					s_active[active_index++ % s_active.length()] = pos.x | (pos.y<<14) | (diagonal_type[i*2] << 28);
-				}
-
-			}
-
-		}
-
-//	} while (!isOn(n, 1 << dir_type));
-//	} while ((n & (1 << dir_type)) != 0);
 	}
 }
 
@@ -139,14 +117,14 @@ void main()
 
 	if(gl_LocalInvocationIndex < constant.num.x)
 	{
-		explore(ivec2(constant.target[gl_LocalInvocationIndex]));
+//		explore(ivec2(constant.target[gl_LocalInvocationIndex]));
 	}
 	if(gl_LocalInvocationIndex < constant.num.y)
 	{
 //		explore(constant.random_search[gl_LocalInvocationIndex]);
 	}
 
-	for(int i = 0; i < 1; i++)
+	for(int i = 0; i < 0; i++)
 	{
 		barrier();
 		memoryBarrierShared();
@@ -169,7 +147,7 @@ void main()
 		if(is_active)
 		{
 			ivec2 pos = ivec2(open, open>>14) & ((1<<14)-1);
-			uint8_t dir_type = uint8_t((open>>28)& 7);
+			uint8_t dir_type = uint8_t((open>>28)& ((1<<4)-1));
 			exploreImpl(pos, dir_type);
 		}
 	}

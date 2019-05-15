@@ -8,11 +8,15 @@
 
 layout (local_size_x = 32, local_size_y = 32) in;
 
-layout(push_constant) uniform InputVertex
+layout(push_constant, std430) uniform InputVertex
 {
 	ivec2 reso;
-	i16vec2 target[2];
+	i16vec2 num;
+	i16vec2 _p;
+	i16vec2 target[4];
+	i16vec2 random_search[3];
 } constant;
+
 
 
 shared uint64_t s_map[36];
@@ -45,7 +49,7 @@ void main()
 		 i16vec2( 1, 0),
 		 i16vec2( 1, 1),
 		 i16vec2( 0, 1),
-		 i16vec2(-1,-1),
+		 i16vec2(-1, 1),
 		 i16vec2(-1, 0),
 	};
 	uint8_t neighbor = uint8_t(0);
