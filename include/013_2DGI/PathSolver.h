@@ -168,19 +168,17 @@ struct PathSolver
 		// 既に探索済み
 		if (cost >= cn.cost)
 		{
-			return;
 		}
-
-		if (cn.is_open == 1)
+		else if (cn.is_open == 1)
 		{
 			// openの中に見つかった
 			cn.cost = cost;
 			cn.parent = parent;
-			return;
 		}
 		else
 		{
-			// もっと早くアクセスする方法が見つかったので更新
+			// 
+			// まだ探索してないか、もっと早くアクセスする方法が見つかったので更新
 			cn.cost = cost;
 			cn.parent = parent;
 			cn.is_open = 1;
