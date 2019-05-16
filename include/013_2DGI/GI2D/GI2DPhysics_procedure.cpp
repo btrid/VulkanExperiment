@@ -219,7 +219,31 @@ void GI2DPhysics_procedure::execute(vk::CommandBuffer cmd, const std::shared_ptr
 		}
 	}
 
+	_label.insert("calc density");
 	{
+		vk::BufferMemoryBarrier to_read[] = {
+			gi2d_physics_context->b_fluid_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			gi2d_physics_context->b_fluid.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+		};
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);
+
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RBCalcDensity].get());
+
+		auto num = app::calcDipatchGroups(uvec3(gi2d_physics_context->m_gi2d_context->RenderSize.x*gi2d_physics_context->m_gi2d_context->RenderSize.y, 1, 1), uvec3(8, 1, 1));
+		cmd.dispatch(num.x, num.y, num.z);
+
+	}
+	_label.insert("calc pressure");
+	{
+		vk::BufferMemoryBarrier to_read[] = {
+			gi2d_physics_context->b_fluid_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			gi2d_physics_context->b_fluid.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			gi2d_physics_context->b_rbparticle.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+		};
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);
+
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RBCalcPressure].get());
+		cmd.dispatchIndirect(gi2d_physics_context->b_update_counter.getInfo().buffer, gi2d_physics_context->b_update_counter.getInfo().offset + gi2d_physics_context->m_world.cpu_index * sizeof(uvec4) * 2 + sizeof(uvec4));
 
 	}
 

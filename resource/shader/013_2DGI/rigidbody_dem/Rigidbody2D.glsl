@@ -17,7 +17,7 @@
 
 float calcWeightImpl(in float distance, in float influenceRadius)
 {
-	return max((influenceRadius / (distance+0.001)) - 1., 0.);
+	return max((distance / influenceRadius) - 1., 0.);
 }
 float calcWeight(in float distance)
 {

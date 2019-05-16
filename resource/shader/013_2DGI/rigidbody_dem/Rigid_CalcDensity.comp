@@ -8,10 +8,6 @@
 
 layout (local_size_x = 8, local_size_y = COLLIDABLE_NUM) in;
 
-#define FLT_EPSIRON (1.19209290e-07)
-//#define isZero(_v) (all(lessThan((_v), vec2(FLT_EPSIRON))))
-#define isZero(_v) (dot((_v), (_v)) < FLT_EPSIRON)
-
 void main() 
 {
 	uint f_num = b_fluid_counter[gl_GlobalInvocationID.x];
@@ -23,8 +19,8 @@ void main()
 	rbFluid fluid = b_fluid[f_id];
 	
 	float density = 0.;
-	for(int y = -1; y < 1; y++)
-	for(int x = -1; x < 1; x++)
+	for(int y = -1; y <= 1; y++)
+	for(int x = -1; x <= 1; x++)
 	{{
 		ivec2 map_index = ivec2(fluid.pos) + ivec2(x, y);
 		if(any(lessThan(map_index, ivec2(0))) || any(greaterThanEqual(map_index, ivec2(0))))
