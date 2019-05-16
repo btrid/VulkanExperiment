@@ -13,6 +13,18 @@
 
 #define k_radius (0.5)
 #define k_delimiter (1.)
+
+
+float calcWeightImpl(in float distance, in float influenceRadius)
+{
+	return max((influenceRadius / (distance+0.001)) - 1., 0.);
+}
+float calcWeight(in float distance)
+{
+	return calcWeightImpl(distance, k_delimiter);
+}
+
+
 struct rbWorld
 {
 	float DeltaTime;
@@ -78,6 +90,8 @@ struct rbCollidable
 struct rbFluid
 {
 	vec2 pos;
+	uint p_id;
+	float density;
 };
 struct BufferManage
 {
@@ -197,4 +211,5 @@ vec2 rotateRBParticle(in vec2 v, in float angle)
 	Result.y = v.x * s + v.y * c;
 	return Result;
 }
+
 #endif

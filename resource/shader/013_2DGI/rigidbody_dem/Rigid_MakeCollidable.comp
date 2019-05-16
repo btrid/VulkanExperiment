@@ -25,20 +25,25 @@ void main()
 	if(((b_rigidbody[r_id].flag & RB_FLAG_FLUID) != 0)){ return; }
 
 	uint i = index.x+index.y*u_gi2d_info.m_resolution.x;
-	uint ii = atomicAdd(b_collidable_counter[i], 1);
-	if(ii < COLLIDABLE_NUM)
+	uint ci = atomicAdd(b_collidable_counter[i], 1);
+	if(ci < COLLIDABLE_NUM)
 	{
 		rbCollidable c;
 		c.r_id = r_id;
-//		c.r_id = p_id;
 		c.mass_inv = 1.;
-
 		c.pos = pos;
 		c.sdf = b_rbParticle[p_id].local_sdf;
-//		c.sdf = vec2(0.);
 		c.vel = pos - b_rbParticle[p_id].pos_old;
 
-		b_collidable[i*COLLIDABLE_NUM + ii] = c;
+		b_collidable[i*COLLIDABLE_NUM + ci] = c;
 	}
+
+	uint fi = atomicAdd(b_fluid_counter[i], 1);
+	if(fi < COLLIDABLE_NUM)
+	{
+		b_fluid[i*COLLIDABLE_NUM + fi].pos = pos;
+		b_fluid[i*COLLIDABLE_NUM + fi].p_id = p_id;
+	}
+
 }
 

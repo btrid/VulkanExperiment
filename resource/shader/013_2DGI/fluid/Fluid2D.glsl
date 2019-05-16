@@ -29,11 +29,6 @@ layout(set=USE_Fluid2D, binding=4) restrict buffer GridNodeBuffer {
 };
 #endif
 
-float calcWeight(in float distance, in float influenceRadius)
-{
-	return max((influenceRadius / (distance+0.001)) - 1., 0.);
-}
-
 bvec4 getWall(in ivec2 index)
 {
 	ivec4 _fi = ivec4(index/8, index%8);

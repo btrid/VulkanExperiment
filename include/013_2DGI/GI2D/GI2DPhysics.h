@@ -110,7 +110,7 @@ struct GI2DPhysics
 		vec2 local_sdf;
 
 		uint contact_index;
-		uint is_contact;
+		float density;
 		uint color;
 		uint is_active;
 	};
@@ -127,6 +127,9 @@ struct GI2DPhysics
 	struct rbFluid
 	{
 		vec2 pos;
+		uint p_id;
+		float density;
+
 	};
 
 	struct BufferManage

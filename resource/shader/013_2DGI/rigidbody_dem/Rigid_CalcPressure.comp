@@ -6,7 +6,7 @@
 #include "GI2D.glsl"
 #include "Rigidbody2D.glsl"
 
-layout (local_size_x = 8, local_size_y = COLLIDABLE_NUM) in;
+layout (local_size_x = RB_PARTICLE_BLOCK_SIZE) in;
 
 #define FLT_EPSIRON (1.19209290e-07)
 //#define isZero(_v) (all(lessThan((_v), vec2(FLT_EPSIRON))))
@@ -14,19 +14,19 @@ layout (local_size_x = 8, local_size_y = COLLIDABLE_NUM) in;
 
 void main() 
 {
-	uint f_num = b_fluid_counter[gl_GlobalInvocationID.x];
-	if(f_num > gl_LocalInvocationID.y)
-	{
-		return;
-	}
-	uint f_id = gl_GlobalInvocationID.x*RB_PARTICLE_BLOCK_SIZE + gl_LocalInvocationID.y;
-	rbFluid fluid = b_fluid[f_id];
-	
-	float density = 0.;
+	uint pb_id = b_pb_update_list[b_world.cpu_index*b_manager.pb_list_size+gl_WorkGroupID.x];
+	uint p_id = pb_id*RB_PARTICLE_BLOCK_SIZE + gl_LocalInvocationID.x;
+	if(b_rbParticle[p_id].contact_index == -1){ return; }
+
+	uint r_id = b_rbParticle_map[pb_id];
+	if(((b_rigidbody[r_id].flag & RB_FLAG_FLUID) == 0)){ return; }
+
+	vec2 pos = b_rbParticle[p_id].pos;
+	vec2 move = vec2(0.);
 	for(int y = -1; y < 1; y++)
 	for(int x = -1; x < 1; x++)
 	{{
-		ivec2 map_index = ivec2(fluid.pos) + ivec2(x, y);
+		ivec2 map_index = ivec2(pos) + ivec2(x, y);
 		if(any(lessThan(map_index, ivec2(0))) || any(greaterThanEqual(map_index, ivec2(0))))
 		{
 			 continue;
@@ -37,22 +37,18 @@ void main()
 		{
 			uint fj_id = findex*COLLIDABLE_NUM + ii;
 			vec2 pos_j = b_fluid[fj_id].pos;
-			vec2 rela_pos = fluid.pos-pos_j;
-			if(dot(rela_pos, rela_pos) >= k_delimiter*k_delimiter || dot(rela_pos, rela_pos) <= 0.0001)
+			vec2 rela_pos = pos-pos_j;
+			if(dot(rela_pos, rela_pos) <= 0.0001 || dot(rela_pos, rela_pos) >= k_delimiter*k_delimiter)
 			{
 				// 距離が離れているか自分
 				continue;
 			}
-			density += calcWeight(length(rela_pos));
 
+			move += normalize(rela_pos) * calcWeight(length(rela_pos)) * b_fluid[fj_id].density;
 		}
 	}}
 
-	b_fluid[f_id].density = density;
-	if(fluid.p_id != -1)
-	{
-		b_rbParticle[fluid.p_id].density = density;
-	}
+	b_rbParticle[p_id].pos += move;
 
 
 }
