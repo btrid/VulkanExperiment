@@ -1,0 +1,168 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_GI2D 0
+#define USE_GI2D_Path 1
+#include "GI2D.glsl"
+#include "GI2DPath.glsl"
+
+layout (local_size_x = 1024) in;
+
+layout(push_constant, std430) uniform InputVertex
+{
+	ivec2 reso;
+	i16vec2 num;
+	i16vec2 _p;
+	i16vec2 target[4];
+	i16vec2 random_search[3];
+} constant;
+
+
+ivec2 neighor_list[] =
+{
+	ivec2(-1, -1),
+	ivec2( 0, -1),
+	ivec2( 1, -1),
+	ivec2( 1,  0),
+	ivec2( 1,  1),
+	ivec2( 0,  1),
+	ivec2(-1,  1),
+	ivec2(-1,  0),
+};
+uvec4 neighor_check_list[] =
+{
+	uvec4(2,6,1,7), // diagonal_path
+	uvec4(3,5,4,4), // diagonal_wall
+	uvec4(1,7,0,0), // straight_path
+	uvec4(2,6,0,0), // straight_wall
+};
+
+shared uint s_active[1024*11+1000];
+shared uvec2 s_active_counter;
+
+void exploreImpl(in ivec2 pos, in uint dir_type)
+{
+	pos += neighor_list[dir_type];
+	int neighbor = int(b_neighbor[pos.x + pos.y * constant.reso.x]);
+
+	// 新しい探索のチェック
+	{
+		uvec4 path_check = (dir_type.xxxx + neighor_check_list[(dir_type%2)*2]) % uvec4(8);
+		uvec4 wall_check = (dir_type.xxxx + neighor_check_list[(dir_type%2)*2+1]) % uvec4(8);
+		uvec4 path_bit = (uvec4(1)<<path_check);
+		uvec4 wall_bit = (uvec4(1)<<wall_check);
+
+		bvec4 is_path = notEqual((~neighbor.xxxx) & path_bit, uvec4(0));
+		bvec4 is_wall = notEqual(neighbor.xxxx & wall_bit, uvec4(0));
+		is_wall.zw = bvec2((dir_type%2)==0); // diagonalのzwはwallいらない
+		uvec4 is_open = uvec4(is_path) * uvec4(is_wall);
+
+		uint check_dir[5];
+		uint num = 0;
+		for(int i = 0; i<4; i++)
+		{
+			if(is_open[i]==0){ continue; }
+			ivec2 next_pos = pos + neighor_list[path_check[i]];
+			int next_index = next_pos.x + next_pos.y * constant.reso.x;
+			int next_bit = (1<<(next_index % 32));
+			if((atomicOr(b_closed[next_index / 32], next_bit) & next_bit) == 0)
+			{
+				check_dir[num] = path_check[i];
+				num++;
+			}			
+		}
+
+		if((neighbor & (1 << dir_type)) == 0)
+		{
+			ivec2 next_pos = pos + neighor_list[dir_type];
+
+			int next_index = next_pos.x + next_pos.y * constant.reso.x;
+			int next_bit = (1<<(next_index % 32));
+			if((atomicOr(b_closed[next_index / 32], next_bit) & next_bit) == 0)
+			{
+				check_dir[num] = dir_type;
+				num++;
+			}			
+		}
+
+		if(num != 0)
+		{
+			uint active_index = atomicAdd(s_active_counter[0], num);
+			for(int i = 0; i < num; i++)
+			{
+				s_active[active_index++ % s_active.length()] = pos.x | (pos.y<<14) | (check_dir[i] << 28);
+			}
+		}
+	}
+}
+
+void explore(in ivec2 pos)
+{
+	uint neighbor = uint(~b_neighbor[pos.x + pos.y * constant.reso.x]);
+	while (neighbor != 0)
+	{
+		uint dir_type = findLSB(neighbor);
+		neighbor &= ~(1<<dir_type);
+
+		exploreImpl(pos, dir_type);
+	}
+}
+
+void main() 
+{
+	for(uint i = gl_LocalInvocationIndex; i < constant.reso.x*constant.reso.y/32; i+=gl_WorkGroupSize.x)
+	{
+		b_closed[i] = 0;
+	}
+	for(uint i = gl_LocalInvocationIndex; i < constant.reso.x*constant.reso.y; i+=gl_WorkGroupSize.x)
+	{
+		b_closed_state[i] = 0;
+	}
+	
+	if(gl_LocalInvocationIndex == 0)
+	{
+		s_active_counter = uvec2(0);
+	}
+
+	barrier();
+	memoryBarrierShared();
+	memoryBarrierBuffer();
+
+	if(gl_LocalInvocationIndex < constant.num.x)
+	{
+		explore(ivec2(constant.target[gl_LocalInvocationIndex]));
+	}
+	if(gl_LocalInvocationIndex < constant.num.y)
+	{
+//		explore(constant.random_search[gl_LocalInvocationIndex]);
+	}
+
+	for(int i = 0; i < constant._p.x; i++)
+//	for(int i = 0; i < 15; i++)
+	{
+		barrier();
+		memoryBarrierShared();
+
+		uint accum = s_active_counter[0];
+		uint consume = s_active_counter[1];
+		uint count = min(accum-consume, gl_WorkGroupSize.x);
+		if(count == 0){ break; }
+
+		bool is_active = gl_LocalInvocationIndex < count;
+		uint open = is_active ? s_active[(consume+gl_LocalInvocationIndex) % s_active.length()] : 0;
+
+		barrier();
+
+		if(gl_LocalInvocationIndex == 0)
+		{
+			s_active_counter[1] += count;
+		}
+
+		if(is_active)
+		{
+			ivec2 pos = ivec2(open, open>>14) & ((1<<14)-1);
+			uint dir_type = uint((open>>28)&((1<<4)-1));
+			exploreImpl(pos, dir_type);
+		}
+	}
+}
