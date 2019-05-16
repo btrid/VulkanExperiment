@@ -40,7 +40,7 @@ uvec4 neighor_check_list[] =
 shared uint s_active[1024*11+1000];
 shared uvec2 s_active_counter;
 
-void exploreImpl(in ivec2 pos, in uint dir_type)
+void explore(in ivec2 pos, in uint dir_type)
 {
 	pos += neighor_list[dir_type];
 
@@ -60,7 +60,7 @@ void exploreImpl(in ivec2 pos, in uint dir_type)
 		uvec4 path_bit = uvec4(1)<<path_check;
 		uvec4 wall_bit = uvec4(1)<<wall_check;
 
-		bvec4 is_path = notEqual((~neighbor.xxxx) & path_bit, uvec4(0));
+		bvec4 is_path = equal((neighbor.xxxx) & path_bit, uvec4(0));
 		bvec4 is_wall = notEqual(neighbor.xxxx & wall_bit, uvec4(0));
 		is_wall.zw = bvec2((dir_type%2)==0); // diagonalのzwはwallいらない
 
@@ -84,18 +84,6 @@ void exploreImpl(in ivec2 pos, in uint dir_type)
 	}
 }
 
-void explore(in ivec2 pos)
-{
-	uint neighbor = uint(~b_neighbor[pos.x + pos.y * constant.reso.x]);
-	while (neighbor != 0)
-	{
-		uint dir_type = findLSB(neighbor);
-		neighbor &= ~(1<<dir_type);
-
-		exploreImpl(pos, dir_type);
-	}
-}
-
 void main() 
 {
 	for(uint i = gl_LocalInvocationIndex; i < constant.reso.x*constant.reso.y/32; i+=gl_WorkGroupSize.x)
@@ -112,9 +100,14 @@ void main()
 	memoryBarrierShared();
 	memoryBarrierBuffer();
 
-	if(gl_LocalInvocationIndex < constant.num.x)
+	if(gl_LocalInvocationIndex < constant.num.x*8)
 	{
-		explore(ivec2(constant.target[gl_LocalInvocationIndex]));
+		ivec2 pos = ivec2(constant.target[gl_LocalInvocationIndex/8]);
+		uint dir_type = gl_LocalInvocationIndex%8;
+		uint neighbor = uint(~b_neighbor[pos.x + pos.y * constant.reso.x]);
+		if((neighbor & (1<<(dir_type))) != 0u){
+			explore(pos, dir_type);
+		}
 	}
 	if(gl_LocalInvocationIndex < constant.num.y)
 	{
@@ -122,7 +115,6 @@ void main()
 	}
 
 	for(int i = 0; i < constant._p.x; i++)
-//	for(int i = 0; i < 15; i++)
 	{
 		barrier();
 		memoryBarrierShared();
@@ -146,7 +138,7 @@ void main()
 		{
 			ivec2 pos = ivec2(open, open>>14) & ((1<<14)-1);
 			uint dir_type = uint((open>>28)&((1<<4)-1));
-			exploreImpl(pos, dir_type);
+			explore(pos, dir_type);
 		}
 	}
 }
