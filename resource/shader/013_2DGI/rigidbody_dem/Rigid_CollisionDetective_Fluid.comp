@@ -96,10 +96,11 @@ void main()
 
 	ivec2 index = ivec2(pos);
 	uint i = index.x+index.y*u_gi2d_info.m_resolution.x;
-	uint ii = atomicAdd(b_fluid_counter[i], 1);
-	if(ii < COLLIDABLE_NUM)
+	uint fi = atomicAdd(b_fluid_counter[i], 1);
+	if(fi < COLLIDABLE_NUM)
 	{
-		b_fluid[i*COLLIDABLE_NUM + ii].pos = pos;
+		b_fluid[i*COLLIDABLE_NUM + fi].pos = pos;
+		b_fluid[i*COLLIDABLE_NUM + fi].p_id = p_id;
 	}
 
 

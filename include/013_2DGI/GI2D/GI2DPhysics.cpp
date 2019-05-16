@@ -379,6 +379,7 @@ void GI2DPhysics::make(vk::CommandBuffer cmd, const uvec4& box)
 	_def.contact_index = -1;
 	_def.color = color;
 	_def.is_active = false;
+	_def.density = 0.f;
 	std::vector<vec2> pos(particle_num);
 	std::vector<rbParticle> pstate((particle_num+63)/64*64, _def);
 
@@ -399,7 +400,6 @@ void GI2DPhysics::make(vk::CommandBuffer cmd, const uvec4& box)
 			{
 				pstate[i].color = edgecolor;
 			}
-			pstate[i].is_contact = 0;
 			pstate[i].is_active = true;
 
 			center_of_mass += pos[i];
@@ -536,6 +536,7 @@ void GI2DPhysics::execute(vk::CommandBuffer cmd)
 	{
 		vk::BufferMemoryBarrier to_write[] = {
 			b_collidable_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
+			b_fluid_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
 			b_world.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {},
@@ -543,6 +544,7 @@ void GI2DPhysics::execute(vk::CommandBuffer cmd)
 	}
 	uint32_t data = 0;
 	cmd.fillBuffer(b_collidable_counter.getInfo().buffer, b_collidable_counter.getInfo().offset, b_collidable_counter.getInfo().range, data);
+	cmd.fillBuffer(b_fluid_counter.getInfo().buffer, b_fluid_counter.getInfo().offset, b_fluid_counter.getInfo().range, data);
 
 	{
 // 		static uint a;
@@ -560,6 +562,7 @@ void GI2DPhysics::execute(vk::CommandBuffer cmd)
 	{
 		vk::BufferMemoryBarrier to_read[] = {
 			b_collidable_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+			b_fluid_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 			b_world.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {},
