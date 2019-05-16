@@ -95,9 +95,9 @@ void main()
 		s_active_counter = uvec2(0);
 	}
 
-	barrier();
-	memoryBarrierShared();
 	memoryBarrierBuffer();
+	memoryBarrierShared();
+	barrier();
 
 	if(gl_LocalInvocationIndex < constant.num.x*8)
 	{
@@ -111,8 +111,8 @@ void main()
 
 	for(int i = 0; i < constant._p.x; i++)
 	{
-		barrier();
 		memoryBarrierShared();
+		barrier();
 
 		uint accum = s_active_counter[0];
 		uint consume = s_active_counter[1];

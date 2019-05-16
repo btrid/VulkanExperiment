@@ -182,7 +182,7 @@ int pathFinding()
 
 			// gi2d
 			{
-				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
+				auto cmd = context->m_cmd_pool->allocCmdOnetime(0, "cmd_gi2d");
 				gi2d_context->execute(cmd);
 				crowd_context->execute(cmd);
 				gi2d_debug.executeMakeFragment(cmd);
