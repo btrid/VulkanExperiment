@@ -102,10 +102,6 @@ void main()
 	{
 		b_closed[i] = 0;
 	}
-	for(uint i = gl_LocalInvocationIndex; i < constant.reso.x*constant.reso.y; i+=gl_WorkGroupSize.x)
-	{
-		b_closed_state[i] = 0;
-	}
 	
 	if(gl_LocalInvocationIndex == 0)
 	{

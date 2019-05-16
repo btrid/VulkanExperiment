@@ -52,10 +52,15 @@ void exploreImpl(in ivec2 pos, in uint dir_type)
 		int index = pos.x + pos.y * constant.reso.x;
 		neighbor = int(b_neighbor[index]);
 
-		uint8_t close_bit = uint8_t(1) << (dir_type % 4);
-		if ((atomicOr(b_closed_state[index], close_bit) & close_bit) != 0)
+//		uint8_t close_bit = uint8_t(1) << (dir_type % 4);
+//		if ((atomicOr(b_closed_state[index], close_bit) & close_bit) != 0)
+//		{
+//			continue;
+//		}
+		int bit = 1<<(index % 32);
+		if((atomicOr(b_closed[index / 32], bit) & bit) != 0)
 		{
-			continue;
+			return;
 		}
 
 		// 新しい探索のチェック
