@@ -23,7 +23,7 @@ void main()
 	for(int x = -1; x <= 1; x++)
 	{{
 		ivec2 map_index = ivec2(pos) + ivec2(x, y);
-		if(any(lessThan(map_index, ivec2(0))) || any(greaterThanEqual(map_index, ivec2(0))))
+		if(any(lessThan(map_index, ivec2(0))) || any(greaterThanEqual(map_index, u_gi2d_info.m_resolution.xy)))
 		{
 			 continue;
 		}
@@ -40,7 +40,7 @@ void main()
 				continue;
 			}
 
-			move -= normalize(rela_pos) * calcWeight(length(rela_pos)) * b_fluid[fj_id].density;
+			move += normalize(rela_pos) * calcWeight(length(rela_pos)) * b_fluid[fj_id].density;
 		}
 	}}
 

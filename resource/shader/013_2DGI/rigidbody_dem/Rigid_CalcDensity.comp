@@ -11,19 +11,20 @@ layout (local_size_x = 8, local_size_y = COLLIDABLE_NUM) in;
 void main() 
 {
 	uint f_num = b_fluid_counter[gl_GlobalInvocationID.x];
-	if(f_num > gl_LocalInvocationID.y)
+	if(gl_LocalInvocationID.y >= f_num)
 	{
 		return;
 	}
-	uint f_id = gl_GlobalInvocationID.x*RB_PARTICLE_BLOCK_SIZE + gl_LocalInvocationID.y;
+	uint f_id = gl_GlobalInvocationID.x*COLLIDABLE_NUM + gl_LocalInvocationID.y;
 	rbFluid fluid = b_fluid[f_id];
 	
 	float density = 0.;
 	for(int y = -1; y <= 1; y++)
 	for(int x = -1; x <= 1; x++)
 	{{
+
 		ivec2 map_index = ivec2(fluid.pos) + ivec2(x, y);
-		if(any(lessThan(map_index, ivec2(0))) || any(greaterThanEqual(map_index, ivec2(0))))
+		if(any(lessThan(map_index, ivec2(0))) || any(greaterThanEqual(map_index, u_gi2d_info.m_resolution.xy)))
 		{
 			 continue;
 		}
@@ -32,15 +33,21 @@ void main()
 		for(uint ii = 0; ii < count; ii++)
 		{
 			uint fj_id = findex*COLLIDABLE_NUM + ii;
+			if( f_id == fj_id)
+			{
+				// 自分とは判定しない
+				continue;
+			}
+
+
 			vec2 pos_j = b_fluid[fj_id].pos;
 			vec2 rela_pos = fluid.pos-pos_j;
-			if(dot(rela_pos, rela_pos) >= k_delimiter*k_delimiter || dot(rela_pos, rela_pos) <= 0.0001)
+			if(dot(rela_pos, rela_pos) >= k_delimiter*k_delimiter)
 			{
-				// 距離が離れているか自分
+				// 距離が離れている
 				continue;
 			}
 			density += calcWeight(length(rela_pos));
-
 		}
 	}}
 
