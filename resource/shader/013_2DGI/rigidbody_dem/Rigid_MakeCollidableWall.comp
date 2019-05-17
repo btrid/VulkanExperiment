@@ -25,15 +25,14 @@ void main()
 	c.r_id = -1;
 	c.mass_inv = 0.;
 	c.pos = vec2(gl_GlobalInvocationID.xy) + vec2(0.5);
-	c.sdf = normalize(gl_GlobalInvocationID.xy - vec2(b_jfa[i]));
+	c.sdf = gl_GlobalInvocationID.xy - vec2(b_jfa[i]);
+	c.sdf = normalize(c.sdf) * min(length(c.sdf) * 0.51, 1.);
 	c.vel = vec2(0.);
 
 	uint ii = atomicAdd(b_collidable_counter[i], 1);
 	b_collidable[i*COLLIDABLE_NUM + ii] = c;
 
-	uint fi = atomicAdd(b_fluid_counter[i], 1);
-//	b_fluid[i*COLLIDABLE_NUM + fi].pos = c.pos;
-//	b_fluid[i*COLLIDABLE_NUM + fi].p_id = -1;
+	atomicAdd(b_fluid_counter[i], 1);
 
 }
 

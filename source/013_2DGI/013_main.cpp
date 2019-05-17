@@ -307,7 +307,7 @@ int rigidbody()
 					{
 						for (int x = 0; x < 20; x++)
 						{
-							gi2d_physics_context->make(cmd, uvec4(200 + x * 16, 570 - y * 16, 16, 16));
+							gi2d_physics_context->make(cmd, uvec4(200 + x * 16, 370 - y * 16, 16, 16));
 
 						}
 					}

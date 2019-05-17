@@ -10,7 +10,7 @@
 
 struct GI2DPhysics
 {
-#define COLLIDABLE_NUM (8)
+#define COLLIDABLE_NUM (4)
 	enum Shader
 	{
 		Shader_ToFluid,

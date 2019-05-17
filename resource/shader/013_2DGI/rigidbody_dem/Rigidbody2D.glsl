@@ -4,7 +4,7 @@
 #if defined(USE_Rigidbody2D)
 
 #define RB_PARTICLE_BLOCK_SIZE (64)
-#define COLLIDABLE_NUM (8)
+#define COLLIDABLE_NUM (4)
 #define RB_DT (0.016)
 #define RB_GRAVITY_DT (vec2(0., 0.0025))
 //#define RB_DT (0.0016)
@@ -76,7 +76,6 @@ struct rbParticle
 	uint is_active;
 
 };
-
 struct rbCollidable
 {
 	uint r_id;
