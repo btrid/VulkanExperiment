@@ -18,33 +18,33 @@ void main()
 	if((b_rigidbody[r_id].flag & RB_FLAG_FLUID) == 0){ return; }
 
 	vec2 pos = b_rbParticle[p_id].pos;
-	vec2 move = vec2(0.);
+	float density[9];
 	for(int y = -1; y <= 1; y++)
 	for(int x = -1; x <= 1; x++)
 	{{
 		ivec2 map_index = ivec2(pos) + ivec2(x, y);
 		if(any(lessThan(map_index, ivec2(0))) || any(greaterThanEqual(map_index, u_gi2d_info.m_resolution.xy)))
 		{
-			 continue;
+			density[(x+1) + (y+1)*3] = 100.;
+			continue;
 		}
 		int findex = map_index.x + map_index.y * u_gi2d_info.m_resolution.x;
-		int count = int(min(b_fluid_counter[findex], COLLIDABLE_NUM));
-		for(uint ii = 0; ii < count; ii++)
-		{
-			uint fj_id = findex*COLLIDABLE_NUM + ii;
-			vec2 pos_j = b_fluid[fj_id].pos;
-			vec2 rela_pos = pos_j-pos;
-			if(dot(rela_pos, rela_pos) <= 0.0001 || dot(rela_pos, rela_pos) >= k_delimiter*k_delimiter)
-			{
-				// 距離が離れているか自分
-				continue;
-			}
-
-			move += normalize(rela_pos) * calcWeight(length(rela_pos)) * b_fluid[fj_id].density;
-		}
+		density[(x+1) + (y+1)*3] = b_fluid_counter[findex];
+	}}
+	vec2 subpos = fract(pos);
+	vec2 move = vec2(0.);
+	for(int y = -1; y <= 1; y++)
+	for(int x = -1; x <= 1; x++)
+	{{
+		if(x==0 && y==0){ continue; }
+		vec2 cell_subpos = vec2(x,y)+0.5;
+		vec2 dir = subpos - cell_subpos;
+		float gradient = density[(x+1) + (y+1)*3] - density[4];
+		move += gradient * normalize(dir);
 	}}
 
-	b_rbParticle[p_id].pos += move;
+
+	b_rbParticle[p_id].pos_old -= move*0.001;
 
 
 }

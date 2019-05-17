@@ -30,7 +30,6 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 			vk::DescriptorSetLayoutBinding(16, vk::DescriptorType::eStorageBuffer, 1, stage),
 			vk::DescriptorSetLayoutBinding(17, vk::DescriptorType::eStorageBuffer, 1, stage),
 			vk::DescriptorSetLayoutBinding(18, vk::DescriptorType::eStorageBuffer, 1, stage),
-			vk::DescriptorSetLayoutBinding(19, vk::DescriptorType::eStorageBuffer, 1, stage),
 		};
 		vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 		desc_layout_info.setBindingCount(array_length(binding));
@@ -226,7 +225,6 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 		b_collidable_counter = m_context->m_storage_memory.allocateMemory<uint32_t>({ gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
 		b_collidable = m_context->m_storage_memory.allocateMemory<rbCollidable>({ COLLIDABLE_NUM * gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
 		b_fluid_counter = m_context->m_storage_memory.allocateMemory<uint>({ gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
-		b_fluid = m_context->m_storage_memory.allocateMemory<rbFluid>({ COLLIDABLE_NUM * gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
 		b_manager = m_context->m_storage_memory.allocateMemory<BufferManage>({ 1,{} });
 		b_rb_memory_list = m_context->m_storage_memory.allocateMemory<uint>({ RB_NUM_MAX,{} });
 		b_pb_memory_list = m_context->m_storage_memory.allocateMemory<uint>({ RB_PARTICLE_BLOCK_NUM_MAX,{} });
@@ -257,7 +255,6 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 				b_collidable_counter.getInfo(),
 				b_collidable.getInfo(),
 				b_fluid_counter.getInfo(),
-				b_fluid.getInfo(),
 				b_manager.getInfo(),
 				b_rb_memory_list.getInfo(),
 				b_pb_memory_list.getInfo(),

@@ -10,7 +10,7 @@
 
 struct GI2DPhysics
 {
-#define COLLIDABLE_NUM (4)
+#define COLLIDABLE_NUM (8)
 	enum Shader
 	{
 		Shader_ToFluid,
@@ -124,13 +124,6 @@ struct GI2DPhysics
 		vec2 vel;
 		vec2 sdf;
 	};
-	struct rbFluid
-	{
-		vec2 pos;
-		uint p_id;
-		float density;
-
-	};
 
 	struct BufferManage
 	{
@@ -163,8 +156,8 @@ struct GI2DPhysics
 
 	enum
 	{
-		RB_NUM_MAX = 1024,
-		RB_PARTICLE_BLOCK_NUM_MAX = RB_NUM_MAX * 16,
+		RB_NUM_MAX = 1024*4,
+		RB_PARTICLE_BLOCK_NUM_MAX = RB_NUM_MAX * 8,
 		RB_PARTICLE_BLOCK_SIZE = 64, // shader‚à64‘O’ñ‚Ì•”•ª‚ª‚ ‚é
 		RB_PARTICLE_NUM = RB_PARTICLE_BLOCK_NUM_MAX * RB_PARTICLE_BLOCK_SIZE,
 
@@ -199,7 +192,6 @@ struct GI2DPhysics
 	btr::BufferMemoryEx<uint32_t> b_collidable_counter;
 	btr::BufferMemoryEx<rbCollidable> b_collidable;
 	btr::BufferMemoryEx<uint> b_fluid_counter;
-	btr::BufferMemoryEx<rbFluid> b_fluid;
 
 	btr::BufferMemoryEx<BufferManage> b_manager;
 	btr::BufferMemoryEx<uint> b_rb_memory_list;

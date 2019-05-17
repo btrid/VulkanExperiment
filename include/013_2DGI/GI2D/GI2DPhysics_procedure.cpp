@@ -16,7 +16,6 @@ GI2DPhysics_procedure::GI2DPhysics_procedure(const std::shared_ptr<GI2DPhysics>&
 			"Rigid_MakeCollidable.comp.spv",
 			"Rigid_CollisionDetective.comp.spv",
 			"Rigid_CollisionDetective_Fluid.comp.spv",
-			"Rigid_CalcDensity.comp.spv",
 			"Rigid_CalcPressure.comp.spv",
 			"Rigid_CalcCenterMass.comp.spv",
 			"Rigid_MakeTransformMatrix.comp.spv",
@@ -81,30 +80,27 @@ GI2DPhysics_procedure::GI2DPhysics_procedure(const std::shared_ptr<GI2DPhysics>&
 		shader_info[4].setModule(m_shader[Shader_RBCollisionDetective_Fluid].get());
 		shader_info[4].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[4].setPName("main");
-		shader_info[5].setModule(m_shader[Shader_RBCalcDensity].get());
+		shader_info[5].setModule(m_shader[Shader_RBCalcPressure].get());
 		shader_info[5].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[5].setPName("main");
-		shader_info[6].setModule(m_shader[Shader_RBCalcPressure].get());
+		shader_info[6].setModule(m_shader[Shader_RBCalcCenterMass].get());
 		shader_info[6].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[6].setPName("main");
-		shader_info[7].setModule(m_shader[Shader_RBCalcCenterMass].get());
+		shader_info[7].setModule(m_shader[Shader_RBMakeTransformMatrix].get());
 		shader_info[7].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[7].setPName("main");
-		shader_info[8].setModule(m_shader[Shader_RBMakeTransformMatrix].get());
+		shader_info[8].setModule(m_shader[Shader_RBUpdateParticleBlock].get());
 		shader_info[8].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[8].setPName("main");
-		shader_info[9].setModule(m_shader[Shader_RBUpdateParticleBlock].get());
+		shader_info[9].setModule(m_shader[Shader_RBUpdateRigidbody].get());
 		shader_info[9].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[9].setPName("main");
-		shader_info[10].setModule(m_shader[Shader_RBUpdateRigidbody].get());
+		shader_info[10].setModule(m_shader[Shader_MakeWallCollision].get());
 		shader_info[10].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[10].setPName("main");
-		shader_info[11].setModule(m_shader[Shader_MakeWallCollision].get());
+		shader_info[11].setModule(m_shader[Shader_DrawVoronoi].get());
 		shader_info[11].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[11].setPName("main");
-		shader_info[12].setModule(m_shader[Shader_DrawVoronoi].get());
-		shader_info[12].setStage(vk::ShaderStageFlagBits::eCompute);
-		shader_info[12].setPName("main");
 		std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 		{
 			vk::ComputePipelineCreateInfo()
@@ -139,12 +135,9 @@ GI2DPhysics_procedure::GI2DPhysics_procedure(const std::shared_ptr<GI2DPhysics>&
 			.setLayout(m_pipeline_layout[PipelineLayout_Rigid].get()),
 			vk::ComputePipelineCreateInfo()
 			.setStage(shader_info[10])
-			.setLayout(m_pipeline_layout[PipelineLayout_Rigid].get()),
-			vk::ComputePipelineCreateInfo()
-			.setStage(shader_info[11])
 			.setLayout(m_pipeline_layout[PipelineLayout_MakeWallCollision].get()),
 			vk::ComputePipelineCreateInfo()
-			.setStage(shader_info[12])
+			.setStage(shader_info[11])
 			.setLayout(m_pipeline_layout[PipelineLayout_Rigid].get()),
 		};
 		auto compute_pipeline = m_gi2d_physics_context->m_context->m_device->createComputePipelinesUnique(m_gi2d_physics_context->m_context->m_cache.get(), compute_pipeline_info);
@@ -153,14 +146,13 @@ GI2DPhysics_procedure::GI2DPhysics_procedure(const std::shared_ptr<GI2DPhysics>&
 		m_pipeline[Pipeline_RBMakeCollidable] = std::move(compute_pipeline[2]);
 		m_pipeline[Pipeline_RBCollisionDetective] = std::move(compute_pipeline[3]);
 		m_pipeline[Pipeline_RBCollisionDetective_Fluid] = std::move(compute_pipeline[4]);
-		m_pipeline[Pipeline_RBCalcDensity] = std::move(compute_pipeline[5]);
-		m_pipeline[Pipeline_RBCalcPressure] = std::move(compute_pipeline[6]);
-		m_pipeline[Pipeline_RBCalcCenterMass] = std::move(compute_pipeline[7]);
-		m_pipeline[Pipeline_RBMakeTransformMatrix] = std::move(compute_pipeline[8]);
-		m_pipeline[Pipeline_RBUpdateParticleBlock] = std::move(compute_pipeline[9]);
-		m_pipeline[Pipeline_RBUpdateRigidbody] = std::move(compute_pipeline[10]);
-		m_pipeline[Pipeline_MakeWallCollision] = std::move(compute_pipeline[11]);
-		m_pipeline[Pipeline_DrawVoronoi] = std::move(compute_pipeline[12]);
+		m_pipeline[Pipeline_RBCalcPressure] = std::move(compute_pipeline[5]);
+		m_pipeline[Pipeline_RBCalcCenterMass] = std::move(compute_pipeline[6]);
+		m_pipeline[Pipeline_RBMakeTransformMatrix] = std::move(compute_pipeline[7]);
+		m_pipeline[Pipeline_RBUpdateParticleBlock] = std::move(compute_pipeline[8]);
+		m_pipeline[Pipeline_RBUpdateRigidbody] = std::move(compute_pipeline[9]);
+		m_pipeline[Pipeline_MakeWallCollision] = std::move(compute_pipeline[10]);
+		m_pipeline[Pipeline_DrawVoronoi] = std::move(compute_pipeline[11]);
 	}
 
 }
@@ -219,25 +211,10 @@ void GI2DPhysics_procedure::execute(vk::CommandBuffer cmd, const std::shared_ptr
 		}
 	}
 
-	_label.insert("calc density");
-	{
-		vk::BufferMemoryBarrier to_read[] = {
-			gi2d_physics_context->b_fluid_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-			gi2d_physics_context->b_fluid.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);
-
-		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RBCalcDensity].get());
-
-		auto num = app::calcDipatchGroups(uvec3(gi2d_physics_context->m_gi2d_context->RenderSize.x*gi2d_physics_context->m_gi2d_context->RenderSize.y, 1, 1), uvec3(8, 1, 1));
-		cmd.dispatch(num.x, num.y, num.z);
-
-	}
 	_label.insert("calc pressure");
 	{
 		vk::BufferMemoryBarrier to_read[] = {
 			gi2d_physics_context->b_fluid_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-			gi2d_physics_context->b_fluid.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			gi2d_physics_context->b_rbparticle.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);

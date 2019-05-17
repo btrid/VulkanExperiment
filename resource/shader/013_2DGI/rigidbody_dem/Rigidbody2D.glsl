@@ -4,7 +4,7 @@
 #if defined(USE_Rigidbody2D)
 
 #define RB_PARTICLE_BLOCK_SIZE (64)
-#define COLLIDABLE_NUM (4)
+#define COLLIDABLE_NUM (8)
 #define RB_DT (0.016)
 #define RB_GRAVITY_DT (vec2(0., 0.0025))
 //#define RB_DT (0.0016)
@@ -17,11 +17,11 @@
 
 float calcWeightImpl(in float distance, in float influenceRadius)
 {
-	return max((influenceRadius / distance) - 1., 0.);
+	return max((distance / influenceRadius) - 1., 0.);
 }
 float calcWeight(in float distance)
 {
-	return calcWeightImpl(distance, k_delimiter);
+	return calcWeightImpl(distance, 0.5);
 }
 
 
@@ -87,12 +87,6 @@ struct rbCollidable
 	vec2 sdf;
 };
 
-struct rbFluid
-{
-	vec2 pos;
-	uint p_id;
-	float density;
-};
 struct BufferManage
 {
 	uint rb_list_size;
@@ -144,43 +138,40 @@ layout(set=USE_Rigidbody2D, binding=5, std430) restrict buffer rbCollidableBuffe
 layout(set=USE_Rigidbody2D, binding=6, std430) restrict buffer rbFluidCounter {
 	uint b_fluid_counter[];
 };
-layout(set=USE_Rigidbody2D, binding=7, std430) restrict buffer rbFluidBuffer {
-	rbFluid b_fluid[];
-};
-layout(set=USE_Rigidbody2D, binding=8, std430) restrict buffer rbBufferManageData {
+layout(set=USE_Rigidbody2D, binding=7, std430) restrict buffer rbBufferManageData {
 	BufferManage b_manager;
 };
-layout(set=USE_Rigidbody2D, binding=9, std430) restrict buffer rbRigidbodyFreelist {
+layout(set=USE_Rigidbody2D, binding=8, std430) restrict buffer rbRigidbodyFreelist {
 	uint b_rb_memory_list[];
 };
-layout(set=USE_Rigidbody2D, binding=10, std430) restrict buffer rbParticleBlockFreelist {
+layout(set=USE_Rigidbody2D, binding=9, std430) restrict buffer rbParticleBlockFreelist {
 	uint b_pb_memory_list[];
 };
-layout(set=USE_Rigidbody2D, binding=11, std430) restrict buffer rbActiveCounter {
+layout(set=USE_Rigidbody2D, binding=10, std430) restrict buffer rbActiveCounter {
 	uvec4 b_update_counter[];
 };
-layout(set=USE_Rigidbody2D, binding=12, std430) restrict buffer rbRBActiveBuffer {
+layout(set=USE_Rigidbody2D, binding=11, std430) restrict buffer rbRBActiveBuffer {
 	uint b_rb_update_list[];
 };
-layout(set=USE_Rigidbody2D, binding=13, std430) restrict buffer rbPBActiveBuffer {
+layout(set=USE_Rigidbody2D, binding=12, std430) restrict buffer rbPBActiveBuffer {
 	uint b_pb_update_list[];
 };
-layout(set=USE_Rigidbody2D, binding=14, std430) restrict buffer rbVoronoiCellBuffer {
+layout(set=USE_Rigidbody2D, binding=13, std430) restrict buffer rbVoronoiCellBuffer {
 	VoronoiCell b_voronoi_cell[];
 };
-layout(set=USE_Rigidbody2D, binding=15, std430) restrict buffer rbVoronoiPolygonBuffer {
+layout(set=USE_Rigidbody2D, binding=14, std430) restrict buffer rbVoronoiPolygonBuffer {
 	VoronoiPolygon b_voronoi_polygon[];
 };
-layout(set=USE_Rigidbody2D, binding=16, std430) restrict buffer rbVoronoiBuffer {
+layout(set=USE_Rigidbody2D, binding=15, std430) restrict buffer rbVoronoiBuffer {
 	int16_t b_voronoi[];
 };
-layout(set=USE_Rigidbody2D, binding=17, std430) restrict buffer rbVoronoiVertexCounter {
+layout(set=USE_Rigidbody2D, binding=16, std430) restrict buffer rbVoronoiVertexCounter {
 	uvec4 b_voronoi_vertex_counter;
 };
-layout(set=USE_Rigidbody2D, binding=18, std430) restrict buffer rbVoronoiVertexBuffer {
+layout(set=USE_Rigidbody2D, binding=17, std430) restrict buffer rbVoronoiVertexBuffer {
 	VoronoiVertex b_voronoi_vertex[];
 };
-layout(set=USE_Rigidbody2D, binding=19, std430) restrict buffer rbVoronoiPathBuffer {
+layout(set=USE_Rigidbody2D, binding=18, std430) restrict buffer rbVoronoiPathBuffer {
 	int16_t b_voronoi_path[];
 };
 

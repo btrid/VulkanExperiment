@@ -31,10 +31,10 @@ ivec2 neighor_list[] =
 };
 uvec4 neighor_check_list[] =
 {
-	uvec4(2,6,1,7), // diagonal_path
+	uvec4(2,6,1,7), // diagonal_path 
 	uvec4(3,5,4,4), // diagonal_wall
-	uvec4(1,7,0,0), // straight_path
-	uvec4(2,6,0,0), // straight_wall
+	uvec4(1,7,4,4), // straight_path
+	uvec4(2,6,4,4), // straight_wall
 };
 
 shared uint s_active[1024*4];
@@ -44,27 +44,32 @@ void explore(in ivec2 pos, in uint dir_type)
 {
 	pos += neighor_list[dir_type];
 	int index = pos.x + pos.y * constant.reso.x;
-	int bit = 1<<(index % 32);
-	if((atomicOr(b_closed[index / 32], bit) & bit) != 0)
-	{
-		return;
-	}
 
+	{
+		// すでにチェック済みなら終わり
+		int bit = 1<<(index % 32);
+		if((atomicOr(b_closed[index / 32], bit) & bit) != 0)
+		{
+			return;
+		}
+		
+	}
 
 	// 新しい探索のチェック
 	{
-		int neighbor = int(b_neighbor[index]);
+		uint neighbor = uint(b_neighbor[index]);
 		uvec4 path_check = (dir_type.xxxx + neighor_check_list[(dir_type%2)*2]) % uvec4(8);
 		uvec4 wall_check = (dir_type.xxxx + neighor_check_list[(dir_type%2)*2+1]) % uvec4(8);
 		uvec4 path_bit = uvec4(1)<<path_check;
 		uvec4 wall_bit = uvec4(1)<<wall_check;
 
-		bvec4 is_path = equal((neighbor.xxxx) & path_bit, uvec4(0));
+		bvec4 is_path = notEqual((~neighbor.xxxx) & path_bit, uvec4(0));
 		bvec4 is_wall = notEqual(neighbor.xxxx & wall_bit, uvec4(0));
-		is_wall.zw = bvec2((dir_type%2)==0); // diagonalのzwはwallいらない
+		uvec4 is_open = uvec4(is_path) * uvec4(is_wall.xy, 1-ivec2(dir_type%2));
 
-		uvec4 is_open = uvec4(is_path) * uvec4(is_wall);
-		uint is_advance = uint((neighbor & (1 << dir_type)) == 0);
+		uint is_advance = uint(((~neighbor) & (1u << dir_type)) != 0) * uint(any(is_path.zw));
+
+
 		uint num = is_open.x+is_open.y+is_open.z+is_open.w + is_advance;
 		if(num != 0)
 		{
@@ -103,13 +108,15 @@ void main()
 	{
 		ivec2 pos = ivec2(constant.target[gl_LocalInvocationIndex/8]);
 		uint dir_type = gl_LocalInvocationIndex%8;
-		uint neighbor = uint(~b_neighbor[pos.x + pos.y * constant.reso.x]);
-		if((neighbor & (1<<(dir_type))) != 0u){
+		uint neighbor = uint(b_neighbor[pos.x + pos.y * constant.reso.x]);
+		if((~neighbor & (1<<dir_type)) != 0)
+		{
 			explore(pos, dir_type);
 		}
 	}
 
 	for(int i = 0; i < constant._p.x; i++)
+//	for(int i = 0; i < 15; i++)
 	{
 		memoryBarrierShared();
 		barrier();
