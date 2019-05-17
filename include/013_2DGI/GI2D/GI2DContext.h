@@ -294,7 +294,7 @@ struct GI2DSDF
 	// https://postd.cc/voronoi-diagrams/
 	enum
 	{
-		SDF_USE_NUM = 2,
+		SDF_USE_NUM = 1,
 	};
 	GI2DSDF(const std::shared_ptr<GI2DContext>& gi2d_context)
 	{
