@@ -124,13 +124,6 @@ struct GI2DPhysics
 		vec2 vel;
 		vec2 sdf;
 	};
-	struct rbFluid
-	{
-		vec2 pos;
-		uint p_id;
-		float density;
-
-	};
 
 	struct BufferManage
 	{
@@ -199,7 +192,6 @@ struct GI2DPhysics
 	btr::BufferMemoryEx<uint32_t> b_collidable_counter;
 	btr::BufferMemoryEx<rbCollidable> b_collidable;
 	btr::BufferMemoryEx<uint> b_fluid_counter;
-	btr::BufferMemoryEx<rbFluid> b_fluid;
 
 	btr::BufferMemoryEx<BufferManage> b_manager;
 	btr::BufferMemoryEx<uint> b_rb_memory_list;

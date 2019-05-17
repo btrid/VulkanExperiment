@@ -15,15 +15,11 @@ SET output=../../binary
 %exe% %include% %option% -o %output%/Rigid_MakeCollidable.comp.spv Rigid_MakeCollidable.comp
 %exe% %include% %option% -o %output%/Rigid_CollisionDetective.comp.spv Rigid_CollisionDetective.comp
 %exe% %include% %option% -o %output%/Rigid_CollisionDetective_Fluid.comp.spv Rigid_CollisionDetective_Fluid.comp
-%exe% %include% %option% -o %output%/Rigid_CalcDensity.comp.spv Rigid_CalcDensity.comp
 %exe% %include% %option% -o %output%/Rigid_CalcPressure.comp.spv Rigid_CalcPressure.comp
 %exe% %include% %option% -o %output%/Rigid_CalcCenterMass.comp.spv Rigid_CalcCenterMass.comp
 %exe% %include% %option% -o %output%/Rigid_MakeTransformMatrix.comp.spv Rigid_MakeTransformMatrix.comp
 %exe% %include% %option% -o %output%/Rigid_UpdateParticleBlock.comp.spv Rigid_UpdateParticleBlock.comp
 %exe% %include% %option% -o %output%/Rigid_UpdateRigidbody.comp.spv Rigid_UpdateRigidbody.comp
-
-%exe% %include% %option% -o %output%/Rigid_CalcDensity.comp.spv Rigid_CalcDensity_2.comp
-%exe% %include% %option% -o %output%/Rigid_CalcPressure.comp.spv Rigid_CalcPressure_2.comp
 
 %exe% %include% %option% -o %output%/RigidMake_Register.comp.spv RigidMake_Register.comp
 %exe% %include% %option% -o %output%/RigidMake_MakeJFA.comp.spv RigidMake_MakeJFA.comp
