@@ -37,7 +37,7 @@ uvec4 neighor_check_list[] =
 	uvec4(2,6,4,4), // straight_wall
 };
 
-shared uint s_active[1024*11+1000];
+shared uint s_active[1024*4];
 shared uvec2 s_active_counter;
 
 void explore(in ivec2 pos, in uint dir_type)
