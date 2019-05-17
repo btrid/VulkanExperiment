@@ -67,9 +67,7 @@ void explore(in ivec2 pos, in uint dir_type)
 		bvec4 is_wall = notEqual(neighbor.xxxx & wall_bit, uvec4(0));
 		uvec4 is_open = uvec4(is_path) * uvec4(is_wall.xy, 1-ivec2(dir_type%2));
 
-		bool is_path_advance = ((~neighbor) & (1u << dir_type)) != 0;
-		bool is_wall_advance = all(notEqual(neighbor.xx & path_bit.zw, uvec2(0)));
-		uint is_advance = uint(is_path_advance) * uint(!is_wall_advance);
+		uint is_advance = uint(((~neighbor) & (1u << dir_type)) != 0) * uint(any(is_path));
 
 
 		uint num = is_open.x+is_open.y+is_open.z+is_open.w + is_advance;
