@@ -40,11 +40,11 @@ void main()
 				continue;
 			}
 
-			move += normalize(rela_pos) * calcWeight(length(rela_pos)) * b_fluid[fj_id].density;
+			move -= normalize(rela_pos) * calcWeight(length(rela_pos)) * b_fluid[fj_id].density;
 		}
 	}}
 
-	b_rbParticle[p_id].pos += move;
+	b_rbParticle[p_id].pos_old -= move*0.01;
 
 
 }

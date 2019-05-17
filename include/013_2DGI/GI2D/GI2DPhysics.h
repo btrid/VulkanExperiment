@@ -10,7 +10,7 @@
 
 struct GI2DPhysics
 {
-#define COLLIDABLE_NUM (4)
+#define COLLIDABLE_NUM (8)
 	enum Shader
 	{
 		Shader_ToFluid,
@@ -163,7 +163,7 @@ struct GI2DPhysics
 
 	enum
 	{
-		RB_NUM_MAX = 1024,
+		RB_NUM_MAX = 1024*2,
 		RB_PARTICLE_BLOCK_NUM_MAX = RB_NUM_MAX * 16,
 		RB_PARTICLE_BLOCK_SIZE = 64, // shader‚à64‘O’ñ‚Ì•”•ª‚ª‚ ‚é
 		RB_PARTICLE_NUM = RB_PARTICLE_BLOCK_NUM_MAX * RB_PARTICLE_BLOCK_SIZE,

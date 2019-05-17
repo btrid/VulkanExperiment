@@ -4,7 +4,7 @@
 #if defined(USE_Rigidbody2D)
 
 #define RB_PARTICLE_BLOCK_SIZE (64)
-#define COLLIDABLE_NUM (4)
+#define COLLIDABLE_NUM (8)
 #define RB_DT (0.016)
 #define RB_GRAVITY_DT (vec2(0., 0.0025))
 //#define RB_DT (0.0016)
@@ -17,11 +17,11 @@
 
 float calcWeightImpl(in float distance, in float influenceRadius)
 {
-	return max((influenceRadius / distance) - 1., 0.);
+	return max((distance / influenceRadius) - 1., 0.);
 }
 float calcWeight(in float distance)
 {
-	return calcWeightImpl(distance, k_delimiter);
+	return calcWeightImpl(distance, 0.5);
 }
 
 
