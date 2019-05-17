@@ -1,0 +1,51 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_Rigidbody2D 0
+#define USE_GI2D 1
+#include "GI2D.glsl"
+#include "Rigidbody2D.glsl"
+
+layout (local_size_x = RB_PARTICLE_BLOCK_SIZE) in;
+
+void main() 
+{
+	uint pb_id = b_pb_update_list[b_world.cpu_index*b_manager.pb_list_size+gl_WorkGroupID.x];
+	uint p_id = pb_id*RB_PARTICLE_BLOCK_SIZE + gl_LocalInvocationID.x;
+	if(b_rbParticle[p_id].contact_index == -1){ return; }
+
+	uint r_id = b_rbParticle_map[pb_id];
+	if((b_rigidbody[r_id].flag & RB_FLAG_FLUID) == 0){ return; }
+
+	vec2 pos = b_rbParticle[p_id].pos;
+	float density[9];
+	for(int y = -1; y <= 1; y++)
+	for(int x = -1; x <= 1; x++)
+	{{
+		ivec2 map_index = ivec2(pos) + ivec2(x, y);
+		if(any(lessThan(map_index, ivec2(0))) || any(greaterThanEqual(map_index, u_gi2d_info.m_resolution.xy)))
+		{
+			density[(x+1) + (y+1)*3] = 100.;
+			continue;
+		}
+		int findex = map_index.x + map_index.y * u_gi2d_info.m_resolution.x;
+		density[(x+1) + (y+1)*3] = b_fluid_counter[findex];
+	}}
+	vec2 subpos = fract(pos);
+	vec2 move = vec2(0.);
+	for(int y = -1; y <= 1; y++)
+	for(int x = -1; x <= 1; x++)
+	{{
+		if(x==0 && y==0){ continue; }
+		vec2 cell_subpos = vec2(x,y)+0.5;
+		vec2 dir = subpos - cell_subpos;
+		float gradiant = density[(x+1) + (y+1)*3] - density[4];
+		move += gradiant * normalize(dir);
+	}}
+
+
+	b_rbParticle[p_id].pos_old -= move*0.01;
+
+
+}
+
