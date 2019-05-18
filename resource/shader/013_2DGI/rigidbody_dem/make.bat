@@ -21,6 +21,9 @@ SET output=../../binary
 %exe% %include% %option% -o %output%/Rigid_UpdateParticleBlock.comp.spv Rigid_UpdateParticleBlock.comp
 %exe% %include% %option% -o %output%/Rigid_UpdateRigidbody.comp.spv Rigid_UpdateRigidbody.comp
 
+%exe% %include% %option% -o %output%/RigidMake_MakeRigidBody.vert.spv RigidMake_MakeRigidBody.vert
+%exe% %include% %option% -o %output%/RigidMake_MakeRigidBody.geom.spv RigidMake_MakeRigidBody.geom
+%exe% %include% %option% -o %output%/RigidMake_MakeRigidBody.frag.spv RigidMake_MakeRigidBody.frag
 %exe% %include% %option% -o %output%/RigidMake_Register.comp.spv RigidMake_Register.comp
 %exe% %include% %option% -o %output%/RigidMake_MakeJFA.comp.spv RigidMake_MakeJFA.comp
 %exe% %include% %option% -o %output%/RigidMake_MakeSDF.comp.spv RigidMake_MakeSDF.comp

@@ -66,6 +66,10 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 			"Voronoi_MakeTriangle2.comp.spv",
 			"Voronoi_SortTriangle.comp.spv",
 			"Voronoi_MakePath.comp.spv",
+
+			"RigidMake_MakeRigidBody.vert.spv",
+			"RigidMake_MakeRigidBody.geom.spv",
+			"RigidMake_MakeRigidBody.frag.spv",
 		};
 		static_assert(array_length(name) == Shader_Num, "not equal shader num");
 
@@ -118,6 +122,23 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 	{
 		vk::DescriptorSetLayout layouts[] = {
 			m_desc_layout[DescLayout_Data].get(),
+			m_gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data),
+			m_desc_layout[DescLayout_Make].get(),
+		};
+		vk::PushConstantRange ranges[] = {
+			vk::PushConstantRange(vk::ShaderStageFlagBits::eVertex, 0, 4),
+		};
+
+		vk::PipelineLayoutCreateInfo pipeline_layout_info;
+		pipeline_layout_info.setSetLayoutCount(array_length(layouts));
+		pipeline_layout_info.setPSetLayouts(layouts);
+		pipeline_layout_info.setPushConstantRangeCount(array_length(ranges));
+		pipeline_layout_info.setPPushConstantRanges(ranges);
+		m_pipeline_layout[PipelineLayout_MakeRB_Graphics] = m_context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+	}
+	{
+		vk::DescriptorSetLayout layouts[] = {
+			m_desc_layout[DescLayout_Data].get(),
 		};
 		vk::PushConstantRange ranges[] = {
 			vk::PushConstantRange(vk::ShaderStageFlagBits::eCompute, 0, 16),
@@ -133,7 +154,7 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 
 	// pipeline
 	{
-		std::array<vk::PipelineShaderStageCreateInfo, Shader_Num> shader_info;
+		std::array<vk::PipelineShaderStageCreateInfo, 11> shader_info;
 		shader_info[0].setModule(m_shader[Shader_ToFluid].get());
 		shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[0].setPName("main");
@@ -217,6 +238,120 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 		m_pipeline[Pipeline_Voronoi_MakePath] = std::move(compute_pipeline[10]);
 	}
 
+	// graphics pipeline
+	{
+		// レンダーパス
+		{
+			// sub pass
+			vk::SubpassDescription subpass;
+			subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+			subpass.setInputAttachmentCount(0);
+			subpass.setPInputAttachments(nullptr);
+			subpass.setColorAttachmentCount(0);
+			subpass.setPColorAttachments(nullptr);
+
+			vk::RenderPassCreateInfo renderpass_info;
+			renderpass_info.setAttachmentCount(0);
+			renderpass_info.setPAttachments(nullptr);
+			renderpass_info.setSubpassCount(1);
+			renderpass_info.setPSubpasses(&subpass);
+
+			m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
+		}
+		{
+			vk::FramebufferCreateInfo framebuffer_info;
+			framebuffer_info.setRenderPass(m_render_pass.get());
+			framebuffer_info.setAttachmentCount(0);
+			framebuffer_info.setPAttachments(nullptr);
+			framebuffer_info.setWidth(1024);
+			framebuffer_info.setHeight(1024);
+			framebuffer_info.setLayers(1);
+
+			m_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
+		}
+
+		{
+			vk::PipelineShaderStageCreateInfo shader_info[] =
+			{
+				vk::PipelineShaderStageCreateInfo()
+				.setModule(m_shader[Shader_MakeRB_DestructWall_VS].get())
+				.setPName("main")
+				.setStage(vk::ShaderStageFlagBits::eVertex),
+				vk::PipelineShaderStageCreateInfo()
+				.setModule(m_shader[Shader_MakeRB_DestructWall_GS].get())
+				.setPName("main")
+				.setStage(vk::ShaderStageFlagBits::eGeometry),
+				vk::PipelineShaderStageCreateInfo()
+				.setModule(m_shader[Shader_MakeRB_DestructWall_FS].get())
+				.setPName("main")
+				.setStage(vk::ShaderStageFlagBits::eFragment),
+			};
+
+			// assembly
+			vk::PipelineInputAssemblyStateCreateInfo assembly_info;
+			assembly_info.setPrimitiveRestartEnable(VK_FALSE);
+			assembly_info.setTopology(vk::PrimitiveTopology::ePointList);
+
+			// viewport
+			vk::Viewport viewport = vk::Viewport(0.f, 0.f, 1024.f, 1024.f, 0.f, 1.f);
+			vk::Rect2D scissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(1024, 1024));
+			vk::PipelineViewportStateCreateInfo viewportInfo;
+			viewportInfo.setViewportCount(1);
+			viewportInfo.setPViewports(&viewport);
+			viewportInfo.setScissorCount(1);
+			viewportInfo.setPScissors(&scissor);
+
+			vk::PipelineRasterizationStateCreateInfo rasterization_info;
+			rasterization_info.setPolygonMode(vk::PolygonMode::eFill);
+			rasterization_info.setFrontFace(vk::FrontFace::eCounterClockwise);
+			rasterization_info.setCullMode(vk::CullModeFlagBits::eNone);
+			rasterization_info.setLineWidth(1.f);
+
+			vk::PipelineMultisampleStateCreateInfo sample_info;
+			sample_info.setRasterizationSamples(vk::SampleCountFlagBits::e1);
+
+			vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
+			depth_stencil_info.setDepthTestEnable(VK_FALSE);
+			depth_stencil_info.setDepthWriteEnable(VK_FALSE);
+			depth_stencil_info.setDepthCompareOp(vk::CompareOp::eGreaterOrEqual);
+			depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
+			depth_stencil_info.setStencilTestEnable(VK_FALSE);
+
+			std::vector<vk::PipelineColorBlendAttachmentState> blend_state = {
+				vk::PipelineColorBlendAttachmentState()
+				.setBlendEnable(VK_FALSE)
+				.setColorWriteMask(vk::ColorComponentFlagBits::eR
+					| vk::ColorComponentFlagBits::eG
+					| vk::ColorComponentFlagBits::eB
+					| vk::ColorComponentFlagBits::eA)
+			};
+			vk::PipelineColorBlendStateCreateInfo blend_info;
+			blend_info.setAttachmentCount((uint32_t)blend_state.size());
+			blend_info.setPAttachments(blend_state.data());
+
+			vk::PipelineVertexInputStateCreateInfo vertex_input_info;
+
+			std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =
+			{
+				vk::GraphicsPipelineCreateInfo()
+				.setStageCount(array_length(shader_info))
+				.setPStages(shader_info)
+				.setPVertexInputState(&vertex_input_info)
+				.setPInputAssemblyState(&assembly_info)
+				.setPViewportState(&viewportInfo)
+				.setPRasterizationState(&rasterization_info)
+				.setPMultisampleState(&sample_info)
+				.setLayout(m_pipeline_layout[PipelineLayout_MakeRB_Graphics].get())
+				.setRenderPass(m_render_pass.get())
+				.setPDepthStencilState(&depth_stencil_info)
+				.setPColorBlendState(&blend_info),
+			};
+			auto graphics_pipeline = context->m_device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info);
+			m_pipeline[Pipeline_MakeRB_DestructWall] = std::move(graphics_pipeline[0]);
+
+		}
+
+	}
 	{
 		b_world = m_context->m_storage_memory.allocateMemory<World>({ 1,{} });
 		b_rigidbody = m_context->m_storage_memory.allocateMemory<Rigidbody>({ RB_NUM_MAX,{} });
@@ -375,7 +510,7 @@ void GI2DPhysics::make(vk::CommandBuffer cmd, const uvec4& box)
 	rbParticle _def;
 	_def.contact_index = -1;
 	_def.color = color;
-	_def.is_active = false;
+	_def.flag = 0;
 	_def.density = 0.f;
 	std::vector<vec2> pos(particle_num);
 	std::vector<rbParticle> pstate((particle_num+63)/64*64, _def);
@@ -397,7 +532,7 @@ void GI2DPhysics::make(vk::CommandBuffer cmd, const uvec4& box)
 			{
 				pstate[i].color = edgecolor;
 			}
-			pstate[i].is_active = true;
+			pstate[i].flag |= RBP_FLAG_ACTIVE;
 
 			center_of_mass += pos[i];
 			size_max = glm::max(pos[i], size_max);

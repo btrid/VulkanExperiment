@@ -26,9 +26,12 @@ struct GI2DPhysics
 		Shader_Voronoi_MakeTriangle2,
 		Shader_Voronoi_SortTriangleVertex,
 
-//		Shader_RB_DestructWall,
-
 		Shader_Voronoi_MakePath,
+
+		Shader_MakeRB_DestructWall_VS,
+		Shader_MakeRB_DestructWall_GS,
+		Shader_MakeRB_DestructWall_FS,
+
 		Shader_Num,
 	};
 
@@ -38,8 +41,10 @@ struct GI2DPhysics
 		PipelineLayout_ToFluidWall,
 
 		PipelineLayout_MakeRB,
+		PipelineLayout_MakeRB_Graphics,
 
 		PipelineLayout_Voronoi,
+
 		PipelineLayout_Num,
 	};
 	enum Pipeline
@@ -57,6 +62,8 @@ struct GI2DPhysics
 		Pipeline_Voronoi_MakeTriangle2,
 		Pipeline_Voronoi_SortTriangleVertex,
 		Pipeline_Voronoi_MakePath,
+
+		Pipeline_MakeRB_DestructWall,
 		Pipeline_Num,
 	};
 
@@ -87,10 +94,8 @@ struct GI2DPhysics
 
 		uint flag;
 		uint _p1;
-		uint _p2;
-		uint _p3;
-		ivec2 size_min;
-		ivec2 size_max;
+		i16vec2 size_min;
+		i16vec2 size_max;
 
 		vec4 R;
 
@@ -98,6 +103,8 @@ struct GI2DPhysics
 		i64vec4 Apq_work;
 	};
 
+#define RBP_FLAG_ACTIVE (1)
+#define RBP_FLAG_COLLIDABLE (2)
 	struct rbParticle
 	{
 		vec2 relative_pos;
@@ -112,7 +119,7 @@ struct GI2DPhysics
 		uint contact_index;
 		float density;
 		uint color;
-		uint is_active;
+		uint flag;
 	};
 
 	struct rbCollidable
@@ -184,6 +191,9 @@ struct GI2DPhysics
 	std::array<vk::UniqueShaderModule, Shader_Num> m_shader;
 	std::array<vk::UniquePipelineLayout, PipelineLayout_Num> m_pipeline_layout;
 	std::array<vk::UniquePipeline, Pipeline_Num> m_pipeline;
+
+	vk::UniqueRenderPass m_render_pass;
+	vk::UniqueFramebuffer m_framebuffer;
 
 	btr::BufferMemoryEx<World> b_world;
 	btr::BufferMemoryEx<Rigidbody> b_rigidbody;

@@ -40,6 +40,7 @@ struct rbWorld
 };
 
 #define RB_FLAG_FLUID (1)
+#define CM_WORK_PRECISION (65535.)
 struct Rigidbody
 {
 	uint pnum;
@@ -48,10 +49,8 @@ struct Rigidbody
 
 	uint flag;
 	uint _p1;
-	uint _p2;
-	uint _p3;
-	ivec2 size_min;
-	ivec2 size_max;
+	i16vec2 size_min;
+	i16vec2 size_max;
 
 	vec4 R;
 
@@ -59,6 +58,8 @@ struct Rigidbody
 	i64vec4 Apq_work;
 };
 
+#define RBP_FLAG_ACTIVE (1)
+#define RBP_FLAG_COLLIDABLE (2)
 struct rbParticle
 {
 	vec2 relative_pos;
@@ -73,7 +74,7 @@ struct rbParticle
 	uint contact_index;
 	float density;
 	uint color;
-	uint is_active;
+	uint flag;
 
 };
 struct rbCollidable

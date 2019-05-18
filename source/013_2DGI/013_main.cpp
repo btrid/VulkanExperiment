@@ -249,6 +249,7 @@ int rigidbody()
 	gi2d_desc.RenderHeight = 1024;
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context, gi2d_desc);
 	std::shared_ptr<GI2DSDF> gi2d_sdf_context = std::make_shared<GI2DSDF>(gi2d_context);
+	std::shared_ptr<GI2DPathContext> gi2d_path_context = std::make_shared<GI2DPathContext>(gi2d_context);
 	std::shared_ptr<GI2DPhysics> gi2d_physics_context = std::make_shared<GI2DPhysics>(context, gi2d_context);
 	std::shared_ptr<GI2DPhysicsDebug> gi2d_physics_debug = std::make_shared<GI2DPhysicsDebug>(gi2d_physics_context, app.m_window->getFrontBuffer());
 
@@ -313,13 +314,14 @@ int rigidbody()
 					}
 				}
 
-
 				gi2d_debug.executeMakeFragment(cmd);
-//				gi2d_make_hierarchy.executeMakeFragmentMap(cmd);
 				gi2d_make_hierarchy.executeMakeFragmentMapAndSDF(cmd, gi2d_sdf_context);
 				gi2d_make_hierarchy.executeHierarchy(cmd);
 				gi2d_make_hierarchy.executeMakeSDF(cmd, gi2d_sdf_context);
 //				gi2d_make_hierarchy.executeRenderSDF(cmd, gi2d_sdf_context, app.m_window->getFrontBuffer());
+
+//				gi2d_make_hierarchy.executeMakeReachMap(cmd, gi2d_path_context);
+//				gi2d_debug.executeDrawReachMap(cmd, gi2d_path_context, app.m_window->getFrontBuffer());
 
 				gi2d_physics_proc.execute(cmd, gi2d_physics_context, gi2d_sdf_context);
 				gi2d_physics_proc.executeToFragment(cmd, gi2d_physics_context);
