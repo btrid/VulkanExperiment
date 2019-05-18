@@ -18,91 +18,108 @@ layout(push_constant, std430) uniform InputVertex
 } constant;
 
 
-shared i16vec2 s_active[1024*4];
+ivec2 neighor_list[] =
+{
+	ivec2(-1, -1),
+	ivec2( 0, -1),
+	ivec2( 1, -1),
+	ivec2( 1,  0),
+	ivec2( 1,  1),
+	ivec2( 0,  1),
+	ivec2(-1,  1),
+	ivec2(-1,  0),
+};
+uvec4 neighor_check_list[] =
+{
+	uvec4(2,6,1,7), // diagonal_path 
+	uvec4(3,5,4,4), // diagonal_wall
+	uvec4(1,7,4,4), // straight_path
+	uvec4(2,6,4,4), // straight_wall
+};
+
+shared uint s_active[1024*4];
 shared uvec2 s_active_counter;
 
-void path(in i16vec2 current)
+void explore(in ivec2 pos, in uint dir_type)
 {
-	uint8_t neighbor = b_neighbor[current.x + current.y * constant.reso.x];
+	pos += neighor_list[dir_type];
+	int index = pos.x + pos.y * constant.reso.x;
 
-#if 0
-	const ivec2 g_offset[4] = { ivec2(1, 0), ivec2(-1, 0), ivec2(0, 1), ivec2(0, -1) };
-	for(int i = 0; i < 4; i++)
 	{
-		if((neighbor & uint8_t(1<<i)) != uint8_t(0))
+		// すでにチェック済みなら終わり
+		int bit = 1<<(index % 32);
+		if((atomicOr(b_closed[index / 32], bit) & bit) != 0)
 		{
-			continue;
+			return;
 		}
+		
+	}
 
-		ivec2 access = ivec2(current + g_offset[i]);
-		int access_1d = access.x + access.y * constant.reso.x;
+	// 新しい探索のチェック
+	{
+		uint neighbor = uint(b_neighbor[index]);
+		uvec4 path_check = (dir_type.xxxx + neighor_check_list[(dir_type%2)*2]) % uvec4(8);
+		uvec4 wall_check = (dir_type.xxxx + neighor_check_list[(dir_type%2)*2+1]) % uvec4(8);
+		uvec4 path_bit = uvec4(1)<<path_check;
+		uvec4 wall_bit = uvec4(1)<<wall_check;
+
+		bvec4 is_path = notEqual((~neighbor.xxxx) & path_bit, uvec4(0));
+		bvec4 is_wall = notEqual(neighbor.xxxx & wall_bit, uvec4(0));
+		uvec4 is_open = uvec4(is_path) * uvec4(is_wall.xy, 1-ivec2(dir_type%2));
+
+		uint is_advance = uint(((~neighbor) & (1u << dir_type)) != 0) * uint(any(is_path.zw));
 
 
-		int bit = 1<<(access_1d % 32);
-		if((atomicOr(b_close[access_1d / 32], bit) & bit) != 0)
+		uint num = is_open.x+is_open.y+is_open.z+is_open.w + is_advance;
+		if(num != 0)
 		{
-			continue;
+			uint active_index = atomicAdd(s_active_counter[0], num);
+			for(int i = 0; i < 4; i++)
+			{
+				if(is_open[i]==0){ continue; }
+				s_active[active_index++ % s_active.length()] = pos.x | (pos.y<<14) | (path_check[i] << 28);
+			}
+
+			if(is_advance != 0)
+			{
+				s_active[active_index++ % s_active.length()] = pos.x | (pos.y<<14) | (dir_type << 28);				
+			}
 		}
-
-		s_active[atomicAdd(s_active_counter[0], 1) % s_active.length()] = i16vec2(access);
 	}
-#else
-	// ほんのちょっと高速化 
-	ivec4 ok = ivec4(equal(u8vec4(neighbor)&(u8vec4(1)<<u8vec4(1,3,5,7)), u8vec4(0)));
-
-	ivec4 access_x = ivec4(current.xxxx) + ivec4(0, 1, 0, -1);
-	ivec4 access_y = ivec4(current.yyyy) + ivec4(-1, 0, 1, 0);
-	ivec4 access_1d = access_x + access_y * constant.reso.xxxx;
-
-	ivec4 map_index = access_1d / 32;
-	ivec4 bit = ivec4(1)<<(access_1d % 32);
-	for(int i = 0; i < 4; i ++)
-	{
-		if(ok[i]==0){continue;}
-		ok[i] = int((atomicOr(b_closed[map_index[i]], bit[i]) & bit[i]) == 0);
-	}
-
-	int num = ok.x+ok.y+ok.z+ok.w;
-	if(num == 0) { return; }
-	uint index = atomicAdd(s_active_counter[0], num);
-
-	uint count = 0;
-	for(int i = 0; i < 4; i++)
-	{
-		if(ok[i]==0){continue;}
-		s_active[(index+count) % s_active.length()] = i16vec2(access_x[i], access_y[i]);
-		count++;
-	}
-#endif
 }
+
 void main() 
 {
 	for(uint i = gl_LocalInvocationIndex; i < constant.reso.x*constant.reso.y/32; i+=gl_WorkGroupSize.x)
 	{
 		b_closed[i] = 0;
 	}
+	
 	if(gl_LocalInvocationIndex == 0)
 	{
 		s_active_counter = uvec2(0);
 	}
 
-	barrier();
-	memoryBarrierShared();
 	memoryBarrierBuffer();
+	memoryBarrierShared();
+	barrier();
 
-	if(gl_LocalInvocationIndex < constant.num.x)
+	if(gl_LocalInvocationIndex < constant.num.x*8)
 	{
-		path(constant.target[gl_LocalInvocationIndex]);
-	}
-	if(gl_LocalInvocationIndex < constant.num.y)
-	{
-		path(constant.random_search[gl_LocalInvocationIndex]);
+		ivec2 pos = ivec2(constant.target[gl_LocalInvocationIndex/8]);
+		uint dir_type = gl_LocalInvocationIndex%8;
+		uint neighbor = uint(b_neighbor[pos.x + pos.y * constant.reso.x]);
+		if((~neighbor & (1<<dir_type)) != 0)
+		{
+			explore(pos, dir_type);
+		}
 	}
 
-	for(int i = 0; i < 10000; i++)
+	for(int i = 0; i < constant._p.x; i++)
+//	for(int i = 0; i < 15; i++)
 	{
-		barrier();
 		memoryBarrierShared();
+		barrier();
 
 		uint accum = s_active_counter[0];
 		uint consume = s_active_counter[1];
@@ -110,7 +127,7 @@ void main()
 		if(count == 0){ break; }
 
 		bool is_active = gl_LocalInvocationIndex < count;
-		i16vec2 open = is_active ? s_active[(consume+gl_LocalInvocationIndex) % s_active.length()] : i16vec2(0);
+		uint open = is_active ? s_active[(consume+gl_LocalInvocationIndex) % s_active.length()] : 0;
 
 		barrier();
 
@@ -121,8 +138,9 @@ void main()
 
 		if(is_active)
 		{
-			path(open);
+			ivec2 pos = ivec2(open, open>>14) & ((1<<14)-1);
+			uint dir_type = uint((open>>28)&((1<<4)-1));
+			explore(pos, dir_type);
 		}
 	}
-
 }
