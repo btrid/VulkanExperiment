@@ -22,7 +22,9 @@ void main()
 	uvec2 reso = fs_in.minmax.zw - fs_in.minmax.xy;
 
 	// 削除
-	vec3 rgb = getRGB(b_fragment[index]);
+//	vec3 rgb = getRGB(b_fragment[index]);
+	setRGB(b_fragment[index], vec3(0., 0., 1.));
+	vec3 rgb = vec3(0., 0., 1.);
 	setDiffuse(b_fragment[index], false);
 
 	// particle生成

@@ -258,9 +258,9 @@ int rigidbody()
 	GI2DPhysics_procedure gi2d_physics_proc(gi2d_physics_context, gi2d_sdf_context);
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
+	gi2d_debug.executeMakeFragment(cmd);
 	gi2d_physics_context->executeMakeVoronoi(cmd);
 	gi2d_physics_context->executeMakeVoronoiPath(cmd);
-	gi2d_debug.executeMakeFragment(cmd);
 	app.setup();
 
 	while (true)
@@ -303,15 +303,15 @@ int rigidbody()
 
 				if (context->m_window->getInput().m_keyboard.isOn('A'))
 				{
-//					physics_world->make(cmd, uvec4(255, 500, 32, 32));
-					for (int y = 0; y < 20; y++)
-					{
-						for (int x = 0; x < 20; x++)
-						{
-							gi2d_physics_context->make(cmd, uvec4(200 + x * 16, 370 - y * 16, 16, 16));
+// 					for (int y = 0; y < 20; y++){
+// 					for (int x = 0; x < 20; x++){
+// 						gi2d_physics_context->make(cmd, uvec4(200 + x * 16, 370 - y * 16, 16, 16));
+// 					}}
+				}
 
-						}
-					}
+				if (context->m_window->getInput().m_keyboard.isOn('A'))
+				{
+					gi2d_physics_context->executeDestructWall(cmd);
 				}
 
 				gi2d_make_hierarchy.executeMakeFragmentMapAndSDF(cmd, gi2d_sdf_context);

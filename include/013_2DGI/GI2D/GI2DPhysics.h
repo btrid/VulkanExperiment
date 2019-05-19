@@ -41,7 +41,7 @@ struct GI2DPhysics
 		PipelineLayout_ToFluidWall,
 
 		PipelineLayout_MakeRB,
-		PipelineLayout_MakeRB_Graphics,
+		PipelineLayout_DestructWall,
 
 		PipelineLayout_Voronoi,
 
@@ -178,6 +178,7 @@ struct GI2DPhysics
 	GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context);
 	void make(vk::CommandBuffer cmd, const uvec4& box);
 	void execute(vk::CommandBuffer cmd);
+	void executeDestructWall(vk::CommandBuffer cmd);
 	void executeMakeFluidWall(vk::CommandBuffer cmd);
 	void executeMakeVoronoi(vk::CommandBuffer cmd);
 	void executeMakeVoronoiPath(vk::CommandBuffer cmd);
