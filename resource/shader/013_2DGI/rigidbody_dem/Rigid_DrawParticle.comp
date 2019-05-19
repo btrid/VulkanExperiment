@@ -1,0 +1,54 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_Rigidbody2D 0
+#define USE_GI2D 1
+#include "GI2D.glsl"
+#include "Rigidbody2D.glsl"
+
+#define USE_RenderTarget 2
+#include "applib/System.glsl"
+
+
+layout (local_size_x = RB_PARTICLE_BLOCK_SIZE) in;
+void main() 
+{
+	uint pb_id = b_pb_update_list[b_world.gpu_index*b_manager.pb_list_size+gl_WorkGroupID.x];
+	uint p_id = pb_id*RB_PARTICLE_BLOCK_SIZE + gl_LocalInvocationID.x;
+	if(b_rbParticle[p_id].contact_index == -1){ return; }
+
+	vec2 pos = b_rbParticle[p_id].pos;
+		
+	ivec2 index = ivec2(pos);
+	if(any(lessThan(index, ivec2(0))) || any(greaterThanEqual(index, u_gi2d_info.m_resolution.xy))){ return; }
+
+	vec4 color = vec4(unpackUnorm4x8(b_rbParticle[p_id].color).xyz, 1.);
+
+	uint r_id = b_rbParticle_map[pb_id];
+	vec4 xaxis = (mat2(b_rigidbody[r_id].R.xy, b_rigidbody[r_id].R.zw) * vec2(1., 0.)).xyxy * vec2(0.25, -0.25).xxyy;
+	vec4 yaxis = (mat2(b_rigidbody[r_id].R.xy, b_rigidbody[r_id].R.zw) * vec2(0., 1.)).xyxy * vec2(0.25, -0.25).xxyy;
+
+	vec4 px = pos.xxxx + xaxis.xxzz + yaxis.xzxz;
+	vec4 py = pos.yyyy + xaxis.yyww + yaxis.ywyw;
+
+	ivec4 ipx = ivec4(px);
+	ivec4 ipy = ivec4(py);
+	ivec4 ii = ipx+ipy*u_gi2d_info.m_resolution.x;
+
+	vec2 p1 = vec2(px.x, py.x);
+	vec2 p2 = vec2(px.y, py.y);
+	vec2 p3 = vec2(px.z, py.z);
+	vec2 p4 = vec2(px.w, py.w);
+
+	float d1 = distance(trunc(p1) + 0.5, p1);
+	float d2 = distance(trunc(p2) + 0.5, p2);
+	float d3 = distance(trunc(p3) + 0.5, p3);
+	float d4 = distance(trunc(p4) + 0.5, p4);
+	if(d1 <= 0.4) { imageStore(i_render_target, ivec2(ipx.x, ipy.x), color); }
+	if(d2 <= 0.4) { imageStore(i_render_target, ivec2(ipx.y, ipy.y), color); }
+	if(d3 <= 0.4) { imageStore(i_render_target, ivec2(ipx.z, ipy.z), color); }
+	if(d4 <= 0.4) { imageStore(i_render_target, ivec2(ipx.w, ipy.w), color); }
+
+//	b_fragment[index.x+index.y*u_gi2d_info.m_resolution.x] = f;
+}
+
