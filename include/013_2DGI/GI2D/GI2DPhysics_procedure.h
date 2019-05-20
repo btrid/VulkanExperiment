@@ -16,7 +16,7 @@ struct GI2DPhysics_procedure
 
 	enum Shader
 	{
-		Shader_ToFragment,
+		Shader_DrawParticle,
 
 		Shader_RBMakeParticle,
 		Shader_RBMakeCollidable,
@@ -39,11 +39,12 @@ struct GI2DPhysics_procedure
 	{
 		PipelineLayout_Rigid,
 		PipelineLayout_MakeWallCollision,
+		PipelineLayout_DrawParticle,
 		PipelineLayout_Num,
 	};
 	enum Pipeline
 	{
-		Pipeline_ToFragment,
+		Pipeline_DrawParticle,
 
 		Pipeline_RBMakeParticle,
 		Pipeline_RBMakeCollidable,
@@ -68,7 +69,7 @@ struct GI2DPhysics_procedure
 	void _executeMakeCollidableParticle(vk::CommandBuffer &cmd, const std::shared_ptr<GI2DPhysics>& world);
 	void _executeMakeCollidableWall(vk::CommandBuffer &cmd, const std::shared_ptr<GI2DPhysics>& world, const std::shared_ptr<GI2DSDF>& sdf);
 
-	void executeToFragment(vk::CommandBuffer cmd, const std::shared_ptr<GI2DPhysics>& world);
+	void executeDrawParticle(vk::CommandBuffer cmd, const std::shared_ptr<GI2DPhysics>& world, const std::shared_ptr<RenderTarget>& render_target);
 	void executeDrawVoronoi(vk::CommandBuffer cmd, const std::shared_ptr<GI2DPhysics>& world);
 
 

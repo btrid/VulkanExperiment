@@ -182,7 +182,7 @@ int pathFinding()
 
 			// gi2d
 			{
-				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
+				auto cmd = context->m_cmd_pool->allocCmdOnetime(0, "cmd_gi2d");
 				gi2d_context->execute(cmd);
 				crowd_context->execute(cmd);
 				gi2d_debug.executeMakeFragment(cmd);
@@ -249,6 +249,7 @@ int rigidbody()
 	gi2d_desc.RenderHeight = 1024;
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context, gi2d_desc);
 	std::shared_ptr<GI2DSDF> gi2d_sdf_context = std::make_shared<GI2DSDF>(gi2d_context);
+	std::shared_ptr<GI2DPathContext> gi2d_path_context = std::make_shared<GI2DPathContext>(gi2d_context);
 	std::shared_ptr<GI2DPhysics> gi2d_physics_context = std::make_shared<GI2DPhysics>(context, gi2d_context);
 	std::shared_ptr<GI2DPhysicsDebug> gi2d_physics_debug = std::make_shared<GI2DPhysicsDebug>(gi2d_physics_context, app.m_window->getFrontBuffer());
 
@@ -256,8 +257,8 @@ int rigidbody()
 	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
 	GI2DPhysics_procedure gi2d_physics_proc(gi2d_physics_context, gi2d_sdf_context);
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-	std::shared_ptr<GI2DFluid> gi2d_Fluid = std::make_shared<GI2DFluid>(context, gi2d_context);
 
+	gi2d_debug.executeMakeFragment(cmd);
 	gi2d_physics_context->executeMakeVoronoi(cmd);
 	gi2d_physics_context->executeMakeVoronoiPath(cmd);
 	app.setup();
@@ -302,28 +303,28 @@ int rigidbody()
 
 				if (context->m_window->getInput().m_keyboard.isOn('A'))
 				{
-//					physics_world->make(cmd, uvec4(255, 500, 32, 32));
-					for (int y = 0; y < 20; y++)
-					{
-						for (int x = 0; x < 20; x++)
-						{
-							gi2d_physics_context->make(cmd, uvec4(200 + x * 16, 570 - y * 16, 16, 16));
-
-						}
-					}
+// 					for (int y = 0; y < 20; y++){
+// 					for (int x = 0; x < 20; x++){
+// 						gi2d_physics_context->make(cmd, uvec4(200 + x * 16, 370 - y * 16, 16, 16));
+// 					}}
 				}
 
+				if (context->m_window->getInput().m_keyboard.isOn('A'))
+				{
+					gi2d_physics_context->executeDestructWall(cmd);
+				}
 
-				gi2d_debug.executeMakeFragment(cmd);
-//				gi2d_make_hierarchy.executeMakeFragmentMap(cmd);
 				gi2d_make_hierarchy.executeMakeFragmentMapAndSDF(cmd, gi2d_sdf_context);
 				gi2d_make_hierarchy.executeHierarchy(cmd);
 				gi2d_make_hierarchy.executeMakeSDF(cmd, gi2d_sdf_context);
-				gi2d_make_hierarchy.executeRenderSDF(cmd, gi2d_sdf_context, app.m_window->getFrontBuffer());
+//				gi2d_make_hierarchy.executeRenderSDF(cmd, gi2d_sdf_context, app.m_window->getFrontBuffer());
 
-// 				gi2d_physics_proc.execute(cmd, gi2d_physics_context, gi2d_sdf_context);
-// 				gi2d_physics_proc.executeToFragment(cmd, gi2d_physics_context);
-// 				gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
+//				gi2d_make_hierarchy.executeMakeReachMap(cmd, gi2d_path_context);
+//				gi2d_debug.executeDrawReachMap(cmd, gi2d_path_context, app.m_window->getFrontBuffer());
+
+				gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
+				gi2d_physics_proc.execute(cmd, gi2d_physics_context, gi2d_sdf_context);
+				gi2d_physics_proc.executeDrawParticle(cmd, gi2d_physics_context, app.m_window->getFrontBuffer());
 
 //				physics_world->executeMakeVoronoi(cmd);
 //				if (app.m_window->getInput().m_keyboard.isHold('A'))

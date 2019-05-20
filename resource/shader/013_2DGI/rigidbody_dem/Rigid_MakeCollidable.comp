@@ -38,12 +38,7 @@ void main()
 		b_collidable[i*COLLIDABLE_NUM + ci] = c;
 	}
 
-	uint fi = atomicAdd(b_fluid_counter[i], 1);
-	if(fi < COLLIDABLE_NUM)
-	{
-//		b_fluid[i*COLLIDABLE_NUM + fi].pos = pos;
-//		b_fluid[i*COLLIDABLE_NUM + fi].p_id = p_id;
-	}
+	atomicAdd(b_fluid_counter[i], 1);
 
 }
 

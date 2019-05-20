@@ -51,7 +51,7 @@ void setRGB(inout Fragment f, in vec3 rgb)
 {
 	f.data = (f.data & (3<<30)) | packRGB(rgb);
 }
-vec3 getRGB(inout Fragment f)
+vec3 getRGB(in Fragment f)
 {
 	return unpackRGB(f.data);
 }
@@ -234,84 +234,6 @@ vec2 intersectRayRay(in vec2 as, in vec2 ad, in vec2 bs, in vec2 bd)
 	return as + u * ad;
 }
 
-bool marchToAABB(inout vec2 p, in vec2 d, in vec2 bmin, in vec2 bmax)
-{
-
-	if(all(lessThan(p, bmax)) 
-	&& all(greaterThan(p, bmin)))
-	{
-		// AABBの中にいる
-		return true;
-	}
-
-	float tmin = 0.;
-	float tmax = 10e6;
-	for (int i = 0; i < 2; i++)
-	{
-		if (abs(d[i]) < 10e-6)
-		{
-			// 光線はスラブに対して平行。原点がスラブの中になければ交点無し。
-			if (p[i] < bmin[i] || p[i] > bmax[i])
-			{
-				return false;
-			}
-		}
-		else
-		{
-			float ood = 1. / d[i];
-			float t1 = (bmin[i] - p[i]) * ood;
-			float t2 = (bmax[i] - p[i]) * ood;
-
-			// t1が近い平面との交差、t2が遠い平面との交差になる
-			float near = min(t1, t2);
-			float far = max(t1, t2);
-
-			// スラブの交差している感覚との交差を計算
-			tmin = max(near, tmin);
-			tmax = max(far, tmax);
-
-			if (tmin > tmax) {
-				return false;
-			}
-		}
-	}
-	float dist = tmin;
-	p += d*dist;
-	return true;
-
-}
-
-bool intersectRayAABB(in vec2 p, in vec2 d, in vec2 bmin, in vec2 bmax, out float d_min, out float d_max)
-{
-	vec2 tmin = vec2(0.);
-	vec2 tmax = vec2(0.);
-	for (int i = 0; i < 2; i++)
-	{
-		if (abs(d[i]) < 10e-6)
-		{
-			// 光線はスラブに対して平行。原点がスラブの中になければ交点無し。
-			if (p[i] < bmin[i] || p[i] > bmax[i])
-			{
-				p = vec2(-9999999999.f);
-				return false;
-			}
-			tmin[i] = 0.;
-			tmax[i] = 99999.;
-		}
-		else
-		{
-			float ood = 1. / d[i];
-			float t1 = (bmin[i] - p[i]) * ood;
-			float t2 = (bmax[i] - p[i]) * ood;
-
-			tmin[i] = min(t1, t2);
-			tmax[i] = max(t1, t2);
-		}
-	}
-	d_min = max(tmin[0], tmin[1]);
-	d_max = min(tmax[0], tmax[1]);
-	return d_min <= d_max;
-}
 vec2 rotate(in float angle)
 {
 	float c = cos(angle);
@@ -344,34 +266,5 @@ vec2 calcDir(in float angle)
 	return dir * min(abs(inv_dir.x), abs(inv_dir.y));
 #endif
 }
-uint64_t popcnt(in uint64_t n)
-{
-    uint64_t c = (n & 0x5555555555555555ul) + ((n>>1) & 0x5555555555555555ul);
-    c = (c & 0x3333333333333333ul) + ((c>>2) & 0x3333333333333333ul);
-    c = (c & 0x0f0f0f0f0f0f0f0ful) + ((c>>4) & 0x0f0f0f0f0f0f0f0ful);
-    c = (c & 0x00ff00ff00ff00fful) + ((c>>8) & 0x00ff00ff00ff00fful);
-    c = (c & 0x0000ffff0000fffful) + ((c>>16) & 0x0000ffff0000fffful);
-    c = (c & 0x00000000fffffffful) + ((c>>32) & 0x00000000fffffffful);
-    return c;
-}
-uint64_t popcnt4(in u64vec4 n)
-{
-    u64vec4 c = (n & 0x5555555555555555ul) + ((n>>1) & 0x5555555555555555ul);
-    c = (c & 0x3333333333333333ul) + ((c>>2) & 0x3333333333333333ul);
-    c = (c & 0x0f0f0f0f0f0f0f0ful) + ((c>>4) & 0x0f0f0f0f0f0f0f0ful);
-    c = (c & 0x00ff00ff00ff00fful) + ((c>>8) & 0x00ff00ff00ff00fful);
-    c = (c & 0x0000ffff0000fffful) + ((c>>16) & 0x0000ffff0000fffful);
-    c = (c & 0x00000000fffffffful) + ((c>>32) & 0x00000000fffffffful);
-    return c.x+c.y+c.z+c.w;
-}
-u64vec4 popcnt44(in u64vec4 n)
-{
-    u64vec4 c = (n & 0x5555555555555555ul) + ((n>>1) & 0x5555555555555555ul);
-    c = (c & 0x3333333333333333ul) + ((c>>2) & 0x3333333333333333ul);
-    c = (c & 0x0f0f0f0f0f0f0f0ful) + ((c>>4) & 0x0f0f0f0f0f0f0f0ful);
-    c = (c & 0x00ff00ff00ff00fful) + ((c>>8) & 0x00ff00ff00ff00fful);
-    c = (c & 0x0000ffff0000fffful) + ((c>>16) & 0x0000ffff0000fffful);
-    c = (c & 0x00000000fffffffful) + ((c>>32) & 0x00000000fffffffful);
-    return c;
-}
+
 #endif //GI2D_

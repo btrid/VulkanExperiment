@@ -20,17 +20,13 @@ SET output=../binary
 %exe% %include% %option% -o %output%/GI2DSDF_MakeSDF.comp.spv GI2DSDF_MakeSDF.comp
 %exe% %include% %option% -o %output%/GI2DSDF_RenderSDF.comp.spv GI2DSDF_RenderSDF.comp
 
-rem %exe% %include% %option% -o %output%/GI2DPath_MakeReachMap.comp.spv GI2DPath_MakeReachMap.comp
-rem %exe% %include% %option% -o %output%/GI2DPath_MakeReachMap.comp.spv GI2DPath_MakeReachMap_jps.comp
- %exe% %include% %option% -o %output%/GI2DPath_MakeReachMap.comp.spv GI2DPath_MakeReachMap_jps_2.comp
-rem %exe% %include% %option% -o %output%/GI2DPath_MakeReachMap.comp.spv GI2DPath_MakeReachMap_jps_3.comp
+%exe% %include% %option% -o %output%/GI2DPath_MakeReachMap.comp.spv GI2DPath_MakeReachMap.comp
 %exe% %include% %option% -o %output%/GI2DPath_MakeReachMap_Precompute.comp.spv GI2DPath_MakeReachMap_Precompute.comp
 
 %exe% %include% %option% -o %output%/GI2DDebug_DrawFragment.comp.spv GI2DDebug_DrawFragment.comp
 %exe% %include% %option% -o %output%/GI2DDebug_DrawFragmentMap.comp.spv GI2DDebug_DrawFragmentMap.comp
 %exe% %include% %option% -o %output%/GI2DDebug_MakeLight.comp.spv GI2DDebug_MakeLight.comp
 %exe% %include% %option% -o %output%/GI2DDebug_DrawReachMap.comp.spv GI2DDebug_DrawReachMap.comp
-rem %exe% %include% %option% -o %output%/GI2DDebug_DrawReachMap.comp.spv GI2DDebug_DrawReachMap_jps.comp
 
 
 %exe% %include% %option% -o %output%/Radiosity_Clear.comp.spv Radiosity_Clear.comp
