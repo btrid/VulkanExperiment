@@ -53,6 +53,8 @@
 #pragma comment(lib, "vulkan-1.lib")
 #pragma comment(lib, "imgui.lib")
 
+#define VMA_IMPLEMENTATION
+#include <VulkanMemoryAllocator/src/vk_mem_alloc.h>
 
 PathContextCPU pathmake_file()
 {
@@ -233,6 +235,21 @@ int rigidbody()
 
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
+
+// 	VmaAllocatorCreateInfo vma_allocater_info = {};
+// 	vma_allocater_info.physicalDevice = (VkPhysicalDevice)gpu.getHandle();
+// 	vma_allocater_info.device = (VkDevice)device.getHandle();
+// 	vma_allocater_info.flags = 0;
+// 	vma_allocater_info.pVulkanFunctions = nullptr;
+// 	vma_allocater_info.pAllocationCallbacks = nullptr;
+// 	vma_allocater_info.pDeviceMemoryCallbacks = nullptr;
+// 	vma_allocater_info.frameInUseCount = 0;
+// 	vma_allocater_info.pHeapSizeLimit = nullptr;
+// 	vma_allocater_info.preferredLargeHeapBlockSize = 0;
+// 	vma_allocater_info.pRecordSettings = nullptr;
+// 
+// 	VmaAllocator allocater;
+// 	vmaCreateAllocator(&vma_allocater_info, &allocater);
 
 	app::AppDescriptor app_desc;
 	app_desc.m_gpu = gpu;
