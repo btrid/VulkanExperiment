@@ -1,0 +1,112 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Common.glsl"
+#include "btrlib/Math.glsl"
+
+#define USE_GI2D 0
+#include "GI2D.glsl"
+#define USE_GI2D_SDF 1
+#include "GI2DSDF.glsl"
+
+layout (local_size_x = 8, local_size_y = 8) in;
+
+layout(push_constant) uniform Input
+{
+	int distance;
+	uint offset;
+} constant;
+
+shared i16vec2 s_cell[10][10];
+
+
+// state.x = invalid cell
+// state.y = inner or outer
+void nearest(inout i16vec2 cell, inout float current_d, in vec2 current, in bvec2 state, in ivec2 offset)
+{
+	uvec2 target = (gl_GlobalInvocationID.xy+offset) * constant.distance;
+	target = (target % u_gi2d_info.m_resolution.xy) + (target / u_gi2d_info.m_resolution.xy);
+
+	if(any(greaterThanEqual(target, u_gi2d_info.m_resolution.xy))){ return;}
+
+	ivec2 local_target = ivec2(gl_LocalInvocationID.xy) + ivec2(1) + offset;
+	i16vec2 target_cell = s_cell[local_target.y][local_target.x];
+	bvec2 target_state = notEqual(target_cell & i16vec2(0x8000), i16vec2(0));
+
+	if(target_state.y == state.y)
+	{
+		if(target_state.x)
+		{
+			return;
+		}
+		target = target_cell & i16vec2(0x7fff);
+	}
+
+	float d = distance(vec2(target), current);
+	if(d < current_d)
+	{
+		current_d = d;
+		cell = i16vec2(target);
+	}
+
+}
+void main() 
+{
+	uvec2 current = gl_GlobalInvocationID.xy * constant.distance;
+	current = (current % u_gi2d_info.m_resolution.xy) + (current / u_gi2d_info.m_resolution.xy);
+	i16vec2 cell = b_jfa[current.x + current.y*u_gi2d_info.m_resolution.x];
+	s_cell[gl_LocalInvocationID.y+1][gl_LocalInvocationID.x+1] = cell;
+
+	if( gl_LocalInvocationID.y < 2)
+	{
+		// 上下を埋める
+		uint xx = current.x;
+		uint yy = gl_WorkGroupID.y*gl_WorkGroupSize.y + (gl_LocalInvocationID.y-1);
+		yy = yy * constant.distance;
+		yy = (yy % u_gi2d_info.m_resolution.y) + (yy / u_gi2d_info.m_resolution.y);
+
+		i16vec2 target_cell = any(greaterThanEqual(uvec2(xx, yy), u_gi2d_info.m_resolution.xy)) ? i16vec2(0xffff) : b_jfa[xx + yy*u_gi2d_info.m_resolution.x];
+		s_cell[gl_LocalInvocationID.y*9][gl_LocalInvocationID.x+1] = target_cell;
+	}
+
+	if( gl_LocalInvocationIndex < 20)
+	{
+		// 左右を埋める
+		uint _x = gl_LocalInvocationIndex / 10;
+		uint _y = gl_LocalInvocationIndex % 10;
+		uint xx = gl_WorkGroupID.x*8 + (_x-1);
+		uint yy = gl_WorkGroupID.y*8 + (_y-1);
+		uvec2 target = uvec2(xx, yy) * constant.distance;
+		target = (target % u_gi2d_info.m_resolution.xy) + (target / u_gi2d_info.m_resolution.xy);
+
+		i16vec2 target_cell = any(greaterThanEqual(target, u_gi2d_info.m_resolution.xy)) ? i16vec2(0xffff) : b_jfa[target.x + target.y*u_gi2d_info.m_resolution.x];
+		s_cell[_y][_x*9] = target_cell;
+	}
+
+	memoryBarrierShared();
+	barrier();
+
+	if(any(greaterThanEqual(current, u_gi2d_info.m_resolution.xy))){ return; }
+
+	bvec2 state = notEqual(cell & i16vec2(0x8000), i16vec2(0));
+	cell = cell & i16vec2(0x7fff);
+
+	float d = !state.x ? distance(vec2(current), vec2(cell)) : 99999999.;
+	const float old_d = d;
+
+	const ivec3 offset = ivec3(-1, 0, 1);
+	nearest(cell, d, current, state, offset.xx);
+	nearest(cell, d, current, state, offset.xy);
+	nearest(cell, d, current, state, offset.xz);
+	nearest(cell, d, current, state, offset.yx);
+	nearest(cell, d, current, state, offset.yz);
+	nearest(cell, d, current, state, offset.zx);
+	nearest(cell, d, current, state, offset.zy);
+	nearest(cell, d, current, state, offset.zz);
+
+	if(d != old_d)
+	{
+		b_jfa[current.x + current.y*u_gi2d_info.m_resolution.x/* + constant.offset*/] = cell | i16vec2(0, int16_t(state.y)<<15);
+	}
+}
