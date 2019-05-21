@@ -180,8 +180,9 @@ layout(set=USE_Rigidbody2D, binding=18, std430) restrict buffer rbVoronoiPathBuf
 
 struct RBMakeParam
 {
-	uvec4 registered_num;
-	i16vec2 size;
+	uvec4 pb_num;
+//	uvec4 registered_num;
+	i16vec4 pow2size_minmax;
 };
 
 

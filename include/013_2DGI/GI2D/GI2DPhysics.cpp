@@ -790,7 +790,7 @@ void GI2DPhysics::executeDestructWall(vk::CommandBuffer cmd)
 					0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 				cmd.pushConstants<uvec2>(m_pipeline_layout[PipelineLayout_MakeRB].get(), vk::ShaderStageFlagBits::eCompute, 0, uvec2{ distance, 0});
-				cmd.dispatch(num.x, num.y, num.z);
+//				cmd.dispatch(num.x, num.y, num.z);
 			}
 		}
 
@@ -807,7 +807,7 @@ void GI2DPhysics::executeDestructWall(vk::CommandBuffer cmd)
 					0, nullptr, array_length(to_read), to_read, 0, nullptr);
 			}
 
-			cmd.pushConstants<uint>(m_pipeline_layout[PipelineLayout_MakeRB].get(), vk::ShaderStageFlagBits::eCompute, 0, block_num);
+//			cmd.pushConstants<uint>(m_pipeline_layout[PipelineLayout_MakeRB].get(), vk::ShaderStageFlagBits::eCompute, 0, block_num);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeRB_Register].get());
 			auto num = app::calcDipatchGroups(uvec3(1, 1, 1), uvec3(1, 1, 1));
@@ -827,7 +827,7 @@ void GI2DPhysics::executeDestructWall(vk::CommandBuffer cmd)
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader | vk::PipelineStageFlagBits::eDrawIndirect, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
-			cmd.pushConstants<uvec4>(m_pipeline_layout[PipelineLayout_MakeRB].get(), vk::ShaderStageFlagBits::eCompute, 0, uvec4{ block_num, 0, area });
+//			cmd.pushConstants<uvec4>(m_pipeline_layout[PipelineLayout_MakeRB].get(), vk::ShaderStageFlagBits::eCompute, 0, uvec4{ block_num, 0, area });
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeRB_MakeSDF].get());
 			cmd.dispatchIndirect(b_make_dispatch_param.getInfo().buffer, b_make_dispatch_param.getInfo().offset);
 		}

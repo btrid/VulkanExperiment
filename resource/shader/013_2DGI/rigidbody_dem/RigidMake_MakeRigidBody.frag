@@ -27,14 +27,16 @@ void main()
 	vec3 rgb = vec3(0., 0., 1.);
 	setDiffuse(b_fragment[index], false);
 
-	// particle生成
-	atomicAdd(b_make_rigidbody.pnum, 1);
+	// 重心
 	atomicAdd(b_make_rigidbody.cm_work.x, int64_t(p_index.x*CM_WORK_PRECISION));
 	atomicAdd(b_make_rigidbody.cm_work.y, int64_t(p_index.y*CM_WORK_PRECISION));
-	b_make_particle[p_index.x + p_index.y * reso.x].flag = RBP_FLAG_ACTIVE;
-	b_make_particle[p_index.x + p_index.y * reso.x].pos = vec2(gl_FragCoord.xy);
-	b_make_particle[p_index.x + p_index.y * reso.x].pos_old = vec2(gl_FragCoord.xy);
-	b_make_particle[p_index.x + p_index.y * reso.x].color = packUnorm4x8(vec4(rgb, 1.));
+
+	// particle生成
+	uint index = atomicAdd(b_make_rigidbody.pnum, 1);
+	b_make_particle[index].flag = RBP_FLAG_ACTIVE;
+	b_make_particle[index].pos = vec2(gl_FragCoord.xy);
+	b_make_particle[index].pos_old = vec2(gl_FragCoord.xy);
+	b_make_particle[index].color = packUnorm4x8(vec4(rgb, 1.));
 
 	// sdf用
 	b_make_jfa_cell[p_index.x + p_index.y * reso.x] = i16vec2(0xfffe);
