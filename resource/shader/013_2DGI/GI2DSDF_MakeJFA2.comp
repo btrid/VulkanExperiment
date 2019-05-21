@@ -21,12 +21,9 @@ layout(push_constant) uniform Input
 shared i16vec2 s_cell[10][10];
 
 
-// state.x = invalid cell
-// state.y = inner or outer
 void nearest(inout i16vec2 cell, inout float current_d, in vec2 current, in bvec2 state, in ivec2 offset)
 {
-	uvec2 target = (gl_GlobalInvocationID.xy+offset) * constant.distance;
-	target = (target % u_gi2d_info.m_resolution.xy) + (target / u_gi2d_info.m_resolution.xy);
+	uvec2 target = uvec2(current) + offset * constant.distance;
 
 	if(any(greaterThanEqual(target, u_gi2d_info.m_resolution.xy))){ return;}
 
@@ -53,7 +50,7 @@ void nearest(inout i16vec2 cell, inout float current_d, in vec2 current, in bvec
 }
 void main() 
 {
-	uvec2 current = gl_GlobalInvocationID.xy * constant.distance;
+	uvec2 current = ivec2(gl_GlobalInvocationID.xy) * constant.distance;
 	current = (current % u_gi2d_info.m_resolution.xy) + (current / u_gi2d_info.m_resolution.xy);
 	i16vec2 cell = b_jfa[current.x + current.y*u_gi2d_info.m_resolution.x];
 	s_cell[gl_LocalInvocationID.y+1][gl_LocalInvocationID.x+1] = cell;
@@ -62,7 +59,7 @@ void main()
 	{
 		// 上下を埋める
 		uint xx = current.x;
-		uint yy = gl_WorkGroupID.y*gl_WorkGroupSize.y + (gl_LocalInvocationID.y-1);
+		uint yy = gl_WorkGroupID.y*gl_WorkGroupSize.y + (gl_LocalInvocationID.y-1) + gl_LocalInvocationID.y*gl_WorkGroupSize.y;
 		yy = yy * constant.distance;
 		yy = (yy % u_gi2d_info.m_resolution.y) + (yy / u_gi2d_info.m_resolution.y);
 
@@ -75,7 +72,7 @@ void main()
 		// 左右を埋める
 		uint _x = gl_LocalInvocationIndex / 10;
 		uint _y = gl_LocalInvocationIndex % 10;
-		uint xx = gl_WorkGroupID.x*8 + (_x-1);
+		uint xx = gl_WorkGroupID.x*8 + (_x-1) + _x*gl_WorkGroupSize.x;
 		uint yy = gl_WorkGroupID.y*8 + (_y-1);
 		uvec2 target = uvec2(xx, yy) * constant.distance;
 		target = (target % u_gi2d_info.m_resolution.xy) + (target / u_gi2d_info.m_resolution.xy);
