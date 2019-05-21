@@ -320,11 +320,11 @@ int rigidbody()
 
 				if (context->m_window->getInput().m_keyboard.isOn('A'))
 				{
-					for (int y = 0; y < 20; y++){
-					for (int x = 0; x < 20; x++){
-						gi2d_physics_context->make(cmd, uvec4(200 + x * 16, 370 - y * 16, 16, 16));
-					}}
-//					gi2d_physics_context->executeDestructWall(cmd);
+// 					for (int y = 0; y < 20; y++){
+// 					for (int x = 0; x < 20; x++){
+// 						gi2d_physics_context->make(cmd, uvec4(200 + x * 32, 420 - y * 16, 16, 16));
+// 					}}
+					gi2d_physics_context->executeDestructWall(cmd);
 				}
 
 

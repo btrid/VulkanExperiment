@@ -163,6 +163,7 @@ struct GI2DPhysics
 
 	struct RBMakeParam
 	{
+		uvec4 pb_num;
 		uvec4 registered_num;
 		i16vec4 pow2size_minmax;
 	};
