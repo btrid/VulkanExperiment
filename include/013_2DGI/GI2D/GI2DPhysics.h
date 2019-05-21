@@ -161,6 +161,11 @@ struct GI2DPhysics
 		int16_t	cell[4];
 	};
 
+	struct RBMakeParam
+	{
+		uvec4 registered_num;
+		i16vec4 pow2size_minmax;
+	};
 	enum
 	{
 		RB_NUM_MAX = 1024*4,
@@ -222,6 +227,7 @@ struct GI2DPhysics
 	btr::BufferMemoryEx<rbParticle> b_make_particle;
 	btr::BufferMemoryEx<i16vec2> b_make_jfa_cell;
 	btr::BufferMemoryEx<uvec4> b_make_dispatch_param;
+	btr::BufferMemoryEx<RBMakeParam> b_make_param;
 
 	World m_world;
 

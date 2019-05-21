@@ -21,8 +21,9 @@ void nearest(inout i16vec2 new_cell, inout float current_d, in i16vec2 current, 
 {
 	if(all(greaterThanEqual(target, i16vec2(0))) && all(lessThan(target, constant.reso)))
 	{
-		target = b_make_jfa_cell[target.x + target.y*constant.reso.x];
-		if(target.x== -32768){ return; }
+		i16vec2 cell = b_make_jfa_cell[target.x + target.y*constant.reso.x];
+		if(cell.x == 0xfffe){ return; }
+		if(cell.x != 0xffff){ target = cell; }
 	}
 
 	{
@@ -40,10 +41,9 @@ void main()
 	const i16vec2 current = i16vec2(gl_GlobalInvocationID.xy);
 	const i16vec3 cd = i16vec3(constant.distance) * i16vec3(-1, 0, 1);
 	i16vec2 cell = b_make_jfa_cell[current.x + current.y*constant.reso.x];
-	if(all(equal(current, cell))){ return; }
+	if(cell.x == 0xffff){ return; } // particleじゃないのでしない
 
-
-	float d = (cell.x != -32768) ? distance(vec2(current), vec2(cell)) : 99999999.;
+	float d = (cell.x >= 0) ? distance(vec2(current), vec2(cell)) : 99999999.;
 	const float old_d = d;
 	// 重力のY方向優先
 	nearest(cell, d, current, current + cd.xy);

@@ -26,6 +26,10 @@ layout(location=1) out A
 	flat i16vec4 voronoi_minmax;
 };
 
+uint align(in uint value, in uint align_num)
+{
+	return (value + (align_num-1)) & ~(align_num -1);
+}
 
 void main()
 {
@@ -37,5 +41,7 @@ void main()
 
 	b_make_rigidbody.size_min = voronoi_minmax.xy;
 	b_make_rigidbody.size_max = voronoi_minmax.zw;
+
+	b_make_param.size = voronoi_minmax.xy - voronoi_minmax.xy;
 
 }

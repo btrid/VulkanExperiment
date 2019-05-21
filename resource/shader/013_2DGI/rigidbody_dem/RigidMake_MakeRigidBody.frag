@@ -36,4 +36,7 @@ void main()
 	b_make_particle[p_index.x + p_index.y * reso.x].pos_old = vec2(gl_FragCoord.xy);
 	b_make_particle[p_index.x + p_index.y * reso.x].color = packUnorm4x8(vec4(rgb, 1.));
 
+	// sdf用
+	b_make_jfa_cell[p_index.x + p_index.y * reso.x] = i16vec2(0xfffe);
+
 }

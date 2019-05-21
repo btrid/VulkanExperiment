@@ -43,6 +43,7 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 			vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
 			vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageBuffer, 1, stage),
 			vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
+			vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
 		};
 		vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 		desc_layout_info.setBindingCount(array_length(binding));
@@ -420,6 +421,8 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 		b_make_particle = m_context->m_storage_memory.allocateMemory<rbParticle>({ MAKE_RB_SIZE_MAX,{} });
 		b_make_jfa_cell = m_context->m_storage_memory.allocateMemory<i16vec2>({ MAKE_RB_JFA_CELL, {} });
 		b_make_dispatch_param = m_context->m_storage_memory.allocateMemory<uvec4>({ 1,{} });
+		b_make_param = m_context->m_storage_memory.allocateMemory<RBMakeParam>({ 1,{} });
+
 		{
 			vk::DescriptorSetLayout layouts[] = {
 				m_desc_layout[DescLayout_Make].get(),
@@ -435,6 +438,7 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 				b_make_particle.getInfo(),
 				b_make_jfa_cell.getInfo(),
 				b_make_dispatch_param.getInfo(),
+				b_make_param.getInfo(),
 			};
 
 			vk::WriteDescriptorSet write[] =
@@ -546,21 +550,14 @@ void GI2DPhysics::make(vk::CommandBuffer cmd, const uvec4& box)
 	auto area = jfa_max - jfa_min;
 	assert(area.x*area.y <= MAKE_RB_JFA_CELL);
 
-	std::vector<i16vec2> jfa_cell(area.x*area.y);
-	for (int y = 0; y<area.y; y++)
-	{
-		for (int x = 0; x < area.x; x++)
-		{
-			jfa_cell[x + y * area.x] = i16vec2(x, y);
-		}
-	}
+	std::vector<i16vec2> jfa_cell(area.x*area.y, i16vec2(0xffff));
 	for (int32_t i = 0; i < particle_num; i++)
 	{
 		pstate[i].relative_pos = pos[i] - center_of_mass;
 		pstate[i].local_pos = pos[i] - vec2(jfa_min);
 
 		ivec2 local_pos = ivec2(pstate[i].local_pos);
-		jfa_cell[local_pos.x + local_pos.y*area.x] = i16vec2(-32768);
+		jfa_cell[local_pos.x + local_pos.y*area.x] = i16vec2(0xfffe);
 	}
 
 
@@ -703,7 +700,7 @@ void GI2DPhysics::execute(vk::CommandBuffer cmd)
 
 void GI2DPhysics::executeDestructWall(vk::CommandBuffer cmd)
 {
-	DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__, DebugLabel::k_color_debug);
+	DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
 
 	{
 		{
@@ -726,6 +723,7 @@ void GI2DPhysics::executeDestructWall(vk::CommandBuffer cmd)
 		rb.Apq_work = ivec4(0);
 
 		cmd.updateBuffer<Rigidbody>(b_make_rigidbody.getInfo().buffer, b_make_rigidbody.getInfo().offset, rb);
+//		cmd.fillBuffer(b_make_jfa_cell.getInfo().buffer, b_make_jfa_cell.getInfo().offset, -1);
 
 		{
 			vk::BufferMemoryBarrier to_read[] = {
@@ -738,26 +736,36 @@ void GI2DPhysics::executeDestructWall(vk::CommandBuffer cmd)
 	}
 
 
-	vk::DescriptorSet descriptorsets[] = {
-		m_descset[DescLayout_Data].get(),
-		m_gi2d_context->getDescriptorSet(),
-		m_descset[DescLayout_Make].get(),
-	};
-
+	_label.insert("GI2DPhysics::DestructWall");
 	{
+
+		vk::DescriptorSet descriptorsets[] = {
+			m_descset[DescLayout_Data].get(),
+			m_gi2d_context->getDescriptorSet(),
+			m_descset[DescLayout_Make].get(),
+		};
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayout_DestructWall].get(), 0, array_length(descriptorsets), descriptorsets, 0, nullptr);
+		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_MakeRB_DestructWall].get());
+		cmd.pushConstants<int32_t>(m_pipeline_layout[PipelineLayout_DestructWall].get(), vk::ShaderStageFlagBits::eVertex, 0, 57);
+
 		vk::RenderPassBeginInfo render_begin_info;
 		render_begin_info.setRenderPass(m_render_pass.get());
 		render_begin_info.setFramebuffer(m_framebuffer.get());
 		render_begin_info.setRenderArea(vk::Rect2D({}, vk::Extent2D(1024, 1024)));
 		cmd.beginRenderPass(render_begin_info, vk::SubpassContents::eInline);
 
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayout_DestructWall].get(), 0, array_length(descriptorsets), descriptorsets, 0, nullptr);
-		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_MakeRB_DestructWall].get());
-		cmd.pushConstants<int32_t>(m_pipeline_layout[PipelineLayout_DestructWall].get(), vk::ShaderStageFlagBits::eVertex, 0, 57);
 		cmd.draw(1, 1, 0, 0);
 
 		cmd.endRenderPass();
 
+	}
+
+	{
+		vk::BufferMemoryBarrier to_read[] = {
+			b_make_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+		};
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+			0, nullptr, array_length(to_read), to_read, 0, nullptr);
 	}
 
 

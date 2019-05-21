@@ -43,8 +43,8 @@ void main()
 			b_make_dispatch_param = uvec4(constant.pb_num, 1, 1, 0);
 		}
 	}
-	barrier();
 	memoryBarrierShared();
+	barrier();
 
 	if(!s_ok)
 	{
@@ -72,8 +72,8 @@ void main()
 
 	}
 
-	barrier();
 	memoryBarrierShared();
+	barrier();
 
 		// bufferからメモリを取得
 	uint freelist_index  = (s_pb_id + gl_LocalInvocationIndex) % b_manager.pb_list_size;
