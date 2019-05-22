@@ -181,7 +181,7 @@ layout(set=USE_Rigidbody2D, binding=18, std430) restrict buffer rbVoronoiPathBuf
 struct RBMakeParam
 {
 	uvec4 pb_num;
-//	uvec4 registered_num;
+	uvec4 registered_num;
 	ivec2 rb_size;
 };
 
@@ -195,10 +195,7 @@ layout(set=USE_MakeRigidbody, binding=1, std430) restrict buffer MakeParticleBuf
 layout(set=USE_MakeRigidbody, binding=2, std430) restrict buffer MakeJFABuffer {
 	i16vec2 b_make_jfa_cell[];
 };
-layout(set=USE_MakeRigidbody, binding=3, std430) restrict buffer MakeDispatchParam {
-	uvec4 b_make_dispatch_param;
-};
-layout(set=USE_MakeRigidbody, binding=4, std430) restrict buffer RBMakeParamBuffer {
+layout(set=USE_MakeRigidbody, binding=3, std430) restrict buffer RBMakeParamBuffer {
 	RBMakeParam b_make_param;
 };
 #endif

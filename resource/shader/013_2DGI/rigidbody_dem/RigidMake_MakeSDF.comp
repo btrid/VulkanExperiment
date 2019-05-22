@@ -12,11 +12,6 @@ float rand(vec2 co){
 }
 layout (local_size_x = RB_PARTICLE_BLOCK_SIZE) in;
 
-layout(push_constant) uniform Input
-{
-	uint particle_block_num;
-	int p;
-} constant;
 
 void main()
 {

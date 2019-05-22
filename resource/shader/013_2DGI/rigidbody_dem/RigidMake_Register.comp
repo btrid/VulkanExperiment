@@ -8,12 +8,6 @@
 #include "Rigidbody2D.glsl"
 layout (local_size_x = 256) in;
 
-layout(push_constant) uniform Input
-{
-	uint pb_num;
-	int p;
-} constant;
-
 
 shared uint s_rb_id;
 shared uint s_pb_id;
@@ -22,7 +16,7 @@ shared uint s_pb_update_index;
 shared bool s_ok;
 void main() 
 {
-	if(gl_LocalInvocationIndex >= constant.pb_num) { return; }
+	if(gl_LocalInvocationIndex >= b_make_param.pb_num.x) { return; }
 
 	if(gl_LocalInvocationIndex == 0)
 	{
@@ -30,16 +24,16 @@ void main()
 		s_rb_update_index = b_update_counter[b_world.gpu_index*2+0].x;
 		s_pb_update_index = b_update_counter[b_world.gpu_index*2+1].x;
 
-		if(s_rb_update_index >= b_manager.rb_list_size || s_pb_update_index + constant.pb_num >= b_manager.pb_list_size)
+		if(s_rb_update_index >= b_manager.rb_list_size || s_pb_update_index + b_make_param.pb_num.x >= b_manager.pb_list_size)
 		{
 			// 追加できない
 			s_ok =false;
-			b_make_dispatch_param = uvec4(0);
+			b_make_param.registered_num = uvec4(0);
 		}
 		else
 		{
 			s_ok =true;
-			b_make_dispatch_param = uvec4(constant.pb_num, 1, 1, 0);
+			b_make_param.registered_num = uvec4(b_make_param.pb_num.x, 1, 1, 0);
 		}
 	}
 	memoryBarrierShared();
@@ -58,7 +52,7 @@ void main()
 		b_manager.rb_active_index = (b_manager.rb_active_index+1)%b_world.rigidbody_max;
 
 		s_pb_id = b_manager.pb_active_index;
-		b_manager.pb_active_index = (b_manager.pb_active_index+constant.pb_num)%b_world.particle_block_max;
+		b_manager.pb_active_index = (b_manager.pb_active_index+b_make_param.pb_num.x)%b_world.particle_block_max;
 
 
 		b_rigidbody[s_rb_id] = b_make_rigidbody;
@@ -67,7 +61,7 @@ void main()
 		b_update_counter[b_world.gpu_index*2+0].x += 1;
 		b_rb_update_list[b_world.gpu_index*b_manager.rb_list_size + s_rb_update_index] = s_rb_id;
 
-		b_update_counter[b_world.gpu_index*2+1].x += constant.pb_num;
+		b_update_counter[b_world.gpu_index*2+1].x += b_make_param.pb_num.x;
 
 	}
 

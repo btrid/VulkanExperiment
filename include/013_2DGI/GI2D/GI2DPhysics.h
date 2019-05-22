@@ -164,6 +164,7 @@ struct GI2DPhysics
 	struct RBMakeParam
 	{
 		uvec4 pb_num;
+		uvec4 registered_num;
 		ivec2 rb_size;
 	};
 	enum
@@ -226,7 +227,6 @@ struct GI2DPhysics
 	btr::BufferMemoryEx<Rigidbody> b_make_rigidbody;
 	btr::BufferMemoryEx<rbParticle> b_make_particle;
 	btr::BufferMemoryEx<i16vec2> b_make_jfa_cell;
-	btr::BufferMemoryEx<uvec4> b_make_dispatch_param;
 	btr::BufferMemoryEx<RBMakeParam> b_make_param;
 
 	World m_world;
