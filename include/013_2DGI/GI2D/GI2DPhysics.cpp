@@ -551,7 +551,6 @@ void GI2DPhysics::make(vk::CommandBuffer cmd, const uvec4& box)
 	_def.contact_index = -1;
 	_def.color = color;
 	_def.flag = 0;
-	_def.density = 0.f;
 	std::vector<vec2> pos(particle_num);
 	std::vector<rbParticle> pstate((particle_num+63)/64*64, _def);
 	uint32_t block_num = ceil(pstate.size() / (float)RB_PARTICLE_BLOCK_SIZE);
@@ -722,7 +721,7 @@ void GI2DPhysics::executeDestructWall(vk::CommandBuffer cmd)
 			Rigidbody rb;
 			rb.R = vec4(1.f, 0.f, 0.f, 1.f);
 			rb.cm = vec2(0.f);
-			rb.flag = 0;
+			rb.flag = RB_FLAG_FLUID;
 			//		rb.size_min = ;
 			//		rb.size_max = jfa_max;
 			rb.life = 100;
@@ -731,6 +730,14 @@ void GI2DPhysics::executeDestructWall(vk::CommandBuffer cmd)
 			rb.Apq_work = ivec4(0);
 
 			cmd.updateBuffer<Rigidbody>(b_make_rigidbody.getInfo().buffer, b_make_rigidbody.getInfo().offset, rb);
+		}
+
+		{
+			rbParticle _def;
+			_def.contact_index = -1;
+			_def.flag = 0;
+			std::vector<rbParticle> pstate(MAKE_RB_SIZE_MAX, _def);
+			cmd.updateBuffer<rbParticle>(b_make_particle.getInfo().buffer, b_make_particle.getInfo().offset, pstate);
 		}
 
 		{
@@ -746,6 +753,7 @@ void GI2DPhysics::executeDestructWall(vk::CommandBuffer cmd)
 			vk::BufferMemoryBarrier to_read[] = {
 				b_make_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 				b_make_jfa_cell.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+				b_make_particle.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead)
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
@@ -764,7 +772,7 @@ void GI2DPhysics::executeDestructWall(vk::CommandBuffer cmd)
 		};
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayout_DestructWall].get(), 0, array_length(descriptorsets), descriptorsets, 0, nullptr);
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_MakeRB_DestructWall].get());
-		cmd.pushConstants<int32_t>(m_pipeline_layout[PipelineLayout_DestructWall].get(), vk::ShaderStageFlagBits::eVertex, 0, 57);
+		cmd.pushConstants<int32_t>(m_pipeline_layout[PipelineLayout_DestructWall].get(), vk::ShaderStageFlagBits::eVertex, 0, 0);
 
 		vk::RenderPassBeginInfo render_begin_info;
 		render_begin_info.setRenderPass(m_render_pass.get());
@@ -826,7 +834,8 @@ void GI2DPhysics::executeDestructWall(vk::CommandBuffer cmd)
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeRB_Register].get());
 			auto num = app::calcDipatchGroups(uvec3(1, 1, 1), uvec3(1, 1, 1));
-			cmd.dispatchIndirect(b_make_param.getInfo().buffer, b_make_param.getInfo().offset + offsetof(RBMakeParam, pb_num));
+			cmd.dispatch(num.x, num.y, num.z);
+			//			cmd.dispatchIndirect(b_make_param.getInfo().buffer, b_make_param.getInfo().offset + offsetof(RBMakeParam, pb_num));
 
 		}
 
