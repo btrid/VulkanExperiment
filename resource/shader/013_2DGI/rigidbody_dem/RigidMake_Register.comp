@@ -12,7 +12,6 @@ layout(push_constant) uniform Input
 {
 	uint pb_num;
 	int p;
-	uvec2 reso;
 } constant;
 
 

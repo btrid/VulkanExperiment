@@ -16,7 +16,6 @@ layout(push_constant) uniform Input
 {
 	uint particle_block_num;
 	int p;
-	uvec2 reso;
 } constant;
 
 void main()
@@ -25,7 +24,7 @@ void main()
 	vec2 pos = p.local_pos;
 	ivec2 posi = ivec2(pos);
 
-	vec2 sdf = -vec2((b_make_jfa_cell[posi.x + posi.y*constant.reso.x]-posi));
+	vec2 sdf = -vec2((b_make_jfa_cell[posi.x + posi.y*b_make_param.rb_size.x]-posi));
 	sdf = (dot(sdf, sdf) >= 0.0001) ? normalize(sdf) : vec2(0., -1.);
 
 	p.sdf = sdf;

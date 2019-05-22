@@ -53,8 +53,8 @@
 #pragma comment(lib, "vulkan-1.lib")
 #pragma comment(lib, "imgui.lib")
 
-// #define VMA_IMPLEMENTATION
-// #include <VulkanMemoryAllocator/src/vk_mem_alloc.h>
+#define VMA_IMPLEMENTATION
+#include <VulkanMemoryAllocator/src/vk_mem_alloc.h>
 
 PathContextCPU pathmake_file()
 {
@@ -320,25 +320,25 @@ int rigidbody()
 
 				if (context->m_window->getInput().m_keyboard.isOn('A'))
 				{
-// 					for (int y = 0; y < 20; y++){
-// 					for (int x = 0; x < 20; x++){
-// 						gi2d_physics_context->make(cmd, uvec4(200 + x * 32, 420 - y * 16, 16, 16));
-// 					}}
-					gi2d_physics_context->executeDestructWall(cmd);
+					for (int y = 0; y < 20; y++){
+					for (int x = 0; x < 20; x++){
+						gi2d_physics_context->make(cmd, uvec4(200 + x * 32, 420 - y * 16, 16, 16));
+					}}
+//					gi2d_physics_context->executeDestructWall(cmd);
 				}
 
 
 				gi2d_make_hierarchy.executeMakeFragmentMapAndSDF(cmd, gi2d_sdf_context);
 				gi2d_make_hierarchy.executeHierarchy(cmd);
 				gi2d_make_hierarchy.executeMakeSDF(cmd, gi2d_sdf_context);
-				gi2d_make_hierarchy.executeRenderSDF(cmd, gi2d_sdf_context, app.m_window->getFrontBuffer());
+//				gi2d_make_hierarchy.executeRenderSDF(cmd, gi2d_sdf_context, app.m_window->getFrontBuffer());
 
 //				gi2d_make_hierarchy.executeMakeReachMap(cmd, gi2d_path_context);
 //				gi2d_debug.executeDrawReachMap(cmd, gi2d_path_context, app.m_window->getFrontBuffer());
 
-// 				gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
-// 				gi2d_physics_proc.execute(cmd, gi2d_physics_context, gi2d_sdf_context);
-// 				gi2d_physics_proc.executeDrawParticle(cmd, gi2d_physics_context, app.m_window->getFrontBuffer());
+ 				gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
+ 				gi2d_physics_proc.execute(cmd, gi2d_physics_context, gi2d_sdf_context);
+ 				gi2d_physics_proc.executeDrawParticle(cmd, gi2d_physics_context, app.m_window->getFrontBuffer());
 
 //				physics_world->executeMakeVoronoi(cmd);
 //				if (app.m_window->getInput().m_keyboard.isHold('A'))

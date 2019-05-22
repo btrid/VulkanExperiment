@@ -17,28 +17,28 @@ layout(location=1)in FSIn
 
 void main()
 {
-	int index = int(gl_FragCoord.x + gl_FragCoord.y * u_gi2d_info.m_resolution.x);
-	uvec2 p_index = uvec2(gl_FragCoord.xy) - fs_in.minmax.xy;
+	int f_index = int(gl_FragCoord.x + gl_FragCoord.y * u_gi2d_info.m_resolution.x);
+	uvec2 p_pos = uvec2(gl_FragCoord.xy) - fs_in.minmax.xy;
 	uvec2 reso = fs_in.minmax.zw - fs_in.minmax.xy;
 
 	// 削除
 //	vec3 rgb = getRGB(b_fragment[index]);
-	setRGB(b_fragment[index], vec3(0., 0., 1.));
+	setRGB(b_fragment[f_index], vec3(0., 0., 1.));
 	vec3 rgb = vec3(0., 0., 1.);
-	setDiffuse(b_fragment[index], false);
+	setDiffuse(b_fragment[f_index], false);
 
 	// 重心
-	atomicAdd(b_make_rigidbody.cm_work.x, int64_t(p_index.x*CM_WORK_PRECISION));
-	atomicAdd(b_make_rigidbody.cm_work.y, int64_t(p_index.y*CM_WORK_PRECISION));
+	atomicAdd(b_make_rigidbody.cm_work.x, int64_t(p_pos.x*CM_WORK_PRECISION));
+	atomicAdd(b_make_rigidbody.cm_work.y, int64_t(p_pos.y*CM_WORK_PRECISION));
 
 	// particle生成
-	uint index = atomicAdd(b_make_rigidbody.pnum, 1);
-	b_make_particle[index].flag = RBP_FLAG_ACTIVE;
-	b_make_particle[index].pos = vec2(gl_FragCoord.xy);
-	b_make_particle[index].pos_old = vec2(gl_FragCoord.xy);
-	b_make_particle[index].color = packUnorm4x8(vec4(rgb, 1.));
+	uint p_index = atomicAdd(b_make_rigidbody.pnum, 1);
+	b_make_particle[p_index].flag = RBP_FLAG_ACTIVE;
+	b_make_particle[p_index].pos = vec2(gl_FragCoord.xy);
+	b_make_particle[p_index].pos_old = vec2(gl_FragCoord.xy);
+	b_make_particle[p_index].color = packUnorm4x8(vec4(rgb, 1.));
 
 	// sdf用
-	b_make_jfa_cell[p_index.x + p_index.y * reso.x] = i16vec2(0xfffe);
+	b_make_jfa_cell[p_pos.x + p_pos.y * reso.x] = i16vec2(0xfffe);
 
 }

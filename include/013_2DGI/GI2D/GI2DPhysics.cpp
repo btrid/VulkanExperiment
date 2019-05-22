@@ -142,7 +142,7 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 			m_desc_layout[DescLayout_Data].get(),
 		};
 		vk::PushConstantRange ranges[] = {
-			vk::PushConstantRange(vk::ShaderStageFlagBits::eCompute, 0, 16),
+			vk::PushConstantRange(vk::ShaderStageFlagBits::eCompute, 0, 8),
 		};
 
 		vk::PipelineLayoutCreateInfo pipeline_layout_info;
@@ -573,8 +573,13 @@ void GI2DPhysics::make(vk::CommandBuffer cmd, const uvec4& box)
 	rb.cm_work = ivec2(0);
 	rb.Apq_work= ivec4(0);
 
+	uint32_t block_num = ceil(pstate.size() / (float)RB_PARTICLE_BLOCK_SIZE);
 
-	uint32_t block_num =  ceil(pstate.size() / (float)RB_PARTICLE_BLOCK_SIZE);
+	RBMakeParam make_param;
+	make_param.pb_num = uvec4(block_num, 1, 1, 0);
+	make_param.rb_size = area;
+	cmd.updateBuffer<RBMakeParam>(b_make_param.getInfo().buffer, b_make_param.getInfo().offset, make_param);
+
 	{
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MakeRB].get(), 0, getDescriptorSet(GI2DPhysics::DescLayout_Data), {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MakeRB].get(), 1, m_gi2d_context->getDescriptorSet(), {});
@@ -585,6 +590,7 @@ void GI2DPhysics::make(vk::CommandBuffer cmd, const uvec4& box)
 			cmd.updateBuffer<i16vec2>(b_make_jfa_cell.getInfo().buffer, b_make_jfa_cell.getInfo().offset, jfa_cell);
 			vk::BufferMemoryBarrier to_read[] = {
 				b_make_jfa_cell.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+				b_make_param.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
@@ -601,7 +607,7 @@ void GI2DPhysics::make(vk::CommandBuffer cmd, const uvec4& box)
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 					0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
-				cmd.pushConstants<uvec4>(m_pipeline_layout[PipelineLayout_MakeRB].get(), vk::ShaderStageFlagBits::eCompute, 0, uvec4{ distance, 0, area });
+				cmd.pushConstants<uvec2>(m_pipeline_layout[PipelineLayout_MakeRB].get(), vk::ShaderStageFlagBits::eCompute, 0, uvec2{ distance, 0 });
 				cmd.dispatch(num.x, num.y, num.z);
 			}
 		}
@@ -641,7 +647,7 @@ void GI2DPhysics::make(vk::CommandBuffer cmd, const uvec4& box)
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer|vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader|vk::PipelineStageFlagBits::eDrawIndirect, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
-			cmd.pushConstants<uvec4>(m_pipeline_layout[PipelineLayout_MakeRB].get(), vk::ShaderStageFlagBits::eCompute, 0, uvec4{ block_num, 0, area });
+			cmd.pushConstants<uvec2>(m_pipeline_layout[PipelineLayout_MakeRB].get(), vk::ShaderStageFlagBits::eCompute, 0, uvec2{ block_num, 0 });
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeRB_MakeSDF].get());
 			cmd.dispatchIndirect(b_make_dispatch_param.getInfo().buffer, b_make_dispatch_param.getInfo().offset);
 		}
