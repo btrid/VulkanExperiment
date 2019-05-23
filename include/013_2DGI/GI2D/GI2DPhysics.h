@@ -166,6 +166,7 @@ struct GI2DPhysics
 		uvec4 pb_num;
 		uvec4 registered_num;
 		ivec2 rb_size;
+		uint destruct_voronoi_id;
 	};
 	enum
 	{

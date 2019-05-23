@@ -125,15 +125,10 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 			m_gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data),
 			m_desc_layout[DescLayout_Make].get(),
 		};
-		vk::PushConstantRange ranges[] = {
-			vk::PushConstantRange(vk::ShaderStageFlagBits::eVertex, 0, 4),
-		};
 
 		vk::PipelineLayoutCreateInfo pipeline_layout_info;
 		pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 		pipeline_layout_info.setPSetLayouts(layouts);
-		pipeline_layout_info.setPushConstantRangeCount(array_length(ranges));
-		pipeline_layout_info.setPPushConstantRanges(ranges);
 		m_pipeline_layout[PipelineLayout_DestructWall] = m_context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 	}
 	{
@@ -741,10 +736,13 @@ void GI2DPhysics::executeDestructWall(vk::CommandBuffer cmd)
 		}
 
 		{
+			static uint s_id;
+			s_id = (s_id + 1) % 4096;
 			RBMakeParam make_param;
 			make_param.pb_num = uvec4(0, 1, 1, 0);
 			make_param.registered_num = uvec4(0,1,1,0);
 			make_param.rb_size = uvec2(0);
+			make_param.destruct_voronoi_id = s_id;
 			cmd.updateBuffer<RBMakeParam>(b_make_param.getInfo().buffer, b_make_param.getInfo().offset, make_param);
 		}
 		cmd.fillBuffer(b_make_jfa_cell.getInfo().buffer, b_make_jfa_cell.getInfo().offset, b_make_jfa_cell.getInfo().range, 0xffffffff);
@@ -772,7 +770,6 @@ void GI2DPhysics::executeDestructWall(vk::CommandBuffer cmd)
 		};
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayout_DestructWall].get(), 0, array_length(descriptorsets), descriptorsets, 0, nullptr);
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_MakeRB_DestructWall].get());
-		cmd.pushConstants<int32_t>(m_pipeline_layout[PipelineLayout_DestructWall].get(), vk::ShaderStageFlagBits::eVertex, 0, 0);
 
 		vk::RenderPassBeginInfo render_begin_info;
 		render_begin_info.setRenderPass(m_render_pass.get());

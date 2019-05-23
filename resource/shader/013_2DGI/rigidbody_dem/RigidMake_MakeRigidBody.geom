@@ -25,7 +25,7 @@ layout(location=0)out gl_PerVertex
 
 layout(location=1) in GS_IN
 {
-	flat int id;
+	flat uint id;
 	flat uint vertex_index;
 	flat i16vec4 voronoi_minmax;
 }

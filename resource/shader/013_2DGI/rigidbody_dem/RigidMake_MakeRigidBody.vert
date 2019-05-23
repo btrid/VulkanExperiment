@@ -21,7 +21,7 @@ layout(location=0) out gl_PerVertex
 
 layout(location=1) out A
 {
-	flat int id;
+	flat uint id;
 	flat uint vertex_index;
 	flat i16vec4 voronoi_minmax;
 };
@@ -35,9 +35,9 @@ void main()
 {
 	gl_Position = vec4(1.0);
 
-	id = constant.id;
+	id = b_make_param.destruct_voronoi_id;
 	vertex_index = gl_VertexIndex;
-	voronoi_minmax = b_voronoi_polygon[constant.id].minmax;
+	voronoi_minmax = b_voronoi_polygon[id].minmax;
 
 	b_make_rigidbody.size_min = voronoi_minmax.xy;
 	b_make_rigidbody.size_max = voronoi_minmax.zw;
