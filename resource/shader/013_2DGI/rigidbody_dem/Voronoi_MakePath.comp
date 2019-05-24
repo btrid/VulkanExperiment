@@ -10,7 +10,7 @@ layout (local_size_x = 1024) in;
 
 layout(push_constant) uniform Input
 {
-	int target[2];
+	ivec2 target;
 	uvec2 reso;
 } constant;
 

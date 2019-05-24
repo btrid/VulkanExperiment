@@ -38,7 +38,6 @@ struct GI2DPhysics
 	enum PipelineLayout
 	{
 		PipelineLayout_ToFluid,
-		PipelineLayout_ToFluidWall,
 
 		PipelineLayout_MakeRB,
 		PipelineLayout_DestructWall,

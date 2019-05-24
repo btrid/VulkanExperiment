@@ -13,6 +13,7 @@ layout(push_constant) uniform Input
 {
 	int distance;
 	int p;
+	uvec2 _p;
 } constant;
 
 

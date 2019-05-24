@@ -9,10 +9,6 @@
 #include "GI2D.glsl"
 #include "Rigidbody2D.glsl"
 
-layout(push_constant) uniform Input
-{
-	int id;
-} constant;
 
 layout(location=0) out gl_PerVertex
 {

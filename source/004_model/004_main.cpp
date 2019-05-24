@@ -13,7 +13,6 @@
 #include <memory>
 #include <filesystem>
 #include <btrlib/Singleton.h>
-#include <btrlib/sValidationLayer.h>
 #include <btrlib/cWindow.h>
 #include <btrlib/cThreadPool.h>
 #include <btrlib/cDebug.h>

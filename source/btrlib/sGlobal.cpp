@@ -1,5 +1,4 @@
 #include <btrlib/cWindow.h>
-#include <btrlib/sValidationLayer.h>
 
 #include <filesystem>
 #include <vector>
@@ -79,7 +78,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_messenger_callback(
 		// 		}
 	}
 	sprintf_s(message, message_size,
-		"%s Message ID Name %s\n %s",
+		"%s %s\n %s",
 		prefix,
 		callbackData->pMessageIdName,
 		callbackData->pMessage);
@@ -221,6 +220,7 @@ vk::UniqueShaderModule loadShaderUnique(const vk::Device& device, const std::str
 		.setCodeSize(buffer.size());
 	return device.createShaderModuleUnique(shaderInfo);
 }
+
 vk::UniqueDescriptorPool createDescriptorPool(vk::Device device, const std::vector<std::vector<vk::DescriptorSetLayoutBinding>>& bindings, uint32_t set_size)
 {
 	std::vector<vk::DescriptorPoolSize> pool_size(VK_DESCRIPTOR_TYPE_RANGE_SIZE);

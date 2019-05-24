@@ -90,17 +90,14 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 		pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 		pipeline_layout_info.setPSetLayouts(layouts);
 		m_pipeline_layout[PipelineLayout_ToFluid] = m_context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
-	}
-	{
-		vk::DescriptorSetLayout layouts[] = {
-			m_desc_layout[DescLayout_Data].get(),
-			m_gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data),
-		};
 
-		vk::PipelineLayoutCreateInfo pipeline_layout_info;
-		pipeline_layout_info.setSetLayoutCount(array_length(layouts));
-		pipeline_layout_info.setPSetLayouts(layouts);
-		m_pipeline_layout[PipelineLayout_ToFluidWall] = m_context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+#if USE_DEBUG_REPORT
+		vk::DebugUtilsObjectNameInfoEXT name_info;
+		name_info.pObjectName = "PipelineLayout_ToFluid";
+		name_info.objectType = vk::ObjectType::ePipelineLayout;
+		name_info.objectHandle = reinterpret_cast<uint64_t &>(m_pipeline_layout[PipelineLayout_ToFluid].get());
+		m_context->m_device->setDebugUtilsObjectNameEXT(name_info, m_context->m_dispach);
+#endif
 	}
 	{
 		vk::DescriptorSetLayout layouts[] = {
@@ -118,6 +115,14 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 		pipeline_layout_info.setPushConstantRangeCount(array_length(ranges));
 		pipeline_layout_info.setPPushConstantRanges(ranges);
 		m_pipeline_layout[PipelineLayout_MakeRB] = m_context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+
+#if USE_DEBUG_REPORT
+		vk::DebugUtilsObjectNameInfoEXT name_info;
+		name_info.pObjectName = "PipelineLayout_MakeRigidbody";
+		name_info.objectType = vk::ObjectType::ePipelineLayout;
+		name_info.objectHandle = reinterpret_cast<uint64_t &>(m_pipeline_layout[PipelineLayout_MakeRB].get());
+		m_context->m_device->setDebugUtilsObjectNameEXT(name_info, m_context->m_dispach);
+#endif
 	}
 	{
 		vk::DescriptorSetLayout layouts[] = {
@@ -130,13 +135,21 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 		pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 		pipeline_layout_info.setPSetLayouts(layouts);
 		m_pipeline_layout[PipelineLayout_DestructWall] = m_context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+
+#if USE_DEBUG_REPORT
+		vk::DebugUtilsObjectNameInfoEXT name_info;
+		name_info.pObjectName = "PipelineLayout_DestructWall";
+		name_info.objectType = vk::ObjectType::ePipelineLayout;
+		name_info.objectHandle = reinterpret_cast<uint64_t &>(m_pipeline_layout[PipelineLayout_DestructWall].get());
+		m_context->m_device->setDebugUtilsObjectNameEXT(name_info, m_context->m_dispach);
+#endif
 	}
 	{
 		vk::DescriptorSetLayout layouts[] = {
 			m_desc_layout[DescLayout_Data].get(),
 		};
 		vk::PushConstantRange ranges[] = {
-			vk::PushConstantRange(vk::ShaderStageFlagBits::eCompute, 0, 8),
+			vk::PushConstantRange(vk::ShaderStageFlagBits::eCompute, 0, 16),
 		};
 
 		vk::PipelineLayoutCreateInfo pipeline_layout_info;
@@ -145,6 +158,14 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 		pipeline_layout_info.setPushConstantRangeCount(array_length(ranges));
 		pipeline_layout_info.setPPushConstantRanges(ranges);
 		m_pipeline_layout[PipelineLayout_Voronoi] = m_context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+
+#if USE_DEBUG_REPORT
+		vk::DebugUtilsObjectNameInfoEXT name_info;
+		name_info.pObjectName = "PipelineLayout_Voronoi";
+		name_info.objectType = vk::ObjectType::ePipelineLayout;
+		name_info.objectHandle = reinterpret_cast<uint64_t &>(m_pipeline_layout[PipelineLayout_Voronoi].get());
+		m_context->m_device->setDebugUtilsObjectNameEXT(name_info, m_context->m_dispach);
+#endif
 	}
 
 	// pipeline
@@ -174,7 +195,7 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 		shader_info[7].setModule(m_shader[Shader_Voronoi_MakeTriangle].get());
 		shader_info[7].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[7].setPName("main");
-		shader_info[8].setModule(m_shader[Shader_Voronoi_MakeTriangle].get());
+		shader_info[8].setModule(m_shader[Shader_Voronoi_MakeTriangle2].get());
 		shader_info[8].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[8].setPName("main");
 		shader_info[9].setModule(m_shader[Shader_Voronoi_SortTriangleVertex].get());
@@ -190,7 +211,7 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 			.setLayout(m_pipeline_layout[PipelineLayout_ToFluid].get()),
 			vk::ComputePipelineCreateInfo()
 			.setStage(shader_info[1])
-			.setLayout(m_pipeline_layout[PipelineLayout_ToFluidWall].get()),
+			.setLayout(m_pipeline_layout[PipelineLayout_ToFluid].get()),
 			vk::ComputePipelineCreateInfo()
 			.setStage(shader_info[2])
 			.setLayout(m_pipeline_layout[PipelineLayout_MakeRB].get()),
@@ -220,6 +241,14 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 			.setLayout(m_pipeline_layout[PipelineLayout_Voronoi].get()),
 		};
 		auto compute_pipeline = m_context->m_device->createComputePipelinesUnique(m_context->m_cache.get(), compute_pipeline_info);
+#if USE_DEBUG_REPORT
+		vk::DebugUtilsObjectNameInfoEXT name_info;
+		name_info.pObjectName = "Pipeline_ToFluid";
+		name_info.objectType = vk::ObjectType::ePipeline;
+		name_info.objectHandle = reinterpret_cast<uint64_t &>(compute_pipeline[0].get());
+		m_context->m_device->setDebugUtilsObjectNameEXT(name_info, m_context->m_dispach);
+#endif
+
 		m_pipeline[Pipeline_ToFluid] = std::move(compute_pipeline[0]);
 		m_pipeline[Pipeline_ToFluidWall] = std::move(compute_pipeline[1]);
 		m_pipeline[Pipeline_MakeRB_Register] = std::move(compute_pipeline[2]);
@@ -716,7 +745,8 @@ void GI2DPhysics::executeDestructWall(vk::CommandBuffer cmd)
 			Rigidbody rb;
 			rb.R = vec4(1.f, 0.f, 0.f, 1.f);
 			rb.cm = vec2(0.f);
-			rb.flag = RB_FLAG_FLUID;
+//			rb.flag = RB_FLAG_FLUID;
+			rb.flag = 0;
 			//		rb.size_min = ;
 			//		rb.size_max = jfa_max;
 			rb.life = 100;
@@ -868,8 +898,8 @@ void GI2DPhysics::executeDestructWall(vk::CommandBuffer cmd)
 void GI2DPhysics::executeMakeFluidWall(vk::CommandBuffer cmd)
 {
 
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_ToFluidWall].get(), 0, m_descset[DescLayout_Data].get(), {});
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_ToFluidWall].get(), 1, m_gi2d_context->getDescriptorSet(), {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_ToFluid].get(), 0, m_descset[DescLayout_Data].get(), {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_ToFluid].get(), 1, m_gi2d_context->getDescriptorSet(), {});
 
 	{
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_ToFluidWall].get());
