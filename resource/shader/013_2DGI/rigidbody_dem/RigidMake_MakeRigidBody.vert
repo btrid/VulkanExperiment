@@ -38,6 +38,6 @@ void main()
 	b_make_rigidbody.size_min = voronoi_minmax.xy;
 	b_make_rigidbody.size_max = voronoi_minmax.zw;
 
-	b_make_param.rb_size = voronoi_minmax.zw - voronoi_minmax.xy;
+	b_make_param.rb_size = b_make_rigidbody.size_max - b_make_rigidbody.size_min;
 
 }

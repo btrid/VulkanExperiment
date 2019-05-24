@@ -21,6 +21,7 @@ layout(push_constant) uniform Input
 
 void main()
 {
+	if(gl_GlobalInvocationID.x >= b_make_rigidbody.pnum){ return; }
 	rbParticle p = b_make_particle[gl_GlobalInvocationID.x];
 	vec2 pos = p.pos - b_make_rigidbody.size_min;
 	ivec2 posi = ivec2(pos);
@@ -35,7 +36,7 @@ void main()
 	uint pb_id = b_pb_memory_list[memory_index];
 	uint p_id  = pb_id * RB_PARTICLE_BLOCK_SIZE + gl_LocalInvocationIndex;
 	b_rbParticle[p_id] = p;
-	b_rbParticle[p_id].pos_old -= vec2(rand(vec2(p_id)), rand(vec2(p_id*12.3123+123.))) * 0.03 + vec2(0., 0.3);
+	b_rbParticle[p_id].pos_old -= vec2(rand(vec2(p_id)), rand(vec2(p_id*12.3123+123.))) * 0.03 - vec2(0., 0.015);
 
 
 }

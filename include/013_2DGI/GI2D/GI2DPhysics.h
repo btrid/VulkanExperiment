@@ -23,7 +23,6 @@ struct GI2DPhysics
 		Shader_Voronoi_SetupJFA,
 		Shader_Voronoi_MakeJFA,
 		Shader_Voronoi_MakeTriangle,
-		Shader_Voronoi_MakeTriangle2,
 		Shader_Voronoi_SortTriangleVertex,
 
 		Shader_Voronoi_MakePath,
@@ -58,7 +57,6 @@ struct GI2DPhysics
 		Pipeline_Voronoi_SetupJFA,
 		Pipeline_Voronoi_MakeJFA,
 		Pipeline_Voronoi_MakeTriangle,
-		Pipeline_Voronoi_MakeTriangle2,
 		Pipeline_Voronoi_SortTriangleVertex,
 		Pipeline_Voronoi_MakePath,
 

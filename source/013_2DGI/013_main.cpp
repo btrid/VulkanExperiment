@@ -324,7 +324,7 @@ int rigidbody()
 // 					for (int x = 0; x < 1; x++){
 // 						gi2d_physics_context->make(cmd, uvec4(200 + x * 32, 620 - y * 16, 16, 16));
 // 					}}
-					gi2d_physics_context->executeDestructWall(cmd);
+ 					gi2d_physics_context->executeDestructWall(cmd);
 				}
 
 

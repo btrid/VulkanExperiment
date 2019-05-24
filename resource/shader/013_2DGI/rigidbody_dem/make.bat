@@ -32,7 +32,6 @@ SET output=../../binary
 %exe% %include% %option% -o %output%/Voronoi_SetupJFA.comp.spv Voronoi_SetupJFA.comp
 %exe% %include% %option% -o %output%/Voronoi_MakeJFA.comp.spv Voronoi_MakeJFA.comp
 %exe% %include% %option% -o %output%/Voronoi_MakeTriangle.comp.spv Voronoi_MakeTriangle.comp
-%exe% %include% %option% -o %output%/Voronoi_MakeTriangle2.comp.spv Voronoi_MakeTriangle2.comp
 %exe% %include% %option% -o %output%/Voronoi_SortTriangle.comp.spv Voronoi_SortTriangle.comp
 %exe% %include% %option% -o %output%/Voronoi_MakePath.comp.spv Voronoi_MakePath.comp
 
