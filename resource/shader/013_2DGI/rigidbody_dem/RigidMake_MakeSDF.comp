@@ -12,17 +12,24 @@ float rand(vec2 co){
 }
 layout (local_size_x = RB_PARTICLE_BLOCK_SIZE) in;
 
+layout(push_constant) uniform Input
+{
+	uint particle_block_num;
+	int p;
+	uvec2 _p;
+} constant;
 
 void main()
 {
 	rbParticle p = b_make_particle[gl_GlobalInvocationID.x];
-	vec2 pos = p.local_pos;
+	vec2 pos = p.pos - b_make_rigidbody.size_min;
 	ivec2 posi = ivec2(pos);
 
 	vec2 sdf = -vec2((b_make_jfa_cell[posi.x + posi.y*b_make_param.rb_size.x]-posi));
 	sdf = (dot(sdf, sdf) >= 0.0001) ? normalize(sdf) : vec2(0., -1.);
 
 	p.sdf = sdf;
+	p.relative_pos = p.pos-b_make_rigidbody.cm;
 
 	uint memory_index = (b_manager.pb_active_index+b_manager.pb_list_size-gl_NumWorkGroups.x + gl_WorkGroupID.x)% b_manager.pb_list_size;
 	uint pb_id = b_pb_memory_list[memory_index];

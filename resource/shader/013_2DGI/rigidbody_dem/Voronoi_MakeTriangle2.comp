@@ -31,5 +31,5 @@ void main()
 		vmin = min(vmin, v);
 		vmax = max(vmax, v);
 	}
-	b_voronoi_polygon[gl_GlobalInvocationID.x].minmax = i16vec4(vmin, vmax);
+	b_voronoi_polygon[gl_GlobalInvocationID.x].minmax = i16vec4(vmin, vmax+1);
 }

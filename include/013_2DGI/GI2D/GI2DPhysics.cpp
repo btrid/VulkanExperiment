@@ -582,7 +582,6 @@ void GI2DPhysics::make(vk::CommandBuffer cmd, const uvec4& box)
 	uint32_t contact_index = 0;
 	vec2 size_max = vec2(-999999.f);
 	vec2 size_min = vec2(999999.f);
-	vec2 center_of_mass = vec2(0.f);
 	for (uint32_t y = 0; y < box.w; y++)
 	{
 		for (uint32_t x = 0; x < box.z; x++)
@@ -598,22 +597,29 @@ void GI2DPhysics::make(vk::CommandBuffer cmd, const uvec4& box)
 			}
 			pstate[i].flag |= RBP_FLAG_ACTIVE;
 
-			center_of_mass += pos[i];
 			size_max = glm::max(pos[i], size_max);
 			size_min = glm::min(pos[i], size_min);
 		}
 	}
-	center_of_mass /= particle_num;
-
 	ivec2 jfa_max = ivec2(ceil(size_max));
 	ivec2 jfa_min = ivec2(trunc(size_min));
 	auto area = jfa_max - jfa_min;
 	assert(area.x*area.y <= MAKE_RB_JFA_CELL);
 
+	vec2 pos_sum = vec2(0.f);
+	vec2 center_of_mass = vec2(0.f);
+	for (int32_t i = 0; i < particle_num; i++)
+	{
+#define CM_WORK_PRECISION (65535.)
+		pos_sum += (pos[i] - vec2(jfa_min))* CM_WORK_PRECISION;
+	}
+	center_of_mass = pos_sum / particle_num / CM_WORK_PRECISION + vec2(jfa_min);
+
+
 	std::vector<i16vec2> jfa_cell(area.x*area.y, i16vec2(0xffff));
 	for (int32_t i = 0; i < particle_num; i++)
 	{
-		pstate[i].relative_pos = pos[i] - center_of_mass;
+		pstate[i].relative_pos = pos[i] - vec2(jfa_min) - center_of_mass;
 		pstate[i].local_pos = pos[i] - vec2(jfa_min);
 
 		ivec2 local_pos = ivec2(pstate[i].local_pos);
@@ -631,7 +637,7 @@ void GI2DPhysics::make(vk::CommandBuffer cmd, const uvec4& box)
 		rb.size_max = jfa_max;
 		rb.life = (std::rand() % 10) + 55;
 		rb.pnum = particle_num;
-		rb.cm_work = ivec2(0);
+		rb.cm_work = pos_sum;
 		rb.Apq_work = ivec4(0);
 		cmd.updateBuffer<Rigidbody>(b_make_rigidbody.getInfo().buffer, b_make_rigidbody.getInfo().offset, rb);
 	}

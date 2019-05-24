@@ -19,8 +19,6 @@ void main()
 {
 	uvec2 coord = uvec2(gl_FragCoord.xy);
 	uint f_index = coord.x + coord.y * u_gi2d_info.m_resolution.x;
-	uvec2 p_pos = coord.xy - fs_in.minmax.xy;
-	uvec2 reso = fs_in.minmax.zw - fs_in.minmax.xy;
 
 	if(!isDiffuse(b_fragment[f_index])){ return; }
 
@@ -31,6 +29,7 @@ void main()
 	setDiffuse(b_fragment[f_index], false);
 
 	// 重心
+	uvec2 p_pos = coord.xy - fs_in.minmax.xy;
 	atomicAdd(b_make_rigidbody.cm_work.x, int64_t(p_pos.x*CM_WORK_PRECISION));
 	atomicAdd(b_make_rigidbody.cm_work.y, int64_t(p_pos.y*CM_WORK_PRECISION));
 
@@ -47,6 +46,7 @@ void main()
 	b_make_particle[p_index].color = packUnorm4x8(vec4(rgb, 1.));
 
 	// sdf用
+	uvec2 reso = fs_in.minmax.zw - fs_in.minmax.xy;
 	b_make_jfa_cell[p_pos.x + p_pos.y * reso.x] = i16vec2(0xfffe);
 
 }
