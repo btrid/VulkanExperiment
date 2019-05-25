@@ -750,18 +750,6 @@ void GI2DPhysics::executeDestructWall(vk::CommandBuffer cmd)
 			rb.cm_work = ivec2(0);
 			rb.Apq_work = ivec4(0);
 
-			cmd.updateBuffer<Rigidbody>(b_make_rigidbody.getInfo().buffer, b_make_rigidbody.getInfo().offset, rb);
-		}
-
-		{
-			rbParticle _def;
-			_def.contact_index = -1;
-			_def.flag = 0;
-			std::vector<rbParticle> pstate(MAKE_RB_SIZE_MAX, _def);
-//			cmd.updateBuffer<rbParticle>(b_make_particle.getInfo().buffer, b_make_particle.getInfo().offset, pstate);
-		}
-
-		{
 			static uint s_id;
 			s_id = (s_id + 1) % 4096;
 			RBMakeParam make_param;
@@ -769,9 +757,11 @@ void GI2DPhysics::executeDestructWall(vk::CommandBuffer cmd)
 			make_param.registered_num = uvec4(0,1,1,0);
 			make_param.rb_size = uvec2(0);
 			make_param.destruct_voronoi_id = s_id;
+
+			cmd.updateBuffer<Rigidbody>(b_make_rigidbody.getInfo().buffer, b_make_rigidbody.getInfo().offset, rb);
 			cmd.updateBuffer<RBMakeParam>(b_make_param.getInfo().buffer, b_make_param.getInfo().offset, make_param);
+			cmd.fillBuffer(b_make_jfa_cell.getInfo().buffer, b_make_jfa_cell.getInfo().offset, b_make_jfa_cell.getInfo().range, 0xffffffff);
 		}
-		cmd.fillBuffer(b_make_jfa_cell.getInfo().buffer, b_make_jfa_cell.getInfo().offset, b_make_jfa_cell.getInfo().range, 0xffffffff);
 
 		{
 			vk::BufferMemoryBarrier to_read[] = {

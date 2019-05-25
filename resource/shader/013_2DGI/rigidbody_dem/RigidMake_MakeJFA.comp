@@ -43,7 +43,7 @@ void main()
 	i16vec2 cell = b_make_jfa_cell[current.x + current.y*b_make_param.rb_size.x];
 	if(cell.x == 0xffff){ return; } // particleじゃないのでしない
 
-	float d = (cell.x >= 1000) ? distance(vec2(current), vec2(cell)) : 99999999.;
+	float d = (cell.x >= -32000) ? distance(vec2(current), vec2(cell)) : 99999999.;
 	const float old_d = d;
 	// 重力のY方向優先
 	nearest(cell, d, current, current + cd.xy);
