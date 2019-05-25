@@ -622,8 +622,6 @@ void GI2DPhysics::make(vk::CommandBuffer cmd, const uvec4& box)
 		rb.cm = center_of_mass;
 		rb.flag = 0;
 		//	rb.flag |= RB_FLAG_FLUID;
-		rb.size_min = jfa_min;
-		rb.size_max = jfa_max;
 		rb.life = (std::rand() % 10) + 55;
 		rb.pnum = particle_num;
 		rb.cm_work = pos_sum;
@@ -634,7 +632,7 @@ void GI2DPhysics::make(vk::CommandBuffer cmd, const uvec4& box)
 		RBMakeParam make_param;
 		make_param.pb_num = uvec4(block_num, 1, 1, 0);
 		make_param.registered_num = uvec4(0, 1, 1, 0);
-		make_param.rb_size = area;
+		make_param.rb_aabb = ivec4(jfa_min, jfa_max);
 		cmd.updateBuffer<RBMakeParam>(b_make_param.getInfo().buffer, b_make_param.getInfo().offset, make_param);
 	}
 	cmd.updateBuffer<rbParticle>(b_make_particle.getInfo().buffer, b_make_particle.getInfo().offset, pstate);
@@ -751,7 +749,7 @@ void GI2DPhysics::executeDestructWall(vk::CommandBuffer cmd)
 			RBMakeParam make_param;
 			make_param.pb_num = uvec4(0, 1, 1, 0);
 			make_param.registered_num = uvec4(0,1,1,0);
-			make_param.rb_size = uvec2(0);
+			make_param.rb_aabb = ivec4(0);
 			make_param.destruct_voronoi_id = s_id;
 			s_id = (s_id + 1) % 4096;
 
@@ -763,8 +761,8 @@ void GI2DPhysics::executeDestructWall(vk::CommandBuffer cmd)
 		{
 			vk::BufferMemoryBarrier to_read[] = {
 				b_make_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-				b_make_jfa_cell.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 				b_make_param.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+				b_make_jfa_cell.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
@@ -800,6 +798,7 @@ void GI2DPhysics::executeDestructWall(vk::CommandBuffer cmd)
 		vk::BufferMemoryBarrier to_read[] = {
 			b_make_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			b_make_jfa_cell.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			b_make_param.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eComputeShader, {},
 			0, nullptr, array_length(to_read), to_read, 0, nullptr);
@@ -834,7 +833,6 @@ void GI2DPhysics::executeDestructWall(vk::CommandBuffer cmd)
 			{
 				vk::BufferMemoryBarrier to_read[] = {
 					b_manager.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
-					b_make_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 					b_rbparticle_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 					b_update_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite | vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 				};
@@ -854,11 +852,10 @@ void GI2DPhysics::executeDestructWall(vk::CommandBuffer cmd)
 			// setup
 			vk::BufferMemoryBarrier to_read[] =
 			{
-				b_make_particle.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 				b_make_jfa_cell.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				b_make_param.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
 			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader | vk::PipelineStageFlagBits::eDrawIndirect, {},
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader | vk::PipelineStageFlagBits::eDrawIndirect, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeRB_MakeSDF].get());
@@ -868,12 +865,9 @@ void GI2DPhysics::executeDestructWall(vk::CommandBuffer cmd)
 
 	vk::BufferMemoryBarrier to_read[] =
 	{
-		b_make_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-		b_make_particle.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-		//		b_jfa_cell.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 		b_update_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 	};
-	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 		0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 }

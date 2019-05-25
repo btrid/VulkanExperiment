@@ -91,8 +91,8 @@ struct GI2DPhysics
 
 		uint flag;
 		uint _p1;
-		i16vec2 size_min;
-		i16vec2 size_max;
+		uint _p2;
+		uint _p3;
 
 		vec4 R;
 
@@ -162,7 +162,7 @@ struct GI2DPhysics
 	{
 		uvec4 pb_num;
 		uvec4 registered_num;
-		ivec2 rb_size;
+		ivec4 rb_aabb;
 		uint destruct_voronoi_id;
 	};
 	enum

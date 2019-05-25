@@ -19,9 +19,9 @@ layout(push_constant) uniform Input
 
 void nearest(inout i16vec2 new_cell, inout float current_d, in i16vec2 current, in i16vec2 target)
 {
-	if(all(greaterThanEqual(target, i16vec2(0))) && all(lessThan(target, b_make_param.rb_size)))
+	if(all(greaterThanEqual(target, i16vec2(0))) && all(lessThan(target, b_make_param.rb_aabb.zw-b_make_param.rb_aabb.xy)))
 	{
-		i16vec2 cell = b_make_jfa_cell[target.x + target.y*b_make_param.rb_size.x];
+		i16vec2 cell = b_make_jfa_cell[target.x + target.y*b_make_param.rb_aabb.x];
 		if(cell.x == 0xfffe){ return; }
 		if(cell.x != 0xffff){ target = cell; }
 	}
@@ -37,9 +37,9 @@ void nearest(inout i16vec2 new_cell, inout float current_d, in i16vec2 current, 
 }
 void main() 
 {
-	if(any(greaterThanEqual(gl_GlobalInvocationID.xy, b_make_param.rb_size))){ return; }
+	if(any(greaterThanEqual(gl_GlobalInvocationID.xy, b_make_param.rb_aabb.zw-b_make_param.rb_aabb.xy))){ return; }
 	const i16vec2 current = i16vec2(gl_GlobalInvocationID.xy);
-	i16vec2 cell = b_make_jfa_cell[current.x + current.y*b_make_param.rb_size.x];
+	i16vec2 cell = b_make_jfa_cell[current.x + current.y*b_make_param.rb_aabb.x];
 	if(cell.x == 0xffff){ return; } // particleじゃないのでしない
 
 	float d = (cell.x >= -32000) ? distance(vec2(current), vec2(cell)) : 99999999.;
@@ -58,6 +58,6 @@ void main()
 
 	if(d != old_d)
 	{
-		b_make_jfa_cell[current.x + current.y*b_make_param.rb_size.x] = cell;
+		b_make_jfa_cell[current.x + current.y*b_make_param.rb_aabb.x] = cell;
 	}
 }

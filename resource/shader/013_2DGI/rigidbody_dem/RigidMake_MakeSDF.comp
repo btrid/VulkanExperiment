@@ -23,10 +23,9 @@ void main()
 {
 	if(gl_GlobalInvocationID.x >= b_make_rigidbody.pnum){ return; }
 	rbParticle p = b_make_particle[gl_GlobalInvocationID.x];
-	vec2 pos = p.pos - b_make_rigidbody.size_min;
-	ivec2 posi = ivec2(pos);
 
-	vec2 sdf = -vec2((b_make_jfa_cell[posi.x + posi.y*b_make_param.rb_size.x]-posi));
+	ivec2 posi = ivec2(p.pos - b_make_param.rb_aabb.xy);
+	vec2 sdf = -vec2((b_make_jfa_cell[posi.x + posi.y*b_make_param.rb_aabb.x]-posi));
 	sdf = (dot(sdf, sdf) >= 0.0001) ? normalize(sdf) : vec2(0., -1.);
 
 	p.sdf = sdf;
@@ -39,7 +38,6 @@ void main()
 //	b_rbParticle[p_id].pos_old -= vec2(rand(vec2(p_id)), rand(vec2(p_id*12.3123+123.))) * 0.03 - vec2(0., 0.015);
 	
 	// 初期化
-//	p.contact_index = -1;
 	p.flag = 0;
 	b_make_particle[gl_GlobalInvocationID.x] = p;
 

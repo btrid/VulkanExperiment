@@ -35,9 +35,6 @@ void main()
 	vertex_index = gl_VertexIndex;
 	voronoi_minmax = b_voronoi_polygon[id].minmax;
 
-	b_make_rigidbody.size_min = voronoi_minmax.xy;
-	b_make_rigidbody.size_max = voronoi_minmax.zw;
-
-	b_make_param.rb_size = b_make_rigidbody.size_max - b_make_rigidbody.size_min;
+	b_make_param.rb_aabb = voronoi_minmax;
 
 }
