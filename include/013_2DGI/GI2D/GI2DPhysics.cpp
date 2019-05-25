@@ -871,18 +871,6 @@ void GI2DPhysics::executeDestructWall(vk::CommandBuffer cmd)
 
 }
 
-void GI2DPhysics::executeMakeFluidWall(vk::CommandBuffer cmd)
-{
-
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_ToFluid].get(), 0, m_descset[DescLayout_Data].get(), {});
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_ToFluid].get(), 1, m_gi2d_context->getDescriptorSet(), {});
-
-	{
-		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_ToFluidWall].get());
-		cmd.dispatch(m_gi2d_context->RenderSize.x / 8, m_gi2d_context->RenderSize.y / 8, 1);
-	}
-
-}
 
 void GI2DPhysics::executeMakeVoronoi(vk::CommandBuffer cmd)
 {

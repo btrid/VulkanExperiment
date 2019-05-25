@@ -128,7 +128,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 	//ŽlŠp‚ÅˆÍ‚Þ
 	for (int32_t y = 0; y < gi2d_context->RenderHeight; y++)
 	{
-		for (int32_t x = 0; x < 4; x++)
+		for (int32_t x = 0; x < 40; x++)
 		{
 			map_data[x + y * gi2d_context->RenderWidth] = g_wall;
 			map_data[(gi2d_context->RenderWidth -1 - x) + y * gi2d_context->RenderWidth] = g_wall;
@@ -136,7 +136,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 	}
  	for (int32_t x = 0; x < gi2d_context->RenderWidth; x++)
  	{
-		for (int32_t y = 0; y < 4; y++)
+		for (int32_t y = 0; y < 40; y++)
 		{
 			map_data[x + y * gi2d_context->RenderWidth] = g_wall;
 			map_data[x + (gi2d_context->RenderHeight - 1 - y) * gi2d_context->RenderWidth] = g_wall;

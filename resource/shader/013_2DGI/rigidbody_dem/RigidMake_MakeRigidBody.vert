@@ -22,11 +22,6 @@ layout(location=1) out A
 	flat i16vec4 voronoi_minmax;
 };
 
-uint align(in uint value, in uint align_num)
-{
-	return (value + (align_num-1)) & ~(align_num -1);
-}
-
 void main()
 {
 	gl_Position = vec4(1.0);

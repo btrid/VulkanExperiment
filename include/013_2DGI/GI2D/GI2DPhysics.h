@@ -183,7 +183,6 @@ struct GI2DPhysics
 	void make(vk::CommandBuffer cmd, const uvec4& box);
 	void execute(vk::CommandBuffer cmd);
 	void executeDestructWall(vk::CommandBuffer cmd);
-	void executeMakeFluidWall(vk::CommandBuffer cmd);
 	void executeMakeVoronoi(vk::CommandBuffer cmd);
 	void executeMakeVoronoiPath(vk::CommandBuffer cmd);
 
