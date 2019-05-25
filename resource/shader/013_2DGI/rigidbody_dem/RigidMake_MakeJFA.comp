@@ -17,11 +17,11 @@ layout(push_constant) uniform Input
 } constant;
 
 
-void nearest(inout i16vec2 new_cell, inout float current_d, in i16vec2 current, in i16vec2 target)
+void nearest(inout i16vec2 new_cell, inout float current_d, in i16vec2 current, in i16vec2 target, in ivec2 reso)
 {
-	if(all(greaterThanEqual(target, i16vec2(0))) && all(lessThan(target, b_make_param.rb_aabb.zw-b_make_param.rb_aabb.xy)))
+	if(all(greaterThanEqual(target, i16vec2(0))) && all(lessThan(target, reso)))
 	{
-		i16vec2 cell = b_make_jfa_cell[target.x + target.y*b_make_param.rb_aabb.x];
+		i16vec2 cell = b_make_jfa_cell[target.x + target.y*reso.x];
 		if(cell.x == 0xfffe){ return; }
 		if(cell.x != 0xffff){ target = cell; }
 	}
@@ -37,27 +37,28 @@ void nearest(inout i16vec2 new_cell, inout float current_d, in i16vec2 current, 
 }
 void main() 
 {
-	if(any(greaterThanEqual(gl_GlobalInvocationID.xy, b_make_param.rb_aabb.zw-b_make_param.rb_aabb.xy))){ return; }
+	const ivec2 reso = b_make_param.rb_aabb.zw-b_make_param.rb_aabb.xy;
+	if(any(greaterThanEqual(gl_GlobalInvocationID.xy, reso))){ return; }
 	const i16vec2 current = i16vec2(gl_GlobalInvocationID.xy);
-	i16vec2 cell = b_make_jfa_cell[current.x + current.y*b_make_param.rb_aabb.x];
+	i16vec2 cell = b_make_jfa_cell[current.x + current.y*reso.x];
 	if(cell.x == 0xffff){ return; } // particleじゃないのでしない
 
 	float d = (cell.x >= -32000) ? distance(vec2(current), vec2(cell)) : 99999999.;
 	const float old_d = d;
 	// 重力のY方向優先
 	const i16vec3 cd = i16vec3(constant.distance) * i16vec3(-1, 0, 1);
-	nearest(cell, d, current, current + cd.xy);
-	nearest(cell, d, current, current + cd.xx);
-	nearest(cell, d, current, current + cd.xz);
-	nearest(cell, d, current, current + cd.zx);
-	nearest(cell, d, current, current + cd.zy);
-	nearest(cell, d, current, current + cd.zz);
-	nearest(cell, d, current, current + cd.yx);
-	//nearest(new_cell, d, current, current + cd.yy);
-	nearest(cell, d, current, current + cd.yz);
+	nearest(cell, d, current, current + cd.xy, reso);
+	nearest(cell, d, current, current + cd.xx, reso);
+	nearest(cell, d, current, current + cd.xz, reso);
+	nearest(cell, d, current, current + cd.zx, reso);
+	nearest(cell, d, current, current + cd.zy, reso);
+	nearest(cell, d, current, current + cd.zz, reso);
+	nearest(cell, d, current, current + cd.yx, reso);
+	//nearest(new_cell, d, current, current + cd.yy, reso);
+	nearest(cell, d, current, current + cd.yz, reso);
 
 	if(d != old_d)
 	{
-		b_make_jfa_cell[current.x + current.y*b_make_param.rb_aabb.x] = cell;
+		b_make_jfa_cell[current.x + current.y*reso.x] = cell;
 	}
 }

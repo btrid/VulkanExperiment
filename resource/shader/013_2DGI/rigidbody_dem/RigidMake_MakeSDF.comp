@@ -25,7 +25,7 @@ void main()
 	rbParticle p = b_make_particle[gl_GlobalInvocationID.x];
 
 	ivec2 posi = ivec2(p.pos - b_make_param.rb_aabb.xy);
-	vec2 sdf = -vec2((b_make_jfa_cell[posi.x + posi.y*b_make_param.rb_aabb.x]-posi));
+	vec2 sdf = -vec2((b_make_jfa_cell[posi.x + posi.y*(b_make_param.rb_aabb.z-b_make_param.rb_aabb.x)]-posi));
 	sdf = (dot(sdf, sdf) >= 0.0001) ? normalize(sdf) : vec2(0., -1.);
 
 	p.sdf = sdf;
