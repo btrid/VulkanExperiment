@@ -39,13 +39,13 @@ void main()
 {
 	if(any(greaterThanEqual(gl_GlobalInvocationID.xy, b_make_param.rb_size))){ return; }
 	const i16vec2 current = i16vec2(gl_GlobalInvocationID.xy);
-	const i16vec3 cd = i16vec3(constant.distance) * i16vec3(-1, 0, 1);
 	i16vec2 cell = b_make_jfa_cell[current.x + current.y*b_make_param.rb_size.x];
 	if(cell.x == 0xffff){ return; } // particleじゃないのでしない
 
 	float d = (cell.x >= -32000) ? distance(vec2(current), vec2(cell)) : 99999999.;
 	const float old_d = d;
 	// 重力のY方向優先
+	const i16vec3 cd = i16vec3(constant.distance) * i16vec3(-1, 0, 1);
 	nearest(cell, d, current, current + cd.xy);
 	nearest(cell, d, current, current + cd.xx);
 	nearest(cell, d, current, current + cd.xz);

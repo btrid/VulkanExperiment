@@ -564,14 +564,12 @@ void GI2DPhysics::make(vk::CommandBuffer cmd, const uvec4& box)
 	uint linecolor = glm::packUnorm4x8(vec4(0.f, 1.f, 0.f, 1.f));
 
 	rbParticle _def;
-	_def.contact_index = -1;
-	_def.color = color;
 	_def.flag = 0;
+	_def.color = color;
 	std::vector<vec2> pos(particle_num);
 	std::vector<rbParticle> pstate((particle_num+63)/64*64, _def);
 	uint32_t block_num = ceil(pstate.size() / (float)RB_PARTICLE_BLOCK_SIZE);
 
-	uint32_t contact_index = 0;
 	vec2 size_max = vec2(-999999.f);
 	vec2 size_min = vec2(999999.f);
 	for (uint32_t y = 0; y < box.w; y++)
@@ -582,7 +580,6 @@ void GI2DPhysics::make(vk::CommandBuffer cmd, const uvec4& box)
 			pos[i] = vec2(box) + rotate(vec2(x, y) + 0.5f, 0.f);
 			pstate[i].pos = pos[i];
 			pstate[i].pos_old = pos[i];
-			pstate[i].contact_index = contact_index++;
 			if (y == 0 || y == box.w - 1 || x == 0 || x == box.z - 1)
 			{
 				pstate[i].color = edgecolor;
@@ -751,12 +748,12 @@ void GI2DPhysics::executeDestructWall(vk::CommandBuffer cmd)
 			rb.Apq_work = ivec4(0);
 
 			static uint s_id;
-			s_id = (s_id + 1) % 4096;
 			RBMakeParam make_param;
 			make_param.pb_num = uvec4(0, 1, 1, 0);
 			make_param.registered_num = uvec4(0,1,1,0);
 			make_param.rb_size = uvec2(0);
 			make_param.destruct_voronoi_id = s_id;
+			s_id = (s_id + 1) % 4096;
 
 			cmd.updateBuffer<Rigidbody>(b_make_rigidbody.getInfo().buffer, b_make_rigidbody.getInfo().offset, rb);
 			cmd.updateBuffer<RBMakeParam>(b_make_param.getInfo().buffer, b_make_param.getInfo().offset, make_param);
@@ -816,7 +813,7 @@ void GI2DPhysics::executeDestructWall(vk::CommandBuffer cmd)
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeRB_MakeJFCell].get());
 
-			uint area_max = 256;
+			uint area_max = 128;
 			auto num = app::calcDipatchGroups(uvec3(area_max, area_max, 1), uvec3(8, 8, 1));
 
 			for (int distance = area_max >> 1; distance != 0; distance >>= 1)

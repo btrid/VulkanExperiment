@@ -23,10 +23,10 @@ void main()
 	if(!isDiffuse(b_fragment[f_index])){ return; }
 
 	// 削除
+	setDiffuse(b_fragment[f_index], false);
 	vec3 rgb = getRGB(b_fragment[f_index]);
 	setRGB(b_fragment[f_index], vec3(1.));
 //	vec3 rgb = vec3(0., 0., 1.);
-	setDiffuse(b_fragment[f_index], false);
 
 	// 重心
 	uvec2 p_pos = coord.xy - fs_in.minmax.xy;
@@ -39,7 +39,7 @@ void main()
 	{
 		atomicAdd(b_make_param.pb_num.x, 1);
 	}
-	b_make_particle[p_index].contact_index = 1;
+//	b_make_particle[p_index].contact_index = 1;
 	b_make_particle[p_index].flag = RBP_FLAG_ACTIVE;
 	b_make_particle[p_index].pos = vec2(coord);
 	b_make_particle[p_index].pos_old = vec2(coord);

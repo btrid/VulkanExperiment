@@ -113,7 +113,7 @@ struct GI2DPhysics
 		vec2 local_pos;
 		vec2 local_sdf;
 
-		uint contact_index;
+		uint _p;
 		float density;
 		uint color;
 		uint flag;
