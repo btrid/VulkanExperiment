@@ -16,7 +16,14 @@ vec2 calcTangent(in vec2 I, in vec2 N)
 {
 	return I - N * dot(N, I);
 }
-
+vec2 normalize_safe(in vec2 v)
+{
+	return isZero(v) ? vec2(0.) : normalize(v);
+}
+float length_safe(in vec2 v)
+{
+	return isZero(v) ? 0. : length(v);
+}
 void main() 
 {
 	uint pb_id = b_pb_update_list[b_world.cpu_index*b_manager.pb_list_size+gl_WorkGroupID.x];
@@ -27,19 +34,27 @@ void main()
 	if(((b_rigidbody[r_id].flag & RB_FLAG_FLUID) != 0)){ return; }
 
 	vec2 pos = b_rbParticle[p_id].pos;
+	vec2 pos_old = b_rbParticle[p_id].pos_old;
 	vec2 sdf = b_rbParticle[p_id].local_sdf;
-	ivec4 map_index = ivec4(pos.xyxy) + ivec4(ivec2(0), step(vec2(0.5), pos-floor(pos)) * 2. - 1.);
-	ivec4 findex = map_index.xzxz + map_index.yyww * u_gi2d_info.m_resolution.x;
 	float mass = 1.;
-	vec2 vel = pos - b_rbParticle[p_id].pos_old;
 
-	for(uint i = 0; i < 4; i++)
+	vec2 vel = pos - pos_old;
+	float len = length_safe(vel);
+	vec2 dir = normalize_safe(vel);
+
+	for(int iter = 0; iter < len+1.; iter++)
 	{
-		uint index = findex[i];
-		uint count = min(b_collidable_counter[index], COLLIDABLE_NUM);
+
+		float rate = isZero(len) ? 1. : min(iter/len, 1.);
+		pos = pos_old + dir * rate * len;
+
+		ivec2 map_index = ivec2(pos);
+		int findex = map_index.x + map_index.y * u_gi2d_info.m_resolution.x;
+		int count = int(min(b_collidable_counter[findex], COLLIDABLE_NUM));
+
 		for(uint ii = 0; ii < count; ii++)
 		{
-			uint fj_id = index*COLLIDABLE_NUM + ii;
+			uint fj_id = findex*COLLIDABLE_NUM + ii;
 			if( b_collidable[fj_id].r_id == r_id)
 			{
 				// 自分とは判定しない
@@ -64,8 +79,8 @@ void main()
 				pos += dot(n_vec, sdf_j) * sdf_j * ((mass /total_mass) * c);
 
 				// 摩擦
-				vec2 vel_unit = isZero(vel) ? vec2(0.) : normalize(vel);
-				vec2 t_vec = calcTangent(vel_unit, sdf_j) * s;
+//				vec2 vel_unit = isZero(vel) ? vec2(0.) : normalize(vel);
+				vec2 t_vec = calcTangent(dir, sdf_j) * s;
 				pos -= t_vec*0.2;
 			}
 		}
