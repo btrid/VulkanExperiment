@@ -45,7 +45,7 @@ void main()
 
 	float d = (cell.x >= -32000) ? distance(vec2(gl_GlobalInvocationID), vec2(cell)) : 99999999.;
 	const float old_d = d;
-	// 重力のY方向優先
+
 	const i16vec3 cd = i16vec3(constant.distance) * i16vec3(-1, 0, 1);
 	nearest(cell, d, cd.xy, reso);
 	nearest(cell, d, cd.xx, reso);

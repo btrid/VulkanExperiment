@@ -724,6 +724,7 @@ void GI2DPhysics::executeDestructWall(vk::CommandBuffer cmd)
 {
 	DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
 
+	Rigidbody rb;
 	{
 		{
 			vk::BufferMemoryBarrier to_write[] = {
@@ -734,7 +735,6 @@ void GI2DPhysics::executeDestructWall(vk::CommandBuffer cmd)
 		}
 
 		{
-			Rigidbody rb;
 			rb.R = vec4(1.f, 0.f, 0.f, 1.f);
 			rb.cm = vec2(0.f);
 			rb.flag = RB_FLAG_FLUID;
@@ -807,6 +807,9 @@ void GI2DPhysics::executeDestructWall(vk::CommandBuffer cmd)
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MakeRB].get(), 0, getDescriptorSet(GI2DPhysics::DescLayout_Data), {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MakeRB].get(), 1, m_gi2d_context->getDescriptorSet(), {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MakeRB].get(), 2, getDescriptorSet(GI2DPhysics::DescLayout_Make), {});
+
+		// make sdf
+		if((rb.flag & RB_FLAG_FLUID) == 0)
 		{
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeRB_MakeJFCell].get());
