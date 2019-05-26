@@ -25,10 +25,17 @@ void main()
 	rbParticle p = b_make_particle[gl_GlobalInvocationID.x];
 
 	ivec2 posi = ivec2(p.pos - b_make_param.rb_aabb.xy);
-	vec2 sdf = -vec2((b_make_jfa_cell[posi.x + posi.y*(b_make_param.rb_aabb.z-b_make_param.rb_aabb.x)]-posi));
-	sdf = (dot(sdf, sdf) >= 0.0001) ? normalize(sdf) : vec2(0., -1.);
+	if((b_make_rigidbody.flag & RB_FLAG_FLUID) != 0)
+	{
+		p.sdf = vec2(0.);
+	}
+	else
+	{
+		vec2 sdf = -vec2((b_make_jfa_cell[posi.x + posi.y*(b_make_param.rb_aabb.z-b_make_param.rb_aabb.x)]-posi));
+		sdf = (dot(sdf, sdf) >= 0.0001) ? normalize(sdf) : vec2(0., -1.);
+		p.sdf = sdf;
+	}
 
-	p.sdf = sdf;
 	p.relative_pos = p.pos-b_make_rigidbody.cm;
 
 	uint memory_index = (b_manager.pb_active_index+b_manager.pb_list_size-gl_NumWorkGroups.x + gl_WorkGroupID.x)% b_manager.pb_list_size;

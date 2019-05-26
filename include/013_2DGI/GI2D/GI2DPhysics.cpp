@@ -56,9 +56,9 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 			"Rigid_ToFluid.comp.spv",
 			"Rigid_ToFluidWall.comp.spv",
 
-			"RigidMake_Register.comp.spv",
+			"RigidMake_SetupRigidbody.comp.spv",
 			"RigidMake_MakeJFA.comp.spv",
-			"RigidMake_MakeSDF.comp.spv",
+			"RigidMake_SetupParticle.comp.spv",
 
 			"Voronoi_SetupJFA.comp.spv",
 			"Voronoi_MakeJFA.comp.spv",
@@ -176,13 +176,13 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 		shader_info[1].setModule(m_shader[Shader_ToFluidWall].get());
 		shader_info[1].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[1].setPName("main");
-		shader_info[2].setModule(m_shader[Shader_MakeRB_Register].get());
+		shader_info[2].setModule(m_shader[Shader_MakeRB_SetupRigidbody].get());
 		shader_info[2].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[2].setPName("main");
 		shader_info[3].setModule(m_shader[Shader_MakeRB_MakeJFCell].get());
 		shader_info[3].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[3].setPName("main");
-		shader_info[4].setModule(m_shader[Shader_MakeRB_MakeSDF].get());
+		shader_info[4].setModule(m_shader[Shader_MakeRB_SetupParticle].get());
 		shader_info[4].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[4].setPName("main");
 		shader_info[5].setModule(m_shader[Shader_Voronoi_SetupJFA].get());
@@ -244,9 +244,9 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 
 		m_pipeline[Pipeline_ToFluid] = std::move(compute_pipeline[0]);
 		m_pipeline[Pipeline_ToFluidWall] = std::move(compute_pipeline[1]);
-		m_pipeline[Pipeline_MakeRB_Register] = std::move(compute_pipeline[2]);
+		m_pipeline[Pipeline_MakeRB_SetupRigidbody] = std::move(compute_pipeline[2]);
 		m_pipeline[Pipeline_MakeRB_MakeJFCell] = std::move(compute_pipeline[3]);
-		m_pipeline[Pipeline_MakeRB_MakeSDF] = std::move(compute_pipeline[4]);
+		m_pipeline[Pipeline_MakeRB_SetupParticle] = std::move(compute_pipeline[4]);
 		m_pipeline[Pipeline_Voronoi_SetupJFA] = std::move(compute_pipeline[5]);
 		m_pipeline[Pipeline_Voronoi_MakeJFA] = std::move(compute_pipeline[6]);
 		m_pipeline[Pipeline_Voronoi_MakeTriangle] = std::move(compute_pipeline[7]);
@@ -684,7 +684,7 @@ void GI2DPhysics::make(vk::CommandBuffer cmd, const uvec4& box)
 					0, nullptr, array_length(to_read), to_read, 0, nullptr);
 			}
 
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeRB_Register].get());
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeRB_SetupRigidbody].get());
 //			cmd.dispatchIndirect(b_make_param.getInfo().buffer, b_make_param.getInfo().offset + offsetof(RBMakeParam, pb_num));
 			auto num = app::calcDipatchGroups(uvec3(1, 1, 1), uvec3(1, 1, 1));
 			cmd.dispatch(num.x, num.y, num.z);
@@ -703,7 +703,7 @@ void GI2DPhysics::make(vk::CommandBuffer cmd, const uvec4& box)
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer|vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader|vk::PipelineStageFlagBits::eDrawIndirect, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeRB_MakeSDF].get());
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeRB_SetupParticle].get());
 			cmd.dispatchIndirect(b_make_param.getInfo().buffer, b_make_param.getInfo().offset + offsetof(RBMakeParam, registered_num));
 		}
 	}
@@ -737,8 +737,8 @@ void GI2DPhysics::executeDestructWall(vk::CommandBuffer cmd)
 			Rigidbody rb;
 			rb.R = vec4(1.f, 0.f, 0.f, 1.f);
 			rb.cm = vec2(0.f);
-//			rb.flag = RB_FLAG_FLUID;
-			rb.flag = 0;
+			rb.flag = RB_FLAG_FLUID;
+//			rb.flag = 0;
 			rb.life = 100;
 			rb.pnum = 0;
 			rb.cm_work = ivec2(0);
@@ -839,7 +839,7 @@ void GI2DPhysics::executeDestructWall(vk::CommandBuffer cmd)
 					0, nullptr, array_length(to_read), to_read, 0, nullptr);
 			}
 
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeRB_Register].get());
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeRB_SetupRigidbody].get());
 			auto num = app::calcDipatchGroups(uvec3(1, 1, 1), uvec3(1, 1, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 			//			cmd.dispatchIndirect(b_make_param.getInfo().buffer, b_make_param.getInfo().offset + offsetof(RBMakeParam, pb_num));
@@ -857,7 +857,7 @@ void GI2DPhysics::executeDestructWall(vk::CommandBuffer cmd)
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader | vk::PipelineStageFlagBits::eDrawIndirect, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeRB_MakeSDF].get());
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeRB_SetupParticle].get());
 			cmd.dispatchIndirect(b_make_param.getInfo().buffer, b_make_param.getInfo().offset + offsetof(RBMakeParam, registered_num));
 		}
 	}

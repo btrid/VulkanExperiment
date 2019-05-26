@@ -16,9 +16,9 @@ struct GI2DPhysics
 		Shader_ToFluid,
 		Shader_ToFluidWall,
 
-		Shader_MakeRB_Register,
+		Shader_MakeRB_SetupRigidbody,
 		Shader_MakeRB_MakeJFCell,
-		Shader_MakeRB_MakeSDF,
+		Shader_MakeRB_SetupParticle,
 
 		Shader_Voronoi_SetupJFA,
 		Shader_Voronoi_MakeJFA,
@@ -50,9 +50,9 @@ struct GI2DPhysics
 		Pipeline_ToFluid,
 		Pipeline_ToFluidWall,
 
-		Pipeline_MakeRB_Register,
+		Pipeline_MakeRB_SetupRigidbody,
 		Pipeline_MakeRB_MakeJFCell,
-		Pipeline_MakeRB_MakeSDF,
+		Pipeline_MakeRB_SetupParticle,
 
 		Pipeline_Voronoi_SetupJFA,
 		Pipeline_Voronoi_MakeJFA,
