@@ -42,7 +42,7 @@ struct System
 	vk::UniqueDescriptorSet m_descriptor_set;
 
 	btr::BufferMemoryEx<SystemData> m_buffer;
-	std::array<BufferMemoryEx<SystemData>, sGlobal::FRAME_MAX> m_staging;
+	std::array<BufferMemoryEx<SystemData>, sGlobal::FRAME_COUNT_MAX> m_staging;
 public:
 	vk::DescriptorSet getSystemDescriptorSet()const { return m_descriptor_set.get(); }
 	vk::DescriptorSetLayout getSystemDescriptorLayout()const { return m_descriptor_layout.get(); }

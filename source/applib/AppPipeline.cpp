@@ -100,6 +100,7 @@ ClearPipeline::ClearPipeline(const std::shared_ptr<btr::Context>& context, const
 
 PresentPipeline::PresentPipeline(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target, const std::shared_ptr<Swapchain>& swapchain)
 {
+	m_context = context;
 	m_swapchain = swapchain;
 
 	{
@@ -130,7 +131,7 @@ PresentPipeline::PresentPipeline(const std::shared_ptr<btr::Context>& context, c
 		static_assert(array_length(shader_info) == 2, "not equal shader num");
 
 		std::string path = btr::getResourceLibPath() + "shader\\binary\\";
-		for (size_t i = 0; i < 2; i++) {
+		for (size_t i = 0; i < array_length(shader_info); i++) {
 			m_shader[i] = loadShaderUnique(context->m_device.getHandle(), path + shader_info[i].name);
 		}
 
@@ -344,7 +345,7 @@ PresentPipeline::PresentPipeline(const std::shared_ptr<btr::Context>& context, c
 	{
 		vk::CommandBufferAllocateInfo cmd_buffer_info;
 		cmd_buffer_info.commandPool = context->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
-		cmd_buffer_info.commandBufferCount = sGlobal::FRAME_MAX;
+		cmd_buffer_info.commandBufferCount = m_framebuffer.size();
 		cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
 		m_cmd = context->m_device->allocateCommandBuffersUnique(cmd_buffer_info);
 

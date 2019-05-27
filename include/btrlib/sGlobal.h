@@ -20,9 +20,13 @@ class sGlobal : public Singleton<sGlobal>
 {
 	friend Singleton<sGlobal>;
 public:
+
+	// éQçl
+	// https://www.isus.jp/games/sample-app-for-direct3d-12-flip-model-swap-chains/
 	enum
 	{
-		FRAME_MAX = 3,
+		FRAME_COUNT_MAX = 2,
+		BUFFER_COUNT_MAX = 3,
 	};
 protected:
 
@@ -33,18 +37,18 @@ public:
 	cGPU& getGPU(int index) { return m_gpu[index]; }
 	void sync();
 	uint32_t getCurrentFrame()const { return m_current_frame; }
-	uint32_t getNextFrame()const { return (m_current_frame + 1) % FRAME_MAX; }
-	uint32_t getPrevFrame()const { return (m_current_frame == 0 ? FRAME_MAX : m_current_frame) - 1; }
-	uint32_t getWorkerFrame()const { return (m_current_frame+1) % FRAME_MAX; }
+	uint32_t getNextFrame()const { return (m_current_frame + 1) % FRAME_COUNT_MAX; }
+	uint32_t getPrevFrame()const { return (m_current_frame == 0 ? FRAME_COUNT_MAX : m_current_frame) - 1; }
+	uint32_t getWorkerFrame()const { return (m_current_frame+1) % FRAME_COUNT_MAX; }
 	uint32_t getRenderFrame()const { return m_current_frame; }
 	uint32_t getGameFrame()const { return m_game_frame; }
 	uint32_t getWorkerIndex()const { return m_tick_tock; }
 	uint32_t getRenderIndex()const { return (m_tick_tock + 1) % 2; }
-	bool isElapsed(GameFrame time, GameFrame offset = FRAME_MAX)
+	bool isElapsed(GameFrame time, GameFrame offset = FRAME_COUNT_MAX)
 	{
 		uint64_t game_frame = (uint64_t)m_game_frame;
 		if (game_frame < time) {
-			game_frame += std::numeric_limits<decltype(m_game_frame)>::max() / FRAME_MAX*FRAME_MAX;
+			game_frame += std::numeric_limits<decltype(m_game_frame)>::max() / FRAME_COUNT_MAX*FRAME_COUNT_MAX;
 		}
 		return game_frame - time >= offset;
 	}
@@ -113,7 +117,7 @@ private:
 	struct Deleter
 	{
 		uint32_t count;
-		Deleter() : count(sGlobal::Order().FRAME_MAX+3) {}
+		Deleter() : count(sGlobal::Order().FRAME_COUNT_MAX+3) {}
 		virtual ~Deleter() { ; }
 	};
 	std::vector<std::unique_ptr<Deleter>> m_deleter_list;
