@@ -88,7 +88,7 @@ void explore(in ivec2 pos, in uint dir_type)
 
 void main() 
 {
-	for(uint i = gl_LocalInvocationIndex; i < constant.reso.x/32*constant.reso.y; i+=gl_WorkGroupSize.x)
+	for(uint i = gl_LocalInvocationIndex; i < uint(constant.reso.x)*constant.reso.y/32; i+=gl_WorkGroupSize.x)
 	{
 		b_closed[i] = 0;
 	}
