@@ -25,7 +25,7 @@ public:
 	// https://www.isus.jp/games/sample-app-for-direct3d-12-flip-model-swap-chains/
 	enum
 	{
-		FRAME_COUNT_MAX = 2,
+		FRAME_COUNT_MAX = 3,
 		BUFFER_COUNT_MAX = 3,
 	};
 protected:
