@@ -377,7 +377,7 @@ int main()
 	camera->getData().m_near = 0.01f;
 
 //	return pathFinding();
-	return rigidbody();
+//	return rigidbody();
 
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
@@ -402,10 +402,8 @@ int main()
 	gi2d_desc.RenderWidth = app_desc.m_window_size.x;
 	gi2d_desc.RenderHeight = app_desc.m_window_size.y;
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context, gi2d_desc);
-	std::shared_ptr<GI2DSDF> gi2d_sdf_context = std::make_shared<GI2DSDF>(gi2d_context);
-	std::shared_ptr<CrowdContext> crowd_context = std::make_shared<CrowdContext>(context, gi2d_context);
 
-	GI2DDebug gi2d_debug_make_fragment(context, gi2d_context);
+	GI2DDebug gi2d_debug(context, gi2d_context);
 	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
 	GI2DRadiosity gi2d_Radiosity(context, gi2d_context, app.m_window->getFrontBuffer());
 	{
@@ -459,37 +457,14 @@ int main()
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0, "cmd_gi2d");
 				gi2d_context->execute(cmd);
-				gi2d_debug_make_fragment.executeMakeFragment(cmd);
+				gi2d_debug.executeMakeFragment(cmd);
 
-//#define use_sdf
-#if defined(use_sdf)
-				gi2d_make_hierarchy.executeMakeFragmentMapAndSDF(cmd, gi2d_sdf_context);
-				gi2d_make_hierarchy.executeHierarchy(cmd);
-				gi2d_make_hierarchy.executeMakeSDF(cmd, gi2d_sdf_context);
-//				gi2d_make_hierarchy.executeRenderSDF(cmd, gi2d_sdf_context, app.m_window->getFrontBuffer());
-#else
 				gi2d_make_hierarchy.executeMakeFragmentMap(cmd);
 				gi2d_make_hierarchy.executeHierarchy(cmd);
-#endif
-				{
-//					crowd_debug.execute(cmd);
-// 					crowd_procedure.executeUpdateUnit(cmd);
-// 					crowd_procedure.executeMakeLinkList(cmd);
-//					crowd_procedure.executeMakeDensity(cmd);
-//					crowd_calc_world_matrix.execute(cmd, player_model);
 
-//					std::vector<vk::CommandBuffer> anime_cmds{ anime_cmd.get() };
-//					animater.dispatchCmd(cmd, anime_cmds);
-
-				}
-				{
-//					std::vector<vk::CommandBuffer> render_cmds{ render_cmd.get() };
-//					renderer.dispatchCmd(cmd, render_cmds);
-				}
-
-				gi2d_Radiosity.executeRadiosity(cmd, gi2d_sdf_context);
+				gi2d_Radiosity.executeRadiosity(cmd);
 				gi2d_Radiosity.executeRendering(cmd);
-//				crowd_procedure.executeDrawField(cmd, app.m_window->getFrontBuffer());
+
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;
 			}

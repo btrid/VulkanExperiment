@@ -11,5 +11,8 @@ layout (local_size_x = RB_PARTICLE_BLOCK_SIZE) in;
 
 void main()
 {
+	dvec2 cm = dvec2(b_make_rigidbody.cm_work) / CM_WORK_PRECISION / b_make_rigidbody.pnum;
+	b_make_rigidbody.cm = vec2(cm);
+	b_make_rigidbody.cm_work = i64vec2(0);
 
 }

@@ -716,7 +716,7 @@ void GI2DPhysics::executeDestructWall(vk::CommandBuffer cmd)
 			Rigidbody rb;
 			rb.R = vec4(1.f, 0.f, 0.f, 1.f);
 			rb.cm = vec2(0.f);
-			rb.flag = RB_FLAG_FLUID;
+			rb.flag = 0;
 			//		rb.size_min = ;
 			//		rb.size_max = jfa_max;
 			rb.life = 100;
