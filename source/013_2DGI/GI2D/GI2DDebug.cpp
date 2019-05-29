@@ -99,7 +99,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 		};
 		std::vector<Fragment> rect;
 		for (int i = 0; i < 600; i++) {
-			rect.emplace_back(Fragment{ ivec4{ std::rand() % gi2d_context->RenderWidth , std::rand() % gi2d_context->RenderHeight, std::rand() % 12 + 16, std::rand() % 12 + 16 }, vec4{ 0.8f,0.2f,0.2f,0.f } });
+//			rect.emplace_back(Fragment{ ivec4{ std::rand() % gi2d_context->RenderWidth , std::rand() % gi2d_context->RenderHeight, std::rand() % 12 + 16, std::rand() % 12 + 16 }, vec4{ 0.8f,0.2f,0.2f,0.f } });
 		}		
 		rect.emplace_back(Fragment{ ivec4{ 70, 900, 900, 10, }, vec4{ 0.8f,0.2f,0.2f,0.f } });
 //		rect.emplace_back(Fragment{ ivec4{ 20, 20, 980, 980, }, vec4{ 0.8f,0.2f,0.2f,0.f } });
@@ -128,7 +128,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 	//ŽlŠp‚ÅˆÍ‚Þ
 	for (int32_t y = 0; y < gi2d_context->RenderHeight; y++)
 	{
-		for (int32_t x = 0; x < 40; x++)
+		for (int32_t x = 0; x < 4; x++)
 		{
 			map_data[x + y * gi2d_context->RenderWidth] = g_wall;
 			map_data[(gi2d_context->RenderWidth -1 - x) + y * gi2d_context->RenderWidth] = g_wall;
@@ -136,7 +136,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 	}
  	for (int32_t x = 0; x < gi2d_context->RenderWidth; x++)
  	{
-		for (int32_t y = 0; y < 40; y++)
+		for (int32_t y = 0; y < 4; y++)
 		{
 			map_data[x + y * gi2d_context->RenderWidth] = g_wall;
 			map_data[x + (gi2d_context->RenderHeight - 1 - y) * gi2d_context->RenderWidth] = g_wall;
@@ -404,7 +404,7 @@ void GI2DDebug::executeMakeFragment(vk::CommandBuffer cmd)
 		for (int i = 0; i < std::size(g_data); i++)
 		{
 			cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayout_PointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, g_data[i]);
-	 		cmd.dispatch(1, 1, 1);
+//	 		cmd.dispatch(1, 1, 1);
 		}
 	}
 }

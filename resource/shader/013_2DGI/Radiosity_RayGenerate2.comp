@@ -18,18 +18,22 @@ void main()
 	float a = PI / gl_NumWorkGroups.y;
 	float angle = a * (gl_WorkGroupID.y+0.5);
 
-	vec2 dir = calcDir(angle);
+	uint y = uint(angle / HALF_PI);
 
-	uint y = (gl_WorkGroupID.y / float(gl_NumWorkGroups.y) >= 0.5);
+	vec2 pos;
+	pos.x = (y==0) ? (reso.x-0.5) : 0.5;
+	pos.y = (y==1) ? (reso.y-0.5) : 0.5;
 	vec2 pdir;
-	pdir.x = (y==1) ? 1 : 0;
-	pdir.y = (y==0) ? 1 : 0;
+	pdir.x = (y%2==1) ? 1 : 0;
+	pdir.y = (y%2==0) ? 1 : 0;
 
-	vec2 pos = pdir*gl_GlobalInvocationID.x;
+	pos += pdir*(gl_WorkGroupID.x);
 	vec2 begin = pos;
 	ivec2 map_index = ivec2(pos);
 
 
+	angle += QUARTER_PI;
+	vec2 dir = calcDir(angle);
 	int march_count = 1;
 	for(; march_count <5000; march_count++)
 	{
@@ -56,7 +60,7 @@ void main()
 	
 	if(gl_LocalInvocationIndex == 0)
 	{
-		s_ray_index	= atomicAdd(b_ray_counter[gl_WorkGroupID.z].x, 1) * 64;
+		s_ray_index	= atomicAdd(b_ray_counter[gl_WorkGroupID.z].x, 64);
 	}
 
 	memoryBarrierShared();

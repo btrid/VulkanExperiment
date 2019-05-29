@@ -4,7 +4,6 @@
 #extension GL_EXT_shader_explicit_arithmetic_types : require
 #extension GL_EXT_shader_atomic_int64 : require
 
-//#define USE_SDF
 struct GI2DInfo
 {
 	mat4 m_camera_PV;
@@ -90,13 +89,8 @@ struct D2Ray
 struct D2Segment
 {
 	uint ray_index;
-#if defined(USE_SDF)
-	float begin;
-	float march;
-#else
 	uint begin;
 	uint march;
-#endif
 	uint radiance;
 };
 
@@ -258,13 +252,9 @@ vec4 rotate2(in vec2 angle)
 }
 vec2 calcDir(in float angle)
 {
-#if defined(USE_SDF)
-	return rotate(angle);
-#else
 	vec2 dir = rotate(angle);
 	vec2 inv_dir = 1./dir;
 	return dir * min(abs(inv_dir.x), abs(inv_dir.y));
-#endif
 }
 
 #endif //GI2D_

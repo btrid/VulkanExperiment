@@ -10,24 +10,21 @@
 #include "GI2D.glsl"
 
 layout (local_size_x=64) in;
+
+shared u64vec2 s_fragment[17];
 void main()
 {
 
 	const int hierarchy = u_gi2d_scene.m_hierarchy;
 	const ivec4 reso = u_gi2d_info.m_resolution;
 
-//	uint ray_index = gl_GlobalInvocationID.x + u_radiosity_info.ray_frame_max*u_gi2d_scene.m_frame;
 	uint ray_index = gl_GlobalInvocationID.x;
 	D2Ray ray = b_ray[ray_index];
-	vec2 pos = ray.origin;
 	vec2 dir = calcDir(ray.angle);
-	vec2 inv_dir = abs(1./dir);
-	ivec2 map_index = ivec2(pos);
 
-
-	u64vec2 map;
-	uint old_map_index = -1;
-	vec2 cell_origin = vec2(greaterThanEqual(dir, vec2(0.))) * vec2(8.);
+//	u64vec2 map;
+//	uint old_map_index = -1;
+//	vec2 cell_origin = vec2(greaterThanEqual(dir, vec2(0.))) * vec2(8.);
 
 	D2Segment seg;
 	seg.ray_index = ray_index;
@@ -37,37 +34,30 @@ void main()
 	int march_count = 0;
 	for(; march_count < ray.march; )
 	{
-		int skip = 1;
+
+		vec2 pos = fma(dir, float(march_count).xx, ray.origin);
+		ivec2 index = ivec2(pos);
+		ivec2 map_index = index >> 3;
+		if(gl_LocalInvocationIndex < 17)
 		{
-			ivec2 cell = map_index>>3;
-			ivec2 cell_sub = map_index%8;
-			uint dindex = getMemoryOrder(cell);
-			
-			if(old_map_index != dindex)
-			{
-				map.x = b_diffuse_map[dindex];
-				map.y = b_emissive_map[dindex];
-				old_map_index = dindex;
+			int mi = map_index.x + map_index.y*reso.z + gl_LocalInvocationIndex;
+			s_fragment[gl_LocalInvocationIndex] = b_fragment_map[mi];
+		}
+		
+		memoryBarrierShared();
+		barrier();
 
-				bvec3 check = equal(map.xxy, u64vec3(0,-1ul,0));
-				if(check.x && check.z)
-				{
-					vec2 pos_sub = vec2(pos - vec2(cell << 3));
-					vec2 tp = vec2(abs(cell_origin - pos_sub)) * inv_dir;
-					int _axis = tp.x < tp.y ? 0 : 1;
-					skip = int(max(tp[_axis], 1.));
-				}
-			}
-
+		for(uint i = 0; i < 8; i++)
+		{
+			s_fragment[];
 			bvec2 attr = notEqual((map & (1ul<<(cell_sub.x+cell_sub.y*8))), u64vec2(0));
 			if(attr.y)
 			{
-				seg.radiance += b_light[getMemoryOrder(map_index)];
+				seg.radiance += b_light[getMemoryOrder(uvec2(fma(dir, float(march_count+i).xx, ray.origin)))];
 			}
-
 			if(attr.x)
 			{
-				if(seg.march > 1/* && seg.radiance != 0*/ )
+				if(seg.march > 1)
 				{
 					int index = atomicAdd(b_segment_counter.w, 1);
 					if(index%1024==0){
@@ -79,18 +69,14 @@ void main()
 				seg.march = 0;
 				seg.radiance = 0;
 			}
+			seg.march++;
 
-			{
-				seg.march+=skip;
-			}
 
 		}
 		// march
 		{
 			// DDA
-			march_count += skip;
-			pos = fma(dir, float(march_count).xx, ray.origin);
-			map_index = ivec2(pos);
+			march_count+=8;
 		}
 	}
 

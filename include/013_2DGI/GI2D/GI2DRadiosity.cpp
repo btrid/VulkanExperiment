@@ -415,6 +415,12 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 
 	// データクリア
 	{
+		vk::BufferMemoryBarrier to_write[] = {
+			b_radiance.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
+			b_segment.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
+		};
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eTransfer, {}, 0, nullptr, array_length(to_write), to_write, 0, nullptr);
+
 		cmd.updateBuffer<ivec4>(b_segment_counter.getInfo().buffer, b_segment_counter.getInfo().offset, ivec4(0, 1, 1, 0));
 		cmd.fillBuffer(b_radiance.getInfo().buffer, b_radiance.getInfo().offset, b_radiance.getInfo().range, 0);
 

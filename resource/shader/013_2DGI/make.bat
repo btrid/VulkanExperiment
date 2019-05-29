@@ -31,7 +31,6 @@ rem %exe% %include% %option% -o %output%/GI2DSDF_MakeJFA_EX.comp.spv GI2DSDF_Mak
 %exe% %include% %option% -o %output%/GI2DDebug_DrawReachMap.comp.spv GI2DDebug_DrawReachMap.comp
 
 
-%exe% %include% %option% -o %output%/Radiosity_Clear.comp.spv Radiosity_Clear.comp
 %exe% %include% %option% -o %output%/Radiosity_Render.frag.spv Radiosity_Render.frag
 %exe% %include% %option% -o %output%/Radiosity_Render.vert.spv Radiosity_Render.vert
 
