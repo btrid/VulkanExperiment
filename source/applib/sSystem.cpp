@@ -11,7 +11,7 @@ sSystem::sSystem(const std::shared_ptr<btr::Context>& context)
 		btr::UpdateBufferDescriptor desc;
 		desc.device_memory = context->m_uniform_memory;
 		desc.staging_memory = context->m_staging_memory;
-		desc.frame_max = sGlobal::FRAME_MAX;
+		desc.frame_max = sGlobal::FRAME_COUNT_MAX;
 		desc.element_num = 16;
 		m_data.setup(context->m_gpu, desc);
 	}

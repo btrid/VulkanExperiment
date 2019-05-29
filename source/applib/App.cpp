@@ -73,8 +73,8 @@ App::App(const AppDescriptor& desc)
 	{
 		vk::FenceCreateInfo fence_info;
 		fence_info.setFlags(vk::FenceCreateFlagBits::eSignaled);
-		m_fence_list.reserve(sGlobal::FRAME_MAX);
-		for (size_t i = 0; i < sGlobal::FRAME_MAX; i++)
+		m_fence_list.reserve(sGlobal::FRAME_COUNT_MAX);
+		for (size_t i = 0; i < sGlobal::FRAME_COUNT_MAX; i++)
 		{
 			m_fence_list.emplace_back(m_context->m_gpu.getDevice()->createFenceUnique(fence_info));
 		}

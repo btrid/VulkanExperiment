@@ -183,7 +183,7 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 		desc.device_memory = context->m_storage_memory;
 		desc.staging_memory = context->m_staging_memory;
 		desc.element_num = 1;
-		desc.frame_max = sGlobal::FRAME_MAX;
+		desc.frame_max = sGlobal::FRAME_COUNT_MAX;
 		m_sound_play_info.setup(desc);
 	}
 	{

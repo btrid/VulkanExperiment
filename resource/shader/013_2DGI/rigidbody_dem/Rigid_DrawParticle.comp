@@ -15,14 +15,15 @@ void main()
 {
 	uint pb_id = b_pb_update_list[b_world.gpu_index*b_manager.pb_list_size+gl_WorkGroupID.x];
 	uint p_id = pb_id*RB_PARTICLE_BLOCK_SIZE + gl_LocalInvocationID.x;
-	if(b_rbParticle[p_id].contact_index == -1){ return; }
+	if((b_rbParticle[p_id].flag & RBP_FLAG_ACTIVE) == 0){ return; }
 
 	vec2 pos = b_rbParticle[p_id].pos;
 		
 	ivec2 index = ivec2(pos);
 	if(any(lessThan(index, ivec2(0))) || any(greaterThanEqual(index, u_gi2d_info.m_resolution.xy))){ return; }
 
-	vec4 color = vec4(unpackUnorm4x8(b_rbParticle[p_id].color).xyz, 1.);
+//	vec4 color = vec4(unpackUnorm4x8(b_rbParticle[p_id].color).xyz, 1.);
+	vec4 color = vec4(abs(b_rbParticle[p_id].sdf), 0., 1.);
 
 	uint r_id = b_rbParticle_map[pb_id];
 	vec4 xaxis = (mat2(b_rigidbody[r_id].R.xy, b_rigidbody[r_id].R.zw) * vec2(1., 0.)).xyxy * vec2(0.25, -0.25).xxyy;

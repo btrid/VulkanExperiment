@@ -88,7 +88,7 @@ void Swapchain::setup(const std::shared_ptr<btr::Context>& context, const cWindo
 	vk::SurfaceCapabilitiesKHR capability = context->m_gpu->getSurfaceCapabilitiesKHR(surface);
 	vk::SwapchainCreateInfoKHR swapchain_info;
 	swapchain_info.setSurface(surface);
-	swapchain_info.setMinImageCount(3);
+	swapchain_info.setMinImageCount(sGlobal::BUFFER_COUNT_MAX);
 	swapchain_info.setImageFormat(m_surface_format.format);
 	swapchain_info.setImageColorSpace(m_surface_format.colorSpace);
 	swapchain_info.setImageExtent(capability.currentExtent);

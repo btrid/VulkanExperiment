@@ -15,6 +15,7 @@ SET output=../../binary
 %exe% %include% %option% -o %output%/Rigid_MakeParticle.comp.spv Rigid_MakeParticle.comp
 %exe% %include% %option% -o %output%/Rigid_MakeCollidable.comp.spv Rigid_MakeCollidable.comp
 %exe% %include% %option% -o %output%/Rigid_CollisionDetective.comp.spv Rigid_CollisionDetective.comp
+rem %exe% %include% %option% -o %output%/Rigid_CollisionDetective.comp.spv Rigid_CollisionDetective2.comp
 %exe% %include% %option% -o %output%/Rigid_CollisionDetective_Fluid.comp.spv Rigid_CollisionDetective_Fluid.comp
 %exe% %include% %option% -o %output%/Rigid_CalcPressure.comp.spv Rigid_CalcPressure.comp
 %exe% %include% %option% -o %output%/Rigid_CalcCenterMass.comp.spv Rigid_CalcCenterMass.comp
@@ -25,14 +26,13 @@ SET output=../../binary
 %exe% %include% %option% -o %output%/RigidMake_MakeRigidBody.vert.spv RigidMake_MakeRigidBody.vert
 %exe% %include% %option% -o %output%/RigidMake_MakeRigidBody.geom.spv RigidMake_MakeRigidBody.geom
 %exe% %include% %option% -o %output%/RigidMake_MakeRigidBody.frag.spv RigidMake_MakeRigidBody.frag
-%exe% %include% %option% -o %output%/RigidMake_Register.comp.spv RigidMake_Register.comp
 %exe% %include% %option% -o %output%/RigidMake_MakeJFA.comp.spv RigidMake_MakeJFA.comp
-%exe% %include% %option% -o %output%/RigidMake_MakeSDF.comp.spv RigidMake_MakeSDF.comp
+%exe% %include% %option% -o %output%/RigidMake_SetupRigidbody.comp.spv RigidMake_SetupRigidbody.comp
+%exe% %include% %option% -o %output%/RigidMake_SetupParticle.comp.spv RigidMake_SetupParticle.comp
 
 %exe% %include% %option% -o %output%/Voronoi_SetupJFA.comp.spv Voronoi_SetupJFA.comp
 %exe% %include% %option% -o %output%/Voronoi_MakeJFA.comp.spv Voronoi_MakeJFA.comp
 %exe% %include% %option% -o %output%/Voronoi_MakeTriangle.comp.spv Voronoi_MakeTriangle.comp
-%exe% %include% %option% -o %output%/Voronoi_MakeTriangle2.comp.spv Voronoi_MakeTriangle2.comp
 %exe% %include% %option% -o %output%/Voronoi_SortTriangle.comp.spv Voronoi_SortTriangle.comp
 %exe% %include% %option% -o %output%/Voronoi_MakePath.comp.spv Voronoi_MakePath.comp
 

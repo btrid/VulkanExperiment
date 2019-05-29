@@ -1,5 +1,4 @@
 #include <btrlib/cWindow.h>
-#include <btrlib/sValidationLayer.h>
 
 #include <filesystem>
 #include <vector>
@@ -79,7 +78,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_messenger_callback(
 		// 		}
 	}
 	sprintf_s(message, message_size,
-		"%s Message ID Name %s\n %s",
+		"%s %s\n %s",
 		prefix,
 		callbackData->pMessageIdName,
 		callbackData->pMessage);
@@ -194,10 +193,10 @@ sGlobal::sGlobal()
 void sGlobal::sync()
 {
 	m_game_frame++;
-	m_game_frame = m_game_frame % (std::numeric_limits<decltype(m_game_frame)>::max() / FRAME_MAX*FRAME_MAX);
-	m_current_frame = m_game_frame % FRAME_MAX;
+	m_game_frame = m_game_frame % (std::numeric_limits<decltype(m_game_frame)>::max() / FRAME_COUNT_MAX*FRAME_COUNT_MAX);
+	m_current_frame = m_game_frame % FRAME_COUNT_MAX;
 	m_tick_tock = (m_tick_tock + 1) % 2;
-	auto next = (m_current_frame+1) % FRAME_MAX;
+	auto next = (m_current_frame+1) % FRAME_COUNT_MAX;
 	m_deltatime = m_timer.getElapsedTimeAsSeconds();
 	m_deltatime = glm::min(m_deltatime, 0.02f);
 	m_totaltime += m_deltatime;
@@ -221,6 +220,7 @@ vk::UniqueShaderModule loadShaderUnique(const vk::Device& device, const std::str
 		.setCodeSize(buffer.size());
 	return device.createShaderModuleUnique(shaderInfo);
 }
+
 vk::UniqueDescriptorPool createDescriptorPool(vk::Device device, const std::vector<std::vector<vk::DescriptorSetLayoutBinding>>& bindings, uint32_t set_size)
 {
 	std::vector<vk::DescriptorPoolSize> pool_size(VK_DESCRIPTOR_TYPE_RANGE_SIZE);

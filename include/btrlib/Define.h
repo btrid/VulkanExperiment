@@ -26,6 +26,7 @@ namespace btr {
 }
 
 #define USE_DEBUG_REPORT 1
+
 struct DebugLabel
 {
 	static const uint32_t k_color_default = uint32_t(0xffffffffu);

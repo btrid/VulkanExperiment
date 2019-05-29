@@ -35,7 +35,9 @@ struct PresentPipeline : IPipeline
 	vk::CommandBuffer execute() override
 	{
 		return m_cmd[m_swapchain->m_backbuffer_index].get();
+//		return m_cmd[m_context->getGPUFrame()].get();
 	}
+	std::shared_ptr<btr::Context> m_context;
 	std::vector<vk::UniqueImageView> m_backbuffer_view;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_layout;

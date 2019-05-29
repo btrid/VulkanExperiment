@@ -16,14 +16,13 @@ struct GI2DPhysics
 		Shader_ToFluid,
 		Shader_ToFluidWall,
 
-		Shader_MakeRB_Register,
+		Shader_MakeRB_SetupRigidbody,
 		Shader_MakeRB_MakeJFCell,
-		Shader_MakeRB_MakeSDF,
+		Shader_MakeRB_SetupParticle,
 
 		Shader_Voronoi_SetupJFA,
 		Shader_Voronoi_MakeJFA,
 		Shader_Voronoi_MakeTriangle,
-		Shader_Voronoi_MakeTriangle2,
 		Shader_Voronoi_SortTriangleVertex,
 
 		Shader_Voronoi_MakePath,
@@ -38,7 +37,6 @@ struct GI2DPhysics
 	enum PipelineLayout
 	{
 		PipelineLayout_ToFluid,
-		PipelineLayout_ToFluidWall,
 
 		PipelineLayout_MakeRB,
 		PipelineLayout_DestructWall,
@@ -52,14 +50,13 @@ struct GI2DPhysics
 		Pipeline_ToFluid,
 		Pipeline_ToFluidWall,
 
-		Pipeline_MakeRB_Register,
+		Pipeline_MakeRB_SetupRigidbody,
 		Pipeline_MakeRB_MakeJFCell,
-		Pipeline_MakeRB_MakeSDF,
+		Pipeline_MakeRB_SetupParticle,
 
 		Pipeline_Voronoi_SetupJFA,
 		Pipeline_Voronoi_MakeJFA,
 		Pipeline_Voronoi_MakeTriangle,
-		Pipeline_Voronoi_MakeTriangle2,
 		Pipeline_Voronoi_SortTriangleVertex,
 		Pipeline_Voronoi_MakePath,
 
@@ -94,8 +91,8 @@ struct GI2DPhysics
 
 		uint flag;
 		uint _p1;
-		i16vec2 size_min;
-		i16vec2 size_max;
+		uint _p2;
+		uint _p3;
 
 		vec4 R;
 
@@ -116,7 +113,7 @@ struct GI2DPhysics
 		vec2 local_pos;
 		vec2 local_sdf;
 
-		uint contact_index;
+		uint _p;
 		float density;
 		uint color;
 		uint flag;
@@ -165,7 +162,7 @@ struct GI2DPhysics
 	{
 		uvec4 pb_num;
 		uvec4 registered_num;
-		ivec2 rb_size;
+		ivec4 rb_aabb;
 		uint destruct_voronoi_id;
 	};
 	enum
@@ -186,7 +183,6 @@ struct GI2DPhysics
 	void make(vk::CommandBuffer cmd, const uvec4& box);
 	void execute(vk::CommandBuffer cmd);
 	void executeDestructWall(vk::CommandBuffer cmd);
-	void executeMakeFluidWall(vk::CommandBuffer cmd);
 	void executeMakeVoronoi(vk::CommandBuffer cmd);
 	void executeMakeVoronoiPath(vk::CommandBuffer cmd);
 

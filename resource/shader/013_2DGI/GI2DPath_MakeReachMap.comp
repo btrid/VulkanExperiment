@@ -10,11 +10,9 @@ layout (local_size_x = 1024) in;
 
 layout(push_constant, std430) uniform InputVertex
 {
-	ivec2 reso;
-	i16vec2 num;
-	i16vec2 _p;
-	i16vec2 target[4];
-	i16vec2 random_search[3];
+	i16vec2 target[10];
+	i16vec2 target_num;
+	i16vec2 reso;
 } constant;
 
 
@@ -90,7 +88,7 @@ void explore(in ivec2 pos, in uint dir_type)
 
 void main() 
 {
-	for(uint i = gl_LocalInvocationIndex; i < constant.reso.x*constant.reso.y/32; i+=gl_WorkGroupSize.x)
+	for(uint i = gl_LocalInvocationIndex; i < uint(constant.reso.x)*constant.reso.y/32; i+=gl_WorkGroupSize.x)
 	{
 		b_closed[i] = 0;
 	}
@@ -104,7 +102,7 @@ void main()
 	memoryBarrierShared();
 	barrier();
 
-	if(gl_LocalInvocationIndex < constant.num.x*8)
+	if(gl_LocalInvocationIndex < constant.target_num.x*8)
 	{
 		ivec2 pos = ivec2(constant.target[gl_LocalInvocationIndex/8]);
 		uint dir_type = gl_LocalInvocationIndex%8;
@@ -115,8 +113,8 @@ void main()
 		}
 	}
 
-	for(int i = 0; i < constant._p.x; i++)
-//	for(int i = 0; i < 5000; i++)
+//	for(int i = 0; i < constant.target_num.y; i++)
+	for(int i = 0; i < 5000; i++)
 	{
 		memoryBarrierShared();
 		barrier();

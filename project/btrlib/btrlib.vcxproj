@@ -92,7 +92,6 @@
     <ClInclude Include="..\..\include\btrlib\DefineMath.h" />
     <ClInclude Include="..\..\include\btrlib\Shape.h" />
     <ClInclude Include="..\..\include\btrlib\Singleton.h" />
-    <ClInclude Include="..\..\include\btrlib\sValidationLayer.h" />
     <ClInclude Include="..\..\include\btrlib\sGlobal.h" />
     <ClInclude Include="..\..\include\btrlib\System.h" />
   </ItemGroup>

@@ -107,13 +107,13 @@ int pathFinding()
 	pf.m_field = pathmake_noise(1024, 1024);
 //	pf = pathmake_file();
 	PathSolver solver;
- 	auto solve1 = solver.executeMakeVectorField(pf);
-  	auto solve2 = solver.executeMakeVectorField2(pf);
+//  	auto solve1 = solver.executeMakeVectorField(pf);
+//   	auto solve2 = solver.executeMakeVectorField2(pf);
 	//	auto solve = solver.executeSolve(pf);
 //	solver.writeConsole(pf);
 //	solver.writeSolvePath(pf, solve, "hoge.txt");
 //	solver.writeConsole(pf, solve);
-	solver.write(pf, solve2);
+//	solver.write(pf, solve2);
 
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
@@ -320,11 +320,11 @@ int rigidbody()
 
 				if (context->m_window->getInput().m_keyboard.isOn('A'))
 				{
-// 					for (int y = 0; y < 20; y++){
-// 					for (int x = 0; x < 20; x++){
-// 						gi2d_physics_context->make(cmd, uvec4(200 + x * 32, 420 - y * 16, 16, 16));
+// 					for (int y = 0; y < 1; y++){
+// 					for (int x = 0; x < 1; x++){
+// 						gi2d_physics_context->make(cmd, uvec4(200 + x * 32, 620 - y * 16, 16, 16));
 // 					}}
-					gi2d_physics_context->executeDestructWall(cmd);
+ 					gi2d_physics_context->executeDestructWall(cmd);
 				}
 
 

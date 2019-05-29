@@ -382,7 +382,7 @@ struct cTriangleLL
 				btr::UpdateBufferDescriptor desc;
 				desc.device_memory = loader.m_uniform_memory;
 				desc.staging_memory = loader.m_staging_memory;
-				desc.frame_max = sGlobal::FRAME_MAX;
+				desc.frame_max = sGlobal::FRAME_COUNT_MAX;
 				m_triangle_projection.setup(desc);
 			}
 			{

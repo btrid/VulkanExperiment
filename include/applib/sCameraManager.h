@@ -33,7 +33,7 @@ struct sCameraManager : public Singleton<sCameraManager>
 			btr::UpdateBufferDescriptor update_desc;
 			update_desc.device_memory = context->m_uniform_memory;
 			update_desc.staging_memory = context->m_staging_memory;
-			update_desc.frame_max = sGlobal::FRAME_MAX;
+			update_desc.frame_max = sGlobal::FRAME_COUNT_MAX;
 			update_desc.element_num = 2;
 			m_camera.setup(update_desc);
 			m_camera_frustom.setup(update_desc);

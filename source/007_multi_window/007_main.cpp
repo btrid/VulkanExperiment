@@ -63,7 +63,7 @@ int main()
 		cWindowDescriptor window_info;
 		window_info.class_name = L"Sub Window";
 		window_info.window_name = L"Sub Window";
-		window_info.backbuffer_num = sGlobal::Order().FRAME_MAX;
+		window_info.backbuffer_num = sGlobal::Order().FRAME_COUNT_MAX;
 		window_info.size = vk::Extent2D(480, 480);
 		window_info.surface_format_request = app.m_window->getSwapchain().m_surface_format;
 		auto sub = sWindow::Order().createWindow<AppWindow>(context, window_info);

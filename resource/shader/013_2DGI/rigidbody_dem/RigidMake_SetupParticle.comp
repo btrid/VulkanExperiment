@@ -1,0 +1,51 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_Rigidbody2D 0
+#define USE_GI2D 1
+#define USE_MakeRigidbody 2
+#include "GI2D.glsl"
+#include "Rigidbody2D.glsl"
+
+float rand(vec2 co){
+    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+}
+layout (local_size_x = RB_PARTICLE_BLOCK_SIZE) in;
+
+layout(push_constant) uniform Input
+{
+	uint particle_block_num;
+	int p;
+	uvec2 _p;
+} constant;
+
+void main()
+{
+	if(gl_GlobalInvocationID.x >= b_make_rigidbody.pnum){ return; }
+	rbParticle p = b_make_particle[gl_GlobalInvocationID.x];
+
+	ivec2 posi = ivec2(p.pos - b_make_param.rb_aabb.xy);
+	if((b_make_rigidbody.flag & RB_FLAG_FLUID) != 0)
+	{
+		p.sdf = vec2(0.);
+	}
+	else
+	{
+		vec2 sdf = -vec2((b_make_jfa_cell[posi.x + posi.y*(b_make_param.rb_aabb.z-b_make_param.rb_aabb.x)]-posi));
+		sdf = (dot(sdf, sdf) >= 0.0001) ? normalize(sdf) : vec2(0., -1.);
+		p.sdf = sdf;
+	}
+
+	p.relative_pos = p.pos-b_make_rigidbody.cm;
+
+	uint memory_index = (b_manager.pb_active_index+b_manager.pb_list_size-gl_NumWorkGroups.x + gl_WorkGroupID.x)% b_manager.pb_list_size;
+	uint pb_id = b_pb_memory_list[memory_index];
+	uint p_id  = pb_id * RB_PARTICLE_BLOCK_SIZE + gl_LocalInvocationIndex;
+	b_rbParticle[p_id] = p;
+//	b_rbParticle[p_id].pos_old -= vec2(rand(vec2(p_id)), rand(vec2(p_id*12.3123+123.))) * 0.03 - vec2(0., 0.015);
+	
+	// 初期化
+	p.flag = 0;
+	b_make_particle[gl_GlobalInvocationID.x] = p;
+
+}

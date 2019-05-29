@@ -20,21 +20,27 @@ void main()
 	VoronoiPolygon vv = b_voronoi_polygon[gl_GlobalInvocationID.x];
 	int num = vv.num;
 	if(num <= 1) { return;}
+
+	// 時計回りにソートとAABBの計算
 	vec2 center =  vec2(b_voronoi_cell[gl_GlobalInvocationID.x].point);
 	vec2 value[VoronoiVertex_MAX];
+	i16vec2 vmin = i16vec2(32000);
+	i16vec2 vmax = i16vec2(-32000);
 	for(int i = 0; i < num; i++)
 	{
-		vec2 a = normalize(vec2(b_voronoi_vertex[int(vv.vertex_index[i])].point) - center);
+		i16vec2 v = b_voronoi_vertex[int(vv.vertex_index[i])].point;
+		vec2 a = normalize(vec2(v) - center);
 		value[i].x = float(i);
 		value[i].y = atan(a.y, a.x);
+
+		vmin = min(vmin, v);
+		vmax = max(vmax, v);
 	}
 
 	for(int i = 0; i < num; i++)
 	{
 		for(int j = num-1; j>i; j--)
 		{
-//			#define TwoSort(a,b) { tmp = min (a, b); b = a + b - tmp; a = tmp; }
-//			TwoSort (c[i], c[i+1]);
 			if(value[j].y > value[j-1].y)
 			{
 				vec2 tmp = value[j-1];
@@ -49,5 +55,6 @@ void main()
 		b_voronoi_polygon[gl_GlobalInvocationID.x].vertex_index[i] = vv.vertex_index[int(value[i].x+0.5)];
 	}	
 
+	b_voronoi_polygon[gl_GlobalInvocationID.x].minmax = i16vec4(vmin, vmax+1);
 
 }

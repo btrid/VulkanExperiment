@@ -24,7 +24,7 @@ struct cCmdPool
 		vk::UniqueCommandPool m_cmd_pool;
 		std::vector<vk::UniqueCommandBuffer> m_cmd_onetime_deleter;
 	};
-	std::vector<std::array<Cmd, sGlobal::FRAME_MAX>> m_cmd;
+	std::vector<std::array<Cmd, sGlobal::FRAME_COUNT_MAX>> m_cmd;
 	std::vector<vk::CommandBuffer> m_tls_cmds;
 
 	std::shared_ptr<btr::Context> m_context;

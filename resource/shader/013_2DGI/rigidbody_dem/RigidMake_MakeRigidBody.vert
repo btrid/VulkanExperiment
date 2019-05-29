@@ -9,10 +9,6 @@
 #include "GI2D.glsl"
 #include "Rigidbody2D.glsl"
 
-layout(push_constant) uniform Input
-{
-	int id;
-} constant;
 
 layout(location=0) out gl_PerVertex
 {
@@ -26,11 +22,6 @@ layout(location=1) out A
 	flat i16vec4 voronoi_minmax;
 };
 
-uint align(in uint value, in uint align_num)
-{
-	return (value + (align_num-1)) & ~(align_num -1);
-}
-
 void main()
 {
 	gl_Position = vec4(1.0);
@@ -39,9 +30,6 @@ void main()
 	vertex_index = gl_VertexIndex;
 	voronoi_minmax = b_voronoi_polygon[id].minmax;
 
-	b_make_rigidbody.size_min = voronoi_minmax.xy;
-	b_make_rigidbody.size_max = voronoi_minmax.zw;
-
-	b_make_param.rb_size = voronoi_minmax.xy - voronoi_minmax.xy;
+	b_make_param.rb_aabb = voronoi_minmax;
 
 }

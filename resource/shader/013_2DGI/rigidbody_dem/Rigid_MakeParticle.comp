@@ -13,7 +13,7 @@ void main()
 {
 	uint pb_id = b_pb_update_list[b_world.cpu_index*b_manager.pb_list_size+gl_WorkGroupID.x];
 	uint p_id = pb_id*RB_PARTICLE_BLOCK_SIZE + gl_LocalInvocationID.x;
-	if(b_rbParticle[p_id].contact_index == -1){ return; }
+	if((b_rbParticle[p_id].flag & RBP_FLAG_ACTIVE) == 0){ return; }
 
 	uint r_id = b_rbParticle_map[pb_id];
 	vec2 pos = ((b_rigidbody[r_id].flag & RB_FLAG_FLUID) == 0) 
