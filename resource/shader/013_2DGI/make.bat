@@ -43,8 +43,8 @@ rem %exe% %include% %option% -o %output%/Radiosity_CalcRadiance.comp.spv Radiosi
 %exe% %include% %option% -o %output%/Radiosity_RayHit.comp.spv Radiosity_RayHit.comp
 %exe% %include% %option% -o %output%/Radiosity_RayBounce.comp.spv Radiosity_RayBounce.comp
 
-%exe% %include% %option% -o %output%/Radiosity_RayMarchSDF.comp.spv Radiosity_RayMarchSDF.comp
-%exe% %include% %option% -o %output%/Radiosity_RayMarchSDF2.comp.spv Radiosity_RayMarchSDF2.comp
+rem %exe% %include% %option% -o %output%/Radiosity_RayMarchSDF.comp.spv Radiosity_RayMarchSDF.comp
+rem %exe% %include% %option% -o %output%/Radiosity_RayMarchSDF2.comp.spv Radiosity_RayMarchSDF2.comp
 
 %exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity.comp
 

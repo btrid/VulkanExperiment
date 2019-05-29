@@ -1,0 +1,109 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Common.glsl"
+#include "btrlib/Math.glsl"
+
+#define USE_GI2D 0
+#define USE_GI2D_Radiosity 1
+#include "GI2D.glsl"
+
+layout (local_size_x=64) in;
+void main()
+{
+
+	const int hierarchy = u_gi2d_scene.m_hierarchy;
+	const ivec4 reso = u_gi2d_info.m_resolution;
+
+//	uint ray_index = gl_GlobalInvocationID.x + u_radiosity_info.ray_frame_max*u_gi2d_scene.m_frame;
+	uint ray_index = gl_GlobalInvocationID.x;
+	D2Ray ray = b_ray[ray_index];
+	vec2 pos = ray.origin;
+	vec2 dir = calcDir(ray.angle);
+	vec2 inv_dir = abs(1./dir);
+	ivec2 map_index = ivec2(pos);
+
+
+	u64vec2 map;
+	uint old_map_index = -1;
+	vec2 cell_origin = vec2(greaterThanEqual(dir, vec2(0.))) * vec2(8.);
+
+	D2Segment seg;
+	seg.ray_index = ray_index;
+	seg.begin = 0;
+	seg.march = 0;
+	seg.radiance = 0;
+	int march_count = 0;
+	for(; march_count < ray.march; )
+	{
+		int skip = 1;
+		{
+			ivec2 cell = map_index>>3;
+			ivec2 cell_sub = map_index%8;
+			uint dindex = getMemoryOrder(cell);
+			
+			if(old_map_index != dindex)
+			{
+				map.x = b_diffuse_map[dindex];
+				map.y = b_emissive_map[dindex];
+				old_map_index = dindex;
+
+				bvec3 check = equal(map.xxy, u64vec3(0,-1ul,0));
+				if(check.x && check.z)
+				{
+					vec2 pos_sub = vec2(pos - vec2(cell << 3));
+					vec2 tp = vec2(abs(cell_origin - pos_sub)) * inv_dir;
+					int _axis = tp.x < tp.y ? 0 : 1;
+					skip = int(max(tp[_axis], 1.));
+				}
+			}
+
+			bvec2 attr = notEqual((map & (1ul<<(cell_sub.x+cell_sub.y*8))), u64vec2(0));
+			if(attr.y)
+			{
+				seg.radiance += b_light[getMemoryOrder(map_index)];
+			}
+
+			if(attr.x)
+			{
+				if(seg.march > 1/* && seg.radiance != 0*/ )
+				{
+					int index = atomicAdd(b_segment_counter.w, 1);
+					if(index%1024==0){
+						atomicAdd(b_segment_counter.x, 1);
+					}
+					b_segment[index] = seg;
+				}
+				seg.begin = march_count;
+				seg.march = 0;
+				seg.radiance = 0;
+			}
+
+			{
+				seg.march+=skip;
+			}
+
+		}
+		// march
+		{
+			// DDA
+			march_count += skip;
+			pos = fma(dir, float(march_count).xx, ray.origin);
+			map_index = ivec2(pos);
+		}
+	}
+
+	// 行きすぎたら戻す
+	seg.march -= march_count-ray.march;
+	if(seg.march > 1)
+	{
+		int index = atomicAdd(b_segment_counter.w, 1);
+		if(index%1024==0){
+			atomicAdd(b_segment_counter.x, 1);
+		}
+		b_segment[index] = seg;
+	}
+
+
+}

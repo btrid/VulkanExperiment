@@ -1,0 +1,68 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_GI2D 0
+#define USE_GI2D_Radiosity 1
+#include "GI2D.glsl"
+
+#define HALF_PI (1.5707963)
+#define TWO_PI (6.28318530)
+#define QUARTER_PI (0.7853981633)
+
+shared uint s_ray_index;
+layout (local_size_x=64, local_size_y=1) in;
+void main()
+{
+	const ivec4 reso = u_gi2d_info.m_resolution;
+
+	float a = PI / gl_NumWorkGroups.y;
+	float angle = a * (gl_WorkGroupID.y+0.5);
+
+	vec2 dir = calcDir(angle);
+
+	uint y = (gl_WorkGroupID.y / float(gl_NumWorkGroups.y) >= 0.5);
+	vec2 pdir;
+	pdir.x = (y==1) ? 1 : 0;
+	pdir.y = (y==0) ? 1 : 0;
+
+	vec2 pos = pdir*gl_GlobalInvocationID.x;
+	vec2 begin = pos;
+	ivec2 map_index = ivec2(pos);
+
+
+	int march_count = 1;
+	for(; march_count <5000; march_count++)
+	{
+		// march
+		{
+			// DDA
+			pos = begin + march_count*dir;
+			map_index = ivec2(pos);
+		}
+		// 範囲外?
+		{
+			ivec2 is_die = ivec2(greaterThanEqual(map_index, reso.xy)) + ivec2(lessThan(map_index, ivec2(0)));
+			if(any(notEqual(is_die.xy, ivec2(0))))
+			{
+				break;
+			}
+		}
+	}
+
+	D2Ray ray;
+	ray.origin = begin;
+	ray.angle = angle;
+	ray.march = march_count;
+	
+	if(gl_LocalInvocationIndex == 0)
+	{
+		s_ray_index	= atomicAdd(b_ray_counter[gl_WorkGroupID.z].x, 1) * 64;
+	}
+
+	memoryBarrierShared();
+	barrier();
+
+	uint buffer_offset = u_radiosity_info.ray_frame_max*gl_WorkGroupID.z;
+	b_ray[s_ray_index + gl_LocalInvocationID.x + buffer_offset] = ray;
+
+}
