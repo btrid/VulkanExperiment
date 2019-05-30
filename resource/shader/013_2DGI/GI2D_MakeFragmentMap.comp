@@ -54,6 +54,7 @@ void main()
 			b_emissive_map[store] = light_bit;
 
 			b_fragment_map[gl_WorkGroupID.x + gl_WorkGroupID.y * u_gi2d_info.m_resolution.z] = u64vec2(bit, light_bit);
+			b_fragment_map[gl_WorkGroupID.y + gl_WorkGroupID.x * u_gi2d_info.m_resolution.w + u_gi2d_info.m_resolution.z*u_gi2d_info.m_resolution.w] = u64vec2(bit, light_bit);
 		}
 
 	}

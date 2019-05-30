@@ -11,7 +11,7 @@ struct GI2DRadiosity
 {
 	enum {
 		Frame = 4,
-		Ray_Frame_Num = 1024 * 256, // é¿ç€ÇÕÇ‡Ç§è≠Çµè≠Ç»Ç¢
+		Ray_Frame_Num = 1024 * 256,
 		Ray_All_Num = Ray_Frame_Num * Frame,
 		Segment_Num = Ray_Frame_Num * 8,// Ç∆ÇËÇ†Ç¶Ç∏ÇÃíl
 		Ray_Group = 1,

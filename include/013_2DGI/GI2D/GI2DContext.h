@@ -176,7 +176,7 @@ struct GI2DContext
 			}
 			{
 				b_fragment = context->m_storage_memory.allocateMemory<Fragment>({ FragmentBufferSize,{} });
-				b_fragment_map = context->m_storage_memory.allocateMemory<u64vec2>({ m_gi2d_info.m_fragment_map_size_hierarchy[m_gi2d_info.m_hierarchy_num - 1],{} });
+				b_fragment_map = context->m_storage_memory.allocateMemory<u64vec2>({ m_gi2d_info.m_fragment_map_size_hierarchy[0]*2,{} });
 				b_diffuse_map = context->m_storage_memory.allocateMemory<uint64_t>({ m_gi2d_info.m_fragment_map_size_hierarchy[m_gi2d_info.m_hierarchy_num - 1],{} });
 				b_emissive_map = context->m_storage_memory.allocateMemory<uint64_t>({ m_gi2d_info.m_fragment_map_size_hierarchy[m_gi2d_info.m_hierarchy_num - 1],{} });
 				b_light = context->m_storage_memory.allocateMemory<uint32_t>({ FragmentBufferSize,{} });
