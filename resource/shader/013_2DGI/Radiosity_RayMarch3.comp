@@ -9,7 +9,7 @@
 #define TWO_PI (6.28318530)
 #define QUARTER_PI (0.7853981633)
 
-layout (local_size_x=64) in;
+layout (local_size_x=128) in;
 
 void main()
 {

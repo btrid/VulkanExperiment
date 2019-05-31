@@ -448,7 +448,7 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 #if defined(USE_OLD)
 		cmd.dispatchIndirect(b_ray_counter.getInfo().buffer, b_ray_counter.getInfo().offset + sizeof(ivec4)*m_gi2d_context->m_gi2d_scene.m_frame);
 #else 
-		auto num = app::calcDipatchGroups(uvec3(Ray_Frame_Num, 1, 1), uvec3(64, 1, 1));
+		auto num = app::calcDipatchGroups(uvec3(Ray_Frame_Num, 1, 1), uvec3(128, 1, 1));
 		cmd.dispatch(num.x, num.y, num.z);
 #endif
 	}

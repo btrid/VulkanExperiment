@@ -9,7 +9,7 @@
 #define TWO_PI (6.28318530)
 #define QUARTER_PI (0.7853981633)
 
-layout (local_size_x=64) in;
+layout (local_size_x=128) in;
 
 shared u64vec2 s_fragment[17];
 shared ivec2 s_base_cell;
@@ -44,7 +44,6 @@ void main()
 		memoryBarrierShared();
 		barrier();
 
-		ivec2 local_cell = s_base_cell-cell;
 		if(gl_LocalInvocationIndex < 17)
 		{
 			s_fragment[gl_LocalInvocationIndex] = b_fragment_map[((y%2)==0) ? (cell.x + cell.y*reso.z) : (cell.y + cell.x*reso.w + fragment_offset) + gl_LocalInvocationIndex - cell_offset];
@@ -52,11 +51,11 @@ void main()
 		memoryBarrierShared();
 		barrier();
 		
-		u64vec2 map = s_fragment[(s_base_cell-cell)[y%2] + cell_offset];
+		u64vec2 map = s_fragment[(cell-s_base_cell)[y%2] + cell_offset];
 		vec2 pos_sub = vec2(pos - vec2(cell << 3));
 		vec2 tp = vec2(abs(cell_origin - pos_sub)) * inv_dir;
-		int _axis = tp.x < tp.y ? 0 : 1;
-		int skip = int(max(tp[_axis], 1.));
+		int axis = tp.x < tp.y ? 0 : 1;
+		int skip = int(max(tp[axis], 1.));
 
 		if(all(equal(map.xy, u64vec2(0,0))))
 		{
@@ -94,15 +93,13 @@ void main()
 			}
 		}
 
-		pos = fma(dir, float(march_count).xx, ray.origin);
-		map_index = ivec2(pos);
-		cell = map_index>>3;
+		if(axis == y%2){ continue; }
+//		pos = fma(dir, float(march_count).xx, ray.origin);
+//		map_index = ivec2(pos);
+//		cell = map_index>>3;
 
-		map = s_fragment[(s_base_cell-cell)[y%2] + cell_offset];
-		pos_sub = vec2(pos - vec2(cell << 3));
-		tp = vec2(abs(cell_origin - pos_sub)) * inv_dir;
-		_axis = tp.x < tp.y ? 0 : 1;
-		skip = 8-int(max(tp[_axis], 1.));
+		map = s_fragment[(cell-s_base_cell)[y%2] + cell_offset + ((y/2)*2-1)];
+		skip = 7-skip;
 
 		if(all(equal(map.xy, u64vec2(0,0))))
 		{
