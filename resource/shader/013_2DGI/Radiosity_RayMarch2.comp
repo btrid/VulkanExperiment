@@ -13,19 +13,24 @@ layout (local_size_x=64) in;
 
 shared u64vec2 s_fragment[17];
 shared ivec2 s_base_index;
+shared ivec2 s_map_index;
 void main()
 {
 	const ivec4 reso = u_gi2d_info.m_resolution;
 
-	uint ray_index = gl_GlobalInvocationID.x;
-	D2Ray ray = b_ray[gl_GlobalInvocationID.x];
+//	uint ray_index = gl_GlobalInvocationID.x;
+	uint ray_index = gl_GlobalInvocationID.x + u_radiosity_info.ray_frame_max*u_gi2d_scene.m_frame;
+	D2Ray ray = b_ray[ray_index];
 	vec2 dir = calcDir(ray.angle);
 	int y = int(ray.angle / HALF_PI);
 	ivec2 idir = ivec2(sign(dir) * 0.5 + 0.5);
 	int dir_type = y%2; // 横:0 縦:1
-	int dir_sign = (y/2) * 2 - 1;
 	ivec2 pdir = ((dir_type==1) ? ivec2(1, 0) : ivec2(0, 1)) * int(gl_LocalInvocationID.x);
 	int fragment_offset = dir_type * reso.z*reso.w; // 縦ほうこうに進む場合
+
+	ivec2 map_offset;
+	map_offset.x = dir_type==0 ? -(1-idir.x) : 0;
+	map_offset.y = dir_type==1 ? -(1-idir.y) : 0;
 
 	D2Segment seg;
 	seg.ray_index = ray_index;
@@ -36,13 +41,27 @@ void main()
 	for(; march_count < ray.march; )
 	{
 		{
-			vec2 pos = fma(dir, float(march_count).xx, ray.origin);
-			ivec2 index = ivec2(pos);
-			ivec2 map_index = index >> 3;
+			if(gl_LocalInvocationIndex == 0)
+			{
+				vec2 pos = fma(dir, float(march_count).xx, ray.origin);
+				ivec2 index = ivec2(pos);
+				s_map_index = index >> 3;
+			}
+			memoryBarrierShared();
+			barrier();
+
 			if(gl_LocalInvocationIndex < 17)
 			{
-				ivec2 mi = map_index + idir;
-				s_fragment[gl_LocalInvocationIndex] = b_fragment_map[mi.x + mi.y*reso.z + fragment_offset];
+				ivec2 mi = s_map_index + map_offset;
+				switch(dir_type)
+				{
+					case 0:
+						s_fragment[gl_LocalInvocationIndex] = b_fragment_map[gl_LocalInvocationIndex + mi.y + mi.x*reso.w + fragment_offset];
+						break;
+					case 1:
+						s_fragment[gl_LocalInvocationIndex] = b_fragment_map[gl_LocalInvocationIndex + mi.x + mi.y*reso.z];
+						break;
+				}
 			}
 			
 		}
@@ -60,7 +79,7 @@ void main()
 			ivec2 local_index = s_base_index + pdir;
 			ivec2 map_local_index = local_index >> 3;
 			ivec2 cell_sub = local_index%8;
-			u64vec2 map = s_fragment[map_local_index[dir_type]];
+			u64vec2 map = s_fragment[map_local_index[1-dir_type]];
 
 			bvec2 attr = notEqual((map & (1ul<<(cell_sub.x+cell_sub.y*8))), u64vec2(0));
 			if(attr.y)
