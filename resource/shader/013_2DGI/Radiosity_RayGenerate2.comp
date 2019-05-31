@@ -16,8 +16,8 @@ void main()
 	const ivec4 reso = u_gi2d_info.m_resolution;
 
 	float a = TWO_PI / gl_NumWorkGroups.y;
-	float angle = a * (gl_WorkGroupID.y+0.5);
-	angle += a*((1. / u_radiosity_info.frame_max)*gl_WorkGroupID.z + (0.5 / u_radiosity_info.frame_max));
+	float angle = a * (gl_WorkGroupID.y+0.3);
+	angle += a*((1. / u_radiosity_info.frame_max)*gl_WorkGroupID.z);
 
 	uint y = uint(angle / HALF_PI);
 
@@ -52,6 +52,19 @@ void main()
 				break;
 			}
 		}
+	}
+
+	// 2重になるのを禁止
+	switch(y)
+	{
+		case 2:
+//			if(map_index.x==reso.x){ return; }
+			if(map_index.y>=reso.y-1||map_index.y<=0){}else{ march_count=0; }
+			break;
+		case 3:
+//			if(map_index.y==reso.y){ return; }
+			if(map_index.x>=reso.x-1||map_index.x<=0){}else{ march_count=0; }
+			break;
 	}
 
 	D2Ray ray;

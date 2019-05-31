@@ -19,9 +19,9 @@ void main()
 
 	uint y = uint(angle / HALF_PI);
 //	if(y == 0){return;}
-	if(y == 1){return;}
+//	if(y == 1){return;}
 //	if(y == 2){return;}
-	if(y == 3){return;}
+//	if(y == 3){return;}
 
 	angle -= QUARTER_PI;
 	angle += HALF_PI;
