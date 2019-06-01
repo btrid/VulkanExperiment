@@ -42,7 +42,7 @@ void main()
 		vec2 pos_sub = vec2(pos - vec2(cell << 3));
 		vec2 tp = vec2(abs(cell_origin - pos_sub)) * inv_dir;
 		int _axis = tp.x < tp.y ? 0 : 1;
-		int skip = int(max(tp[_axis], 1.));
+		int skip = int(tp[_axis] + 1.);
 
 		if(all(equal(map.xy, u64vec2(0,0))))
 		{

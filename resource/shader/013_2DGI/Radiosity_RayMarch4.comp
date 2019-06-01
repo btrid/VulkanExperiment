@@ -11,8 +11,51 @@
 
 layout (local_size_x=128) in;
 
-shared u64vec2 s_fragment[17];
+void march(inout D2Segment seg, inout int march, in D2Ray ray, in vec2 dir, in u64vec2 map, in int skip)
+{
+	if(all(equal(map.xy, u64vec2(0,0))))
+	{
+		seg.march+=skip;
+		march+=skip;
+	}
+	else
+	{
+		for(uint i = 0; i < skip; i++)
+		{
+			vec2 pos = fma(dir, float(march).xx, ray.origin);
+			ivec2 map_index = ivec2(pos);
+			ivec2 cell_sub = map_index % 8;
+			bvec2 attr = notEqual((map & (1ul<<(cell_sub.x+cell_sub.y*8))), u64vec2(0));
+			if(attr.y)
+			{
+				seg.radiance += b_light[getMemoryOrder(map_index)];
+			}
+			if(attr.x)
+			{
+				if(seg.march > 1)
+				{
+					int index = atomicAdd(b_segment_counter.w, 1);
+					if(index%1024==0){
+						atomicAdd(b_segment_counter.x, 1);
+					}
+					b_segment[index] = seg;
+				}
+				seg.begin = march;
+				seg.march = 0;
+				seg.radiance = 0;
+			}
+			seg.march++;
+			march++;
+		}
+	}
+
+
+}
+
+shared u64vec2 s_fragment[18];
 shared ivec2 s_base_cell;
+shared ivec4 s_is_end;
+shared int s_index;
 void main()
 {
 	const ivec4 reso = u_gi2d_info.m_resolution;
@@ -22,121 +65,92 @@ void main()
 	vec2 dir = calcDir(ray.angle);
 	vec2 inv_dir = abs(1./dir);
 	int y = int(ray.angle / HALF_PI);
-	int fragment_offset = (y%2) * reso.z*reso.w; // 縦ほうこうに進む場合
+	int axis = y%2;
 	vec2 cell_origin = vec2(greaterThanEqual(dir, vec2(0.))) * vec2(8.);
-	int cell_offset = (y/2 == 0) ? 1 : 0;
+	ivec2 idir = ivec2(sign(dir));
+	bool is_end = false;
 
+// axis : 0=x, 1=y
+//  y : r d l t
+	if(y == 0) return;
+	if(y == 1) return;
+//	if(y == 2) return;
+	if(y == 3) return;
+
+//	if(any(greaterThanEqual(ray.origin, vec2(1., 10000)))){ return; }
+
+	if(gl_LocalInvocationIndex < 4)
+		s_is_end[gl_LocalInvocationIndex] = 0;
+	memoryBarrierShared();
+	barrier();
+		
 	D2Segment seg;
 	seg.ray_index = ray_index;
 	seg.begin = 0;
 	seg.march = 0;
 	seg.radiance = 0;
 	int march_count = 0;
-	for(; march_count < ray.march; )
+	for(int _i = 0; _i < 10000; _i++)
 	{
+		if(!is_end && march_count >= ray.march)
+		{
+			atomicOr(s_is_end[gl_LocalInvocationIndex / 32], 1 << (gl_LocalInvocationIndex % 32));
+			is_end = true;
+		}
+		memoryBarrierShared();
+		barrier();
+
+		if(all(equal(s_is_end, ivec4(-1)))){ break; }
+
+
 		vec2 pos = fma(dir, float(march_count).xx, ray.origin);
 		ivec2 map_index = ivec2(pos);
 		ivec2 cell = map_index>>3;
 		if(gl_LocalInvocationIndex == 0)
 		{
+			int i = (axis==1) ? (cell.x + cell.y*reso.z) : (cell.y + cell.x*reso.w + reso.z*reso.w);
+			s_index = i - 1;
 			s_base_cell = cell;
 		}
 		memoryBarrierShared();
 		barrier();
 
-		if(gl_LocalInvocationIndex < 17)
+		if(gl_LocalInvocationIndex < 18)
 		{
-			s_fragment[gl_LocalInvocationIndex] = b_fragment_map[((y%2)==0) ? (cell.x + cell.y*reso.z) : (cell.y + cell.x*reso.w + fragment_offset) + gl_LocalInvocationIndex - cell_offset];
+			s_fragment[gl_LocalInvocationIndex] = b_fragment_map[s_index + gl_LocalInvocationIndex];
 		}
 		memoryBarrierShared();
 		barrier();
 		
-		u64vec2 map = s_fragment[(cell-s_base_cell)[y%2] + cell_offset];
+		if(is_end){ continue; }
+
+		int ii = (cell-s_base_cell)[1-axis] + 1;
+		u64vec2 map = s_fragment[ii];
+
 		vec2 pos_sub = vec2(pos - vec2(cell << 3));
 		vec2 tp = vec2(abs(cell_origin - pos_sub)) * inv_dir;
-		int axis = tp.x < tp.y ? 0 : 1;
-		int skip = int(max(tp[axis], 1.));
+		int _axis = tp.x < tp.y ? 0 : 1;
+		int skip = int(tp[_axis] + 1.);
 
-		if(all(equal(map.xy, u64vec2(0,0))))
-		{
-			seg.march+=skip;
-			march_count+=skip;
-		}
-		else
-		{
-			for(uint i = 0; i < skip; i++)
-			{
-				pos = fma(dir, float(march_count).xx, ray.origin);
-				map_index = ivec2(pos);
-				ivec2 cell_sub = map_index % 8;
-				bvec2 attr = notEqual((map & (1ul<<(cell_sub.x+cell_sub.y*8))), u64vec2(0));
-				if(attr.y)
-				{
-					seg.radiance += b_light[getMemoryOrder(map_index)];
-				}
-				if(attr.x)
-				{
-					if(seg.march > 1)
-					{
-						int index = atomicAdd(b_segment_counter.w, 1);
-						if(index%1024==0){
-							atomicAdd(b_segment_counter.x, 1);
-						}
-						b_segment[index] = seg;
-					}
-					seg.begin = march_count;
-					seg.march = 0;
-					seg.radiance = 0;
-				}
-				seg.march++;
-				march_count++;
-			}
-		}
+		march(seg, march_count, ray, dir, map, skip);
 
-		if(axis == y%2){ continue; }
+		if(axis == _axis){ continue; }
+
+		map = s_fragment[ii + idir[1-axis]];
+
 //		pos = fma(dir, float(march_count).xx, ray.origin);
 //		map_index = ivec2(pos);
 //		cell = map_index>>3;
+//		pos_sub = vec2(pos - vec2(cell << 3));
+//		tp = vec2(abs(cell_origin - pos_sub)) * inv_dir;
+//		_axis = tp.x < tp.y ? 0 : 1;
+//		skip = int(max(tp[_axis], 1.));
 
-		map = s_fragment[(cell-s_base_cell)[y%2] + cell_offset + ((y/2)*2-1)];
-		skip = 7-skip;
+//		if(axis == _axis){ continue; }
 
-		if(all(equal(map.xy, u64vec2(0,0))))
-		{
-			seg.march+=skip;
-			march_count+=skip;
-		}
-		else
-		{
-			for(uint i = 0; i < skip; i++)
-			{
-				pos = fma(dir, float(march_count).xx, ray.origin);
-				map_index = ivec2(pos);
-				ivec2 cell_sub = map_index % 8;
-				bvec2 attr = notEqual((map & (1ul<<(cell_sub.x+cell_sub.y*8))), u64vec2(0));
-				if(attr.y)
-				{
-					seg.radiance += b_light[getMemoryOrder(map_index)];
-				}
-				if(attr.x)
-				{
-					if(seg.march > 1)
-					{
-						int index = atomicAdd(b_segment_counter.w, 1);
-						if(index%1024==0){
-							atomicAdd(b_segment_counter.x, 1);
-						}
-						b_segment[index] = seg;
-					}
-					seg.begin = march_count;
-					seg.march = 0;
-					seg.radiance = 0;
-				}
-				seg.march++;
-				march_count++;
-			}
-		}
+		skip = 8-skip;
 
+		march(seg, march_count, ray, dir, map, skip);
 
 	}
 

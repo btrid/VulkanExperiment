@@ -13,7 +13,7 @@ struct GI2DRadiosity
 		Frame = 4,
 		Ray_Frame_Num = 1024 * 256,
 		Ray_All_Num = Ray_Frame_Num * Frame,
-		Segment_Num = Ray_Frame_Num * 8,// ‚Æ‚è‚ ‚¦‚¸‚Ì’l
+		Segment_Num = Ray_Frame_Num * 32,// ‚Æ‚è‚ ‚¦‚¸‚Ì’l
 		Ray_Group = 1,
 		Bounce_Num = 0,
 	};

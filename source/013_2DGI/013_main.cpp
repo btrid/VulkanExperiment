@@ -379,6 +379,38 @@ int main()
 //	return pathFinding();
 //	return rigidbody();
 
+// 	auto dir = normalize(vec2(1.1, 2));
+// 	auto inv_dir = vec2(1.)/dir;
+// 	dir = dir * glm::min(abs(inv_dir.x), abs(inv_dir.y));
+// 	inv_dir = vec2(1.) / dir;
+// 
+// 	auto origin = vec2(12.4, 23.3);
+// 	vec2 cell_origin = vec2(greaterThanEqual(dir, vec2(0.))) * vec2(8.);
+// 
+// 	int march = 0;
+// 	for (;;)
+// 	{
+// 		vec2 pos = glm::fma(dir, vec2(march), origin);
+// 		ivec2 map_index = ivec2(pos);
+// 
+// 		ivec2 cell = map_index >> 3;
+// 
+// 		vec2 pos_sub = vec2(pos - vec2(cell << 3));
+// 		vec2 tp = vec2(abs(cell_origin - pos_sub)) * inv_dir;
+// 		int _axis = tp.x < tp.y ? 0 : 1;
+// 		int skip = int(glm::max(tp[_axis]+1.f, 1.f));
+// 
+// 		march += skip;
+// 
+// 		pos = glm::fma(dir, vec2(march), origin);
+// 		if (all(notEqual(ivec2(pos) % 8, ivec2(0))))
+// 		{
+// 			int a = 0;
+// 			a++;
+// 		}
+// 
+// 	}
+
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
 
