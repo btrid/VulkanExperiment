@@ -40,8 +40,8 @@ void main()
 		u64vec2 map = b_fragment_map[((y%2)==0) ? (cell.x + cell.y*reso.z) : (cell.y + cell.x*reso.w + fragment_offset)];
 
 		vec2 pos_sub = vec2(pos - vec2(cell << 3));
-		vec2 tp = vec2(abs(cell_origin - pos_sub)) * inv_dir;
-		int skip = int(min(tp.x, tp.y) + 1.);
+		vec2 tp = vec2(abs(cell_origin - pos_sub)) * inv_dir + 1.;
+		int skip = int(min(tp.x, tp.y));
 
 		if(all(equal(map.xy, u64vec2(0,0))))
 		{

@@ -52,7 +52,7 @@ void march(inout D2Segment seg, inout int march, in D2Ray ray, in vec2 dir, in u
 
 }
 
-shared u64vec2 s_fragment[18];
+shared u64vec2 s_fragment[18][2];
 shared ivec2 s_base_cell;
 shared ivec4 s_is_end;
 shared int s_index;
@@ -71,8 +71,6 @@ void main()
 	int local_map_offset = ivec2(sign(dir))[1-axis];
 	bool is_end = false;
 
-//	if(y != 2){ return; }
-
 	if(gl_LocalInvocationIndex < 4)
 		s_is_end[gl_LocalInvocationIndex] = 0;
 	memoryBarrierShared();
@@ -86,6 +84,7 @@ void main()
 	int march_count = 0;
 	for(int _i = 0; _i < 10000; _i++)
 	{
+		int base = _i%2;
 		if(!is_end && march_count >= ray.march)
 		{
 			atomicOr(s_is_end[gl_LocalInvocationIndex / 32], 1 << (gl_LocalInvocationIndex % 32));
@@ -104,6 +103,7 @@ void main()
 		{
 			int i = (axis==1) ? (cell.x + cell.y*reso.z) : (cell.y + cell.x*reso.w + fragment_offset);
 			s_index = i - 1;
+
 			s_base_cell = cell;
 		}
 		memoryBarrierShared();
@@ -111,7 +111,7 @@ void main()
 
 		if(gl_LocalInvocationIndex < 18)
 		{
-			s_fragment[gl_LocalInvocationIndex] = b_fragment_map[s_index + gl_LocalInvocationIndex];
+			s_fragment[base][gl_LocalInvocationIndex] = b_fragment_map[s_index + gl_LocalInvocationIndex];
 		}
 		memoryBarrierShared();
 		barrier();
@@ -119,19 +119,12 @@ void main()
 		if(is_end){ continue; }
 
 		int ii = (cell-s_base_cell)[1-axis] + 1;
+		int iii = (cell[axis]-base_index);
 		u64vec2 map = s_fragment[ii];
 
 		vec2 pos_sub = vec2(pos - vec2(cell << 3));
 		vec2 tp = abs(cell_origin - pos_sub) * inv_dir + 1.;
-		int _axis = tp[0] < tp[1] ? 0 : 1;
-		int skip = int(tp[_axis]);
-
-		march(seg, march_count, ray, dir, map, skip);
-
-		if(axis == _axis){ continue; }
-
-		map = s_fragment[ii + local_map_offset];
-		skip = 8-skip;
+		int skip = int(min(tp[0], tp[1]));
 
 		march(seg, march_count, ray, dir, map, skip);
 
