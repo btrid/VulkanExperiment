@@ -19,7 +19,7 @@ void main()
 	D2Ray ray = b_ray[ray_index];
 	vec2 dir = calcDir(ray.angle);
 	vec2 inv_dir = abs(1./dir);
-	int y = int(ray.angle / HALF_PI);
+	int y = int((ray.angle-QUARTER_PI) / HALF_PI);
 //	if(y == 0) return;
 //	if(y == 2) return;
 	int fragment_offset = (y%2) * reso.z*reso.w; // 縦ほうこうに進む場合
@@ -41,8 +41,7 @@ void main()
 
 		vec2 pos_sub = vec2(pos - vec2(cell << 3));
 		vec2 tp = vec2(abs(cell_origin - pos_sub)) * inv_dir;
-		int _axis = tp.x < tp.y ? 0 : 1;
-		int skip = int(tp[_axis] + 1.);
+		int skip = int(min(tp.x, tp.y) + 1.);
 
 		if(all(equal(map.xy, u64vec2(0,0))))
 		{

@@ -379,15 +379,16 @@ int main()
 //	return pathFinding();
 //	return rigidbody();
 
-// 	auto dir = normalize(vec2(1.1, 2));
-// 	auto inv_dir = vec2(1.)/dir;
-// 	dir = dir * glm::min(abs(inv_dir.x), abs(inv_dir.y));
-// 	inv_dir = vec2(1.) / dir;
-// 
-// 	auto origin = vec2(12.4, 23.3);
-// 	vec2 cell_origin = vec2(greaterThanEqual(dir, vec2(0.))) * vec2(8.);
-// 
-// 	int march = 0;
+	auto dir = normalize(vec2(-1.13, -2));
+	auto inv_dir = vec2(1.)/dir;
+	dir = dir * glm::min(abs(inv_dir.x), abs(inv_dir.y));
+	inv_dir = abs(vec2(1.) / dir);
+
+//	auto origin = vec2(10.5, 0.5);
+	auto origin = vec2(1000.5, 1023.5);
+	vec2 cell_origin = vec2(greaterThanEqual(dir, vec2(0.))) * vec2(8.);
+
+	int march = 0;
 // 	for (;;)
 // 	{
 // 		vec2 pos = glm::fma(dir, vec2(march), origin);
@@ -398,12 +399,17 @@ int main()
 // 		vec2 pos_sub = vec2(pos - vec2(cell << 3));
 // 		vec2 tp = vec2(abs(cell_origin - pos_sub)) * inv_dir;
 // 		int _axis = tp.x < tp.y ? 0 : 1;
-// 		int skip = int(glm::max(tp[_axis]+1.f, 1.f));
+// 		int skip = int(tp[_axis]+1.f);
 // 
 // 		march += skip;
-// 
 // 		pos = glm::fma(dir, vec2(march), origin);
-// 		if (all(notEqual(ivec2(pos) % 8, ivec2(0))))
+// 
+// 		if(_axis == 1){ continue;}
+// 
+// 		march += 8-skip;
+// 		pos = glm::fma(dir, vec2(march), origin);
+// 
+// 		if ((int(pos.y) % 8) != 7)
 // 		{
 // 			int a = 0;
 // 			a++;
