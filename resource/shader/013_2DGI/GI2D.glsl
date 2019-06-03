@@ -254,6 +254,7 @@ vec2 calcDir(in float angle)
 {
 	vec2 dir = rotate(angle);
 	vec2 inv_dir = 1./dir;
+//	inv_dir = vec2(isnan(inv_dir)) * 99999999. + inv_dir;
 	return dir * min(abs(inv_dir.x), abs(inv_dir.y));
 }
 

@@ -1,10 +1,6 @@
 #version 450
 #extension GL_GOOGLE_include_directive : require
 
-#include "btrlib/ConvertDimension.glsl"
-#include "btrlib/Common.glsl"
-#include "btrlib/Math.glsl"
-
 #define USE_GI2D 0
 #define USE_GI2D_Radiosity 1
 #include "GI2D.glsl"
@@ -15,15 +11,14 @@ void main()
 {
 	if(gl_GlobalInvocationID.x >= b_segment_counter.w){ return; }
 
-	const int hierarchy = u_gi2d_scene.m_hierarchy;
-	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
+	const ivec4 reso = ivec4(u_gi2d_info.m_resolution);
 
 	D2Segment segment = b_segment[gl_GlobalInvocationID.x];
 	D2Ray ray = b_ray[segment.ray_index];
 	vec2 dir = calcDir(ray.angle);
 
 	{
-		vec4 pos = ray.origin.xyxy + vec4(segment.begin.xx, (segment.begin+segment.march).xx)*dir.xyxy;
+		vec4 pos = fma(vec4(segment.begin.xx, (segment.begin+segment.march).xx), dir.xyxy, ray.origin.xyxy);
 		ivec4 map_index = ivec4(pos);
 
 		uint radiance = 0;
@@ -35,5 +30,4 @@ void main()
 			b_segment[gl_GlobalInvocationID.x].radiance += radiance;
 		}
 	}
-
 }
