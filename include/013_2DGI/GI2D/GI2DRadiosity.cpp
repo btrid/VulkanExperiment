@@ -435,7 +435,6 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 
 	}
 
-
 	// bounce
 	{
 

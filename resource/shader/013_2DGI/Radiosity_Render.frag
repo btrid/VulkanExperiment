@@ -13,17 +13,19 @@ void main()
 //	FragColor = vec4(1.);
 //	return;
 	ivec2 reso = u_gi2d_info.m_resolution.xy;
-	int hierarchy = u_gi2d_scene.m_hierarchy;
-	uint radiance_size = (reso.x*reso.y)>>(hierarchy*2);
+//	int hierarchy = u_gi2d_scene.m_hierarchy;
+	uint radiance_size = (reso.x*reso.y);
+
+	ivec2 coord = ivec2(gl_FragCoord.xy);
 	vec3 radiance = vec3(0.);
 
 //	for(int i = 0; i<2; i++) 
 	{
-		uvec4 coord_x = (ivec4(gl_FragCoord.x)>>hierarchy) + ivec4(0,1,0,1);
-		uvec4 coord_y = (ivec4(gl_FragCoord.y)>>hierarchy) + ivec4(0,0,1,1);
-		uvec4 coord = getMemoryOrder4(coord_x, coord_y);
-		ivec2 subcoord_i = ivec2(gl_FragCoord.xy)%(1<<hierarchy);
-		vec2 subcoord =  subcoord_i / float(1<<hierarchy);
+		uvec4 coord_x = coord.xxxx + ivec4(0,1,0,1);
+		uvec4 coord_y = coord.yyyy + ivec4(0,0,1,1);
+		uvec4 c = getMemoryOrder4(coord_x, coord_y);
+//		ivec2 subcoord_i = ivec2(gl_FragCoord.xy)%(1<<hierarchy);
+//		vec2 subcoord =  subcoord_i / float(1<<hierarchy);
 		vec3 radiance_ = vec3(0.);
 		int count = 0;
 //		for(int y = 0; y < Block_Size; y++){
@@ -33,26 +35,25 @@ void main()
 			for(int i = 0; i < 4; i++)
 			{
 				vec3 rad[4];
-				rad[0] = unpackEmissive(b_radiance[coord.x]);
-				rad[1] = unpackEmissive(b_radiance[coord.y]);
-				rad[2] = unpackEmissive(b_radiance[coord.z]);
-				rad[3] = unpackEmissive(b_radiance[coord.w]);
+				rad[0] = unpackEmissive(b_radiance[c.x]);
+//				rad[1] = unpackEmissive(b_radiance[c.y]);
+//				rad[2] = unpackEmissive(b_radiance[c.z]);
+//				rad[3] = unpackEmissive(b_radiance[c.w]);
 //				radiance_ += mix(mix(rad[0], rad[1], subcoord.x), mix(rad[2], rad[3], subcoord.x), subcoord.y);
 				radiance_ += rad[0];
-				coord += radiance_size;
+				c += radiance_size;
 			}
 			count += 8;
 //		}}
 		radiance += count==0 ? radiance_ : (radiance_ / count)*4;
 	}
 
-	ivec2 map_index = ivec2(gl_FragCoord.xy);
 //	ivec2 shift = map_index%8;
 //	ivec2 _fi = map_index/8;
 //	int findex = _fi.x + _fi.y*u_gi2d_info.m_resolution.z;
 //	uint64_t fragment_map = b_diffuse_map[findex.x];
 //	bool is_fragment = (fragment_map & 1ul<<(shift.x+shift.y*8)) != 0;
-	int fragment_index = map_index.x + map_index.y * u_gi2d_info.m_resolution.x;
+	int fragment_index = coord.x + coord.y * u_gi2d_info.m_resolution.x;
 
 //	radiance *= is_fragment ? b_fragment[fragment_index].albedo.xyz : vec3(0.3, 0.2, 0.2);
 	radiance.xyz *= getRGB(b_fragment[fragment_index]);
