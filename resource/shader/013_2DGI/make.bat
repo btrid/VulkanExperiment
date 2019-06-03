@@ -36,19 +36,11 @@ rem %exe% %include% %option% -o %output%/GI2DSDF_MakeJFA_EX.comp.spv GI2DSDF_Mak
 
 
 %exe% %include% %option% -o %output%/Radiosity_RayGenerate.comp.spv Radiosity_RayGenerate.comp
-%exe% %include% %option% -o %output%/Radiosity_RayGenerate.comp.spv Radiosity_RayGenerate2.comp
-%exe% %include% %option% -o %output%/Radiosity_RaySort.comp.spv Radiosity_RaySort.comp
 %exe% %include% %option% -o %output%/Radiosity_RayMarch.comp.spv Radiosity_RayMarch.comp
-rem %exe% %include% %option% -o %output%/Radiosity_RayMarch.comp.spv Radiosity_RayMarch.1.comp
-rem %exe% %include% %option% -o %output%/Radiosity_RayMarch.comp.spv Radiosity_RayMarch2.comp
- %exe% %include% %option% -o %output%/Radiosity_RayMarch.comp.spv Radiosity_RayMarch3.comp
-rem %exe% %include% %option% -o %output%/Radiosity_RayMarch.comp.spv Radiosity_RayMarch3.1.comp
-rem %exe% %include% %option% -o %output%/Radiosity_RayMarch.comp.spv Radiosity_RayMarch4.comp
-rem %exe% %include% %option% -o %output%/Radiosity_RayMarch.comp.spv Radiosity_RayMarch4.1.comp
-rem %exe% %include% %option% -o %output%/Radiosity_RayMarch.comp.spv Radiosity_RayMarch5.comp
 %exe% %include% %option% -o %output%/Radiosity_RayHit.comp.spv Radiosity_RayHit.comp
 %exe% %include% %option% -o %output%/Radiosity_RayBounce.comp.spv Radiosity_RayBounce.comp
-
-
 %exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity.comp
+
+rem %exe% %include% %option% -o %output%/Radiosity_RaySort.comp.spv Radiosity_RaySort.comp
+
 

@@ -5,8 +5,6 @@
 #define USE_GI2D_Radiosity 1
 #include "GI2D.glsl"
 
-float rate[] = {1., 1.};
-
 layout(location = 0) out vec4 FragColor;
 void main()
 {
@@ -41,9 +39,9 @@ void main()
 //				rad[3] = unpackEmissive(b_radiance[c.w]);
 //				radiance_ += mix(mix(rad[0], rad[1], subcoord.x), mix(rad[2], rad[3], subcoord.x), subcoord.y);
 				radiance_ += rad[0];
-				c += radiance_size;
+//				c += radiance_size;
 			}
-			count += 8;
+//			count += 8;
 //		}}
 		radiance += count==0 ? radiance_ : (radiance_ / count)*4;
 	}
@@ -56,11 +54,11 @@ void main()
 	int fragment_index = coord.x + coord.y * u_gi2d_info.m_resolution.x;
 
 //	radiance *= is_fragment ? b_fragment[fragment_index].albedo.xyz : vec3(0.3, 0.2, 0.2);
-	radiance.xyz *= getRGB(b_fragment[fragment_index]);
+//	radiance.xyz *= getRGB(b_fragment[fragment_index]);
 //	radiance = is_fragment ? vec3(100., 0., 0.) : vec3(0., 0., 1000.2);
 
 	FragColor = vec4(radiance, 1.);
-
+return;
 	// tonemapテスト
 	{
 //#define max_luminamce (0.009)

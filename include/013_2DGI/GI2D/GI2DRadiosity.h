@@ -21,12 +21,10 @@ struct GI2DRadiosity
 	enum Shader
 	{
 		Shader_Radiosity,
-		Shader_Radiosity_Clear,
 		Shader_RenderingVS,
 		Shader_RenderingFS,
 
 		Shader_RayGenerate,
-		Shader_RaySort,
 		Shader_RayMarch,
 		Shader_RayHit,
 		Shader_RayBounce,
@@ -41,11 +39,9 @@ struct GI2DRadiosity
 	enum Pipeline
 	{
 		Pipeline_Radiosity,
-		Pipeline_Radiosity_Clear,
 		Pipeline_Output,
 
 		Pipeline_RayGenerate,
-		Pipeline_RaySort,
 		Pipeline_RayMarch,
 		Pipeline_RayHit,
 		Pipeline_RayBounce,
@@ -91,7 +87,6 @@ struct GI2DRadiosity
 	btr::BufferMemoryEx<GI2DRadiosityInfo> u_radiosity_info;
 	btr::BufferMemoryEx<uint32_t> b_radiance;
 	btr::BufferMemoryEx<D2Ray> b_ray;
-	btr::BufferMemoryEx<ivec4> b_ray_counter;
 	btr::BufferMemoryEx<D2Segment> b_segment;
 	btr::BufferMemoryEx<ivec4> b_segment_counter;
 

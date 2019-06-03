@@ -8,24 +8,18 @@
 #define HALF_PI (1.5707963)
 #define TWO_PI (6.28318530)
 #define QUARTER_PI (0.7853981633)
-layout (local_size_x=255, local_size_y=1) in;
+
+layout (local_size_x=64, local_size_y=1) in;
+
 void main()
 {
 	const ivec4 reso = u_gi2d_info.m_resolution;
 
-	float a = TWO_PI / gl_WorkGroupSize.x;
-	float angle = a * (gl_LocalInvocationID.x);
-	angle += a*((1. / u_radiosity_info.frame_max)*gl_WorkGroupID.z + (0.5 / u_radiosity_info.frame_max));
+	float a = TWO_PI / gl_NumWorkGroups.y;
+	float angle = a * (gl_WorkGroupID.y+0.3);
+	angle += a*((1. / u_radiosity_info.frame_max)*gl_WorkGroupID.z);
 
 	uint y = uint(angle / HALF_PI);
-//	if(y == 0){return;}
-//	if(y == 1){return;}
-//	if(y == 2){return;}
-//	if(y == 3){return;}
-
-	angle -= QUARTER_PI;
-	angle += HALF_PI;
-	vec2 dir = calcDir(angle);
 
 	vec2 pos;
 	pos.x = (y==0) ? (reso.x-0.5) : 0.5;
@@ -34,11 +28,13 @@ void main()
 	pdir.x = (y%2==1) ? 1 : 0;
 	pdir.y = (y%2==0) ? 1 : 0;
 
-	pos += pdir*(gl_WorkGroupID.x);
+	pos += pdir*(gl_GlobalInvocationID.x);
 	vec2 begin = pos;
 	ivec2 map_index = ivec2(pos);
 
 
+	angle += QUARTER_PI;
+	vec2 dir = calcDir(angle);
 	int march_count = 1;
 	for(; march_count <5000; march_count++)
 	{
@@ -58,19 +54,16 @@ void main()
 		}
 	}
 
-	if(march_count <= 1) { return; }
-//	if(march_count <= 1) { march_count =100; }
-
 	// 2重になるのを禁止
 	switch(y)
 	{
 		case 2:
 //			if(map_index.x==reso.x){ return; }
-			if(map_index.y>=reso.y-1||map_index.y<=0){}else{ return; }
+			if(map_index.y>=reso.y-1||map_index.y<=0){}else{ march_count=0; }
 			break;
 		case 3:
 //			if(map_index.y==reso.y){ return; }
-			if(map_index.x>=reso.x-1||map_index.x<=0){}else{ return; }
+			if(map_index.x>=reso.x-1||map_index.x<=0){}else{ march_count=0; }
 			break;
 	}
 
@@ -79,12 +72,7 @@ void main()
 	ray.angle = angle;
 	ray.march = march_count;
 	
-	int buffer_index = atomicAdd(b_ray_counter[gl_WorkGroupID.z].w, 1);
-	if(buffer_index >= u_radiosity_info.ray_frame_max){ while(true); }
 	uint buffer_offset = u_radiosity_info.ray_frame_max*gl_WorkGroupID.z;
-	b_ray[buffer_index+buffer_offset] = ray;
+	b_ray[gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * gl_NumWorkGroups.x * gl_WorkGroupSize.x + buffer_offset] = ray;
 
-	if(buffer_index%1024 == 0){
-		atomicAdd(b_ray_counter[gl_WorkGroupID.z].x, 1);
-	}
 }
