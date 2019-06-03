@@ -35,13 +35,12 @@ void main()
 	{
 		vec2 pos = fma(dir, float(march_count).xx, ray.origin);
 		ivec2 map_index = ivec2(pos);
-//		if(any(greaterThanEqual(map_index, u_gi2d_info.m_resolution.xy)) || any(lessThan(map_index, ivec2(0)))){ return; }
 
 		ivec2 cell = map_index>>3;
 		u64vec2 map = b_fragment_map[((y%2)==0) ? (cell.x + cell.y*reso.z) : (cell.y + cell.x*reso.w + fragment_offset)];
 
 		vec2 pos_sub = vec2(pos - vec2(cell << 3));
-		vec2 tp = vec2(abs(cell_origin - pos_sub)) * inv_dir + 1.;
+		vec2 tp = fma(vec2(abs(cell_origin - pos_sub)), inv_dir, float(1.).xx);
 		int skip = int(min(tp.x, tp.y));
 
 		if(all(equal(map.xy, u64vec2(0,0))))

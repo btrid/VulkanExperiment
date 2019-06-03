@@ -172,7 +172,6 @@ struct GI2DRadiosityInfo
 	uint ray_frame_max;
 	uint frame_max;
 	uint a2;
-	uint a3;
 };
 
 

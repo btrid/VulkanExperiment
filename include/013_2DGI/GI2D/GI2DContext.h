@@ -173,6 +173,16 @@ struct GI2DContext
 				m_gi2d_scene.m_hierarchy = 0;
 				m_gi2d_scene.m_skip = 0;
 				cmd.updateBuffer<GI2DScene>(u_gi2d_scene.getInfo().buffer, u_gi2d_scene.getInfo().offset, m_gi2d_scene);
+
+				{
+					vk::BufferMemoryBarrier to_read[] = {
+						u_gi2d_info.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+						u_gi2d_scene.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+					};
+					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eTopOfPipe, {},
+						0, nullptr, array_length(to_read), to_read, 0, nullptr);
+				}
+
 			}
 			{
 				b_fragment = context->m_storage_memory.allocateMemory<Fragment>({ FragmentBufferSize,{} });

@@ -424,6 +424,7 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 
 void GI2DRadiosity::executeRendering(const vk::CommandBuffer& cmd)
 {
+
 	DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
 
 	// render_target‚É‘‚­

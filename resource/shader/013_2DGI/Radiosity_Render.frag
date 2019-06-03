@@ -58,7 +58,7 @@ void main()
 //	radiance = is_fragment ? vec3(100., 0., 0.) : vec3(0., 0., 1000.2);
 
 	FragColor = vec4(radiance, 1.);
-return;
+
 	// tonemapテスト
 	{
 //#define max_luminamce (0.009)

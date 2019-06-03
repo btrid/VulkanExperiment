@@ -54,7 +54,7 @@ struct GI2DRadiosity
 		uint ray_num_max;
 		uint ray_frame_max;
 		uint frame_max;
-		uint a[2];
+		uint a;
 	};
 	struct D2Ray
 	{
