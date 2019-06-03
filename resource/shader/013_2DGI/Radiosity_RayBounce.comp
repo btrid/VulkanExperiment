@@ -11,8 +11,6 @@ void main()
 {
 	if(gl_GlobalInvocationID.x >= b_segment_counter.w){ return; }
 
-	const ivec4 reso = ivec4(u_gi2d_info.m_resolution);
-
 	D2Segment segment = b_segment[gl_GlobalInvocationID.x];
 	D2Ray ray = b_ray[segment.ray_index];
 	vec2 dir = calcDir(ray.angle);
@@ -24,7 +22,7 @@ void main()
 		uint radiance = 0;
 		radiance += b_light[getMemoryOrder(map_index.xy)];
 		radiance += b_light[getMemoryOrder(map_index.zw)];
-		
+
 		if(radiance != 0)
 		{
 			b_segment[gl_GlobalInvocationID.x].radiance += radiance;

@@ -200,24 +200,29 @@ layout(set=USE_GI2D_Radiosity, binding=5, std430) restrict buffer SegmentCounter
 
 uint getMemoryOrder(in uvec2 xy)
 {
-	xy = (xy ^ (xy << 8 )) & 0x00ff00ff;
-	xy = (xy ^ (xy << 4 )) & 0x0f0f0f0f;
-	xy = (xy ^ (xy << 2 )) & 0x33333333;
-	xy = (xy ^ (xy << 1 )) & 0x55555555;
-	
+//	xy = (xy ^ (xy << 8 )) & 0x00ff00ff;
+//	xy = (xy ^ (xy << 4 )) & 0x0f0f0f0f;
+//	xy = (xy ^ (xy << 2 )) & 0x33333333;
+//	xy = (xy ^ (xy << 1 )) & 0x55555555;
+
+	xy = (xy | (xy << 8 )) & 0x00ff00ff;
+	xy = (xy | (xy << 4 )) & 0x0f0f0f0f;
+	xy = (xy | (xy << 2 )) & 0x33333333;
+	xy = (xy | (xy << 1 )) & 0x55555555;
+
 	return (xy.y<<1)|xy.x;
 }
 uvec4 getMemoryOrder4(in uvec4 x, in uvec4 y)
 {
-	x = (x ^ (x << 8 )) & 0x00ff00ff;
-	x = (x ^ (x << 4 )) & 0x0f0f0f0f;
-	x = (x ^ (x << 2 )) & 0x33333333;
-	x = (x ^ (x << 1 )) & 0x55555555;
+	x = (x | (x << 8 )) & 0x00ff00ff;
+	x = (x | (x << 4 )) & 0x0f0f0f0f;
+	x = (x | (x << 2 )) & 0x33333333;
+	x = (x | (x << 1 )) & 0x55555555;
 
-	y = (y ^ (y << 8 )) & 0x00ff00ff;
-	y = (y ^ (y << 4 )) & 0x0f0f0f0f;
-	y = (y ^ (y << 2 )) & 0x33333333;
-	y = (y ^ (y << 1 )) & 0x55555555;
+	y = (y | (y << 8 )) & 0x00ff00ff;
+	y = (y | (y << 4 )) & 0x0f0f0f0f;
+	y = (y | (y << 2 )) & 0x33333333;
+	y = (y | (y << 1 )) & 0x55555555;
 	
 	return (y<<1)|x;
 }
@@ -254,7 +259,7 @@ vec2 calcDir(in float angle)
 {
 	vec2 dir = rotate(angle);
 	vec2 inv_dir = 1./dir;
-//	inv_dir = vec2(isnan(inv_dir)) * 99999999. + inv_dir;
+	inv_dir = vec2(isnan(inv_dir)) * 99999999. + inv_dir;
 	return dir * min(abs(inv_dir.x), abs(inv_dir.y));
 }
 
