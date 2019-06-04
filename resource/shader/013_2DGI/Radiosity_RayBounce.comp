@@ -16,7 +16,7 @@ void main()
 	vec2 dir = calcDir(ray.angle);
 
 	{
-		vec4 pos = fma(vec4(segment.begin.xx, (segment.begin+segment.march).xx), dir.xyxy, ray.origin.xyxy);
+		vec4 pos = fma(vec4(segment.begin.xx, segment.march.xx), dir.xyxy, ray.origin.xyxy);
 		ivec4 map_index = ivec4(pos);
 
 		uint radiance = 0;
