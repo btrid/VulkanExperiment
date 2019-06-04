@@ -18,9 +18,9 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 		u_radiosity_info = m_context->m_uniform_memory.allocateMemory<GI2DRadiosityInfo>({1,{} });
 		cmd.updateBuffer<GI2DRadiosityInfo>(u_radiosity_info.getInfo().buffer, u_radiosity_info.getInfo().offset, info);
 		vk::BufferMemoryBarrier to_read[] = {
-			u_radiosity_info.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+			u_radiosity_info.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eMemoryRead),
 		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {},
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eTopOfPipe, {},
 			0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 
@@ -116,14 +116,9 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 			m_descriptor_set_layout.get(),
 		};
 
-		vk::PushConstantRange constants[] = {
-			vk::PushConstantRange().setStageFlags(vk::ShaderStageFlagBits::eCompute).setSize(8).setOffset(0),
-	};
 		vk::PipelineLayoutCreateInfo pipeline_layout_info;
 		pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 		pipeline_layout_info.setPSetLayouts(layouts);
-		pipeline_layout_info.setPushConstantRangeCount(array_length(constants));
-		pipeline_layout_info.setPPushConstantRanges(constants);
 		m_pipeline_layout[PipelineLayout_Radiosity] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 	}
 
@@ -320,7 +315,6 @@ void GI2DRadiosity::executeGenerateRay(const vk::CommandBuffer& cmd)
 }
 void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 {
-
 	DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
 
 	// データクリア
@@ -434,13 +428,20 @@ void GI2DRadiosity::executeRendering(const vk::CommandBuffer& cmd)
 			b_radiance.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 		};
 
-		vk::ImageMemoryBarrier barrier;
-		barrier.setImage(m_render_target->m_image);
-		barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-		barrier.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
-		barrier.setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
+// 		vk::ImageMemoryBarrier barrier;
+// 		barrier.setImage(m_render_target->m_image);
+// 		barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+// 		barrier.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+// 		barrier.setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
 
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eFragmentShader| vk::PipelineStageFlagBits::eColorAttachmentOutput, {}, {}, { array_size(to_read), to_read }, {barrier});
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eFragmentShader| vk::PipelineStageFlagBits::eColorAttachmentOutput, {}, {}, { array_size(to_read), to_read }, {});
+
+		vk::ImageMemoryBarrier image_barrier;
+		image_barrier.setImage(m_render_target->m_image);
+		image_barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+		image_barrier.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+		image_barrier.setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eBottomOfPipe, vk::PipelineStageFlagBits::eColorAttachmentOutput, {}, {}, {}, { image_barrier });
 	}
 
 	vk::RenderPassBeginInfo begin_render_Info;

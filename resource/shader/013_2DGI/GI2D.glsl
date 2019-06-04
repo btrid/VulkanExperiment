@@ -201,7 +201,6 @@ uint getMemoryOrder(in uvec2 xy)
 //	xy = (xy ^ (xy << 2 )) & 0x33333333;
 //	xy = (xy ^ (xy << 1 )) & 0x55555555;
 
-	return xy.x + xy.y*1024;
 	xy = (xy | (xy << 8 )) & 0x00ff00ff;
 	xy = (xy | (xy << 4 )) & 0x0f0f0f0f;
 	xy = (xy | (xy << 2 )) & 0x33333333;
@@ -211,7 +210,6 @@ uint getMemoryOrder(in uvec2 xy)
 }
 uvec4 getMemoryOrder4(in uvec4 x, in uvec4 y)
 {
-	return x + y*1024;
 	x = (x | (x << 8 )) & 0x00ff00ff;
 	x = (x | (x << 4 )) & 0x0f0f0f0f;
 	x = (x | (x << 2 )) & 0x33333333;
