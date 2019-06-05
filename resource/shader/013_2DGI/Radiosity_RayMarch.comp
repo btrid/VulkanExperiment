@@ -50,13 +50,11 @@ void main()
 
 		for(uint i = 0; i < skip; i++)
 		{
-			pos = fma(dir, float(seg.march).xx, ray.origin);
-			map_index = ivec2(pos);
-			ivec2 cell_sub = map_index % 8;
+			ivec2 cell_sub = ivec2(pos_sub);
 			bvec2 attr = notEqual((map & (1ul<<(cell_sub.x+cell_sub.y*8))), u64vec2(0));
 			if(attr.y)
 			{
-				seg.radiance += b_light[getMemoryOrder(map_index)];
+				seg.radiance += b_light[getMemoryOrder(cell * 8 + cell_sub)];
 			}
 			if(attr.x)
 			{
@@ -72,6 +70,7 @@ void main()
 				seg.radiance = 0;
 			}
 			seg.march++;
+			pos_sub = fma(dir, vec2(1.), pos_sub);
 		}
 
 	}
