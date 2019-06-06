@@ -8,6 +8,11 @@
 #include "GI2D.glsl"
 
 layout (local_size_x = 1024, local_size_y = 1) in;
+
+float rand(vec2 co){
+    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+}
+
 void main()
 {
 	if(gl_GlobalInvocationID.x >= b_segment_counter.w){ return; }
@@ -24,6 +29,7 @@ void main()
 		// lighting
 		{
 			vec2 pos = fma(dir, float(march_count).xx, ray.origin);
+//			ivec2 map_index = ivec2(pos + (vec2(rand(pos), rand(pos.yx*1.21+0.5)) * 2. - 4.));
 			ivec2 map_index = ivec2(pos);
 
 			uint radiance_cell = getMemoryOrder(map_index);
