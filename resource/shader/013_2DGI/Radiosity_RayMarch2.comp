@@ -1,0 +1,99 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_GI2D 0
+#define USE_GI2D_Radiosity 1
+#include "GI2D.glsl"
+
+#define HALF_PI (1.5707963)
+#define TWO_PI (6.28318530)
+#define QUARTER_PI (0.7853981633)
+
+layout (local_size_x=128) in;
+
+void main()
+{
+	const ivec4 reso = u_gi2d_info.m_resolution;
+
+	uint ray_index = gl_GlobalInvocationID.x + u_radiosity_info.ray_frame_max*u_gi2d_scene.m_frame;
+	D2Ray ray = b_ray[ray_index];
+	vec2 dir = calcDir(ray.angle);
+	vec2 inv_dir = abs(1./dir);
+	int y = int((ray.angle-QUARTER_PI) / HALF_PI);
+
+	int fragment_offset = (y%2) * reso.z*reso.w; // 縦ほうこうに進む場合
+	vec2 cell_origin = vec2(greaterThanEqual(dir, vec2(0.))) * vec2(8.);
+
+	int march = 0;
+	uint radiance = 0;
+
+	int segment_index = atomicAdd(b_segment_counter.w, 1);
+	if(segment_index%1024==0){
+		atomicAdd(b_segment_counter.x, 1);
+	}
+	b_segment[segment_index].ray_index = ray_index;
+	b_segment[segment_index].begin = march;
+
+	bool state;
+	{
+		ivec2 map_index = ivec2(ray.origin);
+		ivec2 cell = map_index>>3;
+		vec2 pos_sub = vec2(ray.origin - vec2(cell << 3));
+		ivec2 cell_sub = ivec2(pos_sub);
+
+		u64vec2 map = b_fragment_map[cell.x + cell.y*reso.z];
+
+		bvec2 attr = notEqual((map & (1ul<<(cell_sub.x+cell_sub.y*8))), u64vec2(0));
+		state = attr.x;
+	}
+
+	for(; march < ray.march; )
+	{
+		vec2 pos = fma(dir, float(march).xx, ray.origin);
+		ivec2 map_index = ivec2(pos);
+
+		ivec2 cell = map_index>>3;
+		u64vec2 map = b_fragment_map[((y%2)==0) ? (cell.x + cell.y*reso.z) : (cell.y + cell.x*reso.w + fragment_offset)];
+
+		vec2 pos_sub = vec2(pos - vec2(cell << 3));
+		vec2 tp = fma(vec2(abs(cell_origin - pos_sub)), inv_dir, float(1.).xx);
+		int skip = int(min(tp.x, tp.y));
+
+		if(all(equal(map.xy, u64vec2(state?-1ul:0, 0))))
+//		if(map.y==0ul && any(equal(map.xx, u64vec2(0,-1ul))))
+		{
+			march+=skip;
+			continue;
+		}
+
+		for(uint i = 0; i < skip; i++)
+		{
+			ivec2 cell_sub = ivec2(pos_sub);
+			bvec2 attr = notEqual((map & (1ul<<(cell_sub.x+cell_sub.y*8))), u64vec2(0));
+			if(attr.y)
+			{
+				radiance += b_light[getMemoryOrder(cell * 8 + cell_sub)];
+			}
+			if(state != attr.x)
+			{
+				b_segment[segment_index].march = march;
+				b_segment[segment_index].radiance = radiance;
+				radiance = 0;
+				state = attr.x;
+
+				segment_index = atomicAdd(b_segment_counter.w, 1);
+				if(segment_index%1024==0){
+					atomicAdd(b_segment_counter.x, 1);
+				}
+
+				b_segment[segment_index].ray_index = ray_index;
+				b_segment[segment_index].begin = march;
+			}
+			march++;
+			pos_sub = fma(dir, vec2(1.), pos_sub);
+		}
+
+	}
+	b_segment[segment_index].march = ray.march;
+	b_segment[segment_index].radiance = radiance;
+}
