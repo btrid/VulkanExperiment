@@ -174,7 +174,18 @@ struct GI2DRadiosityInfo
 	uint a2;
 };
 
-
+struct DrawCommand
+{
+	uint vertexCount;
+	uint instanceCount;
+    uint firstVertex;
+    uint firstInstance;
+};
+struct RadiosityVertex
+{
+	u16vec2 pos;
+	u16vec2 vertex[256];
+};
 layout(set=USE_GI2D_Radiosity, binding=0, std140) uniform GI2DRadiosityInfoUniform {
 	GI2DRadiosityInfo u_radiosity_info;
 };
@@ -190,8 +201,17 @@ layout(set=USE_GI2D_Radiosity, binding=3, std430) restrict buffer SegmentBuffer 
 layout(set=USE_GI2D_Radiosity, binding=4, std430) restrict buffer SegmentCounter {
 	ivec4 b_segment_counter;
 };
-layout(set=USE_GI2D_Radiosity, binding=3, std430) restrict buffer SegmentExBuffer {
+layout(set=USE_GI2D_Radiosity, binding=5, std430) restrict buffer SegmentExBuffer {
 	u16vec4 b_segment_ex[];
+};
+layout(set=USE_GI2D_Radiosity, binding=6, std430) restrict buffer VertexArrayCounter {
+	DrawCommand b_vertex_array_counter;
+};
+layout(set=USE_GI2D_Radiosity, binding=7, std430) restrict buffer VertexArrayIndexBuffer {
+	uint b_vertex_array_index[];
+};
+layout(set=USE_GI2D_Radiosity, binding=8, std430) restrict buffer VertexArrayBuffer {
+	RadiosityVertex b_vertex_array[];
 };
 
 

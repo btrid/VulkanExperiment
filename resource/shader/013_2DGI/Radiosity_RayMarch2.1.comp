@@ -16,6 +16,7 @@ void main()
 	const ivec4 reso = u_gi2d_info.m_resolution;
 
 	uint ray_index = gl_GlobalInvocationID.x + u_radiosity_info.ray_frame_max*u_gi2d_scene.m_frame;
+	uint angle_index = ray_index / 1024;
 	D2Ray ray = b_ray[ray_index];
 	vec2 dir = calcDir(ray.angle);
 	vec2 inv_dir = abs(1./dir);
@@ -64,8 +65,12 @@ void main()
 			bool attr = (map & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0ul;
 			if(state != attr)
 			{
-				vec4 end = fma(dir.xyxy, vec4(float(begin).xx, float(march).xx), ray.origin.xyxy);
-				b_segment_ex[segment_index] = u16vec4(end);
+				u16vec4 end = u16vec4(fma(dir.xyxy, vec4(float(begin).xx, float(march).xx), ray.origin.xyxy));
+				b_segment_ex[segment_index] = end;
+
+				uvec2 index = end.xz + end.yw * reso.xx;
+				b_vertex_array[b_vertex_array_index[index.x]].vertex[angle_index] = end.zw;
+				b_vertex_array[b_vertex_array_index[index.y]].vertex[angle_index] = end.xy;
 
 				state = attr;
 				begin = march;
@@ -80,6 +85,9 @@ void main()
 		}
 
 	}
-	vec4 end = fma(dir.xyxy, vec4(float(begin).xx, float(march).xx), ray.origin.xyxy);
-	b_segment_ex[segment_index] = u16vec4(end);
+	u16vec4 end = u16vec4(fma(dir.xyxy, vec4(float(begin).xx, float(march).xx), ray.origin.xyxy));
+	b_segment_ex[segment_index] = end;
+	uvec2 index = end.xz + end.yw * reso.xx;
+	b_vertex_array[b_vertex_array_index[index.x]].vertex[angle_index] = end.zw;
+	b_vertex_array[b_vertex_array_index[index.y]].vertex[angle_index] = end.xy;
 }

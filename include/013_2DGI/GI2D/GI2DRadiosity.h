@@ -25,9 +25,14 @@ struct GI2DRadiosity
 		Shader_RenderingFS,
 
 		Shader_RayGenerate,
+		Shader_MakeHitpoint,
 		Shader_RayMarch,
 		Shader_RayHit,
 		Shader_RayBounce,
+
+		Shader_RadiateVS,
+		Shader_RadiateGS,
+		Shader_RadiateFS,
 
 		Shader_Num,
 	};
@@ -39,9 +44,11 @@ struct GI2DRadiosity
 	enum Pipeline
 	{
 		Pipeline_Radiosity,
+		Pipeline_Radiosity2,
 		Pipeline_Output,
 
 		Pipeline_RayGenerate,
+		Pipeline_MakeHitpoint,
 		Pipeline_RayMarch,
 		Pipeline_RayHit,
 		Pipeline_RayBounce,
@@ -90,8 +97,10 @@ struct GI2DRadiosity
 	btr::BufferMemoryEx<D2Segment> b_segment;
 	btr::BufferMemoryEx<ivec4> b_segment_counter;
 	btr::BufferMemoryEx<u16vec4> b_segment_ex;
-	btr::BufferMemoryEx<u16vec2> b_segment_target;
-
+	btr::BufferMemoryEx<vk::DrawIndirectCommand> b_vertex_array_counter;
+	btr::BufferMemoryEx<uint> b_vertex_array_index;
+	btr::BufferMemoryEx<u16vec2> b_vertex_array;
+	
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
 
