@@ -10,8 +10,8 @@
 struct GI2DRadiosity
 {
 	enum {
-		Frame = 4,
-		Ray_Direction_Num = 256,
+		Frame = 1,
+		Ray_Direction_Num = 32,
 		Ray_Frame_Num = 1024 * Ray_Direction_Num,
 		Ray_All_Num = Ray_Frame_Num * Frame,
 		Segment_Num = Ray_Frame_Num * 32,// ‚Æ‚è‚ ‚¦‚¸‚Ì’l
@@ -89,6 +89,8 @@ struct GI2DRadiosity
 	btr::BufferMemoryEx<D2Ray> b_ray;
 	btr::BufferMemoryEx<D2Segment> b_segment;
 	btr::BufferMemoryEx<ivec4> b_segment_counter;
+	btr::BufferMemoryEx<u16vec4> b_segment_ex;
+	btr::BufferMemoryEx<u16vec2> b_segment_target;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;

@@ -243,7 +243,7 @@ struct GI2DContext
 	{
 		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
 
-		m_gi2d_scene.m_frame = (m_gi2d_scene.m_frame + 1) % 4;
+		m_gi2d_scene.m_frame = (m_gi2d_scene.m_frame + 1) % 1;
 		auto reso = m_gi2d_info.m_resolution;
 
 		uint radiance_offset = reso.x*reso.y;

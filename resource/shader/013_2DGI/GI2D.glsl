@@ -190,6 +190,9 @@ layout(set=USE_GI2D_Radiosity, binding=3, std430) restrict buffer SegmentBuffer 
 layout(set=USE_GI2D_Radiosity, binding=4, std430) restrict buffer SegmentCounter {
 	ivec4 b_segment_counter;
 };
+layout(set=USE_GI2D_Radiosity, binding=3, std430) restrict buffer SegmentExBuffer {
+	u16vec4 b_segment_ex[];
+};
 
 
 #endif

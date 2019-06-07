@@ -29,6 +29,7 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 		b_segment_counter = m_context->m_storage_memory.allocateMemory<ivec4>({ 1,{} });
 		b_ray = m_context->m_storage_memory.allocateMemory<D2Ray>({ Ray_All_Num,{} });
 		b_segment = m_context->m_storage_memory.allocateMemory<D2Segment>({ Segment_Num,{} });
+		b_segment_ex = m_context->m_storage_memory.allocateMemory<u16vec4>({ Segment_Num,{} });
 	}
 
 	{
@@ -41,6 +42,7 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 				vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
 			};
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 			desc_layout_info.setBindingCount(array_length(binding));
@@ -66,6 +68,7 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 				b_ray.getInfo(),
 				b_segment.getInfo(),
 				b_segment_counter.getInfo(),
+				b_segment_ex.getInfo(),
 			};
 
 			vk::WriteDescriptorSet write[] = 
@@ -428,20 +431,14 @@ void GI2DRadiosity::executeRendering(const vk::CommandBuffer& cmd)
 			b_radiance.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 		};
 
-// 		vk::ImageMemoryBarrier barrier;
-// 		barrier.setImage(m_render_target->m_image);
-// 		barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-// 		barrier.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
-// 		barrier.setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
-
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eFragmentShader| vk::PipelineStageFlagBits::eColorAttachmentOutput, {}, {}, { array_size(to_read), to_read }, {});
-
 		vk::ImageMemoryBarrier image_barrier;
 		image_barrier.setImage(m_render_target->m_image);
 		image_barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
 		image_barrier.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
 		image_barrier.setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eBottomOfPipe, vk::PipelineStageFlagBits::eColorAttachmentOutput, {}, {}, {}, { image_barrier });
+
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eFragmentShader| vk::PipelineStageFlagBits::eColorAttachmentOutput, {}, {}, { array_size(to_read), to_read }, {image_barrier});
+
 	}
 
 	vk::RenderPassBeginInfo begin_render_Info;

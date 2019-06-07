@@ -15,10 +15,6 @@ void main()
 {
 	const ivec4 reso = u_gi2d_info.m_resolution;
 
-//	float a = TWO_PI / gl_NumWorkGroups.y;
-//	float angle = a * (gl_WorkGroupID.y+0.3);
-//	angle += a*((1. / gl_NumWorkGroups.z)*gl_WorkGroupID.z);
-
 	float a = TWO_PI / gl_NumWorkGroups.y;
 	float b = a * (gl_WorkGroupID.y);
 	float c = (a / gl_NumWorkGroups.z) * (gl_WorkGroupID.z + 0.5);

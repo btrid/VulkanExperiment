@@ -50,7 +50,7 @@ void main()
 			uint64_t bit =  (uint64_t(s_bit[1]) << 32) | s_bit[0];
 			uint64_t light_bit =  (uint64_t(s_light_bit[1]) << 32) | s_light_bit[0];
 
-			b_diffuse_map[store] = bit;
+			b_diffuse_map[store] = bit|light_bit;
 			b_emissive_map[store] = light_bit;
 
 			b_fragment_map[gl_WorkGroupID.x + gl_WorkGroupID.y * u_gi2d_info.m_resolution.z] = u64vec2(bit, light_bit);
