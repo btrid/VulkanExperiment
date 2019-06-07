@@ -399,7 +399,7 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 	}
 
 	// radiance
-	_label.insert("GI2DRadiosity::executeCollectRadiant");
+	_label.insert("GI2DRadiosity::executeCollectRadiate");
 	{
 
 		vk::BufferMemoryBarrier to_read[] = {
