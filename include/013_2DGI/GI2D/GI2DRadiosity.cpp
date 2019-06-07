@@ -537,8 +537,8 @@ void GI2DRadiosity::executeRendering(const vk::CommandBuffer& cmd)
 // 	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_Output].get());
 // 	cmd.draw(3, 1, 0, 0);
 
-// 	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_Radiosity2].get());
-// 	cmd.drawIndirect(b_vertex_array_counter.getInfo().buffer, b_vertex_array_counter.getInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
+	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_Radiosity2].get());
+	cmd.drawIndirect(b_vertex_array_counter.getInfo().buffer, b_vertex_array_counter.getInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
 
 	cmd.endRenderPass();
 }

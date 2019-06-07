@@ -26,8 +26,8 @@ void main()
 		s_map[i] = map;
 	}
 
-	barrier();
 	memoryBarrierShared();
+	barrier();
 
 	const i16vec2 g_offset[8] = 
 	{
@@ -40,7 +40,16 @@ void main()
 		 i16vec2(-1, 1),
 		 i16vec2(-1, 0),
 	};
-	bool is_edge = true;
+	{
+		ivec2 ii = ivec2(gl_LocalInvocationID.xy) + ivec2(8);
+		ivec2 map_index = ii / 8;
+		ivec2 map_bit = ii % 8;
+		if((s_map[map_index.x+map_index.y*6] & (1ul<<(map_bit.x+map_bit.y*8))) == 0ul)
+		{
+			return;
+		}
+	}
+	bool is_edge = false;
 
 	for(int i = 0; i < 8; i++)
 	{

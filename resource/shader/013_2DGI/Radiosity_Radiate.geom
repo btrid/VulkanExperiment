@@ -5,7 +5,7 @@
 #define USE_GI2D_Radiosity 1
 #include "GI2D.glsl"
 
-layout(points, invocations = 8) in;
+layout(points, invocations = 32) in;
 layout(triangle_strip, max_vertices = 3) out;
 //layout(points, invocations = 1) in;
 //layout(triangle_strip, max_vertices = 32*3) out;
