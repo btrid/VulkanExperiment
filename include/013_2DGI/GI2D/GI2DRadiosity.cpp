@@ -397,7 +397,7 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 		}
 
 	}
-
+	
 	// radiance
 	_label.insert("GI2DRadiosity::executeCollectRadiate");
 	{

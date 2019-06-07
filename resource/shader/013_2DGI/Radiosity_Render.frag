@@ -39,7 +39,7 @@ void main()
 //				rad[3] = unpackEmissive(b_radiance[c.w]);
 //				radiance_ += mix(mix(rad[0], rad[1], subcoord.x), mix(rad[2], rad[3], subcoord.x), subcoord.y);
 				radiance_ += rad[0];
-//				c += radiance_size;
+				c += radiance_size;
 			}
 //			count += 8;
 //		}}
