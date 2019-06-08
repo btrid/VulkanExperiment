@@ -32,7 +32,7 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 		b_segment_ex = m_context->m_storage_memory.allocateMemory<u16vec4>({ Segment_Num,{} });
 		b_vertex_array_counter = m_context->m_storage_memory.allocateMemory<vk::DrawIndirectCommand>({ 1,{} });
 		b_vertex_array_index = m_context->m_storage_memory.allocateMemory<uint>({ size,{} });
-		b_vertex_array = m_context->m_storage_memory.allocateMemory<u16vec2>({ Ray_Frame_Num* 1024,{} });
+		b_vertex_array = m_context->m_storage_memory.allocateMemory<u16vec2>({ Ray_Frame_Num * 1024,{} });
 	}
 
 	{
@@ -486,7 +486,7 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 	}
 	
 	// radiance
-	_label.insert("GI2DRadiosity::executeCollectRadiate");
+// 	_label.insert("GI2DRadiosity::executeCollectRadiate");
 // 	{
 // 
 // 		vk::BufferMemoryBarrier to_read[] = {
