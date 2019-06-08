@@ -25,6 +25,7 @@ void main()
 	uint angle_index = ray_index / 1024;
 
 	int begin = 0;
+	u16vec2 begin_pos;
 	int march = 0;
 
 	int segment_index = atomicAdd(b_segment_counter.w, 1);
@@ -41,6 +42,7 @@ void main()
 
 		uint64_t map = b_diffuse_map[getMemoryOrder(cell)];
 		state = (map & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0ul;
+		begin_pos = u16vec2(map_index);
 	}
 
 	for(; march < ray.march; )
@@ -62,27 +64,29 @@ void main()
 
 		for(uint i = 0; i < skip; i++)
 		{
-			ivec2 cell_sub = ivec2(pos_sub);
+			ivec2 cell_sub = ivec2(fma(dir, vec2(i), pos_sub));
 			bool attr = (map & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0ul;
 			if(state != attr)
 			{
-				u16vec4 end = u16vec4(fma(dir.xyxy, vec4(float(begin).xx, float(march).xx), ray.origin.xyxy));
-				b_segment_ex[segment_index] = end;
+//				u16vec4 end = u16vec4(fma(dir.xyxy, vec4(float(begin).xx, float(march).xx), ray.origin.xyxy));
+//				b_segment_ex[segment_index] = end;
 
-				uvec2 index = end.xz + end.yw * reso.xx;
-				if(all(notEqual(end.xyxy, uvec4(0, 0, reso.xy-1))))
+//				uvec2 index = end.xz + end.yw * reso.xx;
+				if(all(notEqual(begin_pos.xyxy, uvec4(0, 0, reso.xy-1))))
 				{
-					uint vindex = atomicAdd(b_vertex_array[b_vertex_array_index[index.x]].num, 1);
-					b_vertex_array[b_vertex_array_index[index.x]].vertex[vindex] = end.zw;
+					uint index = begin_pos.x + begin_pos.y * reso.x;
+					uint vindex = atomicAdd(b_vertex_array[b_vertex_array_index[index]].num, 1);
+					b_vertex_array[b_vertex_array_index[index]].vertex[vindex] = u16vec2((cell << 3)+cell_sub);
 				}
-				if(all(notEqual(end.zwzw, uvec4(0, 0, reso.xy-1))))
-				{
-					uint vindex = atomicAdd(b_vertex_array[b_vertex_array_index[index.y]].num, 1);
-					b_vertex_array[b_vertex_array_index[index.y]].vertex[vindex] = end.xy;
-				}
+//				if(all(notEqual(end.zwzw, uvec4(0, 0, reso.xy-1))))
+//				{
+//					uint vindex = atomicAdd(b_vertex_array[b_vertex_array_index[index.y]].num, 1);
+//					b_vertex_array[b_vertex_array_index[index.y]].vertex[vindex] = end.xy;
+//				}
 
-//				state = attr;
+				state = attr;
 				begin = march;
+				begin_pos = u16vec2((cell << 3)+cell_sub);
 
 				segment_index = atomicAdd(b_segment_counter.w, 1);
 				if(segment_index%1024==0){
@@ -90,21 +94,20 @@ void main()
 				}
 			}
 			march++;
-			pos_sub = fma(dir, vec2(1.), pos_sub);
 		}
 
 	}
 	u16vec4 end = u16vec4(fma(dir.xyxy, vec4(float(begin).xx, float(ray.march).xx), ray.origin.xyxy));
-	b_segment_ex[segment_index] = end;
-	uvec2 index = end.xz + end.yw * reso.xx;
-	if(all(notEqual(end.xyxy, uvec4(0, 0, reso.xy-1))))
+//	b_segment_ex[segment_index] = end;
+	if(all(notEqual(begin_pos.xyxy, uvec4(0, 0, reso.xy-1))))
 	{
-		uint vindex = atomicAdd(b_vertex_array[b_vertex_array_index[index.x]].num, 1);
-		b_vertex_array[b_vertex_array_index[index.x]].vertex[vindex] = end.zw;
+		uint index = begin_pos.x + begin_pos.y * reso.x;
+		uint vindex = atomicAdd(b_vertex_array[b_vertex_array_index[index]].num, 1);
+		b_vertex_array[b_vertex_array_index[index]].vertex[vindex] = end.zw;
 	}
-	if(all(notEqual(end.zwzw, uvec4(0, 0, reso.xy-1))))
-	{
-		uint vindex = atomicAdd(b_vertex_array[b_vertex_array_index[index.y]].num, 1);
-		b_vertex_array[b_vertex_array_index[index.y]].vertex[vindex] = end.xy;
-	}
+//	if(all(notEqual(end.zwzw, uvec4(0, 0, reso.xy-1))))
+//	{
+//		uint vindex = atomicAdd(b_vertex_array[b_vertex_array_index[index.y]].num, 1);
+//		b_vertex_array[b_vertex_array_index[index.y]].vertex[vindex] = end.xy;
+//	}
 }

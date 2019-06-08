@@ -6,7 +6,7 @@
 #include "GI2D.glsl"
 
 layout(points, invocations = 1) in;
-layout(triangle_strip, max_vertices = 2*DIR_NUM) out;
+layout(triangle_strip, max_vertices = 2*DIR_NUM+2) out;
 //layout(points, invocations = DIR_NUM) in;
 //layout(triangle_strip, max_vertices = 3) out;
 
@@ -61,6 +61,13 @@ void main()
 		gl_Position = vec4(center, 0., 1.);
 		EmitVertex();
 	}
+	vec2 v1 = vec2(b_vertex_array[index].vertex[0]) / 1024.;
+	gl_Position = vec4(v1*2. - 1., 0., 1.);
+	EmitVertex();
+
+	gl_Position = vec4(center, 0., 1.);
+	EmitVertex();
+
 	EndPrimitive();
 #endif
 

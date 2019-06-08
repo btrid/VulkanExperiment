@@ -185,6 +185,7 @@ struct DrawCommand
 struct RadiosityVertex
 {
 	u16vec2 pos;
+	uint num;
 	u16vec2 vertex[DIR_NUM];
 };
 layout(set=USE_GI2D_Radiosity, binding=0, std140) uniform GI2DRadiosityInfoUniform {

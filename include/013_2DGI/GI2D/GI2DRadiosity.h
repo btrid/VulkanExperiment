@@ -26,6 +26,7 @@ struct GI2DRadiosity
 		Shader_RayGenerate,
 		Shader_MakeHitpoint,
 		Shader_RayMarch,
+		Shader_SortVertex,
 		Shader_RayHit,
 		Shader_RayBounce,
 
@@ -49,6 +50,7 @@ struct GI2DRadiosity
 		Pipeline_RayGenerate,
 		Pipeline_MakeHitpoint,
 		Pipeline_RayMarch,
+		Pipeline_SortVertex,
 		Pipeline_RayHit,
 		Pipeline_RayBounce,
 
