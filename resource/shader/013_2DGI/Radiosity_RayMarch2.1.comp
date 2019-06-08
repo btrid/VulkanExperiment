@@ -70,11 +70,11 @@ void main()
 				b_segment_ex[segment_index] = end;
 
 				uvec2 index = end.xz + end.yw * reso.xx;
-//				if(all(notEqual(end.zwzw, uvec4(0, 0, reso.xy-1))))
+				if(all(notEqual(end.xyxy, uvec4(0, 0, reso.xy-1))))
 				{
 					b_vertex_array[b_vertex_array_index[index.x]].vertex[angle_index] = end.zw;
 				}
-//				if(all(notEqual(end.xyxy, uvec4(0, 0, reso.xy-1))))
+				if(all(notEqual(end.zwzw, uvec4(0, 0, reso.xy-1))))
 				{
 					b_vertex_array[b_vertex_array_index[index.y]].vertex[angle_index] = end.xy;
 				}
@@ -95,14 +95,11 @@ void main()
 	u16vec4 end = u16vec4(fma(dir.xyxy, vec4(float(begin).xx, float(ray.march).xx), ray.origin.xyxy));
 	b_segment_ex[segment_index] = end;
 	uvec2 index = end.xz + end.yw * reso.xx;
-//	b_vertex_array[b_vertex_array_index[index.x]].vertex[angle_index] = end.zw;
-//	b_vertex_array[b_vertex_array_index[index.y]].vertex[angle_index] = end.xy;
-
-//	if(all(notEqual(end.zwzw, uvec4(0, 0, reso.xy-1))))
+	if(all(notEqual(end.xyxy, uvec4(0, 0, reso.xy-1))))
 	{
 		b_vertex_array[b_vertex_array_index[index.x]].vertex[angle_index] = end.zw;
 	}
-//	if(all(notEqual(end.xyxy, uvec4(0, 0, reso.xy-1))))
+	if(all(notEqual(end.zwzw, uvec4(0, 0, reso.xy-1))))
 	{
 		b_vertex_array[b_vertex_array_index[index.y]].vertex[angle_index] = end.xy;
 	}
