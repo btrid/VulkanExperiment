@@ -55,6 +55,8 @@ void main()
 		}
 	}
 
+	march_count--;
+
 	// 2重になるのを禁止
 	switch(y)
 	{

@@ -28,11 +28,11 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 		b_radiance = m_context->m_storage_memory.allocateMemory<uint32_t>({ size * 4,{} });
 		b_segment_counter = m_context->m_storage_memory.allocateMemory<ivec4>({ 1,{} });
 		b_ray = m_context->m_storage_memory.allocateMemory<D2Ray>({ Ray_All_Num,{} });
-		b_segment = m_context->m_storage_memory.allocateMemory<D2Segment>({ Segment_Num,{} });
+		b_segment = m_context->m_storage_memory.allocateMemory<D2Segment>({ 1,{} });
 		b_segment_ex = m_context->m_storage_memory.allocateMemory<u16vec4>({ Segment_Num,{} });
 		b_vertex_array_counter = m_context->m_storage_memory.allocateMemory<vk::DrawIndirectCommand>({ 1,{} });
 		b_vertex_array_index = m_context->m_storage_memory.allocateMemory<uint>({ size,{} });
-		b_vertex_array = m_context->m_storage_memory.allocateMemory<u16vec2>({ Ray_Frame_Num * 1024*4,{} });
+		b_vertex_array = m_context->m_storage_memory.allocateMemory<u16vec2>({ Ray_Frame_Num* 1024,{} });
 	}
 
 	{
@@ -365,7 +365,7 @@ void GI2DRadiosity::executeGenerateRay(const vk::CommandBuffer& cmd)
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RayGenerate].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
-		auto num = app::calcDipatchGroups(uvec3(1024, Ray_Direction_Num, Frame), uvec3(64, 1, 1));
+		auto num = app::calcDipatchGroups(uvec3(1024, Ray_Direction_Num, Frame), uvec3(128, 1, 1));
 		cmd.dispatch(num.x, num.y, num.z);
 	}
 
@@ -388,9 +388,9 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 		vk::BufferMemoryBarrier to_write[] = {
 			b_radiance.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
 			b_segment_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
-			b_vertex_array_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
+			b_vertex_array_counter.makeMemoryBarrier(vk::AccessFlagBits::eIndirectCommandRead, vk::AccessFlagBits::eTransferWrite),
 		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eTransfer, {}, 0, nullptr, array_length(to_write), to_write, 0, nullptr);
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eDrawIndirect|vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eTransfer, {}, 0, nullptr, array_length(to_write), to_write, 0, nullptr);
 
 		cmd.updateBuffer<ivec4>(b_segment_counter.getInfo().buffer, b_segment_counter.getInfo().offset, ivec4(0, 1, 1, 0));
 		int range = b_radiance.getInfo().range / Frame;
@@ -404,8 +404,9 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 	{
 		vk::BufferMemoryBarrier to_read[] = {
 			b_vertex_array_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+			b_vertex_array.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
 		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {},
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer| vk::PipelineStageFlagBits::eGeometryShader, vk::PipelineStageFlagBits::eComputeShader, {},
 			0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeHitpoint].get());
@@ -422,7 +423,7 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 			m_gi2d_context->b_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			m_gi2d_context->b_light.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			b_vertex_array_index.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-
+			b_vertex_array.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			b_segment_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},

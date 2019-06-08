@@ -181,10 +181,11 @@ struct DrawCommand
     uint firstVertex;
     uint firstInstance;
 };
+#define DIR_NUM 32
 struct RadiosityVertex
 {
 	u16vec2 pos;
-	u16vec2 vertex[256];
+	u16vec2 vertex[DIR_NUM];
 };
 layout(set=USE_GI2D_Radiosity, binding=0, std140) uniform GI2DRadiosityInfoUniform {
 	GI2DRadiosityInfo u_radiosity_info;

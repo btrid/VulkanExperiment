@@ -18,7 +18,8 @@ void main()
 		uvec2 offset_xy = gl_LocalInvocationID.xy-1;
 		uvec2 index = gl_WorkGroupID.xy*4 + offset_xy;
 
-		uint64_t map = -1ul;
+//		uint64_t map = -1ul;
+		uint64_t map = 0;
 		if(all(lessThan(index, u_gi2d_info.m_resolution.zw)))
 		{
 			map = b_diffuse_map[getMemoryOrder(index)];
@@ -44,7 +45,10 @@ void main()
 		ivec2 ii = ivec2(gl_LocalInvocationID.xy) + ivec2(8);
 		ivec2 map_index = ii / 8;
 		ivec2 map_bit = ii % 8;
-		if((s_map[map_index.x+map_index.y*6] & (1ul<<(map_bit.x+map_bit.y*8))) == 0ul)
+//		if(any(equal(gl_GlobalInvocationID.xyxy, uvec4(0, 0, u_gi2d_info.m_resolution.xy-1)))){}
+//		else
+		if((s_map[map_index.x+map_index.y*6] & (1ul<<(map_bit.x+map_bit.y*8))) == 1ul){}
+		else 
 		{
 			return;
 		}

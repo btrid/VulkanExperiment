@@ -5,6 +5,11 @@
 #define USE_GI2D_Radiosity 1
 #include "GI2D.glsl"
 
+layout(location=1)in InData
+{
+	vec4 color;
+};
+
 layout(location = 0) out vec4 FragColor;
 void main()
 {

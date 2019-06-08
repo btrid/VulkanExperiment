@@ -16,12 +16,13 @@ void main()
 	const ivec4 reso = u_gi2d_info.m_resolution;
 
 	uint ray_index = gl_GlobalInvocationID.x + u_radiosity_info.ray_frame_max*u_gi2d_scene.m_frame;
-	uint angle_index = ray_index / 1024;
 	D2Ray ray = b_ray[ray_index];
+	if(ray.march==0){ return; }
 	vec2 dir = calcDir(ray.angle);
 	vec2 inv_dir = abs(1./dir);
 
 	vec2 cell_origin = vec2(greaterThanEqual(dir, vec2(0.))) * vec2(8.);
+	uint angle_index = ray_index / 1024;
 
 	int begin = 0;
 	int march = 0;
@@ -69,8 +70,14 @@ void main()
 				b_segment_ex[segment_index] = end;
 
 				uvec2 index = end.xz + end.yw * reso.xx;
-				b_vertex_array[b_vertex_array_index[index.x]].vertex[angle_index] = end.zw;
-				b_vertex_array[b_vertex_array_index[index.y]].vertex[angle_index] = end.xy;
+//				if(all(notEqual(end.zwzw, uvec4(0, 0, reso.xy-1))))
+				{
+					b_vertex_array[b_vertex_array_index[index.x]].vertex[angle_index] = end.zw;
+				}
+//				if(all(notEqual(end.xyxy, uvec4(0, 0, reso.xy-1))))
+				{
+					b_vertex_array[b_vertex_array_index[index.y]].vertex[angle_index] = end.xy;
+				}
 
 				state = attr;
 				begin = march;
@@ -85,9 +92,18 @@ void main()
 		}
 
 	}
-	u16vec4 end = u16vec4(fma(dir.xyxy, vec4(float(begin).xx, float(march).xx), ray.origin.xyxy));
+	u16vec4 end = u16vec4(fma(dir.xyxy, vec4(float(begin).xx, float(ray.march).xx), ray.origin.xyxy));
 	b_segment_ex[segment_index] = end;
 	uvec2 index = end.xz + end.yw * reso.xx;
-	b_vertex_array[b_vertex_array_index[index.x]].vertex[angle_index] = end.zw;
-	b_vertex_array[b_vertex_array_index[index.y]].vertex[angle_index] = end.xy;
+//	b_vertex_array[b_vertex_array_index[index.x]].vertex[angle_index] = end.zw;
+//	b_vertex_array[b_vertex_array_index[index.y]].vertex[angle_index] = end.xy;
+
+//	if(all(notEqual(end.zwzw, uvec4(0, 0, reso.xy-1))))
+	{
+		b_vertex_array[b_vertex_array_index[index.x]].vertex[angle_index] = end.zw;
+	}
+//	if(all(notEqual(end.xyxy, uvec4(0, 0, reso.xy-1))))
+	{
+		b_vertex_array[b_vertex_array_index[index.y]].vertex[angle_index] = end.xy;
+	}
 }
