@@ -35,8 +35,13 @@ void main()
 	uvec2 map_index = uvec2(pos);
 
 
+
+
 	angle += QUARTER_PI;
 	vec2 dir = calcDir(angle);
+	uvec2 end_pos;
+	end_pos.x = dir.x >= 0. ? reso.x-1 : 0;
+	end_pos.y = dir.y >= 0. ? reso.y-1 : 0;
 	int march_count = 1;
 	for(; march_count <5000; march_count++)
 	{
@@ -48,7 +53,11 @@ void main()
 		}
 		// 範囲外?
 		{
-			if(any(equal(map_index.xyxy, uvec4(0, 0, reso.xy-1))))
+//			ivec2 is_die = ivec2(greaterThanEqual(map_index, reso.xy)) + ivec2(lessThan(map_index, ivec2(0)));
+//			if(any(notEqual(is_die.xy, ivec2(0))))
+
+//			if(any(equal(map_index.xyxy, uvec4(0, 0, reso.xy-1))))
+			if(any(equal(map_index.xy, end_pos)))
 			{
 				break;
 			}
@@ -61,6 +70,7 @@ void main()
 		case 2:
 //			march_count=0;
 			if(map_index.x>=reso.x-1){ march_count=0; }
+//			if(map_index.y>=reso.y-1||map_index.y<=0){}else{ march_count=0; }
 //			if(map_index.y > 0 && map_index.y<reso.y-1){ march_count=0; }
 			break;
 		case 3:
