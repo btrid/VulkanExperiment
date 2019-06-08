@@ -8,13 +8,12 @@
 layout(location=1)in InData
 {
 	vec4 color;
-};
+}fs_in;
 
 layout(location = 0) out vec4 FragColor;
 void main()
 {
-	vec3 radiance = vec3(1.);
-	FragColor = vec4(radiance, 1.);
+	FragColor = vec4(fs_in.color.xyz, 1.);
 	return;
 
 	// tonemapテスト
@@ -33,12 +32,12 @@ void main()
 
 		// YCbCr系に変換
 		vec3 YCbCr;
-		YCbCr.y = dot(RGB2Cb, radiance);
-		YCbCr.z = dot(RGB2Cr, radiance);
+		YCbCr.y = dot(RGB2Cb, FragColor.xyz);
+		YCbCr.z = dot(RGB2Cr, FragColor.xyz);
 
 		// 色の強さは補正
 		float coeff = 0.18 * exp( -avg_luminamce ) * max_luminamce;
-		float lum = coeff * dot(RGB2Y, radiance);
+		float lum = coeff * dot(RGB2Y, FragColor.xyz);
 		YCbCr.x = lum * (1.+lum/(max_luminamce*max_luminamce)) / (1.+lum);
 
 		// RGB系にして出力

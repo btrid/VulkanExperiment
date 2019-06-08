@@ -19,8 +19,8 @@ void main()
 {
 	if(gl_GlobalInvocationID.x >= b_vertex_array_counter.instanceCount){ return; }
 	RadiosityVertex vv = b_vertex_array[gl_GlobalInvocationID.x];
-	uint num = vv.num;
-	if(num <= 1) { return;}
+	uint num = DIR_NUM;
+//	if(num <= 1) { return;}
 
 	// 時計回りにソートとAABBの計算
 	vec2 center =  vec2(vv.pos);

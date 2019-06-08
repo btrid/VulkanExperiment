@@ -5,9 +5,10 @@
 #define USE_GI2D_Radiosity 1
 #include "GI2D.glsl"
 
-#define HALF_PI (1.5707963)
-#define TWO_PI (6.28318530)
-#define QUARTER_PI (0.7853981633)
+#define HALF_PI (1.5708)
+#define TWO_PI (6.2832)
+#define QUARTER_PI (0.7854)
+
 
 layout (local_size_x=128) in;
 
@@ -68,7 +69,7 @@ void main()
 
 		for(uint i = 0; i < skip; i++)
 		{
-			ivec2 cell_sub = ivec2(pos_sub);
+			ivec2 cell_sub = ivec2(fma(dir, vec2(i), pos_sub));
 			bvec2 attr = notEqual((map & (1ul<<(cell_sub.x+cell_sub.y*8))), u64vec2(0));
 			if(attr.y)
 			{
@@ -90,7 +91,7 @@ void main()
 				b_segment[segment_index].begin = march;
 			}
 			march++;
-			pos_sub = fma(dir, vec2(1.), pos_sub);
+//			pos_sub = fma(dir, vec2(1.), pos_sub);
 		}
 
 	}

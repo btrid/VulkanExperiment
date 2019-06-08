@@ -19,6 +19,10 @@ void main()
 
 	D2Segment segment = b_segment[gl_GlobalInvocationID.x];
 	if(segment.radiance == 0){ return; }
+//	segment.radiance = segment.ray_index/(1024*32/4) == 0 ? 100: segment.radiance;
+//	segment.radiance = segment.ray_index/(1024*32/4) == 1 ? (100<<10): segment.radiance;
+//	segment.radiance = segment.ray_index/(1024*32/4) == 2 ? (100<<20): segment.radiance;
+//	segment.radiance = segment.ray_index/(1024*32/4) == 3 ? 100: segment.radiance;
 	D2Ray ray = b_ray[segment.ray_index];
 	vec2 dir = calcDir(ray.angle);
 

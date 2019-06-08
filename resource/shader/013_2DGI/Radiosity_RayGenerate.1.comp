@@ -16,11 +16,11 @@ void main()
 	const ivec4 reso = u_gi2d_info.m_resolution;
 
 	float a = TWO_PI / gl_NumWorkGroups.y;
-//	float b = a * (gl_WorkGroupID.y);
+	float b = a * (gl_WorkGroupID.y);
 	float c = (a / gl_NumWorkGroups.z) * (gl_WorkGroupID.z);
-	float angle = fma(a, float(gl_WorkGroupID.y), c);
+	float angle = b + c;
 
-//	uint y = uint(gl_WorkGroupID.y / (gl_NumWorkGroups.y/4.));
+//	uint y = uint(gl_WorkGroupID.y / (gl_NumWorkGroups.y/4));
 	uint y = uint(angle / HALF_PI);
 
 	vec2 pos;
