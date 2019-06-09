@@ -73,29 +73,9 @@ D2Ray makeRay(in uint x, in uint y, in int type)
 void main()
 {
 	uint buffer_offset = u_radiosity_info.ray_frame_max*gl_WorkGroupID.z;
-	D2Ray ray = makeRay(gl_GlobalInvocationID.x, gl_WorkGroupID.y, 0);
-	b_ray[gl_GlobalInvocationID.x + gl_WorkGroupID.y * gl_NumWorkGroups.x * gl_WorkGroupSize.x + buffer_offset] = ray;
+	bool ng = b_ray[gl_GlobalInvocationID.x + (gl_NumWorkGroups.y+gl_WorkGroupID.y) * gl_NumWorkGroups.x * gl_WorkGroupSize.x + buffer_offset].march == -1;
+	if(ng){ b_ray[gl_GlobalInvocationID.x + (gl_NumWorkGroups.y+gl_WorkGroupID.y) * gl_NumWorkGroups.x * gl_WorkGroupSize.x + buffer_offset].march = 0; return; }
 
-	vec2 dir = calcDir(ray.angle);
-	ivec2 pos = ivec2(fma(dir, float(ray.march).xx, ray.origin));
-
-	uint area = uint((ray.angle-QUARTER_PI) / HALF_PI);
-	switch(area)
-	{
-		case 0:
-			if(pos.x!=0)
-			{
-				return;
-			}
-			break;
-
-		case 1:
-			if(pos.y!=0)
-			{
-				return;
-			}
-			break;
-	}
-	b_ray[pos[1-area] + (gl_NumWorkGroups.y+gl_WorkGroupID.y) * gl_NumWorkGroups.x * gl_WorkGroupSize.x + buffer_offset].march = -1;
-
+	D2Ray ray = makeRay(gl_GlobalInvocationID.x, gl_WorkGroupID.y, 1);
+	b_ray[gl_GlobalInvocationID.x + (gl_NumWorkGroups.y+gl_WorkGroupID.y) * gl_NumWorkGroups.x * gl_WorkGroupSize.x + buffer_offset] = ray;
 }

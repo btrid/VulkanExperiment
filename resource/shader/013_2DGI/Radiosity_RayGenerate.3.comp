@@ -80,22 +80,23 @@ void main()
 	ivec2 pos = ivec2(fma(dir, float(ray.march).xx, ray.origin));
 
 	uint area = uint((ray.angle-QUARTER_PI) / HALF_PI);
+	ray = makeRay(pos[1-area], gl_WorkGroupID.y, 1);
 	switch(area)
 	{
 		case 0:
-			if(pos.x!=0)
+			if(pos.x==0)
 			{
-				return;
+				ray.march = 0;
 			}
 			break;
 
 		case 1:
-			if(pos.y!=0)
+			if(pos.y==0)
 			{
-				return;
+				ray.march = 0;
 			}
 			break;
 	}
-	b_ray[pos[1-area] + (gl_NumWorkGroups.y+gl_WorkGroupID.y) * gl_NumWorkGroups.x * gl_WorkGroupSize.x + buffer_offset].march = -1;
+	b_ray[gl_GlobalInvocationID.x + (gl_NumWorkGroups.y+gl_WorkGroupID.y) * gl_NumWorkGroups.x * gl_WorkGroupSize.x + buffer_offset] = ray;
 
 }
