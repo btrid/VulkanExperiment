@@ -11,8 +11,8 @@ struct GI2DRadiosity
 {
 	enum {
 		Frame = 1,
-		Ray_Direction_Num = 4,
-		Ray_Frame_Num = 1024*2 * Ray_Direction_Num,
+		Ray_Direction_Num = 180,
+		Ray_Frame_Num = 1024 * Ray_Direction_Num,
 		Ray_All_Num = Ray_Frame_Num * Frame,
 		Segment_Num = Ray_Frame_Num * 8,// ‚Æ‚è‚ ‚¦‚¸‚Ì’l
 		Bounce_Num = 0,
