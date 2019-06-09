@@ -373,7 +373,7 @@ void GI2DRadiosity::executeGenerateRay(const vk::CommandBuffer& cmd)
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RayGenerate].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
-		auto num = app::calcDipatchGroups(uvec3(1024, Ray_Direction_Num, Frame), uvec3(128, 1, 1));
+		auto num = app::calcDipatchGroups(uvec3(1024, Ray_Direction_Num/2, Frame), uvec3(128, 1, 1));
 		cmd.dispatch(num.x, num.y, num.z);
 	}
 

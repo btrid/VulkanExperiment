@@ -181,7 +181,7 @@ struct DrawCommand
     uint firstVertex;
     uint firstInstance;
 };
-#define DIR_NUM 32
+#define DIR_NUM 256
 struct RadiosityVertex
 {
 	u16vec2 pos;

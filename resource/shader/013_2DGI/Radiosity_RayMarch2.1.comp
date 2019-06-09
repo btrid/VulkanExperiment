@@ -22,7 +22,6 @@ void main()
 	vec2 inv_dir = abs(1./dir);
 
 	vec2 cell_origin = vec2(greaterThanEqual(dir, vec2(0.))) * vec2(8.);
-	uint angle_index = ray_index / 1024;
 
 	int begin = 0;
 	int march = 0;

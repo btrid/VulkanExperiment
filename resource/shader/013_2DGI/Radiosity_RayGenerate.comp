@@ -5,41 +5,46 @@
 #define USE_GI2D_Radiosity 1
 #include "GI2D.glsl"
 
-#define HALF_PI (1.5708)
-#define TWO_PI (6.2832)
-#define QUARTER_PI (0.7854)
+//#define HALF_PI (1.5708)
+//#define TWO_PI (6.2832)
+//#define QUARTER_PI (0.7854)
 
-layout (local_size_x=128, local_size_y=1) in;
+#define HALF_PI radians(90.)
+#define TWO_PI radians(360.)
+#define PI radians(180.)
+#define QUARTER_PI radians(45.)
 
-void main()
+layout (local_size_x=128) in;
+
+D2Ray makeRay(in uint x, in uint y, in int type)
 {
 	const ivec4 reso = u_gi2d_info.m_resolution;
 
-	float a = TWO_PI / gl_NumWorkGroups.y;
-//	float b = a * (gl_WorkGroupID.y);
+//	float a = TWO_PI / (gl_NumWorkGroups.y*2);
+	float a = PI / (gl_NumWorkGroups.y);
 	float c = (a / gl_NumWorkGroups.z) * (gl_WorkGroupID.z);
-	float angle = fma(a, float(gl_WorkGroupID.y), c);
-
-//	uint y = uint(gl_WorkGroupID.y / (gl_NumWorkGroups.y/4.));
-	uint y = uint(angle / HALF_PI);
+	float angle = fma(a, float(y), c);
+	angle += type * PI;
+	
+	uint area = uint(angle / HALF_PI);
+//	uint area_num = gl_NumWorkGroups.y*2;
+//	uint area = uint(y / area_num);
+//	area += type*2;
 
 	vec2 pos;
-	pos.x = (y==0) ? (reso.x-0.5) : 0.5;
-	pos.y = (y==1) ? (reso.y-0.5) : 0.5;
+	pos.x = (area==0) ? (reso.x-0.5) : 0.5;
+	pos.y = (area==1) ? (reso.y-0.5) : 0.5;
 	vec2 pdir;
-	pdir.x = (y%2==1) ? 1 : 0;
-	pdir.y = (y%2==0) ? 1 : 0;
+	pdir.x = (area%2==1) ? 1 : 0;
+	pdir.y = (area%2==0) ? 1 : 0;
 
-	pos += pdir*(gl_GlobalInvocationID.x);
+	pos += pdir*x;
 	vec2 begin = pos;
-	uvec2 map_index = uvec2(pos);
-
-
-
+	ivec2 map_index = ivec2(pos);
 
 	angle += QUARTER_PI;
 	vec2 dir = calcDir(angle);
-	uvec2 end_pos;
+	ivec2 end_pos;
 	end_pos.x = dir.x >= 0. ? reso.x-1 : 0;
 	end_pos.y = dir.y >= 0. ? reso.y-1 : 0;
 	int march_count = 1;
@@ -49,14 +54,10 @@ void main()
 		{
 			// DDA
 			pos = fma(dir, float(march_count).xx, begin);
-			map_index = uvec2(pos);
+			map_index = ivec2(pos);
 		}
 		// 範囲外?
 		{
-//			ivec2 is_die = ivec2(greaterThanEqual(map_index, reso.xy)) + ivec2(lessThan(map_index, ivec2(0)));
-//			if(any(notEqual(is_die.xy, ivec2(0))))
-
-//			if(any(equal(map_index.xyxy, uvec4(0, 0, reso.xy-1))))
 			if(any(equal(map_index.xy, end_pos)))
 			{
 				break;
@@ -64,29 +65,47 @@ void main()
 		}
 	}
 
-	// 2重になるのを禁止
-	switch(y)
-	{
-		case 2:
-//			march_count=0;
-			if(map_index.x>=reso.x-1){ march_count=0; }
-//			if(map_index.y>=reso.y-1||map_index.y<=0){}else{ march_count=0; }
-//			if(map_index.y > 0 && map_index.y<reso.y-1){ march_count=0; }
-			break;
-		case 3:
-//			march_count=0;
-//			if(map_index.x>=reso.x-1||map_index.x<=0){}else{ march_count=0; }
-			if(map_index.y>=reso.y-1){march_count=0;}
-//			if(map_index.y>=reso.y-1 && map_index.x<=reso.x-1){ march_count=0; }
-			break;
-	}
-
 	D2Ray ray;
 	ray.origin = begin;
 	ray.angle = angle;
 	ray.march = march_count;
-	
+
+	return ray;
+
+}
+
+void main()
+{
 	uint buffer_offset = u_radiosity_info.ray_frame_max*gl_WorkGroupID.z;
-	b_ray[gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * gl_NumWorkGroups.x * gl_WorkGroupSize.x + buffer_offset] = ray;
+	D2Ray ray = makeRay(gl_GlobalInvocationID.x, gl_WorkGroupID.y, 0);
+	b_ray[gl_GlobalInvocationID.x + gl_WorkGroupID.y * gl_NumWorkGroups.x * gl_WorkGroupSize.x + buffer_offset] = ray;
+
+	vec2 dir = calcDir(ray.angle);
+	ivec2 pos = ivec2(fma(dir, float(ray.march).xx, ray.origin));
+
+	uint area = uint((ray.angle-QUARTER_PI) / HALF_PI);
+
+	ray = makeRay(1023-gl_GlobalInvocationID.x, gl_WorkGroupID.y, 1);
+	switch(area)
+	{
+		case 0:
+			if(pos.x==0)
+			{
+				ray.march = 0;
+			}
+			break;
+
+		case 1:
+			if(pos.y==0)
+			{
+				ray.march = 0;
+			}
+			break;
+	}
+	b_ray[gl_GlobalInvocationID.x + (gl_NumWorkGroups.y+gl_WorkGroupID.y) * gl_NumWorkGroups.x * gl_WorkGroupSize.x + buffer_offset] = ray;				
+
+
+
+
 
 }
