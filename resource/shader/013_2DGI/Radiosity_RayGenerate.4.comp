@@ -41,8 +41,8 @@ D2Ray makeRay(in uint x, in uint y, in int type)
 	angle += QUARTER_PI;
 	vec2 dir = calcDir(angle);
 	ivec2 end_pos;
-	end_pos.x = dir.x >= 0. ? reso.x : -1;
-	end_pos.y = dir.y >= 0. ? reso.y : -1;
+	end_pos.x = dir.x >= 0. ? reso.x-1 : 0;
+	end_pos.y = dir.y >= 0. ? reso.y-1 : 0;
 	int march_count = 1;
 	for(; march_count <5000; march_count++)
 	{
@@ -83,14 +83,14 @@ void main()
 	switch(area)
 	{
 		case 0:
-			if(pos.x>0)
+			if(pos.x!=0)
 			{
 				return;
 			}
 			break;
 
 		case 1:
-			if(pos.y>0)
+			if(pos.y!=0)
 			{
 				return;
 			}

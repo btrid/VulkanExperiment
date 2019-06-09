@@ -363,8 +363,33 @@ int rigidbody()
 
 	return 0;
 }
+
+bool intersection(vec4 aabb, vec2 pos, vec2 inv_dir, float& dist)
+{
+	float tx1 = ((aabb.x - pos.x)*inv_dir.x);
+	float tx2 = ((aabb.z - pos.x)*inv_dir.x);
+
+	float tmin = glm::min(tx1, tx2);
+	float tmax = glm::max(tx1, tx2);
+
+	float ty1 = ((aabb.y - pos.y)*inv_dir.y);
+	float ty2 = ((aabb.w - pos.y)*inv_dir.y);
+
+	tmin = glm::max(tmin, glm::min(ty1, ty2));
+	tmax = glm::min(tmax, glm::max(ty1, ty2));
+
+	dist = tmin;
+	return tmax >= tmin;
+}
 int main()
 {
+
+	float dist;
+	auto dir = glm::rotate(vec2(0.f, 1.f), 0.785398185f);
+	auto inv_dir = 1.f/dir;
+	auto pos = vec2(1023.5f, 105.5f);
+	auto hit = intersection(vec4(0.5f, 0.5f, 1023.5f, 1023.5f), pos, inv_dir, dist);
+	pos = pos + dir * dist;
 
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();
@@ -379,14 +404,14 @@ int main()
 //	return pathFinding();
 //	return rigidbody();
 
-	auto dir = normalize(vec2(-1.13, -2));
-	auto inv_dir = vec2(1.)/dir;
-	dir = dir * glm::min(abs(inv_dir.x), abs(inv_dir.y));
-	inv_dir = abs(vec2(1.) / dir);
-
-//	auto origin = vec2(10.5, 0.5);
-	auto origin = vec2(1000.5, 1023.5);
-	vec2 cell_origin = vec2(greaterThanEqual(dir, vec2(0.))) * vec2(8.);
+// 	auto dir = normalize(vec2(-1.13, -2));
+// 	auto inv_dir = vec2(1.)/dir;
+// 	dir = dir * glm::min(abs(inv_dir.x), abs(inv_dir.y));
+// 	inv_dir = abs(vec2(1.) / dir);
+// 
+// //	auto origin = vec2(10.5, 0.5);
+// 	auto origin = vec2(1000.5, 1023.5);
+// 	vec2 cell_origin = vec2(greaterThanEqual(dir, vec2(0.))) * vec2(8.);
 
 	int march = 0;
 // 	for (;;)
