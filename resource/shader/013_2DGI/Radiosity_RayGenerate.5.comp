@@ -48,8 +48,8 @@ D2Ray makeRay(in uint x, in uint y)
 
 	uint area = uint(angle / PI);
 	vec2 pos;
-	pos.x = (area==0) ? (reso.x-0.5) : 0.5;
-	pos.y = (area==1) ? (reso.y-0.5) : 0.5;
+	pos.x = (area==0) ? reso.x : 0.;
+	pos.y = (area==1) ? reso.y : 0.;
 	vec2 pdir;
 	pdir.x = (area%2==1) ? 1 : 0;
 	pdir.y = (area%2==0) ? 1 : 0;

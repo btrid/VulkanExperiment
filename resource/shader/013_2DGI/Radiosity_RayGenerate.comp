@@ -20,26 +20,35 @@ D2Ray makeRay(in uint x, in uint y, in int type)
 {
 	const ivec4 reso = u_gi2d_info.m_resolution;
 
-	float a = PI / (gl_NumWorkGroups.y);
+	float a = TWO_PI / (gl_NumWorkGroups.y);
 	float c = (a / gl_NumWorkGroups.z) * (gl_WorkGroupID.z);
 	float angle = fma(a, float(y), c);
-	angle += type * PI;
-	
-	uint area = uint(angle / HALF_PI);
+
+	vec2 dir = calcDir(angle);
+	vec2 inv_dir = abs(1./dir);
+	inv_dir = vec2(isnan(inv_dir)) * 99999999. + inv_dir;
+	int dir_axis = inv_dir.x < inv_dir.y ? 0 : 1;
 
 	vec2 pos;
-	pos.x = (area==0) ? (reso.x-0.5) : 0.5;
-	pos.y = (area==1) ? (reso.y-0.5) : 0.5;
-	vec2 pdir;
-	pdir.x = (area%2==1) ? 1 : 0;
-	pdir.y = (area%2==0) ? 1 : 0;
+	pos.x = dir.x >= 0. ? 0 : reso.x;
+	pos.y = dir.y >= 0. ? 0 : reso.y;
+
+	vec2 pdir = vec2(0.);
+	if(x < reso.x)
+	{
+		pdir.x = (dir_axis==0) ? 1 : 0;
+		pdir.y = (dir_axis==1) ? 1 : 0;
+	}
+	else
+	{
+//		pdir.x = (dir_axis==0) ? 1 : 0;
+//		pdir.y = (dir_axis==1) ? 1 : 0;
+	}
 
 	pos += pdir*x;
 	vec2 begin = pos;
 	ivec2 map_index = ivec2(pos);
 
-	angle += QUARTER_PI;
-	vec2 dir = calcDir(angle);
 	ivec2 end_pos;
 	end_pos.x = dir.x >= 0. ? reso.x : -1;
 	end_pos.y = dir.y >= 0. ? reso.y : -1;
@@ -75,27 +84,4 @@ void main()
 	uint buffer_offset = u_radiosity_info.ray_frame_max*gl_WorkGroupID.z;
 	D2Ray ray = makeRay(gl_GlobalInvocationID.x, gl_WorkGroupID.y, 0);
 	b_ray[gl_GlobalInvocationID.x + gl_WorkGroupID.y * gl_NumWorkGroups.x * gl_WorkGroupSize.x + buffer_offset] = ray;
-
-	vec2 dir = calcDir(ray.angle);
-	ivec2 pos = ivec2(fma(dir, float(ray.march).xx, ray.origin));
-
-	uint area = uint((ray.angle-QUARTER_PI) / HALF_PI);
-	switch(area)
-	{
-		case 0:
-			if(pos.x>0)
-			{
-				return;
-			}
-			break;
-
-		case 1:
-			if(pos.y>0)
-			{
-				return;
-			}
-			break;
-	}
-	b_ray[pos[1-area] + (gl_NumWorkGroups.y+gl_WorkGroupID.y) * gl_NumWorkGroups.x * gl_WorkGroupSize.x + buffer_offset].march = -1;
-
 }
