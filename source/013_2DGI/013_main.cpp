@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <string>
 #include <vector>
+#include <set>
 #include <utility>
 #include <array>
 #include <unordered_set>
@@ -364,8 +365,9 @@ int rigidbody()
 	return 0;
 }
 
-bool intersection(vec4 aabb, vec2 pos, vec2 inv_dir, float& dist)
+bool intersection(vec4 aabb, vec2& pos, vec2 dir)
 {
+	vec2 inv_dir = vec2(1.) / normalize(dir);
 	float tx1 = ((aabb.x - pos.x)*inv_dir.x);
 	float tx2 = ((aabb.z - pos.x)*inv_dir.x);
 
@@ -378,19 +380,42 @@ bool intersection(vec4 aabb, vec2 pos, vec2 inv_dir, float& dist)
 	tmin = glm::max(tmin, glm::min(ty1, ty2));
 	tmax = glm::min(tmax, glm::max(ty1, ty2));
 
-	dist = tmin;
+	pos += normalize(dir) * tmin;
 	return tmax >= tmin;
 }
 int main()
 {
-
-	float dist;
-	auto dir = glm::rotate(vec2(0.f, 1.f), 0.785398185f);
+	auto dir = glm::rotate(vec2(0.f, 1.f), 0.9599f);
 	auto inv_dir = 1.f/dir;
-	auto pos = vec2(1023.5f, 105.5f);
-	auto hit = intersection(vec4(0.5f, 0.5f, 1023.5f, 1023.5f), pos, inv_dir, dist);
-	pos = pos + dir * dist;
+	inv_dir = vec2(isnan(inv_dir)) * 99999999. + inv_dir;
+	dir = dir * glm::min(abs(inv_dir.x), abs(inv_dir.y));
+	inv_dir = 1.f / dir;
+	std::array<vec2, 5> pos;
+	pos[0] = vec2(14.15f, 0.f);
+	pos[1] = vec2(16.19f, 0.f);
+	pos[2] = vec2(18.23f, 0.f);
+	pos[3] = vec2(20.27f, 0.f);
+	pos[4] = vec2(22.31f, 0.f);
+	//	auto hit = intersection(vec4(0.5f, 0.5f, 1023.5f, 1023.5f), pos, dir);
 
+	std::set<int> bitset;
+	ivec2 reso = ivec2(20);
+	for (int i = 0; i < 10; i++)
+	{
+		for (int j = 0; j < pos.size(); j++)
+		{
+			pos[j] += dir;
+			if (pos[j].x < 0.f || pos[j].y < 0.f || pos[j].x >= reso.x || pos[j].x >= reso.y) { continue; }
+
+			auto ipos = ivec2(pos[j]);
+			auto ii = ipos.x + ipos.y * reso.x;
+			if(bitset.count(ii) != 0)
+			{
+				assert(false);
+			}
+			bitset.insert(ii);
+		}
+	}
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = glm::vec3(0.f, 0.f, 1.f);
