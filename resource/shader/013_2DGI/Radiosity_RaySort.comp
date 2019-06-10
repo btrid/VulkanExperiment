@@ -18,6 +18,21 @@ layout(push_constant) uniform Input
 } constant;
 
 bool compare(in D2Ray a, in D2Ray b){
+	if(a.angle != b.angle)
+	{
+		 return a.angle < b.angle;
+	}
+	ivec2 apos = ivec2(ceil(a.origin));
+	ivec2 bpos = ivec2(ceil(b.origin));
+	if(apos.y != bpos.y)
+	{
+		 return apos.y < bpos.y;
+	}
+	if(apos.x != bpos.x)
+	{
+		 return apos.x < bpos.x;
+	}
+
 	return a.march < b.march;
 }
 
@@ -44,15 +59,6 @@ void main()
 	{
 		return;
 	}
-
-	//データないよ
-	uint num = u_radiosity_info.ray_frame_max*frame_a + b_ray_counter[frame_a].w;
-	if(index_a >= num ||index_b >= num)
-	{
-		return;
-	}
-
-
 
 	D2Ray a = b_ray[index_a];
 	D2Ray b = b_ray[index_b];

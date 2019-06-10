@@ -18,7 +18,7 @@ void main()
 
 	uint ray_index = gl_GlobalInvocationID.x + u_radiosity_info.ray_frame_max*u_gi2d_scene.m_frame;
 	D2Ray ray = b_ray[ray_index];
-	if(ray.march==0){ return; }
+	if(ray.march==-1){ return; }
 	vec2 dir = calcDir(ray.angle);
 	vec2 inv_dir = abs(1./dir);
 	int y = int((ray.angle-QUARTER_PI) / HALF_PI);

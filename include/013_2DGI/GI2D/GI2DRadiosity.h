@@ -24,7 +24,7 @@ struct GI2DRadiosity
 		Shader_RenderingFS,
 
 		Shader_RayGenerate,
-		Shader_RayGenerate2,
+		Shader_RaySort,
 		Shader_MakeHitpoint,
 		Shader_RayMarch,
 		Shader_SortVertex,
@@ -39,6 +39,7 @@ struct GI2DRadiosity
 	};
 	enum PipelineLayout
 	{
+		PipelineLayout_GenerateRay,
 		PipelineLayout_Radiosity,
 		PipelineLayout_Num,
 	};
@@ -49,7 +50,7 @@ struct GI2DRadiosity
 		Pipeline_Output,
 
 		Pipeline_RayGenerate,
-		Pipeline_RayGenerate2,
+		Pipeline_RaySort,
 		Pipeline_MakeHitpoint,
 		Pipeline_RayMarch,
 		Pipeline_SortVertex,

@@ -65,8 +65,8 @@ D2Ray makeRay(in uint x, in uint y)
 		{
 			D2Ray ray;
 			ray.origin = vec2(512.);
-			ray.angle = angle;
-			ray.march = 0;
+			ray.angle = 999.;
+			ray.march = -1;
 			return ray;
 		}
 	}
