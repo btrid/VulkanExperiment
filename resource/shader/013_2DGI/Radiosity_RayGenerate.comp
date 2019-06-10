@@ -16,14 +16,13 @@
 
 layout (local_size_x=128) in;
 
-D2Ray makeRay(in uint x, in uint y, in int type)
+D2Ray makeRay(in uint x, in uint y)
 {
 	const ivec4 reso = u_gi2d_info.m_resolution;
 
-	float a = PI / (gl_NumWorkGroups.y);
+	float a = TWO_PI / (gl_NumWorkGroups.y);
 	float c = (a / gl_NumWorkGroups.z) * (gl_WorkGroupID.z);
 	float angle = fma(a, float(y), c);
-	angle += type * PI;
 	
 	uint area = uint(angle / HALF_PI);
 
@@ -40,7 +39,8 @@ D2Ray makeRay(in uint x, in uint y, in int type)
 	angle += QUARTER_PI;
 	vec2 dir = calcDir(angle);
 
-	for(int march_count = 1; march_count <5000; march_count++)
+	vec2 begin = pos;
+	for(int march_count = 1; march_count <6000; march_count++)
 	{
 		// march
 		{
@@ -55,7 +55,7 @@ D2Ray makeRay(in uint x, in uint y, in int type)
 				break;
 			}
 		}
-		if(march_count >= 3000)
+		if(march_count >= 5000)
 		{
 			D2Ray ray;
 			ray.origin = vec2(512.);
@@ -64,7 +64,7 @@ D2Ray makeRay(in uint x, in uint y, in int type)
 			return ray;
 		}
 	}
-	vec2 begin = pos;
+	begin = pos;
 
 	ivec2 end_pos;
 	end_pos.x = dir.x >= 0. ? reso.x : -1;
@@ -99,29 +99,7 @@ D2Ray makeRay(in uint x, in uint y, in int type)
 void main()
 {
 	uint buffer_offset = u_radiosity_info.ray_frame_max*gl_WorkGroupID.z;
-	D2Ray ray = makeRay(gl_GlobalInvocationID.x, gl_WorkGroupID.y, 0);
+	D2Ray ray = makeRay(gl_GlobalInvocationID.x, gl_WorkGroupID.y);
 	b_ray[gl_GlobalInvocationID.x + gl_WorkGroupID.y * gl_NumWorkGroups.x * gl_WorkGroupSize.x + buffer_offset] = ray;
-
-	vec2 dir = calcDir(ray.angle);
-	ivec2 pos = ivec2(fma(dir, float(ray.march).xx, ray.origin));
-
-	uint area = uint((ray.angle-QUARTER_PI) / HALF_PI);
-	switch(area)
-	{
-		case 0:
-			if(pos.x>0)
-			{
-				return;
-			}
-			break;
-
-		case 1:
-			if(pos.y>0)
-			{
-				return;
-			}
-			break;
-	}
-	b_ray[pos[1-area] + (gl_NumWorkGroups.y+gl_WorkGroupID.y) * gl_NumWorkGroups.x * gl_WorkGroupSize.x + buffer_offset].march = -1;
 
 }
