@@ -12,6 +12,7 @@ struct GI2DRadiosity
 	enum {
 		Frame = 1,
 		Ray_Direction_Num = 15,
+		Dir_Num = Ray_Direction_Num * 2,
 		Ray_Frame_Num = 1024 * 2 * Ray_Direction_Num,
 		Ray_All_Num = Ray_Frame_Num * Frame,
 		Segment_Num = Ray_Frame_Num * 32,// ‚Æ‚è‚ ‚¦‚¸‚Ì’l
@@ -83,8 +84,9 @@ struct GI2DRadiosity
 
 	struct RadiosityVertex
 	{
-		u16vec2 vertex[Ray_Direction_Num];
+		u16vec2 vertex[Dir_Num];
 		u16vec2 pos;
+		u16vec2 _p;
 	};
 	GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context, const std::shared_ptr<RenderTarget>& render_target);
 	void executeGenerateRay(const vk::CommandBuffer& cmd);

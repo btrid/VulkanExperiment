@@ -7,7 +7,7 @@
 
 #define invocation_num 1
 layout(points, invocations = invocation_num) in;
-layout(triangle_strip, max_vertices = 2*DIR_NUM+2) out;
+layout(triangle_strip, max_vertices = 2*DIR_NUM/invocation_num+2) out;
 
 
 layout(location=0)in gl_PerVertex
@@ -38,7 +38,7 @@ void main()
 //	vec4 c = vec4(1.);
 	vec2 center = (pos / 1024.) * 2. - 1.;
 
-	uint num = DIR_NUM / invocation_num;
+	uint num = 15 / invocation_num;
 	for(uint _i = 0; _i < num; _i++)
 	{
 		uint i = _i + num * gl_InvocationID;
@@ -50,8 +50,18 @@ void main()
 		gl_Position = vec4(center, 0., 1.);
 		gs_out.color = c;
 		EmitVertex();
+
+
+		vec2 v2 = vec2(b_vertex_array[index].vertex[(i+8+15)% DIR_NUM]) / 1024.;
+		gl_Position = vec4(v2*2. - 1., 0., 1.);
+		gs_out.color = c;
+		EmitVertex();
+
+		gl_Position = vec4(center, 0., 1.);
+		gs_out.color = c;
+		EmitVertex();
 	}
-	vec2 v1 = vec2(b_vertex_array[index].vertex[(num * (gl_InvocationID+1)) % DIR_NUM]) / 1024.;
+	vec2 v1 = vec2(b_vertex_array[index].vertex[0]) / 1024.;
 	gl_Position = vec4(v1*2. - 1., 0., 1.);
 	gs_out.color = c;
 	EmitVertex();
