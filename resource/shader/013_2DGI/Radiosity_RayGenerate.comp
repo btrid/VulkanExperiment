@@ -29,18 +29,24 @@ D2Ray makeRay(in uint x, in uint y)
 	vec2 pos;
 	pos.x = (area==0) ? (reso.x-0.5) : 0.5;
 	pos.y = (area==1) ? (reso.y-0.5) : 0.5;
+
 	vec2 pdir;
 	pdir.x = (area%2==1) ? 1 : 0;
 	pdir.y = (area%2==0) ? 1 : 0;
 
 	pos += pdir*x;
+
+
 	ivec2 map_index = ivec2(pos);
 
 	angle += QUARTER_PI;
 	vec2 dir = calcDir(angle);
 
+	pos.x += ((area%2)==1&&dir.x>=0.)?-reso.x:0;
+	pos.y += ((area%2)==0&&dir.y>=0.)?-reso.y:0;
+
 	vec2 begin = pos;
-	for(int march_count = 1; march_count <6000; march_count++)
+	for(int march_count = 0; march_count <6000; march_count++)
 	{
 		// march
 		{
