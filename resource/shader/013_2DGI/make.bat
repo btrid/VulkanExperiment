@@ -41,7 +41,7 @@ rem %exe% %include% %option% -o %output%/GI2DSDF_MakeJFA_EX.comp.spv GI2DSDF_Mak
 %exe% %include% %option% -o %output%/Radiosity_RayMarch.comp.spv Radiosity_RayMarch.comp
 %exe% %include% %option% -o %output%/Radiosity_RayMarch.comp.spv Radiosity_RayMarch2.comp
  %exe% %include% %option% -o %output%/Radiosity_RayMarch.comp.spv Radiosity_RayMarch2.1.comp
-%exe% %include% %option% -o %output%/Radiosity_SortVertex.comp.spv Radiosity_SortVertex.comp
+rem %exe% %include% %option% -o %output%/Radiosity_SortVertex.comp.spv Radiosity_SortVertex.comp
 %exe% %include% %option% -o %output%/Radiosity_RayHit.comp.spv Radiosity_RayHit.comp
 %exe% %include% %option% -o %output%/Radiosity_RayBounce.comp.spv Radiosity_RayBounce.comp
 %exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity.comp

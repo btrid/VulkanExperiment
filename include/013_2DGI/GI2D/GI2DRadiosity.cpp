@@ -32,7 +32,7 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 		b_segment_ex = m_context->m_storage_memory.allocateMemory<u16vec4>({ 1,{} });
 		b_vertex_array_counter = m_context->m_storage_memory.allocateMemory<vk::DrawIndirectCommand>({ 1,{} });
 		b_vertex_array_index = m_context->m_storage_memory.allocateMemory<uint>({ size,{} });
-		b_vertex_array = m_context->m_storage_memory.allocateMemory<u16vec2>({ Ray_Frame_Num *4* 1024,{} });
+		b_vertex_array = m_context->m_storage_memory.allocateMemory<RadiosityVertex>({ Ray_Frame_Num,{} });
 	}
 
 	{
@@ -558,19 +558,19 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 // 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
 // 		cmd.dispatchIndirect(b_segment_counter.getInfo().buffer, b_segment_counter.getInfo().offset);
 // 	}
-	_label.insert("GI2DRadiosity::executeSortVertex");
-	{
-
-		vk::BufferMemoryBarrier to_read[] = {
-			b_vertex_array.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eShaderRead),
-		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, 0, nullptr, std::size(to_read), to_read, 0, nullptr);
-
-		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_SortVertex].get());
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
-		cmd.dispatch(10000, 1, 1);
-	}
+// 	_label.insert("GI2DRadiosity::executeSortVertex");
+// 	{
+// 
+// 		vk::BufferMemoryBarrier to_read[] = {
+// 			b_vertex_array.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eShaderRead),
+// 		};
+// 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, 0, nullptr, std::size(to_read), to_read, 0, nullptr);
+// 
+// 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_SortVertex].get());
+// 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
+// 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
+// 		cmd.dispatch(10000, 1, 1);
+// 	}
 }
 
 

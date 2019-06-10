@@ -70,7 +70,7 @@ void main()
 	{
 		uint vi = atomicAdd(b_vertex_array_counter.instanceCount, 1);
 		b_vertex_array_index[gl_GlobalInvocationID.x+gl_GlobalInvocationID.y*u_gi2d_info.m_resolution.x] = vi;
-		b_vertex_array[vi].num = 0;
+//		b_vertex_array[vi].num = 0;
 		b_vertex_array[vi].pos = u16vec2(gl_GlobalInvocationID.xy);
 	}
 }
