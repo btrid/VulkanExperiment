@@ -48,6 +48,7 @@ void main()
 		int skip = int(min(tp.x, tp.y));
 
 		uint64_t map = b_diffuse_map[getMemoryOrder(cell)];
+//		uint64_t map = b_emissive_map[getMemoryOrder(cell)];
 		if(map == (state?-1ul:0ul))
 		{
 			march+=skip;

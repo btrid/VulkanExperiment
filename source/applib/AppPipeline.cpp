@@ -29,7 +29,7 @@ ClearPipeline::ClearPipeline(const std::shared_ptr<btr::Context>& context, const
 			nullptr, nullptr, present_to_clear);
 
 		vk::ClearColorValue clear_color;
-		clear_color.setFloat32(std::array<float, 4>{0.8f, 0.8f, 1.f, 0.f});
+		clear_color.setFloat32(std::array<float, 4>{0.f, 0.f, 0.f, 0.f});
 		m_cmd->clearColorImage(render_target->m_image, vk::ImageLayout::eTransferDstOptimal, clear_color, vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
 
 	}

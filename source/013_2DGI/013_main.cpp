@@ -364,58 +364,9 @@ int rigidbody()
 
 	return 0;
 }
-
-bool intersection(vec4 aabb, vec2& pos, vec2 dir)
-{
-	vec2 inv_dir = vec2(1.) / normalize(dir);
-	float tx1 = ((aabb.x - pos.x)*inv_dir.x);
-	float tx2 = ((aabb.z - pos.x)*inv_dir.x);
-
-	float tmin = glm::min(tx1, tx2);
-	float tmax = glm::max(tx1, tx2);
-
-	float ty1 = ((aabb.y - pos.y)*inv_dir.y);
-	float ty2 = ((aabb.w - pos.y)*inv_dir.y);
-
-	tmin = glm::max(tmin, glm::min(ty1, ty2));
-	tmax = glm::min(tmax, glm::max(ty1, ty2));
-
-	pos += normalize(dir) * tmin;
-	return tmax >= tmin;
-}
 int main()
 {
-	auto dir = glm::rotate(vec2(0.f, 1.f), 0.9599f);
-	auto inv_dir = 1.f/dir;
-	inv_dir = vec2(isnan(inv_dir)) * 99999999. + inv_dir;
-	dir = dir * glm::min(abs(inv_dir.x), abs(inv_dir.y));
-	inv_dir = 1.f / dir;
-	std::array<vec2, 5> pos;
-	pos[0] = vec2(14.15f, 0.f);
-	pos[1] = vec2(16.19f, 0.f);
-	pos[2] = vec2(18.23f, 0.f);
-	pos[3] = vec2(20.27f, 0.f);
-	pos[4] = vec2(22.31f, 0.f);
-	//	auto hit = intersection(vec4(0.5f, 0.5f, 1023.5f, 1023.5f), pos, dir);
 
-	std::set<int> bitset;
-	ivec2 reso = ivec2(20);
-	for (int i = 0; i < 10; i++)
-	{
-		for (int j = 0; j < pos.size(); j++)
-		{
-			pos[j] += dir;
-			if (pos[j].x < 0.f || pos[j].y < 0.f || pos[j].x >= reso.x || pos[j].x >= reso.y) { continue; }
-
-			auto ipos = ivec2(pos[j]);
-			auto ii = ipos.x + ipos.y * reso.x;
-			if(bitset.count(ii) != 0)
-			{
-				assert(false);
-			}
-			bitset.insert(ii);
-		}
-	}
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = glm::vec3(0.f, 0.f, 1.f);
@@ -428,44 +379,6 @@ int main()
 
 //	return pathFinding();
 //	return rigidbody();
-
-// 	auto dir = normalize(vec2(-1.13, -2));
-// 	auto inv_dir = vec2(1.)/dir;
-// 	dir = dir * glm::min(abs(inv_dir.x), abs(inv_dir.y));
-// 	inv_dir = abs(vec2(1.) / dir);
-// 
-// //	auto origin = vec2(10.5, 0.5);
-// 	auto origin = vec2(1000.5, 1023.5);
-// 	vec2 cell_origin = vec2(greaterThanEqual(dir, vec2(0.))) * vec2(8.);
-
-	int march = 0;
-// 	for (;;)
-// 	{
-// 		vec2 pos = glm::fma(dir, vec2(march), origin);
-// 		ivec2 map_index = ivec2(pos);
-// 
-// 		ivec2 cell = map_index >> 3;
-// 
-// 		vec2 pos_sub = vec2(pos - vec2(cell << 3));
-// 		vec2 tp = vec2(abs(cell_origin - pos_sub)) * inv_dir;
-// 		int _axis = tp.x < tp.y ? 0 : 1;
-// 		int skip = int(tp[_axis]+1.f);
-// 
-// 		march += skip;
-// 		pos = glm::fma(dir, vec2(march), origin);
-// 
-// 		if(_axis == 1){ continue;}
-// 
-// 		march += 8-skip;
-// 		pos = glm::fma(dir, vec2(march), origin);
-// 
-// 		if ((int(pos.y) % 8) != 7)
-// 		{
-// 			int a = 0;
-// 			a++;
-// 		}
-// 
-// 	}
 
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();

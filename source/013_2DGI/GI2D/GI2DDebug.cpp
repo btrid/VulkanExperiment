@@ -99,7 +99,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 		};
 		std::vector<Fragment> rect;
 		for (int i = 0; i < 600; i++) {
-//			rect.emplace_back(Fragment{ ivec4{ std::rand() % gi2d_context->RenderWidth , std::rand() % gi2d_context->RenderHeight, std::rand() % 12 + 16, std::rand() % 12 + 16 }, vec4{ 0.8f,0.2f,0.2f,0.f } });
+			rect.emplace_back(Fragment{ ivec4{ std::rand() % gi2d_context->RenderWidth , std::rand() % gi2d_context->RenderHeight, std::rand() % 12 + 16, std::rand() % 12 + 16 }, vec4{ 0.8f,0.2f,0.2f,0.f } });
 		}		
 //		rect.emplace_back(Fragment{ ivec4{ 70, 900, 900, 10, }, vec4{ 0.8f,0.2f,0.2f,0.f } });
 //		rect.emplace_back(Fragment{ ivec4{ 20, 20, 980, 980, }, vec4{ 0.8f,0.2f,0.2f,0.f } });
@@ -361,7 +361,7 @@ void GI2DDebug::executeMakeFragment(vk::CommandBuffer cmd)
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
-		static vec4 light_pos = vec4(78.5f, 941.5f, 200.f, 200.f);
+		static vec4 light_pos = vec4(78.5f, 791.5f, 200.f, 200.f);
 		float move = 3.f;
 		if (m_context->m_window->getInput().m_keyboard.isHold('A'))
 		{
