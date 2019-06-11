@@ -45,7 +45,7 @@ void main()
 		vec2 tp = fma(vec2(abs(cell_origin - pos_sub)), inv_dir, float(1.).xx);
 		int skip = int(min(tp.x, tp.y));
 
-		uint64_t map = b_edge[cell.x * cell.y * reso.z];
+		uint64_t map = b_edge[cell.x + cell.y * reso.z];
 		if(map == 0ul)
 		{
 			march+=skip;

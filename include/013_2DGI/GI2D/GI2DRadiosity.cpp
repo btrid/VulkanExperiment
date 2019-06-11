@@ -444,6 +444,8 @@ void GI2DRadiosity::executeGenerateRay(const vk::CommandBuffer& cmd)
 void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 {
 	DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
 
 	// データクリア
 	{
@@ -475,8 +477,6 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 			0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeHitpoint].get());
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
 		auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth, m_gi2d_context->RenderHeight, 1), uvec3(32, 32, 1));
 		cmd.dispatch(num.x, num.y, num.z);
 	}
@@ -495,8 +495,6 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 			0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RayMarch].get());
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
 		auto num = app::calcDipatchGroups(uvec3(Ray_Frame_Num, 1, 1), uvec3(128, 1, 1));
 		cmd.dispatch(num.x, num.y, num.z);
 	}
@@ -513,9 +511,6 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 
 	// bounce
 	{
-
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
 		for (int i = 0; i<0; i++)
 		{
 
@@ -561,8 +556,6 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 // 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader | vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, 0, nullptr, std::size(to_read), to_read, 0, nullptr);
 // 
 // 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Radiosity].get());
-// 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
-// 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
 // 		cmd.dispatchIndirect(b_segment_counter.getInfo().buffer, b_segment_counter.getInfo().offset);
 // 	}
 // 	_label.insert("GI2DRadiosity::executeSortVertex");
@@ -574,8 +567,6 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 // 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, 0, nullptr, std::size(to_read), to_read, 0, nullptr);
 // 
 // 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_SortVertex].get());
-// 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
-// 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
 // 		cmd.dispatch(10000, 1, 1);
 // 	}
 }
