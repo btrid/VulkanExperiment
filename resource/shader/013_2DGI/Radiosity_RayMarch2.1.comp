@@ -5,20 +5,27 @@
 #define USE_GI2D_Radiosity 1
 #include "GI2D.glsl"
 
-#define HALF_PI (1.5707963)
-#define TWO_PI (6.28318530)
-#define QUARTER_PI (0.7853981633)
-
 layout (local_size_x=128) in;
 
 void main()
 {
 	const ivec4 reso = u_gi2d_info.m_resolution;
 
-	uint ray_index = gl_GlobalInvocationID.x + u_radiosity_info.ray_frame_max*u_gi2d_scene.m_frame;
+	int ray_index = int(gl_GlobalInvocationID.x + u_radiosity_info.ray_frame_max*u_gi2d_scene.m_frame);
 	D2Ray ray = b_ray[ray_index];
 	if(ray.march==-1){ return; }
-	uint angle_index = ray_index / 2048;
+
+	int angle_index = ray_index/2048; // 0~14
+	int angle_dir = angle_index/8;
+	if(angle_dir == 0)
+	{
+		angle_index = angle_index*2;
+	}
+	else
+	{
+		angle_index = abs(angle_index-8)*2 + 1;
+	}
+
 	vec2 dir = calcDir(ray.angle);
 	vec2 inv_dir = abs(1./dir);
 
@@ -49,7 +56,6 @@ void main()
 		int skip = int(min(tp.x, tp.y));
 
 		uint64_t map = b_diffuse_map[getMemoryOrder(cell)];
-//		uint64_t map = b_emissive_map[getMemoryOrder(cell)];
 		if(map == (state?-1ul:0ul))
 		{
 			march+=skip;
@@ -66,11 +72,11 @@ void main()
 				uvec2 index = end.xz + end.yw * reso.xx;
 				if(all(notEqual(end.xyxy, uvec4(0, 0, reso.xy-1))))
 				{
-					b_vertex_array[b_vertex_array_index[index.x]].vertex[angle_index + 15] = end.zw;
+					b_vertex_array[b_vertex_array_index[index.x]].vertex[(angle_index + (1-angle_dir)*Dir_Num)%Vertex_Num] = end.zw;
 				}
 				if(all(notEqual(end.zwzw, uvec4(0, 0, reso.xy-1))))
 				{
-					b_vertex_array[b_vertex_array_index[index.y]].vertex[angle_index] = end.xy;
+					b_vertex_array[b_vertex_array_index[index.y]].vertex[(angle_index + angle_dir*Dir_Num)%Vertex_Num] = end.xy;
 				}
 				begin = march;
 			}
@@ -84,11 +90,6 @@ void main()
 	uvec2 index = end.xz + end.yw * reso.xx;
 	if(all(notEqual(end.xyxy, uvec4(0, 0, reso.xy-1))))
 	{
-		b_vertex_array[b_vertex_array_index[index.x]].vertex[angle_index + 15] = end.zw;
+		b_vertex_array[b_vertex_array_index[index.x]].vertex[(angle_index + (1-angle_dir)*Dir_Num)%Vertex_Num] = end.zw;
 	}
-//	if(all(notEqual(end.zwzw, uvec4(0, 0, reso.xy-1))))
-//	{
-//		uint vindex = atomicAdd(b_vertex_array[b_vertex_array_index[index.y]].num, 1);
-//		b_vertex_array[b_vertex_array_index[index.y]].vertex[vindex] = end.xy;
-//	}
 }
