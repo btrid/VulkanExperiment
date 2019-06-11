@@ -34,10 +34,12 @@ void main()
 {
 	uint index = gs_in[0].index;
 	u16vec2 pos = b_vertex_array[index].pos;
-	vec4 c = gs_in[0].color * 8.;
+	vec4 c = gs_in[0].color * 16.;
 	vec2 center = (pos / 1024.) * 2. - 1.;
 
 	uint num = Vertex_Num / invocation_num;
+//	uint num = (Vertex_Num + invocation_num - 1) / invocation_num;
+
 	for(uint _i = 0; _i < num; _i++)
 	{
 		uint i = _i + num * gl_InvocationID;

@@ -16,14 +16,14 @@ void main()
 	if(ray.march==-1){ return; }
 
 	int angle_index = ray_index/2048; // 0~14
-	int angle_dir = angle_index/8;
+	int angle_dir = angle_index/((Dir_Num/2)+1);
 	if(angle_dir == 0)
 	{
 		angle_index = angle_index*2;
 	}
 	else
 	{
-		angle_index = abs(angle_index-8)*2 + 1;
+		angle_index = abs(angle_index-((Dir_Num/2)+1))*2 + 1;
 	}
 
 	vec2 dir = calcDir(ray.angle);
