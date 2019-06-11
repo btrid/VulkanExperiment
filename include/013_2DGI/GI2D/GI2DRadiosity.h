@@ -110,7 +110,8 @@ struct GI2DRadiosity
 	btr::BufferMemoryEx<vk::DrawIndirectCommand> b_vertex_array_counter;
 	btr::BufferMemoryEx<uint> b_vertex_array_index;
 	btr::BufferMemoryEx<RadiosityVertex> b_vertex_array;
-	
+	btr::BufferMemoryEx<uint64_t> b_edge;
+
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
 

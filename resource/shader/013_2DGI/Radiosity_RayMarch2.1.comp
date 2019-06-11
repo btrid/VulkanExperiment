@@ -34,16 +34,6 @@ void main()
 	int begin = 0;
 	int march = 0;
 
-	bool state;
-	{
-		ivec2 map_index = ivec2(ray.origin);
-		ivec2 cell = map_index>>3;
-		vec2 pos_sub = vec2(ray.origin - vec2(cell << 3));
-		ivec2 cell_sub = ivec2(pos_sub);
-
-		uint64_t map = b_diffuse_map[getMemoryOrder(cell)];
-		state = (map & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0ul;
-	}
 
 	for(; march < ray.march; )
 	{
@@ -55,8 +45,8 @@ void main()
 		vec2 tp = fma(vec2(abs(cell_origin - pos_sub)), inv_dir, float(1.).xx);
 		int skip = int(min(tp.x, tp.y));
 
-		uint64_t map = b_diffuse_map[getMemoryOrder(cell)];
-		if(map == (state?-1ul:0ul))
+		uint64_t map = b_edge[cell.x * cell.y * reso.z];
+		if(map == 0ul)
 		{
 			march+=skip;
 			continue;
@@ -66,7 +56,7 @@ void main()
 		{
 			ivec2 cell_sub = ivec2(pos_sub);
 			bool attr = (map & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0ul;
-			if(attr && !state)
+			if(attr)
 			{
 				u16vec4 end = u16vec4(fma(dir.xyxy, vec4(float(begin).xx, float(march).xx), ray.origin.xyxy));
 				uvec2 index = end.xz + end.yw * reso.xx;
@@ -80,7 +70,6 @@ void main()
 				}
 				begin = march;
 			}
-			state = attr;
 			march++;
 			pos_sub = fma(dir, vec2(1.), pos_sub);
 		}

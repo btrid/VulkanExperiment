@@ -216,6 +216,9 @@ layout(set=USE_GI2D_Radiosity, binding=7, std430) restrict buffer VertexArrayInd
 layout(set=USE_GI2D_Radiosity, binding=8, std430) restrict buffer VertexArrayBuffer {
 	RadiosityVertex b_vertex_array[];
 };
+layout(set=USE_GI2D_Radiosity, binding=9, std430) restrict buffer MapEdgeBuffer {
+	uint64_t b_edge[];
+};
 
 
 #endif

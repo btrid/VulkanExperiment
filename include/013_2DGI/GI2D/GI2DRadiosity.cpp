@@ -33,6 +33,7 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 		b_vertex_array_counter = m_context->m_storage_memory.allocateMemory<vk::DrawIndirectCommand>({ 1,{} });
 		b_vertex_array_index = m_context->m_storage_memory.allocateMemory<uint>({ size,{} });
 		b_vertex_array = m_context->m_storage_memory.allocateMemory<RadiosityVertex>({ 60000,{} });
+		b_edge = m_context->m_storage_memory.allocateMemory<uint64_t>({ size / 64,{} });
 	}
 
 	{
@@ -49,6 +50,7 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 				vk::DescriptorSetLayoutBinding(6, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(7, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(8, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(9, vk::DescriptorType::eStorageBuffer, 1, stage),
 			};
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 			desc_layout_info.setBindingCount(array_length(binding));
@@ -78,6 +80,7 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 				b_vertex_array_counter.getInfo(),
 				b_vertex_array_index.getInfo(),
 				b_vertex_array.getInfo(),
+				b_edge.getInfo(),
 			};
 
 			vk::WriteDescriptorSet write[] = 
@@ -446,6 +449,7 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 	{
 		vk::BufferMemoryBarrier to_write[] = {
 			b_radiance.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
+			b_edge.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
 			b_segment_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
 			b_vertex_array_counter.makeMemoryBarrier(vk::AccessFlagBits::eIndirectCommandRead, vk::AccessFlagBits::eTransferWrite),
 		};
@@ -454,7 +458,8 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 		cmd.updateBuffer<ivec4>(b_segment_counter.getInfo().buffer, b_segment_counter.getInfo().offset, ivec4(0, 1, 1, 0));
 		int range = b_radiance.getInfo().range / Frame;
 		cmd.fillBuffer(b_radiance.getInfo().buffer, b_radiance.getInfo().offset + range * m_gi2d_context->m_gi2d_scene.m_frame, range, 0);
-		cmd.updateBuffer<vk::DrawIndirectCommand>(b_vertex_array_counter.getInfo().buffer, b_vertex_array_counter.getInfo().offset, { 1, 0, 0, 0});
+		cmd.updateBuffer<vk::DrawIndirectCommand>(b_vertex_array_counter.getInfo().buffer, b_vertex_array_counter.getInfo().offset, { 1, 0, 0, 0 });
+		cmd.fillBuffer(b_edge.getInfo().buffer, b_edge.getInfo().offset, b_edge.getInfo().range, 0);
 
 	}
 
@@ -463,6 +468,7 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 	{
 		vk::BufferMemoryBarrier to_read[] = {
 			b_vertex_array_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+			b_edge.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 			b_vertex_array.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer| vk::PipelineStageFlagBits::eGeometryShader, vk::PipelineStageFlagBits::eComputeShader, {},
@@ -482,6 +488,7 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 			m_gi2d_context->b_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			b_vertex_array_index.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			b_vertex_array.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			b_edge.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			b_segment_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
