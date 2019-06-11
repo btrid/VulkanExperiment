@@ -181,7 +181,7 @@ struct DrawCommand
     uint firstVertex;
     uint firstInstance;
 };
-#define Dir_Num (31)
+#define Dir_Num (3)
 #define Vertex_Num (Dir_Num*2)
 struct RadiosityVertex
 {

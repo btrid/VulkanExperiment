@@ -18,6 +18,7 @@ layout(location=0)in gl_PerVertex
 layout(location=1) in Data
 {
 	flat uint index;
+	flat uint emissive;
 	vec4 color;
 } gs_in[];
 
@@ -33,32 +34,52 @@ layout(location=1)out OutData
 void main() 
 {
 	uint index = gs_in[0].index;
+	vec4 color = gs_in[0].color * 16.;
+
 	u16vec2 pos = b_vertex_array[index].pos;
-	vec4 c = gs_in[0].color * 16.;
 	vec2 center = (pos / 1024.) * 2. - 1.;
 
+	if(gs_in[0].emissive ==0)
+	{
+		gl_Position = vec4(center, 0., 1.);
+		gs_out.color = color;
+		EmitVertex();
+
+		gl_Position = vec4(center + 2./vec2(1024.), 0., 1.);
+		gs_out.color = color;
+		EmitVertex();
+
+		gl_Position = vec4(center + vec2(2., 0.)/vec2(1024.), 0., 1.);
+		gs_out.color = color;
+		EmitVertex();
+
+		EndPrimitive();
+		return;
+
+	}
+
+
 	uint num = Vertex_Num / invocation_num;
-//	uint num = (Vertex_Num + invocation_num - 1) / invocation_num;
 
 	for(uint _i = 0; _i < num; _i++)
 	{
 		uint i = _i + num * gl_InvocationID;
 		vec2 v1 = vec2(b_vertex_array[index].vertex[i]) / 1024.;
 		gl_Position = vec4(v1*2. - 1., 0., 1.);
-		gs_out.color = c;
+		gs_out.color = color;
 		EmitVertex();
 
 		gl_Position = vec4(center, 0., 1.);
-		gs_out.color = c;
+		gs_out.color = color;
 		EmitVertex();
 	}
 	vec2 v1 = vec2(b_vertex_array[index].vertex[(num * (gl_InvocationID+1)) % Vertex_Num]) / 1024.;
 	gl_Position = vec4(v1*2. - 1., 0., 1.);
-	gs_out.color = c;
+	gs_out.color = color;
 	EmitVertex();
 
 	gl_Position = vec4(center, 0., 1.);
-	gs_out.color = c;
+	gs_out.color = color;
 	EmitVertex();
 
 	EndPrimitive();
