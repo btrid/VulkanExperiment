@@ -364,9 +364,47 @@ int rigidbody()
 
 	return 0;
 }
+
+bool intersection(vec4 aabb, vec2 pos, vec2 inv_dir, int& march)
+{
+	vec4 t = ((aabb - pos.xyxy)*inv_dir.xyxy);
+	t = vec4(lessThan(t, vec4(0.f))) * vec2(999999.f, 999999.f).xxyy + t;
+	vec2 tmin2 = glm::min(t.xy(), t.zw());
+	vec2 tmax2 = glm::max(t.xy(), t.zw());
+
+	march = int(glm::min(tmin2.x, tmin2.y));
+
+	float tmin = glm::max(tmin2.x, tmin2.y);
+	float tmax = glm::min(tmax2.x, tmax2.y);
+	return tmax >= tmin;
+}
+
+void test()
+{
+	auto dir = glm::rotate(vec2(0.f, 1.f), 1.9599f);
+	auto inv_dir = 1.f / dir;
+	inv_dir = vec2(isnan(inv_dir)) * 99999999. + inv_dir;
+	dir = dir * glm::min(abs(inv_dir.x), abs(inv_dir.y));
+	inv_dir = 1.f / dir;
+
+	vec2 pos = vec2(18.19f, -0.5f);
+	int begin = 0;
+	int end = 0;
+	auto hit0 = intersection(vec4(0.f, 0.f, 1024.f, 1024.f), pos, inv_dir, begin);
+	vec2 pos0 = pos + begin * dir;
+	auto hit1 = intersection(vec4(0.f, 0.f, 1024.f, 1024.f), pos0 + dir, inv_dir, end);
+	vec2 pos1 = pos0 + (end + 1) * dir;
+
+	ivec2 ip0 = ivec2(pos0);
+	ivec2 ip1 = ivec2(pos1);
+
+	printf("%s, begin=[%4d,%4d], end=[%4d,%4d]\n", hit0 && hit1 ? "OK" : "NG", ip0.x, ip0.y, ip1.x, ip1.y);
+
+}
 int main()
 {
-
+//	for (;;){test();}
+	test();
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = glm::vec3(0.f, 0.f, 1.f);
