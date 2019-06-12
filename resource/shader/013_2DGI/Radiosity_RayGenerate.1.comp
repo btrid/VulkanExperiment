@@ -48,17 +48,14 @@ D2Ray makeRay(in uint x, in uint y)
 
 	pos += pdir*x;
 
-
-	ivec2 map_index = ivec2(pos);
-
 	angle += QUARTER_PI;
 	vec2 dir = calcDir(angle);
+	vec2 inv_dir = 1. / dir;
+	inv_dir = vec2(isnan(inv_dir)) * 99999999. + inv_dir;
 
 	pos.x += ((area%2)==1&&dir.x>=0.)?-reso.x:0;
 	pos.y += ((area%2)==0&&dir.y>=0.)?-reso.y:0;
 
-	vec2 inv_dir = 1. / dir;
-	inv_dir = vec2(isnan(inv_dir)) * 99999999. + inv_dir;
 	int begin, end;
 	if(!intersection(vec4(vec2(0., 0.), vec2(reso.xy)), pos, inv_dir, begin, end))
 	{
