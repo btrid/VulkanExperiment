@@ -369,13 +369,14 @@ bool intersection(vec2 pos, vec2 inv_dir, int& n, int& f)
 {
 	vec4 aabb = vec4(0.f, 0.f, 1024.f, 1024.f);
 	vec4 t = ((aabb - pos.xyxy)*inv_dir.xyxy);
+
 	vec2 tmin = glm::min(t.xy(), t.zw());
  	vec2 tmax = glm::max(t.xy(), t.zw());
  
 	n = int(glm::max(tmin.x, tmin.y));
 	f = int(glm::min(tmax.x, tmax.y));
 
- 	return f >= n && glm::min(tmax.x, tmax.y) >= glm::max(tmin.x, tmin.y);
+ 	return glm::min(tmax.x, tmax.y) > glm::max(glm::max(tmin.x, tmin.y), 0.f);
 }
 
 void test()
@@ -389,11 +390,11 @@ void test()
 		dir = glm::rotate(vec2(-1.f, 0.f), -glm::radians((float)(std::rand() % 180)));
 		break;
 	case 1:
-		pos = vec2(1025, rand() % 1025);
+		pos = vec2(1025.5f, rand() % 1025);
 		dir = glm::rotate(vec2(0.f, -1.f), -glm::radians((float)(std::rand() % 180)));
 		break;
 	case 2:
-		pos = vec2(rand() % 1025, 1025.f);
+		pos = vec2(rand() % 1025, 1025.5f);
 		dir = glm::rotate(vec2(1.f, 0.f), -glm::radians((float)(std::rand() % 180)));
 		break;
 	case 3:
@@ -413,10 +414,9 @@ void test()
 	vec2 pos0 = pos + begin * dir;
 	vec2 pos1 = pos + end * dir;
 
-	ivec2 ip0 = ivec2(pos0);
-	ivec2 ip1 = ivec2(pos1);
 
-	printf("%s, pos[%7.2f, %7.2f]begin=[%4d,%4d], end=[%4d,%4d], dir=[%5.2f,%5.2f], inv=[%6.2f,%6.2f]\n", hit0 ? "OK" : "NG", pos.x, pos.y, ip0.x, ip0.y, ip1.x, ip1.y, dir.x, dir.y, inv_dir.x, inv_dir.y);
+//	if(!hit0)
+	printf("%s, pos[%7.2f, %7.2f],begin=[%7.2f,%7.2f], end=[%7.2f,%7.2f], dir=[%5.2f,%5.2f], inv=[%6.2f,%6.2f]\n", hit0 ? "OK" : "NG", pos.x, pos.y, pos0.x, pos0.y, pos1.x, pos1.y, dir.x, dir.y, inv_dir.x, inv_dir.y);
 
 }
 int main()

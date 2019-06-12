@@ -41,6 +41,7 @@ void main()
 
 	if(gs_in[0].emissive ==0)
 	{
+		// デバッグ用
 		gl_Position = vec4(center, 0., 1.);
 		gs_out.color = color;
 		EmitVertex();

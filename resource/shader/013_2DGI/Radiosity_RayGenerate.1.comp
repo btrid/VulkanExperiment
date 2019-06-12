@@ -16,6 +16,18 @@
 
 layout (local_size_x=128) in;
 
+bool intersection(in vec4 aabb, in vec2 pos, in vec2 inv_dir, out int n, out int f)
+{
+	vec4 t = ((aabb - pos.xyxy)*inv_dir.xyxy);
+	vec2 tmin = min(t.xy, t.zw);
+ 	vec2 tmax = max(t.xy, t.zw);
+ 
+	n = int(max(tmin.x, tmin.y));
+	f = int(min(tmax.x, tmax.y));
+
+ 	return min(tmax.x, tmax.y) > max(max(tmin.x, tmin.y), 0.0);
+}
+
 D2Ray makeRay(in uint x, in uint y)
 {
 	const ivec4 reso = u_gi2d_info.m_resolution;
@@ -27,8 +39,8 @@ D2Ray makeRay(in uint x, in uint y)
 	uint area = uint(angle / HALF_PI);
 
 	vec2 pos;
-	pos.x = (area==0) ? (reso.x-0.5) : 0.5;
-	pos.y = (area==1) ? (reso.y-0.5) : 0.5;
+	pos.x = (area==0) ? (reso.x+0.5) : -0.5;
+	pos.y = (area==1) ? (reso.y+0.5) : -0.5;
 
 	vec2 pdir;
 	pdir.x = (area%2==1) ? 1 : 0;
@@ -45,61 +57,23 @@ D2Ray makeRay(in uint x, in uint y)
 	pos.x += ((area%2)==1&&dir.x>=0.)?-reso.x:0;
 	pos.y += ((area%2)==0&&dir.y>=0.)?-reso.y:0;
 
-	vec2 begin = pos;
-	for(int march_count = 0; march_count <6000; march_count++)
+	vec2 inv_dir = 1. / dir;
+	inv_dir = vec2(isnan(inv_dir)) * 99999999. + inv_dir;
+	int begin, end;
+	if(!intersection(vec4(vec2(0., 0.), vec2(reso.xy)), pos, inv_dir, begin, end))
 	{
-		// march
-		{
-			// DDA
-			pos = fma(dir, float(march_count).xx, begin);
-			map_index = ivec2(pos);
-		}
-		// 範囲外?
-		{
-			if(all(greaterThanEqual(map_index.xy, ivec2(0))) && all(lessThan(map_index.xy, reso.xy)))
-			{
-				break;
-			}
-		}
-		if(march_count >= 5000)
-		{
-			D2Ray ray;
-			ray.origin = vec2(512.);
-			ray.angle = 999.;
-			ray.march = -1;
-			return ray;
-		}
+		D2Ray ray;
+		ray.origin = vec2(512.);
+		angle = 999.;
+		ray.march = -1;
+		return ray;
 	}
-	begin = pos;
-
-	ivec2 end_pos;
-	end_pos.x = dir.x >= 0. ? reso.x : -1;
-	end_pos.y = dir.y >= 0. ? reso.y : -1;
-	int march_count = 1;
-	for(; march_count <5000; march_count++)
-	{
-		// march
-		{
-			// DDA
-			pos = fma(dir, float(march_count).xx, begin);
-			map_index = ivec2(pos);
-		}
-		// 範囲外?
-		{
-			if(any(equal(map_index.xy, end_pos)))
-			{
-				break;
-			}
-		}
-	}
-
 	D2Ray ray;
-	ray.origin = begin;
+	ray.origin = fma(dir, vec2(begin+1), pos);
 	ray.angle = angle;
-	ray.march = march_count;
+	ray.march = end - begin+1;
 
 	return ray;
-
 }
 
 void main()

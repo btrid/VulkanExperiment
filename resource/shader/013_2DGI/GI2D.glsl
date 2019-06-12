@@ -181,7 +181,7 @@ struct DrawCommand
     uint firstVertex;
     uint firstInstance;
 };
-#define Dir_Num (3)
+#define Dir_Num (17)
 #define Vertex_Num (Dir_Num*2)
 struct RadiosityVertex
 {
@@ -282,7 +282,7 @@ vec4 rotate2(in vec2 angle)
 }
 vec2 calcDir(in float angle)
 {
-#define GI2D_FLT_EPSILON 0.001
+#define GI2D_FLT_EPSILON 0.0001
 	vec2 dir = rotate(angle);
 	dir.x = abs(dir.x)<GI2D_FLT_EPSILON ? 0.0001 : dir.x;
 	dir.y = abs(dir.y)<GI2D_FLT_EPSILON ? 0.0001 : dir.y;
