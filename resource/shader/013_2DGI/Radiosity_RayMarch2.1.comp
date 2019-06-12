@@ -23,49 +23,48 @@ bool intersection(in vec4 aabb, in vec2 pos, in vec2 inv_dir, out int n, out int
 
  	return min(tmax.x, tmax.y) > max(max(tmin.x, tmin.y), 0.0);
 }
-
-D2Ray makeRay(in uint x, in uint y)
+struct Ray
+{
+	vec2 origin;
+	vec2 dir;
+	vec2 inv_dir;
+	int march;
+};
+Ray makeRay(in uint x, in uint y)
 {
 	const ivec4 reso = u_gi2d_info.m_resolution;
+	Ray ray;
 
-	float a = TWO_PI / (gl_NumWorkGroups.y);
-	float c = (a / gl_NumWorkGroups.z) * (gl_WorkGroupID.z);
-	float angle = fma(a, float(y), c);
-	
+	float a = TWO_PI / gl_NumWorkGroups.y;
+	float b = (a / gl_NumWorkGroups.z) * (gl_WorkGroupID.z);
+	float angle = fma(a, float(y), b);
 	uint area = uint(angle / HALF_PI);
 
-	vec2 pos;
-	pos.x = (area==0) ? (reso.x+0.5) : -0.5;
-	pos.y = (area==1) ? (reso.y+0.5) : -0.5;
+	ray.origin.x = (area==0) ? (reso.x+0.5) : -0.5;
+	ray.origin.y = (area==1) ? (reso.y+0.5) : -0.5;
 
 	vec2 pdir;
 	pdir.x = (area%2==1) ? 1 : 0;
 	pdir.y = (area%2==0) ? 1 : 0;
 
-	pos += pdir*x;
+	ray.origin += pdir*x;
 
 	angle += QUARTER_PI;
-	vec2 dir = calcDir(angle);
-	vec2 inv_dir = 1. / dir;
-	inv_dir = vec2(isnan(inv_dir)) * 99999999. + inv_dir;
+//	calcDir2(angle, ray.dir, ray.inv_dir);
+	ray.dir = calcDir(angle);
+	ray.inv_dir = 1. / ray.dir;
+	ray.inv_dir = vec2(isnan(ray.inv_dir)) * 99999999. + ray.inv_dir;
 
-	pos.x += ((area%2)==1&&dir.x>=0.)?-reso.x:0;
-	pos.y += ((area%2)==0&&dir.y>=0.)?-reso.y:0;
+	ray.origin.x += ((area%2)==1&&ray.dir.x>=0.)?-reso.x:0;
+	ray.origin.y += ((area%2)==0&&ray.dir.y>=0.)?-reso.y:0;
 
+	ray.march = -1;
 	int begin, end;
-	if(!intersection(vec4(vec2(0., 0.), vec2(reso.xy)), pos, inv_dir, begin, end))
+	if(intersection(vec4(vec2(0., 0.), vec2(reso.xy)), ray.origin, ray.inv_dir, begin, end))
 	{
-		D2Ray ray;
-		ray.origin = vec2(512.);
-		angle = 999.;
-		ray.march = -1;
-		return ray;
+		ray.origin = fma(ray.dir, vec2(begin+1), ray.origin);
+		ray.march = end - begin+1;
 	}
-	D2Ray ray;
-	ray.origin = fma(dir, vec2(begin+1), pos);
-	ray.angle = angle;
-	ray.march = end - begin+1;
-
 	return ray;
 }
 
@@ -73,8 +72,7 @@ void main()
 {
 	const ivec4 reso = u_gi2d_info.m_resolution;
 
-	int ray_index = int(gl_GlobalInvocationID.x);
-	D2Ray ray = makeRay(gl_GlobalInvocationID.x, gl_WorkGroupID.y);
+	Ray ray = makeRay(gl_GlobalInvocationID.x, gl_WorkGroupID.y);
 
 	if(ray.march==-1){ return; }
 
@@ -89,23 +87,18 @@ void main()
 		angle_index = (angle_index-((Dir_Num/2)+1))*2 + 1;
 	}
 
-	vec2 dir = calcDir(ray.angle);
-	vec2 inv_dir = abs(1./dir);
-
-	vec2 cell_origin = vec2(greaterThanEqual(dir, vec2(0.))) * vec2(8.);
+	vec2 cell_origin = vec2(greaterThanEqual(ray.dir, vec2(0.))) * vec2(8.);
 
 	int begin = 0;
 	int march = 0;
-
-
 	for(; march < ray.march; )
 	{
-		vec2 pos = fma(dir, float(march).xx, ray.origin);
+		vec2 pos = fma(ray.dir, float(march).xx, ray.origin);
 		ivec2 map_index = ivec2(pos);
 		ivec2 cell = map_index>>3;
 		vec2 pos_sub = vec2(pos - vec2(cell << 3));
 
-		vec2 tp = fma(vec2(abs(cell_origin - pos_sub)), inv_dir, float(1.).xx);
+		vec2 tp = fma(vec2(abs(cell_origin - pos_sub)), abs(ray.inv_dir), float(1.).xx);
 		int skip = int(min(tp.x, tp.y));
 
 		uint64_t map = b_edge[cell.x + cell.y * reso.z];
@@ -121,7 +114,7 @@ void main()
 			bool attr = (map & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0ul;
 			if(attr)
 			{
-				u16vec4 end = u16vec4(fma(dir.xyxy, vec4(float(begin).xx, float(march).xx), ray.origin.xyxy));
+				u16vec4 end = u16vec4(fma(ray.dir.xyxy, vec4(float(begin).xx, float(march).xx), ray.origin.xyxy));
 				uvec2 index = end.xz + end.yw * reso.xx;
 				if(all(notEqual(end.xyxy, uvec4(0, 0, reso.xy-1))))
 				{
@@ -134,11 +127,11 @@ void main()
 				begin = march;
 			}
 			march++;
-			pos_sub = fma(dir, vec2(1.), pos_sub);
+			pos_sub = fma(ray.dir, vec2(1.), pos_sub);
 		}
 
 	}
-	u16vec4 end = u16vec4(fma(dir.xyxy, vec4(float(begin).xx, float(ray.march).xx), ray.origin.xyxy));
+	u16vec4 end = u16vec4(fma(ray.dir.xyxy, vec4(float(begin).xx, float(ray.march).xx), ray.origin.xyxy));
 	uvec2 index = end.xz + end.yw * reso.xx;
 	if(all(notEqual(end.xyxy, uvec4(0, 0, reso.xy-1))))
 	{

@@ -289,5 +289,14 @@ vec2 calcDir(in float angle)
 	vec2 inv_dir = 1./dir;
 	return dir * min(abs(inv_dir.x), abs(inv_dir.y));
 }
+void calcDir2(in float angle, out vec2 dir, out vec2 inv_dir)
+{
+	dir = rotate(angle);
+	dir.x = abs(dir.x)<GI2D_FLT_EPSILON ? 0.0001 : dir.x;
+	dir.y = abs(dir.y)<GI2D_FLT_EPSILON ? 0.0001 : dir.y;
+	inv_dir = 1./dir;
+	dir = dir * min(abs(inv_dir.x), abs(inv_dir.y));
+	inv_dir = 1./dir;
+}
 
 #endif //GI2D_
