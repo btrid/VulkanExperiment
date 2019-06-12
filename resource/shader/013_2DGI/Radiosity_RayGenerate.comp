@@ -16,18 +16,16 @@
 
 layout (local_size_x=128) in;
 
-bool intersection(in vec4 aabb, in vec2 pos, in vec2 inv_dir, out int march)
+bool intersection(in vec4 aabb, in vec2 pos, in vec2 inv_dir, out int n, out int f)
 {
 	vec4 t = ((aabb - pos.xyxy)*inv_dir.xyxy);
-	t = vec4(lessThan(t, vec4(0.f))) * 999999.f + t;
-	vec2 tmin2 = min(t.xy, t.zw);
-	vec2 tmax2 = max(t.xy, t.zw);
+	vec2 tmin = min(t.xy, t.zw);
+ 	vec2 tmax = max(t.xy, t.zw);
+ 
+	n = int(max(tmin.x, tmin.y));
+	f = int(min(tmax.x, tmax.y));
 
-	march = int(min(tmin2.x, tmin2.y));
-
-//	float tmin = max(tmin2.x, tmin2.y);
-//	float tmax = min(tmax2.x, tmax2.y);
-	return min(tmax2.x, tmax2.y) >= max(tmin2.x, tmin2.y);
+ 	return f >= n && min(tmax.x, tmax.y) >= max(tmin.x, tmin.y);
 }
 
 D2Ray makeRay(in uint x, in uint y)
@@ -61,8 +59,8 @@ D2Ray makeRay(in uint x, in uint y)
 
 	vec2 inv_dir = 1. / dir;
 	inv_dir = vec2(isnan(inv_dir)) * 99999999. + inv_dir;
-	int march = 0;
-	if(!intersection(vec4(vec2(0., 0.), vec2(reso.xy)), pos, inv_dir, march))
+	int begin, end;
+	if(!intersection(vec4(vec2(0., 0.), vec2(reso.xy)), pos, inv_dir, begin, end))
 	{
 		D2Ray ray;
 		ray.origin = vec2(512.);
@@ -70,21 +68,10 @@ D2Ray makeRay(in uint x, in uint y)
 		ray.march = -1;
 		return ray;
 	}
-	vec2 begin = fma(dir, vec2(march), pos);
-
-	if(!intersection(vec4(vec2(0., 0.), vec2(reso.xy)), begin+dir, inv_dir, march))
-	{
-		D2Ray ray;
-		ray.origin = vec2(512.);
-		ray.angle = 9999.;
-		ray.march = -1;
-		return ray;
-	}
-
 	D2Ray ray;
-	ray.origin = begin;
+	ray.origin = fma(dir, vec2(begin), pos);
 	ray.angle = angle;
-	ray.march = march+1;
+	ray.march = end - begin;
 
 	return ray;
 }

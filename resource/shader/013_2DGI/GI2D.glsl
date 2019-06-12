@@ -282,9 +282,11 @@ vec4 rotate2(in vec2 angle)
 }
 vec2 calcDir(in float angle)
 {
+#define GI2D_FLT_EPSILON 0.001
 	vec2 dir = rotate(angle);
+	dir.x = abs(dir.x)<GI2D_FLT_EPSILON ? 0.0001 : dir.x;
+	dir.y = abs(dir.y)<GI2D_FLT_EPSILON ? 0.0001 : dir.y;
 	vec2 inv_dir = 1./dir;
-	inv_dir = vec2(isnan(inv_dir)) * 99999999. + inv_dir;
 	return dir * min(abs(inv_dir.x), abs(inv_dir.y));
 }
 
