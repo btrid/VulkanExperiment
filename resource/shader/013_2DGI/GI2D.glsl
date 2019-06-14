@@ -180,14 +180,18 @@ struct DrawCommand
 	uint instanceCount;
     uint firstVertex;
     uint firstInstance;
+    uvec4 bounce_cmd;
+    uvec4 radiation_cmd;
 };
-#define Dir_Num (17)
+#define Dir_Num (32)
 #define Vertex_Num (Dir_Num*2)
 struct RadiosityVertex
 {
 	u16vec2 vertex[Vertex_Num];
+//	uint vertex[Vertex_Num];
 	u16vec2 pos;
 	u16vec2 _p;
+	f16vec3 radiation[4];
 };
 layout(set=USE_GI2D_Radiosity, binding=0, std140) uniform GI2DRadiosityInfoUniform {
 	GI2DRadiosityInfo u_radiosity_info;

@@ -1,0 +1,26 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_GI2D 0
+#define USE_GI2D_Radiosity 1
+#include "GI2D.glsl"
+
+layout (local_size_x = 1024) in;
+
+layout(push_constant) uniform InputVertex
+{
+	uint bounce;
+} constant;
+
+void main()
+{
+	if(gl_GlobalInvocationID.x >= b_vertex_array_counter.radiation_cmd.x){ return; }
+	f16vec3 radiance = f16vec3(0.);
+	for(int i = 0; i < Vertex_Num; i++)
+	{
+		u16vec2 v = b_vertex_array[gl_GlobalInvocationID.x].vertex[i];
+		uint target = b_vertex_array_index[v.x + v.y * u_gi2d_info.m_resolution.x];
+		radiance += b_vertex_array[target].radiation[constant.bounce];
+	}
+	b_vertex_array[gl_GlobalInvocationID.x].radiation[constant.bounce+1] = radiance;
+}

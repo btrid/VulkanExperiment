@@ -1,0 +1,42 @@
+// セルをスキップしないレイトレ
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+
+#define USE_GI2D 0
+#define USE_GI2D_Radiosity 1
+#include "GI2D.glsl"
+
+layout (local_size_x = 1, local_size_y = Vertex_Num) in;
+
+void main()
+{
+//	if(gl_GlobalInvocationID.x >= b_vertex_array_counter.instanceCount){ return; }
+
+	f16vec3 radiation = b_vertex_array[gl_GlobalInvocationID.x].radiation[0];
+	radiation += b_vertex_array[gl_GlobalInvocationID.x].radiation[1];
+	radiation += b_vertex_array[gl_GlobalInvocationID.x].radiation[2];
+	radiation += b_vertex_array[gl_GlobalInvocationID.x].radiation[3];
+
+	f16vec2 pos = f16vec2(b_vertex_array[gl_GlobalInvocationID.x].pos);
+	f16vec2 target = f16vec2(b_vertex_array[gl_GlobalInvocationID.x].vertex[gl_LocalInvocationID.y]);
+	f16vec2 dir = target-pos;
+	uint march_count = uint(ceil(length(dir)));
+//	dir.
+	dir.x = abs(dir.x)<GI2D_FLT_EPSILON ? 0.0001 : dir.x;
+	dir.y = abs(dir.y)<GI2D_FLT_EPSILON ? 0.0001 : dir.y;
+	f16vec2 inv_dir = 1./dir;
+	dir = dir * min(abs(inv_dir.x), abs(inv_dir.y));
+
+	for(uint march_count = segment.begin; march_count <= segment.march; march_count++)
+	{
+		// lighting
+		{
+			vec2 pos = fma(dir, float(march_count).xx, ray.origin);
+			ivec2 map_index = ivec2(pos);
+
+			uint radiance_cell = getMemoryOrder(map_index);
+			atomicAdd(b_radiance[radiance_offset + radiance_cell], segment.radiance);
+		}
+	}
+}
