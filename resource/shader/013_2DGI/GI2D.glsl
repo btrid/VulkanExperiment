@@ -189,6 +189,19 @@ struct RadiosityVertex
 	u16vec2 pos;
 	u16vec2 _p;
 };
+
+struct RayEx
+{
+	uint16_t ray_index;
+	uint16_t angle_index;
+	uint16_t segment_count;
+	uint16_t segment[32];
+};
+struct RaySample
+{
+	u16vec2 ray_index[Vertex_Num];
+};
+
 layout(set=USE_GI2D_Radiosity, binding=0, std140) uniform GI2DRadiosityInfoUniform {
 	GI2DRadiosityInfo u_radiosity_info;
 };
@@ -219,7 +232,15 @@ layout(set=USE_GI2D_Radiosity, binding=8, std430) restrict buffer VertexArrayBuf
 layout(set=USE_GI2D_Radiosity, binding=9, std430) restrict buffer MapEdgeBuffer {
 	uint64_t b_edge[];
 };
-
+layout(set=USE_GI2D_Radiosity, binding=10, std430) restrict buffer RayExBuffer {
+	RayEx b_ray_ex[];
+};
+layout(set=USE_GI2D_Radiosity, binding=11, std430) restrict buffer RaySamplingBuffer {
+	RaySample b_ray_sampling[];
+};
+layout(set=USE_GI2D_Radiosity, binding=12, std430) restrict buffer RadianceExBuffer {
+	vec3 b_radiance_ex[];
+};
 
 #endif
 

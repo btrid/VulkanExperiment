@@ -50,7 +50,6 @@ Ray makeRay(in uint x, in uint y)
 	ray.origin += pdir*x;
 
 	angle += QUARTER_PI;
-//	calcDir2(angle, ray.dir, ray.inv_dir);
 	ray.dir = calcDir(angle);
 	ray.inv_dir = 1. / ray.dir;
 	ray.inv_dir = vec2(isnan(ray.inv_dir)) * 99999999. + ray.inv_dir;
@@ -76,7 +75,9 @@ void main()
 
 	if(ray.march==-1){ return; }
 
+	uint ray_index = gl_GlobalInvocationID.x;
 	uint angle_index = gl_WorkGroupID.y;
+	uint segment_index = 0;
 	uint angle_dir = angle_index/((Dir_Num/2)+1);
 	if(angle_dir == 0)
 	{
@@ -89,52 +90,45 @@ void main()
 
 	vec2 cell_origin = vec2(greaterThanEqual(ray.dir, vec2(0.))) * vec2(8.);
 
-	int begin = 0;
-	int march = 0;
+	RayEx ray_ex;
+	ray_ex.ray_index = uint16_t(gl_GlobalInvocationID.x);
+	ray_ex.angle_index = uint16_t(gl_WorkGroupID.y);
+	ray_ex.segment_count = uint16_t(0);
+	ray_ex.segment[0] = uint16_t(0);
+
+	uint16_t march = uint16_t(0);
+	vec2 pos = fma(ray.dir, float(march).xx, ray.origin);
+	ivec2 map_index = ivec2(pos);
+	
 	for(; march < ray.march; )
 	{
-		vec2 pos = fma(ray.dir, float(march).xx, ray.origin);
-		ivec2 map_index = ivec2(pos);
 		ivec2 cell = map_index>>3;
-		vec2 pos_sub = vec2(pos - vec2(cell << 3));
+		vec2 cell_origin = vec2(cell << 3);
+		vec2 pos_sub = vec2(pos - cell_origin);
 
 		vec2 tp = fma(vec2(abs(cell_origin - pos_sub)), abs(ray.inv_dir), float(1.).xx);
 		int skip = int(min(tp.x, tp.y));
 
 		uint64_t map = b_edge[cell.x + cell.y * reso.z];
-		if(map == 0ul)
-		{
-			march+=skip;
-			continue;
-		}
 
 		for(uint i = 0; i < skip; i++)
 		{
-			ivec2 cell_sub = ivec2(pos_sub);
+			ivec2 cell_sub = ivec2(pos - cell_origin);
 			bool attr = (map & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0ul;
 			if(attr)
 			{
-				u16vec4 end = u16vec4(fma(ray.dir.xyxy, vec4(float(begin).xx, float(march).xx), ray.origin.xyxy));
-				uvec2 index = end.xz + end.yw * reso.xx;
-				if(all(notEqual(end.xyxy, uvec4(0, 0, reso.xy-1))))
-				{
-					b_vertex_array[b_vertex_array_index[index.x]].vertex[(angle_index + (1-angle_dir)*Dir_Num)%Vertex_Num] = end.zw;
-				}
-				if(all(notEqual(end.zwzw, uvec4(0, 0, reso.xy-1))))
-				{
-					b_vertex_array[b_vertex_array_index[index.y]].vertex[(angle_index + angle_dir*Dir_Num)%Vertex_Num] = end.xy;
-				}
-				begin = march;
+				ray_ex.segment_count++;
+				ray_ex.segment[uint(ray_ex.segment_count)] = march;
 			}
-			march++;
-			pos_sub = fma(ray.dir, vec2(1.), pos_sub);
-		}
+			b_ray_sampling[map_index.x + map_index.y*reso.x].ray_index[angle_index] = u16vec2(ray_ex.ray_index, ray_ex.segment_count);
 
+			march++;
+			pos = fma(ray.dir, float(march).xx, ray.origin);
+			map_index = ivec2(pos);
+		}
 	}
-	u16vec4 end = u16vec4(fma(ray.dir.xyxy, vec4(float(begin).xx, float(ray.march).xx), ray.origin.xyxy));
-	uvec2 index = end.xz + end.yw * reso.xx;
-	if(all(notEqual(end.xyxy, uvec4(0, 0, reso.xy-1))))
-	{
-		b_vertex_array[b_vertex_array_index[index.x]].vertex[(angle_index + (1-angle_dir)*Dir_Num)%Vertex_Num] = end.zw;
-	}
+
+//	ray_ex.segment_count++;
+//	ray_ex.segment[uint(ray_ex.segment_count)] = march;
+
 }
