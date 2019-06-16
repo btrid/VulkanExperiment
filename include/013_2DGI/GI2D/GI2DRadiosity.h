@@ -56,7 +56,6 @@ struct GI2DRadiosity
 		Pipeline_RayMarch,
 		Pipeline_RayHit,
 		Pipeline_RayBounce,
-		Pipeline_RayBounce2,
 
 		Pipeline_Num,
 	};
@@ -100,6 +99,13 @@ struct GI2DRadiosity
 	{
 		u16vec2 ray_index[Dir_Num];
 	};
+
+	struct VertexCmd
+	{
+		vk::DrawIndirectCommand cmd;
+		uvec4 bounce_cmd;
+
+	};
 	GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context, const std::shared_ptr<RenderTarget>& render_target);
 	void executeGenerateRay(const vk::CommandBuffer& cmd);
 	void executeRadiosity(const vk::CommandBuffer& cmd);
@@ -119,12 +125,13 @@ struct GI2DRadiosity
 	btr::BufferMemoryEx<D2Segment> b_segment;
 	btr::BufferMemoryEx<ivec4> b_segment_counter;
 	btr::BufferMemoryEx<u16vec4> b_segment_ex;
-	btr::BufferMemoryEx<vk::DrawIndirectCommand> b_vertex_array_counter;
+	btr::BufferMemoryEx<VertexCmd> b_vertex_array_counter;
 	btr::BufferMemoryEx<uint> b_vertex_array_index;
 	btr::BufferMemoryEx<RadiosityVertex> b_vertex_array;
 	btr::BufferMemoryEx<uint64_t> b_edge;
 	btr::BufferMemoryEx<RayEx> b_ray_ex;
 	btr::BufferMemoryEx<RaySample> b_ray_sampling;
+	btr::BufferMemoryEx<f16vec3> b_radiance_ex;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;

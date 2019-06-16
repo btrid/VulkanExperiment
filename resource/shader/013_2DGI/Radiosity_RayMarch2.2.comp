@@ -120,7 +120,7 @@ void main()
 				ray_ex.segment_count++;
 				ray_ex.segment[uint(ray_ex.segment_count)] = march;
 			}
-			b_ray_sampling[map_index.x + map_index.y*reso.x].ray_index[angle_index] = u16vec2(ray_ex.ray_index, ray_ex.segment_count);
+//			b_ray_sampling[map_index.x + map_index.y*reso.x].ray_index[angle_index] = u16vec2(ray_ex.ray_index, ray_ex.segment_count);
 
 			march++;
 			pos = fma(ray.dir, float(march).xx, ray.origin);
@@ -128,7 +128,8 @@ void main()
 		}
 	}
 
-//	ray_ex.segment_count++;
-//	ray_ex.segment[uint(ray_ex.segment_count)] = march;
+	ray_ex.segment_count++;
+	ray_ex.segment[uint(ray_ex.segment_count)] = march;
+	b_ray_ex[gl_GlobalInvocationID.x*2048 + gl_WorkGroupID.y] = ray_ex;
 
 }

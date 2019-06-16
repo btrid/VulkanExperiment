@@ -13,7 +13,7 @@ layout(push_constant) uniform Input
 layout (local_size_x = 1024, local_size_y = 1) in;
 void main()
 {
-	if(gl_GlobalInvocationID.x >= b_segment_counter.w){ return; }
+	if(gl_GlobalInvocationID.x >= b_vertex_array_counter.instanceCount){ return; }
 
 	u16vec2 pos = b_vertex_array[gl_GlobalInvocationID.x].pos;
 	uint pos_index = pos.x+pos.y*u_gi2d_info.m_resolution.x;
@@ -21,16 +21,16 @@ void main()
 
 	uint offset = u_gi2d_info.m_resolution.x*u_gi2d_info.m_resolution.y;
 
-	vec3 irradiance = vec3(0.);
+	f16vec3 irradiance = f16vec3(0.);
 	for(int i = 0; i < Vertex_Num; i++)
 	{
 		u16vec2 v = b_vertex_array[gl_GlobalInvocationID.x].vertex[i];
 		uint vi = v.x + v.y * u_gi2d_info.m_resolution.y;
 		if(!isDiffuse(b_fragment[vi])){ continue; }
 
-		vec3 power = b_radiance_ex[vi + offset * constant.bounce];
-		vec3 albedo = getRGB(b_fragment[vi]);
-		irradiance += power * albedo / 6.28;
+		f16vec3 power = b_radiance_ex[vi + offset * constant.bounce];
+		f16vec3 albedo = f16vec3(getRGB(b_fragment[vi]));
+		irradiance += power * albedo / f16vec3(6.28);
 	}
 
 	b_radiance_ex[pos_index + offset * (constant.bounce+1)] = irradiance;

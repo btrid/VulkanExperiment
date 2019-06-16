@@ -87,10 +87,19 @@ void main()
 		angle_index = (angle_index-((Dir_Num/2)+1))*2 + 1;
 	}
 
+	uvec2 angle_index2 = uvec2((angle_index + angle_dir*Dir_Num), (angle_index + (1-angle_dir)*Dir_Num)) %Vertex_Num;
+
 	vec2 cell_origin = vec2(greaterThanEqual(ray.dir, vec2(0.))) * vec2(8.);
 
 	int begin = 0;
-	int march = 0;
+	uint16_t march = uint16_t(0);
+
+	RayEx ray_ex;
+	ray_ex.ray_index = uint16_t(gl_GlobalInvocationID.x);
+	ray_ex.angle_index = uint16_t(gl_WorkGroupID.y);
+	ray_ex.segment_count = uint16_t(0);
+	ray_ex.segment[0] = uint16_t(0);
+
 	for(; march < ray.march; )
 	{
 		vec2 pos = fma(ray.dir, float(march).xx, ray.origin);
@@ -99,7 +108,7 @@ void main()
 		vec2 pos_sub = vec2(pos - vec2(cell << 3));
 
 		vec2 tp = fma(vec2(abs(cell_origin - pos_sub)), abs(ray.inv_dir), float(1.).xx);
-		int skip = int(min(tp.x, tp.y));
+		uint16_t skip = uint16_t(min(tp.x, tp.y));
 
 		uint64_t map = b_edge[cell.x + cell.y * reso.z];
 		if(map == 0ul)
@@ -114,15 +123,20 @@ void main()
 			bool attr = (map & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0ul;
 			if(attr)
 			{
+				ray_ex.segment_count++;
+				ray_ex.segment[uint(ray_ex.segment_count)] = march;
+
 				u16vec4 end = u16vec4(fma(ray.dir.xyxy, vec4(float(begin).xx, float(march).xx), ray.origin.xyxy));
 				uvec2 index = end.xz + end.yw * reso.xx;
 				if(all(notEqual(end.xyxy, uvec4(0, 0, reso.xy-1))))
 				{
-					b_vertex_array[b_vertex_array_index[index.x]].vertex[(angle_index + (1-angle_dir)*Dir_Num)%Vertex_Num] = end.zw;
+//					b_vertex_array[b_vertex_array_index[index.x]].vertex[angle_index2.y] = end.zw;
+					b_vertex_array[b_vertex_array_index[index.x]].vertex[angle_index2.y] = u16vec2(gl_GlobalInvocationID.x, ray_ex.segment_count);
 				}
 				if(all(notEqual(end.zwzw, uvec4(0, 0, reso.xy-1))))
 				{
-					b_vertex_array[b_vertex_array_index[index.y]].vertex[(angle_index + angle_dir*Dir_Num)%Vertex_Num] = end.xy;
+//					b_vertex_array[b_vertex_array_index[index.x]].vertex[angle_index2.x] = end.xy;
+					b_vertex_array[b_vertex_array_index[index.y]].vertex[angle_index2.x] = u16vec2(gl_GlobalInvocationID.x, ray_ex.segment_count);
 				}
 				begin = march;
 			}
@@ -131,10 +145,14 @@ void main()
 		}
 
 	}
+	ray_ex.segment_count++;
+	ray_ex.segment[uint(ray_ex.segment_count)] = march;
+
 	u16vec4 end = u16vec4(fma(ray.dir.xyxy, vec4(float(begin).xx, float(ray.march).xx), ray.origin.xyxy));
 	uvec2 index = end.xz + end.yw * reso.xx;
 	if(all(notEqual(end.xyxy, uvec4(0, 0, reso.xy-1))))
 	{
-		b_vertex_array[b_vertex_array_index[index.x]].vertex[(angle_index + (1-angle_dir)*Dir_Num)%Vertex_Num] = end.zw;
+//		b_vertex_array[b_vertex_array_index[index.x]].vertex[(angle_index + (1-angle_dir)*Dir_Num)%Vertex_Num] = end.zw;
+		b_vertex_array[b_vertex_array_index[index.x]].vertex[angle_index2.y] = u16vec2(gl_GlobalInvocationID.x, ray_ex.segment_count);
 	}
 }

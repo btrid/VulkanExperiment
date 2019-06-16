@@ -178,8 +178,11 @@ struct DrawCommand
 {
 	uint vertexCount;
 	uint instanceCount;
-    uint firstVertex;
-    uint firstInstance;
+	uint firstVertex;
+	uint firstInstance;
+
+	uvec4 bounce_cmd;
+
 };
 #define Dir_Num (17)
 #define Vertex_Num (Dir_Num*2)
@@ -239,7 +242,7 @@ layout(set=USE_GI2D_Radiosity, binding=11, std430) restrict buffer RaySamplingBu
 	RaySample b_ray_sampling[];
 };
 layout(set=USE_GI2D_Radiosity, binding=12, std430) restrict buffer RadianceExBuffer {
-	vec3 b_radiance_ex[];
+	f16vec3 b_radiance_ex[];
 };
 
 #endif
