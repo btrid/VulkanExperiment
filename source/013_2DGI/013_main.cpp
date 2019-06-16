@@ -381,9 +381,9 @@ bool intersection(vec2 pos, vec2 inv_dir, int& n, int& f)
 
 void test()
 {
-	auto dir = glm::rotate(vec2(0.f, 1.f), (std::rand() % 31415) / 10000.f);
+	auto dir = glm::rotate(vec2(1.f, 0.f), -glm::radians(45.f));
 	vec2 pos;
-	switch (std::rand() % 4)
+	switch (std::rand() % 2)
 	{
 	case 0:
 		pos = vec2(rand() % 1025, -0.5f);
@@ -392,14 +392,6 @@ void test()
 	case 1:
 		pos = vec2(1025.5f, rand() % 1025);
 		dir = glm::rotate(vec2(0.f, -1.f), -glm::radians((float)(std::rand() % 180)));
-		break;
-	case 2:
-		pos = vec2(rand() % 1025, 1025.5f);
-		dir = glm::rotate(vec2(1.f, 0.f), -glm::radians((float)(std::rand() % 180)));
-		break;
-	case 3:
-		pos = vec2(-0.5f, rand() % 1025);
-		dir = glm::rotate(vec2(0.f, 1.f), -glm::radians((float)(std::rand() % 180)));
 		break;
 	}
 	dir.x = abs(dir.x)<FLT_EPSILON ? 0.0001 : dir.x;
@@ -428,7 +420,7 @@ int main()
 	bool ishit = intersection(pos, inv_dir, n, f);
 
 //	for (;;){test();}
-//	test();
+	test();
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = glm::vec3(0.f, 0.f, 1.f);
