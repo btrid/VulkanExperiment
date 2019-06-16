@@ -48,6 +48,7 @@ rem %exe% %include% %option% -o %output%/Radiosity_SortVertex.comp.spv Radiosity
 %exe% %include% %option% -o %output%/Radiosity_RayBounce.comp.spv Radiosity_RayBounce.comp
 %exe% %include% %option% -o %output%/Radiosity_RayBounce.comp.spv Radiosity_RayBounce2.comp
 %exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity.comp
+%exe% %include% %option% -o %output%/Radiosity.comp.spv Radiosity.1.comp
 %exe% %include% %option% -o %output%/Radiosity_Radiate.vert.spv Radiosity_Radiate.vert
 %exe% %include% %option% -o %output%/Radiosity_Radiate.geom.spv Radiosity_Radiate.geom
 %exe% %include% %option% -o %output%/Radiosity_Radiate.frag.spv Radiosity_Radiate.frag

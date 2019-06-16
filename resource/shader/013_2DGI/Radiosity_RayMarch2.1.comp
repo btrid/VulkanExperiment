@@ -35,26 +35,18 @@ Ray makeRay(in uint x, in uint y)
 	const ivec4 reso = u_gi2d_info.m_resolution;
 	Ray ray;
 
-	float a = TWO_PI / gl_NumWorkGroups.y;
-	float b = (a / gl_NumWorkGroups.z) * (gl_WorkGroupID.z);
+	float a = TWO_PI / Dir_Num;
+	float b = 0.;
 	float angle = fma(a, float(y), b);
 	uint area = uint(angle / HALF_PI);
 
+	angle += QUARTER_PI;
+	calcDir2(angle, ray.dir, ray.inv_dir);
+
 	ray.origin.x = (area==0) ? (reso.x+0.5) : -0.5;
 	ray.origin.y = (area==1) ? (reso.y+0.5) : -0.5;
-
-	vec2 pdir;
-	pdir.x = (area%2==1) ? 1 : 0;
-	pdir.y = (area%2==0) ? 1 : 0;
-
-	ray.origin += pdir*x;
-
-	angle += QUARTER_PI;
-//	calcDir2(angle, ray.dir, ray.inv_dir);
-	ray.dir = calcDir(angle);
-	ray.inv_dir = 1. / ray.dir;
-	ray.inv_dir = vec2(isnan(ray.inv_dir)) * 99999999. + ray.inv_dir;
-
+	ray.origin.x += (area%2==1) ? x : 0;
+	ray.origin.y += (area%2==0) ? x : 0;
 	ray.origin.x += ((area%2)==1&&ray.dir.x>=0.)?-reso.x:0;
 	ray.origin.y += ((area%2)==0&&ray.dir.y>=0.)?-reso.y:0;
 
@@ -130,13 +122,13 @@ void main()
 				uvec2 index = end.xz + end.yw * reso.xx;
 				if(all(notEqual(end.xyxy, uvec4(0, 0, reso.xy-1))))
 				{
-//					b_vertex_array[b_vertex_array_index[index.x]].vertex[angle_index2.y] = end.zw;
-					b_vertex_array[b_vertex_array_index[index.x]].vertex[angle_index2.y] = u16vec2(gl_GlobalInvocationID.x, ray_ex.segment_count);
+					b_vertex_array[b_vertex_array_index[index.x]].vertex[angle_index2.y] = end.zw;
+//					b_vertex_array[b_vertex_array_index[index.x]].vertex[angle_index2.y] = u16vec2(gl_GlobalInvocationID.x, ray_ex.segment_count);
 				}
 				if(all(notEqual(end.zwzw, uvec4(0, 0, reso.xy-1))))
 				{
-//					b_vertex_array[b_vertex_array_index[index.x]].vertex[angle_index2.x] = end.xy;
-					b_vertex_array[b_vertex_array_index[index.y]].vertex[angle_index2.x] = u16vec2(gl_GlobalInvocationID.x, ray_ex.segment_count);
+					b_vertex_array[b_vertex_array_index[index.x]].vertex[angle_index2.x] = end.xy;
+//					b_vertex_array[b_vertex_array_index[index.y]].vertex[angle_index2.x] = u16vec2(gl_GlobalInvocationID.x, ray_ex.segment_count);
 				}
 				begin = march;
 			}
