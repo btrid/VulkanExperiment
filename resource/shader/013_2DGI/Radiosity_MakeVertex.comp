@@ -33,8 +33,7 @@ void main()
 		ivec2 ii = ivec2(gl_LocalInvocationID.xy) + ivec2(8);
 		ivec2 map_index = ii / 8;
 		ivec2 map_bit = ii % 8;
-		if((s_map[map_index.x+map_index.y*6] & (1ul<<(map_bit.x+map_bit.y*8))) != 0ul){}
-		else 
+		if((s_map[map_index.x+map_index.y*6] & (1ul<<(map_bit.x+map_bit.y*8))) == 0ul)
 		{
 			return;
 		}

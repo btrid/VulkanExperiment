@@ -16,7 +16,7 @@ struct GI2DRadiosity
 		Ray_Frame_Num = 1024 * 2 * Ray_Direction_Num,
 		Ray_All_Num = Ray_Frame_Num * Frame,
 		Segment_Num = Ray_Frame_Num * 32,// ‚Æ‚è‚ ‚¦‚¸‚Ì’l
-		Bounce_Num = 4,
+		Bounce_Num = 3,
 	};
 	enum Shader
 	{

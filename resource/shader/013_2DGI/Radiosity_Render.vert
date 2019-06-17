@@ -22,7 +22,7 @@ void main()
    	uint light_index = pos.x + pos.y * u_gi2d_info.m_resolution.x;
 	uint light_offset = u_gi2d_info.m_resolution.x * u_gi2d_info.m_resolution.y;
 	f16vec3 color = f16vec3(0.);
-	for(int i = 0; i < 4; i++)
+	for(int i = 0; i < Bounce_Num+1; i++)
 	{
 		color += b_radiance[light_index + light_offset * i];
 	}
