@@ -57,7 +57,10 @@ void main()
 //	radiance.xyz *= getRGB(b_fragment[fragment_index]);
 //	radiance = is_fragment ? vec3(100., 0., 0.) : vec3(0., 0., 1000.2);
 
-	FragColor = vec4(radiance, 1.);
+//	FragColor = vec4(radiance, 1.);
+	FragColor =  vec4(b_radiance_ex[fragment_index]*1024., 1.);
+	return;
+
 
 	// tonemapテスト
 	{

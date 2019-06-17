@@ -443,12 +443,6 @@ int main()
 	app::App app(app_desc);
 
 	auto context = app.m_context;
-
-	auto appmodel_context = std::make_shared<AppModelContext>(context);
-
-	cModel model;
-	model.load(context, "..\\..\\resource\\tiny.x");
-	std::shared_ptr<AppModel> player_model = std::make_shared<AppModel>(context, appmodel_context, model.getResource(), 128);
 	
 	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
 	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchainPtr());

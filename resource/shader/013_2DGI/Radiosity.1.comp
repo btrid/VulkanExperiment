@@ -19,7 +19,7 @@ void main()
 	uint offset = u_gi2d_info.m_resolution.x*u_gi2d_info.m_resolution.y;
 
 	f16vec3 color = f16vec3(0.);
-	for(int i =0; i<4; i++)
+	for(int i =0; i<1; i++)
 	{
 		f16vec3 color = b_radiance_ex[pos_index + offset * i ];
 	}
