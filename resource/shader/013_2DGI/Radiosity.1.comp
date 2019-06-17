@@ -1,0 +1,29 @@
+// セルをスキップしないレイトレ
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+
+#define USE_GI2D 0
+#define USE_GI2D_Radiosity 1
+#include "GI2D.glsl"
+
+layout (local_size_x = 1024, local_size_y = 1) in;
+
+void main()
+{
+	if(gl_GlobalInvocationID.x >= b_vertex_array_counter.instanceCount){ return; }
+
+	u16vec2 pos = b_vertex_array[gl_GlobalInvocationID.x].pos;
+	uint pos_index = pos.x+pos.y*u_gi2d_info.m_resolution.x;
+
+	uint offset = u_gi2d_info.m_resolution.x*u_gi2d_info.m_resolution.y;
+
+	f16vec3 color = f16vec3(0.);
+	for(int i =0; i<1; i++)
+	{
+		f16vec3 color = b_radiance_ex[pos_index + offset * i ];
+	}
+	uint radiance_offset = u_gi2d_scene.m_radiance_offset*u_gi2d_scene.m_frame;
+	atomicAdd(b_radiance[pos_index + radiance_offset], uint(10));
+
+}

@@ -23,6 +23,18 @@ bool intersection(in vec4 aabb, in vec2 pos, in vec2 inv_dir, out int n, out int
 
  	return min(tmax.x, tmax.y) > max(max(tmin.x, tmin.y), 0.0);
 }
+
+void calcDirEx(in float angle, out vec2 dir, out vec2 inv_dir)
+{
+	float c = cos(angle);
+	float s = sin(angle);
+	dir = vec2(c, s);
+	dir.x = abs(dir.x)<GI2D_FLT_EPSILON ? 0.0001 : dir.x;
+	dir.y = abs(dir.y)<GI2D_FLT_EPSILON ? 0.0001 : dir.y;
+	inv_dir = 1./dir;
+	dir = dir * min(abs(inv_dir.x), abs(inv_dir.y));
+	inv_dir = 1./dir;
+}
 struct Ray
 {
 	vec2 origin;
@@ -35,22 +47,23 @@ Ray makeRay(in uint x, in uint y)
 	const ivec4 reso = u_gi2d_info.m_resolution;
 	Ray ray;
 
-	float a = TWO_PI / Dir_Num;
+	float a = PI / Dir_Num;
 	float b = 0.;
 	float angle = fma(a, float(y), b);
-	uint area = uint(angle / HALF_PI);
+	uint area = uint(float(y) >= (Dir_Num*0.5));
 
-	angle += QUARTER_PI;
-	calcDir2(angle, ray.dir, ray.inv_dir);
+	angle -= QUARTER_PI;
+	calcDirEx(angle, ray.dir, ray.inv_dir);
 
-	ray.origin.x = (area==0) ? (reso.x+0.5) : -0.5;
-	ray.origin.y = (area==1) ? (reso.y+0.5) : -0.5;
-	ray.origin.x += (area%2==1) ? x : 0;
-	ray.origin.y += (area%2==0) ? x : 0;
-	ray.origin.x += ((area%2)==1&&ray.dir.x>=0.)?-reso.x:0;
-	ray.origin.y += ((area%2)==0&&ray.dir.y>=0.)?-reso.y:0;
+	ray.origin.x = 0.;
+	ray.origin.y = 0.;
+	ray.origin.x += (area==1) ? x : 0;
+	ray.origin.y += (area==0) ? x : 0;
+	ray.origin.x += (area==1&&ray.dir.x>=0.)?-reso.x:0;
+	ray.origin.y += (area==0&&ray.dir.y>=0.)?-reso.y:0;
 
 	ray.march = -1;
+
 	int begin, end;
 	if(intersection(vec4(vec2(0., 0.), vec2(reso.xy)), ray.origin, ray.inv_dir, begin, end))
 	{
@@ -69,17 +82,6 @@ void main()
 	if(ray.march==-1){ return; }
 
 	uint angle_index = gl_WorkGroupID.y;
-	uint angle_dir = angle_index/((Dir_Num/2)+1);
-	if(angle_dir == 0)
-	{
-		angle_index = angle_index*2;
-	}
-	else
-	{
-		angle_index = (angle_index-((Dir_Num/2)+1))*2 + 1;
-	}
-
-	uvec2 angle_index2 = uvec2((angle_index + angle_dir*Dir_Num), (angle_index + (1-angle_dir)*Dir_Num)) %Vertex_Num;
 
 	vec2 cell_origin = vec2(greaterThanEqual(ray.dir, vec2(0.))) * vec2(8.);
 
@@ -122,12 +124,12 @@ void main()
 				uvec2 index = end.xz + end.yw * reso.xx;
 				if(all(notEqual(end.xyxy, uvec4(0, 0, reso.xy-1))))
 				{
-					b_vertex_array[b_vertex_array_index[index.x]].vertex[angle_index2.y] = end.zw;
+					b_vertex_array[b_vertex_array_index[index.x]].vertex[angle_index + Dir_Num] = end.zw;
 //					b_vertex_array[b_vertex_array_index[index.x]].vertex[angle_index2.y] = u16vec2(gl_GlobalInvocationID.x, ray_ex.segment_count);
 				}
 				if(all(notEqual(end.zwzw, uvec4(0, 0, reso.xy-1))))
 				{
-					b_vertex_array[b_vertex_array_index[index.x]].vertex[angle_index2.x] = end.xy;
+					b_vertex_array[b_vertex_array_index[index.x]].vertex[angle_index] = end.xy;
 //					b_vertex_array[b_vertex_array_index[index.y]].vertex[angle_index2.x] = u16vec2(gl_GlobalInvocationID.x, ray_ex.segment_count);
 				}
 				begin = march;
@@ -145,6 +147,6 @@ void main()
 	if(all(notEqual(end.xyxy, uvec4(0, 0, reso.xy-1))))
 	{
 //		b_vertex_array[b_vertex_array_index[index.x]].vertex[(angle_index + (1-angle_dir)*Dir_Num)%Vertex_Num] = end.zw;
-		b_vertex_array[b_vertex_array_index[index.x]].vertex[angle_index2.y] = u16vec2(gl_GlobalInvocationID.x, ray_ex.segment_count);
+		b_vertex_array[b_vertex_array_index[index.x]].vertex[angle_index + Dir_Num] = u16vec2(gl_GlobalInvocationID.x, ray_ex.segment_count);
 	}
 }

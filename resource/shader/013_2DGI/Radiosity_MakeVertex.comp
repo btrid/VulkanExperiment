@@ -66,6 +66,10 @@ void main()
 	if(is_edge)
 	{
 		uint vi = atomicAdd(b_vertex_array_counter.instanceCount, 1);
+		if((vi%1024) == 0){
+			atomicAdd(b_vertex_array_counter.bounce_cmd.x, 1);
+		}
+
 		b_vertex_array_index[gl_GlobalInvocationID.x+gl_GlobalInvocationID.y*u_gi2d_info.m_resolution.x] = vi;
 		b_vertex_array[vi].pos = u16vec2(gl_GlobalInvocationID.xy);
 
@@ -73,4 +77,8 @@ void main()
 		uvec2 bit = gl_GlobalInvocationID.xy % 8;
 		atomicOr(b_edge[map.x + map.y*u_gi2d_info.m_resolution.z], 1ul<<(bit.x+bit.y*8));
 	}
+
+	b_radiance_ex[gl_GlobalInvocationID.x+gl_GlobalInvocationID.y*u_gi2d_info.m_resolution.x]
+		= f16vec3(getRGB(b_fragment[gl_GlobalInvocationID.x+gl_GlobalInvocationID.y*u_gi2d_info.m_resolution.x])) 
+		* f16vec3(isEmissive(b_fragment[gl_GlobalInvocationID.x+gl_GlobalInvocationID.y*u_gi2d_info.m_resolution.x]));
 }
