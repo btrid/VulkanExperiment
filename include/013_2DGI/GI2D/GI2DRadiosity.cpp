@@ -32,9 +32,9 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 		b_segment_ex = m_context->m_storage_memory.allocateMemory<u16vec4>({ 1,{} });
 		b_vertex_array_counter = m_context->m_storage_memory.allocateMemory<VertexCmd>({ 1,{} });
 		b_vertex_array_index = m_context->m_storage_memory.allocateMemory<uint>({ size,{} });
-		b_vertex_array = m_context->m_storage_memory.allocateMemory<RadiosityVertex>({ 60000,{} });
+		b_vertex_array = m_context->m_storage_memory.allocateMemory<RadiosityVertex>({ 80000,{} });
 		b_edge = m_context->m_storage_memory.allocateMemory<uint64_t>({ size / 64,{} });
-		b_ray_ex = m_context->m_storage_memory.allocateMemory<RayEx>({ Ray_Frame_Num,{} });
+		b_ray_ex = m_context->m_storage_memory.allocateMemory<RayEx>({ 1,{} });
 //		b_ray_sampling = m_context->m_storage_memory.allocateMemory<RaySample>({ size,{} });
 //		b_ray_ex = m_context->m_storage_memory.allocateMemory<RayEx>({ 1,{} });
 		b_ray_sampling = m_context->m_storage_memory.allocateMemory<RaySample>({ 1,{} });
@@ -132,6 +132,10 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 			"Radiosity_Radiate.geom.spv",
 			"Radiosity_Radiate.frag.spv",
 
+			"Radiosity_Render2.vert.spv",
+			"Radiosity_Render2.geom.spv",
+			"Radiosity_Render2.frag.spv",
+
 		};
 		static_assert(array_length(name) == Shader_Num, "not equal shader num");
 
@@ -176,8 +180,19 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 			pipeline_layout_info.setPushConstantRangeCount(array_length(ranges));
 			pipeline_layout_info.setPPushConstantRanges(ranges);
 			m_pipeline_layout[PipelineLayout_GenerateRay] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
-
 		}
+
+		{
+			vk::DescriptorSetLayout layouts[] = {
+				gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data),
+				m_descriptor_set_layout.get(),
+			};
+			vk::PipelineLayoutCreateInfo pipeline_layout_info;
+			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
+			pipeline_layout_info.setPSetLayouts(layouts);
+			m_pipeline_layout[PipelineLayout_Rendering] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+		}
+
 	}
 
 	// pipeline
@@ -245,6 +260,7 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 			.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
 			.setAttachment(0)
 		};
+
 		// sub pass
 		vk::SubpassDescription subpass;
 		subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
@@ -253,7 +269,7 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 		subpass.setColorAttachmentCount(std::size(color_ref));
 		subpass.setPColorAttachments(color_ref);
 
-		vk::AttachmentDescription attach_description[] =
+		vk::AttachmentDescription attach_desc[] =
 		{
 			// color1
 			vk::AttachmentDescription()
@@ -265,8 +281,8 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 			.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
 		};
 		vk::RenderPassCreateInfo renderpass_info;
-		renderpass_info.setAttachmentCount(std::size(attach_description));
-		renderpass_info.setPAttachments(attach_description);
+		renderpass_info.setAttachmentCount(array_length(attach_desc));
+		renderpass_info.setPAttachments(attach_desc);
 		renderpass_info.setSubpassCount(1);
 		renderpass_info.setPSubpasses(&subpass);
 
@@ -291,26 +307,15 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 		vk::PipelineShaderStageCreateInfo shader_info[] =
 		{
 			vk::PipelineShaderStageCreateInfo()
-			.setModule(m_shader[Shader_RenderingVS].get())
+			.setModule(m_shader[Shader_Render2VS].get())
 			.setPName("main")
 			.setStage(vk::ShaderStageFlagBits::eVertex),
 			vk::PipelineShaderStageCreateInfo()
-			.setModule(m_shader[Shader_RenderingFS].get())
-			.setPName("main")
-			.setStage(vk::ShaderStageFlagBits::eFragment),
-		};
-		vk::PipelineShaderStageCreateInfo shader_info2[] =
-		{
-			vk::PipelineShaderStageCreateInfo()
-			.setModule(m_shader[Shader_RadiateVS].get())
-			.setPName("main")
-			.setStage(vk::ShaderStageFlagBits::eVertex),
-			vk::PipelineShaderStageCreateInfo()
-			.setModule(m_shader[Shader_RadiateGS].get())
+			.setModule(m_shader[Shader_Render2GS].get())
 			.setPName("main")
 			.setStage(vk::ShaderStageFlagBits::eGeometry),
 			vk::PipelineShaderStageCreateInfo()
-			.setModule(m_shader[Shader_RadiateFS].get())
+			.setModule(m_shader[Shader_Render2FS].get())
 			.setPName("main")
 			.setStage(vk::ShaderStageFlagBits::eFragment),
 		};
@@ -318,10 +323,7 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 		// assembly
 		vk::PipelineInputAssemblyStateCreateInfo assembly_info;
 		assembly_info.setPrimitiveRestartEnable(VK_FALSE);
-		assembly_info.setTopology(vk::PrimitiveTopology::eTriangleStrip);
-		vk::PipelineInputAssemblyStateCreateInfo assembly_info2;
-		assembly_info2.setPrimitiveRestartEnable(VK_FALSE);
-		assembly_info2.setTopology(vk::PrimitiveTopology::ePointList);
+		assembly_info.setTopology(vk::PrimitiveTopology::ePointList);
 
 		// viewport
 		vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)render_target->m_resolution.width, (float)render_target->m_resolution.height, 0.f, 1.f);
@@ -348,8 +350,12 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 		depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
 		depth_stencil_info.setStencilTestEnable(VK_FALSE);
 
+
 		vk::PipelineColorBlendAttachmentState blend_state;
-		blend_state.setBlendEnable(VK_FALSE);
+		blend_state.setBlendEnable(VK_TRUE);
+		blend_state.setColorBlendOp(vk::BlendOp::eAdd);
+		blend_state.setSrcColorBlendFactor(vk::BlendFactor::eOne);
+		blend_state.setDstColorBlendFactor(vk::BlendFactor::eOne);
 		blend_state.setColorWriteMask(vk::ColorComponentFlagBits::eR
 			| vk::ColorComponentFlagBits::eG
 			| vk::ColorComponentFlagBits::eB
@@ -357,19 +363,6 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 		vk::PipelineColorBlendStateCreateInfo blend_info;
 		blend_info.setAttachmentCount(1);
 		blend_info.setPAttachments(&blend_state);
-
-		vk::PipelineColorBlendAttachmentState blend_state2;
-		blend_state2.setBlendEnable(VK_TRUE);
-		blend_state2.setColorBlendOp(vk::BlendOp::eAdd);
-		blend_state2.setSrcColorBlendFactor(vk::BlendFactor::eOne);
-		blend_state2.setDstColorBlendFactor(vk::BlendFactor::eOne);
-		blend_state2.setColorWriteMask(vk::ColorComponentFlagBits::eR
-			| vk::ColorComponentFlagBits::eG
-			| vk::ColorComponentFlagBits::eB
-			| vk::ColorComponentFlagBits::eA);
-		vk::PipelineColorBlendStateCreateInfo blend_info2;
-		blend_info2.setAttachmentCount(1);
-		blend_info2.setPAttachments(&blend_state2);
 
 		vk::PipelineVertexInputStateCreateInfo vertex_input_info;
 
@@ -383,27 +376,15 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 			.setPViewportState(&viewportInfo)
 			.setPRasterizationState(&rasterization_info)
 			.setPMultisampleState(&sample_info)
-			.setLayout(m_pipeline_layout[PipelineLayout_Radiosity].get())
+			.setLayout(m_pipeline_layout[PipelineLayout_Rendering].get())
 			.setRenderPass(m_render_pass.get())
 			.setPDepthStencilState(&depth_stencil_info)
 			.setPColorBlendState(&blend_info),
-			vk::GraphicsPipelineCreateInfo()
-			.setStageCount(array_length(shader_info2))
-			.setPStages(shader_info2)
-			.setPVertexInputState(&vertex_input_info)
-			.setPInputAssemblyState(&assembly_info2)
-			.setPViewportState(&viewportInfo)
-			.setPRasterizationState(&rasterization_info)
-			.setPMultisampleState(&sample_info)
-			.setLayout(m_pipeline_layout[PipelineLayout_Radiosity].get())
-			.setRenderPass(m_render_pass.get())
-			.setPDepthStencilState(&depth_stencil_info)
-			.setPColorBlendState(&blend_info2),
 		};
 		auto graphics_pipeline = context->m_device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info);
-		m_pipeline[Pipeline_Output] = std::move(graphics_pipeline[0]);
-		m_pipeline[Pipeline_Radiosity2] = std::move(graphics_pipeline[1]);
-
+//		m_pipeline[Pipeline_Output] = std::move(graphics_pipeline[0]);
+//		m_pipeline[Pipeline_Radiosity2] = std::move(graphics_pipeline[1]);
+		m_pipeline[Pipeline_Render2] = std::move(graphics_pipeline[0]);
 	}
 
 }
@@ -527,21 +508,6 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 
 		for (int i = 0; i<4; i++)
 		{
-
-// 			_label.insert("GI2DRadiosity::executeHit");
-// 			{
-// 				vk::BufferMemoryBarrier to_read[] = 
-// 				{
-// 					b_segment.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-// 					m_gi2d_context->b_light.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite),
-// 				};
-// 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);
-// 
-// 
-// 				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RayHit].get());
-// 				cmd.dispatchIndirect(b_segment_counter.getInfo().buffer, b_segment_counter.getInfo().offset);
-// 			}
-
 			_label.insert("GI2DRadiosity::executeBounce");
 			{
 				vk::BufferMemoryBarrier to_read[] = 
@@ -553,7 +519,6 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 				cmd.pushConstants<int>(m_pipeline_layout[PipelineLayout_Radiosity].get(), vk::ShaderStageFlagBits::eCompute, 0, i);
 
 				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RayBounce].get());
-//				cmd.dispatchIndirect(b_segment_counter.getInfo().buffer, b_segment_counter.getInfo().offset);
 				cmd.dispatchIndirect(b_vertex_array_counter.getInfo().buffer, b_vertex_array_counter.getInfo().offset + offsetof(VertexCmd, bounce_cmd));
 
 			}
@@ -562,20 +527,20 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 
 	}
 	
-	// radiance
-	_label.insert("GI2DRadiosity::executeCollectRadiate");
-	{
-
-		vk::BufferMemoryBarrier to_read[] = {
-			b_radiance.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-			b_segment.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader | vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, 0, nullptr, std::size(to_read), to_read, 0, nullptr);
-
-		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Radiosity].get());
-//		cmd.dispatchIndirect(b_segment_counter.getInfo().buffer, b_segment_counter.getInfo().offset);
-		cmd.dispatchIndirect(b_vertex_array_counter.getInfo().buffer, b_vertex_array_counter.getInfo().offset + offsetof(VertexCmd, bounce_cmd));
-	}
+// 	// radiance
+// 	_label.insert("GI2DRadiosity::executeCollectRadiate");
+// 	{
+// 
+// 		vk::BufferMemoryBarrier to_read[] = {
+// 			b_radiance.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+// 			b_segment.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+// 		};
+// 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader | vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, 0, nullptr, std::size(to_read), to_read, 0, nullptr);
+// 
+// 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Radiosity].get());
+// //		cmd.dispatchIndirect(b_segment_counter.getInfo().buffer, b_segment_counter.getInfo().offset);
+// 		cmd.dispatchIndirect(b_vertex_array_counter.getInfo().buffer, b_vertex_array_counter.getInfo().offset + offsetof(VertexCmd, bounce_cmd));
+// 	}
 
 }
 
@@ -592,6 +557,7 @@ void GI2DRadiosity::executeRendering(const vk::CommandBuffer& cmd)
 			b_radiance.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			b_vertex_array.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			b_vertex_array_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
+			b_radiance_ex.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 		};
 
 		vk::ImageMemoryBarrier image_barrier;
@@ -609,13 +575,16 @@ void GI2DRadiosity::executeRendering(const vk::CommandBuffer& cmd)
 	begin_render_Info.setFramebuffer(m_framebuffer.get());
 	cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
-	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_Output].get());
-	cmd.draw(3, 1, 0, 0);
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayout_Rendering].get(), 0, m_gi2d_context->getDescriptorSet(), {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayout_Rendering].get(), 1, m_descriptor_set.get(), {});
+//	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_Output].get());
+//	cmd.draw(3, 1, 0, 0);
 
-// 	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_Radiosity2].get());
-// 	cmd.drawIndirect(b_vertex_array_counter.getInfo().buffer, b_vertex_array_counter.getInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
+//	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_Radiosity2].get());
+//	cmd.drawIndirect(b_vertex_array_counter.getInfo().buffer, b_vertex_array_counter.getInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
+
+	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_Render2].get());
+	cmd.drawIndirect(b_vertex_array_counter.getInfo().buffer, b_vertex_array_counter.getInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
 
 	cmd.endRenderPass();
 	

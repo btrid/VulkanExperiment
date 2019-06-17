@@ -54,5 +54,9 @@ rem %exe% %include% %option% -o %output%/Radiosity_SortVertex.comp.spv Radiosity
 %exe% %include% %option% -o %output%/Radiosity_Radiate.geom.spv Radiosity_Radiate.geom
 %exe% %include% %option% -o %output%/Radiosity_Radiate.frag.spv Radiosity_Radiate.frag
 
+%exe% %include% %option% -o %output%/Radiosity_Render2.vert.spv Radiosity_Render.1.vert
+%exe% %include% %option% -o %output%/Radiosity_Render2.geom.spv Radiosity_Render.1.geom
+%exe% %include% %option% -o %output%/Radiosity_Render2.frag.spv Radiosity_Render.1.frag
+
 
 

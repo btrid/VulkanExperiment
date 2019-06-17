@@ -184,13 +184,14 @@ struct DrawCommand
 	uvec4 bounce_cmd;
 
 };
-#define Dir_Num (17)
-#define Vertex_Num (Dir_Num*2)
+#define Dir_Num (31)
+#define Vertex_Num (Dir_Num)
+#define Bounce_Num (4)
 struct RadiosityVertex
 {
 	u16vec2 vertex[Vertex_Num];
 	u16vec2 pos;
-	u16vec2 _p;
+//	u16vec2 _p;
 };
 
 struct RayEx

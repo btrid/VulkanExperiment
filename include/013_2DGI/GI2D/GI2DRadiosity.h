@@ -11,8 +11,8 @@ struct GI2DRadiosity
 {
 	enum {
 		Frame = 1,
-		Ray_Direction_Num = 17,
-		Dir_Num = Ray_Direction_Num * 2,
+		Ray_Direction_Num = 31,
+		Dir_Num = Ray_Direction_Num,
 		Ray_Frame_Num = 1024 * 2 * Ray_Direction_Num,
 		Ray_All_Num = Ray_Frame_Num * Frame,
 		Segment_Num = Ray_Frame_Num * 32,// ‚Æ‚è‚ ‚¦‚¸‚Ì’l
@@ -36,18 +36,24 @@ struct GI2DRadiosity
 		Shader_RadiateGS,
 		Shader_RadiateFS,
 
+		Shader_Render2VS,
+		Shader_Render2GS,
+		Shader_Render2FS,
+
 		Shader_Num,
 	};
 	enum PipelineLayout
 	{
 		PipelineLayout_GenerateRay,
 		PipelineLayout_Radiosity,
+		PipelineLayout_Rendering,
 		PipelineLayout_Num,
 	};
 	enum Pipeline
 	{
 		Pipeline_Radiosity,
 		Pipeline_Radiosity2,
+		Pipeline_Render2,
 		Pipeline_Output,
 
 		Pipeline_RayGenerate,
