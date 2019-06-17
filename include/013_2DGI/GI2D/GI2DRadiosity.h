@@ -11,7 +11,7 @@ struct GI2DRadiosity
 {
 	enum {
 		Frame = 1,
-		Ray_Direction_Num = 32,
+		Ray_Direction_Num = 17,
 		Dir_Num = Ray_Direction_Num * 2,
 		Ray_Frame_Num = 1024 * 2 * Ray_Direction_Num,
 		Ray_All_Num = Ray_Frame_Num * Frame,
@@ -82,17 +82,11 @@ struct GI2DRadiosity
 		uint radiance;
 	};
 
-	struct VertexCounter
-	{
-		vk::DrawIndirectCommand draw_cmd;
-		uvec4 dispatch_cmd;
-	};
 	struct RadiosityVertex
 	{
 		u16vec2 vertex[Dir_Num];
 		u16vec2 pos;
 		u16vec2 _p;
-		f16vec3 radiation[4];
 	};
 	GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context, const std::shared_ptr<RenderTarget>& render_target);
 	void executeGenerateRay(const vk::CommandBuffer& cmd);
@@ -113,7 +107,7 @@ struct GI2DRadiosity
 	btr::BufferMemoryEx<D2Segment> b_segment;
 	btr::BufferMemoryEx<ivec4> b_segment_counter;
 	btr::BufferMemoryEx<u16vec4> b_segment_ex;
-	btr::BufferMemoryEx<VertexCounter> b_vertex_array_counter;
+	btr::BufferMemoryEx<vk::DrawIndirectCommand> b_vertex_array_counter;
 	btr::BufferMemoryEx<uint> b_vertex_array_index;
 	btr::BufferMemoryEx<RadiosityVertex> b_vertex_array;
 	btr::BufferMemoryEx<uint64_t> b_edge;

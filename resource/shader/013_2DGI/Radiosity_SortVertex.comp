@@ -1,0 +1,56 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_GI2D 0
+#define USE_GI2D_Radiosity 1
+#include "GI2D.glsl"
+
+
+layout (local_size_x = 64) in;
+
+layout(push_constant) uniform Input
+{
+	int distance;
+	int p;
+	uvec2 reso;
+} constant;
+
+void main() 
+{
+	if(gl_GlobalInvocationID.x >= b_vertex_array_counter.instanceCount){ return; }
+	RadiosityVertex vv = b_vertex_array[gl_GlobalInvocationID.x];
+//	uint num = DIR_NUM;
+
+	uint num = vv.num;
+	if(num <= 1) { return;}
+
+	// 時計回りにソートとAABBの計算
+	vec2 center =  vec2(vv.pos);
+	vec2 value[DIR_NUM];
+	for(uint i = 0; i < num; i++)
+	{
+		u16vec2 v = vv.vertex[i];
+		vec2 a = normalize(vec2(v) - center);
+		value[i].x = float(i);
+		value[i].y = atan(a.y, a.x);
+	}
+
+	for(uint i = 0; i < num; i++)
+	{
+		for(uint j = num-1; j>i; j--)
+		{
+			if(value[j].y > value[j-1].y)
+			{
+				vec2 tmp = value[j-1];
+				value[j-1] = value[j];
+				value[j] = tmp;
+			}
+		}
+	}
+
+	for(int i = 0; i < num; i++)
+	{
+		b_vertex_array[gl_GlobalInvocationID.x].vertex[i] = vv.vertex[int(value[i].x+0.5)];
+	}	
+
+}

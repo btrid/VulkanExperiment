@@ -119,12 +119,10 @@ void main()
 				if(all(notEqual(end.xyxy, uvec4(0, 0, reso.xy-1))))
 				{
 					b_vertex_array[b_vertex_array_index[index.x]].vertex[(angle_index + (1-angle_dir)*Dir_Num)%Vertex_Num] = end.zw;
-//					b_vertex_array[b_vertex_array_index[index.x]].vertex[(angle_index + (1-angle_dir)*Dir_Num)%Vertex_Num] = b_vertex_array_index[index.y];
 				}
 				if(all(notEqual(end.zwzw, uvec4(0, 0, reso.xy-1))))
 				{
 					b_vertex_array[b_vertex_array_index[index.y]].vertex[(angle_index + angle_dir*Dir_Num)%Vertex_Num] = end.xy;
-//					b_vertex_array[b_vertex_array_index[index.y]].vertex[(angle_index + angle_dir*Dir_Num)%Vertex_Num] = b_vertex_array_index[index.x];
 				}
 				begin = march;
 			}
@@ -138,6 +136,5 @@ void main()
 	if(all(notEqual(end.xyxy, uvec4(0, 0, reso.xy-1))))
 	{
 		b_vertex_array[b_vertex_array_index[index.x]].vertex[(angle_index + (1-angle_dir)*Dir_Num)%Vertex_Num] = end.zw;
-//		b_vertex_array[b_vertex_array_index[index.x]].vertex[(angle_index + (1-angle_dir)*Dir_Num)%Vertex_Num] = b_vertex_array_index[index.y];
 	}
 }
