@@ -1,0 +1,34 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_Rigidbody2D 0
+#define USE_GI2D 1
+#include "GI2D.glsl"
+#include "Rigidbody2D.glsl"
+
+
+layout (local_size_x = 1) in;
+
+void main() 
+{
+	uint pb_id = b_pb_update_list[b_world.cpu_index*b_manager.pb_list_size+gl_GlobalInvocationID.x];
+	uint r_id = b_rbParticle_map[pb_id];
+
+	if(b_rigidbody[r_id].life < 0.)
+	{
+		// 削除
+//		b_rbParticle_map[pb_id] = -1;
+
+		// 使用しているメモリを返す
+		uint pb_memory_index = atomicAdd(b_manager.pb_free_index, 1);
+		if(pb_memory_index != 0 && (pb_memory_index % b_manager.pb_list_size) == 0){ atomicAdd(b_manager.pb_free_index, -int(b_manager.pb_list_size)); }
+		b_pb_memory_list[pb_memory_index % b_manager.pb_list_size] = pb_id;
+	}
+	else
+	{
+		uint update_index = atomicAdd(b_update_counter[b_world.gpu_index*2+1].x, 1);
+		b_pb_update_list[b_world.gpu_index*b_manager.pb_list_size + update_index] = pb_id;
+	}
+
+
+}

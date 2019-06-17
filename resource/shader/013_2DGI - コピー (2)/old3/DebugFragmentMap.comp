@@ -1,0 +1,50 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Common.glsl"
+#include "btrlib/Math.glsl"
+
+#define USE_GI2D 0
+#define USE_GI2D_RENDER 1
+#include "GI2D.glsl"
+
+
+#define u16_max (0xffff)
+#define fragment_state_non (0)
+#define fragment_state_wall (1)
+#define fragment_state_light (2)
+#define fragment_state_bounce (3)
+layout (local_size_x = 32, local_size_y = 32) in;
+void main()
+{
+
+	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
+	vec3 illuminance = vec3(0.);
+	ivec2 map_index = ivec2(gl_GlobalInvocationID.xy);
+
+	int hierarchy=2;
+
+	// hit確認
+//	if(false)
+	{
+		ivec2 map_index_sub = map_index>>hierarchy;
+		ivec4 fragment_index = ivec4(map_index_sub/8, map_index_sub%8);
+		ivec2 fragment_index_1d = fragment_index.xz + fragment_index.yw*ivec2(reso.z>>hierarchy, 8);
+		int offset = getFragmentMapHierarchyOffset(hierarchy);
+		uint64_t fragment_map = b_fragment_map[fragment_index_1d.x + offset];
+		uint64_t bit = 1ul<<fragment_index_1d.y;
+		if((fragment_map) != 0)
+		{ 
+			illuminance = vec3(100., 0., 0.);
+		}else{
+			illuminance = vec3(0., 0., 100.);
+		}
+	}
+	// store
+	{
+		ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
+		imageStore(t_color[0], pixel, vec4(illuminance.xyz, 1.));
+	}
+
+}

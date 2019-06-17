@@ -80,5 +80,5 @@ void main()
 	uint index = gl_GlobalInvocationID.x+gl_GlobalInvocationID.y*u_gi2d_info.m_resolution.x;
 	b_vertex_array_index[index] = vi;
 
-	b_radiance_ex[index] = f16vec3(getRGB(b_fragment[index])) * f16vec3(isEmissive(b_fragment[index]));
+	b_radiance[index] = f16vec3(getRGB(b_fragment[index])) * f16vec3(isEmissive(b_fragment[index]));
 }

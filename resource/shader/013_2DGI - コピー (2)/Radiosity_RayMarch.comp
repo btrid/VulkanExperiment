@@ -1,0 +1,93 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_GI2D 0
+#define USE_GI2D_Radiosity 1
+#include "GI2D.glsl"
+
+#define HALF_PI (1.5708)
+#define TWO_PI (6.2832)
+#define QUARTER_PI (0.7854)
+
+
+layout (local_size_x=128) in;
+
+void main()
+{
+	const ivec4 reso = u_gi2d_info.m_resolution;
+
+	uint ray_index = gl_GlobalInvocationID.x + u_radiosity_info.ray_frame_max*u_gi2d_scene.m_frame;
+
+	D2Ray ray = b_ray[ray_index];
+	if(ray.march==-1){ return; }
+	vec2 dir = calcDir(ray.angle);
+	vec2 inv_dir = abs(1./dir);
+	int y = int((ray.angle-QUARTER_PI) / HALF_PI);
+//	if(y == 0) return;
+//	if(y == 2) return;
+	int fragment_offset = (y%2) * reso.z*reso.w; // 縦ほうこうに進む場合
+	vec2 cell_origin = vec2(greaterThanEqual(dir, vec2(0.))) * vec2(8.);
+
+	D2Segment seg;
+	seg.ray_index = ray_index;
+	seg.begin = 0;
+	seg.march = 0;
+	seg.radiance = 0;
+	for(; seg.march < ray.march; )
+	{
+		vec2 pos = fma(dir, float(seg.march).xx, ray.origin);
+		ivec2 map_index = ivec2(pos);
+
+		ivec2 cell = map_index>>3;
+		u64vec2 map = b_fragment_map[((y%2)==0) ? (cell.x + cell.y*reso.z) : (cell.y + cell.x*reso.w + fragment_offset)];
+
+		vec2 pos_sub = vec2(pos - vec2(cell << 3));
+		vec2 tp = fma(vec2(abs(cell_origin - pos_sub)), inv_dir, float(1.).xx);
+		int skip = int(min(tp.x, tp.y));
+
+		if(all(equal(map.xy, u64vec2(0,0))))
+		{
+			seg.march+=skip;
+			continue;
+		}
+
+		for(uint i = 0; i < skip; i++)
+		{
+			ivec2 cell_sub = ivec2(pos_sub);
+			bvec2 attr = notEqual((map & (1ul<<(cell_sub.x+cell_sub.y*8))), u64vec2(0));
+			if(attr.y)
+			{
+				seg.radiance += b_light[getMemoryOrder(cell * 8 + cell_sub)];
+			}
+			if(attr.x)
+			{
+				if(seg.march-seg.begin > 1)
+				{
+					int index = atomicAdd(b_segment_counter.w, 1);
+					if(index%1024==0){
+						atomicAdd(b_segment_counter.x, 1);
+					}
+					b_segment[index] = seg;
+				}
+				seg.begin = seg.march;
+				seg.radiance = 0;
+			}
+			seg.march++;
+			pos_sub = fma(dir, vec2(1.), pos_sub);
+		}
+
+	}
+
+	// 行きすぎたら戻す
+	if(ray.march-seg.begin > 1)
+	{
+		int index = atomicAdd(b_segment_counter.w, 1);
+		if(index%1024==0){
+			atomicAdd(b_segment_counter.x, 1);
+		}
+		seg.march = ray.march;
+		b_segment[index] = seg;
+	}
+
+
+}

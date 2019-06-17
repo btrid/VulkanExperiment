@@ -39,7 +39,6 @@ void main()
 	u16vec2 target = b_vertex_array[index].vertex[angle_index];
 	vec4 line_vertex = ((vec4(pos, target) + vec4(0.5)) / vec4(u_gi2d_info.m_resolution.xyxy)) * 2. - 1.;
 
-#if 1
 	gl_Position = vec4(line_vertex.xy, 0., 1.);
 	gs_out.color = gs_in[0].color;
 	EmitVertex();
@@ -49,15 +48,4 @@ void main()
 	EmitVertex();
 	EndPrimitive();
 
-#else
-//	if(dot(gs_in[0].color, gs_in[0].color) == 0.){ return;}
-	gl_Position = vec4(line_vertex.xy, 0., 1.);
-	gs_out.color = vec3(1.);
-	EmitVertex();
-
-	gl_Position = vec4(line_vertex.zw, 0., 1.);
-	gs_out.color = vec3(1.);
-	EmitVertex();
-	EndPrimitive();
-#endif
 }

@@ -1,0 +1,134 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_Fluid2D 0
+#define USE_GI2D 1
+#include "GI2D.glsl"
+#include "Fluid2D.glsl"
+#define USE_SYSTEM 2
+#include "applib/system.glsl"
+
+layout (local_size_x = 1024) in;
+
+struct MarchResult
+{
+	vec2 next_pos;
+	ivec2 next_map_index;
+	float progress;
+	bool is_end;
+};
+
+// 軽量版
+MarchResult marchEx(in vec2 pos, in ivec2 map_index, in float progress, in vec2 dir, in float advance)
+{
+	pos += dir * clamp(progress, 0., advance);
+	progress = max(progress-advance, 0.);
+
+	MarchResult result;
+	result.next_pos = pos;
+	result.next_map_index = ivec2(pos);
+	result.progress = progress;
+	result.is_end = progress <= 0.;
+	return result;
+}
+
+void main() 
+{
+	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
+	int p_id = int(gl_GlobalInvocationID.x);
+
+	vec2 pos = b_pos[p_id*2 + cpu_index()];
+	vec2 pos_next = b_pos[p_id*2 + gpu_index()];
+	vec2 dir = pos_next - pos;
+
+	if(dot(dir, dir) != 0.)
+	{ 
+
+		float progress = length(dir);
+		dir = normalize(dir);
+//		dir.x = abs(dir.x) < 0.0001 ? 0.0001 : dir.x;
+//		dir.y = abs(dir.y) < 0.0001 ? 0.0001 : dir.y;
+		vec2 inv_dir;
+		inv_dir.x = abs(dir.x) <= 0.0 ? 999. : abs(1./dir.x);
+		inv_dir.y = abs(dir.y) <= 0.0 ? 999. : abs(1./dir.y);
+//		float advance = min(inv_dir.x, inv_dir.y);
+		float advance = 1.;
+
+//		dir *= dir.x
+		ivec2 map_index = ivec2(pos);
+
+		{
+			ivec4 fragment_index = ivec4(map_index/8, map_index%8);
+
+			int findex = fragment_index.x + fragment_index.y*reso.z;
+			uint64_t fragment_map = b_fragment_map[findex].x;
+
+			ivec2 shift = fragment_index.zw;
+			uint64_t bit = 1ul<<(shift.x+shift.y*8);
+			if((fragment_map & bit) != 0)
+			{
+				// 壁にぶつかったので反射
+//				dir = -dir;
+//				progress = 2.;
+			}
+		}
+
+		for(int _i = 0; _i < 500; _i++)
+		{
+			MarchResult result = marchEx(pos, map_index, progress, dir, advance);
+			progress = result.progress;
+
+			// hit確認
+			{
+				ivec4 fragment_index = ivec4(result.next_map_index/8, result.next_map_index%8);
+
+				int findex = fragment_index.x + fragment_index.y*reso.z;
+				uint64_t fragment_map = b_fragment_map[findex].x;
+
+				ivec2 shift = fragment_index.zw;
+				uint64_t bit = 1ul<<(shift.x+shift.y*8);
+				if((fragment_map & bit) != 0)
+				{
+					// 壁にぶつかったので反射
+					vec2 next = vec2(result.next_map_index - map_index);
+					vec2 wall = vec2(next.x, next.y);
+//					dir = normalize(reflect(dir, wall));
+					dir = -dir;
+					progress *= 0.5;
+
+					// 更新はしない?
+					// pos = result.next_pos;
+
+				}
+				else
+				{
+					// 何もないのでそのまま進む
+					map_index = result.next_map_index;
+					pos = result.next_pos;
+
+				}
+			}
+
+			if(result.is_end)
+			{
+				b_pos[p_id*2 + gpu_index()] = pos;
+				break;
+			}
+
+		}
+	}
+
+
+	ivec2 reso_grid = ivec2(reso.xy/Grid_Size);
+	vec2 index_grid_f = pos / Grid_Size;
+	ivec2 index_grid = ivec2(index_grid_f);
+	if(any(lessThan(index_grid, ivec2(0))) || any(greaterThanEqual(index_grid, reso_grid.xy))){ return; }
+	int i = index_grid.x + index_grid.y*reso_grid.x;
+
+	int next = atomicExchange(b_grid_head[i], p_id);
+	b_grid_node[p_id] = next;
+
+	atomicAdd(b_grid_counter[i], 1);
+
+}
+

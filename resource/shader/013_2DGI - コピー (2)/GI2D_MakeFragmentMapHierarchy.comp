@@ -1,0 +1,74 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Common.glsl"
+#include "btrlib/Math.glsl"
+
+#define USE_GI2D 0
+#include "GI2D.glsl"
+
+layout(push_constant) uniform InputVertex
+{
+	int level;
+} constant;
+
+layout (local_size_x = 8, local_size_y = 8) in;
+
+shared uint s_bit[2];
+shared uint s_light_bit[2];
+void main()
+{
+	uvec2 reso = u_gi2d_info.m_resolution.xy;
+	if(any(greaterThan(gl_GlobalInvocationID.xy, reso.xy>>(constant.level)))){
+		return;
+	}
+
+	// fragment hierarchy
+	int level = constant.level;
+	int prev_level = constant.level-1;
+	{
+		if(gl_LocalInvocationIndex <=1)
+		{
+			s_bit[gl_LocalInvocationIndex] = 0;
+			s_light_bit[gl_LocalInvocationIndex] = 0;
+		}
+		barrier();
+		memoryBarrierShared();
+
+
+		uint findex_1d = getMemoryOrder(gl_GlobalInvocationID.xy);
+		if(findex_1d < getFragmentMapHierarchyOffset(level))
+		{
+			int foffset = getFragmentMapHierarchyOffset(prev_level);
+			uint64_t albedo_map = b_diffuse_map[findex_1d + foffset];
+			uint64_t emissive_map = b_emissive_map[findex_1d + foffset];
+
+//			bool is_albedo = (albedo_map & (1ul<<gl_LocalInvocationIndex)) != 0ul;
+//			bool is_emissive = (emissive_map & (1ul<<gl_LocalInvocationIndex)) != 0ul;
+			bool is_albedo = albedo_map != 0ul;
+			bool is_emissive = emissive_map != 0ul;
+
+			uint hilow = gl_LocalInvocationIndex/32;
+			uint offset = gl_LocalInvocationIndex%32;
+			is_albedo ? atomicOr(s_bit[hilow], 1<<offset) : 0;
+			is_emissive ? atomicOr(s_light_bit[hilow], 1<<offset) : 0;
+		}
+		barrier();
+		memoryBarrierShared();
+
+		if(gl_LocalInvocationIndex == 0)
+		{
+			uint store = getMemoryOrder(gl_WorkGroupID.xy);
+			int offset = getFragmentMapHierarchyOffset(level);
+
+			uint64_t bit =  (uint64_t(s_bit[1]) << 32ul) | s_bit[0];
+			uint64_t light_bit =  (uint64_t(s_light_bit[1]) << 32ul) | s_light_bit[0];
+
+			b_diffuse_map[store+offset] = bit;
+			b_emissive_map[store+offset] = light_bit;
+
+		}
+	}
+}
+

@@ -1,0 +1,29 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_Fluid2D 0
+#define USE_GI2D 1
+#include "GI2D.glsl"
+#include "Fluid2D.glsl"
+
+#define USE_SYSTEM 2
+#include "applib/system.glsl"
+
+layout (local_size_x = 1024) in;
+
+void main() 
+{
+	int p_id = int(gl_GlobalInvocationID.x);
+
+//	Joint joint = b_joint[p_id];
+//	if(joint.parent == -1)
+//	{
+//		return;
+//	}
+//	vec2 pos_old = b_pos[p_id*2 + gpu_index()];
+//	vec2 parent_pos = b_pos[joint.parent*2 + gpu_index()];
+//	float dist = distance(parent_pos, pos_old);
+//	mix(pos,);
+//	vec2 pos = b_pos[p_id*2 + gpu_index()];
+
+}

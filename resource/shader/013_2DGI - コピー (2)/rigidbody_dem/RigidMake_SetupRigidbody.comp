@@ -1,0 +1,85 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_Rigidbody2D 0
+#define USE_GI2D 1
+#define USE_MakeRigidbody 2
+#include "GI2D.glsl"
+#include "Rigidbody2D.glsl"
+layout (local_size_x = 256) in;
+
+
+shared uint s_rb_id;
+shared uint s_pb_id;
+shared uint s_rb_update_index;
+shared uint s_pb_update_index;
+shared bool s_ok;
+void main() 
+{
+	if(gl_LocalInvocationIndex >= b_make_param.pb_num.x) { return; }
+
+	if(gl_LocalInvocationIndex == 0)
+	{
+		// 追加できるかチェック
+		s_rb_update_index = b_update_counter[b_world.gpu_index*2+0].x;
+		s_pb_update_index = b_update_counter[b_world.gpu_index*2+1].x;
+
+		if(s_rb_update_index >= b_manager.rb_list_size || s_pb_update_index + b_make_param.pb_num.x >= b_manager.pb_list_size)
+		{
+			// 追加できない
+			s_ok =false;
+			b_make_param.registered_num = uvec4(0);
+		}
+		else
+		{
+			s_ok =true;
+			b_make_param.registered_num = uvec4(b_make_param.pb_num.x, 1, 1, 0);
+		}
+	}
+	memoryBarrierShared();
+	barrier();
+
+	if(!s_ok)
+	{
+		// 追加できないので終わり
+		return;
+	}
+
+	if(gl_LocalInvocationIndex == 0)
+	{
+		// bufferからメモリを取得
+		s_rb_id = b_manager.rb_active_index;
+		b_manager.rb_active_index = (b_manager.rb_active_index+1)%b_world.rigidbody_max;
+
+		s_pb_id = b_manager.pb_active_index;
+		b_manager.pb_active_index = (b_manager.pb_active_index+b_make_param.pb_num.x)%b_world.particle_block_max;
+
+		// rigidbody更新フラグを立てる
+		b_update_counter[b_world.gpu_index*2+0].x += 1;
+		b_rb_update_list[b_world.gpu_index*b_manager.rb_list_size + s_rb_update_index] = s_rb_id;
+
+		b_update_counter[b_world.gpu_index*2+1].x += b_make_param.pb_num.x;
+
+		// ついでにRigidbodyのセットアップ
+		dvec2 cm = dvec2(b_make_rigidbody.cm_work) / CM_WORK_PRECISION / b_make_rigidbody.pnum + b_make_param.rb_aabb.xy;
+		b_make_rigidbody.cm = vec2(cm);
+		b_make_rigidbody.cm_work = i64vec2(0);
+		b_rigidbody[s_rb_id] = b_make_rigidbody;
+
+
+	}
+
+	memoryBarrierShared();
+	barrier();
+
+		// bufferからメモリを取得
+	uint freelist_index  = (s_pb_id + gl_LocalInvocationIndex) % b_manager.pb_list_size;
+	uint pb_id = b_pb_memory_list[freelist_index];
+	b_rbParticle_map[pb_id] = s_rb_id;
+
+	// particle更新フラグを立てる
+	uint update_index = s_pb_update_index + gl_LocalInvocationIndex;
+	b_pb_update_list[b_world.gpu_index*b_manager.pb_list_size + update_index] = pb_id;
+
+}
+ 

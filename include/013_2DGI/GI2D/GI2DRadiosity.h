@@ -20,21 +20,9 @@ struct GI2DRadiosity
 	};
 	enum Shader
 	{
-		Shader_Radiosity,
-		Shader_RenderingVS,
-		Shader_RenderingFS,
-
-		Shader_RayGenerate,
-		Shader_RaySort,
 		Shader_MakeHitpoint,
 		Shader_RayMarch,
-		Shader_RayHit,
 		Shader_RayBounce,
-//		Shader_RayBounce2,
-
-		Shader_RadiateVS,
-		Shader_RadiateGS,
-		Shader_RadiateFS,
 
 		Shader_Render2VS,
 		Shader_Render2GS,
@@ -44,24 +32,17 @@ struct GI2DRadiosity
 	};
 	enum PipelineLayout
 	{
-		PipelineLayout_GenerateRay,
 		PipelineLayout_Radiosity,
 		PipelineLayout_Rendering,
 		PipelineLayout_Num,
 	};
 	enum Pipeline
 	{
-		Pipeline_Radiosity,
-		Pipeline_Radiosity2,
-		Pipeline_Render2,
-		Pipeline_Output,
-
-		Pipeline_RayGenerate,
-		Pipeline_RaySort,
 		Pipeline_MakeHitpoint,
 		Pipeline_RayMarch,
-		Pipeline_RayHit,
 		Pipeline_RayBounce,
+
+		Pipeline_Render,
 
 		Pipeline_Num,
 	};
@@ -73,37 +54,12 @@ struct GI2DRadiosity
 		uint frame_max;
 		uint a;
 	};
-	struct D2Ray
-	{
-		vec2 origin;
-		float angle;
-		uint32_t march;
-	};
-	struct D2Segment
-	{
-		uint ray_index;
-		uint begin;
-		uint march;
-		uint radiance;
-	};
 
 	struct RadiosityVertex
 	{
 		u16vec2 vertex[Dir_Num];
 		u16vec2 pos;
 		u16vec2 _p;
-	};
-
-	struct RayEx
-	{
-		uint16_t ray_index;
-		uint16_t angle_index;
-		uint16_t segment_count;
-		uint16_t segment[32];
-	};
-	struct RaySample
-	{
-		u16vec2 ray_index[Dir_Num];
 	};
 
 	struct VertexCmd
@@ -126,18 +82,11 @@ struct GI2DRadiosity
 	std::array<vk::UniquePipeline, Pipeline_Num> m_pipeline;
 
 	btr::BufferMemoryEx<GI2DRadiosityInfo> u_radiosity_info;
-	btr::BufferMemoryEx<uint32_t> b_radiance;
-	btr::BufferMemoryEx<D2Ray> b_ray;
-	btr::BufferMemoryEx<D2Segment> b_segment;
-	btr::BufferMemoryEx<ivec4> b_segment_counter;
-	btr::BufferMemoryEx<u16vec4> b_segment_ex;
 	btr::BufferMemoryEx<VertexCmd> b_vertex_array_counter;
 	btr::BufferMemoryEx<uint> b_vertex_array_index;
 	btr::BufferMemoryEx<RadiosityVertex> b_vertex_array;
 	btr::BufferMemoryEx<uint64_t> b_edge;
-	btr::BufferMemoryEx<RayEx> b_ray_ex;
-	btr::BufferMemoryEx<RaySample> b_ray_sampling;
-	btr::BufferMemoryEx<f16vec3> b_radiance_ex;
+	btr::BufferMemoryEx<f16vec3> b_radiance;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;

@@ -194,56 +194,23 @@ struct RadiosityVertex
 //	u16vec2 _p;
 };
 
-struct RayEx
-{
-	uint16_t ray_index;
-	uint16_t angle_index;
-	uint16_t segment_count;
-	uint16_t segment[32];
-};
-struct RaySample
-{
-	u16vec2 ray_index[Vertex_Num];
-};
-
 layout(set=USE_GI2D_Radiosity, binding=0, std140) uniform GI2DRadiosityInfoUniform {
 	GI2DRadiosityInfo u_radiosity_info;
 };
-layout(set=USE_GI2D_Radiosity, binding=1, std430) restrict buffer RadianceBuffer {
-	uint b_radiance[];
-};
-layout(set=USE_GI2D_Radiosity, binding=2, std430) restrict buffer RayBuffer {
-	D2Ray b_ray[];
-};
-layout(set=USE_GI2D_Radiosity, binding=3, std430) restrict buffer SegmentBuffer {
-	D2Segment b_segment[];
-};
-layout(set=USE_GI2D_Radiosity, binding=4, std430) restrict buffer SegmentCounter {
-	ivec4 b_segment_counter;
-};
-layout(set=USE_GI2D_Radiosity, binding=5, std430) restrict buffer SegmentExBuffer {
-	u16vec4 b_segment_ex[];
-};
-layout(set=USE_GI2D_Radiosity, binding=6, std430) restrict buffer VertexArrayCounter {
+layout(set=USE_GI2D_Radiosity, binding=1, std430) restrict buffer VertexArrayCounter {
 	DrawCommand b_vertex_array_counter;
 };
-layout(set=USE_GI2D_Radiosity, binding=7, std430) restrict buffer VertexArrayIndexBuffer {
+layout(set=USE_GI2D_Radiosity, binding=2, std430) restrict buffer VertexArrayIndexBuffer {
 	uint b_vertex_array_index[];
 };
-layout(set=USE_GI2D_Radiosity, binding=8, std430) restrict buffer VertexArrayBuffer {
+layout(set=USE_GI2D_Radiosity, binding=3, std430) restrict buffer VertexArrayBuffer {
 	RadiosityVertex b_vertex_array[];
 };
-layout(set=USE_GI2D_Radiosity, binding=9, std430) restrict buffer MapEdgeBuffer {
+layout(set=USE_GI2D_Radiosity, binding=4, std430) restrict buffer MapEdgeBuffer {
 	uint64_t b_edge[];
 };
-layout(set=USE_GI2D_Radiosity, binding=10, std430) restrict buffer RayExBuffer {
-	RayEx b_ray_ex[];
-};
-layout(set=USE_GI2D_Radiosity, binding=11, std430) restrict buffer RaySamplingBuffer {
-	RaySample b_ray_sampling[];
-};
-layout(set=USE_GI2D_Radiosity, binding=12, std430) restrict buffer RadianceExBuffer {
-	f16vec3 b_radiance_ex[];
+layout(set=USE_GI2D_Radiosity, binding=5, std430) restrict buffer RadianceBuffer {
+	f16vec3 b_radiance[];
 };
 
 #endif

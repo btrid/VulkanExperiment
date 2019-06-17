@@ -1,0 +1,23 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+#extension GL_EXT_shader_explicit_arithmetic_types : require
+#extension GL_EXT_shader_atomic_int64 : require
+
+#define USE_Rigidbody2D 0
+#include "Rigidbody2D.glsl"
+
+layout (local_size_x = 1024) in;
+
+layout(push_constant) uniform Input
+{
+	uint num;
+	int p;
+	uvec2 reso;
+} constant;
+
+void main() 
+{
+	if(gl_GlobalInvocationID.x >= constant.num){ return; }
+	i16vec2 p = b_voronoi_cell[gl_GlobalInvocationID.x].point;
+	b_voronoi[p.x + p.y*constant.reso.x] = int16_t(gl_GlobalInvocationID.x);
+}

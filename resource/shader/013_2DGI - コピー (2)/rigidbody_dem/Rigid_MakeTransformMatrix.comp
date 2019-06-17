@@ -1,0 +1,31 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_Rigidbody2D 0
+#define USE_GI2D 1
+#include "GI2D.glsl"
+#include "Rigidbody2D.glsl"
+
+
+layout (local_size_x = RB_PARTICLE_BLOCK_SIZE) in;
+
+void main() 
+{
+	uint pb_id = b_pb_update_list[b_world.cpu_index*b_manager.pb_list_size+gl_WorkGroupID.x];
+	uint p_id = pb_id*RB_PARTICLE_BLOCK_SIZE + gl_LocalInvocationID.x;
+	if((b_rbParticle[p_id].flag & RBP_FLAG_ACTIVE) == 0){ return; }
+
+	uint r_id = b_rbParticle_map[pb_id];
+
+	vec2 q = b_rbParticle[p_id].relative_pos.xy;
+	vec2 p = b_rbParticle[p_id].pos - b_rigidbody[r_id].cm;
+	vec4 pq = p.xxyy * q.xyxy;
+	i64vec4 Aqpi_integer = i64vec4(round(pq*65535.));
+
+	atomicAdd(b_rigidbody[r_id].Apq_work.x, Aqpi_integer.x);
+	atomicAdd(b_rigidbody[r_id].Apq_work.y, Aqpi_integer.y);
+	atomicAdd(b_rigidbody[r_id].Apq_work.z, Aqpi_integer.z);
+	atomicAdd(b_rigidbody[r_id].Apq_work.w, Aqpi_integer.w);
+}
+
+

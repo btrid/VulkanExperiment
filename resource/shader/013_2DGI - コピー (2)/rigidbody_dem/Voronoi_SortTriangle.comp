@@ -1,0 +1,60 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+#extension GL_EXT_shader_explicit_arithmetic_types : require
+#extension GL_EXT_shader_atomic_int64 : require
+
+#define USE_Rigidbody2D 0
+#include "Rigidbody2D.glsl"
+
+layout (local_size_x = 64) in;
+
+layout(push_constant) uniform Input
+{
+	int distance;
+	int p;
+	uvec2 reso;
+} constant;
+
+void main() 
+{
+	VoronoiPolygon vv = b_voronoi_polygon[gl_GlobalInvocationID.x];
+	int num = vv.num;
+	if(num <= 1) { return;}
+
+	// 時計回りにソートとAABBの計算
+	vec2 center =  vec2(b_voronoi_cell[gl_GlobalInvocationID.x].point);
+	vec2 value[VoronoiVertex_MAX];
+	i16vec2 vmin = i16vec2(32000);
+	i16vec2 vmax = i16vec2(-32000);
+	for(int i = 0; i < num; i++)
+	{
+		i16vec2 v = b_voronoi_vertex[int(vv.vertex_index[i])].point;
+		vec2 a = normalize(vec2(v) - center);
+		value[i].x = float(i);
+		value[i].y = atan(a.y, a.x);
+
+		vmin = min(vmin, v);
+		vmax = max(vmax, v);
+	}
+
+	for(int i = 0; i < num; i++)
+	{
+		for(int j = num-1; j>i; j--)
+		{
+			if(value[j].y > value[j-1].y)
+			{
+				vec2 tmp = value[j-1];
+				value[j-1] = value[j];
+				value[j] = tmp;
+			}
+		}
+	}
+
+	for(int i = 0; i < num; i++)
+	{
+		b_voronoi_polygon[gl_GlobalInvocationID.x].vertex_index[i] = vv.vertex_index[int(value[i].x+0.5)];
+	}	
+
+	b_voronoi_polygon[gl_GlobalInvocationID.x].minmax = i16vec4(vmin, vmax+1);
+
+}

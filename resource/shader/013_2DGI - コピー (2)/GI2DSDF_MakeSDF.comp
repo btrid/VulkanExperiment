@@ -1,0 +1,31 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Common.glsl"
+#include "btrlib/Math.glsl"
+
+#define USE_GI2D 0
+#include "GI2D.glsl"
+#define USE_GI2D_SDF 1
+#include "GI2DSDF.glsl"
+
+layout (local_size_x = 32, local_size_y = 32) in;
+
+layout(push_constant) uniform Input
+{
+	uint distance;
+} constant;
+
+void main() 
+{
+	const ivec2 reso = ivec2(u_gi2d_info.m_resolution.xy);
+
+	ivec2 current = ivec2(gl_GlobalInvocationID.xy);
+	i16vec2 cell = b_jfa[current.x + current.y*reso.x];
+//	b_sdf[getMemoryOrder(current)] = (((cell.y & 0x8000) == 0) ? -1. : 1.) *length(vec2((cell&0x7fff) - ivec2(gl_GlobalInvocationID.xy)));
+	b_sdf[current.x+current.y*reso.x] = (((cell.y & 0x8000) == 0) ? -1. : 1.) *length(vec2((cell&0x7fff) - ivec2(gl_GlobalInvocationID.xy)));
+	cell = b_jfa[current.x + current.y*reso.x + reso.x*reso.y];
+	b_sdf[current.x+current.y*reso.x + reso.x*reso.y] = (((cell.y & 0x8000) == 0) ? -1. : 1.) *length(vec2((cell&0x7fff) - ivec2(gl_GlobalInvocationID.xy)));
+//	b_sdf[getMemoryOrder(current) + reso.x*reso.y] = (((cell.y & 0x8000) == 0) ? -1. : 1.) *length(vec2((cell&0x7fff) - ivec2(gl_GlobalInvocationID.xy)));
+}

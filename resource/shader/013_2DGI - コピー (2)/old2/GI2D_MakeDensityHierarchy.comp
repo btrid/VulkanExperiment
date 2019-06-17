@@ -1,0 +1,37 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_GI2D 0
+#include "GI2D.glsl"
+
+layout (local_size_x = 32, local_size_y = 32) in;
+
+layout(push_constant) uniform Input
+{
+	int level;
+} constant;
+
+void main() 
+{
+	uvec2 src = gl_GlobalInvocationID.xy*2;
+	uvec2 dst = gl_GlobalInvocationID.xy;
+	uvec2 reso = u_gi2d_info.m_resolution.xy>>(constant.level-1);
+	if(any(greaterThanEqual(dst.xy, reso.xy)))
+	{
+		return; 
+	}
+	uint offset = 0;
+	for(int i = 0; i < constant.level-1; i++)
+	{
+		offset += (u_gi2d_info.m_resolution.x>>i) * (u_gi2d_info.m_resolution.y>>i);
+	}
+
+	int d = 0;
+	d += b_grid_counter[offset + src.x + src.y*reso.x];
+	d += b_grid_counter[offset + src.x+1 + src.y*reso.x];
+	d += b_grid_counter[offset + src.x + (src.y+1)*reso.x];
+	d += b_grid_counter[offset + src.x+1 + (src.y+1)*reso.x];
+
+	offset += (u_gi2d_info.m_resolution.x>>(constant.level-1)) * (u_gi2d_info.m_resolution.y>>(constant.level-1));
+	b_grid_counter[offset + dst.x + dst.y * (reso.x>>1)] = d/4;
+}

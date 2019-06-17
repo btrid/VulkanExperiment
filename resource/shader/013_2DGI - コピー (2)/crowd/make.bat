@@ -1,0 +1,28 @@
+@echo off
+cd /d %~dp0
+rem SET exe=glslc.exe
+rem SET include=-I ../include
+rem SET option=-w -x glsl
+SET include=-I./ -I../ -I../../include/
+SET option=--target-env vulkan1.1 -V
+SET exe=glslangValidator.exe
+SET output=../../binary/
+
+%exe% %include% %option% -o %output%/Crowd_UnitUpdate.comp.spv Crowd_UnitUpdate.2.comp
+rem %exe% %include% %option% -o %output%/Crowd_MakeDensityMap.comp.spv Crowd_MakeDensityMap.comp
+rem %exe% %include% %option% -o %output%/Crowd_DrawDensityMap.comp.spv Crowd_DrawDensityMap.comp
+%exe% %include% %option% -o %output%/Crowd_MakeLinkList.comp.spv Crowd_MakeLinkList.comp
+
+%exe% %include% %option% -o %output%/Crowd_RayMake.comp.spv Crowd_RayMake.comp
+%exe% %include% %option% -o %output%/Crowd_RaySort.comp.spv Crowd_RaySort.comp
+
+%exe% %include% %option% -o %output%/Crowd_SegmentMake.comp.spv Crowd_SegmentMake.comp
+%exe% %include% %option% -o %output%/Crowd_MakeEndpoint.comp.spv Crowd_MakeEndpoint.comp
+%exe% %include% %option% -o %output%/Crowd_RayHit.comp.spv Crowd_RayHit.comp
+%exe% %include% %option% -o %output%/Crowd_RayBounce.comp.spv Crowd_RayBounce.comp
+%exe% %include% %option% -o %output%/Crowd_PathFinding.comp.spv Crowd_PathFinding.comp
+
+%exe% %include% %option% -o %output%/Crowd_CalcWorldMatrix.comp.spv Crowd_CalcWorldMatrix.comp
+%exe% %include% %option% -o %output%/Crowd_CrowdDebug.comp.spv Crowd_CrowdDebug.comp
+
+%exe% %include% %option% -o %output%/Crowd_DrawField.comp.spv Crowd_DrawField.1.comp

@@ -1,0 +1,27 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Common.glsl"
+#include "btrlib/Math.glsl"
+
+#define USE_GI2D 0
+#include "GI2D.glsl"
+#define USE_GI2D_SDF 1
+#include "GI2DSDF.glsl"
+#define USE_RenderTarget 2
+#include "applib/System.glsl"
+
+layout (local_size_x = 32, local_size_y = 32) in;
+
+
+void main() 
+{
+	const ivec2 reso = ivec2(u_gi2d_info.m_resolution.xy);
+	ivec2 current = ivec2(gl_GlobalInvocationID.xy);
+
+	i16vec2 cell = b_jfa[current.x + current.y*reso.x];
+	vec2 sdf = (((cell.y & 0x8000) != 0) ? -1. : 1.) * vec2((cell&0x7fff) - ivec2(gl_GlobalInvocationID.xy));
+	vec4 color = dot(sdf,sdf) <= 0.001 ? vec4(1.,1.,0.,1.) :  vec4(abs(sdf) * 0.01, 0., 1.);
+	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), color);
+}

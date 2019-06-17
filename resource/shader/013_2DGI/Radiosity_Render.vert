@@ -5,23 +5,29 @@
 #define USE_GI2D_Radiosity 1
 #include "GI2D.glsl"
 
-out gl_PerVertex{
+layout(location=0) out gl_PerVertex{
 	vec4 gl_Position;
 };
-//layout(location=1) out OUT
-//{
-//	vec2 texcoord;
-//}vs_out;
+
+layout(location=1) out Data
+{
+    flat vec3 color;
+	flat uint vertex_index;
+} vs_out;
 
 void main()
 {
-//    vec2 xy = vec2((gl_VertexIndex.xx & ivec2(1, 2)) << ivec2(2, 1));
-//	gl_Position = vec4(xy * 2. - 1., 0, 1);
-//	vs_out.texcoord = xy*512;
+	u16vec2 pos = b_vertex_array[gl_InstanceIndex].pos;
 
-    float x = -1.0 + float((gl_VertexIndex & 1) << 2);
-    float y = -1.0 + float((gl_VertexIndex & 2) << 1);
-//    vs_out.texcoord.x = (x+1.0)*0.5;
-//    vs_out.texcoord.y = (y+1.0)*0.5;
-    gl_Position = vec4(x, y, 0., 1.);
+   	uint light_index = pos.x + pos.y * u_gi2d_info.m_resolution.x;
+	uint light_offset = u_gi2d_info.m_resolution.x * u_gi2d_info.m_resolution.y;
+	f16vec3 color = f16vec3(0.);
+	for(int i = 0; i < 4; i++)
+	{
+		color += b_radiance[light_index + light_offset * i];
+	}
+
+    vs_out.color = color * 0.1;
+    vs_out.vertex_index = gl_InstanceIndex;
+    gl_Position = vec4(1.);
 }

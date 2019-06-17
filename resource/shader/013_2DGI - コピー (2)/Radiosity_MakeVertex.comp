@@ -1,0 +1,84 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_GI2D 0
+#define USE_GI2D_Radiosity 1
+#include "GI2D.glsl"
+
+layout (local_size_x = 32, local_size_y = 32) in;
+
+shared uint64_t s_map[36];
+
+void main() 
+{
+
+	if(gl_LocalInvocationID.x < 6 && gl_LocalInvocationID.y < 6)
+	{
+		uint i = gl_LocalInvocationID.x+gl_LocalInvocationID.y*6;
+		uvec2 offset_xy = gl_LocalInvocationID.xy-1;
+		uvec2 index = gl_WorkGroupID.xy*4 + offset_xy;
+
+		uint64_t map = -1ul;
+		if(all(lessThan(index, u_gi2d_info.m_resolution.zw)))
+		{
+			map = b_diffuse_map[getMemoryOrder(index)];
+		}
+		s_map[i] = map;
+	}
+
+	memoryBarrierShared();
+	barrier();
+
+	{
+		ivec2 ii = ivec2(gl_LocalInvocationID.xy) + ivec2(8);
+		ivec2 map_index = ii / 8;
+		ivec2 map_bit = ii % 8;
+		if((s_map[map_index.x+map_index.y*6] & (1ul<<(map_bit.x+map_bit.y*8))) != 0ul){}
+		else 
+		{
+			return;
+		}
+	}
+	const i16vec2 g_offset[8] = 
+	{
+		 i16vec2(-1,-1), 
+		 i16vec2( 0,-1),
+		 i16vec2( 1,-1),
+		 i16vec2( 1, 0),
+		 i16vec2( 1, 1),
+		 i16vec2( 0, 1),
+		 i16vec2(-1, 1),
+		 i16vec2(-1, 0),
+	};
+	bool is_edge = false;
+	for(int i = 0; i < 8; i++)
+	{
+		ivec2 ii = ivec2(gl_LocalInvocationID.xy) + g_offset[i] + ivec2(8);
+		ivec2 map_index = ii / 8;
+		ivec2 map_bit = ii % 8;
+		if((s_map[map_index.x+map_index.y*6] & (1ul<<(map_bit.x+map_bit.y*8))) == 0ul)
+		{
+			is_edge = true;
+			break;
+		}
+	}
+
+	uint vi = -1;
+	if(is_edge)
+	{
+		vi = atomicAdd(b_vertex_array_counter.instanceCount, 1);
+		if((vi%1024) == 0){
+			atomicAdd(b_vertex_array_counter.bounce_cmd.x, 1);
+		}
+		b_vertex_array[vi].pos = u16vec2(gl_GlobalInvocationID.xy);
+
+		uvec2 map = gl_GlobalInvocationID.xy / 8;
+		uvec2 bit = gl_GlobalInvocationID.xy % 8;
+		atomicOr(b_edge[map.x + map.y*u_gi2d_info.m_resolution.z], 1ul<<(bit.x+bit.y*8));
+	}
+
+	uint index = gl_GlobalInvocationID.x+gl_GlobalInvocationID.y*u_gi2d_info.m_resolution.x;
+	b_vertex_array_index[index] = vi;
+
+	b_radiance_ex[index] = f16vec3(getRGB(b_fragment[index])) * f16vec3(isEmissive(b_fragment[index]));
+}

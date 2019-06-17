@@ -1,0 +1,18 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_PathFinding 0
+#include "Path.glsl"
+
+#define USE_GI2D 1
+#include "GI2D.glsl"
+
+layout (local_size_x=1024) in;
+void main()
+{
+	const ivec4 reso = u_gi2d_info.m_resolution;
+	uvec2 index =  gl_GlobalInvocationID.xy;
+
+	
+
+}

@@ -1,0 +1,77 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_GI2D 0
+#include "GI2D.glsl"
+#define USE_GI2D_SDF 1
+#include "GI2DSDF.glsl"
+
+layout (local_size_x = 64, local_size_y = 1) in;
+
+layout(push_constant) uniform Input
+{
+	uint distance;
+	uint offset;
+} constant;
+
+// state.x = invalid cell
+// state.y = inner or outer
+
+void nearest(inout i16vec2 cell, inout float current_d, in bvec2 state, in uvec2 reso, in vec2 current, in ivec2 target)
+{
+	if(any(lessThan(target, ivec2(0))) || any(greaterThanEqual(target, reso.xy))){ return; }
+
+	i16vec2 target_cell = b_jfa[target.x + target.y*reso.x + constant.offset];
+	bvec2 target_state = notEqual(target_cell & i16vec2(0x8000), i16vec2(0));
+
+	if(target_state.y == state.y)
+	{
+		if(target_state.x)
+		{
+			return;
+		}
+		target = target_cell & i16vec2(0x7fff);
+	}
+
+	{
+		float d = distance(vec2(target), current);
+		if(d < current_d)
+		{
+			current_d = d;
+			cell = i16vec2(target);
+		}
+	}
+
+}
+void main() 
+{
+	const uvec2 reso = uvec2(u_gi2d_info.m_resolution.xy);
+	const ivec2 current = ivec2(gl_GlobalInvocationID.xy);
+	const ivec3 cd = ivec3(constant.distance) * ivec3(-1, 0, 1);
+	i16vec2 cell = b_jfa[current.x + current.y*reso.x + constant.offset];
+	bvec2 state = notEqual(cell & i16vec2(0x8000), i16vec2(0));
+	cell = cell & i16vec2(0x7fff);
+
+	float d = !state.x ? distance(vec2(current), vec2(cell)) : 99999999.;
+	float old_d = d;
+
+//	if(current.y + cd.x>= 0)
+	{
+		nearest(cell, d, state, reso, current, current + cd.xx);
+		nearest(cell, d, state, reso, current, current + cd.yx);
+		nearest(cell, d, state, reso, current, current + cd.zx);
+	}
+//	if(current.y + cd.z < reso.y)
+	{
+		nearest(cell, d, state, reso, current, current + cd.xz);
+		nearest(cell, d, state, reso, current, current + cd.yz);
+		nearest(cell, d, state, reso, current, current + cd.zz);
+	}
+	nearest(cell, d, state, reso, current, current + cd.xy);
+	nearest(cell, d, state, reso, current, current + cd.zy);
+
+	if(d != old_d)
+	{
+		b_jfa[current.x + current.y*reso.x + constant.offset] = cell | i16vec2(0s, int16_t(state.y)<<15);
+	}
+}

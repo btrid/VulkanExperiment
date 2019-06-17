@@ -1,0 +1,41 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_AppModel 0
+#define USE_AppModel_Update 1
+#include "AppModel.glsl"
+
+
+layout (local_size_x = 1024, local_size_y = 1) in;
+
+
+//shared mat4 global_mat[128];
+void main() 
+{
+	ModelInfo model_info = u_model_info;
+	uint local_invocation_max = 1024/model_info.nodeNum*model_info.nodeNum;
+	if(gl_LocalInvocationID.x >= local_invocation_max){ return; }
+	uint local_invocation_offset = local_invocation_max * gl_WorkGroupID.y;
+	uint root_index = (gl_LocalInvocationID.x+local_invocation_offset) / model_info.nodeNum * model_info.nodeNum;
+	uint model_index = (gl_LocalInvocationID.x+local_invocation_offset) / model_info.nodeNum;
+	uint node_index = (gl_LocalInvocationID.x) % model_info.nodeNum;
+
+	if(model_index >= b_model_instancing_info.instanceAliveNum){ return; }
+
+	if(node_index == 0)
+	{
+		b_node_transform[root_index] = model_info.invGlobalMatrix * b_world[model_index] * b_node_transform[root_index];
+	}
+	barrier();
+	memoryBarrierBuffer();
+	NodeInfo node_info = b_node_info[node_index];
+	for(uint i=1; i < model_info.node_depth_max; i++)
+	{
+		if(node_info.depth == i)
+		{
+			b_node_transform[root_index + node_index] = b_node_transform[root_index + node_info.parent] * b_node_transform[root_index + node_index];
+		}
+		barrier();
+		memoryBarrierBuffer();
+	}
+}

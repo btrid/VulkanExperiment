@@ -5,27 +5,34 @@
 #define USE_GI2D_Radiosity 1
 #include "GI2D.glsl"
 
+layout(push_constant) uniform Input
+{
+	uint bounce;
+} constant;
 
-layout (local_size_x = 1024) in;
+layout (local_size_x = 1024, local_size_y = 1) in;
 void main()
 {
-	if(gl_GlobalInvocationID.x >= b_segment_counter.w){ return; }
+	if(gl_GlobalInvocationID.x >= b_vertex_array_counter.instanceCount){ return; }
 
-	D2Segment segment = b_segment[gl_GlobalInvocationID.x];
-	D2Ray ray = b_ray[segment.ray_index];
-	vec2 dir = calcDir(ray.angle);
+	u16vec2 pos = b_vertex_array[gl_GlobalInvocationID.x].pos;
+	uint pos_index = pos.x+pos.y*u_gi2d_info.m_resolution.x;
+//	if(!isDiffuse(b_fragment[pos_index])){ return; }
 
+	uint offset = u_gi2d_info.m_resolution.x*u_gi2d_info.m_resolution.y;
+
+	f16vec3 irradiance = f16vec3(0.);
+	for(int i = 0; i < Vertex_Num; i++)
 	{
-		vec4 pos = fma(vec4(segment.begin.xx, segment.march.xx), dir.xyxy, ray.origin.xyxy);
-		ivec4 map_index = ivec4(pos);
+		u16vec2 v = b_vertex_array[gl_GlobalInvocationID.x].vertex[i];
+		uint vi = v.x + v.y * u_gi2d_info.m_resolution.y;
+//		if(!isDiffuse(b_fragment[vi])){ continue; }
 
-		uint radiance = 0;
-		radiance += b_light[getMemoryOrder(map_index.xy)];
-		radiance += b_light[getMemoryOrder(map_index.zw)];
-
-		if(radiance != 0)
-		{
-			b_segment[gl_GlobalInvocationID.x].radiance += radiance;
-		}
+		f16vec3 power = b_radiance[vi + offset * constant.bounce];
+		f16vec3 albedo = f16vec3(getRGB(b_fragment[vi]));
+		irradiance += power * albedo;
 	}
+
+	b_radiance[pos_index + offset * (constant.bounce+1)] = irradiance;
+
 }

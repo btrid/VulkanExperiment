@@ -1,0 +1,27 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Common.glsl"
+#include "btrlib/Math.glsl"
+
+#define USE_GI2D 0
+#include "GI2D.glsl"
+
+layout (local_size_x = 1) in;
+
+layout(push_constant) uniform GI2DLightData
+{
+	vec4 m_pos;
+	vec4 m_emissive;
+} constant;
+
+void main()
+{
+	ivec2 index = ivec2(constant.m_pos.xy);
+	if(any(lessThan(index, ivec2(0))) || any(greaterThanEqual(index, u_gi2d_info.m_resolution.xy))){ return; }
+
+	b_fragment[index.x+index.y*u_gi2d_info.m_resolution.x].albedo += constant.m_emissive;
+
+}
+

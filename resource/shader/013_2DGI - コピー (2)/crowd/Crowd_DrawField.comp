@@ -1,0 +1,30 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Common.glsl"
+#include "btrlib/Math.glsl"
+
+#define USE_Crowd2D 0
+#include "Crowd.glsl"
+
+#define USE_SYSTEM 1
+#define USE_RenderTarget 3
+#include "applib/System.glsl"
+
+#define USE_GI2D 2
+#include "GI2D.glsl"
+
+
+layout (local_size_x=32, local_size_y=32) in;
+void main()
+{
+	vec2 rate = u_gi2d_info.m_resolution.xy / vec2(u_render_info.m_size);
+	ivec2 index = ivec2(gl_GlobalInvocationID.xy);
+	ivec2 map_index = ivec2(index*rate) / 8;
+	ivec2 map_bit = ivec2(index*rate) % 8;
+
+	vec3 color = (b_diffuse_map[map_index.x + map_index.y*u_gi2d_info.m_resolution.z] & (1ul<<(map_bit.x+map_bit.y*8))) != 0 ? vec3(1.) : vec3(0.);
+	imageStore(i_render_target, index, vec4(color, 1.));
+
+}

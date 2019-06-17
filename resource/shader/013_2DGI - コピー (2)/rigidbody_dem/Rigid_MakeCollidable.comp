@@ -1,0 +1,44 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_Rigidbody2D 0
+#define USE_GI2D 1
+#include "GI2D.glsl"
+#include "Rigidbody2D.glsl"
+
+
+layout (local_size_x = RB_PARTICLE_BLOCK_SIZE) in;
+
+
+void main() 
+{
+	uint pb_id = b_pb_update_list[b_world.cpu_index*b_manager.pb_list_size+gl_WorkGroupID.x];
+	uint p_id = pb_id*RB_PARTICLE_BLOCK_SIZE + gl_LocalInvocationID.x;
+	if((b_rbParticle[p_id].flag & RBP_FLAG_ACTIVE) == 0){ return; }
+
+	vec2 pos = b_rbParticle[p_id].pos;
+		
+	ivec2 index = ivec2(pos);
+	if(any(lessThan(index, ivec2(0))) || any(greaterThanEqual(index, u_gi2d_info.m_resolution.xy))){ return; }
+
+	uint r_id = b_rbParticle_map[pb_id];
+	if(((b_rigidbody[r_id].flag & RB_FLAG_FLUID) != 0)){ return; }
+
+	uint i = index.x+index.y*u_gi2d_info.m_resolution.x;
+	uint ci = atomicAdd(b_collidable_counter[i], 1);
+	if(ci < COLLIDABLE_NUM)
+	{
+		rbCollidable c;
+		c.r_id = r_id;
+		c.mass_inv = 1.;
+		c.pos = pos;
+		c.sdf = b_rbParticle[p_id].local_sdf;
+		c.vel = pos - b_rbParticle[p_id].pos_old;
+
+		b_collidable[i*COLLIDABLE_NUM + ci] = c;
+	}
+
+	atomicAdd(b_fluid_counter[i], 1);
+
+}
+

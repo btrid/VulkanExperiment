@@ -1,0 +1,84 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+#extension GL_EXT_shader_explicit_arithmetic_types : require
+#extension GL_EXT_shader_atomic_int64 : require
+
+#define USE_Rigidbody2D 0
+#include "Rigidbody2D.glsl"
+
+//#extension VK_EXT_conservative_rasterization : require
+
+
+layout (local_size_x = 8, local_size_y = 8) in;
+
+layout(push_constant) uniform Input
+{
+	int distance;
+	int p;
+	uvec2 reso;
+} constant;
+
+shared int16_t s_cell[8+1][8+1];
+void main() 
+{
+	uvec2 current = gl_GlobalInvocationID.xy;
+	s_cell[gl_LocalInvocationID.y][gl_LocalInvocationID.x] = b_voronoi[current.x + current.y*constant.reso.x];
+
+	if( gl_LocalInvocationIndex < 8)
+	{
+		// 右辺を埋める
+		uint xx = min((gl_WorkGroupID.x+1)*8, constant.reso.x-1);
+		uint yy = min(gl_WorkGroupID.y*8 + gl_LocalInvocationIndex, constant.reso.y-1);
+		s_cell[gl_LocalInvocationIndex][8] = b_voronoi[xx + yy*constant.reso.x];
+	}
+
+	if( gl_LocalInvocationIndex < 9)
+	{
+		// 下辺を埋める
+		uint xx = min(gl_WorkGroupID.x*8 + gl_LocalInvocationIndex, constant.reso.x-1);
+		uint yy = min((gl_WorkGroupID.y+1)*8, constant.reso.y-1);
+		s_cell[8][gl_LocalInvocationIndex] = b_voronoi[xx + yy*constant.reso.x];
+	}
+
+	barrier();
+	memoryBarrierShared();
+
+	uvec4 index_x = gl_LocalInvocationID.xxxx + uvec4(0,1,0,1);
+	uvec4 index_y = gl_LocalInvocationID.yyyy + uvec4(0,0,1,1);
+	int v[4];
+	v[0] = s_cell[index_y.x][index_x.x];
+	v[1] = s_cell[index_y.y][index_x.y];
+	v[2] = s_cell[index_y.z][index_x.z];
+	v[3] = s_cell[index_y.w][index_x.w];
+
+	int count = 1;
+	int diff[4] = {v[0],0,0,0};
+	if(v[1]!=v[0]){ diff[count++] = v[1]; }
+	if(v[2]!=v[0] && v[2]!=v[1]){ diff[count++] = v[2]; }
+	if(v[3]!=v[0] && v[3]!=v[1] && v[3]!=v[2]){ diff[count++] = v[3]; }
+
+	int check = 2;
+	ivec4 edge = ivec4(equal(current.xyxy, uvec4(0,0, constant.reso-1)));
+	check -= (edge.x+edge.y+edge.z+edge.w);
+	if(count <= check){ return; }
+
+	// 4pixel中3pixel以上違うものがあるならそこは頂点になる
+	// 端は頂点とする
+	uint v_index = atomicAdd(b_voronoi_vertex_counter.x, 1);
+
+	for(int i = 0; i < count; i++)
+	{
+		int n = atomicAdd(b_voronoi_polygon[diff[i]].num, 1);
+		if(n < VoronoiVertex_MAX)
+			b_voronoi_polygon[diff[i]].vertex_index[n] = int16_t(v_index);
+	}
+
+	{
+		VoronoiVertex vv;
+		vv.point = i16vec2(current.x, current.y);
+		for(int i = 0; i < count; i++){ vv.cell[i] = int16_t(diff[i]); }
+		for(int i = count; i < 4; i++){ vv.cell[i] = -1s;}
+
+		b_voronoi_vertex[v_index] = vv;
+	}
+}

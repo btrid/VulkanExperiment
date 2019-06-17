@@ -1,0 +1,89 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+#extension GL_EXT_shader_explicit_arithmetic_types : require
+#extension GL_EXT_shader_atomic_int64 : require
+
+#define USE_Rigidbody2D 0
+#include "Rigidbody2D.glsl"
+
+layout (local_size_x = 1024) in;
+
+layout(push_constant) uniform Input
+{
+	ivec2 target;
+	uvec2 reso;
+} constant;
+
+shared uint s_closed[4096];
+shared int16_t s_active[1024];
+shared int s_active_counter;
+
+void path(in int current)
+{
+	int vertex_num = b_voronoi_polygon[current].num;
+	for(int v = 0; v<vertex_num; v++)
+	{
+		int vindex = int(b_voronoi_polygon[current].vertex_index[v]);
+		for(int i = 0; i < 4; i++)
+		{
+			int16_t access_cell = b_voronoi_vertex[vindex].cell[i];
+			if(access_cell == -1s) { break; }
+			if(atomicCompSwap(s_closed[int(access_cell)], 0, 1) == 1)
+			{
+				continue;
+			}
+
+			s_active[atomicAdd(s_active_counter, 1)] = access_cell;
+			b_voronoi_path[int(access_cell)] = int16_t(current);
+		}
+	}
+}
+void main() 
+{
+	for(uint i = gl_LocalInvocationIndex; i < s_closed.length(); i+=gl_NumWorkGroups.x)
+	{
+		s_closed[i] = 0;
+	}
+	if(gl_LocalInvocationIndex == 0)
+	{
+		s_active_counter = 0;
+	}
+
+	barrier();
+	memoryBarrierShared();
+
+	if(gl_LocalInvocationIndex < 1)
+	{
+		int begin = constant.target[gl_LocalInvocationIndex];
+		path(begin);
+
+		s_closed[begin] = 1;
+		b_voronoi_path[begin] = -1s;
+	}
+
+	for(int i = 0; i < 1000; i++)
+	{
+		barrier();
+		memoryBarrierShared();
+		if(s_active_counter==0){ break; }
+		bool is_active = gl_LocalInvocationIndex < s_active_counter;
+
+		barrier();
+
+		if(gl_LocalInvocationIndex == 0)
+		{
+			s_active_counter = 0;
+		}
+		int close_cell = int(s_active[gl_LocalInvocationIndex]);
+
+		barrier();
+		memoryBarrierShared();
+
+		if(is_active)
+		{
+			path(close_cell);
+		}
+	}
+
+
+}

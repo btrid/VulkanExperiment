@@ -1,0 +1,45 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Common.glsl"
+#include "btrlib/Math.glsl"
+
+#define USE_Crowd2D 0
+#include "Crowd.glsl"
+
+#define USE_GI2D 1
+#include "GI2D.glsl"
+
+layout (local_size_x=1024) in;
+void main()
+{
+	if(gl_GlobalInvocationID.x >= b_segment_counter.w){ return; }
+
+	const ivec4 reso = u_gi2d_info.m_resolution;
+
+	CrowdSegment segment = b_segment[gl_GlobalInvocationID.x];
+//	if(segment.weight_a == -1 && segment.weight_b == -1){ return; }
+	if(segment.weight_a == -1 || segment.weight_b == -1){ return; }
+
+	CrowdRay ray = b_ray[segment.ray_index];
+
+	vec2 dir = MakeRayDir(ray.angle);
+	vec2 inv_dir = abs(1./dir);
+	float dir_rate = min(inv_dir.x, inv_dir.y);
+	dir *= dir_rate;
+
+	uint begin = segment.begin_march>>16;
+	uint march = segment.begin_march&0xffff;
+	uint march_count = 1;
+	uint a = min(segment.weight_a, segment.weight_b);
+	int dir_ = segment.weight_a < segment.weight_b ? 1 : -1;
+	do
+	{
+		vec2 pos = ray.origin + (begin+march_count)*dir;
+		ivec2 map_index = ivec2(pos);
+
+		atomicMin(b_node[getMemoryOrder(map_index)].value, uint(a + march_count*dir_rate));
+	}
+	while(++march_count < march);
+}

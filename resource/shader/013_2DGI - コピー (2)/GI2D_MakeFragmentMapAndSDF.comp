@@ -1,0 +1,64 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Common.glsl"
+#include "btrlib/Math.glsl"
+
+#define USE_GI2D 0
+#include "GI2D.glsl"
+#define USE_GI2D_SDF 1
+#include "GI2DSDF.glsl"
+
+layout (local_size_x = 8, local_size_y = 8) in;
+
+shared uint s_bit[2];
+shared uint s_light_bit[2];
+void main()
+{
+	ivec2 id = ivec2(gl_GlobalInvocationID.xy);
+
+	int tiled_1D_index = id.x + id.y*u_gi2d_info.m_resolution.x; 
+	vec3 albedo = getRGB(b_fragment[tiled_1D_index]);
+	bool is_diffuse = isDiffuse(b_fragment[tiled_1D_index]);
+	bool is_emissive = isEmissive(b_fragment[tiled_1D_index]);
+
+	b_jfa[tiled_1D_index] = (!is_diffuse ? i16vec2(0x8000,0x8000) : i16vec2(0x8000, 0));
+//	b_jfa[tiled_1D_index+ u_gi2d_info.m_resolution.x*u_gi2d_info.m_resolution.y] = (!is_emissive ? i16vec2(0x8000,0x8000) : i16vec2(0x8000, 0));
+
+	uint power = packEmissive(albedo*LightPower);
+	b_light[getMemoryOrder(ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y))] = is_emissive ? power : 0;
+
+	// fragment map
+	{
+		if(gl_LocalInvocationIndex <=1)
+		{
+			s_bit[gl_LocalInvocationIndex] = 0;
+			s_light_bit[gl_LocalInvocationIndex] = 0;
+		}
+		barrier();
+		memoryBarrierShared();
+
+		uint hilow = gl_LocalInvocationIndex/32;
+		uint offset = gl_LocalInvocationIndex%32;
+		is_diffuse ? atomicOr(s_bit[hilow], 1<<offset) : 0;
+		is_emissive ? atomicOr(s_light_bit[hilow], 1<<offset) : 0;
+
+		barrier();
+		memoryBarrierShared();
+
+		if(gl_LocalInvocationIndex == 0)
+		{
+			uint store = getMemoryOrder(gl_WorkGroupID.xy);
+
+			uint64_t bit =  (uint64_t(s_bit[1]) << 32) | s_bit[0];
+			uint64_t light_bit =  (uint64_t(s_light_bit[1]) << 32) | s_light_bit[0];
+
+			b_fragment_map[store] = u64vec2(bit, light_bit);
+			b_diffuse_map[store] = bit;
+			b_emissive_map[store] = light_bit;
+		}
+
+	}
+}
+

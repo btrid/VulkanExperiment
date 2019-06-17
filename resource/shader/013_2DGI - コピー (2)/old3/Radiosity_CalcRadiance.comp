@@ -1,0 +1,21 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_GI2D 0
+#define USE_GI2D_Radiosity 1
+#include "GI2D.glsl"
+
+layout (local_size_x = 32, local_size_y = 32) in;
+
+void main()
+{
+	uint tiled_1D_index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*u_gi2d_info.m_resolution.x; 
+	vec4 fragment = b_fragment[tiled_1D_index].albedo;
+	bool is_emissive = (fragment.w >= 1.);
+
+	{
+		uint packed = packEmissive(fragment.xyz*LightPower);
+		b_radiance[getMemoryOrder(ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y))] = packed;
+	}
+}
+

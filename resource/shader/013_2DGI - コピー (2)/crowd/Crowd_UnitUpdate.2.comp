@@ -1,0 +1,233 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Common.glsl"
+#include "btrlib/Math.glsl"
+
+
+
+#define USE_Crowd2D 0
+#include "Crowd.glsl"
+
+#define USE_SYSTEM 1
+#include "applib/System.glsl"
+
+#define USE_GI2D 2
+#include "GI2D.glsl"
+
+layout (local_size_x = 1024) in;
+
+float calcAngle2(in vec2 x, in vec2 y)
+{
+	return acos(clamp(dot(x, y), -1., 1));
+}
+
+vec3 normalize_safe(in vec3 v, in vec3 a)
+{
+	return dot(v, v) >= 0.001 ? normalize(v) : a; 
+}
+vec2 normalize2_safe(in vec2 v, in vec2 a)
+{
+	return dot(v, v) >= 0.001 ? normalize(v) : a; 
+}
+
+float acos_safe(in float a){ return acos(clamp(a, -1., 1.));}
+struct MarchResult
+{
+	vec2 next_pos;
+	ivec2 next_ipos;
+	float progress;
+	bool is_end;
+};
+
+// 軽量版
+MarchResult march(in vec2 pos, in vec2 dir, in float progress, in float advance)
+{
+	pos += dir * clamp(progress, 0., advance);
+	progress = max(progress-advance, 0.);
+
+	MarchResult result;
+	result.next_pos = pos;
+	result.next_ipos = ivec2(pos);
+	result.progress = progress;
+	result.is_end = progress <= 0.;
+	return result;
+}
+
+void main()
+{
+	uint index = gl_GlobalInvocationID.x;
+	if(index >= u_crowd_info.unit_data_max){
+		return;
+	}
+	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
+
+	uvec2 data_offset = ivec2(1-u_system_data.m_gpu_index, u_system_data.m_gpu_index) * u_crowd_info.unit_data_max;
+	float deltatime = u_system_data.m_deltatime;
+
+	UnitData unit = b_unit[data_offset.x + index];
+	CrowdData crowd = b_crowd[unit.crowd_type];
+	UnitInfo unit_info = u_unit_info[unit.unit_type];
+
+	vec2 dir = rotate(unit.m_rot);
+
+
+	const int size = g_crowd_density_cell_size;
+
+	ivec2 ip = ivec2(unit.m_pos) / size;
+	int dindex = ip.x + ip.y * (reso.x/size);
+	UnitData nearest = unit;
+	float nearest_dist = 999999.;
+	uint count = 0;
+	vec2 group_center = vec2(0.);
+	float group_rot = 0.;
+	float group_move = 0.;
+
+	for(uint i = b_unit_link_head[dindex]; i != 0xFFFFFFFF; )
+	{
+		UnitData u = b_unit[data_offset.x + i];
+		i = u.link_next;
+
+		float angle = dot(dir, normalize2_safe(u.m_pos-unit.m_pos, -dir));
+		if(angle >= -0.5)
+		{
+			// 自分が見える範囲だけ
+			group_center += u.m_pos;
+			group_rot += u.m_rot;
+			group_move += u.m_move;
+			count++;
+
+			float d = distance(u.m_pos, unit.m_pos);
+			if(d < nearest_dist)
+			{
+				nearest_dist = d;
+				nearest = u;
+			}
+		}
+		
+	}
+	float NEAR_DIST = 4.;
+	float FAR_DIST = 32.;
+
+	vec2 move = vec2(0.);
+	if(count >= 1)
+	{
+		group_center /= count;
+		group_rot /= count;
+		group_move /= count;
+
+		vec2 to_target = nearest.m_pos-unit.m_pos;
+		// Separate
+		if(nearest_dist < NEAR_DIST)
+		{
+			// 一番近い相手から離れる
+			move += normalize(to_target) * deltatime;
+		}
+		else if(nearest_dist >= FAR_DIST)
+		{
+			move -= normalize(to_target) * deltatime;
+		}
+
+		// Alignment
+		// Cohesion
+		{
+			unit.m_rot = mix(unit.m_rot, group_rot, 0.1);
+			unit.m_move = mix(unit.m_move, group_move, 0.1);			
+
+			move += normalize2_safe(group_center - unit.m_pos, vec2(0.)) * deltatime;
+		}
+
+	}
+	else 
+	{
+		// 目的地に向かう
+		vec2 target_dir = normalize_safe(vec3(crowd.target - unit.m_pos, 0.), vec3(dir, 0.)).xy;
+		float rotate_rad = dot(dir, target_dir);
+		if(rotate_rad <= 0.998)
+		{
+			float rotate_angle = acos(rotate_rad);
+			rotate_angle = min(rotate_angle, unit_info.angler_speed);
+
+			float c = cross(vec3(dir, 0.), vec3(target_dir, 0.)).z;
+			unit.m_rot += sign(c) * rotate_angle*deltatime;
+//			unit.m_move = clamp(unit.m_move * pow(0.99, 1.+deltatime), unit_info.linear_speed*0.2, unit_info.linear_speed);
+		}
+		else
+		{
+//			unit.m_move	= min(unit.m_move*pow(1.01, 1.+deltatime), unit_info.linear_speed);
+		}
+	}
+
+	{
+	
+//		march(unit.m_pos.xz, unit.m_map_index, unit.m_inertia.xz * deltatime);	
+//		unit.m_inertia *= pow(0.92, 1. + deltatime);
+	}
+	{
+
+		// march
+		dir = rotate(unit.m_rot)*unit.m_move*deltatime + move;
+
+		ivec2 ipos = ivec2(unit.m_pos);
+		float progress = dot(dir, dir);
+		if(progress != 0.)
+		{
+			progress = sqrt(progress);
+			dir = normalize(dir);
+
+			for(int _i = 0; _i < 2000; _i++)
+			{
+				MarchResult result = march(unit.m_pos, dir, progress, 1.);
+
+				// hit確認
+				ivec4 fragment_index = ivec4(result.next_ipos/8, result.next_ipos%8);
+				int findex = fragment_index.x + fragment_index.y*reso.z;
+				uint64_t fragment_map = b_fragment_map[findex].x;
+
+				ivec2 shift = fragment_index.zw;
+				uint64_t bit = 1ul<<(shift.x+shift.y*8);
+				if((fragment_map & bit) != 0)
+				{
+					// 壁にぶつかったので反射
+					vec2 next = vec2(result.next_ipos - ipos);
+					vec2 wall = vec2(next.x, next.y);
+//					unit.m_dir = normalize(reflect(normalize(unit.m_dir), wall)) * advance;
+//					unit.m_dir = -unit.m_dir;
+					unit.m_rot = mod(3.14+unit.m_rot, 6.28);
+					dir = rotate(unit.m_rot);
+//					progress *= 0.5;
+
+					// 更新はしない?
+					// pos = result.next_pos;
+
+				}
+				else
+				{
+					// 何もないのでそのまま進む
+					unit.m_pos = result.next_pos;
+					ipos = result.next_ipos;				
+
+				}
+
+				if(result.is_end)
+				{
+	//				b_pos[p_id*2 + gpu_index()] = pos;
+					break;
+				}
+			}
+		}
+
+
+	}
+	uint dst_index = atomicAdd(b_unit_counter.w, 1);
+
+//	uint offset = desc.m_cell_num.x*desc.m_cell_num.y*(u_system_data.m_gpu_index);
+//	uint map_index_1D = calcMapIndex1D(unit.m_map_index) + offset;
+//	uint old = atomicExchange(b_unit_head[map_index_1D], dst_index);
+//	unit.m_ll_next = old;
+
+//	unit.m_pos += vec2(1000.);
+//	unit.m_rot_prev = rot_prev;
+	b_unit[data_offset.y + dst_index] = unit;
+}

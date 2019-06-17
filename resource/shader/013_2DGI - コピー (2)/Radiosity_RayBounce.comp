@@ -1,0 +1,31 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_GI2D 0
+#define USE_GI2D_Radiosity 1
+#include "GI2D.glsl"
+
+
+layout (local_size_x = 1024) in;
+void main()
+{
+	if(gl_GlobalInvocationID.x >= b_segment_counter.w){ return; }
+
+	D2Segment segment = b_segment[gl_GlobalInvocationID.x];
+	D2Ray ray = b_ray[segment.ray_index];
+	vec2 dir = calcDir(ray.angle);
+
+	{
+		vec4 pos = fma(vec4(segment.begin.xx, segment.march.xx), dir.xyxy, ray.origin.xyxy);
+		ivec4 map_index = ivec4(pos);
+
+		uint radiance = 0;
+		radiance += b_light[getMemoryOrder(map_index.xy)];
+		radiance += b_light[getMemoryOrder(map_index.zw)];
+
+		if(radiance != 0)
+		{
+			b_segment[gl_GlobalInvocationID.x].radiance += radiance;
+		}
+	}
+}

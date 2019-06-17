@@ -1,0 +1,51 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Common.glsl"
+#include "btrlib/Math.glsl"
+
+#define USE_GI2D 2
+#include "GI2D.glsl"
+
+#define USE_Crowd2D 0
+#include "Crowd.glsl"
+
+#define USE_SYSTEM 1
+#include "applib/System.glsl"
+
+
+
+layout (local_size_x = 1024, local_size_y = 1) in;
+
+void main()
+{
+	uint index = gl_GlobalInvocationID.x;
+	if(index >= b_unit_counter.w){
+		return;
+	}
+
+	const ivec4 reso = u_gi2d_info.m_resolution;
+	uvec2 data_offset = ivec2(1-u_system_data.m_gpu_index, u_system_data.m_gpu_index) * u_crowd_info.unit_data_max;
+	float deltatime = u_system_data.m_deltatime;
+
+	UnitData unit = b_unit[data_offset.y + index];
+
+	ivec2 ipos = ivec2(unit.m_pos);
+	vec2 dir = rotate(unit.m_rot);
+	vec2 inv_dir;
+	inv_dir.x = dir.x == 0? 99999. : abs(1./dir.x);
+	inv_dir.y = dir.y == 0? 99999. : abs(1./dir.y);
+	dir *= min(inv_dir.x, inv_dir.y);
+
+	const int size = g_crowd_density_cell_size;
+	int num = int(unit.m_move / size + 1);
+	for(int i = 0; i < 5; i++)
+	{
+		ivec2 ip = ivec2(unit.m_pos + dir*(i)*size) / size;
+		int dindex = ip.x + ip.y * (reso.x/size);
+		atomicAdd(b_crowd_density_map[dindex], 1);
+	}
+
+	
+}

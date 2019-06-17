@@ -1,0 +1,159 @@
+// セルをスキップしないレイトレ
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Common.glsl"
+#include "btrlib/Math.glsl"
+
+#define USE_GI2D 0
+#define USE_GI2D_Radiosity 1
+#include "GI2D.glsl"
+
+layout (local_size_x = 512, local_size_y = 1) in;
+void main()
+{
+	if(gl_GlobalInvocationID.x >= b_ray_counter.w){ return; }
+
+	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
+	int hierarchy = u_gi2d_scene.m_hierarchy;
+	int hierarchy_light = u_gi2d_scene.m_hierarchy;
+	int hierarchy_radiance = u_gi2d_scene.m_hierarchy;
+	int hierarchy_diffuse = 0;
+
+	D2Ray ray = b_ray[gl_GlobalInvocationID.x];
+//	vec2 pos = ray.origin;
+//	vec2 dir = rotate(ray.angle);
+	vec2 pos = ray.origin + frame_offset()*(1<<hierarchy)*0.5;
+	vec2 dir = rotate(ray.angle + (6.28318530717958647692528676655900576 / 256) * (0.25*u_gi2d_scene.m_frame));
+	vec2 inv_dir;
+	inv_dir.x = dir.x == 0. ? 99999999. : abs(1./dir.x);
+	inv_dir.y = dir.y == 0. ? 99999999. : abs(1./dir.y);
+
+	vec2 side = rotateZ(dir, 3.14*0.5);
+	{
+		vec2 inv_side;
+		inv_side.x = side.x == 0. ? 99999999. : abs(1./side.x);
+		inv_side.y = side.y == 0. ? 99999999. : abs(1./side.y);
+		side *= min(inv_side.x, inv_side.y);
+	}
+
+	ivec4 offset_x;
+	ivec4 offset_y;
+	{
+		vec2 side = normalize(rotateZ(dir, 3.14*0.5));
+		{
+			vec2 inv_side;
+			inv_side.x = side.x == 0. ? 99999. : abs(1./side.x);
+			inv_side.y = side.y == 0. ? 99999. : abs(1./side.y);
+			side *= min(inv_side.x, inv_side.y);
+		}
+		ivec2 origin;
+		origin.x = side.x > 0. ? 0 : 7;
+		origin.y = side.y > 0. ? 0 : 7;
+		vec4 _offset = (vec4(0., 2., 4., 6.) + vec4(0.5)) / Ray_Density;
+		offset_x = ivec4(side.xxxx * _offset + origin.xxxx);
+		offset_y = ivec4(side.yyyy * _offset + origin.yyyy);
+	}
+	// gpuで事前計算
+	uint radiance_offset = reso.x*reso.y;
+	for(int i = 0; i < hierarchy_radiance; i++)
+	{
+		radiance_offset >>= 2;
+	}
+	radiance_offset *= u_gi2d_scene.m_frame;
+
+	uint light_offset = 0;
+	int map_offset = 0;
+	ivec2 map_reso = reso.zw;
+	for(int i = 0; i < hierarchy_light; i++)
+	{
+		light_offset += (reso.x>>i)*(reso.y>>i);
+		map_offset += (reso.z>>i)*(reso.w>>i);
+		map_reso >>= 1;
+	}
+
+	// raymarch用事前計算
+	ivec2 map_index = ivec2(pos);
+//	ivec2 cell_origin = (ivec2(greaterThanEqual(dir, vec2(0.)))<<hierarchy);
+//	ivec2 map_index_sub = map_index - ((map_index>>hierarchy)<<hierarchy);
+	#define cell_origin (ivec2(greaterThanEqual(dir, vec2(0.)))<<hierarchy)
+	#define map_index_sub (map_index - ((map_index>>hierarchy)<<hierarchy))
+	vec2 tp = abs(cell_origin - (map_index_sub+fract(pos)));
+	tp = tp + (0.5*(1<<hierarchy));
+	tp *= inv_dir;
+	vec3 delta = vec3(abs((1<<hierarchy)*inv_dir), 0.);
+	ivec3 next = ivec3(ivec2(greaterThanEqual(dir, vec2(0.))) * 2 - 1, 0);
+
+	uvec4 u_radiance = uvec4(0);
+	u64vec4 d;
+	uvec4 old_radiance_index = uvec4(-1);
+	uvec4 old_diffuse_index = uvec4(-1);
+	uvec4 is_diffuse = uvec4(0);
+	for(int _i = 0; _i < 5000; _i++)
+	{
+		// hit確認
+		{
+			uvec4 cell_x = (map_index.xxxx+offset_x);
+			uvec4 cell_y = (map_index.yyyy+offset_y);
+			uvec4 map_cell_x = cell_x>>hierarchy_light;
+			uvec4 map_cell_y = cell_y>>hierarchy_light;
+			uvec4 dindex = map_cell_x/8 + map_cell_y/8*map_reso.xxxx + uvec4(map_offset);
+			// 更新
+			if(old_diffuse_index.x != dindex.x) { d.x = b_diffuse_map[dindex.x]; }
+			if(old_diffuse_index.y != dindex.y) { d.y = b_diffuse_map[dindex.y]; }
+			if(old_diffuse_index.z != dindex.z) { d.z = b_diffuse_map[dindex.z]; }
+			if(old_diffuse_index.w != dindex.w) { d.w = b_diffuse_map[dindex.w]; }
+			old_diffuse_index = dindex;
+
+			uvec4 light_cell = uvec4(light_offset)+getMemoryOrder4(cell_x>>hierarchy_light,cell_y>>hierarchy_light);
+			u_radiance[0] += b_light[light_cell.x];
+			u_radiance[1] += b_light[light_cell.y];
+			u_radiance[2] += b_light[light_cell.z];
+			u_radiance[3] += b_light[light_cell.w];
+
+			uvec4 radiance_cell = uvec4(radiance_offset)+getMemoryOrder4(cell_x>>hierarchy_radiance,cell_y>>hierarchy_radiance);
+			if(any(notEqual(old_radiance_index, radiance_cell)))
+			{
+				old_radiance_index = radiance_cell;
+
+				u_radiance.x != 0 ? atomicAdd(b_radiance[radiance_cell.x], u_radiance[0]) : 0;
+				u_radiance.y != 0 ? atomicAdd(b_radiance[radiance_cell.y], u_radiance[1]) : 0;
+				u_radiance.z != 0 ? atomicAdd(b_radiance[radiance_cell.z], u_radiance[2]) : 0;
+				u_radiance.w != 0 ? atomicAdd(b_radiance[radiance_cell.w], u_radiance[3]) : 0;
+			}
+
+			// 拡散
+//			is_diffuse += uvec4(notEqual(u64vec4(diffuse_map) & hit_mask, u64vec4(0)));
+			uvec4 dindex_x_sub = map_cell_x % 8;
+			uvec4 dindex_y_sub = map_cell_y % 8;
+			is_diffuse += uvec4(notEqual(d & (u64vec4(1)<<(dindex_x_sub+dindex_y_sub.y*8)), u64vec4(0)));
+//			rate = min(vec4(1.), rate + vec4(0.7));
+			vec4 rate = vec4(equal(is_diffuse, uvec4(0)));
+			u_radiance *= uvec4(rate);
+			is_diffuse = uvec4(0);
+		}
+		// march
+		{
+#if 1
+			// ちゃんとしたレイマーチ
+			bool axis = tp.x < tp.y;
+			tp += axis ? delta.xz : delta.zy;
+			map_index += (axis ? next.xz : next.zy) * (1<<hierarchy);
+#else
+			// DDA
+			pos += dir * min(inv_dir.x, inv_dir.y) * (1<<hierarchy);
+			map_index = ivec2(pos);
+
+#endif
+		}
+		// 範囲外?
+		{
+			ivec2 is_die = ivec2(greaterThanEqual(map_index, reso.xy)) + ivec2(lessThan(map_index, ivec2(0)));
+			if(any(notEqual(is_die.xy, ivec2(0))))
+			{
+				break;
+			}
+		}
+	}
+}

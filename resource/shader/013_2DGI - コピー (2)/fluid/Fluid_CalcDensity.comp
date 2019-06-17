@@ -1,0 +1,33 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_Fluid2D 0
+#define USE_GI2D 1
+#include "GI2D.glsl"
+#include "Fluid2D.glsl"
+#define USE_SYSTEM 2
+#include "applib/system.glsl"
+
+layout (local_size_x = 1024) in;
+
+
+void main() 
+{
+	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
+	int p_id = int(gl_GlobalInvocationID.x);
+
+	vec2 pos_next = b_pos[p_id*2 + cpu_index()];
+
+	ivec2 reso_grid = ivec2(reso.xy/Grid_Size);
+	vec2 index_grid_f = pos_next / Grid_Size;
+	ivec2 index_grid = ivec2(index_grid_f);
+	if(any(lessThan(index_grid, ivec2(0))) || any(greaterThanEqual(index_grid, reso_grid.xy))){ return; }
+	int i = index_grid.x + index_grid.y*reso_grid.x;
+
+	int next = atomicExchange(b_grid_head[i], p_id);
+	b_grid_node[p_id] = next;
+
+	atomicAdd(b_grid_counter[i], 1);
+
+}
+

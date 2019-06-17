@@ -1,0 +1,61 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+#extension GL_EXT_shader_explicit_arithmetic_types : require
+#extension GL_EXT_shader_atomic_int64 : require
+
+#define USE_Rigidbody2D 0
+#include "Rigidbody2D.glsl"
+
+layout (local_size_x = 8, local_size_y = 8) in;
+
+layout(push_constant) uniform Input
+{
+	int distance;
+	int p;
+	uvec2 reso;
+} constant;
+
+
+void nearest(inout int16_t id, inout float d, in i16vec2 current, in i16vec2 target)
+{
+	if(any(greaterThanEqual(target, constant.reso)) || any(lessThan(target, i16vec2(0))))
+	{
+		return;
+	}
+	int16_t target_id = b_voronoi[target.x + target.y*constant.reso.x];
+	if(target_id < 0){ return; }
+	if(target_id == id){ return; }
+
+	i16vec2 target_point = b_voronoi_cell[int(target_id)].point;
+	float target_d = distance(vec2(target_point), current);
+	if(target_d < d)
+	{
+		d = target_d;
+		id = target_id;
+	}
+}
+void main() 
+{
+	if(any(greaterThanEqual(gl_GlobalInvocationID.xy, constant.reso))){ return; }
+	const i16vec2 current = i16vec2(gl_GlobalInvocationID.xy);
+	int16_t id = b_voronoi[current.x + current.y*constant.reso.x];
+	float d = (id >= 0) ? distance(vec2(current), vec2(b_voronoi_cell[int(id)].point)) : 99999999.;
+	const float old_d = d;
+	// 重力のY方向優先
+	const i16vec3 cd = i16vec3(constant.distance) * i16vec3(-1, 0, 1);
+	nearest(id, d, current, current + cd.xx);
+	nearest(id, d, current, current + cd.xy);
+	nearest(id, d, current, current + cd.xz);
+	nearest(id, d, current, current + cd.zx);
+	nearest(id, d, current, current + cd.zy);
+	nearest(id, d, current, current + cd.zz);
+	nearest(id, d, current, current + cd.yx);
+	//nearest(id, d, current, current + cd.yy);
+	nearest(id, d, current, current + cd.yz);
+
+	if(d < old_d)
+	{
+		b_voronoi[current.x + current.y*constant.reso.x] = id;
+	}
+
+}

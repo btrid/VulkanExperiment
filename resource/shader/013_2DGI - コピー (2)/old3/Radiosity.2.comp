@@ -1,0 +1,68 @@
+// セルをスキップしないレイトレ
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#include "btrlib/ConvertDimension.glsl"
+#include "btrlib/Common.glsl"
+#include "btrlib/Math.glsl"
+
+#define USE_GI2D 0
+#define USE_GI2D_Radiosity 1
+#include "GI2D.glsl"
+
+layout (local_size_x = 512, local_size_y = 1) in;
+void main()
+{
+	if(gl_GlobalInvocationID.x >= b_ray_counter.w){ return; }
+
+	const ivec4 reso = ivec4(u_gi2d_info.m_resolution.xy, u_gi2d_info.m_resolution.xy/8);
+	int hierarchy = u_gi2d_scene.m_hierarchy+1;
+	int hierarchy_light = u_gi2d_scene.m_hierarchy;
+	int hierarchy_radiance = u_gi2d_scene.m_hierarchy;
+	int hierarchy_diffuse = 0;
+
+	D2Ray ray = b_ray[gl_GlobalInvocationID.x];
+	vec2 pos = ray.origin;
+	vec2 dir = rotate(ray.angle);
+	vec2 inv_dir;
+	inv_dir.x = dir.x == 0. ? 99999999. : abs(1./dir.x);
+	inv_dir.y = dir.y == 0. ? 99999999. : abs(1./dir.y);
+
+
+
+	// raymarch用事前計算
+	ivec2 map_index = ivec2(pos);
+	#define cell_origin (ivec2(greaterThanEqual(dir, vec2(0.)))<<hierarchy)
+	#define map_index_sub (map_index - ((map_index>>hierarchy)<<hierarchy))
+	vec2 tp = abs(cell_origin - (map_index_sub+fract(pos)));
+	tp = tp + (0.5*(1<<hierarchy));
+	tp *= inv_dir;
+	vec3 delta = vec3(abs((1<<hierarchy)*inv_dir), 0.);
+	ivec3 next = ivec3(ivec2(greaterThanEqual(dir, vec2(0.))) * 2 - 1, 0);
+
+	for(int _i = 0; _i < 5000; _i++)
+	{
+		// march
+		{
+#if 1
+			// ちゃんとしたレイマーチ
+			bool axis = tp.x < tp.y;
+			tp += axis ? delta.xz : delta.zy;
+			map_index += (axis ? next.xz : next.zy) * (1<<hierarchy);
+#else
+			// DDA
+			pos += dir * min(inv_dir.x, inv_dir.y) * (1<<hierarchy);
+			map_index = ivec2(pos);
+
+#endif
+		}
+		// 範囲外?
+		{
+			ivec2 is_die = ivec2(greaterThanEqual(map_index, reso.xy)) + ivec2(lessThan(map_index, ivec2(0)));
+			if(any(notEqual(is_die.xy, ivec2(0))))
+			{
+				break;
+			}
+		}
+	}
+}
