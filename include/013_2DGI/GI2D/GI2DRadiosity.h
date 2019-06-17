@@ -59,7 +59,6 @@ struct GI2DRadiosity
 	{
 		u16vec2 vertex[Dir_Num];
 		u16vec2 pos;
-		u16vec2 _p;
 	};
 
 	struct VertexCmd
@@ -69,7 +68,6 @@ struct GI2DRadiosity
 
 	};
 	GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context, const std::shared_ptr<RenderTarget>& render_target);
-	void executeGenerateRay(const vk::CommandBuffer& cmd);
 	void executeRadiosity(const vk::CommandBuffer& cmd);
 	void executeRendering(const vk::CommandBuffer& cmd);
 

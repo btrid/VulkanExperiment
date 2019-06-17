@@ -119,7 +119,7 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 				m_descriptor_set_layout.get(),
 			};
 			vk::PushConstantRange ranges[] = {
-				vk::PushConstantRange().setSize(8).setStageFlags(vk::ShaderStageFlagBits::eCompute),
+				vk::PushConstantRange().setSize(4).setStageFlags(vk::ShaderStageFlagBits::eCompute),
 			};
 
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
@@ -277,10 +277,13 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 		blend_state.setColorBlendOp(vk::BlendOp::eAdd);
 		blend_state.setSrcColorBlendFactor(vk::BlendFactor::eOne);
 		blend_state.setDstColorBlendFactor(vk::BlendFactor::eOne);
+		blend_state.setAlphaBlendOp(vk::BlendOp::eAdd);
+		blend_state.setSrcAlphaBlendFactor(vk::BlendFactor::eOne);
+		blend_state.setDstAlphaBlendFactor(vk::BlendFactor::eZero);
 		blend_state.setColorWriteMask(vk::ColorComponentFlagBits::eR
 			| vk::ColorComponentFlagBits::eG
 			| vk::ColorComponentFlagBits::eB
-			| vk::ColorComponentFlagBits::eA);
+			/*| vk::ColorComponentFlagBits::eA*/);
 		vk::PipelineColorBlendStateCreateInfo blend_info;
 		blend_info.setAttachmentCount(1);
 		blend_info.setPAttachments(&blend_state);
@@ -312,6 +315,7 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 	DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
+	cmd.pushConstants<int>(m_pipeline_layout[PipelineLayout_Radiosity].get(), vk::ShaderStageFlagBits::eCompute, 0, 0);
 
 	// データクリア
 	{
@@ -319,9 +323,8 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 			b_edge.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
 			b_vertex_array_counter.makeMemoryBarrier(vk::AccessFlagBits::eIndirectCommandRead, vk::AccessFlagBits::eTransferWrite),
 		};
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eDrawIndirect|vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eTransfer, {}, 0, nullptr, array_length(to_write), to_write, 0, nullptr);
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eDrawIndirect|vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, 0, nullptr, array_length(to_write), to_write, 0, nullptr);
 
-		int range = b_radiance.getInfo().range / Frame;
 		cmd.updateBuffer<VertexCmd>(b_vertex_array_counter.getInfo().buffer, b_vertex_array_counter.getInfo().offset, VertexCmd{ { 1, 0, 0, 0 }, {0, 1, 1, 0} });
 		cmd.fillBuffer(b_edge.getInfo().buffer, b_edge.getInfo().offset, b_edge.getInfo().range, 0);
 
@@ -356,7 +359,6 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 			0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RayMarch].get());
-//		auto num = app::calcDipatchGroups(uvec3(Ray_Frame_Num, 1, 1), uvec3(128, 1, 1));
 		auto num = app::calcDipatchGroups(uvec3(2048, Ray_Direction_Num, 1), uvec3(128, 1, 1));
 		cmd.dispatch(num.x, num.y, num.z);
 	}
@@ -368,7 +370,7 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
-		for (int i = 0; i<4; i++)
+		for (int i = 0; i<Bounce_Num; i++)
 		{
 			_label.insert("GI2DRadiosity::executeBounce");
 			{
@@ -399,10 +401,9 @@ void GI2DRadiosity::executeRendering(const vk::CommandBuffer& cmd)
 	// render_targetに書く
 	{
 		vk::BufferMemoryBarrier to_read[] = {
-			m_gi2d_context->b_fragment.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+//			m_gi2d_context->b_fragment.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			b_radiance.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			b_vertex_array.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-			b_vertex_array_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
 		};
 
 		vk::ImageMemoryBarrier image_barrier;
@@ -411,7 +412,7 @@ void GI2DRadiosity::executeRendering(const vk::CommandBuffer& cmd)
 		image_barrier.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
 		image_barrier.setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
 
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect| vk::PipelineStageFlagBits::eGeometryShader | vk::PipelineStageFlagBits::eFragmentShader| vk::PipelineStageFlagBits::eColorAttachmentOutput, {}, {}, { array_size(to_read), to_read }, {image_barrier});
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eVertexShader | vk::PipelineStageFlagBits::eGeometryShader | vk::PipelineStageFlagBits::eFragmentShader| vk::PipelineStageFlagBits::eColorAttachmentOutput, {}, {}, { array_size(to_read), to_read }, {image_barrier});
 	}
 
 	vk::RenderPassBeginInfo begin_render_Info;
@@ -422,9 +423,9 @@ void GI2DRadiosity::executeRendering(const vk::CommandBuffer& cmd)
 
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayout_Rendering].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayout_Rendering].get(), 1, m_descriptor_set.get(), {});
-
-	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_Render].get());
-	cmd.drawIndirect(b_vertex_array_counter.getInfo().buffer, b_vertex_array_counter.getInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
+  
+  	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_Render].get());
+ 	cmd.drawIndirect(b_vertex_array_counter.getInfo().buffer, b_vertex_array_counter.getInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
 
 	cmd.endRenderPass();
 	

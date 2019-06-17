@@ -29,7 +29,7 @@ ClearPipeline::ClearPipeline(const std::shared_ptr<btr::Context>& context, const
 			nullptr, nullptr, present_to_clear);
 
 		vk::ClearColorValue clear_color;
-		clear_color.setFloat32(std::array<float, 4>{0.f, 0.f, 0.f, 0.f});
+		clear_color.setFloat32(std::array<float, 4>{0.f, 0.f, 0.f, 1.f});
 		m_cmd->clearColorImage(render_target->m_image, vk::ImageLayout::eTransferDstOptimal, clear_color, vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
 
 	}
@@ -401,7 +401,7 @@ PresentPipeline::PresentPipeline(const std::shared_ptr<btr::Context>& context, c
 			cmd->beginRenderPass(begin_render_info, vk::SubpassContents::eInline);
 
 			cmd->bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline.get());
-			cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 0, { m_descriptor_set.get() }, {});
+			cmd->bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout.get(), 0, m_descriptor_set.get(), {});
 			cmd->draw(3, 1, 0, 0);
 
 			cmd->endRenderPass();
