@@ -185,7 +185,7 @@ struct DrawCommand
 
 };
 #define Dir_Num (31)
-#define Vertex_Num (Dir_Num)
+#define Vertex_Num (Dir_Num*2)
 #define Bounce_Num (3)
 struct RadiosityVertex
 {

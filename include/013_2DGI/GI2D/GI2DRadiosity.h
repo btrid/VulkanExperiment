@@ -11,11 +11,8 @@ struct GI2DRadiosity
 {
 	enum {
 		Frame = 1,
-		Ray_Direction_Num = 31,
-		Dir_Num = Ray_Direction_Num,
-		Ray_Frame_Num = 1024 * 2 * Ray_Direction_Num,
-		Ray_All_Num = Ray_Frame_Num * Frame,
-		Segment_Num = Ray_Frame_Num * 32,// ‚Æ‚è‚ ‚¦‚¸‚Ì’l
+		Dir_Num = 31,
+		Vertex_Num = Dir_Num*2,
 		Bounce_Num = 3,
 	};
 	enum Shader
@@ -57,7 +54,7 @@ struct GI2DRadiosity
 
 	struct RadiosityVertex
 	{
-		u16vec2 vertex[Dir_Num];
+		u16vec2 vertex[Vertex_Num];
 		u16vec2 pos;
 	};
 

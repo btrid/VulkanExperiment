@@ -27,7 +27,7 @@ void main()
 		color += b_radiance[light_index + light_offset * i];
 	}
 
-    vs_out.color = color * 0.1;
+    vs_out.color = color * 1.;
     vs_out.vertex_index = gl_InstanceIndex;
     gl_Position = vec4(1.);
 }

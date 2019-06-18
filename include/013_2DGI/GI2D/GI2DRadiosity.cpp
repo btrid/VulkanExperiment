@@ -12,8 +12,8 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 
 	{
 		GI2DRadiosityInfo info;
-		info.ray_num_max = Ray_All_Num;
-		info.ray_frame_max = Ray_Frame_Num;
+		info.ray_num_max = 0;
+		info.ray_frame_max = 0;
 		info.frame_max = Frame;
 		u_radiosity_info = m_context->m_uniform_memory.allocateMemory<GI2DRadiosityInfo>({1,{} });
 		cmd.updateBuffer<GI2DRadiosityInfo>(u_radiosity_info.getInfo().buffer, u_radiosity_info.getInfo().offset, info);
@@ -359,7 +359,7 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 			0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RayMarch].get());
-		auto num = app::calcDipatchGroups(uvec3(2048, Ray_Direction_Num, 1), uvec3(128, 1, 1));
+		auto num = app::calcDipatchGroups(uvec3(2048, Dir_Num, 1), uvec3(128, 1, 1));
 		cmd.dispatch(num.x, num.y, num.z);
 	}
 
@@ -412,7 +412,7 @@ void GI2DRadiosity::executeRendering(const vk::CommandBuffer& cmd)
 		image_barrier.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
 		image_barrier.setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
 
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eVertexShader | vk::PipelineStageFlagBits::eGeometryShader | vk::PipelineStageFlagBits::eFragmentShader| vk::PipelineStageFlagBits::eColorAttachmentOutput, {}, {}, { array_size(to_read), to_read }, {image_barrier});
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eVertexShader | vk::PipelineStageFlagBits::eGeometryShader | vk::PipelineStageFlagBits::eColorAttachmentOutput, {}, {}, { array_size(to_read), to_read }, {image_barrier});
 	}
 
 	vk::RenderPassBeginInfo begin_render_Info;

@@ -149,6 +149,10 @@ void main()
 				{
 					b_vertex_array[b_vertex_array_index[index.x]].vertex[angle_index] = end.zw;
 				}
+				if(b_vertex_array_index[index.y] != -1)
+				{
+					b_vertex_array[b_vertex_array_index[index.y]].vertex[angle_index+Dir_Num] = end.xy;
+				}
 				begin = march;
 			}
 			march++;
@@ -161,5 +165,9 @@ void main()
 	if(b_vertex_array_index[index.x] != -1)
 	{
 		b_vertex_array[b_vertex_array_index[index.x]].vertex[angle_index] = end.zw;
+	}
+//	if(b_vertex_array_index[index.y] != -1)
+	{
+//		b_vertex_array[b_vertex_array_index[index.y]].vertex[angle_index+Dir_Num] = end.xy;
 	}
 }
