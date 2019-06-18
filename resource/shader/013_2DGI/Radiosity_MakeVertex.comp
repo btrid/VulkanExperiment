@@ -8,6 +8,17 @@
 layout (local_size_x = 32, local_size_y = 32) in;
 
 shared uint64_t s_map[36];
+const i16vec2 g_offset[8] = 
+{
+		i16vec2(-1,-1), 
+		i16vec2( 0,-1),
+		i16vec2( 1,-1),
+		i16vec2( 1, 0),
+		i16vec2( 1, 1),
+		i16vec2( 0, 1),
+		i16vec2(-1, 1),
+		i16vec2(-1, 0),
+};
 
 void main() 
 {
@@ -29,27 +40,18 @@ void main()
 	memoryBarrierShared();
 	barrier();
 
+	bool is_diffuse = true;
+	bool is_edge = false;
 	{
 		ivec2 ii = ivec2(gl_LocalInvocationID.xy) + ivec2(8);
 		ivec2 map_index = ii / 8;
 		ivec2 map_bit = ii % 8;
 		if((s_map[map_index.x+map_index.y*6] & (1ul<<(map_bit.x+map_bit.y*8))) == 0ul)
 		{
-			return;
+			// 床なので何もしない
+			is_diffuse = false;
 		}
 	}
-	const i16vec2 g_offset[8] = 
-	{
-		 i16vec2(-1,-1), 
-		 i16vec2( 0,-1),
-		 i16vec2( 1,-1),
-		 i16vec2( 1, 0),
-		 i16vec2( 1, 1),
-		 i16vec2( 0, 1),
-		 i16vec2(-1, 1),
-		 i16vec2(-1, 0),
-	};
-	bool is_edge = false;
 	for(int i = 0; i < 8; i++)
 	{
 		ivec2 ii = ivec2(gl_LocalInvocationID.xy) + g_offset[i] + ivec2(8);
@@ -63,7 +65,7 @@ void main()
 	}
 
 	uint vi = -1;
-	if(is_edge)
+	if(is_diffuse && is_edge)
 	{
 		vi = atomicAdd(b_vertex_array_counter.instanceCount, 1);
 		if((vi%1024) == 0){
