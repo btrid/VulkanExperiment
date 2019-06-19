@@ -64,6 +64,7 @@ void main()
 		}
 	}
 
+	uint index = gl_GlobalInvocationID.x+gl_GlobalInvocationID.y*u_gi2d_info.m_resolution.x;
 	uint vi = -1;
 	if(is_diffuse && is_edge)
 	{
@@ -72,14 +73,17 @@ void main()
 			atomicAdd(b_vertex_array_counter.bounce_cmd.x, 1);
 		}
 		b_vertex_array[vi].pos = u16vec2(gl_GlobalInvocationID.xy);
+		f16vec3 albedo = f16vec3(getRGB(b_fragment[index]));
+		b_vertex_array[vi].radiance[0] = albedo * f16vec3(isEmissive(b_fragment[index]));
+		b_vertex_array[vi].radiance[1] = f16vec3(0.); 
+		b_vertex_array[vi].albedo = albedo;
 
 		uvec2 map = gl_GlobalInvocationID.xy / 8;
 		uvec2 bit = gl_GlobalInvocationID.xy % 8;
 		atomicOr(b_edge[map.x + map.y*u_gi2d_info.m_resolution.z], 1ul<<(bit.x+bit.y*8));
+
 	}
 
-	uint index = gl_GlobalInvocationID.x+gl_GlobalInvocationID.y*u_gi2d_info.m_resolution.x;
 	b_vertex_array_index[index] = vi;
 
-	b_radiance[index] = f16vec3(getRGB(b_fragment[index])) * f16vec3(isEmissive(b_fragment[index]));
 }

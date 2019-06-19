@@ -54,8 +54,12 @@ struct GI2DRadiosity
 
 	struct RadiosityVertex
 	{
-		u16vec2 vertex[Vertex_Num];
+		u16vec4 vertex[Vertex_Num];
 		u16vec2 pos;
+		u16vec2 _p;
+		u16vec4 radiance[2];
+		u16vec4 albedo;
+
 	};
 
 	struct VertexCmd
@@ -81,7 +85,6 @@ struct GI2DRadiosity
 	btr::BufferMemoryEx<uint> b_vertex_array_index;
 	btr::BufferMemoryEx<RadiosityVertex> b_vertex_array;
 	btr::BufferMemoryEx<uint64_t> b_edge;
-	btr::BufferMemoryEx<f16vec3> b_radiance;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
