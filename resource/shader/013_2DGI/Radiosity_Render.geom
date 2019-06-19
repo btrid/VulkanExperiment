@@ -37,8 +37,8 @@ void main()
 	uint angle_index = gl_InvocationID;
 
 	u16vec2 pos = b_vertex_array[index].pos;
-	u16vec2 target0 = b_vertex_array[index].vertex[angle_index*2];
-	u16vec2 target1 = b_vertex_array[index].vertex[angle_index*2+1];
+	i16vec2 target0 = b_vertex_array[index].vertex[angle_index*2] & i16vec2(0x7fff);
+	i16vec2 target1 = b_vertex_array[index].vertex[angle_index*2+1] & i16vec2(0x7fff);
 	vec2 center = (vec2(pos) + vec2(0.5)) / vec2(u_gi2d_info.m_resolution.xy) * 2. - 1.;
 	vec4 vertex = ((vec4(target0, target1) + vec4(0.5)) / vec4(u_gi2d_info.m_resolution.xyxy)) * 2. - 1.;
 

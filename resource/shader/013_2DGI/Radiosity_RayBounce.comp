@@ -24,7 +24,7 @@ void main()
 	f16vec3 irradiance = f16vec3(0.);
 	for(int i = 0; i < Vertex_Num; i++)
 	{
-		u16vec2 v = b_vertex_array[gl_GlobalInvocationID.x].vertex[i];
+		i16vec2 v = b_vertex_array[gl_GlobalInvocationID.x].vertex[i] & i16vec2(0x7fff);
 		uint vi = v.x + v.y * u_gi2d_info.m_resolution.y;
 		if(!isDiffuse(b_fragment[vi])){ continue; }
 

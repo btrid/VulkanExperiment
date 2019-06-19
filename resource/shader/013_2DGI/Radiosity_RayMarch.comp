@@ -69,7 +69,7 @@ Ray makeRay(in uint x, in uint y)
 	if(intersection(vec4(vec2(0., 0.), vec2(reso.xy)), ray.origin, ray.inv_dir, begin, end))
 	{
 		ray.origin = fma(ray.dir, vec2(begin+1), ray.origin);
-		ray.march = end - begin+1;
+		ray.march = end - begin;
 	}
 	return ray;
 }
@@ -99,8 +99,8 @@ Ray makeRay(in uint x, in uint y)
 	int begin, end;
 	if(intersection(vec4(vec2(0., 0.), vec2(reso.xy)), ray.origin, ray.inv_dir, begin, end))
 	{
-		ray.origin = fma(ray.dir, vec2(begin+1), ray.origin);
-		ray.march = end - begin+1;
+		ray.origin = fma(ray.dir, vec2(begin), ray.origin);
+		ray.march = end - begin;
 	}
 	return ray;
 }
@@ -111,7 +111,7 @@ void main()
 
 	Ray ray = makeRay(gl_GlobalInvocationID.x, gl_WorkGroupID.y);
 
-	if(ray.march==-1){ return; }
+	if(ray.march<= 0){ return; }
 
 	uint angle_index = gl_WorkGroupID.y;
 
@@ -119,6 +119,7 @@ void main()
 
 	int begin = 0;
 	uint16_t march = uint16_t(0);
+	bool state = false;
 
 	for(; march < ray.march; )
 	{
@@ -133,8 +134,8 @@ void main()
 		uint64_t map = b_edge[cell.x + cell.y * reso.z];
 		if(map == 0ul)
 		{
-			march+=skip;
-			continue;
+//			march+=skip;
+//			continue;
 		}
 
 		for(uint i = 0; i < skip; i++)
@@ -143,31 +144,30 @@ void main()
 			bool attr = (map & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0ul;
 			if(attr)
 			{
-				u16vec4 end = u16vec4(fma(ray.dir.xyxy, vec4(float(begin).xx, float(march).xx), ray.origin.xyxy));
-				uvec2 index = end.xz + end.yw * reso.xx;
+				i16vec4 end = i16vec4(fma(ray.dir.xyxy, vec4(float(begin).xx, float(march).xx), ray.origin.xyxy));
+				ivec2 index = end.xz + end.yw * reso.xx;
 				if(b_vertex_array_index[index.x] != -1)
 				{
-					b_vertex_array[b_vertex_array_index[index.x]].vertex[angle_index] = end.zw;
+					b_vertex_array[b_vertex_array_index[index.x]].vertex[angle_index] = end.zw;// | (state? i16vec2(0x8000,0):i16vec2(0));
 				}
 				if(b_vertex_array_index[index.y] != -1)
 				{
-					b_vertex_array[b_vertex_array_index[index.y]].vertex[angle_index+Dir_Num] = end.xy;
+					b_vertex_array[b_vertex_array_index[index.y]].vertex[angle_index+Dir_Num] = end.xy;// | (state? i16vec2(0x8000,0):i16vec2(0));
 				}
 				begin = march;
 			}
+			state = attr;
 			march++;
 			pos_sub = fma(ray.dir, vec2(1.), pos_sub);
 		}
 
 	}
-	u16vec4 end = u16vec4(fma(ray.dir.xyxy, vec4(float(begin).xx, float(ray.march).xx), ray.origin.xyxy));
-	uvec2 index = end.xz + end.yw * reso.xx;
+	i16vec4 end = i16vec4(fma(ray.dir.xyxy, vec4(float(begin).xx, float(ray.march).xx), ray.origin.xyxy));
+	ivec2 index = end.xz + end.yw * reso.xx;
 	if(b_vertex_array_index[index.x] != -1)
 	{
-		b_vertex_array[b_vertex_array_index[index.x]].vertex[angle_index] = end.zw;
+		b_vertex_array[b_vertex_array_index[index.x]].vertex[angle_index] = end.zw;// | (state? i16vec2(0x8000,0):i16vec2(0));
 	}
-//	if(b_vertex_array_index[index.y] != -1)
-	{
-//		b_vertex_array[b_vertex_array_index[index.y]].vertex[angle_index+Dir_Num] = end.xy;
-	}
+	// チェック
+//	while(any(lessThan(end.zw, i16vec2(0))) || any(greaterThanEqual(end.zw, i16vec2(reso.xy)))){}
 }

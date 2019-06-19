@@ -189,7 +189,7 @@ struct DrawCommand
 #define Bounce_Num (3)
 struct RadiosityVertex
 {
-	u16vec2 vertex[Vertex_Num];
+	i16vec2 vertex[Vertex_Num];
 	u16vec2 pos;
 //	u16vec2 _p;
 };
