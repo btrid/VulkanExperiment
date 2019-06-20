@@ -189,9 +189,12 @@ struct DrawCommand
 #define Bounce_Num (3)
 struct RadiosityVertex
 {
-	i16vec2 vertex[Vertex_Num];
+	u16vec3 vertex[Vertex_Num];
 	u16vec2 pos;
-//	u16vec2 _p;
+	u16vec2 _p;
+	f16vec3 radiance[2];
+	f16vec3 albedo;
+
 };
 
 layout(set=USE_GI2D_Radiosity, binding=0, std140) uniform GI2DRadiosityInfoUniform {
@@ -209,9 +212,7 @@ layout(set=USE_GI2D_Radiosity, binding=3, std430) restrict buffer VertexArrayBuf
 layout(set=USE_GI2D_Radiosity, binding=4, std430) restrict buffer MapEdgeBuffer {
 	uint64_t b_edge[];
 };
-layout(set=USE_GI2D_Radiosity, binding=5, std430) restrict buffer RadianceBuffer {
-	f16vec3 b_radiance[];
-};
+
 
 #endif
 
