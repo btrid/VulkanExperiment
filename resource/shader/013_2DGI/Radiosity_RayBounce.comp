@@ -26,7 +26,6 @@ void main()
 	{
 		uint vi = uint(b_vertex_array[gl_GlobalInvocationID.x].vertex[i].z);
 		if(vi == -1) { continue; }
-//		uint vi = v.x + v.y * u_gi2d_info.m_resolution.y;
 
 		f16vec3 power = b_vertex_array[vi].radiance[constant.bounce];
 		f16vec3 albedo = b_vertex_array[vi].albedo;

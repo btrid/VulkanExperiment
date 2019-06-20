@@ -42,6 +42,7 @@ void main()
 
 	bool is_diffuse = true;
 	bool is_edge = false;
+	bool is_boundary = any(equal(gl_GlobalInvocationID.xyxy, uvec4(0,0,u_gi2d_info.m_resolution.xy-1)));
 	{
 		ivec2 ii = ivec2(gl_LocalInvocationID.xy) + ivec2(8);
 		ivec2 map_index = ii / 8;
@@ -66,7 +67,7 @@ void main()
 
 	uint index = gl_GlobalInvocationID.x+gl_GlobalInvocationID.y*u_gi2d_info.m_resolution.x;
 	uint vi = -1;
-	if(is_diffuse && is_edge)
+	if((is_diffuse && is_edge) || is_boundary)
 	{
 		vi = atomicAdd(b_vertex_array_counter.instanceCount, 1);
 		if((vi%1024) == 0){

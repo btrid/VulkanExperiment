@@ -19,7 +19,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 {
 	for (int i = 0; i < std::size(g_data); i++)
 	{
-		g_data[i] = GI2DLightData{ vec4(std::rand() % 950 + 40, std::rand() % 950 + 40, 0.f, 0.f), vec4(std::rand() % 80 + 20,std::rand() % 80 + 20,std::rand() % 80 + 20,100) * 0.01f };
+		g_data[i] = GI2DLightData{ vec4(std::rand() % 950 + 40, std::rand() % 950 + 40, 0.f, 0.f), vec4(normalize(vec3(std::rand() % 80+ 20,std::rand() % 80 + 20,std::rand() % 80 + 20))*1.f,1)};
 	}
 
 	m_context = context;
@@ -99,7 +99,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 		};
 		std::vector<Fragment> rect;
 		for (int i = 0; i < 600; i++) {
-			rect.emplace_back(Fragment{ ivec4{ std::rand() % gi2d_context->RenderWidth , std::rand() % gi2d_context->RenderHeight, std::rand() % 12 + 16, std::rand() % 12 + 16 }, vec4{ 0.8f,0.2f,0.2f,0.f } });
+//			rect.emplace_back(Fragment{ ivec4{ std::rand() % gi2d_context->RenderWidth , std::rand() % gi2d_context->RenderHeight, std::rand() % 12 + 16, std::rand() % 12 + 16 }, vec4{ 0.8f,0.2f,0.2f,0.f } });
 		}	
 //		rect.emplace_back(Fragment{ ivec4{ 70, 900, 900, 10, }, vec4{ 0.8f,0.2f,0.2f,0.f } });
 //		rect.emplace_back(Fragment{ ivec4{ 70, 900, 828, 42, }, vec4{ 0.8f,0.2f,0.2f,0.f } });
@@ -340,21 +340,23 @@ void GI2DDebug::executeDrawFragment(vk::CommandBuffer cmd, const std::shared_ptr
 
 void GI2DDebug::executeMakeFragment(vk::CommandBuffer cmd)
 {
-	vk::BufferMemoryBarrier to_write[] =
+	DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
 	{
-		m_gi2d_context->b_fragment.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
-	};
-	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands, {}, 0, nullptr, array_length(to_write), to_write, 0, nullptr);
+		vk::BufferMemoryBarrier to_write[] =
+		{
+			m_gi2d_context->b_fragment.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
+		};
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands, {}, 0, nullptr, array_length(to_write), to_write, 0, nullptr);
 
-	vk::BufferCopy copy;
-	copy.setSrcOffset(m_map_data.getInfo().offset);
-	copy.setDstOffset(m_gi2d_context->b_fragment.getInfo().offset);
-	copy.setSize(m_gi2d_context->b_fragment.getInfo().range);
+		vk::BufferCopy copy;
+		copy.setSrcOffset(m_map_data.getInfo().offset);
+		copy.setDstOffset(m_gi2d_context->b_fragment.getInfo().offset);
+		copy.setSize(m_gi2d_context->b_fragment.getInfo().range);
 
-	cmd.copyBuffer(m_map_data.getInfo().buffer, m_gi2d_context->b_fragment.getInfo().buffer, copy);
+		cmd.copyBuffer(m_map_data.getInfo().buffer, m_gi2d_context->b_fragment.getInfo().buffer, copy);
 
-// 	// light‚Ì‚Å‚Î‚Á‚®
-// //	if(0)
+	}
+
 	{
 		vk::BufferMemoryBarrier to_read[] =
 		{
@@ -385,12 +387,6 @@ void GI2DDebug::executeMakeFragment(vk::CommandBuffer cmd)
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineLayout_PointLight].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_PointLight].get(), 0, m_gi2d_context->getDescriptorSet(), {});
-// 		for (int y = -1; y <= 1; y++) {
-// 			for (int x = -1; x <= 1; x++) {
-// 				cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayout_PointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ vec4(light_pos.x+x, light_pos.y+y, 0.f, 0.f), vec4(1.f, 1.f, 1.f, 1.f) });
-// 				cmd.dispatch(1, 1, 1);
-// 			}
-// 		}
 		cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayout_PointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ vec4(light_pos.x, light_pos.y, 0.f, 0.f), vec4(1.f, 1.f, 1.f, 1.f) });
 		cmd.dispatch(1, 1, 1);
 		for (int i = 0; i < std::size(g_data); i++)

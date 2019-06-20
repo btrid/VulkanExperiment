@@ -106,8 +106,10 @@ void main()
 				uvec2 vi = end.xz + end.yw * reso.xx;
 				uvec2 array_index = uvec2(b_vertex_array_index[vi.x], b_vertex_array_index[vi.y]);
 
-				b_vertex_array[array_index.x].vertex[angle_index] = u16vec3(end.zw, array_index.y);
-				b_vertex_array[array_index.y].vertex[angle_index+Dir_Num] = u16vec3(end.xy, array_index.x);
+				if(array_index.x != -1)
+					b_vertex_array[array_index.x].vertex[angle_index] = u16vec3(end.zw, array_index.y);
+				if(array_index.y != -1)
+					b_vertex_array[array_index.y].vertex[angle_index+Dir_Num] = u16vec3(end.xy, array_index.x);
 
 				begin = march;
 			}
@@ -121,6 +123,7 @@ void main()
 //	while(any(greaterThanEqual(end, reso.xyxy))){}
 	uvec2 vi = end.xz + end.yw * reso.xx;
 	uvec2 array_index = uvec2(b_vertex_array_index[vi.x], b_vertex_array_index[vi.y]);
-	b_vertex_array[array_index.x].vertex[angle_index] = u16vec3(end.zw, array_index.y);
+	if(array_index.x != -1)
+		b_vertex_array[array_index.x].vertex[angle_index] = u16vec3(end.zw, array_index.y);
 
 }
