@@ -32,6 +32,22 @@ struct Ray
 	int march;
 };
 
+vec2 rotateEx(in float angle)
+{
+	float c = cos(angle);
+	float s = sin(angle);
+	return vec2(c, s);
+}
+
+void calcDirEx(in float angle, out vec2 dir, out vec2 inv_dir)
+{
+	dir = rotateEx(angle);
+	dir.x = abs(dir.x)<GI2D_FLT_EPSILON ? 0.0001 : dir.x;
+	dir.y = abs(dir.y)<GI2D_FLT_EPSILON ? 0.0001 : dir.y;
+	inv_dir = 1./dir;
+	dir = dir * min(abs(inv_dir.x), abs(inv_dir.y));
+	inv_dir = 1./dir;
+}
 Ray makeRay(in uint x, in uint y)
 {
 	const ivec4 reso = u_gi2d_info.m_resolution;
@@ -42,11 +58,11 @@ Ray makeRay(in uint x, in uint y)
 	float angle = fma(a, float(y), b);
 	uint area = uint(angle / HALF_PI);
 
-	angle += QUARTER_PI;
-	calcDir2(angle, ray.dir, ray.inv_dir);
+	angle -= QUARTER_PI;
+	calcDirEx(angle, ray.dir, ray.inv_dir);
 
-	ray.origin.x = (area==0) ? (reso.x+0.5) : -0.5;
-	ray.origin.y = (area==1) ? (reso.y+0.5) : -0.5;
+	ray.origin.x = -0.5;
+	ray.origin.y = -0.5;
 	ray.origin.x += (area==1) ? x : 0;
 	ray.origin.y += (area==0) ? x : 0;
 	ray.origin.x += ((area==1)&&ray.dir.x>=0.)?-reso.x:0;
