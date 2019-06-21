@@ -75,8 +75,9 @@ void main()
 		}
 		b_vertex_array[vi].pos = u16vec2(gl_GlobalInvocationID.xy);
 		f16vec3 albedo = f16vec3(getRGB(b_fragment[index]));
-		b_vertex_array[vi].radiance[0] = albedo * f16vec3(isEmissive(b_fragment[index]));
-		b_vertex_array[vi].radiance[1] = f16vec3(0.); 
+		f16vec3 emissive = albedo * f16vec3(isEmissive(b_fragment[index]));
+		b_vertex_array[vi].radiance[0] = emissive;
+		b_vertex_array[vi].radiance[1] = emissive; 
 		b_vertex_array[vi].albedo = albedo;
 
 		uvec2 map = gl_GlobalInvocationID.xy / 8;

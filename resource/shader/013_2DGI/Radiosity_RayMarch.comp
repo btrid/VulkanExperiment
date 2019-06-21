@@ -47,17 +47,39 @@ Ray makeRay(in uint x, in uint y)
 
 	ray.origin.x = (area==0) ? (reso.x+0.5) : -0.5;
 	ray.origin.y = (area==1) ? (reso.y+0.5) : -0.5;
+
+
+#if 1
 	ray.origin.x += (area%2==1) ? x : 0;
 	ray.origin.y += (area%2==0) ? x : 0;
 	ray.origin.x += ((area%2)==1&&ray.dir.x>=0.)?-reso.x:0;
 	ray.origin.y += ((area%2)==0&&ray.dir.y>=0.)?-reso.y:0;
 
+#else
+	if(x<1024)
+	{
+		ray.origin.x += (area%2==1) ? x : 0;
+		ray.origin.y += (area%2==0) ? x : 0;
+	}
+	else
+	{
+		ray.origin.x += ((area%2)==1&&ray.dir.x>=0.)?-reso.x:0;
+		ray.origin.y += ((area%2)==0&&ray.dir.y>=0.)?-reso.y:0;
+
+		ray.origin.x += (area%2)==0? int(ray.inv_dir.y*0.5):0;
+		ray.origin.y += (area%2)==1? int(ray.inv_dir.y*0.5):0;
+	}
+#endif
 	ray.march = -1;
 	int begin, end;
 	if(intersection(vec4(vec2(0., 0.), vec2(reso.xy)), ray.origin, ray.inv_dir, begin, end))
 	{
 		ray.origin = fma(ray.dir, vec2(begin+1), ray.origin);
 		ray.march = end - begin-1;
+
+//		while(!any(equal(uvec4(ray.origin.xyxy), uvec4(0,0,1023,1023)))){}
+//		while(!any(equal(uvec4(fma(ray.dir.xyxy, float(ray.march).xxxx, ray.origin.xyxy)), uvec4(0,0,1023,1023)))){}
+
 	}
 	return ray;
 }
@@ -65,12 +87,25 @@ Ray makeRay(in uint x, in uint y)
 void main()
 {
 	const ivec4 reso = u_gi2d_info.m_resolution;
+	uint angle_index = gl_WorkGroupID.y;
 
 	Ray ray = makeRay(gl_GlobalInvocationID.x, gl_WorkGroupID.y);
 
 	if(ray.march<=0){ return; }
+	if(ray.march==0)
+	{
+		u16vec4 end = u16vec4(ray.origin.xyxy);
+//		while(any(greaterThanEqual(end, reso.xyxy))){}
+		uvec2 vi = end.xz + end.yw * reso.xx;
+		uvec2 array_index = uvec2(b_vertex_array_index[vi.x], b_vertex_array_index[vi.y]);
+		if(array_index.x != -1)
+			b_vertex_array[array_index.x].vertex[angle_index] = u16vec3(end.zw, array_index.y);
+		if(array_index.y != -1)
+			b_vertex_array[array_index.y].vertex[angle_index] = u16vec3(end.xy, array_index.x);
 
-	uint angle_index = gl_WorkGroupID.y;
+		return;
+	}
+
 
 	vec2 cell_origin = vec2(greaterThanEqual(ray.dir, vec2(0.))) * vec2(8.);
 
@@ -120,7 +155,7 @@ void main()
 	}
 
 	u16vec4 end = u16vec4(fma(ray.dir.xyxy, vec4(float(begin).xx, float(ray.march).xx), ray.origin.xyxy));
-//	while(any(greaterThanEqual(end, reso.xyxy))){}
+	while(any(greaterThanEqual(end, reso.xyxy))){}
 	uvec2 vi = end.xz + end.yw * reso.xx;
 	uvec2 array_index = uvec2(b_vertex_array_index[vi.x], b_vertex_array_index[vi.y]);
 	if(array_index.x != -1)

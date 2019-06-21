@@ -371,27 +371,35 @@ bool intersection(vec2 pos, vec2 inv_dir, int& n, int& f)
 	vec4 t = ((aabb - pos.xyxy)*inv_dir.xyxy);
 
 	vec2 tmin = glm::min(t.xy(), t.zw());
- 	vec2 tmax = glm::max(t.xy(), t.zw());
- 
+	vec2 tmax = glm::max(t.xy(), t.zw());
+
 	n = int(glm::max(tmin.x, tmin.y));
 	f = int(glm::min(tmax.x, tmax.y));
 
- 	return glm::min(tmax.x, tmax.y) > glm::max(glm::max(tmin.x, tmin.y), 0.f);
+	return glm::min(tmax.x, tmax.y) > glm::max(glm::max(tmin.x, tmin.y), 0.f);
 }
 
 void test()
 {
-	auto dir = glm::rotate(vec2(1.f, 0.f), -glm::radians(45.f));
+	vec2 dir;
 	vec2 pos;
-	switch (std::rand() % 2)
+	switch (std::rand() % 4)
 	{
 	case 0:
-		pos = vec2(rand() % 1025, -0.5f);
+		pos = vec2(rand() % 1025+0.5f, -0.5f);
 		dir = glm::rotate(vec2(-1.f, 0.f), -glm::radians((float)(std::rand() % 180)));
 		break;
 	case 1:
-		pos = vec2(1025.5f, rand() % 1025);
+		pos = vec2(1024.5f, rand() % 1025 + 0.5f);
 		dir = glm::rotate(vec2(0.f, -1.f), -glm::radians((float)(std::rand() % 180)));
+		break;
+	case 2:
+		pos = vec2(-0.5f, rand() % 1025 + 0.5f);
+		dir = glm::rotate(vec2(1.f, 0.f), -glm::radians((float)(std::rand() % 180)));
+		break;
+	case 3:
+		pos = vec2(rand() % 1025+0.5f, -0.5f);
+		dir = glm::rotate(vec2(0.f, 1.f), -glm::radians((float)(std::rand() % 180)));
 		break;
 	}
 	dir.x = abs(dir.x)<FLT_EPSILON ? 0.0001 : dir.x;
@@ -403,12 +411,24 @@ void test()
 	int begin = 0;
 	int end = 0;
 	auto hit0 = intersection(pos, inv_dir, begin, end);
-	vec2 pos0 = pos + begin * dir;
-	vec2 pos1 = pos + end * dir;
+	vec2 pos0 = pos + (begin+1) * dir;
+	vec2 pos1 = pos0 + (end-begin-1) * dir;
 
 
 //	if(!hit0)
-	printf("%s, pos[%7.2f, %7.2f],begin=[%7.2f,%7.2f], end=[%7.2f,%7.2f], dir=[%5.2f,%5.2f], inv=[%6.2f,%6.2f]\n", hit0 ? "OK" : "NG", pos.x, pos.y, pos0.x, pos0.y, pos1.x, pos1.y, dir.x, dir.y, inv_dir.x, inv_dir.y);
+//	printf("%s, pos[%7.2f, %7.2f],begin=[%7.2f,%7.2f], end=[%7.2f,%7.2f], dir=[%5.2f,%5.2f], inv=[%6.2f,%6.2f]\n", hit0 ? "OK" : "NG", pos.x, pos.y, pos0.x, pos0.y, pos1.x, pos1.y, dir.x, dir.y, inv_dir.x, inv_dir.y);
+	if (hit0)
+	{
+		printf("%s\tbegin=[%7.2f,%7.2f], end=[%7.2f,%7.2f], dir=[%5.2f,%5.2f], inv=[%6.2f,%6.2f], pos=[%7.2f,%7.2f]\n", hit0 ? "OK" : "NG", pos0.x, pos0.y, pos1.x, pos1.y, dir.x, dir.y, inv_dir.x, inv_dir.y, pos.x, pos.y);
+		vec2 pos01 = pos + (begin + 2) * dir;
+		vec2 pos11 = pos01 + (end - begin - 3) * dir;
+		printf("\tbegin=[%7.2f,%7.2f], end=[%7.2f,%7.2f]\n", pos01.x, pos01.y, pos11.x, pos11.y);
+		while (!any(equal(uvec4(pos0.xyxy()), uvec4(0, 0, 1023, 1023)))) {}
+		while (!any(equal(uvec4(pos1.xyxy()), uvec4(0, 0, 1023, 1023)))) {}
+// 		while (!any(equal(uvec4(pos01.xyxy()), uvec4(0, 0, 1023, 1023)))) {}
+// 		while (!any(equal(uvec4(pos11.xyxy()), uvec4(0, 0, 1023, 1023)))) {}
+
+	}
 
 }
 int main()
@@ -420,7 +440,7 @@ int main()
 	bool ishit = intersection(pos, inv_dir, n, f);
 
 //	for (;;){test();}
-	test();
+
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = glm::vec3(0.f, 0.f, 1.f);
@@ -514,7 +534,7 @@ int main()
 				cmds[cmd_gi2d] = cmd;
 			}
 			app.submit(std::move(cmds));
-			device->waitIdle();
+//			device->waitIdle();
 		}
 		app.postUpdate();
 		printf("%-6.4fms\n", time.getElapsedTimeAsMilliSeconds());
