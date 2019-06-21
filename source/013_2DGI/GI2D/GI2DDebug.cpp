@@ -89,6 +89,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 			}
 		}
 
+
 #else
 		struct Fragment
 		{
@@ -103,7 +104,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 		}	
 //		rect.emplace_back(Fragment{ ivec4{ 70, 900, 900, 10, }, vec4{ 0.8f,0.2f,0.2f,0.f } });
 //		rect.emplace_back(Fragment{ ivec4{ 70, 900, 828, 42, }, vec4{ 0.8f,0.2f,0.2f,0.f } });
-		rect.emplace_back(Fragment{ ivec4{ 0, 0, 1023, 1023, }, vec4{ 0.8f,0.2f,0.2f,0.f } });
+//		rect.emplace_back(Fragment{ ivec4{ 0, 0, 1023, 1023, }, vec4{ 0.8f,0.2f,0.2f,0.f } });
 
 		for (size_t y = 0; y < gi2d_context->RenderHeight; y++)
 		{
@@ -364,7 +365,7 @@ void GI2DDebug::executeMakeFragment(vk::CommandBuffer cmd)
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
-		static vec4 light_pos = vec4(0.5f, 0.5f, 200.f, 200.f);
+		static vec4 light_pos = vec4(444.5f, 444.5f, 200.f, 200.f);
 		float move = 3.f;
 		if (m_context->m_window->getInput().m_keyboard.isHold('A'))
 		{

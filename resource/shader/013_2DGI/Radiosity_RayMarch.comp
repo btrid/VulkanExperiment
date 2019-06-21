@@ -55,14 +55,14 @@ Ray makeRay(in uint x, in uint y)
 	ray.march = -1;
 	int begin, end;
 	vec4 aabb = vec4(vec2(0., 0.), vec2(reso.xy));
-//	aabb.x += ray.dir.x>=0.? 0:-1;
-//	aabb.y += ray.dir.y>=0.? 0:-1;
-//	aabb.z += ray.dir.x>=0.? 1:0;
-//	aabb.w += ray.dir.y>=0.? 1:0;
 	if(intersection(aabb, ray.origin, ray.inv_dir, begin, end))
 	{
 		ray.origin = fma(ray.dir, vec2(begin+1), ray.origin);
-		ray.march = end - begin-1;
+		ray.march = end - begin -1;
+
+		while(!any(equal(uvec4(ray.origin.xyxy), uvec4(0,0,reso.xy-1)))){}
+		while(!any(equal(uvec4(fma(ray.dir.xyxy, float(ray.march).xxxx, ray.origin.xyxy)), uvec4(0,0,reso.xy-1)))){}
+
 	}
 	return ray;
 }
@@ -70,15 +70,13 @@ Ray makeRay(in uint x, in uint y)
 void main()
 {
 	const ivec4 reso = u_gi2d_info.m_resolution;
+	uint angle_index = gl_WorkGroupID.y;
 
 	Ray ray = makeRay(gl_GlobalInvocationID.x, gl_WorkGroupID.y);
 
 	if(ray.march<=-1){ return; }
 
 //	while(all(notEqual(uvec4(ray.origin.xyxy), uvec4(0,0,reso.xy-1)))){}
-
-
-	uint angle_index = gl_WorkGroupID.y;
 
 	vec2 cell_origin = vec2(greaterThanEqual(ray.dir, vec2(0.))) * vec2(8.);
 
@@ -121,15 +119,12 @@ void main()
 				begin = march;
 			}
 			march++;
-//			if(march>=ray.march){ break;}
 			pos_sub = fma(ray.dir, vec2(1.), pos_sub);
 		}
 
 	}
 
 	u16vec4 end = u16vec4(fma(ray.dir.xyxy, vec4(float(begin).xx, float(ray.march).xx), ray.origin.xyxy));
-//	while(any(greaterThanEqual(end, reso.xyxy))){}
-//	while(!any(equal(end.zwzw, uvec4(0,0,reso.xy-1)))){}
 
 	uvec2 vi = end.xz + end.yw * reso.xx;
 	uvec2 array_index = uvec2(b_vertex_array_index[vi.x], b_vertex_array_index[vi.y]);
@@ -137,5 +132,6 @@ void main()
 		b_vertex_array[array_index.x].vertex[angle_index] = u16vec3(end.zw, array_index.y);
 	if(array_index.y != 0xffff)
 		b_vertex_array[array_index.y].vertex[angle_index+Dir_Num] = u16vec3(end.xy, array_index.x);
+
 
 }
