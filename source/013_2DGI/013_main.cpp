@@ -386,19 +386,19 @@ void test()
 	switch (std::rand() % 4)
 	{
 	case 0:
-		pos = vec2(rand() % 1025+0.5f, -0.5f);
+		pos = vec2(rand() % 1025, -0.);
 		dir = glm::rotate(vec2(-1.f, 0.f), -glm::radians((float)(std::rand() % 180)));
 		break;
 	case 1:
-		pos = vec2(1024.5f, rand() % 1025 + 0.5f);
+		pos = vec2(1024., rand() % 1025 + 0.);
 		dir = glm::rotate(vec2(0.f, -1.f), -glm::radians((float)(std::rand() % 180)));
 		break;
 	case 2:
-		pos = vec2(-0.5f, rand() % 1025 + 0.5f);
+		pos = vec2(-0., rand() % 1025 + 0.);
 		dir = glm::rotate(vec2(1.f, 0.f), -glm::radians((float)(std::rand() % 180)));
 		break;
 	case 3:
-		pos = vec2(rand() % 1025+0.5f, -0.5f);
+		pos = vec2(rand() % 1025+0., -0.);
 		dir = glm::rotate(vec2(0.f, 1.f), -glm::radians((float)(std::rand() % 180)));
 		break;
 	}

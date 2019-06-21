@@ -37,7 +37,7 @@ Ray makeRay(in uint x, in uint y)
 	const ivec4 reso = u_gi2d_info.m_resolution;
 	Ray ray;
 
-	float a = TWO_PI / Dir_Num;
+	float a = PI / Dir_Num;
 	float b = 0.;
 	float angle = fma(a, float(y), b);
 	uint area = uint(angle / HALF_PI);
@@ -47,10 +47,10 @@ Ray makeRay(in uint x, in uint y)
 
 	ray.origin.x = (area==0) ? (reso.x+0.5) : -0.5;
 	ray.origin.y = (area==1) ? (reso.y+0.5) : -0.5;
-	ray.origin.x += (area%2==1) ? x : 0;
-	ray.origin.y += (area%2==0) ? x : 0;
-	ray.origin.x += ((area%2)==1&&ray.dir.x>=0.)?-reso.x:0;
-	ray.origin.y += ((area%2)==0&&ray.dir.y>=0.)?-reso.y:0;
+	ray.origin.x += (area==1) ? x : 0;
+	ray.origin.y += (area==0) ? x : 0;
+	ray.origin.x += ((area==1)&&ray.dir.x>=0.)?-reso.x:0;
+	ray.origin.y += ((area==0)&&ray.dir.y>=0.)?-reso.y:0;
 
 	ray.march = -1;
 	int begin, end;
