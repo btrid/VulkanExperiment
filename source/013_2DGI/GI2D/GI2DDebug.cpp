@@ -11,7 +11,7 @@ struct GI2DLightData
 	vec4 m_emissive;
 }; 
 
-GI2DLightData g_data[50];
+GI2DLightData g_data[5];
 GI2DContext::Fragment g_wall(vec3(0.8f, 0.2f, 0.2f), true, false);
 GI2DContext::Fragment g_path(vec3(1.f), false, false);
 
@@ -99,11 +99,11 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 		};
 		std::vector<Fragment> rect;
 		for (int i = 0; i < 600; i++) {
-			rect.emplace_back(Fragment{ ivec4{ std::rand() % gi2d_context->RenderWidth , std::rand() % gi2d_context->RenderHeight, std::rand() % 12 + 16, std::rand() % 12 + 16 }, vec4{ 0.8f,0.2f,0.2f,0.f } });
+//			rect.emplace_back(Fragment{ ivec4{ std::rand() % gi2d_context->RenderWidth , std::rand() % gi2d_context->RenderHeight, std::rand() % 12 + 16, std::rand() % 12 + 16 }, vec4{ 0.8f,0.2f,0.2f,0.f } });
 		}	
 //		rect.emplace_back(Fragment{ ivec4{ 70, 900, 900, 10, }, vec4{ 0.8f,0.2f,0.2f,0.f } });
 //		rect.emplace_back(Fragment{ ivec4{ 70, 900, 828, 42, }, vec4{ 0.8f,0.2f,0.2f,0.f } });
-//		rect.emplace_back(Fragment{ ivec4{ 20, 20, 980, 980, }, vec4{ 0.8f,0.2f,0.2f,0.f } });
+		rect.emplace_back(Fragment{ ivec4{ 0, 0, 1023, 1023, }, vec4{ 0.8f,0.2f,0.2f,0.f } });
 
 		for (size_t y = 0; y < gi2d_context->RenderHeight; y++)
 		{
@@ -113,7 +113,9 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 
 				for (auto& r : rect)
 				{
-					if (x >= r.rect.x && y >= r.rect.y && x < r.rect.x + r.rect.z && y < r.rect.y + r.rect.w) {
+//					if (x >= r.rect.x && y >= r.rect.y && x < r.rect.x + r.rect.z && y < r.rect.y + r.rect.w)
+					if (x == r.rect.x || y == r.rect.y || x == r.rect.x + r.rect.z || y == r.rect.y + r.rect.w)
+					{
 						m = g_wall;
 						break;
 					}
@@ -362,7 +364,7 @@ void GI2DDebug::executeMakeFragment(vk::CommandBuffer cmd)
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
-		static vec4 light_pos = vec4(354.5f, 791.5f, 200.f, 200.f);
+		static vec4 light_pos = vec4(0.5f, 0.5f, 200.f, 200.f);
 		float move = 3.f;
 		if (m_context->m_window->getInput().m_keyboard.isHold('A'))
 		{
@@ -385,18 +387,28 @@ void GI2DDebug::executeMakeFragment(vk::CommandBuffer cmd)
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineLayout_PointLight].get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_PointLight].get(), 0, m_gi2d_context->getDescriptorSet(), {});
-// 		for (int y = -1; y <= 1; y++) {
-// 			for (int x = -1; x <= 1; x++) {
-// 				cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayout_PointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ vec4(light_pos.x+x, light_pos.y+y, 0.f, 0.f), vec4(1.f, 1.f, 1.f, 1.f) });
-// 				cmd.dispatch(1, 1, 1);
-// 			}
-// 		}
+//  		for (int y = -1; y <= 1; y++) {
+//  			for (int x = -1; x <= 1; x++) {
+//  				cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayout_PointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ vec4(light_pos.x+x, light_pos.y+y, 0.f, 0.f), vec4(1.f, 1.f, 1.f, 1.f) });
+//  				cmd.dispatch(1, 1, 1);
+//  			}
+//  		}
 		cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayout_PointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ vec4(light_pos.x, light_pos.y, 0.f, 0.f), vec4(1.f, 1.f, 1.f, 1.f) });
 		cmd.dispatch(1, 1, 1);
+
+// 		cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayout_PointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ vec4(0.f, 0.f, 0.f, 0.f), vec4(1.f, 1.f, 1.f, 1.f) });
+// 		cmd.dispatch(1, 1, 1);
+// 		cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayout_PointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ vec4(1023.f, 0.f, 0.f, 0.f), vec4(1.f, 1.f, 1.f, 1.f) });
+// 		cmd.dispatch(1, 1, 1);
+// 		cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayout_PointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ vec4(0.f, 1023.f, 0.f, 0.f), vec4(1.f, 1.f, 1.f, 1.f) });
+// 		cmd.dispatch(1, 1, 1);
+// 		cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayout_PointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ vec4(1023.f, 1023.f, 0.f, 0.f), vec4(1.f, 1.f, 1.f, 1.f) });
+// 		cmd.dispatch(1, 1, 1);
+
 		for (int i = 0; i < std::size(g_data); i++)
 		{
 			cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayout_PointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, g_data[i]);
-	 		cmd.dispatch(1, 1, 1);
+//	 		cmd.dispatch(1, 1, 1);
 		}
 	}
 }

@@ -54,7 +54,12 @@ Ray makeRay(in uint x, in uint y)
 
 	ray.march = -1;
 	int begin, end;
-	if(intersection(vec4(vec2(0., 0.), vec2(reso.xy)), ray.origin, ray.inv_dir, begin, end))
+	vec4 aabb = vec4(vec2(0., 0.), vec2(reso.xy));
+//	aabb.x += ray.dir.x>=0.? 0:-1;
+//	aabb.y += ray.dir.y>=0.? 0:-1;
+//	aabb.z += ray.dir.x>=0.? 1:0;
+//	aabb.w += ray.dir.y>=0.? 1:0;
+	if(intersection(aabb, ray.origin, ray.inv_dir, begin, end))
 	{
 		ray.origin = fma(ray.dir, vec2(begin+1), ray.origin);
 		ray.march = end - begin-1;
@@ -68,14 +73,17 @@ void main()
 
 	Ray ray = makeRay(gl_GlobalInvocationID.x, gl_WorkGroupID.y);
 
-	if(ray.march<=0){ return; }
+	if(ray.march<=-1){ return; }
+
+//	while(all(notEqual(uvec4(ray.origin.xyxy), uvec4(0,0,reso.xy-1)))){}
+
 
 	uint angle_index = gl_WorkGroupID.y;
 
 	vec2 cell_origin = vec2(greaterThanEqual(ray.dir, vec2(0.))) * vec2(8.);
 
-	int begin = 0;
-	uint16_t march = uint16_t(0);
+	uint begin = 0;
+	uint march = 0;
 
 	for(; march < ray.march; )
 	{
@@ -85,7 +93,7 @@ void main()
 		vec2 pos_sub = vec2(pos - vec2(cell << 3));
 
 		vec2 tp = fma(vec2(abs(cell_origin - pos_sub)), abs(ray.inv_dir), float(1.).xx);
-		uint16_t skip = uint16_t(min(tp.x, tp.y));
+		uint skip = uint(min(tp.x, tp.y));
 
 		uint64_t map = b_edge[cell.x + cell.y * reso.z];
 		if(map == 0ul)
@@ -101,17 +109,19 @@ void main()
 			if(attr)
 			{
 				u16vec4 end = u16vec4(fma(ray.dir.xyxy, vec4(float(begin).xx, float(march).xx), ray.origin.xyxy));
-//				while(any(greaterThanEqual(end, reso.xyxy))){}
 
 				uvec2 vi = end.xz + end.yw * reso.xx;
 				uvec2 array_index = uvec2(b_vertex_array_index[vi.x], b_vertex_array_index[vi.y]);
 
-				b_vertex_array[array_index.x].vertex[angle_index] = u16vec3(end.zw, array_index.y);
-				b_vertex_array[array_index.y].vertex[angle_index+Dir_Num] = u16vec3(end.xy, array_index.x);
+				if(array_index.x != 0xffff)
+					b_vertex_array[array_index.x].vertex[angle_index] = u16vec3(end.zw, array_index.y);
+				if(array_index.y != 0xffff)
+					b_vertex_array[array_index.y].vertex[angle_index+Dir_Num] = u16vec3(end.xy, array_index.x);
 
 				begin = march;
 			}
 			march++;
+//			if(march>=ray.march){ break;}
 			pos_sub = fma(ray.dir, vec2(1.), pos_sub);
 		}
 
@@ -119,8 +129,13 @@ void main()
 
 	u16vec4 end = u16vec4(fma(ray.dir.xyxy, vec4(float(begin).xx, float(ray.march).xx), ray.origin.xyxy));
 //	while(any(greaterThanEqual(end, reso.xyxy))){}
+//	while(!any(equal(end.zwzw, uvec4(0,0,reso.xy-1)))){}
+
 	uvec2 vi = end.xz + end.yw * reso.xx;
 	uvec2 array_index = uvec2(b_vertex_array_index[vi.x], b_vertex_array_index[vi.y]);
-	b_vertex_array[array_index.x].vertex[angle_index] = u16vec3(end.zw, array_index.y);
+	if(array_index.x != 0xffff)
+		b_vertex_array[array_index.x].vertex[angle_index] = u16vec3(end.zw, array_index.y);
+	if(array_index.y != 0xffff)
+		b_vertex_array[array_index.y].vertex[angle_index+Dir_Num] = u16vec3(end.xy, array_index.x);
 
 }

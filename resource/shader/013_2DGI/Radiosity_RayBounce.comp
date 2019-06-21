@@ -17,16 +17,16 @@ void main()
 
 	u16vec2 pos = b_vertex_array[gl_GlobalInvocationID.x].pos;
 	uint pos_index = pos.x+pos.y*u_gi2d_info.m_resolution.x;
-//	if(!isDiffuse(b_fragment[pos_index])){ return; }
-
-	uint offset = u_gi2d_info.m_resolution.x*u_gi2d_info.m_resolution.y;
 
 	f16vec3 irradiance = f16vec3(0.);
+	u16vec2 prev = pos;
 	for(int i = 0; i < Vertex_Num; i++)
 	{
-		uint vi = uint(b_vertex_array[gl_GlobalInvocationID.x].vertex[i].z);
-		if(vi == -1) { continue; }
-//		uint vi = v.x + v.y * u_gi2d_info.m_resolution.y;
+		u16vec3 v = b_vertex_array[gl_GlobalInvocationID.x].vertex[i].xyz;
+		if(v.z == 0xffff) { continue; }
+		if(all(equal(v.xy, pos))){ continue;}
+		if(all(equal(v.xy, prev))){ continue;}
+		uint vi = uint(v.z);
 
 		f16vec3 power = b_vertex_array[vi].radiance[constant.bounce];
 		f16vec3 albedo = b_vertex_array[vi].albedo;

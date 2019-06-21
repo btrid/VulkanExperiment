@@ -13,7 +13,7 @@ struct GI2DRadiosity
 		Frame = 1,
 		Dir_Num = 31,
 		Vertex_Num = Dir_Num*2,
-		Bounce_Num = 3,
+		Bounce_Num = 1,
 	};
 	enum Shader
 	{
