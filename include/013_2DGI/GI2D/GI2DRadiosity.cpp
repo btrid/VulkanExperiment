@@ -357,7 +357,7 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 			0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RayMarch].get());
-		auto num = app::calcDipatchGroups(uvec3(2048, Dir_Num, 1), uvec3(128, 1, 1));
+		auto num = app::calcDipatchGroups(uvec3(1024, Dir_Num, 1), uvec3(128, 1, 1));
 		cmd.dispatch(num.x, num.y, num.z);
 	}
 	
