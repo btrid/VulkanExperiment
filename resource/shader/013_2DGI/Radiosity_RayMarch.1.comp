@@ -55,21 +55,25 @@ Ray makeRay(in uint x, in uint y)
 
 	float a = PI / Dir_Num;
 	float b = 0.;
-	float angle = fma(a, float(y), b);
+	float angle = fma(a, float(y), a*0.5);
 	uint area = uint(angle / HALF_PI);
 
-	angle -= QUARTER_PI;
 	calcDirEx(angle, ray.dir, ray.inv_dir);
 
-	ray.origin.x = -0.5;
-	ray.origin.y = -0.5;
-	ray.origin.x += (area==1) ? x : 0;
-	ray.origin.y += (area==0) ? x : 0;
-	ray.origin.x += ((area==1)&&ray.dir.x>=0.)?-reso.x:0;
-	ray.origin.y += ((area==0)&&ray.dir.y>=0.)?-reso.y:0;
+	ray.origin.x = 0.;
+	ray.origin.y = 0.;
+	int axis = abs(ray.inv_dir.x)<abs(ray.inv_dir.y)?1:0;
+	if(x<1024)
+	{
+		ray.origin.y += min(int(ray.inv_dir.x), 1);
+	}
+	else
+	{
+		ray.origin.x += min(int(ray.inv_dir.y), 1);
+	}
 
 	ray.march = -1;
-	int begin, end;
+/*	int begin, end;
 	vec4 aabb = vec4(vec2(0., 0.), vec2(reso.xy));
 	if(intersection(aabb, ray.origin, ray.inv_dir, begin, end))
 	{
@@ -80,7 +84,7 @@ Ray makeRay(in uint x, in uint y)
 		while(!any(equal(uvec4(fma(ray.dir.xyxy, float(ray.march).xxxx, ray.origin.xyxy)), uvec4(0,0,reso.xy-1)))){}
 
 	}
-	return ray;
+*/	return ray;
 }
 
 void main()
@@ -90,19 +94,20 @@ void main()
 
 	Ray ray = makeRay(gl_GlobalInvocationID.x, gl_WorkGroupID.y);
 
-	if(ray.march<=0){ return; }
-
-//	while(all(notEqual(uvec4(ray.origin.xyxy), uvec4(0,0,reso.xy-1)))){}
-
 	vec2 cell_origin = vec2(greaterThanEqual(ray.dir, vec2(0.))) * vec2(8.);
 
 	uint begin = 0;
 	uint march = 0;
 
-	for(; march < ray.march; )
+	for(;;)
 	{
 		vec2 pos = fma(ray.dir, float(march).xx, ray.origin);
 		ivec2 map_index = ivec2(pos);
+		if(any(lessThanEqual(map_index, ivec2(0))) || any(greaterThanEqual(map_index, reso.xy)))
+		{
+			break;
+		}
+
 		ivec2 cell = map_index>>3;
 		vec2 pos_sub = vec2(pos - vec2(cell << 3));
 
@@ -139,8 +144,8 @@ void main()
 		}
 
 	}
-
-	u16vec4 end = u16vec4(fma(ray.dir.xyxy, vec4(float(begin).xx, float(march-1).xx), ray.origin.xyxy));
+/*
+	u16vec4 end = u16vec4(fma(ray.dir.xyxy, vec4(float(begin).xx, float(ray.march).xx), ray.origin.xyxy));
 
 	uvec2 vi = end.xz + end.yw * reso.xx;
 	uvec2 array_index = uvec2(b_vertex_array_index[vi.x], b_vertex_array_index[vi.y]);
@@ -148,6 +153,6 @@ void main()
 		b_vertex_array[array_index.x].vertex[angle_index] = u16vec3(end.zw, array_index.y);
 	if(array_index.y != 0xffff)
 		b_vertex_array[array_index.y].vertex[angle_index+Dir_Num] = u16vec3(end.xy, array_index.x);
-
+*/
 
 }
