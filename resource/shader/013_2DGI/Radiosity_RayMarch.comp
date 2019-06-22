@@ -123,6 +123,8 @@ void main()
 			if(attr)
 			{
 				u16vec4 end = u16vec4(fma(ray.dir.xyxy, vec4(float(begin).xx, float(march).xx), ray.origin.xyxy));
+				while(any(lessThan(ivec4(end), ivec4(0)))){}
+				while(any(greaterThanEqual(uvec4(end), uvec4(reso.xyxy)))){}
 
 				uvec2 vi = end.xz + end.yw * reso.xx;
 				uvec2 array_index = uvec2(b_vertex_array_index[vi.x], b_vertex_array_index[vi.y]);

@@ -439,7 +439,9 @@ int main()
 	int n, f;
 	bool ishit = intersection(pos, inv_dir, n, f);
 
-//	for (;;){test();}
+	auto d1 = glm::rotate(vec2(1.f, 0.f), glm::radians(0.f));
+	auto d2 = glm::rotate(vec2(1.f, 0.f), glm::radians(45.f));
+	//	for (;;){test();}
 
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();
