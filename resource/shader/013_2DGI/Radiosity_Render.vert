@@ -17,8 +17,8 @@ layout(location=1) out Data
 
 void main()
 {
-//    vs_out.color = b_vertex_array[gl_InstanceIndex].radiance[(Bounce_Num%2)];
-    vs_out.color = b_vertex_array[gl_InstanceIndex].radiance[0];
+    vs_out.color = b_vertex_array[gl_InstanceIndex].radiance[(Bounce_Num%2)];
+//    vs_out.color = b_vertex_array[gl_InstanceIndex].radiance[0];
     vs_out.vertex_index = gl_InstanceIndex;
     gl_Position = vec4(1.);
 }

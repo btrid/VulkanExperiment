@@ -11,7 +11,7 @@ struct GI2DLightData
 	vec4 m_emissive;
 }; 
 
-GI2DLightData g_data[5];
+GI2DLightData g_data[50];
 GI2DContext::Fragment g_wall(vec3(0.8f, 0.2f, 0.2f), true, false);
 GI2DContext::Fragment g_path(vec3(1.f), false, false);
 
@@ -365,7 +365,7 @@ void GI2DDebug::executeMakeFragment(vk::CommandBuffer cmd)
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
-		static vec4 light_pos = vec4(0.5f, 0.5f, 200.f, 200.f);
+		static vec4 light_pos = vec4(444.5f, 666.5f, 200.f, 200.f);
 //		static vec4 light_pos = vec4(1023.5f, 0.5f, 200.f, 200.f);
 		float move = 3.f;
 		if (m_context->m_window->getInput().m_keyboard.isHold('A'))

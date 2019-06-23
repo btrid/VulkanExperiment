@@ -24,8 +24,8 @@ void main()
 	{
 		u16vec3 v = b_vertex_array[gl_GlobalInvocationID.x].vertex[i].xyz;
 		if(v.z == 0xffff) { continue; }
-		if(all(equal(v.xy, pos))){ continue;}
-		if(all(equal(v.xy, prev))){ continue;}
+//		if(all(equal(v.xy, pos))){ continue;}
+//		if(all(equal(v.xy, prev))){ continue;}
 		uint vi = uint(v.z);
 
 		f16vec3 power = b_vertex_array[vi].radiance[constant.bounce];
@@ -34,6 +34,6 @@ void main()
 		irradiance += dot(irra, irra) >= 0.01 ? irra : f16vec3(0.);
 	}
 
-//	b_vertex_array[gl_GlobalInvocationID.x].radiance[(1-constant.bounce)] += irradiance;
+	b_vertex_array[gl_GlobalInvocationID.x].radiance[(1-constant.bounce)] += irradiance;
 
 }

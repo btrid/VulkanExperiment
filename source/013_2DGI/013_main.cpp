@@ -373,8 +373,8 @@ bool intersection(vec2 pos, vec2 inv_dir, int& n, int& f)
 	vec2 tmin = glm::min(t.xy(), t.zw());
 	vec2 tmax = glm::max(t.xy(), t.zw());
 
-	n = int(glm::max(tmin.x, tmin.y));
-	f = int(glm::min(tmax.x, tmax.y));
+	n = int(ceil(glm::max(tmin.x, tmin.y)));
+	f = int(ceil(glm::min(tmax.x, tmax.y)));
 
 	return glm::min(tmax.x, tmax.y) > glm::max(glm::max(tmin.x, tmin.y), 0.f);
 }
@@ -402,6 +402,11 @@ void test()
 		dir = glm::rotate(vec2(0.f, 1.f), -glm::radians((float)(std::rand() % 180)));
 		break;
 	}
+	pos = vec2(0.5f, 0.5f);
+	float radian = glm::radians(((std::rand() % 9000))*0.01f);
+	dir = glm::rotate(vec2(1.f, 0.f), radian);
+//	pos = vec2(-0.5f, rand() % 1025 + 0.);
+
 	dir.x = abs(dir.x)<FLT_EPSILON ? 0.0001 : dir.x;
 	dir.y = abs(dir.y)<FLT_EPSILON ? 0.0001 : dir.y;
 	auto inv_dir = 1.f / dir;
@@ -411,37 +416,22 @@ void test()
 	int begin = 0;
 	int end = 0;
 	auto hit0 = intersection(pos, inv_dir, begin, end);
-	vec2 pos0 = pos + (begin+1) * dir;
+	vec2 pos0 = pos + (begin) * dir;
 	vec2 pos1 = pos0 + (end-begin-1) * dir;
 
 
-//	if(!hit0)
-//	printf("%s, pos[%7.2f, %7.2f],begin=[%7.2f,%7.2f], end=[%7.2f,%7.2f], dir=[%5.2f,%5.2f], inv=[%6.2f,%6.2f]\n", hit0 ? "OK" : "NG", pos.x, pos.y, pos0.x, pos0.y, pos1.x, pos1.y, dir.x, dir.y, inv_dir.x, inv_dir.y);
 	if (hit0)
 	{
 		printf("%s\tbegin=[%7.2f,%7.2f], end=[%7.2f,%7.2f], dir=[%5.2f,%5.2f], inv=[%6.2f,%6.2f], pos=[%7.2f,%7.2f]\n", hit0 ? "OK" : "NG", pos0.x, pos0.y, pos1.x, pos1.y, dir.x, dir.y, inv_dir.x, inv_dir.y, pos.x, pos.y);
-		vec2 pos01 = pos + (begin + 2) * dir;
-		vec2 pos11 = pos01 + (end - begin - 3) * dir;
-		printf("\tbegin=[%7.2f,%7.2f], end=[%7.2f,%7.2f]\n", pos01.x, pos01.y, pos11.x, pos11.y);
 		while (!any(equal(uvec4(pos0.xyxy()), uvec4(0, 0, 1023, 1023)))) {}
 		while (!any(equal(uvec4(pos1.xyxy()), uvec4(0, 0, 1023, 1023)))) {}
-// 		while (!any(equal(uvec4(pos01.xyxy()), uvec4(0, 0, 1023, 1023)))) {}
-// 		while (!any(equal(uvec4(pos11.xyxy()), uvec4(0, 0, 1023, 1023)))) {}
 
 	}
 
 }
 int main()
 {
-	vec2 pos = vec2(1025.5f, 1019.f);
-	vec2 inv_dir = vec2(-9.51f, 1.f);
-	auto dir = 1.f / inv_dir;
-	int n, f;
-	bool ishit = intersection(pos, inv_dir, n, f);
-
-	auto d1 = glm::rotate(vec2(1.f, 0.f), glm::radians(0.f));
-	auto d2 = glm::rotate(vec2(1.f, 0.f), glm::radians(45.f));
-	//	for (;;){test();}
+//	for (;;){test();}
 
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();

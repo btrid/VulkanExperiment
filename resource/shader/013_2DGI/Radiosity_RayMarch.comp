@@ -90,7 +90,7 @@ void main()
 
 	Ray ray = makeRay(gl_GlobalInvocationID.x, gl_WorkGroupID.y);
 
-	if(ray.march<=0){ return; }
+	if(ray.march<=-1){ return; }
 
 //	while(all(notEqual(uvec4(ray.origin.xyxy), uvec4(0,0,reso.xy-1)))){}
 
@@ -142,7 +142,8 @@ void main()
 
 	}
 
-	u16vec4 end = u16vec4(fma(ray.dir.xyxy, vec4(float(begin).xx, float(march-1).xx), ray.origin.xyxy));
+	u16vec4 end = u16vec4(fma(ray.dir.xyxy, vec4(float(begin).xx, float(ray.march).xx), ray.origin.xyxy));
+	while(!any(equal(uvec4(end.zwzw), uvec4(0,0,reso.xy-1)))){}
 
 	uvec2 vi = end.xz + end.yw * reso.xx;
 	uvec2 array_index = uvec2(b_vertex_array_index[vi.x], b_vertex_array_index[vi.y]);

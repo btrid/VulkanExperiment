@@ -67,15 +67,15 @@ Ray makeRay(in uint x, in uint y)
 	if(x<1024)
 	{
 //		ray.origin.y = int(roundEven(abs(ray.inv_dir.x))) * x;
-//		ray.origin.y += int(ceil(abs(ray.inv_dir.x))) * x;
-		ray.origin.y += abs(ray.inv_dir.x) * x;
+		ray.origin.y += int((abs(ray.inv_dir.x))) * x;
+//		ray.origin.y += abs(ray.inv_dir.x) * x;
 //		ray.origin.y += int(abs(ray.inv_dir.x)) * x;
 	}
 	else
 	{
 //		ray.origin.x = int(roundEven(abs(ray.inv_dir.y))) * (x-1023);
-//		ray.origin.x += int(ceil(abs(ray.inv_dir.y))) * (x-1023);
-		ray.origin.x += abs(ray.inv_dir.y) * (x-1023);
+		ray.origin.x += int((abs(ray.inv_dir.y))) * (x-1023);
+//		ray.origin.x += abs(ray.inv_dir.y) * (x-1023);
 //		ray.origin.x += int(abs(ray.inv_dir.y)) * (x-1023);
 	}
 
@@ -88,6 +88,7 @@ Ray makeRay(in uint x, in uint y)
 
 void main()
 {
+	if(gl_WorkGroupID.y >= (gl_NumWorkGroups.y/2)){ return; }
 	const ivec4 reso = u_gi2d_info.m_resolution;
 	uint angle_index = gl_WorkGroupID.y;
 
@@ -104,6 +105,7 @@ void main()
 
 
 	}
+	return;
 
 	int begin = 0;
 	int march = 0;
@@ -163,10 +165,9 @@ void main()
 		}
 
 	}
-
-	return;
+/*
 	u16vec4 end = u16vec4(fma(ray.dir.xyxy, vec4(float(begin).xx, float(max(march-1, begin)).xx), ray.origin.xyxy));
-	while(!any(equal(uvec4(end.xyxy), uvec4(0,0,reso.xy-1)))){}
+//	while(!any(equal(uvec4(end.xyxy), uvec4(0,0,reso.xy-1)))){}
 	while(!any(equal(uvec4(end.zwzw), uvec4(0,0,reso.xy-1)))){}
 
 //	if(ray.area==1){ end.xz = u16vec2(reso.xx)-end.xz;}
@@ -178,6 +179,6 @@ void main()
 		b_vertex_array[array_index.x].vertex[angle_index] = u16vec3(end.zw, array_index.y);
 	if(array_index.y != 0xffff)
 		b_vertex_array[array_index.y].vertex[angle_index+Dir_Num] = u16vec3(end.xy, array_index.x);
-
+*/
 
 }
