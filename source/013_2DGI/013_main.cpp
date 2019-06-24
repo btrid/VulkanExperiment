@@ -365,16 +365,16 @@ int rigidbody()
 	return 0;
 }
 
-bool intersection(vec2 pos, vec2 inv_dir, int& n, int& f)
+bool intersection(vec2 pos, vec2 inv_dir, float& n, float& f)
 {
-	vec4 aabb = vec4(0.f, 0.f, 1024.f, 1024.f);
+	vec4 aabb = vec4(0.f, 0.f, 1023.f, 1023.f)+0.5f;
 	vec4 t = ((aabb - pos.xyxy)*inv_dir.xyxy);
 
 	vec2 tmin = glm::min(t.xy(), t.zw());
 	vec2 tmax = glm::max(t.xy(), t.zw());
 
-	n = int(ceil(glm::max(tmin.x, tmin.y)));
-	f = int(ceil(glm::min(tmax.x, tmax.y)));
+	n = glm::max(tmin.x, tmin.y);
+	f = glm::min(tmax.x, tmax.y);
 
 	return glm::min(tmax.x, tmax.y) > glm::max(glm::max(tmin.x, tmin.y), 0.f);
 }
@@ -402,9 +402,9 @@ void test()
 		dir = glm::rotate(vec2(0.f, 1.f), -glm::radians((float)(std::rand() % 180)));
 		break;
 	}
-	pos = vec2(0.5f, 0.5f);
-	float radian = glm::radians(((std::rand() % 9000))*0.01f);
-	dir = glm::rotate(vec2(1.f, 0.f), radian);
+// 	pos = vec2(0.5f, 0.5f);
+// 	float radian = glm::radians(((std::rand() % 9000))*0.01f);
+// 	dir = glm::rotate(vec2(1.f, 0.f), radian);
 //	pos = vec2(-0.5f, rand() % 1025 + 0.);
 
 	dir.x = abs(dir.x)<FLT_EPSILON ? 0.0001 : dir.x;
@@ -413,11 +413,11 @@ void test()
 	dir = dir * glm::min(abs(inv_dir.x), abs(inv_dir.y));
 	inv_dir = 1.f / dir;
 
-	int begin = 0;
-	int end = 0;
+	float begin = 0;
+	float end = 0;
 	auto hit0 = intersection(pos, inv_dir, begin, end);
 	vec2 pos0 = pos + (begin) * dir;
-	vec2 pos1 = pos0 + (end-begin-1) * dir;
+	vec2 pos1 = pos0 + (end-begin) * dir;
 
 
 	if (hit0)
