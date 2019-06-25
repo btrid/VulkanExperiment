@@ -11,7 +11,7 @@ struct GI2DRadiosity
 {
 	enum {
 		Frame = 1,
-		Dir_Num = 31,
+		Dir_Num = 62,
 		Vertex_Num = Dir_Num*2,
 		Bounce_Num = 1,
 	};
@@ -54,12 +54,12 @@ struct GI2DRadiosity
 
 	struct RadiosityVertex
 	{
-		u16vec4 vertex[Vertex_Num];
+		u16vec2 vertex_pos[Vertex_Num];
+		uint vertex_id[Vertex_Num];
 		u16vec2 pos;
 		u16vec2 _p;
 		u16vec4 radiance[2];
 		u16vec4 albedo;
-
 	};
 
 	struct VertexCmd

@@ -100,7 +100,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 		};
 		std::vector<Fragment> rect;
 		for (int i = 0; i < 600; i++) {
-//			rect.emplace_back(Fragment{ ivec4{ std::rand() % gi2d_context->RenderWidth , std::rand() % gi2d_context->RenderHeight, std::rand() % 12 + 16, std::rand() % 12 + 16 }, vec4{ 0.8f,0.2f,0.2f,0.f } });
+			rect.emplace_back(Fragment{ ivec4{ std::rand() % gi2d_context->RenderWidth , std::rand() % gi2d_context->RenderHeight, std::rand() % 12 + 16, std::rand() % 12 + 16 }, vec4{ 0.8f,0.2f,0.2f,0.f } });
 		}	
 //		rect.emplace_back(Fragment{ ivec4{ 70, 900, 900, 10, }, vec4{ 0.8f,0.2f,0.2f,0.f } });
 //		rect.emplace_back(Fragment{ ivec4{ 70, 900, 828, 42, }, vec4{ 0.8f,0.2f,0.2f,0.f } });
@@ -114,8 +114,8 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 
 				for (auto& r : rect)
 				{
-//					if (x >= r.rect.x && y >= r.rect.y && x < r.rect.x + r.rect.z && y < r.rect.y + r.rect.w)
-					if (x == r.rect.x || y == r.rect.y || x == r.rect.x + r.rect.z || y == r.rect.y + r.rect.w)
+					if (x >= r.rect.x && y >= r.rect.y && x < r.rect.x + r.rect.z && y < r.rect.y + r.rect.w)
+//					if (x == r.rect.x || y == r.rect.y || x == r.rect.x + r.rect.z || y == r.rect.y + r.rect.w)
 					{
 						m = g_wall;
 						break;
@@ -410,7 +410,7 @@ void GI2DDebug::executeMakeFragment(vk::CommandBuffer cmd)
 		for (int i = 0; i < std::size(g_data); i++)
 		{
 			cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayout_PointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, g_data[i]);
-//	 		cmd.dispatch(1, 1, 1);
+	 		cmd.dispatch(1, 1, 1);
 		}
 	}
 }

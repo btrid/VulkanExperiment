@@ -184,12 +184,20 @@ struct DrawCommand
 	uvec4 bounce_cmd;
 
 };
-#define Dir_Num (31)
+#define Dir_Num (62)
 #define Vertex_Num (Dir_Num*2)
 #define Bounce_Num (1)
+
+struct VertexInfo
+{
+	u16vec2 pos;
+	uint id;
+};
 struct RadiosityVertex
 {
-	u16vec3 vertex[Vertex_Num];
+//	u16vec2 vertex_pos[Vertex_Num];
+//	uint vertex_id[Vertex_Num];
+	VertexInfo vertex[Vertex_Num];
 	u16vec2 pos;
 	u16vec2 _p;
 	f16vec3 radiance[2];

@@ -27,7 +27,7 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 		uint32_t size = m_gi2d_context->RenderWidth * m_gi2d_context->RenderHeight;
 		b_vertex_array_counter = m_context->m_storage_memory.allocateMemory<VertexCmd>({ 1,{} });
 		b_vertex_array_index = m_context->m_storage_memory.allocateMemory<uint>({ size,{} });
-		b_vertex_array = m_context->m_storage_memory.allocateMemory<RadiosityVertex>({ 100000,{} });
+		b_vertex_array = m_context->m_storage_memory.allocateMemory<RadiosityVertex>({ 220000,{} });
 		b_edge = m_context->m_storage_memory.allocateMemory<uint64_t>({ size / 64,{} });
 	}
 
@@ -360,7 +360,7 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 		auto num = app::calcDipatchGroups(uvec3(2048, Dir_Num, 1), uvec3(128, 1, 1));
 		cmd.dispatch(num.x, num.y, num.z);
 	}
-	
+
 	// bounce
 	{
 		vk::BufferMemoryBarrier to_read[] = {

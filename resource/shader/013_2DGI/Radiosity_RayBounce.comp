@@ -19,19 +19,22 @@ void main()
 	uint pos_index = pos.x+pos.y*u_gi2d_info.m_resolution.x;
 
 	f16vec3 irradiance = f16vec3(0.);
-	u16vec2 prev = pos;
-	for(int i = 0; i < Vertex_Num; i++)
+	u16vec2 prev = u16vec2(-1);
+	for(int i = 0; i < Dir_Num; i++)
 	{
-		u16vec3 v = b_vertex_array[gl_GlobalInvocationID.x].vertex[i].xyz;
-		if(v.z == 0xffff) { continue; }
+		VertexInfo v = b_vertex_array[gl_GlobalInvocationID.x].vertex[i];
+//		if(v.z == 0xffff) { continue; }
 //		if(all(equal(v.xy, pos))){ continue;}
 //		if(all(equal(v.xy, prev))){ continue;}
-		uint vi = uint(v.z);
+//		uint vi = b_vertex_array[gl_GlobalInvocationID.x].vertex_id[i];
+//		uint vi = b_vertex_array_index[v.x+v.y*u_gi2d_info.m_resolution.x];
 
-		f16vec3 power = b_vertex_array[vi].radiance[constant.bounce];
-		f16vec3 albedo = b_vertex_array[vi].albedo;
+		f16vec3 power = b_vertex_array[v.id].radiance[constant.bounce];
+		f16vec3 albedo = b_vertex_array[v.id].albedo;
 		f16vec3 irra = power * albedo * f16vec3(0.1); 
 		irradiance += dot(irra, irra) >= 0.01 ? irra : f16vec3(0.);
+
+//		prev = v.xy;
 	}
 
 	b_vertex_array[gl_GlobalInvocationID.x].radiance[(1-constant.bounce)] += irradiance;

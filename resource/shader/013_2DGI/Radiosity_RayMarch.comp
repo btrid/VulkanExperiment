@@ -92,8 +92,6 @@ void main()
 
 	if(ray.march<=-1){ return; }
 
-//	while(all(notEqual(uvec4(ray.origin.xyxy), uvec4(0,0,reso.xy-1)))){}
-
 	vec2 cell_origin = vec2(greaterThanEqual(ray.dir, vec2(0.))) * vec2(8.);
 
 	uint begin = 0;
@@ -123,16 +121,31 @@ void main()
 			if(attr)
 			{
 				u16vec4 end = u16vec4(fma(ray.dir.xyxy, vec4(float(begin).xx, float(march).xx), ray.origin.xyxy));
-				while(any(lessThan(ivec4(end), ivec4(0)))){}
-				while(any(greaterThanEqual(uvec4(end), uvec4(reso.xyxy)))){}
+//				while(any(lessThan(ivec4(end), ivec4(0)))){}
+//				while(any(greaterThanEqual(uvec4(end), uvec4(reso.xyxy)))){}
 
 				uvec2 vi = end.xz + end.yw * reso.xx;
 				uvec2 array_index = uvec2(b_vertex_array_index[vi.x], b_vertex_array_index[vi.y]);
 
-				if(array_index.x != 0xffff)
-					b_vertex_array[array_index.x].vertex[angle_index] = u16vec3(end.zw, array_index.y);
-				if(array_index.y != 0xffff)
-					b_vertex_array[array_index.y].vertex[angle_index+Dir_Num] = u16vec3(end.xy, array_index.x);
+				if(array_index.x != -1)
+				{
+					VertexInfo v;
+					v.pos = end.zw;
+					v.id = array_index.y;
+					b_vertex_array[array_index.x].vertex[angle_index] = v;
+//					b_vertex_array[array_index.x].vertex_pos[angle_index] = end.zw;
+//					b_vertex_array[array_index.x].vertex_id[angle_index] = array_index.y;
+
+				}
+				if(array_index.y != -1)
+				{
+					VertexInfo v;
+					v.pos = end.xy;
+					v.id = array_index.x;
+					b_vertex_array[array_index.y].vertex[angle_index+Dir_Num] = v;
+//					b_vertex_array[array_index.y].vertex_pos[angle_index+Dir_Num] = end.xy;
+//					b_vertex_array[array_index.y].vertex_id[angle_index+Dir_Num] = array_index.x;
+				}
 
 				begin = march;
 			}
@@ -147,10 +160,25 @@ void main()
 
 	uvec2 vi = end.xz + end.yw * reso.xx;
 	uvec2 array_index = uvec2(b_vertex_array_index[vi.x], b_vertex_array_index[vi.y]);
-	if(array_index.x != 0xffff)
-		b_vertex_array[array_index.x].vertex[angle_index] = u16vec3(end.zw, array_index.y);
-	if(array_index.y != 0xffff)
-		b_vertex_array[array_index.y].vertex[angle_index+Dir_Num] = u16vec3(end.xy, array_index.x);
+	if(array_index.x != -1)
+	{
+		VertexInfo v;
+		v.pos = end.zw;
+		v.id = array_index.y;
+		b_vertex_array[array_index.x].vertex[angle_index] = v;
+//		b_vertex_array[array_index.x].vertex_pos[angle_index] = end.zw;
+//		b_vertex_array[array_index.x].vertex_id[angle_index] = array_index.y;
+
+	}
+	if(array_index.y != -1)
+	{
+		VertexInfo v;
+		v.pos = end.xy;
+		v.id = array_index.x;
+		b_vertex_array[array_index.y].vertex[angle_index+Dir_Num] = v;
+////		b_vertex_array[array_index.y].vertex_pos[angle_index+Dir_Num] = end.xy;
+//		b_vertex_array[array_index.y].vertex_id[angle_index+Dir_Num] = array_index.x;
+	}
 
 
 }
