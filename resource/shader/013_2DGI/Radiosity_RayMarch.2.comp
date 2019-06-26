@@ -41,7 +41,7 @@ vec2 rotateEx(in float angle)
 
 void calcDirEx(in float angle, out vec2 dir, out vec2 inv_dir)
 {
-	dir = rotateEx(angle);
+	dir = rotateEx(angle);a
 	dir.x = abs(dir.x)<GI2D_FLT_EPSILON ? ((dir.x>=0.)?1:-1)*0.0001 : dir.x;
 	dir.y = abs(dir.y)<GI2D_FLT_EPSILON ? ((dir.y>=0.)?1:-1)*0.0001 : dir.y;
 	inv_dir = 1./dir;

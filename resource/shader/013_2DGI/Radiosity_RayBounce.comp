@@ -29,14 +29,16 @@ void main()
 //		uint vi = b_vertex_array[gl_GlobalInvocationID.x].vertex_id[i];
 //		uint vi = b_vertex_array_index[v.x+v.y*u_gi2d_info.m_resolution.x];
 
-		f16vec3 power = b_vertex_array[v.id].radiance[constant.bounce];
+		f16vec3 power = b_vertex_array[v.id].radiance[constant.bounce%2];
 		f16vec3 albedo = b_vertex_array[v.id].albedo;
-		f16vec3 irra = power * albedo * f16vec3(0.1); 
-		irradiance += dot(irra, irra) >= 0.01 ? irra : f16vec3(0.);
+		f16vec3 irra = power * albedo * f16vec3(0.5); 
+		vec3 debug = vec3(0.);
+		debug[constant.bounce] = 1.;
+		irradiance += dot(power, power) >= 0.01 ? f16vec3(debug) : f16vec3(0.);
 
 //		prev = v.xy;
 	}
 
-	b_vertex_array[gl_GlobalInvocationID.x].radiance[(1-constant.bounce)] += irradiance;
+	b_vertex_array[gl_GlobalInvocationID.x].radiance[(1-(constant.bounce%2))] += irradiance;
 
 }

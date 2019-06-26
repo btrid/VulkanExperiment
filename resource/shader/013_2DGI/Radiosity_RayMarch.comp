@@ -12,13 +12,14 @@
 
 layout (local_size_x=128) in;
 
+
 bool intersection(in vec4 aabb, in vec2 pos, in vec2 inv_dir, out int n, out int f)
 {
 	vec4 t = ((aabb - pos.xyxy)*inv_dir.xyxy);
 	vec2 tmin = min(t.xy, t.zw);
  	vec2 tmax = max(t.xy, t.zw);
  
-	n = int(max(tmin.x, tmin.y));
+	n = int(ceil(max(tmin.x, tmin.y)));
 	f = int(min(tmax.x, tmax.y));
 
  	return min(tmax.x, tmax.y) > max(max(tmin.x, tmin.y), 0.0);
@@ -73,8 +74,8 @@ Ray makeRay(in uint x, in uint y)
 	vec4 aabb = vec4(vec2(0., 0.), vec2(reso.xy));
 	if(intersection(aabb, ray.origin, ray.inv_dir, begin, end))
 	{
-		ray.origin = fma(ray.dir, vec2(begin+1), ray.origin);
-		ray.march = end - begin -1;
+		ray.origin = fma(ray.dir, vec2(begin), ray.origin);
+		ray.march = end - begin;
 
 		while(!any(equal(uvec4(ray.origin.xyxy), uvec4(0,0,reso.xy-1)))){}
 		while(!any(equal(uvec4(fma(ray.dir.xyxy, float(ray.march).xxxx, ray.origin.xyxy)), uvec4(0,0,reso.xy-1)))){}
@@ -121,8 +122,8 @@ void main()
 			if(attr)
 			{
 				u16vec4 end = u16vec4(fma(ray.dir.xyxy, vec4(float(begin).xx, float(march).xx), ray.origin.xyxy));
-//				while(any(lessThan(ivec4(end), ivec4(0)))){}
-//				while(any(greaterThanEqual(uvec4(end), uvec4(reso.xyxy)))){}
+				while(any(lessThan(ivec4(end), ivec4(0)))){}
+				while(any(greaterThanEqual(uvec4(end), uvec4(reso.xyxy)))){}
 
 				uvec2 vi = end.xz + end.yw * reso.xx;
 				uvec2 array_index = uvec2(b_vertex_array_index[vi.x], b_vertex_array_index[vi.y]);
@@ -155,6 +156,8 @@ void main()
 
 	}
 
+	if(begin == ray.march && ray.march != 0)
+		return;
 	u16vec4 end = u16vec4(fma(ray.dir.xyxy, vec4(float(begin).xx, float(ray.march).xx), ray.origin.xyxy));
 	while(!any(equal(uvec4(end.zwzw), uvec4(0,0,reso.xy-1)))){}
 
@@ -176,7 +179,7 @@ void main()
 		v.pos = end.xy;
 		v.id = array_index.x;
 		b_vertex_array[array_index.y].vertex[angle_index+Dir_Num] = v;
-////		b_vertex_array[array_index.y].vertex_pos[angle_index+Dir_Num] = end.xy;
+//		b_vertex_array[array_index.y].vertex_pos[angle_index+Dir_Num] = end.xy;
 //		b_vertex_array[array_index.y].vertex_id[angle_index+Dir_Num] = array_index.x;
 	}
 

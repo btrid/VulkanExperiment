@@ -5,7 +5,7 @@
 #define USE_GI2D_Radiosity 1
 #include "GI2D.glsl"
 
-#define invocation_num 4
+#define invocation_num 1
 layout(points, invocations = invocation_num) in;
 layout(triangle_strip, max_vertices = 2*Vertex_Num/invocation_num+2) out;
 
