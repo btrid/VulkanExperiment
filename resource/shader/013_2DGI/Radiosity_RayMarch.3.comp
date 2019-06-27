@@ -1,0 +1,179 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_GI2D 0
+#define USE_GI2D_Radiosity 1
+#include "GI2D.glsl"
+
+#define HALF_PI radians(90.)
+#define TWO_PI radians(360.)
+#define PI radians(180.)
+#define QUARTER_PI radians(45.)
+
+layout (local_size_x=128) in;
+
+
+bool intersection(in ivec4 aabb, in ivec2 pos, in ivec2 inv_dir, out int n, out int f)
+{
+	ivec4 t = ((aabb - pos.xyxy)*inv_dir.yxyx);
+	ivec2 tmin = min(t.xy, t.zw);
+ 	ivec2 tmax = max(t.xy, t.zw);
+ 
+	n = max(tmin.x, tmin.y);
+	f = min(tmax.x, tmax.y);
+
+ 	return min(tmax.x, tmax.y) > max(max(tmin.x, tmin.y), 0);
+}
+
+struct Ray
+{
+	ivec2 origin;
+	ivec2 dir;
+	ivec2 inv_dir;
+	int begin, end;
+	int area;
+};
+
+vec2 rotateEx(in float angle)
+{
+	float c = cos(angle);
+	float s = sin(angle);
+	return vec2(c, s);
+}
+
+void calcDirEx(in float angle, out ivec2 dir, out ivec2 inv_dir)
+{
+	vec2 f_dir = rotateEx(angle);
+	f_dir.x = abs(f_dir.x)<GI2D_FLT_EPSILON ? 0.0001 : f_dir.x;
+	f_dir.y = abs(f_dir.y)<GI2D_FLT_EPSILON ? 0.0001 : f_dir.y;
+	vec2 f_inv_dir = 1./f_dir;
+	f_dir = f_dir * min(abs(f_inv_dir.x), abs(f_inv_dir.y));
+	f_inv_dir = 1./f_dir;
+
+	inv_dir = ivec2(round(f_inv_dir * 10000)) / 10000;
+	dir = ivec2(round(f_dir * 10000)) / 10000;
+
+}
+Ray makeRay(in uint x, in uint y)
+{
+	const ivec4 reso = u_gi2d_info.m_resolution;
+	Ray ray;
+
+	float a = PI / Dir_Num;
+	float b = 0.;
+	float angle = fma(a, float(y), b);
+	ray.area = int(angle / HALF_PI);
+
+	calcDirEx(angle, ray.dir, ray.inv_dir);
+
+	ray.dir.x=abs(ray.dir.x);
+	ray.inv_dir.x=abs(ray.inv_dir.x);
+
+	ray.origin.x = 0;
+	ray.origin.y = 0;
+	if(x<1024)
+	{
+		ray.origin.y += ray.inv_dir.y * int(x);
+	}
+	else
+	{
+		ray.origin.x += ray.inv_dir.x * int(x-1023);
+	}
+
+	ivec4 aabb = ivec4(ivec2(0, 0), reso.xy);
+	if(intersection(aabb, ray.origin, ray.inv_dir, ray.begin, ray.end))
+	{
+//		ray.origin = fma(ray.dir, vec2(begin), ray.origin);
+//		ray.march = end - begin;
+//
+//		while(!any(equal(uvec4(ray.origin.xyxy), uvec4(0,0,reso.xy-1)))){}
+//		while(!any(equal(uvec4(fma(ray.dir.xyxy, float(ray.march).xxxx, ray.origin.xyxy)), uvec4(0,0,reso.xy-1)))){}
+	}
+	else
+	{
+		ray.area = -1;
+	}
+	return ray;
+}
+
+void main()
+{
+	const ivec4 reso = u_gi2d_info.m_resolution;
+	uint angle_index = gl_WorkGroupID.y;
+
+	Ray ray = makeRay(gl_GlobalInvocationID.x, gl_WorkGroupID.y);
+
+	if(ray.area<=-1){ return; }
+
+	ivec2 cell_origin = ivec2(greaterThanEqual(ray.dir, ivec2(0.))) * ivec2(8.);
+
+	int begin = 0;
+
+	for(int march = ray.begin; march < ray.end; )
+	{
+		ivec2 mi = march / ray.inv_dir.yx + ray.origin;
+		ivec2 cell = mi>>3;
+		ivec2 pos_sub = ray.origin - (cell << 3);
+
+		ivec2 tp = abs(cell_origin - pos_sub) * abs(ray.inv_dir.yx) + int(1).xx;
+		int skip = int(min(tp.x, tp.y));
+
+		uint64_t map = b_edge[cell.x + cell.y * reso.z];
+		if(map == 0ul)
+		{
+			march+=skip;
+			continue;
+		}
+
+		for(uint i = 0; i < skip; i++)
+		{
+			mi = march / ray.inv_dir.yx + ray.origin;
+//			ivec2 cell = map_index>>3;
+//			vec2 pos_sub = vec2(pos - vec2(cell << 3));
+
+			ivec2 cell_sub = mi%8;
+			bool attr = (map & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0ul;
+			if(attr)
+			{
+//				u16vec4 end = u16vec4(fma(ray.dir.xyxy, vec4(float(begin).xx, float(march).xx), ray.origin.xyxy));
+//				while(any(lessThan(ivec4(end), ivec4(0)))){}
+//				while(any(greaterThanEqual(uvec4(end), uvec4(reso.xyxy)))){}
+
+				uint vi = mi.x + mi.y * reso.x;
+				uint array_index = b_vertex_array_index[vi];
+				if(array_index != -1)
+				{
+					b_vertex_array[array_index.x].vertex[angle_index] = VertexInfo(u16vec2(mi.xy), array_index);
+				}
+
+				mi = begin / ray.inv_dir.yx + ray.origin;
+				vi = mi.x + mi.y * reso.x;
+				array_index = b_vertex_array_index[vi];
+				if(array_index != -1)
+				{
+					b_vertex_array[array_index].vertex[angle_index+Dir_Num] = VertexInfo(u16vec2(mi.xy), array_index);
+				}
+				begin = march;
+			}
+			march++;
+		}
+
+	}
+
+//	u16vec4 end = u16vec4(fma(ray.dir.xyxy, vec4(float(begin).xx, float(ray.march).xx), ray.origin.xyxy));
+//	while(!any(equal(uvec4(end.zwzw), uvec4(0,0,reso.xy-1)))){}
+
+	ivec2 mi = (ray.end-1) / ray.inv_dir.yx + ray.origin;
+	uint vi = mi.x + mi.y * reso.x;
+	uint array_index = b_vertex_array_index[vi];
+/*	if(array_index.x != -1)
+	{
+		b_vertex_array[array_index.x].vertex[angle_index] = VertexInfo(mi.zw, array_index.y);
+	}
+*/	if(array_index != -1)
+	{
+		b_vertex_array[array_index].vertex[angle_index+Dir_Num] = VertexInfo(u16vec2(mi.xy), array_index);
+	}
+
+
+}

@@ -429,10 +429,117 @@ void test()
 	}
 
 }
+
+bool intersection(ivec2 pos, ivec2 inv_dir, int& n, int& f)
+{
+	ivec4 aabb = ivec4(0.f, 0.f, 128, 128);
+	ivec4 t = ((aabb - pos.xyxy)*inv_dir.yxyx());
+
+	ivec2 tmin = glm::min(t.xy(), t.zw());
+	ivec2 tmax = glm::max(t.xy(), t.zw());
+
+	n = glm::max(tmin.x, tmin.y);
+	f = glm::min(tmax.x, tmax.y);
+
+	return glm::min(tmax.x, tmax.y) > glm::max(glm::max(tmin.x, tmin.y), 0);
+}
+
+
+vec2 rotateEx(float angle)
+{
+	float c = cos(angle);
+	float s = sin(angle);
+	return vec2(c, s);
+}
+
+void calcDirEx(float angle, vec2& dir, vec2& inv_dir)
+{
+	dir = rotateEx(angle);
+	dir.x = abs(dir.x) < FLT_EPSILON ? (dir.x >= 0. ? 0.0001 : -0.0001) : dir.x;
+	dir.y = abs(dir.y) < FLT_EPSILON ? (dir.y >= 0. ? 0.0001 : -0.0001) : dir.y;
+	inv_dir = 1.f / dir;
+	dir = dir * glm::min(abs(inv_dir.x), abs(inv_dir.y));
+	inv_dir = 1.f / dir;
+}
+#define HALF_PI glm::radians(90.)
+#define TWO_PI glm::radians(360.)
+#define PI glm::radians(180.)
+#define QUARTER_PI glm::radians(45.)
+
+void test2()
+{
+	ivec2 reso = ivec2(128);
+	std::array<int, 128*128> map;
+	map.fill(0);
+
+	int angle_num = 32;
+
+	int angle_index = 1;
+	for (int y = 0; y < angle_num; y++)
+	{
+		for (int x = 0; x < reso.x * 2; x++)
+		{
+			uint area = y / (angle_num);
+			float a = PI / (angle_num);
+			float angle = glm::fma(a, float(y), a*0.5f);
+
+			vec2 dir, inv_dir;
+			calcDirEx(angle, dir, inv_dir);
+
+			auto i_inv_dir = ivec2(round(inv_dir * 10000.f)) / 10000;
+			auto i_dir = ivec2(round(dir * 10000.f)) / 10000;
+
+			ivec2 origin = ivec2(0.f);
+			if (x < reso.x)
+			{
+				origin.y += int((abs(i_inv_dir.y))) * x;
+			}
+			else
+			{
+				origin.x += int((abs(i_inv_dir.x))) * (x - (reso.x-1));
+			}
+			dir.x = abs(dir.x);
+			inv_dir.x = abs(inv_dir.x);
+			i_dir.x = abs(i_dir.x);
+			i_inv_dir.x = abs(i_inv_dir.x);
+
+			int march = -1;
+			int begin, end;
+			ivec4 aabb = ivec4(vec2(0., 0.), vec2(reso));
+			if (!intersection(origin, i_inv_dir, begin, end))
+			{
+				continue;
+			}
+
+			for (int i = begin; i < end;)
+			{
+				ivec2 t1 = i / i_inv_dir.yx();
+				ivec2 mi = t1 + origin;
+				map[mi.x + mi.y*reso.x] += 1;
+				ivec2 next = ((t1 >> 3) + 1) << 3;
+				ivec2 tp = (next-mi) * i_inv_dir.yx();
+
+				ivec2 i0 = t1 / i_inv_dir.xy();
+				ivec2 i1 = next / i_inv_dir.xy();
+
+				int skip = glm::min(tp.x, tp.y);
+				i += skip;
+
+			}
+
+		}
+	}
+	for (auto& m : map)
+	{
+		assert(m == angle_num);
+	}
+
+	printf("hoge\n");
+}
 int main()
 {
 //	for (;;){test();}
-
+	test2();
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = glm::vec3(0.f, 0.f, 1.f);
