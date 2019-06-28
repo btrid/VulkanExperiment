@@ -430,11 +430,14 @@ void test()
 
 }
 
+#define map_reso 128
+#define dir_reso 128
 bool intersection(ivec2 pos, ivec2 dir, int& n, int& f)
 {
-	ivec4 aabb = ivec4(0, 0, 128, 128)*128;
-	pos *= 128;
+	ivec4 aabb = ivec4(0, 0, map_reso, map_reso)*dir_reso;
+	pos *= dir_reso;
 	ivec4 t = ((aabb - pos.xyxy)/dir.xyxy());
+	t += ivec4(notEqual((aabb - pos.xyxy) % dir.xyxy(), ivec4(0)));
 
 	ivec2 tmin = glm::min(t.xy(), t.zw());
 	ivec2 tmax = glm::max(t.xy(), t.zw());
@@ -469,8 +472,7 @@ void calcDirEx(float angle, vec2& dir, vec2& inv_dir)
 
 void test2()
 {
-	ivec2 reso = ivec2(128);
-	std::array<int, 128 * 128> map;
+	std::array<int, map_reso * map_reso> map;
 	map.fill(0);
 
 	int angle_num = 32;
@@ -484,70 +486,50 @@ void test2()
 		vec2 dir, inv_dir;
 		calcDirEx(angle, dir, inv_dir);
 
-		auto i_dir = abs(ivec2(round(dir * reso.x)));
-//		auto i_inv_dir = ivec2(round(inv_dir));
+		auto i_dir = abs(ivec2(round(dir * dir_reso)));
 		printf("dir[%3d]=[%4d,%4d]\n", y, i_dir.x, i_dir.y);
 
-		for (int x = 0; x < reso.x * 2; x++)
+		for (int x = 0; x < map_reso * 2; x++)
 		{
 
-			ivec2 origin = ivec2(0.f);
-			if (x < reso.x)
+			ivec2 origin = ivec2(0);
+			if (i_dir.x>= i_dir.y)
 			{
-//				origin.y += int((ceil(i_dir.y/(float)i_dir.x * x)));
-				origin.y += int((ceil(i_dir.y / (float)i_dir.x))) * x;
+				origin.y += (map_reso-1) - int((ceil(i_dir.y / (float)i_dir.x))) * x;
 			}
 			else
 			{
-				int offset = x - (reso.x - 1);
-//				origin.x += int((ceil(i_dir.x / (float)i_dir.y * offset)));
-				origin.x += int((ceil(i_dir.x / (float)i_dir.y))) * offset;
+ 				origin.x += (map_reso - 1) - int((ceil(i_dir.x / (float)i_dir.y))) * x;
 			}
 
-			int march = -1;
 			int begin, end;
-			ivec4 aabb = ivec4(ivec2(0, 0), ivec2(reso));
 			if (!intersection(origin, i_dir, begin, end))
 			{
-				continue;
+				break;;
 			}
 
 			for (int i = begin; i < end;)
 			{
-//				ivec2 t1 = i / i_inv_dir.yx();
-				ivec2 t1 = i * i_dir.xy();
-				t1 /= 128;
-				ivec2 mi = t1 + origin;
-				map[mi.x + mi.y*reso.x] += 1;
+				ivec2 t1 = i * i_dir.xy() + origin * dir_reso;
+				t1 /= dir_reso;
+				ivec2 mi = t1;
+				map[mi.x + mi.y*map_reso] += 1;
 				ivec2 next = ((t1 >> 3) + 1) << 3;
-//				ivec2 tp = (next - t1) * i_inv_dir.yx() - t1 % i_inv_dir.yx();
-//				ivec2 tp = (next - t1) * i_inv_dir.yx() - t1 % i_inv_dir.yx();
-
-//				int skip = glm::min(tp.x, tp.y);
-//				i += skip;
 				i++;
 
 			}
 
 		}
 
-		for (int _y = 0; _y < 128; _y++)
+		for (int _y = 0; _y < map_reso; _y++)
 		{
-			for (int x = 0; x < 128; x++)
+			for (int x = 0; x < map_reso; x++)
 			{
-				assert(map[x + _y * 128] == y+1);
+				assert(map[x + _y * map_reso] == y+1);
 			}
 		}
 
 	}
-	for (int y = 0; y < 128; y++)
-	{
-		for (int x = 0; x < 128; x++)
-		{
-			assert(map[x+y*128] == angle_num);
-		}
-	}
-
 	printf("hoge\n");
 }
 int main()
