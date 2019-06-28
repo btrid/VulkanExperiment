@@ -511,10 +511,11 @@ void test2()
 			for (int i = begin; i < end;)
 			{
 				ivec2 t1 = i * i_dir.xy() + origin * dir_reso;
-				t1 /= dir_reso;
-				ivec2 mi = t1;
+				ivec2 mi = t1 / dir_reso;
 				map[mi.x + mi.y*map_reso] += 1;
-				ivec2 next = ((t1 >> 3) + 1) << 3;
+				ivec2 next = ((mi >> 3) + 1) << 3;
+				ivec2 tp = next - mi;
+
 				i++;
 
 			}
@@ -535,7 +536,8 @@ void test2()
 int main()
 {
 //	for (;;){test();}
-	test2();
+//	test2();
+	
 	btr::setResourceAppPath("../../resource/");
 	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = glm::vec3(0.f, 0.f, 1.f);
