@@ -52,10 +52,14 @@ struct GI2DRadiosity
 		uint a;
 	};
 
+	struct VertexInfo
+	{
+		u16vec2 pos;
+		uint id;
+	};
 	struct RadiosityVertex
 	{
-		u16vec2 vertex_pos[Vertex_Num];
-		uint vertex_id[Vertex_Num];
+		VertexInfo vertex[Vertex_Num];
 		u16vec2 pos;
 		u16vec2 _p;
 		u16vec4 radiance[2];

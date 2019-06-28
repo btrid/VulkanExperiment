@@ -430,8 +430,9 @@ void test()
 
 }
 
-#define map_reso 128
-#define dir_reso 128
+#define map_reso 1024
+#define dir_reso_bit (7)
+#define dir_reso (128)
 bool intersection(ivec2 pos, ivec2 dir, int& n, int& f)
 {
 	ivec4 aabb = ivec4(0, 0, map_reso, map_reso)*dir_reso;
@@ -472,8 +473,7 @@ void calcDirEx(float angle, vec2& dir, vec2& inv_dir)
 
 void test2()
 {
-	std::array<int, map_reso * map_reso> map;
-	map.fill(0);
+	std::vector<int> map(map_reso * map_reso);
 
 	int angle_num = 32;
 
@@ -511,7 +511,7 @@ void test2()
 			for (int i = begin; i < end;)
 			{
 				ivec2 t1 = i * i_dir.xy() + origin * dir_reso;
-				ivec2 mi = t1 / dir_reso;
+				ivec2 mi = t1 >> dir_reso_bit;
 				map[mi.x + mi.y*map_reso] += 1;
 				ivec2 next = ((mi >> 3) + 1) << 3;
 				ivec2 tp = next - mi;

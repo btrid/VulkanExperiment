@@ -43,13 +43,10 @@ struct Ray
 void calcDirEx(in float angle, out ivec2 dir)
 {
 	vec2 f_dir = vec2(cos(angle), sin(angle));
-	f_dir.x = abs(f_dir.x)<GI2D_FLT_EPSILON ? 0.0001 : f_dir.x;
-	f_dir.y = abs(f_dir.y)<GI2D_FLT_EPSILON ? 0.0001 : f_dir.y;
+	f_dir.x = abs(f_dir.x)<GI2D_FLT_EPSILON ? (f_dir.x >= 0. ? 0.0001 : -0.0001) : f_dir.x;
+	f_dir.y = abs(f_dir.y)<GI2D_FLT_EPSILON ? (f_dir.y >= 0. ? 0.0001 : -0.0001) : f_dir.y;
 	vec2 f_inv_dir = 1./f_dir;
 	f_dir = f_dir * min(abs(f_inv_dir.x), abs(f_inv_dir.y));
-
-//	inv_dir = ivec2(round(f_inv_dir * 10000)) / 10000;
-//	dir = ivec2(round(f_dir * 10000)) / 10000;
 
 	dir = abs(ivec2(round(f_dir * dir_reso)));
 
@@ -60,24 +57,20 @@ Ray makeRay(in uint x, in uint y)
 	Ray ray;
 
 	float a = PI / Dir_Num;
-	float b = 0.;
-	float angle = fma(a, float(y), b);
+	float angle = fma(a, float(y), a*0.25);
 	ray.area = int(angle / HALF_PI);
 
 	calcDirEx(angle, ray.dir);
-
-//	ray.dir.x=abs(ray.dir.x);
-//	ray.inv_dir.x=abs(ray.inv_dir.x);
 
 	ray.origin.x = 0;
 	ray.origin.y = 0;
 	if (ray.dir.x>= ray.dir.y)
 	{
-		ray.origin.y += (reso.y-1) - int((ceil(ray.dir.y / float(ray.dir.x)))) * int(x);
+		ray.origin.y += (reso.y-1) - int(ceil(ray.dir.y / float(ray.dir.x))) * int(x);
 	}
 	else
 	{
-		ray.origin.x += (reso.x - 1) - int((ceil(ray.dir.x / float(ray.dir.y)))) * int(x);
+		ray.origin.x += (reso.x-1) - int(ceil(ray.dir.x / float(ray.dir.y))) * int(x);
 	}
 
 	ivec4 aabb = ivec4(ivec2(0, 0), reso.xy);
@@ -97,9 +90,9 @@ void main()
 
 	if(ray.area<=-1){ return; }
 
-	ivec2 cell_origin = ivec2(greaterThanEqual(ray.dir, ivec2(0.))) * ivec2(8.);
+//	ivec2 cell_origin = ivec2(greaterThanEqual(ray.dir, ivec2(0.))) * ivec2(8.);
 
-	int begin = 0;
+	int begin = ray.begin;
 
 	for(int march = ray.begin; march < ray.end; )
 	{
@@ -120,29 +113,45 @@ void main()
 //			continue;
 //		}
 
-		for(uint i = 0; true; i++)
+		for(;;)
 		{
 			ivec2 cell_sub = mi%8;
 			bool attr = (map & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0ul;
 			if(attr)
 			{
-				uint vi = mi.x + mi.y * reso.x;
-				uint array_index = b_vertex_array_index[vi];
-				if(array_index != -1)
+/*				ivec2 m2 = (begin * ray.dir.xy + ray.origin * dir_reso) >> dir_reso_bit;
+				if(ray.area==1) m2.x = (reso.x-1)-m2.x;
+				uint vi1 = mi.x + mi.y * reso.x;
+				uint vi2 = m2.x + m2.y * reso.x;
+				uvec2 array_index = uvec2(b_vertex_array_index[vi1], b_vertex_array_index[vi2]);
+				if(array_index.x != -1)
 				{
-					b_vertex_array[array_index.x].vertex[angle_index] = VertexInfo(u16vec2(mi.xy), array_index);
+					b_vertex_array[array_index.x].vertex[angle_index] = VertexInfo(u16vec2(m2.xy), array_index.y);
 				}
 
-				ivec2 m2 = (begin * ray.dir.xy + ray.origin * dir_reso) >> dir_reso_bit;
-				vi = m2.x + m2.y * reso.x;
-				array_index = b_vertex_array_index[vi];
-				if(array_index != -1)
+				if(array_index.y != -1)
 				{
-					b_vertex_array[array_index].vertex[angle_index+Dir_Num] = VertexInfo(u16vec2(m2.xy), array_index);
+					b_vertex_array[array_index.y].vertex[angle_index+Dir_Num] = VertexInfo(u16vec2(mi.xy), array_index.x);
+				}
+*/
+
+				ivec4 end = (ivec4(march.xx, begin.xx) * ray.dir.xyxy + ray.origin.xyxy * dir_reso) >> dir_reso_bit;
+				if(ray.area==1) end.xz = (reso.xx-1)-end.xz;
+
+				ivec2 vi = end.xz + end.yw * reso.xx;
+				uvec2 array_index = uvec2(b_vertex_array_index[vi.x], b_vertex_array_index[vi.y]);
+				if(array_index.x != -1)
+				{
+					b_vertex_array[array_index.x].vertex[angle_index] = VertexInfo(u16vec2(end.zw), array_index.y);
+				}
+				if(array_index.y != -1)
+				{
+					b_vertex_array[array_index.y].vertex[angle_index+Dir_Num] = VertexInfo(u16vec2(end.xy), array_index.x);
 				}
 				begin = march;
 			}
 			march++;
+
 			mi = (march * ray.dir.xy + ray.origin * dir_reso) >> dir_reso_bit;
 			if(ray.area==1) mi.x = (reso.x-1)-mi.x;
 			if(any(notEqual(cell, mi>>3)))
@@ -153,16 +162,18 @@ void main()
 
 	}
 
-	ivec4 end = (ivec4(begin.xx, ray.end.xx) * ray.dir.xyxy + ray.origin.xyxy * dir_reso) >> dir_reso_bit;
+	ivec4 end = (ivec4((ray.end-1).xx, begin.xx) * ray.dir.xyxy + ray.origin.xyxy * dir_reso) >> dir_reso_bit;
+	if(ray.area==1) end.xz = (reso.xx-1)-end.xz;
+
 	ivec2 vi = end.xz + end.yw * reso.xx;
 	uvec2 array_index = uvec2(b_vertex_array_index[vi.x], b_vertex_array_index[vi.y]);
-	if(array_index.x != -1)
-	{
-		b_vertex_array[array_index.x].vertex[angle_index] = VertexInfo(u16vec2(end.zw), array_index.y);
-	}
+//	if(array_index.x != -1)
+//	{
+//		b_vertex_array[array_index.x].vertex[angle_index] = VertexInfo(u16vec2(end.zw), array_index.y);
+//	}
 	if(array_index.y != -1)
 	{
-		b_vertex_array[array_index.y].vertex[angle_index] = VertexInfo(u16vec2(end.xy), array_index.x);
+		b_vertex_array[array_index.y].vertex[angle_index+Dir_Num] = VertexInfo(u16vec2(end.xy), array_index.x);
 	}
 
 
