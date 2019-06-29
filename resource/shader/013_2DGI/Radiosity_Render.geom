@@ -5,7 +5,7 @@
 #define USE_GI2D_Radiosity 1
 #include "GI2D.glsl"
 
-#define invocation_num 1
+#define invocation_num 4
 layout(points, invocations = invocation_num) in;
 layout(triangle_strip, max_vertices = 2*Vertex_Num/invocation_num+2) out;
 
@@ -28,12 +28,13 @@ layout(location=0)out gl_PerVertex
 
 layout(location=1)out OutData
 {
+	flat u16vec2 center;
 	vec3 color;
 }gs_out;
 
 void main()
 {
-	if(dot(gs_in[0].color, gs_in[0].color) == 0.){ return ;}
+	if(dot(gs_in[0].color, gs_in[0].color) <= 0.01){ return ;}
 	uint index = gs_in[0].vertex_index;
 	vec3 color = gs_in[0].color;
 
@@ -50,11 +51,13 @@ void main()
 		u16vec2 target = b_vertex_array[index].vertex[angle_index].pos;
 		vec2 v = vec2(target) + vec2(0.5);
 		gl_Position = vec4((v / vec2(u_gi2d_info.m_resolution.xy)) * 2. - 1., 0., 1.);
-		gs_out.color = color / (dot(center, v)+1.);
+		gs_out.color = color;
+		gs_out.center = pos;
 		EmitVertex();
 
 		gl_Position = vec4(center, 0., 1.);
 		gs_out.color = color;
+		gs_out.center = pos;
 		EmitVertex();
 	}
 
@@ -62,11 +65,13 @@ void main()
 	u16vec2 target = b_vertex_array[index].vertex[angle_index].pos;
 	vec2 v = vec2(target) + vec2(0.5);
 	gl_Position = vec4((v / vec2(u_gi2d_info.m_resolution.xy)) * 2. - 1., 0., 1.);
-	gs_out.color = color / (dot(center, v)+1.);
+	gs_out.color = color;
+	gs_out.center = pos;
 	EmitVertex();
 
 	gl_Position = vec4(center, 0., 1.);
 	gs_out.color = color;
+	gs_out.center = pos;
 	EmitVertex();
 
 	EndPrimitive();

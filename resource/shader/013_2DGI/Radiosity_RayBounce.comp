@@ -32,9 +32,10 @@ void main()
 		f16vec3 power = b_vertex_array[v.id].radiance[constant.bounce%2];
 		f16vec3 albedo = b_vertex_array[v.id].albedo;
 		f16vec3 irra = power * albedo * f16vec3(0.5); 
-		vec3 debug = vec3(0.);
-		debug[constant.bounce] = 1.;
-		irradiance += dot(power, power) >= 0.01 ? f16vec3(debug) : f16vec3(0.);
+		irradiance += dot(power, power) >= 0.01 ? irra : f16vec3(0.);
+//		vec3 debug = vec3(0.);
+//		debug[constant.bounce] = 1.;
+//		irradiance += dot(power, power) >= 0.01 ? f16vec3(debug) : f16vec3(0.);
 
 //		prev = v.xy;
 	}

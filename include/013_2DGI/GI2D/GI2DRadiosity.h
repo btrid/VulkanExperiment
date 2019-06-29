@@ -11,7 +11,7 @@ struct GI2DRadiosity
 {
 	enum {
 		Frame = 1,
-		Dir_Num = 7,
+		Dir_Num = 31,
 		Vertex_Num = Dir_Num*2,
 		Bounce_Num = 1,
 	};
