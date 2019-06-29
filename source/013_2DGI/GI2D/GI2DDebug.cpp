@@ -410,7 +410,7 @@ void GI2DDebug::executeMakeFragment(vk::CommandBuffer cmd)
 		for (int i = 0; i < std::size(g_data); i++)
 		{
 			cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayout_PointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, g_data[i]);
-//	 		cmd.dispatch(1, 1, 1);
+	 		cmd.dispatch(1, 1, 1);
 		}
 	}
 }

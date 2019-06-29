@@ -90,9 +90,9 @@ void main()
 
 	if(ray.area<=-1){ return; }
 
-//	ivec2 cell_origin = ivec2(greaterThanEqual(ray.dir, ivec2(0.))) * ivec2(8.);
-
-	int begin = ray.begin;
+	ivec2 _mi = (ray.begin * ray.dir.xy + ray.origin * dir_reso) >> dir_reso_bit;
+	if(ray.area==1) _mi.x = (reso.x-1)-_mi.x;
+	VertexInfo begin_vertex = VertexInfo(u16vec2(_mi),b_vertex_array_index[_mi.x+_mi.y*reso.x]);
 
 	for(int march = ray.begin; march < ray.end; )
 	{
@@ -119,36 +119,16 @@ void main()
 			bool attr = (map & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0ul;
 			if(attr)
 			{
-/*				ivec2 m2 = (begin * ray.dir.xy + ray.origin * dir_reso) >> dir_reso_bit;
-				if(ray.area==1) m2.x = (reso.x-1)-m2.x;
-				uint vi1 = mi.x + mi.y * reso.x;
-				uint vi2 = m2.x + m2.y * reso.x;
-				uvec2 array_index = uvec2(b_vertex_array_index[vi1], b_vertex_array_index[vi2]);
-				if(array_index.x != -1)
+				VertexInfo end_vertex = VertexInfo(u16vec2(mi),b_vertex_array_index[mi.x+mi.y*reso.x]);
+				if(end_vertex.id != -1)
 				{
-					b_vertex_array[array_index.x].vertex[angle_index] = VertexInfo(u16vec2(m2.xy), array_index.y);
+					b_vertex_array[end_vertex.id].vertex[angle_index] = begin_vertex;
 				}
-
-				if(array_index.y != -1)
+				if(begin_vertex.id != -1)
 				{
-					b_vertex_array[array_index.y].vertex[angle_index+Dir_Num] = VertexInfo(u16vec2(mi.xy), array_index.x);
+					b_vertex_array[begin_vertex.id].vertex[angle_index+Dir_Num] = end_vertex;
 				}
-*/
-
-				ivec4 end = (ivec4(march.xx, begin.xx) * ray.dir.xyxy + ray.origin.xyxy * dir_reso) >> dir_reso_bit;
-				if(ray.area==1) end.xz = (reso.xx-1)-end.xz;
-
-				ivec2 vi = end.xz + end.yw * reso.xx;
-				uvec2 array_index = uvec2(b_vertex_array_index[vi.x], b_vertex_array_index[vi.y]);
-				if(array_index.x != -1)
-				{
-					b_vertex_array[array_index.x].vertex[angle_index] = VertexInfo(u16vec2(end.zw), array_index.y);
-				}
-				if(array_index.y != -1)
-				{
-					b_vertex_array[array_index.y].vertex[angle_index+Dir_Num] = VertexInfo(u16vec2(end.xy), array_index.x);
-				}
-				begin = march;
+				begin_vertex = end_vertex;
 			}
 			march++;
 
@@ -162,14 +142,13 @@ void main()
 
 	}
 
-	ivec4 end = (ivec4((ray.end-1).xx, begin.xx) * ray.dir.xyxy + ray.origin.xyxy * dir_reso) >> dir_reso_bit;
-	if(ray.area==1) end.xz = (reso.xx-1)-end.xz;
+	ivec2 mi = ((ray.end-1).xx * ray.dir.xy + ray.origin.xy * dir_reso) >> dir_reso_bit;
+	if(ray.area==1) mi.x = (reso.x-1)-mi.x;
 
-	ivec2 vi = end.xz + end.yw * reso.xx;
-	uvec2 array_index = uvec2(b_vertex_array_index[vi.x], b_vertex_array_index[vi.y]);
-	if(array_index.y != -1)
+	VertexInfo end_vertex = VertexInfo(u16vec2(mi),b_vertex_array_index[mi.x+mi.y*reso.x]);
+	if(begin_vertex.id != -1)
 	{
-		b_vertex_array[array_index.y].vertex[angle_index+Dir_Num] = VertexInfo(u16vec2(end.xy), array_index.x);
+		b_vertex_array[begin_vertex.id].vertex[angle_index+Dir_Num] = end_vertex;
 	}
 
 
