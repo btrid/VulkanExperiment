@@ -21,9 +21,9 @@ struct GI2DRadiosity
 		Shader_RayMarch,
 		Shader_RayBounce,
 
-		Shader_Render2VS,
-		Shader_Render2GS,
-		Shader_Render2FS,
+		Shader_RenderVS,
+		Shader_RenderGS,
+		Shader_RenderFS,
 
 		Shader_Num,
 	};

@@ -225,15 +225,15 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 		vk::PipelineShaderStageCreateInfo shader_info[] =
 		{
 			vk::PipelineShaderStageCreateInfo()
-			.setModule(m_shader[Shader_Render2VS].get())
+			.setModule(m_shader[Shader_RenderVS].get())
 			.setPName("main")
 			.setStage(vk::ShaderStageFlagBits::eVertex),
 			vk::PipelineShaderStageCreateInfo()
-			.setModule(m_shader[Shader_Render2GS].get())
+			.setModule(m_shader[Shader_RenderGS].get())
 			.setPName("main")
 			.setStage(vk::ShaderStageFlagBits::eGeometry),
 			vk::PipelineShaderStageCreateInfo()
-			.setModule(m_shader[Shader_Render2FS].get())
+			.setModule(m_shader[Shader_RenderFS].get())
 			.setPName("main")
 			.setStage(vk::ShaderStageFlagBits::eFragment),
 		};
@@ -357,6 +357,13 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 			0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RayMarch].get());
+
+// 		std::array<float, 4> offsets = {0.125f, 0.375f, 0.625f, 0.875f};
+// 		static int s_offset_index;
+// 		s_offset_index = (s_offset_index + 1) % offsets.size();
+// 		cmd.pushConstants<float>(m_pipeline_layout[PipelineLayout_Radiosity].get(), vk::ShaderStageFlagBits::eCompute, 0, offsets[s_offset_index]);
+		cmd.pushConstants<float>(m_pipeline_layout[PipelineLayout_Radiosity].get(), vk::ShaderStageFlagBits::eCompute, 0, 0.25f);
+
 		auto num = app::calcDipatchGroups(uvec3(2048, Dir_Num, 1), uvec3(128, 1, 1));
 		cmd.dispatch(num.x, num.y, num.z);
 	}
@@ -380,7 +387,7 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 				cmd.pushConstants<int>(m_pipeline_layout[PipelineLayout_Radiosity].get(), vk::ShaderStageFlagBits::eCompute, 0, i);
 
 				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RayBounce].get());
-				cmd.dispatchIndirect(b_vertex_array_counter.getInfo().buffer, b_vertex_array_counter.getInfo().offset + offsetof(VertexCmd, bounce_cmd));
+//				cmd.dispatchIndirect(b_vertex_array_counter.getInfo().buffer, b_vertex_array_counter.getInfo().offset + offsetof(VertexCmd, bounce_cmd));
 
 			}
 

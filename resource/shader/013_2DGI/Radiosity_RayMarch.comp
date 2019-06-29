@@ -10,10 +10,16 @@
 #define PI radians(180.)
 #define QUARTER_PI radians(45.)
 
-layout (local_size_x=128) in;
 #define dir_reso_bit (7)
 #define dir_reso (128)
 
+layout(push_constant) uniform Input
+{
+	float offset;
+} constant;
+
+
+layout (local_size_x=128) in;
 
 bool intersection(in ivec4 aabb, in ivec2 pos, in ivec2 dir, out int n, out int f)
 {
@@ -56,7 +62,7 @@ Ray makeRay(in uint x, in uint y)
 	Ray ray;
 
 	float a = PI / Dir_Num;
-	float angle = fma(a, float(y), a*0.25);
+	float angle = fma(a, float(y), a*constant.offset);
 	ray.area = int(angle / HALF_PI);
 
 	calcDirEx(angle, ray.dir);
