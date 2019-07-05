@@ -184,7 +184,7 @@ struct DrawCommand
 	uvec4 bounce_cmd;
 
 };
-#define Dir_Num (31)
+#define Dir_Num (129)
 #define Vertex_Num (Dir_Num*2)
 #define Bounce_Num (3)
 

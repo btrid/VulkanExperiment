@@ -87,16 +87,6 @@ void main()
 		uvec2 bit = gl_GlobalInvocationID.xy % 8;
 		atomicOr(b_edge[map.x + map.y*u_gi2d_info.m_resolution.z], 1ul<<(bit.x+bit.y*8));
 
-
-/*		for(int i = 0; i < Dir_Num; i++)
-		{
-			b_vertex_array[vi].vertex[i]=VertexInfo(u16vec2(1023,1023),-1);
-		}
-		for(int i = 0; i < Dir_Num; i++)
-		{
-			b_vertex_array[vi].vertex[i+Dir_Num]=VertexInfo(u16vec2(0,1023),-1);
-		}
-*/
 	}
 
 	b_vertex_array_index[index] = vi;

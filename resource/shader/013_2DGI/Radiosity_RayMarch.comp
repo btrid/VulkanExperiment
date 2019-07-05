@@ -24,7 +24,6 @@ layout (local_size_x=128) in;
 bool intersection(in ivec4 aabb, in ivec2 pos, in ivec2 dir, out int n, out int f)
 {
 	aabb *= dir_reso;
-	pos *= dir_reso;
 
 	ivec4 t = (aabb - pos.xyxy)/dir.xyxy;
 	t += ivec4(notEqual((aabb - pos.xyxy) % dir.xyxy, ivec4(0)));
@@ -78,6 +77,8 @@ Ray makeRay(in uint x, in uint y)
 		ray.origin.x += (reso.x-1) - int(ceil(ray.dir.x / float(ray.dir.y))) * int(x);
 	}
 
+	ray.origin *= dir_reso;
+
 	ivec4 aabb = ivec4(ivec2(0, 0), reso.xy);
 	if(!intersection(aabb, ray.origin, ray.dir, ray.begin, ray.end))
 	{
@@ -95,7 +96,7 @@ void main()
 
 	if(ray.area<=-1){ return; }
 
-	ivec2 mi = (ray.begin * ray.dir.xy + ray.origin * dir_reso) >> dir_reso_bit;
+	ivec2 mi = (ray.begin * ray.dir.xy + ray.origin) >> dir_reso_bit;
 	if(ray.area==1) mi.x = (reso.x-1)-mi.x;
 	VertexInfo begin_vertex = VertexInfo(u16vec2(mi),b_vertex_array_index[mi.x+mi.y*reso.x]);
 
@@ -111,11 +112,11 @@ void main()
 			if(attr)
 			{
 				VertexInfo end_vertex = VertexInfo(u16vec2(mi),b_vertex_array_index[mi.x+mi.y*reso.x]);
-				if(end_vertex.id != -1)
+//				if(end_vertex.id != -1)
 				{
 					b_vertex_array[end_vertex.id].vertex[angle_index] = begin_vertex;
 				}
-				if(begin_vertex.id != -1)
+//				if(begin_vertex.id != -1)
 				{
 					b_vertex_array[begin_vertex.id].vertex[angle_index+Dir_Num] = end_vertex;
 				}
@@ -123,7 +124,7 @@ void main()
 			}
 			march++;
 
-			mi = (march * ray.dir.xy + ray.origin * dir_reso) >> dir_reso_bit;
+			mi = (march * ray.dir.xy + ray.origin) >> dir_reso_bit;
 			if(ray.area==1) mi.x = (reso.x-1)-mi.x;
 			if(any(notEqual(cell, mi>>3)))
 			{
@@ -133,11 +134,11 @@ void main()
 
 	}
 
-	mi = ((ray.end-1).xx * ray.dir.xy + ray.origin.xy * dir_reso) >> dir_reso_bit;
+	mi = ((ray.end-1).xx * ray.dir.xy + ray.origin.xy) >> dir_reso_bit;
 	if(ray.area==1) mi.x = (reso.x-1)-mi.x;
 
 	VertexInfo end_vertex = VertexInfo(u16vec2(mi),b_vertex_array_index[mi.x+mi.y*reso.x]);
-	if(begin_vertex.id != -1)
+//	if(begin_vertex.id != -1)
 	{
 		b_vertex_array[begin_vertex.id].vertex[angle_index+Dir_Num] = end_vertex;
 	}
