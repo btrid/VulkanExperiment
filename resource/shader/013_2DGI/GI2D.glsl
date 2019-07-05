@@ -193,13 +193,14 @@ struct VertexInfo
 	u16vec2 pos;
 	uint id;
 };
+#define RV_FLAG_IS_BOUNDARY 1
 struct RadiosityVertex
 {
 //	u16vec2 vertex_pos[Vertex_Num];
 //	uint vertex_id[Vertex_Num];
 	VertexInfo vertex[Vertex_Num];
 	u16vec2 pos;
-	u16vec2 _p;
+	uint flag;
 	f16vec3 radiance[2];
 	f16vec3 albedo;
 
