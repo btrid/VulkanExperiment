@@ -5,8 +5,8 @@
 #define USE_GI2D_Radiosity 1
 #include "GI2D.glsl"
 
-layout(points, invocations = Dir_Num) in;
-layout(line_strip, max_vertices = 3) out;
+layout(points, invocations = 1) in;
+layout(line_strip, max_vertices = Vertex_Num) out;
 //layout(triangle_strip, max_vertices = 3) out;
 
 
@@ -35,19 +35,14 @@ void main()
 {
 	if(dot(gs_in[0].color, gs_in[0].color) == 0.){ return ;}
 	uint index = gs_in[0].vertex_index;
+/*
 	uint angle_index = gl_InvocationID;
 
-	u16vec2 pos = b_vertex_array[index].pos;
-	u16vec2 target0 = b_vertex_array[index].vertex[angle_index*2].pos;
-	u16vec2 target1 = b_vertex_array[index].vertex[angle_index*2+1].pos;
-	vec2 center = (vec2(pos) + vec2(0.5)) / vec2(u_gi2d_info.m_resolution.xy) * 2. - 1.;
+	u16vec2 target0 = b_vertex_array[index].vertex[angle_index].pos;
+	u16vec2 target1 = b_vertex_array[index].vertex[angle_index+Dir_Num].pos;
 	vec4 vertex = ((vec4(target0, target1) + vec4(0.5)) / vec4(u_gi2d_info.m_resolution.xyxy)) * 2. - 1.;
 
 	gl_Position = vec4(vertex.xy, 0., 1.);
-	gs_out.color = gs_in[0].color;
-	EmitVertex();
-
-	gl_Position = vec4(center.xy, 0., 1.);
 	gs_out.color = gs_in[0].color;
 	EmitVertex();
 
@@ -55,5 +50,25 @@ void main()
 	gs_out.color = gs_in[0].color;
 	EmitVertex();
 	EndPrimitive();
+*/
+
+//	for(uint i = begin; i < end; i++)
+	for(uint i = 0; i < Dir_Num; i++)
+	{
+		uint angle_index = i;
+		u16vec2 target0 = b_vertex_array[index].vertex[angle_index].pos;
+		u16vec2 target1 = b_vertex_array[index].vertex[angle_index+Dir_Num].pos;
+		vec4 vertex = ((vec4(target0, target1) + vec4(0.5)) / vec4(u_gi2d_info.m_resolution.xyxy)) * 2. - 1.;
+
+		gl_Position = vec4(vertex.xy, 0., 1.);
+		gs_out.color = gs_in[0].color;
+		EmitVertex();
+
+		gl_Position = vec4(vertex.zw, 0., 1.);
+		gs_out.color = gs_in[0].color;
+		EmitVertex();
+		EndPrimitive();
+
+	}
 
 }

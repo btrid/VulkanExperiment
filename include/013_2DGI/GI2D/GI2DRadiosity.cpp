@@ -14,7 +14,7 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 		GI2DRadiosityInfo info;
 		info.ray_num_max = 0;
 		info.ray_frame_max = 0;
-		info.frame_max = Frame;
+		info.frame_max = Frame_Num;
 		u_radiosity_info = m_context->m_uniform_memory.allocateMemory<GI2DRadiosityInfo>({1,{} });
 		cmd.updateBuffer<GI2DRadiosityInfo>(u_radiosity_info.getInfo().buffer, u_radiosity_info.getInfo().offset, info);
 		vk::BufferMemoryBarrier to_read[] = {

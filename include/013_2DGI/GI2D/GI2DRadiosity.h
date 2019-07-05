@@ -10,10 +10,10 @@
 struct GI2DRadiosity
 {
 	enum {
-		Frame = 1,
+		Frame_Num = 4,
 		Dir_Num = 31,
 		Vertex_Num = Dir_Num*2,
-		Bounce_Num = 1,
+		Bounce_Num = 3,
 	};
 	enum Shader
 	{
@@ -49,7 +49,7 @@ struct GI2DRadiosity
 		uint ray_num_max;
 		uint ray_frame_max;
 		uint frame_max;
-		uint a;
+		uint frame;
 	};
 
 	struct VertexInfo

@@ -61,6 +61,7 @@ void main()
 		gs_out.color = color;
 		gs_out.center = pos;
 		EmitVertex();
+
 	}
 
 	uint angle_index = end % Vertex_Num;
