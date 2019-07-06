@@ -24,17 +24,16 @@ void main()
 	uint pos_index = pos.x+pos.y*u_gi2d_info.m_resolution.x;
 
 	f16vec3 irradiance = f16vec3(0.);
-	u16vec2 prev = u16vec2(-1);
-	for(int i = 0; i < Vertex_Num; i++)
+	u16vec4 prev = u16vec4(-1);
+	for(int i = 0; i < Dir_Num; i++)
 	{
 		VertexInfo v = b_vertex_array[gl_GlobalInvocationID.x].vertex[i];
-		if(v.id == -1) { continue; }
-		if(all(equal(v.pos, pos))){ continue;}
-		if(all(equal(v.pos, prev))){ continue;}
+//		if(all(equal(v.pos.xy, pos))){ continue;}
+//		if(all(equal(v.pos.xy, prev))){ continue;}
 
-		f16vec3 power = b_vertex_array[v.id].radiance[constant.bounce%2];
-		f16vec3 albedo = b_vertex_array[v.id].albedo;
-		f16vec3 irra = power * albedo / f16vec3(6.28); 
+		f16vec3 bounce1 = (all(equal(v.pos.xy, pos))||all(equal(v.pos.xy, prev.xy))) ? f16vec3(0.) : b_vertex_array[v.id.x].radiance[constant.bounce%2] * b_vertex_array[v.id.x].albedo;
+		f16vec3 bounce2 = (all(equal(v.pos.zw, pos))||all(equal(v.pos.zw, prev.zw))) ? f16vec3(0.) : b_vertex_array[v.id.y].radiance[constant.bounce%2] * b_vertex_array[v.id.y].albedo;
+		f16vec3 irra = (bounce1 + bounce2) / f16vec3(6.28); 
 		irradiance += irra;
 
 		prev = v.pos;

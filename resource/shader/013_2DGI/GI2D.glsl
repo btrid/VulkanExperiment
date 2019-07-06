@@ -185,20 +185,17 @@ struct DrawCommand
 
 };
 #define Dir_Num (129)
-#define Vertex_Num (Dir_Num*2)
 #define Bounce_Num (3)
 
 struct VertexInfo
 {
-	u16vec2 pos;
-	uint id;
+	u16vec4 pos;
+	uvec2 id;
 };
 #define RV_FLAG_IS_BOUNDARY 1
 struct RadiosityVertex
 {
-//	u16vec2 vertex_pos[Vertex_Num];
-//	uint vertex_id[Vertex_Num];
-	VertexInfo vertex[Vertex_Num];
+	VertexInfo vertex[Dir_Num];
 	u16vec2 pos;
 	uint flag;
 	f16vec3 radiance[2];
