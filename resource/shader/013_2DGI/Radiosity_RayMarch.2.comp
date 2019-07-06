@@ -1,0 +1,166 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_GI2D 0
+#define USE_GI2D_Radiosity 1
+#include "GI2D.glsl"
+
+#define HALF_PI radians(90.)
+#define TWO_PI radians(360.)
+#define PI radians(180.)
+#define QUARTER_PI radians(45.)
+
+#define dir_reso_bit (7)
+#define dir_reso (128)
+
+layout(push_constant) uniform Input
+{
+	float offset;
+} constant;
+
+
+layout (local_size_x=128) in;
+
+bool intersection(in ivec4 aabb, in ivec2 pos, in ivec2 dir, out int n, out int f)
+{
+	aabb *= dir_reso;
+
+	ivec4 t = (aabb - pos.xyxy)/dir.xyxy;
+	t += ivec4(notEqual((aabb - pos.xyxy) % dir.xyxy, ivec4(0)));
+	ivec2 tmin = min(t.xy, t.zw);
+ 	ivec2 tmax = max(t.xy, t.zw);
+ 
+	n = max(tmin.x, tmin.y);
+	f = min(tmax.x, tmax.y);
+
+ 	return min(tmax.x, tmax.y) > max(max(tmin.x, tmin.y), 0);
+}
+
+struct Ray
+{
+	ivec2 origin;
+	ivec2 dir;
+	ivec2 inv_dir;
+	int begin, end;
+	int area;
+};
+
+void calcDirEx(in float angle, out ivec2 dir, out ivec2 inv_dir)
+{
+	vec2 f_dir = vec2(cos(angle), sin(angle));
+	f_dir.x = abs(f_dir.x)<GI2D_FLT_EPSILON ? (f_dir.x >= 0. ? 0.0001 : -0.0001) : f_dir.x;
+	f_dir.y = abs(f_dir.y)<GI2D_FLT_EPSILON ? (f_dir.y >= 0. ? 0.0001 : -0.0001) : f_dir.y;
+	vec2 f_inv_dir = 1./f_dir;
+	f_dir = f_dir * min(abs(f_inv_dir.x), abs(f_inv_dir.y));
+
+	dir = abs(ivec2(round(f_dir * dir_reso)));
+	inv_dir = abs(ivec2(round(1./f_dir * dir_reso)));
+
+}
+Ray makeRay(in uint x, in uint y)
+{
+	const ivec4 reso = u_gi2d_info.m_resolution;
+	Ray ray;
+
+	float a = PI / Dir_Num;
+	float angle = fma(a, float(y), a*constant.offset);
+	ray.area = int(angle / HALF_PI);
+
+	calcDirEx(angle, ray.dir, ray.inv_dir);
+
+	ray.origin.x = 0;
+	ray.origin.y = 0;
+	if (ray.dir.x>= ray.dir.y)
+	{
+		ray.origin.y += (reso.y-1) - int(ceil(ray.dir.y / float(ray.dir.x))) * int(x);
+	}
+	else
+	{
+		ray.origin.x += (reso.x-1) - int(ceil(ray.dir.x / float(ray.dir.y))) * int(x);
+	}
+
+	ray.origin *= dir_reso;
+
+	ivec4 aabb = ivec4(ivec2(0, 0), reso.xy);
+	if(!intersection(aabb, ray.origin, ray.dir, ray.begin, ray.end))
+	{
+		ray.area = -1;
+	}
+	return ray;
+}
+
+void main()
+{
+	const ivec4 reso = u_gi2d_info.m_resolution;
+	ivec2 cell_origin = (ivec2(8)<<dir_reso_bit);
+	uint angle_index = gl_WorkGroupID.y;
+
+	Ray ray = makeRay(gl_GlobalInvocationID.x, gl_WorkGroupID.y);
+
+	if(ray.area<=-1){ return; }
+
+	ivec2 mi = (ray.begin * ray.dir.xy + ray.origin) >> dir_reso_bit;
+	if(ray.area==1) mi.x = (reso.x-1)-mi.x;
+	VertexInfo begin_vertex = VertexInfo(u16vec2(mi),b_vertex_array_index[mi.x+mi.y*reso.x]);
+
+	for(int march = ray.begin; march < ray.end; )
+	{
+		mi = (march * ray.dir.xy + ray.origin) >> dir_reso_bit;
+		if(ray.area==1) mi.x = (reso.x-1)-mi.x;
+		ivec2 cell = mi>>3;
+		uint64_t map = b_edge[cell.x + cell.y * reso.z];
+
+		ivec2 space = cell_origin - ((ray.begin * ray.dir.xy + ray.origin) % cell_origin);
+		ivec2 tp = space / ray.dir;
+		int skip = (int(min(tp.x, tp.y))>> dir_reso_bit)+1;
+
+		if(map== 0u)
+		{
+			march += skip;
+
+//			mi = (march * ray.dir.xy + ray.origin) >> dir_reso_bit;
+//			if(ray.area==1) mi.x = (reso.x-1)-mi.x;
+
+			continue;
+		}
+
+		for(int i = 0; i < skip; i++)
+		{
+			ivec2 cell_sub = mi%8;
+			bool attr = (map & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0ul;
+			if(attr)
+			{
+				VertexInfo end_vertex = VertexInfo(u16vec2(mi),b_vertex_array_index[mi.x+mi.y*reso.x]);
+//				if(end_vertex.id != -1)
+				{
+					b_vertex_array[end_vertex.id].vertex[angle_index] = begin_vertex;
+				}
+//				if(begin_vertex.id != -1)
+				{
+					b_vertex_array[begin_vertex.id].vertex[angle_index+Dir_Num] = end_vertex;
+				}
+				begin_vertex = end_vertex;
+			}
+			march++;
+
+			mi = (march * ray.dir.xy + ray.origin) >> dir_reso_bit;
+			if(ray.area==1) mi.x = (reso.x-1)-mi.x;
+//			if(any(notEqual(cell, mi>>3)))
+//			{
+//				break;
+//			}
+		}
+
+	}
+
+	mi = ((ray.end-1).xx * ray.dir.xy + ray.origin.xy) >> dir_reso_bit;
+	if(ray.area==1) mi.x = (reso.x-1)-mi.x;
+
+	VertexInfo end_vertex = VertexInfo(u16vec2(mi),b_vertex_array_index[mi.x+mi.y*reso.x]);
+//	if(begin_vertex.id != -1)
+	{
+		b_vertex_array[begin_vertex.id].vertex[angle_index+Dir_Num] = end_vertex;
+	}
+
+
+}

@@ -365,74 +365,10 @@ int rigidbody()
 	return 0;
 }
 
-bool intersection(vec2 pos, vec2 inv_dir, float& n, float& f)
-{
-	vec4 aabb = vec4(0.f, 0.f, 1023.f, 1023.f)+0.5f;
-	vec4 t = ((aabb - pos.xyxy)*inv_dir.xyxy);
-
-	vec2 tmin = glm::min(t.xy(), t.zw());
-	vec2 tmax = glm::max(t.xy(), t.zw());
-
-	n = glm::max(tmin.x, tmin.y);
-	f = glm::min(tmax.x, tmax.y);
-
-	return glm::min(tmax.x, tmax.y) > glm::max(glm::max(tmin.x, tmin.y), 0.f);
-}
-
-void test()
-{
-	vec2 dir;
-	vec2 pos;
-	switch (std::rand() % 4)
-	{
-	case 0:
-		pos = vec2(rand() % 1025, -0.);
-		dir = glm::rotate(vec2(-1.f, 0.f), -glm::radians((float)(std::rand() % 180)));
-		break;
-	case 1:
-		pos = vec2(1024., rand() % 1025 + 0.);
-		dir = glm::rotate(vec2(0.f, -1.f), -glm::radians((float)(std::rand() % 180)));
-		break;
-	case 2:
-		pos = vec2(-0., rand() % 1025 + 0.);
-		dir = glm::rotate(vec2(1.f, 0.f), -glm::radians((float)(std::rand() % 180)));
-		break;
-	case 3:
-		pos = vec2(rand() % 1025+0., -0.);
-		dir = glm::rotate(vec2(0.f, 1.f), -glm::radians((float)(std::rand() % 180)));
-		break;
-	}
-// 	pos = vec2(0.5f, 0.5f);
-// 	float radian = glm::radians(((std::rand() % 9000))*0.01f);
-// 	dir = glm::rotate(vec2(1.f, 0.f), radian);
-//	pos = vec2(-0.5f, rand() % 1025 + 0.);
-
-	dir.x = abs(dir.x)<FLT_EPSILON ? 0.0001 : dir.x;
-	dir.y = abs(dir.y)<FLT_EPSILON ? 0.0001 : dir.y;
-	auto inv_dir = 1.f / dir;
-	dir = dir * glm::min(abs(inv_dir.x), abs(inv_dir.y));
-	inv_dir = 1.f / dir;
-
-	float begin = 0;
-	float end = 0;
-	auto hit0 = intersection(pos, inv_dir, begin, end);
-	vec2 pos0 = pos + (begin) * dir;
-	vec2 pos1 = pos0 + (end-begin) * dir;
-
-
-	if (hit0)
-	{
-		printf("%s\tbegin=[%7.2f,%7.2f], end=[%7.2f,%7.2f], dir=[%5.2f,%5.2f], inv=[%6.2f,%6.2f], pos=[%7.2f,%7.2f]\n", hit0 ? "OK" : "NG", pos0.x, pos0.y, pos1.x, pos1.y, dir.x, dir.y, inv_dir.x, inv_dir.y, pos.x, pos.y);
-		while (!any(equal(uvec4(pos0.xyxy()), uvec4(0, 0, 1023, 1023)))) {}
-		while (!any(equal(uvec4(pos1.xyxy()), uvec4(0, 0, 1023, 1023)))) {}
-
-	}
-
-}
-
 #define map_reso 1024
 #define dir_reso_bit (7)
 #define dir_reso (128)
+ivec2 cell_origin = (ivec2(8) << dir_reso_bit);
 bool intersection(ivec2 pos, ivec2 dir, int& n, int& f)
 {
 	ivec4 aabb = ivec4(0, 0, map_reso, map_reso)*dir_reso;
@@ -477,21 +413,21 @@ void test2()
 
 	int angle_num = 32;
 
-	for (int y = 0; y < angle_num; y++)
+	for (int angle_index = 0; angle_index < angle_num; angle_index++)
 	{
-		uint area = y / (angle_num);
+		uint area = angle_index / (angle_num);
 		float a = HALF_PI / (angle_num);
-		float angle = glm::fma(a, float(y), a*0.5f);
+		float angle = glm::fma(a, float(angle_index), a*0.5f);
 
 		vec2 dir, inv_dir;
 		calcDirEx(angle, dir, inv_dir);
 
 		auto i_dir = abs(ivec2(round(dir * dir_reso)));
-		printf("dir[%3d]=[%4d,%4d]\n", y, i_dir.x, i_dir.y);
+		auto i_inv_dir = abs(ivec2(round(inv_dir * dir_reso)));
+		printf("dir[%3d]=[%4d,%4d]\n", angle_index, i_dir.x, i_dir.y);
 
 		for (int x = 0; x < map_reso * 2; x++)
 		{
-
 			ivec2 origin = ivec2(0);
 			if (i_dir.x>= i_dir.y)
 			{
@@ -505,37 +441,39 @@ void test2()
 			int begin, end;
 			if (!intersection(origin, i_dir, begin, end))
 			{
-				break;;
+				break;
 			}
 
 			for (int i = begin; i < end;)
 			{
-				ivec2 t1 = i * i_dir.xy() + origin * dir_reso;
-				ivec2 mi = t1 >> dir_reso_bit;
-				map[mi.x + mi.y*map_reso] += 1;
-				ivec2 next = ((mi >> 3) + 1) << 3;
-				ivec2 tp = next - mi;
+// 				ivec2 t1 = i * i_dir.xy() + origin * dir_reso;
+// 				ivec2 mi = t1 >> dir_reso_bit;
+// 
+// 				map[mi.x + mi.y*map_reso] += 1;
+// 				ivec2 next = ((mi >> 3) + 1) << 3;
+// 				ivec2 tp = next - mi;
+// 
+// 				i++;
 
-				i++;
-
+				ivec2 space = cell_origin - ((i * i_dir.xy + origin* dir_reso) % cell_origin);
+				ivec2 tp = space / i_dir;
+				int skip = (int(glm::min(tp.x, tp.y))) + 1;
+				i += skip;
 			}
 
 		}
 
-		for (int _y = 0; _y < map_reso; _y++)
-		{
-			for (int x = 0; x < map_reso; x++)
-			{
-				assert(map[x + _y * map_reso] == y+1);
-			}
-		}
-
+// 		for (int y = 0; y < map_reso; y++)
+// 		{
+// 			for (int x = 0; x < map_reso; x++)
+// 			{
+// 				assert(map[x + y * map_reso] == angle_index+1);
+// 			}
+// 		}
 	}
-	printf("hoge\n");
 }
 int main()
 {
-//	for (;;){test();}
 //	test2();
 	
 	btr::setResourceAppPath("../../resource/");
