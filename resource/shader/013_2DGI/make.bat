@@ -35,8 +35,8 @@ rem %exe% %include% %option% -o %output%/GI2DSDF_MakeJFA_EX.comp.spv GI2DSDF_Mak
 %exe% %include% %option% -o %output%/Radiosity_RayBounce.comp.spv Radiosity_RayBounce.comp
 
 %exe% %include% %option% -o %output%/Radiosity_Render.vert.spv Radiosity_Render.vert
-%exe% %include% %option% -o %output%/Radiosity_Render.geom.spv Radiosity_Render.geom
-%exe% %include% %option% -o %output%/Radiosity_Render.frag.spv Radiosity_Render.frag
+rem %exe% %include% %option% -o %output%/Radiosity_Render.geom.spv Radiosity_Render.geom
+rem %exe% %include% %option% -o %output%/Radiosity_Render.frag.spv Radiosity_Render.frag
 
 %exe% %include% %option% -o %output%/Radiosity_Render.geom.spv Radiosity_RenderLine.geom
 %exe% %include% %option% -o %output%/Radiosity_Render.frag.spv Radiosity_RenderLine.frag

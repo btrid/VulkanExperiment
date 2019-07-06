@@ -4,6 +4,7 @@
 #define USE_GI2D 0
 #define USE_GI2D_Radiosity 1
 #include "GI2D.glsl"
+#include "Radiosity.glsl"
 
 layout(location=0) out gl_PerVertex{
 	vec4 gl_Position;
