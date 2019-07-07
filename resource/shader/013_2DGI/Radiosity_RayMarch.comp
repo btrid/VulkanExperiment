@@ -98,7 +98,7 @@ void main()
 	if(ray.area<=-1){ return; }
 
 	ivec2 mi = (ray.begin * ray.dir.xy + ray.origin) >> dir_reso_bit;
-	if(ray.area==1) mi.x = (reso.x-1)-mi.x;
+	if((ray.area&1)!=0) mi.x = (reso.x-1)-mi.x;
 
 	VertexInfo vertex = VertexInfo(u16vec4(mi.xyxy),uvec2(b_vertex_array_index[mi.x+mi.y*reso.x]));
 
@@ -121,7 +121,7 @@ void main()
 			march++;
 
 			mi = (march * ray.dir.xy + ray.origin) >> dir_reso_bit;
-			if(ray.area==1) mi.x = (reso.x-1)-mi.x;
+			if((ray.area&1)!=0) mi.x = (reso.x-1)-mi.x;
 			if(any(notEqual(cell, mi>>3)))
 			{
 				break;
@@ -131,7 +131,7 @@ void main()
 	}
 
 	mi = ((ray.end-1).xx * ray.dir.xy + ray.origin.xy) >> dir_reso_bit;
-	if(ray.area==1) mi.x = (reso.x-1)-mi.x;
+	if((ray.area&1)!=0) mi.x = (reso.x-1)-mi.x;
 
 	{
 		uint id = b_vertex_array_index[mi.x+mi.y*reso.x];

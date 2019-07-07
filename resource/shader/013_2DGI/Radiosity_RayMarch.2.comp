@@ -117,10 +117,6 @@ void main()
 		if(map== 0u)
 		{
 			march += skip;
-
-//			mi = (march * ray.dir.xy + ray.origin) >> dir_reso_bit;
-//			if(ray.area==1) mi.x = (reso.x-1)-mi.x;
-
 			continue;
 		}
 
