@@ -100,7 +100,7 @@ void main()
 	ivec2 mi = (ray.begin * ray.dir.xy + ray.origin) >> dir_reso_bit;
 	if((ray.area&1)!=0) mi.x = (reso.x-1)-mi.x;
 
-	VertexInfo vertex = VertexInfo(/*u16vec4(mi.xyxy),*/uvec2(b_vertex_array_index[mi.x+mi.y*reso.x]));
+	VertexInfo vertex = VertexInfo(u16vec4(mi.xyxy),uvec2(b_vertex_array_index[mi.x+mi.y*reso.x]));
 
 	for(int march = ray.begin; march < ray.end; )
 	{
@@ -114,7 +114,8 @@ void main()
 			if(attr)
 			{
 				uint id = b_vertex_array_index[mi.x+mi.y*reso.x];
-				b_vertex_array[vertex.id.y].vertex[angle_index] = VertexInfo(uvec2(vertex.id.x, id));
+				b_vertex_array[vertex.id.y].vertex[angle_index] = VertexInfo(u16vec4(vertex.pos.xy, mi.xy), uvec2(vertex.id.x, id));
+				vertex.pos = u16vec4(vertex.pos.zw, mi.xy);
 				vertex.id = uvec2(vertex.id.y, id);
 			}
 			march++;
@@ -134,7 +135,7 @@ void main()
 
 	{
 		uint id = b_vertex_array_index[mi.x+mi.y*reso.x];
-		b_vertex_array[vertex.id.y].vertex[angle_index] = VertexInfo(uvec2(vertex.id.x, id));
+		b_vertex_array[vertex.id.y].vertex[angle_index] = VertexInfo(u16vec4(vertex.pos.xy, mi.xy), uvec2(vertex.id.x, id));
 	}
 
 

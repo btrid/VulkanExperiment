@@ -28,7 +28,7 @@ struct DrawCommand
 
 struct VertexInfo
 {
-	u16vec4 pos;
+//	u16vec4 pos;
 	uvec2 id;
 };
 #define RV_FLAG_IS_BOUNDARY 1

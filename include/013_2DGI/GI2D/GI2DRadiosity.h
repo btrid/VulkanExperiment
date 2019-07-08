@@ -53,7 +53,6 @@ struct GI2DRadiosity
 
 	struct VertexInfo
 	{
-		u16vec4 pos;
 		uvec2 id;
 	};
 	struct RadiosityVertex
