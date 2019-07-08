@@ -42,9 +42,6 @@ void main()
 	{
 		uint angle_index = i;
 
-//		u16vec4 target = b_vertex_array[index].vertex[angle_index].pos;
-//		vec4 vertex = ((vec4(target) + vec4(0.5)) / vec4(u_gi2d_info.m_resolution.xyxy)) * 2. - 1.;
-
 		uvec2 target_id = b_vertex_array[index].vertex[angle_index].id;
 		u16vec4 target = u16vec4(b_vertex_array[target_id.x].pos, b_vertex_array[target_id.y].pos);
 		vec4 vertex = ((vec4(target) + vec4(0.5)) / vec4(u_gi2d_info.m_resolution.xyxy)) * 2. - 1.;

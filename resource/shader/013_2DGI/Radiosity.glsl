@@ -23,7 +23,7 @@ struct DrawCommand
 	uvec4 bounce_cmd;
 
 };
-#define Dir_Num (129)
+#define Dir_Num (33)
 #define Bounce_Num (3)
 
 struct VertexInfo

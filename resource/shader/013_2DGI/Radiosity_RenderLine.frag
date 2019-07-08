@@ -15,5 +15,8 @@ layout(location=1)in Data
 layout(location = 0) out f16vec4 FragColor;
 void main()
 {
-	FragColor = f16vec4(fs_in.color, 0.01);
+	uvec2 index = uvec2(gl_FragCoord.xy);
+	bool is_diffuse = isDiffuse(b_fragment[index.x + index.y * u_gi2d_info.m_resolution.x]);
+	if(is_diffuse) discard;
+	FragColor = f16vec4(fs_in.color*0.14, 0.0);
 }
