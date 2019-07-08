@@ -434,3 +434,112 @@ void GI2DRadiosity::executeRendering(const vk::CommandBuffer& cmd)
 	cmd.endRenderPass();
 	
 }
+
+// testcode
+#define map_reso 1024
+#define dir_reso_bit (7)
+#define dir_reso (128)
+ivec2 cell_origin = (ivec2(8) << dir_reso_bit);
+bool intersection(ivec2 pos, ivec2 dir, int& n, int& f)
+{
+	ivec4 aabb = ivec4(0, 0, map_reso, map_reso)*dir_reso;
+	pos *= dir_reso;
+	ivec4 t = ((aabb - pos.xyxy)/dir.xyxy());
+	t += ivec4(notEqual((aabb - pos.xyxy) % dir.xyxy(), ivec4(0)));
+
+	ivec2 tmin = glm::min(t.xy(), t.zw());
+	ivec2 tmax = glm::max(t.xy(), t.zw());
+
+	n = glm::max(tmin.x, tmin.y);
+	f = glm::min(tmax.x, tmax.y);
+
+	return glm::min(tmax.x, tmax.y) > glm::max(glm::max(tmin.x, tmin.y), 0);
+}
+
+
+vec2 rotateEx(float angle)
+{
+	float c = cos(angle);
+	float s = sin(angle);
+	return vec2(c, s);
+}
+
+void calcDirEx(float angle, vec2& dir, vec2& inv_dir)
+{
+	dir = rotateEx(angle);
+	dir.x = abs(dir.x) < FLT_EPSILON ? (dir.x >= 0. ? 0.0001 : -0.0001) : dir.x;
+	dir.y = abs(dir.y) < FLT_EPSILON ? (dir.y >= 0. ? 0.0001 : -0.0001) : dir.y;
+	inv_dir = 1.f / dir;
+	dir = dir * glm::min(abs(inv_dir.x), abs(inv_dir.y));
+	inv_dir = 1.f / dir;
+}
+#define HALF_PI glm::radians(90.)
+#define TWO_PI glm::radians(360.)
+#define PI glm::radians(180.)
+#define QUARTER_PI glm::radians(45.)
+
+void test()
+{
+	std::vector<int> map(map_reso * map_reso);
+
+	int angle_num = 32;
+
+	for (int angle_index = 0; angle_index < angle_num; angle_index++)
+	{
+		uint area = angle_index / (angle_num);
+		float a = HALF_PI / (angle_num);
+		float angle = glm::fma(a, float(angle_index), a*0.5f);
+
+		vec2 dir, inv_dir;
+		calcDirEx(angle, dir, inv_dir);
+
+		auto i_dir = abs(ivec2(round(dir * dir_reso)));
+		auto i_inv_dir = abs(ivec2(round(inv_dir * dir_reso)));
+		printf("dir[%3d]=[%4d,%4d]\n", angle_index, i_dir.x, i_dir.y);
+
+		for (int x = 0; x < map_reso * 2; x++)
+		{
+			ivec2 origin = ivec2(0);
+			if (i_dir.x>= i_dir.y)
+			{
+				origin.y += (map_reso-1) - int((ceil(i_dir.y / (float)i_dir.x))) * x;
+			}
+			else
+			{
+ 				origin.x += (map_reso - 1) - int((ceil(i_dir.x / (float)i_dir.y))) * x;
+			}
+
+			int begin, end;
+			if (!intersection(origin, i_dir, begin, end))
+			{
+				break;
+			}
+
+			for (int i = begin; i < end;)
+			{
+				ivec2 t1 = i * i_dir.xy() + origin * dir_reso;
+				ivec2 mi = t1 >> dir_reso_bit;
+
+				map[mi.x + mi.y*map_reso] += 1;
+				ivec2 next = ((mi >> 3) + 1) << 3;
+				ivec2 tp = next - mi;
+
+				i++;
+
+// 				ivec2 space = cell_origin - ((i * i_dir.xy + origin* dir_reso) % cell_origin);
+// 				ivec2 tp = space / i_dir;
+// 				int skip = (int(glm::min(tp.x, tp.y))) + 1;
+// 				i += skip;
+			}
+
+		}
+
+		for (int y = 0; y < map_reso; y++)
+		{
+			for (int x = 0; x < map_reso; x++)
+			{
+				assert(map[x + y * map_reso] == angle_index+1);
+			}
+		}
+	}
+}

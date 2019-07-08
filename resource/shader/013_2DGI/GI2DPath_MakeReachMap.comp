@@ -8,6 +8,10 @@
 
 layout (local_size_x = 1024) in;
 
+// https://github.com/zerowidth/jps-explained
+// https://zerowidth.com/2013/05/05/jump-point-search-explained.html
+
+
 layout(push_constant, std430) uniform InputVertex
 {
 	i16vec2 target[10];
