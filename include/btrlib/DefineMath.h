@@ -50,6 +50,7 @@ using i8vec2 = glm::i8vec2;
 using u8vec2 = glm::u8vec2;
 using f16vec2 = uint32_t;
 using f16vec3 = glm::u16vec3;
+using f16vec4 = uint64_t;
 
 using f16x2 = uint32_t;
 using s8x4 = glm::i8vec4;

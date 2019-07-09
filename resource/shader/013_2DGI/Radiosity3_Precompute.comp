@@ -1,0 +1,65 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_GI2D 0
+#define USE_GI2D_Radiosity3 1
+#include "GI2D.glsl"
+#include "Radiosity3.glsl"
+
+layout (local_size_x = 32, local_size_y = 32) in;
+
+layout(push_constant, std430) uniform InputVertex
+{
+	i16vec2 target;
+	i16vec2 reso;
+	f16vec3 light;
+} constant;
+
+
+
+shared uint64_t s_map[36];
+
+void main() 
+{
+
+	if(gl_LocalInvocationID.x < 6 && gl_LocalInvocationID.y < 6)
+	{
+		uint i = gl_LocalInvocationID.x+gl_LocalInvocationID.y*6;
+		uvec2 offset_xy = gl_LocalInvocationID.xy-1;
+		uvec2 index = gl_WorkGroupID.xy*4 + offset_xy;
+
+		uint64_t map = -1ul;
+		if(all(lessThan(index, u_gi2d_info.m_resolution.zw)))
+		{
+			map = b_diffuse_map[getMemoryOrder(index)];
+		}
+		s_map[i] = map;
+	}
+
+	barrier();
+	memoryBarrierShared();
+
+	const i16vec2 g_offset[8] = 
+	{
+		 i16vec2(-1,-1), 
+		 i16vec2( 0,-1),
+		 i16vec2( 1,-1),
+		 i16vec2( 1, 0),
+		 i16vec2( 1, 1),
+		 i16vec2( 0, 1),
+		 i16vec2(-1, 1),
+		 i16vec2(-1, 0),
+	};
+	uint8_t neighbor = uint8_t(0);
+	for(int i = 0; i < 8; i++)
+	{
+		ivec2 ii = ivec2(gl_LocalInvocationID.xy) + g_offset[i] + ivec2(8);
+		ivec2 map_index = ii / 8;
+		ivec2 map_bit = ii % 8;
+		if((s_map[map_index.x+map_index.y*6] & (1ul<<(map_bit.x+map_bit.y*8))) != 0ul)
+		{
+			neighbor |= uint8_t(1<<i);
+		}
+	}
+	b_neighbor[gl_GlobalInvocationID.x+gl_GlobalInvocationID.y*constant.reso.x] = neighbor;
+}

@@ -31,6 +31,7 @@
 #include <013_2DGI/GI2D/GI2DDebug.h>
 #include <013_2DGI/GI2D/GI2DModelRender.h>
 #include <013_2DGI/GI2D/GI2DRadiosity.h>
+#include <013_2DGI/GI2D/GI2DRadiosity3.h>
 #include <013_2DGI/GI2D/GI2DFluid.h>
 #include <013_2DGI/GI2D/GI2DSoftbody.h>
 
@@ -213,7 +214,7 @@ int pathFinding()
 				}
 
 //				gi2d_debug.executeDrawFragmentMap(cmd, app.m_window->getFrontBuffer());
-//  				path_process.executeBuildTree(cmd);
+//  			path_process.executeBuildTree(cmd);
 //				path_process.executeDrawTree(cmd, app.m_window->getFrontBuffer());
 				gi2d_make_hierarchy.executeMakeReachMap(cmd, gi2d_path_context);
 				gi2d_debug.executeDrawReachMap(cmd, gi2d_path_context, app.m_window->getFrontBuffer());
@@ -401,15 +402,8 @@ int main()
 
 	GI2DDebug gi2d_debug(context, gi2d_context);
 	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
-	GI2DRadiosity gi2d_Radiosity(context, gi2d_context, app.m_window->getFrontBuffer());
-
-//	Crowd_Procedure crowd_procedure(crowd_context, gi2d_context);
-//	Crowd_CalcWorldMatrix crowd_calc_world_matrix(crowd_context, appmodel_context);
-//	Crowd_Debug crowd_debug(crowd_context);
-//	AppModelAnimationStage animater(context, appmodel_context);
-//	GI2DModelRender renderer(context, appmodel_context, gi2d_context);
-//	auto anime_cmd = animater.createCmd(player_model);
-//	auto render_cmd = renderer.createCmd(player_model);
+//	GI2DRadiosity gi2d_Radiosity(context, gi2d_context, app.m_window->getFrontBuffer());
+	GI2DRadiosity3 gi2d_Radiosity(context, gi2d_context, app.m_window->getFrontBuffer());
 
 	app.setup();
 
@@ -436,13 +430,6 @@ int main()
 			{
 				cmds[cmd_render_clear] = clear_pipeline.execute();
 				cmds[cmd_render_present] = present_pipeline.execute();
-			}
-			// crowd
-			{
-//				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
-//				crowd_updater.execute(cmd);
-//				cmd.end();
-//				cmds[cmd_crowd] = cmd;
 			}
 
 			// gi2d

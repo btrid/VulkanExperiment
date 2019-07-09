@@ -1,0 +1,19 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_GI2D 0
+#define USE_GI2D_Radiosity3 1
+#define USE_RenderTarget 2
+#include "GI2D.glsl"
+#include "Radiosity3.glsl"
+#include "applib/System.glsl"
+layout (local_size_x = 32, local_size_y = 32) in;
+
+void main() 
+{
+	uint index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*gl_WorkGroupSize.x*gl_NumWorkGroups.x;	
+	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(b_radiance[index], 1.));
+}
+
+//b_diffuse_map[store]
+

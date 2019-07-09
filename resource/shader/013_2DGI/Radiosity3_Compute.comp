@@ -1,0 +1,157 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_GI2D 0
+#define USE_GI2D_Radiosity3 1
+#include "GI2D.glsl"
+#include "Radiosity3.glsl"
+
+layout (local_size_x = 1024) in;
+
+// https://github.com/zerowidth/jps-explained
+// https://zerowidth.com/2013/05/05/jump-point-search-explained.html
+
+
+layout(push_constant, std430) uniform InputVertex
+{
+	i16vec2 target;
+	i16vec2 reso;
+	f16vec3 light;
+} constant;
+
+
+ivec2 neighor_list[] =
+{
+	ivec2(-1, -1),
+	ivec2( 0, -1),
+	ivec2( 1, -1),
+	ivec2( 1,  0),
+	ivec2( 1,  1),
+	ivec2( 0,  1),
+	ivec2(-1,  1),
+	ivec2(-1,  0),
+};
+uvec4 neighor_check_list[] =
+{
+	uvec4(2,6,1,7), // diagonal_path 
+	uvec4(3,5,4,4), // diagonal_wall
+	uvec4(1,7,4,4), // straight_path
+	uvec4(2,6,4,4), // straight_wall
+};
+
+struct Node
+{
+	uint param;
+	float dist;
+};
+shared Node s_active[1024*4];
+shared uvec2 s_active_counter;
+
+void explore(in ivec2 pos, in uint dir_type, in float dist)
+{
+	f16vec3 power = constant.light / f16vec3(dist*dist * 0.1);
+	if(dot(power, f16vec3(1.)) <= 0.01){ return;}
+
+	pos += neighor_list[dir_type];
+	int index = pos.x + pos.y * constant.reso.x;
+	{
+		// すでにチェック済みなら終わり
+		int bit = 1<<(index % 32);
+		if((atomicOr(b_closed[index / 32], bit) & bit) != 0)
+		{
+			return;
+		}		
+	}
+
+	b_radiance[index] += power;
+
+
+	uint is_straight = dir_type%2;
+	// 新しい探索のチェック
+	{
+		uint neighbor = uint(b_neighbor[index]);
+		uvec4 path_check = (dir_type.xxxx + neighor_check_list[is_straight*2]) % uvec4(8);
+		uvec4 wall_check = (dir_type.xxxx + neighor_check_list[is_straight*2+1]) % uvec4(8);
+		uvec4 path_bit = uvec4(1)<<path_check;
+		uvec4 wall_bit = uvec4(1)<<wall_check;
+
+		bvec4 is_path = notEqual((~neighbor.xxxx) & path_bit, uvec4(0));
+		bvec4 is_wall = notEqual(neighbor.xxxx & wall_bit, uvec4(0));
+		uvec4 is_open = uvec4(is_path) * uvec4(is_wall.xy, 1-ivec2(is_straight));
+
+		uint is_advance = uint(((~neighbor) & (1u << dir_type)) != 0) * uint(any(is_path.zw));
+
+
+		uint num = is_open.x+is_open.y+is_open.z+is_open.w + is_advance;
+		if(num != 0)
+		{
+			uint active_index = atomicAdd(s_active_counter[0], num);
+			for(int i = 0; i < 4; i++)
+			{
+				if(is_open[i]==0){ continue; }
+				s_active[active_index++ % s_active.length()] = Node(pos.x | (pos.y<<14) | (path_check[i]<<28), dist+((i/2==1)?1.:1.41));
+			}
+
+			if(is_advance != 0)
+			{
+				s_active[active_index++ % s_active.length()] = Node(pos.x | (pos.y<<14) | (dir_type<<28), dist+((is_straight==1)?1.:1.41));
+			}
+		}
+	}
+}
+
+void main() 
+{
+	for(uint i = gl_LocalInvocationIndex; i < uint(constant.reso.x)*constant.reso.y/32; i+=gl_WorkGroupSize.x)
+	{
+		b_closed[i] = 0;
+	}
+	
+	if(gl_LocalInvocationIndex == 0)
+	{
+		s_active_counter = uvec2(0);
+	}
+
+	memoryBarrierBuffer();
+	memoryBarrierShared();
+	barrier();
+
+	if(gl_LocalInvocationIndex < 8)
+	{
+		ivec2 pos = ivec2(constant.target);
+		uint dir_type = gl_LocalInvocationIndex%8;
+		uint neighbor = uint(b_neighbor[pos.x + pos.y * constant.reso.x]);
+		if((~neighbor & (1<<dir_type)) != 0)
+		{
+			explore(pos, dir_type, ((dir_type%2)==1)?1.:1.41);
+		}
+	}
+
+	for(int i = 0; i < 5000; i++)
+	{
+		memoryBarrierShared();
+		barrier();
+
+		uint accum = s_active_counter[0];
+		uint consume = s_active_counter[1];
+		uint count = min(accum-consume, gl_WorkGroupSize.x);
+		if(count == 0){ break; }
+
+		bool is_active = gl_LocalInvocationIndex < count;
+		Node open = is_active ? s_active[(consume+gl_LocalInvocationIndex) % s_active.length()] : Node(0, 0.);
+
+		barrier();
+
+		if(gl_LocalInvocationIndex == 0)
+		{
+			s_active_counter[1] += count;
+		}
+
+		if(is_active)
+		{
+			ivec2 pos = ivec2(open.param, open.param>>14) & ((1<<14)-1);
+			uint dir_type = uint((open.param>>28)&((1<<4)-1));
+			explore(pos, dir_type, open.dist);
+		}
+	}
+}

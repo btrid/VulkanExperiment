@@ -42,4 +42,8 @@ rem %exe% %include% %option% -o %output%/Radiosity_Render.frag.spv Radiosity_Ren
 %exe% %include% %option% -o %output%/Radiosity_Render.frag.spv Radiosity_RenderLine.frag
 
 
+%exe% %include% %option% -o %output%/Radiosity3_Precompute.comp.spv Radiosity3_Precompute.comp
+%exe% %include% %option% -o %output%/Radiosity3_Compute.comp.spv Radiosity3_Compute.comp
+%exe% %include% %option% -o %output%/Radiosity3_Rendering.comp.spv Radiosity3_Rendering.comp
+
 
