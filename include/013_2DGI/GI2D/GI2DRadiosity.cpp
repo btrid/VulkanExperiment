@@ -11,12 +11,12 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
 	{
-		GI2DRadiosityInfo info;
-		info.ray_num_max = 0;
-		info.ray_frame_max = 0;
-		info.frame_max = Frame_Num;
+		m_info.ray_num_max = 0;
+		m_info.ray_frame_max = 0;
+		m_info.frame_max = Frame_Num;
+		m_info.frame = 3;
 		u_radiosity_info = m_context->m_uniform_memory.allocateMemory<GI2DRadiosityInfo>({1,{} });
-		cmd.updateBuffer<GI2DRadiosityInfo>(u_radiosity_info.getInfo().buffer, u_radiosity_info.getInfo().offset, info);
+		cmd.updateBuffer<GI2DRadiosityInfo>(u_radiosity_info.getInfo().buffer, u_radiosity_info.getInfo().offset, m_info);
 		vk::BufferMemoryBarrier to_read[] = {
 			u_radiosity_info.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eMemoryRead),
 		};
@@ -29,6 +29,83 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 		b_vertex_index = m_context->m_storage_memory.allocateMemory<uint>({ size,{} });
 		b_vertex = m_context->m_storage_memory.allocateMemory<RadiosityVertex>({ 220000,{} });
 		b_edge = m_context->m_storage_memory.allocateMemory<uint64_t>({ size / 64,{} });
+
+		vk::ImageCreateInfo image_info;
+		image_info.setExtent(vk::Extent3D(m_gi2d_context->RenderSize.x, m_gi2d_context->RenderSize.y, 1));
+		image_info.setArrayLayers(Frame_Num);
+		image_info.setFormat(vk::Format::eR16G16B16A16Sfloat);
+		image_info.setImageType(vk::ImageType::e2D);
+		image_info.setInitialLayout(vk::ImageLayout::eUndefined);
+		image_info.setMipLevels(1);
+		image_info.setSamples(vk::SampleCountFlagBits::e1);
+		image_info.setSharingMode(vk::SharingMode::eExclusive);
+		image_info.setTiling(vk::ImageTiling::eOptimal);
+		image_info.setUsage(vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled);
+
+		m_image = m_context->m_device->createImageUnique(image_info);
+
+		vk::MemoryRequirements memory_request = context->m_device->getImageMemoryRequirements(m_image.get());
+		vk::MemoryAllocateInfo memory_alloc_info;
+		memory_alloc_info.allocationSize = memory_request.size;
+		memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(context->m_gpu.getHandle(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+		m_image_memory = context->m_device->allocateMemoryUnique(memory_alloc_info);
+		context->m_device->bindImageMemory(m_image.get(), m_image_memory.get(), 0);
+
+		vk::ImageViewCreateInfo view_info;
+		view_info.setFormat(image_info.format);
+		view_info.setImage(m_image.get());
+		view_info.subresourceRange.setLayerCount(1);
+		view_info.subresourceRange.setBaseMipLevel(0);
+		view_info.subresourceRange.setLevelCount(1);
+		view_info.subresourceRange.setAspectMask(vk::ImageAspectFlagBits::eColor);
+		view_info.setViewType(vk::ImageViewType::e2D);
+		view_info.components.setR(vk::ComponentSwizzle::eR).setG(vk::ComponentSwizzle::eG).setB(vk::ComponentSwizzle::eB);
+
+		for (int i = 0; i<Frame_Num; i++)
+		{
+			view_info.subresourceRange.setBaseArrayLayer(i);
+			m_image_view[i] = m_context->m_device->createImageViewUnique(view_info);
+		}
+
+		view_info.subresourceRange.setBaseArrayLayer(0);
+		view_info.subresourceRange.setLayerCount(Frame_Num);
+		view_info.setViewType(vk::ImageViewType::e2DArray);
+		m_image_rtv = m_context->m_device->createImageViewUnique(view_info);
+		
+		vk::SamplerCreateInfo sampler_info;
+		sampler_info.setAddressModeU(vk::SamplerAddressMode::eClampToEdge);
+		sampler_info.setAddressModeV(vk::SamplerAddressMode::eClampToEdge);
+		sampler_info.setAddressModeW(vk::SamplerAddressMode::eClampToEdge);
+		sampler_info.setAnisotropyEnable(false);
+		sampler_info.setMagFilter(vk::Filter::eNearest);
+		sampler_info.setMinFilter(vk::Filter::eNearest);
+		sampler_info.setMinLod(0.f);
+		sampler_info.setMaxLod(0.f);
+		sampler_info.setMipLodBias(0.f);
+		sampler_info.setMipmapMode(vk::SamplerMipmapMode::eLinear);
+		sampler_info.setUnnormalizedCoordinates(false);
+		m_image_sampler = m_context->m_device->createSamplerUnique(sampler_info);
+
+		vk::ImageMemoryBarrier to_copy_barrier;
+		to_copy_barrier.image = m_image.get();
+		to_copy_barrier.oldLayout = vk::ImageLayout::eUndefined;
+		to_copy_barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
+		to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+		to_copy_barrier.subresourceRange = vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, Frame_Num };
+
+		vk::ImageMemoryBarrier to_shader_read_barrier;
+		to_shader_read_barrier.image = m_image.get();
+		to_shader_read_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
+		to_shader_read_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+		to_shader_read_barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+		to_shader_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+		to_shader_read_barrier.subresourceRange = vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, Frame_Num };
+
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
+		cmd.clearColorImage(m_image.get(), vk::ImageLayout::eTransferDstOptimal, vk::ClearColorValue(std::array<uint32_t, 4>{0}), vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, Frame_Num });
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllGraphics, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
+
 	}
 
 	{
@@ -41,6 +118,7 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 				vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eCombinedImageSampler, Frame_Num, stage),
 			};
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 			desc_layout_info.setBindingCount(array_length(binding));
@@ -84,6 +162,22 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 				.setDstSet(m_descriptor_set.get()),
 			};
 			context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
+
+			vk::WriteDescriptorSet write_desc[Frame_Num];
+			for (int i = 0; i < Frame_Num; i++)
+			{
+				vk::DescriptorImageInfo samplers(m_image_sampler.get(), m_image_view[i].get(), vk::ImageLayout::eShaderReadOnlyOptimal);
+
+					write_desc[i] =
+					vk::WriteDescriptorSet()
+					.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+					.setDescriptorCount(1)
+					.setPImageInfo(&samplers)
+					.setDstBinding(5)
+					.setDstArrayElement(i)
+					.setDstSet(m_descriptor_set.get());
+			}
+			context->m_device->updateDescriptorSets(array_length(write_desc), write_desc, 0, nullptr);
 		}
 
 	}
@@ -95,9 +189,12 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 			"Radiosity_RayMarch.comp.spv",
 			"Radiosity_RayBounce.comp.spv",
 
-			"Radiosity_Render.vert.spv",
-			"Radiosity_Render.geom.spv",
-			"Radiosity_Render.frag.spv",
+			"Radiosity_Radiosity.vert.spv",
+			"Radiosity_Radiosity.geom.spv",
+			"Radiosity_Radiosity.frag.spv",
+
+			"Radiosity_Rendering.vert.spv",
+			"Radiosity_Rendering.frag.spv",
 
 		};
 		static_assert(array_length(name) == Shader_Num, "not equal shader num");
@@ -136,14 +233,14 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 			pipeline_layout_info.setPSetLayouts(layouts);
-			m_pipeline_layout[PipelineLayout_Rendering] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PipelineLayout_Radiosity_GP] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
 	}
 
 	// pipeline
 	{
-		std::array<vk::PipelineShaderStageCreateInfo, 10> shader_info;
+		std::array<vk::PipelineShaderStageCreateInfo, 3> shader_info;
 		shader_info[0].setModule(m_shader[Shader_MakeHitpoint].get());
 		shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[0].setPName("main");
@@ -174,9 +271,7 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 	// レンダーパス
 	{
 		vk::AttachmentReference color_ref[] = {
-			vk::AttachmentReference()
-			.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
-			.setAttachment(0)
+			vk::AttachmentReference().setLayout(vk::ImageLayout::eColorAttachmentOptimal).setAttachment(0),
 		};
 
 		// sub pass
@@ -184,7 +279,54 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 		subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
 		subpass.setInputAttachmentCount(0);
 		subpass.setPInputAttachments(nullptr);
-		subpass.setColorAttachmentCount(std::size(color_ref));
+		subpass.setColorAttachmentCount(array_length(color_ref));
+		subpass.setPColorAttachments(color_ref);
+
+		vk::AttachmentDescription attach_desc[] =
+		{
+			// color1
+			vk::AttachmentDescription()
+			.setFormat(vk::Format::eR16G16B16A16Sfloat)
+			.setSamples(vk::SampleCountFlagBits::e1)
+			.setLoadOp(vk::AttachmentLoadOp::eClear)
+			.setStoreOp(vk::AttachmentStoreOp::eStore)
+			.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
+			.setFinalLayout(vk::ImageLayout::eShaderReadOnlyOptimal),
+		};
+		vk::RenderPassCreateInfo renderpass_info;
+		renderpass_info.setAttachmentCount(array_length(attach_desc));
+		renderpass_info.setPAttachments(attach_desc);
+		renderpass_info.setSubpassCount(1);
+		renderpass_info.setPSubpasses(&subpass);
+
+		m_radiosity_pass = context->m_device->createRenderPassUnique(renderpass_info);
+
+		{
+			vk::ImageView view[] = {
+				m_image_rtv.get(),
+			};
+			vk::FramebufferCreateInfo framebuffer_info;
+			framebuffer_info.setRenderPass(m_radiosity_pass.get());
+			framebuffer_info.setAttachmentCount(array_length(view));
+			framebuffer_info.setPAttachments(view);
+			framebuffer_info.setWidth(render_target->m_info.extent.width);
+			framebuffer_info.setHeight(render_target->m_info.extent.height);
+			framebuffer_info.setLayers(Frame_Num);
+
+			m_radiosity_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
+		}
+	}
+	{
+		vk::AttachmentReference color_ref[] = {
+			vk::AttachmentReference().setLayout(vk::ImageLayout::eColorAttachmentOptimal).setAttachment(0),
+		};
+
+		// sub pass
+		vk::SubpassDescription subpass;
+		subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+		subpass.setInputAttachmentCount(0);
+		subpass.setPInputAttachments(nullptr);
+		subpass.setColorAttachmentCount(array_length(color_ref));
 		subpass.setPColorAttachments(color_ref);
 
 		vk::AttachmentDescription attach_desc[] =
@@ -204,36 +346,48 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 		renderpass_info.setSubpassCount(1);
 		renderpass_info.setPSubpasses(&subpass);
 
-		m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
+		m_rendering_pass = context->m_device->createRenderPassUnique(renderpass_info);
 	}
 	{
 		vk::ImageView view[] = {
 			render_target->m_view,
 		};
 		vk::FramebufferCreateInfo framebuffer_info;
-		framebuffer_info.setRenderPass(m_render_pass.get());
-		framebuffer_info.setAttachmentCount(std::size(view));
+		framebuffer_info.setRenderPass(m_rendering_pass.get());
+		framebuffer_info.setAttachmentCount(array_length(view));
 		framebuffer_info.setPAttachments(view);
 		framebuffer_info.setWidth(render_target->m_info.extent.width);
 		framebuffer_info.setHeight(render_target->m_info.extent.height);
 		framebuffer_info.setLayers(1);
 
-		m_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
+		m_rendering_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
 	}
 
 	{
 		vk::PipelineShaderStageCreateInfo shader_info[] =
 		{
 			vk::PipelineShaderStageCreateInfo()
-			.setModule(m_shader[Shader_RenderVS].get())
+			.setModule(m_shader[Shader_RadiosityVS].get())
 			.setPName("main")
 			.setStage(vk::ShaderStageFlagBits::eVertex),
 			vk::PipelineShaderStageCreateInfo()
-			.setModule(m_shader[Shader_RenderGS].get())
+			.setModule(m_shader[Shader_RadiosityGS].get())
 			.setPName("main")
 			.setStage(vk::ShaderStageFlagBits::eGeometry),
 			vk::PipelineShaderStageCreateInfo()
-			.setModule(m_shader[Shader_RenderFS].get())
+			.setModule(m_shader[Shader_RadiosityFS].get())
+			.setPName("main")
+			.setStage(vk::ShaderStageFlagBits::eFragment),
+		};
+
+		vk::PipelineShaderStageCreateInfo shader_rendering_info[] =
+		{
+			vk::PipelineShaderStageCreateInfo()
+			.setModule(m_shader[Shader_RenderingVS].get())
+			.setPName("main")
+			.setStage(vk::ShaderStageFlagBits::eVertex),
+			vk::PipelineShaderStageCreateInfo()
+			.setModule(m_shader[Shader_RenderingFS].get())
 			.setPName("main")
 			.setStage(vk::ShaderStageFlagBits::eFragment),
 		};
@@ -242,6 +396,10 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 		vk::PipelineInputAssemblyStateCreateInfo assembly_info;
 		assembly_info.setPrimitiveRestartEnable(VK_FALSE);
 		assembly_info.setTopology(vk::PrimitiveTopology::ePointList);
+
+		vk::PipelineInputAssemblyStateCreateInfo assembly_info2;
+		assembly_info2.setPrimitiveRestartEnable(VK_FALSE);
+		assembly_info2.setTopology(vk::PrimitiveTopology::eTriangleList);
 
 		// viewport
 		vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)render_target->m_resolution.width, (float)render_target->m_resolution.height, 0.f, 1.f);
@@ -281,9 +439,26 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 			| vk::ColorComponentFlagBits::eG
 			| vk::ColorComponentFlagBits::eB
 			/*| vk::ColorComponentFlagBits::eA*/);
+
 		vk::PipelineColorBlendStateCreateInfo blend_info;
 		blend_info.setAttachmentCount(1);
 		blend_info.setPAttachments(&blend_state);
+
+		vk::PipelineColorBlendAttachmentState blend_state2;
+		blend_state2.setBlendEnable(VK_TRUE);
+		blend_state2.setColorBlendOp(vk::BlendOp::eAdd);
+		blend_state2.setSrcColorBlendFactor(vk::BlendFactor::eOne);
+		blend_state2.setDstColorBlendFactor(vk::BlendFactor::eOne);
+		blend_state2.setAlphaBlendOp(vk::BlendOp::eAdd);
+		blend_state2.setSrcAlphaBlendFactor(vk::BlendFactor::eOne);
+		blend_state2.setDstAlphaBlendFactor(vk::BlendFactor::eZero);
+		blend_state2.setColorWriteMask(vk::ColorComponentFlagBits::eR
+			| vk::ColorComponentFlagBits::eG
+			| vk::ColorComponentFlagBits::eB
+		/*| vk::ColorComponentFlagBits::eA*/);
+		vk::PipelineColorBlendStateCreateInfo blend_info2;
+		blend_info2.setAttachmentCount(1);
+		blend_info2.setPAttachments(&blend_state2);
 
 		vk::PipelineVertexInputStateCreateInfo vertex_input_info;
 
@@ -297,19 +472,76 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 			.setPViewportState(&viewportInfo)
 			.setPRasterizationState(&rasterization_info)
 			.setPMultisampleState(&sample_info)
-			.setLayout(m_pipeline_layout[PipelineLayout_Rendering].get())
-			.setRenderPass(m_render_pass.get())
+			.setLayout(m_pipeline_layout[PipelineLayout_Radiosity_GP].get())
+			.setRenderPass(m_radiosity_pass.get())
 			.setPDepthStencilState(&depth_stencil_info)
 			.setPColorBlendState(&blend_info),
+			vk::GraphicsPipelineCreateInfo()
+			.setStageCount(array_length(shader_rendering_info))
+			.setPStages(shader_rendering_info)
+			.setPVertexInputState(&vertex_input_info)
+			.setPInputAssemblyState(&assembly_info2)
+			.setPViewportState(&viewportInfo)
+			.setPRasterizationState(&rasterization_info)
+			.setPMultisampleState(&sample_info)
+			.setLayout(m_pipeline_layout[PipelineLayout_Radiosity_GP].get())
+			.setRenderPass(m_rendering_pass.get())
+			.setPDepthStencilState(&depth_stencil_info)
+			.setPColorBlendState(&blend_info2),
 		};
 		auto graphics_pipeline = context->m_device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info);
-		m_pipeline[Pipeline_Render] = std::move(graphics_pipeline[0]);
+		m_pipeline[Pipeline_Radiosity] = std::move(graphics_pipeline[0]);
+		m_pipeline[Pipeline_Rendering] = std::move(graphics_pipeline[1]);
 	}
 
 }
 void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 {
 	DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
+
+	{
+
+		vk::BufferMemoryBarrier to_write[] = {
+			u_radiosity_info.makeMemoryBarrier(vk::AccessFlagBits::eMemoryRead, vk::AccessFlagBits::eTransferWrite),
+		};
+		vk::ImageMemoryBarrier image_write;
+		image_write.setImage(m_image.get());
+		image_write.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, m_info.frame, 1 });
+//		image_barrier.setSrcAccessMask(vk::AccessFlagBits::eMemoryRead);
+		image_write.setOldLayout(vk::ImageLayout::eUndefined);
+		image_write.setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
+		image_write.setNewLayout(vk::ImageLayout::eTransferDstOptimal);
+
+ 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eBottomOfPipe, vk::PipelineStageFlagBits::eTransfer, {},
+ 			0, nullptr, array_length(to_write), to_write, 1, &image_write);
+
+		m_info.frame = (m_info.frame+1) % m_info.frame_max;
+		cmd.updateBuffer<GI2DRadiosityInfo>(u_radiosity_info.getInfo().buffer, u_radiosity_info.getInfo().offset, m_info);
+
+		vk::ImageSubresourceRange subresource;
+		subresource.setBaseArrayLayer(m_info.frame);
+		subresource.setLayerCount(1);
+		subresource.setBaseMipLevel(0);
+		subresource.setLevelCount(1);
+		subresource.setAspectMask(vk::ImageAspectFlagBits::eColor);
+		cmd.clearColorImage(m_image.get(), vk::ImageLayout::eTransferDstOptimal, vk::ClearColorValue(std::array<uint32_t, 4>{0}), subresource);
+
+		vk::BufferMemoryBarrier to_read[] = {
+			u_radiosity_info.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eMemoryRead),
+		};
+
+		vk::ImageMemoryBarrier image_read;
+		image_read.setImage(m_image.get());
+		image_read.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, m_info.frame, 1 });
+		image_read.setOldLayout(vk::ImageLayout::eTransferDstOptimal);
+		image_read.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+		image_read.setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
+		image_read.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eTopOfPipe| vk::PipelineStageFlagBits::eColorAttachmentOutput, {},
+			0, nullptr, array_length(to_read), to_read, 0, nullptr);
+
+
+	}
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
 	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
 	cmd.pushConstants<int>(m_pipeline_layout[PipelineLayout_Radiosity].get(), vk::ShaderStageFlagBits::eCompute, 0, 0);
@@ -358,10 +590,6 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RayMarch].get());
 
-// 		std::array<float, 4> offsets = {0.125f, 0.375f, 0.625f, 0.875f};
-// 		static int s_offset_index;
-// 		s_offset_index = (s_offset_index + 1) % offsets.size();
-// 		cmd.pushConstants<float>(m_pipeline_layout[PipelineLayout_Radiosity].get(), vk::ShaderStageFlagBits::eCompute, 0, offsets[s_offset_index]);
 		cmd.pushConstants<float>(m_pipeline_layout[PipelineLayout_Radiosity].get(), vk::ShaderStageFlagBits::eCompute, 0, 0.25f);
 
 		auto num = app::calcDipatchGroups(uvec3(2048, Dir_Num, 1), uvec3(128, 1, 1));
@@ -395,6 +623,42 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 
 	}
 
+	// render_targetに書く
+	_label.insert("GI2DRadiosity::executeRendering");
+	{
+		vk::BufferMemoryBarrier to_read[] = {
+			b_vertex.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+		};
+
+		vk::ImageMemoryBarrier image_barrier;
+		image_barrier.setImage(m_image.get());
+		image_barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, Frame_Num });
+//		image_barrier.setOldLayout(vk::ImageLayout::eTransferDstOptimal);
+//		image_barrier.setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+		image_barrier.setOldLayout(vk::ImageLayout::ePreinitialized);
+		image_barrier.setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
+		image_barrier.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+ 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer|vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eVertexShader | vk::PipelineStageFlagBits::eGeometryShader | vk::PipelineStageFlagBits::eColorAttachmentOutput, {}, {}, { array_size(to_read), to_read }, { image_barrier });
+	}
+
+	vk::RenderPassBeginInfo begin_render_Info;
+	begin_render_Info.setRenderPass(m_radiosity_pass.get());
+	begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), m_render_target->m_resolution));
+	begin_render_Info.setFramebuffer(m_radiosity_framebuffer.get());
+	begin_render_Info.setClearValueCount(1);
+	auto color = vk::ClearValue(vk::ClearColorValue(std::array<uint32_t, 4>{}));
+	begin_render_Info.setPClearValues(&color);
+	cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
+
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayout_Radiosity_GP].get(), 0, m_gi2d_context->getDescriptorSet(), {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayout_Radiosity_GP].get(), 1, m_descriptor_set.get(), {});
+
+	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_Radiosity].get());
+	cmd.drawIndirect(b_vertex_counter.getInfo().buffer, b_vertex_counter.getInfo().offset, 1, sizeof(VertexCounter));
+
+	cmd.endRenderPass();
+
+
 }
 
 
@@ -405,31 +669,33 @@ void GI2DRadiosity::executeRendering(const vk::CommandBuffer& cmd)
 
 	// render_targetに書く
 	{
-		vk::BufferMemoryBarrier to_read[] = {
-//			m_gi2d_context->b_fragment.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-			b_vertex.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-		};
 
-		vk::ImageMemoryBarrier image_barrier;
-		image_barrier.setImage(m_render_target->m_image);
-		image_barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-		image_barrier.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
-		image_barrier.setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
+		vk::ImageMemoryBarrier image_barrier[1];
+// 		image_barrier[0].setImage(m_image.get());
+// 		image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, Frame_Num });
+// 		image_barrier[0].setSrcAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+// 		image_barrier[0].setOldLayout(vk::ImageLayout::eColorAttachmentOptimal);
+// 		image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+// 		image_barrier[0].setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+		image_barrier[0].setImage(m_render_target->m_image);
+		image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+		image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+		image_barrier[0].setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
 
-		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eVertexShader | vk::PipelineStageFlagBits::eGeometryShader | vk::PipelineStageFlagBits::eColorAttachmentOutput, {}, {}, { array_size(to_read), to_read }, {image_barrier});
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eBottomOfPipe, vk::PipelineStageFlagBits::eColorAttachmentOutput, {}, {}, {}, {array_length(image_barrier), image_barrier});
 	}
 
 	vk::RenderPassBeginInfo begin_render_Info;
-	begin_render_Info.setRenderPass(m_render_pass.get());
+	begin_render_Info.setRenderPass(m_rendering_pass.get());
 	begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), m_render_target->m_resolution));
-	begin_render_Info.setFramebuffer(m_framebuffer.get());
+	begin_render_Info.setFramebuffer(m_rendering_framebuffer.get());
 	cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayout_Rendering].get(), 0, m_gi2d_context->getDescriptorSet(), {});
-	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayout_Rendering].get(), 1, m_descriptor_set.get(), {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayout_Radiosity_GP].get(), 0, m_gi2d_context->getDescriptorSet(), {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayout_Radiosity_GP].get(), 1, m_descriptor_set.get(), {});
   
-  	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_Render].get());
- 	cmd.drawIndirect(b_vertex_counter.getInfo().buffer, b_vertex_counter.getInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
+  	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_Rendering].get());
+ 	cmd.draw(3,1,0,0);
 
 	cmd.endRenderPass();
 	

@@ -20,16 +20,19 @@ struct GI2DRadiosity
 		Shader_RayMarch,
 		Shader_RayBounce,
 
-		Shader_RenderVS,
-		Shader_RenderGS,
-		Shader_RenderFS,
+		Shader_RadiosityVS,
+		Shader_RadiosityGS,
+		Shader_RadiosityFS,
+
+		Shader_RenderingVS,
+		Shader_RenderingFS,
 
 		Shader_Num,
 	};
 	enum PipelineLayout
 	{
 		PipelineLayout_Radiosity,
-		PipelineLayout_Rendering,
+		PipelineLayout_Radiosity_GP,
 		PipelineLayout_Num,
 	};
 	enum Pipeline
@@ -37,8 +40,9 @@ struct GI2DRadiosity
 		Pipeline_MakeHitpoint,
 		Pipeline_RayMarch,
 		Pipeline_RayBounce,
+		Pipeline_Radiosity,
 
-		Pipeline_Render,
+		Pipeline_Rendering,
 
 		Pipeline_Num,
 	};
@@ -88,11 +92,22 @@ struct GI2DRadiosity
 	btr::BufferMemoryEx<RadiosityVertex> b_vertex;
 	btr::BufferMemoryEx<uint64_t> b_edge;
 
+	GI2DRadiosityInfo m_info;
+
+	vk::ImageCreateInfo m_image_info;
+	vk::UniqueImage m_image;
+	std::array<vk::UniqueImageView, Frame_Num> m_image_view;
+	vk::UniqueImageView m_image_rtv;
+	vk::UniqueDeviceMemory m_image_memory;
+	vk::UniqueSampler m_image_sampler;
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
 
-	vk::UniqueRenderPass m_render_pass;
-	vk::UniqueFramebuffer m_framebuffer;
+	vk::UniqueRenderPass m_radiosity_pass;
+	vk::UniqueFramebuffer m_radiosity_framebuffer;
+
+	vk::UniqueRenderPass m_rendering_pass;
+	vk::UniqueFramebuffer m_rendering_framebuffer;
 
 
 };

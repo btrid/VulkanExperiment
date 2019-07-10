@@ -10,7 +10,7 @@ struct GI2DRadiosityInfo
 	uint ray_num_max;
 	uint ray_frame_max;
 	uint frame_max;
-	uint a2;
+	uint frame;
 };
 
 struct VertexCounter
@@ -57,6 +57,9 @@ layout(set=USE_GI2D_Radiosity, binding=3, std430) restrict buffer VertexBuffer {
 layout(set=USE_GI2D_Radiosity, binding=4, std430) restrict buffer MapEdgeBuffer {
 	uint64_t b_edge[];
 };
+
+layout(set=USE_GI2D_Radiosity, binding=5) uniform sampler2D s_radiosity[4];
+
 
 
 #endif

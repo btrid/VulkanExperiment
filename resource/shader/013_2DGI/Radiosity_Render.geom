@@ -36,6 +36,9 @@ layout(location=1)out OutData
 void main()
 {
 	if(dot(gs_in[0].color, gs_in[0].color) <= 0.01){ return ;}
+
+	gl_Layer = u_radiosity_info.frame;
+
 	uint index = gs_in[0].vertex_index;
 	vec3 color = gs_in[0].color;
 

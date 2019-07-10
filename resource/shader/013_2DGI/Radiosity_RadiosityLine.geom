@@ -36,10 +36,13 @@ layout(location=1)out OutData
 void main()
 {
 	if(dot(gs_in[0].color, gs_in[0].color) <= 0.001){ return ;}
+
 	uint index = gs_in[0].vertex_index;
 
 	for(uint i = gl_InvocationID; i < Dir_Num; i+=invocation_num)
 	{
+		gl_Layer = int(u_radiosity_info.frame);
+
 		uint angle_index = i;
 
 		uvec2 target_id = b_vertex[index].vertex[angle_index].id;
