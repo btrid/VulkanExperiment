@@ -82,8 +82,10 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_messenger_callback(
 		prefix,
 		callbackData->pMessageIdName,
 		callbackData->pMessage);
-	if (callbackData->objectCount > 0) {
-		char tmp_message[500];
+
+	char tmp_message[500];
+	if (callbackData->objectCount > 0) 
+	{
 		sprintf_s(tmp_message, "\n Object Num is %d\n", callbackData->objectCount);
 		strcat_s(message, message_size, tmp_message);
 		for (uint32_t object = 0; object < callbackData->objectCount; ++object) {
@@ -96,8 +98,8 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_messenger_callback(
 			strcat_s(message, message_size, tmp_message);
 		}
 	}
-	if (callbackData->cmdBufLabelCount > 0) {
-		char tmp_message[500];
+	if (callbackData->cmdBufLabelCount > 0) 
+	{
 		sprintf_s(tmp_message, message_size,
 			"\n Command Buffer Labels - %d\n",
 			callbackData->cmdBufLabelCount);

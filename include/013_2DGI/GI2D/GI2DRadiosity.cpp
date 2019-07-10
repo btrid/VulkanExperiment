@@ -540,8 +540,8 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 
 
 		vk::ImageSubresourceRange subresource;
-		subresource.setBaseArrayLayer(0);
-		subresource.setLayerCount(Frame_Num);
+		subresource.setBaseArrayLayer(m_info.frame);
+		subresource.setLayerCount(1);
 		subresource.setBaseMipLevel(0);
 		subresource.setLevelCount(1);
 		subresource.setAspectMask(vk::ImageAspectFlagBits::eColor);
