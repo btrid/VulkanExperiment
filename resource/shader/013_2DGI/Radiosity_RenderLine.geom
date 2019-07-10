@@ -42,8 +42,8 @@ void main()
 	{
 		uint angle_index = i;
 
-		uvec2 target_id = b_vertex_array[index].vertex[angle_index].id;
-		u16vec4 target = u16vec4(b_vertex_array[target_id.x].pos, b_vertex_array[target_id.y].pos);
+		uvec2 target_id = b_vertex[index].vertex[angle_index].id;
+		u16vec4 target = u16vec4(b_vertex[target_id.x].pos, b_vertex[target_id.y].pos);
 		vec4 vertex = ((vec4(target) + vec4(0.5)) / vec4(u_gi2d_info.m_resolution.xyxy)) * 2. - 1.;
 
 		gl_Position = vec4(vertex.xy, 0., 1.);

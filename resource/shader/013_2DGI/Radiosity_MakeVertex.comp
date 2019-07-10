@@ -71,17 +71,17 @@ void main()
 	uint vi = -1;
 	if((is_diffuse && is_edge)||is_boundary)
 	{
-		vi = atomicAdd(b_vertex_array_counter.instanceCount, 1);
+		vi = atomicAdd(b_vertex_counter.instanceCount, 1);
 		if((vi%1024) == 0){
-			atomicAdd(b_vertex_array_counter.bounce_cmd.x, 1);
+			atomicAdd(b_vertex_counter.bounce_cmd.x, 1);
 		}
-		b_vertex_array[vi].pos = u16vec2(gl_GlobalInvocationID.xy);
+		b_vertex[vi].pos = u16vec2(gl_GlobalInvocationID.xy);
 		f16vec3 albedo = f16vec3(getRGB(b_fragment[index]));
 		f16vec3 emissive = albedo * f16vec3(isEmissive(b_fragment[index]));
-		b_vertex_array[vi].radiance[0] = emissive;
-		b_vertex_array[vi].radiance[1] = emissive;
-		b_vertex_array[vi].albedo = albedo;
-		b_vertex_array[vi].flag = (!(is_diffuse && is_edge) && is_boundary) ? RV_FLAG_IS_BOUNDARY : 0;
+		b_vertex[vi].radiance[0] = emissive;
+		b_vertex[vi].radiance[1] = emissive;
+		b_vertex[vi].albedo = albedo;
+		b_vertex[vi].flag = (!(is_diffuse && is_edge) && is_boundary) ? RV_FLAG_IS_BOUNDARY : 0;
 		
 
 		uvec2 map = gl_GlobalInvocationID.xy / 8;
@@ -90,6 +90,6 @@ void main()
 
 	}
 
-	b_vertex_array_index[index] = vi;
+	b_vertex_index[index] = vi;
 
 }

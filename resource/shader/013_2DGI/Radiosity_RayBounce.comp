@@ -14,37 +14,37 @@ layout(push_constant) uniform Input
 layout (local_size_x = 1024, local_size_y = 1) in;
 void main()
 {
-	if(gl_GlobalInvocationID.x >= b_vertex_array_counter.instanceCount){ return; }
+	if(gl_GlobalInvocationID.x >= b_vertex_counter.instanceCount){ return; }
 
-	if((b_vertex_array[gl_GlobalInvocationID.x].flag & RV_FLAG_IS_BOUNDARY)!= 0)
+	if((b_vertex[gl_GlobalInvocationID.x].flag & RV_FLAG_IS_BOUNDARY)!= 0)
 	{
 		return;
 	}
 
-//	u16vec2 pos = b_vertex_array[gl_GlobalInvocationID.x].pos;
+//	u16vec2 pos = b_vertex[gl_GlobalInvocationID.x].pos;
 
 	f16vec3 irradiance = f16vec3(0.);
 //	u16vec4 prev = u16vec4(-1);
 	uvec2 prev = uvec2(-1);
 	for(int i = 0; i < Dir_Num; i++)
 	{
-		VertexInfo v = b_vertex_array[gl_GlobalInvocationID.x].vertex[i];
+		VertexInfo v = b_vertex[gl_GlobalInvocationID.x].vertex[i];
 
 		
 		if(v.id.x != gl_GlobalInvocationID.x && v.id.x != prev.x) 
 		{
-			f16vec3 bounce = b_vertex_array[v.id.x].radiance[constant.bounce%2] * b_vertex_array[v.id.x].albedo;
+			f16vec3 bounce = b_vertex[v.id.x].radiance[constant.bounce%2] * b_vertex[v.id.x].albedo;
 			irradiance = bounce * f16vec3(0.15) + irradiance;
 		}
 		if(v.id.y != gl_GlobalInvocationID.x && v.id.y!=prev.y) 
 		{
-			f16vec3 bounce = b_vertex_array[v.id.y].radiance[constant.bounce%2] * b_vertex_array[v.id.y].albedo;
+			f16vec3 bounce = b_vertex[v.id.y].radiance[constant.bounce%2] * b_vertex[v.id.y].albedo;
 			irradiance = bounce * f16vec3(0.15) + irradiance;
 		}
 		prev = v.id;
 	}
 
 	if(dot(irradiance, f16vec3(1.)) >= 0.02)
-		b_vertex_array[gl_GlobalInvocationID.x].radiance[(1-(constant.bounce%2))] += irradiance;
+		b_vertex[gl_GlobalInvocationID.x].radiance[(1-(constant.bounce%2))] += irradiance;
 
 }
