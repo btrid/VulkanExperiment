@@ -39,7 +39,7 @@ void main()
 	uint index = gs_in[0].vertex_index;
 	vec3 color = gs_in[0].color;
 
-	u16vec2 pos = b_vertex[index].pos;
+	u16vec2 pos = b_vertex_array[index].pos;
 	vec2 c = vec2(pos) + vec2(0.5);
 
 	vec2 center = c / vec2(u_gi2d_info.m_resolution.xy) * 2. - 1.;
@@ -50,7 +50,7 @@ void main()
 	for(uint i = begin; i < end; i++)
 	{
 		uint angle_index = i;
-		u16vec2 target = b_vertex[index].vertex[angle_index].pos;
+		u16vec2 target = b_vertex_array[index].vertex[angle_index].pos;
 		vec2 v = vec2(target) + vec2(0.5);
 		gl_Position = vec4((v / vec2(u_gi2d_info.m_resolution.xy)) * 2. - 1., 0., 1.);
 		gs_out.color = color;
@@ -65,7 +65,7 @@ void main()
 	}
 
 	uint angle_index = end % Vertex_Num;
-	u16vec2 target = b_vertex[index].vertex[angle_index].pos;
+	u16vec2 target = b_vertex_array[index].vertex[angle_index].pos;
 	vec2 v = vec2(target) + vec2(0.5);
 	gl_Position = vec4((v / vec2(u_gi2d_info.m_resolution.xy)) * 2. - 1., 0., 1.);
 	gs_out.color = color;

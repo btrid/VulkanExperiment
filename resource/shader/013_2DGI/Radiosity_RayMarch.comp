@@ -62,7 +62,7 @@ Ray makeRay(in uint x, in uint y)
 	Ray ray;
 
 	float a = PI / Dir_Num;
-	float angle = fma(a, float(y), (a/ u_radiosity_info.frame_max) * (u_radiosity_info.frame+0.5));
+	float angle = fma(a, float(y), a*constant.offset);
 	ray.area = int(angle / HALF_PI);
 
 	calcDirEx(angle, ray.dir);
@@ -94,15 +94,13 @@ void main()
 	uint angle_index = gl_WorkGroupID.y;
 
 	Ray ray = makeRay(gl_GlobalInvocationID.x, gl_WorkGroupID.y);
-	uint vertex_offset = u_radiosity_info.vertex_max * u_radiosity_info.frame;
-	uint index_offset = reso.x*reso.y * u_radiosity_info.frame;
 
 	if(ray.area<=-1){ return; }
 
 	ivec2 mi = (ray.begin * ray.dir.xy + ray.origin) >> dir_reso_bit;
 	if((ray.area&1)!=0) mi.x = (reso.x-1)-mi.x;
 
-	VertexInfo vertex = VertexInfo(/*u16vec4(mi.xyxy),*/uvec2(b_vertex_index[index_offset+mi.x+mi.y*reso.x]));
+	VertexInfo vertex = VertexInfo(/*u16vec4(mi.xyxy),*/uvec2(b_vertex_array_index[mi.x+mi.y*reso.x]));
 
 	for(int march = ray.begin; march < ray.end; )
 	{
@@ -115,8 +113,8 @@ void main()
 			bool attr = (map & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0ul;
 			if(attr)
 			{
-				uint id = b_vertex_index[index_offset+mi.x+mi.y*reso.x];
-				b_vertex[vertex_offset+vertex.id.y].vertex[angle_index] = VertexInfo(uvec2(vertex.id.x, id));
+				uint id = b_vertex_array_index[mi.x+mi.y*reso.x];
+				b_vertex_array[vertex.id.y].vertex[angle_index] = VertexInfo(uvec2(vertex.id.x, id));
 				vertex.id = uvec2(vertex.id.y, id);
 			}
 			march++;
@@ -135,8 +133,8 @@ void main()
 	if((ray.area&1)!=0) mi.x = (reso.x-1)-mi.x;
 
 	{
-		uint id = b_vertex_index[index_offset+mi.x+mi.y*reso.x];
-		b_vertex[vertex_offset+vertex.id.y].vertex[angle_index] = VertexInfo(uvec2(vertex.id.x, id));
+		uint id = b_vertex_array_index[mi.x+mi.y*reso.x];
+		b_vertex_array[vertex.id.y].vertex[angle_index] = VertexInfo(uvec2(vertex.id.x, id));
 	}
 
 
