@@ -41,7 +41,7 @@ void main()
 
 	for(uint i = gl_InvocationID; i < Dir_Num; i+=invocation_num)
 	{
-		gl_Layer = int(u_radiosity_info.frame);
+		gl_Layer = 0;
 
 		uint angle_index = i;
 

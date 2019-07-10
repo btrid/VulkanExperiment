@@ -70,7 +70,7 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 
 		view_info.subresourceRange.setBaseArrayLayer(0);
 		view_info.subresourceRange.setLayerCount(Frame_Num);
-		view_info.setViewType(vk::ImageViewType::e2DArray);
+		view_info.setViewType(vk::ImageViewType::e2D);
 		m_image_rtv = m_context->m_device->createImageViewUnique(view_info);
 		
 		vk::SamplerCreateInfo sampler_info;
@@ -174,18 +174,19 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 			context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
 
 			vk::WriteDescriptorSet write_desc[Frame_Num];
+			vk::DescriptorImageInfo image_info[Frame_Num];
 			for (int i = 0; i < Frame_Num; i++)
 			{
-				vk::DescriptorImageInfo samplers(m_image_sampler.get(), m_image_view[i].get(), vk::ImageLayout::eShaderReadOnlyOptimal);
+				image_info[i] = vk::DescriptorImageInfo(m_image_sampler.get(), m_image_view[i].get(), vk::ImageLayout::eShaderReadOnlyOptimal);
 
-					write_desc[i] =
-					vk::WriteDescriptorSet()
-					.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-					.setDescriptorCount(1)
-					.setPImageInfo(&samplers)
-					.setDstBinding(5)
-					.setDstArrayElement(i)
-					.setDstSet(m_descriptor_set.get());
+				write_desc[i] =
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+				.setDescriptorCount(1)
+				.setPImageInfo(&image_info[i])
+				.setDstBinding(5)
+				.setDstArrayElement(i)
+				.setDstSet(m_descriptor_set.get());
 			}
 			context->m_device->updateDescriptorSets(array_length(write_desc), write_desc, 0, nullptr);
 		}
@@ -298,7 +299,7 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 			vk::AttachmentDescription()
 			.setFormat(vk::Format::eR16G16B16A16Sfloat)
 			.setSamples(vk::SampleCountFlagBits::e1)
-			.setLoadOp(vk::AttachmentLoadOp::eClear)
+			.setLoadOp(vk::AttachmentLoadOp::eLoad)
 			.setStoreOp(vk::AttachmentStoreOp::eStore)
 			.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
 			.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
