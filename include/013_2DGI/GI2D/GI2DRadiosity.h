@@ -13,6 +13,7 @@ struct GI2DRadiosity
 		Frame_Num = 4,
 		Dir_Num = 33,
 		Bounce_Num = 3,
+		Vertex_Num = 65000,
 	};
 	enum Shader
 	{
@@ -45,8 +46,8 @@ struct GI2DRadiosity
 
 	struct GI2DRadiosityInfo
 	{
-		uint ray_num_max;
-		uint ray_frame_max;
+		uint _unused;
+		uint vertex_max;
 		uint frame_max;
 		uint frame;
 	};
@@ -64,7 +65,7 @@ struct GI2DRadiosity
 		u16vec4 albedo;
 	};
 
-	struct VertexCmd
+	struct VertexCounter
 	{
 		vk::DrawIndirectCommand cmd;
 		uvec4 bounce_cmd;
@@ -83,11 +84,12 @@ struct GI2DRadiosity
 	std::array<vk::UniquePipeline, Pipeline_Num> m_pipeline;
 
 	btr::BufferMemoryEx<GI2DRadiosityInfo> u_radiosity_info;
-	btr::BufferMemoryEx<VertexCmd> b_vertex_array_counter;
-	btr::BufferMemoryEx<uint> b_vertex_array_index;
-	btr::BufferMemoryEx<RadiosityVertex> b_vertex_array;
+	btr::BufferMemoryEx<VertexCounter> b_vertex_counter;
+	btr::BufferMemoryEx<uint> b_vertex_index;
+	btr::BufferMemoryEx<RadiosityVertex> b_vertex;
 	btr::BufferMemoryEx<uint64_t> b_edge;
 
+	GI2DRadiosityInfo m_info;
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
 

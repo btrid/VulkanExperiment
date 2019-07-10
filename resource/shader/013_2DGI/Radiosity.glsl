@@ -7,13 +7,13 @@
 #ifdef USE_GI2D_Radiosity
 struct GI2DRadiosityInfo
 {
-	uint ray_num_max;
-	uint ray_frame_max;
+	uint _unused;
+	uint vertex_max;
 	uint frame_max;
-	uint a2;
+	uint frame;
 };
 
-struct DrawCommand
+struct VertexCounter
 {
 	uint vertexCount;
 	uint instanceCount;
@@ -45,14 +45,14 @@ struct RadiosityVertex
 layout(set=USE_GI2D_Radiosity, binding=0, std140) uniform GI2DRadiosityInfoUniform {
 	GI2DRadiosityInfo u_radiosity_info;
 };
-layout(set=USE_GI2D_Radiosity, binding=1, std430) restrict buffer VertexArrayCounter {
-	DrawCommand b_vertex_array_counter;
+layout(set=USE_GI2D_Radiosity, binding=1, std430) restrict buffer VertexCount {
+	VertexCounter b_vertex_counter[];
 };
-layout(set=USE_GI2D_Radiosity, binding=2, std430) restrict buffer VertexArrayIndexBuffer {
-	uint b_vertex_array_index[];
+layout(set=USE_GI2D_Radiosity, binding=2, std430) restrict buffer VertexIndexBuffer {
+	uint b_vertex_index[];
 };
-layout(set=USE_GI2D_Radiosity, binding=3, std430) restrict buffer VertexArrayBuffer {
-	RadiosityVertex b_vertex_array[];
+layout(set=USE_GI2D_Radiosity, binding=3, std430) restrict buffer VertexBuffer {
+	RadiosityVertex b_vertex[];
 };
 layout(set=USE_GI2D_Radiosity, binding=4, std430) restrict buffer MapEdgeBuffer {
 	uint64_t b_edge[];

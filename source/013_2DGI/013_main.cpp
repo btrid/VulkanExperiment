@@ -402,8 +402,8 @@ int main()
 
 	GI2DDebug gi2d_debug(context, gi2d_context);
 	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
-//	GI2DRadiosity gi2d_Radiosity(context, gi2d_context, app.m_window->getFrontBuffer());
-	GI2DRadiosity3 gi2d_Radiosity(context, gi2d_context, app.m_window->getFrontBuffer());
+	GI2DRadiosity gi2d_Radiosity(context, gi2d_context, app.m_window->getFrontBuffer());
+//	GI2DRadiosity3 gi2d_Radiosity(context, gi2d_context, app.m_window->getFrontBuffer());
 
 	app.setup();
 
