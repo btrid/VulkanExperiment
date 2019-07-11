@@ -43,6 +43,14 @@ rem %exe% %include% %option% -o %output%/Radiosity_Render.frag.spv Radiosity_Ren
 %exe% %include% %option% -o %output%/Radiosity_Rendering.vert.spv Radiosity_Rendering.vert
 %exe% %include% %option% -o %output%/Radiosity_Rendering.frag.spv Radiosity_Rendering.frag
 
+%exe% %include% %option% -o %output%/Radiosity2_MakeVertex.comp.spv Radiosity2_MakeVertex.comp
+%exe% %include% %option% -o %output%/Radiosity2_RayMarch.comp.spv Radiosity2_RayMarch.comp
+%exe% %include% %option% -o %output%/Radiosity2_RayBounce.comp.spv Radiosity2_RayBounce.comp
+
+%exe% %include% %option% -o %output%/Radiosity2_Radiosity.vert.spv Radiosity2_Radiosity.vert
+%exe% %include% %option% -o %output%/Radiosity2_Radiosity.geom.spv Radiosity2_Radiosity.geom
+%exe% %include% %option% -o %output%/Radiosity2_Radiosity.frag.spv Radiosity2_Radiosity.frag
+
 %exe% %include% %option% -o %output%/Radiosity3_Precompute.comp.spv Radiosity3_Precompute.comp
 %exe% %include% %option% -o %output%/Radiosity3_Compute.comp.spv Radiosity3_Compute.comp
 %exe% %include% %option% -o %output%/Radiosity3_Rendering.comp.spv Radiosity3_Rendering.comp
