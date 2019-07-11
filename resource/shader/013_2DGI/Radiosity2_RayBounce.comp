@@ -19,30 +19,30 @@ void main()
 	u16vec4 pos = b_segment[gl_GlobalInvocationID.x].pos;
 	uvec2 index = pos.xz + pos.yw * u_gi2d_info.m_resolution.xx;
 
-	uint64_t radiance = b_radiance[index.x *2 + (constant.bounce%2)];
+	uint64_t radiance = b_radiance[index.x *2 + constant.bounce];
 	if(radiance != 0u)
 	{
-		dvec3 rad_d3 = dvec3(radiance&((1<<22ul)-1), (radiance>>22)&((1<<22ul)-1), radiance>>44);
-		f16vec3 rad = f16vec3(rad_d3 / dvec3(1024.));
-		rad = rad * f16vec3(getRGB(b_fragment[index.x])) * f16vec3(0.14);
+		dvec3 rad_d3 = dvec3(radiance&ColorMask, (radiance>>21)&ColorMask, (radiance>>42ul)&ColorMask);
+		vec3 rad = vec3(rad_d3 / dvec3(1024.));
+		rad = rad * vec3(getRGB(b_fragment[index.x])) * vec3(0.16);
 
-		uvec3 emissive_u3 = uvec3(round(rad * f16vec3(1024.)));
-		uint64_t packed = emissive_u3.x + (emissive_u3.y<<22ul) + (emissive_u3.z<<44ul);
+		u64vec3 emissive_u3 = u64vec3(round(rad * vec3(1024.)));
+		uint64_t packed = emissive_u3.x + (emissive_u3.y<<21ul) + (emissive_u3.z<<42ul);
 		if(packed != 0)
-			atomicAdd(b_radiance[index.x *2 + 1-(constant.bounce%2)], packed);
+			atomicAdd(b_radiance[index.y *2 + (1-constant.bounce)], packed);
 	}
 
-	radiance = b_radiance[index.y *2 + (constant.bounce%2)];
+	radiance = b_radiance[index.y *2 + constant.bounce];
 	if(radiance != 0u)
 	{
-		dvec3 rad_d3 = dvec3(radiance&((1<<22ul)-1), (radiance>>22)&((1<<22ul)-1), radiance>>44);
-		f16vec3 rad = f16vec3(rad_d3 / dvec3(1024.));
-		rad = rad * f16vec3(getRGB(b_fragment[index.y])) * f16vec3(0.14);
+		dvec3 rad_d3 = dvec3(radiance&ColorMask, (radiance>>21)&ColorMask, (radiance>>42ul)&ColorMask);
+		vec3 rad = vec3(rad_d3 / dvec3(1024.));
+		rad = rad * vec3(getRGB(b_fragment[index.y])) * vec3(0.16);
 
-		uvec3 emissive_u3 = uvec3(round(rad * f16vec3(1024.)));
-		uint64_t packed = emissive_u3.x + (emissive_u3.y<<22ul) + (emissive_u3.z<<44ul);
+		u64vec3 emissive_u3 = u64vec3(round(rad * vec3(1024.)));
+		uint64_t packed = emissive_u3.x + (emissive_u3.y<<21ul) + (emissive_u3.z<<42ul);
 		if(packed != 0)
-			atomicAdd(b_radiance[index.y *2 + 1-(constant.bounce%2)], packed);
+			atomicAdd(b_radiance[index.x *2 + (1-constant.bounce)], packed);
 	}
 
 }

@@ -8,8 +8,6 @@
 
 layout(points, invocations = 1) in;
 layout(line_strip, max_vertices = 2) out;
-//layout(triangle_strip, max_vertices = 3) out;
-
 
 layout(location=0)in gl_PerVertex
 {
@@ -40,12 +38,12 @@ void main()
 
 	uint64_t radiance1 = b_radiance[index.x *2 + (Bounce_Num%2)];
 	uint64_t radiance2 = b_radiance[index.y *2 + (Bounce_Num%2)];
-	dvec3 rad1_d3 = dvec3(radiance1&((1<<22ul)-1), (radiance1>>22)&((1<<22ul)-1), radiance1>>44);
-	dvec3 rad2_d3 = dvec3(radiance2&((1<<22ul)-1), (radiance2>>22)&((1<<22ul)-1), radiance2>>44);
-	f16vec3 rad = f16vec3(rad1_d3 / 1024.) * f16vec3(getRGB(b_fragment[index.x]));
-	rad = rad + f16vec3(rad2_d3 / 1024.) * f16vec3(getRGB(b_fragment[index.y]));
+	dvec3 rad1_d3 = dvec3(radiance1&ColorMask, (radiance1>>21)&ColorMask, (radiance1>>42)&ColorMask);
+	dvec3 rad2_d3 = dvec3(radiance2&ColorMask, (radiance2>>21)&ColorMask, (radiance2>>42)&ColorMask);
+	vec3 rad = vec3(rad1_d3 / 1024.) * vec3(getRGB(b_fragment[index.x]));
+	rad = rad + vec3(rad2_d3 / 1024.) * vec3(getRGB(b_fragment[index.y]));
 
-	if(dot(rad, f16vec3(1.)) <= 0.0001){ return; }
+	if(dot(rad, vec3(1.)) <= 0.0005){ return; }
 
 	vec4 vertex = ((vec4(pos) + vec4(0.5)) / vec4(u_gi2d_info.m_resolution.xyxy)) * 2. - 1.;
 

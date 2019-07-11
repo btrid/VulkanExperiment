@@ -67,13 +67,12 @@ void main()
 	}
 
 	uint index = gl_GlobalInvocationID.x+gl_GlobalInvocationID.y*u_gi2d_info.m_resolution.x;
-	uint vi = -1;
 	if((is_diffuse && is_edge)||is_boundary)
 	{
-		f16vec3 albedo = f16vec3(getRGB(b_fragment[index]));
-		f16vec3 emissive = albedo * f16vec3(isEmissive(b_fragment[index]));
-		uvec3 emissive_u3 = uvec3(round(emissive * f16vec3(1024.)));
-		uint64_t packed = emissive_u3.x + (emissive_u3.y<<22ul) + (emissive_u3.z<<44ul);
+		vec3 albedo = vec3(getRGB(b_fragment[index]));
+		vec3 emissive = albedo * vec3(isEmissive(b_fragment[index]));
+		u64vec3 emissive_u3 = u64vec3(round(emissive * vec3(1024.)));
+		uint64_t packed = emissive_u3.x + (emissive_u3.y<<21ul) + (emissive_u3.z<<42ul);
 		b_radiance[index*2+0] = packed;
 		b_radiance[index*2+1] = packed;
 

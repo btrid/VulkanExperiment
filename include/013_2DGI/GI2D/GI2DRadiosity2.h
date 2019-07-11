@@ -79,8 +79,8 @@ struct GI2DRadiosity2
 			uint32_t size = m_gi2d_context->RenderWidth * m_gi2d_context->RenderHeight;
 			u_radiosity_info = m_context->m_uniform_memory.allocateMemory<GI2DRadiosityInfo>({ 1,{} });
 			b_segment_counter = m_context->m_storage_memory.allocateMemory<SegmentCounter>({ 1,{} });
-			b_segment = m_context->m_storage_memory.allocateMemory<Segment>({ 1000000,{} });
-			b_radiance = m_context->m_storage_memory.allocateMemory<f16vec4>({ size * 2,{} });
+			b_segment = m_context->m_storage_memory.allocateMemory<Segment>({ 3000000,{} });
+			b_radiance = m_context->m_storage_memory.allocateMemory<uint64_t>({ size * 2,{} });
 			b_edge = m_context->m_storage_memory.allocateMemory<uint64_t>({ size / 64,{} });
 
 			m_info.ray_num_max = 0;
@@ -665,7 +665,7 @@ struct GI2DRadiosity2
 						b_radiance.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 					};
 					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);
-					cmd.pushConstants<int>(m_pipeline_layout[PipelineLayout_Radiosity].get(), vk::ShaderStageFlagBits::eCompute, 0, i);
+					cmd.pushConstants<int>(m_pipeline_layout[PipelineLayout_Radiosity].get(), vk::ShaderStageFlagBits::eCompute, 0, i%2);
 
 					cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RayBounce].get());
 					cmd.dispatchIndirect(b_segment_counter.getInfo().buffer, b_segment_counter.getInfo().offset + offsetof(SegmentCounter, bounce_cmd));
@@ -766,7 +766,7 @@ struct GI2DRadiosity2
 	btr::BufferMemoryEx<GI2DRadiosityInfo> u_radiosity_info;
 	btr::BufferMemoryEx<SegmentCounter> b_segment_counter;
 	btr::BufferMemoryEx<Segment> b_segment;
-	btr::BufferMemoryEx<f16vec4> b_radiance;
+	btr::BufferMemoryEx<uint64_t> b_radiance;
 	btr::BufferMemoryEx<uint64_t> b_edge;
 
 	GI2DRadiosityInfo m_info;

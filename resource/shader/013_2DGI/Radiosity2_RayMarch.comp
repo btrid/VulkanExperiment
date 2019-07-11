@@ -143,24 +143,15 @@ void main()
 
 	}
 
-	mi = ((ray.end-1).xx * ray.dir.xy + ray.origin.xy) >> dir_reso_bit;
-	if((ray.area&1)!=0) mi.x = (reso.x-1)-mi.x;
-
-	ivec2 cell_sub = mi%8;
-	ivec2 cell = mi>>3;
-//	uint64_t map = b_edge[cell.x + cell.y * reso.z];
-//	bool attr = (map & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0ul;
-//	if(attr)
+//	if(!is_inner)
 	{
-//		if(!is_inner)
-		{
-			uint index = atomicAdd(b_segment_counter.instanceCount, 1);
-			if(index%1024==0){
-				atomicAdd(b_segment_counter.bounce_cmd.x, 1);
-			}
-			b_segment[index].pos = u16vec4(pos, mi);					
+		mi = ((ray.end-1).xx * ray.dir.xy + ray.origin.xy) >> dir_reso_bit;
+		if((ray.area&1)!=0) mi.x = (reso.x-1)-mi.x;
+
+		uint index = atomicAdd(b_segment_counter.instanceCount, 1);
+		if(index%1024==0){
+			atomicAdd(b_segment_counter.bounce_cmd.x, 1);
 		}
+		b_segment[index].pos = u16vec4(pos, mi);					
 	}
-
-
 }

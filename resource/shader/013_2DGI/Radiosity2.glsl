@@ -9,6 +9,7 @@
 #define Dir_Num (33)
 #define Bounce_Num (3)
 
+#define ColorMask ((1<<21ul)-1)
 struct GI2DRadiosityInfo
 {
 	uint ray_num_max;
