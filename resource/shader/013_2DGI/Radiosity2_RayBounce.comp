@@ -24,7 +24,7 @@ void main()
 	{
 		dvec3 rad_d3 = dvec3(radiance&ColorMask, (radiance>>21)&ColorMask, (radiance>>42ul)&ColorMask);
 		vec3 rad = vec3(rad_d3 / dvec3(1024.));
-		rad = rad * vec3(getRGB(b_fragment[index.x])) * vec3(0.16);
+		rad = rad * vec3(getRGB(b_fragment[index.x])) * vec3(0.14);
 
 		u64vec3 emissive_u3 = u64vec3(round(rad * vec3(1024.)));
 		uint64_t packed = emissive_u3.x + (emissive_u3.y<<21ul) + (emissive_u3.z<<42ul);
@@ -37,7 +37,7 @@ void main()
 	{
 		dvec3 rad_d3 = dvec3(radiance&ColorMask, (radiance>>21)&ColorMask, (radiance>>42ul)&ColorMask);
 		vec3 rad = vec3(rad_d3 / dvec3(1024.));
-		rad = rad * vec3(getRGB(b_fragment[index.y])) * vec3(0.16);
+		rad = rad * vec3(getRGB(b_fragment[index.y])) * vec3(0.14);
 
 		u64vec3 emissive_u3 = u64vec3(round(rad * vec3(1024.)));
 		uint64_t packed = emissive_u3.x + (emissive_u3.y<<21ul) + (emissive_u3.z<<42ul);
