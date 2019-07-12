@@ -161,14 +161,14 @@ struct GI2DRadiosity2
 			vk::ImageMemoryBarrier to_shader_read_barrier;
 			to_shader_read_barrier.image = m_image.get();
 			to_shader_read_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
-			to_shader_read_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 			to_shader_read_barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+			to_shader_read_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 			to_shader_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 			to_shader_read_barrier.subresourceRange = vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, Frame_Num };
 
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
 			cmd.clearColorImage(m_image.get(), vk::ImageLayout::eTransferDstOptimal, vk::ClearColorValue(std::array<uint32_t, 4>{0}), vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, Frame_Num });
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllGraphics, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllCommands, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
 
 #if USE_DEBUG_REPORT
 			context->m_device->setDebugUtilsObjectNameEXT({ vk::ObjectType::eImage, reinterpret_cast<uint64_t &>(m_image.get()), "GI2DRadiosity::m_image" }, context->m_dispach);
@@ -237,8 +237,8 @@ struct GI2DRadiosity2
 				};
 				context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
 
-				vk::WriteDescriptorSet write_desc[Frame_Num];
-				vk::DescriptorImageInfo image_info[Frame_Num];
+				std::array<vk::WriteDescriptorSet, Frame_Num> write_desc;
+				std::array<vk::DescriptorImageInfo, Frame_Num> image_info;
 				for (int i = 0; i < Frame_Num; i++)
 				{
 					image_info[i] = vk::DescriptorImageInfo(m_image_sampler.get(), m_image_view[i].get(), vk::ImageLayout::eShaderReadOnlyOptimal);
@@ -252,7 +252,7 @@ struct GI2DRadiosity2
 						.setDstArrayElement(i)
 						.setDstSet(m_descriptor_set.get());
 				}
-				context->m_device->updateDescriptorSets(array_length(write_desc), write_desc, 0, nullptr);
+				context->m_device->updateDescriptorSets(array_length(write_desc), write_desc.data(), 0, nullptr);
 			}
 
 		}
@@ -710,7 +710,7 @@ struct GI2DRadiosity2
 		// render_targetÇ…èëÇ≠
 		{
 
-			vk::ImageMemoryBarrier image_barrier[2];
+			std::array<vk::ImageMemoryBarrier, 2> image_barrier;
 			image_barrier[0].setImage(m_render_target->m_image);
 			image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
 			image_barrier[0].setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
@@ -722,7 +722,7 @@ struct GI2DRadiosity2
 			image_barrier[1].setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
 			image_barrier[1].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
 
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eFragmentShader | vk::PipelineStageFlagBits::eColorAttachmentOutput, {}, {}, {}, { array_length(image_barrier), image_barrier });
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eFragmentShader | vk::PipelineStageFlagBits::eColorAttachmentOutput, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
 		}
 
 		vk::RenderPassBeginInfo begin_render_Info;
@@ -731,10 +731,12 @@ struct GI2DRadiosity2
 		begin_render_Info.setFramebuffer(m_rendering_framebuffer.get());
 		cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
-
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_Rendering].get());
+		vk::DescriptorSet descs[] = {
+			m_gi2d_context->getDescriptorSet(),
+			m_descriptor_set.get(),
+		};
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, array_length(descs), descs, 0, nullptr);
 		cmd.draw(3, 1, 0, 0);
 
 		cmd.endRenderPass();

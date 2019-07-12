@@ -381,7 +381,7 @@ int main()
 	camera->getData().m_near = 0.01f;
 
 //	return pathFinding();
-	return rigidbody();
+//	return rigidbody();
 
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
@@ -405,7 +405,6 @@ int main()
 	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
 //	GI2DRadiosity gi2d_Radiosity(context, gi2d_context, app.m_window->getFrontBuffer());
 	GI2DRadiosity2 gi2d_Radiosity(context, gi2d_context, app.m_window->getFrontBuffer());
-//	GI2DRadiosity3 gi2d_Radiosity(context, gi2d_context, app.m_window->getFrontBuffer());
 
 	app.setup();
 
@@ -450,7 +449,6 @@ int main()
 				cmds[cmd_gi2d] = cmd;
 			}
 			app.submit(std::move(cmds));
-//			device->waitIdle();
 		}
 		app.postUpdate();
 		printf("%-6.4fms\n", time.getElapsedTimeAsMilliSeconds());
