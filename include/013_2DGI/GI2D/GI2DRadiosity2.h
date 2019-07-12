@@ -32,7 +32,6 @@ struct GI2DRadiosity2
 	enum PipelineLayout
 	{
 		PipelineLayout_Radiosity,
-		PipelineLayout_Radiosity_GP,
 		PipelineLayout_Num,
 	};
 	enum Pipeline
@@ -301,17 +300,6 @@ struct GI2DRadiosity2
 
 			}
 
-			{
-				vk::DescriptorSetLayout layouts[] = {
-					gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data),
-					m_descriptor_set_layout.get(),
-				};
-				vk::PipelineLayoutCreateInfo pipeline_layout_info;
-				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
-				pipeline_layout_info.setPSetLayouts(layouts);
-				m_pipeline_layout[PipelineLayout_Radiosity_GP] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
-			}
-
 		}
 
 		// pipeline
@@ -548,7 +536,7 @@ struct GI2DRadiosity2
 				.setPViewportState(&viewportInfo)
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
-				.setLayout(m_pipeline_layout[PipelineLayout_Radiosity_GP].get())
+				.setLayout(m_pipeline_layout[PipelineLayout_Radiosity].get())
 				.setRenderPass(m_radiosity_pass.get())
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
@@ -560,7 +548,7 @@ struct GI2DRadiosity2
 				.setPViewportState(&viewportInfo)
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
-				.setLayout(m_pipeline_layout[PipelineLayout_Radiosity_GP].get())
+				.setLayout(m_pipeline_layout[PipelineLayout_Radiosity].get())
 				.setRenderPass(m_rendering_pass.get())
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info2),
@@ -669,7 +657,6 @@ struct GI2DRadiosity2
 
 					cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RayBounce].get());
 					cmd.dispatchIndirect(b_segment_counter.getInfo().buffer, b_segment_counter.getInfo().offset + offsetof(SegmentCounter, bounce_cmd));
-
 				}
 
 			}
@@ -704,8 +691,8 @@ struct GI2DRadiosity2
 		begin_render_Info.setPClearValues(&color);
 		cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayout_Radiosity_GP].get(), 0, m_gi2d_context->getDescriptorSet(), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayout_Radiosity_GP].get(), 1, m_descriptor_set.get(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_Radiosity].get());
 		cmd.drawIndirect(b_segment_counter.getInfo().buffer, b_segment_counter.getInfo().offset, 1, sizeof(SegmentCounter));
@@ -744,8 +731,8 @@ struct GI2DRadiosity2
 		begin_render_Info.setFramebuffer(m_rendering_framebuffer.get());
 		cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayout_Radiosity_GP].get(), 0, m_gi2d_context->getDescriptorSet(), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayout_Radiosity_GP].get(), 1, m_descriptor_set.get(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_Rendering].get());
 		cmd.draw(3, 1, 0, 0);

@@ -26,71 +26,6 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 	m_gi2d_context = gi2d_context;
 	std::vector<GI2DContext::Fragment> map_data(gi2d_context->RenderWidth*gi2d_context->RenderHeight, g_path);
 	{
-
-#if 0
-		for (int y = 0; y < gi2d_context->RenderHeight; y++)
-		{
-			for (int x = 0; x < gi2d_context->RenderWidth; x++)
-			{
-				auto& m = map_data[x + y * gi2d_context->RenderWidth];
-				{
-					m = glm::simplex(vec2(x,y) / 256.f) >= abs(0.5f) ? wall : path;
-				}
-			}
-		}
-#elif 0
-		ivec2 size = gi2d_context->RenderSize / 8;
-// 		auto map = pathmake_maze(size.x, size.y);
-// 		auto aa = size /8;
-// 		for (size_t y = 0; y < aa.y; y++)
-// 		{
-// 			for (size_t x = 0; x < aa.x; x++)
-// 			{
-// 				for (int i = 0; i < 64; i++)
-// 				{
-// 					auto ii = x + y * (aa.x);
-// 					auto type = (map[ii] & (1ull << i) != 0) ? wall : path;
-// 					for (int _i = 0; _i < 64; _i++)
-// 					{
-// //						auto di = ii + _i;
-// 						auto di = (((x * 8 + i % 8)*8+_i) + ((y * 8 + i / 8)*8+_i)/8 * gi2d_context->RenderSize.x);
-// 						map_data[di] = type;
-// 					}
-// 				}
-// 			}
-// 
-// 		}
-
-// 		auto map = pathmake_maze_(size.x, size.y);
-// 		for (size_t y = 0; y < gi2d_context->RenderSize.y; y++)
-// 		{
-// 			for (size_t x = 0; x < gi2d_context->RenderSize.x; x++)
-// 			{
-// 				auto ii = x/8 + y/8 * size.x;
-// 				auto type = (map[ii] == 0) ? wall : path;
-// 
-// 				auto di = ivec2(x, y);
-// 				map_data[di.x + di.y*gi2d_context->RenderSize.x] = type;
-// 			}
-// 
-// 		}
-
-		auto map = pathmake_noise(gi2d_context->RenderSize.x, gi2d_context->RenderSize.y);
-		for (int y = 0; y < size.y; y++)
-		{
-			for (int x = 0; x < size.x; x++)
-			{
-				auto& m = map[x + y * size.x];
-				for (int32_t i = 0; i < 64; i++)
-				{
-					ivec2 xy = ivec2(x, y)*8 + ivec2(i%8, i/8);
-					map_data[xy.x + xy.y*gi2d_context->RenderSize.x] = (m & (1ull << i)) != 0 ? wall : path;
-				}
-			}
-		}
-
-
-#else
 		struct F
 		{
 			ivec4 rect;
@@ -116,7 +51,6 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 					if (x >= r.rect.x && y >= r.rect.y && x < r.rect.x + r.rect.z && y < r.rect.y + r.rect.w)
 //					if (x == r.rect.x || y == r.rect.y || x == r.rect.x + r.rect.z || y == r.rect.y + r.rect.w)
 					{
-//						m = g_wall;
 						m = GI2DContext::Fragment(r.color.xyz, true, false);
 						break;
 					}
@@ -126,27 +60,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 
 		}
 
-#endif
 	}
-
-	//ŽlŠp‚ÅˆÍ‚Þ
-// 	for (int32_t y = 0; y < gi2d_context->RenderHeight; y++)
-// 	{
-// 		for (int32_t x = 0; x < 4; x++)
-// 		{
-// 			map_data[x + y * gi2d_context->RenderWidth] = g_wall;
-// 			map_data[(gi2d_context->RenderWidth -1 - x) + y * gi2d_context->RenderWidth] = g_wall;
-// 		}
-// 	}
-//  	for (int32_t x = 0; x < gi2d_context->RenderWidth; x++)
-//  	{
-// 		for (int32_t y = 0; y < 4; y++)
-// 		{
-// 			map_data[x + y * gi2d_context->RenderWidth] = g_wall;
-// 			map_data[x + (gi2d_context->RenderHeight - 1 - y) * gi2d_context->RenderWidth] = g_wall;
-// 		}
-// 	}
-
 
 	btr::BufferMemoryDescriptorEx<GI2DContext::Fragment> desc;
 	desc.element_num = map_data.size();
