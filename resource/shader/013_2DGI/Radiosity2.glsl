@@ -7,7 +7,8 @@
 #ifdef USE_GI2D_Radiosity2
 
 #define Dir_Num (45)
-#define Bounce_Num (3)
+#define Bounce_Num (2)
+#define Frame_Num (4)
 
 #define ColorMask ((1<<21ul)-1)
 struct GI2DRadiosityInfo
@@ -49,7 +50,7 @@ layout(set=USE_GI2D_Radiosity2, binding=4, std430) restrict buffer MapEdgeBuffer
 	uint64_t b_edge[];
 };
 
-layout(set=USE_GI2D_Radiosity2, binding=5) uniform sampler2D s_radiosity[4];
+layout(set=USE_GI2D_Radiosity2, binding=5) uniform sampler2D s_radiosity[Frame_Num];
 
 #endif
 #endif //Radiosity2_

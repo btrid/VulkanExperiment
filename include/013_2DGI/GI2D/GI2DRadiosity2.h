@@ -12,7 +12,7 @@ struct GI2DRadiosity2
 	enum {
 		Frame_Num = 4,
 		Dir_Num = 45,
-		Bounce_Num = 3,
+		Bounce_Num = 2,
 	};
 	enum Shader
 	{
@@ -147,7 +147,7 @@ struct GI2DRadiosity2
 			sampler_info.setMinLod(0.f);
 			sampler_info.setMaxLod(0.f);
 			sampler_info.setMipLodBias(0.f);
-			sampler_info.setMipmapMode(vk::SamplerMipmapMode::eLinear);
+			sampler_info.setMipmapMode(vk::SamplerMipmapMode::eNearest);
 			sampler_info.setUnnormalizedCoordinates(false);
 			m_image_sampler = m_context->m_device->createSamplerUnique(sampler_info);
 

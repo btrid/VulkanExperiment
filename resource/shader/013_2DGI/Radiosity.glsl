@@ -25,6 +25,7 @@ struct VertexCounter
 };
 #define Dir_Num (33)
 #define Bounce_Num (2)
+#define Frame_Num (4)
 
 struct VertexInfo
 {
@@ -58,7 +59,7 @@ layout(set=USE_GI2D_Radiosity, binding=4, std430) restrict buffer MapEdgeBuffer 
 	uint64_t b_edge[];
 };
 
-layout(set=USE_GI2D_Radiosity, binding=5) uniform sampler2D s_radiosity[4];
+layout(set=USE_GI2D_Radiosity, binding=5) uniform sampler2D s_radiosity[Frame_Num];
 
 
 
