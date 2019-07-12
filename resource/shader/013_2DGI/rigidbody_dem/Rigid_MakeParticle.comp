@@ -24,10 +24,13 @@ void main()
 
 	b_rbParticle[p_id].pos_old = pos;
 
-	vec2 vel = (pos - pos_old) + RB_GRAVITY_DT;
-//	vel = clamp(vel, -vec2(0.5), vec2(0.5));
-	b_rbParticle[p_id].pos = pos + vel;
-//	b_rbParticle[p_id].is_contact = 0;
+	vec2 vel = (pos - pos_old);
+	if((b_rigidbody[r_id].flag & RB_FLAG_FLUID) != 0)
+	{
+		// 粘度
+		vel *= 1. / (1.+b_rbParticle[p_id].density*0.01);
+	}
+	b_rbParticle[p_id].pos = pos + vel + RB_GRAVITY_DT;
 
 	b_rbParticle[p_id].local_sdf = mat2(b_rigidbody[r_id].R) * b_rbParticle[p_id].sdf;
 
