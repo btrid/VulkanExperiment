@@ -24,7 +24,7 @@ struct VertexCounter
 
 };
 #define Dir_Num (33)
-#define Bounce_Num (3)
+#define Bounce_Num (2)
 
 struct VertexInfo
 {

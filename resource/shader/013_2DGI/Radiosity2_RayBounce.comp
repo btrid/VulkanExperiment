@@ -17,6 +17,13 @@ void main()
 	if(gl_GlobalInvocationID.x >= b_segment_counter.instanceCount){ return; }
 
 	u16vec4 pos = b_segment[gl_GlobalInvocationID.x].pos;
+	if(any(equal(pos, u16vec4(0))) || any(equal(pos, u16vec4(u_gi2d_info.m_resolution.xyxy-1))))
+	{
+		// 端では反射しない 
+		return; 
+	}
+
+
 	uvec2 index = pos.xz + pos.yw * u_gi2d_info.m_resolution.xx;
 
 	uint64_t radiance = b_radiance[index.x *2 + constant.bounce];

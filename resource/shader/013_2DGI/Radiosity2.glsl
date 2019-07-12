@@ -6,7 +6,7 @@
 
 #ifdef USE_GI2D_Radiosity2
 
-#define Dir_Num (33)
+#define Dir_Num (45)
 #define Bounce_Num (3)
 
 #define ColorMask ((1<<21ul)-1)
