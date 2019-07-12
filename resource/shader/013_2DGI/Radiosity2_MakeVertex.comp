@@ -73,8 +73,8 @@ void main()
 		vec3 emissive = albedo * vec3(isEmissive(b_fragment[index])) * 0.3;
 		u64vec3 emissive_u3 = u64vec3(round(emissive * vec3(1024.)));
 		uint64_t packed = emissive_u3.x + (emissive_u3.y<<21ul) + (emissive_u3.z<<42ul);
-		b_radiance[index*2+0] = packed;
-		b_radiance[index*2+1] = packed;
+		b_radiance[index] = packed;
+		b_radiance[index+u_gi2d_info.m_resolution.x*u_gi2d_info.m_resolution.y] = packed;
 
 		uvec2 map = gl_GlobalInvocationID.xy / 8;
 		uvec2 bit = gl_GlobalInvocationID.xy % 8;

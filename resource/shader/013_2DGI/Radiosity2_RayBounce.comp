@@ -23,11 +23,12 @@ void main()
 		return; 
 	}
 
+	uint radiance_offset = u_gi2d_info.m_resolution.x*u_gi2d_info.m_resolution.y;
 
 	uvec2 index = pos.xz + pos.yw * u_gi2d_info.m_resolution.xx;
 
-	uint64_t radiance1 = b_radiance[index.x *2 + constant.bounce];
-	uint64_t radiance2 = b_radiance[index.y *2 + constant.bounce];
+	uint64_t radiance1 = b_radiance[index.x + constant.bounce * radiance_offset];
+	uint64_t radiance2 = b_radiance[index.y + constant.bounce * radiance_offset];
 
 	if(radiance1 != 0u)
 	{
@@ -38,7 +39,7 @@ void main()
 		u64vec3 emissive_u3 = u64vec3(round(rad * vec3(1024.)));
 		uint64_t packed = emissive_u3.x + (emissive_u3.y<<21ul) + (emissive_u3.z<<42ul);
 		if(packed != 0)
-			atomicAdd(b_radiance[index.y *2 + (1-constant.bounce)], packed);
+			atomicAdd(b_radiance[index.y + (1-constant.bounce) * radiance_offset], packed);
 	}
 
 	if(radiance2 != 0u)
@@ -50,7 +51,7 @@ void main()
 		u64vec3 emissive_u3 = u64vec3(round(rad * vec3(1024.)));
 		uint64_t packed = emissive_u3.x + (emissive_u3.y<<21ul) + (emissive_u3.z<<42ul);
 		if(packed != 0)
-			atomicAdd(b_radiance[index.x *2 + (1-constant.bounce)], packed);
+			atomicAdd(b_radiance[index.x + (1-constant.bounce) * radiance_offset], packed);
 	}
 
 }
