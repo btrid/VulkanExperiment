@@ -19,7 +19,8 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 {
 	for (int i = 0; i < std::size(g_data); i++)
 	{
-		g_data[i] = GI2DLightData{ vec4(std::rand() % 950 + 40, std::rand() % 950 + 40, 0.f, 0.f), vec4(std::rand() % 80 + 20,std::rand() % 80 + 20,std::rand() % 80 + 20,100) * 0.01f };
+//		g_data[i] = GI2DLightData{ vec4(std::rand() % 950 + 40, std::rand() % 950 + 40, 0.f, 0.f), vec4(std::rand() % 80 + 20,std::rand() % 80 + 20,std::rand() % 80 + 20,100) * 0.01f };
+		g_data[i] = GI2DLightData{ vec4(std::rand() % 950 + 40, std::rand() % 950 + 40, 0.f, 0.f), vec4(1.f) };
 	}
 
 	m_context = context;

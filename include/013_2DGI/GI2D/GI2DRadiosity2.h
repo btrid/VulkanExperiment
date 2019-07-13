@@ -268,8 +268,8 @@ struct GI2DRadiosity2
 				"Radiosity2_Radiosity.geom.spv",
 				"Radiosity2_Radiosity.frag.spv",
 
-				"Radiosity_Rendering.vert.spv",
-				"Radiosity_Rendering.frag.spv",
+				"Radiosity2_Rendering.vert.spv",
+				"Radiosity2_Rendering.frag.spv",
 
 			};
 			static_assert(array_length(name) == Shader_Num, "not equal shader num");
