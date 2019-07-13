@@ -22,40 +22,10 @@ rem %exe% %include% %option% -o %output%/GI2DSDF_MakeJFA_EX.comp.spv GI2DSDF_Mak
 %exe% %include% %option% -o %output%/GI2DSDF_MakeSDF.comp.spv GI2DSDF_MakeSDF.comp
 %exe% %include% %option% -o %output%/GI2DSDF_RenderSDF.comp.spv GI2DSDF_RenderSDF.comp
 
-%exe% %include% %option% -o %output%/GI2DPath_MakeReachMap.comp.spv GI2DPath_MakeReachMap.comp
-%exe% %include% %option% -o %output%/GI2DPath_MakeReachMap_Precompute.comp.spv GI2DPath_MakeReachMap_Precompute.comp
-
 %exe% %include% %option% -o %output%/GI2DDebug_DrawFragment.comp.spv GI2DDebug_DrawFragment.comp
 %exe% %include% %option% -o %output%/GI2DDebug_DrawFragmentMap.comp.spv GI2DDebug_DrawFragmentMap.comp
 %exe% %include% %option% -o %output%/GI2DDebug_MakeLight.comp.spv GI2DDebug_MakeLight.comp
 %exe% %include% %option% -o %output%/GI2DDebug_DrawReachMap.comp.spv GI2DDebug_DrawReachMap.comp
 
-%exe% %include% %option% -o %output%/Radiosity_MakeVertex.comp.spv Radiosity_MakeVertex.comp
-%exe% %include% %option% -o %output%/Radiosity_RayMarch.comp.spv Radiosity_RayMarch.comp
-%exe% %include% %option% -o %output%/Radiosity_RayBounce.comp.spv Radiosity_RayBounce.comp
-
-%exe% %include% %option% -o %output%/Radiosity_Radiosity.vert.spv Radiosity_Radiosity.vert
-rem %exe% %include% %option% -o %output%/Radiosity_Render.geom.spv Radiosity_Render.geom
-rem %exe% %include% %option% -o %output%/Radiosity_Render.frag.spv Radiosity_Render.frag
-%exe% %include% %option% -o %output%/Radiosity_Radiosity.geom.spv Radiosity_RadiosityLine.geom
-%exe% %include% %option% -o %output%/Radiosity_Radiosity.frag.spv Radiosity_RadiosityLine.frag
-
-%exe% %include% %option% -o %output%/Radiosity_Rendering.vert.spv Radiosity_Rendering.vert
-%exe% %include% %option% -o %output%/Radiosity_Rendering.frag.spv Radiosity_Rendering.frag
-
-%exe% %include% %option% -o %output%/Radiosity2_MakeVertex.comp.spv Radiosity2_MakeVertex.comp
-%exe% %include% %option% -o %output%/Radiosity2_RayMarch.comp.spv Radiosity2_RayMarch.comp
-%exe% %include% %option% -o %output%/Radiosity2_RayBounce.comp.spv Radiosity2_RayBounce.comp
-
-%exe% %include% %option% -o %output%/Radiosity2_Radiosity.vert.spv Radiosity2_Radiosity.vert
-%exe% %include% %option% -o %output%/Radiosity2_Radiosity.geom.spv Radiosity2_Radiosity.geom
-%exe% %include% %option% -o %output%/Radiosity2_Radiosity.frag.spv Radiosity2_Radiosity.frag
-
-%exe% %include% %option% -o %output%/Radiosity2_Rendering.vert.spv Radiosity2_Rendering.vert
-%exe% %include% %option% -o %output%/Radiosity2_Rendering.frag.spv Radiosity2_Rendering.frag
-
-%exe% %include% %option% -o %output%/Radiosity3_Precompute.comp.spv Radiosity3_Precompute.comp
-%exe% %include% %option% -o %output%/Radiosity3_Compute.comp.spv Radiosity3_Compute.comp
-%exe% %include% %option% -o %output%/Radiosity3_Rendering.comp.spv Radiosity3_Rendering.comp
 
 

@@ -9,5 +9,7 @@ call crowd/make.bat
 cd /d %~dp0
 call path/make.bat
 cd /d %~dp0
-call rigidbody_dem/make.bat
+call rigidbody/make.bat
+cd /d %~dp0
+call radiosity2/make.bat
 cd /d %~dp0

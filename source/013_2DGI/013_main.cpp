@@ -375,8 +375,8 @@ int main()
 	camera->getData().m_position = glm::vec3(0.f, 0.f, 1.f);
 	camera->getData().m_target = glm::vec3(0.f, 0.f, 0.f);
 	camera->getData().m_up = glm::vec3(0.f, -1.f, 0.f);
-	camera->getData().m_width = 512;
-	camera->getData().m_height = 512;
+	camera->getData().m_width = 1024;
+	camera->getData().m_height = 1024;
 	camera->getData().m_far = 5000.f;
 	camera->getData().m_near = 0.01f;
 
@@ -403,7 +403,6 @@ int main()
 
 	GI2DDebug gi2d_debug(context, gi2d_context);
 	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
-//	GI2DRadiosity gi2d_Radiosity(context, gi2d_context, app.m_window->getFrontBuffer());
 	GI2DRadiosity2 gi2d_Radiosity(context, gi2d_context, app.m_window->getFrontBuffer());
 
 	app.setup();
