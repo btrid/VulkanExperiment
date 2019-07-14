@@ -3,8 +3,6 @@
 call make.bat
 cd /d %~dp0
 
-call fluid/make.bat
-cd /d %~dp0
 call crowd/make.bat
 cd /d %~dp0
 call path/make.bat

@@ -186,10 +186,7 @@ struct GI2DContext
 			}
 			{
 				b_fragment = context->m_storage_memory.allocateMemory<Fragment>({ FragmentBufferSize,{} });
-				b_fragment_map = context->m_storage_memory.allocateMemory<u64vec2>({ m_gi2d_info.m_fragment_map_size_hierarchy[0]*2,{} });
-				b_diffuse_map = context->m_storage_memory.allocateMemory<uint64_t>({ m_gi2d_info.m_fragment_map_size_hierarchy[m_gi2d_info.m_hierarchy_num - 1],{} });
-				b_emissive_map = context->m_storage_memory.allocateMemory<uint64_t>({ m_gi2d_info.m_fragment_map_size_hierarchy[m_gi2d_info.m_hierarchy_num - 1],{} });
-				b_light = context->m_storage_memory.allocateMemory<uint32_t>({ FragmentBufferSize,{} });
+				b_fragment_map = context->m_storage_memory.allocateMemory<uint64_t>({ m_gi2d_info.m_fragment_map_size_hierarchy[0]*2,{} });
 				b_grid_counter = context->m_storage_memory.allocateMemory<int32_t>({ FragmentBufferSize,{} });
 			}
 		}
@@ -214,9 +211,6 @@ struct GI2DContext
 					b_fragment.getInfo(),
 					b_fragment_map.getInfo(),
 					b_grid_counter.getInfo(),
-					b_light.getInfo(),
-					b_diffuse_map.getInfo(),
-					b_emissive_map.getInfo(),
 				};
 
 				vk::WriteDescriptorSet write[] = {
@@ -286,11 +280,8 @@ struct GI2DContext
 	btr::BufferMemoryEx<GI2DInfo> u_gi2d_info;
 	btr::BufferMemoryEx<GI2DScene> u_gi2d_scene;
 	btr::BufferMemoryEx<Fragment> b_fragment;
-	btr::BufferMemoryEx<u64vec2> b_fragment_map;
-	btr::BufferMemoryEx<uint64_t> b_diffuse_map;
-	btr::BufferMemoryEx<uint64_t> b_emissive_map;
+	btr::BufferMemoryEx<uint64_t> b_fragment_map;
 	btr::BufferMemoryEx<int32_t> b_grid_counter;
-	btr::BufferMemoryEx<uint32_t> b_light;
 
 	std::array<vk::UniqueDescriptorSetLayout, Layout_Num> m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;

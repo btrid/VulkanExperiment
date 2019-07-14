@@ -106,7 +106,8 @@ void main()
 		ivec2 cell = mi>>3;
 		ivec2 cell_sub = mi%8;
 //		uint64_t map = b_edge[cell.x + cell.y * reso.z];
-		uint64_t map = b_diffuse_map[getMemoryOrder(cell)];
+//		uint64_t map = b_diffuse_map[getMemoryOrder(cell)];
+		uint64_t map = b_fragment_map[cell.x + cell.y * reso.z];
 		is_inner = (map & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0ul;
 	}
 
@@ -114,7 +115,8 @@ void main()
 	{
 		ivec2 cell = mi>>3;
 //		uint64_t map = b_edge[cell.x + cell.y * reso.z];
-		uint64_t map = b_diffuse_map[getMemoryOrder(cell)];
+//		uint64_t map = b_diffuse_map[getMemoryOrder(cell)];
+		uint64_t map = b_fragment_map[cell.x + cell.y * reso.z];
 
 		for(;;)
 		{

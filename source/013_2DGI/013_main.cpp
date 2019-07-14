@@ -142,7 +142,6 @@ int pathFinding()
 	gi2d_desc.RenderHeight = 1024;
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context, gi2d_desc);
 	std::shared_ptr<CrowdContext> crowd_context = std::make_shared<CrowdContext>(context, gi2d_context);
-	std::shared_ptr<PathContext> path_context = std::make_shared<PathContext>(context, gi2d_context);
 	std::shared_ptr<GI2DPathContext> gi2d_path_context = std::make_shared<GI2DPathContext>(gi2d_context);
 
 	GI2DDebug gi2d_debug(context, gi2d_context);
@@ -152,8 +151,6 @@ int pathFinding()
 	Crowd_Procedure crowd_procedure(crowd_context, gi2d_context);
 	Crowd_CalcWorldMatrix crowd_calc_world_matrix(crowd_context, appmodel_context);
 	Crowd_Debug crowd_debug(crowd_context);
-
-	Path_Process path_process(context, path_context, gi2d_context);
 
 	AppModelAnimationStage animater(context, appmodel_context);
 	GI2DModelRender renderer(context, appmodel_context, gi2d_context);
@@ -193,7 +190,6 @@ int pathFinding()
 				gi2d_debug.executeMakeFragment(cmd);
 
 				gi2d_make_hierarchy.executeMakeFragmentMap(cmd);
-				gi2d_make_hierarchy.executeHierarchy(cmd);
 
 				if (0)
 				{
@@ -239,21 +235,6 @@ int rigidbody()
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
 
-// 	VmaAllocatorCreateInfo vma_allocater_info = {};
-// 	vma_allocater_info.physicalDevice = (VkPhysicalDevice)gpu.getHandle();
-// 	vma_allocater_info.device = (VkDevice)device.getHandle();
-// 	vma_allocater_info.flags = 0;
-// 	vma_allocater_info.pVulkanFunctions = nullptr;
-// 	vma_allocater_info.pAllocationCallbacks = nullptr;
-// 	vma_allocater_info.pDeviceMemoryCallbacks = nullptr;
-// 	vma_allocater_info.frameInUseCount = 0;
-// 	vma_allocater_info.pHeapSizeLimit = nullptr;
-// 	vma_allocater_info.preferredLargeHeapBlockSize = 0;
-// 	vma_allocater_info.pRecordSettings = nullptr;
-// 
-// 	VmaAllocator allocater;
-// 	vmaCreateAllocator(&vma_allocater_info, &allocater);
-
 	app::AppDescriptor app_desc;
 	app_desc.m_gpu = gpu;
 	app_desc.m_window_size = uvec2(1024, 1024);
@@ -269,7 +250,6 @@ int rigidbody()
 	gi2d_desc.RenderHeight = 1024;
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context, gi2d_desc);
 	std::shared_ptr<GI2DSDF> gi2d_sdf_context = std::make_shared<GI2DSDF>(gi2d_context);
-	std::shared_ptr<GI2DPathContext> gi2d_path_context = std::make_shared<GI2DPathContext>(gi2d_context);
 	std::shared_ptr<GI2DPhysics> gi2d_physics_context = std::make_shared<GI2DPhysics>(context, gi2d_context);
 	std::shared_ptr<GI2DPhysicsDebug> gi2d_physics_debug = std::make_shared<GI2DPhysicsDebug>(gi2d_physics_context, app.m_window->getFrontBuffer());
 
@@ -332,29 +312,12 @@ int rigidbody()
 
 
 				gi2d_make_hierarchy.executeMakeFragmentMapAndSDF(cmd, gi2d_sdf_context);
-				gi2d_make_hierarchy.executeHierarchy(cmd);
-				gi2d_make_hierarchy.executeMakeSDF(cmd, gi2d_sdf_context);
 //				gi2d_make_hierarchy.executeRenderSDF(cmd, gi2d_sdf_context, app.m_window->getFrontBuffer());
-
-//				gi2d_make_hierarchy.executeMakeReachMap(cmd, gi2d_path_context);
-//				gi2d_debug.executeDrawReachMap(cmd, gi2d_path_context, app.m_window->getFrontBuffer());
 
  				gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
  				gi2d_physics_proc.execute(cmd, gi2d_physics_context, gi2d_sdf_context);
  				gi2d_physics_proc.executeDrawParticle(cmd, gi2d_physics_context, app.m_window->getFrontBuffer());
 
-//				physics_world->executeMakeVoronoi(cmd);
-//				if (app.m_window->getInput().m_keyboard.isHold('A'))
-				{
-//					gi2d_rigidbody.executeDrawVoronoi(cmd, physics_world);
-//					gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
-				}
-//				else 
-				{
-//					physics_debug->executeDrawVoronoiTriangle(cmd);
-//					physics_world->executeMakeVoronoiPath(cmd);
-//					physics_debug->executeDrawVoronoiPath(cmd);
-				}
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;
 			}
@@ -367,22 +330,8 @@ int rigidbody()
 	return 0;
 }
 
-int main()
+int radiosity()
 {
-	
-	btr::setResourceAppPath("../../resource/");
-	auto camera = cCamera::sCamera::Order().create();
-	camera->getData().m_position = glm::vec3(0.f, 0.f, 1.f);
-	camera->getData().m_target = glm::vec3(0.f, 0.f, 0.f);
-	camera->getData().m_up = glm::vec3(0.f, -1.f, 0.f);
-	camera->getData().m_width = 1024;
-	camera->getData().m_height = 1024;
-	camera->getData().m_far = 5000.f;
-	camera->getData().m_near = 0.01f;
-
-//	return pathFinding();
-//	return rigidbody();
-
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
 
@@ -439,7 +388,100 @@ int main()
 				gi2d_debug.executeMakeFragment(cmd);
 
 				gi2d_make_hierarchy.executeMakeFragmentMap(cmd);
-				gi2d_make_hierarchy.executeHierarchy(cmd);
+
+				gi2d_Radiosity.executeRadiosity(cmd);
+				gi2d_Radiosity.executeRendering(cmd);
+
+				cmd.end();
+				cmds[cmd_gi2d] = cmd;
+			}
+			app.submit(std::move(cmds));
+		}
+		app.postUpdate();
+		printf("%-6.4fms\n", time.getElapsedTimeAsMilliSeconds());
+	}
+
+	return 0;
+}
+
+struct Moveable
+{
+	vec2 pos;
+	float scale;
+};
+
+int main()
+{
+
+	btr::setResourceAppPath("../../resource/");
+	auto camera = cCamera::sCamera::Order().create();
+	camera->getData().m_position = glm::vec3(0.f, 0.f, 1.f);
+	camera->getData().m_target = glm::vec3(0.f, 0.f, 0.f);
+	camera->getData().m_up = glm::vec3(0.f, -1.f, 0.f);
+	camera->getData().m_width = 1024;
+	camera->getData().m_height = 1024;
+	camera->getData().m_far = 5000.f;
+	camera->getData().m_near = 0.01f;
+
+	//	return pathFinding();
+//	return rigidbody();
+		return radiosity();
+
+	auto gpu = sGlobal::Order().getGPU(0);
+	auto device = sGlobal::Order().getGPU(0).getDevice();
+
+	app::AppDescriptor app_desc;
+	app_desc.m_gpu = gpu;
+	app_desc.m_window_size = uvec2(1024, 1024);
+	app::App app(app_desc);
+
+	auto context = app.m_context;
+
+	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
+	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchainPtr());
+
+	GI2DDescription gi2d_desc;
+	gi2d_desc.RenderWidth = app_desc.m_window_size.x;
+	gi2d_desc.RenderHeight = app_desc.m_window_size.y;
+	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context, gi2d_desc);
+	std::shared_ptr<GI2DSDF> gi2d_sdf_context = std::make_shared<GI2DSDF>(gi2d_context);
+
+	GI2DDebug gi2d_debug(context, gi2d_context);
+	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
+	GI2DRadiosity2 gi2d_Radiosity(context, gi2d_context, app.m_window->getFrontBuffer());
+
+	app.setup();
+
+	while (true)
+	{
+		cStopWatch time;
+
+		app.preUpdate();
+		{
+			enum
+			{
+				cmd_render_clear,
+				cmd_gi2d,
+				cmd_render_present,
+				cmd_num
+			};
+			std::vector<vk::CommandBuffer> cmds(cmd_num);
+
+			{
+			}
+
+			{
+				cmds[cmd_render_clear] = clear_pipeline.execute();
+				cmds[cmd_render_present] = present_pipeline.execute();
+			}
+
+			// gi2d
+			{
+				auto cmd = context->m_cmd_pool->allocCmdOnetime(0, "cmd_gi2d");
+				gi2d_context->execute(cmd);
+				gi2d_debug.executeMakeFragment(cmd);
+
+				gi2d_make_hierarchy.executeMakeFragmentMapAndSDF(cmd, gi2d_sdf_context);
 
 				gi2d_Radiosity.executeRadiosity(cmd);
 				gi2d_Radiosity.executeRendering(cmd);

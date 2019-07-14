@@ -221,7 +221,6 @@ struct GI2DMakeHierarchy
 			vk::BufferMemoryBarrier to_write[] = {
 				m_gi2d_context->b_fragment.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				m_gi2d_context->b_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
-				m_gi2d_context->b_light.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_write), to_write, 0, nullptr);
@@ -244,7 +243,6 @@ struct GI2DMakeHierarchy
 			vk::BufferMemoryBarrier to_write[] = {
 				m_gi2d_context->b_fragment.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				m_gi2d_context->b_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
-				m_gi2d_context->b_light.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
 				sdf_context->b_jfa.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
@@ -256,31 +254,32 @@ struct GI2DMakeHierarchy
 			cmd.dispatch(num.x, num.y, num.z);
 		}
 
+		_executeMakeSDF(cmd, sdf_context);
 	}
 
-	void executeHierarchy(vk::CommandBuffer cmd)
-	{
-		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
-
-		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeFragmentMapHierarchy].get());
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Hierarchy].get(), 0, m_gi2d_context->getDescriptorSet(), {});
-
-		for (uint32_t i = 1; i < m_gi2d_context->m_gi2d_info.m_hierarchy_num; i++)
-		{
-			vk::BufferMemoryBarrier to_write[] = {
-				m_gi2d_context->b_diffuse_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
-				m_gi2d_context->b_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
-			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
-				0, nullptr, array_length(to_write), to_write, 0, nullptr);
-
-			cmd.pushConstants<int32_t>(m_pipeline_layout[PipelineLayout_Hierarchy].get(), vk::ShaderStageFlagBits::eCompute, 0, i);
-			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth >> (i*3), m_gi2d_context->RenderHeight >> (i * 3), 1), uvec3(8, 8, 1));
-			cmd.dispatch(num.x, num.y, num.z);
-		}
-	}
-
-	void executeMakeSDF(vk::CommandBuffer cmd, const std::shared_ptr<GI2DSDF>& sdf_context)
+// 	void executeHierarchy(vk::CommandBuffer cmd)
+// 	{
+// 		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
+// 
+// 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeFragmentMapHierarchy].get());
+// 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Hierarchy].get(), 0, m_gi2d_context->getDescriptorSet(), {});
+// 
+// 		for (uint32_t i = 1; i < m_gi2d_context->m_gi2d_info.m_hierarchy_num; i++)
+// 		{
+// 			vk::BufferMemoryBarrier to_write[] = {
+// 				m_gi2d_context->b_diffuse_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+// 				m_gi2d_context->b_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+// 			};
+// 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+// 				0, nullptr, array_length(to_write), to_write, 0, nullptr);
+// 
+// 			cmd.pushConstants<int32_t>(m_pipeline_layout[PipelineLayout_Hierarchy].get(), vk::ShaderStageFlagBits::eCompute, 0, i);
+// 			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth >> (i*3), m_gi2d_context->RenderHeight >> (i * 3), 1), uvec3(8, 8, 1));
+// 			cmd.dispatch(num.x, num.y, num.z);
+// 		}
+// 	}
+// 
+	void _executeMakeSDF(vk::CommandBuffer cmd, const std::shared_ptr<GI2DSDF>& sdf_context)
 	{
 		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
 

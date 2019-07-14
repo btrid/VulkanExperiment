@@ -109,19 +109,7 @@ layout(std430, set=USE_GI2D, binding=2) restrict buffer FragmentBuffer {
 	Fragment b_fragment[];
 };
 layout(std430, set=USE_GI2D, binding=3) restrict buffer FragmentMapBuffer {
-	u64vec2 b_fragment_map[];
-};
-layout(set=USE_GI2D, binding=4) restrict buffer GridCounter {
-	int b_grid_counter[];
-};
-layout(set=USE_GI2D, binding=5) restrict buffer LightBuffer {
-	uint b_light[];
-};
-layout(set=USE_GI2D, binding=6, std430) restrict buffer DiffuseMapBuffer {
-	uint64_t b_diffuse_map[];
-};
-layout(set=USE_GI2D, binding=7, std430) restrict buffer EmissiveMapBuffer {
-	uint64_t b_emissive_map[];
+	uint64_t b_fragment_map[];
 };
 
 

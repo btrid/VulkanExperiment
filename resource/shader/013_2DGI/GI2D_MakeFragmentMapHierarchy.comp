@@ -15,11 +15,11 @@ layout(push_constant) uniform InputVertex
 
 layout (local_size_x = 8, local_size_y = 8) in;
 
-shared uint s_bit[2];
+shared uint s_diffuse_map[2];
 shared uint s_light_bit[2];
 void main()
 {
-	uvec2 reso = u_gi2d_info.m_resolution.xy;
+/*	uvec2 reso = u_gi2d_info.m_resolution.xy;
 	if(any(greaterThan(gl_GlobalInvocationID.xy, reso.xy>>(constant.level)))){
 		return;
 	}
@@ -30,7 +30,7 @@ void main()
 	{
 		if(gl_LocalInvocationIndex <=1)
 		{
-			s_bit[gl_LocalInvocationIndex] = 0;
+			s_diffuse_map[gl_LocalInvocationIndex] = 0;
 			s_light_bit[gl_LocalInvocationIndex] = 0;
 		}
 		barrier();
@@ -41,8 +41,8 @@ void main()
 		if(findex_1d < getFragmentMapHierarchyOffset(level))
 		{
 			int foffset = getFragmentMapHierarchyOffset(prev_level);
-			uint64_t albedo_map = b_diffuse_map[findex_1d + foffset];
-			uint64_t emissive_map = b_emissive_map[findex_1d + foffset];
+			uint64_t albedo_map = b_fragment_map[findex_1d + foffset];
+			uint64_t emissive_map = b_fragment_map[findex_1d + foffset];
 
 //			bool is_albedo = (albedo_map & (1ul<<gl_LocalInvocationIndex)) != 0ul;
 //			bool is_emissive = (emissive_map & (1ul<<gl_LocalInvocationIndex)) != 0ul;
@@ -51,24 +51,22 @@ void main()
 
 			uint hilow = gl_LocalInvocationIndex/32;
 			uint offset = gl_LocalInvocationIndex%32;
-			is_albedo ? atomicOr(s_bit[hilow], 1<<offset) : 0;
-			is_emissive ? atomicOr(s_light_bit[hilow], 1<<offset) : 0;
+			is_albedo ? atomicOr(s_diffuse_map[hilow], 1<<offset) : 0;
+			is_emissive ? atomicOr(s_emissive_map[hilow], 1<<offset) : 0;
 		}
 		barrier();
 		memoryBarrierShared();
 
 		if(gl_LocalInvocationIndex == 0)
 		{
-			uint store = getMemoryOrder(gl_WorkGroupID.xy);
 			int offset = getFragmentMapHierarchyOffset(level);
+			uint64_t diffuse_map =  (uint64_t(s_diffuse_map[1]) << 32) | s_diffuse_map[0];
+			uint64_t emissive_map =  (uint64_t(s_emissive_map[1]) << 32) | s_emissive_map[0];
 
-			uint64_t bit =  (uint64_t(s_bit[1]) << 32ul) | s_bit[0];
-			uint64_t light_bit =  (uint64_t(s_light_bit[1]) << 32ul) | s_light_bit[0];
-
-			b_diffuse_map[store+offset] = bit;
-			b_emissive_map[store+offset] = light_bit;
-
+			b_fragment_map[offset + gl_WorkGroupID.x + gl_WorkGroupID.y * u_gi2d_info.m_resolution.z] = diffuse_map;
+			b_fragment_map[offset + gl_WorkGroupID.x + gl_WorkGroupID.y * u_gi2d_info.m_resolution.z + u_gi2d_info.m_resolution.z*u_gi2d_info.m_resolution.w] = emissive_map;
 		}
 	}
+*/	
 }
 

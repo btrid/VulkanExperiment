@@ -25,6 +25,6 @@ void main()
 //	b_fragment[index.x+index.y*u_gi2d_info.m_resolution.x].albedo.w = 1.;
 
 	if(!isDiffuse(b_fragment[index.x+index.y*u_gi2d_info.m_resolution.x]))
-		b_fragment[index.x+index.y*u_gi2d_info.m_resolution.x] = makeFragment(constant.m_emissive.xyz, false, true);
+		b_fragment[index.x+index.y*u_gi2d_info.m_resolution.x] = makeFragment(constant.m_emissive.xyz, true, true);
 }
 
