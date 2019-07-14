@@ -12,10 +12,8 @@ struct GI2DMakeHierarchy
 	{
 		Shader_MakeFragmentMap,
 		Shader_MakeFragmentMapAndSDF,
-		Shader_MakeFragmentMapHierarchy,
 		Shader_MakeReachMap_Precompute,
 		Shader_MakeReachMap,
-		Shader_MakeLight,
 		Shader_MakeJFA,
 		Shader_MakeJFA_EX,
 		Shader_MakeSDF,
@@ -34,10 +32,8 @@ struct GI2DMakeHierarchy
 	{
 		Pipeline_MakeFragmentMap,
 		Pipeline_MakeFragmentMapAndSDF,
-		Pipeline_MakeFragmentMapHierarchy,
 		Pipeline_MakeReachMap_Precompute,
 		Pipeline_MakeReachMap,
-		Pipeline_MakeLight,
 		Pipeline_MakeJFA,
 		Pipeline_MakeJFA_EX,
 		Pipeline_MakeSDF,
@@ -55,10 +51,8 @@ struct GI2DMakeHierarchy
 			{
 				"GI2D_MakeFragmentMap.comp.spv",
 				"GI2D_MakeFragmentMapAndSDF.comp.spv",
-				"GI2D_MakeFragmentMapHierarchy.comp.spv",
 				"GI2DPath_MakeReachMap_Precompute.comp.spv",
 				"GI2DPath_MakeReachMap.comp.spv",
-				"GI2D_MakeLight.comp.spv",
 				"GI2DSDF_MakeJFA.comp.spv",
 				"GI2DSDF_MakeJFA_EX.comp.spv",
 				"GI2DSDF_MakeSDF.comp.spv",
@@ -140,30 +134,24 @@ struct GI2DMakeHierarchy
 			shader_info[1].setModule(m_shader[Shader_MakeFragmentMapAndSDF].get());
 			shader_info[1].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[1].setPName("main");
-			shader_info[2].setModule(m_shader[Shader_MakeFragmentMapHierarchy].get());
+			shader_info[2].setModule(m_shader[Shader_MakeReachMap_Precompute].get());
 			shader_info[2].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[2].setPName("main");
-			shader_info[3].setModule(m_shader[Shader_MakeReachMap_Precompute].get());
+			shader_info[3].setModule(m_shader[Shader_MakeReachMap].get());
 			shader_info[3].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[3].setPName("main");
-			shader_info[4].setModule(m_shader[Shader_MakeReachMap].get());
+			shader_info[4].setModule(m_shader[Shader_MakeJFA].get());
 			shader_info[4].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[4].setPName("main");
-			shader_info[5].setModule(m_shader[Shader_MakeLight].get());
+			shader_info[5].setModule(m_shader[Shader_MakeJFA_EX].get());
 			shader_info[5].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[5].setPName("main");
-			shader_info[6].setModule(m_shader[Shader_MakeJFA].get());
+			shader_info[6].setModule(m_shader[Shader_MakeSDF].get());
 			shader_info[6].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[6].setPName("main");
-			shader_info[7].setModule(m_shader[Shader_MakeJFA_EX].get());
+			shader_info[7].setModule(m_shader[Shader_RenderSDF].get());
 			shader_info[7].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[7].setPName("main");
-			shader_info[8].setModule(m_shader[Shader_MakeSDF].get());
-			shader_info[8].setStage(vk::ShaderStageFlagBits::eCompute);
-			shader_info[8].setPName("main");
-			shader_info[9].setModule(m_shader[Shader_RenderSDF].get());
-			shader_info[9].setStage(vk::ShaderStageFlagBits::eCompute);
-			shader_info[9].setPName("main");
 			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 			{
 				vk::ComputePipelineCreateInfo()
@@ -174,40 +162,32 @@ struct GI2DMakeHierarchy
 				.setLayout(m_pipeline_layout[PipelineLayout_SDF].get()),
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[2])
-				.setLayout(m_pipeline_layout[PipelineLayout_Hierarchy].get()),
+				.setLayout(m_pipeline_layout[PipelineLayout_Path].get()),
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[3])
 				.setLayout(m_pipeline_layout[PipelineLayout_Path].get()),
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[4])
-				.setLayout(m_pipeline_layout[PipelineLayout_Path].get()),
+				.setLayout(m_pipeline_layout[PipelineLayout_SDF].get()),
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[5])
-				.setLayout(m_pipeline_layout[PipelineLayout_Hierarchy].get()),
+				.setLayout(m_pipeline_layout[PipelineLayout_SDF].get()),
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[6])
 				.setLayout(m_pipeline_layout[PipelineLayout_SDF].get()),
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[7])
-				.setLayout(m_pipeline_layout[PipelineLayout_SDF].get()),
-				vk::ComputePipelineCreateInfo()
-				.setStage(shader_info[8])
-				.setLayout(m_pipeline_layout[PipelineLayout_SDF].get()),
-				vk::ComputePipelineCreateInfo()
-				.setStage(shader_info[9])
 				.setLayout(m_pipeline_layout[PipelineLayout_RenderSDF].get()),
 			};
 			auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
 			m_pipeline[Pipeline_MakeFragmentMap] = std::move(compute_pipeline[0]);
 			m_pipeline[Pipeline_MakeFragmentMapAndSDF] = std::move(compute_pipeline[1]);
-			m_pipeline[Pipeline_MakeFragmentMapHierarchy] = std::move(compute_pipeline[2]);
-			m_pipeline[Pipeline_MakeReachMap_Precompute] = std::move(compute_pipeline[3]);
-			m_pipeline[Pipeline_MakeReachMap] = std::move(compute_pipeline[4]);
-			m_pipeline[Pipeline_MakeLight] = std::move(compute_pipeline[5]);
-			m_pipeline[Pipeline_MakeJFA] = std::move(compute_pipeline[6]);
-			m_pipeline[Pipeline_MakeJFA_EX] = std::move(compute_pipeline[7]);
-			m_pipeline[Pipeline_MakeSDF] = std::move(compute_pipeline[8]);
-			m_pipeline[Pipeline_RenderSDF] = std::move(compute_pipeline[9]);
+			m_pipeline[Pipeline_MakeReachMap_Precompute] = std::move(compute_pipeline[2]);
+			m_pipeline[Pipeline_MakeReachMap] = std::move(compute_pipeline[3]);
+			m_pipeline[Pipeline_MakeJFA] = std::move(compute_pipeline[4]);
+			m_pipeline[Pipeline_MakeJFA_EX] = std::move(compute_pipeline[5]);
+			m_pipeline[Pipeline_MakeSDF] = std::move(compute_pipeline[6]);
+			m_pipeline[Pipeline_RenderSDF] = std::move(compute_pipeline[7]);
 		}
 
 	}
@@ -257,28 +237,6 @@ struct GI2DMakeHierarchy
 		_executeMakeSDF(cmd, sdf_context);
 	}
 
-// 	void executeHierarchy(vk::CommandBuffer cmd)
-// 	{
-// 		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
-// 
-// 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeFragmentMapHierarchy].get());
-// 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Hierarchy].get(), 0, m_gi2d_context->getDescriptorSet(), {});
-// 
-// 		for (uint32_t i = 1; i < m_gi2d_context->m_gi2d_info.m_hierarchy_num; i++)
-// 		{
-// 			vk::BufferMemoryBarrier to_write[] = {
-// 				m_gi2d_context->b_diffuse_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
-// 				m_gi2d_context->b_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
-// 			};
-// 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
-// 				0, nullptr, array_length(to_write), to_write, 0, nullptr);
-// 
-// 			cmd.pushConstants<int32_t>(m_pipeline_layout[PipelineLayout_Hierarchy].get(), vk::ShaderStageFlagBits::eCompute, 0, i);
-// 			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth >> (i*3), m_gi2d_context->RenderHeight >> (i * 3), 1), uvec3(8, 8, 1));
-// 			cmd.dispatch(num.x, num.y, num.z);
-// 		}
-// 	}
-// 
 	void _executeMakeSDF(vk::CommandBuffer cmd, const std::shared_ptr<GI2DSDF>& sdf_context)
 	{
 		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
