@@ -8,6 +8,20 @@
 #include <013_2DGI/GI2D/GI2DContext.h>
 #include <013_2DGI/GI2D/GI2DRigidbody.h>
 
+struct GI2DRB_MakeParam
+{
+	uvec4 aabb;
+	bool is_usercontrol;
+	bool is_fluid;
+
+	GI2DRB_MakeParam()
+		: is_usercontrol(false)
+		, is_fluid(false)
+	{
+
+	}
+};
+
 struct GI2DPhysics
 {
 #define COLLIDABLE_NUM (4)
@@ -82,7 +96,8 @@ struct GI2DPhysics
 		uint gpu_index;
 		uint cpu_index;
 	};
-#define RB_FLAG_FLUID (1)
+#define RB_FLAG_FLUID (1<<0)
+#define RB_FLAG_USER_CONTROL (1<<1)
 	struct Rigidbody
 	{
 		uint pnum;
@@ -100,8 +115,8 @@ struct GI2DPhysics
 		i64vec4 Apq_work;
 	};
 
-#define RBP_FLAG_ACTIVE (1)
-#define RBP_FLAG_COLLIDABLE (2)
+#define RBP_FLAG_ACTIVE (1<<0)
+#define RBP_FLAG_COLLIDABLE (1<<1)
 	struct rbParticle
 	{
 		vec2 relative_pos;
@@ -165,6 +180,10 @@ struct GI2DPhysics
 		ivec4 rb_aabb;
 		uint destruct_voronoi_id;
 	};
+	struct RBMakeCallback
+	{
+		uint rb_id;
+	};
 	enum
 	{
 		RB_NUM_MAX = 1024*4,
@@ -180,7 +199,7 @@ struct GI2DPhysics
 	vk::DescriptorSet getDescriptorSet(DescriptorLayout i)const { return m_descset[i].get(); }
 
 	GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context);
-	void make(vk::CommandBuffer cmd, const uvec4& box);
+	void make(vk::CommandBuffer cmd, const GI2DRB_MakeParam& param);
 	void execute(vk::CommandBuffer cmd);
 	void executeDestructWall(vk::CommandBuffer cmd);
 	void executeMakeVoronoi(vk::CommandBuffer cmd);
@@ -225,7 +244,7 @@ struct GI2DPhysics
 	btr::BufferMemoryEx<rbParticle> b_make_particle;
 	btr::BufferMemoryEx<i16vec2> b_make_jfa_cell;
 	btr::BufferMemoryEx<RBMakeParam> b_make_param;
-
+	btr::BufferMemoryEx<RBMakeCallback> b_make_callback;
 	World m_world;
 
 };

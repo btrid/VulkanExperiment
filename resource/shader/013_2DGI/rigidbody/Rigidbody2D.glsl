@@ -39,7 +39,9 @@ struct rbWorld
 
 };
 
-#define RB_FLAG_FLUID (1)
+#define RB_FLAG_FLUID (1<<0)
+#define RB_FLAG_USER_CONTROL (1<<1)
+
 #define CM_WORK_PRECISION (65535.)
 struct Rigidbody
 {
@@ -58,8 +60,8 @@ struct Rigidbody
 	i64vec4 Apq_work;
 };
 
-#define RBP_FLAG_ACTIVE (1)
-#define RBP_FLAG_COLLIDABLE (2)
+#define RBP_FLAG_ACTIVE (1<<0)
+#define RBP_FLAG_COLLIDABLE (1<<1)
 struct rbParticle
 {
 	vec2 relative_pos;
@@ -186,6 +188,10 @@ struct RBMakeParam
 	uint destruct_voronoi_id;
 };
 
+struct RBMakeCallback
+{
+	uint rb_id;
+};
 
 layout(set=USE_MakeRigidbody, binding=0, std430) restrict buffer MakeRigidbodyBuffer {
 	Rigidbody b_make_rigidbody;
@@ -198,6 +204,9 @@ layout(set=USE_MakeRigidbody, binding=2, std430) restrict buffer MakeJFABuffer {
 };
 layout(set=USE_MakeRigidbody, binding=3, std430) restrict buffer RBMakeParamBuffer {
 	RBMakeParam b_make_param;
+};
+layout(set=USE_MakeRigidbody, binding=4, std430) restrict buffer RBMakeCallbackBuffer {
+	RBMakeCallback b_make_callback;
 };
 #endif
 

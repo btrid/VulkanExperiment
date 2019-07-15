@@ -42,6 +42,7 @@ void main()
 	if(!s_ok)
 	{
 		// 追加できないので終わり
+		b_make_callback.rb_id = -1;
 		return;
 	}
 
@@ -80,6 +81,9 @@ void main()
 	// particle更新フラグを立てる
 	uint update_index = s_pb_update_index + gl_LocalInvocationIndex;
 	b_pb_update_list[b_world.gpu_index*b_manager.pb_list_size + update_index] = pb_id;
+
+	// callbackにデータ追加
+	b_make_callback.rb_id = s_rb_id;
 
 }
  

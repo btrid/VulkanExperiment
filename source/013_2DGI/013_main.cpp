@@ -304,10 +304,11 @@ int rigidbody()
 				{
  					for (int y = 0; y < 1; y++){
  					for (int x = 0; x < 1; x++){
- 						gi2d_physics_context->make(cmd, uvec4(200 + x * 32, 620 - y * 16, 16, 16));
+						GI2DRB_MakeParam param;
+						param.aabb = uvec4(200 + x * 32, 620 - y * 16, 16, 16);
+ 						gi2d_physics_context->make(cmd, param);
  					}}
 				}
-
 
 				gi2d_make_hierarchy.executeMakeFragmentMapAndSDF(cmd, gi2d_sdf_context);
 //				gi2d_make_hierarchy.executeRenderSDF(cmd, gi2d_sdf_context, app.m_window->getFrontBuffer());
@@ -402,10 +403,11 @@ int radiosity()
 	return 0;
 }
 
-struct Moveable
+struct Movable
 {
 	vec2 pos;
 	float scale;
+	uint rb_id;
 };
 
 int main()
@@ -421,9 +423,9 @@ int main()
 	camera->getData().m_far = 5000.f;
 	camera->getData().m_near = 0.01f;
 
-	//	return pathFinding();
-	return rigidbody();
-//		return radiosity();
+//	return pathFinding();
+//	return rigidbody();
+//	return radiosity();
 
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
@@ -443,10 +445,24 @@ int main()
 	gi2d_desc.RenderHeight = app_desc.m_window_size.y;
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context, gi2d_desc);
 	std::shared_ptr<GI2DSDF> gi2d_sdf_context = std::make_shared<GI2DSDF>(gi2d_context);
+	std::shared_ptr<GI2DPhysics> gi2d_physics_context = std::make_shared<GI2DPhysics>(context, gi2d_context);
 
 	GI2DDebug gi2d_debug(context, gi2d_context);
 	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
 	GI2DRadiosity2 gi2d_Radiosity(context, gi2d_context, app.m_window->getFrontBuffer());
+	GI2DPhysics_procedure gi2d_physics_proc(gi2d_physics_context, gi2d_sdf_context);
+
+	btr::BufferMemoryEx<Movable> b_movableplayer_;
+	{
+		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+		GI2DRB_MakeParam param;
+		param.aabb = uvec4(0, 0, 1, 1);
+		param.is_fluid = true;
+		param.is_usercontrol = true;
+		gi2d_physics_context->make(cmd, param);
+
+//		gi2d_physics_context->
+	}
 
 	app.setup();
 
