@@ -6,8 +6,11 @@
 #define USE_Rigidbody2D 0
 #define USE_GI2D 1
 #define USE_MakeRigidbody 2
+#define USE_Voronoi 3
 #include "GI2D.glsl"
 #include "Rigidbody2D.glsl"
+#include "Voronoi.glsl"
+
 
 layout(points, invocations = VoronoiVertex_MAX) in;
 layout(triangle_strip, max_vertices = 3) out;

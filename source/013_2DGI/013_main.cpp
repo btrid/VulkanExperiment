@@ -36,9 +36,9 @@
 #include <013_2DGI/GI2D/GI2DFluid.h>
 #include <013_2DGI/GI2D/GI2DSoftbody.h>
 
-#include <013_2DGI/GI2D/GI2DRigidbody.h>
 #include <013_2DGI/GI2D/GI2DPhysics.h>
 #include <013_2DGI/GI2D/GI2DPhysics_procedure.h>
+#include <013_2DGI/GI2D/GI2DVoronoi.h>
 
 #include <013_2DGI/Crowd/Crowd_Procedure.h>
 #include <013_2DGI/Crowd/Crowd_CalcWorldMatrix.h>
@@ -259,8 +259,8 @@ int rigidbody()
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
 	gi2d_debug.executeMakeFragment(cmd);
-	gi2d_physics_context->executeMakeVoronoi(cmd);
-	gi2d_physics_context->executeMakeVoronoiPath(cmd);
+//	gi2d_physics_context->executeMakeVoronoi(cmd);
+//	gi2d_physics_context->executeMakeVoronoiPath(cmd);
 	app.setup();
 
 	while (true)
@@ -311,7 +311,6 @@ int rigidbody()
 				}
 
 				gi2d_make_hierarchy.executeMakeFragmentMapAndSDF(cmd, gi2d_sdf_context);
-//				gi2d_make_hierarchy.executeRenderSDF(cmd, gi2d_sdf_context, app.m_window->getFrontBuffer());
 
  				gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
  				gi2d_physics_proc.execute(cmd, gi2d_physics_context, gi2d_sdf_context);
@@ -424,7 +423,7 @@ int main()
 	camera->getData().m_near = 0.01f;
 
 //	return pathFinding();
-//	return rigidbody();
+	return rigidbody();
 //	return radiosity();
 
 	auto gpu = sGlobal::Order().getGPU(0);

@@ -6,9 +6,6 @@
       <Filter>GI2D</Filter>
     </ClCompile>
     <ClCompile Include="..\..\source\013_2DGI\PathContext.cpp" />
-    <ClCompile Include="..\..\include\013_2DGI\GI2D\GI2DRigidbody.cpp">
-      <Filter>GI2D</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\include\013_2DGI\GI2D\GI2DPhysics.cpp">
       <Filter>GI2D</Filter>
     </ClCompile>
@@ -72,9 +69,6 @@
     </ClInclude>
     <ClInclude Include="..\..\include\013_2DGI\PathContext.h" />
     <ClInclude Include="..\..\include\013_2DGI\PathSolver.h" />
-    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DRigidbody.h">
-      <Filter>GI2D</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\013_2DGI\GI2D\VoronoiContext.h">
       <Filter>GI2D</Filter>
     </ClInclude>
@@ -88,6 +82,9 @@
       <Filter>GI2D</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DRadiosity3.h">
+      <Filter>GI2D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DVoronoi.h">
       <Filter>GI2D</Filter>
     </ClInclude>
   </ItemGroup>

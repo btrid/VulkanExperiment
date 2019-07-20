@@ -3,11 +3,8 @@
 #extension GL_EXT_shader_explicit_arithmetic_types : require
 #extension GL_EXT_shader_atomic_int64 : require
 
-#define USE_Rigidbody2D 0
-#define USE_GI2D 1
-#define USE_MakeRigidbody 2
-#include "GI2D.glsl"
-#include "Rigidbody2D.glsl"
+#define USE_Voronoi 0
+#include "Voronoi.glsl"
 
 
 layout(location=0) out gl_PerVertex
@@ -17,19 +14,12 @@ layout(location=0) out gl_PerVertex
 
 layout(location=1) out A
 {
-	flat uint id;
 	flat uint vertex_index;
-	flat i16vec4 voronoi_minmax;
 };
+
 
 void main()
 {
 	gl_Position = vec4(1.0);
-
-	id = b_make_param.destruct_voronoi_id;
 	vertex_index = gl_VertexIndex;
-	voronoi_minmax = b_voronoi_polygon[id].minmax;
-
-	b_make_param.rb_aabb = voronoi_minmax;
-
 }

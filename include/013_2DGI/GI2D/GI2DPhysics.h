@@ -6,7 +6,6 @@
 #include <applib/App.h>
 #include <applib/GraphicsResource.h>
 #include <013_2DGI/GI2D/GI2DContext.h>
-#include <013_2DGI/GI2D/GI2DRigidbody.h>
 
 struct GI2DRB_MakeParam
 {
@@ -34,29 +33,13 @@ struct GI2DPhysics
 		Shader_MakeRB_MakeJFCell,
 		Shader_MakeRB_SetupParticle,
 
-		Shader_Voronoi_SetupJFA,
-		Shader_Voronoi_MakeJFA,
-		Shader_Voronoi_MakeTriangle,
-		Shader_Voronoi_SortTriangleVertex,
-
-		Shader_Voronoi_MakePath,
-
-		Shader_MakeRB_DestructWall_VS,
-		Shader_MakeRB_DestructWall_GS,
-		Shader_MakeRB_DestructWall_FS,
-
 		Shader_Num,
 	};
 
 	enum PipelineLayout
 	{
 		PipelineLayout_ToFluid,
-
 		PipelineLayout_MakeRB,
-		PipelineLayout_DestructWall,
-
-		PipelineLayout_Voronoi,
-
 		PipelineLayout_Num,
 	};
 	enum Pipeline
@@ -67,12 +50,6 @@ struct GI2DPhysics
 		Pipeline_MakeRB_SetupRigidbody,
 		Pipeline_MakeRB_MakeJFCell,
 		Pipeline_MakeRB_SetupParticle,
-
-		Pipeline_Voronoi_SetupJFA,
-		Pipeline_Voronoi_MakeJFA,
-		Pipeline_Voronoi_MakeTriangle,
-		Pipeline_Voronoi_SortTriangleVertex,
-		Pipeline_Voronoi_MakePath,
 
 		Pipeline_MakeRB_DestructWall,
 		Pipeline_Num,
@@ -154,24 +131,6 @@ struct GI2DPhysics
 		uint particle_free_index;
 	};
 
-	struct VoronoiCell
-	{
-		i16vec2 point;
-	};
-
-#define VoronoiVertex_MAX (10)
-	struct VoronoiPolygon
-	{
-		int16_t vertex_index[VoronoiVertex_MAX];
-		int num;
-		i16vec4 minmax;
-	};
-
-	struct VoronoiVertex
-	{
-		i16vec2 point;
-		int16_t	cell[4];
-	};
 
 	struct RBMakeParam
 	{
@@ -200,10 +159,9 @@ struct GI2DPhysics
 
 	GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context);
 	void make(vk::CommandBuffer cmd, const GI2DRB_MakeParam& param);
+	void _make(vk::CommandBuffer &cmd);
+
 	void execute(vk::CommandBuffer cmd);
-	void executeDestructWall(vk::CommandBuffer cmd);
-	void executeMakeVoronoi(vk::CommandBuffer cmd);
-	void executeMakeVoronoiPath(vk::CommandBuffer cmd);
 
 	std::shared_ptr<btr::Context> m_context;
 	std::shared_ptr<GI2DContext> m_gi2d_context;
@@ -214,7 +172,7 @@ struct GI2DPhysics
 	std::array<vk::UniqueShaderModule, Shader_Num> m_shader;
 	std::array<vk::UniquePipelineLayout, PipelineLayout_Num> m_pipeline_layout;
 	std::array<vk::UniquePipeline, Pipeline_Num> m_pipeline;
-
+	
 	vk::UniqueRenderPass m_render_pass;
 	vk::UniqueFramebuffer m_framebuffer;
 
@@ -232,13 +190,6 @@ struct GI2DPhysics
 	btr::BufferMemoryEx<uvec4> b_update_counter;
 	btr::BufferMemoryEx<uint> b_rb_update_list;
 	btr::BufferMemoryEx<uint> b_pb_update_list;
-	btr::BufferMemoryEx<VoronoiCell> b_voronoi_cell;
-	btr::BufferMemoryEx<VoronoiPolygon> b_voronoi_polygon;
-	btr::BufferMemoryEx<int16_t> b_voronoi;
-	btr::BufferMemoryEx<uvec4> b_voronoi_vertex_counter;
-	btr::BufferMemoryEx<VoronoiVertex> b_voronoi_vertex;
-	btr::BufferMemoryEx<int16_t> b_voronoi_path;
-
 
 	btr::BufferMemoryEx<Rigidbody> b_make_rigidbody;
 	btr::BufferMemoryEx<rbParticle> b_make_particle;
@@ -261,11 +212,11 @@ struct GI2DPhysicsDebug
 		{
 			const char* name[] =
 			{
-				"Debug_DrawVoronoiTriangle.vert.spv",
-				"Debug_DrawVoronoiTriangle.geom.spv",
-				"Debug_DrawVoronoiTriangle.frag.spv",
+				"VoronoiDebug_DrawVoronoiTriangle.vert.spv",
+				"VoronoiDebug_DrawVoronoiTriangle.geom.spv",
+				"VoronoiDebug_DrawVoronoiTriangle.frag.spv",
 
-				"Debug_DrawVoronoiPath.geom.spv",
+				"VoronoiDebug_DrawVoronoiPath.geom.spv",
 			};
 			static_assert(array_length(name) == Shader_Num, "not equal shader num");
 

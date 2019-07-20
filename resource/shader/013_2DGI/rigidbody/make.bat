@@ -23,9 +23,6 @@ rem %exe% %include% %option% -o %output%/Rigid_CollisionDetective.comp.spv Rigid
 %exe% %include% %option% -o %output%/Rigid_UpdateParticleBlock.comp.spv Rigid_UpdateParticleBlock.comp
 %exe% %include% %option% -o %output%/Rigid_UpdateRigidbody.comp.spv Rigid_UpdateRigidbody.comp
 
-%exe% %include% %option% -o %output%/RigidMake_MakeRigidBody.vert.spv RigidMake_MakeRigidBody.vert
-%exe% %include% %option% -o %output%/RigidMake_MakeRigidBody.geom.spv RigidMake_MakeRigidBody.geom
-%exe% %include% %option% -o %output%/RigidMake_MakeRigidBody.frag.spv RigidMake_MakeRigidBody.frag
 %exe% %include% %option% -o %output%/RigidMake_MakeJFA.comp.spv RigidMake_MakeJFA.comp
 %exe% %include% %option% -o %output%/RigidMake_SetupRigidbody.comp.spv RigidMake_SetupRigidbody.comp
 %exe% %include% %option% -o %output%/RigidMake_SetupParticle.comp.spv RigidMake_SetupParticle.comp
@@ -36,12 +33,16 @@ rem %exe% %include% %option% -o %output%/Rigid_CollisionDetective.comp.spv Rigid
 %exe% %include% %option% -o %output%/Voronoi_SortTriangle.comp.spv Voronoi_SortTriangle.comp
 %exe% %include% %option% -o %output%/Voronoi_MakePath.comp.spv Voronoi_MakePath.comp
 
-%exe% %include% %option% -o %output%/Voronoi_Draw.comp.spv Voronoi_Draw.comp
-%exe% %include% %option% -o %output%/Debug_DrawVoronoiTriangle.vert.spv Debug_DrawVoronoiTriangle.vert
-%exe% %include% %option% -o %output%/Debug_DrawVoronoiTriangle.geom.spv Debug_DrawVoronoiTriangle.geom
-%exe% %include% %option% -o %output%/Debug_DrawVoronoiTriangle.frag.spv Debug_DrawVoronoiTriangle.frag
+%exe% %include% %option% -o %output%/Voronoi_DestructWall.vert.spv Voronoi_DestructWall.vert
+%exe% %include% %option% -o %output%/Voronoi_DestructWall.geom.spv Voronoi_DestructWall.geom
+%exe% %include% %option% -o %output%/Voronoi_DestructWall.frag.spv Voronoi_DestructWall.frag
 
-%exe% %include% %option% -o %output%/Debug_DrawVoronoiPath.geom.spv Debug_DrawVoronoiPath.geom
+%exe% %include% %option% -o %output%/Voronoi_Draw.comp.spv Voronoi_Draw.comp
+%exe% %include% %option% -o %output%/VoronoiDebug_DrawVoronoiTriangle.vert.spv VoronoiDebug_DrawVoronoiTriangle.vert
+%exe% %include% %option% -o %output%/VoronoiDebug_DrawVoronoiTriangle.geom.spv VoronoiDebug_DrawVoronoiTriangle.geom
+%exe% %include% %option% -o %output%/VoronoiDebug_DrawVoronoiTriangle.frag.spv VoronoiDebug_DrawVoronoiTriangle.frag
+
+%exe% %include% %option% -o %output%/VoronoiDebug_DrawVoronoiPath.geom.spv VoronoiDebug_DrawVoronoiPath.geom
 
 
 

@@ -4,10 +4,12 @@
 #extension GL_EXT_shader_atomic_int64 : require
 
 #define USE_Rigidbody2D 0
-#define USE_MakeRigidbody 2
 #define USE_GI2D 1
+#define USE_MakeRigidbody 2
+#define USE_Voronoi 3
 #include "GI2D.glsl"
 #include "Rigidbody2D.glsl"
+#include "Voronoi.glsl"
 
 
 layout(location=1)in FSIn

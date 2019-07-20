@@ -3,8 +3,9 @@
 #extension GL_EXT_shader_explicit_arithmetic_types : require
 #extension GL_EXT_shader_atomic_int64 : require
 
-#define USE_Rigidbody2D 0
-#include "Rigidbody2D.glsl"
+#define USE_Voronoi 0
+#include "Voronoi.glsl"
+
 
 layout(location = 0) out vec4 FragColor;
 
