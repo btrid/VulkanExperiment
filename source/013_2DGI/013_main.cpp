@@ -404,7 +404,9 @@ int radiosity()
 
 struct Movable
 {
+	vec2 pos_old;
 	vec2 pos;
+	vec2 dir;
 	float scale;
 	uint rb_id;
 };
@@ -423,7 +425,7 @@ int main()
 	camera->getData().m_near = 0.01f;
 
 //	return pathFinding();
-	return rigidbody();
+//	return rigidbody();
 //	return radiosity();
 
 	auto gpu = sGlobal::Order().getGPU(0);
@@ -438,6 +440,7 @@ int main()
 
 	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
 	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchainPtr());
+
 
 	GI2DDescription gi2d_desc;
 	gi2d_desc.RenderWidth = app_desc.m_window_size.x;
