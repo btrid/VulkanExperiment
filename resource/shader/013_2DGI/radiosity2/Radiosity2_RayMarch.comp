@@ -47,9 +47,10 @@ struct Ray
 
 void calcDirEx(in float angle, out ivec2 dir)
 {
+	#define GI2D_FLT_EPSILON 0.00001
 	vec2 f_dir = vec2(cos(angle), sin(angle));
-	f_dir.x = abs(f_dir.x)<GI2D_FLT_EPSILON ? (f_dir.x >= 0. ? 0.0001 : -0.0001) : f_dir.x;
-	f_dir.y = abs(f_dir.y)<GI2D_FLT_EPSILON ? (f_dir.y >= 0. ? 0.0001 : -0.0001) : f_dir.y;
+	f_dir.x = abs(f_dir.x)<GI2D_FLT_EPSILON ? (f_dir.x >= 0. ? GI2D_FLT_EPSILON : -GI2D_FLT_EPSILON) : f_dir.x;
+	f_dir.y = abs(f_dir.y)<GI2D_FLT_EPSILON ? (f_dir.y >= 0. ? GI2D_FLT_EPSILON : -GI2D_FLT_EPSILON) : f_dir.y;
 	vec2 f_inv_dir = 1./f_dir;
 	f_dir = f_dir * min(abs(f_inv_dir.x), abs(f_inv_dir.y));
 

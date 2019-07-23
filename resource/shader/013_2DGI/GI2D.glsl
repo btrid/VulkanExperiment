@@ -80,21 +80,6 @@ Fragment makeFragment(in vec3 color, in bool d, in bool e)
 	return f;
 }
 
-struct D2Ray
-{
-	vec2 origin;
-	float angle;
-	uint march;
-};
-struct D2Segment
-{
-	uint ray_index;
-	uint begin;
-	uint march;
-	uint radiance;
-};
-
-#define Grid_Size (1.)
   #define DT 0.016
 //#define DT 0.0005
 
@@ -112,121 +97,13 @@ layout(std430, set=USE_GI2D, binding=3) restrict buffer FragmentMapBuffer {
 	uint64_t b_fragment_map[];
 };
 
-
-ivec2 frame_offset(){
-	return ivec2(u_gi2d_scene.m_frame%2,u_gi2d_scene.m_frame/2);
-}
-
-
-#define getFragmentMapHierarchyOffset(_i) (((_i)==0) ? 0 : u_gi2d_info.m_fragment_map_size_hierarchy[(_i)-1])
 #endif
-
-
-#define LightPower (0.035)
-#define Ray_Density (1)
-#define Block_Size (1)
-#define denominator (512.)
-
-//#define denominator (2048.)
-//#define denominator (16.)
-
-
-uint packEmissive(in vec3 rgb)
-{
-	ivec3 irgb = ivec3(rgb*denominator*(1.+1./denominator*0.5));
-	irgb <<= ivec3(20, 10, 0);
-	return irgb.x | irgb.y | irgb.z;
-}
-vec3 unpackEmissive(in uint irgb)
-{
-//	vec3 rgb = vec3((uvec3(irgb) >> uvec3(21, 10, 0)) & ((uvec3(1)<<uvec3(11, 11, 10))-1));
-	vec3 rgb = vec3((uvec3(irgb) >> uvec3(20, 10, 0)) & ((uvec3(1)<<uvec3(10, 10, 10))-1));
-	return rgb / denominator;
-}
-
-vec3 unpackEmissive4(in uvec4 irgb)
-{
-	vec4 rrrr = vec4((irgb >> uvec4(20)) & ((uvec4(1)<<uvec4(10))-1));
-	vec4 gggg = vec4((irgb >> uvec4(10)) & ((uvec4(1)<<uvec4(10))-1));
-	vec4 bbbb = vec4((irgb >> uvec4(0)) & ((uvec4(1)<<uvec4(10))-1));
-	vec3 rgb = vec3(dot(rrrr, vec4(1.)), dot(gggg, vec4(1.)),dot(bbbb, vec4(1.)));
-	return rgb / denominator;
-}
-
-uint getMemoryOrder(in uvec2 xy)
-{
-//	xy = (xy ^ (xy << 8 )) & 0x00ff00ff;
-//	xy = (xy ^ (xy << 4 )) & 0x0f0f0f0f;
-//	xy = (xy ^ (xy << 2 )) & 0x33333333;
-//	xy = (xy ^ (xy << 1 )) & 0x55555555;
-
-	xy = (xy | (xy << 8 )) & 0x00ff00ff;
-	xy = (xy | (xy << 4 )) & 0x0f0f0f0f;
-	xy = (xy | (xy << 2 )) & 0x33333333;
-	xy = (xy | (xy << 1 )) & 0x55555555;
-
-	return (xy.y<<1)|xy.x;
-}
-uvec4 getMemoryOrder4(in uvec4 x, in uvec4 y)
-{
-	x = (x | (x << 8 )) & 0x00ff00ff;
-	x = (x | (x << 4 )) & 0x0f0f0f0f;
-	x = (x | (x << 2 )) & 0x33333333;
-	x = (x | (x << 1 )) & 0x55555555;
-
-	y = (y | (y << 8 )) & 0x00ff00ff;
-	y = (y | (y << 4 )) & 0x0f0f0f0f;
-	y = (y | (y << 2 )) & 0x33333333;
-	y = (y | (y << 1 )) & 0x55555555;
-	
-	return (y<<1)|x;
-}
-
-vec2 intersectRayRay(in vec2 as, in vec2 ad, in vec2 bs, in vec2 bd)
-{
-	float u = (as.y*bd.x + bd.y*bs.x - bs.y*bd.x - bd.y*as.x) / (ad.x*bd.y - ad.y*bd.x);
-	return as + u * ad;
-}
 
 vec2 rotate(in float angle)
 {
 	float c = cos(angle);
 	float s = sin(angle);
 	return vec2(-s, c);
-}
-vec2 rotateZ(in vec2 dir, in float angle)
-{
-	float c = cos(angle);
-	float s = sin(angle);
-
-	vec2 ret;
-	ret.x = dir.x * c - dir.y * s;
-	ret.y = dir.x * s + dir.y * c;
-	return ret;
-}
-vec4 rotate2(in vec2 angle)
-{
-	vec2 c = cos(angle);
-	vec2 s = sin(angle);
-	return vec4(-s.x, c.x, -s.y, c.y);
-}
-vec2 calcDir(in float angle)
-{
-#define GI2D_FLT_EPSILON 0.0001
-	vec2 dir = rotate(angle);
-	dir.x = abs(dir.x)<GI2D_FLT_EPSILON ? 0.0001 : dir.x;
-	dir.y = abs(dir.y)<GI2D_FLT_EPSILON ? 0.0001 : dir.y;
-	vec2 inv_dir = 1./dir;
-	return dir * min(abs(inv_dir.x), abs(inv_dir.y));
-}
-void calcDir2(in float angle, out vec2 dir, out vec2 inv_dir)
-{
-	dir = rotate(angle);
-	dir.x = abs(dir.x)<GI2D_FLT_EPSILON ? 0.0001 : dir.x;
-	dir.y = abs(dir.y)<GI2D_FLT_EPSILON ? 0.0001 : dir.y;
-	inv_dir = 1./dir;
-	dir = dir * min(abs(inv_dir.x), abs(inv_dir.y));
-	inv_dir = 1./dir;
 }
 
 #endif //GI2D_

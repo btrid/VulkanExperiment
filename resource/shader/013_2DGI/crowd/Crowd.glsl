@@ -127,6 +127,36 @@ vec2 inverse_safe(in vec2 v)
 	inv.x = v.x == 0 ? 99999. : 1./v.x;
 	inv.y = v.y == 0 ? 99999. : 1./v.y;
 	return inv;
-
 }
+
+uint getMemoryOrder(in uvec2 xy)
+{
+//	xy = (xy ^ (xy << 8 )) & 0x00ff00ff;
+//	xy = (xy ^ (xy << 4 )) & 0x0f0f0f0f;
+//	xy = (xy ^ (xy << 2 )) & 0x33333333;
+//	xy = (xy ^ (xy << 1 )) & 0x55555555;
+
+	xy = (xy | (xy << 8 )) & 0x00ff00ff;
+	xy = (xy | (xy << 4 )) & 0x0f0f0f0f;
+	xy = (xy | (xy << 2 )) & 0x33333333;
+	xy = (xy | (xy << 1 )) & 0x55555555;
+
+	return (xy.y<<1)|xy.x;
+}
+uvec4 getMemoryOrder4(in uvec4 x, in uvec4 y)
+{
+	x = (x | (x << 8 )) & 0x00ff00ff;
+	x = (x | (x << 4 )) & 0x0f0f0f0f;
+	x = (x | (x << 2 )) & 0x33333333;
+	x = (x | (x << 1 )) & 0x55555555;
+
+	y = (y | (y << 8 )) & 0x00ff00ff;
+	y = (y | (y << 4 )) & 0x0f0f0f0f;
+	y = (y | (y << 2 )) & 0x33333333;
+	y = (y | (y << 1 )) & 0x55555555;
+	
+	return (y<<1)|x;
+}
+
+
 #endif

@@ -426,7 +426,7 @@ int main()
 
 //	return pathFinding();
 //	return rigidbody();
-//	return radiosity();
+	return radiosity();
 
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
