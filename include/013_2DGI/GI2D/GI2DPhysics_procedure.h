@@ -28,9 +28,6 @@ struct GI2DPhysics_procedure
 		Shader_RBUpdateParticleBlock,
 		Shader_RBUpdateRigidbody,
 
-
-		Shader_DrawVoronoi,
-
 		Shader_Num,
 	};
 
@@ -55,20 +52,13 @@ struct GI2DPhysics_procedure
 		Pipeline_RBUpdateParticleBlock,
 		Pipeline_RBUpdateRigidbody,
 
-
-		Pipeline_DrawVoronoi,
-
 		Pipeline_Num,
 	};
 
 	GI2DPhysics_procedure(const std::shared_ptr<GI2DPhysics>& gi2d_physics_context, const std::shared_ptr<GI2DSDF>& sdf);
 	void execute(vk::CommandBuffer cmd, const std::shared_ptr<GI2DPhysics>& physics_context, const std::shared_ptr<GI2DSDF>& sdf);
 
-	void _executeMakeCollidableParticle(vk::CommandBuffer &cmd, const std::shared_ptr<GI2DPhysics>& world);
-	void _executeMakeCollidableWall(vk::CommandBuffer &cmd, const std::shared_ptr<GI2DPhysics>& world, const std::shared_ptr<GI2DSDF>& sdf);
-
 	void executeDrawParticle(vk::CommandBuffer cmd, const std::shared_ptr<GI2DPhysics>& world, const std::shared_ptr<RenderTarget>& render_target);
-	void executeDrawVoronoi(vk::CommandBuffer cmd, const std::shared_ptr<GI2DPhysics>& world);
 
 
 	std::shared_ptr<GI2DPhysics> m_gi2d_physics_context;
