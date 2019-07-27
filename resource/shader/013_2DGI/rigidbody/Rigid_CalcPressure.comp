@@ -43,13 +43,15 @@ void main()
 	for(int x = -1; x <= 1; x++)
 	{{
 		if(x==0 && y==0){ continue; }
-		vec2 cell_subpos = vec2(x,y)+(vec2(rand(p_id*vec2(12.235, 9.487)), rand(p_id*vec2(1.25, 1.427)))-0.5);
-		vec2 dir = subpos - cell_subpos;
+		vec2 cell_subpos = vec2(x,y)*0.5 + (vec2(rand(p_id*vec2(12.235, 9.487)), rand(p_id*vec2(1.25, 1.427)))-0.5);
+		vec2 dir =  - cell_subpos;
 		float gradient = density[(x+1) + (y+1)*3] - density[4];
 		move += gradient * normalize(dir);
+
+//		move += gradient * -vec2(x,y)*0.5;
 	}}
 
-	b_rbParticle[p_id].pos_old -= move*0.001;
+	b_rbParticle[p_id].pos_old -= move*0.0001;
 	b_rbParticle[p_id].density = density_total /= 9.;
 
 

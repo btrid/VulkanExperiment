@@ -31,7 +31,6 @@ void main()
 	if((b_rbParticle[p_id].flag & RBP_FLAG_ACTIVE) == 0){ return; }
 
 	uint r_id = b_rbParticle_map[pb_id];
-	if(((b_rigidbody[r_id].flag & RB_FLAG_FLUID) != 0)){ return; }
 
 	vec2 pos = b_rbParticle[p_id].pos;
 	vec2 pos_old = b_rbParticle[p_id].pos_old;
@@ -79,17 +78,27 @@ void main()
 				pos += dot(n_vec, sdf_j) * sdf_j * ((mass /total_mass) * c);
 
 				// 摩擦
-//				vec2 vel_unit = isZero(vel) ? vec2(0.) : normalize(vel);
-				vec2 t_vec = calcTangent(dir, sdf_j) * s;
+				vec2 vel_unit = isZero(vel) ? vec2(0.) : normalize(vel);
+				vec2 t_vec = calcTangent(vel_unit, sdf_j) * s;
 				pos -= t_vec*0.2;
 			}
 		}
 	}
 
 	b_rbParticle[p_id].pos = pos;
-	ivec2 pos_integer = ivec2(round((pos-b_rigidbody[r_id].cm) * CM_WORK_PRECISION));
-	atomicAdd(b_rigidbody[r_id].cm_work.x, pos_integer.x);
-	atomicAdd(b_rigidbody[r_id].cm_work.y, pos_integer.y);
+
+	if(((b_rigidbody[r_id].flag & RB_FLAG_FLUID) == 0))
+	{
+		ivec2 pos_integer = ivec2(round((pos-b_rigidbody[r_id].cm) * CM_WORK_PRECISION));
+		atomicAdd(b_rigidbody[r_id].cm_work.x, pos_integer.x);
+		atomicAdd(b_rigidbody[r_id].cm_work.y, pos_integer.y);
+	}
+	else
+	{
+		ivec2 index = ivec2(pos);
+		uint i = index.x+index.y*u_gi2d_info.m_resolution.x;
+		atomicAdd(b_fluid_counter[i], 1);
+	}
 
 
 }
