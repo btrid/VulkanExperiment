@@ -19,7 +19,8 @@ struct GI2DPhysics_procedure
 		Shader_DrawParticle,
 
 		Shader_RBMakeParticle,
-		Shader_RBMakeCollidable,
+		Shader_MakeCollision,
+		Shader_MakeWallCollision,
 		Shader_RBCollisionDetective,
 		Shader_RBCalcPressure,
 		Shader_RBCalcCenterMass,
@@ -27,7 +28,6 @@ struct GI2DPhysics_procedure
 		Shader_RBUpdateParticleBlock,
 		Shader_RBUpdateRigidbody,
 
-		Shader_MakeWallCollision,
 
 		Shader_DrawVoronoi,
 
@@ -37,7 +37,6 @@ struct GI2DPhysics_procedure
 	enum PipelineLayout
 	{
 		PipelineLayout_Rigid,
-		PipelineLayout_MakeWallCollision,
 		PipelineLayout_DrawParticle,
 		PipelineLayout_Num,
 	};
@@ -46,7 +45,9 @@ struct GI2DPhysics_procedure
 		Pipeline_DrawParticle,
 
 		Pipeline_RBMakeParticle,
-		Pipeline_RBMakeCollidable,
+		Pipeline_MakeCollision,
+		Pipeline_MakeWallCollision,
+
 		Pipeline_RBCollisionDetective,
 		Pipeline_RBCalcPressure,
 		Pipeline_RBCalcCenterMass,
@@ -54,7 +55,6 @@ struct GI2DPhysics_procedure
 		Pipeline_RBUpdateParticleBlock,
 		Pipeline_RBUpdateRigidbody,
 
-		Pipeline_MakeWallCollision,
 
 		Pipeline_DrawVoronoi,
 
