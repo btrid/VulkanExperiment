@@ -55,13 +55,9 @@ struct GI2DPhysics_procedure
 		Pipeline_Num,
 	};
 
-	GI2DPhysics_procedure(const std::shared_ptr<GI2DPhysics>& gi2d_physics_context, const std::shared_ptr<GI2DSDF>& sdf);
+	GI2DPhysics_procedure(const std::shared_ptr<GI2DPhysics>& physics_context, const std::shared_ptr<GI2DSDF>& sdf);
 	void execute(vk::CommandBuffer cmd, const std::shared_ptr<GI2DPhysics>& physics_context, const std::shared_ptr<GI2DSDF>& sdf);
-
-	void executeDrawParticle(vk::CommandBuffer cmd, const std::shared_ptr<GI2DPhysics>& world, const std::shared_ptr<RenderTarget>& render_target);
-
-
-	std::shared_ptr<GI2DPhysics> m_gi2d_physics_context;
+	void executeDrawParticle(vk::CommandBuffer cmd, const std::shared_ptr<GI2DPhysics>& physics_context, const std::shared_ptr<RenderTarget>& render_target);
 
 	std::array<vk::UniqueShaderModule, Shader_Num> m_shader;
 	std::array<vk::UniquePipelineLayout, PipelineLayout_Num> m_pipeline_layout;
