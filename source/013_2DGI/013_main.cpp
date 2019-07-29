@@ -417,18 +417,40 @@ struct Input
 	vec2 move;
 };
 
-struct GameDataLayout
+struct GameContext
 {
 	enum Layout
 	{
+		Layout_Map,
+		Layout_Status,
 		Layout_Movable,
 		Layout_Num,
 	};
 	std::array<vk::UniqueDescriptorSetLayout, Layout_Num> m_descriptor_set_layout;
 
 
-	GameDataLayout(const std::shared_ptr<btr::Context>& context)
+	GameContext(const std::shared_ptr<btr::Context>& context)
 	{
+		{
+			auto stage = vk::ShaderStageFlagBits::eCompute;
+			vk::DescriptorSetLayoutBinding binding[] = {
+				vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eStorageBuffer, 1, stage),
+			};
+			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
+			desc_layout_info.setBindingCount(array_length(binding));
+			desc_layout_info.setPBindings(binding);
+			m_descriptor_set_layout[Layout_Map] = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
+		}
+		{
+			auto stage = vk::ShaderStageFlagBits::eCompute;
+			vk::DescriptorSetLayoutBinding binding[] = {
+				vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eStorageBuffer, 1, stage),
+			};
+			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
+			desc_layout_info.setBindingCount(array_length(binding));
+			desc_layout_info.setPBindings(binding);
+			m_descriptor_set_layout[Layout_Status] = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
+		} 
 		{
 			auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
 			vk::DescriptorSetLayoutBinding binding[] = {
@@ -462,7 +484,7 @@ int main()
 	camera->getData().m_near = 0.01f;
 
 //	return pathFinding();
-	return rigidbody();
+//	return rigidbody();
 //	return radiosity();
 
 	auto gpu = sGlobal::Order().getGPU(0);
