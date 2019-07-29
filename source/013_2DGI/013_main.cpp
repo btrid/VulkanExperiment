@@ -404,11 +404,47 @@ int radiosity()
 
 struct Movable
 {
-	vec2 pos_old;
 	vec2 pos;
+	vec2 pos_predict;
 	vec2 dir;
 	float scale;
 	uint rb_id;
+};
+
+struct Input
+{
+	vec2 move;
+};
+
+struct GameDataLayout
+{
+	enum Layout
+	{
+		Layout_Movable,
+		Layout_Num,
+	};
+	std::array<vk::UniqueDescriptorSetLayout, Layout_Num> m_descriptor_set_layout;
+
+
+	GameDataLayout(const std::shared_ptr<btr::Context>& context)
+	{
+		{
+			auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
+			vk::DescriptorSetLayoutBinding binding[] = {
+				vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eStorageBuffer, 1, stage),
+			};
+			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
+			desc_layout_info.setBindingCount(array_length(binding));
+			desc_layout_info.setPBindings(binding);
+			m_descriptor_set_layout[Layout_Movable] = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
+		}
+	}
+};
+
+struct Player
+{
+	DescriptorSet<Movable> m_movale;
+
 };
 
 int main()

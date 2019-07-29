@@ -1,10 +1,11 @@
 #version 460
 #extension GL_GOOGLE_include_directive : require
 
-#define USE_Rigidbody2D 0
+#define USE_Movable 0
 #define USE_GI2D 1
+
+#include "Movable.glsl"
 #include "GI2D.glsl"
-#include "Rigidbody2D.glsl"
 
 layout (local_size_x = 64) in;
 
@@ -25,6 +26,7 @@ float length_safe(in vec2 v)
 {
 	return isZero(v) ? 0. : length(v);
 }
+
 void main() 
 {
 	uint pb_id = b_pb_update_list[b_world.cpu_index*b_manager.pb_list_size+gl_WorkGroupID.x];
