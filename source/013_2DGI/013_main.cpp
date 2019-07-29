@@ -305,7 +305,8 @@ int rigidbody()
  					for (int y = 0; y < 1; y++){
  					for (int x = 0; x < 1; x++){
 						GI2DRB_MakeParam param;
-						param.aabb = uvec4(200 + x * 32, 620 - y * 16, 16, 16);
+						param.aabb = uvec4(220 + x * 32, 620 - y * 16, 16, 16);
+						param.is_fluid = true;
  						gi2d_physics_context->make(cmd, param);
  					}}
 				}
@@ -461,8 +462,8 @@ int main()
 	camera->getData().m_near = 0.01f;
 
 //	return pathFinding();
-//	return rigidbody();
-	return radiosity();
+	return rigidbody();
+//	return radiosity();
 
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();

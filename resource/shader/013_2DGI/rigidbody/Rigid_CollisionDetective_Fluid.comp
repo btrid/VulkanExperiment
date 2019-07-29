@@ -36,13 +36,10 @@ void main()
 
 	vec2 pos = b_rbParticle[p_id].pos;
 	vec2 pos_old = b_rbParticle[p_id].pos_old;
-//	vec2 sdf = b_rbParticle[p_id].local_sdf;
-//	float mass = 1.;
 
 	vec2 vel = pos - pos_old;
 	float len = length_safe(vel);
 	vec2 dir = normalize_safe(vel);
-//	sdf = -dir;
 
 
 	for(int iter = 0; iter < len+1.; iter++)
@@ -76,8 +73,6 @@ void main()
 			}
 
 			vec2 sdf_j = -b_collidable[fj_id].sdf;
-//			float mass_j = b_collidable[fj_id].mass_inv;
-//			float total_mass = mass + mass_j;
 			{
 				vec2 n_vec = pos_j + sdf_j - pos;
 				pos += dot(n_vec, sdf_j) * sdf_j;
