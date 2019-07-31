@@ -459,6 +459,21 @@ void GI2DPhysics::make(vk::CommandBuffer cmd, const GI2DRB_MakeParam& param)
 	_make(cmd);
 
 }
+void GI2DPhysics::getRBID(vk::CommandBuffer cmd, const vk::DescriptorBufferInfo& info)
+{
+	vk::BufferMemoryBarrier to_read[] =
+	{
+		b_make_callback.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eTransferRead),
+	};
+	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {},
+		0, nullptr, array_length(to_read), to_read, 0, nullptr);
+
+	vk::BufferCopy region;
+	region.setSrcOffset(b_make_callback.getInfo().offset);
+	region.setDstOffset(info.offset);
+	region.setSize(4);
+	cmd.copyBuffer(b_make_callback.getInfo().buffer, info.buffer, region);
+}
 
 void GI2DPhysics::_make(vk::CommandBuffer &cmd)
 {
@@ -511,7 +526,6 @@ void GI2DPhysics::_make(vk::CommandBuffer &cmd)
 		b_make_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 		b_make_particle.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
 		b_update_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
-		b_make_callback.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 	};
 	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 		0, nullptr, array_length(to_read), to_read, 0, nullptr);

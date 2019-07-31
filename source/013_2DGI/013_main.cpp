@@ -373,9 +373,6 @@ int radiosity()
 			std::vector<vk::CommandBuffer> cmds(cmd_num);
 
 			{
-			}
-
-			{
 				cmds[cmd_render_clear] = clear_pipeline.execute();
 				cmds[cmd_render_present] = present_pipeline.execute();
 			}
@@ -412,11 +409,6 @@ struct Movable
 	uint rb_id;
 };
 
-struct Input
-{
-	vec2 move;
-};
-
 struct GameContext
 {
 	enum Layout
@@ -450,7 +442,7 @@ struct GameContext
 			desc_layout_info.setBindingCount(array_length(binding));
 			desc_layout_info.setPBindings(binding);
 			m_descriptor_set_layout[Layout_Status] = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
-		} 
+		}
 		{
 			auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
 			vk::DescriptorSetLayoutBinding binding[] = {
@@ -462,11 +454,41 @@ struct GameContext
 			m_descriptor_set_layout[Layout_Movable] = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
 		}
 	}
+	template<typename T>
+	DescriptorSet<T> makeDescriptor(const std::shared_ptr<btr::Context>& context, Layout layout)
+	{
+		DescriptorSet<T> desc;
+		vk::DescriptorSetLayout layouts[] = {
+			m_descriptor_set_layout[layout].get(),
+		};
+		vk::DescriptorSetAllocateInfo desc_info;
+		desc_info.setDescriptorPool(context->m_descriptor_pool.get());
+		desc_info.setDescriptorSetCount(array_length(layouts));
+		desc_info.setPSetLayouts(layouts);
+		desc.m_handle = std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]);
+
+		desc.m_buffer = context->m_storage_memory.allocateMemory<T>({ 1,{} });
+		vk::DescriptorBufferInfo storages[] = {
+			desc.m_buffer.getInfo(),
+		};
+
+		vk::WriteDescriptorSet write[] =
+		{
+			vk::WriteDescriptorSet()
+			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+			.setDescriptorCount(array_length(storages))
+			.setPBufferInfo(storages)
+			.setDstBinding(0)
+			.setDstSet(desc.m_handle.get()),
+		};
+		context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
+		return desc;
+	}
 };
 
 struct Player
 {
-	DescriptorSet<Movable> m_movale;
+	DescriptorSet<Movable> m_movable;
 
 };
 
@@ -507,22 +529,26 @@ int main()
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context, gi2d_desc);
 	std::shared_ptr<GI2DSDF> gi2d_sdf_context = std::make_shared<GI2DSDF>(gi2d_context);
 	std::shared_ptr<GI2DPhysics> gi2d_physics_context = std::make_shared<GI2DPhysics>(context, gi2d_context);
-
+	std::shared_ptr<GameContext> game_context = std::make_shared<GameContext>(context);
+	
 	GI2DDebug gi2d_debug(context, gi2d_context);
 	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
 	GI2DRadiosity2 gi2d_Radiosity(context, gi2d_context, app.m_window->getFrontBuffer());
 	GI2DPhysics_procedure gi2d_physics_proc(gi2d_physics_context, gi2d_sdf_context);
 
-	btr::BufferMemoryEx<Movable> b_movableplayer_;
+	Player player;
+	player.m_movable = game_context->makeDescriptor<Movable>(context, GameContext::Layout_Movable);
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 		GI2DRB_MakeParam param;
-		param.aabb = uvec4(0, 0, 1, 1);
-		param.is_fluid = true;
+		param.aabb = uvec4(128, 128, 3, 3);
+		param.is_fluid = false;
 		param.is_usercontrol = true;
 		gi2d_physics_context->make(cmd, param);
+		auto info = player.m_movable.m_buffer.getInfo();
+		info.offset += offsetof(Movable, rb_id);
+		gi2d_physics_context->getRBID(cmd, info);
 
-//		gi2d_physics_context->
 	}
 
 	app.setup();
@@ -558,8 +584,11 @@ int main()
 
 				gi2d_make_hierarchy.executeMakeFragmentMapAndSDF(cmd, gi2d_sdf_context);
 
-				gi2d_Radiosity.executeRadiosity(cmd);
-				gi2d_Radiosity.executeRendering(cmd);
+				gi2d_physics_proc.execute(cmd, gi2d_physics_context, gi2d_sdf_context);
+				gi2d_physics_proc.executeDrawParticle(cmd, gi2d_physics_context, app.m_window->getFrontBuffer());
+
+//				gi2d_Radiosity.executeRadiosity(cmd);
+	//			gi2d_Radiosity.executeRendering(cmd);
 
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;

@@ -160,6 +160,7 @@ struct GI2DPhysics
 	GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context);
 	void make(vk::CommandBuffer cmd, const GI2DRB_MakeParam& param);
 	void _make(vk::CommandBuffer &cmd);
+	void getRBID(vk::CommandBuffer cmd, const vk::DescriptorBufferInfo& info);
 
 	void execute(vk::CommandBuffer cmd);
 

@@ -7,13 +7,6 @@
 #include <btrlib/sGlobal.h>
 //#include <btrlib/Context.h>
 
-template<typename Set>
-struct DescriptorSet
-{
-	vk::UniqueDescriptorSet m_handle;
-	Set m_descriptors;
-};
-
 template<typename T, typename U>
 struct TypedInfo : public U
 {
@@ -752,5 +745,13 @@ private:
 	Precompute m_precompute;
 
 };
-
 }
+
+
+template<typename Set>
+struct DescriptorSet
+{
+	vk::UniqueDescriptorSet m_handle;
+	btr::BufferMemoryEx<Set> m_buffer;
+	Set m_descriptors;
+};
