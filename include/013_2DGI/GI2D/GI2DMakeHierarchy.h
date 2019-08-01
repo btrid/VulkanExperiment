@@ -195,7 +195,11 @@ struct GI2DMakeHierarchy
 	{
 		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
 
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Hierarchy].get(), 0, m_gi2d_context->getDescriptorSet(), {});
+		vk::DescriptorSet desc[] = {
+			m_gi2d_context->getDescriptorSet(),
+		};
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Hierarchy].get(), 0, array_length(desc), desc, 0, nullptr);
+
 		// make fragment map
 		{
 			vk::BufferMemoryBarrier to_write[] = {
@@ -216,8 +220,11 @@ struct GI2DMakeHierarchy
 	{
 		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
 
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_SDF].get(), 0, m_gi2d_context->getDescriptorSet(), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_SDF].get(), 1, sdf_context->getDescriptorSet(), {});
+		vk::DescriptorSet desc[] = {
+			m_gi2d_context->getDescriptorSet(),
+			sdf_context->getDescriptorSet(),
+		};
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_SDF].get(), 0, array_length(desc), desc, 0, nullptr);
 		// make fragment map
 		{
 			vk::BufferMemoryBarrier to_write[] = {
@@ -241,8 +248,11 @@ struct GI2DMakeHierarchy
 	{
 		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
 
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_SDF].get(), 0, sdf_context->m_gi2d_context->getDescriptorSet(), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_SDF].get(), 1, sdf_context->getDescriptorSet(), {});
+		vk::DescriptorSet desc[] = {
+			m_gi2d_context->getDescriptorSet(),
+			sdf_context->getDescriptorSet(),
+		};
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_SDF].get(), 0, array_length(desc), desc, 0, nullptr);
 
 		// make sdf
 		{
@@ -316,9 +326,12 @@ struct GI2DMakeHierarchy
 	{
 		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
 
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_RenderSDF].get(), 0, sdf_context->m_gi2d_context->getDescriptorSet(), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_RenderSDF].get(), 1, sdf_context->getDescriptorSet(), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_RenderSDF].get(), 2, render_target->m_descriptor.get(), {});
+		vk::DescriptorSet desc[] = {
+			m_gi2d_context->getDescriptorSet(),
+			sdf_context->getDescriptorSet(),
+			render_target->m_descriptor.get(),
+		};
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_RenderSDF].get(), 0, array_length(desc), desc, 0, nullptr);
 
 		{
 			vk::BufferMemoryBarrier to_read[] = {
@@ -343,9 +356,11 @@ struct GI2DMakeHierarchy
 	{
 		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
 
-
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Path].get(), 0, path_context->m_gi2d_context->getDescriptorSet(), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Path].get(), 1, path_context->getDescriptorSet(), {});
+		vk::DescriptorSet desc[] = {
+			path_context->m_gi2d_context->getDescriptorSet(),
+			path_context->getDescriptorSet(),
+		};
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Path].get(), 0, array_length(desc), desc, 0, nullptr);
 
 		static int iter = 10;
 		iter = iter+1;

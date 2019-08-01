@@ -564,9 +564,11 @@ struct GI2DRadiosity2
 	{
 		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
 
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, m_gi2d_context->getDescriptorSet(), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 1, m_descriptor_set.get(), {});
-		cmd.pushConstants<int>(m_pipeline_layout[PipelineLayout_Radiosity].get(), vk::ShaderStageFlagBits::eCompute, 0, 0);
+		vk::DescriptorSet desc[] = {
+			m_gi2d_context->getDescriptorSet(),
+			m_descriptor_set.get(),
+		};
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Radiosity].get(), 0, array_length(desc), desc, 0, nullptr);
 
 		// データクリア
 		{

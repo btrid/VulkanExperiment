@@ -454,6 +454,7 @@ struct GameContext
 			m_descriptor_set_layout[Layout_Movable] = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
 		}
 	}
+
 	template<typename T>
 	DescriptorSet<T> makeDescriptor(const std::shared_ptr<btr::Context>& context, Layout layout)
 	{
@@ -507,7 +508,7 @@ int main()
 
 //	return pathFinding();
 //	return rigidbody();
-//	return radiosity();
+	return radiosity();
 
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
@@ -548,7 +549,6 @@ int main()
 		auto info = player.m_movable.m_buffer.getInfo();
 		info.offset += offsetof(Movable, rb_id);
 		gi2d_physics_context->getRBID(cmd, info);
-
 	}
 
 	app.setup();
