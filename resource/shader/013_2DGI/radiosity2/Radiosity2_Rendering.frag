@@ -20,11 +20,4 @@ void main()
 	{
 		FragColor = fma(f16vec4(texture(s_radiosity[i], fs_in.texcoord)), f16vec4(0.14), FragColor);
 	}
-
-//	uvec2 cood = uvec2(gl_FragCoord.xy);
-//	FragColor.xyz *= getRGB(b_fragment[cood.x + cood.y * u_gi2d_info.m_resolution.x]);
-//	uvec2 index = uvec2(gl_FragCoord.xy);
-//	bool is_diffuse = isDiffuse(b_fragment[index.x + index.y * u_gi2d_info.m_resolution.x]);
-//	if(is_diffuse) discard;
-//	FragColor = f16vec4(fs_in.color*0.14, 0.0);
 }
