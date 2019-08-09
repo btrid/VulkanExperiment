@@ -59,7 +59,7 @@ void calcDirEx(in float angle, out ivec2 dir)
 }
 Ray makeRay(in uint x, in uint y)
 {
-	const ivec4 reso = u_gi2d_info.m_resolution / 2;
+	const ivec4 reso = u_gi2d_info.m_resolution;
 	Ray ray;
 
 	float a = PI / Dir_Num;
@@ -79,6 +79,7 @@ Ray makeRay(in uint x, in uint y)
 		ray.origin.x += (reso.x-1) - int(ceil(ray.dir.x / float(ray.dir.y))) * int(x);
 	}
 
+
 	ray.origin *= dir_reso;
 
 	ivec4 aabb = ivec4(ivec2(0, 0), reso.xy);
@@ -91,7 +92,7 @@ Ray makeRay(in uint x, in uint y)
 
 void main()
 {
-	const ivec4 reso = u_gi2d_info.m_resolution / 2;
+	const ivec4 reso = u_gi2d_info.m_resolution;
 	uint angle_index = gl_WorkGroupID.y;
 
 	Ray ray = makeRay(gl_GlobalInvocationID.x, gl_WorkGroupID.y);
@@ -106,16 +107,14 @@ void main()
 	{
 		ivec2 cell = mi>>3;
 		ivec2 cell_sub = mi%8;
-//		uint64_t map = b_fragment_map[cell.x + cell.y * reso.z];
-		uint64_t map = b_edge[cell.x + cell.y * reso.z];
+		uint64_t map = b_fragment_map[cell.x + cell.y * reso.z];
 		is_inner = (map & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0ul;
 	}
 
 	for(int march = ray.begin; march < ray.end; )
 	{
 		ivec2 cell = mi>>3;
-//		uint64_t map = b_fragment_map[cell.x + cell.y * reso.z];
-		uint64_t map = b_edge[cell.x + cell.y * reso.z];
+		uint64_t map = b_fragment_map[cell.x + cell.y * reso.z];
 
 		for(;;)
 		{

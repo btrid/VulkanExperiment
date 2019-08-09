@@ -81,6 +81,7 @@ struct GI2DRadiosity2
 			b_segment = m_context->m_storage_memory.allocateMemory<Segment>({ 3000000,{} });
 			b_radiance = m_context->m_storage_memory.allocateMemory<uint64_t>({ size * 2,{} });
 			b_edge = m_context->m_storage_memory.allocateMemory<uint64_t>({ size / 64,{} });
+			b_albedo = m_context->m_storage_memory.allocateMemory<f16vec4>({ size / 4,{} });
 
 			m_info.ray_num_max = 0;
 			m_info.ray_frame_max = 0;
@@ -192,7 +193,8 @@ struct GI2DRadiosity2
 					vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eCombinedImageSampler, Frame_Num, stage),
+					vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(6, vk::DescriptorType::eCombinedImageSampler, Frame_Num, stage),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -218,6 +220,7 @@ struct GI2DRadiosity2
 					b_segment.getInfo(),
 					b_radiance.getInfo(),
 					b_edge.getInfo(),
+					b_albedo.getInfo(),
 				};
 
 				vk::WriteDescriptorSet write[] =
@@ -248,7 +251,7 @@ struct GI2DRadiosity2
 						.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
 						.setDescriptorCount(1)
 						.setPImageInfo(&image_info[i])
-						.setDstBinding(5)
+						.setDstBinding(6)
 						.setDstArrayElement(i)
 						.setDstSet(m_descriptor_set.get());
 				}
@@ -635,7 +638,8 @@ struct GI2DRadiosity2
 
 			cmd.pushConstants<float>(m_pipeline_layout[PipelineLayout_Radiosity].get(), vk::ShaderStageFlagBits::eCompute, 0, 0.25f);
 
-			auto num = app::calcDipatchGroups(uvec3(2048, Dir_Num, 1), uvec3(128, 1, 1));
+//			auto num = app::calcDipatchGroups(uvec3(2048, Dir_Num, 1), uvec3(128, 1, 1));
+			auto num = app::calcDipatchGroups(uvec3(1024, Dir_Num, 1), uvec3(128, 1, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 		}
 
@@ -759,6 +763,7 @@ struct GI2DRadiosity2
 	btr::BufferMemoryEx<Segment> b_segment;
 	btr::BufferMemoryEx<uint64_t> b_radiance;
 	btr::BufferMemoryEx<uint64_t> b_edge;
+	btr::BufferMemoryEx<f16vec4> b_albedo;
 
 	GI2DRadiosityInfo m_info;
 
