@@ -8,7 +8,7 @@
 
 layout (local_size_x = 32, local_size_y = 32) in;
 
-shared uint64_t s_map[36];
+shared uint64_t s_map[6][6];
 const i16vec2 g_offset[8] = 
 {
 		i16vec2(-1,-1), 
@@ -26,7 +26,6 @@ void main()
 
 	if(gl_LocalInvocationID.x < 6 && gl_LocalInvocationID.y < 6)
 	{
-		uint i = gl_LocalInvocationID.x+gl_LocalInvocationID.y*6;
 		uvec2 offset_xy = gl_LocalInvocationID.xy-1;
 		uvec2 index = gl_WorkGroupID.xy*4 + offset_xy;
 
@@ -36,7 +35,7 @@ void main()
 //			map = b_diffuse_map[getMemoryOrder(index)];
 			map = b_fragment_map[index.x + index.y * u_gi2d_info.m_resolution.z];
 		}
-		s_map[i] = map;
+		s_map[gl_LocalInvocationID.y][gl_LocalInvocationID.x] = map;
 	}
 
 	memoryBarrierShared();
@@ -49,7 +48,7 @@ void main()
 		ivec2 ii = ivec2(gl_LocalInvocationID.xy) + ivec2(8);
 		ivec2 map_index = ii / 8;
 		ivec2 map_bit = ii % 8;
-		if((s_map[map_index.x+map_index.y*6] & (1ul<<(map_bit.x+map_bit.y*8))) == 0ul)
+		if((s_map[map_index.y][map_index.x] & (1ul<<(map_bit.x+map_bit.y*8))) == 0ul)
 		{
 			// 床なので何もしない
 			is_diffuse = false;
@@ -60,7 +59,7 @@ void main()
 		ivec2 ii = ivec2(gl_LocalInvocationID.xy) + g_offset[i] + ivec2(8);
 		ivec2 map_index = ii / 8;
 		ivec2 map_bit = ii % 8;
-		if((s_map[map_index.x+map_index.y*6] & (1ul<<(map_bit.x+map_bit.y*8))) == 0ul)
+		if((s_map[map_index.y][map_index.x] & (1ul<<(map_bit.x+map_bit.y*8))) == 0ul)
 		{
 			is_edge = true;
 			break;

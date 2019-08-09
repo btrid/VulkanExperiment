@@ -41,12 +41,13 @@ void main()
 	uint64_t radiance2 = b_radiance[index.y + (Bounce_Num%2)*reso.x*reso.y];
 	dvec3 rad1_d3 = dvec3(radiance1&ColorMask, (radiance1>>21)&ColorMask, (radiance1>>42)&ColorMask);
 	dvec3 rad2_d3 = dvec3(radiance2&ColorMask, (radiance2>>21)&ColorMask, (radiance2>>42)&ColorMask);
-	vec3 rad = vec3(rad1_d3 / 1024.) * vec3(b_albedo[index.x]);
-	rad = rad + vec3(rad2_d3 / 1024.) * vec3(b_albedo[index.y]);
+	vec3 rad = vec3(rad1_d3 / 1024.) * vec3(b_albedo[index.x].xyz);
+	rad = rad + vec3(rad2_d3 / 1024.) * vec3(b_albedo[index.y].xyz);
+//	rad = vec3(1.);
 
 	if(dot(rad, vec3(1.)) <= 0.0005){ return; }
 
-	vec4 vertex = ((vec4(pos)*2. + vec4(0.5)) / vec4(reso.xyxy)) * 2. - 1.;
+	vec4 vertex = ((vec4(pos) + vec4(0.5)) / vec4(reso.xyxy)) * 2. - 1.;
 
 	gl_Position = vec4(vertex.xy, 0., 1.);
 	gs_out.color = rad;
