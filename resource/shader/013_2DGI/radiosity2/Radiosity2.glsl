@@ -49,6 +49,9 @@ layout(set=USE_GI2D_Radiosity2, binding=3, std430) restrict buffer RadianceBuffe
 layout(set=USE_GI2D_Radiosity2, binding=4, std430) restrict buffer MapEdgeBuffer {
 	uint64_t b_edge[];
 };
+layout(set=USE_GI2D_Radiosity2, binding=5, std430) restrict buffer AlbedoBuffer {
+	f16vec4 b_albedo[];
+};
 
 layout(set=USE_GI2D_Radiosity2, binding=5) uniform sampler2D s_radiosity[Frame_Num];
 
