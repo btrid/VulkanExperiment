@@ -75,13 +75,13 @@ struct GI2DRadiosity2
 
 		{
 
-			uint32_t size = m_gi2d_context->RenderWidth * m_gi2d_context->RenderHeight;
+			uint32_t size = m_gi2d_context->RenderWidth * m_gi2d_context->RenderHeight / 4;
 			u_radiosity_info = m_context->m_uniform_memory.allocateMemory<GI2DRadiosityInfo>({ 1,{} });
 			b_segment_counter = m_context->m_storage_memory.allocateMemory<SegmentCounter>({ 1,{} });
 			b_segment = m_context->m_storage_memory.allocateMemory<Segment>({ 3000000,{} });
 			b_radiance = m_context->m_storage_memory.allocateMemory<uint64_t>({ size * 2,{} });
 			b_edge = m_context->m_storage_memory.allocateMemory<uint64_t>({ size / 64,{} });
-			b_albedo = m_context->m_storage_memory.allocateMemory<f16vec4>({ size / 4,{} });
+			b_albedo = m_context->m_storage_memory.allocateMemory<f16vec4>({ size,{} });
 
 			m_info.ray_num_max = 0;
 			m_info.ray_frame_max = 0;
@@ -620,7 +620,8 @@ struct GI2DRadiosity2
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeHitpoint].get());
-			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth/2, m_gi2d_context->RenderHeight/2, 1), uvec3(32, 32, 1));
+//			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth, m_gi2d_context->RenderHeight, 1), uvec3(32, 32, 1));
+			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth / 2, m_gi2d_context->RenderHeight / 2, 1), uvec3(32, 32, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 		}
 
