@@ -73,9 +73,13 @@ struct GI2DRadiosity2
 
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
+#define RADIOSITY_FAST
 		{
-
+#ifdef RADIOSITY_FAST
 			uint32_t size = m_gi2d_context->RenderWidth * m_gi2d_context->RenderHeight / 4;
+#else
+			uint32_t size = m_gi2d_context->RenderWidth * m_gi2d_context->RenderHeight;
+#endif
 			u_radiosity_info = m_context->m_uniform_memory.allocateMemory<GI2DRadiosityInfo>({ 1,{} });
 			b_segment_counter = m_context->m_storage_memory.allocateMemory<SegmentCounter>({ 1,{} });
 			b_segment = m_context->m_storage_memory.allocateMemory<Segment>({ 3000000,{} });
@@ -620,8 +624,11 @@ struct GI2DRadiosity2
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeHitpoint].get());
-//			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth, m_gi2d_context->RenderHeight, 1), uvec3(32, 32, 1));
+#ifdef RADIOSITY_FAST
 			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth / 2, m_gi2d_context->RenderHeight / 2, 1), uvec3(32, 32, 1));
+#else
+			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth, m_gi2d_context->RenderHeight, 1), uvec3(32, 32, 1));
+#endif
 			cmd.dispatch(num.x, num.y, num.z);
 		}
 
@@ -639,8 +646,11 @@ struct GI2DRadiosity2
 
 			cmd.pushConstants<float>(m_pipeline_layout[PipelineLayout_Radiosity].get(), vk::ShaderStageFlagBits::eCompute, 0, 0.25f);
 
-//			auto num = app::calcDipatchGroups(uvec3(2048, Dir_Num, 1), uvec3(128, 1, 1));
+#ifdef RADIOSITY_FAST
 			auto num = app::calcDipatchGroups(uvec3(1024, Dir_Num, 1), uvec3(128, 1, 1));
+#else
+			auto num = app::calcDipatchGroups(uvec3(2048, Dir_Num, 1), uvec3(128, 1, 1));
+#endif
 			cmd.dispatch(num.x, num.y, num.z);
 		}
 
