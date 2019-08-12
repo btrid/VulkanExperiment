@@ -12,8 +12,8 @@ struct GI2DLightData
 }; 
 
 GI2DLightData g_data[50];
-GI2DContext::Fragment g_wall(vec3(0.8f, 0.2f, 0.2f), true, false);
-GI2DContext::Fragment g_path(vec3(1.f), false, false);
+GI2DContext::Fragment g_wall(vec3(1.0f, 0.2f, 0.2f), true, false);
+GI2DContext::Fragment g_path(vec3(0.2f, 1.0f, 1.0f), false, false);
 
 GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context)
 {

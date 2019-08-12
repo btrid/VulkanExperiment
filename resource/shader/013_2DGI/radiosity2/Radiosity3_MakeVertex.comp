@@ -34,39 +34,35 @@ void main()
 	int count = 0;
 	for(uint i = 0; i < 4; i++)
 	{
+		uvec2 index = gl_GlobalInvocationID.xy*2 + uvec2(i%2,i/2);
+		Fragment fragment = b_fragment[index.x+index.y*u_gi2d_info.m_resolution.x];
+		vec3 color = vec3(getRGB(fragment));
+		albedo += color;
+
 		uvec2 ii = gl_LocalInvocationID.xy*2 + uvec2(i%2,i/2) + uvec2(8);
 		uvec2 map_index = ii / 8;
 		uvec2 map_bit = ii % 8;
 		if((s_map[map_index.y][map_index.x] & (1ul<<(map_bit.x+map_bit.y*8))) != 0ul)
 		{
-			uvec2 index = gl_GlobalInvocationID.xy*2 + uvec2(i%2,i/2);
-			uint ii = index.x+index.y*u_gi2d_info.m_resolution.x;
-			vec3 color = vec3(getRGB(b_fragment[ii]));
-			rad += color * vec3(isEmissive(b_fragment[ii])) * 0.3;
-			albedo += color;
+			rad += color * vec3(isEmissive(fragment)) * 0.3;
 			count++;
 		}
 	}
 
 	ivec4 reso = u_gi2d_info.m_resolution / 2;
 	uint index = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * reso.x;
+	uint64_t packed = 0ul;
 	if(count!=0)
 	{
 		u64vec3 emissive_u3 = u64vec3(round(rad * vec3(1024.) / count));
-		uint64_t packed = emissive_u3.x + (emissive_u3.y<<21ul) + (emissive_u3.z<<42ul);
-
-		b_radiance[index] = packed;
-		b_radiance[index+reso.x*reso.y] = packed;
-		b_albedo[index] = f16vec4(albedo / count, 1.);
+		packed = emissive_u3.x + (emissive_u3.y<<21ul) + (emissive_u3.z<<42ul);
 
 		uvec2 map = gl_GlobalInvocationID.xy / 8;
 		uvec2 bit = gl_GlobalInvocationID.xy % 8;
 		atomicOr(b_edge[map.x + map.y*reso.z], 1ul<<(bit.x+bit.y*8));
+	}
+	b_radiance[index] = packed;
+	b_radiance[index+reso.x*reso.y] = packed;
 
-	}
-	else
-	{
-		b_radiance[index] = 0ul;
-		b_radiance[index+reso.x*reso.y] = 0ul;
-	}
+	b_albedo[index] = f16vec4(albedo / 4, 1.);
 }

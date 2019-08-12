@@ -11,9 +11,8 @@ SET output=../../binary
 
 %exe% %include% %option% -o %output%/Radiosity2_Radiosity.vert.spv Radiosity2_Radiosity.vert
 %exe% %include% %option% -o %output%/Radiosity2_Radiosity.geom.spv Radiosity3_Radiosity.geom
-%exe% %include% %option% -o %output%/Radiosity2_Radiosity.frag.spv Radiosity2_Radiosity.frag
+%exe% %include% %option% -o %output%/Radiosity2_Radiosity.frag.spv Radiosity3_Radiosity.frag
 
 %exe% %include% %option% -o %output%/Radiosity2_Rendering.vert.spv Radiosity2_Rendering.vert
-%exe% %include% %option% -o %output%/Radiosity2_Rendering.frag.spv Radiosity2_Rendering.frag
 %exe% %include% %option% -o %output%/Radiosity2_Rendering.comp.spv Radiosity2_Rendering.comp
 
