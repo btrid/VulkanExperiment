@@ -1,6 +1,6 @@
 @echo off
 cd /d %~dp0
-SET include=-I../ -I../../include/
+SET include=-I../../include/
 SET option=--target-env spirv1.3 -V -w
 SET exe=glslangValidator.exe
 SET output=../../binary

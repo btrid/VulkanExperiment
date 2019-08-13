@@ -7,7 +7,7 @@
 
 #define USE_GI2D 0
 #define USE_RT 1
-#include "GI2D.glsl"
+#include "GI2D/GI2D.glsl"
 
 out gl_PerVertex{
 	vec4 gl_Position;

@@ -1,12 +1,9 @@
 #version 460
 #extension GL_GOOGLE_include_directive : require
 
-#include "btrlib/ConvertDimension.glsl"
-#include "btrlib/Common.glsl"
-#include "btrlib/Math.glsl"
 
 #define USE_Crowd2D 0
-#include "Crowd.glsl"
+#include "GI2D/Crowd.glsl"
 
 
 layout(push_constant) uniform C

@@ -7,9 +7,9 @@
 #define USE_GI2D 1
 #define USE_MakeRigidbody 2
 #define USE_Voronoi 3
-#include "GI2D.glsl"
-#include "Rigidbody2D.glsl"
-#include "Voronoi.glsl"
+#include "GI2D/GI2D.glsl"
+#include "GI2D/Rigidbody2D.glsl"
+#include "GI2D/Voronoi.glsl"
 
 
 layout(location=1)in FSIn

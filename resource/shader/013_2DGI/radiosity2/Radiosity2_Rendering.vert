@@ -3,8 +3,8 @@
 
 #define USE_GI2D 0
 #define USE_GI2D_Radiosity2 1
-#include "GI2D.glsl"
-#include "Radiosity2.glsl"
+#include "GI2D/GI2D.glsl"
+#include "GI2D/Radiosity2.glsl"
 
 
 layout(location=0) out gl_PerVertex{

@@ -4,11 +4,11 @@
 #include "btrlib/Math.glsl"
 
 #define USE_GI2D 0
-#include "GI2D.glsl"
+#include "GI2D/GI2D.glsl"
 
 #define USE_AppModel 1
 #define USE_AppModel_Render 2
-#include "AppModel.glsl"
+#include "GI2D/AppModel.glsl"
 
 
 layout(location = 0)in vec3 inPosition;

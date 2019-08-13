@@ -4,7 +4,7 @@
 #extension GL_EXT_shader_atomic_int64 : require
 
 #define USE_Voronoi 0
-#include "Voronoi.glsl"
+#include "GI2D/Voronoi.glsl"
 
 
 layout(location = 0) out vec4 FragColor;

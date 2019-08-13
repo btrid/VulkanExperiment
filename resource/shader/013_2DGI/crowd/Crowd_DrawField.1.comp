@@ -1,19 +1,14 @@
 #version 460
 #extension GL_GOOGLE_include_directive : require
 
-#include "btrlib/ConvertDimension.glsl"
-#include "btrlib/Common.glsl"
-#include "btrlib/Math.glsl"
-
 #define USE_Crowd2D 0
-#include "Crowd.glsl"
-
 #define USE_SYSTEM 1
-#define USE_RenderTarget 3
-#include "applib/System.glsl"
-
 #define USE_GI2D 2
-#include "GI2D.glsl"
+#define USE_RenderTarget 3
+#include "GI2D/Crowd.glsl"
+#include "applib/System.glsl"
+#include "GI2D/GI2D.glsl"
+
 
 #define color_size (5)
 vec3 g_color[color_size] = {

@@ -4,8 +4,8 @@
 #define USE_Rigidbody2D 0
 #define USE_GI2D 1
 #define USE_MakeRigidbody 2
-#include "GI2D.glsl"
-#include "Rigidbody2D.glsl"
+#include "GI2D/GI2D.glsl"
+#include "GI2D/Rigidbody2D.glsl"
 
 float rand(vec2 co){
     return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);

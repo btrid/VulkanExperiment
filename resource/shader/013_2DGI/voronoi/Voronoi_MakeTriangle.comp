@@ -5,7 +5,7 @@
 
 
 #define USE_Voronoi 0
-#include "Voronoi.glsl"
+#include "GI2D/Voronoi.glsl"
 
 
 //#extension VK_EXT_conservative_rasterization : require

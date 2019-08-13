@@ -516,92 +516,43 @@ struct GameProcedure
 
 #if USE_DEBUG_REPORT
 			vk::DebugUtilsObjectNameInfoEXT name_info;
-			name_info.pObjectName = "PipelineLayout_ToFluid";
+			name_info.pObjectName = "PipelineLayout_MovableUpdate";
 			name_info.objectType = vk::ObjectType::ePipelineLayout;
 			name_info.objectHandle = reinterpret_cast<uint64_t &>(m_pipeline_layout[PipelineLayout_MovableUpdate].get());
-			context->m_device->setDebugUtilsObjectNameEXT(name_info, m_context->m_dispach);
-#endif
-		}
-		{
-			vk::DescriptorSetLayout layouts[] = {
-				m_desc_layout[DescLayout_Data].get(),
-				m_gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data),
-				m_desc_layout[DescLayout_Make].get(),
-			};
-			vk::PushConstantRange ranges[] = {
-				vk::PushConstantRange(vk::ShaderStageFlagBits::eCompute, 0, 16),
-			};
-
-			vk::PipelineLayoutCreateInfo pipeline_layout_info;
-			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
-			pipeline_layout_info.setPSetLayouts(layouts);
-			pipeline_layout_info.setPushConstantRangeCount(array_length(ranges));
-			pipeline_layout_info.setPPushConstantRanges(ranges);
-			m_pipeline_layout[PipelineLayout_MakeRB] = m_context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
-
-#if USE_DEBUG_REPORT
-			vk::DebugUtilsObjectNameInfoEXT name_info;
-			name_info.pObjectName = "PipelineLayout_MakeRigidbody";
-			name_info.objectType = vk::ObjectType::ePipelineLayout;
-			name_info.objectHandle = reinterpret_cast<uint64_t &>(m_pipeline_layout[PipelineLayout_MakeRB].get());
-			m_context->m_device->setDebugUtilsObjectNameEXT(name_info, m_context->m_dispach);
+			context->m_device->setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
 #endif
 		}
 
 		// pipeline
 		{
-			std::array<vk::PipelineShaderStageCreateInfo, 11> shader_info;
-			shader_info[0].setModule(m_shader[Shader_ToFluid].get());
+			std::array<vk::PipelineShaderStageCreateInfo, Shader_Num> shader_info;
+			shader_info[0].setModule(m_shader[Shader_MovableUpdate].get());
 			shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[0].setPName("main");
-			shader_info[1].setModule(m_shader[Shader_ToFluidWall].get());
-			shader_info[1].setStage(vk::ShaderStageFlagBits::eCompute);
-			shader_info[1].setPName("main");
-			shader_info[2].setModule(m_shader[Shader_MakeRB_SetupRigidbody].get());
-			shader_info[2].setStage(vk::ShaderStageFlagBits::eCompute);
-			shader_info[2].setPName("main");
-			shader_info[3].setModule(m_shader[Shader_MakeRB_MakeJFCell].get());
-			shader_info[3].setStage(vk::ShaderStageFlagBits::eCompute);
-			shader_info[3].setPName("main");
-			shader_info[4].setModule(m_shader[Shader_MakeRB_SetupParticle].get());
-			shader_info[4].setStage(vk::ShaderStageFlagBits::eCompute);
-			shader_info[4].setPName("main");
 			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 			{
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[0])
-				.setLayout(m_pipeline_layout[PipelineLayout_ToFluid].get()),
-				vk::ComputePipelineCreateInfo()
-				.setStage(shader_info[1])
-				.setLayout(m_pipeline_layout[PipelineLayout_ToFluid].get()),
-				vk::ComputePipelineCreateInfo()
-				.setStage(shader_info[2])
-				.setLayout(m_pipeline_layout[PipelineLayout_MakeRB].get()),
-				vk::ComputePipelineCreateInfo()
-				.setStage(shader_info[3])
-				.setLayout(m_pipeline_layout[PipelineLayout_MakeRB].get()),
-				vk::ComputePipelineCreateInfo()
-				.setStage(shader_info[4])
-				.setLayout(m_pipeline_layout[PipelineLayout_MakeRB].get()),
+				.setLayout(m_pipeline_layout[PipelineLayout_MovableUpdate].get()),
 			};
-			auto compute_pipeline = m_context->m_device->createComputePipelinesUnique(m_context->m_cache.get(), compute_pipeline_info);
+			auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
 #if USE_DEBUG_REPORT
 			vk::DebugUtilsObjectNameInfoEXT name_info;
-			name_info.pObjectName = "Pipeline_ToFluid";
+			name_info.pObjectName = "Pipeline_MovableUpdate";
 			name_info.objectType = vk::ObjectType::ePipeline;
 			name_info.objectHandle = reinterpret_cast<uint64_t &>(compute_pipeline[0].get());
-			m_context->m_device->setDebugUtilsObjectNameEXT(name_info, m_context->m_dispach);
+			context->m_device->setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
 #endif
 
-			m_pipeline[Pipeline_ToFluid] = std::move(compute_pipeline[0]);
-			m_pipeline[Pipeline_ToFluidWall] = std::move(compute_pipeline[1]);
-			m_pipeline[Pipeline_MakeRB_SetupRigidbody] = std::move(compute_pipeline[2]);
-			m_pipeline[Pipeline_MakeRB_MakeJFCell] = std::move(compute_pipeline[3]);
-			m_pipeline[Pipeline_MakeRB_SetupParticle] = std::move(compute_pipeline[4]);
+			m_pipeline[Pipeline_MovableUpdate] = std::move(compute_pipeline[0]);
 		}
 
 	}
 
+	void executeMovableUpdate(vk::CommandBuffer cmd, const std::shared_ptr<GameContext>& game_context)
+	{
+
+	}
 	enum Shader
 	{
 		Shader_MovableUpdate,
@@ -646,7 +597,7 @@ int main()
 
 //	return pathFinding();
 //	return rigidbody();
-//	return radiosity();
+	return radiosity();
 
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();

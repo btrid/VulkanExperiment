@@ -4,7 +4,7 @@
 #extension GL_EXT_shader_atomic_int64 : require
 
 #define USE_Voronoi 0
-#include "Voronoi.glsl"
+#include "GI2D/Voronoi.glsl"
 
 layout(points, invocations = VoronoiVertex_MAX) in;
 layout(triangle_strip, max_vertices = 3) out;

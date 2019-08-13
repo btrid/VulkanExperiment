@@ -2,9 +2,9 @@
 #extension GL_GOOGLE_include_directive : require
 
 #define USE_GI2D 0
-#include "GI2D.glsl"
 #define USE_GI2D_SDF 1
-#include "GI2DSDF.glsl"
+#include "GI2D/GI2D.glsl"
+#include "GI2D/GI2DSDF.glsl"
 
 layout (local_size_x = 64, local_size_y = 1) in;
 
