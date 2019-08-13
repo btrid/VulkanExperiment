@@ -118,6 +118,7 @@
     <ClInclude Include="..\..\include\013_2DGI\GI2D\VoronoiContext.h" />
     <ClInclude Include="..\..\include\013_2DGI\PathContext.h" />
     <ClInclude Include="..\..\include\013_2DGI\PathSolver.h" />
+    <ClInclude Include="Movable.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
