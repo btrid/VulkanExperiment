@@ -549,8 +549,33 @@ struct GameProcedure
 
 	}
 
-	void executeMovableUpdate(vk::CommandBuffer cmd, const std::shared_ptr<GameContext>& game_context)
+	void executeMovableUpdate(vk::CommandBuffer cmd, const std::shared_ptr <btr::Context>& context, const std::shared_ptr<GameContext>& game_context, vk::DescriptorSet desc)
 	{
+		DebugLabel _label(cmd, context->m_dispach, __FUNCTION__);
+
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MakeRB].get(), 0, getDescriptorSet(GI2DPhysics::DescLayout_Data), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MakeRB].get(), 1, m_gi2d_context->getDescriptorSet(), {});
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MakeRB].get(), 2, getDescriptorSet(GI2DPhysics::DescLayout_Make), {});
+
+		_label.insert("GI2DPhysics::SetupRigidbody");
+		{
+			{
+				vk::BufferMemoryBarrier to_read[] = {
+					b_manager.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+					b_make_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+					b_rbparticle_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+					b_update_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite | vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+					b_make_param.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eIndirectCommandRead),
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader | vk::PipelineStageFlagBits::eDrawIndirect, {},
+					0, nullptr, array_length(to_read), to_read, 0, nullptr);
+			}
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeRB_SetupRigidbody].get());
+			auto num = app::calcDipatchGroups(uvec3(1, 1, 1), uvec3(1, 1, 1));
+			cmd.dispatch(num.x, num.y, num.z);
+
+		}
 
 	}
 	enum Shader
