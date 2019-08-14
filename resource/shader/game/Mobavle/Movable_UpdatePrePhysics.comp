@@ -1,0 +1,18 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_Movable 0
+#define USE_Rigidbody2D 1
+
+#include "Movable.glsl"
+#include "GI2D/Rigidbody2D.glsl"
+
+
+layout (local_size_x=64) in;
+
+void main()
+{
+	if(gl_GlobalInvocationID.x >= b_movable_counter.w){ return; }
+	if(b_movable[gl_GlobalInvocationID.x].rb_id == -1){ return; }
+	b_rigidbody[b_movable[gl_GlobalInvocationID.x].rb_id].cm = b_movable[gl_GlobalInvocationID.x].pos;
+}

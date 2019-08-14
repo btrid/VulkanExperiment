@@ -403,7 +403,6 @@ int radiosity()
 struct Movable
 {
 	vec2 pos;
-	vec2 pos_predict;
 	vec2 dir;
 	float scale;
 	uint rb_id;
@@ -488,12 +487,31 @@ struct GameContext
 };
 struct GameProcedure
 {
+	enum Shader
+	{
+		ShaderMovable_UpdatePrePhysics,
+		ShaderMovable_UpdatePostPhysics,
+		Shader_Num,
+	};
+
+	enum PipelineLayout
+	{
+		PipelineLayout_MovableUpdate,
+		PipelineLayout_Num,
+	};
+	enum Pipeline
+	{
+		PipelineMovable_UpdatePrePhysics,
+		PipelineMovable_UpdatePostPhysics,
+		Pipeline_Num,
+	};
 	GameProcedure(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GameContext>& game_context)
 	{
 		{
 			const char* name[] =
 			{
-				"Rigid_ToFluid.comp.spv",
+				"Movable_UpdatePrePhysics.comp.spv",
+				"Movable_UpdatePostPhysics.comp.spv",
 			};
 			static_assert(array_length(name) == Shader_Num, "not equal shader num");
 
@@ -526,16 +544,23 @@ struct GameProcedure
 		// pipeline
 		{
 			std::array<vk::PipelineShaderStageCreateInfo, Shader_Num> shader_info;
-			shader_info[0].setModule(m_shader[Shader_MovableUpdate].get());
+			shader_info[0].setModule(m_shader[ShaderMovable_UpdatePrePhysics].get());
 			shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[0].setPName("main");
+			shader_info[1].setModule(m_shader[ShaderMovable_UpdatePostPhysics].get());
+			shader_info[1].setStage(vk::ShaderStageFlagBits::eCompute);
+			shader_info[1].setPName("main");
 			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 			{
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[0])
 				.setLayout(m_pipeline_layout[PipelineLayout_MovableUpdate].get()),
+				vk::ComputePipelineCreateInfo()
+				.setStage(shader_info[1])
+				.setLayout(m_pipeline_layout[PipelineLayout_MovableUpdate].get()),
 			};
 			auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
+
 #if USE_DEBUG_REPORT
 			vk::DebugUtilsObjectNameInfoEXT name_info;
 			name_info.pObjectName = "Pipeline_MovableUpdate";
@@ -544,56 +569,49 @@ struct GameProcedure
 			context->m_device->setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
 #endif
 
-			m_pipeline[Pipeline_MovableUpdate] = std::move(compute_pipeline[0]);
+			m_pipeline[PipelineMovable_UpdatePrePhysics] = std::move(compute_pipeline[0]);
+			m_pipeline[PipelineMovable_UpdatePostPhysics] = std::move(compute_pipeline[1]);
 		}
 
 	}
 
-	void executeMovableUpdate(vk::CommandBuffer cmd, const std::shared_ptr <btr::Context>& context, const std::shared_ptr<GameContext>& game_context, vk::DescriptorSet desc)
+	void executeMovableUpdatePrePyhsics(vk::CommandBuffer cmd, const std::shared_ptr <btr::Context>& context, const std::shared_ptr<GI2DPhysics>& physics_data, vk::DescriptorSet desc)
 	{
 		DebugLabel _label(cmd, context->m_dispach, __FUNCTION__);
 
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MakeRB].get(), 0, getDescriptorSet(GI2DPhysics::DescLayout_Data), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MakeRB].get(), 1, m_gi2d_context->getDescriptorSet(), {});
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MakeRB].get(), 2, getDescriptorSet(GI2DPhysics::DescLayout_Make), {});
-
-		_label.insert("GI2DPhysics::SetupRigidbody");
+		vk::DescriptorSet descs[] =
 		{
-			{
-				vk::BufferMemoryBarrier to_read[] = {
-					b_manager.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
-					b_make_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
-					b_rbparticle_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
-					b_update_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite | vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
-					b_make_param.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eIndirectCommandRead),
-				};
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader | vk::PipelineStageFlagBits::eDrawIndirect, {},
-					0, nullptr, array_length(to_read), to_read, 0, nullptr);
-			}
+			desc,
+			physics_data->getDescriptorSet(GI2DPhysics::DescLayout_Data),
+		};
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MovableUpdate].get(), 0, array_length(descs), descs, 0, nullptr);
 
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeRB_SetupRigidbody].get());
+		{
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[ShaderMovable_UpdatePrePhysics].get());
 			auto num = app::calcDipatchGroups(uvec3(1, 1, 1), uvec3(1, 1, 1));
 			cmd.dispatch(num.x, num.y, num.z);
-
 		}
 
 	}
-	enum Shader
+	void executeMovableUpdatePostPyhsics(vk::CommandBuffer cmd, const std::shared_ptr <btr::Context>& context, const std::shared_ptr<GI2DPhysics>& physics_data, vk::DescriptorSet desc)
 	{
-		Shader_MovableUpdate,
-		Shader_Num,
-	};
+		DebugLabel _label(cmd, context->m_dispach, __FUNCTION__);
 
-	enum PipelineLayout
-	{
-		PipelineLayout_MovableUpdate,
-		PipelineLayout_Num,
-	};
-	enum Pipeline
-	{
-		Pipeline_MovableUpdate,
-		Pipeline_Num,
-	};
+		vk::DescriptorSet descs[] =
+		{
+			desc,
+			physics_data->getDescriptorSet(GI2DPhysics::DescLayout_Data),
+		};
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MovableUpdate].get(), 0, array_length(descs), descs, 0, nullptr);
+
+		{
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[ShaderMovable_UpdatePostPhysics].get());
+			auto num = app::calcDipatchGroups(uvec3(1, 1, 1), uvec3(1, 1, 1));
+			cmd.dispatch(num.x, num.y, num.z);
+		}
+
+	}
+
 
 	std::array<vk::UniqueShaderModule, Shader_Num> m_shader;
 	std::array<vk::UniquePipelineLayout, PipelineLayout_Num> m_pipeline_layout;
@@ -650,7 +668,7 @@ int main()
 	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
 	GI2DRadiosity2 gi2d_Radiosity(context, gi2d_context, app.m_window->getFrontBuffer());
 	GI2DPhysics_procedure gi2d_physics_proc(gi2d_physics_context, gi2d_sdf_context);
-
+	GameProcedure game_proc();
 	Player player;
 	player.m_movable = game_context->makeDescriptor<Movable>(context, GameContext::Layout_Movable);
 	{

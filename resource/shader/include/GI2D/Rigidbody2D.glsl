@@ -1,6 +1,10 @@
 #ifndef Rigidbody2D_H_
 #define Rigidbody2D_H_
 
+#extension GL_EXT_shader_explicit_arithmetic_types : require
+#extension GL_EXT_shader_atomic_int64 : require
+
+
 #if defined(USE_Rigidbody2D)
 
 #define RB_PARTICLE_BLOCK_SIZE (64)
