@@ -400,14 +400,14 @@ int radiosity()
 	return 0;
 }
 
-struct Movable
+struct cMovable
 {
 	vec2 pos;
 	vec2 dir;
 	float scale;
 };
 
-struct DataResourceAccessor
+struct cDataResourceAccessor
 {
 	uint movable_id;
 	uint rb_id;
@@ -417,8 +417,8 @@ struct GameContext
 {
 	enum Layout
 	{
-		Layout_GameObject,
-		Layout_Movable,
+		DSL_GameObject,
+		DSL_Movable,
 		Layout_Status,
 		Layout_Num,
 	};
@@ -438,7 +438,7 @@ struct GameContext
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 			desc_layout_info.setBindingCount(array_length(binding));
 			desc_layout_info.setPBindings(binding);
-			m_descriptor_set_layout[Layout_GameObject] = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
+			m_descriptor_set_layout[DSL_GameObject] = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
 		}
 		{
 			auto stage = vk::ShaderStageFlagBits::eCompute;
@@ -450,15 +450,22 @@ struct GameContext
 			desc_layout_info.setPBindings(binding);
 			m_descriptor_set_layout[Layout_Status] = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
 		}
+
+		// SDL_Movable
 		{
-			auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
+			auto stage = vk::ShaderStageFlagBits::eCompute;
 			vk::DescriptorSetLayoutBinding binding[] = {
 				vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
 			};
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 			desc_layout_info.setBindingCount(array_length(binding));
 			desc_layout_info.setPBindings(binding);
-			m_descriptor_set_layout[Layout_Movable] = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
+			m_descriptor_set_layout[DSL_Movable] = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
 		}
 	}
 
@@ -505,7 +512,9 @@ struct GameProcedure
 		// pipeline layout
 		{
 			vk::DescriptorSetLayout layouts[] = {
-				game_context->getDescriptorSetLayout(GameContext::Layout_Movable),
+				game_context->getDescriptorSetLayout(GameContext::DSL_GameObject),
+				game_context->getDescriptorSetLayout(GameContext::DSL_Movable),
+				game_context->m_physics_context->getDescriptorSetLayout(GI2DPhysics::DescLayout_Data),
 			};
 
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
@@ -556,14 +565,15 @@ struct GameProcedure
 
 	}
 
-	void executeMovableUpdatePrePyhsics(vk::CommandBuffer cmd, const std::shared_ptr <btr::Context>& context, const std::shared_ptr<GI2DPhysics>& physics_data, vk::DescriptorSet desc)
+	void executeMovableUpdatePrePyhsics(vk::CommandBuffer cmd, const std::shared_ptr <btr::Context>& context, const std::shared_ptr<GameContext>& game_context, vk::DescriptorSet desc)
 	{
 		DebugLabel _label(cmd, context->m_dispach, __FUNCTION__);
 
 		vk::DescriptorSet descs[] =
 		{
 			desc,
-			physics_data->getDescriptorSet(GI2DPhysics::DescLayout_Data),
+//			game_context->physics_data->getDescriptorSet(GI2DPhysics::DescLayout_Data),
+//			physics_data->getDescriptorSet(GI2DPhysics::DescLayout_Data),
 		};
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MovableUpdate].get(), 0, array_length(descs), descs, 0, nullptr);
 
@@ -574,14 +584,14 @@ struct GameProcedure
 		}
 
 	}
-	void executeMovableUpdatePostPyhsics(vk::CommandBuffer cmd, const std::shared_ptr <btr::Context>& context, const std::shared_ptr<GI2DPhysics>& physics_data, vk::DescriptorSet desc)
+	void executeMovableUpdatePostPyhsics(vk::CommandBuffer cmd, const std::shared_ptr <btr::Context>& context, const std::shared_ptr<GameContext>& game_context, vk::DescriptorSet desc)
 	{
 		DebugLabel _label(cmd, context->m_dispach, __FUNCTION__);
 
 		vk::DescriptorSet descs[] =
 		{
 			desc,
-			physics_data->getDescriptorSet(GI2DPhysics::DescLayout_Data),
+//			physics_data->getDescriptorSet(GI2DPhysics::DescLayout_Data),
 		};
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MovableUpdate].get(), 0, array_length(descs), descs, 0, nullptr);
 
@@ -593,14 +603,12 @@ struct GameProcedure
 
 	}
 
-
 	std::array<vk::UniqueShaderModule, Shader_Num> m_shader;
 	std::array<vk::UniquePipelineLayout, PipelineLayout_Num> m_pipeline_layout;
 	std::array<vk::UniquePipeline, Pipeline_Num> m_pipeline;
 };
 
-
-struct BufferManager
+struct cBufferManager
 {
 	uint block_max;
 	uint active_index;
@@ -609,67 +617,34 @@ struct BufferManager
 
 	uvec4 active_counter;
 };
-struct DS_GPUBufferManager
+
+struct Movable
 {
-	vk::UniqueDescriptorSet m_descriptor_set;
-	btr::BufferMemoryEx<BufferManager> b_buffer_manager;
-	btr::BufferMemoryEx<uint> b_active_list;
-	btr::BufferMemoryEx<uint> b_free_list;
-	btr::BufferMemoryEx<uint> b_active_map;
-	btr::BufferMemoryEx<Movable> b_movable;
-	btr::BufferMemoryEx<uint> b_register_index;
-};
-
-struct GPUBufferManager
-{
-	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
-
-
-	GPUBufferManager(const std::shared_ptr<btr::Context>& context)
+	Movable(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GameContext>& game_context, uint size)
 	{
-		{
-			auto stage = vk::ShaderStageFlagBits::eCompute;
-			vk::DescriptorSetLayoutBinding binding[] = {
-				vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eStorageBuffer, 1, stage),
-				vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
-				vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageBuffer, 1, stage),
-				vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
-				vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
-				vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
-			};
-			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
-			desc_layout_info.setBindingCount(array_length(binding));
-			desc_layout_info.setPBindings(binding);
-			m_descriptor_set_layout = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
-		}
-	}
-
-	DS_GPUBufferManager makeDescriptor(const std::shared_ptr<btr::Context>& context, uint size)
-	{
-		DS_GPUBufferManager descset;
 		vk::DescriptorSetLayout layouts[] = {
-			m_descriptor_set_layout.get(),
+			game_context->getDescriptorSetLayout(GameContext::DSL_Movable),
 		};
 		vk::DescriptorSetAllocateInfo desc_info;
 		desc_info.setDescriptorPool(context->m_descriptor_pool.get());
 		desc_info.setDescriptorSetCount(array_length(layouts));
 		desc_info.setPSetLayouts(layouts);
-		descset.m_descriptor_set = std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]);
+		m_descriptor_set = std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]);
 
-		descset.b_buffer_manager = context->m_storage_memory.allocateMemory<BufferManager>({ 1,{} });
-		descset.b_active_list = context->m_storage_memory.allocateMemory<uint>({ size,{} });
-		descset.b_free_list = context->m_storage_memory.allocateMemory<uint>({ size,{} });
-		descset.b_active_map = context->m_storage_memory.allocateMemory<uint>({ size,{} });
-		descset.b_movable = context->m_storage_memory.allocateMemory<Movable>({ size*64,{} });
-		descset.b_register_index = context->m_storage_memory.allocateMemory<uint>({ 1,{} });
+		b_buffer_manager = context->m_storage_memory.allocateMemory<cBufferManager>({ 1,{} });
+		b_active_list = context->m_storage_memory.allocateMemory<uint>({ size,{} });
+		b_free_list = context->m_storage_memory.allocateMemory<uint>({ size,{} });
+		b_active_map = context->m_storage_memory.allocateMemory<uint>({ size,{} });
+		b_movable = context->m_storage_memory.allocateMemory<cMovable>({ size * 64,{} });
+		b_register_index = context->m_storage_memory.allocateMemory<uint>({ 1,{} });
 
 		vk::DescriptorBufferInfo storages[] = {
-			descset.b_buffer_manager.getInfo(),
-			descset.b_active_list.getInfo(),
-			descset.b_free_list.getInfo(),
-			descset.b_active_map.getInfo(),
-			descset.b_movable.getInfo(),
-			descset.b_register_index.getInfo(),
+			b_buffer_manager.getInfo(),
+			b_active_list.getInfo(),
+			b_free_list.getInfo(),
+			b_active_map.getInfo(),
+			b_movable.getInfo(),
+			b_register_index.getInfo(),
 		};
 
 		vk::WriteDescriptorSet write[] =
@@ -679,16 +654,23 @@ struct GPUBufferManager
 			.setDescriptorCount(array_length(storages))
 			.setPBufferInfo(storages)
 			.setDstBinding(0)
-			.setDstSet(descset.m_descriptor_set.get()),
+			.setDstSet(m_descriptor_set.get()),
 		};
 		context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
-		return descset;
 	}
+
+	vk::UniqueDescriptorSet m_descriptor_set;
+	btr::BufferMemoryEx<cBufferManager> b_buffer_manager;
+	btr::BufferMemoryEx<uint> b_active_list;
+	btr::BufferMemoryEx<uint> b_free_list;
+	btr::BufferMemoryEx<uint> b_active_map;
+	btr::BufferMemoryEx<cMovable> b_movable;
+	btr::BufferMemoryEx<uint> b_register_index;
 };
 
 struct Player
 {
-	btr::BufferMemoryEx<DataResourceAccessor> m_accessor;
+	btr::BufferMemoryEx<cDataResourceAccessor> b_accessor;
 	vk::UniqueDescriptorSet m_descriptor_set;
 };
 
@@ -740,13 +722,13 @@ int main()
 	{		
 
 		{
-			player.m_accessor = context->m_storage_memory.allocateMemory<DataResourceAccessor>({ 1,{} });
+			player.b_accessor = context->m_storage_memory.allocateMemory<cDataResourceAccessor>({ 1,{} });
 			auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-			cmd.updateBuffer<DataResourceAccessor>(player.m_accessor.getInfo().buffer, player.m_accessor.getInfo().offset, DataResourceAccessor{-1, -1});
+			cmd.updateBuffer<cDataResourceAccessor>(player.b_accessor.getInfo().buffer, player.b_accessor.getInfo().offset, cDataResourceAccessor{-1, -1});
 		}
 		{
 			vk::DescriptorSetLayout layouts[] = {
-				game_context->getDescriptorSetLayout(GameContext::Layout_GameObject),
+				game_context->getDescriptorSetLayout(GameContext::DSL_GameObject),
 			};
 			vk::DescriptorSetAllocateInfo desc_info;
 			desc_info.setDescriptorPool(context->m_descriptor_pool.get());
@@ -755,7 +737,7 @@ int main()
 			player.m_descriptor_set = std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]);
 
 			vk::DescriptorBufferInfo storages[] = {
-				player.m_accessor.getInfo(),
+				player.b_accessor.getInfo(),
 			};
 			vk::WriteDescriptorSet write[] =
 			{
@@ -771,31 +753,31 @@ int main()
 		}
 	}
 	{
-		vk::DescriptorSetLayout layouts[] = {
-			game_context->m_physics_context->getDescriptorSetLayout(GI2DPhysics::DescLayout_Data),
-			game_context->getDescriptorSetLayout(GameContext::Layout_Movable),
-		};
-		vk::DescriptorSetAllocateInfo desc_info;
-		desc_info.setDescriptorPool(context->m_descriptor_pool.get());
-		desc_info.setDescriptorSetCount(array_length(layouts));
-		desc_info.setPSetLayouts(layouts);
-		desc.m_handle = std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]);
-
-		desc.m_buffer = context->m_storage_memory.allocateMemory<T>({ 1,{} });
-		vk::DescriptorBufferInfo storages[] = {
-			desc.m_buffer.getInfo(),
-		};
-
-		vk::WriteDescriptorSet write[] =
-		{
-			vk::WriteDescriptorSet()
-			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-			.setDescriptorCount(array_length(storages))
-			.setPBufferInfo(storages)
-			.setDstBinding(0)
-			.setDstSet(desc.m_handle.get()),
-		};
-		context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
+// 		vk::DescriptorSetLayout layouts[] = {
+// 			game_context->m_physics_context->getDescriptorSetLayout(GI2DPhysics::DescLayout_Data),
+// 			game_context->getDescriptorSetLayout(GameContext::DSL_Movable),
+// 		};
+// 		vk::DescriptorSetAllocateInfo desc_info;
+// 		desc_info.setDescriptorPool(context->m_descriptor_pool.get());
+// 		desc_info.setDescriptorSetCount(array_length(layouts));
+// 		desc_info.setPSetLayouts(layouts);
+// 		desc.m_handle = std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]);
+// 
+// 		desc.m_buffer = context->m_storage_memory.allocateMemory<T>({ 1,{} });
+// 		vk::DescriptorBufferInfo storages[] = {
+// 			desc.m_buffer.getInfo(),
+// 		};
+// 
+// 		vk::WriteDescriptorSet write[] =
+// 		{
+// 			vk::WriteDescriptorSet()
+// 			.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+// 			.setDescriptorCount(array_length(storages))
+// 			.setPBufferInfo(storages)
+// 			.setDstBinding(0)
+// 			.setDstSet(desc.m_handle.get()),
+// 		};
+// 		context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
 	}
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
@@ -804,8 +786,8 @@ int main()
 		param.is_fluid = false;
 		param.is_usercontrol = true;
 		gi2d_physics_context->make(cmd, param);
-		auto info = player.m_movable.m_buffer.getInfo();
-		info.offset += offsetof(Movable, rb_id);
+		auto info = player.b_accessor.getInfo();
+		info.offset += offsetof(cDataResourceAccessor, rb_id);
 		gi2d_physics_context->getRBID(cmd, info);
 	}
 
