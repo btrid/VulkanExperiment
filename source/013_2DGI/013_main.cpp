@@ -680,15 +680,12 @@ struct cResourceMemory
 	uint block_max;
 	uint active_index;
 	uint free_index;
-	uint _p3;
-	// ... data
+	uint allocate_address;
 };
 
 struct Player
 {
-	btr::BufferMemory b_memory_manager;
-//	btr::BufferMemoryEx<uint> b_active_list;
-//	btr::BufferMemoryEx<uint> b_free_list;
+	btr::BufferMemoryEx<uint> b_memory_accessor;
 	btr::BufferMemoryEx<cResourceAccessorInfo> b_accessor_info;
 	btr::BufferMemoryEx<cResourceAccessor> b_accessor;
 	vk::UniqueDescriptorSet m_descriptor_set;
@@ -742,6 +739,7 @@ int main()
 	{		
 
 		{
+			player.b_memory_accessor = context->m_storage_memory.allocateMemory<uint>({ 4 + 1024,{} });
 			player.b_accessor_info = context->m_storage_memory.allocateMemory<cResourceAccessorInfo>({ 1,{} });
 			player.b_accessor = context->m_storage_memory.allocateMemory<cResourceAccessor>({ 1,{} });
 			auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
