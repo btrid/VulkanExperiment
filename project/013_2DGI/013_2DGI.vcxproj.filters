@@ -26,7 +26,7 @@
     <Filter Include="Crowd">
       <UniqueIdentifier>{90f86e97-cff9-4aea-844c-f82f31052f84}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Movable">
+    <Filter Include="Game">
       <UniqueIdentifier>{4fb11427-df20-4f09-b50d-e727e7d0bf11}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -90,8 +90,11 @@
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DVoronoi.h">
       <Filter>GI2D</Filter>
     </ClInclude>
-    <ClInclude Include="Movable.h">
-      <Filter>Movable</Filter>
+    <ClInclude Include="..\..\include\013_2DGI\Game\Movable.h">
+      <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\013_2DGI\Game\Game.h">
+      <Filter>Game</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

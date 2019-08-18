@@ -1,12 +1,10 @@
 #version 450
 #extension GL_GOOGLE_include_directive : require
 
-#define USE_Accessor 0
-#define USE_Movable 1
-#define USE_Rigidbody2D 2
+#define USE_GameObject 0
+#define USE_Rigidbody2D 1
 
-#include "Accessor.glsl"
-#include "Movable.glsl"
+#include "GameObject.glsl"
 #include "GI2D/Rigidbody2D.glsl"
 
 layout (local_size_x=64) in;
