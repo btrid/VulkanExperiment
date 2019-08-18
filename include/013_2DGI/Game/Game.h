@@ -30,6 +30,10 @@ struct cMovable
 	vec2 dir;
 	float scale;
 };
+struct cStatus
+{
+	uint64_t alive;
+};
 
 struct DS_GameObject 
 {
@@ -41,8 +45,8 @@ struct GameContext
 {
 	enum Layout
 	{
+		DSL_GameObject_Buffer,
 		DSL_GameObject,
-		DSL_GameObject_Individual,
 		Layout_Num,
 	};
 	std::array<vk::UniqueDescriptorSetLayout, Layout_Num> m_descriptor_set_layout;
@@ -62,11 +66,12 @@ struct GameContext
 				vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
 			};
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 			desc_layout_info.setBindingCount(array_length(binding));
 			desc_layout_info.setPBindings(binding);
-			m_descriptor_set_layout[DSL_GameObject] = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
+			m_descriptor_set_layout[DSL_GameObject_Buffer] = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
 		}
 		{
 			auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
@@ -76,7 +81,7 @@ struct GameContext
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 			desc_layout_info.setBindingCount(array_length(binding));
 			desc_layout_info.setPBindings(binding);
-			m_descriptor_set_layout[DSL_GameObject_Individual] = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
+			m_descriptor_set_layout[DSL_GameObject] = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
 			
 		}
 
@@ -88,7 +93,7 @@ struct GameContext
 				b_memory_manager = context->m_storage_memory.allocateMemory<cMemoryManager>({ 1,{} });
 				b_memory_list = context->m_storage_memory.allocateMemory<uint>({ size,{} });
 				b_accessor_info = context->m_storage_memory.allocateMemory<cResourceAccessorInfo>({ 1,{} });
-				b_accessor = context->m_storage_memory.allocateMemory<cResourceAccessor>({ size,{} });
+				b_accessor_buffer = context->m_storage_memory.allocateMemory<cResourceAccessor>({ size,{} });
 				b_movable = context->m_storage_memory.allocateMemory<cMovable>({ size * 64,{} });
 				auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
@@ -100,12 +105,12 @@ struct GameContext
 				{
 					init_data.emplace_back(cResourceAccessor{ i, (uint)-1 });
 				}
-				cmd.updateBuffer<cResourceAccessor>(b_accessor.getInfo().buffer, b_accessor.getInfo().offset, init_data);
+				cmd.updateBuffer<cResourceAccessor>(b_accessor_buffer.getInfo().buffer, b_accessor_buffer.getInfo().offset, init_data);
 			}
 			{
 				vk::DescriptorSetLayout layouts[] =
 				{
-					getDescriptorSetLayout(GameContext::DSL_GameObject),
+					getDescriptorSetLayout(GameContext::DSL_GameObject_Buffer),
 				};
 				vk::DescriptorSetAllocateInfo desc_info;
 				desc_info.setDescriptorPool(context->m_descriptor_pool.get());
@@ -118,7 +123,7 @@ struct GameContext
 					b_memory_manager.getInfo(),
 					b_memory_list.getInfo(),
 					b_accessor_info.getInfo(),
-					b_accessor.getInfo(),
+					b_accessor_buffer.getInfo(),
 					b_movable.getInfo(),
 				};
 				vk::WriteDescriptorSet write[] =
@@ -149,7 +154,7 @@ struct GameContext
 
 			vk::DescriptorSetLayout layouts[] =
 			{
-				getDescriptorSetLayout(GameContext::DSL_GameObject_Individual),
+				getDescriptorSetLayout(GameContext::DSL_GameObject),
 			};
 			vk::DescriptorSetAllocateInfo desc_info;
 			desc_info.setDescriptorPool(m_dp_gameobject.get());
@@ -163,7 +168,7 @@ struct GameContext
 				m_ds_gameobject_holder.push_back(std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]));
 				m_ds_gameobject_freelist[i].ds = m_ds_gameobject_holder[i].get();
 
-				auto info = b_accessor.getInfo();
+				auto info = b_accessor_buffer.getInfo();
 				info.offset += i * sizeof(cResourceAccessor);
 				info.range = sizeof(cResourceAccessor);
 				m_ds_gameobject_freelist[i].info = info;
@@ -198,7 +203,7 @@ struct GameContext
 	btr::BufferMemoryEx<cMemoryManager> b_memory_manager;
 	btr::BufferMemoryEx<uint> b_memory_list;
 	btr::BufferMemoryEx<cResourceAccessorInfo> b_accessor_info;
-	btr::BufferMemoryEx<cResourceAccessor> b_accessor;
+	btr::BufferMemoryEx<cResourceAccessor> b_accessor_buffer;
 	btr::BufferMemoryEx<cMovable> b_movable;
 	vk::UniqueDescriptorSet m_ds_gameobject;
 
@@ -247,6 +252,7 @@ struct GameProcedure
 		{
 			vk::DescriptorSetLayout layouts[] = {
 				game_context->getDescriptorSetLayout(GameContext::DSL_GameObject),
+				game_context->getDescriptorSetLayout(GameContext::DSL_GameObject_Buffer),
 				game_context->m_physics_context->getDescriptorSetLayout(GI2DPhysics::DescLayout_Data),
 			};
 
@@ -305,6 +311,7 @@ struct GameProcedure
 		vk::DescriptorSet descs[] =
 		{
 			desc,
+			game_context->m_ds_gameobject.get(),
 			game_context->m_physics_context->getDescriptorSet(GI2DPhysics::DescLayout_Data),
 		};
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MovableUpdate].get(), 0, array_length(descs), descs, 0, nullptr);
@@ -323,6 +330,7 @@ struct GameProcedure
 		vk::DescriptorSet descs[] =
 		{
 			desc,
+			game_context->m_ds_gameobject.get(),
 			game_context->m_physics_context->getDescriptorSet(GI2DPhysics::DescLayout_Data),
 		};
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MovableUpdate].get(), 0, array_length(descs), descs, 0, nullptr);
