@@ -66,7 +66,6 @@ struct GameContext
 				vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
-				vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
 			};
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 			desc_layout_info.setBindingCount(array_length(binding));
@@ -94,7 +93,9 @@ struct GameContext
 				b_memory_list = context->m_storage_memory.allocateMemory<uint>({ size,{} });
 				b_accessor_info = context->m_storage_memory.allocateMemory<cResourceAccessorInfo>({ 1,{} });
 				b_accessor_buffer = context->m_storage_memory.allocateMemory<cResourceAccessor>({ size,{} });
+				b_state = context->m_storage_memory.allocateMemory<cStatus>({ size,{} });
 				b_movable = context->m_storage_memory.allocateMemory<cMovable>({ size * 64,{} });
+				
 				auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
 				cmd.updateBuffer<cResourceAccessorInfo>(b_accessor_info.getInfo().buffer, b_accessor_info.getInfo().offset, cResourceAccessorInfo{ sizeof(cResourceAccessor) / 4 });
@@ -124,6 +125,7 @@ struct GameContext
 					b_memory_list.getInfo(),
 					b_accessor_info.getInfo(),
 					b_accessor_buffer.getInfo(),
+					b_state.getInfo(),
 					b_movable.getInfo(),
 				};
 				vk::WriteDescriptorSet write[] =
@@ -205,6 +207,7 @@ struct GameContext
 	btr::BufferMemoryEx<cResourceAccessorInfo> b_accessor_info;
 	btr::BufferMemoryEx<cResourceAccessor> b_accessor_buffer;
 	btr::BufferMemoryEx<cMovable> b_movable;
+	btr::BufferMemoryEx<cStatus> b_state;
 	vk::UniqueDescriptorSet m_ds_gameobject;
 
 	vk::UniqueDescriptorPool m_dp_gameobject;

@@ -1,6 +1,8 @@
 #ifndef GameObject_
 #define GameObject_
 
+#extension GL_EXT_shader_explicit_arithmetic_types : require
+#extension GL_EXT_shader_atomic_int64 : require
 
 struct cMemoryManager
 {
@@ -17,13 +19,18 @@ struct cResourceAccessorInfo
 struct cResourceAccessor
 {
 	uint gameobject_address;
-	uint rb_address;
 };
+struct cStatus
+{
+	uint64_t alive;
+};
+
 struct cMovable
 {
 	vec2 pos;
 	vec2 dir;
 	float scale;
+	uint rb_address;
 };
 
 #ifdef USE_GameObject_Buffer
@@ -41,7 +48,11 @@ layout(std430, set=USE_GameObject_Buffer, binding=3) buffer AccessorBuffer {
 	cResourceAccessor b_accessor_buffer[];
 };
 
-layout(std430, set=USE_GameObject_Buffer, binding=4) buffer MovableBuffer {
+layout(std430, set=USE_GameObject_Buffer, binding=4) buffer StateBuffer {
+	cStatus b_state_buffer[];
+};
+
+layout(std430, set=USE_GameObject_Buffer, binding=5) buffer MovableBuffer {
 	cMovable b_movable_buffer[];
 };
 #endif

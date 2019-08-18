@@ -10,9 +10,25 @@
 
 layout (local_size_x=64) in;
 
+shared cResourceAccessor s_accessor;
+shared cStatus s_state;
+
 void main()
 {
-//	if(gl_GlobalInvocationID.x >= b_movable_counter.w){ return; }
-//	if(b_movable[gl_GlobalInvocationID.x].rb_id == -1){ return; }
-//	b_movable[gl_GlobalInvocationID.x].pos = b_rigidbody[b_movable[gl_GlobalInvocationID.x].rb_id].cm;
+	if(gl_LocalInvocationIndex == 0)
+	{
+		s_accessor = b_accessor;
+		s_state = b_state_buffer[s_accessor.gameobject_address];
+	}
+
+	memoryBarrierShared();
+	barrier();
+
+	if((s_state.alive & (1ul<<gl_LocalInvocationIndex)) == 0 ){ return; }
+
+	uint index = s_accessor.gameobject_address*64+gl_LocalInvocationIndex;
+	if(b_movable_buffer[index].rb_address == -1){ return; }
+	b_movable_buffer[index].pos = b_rigidbody[b_movable_buffer[index].rb_address].cm;
+
+
 }
