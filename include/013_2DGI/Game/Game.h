@@ -30,11 +30,19 @@ struct cMovable
 	vec2 dir;
 	float scale;
 };
+
+struct DS_GameObject 
+{
+	uint index;
+	vk::DescriptorBufferInfo info;
+	vk::DescriptorSet ds;
+};
 struct GameContext
 {
 	enum Layout
 	{
 		DSL_GameObject,
+		DSL_GameObject_Individual,
 		Layout_Num,
 	};
 	std::array<vk::UniqueDescriptorSetLayout, Layout_Num> m_descriptor_set_layout;
@@ -60,8 +68,21 @@ struct GameContext
 			desc_layout_info.setPBindings(binding);
 			m_descriptor_set_layout[DSL_GameObject] = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
 		}
+		{
+			auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
+			vk::DescriptorSetLayoutBinding binding[] = {
+				vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eStorageBuffer, 1, stage),
+			};
+			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
+			desc_layout_info.setBindingCount(array_length(binding));
+			desc_layout_info.setPBindings(binding);
+			m_descriptor_set_layout[DSL_GameObject_Individual] = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
+			
+		}
 
 		uint size = 1024;
+
+		// descriptor_set
 		{
 			{
 				b_memory_manager = context->m_storage_memory.allocateMemory<cMemoryManager>({ 1,{} });
@@ -72,7 +93,14 @@ struct GameContext
 				auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
 				cmd.updateBuffer<cResourceAccessorInfo>(b_accessor_info.getInfo().buffer, b_accessor_info.getInfo().offset, cResourceAccessorInfo{ sizeof(cResourceAccessor) / 4 });
-				cmd.updateBuffer<cResourceAccessor>(b_accessor.getInfo().buffer, b_accessor.getInfo().offset, cResourceAccessor{ -1, -1 });
+
+				std::vector<cResourceAccessor> init_data;
+				init_data.reserve(size);
+				for (uint i = 0; i < init_data.size(); i++)
+				{
+					init_data.emplace_back(cResourceAccessor{ i, (uint)-1 });
+				}
+				cmd.updateBuffer<cResourceAccessor>(b_accessor.getInfo().buffer, b_accessor.getInfo().offset, init_data);
 			}
 			{
 				vk::DescriptorSetLayout layouts[] =
@@ -121,20 +149,25 @@ struct GameContext
 
 			vk::DescriptorSetLayout layouts[] =
 			{
-				getDescriptorSetLayout(GameContext::DSL_GameObject),
+				getDescriptorSetLayout(GameContext::DSL_GameObject_Individual),
 			};
 			vk::DescriptorSetAllocateInfo desc_info;
 			desc_info.setDescriptorPool(m_dp_gameobject.get());
 			desc_info.setDescriptorSetCount(array_length(layouts));
 			desc_info.setPSetLayouts(layouts);
 
+			m_ds_gameobject_holder.reserve(size);
+			m_ds_gameobject_freelist.resize(size);
 			for (uint i = 0; i<size; i++)
 			{
-				m_ds_gameobject_holder[i] = std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]);
-				m_ds_gameobject_freelist[i] = m_ds_gameobject_holder[i].get();
+				m_ds_gameobject_holder.push_back(std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]));
+				m_ds_gameobject_freelist[i].ds = m_ds_gameobject_holder[i].get();
+
 				auto info = b_accessor.getInfo();
 				info.offset += i * sizeof(cResourceAccessor);
 				info.range = sizeof(cResourceAccessor);
+				m_ds_gameobject_freelist[i].info = info;
+				m_ds_gameobject_freelist[i].index = i;
 				vk::WriteDescriptorSet write[] =
 				{
 					vk::WriteDescriptorSet()
@@ -149,6 +182,16 @@ struct GameContext
 		}
 	}
 
+	DS_GameObject alloc()
+	{
+		auto ds = m_ds_gameobject_freelist.front();
+		m_ds_gameobject_freelist.pop_front();
+		return ds;
+	}
+	void free(const DS_GameObject& ds)
+	{
+		m_ds_gameobject_freelist.push_back(ds);
+	}
 	std::shared_ptr<GI2DContext> m_gi2d_context;
 	std::shared_ptr<GI2DPhysics> m_physics_context;
 
@@ -161,7 +204,7 @@ struct GameContext
 
 	vk::UniqueDescriptorPool m_dp_gameobject;
 	std::vector<vk::UniqueDescriptorSet> m_ds_gameobject_holder;
-	std::deque<vk::DescriptorSet> m_ds_gameobject_freelist;
+	std::deque<DS_GameObject> m_ds_gameobject_freelist;
 
 };
 struct GameProcedure
@@ -204,7 +247,6 @@ struct GameProcedure
 		{
 			vk::DescriptorSetLayout layouts[] = {
 				game_context->getDescriptorSetLayout(GameContext::DSL_GameObject),
-				game_context->getDescriptorSetLayout(GameContext::DSL_Movable),
 				game_context->m_physics_context->getDescriptorSetLayout(GI2DPhysics::DescLayout_Data),
 			};
 
@@ -263,8 +305,7 @@ struct GameProcedure
 		vk::DescriptorSet descs[] =
 		{
 			desc,
-			//			game_context->physics_data->getDescriptorSet(GI2DPhysics::DescLayout_Data),
-			//			physics_data->getDescriptorSet(GI2DPhysics::DescLayout_Data),
+			game_context->m_physics_context->getDescriptorSet(GI2DPhysics::DescLayout_Data),
 		};
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MovableUpdate].get(), 0, array_length(descs), descs, 0, nullptr);
 
@@ -282,7 +323,7 @@ struct GameProcedure
 		vk::DescriptorSet descs[] =
 		{
 			desc,
-			//			physics_data->getDescriptorSet(GI2DPhysics::DescLayout_Data),
+			game_context->m_physics_context->getDescriptorSet(GI2DPhysics::DescLayout_Data),
 		};
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MovableUpdate].get(), 0, array_length(descs), descs, 0, nullptr);
 

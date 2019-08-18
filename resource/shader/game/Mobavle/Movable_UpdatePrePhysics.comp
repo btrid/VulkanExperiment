@@ -11,7 +11,7 @@ layout (local_size_x=64) in;
 
 void main()
 {
-	if(gl_GlobalInvocationID.x >= b_movable_counter.w){ return; }
-	if(b_movable[gl_GlobalInvocationID.x].rb_id == -1){ return; }
-	b_rigidbody[b_movable[gl_GlobalInvocationID.x].rb_id].cm = b_movable[gl_GlobalInvocationID.x].pos;
+//	if(gl_GlobalInvocationID.x >= b_movable_counter.w){ return; }
+//	if(b_movable[gl_GlobalInvocationID.x].rb_id == -1){ return; }
+//	b_rigidbody[b_movable[gl_GlobalInvocationID.x].rb_id].cm = b_movable[gl_GlobalInvocationID.x].pos;
 }

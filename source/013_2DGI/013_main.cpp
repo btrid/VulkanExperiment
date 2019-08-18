@@ -408,6 +408,7 @@ int radiosity()
 
 struct Player
 {
+	DS_GameObject m_gameobject;
 };
 
 int main()
@@ -456,7 +457,7 @@ int main()
 	GameProcedure game_proc(context, game_context);
 	Player player;
 	{		
-		uint 
+		player.m_gameobject = game_context->alloc();
 	}
 
 	{
@@ -466,7 +467,7 @@ int main()
 		param.is_fluid = false;
 		param.is_usercontrol = true;
 		gi2d_physics_context->make(cmd, param);
-		auto info = player.b_accessor.getInfo();
+		auto info = player.m_gameobject.info;
 		info.offset += offsetof(cResourceAccessor, rb_address);
 		gi2d_physics_context->getRBID(cmd, info);
 	}

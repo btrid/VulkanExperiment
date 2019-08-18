@@ -1,7 +1,6 @@
 #ifndef GameObject_
 #define GameObject_
 
-#ifdef USE_GameObject
 
 struct cMemoryManager
 {
@@ -20,7 +19,14 @@ struct cResourceAccessor
 	uint gameobject_address;
 	uint rb_address;
 };
+struct cMovable
+{
+	vec2 pos;
+	vec2 dir;
+	float scale;
+};
 
+#ifdef USE_GameObject
 layout(std430, set=USE_GameObject, binding=0) buffer MemoryManagerBuffer {
 	cMemoryManager b_memory_manager;
 };
@@ -35,17 +41,14 @@ layout(std430, set=USE_GameObject, binding=3) buffer AccessorBuffer {
 	cResourceAccessor b_resource_accessor[];
 };
 
-struct cMovable
-{
-	vec2 pos;
-	vec2 dir;
-	float scale;
-};
-
 layout(std430, set=USE_GameObject, binding=4) buffer MovableBuffer {
 	cMovable b_movable[];
 };
 #endif
-
+#ifdef USE_GameObject_Individual
+layout(std430, set=USE_GameObject_Individual, binding=0) buffer AccessorData {
+	cResourceAccessor b_accessor;
+};
+#endif
 
 #endif
