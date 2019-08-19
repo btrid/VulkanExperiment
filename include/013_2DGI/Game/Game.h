@@ -29,6 +29,7 @@ struct cMovable
 	vec2 pos;
 	vec2 dir;
 	float scale;
+	uint rb_id;
 };
 struct cStatus
 {

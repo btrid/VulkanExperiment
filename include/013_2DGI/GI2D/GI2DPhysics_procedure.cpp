@@ -154,6 +154,8 @@ void GI2DPhysics_procedure::execute(vk::CommandBuffer cmd, const std::shared_ptr
 			physics_context->b_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 			physics_context->b_rbparticle.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 			physics_context->b_update_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
+			physics_context->b_pb_update_list.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader|vk::PipelineStageFlagBits::eDrawIndirect, {},
 			0, nullptr, array_length(to_read), to_read, 0, nullptr);
@@ -281,7 +283,6 @@ void GI2DPhysics_procedure::execute(vk::CommandBuffer cmd, const std::shared_ptr
 
 		cmd.updateBuffer<uvec4>(physics_context->b_update_counter.getInfo().buffer, physics_context->b_update_counter.getInfo().offset + physics_context->m_world.cpu_index * sizeof(uvec4) * 2, uvec4(0, 1, 1, 0));
 		cmd.updateBuffer<uvec4>(physics_context->b_update_counter.getInfo().buffer, physics_context->b_update_counter.getInfo().offset + physics_context->m_world.cpu_index * sizeof(uvec4) * 2 + sizeof(uvec4), uvec4(0, 1, 1, 0));
-
 	}
 
 
@@ -292,13 +293,16 @@ void GI2DPhysics_procedure::executeDrawParticle(vk::CommandBuffer cmd, const std
 	{
 		// render_target‚É‘‚«ž‚Þ
 		vk::BufferMemoryBarrier to_read[] = {
-			physics_context->b_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
-			physics_context->b_rbparticle.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
+			physics_context->b_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			physics_context->b_rbparticle.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			physics_context->b_update_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
+			physics_context->b_pb_update_list.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 		};
 		vk::ImageMemoryBarrier image_barrier;
 		image_barrier.setImage(render_target->m_image);
 		image_barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+		image_barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+		image_barrier.setOldLayout(vk::ImageLayout::eGeneral);
 		image_barrier.setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
 		image_barrier.setNewLayout(vk::ImageLayout::eGeneral);
 

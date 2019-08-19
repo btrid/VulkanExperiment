@@ -309,7 +309,8 @@ int rigidbody()
  					for (int x = 0; x < 1; x++){
 						GI2DRB_MakeParam param;
 						param.aabb = uvec4(220 + x * 32, 620 - y * 16, 16, 16);
-						param.is_fluid = true;
+						param.is_fluid = false;
+						param.is_usercontrol = false;
  						gi2d_physics_context->make(cmd, param);
  					}}
 				}
@@ -324,6 +325,7 @@ int rigidbody()
 				cmds[cmd_gi2d] = cmd;
 			}
 			app.submit(std::move(cmds));
+			device->waitIdle();
 		}
 		app.postUpdate();
 		printf("%-6.4fms\n", time.getElapsedTimeAsMilliSeconds());
@@ -425,7 +427,7 @@ int main()
 	camera->getData().m_near = 0.01f;
 
 //	return pathFinding();
-//	return rigidbody();
+	return rigidbody();
 //	return radiosity();
 
 	auto gpu = sGlobal::Order().getGPU(0);
@@ -458,10 +460,14 @@ int main()
 	Player player;
 	{		
 		player.m_gameobject = game_context->alloc();
+
 	}
 
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+
+		cmd.updateBuffer<uint64_t>(game_context->b_state.getInfo().buffer, game_context->b_state.getInfo().offset, 1ull);
+			
 		GI2DRB_MakeParam param;
 		param.aabb = uvec4(128, 128, 4, 4);
 		param.is_fluid = false;
