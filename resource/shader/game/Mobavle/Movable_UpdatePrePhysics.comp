@@ -2,22 +2,19 @@
 #extension GL_GOOGLE_include_directive : require
 
 #define USE_GameObject 0
-#define USE_GameObject_Buffer 1
-#define USE_Rigidbody2D 2
+#define USE_Rigidbody2D 1
 
 #include "GameObject.glsl"
 #include "GI2D/Rigidbody2D.glsl"
 
 layout (local_size_x=64) in;
 
-shared cResourceAccessor s_accessor;
-shared cStatus s_state;
+shared cState s_state;
 void main()
 {
 	if(gl_LocalInvocationIndex == 0)
 	{
-		s_accessor = b_accessor;
-		s_state = b_state_buffer[s_accessor.gameobject_address];
+		s_state = b_state[0];
 	}
 
 	memoryBarrierShared();
@@ -25,7 +22,6 @@ void main()
 
 	if((s_state.alive & (1ul<<gl_LocalInvocationIndex)) == 0 ){ return; }
 
-	uint index = s_accessor.gameobject_address*64+gl_LocalInvocationIndex;
-	if(b_movable_buffer[index].rb_address == -1){ return; }
-	b_rigidbody[b_movable_buffer[index].rb_address].cm = b_movable_buffer[index].pos;
+	if(b_movable[gl_LocalInvocationIndex].rb_address == -1){ return; }
+	b_rigidbody[b_movable[gl_LocalInvocationIndex].rb_address].cm = b_movable[gl_LocalInvocationIndex].pos;
 }

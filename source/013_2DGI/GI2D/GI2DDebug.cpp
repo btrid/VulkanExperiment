@@ -291,7 +291,7 @@ void GI2DDebug::executeMakeFragment(vk::CommandBuffer cmd)
 			move = 0.3f;
 		}
 		if (m_context->m_window->getInput().m_keyboard.isHold(VK_SPACE))
-			{
+		{
 			light_pos.z += m_context->m_window->getInput().m_keyboard.isHold(VK_RIGHT) * move;
 			light_pos.z -= m_context->m_window->getInput().m_keyboard.isHold(VK_LEFT) * move;
 			light_pos.w -= m_context->m_window->getInput().m_keyboard.isHold(VK_UP) * move;

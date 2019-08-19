@@ -6,6 +6,7 @@ SET option=--target-env vulkan1.1 -V -w
 SET exe=glslangValidator.exe
 SET output=-o ../../binary
 
+%exe% %include% %option% %output%/Player_Move.comp.spv Player_Move.comp
 %exe% %include% %option% %output%/Movable_UpdatePrePhysics.comp.spv Movable_UpdatePrePhysics.comp
 %exe% %include% %option% %output%/Movable_UpdatePostPhysics.comp.spv Movable_UpdatePostPhysics.comp
 

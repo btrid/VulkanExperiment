@@ -1,0 +1,33 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_GameObject 0
+#define USE_SYSTEM 1
+
+#include "GameObject.glsl"
+#include "applib/System.glsl"
+
+layout (local_size_x=64) in;
+
+shared cState s_state;
+void main()
+{
+	if(gl_LocalInvocationIndex == 0)
+	{
+		s_state = b_state[0];
+	}
+	memoryBarrierShared();
+	barrier();
+
+	if((s_state.alive & (1ul<<gl_LocalInvocationIndex)) == 0ul ){ return; }
+
+	float move_value = 3.;
+	vec2 move = vec2(0.);
+	move.y = move.y + float(isOn(u_system_data.m_is_key_on, KEY_BIT_UP)) * move_value;
+	move.y = move.y - float(isOn(u_system_data.m_is_key_on, KEY_BIT_DOWN)) * move_value;
+	move.x = move.x + float(isOn(u_system_data.m_is_key_on, KEY_BIT_UP)) * move_value;
+	move.x = move.x - float(isOn(u_system_data.m_is_key_on, KEY_BIT_DOWN)) * move_value;
+	b_movable[gl_LocalInvocationIndex].pos += move;
+
+
+}
