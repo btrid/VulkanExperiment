@@ -19,14 +19,11 @@ struct cMovable
 struct cState
 {
 	uint64_t alive;
-	uint64_t _p;
 };
 
 struct DS_GameObject 
 {
 	uint index;
-	std::array<vk::DescriptorBufferInfo, 2> info;
-	vk::DescriptorSet ds;
 };
 struct GameContext
 {
@@ -56,20 +53,6 @@ struct GameContext
 		}
 
 		uint size = 1024;
-		// descriptor_pool
-		{
-			std::array<vk::DescriptorPoolSize, 1> pool_size;
-			pool_size[0].setType(vk::DescriptorType::eStorageBuffer);
-			pool_size[0].setDescriptorCount((size+1) * 2);
-
-			vk::DescriptorPoolCreateInfo pool_info;
-			pool_info.setPoolSizeCount(array_length(pool_size));
-			pool_info.setPPoolSizes(pool_size.data());
-			pool_info.setMaxSets((size + 1));
-			m_dp_gameobject = context->m_device->createDescriptorPoolUnique(pool_info);
-
-		}
-
 		// descriptor_set
 		{
 			{
@@ -103,29 +86,11 @@ struct GameContext
 					.setDstSet(m_ds_gameobject.get()),
 				};
 				context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
-
-
-				m_ds_gameobject_holder.reserve(size);
 				m_ds_gameobject_freelist.resize(size);
 				for (uint i = 0; i < size; i++)
 				{
-					m_ds_gameobject_holder.push_back(std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]));
-					m_ds_gameobject_freelist[i].ds = m_ds_gameobject_holder[i].get();
-
-					m_ds_gameobject_freelist[i].info[0] = storages[0];
-					m_ds_gameobject_freelist[i].info[1] = storages[1];
 					m_ds_gameobject_freelist[i].index = i;
-					storages[0].offset += sizeof(cState);
-					storages[1].offset += sizeof(cMovable);
-					vk::WriteDescriptorSet write[] =
-					{
-						vk::WriteDescriptorSet()
-						.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-						.setDescriptorCount(array_length(storages))
-						.setPBufferInfo(storages)
-						.setDstSet(m_ds_gameobject_holder[i].get()),
-					};
-					context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
+
 				}
 			}
 
@@ -150,11 +115,9 @@ struct GameContext
 	btr::BufferMemoryEx<cMovable> b_movable;
 
 
-	vk::UniqueDescriptorPool m_dp_gameobject;
-	std::vector<vk::UniqueDescriptorSet> m_ds_gameobject_holder;
+	vk::UniqueDescriptorSet m_ds_gameobject;
 	std::deque<DS_GameObject> m_ds_gameobject_freelist;
 
-	vk::UniqueDescriptorSet m_ds_gameobject;
 
 };
 struct GameProcedure
@@ -203,9 +166,14 @@ struct GameProcedure
 				sSystem::Order().getSystemDescriptorLayout(),
 			};
 
+			vk::PushConstantRange ranges[] = {
+				vk::PushConstantRange(vk::ShaderStageFlagBits::eCompute, 0, 4),
+			};
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 			pipeline_layout_info.setPSetLayouts(layouts);
+			pipeline_layout_info.setPushConstantRangeCount(array_length(ranges));
+			pipeline_layout_info.setPPushConstantRanges(ranges);
 			m_pipeline_layout[PipelineLayout_PlayerUpdate] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 
 #if USE_DEBUG_REPORT
@@ -221,10 +189,15 @@ struct GameProcedure
 				game_context->getDescriptorSetLayout(GameContext::DSL_GameObject),
 				game_context->m_physics_context->getDescriptorSetLayout(GI2DPhysics::DescLayout_Data),
 			};
+			vk::PushConstantRange ranges[] = {
+				vk::PushConstantRange(vk::ShaderStageFlagBits::eCompute, 0, 4),
+			};
 
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 			pipeline_layout_info.setPSetLayouts(layouts);
+			pipeline_layout_info.setPushConstantRangeCount(array_length(ranges));
+			pipeline_layout_info.setPPushConstantRanges(ranges);
 			m_pipeline_layout[PipelineLayout_MovableUpdate] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 
 #if USE_DEBUG_REPORT
@@ -282,12 +255,13 @@ struct GameProcedure
 
 		vk::DescriptorSet descs[] =
 		{
-			ds.ds,
+			game_context->m_ds_gameobject.get(),
 		};
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_PlayerUpdate].get(), 0, array_length(descs), descs, 0, nullptr);
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_PlayerUpdate].get(), 1, sSystem::Order().getSystemDescriptorSet(), { 0 });
 
 		{
+			cmd.pushConstants<uint>(m_pipeline_layout[PipelineLayout_PlayerUpdate].get(), vk::ShaderStageFlagBits::eCompute, 0, ds.index);
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[ShaderPlayer_Move].get());
 			auto num = app::calcDipatchGroups(uvec3(1, 1, 1), uvec3(1, 1, 1));
 			cmd.dispatch(num.x, num.y, num.z);
@@ -299,21 +273,24 @@ struct GameProcedure
 
 		{
 			vk::BufferMemoryBarrier to_read[] = {
-				vk::BufferMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead, 0,0, ds.info[0].buffer, ds.info[0].offset, ds.info[0].range),
+				game_context->b_movable.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			};
+			to_read[0].offset += ds.index * sizeof(cMovable);
+			to_read[0].size = sizeof(cMovable);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 		}
 		vk::DescriptorSet descs[] =
 		{
-			ds.ds,
+			game_context->m_ds_gameobject.get(),
 			game_context->m_physics_context->getDescriptorSet(GI2DPhysics::DescLayout_Data),
 		};
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MovableUpdate].get(), 0, array_length(descs), descs, 0, nullptr);
 
 		{
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[ShaderMovable_UpdatePrePhysics].get());
+			cmd.pushConstants<uint>(m_pipeline_layout[PipelineLayout_MovableUpdate].get(), vk::ShaderStageFlagBits::eCompute, 0, ds.index);
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineMovable_UpdatePrePhysics].get());
 			auto num = app::calcDipatchGroups(uvec3(1, 1, 1), uvec3(1, 1, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 		}
@@ -324,21 +301,24 @@ struct GameProcedure
 
 		{
 			vk::BufferMemoryBarrier to_read[] = {
-				game_context->m_physics_context->b_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				game_context->b_movable.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 			};
+			to_read[0].offset += ds.index * sizeof(cMovable);
+			to_read[0].size = sizeof(cMovable);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 		}
 		vk::DescriptorSet descs[] =
 		{
-			ds.ds,
+			game_context->m_ds_gameobject.get(),
 			game_context->m_physics_context->getDescriptorSet(GI2DPhysics::DescLayout_Data),
 		};
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_MovableUpdate].get(), 0, array_length(descs), descs, 0, nullptr);
 
 		{
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[ShaderMovable_UpdatePostPhysics].get());
+			cmd.pushConstants<uint>(m_pipeline_layout[PipelineLayout_MovableUpdate].get(), vk::ShaderStageFlagBits::eCompute, 0, ds.index);
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelineMovable_UpdatePostPhysics].get());
 			auto num = app::calcDipatchGroups(uvec3(1, 1, 1), uvec3(1, 1, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 		}

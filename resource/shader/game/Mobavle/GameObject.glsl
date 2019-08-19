@@ -7,7 +7,6 @@
 struct cState
 {
 	uint64_t alive;
-	uint64_t _p;
 };
 
 struct cMovable

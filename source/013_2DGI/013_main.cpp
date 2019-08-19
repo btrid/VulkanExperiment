@@ -473,9 +473,9 @@ int main()
 		param.is_fluid = false;
 		param.is_usercontrol = true;
 		gi2d_physics_context->make(cmd, param);
-		auto info = player.m_gameobject.info;
-		info[1].offset += offsetof(cMovable, rb_address);
-		gi2d_physics_context->getRBID(cmd, info[1]);
+		auto info = game_context->b_movable.getInfo();
+		info.offset += player.m_gameobject.index * sizeof(cMovable) + offsetof(cMovable, rb_address);
+		gi2d_physics_context->getRBID(cmd, info);
 	}
 
 	app.setup();
@@ -507,11 +507,12 @@ int main()
 				gi2d_debug.executeMakeFragment(cmd);
 
 				gi2d_make_hierarchy.executeMakeFragmentMapAndSDF(cmd, gi2d_sdf_context);
-//				game_proc.executePlayerUpdate(cmd, context, game_context, player.m_gameobject);
-//				game_proc.executeMovableUpdatePrePyhsics(cmd, context, game_context, player.m_gameobject);
-//				game_proc.executeMovableUpdatePostPyhsics(cmd, context, game_context, player.m_gameobject);
-				gi2d_physics_proc.execute(cmd, gi2d_physics_context, gi2d_sdf_context);
-				gi2d_physics_proc.executeDrawParticle(cmd, gi2d_physics_context, app.m_window->getFrontBuffer());
+				gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
+ 				game_proc.executePlayerUpdate(cmd, context, game_context, player.m_gameobject);
+ 				game_proc.executeMovableUpdatePrePyhsics(cmd, context, game_context, player.m_gameobject);
+ 				game_proc.executeMovableUpdatePostPyhsics(cmd, context, game_context, player.m_gameobject);
+ 				gi2d_physics_proc.execute(cmd, gi2d_physics_context, gi2d_sdf_context);
+ 				gi2d_physics_proc.executeDrawParticle(cmd, gi2d_physics_context, app.m_window->getFrontBuffer());
 
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;

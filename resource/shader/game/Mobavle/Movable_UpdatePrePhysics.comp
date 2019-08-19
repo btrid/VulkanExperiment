@@ -9,12 +9,16 @@
 
 layout (local_size_x=64) in;
 
+layout(push_constant) uniform Input
+{
+	uint index;
+} constant;
 shared cState s_state;
 void main()
 {
 	if(gl_LocalInvocationIndex == 0)
 	{
-		s_state = b_state[0];
+		s_state = b_state[constant.index];
 	}
 
 	memoryBarrierShared();
@@ -22,6 +26,7 @@ void main()
 
 	if((s_state.alive & (1ul<<gl_LocalInvocationIndex)) == 0 ){ return; }
 
-	if(b_movable[gl_LocalInvocationIndex].rb_address == -1){ return; }
-	b_rigidbody[b_movable[gl_LocalInvocationIndex].rb_address].cm = b_movable[gl_LocalInvocationIndex].pos;
+	uint index = constant.index * 64 + gl_LocalInvocationIndex;
+	if(b_movable[index].rb_address == -1){ return; }
+	b_rigidbody[b_movable[index].rb_address].cm = b_movable[index].pos;
 }
