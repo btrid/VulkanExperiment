@@ -86,6 +86,7 @@ struct GameContext
 					.setDstSet(m_ds_gameobject.get()),
 				};
 				context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
+
 				m_ds_gameobject_freelist.resize(size);
 				for (uint i = 0; i < size; i++)
 				{
@@ -138,6 +139,7 @@ struct GameProcedure
 	};
 	enum Pipeline
 	{
+		PipelinePlayer_Update,
 		PipelineMovable_UpdatePrePhysics,
 		PipelineMovable_UpdatePostPhysics,
 		Pipeline_Num,
@@ -178,7 +180,7 @@ struct GameProcedure
 
 #if USE_DEBUG_REPORT
 			vk::DebugUtilsObjectNameInfoEXT name_info;
-			name_info.pObjectName = "PipelineLayout_MovableUpdate";
+			name_info.pObjectName = "PipelineLayout_PlayerUpdate";
 			name_info.objectType = vk::ObjectType::ePipelineLayout;
 			name_info.objectHandle = reinterpret_cast<uint64_t &>(m_pipeline_layout[PipelineLayout_MovableUpdate].get());
 			context->m_device->setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
@@ -243,8 +245,9 @@ struct GameProcedure
 			context->m_device->setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
 #endif
 
-			m_pipeline[PipelineMovable_UpdatePrePhysics] = std::move(compute_pipeline[0]);
-			m_pipeline[PipelineMovable_UpdatePostPhysics] = std::move(compute_pipeline[1]);
+			m_pipeline[PipelinePlayer_Update] = std::move(compute_pipeline[0]);
+			m_pipeline[PipelineMovable_UpdatePrePhysics] = std::move(compute_pipeline[1]);
+			m_pipeline[PipelineMovable_UpdatePostPhysics] = std::move(compute_pipeline[2]);
 		}
 
 	}
@@ -262,7 +265,7 @@ struct GameProcedure
 
 		{
 			cmd.pushConstants<uint>(m_pipeline_layout[PipelineLayout_PlayerUpdate].get(), vk::ShaderStageFlagBits::eCompute, 0, ds.index);
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[ShaderPlayer_Move].get());
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[PipelinePlayer_Update].get());
 			auto num = app::calcDipatchGroups(uvec3(1, 1, 1), uvec3(1, 1, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 		}
