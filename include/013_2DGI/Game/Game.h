@@ -256,6 +256,17 @@ struct GameProcedure
 	{
 		DebugLabel _label(cmd, context->m_dispach, __FUNCTION__);
 
+		{
+			vk::BufferMemoryBarrier to_read[] = {
+				game_context->b_movable.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderWrite|vk::AccessFlagBits::eShaderRead),
+			};
+			to_read[0].offset += ds.index * sizeof(cMovable);
+			to_read[0].size = sizeof(cMovable);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+				0, nullptr, array_length(to_read), to_read, 0, nullptr);
+
+		}
+
 		vk::DescriptorSet descs[] =
 		{
 			game_context->m_ds_gameobject.get(),
@@ -304,7 +315,7 @@ struct GameProcedure
 
 		{
 			vk::BufferMemoryBarrier to_read[] = {
-				game_context->b_movable.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				game_context->b_movable.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
 			};
 			to_read[0].offset += ds.index * sizeof(cMovable);
 			to_read[0].size = sizeof(cMovable);

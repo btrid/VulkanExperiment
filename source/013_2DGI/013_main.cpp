@@ -467,9 +467,10 @@ int main()
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
 		cmd.updateBuffer<uint64_t>(game_context->b_state.getInfo().buffer, game_context->b_state.getInfo().offset, 1ull);
-			
+		cmd.updateBuffer<vec2>(game_context->b_movable.getInfo().buffer, game_context->b_movable.getInfo().offset, vec2(256.f));
+
 		GI2DRB_MakeParam param;
-		param.aabb = uvec4(128, 128, 16, 16);
+		param.aabb = uvec4(256, 256, 16, 16);
 		param.is_fluid = false;
 		param.is_usercontrol = true;
 		gi2d_physics_context->make(cmd, param);

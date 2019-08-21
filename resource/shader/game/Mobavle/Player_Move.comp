@@ -32,7 +32,8 @@ void main()
 	move.y = move.y - float(isOn(u_system_data.m_is_key_on, KEY_BIT_DOWN)) * move_value;
 	move.x = move.x + float(isOn(u_system_data.m_is_key_on, KEY_BIT_UP)) * move_value;
 	move.x = move.x - float(isOn(u_system_data.m_is_key_on, KEY_BIT_DOWN)) * move_value;
-	b_movable[constant.index * 64 + gl_LocalInvocationIndex].pos += move;
+//	b_movable[constant.index * 64 + gl_LocalInvocationIndex].pos += move;
+	b_movable[constant.index * 64 + gl_LocalInvocationIndex].pos += vec2(2., 0.);
 
 
 }

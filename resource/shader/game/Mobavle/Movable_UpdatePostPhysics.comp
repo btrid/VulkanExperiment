@@ -29,4 +29,5 @@ void main()
 	uint index = constant.index * 64 + gl_LocalInvocationIndex;
 	if(b_movable[index].rb_address == -1){ return; }
 	b_movable[index].pos = b_rigidbody[b_movable[index].rb_address].cm;
+//	b_movable[index].pos = b_movable[index].pos + vec2(1.);
 }
