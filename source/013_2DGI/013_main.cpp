@@ -427,7 +427,7 @@ int main()
 	camera->getData().m_near = 0.01f;
 
 //	return pathFinding();
-//	return rigidbody();
+	return rigidbody();
 //	return radiosity();
 
 	auto gpu = sGlobal::Order().getGPU(0);
