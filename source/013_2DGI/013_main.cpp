@@ -427,7 +427,7 @@ int main()
 	camera->getData().m_near = 0.01f;
 
 //	return pathFinding();
-	return rigidbody();
+//	return rigidbody();
 //	return radiosity();
 
 	auto gpu = sGlobal::Order().getGPU(0);
@@ -467,10 +467,10 @@ int main()
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
 		cmd.updateBuffer<uint64_t>(game_context->b_state.getInfo().buffer, game_context->b_state.getInfo().offset, 1ull);
-		cmd.updateBuffer<vec2>(game_context->b_movable.getInfo().buffer, game_context->b_movable.getInfo().offset, vec2(256.f));
+		cmd.updateBuffer<vec2>(game_context->b_movable.getInfo().buffer, game_context->b_movable.getInfo().offset, vec2(256.f, 756.f));
 
 		GI2DRB_MakeParam param;
-		param.aabb = uvec4(256, 256, 16, 16);
+		param.aabb = uvec4(256, 756, 16, 16);
 		param.is_fluid = false;
 		param.is_usercontrol = true;
 		gi2d_physics_context->make(cmd, param);
@@ -511,9 +511,9 @@ int main()
 				gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
  				game_proc.executePlayerUpdate(cmd, context, game_context, player.m_gameobject);
  				game_proc.executeMovableUpdatePrePyhsics(cmd, context, game_context, player.m_gameobject);
- 				game_proc.executeMovableUpdatePostPyhsics(cmd, context, game_context, player.m_gameobject);
  				gi2d_physics_proc.execute(cmd, gi2d_physics_context, gi2d_sdf_context);
  				gi2d_physics_proc.executeDrawParticle(cmd, gi2d_physics_context, app.m_window->getFrontBuffer());
+				game_proc.executeMovableUpdatePostPyhsics(cmd, context, game_context, player.m_gameobject);
 
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;
