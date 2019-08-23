@@ -73,7 +73,15 @@ struct GI2DRadiosity2
 
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
-//#define RADIOSITY_FAST
+#define RADIOSITY_REDUCT_RADIOSITY
+#ifdef RADIOSITY_REDUCT_RADIOSITY
+		m_radiosity_texture_size = vk::Extent2D(render_target->m_resolution.width / 2, render_target->m_resolution.height / 2);
+#else
+		m_radiosity_texture_size = render_target->m_resolution;
+#endif
+
+#define RADIOSITY_FAST
+
 		{
 #ifdef RADIOSITY_FAST
 			uint32_t size = m_gi2d_context->RenderWidth * m_gi2d_context->RenderHeight / 4;
@@ -100,7 +108,7 @@ struct GI2DRadiosity2
 
 
 			vk::ImageCreateInfo image_info;
-			image_info.setExtent(vk::Extent3D(m_gi2d_context->RenderSize.x, m_gi2d_context->RenderSize.y, 1));
+			image_info.setExtent(vk::Extent3D(m_radiosity_texture_size, 1));
 			image_info.setArrayLayers(Frame_Num);
 			image_info.setFormat(vk::Format::eR16G16B16A16Sfloat);
 			image_info.setImageType(vk::ImageType::e2D);
@@ -473,13 +481,21 @@ struct GI2DRadiosity2
 			assembly_info2.setTopology(vk::PrimitiveTopology::eTriangleList);
 
 			// viewport
-			vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)render_target->m_resolution.width, (float)render_target->m_resolution.height, 0.f, 1.f);
-			vk::Rect2D scissor = vk::Rect2D(vk::Offset2D(0, 0), render_target->m_resolution);
+			vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)m_radiosity_texture_size.width, (float)m_radiosity_texture_size.height, 0.f, 1.f);
+			vk::Rect2D scissor = vk::Rect2D(vk::Offset2D(0, 0), m_radiosity_texture_size);
 			vk::PipelineViewportStateCreateInfo viewportInfo;
 			viewportInfo.setViewportCount(1);
 			viewportInfo.setPViewports(&viewport);
 			viewportInfo.setScissorCount(1);
 			viewportInfo.setPScissors(&scissor);
+
+			vk::Viewport viewport2 = vk::Viewport(0.f, 0.f, (float)render_target->m_resolution.width, (float)render_target->m_resolution.height, 0.f, 1.f);
+			vk::Rect2D scissor2 = vk::Rect2D(vk::Offset2D(0, 0), render_target->m_resolution);
+			vk::PipelineViewportStateCreateInfo viewportInfo2;
+			viewportInfo2.setViewportCount(1);
+			viewportInfo2.setPViewports(&viewport2);
+			viewportInfo2.setScissorCount(1);
+			viewportInfo2.setPScissors(&scissor2);
 
 			vk::PipelineRasterizationStateCreateInfo rasterization_info;
 			rasterization_info.setPolygonMode(vk::PolygonMode::eFill);
@@ -552,7 +568,7 @@ struct GI2DRadiosity2
 				.setPStages(shader_rendering_info)
 				.setPVertexInputState(&vertex_input_info)
 				.setPInputAssemblyState(&assembly_info2)
-				.setPViewportState(&viewportInfo)
+				.setPViewportState(&viewportInfo2)
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
 				.setLayout(m_pipeline_layout[PipelineLayout_Radiosity].get())
@@ -702,7 +718,7 @@ struct GI2DRadiosity2
 
 		vk::RenderPassBeginInfo begin_render_Info;
 		begin_render_Info.setRenderPass(m_radiosity_pass.get());
-		begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), m_render_target->m_resolution));
+		begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), m_radiosity_texture_size));
 		begin_render_Info.setFramebuffer(m_radiosity_framebuffer.get());
 		begin_render_Info.setClearValueCount(1);
 		auto color = vk::ClearValue(vk::ClearColorValue(std::array<uint32_t, 4>{}));
@@ -794,6 +810,7 @@ struct GI2DRadiosity2
 	vk::UniqueRenderPass m_rendering_pass;
 	vk::UniqueFramebuffer m_rendering_framebuffer;
 
+	vk::Extent2D m_radiosity_texture_size;
 
 };
 
