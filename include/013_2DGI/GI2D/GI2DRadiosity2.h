@@ -73,7 +73,7 @@ struct GI2DRadiosity2
 
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
-#define RADIOSITY_FAST
+//#define RADIOSITY_FAST
 		{
 #ifdef RADIOSITY_FAST
 			uint32_t size = m_gi2d_context->RenderWidth * m_gi2d_context->RenderHeight / 4;

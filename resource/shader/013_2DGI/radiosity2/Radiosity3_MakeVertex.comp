@@ -54,7 +54,7 @@ void main()
 	uint64_t packed = 0ul;
 	if(count!=0)
 	{
-		u64vec3 emissive_u3 = u64vec3(round(rad * vec3(1024.) / count));
+		u64vec3 emissive_u3 = u64vec3(round(rad*0.1 * vec3(1024.) / count));
 		packed = emissive_u3.x + (emissive_u3.y<<21ul) + (emissive_u3.z<<42ul);
 
 		uvec2 map = gl_GlobalInvocationID.xy / 8;

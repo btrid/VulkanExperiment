@@ -63,7 +63,8 @@ Ray makeRay(in uint x, in uint y)
 	Ray ray;
 
 	float a = PI / Dir_Num;
-	float angle = fma(a, float(y), a/u_radiosity_info.frame_max * (u_radiosity_info.frame+0.5));
+	uint frame_index[] ={0, 2, 1, 3};
+	float angle = fma(a, float(y), a/u_radiosity_info.frame_max * (frame_index[u_radiosity_info.frame]+0.5));
 	ray.area = int(angle / HALF_PI);
 
 	calcDirEx(angle, ray.dir);
