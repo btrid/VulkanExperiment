@@ -73,14 +73,18 @@ struct GI2DRadiosity2
 
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
-#define RADIOSITY_REDUCT_RADIOSITY
+//#define RADIOSITY_FAST
+//#define RADIOSITY_REDUCT_RADIOSITY
+//#define RADIOSITY_TEXTURE vk::Format::eR16G16B16A16Sfloat
+//#define RADIOSITY_TEXTURE vk::Format::eA2R10G10B10UnormPack32
+#define RADIOSITY_TEXTURE vk::Format::eB10G11R11UfloatPack32
+
 #ifdef RADIOSITY_REDUCT_RADIOSITY
 		m_radiosity_texture_size = vk::Extent2D(render_target->m_resolution.width / 2, render_target->m_resolution.height / 2);
 #else
 		m_radiosity_texture_size = render_target->m_resolution;
 #endif
 
-#define RADIOSITY_FAST
 
 		{
 #ifdef RADIOSITY_FAST
@@ -110,7 +114,7 @@ struct GI2DRadiosity2
 			vk::ImageCreateInfo image_info;
 			image_info.setExtent(vk::Extent3D(m_radiosity_texture_size, 1));
 			image_info.setArrayLayers(Frame_Num);
-			image_info.setFormat(vk::Format::eR16G16B16A16Sfloat);
+			image_info.setFormat(RADIOSITY_TEXTURE);
 			image_info.setImageType(vk::ImageType::e2D);
 			image_info.setInitialLayout(vk::ImageLayout::eUndefined);
 			image_info.setMipLevels(1);
@@ -155,8 +159,8 @@ struct GI2DRadiosity2
 			sampler_info.setAddressModeV(vk::SamplerAddressMode::eClampToEdge);
 			sampler_info.setAddressModeW(vk::SamplerAddressMode::eClampToEdge);
 			sampler_info.setAnisotropyEnable(false);
-			sampler_info.setMagFilter(vk::Filter::eNearest);
-			sampler_info.setMinFilter(vk::Filter::eNearest);
+			sampler_info.setMagFilter(vk::Filter::eLinear);
+			sampler_info.setMinFilter(vk::Filter::eLinear);
 			sampler_info.setMinLod(0.f);
 			sampler_info.setMaxLod(0.f);
 			sampler_info.setMipLodBias(0.f);
