@@ -10,7 +10,7 @@
 #define Bounce_Num (2)
 #define Frame_Num (4)
 
-#define ColorMask ((1<<21ul)-1)
+#define ColorMask ((1<<10)-1)
 struct GI2DRadiosityInfo
 {
 	uint ray_num_max;
@@ -45,6 +45,7 @@ layout(set=USE_GI2D_Radiosity2, binding=2, std430) restrict buffer SegmentBuffer
 };
 layout(set=USE_GI2D_Radiosity2, binding=3, std430) restrict buffer RadianceBuffer {
 	uint64_t b_radiance[];
+//	uint b_radiance[];
 };
 layout(set=USE_GI2D_Radiosity2, binding=4, std430) restrict buffer MapEdgeBuffer {
 	uint64_t b_edge[];

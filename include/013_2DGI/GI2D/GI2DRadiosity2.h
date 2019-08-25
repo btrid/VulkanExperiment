@@ -73,8 +73,8 @@ struct GI2DRadiosity2
 
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
-//#define RADIOSITY_FAST
-//#define RADIOSITY_REDUCT_RADIOSITY
+#define RADIOSITY_FAST
+#define RADIOSITY_REDUCT_RADIOSITY
 //#define RADIOSITY_TEXTURE vk::Format::eR16G16B16A16Sfloat
 //#define RADIOSITY_TEXTURE vk::Format::eA2R10G10B10UnormPack32
 #define RADIOSITY_TEXTURE vk::Format::eB10G11R11UfloatPack32

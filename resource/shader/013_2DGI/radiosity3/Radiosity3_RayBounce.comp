@@ -28,29 +28,31 @@ void main()
 
 	uvec2 index = pos.xz + pos.yw * reso.xx;
 
-	uint64_t radiance1 = b_radiance[index.x + constant.bounce * radiance_offset];
-	uint64_t radiance2 = b_radiance[index.y + constant.bounce * radiance_offset];
+//	uint64_t radiance1 = b_radiance[index.x + constant.bounce * radiance_offset];
+//	uint64_t radiance2 = b_radiance[index.y + constant.bounce * radiance_offset];
+	uint radiance1 = b_radiance[index.x + constant.bounce * radiance_offset];
+	uint radiance2 = b_radiance[index.y + constant.bounce * radiance_offset];
 
-	if(radiance1 != 0u)
+	if(radiance1 != 0)
 	{
-		dvec3 rad_d3 = dvec3(radiance1&ColorMask, (radiance1>>21)&ColorMask, (radiance1>>42ul)&ColorMask);
-		vec3 rad = vec3(rad_d3 / dvec3(1024.));
+		vec3 rad_d3 = vec3(radiance1&ColorMask, (radiance1>>10)&ColorMask, (radiance1>>20)&ColorMask);
+		vec3 rad = vec3(rad_d3 / vec3(128.));
 		rad = rad * b_albedo[index.x].xyz * vec3(0.14);
 
-		u64vec3 emissive_u3 = u64vec3(round(rad * vec3(1024.)));
-		uint64_t packed = emissive_u3.x + (emissive_u3.y<<21ul) + (emissive_u3.z<<42ul);
+		uvec3 emissive_u3 = uvec3(round(rad * vec3(128.)));
+		uint packed = emissive_u3.x + (emissive_u3.y<<10) + (emissive_u3.z<<20);
 		if(packed != 0)
 			atomicAdd(b_radiance[index.y + (1-constant.bounce) * radiance_offset], packed);
 	}
 
-	if(radiance2 != 0u)
+	if(radiance2 != 0)
 	{
-		dvec3 rad_d3 = dvec3(radiance2&ColorMask, (radiance2>>21)&ColorMask, (radiance2>>42ul)&ColorMask);
-		vec3 rad = vec3(rad_d3 / dvec3(1024.));
+		vec3 rad_d3 = vec3(radiance2&ColorMask, (radiance2>>10)&ColorMask, (radiance2>>20)&ColorMask);
+		vec3 rad = vec3(rad_d3 / dvec3(128.));
 		rad = rad * b_albedo[index.y].xyz * vec3(0.14);
 
-		u64vec3 emissive_u3 = u64vec3(round(rad * vec3(1024.)));
-		uint64_t packed = emissive_u3.x + (emissive_u3.y<<21ul) + (emissive_u3.z<<42ul);
+		uvec3 emissive_u3 = uvec3(round(rad * vec3(128.)));
+		uint packed = emissive_u3.x + (emissive_u3.y<<10) + (emissive_u3.z<<20);
 		if(packed != 0)
 			atomicAdd(b_radiance[index.x + (1-constant.bounce) * radiance_offset], packed);
 	}

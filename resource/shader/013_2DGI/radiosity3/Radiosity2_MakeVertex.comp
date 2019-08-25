@@ -1,0 +1,84 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_GI2D 0
+#define USE_GI2D_Radiosity2 1
+#include "GI2D/GI2D.glsl"
+#include "GI2D/Radiosity2.glsl"
+
+layout (local_size_x = 32, local_size_y = 32) in;
+
+shared uint64_t s_map[6][6];
+const i16vec2 g_offset[8] = 
+{
+		i16vec2(-1,-1), 
+		i16vec2( 0,-1),
+		i16vec2( 1,-1),
+		i16vec2( 1, 0),
+		i16vec2( 1, 1),
+		i16vec2( 0, 1),
+		i16vec2(-1, 1),
+		i16vec2(-1, 0),
+};
+
+void main() 
+{
+
+	if(gl_LocalInvocationID.x < 6 && gl_LocalInvocationID.y < 6)
+	{
+		uvec2 offset_xy = gl_LocalInvocationID.xy-1;
+		uvec2 index = gl_WorkGroupID.xy*4 + offset_xy;
+
+		uint64_t map = -1ul;
+		if(all(lessThan(index, u_gi2d_info.m_resolution.zw)))
+		{
+//			map = b_diffuse_map[getMemoryOrder(index)];
+			map = b_fragment_map[index.x + index.y * u_gi2d_info.m_resolution.z];
+		}
+		s_map[gl_LocalInvocationID.y][gl_LocalInvocationID.x] = map;
+	}
+
+	memoryBarrierShared();
+	barrier();
+
+	bool is_diffuse = true;
+	bool is_edge = false;
+	bool is_boundary = any(equal(gl_GlobalInvocationID.xyxy, uvec4(0,0,u_gi2d_info.m_resolution.xy-1)));
+	{
+		ivec2 ii = ivec2(gl_LocalInvocationID.xy) + ivec2(8);
+		ivec2 map_index = ii / 8;
+		ivec2 map_bit = ii % 8;
+		if((s_map[map_index.y][map_index.x] & (1ul<<(map_bit.x+map_bit.y*8))) == 0ul)
+		{
+			// 床なので何もしない
+			is_diffuse = false;
+		}
+	}
+	for(int i = 0; i < 8; i++)
+	{
+		ivec2 ii = ivec2(gl_LocalInvocationID.xy) + g_offset[i] + ivec2(8);
+		ivec2 map_index = ii / 8;
+		ivec2 map_bit = ii % 8;
+		if((s_map[map_index.y][map_index.x] & (1ul<<(map_bit.x+map_bit.y*8))) == 0ul)
+		{
+			is_edge = true;
+			break;
+		}
+	}
+
+	uint index = gl_GlobalInvocationID.x+gl_GlobalInvocationID.y*u_gi2d_info.m_resolution.x;
+	if((is_diffuse && is_edge)||is_boundary)
+	{
+		vec3 albedo = vec3(getRGB(b_fragment[index]));
+		vec3 emissive = albedo * vec3(isEmissive(b_fragment[index])) * 0.3;
+		uvec3 emissive_u3 = uvec3(round(emissive * vec3(128.)));
+		uint packed = emissive_u3.x + (emissive_u3.y<<10) + (emissive_u3.z<<20);
+		b_radiance[index] = packed;
+		b_radiance[index+u_gi2d_info.m_resolution.x*u_gi2d_info.m_resolution.y] = packed;
+
+		uvec2 map = gl_GlobalInvocationID.xy / 8;
+		uvec2 bit = gl_GlobalInvocationID.xy % 8;
+		atomicOr(b_edge[map.x + map.y*u_gi2d_info.m_resolution.z], 1ul<<(bit.x+bit.y*8));
+
+	}
+}
