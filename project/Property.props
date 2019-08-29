@@ -21,7 +21,7 @@
       <AdditionalOptions>/experimental:module %(AdditionalOptions)</AdditionalOptions>
     </Manifest>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(btrInclude);$(btrExternal);$(SolutionDir)external\cpp-taskflow-2.2.0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(btrInclude);$(btrExternal);$(SolutionDir)external\cpp-taskflow-2.2.0;$(SolutionDir)external\tiny_gltf;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>

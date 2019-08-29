@@ -13,6 +13,11 @@
 #include <assimp/scene.h>
 #include <assimp/material.h>
 
+#define TINYGLTF_IMPLEMENTATION
+#define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#define STBI_MSC_SECURE_CRT
+#include <tiny_gltf/tiny_gltf.h>
 namespace {
 	glm::mat4 AI_TO(aiMatrix4x4& from)
 	{
@@ -176,6 +181,16 @@ void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& r
 	}
 }
 
+void cModel::load2(const std::shared_ptr<btr::Context>& context, const std::string& filename)
+{
+
+	tinygltf::Model m;
+	tinygltf::TinyGLTF gltf_ctx;
+	std::string err;
+	std::string warn;
+	gltf_ctx.LoadASCIIFromFile(&m, &err, &warn, (btr::getResourceAppPath() + "tiny.x").c_str());
+
+}
 void cModel::load(const std::shared_ptr<btr::Context>& context, const std::string& filename)
 {
 

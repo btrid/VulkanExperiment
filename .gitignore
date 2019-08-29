@@ -244,3 +244,4 @@ ModelManifest.xml
 # FAKE - F# Make
 .fake/
 /btrVulkan
+/external/tinygltf-2.2.0

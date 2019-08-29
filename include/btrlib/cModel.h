@@ -219,6 +219,7 @@ public:
 public:
 
 	void load(const std::shared_ptr<btr::Context>& loader, const std::string& filename);
+	void load2(const std::shared_ptr<btr::Context>& loader, const std::string& filename);
 
 	std::string getFilename()const;
 	const ResourceVertex* getMesh()const;

@@ -50,15 +50,16 @@ int main()
 	app::App app(app_desc);
 	auto context = app.m_context;
 
-	ClearPipeline clear_pipeline(context, app.m_window->getRenderTarget());
-	PresentPipeline present_pipeline(context, app.m_window->getRenderTarget(), app.m_window->getSwapchainPtr());
+	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
+	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchainPtr());
 
 	auto appmodel_context = std::make_shared<AppModelContext>(context);
-	AppModelRenderStage model_renderer(context, appmodel_context, app.m_window->getRenderTarget());
+	AppModelRenderStage model_renderer(context, appmodel_context, app.m_window->getFrontBuffer());
 	AppModelAnimationStage model_animater(context, appmodel_context);
 
 	cModel model;
-	model.load(context, btr::getResourceAppPath() + "tiny.x");
+//	model.load(context, btr::getResourceAppPath() + "tiny.x");
+	model.load2(context, btr::getResourceAppPath() + "tiny.x");
 	std::shared_ptr<AppModel> player_model = std::make_shared<AppModel>(context, appmodel_context, model.getResource(), 1024);
 
 	auto anime_cmd = model_animater.createCmd(player_model);
@@ -83,7 +84,7 @@ int main()
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 				std::vector<vk::CommandBuffer> anime_cmds = { anime_cmd.get() };
-				model_animater.dispach(cmd, anime_cmds);
+				model_animater.dispatchCmd(cmd, anime_cmds);
 
 				cmd.end();
 				cmds[cmd_model_update] = cmd;
