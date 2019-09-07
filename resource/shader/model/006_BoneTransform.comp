@@ -1,0 +1,24 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_AppModel 0
+#define USE_AppModel_Update 1
+#include "applib/AppModel.glsl"
+
+layout (local_size_x = 1024, local_size_y = 1) in;
+
+
+void main()
+{
+	ModelInfo model_info = u_model_info;
+	if(gl_GlobalInvocationID.x >= model_info.boneNum * b_model_instancing_info.instanceNum){ return; }
+	uint index = gl_GlobalInvocationID.x;
+
+	uint bone_info_index = index % model_info.boneNum;
+	BoneInfo bone_info = b_bone_info[bone_info_index];
+	uint instance_id = b_instance_map[index / model_info.boneNum];
+	uint bone_index_offset = instance_id * model_info.boneNum;
+	uint node_index_offset = instance_id * model_info.nodeNum;
+	b_bone_transform[bone_index_offset + bone_info_index] = b_node_transform[node_index_offset + bone_info.nodeIndex] * bone_info.boneOffset;
+
+}
