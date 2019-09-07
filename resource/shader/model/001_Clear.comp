@@ -14,5 +14,6 @@ void main()
 		return;
 	}
 	b_mesh[index].instanceCount =  0;
+	b_model_instancing_info.instanceNum = 0;
 
 }

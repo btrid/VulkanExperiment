@@ -449,6 +449,30 @@ struct AllocatedMemory
 		return alloc;
 
 	}
+	template<typename T>
+	BufferMemoryEx<T> allocateMemory(uint32_t num, bool is_reverse = false)
+	{
+		assert(num != 0);// size0ÇÕÇ®Ç©ÇµÇ¢ÇÊÇÀ
+
+		auto zone = m_resource->m_free_zone->alloc(num * sizeof(T), is_reverse);
+		assert(zone.isValid());// allocÇ≈Ç´ÇΩÅH
+
+		BufferMemoryEx<T> alloc;
+		alloc.m_resource = std::make_shared<BufferMemoryEx<T>::Resource>();
+		alloc.m_resource->m_allocater = m_resource->m_free_zone;
+		alloc.m_resource->m_buffer_info.buffer = m_resource->m_buffer.get();
+		alloc.m_resource->m_buffer_info.offset = zone.m_start;
+		alloc.m_resource->m_buffer_info.range = zone.range();
+		alloc.m_resource->m_buffer_descriptor.element_num = num;
+
+		alloc.m_resource->m_mapped_memory = nullptr;
+		if (m_resource->m_mapped_memory)
+		{
+			alloc.m_resource->m_mapped_memory = (T*)((char*)m_resource->m_mapped_memory + zone.m_start);
+		}
+		return alloc;
+
+	}
 
 	template<typename T>
 	BufferMemoryEx<T> allocateMemory(const BufferMemoryDescriptor& desc)

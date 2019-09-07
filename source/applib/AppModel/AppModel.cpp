@@ -64,36 +64,13 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 	// ModelInfo
 	{
 
-		auto staging = context->m_staging_memory.allocateMemory<cModel::ModelInfo>({1, btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT });
-
-		auto& mi = *static_cast<cModel::ModelInfo*>(staging.getMappedPtr());
-		mi = resource->m_model_info;
-
-		vk::BufferCopy copy_info;
-		copy_info.setSize(staging.getInfo().range);
-		copy_info.setSrcOffset(staging.getInfo().offset);
-		copy_info.setDstOffset(b_model_info.getInfo().offset);
-		cmd.copyBuffer(staging.getInfo().buffer, b_model_info.getInfo().buffer, copy_info);
-
+		cmd.updateBuffer<cModel::ModelInfo>(b_model_info.getInfo().buffer, b_model_info.getInfo().offset, resource->m_model_info);
 	}
 	// draw indirect
 	{
-		btr::BufferMemoryDescriptorEx<cModel::Mesh> desc;
-		desc.element_num = resource->m_mesh.size();
+		b_draw_indirect = context->m_vertex_memory.allocateMemory<cModel::Mesh>(resource->m_mesh.size());
 
-		auto& buffer = b_draw_indirect;
-		buffer = context->m_vertex_memory.allocateMemory(desc);
-
-		desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
-		auto staging = context->m_staging_memory.allocateMemory(desc);
-
-		memcpy_s(staging.getMappedPtr(), staging.getInfo().range, resource->m_mesh.data(), staging.getInfo().range);
-
-		vk::BufferCopy copy_info;
-		copy_info.setSize(staging.getInfo().range);
-		copy_info.setSrcOffset(staging.getInfo().offset);
-		copy_info.setDstOffset(buffer.getInfo().offset);
-		cmd.copyBuffer(staging.getInfo().buffer, buffer.getInfo().buffer, copy_info);
+		cmd.updateBuffer(b_draw_indirect.getInfo().buffer, b_draw_indirect.getInfo().offset, vector_sizeof(resource->m_mesh), resource->m_mesh.data());
 
 	}
 
@@ -141,32 +118,22 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 		auto& anim = resource->getAnimation();
 		m_motion_texture = MotionTexture::createMotion(context, cmd, resource->getAnimation());
 
-		btr::BufferMemoryDescriptorEx<AnimationInfo> desc;
-		desc.element_num = anim.m_motion.size();
+		b_animation_info = context->m_storage_memory.allocateMemory<AnimationInfo>(anim.m_motion.size());
 
-		auto& buffer = b_animation_info;
-		buffer = context->m_storage_memory.allocateMemory(desc);
-
-		desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
-		auto staging = context->m_staging_memory.allocateMemory(desc);
-		auto* staging_ptr = staging.getMappedPtr();
+		std::vector<AnimationInfo> data(anim.m_motion.size());
 		for (size_t i = 0; i < anim.m_motion.size(); i++)
 		{
-			auto& animation = staging_ptr[i];
+			auto& animation = data[i];
 			animation.duration_ = (float)anim.m_motion[i]->m_duration;
 			animation.ticksPerSecond_ = (float)anim.m_motion[i]->m_ticks_per_second;
 		}
 
-		vk::BufferCopy copy_info;
-		copy_info.setSize(staging.getInfo().range);
-		copy_info.setSrcOffset(staging.getInfo().offset);
-		copy_info.setDstOffset(buffer.getInfo().offset);
-		cmd.copyBuffer(staging.getInfo().buffer, buffer.getInfo().buffer, copy_info);
+		cmd.updateBuffer(b_animation_info.getInfo().buffer, b_animation_info.getInfo().offset, vector_sizeof(data), data.data());
 
 		vk::BufferMemoryBarrier barrier;
-		barrier.setBuffer(buffer.getInfo().buffer);
-		barrier.setOffset(buffer.getInfo().offset);
-		barrier.setSize(buffer.getInfo().range);
+		barrier.setBuffer(b_animation_info.getInfo().buffer);
+		barrier.setOffset(b_animation_info.getInfo().offset);
+		barrier.setSize(b_animation_info.getInfo().range);
 		barrier.setDstAccessMask(vk::AccessFlagBits::eShaderRead);
 		cmd.pipelineBarrier(
 			vk::PipelineStageFlagBits::eTransfer,
@@ -176,78 +143,50 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 	}
 	// PlayingAnimation
 	{
-		btr::BufferMemoryDescriptorEx<AnimationWorker> desc;
-		desc.element_num = instanceNum;
+		b_animation_work = context->m_storage_memory.allocateMemory<AnimationWorker>(instanceNum);
 
-		auto& buffer = b_animation_work;
-		buffer = context->m_storage_memory.allocateMemory(desc);
-
-		desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
-		auto staging = context->m_staging_memory.allocateMemory(desc);
-
-		auto* pa = staging.getMappedPtr();
+		std::vector<AnimationWorker> worker(instanceNum);
 		for (int i = 0; i < instanceNum; i++)
 		{
-			pa[i].playingAnimationNo = 0;
-			pa[i].isLoop = true;
-			pa[i].time = (float)(std::rand() % 200);
-			pa[i]._p2 = 0;
+			worker[i].playingAnimationNo = 0;
+			worker[i].isLoop = true;
+			worker[i].time = (float)(std::rand() % 200);
+			worker[i]._p2 = 0;
 		}
 
-
-		vk::BufferCopy copy_info;
-		copy_info.setSize(staging.getInfo().range);
-		copy_info.setSrcOffset(staging.getInfo().offset);
-		copy_info.setDstOffset(buffer.getInfo().offset);
-		cmd.copyBuffer(staging.getInfo().buffer, buffer.getInfo().buffer, copy_info);
+		cmd.updateBuffer(b_animation_work.getInfo().buffer, b_animation_work.getInfo().offset, vector_sizeof(worker), worker.data());
 	}
 
 	// material index
 	{
-		btr::BufferMemoryDescriptorEx<uint32_t> desc;
-		desc.element_num = resource->m_mesh.size();
-		b_material_index = context->m_storage_memory.allocateMemory(desc);
-		desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
-		auto staging = context->m_staging_memory.allocateMemory(desc);
+		b_material_index = context->m_storage_memory.allocateMemory<uint32_t>(resource->m_mesh.size());
 
 		std::vector<uint32_t> material_index(resource->m_mesh.size());
 		for (size_t i = 0; i < material_index.size(); i++)
 		{
-			staging.getMappedPtr()[i] = resource->m_mesh[i].m_material_index;
+			material_index[i] = resource->m_mesh[i].m_material_index;
 		}
 
 
-		vk::BufferCopy copy_info;
-		copy_info.setSize(staging.getInfo().range);
-		copy_info.setSrcOffset(staging.getInfo().offset);
-		copy_info.setDstOffset(b_material_index.getInfo().offset);
-		cmd.copyBuffer(staging.getInfo().buffer, b_material_index.getInfo().buffer, copy_info);
+		cmd.updateBuffer(b_material_index.getInfo().buffer, b_material_index.getInfo().offset, vector_sizeof(material_index), material_index.data());
 
 	}
 
 	// material
 	{
-		btr::BufferMemoryDescriptorEx<MaterialBuffer> desc;
-		desc.element_num = resource->m_material.size();
-		b_material = context->m_storage_memory.allocateMemory(desc);
-		desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
-		auto staging = context->m_staging_memory.allocateMemory(desc);
-		auto* mb = static_cast<MaterialBuffer*>(staging.getMappedPtr());
+		b_material = context->m_storage_memory.allocateMemory<MaterialBuffer>(resource->m_material.size());
+		std::vector<MaterialBuffer> material(resource->m_material.size());
 		for (size_t i = 0; i < resource->m_material.size(); i++)
 		{
-			mb[i].mAmbient = resource->m_material[i].mAmbient;
-			mb[i].mDiffuse = resource->m_material[i].mDiffuse;
-			mb[i].mEmissive = resource->m_material[i].mEmissive;
-			mb[i].mSpecular = resource->m_material[i].mSpecular;
-			mb[i].mShininess = resource->m_material[i].mShininess;
+			material[i].mAmbient = resource->m_material[i].mAmbient;
+			material[i].mDiffuse = resource->m_material[i].mDiffuse;
+			material[i].mEmissive = resource->m_material[i].mEmissive;
+			material[i].mSpecular = resource->m_material[i].mSpecular;
+			material[i].mShininess = resource->m_material[i].mShininess;
 		}
 
 
-		vk::BufferCopy copy_info;
-		copy_info.setSize(staging.getInfo().range);
-		copy_info.setSrcOffset(staging.getInfo().offset);
-		copy_info.setDstOffset(b_material.getInfo().offset);
-		cmd.copyBuffer(staging.getInfo().buffer, b_material.getInfo().buffer, copy_info);
+		cmd.updateBuffer(b_material.getInfo().buffer, b_material.getInfo().offset, vector_sizeof(material), material.data());
 	}
 
 	// todo 結構適当
@@ -273,24 +212,11 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 			info.mInstanceMaxNum = m_instance_max_num;
 			info.mInstanceNum = 0;
 
-			btr::BufferMemoryDescriptorEx<ModelInstancingInfo> desc;
-			desc.element_num = 1;
-			desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
-			auto staging = context->m_staging_memory.allocateMemory(desc);
-			*staging.getMappedPtr() = info;
-
-			vk::BufferCopy copy;
-			copy.setSrcOffset(staging.getInfo().offset);
-			copy.setDstOffset(b_model_instancing_info.getInfo().offset);
-			copy.setSize(staging.getInfo().range);
-			cmd.copyBuffer(staging.getInfo().buffer, b_model_instancing_info.getInfo().buffer, copy);
+			cmd.updateBuffer<ModelInstancingInfo>(b_model_instancing_info.getInfo().buffer, b_model_instancing_info.getInfo().offset, info);
 		}
 
 		{
-			btr::BufferMemoryDescriptorEx<mat4> desc;
-			desc.element_num = m_instance_max_num;
-			desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
-			auto staging = context->m_staging_memory.allocateMemory(desc);
+			auto staging = context->m_staging_memory.allocateMemory<mat4>(m_instance_max_num, true);
 			for (uint32_t i = 0; i < m_instance_max_num; i++)
 			{
 				*staging.getMappedPtr(i) = glm::scale(glm::translate(glm::ballRand(700.f)), vec3(.2f));
