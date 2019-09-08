@@ -13,21 +13,22 @@ layout (local_size_x = 1024, local_size_y = 1) in;
 
 void main() 
 {
-	uint index = gl_GlobalInvocationID.x;
+	uint node_global_index = gl_GlobalInvocationID.x;
 	ModelInfo model_info = u_model_info;
-	if(index >= model_info.nodeNum * b_model_instancing_info.instanceAliveNum){ return; }
+	if(node_global_index >= model_info.nodeNum * b_model_instancing_info.instanceAliveNum){ return; }
 
-	uint model_index = index / model_info.nodeNum;
+	uint model_index = node_global_index / model_info.nodeNum;
+
 	PlayingAnimation pa = b_playing_animation[model_index];
 	AnimationInfo aInfo = b_animation_info[pa.playingAnimationNo];
-	uint nodeIndex = index % model_info.nodeNum;
 
+	uint node_index = node_global_index % model_info.nodeNum;
 	mat4 local = mat4(1.);
-	vec4 xyz = texture(t_motion_texture, vec2(pa.time / aInfo.maxTime, nodeIndex*3));
-	vec4 rot = texture(t_motion_texture, vec2(pa.time / aInfo.maxTime, nodeIndex*3+1));
-	vec4 scale = texture(t_motion_texture, vec2(pa.time / aInfo.maxTime, nodeIndex*3+2));
+	vec4 xyz = texture(t_motion_texture, vec2(pa.time / aInfo.maxTime, node_index*3));
+	vec4 rot = texture(t_motion_texture, vec2(pa.time / aInfo.maxTime, node_index*3+1));
+	vec4 scale = texture(t_motion_texture, vec2(pa.time / aInfo.maxTime, node_index*3+2));
 	local = scaling(local, scale.xyz) * translate(mat4(1.), xyz.xyz) * mat4(quatToMat3(rot));
-	b_node_transform[index] = local;
+	b_node_transform[node_global_index] = local;
 
 }
 

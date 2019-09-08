@@ -86,11 +86,11 @@ public:
 		enum {
 			BONE_NUM = 4,
 		};
-		glm::vec3	m_position;
-		glm::vec3	m_normal;
-		s8x4		m_texcoord0;
-		glm::u8vec4	m_bone_ID;	//!< 
-		u8x4		m_weight;
+		vec3		m_position;
+		uint32_t	m_normal;
+		uint32_t	m_texcoord0;
+		u8vec4		m_bone_ID;	//!< 
+		u8vec4		m_weight;
 	};
 
 	struct Material {
@@ -192,25 +192,25 @@ public:
 			vk::VertexInputAttributeDescription()
 			.setBinding(0)
 			.setLocation(1)
-			.setFormat(vk::Format::eR32G32B32Sfloat)
+			.setFormat(vk::Format::eA2R10G10B10SnormPack32)
 			.setOffset(12),
 			// texcoord
 			vk::VertexInputAttributeDescription()
 			.setBinding(0)
 			.setLocation(2)
-			.setFormat(vk::Format::eR8G8B8A8Snorm)
-			.setOffset(24),
-			// boneID
+			.setFormat(vk::Format::eA2R10G10B10SnormPack32)
+			.setOffset(16),
+				// boneID
 			vk::VertexInputAttributeDescription()
 			.setBinding(0)
 			.setLocation(3)
 			.setFormat(vk::Format::eR8G8B8A8Uint)
-			.setOffset(28),
+			.setOffset(20),
 			vk::VertexInputAttributeDescription()
 			.setBinding(0)
 			.setLocation(4)
 			.setFormat(vk::Format::eR8G8B8A8Unorm)
-			.setOffset(32),
+			.setOffset(24),
 		};
 
 	}
