@@ -26,8 +26,8 @@ void main()
 	{
 		b_node_transform[root_index] = model_info.invGlobalMatrix * b_world[model_index] * b_node_transform[root_index];
 	}
-	barrier();
 	memoryBarrierBuffer();
+	barrier();
 	NodeInfo node_info = b_node_info[node_index];
 	for(uint i=1; i < model_info.node_depth_max; i++)
 	{
@@ -35,7 +35,7 @@ void main()
 		{
 			b_node_transform[root_index + node_index] = b_node_transform[root_index + node_info.parent] * b_node_transform[root_index + node_index];
 		}
-		barrier();
 		memoryBarrierBuffer();
+		barrier();
 	}
 }

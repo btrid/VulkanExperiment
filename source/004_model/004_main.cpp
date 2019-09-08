@@ -46,7 +46,7 @@ int main()
 
 	app::AppDescriptor app_desc;
 	app_desc.m_gpu = gpu;
-	app_desc.m_window_size = uvec2(640, 480);
+	app_desc.m_window_size = uvec2(1024, 1024);
 	app::App app(app_desc);
 	auto context = app.m_context;
 

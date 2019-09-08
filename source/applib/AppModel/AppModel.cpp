@@ -88,13 +88,13 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 		int32_t local_size_x = 1024;
 		uvec3 local_size(1024, 1, 1);
 		auto nc = (local_size_x / resource->m_model_info.mNodeNum) * resource->m_model_info.mNodeNum;
-		auto node_count = instanceNum * resource->m_model_info.mNodeNum / nc + 1; // @todo 正しい計算 +1は無駄な時ある？
+		auto dispach_count = ((instanceNum * resource->m_model_info.mNodeNum) + (nc - 1)) / nc;
 		uvec3 group[] =
 		{
 			uvec3(1, 1, 1),
 			app::calcDipatchGroups(uvec3(instanceNum, 1, 1), local_size),
 			app::calcDipatchGroups(uvec3(instanceNum*resource->m_model_info.mNodeNum, 1, 1), local_size),
-			uvec3(1, node_count, 1),
+			uvec3(1, dispach_count, 1),
 			app::calcDipatchGroups(uvec3(instanceNum, 1, 1), local_size),
 			app::calcDipatchGroups(uvec3(instanceNum*resource->m_model_info.mBoneNum, 1, 1), local_size),
 		};
