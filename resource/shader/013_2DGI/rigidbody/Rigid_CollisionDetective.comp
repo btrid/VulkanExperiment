@@ -41,9 +41,9 @@ void main()
 	float len = length_safe(vel);
 	vec2 dir = normalize_safe(vel);
 
+	b_rbParticle[p_id].flag &= ~(1<<20);
 	for(int iter = 0; iter < len+1.; iter++)
 	{
-
 		float rate = isZero(len) ? 1. : min(iter/len, 1.);
 		pos = pos_old + dir * rate * len;
 
@@ -69,25 +69,29 @@ void main()
 			}
 
 			vec2 sdf_j = -b_collidable[fj_id].sdf;
+//			sdf_j = isZero(sdf_j) ? -dir : sdf_j;
 			float mass_j = b_collidable[fj_id].mass_inv;
 			float c = max(dot(sdf, sdf_j), 0.);
 			float s = max(cross(vec3(sdf, 0.0), vec3(sdf_j, 0.0)).z, 0.);
 			float total_mass = mass + mass_j;
 			{
-//				vec2 n_vec = pos_j + sdf_j - pos;
-//				pos += dot(n_vec, sdf_j) * sdf_j * ((mass /total_mass) * c);
-				pos += sdf_j;
+				vec2 n_vec = (pos_j - pos) + sdf_j;
+				pos += dot(n_vec, sdf_j) * sdf_j * ((mass /total_mass) * c);
+//				pos += sdf_j;
 
 				// 摩擦
-				vec2 vel_unit = isZero(vel) ? vec2(0.) : normalize(vel);
-				vec2 t_vec = calcTangent(vel_unit, sdf_j) * s;
-				pos -= t_vec*0.2;
+//				vec2 vel_unit = isZero(vel) ? vec2(0.) : normalize(vel);
+//				vec2 t_vec = calcTangent(dir, sdf_j) * s;
+//				pos -= t_vec*0.2;
 			}
+			b_rbParticle[p_id].flag |= (1<<20);
+			iter = 9999;
 			break;
 		}
 	}
 
 	b_rbParticle[p_id].pos = pos;
+//	b_rbParticle[p_id].pos_old = pos;
 
 	if(((b_rigidbody[r_id].flag & RB_FLAG_FLUID) == 0))
 	{

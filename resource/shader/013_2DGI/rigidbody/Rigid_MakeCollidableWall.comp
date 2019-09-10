@@ -12,9 +12,9 @@ layout (local_size_x=8, local_size_y=8) in;
 
 void main() 
 {
-	uint64_t fragment_map = b_fragment_map[gl_WorkGroupID.x + gl_WorkGroupID.y * u_gi2d_info.m_resolution.z];
-	uint64_t bit = 1ul<<(gl_LocalInvocationID.x+gl_LocalInvocationID.y*8);
-	if((fragment_map & bit) == 0)
+	uint64_t fragment_map = b_fragment_map[gl_WorkGroupID.x+gl_WorkGroupID.y*u_gi2d_info.m_resolution.z];
+	uint64_t bit = 1ul<<(gl_LocalInvocationID.x+gl_LocalInvocationID.y*8ul);
+	if((fragment_map & bit) == 0ul)
 	{
 		return;
 	}
@@ -26,6 +26,7 @@ void main()
 	c.mass_inv = 0.;
 	c.pos = vec2(gl_GlobalInvocationID.xy) + vec2(0.5);
 	vec2 sdf = gl_GlobalInvocationID.xy - vec2(b_jfa[i]);
+//	c.sdf = sdf;
 	c.sdf = normalize(sdf) * min(length(sdf) * 0.51, 1.);
 	c.vel = vec2(0.);
 

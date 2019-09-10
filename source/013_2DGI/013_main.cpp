@@ -346,7 +346,7 @@ int radiosity()
 	app::App app(app_desc);
 
 	auto context = app.m_context;
-	
+
 	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
 	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchainPtr());
 
@@ -367,11 +367,80 @@ int radiosity()
 
 		app.preUpdate();
 		{
-			enum 
+			enum
 			{
-//				cmd_model_update,
+				//				cmd_model_update,
 				cmd_render_clear,
-//				cmd_crowd,
+				//				cmd_crowd,
+				cmd_gi2d,
+				cmd_render_present,
+				cmd_num
+			};
+			std::vector<vk::CommandBuffer> cmds(cmd_num);
+
+			{
+				cmds[cmd_render_clear] = clear_pipeline.execute();
+				cmds[cmd_render_present] = present_pipeline.execute();
+			}
+
+			// gi2d
+			{
+				auto cmd = context->m_cmd_pool->allocCmdOnetime(0, "cmd_gi2d");
+				gi2d_context->execute(cmd);
+				gi2d_debug.executeMakeFragment(cmd);
+
+				gi2d_make_hierarchy.executeMakeFragmentMap(cmd);
+
+				gi2d_Radiosity.executeRadiosity(cmd);
+				gi2d_Radiosity.executeRendering(cmd);
+
+				cmd.end();
+				cmds[cmd_gi2d] = cmd;
+			}
+			app.submit(std::move(cmds));
+		}
+		app.postUpdate();
+		printf("%-6.4fms\n", time.getElapsedTimeAsMilliSeconds());
+	}
+
+	return 0;
+}
+
+int radiosity2()
+{
+	auto gpu = sGlobal::Order().getGPU(0);
+	auto device = sGlobal::Order().getGPU(0).getDevice();
+
+	app::AppDescriptor app_desc;
+	app_desc.m_gpu = gpu;
+	app_desc.m_window_size = uvec2(1024, 1024);
+	app::App app(app_desc);
+
+	auto context = app.m_context;
+
+	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
+	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchainPtr());
+
+	GI2DDescription gi2d_desc;
+	gi2d_desc.RenderWidth = app_desc.m_window_size.x;
+	gi2d_desc.RenderHeight = app_desc.m_window_size.y;
+	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context, gi2d_desc);
+
+	GI2DDebug gi2d_debug(context, gi2d_context);
+	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
+	GI2DRadiosity2 gi2d_Radiosity(context, gi2d_context, app.m_window->getFrontBuffer());
+
+	app.setup();
+
+	while (true)
+	{
+		cStopWatch time;
+
+		app.preUpdate();
+		{
+			enum
+			{
+				cmd_render_clear,
 				cmd_gi2d,
 				cmd_render_present,
 				cmd_num
@@ -429,7 +498,8 @@ int main()
 
 //	return pathFinding();
 //	return rigidbody();
-	return radiosity();
+//	return radiosity();
+//	return radiosity2();
 
 	auto gpu = sGlobal::Order().getGPU(0);
 	auto device = sGlobal::Order().getGPU(0).getDevice();
@@ -468,10 +538,10 @@ int main()
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
 		cmd.updateBuffer<uint64_t>(game_context->b_state.getInfo().buffer, game_context->b_state.getInfo().offset, 1ull);
-		cmd.updateBuffer<vec2>(game_context->b_movable.getInfo().buffer, game_context->b_movable.getInfo().offset, vec2(256.f, 756.f));
+		cmd.updateBuffer<vec2>(game_context->b_movable.getInfo().buffer, game_context->b_movable.getInfo().offset, vec2(756.f, 990.f));
 
 		GI2DRB_MakeParam param;
-		param.aabb = uvec4(256, 756, 16, 16);
+		param.aabb = uvec4(756, 990, 16, 16);
 		param.is_fluid = false;
 		param.is_usercontrol = true;
 		gi2d_physics_context->make(cmd, param);
@@ -505,6 +575,20 @@ int main()
 			// gi2d
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0, "cmd_gi2d");
+				if (context->m_window->getInput().m_keyboard.isOn('A'))
+				{
+					for (int y = 0; y < 1; y++) {
+						for (int x = 0; x < 1; x++) {
+							GI2DRB_MakeParam param;
+							param.aabb = uvec4(880 + x * 32, 620 - y * 16, 16, 16);
+							param.is_fluid = false;
+							param.is_usercontrol = false;
+							gi2d_physics_context->make(cmd, param);
+						}
+					}
+				}
+
+
 				gi2d_context->execute(cmd);
 				gi2d_debug.executeMakeFragment(cmd);
 
@@ -516,6 +600,8 @@ int main()
  				gi2d_physics_proc.executeDrawParticle(cmd, gi2d_physics_context, app.m_window->getFrontBuffer());
 				game_proc.executeMovableUpdatePostPyhsics(cmd, context, game_context, player.m_gameobject);
 
+//				gi2d_debug.executeDrawFragmentMap(cmd, app.m_window->getFrontBuffer());
+
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;
 			}
@@ -524,15 +610,4 @@ int main()
 		app.postUpdate();
 		printf("%-6.4fms\n", time.getElapsedTimeAsMilliSeconds());
 	}
-
-	VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-	bufferInfo.size = 65536;
-	bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-
-	VmaAllocationCreateInfo allocInfo = {};
-	allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-
-	VkBuffer buffer;
-	VmaAllocation allocation;
-	vmaCreateBuffer(allocator, &bufferInfo, &allocInfo, &buffer, &allocation, nullptr);	return 0;
 }

@@ -288,6 +288,7 @@ struct GameProcedure
 		{
 			vk::BufferMemoryBarrier to_read[] = {
 				game_context->b_movable.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				game_context->m_physics_context->b_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite),
 			};
 			to_read[0].offset += ds.index * sizeof(cMovable);
 			to_read[0].size = sizeof(cMovable);

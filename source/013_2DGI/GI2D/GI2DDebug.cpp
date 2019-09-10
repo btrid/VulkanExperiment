@@ -13,7 +13,7 @@ struct GI2DLightData
 
 GI2DLightData g_data[50];
 GI2DContext::Fragment g_wall(vec3(0.8f, 0.2f, 0.2f), true, false);
-GI2DContext::Fragment g_path(vec3(1.f), false, false);
+GI2DContext::Fragment g_path(vec3(0.9f), false, false);
 
 GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context)
 {
@@ -34,14 +34,14 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 		std::vector<F> rect;
 		for (int i = 0; i < 600; i++) 
 		{
-			rect.emplace_back(F{ ivec4{ std::rand() % gi2d_context->RenderWidth , std::rand() % gi2d_context->RenderHeight, std::rand() % 12 + 16, std::rand() % 12 + 16 }, vec4(std::rand() % 80 + 20,std::rand() % 80 + 20,std::rand() % 80 + 20,100) * 0.01f });
+//			rect.emplace_back(F{ ivec4{ std::rand() % gi2d_context->RenderWidth , std::rand() % gi2d_context->RenderHeight, std::rand() % 12 + 16, std::rand() % 12 + 16 }, vec4(std::rand() % 80 + 20,std::rand() % 80 + 20,std::rand() % 80 + 20,100) * 0.01f });
 		}
-//		rect.emplace_back(F{ ivec4{ 0, 0, 10, 1023, }, vec4{ 0.8f,0.2f,0.2f,0.f } });
-//		rect.emplace_back(F{ ivec4{ 1010, 0, 10, 1023, }, vec4{ 0.8f,0.2f,0.2f,0.f } });
-//		rect.emplace_back(F{ ivec4{ 0, 1010, 1024, 10, }, vec4{ 0.8f,0.2f,0.2f,0.f } });
+		rect.emplace_back(F{ ivec4{ 0, 0, 10, 1023, }, vec4{ 0.8f,0.2f,0.2f,0.f } });
+		rect.emplace_back(F{ ivec4{ 1010, 0, 10, 1023, }, vec4{ 0.8f,0.2f,0.2f,0.f } });
+		rect.emplace_back(F{ ivec4{ 0, 1010, 1024, 1, }, vec4{ 0.8f,0.2f,0.2f,0.f } });
 		for (int i = 0; i < 500; i++)
 		{
-//			rect.emplace_back(F{ ivec4{ 20+i, 200+i, 100, 1000 }, vec4{ 1.f, 0.3f, 0.3f, 0.3f } });
+			rect.emplace_back(F{ ivec4{ 20+i, 200+i, 100, 1000 }, vec4{ 1.f, 0.3f, 0.3f, 0.3f } });
 		}
 
 		for (size_t y = 0; y < gi2d_context->RenderHeight; y++)
@@ -328,7 +328,7 @@ void GI2DDebug::executeMakeFragment(vk::CommandBuffer cmd)
 		for (int i = 0; i < std::size(g_data); i++)
 		{
 			cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayout_PointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, g_data[i]);
-	 		cmd.dispatch(1, 1, 1);
+//	 		cmd.dispatch(1, 1, 1);
 		}
 	}
 }

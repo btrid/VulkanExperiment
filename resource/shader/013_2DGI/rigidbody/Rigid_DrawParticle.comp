@@ -24,7 +24,8 @@ void main()
 
 //	vec4 color = vec4(unpackUnorm4x8(b_rbParticle[p_id].color).xyz, 1.);
 	vec4 color = vec4(abs(b_rbParticle[p_id].sdf), 0., 1.);
-
+	color = (b_rbParticle[p_id].flag & (1<<20)) != 0 ? vec4(0., 0., 1., 1.) : color;
+#if 0
 	uint r_id = b_rbParticle_map[pb_id];
 	vec4 xaxis = (mat2(b_rigidbody[r_id].R.xy, b_rigidbody[r_id].R.zw) * vec2(1., 0.)).xyxy * vec2(0.25, -0.25).xxyy;
 	vec4 yaxis = (mat2(b_rigidbody[r_id].R.xy, b_rigidbody[r_id].R.zw) * vec2(0., 1.)).xyxy * vec2(0.25, -0.25).xxyy;
@@ -49,7 +50,8 @@ void main()
 	if(d2 <= 0.4) { imageStore(i_render_target, ivec2(ipx.y, ipy.y), color); }
 	if(d3 <= 0.4) { imageStore(i_render_target, ivec2(ipx.z, ipy.z), color); }
 	if(d4 <= 0.4) { imageStore(i_render_target, ivec2(ipx.w, ipy.w), color); }
-
-//	b_fragment[index.x+index.y*u_gi2d_info.m_resolution.x] = f;
+#else
+	imageStore(i_render_target, index, color);
+#endif
 }
 
