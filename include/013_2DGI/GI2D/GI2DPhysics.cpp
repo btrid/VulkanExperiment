@@ -403,8 +403,9 @@ void GI2DPhysics::make(vk::CommandBuffer cmd, const GI2DRB_MakeParam& param)
 	{
 		Rigidbody rb;
 		rb.R = vec4(1.f, 0.f, 0.f, 1.f);
+		rb.R_old = rb.R;
 		rb.cm = vec2(center_of_mass);
-		rb.cm_old = vec2(center_of_mass);
+		rb.cm_old = rb.cm;
 		rb.flag = 0;
 		rb.flag |= param.is_fluid ? RB_FLAG_FLUID : 0;
 		rb.flag |= param.is_usercontrol ? RB_FLAG_USER_CONTROL : 0;

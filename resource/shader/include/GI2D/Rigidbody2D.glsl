@@ -58,6 +58,7 @@ struct Rigidbody
 	uint _p1;
 
 	vec4 R;
+	vec4 R_old;
 
 	i64vec2 cm_work;
 	i64vec4 Apq_work;
