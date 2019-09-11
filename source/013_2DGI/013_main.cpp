@@ -580,7 +580,7 @@ int main()
 					for (int y = 0; y < 1; y++) {
 						for (int x = 0; x < 1; x++) {
 							GI2DRB_MakeParam param;
-							param.aabb = uvec4(880 + x * 32, 620 - y * 16, 16, 16);
+							param.aabb = uvec4(880 + x * 32, 620 - y * 16, 64, 64);
 							param.is_fluid = false;
 							param.is_usercontrol = false;
 							gi2d_physics_context->make(cmd, param);

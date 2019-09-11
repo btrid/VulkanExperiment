@@ -20,12 +20,12 @@ void main()
 	vec2 q = b_rbParticle[p_id].relative_pos.xy;
 	vec2 p = b_rbParticle[p_id].pos - b_rigidbody[r_id].cm;
 	vec4 pq = p.xxyy * q.xyxy;
-	i64vec4 Aqpi_integer = i64vec4(round(pq*65535.));
+	i64vec4 Apq_integer = i64vec4(round(pq*CM_WORK_PRECISION));
 
-	atomicAdd(b_rigidbody[r_id].Apq_work.x, Aqpi_integer.x);
-	atomicAdd(b_rigidbody[r_id].Apq_work.y, Aqpi_integer.y);
-	atomicAdd(b_rigidbody[r_id].Apq_work.z, Aqpi_integer.z);
-	atomicAdd(b_rigidbody[r_id].Apq_work.w, Aqpi_integer.w);
+	atomicAdd(b_rigidbody[r_id].Apq_work.x, Apq_integer.x);
+	atomicAdd(b_rigidbody[r_id].Apq_work.y, Apq_integer.y);
+	atomicAdd(b_rigidbody[r_id].Apq_work.z, Apq_integer.z);
+	atomicAdd(b_rigidbody[r_id].Apq_work.w, Apq_integer.w);
 }
 
 

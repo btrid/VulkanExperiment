@@ -53,10 +53,9 @@ struct Rigidbody
 	float life;
 	vec2 cm;
 
+	vec2 cm_old;
 	uint flag;
 	uint _p1;
-	uint _p2;
-	uint _p3;
 
 	vec4 R;
 

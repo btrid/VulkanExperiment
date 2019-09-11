@@ -76,12 +76,12 @@ void main()
 			float total_mass = mass + mass_j;
 			{
 				vec2 n_vec = (pos_j - pos) + sdf_j;
-				pos += dot(n_vec, sdf_j) * sdf_j * ((mass /total_mass) * c);
-//				pos += sdf_j;
+//				pos += dot(n_vec, sdf_j) * sdf_j * ((mass /total_mass) * c);
+//				pos += normalize_safe(sdf_j);
+				pos += (pos_j - pos) + sdf_j;
 
 				// 摩擦
-//				vec2 vel_unit = isZero(vel) ? vec2(0.) : normalize(vel);
-//				vec2 t_vec = calcTangent(dir, sdf_j) * s;
+//				vec2 t_vec = calcTangent(dir, normalize_safe(sdf_j)) * s;
 //				pos -= t_vec*0.2;
 			}
 			b_rbParticle[p_id].flag |= (1<<20);
@@ -90,7 +90,8 @@ void main()
 		}
 	}
 
-	b_rbParticle[p_id].pos = pos;
+	if((b_rbParticle[p_id].flag & (1<<20)) != 0)
+		b_rbParticle[p_id].pos = pos;
 //	b_rbParticle[p_id].pos_old = pos;
 
 	if(((b_rigidbody[r_id].flag & RB_FLAG_FLUID) == 0))

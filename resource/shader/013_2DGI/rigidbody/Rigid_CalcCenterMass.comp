@@ -14,6 +14,7 @@ void main()
 //	if(r_id >= b_world.rigidbody_num){ return; }
 
 	dvec2 cm = dvec2(b_rigidbody[r_id].cm_work) / CM_WORK_PRECISION / b_rigidbody[r_id].pnum + b_rigidbody[r_id].cm;
+	b_rigidbody[r_id].cm_old = b_rigidbody[r_id].cm;
 	b_rigidbody[r_id].cm = vec2(cm);
 
 	b_rigidbody[r_id].cm_work = i64vec2(0);

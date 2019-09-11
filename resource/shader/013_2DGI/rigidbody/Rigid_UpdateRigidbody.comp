@@ -70,7 +70,7 @@ void main()
 {
 	uint r_id = b_rb_update_list[b_world.cpu_index*b_manager.rb_list_size+gl_GlobalInvocationID.x];
 
-	mat2 Apq = mat2(dvec4(b_rigidbody[r_id].Apq_work) / 65535.);
+	mat2 Apq = mat2(dvec4(b_rigidbody[r_id].Apq_work) / CM_WORK_PRECISION);
 	mat2 R, S;
 	polarDecomposition(Apq, R, S);
 	b_rigidbody[r_id].R = vec4(R[0][0], R[1][0], R[0][1], R[1][1]);

@@ -8,7 +8,6 @@ SET option=--target-env vulkan1.1 -V -w
 SET exe=glslangValidator.exe
 SET output=-o ../../binary
 
-%exe% %include% %option% %output%/Rigid_ToFragment.comp.spv Rigid_ToFragment.comp
 %exe% %include% %option% %output%/Rigid_DrawParticle.comp.spv Rigid_DrawParticle.comp
 %exe% %include% %option% %output%/Rigid_MakeCollidableWall.comp.spv Rigid_MakeCollidableWall.comp
 
