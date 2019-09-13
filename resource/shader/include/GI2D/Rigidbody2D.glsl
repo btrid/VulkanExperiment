@@ -142,7 +142,9 @@ layout(set=USE_Rigidbody2D, binding=11, std430) restrict buffer rbRBActiveBuffer
 layout(set=USE_Rigidbody2D, binding=12, std430) restrict buffer rbPBActiveBuffer {
 	uint b_pb_update_list[];
 };
-
+layout(set=USE_Rigidbody2D, binding=13, std430) restrict buffer rbCollidableWallBuffer {
+	rbCollidable b_collidable_wall[];
+};
 
 #endif
 #if defined(USE_MakeRigidbody)

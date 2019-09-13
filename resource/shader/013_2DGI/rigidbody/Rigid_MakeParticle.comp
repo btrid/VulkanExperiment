@@ -27,6 +27,7 @@ void main()
 
 //	vec2 pos_old = b_rbParticle[p_id].pos_old;
 	b_rbParticle[p_id].pos_old = b_rbParticle[p_id].pos;
+//	b_rbParticle[p_id].pos_old = pos_old;
 
 	if((b_rigidbody[r_id].flag & RB_FLAG_USER_CONTROL) == 0)
 	{
