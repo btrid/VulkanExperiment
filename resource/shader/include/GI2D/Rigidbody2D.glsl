@@ -103,47 +103,47 @@ struct BufferManage
 	uint pb_free_index;
 };
 
-layout(set=USE_Rigidbody2D, binding=0, std430) restrict buffer WorldData {
+layout(set=USE_Rigidbody2D, binding=0, std430) buffer WorldData {
 	rbWorld b_world;
 };
-layout(set=USE_Rigidbody2D, binding=1, std430) restrict buffer rbInfoBuffer {
+layout(set=USE_Rigidbody2D, binding=1, std430) buffer rbInfoBuffer {
 	Rigidbody b_rigidbody[];
 };
-layout(set=USE_Rigidbody2D, binding=2, std430) restrict buffer rbParticleBuffer {
+layout(set=USE_Rigidbody2D, binding=2, std430) buffer rbParticleBuffer {
 	rbParticle b_rbParticle[];
 };
-layout(set=USE_Rigidbody2D, binding=3, std430) restrict buffer rbParticleMappingBuffer {
+layout(set=USE_Rigidbody2D, binding=3, std430) buffer rbParticleMappingBuffer {
 	uint b_rbParticle_map[];
 };
-layout(set=USE_Rigidbody2D, binding=4, std430) restrict buffer rbCollidableCounter {
+layout(set=USE_Rigidbody2D, binding=4, std430) buffer rbCollidableCounter {
 	uint b_collidable_counter[];
 };
-layout(set=USE_Rigidbody2D, binding=5, std430) restrict buffer rbCollidableBuffer {
+layout(set=USE_Rigidbody2D, binding=5, std430) buffer rbCollidableBuffer {
 	rbCollidable b_collidable[];
 };
-layout(set=USE_Rigidbody2D, binding=6, std430) restrict buffer rbFluidCounter {
+layout(set=USE_Rigidbody2D, binding=6, std430) buffer rbCollidableWallBuffer {
+	rbCollidable b_collidable_wall[];
+};
+layout(set=USE_Rigidbody2D, binding=7, std430) buffer rbFluidCounter {
 	uint b_fluid_counter[];
 };
-layout(set=USE_Rigidbody2D, binding=7, std430) restrict buffer rbBufferManageData {
+layout(set=USE_Rigidbody2D, binding=8, std430) buffer rbBufferManageData {
 	BufferManage b_manager;
 };
-layout(set=USE_Rigidbody2D, binding=8, std430) restrict buffer rbRigidbodyFreelist {
+layout(set=USE_Rigidbody2D, binding=9, std430) buffer rbRigidbodyFreelist {
 	uint b_rb_memory_list[];
 };
-layout(set=USE_Rigidbody2D, binding=9, std430) restrict buffer rbParticleBlockFreelist {
+layout(set=USE_Rigidbody2D, binding=10, std430) buffer rbParticleBlockFreelist {
 	uint b_pb_memory_list[];
 };
-layout(set=USE_Rigidbody2D, binding=10, std430) restrict buffer rbActiveCounter {
+layout(set=USE_Rigidbody2D, binding=11, std430) buffer rbActiveCounter {
 	uvec4 b_update_counter[];
 };
-layout(set=USE_Rigidbody2D, binding=11, std430) restrict buffer rbRBActiveBuffer {
+layout(set=USE_Rigidbody2D, binding=12, std430) buffer rbRBActiveBuffer {
 	uint b_rb_update_list[];
 };
-layout(set=USE_Rigidbody2D, binding=12, std430) restrict buffer rbPBActiveBuffer {
+layout(set=USE_Rigidbody2D, binding=13, std430) buffer rbPBActiveBuffer {
 	uint b_pb_update_list[];
-};
-layout(set=USE_Rigidbody2D, binding=13, std430) restrict buffer rbCollidableWallBuffer {
-	rbCollidable b_collidable_wall[];
 };
 
 #endif

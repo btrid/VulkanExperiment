@@ -30,6 +30,8 @@ void main()
 	uint p_id = pb_id*RB_PARTICLE_BLOCK_SIZE + gl_LocalInvocationID.x;
 	if((b_rbParticle[p_id].flag & RBP_FLAG_ACTIVE) == 0){ return; }
 
+	const ivec4 reso = u_gi2d_info.m_resolution;
+
 	uint r_id = b_rbParticle_map[pb_id];
 
 	vec2 pos = b_rbParticle[p_id].pos;
@@ -44,14 +46,15 @@ void main()
 
 	b_rbParticle[p_id].flag &= ~(1<<20);
 	bool is_hit = false;
-	// まず壁と判定
-	for(int iter = 0; iter < len+1.; iter++)
-	{
-		float rate = isZero(len) ? 1. : min(iter/len, 1.);
-		vec2 pos_i = pos_old + dir * rate * len;
 
-		ivec2 map_index = ivec2(pos_i);
-		int findex = map_index.x + map_index.y * u_gi2d_info.m_resolution.x;
+	// まず壁と判定
+	for(uint iter = 0; iter < len+1.; iter++)
+	{
+		vec2 pos_i = pos_old + dir * min(iter, len);
+
+		uvec2 map_index = uvec2(pos_i);
+		if(any(greaterThanEqual(map_index, reso.xy))){ continue; }
+		uint findex = map_index.x + map_index.y * reso.x;
 
 		uint fj_id = findex;
 		if(b_collidable_wall[fj_id].r_id == 0){ continue; }

@@ -193,6 +193,7 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 				b_rbparticle_map.getInfo(),
 				b_collidable_counter.getInfo(),
 				b_collidable.getInfo(),
+				b_collidable_wall.getInfo(),
 				b_fluid_counter.getInfo(),
 				b_manager.getInfo(),
 				b_rb_memory_list.getInfo(),
@@ -200,7 +201,6 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 				b_update_counter.getInfo(),
 				b_rb_update_list.getInfo(),
 				b_pb_update_list.getInfo(),
-				b_collidable_wall.getInfo(),
 			};
 
 			vk::WriteDescriptorSet write[] =
@@ -461,6 +461,10 @@ void GI2DPhysics::make(vk::CommandBuffer cmd, const GI2DRB_MakeParam& param)
 
 	}
 	_make(cmd);
+
+// 	static int a;
+// 	a++;
+// 	printf("%d\n", a);
 
 }
 void GI2DPhysics::getRBID(vk::CommandBuffer cmd, const vk::DescriptorBufferInfo& info)
