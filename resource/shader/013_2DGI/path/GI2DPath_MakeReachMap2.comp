@@ -30,7 +30,7 @@ uvec4 neighor_check_list[] =
 	uvec4(2,6,4,4), // straight_wall
 };
 
-uint g_cost[] = {20, 10};
+
 struct OpenNode
 {
 	i16vec2 pos;
@@ -53,7 +53,7 @@ void explore(in OpenNode parent)
 			return;
 		}
 		
-		b_closed_node[index] = Node(parent.cost+g_cost[parent.dir_type%2], i16vec2(parent.pos));
+		b_closed_node[index] = Node(parent.cost, i16vec2(pos));
 	}
 
 	// 新しい探索のチェック
@@ -72,11 +72,11 @@ void explore(in OpenNode parent)
 
 
 		uint num = is_open.x+is_open.y+is_open.z+is_open.w + is_advance;
-#if 0
+#if 1
+
 		if(num != 0)
 		{
 			OpenNode node;
-			node.cost = parent.cost+1;
 			node.pos = i16vec2(pos);
 			
 			uint active_index = atomicAdd(s_open_counter[0], num);
@@ -84,12 +84,17 @@ void explore(in OpenNode parent)
 			{
 				if(is_open[i]==0){ continue; }
 				node.dir_type = path_check[i];
+				node.cost = parent.cost + ((node.dir_type%2)==0 ? 14 : 10);
+//				node.cost = parent.cost+1;
 				s_open[active_index++ % s_open.length()] = node;
 			}
 
 			if(is_advance != 0)
 			{
 				node.dir_type = parent.dir_type;
+				node.cost = parent.cost + ((node.dir_type%2)==0 ? 14 : 10);
+//				node.cost = parent.cost+g_cost[1];
+//				node.cost = parent.cost+1;
 				s_open[active_index++ % s_open.length()] = node;
 			}
 		}
@@ -104,18 +109,19 @@ void explore(in OpenNode parent)
 		global_index = subgroupMax(global_index);
 
 		OpenNode node;
-		node.cost = parent.cost+1;
 		node.pos = i16vec2(pos);
 		for(int i = 0; i < 4; i++)
 		{
 			if(is_open[i]==0){ continue; }
 			node.dir_type = path_check[i];
+			node.cost = parent.cost + g_cost[node.dir_type%2];
 			s_open[(global_index + local_index++) % s_open.length()] = node;
 		}
 
 		if(is_advance != 0)
 		{
 			node.dir_type = parent.dir_type;
+			node.cost = parent.cost + g_cost[node.dir_type%2];
 			s_open[(global_index + local_index++) % s_open.length()] = node;
 		}
 #endif
