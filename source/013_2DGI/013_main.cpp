@@ -496,7 +496,7 @@ int main()
 	camera->getData().m_far = 5000.f;
 	camera->getData().m_near = 0.01f;
 
-//	return pathFinding();
+	return pathFinding();
 //	return rigidbody();
 //	return radiosity();
 //	return radiosity2();

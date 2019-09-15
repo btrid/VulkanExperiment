@@ -370,7 +370,7 @@ struct GI2DMakeHierarchy
 			i16vec2 target[10];
 			i16vec2 target_num;
 			i16vec2 reso;
-		} constant{ {i16vec2(11, 11), i16vec2(1002, 1002), i16vec2(144, 844), i16vec2(855, 255)}, i16vec2(4, iter / 10), path_context->m_gi2d_context->RenderSize };
+		} constant{ {i16vec2(11, 11), i16vec2(1002, 1002), i16vec2(144, 844), i16vec2(855, 255)}, i16vec2(1, iter / 10), path_context->m_gi2d_context->RenderSize };
 		cmd.pushConstants(m_pipeline_layout[PipelineLayout_Path].get(), vk::ShaderStageFlagBits::eCompute, 0, sizeof(constant), &constant);
 
 		_label.insert("executeMakeReachMap_Precompute");
