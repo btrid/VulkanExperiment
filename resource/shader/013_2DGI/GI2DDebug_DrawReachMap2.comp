@@ -27,7 +27,7 @@ void main()
 	if((fragment_map & (1ul<<(bit.x+bit.y*8))) == 0)
 	{ 
 		uint i = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*u_gi2d_info.m_resolution.x;
-		uint cost = b_closed_node[i].cost;
+		uint cost = b_cost[i];
 		uint color_index1 = (cost / 1000) % colors.length();
 		uint color_index2 = (color_index1+1) % colors.length();
 		float color_rate = (cost % 1000) / 1000.;

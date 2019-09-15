@@ -18,6 +18,14 @@ const i16vec2 g_neighor_list[8] =
 	i16vec2(-1, 1),
 	i16vec2(-1, 0),
 };
+
+struct OpenNode
+{
+	i16vec2 pos;
+	uint cost;
+	uint dir_type;
+};
+
 struct Node
 {
 	uint cost;
@@ -33,8 +41,11 @@ layout(std430, set=USE_GI2D_Path, binding=2) restrict buffer PathNeibghborStateB
 	// 壁ならbitが立つ
 	uint8_t b_neighbor[];
 };
-layout(std430, set=USE_GI2D_Path, binding=3) restrict buffer PathNodeBuffer {
-	Node b_closed_node[];
+layout(std430, set=USE_GI2D_Path, binding=3) restrict buffer PathOpenNodeBuffer {
+	uint b_cost[];
+};
+layout(std430, set=USE_GI2D_Path, binding=4) restrict buffer PathNodeBuffer {
+	i16vec2 b_parent[];
 };
 #endif
 

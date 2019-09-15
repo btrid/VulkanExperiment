@@ -31,13 +31,8 @@ uvec4 neighor_check_list[] =
 };
 
 
-struct OpenNode
-{
-	i16vec2 pos;
-	uint cost;
-	uint dir_type;
-};
-shared OpenNode s_open[1024*2];
+
+shared OpenNode s_open[1024*3];
 shared uvec2 s_open_counter;
 
 void explore(in OpenNode parent)
@@ -46,14 +41,12 @@ void explore(in OpenNode parent)
 	int index = pos.x + pos.y * constant.reso.x;
 
 	{
-		// すでにチェック済みなら終わり
-		int bit = 1<<(index % 32);
-		if((atomicOr(b_closed[index / 32], bit) & bit) != 0)
+		uint data = atomicMin(b_cost[index], parent.cost);
+		if(data <= parent.cost)
 		{
 			return;
 		}
-		
-		b_closed_node[index] = Node(parent.cost, i16vec2(pos));
+		b_parent[index] = i16vec2(pos);
 	}
 
 	// 新しい探索のチェック
@@ -129,12 +122,7 @@ void explore(in OpenNode parent)
 }
 
 void main() 
-{
-	for(uint i = gl_LocalInvocationIndex; i < uint(constant.reso.x)*constant.reso.y/32; i+=gl_WorkGroupSize.x)
-	{
-		b_closed[i] = 0;
-	}
-	
+{	
 	if(gl_LocalInvocationIndex == 0)
 	{
 		s_open_counter = uvec2(0);
@@ -160,7 +148,8 @@ void main()
 		}
 		if((gl_LocalInvocationIndex %8) == 0 )
 		{
-			b_closed_node[index] = Node(0, node.pos);
+			b_cost[index] = 0;
+			b_parent[index] = node.pos;
 		}
 
 	}

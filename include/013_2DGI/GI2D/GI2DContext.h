@@ -138,6 +138,7 @@ struct GI2DContext
 					vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -362,7 +363,8 @@ struct GI2DPathContext
 			b_connect = context->m_storage_memory.allocateMemory<uint32_t>({ 1,{} });
 			b_closed = context->m_storage_memory.allocateMemory<uint32_t>({ gi2d_context->FragmentBufferSize / 32,{} });
 			b_neighbor = context->m_storage_memory.allocateMemory<uint8_t>({ gi2d_context->FragmentBufferSize,{} });
-			b_closed_node = context->m_storage_memory.allocateMemory<Node>(gi2d_context->FragmentBufferSize);
+			b_cost = context->m_storage_memory.allocateMemory<uint32_t>(gi2d_context->FragmentBufferSize);
+			b_parent = context->m_storage_memory.allocateMemory<i16vec2>(gi2d_context->FragmentBufferSize);
 		}
 
 		// descriptor set
@@ -381,7 +383,8 @@ struct GI2DPathContext
 					b_connect.getInfo(),
 					b_closed.getInfo(),
 					b_neighbor.getInfo(),
-					b_closed_node.getInfo(),
+					b_cost.getInfo(),
+					b_parent.getInfo(),
 				};
 
 				vk::WriteDescriptorSet write[] = {
@@ -398,16 +401,11 @@ struct GI2DPathContext
 	}
 	std::shared_ptr<GI2DContext> m_gi2d_context;
 
-	struct Node
-	{
-		uint cost;
-		i16vec2 parent;
-	};
-
 	btr::BufferMemoryEx<uint32_t> b_connect;
 	btr::BufferMemoryEx<uint32_t> b_closed;
 	btr::BufferMemoryEx<uint8_t> b_neighbor;
-	btr::BufferMemoryEx<Node> b_closed_node;
+	btr::BufferMemoryEx<uint32_t> b_cost;
+	btr::BufferMemoryEx<i16vec2> b_parent;
 	vk::UniqueDescriptorSet m_descriptor_set;
 
 	vk::DescriptorSet getDescriptorSet()const { return m_descriptor_set.get(); }
