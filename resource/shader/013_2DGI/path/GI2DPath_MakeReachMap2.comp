@@ -30,19 +30,27 @@ uvec4 neighor_check_list[] =
 	uvec4(2,6,4,4), // straight_wall
 };
 
-
+struct OpenNode
+{
+	i16vec2 pos;
+//	uint cost:28;
+//	uint dir_type:4;
+	uint data;
+};
 
 shared OpenNode s_open[1024*3];
 shared uvec2 s_open_counter;
 
 void explore(in OpenNode parent)
 {
-	ivec2 pos = parent.pos + g_neighor_list[parent.dir_type];
+	uint dir_type = (parent.data>>28)&((1<<4)-1);
+	uint cost = parent.data&((1<<28)-1);
+	ivec2 pos = parent.pos + g_neighor_list[dir_type];
 	int index = pos.x + pos.y * constant.reso.x;
 
 	{
-		uint data = atomicMin(b_cost[index], parent.cost);
-		if(data <= parent.cost)
+		uint prev_cost = atomicMin(b_cost[index], cost);
+		if(prev_cost <= cost)
 		{
 			return;
 		}
@@ -52,16 +60,16 @@ void explore(in OpenNode parent)
 	// 新しい探索のチェック
 	{
 		uint neighbor = uint(b_neighbor[index]);
-		uvec4 path_check = (parent.dir_type.xxxx + neighor_check_list[(parent.dir_type%2)*2]) % uvec4(8);
-		uvec4 wall_check = (parent.dir_type.xxxx + neighor_check_list[(parent.dir_type%2)*2+1]) % uvec4(8);
+		uvec4 path_check = (dir_type.xxxx + neighor_check_list[(dir_type%2)*2]) % uvec4(8);
+		uvec4 wall_check = (dir_type.xxxx + neighor_check_list[(dir_type%2)*2+1]) % uvec4(8);
 		uvec4 path_bit = uvec4(1)<<path_check;
 		uvec4 wall_bit = uvec4(1)<<wall_check;
 
 		bvec4 is_path = notEqual((~neighbor.xxxx) & path_bit, uvec4(0));
 		bvec4 is_wall = notEqual(neighbor.xxxx & wall_bit, uvec4(0));
-		uvec4 is_open = uvec4(is_path) * uvec4(is_wall.xy, 1-ivec2(parent.dir_type%2));
+		uvec4 is_open = uvec4(is_path) * uvec4(is_wall.xy, 1-ivec2(dir_type%2));
 
-		uint is_advance = uint(((~neighbor) & (1u << parent.dir_type)) != 0) * uint(any(is_path.zw));
+		uint is_advance = uint(((~neighbor) & (1u << dir_type)) != 0) * uint(any(is_path.zw));
 
 
 		uint num = is_open.x+is_open.y+is_open.z+is_open.w + is_advance;
@@ -76,18 +84,13 @@ void explore(in OpenNode parent)
 			for(int i = 0; i < 4; i++)
 			{
 				if(is_open[i]==0){ continue; }
-				node.dir_type = path_check[i];
-				node.cost = parent.cost + ((node.dir_type%2)==0 ? 14 : 10);
-//				node.cost = parent.cost+1;
+				node.data = (path_check[i]<<28) | (cost + ((path_check[i]%2)==0 ? 14 : 10));
 				s_open[active_index++ % s_open.length()] = node;
 			}
 
 			if(is_advance != 0)
 			{
-				node.dir_type = parent.dir_type;
-				node.cost = parent.cost + ((node.dir_type%2)==0 ? 14 : 10);
-//				node.cost = parent.cost+g_cost[1];
-//				node.cost = parent.cost+1;
+				node.data = (dir_type<<28) | (cost + ((dir_type%2)==0 ? 14 : 10));
 				s_open[active_index++ % s_open.length()] = node;
 			}
 		}
@@ -128,7 +131,6 @@ void main()
 		s_open_counter = uvec2(0);
 	}
 
-	memoryBarrierBuffer();
 	memoryBarrierShared();
 	barrier();
 
@@ -140,8 +142,7 @@ void main()
 		uint neighbor = uint(b_neighbor[index]);
 		OpenNode node;
 		node.pos = i16vec2(pos);
-		node.cost = 0;
-		node.dir_type = dir_type;
+		node.data = (dir_type<<28);
 		if((~neighbor & (1<<dir_type)) != 0)
 		{
 			explore(node);
@@ -158,6 +159,7 @@ void main()
 	for(int i = 0; i < 5000; i++)
 	{
 		memoryBarrierShared();
+		memoryBarrierBuffer();
 		barrier();
 
 		uint accum = s_open_counter[0];
