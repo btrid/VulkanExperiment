@@ -22,14 +22,6 @@ layout(push_constant, std430) uniform InputVertex
 } constant;
 
 
-uvec4 neighor_check_list[] =
-{
-	uvec4(2,6,1,7), // diagonal_path 
-	uvec4(3,5,4,4), // diagonal_wall
-	uvec4(1,7,4,4), // straight_path
-	uvec4(2,6,4,4), // straight_wall
-};
-
 struct OpenNode
 {
 	i16vec2 pos;
