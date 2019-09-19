@@ -36,7 +36,10 @@ layout(std430, set=USE_GI2D_Path, binding=3) restrict buffer PathCostBuffer {
 layout(std430, set=USE_GI2D_Path, binding=4) restrict buffer PathParentBuffer {
 	i16vec2 b_parent[];
 };
-
+layout(std430, set=USE_GI2D_Path, binding=5) buffer NeighborTableBuffer {
+	// 壁ならbitが立つ
+	uint8_t b_neighbor_table[2048];
+};
 #endif
 
 #endif //GI2D_Path_

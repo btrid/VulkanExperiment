@@ -370,15 +370,17 @@ struct GI2DMakeHierarchy
 			i16vec2 target[10];
 			i16vec2 target_num;
 			i16vec2 reso;
-		} constant{ {i16vec2(11, 11), i16vec2(1002, 1002), i16vec2(144, 844), i16vec2(855, 255)}, i16vec2(1, iter / 10), path_context->m_gi2d_context->RenderSize };
+		} constant{ {i16vec2(11, 11), i16vec2(1002, 1002), i16vec2(144, 844), i16vec2(855, 255)}, i16vec2(3, iter / 10), path_context->m_gi2d_context->RenderSize };
 		cmd.pushConstants(m_pipeline_layout[PipelineLayout_Path].get(), vk::ShaderStageFlagBits::eCompute, 0, sizeof(constant), &constant);
 
 		vk::BufferMemoryBarrier barrier[] = {
 			path_context->b_cost.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite | vk::AccessFlagBits::eTransferWrite),
+			path_context->b_connect.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite | vk::AccessFlagBits::eTransferWrite),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, { array_length(barrier), barrier }, {});
 		cmd.fillBuffer(path_context->b_cost.getInfo().buffer, path_context->b_cost.getInfo().offset, path_context->b_cost.getInfo().range, -1);
-
+		cmd.fillBuffer(path_context->b_connect.getInfo().buffer, path_context->b_connect.getInfo().offset, path_context->b_connect.getInfo().range, 0);
+		
 		_label.insert("executeMakeReachMap_Precompute");
 		{
 			vk::BufferMemoryBarrier barrier[] = {

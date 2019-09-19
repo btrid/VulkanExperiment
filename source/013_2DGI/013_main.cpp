@@ -226,6 +226,7 @@ int pathFinding()
 			app.submit(std::move(cmds));
 		}
 		app.postUpdate();
+		device->waitIdle();
 		printf("%-6.4fms\n", time.getElapsedTimeAsMilliSeconds());
 	}
 
