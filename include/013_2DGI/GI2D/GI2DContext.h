@@ -396,7 +396,7 @@ struct GI2DPathContext
 					uint is_advance = uint(((~neighbor) & (1u << dir)) != 0) * uint(any(is_path.zw()));
 					uint num = is_open.x + is_open.y + is_open.z + is_open.w + is_advance;
 
-					uint8_t neighbor_value;
+					uint8_t neighbor_value = 0;
 					for (int i = 0; i < 4; i++)
 					{
 						if (is_open[i] == 0) { continue; }
