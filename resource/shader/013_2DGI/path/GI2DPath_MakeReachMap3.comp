@@ -67,15 +67,16 @@ void explore(in OpenNode parent)
 		// 先はない
 		if(num==0){ return; }
 
-		return;
 		uint active_index = atomicAdd(s_open_counter[0], num);
 
 		OpenNode node;
 		node.pos = i16vec2(pos);
-		for(int dir = findMSB(advance); dir>=0; advance &= ~(1<<dir))
+		for(int i = 0; i < num ; i++)
 		{
+			int dir = findMSB(advance);
 			node.data = (dir<<28) | (cost + ((dir%2)==0 ? 14 : 10));
 			s_open[active_index++ % s_open.length()] = node;
+			advance &= ~(1<<dir);
 		}
 	}
 }
