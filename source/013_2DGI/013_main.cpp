@@ -31,8 +31,6 @@
 #include <013_2DGI/GI2D/GI2DDebug.h>
 #include <013_2DGI/GI2D/GI2DModelRender.h>
 #include <013_2DGI/GI2D/GI2DRadiosity.h>
-#include <013_2DGI/GI2D/GI2DRadiosity2.h>
-#include <013_2DGI/GI2D/GI2DRadiosity3.h>
 #include <013_2DGI/GI2D/GI2DFluid.h>
 #include <013_2DGI/GI2D/GI2DSoftbody.h>
 
@@ -139,7 +137,7 @@ int pathFinding()
 	std::shared_ptr<AppModel> player_model = std::make_shared<AppModel>(context, appmodel_context, model.getResource(), 128);
 
 	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
-	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchainPtr());
+	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchain());
 
 	GI2DDescription gi2d_desc;
 	gi2d_desc.RenderWidth = 1024;
@@ -248,7 +246,7 @@ int rigidbody()
 	auto context = app.m_context;
 
 	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
-	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchainPtr());
+	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchain());
 
 	GI2DDescription gi2d_desc;
 	gi2d_desc.RenderWidth = 1024;
@@ -349,7 +347,7 @@ int radiosity()
 	auto context = app.m_context;
 
 	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
-	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchainPtr());
+	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchain());
 
 	GI2DDescription gi2d_desc;
 	gi2d_desc.RenderWidth = app_desc.m_window_size.x;
@@ -358,7 +356,7 @@ int radiosity()
 
 	GI2DDebug gi2d_debug(context, gi2d_context);
 	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
-	GI2DRadiosity2 gi2d_Radiosity(context, gi2d_context, app.m_window->getFrontBuffer());
+	GI2DRadiosity gi2d_Radiosity(context, gi2d_context, app.m_window->getFrontBuffer());
 
 	app.setup();
 
@@ -420,7 +418,7 @@ int radiosity2()
 	auto context = app.m_context;
 
 	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
-	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchainPtr());
+	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchain());
 
 	GI2DDescription gi2d_desc;
 	gi2d_desc.RenderWidth = app_desc.m_window_size.x;
@@ -429,7 +427,7 @@ int radiosity2()
 
 	GI2DDebug gi2d_debug(context, gi2d_context);
 	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
-	GI2DRadiosity2 gi2d_Radiosity(context, gi2d_context, app.m_window->getFrontBuffer());
+	GI2DRadiosity gi2d_Radiosity(context, gi2d_context, app.m_window->getFrontBuffer());
 
 	app.setup();
 
@@ -497,9 +495,9 @@ int main()
 	camera->getData().m_far = 5000.f;
 	camera->getData().m_near = 0.01f;
 
-	return pathFinding();
+//	return pathFinding();
 //	return rigidbody();
-//	return radiosity();
+	return radiosity();
 //	return radiosity2();
 
 	auto gpu = sGlobal::Order().getGPU(0);
@@ -513,7 +511,7 @@ int main()
 	auto context = app.m_context;
 
 	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
-	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchainPtr());
+	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchain());
 
 
 	GI2DDescription gi2d_desc;
@@ -526,7 +524,7 @@ int main()
 	
 	GI2DDebug gi2d_debug(context, gi2d_context);
 	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
-	GI2DRadiosity2 gi2d_Radiosity(context, gi2d_context, app.m_window->getFrontBuffer());
+	GI2DRadiosity gi2d_Radiosity(context, gi2d_context, app.m_window->getFrontBuffer());
 	GI2DPhysics_procedure gi2d_physics_proc(gi2d_physics_context, gi2d_sdf_context);
 	GameProcedure game_proc(context, game_context);
 	Player player;

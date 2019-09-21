@@ -217,7 +217,7 @@ void sParticlePipeline::setup(std::shared_ptr<btr::Context>& context)
 	{
 		{
 			//		m_render_pass = std::make_shared<RenderBackbufferModule>(context);
-			m_render_pass = context->m_window->getRenderBackbufferPass();
+//			m_render_pass = context->m_window->getRenderBackbufferPass();
 		}
 
 		vk::PipelineShaderStageCreateInfo shader_info[] =
@@ -252,7 +252,7 @@ void sParticlePipeline::setup(std::shared_ptr<btr::Context>& context)
 		m_pipeline[PIPELINE_GENERATE] = context->m_device->createComputePipelineUnique(context->m_cache.get(), compute_pipeline_info[1]);
 		m_pipeline[PIPELINE_GENERATE_DEBUG] = context->m_device->createComputePipelineUnique(context->m_cache.get(), compute_pipeline_info[2]);
 
-		vk::Extent2D size = m_render_pass->getResolution();
+		vk::Extent2D size;
 		// pipeline
 		{
 			// assembly
@@ -327,7 +327,7 @@ void sParticlePipeline::setup(std::shared_ptr<btr::Context>& context)
 				.setPRasterizationState(&rasterization_info)
 				.setPMultisampleState(&sample_info)
 				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW].get())
-				.setRenderPass(m_render_pass->getRenderPass())
+//				.setRenderPass(m_render_pass->getRenderPass())
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
@@ -424,9 +424,9 @@ vk::CommandBuffer sParticlePipeline::draw(std::shared_ptr<btr::Context>& context
 	cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect, {}, {}, { to_draw }, {});
 
 	vk::RenderPassBeginInfo begin_render_Info;
-	begin_render_Info.setRenderPass(m_render_pass->getRenderPass());
-	begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), context->m_window->getClientSize<vk::Extent2D>()));
-	begin_render_Info.setFramebuffer(m_render_pass->getFramebuffer(context->getGPUFrame()));
+// 	begin_render_Info.setRenderPass(m_render_pass->getRenderPass());
+// 	begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), context->m_window->getClientSize<vk::Extent2D>()));
+// 	begin_render_Info.setFramebuffer(m_render_pass->getFramebuffer(context->getGPUFrame()));
 	cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
 
 	cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[PIPELINE_DRAW].get());

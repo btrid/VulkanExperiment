@@ -25,15 +25,15 @@ sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 			image_info.sharingMode = vk::SharingMode::eExclusive;
 			image_info.initialLayout = vk::ImageLayout::eUndefined;
 			image_info.extent = vk::Extent3D(width, height, 1);
-			m_image = context->m_device->createImageUnique(image_info);
+			m_font_image = context->m_device->createImageUnique(image_info);
 
-			vk::MemoryRequirements memory_request = context->m_device->getImageMemoryRequirements(m_image.get());
+			vk::MemoryRequirements memory_request = context->m_device->getImageMemoryRequirements(m_font_image.get());
 			vk::MemoryAllocateInfo memory_alloc_info;
 			memory_alloc_info.allocationSize = memory_request.size;
 			memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(context->m_gpu.getHandle(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-			m_image_memory = context->m_device->allocateMemoryUnique(memory_alloc_info);
-			context->m_device->bindImageMemory(m_image.get(), m_image_memory.get(), 0);
+			m_font_image_memory = context->m_device->allocateMemoryUnique(memory_alloc_info);
+			context->m_device->bindImageMemory(m_font_image.get(), m_font_image_memory.get(), 0);
 
 
 			vk::ImageSubresourceRange subresourceRange;
@@ -60,14 +60,14 @@ sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 				copy.imageSubresource.mipLevel = 0;
 
 				vk::ImageMemoryBarrier to_copy_barrier;
-				to_copy_barrier.image = m_image.get();
+				to_copy_barrier.image = m_font_image.get();
 				to_copy_barrier.oldLayout = vk::ImageLayout::eUndefined;
 				to_copy_barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
 				to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
 				to_copy_barrier.subresourceRange = subresourceRange;
 
 				vk::ImageMemoryBarrier to_shader_read_barrier;
-				to_shader_read_barrier.image = m_image.get();
+				to_shader_read_barrier.image = m_font_image.get();
 				to_shader_read_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
 				to_shader_read_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 				to_shader_read_barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
@@ -75,7 +75,7 @@ sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 				to_shader_read_barrier.subresourceRange = subresourceRange;
 
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
-				cmd.copyBufferToImage(staging_buffer.getBufferInfo().buffer, m_image.get(), vk::ImageLayout::eTransferDstOptimal, { copy });
+				cmd.copyBufferToImage(staging_buffer.getBufferInfo().buffer, m_font_image.get(), vk::ImageLayout::eTransferDstOptimal, 1, &copy);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllGraphics, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
 
 			}
@@ -88,9 +88,9 @@ sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 			view_info.components.a = vk::ComponentSwizzle::eR;
 			view_info.flags = vk::ImageViewCreateFlags();
 			view_info.format = image_info.format;
-			view_info.image = m_image.get();
+			view_info.image = m_font_image.get();
 			view_info.subresourceRange = subresourceRange;
-			m_image_view.emplace_back(context->m_device->createImageViewUnique(view_info));
+			m_font_image_view = context->m_device->createImageViewUnique(view_info);
 
 			vk::SamplerCreateInfo sampler_info;
 			sampler_info.magFilter = vk::Filter::eLinear;
@@ -106,7 +106,7 @@ sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 			sampler_info.maxAnisotropy = 1.0;
 			sampler_info.anisotropyEnable = VK_FALSE;
 			sampler_info.borderColor = vk::BorderColor::eFloatOpaqueWhite;
-			m_sampler = context->m_device->createSamplerUnique(sampler_info);
+			m_font_sampler = context->m_device->createSamplerUnique(sampler_info);
 
 		}
 	}
@@ -126,12 +126,12 @@ sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 
 		vk::DescriptorImageInfo images[] = {
 			vk::DescriptorImageInfo()
-			.setImageView(m_image_view[0].get())
-			.setSampler(m_sampler.get())
+			.setImageView(m_font_image_view.get())
+			.setSampler(m_font_sampler.get())
 			.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
 		};
 
-		auto write_desc =
+		vk::WriteDescriptorSet write_desc[] =
 		{
 			vk::WriteDescriptorSet()
 			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
@@ -140,7 +140,7 @@ sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 			.setDstBinding(0)
 			.setDstSet(m_descriptor_set.get()),
 		};
-		context->m_device->updateDescriptorSets(write_desc.size(), write_desc.begin(), 0, {});
+		context->m_device->updateDescriptorSets(array_length(write_desc), write_desc, 0, nullptr);
 
 	}
 
@@ -179,7 +179,6 @@ sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 		m_pipeline_layout[PIPELINE_LAYOUT_RENDER] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
 	}
 
-
 }
 
 vk::CommandBuffer sImGuiRenderer::Render()
@@ -192,7 +191,8 @@ vk::CommandBuffer sImGuiRenderer::Render()
 
 		ImGui::SetCurrentContext(window->getImguiPipeline()->m_imgui_context);
 		auto& io = ImGui::GetIO();
-		io.DisplaySize = window->getClientSize<ImVec2>();
+		io.DisplaySize.x = window->getFrontBuffer()->m_info.extent.width;
+		io.DisplaySize.x = window->getFrontBuffer()->m_info.extent.height;
 		{
 			auto& mouse = window->getInput().m_mouse;
 			io.MousePos = ImVec2(mouse.xy.x, mouse.xy.y);
@@ -234,9 +234,9 @@ vk::CommandBuffer sImGuiRenderer::Render()
 		ImDrawData* draw_data = ImGui::GetDrawData();
 
 		vk::RenderPassBeginInfo begin_render_info;
-		begin_render_info.setFramebuffer(window->getRenderBackbufferPass()->getFramebuffer(window->getSwapchain().m_backbuffer_index));
-		begin_render_info.setRenderPass(window->getRenderBackbufferPass()->getRenderPass());
-		begin_render_info.setRenderArea(vk::Rect2D({}, window->getRenderBackbufferPass()->getResolution()));
+ 		begin_render_info.setFramebuffer(window->getImguiPipeline()->m_framebuffer.get());
+ 		begin_render_info.setRenderPass(window->getImguiPipeline()->m_render_pass.get());
+//		begin_render_info.setRenderArea(vk::Rect2D({}, vk::Extent2D(m_render_target->m_info.extent.width, m_render_target->m_info.extent.height)));
 		cmd.beginRenderPass(begin_render_info, vk::SubpassContents::eInline);
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, window->getImguiPipeline()->m_pipeline.get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_RENDER].get(), 0, { m_descriptor_set.get() }, {});

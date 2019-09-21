@@ -96,7 +96,6 @@ protected:
 	cInput m_input_worker;
 	std::shared_ptr<Swapchain> m_swapchain;
 	cWindowDescriptor m_descriptor;
-	std::shared_ptr<RenderPassModule> m_render_pass;
 
 	bool m_is_close;
 public:
@@ -106,14 +105,9 @@ public:
 	void swap();
 public:
 
-	glm::uvec2 getClientSize()const { return glm::uvec2(m_descriptor.size.width, m_descriptor.size.height); }
-	template<typename T> T getClientSize()const { return T( m_descriptor.size.width, m_descriptor.size.height ); }
-	const std::shared_ptr<Swapchain>& getSwapchainPtr()const { return m_swapchain; }
-	const Swapchain& getSwapchain()const { return *m_swapchain; }
-	Swapchain& getSwapchain() { return *m_swapchain; }
+	const std::shared_ptr<Swapchain>& getSwapchain()const { return m_swapchain; }
 	const cInput& getInput()const { return m_input; }
 	
-	std::shared_ptr<RenderPassModule> getRenderBackbufferPass() { return m_render_pass; }
 	bool isClose()const {
 		return m_is_close;
 	}

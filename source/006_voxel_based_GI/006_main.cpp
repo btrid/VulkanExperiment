@@ -58,7 +58,7 @@ int main()
 	auto context = app.m_context;
 
 	ClearPipeline clear_render_target(context, app.m_window->getRenderTarget());
-	PresentPipeline present_pipeline(context, app.m_window->getRenderTarget(), context->m_window->getSwapchainPtr());
+	PresentPipeline present_pipeline(context, app.m_window->getRenderTarget(), context->m_window->getSwapchain());
 
 	VoxelInfo info;
 	info.u_cell_num = uvec4(64, 16, 64, 1);

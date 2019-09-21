@@ -64,7 +64,8 @@ vk::CommandBuffer sSystem::execute(const std::shared_ptr<btr::Context>& context)
 		data.m_render_index = sGlobal::Order().getRenderIndex();
 		data.m_render_frame = sGlobal::Order().getRenderFrame();
 		data.m_deltatime = sGlobal::Order().getDeltaTime();
-		data.m_resolution = window->getClientSize();
+		data.m_resolution.x = window->getFrontBuffer()->m_info.extent.width;
+		data.m_resolution.y = window->getFrontBuffer()->m_info.extent.height;
 		{
 			auto& mouse = window->getInput().m_mouse;
 			data.m_is_mouse_on = data.m_is_mouse_off = data.m_is_mouse_hold = 0;

@@ -146,10 +146,10 @@ void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
 	for (size_t i = 0; i < m_window_list.size(); i++)
 	{
 		auto& window = m_window_list[i];
-		swap_wait_semas[i] = window->getSwapchain().m_swapbuffer_semaphore.get();
-		submit_wait_semas[i] = window->getSwapchain().m_submit_semaphore.get();
-		swapchains[i] = window->getSwapchain().m_swapchain_handle.get();
-		backbuffer_indexs[i] = window->getSwapchain().m_backbuffer_index;
+		swap_wait_semas[i] = window->getSwapchain()->m_swapbuffer_semaphore.get();
+		submit_wait_semas[i] = window->getSwapchain()->m_submit_semaphore.get();
+		swapchains[i] = window->getSwapchain()->m_swapchain_handle.get();
+		backbuffer_indexs[i] = window->getSwapchain()->m_backbuffer_index;
 		wait_pipelines[i] = vk::PipelineStageFlagBits::eAllGraphics;
 	}
 
@@ -204,7 +204,7 @@ void App::preUpdate()
 
 	for (auto& window : m_window_list)
 	{
-		window->getSwapchain().swap();
+		window->getSwapchain()->swap();
 	}
 
 	{
@@ -217,7 +217,7 @@ void App::preUpdate()
 	for (auto& request : m_window_request)
 	{
 		auto new_window = sWindow::Order().createWindow<AppWindow>(m_context, request);
-		new_window->getSwapchain().swap();
+		new_window->getSwapchain()->swap();
 		m_window_list.emplace_back(std::move(new_window));
 	}
 	m_window_request.clear();
@@ -477,7 +477,8 @@ AppWindow::ImguiRenderPipeline::ImguiRenderPipeline(const std::shared_ptr<btr::C
 	m_imgui_context = ImGui::CreateContext();
 	ImGui::SetCurrentContext(m_imgui_context);
 	auto& io = ImGui::GetIO();
-	io.DisplaySize = window->getClientSize<ImVec2>();
+	io.DisplaySize.x = window->getFrontBuffer()->m_info.extent.width;
+	io.DisplaySize.y = window->getFrontBuffer()->m_info.extent.height;
 	io.FontGlobalScale = 1.f;
 	io.RenderDrawListsFn = nullptr;  // Setup a render function, or set to NULL and call GetDrawData() after Render() to access the render data.
 	io.KeyMap[ImGuiKey_Tab] = VK_TAB;
@@ -631,16 +632,16 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 		subresource_range.setLayerCount(1);
 		subresource_range.setBaseMipLevel(0);
 		subresource_range.setLevelCount(1);
-		std::vector<vk::ImageMemoryBarrier> barrier(getSwapchain().getBackbufferNum());
+		std::vector<vk::ImageMemoryBarrier> barrier(getSwapchain()->getBackbufferNum());
 		barrier[0].setSubresourceRange(subresource_range);
 		barrier[0].setDstAccessMask(vk::AccessFlagBits::eMemoryRead);
 		barrier[0].setOldLayout(vk::ImageLayout::eUndefined);
 		barrier[0].setNewLayout(vk::ImageLayout::ePresentSrcKHR);
-		barrier[0].setImage(getSwapchain().m_backbuffer_image[0]);
-		for (uint32_t i = 1; i < getSwapchain().getBackbufferNum(); i++)
+		barrier[0].setImage(getSwapchain()->m_backbuffer_image[0]);
+		for (uint32_t i = 1; i < getSwapchain()->getBackbufferNum(); i++)
 		{
 			barrier[i] = barrier[0];
-			barrier[i].setImage(getSwapchain().m_backbuffer_image[i]);
+			barrier[i].setImage(getSwapchain()->m_backbuffer_image[i]);
 		}
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eAllCommands, vk::DependencyFlags(), {}, {}, barrier);
 

@@ -1,8 +1,8 @@
 #pragma once
 #include <memory>
-#include <013_2DGI/GI2D/GI2DRadiosity.h>
+#include <013_2DGI/GI2D/GI2DRadiosity_old.h>
 
-GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context, const std::shared_ptr<RenderTarget>& render_target)
+GI2DRadiosity_old::GI2DRadiosity_old(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context, const std::shared_ptr<RenderTarget>& render_target)
 {
 	m_context = context;
 	m_gi2d_context = gi2d_context;
@@ -506,7 +506,7 @@ GI2DRadiosity::GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const
 	}
 
 }
-void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
+void GI2DRadiosity_old::executeRadiosity(const vk::CommandBuffer& cmd)
 {
 	DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
 
@@ -653,7 +653,7 @@ void GI2DRadiosity::executeRadiosity(const vk::CommandBuffer& cmd)
 }
 
 
-void GI2DRadiosity::executeRendering(const vk::CommandBuffer& cmd)
+void GI2DRadiosity_old::executeRendering(const vk::CommandBuffer& cmd)
 {
 
 	DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);

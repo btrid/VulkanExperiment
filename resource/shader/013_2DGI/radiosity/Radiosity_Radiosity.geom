@@ -2,9 +2,9 @@
 #extension GL_GOOGLE_include_directive : require
 
 #define USE_GI2D 0
-#define USE_GI2D_Radiosity2 1
+#define USE_GI2D_Radiosity 1
 #include "GI2D/GI2D.glsl"
-#include "GI2D/Radiosity2.glsl"
+#include "GI2D/Radiosity.glsl"
 
 layout(points, invocations = 1) in;
 layout(line_strip, max_vertices = 2) out;
@@ -36,12 +36,12 @@ void main()
 	u16vec4 pos = b_segment[gs_in[0].vertex_index].pos;
 	uvec2 index = pos.xz + pos.yw * u_gi2d_info.m_resolution.xx;
 
-	uint radiance1 = b_radiance[index.x + (Bounce_Num%2)*u_gi2d_info.m_resolution.x*u_gi2d_info.m_resolution.y];
-	uint radiance2 = b_radiance[index.y + (Bounce_Num%2)*u_gi2d_info.m_resolution.x*u_gi2d_info.m_resolution.y];
-	vec3 rad1_d3 = vec3(radiance1&ColorMask, (radiance1>>10)&ColorMask, (radiance1>>20)&ColorMask);
-	vec3 rad2_d3 = vec3(radiance2&ColorMask, (radiance2>>10)&ColorMask, (radiance2>>20)&ColorMask);
-	vec3 rad = vec3(rad1_d3 / 128.) * vec3(getRGB(b_fragment[index.x]));
-	rad = rad + vec3(rad2_d3 / 128.) * vec3(getRGB(b_fragment[index.y]));
+	uint64_t radiance1 = b_radiance[index.x + (Bounce_Num%2)*u_gi2d_info.m_resolution.x*u_gi2d_info.m_resolution.y];
+	uint64_t radiance2 = b_radiance[index.y + (Bounce_Num%2)*u_gi2d_info.m_resolution.x*u_gi2d_info.m_resolution.y];
+	dvec3 rad1_d3 = dvec3(radiance1&ColorMask, (radiance1>>21)&ColorMask, (radiance1>>42)&ColorMask);
+	dvec3 rad2_d3 = dvec3(radiance2&ColorMask, (radiance2>>21)&ColorMask, (radiance2>>42)&ColorMask);
+	vec3 rad = vec3(rad1_d3 / 1024.) * vec3(getRGB(b_fragment[index.x]));
+	rad = rad + vec3(rad2_d3 / 1024.) * vec3(getRGB(b_fragment[index.y]));
 
 	if(dot(rad, vec3(1.)) <= 0.0005){ return; }
 

@@ -19,10 +19,8 @@
 #include <btrlib/sGlobal.h>
 #include <btrlib/cStopWatch.h>
 #include <btrlib/AllocatedMemory.h>
-#include <applib/AppModel/AppModel.h>
-#include <applib/AppModel/AppModelPipeline.h>
 
-#include <applib/DrawHelper.h>
+//#include <applib/DrawHelper.h>
 #include <applib/sCameraManager.h>
 #include <applib/App.h>
 #include <applib/AppPipeline.h>
@@ -55,36 +53,8 @@ int main()
 
 	auto context = app.m_context;
 
-	auto task = std::make_shared<std::promise<std::unique_ptr<cModel>>>();
-	auto modelFuture = task->get_future();
-	{
-		cThreadJob job;
-		auto load = [task, &context]()
-		{
-			auto model = std::make_unique<cModel>();
-			model->load(context, btr::getResourceAppPath() + "../tiny.x");
-			task->set_value(std::move(model));
-		};
-		job.mFinish = load;
-		sGlobal::Order().getThreadPool().enque(std::move(job));
-	}
-
-	while (modelFuture.valid() && modelFuture.wait_for(std::chrono::milliseconds(10)) != std::future_status::ready) {
-		printf("wait...\n");
-	}
-
-	auto model = modelFuture.get();
-	AppModel::DescriptorSet::Create(context);
-	AppModelRenderStage renderer(context, app.m_window->getRenderTarget());
-	AppModelAnimationStage animater(context);
-
-	std::shared_ptr<AppModel> appModel = std::make_shared<AppModel>(context, model->getResource(), 1000);
-
-	auto drawCmd = renderer.createCmd(appModel);
-	auto animeCmd = animater.createCmd(appModel);
-
-	ClearPipeline clear_render_target(context, app.m_window->getRenderTarget());
-	PresentPipeline present_pipeline(context, app.m_window->getRenderTarget(), context->m_window->getSwapchainPtr());
+	ClearPipeline clear_render_target(context, app.m_window->getFrontBuffer());
+	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), context->m_window->getSwapchain());
 	app.setup();
 	while (true)
 	{
@@ -92,50 +62,19 @@ int main()
 
 		app.preUpdate();
 		{
-			SynchronizedPoint render_syncronized_point(1);
-			SynchronizedPoint work_syncronized_point(1);
-
+			enum cmds
 			{
-				MAKE_THREAD_JOB(job);
-				job.mJob.emplace_back(
-					[&]()
-				{
-// 					render->m_instancing->addModel(data.data(), data.size());
-					work_syncronized_point.arrive();
-				}
-				);
-				sGlobal::Order().getThreadPool().enque(job);
-			}
-			std::vector<vk::CommandBuffer> render_cmds(5);
+				cmd_clear,
+				cmd_present,
+				cmd_num,
+			};
+			std::vector<vk::CommandBuffer> render_cmds(cmd_num);
 			{
-				MAKE_THREAD_JOB(job);
-				job.mJob.emplace_back(
-					[&]()
-				{
-					render_cmds[0] = clear_render_target.execute();
-					render_cmds[4] = present_pipeline.execute();
-					{
-						std::vector<vk::CommandBuffer> cmds(1);
-						cmds[0] = animeCmd.get();
-						render_cmds[1] = animater.dispach(cmds);
-					}
-					{
-						render_cmds[2] = renderer.getLight()->execute(context);
-					}
-					{
-						std::vector<vk::CommandBuffer> cmds(1);
-						cmds[0] = drawCmd.get();
-						render_cmds[3] = renderer.draw(cmds);
-					}
-					render_syncronized_point.arrive();
-				}
-				);
-				sGlobal::Order().getThreadPool().enque(job);
+				render_cmds[cmd_clear] = clear_render_target.execute();
+				render_cmds[cmd_present] = present_pipeline.execute();
 			}
 
-			render_syncronized_point.wait();
 			app.submit(std::move(render_cmds));
-			work_syncronized_point.wait();
 		}
 
 		app.postUpdate();

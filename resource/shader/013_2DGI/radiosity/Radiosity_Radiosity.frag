@@ -2,9 +2,9 @@
 #extension GL_GOOGLE_include_directive : require
 
 #define USE_GI2D 0
-#define USE_GI2D_Radiosity2 1
+#define USE_GI2D_Radiosity 1
 #include "GI2D/GI2D.glsl"
-#include "GI2D/Radiosity2.glsl"
+#include "GI2D/Radiosity.glsl"
 
 
 layout(location=1)in Data

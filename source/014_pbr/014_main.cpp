@@ -51,7 +51,7 @@ int main()
 	auto context = app.m_context;
 
 	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
-	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchain());
+	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchainPtr());
 
 	auto appmodel_context = std::make_shared<AppModelContext>(context);
 	AppModelRenderStage model_renderer(context, appmodel_context, app.m_window->getFrontBuffer());

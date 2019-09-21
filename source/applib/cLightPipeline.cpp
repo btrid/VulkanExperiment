@@ -20,7 +20,7 @@ void cFowardPlusPipeline::setup(const std::shared_ptr<btr::Context>& context)
 			desc.device_memory = context->m_uniform_memory;
 			desc.staging_memory = context->m_staging_memory;
 			desc.element_num = 1;
-			desc.frame_max = context->m_window->getSwapchain().getBackbufferNum();
+			desc.frame_max = context->m_window->getSwapchain()->getBackbufferNum();
 			m_light_info_gpu.setup(desc);
 		}
 		{
@@ -28,7 +28,7 @@ void cFowardPlusPipeline::setup(const std::shared_ptr<btr::Context>& context)
 			desc.device_memory = context->m_storage_memory;
 			desc.staging_memory = context->m_staging_memory;
 			desc.element_num = m_light_info.m_light_max_num;
-			desc.frame_max = context->m_window->getSwapchain().getBackbufferNum();
+			desc.frame_max = context->m_window->getSwapchain()->getBackbufferNum();
 			m_light.setup(desc);
 		}
 		{

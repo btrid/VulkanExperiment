@@ -11,7 +11,7 @@ call sdf/make.bat
 cd /d %~dp0
 call rigidbody/make.bat
 cd /d %~dp0
-call radiosity2/make2.bat
+call radiosity/make.bat
 cd /d %~dp0
 
 call voronoi/make.bat

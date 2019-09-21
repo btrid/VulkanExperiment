@@ -122,7 +122,7 @@ int main()
 				job.mJob.emplace_back(
 					[&]()
 				{
-					cmds[2] = sImGuiRenderer::Order().Render();
+//					cmds[2] = sImGuiRenderer::Order().Render();
 					sync_point.arrive();
 				}
 				);

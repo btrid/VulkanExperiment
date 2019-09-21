@@ -65,7 +65,7 @@ void System::execute(vk::CommandBuffer cmd)
 		data.m_render_index = sGlobal::Order().getRenderIndex();
 		data.m_render_frame = sGlobal::Order().getRenderFrame();
 		data.m_deltatime = sGlobal::Order().getDeltaTime();
-		data.m_resolution = window->getClientSize();
+//		data.m_resolution = window->getClientSize();
 		{
 			auto& mouse = window->getInput().m_mouse;
 			data.m_is_mouse_on = data.m_is_mouse_off = data.m_is_mouse_hold = 0;

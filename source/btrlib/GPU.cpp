@@ -16,7 +16,6 @@ void cGPU::setup(vk::PhysicalDevice pd)
 
 	auto gpu_propaty = m_handle.getProperties();
 	auto gpu_feature = m_handle.getFeatures();
-	gpu_feature.robustBufferAccess = 0;
 	assert(gpu_feature.multiDrawIndirect);
 
 	auto queueFamilyProperty = m_handle.getQueueFamilyProperties();

@@ -2,9 +2,9 @@
 #extension GL_GOOGLE_include_directive : require
 
 #define USE_GI2D 0
-#define USE_GI2D_Radiosity2 1
-#include "GI2D/GI2D.glsl"
-#include "GI2D/Radiosity2.glsl"
+#define USE_GI2D_Radiosity 1
+#include "GI2D.glsl"
+#include "Radiosity.glsl"
 
 #define HALF_PI radians(90.)
 #define TWO_PI radians(360.)
@@ -47,10 +47,9 @@ struct Ray
 
 void calcDirEx(in float angle, out ivec2 dir)
 {
-	#define GI2D_FLT_EPSILON 0.00001
 	vec2 f_dir = vec2(cos(angle), sin(angle));
-	f_dir.x = abs(f_dir.x)<GI2D_FLT_EPSILON ? (f_dir.x >= 0. ? GI2D_FLT_EPSILON : -GI2D_FLT_EPSILON) : f_dir.x;
-	f_dir.y = abs(f_dir.y)<GI2D_FLT_EPSILON ? (f_dir.y >= 0. ? GI2D_FLT_EPSILON : -GI2D_FLT_EPSILON) : f_dir.y;
+	f_dir.x = abs(f_dir.x)<GI2D_FLT_EPSILON ? (f_dir.x >= 0. ? 0.0001 : -0.0001) : f_dir.x;
+	f_dir.y = abs(f_dir.y)<GI2D_FLT_EPSILON ? (f_dir.y >= 0. ? 0.0001 : -0.0001) : f_dir.y;
 	vec2 f_inv_dir = 1./f_dir;
 	f_dir = f_dir * min(abs(f_inv_dir.x), abs(f_inv_dir.y));
 
@@ -63,8 +62,7 @@ Ray makeRay(in uint x, in uint y)
 	Ray ray;
 
 	float a = PI / Dir_Num;
-	uint frame_index[] ={0, 2, 1, 3};
-	float angle = fma(a, float(y), a/u_radiosity_info.frame_max * (frame_index[u_radiosity_info.frame]+0.5));
+	float angle = fma(a, float(y), a/u_radiosity_info.frame_max * (u_radiosity_info.frame+0.5));
 	ray.area = int(angle / HALF_PI);
 
 	calcDirEx(angle, ray.dir);
@@ -79,7 +77,6 @@ Ray makeRay(in uint x, in uint y)
 	{
 		ray.origin.x += (reso.x-1) - int(ceil(ray.dir.x / float(ray.dir.y))) * int(x);
 	}
-
 
 	ray.origin *= dir_reso;
 
@@ -103,19 +100,12 @@ void main()
 	ivec2 mi = (ray.begin * ray.dir.xy + ray.origin) >> dir_reso_bit;
 	if((ray.area&1)!=0) mi.x = (reso.x-1)-mi.x;
 
-	uvec2 pos = mi;
-	bool is_inner;
-	{
-		ivec2 cell = mi>>3;
-		ivec2 cell_sub = mi%8;
-		uint64_t map = b_fragment_map[cell.x + cell.y * reso.z];
-		is_inner = (map & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0ul;
-	}
+	VertexInfo vertex = VertexInfo(uvec2(b_vertex_index[mi.x+mi.y*reso.x]));
 
 	for(int march = ray.begin; march < ray.end; )
 	{
 		ivec2 cell = mi>>3;
-		uint64_t map = b_fragment_map[cell.x + cell.y * reso.z];
+		uint64_t map = b_edge[cell.x + cell.y * reso.z];
 
 		for(;;)
 		{
@@ -123,17 +113,10 @@ void main()
 			bool attr = (map & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0ul;
 			if(attr)
 			{
-				if(!is_inner)
-				{
-					uint index = atomicAdd(b_segment_counter.instanceCount, 1);
-					if(index%1024==0){
-						atomicAdd(b_segment_counter.bounce_cmd.x, 1);
-					}
-					b_segment[index].pos = u16vec4(pos, mi);					
-				}
-				pos = mi;
+				uint id = b_vertex_index[mi.x+mi.y*reso.x];
+				b_vertex[vertex.id.y].vertex[angle_index] = VertexInfo(uvec2(vertex.id.x, id));
+				vertex.id = uvec2(vertex.id.y, id);
 			}
-			is_inner = attr;
 			march++;
 
 			mi = (march * ray.dir.xy + ray.origin) >> dir_reso_bit;
@@ -146,15 +129,13 @@ void main()
 
 	}
 
-	if(!is_inner)
-	{
-		mi = ((ray.end-1).xx * ray.dir.xy + ray.origin.xy) >> dir_reso_bit;
-		if((ray.area&1)!=0) mi.x = (reso.x-1)-mi.x;
+	mi = ((ray.end-1).xx * ray.dir.xy + ray.origin.xy) >> dir_reso_bit;
+	if((ray.area&1)!=0) mi.x = (reso.x-1)-mi.x;
 
-		uint index = atomicAdd(b_segment_counter.instanceCount, 1);
-		if(index%1024==0){
-			atomicAdd(b_segment_counter.bounce_cmd.x, 1);
-		}
-		b_segment[index].pos = u16vec4(pos, mi);					
+	{
+		uint id = b_vertex_index[mi.x+mi.y*reso.x];
+		b_vertex[vertex.id.y].vertex[angle_index] = VertexInfo(uvec2(vertex.id.x, id));
 	}
+
+
 }

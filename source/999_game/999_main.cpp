@@ -165,7 +165,7 @@ int main()
 	auto animeCmd = animater.createCmd(player_model);
 
 	ClearPipeline clear_render_target(context, app.m_window->getRenderTarget());
-	PresentPipeline present_pipeline(context, app.m_window->getRenderTarget(), app.m_window->getSwapchainPtr());
+	PresentPipeline present_pipeline(context, app.m_window->getRenderTarget(), app.m_window->getSwapchain());
 
 	app.setup();
 	while (true)

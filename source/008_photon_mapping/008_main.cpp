@@ -533,7 +533,7 @@ int main()
 
 	auto context = app.m_context;
 	ClearPipeline clear_pipeline(context, app.m_window->getRenderTarget());
-	PresentPipeline present_pipeline(context, app.m_window->getRenderTarget(), app.m_window->getSwapchainPtr());
+	PresentPipeline present_pipeline(context, app.m_window->getRenderTarget(), app.m_window->getSwapchain());
 
 	PhotonMapping pm(context);
 

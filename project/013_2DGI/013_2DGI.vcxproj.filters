@@ -12,7 +12,7 @@
     <ClCompile Include="..\..\include\013_2DGI\GI2D\GI2DPhysics_procedure.cpp">
       <Filter>GI2D</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\include\013_2DGI\GI2D\GI2DRadiosity.cpp">
+    <ClCompile Include="..\..\include\013_2DGI\GI2D\GI2DRadiosity_old.cpp">
       <Filter>GI2D</Filter>
     </ClCompile>
   </ItemGroup>
@@ -35,9 +35,6 @@
       <Filter>GI2D</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DContext.h">
-      <Filter>GI2D</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DRadiosity.h">
       <Filter>GI2D</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DMakeHierarchy.h">
@@ -81,12 +78,6 @@
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DPhysics_procedure.h">
       <Filter>GI2D</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DRadiosity2.h">
-      <Filter>GI2D</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DRadiosity3.h">
-      <Filter>GI2D</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DVoronoi.h">
       <Filter>GI2D</Filter>
     </ClInclude>
@@ -95,6 +86,12 @@
     </ClInclude>
     <ClInclude Include="..\..\include\013_2DGI\Game\Game.h">
       <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DRadiosity_old.h">
+      <Filter>GI2D</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\013_2DGI\GI2D\GI2DRadiosity.h">
+      <Filter>GI2D</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

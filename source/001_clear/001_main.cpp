@@ -56,7 +56,7 @@ int main()
 
 	auto render_target = app.m_window->getRenderTarget();
 	ClearPipeline clear_render_target(context.get(), render_target);
-	PresentPipeline present_pipeline(context, render_target, context->m_window->getSwapchainPtr());
+	PresentPipeline present_pipeline(context, render_target, context->m_window->getSwapchain());
 
 	while (true)
 	{
