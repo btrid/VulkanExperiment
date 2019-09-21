@@ -14,8 +14,6 @@
 #include <btrlib/sDebug.h>
 #include <btrlib/cStopWatch.h>
 
-using GameFrame = uint32_t;
-
 class sGlobal : public Singleton<sGlobal>
 {
 	friend Singleton<sGlobal>;
@@ -33,42 +31,19 @@ protected:
 	sGlobal();
 public:
 
-	vk::Instance& getVKInstance() { return m_instance; }
-	cGPU& getGPU(int index) { return m_gpu[index]; }
 	void sync();
 	uint32_t getCurrentFrame()const { return m_current_frame; }
 	uint32_t getNextFrame()const { return (m_current_frame + 1) % FRAME_COUNT_MAX; }
 	uint32_t getPrevFrame()const { return (m_current_frame == 0 ? FRAME_COUNT_MAX : m_current_frame) - 1; }
 	uint32_t getWorkerFrame()const { return (m_current_frame+1) % FRAME_COUNT_MAX; }
 	uint32_t getRenderFrame()const { return m_current_frame; }
-	uint32_t getGameFrame()const { return m_game_frame; }
 	uint32_t getWorkerIndex()const { return m_tick_tock; }
 	uint32_t getRenderIndex()const { return (m_tick_tock + 1) % 2; }
-	bool isElapsed(GameFrame time, GameFrame offset = FRAME_COUNT_MAX)
-	{
-		uint64_t game_frame = (uint64_t)m_game_frame;
-		if (game_frame < time) {
-			game_frame += std::numeric_limits<decltype(m_game_frame)>::max() / FRAME_COUNT_MAX*FRAME_COUNT_MAX;
-		}
-		return game_frame - time >= offset;
-	}
 
-public:
-	cThreadPool& getThreadPool() { return m_thread_pool; }
-	cThreadPool& getThreadPoolSound() { return m_thread_pool_sound; }
 private:
-	vk::Instance m_instance;
-	vk::DispatchLoaderDynamic m_dispatch;
-	vk::UniqueHandle<vk::DebugUtilsMessengerEXT, vk::DispatchLoaderDynamic> m_debug_messenger;
 
-	std::vector<cGPU> m_gpu;
-
-	GameFrame m_current_frame;
-	GameFrame m_game_frame;
+	uint32_t m_current_frame;
 	uint32_t m_tick_tock;
-
-	cThreadPool m_thread_pool;
-	cThreadPool m_thread_pool_sound;
 
 	cStopWatch m_timer;
 	float m_deltatime;

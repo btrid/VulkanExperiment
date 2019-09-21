@@ -134,7 +134,6 @@ struct GPUMemoryAllocater
 	std::vector<Zone> m_active_zone;
 	DelayedFree m_delayed_active;
 	vk::DeviceSize m_align;		//!< メモリのアラインメント
-	GameFrame m_last_gc;		//!< 最後に実行したgcのフレーム
 
 	std::mutex m_free_zone_mutex;
 

@@ -7,28 +7,17 @@
 
 sGlobal::sGlobal()
 	: m_current_frame(0)
-	, m_game_frame(0)
 	, m_tick_tock(0)
 	, m_totaltime(0.f)
 {
 	m_deltatime = 0.016f;
-	{
-	}
 
-// 	m_thread_pool_sound.start(1, [](const cThreadPool::InitParam& param){
-// 		if (param.m_index == 1)
-// 		{
-// 			SetThreadIdealProcessor(::GetCurrentThread(), 7);
-// 		}
-// 	});
 }
 
 
 void sGlobal::sync()
 {
-	m_game_frame++;
-	m_game_frame = m_game_frame % (std::numeric_limits<decltype(m_game_frame)>::max() / FRAME_COUNT_MAX*FRAME_COUNT_MAX);
-	m_current_frame = m_game_frame % FRAME_COUNT_MAX;
+	m_current_frame = (m_current_frame+1) % FRAME_COUNT_MAX;
 	m_tick_tock = (m_tick_tock + 1) % 2;
 	auto next = (m_current_frame+1) % FRAME_COUNT_MAX;
 	m_deltatime = m_timer.getElapsedTimeAsSeconds();

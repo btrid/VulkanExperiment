@@ -3,7 +3,6 @@
 void btr::GPUMemoryAllocater::setup(vk::DeviceSize size, vk::DeviceSize align)
 {
 	assert(m_free_zone.empty());
-	m_last_gc = sGlobal::Order().getGameFrame();
 	m_align = align;
 	Zone zone;
 	zone.m_start = 0;
@@ -16,10 +15,6 @@ void btr::GPUMemoryAllocater::setup(vk::DeviceSize size, vk::DeviceSize align)
 btr::Zone btr::GPUMemoryAllocater::alloc(vk::DeviceSize size, bool is_reverse)
 {
 	assert(size != 0);
-	if (sGlobal::Order().isElapsed(m_last_gc, 1u))
-	{
-		gc_impl();
-	}
 
 	if (is_reverse)
 	{
@@ -125,7 +120,6 @@ void btr::GPUMemoryAllocater::gc_impl()
 		}
 
 	}
-	m_last_gc = sGlobal::Order().getGameFrame();
 }
 
 btr::Zone btr::GPUMemoryAllocater::allocReverse(vk::DeviceSize size)
