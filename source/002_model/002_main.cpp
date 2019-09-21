@@ -43,11 +43,11 @@ int main()
 	camera->getData().m_far = 100000.f;
 	camera->getData().m_near = 0.01f;
 
-	auto gpu = sGlobal::Order().getGPU(0);
-	auto device = sGlobal::Order().getGPU(0).getDevice();
+//	auto gpu = sGlobal::Order().getGPU(0);
+//	auto device = sGlobal::Order().getGPU(0).getDevice();
 
 	app::AppDescriptor app_desc;
-	app_desc.m_gpu = gpu;
+//	app_desc.m_gpu = gpu;
 	app_desc.m_window_size = uvec2(640, 480);
 	app::App app(app_desc);
 

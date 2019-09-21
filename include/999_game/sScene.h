@@ -126,7 +126,7 @@ struct sScene : public Singleton<sScene>
 				vk::MemoryRequirements memory_request = context->m_device.getImageMemoryRequirements(image.get());
 				vk::MemoryAllocateInfo memory_alloc_info;
 				memory_alloc_info.allocationSize = memory_request.size;
-				memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(context->m_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+				memory_alloc_info.memoryTypeIndex = Helper::getMemoryTypeIndex(context->m_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 				auto image_memory = context->m_device.allocateMemoryUnique(memory_alloc_info);
 				context->m_device.bindImageMemory(image.get(), image_memory.get(), 0);
 
@@ -137,7 +137,7 @@ struct sScene : public Singleton<sScene>
 				vk::MemoryRequirements damage_memory_request = context->m_device.getImageMemoryRequirements(image_damage.get());
 				vk::MemoryAllocateInfo damage_memory_alloc_info;
 				damage_memory_alloc_info.allocationSize = damage_memory_request.size;
-				damage_memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(context->m_device.getGPU(), damage_memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+				damage_memory_alloc_info.memoryTypeIndex = Helper::getMemoryTypeIndex(context->m_device.getGPU(), damage_memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 				auto image_damage_memory = context->m_device.allocateMemoryUnique(damage_memory_alloc_info);
 				context->m_device.bindImageMemory(image_damage.get(), image_damage_memory.get(), 0);
 
@@ -148,7 +148,7 @@ struct sScene : public Singleton<sScene>
 				auto sub_memory_request = context->m_device.getImageMemoryRequirements(subimage.get());
 				vk::MemoryAllocateInfo sub_memory_alloc_info;
 				sub_memory_alloc_info.allocationSize = sub_memory_request.size;
-				sub_memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(context->m_device.getGPU(), sub_memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+				sub_memory_alloc_info.memoryTypeIndex = Helper::getMemoryTypeIndex(context->m_device.getGPU(), sub_memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 				auto subimage_memory = context->m_device.allocateMemoryUnique(sub_memory_alloc_info);
 				context->m_device.bindImageMemory(subimage.get(), subimage_memory.get(), 0);
 

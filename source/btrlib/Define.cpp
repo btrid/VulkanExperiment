@@ -35,5 +35,25 @@ namespace btr
 
 }
 
+namespace Helper
+{
+	uint32_t getMemoryTypeIndex(const vk::PhysicalDevice& gpu, const vk::MemoryRequirements& request, vk::MemoryPropertyFlags flag)
+	{
+		auto prop = gpu.getMemoryProperties();
+		auto memory_type_bits = request.memoryTypeBits;
+		for (uint32_t i = 0; i < prop.memoryTypeCount; i++)
+		{
+			auto bit = memory_type_bits >> i;
+			if ((bit & 1) == 0) {
+				continue;
+			}
 
-
+			if ((prop.memoryTypes[i].propertyFlags & flag) != flag)
+			{
+				continue;
+			}
+			return i;
+		}
+		return 0xffffffffu;
+	}
+}

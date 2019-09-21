@@ -2,6 +2,7 @@
 #include <btrlib/sGlobal.h>
 #include <btrlib/cDebug.h>
 #include <btrlib/Context.h>
+#include <btrlib/sDebug.h>
 
 #include <applib/DrawHelper.h>
 #include <applib/sCameraManager.h>
@@ -727,7 +728,7 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 		m_depth_info = depth_info;
 					// ƒƒ‚ƒŠŠm•Û
 		auto memory_request = context->m_device.getImageMemoryRequirements(m_depth_image.get());
-		uint32_t memory_index = cGPU::Helper::getMemoryTypeIndex(context->m_physical_device, memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+		uint32_t memory_index = Helper::getMemoryTypeIndex(context->m_physical_device, memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
 		vk::MemoryAllocateInfo memory_info;
 		memory_info.allocationSize = memory_request.size;
@@ -762,7 +763,7 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 		m_front_buffer_info = image_info;
 		// ƒƒ‚ƒŠŠm•Û
 		auto memory_request = context->m_device.getImageMemoryRequirements(m_front_buffer_image.get());
-		uint32_t memory_index = cGPU::Helper::getMemoryTypeIndex(context->m_physical_device, memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+		uint32_t memory_index = Helper::getMemoryTypeIndex(context->m_physical_device, memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
 		vk::MemoryAllocateInfo memory_info;
 		memory_info.allocationSize = memory_request.size;

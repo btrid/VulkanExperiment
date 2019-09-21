@@ -175,7 +175,7 @@ void ResourceTexture::load(const std::shared_ptr<btr::Context>& context, vk::Com
 	vk::MemoryRequirements memory_request = context->m_device.getImageMemoryRequirements(image.get());
 	vk::MemoryAllocateInfo memory_alloc_info;
 	memory_alloc_info.allocationSize = memory_request.size;
-	memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(context->m_physical_device, memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+	memory_alloc_info.memoryTypeIndex = Helper::getMemoryTypeIndex(context->m_physical_device, memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
 	vk::UniqueDeviceMemory image_memory = context->m_device.allocateMemoryUnique(memory_alloc_info);
 	context->m_device.bindImageMemory(image.get(), image_memory.get(), 0);

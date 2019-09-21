@@ -274,7 +274,7 @@ struct Font : std::enable_shared_from_this<Font>
 		vk::MemoryRequirements memory_request = context->m_device.getImageMemoryRequirements(cache->m_image_raster_cache.get());
 		vk::MemoryAllocateInfo memory_alloc_info;
 		memory_alloc_info.allocationSize = memory_request.size;
-		memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(context->m_gpu.get(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+		memory_alloc_info.memoryTypeIndex = Helper::getMemoryTypeIndex(context->m_gpu.get(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
 		cache->m_memory_raster_cache = context->m_device.allocateMemoryUnique(memory_alloc_info);
 		context->m_device.bindImageMemory(cache->m_image_raster_cache.get(), cache->m_memory_raster_cache.get(), 0);

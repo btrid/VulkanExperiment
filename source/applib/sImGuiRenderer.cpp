@@ -30,7 +30,7 @@ sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 			vk::MemoryRequirements memory_request = context->m_device.getImageMemoryRequirements(m_font_image.get());
 			vk::MemoryAllocateInfo memory_alloc_info;
 			memory_alloc_info.allocationSize = memory_request.size;
-			memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(context->m_physical_device, memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+			memory_alloc_info.memoryTypeIndex = Helper::getMemoryTypeIndex(context->m_physical_device, memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
 			m_font_image_memory = context->m_device.allocateMemoryUnique(memory_alloc_info);
 			context->m_device.bindImageMemory(m_font_image.get(), m_font_image_memory.get(), 0);

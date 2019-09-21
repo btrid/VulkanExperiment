@@ -8,10 +8,7 @@
 #include <climits>
 
 #include <btrlib/Define.h>
-#include <btrlib/GPU.h>
 #include <btrlib/Singleton.h>
-#include <btrlib/cThreadPool.h>
-#include <btrlib/sDebug.h>
 #include <btrlib/cStopWatch.h>
 
 class sGlobal : public Singleton<sGlobal>

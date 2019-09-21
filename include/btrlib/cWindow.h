@@ -8,7 +8,6 @@
 #include <btrlib/Singleton.h>
 #include <btrlib/sGlobal.h>
 #include <btrlib/cInput.h>
-#include <btrlib/GPU.h>
 //#include <btrlib/Module.h>
 namespace btr
 {

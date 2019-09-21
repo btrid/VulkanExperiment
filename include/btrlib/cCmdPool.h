@@ -4,7 +4,6 @@
 #include <vector>
 #include <memory>
 #include <btrlib/Define.h>
-#include <btrlib/GPU.h>
 #include <btrlib/sGlobal.h>
 
 namespace btr

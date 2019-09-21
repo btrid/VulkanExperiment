@@ -48,7 +48,7 @@ void ImageMemoryAllocate()
 	auto buffer = device->createBufferUnique(buffer_info);
 
 	vk::MemoryRequirements buffer_memory_request = device->getBufferMemoryRequirements(buffer.get());
-	auto memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(device.getGPU(), buffer_memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+	auto memoryTypeIndex = Helper::getMemoryTypeIndex(device.getGPU(), buffer_memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
 	vk::ImageCreateInfo image_info;
 	image_info.imageType = vk::ImageType::e2D;
@@ -66,7 +66,7 @@ void ImageMemoryAllocate()
 	vk::MemoryRequirements image_memory_request = device->getImageMemoryRequirements(image.get());
 	vk::MemoryAllocateInfo image_memory_alloc_info;
 	image_memory_alloc_info.allocationSize = image_memory_request.size;
-	image_memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(device.getGPU(), image_memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+	image_memory_alloc_info.memoryTypeIndex = Helper::getMemoryTypeIndex(device.getGPU(), image_memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 	auto image_memory = device->allocateMemoryUnique(image_memory_alloc_info);
 	device->bindImageMemory(image.get(), image_memory.get(), 0);
 
@@ -90,7 +90,7 @@ void AllocateMemory(const cDevice& device, std::vector<AllocateInfo>&& alloc_inf
 	}
 
 // 	vk::MemoryRequirements buffer_memory_request = device->getBufferMemoryRequirements(buffer.get());
-// 	auto memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(device.getGPU(), buffer_memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+// 	auto memoryTypeIndex = Helper::getMemoryTypeIndex(device.getGPU(), buffer_memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 //	return memory;
 
 }
@@ -133,7 +133,7 @@ void memoryAllocate()
 	vk::MemoryRequirements memory_request = device->getImageMemoryRequirements(image);
 	vk::MemoryAllocateInfo memory_alloc_info;
 	memory_alloc_info.allocationSize = memory_request.size;
-	memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+	memory_alloc_info.memoryTypeIndex = Helper::getMemoryTypeIndex(device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
 	auto memory_prop = device.getGPU().getMemoryProperties();
 

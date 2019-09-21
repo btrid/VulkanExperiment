@@ -150,7 +150,7 @@ struct VoxelContext_Old
 			vk::MemoryRequirements memory_request = device->getImageMemoryRequirements(image.get());
 			vk::MemoryAllocateInfo memory_alloc_info;
 			memory_alloc_info.allocationSize = memory_request.size;
-			memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+			memory_alloc_info.memoryTypeIndex = Helper::getMemoryTypeIndex(device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
 			auto image_memory = device->allocateMemoryUnique(memory_alloc_info);
 			device->bindImageMemory(image.get(), image_memory.get(), 0);

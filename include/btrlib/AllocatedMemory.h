@@ -363,7 +363,7 @@ struct AllocatedMemory
 		vk::MemoryRequirements memory_request = device.getBufferMemoryRequirements(resource->m_buffer.get());
 		vk::MemoryAllocateInfo memory_alloc;
 		memory_alloc.setAllocationSize(memory_request.size);
-		memory_alloc.setMemoryTypeIndex(cGPU::Helper::getMemoryTypeIndex(physical_device, memory_request, memory_type));
+		memory_alloc.setMemoryTypeIndex(Helper::getMemoryTypeIndex(physical_device, memory_request, memory_type));
 		resource->m_memory = device.allocateMemoryUnique(memory_alloc);
 		device.bindBufferMemory(resource->m_buffer.get(), resource->m_memory.get(), 0);
 

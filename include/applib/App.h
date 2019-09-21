@@ -6,6 +6,7 @@
 #include <btrlib/Define.h>
 #include <btrlib/cWindow.h>
 #include <btrlib/cCmdPool.h>
+#include <btrlib/cThreadPool.h>
 #include <btrlib/Context.h>
 #include <btrlib/sGlobal.h>
 #include <btrlib/Module.h>

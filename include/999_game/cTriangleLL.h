@@ -403,7 +403,7 @@ struct cTriangleLL
 				vk::MemoryRequirements memory_request = loader.m_device.getImageMemoryRequirements(m_brick_image);
 				vk::MemoryAllocateInfo memory_alloc_info;
 				memory_alloc_info.allocationSize = memory_request.size;
-				memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(loader.m_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+				memory_alloc_info.memoryTypeIndex = Helper::getMemoryTypeIndex(loader.m_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
 				m_brick_image_memory = loader.m_device.allocateMemory(memory_alloc_info);
 				loader.m_device.bindImageMemory(m_brick_image, m_brick_image_memory, 0);

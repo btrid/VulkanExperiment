@@ -90,3 +90,8 @@ size_t alignment(T size, T align)
 
 #define array_length(_a) ((uint32_t)std::size(_a))
 #define array_size(_a) ((uint32_t)std::size(_a))
+
+namespace Helper
+{
+uint32_t getMemoryTypeIndex(const vk::PhysicalDevice& gpu, const vk::MemoryRequirements& request, vk::MemoryPropertyFlags flag);
+}
