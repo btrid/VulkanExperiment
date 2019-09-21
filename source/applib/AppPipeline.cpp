@@ -7,7 +7,7 @@ ClearPipeline::ClearPipeline(const std::shared_ptr<btr::Context>& context, const
 	cmd_buffer_info.commandPool = context->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
 	cmd_buffer_info.commandBufferCount = 1;
 	cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
-	m_cmd = std::move(context->m_device->allocateCommandBuffersUnique(cmd_buffer_info)[0]);
+	m_cmd = std::move(context->m_device.allocateCommandBuffersUnique(cmd_buffer_info)[0]);
 
 	vk::CommandBufferBeginInfo begin_info;
 	begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
@@ -92,7 +92,7 @@ ClearPipeline::ClearPipeline(const std::shared_ptr<btr::Context>& context, const
 	name_info.objectHandle = reinterpret_cast<uint64_t &>(m_cmd.get());
 	name_info.objectType = vk::ObjectType::eCommandBuffer;
 	name_info.pObjectName = "ClearPipeline CMD";
-	context->m_device->setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
+	context->m_device.setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
 #endif
 
 
@@ -115,7 +115,7 @@ PresentPipeline::PresentPipeline(const std::shared_ptr<btr::Context>& context, c
 		vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 		desc_layout_info.setBindingCount(array_length(binding));
 		desc_layout_info.setPBindings(binding);
-		m_descriptor_layout = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
+		m_descriptor_layout = context->m_device.createDescriptorSetLayoutUnique(desc_layout_info);
 
 	}
 	{
@@ -132,7 +132,7 @@ PresentPipeline::PresentPipeline(const std::shared_ptr<btr::Context>& context, c
 
 		std::string path = btr::getResourceLibPath() + "shader\\binary\\";
 		for (size_t i = 0; i < array_length(shader_info); i++) {
-			m_shader[i] = loadShaderUnique(context->m_device.getHandle(), path + shader_info[i].name);
+			m_shader[i] = loadShaderUnique(context->m_device, path + shader_info[i].name);
 		}
 
 	}
@@ -160,7 +160,7 @@ PresentPipeline::PresentPipeline(const std::shared_ptr<btr::Context>& context, c
 				vk::ComponentSwizzle::eA,
 				});
 			backbuffer_view_info.setSubresourceRange(subresourceRange);
-			m_backbuffer_view[i] = context->m_device->createImageViewUnique(backbuffer_view_info);
+			m_backbuffer_view[i] = context->m_device.createImageViewUnique(backbuffer_view_info);
 		}
 	}
 
@@ -197,7 +197,7 @@ PresentPipeline::PresentPipeline(const std::shared_ptr<btr::Context>& context, c
 		renderpass_info.setSubpassCount(1);
 		renderpass_info.setPSubpasses(&subpass);
 
-		m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
+		m_render_pass = context->m_device.createRenderPassUnique(renderpass_info);
 	}
 
 	m_framebuffer.resize(swapchain->getBackbufferNum());
@@ -214,7 +214,7 @@ PresentPipeline::PresentPipeline(const std::shared_ptr<btr::Context>& context, c
 		framebuffer_info.setHeight(swapchain->getSize().height);
 		framebuffer_info.setLayers(1);
 
-		m_framebuffer[i] = context->m_device->createFramebufferUnique(framebuffer_info);
+		m_framebuffer[i] = context->m_device.createFramebufferUnique(framebuffer_info);
 	}
 
 	// pipeline layout
@@ -225,7 +225,7 @@ PresentPipeline::PresentPipeline(const std::shared_ptr<btr::Context>& context, c
 		vk::PipelineLayoutCreateInfo pipeline_layout_info;
 		pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 		pipeline_layout_info.setPSetLayouts(layouts);
-		m_pipeline_layout = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+		m_pipeline_layout = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 	}
 
 	// pipeline 
@@ -310,7 +310,7 @@ PresentPipeline::PresentPipeline(const std::shared_ptr<btr::Context>& context, c
 			.setPDepthStencilState(&depth_stencil_info)
 			.setPColorBlendState(&blend_info)
 		};
-		auto pipelines = context->m_device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info);
+		auto pipelines = context->m_device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info);
 		m_pipeline = std::move(pipelines[0]);
 	}
 
@@ -322,7 +322,7 @@ PresentPipeline::PresentPipeline(const std::shared_ptr<btr::Context>& context, c
 		desc_info.setDescriptorPool(context->m_descriptor_pool.get());
 		desc_info.setDescriptorSetCount(array_length(layouts));
 		desc_info.setPSetLayouts(layouts);
-		m_descriptor_set = std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]);
+		m_descriptor_set = std::move(context->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
 
 		vk::DescriptorImageInfo images[] = {
 			vk::DescriptorImageInfo()
@@ -338,7 +338,7 @@ PresentPipeline::PresentPipeline(const std::shared_ptr<btr::Context>& context, c
 			.setDstBinding(0)
 			.setDstSet(m_descriptor_set.get())
 		};
-		context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
+		context->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
 
 	}
 
@@ -347,7 +347,7 @@ PresentPipeline::PresentPipeline(const std::shared_ptr<btr::Context>& context, c
 		cmd_buffer_info.commandPool = context->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
 		cmd_buffer_info.commandBufferCount = m_framebuffer.size();
 		cmd_buffer_info.level = vk::CommandBufferLevel::ePrimary;
-		m_cmd = context->m_device->allocateCommandBuffersUnique(cmd_buffer_info);
+		m_cmd = context->m_device.allocateCommandBuffersUnique(cmd_buffer_info);
 
 #if USE_DEBUG_REPORT
 		char buf[256];
@@ -358,7 +358,7 @@ PresentPipeline::PresentPipeline(const std::shared_ptr<btr::Context>& context, c
 		{
 			name_info.objectHandle = reinterpret_cast<uint64_t &>(m_cmd[i].get());
 			sprintf_s(buf, "PresentPipeline CMD[%d]", i);
-			context->m_device->setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
+			context->m_device.setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
 		}
 #endif
 	}

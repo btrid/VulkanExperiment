@@ -12,6 +12,8 @@
 // #define VULKAN_HPP_DISABLE_ENHANCED_MODE
 #include <vulkan/vulkan.hpp>
 
+
+#include <VulkanMemoryAllocator/src/vk_mem_alloc.h>
 #include <btrlib/DefineMath.h>
 
 #include <string>

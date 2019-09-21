@@ -242,7 +242,7 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 		descriptor_set_alloc_info.setDescriptorPool(context->m_descriptor_pool.get());
 		descriptor_set_alloc_info.setDescriptorSetCount(array_length(layouts));
 		descriptor_set_alloc_info.setPSetLayouts(layouts);
-		auto descriptor = context->m_device->allocateDescriptorSetsUnique(descriptor_set_alloc_info);
+		auto descriptor = context->m_device.allocateDescriptorSetsUnique(descriptor_set_alloc_info);
 		m_descriptor_set[0] = std::move(descriptor[0]);
 		m_descriptor_set[1] = std::move(descriptor[1]);
 		m_descriptor_set[2] = std::move(descriptor[2]);
@@ -314,7 +314,7 @@ AppModel::AppModel(const std::shared_ptr<btr::Context>& context, const std::shar
 			.setDstBinding(1)
 			.setDstSet(m_descriptor_set[DescriptorSet_Update].get()),
 		};
-		context->m_device->updateDescriptorSets(write, {});
+		context->m_device.updateDescriptorSets(write, {});
 
 	}
 }

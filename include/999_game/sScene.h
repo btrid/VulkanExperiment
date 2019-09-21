@@ -121,36 +121,36 @@ struct sScene : public Singleton<sScene>
 				image_info.sharingMode = vk::SharingMode::eExclusive;
 				image_info.initialLayout = vk::ImageLayout::eUndefined;
 				image_info.extent = { m_map_info_cpu.m_descriptor[0].m_cell_num.x, m_map_info_cpu.m_descriptor[0].m_cell_num.y, 1u };
-				auto image = context->m_device->createImageUnique(image_info);
+				auto image = context->m_device.createImageUnique(image_info);
 
-				vk::MemoryRequirements memory_request = context->m_device->getImageMemoryRequirements(image.get());
+				vk::MemoryRequirements memory_request = context->m_device.getImageMemoryRequirements(image.get());
 				vk::MemoryAllocateInfo memory_alloc_info;
 				memory_alloc_info.allocationSize = memory_request.size;
 				memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(context->m_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
-				auto image_memory = context->m_device->allocateMemoryUnique(memory_alloc_info);
-				context->m_device->bindImageMemory(image.get(), image_memory.get(), 0);
+				auto image_memory = context->m_device.allocateMemoryUnique(memory_alloc_info);
+				context->m_device.bindImageMemory(image.get(), image_memory.get(), 0);
 
 				vk::ImageCreateInfo image_damage_info = image_info;
 				image_damage_info.format = vk::Format::eR32Uint;
-				auto image_damage = context->m_device->createImageUnique(image_damage_info);
+				auto image_damage = context->m_device.createImageUnique(image_damage_info);
 
-				vk::MemoryRequirements damage_memory_request = context->m_device->getImageMemoryRequirements(image_damage.get());
+				vk::MemoryRequirements damage_memory_request = context->m_device.getImageMemoryRequirements(image_damage.get());
 				vk::MemoryAllocateInfo damage_memory_alloc_info;
 				damage_memory_alloc_info.allocationSize = damage_memory_request.size;
 				damage_memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(context->m_device.getGPU(), damage_memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
-				auto image_damage_memory = context->m_device->allocateMemoryUnique(damage_memory_alloc_info);
-				context->m_device->bindImageMemory(image_damage.get(), image_damage_memory.get(), 0);
+				auto image_damage_memory = context->m_device.allocateMemoryUnique(damage_memory_alloc_info);
+				context->m_device.bindImageMemory(image_damage.get(), image_damage_memory.get(), 0);
 
 				vk::ImageCreateInfo sub_image_info = image_info;
 				sub_image_info.extent.width = m_map_info_cpu.m_descriptor[1].m_cell_num.x;
 				sub_image_info.extent.height = m_map_info_cpu.m_descriptor[1].m_cell_num.y;
-				auto subimage = context->m_device->createImageUnique(sub_image_info);
-				auto sub_memory_request = context->m_device->getImageMemoryRequirements(subimage.get());
+				auto subimage = context->m_device.createImageUnique(sub_image_info);
+				auto sub_memory_request = context->m_device.getImageMemoryRequirements(subimage.get());
 				vk::MemoryAllocateInfo sub_memory_alloc_info;
 				sub_memory_alloc_info.allocationSize = sub_memory_request.size;
 				sub_memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(context->m_device.getGPU(), sub_memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
-				auto subimage_memory = context->m_device->allocateMemoryUnique(sub_memory_alloc_info);
-				context->m_device->bindImageMemory(subimage.get(), subimage_memory.get(), 0);
+				auto subimage_memory = context->m_device.allocateMemoryUnique(sub_memory_alloc_info);
+				context->m_device.bindImageMemory(subimage.get(), subimage_memory.get(), 0);
 
 				vk::ImageSubresourceRange subresourceRange;
 				subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
@@ -168,15 +168,15 @@ struct sScene : public Singleton<sScene>
 				view_info.format = image_info.format;
 				view_info.image = image.get();
 				view_info.subresourceRange = subresourceRange;
-				auto image_view = context->m_device->createImageViewUnique(view_info);
+				auto image_view = context->m_device.createImageViewUnique(view_info);
 
 				view_info.image = subimage.get();
-				auto subimage_view = context->m_device->createImageViewUnique(view_info);
+				auto subimage_view = context->m_device.createImageViewUnique(view_info);
 
 				vk::ImageViewCreateInfo damage_view_info = vk::ImageViewCreateInfo(view_info)
 					.setFormat(vk::Format::eR32Uint)
 					.setImage(image_damage.get());
-				auto image_damage_view = context->m_device->createImageViewUnique(damage_view_info);
+				auto image_damage_view = context->m_device.createImageViewUnique(damage_view_info);
 
 				{
 
@@ -217,7 +217,7 @@ struct sScene : public Singleton<sScene>
 					l.setMipLevel(0);
 					{
 						btr::BufferMemoryDescriptor desc;
-						desc.size = context->m_device->getImageMemoryRequirements(image.get()).size;
+						desc.size = context->m_device.getImageMemoryRequirements(image.get()).size;
 						desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 						auto staging = context->m_staging_memory.allocateMemory(desc);
 						memcpy_s(staging.getMappedPtr(), desc.size, map.data(), vector_sizeof(map));
@@ -230,7 +230,7 @@ struct sScene : public Singleton<sScene>
 					}
 					{
 						btr::BufferMemoryDescriptor desc;
-						desc.size = context->m_device->getImageMemoryRequirements(subimage.get()).size;
+						desc.size = context->m_device.getImageMemoryRequirements(subimage.get()).size;
 						desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 						auto staging = context->m_staging_memory.allocateMemory(desc);
 
@@ -342,7 +342,7 @@ struct sScene : public Singleton<sScene>
 			vk::DescriptorSetLayoutCreateInfo descriptor_set_layout_info = vk::DescriptorSetLayoutCreateInfo()
 				.setBindingCount(bindings[i].size())
 				.setPBindings(bindings[i].data());
-			m_descriptor_set_layout[i] = context->m_device->createDescriptorSetLayoutUnique(descriptor_set_layout_info);
+			m_descriptor_set_layout[i] = context->m_device.createDescriptorSetLayoutUnique(descriptor_set_layout_info);
 		}
 
 		// descriptor set
@@ -355,7 +355,7 @@ struct sScene : public Singleton<sScene>
 			alloc_info.descriptorPool = context->m_descriptor_pool.get();
 			alloc_info.descriptorSetCount = array_length(layouts);
 			alloc_info.pSetLayouts = layouts;
-			auto descriptor_set = context->m_device->allocateDescriptorSetsUnique(alloc_info);
+			auto descriptor_set = context->m_device.allocateDescriptorSetsUnique(alloc_info);
 			std::copy(std::make_move_iterator(descriptor_set.begin()), std::make_move_iterator(descriptor_set.end()), m_descriptor_set.begin());
 
 
@@ -383,7 +383,7 @@ struct sScene : public Singleton<sScene>
 					.setDstBinding(1)
 					.setDstSet(m_descriptor_set[DESCRIPTOR_SET_MAP].get()),
 				};
-				context->m_device->updateDescriptorSets(write_desc, {});
+				context->m_device.updateDescriptorSets(write_desc, {});
 
 			}
 			std::vector<vk::DescriptorBufferInfo> uniforms = {
@@ -398,7 +398,7 @@ struct sScene : public Singleton<sScene>
 				.setDstBinding(0)
 				.setDstSet(m_descriptor_set[DESCRIPTOR_SET_SCENE].get()),
 			};
-			context->m_device->updateDescriptorSets(write_desc, {});
+			context->m_device.updateDescriptorSets(write_desc, {});
 
 		}
 
@@ -417,7 +417,7 @@ struct sScene : public Singleton<sScene>
 
 			std::string path = btr::getResourceAppPath() + "shader\\binary\\";
 			for (size_t i = 0; i < SHADER_NUM; i++) {
-				m_shader_module[i] = loadShaderUnique(context->m_device.getHandle(), path + shader_info[i].name);
+				m_shader_module[i] = loadShaderUnique(context->m_device.get(), path + shader_info[i].name);
 				m_shader_info[i].setModule(m_shader_module[i].get());
 				m_shader_info[i].setStage(shader_info[i].stage);
 				m_shader_info[i].setPName("main");
@@ -432,7 +432,7 @@ struct sScene : public Singleton<sScene>
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 			pipeline_layout_info.setPSetLayouts(layouts);
-			m_pipeline_layout[PIPELINE_LAYOUT_UPDATE_MAP] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PIPELINE_LAYOUT_UPDATE_MAP] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
 		// pipeline
@@ -443,7 +443,7 @@ struct sScene : public Singleton<sScene>
 				.setStage(m_shader_info[SHADER_COMPUTE_MAP_UPDATE])
 				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE_MAP].get()),
 			};
-			auto pipelines = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
+			auto pipelines = context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
 			m_pipeline[PIPELINE_COMPUTE_UPDATE_MAP] = std::move(pipelines[0]);
 
 		}

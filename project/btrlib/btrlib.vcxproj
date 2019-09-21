@@ -81,7 +81,6 @@
     <ClInclude Include="..\..\include\btrlib\Context.h" />
     <ClInclude Include="..\..\include\btrlib\cStopWatch.h" />
     <ClInclude Include="..\..\include\btrlib\cThreadPool.h" />
-    <ClInclude Include="..\..\include\btrlib\GPU.h" />
     <ClInclude Include="..\..\include\btrlib\Module.h" />
     <ClInclude Include="..\..\include\btrlib\ResourceManager.h" />
     <ClInclude Include="..\..\include\btrlib\rTexture.h" />
@@ -103,7 +102,6 @@
     <ClCompile Include="..\..\source\btrlib\cModel.cpp" />
     <ClCompile Include="..\..\source\btrlib\cWindow.cpp" />
     <ClCompile Include="..\..\source\btrlib\Define.cpp" />
-    <ClCompile Include="..\..\source\btrlib\GPU.cpp" />
     <ClCompile Include="..\..\source\btrlib\rTexture.cpp" />
     <ClCompile Include="..\..\source\btrlib\sDebug.cpp" />
     <ClCompile Include="..\..\source\btrlib\sGlobal.cpp" />

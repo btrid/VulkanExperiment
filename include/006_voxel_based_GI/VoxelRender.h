@@ -84,7 +84,7 @@ struct VoxelRender
 			renderpass_info.setSubpassCount(1);
 			renderpass_info.setPSubpasses(&subpass);
 
-			m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
+			m_render_pass = context->m_device.createRenderPassUnique(renderpass_info);
 
 			{
 				vk::ImageView view[] = {
@@ -97,7 +97,7 @@ struct VoxelRender
 				framebuffer_info.setWidth(render_target->m_info.extent.width);
 				framebuffer_info.setHeight(render_target->m_info.extent.height);
 				framebuffer_info.setLayers(1);
-				m_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
+				m_framebuffer = context->m_device.createFramebufferUnique(framebuffer_info);
 			}
 		}
 		// setup shader
@@ -115,7 +115,7 @@ struct VoxelRender
 
 			std::string path = btr::getResourceShaderPath() + "../006_voxel_based_GI/binary/";
 			for (size_t i = 0; i < SHADER_NUM; i++) {
-				m_shader_list[i] = std::move(loadShaderUnique(device.getHandle(), path + shader_info[i].name));
+				m_shader_list[i] = std::move(loadShaderUnique(device.get(), path + shader_info[i].name));
 			}
 		}
 
@@ -221,7 +221,7 @@ struct VoxelRender
 					.setPDepthStencilState(&depth_stencil_info)
 					.setPColorBlendState(&blend_info),
 				};
-				m_pipeline[PIPELINE_DRAW_VOXEL] = std::move(device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info)[0]);
+				m_pipeline[PIPELINE_DRAW_VOXEL] = std::move(device->createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info)[0]);
 			}
 
 		}

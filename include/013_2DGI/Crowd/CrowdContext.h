@@ -119,7 +119,7 @@ struct CrowdContext
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
 				desc_layout_info.setPBindings(binding);
-				m_descriptor_set_layout = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
+				m_descriptor_set_layout = context->m_device.createDescriptorSetLayoutUnique(desc_layout_info);
 
 			}
 			{
@@ -130,7 +130,7 @@ struct CrowdContext
 				desc_info.setDescriptorPool(context->m_descriptor_pool.get());
 				desc_info.setDescriptorSetCount(array_length(layouts));
 				desc_info.setPSetLayouts(layouts);
-				m_descriptor_set = std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]);
+				m_descriptor_set = std::move(context->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
 			}
 		}
 
@@ -178,7 +178,7 @@ struct CrowdContext
 				.setDstBinding(3)
 				.setDstSet(m_descriptor_set.get()),
 			};
-			context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
+			context->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
 		}
 
 

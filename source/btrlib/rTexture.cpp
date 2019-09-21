@@ -170,15 +170,15 @@ void ResourceTexture::load(const std::shared_ptr<btr::Context>& context, vk::Com
 	image_info.sharingMode = vk::SharingMode::eExclusive;
 	image_info.initialLayout = vk::ImageLayout::eUndefined;
 	image_info.extent = { texture_data.m_size.x, texture_data.m_size.y, 1 };
-	vk::UniqueImage image = context->m_device->createImageUnique(image_info);
+	vk::UniqueImage image = context->m_device.createImageUnique(image_info);
 
-	vk::MemoryRequirements memory_request = context->m_device->getImageMemoryRequirements(image.get());
+	vk::MemoryRequirements memory_request = context->m_device.getImageMemoryRequirements(image.get());
 	vk::MemoryAllocateInfo memory_alloc_info;
 	memory_alloc_info.allocationSize = memory_request.size;
-	memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(context->m_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+	memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(context->m_physical_device, memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-	vk::UniqueDeviceMemory image_memory = context->m_device->allocateMemoryUnique(memory_alloc_info);
-	context->m_device->bindImageMemory(image.get(), image_memory.get(), 0);
+	vk::UniqueDeviceMemory image_memory = context->m_device.allocateMemoryUnique(memory_alloc_info);
+	context->m_device.bindImageMemory(image.get(), image_memory.get(), 0);
 
 	btr::BufferMemoryDescriptor staging_desc;
 	staging_desc.size = texture_data.getBufferSize();
@@ -206,7 +206,7 @@ void ResourceTexture::load(const std::shared_ptr<btr::Context>& context, vk::Com
 
 		{
 			vk::ImageMemoryBarrier to_copy_barrier;
-			to_copy_barrier.dstQueueFamilyIndex = context->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
+//			to_copy_barrier.dstQueueFamilyIndex = context->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
 			to_copy_barrier.image = image.get();
 			to_copy_barrier.oldLayout = vk::ImageLayout::eUndefined;
 			to_copy_barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
@@ -217,7 +217,7 @@ void ResourceTexture::load(const std::shared_ptr<btr::Context>& context, vk::Com
 		cmd.copyBufferToImage(staging_buffer.getBufferInfo().buffer, image.get(), vk::ImageLayout::eTransferDstOptimal, { copy });
 		{
 			vk::ImageMemoryBarrier to_shader_read_barrier;
-			to_shader_read_barrier.dstQueueFamilyIndex = context->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
+//			to_shader_read_barrier.dstQueueFamilyIndex = context->m_device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics);
 			to_shader_read_barrier.image = image.get();
 			to_shader_read_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
 			to_shader_read_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
@@ -257,6 +257,6 @@ void ResourceTexture::load(const std::shared_ptr<btr::Context>& context, vk::Com
 
 	m_resource->m_image = std::move(image);
 	m_resource->m_memory = std::move(image_memory);
-	m_resource->m_image_view = context->m_device->createImageViewUnique(view_info);
-	m_resource->m_sampler = context->m_device->createSamplerUnique(sampler_info);
+	m_resource->m_image_view = context->m_device.createImageViewUnique(view_info);
+	m_resource->m_sampler = context->m_device.createSamplerUnique(sampler_info);
 }

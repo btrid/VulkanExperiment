@@ -28,7 +28,7 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 		vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 		desc_layout_info.setBindingCount(array_length(binding));
 		desc_layout_info.setPBindings(binding);
-		m_desc_layout[DescLayout_Data] = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
+		m_desc_layout[DescLayout_Data] = context->m_device.createDescriptorSetLayoutUnique(desc_layout_info);
 	}
 	{
 		auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
@@ -42,7 +42,7 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 		vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 		desc_layout_info.setBindingCount(array_length(binding));
 		desc_layout_info.setPBindings(binding);
-		m_desc_layout[DescLayout_Make] = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
+		m_desc_layout[DescLayout_Make] = context->m_device.createDescriptorSetLayoutUnique(desc_layout_info);
 	}
 
 	{
@@ -59,7 +59,7 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 
 		std::string path = btr::getResourceShaderPath();
 		for (size_t i = 0; i < array_length(name); i++) {
-			m_shader[i] = loadShaderUnique(m_context->m_device.getHandle(), path + name[i]);
+			m_shader[i] = loadShaderUnique(m_context->m_device.get(), path + name[i]);
 		}
 	}
 
@@ -73,14 +73,14 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 		vk::PipelineLayoutCreateInfo pipeline_layout_info;
 		pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 		pipeline_layout_info.setPSetLayouts(layouts);
-		m_pipeline_layout[PipelineLayout_ToFluid] = m_context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+		m_pipeline_layout[PipelineLayout_ToFluid] = m_context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 
 #if USE_DEBUG_REPORT
 		vk::DebugUtilsObjectNameInfoEXT name_info;
 		name_info.pObjectName = "PipelineLayout_ToFluid";
 		name_info.objectType = vk::ObjectType::ePipelineLayout;
 		name_info.objectHandle = reinterpret_cast<uint64_t &>(m_pipeline_layout[PipelineLayout_ToFluid].get());
-		m_context->m_device->setDebugUtilsObjectNameEXT(name_info, m_context->m_dispach);
+		m_context->m_device.setDebugUtilsObjectNameEXT(name_info, m_context->m_dispach);
 #endif
 	}
 	{
@@ -98,14 +98,14 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 		pipeline_layout_info.setPSetLayouts(layouts);
 		pipeline_layout_info.setPushConstantRangeCount(array_length(ranges));
 		pipeline_layout_info.setPPushConstantRanges(ranges);
-		m_pipeline_layout[PipelineLayout_MakeRB] = m_context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+		m_pipeline_layout[PipelineLayout_MakeRB] = m_context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 
 #if USE_DEBUG_REPORT
 		vk::DebugUtilsObjectNameInfoEXT name_info;
 		name_info.pObjectName = "PipelineLayout_MakeRigidbody";
 		name_info.objectType = vk::ObjectType::ePipelineLayout;
 		name_info.objectHandle = reinterpret_cast<uint64_t &>(m_pipeline_layout[PipelineLayout_MakeRB].get());
-		m_context->m_device->setDebugUtilsObjectNameEXT(name_info, m_context->m_dispach);
+		m_context->m_device.setDebugUtilsObjectNameEXT(name_info, m_context->m_dispach);
 #endif
 	}
 
@@ -145,13 +145,13 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 			.setStage(shader_info[4])
 			.setLayout(m_pipeline_layout[PipelineLayout_MakeRB].get()),
 		};
-		auto compute_pipeline = m_context->m_device->createComputePipelinesUnique(m_context->m_cache.get(), compute_pipeline_info);
+		auto compute_pipeline = m_context->m_device.createComputePipelinesUnique(m_vk::PipelineCache(), compute_pipeline_info);
 #if USE_DEBUG_REPORT
 		vk::DebugUtilsObjectNameInfoEXT name_info;
 		name_info.pObjectName = "Pipeline_ToFluid";
 		name_info.objectType = vk::ObjectType::ePipeline;
 		name_info.objectHandle = reinterpret_cast<uint64_t &>(compute_pipeline[0].get());
-		m_context->m_device->setDebugUtilsObjectNameEXT(name_info, m_context->m_dispach);
+		m_context->m_device.setDebugUtilsObjectNameEXT(name_info, m_context->m_dispach);
 #endif
 
 		m_pipeline[Pipeline_ToFluid] = std::move(compute_pipeline[0]);
@@ -184,7 +184,7 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 			desc_info.setDescriptorPool(context->m_descriptor_pool.get());
 			desc_info.setDescriptorSetCount(array_length(layouts));
 			desc_info.setPSetLayouts(layouts);
-			m_descset[DescLayout_Data] = std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]);
+			m_descset[DescLayout_Data] = std::move(context->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
 
 			vk::DescriptorBufferInfo storages[] = {
 				b_world.getInfo(),
@@ -212,7 +212,7 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 				.setDstBinding(0)
 				.setDstSet(m_descset[DescLayout_Data].get()),
 			};
-			context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
+			context->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
 		}
 
 		b_make_rigidbody = m_context->m_storage_memory.allocateMemory<Rigidbody>({ 1,{} });
@@ -229,7 +229,7 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 			desc_info.setDescriptorPool(context->m_descriptor_pool.get());
 			desc_info.setDescriptorSetCount(array_length(layouts));
 			desc_info.setPSetLayouts(layouts);
-			m_descset[DescLayout_Make] = std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]);
+			m_descset[DescLayout_Make] = std::move(context->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
 
 			vk::DescriptorBufferInfo storages[] = {
 				b_make_rigidbody.getInfo(),
@@ -248,7 +248,7 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 				.setDstBinding(0)
 				.setDstSet(m_descset[DescLayout_Make].get()),
 			};
-			context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
+			context->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
 		}
 
 

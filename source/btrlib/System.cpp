@@ -51,7 +51,7 @@ System::System(const std::shared_ptr<btr::Context>& context)
 			.setDstBinding(0)
 			.setDstSet(m_descriptor_set.get()),
 		};
-		context->m_device->updateDescriptorSets(write_desc, {});
+		context->m_device.updateDescriptorSets(write_desc, {});
 	}
 }
 

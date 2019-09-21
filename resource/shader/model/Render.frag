@@ -8,13 +8,13 @@
 
 layout(early_fragment_tests) in;
 
-struct Vertex
+layout(location = 1) in Vertex 
 {
 	vec3 Position;
 	vec3 Normal;
 	vec3 Texcoord;
-};
-layout(location = 1) in Vertex FSIn;
+	flat int DrawID;
+}FSIn;
 
 layout(location=0) out vec4 FragColor;
 

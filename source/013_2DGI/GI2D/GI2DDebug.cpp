@@ -94,7 +94,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 
 		std::string path = btr::getResourceShaderPath();
 		for (size_t i = 0; i < array_length(name); i++) {
-			m_shader[i] = loadShaderUnique(context->m_device.getHandle(), path + name[i]);
+			m_shader[i] = loadShaderUnique(context->m_device.get(), path + name[i]);
 		}
 
 	}
@@ -113,7 +113,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 			pipeline_layout_info.setPSetLayouts(layouts);
 			pipeline_layout_info.setPushConstantRangeCount(array_length(constants));
 			pipeline_layout_info.setPPushConstantRanges(constants);
-			m_pipeline_layout[PipelineLayout_PointLight] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PipelineLayout_PointLight] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 		}
 		{
 			vk::DescriptorSetLayout layouts[] = {
@@ -123,7 +123,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 			pipeline_layout_info.setPSetLayouts(layouts);
-			m_pipeline_layout[PipelineLayout_DrawFragmentMap] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PipelineLayout_DrawFragmentMap] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 
 		}
 
@@ -136,7 +136,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 			pipeline_layout_info.setPSetLayouts(layouts);
-			m_pipeline_layout[PipelineLayout_DrawReachMap] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PipelineLayout_DrawReachMap] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 
 		}
 	}
@@ -178,7 +178,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 			.setStage(shader_info[3])
 			.setLayout(m_pipeline_layout[PipelineLayout_DrawReachMap].get()),
 		};
-		auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
+		auto compute_pipeline = context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
 		m_pipeline[Pipeline_PointLight] = std::move(compute_pipeline[0]);
 		m_pipeline[Pipeline_DrawFragmentMap] = std::move(compute_pipeline[1]);
 		m_pipeline[Pipeline_DrawFragment] = std::move(compute_pipeline[2]);

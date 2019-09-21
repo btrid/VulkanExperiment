@@ -114,7 +114,7 @@ public:
 					.setSubpassCount(1)
 					.setPSubpasses(&subpass);
 
-				m_render_pass = loader->m_device->createRenderPassUnique(renderpass_info);
+				m_render_pass = loader->m_device.createRenderPassUnique(renderpass_info);
 			}
 
 			m_framebuffer.resize(loader->m_window->getSwapchain().getBackbufferNum());
@@ -131,7 +131,7 @@ public:
 
 				for (size_t i = 0; i < m_framebuffer.size(); i++) {
 					view[0] = loader->m_window->getSwapchain().m_backbuffer[i].m_view;
-					m_framebuffer[i] = loader->m_device->createFramebufferUnique(framebuffer_info);
+					m_framebuffer[i] = loader->m_device.createFramebufferUnique(framebuffer_info);
 				}
 			}
 
@@ -174,14 +174,14 @@ public:
 			image_info.sharingMode = vk::SharingMode::eExclusive;
 			image_info.initialLayout = vk::ImageLayout::eUndefined;
 			image_info.extent = { texSize.x, texSize.y, texSize.z };
-			m_volume_image = loader->m_device->createImageUnique(image_info);
+			m_volume_image = loader->m_device.createImageUnique(image_info);
 
-			vk::MemoryRequirements memory_request = loader->m_device->getImageMemoryRequirements(m_volume_image.get());
+			vk::MemoryRequirements memory_request = loader->m_device.getImageMemoryRequirements(m_volume_image.get());
 			vk::MemoryAllocateInfo memory_alloc_info;
 			memory_alloc_info.allocationSize = memory_request.size;
 			memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(loader->m_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
-			m_volume_image_memory = loader->m_device->allocateMemoryUnique(memory_alloc_info);
-			loader->m_device->bindImageMemory(m_volume_image.get(), m_volume_image_memory.get(), 0);
+			m_volume_image_memory = loader->m_device.allocateMemoryUnique(memory_alloc_info);
+			loader->m_device.bindImageMemory(m_volume_image.get(), m_volume_image_memory.get(), 0);
 
 			vk::SamplerCreateInfo sampler_info;
 			sampler_info.magFilter = vk::Filter::eLinear;
@@ -197,7 +197,7 @@ public:
 			sampler_info.maxAnisotropy = 1.0;
 			sampler_info.anisotropyEnable = VK_FALSE;
 			sampler_info.borderColor = vk::BorderColor::eFloatOpaqueWhite;
-			m_volume_sampler = loader->m_device->createSamplerUnique(sampler_info);
+			m_volume_sampler = loader->m_device.createSamplerUnique(sampler_info);
 
 			vk::ImageSubresourceRange subresourceRange;
 			subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
@@ -215,7 +215,7 @@ public:
 			view_info.format = image_info.format;
 			view_info.image = m_volume_image.get();
 			view_info.subresourceRange = subresourceRange;
-			m_volume_image_view = loader->m_device->createImageViewUnique(view_info);
+			m_volume_image_view = loader->m_device.createImageViewUnique(view_info);
 
 			{
 
@@ -283,7 +283,7 @@ public:
 
 			std::string path = btr::getResourceAppPath() + "shader\\binary\\";
 			for (size_t i = 0; i < SHADER_NUM; i++) {
-				m_shader_module[i] = (loadShaderUnique(loader->m_device.getHandle(), path + shader_info[i].name));
+				m_shader_module[i] = (loadShaderUnique(loader->m_device.get(), path + shader_info[i].name));
 				m_shader_info[i].setModule(m_shader_module[i].get());
 				m_shader_info[i].setStage(shader_info[i].stage);
 				m_shader_info[i].setPName("main");
@@ -311,7 +311,7 @@ public:
 				vk::DescriptorSetLayoutCreateInfo descriptor_set_layout_info = vk::DescriptorSetLayoutCreateInfo()
 					.setBindingCount(bindings[i].size())
 					.setPBindings(bindings[i].data());
-				m_descriptor_set_layout[i] = loader->m_device->createDescriptorSetLayoutUnique(descriptor_set_layout_info);
+				m_descriptor_set_layout[i] = loader->m_device.createDescriptorSetLayoutUnique(descriptor_set_layout_info);
 			}
 
 		}
@@ -324,7 +324,7 @@ public:
 			alloc_info.descriptorPool = loader->m_descriptor_pool.get();
 			alloc_info.descriptorSetCount = array_length(layouts);
 			alloc_info.pSetLayouts = layouts;
-			auto descriptor_set = loader->m_device->allocateDescriptorSetsUnique(alloc_info);
+			auto descriptor_set = loader->m_device.allocateDescriptorSetsUnique(alloc_info);
 			std::copy(std::make_move_iterator(descriptor_set.begin()), std::make_move_iterator(descriptor_set.end()), m_descriptor_set.begin());
 			{
 
@@ -349,7 +349,7 @@ public:
 					.setDstBinding(1)
 					.setDstSet(m_descriptor_set[DESCRIPTOR_SET_VOLUME_SCENE].get()),
 				};
-				loader->m_device->updateDescriptorSets(write_desc, {});
+				loader->m_device.updateDescriptorSets(write_desc, {});
 			}
 
 		}
@@ -363,7 +363,7 @@ public:
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(layouts.size());
 			pipeline_layout_info.setPSetLayouts(layouts.data());
-			m_pipeline_layout[PIPELINE_LAYOUT_DRAW_VOLUME] = loader->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PIPELINE_LAYOUT_DRAW_VOLUME] = loader->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
 		// setup pipeline
@@ -379,7 +379,7 @@ public:
 // 				.setStage(m_shader_info[SHADER_COMPUTE_MAP_UPDATE])
 // 				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR]),
 // 			};
-// 			auto pipelines = loader->m_device->createComputePipelines(loader->m_cache.get(), compute_pipeline_info);
+// 			auto pipelines = loader->m_device.createComputePipelines(loader->m_cache.get(), compute_pipeline_info);
 // 			m_pipeline[PIPELINE_COMPUTE_MAP] = pipelines[0];
 // 		}
 		{
@@ -458,7 +458,7 @@ public:
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			m_pipeline[PIPELINE_DRAW_VOLUME] = std::move(loader->m_device->createGraphicsPipelinesUnique(loader->m_cache.get(), graphics_pipeline_info)[0]);
+			m_pipeline[PIPELINE_DRAW_VOLUME] = std::move(loader->m_device.createGraphicsPipelinesUnique(loader->m_cache.get(), graphics_pipeline_info)[0]);
 
 		}
 

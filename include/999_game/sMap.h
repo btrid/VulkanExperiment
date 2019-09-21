@@ -44,7 +44,7 @@ struct DrawDescriptor
 			.setDstBinding(0)
 			.setDstSet(descriptor_set),
 		};
-		context->m_device->updateDescriptorSets(array_length(write_desc), write_desc, 0, nullptr);
+		context->m_device.updateDescriptorSets(array_length(write_desc), write_desc, 0, nullptr);
 
 	}
 	static LayoutDescriptor GetLayout()
@@ -143,7 +143,7 @@ struct sMap : public Singleton<sMap>
 
 			std::string path = btr::getResourceAppPath() + "shader\\binary\\";
 			for (size_t i = 0; i < SHADER_NUM; i++) {
-				m_shader_module[i] = loadShaderUnique(context->m_device.getHandle(), path + shader_info[i].name);
+				m_shader_module[i] = loadShaderUnique(context->m_device.get(), path + shader_info[i].name);
 				m_shader_info[i].setModule(m_shader_module[i].get());
 				m_shader_info[i].setStage(shader_info[i].stage);
 				m_shader_info[i].setPName("main");
@@ -190,7 +190,7 @@ struct sMap : public Singleton<sMap>
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 			pipeline_layout_info.setPSetLayouts(layouts);
-			m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
 		vk::Extent2D size = m_render_pass->getResolution();
@@ -259,7 +259,7 @@ struct sMap : public Singleton<sMap>
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			auto pipelines = context->m_device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info);
+			auto pipelines = context->m_device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info);
 			std::copy(std::make_move_iterator(pipelines.begin()), std::make_move_iterator(pipelines.end()), m_pipeline.begin());
 
 		}
@@ -268,7 +268,7 @@ struct sMap : public Singleton<sMap>
 		cmd_info.commandBufferCount = sGlobal::FRAME_MAX;
 		cmd_info.commandPool = context->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
 		cmd_info.level = vk::CommandBufferLevel::ePrimary;
-		m_cmd = std::move(context->m_device->allocateCommandBuffersUnique(cmd_info));
+		m_cmd = std::move(context->m_device.allocateCommandBuffersUnique(cmd_info));
 
 		vk::CommandBufferBeginInfo begin_info;
 		begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);
@@ -417,7 +417,7 @@ struct sMap : public Singleton<sMap>
 			renderpass_info.setSubpassCount(1);
 			renderpass_info.setPSubpasses(&subpass);
 
-			m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
+			m_render_pass = context->m_device.createRenderPassUnique(renderpass_info);
 		}
 
 		{
@@ -433,7 +433,7 @@ struct sMap : public Singleton<sMap>
 			framebuffer_info.setHeight(render_target->m_info.extent.height);
 			framebuffer_info.setLayers(1);
 
-			m_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
+			m_framebuffer = context->m_device.createFramebufferUnique(framebuffer_info);
 		}
 
 		// setup shader
@@ -452,7 +452,7 @@ struct sMap : public Singleton<sMap>
 
 			std::string path = btr::getResourceAppPath() + "shader\\binary\\";
 			for (size_t i = 0; i < SHADER_NUM; i++) {
-				m_shader_module[i] = loadShaderUnique(context->m_device.getHandle(), path + shader_info[i].name);
+				m_shader_module[i] = loadShaderUnique(context->m_device.get(), path + shader_info[i].name);
 			}
 		}
 
@@ -467,7 +467,7 @@ struct sMap : public Singleton<sMap>
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 			pipeline_layout_info.setPSetLayouts(layouts);
-			m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PIPELINE_LAYOUT_DRAW_FLOOR] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
 		vk::Extent2D size = render_target->m_resolution;
@@ -572,7 +572,7 @@ struct sMap : public Singleton<sMap>
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			auto pipelines = context->m_device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info);
+			auto pipelines = context->m_device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info);
 			std::copy(std::make_move_iterator(pipelines.begin()), std::make_move_iterator(pipelines.end()), m_pipeline.begin());
 
 		}
@@ -581,7 +581,7 @@ struct sMap : public Singleton<sMap>
 		cmd_info.commandBufferCount = 1;
 		cmd_info.commandPool = context->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
 		cmd_info.level = vk::CommandBufferLevel::ePrimary;
-		m_cmd = std::move(context->m_device->allocateCommandBuffersUnique(cmd_info)[0]);
+		m_cmd = std::move(context->m_device.allocateCommandBuffersUnique(cmd_info)[0]);
 
 		vk::CommandBufferBeginInfo begin_info;
 		begin_info.setFlags(vk::CommandBufferUsageFlagBits::eSimultaneousUse);

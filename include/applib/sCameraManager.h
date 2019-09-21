@@ -59,14 +59,14 @@ struct sCameraManager : public Singleton<sCameraManager>
 			vk::DescriptorSetLayoutCreateInfo descriptor_set_layout_info = vk::DescriptorSetLayoutCreateInfo()
 				.setBindingCount((uint32_t)bindings[i].size())
 				.setPBindings(bindings[i].data());
-			m_descriptor_set_layout[i] = context->m_device->createDescriptorSetLayout(descriptor_set_layout_info);
+			m_descriptor_set_layout[i] = context->m_device.createDescriptorSetLayout(descriptor_set_layout_info);
 		}
 
 		vk::DescriptorSetAllocateInfo alloc_info;
 		alloc_info.descriptorPool = context->m_descriptor_pool.get();
 		alloc_info.descriptorSetCount = (uint32_t)m_descriptor_set_layout.size();
 		alloc_info.pSetLayouts = m_descriptor_set_layout.data();
-		auto descriptor_set = context->m_device->allocateDescriptorSets(alloc_info);
+		auto descriptor_set = context->m_device.allocateDescriptorSets(alloc_info);
 		std::copy(descriptor_set.begin(), descriptor_set.end(), m_descriptor_set.begin());
 		{
 
@@ -83,7 +83,7 @@ struct sCameraManager : public Singleton<sCameraManager>
 				.setDstBinding(0)
 				.setDstSet(m_descriptor_set[DESCRIPTOR_SET_LAYOUT_CAMERA]),
 			};
-			context->m_device->updateDescriptorSets(write_desc, {});
+			context->m_device.updateDescriptorSets(write_desc, {});
 		}
 
 	}
@@ -98,8 +98,8 @@ struct sCameraManager : public Singleton<sCameraManager>
 	}
 	vk::CommandBuffer draw(const std::shared_ptr<btr::Context>& context)
 	{
-		auto& device = context->m_gpu.getDevice();
-		auto cmd = context->m_cmd_pool->allocCmdOnetime(device.getQueueFamilyIndex(vk::QueueFlagBits::eGraphics));
+		auto& device = context->m_device;
+		auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
 
 		std::vector<vk::BufferMemoryBarrier> to_transfer = {
 			m_camera.getBufferMemory().makeMemoryBarrierEx().setDstAccessMask(vk::AccessFlagBits::eTransferWrite),

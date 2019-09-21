@@ -72,7 +72,7 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context, const std::sh
 		renderpass_info.setSubpassCount(1);
 		renderpass_info.setPSubpasses(&subpass);
 
-		m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
+		m_render_pass = context->m_device.createRenderPassUnique(renderpass_info);
 	}
 	{
 		vk::ImageView view[] = {
@@ -86,7 +86,7 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context, const std::sh
 		framebuffer_info.setHeight(render_target->m_info.extent.height);
 		framebuffer_info.setLayers(1);
 
-		m_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
+		m_framebuffer = context->m_device.createFramebufferUnique(framebuffer_info);
 	}
 
 	// descriptor
@@ -208,7 +208,7 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context, const std::sh
 
 		std::string path = btr::getResourceAppPath() + "shader\\binary\\";
 		for (size_t i = 0; i < SHADER_NUM; i++) {
-			m_shader_module[i] = loadShaderUnique(context->m_device.getHandle(), path + shader_info[i].name);
+			m_shader_module[i] = loadShaderUnique(context->m_device.get(), path + shader_info[i].name);
 		}
 	}
 
@@ -222,9 +222,9 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context, const std::sh
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 			pipeline_layout_info.setPSetLayouts(layouts);
-			m_pipeline_layout[PIPELINE_LAYOUT_UPDATE] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
-			m_pipeline_layout[PIPELINE_LAYOUT_TRANSFORM] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
-			m_pipeline_layout[PIPELINE_LAYOUT_RENDER] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PIPELINE_LAYOUT_UPDATE] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PIPELINE_LAYOUT_TRANSFORM] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PIPELINE_LAYOUT_RENDER] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 		}
 		{
 			vk::DescriptorSetLayout layouts[] =
@@ -246,9 +246,9 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context, const std::sh
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 			pipeline_layout_info.setPSetLayouts(layouts);
-			m_pipeline_layout[PIPELINE_LAYOUT_ANIMATION] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
-			m_pipeline_layout[PIPELINE_LAYOUT_BOUNDARY] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
-			m_pipeline_layout[PIPELINE_LAYOUT_CLEAR] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PIPELINE_LAYOUT_ANIMATION] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PIPELINE_LAYOUT_BOUNDARY] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PIPELINE_LAYOUT_CLEAR] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 		}
 	}
 	// pipeline
@@ -279,7 +279,7 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context, const std::sh
 				.setStage(shader_info[SHADER_BOUNDARY])
 				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_BOUNDARY].get()),
 			};
-			auto pipelines = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
+			auto pipelines = context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
 			m_pipeline[PIPELINE_ANIMATION] = std::move(pipelines[0]);
 			m_pipeline[PIPELINE_CLEAR] = std::move(pipelines[1]);
 			m_pipeline[PIPELINE_UPDATE] = std::move(pipelines[2]);
@@ -357,7 +357,7 @@ sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context, const std::sh
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			auto pipelines = context->m_device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info);
+			auto pipelines = context->m_device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info);
 			m_pipeline[PIPELINE_RENDER] = std::move(pipelines[0]);
 
 		}
@@ -392,7 +392,7 @@ vk::CommandBuffer sUISystem::draw()
 			alloc_info.setDescriptorPool(m_descriptor_pool.get());
 			alloc_info.setDescriptorSetCount(array_length(layouts));
 			alloc_info.setPSetLayouts(layouts);
-			descriptor_holder.emplace_back(std::move(m_context->m_device->allocateDescriptorSetsUnique(alloc_info)[0]));
+			descriptor_holder.emplace_back(std::move(m_context->m_device.allocateDescriptorSetsUnique(alloc_info)[0]));
 			descriptor_set = descriptor_holder.back().get();
 
 			vk::DescriptorBufferInfo uniforms[] = {
@@ -448,7 +448,7 @@ vk::CommandBuffer sUISystem::draw()
 				.setDstBinding(12)
 				.setDstSet(descriptor_set),
 			};
-			m_context->m_device->updateDescriptorSets(write_desc.size(), write_desc.begin(), 0, {});
+			m_context->m_device.updateDescriptorSets(write_desc.size(), write_desc.begin(), 0, {});
 		}
 		{
 			vk::DescriptorSetLayout layouts_anime[] = { m_descriptor_set_layout_anime.get() };
@@ -457,7 +457,7 @@ vk::CommandBuffer sUISystem::draw()
 			alloc_info.setDescriptorSetCount(array_length(layouts_anime));
 			alloc_info.setPSetLayouts(layouts_anime);
 
-			descriptor_holder.emplace_back(std::move(m_context->m_device->allocateDescriptorSetsUnique(alloc_info)[0]));
+			descriptor_holder.emplace_back(std::move(m_context->m_device.allocateDescriptorSetsUnique(alloc_info)[0]));
 			descriptor_set_anime = descriptor_holder.back().get();
 
 			vk::DescriptorBufferInfo uniforms[] = {
@@ -494,7 +494,7 @@ vk::CommandBuffer sUISystem::draw()
 				.setDstBinding(2)
 				.setDstSet(descriptor_set_anime),
 			};
-			m_context->m_device->updateDescriptorSets(write_desc.size(), write_desc.begin(), 0, {});
+			m_context->m_device.updateDescriptorSets(write_desc.size(), write_desc.begin(), 0, {});
 		}
 
 		{

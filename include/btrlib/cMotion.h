@@ -93,8 +93,8 @@ struct MotionTexture
 //		image_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
 		image_info.extent = { SIZE, 1u, 1u };
 
-		auto image_prop = context->m_device.getGPU().getImageFormatProperties(image_info.format, image_info.imageType, image_info.tiling, image_info.usage, image_info.flags);
-		vk::UniqueImage image = context->m_device->createImageUnique(image_info);
+		auto image_prop = context->m_physical_device.getImageFormatProperties(image_info.format, image_info.imageType, image_info.tiling, image_info.usage, image_info.flags);
+		vk::UniqueImage image = context->m_device.createImageUnique(image_info);
 
 		btr::BufferMemoryDescriptor staging_desc;
 		staging_desc.size = image_info.arrayLayers * motion->m_data.size() * SIZE * sizeof(glm::u16vec4);
@@ -177,13 +177,13 @@ struct MotionTexture
 			assert(count == SIZE);
 		}
 
-		vk::MemoryRequirements memory_request = context->m_device->getImageMemoryRequirements(image.get());
+		vk::MemoryRequirements memory_request = context->m_device.getImageMemoryRequirements(image.get());
 		vk::MemoryAllocateInfo memory_alloc_info;
 		memory_alloc_info.allocationSize = memory_request.size;
-		memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(context->m_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+		memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(context->m_physical_device, memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-		vk::UniqueDeviceMemory image_memory = context->m_device->allocateMemoryUnique(memory_alloc_info);
-		context->m_device->bindImageMemory(image.get(), image_memory.get(), 0);
+		vk::UniqueDeviceMemory image_memory = context->m_device.allocateMemoryUnique(memory_alloc_info);
+		context->m_device.bindImageMemory(image.get(), image_memory.get(), 0);
 
 		vk::ImageSubresourceRange subresourceRange;
 		subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
@@ -251,9 +251,9 @@ struct MotionTexture
 		MotionTexture tex;
 		tex.m_resource = std::make_shared<MotionTexture::Resource>();
 		tex.m_resource->m_image = std::move(image);
-		tex.m_resource->m_image_view = context->m_device->createImageViewUnique(view_info);
+		tex.m_resource->m_image_view = context->m_device.createImageViewUnique(view_info);
 		tex.m_resource->m_memory = std::move(image_memory);
-		tex.m_resource->m_sampler = context->m_device->createSamplerUnique(sampler_info);
+		tex.m_resource->m_sampler = context->m_device.createSamplerUnique(sampler_info);
 		return tex;
 	}
 };

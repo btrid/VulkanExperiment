@@ -185,7 +185,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 
 			std::string path = btr::getResourceLibPath() + "shader\\binary\\";
 			for (size_t i = 0; i < SHADER_NUM; i++) {
-				m_shader_module[i] = loadShaderUnique(context->m_device.getHandle(), path + shader_info[i].name);
+				m_shader_module[i] = loadShaderUnique(context->m_device, path + shader_info[i].name);
 				m_shader_info[i].setModule(m_shader_module[i].get());
 				m_shader_info[i].setStage(shader_info[i].stage);
 				m_shader_info[i].setPName("main");
@@ -207,7 +207,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 			pipeline_layout_info.setPSetLayouts(layouts.data());
 			pipeline_layout_info.setPushConstantRangeCount(array_length(constant));
 			pipeline_layout_info.setPPushConstantRanges(constant);
-			m_pipeline_layout[PIPELINE_LAYOUT_DRAW_PRIMITIVE] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PIPELINE_LAYOUT_DRAW_PRIMITIVE] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
 		// setup pipeline
@@ -299,7 +299,7 @@ struct DrawHelper : public Singleton<DrawHelper>
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			auto pipelines = context->m_device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info);
+			auto pipelines = context->m_device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info);
 			m_pipeline[PIPELINE_DRAW_PRIMITIVE] = std::move(pipelines[0]);
 
 		}

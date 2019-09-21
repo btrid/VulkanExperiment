@@ -11,7 +11,7 @@ struct Crowd_Debug
 
 		// shader
 		{
-			m_shader_module = loadShaderUnique(crowd_context->m_context->m_device.getHandle(), btr::getResourceShaderPath() + "Crowd_CrowdDebug.comp.spv");
+			m_shader_module = loadShaderUnique(crowd_context->m_context->m_device.get(), btr::getResourceShaderPath() + "Crowd_CrowdDebug.comp.spv");
 		}
 
 		// pipeline layout
@@ -29,7 +29,7 @@ struct Crowd_Debug
 			pipeline_layout_info.setPSetLayouts(layouts);
 			pipeline_layout_info.setPushConstantRangeCount(array_length(constants));
 			pipeline_layout_info.setPPushConstantRanges(constants);
-			m_pipeline_layout = crowd_context->m_context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout = crowd_context->m_context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
 		// pipeline
@@ -41,7 +41,7 @@ struct Crowd_Debug
 			vk::ComputePipelineCreateInfo compute_pipeline_info;
 			compute_pipeline_info.setStage(shader_info);
 			compute_pipeline_info.setLayout(m_pipeline_layout.get());
-			m_pipeline = crowd_context->m_context->m_device->createComputePipelineUnique(crowd_context->m_context->m_cache.get(), compute_pipeline_info);
+			m_pipeline = crowd_context->m_context->m_device.createComputePipelineUnique(crowd_context->m_vk::PipelineCache(), compute_pipeline_info);
 		}
 
 

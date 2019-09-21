@@ -49,7 +49,7 @@ struct GameContext
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 			desc_layout_info.setBindingCount(array_length(binding));
 			desc_layout_info.setPBindings(binding);
-			m_descriptor_set_layout[DSL_GameObject] = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
+			m_descriptor_set_layout[DSL_GameObject] = context->m_device.createDescriptorSetLayoutUnique(desc_layout_info);
 		}
 
 		uint size = 1024;
@@ -69,7 +69,7 @@ struct GameContext
 				desc_info.setDescriptorPool(context->m_descriptor_pool.get());
 				desc_info.setDescriptorSetCount(array_length(layouts));
 				desc_info.setPSetLayouts(layouts);
-				m_ds_gameobject = std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]);
+				m_ds_gameobject = std::move(context->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
 
 				vk::DescriptorBufferInfo storages[] =
 				{
@@ -85,7 +85,7 @@ struct GameContext
 					.setDstBinding(0)
 					.setDstSet(m_ds_gameobject.get()),
 				};
-				context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
+				context->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
 
 				m_ds_gameobject_freelist.resize(size);
 				for (uint i = 0; i < size; i++)
@@ -157,7 +157,7 @@ struct GameProcedure
 
 			std::string path = btr::getResourceShaderPath();
 			for (size_t i = 0; i < array_length(name); i++) {
-				m_shader[i] = loadShaderUnique(context->m_device.getHandle(), path + name[i]);
+				m_shader[i] = loadShaderUnique(context->m_device.get(), path + name[i]);
 			}
 		}
 
@@ -176,14 +176,14 @@ struct GameProcedure
 			pipeline_layout_info.setPSetLayouts(layouts);
 			pipeline_layout_info.setPushConstantRangeCount(array_length(ranges));
 			pipeline_layout_info.setPPushConstantRanges(ranges);
-			m_pipeline_layout[PipelineLayout_PlayerUpdate] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PipelineLayout_PlayerUpdate] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 
 #if USE_DEBUG_REPORT
 			vk::DebugUtilsObjectNameInfoEXT name_info;
 			name_info.pObjectName = "PipelineLayout_PlayerUpdate";
 			name_info.objectType = vk::ObjectType::ePipelineLayout;
 			name_info.objectHandle = reinterpret_cast<uint64_t &>(m_pipeline_layout[PipelineLayout_MovableUpdate].get());
-			context->m_device->setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
+			context->m_device.setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
 #endif
 		}
 		{
@@ -200,14 +200,14 @@ struct GameProcedure
 			pipeline_layout_info.setPSetLayouts(layouts);
 			pipeline_layout_info.setPushConstantRangeCount(array_length(ranges));
 			pipeline_layout_info.setPPushConstantRanges(ranges);
-			m_pipeline_layout[PipelineLayout_MovableUpdate] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PipelineLayout_MovableUpdate] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 
 #if USE_DEBUG_REPORT
 			vk::DebugUtilsObjectNameInfoEXT name_info;
 			name_info.pObjectName = "PipelineLayout_MovableUpdate";
 			name_info.objectType = vk::ObjectType::ePipelineLayout;
 			name_info.objectHandle = reinterpret_cast<uint64_t &>(m_pipeline_layout[PipelineLayout_MovableUpdate].get());
-			context->m_device->setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
+			context->m_device.setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
 #endif
 		}
 
@@ -235,14 +235,14 @@ struct GameProcedure
 				.setStage(shader_info[2])
 				.setLayout(m_pipeline_layout[PipelineLayout_MovableUpdate].get()),
 			};
-			auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
+			auto compute_pipeline = context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
 
 #if USE_DEBUG_REPORT
 			vk::DebugUtilsObjectNameInfoEXT name_info;
 			name_info.pObjectName = "Pipeline_MovableUpdate";
 			name_info.objectType = vk::ObjectType::ePipeline;
 			name_info.objectHandle = reinterpret_cast<uint64_t &>(compute_pipeline[0].get());
-			context->m_device->setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
+			context->m_device.setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
 #endif
 
 			m_pipeline[PipelinePlayer_Update] = std::move(compute_pipeline[0]);

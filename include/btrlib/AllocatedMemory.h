@@ -349,7 +349,7 @@ struct AllocatedMemory
 	void gc() { m_resource->m_free_zone->gc(); }
 	bool isValid()const { return m_resource.get(); }
 	void setName(const std::string& name) { m_resource->m_name = name; }
-	void setup(const cDevice& device, vk::BufferUsageFlags flag, vk::MemoryPropertyFlags memory_type, vk::DeviceSize size)
+	void setup(const vk::PhysicalDevice& physical_device, const vk::Device& device, vk::BufferUsageFlags flag, vk::MemoryPropertyFlags memory_type, vk::DeviceSize size)
 	{
 		assert(!m_resource);
 
@@ -358,28 +358,28 @@ struct AllocatedMemory
 		vk::BufferCreateInfo buffer_info;
 		buffer_info.usage = flag;
 		buffer_info.size = size;
-		resource->m_buffer = device->createBufferUnique(buffer_info);
+		resource->m_buffer = device.createBufferUnique(buffer_info);
 		resource->m_buffer_info = buffer_info;
 
-		vk::MemoryRequirements memory_request = device->getBufferMemoryRequirements(resource->m_buffer.get());
+		vk::MemoryRequirements memory_request = device.getBufferMemoryRequirements(resource->m_buffer.get());
 		vk::MemoryAllocateInfo memory_alloc;
 		memory_alloc.setAllocationSize(memory_request.size);
-		memory_alloc.setMemoryTypeIndex(cGPU::Helper::getMemoryTypeIndex(device.getGPU(), memory_request, memory_type));
-		resource->m_memory = device->allocateMemoryUnique(memory_alloc);
-		device->bindBufferMemory(resource->m_buffer.get(), resource->m_memory.get(), 0);
+		memory_alloc.setMemoryTypeIndex(cGPU::Helper::getMemoryTypeIndex(physical_device, memory_request, memory_type));
+		resource->m_memory = device.allocateMemoryUnique(memory_alloc);
+		device.bindBufferMemory(resource->m_buffer.get(), resource->m_memory.get(), 0);
 
 		resource->m_free_zone = std::make_shared<GPUMemoryAllocater>();
 		resource->m_free_zone->setup(size, memory_request.alignment);
 
 		resource->m_memory_alloc = memory_alloc;
 		resource->m_memory_request = memory_request;
-		auto memory_prop = device.getGPU().getMemoryProperties();
+		auto memory_prop = physical_device.getMemoryProperties();
 		resource->m_memory_type = memory_prop.memoryTypes[memory_alloc.memoryTypeIndex];
 
 		resource->m_mapped_memory = nullptr;
 		if (btr::isOn(resource->m_memory_type.propertyFlags, vk::MemoryPropertyFlagBits::eHostCoherent) )
 		{
-			resource->m_mapped_memory = device->mapMemory(resource->m_memory.get(), 0, size);
+			resource->m_mapped_memory = device.mapMemory(resource->m_memory.get(), 0, size);
 		}
 		m_resource = std::move(resource);
 	}
@@ -507,14 +507,14 @@ struct UpdateBufferDescriptor
 template<typename T>
 struct UpdateBufferAligned
 {
-	void setup(const cGPU& gpu, const UpdateBufferDescriptor& desc)
+	void setup(const vk::PhysicalDevice& physical_device, const UpdateBufferDescriptor& desc)
 	{
 		assert(!m_device_buffer.isValid());
 		assert(desc.device_memory.isValid());
 		assert(btr::isOn(desc.device_memory.getBufferCreateInfo().usage, vk::BufferUsageFlagBits::eTransferDst));
 
 		m_desc = desc;
-		m_stride = gpu->getProperties().limits.minUniformBufferOffsetAlignment;
+		m_stride = physical_device.getProperties().limits.minUniformBufferOffsetAlignment;
 		m_stride = btr::align<uint32_t>(sizeof(T), m_stride);
 		m_device_buffer = m_desc.device_memory.allocateMemory(m_stride*m_desc.element_num);
 		m_staging_buffer = m_desc.staging_memory.allocateMemory(m_stride*m_desc.element_num*m_desc.frame_max);

@@ -89,7 +89,7 @@ void sParticlePipeline::setup(std::shared_ptr<btr::Context>& context)
 		std::string path = btr::getResourceLibPath() + "shader\\binary\\";
 		for (size_t i = 0; i < SHADER_NUM; i++)
 		{
-			m_shader_module[i] = loadShaderUnique(context->m_device.getHandle(), path + shader_desc[i].name);
+			m_shader_module[i] = loadShaderUnique(context->m_device, path + shader_desc[i].name);
 		}
 	}
 
@@ -144,7 +144,7 @@ void sParticlePipeline::setup(std::shared_ptr<btr::Context>& context)
 			vk::DescriptorSetLayoutCreateInfo descriptor_set_layout_info = vk::DescriptorSetLayoutCreateInfo()
 				.setBindingCount(bindings[i].size())
 				.setPBindings(bindings[i].data());
-			m_descriptor_set_layout[i] = context->m_device->createDescriptorSetLayoutUnique(descriptor_set_layout_info);
+			m_descriptor_set_layout[i] = context->m_device.createDescriptorSetLayoutUnique(descriptor_set_layout_info);
 		}
 
 		vk::DescriptorSetLayout layouts[] = { 
@@ -154,7 +154,7 @@ void sParticlePipeline::setup(std::shared_ptr<btr::Context>& context)
 		alloc_info.descriptorPool = context->m_descriptor_pool.get();
 		alloc_info.descriptorSetCount = array_length(layouts);
 		alloc_info.pSetLayouts = layouts;
-		auto descriptor_set = context->m_device->allocateDescriptorSetsUnique(alloc_info);
+		auto descriptor_set = context->m_device.allocateDescriptorSetsUnique(alloc_info);
 		m_descriptor_set[DESCRIPTOR_SET_PARTICLE] = std::move(descriptor_set[0]);
 	}
 	{
@@ -166,7 +166,7 @@ void sParticlePipeline::setup(std::shared_ptr<btr::Context>& context)
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(layouts.size());
 			pipeline_layout_info.setPSetLayouts(layouts.data());
-			m_pipeline_layout[PIPELINE_LAYOUT_UPDATE] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PIPELINE_LAYOUT_UPDATE] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 		}
 		{
 			std::vector<vk::DescriptorSetLayout> layouts = {
@@ -177,7 +177,7 @@ void sParticlePipeline::setup(std::shared_ptr<btr::Context>& context)
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(layouts.size());
 			pipeline_layout_info.setPSetLayouts(layouts.data());
-			m_pipeline_layout[PIPELINE_LAYOUT_DRAW] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PIPELINE_LAYOUT_DRAW] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
 
@@ -210,7 +210,7 @@ void sParticlePipeline::setup(std::shared_ptr<btr::Context>& context)
 				.setDstBinding(1)
 				.setDstSet(m_descriptor_set[DESCRIPTOR_SET_LAYOUT_PARTICLE].get()),
 			};
-			context->m_device->updateDescriptorSets(write_desc, {});
+			context->m_device.updateDescriptorSets(write_desc, {});
 		}
 	}
 
@@ -248,9 +248,9 @@ void sParticlePipeline::setup(std::shared_ptr<btr::Context>& context)
 			.setStage(shader_info[2])
 			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get()),
 		};
-		m_pipeline[PIPELINE_UPDATE] = context->m_device->createComputePipelineUnique(context->m_cache.get(), compute_pipeline_info[0]);
-		m_pipeline[PIPELINE_GENERATE] = context->m_device->createComputePipelineUnique(context->m_cache.get(), compute_pipeline_info[1]);
-		m_pipeline[PIPELINE_GENERATE_DEBUG] = context->m_device->createComputePipelineUnique(context->m_cache.get(), compute_pipeline_info[2]);
+		m_pipeline[PIPELINE_UPDATE] = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[0]);
+		m_pipeline[PIPELINE_GENERATE] = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[1]);
+		m_pipeline[PIPELINE_GENERATE_DEBUG] = context->m_device.createComputePipelineUnique(vk::PipelineCache(), compute_pipeline_info[2]);
 
 		vk::Extent2D size;
 		// pipeline
@@ -331,7 +331,7 @@ void sParticlePipeline::setup(std::shared_ptr<btr::Context>& context)
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			auto pipelines = context->m_device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info);
+			auto pipelines = context->m_device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info);
 			m_pipeline[PIPELINE_DRAW] = std::move(pipelines[0]);
 		}
 	}

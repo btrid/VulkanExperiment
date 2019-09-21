@@ -224,7 +224,7 @@ struct GI2DPhysicsDebug
 
 			std::string path = btr::getResourceShaderPath();
 			for (size_t i = 0; i < array_length(name); i++) {
-				m_shader[i] = loadShaderUnique(context->m_device.getHandle(), path + name[i]);
+				m_shader[i] = loadShaderUnique(context->m_device.get(), path + name[i]);
 			}
 		}
 
@@ -240,7 +240,7 @@ struct GI2DPhysicsDebug
 			pipeline_layout_info.setPSetLayouts(layouts);
 			pipeline_layout_info.setPushConstantRangeCount(std::size(ranges));
 			pipeline_layout_info.setPPushConstantRanges(ranges);
-			m_pipeline_layout[PipelineLayout_DrawVoronoiTriangle] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PipelineLayout_DrawVoronoiTriangle] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
 
@@ -278,7 +278,7 @@ struct GI2DPhysicsDebug
 			renderpass_info.setSubpassCount(1);
 			renderpass_info.setPSubpasses(&subpass);
 
-			m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
+			m_render_pass = context->m_device.createRenderPassUnique(renderpass_info);
 		}
 
 		{
@@ -293,7 +293,7 @@ struct GI2DPhysicsDebug
 			framebuffer_info.setHeight(render_target->m_info.extent.height);
 			framebuffer_info.setLayers(1);
 
-			m_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
+			m_framebuffer = context->m_device.createFramebufferUnique(framebuffer_info);
 		}
 
 		// pipeline
@@ -388,7 +388,7 @@ struct GI2DPhysicsDebug
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			auto pipelines = context->m_device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info);
+			auto pipelines = context->m_device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info);
 			m_pipeline[Pipeline_DrawVoronoiTriangle] = std::move(pipelines[0]);
 			m_pipeline[Pipeline_DrawVoronoiPath] = std::move(pipelines[1]);
 		}

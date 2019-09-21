@@ -42,10 +42,7 @@ int main()
 	camera->getData().m_far = 10000.f;
 	camera->getData().m_near = 0.01f;
 
-	auto gpu = sGlobal::Order().getGPU(0);
-
 	app::AppDescriptor app_desc;
-	app_desc.m_gpu = gpu;
 	app_desc.m_window_size = uvec2(1024, 1024);
 	app::App app(app_desc);
 	auto context = app.m_context;

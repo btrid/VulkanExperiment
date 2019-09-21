@@ -124,7 +124,7 @@ struct ModelVoxelize
 				.setPAttachments(nullptr)
 				.setSubpassCount(1)
 				.setPSubpasses(&subpass);
-			m_make_voxel_pass = context->m_device->createRenderPassUnique(renderpass_info);
+			m_make_voxel_pass = context->m_device.createRenderPassUnique(renderpass_info);
 
 			{
 				vk::FramebufferCreateInfo framebuffer_info;
@@ -134,7 +134,7 @@ struct ModelVoxelize
 				framebuffer_info.setWidth(voxel_context->getVoxelInfo().u_cell_num.x);
 				framebuffer_info.setHeight(voxel_context->getVoxelInfo().u_cell_num.z);
 				framebuffer_info.setLayers(3);
-				m_make_voxel_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
+				m_make_voxel_framebuffer = context->m_device.createFramebufferUnique(framebuffer_info);
 			}
 		}
 
@@ -155,7 +155,7 @@ struct ModelVoxelize
 
 			std::string path = btr::getResourceShaderPath() + "../006_voxel_based_GI/binary/";
 			for (size_t i = 0; i < SHADER_NUM; i++) {
-				m_shader_list[i] = std::move(loadShaderUnique(device.getHandle(), path + shader_info[i].name));
+				m_shader_list[i] = std::move(loadShaderUnique(device.get(), path + shader_info[i].name));
 				m_stage_info[i].setStage(shader_info[i].stage);
 				m_stage_info[i].setModule(m_shader_list[i].get());
 				m_stage_info[i].setPName("main");
@@ -263,7 +263,7 @@ struct ModelVoxelize
 					.setStage(m_stage_info[SHADER_COPY_VOXEL])
 					.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_COPY_VOXEL].get()),
 				};
-				auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
+				auto compute_pipeline = context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
 				m_pipeline[PIPELINE_COPY_VOXEL] = std::move(compute_pipeline[0]);
 
 			}
@@ -362,7 +362,7 @@ struct ModelVoxelize
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			m_pipeline[PIPELINE_MAKE_VOXEL] = std::move(device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info)[0]);
+			m_pipeline[PIPELINE_MAKE_VOXEL] = std::move(device->createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info)[0]);
 		}
 
 
@@ -543,7 +543,7 @@ struct ModelVoxelize
 			info.setDescriptorPool(m_model_descriptor_pool.get());
 			info.setDescriptorSetCount(array_length(layouts));
 			info.setPSetLayouts(layouts);
-			resource->m_model_descriptor_set = std::move(context->m_device->allocateDescriptorSetsUnique(info)[0]);
+			resource->m_model_descriptor_set = std::move(context->m_device.allocateDescriptorSetsUnique(info)[0]);
 
 			vk::DescriptorBufferInfo storages[] = {
 				resource->m_material.getBufferInfo(),
@@ -555,7 +555,7 @@ struct ModelVoxelize
 			write_desc.setPBufferInfo(storages);
 			write_desc.setDstSet(resource->m_model_descriptor_set.get());
 			write_desc.setDstBinding(0);
-			context->m_device->updateDescriptorSets(write_desc, {});
+			context->m_device.updateDescriptorSets(write_desc, {});
 		}
 		m_model_list.push_back(resource);
 	}

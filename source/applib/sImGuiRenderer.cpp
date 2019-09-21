@@ -25,15 +25,15 @@ sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 			image_info.sharingMode = vk::SharingMode::eExclusive;
 			image_info.initialLayout = vk::ImageLayout::eUndefined;
 			image_info.extent = vk::Extent3D(width, height, 1);
-			m_font_image = context->m_device->createImageUnique(image_info);
+			m_font_image = context->m_device.createImageUnique(image_info);
 
-			vk::MemoryRequirements memory_request = context->m_device->getImageMemoryRequirements(m_font_image.get());
+			vk::MemoryRequirements memory_request = context->m_device.getImageMemoryRequirements(m_font_image.get());
 			vk::MemoryAllocateInfo memory_alloc_info;
 			memory_alloc_info.allocationSize = memory_request.size;
-			memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(context->m_gpu.getHandle(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+			memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(context->m_physical_device, memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-			m_font_image_memory = context->m_device->allocateMemoryUnique(memory_alloc_info);
-			context->m_device->bindImageMemory(m_font_image.get(), m_font_image_memory.get(), 0);
+			m_font_image_memory = context->m_device.allocateMemoryUnique(memory_alloc_info);
+			context->m_device.bindImageMemory(m_font_image.get(), m_font_image_memory.get(), 0);
 
 
 			vk::ImageSubresourceRange subresourceRange;
@@ -90,7 +90,7 @@ sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 			view_info.format = image_info.format;
 			view_info.image = m_font_image.get();
 			view_info.subresourceRange = subresourceRange;
-			m_font_image_view = context->m_device->createImageViewUnique(view_info);
+			m_font_image_view = context->m_device.createImageViewUnique(view_info);
 
 			vk::SamplerCreateInfo sampler_info;
 			sampler_info.magFilter = vk::Filter::eLinear;
@@ -106,7 +106,7 @@ sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 			sampler_info.maxAnisotropy = 1.0;
 			sampler_info.anisotropyEnable = VK_FALSE;
 			sampler_info.borderColor = vk::BorderColor::eFloatOpaqueWhite;
-			m_font_sampler = context->m_device->createSamplerUnique(sampler_info);
+			m_font_sampler = context->m_device.createSamplerUnique(sampler_info);
 
 		}
 	}
@@ -140,7 +140,7 @@ sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 			.setDstBinding(0)
 			.setDstSet(m_descriptor_set.get()),
 		};
-		context->m_device->updateDescriptorSets(array_length(write_desc), write_desc, 0, nullptr);
+		context->m_device.updateDescriptorSets(array_length(write_desc), write_desc, 0, nullptr);
 
 	}
 
@@ -158,7 +158,7 @@ sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 
 		std::string path = btr::getResourceLibPath() + "shader\\binary\\";
 		for (size_t i = 0; i < SHADER_NUM; i++) {
-			m_shader_module[i] = loadShaderUnique(context->m_device.getHandle(), path + shader_info[i].name);
+			m_shader_module[i] = loadShaderUnique(context->m_device, path + shader_info[i].name);
 		}
 	}
 
@@ -176,7 +176,7 @@ sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 		pipeline_layout_info.setPSetLayouts(layouts);
 		// 		pipeline_layout_info.setPushConstantRangeCount(array_length(constants));
 		// 		pipeline_layout_info.setPPushConstantRanges(constants);
-		m_pipeline_layout[PIPELINE_LAYOUT_RENDER] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+		m_pipeline_layout[PIPELINE_LAYOUT_RENDER] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 	}
 
 }
@@ -236,7 +236,7 @@ vk::CommandBuffer sImGuiRenderer::Render()
 		vk::RenderPassBeginInfo begin_render_info;
  		begin_render_info.setFramebuffer(window->getImguiPipeline()->m_framebuffer.get());
  		begin_render_info.setRenderPass(window->getImguiPipeline()->m_render_pass.get());
-//		begin_render_info.setRenderArea(vk::Rect2D({}, vk::Extent2D(m_render_target->m_info.extent.width, m_render_target->m_info.extent.height)));
+		begin_render_info.setRenderArea(vk::Rect2D({}, vk::Extent2D(window->getFrontBuffer()->m_info.extent.width, window->getFrontBuffer()->m_info.extent.height)));
 		cmd.beginRenderPass(begin_render_info, vk::SubpassContents::eInline);
 		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, window->getImguiPipeline()->m_pipeline.get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_RENDER].get(), 0, { m_descriptor_set.get() }, {});

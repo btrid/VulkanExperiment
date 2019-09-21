@@ -57,9 +57,6 @@
 #pragma comment(lib, "vulkan-1.lib")
 #pragma comment(lib, "imgui.lib")
 
-#define VMA_IMPLEMENTATION
-#include <VulkanMemoryAllocator/src/vk_mem_alloc.h>
-
 #include <taskflow/taskflow.hpp>
 PathContextCPU pathmake_file()
 {

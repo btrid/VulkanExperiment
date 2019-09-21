@@ -122,7 +122,7 @@ struct AppModelContext
 			vk::DescriptorSetLayoutCreateInfo descriptor_layout_info;
 			descriptor_layout_info.setBindingCount(array_length(binding));
 			descriptor_layout_info.setPBindings(binding);
-			m_descriptor_set_layout[DescriptorLayout_Model] = context->m_device->createDescriptorSetLayoutUnique(descriptor_layout_info);
+			m_descriptor_set_layout[DescriptorLayout_Model] = context->m_device.createDescriptorSetLayoutUnique(descriptor_layout_info);
 		}
 		{
 			vk::DescriptorSetLayoutBinding binding[] =
@@ -134,7 +134,7 @@ struct AppModelContext
 			vk::DescriptorSetLayoutCreateInfo descriptor_layout_info;
 			descriptor_layout_info.setBindingCount(array_length(binding));
 			descriptor_layout_info.setPBindings(binding);
-			m_descriptor_set_layout[DescriptorLayout_Render] = context->m_device->createDescriptorSetLayoutUnique(descriptor_layout_info);
+			m_descriptor_set_layout[DescriptorLayout_Render] = context->m_device.createDescriptorSetLayoutUnique(descriptor_layout_info);
 		}
 		{
 			vk::DescriptorSetLayoutBinding binding[] =
@@ -152,7 +152,7 @@ struct AppModelContext
 			vk::DescriptorSetLayoutCreateInfo descriptor_layout_info;
 			descriptor_layout_info.setBindingCount(array_length(binding));
 			descriptor_layout_info.setPBindings(binding);
-			m_descriptor_set_layout[DescriptorLayout_Update] = context->m_device->createDescriptorSetLayoutUnique(descriptor_layout_info);
+			m_descriptor_set_layout[DescriptorLayout_Update] = context->m_device.createDescriptorSetLayoutUnique(descriptor_layout_info);
 		}
 	}
 	std::array<vk::UniqueDescriptorSetLayout, DescriptorLayout_Num> m_descriptor_set_layout;

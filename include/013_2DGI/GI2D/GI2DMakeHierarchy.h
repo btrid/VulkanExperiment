@@ -62,7 +62,7 @@ struct GI2DMakeHierarchy
 
 			std::string path = btr::getResourceShaderPath();
 			for (size_t i = 0; i < array_length(name); i++) {
-				m_shader[i] = loadShaderUnique(context->m_device.getHandle(), path + name[i]);
+				m_shader[i] = loadShaderUnique(context->m_device.get(), path + name[i]);
 			}
 		}
 
@@ -80,7 +80,7 @@ struct GI2DMakeHierarchy
 			};
 			pipeline_layout_info.setPushConstantRangeCount(array_length(constants));
 			pipeline_layout_info.setPPushConstantRanges(constants);
-			m_pipeline_layout[PipelineLayout_Hierarchy] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PipelineLayout_Hierarchy] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 		}
 		{
 			vk::DescriptorSetLayout layouts[] = {
@@ -96,7 +96,7 @@ struct GI2DMakeHierarchy
 			};
 			pipeline_layout_info.setPushConstantRangeCount(array_length(constants));
 			pipeline_layout_info.setPPushConstantRanges(constants);
-			m_pipeline_layout[PipelineLayout_SDF] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PipelineLayout_SDF] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 		}
 		{
 			vk::DescriptorSetLayout layouts[] = {
@@ -107,7 +107,7 @@ struct GI2DMakeHierarchy
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 			pipeline_layout_info.setPSetLayouts(layouts);
-			m_pipeline_layout[PipelineLayout_RenderSDF] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PipelineLayout_RenderSDF] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 		}
 		{
 			vk::DescriptorSetLayout layouts[] = {
@@ -122,7 +122,7 @@ struct GI2DMakeHierarchy
 			pipeline_layout_info.setPSetLayouts(layouts);
 			pipeline_layout_info.setPushConstantRangeCount(array_length(constants));
 			pipeline_layout_info.setPPushConstantRanges(constants);
-			m_pipeline_layout[PipelineLayout_Path] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PipelineLayout_Path] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
 		// pipeline
@@ -179,7 +179,7 @@ struct GI2DMakeHierarchy
 				.setStage(shader_info[7])
 				.setLayout(m_pipeline_layout[PipelineLayout_RenderSDF].get()),
 			};
-			auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
+			auto compute_pipeline = context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
 			m_pipeline[Pipeline_MakeFragmentMap] = std::move(compute_pipeline[0]);
 			m_pipeline[Pipeline_MakeFragmentMapAndSDF] = std::move(compute_pipeline[1]);
 			m_pipeline[Pipeline_MakeReachMap_Precompute] = std::move(compute_pipeline[2]);

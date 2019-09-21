@@ -66,7 +66,7 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 	assert(succeeded(ret));
 
 	// オーディオクライアント
-	ret = m_device->Activate(__uuidof(IAudioClient), CLSCTX_ALL, NULL, (void**)&m_audio_client);
+	ret = m_device.Activate(__uuidof(IAudioClient), CLSCTX_ALL, NULL, (void**)&m_audio_client);
 	assert(succeeded(ret));
 	// フォーマットの構築
 	ZeroMemory(&m_format, sizeof(m_format));
@@ -130,7 +130,7 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 
 														// オーディオクライアントを再生成
 			m_audio_client.Release();
-			ret = m_device->Activate(__uuidof(IAudioClient), CLSCTX_ALL, NULL, (void**)&m_audio_client);
+			ret = m_device.Activate(__uuidof(IAudioClient), CLSCTX_ALL, NULL, (void**)&m_audio_client);
 			assert(succeeded(ret));
 
 			// 再挑戦
@@ -313,7 +313,7 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 			alloc_info.setDescriptorPool(m_descriptor_pool.get());
 			alloc_info.setDescriptorSetCount(array_length(layouts));
 			alloc_info.setPSetLayouts(layouts);
-			m_descriptor_set = std::move(context->m_device->allocateDescriptorSetsUnique(alloc_info)[0]);
+			m_descriptor_set = std::move(context->m_device.allocateDescriptorSetsUnique(alloc_info)[0]);
 		}
 
 		{
@@ -353,7 +353,7 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 				.setDstBinding(10)
 				.setDstSet(m_descriptor_set.get()),
 			};
-			context->m_device->updateDescriptorSets(write_desc, {});
+			context->m_device.updateDescriptorSets(write_desc, {});
 		}
 
 		// setup shader
@@ -371,7 +371,7 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 
 			std::string path = btr::getResourceAppPath() + "shader\\binary\\";
 			for (size_t i = 0; i < SHADER_NUM; i++) {
-				m_shader_module[i] = loadShaderUnique(context->m_device.getHandle(), path + shader_info[i].name);
+				m_shader_module[i] = loadShaderUnique(context->m_device.get(), path + shader_info[i].name);
 			}
 		}
 
@@ -385,8 +385,8 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
 				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 				pipeline_layout_info.setPSetLayouts(layouts);
-				m_pipeline_layout[PIPELINE_LAYOUT_SOUND_UPDATE] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
-				m_pipeline_layout[PIPELINE_LAYOUT_SOUND_REQUEST] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+				m_pipeline_layout[PIPELINE_LAYOUT_SOUND_UPDATE] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
+				m_pipeline_layout[PIPELINE_LAYOUT_SOUND_REQUEST] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 			}
 			{
 				vk::DescriptorSetLayout layouts[] =
@@ -402,7 +402,7 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 				pipeline_layout_info.setPSetLayouts(layouts);
 				pipeline_layout_info.setPushConstantRangeCount(array_length(constants));
 				pipeline_layout_info.setPPushConstantRanges(constants);
-				m_pipeline_layout[PIPELINE_LAYOUT_SOUND_PLAY] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+				m_pipeline_layout[PIPELINE_LAYOUT_SOUND_PLAY] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 			}
 
 		}
@@ -427,7 +427,7 @@ void sSoundSystem::setup(std::shared_ptr<btr::Context>& context)
 				.setStage(shader_info[SHADER_SOUND_REQUEST])
 				.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_SOUND_REQUEST].get()),
 			};
-			auto pipelines = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
+			auto pipelines = context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
 			std::copy(std::make_move_iterator(pipelines.begin()), std::make_move_iterator(pipelines.end()), m_pipeline.begin());
 
 		}
@@ -485,7 +485,7 @@ void sSoundSystem::setSoundbank(const std::shared_ptr<btr::Context>& context, st
 		write_desc[i * 2 + 1].setDstSet(m_descriptor_set.get());
 	}
 
-	context->m_device->updateDescriptorSets(SOUND_BANK_SIZE *2, write_desc, 0, nullptr);
+	context->m_device.updateDescriptorSets(SOUND_BANK_SIZE *2, write_desc, 0, nullptr);
 
 }
 

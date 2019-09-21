@@ -126,7 +126,7 @@ struct sFont : SingletonEx <sFont>
 				.setDstBinding(0)
 				.setDstSet(m_descriptor_set_glyph.get()),
 			};
-			context->m_device->updateDescriptorSets(write_desc.size(), write_desc.begin(), 0, {});
+			context->m_device.updateDescriptorSets(write_desc.size(), write_desc.begin(), 0, {});
 		}
 
 		// setup shader
@@ -145,7 +145,7 @@ struct sFont : SingletonEx <sFont>
 
 			std::string path = btr::getResourceAppPath() + "shader\\binary\\";
 			for (size_t i = 0; i < SHADER_NUM; i++) {
-				m_shader_module[i] = loadShaderUnique(context->m_device.getHandle(), path + shader_info[i].name);
+				m_shader_module[i] = loadShaderUnique(context->m_device.get(), path + shader_info[i].name);
 			}
 		}
 
@@ -176,7 +176,7 @@ struct sFont : SingletonEx <sFont>
 			// 			pipeline_layout_info.setPSetLayouts(layouts);
 			// 		pipeline_layout_info.setPushConstantRangeCount(array_length(constants));
 			// 		pipeline_layout_info.setPPushConstantRanges(constants);
-			m_pipeline_layout[PIPELINE_LAYOUT_RENDER] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PIPELINE_LAYOUT_RENDER] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 		}
 		{
 			vk::DescriptorSetLayout layouts[] = {
@@ -189,7 +189,7 @@ struct sFont : SingletonEx <sFont>
 			pipeline_layout_info.setPSetLayouts(layouts);
 			// 		pipeline_layout_info.setPushConstantRangeCount(array_length(constants));
 			// 		pipeline_layout_info.setPPushConstantRanges(constants);
-			m_pipeline_layout[PIPELINE_LAYOUT_RENDER_RASTER] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PIPELINE_LAYOUT_RENDER_RASTER] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
 
@@ -269,15 +269,15 @@ struct Font : std::enable_shared_from_this<Font>
 		image_info.extent.width = (m_description.m_glyph_size * cache_desc.m_glyph_num).x;
 		image_info.extent.height = (m_description.m_glyph_size * 1).y;
 		image_info.extent.depth = 1;
-		cache->m_image_raster_cache = context->m_device->createImageUnique(image_info);
+		cache->m_image_raster_cache = context->m_device.createImageUnique(image_info);
 
-		vk::MemoryRequirements memory_request = context->m_device->getImageMemoryRequirements(cache->m_image_raster_cache.get());
+		vk::MemoryRequirements memory_request = context->m_device.getImageMemoryRequirements(cache->m_image_raster_cache.get());
 		vk::MemoryAllocateInfo memory_alloc_info;
 		memory_alloc_info.allocationSize = memory_request.size;
-		memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(context->m_gpu.getHandle(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+		memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(context->m_gpu.get(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-		cache->m_memory_raster_cache = context->m_device->allocateMemoryUnique(memory_alloc_info);
-		context->m_device->bindImageMemory(cache->m_image_raster_cache.get(), cache->m_memory_raster_cache.get(), 0);
+		cache->m_memory_raster_cache = context->m_device.allocateMemoryUnique(memory_alloc_info);
+		context->m_device.bindImageMemory(cache->m_image_raster_cache.get(), cache->m_memory_raster_cache.get(), 0);
 
 		vk::ImageSubresourceRange subresourceRange;
 		subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
@@ -296,7 +296,7 @@ struct Font : std::enable_shared_from_this<Font>
 		view_info.format = image_info.format;
 		view_info.image = cache->m_image_raster_cache.get();
 		view_info.subresourceRange = subresourceRange;
-		cache->m_image_view_raster_cache = context->m_device->createImageViewUnique(view_info);
+		cache->m_image_view_raster_cache = context->m_device.createImageViewUnique(view_info);
 
 		vk::ImageMemoryBarrier init_barrier;
 		init_barrier.image = cache->m_image_raster_cache.get();
@@ -337,7 +337,7 @@ struct Font : std::enable_shared_from_this<Font>
 				.setDstBinding(0)
 				.setDstSet(cache->m_descriptor_set.get()),
 			};
-			context->m_device->updateDescriptorSets(write_desc.size(), write_desc.begin(), 0, {});
+			context->m_device.updateDescriptorSets(write_desc.size(), write_desc.begin(), 0, {});
 		}
 		return cache;
 	}
@@ -499,7 +499,7 @@ struct FontRenderer
 			renderpass_info.setSubpassCount(1);
 			renderpass_info.setPSubpasses(&subpass);
 
-			m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
+			m_render_pass = context->m_device.createRenderPassUnique(renderpass_info);
 		}
 		{
 			vk::ImageView view[] = {
@@ -513,7 +513,7 @@ struct FontRenderer
 			framebuffer_info.setHeight(render_target->m_info.extent.height);
 			framebuffer_info.setLayers(1);
 
-			m_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
+			m_framebuffer = context->m_device.createFramebufferUnique(framebuffer_info);
 		}
 
 		// setup pipeline
@@ -634,7 +634,7 @@ struct FontRenderer
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			auto pipelines = context->m_device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info);
+			auto pipelines = context->m_device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info);
 			m_pipeline[0] = std::move(pipelines[0]);
 			m_pipeline[1] = std::move(pipelines[1]);
 

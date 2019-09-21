@@ -96,7 +96,7 @@ struct cTriangleLL
 				std::string path = btr::getResourceAppPath() + "shader\\binary\\";
 				for (size_t i = 0; i < sizeof(shader_desc) / sizeof(shader_desc[0]); i++)
 				{
-					m_draw_triangleLL_shader_info[i].setModule(loadShader(loader.m_device.getHandle(), path + shader_desc[i].name));
+					m_draw_triangleLL_shader_info[i].setModule(loadShader(loader.m_device.get(), path + shader_desc[i].name));
 					m_draw_triangleLL_shader_info[i].setStage(shader_desc[i].stage);
 					m_draw_triangleLL_shader_info[i].setPName("main");
 				}
@@ -119,15 +119,15 @@ struct cTriangleLL
 				auto descriptor_set_layout_info = vk::DescriptorSetLayoutCreateInfo()
 					.setBindingCount(bindings.size())
 					.setPBindings(bindings.data());
-				m_descriptor_set_layout = loader.m_device->createDescriptorSetLayout(descriptor_set_layout_info);
+				m_descriptor_set_layout = loader.m_device.createDescriptorSetLayout(descriptor_set_layout_info);
 
-				m_descriptor_pool = createDescriptorPool(loader.m_device.getHandle(), { bindings });
+				m_descriptor_pool = createDescriptorPool(loader.m_device.get(), { bindings });
 
 				vk::DescriptorSetAllocateInfo alloc_info;
 				alloc_info.descriptorPool = m_descriptor_pool;
 				alloc_info.descriptorSetCount = 1;
 				alloc_info.pSetLayouts = &m_descriptor_set_layout;
-				m_descriptor_set = loader.m_device->allocateDescriptorSets(alloc_info)[0];
+				m_descriptor_set = loader.m_device.allocateDescriptorSets(alloc_info)[0];
 
 			}
 
@@ -146,7 +146,7 @@ struct cTriangleLL
 					pipeline_layout_info.setPSetLayouts(layouts.data());
 					pipeline_layout_info.setPushConstantRangeCount(push_constants.size());
 					pipeline_layout_info.setPPushConstantRanges(push_constants.data());
-					m_pipeline_layout = loader.m_device->createPipelineLayout(pipeline_layout_info);
+					m_pipeline_layout = loader.m_device.createPipelineLayout(pipeline_layout_info);
 				}
 
 				{
@@ -172,7 +172,7 @@ struct cTriangleLL
 						.setDstBinding(1)
 						.setDstSet(m_descriptor_set),
 					};
-					loader.m_device->updateDescriptorSets(write_desc, {});
+					loader.m_device.updateDescriptorSets(write_desc, {});
 				}
 
 			}
@@ -261,7 +261,7 @@ struct cTriangleLL
 					.setPDepthStencilState(&depth_stencil_info)
 					.setPColorBlendState(&blend_info),
 				};
-				m_pipeline = loader.m_device->createGraphicsPipelines(vk::PipelineCache(), graphics_pipeline_info)[0];
+				m_pipeline = loader.m_device.createGraphicsPipelines(vk::PipelineCache(), graphics_pipeline_info)[0];
 			}
 
 		}
@@ -398,15 +398,15 @@ struct cTriangleLL
 				image_info.initialLayout = vk::ImageLayout::eUndefined;
 				image_info.extent = { m_brick_info.m_cell_num.x, m_brick_info.m_cell_num.y, m_brick_info.m_cell_num.z };
 				image_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
-				m_brick_image = loader.m_device->createImage(image_info);
+				m_brick_image = loader.m_device.createImage(image_info);
 
-				vk::MemoryRequirements memory_request = loader.m_device->getImageMemoryRequirements(m_brick_image);
+				vk::MemoryRequirements memory_request = loader.m_device.getImageMemoryRequirements(m_brick_image);
 				vk::MemoryAllocateInfo memory_alloc_info;
 				memory_alloc_info.allocationSize = memory_request.size;
 				memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(loader.m_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-				m_brick_image_memory = loader.m_device->allocateMemory(memory_alloc_info);
-				loader.m_device->bindImageMemory(m_brick_image, m_brick_image_memory, 0);
+				m_brick_image_memory = loader.m_device.allocateMemory(memory_alloc_info);
+				loader.m_device.bindImageMemory(m_brick_image, m_brick_image_memory, 0);
 
 				vk::ImageSubresourceRange subresourceRange;
 				subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
@@ -425,7 +425,7 @@ struct cTriangleLL
 				view_info.format = image_info.format;
 				view_info.image = m_brick_image;
 				view_info.subresourceRange = subresourceRange;
-				m_brick_image_view = loader.m_device->createImageView(view_info);
+				m_brick_image_view = loader.m_device.createImageView(view_info);
 
 				{
 
@@ -458,7 +458,7 @@ struct cTriangleLL
 			std::string path = btr::getResourceAppPath() + "shader\\binary\\";
 			for (size_t i = 0; i < sizeof(shader_desc) / sizeof(shader_desc[0]); i++)
 			{
-				m_make_triangleLL_shader_info[i].setModule(loadShader(loader.m_device.getHandle(), path + shader_desc[i].name));
+				m_make_triangleLL_shader_info[i].setModule(loadShader(loader.m_device.get(), path + shader_desc[i].name));
 				m_make_triangleLL_shader_info[i].setStage(shader_desc[i].stage);
 				m_make_triangleLL_shader_info[i].setPName("main");
 			}
@@ -501,15 +501,15 @@ struct cTriangleLL
 			auto descriptor_set_layout_info = vk::DescriptorSetLayoutCreateInfo()
 				.setBindingCount(bindings.size())
 				.setPBindings(bindings.data());
-			m_descriptor_set_layout = loader.m_device->createDescriptorSetLayout(descriptor_set_layout_info);
+			m_descriptor_set_layout = loader.m_device.createDescriptorSetLayout(descriptor_set_layout_info);
 
-			m_descriptor_pool = createDescriptorPool(loader.m_device.getHandle(), { bindings });
+			m_descriptor_pool = createDescriptorPool(loader.m_device.get(), { bindings });
 
 			vk::DescriptorSetAllocateInfo alloc_info;
 			alloc_info.descriptorPool = m_descriptor_pool;
 			alloc_info.descriptorSetCount = 1;
 			alloc_info.pSetLayouts = &m_descriptor_set_layout;
-			m_descriptor_set = loader.m_device->allocateDescriptorSets(alloc_info)[0];
+			m_descriptor_set = loader.m_device.allocateDescriptorSets(alloc_info)[0];
 
 		}
 
@@ -521,7 +521,7 @@ struct cTriangleLL
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
 				pipeline_layout_info.setSetLayoutCount(layouts.size());
 				pipeline_layout_info.setPSetLayouts(layouts.data());
-				m_pipeline_layout = loader.m_device->createPipelineLayout(pipeline_layout_info);
+				m_pipeline_layout = loader.m_device.createPipelineLayout(pipeline_layout_info);
 			}
 
 			{
@@ -561,7 +561,7 @@ struct cTriangleLL
 					.setDstBinding(16)
 					.setDstSet(m_descriptor_set),
 				};
-				loader.m_device->updateDescriptorSets(write_desc, {});
+				loader.m_device.updateDescriptorSets(write_desc, {});
 			}
 
 		}
@@ -572,14 +572,14 @@ struct cTriangleLL
 			vk::RenderPassCreateInfo renderpass_info = vk::RenderPassCreateInfo();
 			renderpass_info.setSubpassCount(1);
 			renderpass_info.setPSubpasses(&subpass);
-			m_render_pass = loader.m_device->createRenderPass(renderpass_info);
+			m_render_pass = loader.m_device.createRenderPass(renderpass_info);
 
 
 			vk::FramebufferCreateInfo framebuffer_info;
 			framebuffer_info.setRenderPass(m_render_pass);
 			framebuffer_info.setHeight(128);
 			framebuffer_info.setWidth(128);
-			m_framebuffer = loader.m_device->createFramebuffer(framebuffer_info);
+			m_framebuffer = loader.m_device.createFramebuffer(framebuffer_info);
 		}
 		// pipeline
 		{
@@ -660,7 +660,7 @@ struct cTriangleLL
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			m_pipeline = loader.m_device->createGraphicsPipelines(vk::PipelineCache(), graphics_pipeline_info)[0];
+			m_pipeline = loader.m_device.createGraphicsPipelines(vk::PipelineCache(), graphics_pipeline_info)[0];
 		}
 
 		m_test.setup(loader, this);

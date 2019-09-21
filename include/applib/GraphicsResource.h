@@ -22,15 +22,15 @@ struct sGraphicsResource : public Singleton<sGraphicsResource>
 		image_info.initialLayout = vk::ImageLayout::eUndefined;
 		image_info.extent = { 1, 1, 1 };
 //		image_info.flags = vk::ImageCreateFlagBits::eMutableFormat;
-		auto image = context->m_device->createImageUnique(image_info);
+		auto image = context->m_device.createImageUnique(image_info);
 
-		vk::MemoryRequirements memory_request = context->m_device->getImageMemoryRequirements(image.get());
+		vk::MemoryRequirements memory_request = context->m_device.getImageMemoryRequirements(image.get());
 		vk::MemoryAllocateInfo memory_alloc_info;
 		memory_alloc_info.allocationSize = memory_request.size;
-		memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(context->m_gpu.getHandle(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+		memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(context->m_physical_device, memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-		auto image_memory = context->m_device->allocateMemoryUnique(memory_alloc_info);
-		context->m_device->bindImageMemory(image.get(), image_memory.get(), 0);
+		auto image_memory = context->m_device.allocateMemoryUnique(memory_alloc_info);
+		context->m_device.bindImageMemory(image.get(), image_memory.get(), 0);
 
 		btr::BufferMemoryDescriptor staging_desc;
 		staging_desc.size = 4;
@@ -105,8 +105,8 @@ struct sGraphicsResource : public Singleton<sGraphicsResource>
 
 		m_whilte_texture.m_image = std::move(image);
 		m_whilte_texture.m_memory = std::move(image_memory);
-		m_whilte_texture.m_image_view = context->m_device->createImageViewUnique(view_info);
-		m_whilte_texture.m_sampler = context->m_device->createSamplerUnique(sampler_info);
+		m_whilte_texture.m_image_view = context->m_device.createImageViewUnique(view_info);
+		m_whilte_texture.m_sampler = context->m_device.createSamplerUnique(sampler_info);
 
 
 		vk::SamplerCreateInfo sampler_infos[2];
@@ -139,7 +139,7 @@ struct sGraphicsResource : public Singleton<sGraphicsResource>
 		sampler_infos[1].borderColor = vk::BorderColor::eFloatOpaqueWhite;
 		for (uint32_t i = 0; i < BASIC_SAMPLER_NUM; i++)
 		{
-			m_basic_samplers[i] = context->m_device->createSamplerUnique(sampler_infos[i]);
+			m_basic_samplers[i] = context->m_device.createSamplerUnique(sampler_infos[i]);
 		}
 	}
 

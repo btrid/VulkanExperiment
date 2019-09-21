@@ -84,7 +84,7 @@ struct Crowd_Procedure
 
 			std::string path = btr::getResourceShaderPath();
 			for (size_t i = 0; i < array_length(name); i++) {
-				m_shader_module[i] = loadShaderUnique(context->m_context->m_device.getHandle(), path + name[i]);
+				m_shader_module[i] = loadShaderUnique(context->m_context->m_device.get(), path + name[i]);
 			}
 		}
 
@@ -100,8 +100,8 @@ struct Crowd_Procedure
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
 				pipeline_layout_info.setSetLayoutCount(std::size(layouts));
 				pipeline_layout_info.setPSetLayouts(layouts);
-				m_pipeline_layout[PipelineLayout_Crowd] = context->m_context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
-				m_pipeline_layout[PipelineLayout_DrawField] = context->m_context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+				m_pipeline_layout[PipelineLayout_Crowd] = context->m_context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
+				m_pipeline_layout[PipelineLayout_DrawField] = context->m_context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 
 			}
 
@@ -119,7 +119,7 @@ struct Crowd_Procedure
 				pipeline_layout_info.setPSetLayouts(layouts);
 				pipeline_layout_info.setPushConstantRangeCount(std::size(constants));
 				pipeline_layout_info.setPPushConstantRanges(constants);
-				m_pipeline_layout[PipelineLayout_MakeRay] = context->m_context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+				m_pipeline_layout[PipelineLayout_MakeRay] = context->m_context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 
 			}
 
@@ -132,7 +132,7 @@ struct Crowd_Procedure
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
 				pipeline_layout_info.setSetLayoutCount(std::size(layouts));
 				pipeline_layout_info.setPSetLayouts(layouts);
-				m_pipeline_layout[PipelineLayout_PathFinding] = context->m_context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+				m_pipeline_layout[PipelineLayout_PathFinding] = context->m_context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 
 			}
 		}
@@ -215,7 +215,7 @@ struct Crowd_Procedure
 				.setStage(shader_info[11])
 				.setLayout(m_pipeline_layout[PipelineLayout_DrawField].get()),
 			};
-			auto compute_pipeline = context->m_context->m_device->createComputePipelinesUnique(context->m_context->m_cache.get(), compute_pipeline_info);
+			auto compute_pipeline = context->m_context->m_device.createComputePipelinesUnique(context->m_vk::PipelineCache(), compute_pipeline_info);
 			m_pipeline[Pipeline_UnitUpdate] = std::move(compute_pipeline[0]);
 			m_pipeline[Pipeline_MakeLinkList] = std::move(compute_pipeline[1]);
 			m_pipeline[Pipeline_MakeDensity] = std::move(compute_pipeline[2]);

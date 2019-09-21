@@ -93,25 +93,31 @@ namespace app
 
 struct AppDescriptor
 {
-	cGPU m_gpu;
+//	 m_gpu;
 	uvec2 m_window_size;
 };
 
 
 struct App
 {
-	cGPU m_gpu;
+	vk::UniqueInstance m_instance;
+	vk::PhysicalDevice m_physical_device;
+	vk::UniqueDevice m_device;
+
 	std::shared_ptr<cCmdPool> m_cmd_pool;
+	cThreadPool m_thread_pool;
 	std::shared_ptr<AppWindow> m_window; // !< mainwindow
 	std::vector<std::shared_ptr<AppWindow>> m_window_list;
 	std::vector<cWindowDescriptor> m_window_request;
 	std::shared_ptr<btr::Context> m_context;
-//	std::shared_ptr<AppContext> m_context;
 
 	std::vector<vk::CommandBuffer> m_system_cmds;
 	SynchronizedPoint m_sync_point;
 
 	std::vector<vk::UniqueFence> m_fence_list;
+
+	vk::DispatchLoaderDynamic m_dispatch;
+	vk::UniqueHandle<vk::DebugUtilsMessengerEXT, vk::DispatchLoaderDynamic> m_debug_messenger;
 
 	App(const AppDescriptor& desc);
 	void setup();

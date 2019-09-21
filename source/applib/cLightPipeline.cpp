@@ -61,7 +61,7 @@ void cFowardPlusPipeline::setup(const std::shared_ptr<btr::Context>& context)
 		std::string path = btr::getResourceLibPath() + "shader\\binary\\";
 		for (size_t i = 0; i < SHADER_NUM; i++) 
 		{
-			m_shader_module[i] = loadShaderUnique(device.getHandle(), path + name[i]);
+			m_shader_module[i] = loadShaderUnique(device, path + name[i]);
 			m_shader_info[i].setModule(m_shader_module[i].get());
 			m_shader_info[i].setStage(vk::ShaderStageFlagBits::eCompute);
 			m_shader_info[i].setPName("main");
@@ -110,7 +110,7 @@ void cFowardPlusPipeline::setup(const std::shared_ptr<btr::Context>& context)
 			vk::DescriptorSetLayoutCreateInfo descriptor_layout_info = vk::DescriptorSetLayoutCreateInfo()
 				.setBindingCount(bindings[i].size())
 				.setPBindings(bindings[i].data());
-			m_descriptor_set_layout[i] = device->createDescriptorSetLayoutUnique(descriptor_layout_info);
+			m_descriptor_set_layout[i] = device.createDescriptorSetLayoutUnique(descriptor_layout_info);
 		}
 	}
 
@@ -123,7 +123,7 @@ void cFowardPlusPipeline::setup(const std::shared_ptr<btr::Context>& context)
 		descriptor_set_alloc_info.setDescriptorPool(context->m_descriptor_pool.get());
 		descriptor_set_alloc_info.setDescriptorSetCount(array_length(layouts));
 		descriptor_set_alloc_info.setPSetLayouts(layouts);
-		auto descriptors = device->allocateDescriptorSetsUnique(descriptor_set_alloc_info);
+		auto descriptors = device.allocateDescriptorSetsUnique(descriptor_set_alloc_info);
 		std::copy(std::make_move_iterator(descriptors.begin()), std::make_move_iterator(descriptors.end()), m_descriptor_set.begin());
 
 		// update descriptor_set
@@ -146,13 +146,13 @@ void cFowardPlusPipeline::setup(const std::shared_ptr<btr::Context>& context)
 			desc.setPBufferInfo(uniforms.data());
 			desc.setDstBinding(0);
 			desc.setDstSet(m_descriptor_set[DESCRIPTOR_SET_LIGHT].get());
-			device->updateDescriptorSets(desc, {});
+			device.updateDescriptorSets(desc, {});
 			desc.setDescriptorType(vk::DescriptorType::eStorageBuffer);
 			desc.setDescriptorCount(storages.size());
 			desc.setPBufferInfo(storages.data());
 			desc.setDstBinding(1);
 			desc.setDstSet(m_descriptor_set[DESCRIPTOR_SET_LIGHT].get());
-			device->updateDescriptorSets(desc, {});
+			device.updateDescriptorSets(desc, {});
 
 		}
 	}
@@ -166,7 +166,7 @@ void cFowardPlusPipeline::setup(const std::shared_ptr<btr::Context>& context)
 		vk::PipelineLayoutCreateInfo pipelineLayoutInfo = vk::PipelineLayoutCreateInfo()
 			.setSetLayoutCount(array_length(layouts))
 			.setPSetLayouts(layouts);
-		m_pipeline_layout[PIPELINE_CULL_LIGHT] = device->createPipelineLayoutUnique(pipelineLayoutInfo);
+		m_pipeline_layout[PIPELINE_CULL_LIGHT] = device.createPipelineLayoutUnique(pipelineLayoutInfo);
 
 	}
 
@@ -178,7 +178,7 @@ void cFowardPlusPipeline::setup(const std::shared_ptr<btr::Context>& context)
 			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_CULL_LIGHT].get()),
 		};
 
-		auto p = device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
+		auto p = device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
 		for (size_t i = 0; i < compute_pipeline_info.size(); i++) {
 			m_pipeline[i] = std::move(p[i]);
 		}

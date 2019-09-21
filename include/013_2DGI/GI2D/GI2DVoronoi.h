@@ -93,7 +93,7 @@ struct GI2DVoronoi
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 			desc_layout_info.setBindingCount(array_length(binding));
 			desc_layout_info.setPBindings(binding);
-			m_desc_layout[DescLayout_Data] = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
+			m_desc_layout[DescLayout_Data] = context->m_device.createDescriptorSetLayoutUnique(desc_layout_info);
 		}
 
 		{
@@ -113,7 +113,7 @@ struct GI2DVoronoi
 
 			std::string path = btr::getResourceShaderPath();
 			for (size_t i = 0; i < array_length(name); i++) {
-				m_shader[i] = loadShaderUnique(m_context->m_device.getHandle(), path + name[i]);
+				m_shader[i] = loadShaderUnique(m_context->m_device.get(), path + name[i]);
 			}
 		}
 
@@ -129,14 +129,14 @@ struct GI2DVoronoi
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 			pipeline_layout_info.setPSetLayouts(layouts);
-			m_pipeline_layout[PipelineLayout_DestructWall] = m_context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PipelineLayout_DestructWall] = m_context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 
 #if USE_DEBUG_REPORT
 			vk::DebugUtilsObjectNameInfoEXT name_info;
 			name_info.pObjectName = "PipelineLayout_DestructWall";
 			name_info.objectType = vk::ObjectType::ePipelineLayout;
 			name_info.objectHandle = reinterpret_cast<uint64_t &>(m_pipeline_layout[PipelineLayout_DestructWall].get());
-			m_context->m_device->setDebugUtilsObjectNameEXT(name_info, m_context->m_dispach);
+			m_context->m_device.setDebugUtilsObjectNameEXT(name_info, m_context->m_dispach);
 #endif
 		}
 		{
@@ -152,14 +152,14 @@ struct GI2DVoronoi
 			pipeline_layout_info.setPSetLayouts(layouts);
 			pipeline_layout_info.setPushConstantRangeCount(array_length(ranges));
 			pipeline_layout_info.setPPushConstantRanges(ranges);
-			m_pipeline_layout[PipelineLayout_Voronoi] = m_context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PipelineLayout_Voronoi] = m_context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 
 #if USE_DEBUG_REPORT
 			vk::DebugUtilsObjectNameInfoEXT name_info;
 			name_info.pObjectName = "PipelineLayout_Voronoi";
 			name_info.objectType = vk::ObjectType::ePipelineLayout;
 			name_info.objectHandle = reinterpret_cast<uint64_t &>(m_pipeline_layout[PipelineLayout_Voronoi].get());
-			m_context->m_device->setDebugUtilsObjectNameEXT(name_info, m_context->m_dispach);
+			m_context->m_device.setDebugUtilsObjectNameEXT(name_info, m_context->m_dispach);
 #endif
 		}
 
@@ -199,7 +199,7 @@ struct GI2DVoronoi
 				.setStage(shader_info[4])
 				.setLayout(m_pipeline_layout[PipelineLayout_Voronoi].get()),
 			};
-			auto compute_pipeline = m_context->m_device->createComputePipelinesUnique(m_context->m_cache.get(), compute_pipeline_info);
+			auto compute_pipeline = m_context->m_device.createComputePipelinesUnique(m_vk::PipelineCache(), compute_pipeline_info);
 
 			m_pipeline[Pipeline_Voronoi_SetupJFA] = std::move(compute_pipeline[0]);
 			m_pipeline[Pipeline_Voronoi_MakeJFA] = std::move(compute_pipeline[1]);
@@ -226,7 +226,7 @@ struct GI2DVoronoi
 				renderpass_info.setSubpassCount(1);
 				renderpass_info.setPSubpasses(&subpass);
 
-				m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
+				m_render_pass = context->m_device.createRenderPassUnique(renderpass_info);
 			}
 			{
 				vk::FramebufferCreateInfo framebuffer_info;
@@ -237,7 +237,7 @@ struct GI2DVoronoi
 				framebuffer_info.setHeight(1024);
 				framebuffer_info.setLayers(1);
 
-				m_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
+				m_framebuffer = context->m_device.createFramebufferUnique(framebuffer_info);
 			}
 
 			{
@@ -316,7 +316,7 @@ struct GI2DVoronoi
 					.setPDepthStencilState(&depth_stencil_info)
 					.setPColorBlendState(&blend_info),
 				};
-				auto graphics_pipeline = context->m_device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info);
+				auto graphics_pipeline = context->m_device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info);
 				m_pipeline[Pipeline_MakeRB_DestructWall] = std::move(graphics_pipeline[0]);
 
 			}
@@ -337,7 +337,7 @@ struct GI2DVoronoi
 				desc_info.setDescriptorPool(context->m_descriptor_pool.get());
 				desc_info.setDescriptorSetCount(array_length(layouts));
 				desc_info.setPSetLayouts(layouts);
-				m_descset[DescLayout_Data] = std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]);
+				m_descset[DescLayout_Data] = std::move(context->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
 
 				vk::DescriptorBufferInfo storages[] = {
 					b_voronoi_cell.getInfo(),
@@ -357,7 +357,7 @@ struct GI2DVoronoi
 					.setDstBinding(0)
 					.setDstSet(m_descset[DescLayout_Data].get()),
 				};
-				context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
+				context->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
 			}
 		}
 		auto cmd = m_context->m_cmd_pool->allocCmdTempolary(0);

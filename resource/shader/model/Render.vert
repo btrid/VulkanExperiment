@@ -26,7 +26,7 @@ layout(location = 1) out Vertex
 	vec3 Position;
 	vec3 Normal;
 	vec3 Texcoord;
-//	flat int DrawID;
+	flat int DrawID;
 }VSOut;
 
 
@@ -53,5 +53,5 @@ void main()
 	VSOut.Position = pos.xyz;
 	VSOut.Normal = mat3(skinningMat) * inNormal.xyz;
 	VSOut.Texcoord = inTexcoord.xyz;
-//	VSOut.DrawID = gl_DrawID;
+	VSOut.DrawID = gl_DrawID;
 }

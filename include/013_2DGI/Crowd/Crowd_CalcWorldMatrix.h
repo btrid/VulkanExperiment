@@ -12,7 +12,7 @@ struct Crowd_CalcWorldMatrix
 
 		// shader
 		{
-			m_shader_module = loadShaderUnique(crowd_context->m_context->m_device.getHandle(), btr::getResourceShaderPath() + "Crowd_CalcWorldMatrix.comp.spv");
+			m_shader_module = loadShaderUnique(crowd_context->m_context->m_device.get(), btr::getResourceShaderPath() + "Crowd_CalcWorldMatrix.comp.spv");
 		}
 
 		// pipeline layout
@@ -26,7 +26,7 @@ struct Crowd_CalcWorldMatrix
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 			pipeline_layout_info.setPSetLayouts(layouts);
-			m_pipeline_layout = crowd_context->m_context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout = crowd_context->m_context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
 		// pipeline
@@ -38,7 +38,7 @@ struct Crowd_CalcWorldMatrix
 			vk::ComputePipelineCreateInfo compute_pipeline_info;
 			compute_pipeline_info.setStage(shader_info);
 			compute_pipeline_info.setLayout(m_pipeline_layout.get());
-			m_pipeline = crowd_context->m_context->m_device->createComputePipelineUnique(crowd_context->m_context->m_cache.get(), compute_pipeline_info);
+			m_pipeline = crowd_context->m_context->m_device.createComputePipelineUnique(crowd_context->m_vk::PipelineCache(), compute_pipeline_info);
 		}
 
 

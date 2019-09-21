@@ -60,10 +60,10 @@ std::vector<uint32_t> getSupportSurfaceQueue(vk::PhysicalDevice gpu, vk::Surface
 void Swapchain::setup(const std::shared_ptr<btr::Context>& context, const cWindowDescriptor& descriptor, vk::SurfaceKHR surface)
 {
 	m_context = context;
-	std::vector<vk::PresentModeKHR> presentModeList = context->m_gpu->getSurfacePresentModesKHR(surface);
+	std::vector<vk::PresentModeKHR> presentModeList = context->m_physical_device.getSurfacePresentModesKHR(surface);
 
 	m_surface_format.format = vk::Format::eUndefined;
-	std::vector<vk::SurfaceFormatKHR> support_format = context->m_gpu->getSurfaceFormatsKHR(surface);
+	std::vector<vk::SurfaceFormatKHR> support_format = context->m_physical_device.getSurfaceFormatsKHR(surface);
 
 	auto request = { 
 		descriptor.surface_format_request,
@@ -80,12 +80,12 @@ void Swapchain::setup(const std::shared_ptr<btr::Context>& context, const cWindo
 	// サーフェスに使用できるフォーマットが見つからなかった
 	assert(m_surface_format.format != vk::Format::eUndefined);
 
-	auto support_surface = getSupportSurfaceQueue(context->m_gpu.getHandle(), surface);
+	auto support_surface = getSupportSurfaceQueue(context->m_physical_device, surface);
 	auto& device = context->m_device;
 
 	auto old_swap_chain = m_swapchain_handle.get();
 
-	vk::SurfaceCapabilitiesKHR capability = context->m_gpu->getSurfaceCapabilitiesKHR(surface);
+	vk::SurfaceCapabilitiesKHR capability = context->m_physical_device.getSurfaceCapabilitiesKHR(surface);
 	vk::SwapchainCreateInfoKHR swapchain_info;
 	swapchain_info.setSurface(surface);
 	swapchain_info.setMinImageCount(sGlobal::BUFFER_COUNT_MAX);
@@ -102,16 +102,16 @@ void Swapchain::setup(const std::shared_ptr<btr::Context>& context, const cWindo
 	swapchain_info.setPresentMode(vk::PresentModeKHR::eMailbox);
 	swapchain_info.setClipped(true);
 	swapchain_info.setOldSwapchain(m_swapchain_handle.get());
-	m_swapchain_handle = device->createSwapchainKHRUnique(swapchain_info);
+	m_swapchain_handle = device.createSwapchainKHRUnique(swapchain_info);
 
-	m_backbuffer_image = device->getSwapchainImagesKHR(m_swapchain_handle.get());
+	m_backbuffer_image = device.getSwapchainImagesKHR(m_swapchain_handle.get());
 	m_size = capability.currentExtent;
 
 }
 
 uint32_t Swapchain::swap()
 {
-	m_context->m_device->acquireNextImageKHR(m_swapchain_handle.get(), 1000, m_swapbuffer_semaphore.get(), vk::Fence(), &m_backbuffer_index);
+	m_context->m_device.acquireNextImageKHR(m_swapchain_handle.get(), 1000, m_swapbuffer_semaphore.get(), vk::Fence(), &m_backbuffer_index);
 	return m_backbuffer_index;
 }
 
@@ -153,14 +153,14 @@ cWindow::cWindow(const std::shared_ptr<btr::Context>& context, const cWindowDesc
 	vk::Win32SurfaceCreateInfoKHR surface_info;
 	surface_info.setHwnd(m_private->m_window);
 	surface_info.setHinstance(GetModuleHandle(nullptr));
-	m_surface = sGlobal::Order().getVKInstance().createWin32SurfaceKHRUnique(surface_info);
+	m_surface = context->m_instance.createWin32SurfaceKHRUnique(surface_info);
 
 	m_swapchain = std::make_shared<Swapchain>();
 	m_swapchain->setup(context, descriptor, m_surface.get());
 
 	vk::SemaphoreCreateInfo semaphoreInfo = vk::SemaphoreCreateInfo();
-	m_swapchain->m_swapbuffer_semaphore = context->m_gpu.getDevice()->createSemaphoreUnique(semaphoreInfo);
-	m_swapchain->m_submit_semaphore = context->m_gpu.getDevice()->createSemaphoreUnique(semaphoreInfo);
+	m_swapchain->m_swapbuffer_semaphore = context->m_device.createSemaphoreUnique(semaphoreInfo);
+	m_swapchain->m_submit_semaphore = context->m_device.createSemaphoreUnique(semaphoreInfo);
 
 }
 

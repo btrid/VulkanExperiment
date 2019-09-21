@@ -36,7 +36,7 @@ struct GI2DModelRender
 			renderpass_info.setSubpassCount(1);
 			renderpass_info.setPSubpasses(&subpass);
 
-			m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
+			m_render_pass = context->m_device.createRenderPassUnique(renderpass_info);
 
 			vk::FramebufferCreateInfo framebuffer_info;
 			framebuffer_info.setRenderPass(m_render_pass.get());
@@ -44,7 +44,7 @@ struct GI2DModelRender
 			framebuffer_info.setHeight(gi2d_context->RenderHeight);
 			framebuffer_info.setLayers(1);
 
-			m_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
+			m_framebuffer = context->m_device.createFramebufferUnique(framebuffer_info);
 
 		}
 		{
@@ -57,7 +57,7 @@ struct GI2DModelRender
 
 			std::string path = btr::getResourceShaderPath();
 			for (size_t i = 0; i < array_length(name); i++) {
-				m_shader[i] = loadShaderUnique(context->m_device.getHandle(), path + name[i]);
+				m_shader[i] = loadShaderUnique(context->m_device.get(), path + name[i]);
 			}
 		}
 
@@ -71,7 +71,7 @@ struct GI2DModelRender
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 			pipeline_layout_info.setPSetLayouts(layouts);
-			m_pipeline_layout[PipelineLayoutRendering] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PipelineLayoutRendering] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
 
@@ -146,7 +146,7 @@ struct GI2DModelRender
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			m_pipeline[PipelineRendering] = std::move(context->m_device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info)[0]);
+			m_pipeline[PipelineRendering] = std::move(context->m_device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info)[0]);
 		}
 
 	}
@@ -157,7 +157,7 @@ struct GI2DModelRender
 		cmd_buffer_info.commandBufferCount = 1;
 		cmd_buffer_info.commandPool = m_context->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
 		cmd_buffer_info.level = vk::CommandBufferLevel::eSecondary;
-		auto cmd = std::move(m_context->m_device->allocateCommandBuffersUnique(cmd_buffer_info)[0]);
+		auto cmd = std::move(m_context->m_device.allocateCommandBuffersUnique(cmd_buffer_info)[0]);
 		{
 
 			vk::CommandBufferBeginInfo begin_info;

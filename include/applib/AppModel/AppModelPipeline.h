@@ -42,7 +42,7 @@ struct AppModelAnimationStage
 			vk::PipelineLayoutCreateInfo pipeline_layout_info = vk::PipelineLayoutCreateInfo()
 				.setSetLayoutCount(array_length(layouts))
 				.setPSetLayouts(layouts);
-			m_pipeline_layout = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
 		// Create pipeline
@@ -67,7 +67,7 @@ struct AppModelAnimationStage
 			.setLayout(m_pipeline_layout.get()),
 		};
 
-		auto p = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
+		auto p = context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
 		for (size_t i = 0; i < p.size(); i++) {
 			m_pipeline[i] = std::move(p[i]);
 		}
@@ -81,7 +81,7 @@ struct AppModelAnimationStage
 		cmd_buffer_info.commandBufferCount = 1;
 		cmd_buffer_info.commandPool = m_context->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
 		cmd_buffer_info.level = vk::CommandBufferLevel::eSecondary;
-		auto cmd = std::move(m_context->m_device->allocateCommandBuffersUnique(cmd_buffer_info)[0]);
+		auto cmd = std::move(m_context->m_device.allocateCommandBuffersUnique(cmd_buffer_info)[0]);
 
 
 		{
@@ -243,7 +243,7 @@ struct AppModelRenderStage
 			renderpass_info.setSubpassCount(1);
 			renderpass_info.setPSubpasses(&subpass);
 
-			m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
+			m_render_pass = context->m_device.createRenderPassUnique(renderpass_info);
 		}
 
 		{
@@ -259,7 +259,7 @@ struct AppModelRenderStage
 			framebuffer_info.setHeight(render_target->m_info.extent.height);
 			framebuffer_info.setLayers(1);
 
-			m_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
+			m_framebuffer = context->m_device.createFramebufferUnique(framebuffer_info);
 		}
 		// setup shader
 		{
@@ -287,7 +287,7 @@ struct AppModelRenderStage
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 			pipeline_layout_info.setPSetLayouts(layouts);
 
-			m_pipeline_layout = device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout = device.createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
 		// pipeline
@@ -364,7 +364,7 @@ struct AppModelRenderStage
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			m_pipeline = std::move(device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info)[0]);
+			m_pipeline = std::move(device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info)[0]);
 		}
 		m_render_target = render_target;
 	}
@@ -375,7 +375,7 @@ struct AppModelRenderStage
 		cmd_buffer_info.commandBufferCount = 1;
 		cmd_buffer_info.commandPool = m_context->m_cmd_pool->getCmdPool(cCmdPool::CMD_POOL_TYPE_COMPILED, 0);
 		cmd_buffer_info.level = vk::CommandBufferLevel::eSecondary;
-		auto cmd = std::move(m_context->m_device->allocateCommandBuffersUnique(cmd_buffer_info)[0]);
+		auto cmd = std::move(m_context->m_device.allocateCommandBuffersUnique(cmd_buffer_info)[0]);
 		{
 
 			vk::CommandBufferBeginInfo begin_info;

@@ -206,7 +206,7 @@ struct VoxelContext_Old
 			sampler_info.anisotropyEnable = VK_FALSE;
 			sampler_info.borderColor = vk::BorderColor::eFloatOpaqueWhite;
 
-			m_voxel_sampler = context->m_device->createSamplerUnique(sampler_info);
+			m_voxel_sampler = context->m_device.createSamplerUnique(sampler_info);
 
 			view_info.subresourceRange.levelCount = 1;
 			m_voxel_hierarchy_imageview.resize(mipnum);
@@ -373,7 +373,7 @@ struct VoxelPipeline
 
 			std::string path = btr::getResourceShaderPath() + "../006_voxel_based_GI/binary/";
 			for (size_t i = 0; i < SHADER_NUM; i++) {
-				m_shader_list[i] = std::move(loadShaderUnique(device.getHandle(), path + shader_info[i].name));
+				m_shader_list[i] = std::move(loadShaderUnique(device.get(), path + shader_info[i].name));
 				m_stage_info[i].setStage(shader_info[i].stage);
 				m_stage_info[i].setModule(m_shader_list[i].get());
 				m_stage_info[i].setPName("main");
@@ -410,7 +410,7 @@ struct VoxelPipeline
 					.setStage(m_stage_info[SHADER_MAKE_VOXEL_HIERARCHY_COMPUTE])
 					.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_MAKE_HIERARCHY_VOXEL].get()),
 				};
-				auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
+				auto compute_pipeline = context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
 				m_pipeline[PIPELINE_MAKE_HIERARCHY_VOXEL] = std::move(compute_pipeline[0]);
 
 			}

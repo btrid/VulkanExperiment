@@ -42,15 +42,15 @@ GI2DRadiosity_old::GI2DRadiosity_old(const std::shared_ptr<btr::Context>& contex
 		image_info.setTiling(vk::ImageTiling::eOptimal);
 		image_info.setUsage(vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled);
 
-		m_image = m_context->m_device->createImageUnique(image_info);
+		m_image = m_context->m_device.createImageUnique(image_info);
 
-		vk::MemoryRequirements memory_request = context->m_device->getImageMemoryRequirements(m_image.get());
+		vk::MemoryRequirements memory_request = context->m_device.getImageMemoryRequirements(m_image.get());
 		vk::MemoryAllocateInfo memory_alloc_info;
 		memory_alloc_info.allocationSize = memory_request.size;
-		memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(context->m_gpu.getHandle(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+		memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(context->m_gpu.get(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-		m_image_memory = context->m_device->allocateMemoryUnique(memory_alloc_info);
-		context->m_device->bindImageMemory(m_image.get(), m_image_memory.get(), 0);
+		m_image_memory = context->m_device.allocateMemoryUnique(memory_alloc_info);
+		context->m_device.bindImageMemory(m_image.get(), m_image_memory.get(), 0);
 
 		vk::ImageViewCreateInfo view_info;
 		view_info.setFormat(image_info.format);
@@ -65,13 +65,13 @@ GI2DRadiosity_old::GI2DRadiosity_old(const std::shared_ptr<btr::Context>& contex
 		for (int i = 0; i<Frame_Num; i++)
 		{
 			view_info.subresourceRange.setBaseArrayLayer(i);
-			m_image_view[i] = m_context->m_device->createImageViewUnique(view_info);
+			m_image_view[i] = m_context->m_device.createImageViewUnique(view_info);
 		}
 
 		view_info.subresourceRange.setBaseArrayLayer(0);
 		view_info.subresourceRange.setLayerCount(Frame_Num);
 		view_info.setViewType(vk::ImageViewType::e2D);
-		m_image_rtv = m_context->m_device->createImageViewUnique(view_info);
+		m_image_rtv = m_context->m_device.createImageViewUnique(view_info);
 		
 		vk::SamplerCreateInfo sampler_info;
 		sampler_info.setAddressModeU(vk::SamplerAddressMode::eClampToEdge);
@@ -85,7 +85,7 @@ GI2DRadiosity_old::GI2DRadiosity_old(const std::shared_ptr<btr::Context>& contex
 		sampler_info.setMipLodBias(0.f);
 		sampler_info.setMipmapMode(vk::SamplerMipmapMode::eLinear);
 		sampler_info.setUnnormalizedCoordinates(false);
-		m_image_sampler = m_context->m_device->createSamplerUnique(sampler_info);
+		m_image_sampler = m_context->m_device.createSamplerUnique(sampler_info);
 
 		vk::ImageMemoryBarrier to_copy_barrier;
 		to_copy_barrier.image = m_image.get();
@@ -107,13 +107,13 @@ GI2DRadiosity_old::GI2DRadiosity_old(const std::shared_ptr<btr::Context>& contex
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllGraphics, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
 
 #if USE_DEBUG_REPORT
-		context->m_device->setDebugUtilsObjectNameEXT({ vk::ObjectType::eImage, reinterpret_cast<uint64_t &>(m_image.get()), "GI2DRadiosity::m_image" }, context->m_dispach);
-		context->m_device->setDebugUtilsObjectNameEXT({ vk::ObjectType::eImageView, reinterpret_cast<uint64_t &>(m_image_rtv.get()), "GI2DRadiosity::m_imag_rtv" }, context->m_dispach);
-		context->m_device->setDebugUtilsObjectNameEXT({ vk::ObjectType::eImageView, reinterpret_cast<uint64_t &>(m_image_view[0].get()), "GI2DRadiosity::m_image_view[0]" }, context->m_dispach);
-		context->m_device->setDebugUtilsObjectNameEXT({ vk::ObjectType::eImageView, reinterpret_cast<uint64_t &>(m_image_view[1].get()), "GI2DRadiosity::m_image_view[1]" }, context->m_dispach);
-		context->m_device->setDebugUtilsObjectNameEXT({ vk::ObjectType::eImageView, reinterpret_cast<uint64_t &>(m_image_view[2].get()), "GI2DRadiosity::m_image_view[2]" }, context->m_dispach);
-		context->m_device->setDebugUtilsObjectNameEXT({ vk::ObjectType::eImageView, reinterpret_cast<uint64_t &>(m_image_view[3].get()), "GI2DRadiosity::m_image_view[3]" }, context->m_dispach);
-		context->m_device->setDebugUtilsObjectNameEXT({ vk::ObjectType::eSampler, reinterpret_cast<uint64_t &>(m_image_sampler.get()), "GI2DRadiosity::m_image_sampler" }, context->m_dispach);
+		context->m_device.setDebugUtilsObjectNameEXT({ vk::ObjectType::eImage, reinterpret_cast<uint64_t &>(m_image.get()), "GI2DRadiosity::m_image" }, context->m_dispach);
+		context->m_device.setDebugUtilsObjectNameEXT({ vk::ObjectType::eImageView, reinterpret_cast<uint64_t &>(m_image_rtv.get()), "GI2DRadiosity::m_imag_rtv" }, context->m_dispach);
+		context->m_device.setDebugUtilsObjectNameEXT({ vk::ObjectType::eImageView, reinterpret_cast<uint64_t &>(m_image_view[0].get()), "GI2DRadiosity::m_image_view[0]" }, context->m_dispach);
+		context->m_device.setDebugUtilsObjectNameEXT({ vk::ObjectType::eImageView, reinterpret_cast<uint64_t &>(m_image_view[1].get()), "GI2DRadiosity::m_image_view[1]" }, context->m_dispach);
+		context->m_device.setDebugUtilsObjectNameEXT({ vk::ObjectType::eImageView, reinterpret_cast<uint64_t &>(m_image_view[2].get()), "GI2DRadiosity::m_image_view[2]" }, context->m_dispach);
+		context->m_device.setDebugUtilsObjectNameEXT({ vk::ObjectType::eImageView, reinterpret_cast<uint64_t &>(m_image_view[3].get()), "GI2DRadiosity::m_image_view[3]" }, context->m_dispach);
+		context->m_device.setDebugUtilsObjectNameEXT({ vk::ObjectType::eSampler, reinterpret_cast<uint64_t &>(m_image_sampler.get()), "GI2DRadiosity::m_image_sampler" }, context->m_dispach);
 #endif
 
 	}
@@ -133,7 +133,7 @@ GI2DRadiosity_old::GI2DRadiosity_old(const std::shared_ptr<btr::Context>& contex
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 			desc_layout_info.setBindingCount(array_length(binding));
 			desc_layout_info.setPBindings(binding);
-			m_descriptor_set_layout = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
+			m_descriptor_set_layout = context->m_device.createDescriptorSetLayoutUnique(desc_layout_info);
 
 		}
 		{
@@ -144,7 +144,7 @@ GI2DRadiosity_old::GI2DRadiosity_old(const std::shared_ptr<btr::Context>& contex
 			desc_info.setDescriptorPool(context->m_descriptor_pool.get());
 			desc_info.setDescriptorSetCount(array_length(layouts));
 			desc_info.setPSetLayouts(layouts);
-			m_descriptor_set = std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]);
+			m_descriptor_set = std::move(context->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
 
 			vk::DescriptorBufferInfo uniforms[] = {
 				u_radiosity_info.getInfo(),
@@ -171,7 +171,7 @@ GI2DRadiosity_old::GI2DRadiosity_old(const std::shared_ptr<btr::Context>& contex
 				.setDstBinding(1)
 				.setDstSet(m_descriptor_set.get()),
 			};
-			context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
+			context->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
 
 			vk::WriteDescriptorSet write_desc[Frame_Num];
 			vk::DescriptorImageInfo image_info[Frame_Num];
@@ -188,7 +188,7 @@ GI2DRadiosity_old::GI2DRadiosity_old(const std::shared_ptr<btr::Context>& contex
 				.setDstArrayElement(i)
 				.setDstSet(m_descriptor_set.get());
 			}
-			context->m_device->updateDescriptorSets(array_length(write_desc), write_desc, 0, nullptr);
+			context->m_device.updateDescriptorSets(array_length(write_desc), write_desc, 0, nullptr);
 		}
 
 	}
@@ -212,7 +212,7 @@ GI2DRadiosity_old::GI2DRadiosity_old(const std::shared_ptr<btr::Context>& contex
 
 		std::string path = btr::getResourceShaderPath();
 		for (size_t i = 0; i < array_length(name); i++) {
-			m_shader[i] = loadShaderUnique(context->m_device.getHandle(), path + name[i]);
+			m_shader[i] = loadShaderUnique(context->m_device.get(), path + name[i]);
 		}
 	}
 
@@ -232,7 +232,7 @@ GI2DRadiosity_old::GI2DRadiosity_old(const std::shared_ptr<btr::Context>& contex
 			pipeline_layout_info.setPSetLayouts(layouts);
 			pipeline_layout_info.setPushConstantRangeCount(array_length(ranges));
 			pipeline_layout_info.setPPushConstantRanges(ranges);
-			m_pipeline_layout[PipelineLayout_Radiosity] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PipelineLayout_Radiosity] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 
 		}
 
@@ -244,7 +244,7 @@ GI2DRadiosity_old::GI2DRadiosity_old(const std::shared_ptr<btr::Context>& contex
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 			pipeline_layout_info.setPSetLayouts(layouts);
-			m_pipeline_layout[PipelineLayout_Radiosity_GP] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PipelineLayout_Radiosity_GP] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
 	}
@@ -273,7 +273,7 @@ GI2DRadiosity_old::GI2DRadiosity_old(const std::shared_ptr<btr::Context>& contex
 			.setStage(shader_info[2])
 			.setLayout(m_pipeline_layout[PipelineLayout_Radiosity].get()),
 		};
-		auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
+		auto compute_pipeline = context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
 		m_pipeline[Pipeline_MakeHitpoint] = std::move(compute_pipeline[0]);
 		m_pipeline[Pipeline_RayMarch] = std::move(compute_pipeline[1]);
 		m_pipeline[Pipeline_RayBounce] = std::move(compute_pipeline[2]);
@@ -310,7 +310,7 @@ GI2DRadiosity_old::GI2DRadiosity_old(const std::shared_ptr<btr::Context>& contex
 		renderpass_info.setSubpassCount(1);
 		renderpass_info.setPSubpasses(&subpass);
 
-		m_radiosity_pass = context->m_device->createRenderPassUnique(renderpass_info);
+		m_radiosity_pass = context->m_device.createRenderPassUnique(renderpass_info);
 
 		{
 			vk::ImageView view[] = {
@@ -324,7 +324,7 @@ GI2DRadiosity_old::GI2DRadiosity_old(const std::shared_ptr<btr::Context>& contex
 			framebuffer_info.setHeight(render_target->m_info.extent.height);
 			framebuffer_info.setLayers(Frame_Num);
 
-			m_radiosity_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
+			m_radiosity_framebuffer = context->m_device.createFramebufferUnique(framebuffer_info);
 		}
 	}
 	{
@@ -357,7 +357,7 @@ GI2DRadiosity_old::GI2DRadiosity_old(const std::shared_ptr<btr::Context>& contex
 		renderpass_info.setSubpassCount(1);
 		renderpass_info.setPSubpasses(&subpass);
 
-		m_rendering_pass = context->m_device->createRenderPassUnique(renderpass_info);
+		m_rendering_pass = context->m_device.createRenderPassUnique(renderpass_info);
 	}
 	{
 		vk::ImageView view[] = {
@@ -371,7 +371,7 @@ GI2DRadiosity_old::GI2DRadiosity_old(const std::shared_ptr<btr::Context>& contex
 		framebuffer_info.setHeight(render_target->m_info.extent.height);
 		framebuffer_info.setLayers(1);
 
-		m_rendering_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
+		m_rendering_framebuffer = context->m_device.createFramebufferUnique(framebuffer_info);
 	}
 
 	{
@@ -500,7 +500,7 @@ GI2DRadiosity_old::GI2DRadiosity_old(const std::shared_ptr<btr::Context>& contex
 			.setPDepthStencilState(&depth_stencil_info)
 			.setPColorBlendState(&blend_info2),
 		};
-		auto graphics_pipeline = context->m_device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info);
+		auto graphics_pipeline = context->m_device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info);
 		m_pipeline[Pipeline_Radiosity] = std::move(graphics_pipeline[0]);
 		m_pipeline[Pipeline_Rendering] = std::move(graphics_pipeline[1]);
 	}

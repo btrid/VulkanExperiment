@@ -118,7 +118,7 @@ void sBulletSystem::setup(std::shared_ptr<btr::Context>& context, const std::sha
 		renderpass_info.setSubpassCount(1);
 		renderpass_info.setPSubpasses(&subpass);
 
-		m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
+		m_render_pass = context->m_device.createRenderPassUnique(renderpass_info);
 	}
 
 	{
@@ -134,7 +134,7 @@ void sBulletSystem::setup(std::shared_ptr<btr::Context>& context, const std::sha
 		framebuffer_info.setHeight(render_target->m_info.extent.height);
 		framebuffer_info.setLayers(1);
 
-		m_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
+		m_framebuffer = context->m_device.createFramebufferUnique(framebuffer_info);
 	}
 
 	{
@@ -152,7 +152,7 @@ void sBulletSystem::setup(std::shared_ptr<btr::Context>& context, const std::sha
 		std::string path = btr::getResourceAppPath() + "shader\\binary\\";
 		for (uint32_t i = 0; i < SHADER_NUM; i++)
 		{
-			m_shader_module[i] = loadShaderUnique(context->m_device.getHandle(), path + shader_desc[i].name);
+			m_shader_module[i] = loadShaderUnique(context->m_device.get(), path + shader_desc[i].name);
 		}
 	}
 
@@ -198,7 +198,7 @@ void sBulletSystem::setup(std::shared_ptr<btr::Context>& context, const std::sha
 			vk::DescriptorSetLayoutCreateInfo descriptor_set_layout_info = vk::DescriptorSetLayoutCreateInfo()
 				.setBindingCount(bindings[i].size())
 				.setPBindings(bindings[i].data());
-			m_descriptor_set_layout[i] = context->m_device->createDescriptorSetLayoutUnique(descriptor_set_layout_info);
+			m_descriptor_set_layout[i] = context->m_device.createDescriptorSetLayoutUnique(descriptor_set_layout_info);
 		}
 
 		vk::DescriptorSetLayout layouts[] = {
@@ -208,7 +208,7 @@ void sBulletSystem::setup(std::shared_ptr<btr::Context>& context, const std::sha
 		alloc_info.descriptorPool = context->m_descriptor_pool.get();
 		alloc_info.descriptorSetCount = array_length(layouts);
 		alloc_info.pSetLayouts = layouts;
-		auto descriptor_set = context->m_device->allocateDescriptorSetsUnique(alloc_info);
+		auto descriptor_set = context->m_device.allocateDescriptorSetsUnique(alloc_info);
 		std::copy(std::make_move_iterator(descriptor_set.begin()), std::make_move_iterator(descriptor_set.end()), m_descriptor_set.begin());
 	}
 	{
@@ -238,7 +238,7 @@ void sBulletSystem::setup(std::shared_ptr<btr::Context>& context, const std::sha
 			.setDstBinding(1)
 			.setDstSet(m_descriptor_set[DESCRIPTOR_SET_UPDATE].get()),
 		};
-		context->m_device->updateDescriptorSets(write_desc, {});
+		context->m_device.updateDescriptorSets(write_desc, {});
 	}
 
 	// pipeline layout
@@ -252,7 +252,7 @@ void sBulletSystem::setup(std::shared_ptr<btr::Context>& context, const std::sha
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(layouts.size());
 			pipeline_layout_info.setPSetLayouts(layouts.data());
-			m_pipeline_layout[PIPELINE_LAYOUT_UPDATE] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PIPELINE_LAYOUT_UPDATE] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 		}
 		{
 			std::vector<vk::DescriptorSetLayout> layouts = {
@@ -263,7 +263,7 @@ void sBulletSystem::setup(std::shared_ptr<btr::Context>& context, const std::sha
 			vk::PipelineLayoutCreateInfo pipeline_layout_info;
 			pipeline_layout_info.setSetLayoutCount(layouts.size());
 			pipeline_layout_info.setPSetLayouts(layouts.data());
-			m_pipeline_layout[PIPELINE_LAYOUT_DRAW] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+			m_pipeline_layout[PIPELINE_LAYOUT_DRAW] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 		}
 
 
@@ -285,7 +285,7 @@ void sBulletSystem::setup(std::shared_ptr<btr::Context>& context, const std::sha
 				.setStage(vk::ShaderStageFlagBits::eCompute))
 			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_UPDATE].get()),
 		};
-		auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
+		auto compute_pipeline = context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
 		m_pipeline[PIPELINE_COMPUTE_UPDATE] = std::move(compute_pipeline[0]);
 		m_pipeline[PIPELINE_COMPUTE_EMIT] = std::move(compute_pipeline[1]);
 
@@ -367,7 +367,7 @@ void sBulletSystem::setup(std::shared_ptr<btr::Context>& context, const std::sha
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info),
 			};
-			auto graphics_pipeline = context->m_device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info);
+			auto graphics_pipeline = context->m_device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info);
 			m_pipeline[PIPELINE_GRAPHICS_RENDER] = std::move(graphics_pipeline[0]);
 
 		}

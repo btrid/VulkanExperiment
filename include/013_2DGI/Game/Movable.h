@@ -16,7 +16,7 @@
 // 		desc_info.setDescriptorPool(context->m_descriptor_pool.get());
 // 		desc_info.setDescriptorSetCount(array_length(layouts));
 // 		desc_info.setPSetLayouts(layouts);
-// 		m_descriptor_set = std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]);
+// 		m_descriptor_set = std::move(context->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
 // 
 // 		b_movable = context->m_storage_memory.allocateMemory<cMovable>({ size * 64,{} });
 // 
@@ -33,7 +33,7 @@
 // 			.setDstBinding(0)
 // 			.setDstSet(m_descriptor_set.get()),
 // 		};
-// 		context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
+// 		context->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
 // 	}
 // 
 // 	vk::UniqueDescriptorSet m_descriptor_set;

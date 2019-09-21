@@ -1,5 +1,6 @@
 #pragma once
 
+#include <btrlib/Define.h>
 #include <filesystem>
 #define TINYGLTF_IMPLEMENTATION
 #define TINYGLTF_NO_STB_IMAGE_WRITE
@@ -12,9 +13,26 @@ struct Mesh
 {
 	uint32_t indexdata_offset;
 };
+struct VertexBuffer
+{
+	VertexBuffer()
+	{
+		VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+		bufferInfo.size = 65536;
+		bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+		VmaAllocationCreateInfo allocInfo = {};
+		allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
+		VkBuffer buffer;
+		VmaAllocation allocation;
+		vmaCreateBuffer(allocator, &bufferInfo, &allocInfo, &buffer, &allocation, nullptr);
+	}
+	VmaAllocate()
+};
 struct Model 
 {
-	
+	std::vector<Buffer>
 	Model(const std::string &filename)
 //		std::vector<Mesh<float> > *meshes,
 //		std::vector<Material> *materials,

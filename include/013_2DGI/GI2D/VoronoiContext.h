@@ -25,7 +25,7 @@ struct GI2DSDF
 // 				desc_info.setDescriptorPool(context->m_descriptor_pool.get());
 // 				desc_info.setDescriptorSetCount(array_length(layouts));
 // 				desc_info.setPSetLayouts(layouts);
-// 				m_descriptor_set = std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]);
+// 				m_descriptor_set = std::move(context->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
 // 
 // 				vk::DescriptorBufferInfo storages[] = {
 //  					b_jfa.getInfo(),
@@ -39,7 +39,7 @@ struct GI2DSDF
 // 					.setDstBinding(0)
 // 					.setDstSet(m_descriptor_set.get()),
 // 				};
-// 				context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
+// 				context->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
 			}
 		}
 	}

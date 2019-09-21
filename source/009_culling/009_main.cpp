@@ -91,7 +91,7 @@ struct InstancingDescriptorLayout : public DescriptorModule
 			.setDstBinding(0)
 			.setDstSet(descriptor_set.get()),
 		};
-		m_context->m_device->updateDescriptorSets(array_length(write_desc), write_desc, 0, nullptr);
+		m_context->m_device.updateDescriptorSets(array_length(write_desc), write_desc, 0, nullptr);
 		return descriptor_set;
 	}
 
@@ -389,7 +389,7 @@ struct CullingTest
 				renderpass_info.setAttachmentCount(array_length(attach_description));
 				renderpass_info.setPAttachments(attach_description);
 
-				m_occlusion_test_pass = context->m_device->createRenderPassUnique(renderpass_info);
+				m_occlusion_test_pass = context->m_device.createRenderPassUnique(renderpass_info);
 			}
 			{
 				vk::ImageView view[] = {
@@ -403,7 +403,7 @@ struct CullingTest
 				framebuffer_info.setHeight(context->m_window->getClientSize().y);
 				framebuffer_info.setLayers(1);
 
-				m_occlusion_test_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
+				m_occlusion_test_framebuffer = context->m_device.createFramebufferUnique(framebuffer_info);
 			}
 
 		}
@@ -429,7 +429,7 @@ struct CullingTest
 
 				std::string path = btr::getResourceAppPath() + "shader\\binary\\";
 				for (size_t i = 0; i < SHADER_NUM; i++) {
-					m_shader_module[i] = loadShaderUnique(context->m_device.getHandle(), path + shader_info[i].name);
+					m_shader_module[i] = loadShaderUnique(context->m_device.get(), path + shader_info[i].name);
 					m_shader_info[i].setModule(m_shader_module[i].get());
 					m_shader_info[i].setStage(shader_info[i].stage);
 					m_shader_info[i].setPName("main");
@@ -446,7 +446,7 @@ struct CullingTest
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
 				pipeline_layout_info.setSetLayoutCount(layouts.size());
 				pipeline_layout_info.setPSetLayouts(layouts.data());
-				m_pipeline_layout[PIPELINE_LAYOUT_DRAW] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+				m_pipeline_layout[PIPELINE_LAYOUT_DRAW] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 			}
 			{
 				std::vector<vk::DescriptorSetLayout> layouts =
@@ -456,7 +456,7 @@ struct CullingTest
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
 				pipeline_layout_info.setSetLayoutCount(layouts.size());
 				pipeline_layout_info.setPSetLayouts(layouts.data());
-				m_pipeline_layout[PIPELINE_LAYOUT_COMPUTE] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+				m_pipeline_layout[PIPELINE_LAYOUT_COMPUTE] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 			}
 
 			{
@@ -466,7 +466,7 @@ struct CullingTest
 					.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_COMPUTE].get()),
 				};
 
-				auto p = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
+				auto p = context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
 				m_pipeline[PIPELINE_COMPUTE_VISIBLE] = std::move(p[0]);
 
 			}
@@ -563,7 +563,7 @@ struct CullingTest
 						.setPDepthStencilState(&depth_stencil_info)
 						.setPColorBlendState(&no_blend_info),
 					};
-					auto pipelines = context->m_device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info);
+					auto pipelines = context->m_device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info);
 					m_pipeline[PIPELINE_GRAPHICS_WRITE_DEPTH] = std::move(pipelines[0]);
 
 				}
@@ -606,7 +606,7 @@ struct CullingTest
 						.setPColorBlendState(&no_blend_info),
 					};
 
-					auto pipelines = context->m_device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info);
+					auto pipelines = context->m_device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info);
 					m_pipeline[PIPELINE_GRAPHICS_OCCULSION_TEST] = std::move(pipelines[0]);
 
 				}
@@ -657,7 +657,7 @@ struct CullingTest
 						.setPDepthStencilState(&no_depth_stencil_info)
 						.setPColorBlendState(&blend_info),
 					};
-					auto pipelines = context->m_device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info);
+					auto pipelines = context->m_device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info);
 					m_pipeline[PIPELINE_GRAPHICS_RENDER] = std::move(pipelines[0]);
 
 				}

@@ -54,7 +54,7 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context, const std::shared_ptr<
 		renderpass_info.setSubpassCount(1);
 		renderpass_info.setPSubpasses(&subpass);
 
-		m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
+		m_render_pass = context->m_device.createRenderPassUnique(renderpass_info);
 	}
 
 	{
@@ -70,7 +70,7 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context, const std::shared_ptr<
 		framebuffer_info.setHeight(render_target->m_info.extent.height);
 		framebuffer_info.setLayers(1);
 
-		m_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
+		m_framebuffer = context->m_device.createFramebufferUnique(framebuffer_info);
 	}
 
 	{
@@ -206,15 +206,15 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context, const std::shared_ptr<
 			image_info.initialLayout = vk::ImageLayout::eUndefined;
 			image_info.extent = { (uint32_t)maze->getSizeX(), (uint32_t)maze->getSizeY(), 1 };
 			image_info.flags = vk::ImageCreateFlagBits::e2DArrayCompatibleKHR;
-			auto image = context->m_device->createImageUnique(image_info);
+			auto image = context->m_device.createImageUnique(image_info);
 
-			vk::MemoryRequirements memory_request = context->m_device->getImageMemoryRequirements(image.get());
+			vk::MemoryRequirements memory_request = context->m_device.getImageMemoryRequirements(image.get());
 			vk::MemoryAllocateInfo memory_alloc_info;
 			memory_alloc_info.allocationSize = memory_request.size;
 			memory_alloc_info.memoryTypeIndex = cGPU::Helper::getMemoryTypeIndex(context->m_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-			auto image_memory = context->m_device->allocateMemoryUnique(memory_alloc_info);
-			context->m_device->bindImageMemory(image.get(), image_memory.get(), 0);
+			auto image_memory = context->m_device.allocateMemoryUnique(memory_alloc_info);
+			context->m_device.bindImageMemory(image.get(), image_memory.get(), 0);
 
 			vk::ImageSubresourceRange subresourceRange;
 			subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
@@ -232,7 +232,7 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context, const std::shared_ptr<
 			view_info.format = image_info.format;
 			view_info.image = image.get();
 			view_info.subresourceRange = subresourceRange;
-			auto image_view = context->m_device->createImageViewUnique(view_info);
+			auto image_view = context->m_device.createImageViewUnique(view_info);
 
 			{
 
@@ -302,7 +302,7 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context, const std::shared_ptr<
 		std::string path = btr::getResourceAppPath() + "shader\\binary\\";
 		for (size_t i = 0; i < SHADER_NUM; i++)
 		{
-			m_shader_module[i] = loadShaderUnique(context->m_device.getHandle(), path + shader_info[i].name);
+			m_shader_module[i] = loadShaderUnique(context->m_device.get(), path + shader_info[i].name);
 		}
 	}
 
@@ -359,7 +359,7 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context, const std::shared_ptr<
 				vk::DescriptorSetLayoutCreateInfo descriptor_set_layout_info = vk::DescriptorSetLayoutCreateInfo()
 					.setBindingCount(bindings[i].size())
 					.setPBindings(bindings[i].data());
-				m_descriptor_set_layout[i] = context->m_device->createDescriptorSetLayoutUnique(descriptor_set_layout_info);
+				m_descriptor_set_layout[i] = context->m_device.createDescriptorSetLayoutUnique(descriptor_set_layout_info);
 			}
 
 			vk::DescriptorSetLayout layouts[] = { m_descriptor_set_layout[DESCRIPTOR_SET_LAYOUT_SOLDIER_UPDATE].get() };
@@ -367,7 +367,7 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context, const std::shared_ptr<
 			alloc_info.descriptorPool = context->m_descriptor_pool.get();
 			alloc_info.descriptorSetCount = array_length(layouts);
 			alloc_info.pSetLayouts = layouts;
-			auto descriptor_set = context->m_device->allocateDescriptorSetsUnique(alloc_info);
+			auto descriptor_set = context->m_device.allocateDescriptorSetsUnique(alloc_info);
 			m_descriptor_set[DESCRIPTOR_SET_SOLDIER_UPDATE] = std::move(descriptor_set[0]);
 
 			// update
@@ -410,7 +410,7 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context, const std::shared_ptr<
 					.setDstBinding(7)
 					.setDstSet(getDescriptorSet(DESCRIPTOR_SET_SOLDIER_UPDATE)),
 				};
-				context->m_device->updateDescriptorSets(write_desc, {});
+				context->m_device.updateDescriptorSets(write_desc, {});
 			}
 		}
 
@@ -424,7 +424,7 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context, const std::shared_ptr<
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
 				pipeline_layout_info.setSetLayoutCount(layouts.size());
 				pipeline_layout_info.setPSetLayouts(layouts.data());
-				m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_UPDATE] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+				m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_UPDATE] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 			}
 			{
 				std::vector<vk::DescriptorSetLayout> layouts = {
@@ -441,7 +441,7 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context, const std::shared_ptr<
 				pipeline_layout_info.setPSetLayouts(layouts.data());
 				pipeline_layout_info.setPushConstantRangeCount(push_constants.size());
 				pipeline_layout_info.setPPushConstantRanges(push_constants.data());
-				m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_EMIT] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+				m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_EMIT] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 			}
 			{
 				std::vector<vk::DescriptorSetLayout> layouts = {
@@ -452,7 +452,7 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context, const std::shared_ptr<
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
 				pipeline_layout_info.setSetLayoutCount(layouts.size());
 				pipeline_layout_info.setPSetLayouts(layouts.data());
-				m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+				m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_DRAW] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 			}
 		}
 
@@ -475,7 +475,7 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context, const std::shared_ptr<
 			.setStage(vk::ShaderStageFlagBits::eCompute))
 		.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_SOLDIER_EMIT].get()),
 	};
-	auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
+	auto compute_pipeline = context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
 	m_pipeline[PIPELINE_COMPUTE_SOLDIER_UPDATE] = std::move(compute_pipeline[0]);
 	m_pipeline[PIPELINE_COMPUTE_SOLDIER_EMIT] = std::move(compute_pipeline[1]);
 
@@ -555,7 +555,7 @@ void sBoid::setup(std::shared_ptr<btr::Context>& context, const std::shared_ptr<
 			.setPDepthStencilState(&depth_stencil_info)
 			.setPColorBlendState(&blend_info),
 		};
-		auto graphics_pipeline = context->m_device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info);
+		auto graphics_pipeline = context->m_device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info);
 		m_pipeline[PIPELINE_GRAPHICS_SOLDIER_DRAW] = std::move(graphics_pipeline[0]);
 	}
 }

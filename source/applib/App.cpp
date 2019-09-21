@@ -12,6 +12,96 @@
 
 vk::UniqueDescriptorSetLayout RenderTarget::s_descriptor_set_layout;
 
+VKAPI_ATTR VkBool32 VKAPI_CALL debug_messenger_callback(
+	VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+	VkDebugUtilsMessageTypeFlagsEXT messageType,
+	const VkDebugUtilsMessengerCallbackDataEXT* callbackData,
+	void* userData)
+{
+	char prefix[64];
+	auto message_size = strlen(callbackData->pMessage) + 500;
+	char *message = (char *)malloc(message_size);
+	assert(message);
+	if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT)
+	{
+		strcpy_s(prefix, "VERBOSE :");
+	}
+	else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
+	{
+		strcpy_s(prefix, "INFO :");
+	}
+	else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+	{
+		strcpy_s(prefix, "WARNING :");
+	}
+	else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+	{
+		strcpy_s(prefix, "ERROR :");
+	}
+	if (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT)
+	{
+		strcat_s(prefix, "GENERAL :");
+	}
+	else
+	{
+		// 		if (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_SPECIFICATION_BIT_EXT) {
+		// 			strcat_s(prefix, "SPEC");
+		// 			validation_error = 1;
+		// 		}
+		// 		if (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) {
+		// 			if (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_SPECIFICATION_BIT_EXT) {
+		// 				strcat(prefix, "|");
+		// 			}
+		// 			strcat_s(prefix, "PERF");
+		// 		}
+	}
+	sprintf_s(message, message_size,
+		"%s %s\n %s",
+		prefix,
+		callbackData->pMessageIdName,
+		callbackData->pMessage);
+
+	char tmp_message[500];
+	if (callbackData->objectCount > 0)
+	{
+		sprintf_s(tmp_message, "\n Object Num is %d\n", callbackData->objectCount);
+		strcat_s(message, message_size, tmp_message);
+		for (uint32_t object = 0; object < callbackData->objectCount; ++object) {
+			sprintf_s(tmp_message,
+				" Object[%d] - Type %s, Value %p, Name \"%s\"\n",
+				object,
+				vk::to_string((vk::ObjectType)callbackData->pObjects[object].objectType).c_str(),
+				(void*)(callbackData->pObjects[object].objectHandle),
+				callbackData->pObjects[object].pObjectName ? callbackData->pObjects[object].pObjectName : "no name");
+			strcat_s(message, message_size, tmp_message);
+		}
+	}
+	if (callbackData->cmdBufLabelCount > 0)
+	{
+		sprintf_s(tmp_message, message_size,
+			"\n Command Buffer Labels - %d\n",
+			callbackData->cmdBufLabelCount);
+		strcat_s(message, message_size, tmp_message);
+		for (uint32_t label = 0; label < callbackData->cmdBufLabelCount; ++label) {
+			sprintf_s(tmp_message, message_size,
+				" Label[%d] - %s { %f, %f, %f, %f}\n",
+				label,
+				callbackData->pCmdBufLabels[label].pLabelName,
+				callbackData->pCmdBufLabels[label].color[0],
+				callbackData->pCmdBufLabels[label].color[1],
+				callbackData->pCmdBufLabels[label].color[2],
+				callbackData->pCmdBufLabels[label].color[3]);
+			strcat_s(message, message_size, tmp_message);
+		}
+	}
+	printf("%s\n", message);
+	fflush(stdout);
+	free(message);
+	// Don't bail out, but keep going.
+	DebugBreak();
+	return false;
+}
+
 namespace app
 {
 App* g_app_instance = nullptr;
@@ -22,28 +112,134 @@ App::App(const AppDescriptor& desc)
 	// ウインドウリストを取りたいけどいい考えがない。後で考える
 	g_app_instance = this;
 
-	vk::Instance instance = sGlobal::Order().getVKInstance();
+	vk::ApplicationInfo appInfo = { "Vulkan Test", 1, "EngineName", 0, VK_API_VERSION_1_1 };
+	std::vector<const char*> LayerName =
+	{
+#if _DEBUG
+			"VK_LAYER_LUNARG_standard_validation"
+#endif
+	};
+	std::vector<const char*> ExtensionName =
+	{
+		VK_KHR_SURFACE_EXTENSION_NAME,
+		VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
+#if USE_DEBUG_REPORT
+			VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+#endif
+	};
 
-	m_gpu = desc.m_gpu;
-	auto device = sGlobal::Order().getGPU(0).getDevice();
+	vk::InstanceCreateInfo instanceInfo = {};
+	instanceInfo.setPApplicationInfo(&appInfo);
+	instanceInfo.setEnabledExtensionCount((uint32_t)ExtensionName.size());
+	instanceInfo.setPpEnabledExtensionNames(ExtensionName.data());
+	instanceInfo.setEnabledLayerCount((uint32_t)LayerName.size());
+	instanceInfo.setPpEnabledLayerNames(LayerName.data());
+	m_instance = vk::createInstanceUnique(instanceInfo);
+
+	m_dispatch = vk::DispatchLoaderDynamic(m_instance.get());
+#if USE_DEBUG_REPORT
+	vk::DebugUtilsMessengerCreateInfoEXT debug_create_info;
+	debug_create_info.setMessageSeverity(vk::DebugUtilsMessageSeverityFlagBitsEXT::eError | vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning/* | vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose*/);
+	debug_create_info.setMessageType(vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation);
+	debug_create_info.setPfnUserCallback(debug_messenger_callback);
+	m_debug_messenger = m_instance->createDebugUtilsMessengerEXTUnique(debug_create_info, nullptr, m_dispatch);
+#endif
+
+	auto gpus = m_instance->enumeratePhysicalDevices();
+	m_physical_device = gpus[0];
+
+	{
+		std::vector<const char*> extensionName = {
+			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+			VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME,
+			VK_KHR_SHADER_ATOMIC_INT64_EXTENSION_NAME,
+			VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME,
+			VK_KHR_8BIT_STORAGE_EXTENSION_NAME,
+		};
+
+		auto gpu_propaty = m_physical_device.getProperties();
+		auto gpu_feature = m_physical_device.getFeatures();
+		assert(gpu_feature.multiDrawIndirect);
+
+		auto queueFamilyProperty = m_physical_device.getQueueFamilyProperties();
+
+		std::vector<std::vector<float>> queue_priority(queueFamilyProperty.size());
+		for (size_t i = 0; i < queueFamilyProperty.size(); i++)
+		{
+			auto& queue_property = queueFamilyProperty[i];
+			auto& priority = queue_priority[i];
+			priority.resize(1);
+			for (size_t q = 1; q < priority.size(); q++)
+			{
+				priority[q] = 1.f / (priority.size() - 1) * q;
+			}
+		}
+
+		// デバイス
+		std::vector<vk::DeviceQueueCreateInfo> queue_info(queueFamilyProperty.size());
+		std::vector<uint32_t> family_index;
+		for (size_t i = 0; i < queueFamilyProperty.size(); i++)
+		{
+			queue_info[i].queueCount = (uint32_t)queue_priority[i].size();
+			queue_info[i].pQueuePriorities = queue_priority[i].data();
+			queue_info[i].queueFamilyIndex = (uint32_t)i;
+			family_index.push_back((uint32_t)i);
+		}
+
+		vk::DeviceCreateInfo device_info;
+		device_info.setQueueCreateInfoCount((uint32_t)queue_info.size());
+		device_info.setPQueueCreateInfos(queue_info.data());
+		device_info.setPEnabledFeatures(&gpu_feature);
+		device_info.setEnabledExtensionCount((uint32_t)extensionName.size());
+		device_info.setPpEnabledExtensionNames(extensionName.data());
+
+		vk::PhysicalDevice8BitStorageFeaturesKHR  storage8bit_feature;
+		storage8bit_feature.setStorageBuffer8BitAccess(VK_TRUE);
+		device_info.setPNext(&storage8bit_feature);
+
+		vk::PhysicalDeviceFloat16Int8FeaturesKHR  f16s8_feature;
+		f16s8_feature.setShaderInt8(VK_TRUE);
+		f16s8_feature.setShaderFloat16(VK_TRUE);
+		storage8bit_feature.setPNext(&f16s8_feature);
+
+		m_device = m_physical_device.createDeviceUnique(device_info, nullptr);
+	}
+
+	m_dispatch = vk::DispatchLoaderDynamic(m_instance.get(), m_device.get());
+
+//	auto device = sGlobal::Order().getGPU(0).getDevice();
+
+	auto init_thread_data_func = [=](const cThreadPool::InitParam& param)
+	{
+		SetThreadIdealProcessor(::GetCurrentThread(), param.m_index);
+		auto& data = sThreadLocal::Order();
+		data.m_thread_index = param.m_index;
+	};
+	m_thread_pool.start(std::thread::hardware_concurrency() - 1, init_thread_data_func);
 
 	m_context = std::make_shared<btr::Context>();
-	m_context->m_instance = instance;
-	m_context->m_dispach.init(sGlobal::Order().getVKInstance(), device.getHandle());
+	m_context->m_instance = m_instance.get();
+	m_context->m_physical_device = m_physical_device;
+	m_context->m_device = m_device.get();
+	m_context->m_dispach = m_dispatch;
 	
 	//	m_context = std::make_shared<AppContext>();
 	{
-		m_context->m_gpu = m_gpu;
-		m_context->m_device = device;
+		m_context->m_device = m_device.get();
+
+		VmaAllocatorCreateInfo allocator_info = {};
+		allocator_info.physicalDevice = m_physical_device;
+		allocator_info.device = m_device.get();
+		vmaCreateAllocator(&allocator_info, &m_context->m_allocator);
 
 		vk::MemoryPropertyFlags host_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
 		vk::MemoryPropertyFlags device_memory = vk::MemoryPropertyFlagBits::eDeviceLocal;
 		vk::MemoryPropertyFlags transfer_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
 //		device_memory = host_memory; // debug
-		m_context->m_vertex_memory.setup(device, vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 1000 * 100);
-		m_context->m_uniform_memory.setup(device, vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 20);
-		m_context->m_storage_memory.setup(device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eTransferSrc, device_memory, 1024 * 1024 * 768);
-		m_context->m_staging_memory.setup(device, vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst, host_memory, 1000 * 1000 * 100);
+		m_context->m_vertex_memory.setup(m_physical_device, m_device.get(), vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 1000 * 100);
+		m_context->m_uniform_memory.setup(m_physical_device, m_device.get(), vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 20);
+		m_context->m_storage_memory.setup(m_physical_device, m_device.get(), vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eTransferSrc, device_memory, 1024 * 1024 * 768);
+		m_context->m_staging_memory.setup(m_physical_device, m_device.get(), vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst, host_memory, 1000 * 1000 * 100);
 		{
 			vk::DescriptorPoolSize pool_size[5];
 			pool_size[0].setType(vk::DescriptorType::eUniformBuffer);
@@ -61,10 +257,8 @@ App::App(const AppDescriptor& desc)
 			pool_info.setPoolSizeCount(array_length(pool_size));
 			pool_info.setPPoolSizes(pool_size);
 			pool_info.setMaxSets(2000);
-			m_context->m_descriptor_pool = device->createDescriptorPoolUnique(pool_info);
+			m_context->m_descriptor_pool = m_device->createDescriptorPoolUnique(pool_info);
 
-			vk::PipelineCacheCreateInfo cacheInfo = vk::PipelineCacheCreateInfo();
-			m_context->m_cache = device->createPipelineCacheUnique(cacheInfo);
 		}
 	}
 
@@ -76,7 +270,7 @@ App::App(const AppDescriptor& desc)
 		m_fence_list.reserve(sGlobal::FRAME_COUNT_MAX);
 		for (size_t i = 0; i < sGlobal::FRAME_COUNT_MAX; i++)
 		{
-			m_fence_list.emplace_back(m_context->m_gpu.getDevice()->createFenceUnique(fence_info));
+			m_fence_list.emplace_back(m_device->createFenceUnique(fence_info));
 		}
 	}
 
@@ -89,7 +283,7 @@ App::App(const AppDescriptor& desc)
 		vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 		desc_layout_info.setBindingCount(array_length(binding));
 		desc_layout_info.setPBindings(binding);
-		RenderTarget::s_descriptor_set_layout = m_context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
+		RenderTarget::s_descriptor_set_layout = m_device->createDescriptorSetLayoutUnique(desc_layout_info);
 
 	}
 
@@ -107,7 +301,6 @@ App::App(const AppDescriptor& desc)
 	m_window = window;
 	m_window_list.emplace_back(window);
 	m_context->m_window = window;
-
 }
 
 void App::setup()
@@ -120,15 +313,15 @@ void App::setup()
 		.setPCommandBuffers(setup_cmds.data())
 	};
 
-	auto queue = m_context->m_device->getQueue(0, 0);
+	auto queue = m_device->getQueue(0, 0);
 
 	vk::FenceCreateInfo fence_info;
 //	fence_info.setFlags(vk::FenceCreateFlagBits::eSignaled);
-	auto fence = m_context->m_gpu.getDevice()->createFenceUnique(fence_info);
+	auto fence = m_device->createFenceUnique(fence_info);
 	queue.submit(submitInfo, fence.get());
 
-	sDebug::Order().waitFence(m_context->m_device.getHandle(), fence.get());
-//	m_context->m_device->resetFences({ m_fence_list[index].get() });
+	sDebug::Order().waitFence(m_device.get(), fence.get());
+//	m_context->m_device.resetFences({ m_fence_list[index].get() });
 
 //	// 適当な実装なので絶対待つ
 //	queue.waitIdle();
@@ -187,7 +380,7 @@ void App::submit(std::vector<vk::CommandBuffer>&& submit_cmds)
 	submit_info.setSignalSemaphoreCount((uint32_t)submit_wait_semas.size());
 	submit_info.setPSignalSemaphores(submit_wait_semas.data());
 
-	auto queue = m_gpu.getDevice()->getQueue(0, 0);
+	auto queue = m_device->getQueue(0, 0);
 	queue.submit(submit_info, m_fence_list[sGlobal::Order().getCurrentFrame()].get());
 
 	vk::PresentInfoKHR present_info;
@@ -209,8 +402,8 @@ void App::preUpdate()
 
 	{
 		uint32_t index = sGlobal::Order().getCurrentFrame();
-		sDebug::Order().waitFence(m_context->m_device.getHandle(), m_fence_list[index].get());
-		m_context->m_device->resetFences({ m_fence_list[index].get() });
+		sDebug::Order().waitFence(m_device.get(), m_fence_list[index].get());
+		m_device->resetFences({ m_fence_list[index].get() });
 		m_cmd_pool->resetPool();
 	}
 
@@ -239,7 +432,7 @@ void App::preUpdate()
 			m_sync_point.arrive();
 		}
 		);
-		sGlobal::Order().getThreadPool().enque(job);
+		m_thread_pool.enque(job);
 	}
 	{
 		MAKE_THREAD_JOB(job);
@@ -250,7 +443,7 @@ void App::preUpdate()
 			m_sync_point.arrive();
 		}
 		);
-		sGlobal::Order().getThreadPool().enque(job);
+		m_thread_pool.enque(job);
 	}
 	{
 		MAKE_THREAD_JOB(job);
@@ -261,7 +454,7 @@ void App::preUpdate()
 			m_sync_point.arrive();
 		}
 		);
-		sGlobal::Order().getThreadPool().enque(job);
+		m_thread_pool.enque(job);
 	}
 	{
 		MAKE_THREAD_JOB(job);
@@ -272,7 +465,7 @@ void App::preUpdate()
 			m_sync_point.arrive();
 		}
 		);
-		sGlobal::Order().getThreadPool().enque(job);
+		m_thread_pool.enque(job);
 	}
 
 }
@@ -352,7 +545,7 @@ AppWindow::ImguiRenderPipeline::ImguiRenderPipeline(const std::shared_ptr<btr::C
 		renderpass_info.setSubpassCount(1);
 		renderpass_info.setPSubpasses(&subpass);
 
-		m_render_pass = context->m_device->createRenderPassUnique(renderpass_info);
+		m_render_pass = context->m_device.createRenderPassUnique(renderpass_info);
 	}
 
 	{
@@ -367,7 +560,7 @@ AppWindow::ImguiRenderPipeline::ImguiRenderPipeline(const std::shared_ptr<btr::C
 		framebuffer_info.setHeight(render_target->m_info.extent.height);
 		framebuffer_info.setLayers(1);
 
-		m_framebuffer = context->m_device->createFramebufferUnique(framebuffer_info);
+		m_framebuffer = context->m_device.createFramebufferUnique(framebuffer_info);
 	}
 
 	// setup pipeline
@@ -469,7 +662,7 @@ AppWindow::ImguiRenderPipeline::ImguiRenderPipeline(const std::shared_ptr<btr::C
 			.setPColorBlendState(&blend_info)
 			.setPDynamicState(&dynamic_info),
 		};
-		auto pipelines = context->m_device->createGraphicsPipelinesUnique(context->m_cache.get(), graphics_pipeline_info);
+		auto pipelines = context->m_device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info);
 		m_pipeline = std::move(pipelines[0]);
 
 	}
@@ -516,7 +709,7 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 
 	vk::ImageCreateInfo depth_info;
 	vk::ImageCreateInfo image_info;
-	vk::SurfaceCapabilitiesKHR capability = context->m_gpu->getSurfaceCapabilitiesKHR(m_surface.get());
+	vk::SurfaceCapabilitiesKHR capability = context->m_physical_device.getSurfaceCapabilitiesKHR(m_surface.get());
 	{
 		// デプス生成
 		depth_info.format = vk::Format::eD32Sfloat;
@@ -528,20 +721,20 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 		depth_info.extent.depth = 1;
 		depth_info.imageType = vk::ImageType::e2D;
 		depth_info.initialLayout = vk::ImageLayout::eUndefined;
-		depth_info.queueFamilyIndexCount = (uint32_t)context->m_device.getQueueFamilyIndex().size();
-		depth_info.pQueueFamilyIndices = context->m_device.getQueueFamilyIndex().data();
-		m_depth_image = context->m_device->createImageUnique(depth_info);
+//		depth_info.queueFamilyIndexCount = (uint32_t)context->m_device.getQueueFamilyIndex().size();
+//		depth_info.pQueueFamilyIndices = context->m_device.getQueueFamilyIndex().data();
+		m_depth_image = context->m_device.createImageUnique(depth_info);
 		m_depth_info = depth_info;
 					// メモリ確保
-		auto memory_request = context->m_device->getImageMemoryRequirements(m_depth_image.get());
-		uint32_t memory_index = cGPU::Helper::getMemoryTypeIndex(context->m_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+		auto memory_request = context->m_device.getImageMemoryRequirements(m_depth_image.get());
+		uint32_t memory_index = cGPU::Helper::getMemoryTypeIndex(context->m_physical_device, memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
 		vk::MemoryAllocateInfo memory_info;
 		memory_info.allocationSize = memory_request.size;
 		memory_info.memoryTypeIndex = memory_index;
-		m_depth_memory = context->m_device->allocateMemoryUnique(memory_info);
+		m_depth_memory = context->m_device.allocateMemoryUnique(memory_info);
 
-		context->m_device->bindImageMemory(m_depth_image.get(), m_depth_memory.get(), 0);
+		context->m_device.bindImageMemory(m_depth_image.get(), m_depth_memory.get(), 0);
 
 		vk::ImageViewCreateInfo depth_view_info;
 		depth_view_info.format = depth_info.format;
@@ -552,7 +745,7 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 		depth_view_info.subresourceRange.baseMipLevel = 0;
 		depth_view_info.subresourceRange.layerCount = 1;
 		depth_view_info.subresourceRange.levelCount = 1;
-		m_depth_view = context->m_device->createImageViewUnique(depth_view_info);
+		m_depth_view = context->m_device.createImageViewUnique(depth_view_info);
 
 	}
 	{
@@ -565,17 +758,17 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 		image_info.extent.depth = 1;
 		image_info.imageType = vk::ImageType::e2D;
 		image_info.initialLayout = vk::ImageLayout::eUndefined;
-		m_front_buffer_image = context->m_device->createImageUnique(image_info);
+		m_front_buffer_image = context->m_device.createImageUnique(image_info);
 		m_front_buffer_info = image_info;
 		// メモリ確保
-		auto memory_request = context->m_device->getImageMemoryRequirements(m_front_buffer_image.get());
-		uint32_t memory_index = cGPU::Helper::getMemoryTypeIndex(context->m_device.getGPU(), memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+		auto memory_request = context->m_device.getImageMemoryRequirements(m_front_buffer_image.get());
+		uint32_t memory_index = cGPU::Helper::getMemoryTypeIndex(context->m_physical_device, memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
 		vk::MemoryAllocateInfo memory_info;
 		memory_info.allocationSize = memory_request.size;
 		memory_info.memoryTypeIndex = memory_index;
-		m_front_buffer_memory = context->m_device->allocateMemoryUnique(memory_info);
-		context->m_device->bindImageMemory(m_front_buffer_image.get(), m_front_buffer_memory.get(), 0);
+		m_front_buffer_memory = context->m_device.allocateMemoryUnique(memory_info);
+		context->m_device.bindImageMemory(m_front_buffer_image.get(), m_front_buffer_memory.get(), 0);
 
 		vk::ImageViewCreateInfo view_info;
 		view_info.format = image_info.format;
@@ -586,7 +779,7 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 		view_info.subresourceRange.baseMipLevel = 0;
 		view_info.subresourceRange.layerCount = 1;
 		view_info.subresourceRange.levelCount = 1;
-		m_front_buffer_view = context->m_device->createImageViewUnique(view_info);
+		m_front_buffer_view = context->m_device.createImageViewUnique(view_info);
 	}
 	{
 
@@ -682,7 +875,7 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 		desc_info.setDescriptorPool(context->m_descriptor_pool.get());
 		desc_info.setDescriptorSetCount(array_length(layouts));
 		desc_info.setPSetLayouts(layouts);
-		m_front_buffer->m_descriptor = std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]);
+		m_front_buffer->m_descriptor = std::move(context->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
 
 		vk::DescriptorImageInfo images[] = {
 			vk::DescriptorImageInfo().setImageLayout(vk::ImageLayout::eGeneral).setImageView(m_front_buffer->m_view),
@@ -706,7 +899,7 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 			.setDstBinding(1)
 			.setDstSet(m_front_buffer->m_descriptor.get()),
 		};
-		context->m_device->updateDescriptorSets(std::size(write), write, 0, nullptr);
+		context->m_device.updateDescriptorSets(std::size(write), write, 0, nullptr);
 	}
 
 	m_imgui_pipeline = std::make_unique<ImguiRenderPipeline>(context, this);
@@ -722,38 +915,38 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 		name_info.objectHandle = reinterpret_cast<uint64_t &>(m_swapchain->m_backbuffer_image[i]);
 		name_info.objectType = vk::ObjectType::eImage;
 		name_info.pObjectName = buf;
-		context->m_device->setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
+		context->m_device.setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
 	}
 
 	name_info.objectHandle = reinterpret_cast<uint64_t &>(m_front_buffer->m_image);
 	name_info.objectType = vk::ObjectType::eImage;
 	name_info.pObjectName = "AppWindow FrontBufferImage";
-	context->m_device->setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
+	context->m_device.setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
 
 	name_info.objectHandle = reinterpret_cast<uint64_t &>(m_front_buffer->m_view);
 	name_info.objectType = vk::ObjectType::eImageView;
 	name_info.pObjectName = "AppWindow FrontBufferImageView";
-	context->m_device->setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
+	context->m_device.setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
 
 	name_info.objectHandle = reinterpret_cast<uint64_t &>(m_front_buffer->m_memory);
 	name_info.objectType = vk::ObjectType::eDeviceMemory;
 	name_info.pObjectName = "AppWindow FrontBufferImageMemory";
-	context->m_device->setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
+	context->m_device.setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
 
 	name_info.objectHandle = reinterpret_cast<uint64_t &>(m_depth_image.get());
 	name_info.objectType = vk::ObjectType::eImage;
 	name_info.pObjectName = "AppWindow DepthImage";
-	context->m_device->setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
+	context->m_device.setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
 
 	name_info.objectHandle = reinterpret_cast<uint64_t &>(m_depth_view.get());
 	name_info.objectType = vk::ObjectType::eImageView;
 	name_info.pObjectName = "AppWindow DepthImageView";
-	context->m_device->setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
+	context->m_device.setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
 
 	name_info.objectHandle = reinterpret_cast<uint64_t &>(m_depth_memory.get());
 	name_info.objectType = vk::ObjectType::eDeviceMemory;
 	name_info.pObjectName = "AppWindow DepthImageMemory";
-	context->m_device->setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
+	context->m_device.setDebugUtilsObjectNameEXT(name_info, context->m_dispach);
 #endif
 
 }

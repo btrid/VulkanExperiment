@@ -75,7 +75,7 @@ struct GI2DSoftbody
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
 				desc_layout_info.setPBindings(binding);
-				m_descriptor_set_layout = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
+				m_descriptor_set_layout = context->m_device.createDescriptorSetLayoutUnique(desc_layout_info);
 
 			}
 
@@ -90,7 +90,7 @@ struct GI2DSoftbody
 
 				std::string path = btr::getResourceShaderPath();
 				for (size_t i = 0; i < array_length(name); i++) {
-					m_shader[i] = loadShaderUnique(context->m_device.getHandle(), path + name[i]);
+					m_shader[i] = loadShaderUnique(context->m_device.get(), path + name[i]);
 				}
 			}
 
@@ -106,7 +106,7 @@ struct GI2DSoftbody
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
 				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 				pipeline_layout_info.setPSetLayouts(layouts);
-				m_pipeline_layout[PipelineLayout_Softbody] = context->m_device->createPipelineLayoutUnique(pipeline_layout_info);
+				m_pipeline_layout[PipelineLayout_Softbody] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 			}
 
 			// pipeline
@@ -133,7 +133,7 @@ struct GI2DSoftbody
 					.setStage(shader_info[2])
 					.setLayout(m_pipeline_layout[PipelineLayout_Softbody].get()),
 				};
-				auto compute_pipeline = context->m_device->createComputePipelinesUnique(context->m_cache.get(), compute_pipeline_info);
+				auto compute_pipeline = context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
 				m_pipeline[Pipeline_CalcCenter] = std::move(compute_pipeline[0]);
 				m_pipeline[Pipeline_CalcCenter_Post] = std::move(compute_pipeline[1]);
 				m_pipeline[Pipeline_CalcForce] = std::move(compute_pipeline[2]);
@@ -210,7 +210,7 @@ struct GI2DSoftbody
 				desc_info.setDescriptorPool(context->m_descriptor_pool.get());
 				desc_info.setDescriptorSetCount(array_length(layouts));
 				desc_info.setPSetLayouts(layouts);
-				m_descriptor_set = std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]);
+				m_descriptor_set = std::move(context->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
 
 				vk::DescriptorBufferInfo storages[] = {
 					b_softbody.getInfo(),
@@ -226,7 +226,7 @@ struct GI2DSoftbody
 					.setDstBinding(0)
 					.setDstSet(m_descriptor_set.get()),
 				};
-				context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
+				context->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
 			}
 		}
 

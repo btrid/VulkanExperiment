@@ -116,7 +116,7 @@ struct GI2DContext
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
 				desc_layout_info.setPBindings(binding);
-				m_descriptor_set_layout[Layout_Data] = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
+				m_descriptor_set_layout[Layout_Data] = context->m_device.createDescriptorSetLayoutUnique(desc_layout_info);
 
 			}
 			{
@@ -128,7 +128,7 @@ struct GI2DContext
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
 				desc_layout_info.setPBindings(binding);
-				m_descriptor_set_layout[Layout_SDF] = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
+				m_descriptor_set_layout[Layout_SDF] = context->m_device.createDescriptorSetLayoutUnique(desc_layout_info);
 
 			}
 			{
@@ -144,7 +144,7 @@ struct GI2DContext
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
 				desc_layout_info.setPBindings(binding);
-				m_descriptor_set_layout[Layout_Path] = context->m_device->createDescriptorSetLayoutUnique(desc_layout_info);
+				m_descriptor_set_layout[Layout_Path] = context->m_device.createDescriptorSetLayoutUnique(desc_layout_info);
 
 			}
 		}
@@ -204,7 +204,7 @@ struct GI2DContext
 				desc_info.setDescriptorPool(context->m_descriptor_pool.get());
 				desc_info.setDescriptorSetCount(array_length(layouts));
 				desc_info.setPSetLayouts(layouts);
-				m_descriptor_set = std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]);
+				m_descriptor_set = std::move(context->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
 
 				vk::DescriptorBufferInfo uniforms[] = {
 					u_gi2d_info.getInfo(),
@@ -230,7 +230,7 @@ struct GI2DContext
 					.setDstBinding(2)
 					.setDstSet(m_descriptor_set.get()),
 				};
-				context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
+				context->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
 			}
 
 		}
@@ -319,7 +319,7 @@ struct GI2DSDF
 				desc_info.setDescriptorPool(context->m_descriptor_pool.get());
 				desc_info.setDescriptorSetCount(array_length(layouts));
 				desc_info.setPSetLayouts(layouts);
-				m_descriptor_set = std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]);
+				m_descriptor_set = std::move(context->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
 
 				vk::DescriptorBufferInfo storages[] = {
  					b_jfa.getInfo(),
@@ -334,7 +334,7 @@ struct GI2DSDF
 					.setDstBinding(0)
 					.setDstSet(m_descriptor_set.get()),
 				};
-				context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
+				context->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
 			}
 		}
 	}
@@ -425,7 +425,7 @@ struct GI2DPathContext
 				desc_info.setDescriptorPool(context->m_descriptor_pool.get());
 				desc_info.setDescriptorSetCount(array_length(layouts));
 				desc_info.setPSetLayouts(layouts);
-				m_descriptor_set = std::move(context->m_device->allocateDescriptorSetsUnique(desc_info)[0]);
+				m_descriptor_set = std::move(context->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
 
 				vk::DescriptorBufferInfo storages[] = {
 					b_connect.getInfo(),
@@ -444,7 +444,7 @@ struct GI2DPathContext
 					.setDstBinding(0)
 					.setDstSet(m_descriptor_set.get()),
 				};
-				context->m_device->updateDescriptorSets(array_length(write), write, 0, nullptr);
+				context->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
 			}
 		}
 	}

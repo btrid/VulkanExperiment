@@ -13,16 +13,16 @@ namespace btr
 struct Context
 {
 	vk::Instance m_instance;
-	cGPU m_gpu;
-	cDevice m_device;
+	vk::PhysicalDevice m_physical_device;
+	vk::Device m_device;
 
 	btr::AllocatedMemory m_vertex_memory;
 	btr::AllocatedMemory m_uniform_memory;
 	btr::AllocatedMemory m_storage_memory;
 	btr::AllocatedMemory m_staging_memory;
+	VmaAllocator m_allocator;
 
 	vk::UniqueDescriptorPool m_descriptor_pool;
-	vk::UniquePipelineCache m_cache;
 
 	std::shared_ptr<cWindow> m_window;
 	std::shared_ptr<cCmdPool> m_cmd_pool;
@@ -50,14 +50,14 @@ struct Context
 			.setPCode(reinterpret_cast<const uint32_t*>(buffer.data()))
 			.setCodeSize(buffer.size());
 
-		auto shader_module = m_device->createShaderModuleUnique(shaderInfo);
+		auto shader_module = m_device.createShaderModuleUnique(shaderInfo);
 
 #if USE_DEBUG_REPORT
 		vk::DebugUtilsObjectNameInfoEXT name_info;
 		name_info.pObjectName = filename.c_str();
 		name_info.objectType = vk::ObjectType::eShaderModule;
 		name_info.objectHandle = reinterpret_cast<uint64_t &>(shader_module);
-		m_device->setDebugUtilsObjectNameEXT(name_info, m_dispach);
+		m_device.setDebugUtilsObjectNameEXT(name_info, m_dispach);
 #endif
 		return shader_module;
 	}
