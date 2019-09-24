@@ -8,38 +8,90 @@
 #define STBI_MSC_SECURE_CRT
 #include <tiny_gltf/tiny_gltf.h>
 
+#include <btrlib/Context.h>
 
+struct Attribute
+{
+	int32_t m_buffer_index;
+	int32_t m_buffer_offset;
+	int32_t m_buffer_count;
+	uint32_t m_element_stride;
+	uint32_t m_element_offset;
+};
+struct Primitive
+{
+	int32_t m_indexbuffer_index;
+	int32_t m_primitive_topology;
+	int32_t m_index_type;
+	int32_t m_indexbuffer_offset;
+	int32_t m_indexbuffer_count;
+
+	std::vector<Attribute> m_vertex_attribute;
+
+	int32_t m_material;
+
+
+};
 struct Mesh
 {
-	uint32_t indexdata_offset;
+	std::vector<Primitive> m_primitive;
 };
+
 struct VertexBuffer
 {
+	VkBuffer m_buffer;
+	VmaAllocation m_allocation;
+	VmaAllocator m_allocator;
+
 	VertexBuffer()
+		: m_buffer(VK_NULL_HANDLE)
+		, m_allocation()
+		, m_allocator()
 	{
-		VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-		bufferInfo.size = 65536;
-		bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-
-		VmaAllocationCreateInfo allocInfo = {};
-		allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-
-		VkBuffer buffer;
-		VmaAllocation allocation;
-		vmaCreateBuffer(allocator, &bufferInfo, &allocInfo, &buffer, &allocation, nullptr);
 	}
-	VmaAllocate()
+	VertexBuffer(const std::shared_ptr<btr::Context>& context, const vk::BufferCreateInfo& info, const VmaAllocationCreateInfo& alloc_info)
+	{
+		vmaCreateBuffer(context->m_allocator, &(VkBufferCreateInfo)info, &alloc_info, &m_buffer, &m_allocation, nullptr);
+		m_allocator = context->m_allocator;
+	}
+
+	~VertexBuffer()
+	{
+		if (m_buffer != VK_NULL_HANDLE)
+		{
+			vmaDestroyBuffer(m_allocator, m_buffer, m_allocation);
+			m_buffer = VK_NULL_HANDLE;
+		}
+	}
+
+	VertexBuffer(VertexBuffer&& rhv)noexcept
+	{
+		*this = std::move(rhv);
+	}
+	VertexBuffer& operator=(VertexBuffer&& rhv)noexcept
+	{
+		if (this != &rhv) 
+		{
+			this->~VertexBuffer();
+			m_buffer = rhv.m_buffer;
+			m_allocation = rhv.m_allocation;
+			m_allocator = rhv.m_allocator;
+
+
+			rhv.m_buffer = VK_NULL_HANDLE;
+		}
+		return *this;
+	}
+
+	VertexBuffer(const VertexBuffer&) = delete;
+	VertexBuffer operator=(const VertexBuffer&) = delete;
 };
 struct Model 
 {
-	std::vector<Buffer>
-	Model(const std::string &filename)
-//		std::vector<Mesh<float> > *meshes,
-//		std::vector<Material> *materials,
-//		std::vector<Texture> *textures) 
+	std::vector<btr::BufferMemory> m_buffer;
+	std::vector<Mesh> m_mesh;
+	Model(const std::shared_ptr<btr::Context>& context, const std::string &filename)
 	{
-		// TODO(syoyo): Texture
-		// TODO(syoyo): Material
 
 		tinygltf::Model model;
 		tinygltf::TinyGLTF loader;
@@ -56,7 +108,6 @@ struct Model
 			// assume ascii glTF.
 			ret = loader.LoadASCIIFromFile(&model, &err, &warn, filename.c_str());
 		}
-
 		if (!warn.empty()) {
 			printf("glTF parse warning: %s\n", warn.c_str());
 		}
@@ -69,436 +120,79 @@ struct Model
 
 
 		// Iterate through all the meshes in the glTF file
-		model.buffers
-		for (const auto &gltfMesh : model.meshes) 
+
+		m_buffer.reserve(model.buffers.size());
+		for (auto& gltf_buffer : model.buffers)
 		{
-			// Create a mesh object
-//			Mesh<float> loadedMesh(sizeof(float) * 3);
+			auto buffer = context->m_vertex_memory.allocateMemory(gltf_buffer.data.size());
+			auto staging = context->m_staging_memory.allocateMemory(gltf_buffer.data.size(), true);
+			memcpy(staging.getMappedPtr(), gltf_buffer.data.data(), gltf_buffer.data.size());
 
-			// To store the min and max of the buffer (as 3D vector of floats)
-//			v3f pMin = {}, pMax = {};
+			vk::BufferCopy copy;
+			copy.srcOffset = buffer.getInfo().offset;
+			copy.dstOffset = staging.getInfo().offset;
+			copy.size = gltf_buffer.data.size();
 
-			// Store the name of the glTF mesh (if defined)
-//			loadedMesh.name = gltfMesh.name;
+			auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+			cmd.copyBuffer(buffer.getInfo().buffer, staging.getInfo().buffer, copy);
+		}
 
-			for (const auto &meshPrimitive : gltfMesh.primitives)
-			{
-			}
+		m_mesh.resize(model.meshes.size());
+		for (size_t mesh_index = 0; mesh_index < model.meshes.size(); mesh_index++)
+		{
+			const auto& gltf_mesh = model.meshes[mesh_index];
+			auto& mesh = m_mesh[mesh_index];
+			mesh.m_primitive.resize(gltf_mesh.primitives.size());
 
 			// For each primitive
-			for (const auto &meshPrimitive : gltfMesh.primitives)
+			for (size_t primitive_index = 0; primitive_index < gltf_mesh.primitives.size(); primitive_index++)
 			{
-				// Boolean used to check if we have converted the vertex buffer format
-				bool convertedToTriangleList = false;
-				// This permit to get a type agnostic way of reading the index buffer
-//				std::unique_ptr<intArrayBase> indicesArrayPtr = nullptr;
+				const auto &gltf_primitive = gltf_mesh.primitives[primitive_index];
+				auto &primitive = mesh.m_primitive[primitive_index];
 				{
-					const auto &indicesAccessor = model.accessors[meshPrimitive.indices];
-					const auto &bufferView = model.bufferViews[indicesAccessor.bufferView];
-					const auto &buffer = model.buffers[bufferView.buffer];
-					const auto dataAddress = buffer.data.data() + bufferView.byteOffset +
-						indicesAccessor.byteOffset;
-					const auto byteStride = indicesAccessor.ByteStride(bufferView);
-					const auto count = indicesAccessor.count;
+					primitive.m_indexbuffer_index = gltf_primitive.indices;
+					primitive.m_primitive_topology = gltf_primitive.mode;
 
-					// Allocate the index array in the pointer-to-base declared in the
-					// parent scope
-					switch (indicesAccessor.componentType) {
-					case TINYGLTF_COMPONENT_TYPE_BYTE:
-						indicesArrayPtr =
-							std::unique_ptr<intArray<char> >(new intArray<char>(
-								arrayAdapter<char>(dataAddress, count, byteStride)));
-						break;
-
-					case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-						indicesArrayPtr = std::unique_ptr<intArray<unsigned char> >(
-							new intArray<unsigned char>(arrayAdapter<unsigned char>(
-								dataAddress, count, byteStride)));
-						break;
-
-					case TINYGLTF_COMPONENT_TYPE_SHORT:
-						indicesArrayPtr =
-							std::unique_ptr<intArray<short> >(new intArray<short>(
-								arrayAdapter<short>(dataAddress, count, byteStride)));
-						break;
-
-					case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-						indicesArrayPtr = std::unique_ptr<intArray<unsigned short> >(
-							new intArray<unsigned short>(arrayAdapter<unsigned short>(
-								dataAddress, count, byteStride)));
-						break;
-
-					case TINYGLTF_COMPONENT_TYPE_INT:
-						indicesArrayPtr = std::unique_ptr<intArray<int> >(new intArray<int>(
-							arrayAdapter<int>(dataAddress, count, byteStride)));
-						break;
-
-					case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-						indicesArrayPtr = std::unique_ptr<intArray<unsigned int> >(
-							new intArray<unsigned int>(arrayAdapter<unsigned int>(
-								dataAddress, count, byteStride)));
-						break;
-					default:
-						break;
-					}
-				}
-				const auto &indices = *indicesArrayPtr;
-
-				if (indicesArrayPtr) {
-					std::cout << "indices: ";
-					for (size_t i(0); i < indicesArrayPtr->size(); ++i) {
-						std::cout << indices[i] << " ";
-						loadedMesh.faces.push_back(indices[i]);
-					}
-					std::cout << '\n';
+					const auto &accessor = model.accessors[gltf_primitive.indices];
+					const auto &buffer_view = model.bufferViews[accessor.bufferView];
+					primitive.m_index_type = accessor.componentType;
+					primitive.m_indexbuffer_offset = buffer_view.byteOffset;
+					primitive.m_indexbuffer_count = accessor.count;
 				}
 
-				switch (meshPrimitive.mode) {
-					// We re-arrange the indices so that it describe a simple list of
-					// triangles
-				case TINYGLTF_MODE_TRIANGLE_FAN:
-					if (!convertedToTriangleList) {
-						std::cout << "TRIANGLE_FAN\n";
-						// This only has to be done once per primitive
-						convertedToTriangleList = true;
-
-						// We steal the guts of the vector
-						auto triangleFan = std::move(loadedMesh.faces);
-						loadedMesh.faces.clear();
-
-						// Push back the indices that describe just one triangle one by one
-						for (size_t i{ 2 }; i < triangleFan.size(); ++i) {
-							loadedMesh.faces.push_back(triangleFan[0]);
-							loadedMesh.faces.push_back(triangleFan[i - 1]);
-							loadedMesh.faces.push_back(triangleFan[i]);
-						}
-					}
-				case TINYGLTF_MODE_TRIANGLE_STRIP:
-					if (!convertedToTriangleList) {
-						std::cout << "TRIANGLE_STRIP\n";
-						// This only has to be done once per primitive
-						convertedToTriangleList = true;
-
-						auto triangleStrip = std::move(loadedMesh.faces);
-						loadedMesh.faces.clear();
-
-						for (size_t i{ 2 }; i < triangleStrip.size(); ++i) {
-							loadedMesh.faces.push_back(triangleStrip[i - 2]);
-							loadedMesh.faces.push_back(triangleStrip[i - 1]);
-							loadedMesh.faces.push_back(triangleStrip[i]);
-						}
-					}
-				case TINYGLTF_MODE_TRIANGLES:  // this is the simpliest case to handle
-
+				primitive.m_vertex_attribute.resize(gltf_primitive.attributes.size());
+				for (size_t attribute_i = 0; attribute_i < gltf_primitive.attributes.size(); attribute_i++)
 				{
-					std::cout << "TRIANGLES\n";
+					const auto &attribute = gltf_primitive.attributes[attribute_i];
+					const auto &accessor = model.accessors[attribute.second];
+					const auto &buffer_view = model.bufferViews[accessor.bufferView];
 
-					for (const auto &attribute : meshPrimitive.attributes) {
-						const auto attribAccessor = model.accessors[attribute.second];
-						const auto &bufferView =
-							model.bufferViews[attribAccessor.bufferView];
-						const auto &buffer = model.buffers[bufferView.buffer];
-						const auto dataPtr = buffer.data.data() + bufferView.byteOffset +
-							attribAccessor.byteOffset;
-						const auto byte_stride = attribAccessor.ByteStride(bufferView);
-						const auto count = attribAccessor.count;
-
-						std::cout << "current attribute has count " << count
-							<< " and stride " << byte_stride << " bytes\n";
-
-						std::cout << "attribute string is : " << attribute.first << '\n';
-						if (attribute.first == "POSITION") {
-							std::cout << "found position attribute\n";
-
-							// get the position min/max for computing the boundingbox
-// 							pMin.x = attribAccessor.minValues[0];
-// 							pMin.y = attribAccessor.minValues[1];
-// 							pMin.z = attribAccessor.minValues[2];
-// 							pMax.x = attribAccessor.maxValues[0];
-// 							pMax.y = attribAccessor.maxValues[1];
-// 							pMax.z = attribAccessor.maxValues[2];
-
-							switch (attribAccessor.type) {
-							case TINYGLTF_TYPE_VEC3: {
-								switch (attribAccessor.componentType) {
-								case TINYGLTF_COMPONENT_TYPE_FLOAT:
-									std::cout << "Type is FLOAT\n";
-									// 3D vector of float
-									v3fArray positions(
-										arrayAdapter<v3f>(dataPtr, count, byte_stride));
-
-									std::cout << "positions's size : " << positions.size()
-										<< '\n';
-
-									for (size_t i{ 0 }; i < positions.size(); ++i) {
-										const auto v = positions[i];
-										std::cout << "positions[" << i << "]: (" << v.x << ", "
-											<< v.y << ", " << v.z << ")\n";
-
-										loadedMesh.vertices.push_back(v.x * scale);
-										loadedMesh.vertices.push_back(v.y * scale);
-										loadedMesh.vertices.push_back(v.z * scale);
-									}
-								}
-								break;
-							case TINYGLTF_COMPONENT_TYPE_DOUBLE: {
-								std::cout << "Type is DOUBLE\n";
-								switch (attribAccessor.type) {
-								case TINYGLTF_TYPE_VEC3: {
-									v3dArray positions(
-										arrayAdapter<v3d>(dataPtr, count, byte_stride));
-									for (size_t i{ 0 }; i < positions.size(); ++i) {
-										const auto v = positions[i];
-										std::cout << "positions[" << i << "]: (" << v.x
-											<< ", " << v.y << ", " << v.z << ")\n";
-
-										loadedMesh.vertices.push_back(v.x * scale);
-										loadedMesh.vertices.push_back(v.y * scale);
-										loadedMesh.vertices.push_back(v.z * scale);
-									}
-								} break;
-								default:
-									// TODO Handle error
-									break;
-								}
-								break;
-							default:
-								break;
-							}
-							} break;
-							}
-						}
-
-						if (attribute.first == "NORMAL") {
-							std::cout << "found normal attribute\n";
-
-							switch (attribAccessor.type) {
-							case TINYGLTF_TYPE_VEC3: {
-								std::cout << "Normal is VEC3\n";
-								switch (attribAccessor.componentType) {
-								case TINYGLTF_COMPONENT_TYPE_FLOAT: {
-									std::cout << "Normal is FLOAT\n";
-									v3fArray normals(
-										arrayAdapter<v3f>(dataPtr, count, byte_stride));
-
-									// IMPORTANT: We need to reorder normals (and texture
-									// coordinates into "facevarying" order) for each face
-
-									// For each triangle :
-									for (size_t i{ 0 }; i < indices.size() / 3; ++i) {
-										// get the i'th triange's indexes
-										auto f0 = indices[3 * i + 0];
-										auto f1 = indices[3 * i + 1];
-										auto f2 = indices[3 * i + 2];
-
-										// get the 3 normal vectors for that face
-										v3f n0, n1, n2;
-										n0 = normals[f0];
-										n1 = normals[f1];
-										n2 = normals[f2];
-
-										// Put them in the array in the correct order
-										loadedMesh.facevarying_normals.push_back(n0.x);
-										loadedMesh.facevarying_normals.push_back(n0.y);
-										loadedMesh.facevarying_normals.push_back(n0.z);
-
-										loadedMesh.facevarying_normals.push_back(n1.x);
-										loadedMesh.facevarying_normals.push_back(n1.y);
-										loadedMesh.facevarying_normals.push_back(n1.z);
-
-										loadedMesh.facevarying_normals.push_back(n2.x);
-										loadedMesh.facevarying_normals.push_back(n2.y);
-										loadedMesh.facevarying_normals.push_back(n2.z);
-									}
-								} break;
-								case TINYGLTF_COMPONENT_TYPE_DOUBLE: {
-									std::cout << "Normal is DOUBLE\n";
-									v3dArray normals(
-										arrayAdapter<v3d>(dataPtr, count, byte_stride));
-
-									// IMPORTANT: We need to reorder normals (and texture
-									// coordinates into "facevarying" order) for each face
-
-									// For each triangle :
-									for (size_t i{ 0 }; i < indices.size() / 3; ++i) {
-										// get the i'th triange's indexes
-										auto f0 = indices[3 * i + 0];
-										auto f1 = indices[3 * i + 1];
-										auto f2 = indices[3 * i + 2];
-
-										// get the 3 normal vectors for that face
-										v3d n0, n1, n2;
-										n0 = normals[f0];
-										n1 = normals[f1];
-										n2 = normals[f2];
-
-										// Put them in the array in the correct order
-										loadedMesh.facevarying_normals.push_back(n0.x);
-										loadedMesh.facevarying_normals.push_back(n0.y);
-										loadedMesh.facevarying_normals.push_back(n0.z);
-
-										loadedMesh.facevarying_normals.push_back(n1.x);
-										loadedMesh.facevarying_normals.push_back(n1.y);
-										loadedMesh.facevarying_normals.push_back(n1.z);
-
-										loadedMesh.facevarying_normals.push_back(n2.x);
-										loadedMesh.facevarying_normals.push_back(n2.y);
-										loadedMesh.facevarying_normals.push_back(n2.z);
-									}
-								} break;
-								default:
-									std::cerr << "Unhandeled componant type for normal\n";
-								}
-							} break;
-							default:
-								std::cerr << "Unhandeled vector type for normal\n";
-							}
-
-							// Face varying comment on the normals is also true for the UVs
-							if (attribute.first == "TEXCOORD_0") {
-								std::cout << "Found texture coordinates\n";
-
-								switch (attribAccessor.type) {
-								case TINYGLTF_TYPE_VEC2: {
-									std::cout << "TEXTCOORD is VEC2\n";
-									switch (attribAccessor.componentType) {
-									case TINYGLTF_COMPONENT_TYPE_FLOAT: {
-										std::cout << "TEXTCOORD is FLOAT\n";
-										v2fArray uvs(
-											arrayAdapter<v2f>(dataPtr, count, byte_stride));
-
-										for (size_t i{ 0 }; i < indices.size() / 3; ++i) {
-											// get the i'th triange's indexes
-											auto f0 = indices[3 * i + 0];
-											auto f1 = indices[3 * i + 1];
-											auto f2 = indices[3 * i + 2];
-
-											// get the texture coordinates for each triangle's
-											// vertices
-											v2f uv0, uv1, uv2;
-											uv0 = uvs[f0];
-											uv1 = uvs[f1];
-											uv2 = uvs[f2];
-
-											// push them in order into the mesh data
-											loadedMesh.facevarying_uvs.push_back(uv0.x);
-											loadedMesh.facevarying_uvs.push_back(uv0.y);
-
-											loadedMesh.facevarying_uvs.push_back(uv1.x);
-											loadedMesh.facevarying_uvs.push_back(uv1.y);
-
-											loadedMesh.facevarying_uvs.push_back(uv2.x);
-											loadedMesh.facevarying_uvs.push_back(uv2.y);
-										}
-
-									} break;
-									case TINYGLTF_COMPONENT_TYPE_DOUBLE: {
-										std::cout << "TEXTCOORD is DOUBLE\n";
-										v2dArray uvs(
-											arrayAdapter<v2d>(dataPtr, count, byte_stride));
-
-										for (size_t i{ 0 }; i < indices.size() / 3; ++i) {
-											// get the i'th triange's indexes
-											auto f0 = indices[3 * i + 0];
-											auto f1 = indices[3 * i + 1];
-											auto f2 = indices[3 * i + 2];
-
-											v2d uv0, uv1, uv2;
-											uv0 = uvs[f0];
-											uv1 = uvs[f1];
-											uv2 = uvs[f2];
-
-											loadedMesh.facevarying_uvs.push_back(uv0.x);
-											loadedMesh.facevarying_uvs.push_back(uv0.y);
-
-											loadedMesh.facevarying_uvs.push_back(uv1.x);
-											loadedMesh.facevarying_uvs.push_back(uv1.y);
-
-											loadedMesh.facevarying_uvs.push_back(uv2.x);
-											loadedMesh.facevarying_uvs.push_back(uv2.y);
-										}
-									} break;
-									default:
-										std::cerr << "unrecognized vector type for UV";
-									}
-								} break;
-								default:
-									std::cerr << "unreconized componant type for UV";
-								}
-							}
-						}
-					}
-					break;
-
-				default:
-					std::cerr << "primitive mode not implemented";
-					break;
-
-					// These aren't triangles:
-				case TINYGLTF_MODE_POINTS:
-				case TINYGLTF_MODE_LINE:
-				case TINYGLTF_MODE_LINE_LOOP:
-					std::cerr << "primitive is not triangle based, ignoring";
+					primitive.m_vertex_attribute[attribute_i].m_buffer_index = buffer_view.buffer;
+					primitive.m_vertex_attribute[attribute_i].m_buffer_offset = buffer_view.byteOffset;
+					primitive.m_vertex_attribute[attribute_i].m_buffer_count = accessor.count;
+					primitive.m_vertex_attribute[attribute_i].m_element_offset = accessor.byteOffset;
+					primitive.m_vertex_attribute[attribute_i].m_element_stride = accessor.ByteStride(buffer_view);
 				}
-				}
-
-				// bbox :
-				v3f bCenter;
-				bCenter.x = 0.5f * (pMax.x - pMin.x) + pMin.x;
-				bCenter.y = 0.5f * (pMax.y - pMin.y) + pMin.y;
-				bCenter.z = 0.5f * (pMax.z - pMin.z) + pMin.z;
-
-				for (size_t v = 0; v < loadedMesh.vertices.size() / 3; v++) {
-					loadedMesh.vertices[3 * v + 0] -= bCenter.x;
-					loadedMesh.vertices[3 * v + 1] -= bCenter.y;
-					loadedMesh.vertices[3 * v + 2] -= bCenter.z;
-				}
-
-				loadedMesh.pivot_xform[0][0] = 1.0f;
-				loadedMesh.pivot_xform[0][1] = 0.0f;
-				loadedMesh.pivot_xform[0][2] = 0.0f;
-				loadedMesh.pivot_xform[0][3] = 0.0f;
-
-				loadedMesh.pivot_xform[1][0] = 0.0f;
-				loadedMesh.pivot_xform[1][1] = 1.0f;
-				loadedMesh.pivot_xform[1][2] = 0.0f;
-				loadedMesh.pivot_xform[1][3] = 0.0f;
-
-				loadedMesh.pivot_xform[2][0] = 0.0f;
-				loadedMesh.pivot_xform[2][1] = 0.0f;
-				loadedMesh.pivot_xform[2][2] = 1.0f;
-				loadedMesh.pivot_xform[2][3] = 0.0f;
-
-				loadedMesh.pivot_xform[3][0] = bCenter.x;
-				loadedMesh.pivot_xform[3][1] = bCenter.y;
-				loadedMesh.pivot_xform[3][2] = bCenter.z;
-				loadedMesh.pivot_xform[3][3] = 1.0f;
-
-				// TODO handle materials
-				for (size_t i{ 0 }; i < loadedMesh.faces.size(); ++i)
-					loadedMesh.material_ids.push_back(materials->at(0).id);
-
-				meshes->push_back(loadedMesh);
-				ret = true;
 			}
 		}
 
-		// Iterate through all texture declaration in glTF file
-		for (const auto &gltfTexture : model.textures) {
-			std::cout << "Found texture!";
-			Texture loadedTexture;
-			const auto &image = model.images[gltfTexture.source];
-			loadedTexture.components = image.component;
-			loadedTexture.width = image.width;
-			loadedTexture.height = image.height;
-
-			const auto size =
-				image.component * image.width * image.height * sizeof(unsigned char);
-			loadedTexture.image = new unsigned char[size];
-			memcpy(loadedTexture.image, image.image.data(), size);
-			textures->push_back(loadedTexture);
-		}
-		return ret;
+// 		// Iterate through all texture declaration in glTF file
+// 		for (const auto &gltfTexture : model.textures) 
+// 		{
+// 			std::cout << "Found texture!";
+// 			Texture loadedTexture;
+// 			const auto &image = model.images[gltfTexture.source];
+// 			loadedTexture.components = image.component;
+// 			loadedTexture.width = image.width;
+// 			loadedTexture.height = image.height;
+// 
+// 			const auto size =
+// 				image.component * image.width * image.height * sizeof(unsigned char);
+// 			loadedTexture.image = new unsigned char[size];
+// 			memcpy(loadedTexture.image, image.image.data(), size);
+// 			textures->push_back(loadedTexture);
+// 		}
+// 		return ret;
 	}
 
 };

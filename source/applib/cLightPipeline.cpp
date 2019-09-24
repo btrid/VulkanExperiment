@@ -264,8 +264,8 @@ vk::CommandBuffer cFowardPlusPipeline::execute(const std::shared_ptr<btr::Contex
 		cmd.dispatch(1, 1, 1);
 		{
 			std::vector<vk::BufferMemoryBarrier> barrier = {
-				m_lightLL_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite),
-				m_lightLL.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite)
+				m_lightLL_head.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+				m_lightLL.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead)
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eFragmentShader, vk::DependencyFlags(), {}, barrier, {});
 		}

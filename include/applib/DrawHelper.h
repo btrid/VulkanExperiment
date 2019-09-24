@@ -158,8 +158,8 @@ struct DrawHelper : public Singleton<DrawHelper>
 		{
 			std::vector<vk::BufferMemoryBarrier> barrier =
 			{
-				m_mesh_index[Box].makeMemoryBarrier(vk::AccessFlagBits::eIndexRead),
-				m_mesh_index[SPHERE].makeMemoryBarrier(vk::AccessFlagBits::eIndexRead),
+				m_mesh_index[Box].makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eIndexRead),
+				m_mesh_index[SPHERE].makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eIndexRead),
 			};
 			barrier[0].setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 			barrier[1].setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);

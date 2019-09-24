@@ -199,12 +199,9 @@ struct BufferMemoryDescriptorEx
 
 struct BufferMemory
 {
-	vk::DescriptorBufferInfo m_buffer_info;
-	vk::BufferMemoryBarrier m_memory_barrier;
 	struct Resource
 	{
-		Zone m_zone;
-		vk::DeviceMemory m_memory_ref;
+		vk::DescriptorBufferInfo m_buffer_info;
 		void* m_mapped_memory;
 
 		~Resource()
@@ -216,25 +213,27 @@ struct BufferMemory
 	std::shared_ptr<Resource> m_resource;
 public:
 	bool isValid()const { return !!m_resource; }
-	vk::DescriptorBufferInfo getInfo()const { return m_buffer_info; }
-	vk::DescriptorBufferInfo getBufferInfo()const { return m_buffer_info; } // @deprecated 名前が長いので
-	vk::DeviceMemory getDeviceMemory()const { return m_resource->m_memory_ref; }
+	vk::DescriptorBufferInfo getInfo()const { return m_resource->m_buffer_info; }
+	vk::DescriptorBufferInfo getBufferInfo()const { return m_resource->m_buffer_info; } // @deprecated 名前が長いので
 	void* getMappedPtr()const { return m_resource->m_mapped_memory; }
 	template<typename T> T* getMappedPtr(size_t offset_num = 0)const { return static_cast<T*>(m_resource->m_mapped_memory) + offset_num; }
 
-	const vk::BufferMemoryBarrier& makeMemoryBarrier(vk::AccessFlags dstAccessMask) {
-		m_memory_barrier.buffer = m_buffer_info.buffer;
-		m_memory_barrier.size = m_buffer_info.range;
-		m_memory_barrier.offset = m_buffer_info.offset;
-		m_memory_barrier.srcAccessMask = m_memory_barrier.dstAccessMask;
-		m_memory_barrier.dstAccessMask = dstAccessMask;
-		return m_memory_barrier;
-	}
-	vk::BufferMemoryBarrier makeMemoryBarrierEx() {
+	vk::BufferMemoryBarrier makeMemoryBarrier(vk::AccessFlags srcAccessMask, vk::AccessFlags dstAccessMask)const
+	{
 		vk::BufferMemoryBarrier barrier;
-		barrier.buffer = m_buffer_info.buffer;
-		barrier.size = m_buffer_info.range;
-		barrier.offset = m_buffer_info.offset;
+		barrier.buffer = m_resource->m_buffer_info.buffer;
+		barrier.size = m_resource->m_buffer_info.range;
+		barrier.offset = m_resource->m_buffer_info.offset;
+		barrier.srcAccessMask = srcAccessMask;
+		barrier.dstAccessMask = dstAccessMask;
+		return barrier;
+	}
+	vk::BufferMemoryBarrier makeMemoryBarrierEx()const
+	{
+		vk::BufferMemoryBarrier barrier;
+		barrier.buffer = m_resource->m_buffer_info.buffer;
+		barrier.size = m_resource->m_buffer_info.range;
+		barrier.offset = m_resource->m_buffer_info.offset;
 		return barrier;
 	}
 };
@@ -403,23 +402,37 @@ struct AllocatedMemory
 		assert(zone.isValid());
 
 		BufferMemory alloc;
-		auto deleter = [&](BufferMemory::Resource* ptr)
-		{
-			// todo deleterは遅くなるのでやめたいデストラクタでする
-			m_resource->m_free_zone->delayedFree(ptr->m_zone);
-			delete ptr;
-		};
-		alloc.m_resource = std::shared_ptr<BufferMemory::Resource>(new BufferMemory::Resource, deleter);
-		alloc.m_resource->m_zone = zone;
-		alloc.m_resource->m_memory_ref = m_resource->m_memory.get();
-		alloc.m_buffer_info.buffer = m_resource->m_buffer.get();
-		alloc.m_buffer_info.offset = alloc.m_resource->m_zone.m_start;
-		alloc.m_buffer_info.range = desc.size;
+		alloc.m_resource = std::make_shared<BufferMemory::Resource>();
+		alloc.m_resource->m_buffer_info.buffer = m_resource->m_buffer.get();
+		alloc.m_resource->m_buffer_info.offset = zone.m_start;
+		alloc.m_resource->m_buffer_info.range = desc.size;
 
 		alloc.m_resource->m_mapped_memory = nullptr;
 		if (m_resource->m_mapped_memory)
 		{
-			alloc.m_resource->m_mapped_memory = (char*)m_resource->m_mapped_memory + alloc.m_resource->m_zone.m_start;
+			alloc.m_resource->m_mapped_memory = (char*)m_resource->m_mapped_memory + zone.m_start;
+		}
+		return alloc;
+	}
+	BufferMemory allocateMemory(uint32_t size, bool is_reverse)
+	{
+		assert(size != 0);
+
+		auto zone = m_resource->m_free_zone->alloc(size, is_reverse);
+
+		// allocできた？
+		assert(zone.isValid());
+
+		BufferMemory alloc;
+		alloc.m_resource = std::make_shared<BufferMemory::Resource>();
+		alloc.m_resource->m_buffer_info.buffer = m_resource->m_buffer.get();
+		alloc.m_resource->m_buffer_info.offset = zone.m_start;
+		alloc.m_resource->m_buffer_info.range = size;
+
+		alloc.m_resource->m_mapped_memory = nullptr;
+		if (m_resource->m_mapped_memory)
+		{
+			alloc.m_resource->m_mapped_memory = (char*)m_resource->m_mapped_memory + zone.m_start;
 		}
 		return alloc;
 	}
