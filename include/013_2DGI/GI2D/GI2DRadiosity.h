@@ -73,8 +73,8 @@ struct GI2DRadiosity
 
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
-#define RADIOSITY_FAST
-#define RADIOSITY_REDUCT_RADIOSITY
+//#define RADIOSITY_FAST
+//#define RADIOSITY_REDUCT_RADIOSITY
 //#define RADIOSITY_TEXTURE vk::Format::eR16G16B16A16Sfloat
 //#define RADIOSITY_TEXTURE vk::Format::eA2R10G10B10UnormPack32
 #define RADIOSITY_TEXTURE vk::Format::eB10G11R11UfloatPack32
@@ -369,7 +369,7 @@ struct GI2DRadiosity
 			{
 				// color1
 				vk::AttachmentDescription()
-				.setFormat(vk::Format::eR16G16B16A16Sfloat)
+				.setFormat(RADIOSITY_TEXTURE)
 				.setSamples(vk::SampleCountFlagBits::e1)
 				.setLoadOp(vk::AttachmentLoadOp::eLoad)
 				.setStoreOp(vk::AttachmentStoreOp::eStore)
@@ -392,8 +392,8 @@ struct GI2DRadiosity
 				framebuffer_info.setRenderPass(m_radiosity_pass.get());
 				framebuffer_info.setAttachmentCount(array_length(view));
 				framebuffer_info.setPAttachments(view);
-				framebuffer_info.setWidth(render_target->m_info.extent.width);
-				framebuffer_info.setHeight(render_target->m_info.extent.height);
+				framebuffer_info.setWidth(m_radiosity_texture_size.width);
+				framebuffer_info.setHeight(m_radiosity_texture_size.height);
 				framebuffer_info.setLayers(Frame_Num);
 
 				m_radiosity_framebuffer = context->m_device.createFramebufferUnique(framebuffer_info);
