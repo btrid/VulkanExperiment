@@ -117,11 +117,7 @@ int pathFinding()
 //	solver.writeConsole(pf, solve);
 //	solver.write(pf, solve2);
 
-	auto gpu = sGlobal::Order().getGPU(0);
-	auto device = sGlobal::Order().getGPU(0).getDevice();
-
 	app::AppDescriptor app_desc;
-	app_desc.m_gpu = gpu;
 	app_desc.m_window_size = uvec2(1024, 1024);
 	app::App app(app_desc);
 
@@ -221,7 +217,7 @@ int pathFinding()
 			app.submit(std::move(cmds));
 		}
 		app.postUpdate();
-		device->waitIdle();
+		context->m_device.waitIdle();
 		printf("%-6.4fms\n", time.getElapsedTimeAsMilliSeconds());
 	}
 
@@ -232,11 +228,7 @@ int pathFinding()
 int rigidbody()
 {
 
-	auto gpu = sGlobal::Order().getGPU(0);
-	auto device = sGlobal::Order().getGPU(0).getDevice();
-
 	app::AppDescriptor app_desc;
-	app_desc.m_gpu = gpu;
 	app_desc.m_window_size = uvec2(1024, 1024);
 	app::App app(app_desc);
 
@@ -322,7 +314,7 @@ int rigidbody()
 				cmds[cmd_gi2d] = cmd;
 			}
 			app.submit(std::move(cmds));
-			device->waitIdle();
+			context->m_device.waitIdle();
 		}
 		app.postUpdate();
 		printf("%-6.4fms\n", time.getElapsedTimeAsMilliSeconds());
@@ -333,11 +325,7 @@ int rigidbody()
 
 int radiosity()
 {
-	auto gpu = sGlobal::Order().getGPU(0);
-	auto device = sGlobal::Order().getGPU(0).getDevice();
-
 	app::AppDescriptor app_desc;
-	app_desc.m_gpu = gpu;
 	app_desc.m_window_size = uvec2(1024, 1024);
 	app::App app(app_desc);
 
@@ -404,11 +392,7 @@ int radiosity()
 
 int radiosity2()
 {
-	auto gpu = sGlobal::Order().getGPU(0);
-	auto device = sGlobal::Order().getGPU(0).getDevice();
-
 	app::AppDescriptor app_desc;
-	app_desc.m_gpu = gpu;
 	app_desc.m_window_size = uvec2(1024, 1024);
 	app::App app(app_desc);
 
@@ -497,11 +481,7 @@ int main()
 	return radiosity();
 //	return radiosity2();
 
-	auto gpu = sGlobal::Order().getGPU(0);
-	auto device = sGlobal::Order().getGPU(0).getDevice();
-
 	app::AppDescriptor app_desc;
-	app_desc.m_gpu = gpu;
 	app_desc.m_window_size = uvec2(1024, 1024);
 	app::App app(app_desc);
 

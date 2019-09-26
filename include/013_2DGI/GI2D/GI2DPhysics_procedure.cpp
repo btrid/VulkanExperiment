@@ -26,7 +26,7 @@ GI2DPhysics_procedure::GI2DPhysics_procedure(const std::shared_ptr<GI2DPhysics>&
 
 		std::string path = btr::getResourceShaderPath();
 		for (size_t i = 0; i < array_length(name); i++) {
-			m_shader[i] = loadShaderUnique(physics_context->m_context->m_device.get(), path + name[i]);
+			m_shader[i] = loadShaderUnique(physics_context->m_context->m_device, path + name[i]);
 		}
 	}
 
@@ -124,7 +124,7 @@ GI2DPhysics_procedure::GI2DPhysics_procedure(const std::shared_ptr<GI2DPhysics>&
 			.setStage(shader_info[9])
 			.setLayout(m_pipeline_layout[PipelineLayout_Rigid].get()),
 		};
-		auto compute_pipeline = physics_context->m_context->m_device.createComputePipelinesUnique(physics_context->m_vk::PipelineCache(), compute_pipeline_info);
+		auto compute_pipeline = physics_context->m_context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
 		m_pipeline[Pipeline_DrawParticle] = std::move(compute_pipeline[0]);
 		m_pipeline[Pipeline_RBMakeParticle] = std::move(compute_pipeline[1]);
 		m_pipeline[Pipeline_MakeCollision] = std::move(compute_pipeline[2]);

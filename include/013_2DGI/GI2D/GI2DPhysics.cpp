@@ -59,7 +59,7 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 
 		std::string path = btr::getResourceShaderPath();
 		for (size_t i = 0; i < array_length(name); i++) {
-			m_shader[i] = loadShaderUnique(m_context->m_device.get(), path + name[i]);
+			m_shader[i] = loadShaderUnique(m_context->m_device, path + name[i]);
 		}
 	}
 
@@ -145,7 +145,7 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 			.setStage(shader_info[4])
 			.setLayout(m_pipeline_layout[PipelineLayout_MakeRB].get()),
 		};
-		auto compute_pipeline = m_context->m_device.createComputePipelinesUnique(m_vk::PipelineCache(), compute_pipeline_info);
+		auto compute_pipeline = m_context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
 #if USE_DEBUG_REPORT
 		vk::DebugUtilsObjectNameInfoEXT name_info;
 		name_info.pObjectName = "Pipeline_ToFluid";
