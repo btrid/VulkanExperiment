@@ -113,7 +113,7 @@ struct GI2DVoronoi
 
 			std::string path = btr::getResourceShaderPath();
 			for (size_t i = 0; i < array_length(name); i++) {
-				m_shader[i] = loadShaderUnique(m_context->m_device.get(), path + name[i]);
+				m_shader[i] = loadShaderUnique(m_context->m_device, path + name[i]);
 			}
 		}
 
@@ -199,7 +199,7 @@ struct GI2DVoronoi
 				.setStage(shader_info[4])
 				.setLayout(m_pipeline_layout[PipelineLayout_Voronoi].get()),
 			};
-			auto compute_pipeline = m_context->m_device.createComputePipelinesUnique(m_vk::PipelineCache(), compute_pipeline_info);
+			auto compute_pipeline = m_context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
 
 			m_pipeline[Pipeline_Voronoi_SetupJFA] = std::move(compute_pipeline[0]);
 			m_pipeline[Pipeline_Voronoi_MakeJFA] = std::move(compute_pipeline[1]);

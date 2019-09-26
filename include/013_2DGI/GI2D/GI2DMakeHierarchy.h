@@ -62,7 +62,7 @@ struct GI2DMakeHierarchy
 
 			std::string path = btr::getResourceShaderPath();
 			for (size_t i = 0; i < array_length(name); i++) {
-				m_shader[i] = loadShaderUnique(context->m_device.get(), path + name[i]);
+				m_shader[i] = loadShaderUnique(context->m_device, path + name[i]);
 			}
 		}
 

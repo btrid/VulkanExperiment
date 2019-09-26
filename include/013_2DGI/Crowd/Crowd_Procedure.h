@@ -84,7 +84,7 @@ struct Crowd_Procedure
 
 			std::string path = btr::getResourceShaderPath();
 			for (size_t i = 0; i < array_length(name); i++) {
-				m_shader_module[i] = loadShaderUnique(context->m_context->m_device.get(), path + name[i]);
+				m_shader_module[i] = loadShaderUnique(context->m_context->m_device, path + name[i]);
 			}
 		}
 
@@ -215,7 +215,7 @@ struct Crowd_Procedure
 				.setStage(shader_info[11])
 				.setLayout(m_pipeline_layout[PipelineLayout_DrawField].get()),
 			};
-			auto compute_pipeline = context->m_context->m_device.createComputePipelinesUnique(context->m_vk::PipelineCache(), compute_pipeline_info);
+			auto compute_pipeline = context->m_context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
 			m_pipeline[Pipeline_UnitUpdate] = std::move(compute_pipeline[0]);
 			m_pipeline[Pipeline_MakeLinkList] = std::move(compute_pipeline[1]);
 			m_pipeline[Pipeline_MakeDensity] = std::move(compute_pipeline[2]);
