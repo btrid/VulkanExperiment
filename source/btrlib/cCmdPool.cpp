@@ -1,41 +1,9 @@
 #include <btrlib/cCmdPool.h>
 #include <btrlib/Context.h>
 
-void* VKAPI_PTR Allocation(void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
-{
-	return malloc(size);
-}
-
-void* VKAPI_PTR Reallocation(void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
-{
-	return realloc(pOriginal, size);
-
-}
-
-void VKAPI_PTR Free(void* pUserData, void* pMemory)
-{
-	free(pMemory);
-}
-
-void VKAPI_PTR InternalAllocationNotification(void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope)
-{
-	printf("alloc\n");
-}
-
-void VKAPI_PTR InternalFreeNotification(void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope)
-{
-	printf("free\n");
-}
-
 cCmdPool::cCmdPool(const std::shared_ptr<btr::Context>& context)
 {
 	m_context = context;
-	vk::AllocationCallbacks cb;
-	cb.setPfnAllocation(Allocation);
-	cb.setPfnFree(Free);
-	cb.setPfnReallocation(Reallocation);
-	cb.setPfnInternalAllocation(InternalAllocationNotification);
-	cb.setPfnInternalFree(InternalFreeNotification);
 
 	m_cmd_pool_system.resize(std::thread::hardware_concurrency());
 	for (auto& per_thread : m_cmd_pool_system)
@@ -43,7 +11,7 @@ cCmdPool::cCmdPool(const std::shared_ptr<btr::Context>& context)
 		vk::CommandPoolCreateInfo cmd_pool_compiled;
 		cmd_pool_compiled.queueFamilyIndex = (uint32_t)0;
 		cmd_pool_compiled.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
-		per_thread = context->m_device.createCommandPoolUnique(cmd_pool_compiled, cb);
+		per_thread = context->m_device.createCommandPoolUnique(cmd_pool_compiled);
 
 	}
 	m_cmd.resize(std::thread::hardware_concurrency());
@@ -54,7 +22,7 @@ cCmdPool::cCmdPool(const std::shared_ptr<btr::Context>& context)
 			vk::CommandPoolCreateInfo cmd_pool_onetime;
 			cmd_pool_onetime.queueFamilyIndex = (uint32_t)0;
 			cmd_pool_onetime.flags = vk::CommandPoolCreateFlagBits::eTransient | vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
-			per_frame.m_cmd_pool = context->m_device.createCommandPoolUnique(cmd_pool_onetime, cb);
+			per_frame.m_cmd_pool = context->m_device.createCommandPoolUnique(cmd_pool_onetime);
 		}
 	}
 
