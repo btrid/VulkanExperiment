@@ -28,6 +28,113 @@
 
 #pragma comment(lib, "vulkan-1.lib")
 
+
+struct Geometry
+{
+	static std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> GetPlane()
+	{
+		std::vector<glm::vec3> v(4);
+		v[0] = { -0.5f, 0.f, -0.5f };
+		v[1] = { -0.5f, 0.f, 0.5f };
+		v[2] = { 0.5f, 0.f, -0.5f };
+		v[3] = { 0.5f, 0.f, 0.5f };
+
+		std::vector<glm::uvec3> i(2);
+		i[0] = { 0, 1, 2 };
+		i[1] = { 1, 3, 2 };
+
+		return std::tie(v, i);
+	}
+
+	static std::tuple<std::vector<vec3>, std::vector<uvec3>> GetBox()
+	{
+		std::vector<vec3> box = 
+		{
+			{ -0.5f, 0.5f, 0.5f},
+			{ 0.5f, 0.5f, 0.5f},
+			{ -0.5f, -0.5f, 0.5f},
+			{ 0.5f, -0.5f, 0.5f},
+			{ -0.5f, 0.5f, -0.5f},
+			{ 0.5f, 0.5f, -0.5f},
+			{ -0.5f, -0.5f, -0.5f},
+			{ 0.5f, -0.5f, -0.5f},
+		};
+
+		std::vector<uvec3> boxFace =
+		{
+			{ 0, 2, 3 },
+			{ 0, 3, 1 },
+			{ 0, 1, 5 },
+			{ 0, 5, 4 },
+			{ 6, 7, 3 },
+			{ 6, 3, 2 },
+			{ 0, 4, 6 },
+			{ 0, 6, 2 },
+			{ 3, 7, 5 },
+			{ 3, 5, 1 },
+			{ 5, 7, 6 },
+			{ 5, 6, 4 },
+		};
+		return std::tie(box, boxFace);
+
+	}
+
+	static std::tuple<std::vector<vec3>, std::vector<uvec3>> getSphere()
+	{
+		// create 12 vertices of a icosahedron
+		auto t = (1.f + glm::sqrt(5.f)) / 2.f;
+		std::vector<vec3> vertex;
+
+		vertex.push_back(normalize(vec3(-1, t, 0)));
+		vertex.push_back(normalize(vec3(1, t, 0)));
+		vertex.push_back(normalize(vec3(-1, -t, 0)));
+		vertex.push_back(normalize(vec3(1, -t, 0)));
+
+		vertex.push_back(normalize(vec3(0, -1, t)));
+		vertex.push_back(normalize(vec3(0, 1, t)));
+		vertex.push_back(normalize(vec3(0, -1, -t)));
+		vertex.push_back(normalize(vec3(0, 1, -t)));
+
+		vertex.push_back(normalize(vec3(t, 0, -1)));
+		vertex.push_back(normalize(vec3(t, 0, 1)));
+		vertex.push_back(normalize(vec3(-t, 0, -1)));
+		vertex.push_back(normalize(vec3(-t, 0, 1)));
+
+
+		// create 20 triangles of the icosahedron
+		std::vector<uvec3> face;
+
+		// 5 faces around point 0
+		face.emplace_back(0, 11, 5);
+		face.emplace_back(0, 5, 1);
+		face.emplace_back(0, 1, 7);
+		face.emplace_back(0, 7, 10);
+		face.emplace_back(0, 10, 11);
+
+		// 5 adjacent faces 
+		face.emplace_back(1, 5, 9);
+		face.emplace_back(5, 11, 4);
+		face.emplace_back(11, 10, 2);
+		face.emplace_back(10, 7, 6);
+		face.emplace_back(7, 1, 8);
+
+		// 5 faces around point 3
+		face.emplace_back(3, 9, 4);
+		face.emplace_back(3, 4, 2);
+		face.emplace_back(3, 2, 6);
+		face.emplace_back(3, 6, 8);
+		face.emplace_back(3, 8, 9);
+
+		// 5 adjacent faces 
+		face.emplace_back(4, 9, 5);
+		face.emplace_back(2, 4, 11);
+		face.emplace_back(6, 2, 10);
+		face.emplace_back(8, 6, 7);
+		face.emplace_back(9, 8, 1);
+
+		return std::tie(vertex, face);
+	}
+};
 struct TriangleList 
 {
 };
@@ -115,12 +222,6 @@ struct PhotonMapping
 		uint32_t _p2;
 	};
 
-	struct BounceData {
-		int32_t count;
-		int32_t startOffset;
-		int32_t calced;
-		int32_t _p;
-	};
 	struct PMInfo
 	{
 		uvec4 num0;
@@ -403,7 +504,6 @@ struct PhotonMapping
 		b_photon_counter = context->m_storage_memory.allocateMemory<uvec4>({ 1, {} });
 		bPhotonLLHead = context->m_storage_memory.allocateMemory<uint32_t>({ info.num0.w, {} });
 		bPhotonLL = context->m_storage_memory.allocateMemory<uint32_t>({ 100000, {} });
-		bPhotonBounce = context->m_storage_memory.allocateMemory<BounceData>({ 1, {} });
 
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 		cmd.updateBuffer<PMInfo>(u_pm_info.getInfo().buffer, u_pm_info.getInfo().offset, info);
@@ -524,7 +624,6 @@ struct PhotonMapping
 	btr::BufferMemoryEx<uvec4> b_photon_counter;
 	btr::BufferMemoryEx<uint32_t> bPhotonLLHead;
 	btr::BufferMemoryEx<uint32_t> bPhotonLL;
-	btr::BufferMemoryEx<BounceData> bPhotonBounce;
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;

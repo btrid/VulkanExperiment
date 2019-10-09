@@ -237,7 +237,7 @@ vec3 calcDir(in vec3 n, in float v)
 
 	return dir;
 }
-
+/*
 uint morton3D(in uvec3 n)
 {
 	n = (n * 0x00010001u) & 0xFF0000FFu;
@@ -277,5 +277,5 @@ uint getMortonKey(in uvec3 min_p, in uvec3 max_p)
 
 	return key;
 }
-
+*/
 #endif // PM_GLSL_

@@ -1,6 +1,6 @@
 #version 460
 #extension GL_GOOGLE_include_directive : require
-//#extension NV_conservative_raster : require
+#extension VK_EXT_conservative_rasterization : require
 #define USE_PM 0
 #include "PM.glsl"
 
@@ -157,17 +157,17 @@ void main()
 	transform.InstanceID = In[0].InstanceID;
 
 	// 三角形を大きくしてフラグメントシェーダのテストに入るようにする.なくてもいい？
-	Triangle t = MakeTriangle(In[0].Position, In[1].Position, In[2].Position);
-	t = scaleTriangleV(t, vec3(0.5));
+//	Triangle t = MakeTriangle(In[0].Position, In[1].Position, In[2].Position);
+//	t = scaleTriangleV(t, vec3(0.5));
 
-	gl_Position = projection * view * vec4(t.a, 1.);
-	transform.Position = t.a;
+	gl_Position = projection * view * vec4(In[0].Position, 1.);
+	transform.Position = In[0].Position;
 	EmitVertex();
-	gl_Position = projection * view * vec4(t.b, 1.);
-	transform.Position = t.b;
+	gl_Position = projection * view * vec4(In[1].Position, 1.);
+	transform.Position = In[1].Position;
 	EmitVertex();
-	gl_Position = projection * view * vec4(t.c, 1.);
-	transform.Position = t.c;
+	gl_Position = projection * view * vec4(In[2].Position, 1.);
+	transform.Position = In[2].Position;
 	EmitVertex();
 	
 	EndPrimitive();
