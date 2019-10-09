@@ -1,0 +1,129 @@
+#version 450
+#pragma optionNV (unroll all)
+#pragma optionNV (inline all)
+#pragma optionNV(fastmath on)
+//#pragma optionNV(fastprecision on)
+//#pragma optionNV(ifcvt all)
+#pragma optionNV(strict on)
+#extension GL_ARB_shader_draw_parameters : require
+#extension GL_ARB_bindless_texture : require
+#extension GL_ARB_shading_language_include : require
+
+
+#include </PMDefine.glsl>
+#include </convertDimension.glsl>
+#include </Brick.glsl>
+#include </Shape.glsl>
+#include </PM.glsl>
+
+layout (local_size_x = 1024, local_size_y = 1, local_size_z = 1) in;
+
+layout(std140, binding=0) uniform BrickParamUniform {
+	BrickParam uParam;
+};
+
+layout(std430, binding = 0) readonly restrict buffer  VertexBuffer{
+	Vertex bVertex[];
+};
+
+layout(std430, binding = 1) readonly restrict buffer  ElementBuffer{
+	ivec3 bElement[];
+};
+layout(std430, binding=2) readonly restrict buffer MaterialBuffer {
+	Material bMaterial[];
+};
+
+layout(std430, binding = 3) readonly restrict buffer TriangleLLHeadBuffer{
+	uint bTriangleLLHead[];
+};
+layout(std430, binding = 4) readonly restrict buffer TriangleLLBuffer{
+	TriangleLL bTriangleLL[];
+};
+layout(std430, binding = 5) restrict buffer  PhotonBuffer{
+	Photon bPhoton[];
+};
+layout(std430, binding = 6) restrict buffer PhotonLLHeadBuffer{
+	uint bPhotonLLHead[];
+};
+layout(std430, binding = 7) writeonly restrict buffer PhotonLLBuffer{
+	uint bPhotonLL[];
+};
+
+struct BounceData{
+	int count;
+	int startOffset;
+	int calced;
+	int _p;
+};
+layout(std430, binding = 8) restrict buffer PhotonBounceBuffer{
+	BounceData bPhotonBounce[];
+};
+
+
+layout(binding = 0, r8ui) uniform readonly uimage3D tBrickMap0;
+
+layout(binding = 0) uniform atomic_uint  aPhotonCount;
+
+/*layout(location = 0)*/ uniform int gBounceCount;
+#include </Marching.glsl>
+
+
+void main() 
+{
+	int index = int(gl_GlobalInvocationID.x);
+	float seed = sqrt(float(index));
+	float probabry = rand(vec2(seed, sqrt(seed)));
+	BounceData prev = bPhotonBounce[gBounceCount-1];
+	{
+		int index = atomicAdd(bPhotonBounce[gBounceCount].calced, 1);
+		if(index >= prev.count)
+		{
+			// 計算する数を超えた
+			return;
+		}
+		if(probabry <= 0.3)
+		{
+			// ロシアンルーレット
+			return;
+		}
+
+		Photon stored = bPhoton[prev.startOffset + index];
+		if(dot(stored.Power, stored.Power) <= 0.001)
+		{
+			// 強度が弱すぎるのでしない
+			return;
+		}
+
+		TriangleLL tLL = bTriangleLL[stored.TriangleLLIndex];
+		Vertex a = bVertex[tLL.index[0]];
+		Vertex b = bVertex[tLL.index[1]];
+		Vertex c = bVertex[tLL.index[2]];
+
+		vec3 n = normalize(cross(normalize(b.Position-a.Position), normalize(c.Position-a.Position)));
+		vec3 d = calcDir(n, seed);
+		Ray ray = MakeRay(stored.Position+d*0.001, d);
+
+		MarchResult result = marching(uParam, ray);
+		if(result.HitResult.IsHit == 0){
+			return;
+		}
+
+		Photon photon;
+		photon.Position = result.HitResult.HitPoint;
+		setDirection(photon, ray.d);
+		Material material = bMaterial[result.HitTriangle.a.MaterialIndex];
+		vec3 brdf = sampling(material, getDirection(stored), result);
+		photon.Power = stored.Power * brdf;
+		photon.TriangleLLIndex = result.TriangleLLIndex;
+		
+		uint photonIndex = atomicCounterIncrement(aPhotonCount);
+		bPhoton[photonIndex] = photon;
+
+		int index1d = convert3DTo1D(getIndexBrick1(uParam, photon.Position), uParam.num1);
+		uint old = atomicExchange(bPhotonLLHead[index1d], photonIndex);
+		bPhotonLL[photonIndex] = old;
+
+		atomicAdd(bPhotonBounce[gBounceCount].count, 1);
+
+	}
+}

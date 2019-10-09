@@ -1,0 +1,136 @@
+#version 450
+
+#pragma optionNV (unroll all)
+#pragma optionNV (inline all)
+#pragma optionNV(fastmath on)
+//#pragma optionNV(fastprecision on)
+//#pragma optionNV(ifcvt all)
+#pragma optionNV(strict on)
+#extension GL_ARB_shading_language_include : require
+
+#include </PMDefine.glsl>
+#include </convertDimension.glsl>
+#include </Shape.glsl>
+#include </Brick.glsl>
+#include </PM.glsl>
+
+layout (local_size_x = PHOTON_BLOCK_NUM, local_size_y = 1, local_size_z = 1) in;
+
+layout(std140, binding=0) uniform BrickParamUniform {
+	BrickParam uParam;
+};
+
+layout(std430, binding = 0) readonly restrict buffer  LightVertexBuffer{
+	Vertex bLightVertex[];
+};
+
+layout(std430, binding = 1) readonly restrict buffer  LightElementBuffer{
+	ivec3 bLightElement[];
+};
+layout(std430, binding=2) readonly restrict buffer LightMaterialBuffer {
+	Material bLightMaterial[];
+};
+
+layout(binding = 3) writeonly restrict buffer  EmitPhotonBuffer{
+	Photon bEmitPhoton[];
+};
+
+layout(std430, binding = 4) coherent restrict buffer  EmitPhotonMapBuffer{
+	int bEmitPhotonNumMap[];
+};
+
+layout(binding = 0) uniform atomic_uint  aPhotonEmitBlockCount;
+
+float getArea(in vec3 a, in vec3 b, in vec3 c)
+{
+	return length(cross(b - a, c - a)) * 0.5;
+}
+
+float rand(in vec2 co){
+    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+}
+
+vec3 calcDir(in vec3 n, in float v)
+{
+	float r1 = rand(vec2(v*123.456, v*654.321));
+	float phi = r1 * 2. * 3.1415;
+
+	float r2 = rand(vec2(v*12.45, v*54.32));
+	float r2sq = sqrt(r2);
+
+	float tx = r2sq * cos(phi);
+	float ty = r2sq * sin(phi);
+	float tz = sqrt(1. - r2);
+
+	vec3 t = abs(n.x) > abs(n.y) 
+		? normalize(cross(vec3(0., 1., 0.), n))
+		: normalize(cross(vec3(1., 0., 0.), n));
+	vec3 b = normalize(cross(n, t));
+	vec3 dir = tz * n + tx * t + ty * b;
+	dir = normalize(dir);
+
+	return dir;
+}
+
+shared int sIndex;
+shared vec3 sTriangle[3];
+void main() 
+{
+	for(uint i = 0; i < 1; i++)
+	{
+		Vertex va = bLightVertex[bLightElement[i].x];
+		Material material = bLightMaterial[va.MaterialIndex];
+
+		float seed = sqrt(float(convert3DTo1D(ivec3(gl_GlobalInvocationID.xyz), uParam.num1)));
+		{
+			ivec3 indexMap0;
+			if(gl_LocalInvocationID.x == 0)
+			{
+				Vertex a = bLightVertex[bLightElement[i].x];
+				Vertex b = bLightVertex[bLightElement[i].y];
+				Vertex c = bLightVertex[bLightElement[i].z];
+				vec3 w = vec3(rand(vec2(seed, b.Position.x)), rand(vec2(seed, b.Position.y)), rand(vec2(seed, b.Position.z))) + vec3(0., 0., 0.001);
+				w /= w.x + w.y + w.z;
+				vec3 p = w.x * a.Position + w.y * b.Position + w.z * c.Position;
+				indexMap0 = getIndexBrick0(uParam, p);
+
+				vec3 cellMin = indexMap0 * getCellSize0(uParam) + uParam.areaMin;
+				vec3 cellMax = (indexMap0+ivec3(1)) * getCellSize0(uParam) + uParam.areaMin;
+				sTriangle[0] = max(min(a.Position, cellMax), cellMin);
+				sTriangle[1] = max(min(b.Position, cellMax), cellMin);
+				sTriangle[2] = max(min(c.Position, cellMax), cellMin);
+			}
+
+			memoryBarrierShared();
+			barrier();
+
+			vec3 a = sTriangle[0];
+			vec3 b = sTriangle[1];
+			vec3 c = sTriangle[2];
+			vec3 w = vec3(rand(vec2(seed, b.x)), rand(vec2(seed, c.y)), rand(vec2(seed, a.z))) + vec3(0., 0., 0.001);
+			w /= w.x + w.y + w.z;
+			vec3 p = a*w.x + b*w.y + c*w.z;
+			vec3 n = normalize(cross(normalize(b-a), normalize(c-a)));
+			vec3 d = normalize(vec3(0., -1., 0.));
+
+			Photon emit;
+			emit.Position = p + d*0.1;
+			emit.Power = material.Emissive.xyz;
+			setDirection(emit, d);
+
+			if(gl_LocalInvocationID.x == 0)
+			{
+				sIndex = int(atomicCounterIncrement(aPhotonEmitBlockCount));
+				int index1DMap0 = convert3DTo1D(indexMap0, uParam.num0);
+				int data = (index1DMap0<<8)| PHOTON_BLOCK_NUM;
+				bEmitPhotonNumMap[sIndex] = data;
+			}
+			memoryBarrierShared();
+			barrier();
+
+			bEmitPhoton[sIndex*PHOTON_BLOCK_NUM + gl_LocalInvocationID.x] = emit;
+
+		}
+
+	}
+}

@@ -1,0 +1,116 @@
+#version 450
+
+#pragma optionNV (unroll all)
+#pragma optionNV (inline all)
+#pragma optionNV(fastmath on)
+//#pragma optionNV(fastprecision on)
+//#pragma optionNV(ifcvt all)
+#pragma optionNV(strict on)
+#extension GL_ARB_shader_draw_parameters : require
+#extension GL_ARB_bindless_texture : require
+#extension GL_ARB_shading_language_include : require
+
+
+#include </convertDimension.glsl>
+#include </Shape.glsl>
+#include </PMDefine.glsl>
+#include </Brick.glsl>
+#include </PM.glsl>
+
+layout (local_size_x = 1024, local_size_y = 1, local_size_z = 1) in;
+
+layout(std140, binding=0) uniform BrickParamUniform {
+	BrickParam uParam;
+};
+
+
+layout(std430, binding = 0) readonly restrict buffer  LightVertexBuffer{
+	Vertex bLightVertex[];
+};
+
+layout(std430, binding = 1) readonly restrict buffer  LightElementBuffer{
+	ivec3 bLightElement[];
+};
+layout(std430, binding=2) readonly restrict buffer LightMaterialBuffer {
+	Material bLightMaterial[];
+};
+
+layout(std430, binding = 3) readonly restrict buffer  VertexBuffer{
+	Vertex bVertex[];
+};
+
+layout(std430, binding = 4) readonly restrict buffer  ElementBuffer{
+	ivec3 bElement[];
+};
+layout(std430, binding=5) readonly restrict buffer MaterialBuffer {
+	Material bMaterial[];
+};
+
+layout(std430, binding = 6) readonly restrict buffer TriangleLLHeadBuffer{
+	uint bTriangleLLHead[];
+};
+layout(std430, binding = 7) readonly restrict buffer TriangleLLBuffer{
+	TriangleLL bTriangleLL[];
+};
+layout(std430, binding = 8) writeonly restrict buffer  PhotonBuffer{
+	Photon bPhoton[];
+};
+layout(std430, binding = 9) restrict buffer PhotonLLHeadBuffer{
+	uint bPhotonLLHead[];
+};
+layout(std430, binding = 10) writeonly restrict buffer PhotonLLBuffer{
+	uint bPhotonLL[];
+};
+
+
+layout(binding = 0, r8ui) uniform readonly uimage3D tBrickMap0;
+
+layout(binding = 0) uniform atomic_uint  aPhotonCount;
+
+
+#include </Marching.glsl>
+
+
+void main() 
+{
+	ivec3 index = ivec3(gl_GlobalInvocationID.xyz);
+	for(uint i = 0; i < 1; i++)
+	{
+		Vertex a = bLightVertex[bLightElement[i].x];
+		Vertex b = bLightVertex[bLightElement[i].y];
+		Vertex c = bLightVertex[bLightElement[i].z];
+		Material material = bLightMaterial[a.MaterialIndex];
+
+		float area = getArea(a.Position, b.Position, c.Position);
+		float seed = sqrt(area * float(convert3DTo1D(index, uParam.num1)));
+		{
+			vec3 w = vec3(rand(vec2(seed, b.Position.x)), rand(vec2(seed, c.Position.y)), rand(vec2(seed, a.Position.z))) + vec3(0., 0., 0.001);
+			w /= w.x + w.y + w.z;
+			vec3 p = w.x * a.Position + w.y * b.Position + w.z * c.Position;
+			vec3 n = normalize(cross(normalize(b.Position-a.Position), normalize(c.Position-a.Position)));
+			vec3 d = calcDir(n, seed);
+			Ray ray = MakeRay(p+d*0.001, d);
+
+			MarchResult result = marching(uParam, ray);
+			if(result.HitResult.IsHit == 0){
+ 				continue;
+			}
+
+			Photon photon;
+			photon.Position = result.HitResult.HitPoint;
+			setDirection(photon, ray.d);
+			Material hitMaterial = bMaterial[result.HitTriangle.a.MaterialIndex];
+			photon.Power = material.Emissive.xyz * sampling(hitMaterial, ray.d, result);
+			photon.TriangleLLIndex = result.TriangleLLIndex;
+			
+			uint photonIndex = atomicCounterIncrement(aPhotonCount);
+			bPhoton[photonIndex] = photon;
+
+			int index1d = convert3DTo1D(getIndexBrick1(uParam, photon.Position), uParam.num1);
+			uint old = atomicExchange(bPhotonLLHead[index1d], photonIndex);
+			bPhotonLL[photonIndex] = old;
+			
+			seed *= 2.3456;
+		}
+	}
+}

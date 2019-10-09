@@ -1,0 +1,99 @@
+#version 450
+
+#pragma optionNV (unroll all)
+#pragma optionNV (inline all)
+#pragma optionNV(fastmath on)
+//#pragma optionNV(fastprecision on)
+//#pragma optionNV(ifcvt all)
+#pragma optionNV(strict on)
+//#pragma optionNV(O1)
+#extension GL_ARB_shading_language_include : require
+
+#include </PMDefine.glsl>
+#include </convertDimension.glsl>
+#include </Shape.glsl>
+#include </Brick.glsl>
+#include </PM.glsl>
+
+layout (local_size_x = PHOTON_BLOCK_NUM, local_size_y = 1, local_size_z = 1) in;
+
+layout(std140, binding=0) uniform BrickParamUniform {
+	BrickParam uParam;
+};
+
+
+layout(std430, binding = 0) readonly buffer  VertexBuffer{
+	Vertex bVertex[];
+};
+
+layout(std430, binding = 1) readonly  buffer  ElementBuffer{
+	ivec3 bElement[];
+};
+layout(std430, binding=2) readonly  buffer MaterialBuffer {
+	Material bMaterial[];
+};
+
+layout(std430, binding = 3) readonly  buffer TriangleReferenceNumBuffer{
+	uint bTriangleReferenceNum[];
+};
+layout(std430, binding = 4) readonly  buffer TriangleReferenceData{
+	TriangleLL bTriangleReferenceData[];
+};
+layout(std430, binding = 5) writeonly coherent buffer  PhotonBuffer{
+	Photon bPhoton[];
+};
+layout(std430, binding = 6)  buffer PhotonLLHeadBuffer{
+	uint bPhotonLLHead[];
+};
+layout(std430, binding = 7) writeonly  buffer PhotonLLBuffer{
+	uint bPhotonLL[];
+};
+layout(std430, binding = 8) coherent  buffer  EmitPhotonBuffer{
+	Photon bEmitPhoton[];
+};
+
+layout(std430, binding = 9)  buffer PhotonDataCountBatchBuffer{
+	ivec2 bPhotonDataCountBatch[];
+};
+layout(std430, binding = 10)  buffer PhotonDataBatchBuffer{
+	Photon bPhotonDataBatch[];
+};
+
+layout(std430, binding = 11) coherent restrict buffer  PhotonMapBuffer{
+	int bEmitPhotonNumMap[];
+};
+
+layout(binding = 0, r32ui) uniform readonly uimage3D tBrickMap0;
+layout(binding = 1, r32ui) uniform readonly uimage3D tBrickMap1;
+
+layout(binding = 0) uniform atomic_uint  aPhotonEmitBlockCount;
+layout(binding = 1) uniform atomic_uint  aMarchingProcessIndex;
+layout(binding = 2) uniform atomic_uint  aPhotonStoredCount;
+
+bool MarchingCallback(in MarchResult result, inout Photon photon)
+{
+	ivec3 index1 = getIndexBrick1(uParam, photon.Position);
+	int index1D1 = convert3DTo1D(index1, uParam.num1);
+
+	uint storeIndex = atomicCounterIncrement(aPhotonStoredCount);
+	int old = int(atomicExchange(bPhotonLLHead[index1D1], int(storeIndex)));
+	if(old == -1){ }
+	else{ bPhotonLL[index1D1] = int(old); }
+
+/*	Photon store;
+	store.Position = vec3(getIndexBrick0(uParam, p));
+	setDirection(store, d);
+	store.Power = photon.Power;
+*/
+//	photon.Power.x = 999.;
+
+	bPhoton[storeIndex] = photon;
+
+	return false;
+}
+#include </StorePhotonBatch.glsl>
+#include </Marching.glsl>
+void main() 
+{
+	marching(uParam);
+}
