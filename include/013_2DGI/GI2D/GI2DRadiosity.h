@@ -79,10 +79,10 @@ struct GI2DRadiosity
 //#define RADIOSITY_TEXTURE vk::Format::eA2R10G10B10UnormPack32
 #define RADIOSITY_TEXTURE vk::Format::eB10G11R11UfloatPack32
 
-#ifdef RADIOSITY_REDUCT_RADIOSITY
-		m_radiosity_texture_size = vk::Extent2D(render_target->m_resolution.width / 2, render_target->m_resolution.height / 2);
+#ifndef RADIOSITY_REDUCT_RADIOSITY
+		m_radiosity_texture_size = gi2d_context->m_gi2d_info.m_resolution;
 #else
-		m_radiosity_texture_size = render_target->m_resolution;
+		m_radiosity_texture_size /= 2;
 #endif
 
 
@@ -112,7 +112,7 @@ struct GI2DRadiosity
 
 
 			vk::ImageCreateInfo image_info;
-			image_info.setExtent(vk::Extent3D(m_radiosity_texture_size, 1));
+			image_info.setExtent(vk::Extent3D(m_radiosity_texture_size.x, m_radiosity_texture_size.y, 1));
 			image_info.setArrayLayers(Frame_Num);
 			image_info.setFormat(RADIOSITY_TEXTURE);
 			image_info.setImageType(vk::ImageType::e2D);
@@ -392,8 +392,8 @@ struct GI2DRadiosity
 				framebuffer_info.setRenderPass(m_radiosity_pass.get());
 				framebuffer_info.setAttachmentCount(array_length(view));
 				framebuffer_info.setPAttachments(view);
-				framebuffer_info.setWidth(m_radiosity_texture_size.width);
-				framebuffer_info.setHeight(m_radiosity_texture_size.height);
+				framebuffer_info.setWidth(m_radiosity_texture_size.x);
+				framebuffer_info.setHeight(m_radiosity_texture_size.y);
 				framebuffer_info.setLayers(Frame_Num);
 
 				m_radiosity_framebuffer = context->m_device.createFramebufferUnique(framebuffer_info);
@@ -485,8 +485,8 @@ struct GI2DRadiosity
 			assembly_info2.setTopology(vk::PrimitiveTopology::eTriangleList);
 
 			// viewport
-			vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)m_radiosity_texture_size.width, (float)m_radiosity_texture_size.height, 0.f, 1.f);
-			vk::Rect2D scissor = vk::Rect2D(vk::Offset2D(0, 0), m_radiosity_texture_size);
+			vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)m_radiosity_texture_size.x, (float)m_radiosity_texture_size.y, 0.f, 1.f);
+			vk::Rect2D scissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(m_radiosity_texture_size.x, m_radiosity_texture_size.y));
 			vk::PipelineViewportStateCreateInfo viewportInfo;
 			viewportInfo.setViewportCount(1);
 			viewportInfo.setPViewports(&viewport);
@@ -665,11 +665,12 @@ struct GI2DRadiosity
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RayMarch].get());
 
 			cmd.pushConstants<float>(m_pipeline_layout[PipelineLayout_Radiosity].get(), vk::ShaderStageFlagBits::eCompute, 0, 0.25f);
-
-#ifdef RADIOSITY_FAST
-			auto num = app::calcDipatchGroups(uvec3(1024, Dir_Num, 1), uvec3(128, 1, 1));
+			
+			uint direction_ray_num = glm::max(m_radiosity_texture_size.x, m_radiosity_texture_size.y);
+#ifndef RADIOSITY_FAST
+			auto num = app::calcDipatchGroups(uvec3(direction_ray_num * 2, Dir_Num, 1), uvec3(128, 1, 1));
 #else
-			auto num = app::calcDipatchGroups(uvec3(2048, Dir_Num, 1), uvec3(128, 1, 1));
+			auto num = app::calcDipatchGroups(uvec3(direction_ray_num, Dir_Num, 1), uvec3(128, 1, 1));
 #endif
 			cmd.dispatch(num.x, num.y, num.z);
 		}
@@ -722,7 +723,7 @@ struct GI2DRadiosity
 
 		vk::RenderPassBeginInfo begin_render_Info;
 		begin_render_Info.setRenderPass(m_radiosity_pass.get());
-		begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), m_radiosity_texture_size));
+		begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(m_radiosity_texture_size.x, m_radiosity_texture_size.y)));
 		begin_render_Info.setFramebuffer(m_radiosity_framebuffer.get());
 		begin_render_Info.setClearValueCount(1);
 		auto color = vk::ClearValue(vk::ClearColorValue(std::array<uint32_t, 4>{}));
@@ -814,7 +815,7 @@ struct GI2DRadiosity
 	vk::UniqueRenderPass m_rendering_pass;
 	vk::UniqueFramebuffer m_rendering_framebuffer;
 
-	vk::Extent2D m_radiosity_texture_size;
+	uvec2 m_radiosity_texture_size;
 
 };
 

@@ -19,7 +19,7 @@
 #include <btrlib/sGlobal.h>
 #include <btrlib/cStopWatch.h>
 #include <btrlib/AllocatedMemory.h>
-
+#include <002_model/Model.h>
 //#include <applib/DrawHelper.h>
 #include <applib/sCameraManager.h>
 #include <applib/App.h>
@@ -43,16 +43,13 @@ int main()
 	camera->getData().m_far = 100000.f;
 	camera->getData().m_near = 0.01f;
 
-//	auto gpu = sGlobal::Order().getGPU(0);
-//	auto device = sGlobal::Order().getGPU(0).getDevice();
-
 	app::AppDescriptor app_desc;
-//	app_desc.m_gpu = gpu;
 	app_desc.m_window_size = uvec2(640, 480);
 	app::App app(app_desc);
 
 	auto context = app.m_context;
 
+	Model model(context, btr::getResourceAppPath() + "/model/test.glb");
 	ClearPipeline clear_render_target(context, app.m_window->getFrontBuffer());
 	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), context->m_window->getSwapchain());
 	app.setup();

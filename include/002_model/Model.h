@@ -100,7 +100,7 @@ struct Model
 		const std::string ext = std::experimental::filesystem::path(filename).extension().generic_string();
 
 		bool ret = false;
-		if (ext.compare("glb") == 0) {
+		if (ext.compare(".glb") == 0) {
 			// assume binary glTF.
 			ret = loader.LoadBinaryFromFile(&model, &err, &warn, filename.c_str());
 		}
@@ -161,9 +161,11 @@ struct Model
 				}
 
 				primitive.m_vertex_attribute.resize(gltf_primitive.attributes.size());
-				for (size_t attribute_i = 0; attribute_i < gltf_primitive.attributes.size(); attribute_i++)
+				uint attribute_i = 0;
+//				for (size_t attribute_i = 0; attribute_i < gltf_primitive.attributes.size(); attribute_i++)
+				for(const auto &attribute : gltf_primitive.attributes)
 				{
-					const auto &attribute = gltf_primitive.attributes[attribute_i];
+//					const auto &attribute = gltf_primitive.attributes[attribute_i];
 					const auto &accessor = model.accessors[attribute.second];
 					const auto &buffer_view = model.bufferViews[accessor.bufferView];
 
@@ -172,26 +174,34 @@ struct Model
 					primitive.m_vertex_attribute[attribute_i].m_buffer_count = accessor.count;
 					primitive.m_vertex_attribute[attribute_i].m_element_offset = accessor.byteOffset;
 					primitive.m_vertex_attribute[attribute_i].m_element_stride = accessor.ByteStride(buffer_view);
+					attribute_i++;
 				}
 			}
 		}
 
-// 		// Iterate through all texture declaration in glTF file
-// 		for (const auto &gltfTexture : model.textures) 
-// 		{
-// 			std::cout << "Found texture!";
-// 			Texture loadedTexture;
-// 			const auto &image = model.images[gltfTexture.source];
-// 			loadedTexture.components = image.component;
-// 			loadedTexture.width = image.width;
-// 			loadedTexture.height = image.height;
+		// Iterate through all texture declaration in glTF file
+		for (const auto &gltfTexture : model.textures) 
+ 		{
+			const auto &image = model.images[gltfTexture.source];
+			if (image.uri.empty())
+			{
+
+			}
+			else
+			{
+// 				Texture loadedTexture;
+// 				loadedTexture.components = image.component;
+// 				loadedTexture.width = image.width;
+// 				loadedTexture.height = image.height;
 // 
-// 			const auto size =
-// 				image.component * image.width * image.height * sizeof(unsigned char);
-// 			loadedTexture.image = new unsigned char[size];
-// 			memcpy(loadedTexture.image, image.image.data(), size);
-// 			textures->push_back(loadedTexture);
-// 		}
+// 				const auto size =
+// 					image.component * image.width * image.height * sizeof(unsigned char);
+// 				loadedTexture.image = new unsigned char[size];
+// 				memcpy(loadedTexture.image, image.image.data(), size);
+// 				textures->push_back(loadedTexture);
+
+			}
+		}
 // 		return ret;
 	}
 

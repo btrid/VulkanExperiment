@@ -149,6 +149,32 @@ struct PhotonMapping
 		info.cell_size = (info.area_max - info.area_min) / info.cell_size;
 
 		{
+			// sub pass
+			vk::SubpassDescription subpass;
+			subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+			subpass.setInputAttachmentCount(0);
+			subpass.setPInputAttachments(nullptr);
+			subpass.setColorAttachmentCount(0);
+			subpass.setPColorAttachments(nullptr);
+
+			vk::RenderPassCreateInfo renderpass_info;
+			renderpass_info.setSubpassCount(1);
+			renderpass_info.setPSubpasses(&subpass);
+
+			m_make_bv_renderpass = context->m_device.createRenderPassUnique(renderpass_info);
+
+			{
+				vk::FramebufferCreateInfo framebuffer_info;
+				framebuffer_info.setRenderPass(m_make_bv_renderpass.get());
+				framebuffer_info.setWidth(info.num0.x);
+				framebuffer_info.setHeight(info.num0.y);
+				framebuffer_info.setLayers(1);
+
+				m_make_bv_framebuffer = context->m_device.createFramebufferUnique(framebuffer_info);
+			}
+		}
+
+		{
 
 			{
 				auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
@@ -191,7 +217,6 @@ struct PhotonMapping
 					"PM_MakeVoxel.vert.spv",
 					"PM_MakeVoxel.geom.spv",
 					"PM_MakeVoxel.frag.spv",
-//					"PhotonMapping.comp.spv",
 					"PhotonMapping.comp.spv",
 					"PhotonMappingBounce.comp.spv",
 					"PhotonRendering.comp.spv",
@@ -200,7 +225,7 @@ struct PhotonMapping
 
 				std::string path = btr::getResourceShaderPath();
 				for (size_t i = 0; i < array_length(name); i++) {
-					m_shader[i] = loadShaderUnique(context->m_device.get(), path + name[i]);
+					m_shader[i] = loadShaderUnique(context->m_device, path + name[i]);
 				}
 			}
 
@@ -356,11 +381,11 @@ struct PhotonMapping
 					.setPRasterizationState(&rasterization_info)
 					.setPMultisampleState(&sample_info)
 					.setLayout(m_pipeline_layout[Pipeline_MakeBV].get())
-					.setRenderPass(m_make_voxel_pass.get())
+					.setRenderPass(m_make_bv_renderpass.get())
 					.setPDepthStencilState(&depth_stencil_info)
 					.setPColorBlendState(&blend_info),
 				};
-				m_pipeline[Pipeline_MakeBV] = std::move(device->createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info)[0]);
+				m_pipeline[Pipeline_MakeBV] = std::move(context->m_device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info)[0]);
 
 			}
 		}
@@ -473,11 +498,11 @@ struct PhotonMapping
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeBV].get());
 
-			for (int i = 0; i < m_m)
-			{
-			}
-			auto num = app::calcDipatchGroups(uvec3(Particle_Num, 1, 1), uvec3(1024, 1, 1));
-			cmd.dispatch(num.x, num.y, num.z);
+// 			for (int i = 0; i < m_m)
+// 			{
+// 			}
+// 			auto num = app::calcDipatchGroups(uvec3(Particle_Num, 1, 1), uvec3(1024, 1, 1));
+// 			cmd.dispatch(num.x, num.y, num.z);
 
 		}
 
@@ -511,6 +536,8 @@ struct PhotonMapping
 	std::array<vk::UniquePipelineLayout, PipelineLayout_Num> m_pipeline_layout;
 	std::array<vk::UniquePipeline, Pipeline_Num> m_pipeline;
 
+	vk::UniqueRenderPass m_make_bv_renderpass;
+	vk::UniqueFramebuffer m_make_bv_framebuffer;
 };
 int main()
 {
@@ -523,17 +550,13 @@ int main()
 	camera->getData().m_far = 5000.f;
 	camera->getData().m_near = 0.01f;
 
-	auto gpu = sGlobal::Order().getGPU(0);
-	auto device = sGlobal::Order().getGPU(0).getDevice();
-
 	app::AppDescriptor app_desc;
-	app_desc.m_gpu = gpu;
-	app_desc.m_window_size = uvec2(512, 512);
+	app_desc.m_window_size = uvec2(1024, 1024);
 	app::App app(app_desc);
 
 	auto context = app.m_context;
-	ClearPipeline clear_pipeline(context, app.m_window->getRenderTarget());
-	PresentPipeline present_pipeline(context, app.m_window->getRenderTarget(), app.m_window->getSwapchain());
+	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
+	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchain());
 
 	PhotonMapping pm(context);
 
