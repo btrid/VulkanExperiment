@@ -478,7 +478,7 @@ struct PhotonMapping
 		}
 
 		u_pm_info = context->m_uniform_memory.allocateMemory<PMInfo>({ 1, {} });
-		b_voxel_flag = context->m_storage_memory.allocateMemory<uint64_t>({ 256*256*256,{} });
+		b_voxel_map = context->m_storage_memory.allocateMemory<uint64_t>({ 256*256*256,{} });
 		b_cmd = context->m_storage_memory.allocateMemory<DrawCommand>({ 100, {} });
 		b_vertex = context->m_storage_memory.allocateMemory<Vertex>({ 10000, {} });
 		b_element = context->m_storage_memory.allocateMemory<uvec3>({ 10000, {} });
@@ -603,7 +603,7 @@ struct PhotonMapping
 	}
 
 	btr::BufferMemoryEx<PMInfo> u_pm_info;
-	btr::BufferMemoryEx<uint64_t> b_voxel_flag;
+	btr::BufferMemoryEx<uint64_t> b_voxel_map;
 	btr::BufferMemoryEx<DrawCommand> b_cmd;
 	btr::BufferMemoryEx<Vertex> b_vertex;
 	btr::BufferMemoryEx<uvec3> b_element;

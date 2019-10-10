@@ -12,6 +12,12 @@ SET output=-o ../binary
 %exe% %include% %option% %output%/PhotonMappingBounce.comp.spv PhotonMappingBounce.comp
 %exe% %include% %option% %output%/PhotonRendering.comp.spv PhotonRendering.comp
 
+%exe% %include% %option% %output%/PM_CheckVoxelMap.vert.spv PM_CheckVoxelMap.vert
+%exe% %include% %option% %output%/PM_CheckVoxelMap.geom.spv PM_CheckVoxelMap.geom
+%exe% %include% %option% %output%/PM_CheckVoxelMap.frag.spv PM_CheckVoxelMap.frag
+
+%exe% %include% %option% %output%/PM_MakeSparseVoxel.comp.spv PM_MakeSparseVoxel.comp
+
 %exe% %include% %option% %output%/PM_MakeVoxel.vert.spv PM_MakeVoxel.vert
 %exe% %include% %option% %output%/PM_MakeVoxel.geom.spv PM_MakeVoxel.geom
 %exe% %include% %option% %output%/PM_MakeVoxel.frag.spv PM_MakeVoxel.frag

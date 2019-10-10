@@ -95,6 +95,12 @@ struct Photon
 layout(set=USE_PM, binding=0, std140) uniform PMUniform {
 	PMInfo u_pm_info;
 };
+layout(set=USE_PM, binding=1, std430) restrict buffer  VoxelMapBuffer{
+	uint64_t b_voxel_map[];
+};
+layout(set=USE_PM, binding=1, std430) restrict buffer  VoxelCounterBuffer{
+	uvec4 b_voxel_counter;
+};
 
 layout(set=USE_PM, binding=10, std430) restrict buffer  CMDBuffer{
 	DrawCommand b_cmd[];
