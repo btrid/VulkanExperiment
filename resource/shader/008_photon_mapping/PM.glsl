@@ -2,9 +2,12 @@
 #ifndef PM_GLSL_
 #define PM_GLSL_
 
-#extension GL_ARB_gpu_shader_int64 : require
+#extension GL_EXT_shader_explicit_arithmetic_types : require
 #extension GL_ARB_shader_draw_parameters : require
 #extension GL_NV_shader_atomic_int64 : require
+
+//#extension GL_EXT_shader_atomic_int64 : require
+//#extension VK_KHR_shader_atomic_int64 : require
 
 #include "btrlib/convertDimension.glsl"
 #include "PMShape.glsl"
@@ -195,7 +198,8 @@ void setDirection(inout Photon p, in vec3 dir)
 	int phi = int((dir.y < 0.f ? -1.f : 1.f) * acos(dir.x / sqrt(dir.x*dir.x + dir.y*dir.y)) / pi * intmax);
 	p.Dir_16_16 = (theta & 0xffff) << 16 | ((phi & 0xffff));
 }
-vec3 getDirection(in Photon p){
+vec3 getDirection(in Photon p)
+{
 	uint theta = p.Dir_16_16 >> 16;
 	uint phi = p.Dir_16_16 & 0xFFFF;
 

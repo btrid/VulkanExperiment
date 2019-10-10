@@ -11,6 +11,7 @@
 #include <future>
 #include <chrono>
 #include <memory>
+#include <tuple>
 #include <filesystem>
 #include <btrlib/Define.h>
 #include <btrlib/cWindow.h>
@@ -31,19 +32,19 @@
 
 struct Geometry
 {
-	static std::tuple<std::vector<glm::vec3>, std::vector<glm::uvec3>> GetPlane()
+	static std::tuple<std::vector<vec3>, std::vector<uvec3>> GetPlane()
 	{
-		std::vector<glm::vec3> v(4);
+		std::vector<vec3> v(4);
 		v[0] = { -0.5f, 0.f, -0.5f };
 		v[1] = { -0.5f, 0.f, 0.5f };
 		v[2] = { 0.5f, 0.f, -0.5f };
 		v[3] = { 0.5f, 0.f, 0.5f };
 
-		std::vector<glm::uvec3> i(2);
+		std::vector<uvec3> i(2);
 		i[0] = { 0, 1, 2 };
 		i[1] = { 1, 3, 2 };
 
-		return std::tie(v, i);
+		return std::make_tuple(v, i);
 	}
 
 	static std::tuple<std::vector<vec3>, std::vector<uvec3>> GetBox()
@@ -75,7 +76,7 @@ struct Geometry
 			{ 5, 7, 6 },
 			{ 5, 6, 4 },
 		};
-		return std::tie(box, boxFace);
+		return std::make_tuple(box, boxFace);
 
 	}
 
@@ -132,7 +133,7 @@ struct Geometry
 		face.emplace_back(8, 6, 7);
 		face.emplace_back(9, 8, 1);
 
-		return std::tie(vertex, face);
+		return std::make_tuple(vertex, face);
 	}
 };
 struct TriangleList 
@@ -279,31 +280,16 @@ struct PhotonMapping
 
 			{
 				auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
-				auto storage = vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(1)
-					.setBinding(10);
 
 				vk::DescriptorSetLayoutBinding binding[] = {
-					vk::DescriptorSetLayoutBinding()
-					.setStageFlags(stage)
-					.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-					.setDescriptorCount(1)
-					.setBinding(0),
-					storage.setBinding(10),
-					storage.setBinding(11),
-					storage.setBinding(12),
-					storage.setBinding(13),
-					storage.setBinding(20),
-					storage.setBinding(21),
-					storage.setBinding(22),
-					storage.setBinding(23),
-					storage.setBinding(30),
-					storage.setBinding(31),
-					storage.setBinding(32),
-					storage.setBinding(33),
-					storage.setBinding(34),
+					vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eUniformBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(6, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(7, vk::DescriptorType::eStorageBuffer, 1, stage),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -325,7 +311,8 @@ struct PhotonMapping
 				static_assert(array_length(name) == Shader_Num, "not equal shader num");
 
 				std::string path = btr::getResourceShaderPath();
-				for (size_t i = 0; i < array_length(name); i++) {
+				for (uint32_t i = 0; i < array_length(name); i++) 
+				{
 					m_shader[i] = loadShaderUnique(context->m_device, path + name[i]);
 				}
 			}
@@ -350,7 +337,6 @@ struct PhotonMapping
 				{
 					vk::PushConstantRange constants[] = {
 						vk::PushConstantRange().setStageFlags(vk::ShaderStageFlagBits::eCompute).setSize(16).setOffset(0),
-						vk::PushConstantRange().setStageFlags(vk::ShaderStageFlagBits::eCompute).setSize(16).setOffset(16),
 					};
 					pipeline_layout_info.setPPushConstantRanges(constants);
 					pipeline_layout_info.setPushConstantRangeCount(array_length(constants));
@@ -492,6 +478,7 @@ struct PhotonMapping
 		}
 
 		u_pm_info = context->m_uniform_memory.allocateMemory<PMInfo>({ 1, {} });
+		b_voxel_flag = context->m_storage_memory.allocateMemory<uint64_t>({ 256*256*256,{} });
 		b_cmd = context->m_storage_memory.allocateMemory<DrawCommand>({ 100, {} });
 		b_vertex = context->m_storage_memory.allocateMemory<Vertex>({ 10000, {} });
 		b_element = context->m_storage_memory.allocateMemory<uvec3>({ 10000, {} });
@@ -570,6 +557,10 @@ struct PhotonMapping
 		}
 	}
 
+	void executeMakeVoxel(vk::CommandBuffer cmd)
+	{
+//		b_voxel_flag
+	}
 	void execute(vk::CommandBuffer cmd)
 	{
 		{
@@ -612,6 +603,7 @@ struct PhotonMapping
 	}
 
 	btr::BufferMemoryEx<PMInfo> u_pm_info;
+	btr::BufferMemoryEx<uint64_t> b_voxel_flag;
 	btr::BufferMemoryEx<DrawCommand> b_cmd;
 	btr::BufferMemoryEx<Vertex> b_vertex;
 	btr::BufferMemoryEx<uvec3> b_element;
