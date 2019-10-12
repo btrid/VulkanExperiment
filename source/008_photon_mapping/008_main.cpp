@@ -479,6 +479,7 @@ struct PhotonMapping
 
 		u_pm_info = context->m_uniform_memory.allocateMemory<PMInfo>({ 1, {} });
 		b_voxel_map = context->m_storage_memory.allocateMemory<uint64_t>({ 256*256*256,{} });
+		b_voxel_edge_detection_map = context->m_storage_memory.allocateMemory<uint64_t>(64*4);
 		b_cmd = context->m_storage_memory.allocateMemory<DrawCommand>({ 100, {} });
 		b_vertex = context->m_storage_memory.allocateMemory<Vertex>({ 10000, {} });
 		b_element = context->m_storage_memory.allocateMemory<uvec3>({ 10000, {} });
@@ -555,11 +556,25 @@ struct PhotonMapping
 			};
 			context->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
 		}
+
+// 		std::array<uint64_t, 64*4> edge_detection_map;
+// 		for (uint i = 0; i < 4; i++)
+// 		{
+// 			uint offset = i * 64;
+// 			for (uint y = 0; y < 8; y++)
+// 			{
+// 				for (uint x = 0; x < 8; x++)
+// 				{
+// 					uint64_t map = 0ull;
+// 					map
+// 				}
+// 			}
+// 		}
 	}
 
 	void executeMakeVoxel(vk::CommandBuffer cmd)
 	{
-//		b_voxel_flag
+		b_voxel_flag
 	}
 	void execute(vk::CommandBuffer cmd)
 	{
@@ -604,6 +619,7 @@ struct PhotonMapping
 
 	btr::BufferMemoryEx<PMInfo> u_pm_info;
 	btr::BufferMemoryEx<uint64_t> b_voxel_map;
+	btr::BufferMemoryEx<uint64_t> b_voxel_edge_detection_map;
 	btr::BufferMemoryEx<DrawCommand> b_cmd;
 	btr::BufferMemoryEx<Vertex> b_vertex;
 	btr::BufferMemoryEx<uvec3> b_element;

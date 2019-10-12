@@ -20,7 +20,7 @@ void main()
 	if(any(equal(pos, u16vec4(0))) || any(equal(pos, u16vec4(u_gi2d_info.m_resolution.xyxy-1))))
 	{
 		// 端では反射しない 
-		return; 
+		return;
 	}
 
 	uint radiance_offset = u_gi2d_info.m_resolution.x*u_gi2d_info.m_resolution.y;

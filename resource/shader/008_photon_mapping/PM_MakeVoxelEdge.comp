@@ -24,7 +24,9 @@ void main()
 		{
 			s_start = atomicAdd(b_voxel_counter.x, bitcount+1);
 
+
 			s_start++;
+
 		}
 	}
 	memoryBarrierShared();
@@ -33,4 +35,7 @@ void main()
 	if(s_map & (1ul<<gl_LocalInvocationIndex) == 0ul){ return; }
 	uint voxel_index = bitCount(bitfieldExtract(s_map, 0, gl_LocalInvocationIndex));
 	s_start + voxel_index;
+	uint old = atomicExchange(b_triangle_LL_head[bv_index1d], t_index);
+
 }
+
