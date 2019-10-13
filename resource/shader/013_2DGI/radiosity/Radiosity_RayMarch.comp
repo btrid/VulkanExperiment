@@ -88,6 +88,11 @@ Ray makeRay(in uint x, in uint y)
 	{
 		ray.area = -1;
 	}
+	if((ray.area&1)!=0)
+	{
+		ray.origin.x = ((reso.x-1)<<dir_reso_bit) -ray.origin.x;
+		ray.dir.x = -ray.dir.x;
+	} 
 	return ray;
 }
 
@@ -101,7 +106,6 @@ void main()
 	if(ray.area<=-1){ return; }
 
 	ivec2 mi = (ray.begin * ray.dir.xy + ray.origin) >> dir_reso_bit;
-	if((ray.area&1)!=0) mi.x = (reso.x-1)-mi.x;
 
 	uvec2 pos = mi;
 	bool is_inner;
@@ -137,7 +141,6 @@ void main()
 			march++;
 
 			mi = (march * ray.dir.xy + ray.origin) >> dir_reso_bit;
-			if((ray.area&1)!=0) mi.x = (reso.x-1)-mi.x;
 			if(any(notEqual(cell, mi>>3)))
 			{
 				break;
@@ -149,7 +152,6 @@ void main()
 	if(!is_inner)
 	{
 		mi = ((ray.end-1).xx * ray.dir.xy + ray.origin.xy) >> dir_reso_bit;
-		if((ray.area&1)!=0) mi.x = (reso.x-1)-mi.x;
 
 		uint index = atomicAdd(b_segment_counter.instanceCount, 1);
 		if(index%1024==0){
