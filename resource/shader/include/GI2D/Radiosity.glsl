@@ -45,7 +45,6 @@ layout(set=USE_GI2D_Radiosity, binding=2, std430) restrict buffer SegmentBuffer 
 };
 layout(set=USE_GI2D_Radiosity, binding=3, std430) restrict buffer RadianceBuffer {
 	uint64_t b_radiance[];
-//	uint b_radiance[];
 };
 layout(set=USE_GI2D_Radiosity, binding=4, std430) restrict buffer MapEdgeBuffer {
 	uint64_t b_edge[];

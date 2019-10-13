@@ -10,15 +10,15 @@ layout (local_size_x = 32, local_size_y = 32) in;
 
 shared uint32_t s_edge[2][4][4];
 shared uint64_t s_map[6][6];
-const i16vec2 g_offset[8] = 
+const i16vec2 g_offset[] = 
 {
-		i16vec2(-1,-1), 
+//		i16vec2(-1,-1), 
 		i16vec2( 0,-1),
-		i16vec2( 1,-1),
+//		i16vec2( 1,-1),
 		i16vec2( 1, 0),
-		i16vec2( 1, 1),
+//		i16vec2( 1, 1),
 		i16vec2( 0, 1),
-		i16vec2(-1, 1),
+//		i16vec2(-1, 1),
 		i16vec2(-1, 0),
 };
 
