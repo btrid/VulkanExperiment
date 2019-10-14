@@ -11,8 +11,8 @@
 #define PI radians(180.)
 #define QUARTER_PI radians(45.)
 
-#define dir_reso_bit (7)
-#define dir_reso (128)
+#define dir_reso_bit (12)
+#define dir_reso (4096)
 
 layout(push_constant) uniform Input
 {
@@ -73,7 +73,7 @@ Ray makeRay(in uint x, in uint y)
 	ray.origin.y = 0;
 	if (ray.dir.x>= ray.dir.y)
 	{
-		ray.origin.y += (reso.y-1) - int(ceil(ray.dir.y / float(ray.dir.x))) * int(x);
+		ray.origin.y += (reso.y-1) - int(ceil(ray.dir.y / float(ray.dir.x))) * int(x);		
 	}
 	else
 	{

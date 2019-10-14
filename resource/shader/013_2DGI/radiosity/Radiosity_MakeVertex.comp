@@ -75,17 +75,18 @@ void main()
 		vec3 albedo = vec3(getRGB(b_fragment[index]));
 		vec3 emissive = albedo * vec3(isEmissive(b_fragment[index])) * 0.3;
 		u64vec3 emissive_u3 = u64vec3(round(emissive * vec3(1024.)));
-		uint64_t packed = emissive_u3.x + (emissive_u3.y<<21ul) + (emissive_u3.z<<42ul);
+		uint64_t packed = emissive_u3.x + (emissive_u3.y<<20ul) + (emissive_u3.z<<40ul);
 		b_radiance[index] = packed;
 		b_radiance[index+u_gi2d_info.m_resolution.x*u_gi2d_info.m_resolution.y] = packed;
 
-		uvec2 map = gl_LocalInvocationID.xy / 8;
+/*		uvec2 map = gl_LocalInvocationID.xy / 8;
 		uvec2 b = gl_LocalInvocationID.xy % 8;
 		uint bit = b.x+b.y*8;
 		atomicOr(s_edge[map.y][map.x][bit/32], 1<<(bit%32));
+*/	
 	}
 
-	memoryBarrierShared();
+/*	memoryBarrierShared();
 	barrier();
 	if(gl_LocalInvocationID.x < 4 && gl_LocalInvocationID.y < 4)
 	{
@@ -94,4 +95,5 @@ void main()
 		uvec2 index = gl_WorkGroupID.xy * 4 + gl_LocalInvocationID.xy;
 		b_edge[index.x + index.y*u_gi2d_info.m_resolution.z] = edge;
 	}
+*/	
 }

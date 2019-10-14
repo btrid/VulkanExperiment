@@ -32,7 +32,7 @@ void main()
 
 	if(radiance1 != 0u)
 	{
-		dvec3 rad_d3 = dvec3(radiance1&ColorMask, (radiance1>>21)&ColorMask, (radiance1>>42ul)&ColorMask);
+		dvec3 rad_d3 = dvec3(radiance1&ColorMask, (radiance1>>20)&ColorMask, (radiance1>>40ul)&ColorMask);
 		vec3 rad = vec3(rad_d3 / dvec3(1024.));
 		rad = rad * vec3(getRGB(b_fragment[index.x])) * vec3(0.14);
 
@@ -44,7 +44,7 @@ void main()
 
 	if(radiance2 != 0u)
 	{
-		dvec3 rad_d3 = dvec3(radiance2&ColorMask, (radiance2>>21)&ColorMask, (radiance2>>42ul)&ColorMask);
+		dvec3 rad_d3 = dvec3(radiance2&ColorMask, (radiance2>>20)&ColorMask, (radiance2>>40ul)&ColorMask);
 		vec3 rad = vec3(rad_d3 / dvec3(1024.));
 		rad = rad * vec3(getRGB(b_fragment[index.y])) * vec3(0.14);
 

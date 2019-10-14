@@ -38,8 +38,8 @@ void main()
 
 	uint64_t radiance1 = b_radiance[index.x + (Bounce_Num%2)*u_gi2d_info.m_resolution.x*u_gi2d_info.m_resolution.y];
 	uint64_t radiance2 = b_radiance[index.y + (Bounce_Num%2)*u_gi2d_info.m_resolution.x*u_gi2d_info.m_resolution.y];
-	dvec3 rad1_d3 = dvec3(radiance1&ColorMask, (radiance1>>21)&ColorMask, (radiance1>>42)&ColorMask);
-	dvec3 rad2_d3 = dvec3(radiance2&ColorMask, (radiance2>>21)&ColorMask, (radiance2>>42)&ColorMask);
+	dvec3 rad1_d3 = dvec3(radiance1&ColorMask, (radiance1>>20)&ColorMask, (radiance1>>40)&ColorMask);
+	dvec3 rad2_d3 = dvec3(radiance2&ColorMask, (radiance2>>20)&ColorMask, (radiance2>>40)&ColorMask);
 	vec3 rad = vec3(rad1_d3 / 1024.) * vec3(getRGB(b_fragment[index.x]));
 	rad = rad + vec3(rad2_d3 / 1024.) * vec3(getRGB(b_fragment[index.y]));
 
