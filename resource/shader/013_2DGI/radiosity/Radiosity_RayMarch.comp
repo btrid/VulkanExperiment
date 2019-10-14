@@ -55,6 +55,7 @@ void calcDirEx(in float angle, out ivec2 dir)
 	f_dir = f_dir * min(abs(f_inv_dir.x), abs(f_inv_dir.y));
 
 	dir = abs(ivec2(round(f_dir * dir_reso)));
+	dir = max(dir, ivec2(1)); // 0除算回避
 
 }
 Ray makeRay(in uint x, in uint y)
@@ -63,8 +64,8 @@ Ray makeRay(in uint x, in uint y)
 	Ray ray;
 
 	float a = PI / Dir_Num;
-	uint frame_index[] ={0, 2, 1, 3};
-	float angle = fma(a, float(y), a/u_radiosity_info.frame_max * (frame_index[u_radiosity_info.frame]+0.5));
+	float frame_index[] ={0., .25, .5, .75};
+	float angle = fma(a, float(y), a*frame_index[u_radiosity_info.frame]);
 	ray.area = int(angle / HALF_PI);
 
 	calcDirEx(angle, ray.dir);
