@@ -10,7 +10,8 @@
 #define Bounce_Num (2)
 #define Frame_Num (4)
 
-#define ColorMask ((1<<10)-1)
+#define ColorShift (20)
+#define ColorMask ((1<<ColorShift)-1)
 struct GI2DRadiosityInfo
 {
 	uint ray_num_max;

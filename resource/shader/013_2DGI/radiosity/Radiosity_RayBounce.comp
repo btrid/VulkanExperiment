@@ -37,7 +37,7 @@ void main()
 		rad = rad * vec3(getRGB(b_fragment[index.x])) * vec3(0.14);
 
 		u64vec3 emissive_u3 = u64vec3(round(rad * vec3(1024.)));
-		uint64_t packed = emissive_u3.x + (emissive_u3.y<<21ul) + (emissive_u3.z<<42ul);
+		uint64_t packed = emissive_u3.x + (emissive_u3.y<<20ul) + (emissive_u3.z<<40ul);
 		if(packed != 0)
 			atomicAdd(b_radiance[index.y + (1-constant.bounce) * radiance_offset], packed);
 	}
@@ -49,7 +49,7 @@ void main()
 		rad = rad * vec3(getRGB(b_fragment[index.y])) * vec3(0.14);
 
 		u64vec3 emissive_u3 = u64vec3(round(rad * vec3(1024.)));
-		uint64_t packed = emissive_u3.x + (emissive_u3.y<<21ul) + (emissive_u3.z<<42ul);
+		uint64_t packed = emissive_u3.x + (emissive_u3.y<<20ul) + (emissive_u3.z<<40ul);
 		if(packed != 0)
 			atomicAdd(b_radiance[index.x + (1-constant.bounce) * radiance_offset], packed);
 	}
