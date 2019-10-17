@@ -27,11 +27,15 @@ struct GI2DRadiosity
 		Shader_RenderingVS,
 		Shader_RenderingFS,
 
+		Shader_DirectLightingVS,
+		Shader_DirectLightingFS,
+
 		Shader_Num,
 	};
 	enum PipelineLayout
 	{
 		PipelineLayout_Radiosity,
+		PipelineLayout_DirectLighting,
 		PipelineLayout_Num,
 	};
 	enum Pipeline
@@ -42,6 +46,8 @@ struct GI2DRadiosity
 		Pipeline_Radiosity,
 
 		Pipeline_Rendering,
+
+		Pipeline_DirectLighting,
 
 		Pipeline_Num,
 	};
@@ -280,6 +286,9 @@ struct GI2DRadiosity
 				"Radiosity_Rendering.vert.spv",
 				"Radiosity_Rendering.frag.spv",
 
+				"Radiosity_DirectLighting.vert.spv",
+				"Radiosity_DirectLighting.frag.spv",
+
 			};
 			static_assert(array_length(name) == Shader_Num, "not equal shader num");
 
@@ -306,6 +315,23 @@ struct GI2DRadiosity
 				pipeline_layout_info.setPushConstantRangeCount(array_length(ranges));
 				pipeline_layout_info.setPPushConstantRanges(ranges);
 				m_pipeline_layout[PipelineLayout_Radiosity] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
+
+			}
+			{
+				vk::DescriptorSetLayout layouts[] = {
+					gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data),
+					m_descriptor_set_layout.get(),
+				};
+				vk::PushConstantRange ranges[] = {
+					vk::PushConstantRange().setSize(32).setStageFlags(vk::ShaderStageFlagBits::eVertex| vk::ShaderStageFlagBits::eFragment),
+				};
+
+				vk::PipelineLayoutCreateInfo pipeline_layout_info;
+				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
+				pipeline_layout_info.setPSetLayouts(layouts);
+				pipeline_layout_info.setPushConstantRangeCount(array_length(ranges));
+				pipeline_layout_info.setPPushConstantRanges(ranges);
+				m_pipeline_layout[PipelineLayout_DirectLighting] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 
 			}
 
@@ -474,6 +500,10 @@ struct GI2DRadiosity
 			assembly_info2.setPrimitiveRestartEnable(VK_FALSE);
 			assembly_info2.setTopology(vk::PrimitiveTopology::eTriangleList);
 
+			vk::PipelineInputAssemblyStateCreateInfo assembly_info3;
+			assembly_info3.setPrimitiveRestartEnable(VK_FALSE);
+			assembly_info3.setTopology(vk::PrimitiveTopology::eTriangleFan);
+
 			// viewport
 			vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)m_radiosity_texture_size.x, (float)m_radiosity_texture_size.y, 0.f, 1.f);
 			vk::Rect2D scissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(m_radiosity_texture_size.x, m_radiosity_texture_size.y));
@@ -569,10 +599,23 @@ struct GI2DRadiosity
 				.setRenderPass(m_rendering_pass.get())
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info2),
+				vk::GraphicsPipelineCreateInfo()
+				.setStageCount(array_length(shader_rendering_info))
+				.setPStages(shader_rendering_info)
+				.setPVertexInputState(&vertex_input_info)
+				.setPInputAssemblyState(&assembly_info3)
+				.setPViewportState(&viewportInfo2)
+				.setPRasterizationState(&rasterization_info)
+				.setPMultisampleState(&sample_info)
+				.setLayout(m_pipeline_layout[PipelineLayout_DirectLighting].get())
+				.setRenderPass(m_rendering_pass.get())
+				.setPDepthStencilState(&depth_stencil_info)
+				.setPColorBlendState(&blend_info2),
 			};
 			auto graphics_pipeline = context->m_device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info);
 			m_pipeline[Pipeline_Radiosity] = std::move(graphics_pipeline[0]);
 			m_pipeline[Pipeline_Rendering] = std::move(graphics_pipeline[1]);
+			m_pipeline[Pipeline_DirectLighting] = std::move(graphics_pipeline[2]);
 		}
 
 	}
@@ -764,6 +807,53 @@ struct GI2DRadiosity
 
 	}
 
+	void executeDirectLighting(const vk::CommandBuffer& cmd)
+	{
+
+		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
+
+		// render_targetÇ…èëÇ≠
+		{
+
+			std::array<vk::ImageMemoryBarrier, 2> image_barrier;
+			image_barrier[0].setImage(m_render_target->m_image);
+			image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+			image_barrier[0].setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
+			image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+			image_barrier[1].setImage(m_image.get());
+			image_barrier[1].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, Frame_Num });
+			image_barrier[1].setOldLayout(vk::ImageLayout::eColorAttachmentOptimal);
+			image_barrier[1].setSrcAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+			image_barrier[1].setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+			image_barrier[1].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eFragmentShader | vk::PipelineStageFlagBits::eColorAttachmentOutput, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
+		}
+
+		vk::RenderPassBeginInfo begin_render_Info;
+		begin_render_Info.setRenderPass(m_rendering_pass.get());
+		begin_render_Info.setRenderArea(vk::Rect2D(vk::Offset2D(0, 0), m_render_target->m_resolution));
+		begin_render_Info.setFramebuffer(m_rendering_framebuffer.get());
+		cmd.beginRenderPass(begin_render_Info, vk::SubpassContents::eInline);
+
+		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_Rendering].get());
+		vk::DescriptorSet descs[] = {
+			m_gi2d_context->getDescriptorSet(),
+			m_descriptor_set.get(),
+		};
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayout_DirectLighting].get(), 0, array_length(descs), descs, 0, nullptr);
+
+		struct Light
+		{
+			vec4 pos;
+			vec4 color;
+		};
+		cmd.pushConstants<Light>(m_pipeline_layout[PipelineLayout_Radiosity].get(), vk::ShaderStageFlagBits::eCompute, 0, Light{ vec4{333}, vec4{1.f} });
+		cmd.draw(1024+1023+1023+1022, 1, 0, 0);
+
+		cmd.endRenderPass();
+
+	}
 
 	std::shared_ptr<btr::Context> m_context;
 	std::shared_ptr<GI2DContext> m_gi2d_context;

@@ -153,6 +153,7 @@ void main()
 	if(!is_inner)
 	{
 		mi = ((ray.end-1).xx * ray.dir.xy + ray.origin.xy) >> dir_reso_bit;
+//		if(all(notEqual(pos, mi))) while(true);
 
 		uint index = atomicAdd(b_segment_counter.instanceCount, 1);
 		if(index%1024==0){
