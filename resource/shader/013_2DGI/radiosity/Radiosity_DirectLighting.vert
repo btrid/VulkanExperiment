@@ -31,27 +31,40 @@ vec2 calcDirEx(in vec2 pos, out vec2 target)
 void main()
 {
 	const ivec4 reso = u_gi2d_info.m_resolution;
+	vec2 pos = constant.pos.xy;
 	vec2 target;
-	uint targetID = gl_VertexIndex%1024;
-	if(gl_VertexIndex < 1024){
+	uint targetID = gl_VertexIndex%1024-1;
+	if(gl_VertexIndex==0)
+	{
+		gl_Position = vec4(pos, 0., 1.);
+		return;
+	}
+	else if(gl_VertexIndex < 1+1024){
 		target = vec2(targetID, 0);
 	}
-	else if(gl_VertexIndex < 1024+1023){
+	else if(gl_VertexIndex < 1+1024+1023)
+	{
 		target = vec2(1023, 1+targetID);
 	}
-	else if(gl_VertexIndex < 1024+1023+1023){
+	else if(gl_VertexIndex < 1+1024+1023+1023)
+	{
 		target = vec2(1024-targetID, 1023);
 	}
-	else if(gl_VertexIndex < 1024+1023+1023+1022){
+	else
+	{
 		target = vec2(0, 1023-targetID);
 	}
 	target += 0.5;
+//	pos = vec2(333.);
+//	target = vec2(888.);
 
 	vec2 dir = calcDirEx(constant.pos.xy, target);
+//	vec2 dir = normalize(target - pos);
+	gl_Position = vec4(pos, 0., 1.);
 
-	for(int i = 1; i++ <10000; i++)
+	for(int i = 1; i <10; i++)
 	{
-		ivec2 mi = ivec2(constant.pos.xy + dir*i);
+		ivec2 mi = ivec2(pos + dir*i);
 		ivec2 cell = mi>>3;
 		uint64_t map = b_fragment_map[cell.x + cell.y * reso.z];
 
@@ -67,7 +80,7 @@ void main()
 			}
 			i++;
 
-			mi = ivec2(constant.pos.xy + dir*i);
+			mi = ivec2(pos + dir*i);
 			if(any(notEqual(cell, mi>>3)))
 			{
 				break;

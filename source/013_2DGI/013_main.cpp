@@ -440,8 +440,7 @@ int radiosity2()
 
 				gi2d_make_hierarchy.executeMakeFragmentMap(cmd);
 
-				gi2d_Radiosity.executeRadiosity(cmd);
-				gi2d_Radiosity.executeRendering(cmd);
+				gi2d_Radiosity.executeDirectLighting(cmd);
 
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;
@@ -478,8 +477,8 @@ int main()
 
 //	return pathFinding();
 //	return rigidbody();
-	return radiosity();
-//	return radiosity2();
+//	return radiosity();
+	return radiosity2();
 
 	app::AppDescriptor app_desc;
 	app_desc.m_window_size = uvec2(1024, 1024);
