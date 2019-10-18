@@ -69,6 +69,11 @@ void main()
 		}	
 	}
 
+	if(all(equal(target, pos)))
+	{ 
+		gl_Position = vec4(target / reso.xy * 2. - 1., 0., 1.);
+		return;
+	}
 	ivec2 dir = calcDirEx(pos, target);
 	pos = ivec2(pos*dir_reso);
 //	target = ivec2((target+vec2(0.5))*dir_reso);

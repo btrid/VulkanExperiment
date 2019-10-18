@@ -36,19 +36,15 @@ void main()
 		{
 			case 0:
 				target = vec2(targetID, 0);
-//				gl_Position = vec4(target / reso.xy * 2. - 1., 0., 1.);return;
 				break;
 			case 1:
 				target = vec2(1023, targetID);
-//				gl_Position = vec4(target / reso.xy * 2. - 1., 0., 1.);return;
 				break;
 			case 2:
 				target = vec2((reso.x-1)-targetID, 1023);
-//				gl_Position = vec4(target / reso.xy * 2. - 1., 0., 1.);return;
 				break;
 			case 3:
 				target = vec2(0, (reso.y-1)-targetID);
-//				gl_Position = vec4(target / reso.xy * 2. - 1., 0., 1.);return;
 				break;
 		}	
 	}
@@ -60,8 +56,6 @@ void main()
 		return;
 	}
 	vec2 dir = normalize(target - pos);
-	gl_Position = vec4(pos / reso.xy * 2. - 1., 0., 1.);
-
 	for(int march = 1; march <2000; )
 	{
 		ivec2 mi = ivec2(pos + dir*march);
@@ -74,13 +68,12 @@ void main()
 			bool attr = (map & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0ul;
 			if(attr)
 			{
-				gl_Position = vec4(ivec2(pos + dir*march) / vec2(reso.xy) * 2. - 1., 0., 1.);
+				gl_Position = vec4((pos + dir*march) / vec2(reso.xy) * 2. - 1., 0., 1.);
 				return;
 			}
 			march++;
 
 			mi = ivec2(pos + dir*march);
-//			gl_Position = vec4(vec2(pos + dir*march) / reso.xy * 2. - 1., 0., 1.);
 			if(any(notEqual(cell, mi>>3)))
 			{
 				break;
