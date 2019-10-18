@@ -315,7 +315,7 @@ void GI2DDebug::executeMakeFragment(vk::CommandBuffer cmd)
 // 			}
 // 		}
 		cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayout_PointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ vec4(light_pos.x, light_pos.y, 0.f, 0.f), vec4(1.f, 1.f, 1.f, 1.f) });
-		cmd.dispatch(1, 1, 1);
+//		cmd.dispatch(1, 1, 1);
 
 // 		cmd.pushConstants<GI2DLightData>(m_pipeline_layout[PipelineLayout_PointLight].get(), vk::ShaderStageFlagBits::eCompute, 0, GI2DLightData{ vec4(0.f, 0.f, 0.f, 0.f), vec4(1.f, 1.f, 1.f, 1.f) });
 // 		cmd.dispatch(1, 1, 1);

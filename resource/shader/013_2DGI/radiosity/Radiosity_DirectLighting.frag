@@ -20,7 +20,9 @@ layout(push_constant) uniform Constant
 layout(location = 0) out f16vec4 FragColor;
 void main()
 {
-//	vec2 pos = vec2(gl_FragCoord.xy) / 1024.;
-//	float dist = distance(constant.pos.xy, pos);
-	FragColor = f16vec4(vec3(5.), 1.0);
+//	FragColor = f16vec4(vec3(5.), 1.0);
+
+//	vec2 pos = ;
+	float dist = distance(constant.pos.xy, vec2(gl_FragCoord.xy));
+	FragColor = f16vec4(constant.color.xyz/(dist*0.01), 1.0);
 }

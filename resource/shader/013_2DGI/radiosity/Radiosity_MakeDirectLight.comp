@@ -12,12 +12,20 @@ layout(push_constant) uniform Input
 } constant;
 
 
-layout (local_size_x=1024) in;
+layout (local_size_y=1024) in;
 
+shared Emissive s_emissive;
 void main()
 {
+	if(gl_LocalInvocationIndex == 0)
+	{
+		s_emissive = b_emissive[gl_GlobalInvocationID.x];
+	}
+	memoryBarrierShared();
+	barrier();
+
 	const ivec4 reso = u_gi2d_info.m_resolution;
-	uint targetID = gl_GlobalInvocationID.x % 1024;
+	uint targetID = gl_GlobalInvocationID.y % 1024;
 	uint targetType = targetID / 1024;
 	vec2 target;
 	switch(targetType)
@@ -35,8 +43,9 @@ void main()
 			target = vec2(0, reso.y-targetID);
 			break;
 	}
+	target += vec2(0.5);
 
-	vec2 pos = vec2(555);
+	vec2 pos = vec2(s_emissive.pos) + vec2(0.5);
 	vec2 dir = normalize(target - pos);
 	vec2 inv_dir = 1./dir;
 
@@ -67,5 +76,5 @@ void main()
 		}
 	}
 
-	b_ray_target[gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*4096] = i16vec2(ipos);
+	b_ray_target[gl_GlobalInvocationID.y + gl_GlobalInvocationID.x*4096] = i16vec2(ipos);
 }

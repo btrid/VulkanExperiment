@@ -27,7 +27,9 @@ struct GI2DRadiosity
 		Shader_RenderingVS,
 		Shader_RenderingFS,
 
+		Shader_MakeDirectLight,
 		Shader_DirectLightingVS,
+		Shader_DirectLightingGS,
 		Shader_DirectLightingFS,
 
 		Shader_Num,
@@ -47,6 +49,7 @@ struct GI2DRadiosity
 
 		Pipeline_Rendering,
 
+		Pipeline_MakeDirectLight,
 		Pipeline_DirectLighting,
 
 		Pipeline_Num,
@@ -69,8 +72,15 @@ struct GI2DRadiosity
 	{
 		vk::DrawIndirectCommand cmd;
 		uvec4 bounce_cmd;
-
 	};
+
+	struct Emissive
+	{
+		i16vec2 pos;
+		i16vec2 _p;
+		f16vec4 color;
+	};
+
 	GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context, const std::shared_ptr<RenderTarget>& render_target)
 	{
 		m_context = context;
@@ -94,6 +104,9 @@ struct GI2DRadiosity
 			b_radiance = m_context->m_storage_memory.allocateMemory<uint64_t>({ size * 2,{} });
 			b_edge = m_context->m_storage_memory.allocateMemory<uint64_t>({ size / 64,{} });
 			b_albedo = m_context->m_storage_memory.allocateMemory<f16vec4>({ size,{} });
+			b_emissive_counter = m_context->m_storage_memory.allocateMemory<uvec4>(1);
+			b_emissive = m_context->m_storage_memory.allocateMemory<Emissive>(64);
+			b_ray_target = m_context->m_storage_memory.allocateMemory<i16vec2>((m_radiosity_texture_size.x*2+ m_radiosity_texture_size.y*2) * 64);
 
 			m_info.ray_num_max = 0;
 			m_info.ray_frame_max = 0;
@@ -206,7 +219,10 @@ struct GI2DRadiosity
 					vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(6, vk::DescriptorType::eCombinedImageSampler, Frame_Num, stage),
+					vk::DescriptorSetLayoutBinding(6, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(7, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(8, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(9, vk::DescriptorType::eCombinedImageSampler, Frame_Num, stage),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -233,6 +249,9 @@ struct GI2DRadiosity
 					b_radiance.getInfo(),
 					b_edge.getInfo(),
 					b_albedo.getInfo(),
+					b_emissive_counter.getInfo(),
+					b_emissive.getInfo(),
+					b_ray_target.getInfo(),
 				};
 
 				vk::WriteDescriptorSet write[] =
@@ -263,7 +282,7 @@ struct GI2DRadiosity
 						.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
 						.setDescriptorCount(1)
 						.setPImageInfo(&image_info[i])
-						.setDstBinding(6)
+						.setDstBinding(9)
 						.setDstArrayElement(i)
 						.setDstSet(m_descriptor_set.get());
 				}
@@ -286,7 +305,9 @@ struct GI2DRadiosity
 				"Radiosity_Rendering.vert.spv",
 				"Radiosity_Rendering.frag.spv",
 
+				"Radiosity_MakeDirectLight.comp.spv",
 				"Radiosity_DirectLighting.vert.spv",
+				"Radiosity_DirectLighting.geom.spv",
 				"Radiosity_DirectLighting.frag.spv",
 
 			};
@@ -339,7 +360,7 @@ struct GI2DRadiosity
 
 		// pipeline
 		{
-			std::array<vk::PipelineShaderStageCreateInfo, 3> shader_info;
+			std::array<vk::PipelineShaderStageCreateInfo, 4> shader_info;
 			shader_info[0].setModule(m_shader[Shader_MakeHitpoint].get());
 			shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[0].setPName("main");
@@ -349,6 +370,9 @@ struct GI2DRadiosity
 			shader_info[2].setModule(m_shader[Shader_RayBounce].get());
 			shader_info[2].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[2].setPName("main");
+			shader_info[3].setModule(m_shader[Shader_MakeDirectLight].get());
+			shader_info[3].setStage(vk::ShaderStageFlagBits::eCompute);
+			shader_info[3].setPName("main");
 			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 			{
 				vk::ComputePipelineCreateInfo()
@@ -360,11 +384,15 @@ struct GI2DRadiosity
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[2])
 				.setLayout(m_pipeline_layout[PipelineLayout_Radiosity].get()),
+				vk::ComputePipelineCreateInfo()
+				.setStage(shader_info[3])
+				.setLayout(m_pipeline_layout[PipelineLayout_Radiosity].get()),
 			};
 			auto compute_pipeline = context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
 			m_pipeline[Pipeline_MakeHitpoint] = std::move(compute_pipeline[0]);
 			m_pipeline[Pipeline_RayMarch] = std::move(compute_pipeline[1]);
 			m_pipeline[Pipeline_RayBounce] = std::move(compute_pipeline[2]);
+			m_pipeline[Pipeline_MakeDirectLight] = std::move(compute_pipeline[3]);
 		}
 
 		// レンダーパス
@@ -489,6 +517,18 @@ struct GI2DRadiosity
 				.setModule(m_shader[Shader_RenderingFS].get())
 				.setPName("main")
 				.setStage(vk::ShaderStageFlagBits::eFragment),
+			};	
+			
+			vk::PipelineShaderStageCreateInfo shader_direct_light_info[] =
+			{
+				vk::PipelineShaderStageCreateInfo()
+				.setModule(m_shader[Shader_DirectLightingVS].get())
+				.setPName("main")
+				.setStage(vk::ShaderStageFlagBits::eVertex),
+				vk::PipelineShaderStageCreateInfo()
+				.setModule(m_shader[Shader_DirectLightingFS].get())
+				.setPName("main")
+				.setStage(vk::ShaderStageFlagBits::eFragment),
 			};
 
 			// assembly
@@ -600,8 +640,8 @@ struct GI2DRadiosity
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info2),
 				vk::GraphicsPipelineCreateInfo()
-				.setStageCount(array_length(shader_rendering_info))
-				.setPStages(shader_rendering_info)
+				.setStageCount(array_length(shader_direct_light_info))
+				.setPStages(shader_direct_light_info)
 				.setPVertexInputState(&vertex_input_info)
 				.setPInputAssemblyState(&assembly_info3)
 				.setPViewportState(&viewportInfo2)
@@ -812,7 +852,30 @@ struct GI2DRadiosity
 
 		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
 
-		// render_targetに書く
+
+		// ライトデータ作成
+		{
+			//			cmd.updateBuffer(b_emissive_counter.getInfo().buffer);
+		}
+		// light作成
+// 		_label.insert("GI2DRadiosity::executeMakeDirectLight");
+// 		{
+// 			vk::BufferMemoryBarrier to_read[] = 
+// 			{
+// 				m_gi2d_context->b_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+// 				b_edge.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+// 			};
+// 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+// 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
+// 
+// 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RayMarch].get());
+// 
+// 			cmd.pushConstants<float>(m_pipeline_layout[PipelineLayout_Radiosity].get(), vk::ShaderStageFlagBits::eCompute, 0, 0.25f);
+// 
+// 			uint direction_ray_num = glm::max(m_radiosity_texture_size.x, m_radiosity_texture_size.y);
+// 			auto num = app::calcDipatchGroups(uvec3(direction_ray_num * 2, Dir_Num, 1), uvec3(128, 1, 1));
+// 			cmd.dispatch(num.x, num.y, num.z);
+// 		}		// render_targetに書く
 		{
 
 			std::array<vk::ImageMemoryBarrier, 1> image_barrier;
@@ -848,8 +911,20 @@ struct GI2DRadiosity
 			vec4 pos;
 			vec4 color;
 		};
-		cmd.pushConstants<Light>(m_pipeline_layout[PipelineLayout_DirectLighting].get(), vk::ShaderStageFlagBits::eVertex| vk::ShaderStageFlagBits::eFragment, 0, Light{ vec4{333}, vec4{1.f} });
-		cmd.draw(1024+1, 1, 0, 0);
+		static vec2 light_pos = vec2(666.5f);
+		float move = 3.f;
+		if (m_context->m_window->getInput().m_keyboard.isHold('A'))
+		{
+			move = 0.3f;
+		}
+		{
+			light_pos.x += m_context->m_window->getInput().m_keyboard.isHold(VK_RIGHT) * move;
+			light_pos.x -= m_context->m_window->getInput().m_keyboard.isHold(VK_LEFT) * move;
+			light_pos.y -= m_context->m_window->getInput().m_keyboard.isHold(VK_UP) * move;
+			light_pos.y += m_context->m_window->getInput().m_keyboard.isHold(VK_DOWN) * move;
+		}
+		cmd.pushConstants<Light>(m_pipeline_layout[PipelineLayout_DirectLighting].get(), vk::ShaderStageFlagBits::eVertex| vk::ShaderStageFlagBits::eFragment, 0, Light{ light_pos.xyxy(), vec4{1.f} });
+		cmd.draw(1+1023*4+1, 1, 0, 0);
 
 		cmd.endRenderPass();
 
@@ -869,6 +944,9 @@ struct GI2DRadiosity
 	btr::BufferMemoryEx<uint64_t> b_radiance;
 	btr::BufferMemoryEx<uint64_t> b_edge;
 	btr::BufferMemoryEx<f16vec4> b_albedo;
+	btr::BufferMemoryEx<uvec4> b_emissive_counter;
+	btr::BufferMemoryEx<Emissive> b_emissive;
+	btr::BufferMemoryEx<i16vec2> b_ray_target;
 
 	GI2DRadiosityInfo m_info;
 

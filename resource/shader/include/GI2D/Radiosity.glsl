@@ -54,11 +54,22 @@ layout(set=USE_GI2D_Radiosity, binding=5, std430) restrict buffer AlbedoBuffer {
 	f16vec4 b_albedo[];
 };
 
-layout(set=USE_GI2D_Radiosity, binding=6, std430) restrict buffer RayBuffer {
+struct Emissive
+{
+	i16vec2 pos;
+	i16vec2 _p;
+	f16vec4 color;
+};
+layout(set=USE_GI2D_Radiosity, binding=6, std430) restrict buffer EmissiveCounter {
+	uvec4 b_emissive_counter;
+};layout(set=USE_GI2D_Radiosity, binding=7, std430) restrict buffer EmissiveBuffer {
+	Emissive b_emissive[];
+};
+layout(set=USE_GI2D_Radiosity, binding=8, std430) restrict buffer RayBuffer {
 	i16vec2 b_ray_target[];
 };
 
-layout(set=USE_GI2D_Radiosity, binding=7) uniform sampler2D s_radiosity[Frame_Num];
+layout(set=USE_GI2D_Radiosity, binding=9) uniform sampler2D s_radiosity[Frame_Num];
 
 
 #endif

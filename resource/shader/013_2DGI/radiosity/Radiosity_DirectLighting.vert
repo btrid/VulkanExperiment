@@ -33,40 +33,45 @@ void main()
 	const ivec4 reso = u_gi2d_info.m_resolution;
 	vec2 pos = constant.pos.xy;
 	vec2 target;
-	uint targetID = gl_VertexIndex%1024-1;
-	pos = vec2(333.);
-	target = vec2(888.);
-	if(gl_VertexIndex==0)
+//	pos = vec2(333.);
+//	target = vec2(888.);
+	if(gl_VertexIndex==0||gl_VertexIndex==1024*4+1)
 	{
 		gl_Position = vec4(pos / reso.xy * 2. - 1., 0., 1.);
 		return;
 	}
-	else if(gl_VertexIndex < 1+1024){
-		target = vec2(targetID, 0);
-	}
-	else if(gl_VertexIndex < 1+1024+1023)
+	else 
 	{
-		target = vec2(1023, 1+targetID);
-	}
-	else if(gl_VertexIndex < 1+1024+1023+1023)
-	{
-		target = vec2(1024-targetID, 1023);
-	}
-	else
-	{
-		target = vec2(0, 1023-targetID);
+		uint targetID = (gl_VertexIndex-1)%1023;
+		uint targetType = (gl_VertexIndex-1)/1023;
+		switch(targetType)
+		{
+			case 0:
+				target = vec2(targetID, 0);
+//				gl_Position = vec4(target / reso.xy * 2. - 1., 0., 1.);return;
+				break;
+			case 1:
+				target = vec2(1023, targetID);
+//				gl_Position = vec4(target / reso.xy * 2. - 1., 0., 1.);return;
+				break;
+			case 2:
+				target = vec2((reso.x-1)-targetID, 1023);
+//				gl_Position = vec4(target / reso.xy * 2. - 1., 0., 1.);return;
+				break;
+			case 3:
+				target = vec2(0, (reso.y-1)-targetID);
+//				gl_Position = vec4(target / reso.xy * 2. - 1., 0., 1.);return;
+				break;
+		}	
 	}
 	target += 0.5;
-	pos = vec2(333.);
-	target = vec2(888.);
 
-//	vec2 dir = calcDirEx(constant.pos.xy, target);
 	vec2 dir = normalize(target - pos);
-	gl_Position = vec4(pos, 0., 1.);
+	gl_Position = vec4(pos / reso.xy * 2. - 1., 0., 1.);
 
-	for(int i = 1; i <10; i++)
+	for(int march = 1; march <2000; march++)
 	{
-		ivec2 mi = ivec2(pos + dir*i);
+		ivec2 mi = ivec2(pos + dir*march);
 		ivec2 cell = mi>>3;
 		uint64_t map = b_fragment_map[cell.x + cell.y * reso.z];
 
@@ -76,12 +81,13 @@ void main()
 			bool attr = (map & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0ul;
 			if(attr)
 			{
-				gl_Position = vec4(vec2(mi) / reso.xy * 2. - 1., 0., 1.);
+				gl_Position = vec4(ivec2(pos + dir*march) / vec2(reso.xy) * 2. - 1., 0., 1.);
 				return;
 			}
-			i++;
+			march++;
 
-			mi = ivec2(pos + dir*i);
+			mi = ivec2(pos + dir*march);
+//			gl_Position = vec4(vec2(pos + dir*march) / reso.xy * 2. - 1., 0., 1.);
 			if(any(notEqual(cell, mi>>3)))
 			{
 				break;
