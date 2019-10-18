@@ -1,0 +1,71 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_GI2D 0
+#define USE_GI2D_Radiosity 1
+#include "GI2D/GI2D.glsl"
+#include "GI2D/Radiosity.glsl"
+
+layout(push_constant) uniform Input
+{
+	float offset;
+} constant;
+
+
+layout (local_size_x=1024) in;
+
+void main()
+{
+	const ivec4 reso = u_gi2d_info.m_resolution;
+	uint targetID = gl_GlobalInvocationID.x % 1024;
+	uint targetType = targetID / 1024;
+	vec2 target;
+	switch(targetType)
+	{
+		case 0:
+			target = vec2(targetID, 0);
+			break;
+		case 1:
+			target = vec2(1023, 1+targetID);
+			break;
+		case 2:
+			target = vec2(reso.x-targetID, 1023);
+			break;
+		case 3:
+			target = vec2(0, reso.y-targetID);
+			break;
+	}
+
+	vec2 pos = vec2(555);
+	vec2 dir = normalize(target - pos);
+	vec2 inv_dir = 1./dir;
+
+
+	ivec2 ipos = ivec2(1 * dir + pos);
+	for(int march = 1; march < 3000;)
+	{
+		ipos = ivec2(march * dir + pos);
+		ivec2 cell = ipos>>3;
+		uint64_t map = b_fragment_map[cell.x + cell.y * reso.z];
+
+		for(;;)
+		{
+			ivec2 cell_sub = ipos%8;
+			bool attr = (map & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0ul;
+			if(attr)
+			{
+				march = 99999;
+				break;
+			}
+			march++;
+
+			ipos = ivec2(march * dir + pos);
+			if(any(notEqual(cell, ipos>>3)))
+			{
+				break;
+			}
+		}
+	}
+
+	b_ray_target[gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*4096] = i16vec2(ipos);
+}

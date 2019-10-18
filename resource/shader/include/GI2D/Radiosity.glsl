@@ -54,7 +54,12 @@ layout(set=USE_GI2D_Radiosity, binding=5, std430) restrict buffer AlbedoBuffer {
 	f16vec4 b_albedo[];
 };
 
-layout(set=USE_GI2D_Radiosity, binding=6) uniform sampler2D s_radiosity[Frame_Num];
+layout(set=USE_GI2D_Radiosity, binding=6, std430) restrict buffer RayBuffer {
+	i16vec2 b_ray_target[];
+};
+
+layout(set=USE_GI2D_Radiosity, binding=7) uniform sampler2D s_radiosity[Frame_Num];
+
 
 #endif
 #endif //Radiosity2_

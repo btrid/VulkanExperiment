@@ -34,9 +34,11 @@ void main()
 	vec2 pos = constant.pos.xy;
 	vec2 target;
 	uint targetID = gl_VertexIndex%1024-1;
+	pos = vec2(333.);
+	target = vec2(888.);
 	if(gl_VertexIndex==0)
 	{
-		gl_Position = vec4(pos, 0., 1.);
+		gl_Position = vec4(pos / reso.xy * 2. - 1., 0., 1.);
 		return;
 	}
 	else if(gl_VertexIndex < 1+1024){
@@ -55,11 +57,11 @@ void main()
 		target = vec2(0, 1023-targetID);
 	}
 	target += 0.5;
-//	pos = vec2(333.);
-//	target = vec2(888.);
+	pos = vec2(333.);
+	target = vec2(888.);
 
-	vec2 dir = calcDirEx(constant.pos.xy, target);
-//	vec2 dir = normalize(target - pos);
+//	vec2 dir = calcDirEx(constant.pos.xy, target);
+	vec2 dir = normalize(target - pos);
 	gl_Position = vec4(pos, 0., 1.);
 
 	for(int i = 1; i <10; i++)
@@ -74,9 +76,8 @@ void main()
 			bool attr = (map & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0ul;
 			if(attr)
 			{
-				gl_Position = vec4(mi, 0., 1.);
-				i = 99999999;
-				break;
+				gl_Position = vec4(vec2(mi) / reso.xy * 2. - 1., 0., 1.);
+				return;
 			}
 			i++;
 
