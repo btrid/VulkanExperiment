@@ -915,7 +915,7 @@ struct GI2DRadiosity
 		float move = 3.f;
 		if (m_context->m_window->getInput().m_keyboard.isHold('A'))
 		{
-			move = 0.3f;
+			move = 0.03f;
 		}
 		{
 			light_pos.x += m_context->m_window->getInput().m_keyboard.isHold(VK_RIGHT) * move;
