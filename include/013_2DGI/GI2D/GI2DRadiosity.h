@@ -938,9 +938,10 @@ struct GI2DRadiosity
 		cmd.pushConstants<Light>(m_pipeline_layout[PipelineLayout_DirectLighting].get(), vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, 0, Light{ light_pos.xyxy(), vec4{1.f}*1.1 });
 		cmd.draw(1 + 1023 * 4 + 1, 1, 0, 0);
 
+//		cmd.pushConstants<Light>(m_pipeline_layout[PipelineLayout_DirectLighting].get(), vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, 0, s_data[0]);
 		for (int i = 0; i < array_length(s_data); i++)
 		{
-			cmd.pushConstants<Light>(m_pipeline_layout[PipelineLayout_DirectLighting].get(), vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, 0, s_data[i]);
+//			cmd.pushConstants<Light>(m_pipeline_layout[PipelineLayout_DirectLighting].get(), vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, 0, s_data[i]);
 			cmd.draw(1 + 1023 * 4 + 1, 1, 0, 0);
 		}
 

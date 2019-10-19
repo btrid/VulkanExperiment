@@ -8,6 +8,6 @@ void sDebug::waitFence(const vk::Device& device, const vk::Fence& fence)const
 		cStopWatch timer;
 		auto result = device.waitForFences(fence, VK_TRUE, 0xffffffffLLu);
 		assert(result == vk::Result::eSuccess);
-		print(FLAG_PERFORMANCE, "wait_fence = %8.6fs\n", timer.getElapsedTimeAsSeconds());
+//		print(FLAG_PERFORMANCE, "wait_fence = %8.6fs\n", timer.getElapsedTimeAsSeconds());
 	}
 }
