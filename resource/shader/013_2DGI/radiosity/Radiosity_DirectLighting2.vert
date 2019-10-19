@@ -55,6 +55,12 @@ void main()
 		return;
 	}
 
+	// ライトの影響が小さすぎるところはしない
+//	float cutoff = 0.001;
+//	float dist = distance(vec2(target),vec2(pos));
+//	int p = int(1.+ dist * dist * 0.01)+1;
+	int p = 200;
+
 	ivec2 delta = abs(target - pos);
 	ivec3 _dir = sign(ivec3(target, 0) - ivec3(pos, 0));
 
@@ -66,12 +72,13 @@ void main()
 	uint64_t map = 0ul;
 	ivec2 cell = ivec2(999999999);
 	for(;any(notEqual(pos, target));)
+//	for(;p!=0;p--)
 	{
 		for(;;)
 		{
 			ivec2 cell_sub = pos%8;
 			bool attr = (map & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0ul;
-			if(attr)
+			if(attr || p<0)
 			{
 				gl_Position = vec4(pos / vec2(reso.xy) * 2. - 1., 0., 1.);
 				return;
@@ -79,6 +86,7 @@ void main()
 
 			if (D > 0)
 			{
+				p--;
 				pos += dir[1 - axis];
 				D = D + (2 * delta[1 - axis] - 2 * delta[axis]);
 			}
@@ -86,6 +94,7 @@ void main()
 			{
 				D = D + 2 * delta[1 - axis];
 			}
+			p--;
 			pos += dir[axis];
 
 			if(any(notEqual(cell, pos>>3)))
@@ -96,6 +105,6 @@ void main()
 		cell = pos>>3;
 		map = b_fragment_map[cell.x + cell.y * reso.z];
 	}
-//	while(true);
+	gl_Position = vec4(pos / vec2(reso.xy) * 2. - 1., 0., 1.);
 
 }

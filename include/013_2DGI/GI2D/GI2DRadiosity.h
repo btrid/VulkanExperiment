@@ -562,7 +562,7 @@ struct GI2DRadiosity
 			viewportInfo2.setPScissors(&scissor2);
 
 			vk::PipelineRasterizationStateCreateInfo rasterization_info;
-			rasterization_info.setPolygonMode(vk::PolygonMode::eLine);
+			rasterization_info.setPolygonMode(vk::PolygonMode::eFill);
 			rasterization_info.setFrontFace(vk::FrontFace::eCounterClockwise);
 			rasterization_info.setCullMode(vk::CullModeFlagBits::eNone);
 			rasterization_info.setLineWidth(1.f);
@@ -912,7 +912,7 @@ struct GI2DRadiosity
 			vec4 color;
 		};
 		static vec2 light_pos = vec2(666.5f);
-		static Light s_data[5];
+		static Light s_data[500];
 		static std::once_flag s_is_init_light;
 		std::call_once(s_is_init_light, []() 
 			{

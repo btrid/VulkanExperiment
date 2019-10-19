@@ -24,5 +24,5 @@ void main()
 
 //	vec2 pos = ;
 	float dist = distance(constant.pos.xy, vec2(gl_FragCoord.xy));
-	FragColor = f16vec4(constant.color.xyz/(dist*dist*0.01), 1.0);
+	FragColor = f16vec4(constant.color.xyz/(1.+dist*dist*0.01), 1.0);
 }

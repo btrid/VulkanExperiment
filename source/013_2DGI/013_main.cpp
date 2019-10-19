@@ -428,11 +428,15 @@ void dda()
 		}
 		printf("pos\n");
 	}
-
+	float dist = distance(vec2(target), vec2(pos0));
+	float p = 1. / (1. + dist * dist * 0.01);
+	target = vec2(pos0) + vec2(target - pos0) * p * 100.;
+	dist += 1.;
 }
 int radiosity2()
 {
 //	dda();
+
 	app::AppDescriptor app_desc;
 	app_desc.m_window_size = uvec2(1024, 1024);
 	app::App app(app_desc);
