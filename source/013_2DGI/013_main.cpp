@@ -390,8 +390,49 @@ int radiosity()
 	return 0;
 }
 
+// Bresenham's line algorithm
+// https://ja.wikipedia.org/wiki/%E3%83%96%E3%83%AC%E3%82%BC%E3%83%B3%E3%83%8F%E3%83%A0%E3%81%AE%E3%82%A2%E3%83%AB%E3%82%B4%E3%83%AA%E3%82%BA%E3%83%A0
+void dda()
+{
+	ivec2 target(0, 0);
+	ivec2 pos0(999, 777);
+	ivec2 delta = abs(target - pos0);
+	ivec3 _dir = glm::sign(ivec3(target, 0) - ivec3(pos0, 0));
+
+	int axis = delta.x >= delta.y ? 0 : 1;
+	ivec2 dir[2];
+	dir[0] = _dir.xz();
+	dir[1] = _dir.zy();
+
+	{
+		int	D = 2 * delta[1 - axis] - delta[axis];
+		ivec2 pos = pos0;
+		for (; true;)
+		{
+			if (D > 0)
+			{
+				pos += dir[1 - axis];
+				D = D + (2 * delta[1 - axis] - 2 * delta[axis]);
+			}
+			else
+			{
+				D = D + 2 * delta[1 - axis];
+			}
+			pos += dir[axis];
+
+			printf("pos=[%3d,%3d]\n", pos.x, pos.y);
+			if (all(glm::equal(pos, target)))
+			{
+				break;
+			}
+		}
+		printf("pos\n");
+	}
+
+}
 int radiosity2()
 {
+
 	app::AppDescriptor app_desc;
 	app_desc.m_window_size = uvec2(1024, 1024);
 	app::App app(app_desc);
