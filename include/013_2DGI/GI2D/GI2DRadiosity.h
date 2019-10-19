@@ -562,7 +562,7 @@ struct GI2DRadiosity
 			viewportInfo2.setPScissors(&scissor2);
 
 			vk::PipelineRasterizationStateCreateInfo rasterization_info;
-			rasterization_info.setPolygonMode(vk::PolygonMode::eFill);
+			rasterization_info.setPolygonMode(vk::PolygonMode::eLine);
 			rasterization_info.setFrontFace(vk::FrontFace::eCounterClockwise);
 			rasterization_info.setCullMode(vk::CullModeFlagBits::eNone);
 			rasterization_info.setLineWidth(1.f);
@@ -912,6 +912,18 @@ struct GI2DRadiosity
 			vec4 color;
 		};
 		static vec2 light_pos = vec2(666.5f);
+		static Light s_data[5];
+		static std::once_flag s_is_init_light;
+		std::call_once(s_is_init_light, []() 
+			{
+				vec4 colors[] = {vec4(1.f, 0.f, 0.f, 0.f), vec4(0.f, 1.f, 0.f, 0.f) , vec4(0.f, 0.f, 1.f, 0.f) };
+				for (int i = 0; i < array_length(s_data); i++)
+				{
+					auto color_index = std::rand()%3;
+					s_data[i] = Light{ vec4(std::rand() % 950 + 40, std::rand() % 950 + 40, 0.f, 0.f), colors[color_index]*1.f };
+				}
+			});
+
 		float move = 3.f;
 		if (m_context->m_window->getInput().m_keyboard.isHold('A'))
 		{
@@ -923,8 +935,14 @@ struct GI2DRadiosity
 			light_pos.y -= m_context->m_window->getInput().m_keyboard.isHold(VK_UP) * move;
 			light_pos.y += m_context->m_window->getInput().m_keyboard.isHold(VK_DOWN) * move;
 		}
-		cmd.pushConstants<Light>(m_pipeline_layout[PipelineLayout_DirectLighting].get(), vk::ShaderStageFlagBits::eVertex| vk::ShaderStageFlagBits::eFragment, 0, Light{ light_pos.xyxy(), vec4{1.f} });
-		cmd.draw(1+1023*4+1, 1, 0, 0);
+		cmd.pushConstants<Light>(m_pipeline_layout[PipelineLayout_DirectLighting].get(), vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, 0, Light{ light_pos.xyxy(), vec4{1.f}*1.1 });
+		cmd.draw(1 + 1023 * 4 + 1, 1, 0, 0);
+
+		for (int i = 0; i < array_length(s_data); i++)
+		{
+			cmd.pushConstants<Light>(m_pipeline_layout[PipelineLayout_DirectLighting].get(), vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, 0, s_data[i]);
+			cmd.draw(1 + 1023 * 4 + 1, 1, 0, 0);
+		}
 
 		cmd.endRenderPass();
 

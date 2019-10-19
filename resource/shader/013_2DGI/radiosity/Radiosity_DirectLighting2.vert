@@ -65,7 +65,7 @@ void main()
 	int	D = 2 * delta[1 - axis] - delta[axis];
 	uint64_t map = 0ul;
 	ivec2 cell = ivec2(999999999);
-	for(;all(notEqual(pos, target));)
+	for(;any(notEqual(pos, target));)
 	{
 		for(;;)
 		{
