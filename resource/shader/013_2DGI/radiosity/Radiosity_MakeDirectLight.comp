@@ -1,5 +1,8 @@
 #version 450
 #extension GL_GOOGLE_include_directive : require
+#extension GL_KHR_shader_subgroup_ballot : enable
+#extension GL_KHR_shader_subgroup_arithmetic : enable
+#extension GL_KHR_shader_subgroup_shuffle_relative : enable
 
 #define USE_GI2D 0
 #define USE_GI2D_Radiosity 1
@@ -25,56 +28,109 @@ void main()
 	barrier();
 
 	const ivec4 reso = u_gi2d_info.m_resolution;
-	uint targetID = gl_GlobalInvocationID.y % 1024;
-	uint targetType = targetID / 1024;
-	vec2 target;
-	switch(targetType)
+	ivec2 pos = ivec2(s_emissive.pos);
+	ivec2 target = ivec2(s_emissive.pos);
+	ivec2 target_dir = ivec2(1, 0);
 	{
-		case 0:
-			target = vec2(targetID, 0);
-			break;
-		case 1:
-			target = vec2(1023, 1+targetID);
-			break;
-		case 2:
-			target = vec2(reso.x-targetID, 1023);
-			break;
-		case 3:
-			target = vec2(0, reso.y-targetID);
-			break;
-	}
-	target += vec2(0.5);
-
-	vec2 pos = vec2(s_emissive.pos) + vec2(0.5);
-	vec2 dir = normalize(target - pos);
-	vec2 inv_dir = 1./dir;
-
-
-	ivec2 ipos = ivec2(1 * dir + pos);
-	for(int march = 1; march < 3000;)
-	{
-		ipos = ivec2(march * dir + pos);
-		ivec2 cell = ipos>>3;
-		uint64_t map = b_fragment_map[cell.x + cell.y * reso.z];
-
-		for(;;)
+		uint vertex_id = gl_GlobalInvocationID.y;
+		uint targetID = (vertex_id-1)%1023;
+		uint targetType = (vertex_id-1)/1023;
+		switch(targetType)
 		{
-			ivec2 cell_sub = ipos%8;
-			bool attr = (map & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0ul;
-			if(attr)
-			{
-				march = 99999;
+			case 0:
+				target = ivec2(targetID, 0);
+				target_dir = ivec2(1, 0);
 				break;
-			}
-			march++;
-
-			ipos = ivec2(march * dir + pos);
-			if(any(notEqual(cell, ipos>>3)))
-			{
+			case 1:
+				target = ivec2(1023, targetID);
+				target_dir = ivec2(0, 1);
 				break;
-			}
+			case 2:
+				target = ivec2((reso.x-1)-targetID, 1023);
+				target_dir = ivec2(-1, 0);
+				break;
+			case 3:
+				target = ivec2(0, (reso.y-1)-targetID);
+				target_dir = ivec2(0, -1);
+				break;
+			default:
+				break;
 		}
 	}
 
-	b_ray_target[gl_GlobalInvocationID.y + gl_GlobalInvocationID.x*4096] = i16vec2(ipos);
+	// ライトの影響が小さすぎるところはしない
+//	float cutoff = 0.001;
+//	float dist = distance(vec2(target),vec2(pos));
+//	int p = int(1.+ dist * dist * 0.01)+1;
+	int p = 150;
+
+	ivec2 delta = abs(target - pos);
+	ivec3 _dir = sign(ivec3(target, 0) - ivec3(pos, 0));
+
+	int axis = delta.x >= delta.y ? 0 : 1;
+	ivec2 d[2];
+	d[0] = _dir.xz;
+	d[1] = _dir.zy;
+	ivec2 dir[2];
+	dir[0] = d[1-axis]+d[axis];
+	dir[1] = d[axis];
+	int	D = 2 * delta[1 - axis] - delta[axis];
+	int deltax = 2 * delta[1 - axis] - 2 * delta[axis];
+	int deltay = 2 * delta[1 - axis];
+
+	uint64_t map = 0ul;
+	ivec2 cell = ivec2(999999999);
+	for(;p>=0;)
+	{
+		ivec2 cell_sub = pos%8;
+		bool attr = (map & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0ul;
+		if(attr)
+		{
+			break;
+		}
+
+		D += D>0 ? deltax : deltay;
+		p -= 1;
+		pos += D>0 ? dir[0] : dir[1];
+
+		if(any(notEqual(cell, pos>>3)))
+		{
+			cell = pos>>3;
+			map = b_fragment_map[cell.x + cell.y * reso.z];
+		}
+	}
+
+	uint highestActiveID = subgroupBallotFindMSB(subgroupBallot(true));
+	bool store = gl_SubgroupInvocationID==0||gl_SubgroupInvocationID==highestActiveID;
+	if(!store)
+	{
+//		vec2 fvec
+		ivec2 up_pos = subgroupShuffleUp(pos, 1);
+		ivec2 down_pos = subgroupShuffleDown(pos, 1);
+		if(dot(vec2(up_pos-pos), vec2(target_dir)) != 0.){ store = true; }
+		if(dot(vec2(pos-down_pos), vec2(target_dir)) != 0.){ store = true; }
+	}
+
+	uint local_index = subgroupExclusiveAdd(store?1:0);
+
+	// Find out which active invocation has the highest ID
+
+	uint global_index = 0;
+
+	// If we're the highest active ID
+	if (highestActiveID == gl_SubgroupInvocationID) 
+	{
+		uint local_size = local_index + (store?1:0);
+		global_index = atomicAdd(b_emissive_counter[gl_GlobalInvocationID.x].x, local_size);
+	}
+
+	global_index = subgroupMax(global_index);
+
+	if (store) 
+	{
+//		out_triangles[global_index + local_index + 0] = x;
+//		out_triangles[global_index + local_index + 1] = y;
+//		out_triangles[global_index + local_index + 2] = z;
+		b_ray_target[global_index + local_index + gl_GlobalInvocationID.x*4096] = i16vec2(pos);
+	}
 }
