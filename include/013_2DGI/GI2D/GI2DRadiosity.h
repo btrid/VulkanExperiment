@@ -13,6 +13,7 @@ struct GI2DRadiosity
 		Frame_Num = 4,
 		Dir_Num = 45,
 		Bounce_Num = 2,
+		Emissive_Num = 512,
 	};
 	enum Shader
 	{
@@ -105,7 +106,7 @@ struct GI2DRadiosity
 			b_edge = m_context->m_storage_memory.allocateMemory<uint64_t>({ size / 64,{} });
 			b_albedo = m_context->m_storage_memory.allocateMemory<f16vec4>({ size,{} });
 			b_emissive_counter = m_context->m_storage_memory.allocateMemory<uvec4>(1);
-			b_emissive = m_context->m_storage_memory.allocateMemory<Emissive>(64);
+			b_emissive = m_context->m_storage_memory.allocateMemory<Emissive>(Emissive_Num);
 			b_ray_target = m_context->m_storage_memory.allocateMemory<i16vec2>((m_radiosity_texture_size.x*2+ m_radiosity_texture_size.y*2) * 64);
 
 			m_info.ray_num_max = 0;
@@ -343,15 +344,9 @@ struct GI2DRadiosity
 					gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data),
 					m_descriptor_set_layout.get(),
 				};
-				vk::PushConstantRange ranges[] = {
-					vk::PushConstantRange().setSize(32).setStageFlags(vk::ShaderStageFlagBits::eVertex| vk::ShaderStageFlagBits::eFragment),
-				};
-
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
 				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 				pipeline_layout_info.setPSetLayouts(layouts);
-				pipeline_layout_info.setPushConstantRangeCount(array_length(ranges));
-				pipeline_layout_info.setPPushConstantRanges(ranges);
 				m_pipeline_layout[PipelineLayout_DirectLighting] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 
 			}
@@ -858,24 +853,49 @@ struct GI2DRadiosity
 			//			cmd.updateBuffer(b_emissive_counter.getInfo().buffer);
 		}
 		// lightçÏê¨
-// 		_label.insert("GI2DRadiosity::executeMakeDirectLight");
-// 		{
-// 			vk::BufferMemoryBarrier to_read[] = 
-// 			{
-// 				m_gi2d_context->b_fragment_map.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-// 				b_edge.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-// 			};
-// 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
-// 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
-// 
-// 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RayMarch].get());
-// 
-// 			cmd.pushConstants<float>(m_pipeline_layout[PipelineLayout_Radiosity].get(), vk::ShaderStageFlagBits::eCompute, 0, 0.25f);
-// 
-// 			uint direction_ray_num = glm::max(m_radiosity_texture_size.x, m_radiosity_texture_size.y);
-// 			auto num = app::calcDipatchGroups(uvec3(direction_ray_num * 2, Dir_Num, 1), uvec3(128, 1, 1));
-// 			cmd.dispatch(num.x, num.y, num.z);
-// 		}		// render_targetÇ…èëÇ≠
+		_label.insert("GI2DRadiosity::executeMakeDirectLight");
+		static std::array<Emissive, Emissive_Num> s_data;
+		{
+			static vec2 light_pos = vec2(666.5f);
+			static std::once_flag s_is_init_light;
+			std::call_once(s_is_init_light, []()
+			{
+				vec4 colors[] = { vec4(1.f, 0.f, 0.f, 0.f), vec4(0.f, 1.f, 0.f, 0.f) , vec4(0.f, 0.f, 1.f, 0.f) };
+				for (int i = 0; i < array_length(s_data); i++)
+				{
+					auto color_index = std::rand() % 3;
+					s_data[i] = Emissive{ i16vec2(std::rand() % 950 + 40, std::rand() % 950 + 40), i16vec2(), glm::packHalf4x16(colors[color_index] * 1.f) };
+				}
+			});
+
+			float move = 3.f;
+			if (m_context->m_window->getInput().m_keyboard.isHold('A'))
+			{
+				move = 0.03f;
+			}
+			{
+				light_pos.x += m_context->m_window->getInput().m_keyboard.isHold(VK_RIGHT) * move;
+				light_pos.x -= m_context->m_window->getInput().m_keyboard.isHold(VK_LEFT) * move;
+				light_pos.y -= m_context->m_window->getInput().m_keyboard.isHold(VK_UP) * move;
+				light_pos.y += m_context->m_window->getInput().m_keyboard.isHold(VK_DOWN) * move;
+			}
+			s_data[0].pos = i16vec2(light_pos);
+			s_data[0].color = glm::packHalf4x16(vec4(1.f));
+
+			vk::BufferMemoryBarrier to_write[] =
+			{
+				b_emissive.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eTransferWrite),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eVertexShader, vk::PipelineStageFlagBits::eTransfer, {}, 0, nullptr, array_length(to_write), to_write, 0, nullptr);
+
+			cmd.updateBuffer<Emissive>(b_emissive.getInfo().buffer, b_emissive.getInfo().offset, s_data);
+			vk::BufferMemoryBarrier to_read[] =
+			{
+				b_emissive.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+			};
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eVertexShader, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);
+		}
+		// render_targetÇ…èëÇ≠
 		{
 
 			std::array<vk::ImageMemoryBarrier, 1> image_barrier;
@@ -906,44 +926,7 @@ struct GI2DRadiosity
 		};
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PipelineLayout_DirectLighting].get(), 0, array_length(descs), descs, 0, nullptr);
 
-		struct Light
-		{
-			vec4 pos;
-			vec4 color;
-		};
-		static vec2 light_pos = vec2(666.5f);
-		static Light s_data[500];
-		static std::once_flag s_is_init_light;
-		std::call_once(s_is_init_light, []() 
-			{
-				vec4 colors[] = {vec4(1.f, 0.f, 0.f, 0.f), vec4(0.f, 1.f, 0.f, 0.f) , vec4(0.f, 0.f, 1.f, 0.f) };
-				for (int i = 0; i < array_length(s_data); i++)
-				{
-					auto color_index = std::rand()%3;
-					s_data[i] = Light{ vec4(std::rand() % 950 + 40, std::rand() % 950 + 40, 0.f, 0.f), colors[color_index]*1.f };
-				}
-			});
-
-		float move = 3.f;
-		if (m_context->m_window->getInput().m_keyboard.isHold('A'))
-		{
-			move = 0.03f;
-		}
-		{
-			light_pos.x += m_context->m_window->getInput().m_keyboard.isHold(VK_RIGHT) * move;
-			light_pos.x -= m_context->m_window->getInput().m_keyboard.isHold(VK_LEFT) * move;
-			light_pos.y -= m_context->m_window->getInput().m_keyboard.isHold(VK_UP) * move;
-			light_pos.y += m_context->m_window->getInput().m_keyboard.isHold(VK_DOWN) * move;
-		}
-		cmd.pushConstants<Light>(m_pipeline_layout[PipelineLayout_DirectLighting].get(), vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, 0, Light{ light_pos.xyxy(), vec4{1.f}*1.1 });
-		cmd.draw(1 + 1023 * 4 + 1, 1, 0, 0);
-
-//		cmd.pushConstants<Light>(m_pipeline_layout[PipelineLayout_DirectLighting].get(), vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, 0, s_data[0]);
-		for (int i = 0; i < array_length(s_data); i++)
-		{
-//			cmd.pushConstants<Light>(m_pipeline_layout[PipelineLayout_DirectLighting].get(), vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, 0, s_data[i]);
-			cmd.draw(1 + 1023 * 4 + 1, 1, 0, 0);
-		}
+		cmd.draw(1 + 1023 * 4 + 1, array_length(s_data), 0, 0);
 
 		cmd.endRenderPass();
 

@@ -6,6 +6,11 @@
 #include "GI2D/GI2D.glsl"
 #include "GI2D/Radiosity.glsl"
 
+layout(push_constant) uniform Constant
+{
+	vec4 pos;
+	vec4 color;
+} constant;
 
 layout(location=1) in Vertex{
 	flat i16vec2 pos;

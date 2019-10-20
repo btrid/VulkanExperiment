@@ -6,6 +6,14 @@
 #include "GI2D/GI2D.glsl"
 #include "GI2D/Radiosity.glsl"
 
+#define dir_reso_bit (12)
+#define dir_reso (4096)
+layout(push_constant) uniform Constant
+{
+	vec4 pos;
+	vec4 color;
+} constant;
+
 layout(location=0) out gl_PerVertex{
 	vec4 gl_Position;
 };
