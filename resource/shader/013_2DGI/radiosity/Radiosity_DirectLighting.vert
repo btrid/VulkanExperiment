@@ -6,9 +6,14 @@
 #include "GI2D/GI2D.glsl"
 #include "GI2D/Radiosity.glsl"
 
+layout(location = 0)in ivec2 in_pos;
+layout(location = 1)in vec4 in_color;
+
+
 layout(location=0) out gl_PerVertex{
 	vec4 gl_Position;
 };
+
 layout(location=1) out Vertex{
 	flat i16vec2 pos;
 	flat vec3 color;
@@ -17,16 +22,16 @@ layout(location=1) out Vertex{
 void main()
 {
 	const ivec4 reso = u_gi2d_info.m_resolution;
-	Emissive emissive = b_emissive[gl_InstanceIndex];
-	vs_out.pos = emissive.pos;
-	vs_out.color = vec3(emissive.color.xyz);
-	ivec2 pos = ivec2(emissive.pos);
+	vs_out.pos = i16vec2(in_pos);
+	vs_out.color = vec3(in_color.xyz);
+
+	ivec2 pos = ivec2(in_pos);
 	if(gl_VertexIndex==0||gl_VertexIndex==1024*4+1)
 	{
 		gl_Position = vec4(vec2(pos) / reso.xy * 2. - 1., 0., 1.);
 		return;
 	}
-		gl_Position = vec4(vec2(pos) / reso.xy * 2. - 1., 0., 1.);
+	gl_Position = vec4(vec2(pos) / reso.xy * 2. - 1., 0., 1.);
 
 	ivec2 target;
 	{

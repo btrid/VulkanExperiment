@@ -62,7 +62,8 @@ struct Emissive
 };
 layout(set=USE_GI2D_Radiosity, binding=6, std430) restrict buffer EmissiveCounter {
 	uvec4 b_emissive_counter;
-};layout(set=USE_GI2D_Radiosity, binding=7, std430) restrict buffer EmissiveBuffer {
+};
+layout(set=USE_GI2D_Radiosity, binding=7, std430) restrict buffer EmissiveBuffer {
 	Emissive b_emissive[];
 };
 layout(set=USE_GI2D_Radiosity, binding=8, std430) restrict buffer RayBuffer {
