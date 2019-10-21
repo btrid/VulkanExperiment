@@ -30,7 +30,6 @@ struct GI2DRadiosity
 
 		Shader_MakeDirectLight,
 		Shader_DirectLightingVS,
-		Shader_DirectLightingGS,
 		Shader_DirectLightingFS,
 
 		Shader_Num,
@@ -309,7 +308,6 @@ struct GI2DRadiosity
 
 				"Radiosity_MakeDirectLight.comp.spv",
 				"Radiosity_DirectLighting.vert.spv",
-				"Radiosity_DirectLighting.geom.spv",
 				"Radiosity_DirectLighting.frag.spv",
 
 			};
@@ -612,12 +610,12 @@ struct GI2DRadiosity
 			vk::PipelineVertexInputStateCreateInfo direct_light_vertex_input_info;
 			vk::VertexInputBindingDescription directlight_vinput_binding_desc[] = {
 				vk::VertexInputBindingDescription(0, sizeof(Emissive), vk::VertexInputRate::eInstance),
-				vk::VertexInputBindingDescription(1, sizeof(i16vec2), vk::VertexInputRate::eVertex),
+//				vk::VertexInputBindingDescription(1, sizeof(i16vec2), vk::VertexInputRate::eVertex),
 			};
 			vk::VertexInputAttributeDescription directlight_vinput_attr_desc[] = {
 				vk::VertexInputAttributeDescription(0, 0, vk::Format::eR16G16Sint, offsetof(Emissive, pos)),
 				vk::VertexInputAttributeDescription(1, 0, vk::Format::eR16G16B16A16Sfloat, offsetof(Emissive, color)),
-				vk::VertexInputAttributeDescription(2, 1, vk::Format::eR16G16Sint, 0),
+//				vk::VertexInputAttributeDescription(2, 1, vk::Format::eR16G16Sint, 0),
 			};
 			direct_light_vertex_input_info.setVertexBindingDescriptionCount(array_length(directlight_vinput_binding_desc));
 			direct_light_vertex_input_info.setPVertexBindingDescriptions(directlight_vinput_binding_desc);
@@ -896,7 +894,7 @@ struct GI2DRadiosity
 		_label.insert("GI2DRadiosity::executeMakeDirectLight");
 		{
 			std::array<vk::DrawIndirectCommand, Emissive_Num> counter;
-			for (size_t i = 0; i < counter.size(); i++)
+			for (uint32_t i = 0; i < Emissive_Num; i++)
 			{
 				counter[i] = vk::DrawIndirectCommand(0, 1, i * 4096, 0);
 			}
@@ -908,29 +906,29 @@ struct GI2DRadiosity
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eDrawIndirect |vk::PipelineStageFlagBits::eVertexInput, vk::PipelineStageFlagBits::eTransfer, {}, 0, nullptr, array_length(to_write), to_write, 0, nullptr);
 
-			cmd.updateBuffer<vk::DrawIndirectCommand>(b_emissive_counter.getInfo().buffer, b_emissive_counter.getInfo().offset, counter);
+//			cmd.updateBuffer<vk::DrawIndirectCommand>(b_emissive_counter.getInfo().buffer, b_emissive_counter.getInfo().offset, counter);
 			cmd.updateBuffer<Emissive>(v_emissive.getInfo().buffer, v_emissive.getInfo().offset, s_data);
 		}
 		// emissiveâeãøîÕàÕÇÃçÏê¨
-		{
-
-			vk::BufferMemoryBarrier to_read[] =
-			{
-				b_emissive_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderWrite),
-			};
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);
-
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeDirectLight].get());
-
-			vk::DescriptorSet descs[] = 
-			{
-				m_gi2d_context->getDescriptorSet(),
-				m_descriptor_set.get(),
-			};
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_DirectLighting].get(), 0, array_length(descs), descs, 0, nullptr);
-
-			cmd.dispatch(Emissive_Num, 4, 1);
-		}
+// 		{
+// 
+// 			vk::BufferMemoryBarrier to_read[] =
+// 			{
+// 				b_emissive_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderWrite),
+// 			};
+// 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);
+// 
+// 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeDirectLight].get());
+// 
+// 			vk::DescriptorSet descs[] = 
+// 			{
+// 				m_gi2d_context->getDescriptorSet(),
+// 				m_descriptor_set.get(),
+// 			};
+// 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_DirectLighting].get(), 0, array_length(descs), descs, 0, nullptr);
+// 
+// 			cmd.dispatch(Emissive_Num, 4, 1);
+// 		}
 		// render_targetÇ…èëÇ≠
 		{
 			vk::BufferMemoryBarrier to_read[] =
@@ -951,7 +949,9 @@ struct GI2DRadiosity
 // 			image_barrier[1].setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
 // 			image_barrier[1].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
 
-			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eDrawIndirect | vk::PipelineStageFlagBits::eVertexInput | vk::PipelineStageFlagBits::eColorAttachmentOutput, {}, {}, { array_length(to_read), to_read }, { array_length(image_barrier), image_barrier.data() });
+			auto src_stage_mask = vk::PipelineStageFlagBits::eTransfer | vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eComputeShader;
+			auto dst_stage_mask = vk::PipelineStageFlagBits::eDrawIndirect | vk::PipelineStageFlagBits::eVertexInput | vk::PipelineStageFlagBits::eColorAttachmentOutput;
+			cmd.pipelineBarrier(src_stage_mask, dst_stage_mask, {}, {}, { array_length(to_read), to_read }, { array_length(image_barrier), image_barrier.data() });
 		}
 
 		vk::RenderPassBeginInfo begin_render_Info;
@@ -969,13 +969,14 @@ struct GI2DRadiosity
 		vk::Buffer vertex_buffers[] =
 		{
 			v_emissive.getInfo().buffer,
-			vb_ray_target.getInfo().buffer,
+//			vb_ray_target.getInfo().buffer,
 		};
 		vk::DeviceSize offsets[array_length(vertex_buffers)] = {};
 
 		cmd.bindVertexBuffers(0, array_length(vertex_buffers), vertex_buffers, offsets);
 
-		cmd.drawIndirect(b_emissive_counter.getInfo().buffer, b_emissive_counter.getInfo().offset, Emissive_Num, b_emissive_counter.getDataSizeof());
+		cmd.draw(2+1023*4, 1, 0, 0);
+//		cmd.drawIndirect(b_emissive_counter.getInfo().buffer, b_emissive_counter.getInfo().offset, Emissive_Num, b_emissive_counter.getDataSizeof());
 
 		cmd.endRenderPass();
 

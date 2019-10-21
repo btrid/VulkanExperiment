@@ -23,15 +23,14 @@ void main()
 {
 	const ivec4 reso = u_gi2d_info.m_resolution;
 	vs_out.pos = i16vec2(in_pos);
-	vs_out.color = vec3(in_color.xyz);
+	vs_out.color = vec3(in_color);
 
-	ivec2 pos = ivec2(in_pos);
-	if(gl_VertexIndex==0||gl_VertexIndex==1024*4+1)
+	ivec2 pos = in_pos;
+	if(gl_VertexIndex==0||gl_VertexIndex==1024*3+1)
 	{
 		gl_Position = vec4(vec2(pos) / reso.xy * 2. - 1., 0., 1.);
 		return;
 	}
-	gl_Position = vec4(vec2(pos) / reso.xy * 2. - 1., 0., 1.);
 
 	ivec2 target;
 	{
@@ -54,11 +53,8 @@ void main()
 		}
 	}
 
-//	gl_Position = vec4(vec2(target) / reso.xy * 2. - 1., 0., 1.);
-	if(all(equal(target, pos)))
-	{ 
-		return;
-	}
+	gl_Position = vec4(vec2(target) / reso.xy * 2. - 1., 0., 1.);
+	return;
 
 	// ライトの影響が小さすぎるところはしない
 //	float cutoff = 0.001;
