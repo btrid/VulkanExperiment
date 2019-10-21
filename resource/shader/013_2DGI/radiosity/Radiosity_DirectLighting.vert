@@ -23,10 +23,10 @@ void main()
 {
 	const ivec4 reso = u_gi2d_info.m_resolution;
 	vs_out.pos = i16vec2(in_pos);
-	vs_out.color = vec3(in_color);
+	vs_out.color = vec3(1.);
 
 	ivec2 pos = in_pos;
-	if(gl_VertexIndex==0||gl_VertexIndex==1024*3+1)
+	if(gl_VertexIndex==0||gl_VertexIndex==1023*4+1)
 	{
 		gl_Position = vec4(vec2(pos) / reso.xy * 2. - 1., 0., 1.);
 		return;
