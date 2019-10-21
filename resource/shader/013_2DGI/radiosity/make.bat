@@ -17,8 +17,5 @@ SET output=-o ../../binary
 %exe% %include% %option% %output%/Radiosity_Rendering.frag.spv Radiosity_Rendering.frag
 
 %exe% %include% %option% %output%/Radiosity_DirectLighting.vert.spv Radiosity_DirectLighting.vert
-rem %exe% %include% %option% %output%/Radiosity_DirectLighting.vert.spv Radiosity_DirectLighting2.vert
 %exe% %include% %option% %output%/Radiosity_DirectLighting.frag.spv Radiosity_DirectLighting.frag
-
-%exe% %include% %option% %output%/Radiosity_MakeDirectLight.comp.spv Radiosity_MakeDirectLight.comp
 

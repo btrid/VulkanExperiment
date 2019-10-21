@@ -394,7 +394,7 @@ int radiosity()
 // https://ja.wikipedia.org/wiki/%E3%83%96%E3%83%AC%E3%82%BC%E3%83%B3%E3%83%8F%E3%83%A0%E3%81%AE%E3%82%A2%E3%83%AB%E3%82%B4%E3%83%AA%E3%82%BA%E3%83%A0
 void dda()
 {
-	ivec2 target(1024, 256);
+	ivec2 target(0, 256);
 	ivec2 pos0(333, 256);
 	ivec2 delta = abs(target - pos0);
 	ivec3 _dir = glm::sign(ivec3(target, 0) - ivec3(pos0, 0));
