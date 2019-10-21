@@ -105,7 +105,6 @@ void main()
 	store = true;
 	if(!store)
 	{
-//		vec2 fvec
 		ivec2 up_pos = subgroupShuffleUp(pos, 1);
 		ivec2 down_pos = subgroupShuffleDown(pos, 1);
 		if(dot(vec2(up_pos-pos), vec2(target_dir)) >= 1.){ store = true; }
