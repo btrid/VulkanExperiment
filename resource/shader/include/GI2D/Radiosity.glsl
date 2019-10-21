@@ -30,6 +30,7 @@ struct SegmentCounter
 	uvec4 bounce_cmd;
 };
 
+
 struct Segment
 {
 	u16vec4 pos;
@@ -54,14 +55,22 @@ layout(set=USE_GI2D_Radiosity, binding=5, std430) restrict buffer AlbedoBuffer {
 	f16vec4 b_albedo[];
 };
 
+struct EmissiveCounter
+{
+    uint vertexCount;
+    uint instanceCount;
+    uint firstVertex;
+    uint firstInstance;
+};
 struct Emissive
 {
 	i16vec2 pos;
 	i16vec2 _p;
 	f16vec4 color;
 };
-layout(set=USE_GI2D_Radiosity, binding=6, std430) restrict buffer EmissiveCounter {
-	uvec4 b_emissive_counter;
+
+layout(set=USE_GI2D_Radiosity, binding=6, std430) restrict buffer EmissiveCountBuffer {
+	EmissiveCounter b_emissive_counter[];
 };
 layout(set=USE_GI2D_Radiosity, binding=7, std430) restrict buffer EmissiveBuffer {
 	Emissive b_emissive[];

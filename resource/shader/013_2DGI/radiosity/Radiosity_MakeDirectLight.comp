@@ -102,12 +102,13 @@ void main()
 
 	uint highestActiveID = subgroupBallotFindMSB(subgroupBallot(true));
 	bool store = gl_SubgroupInvocationID==0||gl_SubgroupInvocationID==highestActiveID;
+	store = true;
 	if(!store)
 	{
 //		vec2 fvec
 		ivec2 up_pos = subgroupShuffleUp(pos, 1);
 		ivec2 down_pos = subgroupShuffleDown(pos, 1);
-		if(dot(vec2(up_pos-pos), vec2(target_dir)) != 0.){ store = true; }
+		if(dot(vec2(up_pos-pos), vec2(target_dir)) >= 1.){ store = true; }
 		if(dot(vec2(pos-down_pos), vec2(target_dir)) != 0.){ store = true; }
 	}
 
@@ -121,16 +122,13 @@ void main()
 	if (highestActiveID == gl_SubgroupInvocationID) 
 	{
 		uint local_size = local_index + (store?1:0);
-		global_index = atomicAdd(b_emissive_counter[gl_GlobalInvocationID.x].x, local_size);
+		global_index = atomicAdd(b_emissive_counter[gl_GlobalInvocationID.x].vertexCount, local_size);
 	}
 
 	global_index = subgroupMax(global_index);
 
 	if (store) 
 	{
-//		out_triangles[global_index + local_index + 0] = x;
-//		out_triangles[global_index + local_index + 1] = y;
-//		out_triangles[global_index + local_index + 2] = z;
 		b_ray_target[global_index + local_index + gl_GlobalInvocationID.x*4096] = i16vec2(pos);
 	}
 }
