@@ -929,20 +929,12 @@ struct GI2DRadiosity
 		// emissiveÉfÅ[É^çÏê¨
 		_label.insert("GI2DRadiosity::executeMakeDirectLight");
 		{
-			std::array<vk::DrawIndirectCommand, Emissive_Num> counter;
-			for (uint32_t i = 0; i < Emissive_Num; i++)
-			{
-				counter[i] = vk::DrawIndirectCommand(0, 1, i * 4096, 0);
-			}
-
 			vk::BufferMemoryBarrier to_write[] =
 			{
-				b_emissive_counter.makeMemoryBarrier(vk::AccessFlagBits::eIndirectCommandRead, vk::AccessFlagBits::eTransferWrite),
 				v_emissive.makeMemoryBarrier(vk::AccessFlagBits::eVertexAttributeRead, vk::AccessFlagBits::eTransferWrite),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eDrawIndirect |vk::PipelineStageFlagBits::eVertexInput, vk::PipelineStageFlagBits::eTransfer, {}, 0, nullptr, array_length(to_write), to_write, 0, nullptr);
 
-			cmd.updateBuffer<vk::DrawIndirectCommand>(b_emissive_counter.getInfo().buffer, b_emissive_counter.getInfo().offset, counter);
 			cmd.updateBuffer<Emissive>(v_emissive.getInfo().buffer, v_emissive.getInfo().offset, s_data);
 		}
 
@@ -950,7 +942,6 @@ struct GI2DRadiosity
 		{
 			vk::BufferMemoryBarrier to_read[] =
 			{
-				b_emissive_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
 				v_emissive.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eVertexAttributeRead),
 			};
 

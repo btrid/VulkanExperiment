@@ -492,7 +492,7 @@ void makeCircle(int Ox, int Oy, int R)
 }
 int radiosity2()
 {
-	makeCircle(40, 40, 16);
+//	makeCircle(40, 40, 16);
 //	dda();
 
 	app::AppDescriptor app_desc;

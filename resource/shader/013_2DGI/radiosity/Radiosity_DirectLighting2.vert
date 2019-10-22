@@ -42,28 +42,20 @@ void main()
 		target = ivec2(b_ray_target[target_index]);
 		switch(targetType)
 		{
-			case 0:
-				break;
-			case 1:
-				target = ivec2(target.y, -target.x);
-				break;
-			case 2:
-				target = ivec2((reso.x-1)-targetID, 1023);
-				break;
-			case 3:
-				target = ivec2(0, (reso.y-1)-targetID);
-				break;
+			case 0: target = ivec2( target.x, target.y); break;
+			case 1: target = ivec2( target.y,-target.x); break;
+			case 2: target = ivec2( target.y, target.x); break;
+			case 3: target = ivec2(-target.x, target.y); break;
+			case 4: target = ivec2(-target.x,-target.y); break;
+			case 5: target = ivec2(-target.y,-target.x); break;
+			case 6: target = ivec2(-target.y, target.x); break;
+			case 7: target = ivec2( target.x,-target.y); break;
 		}
-
 		target += pos;
 	}
 	pos += sign(target - pos);
 	ivec2 delta = abs(target - pos);
 
-	// ライトの影響が小さすぎるところはしない
-//	float cutoff = 0.001;
-//	float dist = distance(vec2(target),vec2(pos));
-//	int p = int(1.+ dist * dist * 0.01)+1;
 	int p = delta.x+delta.y;
 
 	ivec3 _dir = sign(ivec3(target, 0) - ivec3(pos, 0));
