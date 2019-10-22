@@ -435,10 +435,10 @@ void dda()
 }
 
 /* primitive Bresenham's-like algorithm */
-void method1(int Ox, int Oy, int R) 
+void makeCircle(int Ox, int Oy, int R) 
 {
 
-	int S = 4096;
+	int S = 128;
 	std::vector<char> field(S * S);
 	int x = R;
 	int y = 0;
@@ -463,19 +463,27 @@ void method1(int Ox, int Oy, int R)
 			dedx -= 2;
 		}
 
+//		assert(field[(Ox + x) + (Oy + y) * S] == 0);
 		field[(Ox + x) + (Oy + y) * S] = 1;// +theta
+//		assert(field[(Ox + x) + (Oy - y) * S] == 0);
 		field[(Ox + x) + (Oy - y) * S] = 1;// -theta
+//		assert(field[(Ox - x) + (Oy + y) * S] == 0);
 		field[(Ox - x) + (Oy + y) * S] = 1;// 180-theta
+//		assert(field[(Ox - x) + (Oy - y) * S] == 0);
 		field[(Ox - x) + (Oy - y) * S] = 1;// 180+theta
+//		assert(field[(Ox + y) + (Oy + x) * S] == 0);
 		field[(Ox + y) + (Oy + x) * S] = 1;// 90+theta
+//		assert(field[(Ox + y) + (Oy - x) * S] == 0);
 		field[(Ox + y) + (Oy - x) * S] = 1;// 90-theta
+//		assert(field[(Ox - y) + (Oy + x) * S] == 0);
 		field[(Ox - y) + (Oy + x) * S] = 1;// 270+theta
+//		assert(field[(Ox - y) + (Oy - x) * S] == 0);
 		field[(Ox - y) + (Oy - x) * S] = 1;// 270-theta
 	}
 
-	for (int _y = 0; _y < S; y++)
+	for (int _y = 0; _y < S; _y++)
 	{
-		for (int _x = 0; _x < S; x++)
+		for (int _x = 0; _x < S; _x++)
 		{
 			printf("%c", field[_x + _y * S] ? '@' : ' ');
 		}
@@ -484,7 +492,7 @@ void method1(int Ox, int Oy, int R)
 }
 int radiosity2()
 {
-	method1(1024, 1024, 512);
+	makeCircle(40, 40, 16);
 //	dda();
 
 	app::AppDescriptor app_desc;

@@ -13,7 +13,7 @@ struct GI2DRadiosity
 		Frame_Num = 4,
 		Dir_Num = 45,
 		Bounce_Num = 2,
-		Emissive_Num = 300,
+		Emissive_Num = 512,
 	};
 	enum Shader
 	{
@@ -104,7 +104,7 @@ struct GI2DRadiosity
 			b_albedo = m_context->m_storage_memory.allocateMemory<f16vec4>({ size,{} });
 			b_emissive_counter = m_context->m_vertex_memory.allocateMemory<vk::DrawIndirectCommand>(Emissive_Num);
 			v_emissive = m_context->m_vertex_memory.allocateMemory<Emissive>(Emissive_Num);
-
+			v_ray_target = m_context->m_vertex_memory.allocateMemory<i16vec2>(Emissive_Num*512);
 
 			m_info.ray_num_max = 0;
 			m_info.ray_frame_max = 0;
@@ -204,6 +204,52 @@ struct GI2DRadiosity
 			context->m_device.setDebugUtilsObjectNameEXT({ vk::ObjectType::eSampler, reinterpret_cast<uint64_t &>(m_image_sampler.get()), "GI2DRadiosity::m_image_sampler" }, context->m_dispach);
 #endif
 
+			{
+				int i = 0;
+				int R = 150;
+				{
+
+					int x = R;
+					int y = 0;
+					int err = 0;
+					int dedx = (R << 1) - 1;	// 2x-1 = 2R-1
+					int dedy = 1;	// 2y-1
+
+					std::vector<i16vec2> data;
+					data.reserve(512);
+					data.push_back(i16vec2(R, 0));
+// 					field[(Ox + R) + Oy * S] = 1;// +0
+// 					field[Ox + (Oy + R) * S] = 1;// +90
+// 					field[(Ox - R) + Oy * S] = 1;// +180
+// 					field[Ox + (Oy - R) * S] = 1;// +270
+
+					while (x > y)
+					{
+						y++;
+						err += dedy;
+						dedy += 2;
+						if (err >= dedx)
+						{
+							x--;
+							err -= dedx;
+							dedx -= 2;
+						}
+						data.push_back(i16vec2(x, y));
+// 						field[(Ox + x) + (Oy + y) * S] = 1;// +theta
+// 						field[(Ox + x) + (Oy - y) * S] = 1;// -theta
+// 						field[(Ox - x) + (Oy + y) * S] = 1;// 180-theta
+// 						field[(Ox - x) + (Oy - y) * S] = 1;// 180+theta
+// 						field[(Ox + y) + (Oy + x) * S] = 1;// 90+theta
+// 						field[(Ox + y) + (Oy - x) * S] = 1;// 90-theta
+// 						field[(Ox - y) + (Oy + x) * S] = 1;// 270+theta
+// 						field[(Ox - y) + (Oy - x) * S] = 1;// 270-theta
+					}
+
+					cmd.updateBuffer<i16vec2>(v_ray_target.getInfo().buffer, v_ray_target.getInfo().offset + sizeof(i16vec2)*512*i, data);
+					cmd.updateBuffer<vk::DrawIndirectCommand>(b_emissive_counter.getInfo().buffer, b_emissive_counter.getInfo().offset + sizeof(vk::DrawIndirectCommand)*i, { vk::DrawIndirectCommand(2 + y * 8, 1, i * 512, 0) });
+				}
+
+			}
 		}
 
 		{
@@ -249,6 +295,7 @@ struct GI2DRadiosity
 					b_albedo.getInfo(),
 					b_emissive_counter.getInfo(),
 					v_emissive.getInfo(),
+					v_ray_target.getInfo(),
 				};
 
 				vk::WriteDescriptorSet write[] =
@@ -598,10 +645,12 @@ struct GI2DRadiosity
 			vk::PipelineVertexInputStateCreateInfo direct_light_vertex_input_info;
 			vk::VertexInputBindingDescription directlight_vinput_binding_desc[] = {
 				vk::VertexInputBindingDescription(0, sizeof(Emissive), vk::VertexInputRate::eInstance),
+				vk::VertexInputBindingDescription(1, sizeof(i16vec2), vk::VertexInputRate::eVertex),
 			};
 			vk::VertexInputAttributeDescription directlight_vinput_attr_desc[] = {
 				vk::VertexInputAttributeDescription(0, 0, vk::Format::eR16G16Sint, offsetof(Emissive, pos)),
 				vk::VertexInputAttributeDescription(1, 0, vk::Format::eR16G16B16A16Sfloat, offsetof(Emissive, color)),
+				vk::VertexInputAttributeDescription(2, 1, vk::Format::eR16G16Sint, 0),
 			};
 			direct_light_vertex_input_info.setVertexBindingDescriptionCount(array_length(directlight_vinput_binding_desc));
 			direct_light_vertex_input_info.setPVertexBindingDescriptions(directlight_vinput_binding_desc);
@@ -963,6 +1012,8 @@ struct GI2DRadiosity
 	btr::BufferMemoryEx<f16vec4> b_albedo;
 	btr::BufferMemoryEx<vk::DrawIndirectCommand> b_emissive_counter;
 	btr::BufferMemoryEx<Emissive> v_emissive;
+	btr::BufferMemoryEx<i16vec2> v_ray_target;
+
 
 	GI2DRadiosityInfo m_info;
 
