@@ -235,18 +235,19 @@ struct GI2DRadiosity
 							dedx -= 2;
 						}
 						data.push_back(i16vec2(x, y));
+						// 3Žž‚©‚çŽžŒv‰ñ‚è
 // 						field[(Ox + x) + (Oy + y) * S] = 1;// +theta
-// 						field[(Ox + x) + (Oy - y) * S] = 1;// -theta
+// 						field[(Ox + y) + (Oy - x) * S] = 1;// 90-theta
+// 						field[(Ox + y) + (Oy + x) * S] = 1;// 90+theta
 // 						field[(Ox - x) + (Oy + y) * S] = 1;// 180-theta
 // 						field[(Ox - x) + (Oy - y) * S] = 1;// 180+theta
-// 						field[(Ox + y) + (Oy + x) * S] = 1;// 90+theta
-// 						field[(Ox + y) + (Oy - x) * S] = 1;// 90-theta
-// 						field[(Ox - y) + (Oy + x) * S] = 1;// 270+theta
 // 						field[(Ox - y) + (Oy - x) * S] = 1;// 270-theta
+// 						field[(Ox - y) + (Oy + x) * S] = 1;// 270+theta
+// 						field[(Ox + x) + (Oy - y) * S] = 1;// -theta
 					}
 
 					cmd.updateBuffer<i16vec2>(v_ray_target.getInfo().buffer, v_ray_target.getInfo().offset + sizeof(i16vec2)*512*i, data);
-					cmd.updateBuffer<vk::DrawIndirectCommand>(b_emissive_counter.getInfo().buffer, b_emissive_counter.getInfo().offset + sizeof(vk::DrawIndirectCommand)*i, { vk::DrawIndirectCommand(2 + y * 8, 1, i * 512, 0) });
+					cmd.updateBuffer<vk::DrawIndirectCommand>(b_emissive_counter.getInfo().buffer, b_emissive_counter.getInfo().offset + sizeof(vk::DrawIndirectCommand)*i, { vk::DrawIndirectCommand(2 + y * 8, Emissive_Num, i * 512, 0) });
 				}
 
 			}
@@ -645,12 +646,12 @@ struct GI2DRadiosity
 			vk::PipelineVertexInputStateCreateInfo direct_light_vertex_input_info;
 			vk::VertexInputBindingDescription directlight_vinput_binding_desc[] = {
 				vk::VertexInputBindingDescription(0, sizeof(Emissive), vk::VertexInputRate::eInstance),
-				vk::VertexInputBindingDescription(1, sizeof(i16vec2), vk::VertexInputRate::eVertex),
+				vk::VertexInputBindingDescription(1, sizeof(uvec4), vk::VertexInputRate::eInstance),
 			};
 			vk::VertexInputAttributeDescription directlight_vinput_attr_desc[] = {
 				vk::VertexInputAttributeDescription(0, 0, vk::Format::eR16G16Sint, offsetof(Emissive, pos)),
 				vk::VertexInputAttributeDescription(1, 0, vk::Format::eR16G16B16A16Sfloat, offsetof(Emissive, color)),
-				vk::VertexInputAttributeDescription(2, 1, vk::Format::eR16G16Sint, 0),
+				vk::VertexInputAttributeDescription(2, 1, vk::Format::eR32G32B32A32Sint, 0),
 			};
 			direct_light_vertex_input_info.setVertexBindingDescriptionCount(array_length(directlight_vinput_binding_desc));
 			direct_light_vertex_input_info.setPVertexBindingDescriptions(directlight_vinput_binding_desc);
@@ -985,13 +986,13 @@ struct GI2DRadiosity
 		vk::Buffer vertex_buffers[] =
 		{
 			v_emissive.getInfo().buffer,
+			b_emissive_counter.getInfo().buffer,
 		};
-		vk::DeviceSize offsets[] = { v_emissive.getInfo().offset};
+		vk::DeviceSize offsets[] = { v_emissive.getInfo().offset, b_emissive_counter.getInfo().offset };
 
 		cmd.bindVertexBuffers(0, array_length(vertex_buffers), vertex_buffers, offsets);
 
-		cmd.draw(2+1023*4, 1, 0, 0);
-
+		cmd.drawIndirect(b_emissive_counter.getInfo().buffer, b_emissive_counter.getInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
 		cmd.endRenderPass();
 
 	}
