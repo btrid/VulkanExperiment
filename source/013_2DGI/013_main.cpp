@@ -433,8 +433,58 @@ void dda()
 	target = vec2(pos0) + vec2(target - pos0) * p * 100.;
 	dist += 1.;
 }
+
+/* primitive Bresenham's-like algorithm */
+void method1(int Ox, int Oy, int R) 
+{
+
+	int S = 4096;
+	std::vector<char> field(S * S);
+	int x = R;
+	int y = 0;
+	int err = 0;
+	int dedx = (R << 1) - 1;	// 2x-1 = 2R-1
+	int dedy = 1;	// 2y-1
+
+	field[(Ox+R) + Oy * S] = 1;// +0
+	field[Ox + (Oy+R) * S] = 1;// +90
+	field[(Ox-R) + Oy * S] = 1;// +180
+	field[Ox + (Oy-R) * S] = 1;// +270
+
+	while (x > y) 
+	{
+		y++;
+		err += dedy;
+		dedy += 2;
+		if (err >= dedx) 
+		{
+			x--;
+			err -= dedx;
+			dedx -= 2;
+		}
+
+		field[(Ox + x) + (Oy + y) * S] = 1;// +theta
+		field[(Ox + x) + (Oy - y) * S] = 1;// -theta
+		field[(Ox - x) + (Oy + y) * S] = 1;// 180-theta
+		field[(Ox - x) + (Oy - y) * S] = 1;// 180+theta
+		field[(Ox + y) + (Oy + x) * S] = 1;// 90+theta
+		field[(Ox + y) + (Oy - x) * S] = 1;// 90-theta
+		field[(Ox - y) + (Oy + x) * S] = 1;// 270+theta
+		field[(Ox - y) + (Oy - x) * S] = 1;// 270-theta
+	}
+
+	for (int _y = 0; _y < S; y++)
+	{
+		for (int _x = 0; _x < S; x++)
+		{
+			printf("%c", field[_x + _y * S] ? '@' : ' ');
+		}
+		printf("\n");
+	}
+}
 int radiosity2()
 {
+	method1(1024, 1024, 512);
 //	dda();
 
 	app::AppDescriptor app_desc;
