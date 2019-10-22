@@ -52,8 +52,9 @@ void main()
 				break;
 		}
 	}
-
+	pos += sign(target - pos);
 	ivec2 delta = abs(target - pos);
+
 	// ライトの影響が小さすぎるところはしない
 //	float cutoff = 0.001;
 //	float dist = distance(vec2(target),vec2(pos));
@@ -61,11 +62,11 @@ void main()
 	int p = min(500, delta.x+delta.y);
 
 	ivec3 _dir = sign(ivec3(target, 0) - ivec3(pos, 0));
-
-	int axis = delta.x >= delta.y ? 0 : 1;
 	ivec2 d[2];
 	d[0] = _dir.xz;
 	d[1] = _dir.zy;
+
+	int axis = delta.x > delta.y ? 0 : 1;
 	ivec2 dir[2];
 	dir[0] = d[1-axis]+d[axis];
 	dir[1] = d[axis];
@@ -77,7 +78,13 @@ void main()
 	ivec2 cell = ivec2(999999999);
 	for(;p>=0;)
 	{
-		ivec2 cell_sub = pos-cell*8;
+		if(any(notEqual(cell, pos>>3)))
+		{
+			cell = pos>>3;
+			map = b_fragment_map[cell.x + cell.y * reso.z];
+		}
+
+		ivec2 cell_sub = pos-(cell<<3);
 		if((map & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0ul)
 		{
 			break;
@@ -86,12 +93,6 @@ void main()
 		D += D>0 ? deltax : deltay;
 		p -= D>0 ? 2 : 1;
 		pos += D>0 ? dir[0] : dir[1];
-
-		if(any(notEqual(cell, pos>>3)))
-		{
-			cell = pos>>3;
-			map = b_fragment_map[cell.x + cell.y * reso.z];
-		}
 	}
 	gl_Position = vec4((pos/dvec2(reso.xy)) * 2. -1., 0., 1.);
 

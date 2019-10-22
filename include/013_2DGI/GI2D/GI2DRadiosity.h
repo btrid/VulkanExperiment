@@ -861,7 +861,7 @@ struct GI2DRadiosity
 				}
 			});
 
-			static vec2 light_pos = vec2(240, 525);
+			static vec2 light_pos = vec2(9.5, 525);
 			float move = 3.f;
 			if (m_context->m_window->getInput().m_keyboard.isHold('A'))
 			{
