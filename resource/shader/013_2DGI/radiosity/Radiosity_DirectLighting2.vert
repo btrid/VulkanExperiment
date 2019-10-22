@@ -33,23 +33,27 @@ void main()
 		return;
 	}
 
-	uint vertex_num = (in_param.x - 2)/8;
+	uint vertex_num = (b_emissive_counter[0].vertexCount - 2)/8;
 	ivec2 target = ivec2(0);
 	{
 		uint targetID = (gl_VertexIndex-1)%vertex_num;
 		uint targetType = (gl_VertexIndex-1)/vertex_num;
 		uint target_index = ((targetType%2)==0)?targetID:(vertex_num-targetID);
+//		uint target_index = targetID;
 		target = ivec2(b_ray_target[target_index]);
-		switch(targetType)
+		switch(targetType%8)
 		{
 			case 0: target = ivec2( target.x, target.y); break;
-			case 1: target = ivec2( target.y,-target.x); break;
-			case 2: target = ivec2( target.y, target.x); break;
+			case 1: target = ivec2( target.y, target.x); break;
+			case 2: target = ivec2(-target.y, target.x); break;
 			case 3: target = ivec2(-target.x, target.y); break;
 			case 4: target = ivec2(-target.x,-target.y); break;
 			case 5: target = ivec2(-target.y,-target.x); break;
-			case 6: target = ivec2(-target.y, target.x); break;
+			case 6: target = ivec2( target.y,-target.x); break;
 			case 7: target = ivec2( target.x,-target.y); break;
+//			default:
+//				gl_Position = vec4(vec2(pos) / reso.xy * 2. - 1., 0., 1.);
+//				return;
 		}
 		target += pos;
 	}
@@ -73,7 +77,8 @@ void main()
 
 	uint64_t map = 0ul;
 	ivec2 cell = ivec2(999999999);
-	for(;p>=0;)
+//	for(;p>=0;)
+	for(;any(notEqual(pos, target));)
 	{
 		if(any(notEqual(cell, pos>>3)))
 		{

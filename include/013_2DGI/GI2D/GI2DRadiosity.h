@@ -237,8 +237,8 @@ struct GI2DRadiosity
 						data.push_back(i16vec2(x, y));
 						// 3Žž‚©‚çŽžŒv‰ñ‚è
 // 						field[(Ox + x) + (Oy + y) * S] = 1;// +theta
-// 						field[(Ox + y) + (Oy - x) * S] = 1;// 90-theta
 // 						field[(Ox + y) + (Oy + x) * S] = 1;// 90+theta
+// 						field[(Ox + y) + (Oy - x) * S] = 1;// 90-theta
 // 						field[(Ox - x) + (Oy + y) * S] = 1;// 180-theta
 // 						field[(Ox - x) + (Oy - y) * S] = 1;// 180+theta
 // 						field[(Ox - y) + (Oy - x) * S] = 1;// 270-theta
@@ -247,95 +247,94 @@ struct GI2DRadiosity
 					}
 
 					cmd.updateBuffer<i16vec2>(v_ray_target.getInfo().buffer, v_ray_target.getInfo().offset + sizeof(i16vec2)*512*i, data);
-					cmd.updateBuffer<vk::DrawIndirectCommand>(b_emissive_counter.getInfo().buffer, b_emissive_counter.getInfo().offset + sizeof(vk::DrawIndirectCommand)*i, { vk::DrawIndirectCommand(2 + y * 8, Emissive_Num, i * 512, 0) });
+					cmd.updateBuffer<vk::DrawIndirectCommand>(b_emissive_counter.getInfo().buffer, b_emissive_counter.getInfo().offset + sizeof(vk::DrawIndirectCommand)*i, { vk::DrawIndirectCommand(2 + y * 8, 1, i * 512, 0) });
 				}
 
 			}
 		}
 
+		// descriptor
 		{
-
+			auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
+			vk::DescriptorSetLayoutBinding binding[] = 
 			{
-				auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
-				vk::DescriptorSetLayoutBinding binding[] = {
-					vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eUniformBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(6, vk::DescriptorType::eStorageBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(7, vk::DescriptorType::eStorageBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(8, vk::DescriptorType::eStorageBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(9, vk::DescriptorType::eCombinedImageSampler, Frame_Num, stage),
-				};
-				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
-				desc_layout_info.setBindingCount(array_length(binding));
-				desc_layout_info.setPBindings(binding);
-				m_descriptor_set_layout = context->m_device.createDescriptorSetLayoutUnique(desc_layout_info);
+				vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eUniformBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(6, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(7, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(8, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(9, vk::DescriptorType::eCombinedImageSampler, Frame_Num, stage),
+			};
+			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
+			desc_layout_info.setBindingCount(array_length(binding));
+			desc_layout_info.setPBindings(binding);
+			m_descriptor_set_layout = context->m_device.createDescriptorSetLayoutUnique(desc_layout_info);
+		}
+		// descriptor set
+		{
+			vk::DescriptorSetLayout layouts[] = {
+				m_descriptor_set_layout.get(),
+			};
+			vk::DescriptorSetAllocateInfo desc_info;
+			desc_info.setDescriptorPool(context->m_descriptor_pool.get());
+			desc_info.setDescriptorSetCount(array_length(layouts));
+			desc_info.setPSetLayouts(layouts);
+			m_descriptor_set = std::move(context->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
 
-			}
+			vk::DescriptorBufferInfo uniforms[] = {
+				u_radiosity_info.getInfo(),
+			};
+			vk::DescriptorBufferInfo storages[] = {
+				b_segment_counter.getInfo(),
+				b_segment.getInfo(),
+				b_radiance.getInfo(),
+				b_edge.getInfo(),
+				b_albedo.getInfo(),
+				b_emissive_counter.getInfo(),
+				v_emissive.getInfo(),
+				v_ray_target.getInfo(),
+			};
+
+			vk::WriteDescriptorSet write[] =
 			{
-				vk::DescriptorSetLayout layouts[] = {
-					m_descriptor_set_layout.get(),
-				};
-				vk::DescriptorSetAllocateInfo desc_info;
-				desc_info.setDescriptorPool(context->m_descriptor_pool.get());
-				desc_info.setDescriptorSetCount(array_length(layouts));
-				desc_info.setPSetLayouts(layouts);
-				m_descriptor_set = std::move(context->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+				.setDescriptorCount(array_length(uniforms))
+				.setPBufferInfo(uniforms)
+				.setDstBinding(0)
+				.setDstSet(m_descriptor_set.get()),
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(array_length(storages))
+				.setPBufferInfo(storages)
+				.setDstBinding(1)
+				.setDstSet(m_descriptor_set.get()),
+			};
+			context->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
 
-				vk::DescriptorBufferInfo uniforms[] = {
-					u_radiosity_info.getInfo(),
-				};
-				vk::DescriptorBufferInfo storages[] = {
-					b_segment_counter.getInfo(),
-					b_segment.getInfo(),
-					b_radiance.getInfo(),
-					b_edge.getInfo(),
-					b_albedo.getInfo(),
-					b_emissive_counter.getInfo(),
-					v_emissive.getInfo(),
-					v_ray_target.getInfo(),
-				};
+			std::array<vk::WriteDescriptorSet, Frame_Num> write_desc;
+			std::array<vk::DescriptorImageInfo, Frame_Num> image_info;
+			for (int i = 0; i < Frame_Num; i++)
+			{
+				image_info[i] = vk::DescriptorImageInfo(m_image_sampler.get(), m_image_view[i].get(), vk::ImageLayout::eShaderReadOnlyOptimal);
 
-				vk::WriteDescriptorSet write[] =
-				{
+				write_desc[i] =
 					vk::WriteDescriptorSet()
-					.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-					.setDescriptorCount(array_length(uniforms))
-					.setPBufferInfo(uniforms)
-					.setDstBinding(0)
-					.setDstSet(m_descriptor_set.get()),
-					vk::WriteDescriptorSet()
-					.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-					.setDescriptorCount(array_length(storages))
-					.setPBufferInfo(storages)
-					.setDstBinding(1)
-					.setDstSet(m_descriptor_set.get()),
-				};
-				context->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
-
-				std::array<vk::WriteDescriptorSet, Frame_Num> write_desc;
-				std::array<vk::DescriptorImageInfo, Frame_Num> image_info;
-				for (int i = 0; i < Frame_Num; i++)
-				{
-					image_info[i] = vk::DescriptorImageInfo(m_image_sampler.get(), m_image_view[i].get(), vk::ImageLayout::eShaderReadOnlyOptimal);
-
-					write_desc[i] =
-						vk::WriteDescriptorSet()
-						.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-						.setDescriptorCount(1)
-						.setPImageInfo(&image_info[i])
-						.setDstBinding(9)
-						.setDstArrayElement(i)
-						.setDstSet(m_descriptor_set.get());
-				}
-				context->m_device.updateDescriptorSets(array_length(write_desc), write_desc.data(), 0, nullptr);
+					.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+					.setDescriptorCount(1)
+					.setPImageInfo(&image_info[i])
+					.setDstBinding(9)
+					.setDstArrayElement(i)
+					.setDstSet(m_descriptor_set.get());
 			}
-
+			context->m_device.updateDescriptorSets(array_length(write_desc), write_desc.data(), 0, nullptr);
 		}
 
+		// shader
 		{
 			const char* name[] =
 			{
@@ -395,7 +394,7 @@ struct GI2DRadiosity
 			
 		}
 
-		// pipeline
+		// compute pipeline
 		{
 			std::array<vk::PipelineShaderStageCreateInfo, 3> shader_info;
 			shader_info[0].setModule(m_shader[Shader_MakeHitpoint].get());
@@ -520,6 +519,7 @@ struct GI2DRadiosity
 			m_rendering_framebuffer = context->m_device.createFramebufferUnique(framebuffer_info);
 		}
 
+		// graphics pipeline
 		{
 			vk::PipelineShaderStageCreateInfo shader_info[] =
 			{
