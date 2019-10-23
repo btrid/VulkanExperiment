@@ -8,7 +8,7 @@
 
 layout(location = 0)in ivec2 in_pos;
 layout(location = 1)in vec4 in_color;
-
+layout(location = 2)in ivec4 in_param;
 
 layout(location=0) out gl_PerVertex{
 	vec4 gl_Position;
@@ -59,7 +59,7 @@ void main()
 //	float cutoff = 0.001;
 //	float dist = distance(vec2(target),vec2(pos));
 //	int p = int(1.+ dist * dist * 0.01)+1;
-	int p = min(500, delta.x+delta.y);
+	int p = 200;
 
 	ivec3 _dir = sign(ivec3(target, 0) - ivec3(pos, 0));
 	ivec2 d[2];

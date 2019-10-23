@@ -13,7 +13,7 @@ struct GI2DRadiosity
 		Frame_Num = 4,
 		Dir_Num = 45,
 		Bounce_Num = 2,
-		Emissive_Num = 512,
+		Emissive_Num = 1024,
 	};
 	enum Shader
 	{
@@ -104,7 +104,7 @@ struct GI2DRadiosity
 			b_albedo = m_context->m_storage_memory.allocateMemory<f16vec4>({ size,{} });
 			b_emissive_counter = m_context->m_vertex_memory.allocateMemory<vk::DrawIndirectCommand>(Emissive_Num);
 			v_emissive = m_context->m_vertex_memory.allocateMemory<Emissive>(Emissive_Num);
-			v_ray_target = m_context->m_vertex_memory.allocateMemory<i16vec2>(Emissive_Num*512);
+			v_ray_target = m_context->m_vertex_memory.allocateMemory<i16vec2>(16*512);
 
 			m_info.ray_num_max = 0;
 			m_info.ray_frame_max = 0;
@@ -218,10 +218,6 @@ struct GI2DRadiosity
 					std::vector<i16vec2> data;
 					data.reserve(512);
 					data.push_back(i16vec2(R, 0));
-// 					field[(Ox + R) + Oy * S] = 1;// +0
-// 					field[Ox + (Oy + R) * S] = 1;// +90
-// 					field[(Ox - R) + Oy * S] = 1;// +180
-// 					field[Ox + (Oy - R) * S] = 1;// +270
 
 					while (x > y)
 					{
@@ -235,19 +231,9 @@ struct GI2DRadiosity
 							dedx -= 2;
 						}
 						data.push_back(i16vec2(x, y));
-						// 3Žž‚©‚çŽžŒv‰ñ‚è
-// 						field[(Ox + x) + (Oy + y) * S] = 1;// +theta
-// 						field[(Ox + y) + (Oy + x) * S] = 1;// 90+theta
-// 						field[(Ox + y) + (Oy - x) * S] = 1;// 90-theta
-// 						field[(Ox - x) + (Oy + y) * S] = 1;// 180-theta
-// 						field[(Ox - x) + (Oy - y) * S] = 1;// 180+theta
-// 						field[(Ox - y) + (Oy - x) * S] = 1;// 270-theta
-// 						field[(Ox - y) + (Oy + x) * S] = 1;// 270+theta
-// 						field[(Ox + x) + (Oy - y) * S] = 1;// -theta
 					}
-
 					cmd.updateBuffer<i16vec2>(v_ray_target.getInfo().buffer, v_ray_target.getInfo().offset + sizeof(i16vec2)*512*i, data);
-					cmd.updateBuffer<vk::DrawIndirectCommand>(b_emissive_counter.getInfo().buffer, b_emissive_counter.getInfo().offset + sizeof(vk::DrawIndirectCommand)*i, { vk::DrawIndirectCommand(2 + y * 8, 1, i * 512, 0) });
+					cmd.updateBuffer<vk::DrawIndirectCommand>(b_emissive_counter.getInfo().buffer, b_emissive_counter.getInfo().offset + sizeof(vk::DrawIndirectCommand)*i, { vk::DrawIndirectCommand(2 + y * 8, Emissive_Num, i * 512, 0) });
 				}
 
 			}
@@ -983,6 +969,7 @@ struct GI2DRadiosity
 
 		cmd.bindVertexBuffers(0, array_length(vertex_buffers), vertex_buffers, offsets);
 
+//		cmd.draw(2+1024*4, 1, 0, 0);
 		cmd.drawIndirect(b_emissive_counter.getInfo().buffer, b_emissive_counter.getInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
 		cmd.endRenderPass();
 

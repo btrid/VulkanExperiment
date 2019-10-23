@@ -39,7 +39,6 @@ void main()
 		uint targetID = (gl_VertexIndex-1)%vertex_num;
 		uint targetType = (gl_VertexIndex-1)/vertex_num;
 		uint target_index = ((targetType%2)==0)?targetID:(vertex_num-targetID);
-//		uint target_index = targetID;
 		target = ivec2(b_ray_target[target_index]);
 		switch(targetType%8)
 		{
@@ -59,8 +58,6 @@ void main()
 	}
 	pos += sign(target - pos);
 	ivec2 delta = abs(target - pos);
-
-	int p = delta.x+delta.y;
 
 	ivec3 _dir = sign(ivec3(target, 0) - ivec3(pos, 0));
 	ivec2 d[2];
@@ -93,7 +90,6 @@ void main()
 		}
 
 		D += D>0 ? deltax : deltay;
-		p -= D>0 ? 2 : 1;
 		pos += D>0 ? dir[0] : dir[1];
 	}
 	gl_Position = vec4((pos/dvec2(reso.xy)) * 2. -1., 0., 1.);
