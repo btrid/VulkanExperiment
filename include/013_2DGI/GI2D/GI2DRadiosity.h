@@ -206,7 +206,7 @@ struct GI2DRadiosity
 
 			{
 				int i = 0;
-				int R = 150;
+				int R = 330;
 				{
 
 					int x = R;
@@ -233,9 +233,18 @@ struct GI2DRadiosity
 						data.push_back(i16vec2(x, y));
 					}
 					cmd.updateBuffer<i16vec2>(v_ray_target.getInfo().buffer, v_ray_target.getInfo().offset + sizeof(i16vec2)*512*i, data);
-					cmd.updateBuffer<vk::DrawIndirectCommand>(b_emissive_counter.getInfo().buffer, b_emissive_counter.getInfo().offset + sizeof(vk::DrawIndirectCommand)*i, { vk::DrawIndirectCommand(2 + y * 8, Emissive_Num, i * 512, 0) });
+					cmd.updateBuffer<vk::DrawIndirectCommand>(b_emissive_counter.getInfo().buffer, b_emissive_counter.getInfo().offset + sizeof(vk::DrawIndirectCommand)*i, { vk::DrawIndirectCommand(2 + y * 8, 1, i * 512, 0) });
 				}
 
+// 				vec3 color = vec3(c) / (R * R);
+// 				c / R ^ 2 <= 0.01;
+// 				C = R^2*0.01;
+// 				sqrt(C) <= R * 0.1;
+				vec3 color = vec3(10.f, 10.f, 10.f);
+//				float a = dot(glm::sqrt(color), vec3(1.));
+				float a = glm::sqrt(dot(color, vec3(1.)) / 3.f);
+				float b = R*0.1;
+				if(a<b){ }
 			}
 		}
 
@@ -632,12 +641,10 @@ struct GI2DRadiosity
 			vk::PipelineVertexInputStateCreateInfo direct_light_vertex_input_info;
 			vk::VertexInputBindingDescription directlight_vinput_binding_desc[] = {
 				vk::VertexInputBindingDescription(0, sizeof(Emissive), vk::VertexInputRate::eInstance),
-				vk::VertexInputBindingDescription(1, sizeof(uvec4), vk::VertexInputRate::eInstance),
 			};
 			vk::VertexInputAttributeDescription directlight_vinput_attr_desc[] = {
 				vk::VertexInputAttributeDescription(0, 0, vk::Format::eR16G16Sint, offsetof(Emissive, pos)),
 				vk::VertexInputAttributeDescription(1, 0, vk::Format::eR16G16B16A16Sfloat, offsetof(Emissive, color)),
-				vk::VertexInputAttributeDescription(2, 1, vk::Format::eR32G32B32A32Sint, 0),
 			};
 			direct_light_vertex_input_info.setVertexBindingDescriptionCount(array_length(directlight_vinput_binding_desc));
 			direct_light_vertex_input_info.setPVertexBindingDescriptions(directlight_vinput_binding_desc);
@@ -963,9 +970,8 @@ struct GI2DRadiosity
 		vk::Buffer vertex_buffers[] =
 		{
 			v_emissive.getInfo().buffer,
-			b_emissive_counter.getInfo().buffer,
 		};
-		vk::DeviceSize offsets[] = { v_emissive.getInfo().offset, b_emissive_counter.getInfo().offset };
+		vk::DeviceSize offsets[] = { v_emissive.getInfo().offset };
 
 		cmd.bindVertexBuffers(0, array_length(vertex_buffers), vertex_buffers, offsets);
 
