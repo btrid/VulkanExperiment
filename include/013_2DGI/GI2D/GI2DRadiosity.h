@@ -205,46 +205,40 @@ struct GI2DRadiosity
 #endif
 
 			{
-				int i = 0;
-				int R = 330;
+				for (int i = 0; i < 16; i++)
 				{
-
-					int x = R;
-					int y = 0;
-					int err = 0;
-					int dedx = (R << 1) - 1;	// 2x-1 = 2R-1
-					int dedy = 1;	// 2y-1
-
-					std::vector<i16vec2> data;
-					data.reserve(512);
-					data.push_back(i16vec2(R, 0));
-
-					while (x > y)
+// 					vec3 color = vec3(10.f, 10.f, 10.f);
+//	 				float a = glm::sqrt(dot(color, vec3(1.)) / 3.f) + 3.f;
+					int R = glm::sqrt((i+1)*1.f)*100.f + 3;
 					{
-						y++;
-						err += dedy;
-						dedy += 2;
-						if (err >= dedx)
-						{
-							x--;
-							err -= dedx;
-							dedx -= 2;
-						}
-						data.push_back(i16vec2(x, y));
-					}
-					cmd.updateBuffer<i16vec2>(v_ray_target.getInfo().buffer, v_ray_target.getInfo().offset + sizeof(i16vec2)*512*i, data);
-					cmd.updateBuffer<vk::DrawIndirectCommand>(b_emissive_counter.getInfo().buffer, b_emissive_counter.getInfo().offset + sizeof(vk::DrawIndirectCommand)*i, { vk::DrawIndirectCommand(2 + y * 8, 1, i * 512, 0) });
-				}
 
-// 				vec3 color = vec3(c) / (R * R);
-// 				c / R ^ 2 <= 0.01;
-// 				C = R^2*0.01;
-// 				sqrt(C) <= R * 0.1;
-				vec3 color = vec3(10.f, 10.f, 10.f);
-//				float a = dot(glm::sqrt(color), vec3(1.));
-				float a = glm::sqrt(dot(color, vec3(1.)) / 3.f);
-				float b = R*0.1;
-				if(a<b){ }
+						int x = R;
+						int y = 0;
+						int err = 0;
+						int dedx = (R << 1) - 1;	// 2x-1 = 2R-1
+						int dedy = 1;	// 2y-1
+
+						std::vector<i16vec2> data(512);
+						data[y] = i16vec2(R, 0);
+
+						while (x > y)
+						{
+							y++;
+							err += dedy;
+							dedy += 2;
+							if (err >= dedx)
+							{
+								x--;
+								err -= dedx;
+								dedx -= 2;
+							}
+							data[y] = i16vec2(x, y);
+						}
+						cmd.updateBuffer<i16vec2>(v_ray_target.getInfo().buffer, v_ray_target.getInfo().offset + sizeof(i16vec2) * 512 * i, data);
+						cmd.updateBuffer<vk::DrawIndirectCommand>(b_emissive_counter.getInfo().buffer, b_emissive_counter.getInfo().offset + sizeof(vk::DrawIndirectCommand)*i, { vk::DrawIndirectCommand(2 + y * 8, 1, i * 512, 0) });
+					}
+
+				}
 			}
 		}
 
