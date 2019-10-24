@@ -38,7 +38,7 @@ void main()
 		uint targetID = (gl_VertexIndex-1)%vertex_num;
 		uint targetType = (gl_VertexIndex-1)/vertex_num;
 		uint target_index = ((targetType%2)==0)?targetID:(vertex_num-targetID);
-		target = ivec2(b_ray_target[target_index]);
+		target = ivec2(u_circle_mesh_vertex[gl_DrawID][target_index]);
 		switch(targetType%8)
 		{
 			case 0: target = ivec2( target.x, target.y); break;

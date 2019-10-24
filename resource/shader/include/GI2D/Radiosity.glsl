@@ -39,19 +39,25 @@ struct Segment
 layout(set=USE_GI2D_Radiosity, binding=0, std140) uniform GI2DRadiosityInfoUniform {
 	GI2DRadiosityInfo u_radiosity_info;
 };
-layout(set=USE_GI2D_Radiosity, binding=1, std430) restrict buffer SegmentCounterBuffer {
+layout(set=USE_GI2D_Radiosity, binding=1, std140) uniform MeshVertexCount {
+	uvec4 u_circle_mesh_count[4];
+};
+layout(set=USE_GI2D_Radiosity, binding=2, std140) uniform MeshVertexBuffer {
+	i16vec2 u_circle_mesh_vertex[512][16];
+};
+layout(set=USE_GI2D_Radiosity, binding=3, std430) restrict buffer SegmentCounterBuffer {
 	SegmentCounter b_segment_counter;
 };
-layout(set=USE_GI2D_Radiosity, binding=2, std430) restrict buffer SegmentBuffer {
+layout(set=USE_GI2D_Radiosity, binding=4, std430) restrict buffer SegmentBuffer {
 	Segment b_segment[];
 };
-layout(set=USE_GI2D_Radiosity, binding=3, std430) restrict buffer RadianceBuffer {
+layout(set=USE_GI2D_Radiosity, binding=5, std430) restrict buffer RadianceBuffer {
 	uint64_t b_radiance[];
 };
-layout(set=USE_GI2D_Radiosity, binding=4, std430) restrict buffer MapEdgeBuffer {
+layout(set=USE_GI2D_Radiosity, binding=6, std430) restrict buffer MapEdgeBuffer {
 	uint64_t b_edge[];
 };
-layout(set=USE_GI2D_Radiosity, binding=5, std430) restrict buffer AlbedoBuffer {
+layout(set=USE_GI2D_Radiosity, binding=7, std430) restrict buffer AlbedoBuffer {
 	f16vec4 b_albedo[];
 };
 
@@ -69,14 +75,8 @@ struct Emissive
 	f16vec4 color;
 };
 
-layout(set=USE_GI2D_Radiosity, binding=6, std430) restrict buffer EmissiveCountBuffer {
-	EmissiveCounter b_emissive_counter[];
-};
-layout(set=USE_GI2D_Radiosity, binding=7, std430) restrict buffer EmissiveBuffer {
+layout(set=USE_GI2D_Radiosity, binding=8, std430) restrict buffer EmissiveBuffer {
 	Emissive b_emissive[];
-};
-layout(set=USE_GI2D_Radiosity, binding=8, std430) restrict buffer RayBuffer {
-	i16vec2 b_ray_target[];
 };
 
 layout(set=USE_GI2D_Radiosity, binding=9) uniform sampler2D s_radiosity[Frame_Num];

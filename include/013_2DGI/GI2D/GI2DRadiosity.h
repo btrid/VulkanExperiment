@@ -14,6 +14,8 @@ struct GI2DRadiosity
 		Dir_Num = 45,
 		Bounce_Num = 2,
 		Emissive_Num = 1024,
+		Mesh_Num = 16,
+		Mesh_Vertex_Size = 512,
 	};
 	enum Shader
 	{
@@ -102,9 +104,10 @@ struct GI2DRadiosity
 			b_radiance = m_context->m_storage_memory.allocateMemory<uint64_t>({ size * 2,{} });
 			b_edge = m_context->m_storage_memory.allocateMemory<uint64_t>({ size / 64,{} });
 			b_albedo = m_context->m_storage_memory.allocateMemory<f16vec4>({ size,{} });
-			b_emissive_counter = m_context->m_vertex_memory.allocateMemory<vk::DrawIndirectCommand>(Emissive_Num);
 			v_emissive = m_context->m_vertex_memory.allocateMemory<Emissive>(Emissive_Num);
-			v_ray_target = m_context->m_vertex_memory.allocateMemory<i16vec2>(16*512);
+			u_circle_mesh_count = m_context->m_uniform_memory.allocateMemory<uint32_t>(Mesh_Num);
+			u_circle_mesh_vertex = m_context->m_uniform_memory.allocateMemory<i16vec2>(Mesh_Num*Mesh_Vertex_Size);
+			b_
 
 			m_info.ray_num_max = 0;
 			m_info.ray_frame_max = 0;
@@ -205,40 +208,36 @@ struct GI2DRadiosity
 #endif
 
 			{
-				for (int i = 0; i < 16; i++)
+				std::vector<uint32_t> count(Mesh_Num);
+				std::vector<i16vec2> data(Mesh_Vertex_Size);
+				for (int i = 0; i < Mesh_Num; i++)
 				{
-// 					vec3 color = vec3(10.f, 10.f, 10.f);
-//	 				float a = glm::sqrt(dot(color, vec3(1.)) / 3.f) + 3.f;
 					int R = glm::sqrt((i+1)*1.f)*100.f + 3;
+					int x = R;
+					int y = 0;
+					int err = 0;
+					int dedx = (R << 1) - 1;	// 2x-1 = 2R-1
+					int dedy = 1;	// 2y-1
+
+					data[y] = i16vec2(R, 0);
+
+					while (x > y)
 					{
-
-						int x = R;
-						int y = 0;
-						int err = 0;
-						int dedx = (R << 1) - 1;	// 2x-1 = 2R-1
-						int dedy = 1;	// 2y-1
-
-						std::vector<i16vec2> data(512);
-						data[y] = i16vec2(R, 0);
-
-						while (x > y)
+						y++;
+						err += dedy;
+						dedy += 2;
+						if (err >= dedx)
 						{
-							y++;
-							err += dedy;
-							dedy += 2;
-							if (err >= dedx)
-							{
-								x--;
-								err -= dedx;
-								dedx -= 2;
-							}
-							data[y] = i16vec2(x, y);
+							x--;
+							err -= dedx;
+							dedx -= 2;
 						}
-						cmd.updateBuffer<i16vec2>(v_ray_target.getInfo().buffer, v_ray_target.getInfo().offset + sizeof(i16vec2) * 512 * i, data);
-						cmd.updateBuffer<vk::DrawIndirectCommand>(b_emissive_counter.getInfo().buffer, b_emissive_counter.getInfo().offset + sizeof(vk::DrawIndirectCommand)*i, { vk::DrawIndirectCommand(2 + y * 8, 1, i * 512, 0) });
+						data[y] = i16vec2(x, y);
 					}
-
+					cmd.updateBuffer<i16vec2>(u_circle_mesh_vertex.getInfo().buffer, u_circle_mesh_vertex.getInfo().offset + sizeof(i16vec2) * Mesh_Vertex_Size * i, data);
+					count[i] = y;
 				}
+				cmd.updateBuffer<uint32_t>(u_circle_mesh_count.getInfo().buffer, u_circle_mesh_count.getInfo().offset, count);
 			}
 		}
 
@@ -248,8 +247,8 @@ struct GI2DRadiosity
 			vk::DescriptorSetLayoutBinding binding[] = 
 			{
 				vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eUniformBuffer, 1, stage),
-				vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eStorageBuffer, 1, stage),
-				vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eUniformBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eUniformBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
@@ -276,6 +275,8 @@ struct GI2DRadiosity
 
 			vk::DescriptorBufferInfo uniforms[] = {
 				u_radiosity_info.getInfo(),
+				u_circle_mesh_count.getInfo(),
+				u_circle_mesh_vertex.getInfo(),
 			};
 			vk::DescriptorBufferInfo storages[] = {
 				b_segment_counter.getInfo(),
@@ -283,9 +284,7 @@ struct GI2DRadiosity
 				b_radiance.getInfo(),
 				b_edge.getInfo(),
 				b_albedo.getInfo(),
-				b_emissive_counter.getInfo(),
 				v_emissive.getInfo(),
-				v_ray_target.getInfo(),
 			};
 
 			vk::WriteDescriptorSet write[] =
@@ -300,7 +299,7 @@ struct GI2DRadiosity
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 				.setDescriptorCount(array_length(storages))
 				.setPBufferInfo(storages)
-				.setDstBinding(1)
+				.setDstBinding(3)
 				.setDstSet(m_descriptor_set.get()),
 			};
 			context->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
@@ -969,8 +968,7 @@ struct GI2DRadiosity
 
 		cmd.bindVertexBuffers(0, array_length(vertex_buffers), vertex_buffers, offsets);
 
-//		cmd.draw(2+1024*4, 1, 0, 0);
-		cmd.drawIndirect(b_emissive_counter.getInfo().buffer, b_emissive_counter.getInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
+		cmd.drawIndirect(u_circle_mesh_count.getInfo().buffer, u_circle_mesh_count.getInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
 		cmd.endRenderPass();
 
 	}
@@ -989,9 +987,10 @@ struct GI2DRadiosity
 	btr::BufferMemoryEx<uint64_t> b_radiance;
 	btr::BufferMemoryEx<uint64_t> b_edge;
 	btr::BufferMemoryEx<f16vec4> b_albedo;
-	btr::BufferMemoryEx<vk::DrawIndirectCommand> b_emissive_counter;
 	btr::BufferMemoryEx<Emissive> v_emissive;
-	btr::BufferMemoryEx<i16vec2> v_ray_target;
+	btr::BufferMemoryEx<uint32_t> u_circle_mesh_count;
+	btr::BufferMemoryEx<i16vec2> u_circle_mesh_vertex;
+	btr::BufferMemoryEx<Emissive> v_emissive_draw_param;
 
 
 	GI2DRadiosityInfo m_info;
