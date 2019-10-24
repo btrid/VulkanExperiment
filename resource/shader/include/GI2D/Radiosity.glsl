@@ -61,25 +61,23 @@ layout(set=USE_GI2D_Radiosity, binding=7, std430) restrict buffer AlbedoBuffer {
 	f16vec4 b_albedo[];
 };
 
-struct EmissiveCounter
-{
-    uint vertexCount;
-    uint instanceCount;
-    uint firstVertex;
-    uint firstInstance;
-};
 struct Emissive
 {
 	i16vec2 pos;
-	i16vec2 _p;
+	u16vec2 flag;
 	f16vec4 color;
 };
 
 layout(set=USE_GI2D_Radiosity, binding=8, std430) restrict buffer EmissiveBuffer {
 	Emissive b_emissive[];
 };
-
-layout(set=USE_GI2D_Radiosity, binding=9) uniform sampler2D s_radiosity[Frame_Num];
+layout(set=USE_GI2D_Radiosity, binding=9, std430) restrict buffer EmissiveDrawCommandBuffer {
+	uvec4 v_emissive_draw_command[];
+};
+layout(set=USE_GI2D_Radiosity, binding=10, std430) restrict buffer EmissiveDrawCountBuffer {
+	uint v_emissive_draw_count;
+};
+layout(set=USE_GI2D_Radiosity, binding=11) uniform sampler2D s_radiosity[Frame_Num];
 
 
 #endif

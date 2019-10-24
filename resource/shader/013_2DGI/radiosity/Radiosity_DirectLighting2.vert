@@ -7,7 +7,8 @@
 #include "GI2D/Radiosity.glsl"
 
 layout(location = 0)in ivec2 in_pos;
-layout(location = 1)in vec4 in_color;
+layout(location = 1)in uvec2 in_flag; //[mesh_index, vertex_num]
+layout(location = 2)in vec4 in_color;
 
 
 layout(location=0) out gl_PerVertex{
@@ -32,13 +33,13 @@ void main()
 		return;
 	}
 
-	uint vertex_num = (b_emissive_counter[0].vertexCount - 2)/8;
+	uint vertex_num = in_flag.y;
 	ivec2 target = ivec2(0);
 	{
 		uint targetID = (gl_VertexIndex-1)%vertex_num;
 		uint targetType = (gl_VertexIndex-1)/vertex_num;
 		uint target_index = ((targetType%2)==0)?targetID:(vertex_num-targetID);
-		target = ivec2(u_circle_mesh_vertex[gl_DrawID][target_index]);
+		target = ivec2(u_circle_mesh_vertex[in_flag.x][target_index]);
 		switch(targetType%8)
 		{
 			case 0: target = ivec2( target.x, target.y); break;
