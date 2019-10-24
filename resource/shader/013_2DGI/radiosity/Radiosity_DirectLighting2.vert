@@ -33,14 +33,14 @@ void main()
 		return;
 	}
 
-	uint vertex_num = in_flag.y;
 	ivec2 target = ivec2(0);
 	{
-		uint targetID = (gl_VertexIndex-1)%vertex_num;
-		uint targetType = (gl_VertexIndex-1)/vertex_num;
-		uint target_index = ((targetType%2)==0)?targetID:(vertex_num-targetID);
-		target = ivec2(u_circle_mesh_vertex[in_flag.x][target_index]);
-		switch(targetType%8)
+		uint vertex_num = in_flag.y;
+		uint target_ID = (gl_VertexIndex-1)%vertex_num;
+		uint target_type = (gl_VertexIndex-1)/vertex_num;
+		uint vertex_index = ((target_type%2)==0)?target_ID:(vertex_num-target_ID);
+		target = ivec2(u_circle_mesh_vertex[in_flag.x][vertex_index]);
+		switch(target_type%8)
 		{
 			case 0: target = ivec2( target.x, target.y); break;
 			case 1: target = ivec2( target.y, target.x); break;
@@ -50,13 +50,10 @@ void main()
 			case 5: target = ivec2(-target.y,-target.x); break;
 			case 6: target = ivec2( target.y,-target.x); break;
 			case 7: target = ivec2( target.x,-target.y); break;
-//			default:
-//				gl_Position = vec4(vec2(pos) / reso.xy * 2. - 1., 0., 1.);
-//				return;
 		}
 		target += pos;
 	}
-	pos += sign(target - pos);
+//	pos += sign(target-pos);
 	ivec2 delta = abs(target - pos);
 
 	ivec3 _dir = sign(ivec3(target, 0) - ivec3(pos, 0));
@@ -74,8 +71,8 @@ void main()
 
 	uint64_t map = 0ul;
 	ivec2 cell = ivec2(999999999);
-//	for(;p>=0;)
-	for(;any(notEqual(pos, target));)
+
+	for(;!all(equal(pos, target));)
 	{
 		if(any(notEqual(cell, pos>>3)))
 		{
@@ -83,7 +80,7 @@ void main()
 			map = b_fragment_map[cell.x + cell.y * reso.z];
 		}
 
-		ivec2 cell_sub = pos-(cell<<3);
+		ivec2 cell_sub = pos%8;
 		if((map & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0ul)
 		{
 			break;
@@ -92,6 +89,6 @@ void main()
 		D += D>0 ? deltax : deltay;
 		pos += D>0 ? dir[0] : dir[1];
 	}
-	gl_Position = vec4((pos/dvec2(reso.xy)) * 2. -1., 0., 1.);
+	gl_Position = vec4((pos/vec2(reso.xy)) * 2. -1., 0., 1.);
 
 }

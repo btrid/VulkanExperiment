@@ -213,9 +213,9 @@ struct GI2DRadiosity
 			{
 				std::vector<uint32_t> count(Mesh_Num);
 				std::vector<i16vec2> data(Mesh_Vertex_Size);
-				for (int i = 0; i < Mesh_Num; i++)
+				for (int i = 0; i < 1; i++)
 				{
-					int R = glm::sqrt((i+1)*1.f)*100.f + 3;
+					int R = glm::sqrt((i+1)*1.f)*100.f + 1;
 					int x = R;
 					int y = 0;
 					int err = 0;
@@ -240,11 +240,34 @@ struct GI2DRadiosity
 					cmd.updateBuffer<i16vec2>(u_circle_mesh_vertex.getInfo().buffer, u_circle_mesh_vertex.getInfo().offset + sizeof(i16vec2) * Mesh_Vertex_Size * i, data);
 					count[i] = y;
 				}
+
+// 				ivec2 target = ivec2(0);
+// 				for(int i = 0; i < count[0]*8+2; i++)
+// 				{
+// 					if (i == 0)continue;
+// 					uint vertex_num = count[0];
+// 					uint target_ID = (i - 1) % vertex_num;
+// 					uint target_type = (i - 1) / vertex_num;
+// 					uint vertex_index = ((target_type % 2) == 0) ? target_ID : (vertex_num - target_ID);
+// 					target = ivec2(data[vertex_index]);
+// 					switch (target_type % 8)
+// 					{
+// 						case 0: target = ivec2(target.x, target.y); break;
+// 						case 1: target = ivec2(target.y, target.x); break;
+// 						case 2: target = ivec2(-target.y, target.x); break;
+// 						case 3: target = ivec2(-target.x, target.y); break;
+// 						case 4: target = ivec2(-target.x, -target.y); break;
+// 						case 5: target = ivec2(-target.y, -target.x); break;
+// 						case 6: target = ivec2(target.y, -target.x); break;
+// 						case 7: target = ivec2(target.x, -target.y); break;
+// 					}
+// 					printf("i=%3d vertex_index=%3d, pos=[%3d,%3d]\n", i, vertex_index, target.x, target.y);
+// 				}
 				cmd.updateBuffer<uint32_t>(u_circle_mesh_count.getInfo().buffer, u_circle_mesh_count.getInfo().offset, count);
 			}
 		}
 
-		// descriptor
+		// descriptor layout
 		{
 			auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
 			vk::DescriptorSetLayoutBinding binding[] = 
@@ -973,6 +996,7 @@ struct GI2DRadiosity
 			vk::BufferMemoryBarrier to_read[] =
 			{
 				v_emissive.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eVertexAttributeRead),
+				v_emissive_draw_command.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
 			};
 
 			std::array<vk::ImageMemoryBarrier, 1> image_barrier;
@@ -1013,7 +1037,8 @@ struct GI2DRadiosity
 		cmd.bindVertexBuffers(0, array_length(vertex_buffers), vertex_buffers, offsets);
 
 //		cmd.drawIndirect(u_circle_mesh_count.getInfo().buffer, u_circle_mesh_count.getInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
-		cmd.drawIndirectCountKHR(v_emissive_draw_command.getInfo().buffer, v_emissive_draw_command.getInfo().offset, v_emissive_draw_count.getInfo().buffer, v_emissive_draw_count.getInfo().offset, Emissive_Num, sizeof(vk::DrawIndirectCommand), m_context->m_dispach);
+//		cmd.drawIndirectCountKHR(v_emissive_draw_command.getInfo().buffer, v_emissive_draw_command.getInfo().offset, v_emissive_draw_count.getInfo().buffer, v_emissive_draw_count.getInfo().offset, Emissive_Num, sizeof(vk::DrawIndirectCommand), m_context->m_dispach);
+		cmd.drawIndirect(v_emissive_draw_command.getInfo().buffer, v_emissive_draw_command.getInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
 		cmd.endRenderPass();
 
 	}
