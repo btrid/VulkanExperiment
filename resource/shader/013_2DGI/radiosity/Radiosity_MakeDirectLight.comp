@@ -15,6 +15,6 @@ void main()
 //	uint cmd_index = atomicAdd(v_emissive_draw_count, 1);
 	uint cmd_index = gl_GlobalInvocationID.x;
 	uint v_num = u_circle_mesh_count[emissive_power/4][emissive_power%4];
-	v_emissive_draw_command[cmd_index] = uvec4(v_num*8+2, 1, 0, 0);
+	v_emissive_draw_command[cmd_index] = uvec4(v_num*8+2, 1, 0, cmd_index);
 	b_emissive[gl_GlobalInvocationID.x].flag = u16vec2(emissive_power, v_num);
 }

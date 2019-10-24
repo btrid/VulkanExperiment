@@ -213,7 +213,7 @@ struct GI2DRadiosity
 			{
 				std::vector<uint32_t> count(Mesh_Num);
 				std::vector<i16vec2> data(Mesh_Vertex_Size);
-				for (int i = 0; i < 1; i++)
+				for (int i = 0; i < Mesh_Num; i++)
 				{
 					int R = glm::sqrt((i+1)*1.f)*100.f + 1;
 					int x = R;
@@ -936,7 +936,7 @@ struct GI2DRadiosity
 				}
 			});
 
-			static vec2 light_pos = vec2(9.5, 525);
+			static vec2 light_pos = vec2(436.5, 525.6);
 			float move = 3.f;
 			if (m_context->m_window->getInput().m_keyboard.isHold('A'))
 			{
@@ -1038,7 +1038,7 @@ struct GI2DRadiosity
 
 //		cmd.drawIndirect(u_circle_mesh_count.getInfo().buffer, u_circle_mesh_count.getInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
 //		cmd.drawIndirectCountKHR(v_emissive_draw_command.getInfo().buffer, v_emissive_draw_command.getInfo().offset, v_emissive_draw_count.getInfo().buffer, v_emissive_draw_count.getInfo().offset, Emissive_Num, sizeof(vk::DrawIndirectCommand), m_context->m_dispach);
-		cmd.drawIndirect(v_emissive_draw_command.getInfo().buffer, v_emissive_draw_command.getInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
+		cmd.drawIndirect(v_emissive_draw_command.getInfo().buffer, v_emissive_draw_command.getInfo().offset, Emissive_Num, sizeof(vk::DrawIndirectCommand));
 		cmd.endRenderPass();
 
 	}
