@@ -234,6 +234,10 @@ struct GI2DRadiosity
 							x--;
 							err -= dedx;
 							dedx -= 2;
+							if (x<y)
+							{
+								x=y;
+							}
 						}
 						data[y] = i16vec2(x, y);
 					}
@@ -242,7 +246,7 @@ struct GI2DRadiosity
 				}
 
 // 				ivec2 target = ivec2(0);
-// 				for(int i = 0; i < count[0]*8+2; i++)
+// 				for(int i = 0; i < (count[0])*8+2; i++)
 // 				{
 // 					if (i == 0)continue;
 // 					uint vertex_num = count[0];
@@ -261,7 +265,7 @@ struct GI2DRadiosity
 // 						case 6: target = ivec2(target.y, -target.x); break;
 // 						case 7: target = ivec2(target.x, -target.y); break;
 // 					}
-// 					printf("i=%3d vertex_index=%3d, pos=[%3d,%3d]\n", i, vertex_index, target.x, target.y);
+// 					printf("vi=%3d, id=%3d, type=%3d, pos=[%3d,%3d]\n", vertex_index, target_ID, target_type, target.x, target.y);
 // 				}
 				cmd.updateBuffer<uint32_t>(u_circle_mesh_count.getInfo().buffer, u_circle_mesh_count.getInfo().offset, count);
 			}

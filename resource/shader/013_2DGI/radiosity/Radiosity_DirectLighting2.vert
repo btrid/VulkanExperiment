@@ -29,7 +29,7 @@ void main()
 	ivec2 pos = in_pos;
 	if(gl_VertexIndex==0)
 	{
-		gl_Position = vec4(vec2(pos) / reso.xy * 2. - 1., 0., 1.);
+		gl_Position = vec4(vec2(pos+0.5) / reso.xy * 2. - 1., 0., 1.);
 		return;
 	}
 
@@ -38,8 +38,10 @@ void main()
 		uint vertex_num = in_flag.y;
 		uint target_ID = (gl_VertexIndex-1)%vertex_num;
 		uint target_type = (gl_VertexIndex-1)/vertex_num;
-		uint vertex_index = ((target_type%2)==0)?target_ID:(vertex_num-target_ID);
-		target = ivec2(u_circle_mesh_vertex[in_flag.x][vertex_index]);
+		int vertex_index = int(((target_type%2)==0)?target_ID:(vertex_num-target_ID));
+		int target2 = u_circle_mesh_vertex[in_flag.x][vertex_index/4][vertex_index%4];
+		target = (ivec2(target2)>>ivec2(0, 16)) & ivec2(0xffff);
+		while(all(equal(target, ivec2(0))));
 		switch(target_type%8)
 		{
 			case 0: target = ivec2( target.x, target.y); break;
@@ -53,7 +55,7 @@ void main()
 		}
 		target += pos;
 	}
-//	pos += sign(target-pos);
+	pos += sign(target-pos);
 	ivec2 delta = abs(target - pos);
 
 	ivec3 _dir = sign(ivec3(target, 0) - ivec3(pos, 0));
@@ -89,6 +91,6 @@ void main()
 		D += D>0 ? deltax : deltay;
 		pos += D>0 ? dir[0] : dir[1];
 	}
-	gl_Position = vec4((pos/vec2(reso.xy)) * 2. -1., 0., 1.);
+	gl_Position = vec4(vec2(pos+0.5)/reso.xy * 2. -1., 0., 1.);
 
 }

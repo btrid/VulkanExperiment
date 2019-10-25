@@ -43,7 +43,7 @@ layout(set=USE_GI2D_Radiosity, binding=1, std140) uniform MeshVertexCount {
 	uvec4 u_circle_mesh_count[4];
 };
 layout(set=USE_GI2D_Radiosity, binding=2, std140) uniform MeshVertexBuffer {
-	i16vec2 u_circle_mesh_vertex[512][16];
+	ivec4 u_circle_mesh_vertex[16][512/4];
 };
 layout(set=USE_GI2D_Radiosity, binding=3, std430) restrict buffer SegmentCounterBuffer {
 	SegmentCounter b_segment_counter;
