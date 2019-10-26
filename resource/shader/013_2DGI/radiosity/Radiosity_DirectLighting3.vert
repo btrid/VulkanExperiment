@@ -59,11 +59,14 @@ void main()
 	ivec2 delta = abs(target - pos);
 
 	ivec3 _dir = sign(ivec3(target, 0) - ivec3(pos, 0));
-	ivec2 dir[2];
-	dir[0] = _dir.xz;
-	dir[1] = _dir.zy;
+	ivec2 d[2];
+	d[0] = _dir.xz;
+	d[1] = _dir.zy;
 
 	int axis = delta.x > delta.y ? 0 : 1;
+	ivec2 dir[2];
+	dir[0] = d[1-axis]+d[axis];
+	dir[1] = d[axis];
 	int	D = 2 * delta[1 - axis] - delta[axis];
 	int deltax = 2 * delta[1 - axis] - 2 * delta[axis];
 	int deltay = 2 * delta[1 - axis];
@@ -85,13 +88,11 @@ void main()
 			break;
 		}
 
-		if (D > 0)
-		{
-			pos += dir[1 - axis];
-		}
-		pos += dir[axis];
 		D += D>0 ? deltax : deltay;
+		pos += D>0 ? dir[0] : dir[1];
 	}
 	gl_Position = vec4(vec2(pos+0.5)/reso.xy * 2. -1., 0., 1.);
+
+	
 
 }

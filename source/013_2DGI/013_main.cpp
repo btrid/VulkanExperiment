@@ -395,7 +395,7 @@ int radiosity()
 void dda()
 {
 	ivec2 target(0, 256);
-	ivec2 pos0(333, 256);
+	ivec2 pos0(333, 333);
 	ivec2 delta = abs(target - pos0);
 	ivec3 _dir = glm::sign(ivec3(target, 0) - ivec3(pos0, 0));
 
@@ -412,13 +412,13 @@ void dda()
 			if (D > 0)
 			{
 				pos += dir[1 - axis];
-				D = D + (2 * delta[1 - axis] - 2 * delta[axis]);
+				D = D - 2 * delta[axis];
 			}
 			else
 			{
+				pos += dir[axis];
 				D = D + 2 * delta[1 - axis];
 			}
-			pos += dir[axis];
 
 			printf("pos=[%3d,%3d]\n", pos.x, pos.y);
 			if (all(glm::equal(pos, target)))
