@@ -11,7 +11,7 @@ layout (local_size_x = 1024) in;
 void main() 
 {
 	vec3 color = vec3(b_emissive[gl_GlobalInvocationID.x].color.xyz);
-	int emissive_power = clamp(int(ceil(sqrt(dot(color, vec3(1.)) / 3.))-0.01), 0, 15);
+	int emissive_power = clamp(int(ceil(sqrt(dot(color, vec3(1.)) / 3.))), 0, 15);
 //	uint cmd_index = atomicAdd(v_emissive_draw_count, 1);
 	uint cmd_index = gl_GlobalInvocationID.x;
 	uint v_num = u_circle_mesh_count[emissive_power/4][emissive_power%4];

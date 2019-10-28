@@ -14,7 +14,7 @@ struct GI2DRadiosity
 		Dir_Num = 45,
 		Bounce_Num = 2,
 		Emissive_Num = 1024,
-		Mesh_Num = 16,
+		Mesh_Num = 8,
 		Mesh_Vertex_Size = 512,
 	};
 	enum Shader
@@ -215,7 +215,7 @@ struct GI2DRadiosity
 				std::vector<i16vec2> data(Mesh_Vertex_Size);
 				for (int i = 0; i < Mesh_Num; i++)
 				{
-					int R = glm::sqrt((i+1)*1.f)*100.f + 1;
+					int R = glm::sqrt((i*i+1.f))*100.f + 1;
 					int x = R;
 					int y = 0;
 					int err = 0;
@@ -940,20 +940,18 @@ struct GI2DRadiosity
 				}
 			});
 
-			static vec2 light_pos = vec2(436.5, 525.6);
+			static vec2 light_pos = vec2(349.5f, 316.6f);
+			static int light_power = 1;
 			float move = 3.f;
-			if (m_context->m_window->getInput().m_keyboard.isHold('A'))
-			{
-				move = 0.03f;
-			}
-			{
-				light_pos.x += m_context->m_window->getInput().m_keyboard.isHold(VK_RIGHT) * move;
-				light_pos.x -= m_context->m_window->getInput().m_keyboard.isHold(VK_LEFT) * move;
-				light_pos.y -= m_context->m_window->getInput().m_keyboard.isHold(VK_UP) * move;
-				light_pos.y += m_context->m_window->getInput().m_keyboard.isHold(VK_DOWN) * move;
-			}
+			if (m_context->m_window->getInput().m_keyboard.isHold('A')) { move = 0.03f; }
+			light_pos.x += m_context->m_window->getInput().m_keyboard.isHold(VK_RIGHT) * move;
+			light_pos.x -= m_context->m_window->getInput().m_keyboard.isHold(VK_LEFT) * move;
+			light_pos.y -= m_context->m_window->getInput().m_keyboard.isHold(VK_UP) * move;
+			light_pos.y += m_context->m_window->getInput().m_keyboard.isHold(VK_DOWN) * move;
+			if (m_context->m_window->getInput().m_keyboard.isOn(' ')) { light_power = (light_power + 1) % 31; }
+
 			s_data[0].pos = i16vec2(light_pos);
-			s_data[0].color = glm::packHalf4x16(vec4(1.f));
+			s_data[0].color = glm::packHalf4x16(vec4(0.5f + light_power));
 		}
 		// emissiveƒf[ƒ^ì¬
 		_label.insert("GI2DRadiosity::executeMakeDirectLight");
@@ -1042,7 +1040,7 @@ struct GI2DRadiosity
 
 //		cmd.drawIndirect(u_circle_mesh_count.getInfo().buffer, u_circle_mesh_count.getInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
 //		cmd.drawIndirectCountKHR(v_emissive_draw_command.getInfo().buffer, v_emissive_draw_command.getInfo().offset, v_emissive_draw_count.getInfo().buffer, v_emissive_draw_count.getInfo().offset, Emissive_Num, sizeof(vk::DrawIndirectCommand), m_context->m_dispach);
-		cmd.drawIndirect(v_emissive_draw_command.getInfo().buffer, v_emissive_draw_command.getInfo().offset, Emissive_Num, sizeof(vk::DrawIndirectCommand));
+		cmd.drawIndirect(v_emissive_draw_command.getInfo().buffer, v_emissive_draw_command.getInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
 		cmd.endRenderPass();
 
 	}
