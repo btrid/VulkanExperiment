@@ -35,25 +35,39 @@ void main()
 
 	ivec2 target = ivec2(0);
 	{
-		uint vertex_num = in_flag.y;
-		uint target_ID = (gl_VertexIndex-1)%vertex_num;
-		uint target_type = (gl_VertexIndex-1)/vertex_num;
-		int vertex_index = int(((target_type%2)==0)?target_ID:(vertex_num-target_ID));
-		int target2 = u_circle_mesh_vertex[in_flag.x][vertex_index/4][vertex_index%4];
-		target = (ivec2(target2)>>ivec2(0, 16)) & ivec2(0xffff);
-		while(all(equal(target, ivec2(0))));
-		switch(target_type%8)
+		if(in_flag.y == 0xffff)
 		{
-			case 0: target = ivec2( target.x, target.y); break;
-			case 1: target = ivec2( target.y, target.x); break;
-			case 2: target = ivec2(-target.y, target.x); break;
-			case 3: target = ivec2(-target.x, target.y); break;
-			case 4: target = ivec2(-target.x,-target.y); break;
-			case 5: target = ivec2(-target.y,-target.x); break;
-			case 6: target = ivec2( target.y,-target.x); break;
-			case 7: target = ivec2( target.x,-target.y); break;
+			uint target_ID = (gl_VertexIndex-1)%1023;
+			uint target_type = (gl_VertexIndex-1)/1023;
+			switch(target_type)
+			{
+				case 0: target = ivec2(target_ID, 0); break;
+				case 1: target = ivec2(1023, target_ID); break;
+				case 2: target = ivec2((reso.x-1)-target_ID, 1023); break;
+				case 3: target = ivec2(0, (reso.y-1)-target_ID); break;
+			}
 		}
+		else
+		{
+			uint vertex_num = in_flag.y;
+			uint target_ID = (gl_VertexIndex-1)%vertex_num;
+			uint target_type = (gl_VertexIndex-1)/vertex_num;
+			int vertex_index = int(((target_type%2)==0)?target_ID:(vertex_num-target_ID));
+			int target2 = u_circle_mesh_vertex[in_flag.x][vertex_index/4][vertex_index%4];
+			target = (ivec2(target2)>>ivec2(0, 16)) & ivec2(0xffff);
+			switch(target_type%8)
+			{
+				case 0: target = ivec2( target.x, target.y); break;
+				case 1: target = ivec2( target.y, target.x); break;
+				case 2: target = ivec2(-target.y, target.x); break;
+				case 3: target = ivec2(-target.x, target.y); break;
+				case 4: target = ivec2(-target.x,-target.y); break;
+				case 5: target = ivec2(-target.y,-target.x); break;
+				case 6: target = ivec2( target.y,-target.x); break;
+				case 7: target = ivec2( target.x,-target.y); break;
+			}
 		target += pos;
+		}
 	}
 	pos += sign(target-pos);
 	ivec2 delta = abs(target - pos);

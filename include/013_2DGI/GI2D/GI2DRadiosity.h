@@ -213,9 +213,9 @@ struct GI2DRadiosity
 			{
 				std::vector<uint32_t> count(Mesh_Num);
 				std::vector<i16vec2> data(Mesh_Vertex_Size);
-				for (int i = 0; i < Mesh_Num; i++)
+				for (int i = 0; i < Mesh_Num-1; i++)
 				{
-					int R = glm::sqrt((i*i+1.f))*100.f + 1;
+					int R = glm::sqrt((i+1)*(i+1))*100.f + 1;
 					int x = R;
 					int y = 0;
 					int err = 0;
@@ -267,6 +267,7 @@ struct GI2DRadiosity
 // 					}
 // 					printf("vi=%3d, id=%3d, type=%3d, pos=[%3d,%3d]\n", vertex_index, target_ID, target_type, target.x, target.y);
 // 				}
+				count[Mesh_Num - 1] = gi2d_context->RenderSize.x*gi2d_context->RenderSize.y / 8;
 				cmd.updateBuffer<uint32_t>(u_circle_mesh_count.getInfo().buffer, u_circle_mesh_count.getInfo().offset, count);
 			}
 		}
@@ -941,17 +942,17 @@ struct GI2DRadiosity
 			});
 
 			static vec2 light_pos = vec2(349.5f, 316.6f);
-			static int light_power = 1;
+			static int light_power = 0;
 			float move = 3.f;
 			if (m_context->m_window->getInput().m_keyboard.isHold('A')) { move = 0.03f; }
 			light_pos.x += m_context->m_window->getInput().m_keyboard.isHold(VK_RIGHT) * move;
 			light_pos.x -= m_context->m_window->getInput().m_keyboard.isHold(VK_LEFT) * move;
 			light_pos.y -= m_context->m_window->getInput().m_keyboard.isHold(VK_UP) * move;
 			light_pos.y += m_context->m_window->getInput().m_keyboard.isHold(VK_DOWN) * move;
-			if (m_context->m_window->getInput().m_keyboard.isOn(' ')) { light_power = (light_power + 1) % 31; }
+			if (m_context->m_window->getInput().m_keyboard.isOn(' ')) { light_power = (light_power + 1) % 300; }
 
 			s_data[0].pos = i16vec2(light_pos);
-			s_data[0].color = glm::packHalf4x16(vec4(0.5f + light_power));
+			s_data[0].color = glm::packHalf4x16(vec4(light_power*0.3f));
 		}
 		// emissiveÉfÅ[É^çÏê¨
 		_label.insert("GI2DRadiosity::executeMakeDirectLight");
