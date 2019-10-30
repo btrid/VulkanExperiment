@@ -1039,9 +1039,7 @@ struct GI2DRadiosity
 
 		cmd.bindVertexBuffers(0, array_length(vertex_buffers), vertex_buffers, offsets);
 
-//		cmd.drawIndirect(u_circle_mesh_count.getInfo().buffer, u_circle_mesh_count.getInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
-//		cmd.drawIndirectCountKHR(v_emissive_draw_command.getInfo().buffer, v_emissive_draw_command.getInfo().offset, v_emissive_draw_count.getInfo().buffer, v_emissive_draw_count.getInfo().offset, Emissive_Num, sizeof(vk::DrawIndirectCommand), m_context->m_dispach);
-		cmd.drawIndirect(v_emissive_draw_command.getInfo().buffer, v_emissive_draw_command.getInfo().offset, 1, sizeof(vk::DrawIndirectCommand));
+		cmd.drawIndirect(v_emissive_draw_command.getInfo().buffer, v_emissive_draw_command.getInfo().offset, Emissive_Num, sizeof(vk::DrawIndirectCommand));
 		cmd.endRenderPass();
 
 	}
