@@ -98,7 +98,7 @@ void main()
 		ivec2 cell_sub = pos%8;
 		if((map & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0ul)
 		{
-			break;
+//			break;
 		}
 
 		if (D > 0)
