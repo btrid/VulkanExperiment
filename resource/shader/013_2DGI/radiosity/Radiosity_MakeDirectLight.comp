@@ -10,6 +10,7 @@ layout (local_size_x = 1024) in;
 
 bool intersection(in ivec4 aabb, in ivec2 pos, in int R)
 {
+	// https://yal.cc/rectangle-circle-intersection-test/
 	int delta_x = pos.x - max(aabb.x, min(pos.x, aabb.z));
 	int delta_y = pos.y - max(aabb.y, min(pos.y, aabb.w));
 	return delta_x*delta_x+delta_y*delta_y < R*R;
@@ -20,11 +21,18 @@ void main()
 	int emissive_power = clamp(int(ceil(sqrt(dot(color, vec3(1.)) / 3.)))-1, 0, 7);
 
 	uint cmd_index = gl_GlobalInvocationID.x;
+
+	if(!intersection(ivec4(0, 0, u_gi2d_info.m_resolution.xy-1), b_emissive[gl_GlobalInvocationID.x].pos, 1)
+	{
+		// マップ範囲外(todo mapとレンダリング矩形を分ける)
+		v_emissive_draw_command[cmd_index] = uvec4(0, 0, 0, 0);
+		return;
+	}
 	if(emissive_power <= 6)
 	{
-		// 範囲外
 		if(!intersection(ivec4(0, 0, u_gi2d_info.m_resolution.xy-1), b_emissive[gl_GlobalInvocationID.x].pos, (emissive_power+1)*100))
 		{
+			// レンダリング範囲外
 			v_emissive_draw_command[cmd_index] = uvec4(0, 0, 0, 0);
 			return;
 		}

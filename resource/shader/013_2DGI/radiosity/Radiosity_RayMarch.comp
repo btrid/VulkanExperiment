@@ -24,6 +24,7 @@ layout (local_size_x=128) in;
 
 bool intersection(in ivec4 aabb, in ivec2 pos, in ivec2 dir, out int n, out int f)
 {
+	// https://tavianator.com/fast-branchless-raybounding-box-intersections/
 	aabb *= dir_reso;
 
 	ivec4 t = (aabb - pos.xyxy)/dir.xyxy;
