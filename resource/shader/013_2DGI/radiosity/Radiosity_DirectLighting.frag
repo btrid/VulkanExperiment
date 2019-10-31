@@ -24,6 +24,9 @@ void main()
 //	vec2 pos = ;
 	float dist = distance(vec2(fs_in.pos.xy), vec2(gl_FragCoord.xy));
 	vec3 color = fs_in.color/(1.+dist*dist*0.01)-0.01;
-	color = dot(color, vec3(1.)) <= 0. ? vec3(1., 0., 0.) : vec3(1.); // チェック用
 	FragColor = f16vec4(color, 1.0);
+
+
+//	チェック用
+//	FragColor.xyz = dot(FragColor.xyz, vec3(1.)) <= 0. ? vec3(1., 0., 0.) : vec3(1.); 
 }

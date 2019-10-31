@@ -42,7 +42,7 @@ void main()
 
 	if(emissive_power>= 7)
 	{
-		uint v_num = (u_gi2d_info.m_resolution.x+u_gi2d_info.m_resolution.y)*2;
+		uint v_num = (u_gi2d_info.m_resolution.x-1+u_gi2d_info.m_resolution.y-1)*2+2;
 		v_emissive_draw_command[cmd_index] = uvec4(v_num, 1, 0, cmd_index);
 		b_emissive[cmd_index].flag = u16vec2(emissive_power, uint16_t(0xffff));
 	}

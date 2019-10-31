@@ -87,14 +87,14 @@ void main()
 			}
 			target += pos;
 
-			if(!contains(ivec4(0, 0, reso.xy-1), pos, target))
-			{
-				// 画面外の場合はレイを飛ばさない
-				//return; // 効果少ない？
-			}
+			// 画面外の場合はレイを飛ばさない
+			// 効果少ない？
+//			if(!contains(ivec4(0, 0, reso.xy-1), pos, target))
+//			{
+//				return; 
+//			}
 		}
 	}
-	pos += sign(target-pos);
 
 	ivec3 _dir = sign(ivec3(target, 0) - ivec3(pos, 0));
 	ivec2 dir[2];
@@ -121,7 +121,7 @@ void main()
 		ivec2 cell_sub = pos%8;
 		if((map & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0ul)
 		{
-//			break;
+			break;
 		}
 
 		if (D > 0)
