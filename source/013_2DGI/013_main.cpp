@@ -490,10 +490,47 @@ void makeCircle(int Ox, int Oy, int R)
 		printf("\n");
 	}
 }
+
+bool intersection() 
+{
+	vec4 aabb = vec4(0, 0, 1023, 1023);
+	vec2 p0 = vec2(1011, 667);
+	vec2 p1 = vec2(1013, 669);
+	vec2 dir = vec2(p1 - p0);
+
+// 	float tx1 = (aabb.x - p0.x) / dir.x;
+// 	float tx2 = (aabb.z - p0.x) / dir.x;
+// 
+// 	float tmin = glm::min(tx1, tx2);
+// 	float tmax = glm::max(tx1, tx2);
+// 
+// 	float ty1 = (aabb.y - p0.y) / dir.y;
+// 	float ty2 = (aabb.w - p0.y) / dir.y;
+// 
+// 	tmin = glm::max(tmin, glm::min(ty1, ty2));
+// 	tmax = glm::min(tmax, glm::max(ty1, ty2));
+// 
+// 	return tmax >= tmin;
+
+	vec2 line[] = {
+		aabb.xy() - aabb.zy(),
+		aabb.zy() - aabb.zw(),
+		aabb.zw() - aabb.xw(),
+		aabb.xw() - aabb.xy(),
+	};
+	bool inner = false;
+	for (int i = 0; i<4; i++ )
+	{
+		inner |= cross(vec3(line[i], 0.f), vec3(p0, 0.f)).z >= 0.f;
+		inner |= cross(vec3(line[i], 0.f), vec3(p1, 0.f)).z >= 0.f;
+	}
+	return inner;
+}
 int radiosity2()
 {
 //	makeCircle(40, 40, 16);
 //	dda();
+//	intersection();
 
 	app::AppDescriptor app_desc;
 	app_desc.m_window_size = uvec2(1024, 1024);

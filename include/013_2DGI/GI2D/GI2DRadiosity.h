@@ -937,8 +937,8 @@ struct GI2DRadiosity
 				for (int i = 0; i < array_length(s_data); i++)
 				{
 					auto color_index = std::rand() % 3;
-					s_data[i] = Emissive{ i16vec2(std::rand() % 950 + 40, std::rand() % 950 + 40), u8vec4(), glm::packHalf4x16(colors[color_index] * 30.f) };
-//					s_data[i].pos -= i16vec2(5000);
+					s_data[i] = Emissive{ i16vec2(std::rand() % 950 + 40, std::rand() % 950 + 40), u8vec4(), glm::packHalf4x16(colors[color_index] * 1.f) };
+//					s_data[i].pos -= i16vec2(500);
 				}
 			});
 

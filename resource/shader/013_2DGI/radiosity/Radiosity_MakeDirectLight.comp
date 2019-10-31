@@ -22,12 +22,13 @@ void main()
 
 	uint cmd_index = gl_GlobalInvocationID.x;
 
-	if(!intersection(ivec4(0, 0, u_gi2d_info.m_resolution.xy-1), b_emissive[gl_GlobalInvocationID.x].pos, 1)
+/*	if(!intersection(ivec4(0, 0, u_gi2d_info.m_resolution.xy-1), b_emissive[gl_GlobalInvocationID.x].pos, 1))
 	{
 		// マップ範囲外(todo mapとレンダリング矩形を分ける)
 		v_emissive_draw_command[cmd_index] = uvec4(0, 0, 0, 0);
 		return;
 	}
+*/
 	if(emissive_power <= 6)
 	{
 		if(!intersection(ivec4(0, 0, u_gi2d_info.m_resolution.xy-1), b_emissive[gl_GlobalInvocationID.x].pos, (emissive_power+1)*100))

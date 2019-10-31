@@ -20,6 +20,23 @@ layout(location=1) out Vertex{
 	flat vec3 color;
 }vs_out;
 
+
+bool contains(in ivec4 aabb, in ivec2 p0, in ivec2 p1) 
+{
+	vec2 line[] = {
+		aabb.xy - aabb.zy,
+		aabb.zy - aabb.zw,
+		aabb.zw - aabb.xw,
+		aabb.xw - aabb.xy,
+	};
+	bool inner = false;
+	for (int i = 0; i<4; i++ )
+	{
+		inner = inner || cross(vec3(line[i], 0.f), vec3(p0, 0.)).z >= 0.;
+		inner = inner || cross(vec3(line[i], 0.f), vec3(p1, 0.)).z >= 0.;
+	}
+	return inner;
+}
 void main()
 {
 	const ivec4 reso = u_gi2d_info.m_resolution;
@@ -27,9 +44,9 @@ void main()
 	vs_out.color = vec3(in_color.xyz);
 
 	ivec2 pos = in_pos;
+	gl_Position = vec4(vec2(pos+0.5) / reso.xy * 2. - 1., 0., 1.);
 	if(gl_VertexIndex==0)
 	{
-		gl_Position = vec4(vec2(pos+0.5) / reso.xy * 2. - 1., 0., 1.);
 		return;
 	}
 
@@ -69,6 +86,12 @@ void main()
 				case 7: target = ivec2( target.x,-target.y); break;
 			}
 			target += pos;
+
+			if(!contains(ivec4(0, 0, reso.xy-1), pos, target))
+			{
+				// 画面外の場合はレイを飛ばさない
+				//return; // 効果少ない？
+			}
 		}
 	}
 	pos += sign(target-pos);
