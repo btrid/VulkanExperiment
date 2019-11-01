@@ -81,6 +81,7 @@ struct GI2DRadiosity
 		i16vec2 pos;
 		u16vec2 flag;
 		f16vec4 color;
+		f16vec2 angle;
 	};
 
 	GI2DRadiosity(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<GI2DContext>& gi2d_context, const std::shared_ptr<RenderTarget>& render_target)
@@ -682,6 +683,7 @@ struct GI2DRadiosity
 				vk::VertexInputAttributeDescription(0, 0, vk::Format::eR16G16Sint, offsetof(Emissive, pos)),
 				vk::VertexInputAttributeDescription(1, 0, vk::Format::eR16G16Uint, offsetof(Emissive, flag)),
 				vk::VertexInputAttributeDescription(2, 0, vk::Format::eR16G16B16A16Sfloat, offsetof(Emissive, color)),
+				vk::VertexInputAttributeDescription(3, 0, vk::Format::eR16G16Sfloat, offsetof(Emissive, angle)),
 			};
 			direct_light_vertex_input_info.setVertexBindingDescriptionCount(array_length(directlight_vinput_binding_desc));
 			direct_light_vertex_input_info.setPVertexBindingDescriptions(directlight_vinput_binding_desc);
@@ -937,23 +939,26 @@ struct GI2DRadiosity
 				for (int i = 0; i < array_length(s_data); i++)
 				{
 					auto color_index = std::rand() % 3;
-					s_data[i] = Emissive{ i16vec2(std::rand() % 950 + 40, std::rand() % 950 + 40), u8vec4(), glm::packHalf4x16(colors[color_index] * 1.f) };
+					s_data[i] = Emissive{ i16vec2(std::rand() % 950 + 40, std::rand() % 950 + 40), u8vec4(), glm::packHalf4x16(colors[color_index] * 1.f), glm::packHalf2x16(vec2(0.f, 1.f)) };
 //					s_data[i].pos -= i16vec2(500);
 				}
 			});
 
 			static vec2 light_pos = vec2(646.5f, 601.6f);
-			static int light_power = 0;
+			static int light_power = 80;
+			static float light_dir = 0.f;
 			float move = 3.f;
 			if (m_context->m_window->getInput().m_keyboard.isHold('A')) { move = 0.03f; }
 			light_pos.x += m_context->m_window->getInput().m_keyboard.isHold(VK_RIGHT) * move;
 			light_pos.x -= m_context->m_window->getInput().m_keyboard.isHold(VK_LEFT) * move;
 			light_pos.y -= m_context->m_window->getInput().m_keyboard.isHold(VK_UP) * move;
 			light_pos.y += m_context->m_window->getInput().m_keyboard.isHold(VK_DOWN) * move;
-			if (m_context->m_window->getInput().m_keyboard.isOn(' ')) { light_power = (light_power + 1) % 200; }
+			if (m_context->m_window->getInput().m_keyboard.isOn(' ')) { light_power = (light_power + 4) % 200; }
+			if (m_context->m_window->getInput().m_keyboard.isOn('D')) { light_dir = glm::mod(light_dir + 0.05f, 1.f); }
 
 			s_data[0].pos = i16vec2(light_pos);
 			s_data[0].color = glm::packHalf4x16(vec4(light_power+0.3f));
+			s_data[0].angle = glm::packHalf2x16(vec2(light_dir, 0.25f));
 		}
 		// emissiveÉfÅ[É^çÏê¨
 		_label.insert("GI2DRadiosity::executeMakeDirectLight");

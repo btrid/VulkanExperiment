@@ -66,6 +66,7 @@ struct Emissive
 	i16vec2 pos;
 	u16vec2 flag;
 	f16vec4 color;
+	f16vec2 angle;
 };
 
 layout(set=USE_GI2D_Radiosity, binding=8, std430) restrict buffer EmissiveBuffer {

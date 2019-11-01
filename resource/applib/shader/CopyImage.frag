@@ -16,5 +16,7 @@ layout(location=0) out vec4 FragColor;
 
 void main()
 {
-	FragColor = texture(tSrc, VSIn.Texcoord);
+	// ガンマ補正
+	vec4 color = texture(tSrc, VSIn.Texcoord);
+	FragColor = pow(color, vec4(2.2));
 }

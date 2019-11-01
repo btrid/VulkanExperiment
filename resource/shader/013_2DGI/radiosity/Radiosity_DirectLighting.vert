@@ -1,5 +1,6 @@
 #version 450
 #extension GL_GOOGLE_include_directive : require
+#extension GL_ARB_shader_draw_parameters : require
 
 #define USE_GI2D 0
 #define USE_GI2D_Radiosity 1
@@ -9,6 +10,7 @@
 layout(location = 0)in ivec2 in_pos;
 layout(location = 1)in uvec2 in_flag; //[mesh_index, _not_use]
 layout(location = 2)in vec4 in_color;
+layout(location = 3)in vec2 in_angle;
 
 
 layout(location=0) out gl_PerVertex{
@@ -20,6 +22,21 @@ layout(location=1) out Vertex{
 	flat vec3 color;
 }vs_out;
 
+
+#define TWO_PI (6.28)
+#define PI (3.14)
+#define HALF_PI (1.57)
+#define QUATER_PI (0.785)
+float atan_safe(in float y, in float x)
+{
+	return x == 0.0 ? sign(y)*HALF_PI : atan(y, x);
+}
+
+float mod_hlsl(in float x, in float y)
+{
+	// x - y * floor(x / y) glsl
+	return x - y * trunc(x/y);
+}
 
 bool contains(in ivec4 aabb, in ivec2 p0, in ivec2 p1) 
 {
@@ -44,9 +61,10 @@ void main()
 	vs_out.color = vec3(in_color.xyz);
 
 	ivec2 pos = in_pos;
-	gl_Position = vec4(vec2(pos+0.5) / reso.xy * 2. - 1., 0., 1.);
-	if(gl_VertexIndex==0)
+	if(gl_VertexIndex==gl_BaseVertexARB)
 	{
+		// 最初は中点とする
+		gl_Position = vec4(vec2(pos+0.5) / reso.xy * 2. - 1., 0., 1.);
 		return;
 	}
 
@@ -55,14 +73,24 @@ void main()
 		if(in_flag.x >= 7)
 		{
 			// 画面端にまで届くような光の場合
-			uint target_ID = (gl_VertexIndex-1)%1023;
-			uint target_type = (gl_VertexIndex-1)/1023;
-			switch(target_type)
+			uint target_ID = (gl_VertexIndex-1+511)%1023;
+			uint target_type = (gl_VertexIndex-1+511)/1023;
+			switch((target_type+1)%4)
 			{
 				case 0: target = ivec2(target_ID, 0); break;
-				case 1: target = ivec2(1023, target_ID); break;
-				case 2: target = ivec2((reso.x-1)-target_ID, 1023); break;
+				case 1: target = ivec2((reso.x-1), target_ID); break;
+				case 2: target = ivec2((reso.x-1)-target_ID, (reso.y-1)); break;
 				case 3: target = ivec2(0, (reso.y-1)-target_ID); break;
+			}
+
+			// 範囲外なら描画しない（無理やり計算）
+			vec2 dir = vec2(target-pos);
+			float angle = atan_safe(dir.x, dir.y);
+			angle = mod_hlsl(angle+in_angle.x*6.28, 6.28) / 6.28;
+			if(angle < 0. || angle > in_angle.y)
+			{
+				gl_Position = vec4(vec2(pos+0.5) / reso.xy * 2. - 1., 0., 1.);
+				return;
 			}
 		}
 		else

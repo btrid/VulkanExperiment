@@ -40,17 +40,25 @@ void main()
 
 	}
 
+	uint vertex_num;
+	uint vertex_offset;
 	if(emissive_power>= 7)
 	{
-		uint v_num = (u_gi2d_info.m_resolution.x-1+u_gi2d_info.m_resolution.y-1)*2+2;
-		v_emissive_draw_command[cmd_index] = uvec4(v_num, 1, 0, cmd_index);
-		b_emissive[cmd_index].flag = u16vec2(emissive_power, uint16_t(0xffff));
+		vertex_num = (u_gi2d_info.m_resolution.x-1+u_gi2d_info.m_resolution.y-1)*2;
+		vertex_offset = 0; // vertexshaderで計算
 	}
 	else
 	{
-
-		uint v_num = u_circle_mesh_count[emissive_power/4][emissive_power%4];
-		v_emissive_draw_command[cmd_index] = uvec4(v_num*8+2, 1, 0, cmd_index);
-		b_emissive[cmd_index].flag = u16vec2(emissive_power, v_num);
+		vertex_num = u_circle_mesh_count[emissive_power/4][emissive_power%4]*8;
+		vertex_offset = uint(float(b_emissive[cmd_index].angle.x) * vertex_num);
+		vertex_num = uint(ceil(vertex_num*float(b_emissive[cmd_index].angle.y)));
 	}
+
+	// 
+
+	// 中点と、円になるために0番目の頂点は二度書く
+	vertex_num+=2;
+
+	v_emissive_draw_command[cmd_index] = uvec4(vertex_num, 1, vertex_offset, cmd_index);
+	b_emissive[cmd_index].flag = u16vec2(emissive_power, uint16_t(0xffff));
 }
