@@ -23,7 +23,8 @@ void main()
 
 //	vec2 pos = ;
 	float dist = distance(vec2(fs_in.pos.xy), vec2(gl_FragCoord.xy));
-	vec3 color = fs_in.color/(1.+dist*dist*0.01)-0.01;
+	vec3 color = fs_in.color/(1.+dist*dist*0.01);
+	color = max(color-0.01, 0.);
 	FragColor = f16vec4(color, 1.0);
 
 

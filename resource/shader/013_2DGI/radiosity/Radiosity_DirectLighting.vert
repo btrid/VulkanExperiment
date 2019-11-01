@@ -7,7 +7,7 @@
 #include "GI2D/Radiosity.glsl"
 
 layout(location = 0)in ivec2 in_pos;
-layout(location = 1)in uvec2 in_flag; //[mesh_index, vertex_num]
+layout(location = 1)in uvec2 in_flag; //[mesh_index, _not_use]
 layout(location = 2)in vec4 in_color;
 
 
@@ -52,7 +52,7 @@ void main()
 
 	ivec2 target = ivec2(0);
 	{
-		if(in_flag.y == 0xffff)
+		if(in_flag.x >= 7)
 		{
 			// 画面端にまで届くような光の場合
 			uint target_ID = (gl_VertexIndex-1)%1023;
@@ -68,7 +68,8 @@ void main()
 		else
 		{
 			// ある程度以下の光の場合
-			uint vertex_num = in_flag.y;
+//			uint vertex_num = in_flag.y;
+			uint vertex_num = u_circle_mesh_count[in_flag.x/4][in_flag.x%4];
 			uint target_ID = (gl_VertexIndex-1)%vertex_num;
 			uint target_type = (gl_VertexIndex-1)/vertex_num;
 			int vertex_index = int(((target_type%2)==0)?target_ID:(vertex_num-target_ID));
