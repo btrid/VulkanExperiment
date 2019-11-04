@@ -55,20 +55,20 @@ void main()
 	float d = !state.x ? distance(vec2(current), vec2(cell)) : 99999999.;
 	float old_d = d;
 
-//	if(current.y + cd.x>= 0)
+	if(d > distance(vec2(constant.distance), vec2(0)))
 	{
 		nearest(cell, d, state, reso, current, current + cd.xx);
-		nearest(cell, d, state, reso, current, current + cd.yx);
-		nearest(cell, d, state, reso, current, current + cd.zx);
-	}
-//	if(current.y + cd.z < reso.y)
-	{
 		nearest(cell, d, state, reso, current, current + cd.xz);
-		nearest(cell, d, state, reso, current, current + cd.yz);
+		nearest(cell, d, state, reso, current, current + cd.zx);
 		nearest(cell, d, state, reso, current, current + cd.zz);
 	}
-	nearest(cell, d, state, reso, current, current + cd.xy);
-	nearest(cell, d, state, reso, current, current + cd.zy);
+	if(d > distance(vec2(constant.distance, 0), vec2(0)))
+	{
+		nearest(cell, d, state, reso, current, current + cd.xy);
+		nearest(cell, d, state, reso, current, current + cd.zy);
+		nearest(cell, d, state, reso, current, current + cd.yx);
+		nearest(cell, d, state, reso, current, current + cd.yz);
+	}
 
 	if(d != old_d)
 	{

@@ -77,14 +77,21 @@ void main()
 
 	const ivec2 step = ivec2(constant.distance)>>uvec2(2, 0);
 	vec2 offset = vec2(length(vec2(constant.distance.xx)), length(vec2(constant.distance.x, 0.)));
-	nearest(cell_x, cell_y, d, state_inner, cell_pos_x, cell_pos_y, reso, current + step * ivec2(-1,-1), offset.xxxx);
-	nearest(cell_x, cell_y, d, state_inner, cell_pos_x, cell_pos_y, reso, current + step * ivec2( 0,-1), offset.yyyy);
-	nearest(cell_x, cell_y, d, state_inner, cell_pos_x, cell_pos_y, reso, current + step * ivec2( 1,-1), offset.xxxx);
-	nearest(cell_x, cell_y, d, state_inner, cell_pos_x, cell_pos_y, reso, current + step * ivec2(-1, 1), offset.xxxx);
-	nearest(cell_x, cell_y, d, state_inner, cell_pos_x, cell_pos_y, reso, current + step * ivec2( 0, 1), offset.yyyy);
-	nearest(cell_x, cell_y, d, state_inner, cell_pos_x, cell_pos_y, reso, current + step * ivec2( 1, 1), offset.xxxx);
-	nearest(cell_x, cell_y, d, state_inner, cell_pos_x, cell_pos_y, reso, current + step * ivec2(-1, 0), offset.yyyy);
-	nearest(cell_x, cell_y, d, state_inner, cell_pos_x, cell_pos_y, reso, current + step * ivec2( 1, 0), offset.yyyy);
+
+	if(any(greaterThan(d, vec4(distance(vec2(constant.distance), vec2(0))))))
+	{
+		nearest(cell_x, cell_y, d, state_inner, cell_pos_x, cell_pos_y, reso, current + step * ivec2(-1,-1), offset.xxxx);
+		nearest(cell_x, cell_y, d, state_inner, cell_pos_x, cell_pos_y, reso, current + step * ivec2( 1,-1), offset.xxxx);
+		nearest(cell_x, cell_y, d, state_inner, cell_pos_x, cell_pos_y, reso, current + step * ivec2(-1, 1), offset.xxxx);
+		nearest(cell_x, cell_y, d, state_inner, cell_pos_x, cell_pos_y, reso, current + step * ivec2( 1, 1), offset.xxxx);
+	}
+	if(any(greaterThan(d, vec4(distance(vec2(constant.distance, 0), vec2(0))))))
+	{
+		nearest(cell_x, cell_y, d, state_inner, cell_pos_x, cell_pos_y, reso, current + step * ivec2( 0,-1), offset.yyyy);
+		nearest(cell_x, cell_y, d, state_inner, cell_pos_x, cell_pos_y, reso, current + step * ivec2( 0, 1), offset.yyyy);
+		nearest(cell_x, cell_y, d, state_inner, cell_pos_x, cell_pos_y, reso, current + step * ivec2(-1, 0), offset.yyyy);
+		nearest(cell_x, cell_y, d, state_inner, cell_pos_x, cell_pos_y, reso, current + step * ivec2( 1, 0), offset.yyyy);
+	}
 
 	ivec4 is_update = ivec4(d != old_d);
 	ivec4 write = (ivec4(cell_y)<<16) | ivec4(cell_x) | (state_inner<<31) | ((1-is_update)*(isInvalid(cell)<<15));
