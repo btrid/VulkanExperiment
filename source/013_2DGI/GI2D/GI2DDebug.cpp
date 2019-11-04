@@ -36,14 +36,14 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 		{
 //			rect.emplace_back(F{ ivec4{ std::rand() % gi2d_context->RenderWidth , std::rand() % gi2d_context->RenderHeight, std::rand() % 12 + 16, std::rand() % 12 + 16 }, vec4(std::rand() % 80 + 20,std::rand() % 80 + 20,std::rand() % 80 + 20,100) * 0.01f });
 		}
-// 		rect.emplace_back(F{ ivec4{ 0, 0, 10, 1023, }, vec4{ 0.8f,0.2f,0.2f,0.f } });
-// 		rect.emplace_back(F{ ivec4{ 1013, 0, 10, 1023, }, vec4{ 0.8f,0.2f,0.2f,0.f } });
-// 		rect.emplace_back(F{ ivec4{ 0, 0, 1023, 1, }, vec4{ 0.8f,0.2f,0.2f,0.f } });
-// 		rect.emplace_back(F{ ivec4{ 0, 1023, 1024, 1, }, vec4{ 0.8f,0.2f,0.2f,0.f } });
-		rect.emplace_back(F{ ivec4{ 50, 150, 200, 300 }, vec4{ 1.f, 0.3f, 0.3f, 0.3f } });
-		rect.emplace_back(F{ ivec4{ 250, 500, 300, 400 }, vec4{ 1.f, 0.3f, 0.3f, 0.3f } });
-		rect.emplace_back(F{ ivec4{ 650, 300, 500, 200 }, vec4{ 1.f, 0.3f, 0.3f, 0.3f } });
-		rect.emplace_back(F{ ivec4{ 750, 600, 500, 200 }, vec4{ 1.f, 0.3f, 0.3f, 0.3f } });
+		rect.emplace_back(F{ ivec4{ 0, 0, 10, 1023, }, vec4{ 0.8f,0.2f,0.2f,0.f } });
+		rect.emplace_back(F{ ivec4{ 1013, 0, 10, 1023, }, vec4{ 0.8f,0.2f,0.2f,0.f } });
+		rect.emplace_back(F{ ivec4{ 0, 0, 1023, 1, }, vec4{ 0.8f,0.2f,0.2f,0.f } });
+		rect.emplace_back(F{ ivec4{ 0, 1023, 1024, 1, }, vec4{ 0.8f,0.2f,0.2f,0.f } });
+// 		rect.emplace_back(F{ ivec4{ 50, 150, 200, 300 }, vec4{ 1.f, 0.3f, 0.3f, 0.3f } });
+// 		rect.emplace_back(F{ ivec4{ 250, 500, 300, 400 }, vec4{ 1.f, 0.3f, 0.3f, 0.3f } });
+// 		rect.emplace_back(F{ ivec4{ 650, 300, 500, 200 }, vec4{ 1.f, 0.3f, 0.3f, 0.3f } });
+// 		rect.emplace_back(F{ ivec4{ 750, 600, 500, 200 }, vec4{ 1.f, 0.3f, 0.3f, 0.3f } });
 
 		for (size_t y = 0; y < gi2d_context->RenderHeight; y++)
 		{

@@ -294,10 +294,10 @@ int rigidbody()
 
 				if (context->m_window->getInput().m_keyboard.isOn('A'))
 				{
- 					for (int y = 0; y < 1; y++){
- 					for (int x = 0; x < 1; x++){
+ 					for (int y = 0; y < 8; y++){
+ 					for (int x = 0; x < 8; x++){
 						GI2DRB_MakeParam param;
-						param.aabb = uvec4(220 + x * 32, 620 - y * 16, 16, 16);
+						param.aabb = uvec4(220 + x * 32, 620 - y * 16, 8, 8);
 						param.is_fluid = false;
 						param.is_usercontrol = false;
  						gi2d_physics_context->make(cmd, param);
@@ -305,10 +305,11 @@ int rigidbody()
 				}
 
 				gi2d_make_hierarchy.executeMakeFragmentMapAndSDF(cmd, gi2d_sdf_context);
+				gi2d_make_hierarchy.executeRenderSDF(cmd, gi2d_sdf_context, app.m_window->getFrontBuffer());
 
- 				gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
- 				gi2d_physics_proc.execute(cmd, gi2d_physics_context, gi2d_sdf_context);
- 				gi2d_physics_proc.executeDrawParticle(cmd, gi2d_physics_context, app.m_window->getFrontBuffer());
+// 				gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
+// 				gi2d_physics_proc.execute(cmd, gi2d_physics_context, gi2d_sdf_context);
+// 				gi2d_physics_proc.executeDrawParticle(cmd, gi2d_physics_context, app.m_window->getFrontBuffer());
 
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;
@@ -616,9 +617,9 @@ int main()
 	camera->getData().m_near = 0.01f;
 
 //	return pathFinding();
-//	return rigidbody();
+	return rigidbody();
 //	return radiosity();
-	return radiosity2();
+//	return radiosity2();
 
 	app::AppDescriptor app_desc;
 	app_desc.m_window_size = uvec2(1024, 1024);

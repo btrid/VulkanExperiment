@@ -25,9 +25,7 @@ void main()
 	? mat2(b_rigidbody[r_id].R_old) * b_rbParticle[p_id].relative_pos + b_rigidbody[r_id].cm_old
 	: b_rbParticle[p_id].pos;
 
-//	vec2 pos_old = b_rbParticle[p_id].pos_old;
 	b_rbParticle[p_id].pos_old = b_rbParticle[p_id].pos;
-//	b_rbParticle[p_id].pos_old = pos_old;
 
 	if((b_rigidbody[r_id].flag & RB_FLAG_USER_CONTROL) == 0)
 	{

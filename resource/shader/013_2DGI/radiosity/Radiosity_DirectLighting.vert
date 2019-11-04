@@ -1,6 +1,7 @@
 #version 450
 #extension GL_GOOGLE_include_directive : require
 #extension GL_ARB_shader_draw_parameters : require
+#extension GL_KHR_shader_subgroup_ballot: enable
 
 #define USE_GI2D 0
 #define USE_GI2D_Radiosity 1
@@ -145,6 +146,7 @@ void main()
 		{
 			cell = pos>>3;
 			map = b_fragment_map[cell.x + cell.y * reso.z];
+			if (subgroupElect()) {}
 		}
 
 		ivec2 cell_sub = pos%8;
