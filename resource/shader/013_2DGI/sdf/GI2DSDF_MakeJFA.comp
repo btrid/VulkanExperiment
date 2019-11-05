@@ -16,7 +16,6 @@ layout(push_constant) uniform Input
 
 // state.x = invalid cell
 // state.y = inner or outer
-
 void nearest(inout i16vec2 cell, inout float current_d, in bvec2 state, in uvec2 reso, in vec2 current, in ivec2 target)
 {
 	if(any(lessThan(target, ivec2(0))) || any(greaterThanEqual(target, reso.xy))){ return; }
