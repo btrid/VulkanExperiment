@@ -105,10 +105,9 @@ struct GI2DPhysics
 		vec2 pos;
 		vec2 pos_old;
 
-		uint _p;
 		float density;
-		uint color;
-		uint flag;
+		uint flag : 8;
+		uint color : 24;
 	};
 
 	struct rbCollidable

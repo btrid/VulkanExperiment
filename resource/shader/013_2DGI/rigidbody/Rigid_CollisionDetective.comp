@@ -28,7 +28,7 @@ void main()
 {
 	uint pb_id = b_pb_update_list[b_world.cpu_index*b_manager.pb_list_size+gl_WorkGroupID.x];
 	uint p_id = pb_id*RB_PARTICLE_BLOCK_SIZE + gl_LocalInvocationID.x;
-	if((b_rbParticle[p_id].flag & RBP_FLAG_ACTIVE) == 0){ return; }
+	if((b_rbParticle[p_id].flag_color & RBP_FLAG_ACTIVE) == 0){ return; }
 
 	const ivec4 reso = u_gi2d_info.m_resolution;
 
@@ -44,7 +44,6 @@ void main()
 	float len = length_safe(vel);
 	vec2 dir = normalize_safe(vel);
 
-	b_rbParticle[p_id].flag &= ~(1<<20);
 	bool is_hit = false;
 
 	// まず壁と判定
@@ -116,12 +115,12 @@ void main()
 
 	if(is_hit)
 	{
-		b_rbParticle[p_id].flag |= 1<<20;
+		b_rbParticle[p_id].flag_color |= _RBP_FLAG_COLLIDED;
 		b_rbParticle[p_id].pos = pos;
 	}
 	else
 	{
-		b_rbParticle[p_id].flag &= ~(1<<20);
+		b_rbParticle[p_id].flag_color &= ~_RBP_FLAG_COLLIDED;
 	}
 
 	if(((b_rigidbody[r_id].flag & RB_FLAG_FLUID) == 0))

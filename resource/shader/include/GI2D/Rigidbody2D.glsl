@@ -66,6 +66,7 @@ struct Rigidbody
 
 #define RBP_FLAG_ACTIVE (1<<0)
 #define RBP_FLAG_COLLIDABLE (1<<1)
+#define _RBP_FLAG_COLLIDED (1<<7)
 struct rbParticle
 {
 	f16vec2 relative_pos;
@@ -78,10 +79,8 @@ struct rbParticle
 	vec2 pos_old;
 
 
-	uint _p;
 	float density;
-	uint color;
-	uint flag;
+	uint flag_color; // u8vec4[flag, r, g, b]
 
 };
 struct rbCollidable

@@ -44,8 +44,8 @@ void main()
 	b_rbParticle[p_id] = p;
 //	b_rbParticle[p_id].pos_old -= vec2(rand(vec2(p_id)), rand(vec2(p_id*12.3123+123.))) * 0.03 - vec2(0., 0.015);
 	
-	// 初期化
-	p.flag = 0;
+	// フラグ初期化
+	p.flag_color = 0xffffff00;
 	b_make_particle[gl_GlobalInvocationID.x] = p;
 
 }
