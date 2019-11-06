@@ -394,10 +394,10 @@ void GI2DPhysics::make(vk::CommandBuffer cmd, const GI2DRB_MakeParam& param)
 	std::vector<i16vec2> jfa_cell(area.x*area.y, i16vec2(0xffff));
 	for (int32_t i = 0; i < particle_num; i++)
 	{
-		pstate[i].relative_pos = pos[i] - vec2(jfa_min) - vec2(center_of_mass);
-		pstate[i].local_pos = pos[i] - vec2(jfa_min);
+		pstate[i].relative_pos = glm::packHalf2x16( pos[i] - vec2(jfa_min) - vec2(center_of_mass));
+		pstate[i].local_pos = glm::packHalf2x16(pos[i] - vec2(jfa_min));
 
-		ivec2 local_pos = ivec2(pstate[i].local_pos);
+		ivec2 local_pos = ivec2(pos[i] - vec2(jfa_min));
 		jfa_cell[local_pos.x + local_pos.y*area.x] = i16vec2(0xfffe);
 	}
 	cmd.updateBuffer<i16vec2>(b_make_jfa_cell.getInfo().buffer, b_make_jfa_cell.getInfo().offset, jfa_cell);

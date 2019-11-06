@@ -68,14 +68,15 @@ struct Rigidbody
 #define RBP_FLAG_COLLIDABLE (1<<1)
 struct rbParticle
 {
-	vec2 relative_pos;
-	vec2 sdf;
+	f16vec2 relative_pos;
+	f16vec2 sdf;
+
+	f16vec2 local_pos;
+	f16vec2 local_sdf;
 
 	vec2 pos;
 	vec2 pos_old;
 
-	vec2 local_pos;
-	vec2 local_sdf;
 
 	uint _p;
 	float density;

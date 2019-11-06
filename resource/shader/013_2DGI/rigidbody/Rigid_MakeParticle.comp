@@ -39,7 +39,7 @@ void main()
 		pos = pos + vel + RB_GRAVITY_DT;
 	}
 	b_rbParticle[p_id].pos = pos;
-	b_rbParticle[p_id].local_sdf = mat2(b_rigidbody[r_id].R) * b_rbParticle[p_id].sdf;
+	b_rbParticle[p_id].local_sdf = f16vec2(mat2(b_rigidbody[r_id].R) * b_rbParticle[p_id].sdf);
 
 }
 

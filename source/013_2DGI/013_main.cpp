@@ -305,11 +305,11 @@ int rigidbody()
 				}
 
 				gi2d_make_hierarchy.executeMakeFragmentMapAndSDF(cmd, gi2d_sdf_context);
-				gi2d_make_hierarchy.executeRenderSDF(cmd, gi2d_sdf_context, app.m_window->getFrontBuffer());
+//				gi2d_make_hierarchy.executeRenderSDF(cmd, gi2d_sdf_context, app.m_window->getFrontBuffer());
 
-// 				gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
-// 				gi2d_physics_proc.execute(cmd, gi2d_physics_context, gi2d_sdf_context);
-// 				gi2d_physics_proc.executeDrawParticle(cmd, gi2d_physics_context, app.m_window->getFrontBuffer());
+ 				gi2d_debug.executeDrawFragment(cmd, app.m_window->getFrontBuffer());
+				gi2d_physics_proc.execute(cmd, gi2d_physics_context, gi2d_sdf_context);
+				gi2d_physics_proc.executeDrawParticle(cmd, gi2d_physics_context, app.m_window->getFrontBuffer());
 
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;
