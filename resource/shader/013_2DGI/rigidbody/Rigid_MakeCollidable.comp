@@ -29,11 +29,11 @@ void main()
 	if(ci < COLLIDABLE_NUM)
 	{
 		rbCollidable c;
-		c.r_id = r_id;
-		c.mass_inv = 1.;
-		c.pos = pos;
+		c.r_id = uint16_t(r_id);
+		c.mass_inv = float16_t(1.);
+		c.grid_relative_pos = f16vec2(pos-index);
 		c.sdf = b_rbParticle[p_id].local_sdf;
-		c.vel = pos - b_rbParticle[p_id].pos_old;
+		c.vel = f16vec2(pos - b_rbParticle[p_id].pos_old);
 
 		b_collidable[i*COLLIDABLE_NUM + ci] = c;
 	}

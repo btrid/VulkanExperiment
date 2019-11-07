@@ -85,7 +85,7 @@ void main()
 				continue;
 			}
 
-			vec2 pos_j = b_collidable[fj_id].pos;
+			vec2 pos_j = vec2(b_collidable[fj_id].grid_relative_pos) + map_index;
 			vec2 rela_pos = pos-pos_j;
 			if(dot(rela_pos, rela_pos) >= k_delimiter*k_delimiter)
 			{
@@ -94,7 +94,7 @@ void main()
 			}
 
 			vec2 sdf_j = -b_collidable[fj_id].sdf;
-			float mass_j = b_collidable[fj_id].mass_inv;
+			float mass_j = float(b_collidable[fj_id].mass_inv);
 			float c = max(dot(sdf, sdf_j), 0.);
 			float s = max(cross(vec3(sdf, 0.0), vec3(sdf_j, 0.0)).z, 0.);
 			float total_mass = mass + mass_j;

@@ -85,12 +85,12 @@ struct rbParticle
 };
 struct rbCollidable
 {
-	uint r_id;
-	float mass_inv;
-	vec2 pos;
+	uint16_t r_id;
+	float16_t mass_inv;
+	f16vec2 grid_relative_pos;
 
-	vec2 vel;
-	vec2 sdf;
+	f16vec2 vel;
+	f16vec2 sdf;
 };
 struct rbCollidableWall
 {

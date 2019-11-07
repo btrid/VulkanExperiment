@@ -112,12 +112,12 @@ struct GI2DPhysics
 
 	struct rbCollidable
 	{
-		uint r_id;
-		float mass;
-		vec2 pos;
+		uint16_t r_id;
+		float16_t mass_inv;
+		f16vec2 pos;
 
-		vec2 vel;
-		vec2 sdf;
+		f16vec2 vel;
+		f16vec2 sdf;
 	};
 
 	struct BufferManage
@@ -144,7 +144,7 @@ struct GI2DPhysics
 	};
 	enum
 	{
-		RB_NUM_MAX = 1024*4,
+		RB_NUM_MAX = 1024*4*4,
 		RB_PARTICLE_BLOCK_NUM_MAX = RB_NUM_MAX * 8,
 		RB_PARTICLE_BLOCK_SIZE = 64, // shader‚à64‘O’ñ‚Ì•”•ª‚ª‚ ‚é
 		RB_PARTICLE_NUM = RB_PARTICLE_BLOCK_NUM_MAX * RB_PARTICLE_BLOCK_SIZE,
@@ -152,6 +152,7 @@ struct GI2DPhysics
 		MAKE_RB_SIZE_MAX = RB_PARTICLE_BLOCK_SIZE * 16*16,
 		MAKE_RB_JFA_CELL = 128*128,
 	};
+	static_assert(GI2DPhysics::RB_NUM_MAX < std::numeric_limits<decltype(rbCollidable::r_id)>::max());
 
 	vk::DescriptorSetLayout getDescriptorSetLayout(DescriptorLayout i)const { return m_desc_layout[i].get(); }
 	vk::DescriptorSet getDescriptorSet(DescriptorLayout i)const { return m_descset[i].get(); }
@@ -200,7 +201,6 @@ struct GI2DPhysics
 	World m_world;
 
 };
-
 
 struct GI2DPhysicsDebug
 {

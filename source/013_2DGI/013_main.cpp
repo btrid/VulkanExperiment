@@ -294,8 +294,8 @@ int rigidbody()
 
 				if (context->m_window->getInput().m_keyboard.isOn('A'))
 				{
- 					for (int y = 0; y < 8; y++){
- 					for (int x = 0; x < 8; x++){
+ 					for (int y = 0; y < 16; y++){
+ 					for (int x = 0; x < 16; x++){
 						GI2DRB_MakeParam param;
 						param.aabb = uvec4(220 + x * 32, 620 - y * 16, 8, 8);
 						param.is_fluid = false;
