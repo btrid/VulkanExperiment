@@ -168,7 +168,7 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 		b_rbparticle_map = m_context->m_storage_memory.allocateMemory<uint32_t>({ RB_PARTICLE_BLOCK_NUM_MAX,{} });
 		b_collidable_counter = m_context->m_storage_memory.allocateMemory<uint32_t>({ gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
 		b_collidable = m_context->m_storage_memory.allocateMemory<rbCollidable>({ COLLIDABLE_NUM * gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
-		b_collidable_wall = m_context->m_storage_memory.allocateMemory<rbCollidable>({ COLLIDABLE_NUM * gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
+		b_collidable_wall = m_context->m_storage_memory.allocateMemory<f16vec2>({ gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
 		b_fluid_counter = m_context->m_storage_memory.allocateMemory<uint>({ gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
 		b_manager = m_context->m_storage_memory.allocateMemory<BufferManage>({ 1,{} });
 		b_rb_memory_list = m_context->m_storage_memory.allocateMemory<uint>({ RB_NUM_MAX,{} });

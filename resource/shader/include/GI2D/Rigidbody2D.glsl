@@ -92,6 +92,10 @@ struct rbCollidable
 	vec2 vel;
 	vec2 sdf;
 };
+struct rbCollidableWall
+{
+	f16vec2 sdf;
+};
 
 struct BufferManage
 {
@@ -122,7 +126,7 @@ layout(set=USE_Rigidbody2D, binding=5, std430) buffer rbCollidableBuffer {
 	rbCollidable b_collidable[];
 };
 layout(set=USE_Rigidbody2D, binding=6, std430) buffer rbCollidableWallBuffer {
-	rbCollidable b_collidable_wall[];
+	rbCollidableWall b_collidable_wall[];
 };
 layout(set=USE_Rigidbody2D, binding=7, std430) buffer rbFluidCounter {
 	uint b_fluid_counter[];

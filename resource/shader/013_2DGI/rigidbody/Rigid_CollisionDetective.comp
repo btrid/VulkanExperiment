@@ -54,12 +54,12 @@ void main()
 		uvec2 map_index = uvec2(pos_i);
 		if(any(greaterThanEqual(map_index, reso.xy))){ continue; }
 		uint findex = map_index.x + map_index.y * reso.x;
+		vec2 sdf_j = -b_collidable_wall[findex].sdf;
 
-		uint fj_id = findex;
-		if(b_collidable_wall[fj_id].r_id == 0){ continue; }
+		// sdfが無いなら壁ではない
+		if(dot(sdf_j,sdf_j) <= 0.001){ continue; }
 
-		vec2 sdf_j = -b_collidable_wall[fj_id].sdf;
-		vec2 pos_j = b_collidable_wall[fj_id].pos;
+		vec2 pos_j = map_index + vec2(0.5);
 		{
 			vec2 n_vec = (pos_j - pos_i) + sdf_j;
 //				pos += dot(n_vec, sdf_j) * sdf_j * ((mass /total_mass) * c);

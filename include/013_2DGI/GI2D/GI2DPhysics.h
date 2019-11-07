@@ -182,7 +182,7 @@ struct GI2DPhysics
 	btr::BufferMemoryEx<uint32_t> b_rbparticle_map;
 	btr::BufferMemoryEx<uint32_t> b_collidable_counter;
 	btr::BufferMemoryEx<rbCollidable> b_collidable;
-	btr::BufferMemoryEx<rbCollidable> b_collidable_wall;
+	btr::BufferMemoryEx<f16vec2> b_collidable_wall;
 	btr::BufferMemoryEx<uint> b_fluid_counter;
 
 	btr::BufferMemoryEx<BufferManage> b_manager;
