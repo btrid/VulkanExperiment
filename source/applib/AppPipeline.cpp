@@ -376,9 +376,9 @@ PresentPipeline::PresentPipeline(const std::shared_ptr<btr::Context>& context, c
 
 		{
 			vk::ImageMemoryBarrier to_present[2];
-			to_present[0].setSrcAccessMask(vk::AccessFlagBits::eMemoryRead);
+//			to_present[0].setSrcAccessMask(vk::AccessFlagBits::eMemoryRead);
 			to_present[0].setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
-			to_present[0].setOldLayout(vk::ImageLayout::ePresentSrcKHR);
+//			to_present[0].setOldLayout(vk::ImageLayout::ePresentSrcKHR);
 			to_present[0].setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
 			to_present[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
 			to_present[0].setImage(swapchain->m_backbuffer_image[i]);
