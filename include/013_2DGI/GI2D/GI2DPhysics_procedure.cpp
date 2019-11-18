@@ -21,6 +21,8 @@ GI2DPhysics_procedure::GI2DPhysics_procedure(const std::shared_ptr<GI2DPhysics>&
 			"Rigid_UpdateParticleBlock.comp.spv",
 			"Rigid_UpdateRigidbody.comp.spv",
 
+			"RigidDebug_DrawCollisionMap.comp.spv",
+
 		};
 		static_assert(array_length(name) == Shader_Num, "not equal shader num");
 
@@ -91,6 +93,9 @@ GI2DPhysics_procedure::GI2DPhysics_procedure(const std::shared_ptr<GI2DPhysics>&
 		shader_info[9].setModule(m_shader[Shader_RBUpdateRigidbody].get());
 		shader_info[9].setStage(vk::ShaderStageFlagBits::eCompute);
 		shader_info[9].setPName("main");
+		shader_info[10].setModule(m_shader[ShaderDebug_DrawCollisionHeatMap].get());
+		shader_info[10].setStage(vk::ShaderStageFlagBits::eCompute);
+		shader_info[10].setPName("main");
 		std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 		{
 			vk::ComputePipelineCreateInfo()
@@ -123,6 +128,9 @@ GI2DPhysics_procedure::GI2DPhysics_procedure(const std::shared_ptr<GI2DPhysics>&
 			vk::ComputePipelineCreateInfo()
 			.setStage(shader_info[9])
 			.setLayout(m_pipeline_layout[PipelineLayout_Rigid].get()),
+			vk::ComputePipelineCreateInfo()
+			.setStage(shader_info[10])
+			.setLayout(m_pipeline_layout[PipelineLayout_DrawParticle].get()),
 		};
 		auto compute_pipeline = physics_context->m_context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
 		m_pipeline[Pipeline_DrawParticle] = std::move(compute_pipeline[0]);
@@ -135,6 +143,7 @@ GI2DPhysics_procedure::GI2DPhysics_procedure(const std::shared_ptr<GI2DPhysics>&
 		m_pipeline[Pipeline_RBMakeTransformMatrix] = std::move(compute_pipeline[7]);
 		m_pipeline[Pipeline_RBUpdateParticleBlock] = std::move(compute_pipeline[8]);
 		m_pipeline[Pipeline_RBUpdateRigidbody] = std::move(compute_pipeline[9]);
+		m_pipeline[Pipeline_DrawCollisionHeatMap] = std::move(compute_pipeline[10]);
 	}
 
 }
@@ -284,8 +293,6 @@ void GI2DPhysics_procedure::execute(vk::CommandBuffer cmd, const std::shared_ptr
 		cmd.updateBuffer<uvec4>(physics_context->b_update_counter.getInfo().buffer, physics_context->b_update_counter.getInfo().offset + physics_context->m_world.cpu_index * sizeof(uvec4) * 2, uvec4(0, 1, 1, 0));
 		cmd.updateBuffer<uvec4>(physics_context->b_update_counter.getInfo().buffer, physics_context->b_update_counter.getInfo().offset + physics_context->m_world.cpu_index * sizeof(uvec4) * 2 + sizeof(uvec4), uvec4(0, 1, 1, 0));
 	}
-
-
 }
 
 void GI2DPhysics_procedure::executeDrawParticle(vk::CommandBuffer cmd, const std::shared_ptr<GI2DPhysics>& physics_context, const std::shared_ptr<RenderTarget>& render_target)
@@ -317,5 +324,41 @@ void GI2DPhysics_procedure::executeDrawParticle(vk::CommandBuffer cmd, const std
 	cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_DrawParticle].get());
 
 	cmd.dispatchIndirect(physics_context->b_update_counter.getInfo().buffer, physics_context->b_update_counter.getInfo().offset + physics_context->m_world.gpu_index * sizeof(uvec4) * 2 + sizeof(uvec4));
+
+}
+
+
+void GI2DPhysics_procedure::executeDebugDrawCollisionHeatMap(vk::CommandBuffer cmd, const std::shared_ptr<GI2DPhysics>& physics_context, const std::shared_ptr<RenderTarget>& render_target)
+{
+	DebugLabel _label(cmd, physics_context->m_context->m_dispach, __FUNCTION__);
+
+	{
+		// render_target‚É‘‚«ž‚Þ
+		vk::BufferMemoryBarrier to_read[] = {
+			physics_context->b_rigidbody.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			physics_context->b_rbparticle.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+			physics_context->b_update_counter.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
+			physics_context->b_pb_update_list.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+		};
+		vk::ImageMemoryBarrier image_barrier;
+		image_barrier.setImage(render_target->m_image);
+		image_barrier.setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+		image_barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+		image_barrier.setOldLayout(vk::ImageLayout::eGeneral);
+		image_barrier.setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
+		image_barrier.setNewLayout(vk::ImageLayout::eGeneral);
+
+		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eComputeShader | vk::PipelineStageFlagBits::eDrawIndirect, {},
+			0, nullptr, array_length(to_read), to_read, 1, &image_barrier);
+	}
+
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_DrawParticle].get(), 0, physics_context->getDescriptorSet(GI2DPhysics::DescLayout_Data), {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_DrawParticle].get(), 1, physics_context->m_gi2d_context->getDescriptorSet(), {});
+	cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_DrawParticle].get(), 2, render_target->m_descriptor.get(), {});
+
+	cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_DrawCollisionHeatMap].get());
+
+	auto num = app::calcDipatchGroups(uvec3(physics_context->m_gi2d_context->RenderWidth, physics_context->m_gi2d_context->RenderHeight, 1), uvec3(32, 32, 1));
+	cmd.dispatch(num.x, num.y, num.z);
 
 }

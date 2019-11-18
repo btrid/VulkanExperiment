@@ -25,4 +25,6 @@ SET output=-o ../../binary
 %exe% %include% %option% %output%/RigidMake_SetupParticle.comp.spv RigidMake_SetupParticle.comp
 
 
+%exe% %include% %option% %output%/RigidDebug_DrawCollisionMap.comp.spv RigidDebug_DrawCollisionMap.comp
+
 
