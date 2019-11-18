@@ -23,7 +23,7 @@ void main()
 	if(any(lessThan(index, ivec2(0))) || any(greaterThanEqual(index, u_gi2d_info.m_resolution.xy))){ return; }
 
 //	vec4 color = vec4(unpackUnorm4x8(b_rbParticle[p_id].color).xyz, 1.);
-	vec4 color = vec4(abs(b_rbParticle[p_id].sdf), 0., 1.);
+	vec4 color = vec4(abs(vec2(b_rbParticle[p_id].sdf)), 0., 1.);
 	color = (b_rbParticle[p_id].flag_color & _RBP_FLAG_COLLIDED) != 0 ? vec4(0., 0., 1., 1.) : color;
 #if 0
 	uint r_id = b_rbParticle_map[pb_id];

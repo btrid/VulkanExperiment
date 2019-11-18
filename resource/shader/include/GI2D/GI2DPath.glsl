@@ -7,18 +7,6 @@
 #ifdef USE_GI2D_Path
 
 
-const i16vec2 g_neighor_list[8] = 
-{
-	i16vec2(-1,-1), 
-	i16vec2( 0,-1),
-	i16vec2( 1,-1),
-	i16vec2( 1, 0),
-	i16vec2( 1, 1),
-	i16vec2( 0, 1),
-	i16vec2(-1, 1),
-	i16vec2(-1, 0),
-};
-
 #define OPEN_NODE_SIZE (4096)
 layout(std430, set=USE_GI2D_Path, binding=0) restrict buffer PathConnectBuffer {
 	uint b_connect;
