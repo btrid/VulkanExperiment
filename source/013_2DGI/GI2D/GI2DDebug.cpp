@@ -32,9 +32,9 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 			vec4 color;
 		};
 		std::vector<F> rect;
-		for (int i = 0; i < 50; i++) 
+		for (int i = 0; i < 100; i++) 
 		{
-//			rect.emplace_back(F{ ivec4{ std::rand() % gi2d_context->RenderWidth , std::rand() % gi2d_context->RenderHeight, 1, 1 }, vec4(std::rand() % 80 + 20,std::rand() % 80 + 20,std::rand() % 80 + 20,100) * 0.01f });
+			rect.emplace_back(F{ ivec4{ std::rand() % gi2d_context->RenderWidth , std::rand() % gi2d_context->RenderHeight, rand()%20+8, rand() % 20 + 8 }, vec4(std::rand() % 80 + 20,std::rand() % 80 + 20,std::rand() % 80 + 20,100) * 0.01f });
 		}
 		rect.emplace_back(F{ ivec4{ 0, 0, 10, 1023, }, vec4{ 0.8f,0.2f,0.2f,0.f } });
 		rect.emplace_back(F{ ivec4{ 1013, 0, 10, 1023, }, vec4{ 0.8f,0.2f,0.2f,0.f } });

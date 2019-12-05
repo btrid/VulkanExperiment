@@ -935,30 +935,32 @@ struct GI2DRadiosity
 			static std::once_flag s_is_init_light;
 			std::call_once(s_is_init_light, []()
 			{
-				vec4 colors[] = { vec4(1.f, 0.f, 0.f, 0.f), vec4(0.f, 1.f, 0.f, 0.f) , vec4(0.f, 0.f, 1.f, 0.f) };
+				std::vector<vec4> colors = { vec4(1.f, 0.f, 0.f, 0.f), vec4(0.f, 1.f, 0.f, 0.f) , vec4(0.f, 0.f, 1.f, 0.f), vec4(0.f) };
 				for (int i = 0; i < array_length(s_data); i++)
 				{
 					auto color_index = std::rand() % 3;
+					color_index = 3;
 					s_data[i] = Emissive{ i16vec2(std::rand() % 950 + 40, std::rand() % 950 + 40), u8vec4(), glm::packHalf4x16(colors[color_index] * 1.f), glm::packHalf2x16(vec2(0.f, 1.f)) };
-//					s_data[i].pos -= i16vec2(500);
 				}
 			});
 
 			static vec2 light_pos = vec2(646.5f, 601.6f);
-			static int light_power = 80;
+			static int light_power = 10;
 			static float light_dir = 0.f;
+			static float light_angle = 1.f;
 			float move = 3.f;
 			if (m_context->m_window->getInput().m_keyboard.isHold('A')) { move = 0.03f; }
 			light_pos.x += m_context->m_window->getInput().m_keyboard.isHold(VK_RIGHT) * move;
 			light_pos.x -= m_context->m_window->getInput().m_keyboard.isHold(VK_LEFT) * move;
 			light_pos.y -= m_context->m_window->getInput().m_keyboard.isHold(VK_UP) * move;
 			light_pos.y += m_context->m_window->getInput().m_keyboard.isHold(VK_DOWN) * move;
-			if (m_context->m_window->getInput().m_keyboard.isOn(' ')) { light_power = (light_power + 4) % 200; }
+			if (m_context->m_window->getInput().m_keyboard.isOn(' ')) { light_power = (light_power + 50) % 100; }
 			if (m_context->m_window->getInput().m_keyboard.isOn('D')) { light_dir = glm::mod(light_dir + 0.05f, 1.f); }
+			if (m_context->m_window->getInput().m_keyboard.isOn('F')) { light_angle = glm::mod(light_angle + 0.05f, 1.f); }
 
 			s_data[0].pos = i16vec2(light_pos);
 			s_data[0].color = glm::packHalf4x16(vec4(light_power+0.3f));
-			s_data[0].angle = glm::packHalf2x16(vec2(light_dir, 0.25f));
+			s_data[0].angle = glm::packHalf2x16(vec2(light_dir, light_angle));
 		}
 		// emissiveÉfÅ[É^çÏê¨
 		_label.insert("GI2DRadiosity::executeMakeDirectLight");

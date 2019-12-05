@@ -74,9 +74,9 @@ void main()
 		if(in_flag.x >= 7)
 		{
 			// 画面端にまで届くような光の場合
-			uint target_ID = (gl_VertexIndex-1+511)%1023;
-			uint target_type = (gl_VertexIndex-1+511)/1023;
-			switch((target_type+1)%4)
+			uint target_ID = (gl_VertexIndex-1)%1023;
+			uint target_type = (gl_VertexIndex-1)/1023;
+			switch(target_type%4)
 			{
 				case 0: target = ivec2(target_ID, 0); break;
 				case 1: target = ivec2((reso.x-1), target_ID); break;
@@ -84,10 +84,11 @@ void main()
 				case 3: target = ivec2(0, (reso.y-1)-target_ID); break;
 			}
 
-			// 範囲外なら描画しない（無理やり計算）
-			vec2 dir = vec2(target-pos);
-			float angle = atan_safe(dir.x, dir.y);
-			angle = mod_hlsl(angle+in_angle.x*6.28, 6.28) / 6.28;
+			// 範囲外なら描画しない。計算がだいぶ怪しい。
+			vec2 dir = vec2(pos-target);
+			float angle = (atan_safe(dir.x, dir.y)+(3.14*0.5))/6.28+1.;
+			angle = fract(1.-angle-in_angle.x);
+			angle = (angle);
 			if(angle < 0. || angle > in_angle.y)
 			{
 				gl_Position = vec4(vec2(pos+0.5) / reso.xy * 2. - 1., 0., 1.);

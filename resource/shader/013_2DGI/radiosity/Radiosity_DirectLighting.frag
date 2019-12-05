@@ -16,7 +16,7 @@ layout(location=1) in Vertex{
 	flat vec3 color;
 }fs_in;
 */
-layout(location = 0) out f16vec4 FragColor;
+layout(location = 0) out vec4 FragColor;
 void main()
 {
 //	FragColor = f16vec4(vec3(5.), 1.0);
@@ -29,5 +29,5 @@ void main()
 
 
 //	チェック用
-//	FragColor.xyz = dot(FragColor.xyz, vec3(1.)) <= 0. ? vec3(1., 0., 0.) : vec3(1.); 
+	FragColor.xyz = dot(FragColor.xyz, vec3(1.)) <= 0. ? vec3(1., 0., 0.) : vec3(1.); 
 }

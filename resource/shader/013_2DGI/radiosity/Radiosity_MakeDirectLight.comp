@@ -18,7 +18,7 @@ bool intersection(in ivec4 aabb, in ivec2 pos, in int R)
 void main() 
 {
 	vec3 color = vec3(b_emissive[gl_GlobalInvocationID.x].color.xyz);
-	int emissive_power = clamp(int(ceil(sqrt(dot(color, vec3(1.)) / 3.)))-1, 0, 7);
+	int emissive_power = clamp(int(ceil(sqrt(dot(color, vec3(1.)) / 3.)))-1, -1, 7);
 
 	uint cmd_index = gl_GlobalInvocationID.x;
 
@@ -29,6 +29,12 @@ void main()
 		return;
 	}
 */
+	if(emissive_power < 0)
+	{
+		// 無効なライト
+		v_emissive_draw_command[cmd_index] = uvec4(0, 0, 0, 0);
+		return;
+	}
 	if(emissive_power <= 6)
 	{
 		if(!intersection(ivec4(0, 0, u_gi2d_info.m_resolution.xy-1), b_emissive[gl_GlobalInvocationID.x].pos, (emissive_power+1)*100))
@@ -53,8 +59,6 @@ void main()
 		vertex_offset = uint(float(b_emissive[cmd_index].angle.x) * vertex_num);
 		vertex_num = uint(ceil(vertex_num*float(b_emissive[cmd_index].angle.y)));
 	}
-
-	// 
 
 	// 中点と、円になるために0番目の頂点は二度書く
 	vertex_num+=2;
