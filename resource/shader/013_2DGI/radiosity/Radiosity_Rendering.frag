@@ -18,6 +18,6 @@ void main()
 	FragColor = f16vec4(0.);
 	for(int i = 0; i < u_radiosity_info.frame_max; i++)
 	{
-		FragColor = fma(f16vec4(texture(s_radiosity[i], fs_in.texcoord)), f16vec4(5.), FragColor);
+		FragColor = fma(f16vec4(texture(s_radiosity[i], fs_in.texcoord)), f16vec4(1.), FragColor);
 	}
 }

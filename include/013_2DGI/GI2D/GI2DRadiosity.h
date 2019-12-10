@@ -837,7 +837,7 @@ struct GI2DRadiosity
 					cmd.pushConstants<int>(m_pipeline_layout[PipelineLayout_Radiosity].get(), vk::ShaderStageFlagBits::eCompute, 0, i%2);
 
 					cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RayBounce].get());
-//					cmd.dispatchIndirect(b_segment_counter.getInfo().buffer, b_segment_counter.getInfo().offset + offsetof(SegmentCounter, bounce_cmd));
+					cmd.dispatchIndirect(b_segment_counter.getInfo().buffer, b_segment_counter.getInfo().offset + offsetof(SegmentCounter, bounce_cmd));
 				}
 
 			}
@@ -954,9 +954,9 @@ struct GI2DRadiosity
 			light_pos.x -= m_context->m_window->getInput().m_keyboard.isHold(VK_LEFT) * move;
 			light_pos.y -= m_context->m_window->getInput().m_keyboard.isHold(VK_UP) * move;
 			light_pos.y += m_context->m_window->getInput().m_keyboard.isHold(VK_DOWN) * move;
-			if (m_context->m_window->getInput().m_keyboard.isOn(' ')) { light_power = (light_power + 50) % 100; }
-			if (m_context->m_window->getInput().m_keyboard.isOn('D')) { light_dir = glm::mod(light_dir + 0.05f, 1.f); }
-			if (m_context->m_window->getInput().m_keyboard.isOn('F')) { light_angle = glm::mod(light_angle + 0.05f, 1.f); }
+			if (m_context->m_window->getInput().m_keyboard.isOn(' ')) { light_power = (light_power + 5) % 60; }
+//			if (m_context->m_window->getInput().m_keyboard.isOn('D')) { light_dir = glm::mod(light_dir + 0.05f, 1.f); }
+//			if (m_context->m_window->getInput().m_keyboard.isOn('F')) { light_angle = glm::mod(light_angle + 0.05f, 1.f); }
 
 			s_data[0].pos = i16vec2(light_pos);
 			s_data[0].color = glm::packHalf4x16(vec4(light_power+0.3f));
