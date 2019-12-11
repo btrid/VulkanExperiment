@@ -275,7 +275,7 @@ void GI2DDebug::executeMakeFragment(vk::CommandBuffer cmd)
 	cmd.copyBuffer(m_map_data.getInfo().buffer, m_gi2d_context->b_fragment.getInfo().buffer, copy);
 
 // 	// light‚Ì‚Å‚Î‚Á‚®
-	if(0)
+//	if(0)
 	{
 		vk::BufferMemoryBarrier to_read[] =
 		{

@@ -1,0 +1,100 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+#extension GL_KHR_shader_subgroup_ballot: enable
+#extension GL_KHR_shader_subgroup_arithmetic: enable
+
+#define USE_GI2D 0
+#define USE_GI2D_Radiosity 1
+#define USE_RenderTarget 2
+
+#include "GI2D/GI2D.glsl"
+#include "GI2D/Radiosity.glsl"
+#include "applib/System.glsl"
+
+layout (local_size_x=16) in;
+
+float rand(in vec2 co)
+{
+   return fract(sin(dot(co.xy, vec2(12.9898,78.233))) * 43758.5453);
+}
+
+bool intersection(ivec4 box, ivec2 origin, vec2 inv_dir, out float tmin, out float tmax) 
+{
+	float tx1 = (box.x - origin.x)*inv_dir.x;
+	float tx2 = (box.z - origin.x)*inv_dir.x;
+
+	float ty1 = (box.y - origin.y)*inv_dir.y;
+	float ty2 = (box.w - origin.y)*inv_dir.y;
+
+	tmin = max(min(tx1, tx2), min(ty1, ty2));
+	tmax = min(max(tx1, tx2), max(ty1, ty2));
+
+	return tmax >= tmin;
+} 
+void main()
+{
+	uvec4 reso = u_gi2d_info.m_resolution;
+	ivec2 pos = ivec2(gl_WorkGroupID.xy);
+	ivec2 target;
+	{
+		float angle_offset = rand(vec2(gl_GlobalInvocationID.xy));
+		float angle = (gl_LocalInvocationID.x + angle_offset) * (6.28 / float(gl_NumWorkGroups.x));
+		vec2 dir = vec2(cos(angle), sin(angle));
+
+		vec2 inv_dir;
+		inv_dir.x = abs(dir.x) <= 0.000001 ? (sign(dir.x)*9999999.) : (1. / dir.x);
+		inv_dir.y = abs(dir.y) <= 0.000001 ? (sign(dir.y)*9999999.) : (1. / dir.y);
+
+		float tmin, tmax;
+		intersection(ivec4(0,0,1024,1024), pos, inv_dir, tmin, tmax);
+		target = ivec2(trunc(dir * tmax + pos));
+	}
+
+	ivec3 _dir = sign(ivec3(target, 0) - ivec3(pos, 0));
+	ivec2 dir[2];
+	dir[0] = _dir.xz;
+	dir[1] = _dir.zy;
+
+	ivec2 delta = abs(target - pos);
+	int axis = delta.x > delta.y ? 0 : 1;
+	int	D = 2 * delta[1 - axis] - delta[axis];
+	int deltax = 2 * delta[1 - axis] - 2 * delta[axis];
+	int deltay = 2 * delta[1 - axis];
+
+	uint64_t map = 0ul;
+	ivec2 cell = ivec2(999999999);
+
+	for(;!all(equal(pos, target));)
+	{
+		if(any(notEqual(cell, pos>>3)))
+		{
+			cell = pos>>3;
+			map = b_fragment_map[cell.x + cell.y * reso.z];
+		}
+
+		ivec2 cell_sub = pos%8;
+		if((map & (1ul<<(cell_sub.x+cell_sub.y*8))) != 0ul)
+		{
+			break;
+		}
+
+		if (D > 0)
+		{
+			pos += dir[1 - axis];
+		}
+		pos += dir[axis];
+		D += D>0 ? deltax : deltay;
+	}
+
+	uint index = pos.x + pos.y*reso.x; 
+	vec3 albedo = getRGB(b_fragment[index]);
+	bool is_emissive = isEmissive(b_fragment[index]);
+
+	vec3 color = subgroupAdd(albedo * float(is_emissive));
+	if(subgroupElect())
+	{
+		imageStore(i_render_target, ivec2(gl_WorkGroupID.xy), vec4(color, 1.));
+	}
+}
+
+
