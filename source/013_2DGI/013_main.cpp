@@ -598,6 +598,19 @@ int radiosity2()
 
 int radiosity3()
 {
+	
+// 	{
+// 		for (size_t i = 0; i < 32; i++)
+// 		{
+// //			float angle_offset = rand(vec2(gl_GlobalInvocationID.xy));
+// 			float angle = i * (6.28 / 32.);
+// 			vec2 dir = normalize(vec2(cos(angle), sin(angle)));
+// 			printf("%i = [%6.2f%6.2f]", i, dir.x, dir.y);
+// 			dir = normalize(dir);
+// 			printf(", [%6.2f%6.2f]\n", dir.x, dir.y);
+// 		}
+// 
+// 	}
 	app::AppDescriptor app_desc;
 	app_desc.m_window_size = uvec2(1024, 1024);
 	app::App app(app_desc);

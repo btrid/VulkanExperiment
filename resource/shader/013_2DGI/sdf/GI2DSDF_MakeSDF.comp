@@ -25,7 +25,7 @@ void main()
 	i16vec2 cell = b_jfa[current.x + current.y*reso.x];
 //	b_sdf[getMemoryOrder(current)] = (((cell.y & 0x8000) == 0) ? -1. : 1.) *length(vec2((cell&0x7fff) - ivec2(gl_GlobalInvocationID.xy)));
 	b_sdf[current.x+current.y*reso.x] = (((cell.y & 0x8000) == 0) ? -1. : 1.) *length(vec2((cell&0x7fff) - ivec2(gl_GlobalInvocationID.xy)));
-	cell = b_jfa[current.x + current.y*reso.x + reso.x*reso.y];
-	b_sdf[current.x+current.y*reso.x + reso.x*reso.y] = (((cell.y & 0x8000) == 0) ? -1. : 1.) *length(vec2((cell&0x7fff) - ivec2(gl_GlobalInvocationID.xy)));
+//	cell = b_jfa[current.x + current.y*reso.x + reso.x*reso.y];
+//	b_sdf[current.x+current.y*reso.x + reso.x*reso.y] = (((cell.y & 0x8000) == 0) ? -1. : 1.) *length(vec2((cell&0x7fff) - ivec2(gl_GlobalInvocationID.xy)));
 //	b_sdf[getMemoryOrder(current) + reso.x*reso.y] = (((cell.y & 0x8000) == 0) ? -1. : 1.) *length(vec2((cell&0x7fff) - ivec2(gl_GlobalInvocationID.xy)));
 }

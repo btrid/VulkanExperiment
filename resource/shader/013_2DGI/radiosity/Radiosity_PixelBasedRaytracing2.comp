@@ -40,7 +40,7 @@ void main()
 		float angle_offset = rand(vec2(gl_GlobalInvocationID.xy));
 		float angle = (gl_LocalInvocationID.x + angle_offset) * (6.28 / float(gl_WorkGroupSize.x));
 		dir = vec2(cos(angle), sin(angle));
-
+//		dir = normalize(vec2(cos(angle), sin(angle)));
 	}
 	for(int _i; _i < 1000; _i++)
 	{
