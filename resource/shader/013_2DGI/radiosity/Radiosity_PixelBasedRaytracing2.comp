@@ -23,9 +23,11 @@ float rand(in vec2 co)
 void main()
 {
 	uvec4 reso = u_gi2d_info.m_resolution;
+	ivec2 ipos = ivec2(gl_WorkGroupID.xy);
+	vec2 pos = vec2(ipos);
 	{
-//		if(any(equal(ivec2(pos.xyxy), ivec4(0,0, reso.xy)))){ return; }
-		uint index = gl_WorkGroupID.x + gl_WorkGroupID.y*reso.x; 
+		if(any(equal(ipos.xyxy, ivec4(0,0,reso.xy)))){ return; }
+		uint index = ipos.x + ipos.y*reso.x; 
 		if(isDiffuse(b_fragment[index]))
 		{
 			return;
@@ -33,8 +35,6 @@ void main()
 	}
 
 
-	vec2 pos = vec2(gl_WorkGroupID.xy);
-	ivec2 ipos = ivec2(pos);
 	vec2 dir;
 	{
 		float angle_offset = rand(vec2(gl_GlobalInvocationID.xy));
