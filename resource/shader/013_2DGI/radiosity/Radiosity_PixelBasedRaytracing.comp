@@ -35,10 +35,20 @@ void main()
 {
 	uvec4 reso = u_gi2d_info.m_resolution;
 	ivec2 pos = ivec2(gl_WorkGroupID.xy);
+	{
+		if(any(equal(pos.xyxy, ivec4(0,0, reso.xy)))){ return; }
+		uint index = pos.x + pos.y*reso.x; 
+		if(isDiffuse(b_fragment[index]))
+		{
+			return;
+		}
+	}
+
+
 	ivec2 target;
 	{
 		float angle_offset = rand(vec2(gl_GlobalInvocationID.xy));
-		float angle = (gl_LocalInvocationID.x + angle_offset) * (6.28 / float(gl_NumWorkGroups.x));
+		float angle = (gl_LocalInvocationID.x + angle_offset) * (6.28 / float(gl_WorkGroupSize.x));
 		vec2 dir = vec2(cos(angle), sin(angle));
 
 		vec2 inv_dir;
@@ -91,7 +101,7 @@ void main()
 	bool is_emissive = isEmissive(b_fragment[index]);
 
 	vec3 color = subgroupAdd(albedo * float(is_emissive));
-	if(subgroupElect())
+	if(subgroupElect() && dot(color, vec3(1.)) >= 0.0001)
 	{
 		imageStore(i_render_target, ivec2(gl_WorkGroupID.xy), vec4(color, 1.));
 	}
