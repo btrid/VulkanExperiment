@@ -35,6 +35,7 @@ struct GI2DRadiosity
 		Shader_DirectLightingFS,
 
 		Shader_PixelBasedRaytracing,
+		Shader_PixelBasedRaytracing2,
 
 		Shader_Num,
 	};
@@ -43,6 +44,7 @@ struct GI2DRadiosity
 		PipelineLayout_Radiosity,
 		PipelineLayout_DirectLighting,
 		PipelineLayout_PixelBasedRaytracing,
+		PipelineLayout_PixelBasedRaytracing2,
 		PipelineLayout_Num,
 	};
 	enum Pipeline
@@ -58,6 +60,7 @@ struct GI2DRadiosity
 		Pipeline_DirectLighting,
 
 		Pipeline_PixelBasedRaytracing,
+		Pipeline_PixelBasedRaytracing2,
 
 		Pipeline_Num,
 	};
@@ -382,7 +385,8 @@ struct GI2DRadiosity
 				"Radiosity_DirectLighting.vert.spv",
 				"Radiosity_DirectLighting.frag.spv",
 
-				"Radiosity_PixelBasedRaytracing.comp.spv"
+				"Radiosity_PixelBasedRaytracing.comp.spv",
+				"Radiosity_PixelBasedRaytracing2.comp.spv",
 
 			};
 			static_assert(array_length(name) == Shader_Num, "not equal shader num");
@@ -434,14 +438,26 @@ struct GI2DRadiosity
 				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 				pipeline_layout_info.setPSetLayouts(layouts);
 				m_pipeline_layout[PipelineLayout_PixelBasedRaytracing] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
+			}
 
+			{
+				vk::DescriptorSetLayout layouts[] = {
+					gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_Data),
+					gi2d_context->getDescriptorSetLayout(GI2DContext::Layout_SDF),
+					m_descriptor_set_layout.get(),
+					RenderTarget::s_descriptor_set_layout.get(),
+				};
+				vk::PipelineLayoutCreateInfo pipeline_layout_info;
+				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
+				pipeline_layout_info.setPSetLayouts(layouts);
+				m_pipeline_layout[PipelineLayout_PixelBasedRaytracing2] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 			}
 
 		}
 
 		// compute pipeline
 		{
-			std::array<vk::PipelineShaderStageCreateInfo, 5> shader_info;
+			std::array<vk::PipelineShaderStageCreateInfo, 6> shader_info;
 			shader_info[0].setModule(m_shader[Shader_MakeHitpoint].get());
 			shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[0].setPName("main");
@@ -457,6 +473,9 @@ struct GI2DRadiosity
 			shader_info[4].setModule(m_shader[Shader_PixelBasedRaytracing].get());
 			shader_info[4].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[4].setPName("main");
+			shader_info[5].setModule(m_shader[Shader_PixelBasedRaytracing2].get());
+			shader_info[5].setStage(vk::ShaderStageFlagBits::eCompute);
+			shader_info[5].setPName("main");
 			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 			{
 				vk::ComputePipelineCreateInfo()
@@ -474,6 +493,9 @@ struct GI2DRadiosity
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[4])
 				.setLayout(m_pipeline_layout[PipelineLayout_PixelBasedRaytracing].get()),
+				vk::ComputePipelineCreateInfo()
+				.setStage(shader_info[5])
+				.setLayout(m_pipeline_layout[PipelineLayout_PixelBasedRaytracing2].get()),
 			};
 			auto compute_pipeline = context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
 			m_pipeline[Pipeline_MakeHitpoint] = std::move(compute_pipeline[0]);
@@ -481,6 +503,7 @@ struct GI2DRadiosity
 			m_pipeline[Pipeline_RayBounce] = std::move(compute_pipeline[2]);
 			m_pipeline[Pipeline_MakeDirectLight] = std::move(compute_pipeline[3]);
 			m_pipeline[Pipeline_PixelBasedRaytracing] = std::move(compute_pipeline[4]);
+			m_pipeline[Pipeline_PixelBasedRaytracing2] = std::move(compute_pipeline[5]);
 		}
 
 		// レンダーパス
@@ -1105,6 +1128,37 @@ struct GI2DRadiosity
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_PixelBasedRaytracing].get(), 0, array_length(descs), descs, 0, nullptr);
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_PixelBasedRaytracing].get());
+		cmd.dispatch(m_gi2d_context->m_gi2d_info.m_resolution.x, m_gi2d_context->m_gi2d_info.m_resolution.y, 1);
+
+	}
+
+	void executePixelBasedRaytracing2(const vk::CommandBuffer& cmd, const std::shared_ptr<GI2DSDF>& gi2d_sdf)
+	{
+		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
+
+		// render_targetに書く
+		{
+
+			std::array<vk::ImageMemoryBarrier, 1> image_barrier;
+			image_barrier[0].setImage(m_render_target->m_image);
+			image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+			image_barrier[0].setNewLayout(vk::ImageLayout::eGeneral);
+			image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
+
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
+		}
+
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_PixelBasedRaytracing2].get());
+		vk::DescriptorSet descs[] =
+		{
+			m_gi2d_context->getDescriptorSet(),
+			gi2d_sdf->m_descriptor_set.get(),
+			m_descriptor_set.get(),
+			m_render_target->m_descriptor.get(),
+		};
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_PixelBasedRaytracing2].get(), 0, array_length(descs), descs, 0, nullptr);
+
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_PixelBasedRaytracing2].get());
 		cmd.dispatch(m_gi2d_context->m_gi2d_info.m_resolution.x, m_gi2d_context->m_gi2d_info.m_resolution.y, 1);
 
 	}

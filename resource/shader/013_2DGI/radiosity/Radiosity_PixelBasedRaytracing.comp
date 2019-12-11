@@ -11,7 +11,7 @@
 #include "GI2D/Radiosity.glsl"
 #include "applib/System.glsl"
 
-layout (local_size_x=16) in;
+layout (local_size_x=32) in;
 
 float rand(in vec2 co)
 {

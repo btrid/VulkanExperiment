@@ -611,6 +611,7 @@ int radiosity3()
 	gi2d_desc.RenderWidth = app_desc.m_window_size.x;
 	gi2d_desc.RenderHeight = app_desc.m_window_size.y;
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context, gi2d_desc);
+	std::shared_ptr<GI2DSDF> gi2d_sdf = std::make_shared<GI2DSDF>(gi2d_context);
 
 	GI2DDebug gi2d_debug(context, gi2d_context);
 	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
@@ -644,10 +645,15 @@ int radiosity3()
 				gi2d_context->execute(cmd);
 				gi2d_debug.executeMakeFragment(cmd);
 
+#define USE_SDF
+#if defined(USE_SDF)
+				gi2d_make_hierarchy.executeMakeFragmentMapAndSDF(cmd, gi2d_sdf);
+				gi2d_Radiosity.executePixelBasedRaytracing2(cmd, gi2d_sdf);
+#else
 				gi2d_make_hierarchy.executeMakeFragmentMap(cmd);
-
 				gi2d_Radiosity.executePixelBasedRaytracing(cmd);
 
+#endif
 				cmd.end();
 				cmds[cmd_gi2d] = cmd;
 			}
