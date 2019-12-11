@@ -12,12 +12,12 @@ layout(location=1)in Data
 	vec2 texcoord;
 }fs_in;
 
-layout(location = 0) out f16vec4 FragColor;
+layout(location = 0) out vec4 FragColor;
 void main()
 {
-	FragColor = f16vec4(0.);
+	FragColor = vec4(0.);
 	for(int i = 0; i < u_radiosity_info.frame_max; i++)
 	{
-		FragColor = fma(f16vec4(texture(s_radiosity[i], fs_in.texcoord)), f16vec4(1.), FragColor);
+		FragColor = fma(vec4(texture(s_radiosity[i], fs_in.texcoord)), vec4(1.), FragColor);
 	}
 }
