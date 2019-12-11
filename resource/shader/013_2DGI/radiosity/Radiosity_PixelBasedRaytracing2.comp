@@ -25,6 +25,7 @@ void main()
 	uvec4 reso = u_gi2d_info.m_resolution;
 	ivec2 ipos = ivec2(gl_WorkGroupID.xy);
 	vec2 pos = vec2(ipos);
+
 	{
 		if(any(equal(ipos.xyxy, ivec4(0,0,reso.xy)))){ return; }
 		uint index = ipos.x + ipos.y*reso.x; 
@@ -38,11 +39,11 @@ void main()
 	vec2 dir;
 	{
 		float angle_offset = rand(vec2(gl_GlobalInvocationID.xy));
-		float angle = (gl_LocalInvocationID.x + angle_offset) * (6.28 / float(gl_WorkGroupSize.x));
+		float angle = (gl_LocalInvocationID.x + angle_offset) * (6.2831 / float(gl_WorkGroupSize.x));
 		dir = vec2(cos(angle), sin(angle));
 //		dir = normalize(vec2(cos(angle), sin(angle)));
 	}
-	for(int _i; _i < 1000; _i++)
+	for(int _i = 0; _i < 100; _i++)
 	{
 		ipos = ivec2(pos);
 		float sdf = b_sdf[ipos.x + ipos.y * reso.x];
