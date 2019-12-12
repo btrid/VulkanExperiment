@@ -19,15 +19,19 @@ layout(location=1) in Vertex{
 layout(location = 0) out vec4 FragColor;
 void main()
 {
-//	FragColor = f16vec4(vec3(5.), 1.0);
+	float dist = distance(vec2(fs_in.pos.xy), vec2(gl_FragCoord.xy)) * 0.1;
+	vec3 color = fs_in.color/(1.+dist*dist);
 
-//	vec2 pos = ;
-	float dist = distance(vec2(fs_in.pos.xy), vec2(gl_FragCoord.xy));
-	vec3 color = fs_in.color/(1.+dist*dist*0.01);
-	color = max(color-0.01, 0.);
+	if(dot(color, vec3(1.)) < 0.0001)
+	{
+		color = vec3(1., 0., 0.);
+		//discard;
+	}
+
 	FragColor = f16vec4(color, 1.0);
 
 
+
 //	チェック用
-	FragColor.xyz = dot(FragColor.xyz, vec3(1.)) <= 0. ? vec3(1., 0., 0.) : vec3(1.); 
+//	FragColor.xyz = dot(FragColor.xyz, vec3(1.)) <= 0. ? vec3(1., 0., 0.) : vec3(1.); 
 }

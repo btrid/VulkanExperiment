@@ -787,7 +787,7 @@ struct GI2DRadiosity
 
 	}
 
-	void executeRadiosity(const vk::CommandBuffer& cmd)
+	void executeGlobalLineRadiosity(const vk::CommandBuffer& cmd)
 	{
 		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
 
@@ -933,7 +933,7 @@ struct GI2DRadiosity
 
 	}
 
-	void executeRendering(const vk::CommandBuffer& cmd)
+	void executeGlobalLineRadiosityRendering(const vk::CommandBuffer& cmd)
 	{
 
 		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
@@ -974,7 +974,7 @@ struct GI2DRadiosity
 
 	}
 
-	void executeDirectLighting(const vk::CommandBuffer& cmd)
+	void executeLightBasedRaytracing(const vk::CommandBuffer& cmd)
 	{
 
 		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
