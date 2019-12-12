@@ -662,6 +662,8 @@ int radiosity3()
 #if defined(USE_SDF)
 				gi2d_make_hierarchy.executeMakeFragmentMapAndSDF(cmd, gi2d_sdf);
 				gi2d_Radiosity.executePixelBasedRaytracing2(cmd, gi2d_sdf);
+//				gi2d_make_hierarchy.executeRenderSDF(cmd, gi2d_sdf, app.m_window->getFrontBuffer());
+//				gi2d_debug.executeRenderSDF(cmd, gi2d_sdf, app.m_window->getFrontBuffer());
 #else
 				gi2d_make_hierarchy.executeMakeFragmentMap(cmd);
 				gi2d_Radiosity.executePixelBasedRaytracing(cmd);

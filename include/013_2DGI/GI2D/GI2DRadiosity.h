@@ -1159,7 +1159,8 @@ struct GI2DRadiosity
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_PixelBasedRaytracing2].get(), 0, array_length(descs), descs, 0, nullptr);
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_PixelBasedRaytracing2].get());
-		cmd.dispatch(m_gi2d_context->m_gi2d_info.m_resolution.x, m_gi2d_context->m_gi2d_info.m_resolution.y, 1);
+//		cmd.dispatch(m_gi2d_context->m_gi2d_info.m_resolution.x, m_gi2d_context->m_gi2d_info.m_resolution.y, 1);
+		cmd.dispatch(m_gi2d_context->m_gi2d_info.m_resolution.x / 8, m_gi2d_context->m_gi2d_info.m_resolution.y/8, 1);
 
 	}
 	std::shared_ptr<btr::Context> m_context;
