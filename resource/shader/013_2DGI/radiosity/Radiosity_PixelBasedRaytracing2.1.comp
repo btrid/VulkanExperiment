@@ -61,7 +61,10 @@ void main()
 
 		color = albedo * float(is_emissive) + color;
 	}
-	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(color, 1.));
+//	if(dot(color, vec3(1.)) > 0.)
+	{
+		imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(color, 1.));
+	}
 }
 
 
