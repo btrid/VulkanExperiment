@@ -24,7 +24,7 @@ void main()
 {
 	uvec4 reso = u_gi2d_info.m_resolution;
 	ivec2 ipos = ivec2(gl_WorkGroupID.xy);
-	vec2 pos = vec2(ipos);
+	vec2 pos = vec2(ipos) + 0.5;
 
 	{
 		if(any(equal(ipos.xyxy, ivec4(0,0,reso.xy)))){ return; }
