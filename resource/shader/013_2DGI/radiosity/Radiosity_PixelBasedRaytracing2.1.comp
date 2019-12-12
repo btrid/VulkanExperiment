@@ -41,7 +41,7 @@ void main()
 	{
 		float angle = (angle_index + angle_offset) * (2.*3.1415 / float(ANGLE_NUM));
 		vec2 dir = vec2(cos(angle), sin(angle));
-		vec2 pos = vec2(gl_GlobalInvocationID.xy) + dir;
+		vec2 pos = vec2(gl_GlobalInvocationID.xy) + 0.5;
 		ivec2 ipos = ivec2(pos);
 
 		for(;;)

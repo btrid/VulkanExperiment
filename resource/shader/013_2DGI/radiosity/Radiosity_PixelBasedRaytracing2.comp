@@ -42,7 +42,7 @@ void main()
 		float angle = (gl_LocalInvocationID.x + angle_offset) * (6.2831 / float(gl_WorkGroupSize.x));
 		dir = vec2(cos(angle), sin(angle));
 	}
-	pos += dir;
+
 	for(int _i = 0; _i < 1000; _i++)
 	{
 		ipos = ivec2(pos);
