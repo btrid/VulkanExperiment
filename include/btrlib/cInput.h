@@ -6,9 +6,6 @@
 #include <cctype>
 #include <btrlib/Define.h>
 
-// 0x16‚ÍŽg‚í‚ê‚Ä‚¢‚È‚¢‚Ì‚Åvk_alt‚Æ‚·‚é
-#define vk_alt 0x16u
-
 struct cKeyboard {
 	cKeyboard() 
 		: m_char_count(0)

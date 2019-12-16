@@ -174,19 +174,6 @@ LRESULT cWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	switch (uMsg)
 	{
-	case WM_SYSKEYDOWN:
-	{
-		auto& p = m_input_worker.m_keyboard.m_data[vk_alt];
-		p.key = vk_alt;
-		p.state = cKeyboard::STATE_ON;
-	}
-	break;
-	case WM_SYSKEYUP:
-	{
-		auto& p = m_input_worker.m_keyboard.m_data[vk_alt];
-		p.key = vk_alt;
-		p.state = cKeyboard::STATE_OFF;
-	}
 	break;
 	case WM_KEYDOWN:
 	{
