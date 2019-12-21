@@ -32,6 +32,7 @@ vk::UniqueShaderModule loadShaderUnique(const vk::Device& device, const std::str
 	std::ifstream file(filepath, std::ios_base::ate | std::ios::binary);
 	if (!file.is_open()) {
 		printf("file not found \"%s\"", filename.c_str());
+		assert(file.is_open());
 	}
 
 	size_t file_size = (size_t)file.tellg();

@@ -30,6 +30,19 @@ uvec4 neighor_check_list[] =
 	uvec4(2,6,4,4), // straight_wall
 };
 
+
+const i16vec2 g_offset[8] = 
+{
+	i16vec2(-1,-1), 
+	i16vec2( 0,-1),
+	i16vec2( 1,-1),
+	i16vec2( 1, 0),
+	i16vec2( 1, 1),
+	i16vec2( 0, 1),
+	i16vec2(-1, 1),
+	i16vec2(-1, 0),
+};
+
 struct OpenNode
 {
 	i16vec2 pos;
@@ -45,7 +58,7 @@ void explore(in OpenNode parent)
 {
 	uint dir_type = (parent.data>>28)&((1<<4)-1);
 	uint cost = parent.data&((1<<28)-1);
-	ivec2 pos = parent.pos + g_neighor_list[dir_type];
+	ivec2 pos = parent.pos + g_offset[dir_type];
 	int index = pos.x + pos.y * constant.reso.x;
 
 	{

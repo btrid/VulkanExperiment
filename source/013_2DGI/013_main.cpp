@@ -181,9 +181,8 @@ int pathFinding()
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0, "cmd_gi2d");
 				gi2d_context->execute(cmd);
-				crowd_context->execute(cmd);
+//				crowd_context->execute(cmd);
 				gi2d_debug.executeMakeFragment(cmd);
-
 				gi2d_make_hierarchy.executeMakeFragmentMap(cmd);
 
 				if (0)
@@ -199,15 +198,6 @@ int pathFinding()
 					renderer.dispatchCmd(cmd, render_cmds);
 				}
 
-				if (0)
-				{
-					crowd_procedure.executePathFinding(cmd);
-					crowd_procedure.executeDrawField(cmd, app.m_window->getFrontBuffer());
-				}
-
-//				gi2d_debug.executeDrawFragmentMap(cmd, app.m_window->getFrontBuffer());
-//  			path_process.executeBuildTree(cmd);
-//				path_process.executeDrawTree(cmd, app.m_window->getFrontBuffer());
 				gi2d_make_hierarchy.executeMakeReachMap(cmd, gi2d_path_context);
 				gi2d_debug.executeDrawReachMap(cmd, gi2d_path_context, app.m_window->getFrontBuffer());
 
@@ -701,10 +691,10 @@ int main()
 	camera->getData().m_far = 5000.f;
 	camera->getData().m_near = 0.01f;
 
-//	return pathFinding();
+	return pathFinding();
 //	return rigidbody();
 //	return radiosity();
-	return radiosity2();
+//	return radiosity2();
 //	return radiosity3();
 
 	app::AppDescriptor app_desc;
