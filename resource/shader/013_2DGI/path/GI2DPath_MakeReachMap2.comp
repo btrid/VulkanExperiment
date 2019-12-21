@@ -31,16 +31,16 @@ uvec4 neighor_check_list[] =
 };
 
 
-const i16vec2 g_offset[8] = 
+const ivec2 g_neighbor[8] = 
 {
-	i16vec2(-1,-1), 
-	i16vec2( 0,-1),
-	i16vec2( 1,-1),
-	i16vec2( 1, 0),
-	i16vec2( 1, 1),
-	i16vec2( 0, 1),
-	i16vec2(-1, 1),
-	i16vec2(-1, 0),
+	ivec2(-1,-1), 
+	ivec2( 0,-1),
+	ivec2( 1,-1),
+	ivec2( 1, 0),
+	ivec2( 1, 1),
+	ivec2( 0, 1),
+	ivec2(-1, 1),
+	ivec2(-1, 0),
 };
 
 struct OpenNode
@@ -58,7 +58,7 @@ void explore(in OpenNode parent)
 {
 	uint dir_type = (parent.data>>28)&((1<<4)-1);
 	uint cost = parent.data&((1<<28)-1);
-	ivec2 pos = parent.pos + g_offset[dir_type];
+	ivec2 pos = parent.pos + g_neighbor[dir_type];
 	int index = pos.x + pos.y * constant.reso.x;
 
 	{
@@ -73,10 +73,12 @@ void explore(in OpenNode parent)
 	// 新しい探索のチェック
 	{
 		uint neighbor = uint(b_neighbor[index]);
-		uvec4 path_check = (dir_type.xxxx + neighor_check_list[(dir_type%2)*2]) % uvec4(8);
-		uvec4 wall_check = (dir_type.xxxx + neighor_check_list[(dir_type%2)*2+1]) % uvec4(8);
-		uvec4 path_bit = uvec4(1)<<path_check;
-		uvec4 wall_bit = uvec4(1)<<wall_check;
+//		u8vec4 path_check = u8vec4((dir_type.xxxx + neighor_check_list[(dir_type%2)*2]) % u8vec4(8u));
+//		u8vec4 wall_check = u8vec4((dir_type.xxxx + neighor_check_list[(dir_type%2)*2+1]) % u8vec4(8u));
+		uvec4 path_check = (dir_type.xxxx + neighor_check_list[(dir_type%2)*2]) % u8vec4(8);
+		uvec4 wall_check = (dir_type.xxxx + neighor_check_list[(dir_type%2)*2+1]) % u8vec4(8);
+		u8vec4 path_bit = u8vec4(1)<<path_check;
+		u8vec4 wall_bit = u8vec4(1)<<wall_check;
 
 		bvec4 is_path = notEqual((~neighbor.xxxx) & path_bit, uvec4(0));
 		bvec4 is_wall = notEqual(neighbor.xxxx & wall_bit, uvec4(0));

@@ -15,7 +15,17 @@ layout(push_constant, std430) uniform InputVertex
 	i16vec2 reso;
 } constant;
 
-
+const ivec2 g_neighbor[8] = 
+{
+	ivec2(-1,-1), 
+	ivec2( 0,-1),
+	ivec2( 1,-1),
+	ivec2( 1, 0),
+	ivec2( 1, 1),
+	ivec2( 0, 1),
+	ivec2(-1, 1),
+	ivec2(-1, 0),
+};
 
 shared uint64_t s_map[36];
 
@@ -39,23 +49,10 @@ void main()
 	barrier();
 	memoryBarrierShared();
 
-
-	const i16vec2 g_offset[8] = 
-	{
-		 i16vec2(-1,-1), 
-		 i16vec2( 0,-1),
-		 i16vec2( 1,-1),
-		 i16vec2( 1, 0),
-		 i16vec2( 1, 1),
-		 i16vec2( 0, 1),
-		 i16vec2(-1, 1),
-		 i16vec2(-1, 0),
-	};
-	
 	uint8_t neighbor = uint8_t(0);
 	for(int i = 0; i < 8; i++)
 	{
-		ivec2 ii = ivec2(gl_LocalInvocationID.xy) + g_offset[i] + ivec2(8);
+		ivec2 ii = ivec2(gl_LocalInvocationID.xy) + g_neighbor[i] + ivec2(8);
 		ivec2 map_index = ii / 8;
 		ivec2 map_bit = ii % 8;
 		if((s_map[map_index.x+map_index.y*6] & (1ul<<(map_bit.x+map_bit.y*8))) != 0ul)
