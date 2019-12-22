@@ -88,8 +88,6 @@ void explore(in OpenNode parent)
 
 
 		uint num = is_open.x+is_open.y+is_open.z+is_open.w + is_advance;
-#if 1
-
 		if(num != 0)
 		{
 			OpenNode node;
@@ -109,33 +107,6 @@ void explore(in OpenNode parent)
 				s_open[active_index++ % s_open.length()] = node;
 			}
 		}
-
-#else
-		uint local_index = subgroupExclusiveAdd(num);
-		uint global_index = 0;
-		if (gl_SubgroupInvocationID == subgroupBallotFindMSB(subgroupBallot(true)))
-		{
-			global_index = atomicAdd(s_open_counter[0], local_index + num);
-		}
-		global_index = subgroupMax(global_index);
-
-		OpenNode node;
-		node.pos = i16vec2(pos);
-		for(int i = 0; i < 4; i++)
-		{
-			if(is_open[i]==0){ continue; }
-			node.dir_type = path_check[i];
-			node.cost = parent.cost + g_cost[node.dir_type%2];
-			s_open[(global_index + local_index++) % s_open.length()] = node;
-		}
-
-		if(is_advance != 0)
-		{
-			node.dir_type = parent.dir_type;
-			node.cost = parent.cost + g_cost[node.dir_type%2];
-			s_open[(global_index + local_index++) % s_open.length()] = node;
-		}
-#endif
 	}
 }
 
@@ -189,6 +160,8 @@ void main()
 		if(gl_LocalInvocationIndex == 0)
 		{
 			s_open_counter[1] += count;
+
+			// 調査用
 			atomicMax(b_connect, accum-consume);
 		}
 

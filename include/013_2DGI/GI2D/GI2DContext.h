@@ -166,7 +166,6 @@ struct GI2DContext
 			{
 				b_fragment = context->m_storage_memory.allocateMemory<Fragment>({ FragmentBufferSize,{} });
 				b_fragment_map = context->m_storage_memory.allocateMemory<uint64_t>({ FragmentBufferSize/64*2,{} });
-				b_grid_counter = context->m_storage_memory.allocateMemory<int32_t>({ 1,{} });
 			}
 		}
 
@@ -189,7 +188,6 @@ struct GI2DContext
 				vk::DescriptorBufferInfo storages[] = {
 					b_fragment.getInfo(),
 					b_fragment_map.getInfo(),
-					b_grid_counter.getInfo(),
 				};
 
 				vk::WriteDescriptorSet write[] = {
@@ -246,7 +244,6 @@ struct GI2DContext
 	btr::BufferMemoryEx<GI2DScene> u_gi2d_scene;
 	btr::BufferMemoryEx<Fragment> b_fragment;
 	btr::BufferMemoryEx<uint64_t> b_fragment_map;
-	btr::BufferMemoryEx<int32_t> b_grid_counter;
 
 	std::array<vk::UniqueDescriptorSetLayout, Layout_Num> m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
