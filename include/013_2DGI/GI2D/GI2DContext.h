@@ -27,23 +27,10 @@ struct GI2DContext
 		mat4 m_camera_PV;
 		uvec4 m_resolution;
 		vec4 m_position;
-		std::array<uint32_t, 4> m_fragment_map_size_hierarchy;
-		uint32_t m_hierarchy_num;
-
-		uint32_t  getsize(int32_t hierarchy) {
-			return m_fragment_map_size_hierarchy[hierarchy] - m_fragment_map_size_hierarchy[hierarchy-1];
-		}
 	};
 	struct GI2DScene
 	{
 		int32_t m_frame;
-		int32_t m_hierarchy;
-		uint32_t m_skip;
-		int32_t _p2;
-
-		uint32_t m_radiance_offset;
-		uint32_t m_map_offset;
-		uvec2 m_map_reso;
 	};
 
 	struct Fragment
@@ -159,22 +146,11 @@ struct GI2DContext
 				m_gi2d_info.m_position = vec4(0.f, 0.f, 0.f, 0.f);
 				m_gi2d_info.m_resolution = uvec4(RenderWidth, RenderHeight, RenderWidth / 8, RenderHeight / 8);
 				m_gi2d_info.m_camera_PV = glm::ortho(RenderWidth*-0.5f, RenderWidth*0.5f, RenderHeight*-0.5f, RenderHeight*0.5f, 0.f, 2000.f) * glm::lookAt(vec3(RenderWidth*0.5f, 1000.f, RenderHeight*0.5f) + m_gi2d_info.m_position.xyz(), vec3(RenderWidth*0.5f, 0.f, RenderHeight*0.5f) + m_gi2d_info.m_position.xyz(), vec3(0.f, 0.f, 1.f));
-				m_gi2d_info.m_hierarchy_num = 4;
 
-				int size = RenderHeight * RenderWidth / 64;
-				m_gi2d_info.m_fragment_map_size_hierarchy[0] = size;
-				size /= 64;
-				m_gi2d_info.m_fragment_map_size_hierarchy[1] = m_gi2d_info.m_fragment_map_size_hierarchy[0] + size;
-				size /= 64;
-				m_gi2d_info.m_fragment_map_size_hierarchy[2] = m_gi2d_info.m_fragment_map_size_hierarchy[1] + size;
-				size /= 64;
-				m_gi2d_info.m_fragment_map_size_hierarchy[3] = m_gi2d_info.m_fragment_map_size_hierarchy[2] + glm::max(size, 1);
 
 				cmd.updateBuffer<GI2DInfo>(u_gi2d_info.getInfo().buffer, u_gi2d_info.getInfo().offset, m_gi2d_info);
 
 				m_gi2d_scene.m_frame = 0;
-				m_gi2d_scene.m_hierarchy = 0;
-				m_gi2d_scene.m_skip = 0;
 				cmd.updateBuffer<GI2DScene>(u_gi2d_scene.getInfo().buffer, u_gi2d_scene.getInfo().offset, m_gi2d_scene);
 
 				{
@@ -189,8 +165,8 @@ struct GI2DContext
 			}
 			{
 				b_fragment = context->m_storage_memory.allocateMemory<Fragment>({ FragmentBufferSize,{} });
-				b_fragment_map = context->m_storage_memory.allocateMemory<uint64_t>({ m_gi2d_info.m_fragment_map_size_hierarchy[0]*2,{} });
-				b_grid_counter = context->m_storage_memory.allocateMemory<int32_t>({ FragmentBufferSize,{} });
+				b_fragment_map = context->m_storage_memory.allocateMemory<uint64_t>({ FragmentBufferSize/64*2,{} });
+				b_grid_counter = context->m_storage_memory.allocateMemory<int32_t>({ 1,{} });
 			}
 		}
 
@@ -241,20 +217,6 @@ struct GI2DContext
 		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
 
 		m_gi2d_scene.m_frame = (m_gi2d_scene.m_frame + 1) % 1;
-		auto reso = m_gi2d_info.m_resolution;
-
-		uint radiance_offset = reso.x*reso.y;
-		int map_offset = 0;
-		uvec2 map_reso = reso.zw();
-		for (int i = 0; i < m_gi2d_scene.m_hierarchy; i++)
-		{
-			radiance_offset >>= 2;
-			map_offset += (reso.z >> i)*(reso.w >> i);
-			map_reso >>= 1;
-		}
-		m_gi2d_scene.m_radiance_offset = radiance_offset;
-		m_gi2d_scene.m_map_offset = map_offset;
-		m_gi2d_scene.m_map_reso = map_reso;
 
 		{
 			vk::BufferMemoryBarrier to_write[] = {

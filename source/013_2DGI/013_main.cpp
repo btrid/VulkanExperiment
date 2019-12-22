@@ -106,7 +106,7 @@ int pathFinding()
 	desc.m_finish = ivec2(1002, 1000);
 	PathContextCPU pf(desc);
 //	pf.m_field = pathmake_maze(1024, 1024);
-	pf.m_field = pathmake_noise(1024, 1024);
+	pf.m_field = pathmake_noise(4096, 4096);
 //	pf = pathmake_file();
 	PathSolver solver;
 //  	auto solve1 = solver.executeMakeVectorField(pf);
@@ -125,34 +125,34 @@ int pathFinding()
 
 	auto appmodel_context = std::make_shared<AppModelContext>(context);
 
-	cModel model;
-	model.load(context, "..\\..\\resource\\tiny.x");
-	std::shared_ptr<AppModel> player_model = std::make_shared<AppModel>(context, appmodel_context, model.getResource(), 128);
+// 	cModel model;
+// 	model.load(context, "..\\..\\resource\\tiny.x");
+// 	std::shared_ptr<AppModel> player_model = std::make_shared<AppModel>(context, appmodel_context, model.getResource(), 128);
 
 	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
 	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchain());
 
 	GI2DDescription gi2d_desc;
-	gi2d_desc.RenderWidth = 1024;
-	gi2d_desc.RenderHeight = 1024;
+	gi2d_desc.RenderWidth = 4096;
+	gi2d_desc.RenderHeight = 4096;
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context, gi2d_desc);
-	std::shared_ptr<CrowdContext> crowd_context = std::make_shared<CrowdContext>(context, gi2d_context);
+//	std::shared_ptr<CrowdContext> crowd_context = std::make_shared<CrowdContext>(context, gi2d_context);
 	std::shared_ptr<GI2DPathContext> gi2d_path_context = std::make_shared<GI2DPathContext>(gi2d_context);
 
 	GI2DDebug gi2d_debug(context, gi2d_context);
 	GI2DMakeHierarchy gi2d_make_hierarchy(context, gi2d_context);
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
-	Crowd_Procedure crowd_procedure(crowd_context, gi2d_context);
-	Crowd_CalcWorldMatrix crowd_calc_world_matrix(crowd_context, appmodel_context);
-	Crowd_Debug crowd_debug(crowd_context);
+//	Crowd_Procedure crowd_procedure(crowd_context, gi2d_context);
+//	Crowd_CalcWorldMatrix crowd_calc_world_matrix(crowd_context, appmodel_context);
+//	Crowd_Debug crowd_debug(crowd_context);
 
 	AppModelAnimationStage animater(context, appmodel_context);
 	GI2DModelRender renderer(context, appmodel_context, gi2d_context);
-	auto anime_cmd = animater.createCmd(player_model);
-	auto render_cmd = renderer.createCmd(player_model);
+//	auto anime_cmd = animater.createCmd(player_model);
+//	auto render_cmd = renderer.createCmd(player_model);
 
-	crowd_procedure.executeMakeRay(cmd);
+//	crowd_procedure.executeMakeRay(cmd);
 	gi2d_debug.executeUpdateMap(cmd, pf.m_field),
 	app.setup();
 
@@ -187,15 +187,15 @@ int pathFinding()
 
 				if (0)
 				{
-					crowd_debug.execute(cmd);
- 					crowd_procedure.executeUpdateUnit(cmd);
- 					crowd_procedure.executeMakeLinkList(cmd);
-					crowd_calc_world_matrix.execute(cmd, player_model);
+// 					crowd_debug.execute(cmd);
+//  					crowd_procedure.executeUpdateUnit(cmd);
+//  					crowd_procedure.executeMakeLinkList(cmd);
+// 					crowd_calc_world_matrix.execute(cmd, player_model);
 
-					std::vector<vk::CommandBuffer> anime_cmds{ anime_cmd.get() };
-					animater.dispatchCmd(cmd, anime_cmds);
-					std::vector<vk::CommandBuffer> render_cmds{ render_cmd.get() };
-					renderer.dispatchCmd(cmd, render_cmds);
+// 					std::vector<vk::CommandBuffer> anime_cmds{ anime_cmd.get() };
+// 					animater.dispatchCmd(cmd, anime_cmds);
+// 					std::vector<vk::CommandBuffer> render_cmds{ render_cmd.get() };
+// 					renderer.dispatchCmd(cmd, render_cmds);
 				}
 
 				gi2d_make_hierarchy.executeMakeReachMap(cmd, gi2d_path_context);

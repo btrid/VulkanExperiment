@@ -352,7 +352,7 @@ struct GI2DMakeHierarchy
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Path].get(), 0, array_length(desc), desc, 0, nullptr);
 
 		static int iter = 10;
-		iter = iter+1;
+		iter = iter+10;
 		iter %= 100000;
 		struct
 		{
