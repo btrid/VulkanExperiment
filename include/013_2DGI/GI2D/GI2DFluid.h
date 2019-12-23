@@ -59,7 +59,7 @@ struct GI2DFluid
 
 		{
 			b_pos = m_context->m_storage_memory.allocateMemory<vec2>({ Particle_Num*2,{} });
-			b_grid_head = m_context->m_storage_memory.allocateMemory<int32_t>({ (uint32_t)m_gi2d_context->RenderWidth*m_gi2d_context->RenderHeight,{} });
+			b_grid_head = m_context->m_storage_memory.allocateMemory<int32_t>({ (uint32_t)m_gi2d_context->m_desc.Resolution.x*m_gi2d_context->m_desc.Resolution.y,{} });
 			b_grid_node = m_context->m_storage_memory.allocateMemory<int32_t>({ Particle_Num,{} });
 			b_grid_counter = context->m_storage_memory.allocateMemory<int32_t>({ 1,{} });
 			b_type = m_context->m_storage_memory.allocateMemory<int32_t>({ Particle_Num,{} });

@@ -325,7 +325,7 @@ struct GI2DVoronoi
 		{
 			b_voronoi_cell = m_context->m_storage_memory.allocateMemory<VoronoiCell>({ 4096,{} });
 			b_voronoi_polygon = m_context->m_storage_memory.allocateMemory<VoronoiPolygon>({ 4096,{} });
-			b_voronoi = m_context->m_storage_memory.allocateMemory<int16_t>({ physics_context->m_gi2d_context->RenderSize.x*physics_context->m_gi2d_context->RenderSize.y,{} });
+			b_voronoi = m_context->m_storage_memory.allocateMemory<int16_t>({ physics_context->m_gi2d_context->m_desc.Resolution.x*physics_context->m_gi2d_context->m_desc.Resolution.y,{} });
 			b_voronoi_vertex_counter = m_context->m_storage_memory.allocateMemory<uvec4>({ 1,{} });
 			b_voronoi_vertex = m_context->m_storage_memory.allocateMemory<VoronoiVertex>({ 4096 * 6,{} });
 			b_voronoi_path = m_context->m_storage_memory.allocateMemory<int16_t>({ 4096,{} });
@@ -458,7 +458,7 @@ struct GI2DVoronoi
 
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Voronoi].get(), 0, m_descset[DescLayout_Data].get(), {});
 
-		ivec2 reso = m_physics_context->m_gi2d_context->RenderSize;
+		ivec2 reso = m_physics_context->m_gi2d_context->m_desc.Resolution;
 		int voronoi_cell_num = 0;
 		{
 			{

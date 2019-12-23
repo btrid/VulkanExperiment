@@ -28,7 +28,7 @@ void main()
 	if((fragment_map & (1ul<<(bit.x+bit.y*8))) == 0)
 	{ 
 		uint i = point.x + point.y*u_gi2d_info.m_resolution.x;
-		uint cost = b_cost[i];
+		uint cost = b_path_data[i].data;
 		uint color_index1 = (cost / 500) % colors.length();
 		uint color_index2 = (color_index1+1) % colors.length();
 		float color_rate = (cost % 500) / 500.;

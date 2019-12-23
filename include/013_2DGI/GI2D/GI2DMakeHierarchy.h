@@ -211,7 +211,7 @@ struct GI2DMakeHierarchy
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeFragmentMap].get());
 
-			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth, m_gi2d_context->RenderHeight, 1), uvec3(8, 8, 1));
+			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->m_desc.Resolution.x, m_gi2d_context->m_desc.Resolution.y, 1), uvec3(8, 8, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 		}
 
@@ -237,7 +237,7 @@ struct GI2DMakeHierarchy
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeFragmentMapAndSDF].get());
 
-			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth, m_gi2d_context->RenderHeight, 1), uvec3(8, 8, 1));
+			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->m_desc.Resolution.x, m_gi2d_context->m_desc.Resolution.y, 1), uvec3(8, 8, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 		}
 
@@ -257,15 +257,15 @@ struct GI2DMakeHierarchy
 		// make sdf
 		{
 			_label.insert("Make JFA");
-			int distance = sdf_context->m_gi2d_context->RenderWidth >> 1;
+			int distance = sdf_context->m_gi2d_context->m_desc.Resolution.x >> 1;
 #if	1
 			// ˆê“x‚É4—v‘fŒvŽZ‚·‚éÅ“K‰»‚ð‚µ‚½
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeJFA_EX].get());
 			{
-				auto num = app::calcDipatchGroups(uvec3(sdf_context->m_gi2d_context->RenderWidth >> 2, sdf_context->m_gi2d_context->RenderHeight, 1), uvec3(64, 1, 1));
-//				auto num = app::calcDipatchGroups(uvec3(sdf_context->m_gi2d_context->RenderWidth >> 2, sdf_context->m_gi2d_context->RenderHeight, 1), uvec3(32, 32, 1));
+				auto num = app::calcDipatchGroups(uvec3(sdf_context->m_gi2d_context->m_desc.Resolution.x >> 2, sdf_context->m_gi2d_context->m_desc.Resolution.y, 1), uvec3(64, 1, 1));
+//				auto num = app::calcDipatchGroups(uvec3(sdf_context->m_gi2d_context->m_desc.Resolution.x >> 2, sdf_context->m_gi2d_context->m_desc.Resolution.y, 1), uvec3(32, 32, 1));
 				for (; distance >= 4; distance >>= 1)
-//				for (; distance < (sdf_context->m_gi2d_context->RenderWidth >> 2); distance <<= 1)
+//				for (; distance < (sdf_context->m_gi2d_context->m_desc.Resolution.x >> 2); distance <<= 1)
 				{
 					vk::BufferMemoryBarrier to_read[] = { sdf_context->b_jfa.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite), };
 					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);
@@ -278,10 +278,10 @@ struct GI2DMakeHierarchy
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeJFA].get());
 			{
-				auto num = app::calcDipatchGroups(uvec3(sdf_context->m_gi2d_context->RenderWidth, sdf_context->m_gi2d_context->RenderHeight, 1), uvec3(8, 8, 1));
-//				auto num = app::calcDipatchGroups(uvec3(sdf_context->m_gi2d_context->RenderWidth, sdf_context->m_gi2d_context->RenderHeight, 1), uvec3(32, 32, 1));
+				auto num = app::calcDipatchGroups(uvec3(sdf_context->m_gi2d_context->m_desc.Resolution.x, sdf_context->m_gi2d_context->m_desc.Resolution.y, 1), uvec3(8, 8, 1));
+//				auto num = app::calcDipatchGroups(uvec3(sdf_context->m_gi2d_context->m_desc.Resolution.x, sdf_context->m_gi2d_context->m_desc.Resolution.y, 1), uvec3(32, 32, 1));
 				for (; distance > 0; distance >>= 1)
-//				for (; distance < sdf_context->m_gi2d_context->RenderWidth; distance <<= 1)
+//				for (; distance < sdf_context->m_gi2d_context->m_desc.Resolution.x; distance <<= 1)
 				{
 					vk::BufferMemoryBarrier to_read[] = { sdf_context->b_jfa.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite), };
 					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);
@@ -302,7 +302,7 @@ struct GI2DMakeHierarchy
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeSDF].get());
-			auto num = app::calcDipatchGroups(uvec3(sdf_context->m_gi2d_context->RenderWidth, sdf_context->m_gi2d_context->RenderHeight, 1), uvec3(32, 32, 1));
+			auto num = app::calcDipatchGroups(uvec3(sdf_context->m_gi2d_context->m_desc.Resolution.x, sdf_context->m_gi2d_context->m_desc.Resolution.y, 1), uvec3(32, 32, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 		}
 
@@ -336,7 +336,7 @@ struct GI2DMakeHierarchy
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_size(to_read), to_read }, { barrier });
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_RenderSDF].get());
-			auto num = app::calcDipatchGroups(uvec3(sdf_context->m_gi2d_context->RenderWidth, sdf_context->m_gi2d_context->RenderHeight, 1), uvec3(32, 32, 1));
+			auto num = app::calcDipatchGroups(uvec3(sdf_context->m_gi2d_context->m_desc.Resolution.x, sdf_context->m_gi2d_context->m_desc.Resolution.y, 1), uvec3(32, 32, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 		}
 	}
@@ -359,15 +359,15 @@ struct GI2DMakeHierarchy
 			i16vec2 target[10];
 			i16vec2 target_num;
 			i16vec2 reso;
-		} constant{ {i16vec2(11, 11), i16vec2(1002, 1002), i16vec2(144, 844), i16vec2(855, 255)}, i16vec2(1, iter / 10), path_context->m_gi2d_context->RenderSize };
+		} constant{ {i16vec2(11, 11), i16vec2(1002, 1002), i16vec2(144, 844), i16vec2(855, 255)}, i16vec2(1, iter / 10), path_context->m_gi2d_context->m_desc.Resolution };
 		cmd.pushConstants(m_pipeline_layout[PipelineLayout_Path].get(), vk::ShaderStageFlagBits::eCompute, 0, sizeof(constant), &constant);
 
 		vk::BufferMemoryBarrier barrier[] = {
-			path_context->b_cost.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eTransferWrite),
+			path_context->b_path_data.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eTransferWrite),
 			path_context->b_connect.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eTransferWrite),
 		};
 		cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, { array_length(barrier), barrier }, {});
-		cmd.fillBuffer(path_context->b_cost.getInfo().buffer, path_context->b_cost.getInfo().offset, path_context->b_cost.getInfo().range, -1);
+		cmd.fillBuffer(path_context->b_path_data.getInfo().buffer, path_context->b_path_data.getInfo().offset, path_context->b_path_data.getInfo().range, -1);
 		cmd.fillBuffer(path_context->b_connect.getInfo().buffer, path_context->b_connect.getInfo().offset, path_context->b_connect.getInfo().range, 0);
 		
 		_label.insert("executeMakeReachMap_Precompute");
@@ -379,7 +379,7 @@ struct GI2DMakeHierarchy
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeReachMap_Precompute].get());
 
-			auto num = app::calcDipatchGroups(uvec3(path_context->m_gi2d_context->RenderWidth, path_context->m_gi2d_context->RenderHeight, 1), uvec3(32, 32, 1));
+			auto num = app::calcDipatchGroups(uvec3(path_context->m_gi2d_context->m_desc.Resolution.x, path_context->m_gi2d_context->m_desc.Resolution.y, 1), uvec3(32, 32, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 
 		}
@@ -389,7 +389,7 @@ struct GI2DMakeHierarchy
 			vk::BufferMemoryBarrier barrier[] = {
 				path_context->b_neighbor.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 				path_context->b_closed.makeMemoryBarrier(vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite),
-				path_context->b_cost.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite),
+				path_context->b_path_data.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead|vk::AccessFlagBits::eShaderWrite),
 			};
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer|vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_length(barrier), barrier }, {});
 			

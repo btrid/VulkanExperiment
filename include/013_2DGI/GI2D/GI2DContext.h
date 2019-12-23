@@ -6,8 +6,7 @@
 
 struct GI2DDescription
 {
-	int32_t RenderWidth;
-	int32_t RenderHeight;
+	uvec2 Resolution;
 };
 struct GI2DContext
 {
@@ -18,9 +17,7 @@ struct GI2DContext
 		Layout_Path,
 		Layout_Num,
 	};
-	int32_t RenderWidth;
-	int32_t RenderHeight;
-	ivec2 RenderSize;
+	GI2DDescription m_desc;
 	int FragmentBufferSize;
 	struct GI2DInfo
 	{
@@ -79,10 +76,8 @@ struct GI2DContext
 
 	GI2DContext(const std::shared_ptr<btr::Context>& context, const GI2DDescription& desc)
 	{
- 		RenderWidth = desc.RenderHeight;
- 		RenderHeight = desc.RenderWidth;
-		RenderSize = ivec2(RenderWidth, RenderHeight);
-		FragmentBufferSize = RenderWidth * RenderHeight;
+		m_desc = desc;
+		FragmentBufferSize = desc.Resolution.x * desc.Resolution.y;
 
 		m_context = context;
 
@@ -98,7 +93,6 @@ struct GI2DContext
 					vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(6, vk::DescriptorType::eStorageBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(7, vk::DescriptorType::eStorageBuffer, 1, stage),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -145,8 +139,8 @@ struct GI2DContext
 				u_gi2d_scene = context->m_uniform_memory.allocateMemory<GI2DScene>({ 1,{} });
 
 				m_gi2d_info.m_position = vec4(0.f, 0.f, 0.f, 0.f);
-				m_gi2d_info.m_resolution = uvec4(RenderWidth, RenderHeight, RenderWidth / 8, RenderHeight / 8);
-				m_gi2d_info.m_camera_PV = glm::ortho(RenderWidth*-0.5f, RenderWidth*0.5f, RenderHeight*-0.5f, RenderHeight*0.5f, 0.f, 2000.f) * glm::lookAt(vec3(RenderWidth*0.5f, 1000.f, RenderHeight*0.5f) + m_gi2d_info.m_position.xyz(), vec3(RenderWidth*0.5f, 0.f, RenderHeight*0.5f) + m_gi2d_info.m_position.xyz(), vec3(0.f, 0.f, 1.f));
+				m_gi2d_info.m_resolution = uvec4(desc.Resolution, desc.Resolution / 8);
+				m_gi2d_info.m_camera_PV = glm::ortho(desc.Resolution.x*-0.5f, desc.Resolution.x*0.5f, desc.Resolution.y*-0.5f, desc.Resolution.y*0.5f, 0.f, 2000.f) * glm::lookAt(vec3(desc.Resolution.x*0.5f, 1000.f, desc.Resolution.y*0.5f) + m_gi2d_info.m_position.xyz(), vec3(desc.Resolution.x*0.5f, 0.f, desc.Resolution.y*0.5f) + m_gi2d_info.m_position.xyz(), vec3(0.f, 0.f, 1.f));
 
 
 				cmd.updateBuffer<GI2DInfo>(u_gi2d_info.getInfo().buffer, u_gi2d_info.getInfo().offset, m_gi2d_info);
@@ -331,8 +325,7 @@ struct GI2DPathContext
 			b_connect = context->m_storage_memory.allocateMemory<uint32_t>({ 1,{} });
 			b_closed = context->m_storage_memory.allocateMemory<uint32_t>({ gi2d_context->FragmentBufferSize / 32,{} });
 			b_neighbor = context->m_storage_memory.allocateMemory<uint8_t>({ gi2d_context->FragmentBufferSize,{} });
-			b_cost = context->m_storage_memory.allocateMemory<uint32_t>(gi2d_context->FragmentBufferSize);
-			b_parent = context->m_storage_memory.allocateMemory<i16vec2>(gi2d_context->FragmentBufferSize);
+			b_path_data = context->m_storage_memory.allocateMemory<uint32_t>(gi2d_context->FragmentBufferSize);
 			b_open_node = context->m_storage_memory.allocateMemory<OpenNode>(1024 * 16);
 			b_neighbor_table = context->m_storage_memory.allocateMemory<uint8_t>(2048);
 		}
@@ -399,8 +392,7 @@ struct GI2DPathContext
 					b_connect.getInfo(),
 					b_closed.getInfo(),
 					b_neighbor.getInfo(),
-					b_cost.getInfo(),
-					b_parent.getInfo(),
+					b_path_data.getInfo(),
 					b_open_node.getInfo(),
 					b_neighbor_table.getInfo(),
 				};
@@ -422,8 +414,7 @@ struct GI2DPathContext
 	btr::BufferMemoryEx<uint32_t> b_connect;
 	btr::BufferMemoryEx<uint32_t> b_closed;
 	btr::BufferMemoryEx<uint8_t> b_neighbor;
-	btr::BufferMemoryEx<uint32_t> b_cost;
-	btr::BufferMemoryEx<i16vec2> b_parent;
+	btr::BufferMemoryEx<uint32_t> b_path_data;
 	btr::BufferMemoryEx<OpenNode> b_open_node;
 	btr::BufferMemoryEx<uint8_t> b_neighbor_table;
 	vk::UniqueDescriptorSet m_descriptor_set;

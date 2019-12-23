@@ -46,8 +46,8 @@ const ivec2 g_neighbor[8] =
 struct OpenNode
 {
 	i16vec2 pos;
-//	uint cost:28;
 //	uint dir_type:4;
+//	uint cost:28;
 	uint data;
 };
 
@@ -56,25 +56,23 @@ shared uvec2 s_open_counter;
 
 void explore(in OpenNode parent)
 {
-	uint dir_type = (parent.data>>28)&((1<<4)-1);
-	uint cost = parent.data&((1<<28)-1);
+	uint dir_type = (parent.data>>0)&((1<<4)-1);
+	uint cost = (parent.data>>4)&((1<<28)-1);
 	ivec2 pos = parent.pos + g_neighbor[dir_type];
 	int index = pos.x + pos.y * constant.reso.x;
 
 	{
-		uint prev_cost = atomicMin(b_cost[index], cost);
-		if(prev_cost <= cost)
+		uint prev_cost = atomicMin(b_path_data[index].data, parent.data);
+		if(prev_cost <= parent.data)
 		{
 			return;
 		}
-		b_parent[index] = i16vec2(pos);
+//		b_parent[index] = uint8_t((dir_type+4)%8);
 	}
 
 	// 新しい探索のチェック
 	{
 		uint neighbor = uint(b_neighbor[index]);
-//		u8vec4 path_check = u8vec4((dir_type.xxxx + neighor_check_list[(dir_type%2)*2]) % u8vec4(8u));
-//		u8vec4 wall_check = u8vec4((dir_type.xxxx + neighor_check_list[(dir_type%2)*2+1]) % u8vec4(8u));
 		uvec4 path_check = (dir_type.xxxx + neighor_check_list[(dir_type%2)*2]) % u8vec4(8);
 		uvec4 wall_check = (dir_type.xxxx + neighor_check_list[(dir_type%2)*2+1]) % u8vec4(8);
 		u8vec4 path_bit = u8vec4(1)<<path_check;
@@ -97,13 +95,13 @@ void explore(in OpenNode parent)
 			for(int i = 0; i < 4; i++)
 			{
 				if(is_open[i]==0){ continue; }
-				node.data = (path_check[i]<<28) | (cost + ((path_check[i]%2)==0 ? 14 : 10));
+				node.data = (path_check[i]) | ((cost + ((path_check[i]%2)==0 ? 14 : 10))<<4);
 				s_open[active_index++ % s_open.length()] = node;
 			}
 
 			if(is_advance != 0)
 			{
-				node.data = (dir_type<<28) | (cost + ((dir_type%2)==0 ? 14 : 10));
+				node.data = (dir_type) | ((cost + ((dir_type%2)==0 ? 14 : 10))<<4);
 				s_open[active_index++ % s_open.length()] = node;
 			}
 		}
@@ -128,15 +126,15 @@ void main()
 		uint neighbor = uint(b_neighbor[index]);
 		OpenNode node;
 		node.pos = i16vec2(pos);
-		node.data = (dir_type<<28);
+		node.data = dir_type;
 		if((~neighbor & (1<<dir_type)) != 0)
 		{
 			explore(node);
 		}
 		if((gl_LocalInvocationIndex %8) == 0 )
 		{
-			b_cost[index] = 0;
-			b_parent[index] = node.pos;
+			b_path_data[index].data = 0;
+//			b_parent[index] = uint8_t(0);
 		}
 
 	}

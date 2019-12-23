@@ -108,7 +108,7 @@ struct GI2DRadiosity
 
 
 		{
-			uint32_t size = m_gi2d_context->RenderWidth * m_gi2d_context->RenderHeight;
+			uint32_t size = m_gi2d_context->m_desc.Resolution.x * m_gi2d_context->m_desc.Resolution.y;
 			u_radiosity_info = m_context->m_uniform_memory.allocateMemory<GI2DRadiosityInfo>({ 1,{} });
 			b_segment_counter = m_context->m_storage_memory.allocateMemory<SegmentCounter>({ 1,{} });
 			b_segment = m_context->m_storage_memory.allocateMemory<Segment>({ 3000000,{} });
@@ -276,7 +276,7 @@ struct GI2DRadiosity
 // 					}
 // 					printf("vi=%3d, id=%3d, type=%3d, pos=[%3d,%3d]\n", vertex_index, target_ID, target_type, target.x, target.y);
 // 				}
-				count[Mesh_Num - 1] = gi2d_context->RenderSize.x*gi2d_context->RenderSize.y / 8;
+				count[Mesh_Num - 1] = gi2d_context->m_desc.Resolution.x*gi2d_context->m_desc.Resolution.y / 8;
 				cmd.updateBuffer<uint32_t>(u_circle_mesh_count.getInfo().buffer, u_circle_mesh_count.getInfo().offset, count);
 			}
 		}
@@ -844,7 +844,7 @@ struct GI2DRadiosity
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeHitpoint].get());
-			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth, m_gi2d_context->RenderHeight, 1), uvec3(32, 32, 1));
+			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->m_desc.Resolution.x, m_gi2d_context->m_desc.Resolution.y, 1), uvec3(32, 32, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 		}
 

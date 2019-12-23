@@ -179,7 +179,7 @@ void GI2DPhysics_procedure::execute(vk::CommandBuffer cmd, const std::shared_ptr
 		{
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeWallCollision].get());
 
-			auto num = app::calcDipatchGroups(uvec3(physics_context->m_gi2d_context->RenderSize, 1), uvec3(8, 8, 1));
+			auto num = app::calcDipatchGroups(uvec3(physics_context->m_gi2d_context->m_desc.Resolution, 1), uvec3(8, 8, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 		}
 
@@ -358,7 +358,7 @@ void GI2DPhysics_procedure::executeDebugDrawCollisionHeatMap(vk::CommandBuffer c
 
 	cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_DrawCollisionHeatMap].get());
 
-	auto num = app::calcDipatchGroups(uvec3(physics_context->m_gi2d_context->RenderWidth, physics_context->m_gi2d_context->RenderHeight, 1), uvec3(32, 32, 1));
+	auto num = app::calcDipatchGroups(uvec3(physics_context->m_gi2d_context->m_desc.Resolution.x, physics_context->m_gi2d_context->m_desc.Resolution.y, 1), uvec3(32, 32, 1));
 	cmd.dispatch(num.x, num.y, num.z);
 
 }

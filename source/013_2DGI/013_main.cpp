@@ -106,7 +106,7 @@ int pathFinding()
 	desc.m_finish = ivec2(1002, 1000);
 	PathContextCPU pf(desc);
 //	pf.m_field = pathmake_maze(1024, 1024);
-	pf.m_field = pathmake_noise(4096, 4096);
+	pf.m_field = pathmake_noise(1024, 1024);
 //	pf = pathmake_file();
 	PathSolver solver;
 //  	auto solve1 = solver.executeMakeVectorField(pf);
@@ -133,8 +133,7 @@ int pathFinding()
 	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchain());
 
 	GI2DDescription gi2d_desc;
-	gi2d_desc.RenderWidth = 4096;
-	gi2d_desc.RenderHeight = 4096;
+	gi2d_desc.Resolution = uvec2(1024);
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context, gi2d_desc);
 //	std::shared_ptr<CrowdContext> crowd_context = std::make_shared<CrowdContext>(context, gi2d_context);
 	std::shared_ptr<GI2DPathContext> gi2d_path_context = std::make_shared<GI2DPathContext>(gi2d_context);
@@ -228,8 +227,7 @@ int rigidbody()
 	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchain());
 
 	GI2DDescription gi2d_desc;
-	gi2d_desc.RenderWidth = 1024;
-	gi2d_desc.RenderHeight = 1024;
+	gi2d_desc.Resolution = uvec2(1024, 1024);
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context, gi2d_desc);
 	std::shared_ptr<GI2DSDF> gi2d_sdf_context = std::make_shared<GI2DSDF>(gi2d_context);
 	std::shared_ptr<GI2DPhysics> gi2d_physics_context = std::make_shared<GI2DPhysics>(context, gi2d_context);
@@ -327,8 +325,7 @@ int radiosity()
 	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchain());
 
 	GI2DDescription gi2d_desc;
-	gi2d_desc.RenderWidth = app_desc.m_window_size.x;
-	gi2d_desc.RenderHeight = app_desc.m_window_size.y;
+	gi2d_desc.Resolution = app_desc.m_window_size;
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context, gi2d_desc);
 
 	GI2DDebug gi2d_debug(context, gi2d_context);
@@ -534,8 +531,7 @@ int radiosity2()
 	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchain());
 
 	GI2DDescription gi2d_desc;
-	gi2d_desc.RenderWidth = app_desc.m_window_size.x;
-	gi2d_desc.RenderHeight = app_desc.m_window_size.y;
+	gi2d_desc.Resolution = app_desc.m_window_size;
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context, gi2d_desc);
 
 	GI2DDebug gi2d_debug(context, gi2d_context);
@@ -611,8 +607,7 @@ int radiosity3()
 	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchain());
 
 	GI2DDescription gi2d_desc;
-	gi2d_desc.RenderWidth = app_desc.m_window_size.x;
-	gi2d_desc.RenderHeight = app_desc.m_window_size.y;
+	gi2d_desc.Resolution = app_desc.m_window_size;
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context, gi2d_desc);
 	std::shared_ptr<GI2DSDF> gi2d_sdf = std::make_shared<GI2DSDF>(gi2d_context);
 
@@ -708,8 +703,7 @@ int main()
 
 
 	GI2DDescription gi2d_desc;
-	gi2d_desc.RenderWidth = app_desc.m_window_size.x;
-	gi2d_desc.RenderHeight = app_desc.m_window_size.y;
+	gi2d_desc.Resolution = app_desc.m_window_size;
 	std::shared_ptr<GI2DContext> gi2d_context = std::make_shared<GI2DContext>(context, gi2d_desc);
 	std::shared_ptr<GI2DSDF> gi2d_sdf_context = std::make_shared<GI2DSDF>(gi2d_context);
 	std::shared_ptr<GI2DPhysics> gi2d_physics_context = std::make_shared<GI2DPhysics>(context, gi2d_context);

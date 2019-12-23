@@ -40,8 +40,8 @@ struct GI2DModelRender
 
 			vk::FramebufferCreateInfo framebuffer_info;
 			framebuffer_info.setRenderPass(m_render_pass.get());
-			framebuffer_info.setWidth(gi2d_context->RenderWidth);
-			framebuffer_info.setHeight(gi2d_context->RenderHeight);
+			framebuffer_info.setWidth(gi2d_context->m_desc.Resolution.x);
+			framebuffer_info.setHeight(gi2d_context->m_desc.Resolution.y);
 			framebuffer_info.setLayers(1);
 
 			m_framebuffer = context->m_device.createFramebufferUnique(framebuffer_info);
@@ -82,10 +82,10 @@ struct GI2DModelRender
 				.setPrimitiveRestartEnable(VK_FALSE)
 				.setTopology(vk::PrimitiveTopology::eTriangleList);
 
-			vk::Extent3D size = gi2d_context->RenderWidth;
+			vk::Extent3D size = gi2d_context->m_desc.Resolution.x;
 			// viewport
-			vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)gi2d_context->RenderWidth, (float)gi2d_context->RenderHeight, 0.f, 1.f);
-			vk::Rect2D scissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(gi2d_context->RenderWidth, gi2d_context->RenderHeight));
+			vk::Viewport viewport = vk::Viewport(0.f, 0.f, (float)gi2d_context->m_desc.Resolution.x, (float)gi2d_context->m_desc.Resolution.y, 0.f, 1.f);
+			vk::Rect2D scissor = vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(gi2d_context->m_desc.Resolution.x, gi2d_context->m_desc.Resolution.y));
 
 			vk::PipelineViewportStateCreateInfo viewport_info;
 			viewport_info.setViewportCount(1);
@@ -194,7 +194,7 @@ struct GI2DModelRender
 		vk::RenderPassBeginInfo render_begin_info;
 		render_begin_info.setRenderPass(m_render_pass.get());
 		render_begin_info.setFramebuffer(m_framebuffer.get());
-		render_begin_info.setRenderArea(vk::Rect2D({}, { (uint32_t)m_gi2d_context->RenderWidth, (uint32_t)m_gi2d_context->RenderHeight}));
+		render_begin_info.setRenderArea(vk::Rect2D({}, { (uint32_t)m_gi2d_context->m_desc.Resolution.x, (uint32_t)m_gi2d_context->m_desc.Resolution.y}));
 
 		cmd.beginRenderPass(render_begin_info, vk::SubpassContents::eSecondaryCommandBuffers);
 		cmd.executeCommands(cmds.size(), cmds.data());
