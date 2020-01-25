@@ -13,7 +13,6 @@
 #include <vulkan/vulkan.hpp>
 
 
-#include <VulkanMemoryAllocator/src/vk_mem_alloc.h>
 #include <btrlib/DefineMath.h>
 
 #include <string>

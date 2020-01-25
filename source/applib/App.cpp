@@ -228,10 +228,10 @@ App::App(const AppDescriptor& desc)
 	{
 		m_context->m_device = m_device.get();
 
-		VmaAllocatorCreateInfo allocator_info = {};
-		allocator_info.physicalDevice = m_physical_device;
-		allocator_info.device = m_device.get();
-		vmaCreateAllocator(&allocator_info, &m_context->m_allocator);
+//		VmaAllocatorCreateInfo allocator_info = {};
+//		allocator_info.physicalDevice = m_physical_device;
+//		allocator_info.device = m_device.get();
+//		vmaCreateAllocator(&allocator_info, &m_context->m_allocator);
 
 		vk::MemoryPropertyFlags host_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
 		vk::MemoryPropertyFlags device_memory = vk::MemoryPropertyFlagBits::eDeviceLocal;
@@ -674,7 +674,7 @@ AppWindow::ImguiRenderPipeline::ImguiRenderPipeline(const std::shared_ptr<btr::C
 	io.DisplaySize.x = window->getFrontBuffer()->m_info.extent.width;
 	io.DisplaySize.y = window->getFrontBuffer()->m_info.extent.height;
 	io.FontGlobalScale = 1.f;
-	io.RenderDrawListsFn = nullptr;  // Setup a render function, or set to NULL and call GetDrawData() after Render() to access the render data.
+	io.RenderDrawListsFnUnused = nullptr;  // Setup a render function, or set to NULL and call GetDrawData() after Render() to access the render data.
 	io.KeyMap[ImGuiKey_Tab] = VK_TAB;
 	io.KeyMap[ImGuiKey_LeftArrow] = VK_LEFT;
 	io.KeyMap[ImGuiKey_RightArrow] = VK_RIGHT;

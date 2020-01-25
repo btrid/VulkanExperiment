@@ -215,7 +215,7 @@ vk::CommandBuffer sImGuiRenderer::Render()
 			}
 			for (uint32_t i = 0; i < keyboard.m_char_count; i++)
 			{
-				io.InputCharacters[i] = keyboard.m_char[i];
+				io.AddInputCharacter(keyboard.m_char[i]);
 			}
 
 		}
