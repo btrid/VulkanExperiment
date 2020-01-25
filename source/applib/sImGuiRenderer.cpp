@@ -8,6 +8,7 @@ sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
 	{
+		ImGui::CreateContext();
 		ImGuiIO& io = ImGui::GetIO();
 
 		unsigned char* pixels;
