@@ -3,7 +3,7 @@
 #include <filesystem>
 #include <algorithm>
 
-#include <btrlib/cModel.h>
+#include <btrlib/cModel2.h>
 #include <btrlib/sGlobal.h>
 #include <btrlib/sDebug.h>
 #include <btrlib/cStopWatch.h>
@@ -51,12 +51,10 @@ namespace {
 
 }
 
-ResourceManager<cModel::Resource> cModel::s_manager;
-
-std::vector<cModel::Material> loadMaterial(const aiScene* scene, const std::string& filename, const std::shared_ptr<btr::Context>& context, vk::CommandBuffer cmd)
+std::vector<cModel2::Material> loadMaterial(const aiScene* scene, const std::string& filename, const std::shared_ptr<btr::Context>& context, vk::CommandBuffer cmd)
 {
 	std::string path = std::experimental::filesystem::path(filename).remove_filename().string();
-	std::vector<cModel::Material> material(scene->mNumMaterials);
+	std::vector<cModel2::Material> material(scene->mNumMaterials);
 	for (size_t i = 0; i < scene->mNumMaterials; i++)
 	{
 		auto* aiMat = scene->mMaterials[i];
@@ -176,23 +174,8 @@ void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& r
 	}
 }
 
-void cModel::load2(const std::shared_ptr<btr::Context>& context, const std::string& filename)
+std::shared_ptr<cModel2> load(const std::shared_ptr<btr::Context>& context, const std::string& filename)
 {
-// 	tinygltf::Model m;
-// 	tinygltf::TinyGLTF gltf_ctx;
-// 	std::string err;
-// 	std::string warn;
-// 	gltf_ctx.LoadASCIIFromFile(&m, &err, &warn, (btr::getResourceAppPath() + "tiny.x").c_str());
-
-}
-void cModel::load(const std::shared_ptr<btr::Context>& context, const std::string& filename)
-{
-
-	if (s_manager.manage(m_resource, filename)) {
-		return;
-	}
-	auto s = std::chrono::system_clock::now();
-
 	int OREORE_PRESET = 0
 		| aiProcess_JoinIdenticalVertices
 		| aiProcess_ImproveCacheLocality
@@ -200,42 +183,41 @@ void cModel::load(const std::shared_ptr<btr::Context>& context, const std::strin
 		| aiProcess_RemoveRedundantMaterials
 		| aiProcess_SplitLargeMeshes
 		| aiProcess_SortByPType
-//		| aiProcess_OptimizeMeshes
+		//		| aiProcess_OptimizeMeshes
 		| aiProcess_Triangulate
-//		| aiProcess_MakeLeftHanded
+		//		| aiProcess_MakeLeftHanded
 		;
-	cStopWatch timer;
+
 	Assimp::Importer importer;
 	const aiScene* scene = importer.ReadFile(filename, OREORE_PRESET);
 	if (!scene) {
-		sDebug::Order().print(sDebug::FLAG_ERROR | sDebug::ACTION_ASSERTION,"can't file load in cModel::load : %s : %s\n", filename.c_str(), importer.GetErrorString());
+		sDebug::Order().print(sDebug::FLAG_ERROR | sDebug::ACTION_ASSERTION, "can't file load in cModel2::load : %s : %s\n", filename.c_str(), importer.GetErrorString());
 		return;
 	}
-	sDebug::Order().print(sDebug::FLAG_LOG | sDebug::SOURCE_MODEL, "[Load Model %6.2fs] %s \n", timer.getElapsedTimeAsSeconds(), filename.c_str());
 
 
-	auto& device = context->m_device;
+	auto resource = std::make_shared<cModel2>();
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
 	// èâä˙âª
-	m_resource->m_material = loadMaterial(scene, filename, context, cmd);
-	m_resource->mNodeRoot = loadNode(scene);
-	loadMotion(m_resource->m_animation, scene, m_resource->mNodeRoot, context);
+	resource->mMaterial = loadMaterial(scene, filename, context, cmd);
+	resource->mNodeRoot = loadNode(scene);
+	loadMotion(resource->m_animation, scene, resource->mNodeRoot, context);
 
-	std::vector<Bone>& boneList = m_resource->mBone;
+	std::vector<cModel2::Bone>& boneList = resource->mBone;
 
 	unsigned numIndex = 0;
 	unsigned numVertex = 0;
-	m_resource->m_mesh.resize(scene->mNumMeshes);
+	resource->m_mesh.resize(scene->mNumMeshes);
 	for (size_t i = 0; i < scene->mNumMeshes; i++)
 	{
-		m_resource->m_mesh[i].m_draw_cmd.indexCount = scene->mMeshes[i]->mNumFaces * 3;
-		m_resource->m_mesh[i].m_draw_cmd.firstIndex = numIndex;
-		m_resource->m_mesh[i].m_draw_cmd.instanceCount = 1;
-		m_resource->m_mesh[i].m_draw_cmd.vertexOffset = 0;
-		m_resource->m_mesh[i].m_draw_cmd.firstInstance = 0;
-		m_resource->m_mesh[i].m_vertex_num = scene->mMeshes[i]->mNumVertices;
-		m_resource->m_mesh[i].m_material_index = scene->mMeshes[i]->mMaterialIndex;
+		resource->m_mesh[i].m_draw_cmd.indexCount = scene->mMeshes[i]->mNumFaces * 3;
+		resource->m_mesh[i].m_draw_cmd.firstIndex = numIndex;
+		resource->m_mesh[i].m_draw_cmd.instanceCount = 1;
+		resource->m_mesh[i].m_draw_cmd.vertexOffset = 0;
+		resource->m_mesh[i].m_draw_cmd.firstInstance = 0;
+		resource->m_mesh[i].m_vertex_num = scene->mMeshes[i]->mNumVertices;
+		resource->m_mesh[i].m_material_index = scene->mMeshes[i]->mMaterialIndex;
 
 		numVertex += scene->mMeshes[i]->mNumVertices;
 		numIndex += scene->mMeshes[i]->mNumFaces * 3;
@@ -260,7 +242,7 @@ void cModel::load(const std::shared_ptr<btr::Context>& context, const std::strin
 	for (size_t i = 0; i < scene->mNumMeshes; i++)
 	{
 		aiMesh* mesh = scene->mMeshes[i];
- 
+
 		// ELEMENT_ARRAY_BUFFER
 		// éOäpÉÅÉbÉVÉÖÇ∆ÇµÇƒì«Ç›çûÇﬁ
 		for (u32 n = 0; n < mesh->mNumFaces; n++) {
@@ -275,7 +257,7 @@ void cModel::load(const std::shared_ptr<btr::Context>& context, const std::strin
 		// ARRAY_BUFFER
 		Vertex* _vertex = vertex + v_count;
 		v_count += mesh->mNumVertices;
-		for (uint32_t v = 0; v < mesh->mNumVertices; v++){
+		for (uint32_t v = 0; v < mesh->mNumVertices; v++) {
 			_vertex[v].m_position = glm::vec3(mesh->mVertices[v].x, mesh->mVertices[v].y, mesh->mVertices[v].z);
 		}
 		glm::vec3 max(-10e10f);
@@ -283,22 +265,26 @@ void cModel::load(const std::shared_ptr<btr::Context>& context, const std::strin
 		for (unsigned i = 0; i < mesh->mNumVertices; i++)
 		{
 			auto& v = _vertex[i];
-			max.x = glm::max(max.x, v.m_position.x);
+			max.x = glm::max(max, v.m_position);
 			max.y = glm::max(max.y, v.m_position.y);
 			max.z = glm::max(max.z, v.m_position.z);
 			min.x = glm::min(min.x, v.m_position.x);
 			min.y = glm::min(min.y, v.m_position.y);
 			min.z = glm::min(min.z, v.m_position.z);
 		}
-		m_resource->m_mesh[i].mAABB = glm::vec4((max - min).xyz, glm::length((max - min)));
+		resource->m_mesh[i].mAABB = glm::vec4((max - min).xyz, glm::length((max - min)));
 
-		if (mesh->HasNormals()) {
-			for (size_t v = 0; v < mesh->mNumVertices; v++) {
-				_vertex[v].m_normal = glm::packSnorm3x10_1x2(vec4(mesh->mNormals[v].x, mesh->mNormals[v].y, mesh->mNormals[v].z, 1.f));
+		if (mesh->HasNormals()) 
+		{
+			for (size_t v = 0; v < mesh->mNumVertices; v++) 
+			{
+				_vertex[v].m_normal = glm::packF2x11_1x10(vec3(mesh->mNormals[v].x, mesh->mNormals[v].y, mesh->mNormals[v].z));
 			}
 		}
-		if (mesh->HasTextureCoords(0)) {
-			for (size_t v = 0; v < mesh->mNumVertices; v++) {
+		if (mesh->HasTextureCoords(0)) 
+		{
+			for (size_t v = 0; v < mesh->mNumVertices; v++) 
+			{
 				_vertex[v].m_texcoord0 = glm::packSnorm3x10_1x2(vec4(mesh->mTextureCoords[0][v].x, mesh->mTextureCoords[0][v].y, mesh->mTextureCoords[0][v].z, 0.f));
 			}
 		}
@@ -317,24 +303,25 @@ void cModel::load(const std::shared_ptr<btr::Context>& context, const std::strin
 					}
 
 				}
-				if (index == 0xffui8) {
+				if (index == 0xffui8) 
+				{
 					// êVÇµÇ¢É{Å[ÉìÇÃìoò^
-					Bone bone;
+					cModel2::Bone bone;
 					bone.mName = mesh->mBones[b]->mName.C_Str();
 					bone.mOffset = AI_TO(mesh->mBones[b]->mOffsetMatrix);
-					bone.mNodeIndex = m_resource->mNodeRoot.getNodeIndexByName(mesh->mBones[b]->mName.C_Str());
+					bone.mNodeIndex = resource->mNodeRoot.getNodeIndexByName(mesh->mBones[b]->mName.C_Str());
 					boneList.emplace_back(bone);
 					index = (int)boneList.size() - 1;
 					assert(index < 0xffui8);
-					assert(m_resource->mNodeRoot.mNodeList[bone.mNodeIndex].m_bone_index == -1);
-					m_resource->mNodeRoot.mNodeList[bone.mNodeIndex].m_bone_index = index;
+					assert(resource->mNodeRoot.mNodeList[bone.mNodeIndex].m_bone_index == -1);
+					resource->mNodeRoot.mNodeList[bone.mNodeIndex].m_bone_index = index;
 				}
 
 				for (size_t i = 0; i < mesh->mBones[b]->mNumWeights; i++)
 				{
 					aiVertexWeight& weight = mesh->mBones[b]->mWeights[i];
 					Vertex& v = _vertex[weight.mVertexId];
-					for (glm::length_t o = 0; o < Vertex::BONE_NUM; o++) {
+					for (glm::length_t o = 0; o < cModel2::BONE_BLEND_MAX; o++) {
 						if (v.m_bone_ID[o] == 0xffui8) {
 							v.m_bone_ID[o] = index;
 							v.m_weight[o] = glm::packUnorm1x8(weight.mWeight);
@@ -348,20 +335,20 @@ void cModel::load(const std::shared_ptr<btr::Context>& context, const std::strin
 	importer.FreeScene();
 
 	{
-		ResourceVertex& vertex_data = m_resource->m_mesh_resource;
+		ResourceVertex& vertex_data = resource->m_mesh_resource;
 
 		{
 			vertex_data.m_vertex_buffer = context->m_vertex_memory.allocateMemory(staging_vertex.getInfo().range);
 			vertex_data.m_index_buffer = context->m_vertex_memory.allocateMemory(staging_index.getInfo().range);
 
 			btr::BufferMemoryDescriptor indirect_desc;
-			indirect_desc.size = vector_sizeof(m_resource->m_mesh);
+			indirect_desc.size = vector_sizeof(resource->m_mesh);
 			vertex_data.m_indirect_buffer = context->m_vertex_memory.allocateMemory(indirect_desc);
 
 			indirect_desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
 			auto staging_indirect = context->m_staging_memory.allocateMemory(indirect_desc);
-			auto* indirect = staging_indirect.getMappedPtr<Mesh>(0);
-			memcpy_s(indirect, indirect_desc.size, m_resource->m_mesh.data(), indirect_desc.size);
+			auto* indirect = staging_indirect.getMappedPtr<cModel2::Mesh>(0);
+			memcpy_s(indirect, indirect_desc.size, resource->m_mesh.data(), indirect_desc.size);
 
 			vk::BufferCopy copy_info;
 			copy_info.setSize(staging_vertex.getInfo().range);
@@ -391,48 +378,26 @@ void cModel::load(const std::shared_ptr<btr::Context>& context, const std::strin
 				{}, { indirect_barrier }, {});
 
 			vertex_data.mIndexType = index_type;
-			vertex_data.mIndirectCount = (int32_t)m_resource->m_mesh.size();
+			vertex_data.mIndirectCount = (int32_t)resource->m_mesh.size();
 
-			vertex_data.m_vertex_input_binding = GetVertexInputBinding();
-			vertex_data.m_vertex_input_attribute = GetVertexInputAttribute();
-			vertex_data.m_vertex_input_info.setVertexBindingDescriptionCount((uint32_t)vertex_data.m_vertex_input_binding.size());
-			vertex_data.m_vertex_input_info.setPVertexBindingDescriptions(vertex_data.m_vertex_input_binding.data());
-			vertex_data.m_vertex_input_info.setVertexAttributeDescriptionCount((uint32_t)vertex_data.m_vertex_input_attribute.size());
-			vertex_data.m_vertex_input_info.setPVertexAttributeDescriptions(vertex_data.m_vertex_input_attribute.data());
+// 			vertex_data.m_vertex_input_binding = GetVertexInputBinding();
+// 			vertex_data.m_vertex_input_attribute = GetVertexInputAttribute();
+// 			vertex_data.m_vertex_input_info.setVertexBindingDescriptionCount((uint32_t)vertex_data.m_vertex_input_binding.size());
+// 			vertex_data.m_vertex_input_info.setPVertexBindingDescriptions(vertex_data.m_vertex_input_binding.data());
+// 			vertex_data.m_vertex_input_info.setVertexAttributeDescriptionCount((uint32_t)vertex_data.m_vertex_input_attribute.size());
+// 			vertex_data.m_vertex_input_info.setPVertexAttributeDescriptions(vertex_data.m_vertex_input_attribute.data());
 		}
 	}
 
-	m_resource->m_model_info.mNodeNum = (s32)m_resource->mNodeRoot.mNodeList.size();
-	m_resource->m_model_info.mBoneNum = (s32)m_resource->mBone.size();
-	m_resource->m_model_info.mMeshNum = (s32)m_resource->m_mesh.size();
-	m_resource->m_model_info.m_node_depth_max = m_resource->mNodeRoot.m_depth_max;
+	resource->m_model_info.mNodeNum = (s32)resource->mNodeRoot.mNodeList.size();
+	resource->m_model_info.mBoneNum = (s32)resource->mBone.size();
+	resource->m_model_info.mMeshNum = (s32)resource->m_mesh.size();
+	resource->m_model_info.m_node_depth_max = resource->mNodeRoot.m_depth_max;
 	// todo
 	glm::vec3 max(-10e10f);
 	glm::vec3 min(10e10f);
-	m_resource->m_model_info.mAabb = glm::vec4((max - min).xyz, glm::length((max - min)));
+	resource->m_model_info.mAabb = glm::vec4((max - min).xyz, glm::length((max - min)));
 
-	m_resource->m_model_info.mInvGlobalMatrix = glm::inverse(m_resource->mNodeRoot.mNodeList[0].mTransformation);
-
-
-	auto e = std::chrono::system_clock::now();
-	auto t = std::chrono::duration_cast<std::chrono::microseconds>(e - s);
-	sDebug::Order().print(sDebug::FLAG_LOG | sDebug::SOURCE_MODEL, "[Load Complete %6.2fs] %s NodeNum = %d BoneNum = %d \n", t.count() / 1000.f / 1000.f, filename.c_str(), m_resource->mNodeRoot.mNodeList.size(), m_resource->mBone.size());
-
+	resource->m_model_info.mInvGlobalMatrix = glm::inverse(resource->mNodeRoot.mNodeList[0].mTransformation);
 }
 
-
-std::string cModel::getFilename() const
-{
-	return m_resource ? m_resource->m_filename : "";
-}
-const ResourceVertex* cModel::getMesh() const
-{
-	return m_resource ? &m_resource->m_mesh_resource : nullptr;
-}
-
-void ResourceVertex::draw(vk::CommandBuffer cmd) const
-{
-	cmd.bindVertexBuffers(0, m_vertex_buffer.getInfo().buffer, m_vertex_buffer.getInfo().offset);
-	cmd.bindIndexBuffer(m_index_buffer.getInfo().buffer, m_index_buffer.getInfo().offset, mIndexType);
-	cmd.drawIndexedIndirect(m_indirect_buffer.getInfo().buffer, m_indirect_buffer.getInfo().offset, mIndirectCount, sizeof(cModel::Mesh));
-}
