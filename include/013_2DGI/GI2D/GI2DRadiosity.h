@@ -1058,6 +1058,7 @@ struct GI2DRadiosity
 			{
 				v_emissive.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eVertexAttributeRead),
 				v_emissive_draw_command.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
+				v_emissive_draw_count.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
 			};
 
 			std::array<vk::ImageMemoryBarrier, 1> image_barrier;
@@ -1097,7 +1098,8 @@ struct GI2DRadiosity
 
 		cmd.bindVertexBuffers(0, array_length(vertex_buffers), vertex_buffers, offsets);
 
-		cmd.drawIndirect(v_emissive_draw_command.getInfo().buffer, v_emissive_draw_command.getInfo().offset, Emissive_Num, sizeof(vk::DrawIndirectCommand));
+//		cmd.drawIndirect(v_emissive_draw_command.getInfo().buffer, v_emissive_draw_command.getInfo().offset, Emissive_Num, sizeof(vk::DrawIndirectCommand));
+		cmd.drawIndirectCount(v_emissive_draw_command.getInfo().buffer, v_emissive_draw_command.getInfo().offset, v_emissive_draw_count.getInfo().buffer, v_emissive_draw_count.getInfo().offset, Emissive_Num, sizeof(vk::DrawIndirectCommand));
 		cmd.endRenderPass();
 
 	}

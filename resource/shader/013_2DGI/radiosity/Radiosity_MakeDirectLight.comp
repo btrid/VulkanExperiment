@@ -20,7 +20,7 @@ void main()
 	vec3 color = vec3(b_emissive[gl_GlobalInvocationID.x].color.xyz);
 	int emissive_power = clamp(int(ceil(sqrt(dot(color, vec3(1.)) / 3.)))-1, -1, 7);
 
-	uint cmd_index = gl_GlobalInvocationID.x;
+//	uint cmd_index = gl_GlobalInvocationID.x;
 
 /*	if(!intersection(ivec4(0, 0, u_gi2d_info.m_resolution.xy-1), b_emissive[gl_GlobalInvocationID.x].pos, 1))
 	{
@@ -32,7 +32,7 @@ void main()
 	if(emissive_power < 0)
 	{
 		// 無効なライト
-		v_emissive_draw_command[cmd_index] = uvec4(0, 0, 0, 0);
+//		v_emissive_draw_command[cmd_index] = uvec4(0, 0, 0, 0);
 		return;
 	}
 	if(emissive_power <= 6)
@@ -40,12 +40,13 @@ void main()
 		if(!intersection(ivec4(0, 0, u_gi2d_info.m_resolution.xy-1), b_emissive[gl_GlobalInvocationID.x].pos, (emissive_power+1)*100))
 		{
 			// レンダリング範囲外
-			v_emissive_draw_command[cmd_index] = uvec4(0, 0, 0, 0);
+//			v_emissive_draw_command[cmd_index] = uvec4(0, 0, 0, 0);
 			return;
 		}
 
 	}
 
+	uint cmd_index = atomicAdd(v_emissive_draw_count, 1);
 	uint vertex_num;
 	uint vertex_offset;
 	if(emissive_power>= 7)

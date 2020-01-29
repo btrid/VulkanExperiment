@@ -113,7 +113,7 @@ App::App(const AppDescriptor& desc)
 	// ウインドウリストを取りたいけどいい考えがない。後で考える
 	g_app_instance = this;
 
-	vk::ApplicationInfo appInfo = { "Vulkan Test", 1, "EngineName", 0, VK_API_VERSION_1_1 };
+	vk::ApplicationInfo appInfo = { "Vulkan Test", 1, "EngineName", 0, VK_API_VERSION_1_2 };
 	std::vector<const char*> LayerName =
 	{
 #if _DEBUG
