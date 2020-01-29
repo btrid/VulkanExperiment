@@ -176,6 +176,7 @@ void loadMotion(cAnimation& anim_buffer, const aiScene* scene, const RootNode& r
 
 std::shared_ptr<cModel2> load(const std::shared_ptr<btr::Context>& context, const std::string& filename)
 {
+#if 0
 	int OREORE_PRESET = 0
 		| aiProcess_JoinIdenticalVertices
 		| aiProcess_ImproveCacheLocality
@@ -223,56 +224,36 @@ std::shared_ptr<cModel2> load(const std::shared_ptr<btr::Context>& context, cons
 		numIndex += scene->mMeshes[i]->mNumFaces * 3;
 	}
 
-	btr::BufferMemoryDescriptor staging_vertex_desc;
-	staging_vertex_desc.size = sizeof(Vertex) * numVertex;
-	staging_vertex_desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
-	auto staging_vertex = context->m_staging_memory.allocateMemory(staging_vertex_desc);
-
-	auto index_type = numVertex < std::numeric_limits<uint16_t>::max() ? vk::IndexType::eUint16 : vk::IndexType::eUint32;
-
-	btr::BufferMemoryDescriptor staging_index_desc;
-	staging_index_desc.size = (index_type == vk::IndexType::eUint16 ? sizeof(uint16_t) : sizeof(uint32_t)) * numIndex;
-	staging_index_desc.attribute = btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT;
-	auto staging_index = context->m_staging_memory.allocateMemory(staging_index_desc);
-	auto index_stride = (index_type == vk::IndexType::eUint16 ? sizeof(uint16_t) : sizeof(uint32_t));
-	auto* index = static_cast<char*>(staging_index.getMappedPtr());
-	Vertex* vertex = static_cast<Vertex*>(staging_vertex.getMappedPtr());
-	memset(vertex, -1, staging_vertex.getInfo().range);
-	uint32_t v_count = 0;
 	for (size_t i = 0; i < scene->mNumMeshes; i++)
 	{
 		aiMesh* mesh = scene->mMeshes[i];
 
 		// ELEMENT_ARRAY_BUFFER
-		// 三角メッシュとして読み込む
-		for (u32 n = 0; n < mesh->mNumFaces; n++) {
-			(*(uint32_t*)index) = mesh->mFaces[n].mIndices[0] + v_count;
-			index += index_stride;
-			(*(uint32_t*)index) = mesh->mFaces[n].mIndices[1] + v_count;
-			index += index_stride;
-			(*(uint32_t*)index) = mesh->mFaces[n].mIndices[2] + v_count;
-			index += index_stride;
+		{
+			auto IndexNum = scene->mMeshes[i]->mNumFaces * 3;
+			auto index_type = IndexNum < std::numeric_limits<uint16_t>::max() ? vk::IndexType::eUint16 : vk::IndexType::eUint32;
+			auto index_stride = (index_type == vk::IndexType::eUint16 ? sizeof(uint16_t) : sizeof(uint32_t));
+			
+			auto staging_index = context->m_staging_memory.allocateMemory(index_stride*IndexNum, true);
+			auto* index = static_cast<char*>(staging_index.getMappedPtr());
+
+
+			// 三角メッシュとして読み込む
+			for (u32 n = 0; n < mesh->mNumFaces; n++)
+			{
+				(*(uint32_t*)index) = mesh->mFaces[n].mIndices[0];
+				index += index_stride;
+				(*(uint32_t*)index) = mesh->mFaces[n].mIndices[1];
+				index += index_stride;
+				(*(uint32_t*)index) = mesh->mFaces[n].mIndices[2];
+				index += index_stride;
+			}
 		}
 
 		// ARRAY_BUFFER
-		Vertex* _vertex = vertex + v_count;
-		v_count += mesh->mNumVertices;
 		for (uint32_t v = 0; v < mesh->mNumVertices; v++) {
 			_vertex[v].m_position = glm::vec3(mesh->mVertices[v].x, mesh->mVertices[v].y, mesh->mVertices[v].z);
 		}
-		glm::vec3 max(-10e10f);
-		glm::vec3 min(10e10f);
-		for (unsigned i = 0; i < mesh->mNumVertices; i++)
-		{
-			auto& v = _vertex[i];
-			max.x = glm::max(max, v.m_position);
-			max.y = glm::max(max.y, v.m_position.y);
-			max.z = glm::max(max.z, v.m_position.z);
-			min.x = glm::min(min.x, v.m_position.x);
-			min.y = glm::min(min.y, v.m_position.y);
-			min.z = glm::min(min.z, v.m_position.z);
-		}
-		resource->m_mesh[i].mAABB = glm::vec4((max - min).xyz, glm::length((max - min)));
 
 		if (mesh->HasNormals()) 
 		{
@@ -294,22 +275,24 @@ std::shared_ptr<cModel2> load(const std::shared_ptr<btr::Context>& context, cons
 		{
 			for (size_t b = 0; b < mesh->mNumBones; b++)
 			{
+				auto* aibone = mesh->mBones[b];
 				// BoneがMeshからしか参照できないので全部展開する
 				u8 index = 0xffui8;
-				for (size_t k = 0; k < boneList.size(); k++) {
-					if (boneList[k].mName.compare(mesh->mBones[b]->mName.C_Str()) == 0) {
+				for (size_t k = 0; k < boneList.size(); k++) 
+				{
+					if (boneList[k].mName.compare(aibone->mName.C_Str()) == 0) 
+					{
 						index = (int)k;
 						break;
 					}
-
 				}
 				if (index == 0xffui8) 
 				{
 					// 新しいボーンの登録
 					cModel2::Bone bone;
-					bone.mName = mesh->mBones[b]->mName.C_Str();
-					bone.mOffset = AI_TO(mesh->mBones[b]->mOffsetMatrix);
-					bone.mNodeIndex = resource->mNodeRoot.getNodeIndexByName(mesh->mBones[b]->mName.C_Str());
+					bone.mName = aibone->mName.C_Str();
+					bone.mOffset = AI_TO(aibone->mOffsetMatrix);
+					bone.mNodeIndex = resource->mNodeRoot.getNodeIndexByName(aibone->mName.C_Str());
 					boneList.emplace_back(bone);
 					index = (int)boneList.size() - 1;
 					assert(index < 0xffui8);
@@ -317,12 +300,14 @@ std::shared_ptr<cModel2> load(const std::shared_ptr<btr::Context>& context, cons
 					resource->mNodeRoot.mNodeList[bone.mNodeIndex].m_bone_index = index;
 				}
 
-				for (size_t i = 0; i < mesh->mBones[b]->mNumWeights; i++)
+				for (size_t i = 0; i < aibone->mNumWeights; i++)
 				{
-					aiVertexWeight& weight = mesh->mBones[b]->mWeights[i];
+					aiVertexWeight& weight = aibone->mWeights[i];
 					Vertex& v = _vertex[weight.mVertexId];
-					for (glm::length_t o = 0; o < cModel2::BONE_BLEND_MAX; o++) {
-						if (v.m_bone_ID[o] == 0xffui8) {
+					for (int o = 0; o < cModel2::BONE_BLEND_MAX; o++)
+					{
+						if (v.m_bone_ID[o] == 0xffui8) 
+						{
 							v.m_bone_ID[o] = index;
 							v.m_weight[o] = glm::packUnorm1x8(weight.mWeight);
 							break;
@@ -399,5 +384,7 @@ std::shared_ptr<cModel2> load(const std::shared_ptr<btr::Context>& context, cons
 	resource->m_model_info.mAabb = glm::vec4((max - min).xyz, glm::length((max - min)));
 
 	resource->m_model_info.mInvGlobalMatrix = glm::inverse(resource->mNodeRoot.mNodeList[0].mTransformation);
+#endif
+	return nullptr;
 }
 

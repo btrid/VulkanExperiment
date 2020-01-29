@@ -11,8 +11,8 @@
   <PropertyGroup>
     <OutDir>$(btrBin)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(btrObj)$(ProjectName)_$(Platform)\$(Configuration)\</IntDir>
-    <IncludePath>$(VK_SDK_PATH)\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(VK_SDK_PATH)\Lib;$(VK_SDK_PATH)\bin;;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(VK_SDK_PATH)\Include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(VK_SDK_PATH)\Lib;$(LibraryPath)</LibraryPath>
     <RuntimeLibrary>
     </RuntimeLibrary>
   </PropertyGroup>
