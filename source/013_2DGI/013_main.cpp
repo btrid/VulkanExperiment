@@ -53,7 +53,6 @@
 
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")
-//#pragma comment(lib, "FreeImage.lib")
 #pragma comment(lib, "vulkan-1.lib")
 #pragma comment(lib, "imgui.lib")
 
@@ -419,7 +418,7 @@ void dda()
 	}
 	float dist = distance(vec2(target), vec2(pos0));
 	float p = 1. / (1. + dist * dist * 0.01);
-	target = vec2(pos0) + vec2(target - pos0) * p * 100.;
+	target = vec2(pos0) + vec2(target - pos0) * p * 100.f;
 	dist += 1.;
 }
 
@@ -687,9 +686,9 @@ int main()
 	camera->getData().m_near = 0.01f;
 
 //	return pathFinding();
-//	return rigidbody();
+	return rigidbody();
 //	return radiosity();
-	return radiosity2();
+//	return radiosity2();
 //	return radiosity3();
 
 	app::AppDescriptor app_desc;

@@ -139,7 +139,7 @@ struct GI2DContext
 				u_gi2d_scene = context->m_uniform_memory.allocateMemory<GI2DScene>({ 1,{} });
 
 				m_gi2d_info.m_position = vec4(0.f, 0.f, 0.f, 0.f);
-				m_gi2d_info.m_resolution = uvec4(desc.Resolution, desc.Resolution / 8);
+				m_gi2d_info.m_resolution = uvec4(desc.Resolution, desc.Resolution / uvec2(8));
 				m_gi2d_info.m_camera_PV = glm::ortho(desc.Resolution.x*-0.5f, desc.Resolution.x*0.5f, desc.Resolution.y*-0.5f, desc.Resolution.y*0.5f, 0.f, 2000.f) * glm::lookAt(vec3(desc.Resolution.x*0.5f, 1000.f, desc.Resolution.y*0.5f) + m_gi2d_info.m_position.xyz(), vec3(desc.Resolution.x*0.5f, 0.f, desc.Resolution.y*0.5f) + m_gi2d_info.m_position.xyz(), vec3(0.f, 0.f, 1.f));
 
 

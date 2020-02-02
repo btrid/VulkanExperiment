@@ -750,8 +750,8 @@ void test()
 		vec2 dir, inv_dir;
 		calcDirEx(angle, dir, inv_dir);
 
-		auto i_dir = abs(ivec2(round(dir * dir_reso)));
-		auto i_inv_dir = abs(ivec2(round(inv_dir * dir_reso)));
+		auto i_dir = abs(ivec2(round(dir * (float)dir_reso)));
+		auto i_inv_dir = abs(ivec2(round(inv_dir * (float)dir_reso)));
 		printf("dir[%3d]=[%4d,%4d]\n", angle_index, i_dir.x, i_dir.y);
 
 		for (int x = 0; x < map_reso * 2; x++)

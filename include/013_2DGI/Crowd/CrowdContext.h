@@ -207,7 +207,7 @@ struct CrowdContext
 					staging.getMappedPtr(i)->unit_type = 0;
 //					staging.getMappedPtr(i)->crowd_type = std::rand() % 2;
 					staging.getMappedPtr(i)->crowd_type = 0;
-					staging.getMappedPtr(i)->m_pos += staging.getMappedPtr(i)->crowd_type * vec2(600.f);
+					staging.getMappedPtr(i)->m_pos += float(staging.getMappedPtr(i)->crowd_type) * vec2(600.f);
 				}
 
 				vk::BufferCopy copy;

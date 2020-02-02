@@ -363,7 +363,8 @@ void GI2DPhysics::make(vk::CommandBuffer cmd, const GI2DRB_MakeParam& param)
 		for (uint32_t x = 0; x < box.z; x++)
 		{
 			uint i = x + y * box.z;
-			pos[i] = vec2(box) + rotate(vec2(x, y) + 0.5f, 0.f);
+			pos[i] = vec2(box.xy()) + vec2(x, y) + 0.5f;
+//			pos[i] = vec2(box) + rotate(vec2(x, y) + 0.5f, 0.f);
 			pstate[i].pos = pos[i];
 			pstate[i].pos_old = pos[i];
 			if (y == 0 || y == box.w - 1 || x == 0 || x == box.z - 1)
@@ -445,7 +446,7 @@ void GI2DPhysics::make(vk::CommandBuffer cmd, const GI2DRB_MakeParam& param)
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeRB_MakeJFCell].get());
 			auto num = app::calcDipatchGroups(uvec3(area, 1), uvec3(8, 8, 1));
 
-			uint area_max = glm::powerOfTwoAbove(glm::max(area.x, area.y));
+			uint area_max = glm::ceilPowerOfTwo(glm::max(area.x, area.y));
 			for (int distance = area_max >> 1; distance != 0; distance >>= 1)
 			{
 				vk::BufferMemoryBarrier to_read[] = {

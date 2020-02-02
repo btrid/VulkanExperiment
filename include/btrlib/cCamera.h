@@ -83,7 +83,7 @@ public:
 			// XZ•½–Ê‚ÌˆÚ“®
 			auto f = glm::normalize(m_data.m_target - m_data.m_position);
 			auto s = glm::normalize(glm::cross(m_data.m_up, f));
-			auto move = input.m_mouse.getMove();
+			auto move = vec2(input.m_mouse.getMove());
 			m_data.m_position += (s*move.x + f*move.y);
 			m_data.m_target += (s*move.x + f*move.y);
 
@@ -92,7 +92,7 @@ public:
 			// XY•½–Ê‚ÌˆÚ“®
 			auto f = glm::normalize(m_data.m_target - m_data.m_position);
 			auto s = glm::normalize(glm::cross(m_data.m_up, f));
-			auto move = input.m_mouse.getMove();
+			auto move = vec2(input.m_mouse.getMove());
 			m_data.m_position += (s*move.x + m_data.m_up*move.y);// * distance / 100.f;
 			m_data.m_target += (s*move.x + m_data.m_up*move.y);// * distance / 100.f;
 		}

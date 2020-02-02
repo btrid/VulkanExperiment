@@ -1,4 +1,4 @@
-﻿#include <btrlib/Define.h>
+#include <btrlib/Define.h>
 #include <cstdlib>
 #include <string>
 #include <vector>
@@ -28,6 +28,9 @@
 #include <applib/AppPipeline.h>
 
 #pragma comment(lib, "vulkan-1.lib")
+#pragma comment(lib, "btrlib.lib")
+#pragma comment(lib, "applib.lib")
+#pragma comment(lib, "imgui.lib")
 
 int main()
 {
@@ -49,18 +52,6 @@ int main()
 	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
 	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchain());
 
-	auto appmodel_context = std::make_shared<AppModelContext>(context);
-	AppModelRenderStage model_renderer(context, appmodel_context, app.m_window->getFrontBuffer());
-	AppModelAnimationStage model_animater(context, appmodel_context);
-
-	cModel model;
-	model.load(context, btr::getResourceAppPath() + "tiny.x");
-//	model.load2(context, btr::getResourceAppPath() + "tiny.x");
-	std::shared_ptr<AppModel> player_model = std::make_shared<AppModel>(context, appmodel_context, model.getResource(), 1024);
-
-	auto anime_cmd = model_animater.createCmd(player_model);
-	auto render_cmd = model_renderer.createCmd(player_model);
-
 	app.setup();
 	while (true)
 	{
@@ -78,22 +69,8 @@ int main()
 			};
 			std::vector<vk::CommandBuffer> cmds(cmd_num);
 			{
-				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
-				std::vector<vk::CommandBuffer> anime_cmds = { anime_cmd.get() };
-				model_animater.dispatchCmd(cmd, anime_cmds);
-
-				cmd.end();
-				cmds[cmd_model_update] = cmd;
-
 			}
-			{
-				auto cmd = context->m_cmd_pool->allocCmdOnetime(0);
-				std::vector<vk::CommandBuffer> render_cmds = { render_cmd.get() };
-				model_renderer.dispach(cmd, render_cmds);
-				cmd.end();
-				cmds[cmd_model_render] = cmd;
 
-			}
 			{
 				cmds[cmd_render_clear] = clear_pipeline.execute();
 				cmds[cmd_render_present] = present_pipeline.execute();
