@@ -1,0 +1,256 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+layout (local_size_x = 64, local_size_y = 64) in;
+
+// 雲の光の吸収量
+#define ABSORPTION		0.7
+
+const float u_plant_radius = 1000.;
+const vec4 u_planet = vec4(0., -u_plant_radius, 0, u_plant_radius);
+const vec4 u_cloud_inner = vec4(u_planet.xyz, u_planet.w*1.05);
+const vec4 u_cloud_outer = u_cloud_inner + vec4(0., 0., 0, 30.);
+const float u_cloud_area_inv = 1. / (u_cloud_outer.w - u_cloud_inner.w);
+vec3 uLightRay = normalize(vec3(0., 1., 0.));
+vec3 uLightColor = vec3(1.);
+vec3 uIndirectColor = vec3(0.6);
+
+float band(in float start, in float peak, in float end, in float t)
+{
+	return smoothstep (start, peak, t) * (1. - smoothstep (peak, end, t));
+}
+float band2(in float ls, in float le, in float hs, in float he, in float t)
+{
+	return smoothstep (ls, le, t) * (1. - smoothstep (hs, he, t));
+}
+
+float rand(in vec3 co)
+{
+	return fract(sin(dot(co, vec3(12.98,78.23, 45.41))) * 43758.5);
+}
+float noise(in vec3 pos)
+{
+	vec3 ip = floor(pos);
+	vec3 fp = smoothstep(0., 1., fract(pos));
+	vec2 offset = vec2(0., 1.);
+	vec4 a = vec4(rand(ip+offset.xxx),rand(ip+offset.yxx),rand(ip+offset.xyx),rand(ip+offset.yyx));
+	vec4 b = vec4(rand(ip+offset.xxy),rand(ip+offset.yxy),rand(ip+offset.xyy),rand(ip+offset.yyy));
+	a = mix(a, b, fp.z);
+	a.xy = mix(a.xy, a.zw, fp.y);
+	return mix(a.x, a.y, fp.x);
+}
+
+// https://thebookofshaders.com/13/?lan=jp
+// 非整数ブラウン運動
+float fBM(in vec3 pos, in int octaves)
+{
+	float lacunarity = 2.5;
+	float total = 0.;
+	float value = 0.;
+	for(int i = 0; i < octaves; i++)
+	{
+		pos *= lacunarity;
+		value = value*2. + noise(pos);
+		total = total*2. + 1.;
+	}
+
+	return value / total;
+}
+float intersectRaySphere(in vec3 origin, in vec3 ray, in vec4 sphere)
+{
+	vec3 relative_pos = sphere.xyz - origin;
+	float tca = dot(relative_pos, ray);
+//	if (tca < 0.) return -1.;
+
+	float radiusSq = sphere.w * sphere.w;
+	float d2 = dot(relative_pos, relative_pos) - tca * tca;
+	if (d2 > radiusSq)
+		return -1.;
+
+	float thc = sqrt(radiusSq - d2);
+	float t0 = tca - thc;
+	float t1 = tca + thc;
+	if (t0 < 0.) t0 = t1;
+	return t0;
+}
+
+vec3 getSkyColor(in vec3 ray)
+{
+	// 太陽の色
+	vec3 vSkyColor = mix(vec3(.0, 0.1, 0.4), vec3(0.3, 0.6, 0.8), 1.0 - ray.y);
+	uIndirectColor = mix(vSkyColor, vec3(0.4), 0.2);
+
+	// 太陽
+	vSkyColor = mix(vSkyColor, uLightColor, smoothstep(0.999, 1.00, dot(uLightRay, ray)));
+
+
+	return vSkyColor;
+}
+
+
+float cloud_density(in vec3 pos)
+{
+//	float t = (distance(pos, u_cloud_inner.xyz)-u_cloud_inner.w) * u_cloud_area_inv;
+//	vec3 p = pos * vec3(0.01,0.,0.01) + vec3(0., t, 0.);
+	vec3 p = pos * vec3(0.01,0.01,0.01);
+
+	float density = fBM(p/* + vec3(0., 0., iTime*0.2)*/, 4);
+
+	float coverage = 0.5;
+	float alpha = 0.05;
+
+	density = density * smoothstep(coverage, coverage+alpha, density);
+
+	density = band(0., 0.5, 1., (distance(pos,u_cloud_inner.xyz)-u_cloud_inner.w)*u_cloud_area_inv) * density;
+	return density;
+}
+
+float cloud_lighting(in vec3 pos)
+{
+	float transparent = 1.;
+#if 0
+	return 0.5;
+#elif 1
+	pos = pos + uLightRay * 5.;
+	float density = cloud_density(pos);
+
+	transparent *= exp(-density * ABSORPTION);
+#elif 1
+	const int steps = 5;
+	for (int i = 0; i < steps; i++) 
+	{
+		pos = pos + uLightRay * 4.;
+		float density = cloud_density(pos);
+
+		transparent *= exp(-density * ABSORPTION);
+	}
+#endif
+	return transparent;
+}
+
+bool intersectRayAtom(vec3 Pos, vec3 Dir, vec3 AtomPos, vec2 Area, out vec4 OutDist)
+{
+	vec3 RelativePos = AtomPos - Pos;
+	float tca = dot(RelativePos, Dir);
+
+	vec2 RadiusSq = Area * Area;
+	float d2 = dot(RelativePos, RelativePos) - tca * tca;
+
+	OutDist = vec4(tca) + vec4(sqrt(RadiusSq.yxxy - d2)) * vec4(-1., -1., 1., 1.);
+	return d2 <= RadiusSq.y;
+}
+vec4 cloud(in vec3 rayPos, in vec3 rayDir, float depth)
+{
+	vec4 dist;
+	if(!intersectRayAtom(rayPos, rayDir, u_cloud_inner.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), dist))
+	{
+		// 雲にヒットしない
+		return vec4(0.);
+	}
+	
+
+	int count = 0;
+	vec2 ray_segment[2];
+	if(dist.y>0.)
+	{
+		// 雲の上から雲を見る
+		ray_segment[count] = vec2(max(dist.x, 0.), dist.y-max(dist.x, 0.));
+		count++;
+	}
+	if(dist.w>0. && depth<0.)
+	{
+		// 雲の下から雲を見る
+		ray_segment[count] = vec2(max(dist.z, 0.), dist.w-max(dist.z, 0.));
+		count++;
+	}
+#define STEP_LENGTH	1.
+	float transparent = 1.;
+	float alpha = 0.;
+	vec3 color = vec3(0.);
+	for(int i = 0; i <count; i++)
+	{
+		int step_num = int(ray_segment[i].y / STEP_LENGTH);
+		float ray_step = ray_segment[i].y / float(step_num);
+		vec3 pos = rayPos + rayDir * (ray_segment[i].x+ray_step*0.5);
+		for(int step = 0; step < step_num; step++)
+		{
+			float density = cloud_density(pos);
+
+			float t = exp(-density * ABSORPTION);
+			transparent *= t;
+			if (transparent < 0.01) { i = count; break; }
+
+			color += transparent * density * cloud_lighting(pos);
+			alpha += (1.-t) *(1.-alpha);
+
+			pos = pos + rayDir * ray_step;
+
+		}
+
+	}
+	return vec4(color, min(alpha, 1.));
+}
+
+void main()
+{
+	vec3 CamPos = vec3(0., 1., 0.);
+
+	vec3 CamDir; 
+	// カメラレイの作成
+	{
+		uvec3 reso = gl_WorkGroupSize * gl_WorkGroupSize;
+		vec2 ndc = (vec2(gl_GlobalInvocationID.xy) / vec2(reso.xy)) * 2. -1.;
+		vec3 up = vec3(0., 1., 0.); 
+		vec3 side = normalize(cross(CamDir, normalize(up)));
+		up = normalize(cross(CamDir, side));
+
+		float CamFov = tan(radians(45.0));
+		vec2 aspect = vec2(float(reso.x) / float(reso.y), 1);
+		CamDir = normalize(side*ndc.x*sin(CamFov)*aspect.x + up*ndc.y*sin(CamFov) + CamDir);
+	}
+	vec3 sky_color = getSkyColor(CamDir);
+
+	// 地面判定
+	float distance_land = intersectRaySphere(CamPos, CamDir, u_planet);
+	if(distance_land >= 0.)
+	{
+		// 地面に当たってる
+		vec3 pos = CamPos + CamDir * distance_land;
+		vec2 pos_i = floor(pos * 0.5).xz;
+		float p = float(mod(pos_i.x + pos_i.y, 2.));
+		sky_color = mix(vec3(.6, .6, .6), vec3(.75, .75, .75), p);
+
+		// shadow
+/*		if(true)
+		{
+			#define SHADOW_RAY_STEP 12
+			#define SHADOW_RAY_LENGTH 5.
+			float d1 = intersectRaySphere(pos, uLightRay, u_cloud_inner);
+			float d2 = intersectRaySphere(pos, uLightRay, u_cloud_outer);
+			int step_num = min(int((max(d2, 0.)-max(d1, 0.)) / float(SHADOW_RAY_LENGTH)), SHADOW_RAY_STEP);
+			pos = pos + uLightRay * (d1 + SHADOW_RAY_LENGTH*0.5);
+			vec3 ray = uLightRay/uLightRay.y;
+
+			float transparent = 1.;
+			for(int step = 0; step < step_num; step++)
+			{
+				float density = cloud_density(pos);
+
+				float t = exp(-density * ABSORPTION);
+				transparent *= t;
+				if (transparent < 0.01) break;
+
+				pos += ray * SHADOW_RAY_LENGTH; 
+			}
+			sky_color = mix(sky_color, vec3(0.), 1.-transparent);
+		}
+*/		
+	}
+
+	vec3 pos = CamPos + CamDir;
+	vec4 color = cloud(pos, CamDir, distance_land);
+
+	color.xyz = mix(sky_color, color.xyz/(color.a+0.0001), color.a);
+
+	gl_FragColor = vec4(color.xyz, 1.);
+}
