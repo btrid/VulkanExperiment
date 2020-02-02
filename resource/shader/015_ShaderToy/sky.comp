@@ -1,6 +1,9 @@
 #version 460
 #extension GL_GOOGLE_include_directive : require
 
+#define USE_RenderTarget 0
+#include "applib/System.glsl"
+
 layout (local_size_x = 64, local_size_y = 64) in;
 
 // 雲の光の吸収量
@@ -252,5 +255,6 @@ void main()
 
 	color.xyz = mix(sky_color, color.xyz/(color.a+0.0001), color.a);
 
-	gl_FragColor = vec4(color.xyz, 1.);
+	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(color.xyz, 1.));
+
 }

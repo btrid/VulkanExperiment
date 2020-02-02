@@ -149,7 +149,8 @@ struct Sky
 		{
 			{
 				vk::DescriptorSetLayout layouts[] = {
-					m_descriptor_set_layout.get(),
+					RenderTarget::s_descriptor_set_layout.get(),
+//					m_descriptor_set_layout.get(),
 				};
 				vk::PushConstantRange ranges[] = {
 					vk::PushConstantRange().setSize(4).setStageFlags(vk::ShaderStageFlagBits::eCompute),
@@ -181,6 +182,11 @@ struct Sky
 			m_pipeline[Pipeline_Sky_CS] = std::move(compute_pipeline[0]);
 		}
 	}
+
+	void execute(vk::CommandBuffer& cmd)
+	{
+
+	}
 };
 int main()
 {
@@ -201,7 +207,7 @@ int main()
 
 	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
 	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchain());
-
+	Sky sky(context);
 	app.setup();
 	while (true)
 	{
