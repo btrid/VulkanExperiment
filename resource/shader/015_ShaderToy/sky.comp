@@ -198,7 +198,7 @@ void main()
 {
 	vec3 CamPos = vec3(0., 1., 0.);
 
-	vec3 CamDir; 
+	vec3 CamDir = normalize(vec3(0., 1., 1.));
 	// カメラレイの作成
 	{
 		uvec3 reso = gl_WorkGroupSize * gl_WorkGroupSize;
@@ -207,9 +207,9 @@ void main()
 		vec3 side = normalize(cross(CamDir, normalize(up)));
 		up = normalize(cross(CamDir, side));
 
-		float CamFov = tan(radians(45.0));
+		float CamFov = (radians(45.0));
 		vec2 aspect = vec2(float(reso.x) / float(reso.y), 1);
-		CamDir = normalize(side*ndc.x*sin(CamFov)*aspect.x + up*ndc.y*sin(CamFov) + CamDir);
+		CamDir = normalize(side*ndc.x + up*ndc.y + CamDir);
 	}
 	vec3 sky_color = getSkyColor(CamDir);
 
