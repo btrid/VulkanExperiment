@@ -4,7 +4,7 @@
 #define USE_RenderTarget 0
 #include "applib/System.glsl"
 
-layout (local_size_x = 64, local_size_y = 64) in;
+layout (local_size_x = 32, local_size_y = 32) in;
 
 // 雲の光の吸収量
 #define ABSORPTION		0.7

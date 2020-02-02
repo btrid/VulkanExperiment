@@ -152,15 +152,15 @@ struct Sky
 					RenderTarget::s_descriptor_set_layout.get(),
 //					m_descriptor_set_layout.get(),
 				};
-				vk::PushConstantRange ranges[] = {
-					vk::PushConstantRange().setSize(4).setStageFlags(vk::ShaderStageFlagBits::eCompute),
-				};
+// 				vk::PushConstantRange ranges[] = {
+// 					vk::PushConstantRange().setSize(4).setStageFlags(vk::ShaderStageFlagBits::eCompute),
+// 				};
 
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
 				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 				pipeline_layout_info.setPSetLayouts(layouts);
-				pipeline_layout_info.setPushConstantRangeCount(array_length(ranges));
-				pipeline_layout_info.setPPushConstantRanges(ranges);
+// 				pipeline_layout_info.setPushConstantRangeCount(array_length(ranges));
+// 				pipeline_layout_info.setPPushConstantRanges(ranges);
 				m_pipeline_layout[PipelineLayout_Sky] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 
 			}
@@ -168,7 +168,7 @@ struct Sky
 
 		// compute pipeline
 		{
-			std::array<vk::PipelineShaderStageCreateInfo, 6> shader_info;
+			std::array<vk::PipelineShaderStageCreateInfo, 1> shader_info;
 			shader_info[0].setModule(m_shader[Shader_Sky_CS].get());
 			shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[0].setPName("main");
@@ -183,9 +183,30 @@ struct Sky
 		}
 	}
 
-	void execute(vk::CommandBuffer& cmd)
+	void execute(vk::CommandBuffer& cmd, const std::shared_ptr<RenderTarget>& render_target)
 	{
+		// render_targetÇ…èëÇ≠
+		{
 
+			std::array<vk::ImageMemoryBarrier, 1> image_barrier;
+			image_barrier[0].setImage(render_target->m_image);
+			image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+			image_barrier[0].setNewLayout(vk::ImageLayout::eGeneral);
+			image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
+
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
+		}
+
+		vk::DescriptorSet descs[] =
+		{
+			render_target->m_descriptor.get(),
+		};
+		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Sky].get(), 0, array_length(descs), descs, 0, nullptr);
+
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Sky_CS].get());
+
+		auto num = app::calcDipatchGroups(uvec3(1024, 1024, 1), uvec3(32,32,1));
+		cmd.dispatch(num.x, num.y, num.z);
 	}
 };
 int main()
@@ -218,13 +239,16 @@ int main()
 			enum
 			{
 				cmd_render_clear,
-				cmd_model_update,
-				cmd_model_render,
+				cmd_sky,
 				cmd_render_present,
 				cmd_num
 			};
 			std::vector<vk::CommandBuffer> cmds(cmd_num);
 			{
+				auto cmd = context->m_cmd_pool->allocCmdOnetime(0, "cmd_sky");
+				sky.execute(cmd, app.m_window->getFrontBuffer());
+				cmd.end();
+				cmds[cmd_sky] = cmd;
 			}
 
 			{
