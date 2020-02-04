@@ -120,7 +120,7 @@ struct Sky
 			}
 
 			vk::ImageCreateInfo image_info;
-			image_info.setExtent(vk::Extent3D(64, 16, 64));
+			image_info.setExtent(vk::Extent3D(128, 64, 128));
 			image_info.setArrayLayers(1);
 			image_info.setFormat(vk::Format::eR8Unorm);
 			image_info.setImageType(vk::ImageType::e3D);
@@ -154,9 +154,9 @@ struct Sky
 			m_image_view = context->m_device.createImageViewUnique(view_info);
 
 			vk::SamplerCreateInfo sampler_info;
-			sampler_info.setAddressModeU(vk::SamplerAddressMode::eClampToEdge);
-			sampler_info.setAddressModeV(vk::SamplerAddressMode::eClampToEdge);
-			sampler_info.setAddressModeW(vk::SamplerAddressMode::eClampToEdge);
+			sampler_info.setAddressModeU(vk::SamplerAddressMode::eRepeat);
+			sampler_info.setAddressModeV(vk::SamplerAddressMode::eRepeat);
+			sampler_info.setAddressModeW(vk::SamplerAddressMode::eRepeat);
 			sampler_info.setAnisotropyEnable(false);
 			sampler_info.setMagFilter(vk::Filter::eLinear);
 			sampler_info.setMinFilter(vk::Filter::eLinear);
