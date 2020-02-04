@@ -207,7 +207,7 @@ vk::CommandBuffer sImGuiRenderer::Render()
 			auto is_shift = keyboard.isHold(VK_SHIFT);
 			io.KeyShift = is_shift;
 			io.KeyCtrl = keyboard.isHold(VK_CONTROL);
-			io.KeyAlt = keyboard.isHold(vk_alt);
+			io.KeyAlt = keyboard.isHold(VK_MENU);
 			int32_t input_count = 0;
 			for (uint32_t i = 0; i < 256; i++)
 			{

@@ -34,6 +34,7 @@ struct Sky
 	enum Shader
 	{
 		Shader_Sky_CS,
+		Shader_SkyWithTexture_CS,
 
 		Shader_Num,
 	};
@@ -45,6 +46,7 @@ struct Sky
 	enum Pipeline
 	{
 		Pipeline_Sky_CS,
+		Pipeline_SkyWithTexture_CS,
 		Pipeline_Num,
 	};
 
@@ -55,87 +57,128 @@ struct Sky
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
 
+	vk::ImageCreateInfo m_image_info;
+	vk::UniqueImage m_image;
+	vk::UniqueImageView m_image_view;
+	vk::UniqueDeviceMemory m_image_memory;
+	vk::UniqueSampler m_image_sampler;
+
 	Sky(const std::shared_ptr<btr::Context>& context)
 	{
 		// descriptor layout
-// 		{
-// 			auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
-// 			vk::DescriptorSetLayoutBinding binding[] =
-// 			{
-// 				vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eStorageBuffer, 1, stage),
-// 			};
-// 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
-// 			desc_layout_info.setBindingCount(array_length(binding));
-// 			desc_layout_info.setPBindings(binding);
-// 			m_descriptor_set_layout = context->m_device.createDescriptorSetLayoutUnique(desc_layout_info);
-// 		}
-// 		// descriptor set
-// 		{
-// 			vk::DescriptorSetLayout layouts[] = {
-// 				m_descriptor_set_layout.get(),
-// 			};
-// 			vk::DescriptorSetAllocateInfo desc_info;
-// 			desc_info.setDescriptorPool(context->m_descriptor_pool.get());
-// 			desc_info.setDescriptorSetCount(array_length(layouts));
-// 			desc_info.setPSetLayouts(layouts);
-// 			m_descriptor_set = std::move(context->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
-// 
-// 			vk::DescriptorBufferInfo uniforms[] = {
-// 				u_radiosity_info.getInfo(),
-// 				u_circle_mesh_count.getInfo(),
-// 				u_circle_mesh_vertex.getInfo(),
-// 			};
-// 			vk::DescriptorBufferInfo storages[] = {
-// 				b_segment_counter.getInfo(),
-// 				b_segment.getInfo(),
-// 				b_radiance.getInfo(),
-// 				b_edge.getInfo(),
-// 				b_albedo.getInfo(),
-// 				v_emissive.getInfo(),
-// 				v_emissive_draw_command.getInfo(),
-// 				v_emissive_draw_count.getInfo(),
-// 			};
-// 
-// 			vk::WriteDescriptorSet write[] =
-// 			{
-// 				vk::WriteDescriptorSet()
-// 				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-// 				.setDescriptorCount(array_length(uniforms))
-// 				.setPBufferInfo(uniforms)
-// 				.setDstBinding(0)
-// 				.setDstSet(m_descriptor_set.get()),
-// 				vk::WriteDescriptorSet()
-// 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-// 				.setDescriptorCount(array_length(storages))
-// 				.setPBufferInfo(storages)
-// 				.setDstBinding(3)
-// 				.setDstSet(m_descriptor_set.get()),
-// 			};
-// 			context->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
-// 
-// 			std::array<vk::WriteDescriptorSet, Frame_Num> write_desc;
-// 			std::array<vk::DescriptorImageInfo, Frame_Num> image_info;
-// 			for (int i = 0; i < Frame_Num; i++)
-// 			{
-// 				image_info[i] = vk::DescriptorImageInfo(m_image_sampler.get(), m_image_view[i].get(), vk::ImageLayout::eShaderReadOnlyOptimal);
-// 
-// 				write_desc[i] =
-// 					vk::WriteDescriptorSet()
-// 					.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-// 					.setDescriptorCount(1)
-// 					.setPImageInfo(&image_info[i])
-// 					.setDstBinding(11)
-// 					.setDstArrayElement(i)
-// 					.setDstSet(m_descriptor_set.get());
-// 			}
-// 			context->m_device.updateDescriptorSets(array_length(write_desc), write_desc.data(), 0, nullptr);
-// 		}
+		{
+			auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
+			vk::DescriptorSetLayoutBinding binding[] =
+			{
+				vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eCombinedImageSampler, 1, stage),
+			};
+			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
+			desc_layout_info.setBindingCount(array_length(binding));
+			desc_layout_info.setPBindings(binding);
+			m_descriptor_set_layout = context->m_device.createDescriptorSetLayoutUnique(desc_layout_info);
+		}
+		// descriptor set
+		{
+			{
+				vk::DescriptorSetLayout layouts[] = {
+					m_descriptor_set_layout.get(),
+				};
+				vk::DescriptorSetAllocateInfo desc_info;
+				desc_info.setDescriptorPool(context->m_descriptor_pool.get());
+				desc_info.setDescriptorSetCount(array_length(layouts));
+				desc_info.setPSetLayouts(layouts);
+				m_descriptor_set = std::move(context->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
+			}
+
+			vk::ImageCreateInfo image_info;
+			image_info.setExtent(vk::Extent3D(64, 16, 64));
+			image_info.setArrayLayers(1);
+			image_info.setFormat(vk::Format::eR8Unorm);
+			image_info.setImageType(vk::ImageType::e3D);
+			image_info.setInitialLayout(vk::ImageLayout::eUndefined);
+			image_info.setMipLevels(1);
+			image_info.setSamples(vk::SampleCountFlagBits::e1);
+			image_info.setSharingMode(vk::SharingMode::eExclusive);
+			image_info.setTiling(vk::ImageTiling::eOptimal);
+			image_info.setUsage(vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled);
+
+			m_image = context->m_device.createImageUnique(image_info);
+
+			vk::MemoryRequirements memory_request = context->m_device.getImageMemoryRequirements(m_image.get());
+			vk::MemoryAllocateInfo memory_alloc_info;
+			memory_alloc_info.allocationSize = memory_request.size;
+			memory_alloc_info.memoryTypeIndex = Helper::getMemoryTypeIndex(context->m_physical_device, memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+			m_image_memory = context->m_device.allocateMemoryUnique(memory_alloc_info);
+			context->m_device.bindImageMemory(m_image.get(), m_image_memory.get(), 0);
+
+			vk::ImageViewCreateInfo view_info;
+			view_info.setFormat(image_info.format);
+			view_info.setImage(m_image.get());
+			view_info.subresourceRange.setBaseArrayLayer(0);
+			view_info.subresourceRange.setLayerCount(1);
+			view_info.subresourceRange.setBaseMipLevel(0);
+			view_info.subresourceRange.setLevelCount(1);
+			view_info.subresourceRange.setAspectMask(vk::ImageAspectFlagBits::eColor);
+			view_info.setViewType(vk::ImageViewType::e3D);
+			view_info.components.setR(vk::ComponentSwizzle::eR).setG(vk::ComponentSwizzle::eG).setB(vk::ComponentSwizzle::eB);
+			m_image_view = context->m_device.createImageViewUnique(view_info);
+
+			vk::SamplerCreateInfo sampler_info;
+			sampler_info.setAddressModeU(vk::SamplerAddressMode::eClampToEdge);
+			sampler_info.setAddressModeV(vk::SamplerAddressMode::eClampToEdge);
+			sampler_info.setAddressModeW(vk::SamplerAddressMode::eClampToEdge);
+			sampler_info.setAnisotropyEnable(false);
+			sampler_info.setMagFilter(vk::Filter::eLinear);
+			sampler_info.setMinFilter(vk::Filter::eLinear);
+			sampler_info.setMinLod(0.f);
+			sampler_info.setMaxLod(0.f);
+			sampler_info.setMipLodBias(0.f);
+			sampler_info.setMipmapMode(vk::SamplerMipmapMode::eNearest);
+			sampler_info.setUnnormalizedCoordinates(false);
+			m_image_sampler = context->m_device.createSamplerUnique(sampler_info);
+
+			vk::ImageMemoryBarrier to_copy_barrier;
+			to_copy_barrier.image = m_image.get();
+			to_copy_barrier.oldLayout = vk::ImageLayout::eUndefined;
+			to_copy_barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
+			to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+			to_copy_barrier.subresourceRange = vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1};
+
+			vk::ImageMemoryBarrier to_shader_read_barrier;
+			to_shader_read_barrier.image = m_image.get();
+			to_shader_read_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
+			to_shader_read_barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+			to_shader_read_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+			to_shader_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+			to_shader_read_barrier.subresourceRange = vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1};
+
+			auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
+			cmd.clearColorImage(m_image.get(), vk::ImageLayout::eTransferDstOptimal, vk::ClearColorValue(std::array<uint32_t, 4>{0}), vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllCommands, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
+
+			vk::DescriptorImageInfo desc_image_info = vk::DescriptorImageInfo(m_image_sampler.get(), m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal);
+
+			vk::WriteDescriptorSet write[] =
+			{
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+				.setDescriptorCount(1)
+				.setPImageInfo(&desc_image_info)
+				.setDstBinding(0)
+				.setDstArrayElement(0)
+				.setDstSet(m_descriptor_set.get()),
+			};
+			context->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
+		}
 
 		// shader
 		{
 			const char* name[] =
 			{
 				"Sky.comp.spv",
+				"SkyWithTexture.comp.spv",
 			};
 			static_assert(array_length(name) == Shader_Num, "not equal shader num");
 
@@ -150,7 +193,7 @@ struct Sky
 			{
 				vk::DescriptorSetLayout layouts[] = {
 					RenderTarget::s_descriptor_set_layout.get(),
-//					m_descriptor_set_layout.get(),
+					m_descriptor_set_layout.get(),
 				};
 // 				vk::PushConstantRange ranges[] = {
 // 					vk::PushConstantRange().setSize(4).setStageFlags(vk::ShaderStageFlagBits::eCompute),
@@ -200,6 +243,7 @@ struct Sky
 		vk::DescriptorSet descs[] =
 		{
 			render_target->m_descriptor.get(),
+			m_descriptor_set.get(),
 		};
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Sky].get(), 0, array_length(descs), descs, 0, nullptr);
 
@@ -213,9 +257,9 @@ int main()
 {
 	btr::setResourceAppPath("..\\..\\resource/");
 	auto camera = cCamera::sCamera::Order().create();
-	camera->getData().m_position = glm::vec3(0.f, -500.f, 800.f);
-	camera->getData().m_target = glm::vec3(0.f, -100.f, 0.f);
-	camera->getData().m_up = glm::vec3(0.f, -1.f, 0.f);
+	camera->getData().m_position = vec3(0.f, -500.f, 800.f);
+	camera->getData().m_target = vec3(0.f, -100.f, 0.f);
+	camera->getData().m_up = vec3(0.f, -1.f, 0.f);
 	camera->getData().m_width = 640;
 	camera->getData().m_height = 480;
 	camera->getData().m_far = 10000.f;

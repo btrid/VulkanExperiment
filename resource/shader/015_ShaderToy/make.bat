@@ -8,7 +8,8 @@ SET option=--target-env spirv1.3 -V -w
 SET exe=glslangValidator.exe
 SET output=-o ../binary
 
-%exe% %include% %option% %output%/sky.comp.spv sky.comp
+%exe% %include% %option% %output%/Sky.comp.spv Sky.comp
+%exe% %include% %option% %output%/SkyWithTexture.comp.spv SkyWithTexture.comp
 
 
 
