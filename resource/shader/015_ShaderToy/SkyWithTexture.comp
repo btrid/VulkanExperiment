@@ -4,6 +4,8 @@
 #define USE_RenderTarget 0
 #include "applib/System.glsl"
 
+layout(set=1, binding=0) uniform sampler3D s_map;
+
 layout (local_size_x = 32, local_size_y = 32) in;
 
 // 雲の光の吸収量
@@ -27,38 +29,6 @@ float band2(in float ls, in float le, in float hs, in float he, in float t)
 	return smoothstep (ls, le, t) * (1. - smoothstep (hs, he, t));
 }
 
-float rand(in vec3 co)
-{
-	return fract(sin(dot(co, vec3(12.98,78.23, 45.41))) * 43758.5);
-}
-float noise(in vec3 pos)
-{
-	vec3 ip = floor(pos);
-	vec3 fp = smoothstep(0., 1., fract(pos));
-	vec2 offset = vec2(0., 1.);
-	vec4 a = vec4(rand(ip+offset.xxx),rand(ip+offset.yxx),rand(ip+offset.xyx),rand(ip+offset.yyx));
-	vec4 b = vec4(rand(ip+offset.xxy),rand(ip+offset.yxy),rand(ip+offset.xyy),rand(ip+offset.yyy));
-	a = mix(a, b, fp.z);
-	a.xy = mix(a.xy, a.zw, fp.y);
-	return mix(a.x, a.y, fp.x);
-}
-
-// https://thebookofshaders.com/13/?lan=jp
-// 非整数ブラウン運動
-float fBM(in vec3 pos, in int octaves)
-{
-	float lacunarity = 2.5;
-	float total = 0.;
-	float value = 0.;
-	for(int i = 0; i < octaves; i++)
-	{
-		pos *= lacunarity;
-		value = value*2. + noise(pos);
-		total = total*2. + 1.;
-	}
-
-	return value / total;
-}
 float intersectRaySphere(in vec3 origin, in vec3 ray, in vec4 sphere)
 {
 	vec3 relative_pos = sphere.xyz - origin;
@@ -93,16 +63,9 @@ vec3 getSkyColor(in vec3 ray)
 
 float cloud_density(in vec3 pos)
 {
-//	float t = (distance(pos, u_cloud_inner.xyz)-u_cloud_inner.w) * u_cloud_area_inv;
-//	vec3 p = pos * vec3(0.01,0.,0.01) + vec3(0., t, 0.);
 	vec3 p = pos * vec3(0.01,0.01,0.01);
 
-	float density = fBM(p/* + vec3(0., 0., iTime*0.2)*/, 4);
-
-	float coverage = 0.5;
-	float alpha = 0.05;
-
-	density = density * smoothstep(coverage, coverage+alpha, density);
+	float density = texture(s_map, p).x;
 
 	density = band(0., 0.5, 1., (distance(pos,u_cloud_inner.xyz)-u_cloud_inner.w)*u_cloud_area_inv) * density;
 	return density;

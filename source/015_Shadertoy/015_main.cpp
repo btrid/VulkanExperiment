@@ -29,6 +29,35 @@
 #pragma comment(lib, "applib.lib")
 #pragma comment(lib, "imgui.lib")
 
+float rand(const glm::vec3& co)
+{
+	return glm::fract(glm::sin(glm::dot(co, glm::vec3(12.98f, 78.23f, 45.41f))) * 43758.5f);
+}
+
+float noise(const vec3& pos)
+{
+	vec3 ip = floor(pos);
+	vec3 fp = glm::smoothstep(0.f, 1.f, glm::fract(pos));
+	vec2 offset = vec2(0.f, 1.f);
+	vec4 a = vec4(rand(ip + offset.xxx), rand(ip + offset.yxx), rand(ip + offset.xyx), rand(ip + offset.yyx));
+	vec4 b = vec4(rand(ip + offset.xxy), rand(ip + offset.yxy), rand(ip + offset.xyy), rand(ip + offset.yyy));
+	a = mix(a, b, fp.z);
+	a.xy = glm::mix(a.xy(), a.zw(), fp.y);
+	return glm::mix(a.x, a.y, fp.x);
+}
+
+float fBM(const glm::vec3& seed)
+{
+	float value = 0.f;
+	auto p = seed;
+	for (int i = 0; i < 4; i++)
+	{
+		value = value * 2.f + noise(p);
+		p *= glm::vec3(2.57859f);
+	}
+	return value / 15.f;
+
+}
 struct Sky 
 {
 	enum Shader
@@ -155,7 +184,24 @@ struct Sky
 
 			auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
-			cmd.clearColorImage(m_image.get(), vk::ImageLayout::eTransferDstOptimal, vk::ClearColorValue(std::array<uint32_t, 4>{0}), vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+			
+			{				
+				auto staging = context->m_staging_memory.allocateMemory<uint8_t>(image_info.extent.width*image_info.extent.height*image_info.extent.depth);
+				auto* data = staging.getMappedPtr();
+				for (int z = 0; z < image_info.extent.depth; z++)
+				for (int y = 0; y < image_info.extent.height; y++)
+				for (int x = 0; x < image_info.extent.width; x++)
+				{
+					glm::vec3 s = glm::vec3(x, y, z) * 0.05f + 2.75f;
+					auto v = fBM(s);
+					v *= glm::smoothstep(0.5f, 0.55f, v);
+					*data = glm::packUnorm1x8(v);
+					data++;
+				}
+
+				auto copy = vk::BufferImageCopy(staging.getInfo().offset, image_info.extent.width, image_info.extent.height, vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1), vk::Offset3D(0, 0, 0), image_info.extent);
+				cmd.copyBufferToImage(staging.getInfo().buffer, m_image.get(), vk::ImageLayout::eTransferDstOptimal, copy);
+			}
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllCommands, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
 
 			vk::DescriptorImageInfo desc_image_info = vk::DescriptorImageInfo(m_image_sampler.get(), m_image_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal);
@@ -211,18 +257,25 @@ struct Sky
 
 		// compute pipeline
 		{
-			std::array<vk::PipelineShaderStageCreateInfo, 1> shader_info;
+			std::array<vk::PipelineShaderStageCreateInfo, 2> shader_info;
 			shader_info[0].setModule(m_shader[Shader_Sky_CS].get());
 			shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[0].setPName("main");
+			shader_info[1].setModule(m_shader[Shader_SkyWithTexture_CS].get());
+			shader_info[1].setStage(vk::ShaderStageFlagBits::eCompute);
+			shader_info[1].setPName("main");
 			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 			{
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[0])
 				.setLayout(m_pipeline_layout[PipelineLayout_Sky].get()),
+				vk::ComputePipelineCreateInfo()
+				.setStage(shader_info[1])
+				.setLayout(m_pipeline_layout[PipelineLayout_Sky].get()),
 			};
 			auto compute_pipeline = context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
 			m_pipeline[Pipeline_Sky_CS] = std::move(compute_pipeline[0]);
+			m_pipeline[Pipeline_SkyWithTexture_CS] = std::move(compute_pipeline[1]);
 		}
 	}
 
@@ -247,7 +300,7 @@ struct Sky
 		};
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Sky].get(), 0, array_length(descs), descs, 0, nullptr);
 
-		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Sky_CS].get());
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_SkyWithTexture_CS].get());
 
 		auto num = app::calcDipatchGroups(uvec3(1024, 1024, 1), uvec3(32,32,1));
 		cmd.dispatch(num.x, num.y, num.z);
