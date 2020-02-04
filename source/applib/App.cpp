@@ -113,7 +113,7 @@ App::App(const AppDescriptor& desc)
 	// ウインドウリストを取りたいけどいい考えがない。後で考える
 	g_app_instance = this;
 
-	vk::ApplicationInfo appInfo = { "Vulkan Test", 1, "EngineName", 0, VK_API_VERSION_1_1 };
+	vk::ApplicationInfo appInfo = { "Vulkan Test", 1, "EngineName", 0, VK_API_VERSION_1_2 };
 	std::vector<const char*> LayerName =
 	{
 #if _DEBUG
@@ -137,9 +137,9 @@ App::App(const AppDescriptor& desc)
 	instanceInfo.setPpEnabledLayerNames(LayerName.data());
 	m_instance = vk::createInstanceUnique(instanceInfo);
 
-// 	vk::DynamicLoader dl;
-// 	PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr = dl.getProcAddress<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr");
-// 	m_dispatch.init(vkGetInstanceProcAddr);
+	vk::DynamicLoader dl;
+	PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr = dl.getProcAddress<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr");
+	m_dispatch.init(vkGetInstanceProcAddr);
 	m_dispatch.init(m_instance.get());
 #if USE_DEBUG_REPORT
 	vk::DebugUtilsMessengerCreateInfoEXT debug_create_info;
