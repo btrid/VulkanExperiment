@@ -6,8 +6,7 @@
 
 struct GI2DDescription
 {
-	int32_t RenderWidth;
-	int32_t RenderHeight;
+	uvec2 Resolution;
 };
 struct GI2DContext
 {
@@ -18,32 +17,17 @@ struct GI2DContext
 		Layout_Path,
 		Layout_Num,
 	};
-	int32_t RenderWidth;
-	int32_t RenderHeight;
-	ivec2 RenderSize;
+	GI2DDescription m_desc;
 	int FragmentBufferSize;
 	struct GI2DInfo
 	{
 		mat4 m_camera_PV;
 		uvec4 m_resolution;
 		vec4 m_position;
-		std::array<uint32_t, 4> m_fragment_map_size_hierarchy;
-		uint32_t m_hierarchy_num;
-
-		uint32_t  getsize(int32_t hierarchy) {
-			return m_fragment_map_size_hierarchy[hierarchy] - m_fragment_map_size_hierarchy[hierarchy-1];
-		}
 	};
 	struct GI2DScene
 	{
 		int32_t m_frame;
-		int32_t m_hierarchy;
-		uint32_t m_skip;
-		int32_t _p2;
-
-		uint32_t m_radiance_offset;
-		uint32_t m_map_offset;
-		uvec2 m_map_reso;
 	};
 
 	struct Fragment
@@ -92,10 +76,8 @@ struct GI2DContext
 
 	GI2DContext(const std::shared_ptr<btr::Context>& context, const GI2DDescription& desc)
 	{
- 		RenderWidth = desc.RenderHeight;
- 		RenderHeight = desc.RenderWidth;
-		RenderSize = ivec2(RenderWidth, RenderHeight);
-		FragmentBufferSize = RenderWidth * RenderHeight;
+		m_desc = desc;
+		FragmentBufferSize = desc.Resolution.x * desc.Resolution.y;
 
 		m_context = context;
 
@@ -111,7 +93,6 @@ struct GI2DContext
 					vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(6, vk::DescriptorType::eStorageBuffer, 1, stage),
-					vk::DescriptorSetLayoutBinding(7, vk::DescriptorType::eStorageBuffer, 1, stage),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -140,6 +121,7 @@ struct GI2DContext
 					vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eStorageBuffer, 1, stage),
 					vk::DescriptorSetLayoutBinding(5, vk::DescriptorType::eStorageBuffer, 1, stage),
+					vk::DescriptorSetLayoutBinding(6, vk::DescriptorType::eStorageBuffer, 1, stage),
 				};
 				vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 				desc_layout_info.setBindingCount(array_length(binding));
@@ -157,24 +139,13 @@ struct GI2DContext
 				u_gi2d_scene = context->m_uniform_memory.allocateMemory<GI2DScene>({ 1,{} });
 
 				m_gi2d_info.m_position = vec4(0.f, 0.f, 0.f, 0.f);
-				m_gi2d_info.m_resolution = uvec4(RenderWidth, RenderHeight, RenderWidth / 8, RenderHeight / 8);
-				m_gi2d_info.m_camera_PV = glm::ortho(RenderWidth*-0.5f, RenderWidth*0.5f, RenderHeight*-0.5f, RenderHeight*0.5f, 0.f, 2000.f) * glm::lookAt(vec3(RenderWidth*0.5f, 1000.f, RenderHeight*0.5f) + m_gi2d_info.m_position.xyz(), vec3(RenderWidth*0.5f, 0.f, RenderHeight*0.5f) + m_gi2d_info.m_position.xyz(), vec3(0.f, 0.f, 1.f));
-				m_gi2d_info.m_hierarchy_num = 4;
+				m_gi2d_info.m_resolution = uvec4(desc.Resolution, desc.Resolution / uvec2(8));
+				m_gi2d_info.m_camera_PV = glm::ortho(desc.Resolution.x*-0.5f, desc.Resolution.x*0.5f, desc.Resolution.y*-0.5f, desc.Resolution.y*0.5f, 0.f, 2000.f) * glm::lookAt(vec3(desc.Resolution.x*0.5f, 1000.f, desc.Resolution.y*0.5f) + m_gi2d_info.m_position.xyz(), vec3(desc.Resolution.x*0.5f, 0.f, desc.Resolution.y*0.5f) + m_gi2d_info.m_position.xyz(), vec3(0.f, 0.f, 1.f));
 
-				int size = RenderHeight * RenderWidth / 64;
-				m_gi2d_info.m_fragment_map_size_hierarchy[0] = size;
-				size /= 64;
-				m_gi2d_info.m_fragment_map_size_hierarchy[1] = m_gi2d_info.m_fragment_map_size_hierarchy[0] + size;
-				size /= 64;
-				m_gi2d_info.m_fragment_map_size_hierarchy[2] = m_gi2d_info.m_fragment_map_size_hierarchy[1] + size;
-				size /= 64;
-				m_gi2d_info.m_fragment_map_size_hierarchy[3] = m_gi2d_info.m_fragment_map_size_hierarchy[2] + glm::max(size, 1);
 
 				cmd.updateBuffer<GI2DInfo>(u_gi2d_info.getInfo().buffer, u_gi2d_info.getInfo().offset, m_gi2d_info);
 
 				m_gi2d_scene.m_frame = 0;
-				m_gi2d_scene.m_hierarchy = 0;
-				m_gi2d_scene.m_skip = 0;
 				cmd.updateBuffer<GI2DScene>(u_gi2d_scene.getInfo().buffer, u_gi2d_scene.getInfo().offset, m_gi2d_scene);
 
 				{
@@ -189,8 +160,7 @@ struct GI2DContext
 			}
 			{
 				b_fragment = context->m_storage_memory.allocateMemory<Fragment>({ FragmentBufferSize,{} });
-				b_fragment_map = context->m_storage_memory.allocateMemory<uint64_t>({ m_gi2d_info.m_fragment_map_size_hierarchy[0]*2,{} });
-				b_grid_counter = context->m_storage_memory.allocateMemory<int32_t>({ FragmentBufferSize,{} });
+				b_fragment_map = context->m_storage_memory.allocateMemory<uint64_t>({ FragmentBufferSize/64*2,{} });
 			}
 		}
 
@@ -213,7 +183,6 @@ struct GI2DContext
 				vk::DescriptorBufferInfo storages[] = {
 					b_fragment.getInfo(),
 					b_fragment_map.getInfo(),
-					b_grid_counter.getInfo(),
 				};
 
 				vk::WriteDescriptorSet write[] = {
@@ -241,20 +210,6 @@ struct GI2DContext
 		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
 
 		m_gi2d_scene.m_frame = (m_gi2d_scene.m_frame + 1) % 1;
-		auto reso = m_gi2d_info.m_resolution;
-
-		uint radiance_offset = reso.x*reso.y;
-		int map_offset = 0;
-		uvec2 map_reso = reso.zw();
-		for (int i = 0; i < m_gi2d_scene.m_hierarchy; i++)
-		{
-			radiance_offset >>= 2;
-			map_offset += (reso.z >> i)*(reso.w >> i);
-			map_reso >>= 1;
-		}
-		m_gi2d_scene.m_radiance_offset = radiance_offset;
-		m_gi2d_scene.m_map_offset = map_offset;
-		m_gi2d_scene.m_map_reso = map_reso;
 
 		{
 			vk::BufferMemoryBarrier to_write[] = {
@@ -284,7 +239,6 @@ struct GI2DContext
 	btr::BufferMemoryEx<GI2DScene> u_gi2d_scene;
 	btr::BufferMemoryEx<Fragment> b_fragment;
 	btr::BufferMemoryEx<uint64_t> b_fragment_map;
-	btr::BufferMemoryEx<int32_t> b_grid_counter;
 
 	std::array<vk::UniqueDescriptorSetLayout, Layout_Num> m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
@@ -300,6 +254,7 @@ struct GI2DSDF
 	{
 		SDF_USE_NUM = 1,
 	};
+
 	GI2DSDF(const std::shared_ptr<GI2DContext>& gi2d_context)
 	{
 		m_gi2d_context = gi2d_context;
@@ -353,6 +308,12 @@ struct GI2DSDF
 
 struct GI2DPathContext
 {
+	struct OpenNode
+	{
+		i16vec2 pos;
+		uint data;
+	};
+
 	GI2DPathContext(const std::shared_ptr<GI2DContext>& gi2d_context)
 	{
 		m_gi2d_context = gi2d_context;
@@ -364,8 +325,8 @@ struct GI2DPathContext
 			b_connect = context->m_storage_memory.allocateMemory<uint32_t>({ 1,{} });
 			b_closed = context->m_storage_memory.allocateMemory<uint32_t>({ gi2d_context->FragmentBufferSize / 32,{} });
 			b_neighbor = context->m_storage_memory.allocateMemory<uint8_t>({ gi2d_context->FragmentBufferSize,{} });
-			b_cost = context->m_storage_memory.allocateMemory<uint32_t>(gi2d_context->FragmentBufferSize);
-			b_parent = context->m_storage_memory.allocateMemory<i16vec2>(gi2d_context->FragmentBufferSize);
+			b_path_data = context->m_storage_memory.allocateMemory<uint32_t>(gi2d_context->FragmentBufferSize);
+			b_open_node = context->m_storage_memory.allocateMemory<OpenNode>(1024 * 16);
 			b_neighbor_table = context->m_storage_memory.allocateMemory<uint8_t>(2048);
 		}
 
@@ -431,8 +392,8 @@ struct GI2DPathContext
 					b_connect.getInfo(),
 					b_closed.getInfo(),
 					b_neighbor.getInfo(),
-					b_cost.getInfo(),
-					b_parent.getInfo(),
+					b_path_data.getInfo(),
+					b_open_node.getInfo(),
 					b_neighbor_table.getInfo(),
 				};
 
@@ -453,8 +414,8 @@ struct GI2DPathContext
 	btr::BufferMemoryEx<uint32_t> b_connect;
 	btr::BufferMemoryEx<uint32_t> b_closed;
 	btr::BufferMemoryEx<uint8_t> b_neighbor;
-	btr::BufferMemoryEx<uint32_t> b_cost;
-	btr::BufferMemoryEx<i16vec2> b_parent;
+	btr::BufferMemoryEx<uint32_t> b_path_data;
+	btr::BufferMemoryEx<OpenNode> b_open_node;
 	btr::BufferMemoryEx<uint8_t> b_neighbor_table;
 	vk::UniqueDescriptorSet m_descriptor_set;
 

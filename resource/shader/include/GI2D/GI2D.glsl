@@ -9,19 +9,10 @@ struct GI2DInfo
 	mat4 m_camera_PV;
 	ivec4 m_resolution;
 	vec4 m_position;
-	ivec4 m_fragment_map_size_hierarchy;
-	uint m_hierarchy_num;
 };
 struct GI2DScene
 {
 	int m_frame;
-	int m_hierarchy;
-	uint m_skip;
-	int _p2;
-
-	uint m_radiance_offset;
-	uint m_map_offset;
-	uvec2 m_map_reso;
 };
 
 #define _maxf (1023.)

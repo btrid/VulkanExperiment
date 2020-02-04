@@ -98,7 +98,7 @@ std::vector<cModel::Material> loadMaterial(const aiScene* scene, const std::stri
 	return material;
 }
 
-void _loadNodeRecurcive(aiNode* ainode, RootNode& root, int parent, uint32_t depth)
+void _loadNodeRecurcive(RootNode& root, aiNode* ainode, int parent, uint32_t depth)
 {
 	auto nodeIndex = (s32)root.mNodeList.size();
 	Node node;
@@ -111,7 +111,7 @@ void _loadNodeRecurcive(aiNode* ainode, RootNode& root, int parent, uint32_t dep
 	root.mNodeList.push_back(node);
 	root.m_depth_max = glm::max(root.m_depth_max, depth);
 	for (s32 i = 0; i < (int)ainode->mNumChildren; i++) {
-		_loadNodeRecurcive(ainode->mChildren[i], root, nodeIndex, depth+1);
+		_loadNodeRecurcive(root, ainode->mChildren[i], nodeIndex, depth + 1);
 	}
 }
 RootNode loadNode(const aiScene* scene)
@@ -119,7 +119,7 @@ RootNode loadNode(const aiScene* scene)
 	RootNode root;
 	root.mNodeList.clear();
 	root.mNodeList.reserve(countAiNode(scene->mRootNode));
-	_loadNodeRecurcive(scene->mRootNode, root, -1, 0);
+	_loadNodeRecurcive(root, scene->mRootNode, -1, 0);
 	return root;
 }
 
@@ -326,8 +326,8 @@ void cModel::load(const std::shared_ptr<btr::Context>& context, const std::strin
 					boneList.emplace_back(bone);
 					index = (int)boneList.size() - 1;
 					assert(index < 0xffui8);
-					assert(m_resource->mNodeRoot.getNodeByIndex(bone.mNodeIndex)->m_bone_index == -1);
-					m_resource->mNodeRoot.getNodeByIndex(bone.mNodeIndex)->m_bone_index = index;
+					assert(m_resource->mNodeRoot.mNodeList[bone.mNodeIndex].m_bone_index == -1);
+					m_resource->mNodeRoot.mNodeList[bone.mNodeIndex].m_bone_index = index;
 				}
 
 				for (size_t i = 0; i < mesh->mBones[b]->mNumWeights; i++)
@@ -411,7 +411,7 @@ void cModel::load(const std::shared_ptr<btr::Context>& context, const std::strin
 	glm::vec3 min(10e10f);
 	m_resource->m_model_info.mAabb = glm::vec4((max - min).xyz, glm::length((max - min)));
 
-	m_resource->m_model_info.mInvGlobalMatrix = glm::inverse(m_resource->mNodeRoot.getRootNode()->mTransformation);
+	m_resource->m_model_info.mInvGlobalMatrix = glm::inverse(m_resource->mNodeRoot.mNodeList[0].mTransformation);
 
 
 	auto e = std::chrono::system_clock::now();

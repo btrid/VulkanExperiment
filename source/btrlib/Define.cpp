@@ -1,8 +1,5 @@
 #include <btrlib/Define.h>
 
-#define VMA_IMPLEMENTATION
-#include <VulkanMemoryAllocator/src/vk_mem_alloc.h>
-
 namespace btr
 {
 	static std::string s_app_path = "..\\..\\resource\\";

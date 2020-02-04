@@ -102,9 +102,10 @@ struct Segment2
 		return glm::distance(closest(rhv, &p), p);
 	}
 
-	glm::vec2 normal()const{
-		return glm::normalize(glm::rotate(dir(), glm::radians(90.f)));
-	}
+// 	glm::vec2 normal()const{
+// 		assert(false); // 未チェック
+// 		return vec3()
+// 	}
 };
 
 struct Triangle2
@@ -429,7 +430,7 @@ struct Plane
 
 	float getDistance(const glm::vec3& p) const
 	{
-		assert(glm::isNormalized(normal_, FLT_EPSILON));
+		assert(glm::dot(normal_, normal_) <= 1.00001f && glm::dot(normal_, normal_) >= 0.99999f);
 		return glm::dot(p, normal_) - dot_;
 	}
 

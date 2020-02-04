@@ -24,7 +24,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 
 	m_context = context;
 	m_gi2d_context = gi2d_context;
-	std::vector<GI2DContext::Fragment> map_data(gi2d_context->RenderWidth*gi2d_context->RenderHeight, g_path);
+	std::vector<GI2DContext::Fragment> map_data(gi2d_context->m_desc.Resolution.x*gi2d_context->m_desc.Resolution.y, g_path);
 	{
 		struct F
 		{
@@ -34,7 +34,7 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 		std::vector<F> rect;
 		for (int i = 0; i < 100; i++) 
 		{
-			rect.emplace_back(F{ ivec4{ std::rand() % gi2d_context->RenderWidth , std::rand() % gi2d_context->RenderHeight, rand()%20+16, rand() % 20+16 }, vec4(std::rand() % 80 + 20,std::rand() % 80 + 20,std::rand() % 80 + 20,100) * 0.01f });
+			rect.emplace_back(F{ ivec4{ std::rand() % gi2d_context->m_desc.Resolution.x , std::rand() % gi2d_context->m_desc.Resolution.y, rand()%20+16, rand() % 20+16 }, vec4(std::rand() % 80 + 20,std::rand() % 80 + 20,std::rand() % 80 + 20,100) * 0.01f });
 		}
 		rect.emplace_back(F{ ivec4{ 0, 0, 10, 1023, }, vec4{ 0.8f,0.2f,0.2f,0.f } });
 		rect.emplace_back(F{ ivec4{ 1013, 0, 10, 1023, }, vec4{ 0.8f,0.2f,0.2f,0.f } });
@@ -45,11 +45,11 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 // 		rect.emplace_back(F{ ivec4{ 650, 300, 500, 200 }, vec4{ 1.f, 0.3f, 0.3f, 0.3f } });
 // 		rect.emplace_back(F{ ivec4{ 750, 600, 500, 200 }, vec4{ 1.f, 0.3f, 0.3f, 0.3f } });
 
-		for (size_t y = 0; y < gi2d_context->RenderHeight; y++)
+		for (size_t y = 0; y < gi2d_context->m_desc.Resolution.y; y++)
 		{
-			for (size_t x = 0; x < gi2d_context->RenderWidth; x++)
+			for (size_t x = 0; x < gi2d_context->m_desc.Resolution.x; x++)
 			{
-				auto& m = map_data[x + y * gi2d_context->RenderWidth];
+				auto& m = map_data[x + y * gi2d_context->m_desc.Resolution.x];
 
 				for (auto& r : rect)
 				{
@@ -189,16 +189,16 @@ GI2DDebug::GI2DDebug(const std::shared_ptr<btr::Context>& context, const std::sh
 
 void GI2DDebug::executeUpdateMap(vk::CommandBuffer cmd, const std::vector<uint64_t>& map)
 {
-	auto staging = m_context->m_staging_memory.allocateMemory<GI2DContext::Fragment>({ m_gi2d_context->RenderSize.x*m_gi2d_context->RenderSize.y, btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT });
+	auto staging = m_context->m_staging_memory.allocateMemory<GI2DContext::Fragment>({ m_gi2d_context->m_desc.Resolution.x*m_gi2d_context->m_desc.Resolution.y, btr::BufferMemoryAttributeFlagBits::SHORT_LIVE_BIT });
 
 
-	for (int y = 0; y < m_gi2d_context->RenderSize.y; y++)
+	for (int y = 0; y < m_gi2d_context->m_desc.Resolution.y; y++)
 	{
-		for (int x = 0; x < m_gi2d_context->RenderSize.x; x++)
+		for (int x = 0; x < m_gi2d_context->m_desc.Resolution.x; x++)
 		{
 			auto mi = ivec2(x, y) >> 3;
 			auto mbit = ivec2(x, y) % 8;
-			*staging.getMappedPtr(x + y * m_gi2d_context->RenderSize.x) = (map[mi.x + mi.y*(m_gi2d_context->RenderSize.x >> 3)] & (1ull << (mbit.x + mbit.y * 8))) != 0 ? g_wall : g_path;
+			*staging.getMappedPtr(x + y * m_gi2d_context->m_desc.Resolution.x) = (map[mi.x + mi.y*(m_gi2d_context->m_desc.Resolution.x >> 3)] & (1ull << (mbit.x + mbit.y * 8))) != 0 ? g_wall : g_path;
 		}
 	}
 
@@ -226,7 +226,7 @@ void GI2DDebug::executeDrawFragmentMap(vk::CommandBuffer cmd, const std::shared_
 	{
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_DrawFragmentMap].get());
 
-		auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderSize.x, m_gi2d_context->RenderSize.y, 1), uvec3(32, 32, 1));
+		auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->m_desc.Resolution.x, m_gi2d_context->m_desc.Resolution.y, 1), uvec3(32, 32, 1));
 		cmd.dispatch(num.x, num.y, num.z);
 	}
 
@@ -253,7 +253,7 @@ void GI2DDebug::executeDrawFragment(vk::CommandBuffer cmd, const std::shared_ptr
 	{
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_DrawFragment].get());
 
-		auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderSize.x, m_gi2d_context->RenderSize.y, 1), uvec3(32, 32, 1));
+		auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->m_desc.Resolution.x, m_gi2d_context->m_desc.Resolution.y, 1), uvec3(32, 32, 1));
 		cmd.dispatch(num.x, num.y, num.z);
 	}
 
@@ -340,7 +340,7 @@ void GI2DDebug::executeDrawReachMap(vk::CommandBuffer cmd, const std::shared_ptr
 
 	vk::BufferMemoryBarrier barrier[] = {
 		gi2d_path_context->b_closed.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
-		gi2d_path_context->b_cost.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
+		gi2d_path_context->b_path_data.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead),
 	};
 	vk::ImageMemoryBarrier image_barrier;
 	image_barrier.setImage(render_target->m_image);
@@ -360,7 +360,7 @@ void GI2DDebug::executeDrawReachMap(vk::CommandBuffer cmd, const std::shared_ptr
 	{
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_DrawReachMap].get());
 
-		auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderSize.x, m_gi2d_context->RenderSize.y, 1), uvec3(32, 32, 1));
+		auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->m_desc.Resolution.x, m_gi2d_context->m_desc.Resolution.y, 1), uvec3(32, 32, 1));
 		cmd.dispatch(num.x, num.y, num.z);
 	}
 

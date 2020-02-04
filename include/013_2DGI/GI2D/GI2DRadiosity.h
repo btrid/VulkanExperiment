@@ -108,7 +108,7 @@ struct GI2DRadiosity
 
 
 		{
-			uint32_t size = m_gi2d_context->RenderWidth * m_gi2d_context->RenderHeight;
+			uint32_t size = m_gi2d_context->m_desc.Resolution.x * m_gi2d_context->m_desc.Resolution.y;
 			u_radiosity_info = m_context->m_uniform_memory.allocateMemory<GI2DRadiosityInfo>({ 1,{} });
 			b_segment_counter = m_context->m_storage_memory.allocateMemory<SegmentCounter>({ 1,{} });
 			b_segment = m_context->m_storage_memory.allocateMemory<Segment>({ 3000000,{} });
@@ -248,10 +248,10 @@ struct GI2DRadiosity
 								x=y;
 							}
 						}
-						data[y] = i16vec2(x, y);
+						data[y/2] = i16vec2(x, y);
 					}
 					cmd.updateBuffer<i16vec2>(u_circle_mesh_vertex.getInfo().buffer, u_circle_mesh_vertex.getInfo().offset + sizeof(i16vec2) * Mesh_Vertex_Size * i, data);
-					count[i] = y;
+					count[i] = y/2;
 				}
 
 // 				ivec2 target = ivec2(0);
@@ -276,7 +276,7 @@ struct GI2DRadiosity
 // 					}
 // 					printf("vi=%3d, id=%3d, type=%3d, pos=[%3d,%3d]\n", vertex_index, target_ID, target_type, target.x, target.y);
 // 				}
-				count[Mesh_Num - 1] = gi2d_context->RenderSize.x*gi2d_context->RenderSize.y / 8;
+				count[Mesh_Num - 1] = gi2d_context->m_desc.Resolution.x*gi2d_context->m_desc.Resolution.y / 8;
 				cmd.updateBuffer<uint32_t>(u_circle_mesh_count.getInfo().buffer, u_circle_mesh_count.getInfo().offset, count);
 			}
 		}
@@ -844,7 +844,7 @@ struct GI2DRadiosity
 				0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeHitpoint].get());
-			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth, m_gi2d_context->RenderHeight, 1), uvec3(32, 32, 1));
+			auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->m_desc.Resolution.x, m_gi2d_context->m_desc.Resolution.y, 1), uvec3(32, 32, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 		}
 
@@ -986,11 +986,11 @@ struct GI2DRadiosity
 			std::call_once(s_is_init_light, []()
 			{
 				std::vector<vec4> colors = { vec4(1.f, 0.f, 0.f, 0.f), vec4(0.f, 1.f, 0.f, 0.f) , vec4(0.f, 0.f, 1.f, 0.f), vec4(0.f) };
-				for (int i = 0; i < array_length(s_data); i++)
+				for (int i = 0; i < s_data.size(); i++)
 				{
 					auto color_index = std::rand() % 3;
 					color_index = 3;
-					s_data[i] = Emissive{ i16vec2(std::rand() % 950 + 40, std::rand() % 950 + 40), u8vec4(), glm::packHalf4x16(colors[color_index] * 1.f), glm::packHalf2x16(vec2(0.f, 1.f)) };
+					s_data[i] = Emissive{ i16vec2(std::rand() % 950 + 40, std::rand() % 950 + 40), u8vec4(), glm::packHalf4x16(colors[color_index] * 100.f), glm::packHalf2x16(vec2(0.f, 1.f)) };
 				}
 			});
 
@@ -1024,7 +1024,7 @@ struct GI2DRadiosity
 			cmd.updateBuffer<Emissive>(v_emissive.getInfo().buffer, v_emissive.getInfo().offset, s_data);
 		}
 
-		// draw cmmand çÏê¨
+		// draw command çÏê¨
 		{
 			{
 				vk::BufferMemoryBarrier to_init[] = {
@@ -1058,6 +1058,7 @@ struct GI2DRadiosity
 			{
 				v_emissive.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eVertexAttributeRead),
 				v_emissive_draw_command.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
+				v_emissive_draw_count.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eIndirectCommandRead),
 			};
 
 			std::array<vk::ImageMemoryBarrier, 1> image_barrier;
@@ -1097,7 +1098,7 @@ struct GI2DRadiosity
 
 		cmd.bindVertexBuffers(0, array_length(vertex_buffers), vertex_buffers, offsets);
 
-		cmd.drawIndirect(v_emissive_draw_command.getInfo().buffer, v_emissive_draw_command.getInfo().offset, Emissive_Num, sizeof(vk::DrawIndirectCommand));
+		cmd.drawIndirectCount(v_emissive_draw_command.getInfo().buffer, v_emissive_draw_command.getInfo().offset, v_emissive_draw_count.getInfo().buffer, v_emissive_draw_count.getInfo().offset, Emissive_Num, sizeof(vk::DrawIndirectCommand));
 		cmd.endRenderPass();
 
 	}

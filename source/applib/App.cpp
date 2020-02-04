@@ -113,7 +113,7 @@ App::App(const AppDescriptor& desc)
 	// ウインドウリストを取りたいけどいい考えがない。後で考える
 	g_app_instance = this;
 
-	vk::ApplicationInfo appInfo = { "Vulkan Test", 1, "EngineName", 0, VK_API_VERSION_1_1 };
+	vk::ApplicationInfo appInfo = { "Vulkan Test", 1, "EngineName", 0, VK_API_VERSION_1_2 };
 	std::vector<const char*> LayerName =
 	{
 #if _DEBUG
@@ -137,7 +137,10 @@ App::App(const AppDescriptor& desc)
 	instanceInfo.setPpEnabledLayerNames(LayerName.data());
 	m_instance = vk::createInstanceUnique(instanceInfo);
 
-	m_dispatch = vk::DispatchLoaderDynamic(m_instance.get());
+	vk::DynamicLoader dl;
+	PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr = dl.getProcAddress<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr");
+	m_dispatch.init(vkGetInstanceProcAddr);
+	m_dispatch.init(m_instance.get());
 #if USE_DEBUG_REPORT
 	vk::DebugUtilsMessengerCreateInfoEXT debug_create_info;
 	debug_create_info.setMessageSeverity(vk::DebugUtilsMessageSeverityFlagBitsEXT::eError | vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning/* | vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose*/);
@@ -228,10 +231,10 @@ App::App(const AppDescriptor& desc)
 	{
 		m_context->m_device = m_device.get();
 
-		VmaAllocatorCreateInfo allocator_info = {};
-		allocator_info.physicalDevice = m_physical_device;
-		allocator_info.device = m_device.get();
-		vmaCreateAllocator(&allocator_info, &m_context->m_allocator);
+//		VmaAllocatorCreateInfo allocator_info = {};
+//		allocator_info.physicalDevice = m_physical_device;
+//		allocator_info.device = m_device.get();
+//		vmaCreateAllocator(&allocator_info, &m_context->m_allocator);
 
 		vk::MemoryPropertyFlags host_memory = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
 		vk::MemoryPropertyFlags device_memory = vk::MemoryPropertyFlagBits::eDeviceLocal;
@@ -239,8 +242,8 @@ App::App(const AppDescriptor& desc)
 //		device_memory = host_memory; // debug
 		m_context->m_vertex_memory.setup(m_physical_device, m_device.get(), vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000 * 1000 * 100);
 		m_context->m_uniform_memory.setup(m_physical_device, m_device.get(), vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eTransferDst, device_memory, 1000*1000 * 20);
-		m_context->m_storage_memory.setup(m_physical_device, m_device.get(), vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eTransferSrc, device_memory, 1024 * 1024 * 768);
-		m_context->m_staging_memory.setup(m_physical_device, m_device.get(), vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst, host_memory, 1000 * 1000 * 100);
+		m_context->m_storage_memory.setup(m_physical_device, m_device.get(), vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eTransferSrc, device_memory, 1024 * 1024 * (1024+200));
+		m_context->m_staging_memory.setup(m_physical_device, m_device.get(), vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst, host_memory, 1000 * 1000 * 500);
 		{
 			vk::DescriptorPoolSize pool_size[5];
 			pool_size[0].setType(vk::DescriptorType::eUniformBuffer);
@@ -674,7 +677,7 @@ AppWindow::ImguiRenderPipeline::ImguiRenderPipeline(const std::shared_ptr<btr::C
 	io.DisplaySize.x = window->getFrontBuffer()->m_info.extent.width;
 	io.DisplaySize.y = window->getFrontBuffer()->m_info.extent.height;
 	io.FontGlobalScale = 1.f;
-	io.RenderDrawListsFn = nullptr;  // Setup a render function, or set to NULL and call GetDrawData() after Render() to access the render data.
+	io.RenderDrawListsFnUnused = nullptr;  // Setup a render function, or set to NULL and call GetDrawData() after Render() to access the render data.
 	io.KeyMap[ImGuiKey_Tab] = VK_TAB;
 	io.KeyMap[ImGuiKey_LeftArrow] = VK_LEFT;
 	io.KeyMap[ImGuiKey_RightArrow] = VK_RIGHT;

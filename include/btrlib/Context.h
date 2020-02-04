@@ -19,7 +19,6 @@ struct Context
 	btr::AllocatedMemory m_uniform_memory;
 	btr::AllocatedMemory m_storage_memory;
 	btr::AllocatedMemory m_staging_memory;
-	VmaAllocator m_allocator;
 
 	vk::UniqueDescriptorPool m_descriptor_pool;
 

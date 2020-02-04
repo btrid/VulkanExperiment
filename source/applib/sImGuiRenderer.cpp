@@ -8,6 +8,7 @@ sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
 	{
+		ImGui::CreateContext();
 		ImGuiIO& io = ImGui::GetIO();
 
 		unsigned char* pixels;
@@ -215,7 +216,7 @@ vk::CommandBuffer sImGuiRenderer::Render()
 			}
 			for (uint32_t i = 0; i < keyboard.m_char_count; i++)
 			{
-				io.InputCharacters[i] = keyboard.m_char[i];
+				io.AddInputCharacter(keyboard.m_char[i]);
 			}
 
 		}

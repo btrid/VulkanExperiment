@@ -6,8 +6,22 @@
 
 #ifdef USE_GI2D_Path
 
+struct PathNode
+{
+	i16vec2 pos;
+//	uint dir_type:4;
+//	uint cost:28;
+	uint data;
+};
 
-#define OPEN_NODE_SIZE (4096)
+struct PathData
+{
+//	uint cost:28;
+//	uint dir_type:4;
+	uint data;
+};
+
+#define NodeSize (1024 * 16)
 layout(std430, set=USE_GI2D_Path, binding=0) restrict buffer PathConnectBuffer {
 	uint b_connect;
 };
@@ -19,10 +33,10 @@ layout(std430, set=USE_GI2D_Path, binding=2) restrict buffer PathNeibghborStateB
 	uint8_t b_neighbor[];
 };
 layout(std430, set=USE_GI2D_Path, binding=3) restrict buffer PathCostBuffer {
-	uint b_cost[];
+	PathData b_path_data[];
 };
-layout(std430, set=USE_GI2D_Path, binding=4) restrict buffer PathParentBuffer {
-	i16vec2 b_parent[];
+layout(std430, set=USE_GI2D_Path, binding=4) restrict buffer PathNodeBuffer {
+	PathNode b_node[];
 };
 layout(std430, set=USE_GI2D_Path, binding=5) buffer NeighborTableBuffer {
 	// 壁ならbitが立つ

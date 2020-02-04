@@ -122,6 +122,7 @@ void main()
 			// 効果少ない？
 //			if(!contains(ivec4(0, 0, reso.xy-1), pos, target))
 //			{
+//				gl_Position = vec4(vec2(in_pos+0.5) / reso.xy * 2. - 1., 0., 1.);
 //				return; 
 //			}
 		}
@@ -147,7 +148,6 @@ void main()
 		{
 			cell = pos>>3;
 			map = b_fragment_map[cell.x + cell.y * reso.z];
-			if (subgroupElect()) {}
 		}
 
 		ivec2 cell_sub = pos%8;
@@ -158,7 +158,7 @@ void main()
 
 		if (D > 0)
 		{
-			pos += dir[1 - axis];
+			pos += dir[1-axis];
 		}
 		pos += dir[axis];
 		D += D>0 ? deltax : deltay;

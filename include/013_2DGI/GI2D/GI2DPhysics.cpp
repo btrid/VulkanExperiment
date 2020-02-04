@@ -166,10 +166,10 @@ GI2DPhysics::GI2DPhysics(const std::shared_ptr<btr::Context>& context, const std
 		b_rigidbody = m_context->m_storage_memory.allocateMemory<Rigidbody>({ RB_NUM_MAX,{} });
 		b_rbparticle = m_context->m_storage_memory.allocateMemory<rbParticle>({ RB_PARTICLE_NUM,{} });
 		b_rbparticle_map = m_context->m_storage_memory.allocateMemory<uint32_t>({ RB_PARTICLE_BLOCK_NUM_MAX,{} });
-		b_collidable_counter = m_context->m_storage_memory.allocateMemory<uint32_t>({ gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
-		b_collidable = m_context->m_storage_memory.allocateMemory<rbCollidable>({ COLLIDABLE_NUM * gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
-		b_collidable_wall = m_context->m_storage_memory.allocateMemory<f16vec2>({ gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
-		b_fluid_counter = m_context->m_storage_memory.allocateMemory<uint>({ gi2d_context->RenderSize.x*gi2d_context->RenderSize.y,{} });
+		b_collidable_counter = m_context->m_storage_memory.allocateMemory<uint32_t>({ gi2d_context->m_desc.Resolution.x*gi2d_context->m_desc.Resolution.y,{} });
+		b_collidable = m_context->m_storage_memory.allocateMemory<rbCollidable>({ COLLIDABLE_NUM * gi2d_context->m_desc.Resolution.x*gi2d_context->m_desc.Resolution.y,{} });
+		b_collidable_wall = m_context->m_storage_memory.allocateMemory<f16vec2>({ gi2d_context->m_desc.Resolution.x*gi2d_context->m_desc.Resolution.y,{} });
+		b_fluid_counter = m_context->m_storage_memory.allocateMemory<uint>({ gi2d_context->m_desc.Resolution.x*gi2d_context->m_desc.Resolution.y,{} });
 		b_manager = m_context->m_storage_memory.allocateMemory<BufferManage>({ 1,{} });
 		b_rb_memory_list = m_context->m_storage_memory.allocateMemory<uint>({ RB_NUM_MAX,{} });
 		b_pb_memory_list = m_context->m_storage_memory.allocateMemory<uint>({ RB_PARTICLE_BLOCK_NUM_MAX,{} });
@@ -363,7 +363,8 @@ void GI2DPhysics::make(vk::CommandBuffer cmd, const GI2DRB_MakeParam& param)
 		for (uint32_t x = 0; x < box.z; x++)
 		{
 			uint i = x + y * box.z;
-			pos[i] = vec2(box) + rotate(vec2(x, y) + 0.5f, 0.f);
+			pos[i] = vec2(box.xy()) + vec2(x, y) + 0.5f;
+//			pos[i] = vec2(box) + rotate(vec2(x, y) + 0.5f, 0.f);
 			pstate[i].pos = pos[i];
 			pstate[i].pos_old = pos[i];
 			if (y == 0 || y == box.w - 1 || x == 0 || x == box.z - 1)
@@ -445,7 +446,7 @@ void GI2DPhysics::make(vk::CommandBuffer cmd, const GI2DRB_MakeParam& param)
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeRB_MakeJFCell].get());
 			auto num = app::calcDipatchGroups(uvec3(area, 1), uvec3(8, 8, 1));
 
-			uint area_max = glm::powerOfTwoAbove(glm::max(area.x, area.y));
+			uint area_max = glm::ceilPowerOfTwo(glm::max(area.x, area.y));
 			for (int distance = area_max >> 1; distance != 0; distance >>= 1)
 			{
 				vk::BufferMemoryBarrier to_read[] = {

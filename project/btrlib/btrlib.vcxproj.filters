@@ -29,6 +29,7 @@
     <ClInclude Include="..\..\include\btrlib\Shape.h" />
     <ClInclude Include="..\..\include\btrlib\Singleton.h" />
     <ClInclude Include="..\..\include\btrlib\System.h" />
+    <ClInclude Include="..\..\include\btrlib\cModel2.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\source\btrlib\AllocatedMemory.cpp" />
@@ -43,6 +44,7 @@
     <ClCompile Include="..\..\source\btrlib\sGlobal.cpp" />
     <ClCompile Include="..\..\source\btrlib\Shape.cpp" />
     <ClCompile Include="..\..\source\btrlib\System.cpp" />
+    <ClCompile Include="..\..\source\btrlib\cModel2.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

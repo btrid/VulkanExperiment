@@ -31,33 +31,35 @@ public:
 	{}
 };
 
-class RootNode
+struct RootNode
 {
 
 public:
 	std::vector<Node>	mNodeList;
 	uint32_t m_depth_max;
 
-	const Node* getRootNode()const { return mNodeList.empty() ? nullptr : &mNodeList[0]; }
-	Node* getNodeByIndex(int index) { return mNodeList.empty() ? nullptr : &mNodeList[index]; }
-	const Node* getNodeByIndex(int index)const { return mNodeList.empty() ? nullptr : &mNodeList[index]; }
-	const Node* getNodeByName(const std::string& name)const {
-		for (auto& n : mNodeList) {
-			if (n.mName == name) {
+	const Node* getNodeByName(const std::string& name)const 
+	{
+		for (auto& n : mNodeList) 
+		{
+			if (n.mName == name) 
+			{
 				return &n;
 			}
 		}
 		return nullptr;
 	}
-	int getNodeIndexByName(const std::string& name)const {
-		for (unsigned i = 0; i < mNodeList.size(); i++) {
-			if (mNodeList[i].mName == name) {
+	int getNodeIndexByName(const std::string& name)const 
+	{
+		for (unsigned i = 0; i < mNodeList.size(); i++) 
+		{
+			if (mNodeList[i].mName == name) 
+			{
 				return i;
 			}
 		}
 		return -1;
 	}
-
 };
 
 
@@ -215,9 +217,7 @@ public:
 
 	}
 
-
 public:
-
 	void load(const std::shared_ptr<btr::Context>& loader, const std::string& filename);
 	void load2(const std::shared_ptr<btr::Context>& loader, const std::string& filename);
 

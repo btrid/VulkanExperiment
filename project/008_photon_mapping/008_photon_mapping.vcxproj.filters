@@ -7,9 +7,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
+    <ClCompile Include="..\..\source\008_photon_mapping\008_main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\source\008_photon_mapping\008_main.cpp" />
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>

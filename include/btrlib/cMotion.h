@@ -127,7 +127,7 @@ struct MotionTexture
 				auto current_value = glm::vec4(current.m_data.x, current.m_data.y, current.m_data.z, 1.f);
 				auto next_value = glm::vec4(next.m_data.x, next.m_data.y, next.m_data.z, 1.f);
 				auto rate = 1.f - (next.m_time - time) / (next.m_time - current.m_time);
-				auto value = glm::lerp(current_value, next_value, rate);
+				auto value = glm::mix(current_value, next_value, vec4(rate));
 				scale[count] = glm::packHalf4x16(value);
 				count++;
 				time += time_per;
@@ -148,7 +148,7 @@ struct MotionTexture
 				auto current_value = glm::vec3(current.m_data.x, current.m_data.y, current.m_data.z);
 				auto next_value = glm::vec3(next.m_data.x, next.m_data.y, next.m_data.z);
 				auto rate = 1.f - (float)(next.m_time - time) / (float)(next.m_time - current.m_time);
-				auto value = glm::lerp<float>(current_value, next_value, rate);
+				auto value = glm::mix(current_value, next_value, vec3(rate));
 				pos[count] = glm::packHalf4x16(glm::vec4(value, 0.f));
 				count++;
 				time += time_per;
@@ -329,7 +329,7 @@ struct ModelTransform
 	{}
 	glm::mat4 calcLocal()const
 	{
-		return glm::scale(m_local_scale) * glm::toMat4(m_local_rotate) * glm::translate(m_local_translate);
+		return glm::scale(mat4(1.f), m_local_scale) * glm::mat4_cast(m_local_rotate) * glm::translate(mat4(1.f), m_local_translate);
 	}
 	glm::mat4 calcGlobal()const
 	{

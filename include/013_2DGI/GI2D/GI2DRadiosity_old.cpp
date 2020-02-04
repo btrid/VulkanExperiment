@@ -24,14 +24,14 @@ GI2DRadiosity_old::GI2DRadiosity_old(const std::shared_ptr<btr::Context>& contex
 			0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 
-		uint32_t size = m_gi2d_context->RenderWidth * m_gi2d_context->RenderHeight;
+		uint32_t size = m_gi2d_context->m_desc.Resolution.x * m_gi2d_context->m_desc.Resolution.y;
 		b_vertex_counter = m_context->m_storage_memory.allocateMemory<VertexCounter>({ 1,{} });
 		b_vertex_index = m_context->m_storage_memory.allocateMemory<uint>({ size,{} });
 		b_vertex = m_context->m_storage_memory.allocateMemory<RadiosityVertex>({ 220000,{} });
 		b_edge = m_context->m_storage_memory.allocateMemory<uint64_t>({ size / 64,{} });
 
 		vk::ImageCreateInfo image_info;
-		image_info.setExtent(vk::Extent3D(m_gi2d_context->RenderSize.x, m_gi2d_context->RenderSize.y, 1));
+		image_info.setExtent(vk::Extent3D(m_gi2d_context->m_desc.Resolution.x, m_gi2d_context->m_desc.Resolution.y, 1));
 		image_info.setArrayLayers(Frame_Num);
 		image_info.setFormat(vk::Format::eR16G16B16A16Sfloat);
 		image_info.setImageType(vk::ImageType::e2D);
@@ -562,7 +562,7 @@ void GI2DRadiosity_old::executeRadiosity(const vk::CommandBuffer& cmd)
 			0, nullptr, array_length(to_read), to_read, 0, nullptr);
 
 		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_MakeHitpoint].get());
-		auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->RenderWidth, m_gi2d_context->RenderHeight, 1), uvec3(32, 32, 1));
+		auto num = app::calcDipatchGroups(uvec3(m_gi2d_context->m_desc.Resolution.x, m_gi2d_context->m_desc.Resolution.y, 1), uvec3(32, 32, 1));
 		cmd.dispatch(num.x, num.y, num.z);
 	}
 
@@ -750,8 +750,8 @@ void test()
 		vec2 dir, inv_dir;
 		calcDirEx(angle, dir, inv_dir);
 
-		auto i_dir = abs(ivec2(round(dir * dir_reso)));
-		auto i_inv_dir = abs(ivec2(round(inv_dir * dir_reso)));
+		auto i_dir = abs(ivec2(round(dir * (float)dir_reso)));
+		auto i_inv_dir = abs(ivec2(round(inv_dir * (float)dir_reso)));
 		printf("dir[%3d]=[%4d,%4d]\n", angle_index, i_dir.x, i_dir.y);
 
 		for (int x = 0; x < map_reso * 2; x++)

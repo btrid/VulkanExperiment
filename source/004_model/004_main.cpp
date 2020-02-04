@@ -27,7 +27,6 @@
 #include <applib/AppModel/AppModelPipeline.h>
 #include <applib/AppPipeline.h>
 
-#pragma comment(lib, "FreeImage.lib")
 #pragma comment(lib, "vulkan-1.lib")
 
 int main()

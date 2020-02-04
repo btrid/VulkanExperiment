@@ -83,7 +83,7 @@ struct CrowdContext
 		m_context = context;
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
-		auto Ray_Frame_Num = gi2d_context->RenderWidth * Rot_Num; // ŽÀÛ‚Í‚à‚¤­‚µ­‚È‚¢
+		auto Ray_Frame_Num = gi2d_context->m_desc.Resolution.x * Rot_Num; // ŽÀÛ‚Í‚à‚¤­‚µ­‚È‚¢
 		auto Ray_All_Num = Ray_Frame_Num * Frame;
 		auto Segment_Num = Ray_Frame_Num * 64; // ‚Æ‚è‚ ‚¦‚¸‚Ì’l
 		{
@@ -141,12 +141,12 @@ struct CrowdContext
 			b_crowd = m_context->m_storage_memory.allocateMemory<CrowdData>({ m_crowd_info.crowd_data_max, {} });
 			b_unit = m_context->m_storage_memory.allocateMemory<UnitData>({ m_crowd_info.unit_data_max*2, {} });
 			b_unit_counter = m_context->m_storage_memory.allocateMemory<uvec4>({ 1, {} });
-			b_unit_link_head = m_context->m_storage_memory.allocateMemory<int32_t>({ gi2d_context->RenderWidth*gi2d_context->RenderHeight, {} });
+			b_unit_link_head = m_context->m_storage_memory.allocateMemory<int32_t>({ gi2d_context->m_desc.Resolution.x*gi2d_context->m_desc.Resolution.y, {} });
 			b_ray_counter = m_context->m_storage_memory.allocateMemory<ivec4>({ Frame,{} });
 			b_segment_counter = m_context->m_storage_memory.allocateMemory<ivec4>({ 1,{} });
 			b_ray = m_context->m_storage_memory.allocateMemory<CrowdRay>({ m_crowd_info.ray_num_max,{} });
 			b_segment = m_context->m_storage_memory.allocateMemory<CrowdSegment>({ Segment_Num,{} });
-			b_node = m_context->m_storage_memory.allocateMemory<PathNode>({ gi2d_context->RenderWidth*gi2d_context->RenderHeight,{} });
+			b_node = m_context->m_storage_memory.allocateMemory<PathNode>({ gi2d_context->m_desc.Resolution.x*gi2d_context->m_desc.Resolution.y,{} });
 
 			vk::DescriptorBufferInfo uniforms[] = {
 				u_crowd_info.getInfo(),
@@ -207,7 +207,7 @@ struct CrowdContext
 					staging.getMappedPtr(i)->unit_type = 0;
 //					staging.getMappedPtr(i)->crowd_type = std::rand() % 2;
 					staging.getMappedPtr(i)->crowd_type = 0;
-					staging.getMappedPtr(i)->m_pos += staging.getMappedPtr(i)->crowd_type * vec2(600.f);
+					staging.getMappedPtr(i)->m_pos += float(staging.getMappedPtr(i)->crowd_type) * vec2(600.f);
 				}
 
 				vk::BufferCopy copy;

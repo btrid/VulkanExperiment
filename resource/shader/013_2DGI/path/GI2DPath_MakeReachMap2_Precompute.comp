@@ -15,7 +15,17 @@ layout(push_constant, std430) uniform InputVertex
 	i16vec2 reso;
 } constant;
 
-
+const ivec2 g_neighbor_access[8] = 
+{
+	ivec2(-1,-1), 
+	ivec2( 0,-1),
+	ivec2( 1,-1),
+	ivec2( 1, 0),
+	ivec2( 1, 1),
+	ivec2( 0, 1),
+	ivec2(-1, 1),
+	ivec2(-1, 0),
+};
 
 shared uint64_t s_map[36];
 
@@ -42,7 +52,7 @@ void main()
 	uint8_t neighbor = uint8_t(0);
 	for(int i = 0; i < 8; i++)
 	{
-		ivec2 ii = ivec2(gl_LocalInvocationID.xy) + g_neighor_list[i] + ivec2(8);
+		ivec2 ii = ivec2(gl_LocalInvocationID.xy) + g_neighbor_access[i] + ivec2(8);
 		ivec2 map_index = ii / 8;
 		ivec2 map_bit = ii % 8;
 		if((s_map[map_index.x+map_index.y*6] & (1ul<<(map_bit.x+map_bit.y*8))) != 0ul)
