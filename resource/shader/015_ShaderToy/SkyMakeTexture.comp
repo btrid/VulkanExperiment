@@ -9,6 +9,11 @@ layout(set=1, binding=1, r8ui) uniform uimage3D i_map;
 
 layout (local_size_x = 32, local_size_y = 32) in;
 
+layout(push_constant) uniform Input
+{
+	float time;
+} constant;
+
 float band(in float start, in float peak, in float end, in float t)
 {
 	return smoothstep (start, peak, t) * (1. - smoothstep (peak, end, t));
@@ -52,11 +57,11 @@ float fBM(in vec3 pos, in int octaves)
 }
 void main()
 {
-	float v = fBM(vec3(gl_GlobalInvocationID.xyz) * 0.05 + 1.55 /*+ vec3(0., 0., float(u_system_data.m_gpu_frame)*0.002)*/, 4);
+	float v = fBM(vec3(gl_GlobalInvocationID.xyz) * 0.03 + 1.55 + vec3(0., 0., constant.time*0.1), 4);
 	// 雲っぽく
-	v *= smoothstep(0.5, 0.55, v);
+	v *= smoothstep(0.55, 0.6, v);
 	// 高さで減衰。私用側で行う
-//	v *= band(0., 0.5, 1., (float(gl_GlobalInvocationID.y)+0.5) / float(gl_WorkGroupSize.y*gl_WorkGroupSize.y));
+	v *= band(0., 0.5, 1., (float(gl_GlobalInvocationID.y)+0.5) / float(gl_NumWorkGroups.y*gl_WorkGroupSize.y));
 
 	imageStore(i_map, ivec3(gl_GlobalInvocationID.xyz), uvec4(v*255.));
 

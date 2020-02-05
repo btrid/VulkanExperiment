@@ -90,6 +90,7 @@ struct Sky
 				vk::DescriptorSetLayout layouts[] = {
 					m_descriptor_set_layout.get(),
 				};
+
 				vk::DescriptorSetAllocateInfo desc_info;
 				desc_info.setDescriptorPool(context->m_descriptor_pool.get());
 				desc_info.setDescriptorSetCount(array_length(layouts));
@@ -98,7 +99,7 @@ struct Sky
 			}
 
 			vk::ImageCreateInfo image_info;
-			image_info.setExtent(vk::Extent3D(128, 64, 128));
+			image_info.setExtent(vk::Extent3D(256, 32, 256));
 			image_info.setArrayLayers(1);
 			image_info.setFormat(vk::Format::eR8Unorm);
 			image_info.setImageType(vk::ImageType::e3D);
@@ -137,9 +138,9 @@ struct Sky
 			m_image_write_view = context->m_device.createImageViewUnique(view_info);
 
 			vk::SamplerCreateInfo sampler_info;
-			sampler_info.setAddressModeU(vk::SamplerAddressMode::eRepeat);
-			sampler_info.setAddressModeV(vk::SamplerAddressMode::eRepeat);
-			sampler_info.setAddressModeW(vk::SamplerAddressMode::eRepeat);
+			sampler_info.setAddressModeU(vk::SamplerAddressMode::eMirroredRepeat);
+			sampler_info.setAddressModeV(vk::SamplerAddressMode::eMirroredRepeat);
+			sampler_info.setAddressModeW(vk::SamplerAddressMode::eMirroredRepeat);
 			sampler_info.setAnisotropyEnable(false);
 			sampler_info.setMagFilter(vk::Filter::eLinear);
 			sampler_info.setMinFilter(vk::Filter::eLinear);
@@ -211,15 +212,15 @@ struct Sky
 					RenderTarget::s_descriptor_set_layout.get(),
 					m_descriptor_set_layout.get(),
 				};
-// 				vk::PushConstantRange ranges[] = {
-// 					vk::PushConstantRange().setSize(4).setStageFlags(vk::ShaderStageFlagBits::eCompute),
-// 				};
+				vk::PushConstantRange ranges[] = {
+					vk::PushConstantRange().setSize(4).setStageFlags(vk::ShaderStageFlagBits::eCompute),
+				};
 
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
 				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 				pipeline_layout_info.setPSetLayouts(layouts);
-// 				pipeline_layout_info.setPushConstantRangeCount(array_length(ranges));
-// 				pipeline_layout_info.setPPushConstantRanges(ranges);
+				pipeline_layout_info.setPushConstantRangeCount(array_length(ranges));
+				pipeline_layout_info.setPPushConstantRanges(ranges);
 				m_pipeline_layout[PipelineLayout_Sky] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 
 			}
@@ -259,6 +260,18 @@ struct Sky
 	void execute(vk::CommandBuffer& cmd, const std::shared_ptr<RenderTarget>& render_target)
 	{
 		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
+		{
+			vk::DescriptorSet descs[] =
+			{
+				render_target->m_descriptor.get(),
+				m_descriptor_set.get(),
+			};
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Sky].get(), 0, array_length(descs), descs, 0, nullptr);
+
+			cmd.pushConstants<float>(m_pipeline_layout[PipelineLayout_Sky].get(), vk::ShaderStageFlagBits::eCompute, 0, sGlobal::Order().getTotalTime());
+
+		}
+
 		_label.insert("make cloud map");
 		// make texture
 		{
@@ -274,12 +287,6 @@ struct Sky
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
 			}
 
-			vk::DescriptorSet descs[] =
-			{
-				render_target->m_descriptor.get(),
-				m_descriptor_set.get(),
-			};
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Sky].get(), 0, array_length(descs), descs, 0, nullptr);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_SkyMakeTexture_CS].get());
 
@@ -305,13 +312,6 @@ struct Sky
 
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput|vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
 			}
-
-			vk::DescriptorSet descs[] =
-			{
-				render_target->m_descriptor.get(),
-				m_descriptor_set.get(),
-			};
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Sky].get(), 0, array_length(descs), descs, 0, nullptr);
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_SkyWithTexture_CS].get());
 

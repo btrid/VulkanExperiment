@@ -65,11 +65,12 @@ vec3 getSkyColor(in vec3 ray)
 
 float cloud_density(in vec3 pos)
 {
-	vec3 p = pos * vec3(0.01,0.01,0.01) + 0.5;
+	float t = (distance(pos,u_cloud_inner.xyz)-u_cloud_inner.w)*u_cloud_area_inv;
+	pos = vec3(pos.x, t, pos.z)* vec3(0.0005, 1.,0.0005) + vec3(0.5, 0., 0.5);
 
-	float density = texture(s_map, p).x;
+	float density = texture(s_map, pos).x;
 
-	density = band(0., 0.5, 1., (distance(pos,u_cloud_inner.xyz)-u_cloud_inner.w)*u_cloud_area_inv) * density;
+//	density = band(0., 0.5, 1., t) * density;
 	return density;
 }
 
@@ -132,7 +133,7 @@ vec4 cloud(in vec3 rayPos, in vec3 rayDir, float depth)
 	vec3 color = vec3(0.);
 	for(int i = 0; i <count; i++)
 	{
-		int step_num = int(ray_segment[i].y / STEP_LENGTH);
+		int step_num = 30;
 		float ray_step = ray_segment[i].y / float(step_num);
 		vec3 pos = rayPos + rayDir * (ray_segment[i].x+ray_step*0.5);
 		for(int step = 0; step < step_num; step++)
