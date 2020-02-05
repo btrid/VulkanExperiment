@@ -29,35 +29,7 @@
 #pragma comment(lib, "applib.lib")
 #pragma comment(lib, "imgui.lib")
 
-float rand(const glm::vec3& co)
-{
-	return glm::fract(glm::sin(glm::dot(co, glm::vec3(12.98f, 78.23f, 45.41f))) * 43758.5f);
-}
 
-float noise(const vec3& pos)
-{
-	vec3 ip = floor(pos);
-	vec3 fp = glm::smoothstep(0.f, 1.f, glm::fract(pos));
-	vec2 offset = vec2(0.f, 1.f);
-	vec4 a = vec4(rand(ip + offset.xxx), rand(ip + offset.yxx), rand(ip + offset.xyx), rand(ip + offset.yyx));
-	vec4 b = vec4(rand(ip + offset.xxy), rand(ip + offset.yxy), rand(ip + offset.xyy), rand(ip + offset.yyy));
-	a = mix(a, b, fp.z);
-	a.xy = glm::mix(a.xy(), a.zw(), fp.y);
-	return glm::mix(a.x, a.y, fp.x);
-}
-
-float fBM(const glm::vec3& seed)
-{
-	float value = 0.f;
-	auto p = seed;
-	for (int i = 0; i < 4; i++)
-	{
-		value = value * 2.f + noise(p);
-		p *= glm::vec3(2.57859f);
-	}
-	return value / 15.f;
-
-}
 struct Sky 
 {
 	enum Shader
@@ -81,6 +53,7 @@ struct Sky
 		Pipeline_Num,
 	};
 
+	std::shared_ptr<btr::Context> m_context;
 	std::array<vk::UniqueShaderModule, Shader_Num> m_shader;
 	std::array<vk::UniquePipelineLayout, PipelineLayout_Num> m_pipeline_layout;
 	std::array<vk::UniquePipeline, Pipeline_Num> m_pipeline;
@@ -97,6 +70,7 @@ struct Sky
 
 	Sky(const std::shared_ptr<btr::Context>& context)
 	{
+		m_context = context;
 		// descriptor layout
 		{
 			auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
@@ -176,41 +150,6 @@ struct Sky
 			sampler_info.setUnnormalizedCoordinates(false);
 			m_image_sampler = context->m_device.createSamplerUnique(sampler_info);
 
-// 			vk::ImageMemoryBarrier to_copy_barrier;
-// 			to_copy_barrier.image = m_image.get();
-// 			to_copy_barrier.oldLayout = vk::ImageLayout::eUndefined;
-// 			to_copy_barrier.newLayout = vk::ImageLayout::eTransferDstOptimal;
-// 			to_copy_barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
-// 			to_copy_barrier.subresourceRange = vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1};
-// 
-// 			vk::ImageMemoryBarrier to_shader_read_barrier;
-// 			to_shader_read_barrier.image = m_image.get();
-// 			to_shader_read_barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
-// 			to_shader_read_barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-// 			to_shader_read_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-// 			to_shader_read_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-// 			to_shader_read_barrier.subresourceRange = vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1};
-
-// 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlags(), {}, {}, { to_copy_barrier });
-			
-// 			{				
-// 				auto staging = context->m_staging_memory.allocateMemory<uint8_t>(image_info.extent.width*image_info.extent.height*image_info.extent.depth);
-// 				auto* data = staging.getMappedPtr();
-// 				for (int z = 0; z < image_info.extent.depth; z++)
-// 				for (int y = 0; y < image_info.extent.height; y++)
-// 				for (int x = 0; x < image_info.extent.width; x++)
-// 				{
-// 					glm::vec3 s = glm::vec3(x, y, z) * 0.05f + 2.75f;
-// 					auto v = fBM(s);
-// 					v *= glm::smoothstep(0.5f, 0.55f, v);
-// 					*data = glm::packUnorm1x8(v);
-// 					data++;
-// 				}
-// 
-// 				auto copy = vk::BufferImageCopy(staging.getInfo().offset, image_info.extent.width, image_info.extent.height, vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1), vk::Offset3D(0, 0, 0), image_info.extent);
-// 				cmd.copyBufferToImage(staging.getInfo().buffer, m_image.get(), vk::ImageLayout::eTransferDstOptimal, copy);
-// 			}
-//			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eAllCommands, vk::DependencyFlags(), {}, {}, { to_shader_read_barrier });
 
 			vk::ImageMemoryBarrier to_make_barrier;
 			to_make_barrier.image = m_image.get();
@@ -319,6 +258,8 @@ struct Sky
 
 	void execute(vk::CommandBuffer& cmd, const std::shared_ptr<RenderTarget>& render_target)
 	{
+		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
+		_label.insert("make cloud map");
 		// make texture
 		{
 			{
@@ -346,6 +287,7 @@ struct Sky
 			cmd.dispatch(num.x, num.y, num.z);
 		}
 		// render_targetÇ…èëÇ≠
+		_label.insert("render cloud");
 		{
 			{
 
