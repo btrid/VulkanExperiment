@@ -5,8 +5,10 @@
 #include "applib/System.glsl"
 
 layout(set=1, binding=0) uniform sampler3D s_map;
+layout(set=1, binding=1, r8ui) uniform uimage3D i_map;
 
 layout (local_size_x = 32, local_size_y = 32) in;
+
 
 // 雲の光の吸収量
 #define ABSORPTION		0.7
@@ -77,12 +79,7 @@ float cloud_lighting(in vec3 pos)
 #if 0
 	return 0.5;
 #elif 1
-	pos = pos + uLightRay * 5.;
-	float density = cloud_density(pos);
-
-	transparent *= exp(-density * ABSORPTION);
-#elif 1
-	const int steps = 5;
+	const int steps = 1;
 	for (int i = 0; i < steps; i++) 
 	{
 		pos = pos + uLightRay * 4.;

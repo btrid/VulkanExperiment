@@ -10,6 +10,7 @@ SET output=-o ../binary
 
 %exe% %include% %option% %output%/Sky.comp.spv Sky.comp
 %exe% %include% %option% %output%/SkyWithTexture.comp.spv SkyWithTexture.comp
+%exe% %include% %option% %output%/SkyMakeTexture.comp.spv SkyMakeTexture.comp
 
 
 
