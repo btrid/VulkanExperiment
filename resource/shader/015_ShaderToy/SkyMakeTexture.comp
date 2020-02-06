@@ -48,20 +48,20 @@ float fBM(in vec3 pos, in int octaves)
 	float value = 0.;
 	for(int i = 0; i < octaves; i++)
 	{
-		pos *= lacunarity;
 		value = value*2. + noise(pos);
 		total = total*2. + 1.;
+		pos = pos * lacunarity + vec3(0., 0., constant.time);
 	}
 
 	return value / total;
 }
 void main()
 {
-	float v = fBM(vec3(gl_GlobalInvocationID.xyz) * 0.03 + vec3(0., 0., constant.time*0.1), 4);
+	float v = fBM(vec3(gl_GlobalInvocationID.xyz) * 0.03, 4);
 	// 雲っぽく
 	v *= smoothstep(0.55, 0.6, v);
 	// 高さで減衰。私用側で行う
-//	v *= band(0., 0.5, 1., (float(gl_GlobalInvocationID.y)+0.5) / float(gl_NumWorkGroups.y*gl_WorkGroupSize.y));
+	v *= band(0., 0.5, 1., (float(gl_GlobalInvocationID.y)+0.5) / float(gl_NumWorkGroups.y*gl_WorkGroupSize.y));
 
 	imageStore(i_map, ivec3(gl_GlobalInvocationID.xyz), uvec4(v*255.));
 

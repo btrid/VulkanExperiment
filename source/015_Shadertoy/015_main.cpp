@@ -113,7 +113,7 @@ struct Sky
 			}
 
 			vk::ImageCreateInfo image_info;
-			image_info.setExtent(vk::Extent3D(1024, 32, 1024));
+			image_info.setExtent(vk::Extent3D(256, 32, 256));
 			image_info.setArrayLayers(1);
 			image_info.setFormat(vk::Format::eR8Unorm);
 			image_info.setImageType(vk::ImageType::e3D);
@@ -152,15 +152,15 @@ struct Sky
 			m_image_write_view = context->m_device.createImageViewUnique(view_info);
 
 			vk::SamplerCreateInfo sampler_info;
-			sampler_info.setAddressModeU(vk::SamplerAddressMode::eMirroredRepeat);
-			sampler_info.setAddressModeV(vk::SamplerAddressMode::eMirroredRepeat);
-			sampler_info.setAddressModeW(vk::SamplerAddressMode::eMirroredRepeat);
-			sampler_info.setAnisotropyEnable(VK_TRUE);
-			sampler_info.setMaxAnisotropy(1.f);
+			sampler_info.setAddressModeU(vk::SamplerAddressMode::eRepeat);
+			sampler_info.setAddressModeV(vk::SamplerAddressMode::eRepeat);
+			sampler_info.setAddressModeW(vk::SamplerAddressMode::eRepeat);
+//			sampler_info.setAnisotropyEnable(VK_TRUE);
+//			sampler_info.setMaxAnisotropy(1.f);
 			sampler_info.setMagFilter(vk::Filter::eLinear);
 			sampler_info.setMinFilter(vk::Filter::eLinear);
-			sampler_info.setMinLod(0.f);
-			sampler_info.setMaxLod(0.f);
+			sampler_info.setMinLod(1.f);
+			sampler_info.setMaxLod(1.f);
 			sampler_info.setMipLodBias(0.f);
 			sampler_info.setMipmapMode(vk::SamplerMipmapMode::eLinear);
 			sampler_info.setUnnormalizedCoordinates(false);
@@ -472,7 +472,7 @@ struct Sky
 
 		// render_targetÇ…èëÇ≠
 		_label.insert("render cloud");
-		if(0)
+		if(1)
 		{
 			{
 

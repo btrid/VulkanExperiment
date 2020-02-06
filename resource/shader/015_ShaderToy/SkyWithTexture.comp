@@ -8,6 +8,10 @@ layout(set=1, binding=0) uniform sampler3D s_map;
 layout(set=1, binding=1, r8ui) uniform uimage3D i_map;
 
 layout (local_size_x = 32, local_size_y = 32) in;
+layout(push_constant) uniform Input
+{
+	float time;
+} constant;
 
 
 // 雲の光の吸収量
@@ -15,12 +19,11 @@ layout (local_size_x = 32, local_size_y = 32) in;
 
 const float u_plant_radius = 1000.;
 const vec4 u_planet = vec4(0., -u_plant_radius, 0, u_plant_radius);
-const vec4 u_cloud_inner = vec4(u_planet.xyz, u_planet.w*1.05);
+const vec4 u_cloud_inner = vec4(u_planet.xyz, u_planet.w*1.1);
 const vec4 u_cloud_outer = u_cloud_inner + vec4(0., 0., 0, 30.);
 const float u_cloud_area_inv = 1. / (u_cloud_outer.w - u_cloud_inner.w);
 vec3 uLightRay = normalize(vec3(0., 1., 0.));
 vec3 uLightColor = vec3(1.);
-vec3 uIndirectColor = vec3(0.6);
 
 float band(in float start, in float peak, in float end, in float t)
 {
@@ -53,8 +56,6 @@ vec3 getSkyColor(in vec3 ray)
 {
 	// 太陽の色
 	vec3 vSkyColor = mix(vec3(.0, 0.1, 0.4), vec3(0.3, 0.6, 0.8), 1.0 - ray.y);
-	uIndirectColor = mix(vSkyColor, vec3(0.4), 0.2);
-
 	// 太陽
 	vSkyColor = mix(vSkyColor, uLightColor, smoothstep(0.999, 1.00, dot(uLightRay, ray)));
 
@@ -63,32 +64,27 @@ vec3 getSkyColor(in vec3 ray)
 }
 
 
-float cloud_density(in vec3 pos, in vec3 dir)
+float cloud_density(in vec3 pos)
 {
 	float t = (distance(pos,u_cloud_inner.xyz)-u_cloud_inner.w)*u_cloud_area_inv;
-	pos = vec3(pos.x, t, pos.z) / vec3(2000., 1., 2000.) + vec3(0.5, 0., 0.5);
+	pos = vec3(pos.x, t, pos.z) / vec3(2000., 1., 2000.) + vec3(0.5, 0., 0.5 + constant.time*0.02);
 
-	float density = textureGrad(s_map, pos, dir*1., -dir*1.).x;
+	float density = texture(s_map, pos).x;
 
-//	density = band(0., 0.5, 1., t) * density;
 	return density;
 }
 
 float cloud_lighting(in vec3 pos)
 {
 	float transparent = 1.;
-#if 0
-	return 0.5;
-#elif 1
 	const int steps = 1;
 	for (int i = 0; i < steps; i++) 
 	{
 		pos = pos + uLightRay * 4.;
-		float density = cloud_density(pos, uLightRay);
+		float density = cloud_density(pos);
 
 		transparent *= exp(-density * ABSORPTION);
 	}
-#endif
 	return transparent;
 }
 
@@ -134,12 +130,12 @@ vec4 cloud(in vec3 rayPos, in vec3 rayDir, float depth)
 	for(int i = 0; i <count; i++)
 	{
 		int step_num = 30;
-//		float ray_step = ray_segment[i].y / float(step_num);
-		float ray_step = 1.;
+		float ray_step = ray_segment[i].y / float(step_num);
+//		float ray_step = 1.;
 		vec3 pos = rayPos + rayDir * (ray_segment[i].x+ray_step*0.5);
 		for(int step = 0; step < step_num; step++)
 		{
-			float density = cloud_density(pos, rayDir);
+			float density = cloud_density(pos);
 
 			float t = exp(-density * ABSORPTION);
 			transparent *= t;
@@ -148,7 +144,7 @@ vec4 cloud(in vec3 rayPos, in vec3 rayDir, float depth)
 			color += transparent * density * cloud_lighting(pos);
 			alpha += (1.-t) *(1.-alpha);
 
-//			pos = pos + rayDir * ray_step;
+			pos = pos + rayDir * ray_step;
 
 		}
 
