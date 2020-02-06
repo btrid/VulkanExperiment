@@ -63,12 +63,12 @@ vec3 getSkyColor(in vec3 ray)
 }
 
 
-float cloud_density(in vec3 pos)
+float cloud_density(in vec3 pos, in vec3 dir)
 {
 	float t = (distance(pos,u_cloud_inner.xyz)-u_cloud_inner.w)*u_cloud_area_inv;
-	pos = vec3(pos.x, t, pos.z)* vec3(0.0005, 1.,0.0005) + vec3(0.5, 0., 0.5);
+	pos = vec3(pos.x, t, pos.z) / vec3(2000., 1., 2000.) + vec3(0.5, 0., 0.5);
 
-	float density = texture(s_map, pos).x;
+	float density = textureGrad(s_map, pos, dir*1., -dir*1.).x;
 
 //	density = band(0., 0.5, 1., t) * density;
 	return density;
@@ -84,7 +84,7 @@ float cloud_lighting(in vec3 pos)
 	for (int i = 0; i < steps; i++) 
 	{
 		pos = pos + uLightRay * 4.;
-		float density = cloud_density(pos);
+		float density = cloud_density(pos, uLightRay);
 
 		transparent *= exp(-density * ABSORPTION);
 	}
@@ -134,11 +134,12 @@ vec4 cloud(in vec3 rayPos, in vec3 rayDir, float depth)
 	for(int i = 0; i <count; i++)
 	{
 		int step_num = 30;
-		float ray_step = ray_segment[i].y / float(step_num);
+//		float ray_step = ray_segment[i].y / float(step_num);
+		float ray_step = 1.;
 		vec3 pos = rayPos + rayDir * (ray_segment[i].x+ray_step*0.5);
 		for(int step = 0; step < step_num; step++)
 		{
-			float density = cloud_density(pos);
+			float density = cloud_density(pos, rayDir);
 
 			float t = exp(-density * ABSORPTION);
 			transparent *= t;
@@ -147,7 +148,7 @@ vec4 cloud(in vec3 rayPos, in vec3 rayDir, float depth)
 			color += transparent * density * cloud_lighting(pos);
 			alpha += (1.-t) *(1.-alpha);
 
-			pos = pos + rayDir * ray_step;
+//			pos = pos + rayDir * ray_step;
 
 		}
 
@@ -159,7 +160,7 @@ void main()
 {
 	vec3 CamPos = vec3(0., 1., 0.);
 
-	vec3 CamDir = normalize(vec3(0., 1., 1.));
+	vec3 CamDir = normalize(vec3(0., 1., 4.));
 	// カメラレイの作成
 	{
 		uvec3 reso = gl_WorkGroupSize * gl_WorkGroupSize;
