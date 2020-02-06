@@ -177,7 +177,7 @@ struct Sky
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eAllCommands, vk::DependencyFlags(), {}, {}, { to_make_barrier });
 
 			{
-				auto sphere = Geometry::MakeSphere(1);
+				auto sphere = Geometry::MakeSphere(3);
 				v_sphere = context->m_vertex_memory.allocateMemory<vec3>(std::get<0>(sphere).size());
 				v_sphere_i = context->m_vertex_memory.allocateMemory<uvec3>(std::get<1>(sphere).size());
 
@@ -537,7 +537,7 @@ struct Sky
 				{
 					mat4 PV;
 					vec4 CamPos;
-				} s = { glm::perspective(glm::radians(45.f), 1.f, 0.01f, 10000.f) * glm::lookAt(vec3(0.f, 1.f, 0.f), vec3(0.f, 1.f, 10.f), vec3(0.f, 1.f, 0.f)), vec4(0.f, 1.f, 0.f, 0.f) };
+				} s = { glm::perspective(glm::radians(45.f), 1.f, 0.01f, 10000.f) * glm::lookAt(vec3(0.f, 1.f, 0.f), vec3(0.f, 1.f, 10.f), vec3(0.f, -1.f, 0.f)), vec4(0.f, 1.f, 0.f, 0.f) };
 				cmd.pushConstants<S>(m_pipeline_layout[PipelineLayout_Sky].get(), vk::ShaderStageFlagBits::eVertex|vk::ShaderStageFlagBits::eFragment, 0, s);
 
 				cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline[Pipeline_Sky].get());

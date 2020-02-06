@@ -30,8 +30,9 @@ layout(push_constant) uniform Input
 
 void main()
 {
-	gl_Position = constant.PV * vec4(i_position*1000., 1.);
-	VSOut.Position = i_position;
+	vec3 p = i_position*1030. + vec3(0., -1000., 0.);
+	gl_Position = constant.PV * vec4(p, 1.);
+	VSOut.Position = p;
 //	VSOut.Normal = mat3(skinningMat) * inNormal.xyz;
 //	VSOut.Texcoord = inTexcoord.xyz;
 //	VSOut.DrawID = gl_DrawID;
