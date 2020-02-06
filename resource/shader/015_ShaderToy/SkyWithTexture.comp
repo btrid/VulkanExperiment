@@ -67,7 +67,7 @@ vec3 getSkyColor(in vec3 ray)
 float cloud_density(in vec3 pos)
 {
 	float t = (distance(pos,u_cloud_inner.xyz)-u_cloud_inner.w)*u_cloud_area_inv;
-	pos = vec3(pos.x, t, pos.z) / vec3(2000., 1., 2000.) + vec3(0.5, 0., 0.5 + constant.time*0.02);
+	pos = vec3(pos.x, t, pos.z + fract(constant.time)) / vec3(2000., 1., 2000.) + vec3(0.5, 0., 0.5);
 
 	float density = texture(s_map, pos).x;
 

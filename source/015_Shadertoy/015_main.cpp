@@ -155,8 +155,6 @@ struct Sky
 			sampler_info.setAddressModeU(vk::SamplerAddressMode::eRepeat);
 			sampler_info.setAddressModeV(vk::SamplerAddressMode::eRepeat);
 			sampler_info.setAddressModeW(vk::SamplerAddressMode::eRepeat);
-//			sampler_info.setAnisotropyEnable(VK_TRUE);
-//			sampler_info.setMaxAnisotropy(1.f);
 			sampler_info.setMagFilter(vk::Filter::eLinear);
 			sampler_info.setMinFilter(vk::Filter::eLinear);
 			sampler_info.setMinLod(1.f);

@@ -43,25 +43,25 @@ float noise(in vec3 pos)
 // 非整数ブラウン運動
 float fBM(in vec3 pos, in int octaves)
 {
-	float lacunarity = 2.5;
+	float lacunarity = 2.971;
 	float total = 0.;
 	float value = 0.;
 	for(int i = 0; i < octaves; i++)
 	{
 		value = value*2. + noise(pos);
 		total = total*2. + 1.;
-		pos = pos * lacunarity + vec3(0., 0., constant.time);
+		pos = pos * lacunarity + vec3(0., 0., constant.time*3.);
 	}
 
 	return value / total;
 }
 void main()
 {
-	float v = fBM(vec3(gl_GlobalInvocationID.xyz) * 0.03, 4);
+	float v = fBM((vec3(gl_GlobalInvocationID.xyz) + vec3(0., 0., floor(constant.time))) * 0.03, 4);
 	// 雲っぽく
-	v *= smoothstep(0.55, 0.6, v);
+	v *= smoothstep(0.55, 0.55, v);
 	// 高さで減衰。私用側で行う
-	v *= band(0., 0.5, 1., (float(gl_GlobalInvocationID.y)+0.5) / float(gl_NumWorkGroups.y*gl_WorkGroupSize.y));
+//	v *= band(0., 0.5, 1., (float(gl_GlobalInvocationID.y)+0.5) / float(gl_NumWorkGroups.y*gl_WorkGroupSize.y));
 
 	imageStore(i_map, ivec3(gl_GlobalInvocationID.xyz), uvec4(v*255.));
 
