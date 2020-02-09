@@ -177,7 +177,7 @@ struct Sky
 			}
 			{
 				vk::ImageCreateInfo image_info;
-				image_info.setExtent(vk::Extent3D(256, 128, 256));
+				image_info.setExtent(vk::Extent3D(256*4, 32, 256 * 4));
 				image_info.setArrayLayers(1);
 				image_info.setFormat(vk::Format::eR8Unorm);
 				image_info.setImageType(vk::ImageType::e3D);
@@ -497,6 +497,11 @@ int main()
 	camera->getData().m_height = 480;
 	camera->getData().m_far = 10000.f;
 	camera->getData().m_near = 0.01f;
+	{
+		auto dir = normalize(vec3(1.f, 3.f, 2.f));
+		auto rot = normalize(cross(vec3(0.f, 1.f, 0.f), normalize(vec3(dir.x, 0.f, dir.z))));
+		int a = 0;
+	}
 
 	app::AppDescriptor app_desc;
 	app_desc.m_window_size = uvec2(1024, 1024);
@@ -523,7 +528,7 @@ int main()
 			std::vector<vk::CommandBuffer> cmds(cmd_num);
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0, "cmd_sky");
-				sky.execute2(cmd, app.m_window->getFrontBuffer());
+				sky.execute(cmd, app.m_window->getFrontBuffer());
 				cmd.end();
 				cmds[cmd_sky] = cmd;
 			}

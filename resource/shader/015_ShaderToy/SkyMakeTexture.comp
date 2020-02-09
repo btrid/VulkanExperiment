@@ -57,9 +57,9 @@ float fBM(in vec3 pos, in int octaves)
 }
 void main()
 {
-	float v = fBM(vec3(gl_GlobalInvocationID.xyz) * vec3(1., 0.3, 1.) + vec3(157.), 4);
+	float v = fBM(vec3(gl_GlobalInvocationID.xyz + vec3(0., 0., floor(constant.time))) * vec3(0.1, 0.3, 0.1) + vec3(597.75), 4);
 	// 雲っぽく
-	v *= smoothstep(0.75, 0.755, v);
+	v *= smoothstep(0.5, 0.55, v);
 	// 高さで減衰
 //	v *= band(0., 0.5, 1., (float(gl_GlobalInvocationID.y)+0.5) / float(gl_NumWorkGroups.y*gl_WorkGroupSize.y));
 //	v *= band2(0., 0.1, 0.9, 1., (float(gl_GlobalInvocationID.y)+0.5) / float(gl_NumWorkGroups.y*gl_WorkGroupSize.y));
