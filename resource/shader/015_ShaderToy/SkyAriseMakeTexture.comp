@@ -4,8 +4,10 @@
 #define USE_RenderTarget 0
 #include "applib/System.glsl"
 
-layout(set=1, binding=0) uniform sampler3D s_map;
-layout(set=1, binding=1, r8ui) uniform uimage3D i_map;
+layout(set=1, binding=0) uniform sampler3D _s_map;
+layout(set=1, binding=1, r8ui) uniform uimage3D _i_map;
+layout(set=1, binding=2) uniform sampler2D s_map;
+layout(set=1, binding=3, rgba8ui) uniform uimage2D i_map;
 
 layout (local_size_x = 32, local_size_y = 32) in;
 
@@ -43,6 +45,7 @@ float noise(in vec3 pos)
 // 非整数ブラウン運動
 float fBM(in vec3 pos, in int octaves)
 {
+	pos *= 0.004 + vec3(0., 0., constant.time*0.01);
 	float lacunarity = 2.971;
 	float total = 0.;
 	float value = 0.;
@@ -57,13 +60,15 @@ float fBM(in vec3 pos, in int octaves)
 }
 void main()
 {
-	float v = fBM(vec3(gl_GlobalInvocationID.xyz) * vec3(1., 0.3, 1.) + vec3(157.), 4);
-	// 雲っぽく
-	v *= smoothstep(0.75, 0.755, v);
-	// 高さで減衰
-//	v *= band(0., 0.5, 1., (float(gl_GlobalInvocationID.y)+0.5) / float(gl_NumWorkGroups.y*gl_WorkGroupSize.y));
-//	v *= band2(0., 0.1, 0.9, 1., (float(gl_GlobalInvocationID.y)+0.5) / float(gl_NumWorkGroups.y*gl_WorkGroupSize.y));
+	float r = fBM(vec3(gl_GlobalInvocationID.xyx) * vec3(2.78, 5.35, 1.57), 4);
+	float g = fBM(vec3(gl_GlobalInvocationID.xyx) * vec3(1.97, 7.38, 1.16), 4);
+	float b = fBM(vec3(gl_GlobalInvocationID.xyx) * vec3(2.58, 3.73, 1.78), 4);
+	float a = fBM(vec3(gl_GlobalInvocationID.xyx) * vec3(1.35, 1.93, 1.93), 4);
 
-	imageStore(i_map, ivec3(gl_GlobalInvocationID.xyz), uvec4(v*255.));
+	r = r *smoothstep(0.5, 0.55, r);
+	g = g *0.5;
+	b = b *0.5; 
+
+	imageStore(i_map, ivec2(gl_GlobalInvocationID.xy), uvec4(vec4(r, g, b, a)*255.));
 
 }
