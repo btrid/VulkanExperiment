@@ -22,7 +22,7 @@ const vec4 u_planet = vec4(0., -u_plant_radius, 0, u_plant_radius);
 const vec4 u_cloud_inner = vec4(u_planet.xyz, u_planet.w*1.05);
 const vec4 u_cloud_outer = u_cloud_inner + vec4(0., 0., 0, 50.);
 const float u_cloud_area_inv = 1. / (u_cloud_outer.w - u_cloud_inner.w);
-const float u_mapping = 1./(u_cloud_outer.w+u_cloud_outer.w) * 1.;
+const float u_mapping = 1./u_cloud_outer.w;
 vec3 uLightRay = normalize(vec3(0., 1., 0.));
 vec3 uLightColor = vec3(1.);
 
@@ -48,7 +48,9 @@ float cloud_density(in vec3 pos)
 {
 	float t = (distance(pos,u_cloud_inner.xyz)-u_cloud_inner.w)*u_cloud_area_inv;
 	pos = vec3(pos.x, t, pos.z) * vec3(u_mapping, 1., u_mapping) + vec3(0.5, 0., 0.5);
-	pos = pos + fract(constant.time)*vec3(0., 0., u_mapping*2.);
+//	pos = pos + fract(constant.time)*vec3(u_mapping, 0., 0.);
+//	pos = fract(pos + floor(constant.time)*vec3(1./textureSize(s_map, 0).x, 0., 0.)) + fract(constant.time)*vec3(u_mapping, 0., 0.);
+	pos = fract(pos + constant.time*vec3(1./textureSize(s_map, 0).x, 0., 0.));
 
 	float density = texture(s_map, pos).x;
 
@@ -135,7 +137,7 @@ vec4 cloud(in vec3 rayPos, in vec3 rayDir, float depth)
 void main()
 {
 	vec3 CamPos = vec3(0., 1., 0.);
-	vec3 CamDir = normalize(vec3(1., 4., 1.));
+	vec3 CamDir = normalize(vec3(1.5, 1.7, 1.5));
 	// カメラレイの作成
 	{
 		uvec3 reso = gl_NumWorkGroups * gl_WorkGroupSize;

@@ -177,7 +177,8 @@ struct Sky
 			}
 			{
 				vk::ImageCreateInfo image_info;
-				image_info.setExtent(vk::Extent3D(256*4, 32, 256 * 4));
+				image_info.setExtent(vk::Extent3D(128, 32, 128));
+//				image_info.setExtent(vk::Extent3D(256 * 4, 32, 256 * 4));
 				image_info.setArrayLayers(1);
 				image_info.setFormat(vk::Format::eR8Unorm);
 				image_info.setImageType(vk::ImageType::e3D);
@@ -362,6 +363,8 @@ struct Sky
 	void execute(vk::CommandBuffer& cmd, const std::shared_ptr<RenderTarget>& render_target)
 	{
 		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
+
+		auto window = sGlobal::Order().getTotalTime() * 20.f;
 		{
 			vk::DescriptorSet descs[] =
 			{
@@ -370,7 +373,7 @@ struct Sky
 			};
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Sky_CS].get(), 0, array_length(descs), descs, 0, nullptr);
 
-			cmd.pushConstants<float>(m_pipeline_layout[PipelineLayout_Sky_CS].get(), vk::ShaderStageFlagBits::eCompute, 0, sGlobal::Order().getTotalTime());
+			cmd.pushConstants<float>(m_pipeline_layout[PipelineLayout_Sky_CS].get(), vk::ShaderStageFlagBits::eCompute, 0, window);
 
 		}
 
@@ -392,15 +395,30 @@ struct Sky
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_SkyMakeTexture_CS].get());
 
-			auto num = app::calcDipatchGroups(uvec3(m_image_density_info.extent.width, m_image_density_info.extent.height, m_image_density_info.extent.depth), uvec3(32, 32, 1));
-			cmd.dispatch(num.x, num.y, num.z);
+			static bool s_is_init;
+			if (!s_is_init)
+			{
+				s_is_init = true;
+				auto num = app::calcDipatchGroups(uvec3(m_image_density_info.extent.width, m_image_density_info.extent.height, m_image_density_info.extent.depth), uvec3(128, 1, 1));
+				cmd.dispatch(num.x, num.y, num.z);
+			}
+			else 
+			{
+				static float s_time;
+				if (floor(s_time) != floor(window))
+				{
+					auto num = app::calcDipatchGroups(uvec3(m_image_density_info.extent.width, m_image_density_info.extent.height, 1), uvec3(128, 1, 1));
+					cmd.dispatchBase(0, 0, (int)floor(window) % 128, 1, 32, 1);
+				}
+				s_time = window;
+			}
 		}
 
 		// render_targetÇ…èëÇ≠
 		_label.insert("render cloud");
 		{
 			{
-
+//				cmd.dispatchBase()
 				std::array<vk::ImageMemoryBarrier, 2> image_barrier;
 				image_barrier[0].setImage(render_target->m_image);
 				image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
