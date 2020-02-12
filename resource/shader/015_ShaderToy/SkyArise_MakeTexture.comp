@@ -63,7 +63,7 @@ void main()
 	float r = fBM(s * vec3(0.01) + vec3(97.15), 4);
 	float g = fBM(s * vec3(0.01) + vec3(51.71), 4);
 	float b = fBM(s * vec3(0.001) + vec3(57.79), 4);
-	float a = fBM((s + vec3(constant.time)*vec3(2.4)) * vec3(0.01) + vec3(91.78), 4);
+	float a = fBM((s + vec3(constant.time)*vec3(2.2)) * vec3(0.01) + vec3(91.78), 4) * 1.;
 
 
 	r = r *smoothstep(0.5, 0.55, r);
