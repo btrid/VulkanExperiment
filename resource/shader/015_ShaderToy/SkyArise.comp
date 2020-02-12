@@ -60,7 +60,7 @@ float cloud_density(in vec3 pos)
 	pos = vec3(pos.x, t, pos.z) * vec3(u_mapping, 1., u_mapping) + vec3(0.5, 0., 0.5);
 //	pos = fract(pos + constant.time*vec3(1./textureSize(s_map, 0).x, 0., 0.));
 	vec4 map = texture(s_map, pos.xz);
-	float density = map.x * band(map.z, map.z+map.y*0.5, map.z+map.y*1., t);
+	float density = map.x * band(map.z, map.z+map.y*0.5, map.z+map.y*1., t+map.w);
 
 	return density;
 }
