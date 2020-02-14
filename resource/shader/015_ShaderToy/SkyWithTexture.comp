@@ -10,7 +10,7 @@ layout(set=1, binding=1, r8ui) uniform uimage3D i_map;
 layout (local_size_x = 32, local_size_y = 32) in;
 layout(push_constant) uniform Input
 {
-	float time;
+	vec3 window;
 } constant;
 
 
@@ -48,7 +48,8 @@ float cloud_density(in vec3 pos)
 {
 	float t = (distance(pos,u_cloud_inner.xyz)-u_cloud_inner.w)*u_cloud_area_inv;
 	pos = vec3(pos.x, t, pos.z) * vec3(u_mapping, 1., u_mapping) + vec3(0.5, 0., 0.5);
-	pos = fract(pos + constant.time*vec3(0., 0., 1./textureSize(s_map, 0).z));
+	pos = fract(pos + constant.window/vec3(textureSize(s_map, 0)));
+	pos.y = t;
 
 	float density = texture(s_map, pos).x;
 

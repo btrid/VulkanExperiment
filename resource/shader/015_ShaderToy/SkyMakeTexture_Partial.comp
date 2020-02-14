@@ -7,12 +7,12 @@
 layout(set=1, binding=0) uniform sampler3D s_map;
 layout(set=1, binding=1, r8ui) uniform uimage3D i_map;
 
-//layout (local_size_x = LSX, local_size_y = LSY, local_size_z = LSZ) in;
-layout (local_size_x_id = 0, local_size_y_id = 1, local_size_z_id = 2) in;
+layout (local_size_x = LSX, local_size_y = LSY, local_size_z = LSZ) in;
+//layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 
 layout(push_constant) uniform Input
 {
-	float time;
+	vec3 window;
 } constant;
 
 float band(in float start, in float peak, in float end, in float t)
@@ -58,7 +58,7 @@ float fBM(in vec3 pos, in int octaves)
 }
 void main()
 {
-	float v = fBM(vec3(gl_GlobalInvocationID.xyz + vec3(floor(constant.time), 0., 0.)) * vec3(0.1, 0.3, 0.1) + vec3(597.75), 4);
+	float v = fBM(vec3(gl_GlobalInvocationID.xyz) + floor(constant.window) * vec3(0.1, 0.3, 0.1) + vec3(597.75), 4);
 	// 雲っぽく
 	v *= smoothstep(0.65, 0.655, v);
 	// 高さで減衰
