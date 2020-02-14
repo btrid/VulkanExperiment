@@ -7,7 +7,8 @@
 layout(set=1, binding=0) uniform sampler3D s_map;
 layout(set=1, binding=1, r8ui) uniform uimage3D i_map;
 
-layout (local_size_x = 128) in;
+//layout (local_size_x = LSX, local_size_y = LSY, local_size_z = LSZ) in;
+layout (local_size_x_id = 0, local_size_y_id = 1, local_size_z_id = 2) in;
 
 layout(push_constant) uniform Input
 {
@@ -39,6 +40,8 @@ float noise(in vec3 pos)
 	return mix(a.x, a.y, fp.x);
 }
 
+// https://thebookofshaders.com/13/?lan=jp
+// 非整数ブラウン運動
 float fBM(in vec3 pos, in int octaves)
 {
 	float lacunarity = 2.971;
@@ -56,7 +59,12 @@ float fBM(in vec3 pos, in int octaves)
 void main()
 {
 	float v = fBM(vec3(gl_GlobalInvocationID.xyz + vec3(floor(constant.time), 0., 0.)) * vec3(0.1, 0.3, 0.1) + vec3(597.75), 4);
-	v *= smoothstep(0.65, 0.75, v);
+	// 雲っぽく
+	v *= smoothstep(0.65, 0.655, v);
+	// 高さで減衰
+//	v *= band(0., 0.5, 1., (float(gl_GlobalInvocationID.y)+0.5) / float(gl_NumWorkGroups.y*gl_WorkGroupSize.y));
+//	v *= band2(0., 0.1, 0.9, 1., (float(gl_GlobalInvocationID.y)+0.5) / float(gl_NumWorkGroups.y*gl_WorkGroupSize.y));
+//	v = constant.time <= 0.001 ? v : 0.;
 
 	imageStore(i_map, ivec3(gl_GlobalInvocationID.xyz), uvec4(v*255.));
 
