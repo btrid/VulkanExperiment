@@ -57,7 +57,7 @@ float fBM(in vec3 pos, in int octaves)
 }
 void main()
 {
-	float v = fBM(vec3(gl_GlobalInvocationID.xyz) + floor(constant.window) * vec3(0.1, 0.3, 0.1) + vec3(597.75), 4);
+	float v = fBM((vec3(gl_GlobalInvocationID.xyz) + floor(constant.window)) * vec3(0.1, 0.3, 0.1) + vec3(597.75), 4);
 	// 雲っぽく
 	v *= smoothstep(0.65, 0.655, v);
 	// 高さで減衰

@@ -336,7 +336,7 @@ struct Sky
 					m_descriptor_set_layout.get(),
 				};
 				vk::PushConstantRange ranges[] = {
-					vk::PushConstantRange().setSize(4).setStageFlags(vk::ShaderStageFlagBits::eCompute),
+					vk::PushConstantRange().setSize(12).setStageFlags(vk::ShaderStageFlagBits::eCompute),
 				};
 
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
@@ -471,7 +471,7 @@ struct Sky
 			};
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Sky_CS].get(), 0, array_length(descs), descs, 0, nullptr);
 
-			cmd.pushConstants<float>(m_pipeline_layout[PipelineLayout_Sky_CS].get(), vk::ShaderStageFlagBits::eCompute, 0, window);
+			cmd.pushConstants<vec3>(m_pipeline_layout[PipelineLayout_Sky_CS].get(), vk::ShaderStageFlagBits::eCompute, 0, window);
 
 		}
 
@@ -502,7 +502,7 @@ struct Sky
 			}
 			else 
 			{
-				static vec3 s_time;
+				static vec3 s_window;
 				uvec3 local_size[3] = { uvec3(64, 1, 1), uvec3(4, 16, 1), uvec3(1, 1, 64) };
 				uvec3 offset =(uvec3)glm::floor(window) % uvec3(m_image_density_info.extent.width, m_image_density_info.extent.height, m_image_density_info.extent.depth);
 				uvec3 group[] =
@@ -513,13 +513,13 @@ struct Sky
 				};
 				for (INT i = 0; i < 3; i++)
 				{
-					if (floor(s_time[i]) != floor(window[i]))
+					if (floor(s_window[i]) != floor(window[i]))
 					{
 						cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_SkyMakeTexture_PartialX_CS+i].get());
 						cmd.dispatchBase(i==0?offset.x:0, i==1?offset.y:0, i==2?offset.z:0, group[i].x, group[i].y, group[i].z);
 					}
 				}
-				s_time = window;
+				s_window = window;
 			}
 		}
 
