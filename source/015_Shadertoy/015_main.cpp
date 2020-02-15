@@ -35,7 +35,7 @@ struct Sky
 {
 	enum Shader
 	{
-		Shader_Sky_CS,
+		Shader_Sky_Reference_CS,
 		Shader_SkyWithTexture_CS,
 		Shader_SkyMakeTexture_CS,
 		Shader_SkyMakeTexture_PartialX_CS,
@@ -54,7 +54,7 @@ struct Sky
 	};
 	enum Pipeline
 	{
-		Pipeline_Sky_CS,
+		Pipeline_Sky_Reference_CS,
 		Pipeline_SkyWithTexture_CS,
 		Pipeline_SkyMakeTexture_CS,
 		Pipeline_SkyMakeTexture_PartialX_CS,
@@ -310,7 +310,7 @@ struct Sky
 		{
 			const char* name[] =
 			{
-				"Sky.comp.spv",
+				"Sky_Reference.comp.spv",
 				"SkyWithTexture.comp.spv",
 				"SkyMakeTexture.comp.spv",
 				"SkyMakeTexture_PartialX.comp.spv",
@@ -353,7 +353,7 @@ struct Sky
 		// compute pipeline
 		{
 			std::array<vk::PipelineShaderStageCreateInfo, 8> shader_info;
-			shader_info[0].setModule(m_shader[Shader_Sky_CS].get());
+			shader_info[0].setModule(m_shader[Shader_Sky_Reference_CS].get());
 			shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[0].setPName("main");
 			shader_info[1].setModule(m_shader[Shader_SkyWithTexture_CS].get());
@@ -405,7 +405,7 @@ struct Sky
 				.setLayout(m_pipeline_layout[PipelineLayout_Sky_CS].get()),
 			};
 			auto compute_pipeline = context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
-			m_pipeline[Pipeline_Sky_CS] = std::move(compute_pipeline[0]);
+			m_pipeline[Pipeline_Sky_Reference_CS] = std::move(compute_pipeline[0]);
 			m_pipeline[Pipeline_SkyWithTexture_CS] = std::move(compute_pipeline[1]);
 			m_pipeline[Pipeline_SkyMakeTexture_CS] = std::move(compute_pipeline[2]);
 			m_pipeline[Pipeline_SkyArise_CS] = std::move(compute_pipeline[3]);
@@ -449,7 +449,7 @@ struct Sky
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
 			}
 
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Sky_CS].get());
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Sky_Reference_CS].get());
 
 			auto num = app::calcDipatchGroups(uvec3(1024, 1024, 1), uvec3(32, 32, 1));
 			cmd.dispatch(num.x, num.y, num.z);
