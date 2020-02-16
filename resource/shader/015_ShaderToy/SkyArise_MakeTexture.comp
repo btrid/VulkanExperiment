@@ -4,10 +4,11 @@
 #define USE_RenderTarget 0
 #include "applib/System.glsl"
 
-layout(set=1, binding=0) uniform sampler3D _s_map;
-layout(set=1, binding=1, r8ui) uniform uimage3D _i_map;
-layout(set=1, binding=2) uniform sampler2D s_map;
-layout(set=1, binding=3, rgba8ui) uniform uimage2D i_map;
+layout(set=1, binding=0) uniform sampler3D s_map;
+layout(set=1, binding=1) uniform sampler2D s_arise_map;
+layout(set=1, binding=10, r8ui) uniform uimage3D i_map;
+layout(set=1, binding=11, rgba8ui) uniform uimage2D i_arise_map;
+
 
 layout (local_size_x = 32, local_size_y = 32) in;
 
@@ -72,6 +73,6 @@ void main()
 //	g = g *0.75;
 //	b = b *0.25; 
 
-	imageStore(i_map, ivec2(gl_GlobalInvocationID.xy), uvec4(vec4(r, g, b, a)*255.));
+	imageStore(i_arise_map, ivec2(gl_GlobalInvocationID.xy), uvec4(vec4(r, g, b, a)*255.));
 
 }
