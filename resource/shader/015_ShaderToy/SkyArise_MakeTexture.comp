@@ -1,13 +1,7 @@
 #version 460
 #extension GL_GOOGLE_include_directive : require
 
-#define USE_RenderTarget 0
-#include "applib/System.glsl"
-
-layout(set=1, binding=0) uniform sampler3D s_map;
-layout(set=1, binding=1) uniform sampler2D s_arise_map;
-layout(set=1, binding=10, r8ui) uniform uimage3D i_map;
-layout(set=1, binding=11, rgba8ui) uniform uimage2D i_arise_map;
+#include "Sky.glsl"
 
 
 layout (local_size_x = 32, local_size_y = 32) in;

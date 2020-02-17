@@ -141,7 +141,7 @@ struct Sky
 			{
 				vk::ImageCreateInfo image_info;
 				//				image_info.setExtent(vk::Extent3D(128, 32, 128));
-				image_info.setExtent(vk::Extent3D(256 * 4, 32, 256 * 4));
+				image_info.setExtent(vk::Extent3D(256 * 2, 16, 256 * 2));
 				image_info.setArrayLayers(1);
 				image_info.setFormat(vk::Format::eR8Unorm);
 				image_info.setImageType(vk::ImageType::e3D);
@@ -683,25 +683,26 @@ struct Sky
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
 			}
 
+			uvec3 tex_size = uvec3(m_image_density_info.extent.width, m_image_density_info.extent.height, m_image_density_info.extent.depth);
 			static bool s_is_init;
 			if (!s_is_init)
 			{
 				// 初回はデータを全部埋める
 				s_is_init = true;
 				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Sky_MakeTexture_PartialX_CS].get());
-				auto num = app::calcDipatchGroups(uvec3(m_image_density_info.extent.width, m_image_density_info.extent.height, m_image_density_info.extent.depth), uvec3(64, 1, 1));
+				auto num = app::calcDipatchGroups(tex_size, uvec3(64, 1, 1));
 				cmd.dispatch(num.x, num.y, num.z);
 			}
 			else 
 			{
 				static vec3 s_window;
 				uvec3 local_size[3] = { uvec3(64, 1, 1), uvec3(4, 16, 1), uvec3(1, 1, 64) };
-				uvec3 offset =(uvec3)glm::floor(window) % uvec3(m_image_density_info.extent.width, m_image_density_info.extent.height, m_image_density_info.extent.depth);
+				uvec3 offset =(uvec3)glm::floor(window) % tex_size;
 				uvec3 group[] =
 				{
-					app::calcDipatchGroups(uvec3(m_image_density_info.extent.width, m_image_density_info.extent.height, 1), uvec3(64, 1, 1)),
-					app::calcDipatchGroups(uvec3(m_image_density_info.extent.width, 1, m_image_density_info.extent.depth), uvec3(4, 16, 1)),
-					app::calcDipatchGroups(uvec3(1, m_image_density_info.extent.height, m_image_density_info.extent.depth), uvec3(1, 1, 64)),
+					app::calcDipatchGroups(uvec3(tex_size.x, tex_size.y, 1), uvec3(64, 1, 1)),
+					app::calcDipatchGroups(uvec3(tex_size.x, 1, tex_size.z), uvec3(4, 16, 1)),
+					app::calcDipatchGroups(uvec3(1, tex_size.y, tex_size.z), uvec3(1, 1, 64)),
 				};
 				for (INT i = 0; i < 3; i++)
 				{
@@ -714,7 +715,6 @@ struct Sky
 				s_window = window;
 			}
 		}
-
 		// render_targetに書く
 		_label.insert("render cloud");
 		{

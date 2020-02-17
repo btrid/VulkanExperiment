@@ -10,7 +10,6 @@ SET output=-o ../binary
 
 %exe% %include% %option% %output%/SkyReference.comp.spv SkyReference.comp
 %exe% %include% %option% %output%/Sky_Render.comp.spv Sky_Render.comp
-%exe% %include% %option% %output%/Sky_MakeTexture.comp.spv Sky_MakeTexture.comp
 %exe% %include% %option% -DLSX=64 -DLSY=1 -DLSZ=1 %output%/Sky_MakeTexture_PartialX.comp.spv Sky_MakeTexture_Partial.comp
 %exe% %include% %option% -DLSX=4 -DLSY=16 -DLSZ=1 %output%/Sky_MakeTexture_PartialY.comp.spv Sky_MakeTexture_Partial.comp
 %exe% %include% %option% -DLSX=1 -DLSY=1 -DLSZ=64 %output%/Sky_MakeTexture_PartialZ.comp.spv Sky_MakeTexture_Partial.comp

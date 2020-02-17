@@ -1,8 +1,8 @@
 #version 460
 #extension GL_GOOGLE_include_directive : require
 
-#define USE_RenderTarget 0
-#include "applib/System.glsl"
+#include "Sky.glsl"
+
 
 layout (local_size_x = 32, local_size_y = 32) in;
 layout(push_constant) uniform Input
@@ -10,17 +10,6 @@ layout(push_constant) uniform Input
 	float time;
 } constant;
 
-// 雲の光の吸収量
-#define ABSORPTION		0.7
-
-const float u_plant_radius = 1000.;
-const vec4 u_planet = vec4(0., -u_plant_radius, 0, u_plant_radius);
-const vec4 u_cloud_inner = vec4(u_planet.xyz, u_planet.w*1.05);
-const vec4 u_cloud_outer = u_cloud_inner + vec4(0., 0., 0, 30.);
-const float u_cloud_area_inv = 1. / (u_cloud_outer.w - u_cloud_inner.w);
-vec3 uLightRay = normalize(vec3(0., 1., 0.));
-vec3 uLightColor = vec3(1.);
-vec3 uIndirectColor = vec3(0.6);
 
 float band(in float start, in float peak, in float end, in float t)
 {
@@ -85,7 +74,6 @@ vec3 getSkyColor(in vec3 ray)
 {
 	// 太陽の色
 	vec3 vSkyColor = mix(vec3(.0, 0.1, 0.4), vec3(0.3, 0.6, 0.8), 1.0 - ray.y);
-	uIndirectColor = mix(vSkyColor, vec3(0.4), 0.2);
 
 	// 太陽
 	vSkyColor = mix(vSkyColor, uLightColor, smoothstep(0.999, 1.00, dot(uLightRay, ray)));
