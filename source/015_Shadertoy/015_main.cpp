@@ -38,6 +38,7 @@ struct Sky
 		Shader_SkyReference_CS,
 
 		Shader_Sky_Render_CS,
+		Shader_Sky_CalcDensity_CS,
 		Shader_Sky_MakeTexture_PartialX_CS,
 		Shader_Sky_MakeTexture_PartialY_CS,
 		Shader_Sky_MakeTexture_PartialZ_CS,
@@ -56,6 +57,7 @@ struct Sky
 	{
 		Pipeline_SkyReference_CS,
 		Pipeline_Sky_Render_CS,
+		Pipeline_Sky_CalcDensity_CS,
 		Pipeline_Sky_MakeTexture_PartialX_CS,
 		Pipeline_Sky_MakeTexture_PartialY_CS,
 		Pipeline_Sky_MakeTexture_PartialZ_CS,
@@ -72,6 +74,8 @@ struct Sky
 
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
+
+	btr::BufferMemoryEx<uvec4> b_density;
 
 	vk::ImageCreateInfo m_image_density_info;
 	vk::UniqueImage m_image_density;
@@ -118,6 +122,7 @@ struct Sky
 				vk::DescriptorSetLayoutBinding(11, vk::DescriptorType::eStorageImage, 1, stage),
 				vk::DescriptorSetLayoutBinding(12, vk::DescriptorType::eStorageImage, 1, stage),
 				vk::DescriptorSetLayoutBinding(13, vk::DescriptorType::eStorageImage, 1, stage),
+				vk::DescriptorSetLayoutBinding(20, vk::DescriptorType::eStorageBuffer, 1, stage),
 			};
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 			desc_layout_info.setBindingCount(array_length(binding));
@@ -136,6 +141,9 @@ struct Sky
 				desc_info.setDescriptorSetCount(array_length(layouts));
 				desc_info.setPSetLayouts(layouts);
 				m_descriptor_set = std::move(context->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
+			}
+			{
+				b_density = context->m_storage_memory.allocateMemory<uvec4>(512 * 16 * 512 / 16);
 			}
 
 			{
@@ -485,6 +493,9 @@ struct Sky
 				vk::DescriptorImageInfo().setImageView(m_image_shadow_write_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
 				vk::DescriptorImageInfo().setImageView(m_image_render_write_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
 			};
+			vk::DescriptorBufferInfo buffers[] = {
+				b_density.getInfo(),
+			};
 
 
 			vk::WriteDescriptorSet write[] =
@@ -503,6 +514,13 @@ struct Sky
 				.setDstBinding(10)
 				.setDstArrayElement(0)
 				.setDstSet(m_descriptor_set.get()),
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(array_length(buffers))
+				.setPBufferInfo(buffers)
+				.setDstBinding(20)
+				.setDstArrayElement(0)
+				.setDstSet(m_descriptor_set.get()),
 			};
 			context->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
 		}
@@ -513,6 +531,7 @@ struct Sky
 			{
 				"SkyReference.comp.spv",
 				"Sky_Render.comp.spv",
+				"Sky_CalcDensity.comp.spv",
 				"Sky_MakeTexture_PartialX.comp.spv",
 				"Sky_MakeTexture_PartialY.comp.spv",
 				"Sky_MakeTexture_PartialZ.comp.spv",
@@ -552,28 +571,31 @@ struct Sky
 
 		// compute pipeline
 		{
-			std::array<vk::PipelineShaderStageCreateInfo, 7> shader_info;
+			std::array<vk::PipelineShaderStageCreateInfo, 8> shader_info;
 			shader_info[0].setModule(m_shader[Shader_SkyReference_CS].get());
 			shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[0].setPName("main");
 			shader_info[1].setModule(m_shader[Shader_Sky_Render_CS].get());
 			shader_info[1].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[1].setPName("main");
-			shader_info[2].setModule(m_shader[Shader_Sky_MakeTexture_PartialX_CS].get());
+			shader_info[2].setModule(m_shader[Shader_Sky_CalcDensity_CS].get());
 			shader_info[2].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[2].setPName("main");
-			shader_info[3].setModule(m_shader[Shader_Sky_MakeTexture_PartialY_CS].get());
+			shader_info[3].setModule(m_shader[Shader_Sky_MakeTexture_PartialX_CS].get());
 			shader_info[3].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[3].setPName("main");
-			shader_info[4].setModule(m_shader[Shader_Sky_MakeTexture_PartialZ_CS].get());
+			shader_info[4].setModule(m_shader[Shader_Sky_MakeTexture_PartialY_CS].get());
 			shader_info[4].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[4].setPName("main");
-			shader_info[5].setModule(m_shader[Shader_SkyArise_CS].get());
+			shader_info[5].setModule(m_shader[Shader_Sky_MakeTexture_PartialZ_CS].get());
 			shader_info[5].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[5].setPName("main");
-			shader_info[6].setModule(m_shader[Shader_SkyArise_MakeTexture_CS].get());
+			shader_info[6].setModule(m_shader[Shader_SkyArise_CS].get());
 			shader_info[6].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[6].setPName("main");
+			shader_info[7].setModule(m_shader[Shader_SkyArise_MakeTexture_CS].get());
+			shader_info[7].setStage(vk::ShaderStageFlagBits::eCompute);
+			shader_info[7].setPName("main");
 			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 			{
 				vk::ComputePipelineCreateInfo()
@@ -597,15 +619,19 @@ struct Sky
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[6])
 				.setLayout(m_pipeline_layout[PipelineLayout_Sky_CS].get()),
+				vk::ComputePipelineCreateInfo()
+				.setStage(shader_info[7])
+				.setLayout(m_pipeline_layout[PipelineLayout_Sky_CS].get()),
 			};
 			auto compute_pipeline = context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
 			m_pipeline[Pipeline_SkyReference_CS] = std::move(compute_pipeline[0]);
 			m_pipeline[Pipeline_Sky_Render_CS] = std::move(compute_pipeline[1]);
-			m_pipeline[Pipeline_Sky_MakeTexture_PartialX_CS] = std::move(compute_pipeline[2]);
-			m_pipeline[Pipeline_Sky_MakeTexture_PartialY_CS] = std::move(compute_pipeline[3]);
-			m_pipeline[Pipeline_Sky_MakeTexture_PartialZ_CS] = std::move(compute_pipeline[4]);
-			m_pipeline[Pipeline_SkyArise_CS] = std::move(compute_pipeline[5]);
-			m_pipeline[Pipeline_SkyArise_MakeTexture_CS] = std::move(compute_pipeline[6]);
+			m_pipeline[Pipeline_Sky_CalcDensity_CS] = std::move(compute_pipeline[2]);
+			m_pipeline[Pipeline_Sky_MakeTexture_PartialX_CS] = std::move(compute_pipeline[3]);
+			m_pipeline[Pipeline_Sky_MakeTexture_PartialY_CS] = std::move(compute_pipeline[4]);
+			m_pipeline[Pipeline_Sky_MakeTexture_PartialZ_CS] = std::move(compute_pipeline[5]);
+			m_pipeline[Pipeline_SkyArise_CS] = std::move(compute_pipeline[6]);
+			m_pipeline[Pipeline_SkyArise_MakeTexture_CS] = std::move(compute_pipeline[7]);
 		}
 
 
