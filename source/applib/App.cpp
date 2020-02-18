@@ -199,6 +199,7 @@ App::App(const AppDescriptor& desc)
 
 		vk::PhysicalDevice8BitStorageFeaturesKHR  storage8bit_feature;
 		storage8bit_feature.setStorageBuffer8BitAccess(VK_TRUE);
+		storage8bit_feature.setUniformAndStorageBuffer8BitAccess(VK_TRUE);
 		device_info.setPNext(&storage8bit_feature);
 
 		vk::PhysicalDeviceFloat16Int8FeaturesKHR  f16s8_feature;

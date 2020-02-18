@@ -24,7 +24,7 @@ float rand(in vec3 co)
 {
 	return fract(sin(dot(co, vec3(12.98,78.23, 45.41))) * 43758.5);
 }
-float _noise1(in vec3 pos)
+float noise(in vec3 pos)
 {
 	vec3 ip = floor(pos);
 	vec3 fp = smoothstep(0., 1., fract(pos));
@@ -36,55 +36,6 @@ float _noise1(in vec3 pos)
 	return mix(a.x, a.y, fp.x);
 }
 
-float grad(int hash, vec3 fp)
-{
-    switch(hash & 0xF)
-    {
-        case 0x0: return  fp.x + fp.y;
-        case 0x1: return -fp.x + fp.y;
-        case 0x2: return  fp.x - fp.y;
-        case 0x3: return -fp.x - fp.y;
-        case 0x4: return  fp.x + fp.z;
-        case 0x5: return -fp.x + fp.z;
-        case 0x6: return  fp.x - fp.z;
-        case 0x7: return -fp.x - fp.z;
-        case 0x8: return  fp.y + fp.z;
-        case 0x9: return -fp.y + fp.z;
-        case 0xA: return  fp.y - fp.z;
-        case 0xB: return -fp.y - fp.z;
-        case 0xC: return  fp.y + fp.x;
-        case 0xD: return -fp.y + fp.z;
-        case 0xE: return  fp.y - fp.x;
-        case 0xF: return -fp.y - fp.z;
-    }
-	return 0.;
-}
-float _noise2(in vec3 pos)
-{
-	ivec3 ip = ivec3(floor(pos))%ivec3(hash_size/2-1);
-	vec3 fp = smoothstep(0., 1., fract(pos));
-
-	int aaa, aba, aab, abb, baa, bba, bab, bbb;
-	aaa = u_hash[u_hash[u_hash[ip.x]+ip.y]+ip.z];
-	aba = u_hash[u_hash[u_hash[ip.x]+ip.y+1]+ip.z];
-	aab = u_hash[u_hash[u_hash[ip.x]+ip.y]+ip.z+1];
-	abb = u_hash[u_hash[u_hash[ip.x]+ip.y+1]+ip.z+1];
-	baa = u_hash[u_hash[u_hash[ip.x+1]+ip.y]+ip.z];
-	bba = u_hash[u_hash[u_hash[ip.x+1]+ip.y+1]+ip.z];
-	bab = u_hash[u_hash[u_hash[ip.x+1]+ip.y]+ip.z+1];
-	bbb = u_hash[u_hash[u_hash[ip.x+1]+ip.y+1]+ip.z+1];
-
-	float x1, x2, y1, y2;
-	x1 = mix(grad(aaa, fp), grad(baa, fp-vec3(1., 0., 0.)), fp.x);
-	x2 = mix(grad(aba, fp-vec3(0.,1.,0.)),grad(bba, fp-vec3(1.,1.,0.)),fp.x);
-	y1 = mix(x1, x2, fp.y);
-	x1 = mix(grad(aab, fp-vec3(0.,0.,1)), grad(bab, fp-vec3(1.,0.,1)),fp.x);
-	x2 = mix(grad(abb, fp-vec3(0.,1.,1)), grad(bbb, fp-vec3(1.,1.,1)),fp.x);
-	y2 = mix(x1, x2, fp.y);
-	return mix(y1, y2, fp.z)*0.5+0.5;
-}
-
-#define noise _noise1
 // https://thebookofshaders.com/13/?lan=jp
 // 非整数ブラウン運動
 float fBM(in vec3 pos, in int octaves)

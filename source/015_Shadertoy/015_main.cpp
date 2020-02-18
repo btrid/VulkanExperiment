@@ -75,6 +75,7 @@ struct Sky
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
 
+	btr::BufferMemoryEx<uint8_t> u_hash;
 	btr::BufferMemoryEx<uvec4> b_density;
 
 	vk::ImageCreateInfo m_image_density_info;
@@ -122,7 +123,8 @@ struct Sky
 				vk::DescriptorSetLayoutBinding(11, vk::DescriptorType::eStorageImage, 1, stage),
 				vk::DescriptorSetLayoutBinding(12, vk::DescriptorType::eStorageImage, 1, stage),
 				vk::DescriptorSetLayoutBinding(13, vk::DescriptorType::eStorageImage, 1, stage),
-				vk::DescriptorSetLayoutBinding(20, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(20, vk::DescriptorType::eUniformBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(30, vk::DescriptorType::eStorageBuffer, 1, stage),
 			};
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 			desc_layout_info.setBindingCount(array_length(binding));
@@ -143,7 +145,16 @@ struct Sky
 				m_descriptor_set = std::move(context->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
 			}
 			{
+				u_hash = context->m_uniform_memory.allocateMemory<uint8_t>(64);
 				b_density = context->m_storage_memory.allocateMemory<uvec4>(512 * 16 * 512 / 16);
+
+				std::vector<uint8_t> hash(64);
+				for (auto& h : hash)
+				{
+					h = rand() % 32;
+				}
+				auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+				cmd.updateBuffer<uint8_t>(u_hash.getInfo().buffer, u_hash.getInfo().offset, hash);
 			}
 
 			{
@@ -493,6 +504,9 @@ struct Sky
 				vk::DescriptorImageInfo().setImageView(m_image_shadow_write_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
 				vk::DescriptorImageInfo().setImageView(m_image_render_write_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
 			};
+			vk::DescriptorBufferInfo uniforms[] = {
+				u_hash.getInfo(),
+			};
 			vk::DescriptorBufferInfo buffers[] = {
 				b_density.getInfo(),
 			};
@@ -515,10 +529,17 @@ struct Sky
 				.setDstArrayElement(0)
 				.setDstSet(m_descriptor_set.get()),
 				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+				.setDescriptorCount(array_length(uniforms))
+				.setPBufferInfo(uniforms)
+				.setDstBinding(20)
+				.setDstArrayElement(0)
+				.setDstSet(m_descriptor_set.get()),
+				vk::WriteDescriptorSet()
 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
 				.setDescriptorCount(array_length(buffers))
 				.setPBufferInfo(buffers)
-				.setDstBinding(20)
+				.setDstBinding(30)
 				.setDstArrayElement(0)
 				.setDstSet(m_descriptor_set.get()),
 			};
@@ -714,7 +735,7 @@ struct Sky
 			if (!s_is_init)
 			{
 				// 初回はデータを全部埋める
-				s_is_init = true;
+//				s_is_init = true;
 				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Sky_MakeTexture_PartialX_CS].get());
 				auto num = app::calcDipatchGroups(tex_size, uvec3(64, 1, 1));
 				cmd.dispatch(num.x, num.y, num.z);
@@ -873,8 +894,8 @@ int main()
 			std::vector<vk::CommandBuffer> cmds(cmd_num);
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0, "cmd_sky");
-//				sky.execute_reference(cmd, app.m_window->getFrontBuffer());
-				sky.execute(cmd, app.m_window->getFrontBuffer());
+				sky.execute_reference(cmd, app.m_window->getFrontBuffer());
+//				sky.execute(cmd, app.m_window->getFrontBuffer());
 				cmd.end();
 				cmds[cmd_sky] = cmd;
 			}
