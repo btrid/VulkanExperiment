@@ -38,6 +38,7 @@ struct Sky
 		Shader_SkyReference_CS,
 
 		Shader_Sky_Render_CS,
+		Shader_Sky_Render2_CS,
 		Shader_Sky_CalcDensity_CS,
 		Shader_Sky_MakeTexture_PartialX_CS,
 		Shader_Sky_MakeTexture_PartialY_CS,
@@ -57,6 +58,7 @@ struct Sky
 	{
 		Pipeline_SkyReference_CS,
 		Pipeline_Sky_Render_CS,
+		Pipeline_Sky_Render2_CS,
 		Pipeline_Sky_CalcDensity_CS,
 		Pipeline_Sky_MakeTexture_PartialX_CS,
 		Pipeline_Sky_MakeTexture_PartialY_CS,
@@ -105,7 +107,6 @@ struct Sky
 	vk::UniqueImageView m_image_render_write_view;
 	vk::UniqueDeviceMemory m_image_render_memory;
 	vk::UniqueSampler m_image_render_sampler;
-
 
 	Sky(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target)
 	{
@@ -160,7 +161,7 @@ struct Sky
 			{
 				vk::ImageCreateInfo image_info;
 				//				image_info.setExtent(vk::Extent3D(128, 32, 128));
-				image_info.setExtent(vk::Extent3D(256 * 2, 16 * 1, 256 * 2));
+				image_info.setExtent(vk::Extent3D(256, 16 * 1, 256));
 				image_info.setArrayLayers(1);
 				image_info.setFormat(vk::Format::eR8Unorm);
 				image_info.setImageType(vk::ImageType::e3D);
@@ -552,6 +553,7 @@ struct Sky
 			{
 				"SkyReference.comp.spv",
 				"Sky_Render.comp.spv",
+				"Sky_Render2.comp.spv",
 				"Sky_CalcDensity.comp.spv",
 				"Sky_MakeTexture_PartialX.comp.spv",
 				"Sky_MakeTexture_PartialY.comp.spv",
@@ -592,7 +594,7 @@ struct Sky
 
 		// compute pipeline
 		{
-			std::array<vk::PipelineShaderStageCreateInfo, 8> shader_info;
+			std::array<vk::PipelineShaderStageCreateInfo, 9> shader_info;
 			shader_info[0].setModule(m_shader[Shader_SkyReference_CS].get());
 			shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[0].setPName("main");
@@ -617,6 +619,9 @@ struct Sky
 			shader_info[7].setModule(m_shader[Shader_SkyArise_MakeTexture_CS].get());
 			shader_info[7].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[7].setPName("main");
+			shader_info[8].setModule(m_shader[Shader_Sky_Render2_CS].get());
+			shader_info[8].setStage(vk::ShaderStageFlagBits::eCompute);
+			shader_info[8].setPName("main");
 			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 			{
 				vk::ComputePipelineCreateInfo()
@@ -643,6 +648,9 @@ struct Sky
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[7])
 				.setLayout(m_pipeline_layout[PipelineLayout_Sky_CS].get()),
+				vk::ComputePipelineCreateInfo()
+				.setStage(shader_info[8])
+				.setLayout(m_pipeline_layout[PipelineLayout_Sky_CS].get()),
 			};
 			auto compute_pipeline = context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
 			m_pipeline[Pipeline_SkyReference_CS] = std::move(compute_pipeline[0]);
@@ -653,6 +661,7 @@ struct Sky
 			m_pipeline[Pipeline_Sky_MakeTexture_PartialZ_CS] = std::move(compute_pipeline[5]);
 			m_pipeline[Pipeline_SkyArise_CS] = std::move(compute_pipeline[6]);
 			m_pipeline[Pipeline_SkyArise_MakeTexture_CS] = std::move(compute_pipeline[7]);
+			m_pipeline[Pipeline_Sky_Render2_CS] = std::move(compute_pipeline[8]);
 		}
 
 
@@ -720,7 +729,6 @@ struct Sky
 		{
 #if 1
 			{
-
 				std::array<vk::ImageMemoryBarrier, 1> image_barrier;
 				image_barrier[0].setImage(m_image_density.get());
 				image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
@@ -807,18 +815,39 @@ struct Sky
 		_label.insert("render cloud");
 		{
 			{
-//				cmd.dispatchBase()
 				std::array<vk::ImageMemoryBarrier, 2> image_barrier;
-				image_barrier[0].setImage(render_target->m_image);
+				image_barrier[0].setImage(m_image_render.get());
 				image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+				image_barrier[0].setOldLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+				image_barrier[0].setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
 				image_barrier[0].setNewLayout(vk::ImageLayout::eGeneral);
 				image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
 				image_barrier[1].setImage(m_image_density.get());
 				image_barrier[1].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
 				image_barrier[1].setOldLayout(vk::ImageLayout::eGeneral);
 				image_barrier[1].setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
-// 				image_barrier[1].setOldLayout(vk::ImageLayout::eTransferDstOptimal);
-// 				image_barrier[1].setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+				image_barrier[1].setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+				image_barrier[1].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
+			}
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Sky_Render_CS].get());
+			auto num = app::calcDipatchGroups(uvec3(512, 512, 1), uvec3(32, 32, 1));
+			cmd.dispatch(num.x, num.y, num.z);
+		}
+		{
+			{
+//				cmd.dispatchBase()
+				std::array<vk::ImageMemoryBarrier, 2> image_barrier;
+				image_barrier[0].setImage(render_target->m_image);
+				image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+				image_barrier[0].setNewLayout(vk::ImageLayout::eGeneral);
+				image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
+				image_barrier[1].setImage(m_image_render.get());
+				image_barrier[1].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+				image_barrier[1].setOldLayout(vk::ImageLayout::eGeneral);
+				image_barrier[1].setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
 				image_barrier[1].setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
 				image_barrier[1].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
 
@@ -826,7 +855,7 @@ struct Sky
 //				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
 			}
 			
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Sky_Render_CS].get());
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Sky_Render2_CS].get());
 
 			auto num = app::calcDipatchGroups(uvec3(1024, 1024, 1), uvec3(32, 32, 1));
 			cmd.dispatch(num.x, num.y, num.z);
