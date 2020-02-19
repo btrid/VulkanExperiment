@@ -35,7 +35,7 @@ float cloud_density(in vec3 pos)
 	pos.y = t;
 
 	float density = texture(s_map, pos).x;
-	return density * smoothstep(0.65, 0.655, density);
+//	return density * smoothstep(0.65, 0.655, density);
 
 	return density;
 }
