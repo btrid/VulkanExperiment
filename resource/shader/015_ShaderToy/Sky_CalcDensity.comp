@@ -2,7 +2,7 @@
 #extension GL_GOOGLE_include_directive : require
 #include "Sky.glsl"
 
-layout (local_size_x = 16, local_size_z = 16) in;
+layout (local_size_x = 32, local_size_z = 2) in;
 //shared f16vec4 s_rand[1024][3];
 
 

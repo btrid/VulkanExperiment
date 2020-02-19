@@ -160,7 +160,7 @@ struct Sky
 			{
 				vk::ImageCreateInfo image_info;
 				//				image_info.setExtent(vk::Extent3D(128, 32, 128));
-				image_info.setExtent(vk::Extent3D(256 * 2, 16, 256 * 2));
+				image_info.setExtent(vk::Extent3D(256 * 2, 16 * 1, 256 * 2));
 				image_info.setArrayLayers(1);
 				image_info.setFormat(vk::Format::eR8Unorm);
 				image_info.setImageType(vk::ImageType::e3D);
@@ -499,7 +499,7 @@ struct Sky
 				vk::DescriptorImageInfo(m_image_render_sampler.get(), m_image_render_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal),
 			};
 			vk::DescriptorImageInfo images[] = {
-//				vk::DescriptorImageInfo().setImageView(m_image_density_write_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
+				vk::DescriptorImageInfo().setImageView(m_image_density_write_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
 				vk::DescriptorImageInfo().setImageView(m_image_arise_write_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
 				vk::DescriptorImageInfo().setImageView(m_image_shadow_write_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
 				vk::DescriptorImageInfo().setImageView(m_image_render_write_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
@@ -525,7 +525,7 @@ struct Sky
 				.setDescriptorType(vk::DescriptorType::eStorageImage)
 				.setDescriptorCount(array_length(images))
 				.setPImageInfo(images)
-				.setDstBinding(11)
+				.setDstBinding(10)
 				.setDstArrayElement(0)
 				.setDstSet(m_descriptor_set.get()),
 				vk::WriteDescriptorSet()
@@ -718,7 +718,7 @@ struct Sky
 		// make texture
 		_label.insert("make cloud map");
 		{
-#if 0
+#if 1
 			{
 
 				std::array<vk::ImageMemoryBarrier, 1> image_barrier;
@@ -773,7 +773,7 @@ struct Sky
 			{
 				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Sky_CalcDensity_CS].get());
 				auto tex_size = uvec3(m_image_density_info.extent.width / 16, m_image_density_info.extent.height, m_image_density_info.extent.depth);
-				auto num = app::calcDipatchGroups(tex_size, uvec3(16, 1, 16));
+				auto num = app::calcDipatchGroups(tex_size, uvec3(32, 1, 2));
 				cmd.dispatch(num.x, num.y, num.z);
 			}
 
@@ -791,13 +791,14 @@ struct Sky
  				image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, { array_length(buffer_barrier), buffer_barrier.data() }, { array_length(image_barrier), image_barrier.data() });
 			}
+			
 			{
 				vk::BufferImageCopy copy;
 				copy.setImageSubresource(vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1));
 				copy.setImageOffset(vk::Offset3D(0, 0, 0));
 				copy.setImageExtent(m_image_density_info.extent);
 				copy.setBufferOffset(b_density.getInfo().offset);
-				cmd.copyBufferToImage(b_density.getInfo().buffer, m_image_density.get(), vk::ImageLayout::eTransferDstOptimal, copy);
+//				cmd.copyBufferToImage(b_density.getInfo().buffer, m_image_density.get(), vk::ImageLayout::eTransferDstOptimal, copy);
 			}
 
 #endif
@@ -814,14 +815,17 @@ struct Sky
 				image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
 				image_barrier[1].setImage(m_image_density.get());
 				image_barrier[1].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-				image_barrier[1].setOldLayout(vk::ImageLayout::eTransferDstOptimal);
-				image_barrier[1].setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
+				image_barrier[1].setOldLayout(vk::ImageLayout::eGeneral);
+				image_barrier[1].setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+// 				image_barrier[1].setOldLayout(vk::ImageLayout::eTransferDstOptimal);
+// 				image_barrier[1].setSrcAccessMask(vk::AccessFlagBits::eTransferWrite);
 				image_barrier[1].setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
 				image_barrier[1].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
 
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
+ 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
+//				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
 			}
-
+			
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Sky_Render_CS].get());
 
 			auto num = app::calcDipatchGroups(uvec3(1024, 1024, 1), uvec3(32, 32, 1));
