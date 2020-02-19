@@ -736,7 +736,7 @@ struct Sky
 			if (!s_is_init)
 			{
 				// 初回はデータを全部埋める
-//				s_is_init = true;
+				s_is_init = true;
 				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Sky_MakeTexture_PartialX_CS].get());
 				auto num = app::calcDipatchGroups(tex_size, uvec3(64, 1, 1));
 				cmd.dispatch(num.x, num.y, num.z);
