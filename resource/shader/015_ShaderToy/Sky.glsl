@@ -21,7 +21,7 @@ layout(set=1, binding=20, std140) uniform HashUniform {
 };
 
 layout(set=1, binding=30, std430) restrict buffer DensityBuffer {
-	float b_density[];
+	uvec4 b_density[];
 };
 
 
