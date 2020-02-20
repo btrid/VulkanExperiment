@@ -186,6 +186,7 @@ void main()
 
 	color.xyz = mix(sky_color, color.xyz/(color.a+0.0001), color.a);
 
-	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(color.xyz, 1.));
+//	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(color.xyz, 1.));
+	imageStore(i_render_map, ivec2(gl_GlobalInvocationID.xy), vec4(color.xyz, 1.));
 
 }
