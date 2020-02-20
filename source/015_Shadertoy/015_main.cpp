@@ -36,6 +36,7 @@ struct Sky
 	enum Shader
 	{
 		Shader_SkyReference_CS,
+		Shader_SkyAriseReference_CS,
 
 		Shader_Sky_Render_CS,
 		Shader_Sky_Render2_CS,
@@ -57,6 +58,7 @@ struct Sky
 	enum Pipeline
 	{
 		Pipeline_SkyReference_CS,
+		Pipeline_SkyAriseReference_CS,
 		Pipeline_Sky_Render_CS,
 		Pipeline_Sky_Render2_CS,
 		Pipeline_Sky_CalcDensity_CS,
@@ -552,6 +554,7 @@ struct Sky
 			const char* name[] =
 			{
 				"SkyReference.comp.spv",
+				"SkyAriseReference.comp.spv",
 				"Sky_Render.comp.spv",
 				"Sky_Render2.comp.spv",
 				"Sky_CalcDensity.comp.spv",
@@ -594,7 +597,7 @@ struct Sky
 
 		// compute pipeline
 		{
-			std::array<vk::PipelineShaderStageCreateInfo, 9> shader_info;
+			std::array<vk::PipelineShaderStageCreateInfo, 10> shader_info;
 			shader_info[0].setModule(m_shader[Shader_SkyReference_CS].get());
 			shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[0].setPName("main");
@@ -622,6 +625,9 @@ struct Sky
 			shader_info[8].setModule(m_shader[Shader_Sky_Render2_CS].get());
 			shader_info[8].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[8].setPName("main");
+			shader_info[9].setModule(m_shader[Shader_SkyReference_CS].get());
+			shader_info[9].setStage(vk::ShaderStageFlagBits::eCompute);
+			shader_info[9].setPName("main");
 			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 			{
 				vk::ComputePipelineCreateInfo()
@@ -651,6 +657,9 @@ struct Sky
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[8])
 				.setLayout(m_pipeline_layout[PipelineLayout_Sky_CS].get()),
+				vk::ComputePipelineCreateInfo()
+				.setStage(shader_info[9])
+				.setLayout(m_pipeline_layout[PipelineLayout_Sky_CS].get()),
 			};
 			auto compute_pipeline = context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
 			m_pipeline[Pipeline_SkyReference_CS] = std::move(compute_pipeline[0]);
@@ -662,6 +671,7 @@ struct Sky
 			m_pipeline[Pipeline_SkyArise_CS] = std::move(compute_pipeline[6]);
 			m_pipeline[Pipeline_SkyArise_MakeTexture_CS] = std::move(compute_pipeline[7]);
 			m_pipeline[Pipeline_Sky_Render2_CS] = std::move(compute_pipeline[8]);
+			m_pipeline[Pipeline_SkyAriseReference_CS] = std::move(compute_pipeline[9]);
 		}
 
 
@@ -699,6 +709,44 @@ struct Sky
 			}
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_SkyReference_CS].get());
+
+			auto num = app::calcDipatchGroups(uvec3(1024, 1024, 1), uvec3(32, 32, 1));
+			cmd.dispatch(num.x, num.y, num.z);
+		}
+
+	}
+	void execute_AriseReference(vk::CommandBuffer& cmd, const std::shared_ptr<RenderTarget>& render_target)
+	{
+		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
+
+		auto window = sGlobal::Order().getTotalTime() * 20.f;
+		{
+			vk::DescriptorSet descs[] =
+			{
+				render_target->m_descriptor.get(),
+				m_descriptor_set.get(),
+			};
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Sky_CS].get(), 0, array_length(descs), descs, 0, nullptr);
+
+			cmd.pushConstants<float>(m_pipeline_layout[PipelineLayout_Sky_CS].get(), vk::ShaderStageFlagBits::eCompute, 0, window);
+
+		}
+
+		// render_targetÇ…èëÇ≠
+		_label.insert("render cloud");
+		{
+			{
+				//				cmd.dispatchBase()
+				std::array<vk::ImageMemoryBarrier, 1> image_barrier;
+				image_barrier[0].setImage(render_target->m_image);
+				image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+				image_barrier[0].setNewLayout(vk::ImageLayout::eGeneral);
+				image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
+
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
+			}
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_SkyAriseReference_CS].get());
 
 			auto num = app::calcDipatchGroups(uvec3(1024, 1024, 1), uvec3(32, 32, 1));
 			cmd.dispatch(num.x, num.y, num.z);
@@ -968,6 +1016,7 @@ int main()
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0, "cmd_sky");
 //				sky.execute_reference(cmd, app.m_window->getFrontBuffer());
+//				sky.execute_AriseReference(cmd, app.m_window->getFrontBuffer());
 				sky.execute(cmd, app.m_window->getFrontBuffer());
 				cmd.end();
 				cmds[cmd_sky] = cmd;

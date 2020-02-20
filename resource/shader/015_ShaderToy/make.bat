@@ -15,6 +15,8 @@ SET output=-o ../binary
 %exe% %include% %option% -DLSX=64 -DLSY=1 -DLSZ=1 %output%/Sky_MakeTexture_PartialX.comp.spv Sky_MakeTexture_Partial.comp
 %exe% %include% %option% -DLSX=4 -DLSY=16 -DLSZ=1 %output%/Sky_MakeTexture_PartialY.comp.spv Sky_MakeTexture_Partial.comp
 %exe% %include% %option% -DLSX=1 -DLSY=1 -DLSZ=64 %output%/Sky_MakeTexture_PartialZ.comp.spv Sky_MakeTexture_Partial.comp
+
+%exe% %include% %option% %output%/SkyAriseReference.comp.spv SkyAriseReference.comp
 %exe% %include% %option% %output%/SkyArise.comp.spv SkyArise.comp
 %exe% %include% %option% %output%/SkyArise_MakeTexture.comp.spv SkyArise_MakeTexture.comp
 
