@@ -1017,7 +1017,7 @@ int main()
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0, "cmd_sky");
 //				sky.execute_reference(cmd, app.m_window->getFrontBuffer());
 //				sky.execute_AriseReference(cmd, app.m_window->getFrontBuffer());
-				sky.execute(cmd, app.m_window->getFrontBuffer());
+				sky.executeArise(cmd, app.m_window->getFrontBuffer());
 				cmd.end();
 				cmds[cmd_sky] = cmd;
 			}

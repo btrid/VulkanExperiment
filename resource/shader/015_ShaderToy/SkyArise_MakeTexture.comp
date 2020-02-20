@@ -8,7 +8,7 @@ layout (local_size_x = 32, local_size_y = 32) in;
 
 layout(push_constant) uniform Input
 {
-	float time;
+	vec3 window;
 } constant;
 
 float band(in float start, in float peak, in float end, in float t)
@@ -36,8 +36,6 @@ float noise(in vec3 pos)
 	return mix(a.x, a.y, fp.x);
 }
 
-// https://thebookofshaders.com/13/?lan=jp
-// 非整数ブラウン運動
 float fBM(in vec3 pos, in int octaves)
 {
 	float lacunarity = 2.971;
@@ -52,21 +50,66 @@ float fBM(in vec3 pos, in int octaves)
 
 	return value / total;
 }
+vec4 rand4(in vec3 co)
+{
+	vec4 value;
+	value.x = dot(co.xyz, vec3(12.98, 25.23, 45.41));
+	value.y = dot(co.yzx, vec3(32.89, 19.31, 29.11));
+	value.z = dot(co.zxy, vec3(29.55, 13.94, 31.45));
+	value.w = dot(co.yxz, vec3(65.14, 33.57, 12.12));
+
+	return fract(sin(value * vec4(21.55, 78.23, 45.41, 31.37)) * 43.57);
+}
+vec4 noise4(in vec3 pos)
+{
+	vec3 ip = floor(pos);
+	vec3 fp = smoothstep(0., 1., fract(pos));
+	vec2 offset = vec2(0., 1.);
+	vec4 aa = rand4(ip+offset.xxx);
+	vec4 ab = rand4(ip+offset.xxy);
+	vec4 ba = rand4(ip+offset.xyx);
+	vec4 bb = rand4(ip+offset.xyy);
+	vec4 v0 = mix(mix(aa, ab, fp.z), mix(ba, bb, fp.z), fp.y);
+
+	aa = rand4(ip+offset.yxx);
+	ab = rand4(ip+offset.yxy);
+	ba = rand4(ip+offset.yyx);
+	bb = rand4(ip+offset.yyy);
+
+	return mix(v0, mix(mix(aa, ab, fp.z), mix(ba, bb, fp.z), fp.y), fp.x);
+}
+vec4 fBM4(in vec3 pos, in int octaves)
+{
+	float lacunarity = 2.5;
+	float total = 0.;
+	vec4 value = vec4(0.);
+	for(int i = 0; i < octaves; i++)
+	{
+		pos *= lacunarity;
+		value = value*2. + noise4(pos);
+		total = total*2. + 1.;
+	}
+
+	return value / total;
+}
+
 void main()
 {
-	vec3 s = vec3(gl_GlobalInvocationID.xyz + vec3(constant.time*20., 0., 0.));
+#if 1
+	vec3 s = vec3(gl_GlobalInvocationID.xyz) + constant.window*20.;
 	float r = fBM(s * vec3(0.01) + vec3(97.15), 4);
 	float g = fBM(s * vec3(0.01) + vec3(51.71), 4);
 	float b = fBM(s * vec3(0.001) + vec3(57.79), 4);
-	float a = fBM((s + vec3(constant.time)*vec3(2.2)) * vec3(0.01) + vec3(91.78), 4) * 1.;
-
+	float a = fBM((s + constant.window*vec3(2.2)) * vec3(0.01) + vec3(91.78), 4) * 1.;
 
 	r = r *smoothstep(0.5, 0.55, r);
 	g = g *smoothstep(0., 0.75, g) * 0.75;
 	b = b *smoothstep(0., 0.75, b) * 0.25;
-//	g = g *0.75;
-//	b = b *0.25; 
-
 	imageStore(i_arise_map, ivec2(gl_GlobalInvocationID.xy), uvec4(vec4(r, g, b, a)*255.));
+#else
+	vec4 v = fBM4(vec3(gl_GlobalInvocationID.xyz)*0.01 + constant.window, 4);
+	v = v * smoothstep(vec4(0.5, 0.,0.,0.), vec4(0.55, 0.75,0.75,0.),v) * vec4(1., 0.75, 0.75, 1.);
+	imageStore(i_arise_map, ivec2(gl_GlobalInvocationID.xy), uvec4(v*255.));
+#endif
 
 }
