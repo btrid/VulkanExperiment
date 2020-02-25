@@ -15,15 +15,6 @@ layout(set=1, binding=11, rgba8ui) uniform uimage2D i_arise_map;
 layout(set=1, binding=12, r8ui) uniform uimage3D i_shadow_map;
 layout(set=1, binding=13, rgba16) uniform image2D i_render_map;
 
-#define hash_size 64
-layout(set=1, binding=20, std140) uniform HashUniform {
-	uint8_t u_hash[hash_size];
-};
-
-layout(set=1, binding=30, std430) restrict buffer DensityBuffer {
-	uvec4 b_density[];
-};
-
 
 // 雲の光の吸収量
 #define ABSORPTION		0.7

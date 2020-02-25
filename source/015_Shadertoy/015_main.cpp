@@ -31,6 +31,206 @@
 #pragma comment(lib, "imgui.lib")
 
 
+struct SkyNoise
+{
+	SkyNoise(const std::shared_ptr<btr::Context>& context)
+	{
+
+		// descriptor layout
+		{
+			auto stage = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute;
+			vk::DescriptorSetLayoutBinding binding[] =
+			{
+				vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eCombinedImageSampler, 1, stage),
+				vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eCombinedImageSampler, 1, stage),
+				vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eCombinedImageSampler, 1, stage),
+				vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eCombinedImageSampler, 1, stage),
+				vk::DescriptorSetLayoutBinding(10, vk::DescriptorType::eStorageImage, 1, stage),
+				vk::DescriptorSetLayoutBinding(11, vk::DescriptorType::eStorageImage, 1, stage),
+				vk::DescriptorSetLayoutBinding(12, vk::DescriptorType::eStorageImage, 1, stage),
+				vk::DescriptorSetLayoutBinding(13, vk::DescriptorType::eStorageImage, 1, stage),
+				vk::DescriptorSetLayoutBinding(20, vk::DescriptorType::eUniformBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(30, vk::DescriptorType::eStorageBuffer, 1, stage),
+			};
+			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
+			desc_layout_info.setBindingCount(array_length(binding));
+			desc_layout_info.setPBindings(binding);
+			m_descriptor_set_layout = context->m_device.createDescriptorSetLayoutUnique(desc_layout_info);
+		}
+		// descriptor set
+		{
+			{
+				vk::DescriptorSetLayout layouts[] = {
+					m_descriptor_set_layout.get(),
+				};
+
+				vk::DescriptorSetAllocateInfo desc_info;
+				desc_info.setDescriptorPool(context->m_descriptor_pool.get());
+				desc_info.setDescriptorSetCount(array_length(layouts));
+				desc_info.setPSetLayouts(layouts);
+				m_descriptor_set = std::move(context->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
+			}
+
+ 			{
+// 				vk::ImageCreateInfo image_info;
+// 				image_info.setExtent(vk::Extent3D(256, 16 * 1, 256));
+// 				image_info.setArrayLayers(1);
+// 				image_info.setFormat(vk::Format::eR8Unorm);
+// 				image_info.setImageType(vk::ImageType::e3D);
+// 				image_info.setInitialLayout(vk::ImageLayout::eUndefined);
+// 				image_info.setMipLevels(1);
+// 				image_info.setSamples(vk::SampleCountFlagBits::e1);
+// 				image_info.setSharingMode(vk::SharingMode::eExclusive);
+// 				image_info.setTiling(vk::ImageTiling::eOptimal);
+// 				image_info.setUsage(vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eTransferDst);
+// 				image_info.setFlags(vk::ImageCreateFlagBits::eMutableFormat);
+// 
+// 				m_image_density = context->m_device.createImageUnique(image_info);
+// 				m_image_density_info = image_info;
+// 
+// 				vk::MemoryRequirements memory_request = context->m_device.getImageMemoryRequirements(m_image_density.get());
+// 				vk::MemoryAllocateInfo memory_alloc_info;
+// 				memory_alloc_info.allocationSize = memory_request.size;
+// 				memory_alloc_info.memoryTypeIndex = Helper::getMemoryTypeIndex(context->m_physical_device, memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+// 
+// 				m_image_density_memory = context->m_device.allocateMemoryUnique(memory_alloc_info);
+// 				context->m_device.bindImageMemory(m_image_density.get(), m_image_density_memory.get(), 0);
+// 
+// 				vk::ImageViewCreateInfo view_info;
+// 				view_info.setFormat(image_info.format);
+// 				view_info.setImage(m_image_density.get());
+// 				view_info.subresourceRange.setBaseArrayLayer(0);
+// 				view_info.subresourceRange.setLayerCount(1);
+// 				view_info.subresourceRange.setBaseMipLevel(0);
+// 				view_info.subresourceRange.setLevelCount(1);
+// 				view_info.subresourceRange.setAspectMask(vk::ImageAspectFlagBits::eColor);
+// 				view_info.setViewType(vk::ImageViewType::e3D);
+// 				view_info.components.setR(vk::ComponentSwizzle::eR).setG(vk::ComponentSwizzle::eIdentity).setB(vk::ComponentSwizzle::eIdentity).setA(vk::ComponentSwizzle::eIdentity);
+// 				m_image_density_view = context->m_device.createImageViewUnique(view_info);
+// 
+// 				view_info.setFormat(vk::Format::eR8Uint);
+// 				m_image_density_write_view = context->m_device.createImageViewUnique(view_info);
+// 
+// 				vk::SamplerCreateInfo sampler_info;
+// 				sampler_info.setAddressModeU(vk::SamplerAddressMode::eClampToBorder);
+// 				sampler_info.setAddressModeV(vk::SamplerAddressMode::eClampToBorder);
+// 				sampler_info.setAddressModeW(vk::SamplerAddressMode::eClampToBorder);
+// 				sampler_info.setAddressModeU(vk::SamplerAddressMode::eRepeat);
+// 				sampler_info.setAddressModeV(vk::SamplerAddressMode::eRepeat);
+// 				sampler_info.setAddressModeW(vk::SamplerAddressMode::eRepeat);
+// 				sampler_info.setBorderColor(vk::BorderColor::eFloatOpaqueWhite);
+// 				sampler_info.setMagFilter(vk::Filter::eLinear);
+// 				sampler_info.setMinFilter(vk::Filter::eLinear);
+// 				sampler_info.setMinLod(0.f);
+// 				sampler_info.setMaxLod(0.f);
+// 				sampler_info.setMipLodBias(0.f);
+// 				sampler_info.setMipmapMode(vk::SamplerMipmapMode::eLinear);
+// 				sampler_info.setUnnormalizedCoordinates(false);
+// 				m_image_density_sampler = context->m_device.createSamplerUnique(sampler_info);
+// 
+// 
+// 				vk::ImageMemoryBarrier to_make_barrier;
+// 				to_make_barrier.image = m_image_density.get();
+// 				to_make_barrier.oldLayout = vk::ImageLayout::eUndefined;
+// 				to_make_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+// 				to_make_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+// 				to_make_barrier.subresourceRange = vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
+// 				auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+// 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eAllCommands, vk::DependencyFlags(), {}, {}, { to_make_barrier });
+// 
+			}
+
+
+// 			vk::DescriptorImageInfo samplers[] = {
+// 				vk::DescriptorImageInfo(m_image_density_sampler.get(), m_image_density_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal),
+// 				vk::DescriptorImageInfo(m_image_arise_sampler.get(), m_image_arise_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal),
+// 				vk::DescriptorImageInfo(m_image_shadow_sampler.get(), m_image_shadow_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal),
+// 				vk::DescriptorImageInfo(m_image_render_sampler.get(), m_image_render_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal),
+// 			};
+// 			vk::DescriptorImageInfo images[] = {
+// 				vk::DescriptorImageInfo().setImageView(m_image_density_write_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
+// 				vk::DescriptorImageInfo().setImageView(m_image_arise_write_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
+// 				vk::DescriptorImageInfo().setImageView(m_image_shadow_write_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
+// 				vk::DescriptorImageInfo().setImageView(m_image_render_write_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
+// 			};
+// 
+// 			vk::WriteDescriptorSet write[] =
+// 			{
+// 				vk::WriteDescriptorSet()
+// 				.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+// 				.setDescriptorCount(array_length(samplers))
+// 				.setPImageInfo(samplers)
+// 				.setDstBinding(0)
+// 				.setDstArrayElement(0)
+// 				.setDstSet(m_descriptor_set.get()),
+// 				vk::WriteDescriptorSet()
+// 				.setDescriptorType(vk::DescriptorType::eStorageImage)
+// 				.setDescriptorCount(array_length(images))
+// 				.setPImageInfo(images)
+// 				.setDstBinding(10)
+// 				.setDstArrayElement(0)
+// 				.setDstSet(m_descriptor_set.get()),
+// 				vk::WriteDescriptorSet()
+// 				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+// 				.setDescriptorCount(array_length(uniforms))
+// 				.setPBufferInfo(uniforms)
+// 				.setDstBinding(20)
+// 				.setDstArrayElement(0)
+// 				.setDstSet(m_descriptor_set.get()),
+// 				vk::WriteDescriptorSet()
+// 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+// 				.setDescriptorCount(array_length(buffers))
+// 				.setPBufferInfo(buffers)
+// 				.setDstBinding(30)
+// 				.setDstArrayElement(0)
+// 				.setDstSet(m_descriptor_set.get()),
+// 			};
+//			context->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
+		}
+
+		// shader
+		{
+			const char* name[] =
+			{
+				"WorleyNoise.vert.spv",
+				"WorleyNoise.frag.spv",
+			};
+			std::string path = btr::getResourceShaderPath();
+			for (size_t i = 0; i < array_length(name); i++) {
+//				shader[i] = loadShaderUnique(context->m_device, path + name[i]);
+			}
+		}
+
+		// pipeline layout
+		{
+			{
+				vk::DescriptorSetLayout layouts[] = {
+					RenderTarget::s_descriptor_set_layout.get(),
+					m_descriptor_set_layout.get(),
+				};
+				vk::PushConstantRange ranges[] = {
+					vk::PushConstantRange().setSize(12).setStageFlags(vk::ShaderStageFlagBits::eCompute),
+				};
+
+				vk::PipelineLayoutCreateInfo pipeline_layout_info;
+				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
+				pipeline_layout_info.setPSetLayouts(layouts);
+				pipeline_layout_info.setPushConstantRangeCount(array_length(ranges));
+				pipeline_layout_info.setPPushConstantRanges(ranges);
+//				m_pipeline_layout[PipelineLayout_Sky_CS] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
+
+			}
+
+		}
+
+	}
+	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
+	vk::UniqueDescriptorSet m_descriptor_set;
+
+	vk::UniquePipelineLayout m_pipeline_layout;
+	vk::UniquePipeline m_pipeline;
+
+};
 struct Sky 
 {
 	enum Shader
@@ -80,9 +280,6 @@ struct Sky
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
 
-	btr::BufferMemoryEx<uint8_t> u_hash;
-	btr::BufferMemoryEx<uvec4> b_density;
-
 	vk::ImageCreateInfo m_image_density_info;
 	vk::UniqueImage m_image_density;
 	vk::UniqueImageView m_image_density_view;
@@ -127,8 +324,6 @@ struct Sky
 				vk::DescriptorSetLayoutBinding(11, vk::DescriptorType::eStorageImage, 1, stage),
 				vk::DescriptorSetLayoutBinding(12, vk::DescriptorType::eStorageImage, 1, stage),
 				vk::DescriptorSetLayoutBinding(13, vk::DescriptorType::eStorageImage, 1, stage),
-				vk::DescriptorSetLayoutBinding(20, vk::DescriptorType::eUniformBuffer, 1, stage),
-				vk::DescriptorSetLayoutBinding(30, vk::DescriptorType::eStorageBuffer, 1, stage),
 			};
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 			desc_layout_info.setBindingCount(array_length(binding));
@@ -147,18 +342,6 @@ struct Sky
 				desc_info.setDescriptorSetCount(array_length(layouts));
 				desc_info.setPSetLayouts(layouts);
 				m_descriptor_set = std::move(context->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
-			}
-			{
-				u_hash = context->m_uniform_memory.allocateMemory<uint8_t>(64);
-				b_density = context->m_storage_memory.allocateMemory<uvec4>(512 * 16 * 512 / 16);
-
-				std::vector<uint8_t> hash(64);
-				for (auto& h : hash)
-				{
-					h = rand() % 32;
-				}
-				auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-				cmd.updateBuffer<uint8_t>(u_hash.getInfo().buffer, u_hash.getInfo().offset, hash);
 			}
 
 			{
@@ -507,12 +690,6 @@ struct Sky
 				vk::DescriptorImageInfo().setImageView(m_image_shadow_write_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
 				vk::DescriptorImageInfo().setImageView(m_image_render_write_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
 			};
-			vk::DescriptorBufferInfo uniforms[] = {
-				u_hash.getInfo(),
-			};
-			vk::DescriptorBufferInfo buffers[] = {
-				b_density.getInfo(),
-			};
 
 
 			vk::WriteDescriptorSet write[] =
@@ -529,20 +706,6 @@ struct Sky
 				.setDescriptorCount(array_length(images))
 				.setPImageInfo(images)
 				.setDstBinding(10)
-				.setDstArrayElement(0)
-				.setDstSet(m_descriptor_set.get()),
-				vk::WriteDescriptorSet()
-				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-				.setDescriptorCount(array_length(uniforms))
-				.setPBufferInfo(uniforms)
-				.setDstBinding(20)
-				.setDstArrayElement(0)
-				.setDstSet(m_descriptor_set.get()),
-				vk::WriteDescriptorSet()
-				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-				.setDescriptorCount(array_length(buffers))
-				.setPBufferInfo(buffers)
-				.setDstBinding(30)
 				.setDstArrayElement(0)
 				.setDstSet(m_descriptor_set.get()),
 			};

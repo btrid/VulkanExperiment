@@ -36,6 +36,7 @@ float _noise1(in vec3 pos)
 	return mix(a.x, a.y, fp.x);
 }
 
+/*
 float grad(int hash, vec3 fp)
 {
     switch(hash & 0xF)
@@ -83,7 +84,7 @@ float _noise2(in vec3 pos)
 	y2 = mix(x1, x2, fp.y);
 	return mix(y1, y2, fp.z)*0.5+0.5;
 }
-
+*/
 #define noise _noise1
 // https://thebookofshaders.com/13/?lan=jp
 // 非整数ブラウン運動
