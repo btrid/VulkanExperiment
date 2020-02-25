@@ -49,8 +49,6 @@ struct SkyNoise
 				vk::DescriptorSetLayoutBinding(11, vk::DescriptorType::eStorageImage, 1, stage),
 				vk::DescriptorSetLayoutBinding(12, vk::DescriptorType::eStorageImage, 1, stage),
 				vk::DescriptorSetLayoutBinding(13, vk::DescriptorType::eStorageImage, 1, stage),
-				vk::DescriptorSetLayoutBinding(20, vk::DescriptorType::eUniformBuffer, 1, stage),
-				vk::DescriptorSetLayoutBinding(30, vk::DescriptorType::eStorageBuffer, 1, stage),
 			};
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 			desc_layout_info.setBindingCount(array_length(binding));
@@ -239,10 +237,12 @@ struct Sky
 		Shader_SkyAriseReference_CS,
 
 		Shader_Sky_Render_CS,
-		Shader_Sky_CalcDensity_CS,
 		Shader_Sky_MakeTexture_PartialX_CS,
 		Shader_Sky_MakeTexture_PartialY_CS,
 		Shader_Sky_MakeTexture_PartialZ_CS,
+
+		Shader_Sky_Render2_CS,
+		Shader_Sky_MakeTexture2_CS,
 
 		Shader_SkyArise_CS,
 		Shader_SkyArise_MakeTexture_CS,
@@ -260,10 +260,12 @@ struct Sky
 		Pipeline_SkyReference_CS,
 		Pipeline_SkyAriseReference_CS,
 		Pipeline_Sky_Render_CS,
-		Pipeline_Sky_CalcDensity_CS,
 		Pipeline_Sky_MakeTexture_PartialX_CS,
 		Pipeline_Sky_MakeTexture_PartialY_CS,
 		Pipeline_Sky_MakeTexture_PartialZ_CS,
+
+		Pipeline_Sky_Render2_CS,
+		Pipeline_Sky_MakeTexture2_CS,
 
 		Pipeline_SkyArise_CS,
 		Pipeline_SkyArise_MakeTexture_CS,
@@ -286,6 +288,12 @@ struct Sky
 	vk::UniqueImageView m_image_density_write_view;
 	vk::UniqueDeviceMemory m_image_density_memory;
 	vk::UniqueSampler m_image_density_sampler;
+
+	vk::ImageCreateInfo m_image_density2_info;
+	vk::UniqueImage m_image_density2;
+	vk::UniqueImageView m_image_density2_view;
+	vk::UniqueImageView m_image_density2_write_view;
+	vk::UniqueDeviceMemory m_image_density2_memory;
 
 	vk::ImageCreateInfo m_image_arise_info;
 	vk::UniqueImage m_image_arise;
@@ -320,10 +328,12 @@ struct Sky
 				vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eCombinedImageSampler, 1, stage),
 				vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eCombinedImageSampler, 1, stage),
 				vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eCombinedImageSampler, 1, stage),
+				vk::DescriptorSetLayoutBinding(4, vk::DescriptorType::eCombinedImageSampler, 1, stage),
 				vk::DescriptorSetLayoutBinding(10, vk::DescriptorType::eStorageImage, 1, stage),
 				vk::DescriptorSetLayoutBinding(11, vk::DescriptorType::eStorageImage, 1, stage),
 				vk::DescriptorSetLayoutBinding(12, vk::DescriptorType::eStorageImage, 1, stage),
 				vk::DescriptorSetLayoutBinding(13, vk::DescriptorType::eStorageImage, 1, stage),
+				vk::DescriptorSetLayoutBinding(14, vk::DescriptorType::eStorageImage, 1, stage),
 			};
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 			desc_layout_info.setBindingCount(array_length(binding));
@@ -385,9 +395,6 @@ struct Sky
 				m_image_density_write_view = context->m_device.createImageViewUnique(view_info);
 
 				vk::SamplerCreateInfo sampler_info;
-				sampler_info.setAddressModeU(vk::SamplerAddressMode::eClampToBorder);
-				sampler_info.setAddressModeV(vk::SamplerAddressMode::eClampToBorder);
-				sampler_info.setAddressModeW(vk::SamplerAddressMode::eClampToBorder);
 				sampler_info.setAddressModeU(vk::SamplerAddressMode::eRepeat);
 				sampler_info.setAddressModeV(vk::SamplerAddressMode::eRepeat);
 				sampler_info.setAddressModeW(vk::SamplerAddressMode::eRepeat);
@@ -404,6 +411,45 @@ struct Sky
 
 				vk::ImageMemoryBarrier to_make_barrier;
 				to_make_barrier.image = m_image_density.get();
+				to_make_barrier.oldLayout = vk::ImageLayout::eUndefined;
+				to_make_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+				to_make_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+				to_make_barrier.subresourceRange = vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
+				auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eAllCommands, vk::DependencyFlags(), {}, {}, { to_make_barrier });
+
+			}
+
+			{
+				m_image_density2_info = m_image_density_info;
+				m_image_density2_info.setFormat(vk::Format::eR8G8B8A8Unorm);
+				m_image_density2 = context->m_device.createImageUnique(m_image_density2_info);
+
+				vk::MemoryRequirements memory_request = context->m_device.getImageMemoryRequirements(m_image_density2.get());
+				vk::MemoryAllocateInfo memory_alloc_info;
+				memory_alloc_info.allocationSize = memory_request.size;
+				memory_alloc_info.memoryTypeIndex = Helper::getMemoryTypeIndex(context->m_physical_device, memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+				m_image_density2_memory = context->m_device.allocateMemoryUnique(memory_alloc_info);
+				context->m_device.bindImageMemory(m_image_density2.get(), m_image_density2_memory.get(), 0);
+
+				vk::ImageViewCreateInfo view_info;
+				view_info.setFormat(m_image_density2_info.format);
+				view_info.setImage(m_image_density2.get());
+				view_info.subresourceRange.setBaseArrayLayer(0);
+				view_info.subresourceRange.setLayerCount(1);
+				view_info.subresourceRange.setBaseMipLevel(0);
+				view_info.subresourceRange.setLevelCount(1);
+				view_info.subresourceRange.setAspectMask(vk::ImageAspectFlagBits::eColor);
+				view_info.setViewType(vk::ImageViewType::e3D);
+				view_info.components.setR(vk::ComponentSwizzle::eR).setG(vk::ComponentSwizzle::eG).setB(vk::ComponentSwizzle::eB).setA(vk::ComponentSwizzle::eA);
+				m_image_density2_view = context->m_device.createImageViewUnique(view_info);
+
+				view_info.setFormat(vk::Format::eR8G8B8A8Uint);
+				m_image_density2_write_view = context->m_device.createImageViewUnique(view_info);
+
+				vk::ImageMemoryBarrier to_make_barrier;
+				to_make_barrier.image = m_image_density2.get();
 				to_make_barrier.oldLayout = vk::ImageLayout::eUndefined;
 				to_make_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 				to_make_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
@@ -683,12 +729,14 @@ struct Sky
 				vk::DescriptorImageInfo(m_image_arise_sampler.get(), m_image_arise_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal),
 				vk::DescriptorImageInfo(m_image_shadow_sampler.get(), m_image_shadow_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal),
 				vk::DescriptorImageInfo(m_image_render_sampler.get(), m_image_render_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal),
+				vk::DescriptorImageInfo(m_image_density_sampler.get(), m_image_density2_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal),
 			};
 			vk::DescriptorImageInfo images[] = {
 				vk::DescriptorImageInfo().setImageView(m_image_density_write_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
 				vk::DescriptorImageInfo().setImageView(m_image_arise_write_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
 				vk::DescriptorImageInfo().setImageView(m_image_shadow_write_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
 				vk::DescriptorImageInfo().setImageView(m_image_render_write_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
+				vk::DescriptorImageInfo().setImageView(m_image_density2_write_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
 			};
 
 
@@ -719,10 +767,12 @@ struct Sky
 				"SkyReference.comp.spv",
 				"SkyAriseReference.comp.spv",
 				"Sky_Render.comp.spv",
-				"Sky_CalcDensity.comp.spv",
 				"Sky_MakeTexture_PartialX.comp.spv",
 				"Sky_MakeTexture_PartialY.comp.spv",
 				"Sky_MakeTexture_PartialZ.comp.spv",
+
+				"Sky_Render2.comp.spv",
+				"Sky_MakeTexture2.comp.spv",
 
 				"SkyArise.comp.spv",
 				"SkyArise_MakeTexture.comp.spv",
@@ -761,37 +811,40 @@ struct Sky
 
 		// compute pipeline
 		{
-			std::array<vk::PipelineShaderStageCreateInfo, 10> shader_info;
+			std::array<vk::PipelineShaderStageCreateInfo, 11> shader_info;
 			shader_info[0].setModule(m_shader[Shader_SkyReference_CS].get());
 			shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[0].setPName("main");
 			shader_info[1].setModule(m_shader[Shader_Sky_Render_CS].get());
 			shader_info[1].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[1].setPName("main");
-			shader_info[2].setModule(m_shader[Shader_Sky_CalcDensity_CS].get());
+			shader_info[2].setModule(m_shader[Shader_Sky_MakeTexture_PartialX_CS].get());
 			shader_info[2].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[2].setPName("main");
-			shader_info[3].setModule(m_shader[Shader_Sky_MakeTexture_PartialX_CS].get());
+			shader_info[3].setModule(m_shader[Shader_Sky_MakeTexture_PartialY_CS].get());
 			shader_info[3].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[3].setPName("main");
-			shader_info[4].setModule(m_shader[Shader_Sky_MakeTexture_PartialY_CS].get());
+			shader_info[4].setModule(m_shader[Shader_Sky_MakeTexture_PartialZ_CS].get());
 			shader_info[4].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[4].setPName("main");
-			shader_info[5].setModule(m_shader[Shader_Sky_MakeTexture_PartialZ_CS].get());
+			shader_info[5].setModule(m_shader[Shader_SkyArise_CS].get());
 			shader_info[5].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[5].setPName("main");
-			shader_info[6].setModule(m_shader[Shader_SkyArise_CS].get());
+			shader_info[6].setModule(m_shader[Shader_SkyArise_MakeTexture_CS].get());
 			shader_info[6].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[6].setPName("main");
-			shader_info[7].setModule(m_shader[Shader_SkyArise_MakeTexture_CS].get());
+			shader_info[7].setModule(m_shader[Shader_SkyReference_CS].get());
 			shader_info[7].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[7].setPName("main");
-			shader_info[8].setModule(m_shader[Shader_SkyReference_CS].get());
+			shader_info[8].setModule(m_shader[Shader_Sky_RenderUpsampling_CS].get());
 			shader_info[8].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[8].setPName("main");
-			shader_info[9].setModule(m_shader[Shader_Sky_RenderUpsampling_CS].get());
+			shader_info[9].setModule(m_shader[Shader_Sky_Render2_CS].get());
 			shader_info[9].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[9].setPName("main");
+			shader_info[10].setModule(m_shader[Shader_Sky_MakeTexture2_CS].get());
+			shader_info[10].setStage(vk::ShaderStageFlagBits::eCompute);
+			shader_info[10].setPName("main");
 			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 			{
 				vk::ComputePipelineCreateInfo()
@@ -824,18 +877,22 @@ struct Sky
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[9])
 				.setLayout(m_pipeline_layout[PipelineLayout_Sky_CS].get()),
+				vk::ComputePipelineCreateInfo()
+				.setStage(shader_info[10])
+				.setLayout(m_pipeline_layout[PipelineLayout_Sky_CS].get()),
 			};
 			auto compute_pipeline = context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
 			m_pipeline[Pipeline_SkyReference_CS] = std::move(compute_pipeline[0]);
 			m_pipeline[Pipeline_Sky_Render_CS] = std::move(compute_pipeline[1]);
-			m_pipeline[Pipeline_Sky_CalcDensity_CS] = std::move(compute_pipeline[2]);
-			m_pipeline[Pipeline_Sky_MakeTexture_PartialX_CS] = std::move(compute_pipeline[3]);
-			m_pipeline[Pipeline_Sky_MakeTexture_PartialY_CS] = std::move(compute_pipeline[4]);
-			m_pipeline[Pipeline_Sky_MakeTexture_PartialZ_CS] = std::move(compute_pipeline[5]);
-			m_pipeline[Pipeline_SkyArise_CS] = std::move(compute_pipeline[6]);
-			m_pipeline[Pipeline_SkyArise_MakeTexture_CS] = std::move(compute_pipeline[7]);
-			m_pipeline[Pipeline_SkyAriseReference_CS] = std::move(compute_pipeline[8]);
-			m_pipeline[Pipeline_Sky_RenderUpsampling_CS] = std::move(compute_pipeline[9]);
+			m_pipeline[Pipeline_Sky_MakeTexture_PartialX_CS] = std::move(compute_pipeline[2]);
+			m_pipeline[Pipeline_Sky_MakeTexture_PartialY_CS] = std::move(compute_pipeline[3]);
+			m_pipeline[Pipeline_Sky_MakeTexture_PartialZ_CS] = std::move(compute_pipeline[4]);
+			m_pipeline[Pipeline_SkyArise_CS] = std::move(compute_pipeline[5]);
+			m_pipeline[Pipeline_SkyArise_MakeTexture_CS] = std::move(compute_pipeline[6]);
+			m_pipeline[Pipeline_SkyAriseReference_CS] = std::move(compute_pipeline[7]);
+			m_pipeline[Pipeline_Sky_RenderUpsampling_CS] = std::move(compute_pipeline[8]);
+			m_pipeline[Pipeline_Sky_Render2_CS] = std::move(compute_pipeline[9]);
+			m_pipeline[Pipeline_Sky_MakeTexture2_CS] = std::move(compute_pipeline[10]);
 		}
 
 
@@ -960,11 +1017,11 @@ struct Sky
 				auto num = app::calcDipatchGroups(tex_size, uvec3(64, 1, 1));
 				cmd.dispatch(num.x, num.y, num.z);
 			}
-			else 
+			else
 			{
 				static vec3 s_window;
 				uvec3 local_size[3] = { uvec3(64, 1, 1), uvec3(4, 16, 1), uvec3(1, 1, 64) };
-				uvec3 offset =(uvec3)glm::floor(window) % tex_size;
+				uvec3 offset = (uvec3)glm::floor(window) % tex_size;
 				uvec3 group[] =
 				{
 					app::calcDipatchGroups(uvec3(tex_size.x, tex_size.y, 1), uvec3(64, 1, 1)),
@@ -975,8 +1032,8 @@ struct Sky
 				{
 					if (floor(s_window[i]) != floor(window[i]))
 					{
-						cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Sky_MakeTexture_PartialX_CS+i].get());
-						cmd.dispatchBase(i==0?offset.x:0, i==1?offset.y:0, i==2?offset.z:0, group[i].x, group[i].y, group[i].z);
+						cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Sky_MakeTexture_PartialX_CS + i].get());
+						cmd.dispatchBase(i == 0 ? offset.x : 0, i == 1 ? offset.y : 0, i == 2 ? offset.z : 0, group[i].x, group[i].y, group[i].z);
 					}
 				}
 				s_window = window;
@@ -1004,6 +1061,73 @@ struct Sky
 			}
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Sky_Render_CS].get());
+			auto num = app::calcDipatchGroups(uvec3(512, 512, 1), uvec3(32, 32, 1));
+			cmd.dispatch(num.x, num.y, num.z);
+
+			{
+				_executeUpsampling(cmd, render_target);
+			}
+		}
+	}
+	void execute2(vk::CommandBuffer& cmd, const std::shared_ptr<RenderTarget>& render_target)
+	{
+		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
+
+		auto window = vec3(sGlobal::Order().getTotalTime()) * vec3(20.f, 0.f, 12.f);
+		{
+			vk::DescriptorSet descs[] =
+			{
+				render_target->m_descriptor.get(),
+				m_descriptor_set.get(),
+			};
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Sky_CS].get(), 0, array_length(descs), descs, 0, nullptr);
+
+			cmd.pushConstants<vec3>(m_pipeline_layout[PipelineLayout_Sky_CS].get(), vk::ShaderStageFlagBits::eCompute, 0, window);
+
+		}
+
+		// make texture
+		_label.insert("make cloud map");
+		{
+			{
+				std::array<vk::ImageMemoryBarrier, 1> image_barrier;
+				image_barrier[0].setImage(m_image_density2.get());
+				image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+				image_barrier[0].setNewLayout(vk::ImageLayout::eGeneral);
+				image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
+				image_barrier[0].setOldLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+				image_barrier[0].setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
+			}
+
+			uvec3 tex_size = uvec3(m_image_density_info.extent.width, m_image_density_info.extent.height, m_image_density_info.extent.depth);
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Sky_MakeTexture2_CS].get());
+			auto num = app::calcDipatchGroups(tex_size, uvec3(64, 1, 1));
+			cmd.dispatch(num.x, num.y, num.z);
+
+		}
+		// render_targetÇ…èëÇ≠
+		_label.insert("render cloud");
+		{
+			{
+				std::array<vk::ImageMemoryBarrier, 2> image_barrier;
+				image_barrier[0].setImage(m_image_render.get());
+				image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+				image_barrier[0].setOldLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+				image_barrier[0].setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
+				image_barrier[0].setNewLayout(vk::ImageLayout::eGeneral);
+				image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
+				image_barrier[1].setImage(m_image_density2.get());
+				image_barrier[1].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+				image_barrier[1].setOldLayout(vk::ImageLayout::eGeneral);
+				image_barrier[1].setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+				image_barrier[1].setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+				image_barrier[1].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
+			}
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Sky_Render2_CS].get());
 			auto num = app::calcDipatchGroups(uvec3(512, 512, 1), uvec3(32, 32, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 
@@ -1155,7 +1279,7 @@ int main()
 //				sky.execute_reference(cmd, app.m_window->getFrontBuffer());
 //				sky.execute_AriseReference(cmd, app.m_window->getFrontBuffer());
 //				sky.executeArise(cmd, app.m_window->getFrontBuffer());
-				sky.execute(cmd, app.m_window->getFrontBuffer());
+				sky.execute2(cmd, app.m_window->getFrontBuffer());
 				cmd.end();
 				cmds[cmd_sky] = cmd;
 			}
