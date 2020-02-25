@@ -776,7 +776,6 @@ struct Sky
 		// make texture
 		_label.insert("make cloud map");
 		{
-#if 1
 			{
 				std::array<vk::ImageMemoryBarrier, 1> image_barrier;
 				image_barrier[0].setImage(m_image_density.get());
@@ -819,46 +818,6 @@ struct Sky
 				}
 				s_window = window;
 			}
-#else
-			{
-				std::array<vk::BufferMemoryBarrier, 1> buffer_barrier = {
-					b_density.makeMemoryBarrier(vk::AccessFlagBits::eTransferRead, vk::AccessFlagBits::eShaderWrite),
-				};
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, { array_length(buffer_barrier), buffer_barrier.data() }, {});
-			}
-
-			{
-				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Sky_CalcDensity_CS].get());
-				auto tex_size = uvec3(m_image_density_info.extent.width / 16, m_image_density_info.extent.height, m_image_density_info.extent.depth);
-				auto num = app::calcDipatchGroups(tex_size, uvec3(32, 1, 2));
-				cmd.dispatch(num.x, num.y, num.z);
-			}
-
-			{
-				std::array<vk::BufferMemoryBarrier, 1> buffer_barrier = {
-					b_density.makeMemoryBarrier(vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eTransferRead),
-				};
-
-				std::array<vk::ImageMemoryBarrier, 1> image_barrier;
-				image_barrier[0].setImage(m_image_density.get());
-				image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-				image_barrier[0].setOldLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
-				image_barrier[0].setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
- 				image_barrier[0].setNewLayout(vk::ImageLayout::eTransferDstOptimal);
- 				image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eTransferWrite);
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, {}, { array_length(buffer_barrier), buffer_barrier.data() }, { array_length(image_barrier), image_barrier.data() });
-			}
-			
-			{
-				vk::BufferImageCopy copy;
-				copy.setImageSubresource(vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1));
-				copy.setImageOffset(vk::Offset3D(0, 0, 0));
-				copy.setImageExtent(m_image_density_info.extent);
-				copy.setBufferOffset(b_density.getInfo().offset);
-//				cmd.copyBufferToImage(b_density.getInfo().buffer, m_image_density.get(), vk::ImageLayout::eTransferDstOptimal, copy);
-			}
-
-#endif
 		}
 		// render_targetÇ…èëÇ≠
 		_label.insert("render cloud");
@@ -884,32 +843,37 @@ struct Sky
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Sky_Render_CS].get());
 			auto num = app::calcDipatchGroups(uvec3(512, 512, 1), uvec3(32, 32, 1));
 			cmd.dispatch(num.x, num.y, num.z);
-		}
-		{
+
 			{
-//				cmd.dispatchBase()
-				std::array<vk::ImageMemoryBarrier, 2> image_barrier;
-				image_barrier[0].setImage(render_target->m_image);
-				image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-				image_barrier[0].setNewLayout(vk::ImageLayout::eGeneral);
-				image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
-				image_barrier[1].setImage(m_image_render.get());
-				image_barrier[1].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-				image_barrier[1].setOldLayout(vk::ImageLayout::eGeneral);
-				image_barrier[1].setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
-				image_barrier[1].setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
-				image_barrier[1].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-
- 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
-//				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
+				_executeUpsampling(cmd, render_target);
 			}
-			
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Sky_RenderUpsampling_CS].get());
-
-			auto num = app::calcDipatchGroups(uvec3(1024, 1024, 1), uvec3(32, 32, 1));
-			cmd.dispatch(num.x, num.y, num.z);
 		}
 	}
+
+	void _executeUpsampling(vk::CommandBuffer &cmd, const std::shared_ptr<RenderTarget>& render_target)
+	{
+		{
+			std::array<vk::ImageMemoryBarrier, 2> image_barrier;
+			image_barrier[0].setImage(render_target->m_image);
+			image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+			image_barrier[0].setNewLayout(vk::ImageLayout::eGeneral);
+			image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
+			image_barrier[1].setImage(m_image_render.get());
+			image_barrier[1].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+			image_barrier[1].setOldLayout(vk::ImageLayout::eGeneral);
+			image_barrier[1].setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+			image_barrier[1].setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+			image_barrier[1].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
+		}
+
+		cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Sky_RenderUpsampling_CS].get());
+
+		auto num = app::calcDipatchGroups(uvec3(1024, 1024, 1), uvec3(32, 32, 1));
+		cmd.dispatch(num.x, num.y, num.z);
+	}
+
 	void executeArise(vk::CommandBuffer& cmd, const std::shared_ptr<RenderTarget>& render_target)
 	{
 		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
@@ -978,28 +942,7 @@ struct Sky
 			}
 
 			{
-
-				{
-
-					std::array<vk::ImageMemoryBarrier, 2> image_barrier;
-					image_barrier[0].setImage(render_target->m_image);
-					image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-					image_barrier[0].setNewLayout(vk::ImageLayout::eGeneral);
-					image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
-					image_barrier[1].setImage(m_image_render.get());
-					image_barrier[1].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-					image_barrier[1].setOldLayout(vk::ImageLayout::eGeneral);
-					image_barrier[1].setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
-					image_barrier[1].setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
-					image_barrier[1].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-
-					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
-				}
-
-				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Sky_RenderUpsampling_CS].get());
-
-				auto num = app::calcDipatchGroups(uvec3(1024, 1024, 1), uvec3(32, 32, 1));
-				cmd.dispatch(num.x, num.y, num.z);
+				_executeUpsampling(cmd, render_target);
 			}
 		}
 	}
@@ -1048,7 +991,8 @@ int main()
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0, "cmd_sky");
 //				sky.execute_reference(cmd, app.m_window->getFrontBuffer());
 //				sky.execute_AriseReference(cmd, app.m_window->getFrontBuffer());
-				sky.executeArise(cmd, app.m_window->getFrontBuffer());
+//				sky.executeArise(cmd, app.m_window->getFrontBuffer());
+				sky.execute(cmd, app.m_window->getFrontBuffer());
 				cmd.end();
 				cmds[cmd_sky] = cmd;
 			}

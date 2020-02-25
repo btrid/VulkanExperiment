@@ -85,9 +85,9 @@ vec4 fBM4(in vec3 pos, in int octaves)
 	vec4 value = vec4(0.);
 	for(int i = 0; i < octaves; i++)
 	{
-		pos *= lacunarity;
 		value = value*2. + noise4(pos);
 		total = total*2. + 1.;
+		pos = pos * lacunarity + constant.window*20.;
 	}
 
 	return value / total;
@@ -98,13 +98,13 @@ void main()
 #if 1
 	vec3 s = vec3(gl_GlobalInvocationID.xyz) + constant.window*20.;
 	float r = fBM(s * vec3(0.01) + vec3(97.15), 4);
-	float g = fBM(s * vec3(0.01) + vec3(51.71), 4);
+	float g = fBM(s * vec3(0.005) + vec3(51.71), 4);
 	float b = fBM(s * vec3(0.001) + vec3(57.79), 4);
-	float a = fBM((s + constant.window*vec3(2.2)) * vec3(0.01) + vec3(91.78), 4) * 1.;
+	float a = fBM(s * vec3(0.1)  + constant.window*1. + vec3(91.78), 4);
 
 	r = r *smoothstep(0.5, 0.55, r);
-	g = g *smoothstep(0., 0.75, g) * 0.75;
-	b = b *smoothstep(0., 0.75, b) * 0.25;
+	g = g *smoothstep(0., 0.75, g) * 0.85;
+	b = b *smoothstep(0., 0.75, b) * 0.15;
 	imageStore(i_arise_map, ivec2(gl_GlobalInvocationID.xy), uvec4(vec4(r, g, b, a)*255.));
 #else
 	vec4 v = fBM4(vec3(gl_GlobalInvocationID.xyz)*0.01 + constant.window, 4);
