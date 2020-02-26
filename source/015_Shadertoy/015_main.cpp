@@ -225,15 +225,15 @@ struct SkyNoise
 				vk::DescriptorSetLayout layouts[] = {
 					m_descriptor_set_layout.get(),
 				};
-				vk::PushConstantRange ranges[] = {
-					vk::PushConstantRange().setSize(12).setStageFlags(vk::ShaderStageFlagBits::eCompute),
-				};
+// 				vk::PushConstantRange ranges[] = {
+// 					vk::PushConstantRange().setSize(12).setStageFlags(vk::ShaderStageFlagBits::eCompute),
+// 				};
 
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
 				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 				pipeline_layout_info.setPSetLayouts(layouts);
-				pipeline_layout_info.setPushConstantRangeCount(array_length(ranges));
-				pipeline_layout_info.setPPushConstantRanges(ranges);
+// 				pipeline_layout_info.setPushConstantRangeCount(array_length(ranges));
+// 				pipeline_layout_info.setPPushConstantRanges(ranges);
 				m_pipeline_layout[PipelineLayout_WorleyNoise_CS] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 
 			}
@@ -279,14 +279,19 @@ struct SkyNoise
 		_label.insert("precompute");
 		{
 			{
-				std::array<vk::ImageMemoryBarrier, 1> image_barrier;
-				image_barrier[0].setImage(m_image_noise.get());
-				image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-				image_barrier[0].setOldLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
-				image_barrier[0].setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
-				image_barrier[0].setNewLayout(vk::ImageLayout::eGeneral);
-				image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
+				vk::BufferMemoryBarrier to_write[] = {
+					b_tile_counter.makeMemoryBarrier(vk::AccessFlagBits::eMemoryRead, vk::AccessFlagBits::eTransferWrite),
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer, {}, 0, nullptr, array_length(to_write), to_write, 0, nullptr);
+
+			}
+			cmd.fillBuffer(b_tile_counter.getInfo().buffer, b_tile_counter.getInfo().offset, b_tile_counter.getInfo().range, 0);
+			{
+				vk::BufferMemoryBarrier to_read[] = {
+					b_tile_counter.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eMemoryRead| vk::AccessFlagBits::eMemoryWrite),
+				};
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);
+
 			}
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_WorleyNoise_Precompute].get());
@@ -295,6 +300,25 @@ struct SkyNoise
 
 		_label.insert("compute");
 		{
+			{
+				vk::BufferMemoryBarrier to_read[] = 
+				{
+					b_tile_counter.makeMemoryBarrier(vk::AccessFlagBits::eMemoryWrite, vk::AccessFlagBits::eMemoryRead),
+				};
+
+				std::array<vk::ImageMemoryBarrier, 1> image_barrier;
+				image_barrier[0].setImage(m_image_noise.get());
+				image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+				image_barrier[0].setOldLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+				image_barrier[0].setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
+				image_barrier[0].setNewLayout(vk::ImageLayout::eGeneral);
+				image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {array_length(to_read), to_read }, { array_length(image_barrier), image_barrier.data() });
+			}
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_WorleyNoise_Compute].get());
+			cmd.dispatch(num.x, num.y, num.z);
+
 			{
 				std::array<vk::ImageMemoryBarrier, 1> image_barrier;
 				image_barrier[0].setImage(m_image_noise.get());
@@ -306,8 +330,6 @@ struct SkyNoise
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
 			}
 
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_WorleyNoise_Compute].get());
-			cmd.dispatch(num.x, num.y, num.z);
 		}
 	}
 
@@ -316,17 +338,20 @@ struct SkyNoise
 	{
 		Shader_WorleyNoise_Precompute,
 		Shader_WorleyNoise_Compute,
+//		Shader_WorleyNoise_Render,
 		Shader_Num,
 	};
 	enum PipelineLayout
 	{
 		PipelineLayout_WorleyNoise_CS,
+//		PipelineLayout_WorleyNoise_Render,
 		PipelineLayout_Num,
 	};
 	enum Pipeline
 	{
 		Pipeline_WorleyNoise_Precompute,
 		Pipeline_WorleyNoise_Compute,
+//		Pipeline_WorleyNoise_Render,
 		Pipeline_Num,
 	};
 
