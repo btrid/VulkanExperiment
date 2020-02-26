@@ -24,15 +24,14 @@ vec2 _wn_rand(in ivec2 co)
 	return fract(sin(s) * vec2(43758.5, 63527.7));
 }
 
-vec4 w_noise(in uvec2 invocation, in uvec2 reso)
+vec4 w_noise(in uvec2 invocation)
 {
 	vec4 value = vec4(0.);
 	vec2 pos = vec2(invocation) + 0.5;
 	for(int i = 0; i < 4; i++)
 	{
-//		ivec2 tile_num = ivec2(gl_WorkGroupSize.xy*gl_NumWorkGroups.xy)>>(i+4);
-		uvec2 tile_size = ivec2(1)<<(i+4);
-		uvec2 tile_id = invocation>>(i+4);
+		uvec2 tile_size = ivec2(32)>>i;
+		uvec2 tile_id = invocation/tile_size;
 		float _radius = float(tile_size.x);
 
 		for(int y = -1; y <= 1; y++)
