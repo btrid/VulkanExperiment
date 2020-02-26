@@ -1,0 +1,14 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_WORLEYNOISE 0
+#include "WorleyNoise.glsl"
+
+layout (local_size_x = TILE_SIZE, local_size_y = TILE_SIZE) in;
+
+
+void main()
+{
+	imageStore(i_worleynoise_map, ivec3(gl_GlobalInvocationID), uvec4(w_noise(gl_GlobalInvocationID.xy, gl_NumWorkGroups.xy*gl_WorkGroupSize.xy) * 255.));
+
+}

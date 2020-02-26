@@ -17,5 +17,38 @@ layout(set=USE_WORLEYNOISE, binding=22, std430) restrict buffer WN_TileDataBuffe
 
 #define TILE_SIZE 32
 #define radius  27.
+
+vec2 _wn_rand(in ivec2 co)
+{
+	vec2 s = vec2(dot(vec2(co)*9.63+53.81, vec2(12.98,78.23)), dot(vec2(co.yx)*54.53+37.33, vec2(91.87,47.73)));
+	return fract(sin(s) * vec2(43758.5, 63527.7));
+}
+
+vec4 w_noise(in uvec2 invocation, in uvec2 reso)
+{
+	vec4 value = vec4(0.);
+	vec2 pos = vec2(invocation) + 0.5;
+	for(int i = 0; i < 4; i++)
+	{
+//		ivec2 tile_num = ivec2(gl_WorkGroupSize.xy*gl_NumWorkGroups.xy)>>(i+4);
+		uvec2 tile_size = ivec2(1)<<(i+4);
+		uvec2 tile_id = invocation>>(i+4);
+		float _radius = float(tile_size.x);
+
+		for(int y = -1; y <= 1; y++)
+		{
+			for(int x = -1; x <= 1 ; x++)
+			{
+				ivec2 tid = ivec2(tile_id) + ivec2(x, y);
+				vec2 p = _wn_rand(tid)*tile_size + tid*tile_size;
+
+				float v = 1.-min(distance(pos.xy, p) / _radius, 1.);
+				value[i] = max(value[i], v);
+			}
+		}
+	}
+
+	return value;
+}
 #endif // USE_WORLEYNOISE
 #endif // WORLEYNOISE_HEADER_

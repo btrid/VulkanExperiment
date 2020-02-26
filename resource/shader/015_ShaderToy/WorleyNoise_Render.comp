@@ -15,6 +15,6 @@ void main()
 	ivec2 xy = ivec2(vec2(gl_GlobalInvocationID.xy) * (tex_size.xy/vec2(gl_NumWorkGroups.xy*gl_WorkGroupSize.xy)));
 	float v = float(imageLoad(i_worleynoise_map, ivec3(xy, 0)).x) / 255.;
 
-	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(v));
+	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(w_noise(gl_GlobalInvocationID.xy>>2, (gl_NumWorkGroups.xy*gl_WorkGroupSize.xy)>>2).x, 0., 0., 1.));
 
 }
