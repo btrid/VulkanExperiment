@@ -2,22 +2,9 @@
 #extension GL_GOOGLE_include_directive : require
 
 #define USE_WORLEYNOISE 0
-layout(set=USE_WORLEYNOISE, binding=0) uniform sampler3D s_worleynoise_map;
-layout(set=USE_WORLEYNOISE, binding=10, r8ui) uniform uimage3D i_worleynoise_map;
+#include "WorleyNoise.glsl"
 
-layout(set=USE_WORLEYNOISE, binding=20, std430) restrict buffer WN_SeedBuffer {
-	ivec3 b_seed[];
-};
-layout(set=USE_WORLEYNOISE, binding=21, std430) restrict buffer WN_TileCounter {
-	uint b_tile_counter[];
-};
-layout(set=USE_WORLEYNOISE, binding=22, std430) restrict buffer WN_TileDataBuffer {
-	uint b_tile_buffer[];
-};
-#define TILE_SIZE 32
-#define radius  9.
-
-layout (local_size_x = 1024) in;
+layout (local_size_x = 64) in;
 
 void main()
 {
@@ -26,7 +13,7 @@ void main()
 	vec2 bmax = bmin+vec2(TILE_SIZE);
 
 	// タイルベースカリング
-	for(uint i = 0; i < gl_LocalInvocationIndex; i+=gl_WorkGroupSize.x)
+	for(uint i = gl_LocalInvocationIndex; i < 64; i+=gl_WorkGroupSize.x)
 	{
 		vec2 p = vec3(b_seed[i]).xy;
 		vec2 delta = p-clamp(p, bmin, bmax);

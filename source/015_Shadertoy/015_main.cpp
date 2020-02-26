@@ -135,26 +135,26 @@ struct SkyNoise
 			}
 			{
 				auto tile_num = ivec3(m_image_noise_info.extent.width / TILE_SIZE, m_image_noise_info.extent.height / TILE_SIZE, m_image_noise_info.extent.depth / TILE_SIZE);
-				b_noise_seed = context->m_storage_memory.allocateMemory<ivec3>(tile_num.x*tile_num.y*tile_num.z);
+				b_noise_seed = context->m_storage_memory.allocateMemory<ivec4>(tile_num.x*tile_num.y*tile_num.z);
 				b_tile_counter = context->m_storage_memory.allocateMemory<uint32_t>(tile_num.x*tile_num.y*tile_num.z);
 				b_tile_buffer = context->m_storage_memory.allocateMemory<uint32_t>(tile_num.x*tile_num.y*tile_num.z * 27);
 
 				{
-					auto tile_sub = ivec3(TILE_SIZE, TILE_SIZE, TILE_SIZE);
-					std::vector<ivec3> data(tile_num.x*tile_num.y*tile_num.z);
+					auto tile_sub = ivec3(TILE_SIZE);
+					std::vector<ivec4> data(tile_num.x*tile_num.y*tile_num.z);
 					for (int z = 0; z < tile_num.z; z++)
 					{
 						for (int y = 0; y < tile_num.y; y++)
 						{
 							for (int x = 0; x < tile_num.x; x++)
 							{
-								data[x + y* tile_num.x + z* tile_num.x*tile_num.y] = ivec3(x, y, z) * tile_sub + ivec3(std::rand(), std::rand(), std::rand()) % tile_sub;
+								data[x + y*tile_num.x + z*tile_num.x*tile_num.y] = ivec4(ivec3(x, y, 0) * tile_sub + ivec3(std::rand(), std::rand(), 0) % tile_sub, 0);
 							}
 						}
 					}
 
 					auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-					cmd.updateBuffer<ivec3>(b_noise_seed.getInfo().buffer, b_noise_seed.getInfo().offset, data);
+					cmd.updateBuffer<ivec4>(b_noise_seed.getInfo().buffer, b_noise_seed.getInfo().offset, data);
 
 
 					vk::BufferMemoryBarrier to_read[] = {
@@ -212,6 +212,7 @@ struct SkyNoise
 			{
 				"WorleyNoise_Precompute.comp.spv",
 				"WorleyNoise_Compute.comp.spv",
+				"WorleyNoise_Render.comp.spv",
 			};
 			std::string path = btr::getResourceShaderPath();
 			for (size_t i = 0; i < array_length(name); i++) {
@@ -225,29 +226,36 @@ struct SkyNoise
 				vk::DescriptorSetLayout layouts[] = {
 					m_descriptor_set_layout.get(),
 				};
-// 				vk::PushConstantRange ranges[] = {
-// 					vk::PushConstantRange().setSize(12).setStageFlags(vk::ShaderStageFlagBits::eCompute),
-// 				};
-
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
 				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
 				pipeline_layout_info.setPSetLayouts(layouts);
-// 				pipeline_layout_info.setPushConstantRangeCount(array_length(ranges));
-// 				pipeline_layout_info.setPPushConstantRanges(ranges);
 				m_pipeline_layout[PipelineLayout_WorleyNoise_CS] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
+			}
 
+			{
+				vk::DescriptorSetLayout layouts[] = {
+					m_descriptor_set_layout.get(),
+					RenderTarget::s_descriptor_set_layout.get(),
+				};
+				vk::PipelineLayoutCreateInfo pipeline_layout_info;
+				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
+				pipeline_layout_info.setPSetLayouts(layouts);
+				m_pipeline_layout[PipelineLayout_WorleyNoise_Render] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 			}
 
 		}
 		// compute pipeline
 		{
-			std::array<vk::PipelineShaderStageCreateInfo, 2> shader_info;
+			std::array<vk::PipelineShaderStageCreateInfo, 3> shader_info;
 			shader_info[0].setModule(m_shader[Shader_WorleyNoise_Precompute].get());
 			shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[0].setPName("main");
 			shader_info[1].setModule(m_shader[Shader_WorleyNoise_Compute].get());
 			shader_info[1].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[1].setPName("main");
+			shader_info[2].setModule(m_shader[Shader_WorleyNoise_Render].get());
+			shader_info[2].setStage(vk::ShaderStageFlagBits::eCompute);
+			shader_info[2].setPName("main");
 			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 			{
 				vk::ComputePipelineCreateInfo()
@@ -256,10 +264,14 @@ struct SkyNoise
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[1])
 				.setLayout(m_pipeline_layout[PipelineLayout_WorleyNoise_CS].get()),
+				vk::ComputePipelineCreateInfo()
+				.setStage(shader_info[2])
+				.setLayout(m_pipeline_layout[PipelineLayout_WorleyNoise_Render].get()),
 			};
 			auto compute_pipeline = context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
 			m_pipeline[Pipeline_WorleyNoise_Precompute] = std::move(compute_pipeline[0]);
 			m_pipeline[Pipeline_WorleyNoise_Compute] = std::move(compute_pipeline[1]);
+			m_pipeline[Pipeline_WorleyNoise_Render] = std::move(compute_pipeline[2]);
 		}
 	}
 
@@ -333,25 +345,63 @@ struct SkyNoise
 		}
 	}
 
+	void execute_Render(const std::shared_ptr<btr::Context>& context, vk::CommandBuffer& cmd, const std::shared_ptr<RenderTarget>& render_target)
+	{
+		DebugLabel _label(cmd, context->m_dispach, __FUNCTION__);
 
+		{
+			vk::DescriptorSet descs[] =
+			{
+				m_descriptor_set.get(),
+				render_target->m_descriptor.get(),
+			};
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_WorleyNoise_Render].get(), 0, array_length(descs), descs, 0, nullptr);
+		}
+
+		{
+			{
+				std::array<vk::ImageMemoryBarrier, 2> image_barrier;
+				image_barrier[0].setImage(render_target->m_image);
+				image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+				image_barrier[0].setNewLayout(vk::ImageLayout::eGeneral);
+				image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
+				image_barrier[1].setImage(m_image_noise.get());
+				image_barrier[1].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+//				image_barrier[1].setOldLayout(vk::ImageLayout::eGeneral);
+//				image_barrier[1].setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+				image_barrier[1].setNewLayout(vk::ImageLayout::eGeneral);
+				image_barrier[1].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
+
+
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
+			}
+
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_WorleyNoise_Render].get());
+			auto num = app::calcDipatchGroups(uvec3(1024, 1024, 1), uvec3(32, 32, 1));
+			cmd.dispatch(num.x, num.y, num.z);
+		}
+
+	}
 	enum Shader
 	{
 		Shader_WorleyNoise_Precompute,
 		Shader_WorleyNoise_Compute,
-//		Shader_WorleyNoise_Render,
+		Shader_WorleyNoise_Render,
 		Shader_Num,
 	};
 	enum PipelineLayout
 	{
 		PipelineLayout_WorleyNoise_CS,
-//		PipelineLayout_WorleyNoise_Render,
+		PipelineLayout_WorleyNoise_Render,
 		PipelineLayout_Num,
 	};
 	enum Pipeline
 	{
 		Pipeline_WorleyNoise_Precompute,
 		Pipeline_WorleyNoise_Compute,
-//		Pipeline_WorleyNoise_Render,
+		Pipeline_WorleyNoise_Render,
 		Pipeline_Num,
 	};
 
@@ -370,7 +420,7 @@ struct SkyNoise
 	vk::UniqueDeviceMemory m_image_noise_memory;
 	vk::UniqueSampler m_image_noise_sampler;
 
-	btr::BufferMemoryEx<ivec3> b_noise_seed;
+	btr::BufferMemoryEx<ivec4> b_noise_seed;
 	btr::BufferMemoryEx<uint32_t> b_tile_counter;
 	btr::BufferMemoryEx<uint32_t> b_tile_buffer;
 };
@@ -1104,7 +1154,6 @@ struct Sky
 		_label.insert("render cloud");
 		{
 			{
-				//				cmd.dispatchBase()
 				std::array<vk::ImageMemoryBarrier, 1> image_barrier;
 				image_barrier[0].setImage(render_target->m_image);
 				image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
@@ -1431,7 +1480,8 @@ int main()
 //				sky.execute_reference(cmd, app.m_window->getFrontBuffer());
 //				sky.execute_AriseReference(cmd, app.m_window->getFrontBuffer());
 //				sky.executeArise(cmd, app.m_window->getFrontBuffer());
-				sky.execute2(cmd, app.m_window->getFrontBuffer());
+//				sky.execute2(cmd, app.m_window->getFrontBuffer());
+				sky.m_skynoise.execute_Render(context, cmd, app.m_window->getFrontBuffer());
 				cmd.end();
 				cmds[cmd_sky] = cmd;
 			}
