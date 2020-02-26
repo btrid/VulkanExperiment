@@ -1,0 +1,38 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_WORLEYNOISE 0
+layout(set=USE_WORLEYNOISE, binding=0) uniform sampler3D s_worleynoise_map;
+layout(set=USE_WORLEYNOISE, binding=10, r8ui) uniform uimage3D i_worleynoise_map;
+
+layout(set=USE_WORLEYNOISE, binding=20, std430) restrict buffer WN_SeedBuffer {
+	ivec3 b_seed[];
+};
+layout(set=USE_WORLEYNOISE, binding=21, std430) restrict buffer WN_TileCounter {
+	uint b_tile_counter[];
+};
+layout(set=USE_WORLEYNOISE, binding=22, std430) restrict buffer WN_TileDataBuffer {
+	uint b_tile_buffer[];
+};
+
+#define TILE_SIZE 32
+#define radius  9.
+layout (local_size_x = TILE_SIZE, local_size_y = TILE_SIZE) in;
+
+void main()
+{
+	uint tile_index = gl_WorkGroupID.x + gl_WorkGroupID.y*gl_NumWorkGroups.x;
+	uint tile_data_num = b_tile_counter[tile_index];
+	vec3 pos = vec3(gl_GlobalInvocationID) + 0.5;
+	float value = 0.;
+	for(uint i = 0; i < tile_data_num; i++)
+	{
+		vec3 p = vec3(b_tile_buffer[i + tile_index*27]);
+		float v = 1.-max(distance(pos, p) / radius, 1.);
+		value = max(value, v);
+	}
+
+	imageStore(i_worleynoise_map, ivec3(gl_GlobalInvocationID), uvec4(value * 255.));
+
+
+}

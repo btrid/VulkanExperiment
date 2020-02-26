@@ -33,6 +33,10 @@
 
 struct SkyNoise
 {
+	enum
+	{
+		TILE_SIZE = 32,
+	};
 	SkyNoise(const std::shared_ptr<btr::Context>& context)
 	{
 
@@ -42,13 +46,10 @@ struct SkyNoise
 			vk::DescriptorSetLayoutBinding binding[] =
 			{
 				vk::DescriptorSetLayoutBinding(0, vk::DescriptorType::eCombinedImageSampler, 1, stage),
-				vk::DescriptorSetLayoutBinding(1, vk::DescriptorType::eCombinedImageSampler, 1, stage),
-				vk::DescriptorSetLayoutBinding(2, vk::DescriptorType::eCombinedImageSampler, 1, stage),
-				vk::DescriptorSetLayoutBinding(3, vk::DescriptorType::eCombinedImageSampler, 1, stage),
 				vk::DescriptorSetLayoutBinding(10, vk::DescriptorType::eStorageImage, 1, stage),
-				vk::DescriptorSetLayoutBinding(11, vk::DescriptorType::eStorageImage, 1, stage),
-				vk::DescriptorSetLayoutBinding(12, vk::DescriptorType::eStorageImage, 1, stage),
-				vk::DescriptorSetLayoutBinding(13, vk::DescriptorType::eStorageImage, 1, stage),
+				vk::DescriptorSetLayoutBinding(20, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(21, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(22, vk::DescriptorType::eStorageBuffer, 1, stage),
 			};
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 			desc_layout_info.setBindingCount(array_length(binding));
@@ -70,132 +71,151 @@ struct SkyNoise
 			}
 
  			{
-// 				vk::ImageCreateInfo image_info;
-// 				image_info.setExtent(vk::Extent3D(256, 16 * 1, 256));
-// 				image_info.setArrayLayers(1);
-// 				image_info.setFormat(vk::Format::eR8Unorm);
-// 				image_info.setImageType(vk::ImageType::e3D);
-// 				image_info.setInitialLayout(vk::ImageLayout::eUndefined);
-// 				image_info.setMipLevels(1);
-// 				image_info.setSamples(vk::SampleCountFlagBits::e1);
-// 				image_info.setSharingMode(vk::SharingMode::eExclusive);
-// 				image_info.setTiling(vk::ImageTiling::eOptimal);
-// 				image_info.setUsage(vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eTransferDst);
-// 				image_info.setFlags(vk::ImageCreateFlagBits::eMutableFormat);
-// 
-// 				m_image_density = context->m_device.createImageUnique(image_info);
-// 				m_image_density_info = image_info;
-// 
-// 				vk::MemoryRequirements memory_request = context->m_device.getImageMemoryRequirements(m_image_density.get());
-// 				vk::MemoryAllocateInfo memory_alloc_info;
-// 				memory_alloc_info.allocationSize = memory_request.size;
-// 				memory_alloc_info.memoryTypeIndex = Helper::getMemoryTypeIndex(context->m_physical_device, memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
-// 
-// 				m_image_density_memory = context->m_device.allocateMemoryUnique(memory_alloc_info);
-// 				context->m_device.bindImageMemory(m_image_density.get(), m_image_density_memory.get(), 0);
-// 
-// 				vk::ImageViewCreateInfo view_info;
-// 				view_info.setFormat(image_info.format);
-// 				view_info.setImage(m_image_density.get());
-// 				view_info.subresourceRange.setBaseArrayLayer(0);
-// 				view_info.subresourceRange.setLayerCount(1);
-// 				view_info.subresourceRange.setBaseMipLevel(0);
-// 				view_info.subresourceRange.setLevelCount(1);
-// 				view_info.subresourceRange.setAspectMask(vk::ImageAspectFlagBits::eColor);
-// 				view_info.setViewType(vk::ImageViewType::e3D);
-// 				view_info.components.setR(vk::ComponentSwizzle::eR).setG(vk::ComponentSwizzle::eIdentity).setB(vk::ComponentSwizzle::eIdentity).setA(vk::ComponentSwizzle::eIdentity);
-// 				m_image_density_view = context->m_device.createImageViewUnique(view_info);
-// 
-// 				view_info.setFormat(vk::Format::eR8Uint);
-// 				m_image_density_write_view = context->m_device.createImageViewUnique(view_info);
-// 
-// 				vk::SamplerCreateInfo sampler_info;
-// 				sampler_info.setAddressModeU(vk::SamplerAddressMode::eClampToBorder);
-// 				sampler_info.setAddressModeV(vk::SamplerAddressMode::eClampToBorder);
-// 				sampler_info.setAddressModeW(vk::SamplerAddressMode::eClampToBorder);
-// 				sampler_info.setAddressModeU(vk::SamplerAddressMode::eRepeat);
-// 				sampler_info.setAddressModeV(vk::SamplerAddressMode::eRepeat);
-// 				sampler_info.setAddressModeW(vk::SamplerAddressMode::eRepeat);
-// 				sampler_info.setBorderColor(vk::BorderColor::eFloatOpaqueWhite);
-// 				sampler_info.setMagFilter(vk::Filter::eLinear);
-// 				sampler_info.setMinFilter(vk::Filter::eLinear);
-// 				sampler_info.setMinLod(0.f);
-// 				sampler_info.setMaxLod(0.f);
-// 				sampler_info.setMipLodBias(0.f);
-// 				sampler_info.setMipmapMode(vk::SamplerMipmapMode::eLinear);
-// 				sampler_info.setUnnormalizedCoordinates(false);
-// 				m_image_density_sampler = context->m_device.createSamplerUnique(sampler_info);
-// 
-// 
-// 				vk::ImageMemoryBarrier to_make_barrier;
-// 				to_make_barrier.image = m_image_density.get();
-// 				to_make_barrier.oldLayout = vk::ImageLayout::eUndefined;
-// 				to_make_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
-// 				to_make_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-// 				to_make_barrier.subresourceRange = vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
-// 				auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
-// 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eAllCommands, vk::DependencyFlags(), {}, {}, { to_make_barrier });
-// 
+				vk::ImageCreateInfo image_info;
+				image_info.setExtent(vk::Extent3D(128, 128, 128));
+				image_info.setArrayLayers(1);
+				image_info.setFormat(vk::Format::eR8Unorm);
+				image_info.setImageType(vk::ImageType::e3D);
+				image_info.setInitialLayout(vk::ImageLayout::eUndefined);
+				image_info.setMipLevels(1);
+				image_info.setSamples(vk::SampleCountFlagBits::e1);
+				image_info.setSharingMode(vk::SharingMode::eExclusive);
+				image_info.setTiling(vk::ImageTiling::eOptimal);
+				image_info.setUsage(vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage);
+				image_info.setFlags(vk::ImageCreateFlagBits::eMutableFormat);
+
+				m_image_noise = context->m_device.createImageUnique(image_info);
+				m_image_noise_info = image_info;
+
+				vk::MemoryRequirements memory_request = context->m_device.getImageMemoryRequirements(m_image_noise.get());
+				vk::MemoryAllocateInfo memory_alloc_info;
+				memory_alloc_info.allocationSize = memory_request.size;
+				memory_alloc_info.memoryTypeIndex = Helper::getMemoryTypeIndex(context->m_physical_device, memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+				m_image_noise_memory = context->m_device.allocateMemoryUnique(memory_alloc_info);
+				context->m_device.bindImageMemory(m_image_noise.get(), m_image_noise_memory.get(), 0);
+
+				vk::ImageViewCreateInfo view_info;
+				view_info.setFormat(image_info.format);
+				view_info.setImage(m_image_noise.get());
+				view_info.subresourceRange.setBaseArrayLayer(0);
+				view_info.subresourceRange.setLayerCount(1);
+				view_info.subresourceRange.setBaseMipLevel(0);
+				view_info.subresourceRange.setLevelCount(1);
+				view_info.subresourceRange.setAspectMask(vk::ImageAspectFlagBits::eColor);
+				view_info.setViewType(vk::ImageViewType::e3D);
+				view_info.components.setR(vk::ComponentSwizzle::eR).setG(vk::ComponentSwizzle::eIdentity).setB(vk::ComponentSwizzle::eIdentity).setA(vk::ComponentSwizzle::eIdentity);
+				m_image_noise_view = context->m_device.createImageViewUnique(view_info);
+
+				view_info.setFormat(vk::Format::eR8Uint);
+				m_image_noise_write_view = context->m_device.createImageViewUnique(view_info);
+
+				vk::SamplerCreateInfo sampler_info;
+				sampler_info.setAddressModeU(vk::SamplerAddressMode::eRepeat);
+				sampler_info.setAddressModeV(vk::SamplerAddressMode::eRepeat);
+				sampler_info.setAddressModeW(vk::SamplerAddressMode::eRepeat);
+				sampler_info.setMagFilter(vk::Filter::eLinear);
+				sampler_info.setMinFilter(vk::Filter::eLinear);
+				sampler_info.setMinLod(0.f);
+				sampler_info.setMaxLod(0.f);
+				sampler_info.setMipLodBias(0.f);
+				sampler_info.setMipmapMode(vk::SamplerMipmapMode::eLinear);
+				sampler_info.setUnnormalizedCoordinates(false);
+				m_image_noise_sampler = context->m_device.createSamplerUnique(sampler_info);
+
+
+				vk::ImageMemoryBarrier to_make_barrier;
+				to_make_barrier.image = m_image_noise.get();
+				to_make_barrier.oldLayout = vk::ImageLayout::eUndefined;
+				to_make_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+				to_make_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+				to_make_barrier.subresourceRange = vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
+				auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eAllCommands, vk::DependencyFlags(), {}, {}, { to_make_barrier });
+			}
+			{
+				auto tile_num = ivec3(m_image_noise_info.extent.width / TILE_SIZE, m_image_noise_info.extent.height / TILE_SIZE, m_image_noise_info.extent.depth / TILE_SIZE);
+				b_noise_seed = context->m_storage_memory.allocateMemory<ivec3>(tile_num.x*tile_num.y*tile_num.z);
+				b_tile_counter = context->m_storage_memory.allocateMemory<uint32_t>(tile_num.x*tile_num.y*tile_num.z);
+				b_tile_buffer = context->m_storage_memory.allocateMemory<uint32_t>(tile_num.x*tile_num.y*tile_num.z * 27);
+
+				{
+					auto tile_sub = ivec3(TILE_SIZE, TILE_SIZE, TILE_SIZE);
+					std::vector<ivec3> data(tile_num.x*tile_num.y*tile_num.z);
+					for (int z = 0; z < tile_num.z; z++)
+					{
+						for (int y = 0; y < tile_num.y; y++)
+						{
+							for (int x = 0; x < tile_num.x; x++)
+							{
+								data[x + y* tile_num.x + z* tile_num.x*tile_num.y] = ivec3(x, y, z) * tile_sub + ivec3(std::rand(), std::rand(), std::rand()) % tile_sub;
+							}
+						}
+					}
+
+					auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
+					cmd.updateBuffer<ivec3>(b_noise_seed.getInfo().buffer, b_noise_seed.getInfo().offset, data);
+
+
+					vk::BufferMemoryBarrier to_read[] = {
+						b_noise_seed.makeMemoryBarrier(vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead),
+					};
+					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader, {}, 0, nullptr, array_length(to_read), to_read, 0, nullptr);
+
+				}
+
 			}
 
 
-// 			vk::DescriptorImageInfo samplers[] = {
-// 				vk::DescriptorImageInfo(m_image_density_sampler.get(), m_image_density_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal),
-// 				vk::DescriptorImageInfo(m_image_arise_sampler.get(), m_image_arise_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal),
-// 				vk::DescriptorImageInfo(m_image_shadow_sampler.get(), m_image_shadow_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal),
-// 				vk::DescriptorImageInfo(m_image_render_sampler.get(), m_image_render_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal),
-// 			};
-// 			vk::DescriptorImageInfo images[] = {
-// 				vk::DescriptorImageInfo().setImageView(m_image_density_write_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
-// 				vk::DescriptorImageInfo().setImageView(m_image_arise_write_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
-// 				vk::DescriptorImageInfo().setImageView(m_image_shadow_write_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
-// 				vk::DescriptorImageInfo().setImageView(m_image_render_write_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
-// 			};
-// 
-// 			vk::WriteDescriptorSet write[] =
-// 			{
-// 				vk::WriteDescriptorSet()
-// 				.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-// 				.setDescriptorCount(array_length(samplers))
-// 				.setPImageInfo(samplers)
-// 				.setDstBinding(0)
-// 				.setDstArrayElement(0)
-// 				.setDstSet(m_descriptor_set.get()),
-// 				vk::WriteDescriptorSet()
-// 				.setDescriptorType(vk::DescriptorType::eStorageImage)
-// 				.setDescriptorCount(array_length(images))
-// 				.setPImageInfo(images)
-// 				.setDstBinding(10)
-// 				.setDstArrayElement(0)
-// 				.setDstSet(m_descriptor_set.get()),
-// 				vk::WriteDescriptorSet()
-// 				.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-// 				.setDescriptorCount(array_length(uniforms))
-// 				.setPBufferInfo(uniforms)
-// 				.setDstBinding(20)
-// 				.setDstArrayElement(0)
-// 				.setDstSet(m_descriptor_set.get()),
-// 				vk::WriteDescriptorSet()
-// 				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
-// 				.setDescriptorCount(array_length(buffers))
-// 				.setPBufferInfo(buffers)
-// 				.setDstBinding(30)
-// 				.setDstArrayElement(0)
-// 				.setDstSet(m_descriptor_set.get()),
-// 			};
-//			context->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
+			vk::DescriptorImageInfo samplers[] = {
+				vk::DescriptorImageInfo(m_image_noise_sampler.get(), m_image_noise_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal),
+ 			};
+			vk::DescriptorImageInfo images[] = {
+				vk::DescriptorImageInfo().setImageView(m_image_noise_write_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
+ 			};
+			vk::DescriptorBufferInfo buffers[] = {
+				b_noise_seed.getInfo(),
+				b_tile_counter.getInfo(),
+				b_tile_buffer.getInfo(),
+			};
+
+			vk::WriteDescriptorSet write[] =
+			{
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+				.setDescriptorCount(array_length(samplers))
+				.setPImageInfo(samplers)
+				.setDstBinding(0)
+				.setDstArrayElement(0)
+				.setDstSet(m_descriptor_set.get()),
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eStorageImage)
+				.setDescriptorCount(array_length(images))
+				.setPImageInfo(images)
+				.setDstBinding(10)
+				.setDstArrayElement(0)
+				.setDstSet(m_descriptor_set.get()),
+				vk::WriteDescriptorSet()
+				.setDescriptorType(vk::DescriptorType::eStorageBuffer)
+				.setDescriptorCount(array_length(buffers))
+				.setPBufferInfo(buffers)
+				.setDstBinding(20)
+				.setDstArrayElement(0)
+				.setDstSet(m_descriptor_set.get()),
+ 			};
+			context->m_device.updateDescriptorSets(array_length(write), write, 0, nullptr);
 		}
 
 		// shader
 		{
 			const char* name[] =
 			{
-				"WorleyNoise.vert.spv",
-				"WorleyNoise.frag.spv",
+				"WorleyNoise_Precompute.comp.spv",
+				"WorleyNoise_Compute.comp.spv",
 			};
 			std::string path = btr::getResourceShaderPath();
 			for (size_t i = 0; i < array_length(name); i++) {
-//				shader[i] = loadShaderUnique(context->m_device, path + name[i]);
+				m_shader[i] = loadShaderUnique(context->m_device, path + name[i]);
 			}
 		}
 
@@ -203,7 +223,6 @@ struct SkyNoise
 		{
 			{
 				vk::DescriptorSetLayout layouts[] = {
-					RenderTarget::s_descriptor_set_layout.get(),
 					m_descriptor_set_layout.get(),
 				};
 				vk::PushConstantRange ranges[] = {
@@ -215,19 +234,120 @@ struct SkyNoise
 				pipeline_layout_info.setPSetLayouts(layouts);
 				pipeline_layout_info.setPushConstantRangeCount(array_length(ranges));
 				pipeline_layout_info.setPPushConstantRanges(ranges);
-//				m_pipeline_layout[PipelineLayout_Sky_CS] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
+				m_pipeline_layout[PipelineLayout_WorleyNoise_CS] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 
 			}
 
 		}
-
+		// compute pipeline
+		{
+			std::array<vk::PipelineShaderStageCreateInfo, 2> shader_info;
+			shader_info[0].setModule(m_shader[Shader_WorleyNoise_Precompute].get());
+			shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
+			shader_info[0].setPName("main");
+			shader_info[1].setModule(m_shader[Shader_WorleyNoise_Compute].get());
+			shader_info[1].setStage(vk::ShaderStageFlagBits::eCompute);
+			shader_info[1].setPName("main");
+			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
+			{
+				vk::ComputePipelineCreateInfo()
+				.setStage(shader_info[0])
+				.setLayout(m_pipeline_layout[PipelineLayout_WorleyNoise_CS].get()),
+				vk::ComputePipelineCreateInfo()
+				.setStage(shader_info[1])
+				.setLayout(m_pipeline_layout[PipelineLayout_WorleyNoise_CS].get()),
+			};
+			auto compute_pipeline = context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
+			m_pipeline[Pipeline_WorleyNoise_Precompute] = std::move(compute_pipeline[0]);
+			m_pipeline[Pipeline_WorleyNoise_Compute] = std::move(compute_pipeline[1]);
+		}
 	}
+
+	void execute(const std::shared_ptr<btr::Context>& context, vk::CommandBuffer& cmd)
+	{
+		DebugLabel _label(cmd, context->m_dispach, __FUNCTION__);
+
+		{
+			vk::DescriptorSet descs[] =
+			{
+				m_descriptor_set.get(),
+			};
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_WorleyNoise_CS].get(), 0, array_length(descs), descs, 0, nullptr);
+		}
+		uvec3 num = uvec3(m_image_noise_info.extent.width, m_image_noise_info.extent.height, m_image_noise_info.extent.depth) / uvec3(TILE_SIZE);
+
+		_label.insert("precompute");
+		{
+			{
+				std::array<vk::ImageMemoryBarrier, 1> image_barrier;
+				image_barrier[0].setImage(m_image_noise.get());
+				image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+				image_barrier[0].setOldLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+				image_barrier[0].setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
+				image_barrier[0].setNewLayout(vk::ImageLayout::eGeneral);
+				image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
+			}
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_WorleyNoise_Precompute].get());
+			cmd.dispatch(num.x, num.y, 1);
+		}
+
+		_label.insert("compute");
+		{
+			{
+				std::array<vk::ImageMemoryBarrier, 1> image_barrier;
+				image_barrier[0].setImage(m_image_noise.get());
+				image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+				image_barrier[0].setOldLayout(vk::ImageLayout::eGeneral);
+				image_barrier[0].setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
+				image_barrier[0].setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+				image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
+				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
+			}
+
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_WorleyNoise_Compute].get());
+			cmd.dispatch(num.x, num.y, num.z);
+		}
+	}
+
+
+	enum Shader
+	{
+		Shader_WorleyNoise_Precompute,
+		Shader_WorleyNoise_Compute,
+		Shader_Num,
+	};
+	enum PipelineLayout
+	{
+		PipelineLayout_WorleyNoise_CS,
+		PipelineLayout_Num,
+	};
+	enum Pipeline
+	{
+		Pipeline_WorleyNoise_Precompute,
+		Pipeline_WorleyNoise_Compute,
+		Pipeline_Num,
+	};
+
+	std::array<vk::UniqueShaderModule, Shader_Num> m_shader;
+	std::array<vk::UniquePipelineLayout, PipelineLayout_Num> m_pipeline_layout;
+	std::array<vk::UniquePipeline, Pipeline_Num> m_pipeline;
+
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
 
-	vk::UniquePipelineLayout m_pipeline_layout;
-	vk::UniquePipeline m_pipeline;
 
+	vk::ImageCreateInfo m_image_noise_info;
+	vk::UniqueImage m_image_noise;
+	vk::UniqueImageView m_image_noise_view;
+	vk::UniqueImageView m_image_noise_write_view;
+	vk::UniqueDeviceMemory m_image_noise_memory;
+	vk::UniqueSampler m_image_noise_sampler;
+
+	btr::BufferMemoryEx<ivec3> b_noise_seed;
+	btr::BufferMemoryEx<uint32_t> b_tile_counter;
+	btr::BufferMemoryEx<uint32_t> b_tile_buffer;
 };
 struct Sky 
 {
@@ -316,7 +436,9 @@ struct Sky
 	vk::UniqueDeviceMemory m_image_render_memory;
 	vk::UniqueSampler m_image_render_sampler;
 
+	SkyNoise m_skynoise;
 	Sky(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target)
+		: m_skynoise(context)
 	{
 		m_context = context;
 		// descriptor layout
@@ -1099,9 +1221,9 @@ struct Sky
 				image_barrier[0].setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
 			}
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Sky_MakeTexture2_CS].get());
 
 			uvec3 tex_size = uvec3(m_image_density_info.extent.width, m_image_density_info.extent.height, m_image_density_info.extent.depth);
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Sky_MakeTexture2_CS].get());
 			auto num = app::calcDipatchGroups(tex_size, uvec3(64, 1, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 
@@ -1259,6 +1381,11 @@ int main()
 	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
 	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchain());
 	Sky sky(context, app.m_window->getFrontBuffer());
+
+	{
+		auto cmd = context->m_cmd_pool->allocCmdTempolary(0, "cmd_skynoise");
+		sky.m_skynoise.execute(context, cmd);
+	}
 	app.setup();
 	while (true)
 	{
