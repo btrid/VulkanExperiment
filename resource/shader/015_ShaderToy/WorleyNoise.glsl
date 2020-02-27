@@ -18,9 +18,9 @@ layout(set=USE_WORLEYNOISE, binding=22, std430) restrict buffer WN_TileDataBuffe
 #define TILE_SIZE 32
 #define radius  27.
 
-vec2 _wn_rand(in ivec2 co)
+vec2 _wn_rand(in ivec2 co, in int i)
 {
-	vec2 s = vec2(dot(vec2(co)*9.63+53.81, vec2(12.98,78.23)), dot(vec2(co.yx)*54.53+37.33, vec2(91.87,47.73)));
+	vec2 s = vec2(dot(vec3(co, i)*9.63+53.81, vec3(12.98,78.23, 15.61)), dot(vec3(co.yx, i)*54.53+37.33, vec3(91.87,47.73, 13)));
 	return fract(sin(s) * vec2(43758.5, 63527.7));
 }
 
@@ -34,15 +34,19 @@ vec4 w_noise(in uvec2 invocation)
 		uvec2 tile_id = invocation/tile_size;
 		float _radius = float(tile_size.x);
 
-		for(int y = -1; y <= 1; y++)
+		for(int y = -2; y <= 1; y++)
 		{
-			for(int x = -1; x <= 1 ; x++)
+			for(int x = -2; x <= 1; x++)
 			{
 				ivec2 tid = ivec2(tile_id) + ivec2(x, y);
-				vec2 p = _wn_rand(tid)*tile_size + tid*tile_size;
+				for(int n = 0; n < 5; n++)
+				{
+					vec2 p = _wn_rand(tid, n)*tile_size + tid*tile_size;
 
-				float v = 1.-min(distance(pos.xy, p) / _radius, 1.);
-				value[i] = max(value[i], v);
+					float v = 1.-min(distance(pos.xy, p) / _radius, 1.);
+					value[i] = max(value[i], v);
+
+				}
 			}
 		}
 	}
