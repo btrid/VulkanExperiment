@@ -4,21 +4,11 @@
 #define USE_WORLEYNOISE 0
 #include "WorleyNoise.glsl"
 
-layout (local_size_x = TILE_SIZE, local_size_y = TILE_SIZE) in;
+layout (local_size_x = 32, local_size_y = 32) in;
+
 
 void main()
 {
-	uint tile_index = gl_WorkGroupID.x + gl_WorkGroupID.y*gl_NumWorkGroups.x;
-	uint tile_data_num = b_tile_counter[tile_index];
-	vec3 pos = vec3(gl_GlobalInvocationID) + 0.5;
-	float value = 0.;
-	for(uint i = 0; i < tile_data_num; i++)
-	{
-		vec3 p = vec3(b_seed[b_tile_buffer[i + tile_index*27]]);
-		float v = 1.-min(distance(pos, p) / radius, 1.);
-		value = max(value, v);
-	}
-
-	imageStore(i_worleynoise_map, ivec3(gl_GlobalInvocationID), uvec4(value * 255.));
+	imageStore(i_worleynoise_map, ivec3(gl_GlobalInvocationID), uvec4(worley_noise(gl_GlobalInvocationID.xy) * 255.));
 
 }

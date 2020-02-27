@@ -23,9 +23,7 @@ rem %exe% %include% %option% %output%/Sky_CalcDensity.comp.spv Sky_CalcDensity.c
 %exe% %include% %option% %output%/SkyArise.comp.spv SkyArise.comp
 %exe% %include% %option% %output%/SkyArise_MakeTexture.comp.spv SkyArise_MakeTexture.comp
 
-%exe% %include% %option% %output%/WorleyNoise_Precompute.comp.spv WorleyNoise_Precompute.comp
 %exe% %include% %option% %output%/WorleyNoise_Compute.comp.spv WorleyNoise_Compute.comp
-%exe% %include% %option% %output%/WorleyNoise_Compute2.comp.spv WorleyNoise_Compute2.comp
 %exe% %include% %option% %output%/WorleyNoise_Render.comp.spv WorleyNoise_Render.comp
 
 rem %exe% %include% %option% %output%/SkyWithTexture.comp.spv Sky.comp
