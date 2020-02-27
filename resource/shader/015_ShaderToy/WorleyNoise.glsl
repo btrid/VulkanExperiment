@@ -24,7 +24,7 @@ vec2 _wn_rand(in ivec2 co, in int i)
 	return fract(sin(s) * vec2(43758.5, 63527.7));
 }
 
-vec4 w_noise(in uvec2 invocation)
+vec4 worley_noise(in uvec2 invocation)
 {
 	vec4 value = vec4(0.);
 	vec2 pos = vec2(invocation) + 0.5;
