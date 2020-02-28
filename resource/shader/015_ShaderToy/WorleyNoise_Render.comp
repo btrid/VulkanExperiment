@@ -11,13 +11,13 @@ layout (local_size_x = 32, local_size_y = 32) in;
 
 void main()
 {
-//	vec3 tex_size = vec3(imageSize(i_worleynoise_map));
-//	ivec2 xy = ivec2(vec2(gl_GlobalInvocationID.xy) * (tex_size.xy/vec2(gl_NumWorkGroups.xy*gl_WorkGroupSize.xy)));
-//	float v = float(imageLoad(i_worleynoise_map, ivec3(xy, 0)).x) / 255.;
-//	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(v, 0., 0., 1.));
-
-	float v = worley_noise(uvec3(gl_GlobalInvocationID.xy>>2, 10)).x;
-	v = smoothstep(0.8, 1., v);
+	vec3 tex_size = vec3(imageSize(i_worleynoise_map));
+	ivec2 xy = ivec2(vec2(gl_GlobalInvocationID.xy) * (tex_size.xy/vec2(gl_NumWorkGroups.xy*gl_WorkGroupSize.xy)));
+	float v = float(imageLoad(i_worleynoise_map, ivec3(xy, 0)).x) / 255.;
 	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(v, 0., 0., 1.));
+
+//	float v = worley_noise(uvec3(gl_GlobalInvocationID.xy>>2, 10), 0).x;
+//	v = smoothstep(0.8, 1., v);
+//	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(v, 0., 0., 1.));
 
 }

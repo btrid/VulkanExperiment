@@ -9,6 +9,11 @@ layout (local_size_x = 32, local_size_y = 32) in;
 
 void main()
 {
-	imageStore(i_worleynoise_map, ivec3(gl_GlobalInvocationID), uvec4(worley_noise(gl_GlobalInvocationID.xyz) * 255.));
+	vec4 v;
+	v[0] = worley_noise(gl_GlobalInvocationID.xyz+ 144, 0);
+	v[1] = worley_noise(gl_GlobalInvocationID.xyz+ 291, 1);
+	v[2] = worley_noise(gl_GlobalInvocationID.xyz+ 401, 2);
+	v[3] = worley_noise(gl_GlobalInvocationID.xyz+ 583, 3);
+	imageStore(i_worleynoise_map, ivec3(gl_GlobalInvocationID), uvec4(v* 255.));
 
 }
