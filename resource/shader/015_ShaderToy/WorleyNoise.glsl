@@ -3,7 +3,7 @@
 
 #ifdef USE_WORLEYNOISE
 layout(set=USE_WORLEYNOISE, binding=0) uniform sampler3D s_worleynoise_map;
-layout(set=USE_WORLEYNOISE, binding=10, r8ui) uniform uimage3D i_worleynoise_map;
+layout(set=USE_WORLEYNOISE, binding=10, rgba8ui) uniform uimage3D i_worleynoise_map;
 
 
 vec3 _wn_rand(in ivec4 co)

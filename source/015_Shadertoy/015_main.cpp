@@ -71,7 +71,7 @@ struct SkyNoise
 				vk::ImageCreateInfo image_info;
 				image_info.setExtent(vk::Extent3D(128, 128, 128));
 				image_info.setArrayLayers(1);
-				image_info.setFormat(vk::Format::eR8Unorm);
+				image_info.setFormat(vk::Format::eR8G8B8A8Unorm);
 				image_info.setImageType(vk::ImageType::e3D);
 				image_info.setInitialLayout(vk::ImageLayout::eUndefined);
 				image_info.setMipLevels(1);
@@ -101,10 +101,10 @@ struct SkyNoise
 				view_info.subresourceRange.setLevelCount(1);
 				view_info.subresourceRange.setAspectMask(vk::ImageAspectFlagBits::eColor);
 				view_info.setViewType(vk::ImageViewType::e3D);
-				view_info.components.setR(vk::ComponentSwizzle::eR).setG(vk::ComponentSwizzle::eIdentity).setB(vk::ComponentSwizzle::eIdentity).setA(vk::ComponentSwizzle::eIdentity);
+				view_info.components.setR(vk::ComponentSwizzle::eR).setG(vk::ComponentSwizzle::eG).setB(vk::ComponentSwizzle::eB).setA(vk::ComponentSwizzle::eA);
 				m_image_noise_view = context->m_device.createImageViewUnique(view_info);
 
-				view_info.setFormat(vk::Format::eR8Uint);
+				view_info.setFormat(vk::Format::eR8G8B8A8Uint);
 				m_image_noise_write_view = context->m_device.createImageViewUnique(view_info);
 
 				vk::SamplerCreateInfo sampler_info;

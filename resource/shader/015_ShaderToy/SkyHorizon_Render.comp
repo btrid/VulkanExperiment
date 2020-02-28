@@ -37,7 +37,7 @@ float cloud_density(in vec3 pos)
 
 	float density = dot(texture(s_worleynoise_map, pos), vec4(8, 4, 2, 1)) / 15.;
 //	float density = dot(texture(s_worleynoise_map, pos), vec4(1, 1, 1, 1)) / 4.;
-	return density * smoothstep(0.4, 0.45, density);
+	return density * smoothstep(0.6, 0.65, density);
 
 //	return density;
 }
