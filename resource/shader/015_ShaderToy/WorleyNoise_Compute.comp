@@ -10,10 +10,10 @@ layout (local_size_x = 32, local_size_y = 32) in;
 void main()
 {
 	vec4 v;
-	v[0] = worley_noise(gl_GlobalInvocationID.xyz+ 144, 0) + value_noise(gl_GlobalInvocationID.xyz*8+41);
-	v[1] = worley_noise(gl_GlobalInvocationID.xyz+ 291, 1) + value_noise(gl_GlobalInvocationID.xyz*4+141);
-	v[2] = worley_noise(gl_GlobalInvocationID.xyz+ 401, 2) + value_noise(gl_GlobalInvocationID.xyz*2+451);
-	v[3] = worley_noise(gl_GlobalInvocationID.xyz+ 583, 3) + value_noise(gl_GlobalInvocationID.xyz*1+491);
+	v[0] = worley_noise(gl_GlobalInvocationID.xyz+ 144, 0) + value_noise(gl_GlobalInvocationID.xyz*0.4+41);
+	v[1] = worley_noise(gl_GlobalInvocationID.xyz+ 291, 1) + value_noise(gl_GlobalInvocationID.xyz*0.2+141);
+	v[2] = worley_noise(gl_GlobalInvocationID.xyz+ 401, 2) + value_noise(gl_GlobalInvocationID.xyz*0.1+451);
+	v[3] = worley_noise(gl_GlobalInvocationID.xyz+ 583, 3) + value_noise(gl_GlobalInvocationID.xyz*0.05+491);
 	imageStore(i_worleynoise_map, ivec3(gl_GlobalInvocationID), uvec4(v* 127.));
 
 }
