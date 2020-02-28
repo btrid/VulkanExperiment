@@ -290,8 +290,6 @@ struct SkyNoise
 				image_barrier[1].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
 
-
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
 			}
 
 
