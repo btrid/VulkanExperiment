@@ -31,12 +31,13 @@ float cloud_density(in vec3 pos)
 {
 	float t = (distance(pos,u_cloud_inner.xyz)-u_cloud_inner.w)*u_cloud_area_inv;
 	pos = vec3(pos.x, t, pos.z) * vec3(u_mapping, 1., u_mapping) + vec3(0.5, 0., 0.5);
+	pos = pos.xzy;
 	pos = fract(pos + constant.window/vec3(textureSize(s_worleynoise_map, 0)));
-	pos.y = t;
+	pos.z = t;
 
-	float density = dot(texture(s_worleynoise_map, pos.xzy), vec4(8, 4, 2, 1)) / 15.;
+	float density = dot(texture(s_worleynoise_map, pos), vec4(8, 4, 2, 1)) / 15.;
 //	float density = dot(texture(s_worleynoise_map, pos), vec4(1, 1, 1, 1)) / 4.;
-	return density * smoothstep(0.5, 0.55, density);
+	return density * smoothstep(0.4, 0.45, density);
 
 //	return density;
 }
