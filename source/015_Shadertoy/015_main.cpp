@@ -69,7 +69,7 @@ struct SkyNoise
 
  			{
 				vk::ImageCreateInfo image_info;
-				image_info.setExtent(vk::Extent3D(128, 128, 128));
+				image_info.setExtent(vk::Extent3D(512, 512, 16));
 				image_info.setArrayLayers(1);
 				image_info.setFormat(vk::Format::eR8G8B8A8Unorm);
 				image_info.setImageType(vk::ImageType::e3D);
@@ -466,7 +466,7 @@ struct Sky
 
 			{
 				vk::ImageCreateInfo image_info;
-				image_info.setExtent(vk::Extent3D(256, 16 * 1, 256));
+				image_info.setExtent(vk::Extent3D(512, 16 * 1, 512));
 				image_info.setArrayLayers(1);
 				image_info.setFormat(vk::Format::eR8Unorm);
 				image_info.setImageType(vk::ImageType::e3D);
@@ -1105,6 +1105,7 @@ struct Sky
 			{
 				render_target->m_descriptor.get(),
 				m_descriptor_set.get(),
+				m_skynoise.m_descriptor_set.get(),
 			};
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Sky_CS].get(), 0, array_length(descs), descs, 0, nullptr);
 
@@ -1424,6 +1425,8 @@ int main()
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0, "cmd_skynoise");
 		sky.m_skynoise.execute(context, cmd);
+		sky.execute(cmd, app.m_window->getFrontBuffer());
+		sky.executeArise(cmd, app.m_window->getFrontBuffer());
 	}
 	app.setup();
 	while (true)
@@ -1445,9 +1448,9 @@ int main()
 //				sky.execute_reference(cmd, app.m_window->getFrontBuffer());
 //				sky.execute_AriseReference(cmd, app.m_window->getFrontBuffer());
 //				sky.executeArise(cmd, app.m_window->getFrontBuffer());
-//				sky.execute2(cmd, app.m_window->getFrontBuffer());
+				sky.execute(cmd, app.m_window->getFrontBuffer());
 //				sky.m_skynoise.execute_Render(context, cmd, app.m_window->getFrontBuffer());
-				sky.executeHorizon(cmd, app.m_window->getFrontBuffer());
+//				sky.executeHorizon(cmd, app.m_window->getFrontBuffer());
 				cmd.end();
 				cmds[cmd_sky] = cmd;
 			}

@@ -24,7 +24,7 @@ layout(set=USE_Sky, binding=13, rgba16) uniform image2D i_render_map;
 layout(set=USE_Sky, binding=14, rgba8ui) uniform uimage3D i_map2;
 
 // 雲の光の吸収量
-#define ABSORPTION		0.7
+#define ABSORPTION		0.3
 
 const float u_plant_radius = 1000.;
 const vec4 u_planet = vec4(0., -u_plant_radius, 0, u_plant_radius);
