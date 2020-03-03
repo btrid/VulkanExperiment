@@ -9,11 +9,20 @@ layout (local_size_x = 32, local_size_y = 32) in;
 
 void main()
 {
-	vec4 v;
-	v[0] = value_noise(gl_GlobalInvocationID.xyz*0.1+41);
-	v[1] = worley_noise(gl_GlobalInvocationID.xyz+ 291, 2) + value_noise(gl_GlobalInvocationID.xyz*0.1+141);
-	v[2] = worley_noise(gl_GlobalInvocationID.xyz+ 401, 3) + value_noise(gl_GlobalInvocationID.xyz*0.2+451);
-	v[3] = worley_noise(gl_GlobalInvocationID.xyz+ 583, 4) + value_noise(gl_GlobalInvocationID.xyz*0.4+491);
-	imageStore(i_worleynoise_map, ivec3(gl_GlobalInvocationID), uvec4(v* vec4(255.)*vec4(1., 0.2, 0.8, 1.)));
+	vec4 v = vec4(0.);
+	v[0] = worley_noise(gl_GlobalInvocationID.xyz+ 591824, 1) + value_noise(gl_GlobalInvocationID.xyz*0.4+257451);
+	v[0] *= 0.5;
 
+	v[1] = worley_noise(gl_GlobalInvocationID.xyz+ 601541, 2) + _v_rand(vec3(gl_GlobalInvocationID+12425))*0.2-0.1;
+	v[2] = worley_noise(gl_GlobalInvocationID.xyz+ 154081, 3) + _v_rand(vec3(gl_GlobalInvocationID+17536))*0.2-0.1;
+	v[3] = worley_noise(gl_GlobalInvocationID.xyz+ 705893, 4) + _v_rand(vec3(gl_GlobalInvocationID+62911))*0.2-0.1;
+	v = clamp(v, vec4(0.), vec4(1.));
+	imageStore(i_worleynoise_map, ivec3(gl_GlobalInvocationID), uvec4(v* vec4(255.)));
+
+//	vec4 v = vec4(0.);
+//	v[0] = worley_noise(gl_GlobalInvocationID.xyz+ 860218, 1);
+//	v[1] = worley_noise(gl_GlobalInvocationID.xyz+ 601541, 2) + value_noise(gl_GlobalInvocationID.xyz*0.1+257451);
+//	v[2] = worley_noise(gl_GlobalInvocationID.xyz+ 154081, 3) + value_noise(gl_GlobalInvocationID.xyz*0.2+417510);
+//	v[3] = worley_noise(gl_GlobalInvocationID.xyz+ 705893, 4) + value_noise(gl_GlobalInvocationID.xyz*0.4+497271);
+//	imageStore(i_worleynoise_map, ivec3(gl_GlobalInvocationID), uvec4(v* vec4(127.)));
 }

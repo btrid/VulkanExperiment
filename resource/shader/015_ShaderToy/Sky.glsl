@@ -24,12 +24,12 @@ layout(set=USE_Sky, binding=13, rgba16) uniform image2D i_render_map;
 layout(set=USE_Sky, binding=14, rgba8ui) uniform uimage3D i_map2;
 
 // 雲の光の吸収量
-#define ABSORPTION		0.3
+#define ABSORPTION		0.15
 
 const float u_plant_radius = 1000.;
 const vec4 u_planet = vec4(0., -u_plant_radius, 0, u_plant_radius);
 const vec4 u_cloud_inner = vec4(u_planet.xyz, u_planet.w*1.05);
-const vec4 u_cloud_outer = u_cloud_inner + vec4(0., 0., 0, 50.);
+const vec4 u_cloud_outer = u_cloud_inner + vec4(0., 0., 0, 16.);
 const float u_cloud_area_inv = 1. / (u_cloud_outer.w - u_cloud_inner.w);
 const float u_mapping = 1./u_cloud_outer.w;
 vec3 uLightRay = normalize(vec3(0., 1., 0.));

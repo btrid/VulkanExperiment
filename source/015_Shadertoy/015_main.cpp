@@ -69,7 +69,7 @@ struct SkyNoise
 
  			{
 				vk::ImageCreateInfo image_info;
-				image_info.setExtent(vk::Extent3D(512, 512, 16));
+				image_info.setExtent(vk::Extent3D(128, 128, 128));
 				image_info.setArrayLayers(1);
 				image_info.setFormat(vk::Format::eR8G8B8A8Unorm);
 				image_info.setImageType(vk::ImageType::e3D);
@@ -81,20 +81,20 @@ struct SkyNoise
 				image_info.setUsage(vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage);
 				image_info.setFlags(vk::ImageCreateFlagBits::eMutableFormat);
 
-				m_image_noise = context->m_device.createImageUnique(image_info);
-				m_image_noise_info = image_info;
+				m_image_base_shape = context->m_device.createImageUnique(image_info);
+				m_image_base_shape_info = image_info;
 
-				vk::MemoryRequirements memory_request = context->m_device.getImageMemoryRequirements(m_image_noise.get());
+				vk::MemoryRequirements memory_request = context->m_device.getImageMemoryRequirements(m_image_base_shape.get());
 				vk::MemoryAllocateInfo memory_alloc_info;
 				memory_alloc_info.allocationSize = memory_request.size;
 				memory_alloc_info.memoryTypeIndex = Helper::getMemoryTypeIndex(context->m_physical_device, memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-				m_image_noise_memory = context->m_device.allocateMemoryUnique(memory_alloc_info);
-				context->m_device.bindImageMemory(m_image_noise.get(), m_image_noise_memory.get(), 0);
+				m_image_base_shape_memory = context->m_device.allocateMemoryUnique(memory_alloc_info);
+				context->m_device.bindImageMemory(m_image_base_shape.get(), m_image_base_shape_memory.get(), 0);
 
 				vk::ImageViewCreateInfo view_info;
 				view_info.setFormat(image_info.format);
-				view_info.setImage(m_image_noise.get());
+				view_info.setImage(m_image_base_shape.get());
 				view_info.subresourceRange.setBaseArrayLayer(0);
 				view_info.subresourceRange.setLayerCount(1);
 				view_info.subresourceRange.setBaseMipLevel(0);
@@ -102,10 +102,10 @@ struct SkyNoise
 				view_info.subresourceRange.setAspectMask(vk::ImageAspectFlagBits::eColor);
 				view_info.setViewType(vk::ImageViewType::e3D);
 				view_info.components.setR(vk::ComponentSwizzle::eR).setG(vk::ComponentSwizzle::eG).setB(vk::ComponentSwizzle::eB).setA(vk::ComponentSwizzle::eA);
-				m_image_noise_view = context->m_device.createImageViewUnique(view_info);
+				m_image_base_shape_view = context->m_device.createImageViewUnique(view_info);
 
 				view_info.setFormat(vk::Format::eR8G8B8A8Uint);
-				m_image_noise_write_view = context->m_device.createImageViewUnique(view_info);
+				m_image_base_shape_write_view = context->m_device.createImageViewUnique(view_info);
 
 				vk::SamplerCreateInfo sampler_info;
 				sampler_info.setAddressModeU(vk::SamplerAddressMode::eRepeat);
@@ -118,11 +118,11 @@ struct SkyNoise
 				sampler_info.setMipLodBias(0.f);
 				sampler_info.setMipmapMode(vk::SamplerMipmapMode::eLinear);
 				sampler_info.setUnnormalizedCoordinates(false);
-				m_image_noise_sampler = context->m_device.createSamplerUnique(sampler_info);
+				m_image_base_shape_sampler = context->m_device.createSamplerUnique(sampler_info);
 
 
 				vk::ImageMemoryBarrier to_make_barrier;
-				to_make_barrier.image = m_image_noise.get();
+				to_make_barrier.image = m_image_base_shape.get();
 				to_make_barrier.oldLayout = vk::ImageLayout::eUndefined;
 				to_make_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 				to_make_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
@@ -132,10 +132,10 @@ struct SkyNoise
 			}
 
 			vk::DescriptorImageInfo samplers[] = {
-				vk::DescriptorImageInfo(m_image_noise_sampler.get(), m_image_noise_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal),
+				vk::DescriptorImageInfo(m_image_base_shape_sampler.get(), m_image_base_shape_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal),
  			};
 			vk::DescriptorImageInfo images[] = {
-				vk::DescriptorImageInfo().setImageView(m_image_noise_write_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
+				vk::DescriptorImageInfo().setImageView(m_image_base_shape_write_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
  			};
 
 			vk::WriteDescriptorSet write[] =
@@ -235,7 +235,7 @@ struct SkyNoise
 		{
 			{
 				std::array<vk::ImageMemoryBarrier, 1> image_barrier;
-				image_barrier[0].setImage(m_image_noise.get());
+				image_barrier[0].setImage(m_image_base_shape.get());
 				image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
 				image_barrier[0].setOldLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
 				image_barrier[0].setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
@@ -244,13 +244,13 @@ struct SkyNoise
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
 			}
 
-			uvec3 num = app::calcDipatchGroups(uvec3(m_image_noise_info.extent.width, m_image_noise_info.extent.height, m_image_noise_info.extent.depth), uvec3(32, 32, 1));
+			uvec3 num = app::calcDipatchGroups(uvec3(m_image_base_shape_info.extent.width, m_image_base_shape_info.extent.height, m_image_base_shape_info.extent.depth), uvec3(32, 32, 1));
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_WorleyNoise_Compute].get());
 			cmd.dispatch(num.x, num.y, num.z);
 
 			{
 				std::array<vk::ImageMemoryBarrier, 1> image_barrier;
-				image_barrier[0].setImage(m_image_noise.get());
+				image_barrier[0].setImage(m_image_base_shape.get());
 				image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
 				image_barrier[0].setOldLayout(vk::ImageLayout::eGeneral);
 				image_barrier[0].setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
@@ -282,7 +282,7 @@ struct SkyNoise
 				image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
 				image_barrier[0].setNewLayout(vk::ImageLayout::eGeneral);
 				image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
-				image_barrier[1].setImage(m_image_noise.get());
+				image_barrier[1].setImage(m_image_base_shape.get());
 				image_barrier[1].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
 //				image_barrier[1].setOldLayout(vk::ImageLayout::eGeneral);
 //				image_barrier[1].setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
@@ -326,12 +326,12 @@ struct SkyNoise
 	vk::UniqueDescriptorSet m_descriptor_set;
 
 
-	vk::ImageCreateInfo m_image_noise_info;
-	vk::UniqueImage m_image_noise;
-	vk::UniqueImageView m_image_noise_view;
-	vk::UniqueImageView m_image_noise_write_view;
-	vk::UniqueDeviceMemory m_image_noise_memory;
-	vk::UniqueSampler m_image_noise_sampler;
+	vk::ImageCreateInfo m_image_base_shape_info;
+	vk::UniqueImage m_image_base_shape;
+	vk::UniqueImageView m_image_base_shape_view;
+	vk::UniqueImageView m_image_base_shape_write_view;
+	vk::UniqueDeviceMemory m_image_base_shape_memory;
+	vk::UniqueSampler m_image_base_shape_sampler;
 };
 struct Sky 
 {
@@ -1396,6 +1396,7 @@ struct Sky
 		}
 	}
 };
+// https://bib.irb.hr/datoteka/949019.Final_0036470256_56.pdf
 int main()
 {
 	btr::setResourceAppPath("..\\..\\resource/");
@@ -1448,8 +1449,8 @@ int main()
 //				sky.execute_reference(cmd, app.m_window->getFrontBuffer());
 //				sky.execute_AriseReference(cmd, app.m_window->getFrontBuffer());
 //				sky.executeArise(cmd, app.m_window->getFrontBuffer());
-				sky.execute(cmd, app.m_window->getFrontBuffer());
-//				sky.m_skynoise.execute_Render(context, cmd, app.m_window->getFrontBuffer());
+//				sky.execute(cmd, app.m_window->getFrontBuffer());
+				sky.m_skynoise.execute_Render(context, cmd, app.m_window->getFrontBuffer());
 //				sky.executeHorizon(cmd, app.m_window->getFrontBuffer());
 				cmd.end();
 				cmds[cmd_sky] = cmd;

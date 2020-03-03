@@ -12,6 +12,12 @@ float band(in float start, in float peak, in float end, in float t)
 {
 	return smoothstep (start, peak, t) * (1. - smoothstep (peak, end, t));
 }
+
+float remap(in float value, in float original_min, in float original_max, in float new_min, in float new_max) 
+{
+	return new_min + (((value - original_min) / (original_max - original_min)) * (new_max - new_min));
+}
+
 float intersectRaySphere(in vec3 origin, in vec3 ray, in vec4 sphere)
 {
 	vec3 relative_pos = sphere.xyz - origin;
@@ -48,23 +54,30 @@ float cloud_density(in vec3 pos)
 	if(t>= 1. || t <= 0.) { return 0.; }
 
 	pos = vec3(pos.x, t, pos.z) * vec3(u_mapping, 1., u_mapping) + vec3(0.5, 0., 0.5);
+	vec3 tex_size = vec3(textureSize(s_map, 0));
+	pos = fract(pos + constant.window/tex_size);
 
 #define USE_HORIZON_CLOUD
 //#define USE_ARISE_CLOUD
 #if defined(USE_HORIZON_CLOUD)
 	vec4 map = texture(s_worleynoise_map, vec3(pos.xz, 0.));
-	float noise  = texture(s_map, vec3(pos.x, t, pos.z)).x;
-	float density = map.x*smoothstep(0.5, 0.55, map.x) * map.x * noise;
+//	float density = smoothstep(0.65, 0.65, dot(map, vec4(8.,4.,2.,1.)) / 15.);
+	float density = dot(map, vec4(8.,4.,2.,1.)) / 15.;
+	density += texture(s_map, pos).x*0.2;
+	density *= step(0.5, density);
+//	density *= band(0., 0.5, 1., t);
+//	float density_detail = texture(s_worleynoise_map, vec3(pos.xz, 0.)*10.).y;
+//	float density = map.x * band(0., 0.5, 1., t) + density_detail * 0.2;
+//	density += texture(s_map, pos).x*0.2;
 	return density;
 
 #elif defined(USE_ARISE_CLOUD)
-	vec4 map = texture(s_arise_map, pos.xz);
-	float density = map.x * band(map.z, map.z+map.y*0.5, map.z+map.y*1., t);
-
+	vec4 map = texture(s_worleynoise_map, vec3(pos.xz, 0));
+	map.x *= step(0.65, map.x);
+	float density = map.x * band(map.y, map.y+map.z*0.5, map.y+map.z*1., t);
 	return density;
 #else
-	vec3 tex_size = vec3(textureSize(s_map, 0));
-	pos = fract(pos + constant.window/tex_size);
+//	pos = fract(pos + constant.window/tex_size);
 	pos.y = t;
 
 	float density = texture(s_map, pos).x;
@@ -76,14 +89,16 @@ float cloud_density(in vec3 pos)
 float cloud_lighting(in vec3 pos)
 {
 	float transparent = 1.;
-	float ray_step = 4.;
+	float ray_step = 1.;
 	const int steps = 4;
-	for (int i = 0; i < steps; i++) 
+	pos = pos + uLightRay*4.;
+	for (int i = 0; i < steps; i++)
 	{
-		pos = pos + uLightRay * ray_step;
 		float density = cloud_density(pos);
 
-		transparent *= exp(-density * ABSORPTION * ray_step);
+		transparent *= exp(-density * ABSORPTION * ray_step*12.);
+		if(transparent<=0.01){ break; }
+		pos = pos + uLightRay * ray_step;
 	}
 	return transparent;
 }
@@ -118,6 +133,7 @@ vec4 cloud(in vec3 rayPos, in vec3 rayDir, float depth)
 	vec3 color = vec3(0.);
 	for(int i = 0; i <count; i++)
 	{
+//		vec3 dir = rayDir / rayDir.y;
 		int step_num = int(ray_segment[i].y / STEP_LENGTH);
 		float ray_step = STEP_LENGTH;
 		vec3 pos = rayPos + rayDir * (ray_segment[i].x+ray_step*0.5);

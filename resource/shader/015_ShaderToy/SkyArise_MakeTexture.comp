@@ -102,7 +102,7 @@ void main()
 	float b = fBM(s * vec3(0.001) + vec3(57.79), 4);
 	float a = fBM(s * vec3(0.1)  + constant.window*1. + vec3(91.78), 4);
 
-	r = r *smoothstep(0.5, 0.55, r);
+	r = r *smoothstep(0.5, 0.5, r);
 	g = g *smoothstep(0., 0.75, g) * 0.85;
 	b = b *smoothstep(0., 0.75, b) * 0.15;
 	imageStore(i_arise_map, ivec2(gl_GlobalInvocationID.xy), uvec4(vec4(r, g, b, a)*255.));

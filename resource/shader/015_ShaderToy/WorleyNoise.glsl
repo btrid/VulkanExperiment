@@ -15,18 +15,18 @@ vec3 _wn_rand(in ivec4 co)
 float worley_noise(in uvec3 invocation, in int level)
 {
 	float value = 0.;
-	vec3 pos = vec3(invocation) + 0.5;
+	vec3 pos = vec3(invocation) + _wn_rand(ivec4(invocation, level));
 	uvec3 tile_size = ivec3(32)>>level;
 	uvec3 tile_id = invocation/tile_size;
-	float _radius = float(tile_size.x);
-	#define cell_size 1
+	float _radius = float(tile_size.x)+2.;
+	#define cell_size 2
 
 	for(int z = -cell_size; z <= cell_size; z++)
 	for(int y = -cell_size; y <= cell_size; y++)
 	for(int x = -cell_size; x <= cell_size; x++)
 	{
 		ivec3 tid = ivec3(tile_id) + ivec3(x, y, z);
-		for(int n = 0; n < 5; n++)
+		for(int n = 0; n < 2; n++)
 		{
 			vec3 p = _wn_rand(ivec4(tid, n))*tile_size + tid*tile_size;
 
@@ -52,6 +52,7 @@ float _v_noise(in vec3 pos)
 	a.xy = mix(a.xy, a.zw, fp.y);
 	return mix(a.x, a.y, fp.x);
 }
+
 
 float _v_fBM(in vec3 pos, in int octaves)
 {

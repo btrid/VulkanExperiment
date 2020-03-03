@@ -14,7 +14,7 @@ void main()
 	vec3 tex_size = vec3(imageSize(i_worleynoise_map));
 	ivec2 xy = ivec2(vec2(gl_GlobalInvocationID.xy) * (tex_size.xy/vec2(gl_NumWorkGroups.xy*gl_WorkGroupSize.xy)));
 	vec4 v = imageLoad(i_worleynoise_map, ivec3(xy, 0)) / 255.;
-	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(v.xyz, 1.));
+	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(v.yyy, 1.));
 
 //	float v = worley_noise(uvec3(gl_GlobalInvocationID.xy>>2, 10), 0).x;
 //	v = smoothstep(0.8, 1., v);
