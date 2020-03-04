@@ -16,9 +16,6 @@ rem %exe% %include% %option% %output%/Sky_CalcDensity.comp.spv Sky_CalcDensity.c
 %exe% %include% %option% -DLSX=4 -DLSY=16 -DLSZ=1 %output%/Sky_MakeTexture_PartialY.comp.spv Sky_MakeTexture_Partial.comp
 %exe% %include% %option% -DLSX=1 -DLSY=1 -DLSZ=64 %output%/Sky_MakeTexture_PartialZ.comp.spv Sky_MakeTexture_Partial.comp
 
-%exe% %include% %option% %output%/Sky_Render2.comp.spv Sky_Render2.comp
-%exe% %include% %option% %output%/Sky_MakeTexture2.comp.spv Sky_MakeTexture2.comp
-
 %exe% %include% %option% %output%/SkyAriseReference.comp.spv SkyAriseReference.comp
 %exe% %include% %option% %output%/SkyArise.comp.spv SkyArise.comp
 %exe% %include% %option% %output%/SkyArise_MakeTexture.comp.spv SkyArise_MakeTexture.comp
@@ -26,6 +23,7 @@ rem %exe% %include% %option% %output%/Sky_CalcDensity.comp.spv Sky_CalcDensity.c
 %exe% %include% %option% %output%/SkyHorizon_Render.comp.spv SkyHorizon_Render.comp
 
 %exe% %include% %option% %output%/WorleyNoise_Compute.comp.spv WorleyNoise_Compute.comp
+%exe% %include% %option% %output%/WorleyNoise_ComputeWeatherTexture.comp.spv WorleyNoise_ComputeWeatherTexture.comp
 %exe% %include% %option% %output%/WorleyNoise_Render.comp.spv WorleyNoise_Render.comp
 
 rem %exe% %include% %option% %output%/SkyWithTexture.comp.spv Sky.comp

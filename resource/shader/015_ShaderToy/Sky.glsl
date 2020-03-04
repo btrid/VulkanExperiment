@@ -16,12 +16,10 @@ layout(set=USE_Sky, binding=0) uniform sampler3D s_map;
 layout(set=USE_Sky, binding=1) uniform sampler2D s_arise_map;
 layout(set=USE_Sky, binding=2) uniform sampler3D s_shadow_map;
 layout(set=USE_Sky, binding=3) uniform sampler2D s_render_map;
-layout(set=USE_Sky, binding=4) uniform sampler3D s_map2;
 layout(set=USE_Sky, binding=10, r8ui) uniform uimage3D i_map;
 layout(set=USE_Sky, binding=11, rgba8ui) uniform uimage2D i_arise_map;
 layout(set=USE_Sky, binding=12, r8ui) uniform uimage3D i_shadow_map;
 layout(set=USE_Sky, binding=13, rgba16) uniform image2D i_render_map;
-layout(set=USE_Sky, binding=14, rgba8ui) uniform uimage3D i_map2;
 
 // 雲の光の吸収量
 #define ABSORPTION		0.15

@@ -2,8 +2,12 @@
 #define WORLEYNOISE_HEADER_
 
 #ifdef USE_WORLEYNOISE
-layout(set=USE_WORLEYNOISE, binding=0) uniform sampler3D s_worleynoise_map;
-layout(set=USE_WORLEYNOISE, binding=10, rgba8ui) uniform uimage3D i_worleynoise_map;
+layout(set=USE_WORLEYNOISE, binding=0) uniform sampler3D s_cloud_map;
+layout(set=USE_WORLEYNOISE, binding=10, rgba8ui) uniform uimage3D i_cloud_map;
+layout(set=USE_WORLEYNOISE, binding=1) uniform sampler3D s_cloud_detail_map;
+layout(set=USE_WORLEYNOISE, binding=11, rgba8ui) uniform uimage3D i_cloud_detail_map;
+layout(set=USE_WORLEYNOISE, binding=2) uniform sampler2D s_weather_map;
+layout(set=USE_WORLEYNOISE, binding=12, rgba8ui) uniform uimage2D i_weather_map;
 
 
 vec3 _wn_rand(in ivec4 co)
@@ -15,20 +19,20 @@ vec3 _wn_rand(in ivec4 co)
 float worley_noise(in uvec3 invocation, in int level)
 {
 	float value = 0.;
-	vec3 pos = vec3(invocation) + _wn_rand(ivec4(invocation, level));
 	uvec3 tile_size = ivec3(32)>>level;
 	uvec3 tile_id = invocation/tile_size;
-	float _radius = float(tile_size.x)+2.;
-	#define cell_size 2
+	vec3 pos = vec3(invocation%tile_size);
+	float _radius = float(tile_size.x)+0.5;
+	#define cell_size 1
 
 	for(int z = -cell_size; z <= cell_size; z++)
 	for(int y = -cell_size; y <= cell_size; y++)
 	for(int x = -cell_size; x <= cell_size; x++)
 	{
 		ivec3 tid = ivec3(tile_id) + ivec3(x, y, z);
-		for(int n = 0; n < 2; n++)
+		for(int n = 0; n < 16; n++)
 		{
-			vec3 p = _wn_rand(ivec4(tid, n))*tile_size + tid*tile_size;
+			vec3 p = _wn_rand(ivec4(tid, n))*tile_size + vec3(x, y, z)*tile_size;
 
 			float v = 1.-min(distance(pos, p) / _radius, 1.);
 			value = max(value, v);

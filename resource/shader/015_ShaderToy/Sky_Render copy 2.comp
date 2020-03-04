@@ -3,14 +3,20 @@
 
 #include "Sky.glsl"
 
-#define USE_RenderTarget 0
-#include "applib/System.glsl"
-
 layout (local_size_x = 32, local_size_y = 32) in;
 layout(push_constant) uniform Input
 {
 	vec3 window;
 } constant;
+float band(in float start, in float peak, in float end, in float t)
+{
+	return smoothstep (start, peak, t) * (1. - smoothstep (peak, end, t));
+}
+
+float remap(in float value, in float original_min, in float original_max, in float new_min, in float new_max) 
+{
+	return new_min + (((value - original_min) / (original_max - original_min)) * (new_max - new_min));
+}
 
 float intersectRaySphere(in vec3 origin, in vec3 ray, in vec4 sphere)
 {
@@ -30,35 +36,6 @@ float intersectRaySphere(in vec3 origin, in vec3 ray, in vec4 sphere)
 	return t0;
 }
 
-float cloud_density(in vec3 pos)
-{
-	float t = (distance(pos,u_cloud_inner.xyz)-u_cloud_inner.w)*u_cloud_area_inv;
-	pos = vec3(pos.x, t, pos.z) * vec3(u_mapping, 1., u_mapping) + vec3(0.5, 0., 0.5);
-	pos = fract(pos);
-	pos.y = t;
-
-	vec4 density = texture(s_map2, pos);
-//	density = density * smoothstep(0.5, 0.55, density);
-
-	float d = dot(density, vec4(8, 4, 2, 1)) / 15.;
-	return smoothstep(0.5, 0.55, d) * d;
-//	return smoothstep(0.5, 0.55, dot(density, vec4(8, 4, 2, 1)) / 15.);
-}
-
-float cloud_lighting(in vec3 pos)
-{
-	float transparent = 1.;
-	const int steps = 1;
-	for (int i = 0; i < steps; i++) 
-	{
-		pos = pos + uLightRay * 1.;
-		float density = cloud_density(pos);
-
-		transparent *= exp(-density * ABSORPTION);
-	}
-	return transparent;
-}
-
 bool intersectRayAtom(vec3 Pos, vec3 Dir, vec3 AtomPos, vec2 Area, out vec4 OutDist)
 {
 	vec3 RelativePos = AtomPos - Pos;
@@ -70,6 +47,55 @@ bool intersectRayAtom(vec3 Pos, vec3 Dir, vec3 AtomPos, vec2 Area, out vec4 OutD
 	OutDist = vec4(tca) + vec4(sqrt(RadiusSq.yxxy - d2)) * vec4(-1., -1., 1., 1.);
 	return d2 <= RadiusSq.y;
 }
+
+float cloud_density(in vec3 pos)
+{
+	float t = (distance(pos,u_cloud_inner.xyz)-u_cloud_inner.w)*u_cloud_area_inv;
+	if(t>= 1. || t <= 0.) { return 0.; }
+
+	pos = vec3(pos.x, t, pos.z) * vec3(u_mapping, 1., u_mapping) + vec3(0.5, 0., 0.5);
+	vec3 tex_size = vec3(textureSize(s_map, 0));
+	pos = fract(pos + constant.window/tex_size);
+
+#if defined(USE_HORIZON_CLOUD)
+	vec3 map = texture(s_weather_map, vec3(pos.xz, 0.)).xyz;
+	float density = remap(map.x * band(map.y, map.y+map.z*0.5, map.y+map.z*1., t);
+	density += texture(s_map, pos).x*0.2;
+	density *= step(0.5, density);
+	return density;
+
+#elif defined(USE_ARISE_CLOUD)
+	vec4 map = texture(s_arise_map, vec3(pos.xz, 0));
+	map.x *= step(0.65, map.x);
+	float density = map.x * band(map.y, map.y+map.z*0.5, map.y+map.z*1., t);
+	return density;
+#else
+//	pos = fract(pos + constant.window/tex_size);
+	pos.y = t;
+
+	float density = texture(s_map, pos).x;
+//	float density_detail = texture(s_map, pos*vec3(10.1)+constant.window*0.3/tex_size + 40.).x;
+	return density;
+#endif
+}
+
+float cloud_lighting(in vec3 pos)
+{
+	float transparent = 1.;
+	float ray_step = 1.;
+	const int steps = 4;
+	pos = pos + uLightRay*4.;
+	for (int i = 0; i < steps; i++)
+	{
+		float density = cloud_density(pos);
+
+		transparent *= exp(-density * ABSORPTION * ray_step*12.);
+		if(transparent<=0.01){ break; }
+		pos = pos + uLightRay * ray_step;
+	}
+	return transparent;
+}
+
 vec4 cloud(in vec3 rayPos, in vec3 rayDir, float depth)
 {
 	vec4 dist;
@@ -100,18 +126,19 @@ vec4 cloud(in vec3 rayPos, in vec3 rayDir, float depth)
 	vec3 color = vec3(0.);
 	for(int i = 0; i <count; i++)
 	{
+//		vec3 dir = rayDir / rayDir.y;
 		int step_num = int(ray_segment[i].y / STEP_LENGTH);
-		float ray_step = ray_segment[i].y / float(step_num);
+		float ray_step = STEP_LENGTH;
 		vec3 pos = rayPos + rayDir * (ray_segment[i].x+ray_step*0.5);
 		for(int step = 0; step < step_num; step++)
 		{
 			float density = cloud_density(pos);
 
-			float t = exp(-density * ABSORPTION);
+			float t = exp(-density * ABSORPTION * ray_step);
 			transparent *= t;
 			if (transparent < 0.01) { i = count; break; }
 
-			color += transparent * density * cloud_lighting(pos);
+			color += transparent * density * cloud_lighting(pos) * ray_step;
 			alpha += (1.-t) *(1.-alpha);
 
 			pos = pos + rayDir * ray_step;
