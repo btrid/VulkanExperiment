@@ -9,14 +9,14 @@
 
 static const float VOLUME_END_HEIGHT = cb_cloudVolumeStartHeight + cb_cloudVolumeHeight;
 // planet center (world space)
-static const float3 PLANET_CENTER = float3(0.0f, -cb_groundRadius - 100.0f, 0.0f); // TODO revisit - 100.0f offset is to match planet sky settings
+static const vec3 PLANET_CENTER = vec3(0.0f, -cb_groundRadius - 100.0f, 0.0f); // TODO revisit - 100.0f offset is to match planet sky settings
 // radius from the planet center to the bottom of the cloud volume
 static const float PLANET_CENTER_TO_LOWER_CLOUD_RADIUS = cb_groundRadius + cb_cloudVolumeStartHeight;
 // radius from the planet center to the top of the cloud volume
 static const float PLANET_CENTER_TO_UPPER_CLOUD_RADIUS = cb_groundRadius + VOLUME_END_HEIGHT;
 static const float CLOUD_SCALE = 1.0 / VOLUME_END_HEIGHT;
-static const vec3 WEATHER_TEX_MOD = float3(1.0 / (VOLUME_END_HEIGHT * cb_weatherTexMod.x), cb_weatherTexMod.y, cb_weatherTexMod.z); 
-static const vec2 WEATHER_TEX_MOVE_SPEED = float2(cb_windStrength * cb_windDirection.x, cb_windStrength * cb_windDirection.z); // this is modded by app run time
+static const vec3 WEATHER_TEX_MOD = vec3(1.0 / (VOLUME_END_HEIGHT * cb_weatherTexMod.x), cb_weatherTexMod.y, cb_weatherTexMod.z); 
+static const vec2 WEATHER_TEX_MOVE_SPEED = vec2(cb_windStrength * cb_windDirection.x, cb_windStrength * cb_windDirection.z); // this is modded by app run time
 // samples based on shell thickness between inner and outer volume
 static const uvec2 SAMPLE_RANGE = uvec2(64u, 128u);
 
@@ -24,6 +24,18 @@ static const vec4 STRATUS_GRADIENT = vec4(0.02, 0.05, 0.09, 0.11);
 static const vec4 STRATOCUMULUS_GRADIENT = vec4(0.02, 0.2, 0.48, 0.625);
 static const vec4 CUMULUS_GRADIENT = vec4(0.01, 0.0625, 0.78, 1.0); // these fractions would need to be altered if cumulonimbus are added to the same pass
 
+
+bool intersectRayAtom(vec3 Pos, vec3 Dir, vec3 AtomPos, vec2 Area, out vec4 OutDist)
+{
+	vec3 RelativePos = AtomPos - Pos;
+	float tca = dot(RelativePos, Dir);
+
+	vec2 RadiusSq = Area * Area;
+	float d2 = dot(RelativePos, RelativePos) - tca * tca;
+
+	OutDist = vec4(tca) + vec4(sqrt(RadiusSq.yxxy - d2)) * vec4(-1., -1., 1., 1.);
+	return d2 <= RadiusSq.y;
+}
 
 float remap(float value, float oldMin, float oldMax, float newMin, float newMax)
 {
@@ -73,10 +85,10 @@ float densityHeightGradient(float heightFrac, float cloudType)
 float sampleCloudDensity(vec3 pos, vec3 weatherData, float heightFrac, float lod)
 {
 	pos += heightFrac * cb_windDirection * cb_cloudTopOffset;
-	pos += (cb_windDirection + float3(0.0f, -0.25f, 0.0f)) * cb_cloudSpeed * (cb_appRunTime/* * 25.0f*/); // the * 25.0f is just for testing to make the effect obvious
+	pos += (cb_windDirection + vec3(0.0f, -0.25f, 0.0f)) * cb_cloudSpeed * (cb_appRunTime/* * 25.0f*/); // the * 25.0f is just for testing to make the effect obvious
 	pos *= CLOUD_SCALE;
 	
-	float4 lowFreqNoise = baseShapeLookup.SampleLevel(texSampler, pos, lerp(0.0f, cb_baseShapeTextureBottomMipLevel, lod));
+	vec4 lowFreqNoise = baseShapeLookup.SampleLevel(texSampler, pos, lerp(0.0f, cb_baseShapeTextureBottomMipLevel, lod));
 	float lowFreqFBM =
 		(lowFreqNoise.g * 0.625f) +
 		(lowFreqNoise.b * 0.25f) +
@@ -94,7 +106,7 @@ float sampleCloudDensity(vec3 pos, vec3 weatherData, float heightFrac, float lod
 	//// TODO add curl noise
 	//// pos += curlNoise.xy * (1.0f - heightFrac);
 
-	float3 highFreqNoise = erosionLookup.SampleLevel(texSampler, pos * 0.1f, lerp(0.0f, cb_erosionTextureBottomMipLevel, lod)).rgb;
+	vec3 highFreqNoise = erosionLookup.SampleLevel(texSampler, pos * 0.1f, lerp(0.0f, cb_erosionTextureBottomMipLevel, lod)).rgb;
 	float highFreqFBM =
 		(highFreqNoise.r * 0.625f) +
 		(highFreqNoise.g * 0.25f) +
@@ -108,14 +120,14 @@ float sampleCloudDensity(vec3 pos, vec3 weatherData, float heightFrac, float lod
 }
 
 // random vectors on the unit sphere
-static const float3 RANDOM_VECTORS[] =
+static const vec3 RANDOM_VECTORS[] =
 {
-	float3( 0.38051305f,  0.92453449f, -0.02111345f),
-	float3(-0.50625799f, -0.03590792f, -0.86163418f),
-	float3(-0.32509218f, -0.94557439f,  0.01428793f),
-	float3( 0.09026238f, -0.27376545f,  0.95755165f),
-	float3( 0.28128598f,  0.42443639f, -0.86065785f),
-	float3(-0.16852403f,  0.14748697f,  0.97460106f)
+	vec3( 0.38051305f,  0.92453449f, -0.02111345f),
+	vec3(-0.50625799f, -0.03590792f, -0.86163418f),
+	vec3(-0.32509218f, -0.94557439f,  0.01428793f),
+	vec3( 0.09026238f, -0.27376545f,  0.95755165f),
+	vec3( 0.28128598f,  0.42443639f, -0.86065785f),
+	vec3(-0.16852403f,  0.14748697f,  0.97460106f)
 };
 
 static const uint LIGHT_RAY_ITERATIONS = 6u;
@@ -153,7 +165,7 @@ float lightEnergy(
 // TODO get from cb values - has to change as time of day changes
 vec3 ambientLight(float heightFrac)
 {
-	return lerp(float3(0.5f, 0.67f, 0.82f), float3(1.0f, 1.0f, 1.0f), heightFrac);
+	return lerp(vec3(0.5f, 0.67f, 0.82f), vec3(1.0f, 1.0f, 1.0f), heightFrac);
 }
 
 float sampleCloudDensityAlongCone(
@@ -175,7 +187,7 @@ float sampleCloudDensityAlongCone(
 
 	for(uint i = 0u; i < LIGHT_RAY_ITERATIONS; ++i)
 	{
-		float3 conePos = pos + coneRadius * RANDOM_VECTORS[i] * float(i + 1u);
+		vec3 conePos = pos + coneRadius * RANDOM_VECTORS[i] * float(i + 1u);
 		float heightFrac = heightFraction(conePos);
 		if(heightFrac <= 1.0f)
 		{
@@ -220,24 +232,24 @@ float sampleCloudDensityAlongCone(
 		lerp(1.0f, 2.0f, getPrecipitation(weatherData))));
 }
 
-float4 traceClouds(
-	float3 viewDirW,		// world space view direction
-	float3 startPos,		// world space start position
-	float3 endPos)			// world space end position
+vec4 traceClouds(
+	vec3 viewDirW,		// world space view direction
+	vec3 startPos,		// world space start position
+	vec3 endPos)			// world space end position
 {
-	float3 dir = endPos - startPos;
+	vec3 dir = endPos - startPos;
 	float thickness = length(dir);
 	float rcpThickness = 1.0f / thickness;
 	uint sampleCount = lerp(SAMPLE_RANGE.x, SAMPLE_RANGE.y, saturate((thickness - cb_cloudVolumeHeight) / cb_cloudVolumeHeight));
 	float stepSize = thickness / float(sampleCount);
 	dir /= thickness;
-	float3 posStep = stepSize * dir;
+	vec3 posStep = stepSize * dir;
 
 	float lightDotEye = -dot(cb_lightDirection, viewDirW);
 
-	float3 pos = startPos;
-	float3 weatherData = 0.0f;
-	float4 result = 0.0f;
+	vec3 pos = startPos;
+	vec3 weatherData = 0.0f;
+	vec4 result = 0.0f;
 	float density = 0.0f;
 	
 	for(uint i = 0u; i < sampleCount; ++i)
@@ -260,8 +272,8 @@ float4 traceClouds(
 				lightDotEye,
 				cloudDensity);
 
-			float3 ambientBadApprox = ambientLight(heightFrac) * min(1.0f, length(cb_sunColor.rgb * 0.0125f)) * transmittance;
-			float4 source = float4((cb_sunColor.rgb * lightDensity) + ambientBadApprox/*+ ambientLight(heightFrac)*/, cloudDensity * transmittance); // TODO enable ambient when added to constant buffer
+			vec3 ambientBadApprox = ambientLight(heightFrac) * min(1.0f, length(cb_sunColor.rgb * 0.0125f)) * transmittance;
+			vec4 source = vec4((cb_sunColor.rgb * lightDensity) + ambientBadApprox/*+ ambientLight(heightFrac)*/, cloudDensity * transmittance); // TODO enable ambient when added to constant buffer
 			source.rgb *= source.a;
 			result = (1.0f - result.a) * source + result;
 			if(result.a >= 1.0f) break;
@@ -273,102 +285,49 @@ float4 traceClouds(
 	// experimental fog - may not be needed if clouds are drawn before atmosphere - would have to draw sun by itself, then clouds, then atmosphere
 	// fogAmt = 0 to disable
 	float fogAmt = 1.0f - exp(-distance(startPos, cb_eyePositionW) * 0.00001f);
-	float3 fogColor = float3(0.3f, 0.4f, 0.45f) * length(cb_sunColor.rgb * 0.125f) * 0.8f;
-	float3 sunColor = normalize(cb_sunColor.rgb) * 4.0f * length(cb_sunColor.rgb * 0.125f);
+	vec3 fogColor = vec3(0.3f, 0.4f, 0.45f) * length(cb_sunColor.rgb * 0.125f) * 0.8f;
+	vec3 sunColor = normalize(cb_sunColor.rgb) * 4.0f * length(cb_sunColor.rgb * 0.125f);
 	fogColor = lerp(fogColor, sunColor, pow(saturate(lightDotEye), 8.0f));
-	return float4(clamp(lerp(result.rgb, fogColor, fogAmt), 0.0f, 1000.0f), saturate(result.a));
+	return vec4(clamp(lerp(result.rgb, fogColor, fogAmt), 0.0f, 1000.0f), saturate(result.a));
 }
 
-float4 main(VertexOut pIn) : SV_TARGET
+void main()
 {
-	int3 loadIndices = int3(pIn.posH.xy, 0);
+	ivec3 loadIndices = ivec3(pIn.posH.xy, 0);
 	float zwDepth = depthTexture.Load(loadIndices).r;
 	bool depthPresent = zwDepth < 1.0f;
 	float depth = linearizeDepth(zwDepth);
-	float3 posV = pIn.viewRay * depth;
-	float3 posW = mul(float4(posV, 1.0f), cb_inverseViewMatrix).xyz;
-	float3 viewDirW = normalize(posW - cb_eyePositionW);
+	vec3 posV = pIn.viewRay * depth;
+	vec3 posW = mul(vec4(posV, 1.0f), cb_inverseViewMatrix).xyz;
+	vec3 viewDirW = normalize(posW - cb_eyePositionW);
 
 	// find nearest planet surface point
-	float2 ph = 0.0f;
-	uint planetHits = intersectRaySphere(
-		cb_eyePositionW,
-		viewDirW,
-		PLANET_CENTER,
-		cb_groundRadius,
-		ph);
-
-	// find nearest inner shell point
-	float2 ih = 0.0f;
-	uint innerShellHits = intersectRaySphere(
-		cb_eyePositionW,
-		viewDirW,
-		PLANET_CENTER,
-		PLANET_CENTER_TO_LOWER_CLOUD_RADIUS,
-		ih);
-
-	// find nearest outer shell point
-	float2 oh = 0.0f;
-	uint outerShellHits = intersectRaySphere(
-		cb_eyePositionW,
-		viewDirW,
-		PLANET_CENTER,
-		PLANET_CENTER_TO_UPPER_CLOUD_RADIUS,
-		oh);
-
-	// world space ray intersections
-	float3 planetHitSpot = cb_eyePositionW + (viewDirW * ph.x);
-	float3 innerShellHit = cb_eyePositionW + (viewDirW * ih.x);
-	float3 outerShellHit = cb_eyePositionW + (viewDirW * oh.x);
-
-	// eye radius from planet center
-	float eyeRadius = distance(cb_eyePositionW, PLANET_CENTER);
-	if(eyeRadius < PLANET_CENTER_TO_LOWER_CLOUD_RADIUS) // under inner shell
+	vec4 dist;
+	if(!intersectRayAtom(rayPos, rayDir, u_cloud_inner.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), dist))
 	{
-		// exit if there's something in front of the start of the cloud volume
-		if((depthPresent && (distance(posW, cb_eyePositionW) < distance(innerShellHit, cb_eyePositionW))) ||
-			planetHits > 0u) // shell hits are guaranteed, but the ground may be occluding cloud layer
-		{
-			return float4(0.0f, 0.0f, 0.0f, 0.0f);
-		}
-		return traceClouds(
-			viewDirW,
-			innerShellHit,
-			outerShellHit);
+		// 雲にヒットしない
+		return vec4(0.);
 	}
-	else if(eyeRadius > PLANET_CENTER_TO_UPPER_CLOUD_RADIUS) // over outer shell
+	
+
+	int count = 0;
+	vec2 ray_segment[2];
+	if(dist.y>0.)
 	{
-		// possibilities are
-		// 1) enter outer shell, leave inner shell
-		// 2) enter outer shell, leave outer shell
-		float3 firstShellHit = outerShellHit;
-		if(outerShellHits == 0u ||
-			depthPresent && (distance(posW, cb_eyePositionW) < distance(firstShellHit, cb_eyePositionW)))
-		{
-			return float4(0.0f, 0.0f, 0.0f, 0.0f);
-		}
-		float3 secondShellHit = outerShellHits == 2u && innerShellHits == 0u ? cb_eyePositionW + (viewDirW * oh.y) : innerShellHit;
-		return traceClouds(
-			viewDirW,
-			firstShellHit,
-			secondShellHit);
+		// 雲の上から雲を見る
+		ray_segment[count] = vec2(max(dist.x, 0.), dist.y-max(dist.x, 0.));
+		count++;
 	}
-	else // between shells
+	if(dist.w>0. && depth<0.)
 	{
-		/*
-		 * From a practical viewpoint (properly scaled planet, atmosphere, etc.)
-		 * only one shell will be hit.
-		 * Start position is always eye position.
-		 */
-		float3 shellHit = innerShellHits > 0u ? innerShellHit : outerShellHit;
-		// if there's something in the depth buffer that's closer, that's the end point
-		if(depthPresent && (distance(posW, cb_eyePositionW) < distance(shellHit, cb_eyePositionW)))
-		{
-			shellHit = posW;
-		}
-		return traceClouds(
-			viewDirW,
-			cb_eyePositionW,
-			shellHit);
+		// 雲の下から雲を見る
+		ray_segment[count] = vec2(max(dist.z, 0.), dist.w-max(dist.z, 0.));
+		count++;
+	}
+	for(int i = 0; i <count; i++)
+	{
+		vec3 begin = rayPos + rayDir * ray_segment[i].x;
+		vec3 end = begin + rayDir * ray_segment[i].y;
+		return traceClouds( rayDir, begin, end);
 	}
 }
