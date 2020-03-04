@@ -24,63 +24,8 @@ static const vec4 STRATUS_GRADIENT = vec4(0.02, 0.05, 0.09, 0.11);
 static const vec4 STRATOCUMULUS_GRADIENT = vec4(0.02, 0.2, 0.48, 0.625);
 static const vec4 CUMULUS_GRADIENT = vec4(0.01, 0.0625, 0.78, 1.0); // these fractions would need to be altered if cumulonimbus are added to the same pass
 
-/**
- * Perform a ray-sphere intersection test.
- * Returns the number of intersections in the direction of the ray (excludes intersections behind the ray origin), between 0 and 2.
- * In the case of more than one intersection, the nearest point will be returned in t1.
- * 
- * http://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-sphere-intersection
- */
-uint intersectRaySphere(
-	float3 rayOrigin,
-	float3 rayDir, // must be normalized
-	float3 sphereCenter,
-	float  sphereRadius,
-	out float2 t)
-{
-	float3 l = rayOrigin - sphereCenter;
-	float a = 1.0f; // dot(rayDir, rayDir) where rayDir is normalized
-	float b = 2.0f * dot(rayDir, l);
-	float c = dot(l, l) - sphereRadius * sphereRadius;
-	float discriminate = b * b - 4.0f * a * c;
-	if(discriminate < 0.0f)
-	{
-		t.x = t.y = 0.0f;
-		return 0u;
-	}
-	else if(abs(discriminate) - 0.00005f <= 0.0f)
-	{
-		t.x = t.y = -0.5f * b / a;
-		return 1u;
-	}
-	else
-	{
-		float q = b > 0.0f ?
-			-0.5f * (b + sqrt(discriminate)) :
-			-0.5f * (b - sqrt(discriminate));
-		float h1 = q / a;
-		float h2 = c / q;
-		t.x = min(h1, h2);
-		t.y = max(h1, h2);
-		if(t.x < 0.0f)
-		{
-			t.x = t.y;
-			if(t.x < 0.0f)
-			{
-				return 0u;
-			}
-			return 1u;
-		}
-		return 2u;
-	}
-}
 
-float remap(
-	float value,
-	float oldMin,
-	float oldMax,
-	float newMin,
-	float newMax)
+float remap(float value, float oldMin, float oldMax, float newMin, float newMax)
 {
 	return newMin + (value - oldMin) / (oldMax - oldMin) * (newMax - newMin);
 }
@@ -113,15 +58,15 @@ float heightFraction(vec3 pos)
 
 vec4 mixGradients(float cloudType)
 {
-	float stratus = 1.0 - clamp(cloudType * 2., 0., 1.);
+	float stratus = 1.0 - saturate(cloudType * 2.);
 	float stratocumulus = 1.0 - abs(cloudType - 0.5) * 2.0;
-	float cumulus = clamp(cloudType - 0.5, 0., 1.) * 2.0;
+	float cumulus = saturate(cloudType - 0.5) * 2.0;
 	return STRATUS_GRADIENT * stratus + STRATOCUMULUS_GRADIENT * stratocumulus + CUMULUS_GRADIENT * cumulus;
 }
 
 float densityHeightGradient(float heightFrac, float cloudType)
 {
-	float4 cloudGradient = mixGradients(cloudType);
+	vec4 cloudGradient = mixGradients(cloudType);
 	return smoothstep(cloudGradient.x, cloudGradient.y, heightFrac) - smoothstep(cloudGradient.z, cloudGradient.w, heightFrac);
 }
 
