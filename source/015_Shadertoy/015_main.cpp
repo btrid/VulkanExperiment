@@ -530,20 +530,12 @@ struct Sky
 	enum Shader
 	{
 		Shader_SkyReference_CS,
-		Shader_SkyAriseReference_CS,
 
 		Shader_Sky_Render_CS,
 		Shader_Sky_MakeTexture_PartialX_CS,
 		Shader_Sky_MakeTexture_PartialY_CS,
 		Shader_Sky_MakeTexture_PartialZ_CS,
 
-		Shader_Sky_Render2_CS,
-		Shader_Sky_MakeTexture2_CS,
-
-		Shader_SkyArise_CS,
-		Shader_SkyArise_MakeTexture_CS,
-
-		Shader_SkyHorizon_CS,
 
 		Shader_Sky_RenderUpsampling_CS,
 		Shader_Num,
@@ -556,19 +548,10 @@ struct Sky
 	enum Pipeline
 	{
 		Pipeline_SkyReference_CS,
-		Pipeline_SkyAriseReference_CS,
 		Pipeline_Sky_Render_CS,
 		Pipeline_Sky_MakeTexture_PartialX_CS,
 		Pipeline_Sky_MakeTexture_PartialY_CS,
 		Pipeline_Sky_MakeTexture_PartialZ_CS,
-
-		Pipeline_Sky_Render2_CS,
-		Pipeline_Sky_MakeTexture2_CS,
-
-		Pipeline_SkyArise_CS,
-		Pipeline_SkyArise_MakeTexture_CS,
-
-		Pipeline_SkyHorizon_CS,
 
 		Pipeline_Sky_RenderUpsampling_CS,
 		Pipeline_Num,
@@ -1020,19 +1003,10 @@ struct Sky
 			const char* name[] =
 			{
 				"SkyReference.comp.spv",
-				"SkyAriseReference.comp.spv",
 				"Sky_Render.comp.spv",
 				"Sky_MakeTexture_PartialX.comp.spv",
 				"Sky_MakeTexture_PartialY.comp.spv",
 				"Sky_MakeTexture_PartialZ.comp.spv",
-
-				"Sky_Render2.comp.spv",
-				"Sky_MakeTexture2.comp.spv",
-
-				"SkyArise.comp.spv",
-				"SkyArise_MakeTexture.comp.spv",
-
-				"SkyHorizon_Render.comp.spv",
 
 				"Sky_RenderUpsampling.comp.spv",
 			};
@@ -1069,7 +1043,7 @@ struct Sky
 
 		// compute pipeline
 		{
-			std::array<vk::PipelineShaderStageCreateInfo, 12> shader_info;
+			std::array<vk::PipelineShaderStageCreateInfo, 6> shader_info;
 			shader_info[0].setModule(m_shader[Shader_SkyReference_CS].get());
 			shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[0].setPName("main");
@@ -1085,27 +1059,9 @@ struct Sky
 			shader_info[4].setModule(m_shader[Shader_Sky_MakeTexture_PartialZ_CS].get());
 			shader_info[4].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[4].setPName("main");
-			shader_info[5].setModule(m_shader[Shader_SkyArise_CS].get());
+			shader_info[5].setModule(m_shader[Shader_Sky_RenderUpsampling_CS].get());
 			shader_info[5].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[5].setPName("main");
-			shader_info[6].setModule(m_shader[Shader_SkyArise_MakeTexture_CS].get());
-			shader_info[6].setStage(vk::ShaderStageFlagBits::eCompute);
-			shader_info[6].setPName("main");
-			shader_info[7].setModule(m_shader[Shader_SkyReference_CS].get());
-			shader_info[7].setStage(vk::ShaderStageFlagBits::eCompute);
-			shader_info[7].setPName("main");
-			shader_info[8].setModule(m_shader[Shader_Sky_RenderUpsampling_CS].get());
-			shader_info[8].setStage(vk::ShaderStageFlagBits::eCompute);
-			shader_info[8].setPName("main");
-			shader_info[9].setModule(m_shader[Shader_Sky_Render2_CS].get());
-			shader_info[9].setStage(vk::ShaderStageFlagBits::eCompute);
-			shader_info[9].setPName("main");
-			shader_info[10].setModule(m_shader[Shader_Sky_MakeTexture2_CS].get());
-			shader_info[10].setStage(vk::ShaderStageFlagBits::eCompute);
-			shader_info[10].setPName("main");
-			shader_info[11].setModule(m_shader[Shader_SkyHorizon_CS].get());
-			shader_info[11].setStage(vk::ShaderStageFlagBits::eCompute);
-			shader_info[11].setPName("main");
 			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 			{
 				vk::ComputePipelineCreateInfo()
@@ -1126,24 +1082,6 @@ struct Sky
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[5])
 				.setLayout(m_pipeline_layout[PipelineLayout_Sky_CS].get()),
-				vk::ComputePipelineCreateInfo()
-				.setStage(shader_info[6])
-				.setLayout(m_pipeline_layout[PipelineLayout_Sky_CS].get()),
-				vk::ComputePipelineCreateInfo()
-				.setStage(shader_info[7])
-				.setLayout(m_pipeline_layout[PipelineLayout_Sky_CS].get()),
-				vk::ComputePipelineCreateInfo()
-				.setStage(shader_info[8])
-				.setLayout(m_pipeline_layout[PipelineLayout_Sky_CS].get()),
-				vk::ComputePipelineCreateInfo()
-				.setStage(shader_info[9])
-				.setLayout(m_pipeline_layout[PipelineLayout_Sky_CS].get()),
-				vk::ComputePipelineCreateInfo()
-				.setStage(shader_info[10])
-				.setLayout(m_pipeline_layout[PipelineLayout_Sky_CS].get()),
-				vk::ComputePipelineCreateInfo()
-				.setStage(shader_info[11])
-				.setLayout(m_pipeline_layout[PipelineLayout_Sky_CS].get()),
 			};
 			auto compute_pipeline = context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
 			m_pipeline[Pipeline_SkyReference_CS] = std::move(compute_pipeline[0]);
@@ -1151,13 +1089,7 @@ struct Sky
 			m_pipeline[Pipeline_Sky_MakeTexture_PartialX_CS] = std::move(compute_pipeline[2]);
 			m_pipeline[Pipeline_Sky_MakeTexture_PartialY_CS] = std::move(compute_pipeline[3]);
 			m_pipeline[Pipeline_Sky_MakeTexture_PartialZ_CS] = std::move(compute_pipeline[4]);
-			m_pipeline[Pipeline_SkyArise_CS] = std::move(compute_pipeline[5]);
-			m_pipeline[Pipeline_SkyArise_MakeTexture_CS] = std::move(compute_pipeline[6]);
-			m_pipeline[Pipeline_SkyAriseReference_CS] = std::move(compute_pipeline[7]);
-			m_pipeline[Pipeline_Sky_RenderUpsampling_CS] = std::move(compute_pipeline[8]);
-			m_pipeline[Pipeline_Sky_Render2_CS] = std::move(compute_pipeline[9]);
-			m_pipeline[Pipeline_Sky_MakeTexture2_CS] = std::move(compute_pipeline[10]);
-			m_pipeline[Pipeline_SkyHorizon_CS] = std::move(compute_pipeline[11]);
+			m_pipeline[Pipeline_Sky_RenderUpsampling_CS] = std::move(compute_pipeline[5]);
 		}
 
 
@@ -1201,44 +1133,6 @@ struct Sky
 		}
 
 	}
-	void execute_AriseReference(vk::CommandBuffer& cmd, const std::shared_ptr<RenderTarget>& render_target)
-	{
-		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
-
-		auto window = sGlobal::Order().getTotalTime() * 20.f;
-		{
-			vk::DescriptorSet descs[] =
-			{
-				render_target->m_descriptor.get(),
-				m_descriptor_set.get(),
-			};
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Sky_CS].get(), 0, array_length(descs), descs, 0, nullptr);
-
-			cmd.pushConstants<float>(m_pipeline_layout[PipelineLayout_Sky_CS].get(), vk::ShaderStageFlagBits::eCompute, 0, window);
-
-		}
-
-		// render_targetÇ…èëÇ≠
-		_label.insert("render cloud");
-		{
-			{
-				std::array<vk::ImageMemoryBarrier, 1> image_barrier;
-				image_barrier[0].setImage(render_target->m_image);
-				image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-				image_barrier[0].setNewLayout(vk::ImageLayout::eGeneral);
-				image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
-
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
-			}
-
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_SkyAriseReference_CS].get());
-
-			auto num = app::calcDipatchGroups(uvec3(1024, 1024, 1), uvec3(32, 32, 1));
-			cmd.dispatch(num.x, num.y, num.z);
-		}
-
-	}
-
 
 	void execute(vk::CommandBuffer& cmd, const std::shared_ptr<RenderTarget>& render_target)
 	{
@@ -1335,48 +1229,6 @@ struct Sky
 		}
 	}
 
-	void executeHorizon(vk::CommandBuffer& cmd, const std::shared_ptr<RenderTarget>& render_target)
-	{
-		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
-
-		auto window = vec3(sGlobal::Order().getTotalTime()) * vec3(20.f, 0.f, 12.f);
-		{
-			vk::DescriptorSet descs[] =
-			{
-				render_target->m_descriptor.get(),
-				m_descriptor_set.get(),
-				m_skynoise.m_descriptor_set.get(),
-			};
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Sky_CS].get(), 0, array_length(descs), descs, 0, nullptr);
-
-			cmd.pushConstants<vec3>(m_pipeline_layout[PipelineLayout_Sky_CS].get(), vk::ShaderStageFlagBits::eCompute, 0, window);
-
-		}
-
-		// render_targetÇ…èëÇ≠
-		_label.insert("render cloud");
-		{
-			{
-				std::array<vk::ImageMemoryBarrier, 1> image_barrier;
-				image_barrier[0].setImage(m_image_render.get());
-				image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-				image_barrier[0].setOldLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
-				image_barrier[0].setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
-				image_barrier[0].setNewLayout(vk::ImageLayout::eGeneral);
-				image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
-			}
-
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_SkyHorizon_CS].get());
-			auto num = app::calcDipatchGroups(uvec3(512, 512, 1), uvec3(32, 32, 1));
-			cmd.dispatch(num.x, num.y, num.z);
-
-			{
-				_executeUpsampling(cmd, render_target);
-			}
-		}
-	}
-
 	void _executeUpsampling(vk::CommandBuffer &cmd, const std::shared_ptr<RenderTarget>& render_target)
 	{
 		{
@@ -1401,78 +1253,6 @@ struct Sky
 		cmd.dispatch(num.x, num.y, num.z);
 	}
 
-	void executeArise(vk::CommandBuffer& cmd, const std::shared_ptr<RenderTarget>& render_target)
-	{
-		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
-		{
-			vk::DescriptorSet descs[] =
-			{
-				render_target->m_descriptor.get(),
-				m_descriptor_set.get(),
-			};
-			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Sky_CS].get(), 0, array_length(descs), descs, 0, nullptr);
-
-			cmd.pushConstants<float>(m_pipeline_layout[PipelineLayout_Sky_CS].get(), vk::ShaderStageFlagBits::eCompute, 0, sGlobal::Order().getTotalTime());
-
-		}
-
-		// make texture
-		_label.insert("make cloud map");
-		{
-			{
-
-				std::array<vk::ImageMemoryBarrier, 1> image_barrier;
-				image_barrier[0].setImage(m_image_arise.get());
-				image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-				image_barrier[0].setNewLayout(vk::ImageLayout::eGeneral);
-				image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
-				image_barrier[0].setOldLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
-				image_barrier[0].setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
-				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
-			}
-
-
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_SkyArise_MakeTexture_CS].get());
-
-			auto num = app::calcDipatchGroups(uvec3(m_image_arise_info.extent.width, m_image_arise_info.extent.height, m_image_arise_info.extent.depth), uvec3(32, 32, 1));
-			cmd.dispatch(num.x, num.y, num.z);
-		}
-
-		// render_targetÇ…èëÇ≠
-		_label.insert("render cloud");
-		{
-			{
-
-				{
-
-					std::array<vk::ImageMemoryBarrier, 2> image_barrier;
-					image_barrier[0].setImage(m_image_render.get());
-					image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-					image_barrier[0].setOldLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
-					image_barrier[0].setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
-					image_barrier[0].setNewLayout(vk::ImageLayout::eGeneral);
-					image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
-					image_barrier[1].setImage(m_image_arise.get());
-					image_barrier[1].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-					image_barrier[1].setOldLayout(vk::ImageLayout::eGeneral);
-					image_barrier[1].setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
-					image_barrier[1].setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
-					image_barrier[1].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-
-					cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
-				}
-
-				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_SkyArise_CS].get());
-
-				auto num = app::calcDipatchGroups(uvec3(m_image_render_info.extent.width, m_image_render_info.extent.height, 1), uvec3(32, 32, 1));
-				cmd.dispatch(num.x, num.y, num.z);
-			}
-
-			{
-				_executeUpsampling(cmd, render_target);
-			}
-		}
-	}
 };
 // https://bib.irb.hr/datoteka/949019.Final_0036470256_56.pdf
 int main()
@@ -1504,8 +1284,6 @@ int main()
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0, "cmd_skynoise");
 		sky.m_skynoise.execute(context, cmd);
-//		sky.execute(cmd, app.m_window->getFrontBuffer());
-//		sky.executeArise(cmd, app.m_window->getFrontBuffer());
 	}
 	app.setup();
 	while (true)
@@ -1524,12 +1302,8 @@ int main()
 			std::vector<vk::CommandBuffer> cmds(cmd_num);
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0, "cmd_sky");
-//				sky.execute_reference(cmd, app.m_window->getFrontBuffer());
-//				sky.execute_AriseReference(cmd, app.m_window->getFrontBuffer());
-//				sky.executeArise(cmd, app.m_window->getFrontBuffer());
 				sky.execute(cmd, app.m_window->getFrontBuffer());
 //				sky.m_skynoise.execute_Render(context, cmd, app.m_window->getFrontBuffer());
-//				sky.executeHorizon(cmd, app.m_window->getFrontBuffer());
 				cmd.end();
 				cmds[cmd_sky] = cmd;
 			}

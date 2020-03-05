@@ -65,7 +65,7 @@ float densityHeightGradient(float height_frac, float cloudType)
 
 float sampleCloudDensity(vec3 pos, vec3 weather_data, float height_frac, float lod)
 {
-	if(height_frac>= 1. || height_frac <= 0.) { return 0.; }
+	if(height_frac>= 1. || height_frac <= 0.) { return 0.; } //範囲外
 
 	pos = vec3(pos.x, height_frac, pos.z) * vec3(u_mapping, 1., u_mapping) + vec3(0.5, 0., 0.5);// UV[0~1]
 	
@@ -211,7 +211,7 @@ vec4 traceClouds(vec3 viewDirW, vec3 startPos, vec3 endPos)
 			float transmittance = 1. - (density * rcpThickness);
 			float lightDensity = sampleCloudDensityAlongCone(pos, stepSize, lightDotEye, cloudDensity);
 
-			vec3 ambientBadApprox = ambientLight(height_frac) * min(1.0f, length(uLightColor.rgb * 0.325)) * transmittance;
+			vec3 ambientBadApprox = ambientLight(height_frac) * min(1.0f, length(uLightColor.rgb * 0.925)) * transmittance;
 			vec4 source = vec4((uLightColor.rgb * lightDensity) + ambientBadApprox/*+ ambientLight(heightFrac)*/, cloudDensity * transmittance); // TODO enable ambient when added to constant buffer
 			source.rgb *= source.a;
 			result = (1.0 - result.a) * source + result;
@@ -304,6 +304,13 @@ void main()
 		vec3 end = begin + CamDir * ray_segment[i].y;
 		vec4 color = traceClouds( CamDir, begin, end);
 		color.xyz = mix(sky_color, color.xyz/(color.a+0.0001), color.a);
+
+		// tonemapping
+		{
+			float exposure = 2.5;
+			color.xyz = vec3(1.0) - exp(-exposure * color.xyz);
+		}
+
 		imageStore(i_render_map, ivec2(gl_GlobalInvocationID.xy), vec4(color.xyz, 1.));
 		return;
 	}
