@@ -2,20 +2,22 @@
 #extension GL_GOOGLE_include_directive : require
 
 #include "Sky.glsl"
-
 layout (local_size_x = 32, local_size_y = 32) in;
-layout(push_constant) uniform Input
-{
-	vec3 window;
-} constant;
-float band(in float start, in float peak, in float end, in float t)
-{
-	return smoothstep (start, peak, t) * (1. - smoothstep (peak, end, t));
-}
+#define saturate(_a) clamp(_a, 0., 1.)
 
-float remap(in float value, in float original_min, in float original_max, in float new_min, in float new_max) 
+// https://www.gamedev.net/forums/topic/680832-horizonzero-dawn-cloud-system/?page=6
+
+
+bool intersectRayAtom(vec3 Pos, vec3 Dir, vec3 AtomPos, vec2 Area, out vec4 OutDist)
 {
-	return new_min + (((value - original_min) / (original_max - original_min)) * (new_max - new_min));
+	vec3 RelativePos = AtomPos - Pos;
+	float tca = dot(RelativePos, Dir);
+
+	vec2 RadiusSq = Area * Area;
+	float d2 = dot(RelativePos, RelativePos) - tca * tca;
+
+	OutDist = vec4(tca) + vec4(sqrt(RadiusSq.yxxy - d2)) * vec4(-1., -1., 1., 1.);
+	return d2 <= RadiusSq.y;
 }
 
 float intersectRaySphere(in vec3 origin, in vec3 ray, in vec4 sphere)
@@ -35,131 +37,212 @@ float intersectRaySphere(in vec3 origin, in vec3 ray, in vec4 sphere)
 	if (t0 < 0.) t0 = t1;
 	return t0;
 }
+float remap(float value, float oldMin, float oldMax, float newMin, float newMax){ return newMin + (value - oldMin) / (oldMax - oldMin) * (newMax - newMin); }
 
-bool intersectRayAtom(vec3 Pos, vec3 Dir, vec3 AtomPos, vec2 Area, out vec4 OutDist)
+vec3 sampleWeather(vec3 pos){ return texture(s_weather_map, (vec3(pos) * vec3(u_mapping, 1., u_mapping) + vec3(0.5, 0., 0.5)).xz).xyz; }
+float getCoverage(vec3 weather_data){ return weather_data.r; }
+float getPrecipitation(vec3 weather_data){ return weather_data.g; }
+float getCloudType(vec3 weather_data){ return weather_data.b; }// weather b channel tells the cloud type 0.0 = stratus, 0.5 = stratocumulus, 1.0 = cumulus
+
+float heightFraction(vec3 pos) { return (distance(pos,u_cloud_inner.xyz)-u_cloud_inner.w)*u_cloud_area_inv; }
+
+vec4 mixGradients(float cloudType)
 {
-	vec3 RelativePos = AtomPos - Pos;
-	float tca = dot(RelativePos, Dir);
+	#define STRATUS_GRADIENT vec4(0.02, 0.05, 0.09, 0.11)
+	#define STRATOCUMULUS_GRADIENT vec4(0.02, 0.2, 0.48, 0.625)
+	#define CUMULUS_GRADIENT vec4(0.01, 0.0625, 0.78, 1.0)
 
-	vec2 RadiusSq = Area * Area;
-	float d2 = dot(RelativePos, RelativePos) - tca * tca;
-
-	OutDist = vec4(tca) + vec4(sqrt(RadiusSq.yxxy - d2)) * vec4(-1., -1., 1., 1.);
-	return d2 <= RadiusSq.y;
+	float stratus = 1.0 - saturate(cloudType * 2.);
+	float stratocumulus = 1.0 - abs(cloudType - 0.5) * 2.0;
+	float cumulus = saturate(cloudType - 0.5) * 2.0;
+	return STRATUS_GRADIENT * stratus + STRATOCUMULUS_GRADIENT * stratocumulus + CUMULUS_GRADIENT * cumulus;
+}
+float densityHeightGradient(float height_frac, float cloudType)
+{
+	vec4 cloudGradient = mixGradients(cloudType);
+	return smoothstep(cloudGradient.x, cloudGradient.y, height_frac) - smoothstep(cloudGradient.z, cloudGradient.w, height_frac);
 }
 
-float cloud_density(in vec3 pos)
+float sampleCloudDensity(vec3 pos, vec3 weather_data, float height_frac, float lod)
 {
-	float t = (distance(pos,u_cloud_inner.xyz)-u_cloud_inner.w)*u_cloud_area_inv;
-	if(t>= 1. || t <= 0.) { return 0.; }
+	if(height_frac>= 1. || height_frac <= 0.) { return 0.; }
 
-	pos = vec3(pos.x, t, pos.z) * vec3(u_mapping, 1., u_mapping) + vec3(0.5, 0., 0.5);
-	vec3 tex_size = vec3(textureSize(s_map, 0));
-	pos = fract(pos + constant.window/tex_size);
-
-#define USE_HORIZON_CLOUD
-//#define USE_ARISE_CLOUD
-#if defined(USE_HORIZON_CLOUD)
-	vec4 map = texture(s_worleynoise_map, vec3(pos.xz, 0.));
-//	float density = smoothstep(0.65, 0.65, dot(map, vec4(8.,4.,2.,1.)) / 15.);
-	float density = dot(map, vec4(8.,4.,2.,1.)) / 15.;
-	density += texture(s_map, pos).x*0.2;
-	density *= step(0.5, density);
-//	density *= band(0., 0.5, 1., t);
-//	float density_detail = texture(s_worleynoise_map, vec3(pos.xz, 0.)*10.).y;
-//	float density = map.x * band(0., 0.5, 1., t) + density_detail * 0.2;
-//	density += texture(s_map, pos).x*0.2;
-	return density;
-
-#elif defined(USE_ARISE_CLOUD)
-	vec4 map = texture(s_worleynoise_map, vec3(pos.xz, 0));
-	map.x *= step(0.65, map.x);
-	float density = map.x * band(map.y, map.y+map.z*0.5, map.y+map.z*1., t);
-	return density;
-#else
-//	pos = fract(pos + constant.window/tex_size);
-	pos.y = t;
-
-	float density = texture(s_map, pos).x;
-//	float density_detail = texture(s_map, pos*vec3(10.1)+constant.window*0.3/tex_size + 40.).x;
-	return density;
-#endif
-}
-
-float cloud_lighting(in vec3 pos)
-{
-	float transparent = 1.;
-	float ray_step = 1.;
-	const int steps = 4;
-	pos = pos + uLightRay*4.;
-	for (int i = 0; i < steps; i++)
-	{
-		float density = cloud_density(pos);
-
-		transparent *= exp(-density * ABSORPTION * ray_step*12.);
-		if(transparent<=0.01){ break; }
-		pos = pos + uLightRay * ray_step;
-	}
-	return transparent;
-}
-
-vec4 cloud(in vec3 rayPos, in vec3 rayDir, float depth)
-{
-	vec4 dist;
-	if(!intersectRayAtom(rayPos, rayDir, u_cloud_inner.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), dist))
-	{
-		// 雲にヒットしない
-		return vec4(0.);
-	}
+	pos = vec3(pos.x, height_frac, pos.z) * vec3(u_mapping, 1., u_mapping) + vec3(0.5, 0., 0.5);// UV[0~1]
 	
+	vec4 low_freq_noise = texture(s_cloud_map, pos);
+	float low_freq_fBM = dot(low_freq_noise.yzw, vec3(0.625, 0.25, 0.125));
+	float baseCloud = remap(low_freq_noise.r, -(1.0 - low_freq_fBM), 1.0, 0.0, 1.0);
 
-	int count = 0;
-	vec2 ray_segment[2];
-	if(dist.y>0.)
+	float densityGradient = densityHeightGradient(height_frac, getCloudType(weather_data));
+	baseCloud *= densityGradient;
+
+	float cloudCoverage = getCoverage(weather_data);
+	float baseCloudWithCoverage = remap(baseCloud, 1.0 - cloudCoverage, 1., 0., 1.);
+	baseCloudWithCoverage *= cloudCoverage;
+
+	//// TODO add curl noise
+	//// pos += curlNoise.xy * (1.0f - height_frac);
+
+	vec3 high_freq_noise = texture(s_cloud_detail_map, pos * 10.15).xyz;
+	float high_freq_fBM = dot(high_freq_noise, vec3(0.625, 0.25, 0.125));
+	float high_freq_foise_modifier = mix(high_freq_fBM, 1.0 - high_freq_fBM, saturate(height_frac * 10.0f));
+
+	baseCloudWithCoverage = remap(baseCloudWithCoverage, high_freq_foise_modifier * 0.2, 1.0, 0.0, 1.0);
+	return saturate(baseCloudWithCoverage);
+}
+
+// random vectors on the unit sphere
+const vec3 RANDOM_VECTORS[] =
+{
+	vec3( 0.38051305f,  0.92453449f, -0.02111345f),
+	vec3(-0.50625799f, -0.03590792f, -0.86163418f),
+	vec3(-0.32509218f, -0.94557439f,  0.01428793f),
+	vec3( 0.09026238f, -0.27376545f,  0.95755165f),
+	vec3( 0.28128598f,  0.42443639f, -0.86065785f),
+	vec3(-0.16852403f,  0.14748697f,  0.97460106f)
+};
+const uint LIGHT_RAY_ITERATIONS = 6u;
+const float RCP_LIGHT_RAY_ITERATIONS = 1.0f / float(LIGHT_RAY_ITERATIONS);
+
+float beerLambert(float sampleDensity, float precipitation)
+{
+	return exp(-sampleDensity * precipitation);
+}
+
+float powder(float sampleDensity, float lightDotEye)
+{
+	float powd = 1.0f - exp(-sampleDensity * 2.0f);
+	return mix(1.0f, powd, clamp((-lightDotEye * 0.5f) + 0.5f, 0., 1.));
+}
+
+float henyeyGreenstein(float lightDotEye, float g)
+{
+	return ((1.0f - g*g) / pow((1. + g*g - 2.*g*lightDotEye), 1.5)) / (4.*3.1415);
+}
+
+float lightEnergy(float lightDotEye, float densitySample, float originalDensity, float precipitation)
+{
+	return 2.0f *
+		beerLambert(densitySample, precipitation) *
+		powder(originalDensity, lightDotEye) * 
+		mix(henyeyGreenstein(lightDotEye, 0.2f), henyeyGreenstein(lightDotEye, -0.5f), 0.5f);
+}
+
+// TODO get from cb values - has to change as time of day changes
+vec3 ambientLight(float height_frac)
+{
+	return mix(vec3(0.5f, 0.67f, 0.82f), vec3(1.0f, 1.0f, 1.0f), height_frac);
+}
+
+float sampleCloudDensityAlongCone(vec3 startPos, float stepSize, float lightDotEye, float originalDensity)
+{
+	vec3 lightStep = stepSize * -uLightRay;
+	vec3 pos = startPos;
+	float coneRadius = 1.0f;
+	float coneStep = RCP_LIGHT_RAY_ITERATIONS;
+	float densityAlongCone = 0.;
+	float lod = 0.;
+	float lodStride = RCP_LIGHT_RAY_ITERATIONS;
+	vec3 weather_data = vec3(0.);
+	float rcpThickness = 1. / (stepSize * LIGHT_RAY_ITERATIONS);
+	float density = 0.;
+
+	for(uint i = 0u; i < LIGHT_RAY_ITERATIONS; ++i)
 	{
-		// 雲の上から雲を見る
-		ray_segment[count] = vec2(max(dist.x, 0.), dist.y-max(dist.x, 0.));
-		count++;
-	}
-	if(dist.w>0. && depth<0.)
-	{
-		// 雲の下から雲を見る
-		ray_segment[count] = vec2(max(dist.z, 0.), dist.w-max(dist.z, 0.));
-		count++;
-	}
-#define STEP_LENGTH	1.
-	float transparent = 1.;
-	float alpha = 0.;
-	vec3 color = vec3(0.);
-	for(int i = 0; i <count; i++)
-	{
-//		vec3 dir = rayDir / rayDir.y;
-		int step_num = int(ray_segment[i].y / STEP_LENGTH);
-		float ray_step = STEP_LENGTH;
-		vec3 pos = rayPos + rayDir * (ray_segment[i].x+ray_step*0.5);
-		for(int step = 0; step < step_num; step++)
+		vec3 conePos = pos + coneRadius * RANDOM_VECTORS[i] * float(i + 1u);
+		float height_frac = heightFraction(conePos);
+		if(height_frac <= 1.0)
 		{
-			float density = cloud_density(pos);
+			weather_data = sampleWeather(conePos);
+			float cloudDensity = sampleCloudDensity(conePos, weather_data, height_frac, lod);
+			if(cloudDensity > 0.0)
+			{
+				density += cloudDensity;
+				float transmittance = 1.0f - (density * rcpThickness);
+				densityAlongCone += (cloudDensity * transmittance);
+			}
+		}
+		pos += lightStep;
+		coneRadius += coneStep;
+		lod += lodStride;
+	}
+	// take additional step at large distance away for shadowing from other clouds
+	pos = pos + (lightStep * 8.0f);
+	weather_data = sampleWeather(pos);
+	float height_frac = heightFraction(pos);
+	if(height_frac <= 1.0f)
+	{
+		float cloudDensity = sampleCloudDensity(pos, weather_data, height_frac, 0.8f);
+		// no need to branch here since density variable is no longer used after this
+		density += cloudDensity;
+		float transmittance = 1.0f - saturate(density * rcpThickness);
+		densityAlongCone += (cloudDensity * transmittance);
+	}
 
-			float t = exp(-density * ABSORPTION * ray_step);
-			transparent *= t;
-			if (transparent < 0.01) { i = count; break; }
+	return saturate(lightEnergy(lightDotEye, densityAlongCone, originalDensity, mix(1., 2., getPrecipitation(weather_data))));
+}
 
-			color += transparent * density * cloud_lighting(pos) * ray_step;
-			alpha += (1.-t) *(1.-alpha);
+vec4 traceClouds(vec3 viewDirW, vec3 startPos, vec3 endPos)
+{
+	vec3 dir = endPos - startPos;
+	float thickness = length(dir);
+	float rcpThickness = 1. / thickness;
+	uint sampleCount = 16;
+	float stepSize = thickness / float(sampleCount);
+	dir /= thickness;
+	vec3 posStep = stepSize * dir;
 
-			pos = pos + rayDir * ray_step;
+	float lightDotEye = dot(-uLightRay, viewDirW);
 
+	vec3 pos = startPos;
+	vec3 weather_data = vec3(0.);
+	vec4 result = vec4(0.);
+	float density = 0.;
+	
+	for(uint i = 0u; i < sampleCount; ++i)
+	{
+		float height_frac = heightFraction(pos);
+		weather_data = sampleWeather(pos);
+		float cloudDensity = sampleCloudDensity(pos, weather_data, height_frac, 0.);
+
+		if(cloudDensity > 0.0)
+		{
+			density += cloudDensity;
+			float transmittance = 1. - (density * rcpThickness);
+			float lightDensity = sampleCloudDensityAlongCone(pos, stepSize, lightDotEye, cloudDensity);
+
+			vec3 ambientBadApprox = ambientLight(height_frac) * min(1.0f, length(uLightColor.rgb * 0.325)) * transmittance;
+			vec4 source = vec4((uLightColor.rgb * lightDensity) + ambientBadApprox/*+ ambientLight(heightFrac)*/, cloudDensity * transmittance); // TODO enable ambient when added to constant buffer
+			source.rgb *= source.a;
+			result = (1.0 - result.a) * source + result;
+			if(result.a >= 1.0) break;
 		}
 
+		pos += posStep;
 	}
-	return vec4(color, min(alpha, 1.));
+
+	// experimental fog - may not be needed if clouds are drawn before atmosphere - would have to draw sun by itself, then clouds, then atmosphere
+	// fogAmt = 0 to disable
+//	float fogAmt = 1.0f - exp(-distance(startPos, uCamPos) * 0.00001f);
+//	vec3 fogColor = vec3(0.3f, 0.4f, 0.45f) * length(uLightColor.rgb * 0.125f) * 0.8f;
+//	vec3 sunColor = normalize(uLightColor.rgb) * 4.0f * length(uLightColor.rgb * 0.125f);
+//	fogColor = mix(fogColor, sunColor, pow(saturate(lightDotEye), 8.0f));
+//	return vec4(clamp(mix(result.rgb, fogColor, fogAmt), 0.0f, 1000.0f), saturate(result.a));
+	return saturate(vec4(result));
 }
 
 void main()
 {
+//	ivec3 loadIndices = ivec3(pIn.posH.xy, 0);
+//	float zwDepth = depthTexture.Load(loadIndices).r;
+	bool depthPresent = false;
+//	float depth = linearizeDepth(zwDepth);
+	float depth = 9999999999.;
+//	vec3 posV = pIn.viewRay * depth;
+//	vec3 posW = mul(vec4(posV, 1.0f), cb_inverseViewMatrix).xyz;
 	vec3 CamPos = vec3(0., 1., 0.);
 	vec3 CamDir = normalize(vec3(1.5, 1.7, 1.5));
+
 	// カメラレイの作成
 	{
 		uvec3 reso = gl_NumWorkGroups * gl_WorkGroupSize;
@@ -172,10 +255,8 @@ void main()
 		vec2 aspect = vec2(float(reso.x) / float(reso.y), 1);
 		CamDir = normalize(side*ndc.x + up*ndc.y + CamDir);
 	}
-
-	vec3 sky_color = mix(vec3(.0, 0.1, 0.4), vec3(0.3, 0.6, 0.8), 1.0 - CamDir.y);
-	sky_color = mix(sky_color, uLightColor, smoothstep(0.999, 1.00, dot(uLightRay, CamDir)));
-
+	uCamPos = CamPos;
+	uCamDir = CamDir;
 
 	// 地面判定
 	float distance_land = intersectRaySphere(CamPos, CamDir, u_planet);
@@ -185,39 +266,48 @@ void main()
 		vec3 pos = CamPos + CamDir * distance_land;
 		vec2 pos_i = floor(pos * 0.5).xz;
 		float p = float(mod(pos_i.x + pos_i.y, 2.));
-		sky_color = mix(vec3(.6, .6, .6), vec3(.75, .75, .75), p);
-
-		// shadow
-/*		if(true)
-		{
-			#define SHADOW_RAY_STEP 12
-			#define SHADOW_RAY_LENGTH 5.
-			float d1 = intersectRaySphere(pos, uLightRay, u_cloud_inner);
-			float d2 = intersectRaySphere(pos, uLightRay, u_cloud_outer);
-			int step_num = min(int((max(d2, 0.)-max(d1, 0.)) / float(SHADOW_RAY_LENGTH)), SHADOW_RAY_STEP);
-			pos = pos + uLightRay * (d1 + SHADOW_RAY_LENGTH*0.5);
-			vec3 ray = uLightRay/uLightRay.y;
-
-			float transparent = 1.;
-			for(int step = 0; step < step_num; step++)
-			{
-				float density = cloud_density(pos);
-
-				float t = exp(-density * ABSORPTION);
-				transparent *= t;
-				if (transparent < 0.01) break;
-
-				pos += ray * SHADOW_RAY_LENGTH; 
-			}
-			sky_color = mix(sky_color, vec3(0.), 1.-transparent);
-		}
-*/		
+		vec3 ground_color = mix(vec3(.6, .6, .6), vec3(.75, .75, .75), p);
+		imageStore(i_render_map, ivec2(gl_GlobalInvocationID.xy), vec4(ground_color, 1.));
+		return;
 	}
 
-	vec4 color = cloud(CamPos, CamDir, distance_land);
+	// find nearest planet surface point
+	vec4 dist;
+	if(!intersectRayAtom(CamPos, CamDir, u_cloud_inner.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), dist))
+	{
+		// 雲にヒットしない
+		imageStore(i_render_map, ivec2(gl_GlobalInvocationID.xy), vec4(1.,0., 1., 1.));
+		return;
+	}
+	
+	vec3 sky_color = mix(vec3(.0, 0.1, 0.4), vec3(0.3, 0.6, 0.8), 1.0 - CamDir.y);
+	sky_color = mix(sky_color, uLightColor, smoothstep(0.9999, 1.00, dot(-uLightRay, CamDir)));
 
-	color.xyz = mix(sky_color, color.xyz/(color.a+0.0001), color.a);
+	int count = 0;
+	vec2 ray_segment[2];
+	if(dist.y>0.)
+	{
+		// 雲の上から雲を見る
+		ray_segment[count] = vec2(max(dist.x, 0.), dist.y-max(dist.x, 0.));
+		count++;
+	}
+	if(dist.w>0. && distance_land<0.)
+	{
+		// 雲の下から雲を見る
+		ray_segment[count] = vec2(max(dist.z, 0.), dist.w-max(dist.z, 0.));
+		count++;
+	}
 
-	imageStore(i_render_map, ivec2(gl_GlobalInvocationID.xy), vec4(color.xyz, 1.));
+	for(int i = 0; i <count; i++)
+	{
+		vec3 begin = CamPos + CamDir * ray_segment[i].x;
+		vec3 end = begin + CamDir * ray_segment[i].y;
+		vec4 color = traceClouds( CamDir, begin, end);
+		color.xyz = mix(sky_color, color.xyz/(color.a+0.0001), color.a);
+		imageStore(i_render_map, ivec2(gl_GlobalInvocationID.xy), vec4(color.xyz, 1.));
+		return;
+	}
+
+	imageStore(i_render_map, ivec2(gl_GlobalInvocationID.xy), vec4(0.,0., 1., 1.));
 
 }

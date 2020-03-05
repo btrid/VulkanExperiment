@@ -138,7 +138,7 @@ struct SkyNoise
 				vk::ImageCreateInfo image_info;
 				image_info.setExtent(vk::Extent3D(32, 32, 32));
 				image_info.setArrayLayers(1);
-				image_info.setFormat(vk::Format::eR8G8B8Unorm);
+				image_info.setFormat(vk::Format::eR8G8B8A8Unorm);
 				image_info.setImageType(vk::ImageType::e3D);
 				image_info.setInitialLayout(vk::ImageLayout::eUndefined);
 				image_info.setMipLevels(1);
@@ -171,7 +171,7 @@ struct SkyNoise
 				view_info.components.setR(vk::ComponentSwizzle::eR).setG(vk::ComponentSwizzle::eG).setB(vk::ComponentSwizzle::eB).setA(vk::ComponentSwizzle::eIdentity);
 				m_image_detail_view = context->m_device.createImageViewUnique(view_info);
 
-				view_info.setFormat(vk::Format::eR8G8B8Uint);
+				view_info.setFormat(vk::Format::eR8G8B8A8Uint);
 				m_image_detail_write_view = context->m_device.createImageViewUnique(view_info);
 
 				vk::SamplerCreateInfo sampler_info;
@@ -202,7 +202,7 @@ struct SkyNoise
 				vk::ImageCreateInfo image_info;
 				image_info.setExtent(vk::Extent3D(1024, 1024, 1));
 				image_info.setArrayLayers(1);
-				image_info.setFormat(vk::Format::eR8G8B8Unorm);
+				image_info.setFormat(vk::Format::eR8G8B8A8Unorm);
 				image_info.setImageType(vk::ImageType::e2D);
 				image_info.setInitialLayout(vk::ImageLayout::eUndefined);
 				image_info.setMipLevels(1);
@@ -235,7 +235,7 @@ struct SkyNoise
 				view_info.components.setR(vk::ComponentSwizzle::eR).setG(vk::ComponentSwizzle::eG).setB(vk::ComponentSwizzle::eB).setA(vk::ComponentSwizzle::eIdentity);
 				m_image_weather_view = context->m_device.createImageViewUnique(view_info);
 
-				view_info.setFormat(vk::Format::eR8G8B8Uint);
+				view_info.setFormat(vk::Format::eR8G8B8A8Uint);
 				m_image_weather_write_view = context->m_device.createImageViewUnique(view_info);
 
 				vk::SamplerCreateInfo sampler_info;
@@ -1504,8 +1504,8 @@ int main()
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0, "cmd_skynoise");
 		sky.m_skynoise.execute(context, cmd);
-		sky.execute(cmd, app.m_window->getFrontBuffer());
-		sky.executeArise(cmd, app.m_window->getFrontBuffer());
+//		sky.execute(cmd, app.m_window->getFrontBuffer());
+//		sky.executeArise(cmd, app.m_window->getFrontBuffer());
 	}
 	app.setup();
 	while (true)
@@ -1527,8 +1527,8 @@ int main()
 //				sky.execute_reference(cmd, app.m_window->getFrontBuffer());
 //				sky.execute_AriseReference(cmd, app.m_window->getFrontBuffer());
 //				sky.executeArise(cmd, app.m_window->getFrontBuffer());
-//				sky.execute(cmd, app.m_window->getFrontBuffer());
-				sky.m_skynoise.execute_Render(context, cmd, app.m_window->getFrontBuffer());
+				sky.execute(cmd, app.m_window->getFrontBuffer());
+//				sky.m_skynoise.execute_Render(context, cmd, app.m_window->getFrontBuffer());
 //				sky.executeHorizon(cmd, app.m_window->getFrontBuffer());
 				cmd.end();
 				cmds[cmd_sky] = cmd;
