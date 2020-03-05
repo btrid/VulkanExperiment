@@ -18,27 +18,31 @@ vec3 _wn_rand(in ivec4 co)
 
 float worley_noise(in uvec3 invocation, in int level)
 {
-	float value = 0.;
-	uvec3 tile_size = ivec3(32)>>level;
-	uvec3 tile_id = invocation/tile_size;
-	vec3 pos = vec3(invocation%tile_size);
-	float _radius = float(tile_size.x)+0.5;
-	#define cell_size 1
+	vec3 value = vec3(0.);
 
-	for(int z = -cell_size; z <= cell_size; z++)
-	for(int y = -cell_size; y <= cell_size; y++)
-	for(int x = -cell_size; x <= cell_size; x++)
+	for(int i = 0; i < 3; i++)
 	{
-		ivec3 tid = ivec3(tile_id) + ivec3(x, y, z);
-		for(int n = 0; n < 16; n++)
-		{
-			vec3 p = _wn_rand(ivec4(tid, n))*tile_size + vec3(x, y, z)*tile_size;
+		uvec3 tile_size = ivec3(32)>>(level+i);
+		uvec3 tile_id = invocation/tile_size;
+		vec3 pos = vec3(invocation%tile_size);
+		float _radius = float(tile_size.x);
+		#define cell_size 1
 
-			float v = 1.-min(distance(pos, p) / _radius, 1.);
-			value = max(value, v);
+		for(int z = -cell_size; z <= cell_size; z++)
+		for(int y = -cell_size; y <= cell_size; y++)
+		for(int x = -cell_size; x <= cell_size; x++)
+		{
+			ivec3 tid = ivec3(tile_id) + ivec3(x, y, z);
+			for(int n = 0; n < 2; n++)
+			{
+				vec3 p = _wn_rand(ivec4(tid, n))*tile_size + vec3(x, y, z)*tile_size;
+
+				float v = 1.-min(distance(pos, p) / _radius, 1.);
+				value[i] = max(value[i], v);
+			}
 		}
 	}
-	return value;
+	return dot(value, vec3(0.625, 0.25, 0.125));
 }
 
 float _v_rand(in vec3 co)
