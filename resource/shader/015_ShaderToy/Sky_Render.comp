@@ -307,7 +307,7 @@ void main()
 
 		// tonemapping
 		{
-			float exposure = 2.5;
+			float exposure = 5.5;
 			color.xyz = vec3(1.0) - exp(-exposure * color.xyz);
 		}
 
