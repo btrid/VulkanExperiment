@@ -22,7 +22,7 @@ float worley_noise(in uvec3 invocation, in int level)
 
 	for(int i = 0; i < 3; i++)
 	{
-		uvec3 tile_size = ivec3(32)>>(level+i);
+		uvec3 tile_size = ivec3(128)>>(level+i);
 		uvec3 tile_id = invocation/tile_size;
 		vec3 pos = vec3(invocation%tile_size);
 		float _radius = float(tile_size.x);
@@ -79,7 +79,7 @@ float _v_fBM(in vec3 pos, in int octaves)
 
 float value_noise(in vec3 invocation, in int level)
 {
-	vec3 pos = vec3(invocation) * 1./float(1<<level) + 254.;
+	vec3 pos = vec3(invocation) * 1./float(1<<max(7-level, 0)) + 254.571823;
 	return _v_fBM(pos, 3);
 }
 
