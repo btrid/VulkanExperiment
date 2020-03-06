@@ -260,8 +260,8 @@ void main()
 	uCamDir = CamDir;
 
 	// 空色
-	vec3 back_color = mix(vec3(.0, 0.1, 0.4), vec3(0.3, 0.6, 0.8), 1.0 - CamDir.y);
-	back_color = mix(back_color, uLightColor, smoothstep(0.9999, 1.00, dot(-uLightRay, CamDir)));
+	vec3 color = mix(vec3(.0, 0.1, 0.4), vec3(0.3, 0.6, 0.8), 1.0 - CamDir.y);
+	color = mix(color, uLightColor, smoothstep(0.9999, 1.00, dot(-uLightRay, CamDir)));
 
 	// 地面判定
 	float distance_land = intersectRaySphere(CamPos, CamDir, u_planet);
@@ -271,8 +271,7 @@ void main()
 		vec3 pos = CamPos + CamDir * distance_land;
 		vec2 pos_i = floor(pos * 0.5).xz;
 		float p = float(mod(pos_i.x + pos_i.y, 2.));
-		back_color = mix(vec3(.6, .6, .6), vec3(.75, .75, .75), p);
-
+		color = mix(vec3(.6, .6, .6), vec3(.75, .75, .75), p);
 	}
 
 	// find nearest planet surface point
@@ -334,20 +333,19 @@ void main()
 
 				pos += posStep;
 			}
-			imageStore(i_render_map, ivec2(gl_GlobalInvocationID.xy), vec4(result.xyz, 1.));
 		}
 
-		result.xyz = mix(back_color, result.xyz/(result.a+0.0001), result.a);
-		back_color = result.xyz;
+		result.xyz = mix(color, result.xyz/(result.a+0.0001), result.a);
+		color = result.xyz;
 
 	}
 	// tonemapping
 	{
 		float exposure = 3.5;
-		back_color.xyz = vec3(1.0) - exp(-exposure * back_color.xyz);
+		color.xyz = vec3(1.0) - exp(-exposure * color.xyz);
 	}
 
-	imageStore(i_render_map, ivec2(gl_GlobalInvocationID.xy), vec4(result.xyz, 1.));
+	imageStore(i_render_map, ivec2(gl_GlobalInvocationID.xy), vec4(color.xyz, 1.));
 
 
 }
