@@ -79,7 +79,7 @@ float _v_fBM(in vec3 pos, in int octaves)
 
 float value_noise(in vec3 invocation, in int level)
 {
-	vec3 pos = vec3(invocation) * 1./float(1<<max(7-level, 0)) + 254.571823;
+	vec3 pos = vec3(invocation) * 1./float(1<<max(7-level, 0)) + 24.53;
 	return _v_fBM(pos, 3);
 }
 

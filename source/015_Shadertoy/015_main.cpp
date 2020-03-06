@@ -112,9 +112,9 @@ struct SkyNoise
 				m_image_base_shape_write_view = context->m_device.createImageViewUnique(view_info);
 
 				vk::SamplerCreateInfo sampler_info;
-				sampler_info.setAddressModeU(vk::SamplerAddressMode::eRepeat);
-				sampler_info.setAddressModeV(vk::SamplerAddressMode::eRepeat);
-				sampler_info.setAddressModeW(vk::SamplerAddressMode::eRepeat);
+				sampler_info.setAddressModeU(vk::SamplerAddressMode::eClampToEdge);
+				sampler_info.setAddressModeV(vk::SamplerAddressMode::eClampToEdge);
+				sampler_info.setAddressModeW(vk::SamplerAddressMode::eClampToEdge);
 				sampler_info.setMagFilter(vk::Filter::eLinear);
 				sampler_info.setMinFilter(vk::Filter::eLinear);
 				sampler_info.setMinLod(0.f);

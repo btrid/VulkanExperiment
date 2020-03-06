@@ -48,8 +48,7 @@ float remap(float value, float oldMin, float oldMax, float newMin, float newMax)
 vec3 sampleWeather(vec3 pos){ return texture(s_weather_map, (vec3(pos) * vec3(u_mapping, 1., u_mapping) + vec3(0.5, 0., 0.5)).xz).xyz; }
 float getCoverage(vec3 weather_data){ return weather_data.r; }
 float getPrecipitation(vec3 weather_data){ return weather_data.g; }
-float getCloudType(vec3 weather_data){ return weather_data.b; }// weather b channel tells the cloud type 0.0 = stratus, 0.5 = stratocumulus, 1.0 = cumulus
-
+float getCloudType(vec3 weather_data){ return weather_data.b; }// 0.0 = stratus, 0.5 = stratocumulus, 1.0 = cumulus
 float heightFraction(vec3 pos) { return (distance(pos,u_cloud_inner.xyz)-u_cloud_inner.w)*u_cloud_area_inv; }
 
 vec4 mixGradients(float cloudType)
@@ -110,7 +109,7 @@ float powder(float sampleDensity, float lightDotEye)
 // 光を前方または後方に散乱します。値が0の場合、等方性散乱（bsdf と同じ）が発生し、正の値が生成されます。
 // 前方散乱と負の値は、後方散乱を生成します。
 // -1と1の極値は、すべての光を単一方向に散乱させ、-1の場合は光に戻り、1の場合は方向を変更しません。
-float henyeyGreenstein(float lightDotEye, float g)
+float henyeyGreensteinPhaseFunction(float lightDotEye, float g)
 {
 	return ((1. - g*g) / pow((1. + g*g - 2.*g*lightDotEye), 1.5)) / (4.*3.1415);
 }
@@ -120,7 +119,7 @@ float lightEnergy(float lightDotEye, float densitySample, float originalDensity,
 	return 2. *
 		beerLambert(densitySample, precipitation) *
 		powder(originalDensity, lightDotEye) * 
-		henyeyGreenstein(lightDotEye, 0.9);
+		henyeyGreensteinPhaseFunction(lightDotEye, 0.9);
 }
 
 // TODO get from cb values - has to change as time of day changes
@@ -191,12 +190,12 @@ float sampleCloudDensityAlongCone(vec3 startPos, float stepSize, float lightDotE
 
 void main()
 {
-	vec3 CamPos = vec3(0., 1. + constant.window.z, 0.);
-	vec3 CamDir = normalize(vec3(0., 10., 1000.) - CamPos);
-//	vec3 CamPos = vec3(0., 1., 0.);
-//	vec3 CamDir = normalize(vec3(1.5, 1.7, 1.5));
-//	uLightRay = -CamDir;
-	uLightRay = -normalize(vec3(-1.5, -10.7, 1.5));
+//	vec3 CamPos = vec3(0., 1. + constant.window.z, 0.);
+//	vec3 CamDir = normalize(vec3(0., 10., 1000.) - CamPos);
+	vec3 CamPos = vec3(0., 1., 0.);
+	vec3 CamDir = normalize(vec3(1.5, 1.7, 1.5));
+	uLightRay = -CamDir;
+//	uLightRay = -normalize(vec3(-1.5, -10.7, 1.5));
 
 	// カメラレイの作成
 	{
