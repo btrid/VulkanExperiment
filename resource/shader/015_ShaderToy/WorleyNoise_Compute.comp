@@ -11,10 +11,10 @@ void main()
 {
 	{
 		vec4 v = vec4(0.);
-		v[0] = worley_noise(gl_GlobalInvocationID.xyz+ 591824, 1) + value_noise(gl_GlobalInvocationID.xyz*0.2+257451);
-		v[1] = worley_noise(gl_GlobalInvocationID.xyz+ 601541, 2);
-		v[2] = worley_noise(gl_GlobalInvocationID.xyz+ 154081, 3);
-		v[3] = worley_noise(gl_GlobalInvocationID.xyz+ 705893, 4);
+		v[0] = worley_noise(gl_GlobalInvocationID.xyz+ 591824, 3) + value_noise(gl_GlobalInvocationID.xyz+257451, 4);
+		v[1] = worley_noise(gl_GlobalInvocationID.xyz+ 601541, 4);
+		v[2] = worley_noise(gl_GlobalInvocationID.xyz+ 154081, 5);
+		v[3] = worley_noise(gl_GlobalInvocationID.xyz+ 705893, 6);
 
 		v = clamp(v*vec4(0.5, 1., 1., 1.), vec4(0.), vec4(1.));
 		imageStore(i_cloud_map, ivec3(gl_GlobalInvocationID), uvec4(v* vec4(255.)));
@@ -23,9 +23,9 @@ void main()
 	if(all(lessThan(gl_GlobalInvocationID, imageSize(i_cloud_detail_map))))
 	{
 		vec4 v = vec4(0.);
-		v[0] = worley_noise(gl_GlobalInvocationID.xyz+ 290253, 2);
-		v[1] = worley_noise(gl_GlobalInvocationID.xyz+ 564829, 3);
-		v[2] = worley_noise(gl_GlobalInvocationID.xyz+ 123102, 4);
+		v[0] = worley_noise(gl_GlobalInvocationID.xyz+ 290253, 3);
+		v[1] = worley_noise(gl_GlobalInvocationID.xyz+ 564829, 4);
+		v[2] = worley_noise(gl_GlobalInvocationID.xyz+ 123102, 5);
 		v = clamp(v, vec4(0.), vec4(1.));
 		imageStore(i_cloud_detail_map, ivec3(gl_GlobalInvocationID), uvec4(v* vec4(255.)));
 

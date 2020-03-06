@@ -27,7 +27,7 @@ const vec4 u_cloud_outer = u_cloud_inner + vec4(0., 0., 0, 16.);
 const float u_cloud_area_inv = 1. / (u_cloud_outer.w - u_cloud_inner.w);
 const float u_mapping = 1./u_cloud_outer.w;
 vec3 uLightRay = normalize(vec3(0., -1., 0.));
-vec3 uLightColor = vec3(1.);
+vec3 uLightColor = vec3(130.);
 
 vec3 uCamPos = vec3(0., 1., 0.);
 vec3 uCamDir = normalize(vec3(1.5, 1.7, 1.5));
