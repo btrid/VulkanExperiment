@@ -28,11 +28,11 @@ float henyeyGreensteinPhaseFunction(float lightDotEye, float g)
 	return ((1. - g*g) / pow((1. + g*g - 2.*g*lightDotEye), 1.5)) / (4.*3.1415);
 }
 
-float lightEnergy(float lightDotEye, float densitySample, float originalDensity, float precipitation)
+float lightEnergy(float lightDotEye, float densitySample, float precipitation)
 {
 	return 2. *
 		beerLambert(densitySample, precipitation) *
-		powder(originalDensity, lightDotEye) * 
+		powder(densitySample, lightDotEye) * 
 		henyeyGreensteinPhaseFunction(lightDotEye, 0.9);
 }
 
@@ -42,7 +42,7 @@ vec3 ambientLight(float height_frac)
 	return mix(vec3(0.5, 0.67, 0.82), vec3(1.0, 1.0, 1.0), height_frac);
 }
 
-float sampleCloudDensityAlongCone(vec3 startPos, float stepSize, float lightDotEye, float originalDensity)
+float sampleCloudDensityAlongCone(vec3 startPos, float stepSize, float lightDotEye)
 {
 	// random vectors on the unit sphere
 	const vec3 RANDOM_VECTORS[] =
@@ -58,14 +58,9 @@ float sampleCloudDensityAlongCone(vec3 startPos, float stepSize, float lightDotE
 	
 	vec3 lightStep = stepSize * -uLightRay;
 	vec3 pos = startPos;
-	float coneRadius = 1.0f;
-	float coneStep = RCP_LIGHT_RAY_ITERATIONS;
+	float coneRadius = 1.0;
 	float densityAlongCone = 0.;
 	float lod = 0.;
-	float lodStride = RCP_LIGHT_RAY_ITERATIONS;
-	vec3 weather_data = vec3(0.);
-	float rcpThickness = 1. / (stepSize * RANDOM_VECTORS.length());
-	float density = 0.;
 
 	for(uint i = 0u; i < RANDOM_VECTORS.length(); ++i)
 	{
@@ -73,40 +68,33 @@ float sampleCloudDensityAlongCone(vec3 startPos, float stepSize, float lightDotE
 		float height_frac = heightFraction(conePos);
 		if(height_frac < 1.0 && height_frac > 0.)
 		{
-			weather_data = sampleWeather(conePos);
+			vec3 weather_data = sampleWeather(conePos);
 			float cloudDensity = sampleCloudDensity(conePos, weather_data, height_frac, lod);
-			if(cloudDensity > 0.0)
-			{
-				density += cloudDensity;
-				float transmittance = 1. - (density * rcpThickness);
-				densityAlongCone += (cloudDensity * transmittance);
-			}
+			densityAlongCone += cloudDensity*getPrecipitation(weather_data) / RANDOM_VECTORS.length();
 		}
 		pos += lightStep;
-		coneRadius += coneStep;
-		lod += lodStride;
+		coneRadius += RCP_LIGHT_RAY_ITERATIONS;
+		lod += RCP_LIGHT_RAY_ITERATIONS;
 	}
 	// take additional step at large distance away for shadowing from other clouds
-	pos = startPos + (lightStep * 8.);
-	weather_data = sampleWeather(pos);
+	pos = startPos + 10.*lightStep;
+	vec3 weather_data = sampleWeather(pos);
 	float height_frac = heightFraction(pos);
-	if(height_frac < 1.0 && height_frac > 0.)
+/*	if(height_frac < 1.0 && height_frac > 0.)
 	{
-		float cloudDensity = sampleCloudDensity(pos, weather_data, height_frac, 0.8f);
-		// no need to branch here since density variable is no longer used after this
-		density += cloudDensity;
-		float transmittance = 1. - saturate(density * rcpThickness);
-		densityAlongCone += (cloudDensity * transmittance);
-	}
+		float cloudDensity = sampleCloudDensity(pos, weather_data, height_frac, 0.8);
+		densityAlongCone += cloudDensity*getPrecipitation(weather_data) / RANDOM_VECTORS.length();
 
-	return saturate(lightEnergy(lightDotEye, densityAlongCone, originalDensity, getPrecipitation(weather_data)));
+	}
+*/
+	return saturate(lightEnergy(lightDotEye, densityAlongCone, getPrecipitation(weather_data)));
 }
 
 void main()
 {
 //	vec3 CamPos = vec3(0., 1. + constant.window.z, 0.);
 //	vec3 CamDir = normalize(vec3(0., 10., 1000.) - CamPos);
-	vec3 CamPos = vec3(0., 1., 0.);
+	vec3 CamPos = vec3(0., 3., 0.);
 	vec3 CamDir = normalize(vec3(1.5, 1.7, 1.5));
 	uLightRay = -CamDir;
 //	uLightRay = -normalize(vec3(-1.5, -10.7, 1.5));
@@ -140,8 +128,9 @@ void main()
 	}
 
 	// find nearest planet surface point
-		float alpha = 0.;
-		vec3 color = vec3(0.);
+	float alpha = 0.;
+	vec3 color = vec3(0.);
+	float transmittance = 1.;
 	vec4 dist = vec4(-1.);
 	if(intersectRayAtom(CamPos, CamDir, u_cloud_inner.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), dist))
 	{
@@ -160,7 +149,6 @@ void main()
 			count++;
 		}
 
-		float transmittance = 1.;
 		uint sampleCount = 128;
 		float lightDotEye = dot(-uLightRay, CamDir);
 		for(int i = 0; i <count; i++)
@@ -184,12 +172,12 @@ void main()
 				cloud_depth = cloudDensity > 0.0 ? cloud_depth + cloudDensity : 0.;
 				if(cloudDensity > 0.0)
 				{
-					float t = exp(-cloudDensity * ABSORPTION);
+					float t = exp(-cloudDensity*getPrecipitation(weather_data));
 					transmittance *= t;
 					if (transmittance < 0.01) { i = count; break; }
 
-					float lightDensity = sampleCloudDensityAlongCone(pos, stepSize, lightDotEye, cloudDensity);
-					vec3 ambientBadApprox = ambientLight(height_frac) * min(1.0f, length(uLightColor.rgb * 0.00125)) * transmittance;
+					float lightDensity = sampleCloudDensityAlongCone(pos, stepSize, lightDotEye);
+					vec3 ambientBadApprox = ambientLight(height_frac) * min(1.0, length(uLightColor.rgb * 0.0125)) * transmittance;
 					color += transmittance * cloudDensity * vec3((uLightColor.rgb * lightDensity) + ambientBadApprox/*+ ambientLight(heightFrac)*/);
 					alpha += (1.-t) *(1.-alpha);
 
