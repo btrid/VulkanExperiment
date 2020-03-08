@@ -53,9 +53,8 @@ void main()
 
 				vec3 p = vec3(pos.x, height_frac, pos.z) * vec3(u_mapping, 1., u_mapping) + vec3(0.5, 0., 0.5);// UV[0~1]
 				
-				imageStore(i_shadow_map, ivec3(p*imageSize(i_shadow_map)), ivec4(transmittance*255.));
-
-
+				imageStore(i_shadow_map, ivec3(p*imageSize(i_shadow_map)), ivec4(255.));
+//				imageStore(i_shadow_map, ivec3(p*imageSize(i_shadow_map)), ivec4(transmittance*255.));
 
 				pos += step;
 			}

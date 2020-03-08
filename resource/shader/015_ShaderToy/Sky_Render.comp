@@ -33,7 +33,7 @@ float lightEnergy(float lightDotEye, float densitySample, float precipitation)
 	return 2. *
 		beerLambert(densitySample, precipitation) *
 		powder(densitySample, lightDotEye) * 
-		henyeyGreensteinPhaseFunction(lightDotEye, 0.9);
+		henyeyGreensteinPhaseFunction(lightDotEye, 0.2);
 }
 
 // TODO get from cb values - has to change as time of day changes
@@ -70,7 +70,7 @@ float sampleCloudDensityAlongCone(vec3 startPos, float stepSize, float lightDotE
 		{
 			vec3 weather_data = sampleWeather(conePos);
 			float cloudDensity = sampleCloudDensity(conePos, weather_data, height_frac, lod);
-			densityAlongCone += cloudDensity*getPrecipitation(weather_data) / RANDOM_VECTORS.length();
+			densityAlongCone += cloudDensity / RANDOM_VECTORS.length();
 		}
 		pos += lightStep;
 		coneRadius += RCP_LIGHT_RAY_ITERATIONS;
