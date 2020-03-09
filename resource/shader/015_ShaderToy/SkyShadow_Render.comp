@@ -3,11 +3,15 @@
 
 #include "Sky.glsl"
 layout (local_size_x = 32, local_size_y = 32) in;
+layout(push_constant) uniform Input
+{
+	vec3 window;
+} constant;
 
 void main()
 {
 	uvec3 reso = gl_NumWorkGroups * gl_WorkGroupSize;
 	vec2 ndc = ((vec2(gl_GlobalInvocationID.xy) + 0.5) / vec2(reso.xy));
-	vec4 s = texture(s_shadow_map, vec3(ndc.x, 0.5, ndc.y));
+	vec4 s = texture(s_shadow_map, vec3(ndc.x, mod(constant.window.x, 1.), ndc.y));
 	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(s.xxx, 1.));
 }

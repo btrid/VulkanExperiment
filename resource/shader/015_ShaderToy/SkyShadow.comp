@@ -42,26 +42,25 @@ void main()
 			ray_segment[count] = vec2(max(dist.x, 0.), dist.y-max(dist.x, 0.));
 			count++;
 		}
-		uint sampleCount = 16;
+		int sampleCount = 16;
 		float transmittance = 1.;
 		for(int i = 0; i <count; i++)
 		{
 			float step = ray_segment[i].y / float(sampleCount);
 			vec3 pos = CamPos + CamDir * (ray_segment[i].x + 0.5);
 			
-			for(uint i = 0u; i < sampleCount; ++i)
+			for(int s = 0; s < sampleCount; s++)
 			{
 				float height_frac = heightFraction(pos);
 				vec3 weather_data = sampleWeather(pos);
-				float cloudDensity = sampleCloudDensity(pos, weather_data, height_frac, 0.);
-				transmittance *= exp(-cloudDensity*getPrecipitation(weather_data));
+				float density = sampleCloudDensity(pos, weather_data, height_frac, 0.);
+
+				transmittance *= exp(-density*getPrecipitation(weather_data));
 
 				vec3 p = vec3(pos.x, height_frac, pos.z) * vec3(u_mapping, 1., u_mapping) * vec3(0.5, 1., 0.5) + vec3(0.5, 0., 0.5);// UV[0~1]
-				
 				imageStore(i_shadow_map, ivec3(p*imageSize(i_shadow_map)), ivec4(transmittance*255.));
 
-				pos = pos + CamDir * step;
-				
+				pos = pos + CamDir * step;		
 			}
 		}
 	}

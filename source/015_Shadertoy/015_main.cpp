@@ -717,7 +717,7 @@ struct Sky
 
 				vk::SamplerCreateInfo sampler_info;
 				sampler_info.setAddressModeU(vk::SamplerAddressMode::eRepeat);
-				sampler_info.setAddressModeV(vk::SamplerAddressMode::eRepeat);
+				sampler_info.setAddressModeV(vk::SamplerAddressMode::eClampToEdge);
 				sampler_info.setAddressModeW(vk::SamplerAddressMode::eRepeat);
 				sampler_info.setMagFilter(vk::Filter::eLinear);
 				sampler_info.setMinFilter(vk::Filter::eLinear);
@@ -945,14 +945,20 @@ struct Sky
 	{
 		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
 
-		vk::DescriptorSet descs[] =
 		{
-			render_target->m_descriptor.get(),
-			m_descriptor_set.get(),
-			m_skynoise.m_descriptor_set.get(),
-		};
-		cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Sky_CS].get(), 0, array_length(descs), descs, 0, nullptr);
+			vk::DescriptorSet descs[] =
+			{
+				render_target->m_descriptor.get(),
+				m_descriptor_set.get(),
+				m_skynoise.m_descriptor_set.get(),
+			};
+			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Sky_CS].get(), 0, array_length(descs), descs, 0, nullptr);
 
+			auto window = vec3(sGlobal::Order().getTotalTime()) * vec3(0.5f, 0.f, 0.f);
+			cmd.pushConstants<vec3>(m_pipeline_layout[PipelineLayout_Sky_CS].get(), vk::ShaderStageFlagBits::eCompute, 0, window);
+
+		}
+	
 		{
 			{
 				std::array<vk::ImageMemoryBarrier, 1> image_barrier;
