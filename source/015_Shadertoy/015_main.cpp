@@ -1025,6 +1025,8 @@ struct Sky
 	}
 
 };
+
+// https://github.com/erickTornero/realtime-volumetric-cloudscapes
 // https://bib.irb.hr/datoteka/949019.Final_0036470256_56.pdf
 int main()
 {
