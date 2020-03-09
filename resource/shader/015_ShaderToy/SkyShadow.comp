@@ -21,7 +21,13 @@ void main()
 	{
 		uvec3 reso = gl_NumWorkGroups * gl_WorkGroupSize;
 		vec2 ndc = ((vec2(gl_GlobalInvocationID.xy) + 0.5) / vec2(reso.xy)) * 2. -1.;
-		CamPos = u_cloud_inner.www * vec3(ndc.x, 0., ndc.y) + (-CamDir * u_cloud_outer.www * 1.5);
+		ndc /= vec2(u_mapping);
+
+		vec3 up = vec3(0., 1., 0.); 
+		vec3 side = cross(uLightRay, normalize(up));
+		side = dot(side, side) <= 0.000001 ? vec3(1., 0., 0.) : normalize(side);
+		up = normalize(cross(side, uLightRay));
+		CamPos = side*ndc.x + up*ndc.y -uLightRay*3000.;
 	}
 
 	// find nearest planet surface point
@@ -36,7 +42,6 @@ void main()
 			ray_segment[count] = vec2(max(dist.x, 0.), dist.y-max(dist.x, 0.));
 			count++;
 		}
-
 		uint sampleCount = 16;
 		float transmittance = 1.;
 		for(int i = 0; i <count; i++)
@@ -51,12 +56,12 @@ void main()
 				float cloudDensity = sampleCloudDensity(pos, weather_data, height_frac, 0.);
 				transmittance *= exp(-cloudDensity*getPrecipitation(weather_data));
 
-				vec3 p = vec3(pos.x, height_frac, pos.z) * vec3(u_mapping, 1., u_mapping) + vec3(0.5, 0., 0.5);// UV[0~1]
+				vec3 p = vec3(pos.x, height_frac, pos.z) * vec3(u_mapping, 1., u_mapping) * vec3(0.5, 1., 0.5) + vec3(0.5, 0., 0.5);// UV[0~1]
 				
-				imageStore(i_shadow_map, ivec3(p*imageSize(i_shadow_map)), ivec4(255.));
-//				imageStore(i_shadow_map, ivec3(p*imageSize(i_shadow_map)), ivec4(transmittance*255.));
+				imageStore(i_shadow_map, ivec3(p*imageSize(i_shadow_map)), ivec4(transmittance*255.));
 
-				pos += step;
+				pos = pos + CamDir * step;
+				
 			}
 		}
 	}

@@ -645,7 +645,6 @@ struct Sky
 				view_info.subresourceRange.setLevelCount(1);
 				view_info.subresourceRange.setAspectMask(vk::ImageAspectFlagBits::eColor);
 				view_info.setViewType(vk::ImageViewType::e3D);
-				view_info.components.setR(vk::ComponentSwizzle::eR).setG(vk::ComponentSwizzle::eIdentity).setB(vk::ComponentSwizzle::eIdentity).setA(vk::ComponentSwizzle::eIdentity);
 				m_image_shadow_view = context->m_device.createImageViewUnique(view_info);
 
 				view_info.setFormat(vk::Format::eR8Uint);
@@ -655,14 +654,14 @@ struct Sky
 				sampler_info.setAddressModeU(vk::SamplerAddressMode::eRepeat);
 				sampler_info.setAddressModeV(vk::SamplerAddressMode::eRepeat);
 				sampler_info.setAddressModeW(vk::SamplerAddressMode::eRepeat);
-				sampler_info.setBorderColor(vk::BorderColor::eFloatOpaqueWhite);
+//				sampler_info.setBorderColor(vk::BorderColor::eFloatOpaqueWhite);
 				sampler_info.setMagFilter(vk::Filter::eLinear);
 				sampler_info.setMinFilter(vk::Filter::eLinear);
 				sampler_info.setMinLod(0.f);
 				sampler_info.setMaxLod(0.f);
 				sampler_info.setMipLodBias(0.f);
 				sampler_info.setMipmapMode(vk::SamplerMipmapMode::eLinear);
-				sampler_info.setUnnormalizedCoordinates(false);
+//				sampler_info.setUnnormalizedCoordinates(false);
 				m_image_shadow_sampler = context->m_device.createSamplerUnique(sampler_info);
 
 
@@ -1023,6 +1022,18 @@ struct Sky
 // https://bib.irb.hr/datoteka/949019.Final_0036470256_56.pdf
 int main()
 {
+	const float u_plant_radius = 10000.;
+	const vec4 u_planet = vec4(0., -u_plant_radius, 0, u_plant_radius);
+	const vec4 u_cloud_inner = vec4(u_planet.xyz, u_planet.w + 2000.);
+	const vec4 u_cloud_outer = u_cloud_inner + vec4(0., 0., 0, 64.);
+	const float u_cloud_area_inv = 1. / (u_cloud_outer.w - u_cloud_inner.w);
+	const float u_mapping = 1. / u_cloud_outer.w;
+	vec3 uLightRay = -normalize(vec3(0., 1., 0.));
+	vec3 uLightColor = vec3(130.);
+	auto h = (glm::distance(vec3(0.f, 2020.f, 0.f), u_cloud_inner.xyz()) - u_cloud_inner.w)*u_cloud_area_inv;
+	auto h1 = (glm::distance(vec3(0.f, 2064.f, 0.f), u_cloud_inner.xyz()) - u_cloud_inner.w)*u_cloud_area_inv;
+	auto h2 = (glm::distance(vec3(0.f, 2000.f, 0.f), u_cloud_inner.xyz()) - u_cloud_inner.w)*u_cloud_area_inv;
+
 	btr::setResourceAppPath("..\\..\\resource/");
 	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = vec3(0.f, -500.f, 800.f);
