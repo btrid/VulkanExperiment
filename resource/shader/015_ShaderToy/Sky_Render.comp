@@ -96,7 +96,7 @@ void main()
 //	vec3 CamDir = normalize(vec3(0., 10., 1000.) - CamPos);
 	vec3 CamPos = vec3(0., 3., 0.);
 	vec3 CamDir = normalize(vec3(1.5, 1.7, 1.5));
-	uLightRay = -CamDir;
+//	uLightRay = -CamDir;
 //	uLightRay = -normalize(vec3(-1.5, -10.7, 1.5));
 
 	// カメラレイの作成
