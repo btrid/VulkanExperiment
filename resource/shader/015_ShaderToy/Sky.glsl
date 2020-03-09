@@ -93,7 +93,7 @@ float sampleCloudDensity(vec3 pos, vec3 weather_data, float height_frac, float l
 {
 	if(height_frac>= 1. || height_frac <= 0.) { return 0.; } //範囲外
 
-	pos = vec3(pos.x, height_frac, pos.z) * vec3(u_mapping, 1., u_mapping)*vec3(0.5,1.,0.5) + vec3(0.5, 0., 0.5);// UV[0~1]
+	pos = vec3(pos.x, height_frac, pos.z) * vec3(u_mapping, 1., u_mapping) + vec3(0.5, 0., 0.5);// UV[0~1]
 	
 	vec4 low_freq_noise = texture(s_cloud_map, pos);
 	float low_freq_fBM = dot(low_freq_noise.yzw, vec3(0.625, 0.25, 0.125));

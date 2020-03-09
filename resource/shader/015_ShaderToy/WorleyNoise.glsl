@@ -10,7 +10,7 @@ layout(set=USE_WORLEYNOISE, binding=2) uniform sampler2D s_weather_map;
 layout(set=USE_WORLEYNOISE, binding=12, rgba8ui) uniform uimage2D i_weather_map;
 
 
-#define _octaves 3
+#define _octaves 7
 vec3 _wn_rand(in ivec4 co)
 {
 	vec3 s = vec3(dot(vec3(co.xyz)*9.63+53.81, vec3(12.98,78.23, 15.61)), dot(vec3(co.zxy)*54.53+37.33, vec3(91.87,47.73, 13.78)), dot(vec3(co.yzx)*18.71+27.14, vec3(51.71,14.35, 24.89)));
