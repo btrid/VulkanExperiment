@@ -61,7 +61,7 @@ float sampleCloudDensityAlongCone(vec3 startPos, float stepSize, float lightDotE
 	float coneRadius = 1.0;
 	float densityAlongCone = 0.;
 	float lod = 0.;
-
+	float light_energy = 0.;
 	for(uint i = 0u; i < RANDOM_VECTORS.length(); ++i)
 	{
 		vec3 conePos = pos + coneRadius * RANDOM_VECTORS[i] * float(i + 1u);
@@ -70,6 +70,7 @@ float sampleCloudDensityAlongCone(vec3 startPos, float stepSize, float lightDotE
 		{
 			vec3 weather_data = sampleWeather(conePos);
 			float cloudDensity = sampleCloudDensity(conePos, weather_data, height_frac, lod);
+			light_energy += lightEnergy(lightDotEye, cloudDensity, getPrecipitation(weather_data)) / RANDOM_VECTORS.length();
 			densityAlongCone += cloudDensity / RANDOM_VECTORS.length();
 		}
 		pos += lightStep;
@@ -87,7 +88,7 @@ float sampleCloudDensityAlongCone(vec3 startPos, float stepSize, float lightDotE
 
 	}
 */
-	return saturate(lightEnergy(lightDotEye, densityAlongCone, getPrecipitation(weather_data)));
+	return light_energy;
 }
 
 void main()

@@ -10,6 +10,7 @@ layout(set=USE_WORLEYNOISE, binding=2) uniform sampler2D s_weather_map;
 layout(set=USE_WORLEYNOISE, binding=12, rgba8ui) uniform uimage2D i_weather_map;
 
 
+#define _octaves 3
 vec3 _wn_rand(in ivec4 co)
 {
 	vec3 s = vec3(dot(vec3(co.xyz)*9.63+53.81, vec3(12.98,78.23, 15.61)), dot(vec3(co.zxy)*54.53+37.33, vec3(91.87,47.73, 13.78)), dot(vec3(co.yzx)*18.71+27.14, vec3(51.71,14.35, 24.89)));
@@ -20,7 +21,7 @@ float worley_noise(in uvec3 invocation, in int level)
 {
 	vec3 value = vec3(0.);
 
-	for(int i = 0; i < 3; i++)
+	for(int i = 0; i < _octaves; i++)
 	{
 		uvec3 tile_size = ivec3(128)>>(level+i);
 		uvec3 tile_id = invocation/tile_size;
@@ -49,10 +50,16 @@ float _v_rand(in vec3 co)
 {
 	return fract(sin(dot(co, vec3(12.98,78.23, 45.41))) * 43758.5);
 }
+vec3 _interpolate(in vec3 t) 
+{
+    return t * t * t * (10. + t * (-15. + 6. * t));
+}
+
 float _v_noise(in vec3 pos)
 {
 	vec3 ip = floor(pos);
-	vec3 fp = smoothstep(0., 1., fract(pos));
+//	vec3 fp = smoothstep(0., 1., fract(pos));
+	vec3 fp = _interpolate(fract(pos));
 	vec2 offset = vec2(0., 1.);
 	vec4 a = vec4(_v_rand(ip+offset.xxx),_v_rand(ip+offset.yxx),_v_rand(ip+offset.xyx),_v_rand(ip+offset.yyx));
 	vec4 b = vec4(_v_rand(ip+offset.xxy),_v_rand(ip+offset.yxy),_v_rand(ip+offset.xyy),_v_rand(ip+offset.yyy));
@@ -80,7 +87,7 @@ float _v_fBM(in vec3 pos, in int octaves)
 float value_noise(in vec3 invocation, in int level)
 {
 	vec3 pos = vec3(invocation) * 1./float(1<<max(7-level, 0)) + 24.53;
-	return _v_fBM(pos, 3);
+	return _v_fBM(pos, _octaves);
 }
 
 

@@ -20,10 +20,10 @@ layout(set=USE_Sky, binding=11, rgba16) uniform image2D i_render_map;
 // 雲の光の吸収量
 #define ABSORPTION		0.15
 
-const float u_plant_radius = 10000.;
+const float u_plant_radius = 1000.;
 const vec4 u_planet = vec4(0., -u_plant_radius, 0, u_plant_radius);
-const vec4 u_cloud_inner = vec4(u_planet.xyz, u_planet.w+2000.);
-const vec4 u_cloud_outer = u_cloud_inner + vec4(0., 0., 0, 64.);
+const vec4 u_cloud_inner = vec4(u_planet.xyz, u_planet.w*1.025);
+const vec4 u_cloud_outer = u_cloud_inner + vec4(0., 0., 0, 16.);
 const float u_cloud_area_inv = 1. / (u_cloud_outer.w - u_cloud_inner.w);
 const float u_mapping = 1./u_cloud_outer.w;
 vec3 uLightRay = -normalize(vec3(0., 1., 0.));
@@ -93,7 +93,7 @@ float sampleCloudDensity(vec3 pos, vec3 weather_data, float height_frac, float l
 {
 	if(height_frac>= 1. || height_frac <= 0.) { return 0.; } //範囲外
 
-	pos = vec3(pos.x, height_frac, pos.z) * vec3(u_mapping, 1., u_mapping) + vec3(0.5, 0., 0.5);// UV[0~1]
+	pos = vec3(pos.x, height_frac, pos.z) * vec3(u_mapping, 1., u_mapping)*vec3(0.5,1.,0.5) + vec3(0.5, 0., 0.5);// UV[0~1]
 	
 	vec4 low_freq_noise = texture(s_cloud_map, pos);
 	float low_freq_fBM = dot(low_freq_noise.yzw, vec3(0.625, 0.25, 0.125));
