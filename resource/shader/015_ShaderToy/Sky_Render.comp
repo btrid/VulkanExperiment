@@ -41,7 +41,7 @@ float beerLambert(float sampleDensity, float precipitation)
 	return exp(-sampleDensity * precipitation);
 }
 
-float powder(float sampleDensity, float lightDotEye)
+float powder(float sampleDensity)
 {
 	return 1. - exp(-sampleDensity * 2.0);
 }
@@ -53,12 +53,12 @@ float henyeyGreensteinPhaseFunction(float lightDotEye, float g)
 	return ((1. - g*g) / pow((1. + g*g - 2.*g*lightDotEye), 1.5)) / (4.*3.1415);
 }
 
-float lightEnergy(float lightDotEye, float densitySample, float precipitation)
+float lightEnergy(float densitySample, float precipitation, float henyeyGreensteinFactor)
 {
-	return 2. *
-		beerLambert(densitySample, precipitation) *
-		powder(densitySample, lightDotEye) * 
-		henyeyGreensteinPhaseFunction(lightDotEye, 0.2);
+	return 2.
+	 	* beerLambert(densitySample, precipitation) 
+		* powder(densitySample)
+		* henyeyGreensteinFactor;
 }
 
 // TODO get from cb values - has to change as time of day changes
@@ -67,17 +67,17 @@ vec3 ambientLight(float height_frac)
 	return mix(vec3(0.5, 0.67, 0.82), vec3(1.0, 1.0, 1.0), height_frac);
 }
 
-float sampleCloudDensityAlongCone(vec3 startPos, float stepSize, float lightDotEye)
+float sampleCloudDensityAlongCone(vec3 startPos, float stepSize)
 {
 	// random vectors on the unit sphere
 	const float RCP_LIGHT_RAY_ITERATIONS = 1. / float(g_noise_kernel.length());
-	
+	float rcpThickness = 1. / (stepSize * g_noise_kernel.length());
+
 	vec3 lightStep = stepSize * -uLightRay;
 	vec3 pos = startPos;
 	float coneRadius = 1.0;
-	float densityAlongCone = 0.;
+	float density = 0.;
 	float lod = 0.;
-	float light_energy = 0.;
 	for(uint i = 0u; i < g_noise_kernel.length(); ++i)
 	{
 		vec3 conePos = pos + coneRadius * g_noise_kernel[i] * float(i + 1u);
@@ -85,36 +85,25 @@ float sampleCloudDensityAlongCone(vec3 startPos, float stepSize, float lightDotE
 		if(height_frac < 1.0 && height_frac > 0.)
 		{
 			vec3 weather_data = sampleWeather(conePos);
-			float cloudDensity = sampleCloudDensity(conePos, weather_data, height_frac, lod);
-			light_energy += lightEnergy(lightDotEye, cloudDensity, getPrecipitation(weather_data)) / g_noise_kernel.length();
-			densityAlongCone += cloudDensity / g_noise_kernel.length();
+			float d = sampleCloudDensity(conePos, weather_data, height_frac, lod);
+			if(d > 0.0)
+			{
+				float transmittance = 1. - (d * rcpThickness);
+				density += (d * transmittance);
+			}
 		}
 		pos += lightStep;
 		coneRadius += RCP_LIGHT_RAY_ITERATIONS;
 		lod += RCP_LIGHT_RAY_ITERATIONS;
 	}
-	// take additional step at large distance away for shadowing from other clouds
-	pos = startPos + 10.*lightStep;
-	vec3 weather_data = sampleWeather(pos);
-	float height_frac = heightFraction(pos);
-/*	if(height_frac < 1.0 && height_frac > 0.)
-	{
-		float cloudDensity = sampleCloudDensity(pos, weather_data, height_frac, 0.8);
-		densityAlongCone += cloudDensity*getPrecipitation(weather_data) / RANDOM_VECTORS.length();
 
-	}
-*/
-	return light_energy;
+	return density;
 }
 
 void main()
 {
-//	vec3 CamPos = vec3(0., 1. + constant.window.z, 0.);
-//	vec3 CamDir = normalize(vec3(0., 10., 1000.) - CamPos);
 	vec3 CamPos = vec3(0., 3., 0.);
 	vec3 CamDir = normalize(vec3(1.5, 1.7, 1.5));
-//	uLightRay = -CamDir;
-//	uLightRay = -normalize(vec3(-1.5, -10.7, 1.5));
 
 	// カメラレイの作成
 	{
@@ -128,6 +117,9 @@ void main()
 		vec2 aspect = vec2(float(reso.x) / float(reso.y), 1);
 		CamDir = normalize(side*ndc.x + up*ndc.y + CamDir);
 	}
+
+	precomputeNoiseKernel(uLightRay);
+
 
 	// 空色
 	vec3 background_color = mix(vec3(.0, 0.1, 0.4), vec3(0.3, 0.6, 0.8), 1.0 - CamDir.y);
@@ -149,6 +141,7 @@ void main()
 	vec3 color = vec3(0.);
 	float transmittance = 1.;
 	vec4 dist = vec4(-1.);
+	float phaseFactor = henyeyGreensteinPhaseFunction(dot(-uLightRay, CamDir), 0.2);
 	if(intersectRayAtom(CamPos, CamDir, u_cloud_inner.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), dist))
 	{
 		int count = 0;
@@ -167,7 +160,7 @@ void main()
 		}
 
 		uint sampleCount = 128;
-		float lightDotEye = dot(-uLightRay, CamDir);
+		float density = 0.;
 		for(int i = 0; i <count; i++)
 		{
 			vec3 begin = CamPos + CamDir * ray_segment[i].x;
@@ -180,30 +173,29 @@ void main()
 
 			vec3 pos = begin;
 			float cloud_depth = 0.;
-			for(uint s = 0u; s < sampleCount; ++s)
+			for(int s = 0; s < sampleCount; s++)
 			{
 				float height_frac = heightFraction(pos);
 				vec3 weather_data = sampleWeather(pos);
-				float cloudDensity = sampleCloudDensity(pos, weather_data, height_frac, 0.);
+				float d = sampleCloudDensity(pos, weather_data, height_frac, 0.);
 
-				cloud_depth = cloudDensity > 0.0 ? cloud_depth + cloudDensity : 0.;
-				if(cloudDensity > 0.0)
+				if(d > 0.0)
 				{
-					float t = exp(-cloudDensity*getPrecipitation(weather_data));
+					float t = exp(-d*getPrecipitation(weather_data));
 					transmittance *= t;
 					if (transmittance < 0.01) { i = count; break; }
 
-					float lightDensity = sampleCloudDensityAlongCone(pos, stepSize, lightDotEye);
-					vec3 ambientBadApprox = ambientLight(height_frac) * min(1.0, length(uLightColor.rgb * 0.0125)) * transmittance;
-					color += transmittance * cloudDensity * vec3((uLightColor.rgb * lightDensity) + ambientBadApprox/*+ ambientLight(heightFrac)*/);
+					float light_density = sampleCloudDensityAlongCone(pos, stepSize);
+					color += transmittance * d * uLightColor.rgb * lightEnergy(light_density, getPrecipitation(weather_data), phaseFactor);;
+//					color += transmittance * ambientLight(height_frac) * min(1.0, length(uLightColor.rgb * 0.00125));
 					alpha += (1.-t) *(1.-alpha);
-
 				}
-				pos = pos + CamDir * stepSize;
+
+				pos += stepSize * CamDir;
 			}
 		}
 
-		color = mix(background_color, color/(alpha+0.0001), alpha);
+		color = mix(background_color, color.xyz/(alpha+0.0001), alpha);
 
 	}
 	// tonemapping
