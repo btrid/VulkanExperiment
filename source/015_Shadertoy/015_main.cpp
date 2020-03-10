@@ -652,7 +652,7 @@ struct Sky
 
 				vk::SamplerCreateInfo sampler_info;
 				sampler_info.setAddressModeU(vk::SamplerAddressMode::eRepeat);
-				sampler_info.setAddressModeV(vk::SamplerAddressMode::eClampToEdge);
+				sampler_info.setAddressModeV(vk::SamplerAddressMode::eRepeat);
 				sampler_info.setAddressModeW(vk::SamplerAddressMode::eRepeat);
 //				sampler_info.setBorderColor(vk::BorderColor::eFloatOpaqueWhite);
 				sampler_info.setMagFilter(vk::Filter::eLinear);
@@ -959,6 +959,8 @@ struct Sky
 
 		}
 	
+		// render_targetÇ…èëÇ≠
+		_label.insert("make transmittance");
 		{
 			{
 				std::array<vk::ImageMemoryBarrier, 1> image_barrier;
@@ -977,7 +979,8 @@ struct Sky
 			cmd.dispatch(num.x, num.y, num.z);
 		}
 
-		{
+		_label.insert("render transmittance");
+ 		{
 			{
 				std::array<vk::ImageMemoryBarrier, 2> image_barrier;
 				image_barrier[0].setImage(m_image_shadow.get());
@@ -993,11 +996,11 @@ struct Sky
 
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
 			}
-
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_SkyShadow_Render_CS].get());
+ 
+ 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_SkyShadow_Render_CS].get());
 			auto num = app::calcDipatchGroups(uvec3(1024, 1024, 1), uvec3(32, 32, 1));
-			cmd.dispatch(num.x, num.y, num.z);
-		}		
+ 			cmd.dispatch(num.x, num.y, num.z);
+ 		}		
 	}
 
 	void _executeUpsampling(vk::CommandBuffer &cmd, const std::shared_ptr<RenderTarget>& render_target)
@@ -1026,21 +1029,65 @@ struct Sky
 
 };
 
+int intersectRayAtom(vec3 Pos, vec3 Dir, vec3 AtomPos, vec2 Area, vec4& OutDist)
+{
+	vec3 RelativePos = AtomPos - Pos;
+	float tca = dot(RelativePos, Dir);
+
+	vec2 RadiusSq = Area * Area;
+	float d2 = dot(RelativePos, RelativePos) - tca * tca;
+	bvec2 intersect = greaterThanEqual(RadiusSq, vec2(d2));
+	vec4 dist = vec4(tca) + vec4(glm::sqrt(RadiusSq.yxxy() - d2)) * vec4(-1., -1., 1., 1.);
+
+	int count = 0;
+	vec4 rays = vec4(-1.f);
+	if (intersect.x && dist.y >= 0.f)
+	{
+		rays[count++] = glm::max(dist.x, 0.f);
+		rays[count++] = dist.y;
+	}
+	if (intersect.y && dist.w >= 0.f)
+	{
+		rays[count++] = intersect.x ? glm::max(dist.z, 0.f) : glm::max(dist.x, 0.f);
+		rays[count++] = dist.w;
+	}
+	OutDist = rays;
+	return count;
+
+}
+
 // https://github.com/erickTornero/realtime-volumetric-cloudscapes
 // https://bib.irb.hr/datoteka/949019.Final_0036470256_56.pdf
 int main()
 {
-	const float u_plant_radius = 10000.;
-	const vec4 u_planet = vec4(0., -u_plant_radius, 0, u_plant_radius);
-	const vec4 u_cloud_inner = vec4(u_planet.xyz, u_planet.w + 2000.);
-	const vec4 u_cloud_outer = u_cloud_inner + vec4(0., 0., 0, 64.);
-	const float u_cloud_area_inv = 1. / (u_cloud_outer.w - u_cloud_inner.w);
-	const float u_mapping = 1. / u_cloud_outer.w;
-	vec3 uLightRay = -normalize(vec3(0., 1., 0.));
-	vec3 uLightColor = vec3(130.);
-	auto h = (glm::distance(vec3(0.f, 2020.f, 0.f), u_cloud_inner.xyz()) - u_cloud_inner.w)*u_cloud_area_inv;
-	auto h1 = (glm::distance(vec3(0.f, 2064.f, 0.f), u_cloud_inner.xyz()) - u_cloud_inner.w)*u_cloud_area_inv;
-	auto h2 = (glm::distance(vec3(0.f, 2000.f, 0.f), u_cloud_inner.xyz()) - u_cloud_inner.w)*u_cloud_area_inv;
+	{
+		const vec3 u_planet = vec3(0.f, 0.f, 0.f);
+
+		vec4 dist;
+		int count = 0;
+		int c = 1;
+#define debug_print printf("pattern%d\n", c); for (int i = 0; i < count; i += 2) { printf(" %d %5.2f\n", i, dist[i]); printf("   %5.2f\n", dist[i + 1]); } c++
+		count = intersectRayAtom(vec3(0.f, 200.f, 0.f), vec3(0.f, -1.f, 0.f), u_planet, vec2(50.f, 150.f), dist); // âFíàÇ©ÇÁínè„ÅAínè„Ç©ÇÁâFíàÇ÷
+		debug_print;
+		count = intersectRayAtom(vec3(0.f, 100.f, 0.f), vec3(0.f, -1.f, 0.f), u_planet.xyz(), vec2(50.f, 150.f), dist); // ëÂãCÇ©ÇÁínè„ÅAínè„Ç©ÇÁâFíàÇ÷
+		debug_print;
+		count = intersectRayAtom(vec3(0.f, 200.f, 55.f), vec3(0.f, -1.f, 0.f), u_planet.xyz(), vec2(50.f, 150.f), dist);	// âFíàÇ©ÇÁínè„Ç…ìñÇΩÇÁÇ∏âFíàÇ÷
+		debug_print;
+		count = intersectRayAtom(vec3(0.f, 100.f, 55.f), vec3(0.f, -1.f, 0.f), u_planet.xyz(), vec2(50.f, 150.f), dist); //Å@ëÂãCÇ©ÇÁínè„Ç…ìñÇΩÇÁÇ∏âFíàÇ÷
+		debug_print;
+		count = intersectRayAtom(vec3(0.f, -50.f, 5.f), vec3(0.f, -1.f, 0.f), u_planet.xyz(), vec2(50.f, 150.f), dist); // ínè„Ç©ÇÁâFíàÇ÷
+		debug_print; 
+		count = intersectRayAtom(vec3(0.f, -50.f, 55.f), vec3(0.f, -1.f, 0.f), u_planet.xyz(), vec2(50.f, 150.f), dist); // ëÂãCÇ©ÇÁâFíàÇ÷
+		debug_print;
+		count = intersectRayAtom(vec3(0.f, -100.f, 5.f), vec3(0.f, -1.f, 0.f), u_planet.xyz(), vec2(50.f, 150.f), dist);
+		debug_print;
+		count = intersectRayAtom(vec3(0.f, -100.f, 55.f), vec3(0.f, -1.f, 0.f), u_planet.xyz(), vec2(50.f, 150.f), dist);
+		debug_print;
+
+
+		int aaa = 0;
+
+	}
 
 	btr::setResourceAppPath("..\\..\\resource/");
 	auto camera = cCamera::sCamera::Order().create();
@@ -1087,9 +1134,9 @@ int main()
 			std::vector<vk::CommandBuffer> cmds(cmd_num);
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0, "cmd_sky");
+				sky.executeShadow(cmd, app.m_window->getFrontBuffer());
 				sky.execute(cmd, app.m_window->getFrontBuffer());
-//				sky.executeShadow(cmd, app.m_window->getFrontBuffer());
-				//				sky.m_skynoise.execute_Render(context, cmd, app.m_window->getFrontBuffer());
+//				sky.m_skynoise.execute_Render(context, cmd, app.m_window->getFrontBuffer());
 				cmd.end();
 				cmds[cmd_sky] = cmd;
 			}

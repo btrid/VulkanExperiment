@@ -20,50 +20,47 @@ void main()
 	// カメラ位置の作成
 	{
 		uvec3 reso = gl_NumWorkGroups * gl_WorkGroupSize;
-		vec2 ndc = ((vec2(gl_GlobalInvocationID.xy) + 0.5) / vec2(reso.xy)) * 2. -1.;
+		vec2 ndc = ((vec2(gl_GlobalInvocationID.xy)) / vec2(reso.xy)) * 2. -1.;
 		ndc /= vec2(u_mapping);
 
 		vec3 up = vec3(0., 1., 0.); 
 		vec3 side = cross(uLightRay, normalize(up));
-		side = dot(side, side) <= 0.000001 ? vec3(1., 0., 0.) : normalize(side);
+		side = dot(side, side) < 0.000001 ? vec3(1., 0., 0.) : normalize(side);
 		up = normalize(cross(side, uLightRay));
-		CamPos = side*ndc.x + up*ndc.y -uLightRay*3000.;
+		CamPos = side*ndc.x + up*ndc.y -uLightRay*2000.;
 	}
 
 	// find nearest planet surface point
-	vec4 dist = vec4(-1.);
-	if(intersectRayAtom(CamPos, CamDir, u_cloud_inner.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), dist))
+	vec4 ray_segment;
+	int count = intersectRayAtomEx(CamPos, CamDir, u_cloud_inner.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), ray_segment);
+	int sampleCount = 32;
+	float transmittance = 1.;
+	float depth = 0.;
+	for(int i = 0; i <count; i++)
 	{
-		int count = 0;
-		vec2 ray_segment[2];
-		if(dist.y>0.)
+		float step = (ray_segment[i*2+1]-ray_segment[i*2]) / float(sampleCount);
+		vec3 pos = CamPos + CamDir * (ray_segment[i*2] + 0.5);
+		for(int s = 0; s < sampleCount; s++)
 		{
-			// 雲の上から雲を見る
-			ray_segment[count] = vec2(max(dist.x, 0.), dist.y-max(dist.x, 0.));
-			count++;
+			float height_frac = heightFraction(pos);
+			vec3 weather_data = sampleWeather(pos);
+			float density = sampleCloudDensity(pos, weather_data, height_frac, 0.);
+
+			depth = density > 0. ? depth + step*0.2 : 0.;
+			depth = saturate(depth);
+			transmittance *= exp(-density*getPrecipitation(weather_data));
+
+			vec3 p = vec3(pos.x, float(s)/float(sampleCount), pos.z) * vec3(u_mapping, 1., u_mapping) * vec3(0.5, 1., 0.5) + vec3(0.5, 0., 0.5);// UV[0~1]
+			imageStore(i_shadow_map, ivec3(p*imageSize(i_shadow_map)), ivec4(vec2(transmittance, depth).xyxy*255.));
+
+			pos = pos + CamDir * step;		
 		}
-		int sampleCount = 32;
-		float transmittance = 1.;
-		float depth = 0.;
-		for(int i = 0; i <count; i++)
+	}
+	if(count==0)
+	{
+		for(int s = 0; s < sampleCount; s++)
 		{
-			float step = ray_segment[i].y / float(sampleCount);
-			vec3 pos = CamPos + CamDir * (ray_segment[i].x + 0.5);
-			for(int s = 0; s < sampleCount; s++)
-			{
-				float height_frac = heightFraction(pos);
-				vec3 weather_data = sampleWeather(pos);
-				float density = sampleCloudDensity(pos, weather_data, height_frac, 0.);
-
-				depth = density > 0. ? depth + step*0.2 : 0.;
-				depth = saturate(depth);
-				transmittance *= exp(-density*getPrecipitation(weather_data));
-
-				vec3 p = vec3(pos.x, height_frac, pos.z) * vec3(u_mapping, 1., u_mapping) * vec3(0.5, 1., 0.5) + vec3(0.5, 0., 0.5);// UV[0~1]
-				imageStore(i_shadow_map, ivec3(p*imageSize(i_shadow_map)), ivec4(vec2(transmittance, depth).xyxy*255.));
-
-				pos = pos + CamDir * step;		
-			}
+			imageStore(i_shadow_map, ivec3(gl_GlobalInvocationID.x, s, gl_GlobalInvocationID.y), ivec4(s/float(sampleCount) * 255.));
 		}
 	}
 

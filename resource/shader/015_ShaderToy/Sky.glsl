@@ -44,6 +44,33 @@ bool intersectRayAtom(vec3 Pos, vec3 Dir, vec3 AtomPos, vec2 Area, out vec4 OutD
 	return d2 <= RadiusSq.y;
 }
 
+int intersectRayAtomEx(vec3 Pos, vec3 Dir, vec3 AtomPos, vec2 Area, out vec4 Rays)
+{
+	vec3 RelativePos = AtomPos - Pos;
+	float tca = dot(RelativePos, Dir);
+
+	vec2 RadiusSq = Area * Area;
+	float d2 = dot(RelativePos, RelativePos) - tca * tca;
+	bvec2 intersect = greaterThanEqual(RadiusSq, vec2(d2));
+	vec4 dist = vec4(tca) + vec4(sqrt(RadiusSq.yxxy - d2)) * vec4(-1., -1., 1., 1.);
+
+	int count = 0;
+	if (intersect.x && dist.y >= 0.)
+	{
+		Rays[count*2] = max(dist.x, 0.);
+		Rays[count*2+1] = dist.y;
+        count++;
+	}
+	if (intersect.y && dist.w >= 0.)
+	{
+		Rays[count*2] = intersect.x ? max(dist.z, 0.) : max(dist.x, 0.);
+		Rays[count*2+1] = dist.w;
+        count++;
+	}
+	return count;
+
+}
+
 float intersectRaySphere(in vec3 origin, in vec3 ray, in vec4 sphere)
 {
 	vec3 relative_pos = sphere.xyz - origin;
@@ -68,7 +95,7 @@ float remap(float value, float oldMin, float oldMax, float newMin, float newMax)
 
 vec3 sampleWeather(vec3 pos){ return texture(s_weather_map, (vec3(pos) * vec3(u_mapping, 1., u_mapping) + vec3(0.5, 0., 0.5)).xz).xyz; }
 float getCoverage(vec3 weather_data){ return weather_data.r; }
-float getPrecipitation(vec3 weather_data){ return mix(1., 10., weather_data.g); }
+float getPrecipitation(vec3 weather_data){ return mix(0.0001, 1., weather_data.g); }
 float getCloudType(vec3 weather_data){ return weather_data.b; }// 0.0 = stratus, 0.5 = stratocumulus, 1.0 = cumulus
 float heightFraction(vec3 pos) { return (distance(pos,u_cloud_inner.xyz)-u_cloud_inner.w)*u_cloud_area_inv; }
 
@@ -89,6 +116,14 @@ float densityHeightGradient(float height_frac, float cloudType)
 	return smoothstep(cloudGradient.x, cloudGradient.y, height_frac) - smoothstep(cloudGradient.z, cloudGradient.w, height_frac);
 }
 
+vec3 toUV(in vec3 pos)
+{
+    float y = heightFraction(pos);
+//	pos = pos * vec3(u_mapping, 1., u_mapping) + vec3(0.5, 0., 0.5);// UV[0~1]
+	pos = pos * vec3(u_mapping, 1., u_mapping);// UV[0~1]
+    return pos*vec3(1., 0., 1.) + vec3(0., y, 0.);
+
+}
 float sampleCloudDensity(vec3 pos, vec3 weather_data, float height_frac, float lod)
 {
 	if(height_frac>= 1. || height_frac <= 0.) { return 0.; } //範囲外

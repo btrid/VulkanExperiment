@@ -14,7 +14,7 @@ void main()
 {
 	{
 		vec4 v = vec4(0.);
-		int level = 0;
+		int level = 2;
 		v[0] = remap(value_noise(gl_GlobalInvocationID.xyz+21, level), worley_noise(gl_GlobalInvocationID.xyz+ 5, level), 1., 0., 1.);
 		v[1] = worley_noise(gl_GlobalInvocationID.xyz+ 14, level+1);
 		v[2] = worley_noise(gl_GlobalInvocationID.xyz+ 11, level+2);
