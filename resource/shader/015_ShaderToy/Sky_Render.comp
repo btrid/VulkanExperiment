@@ -87,9 +87,9 @@ float sampleCloudDensityAlongCone(vec3 startPos, float stepSize)
 			float d = sampleCloudDensity(conePos, weather_data, height_frac, lod);
 			if(d > 0.0)
 			{
-//				float transmittance = 1. - (d * rcpThickness);
-//				density += (d * transmittance);
-				density += d;
+				float transmittance = 1. - (d * rcpThickness);
+				density += (d * transmittance);
+//				density += d;
 			}
 		}
 //		lod += RCP_LIGHT_RAY_ITERATIONS;
@@ -189,8 +189,8 @@ void main()
 
 					float light_density = sampleCloudDensityAlongCone(pos, stepSize);
 //					vec2 shadow = texture(s_shadow_map, p).xy;
-//					color += shadow.x * d * uLightColor.rgb * lightEnergy(light_density, getPrecipitation(weather_data), phaseFactor);;
-					color += transmittance * ambientLight(height_frac) * min(1.0, length(uLightColor.rgb * 0.00125));
+//					color += shadow.x * d * uLightColor.rgb * lightEnergy(light_density, getPrecipitation(weather_data), phaseFactor);
+					color += transmittance  * lightEnergy(light_density, getPrecipitation(weather_data), phaseFactor);
 					alpha += (1.-t) *(1.-alpha);
 				}
 

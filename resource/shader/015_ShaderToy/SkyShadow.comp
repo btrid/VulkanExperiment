@@ -33,7 +33,7 @@ void main()
 	// find nearest planet surface point
 	vec4 ray_segment;
 	int count = intersectRayAtomEx(CamPos, CamDir, u_cloud_inner.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), ray_segment);
-	int sampleCount = 32;
+	int sampleCount = 128;
 	float transmittance = 1.;
 	float depth = 0.;
 	for(int i = 0; i <count; i++)
