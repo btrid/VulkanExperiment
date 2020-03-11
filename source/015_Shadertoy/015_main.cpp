@@ -121,7 +121,6 @@ struct SkyNoise
 				sampler_info.setMaxLod(0.f);
 				sampler_info.setMipLodBias(0.f);
 				sampler_info.setMipmapMode(vk::SamplerMipmapMode::eLinear);
-				sampler_info.setUnnormalizedCoordinates(false);
 				m_image_base_shape_sampler = context->m_device.createSamplerUnique(sampler_info);
 
 
@@ -184,7 +183,6 @@ struct SkyNoise
 				sampler_info.setMaxLod(0.f);
 				sampler_info.setMipLodBias(0.f);
 				sampler_info.setMipmapMode(vk::SamplerMipmapMode::eLinear);
-				sampler_info.setUnnormalizedCoordinates(false);
 				m_image_detail_sampler = context->m_device.createSamplerUnique(sampler_info);
 
 
@@ -1134,8 +1132,8 @@ int main()
 			std::vector<vk::CommandBuffer> cmds(cmd_num);
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0, "cmd_sky");
-//				sky.executeShadow(cmd, app.m_window->getFrontBuffer());
-				sky.execute(cmd, app.m_window->getFrontBuffer());
+//				sky.execute(cmd, app.m_window->getFrontBuffer());
+				sky.executeShadow(cmd, app.m_window->getFrontBuffer());
 //				sky.m_skynoise.execute_Render(context, cmd, app.m_window->getFrontBuffer());
 				cmd.end();
 				cmds[cmd_sky] = cmd;

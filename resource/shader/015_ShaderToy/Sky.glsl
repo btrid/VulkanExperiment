@@ -113,21 +113,11 @@ float densityHeightGradient(float height_frac, float cloudType)
 	return smoothstep(cloudGradient.x, cloudGradient.y, height_frac) - smoothstep(cloudGradient.z, cloudGradient.w, height_frac);
 }
 
-vec3 toUV(in vec3 pos)
-{
-    float y = heightFraction(pos);
-//	pos = pos * vec3(u_mapping, 1., u_mapping) + vec3(0.5, 0., 0.5);// UV[0~1]
-	pos = pos * vec3(u_mapping, 1., u_mapping);// UV[0~1]
-//	pos = pos * vec3(0.033, 1., 0.033);// UV[0~1]
-    return pos*vec3(1., 0., 1.) + vec3(0., y, 0.);
-
-}
 float sampleCloudDensity(vec3 pos, vec3 weather_data, float height_frac, float lod)
 {
 	if(height_frac>= 1. || height_frac <= 0.) { return 0.; } //範囲外
 
-	pos = vec3(pos.x, height_frac, pos.z) * vec3(0.0167, 1., 0.0167);
-//    pos.y = height_frac;
+	pos = vec3(pos.x, height_frac, pos.z) * vec3(0.0167, 1., 0.0167) + 10.5;
 	
 	vec4 low_freq_noise = texture(s_cloud_map, pos);
 	float low_freq_fBM = dot(low_freq_noise.yzw, vec3(0.625, 0.25, 0.125));

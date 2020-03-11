@@ -16,7 +16,7 @@ vec3 _wn_rand(in ivec4 co)
 	return fract(sin(s) * (float(co.w) + vec3(39.15, 48.51, 67.79)) * vec3(39729.1, 43758.5, 63527.7));
 }
 
-float worley_noise(in uvec3 invocation, in int level)
+float worley_noise(in uvec3 invocation, in int level, in uvec3 reso)
 {
 	vec3 value = vec3(0.);
 
@@ -33,6 +33,7 @@ float worley_noise(in uvec3 invocation, in int level)
 		for(int x = -cell_size; x <= cell_size; x++)
 		{
 			ivec3 tid = ivec3(tile_id) + ivec3(x, y, z);
+			tid %= ivec3(reso);
 			for(int n = 0; n < 2; n++)
 			{
 				vec3 p = _wn_rand(ivec4(tid, n))*tile_size + vec3(x, y, z)*tile_size;
@@ -54,38 +55,40 @@ vec3 _interpolate(in vec3 t)
     return t * t * t * (10. + t * (-15. + 6. * t));
 }
 
-float _v_noise(in vec3 pos)
+float _v_noise(in vec3 pos, in uvec3 reso)
 {
-	vec3 ip = floor(pos);
-//	vec3 fp = smoothstep(0., 1., fract(pos));
+	vec4 ip0 = vec4(mod(floor(pos), vec3(reso)), 0.);
+	vec4 ip1 = vec4(mod(ip0.xyz+vec3(1.), vec3(reso)), 0.);
 	vec3 fp = _interpolate(fract(pos));
-	vec2 offset = vec2(0., 1.);
-	vec4 a = vec4(_v_rand(ip+offset.xxx),_v_rand(ip+offset.yxx),_v_rand(ip+offset.xyx),_v_rand(ip+offset.yyx));
-	vec4 b = vec4(_v_rand(ip+offset.xxy),_v_rand(ip+offset.yxy),_v_rand(ip+offset.xyy),_v_rand(ip+offset.yyy));
+	vec4 a = vec4(_v_rand(ip0.xyz+ip1.www),_v_rand(ip0.wyz+ip1.xww),_v_rand(ip0.xwz+ip1.wyw),_v_rand(ip0.wwz+ip1.xyw));
+	vec4 b = vec4(_v_rand(ip0.xyw+ip1.wwz),_v_rand(ip0.wyw+ip1.xwz),_v_rand(ip0.xww+ip1.wyz),_v_rand(ip0.www+ip1.xyz));
 	a = mix(a, b, fp.z);
 	a.xy = mix(a.xy, a.zw, fp.y);
 	return mix(a.x, a.y, fp.x);
 }
 
 
-float _v_fBM(in vec3 pos)
+float _v_fBM(in vec3 pos, in uvec3 reso)
 {
-	float lacunarity = 2.971;
-	vec3 value = vec3(0.);
-	for(int i = 0; i < 3; i++)
+	float lacunarity = 2.371;
+	vec4 value = vec4(0.);
+	for(int i = 0; i < 4; i++)
 	{
-		value[i] = _v_noise(pos);
+		value[i] = _v_noise(pos, reso);
 		pos = pos * lacunarity;
 	}
 
-	return dot(value, vec3(0.625, 0.25, 0.125));
+	return dot(value, vec4(0.45, 0.3, 0.15, 0.1));
 }
 
+float value_noise(in vec3 invocation, in int level, in uvec3 reso)
+{
+	vec3 pos = vec3(invocation) * 1./float(1<<max(7-level, 0)) + 24.53;
+	return _v_fBM(pos, reso);
+}
 float value_noise(in vec3 invocation, in int level)
 {
-#define _octaves 3
-	vec3 pos = vec3(invocation) * 1./float(1<<max(7-level, 0)) + 24.53;
-	return _v_fBM(pos);
+	return value_noise(invocation, level, uvec3(9999999));
 }
 
 
