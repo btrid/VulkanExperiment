@@ -17,9 +17,6 @@ layout(set=USE_Sky, binding=1) uniform sampler2D s_render_map;
 layout(set=USE_Sky, binding=10, rg8ui) uniform uimage3D i_shadow_map;
 layout(set=USE_Sky, binding=11, rgba16) uniform image2D i_render_map;
 
-// 雲の光の吸収量
-#define ABSORPTION		0.15
-
 const float u_plant_radius = 1000.;
 const vec4 u_planet = vec4(0., -u_plant_radius, 0, u_plant_radius);
 const vec4 u_cloud_inner = vec4(u_planet.xyz, u_planet.w*1.025);
@@ -95,7 +92,7 @@ float remap(float value, float oldMin, float oldMax, float newMin, float newMax)
 
 vec3 sampleWeather(vec3 pos){ return texture(s_weather_map, (vec3(pos) * vec3(u_mapping, 1., u_mapping) + vec3(0.5, 0., 0.5)).xz).xyz; }
 float getCoverage(vec3 weather_data){ return weather_data.r; }
-float getPrecipitation(vec3 weather_data){ return mix(0.0001, 1., weather_data.g); }
+float getPrecipitation(vec3 weather_data){ return mix(0.001, 2., weather_data.g); }
 float getCloudType(vec3 weather_data){ return weather_data.b; }// 0.0 = stratus, 0.5 = stratocumulus, 1.0 = cumulus
 float heightFraction(vec3 pos) { return (distance(pos,u_cloud_inner.xyz)-u_cloud_inner.w)*u_cloud_area_inv; }
 
@@ -132,23 +129,26 @@ float sampleCloudDensity(vec3 pos, vec3 weather_data, float height_frac, float l
 	
 	vec4 low_freq_noise = texture(s_cloud_map, pos);
 	float low_freq_fBM = dot(low_freq_noise.yzw, vec3(0.625, 0.25, 0.125));
-	float base_cloud = remap(low_freq_noise.r, -(1.0 - low_freq_fBM), 1.0, 0.0, 1.0);
+	float base_cloud = remap(low_freq_noise.r, -(1.-low_freq_fBM), 1., 0., 1.);
 
 	float density_gradient = densityHeightGradient(height_frac, getCloudType(weather_data));
 	base_cloud *= density_gradient;
 
 	float cloud_coverage = getCoverage(weather_data);
-	float base_cloud_with_coverage = remap(base_cloud, 1.0 - cloud_coverage, 1., 0., 1.);
-	base_cloud_with_coverage *= cloud_coverage;
+	float base_cloud_with_coverage = remap(base_cloud, 1.-cloud_coverage, 1., 0., 1.);
+	float final_cloud = base_cloud_with_coverage * cloud_coverage;
 
-	//// TODO add curl noise
-	//// pos += curlNoise.xy * (1.0f - height_frac);
+    if(final_cloud > 0.)
+    {
+        //// TODO add curl noise
+        //// pos += curlNoise.xy * (1.0f - height_frac);
 
-	vec3 high_freq_noise = texture(s_cloud_detail_map, pos * 0.1).xyz;
-	float high_freq_fBM = dot(high_freq_noise, vec3(0.625, 0.25, 0.125));
-	float high_freq_foise_modifier = mix(high_freq_fBM, 1.0 - high_freq_fBM, saturate(height_frac * 10.));
+        vec3 high_freq_noise = texture(s_cloud_detail_map, pos * 0.1).xyz;
+        float high_freq_fBM = dot(high_freq_noise, vec3(0.625, 0.25, 0.125));
+        float high_freq_foise_modifier = mix(high_freq_fBM, 1.0-high_freq_fBM, saturate(height_frac * 10.));
 
-	float final_cloud = remap(base_cloud_with_coverage, high_freq_foise_modifier * 0.2, 1.0, 0.0, 1.0);
+        final_cloud = remap(final_cloud, high_freq_foise_modifier*0.2, 1., 0., 1.);
+    }
 	return saturate(final_cloud);
 }
 
