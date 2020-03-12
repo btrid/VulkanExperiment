@@ -22,7 +22,7 @@ float worley_noise(in uvec3 invocation, in int level, in uvec3 reso)
 
 	for(int i = 0; i < 3; i++)
 	{
-		uvec3 tile_size = ivec3(128)>>(level+i);
+		uvec3 tile_size = max(ivec3(32)>>(level+i), ivec3(1));
 		uvec3 tile_id = invocation/tile_size;
 		vec3 pos = vec3(invocation%tile_size);
 		uvec3 reso_ = reso / tile_size;
@@ -36,7 +36,7 @@ float worley_noise(in uvec3 invocation, in int level, in uvec3 reso)
 		{
 			ivec3 tid = ivec3(tile_id) + ivec3(x, y, z);
 			tid = (tid + ivec3(reso_)) % ivec3(reso_);
-			for(int n = 0; n < 2; n++)
+			for(int n = 0; n < 5; n++)
 			{
 				vec3 p = _wn_rand(ivec4(tid, n))*tile_size + vec3(x, y, z)*tile_size;
 
@@ -44,14 +44,13 @@ float worley_noise(in uvec3 invocation, in int level, in uvec3 reso)
 				value[i] = max(value[i], v);
 			}
 		}
-//		invocation <<= 1;
 	}
 	return dot(value, vec3(0.625, 0.25, 0.125));
 }
 
 float _v_rand(in vec3 co, in vec3 scale)
 {
-	return fract(sin(dot(co = mod(co, scale), vec3(12.67,78.23, 45.41))) * 43758.5);
+	return fract(sin(dot(mod(co, scale), vec3(12.67, 78.23, 45.41))) * 43758.5);
 }
 vec3 _interpolate(in vec3 t) 
 {
@@ -60,7 +59,7 @@ vec3 _interpolate(in vec3 t)
 
 float _v_noise(in vec3 pos, in vec3 scale)
 {
-	pos *= scale;
+
 	vec3 ip = floor(pos);
 	vec3 fp = _interpolate(fract(pos));
 	vec2 offset = vec2(0., 1.);
@@ -74,12 +73,13 @@ float _v_noise(in vec3 pos, in vec3 scale)
 
 float _v_fBM(in vec3 pos, in uvec3 reso)
 {
+//	reso = uvec3(8);
 	float lacunarity = 2.;
-//	pos = mod(pos, vec3(reso));
 	vec4 value = vec4(0.);
 	for(int i = 0; i < 4; i++)
 	{
 		value[i] = _v_noise(pos, vec3(reso));
+		pos  *= 2;
 		reso *= 2;
 	}
 
@@ -88,7 +88,8 @@ float _v_fBM(in vec3 pos, in uvec3 reso)
 
 float value_noise(in vec3 invocation, in int level, in uvec3 reso)
 {
-	vec3 pos = vec3(invocation) * 1./float(1<<max(7-level, 0)) + 24.53;
+	vec3 pos = vec3(invocation)*1./float(1<<max(4-level, 0)) + 25.631;
+	reso >>= max(4-level, 0);
 	return _v_fBM(pos, reso);
 }
 float value_noise(in vec3 invocation, in int level)

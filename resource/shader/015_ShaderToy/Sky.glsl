@@ -92,7 +92,7 @@ float remap(float value, float oldMin, float oldMax, float newMin, float newMax)
 
 vec3 sampleWeather(vec3 pos){ return texture(s_weather_map, (vec3(pos) * vec3(u_mapping, 1., u_mapping) + vec3(0.5, 0., 0.5)).xz).xyz; }
 float getCoverage(vec3 weather_data){ return weather_data.r; }
-float getPrecipitation(vec3 weather_data){ return mix(0.001, 2., weather_data.g); }
+float getPrecipitation(vec3 weather_data){ return mix(0., 1., weather_data.g) + 0.0001; }
 float getCloudType(vec3 weather_data){ return weather_data.b; }// 0.0 = stratus, 0.5 = stratocumulus, 1.0 = cumulus
 float heightFraction(vec3 pos) { return (distance(pos,u_cloud_inner.xyz)-u_cloud_inner.w)*u_cloud_area_inv; }
 
@@ -117,7 +117,8 @@ float sampleCloudDensity(vec3 pos, vec3 weather_data, float height_frac, float l
 {
 	if(height_frac>= 1. || height_frac <= 0.) { return 0.; } //範囲外
 
-	pos = vec3(pos.x, height_frac, pos.z) * vec3(0.0167, 1., 0.0167) + 10.5;
+//	vec3 p = vec3(pos.x, height_frac, pos.z) * vec3(0.217, 1., 0.217);
+	pos = vec3(pos.x, height_frac, pos.z) * vec3(0.00817, 1., 0.00817);
 	
 	vec4 low_freq_noise = texture(s_cloud_map, pos);
 	float low_freq_fBM = dot(low_freq_noise.yzw, vec3(0.625, 0.25, 0.125));
@@ -135,7 +136,7 @@ float sampleCloudDensity(vec3 pos, vec3 weather_data, float height_frac, float l
         //// TODO add curl noise
         //// pos += curlNoise.xy * (1.0f - height_frac);
 
-        vec3 high_freq_noise = texture(s_cloud_detail_map, pos * 0.1).xyz;
+        vec3 high_freq_noise = texture(s_cloud_detail_map, pos * vec3(0.1, 1., 0.1)).xyz;
         float high_freq_fBM = dot(high_freq_noise, vec3(0.625, 0.25, 0.125));
         float high_freq_foise_modifier = mix(high_freq_fBM, 1.0-high_freq_fBM, saturate(height_frac * 10.));
 

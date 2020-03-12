@@ -158,7 +158,7 @@ void main()
 		}
 
 
-		uint sampleCount = 128;
+		uint sampleCount = 64;
 		float transmittance = 1.;
 		float phaseFactor = henyeyGreensteinPhaseFunction(dot(-uLightRay, CamDir), 0.2);
 		for(int i = 0; i <count; i++)
