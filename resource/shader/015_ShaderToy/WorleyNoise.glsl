@@ -25,6 +25,8 @@ float worley_noise(in uvec3 invocation, in int level, in uvec3 reso)
 		uvec3 tile_size = ivec3(128)>>(level+i);
 		uvec3 tile_id = invocation/tile_size;
 		vec3 pos = vec3(invocation%tile_size);
+		uvec3 reso_ = reso / tile_size;
+
 		float _radius = float(tile_size.x);
 		#define cell_size 1
 
@@ -33,7 +35,7 @@ float worley_noise(in uvec3 invocation, in int level, in uvec3 reso)
 		for(int x = -cell_size; x <= cell_size; x++)
 		{
 			ivec3 tid = ivec3(tile_id) + ivec3(x, y, z);
-			tid %= ivec3(reso);
+			tid = (tid + ivec3(reso_)) % ivec3(reso_);
 			for(int n = 0; n < 2; n++)
 			{
 				vec3 p = _wn_rand(ivec4(tid, n))*tile_size + vec3(x, y, z)*tile_size;
@@ -42,26 +44,28 @@ float worley_noise(in uvec3 invocation, in int level, in uvec3 reso)
 				value[i] = max(value[i], v);
 			}
 		}
+//		invocation <<= 1;
 	}
 	return dot(value, vec3(0.625, 0.25, 0.125));
 }
 
-float _v_rand(in vec3 co)
+float _v_rand(in vec3 co, in vec3 scale)
 {
-	return fract(sin(dot(co, vec3(12.98,78.23, 45.41))) * 43758.5);
+	return fract(sin(dot(co = mod(co, scale), vec3(12.67,78.23, 45.41))) * 43758.5);
 }
 vec3 _interpolate(in vec3 t) 
 {
     return t * t * t * (10. + t * (-15. + 6. * t));
 }
 
-float _v_noise(in vec3 pos, in uvec3 reso)
+float _v_noise(in vec3 pos, in vec3 scale)
 {
-	vec4 ip0 = vec4(mod(floor(pos), vec3(reso)), 0.);
-	vec4 ip1 = vec4(mod(ip0.xyz+vec3(1.), vec3(reso)), 0.);
+	pos *= scale;
+	vec3 ip = floor(pos);
 	vec3 fp = _interpolate(fract(pos));
-	vec4 a = vec4(_v_rand(ip0.xyz+ip1.www),_v_rand(ip0.wyz+ip1.xww),_v_rand(ip0.xwz+ip1.wyw),_v_rand(ip0.wwz+ip1.xyw));
-	vec4 b = vec4(_v_rand(ip0.xyw+ip1.wwz),_v_rand(ip0.wyw+ip1.xwz),_v_rand(ip0.xww+ip1.wyz),_v_rand(ip0.www+ip1.xyz));
+	vec2 offset = vec2(0., 1.);
+	vec4 a = vec4(_v_rand(ip+offset.xxx, scale),_v_rand(ip+offset.yxx, scale),_v_rand(ip+offset.xyx, scale),_v_rand(ip+offset.yyx, scale));
+	vec4 b = vec4(_v_rand(ip+offset.xxy, scale),_v_rand(ip+offset.yxy, scale),_v_rand(ip+offset.xyy, scale),_v_rand(ip+offset.yyy, scale));
 	a = mix(a, b, fp.z);
 	a.xy = mix(a.xy, a.zw, fp.y);
 	return mix(a.x, a.y, fp.x);
@@ -70,12 +74,13 @@ float _v_noise(in vec3 pos, in uvec3 reso)
 
 float _v_fBM(in vec3 pos, in uvec3 reso)
 {
-	float lacunarity = 2.371;
+	float lacunarity = 2.;
+//	pos = mod(pos, vec3(reso));
 	vec4 value = vec4(0.);
 	for(int i = 0; i < 4; i++)
 	{
-		value[i] = _v_noise(pos, reso);
-		pos = pos * lacunarity;
+		value[i] = _v_noise(pos, vec3(reso));
+		reso *= 2;
 	}
 
 	return dot(value, vec4(0.45, 0.3, 0.15, 0.1));
