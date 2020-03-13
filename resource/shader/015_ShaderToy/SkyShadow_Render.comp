@@ -18,7 +18,7 @@ void main()
 	vec2 uv = vec2(gl_GlobalInvocationID.xy) / vec2(gl_NumWorkGroups.xy*gl_WorkGroupSize.xy);
 //	uv *= 4.;
 	vec4 v = texture(s_cloud_map, vec3(uv.x, 0., uv.y));
-	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(v.xxx, 1.));
+	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(v.www, 1.));
 
 
 }

@@ -35,17 +35,6 @@ void precomputeNoiseKernel(vec3 lightDirection)
 }
 
 
-
-float beerLambert(float sampleDensity, float precipitation)
-{
-	return exp(-sampleDensity * precipitation);
-}
-
-float powder(float sampleDensity)
-{
-	return 1. - exp(-sampleDensity * 2.0);
-}
-
 // 光を前方または後方に散乱します。値が0の場合、等方性散乱（bsdf と同じ）が発生し、正の値が生成されます。
 // -1と1の極値は、すべての光を単一方向に散乱させ、-1の場合は光に戻り、1の場合は方向を変更しません。
 float henyeyGreensteinPhaseFunction(float lightDotEye, float g)
@@ -53,12 +42,11 @@ float henyeyGreensteinPhaseFunction(float lightDotEye, float g)
 	return ((1. - g*g) / pow((1. + g*g - 2.*g*lightDotEye), 1.5)) / (4.*3.1415);
 }
 
-float lightEnergy(float densitySample, float precipitation, float henyeyGreensteinFactor)
+float lightEnergy(float density_sample, float precipitation, float henyeyGreensteinFactor)
 {
-	return 2.
-	 	* beerLambert(densitySample, precipitation) 
-		* powder(densitySample)
-		* henyeyGreensteinFactor;
+	float beer_lambert = exp(-density_sample * precipitation);
+	float powder_sugar_effect = 1. - exp(-density_sample * 2.0);
+	return 2. * beer_lambert * powder_sugar_effect * henyeyGreensteinFactor;
 }
 
 // TODO get from cb values - has to change as time of day changes

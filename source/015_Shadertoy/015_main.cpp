@@ -85,20 +85,20 @@ struct SkyNoise
 				image_info.setUsage(vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage);
 				image_info.setFlags(vk::ImageCreateFlagBits::eMutableFormat);
 
-				m_image_base_shape = context->m_device.createImageUnique(image_info);
-				m_image_base_shape_info = image_info;
+				m_image_cloud = context->m_device.createImageUnique(image_info);
+				m_image_cloud_info = image_info;
 
-				vk::MemoryRequirements memory_request = context->m_device.getImageMemoryRequirements(m_image_base_shape.get());
+				vk::MemoryRequirements memory_request = context->m_device.getImageMemoryRequirements(m_image_cloud.get());
 				vk::MemoryAllocateInfo memory_alloc_info;
 				memory_alloc_info.allocationSize = memory_request.size;
 				memory_alloc_info.memoryTypeIndex = Helper::getMemoryTypeIndex(context->m_physical_device, memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-				m_image_base_shape_memory = context->m_device.allocateMemoryUnique(memory_alloc_info);
-				context->m_device.bindImageMemory(m_image_base_shape.get(), m_image_base_shape_memory.get(), 0);
+				m_image_cloud_memory = context->m_device.allocateMemoryUnique(memory_alloc_info);
+				context->m_device.bindImageMemory(m_image_cloud.get(), m_image_cloud_memory.get(), 0);
 
 				vk::ImageViewCreateInfo view_info;
 				view_info.setFormat(image_info.format);
-				view_info.setImage(m_image_base_shape.get());
+				view_info.setImage(m_image_cloud.get());
 				view_info.subresourceRange.setBaseArrayLayer(0);
 				view_info.subresourceRange.setLayerCount(1);
 				view_info.subresourceRange.setBaseMipLevel(0);
@@ -106,10 +106,10 @@ struct SkyNoise
 				view_info.subresourceRange.setAspectMask(vk::ImageAspectFlagBits::eColor);
 				view_info.setViewType(vk::ImageViewType::e3D);
 				view_info.components.setR(vk::ComponentSwizzle::eR).setG(vk::ComponentSwizzle::eG).setB(vk::ComponentSwizzle::eB).setA(vk::ComponentSwizzle::eA);
-				m_image_base_shape_view = context->m_device.createImageViewUnique(view_info);
+				m_image_cloud_view = context->m_device.createImageViewUnique(view_info);
 
 				view_info.setFormat(vk::Format::eR8G8B8A8Uint);
-				m_image_base_shape_write_view = context->m_device.createImageViewUnique(view_info);
+				m_image_cloud_write_view = context->m_device.createImageViewUnique(view_info);
 
 				vk::SamplerCreateInfo sampler_info;
 				sampler_info.setAddressModeU(vk::SamplerAddressMode::eRepeat);
@@ -121,11 +121,11 @@ struct SkyNoise
 				sampler_info.setMaxLod(0.f);
 				sampler_info.setMipLodBias(0.f);
 				sampler_info.setMipmapMode(vk::SamplerMipmapMode::eLinear);
-				m_image_base_shape_sampler = context->m_device.createSamplerUnique(sampler_info);
+				m_image_cloud_sampler = context->m_device.createSamplerUnique(sampler_info);
 
 
 				vk::ImageMemoryBarrier to_make_barrier;
-				to_make_barrier.image = m_image_base_shape.get();
+				to_make_barrier.image = m_image_cloud.get();
 				to_make_barrier.oldLayout = vk::ImageLayout::eUndefined;
 				to_make_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 				to_make_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
@@ -147,20 +147,20 @@ struct SkyNoise
 				image_info.setUsage(vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage);
 				image_info.setFlags(vk::ImageCreateFlagBits::eMutableFormat);
 
-				m_image_detail = context->m_device.createImageUnique(image_info);
-				m_image_detail_info = image_info;
+				m_image_cloud_detail = context->m_device.createImageUnique(image_info);
+				m_image_cloud_detail_info = image_info;
 
-				vk::MemoryRequirements memory_request = context->m_device.getImageMemoryRequirements(m_image_detail.get());
+				vk::MemoryRequirements memory_request = context->m_device.getImageMemoryRequirements(m_image_cloud_detail.get());
 				vk::MemoryAllocateInfo memory_alloc_info;
 				memory_alloc_info.allocationSize = memory_request.size;
 				memory_alloc_info.memoryTypeIndex = Helper::getMemoryTypeIndex(context->m_physical_device, memory_request, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-				m_image_detail_memory = context->m_device.allocateMemoryUnique(memory_alloc_info);
-				context->m_device.bindImageMemory(m_image_detail.get(), m_image_detail_memory.get(), 0);
+				m_image_cloud_detail_memory = context->m_device.allocateMemoryUnique(memory_alloc_info);
+				context->m_device.bindImageMemory(m_image_cloud_detail.get(), m_image_cloud_detail_memory.get(), 0);
 
 				vk::ImageViewCreateInfo view_info;
 				view_info.setFormat(image_info.format);
-				view_info.setImage(m_image_detail.get());
+				view_info.setImage(m_image_cloud_detail.get());
 				view_info.subresourceRange.setBaseArrayLayer(0);
 				view_info.subresourceRange.setLayerCount(1);
 				view_info.subresourceRange.setBaseMipLevel(0);
@@ -168,10 +168,10 @@ struct SkyNoise
 				view_info.subresourceRange.setAspectMask(vk::ImageAspectFlagBits::eColor);
 				view_info.setViewType(vk::ImageViewType::e3D);
 				view_info.components.setR(vk::ComponentSwizzle::eR).setG(vk::ComponentSwizzle::eG).setB(vk::ComponentSwizzle::eB).setA(vk::ComponentSwizzle::eIdentity);
-				m_image_detail_view = context->m_device.createImageViewUnique(view_info);
+				m_image_cloud_detail_view = context->m_device.createImageViewUnique(view_info);
 
 				view_info.setFormat(vk::Format::eR8G8B8A8Uint);
-				m_image_detail_write_view = context->m_device.createImageViewUnique(view_info);
+				m_image_cloud_detail_write_view = context->m_device.createImageViewUnique(view_info);
 
 				vk::SamplerCreateInfo sampler_info;
 				sampler_info.setAddressModeU(vk::SamplerAddressMode::eRepeat);
@@ -183,11 +183,11 @@ struct SkyNoise
 				sampler_info.setMaxLod(0.f);
 				sampler_info.setMipLodBias(0.f);
 				sampler_info.setMipmapMode(vk::SamplerMipmapMode::eLinear);
-				m_image_detail_sampler = context->m_device.createSamplerUnique(sampler_info);
+				m_image_cloud_detail_sampler = context->m_device.createSamplerUnique(sampler_info);
 
 
 				vk::ImageMemoryBarrier to_make_barrier;
-				to_make_barrier.image = m_image_detail.get();
+				to_make_barrier.image = m_image_cloud_detail.get();
 				to_make_barrier.oldLayout = vk::ImageLayout::eUndefined;
 				to_make_barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 				to_make_barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
@@ -261,13 +261,13 @@ struct SkyNoise
 			}
 
 			vk::DescriptorImageInfo samplers[] = {
-				vk::DescriptorImageInfo(m_image_base_shape_sampler.get(), m_image_base_shape_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal),
-				vk::DescriptorImageInfo(m_image_detail_sampler.get(), m_image_detail_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal),
+				vk::DescriptorImageInfo(m_image_cloud_sampler.get(), m_image_cloud_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal),
+				vk::DescriptorImageInfo(m_image_cloud_detail_sampler.get(), m_image_cloud_detail_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal),
 				vk::DescriptorImageInfo(m_image_weather_sampler.get(), m_image_weather_view.get(), vk::ImageLayout::eShaderReadOnlyOptimal),
 			};
 			vk::DescriptorImageInfo images[] = {
-				vk::DescriptorImageInfo().setImageView(m_image_base_shape_write_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
-				vk::DescriptorImageInfo().setImageView(m_image_detail_write_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
+				vk::DescriptorImageInfo().setImageView(m_image_cloud_write_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
+				vk::DescriptorImageInfo().setImageView(m_image_cloud_detail_write_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
 				vk::DescriptorImageInfo().setImageView(m_image_weather_write_view.get()).setImageLayout(vk::ImageLayout::eGeneral),
 			};
 
@@ -376,13 +376,13 @@ struct SkyNoise
 		{
 			{
 				std::array<vk::ImageMemoryBarrier, 3> image_barrier;
-				image_barrier[0].setImage(m_image_base_shape.get());
+				image_barrier[0].setImage(m_image_cloud.get());
 				image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
 				image_barrier[0].setOldLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
 				image_barrier[0].setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
 				image_barrier[0].setNewLayout(vk::ImageLayout::eGeneral);
 				image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
-				image_barrier[1].setImage(m_image_detail.get());
+				image_barrier[1].setImage(m_image_cloud_detail.get());
 				image_barrier[1].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
 				image_barrier[1].setOldLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
 				image_barrier[1].setSrcAccessMask(vk::AccessFlagBits::eShaderRead);
@@ -398,7 +398,7 @@ struct SkyNoise
 			}
 
 			{
-				uvec3 num = app::calcDipatchGroups(uvec3(m_image_base_shape_info.extent.width, m_image_base_shape_info.extent.height, m_image_base_shape_info.extent.depth), uvec3(32, 32, 1));
+				uvec3 num = app::calcDipatchGroups(uvec3(m_image_cloud_info.extent.width, m_image_cloud_info.extent.height, m_image_cloud_info.extent.depth), uvec3(32, 32, 1));
 				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_WorleyNoise_Compute].get());
 				cmd.dispatch(num.x, num.y, num.z);
 
@@ -412,13 +412,13 @@ struct SkyNoise
 
 			{
 				std::array<vk::ImageMemoryBarrier, 3> image_barrier;
-				image_barrier[0].setImage(m_image_base_shape.get());
+				image_barrier[0].setImage(m_image_cloud.get());
 				image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
 				image_barrier[0].setOldLayout(vk::ImageLayout::eGeneral);
 				image_barrier[0].setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
 				image_barrier[0].setNewLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
 				image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderRead);
-				image_barrier[1].setImage(m_image_detail.get());
+				image_barrier[1].setImage(m_image_cloud_detail.get());
 				image_barrier[1].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
 				image_barrier[1].setOldLayout(vk::ImageLayout::eGeneral);
 				image_barrier[1].setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
@@ -456,7 +456,7 @@ struct SkyNoise
 				image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
 				image_barrier[0].setNewLayout(vk::ImageLayout::eGeneral);
 				image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
-				image_barrier[1].setImage(m_image_base_shape.get());
+				image_barrier[1].setImage(m_image_cloud.get());
 				image_barrier[1].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
 //				image_barrier[1].setOldLayout(vk::ImageLayout::eGeneral);
 //				image_barrier[1].setSrcAccessMask(vk::AccessFlagBits::eShaderWrite);
@@ -502,19 +502,19 @@ struct SkyNoise
 	vk::UniqueDescriptorSet m_descriptor_set;
 
 
-	vk::ImageCreateInfo m_image_base_shape_info;
-	vk::UniqueImage m_image_base_shape;
-	vk::UniqueImageView m_image_base_shape_view;
-	vk::UniqueImageView m_image_base_shape_write_view;
-	vk::UniqueDeviceMemory m_image_base_shape_memory;
-	vk::UniqueSampler m_image_base_shape_sampler;
+	vk::ImageCreateInfo m_image_cloud_info;
+	vk::UniqueImage m_image_cloud;
+	vk::UniqueImageView m_image_cloud_view;
+	vk::UniqueImageView m_image_cloud_write_view;
+	vk::UniqueDeviceMemory m_image_cloud_memory;
+	vk::UniqueSampler m_image_cloud_sampler;
 
-	vk::ImageCreateInfo m_image_detail_info;
-	vk::UniqueImage m_image_detail;
-	vk::UniqueImageView m_image_detail_view;
-	vk::UniqueImageView m_image_detail_write_view;
-	vk::UniqueDeviceMemory m_image_detail_memory;
-	vk::UniqueSampler m_image_detail_sampler;
+	vk::ImageCreateInfo m_image_cloud_detail_info;
+	vk::UniqueImage m_image_cloud_detail;
+	vk::UniqueImageView m_image_cloud_detail_view;
+	vk::UniqueImageView m_image_cloud_detail_write_view;
+	vk::UniqueDeviceMemory m_image_cloud_detail_memory;
+	vk::UniqueSampler m_image_cloud_detail_sampler;
 
 	vk::ImageCreateInfo m_image_weather_info;
 	vk::UniqueImage m_image_weather;

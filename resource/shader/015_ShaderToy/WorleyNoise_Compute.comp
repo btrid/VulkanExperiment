@@ -16,11 +16,8 @@ void main()
 		vec4 v = vec4(0.);
 		int level = 0;
 		uvec3 reso = imageSize(i_cloud_map);
-//		v[0] = remap(worley_noise(gl_GlobalInvocationID.xyz+ 421, level, reso), value_noise(gl_GlobalInvocationID.xyz+21, level, reso), 1., 0., 1.);
-//		v[0] = remap(value_noise(gl_GlobalInvocationID.xyz+21, level, reso), worley_noise(gl_GlobalInvocationID.xyz+ 421, level, reso), 1., 0., 1.);
-//		v[0] = worley_noise(gl_GlobalInvocationID.xyz+ 421, level, reso);
-//		v[0] = value_noise(gl_GlobalInvocationID.xyz+ 421, level, reso);
-		v[0] = worley_noise(gl_GlobalInvocationID.xyz+ 421, level, reso) * 0.5 + value_noise(gl_GlobalInvocationID.xyz+21, level, reso) * 0.5;
+		v[0] = remap(value_noise(gl_GlobalInvocationID.xyz+21, level, reso)*0.5+0.5, worley_noise(gl_GlobalInvocationID.xyz+ 421, level, reso)*0.2, 1., 0., 1.);
+//		v[0] = worley_noise(gl_GlobalInvocationID.xyz+ 14, ++level, reso);
 		v[1] = worley_noise(gl_GlobalInvocationID.xyz+ 14, level++, reso);
 		v[2] = worley_noise(gl_GlobalInvocationID.xyz+ 11, level++, reso);
 		v[3] = worley_noise(gl_GlobalInvocationID.xyz+ 73, level++, reso);

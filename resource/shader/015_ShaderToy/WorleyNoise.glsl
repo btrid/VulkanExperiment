@@ -18,9 +18,8 @@ vec3 _wn_rand(in ivec4 co)
 
 float worley_noise(in uvec3 invocation, in int level, in uvec3 reso)
 {
-	vec3 value = vec3(0.);
-
-	for(int i = 0; i < 3; i++)
+	vec4 value = vec4(0.);
+	for(int i = 0; i < 4; i++)
 	{
 		uvec3 tile_size = max(ivec3(32)>>(level+i), ivec3(1));
 		uvec3 tile_id = invocation/tile_size;
@@ -45,7 +44,8 @@ float worley_noise(in uvec3 invocation, in int level, in uvec3 reso)
 			}
 		}
 	}
-	return dot(value, vec3(0.625, 0.25, 0.125));
+//	return dot(value, vec3(0.625, 0.25, 0.125));
+	return dot(value, vec4(0.5, 0.25, 0.15, 0.1));
 }
 
 float _v_rand(in vec3 co, in vec3 scale)
