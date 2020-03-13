@@ -1,0 +1,64 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#include "SkyBase.glsl"
+
+layout (local_size_x = LSX, local_size_y = LSY, local_size_z = LSZ) in;
+
+layout(push_constant) uniform Input
+{
+	vec3 window;
+} constant;
+
+float band(in float start, in float peak, in float end, in float t)
+{
+	return smoothstep (start, peak, t) * (1. - smoothstep (peak, end, t));
+}
+float band2(in float ls, in float le, in float hs, in float he, in float t)
+{
+	return smoothstep (ls, le, t) * (1. - smoothstep (hs, he, t));
+}
+
+float rand(in vec3 co)
+{
+	return fract(sin(dot(co, vec3(12.98,78.23, 45.41))) * 43758.5);
+}
+float noise(in vec3 pos)
+{
+	vec3 ip = floor(pos);
+	vec3 fp = smoothstep(0., 1., fract(pos));
+	vec2 offset = vec2(0., 1.);
+	vec4 a = vec4(rand(ip+offset.xxx),rand(ip+offset.yxx),rand(ip+offset.xyx),rand(ip+offset.yyx));
+	vec4 b = vec4(rand(ip+offset.xxy),rand(ip+offset.yxy),rand(ip+offset.xyy),rand(ip+offset.yyy));
+	a = mix(a, b, fp.z);
+	a.xy = mix(a.xy, a.zw, fp.y);
+	return mix(a.x, a.y, fp.x);
+}
+
+// https://thebookofshaders.com/13/?lan=jp
+// 非整数ブラウン運動
+float fBM(in vec3 pos, in int octaves)
+{
+	float lacunarity = 2.971;
+	float total = 0.;
+	float value = 0.;
+	for(int i = 0; i < octaves; i++)
+	{
+		value = value*2. + noise(pos);
+		total = total*2. + 1.;
+		pos = pos * lacunarity;
+	}
+
+	return value / total;
+}
+void main()
+{
+	float v = fBM((vec3(gl_GlobalInvocationID.xyz) + floor(constant.window)) * vec3(0.1, 0.3, 0.1), 3);
+	// 雲っぽく
+	v *= smoothstep(0.65, 0.655, v);
+	// 高さで減衰
+//	v *= band(0., 0.5, 1., (float(gl_GlobalInvocationID.y)+0.5) / float(gl_NumWorkGroups.y*gl_WorkGroupSize.y));
+//	v *= band2(0., 0.1, 0.9, 1., (float(gl_GlobalInvocationID.y)+0.5) / float(gl_NumWorkGroups.y*gl_WorkGroupSize.y));
+//	v = constant.time <= 0.001 ? v : 0.;
+	imageStore(i_map, ivec3(gl_GlobalInvocationID.xyz), uvec4(v*255.));
+}

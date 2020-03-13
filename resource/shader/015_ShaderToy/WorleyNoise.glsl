@@ -97,6 +97,5 @@ float value_noise(in vec3 invocation, in int level)
 	return value_noise(invocation, level, uvec3(9999999));
 }
 
-
 #endif // USE_WORLEYNOISE
 #endif // WORLEYNOISE_HEADER_

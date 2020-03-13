@@ -20,5 +20,3 @@ SET output=-o ../binary
 %exe% %include% %option% %output%/WorleyNoise_Render.comp.spv WorleyNoise_Render.comp
 
 rem %exe% %include% %option% %output%/SkyWithTexture.comp.spv Sky.comp
-
-

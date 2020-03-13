@@ -16,6 +16,10 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\source\015_Shadertoy\Sky.h" />
+    <ClInclude Include="..\..\source\015_Shadertoy\SkyBase.h" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{E6F20858-81CE-405D-ACFE-799F2EC13FCA}</ProjectGuid>
