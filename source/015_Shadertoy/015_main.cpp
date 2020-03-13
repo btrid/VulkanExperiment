@@ -24,7 +24,7 @@
 #include <applib/App.h>
 #include <applib/AppPipeline.h>
 #include <applib/Geometry.h>
-
+#include <glm/gtx/intersect.hpp>
 #include "Sky.h"
 #include "SkyBase.h"
 
@@ -150,7 +150,6 @@ int main()
 				cmds[cmd_render_clear] = clear_pipeline.execute();
 				cmds[cmd_render_present] = present_pipeline.execute();
 			}
-
 			app.submit(std::move(cmds));
 		}
 

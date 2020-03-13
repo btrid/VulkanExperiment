@@ -1,13 +1,34 @@
+// https://www.gamedev.net/forums/topic/680832-horizonzero-dawn-cloud-system/?page=6
+
 #version 460
 #extension GL_GOOGLE_include_directive : require
 
 #include "Sky.glsl"
+
 layout (local_size_x = 32, local_size_y = 32) in;
 layout(push_constant) uniform Input
 {
 	vec3 window;
 } constant;
-// https://www.gamedev.net/forums/topic/680832-horizonzero-dawn-cloud-system/?page=6
+
+vec4 intersectAtom(vec3 orig,vec3 dir, vec3 planeOrig, vec3 planeNormal)
+{
+	float d = dot(dir, planeNormal);
+
+	if(abs(d) < 0.00001)
+	{
+		// 平行なら当たらない
+		return vec4(-1.);
+	}
+	float dist =  dot(planeOrig - orig, planeNormal) / d;
+	if (dist <= 0.) 
+	{
+		// 違う方向
+		return vec4(-1.);
+	}
+	return vec4(dist);
+}
+
 
 vec3 g_noise_kernel[6];
 void precomputeNoiseKernel(vec3 lightDirection)
@@ -75,8 +96,13 @@ float sampleCloudDensityAlongCone(vec3 startPos, float stepSize)
 			float d = sampleCloudDensity(conePos, weather_data, height_frac, lod);
 			if(d > 0.0)
 			{
-				float transmittance = 1. - (d * rcpThickness);
+				density += d;
+				float transmittance = 1. - (density * rcpThickness);
 				density += (d * transmittance);
+
+//				float transmittance = 1. - (d * rcpThickness);
+//				density += (d * transmittance);
+
 //				density += d;
 			}
 		}
@@ -125,11 +151,10 @@ void main()
 		background_color = mix(vec3(.6, .6, .6), vec3(.75, .75, .75), p);
 	}
 
-	float alpha = 0.;
-	vec3 color = vec3(0.);
 	vec4 dist = vec4(-1.);
 	if(intersectRayAtom(CamPos, CamDir, u_cloud_inner.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), dist))
 	{
+
 		int count = 0;
 		vec2 ray_segment[2];
 		if(dist.y>0.)
@@ -147,8 +172,9 @@ void main()
 
 
 		uint sampleCount = 64;
-		float transmittance = 1.;
+		float density = 0.;
 		float phaseFactor = henyeyGreensteinPhaseFunction(dot(-uLightRay, CamDir), 0.2);
+		vec4 cloud_color = vec4(0.);
 		for(int i = 0; i <count; i++)
 		{
 			vec3 begin = CamPos + CamDir * ray_segment[i].x;
@@ -168,31 +194,32 @@ void main()
 
 				if(d > 0.0)
 				{
-					float t = exp(-d*getPrecipitation(weather_data));
-					transmittance *= t;
-//					if (transmittance < 0.01) { i = count; break; }
+					density += d;
+					float transmittance = 1. - (density * rcpThickness);
 
 					float light_density = sampleCloudDensityAlongCone(pos, stepSize);
 //					vec2 shadow = texture(s_shadow_map, p).xy;
 //					color += shadow.x * d * uLightColor.rgb * lightEnergy(light_density, getPrecipitation(weather_data), phaseFactor);
-					color += transmittance  * lightEnergy(light_density, getPrecipitation(weather_data), phaseFactor);
-					alpha += (1.-t) *(1.-alpha);
-				}
 
+					vec4 source = vec4(uLightColor * light_density * lightEnergy(light_density, getPrecipitation(weather_data), phaseFactor), d*transmittance);
+					source.xyz *= source.w;
+					cloud_color = (1. - cloud_color.a) * source + cloud_color;
+					if(cloud_color.a >= 1.) break;
+				}
 				pos += stepSize * CamDir;
 			}
 		}
 
-		color = mix(background_color, color.xyz/(alpha+0.0001), alpha);
-
+		background_color = mix(background_color, cloud_color.xyz/(cloud_color.a+0.0001), cloud_color.a);
 	}
+
 	// tonemapping
 	{
 		float exposure = 3.5;
-		color.xyz = vec3(1.0) - exp(-exposure * color.xyz);
+		background_color.xyz = vec3(1.0) - exp(-exposure * background_color.xyz);
 	}
 
-	imageStore(i_render_map, ivec2(gl_GlobalInvocationID.xy), vec4(color.xyz, 1.));
+	imageStore(i_render_map, ivec2(gl_GlobalInvocationID.xy), vec4(background_color.xyz, 1.));
 
 
 }

@@ -17,6 +17,8 @@ layout(set=USE_Sky, binding=1) uniform sampler2D s_render_map;
 layout(set=USE_Sky, binding=10, rg8ui) uniform uimage3D i_shadow_map;
 layout(set=USE_Sky, binding=11, rgba16) uniform image2D i_render_map;
 
+
+
 const float u_plant_radius = 6300.;
 const vec4 u_planet = vec4(0., -u_plant_radius, 0, u_plant_radius);
 const vec4 u_cloud_inner = vec4(u_planet.xyz, u_planet.w*1.025);
@@ -24,7 +26,7 @@ const vec4 u_cloud_outer = u_cloud_inner + vec4(0., 0., 0, 64.);
 const float u_cloud_area_inv = 1. / (u_cloud_outer.w - u_cloud_inner.w);
 const float u_mapping = 1./u_cloud_outer.w;
 vec3 uLightRay = -normalize(vec3(0., 1., 0.));
-vec3 uLightColor = vec3(130.);
+vec3 uLightColor = vec3(3.);
 
 
 #define saturate(_a) clamp(_a, 0., 1.)
@@ -124,7 +126,7 @@ float sampleCloudDensity(vec3 pos, vec3 weather_data, float height_frac, float l
 
 //	vec3 p = vec3(pos.x, height_frac, pos.z) * vec3(0.217, 1., 0.217);
 //	pos = vec3(pos.x, height_frac, pos.z) * vec3(0.18, 1., 0.18);
-	pos = vec3(pos.x, height_frac, pos.z) * vec3(u_mapping, 1., u_mapping) * 0.5;
+	pos = vec3(pos.x, height_frac, pos.z) * vec3(u_mapping, 1., u_mapping) * 0.5+0.5;
 	
 	vec4 low_freq_noise = texture(s_cloud_map, pos);
 	float low_freq_fBM = dot(low_freq_noise.yzw, vec3(0.625, 0.25, 0.125));
@@ -141,11 +143,11 @@ float sampleCloudDensity(vec3 pos, vec3 weather_data, float height_frac, float l
         //// TODO add curl noise
         //// pos += curlNoise.xy * (1.0f - height_frac);
 
-        vec3 high_freq_noise = texture(s_cloud_detail_map, pos * vec3(0.1, 0.1, 0.1)).xyz;
+        vec3 high_freq_noise = texture(s_cloud_detail_map, pos).xyz;
         float high_freq_fBM = dot(high_freq_noise, vec3(0.625, 0.25, 0.125));
         float high_freq_foise_modifier = mix(high_freq_fBM, 1.0-high_freq_fBM, saturate(height_frac * 10.));
 
-//        final_cloud = remap(final_cloud, high_freq_foise_modifier*0.2, 1., 0., 1.);
+        final_cloud = remap(final_cloud, high_freq_foise_modifier*0.2, 1., 0., 1.);
     }
 	return saturate(final_cloud);
 }
