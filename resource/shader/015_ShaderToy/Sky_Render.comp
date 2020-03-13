@@ -154,7 +154,6 @@ void main()
 			vec3 begin = CamPos + CamDir * ray_segment[i].x;
 			vec3 end = begin + CamDir * ray_segment[i].y;
 
-			vec3 dir = end - begin;
 			float thickness = ray_segment[i].y;
 			float rcpThickness = 1. / thickness;
 			float stepSize = thickness / float(sampleCount);
@@ -172,8 +171,6 @@ void main()
 					float t = exp(-d*getPrecipitation(weather_data));
 					transmittance *= t;
 //					if (transmittance < 0.01) { i = count; break; }
-					vec3 p = vec3(pos.x, height_frac, pos.z) * vec3(u_mapping, 1., u_mapping);// UV[0~1]
-
 
 					float light_density = sampleCloudDensityAlongCone(pos, stepSize);
 //					vec2 shadow = texture(s_shadow_map, p).xy;

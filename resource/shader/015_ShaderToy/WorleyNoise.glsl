@@ -21,7 +21,7 @@ float worley_noise(in uvec3 invocation, in int level, in uvec3 reso)
 	vec4 value = vec4(0.);
 	for(int i = 0; i < 4; i++)
 	{
-		uvec3 tile_size = max(ivec3(32)>>(level+i), ivec3(1));
+		uvec3 tile_size = max(ivec3(512)>>(level+i), ivec3(1));
 		uvec3 tile_id = invocation/tile_size;
 		vec3 pos = vec3(invocation%tile_size);
 		uvec3 reso_ = reso / tile_size;
@@ -88,8 +88,8 @@ float _v_fBM(in vec3 pos, in uvec3 reso)
 
 float value_noise(in vec3 invocation, in int level, in uvec3 reso)
 {
-	vec3 pos = vec3(invocation)*1./float(1<<max(4-level, 0)) + 25.631;
-	reso >>= max(4-level, 0);
+	vec3 pos = vec3(invocation)*1./float(1<<max(8-level, 0)) + 25.631;
+	reso >>= max(8-level, 0);
 	return _v_fBM(pos, reso);
 }
 float value_noise(in vec3 invocation, in int level)
