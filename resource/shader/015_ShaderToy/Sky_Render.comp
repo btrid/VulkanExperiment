@@ -7,25 +7,6 @@
 
 layout (local_size_x = 32, local_size_y = 32) in;
 
-vec4 intersectAtom(vec3 orig,vec3 dir, vec3 planeOrig, vec3 planeNormal)
-{
-	float d = dot(dir, planeNormal);
-
-	if(abs(d) < 0.00001)
-	{
-		// 平行なら当たらない
-		return vec4(-1.);
-	}
-	float dist =  dot(planeOrig - orig, planeNormal) / d;
-	if (dist <= 0.) 
-	{
-		// 違う方向
-		return vec4(-1.);
-	}
-	return vec4(dist);
-}
-
-
 vec3 g_noise_kernel[6];
 void precomputeNoiseKernel(vec3 lightDirection)
 {
@@ -66,11 +47,6 @@ float lightEnergy(float density_sample, float precipitation, float henyeyGreenst
 	return 2. * beer_lambert * powder_sugar_effect * henyeyGreensteinFactor;
 }
 
-// TODO get from cb values - has to change as time of day changes
-vec3 ambientLight(float height_frac)
-{
-	return mix(vec3(0.5, 0.67, 0.82), vec3(1.0, 1.0, 1.0), height_frac);
-}
 
 float sampleCloudDensityAlongCone(vec3 startPos, float stepSize)
 {
@@ -117,7 +93,7 @@ void main()
 //	vec3 CamPos = vec3(0., 200., 100.);
 //	vec3 CamDir = normalize(-CamPos);
 	vec3 CamPos = vec3(0., 1., 0.);
-	vec3 CamDir = normalize(vec3(1.5, 1.7, 1.5));
+	vec3 CamDir = normalize(vec3(1.5, 2.0, 1.5));
 
 	// カメラレイの作成
 	{
@@ -149,25 +125,9 @@ void main()
 		background_color = mix(vec3(.6, .6, .6), vec3(.75, .75, .75), p);
 	}
 
-	vec4 dist = vec4(-1.);
-	if(intersectRayAtom(CamPos, CamDir, u_cloud_inner.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), dist))
+	vec4 rays;
+	int count = intersectRayAtomEx(CamPos, CamDir, u_cloud_inner.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), distance_land, rays);
 	{
-
-		int count = 0;
-		vec2 ray_segment[2];
-		if(dist.y>0.)
-		{
-			// 雲の上から雲を見る
-			ray_segment[count] = vec2(max(dist.x, 0.), dist.y-max(dist.x, 0.));
-			count++;
-		}
-		if(dist.w>0. && distance_land<0.)
-		{
-			// 雲の下から雲を見る
-			ray_segment[count] = vec2(max(dist.z, 0.), dist.w-max(dist.z, 0.));
-			count++;
-		}
-
 
 		uint sampleCount = 64;
 		float density = 0.;
@@ -175,10 +135,10 @@ void main()
 		vec4 cloud_color = vec4(0.);
 		for(int i = 0; i <count; i++)
 		{
-			vec3 begin = CamPos + CamDir * ray_segment[i].x;
-			vec3 end = begin + CamDir * ray_segment[i].y;
+			vec3 begin = CamPos + CamDir * rays[i*2];
+			vec3 end = begin + CamDir * rays[i*2+1];
 
-			float thickness = ray_segment[i].y;
+			float thickness = rays[i*2+1];
 			float rcpThickness = 1. / thickness;
 			float stepSize = thickness / float(sampleCount);
 
@@ -198,6 +158,7 @@ void main()
 					float light_density = sampleCloudDensityAlongCone(pos, stepSize);
 //					vec2 shadow = texture(s_shadow_map, p).xy;
 //					color += shadow.x * d * uLightColor.rgb * lightEnergy(light_density, getPrecipitation(weather_data), phaseFactor);
+					vec3 ambient = mix(vec3(.0, 0.1, 0.4), vec3(0.3, 0.6, 0.8), 1.0 - height_frac) ;
 
 					vec4 source = vec4(uLightColor * lightEnergy(light_density, getPrecipitation(weather_data), phaseFactor), d*transmittance);
 					source.xyz *= source.w;

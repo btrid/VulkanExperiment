@@ -26,7 +26,7 @@ layout(push_constant) uniform Input
 
 const float u_plant_radius = 6300.;
 const vec4 u_planet = vec4(0., -u_plant_radius, 0, u_plant_radius);
-const vec4 u_cloud_inner = vec4(u_planet.xyz, u_planet.w*1.025);
+const vec4 u_cloud_inner = vec4(u_planet.xyz, u_plant_radius + 100.);
 const vec4 u_cloud_outer = u_cloud_inner + vec4(0., 0., 0, 64.);
 const float u_cloud_area_inv = 1. / (u_cloud_outer.w - u_cloud_inner.w);
 const float u_mapping = 1./u_cloud_outer.w;
@@ -48,8 +48,28 @@ bool intersectRayAtom(vec3 Pos, vec3 Dir, vec3 AtomPos, vec2 Area, out vec4 OutD
 	return d2 <= RadiusSq.y;
 }
 
-int intersectRayAtomEx(vec3 Pos, vec3 Dir, vec3 AtomPos, vec2 Area, out vec4 Rays)
+vec4 intersectPlane(vec3 orig,vec3 dir, vec3 planeOrig, vec3 planeNormal)
 {
+	float d = dot(dir, planeNormal);
+
+	if(abs(d) < 0.00001)
+	{
+		// 平行なら当たらない
+		return vec4(-1.);
+	}
+	float dist =  dot(planeOrig - orig, planeNormal) / d;
+	if (dist <= 0.) 
+	{
+		// 違う方向
+//		return vec4(-1.);
+	}
+	return vec4(dist);
+}
+
+
+int intersectRayAtomEx(vec3 Pos, vec3 Dir, vec3 AtomPos, vec2 Area, float z, out vec4 Rays)
+{
+#if 0
 	vec3 RelativePos = AtomPos - Pos;
 	float tca = dot(RelativePos, Dir);
 
@@ -67,12 +87,20 @@ int intersectRayAtomEx(vec3 Pos, vec3 Dir, vec3 AtomPos, vec2 Area, out vec4 Ray
 	}
 	if (intersect.y && dist.w >= 0.)
 	{
-		Rays[count*2] = intersect.x ? max(dist.z, 0.) : max(dist.x, 0.);
-		Rays[count*2+1] = dist.w;
-        count++;
+		float begin = intersect.x ? max(dist.z, 0.) : max(dist.x, 0.);
+		if(z < 0. || begin < z)
+		{
+			Rays[count*2] = intersect.x ? max(dist.z, 0.) : max(dist.x, 0.);
+			Rays[count*2+1] = z>=0. ? min(dist.w, z) : dist.w;
+			count++;
+		}
 	}
 	return count;
-
+#else
+	Rays[0] = intersectPlane(Pos, Dir, vec3(0., 100., 0.), vec3(0.,-1.,0.)).x;
+	Rays[1] = intersectPlane(Pos, Dir, vec3(0., 164., 0.), vec3(0.,-1.,0.)).x;
+	return Rays[0] > 0. ? 1 : 0;
+#endif
 }
 
 float intersectRaySphere(in vec3 origin, in vec3 ray, in vec4 sphere)
