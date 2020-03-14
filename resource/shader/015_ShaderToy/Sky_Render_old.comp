@@ -4,10 +4,7 @@
 #include "Sky.glsl"
 
 layout (local_size_x = 32, local_size_y = 32) in;
-layout(push_constant) uniform Input
-{
-	vec3 window;
-} constant;
+
 float band(in float start, in float peak, in float end, in float t)
 {
 	return smoothstep (start, peak, t) * (1. - smoothstep (peak, end, t));

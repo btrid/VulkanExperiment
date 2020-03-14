@@ -7,10 +7,6 @@
 #define ABSORPTION		0.15
 
 layout (local_size_x = 32, local_size_y = 32) in;
-layout(push_constant) uniform Input
-{
-	float time;
-} constant;
 
 
 float band(in float start, in float peak, in float end, in float t)
@@ -124,7 +120,7 @@ float cloud_density(in vec3 pos)
 //	vec3 p = pos * vec3(0.01,0.,0.01) + vec3(0., t, 0.);
 	vec3 p = pos * vec3(0.01,0.01,0.01);
 
-	float density = fBM(p + vec3(0., 0., constant.time*0.2), 4);
+	float density = fBM(p + vec3(0., 0., constant.window.z*0.2), 4);
 
 	float coverage = 0.5;
 	float alpha = 0.05;

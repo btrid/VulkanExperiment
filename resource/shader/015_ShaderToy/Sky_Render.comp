@@ -6,10 +6,6 @@
 #include "Sky.glsl"
 
 layout (local_size_x = 32, local_size_y = 32) in;
-layout(push_constant) uniform Input
-{
-	vec3 window;
-} constant;
 
 vec4 intersectAtom(vec3 orig,vec3 dir, vec3 planeOrig, vec3 planeNormal)
 {
@@ -85,6 +81,8 @@ float sampleCloudDensityAlongCone(vec3 startPos, float stepSize)
 	vec3 lightStep = stepSize * -uLightRay;
 	vec3 pos = startPos;
 	float density = 0.;
+	float density_along_cone = 0.;
+
 	float lod = 0.;
 	for(uint i = 0u; i < g_noise_kernel.length(); ++i)
 	{
@@ -98,7 +96,7 @@ float sampleCloudDensityAlongCone(vec3 startPos, float stepSize)
 			{
 				density += d;
 				float transmittance = 1. - (density * rcpThickness);
-				density += (d * transmittance);
+				density_along_cone += (d * transmittance);
 
 //				float transmittance = 1. - (d * rcpThickness);
 //				density += (d * transmittance);
@@ -109,7 +107,7 @@ float sampleCloudDensityAlongCone(vec3 startPos, float stepSize)
 //		lod += RCP_LIGHT_RAY_ITERATIONS;
 	}
 
-	return density;
+	return density_along_cone;
 }
 
 void main()
@@ -201,7 +199,7 @@ void main()
 //					vec2 shadow = texture(s_shadow_map, p).xy;
 //					color += shadow.x * d * uLightColor.rgb * lightEnergy(light_density, getPrecipitation(weather_data), phaseFactor);
 
-					vec4 source = vec4(uLightColor * light_density * lightEnergy(light_density, getPrecipitation(weather_data), phaseFactor), d*transmittance);
+					vec4 source = vec4(uLightColor * lightEnergy(light_density, getPrecipitation(weather_data), phaseFactor), d*transmittance);
 					source.xyz *= source.w;
 					cloud_color = (1. - cloud_color.a) * source + cloud_color;
 					if(cloud_color.a >= 1.) break;

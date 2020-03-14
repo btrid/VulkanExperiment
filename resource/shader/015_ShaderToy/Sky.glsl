@@ -18,6 +18,11 @@ layout(set=USE_Sky, binding=10, rg8ui) uniform uimage3D i_shadow_map;
 layout(set=USE_Sky, binding=11, rgba16) uniform image2D i_render_map;
 
 
+layout(push_constant) uniform Input
+{
+	vec3 window;
+} constant;
+
 
 const float u_plant_radius = 6300.;
 const vec4 u_planet = vec4(0., -u_plant_radius, 0, u_plant_radius);
@@ -124,9 +129,9 @@ float sampleCloudDensity(vec3 pos, vec3 weather_data, float height_frac, float l
 {
 	if(height_frac>= 1. || height_frac <= 0.) { return 0.; } //範囲外
 
-//	vec3 p = vec3(pos.x, height_frac, pos.z) * vec3(0.217, 1., 0.217);
-//	pos = vec3(pos.x, height_frac, pos.z) * vec3(0.18, 1., 0.18);
-	pos = vec3(pos.x, height_frac, pos.z) * vec3(u_mapping, 1., u_mapping) * 0.5+0.5;
+	pos = pos + height_frac * constant.window;
+	pos = vec3(pos.x, height_frac, pos.z) * vec3(u_mapping, 1., u_mapping);
+//	pos *= 1./32.;
 	
 	vec4 low_freq_noise = texture(s_cloud_map, pos);
 	float low_freq_fBM = dot(low_freq_noise.yzw, vec3(0.625, 0.25, 0.125));
@@ -143,7 +148,7 @@ float sampleCloudDensity(vec3 pos, vec3 weather_data, float height_frac, float l
         //// TODO add curl noise
         //// pos += curlNoise.xy * (1.0f - height_frac);
 
-        vec3 high_freq_noise = texture(s_cloud_detail_map, pos).xyz;
+        vec3 high_freq_noise = texture(s_cloud_detail_map, pos*0.1).xyz;
         float high_freq_fBM = dot(high_freq_noise, vec3(0.625, 0.25, 0.125));
         float high_freq_foise_modifier = mix(high_freq_fBM, 1.0-high_freq_fBM, saturate(height_frac * 10.));
 
