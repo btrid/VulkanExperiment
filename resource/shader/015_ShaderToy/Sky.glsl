@@ -24,16 +24,18 @@ layout(push_constant) uniform Input
 } constant;
 
 
-const float u_plant_radius = 6300.;
-const vec4 u_planet = vec4(0., -u_plant_radius, 0, u_plant_radius);
-const vec4 u_cloud_inner = vec4(u_planet.xyz, u_plant_radius + 100.);
-const vec4 u_cloud_outer = u_cloud_inner + vec4(0., 0., 0, 64.);
+const float u_planet_radius = 6300.;
+const float u_planet_cloud_begin = 100.;
+const float u_planet_cloud_end = u_planet_cloud_begin + 64.;
+const vec4 u_planet = vec4(0., -u_planet_radius, 0, u_planet_radius);
+const vec4 u_cloud_inner = u_planet + vec4(0.,0.,0.,u_planet_cloud_begin);
+const vec4 u_cloud_outer = u_planet + vec4(0.,0.,0.,u_planet_cloud_end);
 const float u_cloud_area_inv = 1. / (u_cloud_outer.w - u_cloud_inner.w);
 const float u_mapping = 1./u_cloud_outer.w;
 vec3 uLightRay = -normalize(vec3(0., 1., 0.));
 vec3 uLightColor = vec3(3.);
 
-
+//#define SkyType_Sphere
 #define saturate(_a) clamp(_a, 0., 1.)
 
 bool intersectRayAtom(vec3 Pos, vec3 Dir, vec3 AtomPos, vec2 Area, out vec4 OutDist)
@@ -69,7 +71,7 @@ vec4 intersectPlane(vec3 orig,vec3 dir, vec3 planeOrig, vec3 planeNormal)
 
 int intersectRayAtomEx(vec3 Pos, vec3 Dir, vec3 AtomPos, vec2 Area, float z, out vec4 Rays)
 {
-#if 0
+#if defined(SkyType_Sphere)
 	vec3 RelativePos = AtomPos - Pos;
 	float tca = dot(RelativePos, Dir);
 
@@ -133,7 +135,14 @@ vec3 sampleWeather(vec3 pos){ return texture(s_weather_map, (vec3(pos) * vec3(u_
 float getCoverage(vec3 weather_data){ return weather_data.r; }
 float getPrecipitation(vec3 weather_data){ return mix(0., 1., weather_data.g) + 0.0001; }
 float getCloudType(vec3 weather_data){ return weather_data.b; }
-float heightFraction(vec3 pos) { return (distance(pos,u_cloud_inner.xyz)-u_cloud_inner.w)*u_cloud_area_inv; }
+float heightFraction(vec3 pos) 
+{
+#if defined(SkyType_Sphere)
+	return (distance(pos,u_cloud_inner.xyz)-u_cloud_inner.w)*u_cloud_area_inv; 
+#else
+	return (pos.y-u_planet_cloud_begin) / (u_planet_cloud_end-u_planet_cloud_begin); 
+#endif
+}
 
 vec4 mixGradients(float cloud_type)
 {
