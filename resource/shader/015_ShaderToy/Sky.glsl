@@ -26,16 +26,16 @@ layout(push_constant) uniform Input
 
 const float u_planet_radius = 6300.;
 const float u_planet_cloud_begin = 100.;
-const float u_planet_cloud_end = u_planet_cloud_begin + 64.;
+const float u_planet_cloud_end = 364.;
 const vec4 u_planet = vec4(0., -u_planet_radius, 0, u_planet_radius);
 const vec4 u_cloud_inner = u_planet + vec4(0.,0.,0.,u_planet_cloud_begin);
 const vec4 u_cloud_outer = u_planet + vec4(0.,0.,0.,u_planet_cloud_end);
-const float u_cloud_area_inv = 1. / (u_cloud_outer.w - u_cloud_inner.w);
-const float u_mapping = 1./u_cloud_outer.w;
+const float u_cloud_area_inv = 1. / (u_planet_cloud_end - u_planet_cloud_begin);
+const float u_mapping = 0.5/u_cloud_outer.w;
 vec3 uLightRay = -normalize(vec3(0., 1., 0.));
-vec3 uLightColor = vec3(3.);
+vec3 uLightColor = vec3(7.);
 
-//#define SkyType_Sphere
+#define SkyType_Sphere
 #define saturate(_a) clamp(_a, 0., 1.)
 
 bool intersectRayAtom(vec3 Pos, vec3 Dir, vec3 AtomPos, vec2 Area, out vec4 OutDist)
@@ -99,8 +99,8 @@ int intersectRayAtomEx(vec3 Pos, vec3 Dir, vec3 AtomPos, vec2 Area, float z, out
 	}
 	return count;
 #else
-	Rays[0] = intersectPlane(Pos, Dir, vec3(0., 100., 0.), vec3(0.,-1.,0.)).x;
-	Rays[1] = intersectPlane(Pos, Dir, vec3(0., 164., 0.), vec3(0.,-1.,0.)).x;
+	Rays[0] = intersectPlane(Pos, Dir, vec3(0., u_planet_cloud_begin, 0.), vec3(0.,-1.,0.)).x;
+	Rays[1] = intersectPlane(Pos, Dir, vec3(0., u_planet_cloud_end, 0.), vec3(0.,-1.,0.)).x;
 	return Rays[0] > 0. ? 1 : 0;
 #endif
 }
@@ -168,16 +168,15 @@ float sampleCloudDensity(vec3 pos, vec3 weather_data, float height_frac, float l
 
 	pos = pos + height_frac * constant.window;
 	pos = vec3(pos.x, height_frac, pos.z) * vec3(u_mapping, 1., u_mapping);
-//	pos *= 1./32.;
 	
 	vec4 low_freq_noise = texture(s_cloud_map, pos);
 	float low_freq_fBM = dot(low_freq_noise.yzw, vec3(0.625, 0.25, 0.125));
 	float base_cloud = remap(low_freq_noise.r, -(1.-low_freq_fBM), 1., 0., 1.);
 
-	base_cloud *= densityHeightGradient(weather_data, height_frac);;
+	base_cloud *= densityHeightGradient(weather_data, height_frac);
 
 	float cloud_coverage = getCoverage(weather_data);
-	float base_cloud_with_coverage = remap(base_cloud, 1.-cloud_coverage, 1., 0., 1.);
+	float base_cloud_with_coverage = remap(base_cloud, 1.-cloud_coverage*0.5, 1., 0., 1.);
 	float final_cloud = base_cloud_with_coverage * cloud_coverage;
 
 //	if(final_cloud > 0.)
