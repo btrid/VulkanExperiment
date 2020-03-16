@@ -131,7 +131,10 @@ float _band(in float ls, in float le, in float hs, in float he, in float t)
 	return smoothstep (ls, le, t) * (1. - smoothstep (hs, he, t));
 }
 
-vec3 sampleWeather(vec3 pos){ return texture(s_weather_map, (vec3(pos) * vec3(u_mapping, 1., u_mapping) + vec3(0.5, 0., 0.5)).xz).xyz; }
+vec3 sampleWeather(vec3 pos)
+{
+	 return texture(s_weather_map, ((pos + constant.window*50.)* vec3(u_mapping, 1., u_mapping) + vec3(0.5, 0., 0.5)).xz).xyz; 
+}
 float getCoverage(vec3 weather_data){ return weather_data.r; }
 float getPrecipitation(vec3 weather_data){ return mix(0., 1., weather_data.g) + 0.0001; }
 float getCloudType(vec3 weather_data){ return weather_data.b; }
