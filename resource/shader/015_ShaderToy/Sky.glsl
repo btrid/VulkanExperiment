@@ -24,9 +24,9 @@ layout(push_constant) uniform Input
 } constant;
 
 
-const float u_planet_radius = 6300.;
-const float u_planet_cloud_begin = 100.;
-const float u_planet_cloud_end = 364.;
+const float u_planet_radius = 16300.;
+const float u_planet_cloud_begin = 1000.;
+const float u_planet_cloud_end = 1640.;
 const vec4 u_planet = vec4(0., -u_planet_radius, 0, u_planet_radius);
 const vec4 u_cloud_inner = u_planet + vec4(0.,0.,0.,u_planet_cloud_begin);
 const vec4 u_cloud_outer = u_planet + vec4(0.,0.,0.,u_planet_cloud_end);
@@ -166,7 +166,7 @@ float sampleCloudDensity(vec3 pos, vec3 weather_data, float height_frac, float l
 {
 	if(height_frac>= 1. || height_frac <= 0.) { return 0.; } //範囲外
 
-	pos = pos + height_frac * constant.window;
+	pos = pos + height_frac * constant.window*50.;
 	pos = vec3(pos.x, height_frac, pos.z) * vec3(u_mapping, 1., u_mapping);
 	
 	vec4 low_freq_noise = texture(s_cloud_map, pos);
@@ -176,7 +176,7 @@ float sampleCloudDensity(vec3 pos, vec3 weather_data, float height_frac, float l
 	base_cloud *= densityHeightGradient(weather_data, height_frac);
 
 	float cloud_coverage = getCoverage(weather_data);
-	float base_cloud_with_coverage = remap(base_cloud, 1.-cloud_coverage*0.5, 1., 0., 1.);
+	float base_cloud_with_coverage = remap(base_cloud, 1.-cloud_coverage, 1., 0., 1.);
 	float final_cloud = base_cloud_with_coverage * cloud_coverage;
 
 //	if(final_cloud > 0.)

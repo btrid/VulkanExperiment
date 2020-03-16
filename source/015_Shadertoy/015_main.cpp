@@ -61,10 +61,34 @@ int intersectRayAtom(vec3 Pos, vec3 Dir, vec3 AtomPos, vec2 Area, vec4& OutDist)
 
 }
 
+std::array<vec3, 6> precomputeNoiseKernel(vec3 lightDirection)
+{
+	std::array<vec3, 6> g_noise_kernel;
+
+	vec3 up = vec3(0., 1., 0.);
+	vec3 side = cross(lightDirection, normalize(up));
+	side = dot(side, side) < 0.000001 ? vec3(1., 0., 0.) : normalize(side);
+	up = normalize(cross(side, lightDirection));
+
+	g_noise_kernel[0] = lightDirection * 0.5f + side * 0.3f + up * 0.3f;
+	g_noise_kernel[1] = lightDirection * 1.0f + side * 0.7f + up * -0.7f;
+	g_noise_kernel[2] = lightDirection * 1.5f + side * -0.1f + up * 1.3f;
+	g_noise_kernel[3] = lightDirection * 2.0f + side * -1.1f + up * -0.3f;
+	g_noise_kernel[4] = lightDirection * 2.5f + side * 1.3f + up * 0.3f;
+	g_noise_kernel[5] = lightDirection * 3.0f + side * -0.4f + up * -1.1f;
+	return g_noise_kernel;
+}
+
 // https://github.com/erickTornero/realtime-volumetric-cloudscapes
 // https://bib.irb.hr/datoteka/949019.Final_0036470256_56.pdf
 int main()
 {
+	{
+//		auto a = precomputeNoiseKernel(normalize(vec3(0.f, -1.f, 0.f)));
+//		auto b = precomputeNoiseKernel(normalize(vec3(0.f, -1.f, 1.f)));
+		auto v = precomputeNoiseKernel(normalize(vec3(1.f, -1.f, 1.f)));
+		int aaa = 0;
+	}
 	{
 		const vec3 u_planet = vec3(0.f, 0.f, 0.f);
 
