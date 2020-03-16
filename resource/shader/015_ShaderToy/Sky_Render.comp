@@ -15,13 +15,18 @@ void precomputeNoiseKernel(vec3 lightDirection)
 	side = dot(side, side) < 0.000001 ? vec3(1., 0., 0.) : normalize(side);
 	up = normalize(cross(side, lightDirection));
 
-	g_noise_kernel[0] = lightDirection * 0.5 + side * 0.3 + up * 0.3;
-	g_noise_kernel[1] = lightDirection * 1.0 + side * 0.7 + up * -0.7;
-	g_noise_kernel[2] = lightDirection * 1.5 + side * -0.1 + up * 1.3;
-	g_noise_kernel[3] = lightDirection * 2.0 + side * -1.1 + up * -0.3;
-	g_noise_kernel[4] = lightDirection * 2.5 + side * 1.3 + up * 0.3;
-	g_noise_kernel[5] = lightDirection * 3.0 + side * -0.4 + up * -1.1;
-
+//	g_noise_kernel[0] = lightDirection * 0.5 + side * 0.3 + up * 0.3;
+//	g_noise_kernel[1] = lightDirection * 1.0 + side * 0.7 + up * -0.7;
+//	g_noise_kernel[2] = lightDirection * 1.5 + side * -0.1 + up * 1.3;
+//	g_noise_kernel[3] = lightDirection * 2.0 + side * -1.1 + up * -0.3;
+//	g_noise_kernel[4] = lightDirection * 2.5 + side * 1.3 + up * 0.3;
+//	g_noise_kernel[5] = lightDirection * 3.0 + side * -0.4 + up * -1.1;
+	g_noise_kernel[0] = lightDirection * 1.0 + side * 0.3 + up * 0.3;
+	g_noise_kernel[1] = lightDirection * 2.0 + side * 0.7 + up * -0.7;
+	g_noise_kernel[2] = lightDirection * 3.0 + side * -0.1 + up * 1.3;
+	g_noise_kernel[3] = lightDirection * -1. + side * -1.1 + up * -0.3;
+	g_noise_kernel[4] = lightDirection * -2. + side * 1.3 + up * 0.3;
+	g_noise_kernel[5] = lightDirection * -3. + side * -0.4 + up * -1.1;
 }
 
 
@@ -42,38 +47,28 @@ float lightEnergy(float density_sample, float precipitation, float henyeyGreenst
 
 float sampleCloudDensityAlongCone(vec3 startPos, float stepSize)
 {
-	// random vectors on the unit sphere
-	const float RCP_LIGHT_RAY_ITERATIONS = 1. / float(g_noise_kernel.length());
 	float rcpThickness = 1. / (stepSize * g_noise_kernel.length());
-
+	
 	float density = 0.;
 	float density_along_cone = 0.;
 
 	float lod = 0.;
 	for(uint i = 0u; i < g_noise_kernel.length(); ++i)
 	{
-//		vec3 conePos = startPos + g_noise_kernel[i] * float(i + 1u);
+//		vec3 conePos = startPos + g_noise_kernel[i] * float(i + 1u) * 3.;
 		vec3 conePos = startPos + g_noise_kernel[i];
 		float height_frac = heightFraction(conePos);
 		if(height_frac < 1.0 && height_frac > 0.)
 		{
 			vec3 weather_data = sampleWeather(conePos);
 			float d = sampleCloudDensity(conePos, weather_data, height_frac, lod);
-			if(d > 0.0)
-			{
-				density += d;
-				float transmittance = 1. - (density * rcpThickness);
-				density_along_cone += (d * transmittance);
-
-//				float transmittance = 1. - (d * rcpThickness);
-//				density += (d * transmittance);
-
-//				density += d;
-			}
+			density += d;
+			float transmittance = 1. - (density * rcpThickness);
+			density_along_cone += (d * transmittance);
 		}
 //		lod += RCP_LIGHT_RAY_ITERATIONS;
 	}
-
+//	return density;
 	return density_along_cone;
 }
 
@@ -84,7 +79,9 @@ void main()
 //	vec3 CamPos = vec3(0., 200., 100.);
 //	vec3 CamDir = normalize(-CamPos);
 	vec3 CamPos = vec3(0., 1., 0.);
-	vec3 CamDir = normalize(vec3(1.5, 2.0, 1.5));
+	float s = sin(constant.window.x * 0.02);
+	float c = cos(constant.window.x * 0.02);
+	vec3 CamDir = normalize(vec3(s, 0.5, c));
 
 	// カメラレイの作成
 	{
@@ -148,8 +145,6 @@ void main()
 					float transmittance = 1. - (density * rcpThickness);
 
 					float light_density = sampleCloudDensityAlongCone(pos, stepSize);
-//					vec2 shadow = texture(s_shadow_map, p).xy;
-//					color += shadow.x * d * uLightColor.rgb * lightEnergy(light_density, getPrecipitation(weather_data), phaseFactor);
 					vec3 ambient = mix(vec3(.0, 0.1, 0.4), vec3(0.3, 0.6, 0.8), 1.0 - height_frac) ;
 
 					vec4 source = vec4(uLightColor * lightEnergy(light_density, getPrecipitation(weather_data), phaseFactor), d*transmittance);

@@ -24,15 +24,15 @@ layout(push_constant) uniform Input
 } constant;
 
 
-const float u_planet_radius = 16300.;
-const float u_planet_cloud_begin = 1000.;
-const float u_planet_cloud_end = 1640.;
+const float u_planet_radius = 56300.;
+const float u_planet_cloud_begin = 5100.;
+const float u_planet_cloud_end = 5640.;
 const vec4 u_planet = vec4(0., -u_planet_radius, 0, u_planet_radius);
 const vec4 u_cloud_inner = u_planet + vec4(0.,0.,0.,u_planet_cloud_begin);
 const vec4 u_cloud_outer = u_planet + vec4(0.,0.,0.,u_planet_cloud_end);
 const float u_cloud_area_inv = 1. / (u_planet_cloud_end - u_planet_cloud_begin);
 const float u_mapping = 0.5/u_cloud_outer.w;
-vec3 uLightRay = -normalize(vec3(0., 1., 0.));
+vec3 uLightRay = -normalize(vec3(0., 1., 1.));
 vec3 uLightColor = vec3(7.);
 
 #define SkyType_Sphere
@@ -184,8 +184,9 @@ float sampleCloudDensity(vec3 pos, vec3 weather_data, float height_frac, float l
 
 //	if(final_cloud > 0.)
     {
-        //// TODO add curl noise
-        //// pos += curlNoise.xy * (1.0f - height_frac);
+		// add some turbulense to bottoms of clouds. 
+        // pos += curlNoise.xy * (1.0f - height_frac); // TODO add curl noise
+//		pos += constant.window.xzy*500. * (1. - height_frac);
 
         vec3 high_freq_noise = texture(s_cloud_detail_map, pos*0.1).xyz;
         float high_freq_fBM = dot(high_freq_noise, vec3(0.625, 0.25, 0.125));
