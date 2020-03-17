@@ -89,6 +89,20 @@ int main()
 		auto v = precomputeNoiseKernel(normalize(vec3(1.f, -1.f, 1.f)));
 		int aaa = 0;
 	}
+
+	{
+		const float u_planet_radius = 6371.; // km
+		const float u_planet_cloud_begin = 1.;
+		const float u_planet_cloud_end = 8.2;
+		const vec4 u_planet = vec4(0., -u_planet_radius, 0, u_planet_radius);
+		const vec4 u_cloud_inner = u_planet + vec4(0., 0., 0., u_planet_cloud_begin);
+		const vec4 u_cloud_outer = u_planet + vec4(0., 0., 0., u_planet_cloud_end);
+		const float u_cloud_area_inv = 1. / (u_planet_cloud_end - u_planet_cloud_begin);
+		const float u_mapping = 0.5 / 120.; // “K“–
+		float c = acos(u_planet_radius / u_cloud_outer.w);
+		float l = u_planet_radius*sin(c);
+		int aaa = 0.f;
+	}
 	{
 		const vec3 u_planet = vec3(0.f, 0.f, 0.f);
 
