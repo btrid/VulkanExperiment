@@ -24,9 +24,9 @@ layout(push_constant) uniform Input
 } constant;
 
 
-const float u_planet_radius = 56300.;
-const float u_planet_cloud_begin = 5100.;
-const float u_planet_cloud_end = 5640.;
+const float u_planet_radius = 1000.;
+const float u_planet_cloud_begin = 100.;
+const float u_planet_cloud_end = 164.;
 const vec4 u_planet = vec4(0., -u_planet_radius, 0, u_planet_radius);
 const vec4 u_cloud_inner = u_planet + vec4(0.,0.,0.,u_planet_cloud_begin);
 const vec4 u_cloud_outer = u_planet + vec4(0.,0.,0.,u_planet_cloud_end);
@@ -124,7 +124,7 @@ float intersectRaySphere(in vec3 origin, in vec3 ray, in vec4 sphere)
 }
 float remap(float original_value, float original_min, float original_max, float new_min, float new_max)
 {
-	 return new_min + (original_value - original_min) / (original_max - original_min) * (new_max - new_min); 
+	 return (original_value - original_min) / (original_max - original_min) * (new_max - new_min) + new_min; 
 }
 float _band(in float ls, in float le, in float hs, in float he, in float t)
 {
@@ -133,9 +133,9 @@ float _band(in float ls, in float le, in float hs, in float he, in float t)
 
 vec3 sampleWeather(vec3 pos)
 {
-	 return texture(s_weather_map, ((pos + constant.window*50.)* vec3(u_mapping, 1., u_mapping) + vec3(0.5, 0., 0.5)).xz).xyz; 
+	 return texture(s_weather_map, ((pos + constant.window*0.)* vec3(u_mapping, 1., u_mapping) + vec3(0.5, 0., 0.5)).xz).xyz; 
 }
-float getCoverage(vec3 weather_data){ return weather_data.r; }
+float getCoverage(vec3 weather_data){ return saturate(weather_data.r); }
 float getPrecipitation(vec3 weather_data){ return mix(0., 1., weather_data.g) + 0.0001; }
 float getCloudType(vec3 weather_data){ return weather_data.b; }
 float heightFraction(vec3 pos) 
@@ -169,24 +169,23 @@ float sampleCloudDensity(vec3 pos, vec3 weather_data, float height_frac, float l
 {
 	if(height_frac>= 1. || height_frac <= 0.) { return 0.; } //範囲外
 
-	pos = pos + height_frac * constant.window*50.;
-	pos = vec3(pos.x, height_frac, pos.z) * vec3(u_mapping, 1., u_mapping);
+//	pos = pos + height_frac * constant.window*5.;
+	pos = vec3(pos.x, height_frac, pos.z) * vec3(u_mapping, 0.2, u_mapping);
 	
 	vec4 low_freq_noise = texture(s_cloud_map, pos);
-	float low_freq_fBM = dot(low_freq_noise.yzw, vec3(0.625, 0.25, 0.125));
+	float low_freq_fBM = dot(low_freq_noise.gba, vec3(0.625, 0.25, 0.125));
 	float base_cloud = remap(low_freq_noise.r, -(1.-low_freq_fBM), 1., 0., 1.);
 
 	base_cloud *= densityHeightGradient(weather_data, height_frac);
-
+//	return saturate(base_cloud);
 	float cloud_coverage = getCoverage(weather_data);
-	float base_cloud_with_coverage = remap(base_cloud, 1.-cloud_coverage, 1., 0., 1.);
+	float base_cloud_with_coverage = remap(base_cloud, cloud_coverage, 1., 0., 1.);
 	float final_cloud = base_cloud_with_coverage * cloud_coverage;
 
 //	if(final_cloud > 0.)
     {
-		// add some turbulense to bottoms of clouds. 
-        // pos += curlNoise.xy * (1.0f - height_frac); // TODO add curl noise
-//		pos += constant.window.xzy*500. * (1. - height_frac);
+        //// TODO add curl noise
+        //// pos += curlNoise.xy * (1.0f - height_frac);
 
         vec3 high_freq_noise = texture(s_cloud_detail_map, pos*0.1).xyz;
         float high_freq_fBM = dot(high_freq_noise, vec3(0.625, 0.25, 0.125));
@@ -195,6 +194,7 @@ float sampleCloudDensity(vec3 pos, vec3 weather_data, float height_frac, float l
         final_cloud = remap(final_cloud, high_freq_foise_modifier*0.2, 1., 0., 1.);
     }
 	return saturate(final_cloud);
+
 }
 
 #endif

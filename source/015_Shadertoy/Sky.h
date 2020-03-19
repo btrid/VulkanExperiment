@@ -921,7 +921,7 @@ struct Sky
 			};
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Sky_CS].get(), 0, array_length(descs), descs, 0, nullptr);
 
-			auto window = vec3(sGlobal::Order().getTotalTime()) * vec3(0.5f, 0.f, 0.f);
+			auto window = vec3(sGlobal::Order().getTotalTime()) * vec3(0.5f, 0.f, 0.25f);
 			cmd.pushConstants<vec3>(m_pipeline_layout[PipelineLayout_Sky_CS].get(), vk::ShaderStageFlagBits::eCompute, 0, window);
 
 		}
