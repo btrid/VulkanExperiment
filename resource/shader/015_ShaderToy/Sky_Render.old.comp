@@ -43,7 +43,7 @@ float henyeyGreensteinPhaseFunction(float lightDotEye, float g)
 float lightEnergy(float density_sample, float precipitation, float henyeyGreensteinFactor)
 {
 	float beer_lambert = exp(-density_sample * precipitation);
-	float powder_sugar_effect = 1. - exp(-density_sample * 2.0);
+	float powder_sugar_effect = 1. - exp(-density_sample * precipitation * 2.0);
 	return 2. * beer_lambert * powder_sugar_effect * henyeyGreensteinFactor;
 }
 
@@ -51,10 +51,10 @@ float lightEnergy(float density_sample, float precipitation, float henyeyGreenst
 float sampleCloudDensityAlongCone(vec3 startPos, float stepSize)
 {
 	float rcpThickness = 1. / (stepSize * g_noise_kernel.length());
-//	float rcpThickness = 1.;
 	
 	float density = 0.;
 	float density_along_cone = 0.;
+	float transmittance = 1.;
 
 	float lod = 0.;
 	for(uint i = 0u; i < g_noise_kernel.length(); ++i)
@@ -67,13 +67,16 @@ float sampleCloudDensityAlongCone(vec3 startPos, float stepSize)
 			vec3 weather_data = sampleWeather(conePos);
 			float d = sampleCloudDensity(conePos, weather_data, height_frac, lod);
 			density += d;
-			float transmittance = 1. - (density * rcpThickness);
+
+//			float transmittance = 1. - (density * rcpThickness);
+			float t = exp(-d * getPrecipitation(weather_data));
+			transmittance *= t;
 			density_along_cone += (d * transmittance);
 		}
 //		lod += RCP_LIGHT_RAY_ITERATIONS;
 	}
-//	return density;
-	return saturate(density_along_cone);
+	return density;
+	return density_along_cone;
 }
 
 void main()
@@ -83,8 +86,8 @@ void main()
 //	vec3 CamPos = vec3(0., 200., 100.);
 //	vec3 CamDir = normalize(-CamPos);
 	vec3 CamPos = vec3(0., 1., 0.);
-	float s = sin(constant.window.x * 0.004);
-	float c = cos(constant.window.x * 0.004);
+	float s = sin(constant.window.x * 0.02);
+	float c = cos(constant.window.x * 0.02);
 	vec3 CamDir = normalize(vec3(s, 0.5, c));
 
 	// カメラレイの作成
@@ -123,6 +126,7 @@ void main()
 	{
 
 		uint sampleCount = 64;
+		float transmittance = 1.;
 		float density = 0.;
 		float phaseFactor = henyeyGreensteinPhaseFunction(dot(-uLightRay, CamDir), 0.2);
 		vec4 cloud_color = vec4(0.);
@@ -131,9 +135,13 @@ void main()
 			vec3 begin = CamPos + CamDir * rays[i*2];
 			vec3 end = begin + CamDir * rays[i*2+1];
 
+//			float thickness = rays[i*2+1];
+//			float rcpThickness = 1. / thickness;
+//			float stepSize = thickness / float(sampleCount);
 			float thickness = rays[i*2+1];
 			float rcpThickness = 1. / thickness;
-			float stepSize = thickness / float(sampleCount);
+			float stepSize = 1;
+			sampleCount = uint(thickness)+1u;
 
 			vec3 pos = begin;
 			float cloud_depth = 0.;
@@ -143,26 +151,24 @@ void main()
 				vec3 weather_data = sampleWeather(pos);
 				float d = sampleCloudDensity(pos, weather_data, height_frac, 0.);
 
-//				if(d > 0.0)
+				if(d > 0.0)
 				{
-					density += d;
-					float transmittance = 1. - (density * rcpThickness);
-					if(transmittance <= 0.00001) { break; }
-
+//					float t = exp(-d * getPrecipitation(weather_data));
+//					transmittance *= t;
 					float light_density = sampleCloudDensityAlongCone(pos, stepSize);
+					float t = exp(-mix(light_density, d, 1.) * getPrecipitation(weather_data));
+					transmittance *= t;
+					
+					cloud_color.xyz = cloud_color.xyz + transmittance * d * uLightColor * lightEnergy(light_density, getPrecipitation(weather_data), phaseFactor);
+					cloud_color.a = cloud_color.a + (1.-cloud_color.a) * (1.-t);
 
-					vec4 source = vec4(uLightColor * lightEnergy(light_density, getPrecipitation(weather_data), phaseFactor), d*transmittance);
-					source.xyz *= source.w;
-					cloud_color = (1. - cloud_color.a) * source + cloud_color;
-					if(cloud_color.a >= 1.) break;
+					if(transmittance < 0.0001){ break; }
 				}
 				pos += stepSize * CamDir;
 			}
 		}
 
-		cloud_color = saturate(cloud_color);
 		background_color = mix(background_color, cloud_color.xyz/(cloud_color.a+0.0001), cloud_color.a);
-//		background_color.xyz = cloud_color.xyz;
 	}
 
 	// tonemapping

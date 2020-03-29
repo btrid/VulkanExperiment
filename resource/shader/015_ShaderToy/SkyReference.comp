@@ -8,16 +8,6 @@
 
 layout (local_size_x = 32, local_size_y = 32) in;
 
-
-float band(in float start, in float peak, in float end, in float t)
-{
-	return smoothstep (start, peak, t) * (1. - smoothstep (peak, end, t));
-}
-float band2(in float ls, in float le, in float hs, in float he, in float t)
-{
-	return smoothstep (ls, le, t) * (1. - smoothstep (hs, he, t));
-}
-
 float rand(in vec3 co)
 {
 	return fract(sin(dot(co, vec3(12.98,78.23, 45.41))) * 43758.5);

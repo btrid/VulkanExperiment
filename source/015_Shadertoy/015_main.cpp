@@ -83,6 +83,17 @@ std::array<vec3, 6> precomputeNoiseKernel(vec3 lightDirection)
 // https://bib.irb.hr/datoteka/949019.Final_0036470256_56.pdf
 int main()
 {
+
+	{
+		vec3 f = normalize(vec3(1.f));
+		vec3 up = vec3(0., 1., 0.);
+		vec3 side = cross(f, up);
+		side = dot(side, side) < 0.000001 ? vec3(1., 0., 0.) : normalize(side);
+		up = normalize(cross(side, f));
+		int i = 0;
+
+	}
+
 	{
 //		auto a = precomputeNoiseKernel(normalize(vec3(0.f, -1.f, 0.f)));
 //		auto b = precomputeNoiseKernel(normalize(vec3(0.f, -1.f, 1.f)));
