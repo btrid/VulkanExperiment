@@ -9,7 +9,8 @@ layout (local_size_x = 32, local_size_y = 32) in;
 
 #define light_num 4
 vec3 g_noise_kernel[light_num];
-float g_phase_factor;
+float g_cam_phase_factor;
+float g_light_phase_factor;
 vec3 uCamDir;
 vec3 uCamPos;
 void precompute()
@@ -39,7 +40,8 @@ void precompute()
 		uLightRay = normalize(vec3(0., -1., 12));
 	}
 
-	g_phase_factor = henyeyGreenstein(dot(-uLightRay, uCamDir), 0.1);
+	g_cam_phase_factor = henyeyGreenstein(dot(-uLightRay, uCamDir), 0.9);
+	g_light_phase_factor = henyeyGreenstein(dot(-uLightRay, -uLightRay), 0.2);
 
 	{
 		vec3 up = vec3(0., 1., 0.);
@@ -72,7 +74,7 @@ float lightEnergy(float density, float light_density, float precipitation, float
 	return 2. * beer_lambert * powder_sugar_effect * henyeyGreensteinFactor;
 }
 
-float light(vec3 pos, float ray_step)
+float light(vec3 pos, float ray_length)
 {
 	vec4 rays;
 	if(intersectRayAtomEx(pos, -uLightRay, u_planet.xyz, vec2(u_planet.w), -1., rays) != 0)
@@ -83,13 +85,13 @@ float light(vec3 pos, float ray_step)
 
 	float density = 0.;
 	int step_num = 8;
-	float step = ray_step / float(step_num);
+	float ray_step = ray_length / float(step_num);
 	for(int i = 0; i < step_num; i++)
 	{
 		vec3 p = pos - uLightRay * (float(i)+0.5);
 		float height_frac = heightFraction(p);
 		vec3 weather_data = sampleWeather(p);
-		float d = cloud_density(p, weather_data, height_frac, 0.);
+		float d = cloud_density(p, weather_data, height_frac, 0.) * ray_step;
 		density += d;
 	}
 
@@ -136,7 +138,6 @@ void main()
 
 		uint sampleCount = 16;
 		float density = 0.;
-		float phaseFactor = henyeyGreensteinPhaseFunction(dot(-uLightRay, uCamDir), 0.2);
 		vec3 color = vec3(0.);
 		for(int i = 0; i <count; i++)
 		{
@@ -145,23 +146,25 @@ void main()
 
 			float thickness = rays[i*2+1];
 			float rcpThickness = 1. / thickness;
-			float ray_step = 1;
 			sampleCount = uint(thickness)+1u;
+			float ray_step =  thickness / float(sampleCount);
 
 			vec3 pos = begin;
 			for(int s = 0; s < sampleCount; s++)
 			{
 				float height_frac = heightFraction(pos);
 				vec3 weather_data = sampleWeather(pos);
-				float d = cloud_density(pos, weather_data, height_frac, 0.);
+				float d = cloud_density(pos, weather_data, height_frac, 0.) * ray_step;
 				density += d;
 
 				float light = light(pos, rays[i*2+1] - ray_step*float(s));
 				float lambert = BeerLambert(density);
 				float powder = SugerPowderEffect(pos)*0.5+0.5;
-				float e = light * lambert * powder * g_phase_factor;
+				float e = light * lambert * g_cam_phase_factor;
 
 				color += e * vec3(1., 1., 1.);
+				float alpha = exp(-density);
+				if(alpha < 0.00001) { break; }
 
 
 				pos += ray_step * uCamDir;
