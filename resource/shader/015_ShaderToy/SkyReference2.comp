@@ -3,7 +3,7 @@
 
 #include "Sky.glsl"
 
-#define ABSORPTION		0.15
+#define ABSORPTION		0.7
 
 layout (local_size_x = 32, local_size_y = 32) in;
 
@@ -86,9 +86,6 @@ void precompute()
 	}
 }
 
-
-float henyeyGreensteinPhaseFunction(float lightDotEye, float g){ return ((1. - g*g) / pow((1. + g*g - 2.*g*lightDotEye), 1.5)) / (4.*3.1415); }
-
 float BeerLambert(float density, float precipitation){ return exp(-density * precipitation);}
 float PowderSugarEffect(float density, float precipitation){ return 1. - exp(-density * precipitation * 2.0);}
 float lightEnergy(float density, float light_density, float precipitation, float henyeyGreensteinFactor)
@@ -113,28 +110,10 @@ float cloud_density(in vec3 pos, in int lod)
 	density = density * smoothstep(coverage, coverage+alpha, density);
 
 	density = band(0., 0.5, 1., t) * density;
-	return density;
+	return density * ABSORPTION;
 }
 
-float light(in vec3 pos)
-{
-	vec4 rays;
-	if(intersectRayAtomEx(pos, -uLightRay, u_planet.xyz, vec2(u_planet.w), -1., rays) != 0)
-	{
-		// 星の影
-		return 0.;
-	}
-
-	float density = 0.;
-	for (int i = 0; i < 3; i++) 
-	{
-		pos = pos + uLightRay * 4.;
-		density += cloud_density(pos, 2);
-	}
-	return exp(-density);
-}
-
-float light(vec3 pos, float ray_length)
+float light(vec3 pos)
 {
 	vec4 rays;
 	if(intersectRayAtomEx(pos, -uLightRay, u_planet.xyz, vec2(u_planet.w), -1., rays) != 0)
@@ -145,7 +124,7 @@ float light(vec3 pos, float ray_length)
 
 	float density = 0.;
 	int step_num = 8;
-	float ray_step = ray_length / float(step_num);
+	float ray_step = (rays[1]-rays[0]) / float(step_num);
 	for(int i = 0; i < step_num; i++)
 	{
 		vec3 p = pos - uLightRay * (float(i)+0.5) * ray_step;
@@ -191,10 +170,10 @@ vec4 cloud(in vec3 rayPos, in vec3 rayDir, float depth)
 			float d = cloud_density(pos, 4) * ray_step;
 			density += d;
 
-			float light = light(pos, rays[i*2+1] - ray_step*float(s));
+			float light = light(pos);
 			float lambert = BeerLambert(density);
-			float powder = SugerPowderEffect(pos)*0.5+0.5;
-			float e = light * lambert;
+			float powder = SugerPowderEffect(pos)*0.2+0.8;
+			float e = light * lambert * powder;
 
 			color += e * vec3(1., 1., 1.);
 			float alpha = exp(-density);

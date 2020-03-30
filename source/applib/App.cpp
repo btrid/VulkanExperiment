@@ -137,9 +137,9 @@ App::App(const AppDescriptor& desc)
 	instanceInfo.setPpEnabledLayerNames(LayerName.data());
 	m_instance = vk::createInstanceUnique(instanceInfo);
 
-// 	vk::DynamicLoader dl;
-// 	PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr = dl.getProcAddress<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr");
-// 	m_dispatch.init(vkGetInstanceProcAddr);
+ 	vk::DynamicLoader dl;
+ 	PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr = dl.getProcAddress<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr");
+ 	m_dispatch.init(vkGetInstanceProcAddr);
 	m_dispatch.init(m_instance.get());
 #if USE_DEBUG_REPORT
 	vk::DebugUtilsMessengerCreateInfoEXT debug_create_info;
