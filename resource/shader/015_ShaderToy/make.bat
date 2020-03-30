@@ -9,6 +9,7 @@ SET exe=glslangValidator.exe
 SET output=-o ../binary
 
 %exe% %include% %option% %output%/SkyReference.comp.spv SkyReference.comp
+%exe% %include% %option% %output%/SkyReference.comp.spv SkyReference2.comp
 %exe% %include% %option% %output%/SkyShadow.comp.spv SkyShadow.comp
 %exe% %include% %option% %output%/SkyShadow_Render.comp.spv SkyShadow_Render.comp
 

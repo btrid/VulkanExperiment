@@ -836,6 +836,7 @@ struct Sky
 			{
 				render_target->m_descriptor.get(),
 				m_descriptor_set.get(),
+				m_skynoise.m_descriptor_set.get(),
 			};
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Sky_CS].get(), 0, array_length(descs), descs, 0, nullptr);
 
