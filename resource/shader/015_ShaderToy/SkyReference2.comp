@@ -144,7 +144,7 @@ float light(vec3 pos, float ray_length)
 	}
 
 	float density = 0.;
-	int step_num = 5;
+	int step_num = 8;
 	float ray_step = ray_length / float(step_num);
 	for(int i = 0; i < step_num; i++)
 	{
@@ -182,7 +182,7 @@ vec4 cloud(in vec3 rayPos, in vec3 rayDir, float depth)
 
 		float thickness = rays[i*2+1];
 		float rcpThickness = 1. / thickness;
-		sampleCount = uint(thickness)+1u;
+//		sampleCount = uint(thickness);
 		float ray_step =  thickness / float(sampleCount);
 
 		vec3 pos = begin;
