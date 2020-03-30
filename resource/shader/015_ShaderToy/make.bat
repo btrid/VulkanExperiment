@@ -13,6 +13,7 @@ SET output=-o ../binary
 %exe% %include% %option% %output%/SkyShadow_Render.comp.spv SkyShadow_Render.comp
 
 %exe% %include% %option% %output%/Sky_Render.comp.spv Sky_Render.comp
+rem %exe% %include% %option% %output%/Sky_Render.comp.spv Sky_Render.old.comp
 %exe% %include% %option% %output%/Sky_RenderUpsampling.comp.spv Sky_RenderUpsampling.comp
 
 %exe% %include% %option% %output%/WorleyNoise_Compute.comp.spv WorleyNoise_Compute.comp

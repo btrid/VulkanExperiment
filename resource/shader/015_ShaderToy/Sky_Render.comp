@@ -82,7 +82,7 @@ float light(vec3 pos, float ray_step)
 	}
 
 	float density = 0.;
-	int step_num = int(ray_step / 8.) + 1;
+	int step_num = 8;
 	float step = ray_step / float(step_num);
 	for(int i = 0; i < step_num; i++)
 	{

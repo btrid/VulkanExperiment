@@ -65,7 +65,7 @@ float sampleCloudDensityAlongCone(vec3 startPos, float stepSize)
 		if(height_frac < 1.0 && height_frac > 0.)
 		{
 			vec3 weather_data = sampleWeather(conePos);
-			float d = sampleCloudDensity(conePos, weather_data, height_frac, lod);
+			float d = cloud_density(conePos, weather_data, height_frac, lod);
 			density += d;
 
 //			float transmittance = 1. - (density * rcpThickness);
@@ -149,7 +149,7 @@ void main()
 			{
 				float height_frac = heightFraction(pos);
 				vec3 weather_data = sampleWeather(pos);
-				float d = sampleCloudDensity(pos, weather_data, height_frac, 0.);
+				float d = cloud_density(pos, weather_data, height_frac, 0.);
 
 				if(d > 0.0)
 				{
