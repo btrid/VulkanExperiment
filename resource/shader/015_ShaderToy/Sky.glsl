@@ -25,8 +25,8 @@ layout(push_constant) uniform Input
 
 
 const float u_planet_radius = 1000.;
-const float u_planet_cloud_begin = 100.;
-const float u_planet_cloud_end = 164.;
+const float u_planet_cloud_begin = 50.;
+const float u_planet_cloud_end = 50.+32.;
 const vec4 u_planet = vec4(0., -u_planet_radius, 0, u_planet_radius);
 const vec4 u_cloud_inner = u_planet + vec4(0.,0.,0.,u_planet_cloud_begin);
 const vec4 u_cloud_outer = u_planet + vec4(0.,0.,0.,u_planet_cloud_end);

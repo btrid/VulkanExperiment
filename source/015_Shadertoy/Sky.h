@@ -830,7 +830,7 @@ struct Sky
 	{
 		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
 
-		auto window = sGlobal::Order().getTotalTime() * 20.f;
+		auto window = sGlobal::Order().getTotalTime() * 1.f;
 		{
 			vk::DescriptorSet descs[] =
 			{
@@ -840,7 +840,7 @@ struct Sky
 			};
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Sky_CS].get(), 0, array_length(descs), descs, 0, nullptr);
 
-			cmd.pushConstants<float>(m_pipeline_layout[PipelineLayout_Sky_CS].get(), vk::ShaderStageFlagBits::eCompute, 0, window);
+			cmd.pushConstants<vec3>(m_pipeline_layout[PipelineLayout_Sky_CS].get(), vk::ShaderStageFlagBits::eCompute, 0, vec3(window));
 
 		}
 
