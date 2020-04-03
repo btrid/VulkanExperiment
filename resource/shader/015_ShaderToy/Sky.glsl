@@ -32,7 +32,7 @@ const vec4 u_cloud_inner = u_planet + vec4(0.,0.,0.,u_planet_cloud_begin);
 const vec4 u_cloud_outer = u_planet + vec4(0.,0.,0.,u_planet_cloud_end);
 const float u_cloud_area_inv = 1. / (u_planet_cloud_end - u_planet_cloud_begin);
 const float u_mapping = 1./u_cloud_outer.w;
-vec3 uLightRay = -normalize(vec3(0., 1., 1.));
+vec3 uLightRay = -normalize(vec3(0., 1., 0.));
 vec3 uLightColor = vec3(1.);
 float uAmbientPower = 0.2;
 
@@ -144,7 +144,7 @@ float LightEnergy(float density, float henyeyGreensteinFactor)
 
 vec3 sampleWeather(vec3 pos)
 {
-	 return texture(s_weather_map, ((pos + constant.window*0.)* vec3(u_mapping, 1., u_mapping) + vec3(0.5, 0., 0.5)).xz).xyz; 
+	 return texture(s_weather_map, ((pos + constant.window*0.)* vec3(u_mapping, 1., u_mapping) * vec3(0.5, 1., 0.5) + vec3(0.5, 0., 0.5)).xz).xyz; 
 }
 float getCoverage(vec3 weather_data){ return saturate(weather_data.r); }
 float getPrecipitation(vec3 weather_data){ return mix(0., 0.2, weather_data.g) + 0.001; }

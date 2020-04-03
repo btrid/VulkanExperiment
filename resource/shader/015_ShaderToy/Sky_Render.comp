@@ -35,7 +35,7 @@ void precompute()
 
 	{
 //		uLightRay = normalize(vec3(s, c, 0.1));
-		uLightRay = normalize(vec3(0., -1., 12));
+//		uLightRay = normalize(vec3(0., -1., 12));
 	}
 
 	g_phase_factor = henyeyGreenstein(dot(-uLightRay, uCamDir), 0.2);
@@ -56,6 +56,11 @@ void precompute()
 
 float light(in vec3 pos)
 {
+#if 1
+	vec3 p = vec3(pos.x, heightFraction(pos), pos.z) * vec3(u_mapping, 1., u_mapping) * vec3(0.5, 1., 0.5) + vec3(0.5, 0., 0.5);
+	return texture(s_shadow_map, p).x * g_phase_factor;
+
+#else
 	vec4 rays;
 	if(intersectRayAtomEx(pos, -uLightRay, u_planet.xyz, vec2(u_planet.w), -1., rays) != 0)
 	{
@@ -68,8 +73,6 @@ float light(in vec3 pos)
 	float density = 0.;
 	for(int i = 0; i <count; i++)
 	{
-//		float ray_step = 4.;
-//		int step_num = int(rays[2*i+1] / ray_step) + 1;
 		int step_num = 6;
 		float ray_step = rays[2*i+1] / float(step_num);
 		vec3 p = pos -uLightRay * (rays[2*i]+0.5);
@@ -86,6 +89,7 @@ float light(in vec3 pos)
 	}
 
 	return exp(-density) * g_phase_factor;
+#endif
 }
 
 float SugerPowderEffect(vec3 pos)
