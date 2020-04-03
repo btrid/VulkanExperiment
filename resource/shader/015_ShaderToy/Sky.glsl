@@ -31,8 +31,8 @@ const vec4 u_planet = vec4(0., -u_planet_radius, 0, u_planet_radius);
 const vec4 u_cloud_inner = u_planet + vec4(0.,0.,0.,u_planet_cloud_begin);
 const vec4 u_cloud_outer = u_planet + vec4(0.,0.,0.,u_planet_cloud_end);
 const float u_cloud_area_inv = 1. / (u_planet_cloud_end - u_planet_cloud_begin);
-const float u_mapping = 0.5/u_cloud_outer.w;
-vec3 uLightRay = -normalize(vec3(0., 1., 1.));
+const float u_mapping = 1./u_cloud_outer.w;
+vec3 uLightRay = -normalize(vec3(0., 1., 0.));
 vec3 uLightColor = vec3(1.);
 float uAmbientPower = 0.2;
 
@@ -131,7 +131,8 @@ float band(in float start, in float peak, in float end, in float t){return smoot
 float band2(in float ls, in float le, in float hs, in float he, in float t){return smoothstep (ls, le, t) * (1. - smoothstep (hs, he, t));}
 float _band(in float ls, in float le, in float hs, in float he, in float t){return band2(ls, le, hs, he, t);}
 
-float henyeyGreenstein(float d, float g) { return ((1. - g*g) / pow((1. + g*g - 2.*g*d), 1.5)) / (4.*3.1415); }
+//float henyeyGreenstein(float d, float g) { return ((1. - g*g) / pow((1. + g*g - 2.*g*d), 1.5)) / (4.*3.1415); }
+float henyeyGreenstein(float d, float g) { return ((1. - g*g) / pow((1. + g*g - 2.*g*d), 1.5)) * 0.5; }
 float BeerLambert(float density){ return exp(-density);}
 float PowderSugarEffect(float density){ return 1. - exp(-density*2.);}
 float LightEnergy(float density, float henyeyGreensteinFactor)
@@ -143,10 +144,10 @@ float LightEnergy(float density, float henyeyGreensteinFactor)
 
 vec3 sampleWeather(vec3 pos)
 {
-	 return texture(s_weather_map, ((pos + constant.window*0.)* vec3(u_mapping, 1., u_mapping) + vec3(0.5, 0., 0.5)).xz).xyz; 
+	 return texture(s_weather_map, ((pos + constant.window*0.)* vec3(u_mapping, 1., u_mapping) * vec3(0.5, 1., 0.5) + vec3(0.5, 0., 0.5)).xz).xyz; 
 }
 float getCoverage(vec3 weather_data){ return saturate(weather_data.r); }
-float getPrecipitation(vec3 weather_data){ return mix(0., 1., weather_data.g) + 0.0001; }
+float getPrecipitation(vec3 weather_data){ return mix(0., 0.2, weather_data.g) + 0.001; }
 float getCloudType(vec3 weather_data){ return weather_data.b; }
 float heightFraction(vec3 pos) 
 {

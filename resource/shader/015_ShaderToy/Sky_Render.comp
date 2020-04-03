@@ -8,10 +8,9 @@
 layout (local_size_x = 32, local_size_y = 32) in;
 
 vec3 g_noise_kernel[4];
-float g_cam_phase_factor;
-float g_light_phase_factor;
-vec3 uCamDir;
+float g_phase_factor;
 vec3 uCamPos;
+vec3 uCamDir;
 void precompute()
 {
 	uCamPos = vec3(0., 1., 0.);
@@ -36,11 +35,10 @@ void precompute()
 
 	{
 //		uLightRay = normalize(vec3(s, c, 0.1));
-		uLightRay = normalize(vec3(0., -1., 12));
+//		uLightRay = normalize(vec3(0., -1., 12));
 	}
 
-	g_cam_phase_factor = henyeyGreenstein(dot(-uLightRay, uCamDir), 0.9);
-	g_light_phase_factor = henyeyGreenstein(dot(-uLightRay, -uLightRay), 0.2);
+	g_phase_factor = henyeyGreenstein(dot(-uLightRay, uCamDir), 0.2);
 
 	{
 		vec3 up = vec3(0., 1., 0.);
@@ -56,20 +54,13 @@ void precompute()
 	}
 }
 
-
-float henyeyGreensteinPhaseFunction(float lightDotEye, float g){ return ((1. - g*g) / pow((1. + g*g - 2.*g*lightDotEye), 1.5)) / (4.*3.1415); }
-
-float BeerLambert(float density, float precipitation){ return exp(-density * precipitation);}
-float PowderSugarEffect(float density, float precipitation){ return 1. - exp(-density * precipitation * 2.0);}
-float lightEnergy(float density, float light_density, float precipitation, float henyeyGreensteinFactor)
+float light(in vec3 pos)
 {
-	float beer_lambert = BeerLambert(density, precipitation);
-	float powder_sugar_effect = PowderSugarEffect(density, precipitation);
-	return 2. * beer_lambert * powder_sugar_effect * henyeyGreensteinFactor;
-}
+#if 1
+	vec3 p = vec3(pos.x, heightFraction(pos), pos.z) * vec3(u_mapping, 1., u_mapping) * vec3(0.5, 1., 0.5) + vec3(0.5, 0., 0.5);
+	return texture(s_shadow_map, p).x * g_phase_factor;
 
-float light(vec3 pos)
-{
+#else
 	vec4 rays;
 	if(intersectRayAtomEx(pos, -uLightRay, u_planet.xyz, vec2(u_planet.w), -1., rays) != 0)
 	{
@@ -77,20 +68,30 @@ float light(vec3 pos)
 		return 0.;
 	}
 
+	int count = intersectRayAtomEx(pos, -uLightRay, u_cloud_inner.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), -1., rays);
+
 	float density = 0.;
-	int step_num = 8;
-	float ray_step = (rays[1]-rays[0]) / float(step_num);
-	for(int i = 0; i < step_num; i++)
+	for(int i = 0; i <count; i++)
 	{
-		vec3 p = pos - uLightRay * (float(i)+0.5);
-		float height_frac = heightFraction(p);
-		vec3 weather_data = sampleWeather(p);
-		float d = cloud_density(p, weather_data, height_frac, 0.) * ray_step;
-		density += d;
+		int step_num = 6;
+		float ray_step = rays[2*i+1] / float(step_num);
+		vec3 p = pos -uLightRay * (rays[2*i]+0.5);
+		for(int s = 0; s < step_num; s++)
+		{
+			float height_frac = heightFraction(p);
+			vec3 weather_data = sampleWeather(p);
+			float d = cloud_density(p, weather_data, height_frac, 0.) * ray_step;
+
+			density = density + d*getPrecipitation(weather_data);
+			p = p - uLightRay * ray_step;
+		}
+
 	}
 
-	return exp(-density);
+	return exp(-density) * g_phase_factor;
+#endif
 }
+
 float SugerPowderEffect(vec3 pos)
 {
 	float density = 0.;
@@ -129,41 +130,34 @@ void main()
 	vec4 rays;
 	int count = intersectRayAtomEx(uCamPos, uCamDir, u_cloud_inner.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), distance_land, rays);
 
-	uint sampleCount = 16;
-	float density = 0.;
+	uint sampleCount = 128;
+	float transmittance = 1.;
 	vec3 color = vec3(0.);
 	for(int i = 0; i <count; i++)
 	{
-		vec3 begin = uCamPos + uCamDir * rays[i*2];
-		vec3 end = begin + uCamDir * rays[i*2+1];
 
-		float thickness = rays[i*2+1];
-		float rcpThickness = 1. / thickness;
-		sampleCount = uint(thickness)+1u;
-		float ray_step =  thickness / float(sampleCount);
+		vec3 pos = uCamPos + uCamDir * rays[i*2];
+		float ray_step = rays[i*2+1] / float(sampleCount);
 
-		vec3 pos = begin;
 		for(int s = 0; s < sampleCount; s++)
 		{
 			float height_frac = heightFraction(pos);
 			vec3 weather_data = sampleWeather(pos);
-			float d = cloud_density(pos, weather_data, height_frac, 0.) * ray_step;
-			density += d;
+			float d = cloud_density(pos, weather_data, height_frac, 0.);
 
 			float light = light(pos);
-			float lambert = BeerLambert(density);
-			float powder = SugerPowderEffect(pos)*0.5+0.5;
-			float e = light * lambert;
+			float e = light * d * transmittance;
 
 			color += e * vec3(1., 1., 1.);
-			float alpha = exp(-density);
-			if(alpha < 0.00001) { break; }
+
+			transmittance *= exp(-d*getPrecipitation(weather_data)*ray_step);
+			if(transmittance < 0.001) { break; }
 
 
-			pos += ray_step * uCamDir;
+			pos = pos + ray_step * uCamDir;
 		}
 	}
-	float alpha = min(1.-exp(-density), 1.);
+	float alpha = clamp(1.-transmittance, 0., 1.);
 	background_color = mix(background_color, color/(alpha+0.0001), alpha);
 
 	// tonemapping
