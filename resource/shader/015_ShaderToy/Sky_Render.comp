@@ -54,18 +54,6 @@ void precompute()
 	}
 }
 
-
-float henyeyGreensteinPhaseFunction(float lightDotEye, float g){ return ((1. - g*g) / pow((1. + g*g - 2.*g*lightDotEye), 1.5)) / (4.*3.1415); }
-
-float BeerLambert(float density, float precipitation){ return exp(-density * precipitation);}
-float PowderSugarEffect(float density, float precipitation){ return 1. - exp(-density * precipitation * 2.0);}
-float lightEnergy(float density, float light_density, float precipitation, float henyeyGreensteinFactor)
-{
-	float beer_lambert = BeerLambert(density, precipitation);
-	float powder_sugar_effect = PowderSugarEffect(density, precipitation);
-	return 2. * beer_lambert * powder_sugar_effect * henyeyGreensteinFactor;
-}
-
 float light(in vec3 pos)
 {
 	vec4 rays;
@@ -80,9 +68,11 @@ float light(in vec3 pos)
 	float density = 0.;
 	for(int i = 0; i <count; i++)
 	{
-		float ray_step = 4.;
-		int step_num = int(rays[2*i+1] / ray_step) + 1;
-		vec3 p = pos + (rays[2*i]+0.5) * -uLightRay;
+//		float ray_step = 4.;
+//		int step_num = int(rays[2*i+1] / ray_step) + 1;
+		int step_num = 6;
+		float ray_step = rays[2*i+1] / float(step_num);
+		vec3 p = pos -uLightRay * (rays[2*i]+0.5);
 		for(int s = 0; s < step_num; s++)
 		{
 			float height_frac = heightFraction(p);
@@ -136,7 +126,7 @@ void main()
 	vec4 rays;
 	int count = intersectRayAtomEx(uCamPos, uCamDir, u_cloud_inner.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), distance_land, rays);
 
-	uint sampleCount = 32;
+	uint sampleCount = 128;
 	float transmittance = 1.;
 	vec3 color = vec3(0.);
 	for(int i = 0; i <count; i++)
