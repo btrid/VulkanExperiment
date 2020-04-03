@@ -31,7 +31,6 @@ void main()
 	int count = intersectRayAtomEx(CamPos, CamDir, u_cloud_inner.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), -1, ray_segment);
 	int sampleCount = 128;
 	float transmittance = 1.;
-	float depth = 0.;
 	for(int i = 0; i <count; i++)
 	{
 		float step = (ray_segment[i*2+1]-ray_segment[i*2]) / float(sampleCount);
@@ -42,12 +41,10 @@ void main()
 			vec3 weather_data = sampleWeather(pos);
 			float density = cloud_density(pos, weather_data, height_frac, 0.);
 
-			depth = density > 0. ? depth + step*0.2 : 0.;
-			depth = saturate(depth);
-			transmittance *= exp(-density*getPrecipitation(weather_data));
+			transmittance *= exp(-density*getPrecipitation(weather_data)*step);
 
 			vec3 p = vec3(pos.x, float(s)/float(sampleCount), pos.z) * vec3(u_mapping, 1., u_mapping) * vec3(0.5, 1., 0.5) + vec3(0.5, 0., 0.5);// UV[0~1]
-			imageStore(i_shadow_map, ivec3(p*imageSize(i_shadow_map)), ivec4(vec2(transmittance, depth).xyxy*255.));
+			imageStore(i_shadow_map, ivec3(p*imageSize(i_shadow_map)), ivec4(vec2(transmittance).xxxx*255.));
 
 			pos = pos + CamDir * step;		
 		}
