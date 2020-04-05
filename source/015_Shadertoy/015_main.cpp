@@ -189,7 +189,7 @@ int main()
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0, "cmd_sky");
 				sky.executeShadow(cmd, app.m_window->getFrontBuffer());
-				sky.execute(cmd, app.m_window->getFrontBuffer());
+//				sky.execute(cmd, app.m_window->getFrontBuffer());
 //				sky.execute_reference(cmd, app.m_window->getFrontBuffer());
 //				sky.m_skynoise.execute_Render(context, cmd, app.m_window->getFrontBuffer());
 				cmd.end();

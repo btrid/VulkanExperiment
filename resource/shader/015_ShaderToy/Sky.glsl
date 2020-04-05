@@ -130,6 +130,7 @@ float remap(float original_value, float original_min, float original_max, float 
 float band(in float start, in float peak, in float end, in float t){return smoothstep (start, peak, t) * (1. - smoothstep (peak, end, t));}
 float band2(in float ls, in float le, in float hs, in float he, in float t){return smoothstep (ls, le, t) * (1. - smoothstep (hs, he, t));}
 float _band(in float ls, in float le, in float hs, in float he, in float t){return band2(ls, le, hs, he, t);}
+float atan2(in float y, in float x){return x == 0.0 ? sign(y)*3.14/2.:atan(y, x);}
 
 //float henyeyGreenstein(float d, float g) { return ((1. - g*g) / pow((1. + g*g - 2.*g*d), 1.5)) / (4.*3.1415); }
 float henyeyGreenstein(float d, float g) { return ((1. - g*g) / pow((1. + g*g - 2.*g*d), 1.5)) * 0.5; }
@@ -211,6 +212,20 @@ float cloud_density(vec3 pos, vec3 weather_data, float height_frac, float lod)
 	return saturate(final_cloud);
 
 }
+
+vec3 getAtmosphereUV(in vec3 pos)
+{
+	
+	vec3 n = normalize(pos - u_planet.xyz);
+	float u = (atan2(n.x, n.z) / 3.14) * 0.5 + 0.5;
+	float v = n.y * 0.5 + 0.5;
+//	float v = n.y; // 北半球
+	float w = heightFraction(pos);
+
+	return vec3(u,w,v);
+
+}
+
 
 #endif
 
