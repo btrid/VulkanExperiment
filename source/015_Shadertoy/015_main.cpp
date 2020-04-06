@@ -48,13 +48,15 @@ int intersectRayAtom(vec3 Pos, vec3 Dir, vec3 AtomPos, vec2 Area, vec4& OutDist)
 	vec4 rays = vec4(-1.f);
 	if (intersect.x && dist.y >= 0.f)
 	{
-		rays[count++] = glm::max(dist.x, 0.f);
-		rays[count++] = dist.y;
+		rays[count*2] = glm::max(dist.x, 0.f);
+		rays[count*2+1] = dist.y;
+		count++;
 	}
 	if (intersect.y && dist.w >= 0.f)
 	{
-		rays[count++] = intersect.x ? glm::max(dist.z, 0.f) : glm::max(dist.x, 0.f);
-		rays[count++] = dist.w;
+		rays[count*2] = intersect.x ? glm::max(dist.z, 0.f) : glm::max(dist.x, 0.f);
+		rays[count*2+1] = dist.w;
+		count++;
 	}
 	OutDist = rays;
 	return count;
@@ -79,10 +81,107 @@ std::array<vec3, 6> precomputeNoiseKernel(vec3 lightDirection)
 	return g_noise_kernel;
 }
 
+const float u_planet_radius = 1000.;
+const float u_planet_cloud_begin = 50.;
+const float u_planet_cloud_end = 50. + 32.;
+const vec4 u_planet = vec4(0., -u_planet_radius, 0, u_planet_radius);
+const vec4 u_cloud_inner = u_planet + vec4(0., 0., 0., u_planet_cloud_begin);
+const vec4 u_cloud_outer = u_planet + vec4(0., 0., 0., u_planet_cloud_end);
+const float u_cloud_area_inv = 1. / (u_planet_cloud_end - u_planet_cloud_begin);
+const float u_mapping = 1. / u_cloud_outer.w;
+
+float heightFraction(const vec3& pos)
+{
+	return (distance(pos, u_cloud_inner.xyz()) - u_cloud_inner.w)*u_cloud_area_inv;
+}
+
+vec3 getAtmosphereUV(const vec3& pos)
+{
+//	vec3 n = normalize(pos);
+//	float u = Mathf.Clamp01((Mathf.Atan2(d.z, d.x) / (Mathf.PI) + 1f) * .5f);
+//	float v = 0.5f - Mathf.Asin(d.y) / Mathf.PI;
+
+
+	float h = heightFraction(pos);
+	vec4 s = mix(u_cloud_inner, u_cloud_outer, h) - u_planet;
+
+	vec3 n = normalize(pos - vec3(0.f, s.w, 0.f));
+	float a = atan2(n.x, n.z);
+	float u = (a / 3.14f) * 0.5f + 0.5f;
+
+	float v = asin(n.y) / 3.14f + 0.5f; // 北半球
+//	float w = (pos.y - 32.f) / 32.f;
+
+	return vec3(u, h, v);
+
+}
+
 // https://github.com/erickTornero/realtime-volumetric-cloudscapes
 // https://bib.irb.hr/datoteka/949019.Final_0036470256_56.pdf
 int main()
 {
+	constexpr uvec3 reso = uvec3(32, 1, 32);
+	std::array<int, reso.x*reso.y*reso.z> b;
+	b.fill(0);
+	for (int x = 0; x < reso.x; x++)
+	for (int z = 0; z < reso.z; z++)
+	{
+		vec3 CamPos = vec3(0., 1., 0.);
+		vec3 CamDir = vec3(0., -1., 0.);
+
+		// カメラ位置の作成
+		{
+			vec2 ndc = (vec2(x, z) + vec2(0.5f, 0.5f)) / vec2(reso.x, reso.z);
+			{
+				float s = sin(ndc.x*6.28f);
+				float c = cos(ndc.x*6.28f);
+				vec3 dir = normalize(vec3(s, 0., c));
+
+				CamPos = dir * ndc.y / vec3(u_mapping, 1., u_mapping) - CamDir * 1100.f;
+
+			}
+
+			{
+				CamPos = vec3(ndc.x, 1.f, ndc.y) / vec3(u_mapping, 1., u_mapping) - CamDir * 1100.f;
+
+			}
+
+//			vec2 uv = vec2(CamPos.x, CamPos.z) * vec2(u_mapping, u_mapping) * vec2(0.5, 0.5) + vec2(0.5, 0.5);// UV[0~1]
+//			vec3 uvw = getAtmosphereUV(CamPos);
+//			vec2 uv = vec2(uvw.x, uvw.z);
+//			ivec2 index = ivec2(uv*vec2(reso.x, reso.z)) - 1;
+//			assert(b[z*reso.x*reso.y + x] == 0);
+//			b[index.y*reso.x + index.x]++;
+//			printf("[%3d:%3d] dir=[%3.2f, %3.2f] uv=[%3.2f, %3.2f] index=[%2d, %2d]\n", x, z, dir.x, dir.z, uv.x, uv.y, index.x, index.y);
+		}
+
+		// find nearest planet surface point
+		vec4 ray_segment;
+		int count = intersectRayAtom(CamPos, CamDir, u_planet.xyz(), vec2(u_cloud_inner.w, u_cloud_outer.w), ray_segment);
+		int sampleCount = reso.y;
+		float transmittance = 1.;
+		for (int i = 0; i < 1; i++)
+		{
+			float step = (ray_segment[i * 2 + 1]) / float(sampleCount);
+			vec3 pos = CamPos + CamDir * (ray_segment[i * 2]);
+			for (int y = 0; y < sampleCount; y++)
+			{
+				float t = float(y) / float(sampleCount);
+//				vec3 uv = vec3(pos.x, t, pos.z) * vec3(u_mapping, 1., u_mapping) * vec3(0.5, 1., 0.5) + vec3(0.5, 0., 0.5);// UV[0~1]
+
+				vec3 uv = getAtmosphereUV(pos); uv.y = t;
+				ivec3 index = ivec3(uv*vec3(reso));
+//				assert(b[z*reso.x*reso.y + x] == 0);
+				b[index.z*reso.x*reso.y + index.y*reso.x + index.x]++;
+
+				//				ivec3 index = ivec3(round(uv*vec3(reso)));
+				printf("[%03d:%03d] pos=[%5.2f, %5.2f, %5.2f] [%5.2f, %5.2f, %5.2f] [%3d, %3d, %3d]\n", i, y, pos.x, pos.y, pos.z, uv.x, uv.y, uv.z, index.x, index.y, index.z);
+	//			b[z*reso.x*reso.y + y*reso.x + x]++;
+
+				pos = pos + CamDir * step;
+			}
+		}
+	}
 
 	{
 		vec3 f = normalize(vec3(1.f));
@@ -120,7 +219,7 @@ int main()
 		vec4 dist;
 		int count = 0;
 		int c = 1;
-#define debug_print printf("pattern%d\n", c); for (int i = 0; i < count; i += 2) { printf(" %d %5.2f\n", i, dist[i]); printf("   %5.2f\n", dist[i + 1]); } c++
+#define debug_print printf("pattern%d\n", c); for (int i = 0; i < count; i++) { printf(" %d %5.2f\n", i, dist[i]); printf("   %5.2f\n", dist[i + 1]); } c++
 		count = intersectRayAtom(vec3(0.f, 200.f, 0.f), vec3(0.f, -1.f, 0.f), u_planet, vec2(50.f, 150.f), dist); // 宇宙から地上、地上から宇宙へ
 		debug_print;
 		count = intersectRayAtom(vec3(0.f, 100.f, 0.f), vec3(0.f, -1.f, 0.f), u_planet.xyz(), vec2(50.f, 150.f), dist); // 大気から地上、地上から宇宙へ
