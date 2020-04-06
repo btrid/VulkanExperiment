@@ -97,20 +97,16 @@ float heightFraction(const vec3& pos)
 
 vec3 getAtmosphereUV(const vec3& pos)
 {
-//	vec3 n = normalize(pos);
-//	float u = Mathf.Clamp01((Mathf.Atan2(d.z, d.x) / (Mathf.PI) + 1f) * .5f);
-//	float v = 0.5f - Mathf.Asin(d.y) / Mathf.PI;
-
 
 	float h = heightFraction(pos);
 	vec4 s = mix(u_cloud_inner, u_cloud_outer, h) - u_planet;
 
-	vec3 n = normalize(pos - vec3(0.f, s.w, 0.f));
-	float a = atan2(n.x, n.z);
+//	vec3 n = normalize(pos - vec3(0.f, s.w, 0.f));
+	vec2 n = normalize(vec2(pos.x, pos.z));
+	float a = atan2(n.y, n.x);
 	float u = (a / 3.14f) * 0.5f + 0.5f;
 
 	float v = asin(n.y) / 3.14f + 0.5f; // ñkîºãÖ
-//	float w = (pos.y - 32.f) / 32.f;
 
 	return vec3(u, h, v);
 
@@ -131,19 +127,19 @@ int main()
 
 		// ÉJÉÅÉâà íuÇÃçÏê¨
 		{
-			vec2 ndc = (vec2(x, z) + vec2(0.5f, 0.5f)) / vec2(reso.x, reso.z);
 			{
-				float s = sin(ndc.x*6.28f);
-				float c = cos(ndc.x*6.28f);
-				vec3 dir = normalize(vec3(s, 0., c));
-
-				CamPos = dir * ndc.y / vec3(u_mapping, 1., u_mapping) - CamDir * 1100.f;
+// 				vec2 ndc = (vec2(x, z) + vec2(0.5f, 0.5f)) / vec2(reso.x, reso.z);
+// 				float s = sin(ndc.x*6.28f);
+// 				float c = cos(ndc.x*6.28f);
+// 				vec3 dir = normalize(vec3(s, 0., c));
+// 				CamPos = dir * ndc.y * vec3(u_cloud_outer.w, 1., u_cloud_outer.w) - CamDir * 1100.f;
 
 			}
 
 			{
-				CamPos = vec3(ndc.x, 1.f, ndc.y) / vec3(u_mapping, 1., u_mapping) - CamDir * 1100.f;
-
+				vec2 ndc = (vec2(x, z) + vec2(0.5f, 0.5f)) / vec2(reso.x, reso.z);
+				ndc = ndc * 2.f - 1.f;
+				CamPos = vec3(ndc.x, 0.f, ndc.y) * vec3(u_cloud_outer.w, 1., u_cloud_outer.w) - CamDir * 1100.f;
 			}
 
 //			vec2 uv = vec2(CamPos.x, CamPos.z) * vec2(u_mapping, u_mapping) * vec2(0.5, 0.5) + vec2(0.5, 0.5);// UV[0~1]
@@ -160,26 +156,29 @@ int main()
 		int count = intersectRayAtom(CamPos, CamDir, u_planet.xyz(), vec2(u_cloud_inner.w, u_cloud_outer.w), ray_segment);
 		int sampleCount = reso.y;
 		float transmittance = 1.;
-		for (int i = 0; i < 1; i++)
+		for (int i = 0; i < count; i++)
 		{
-			float step = (ray_segment[i * 2 + 1]) / float(sampleCount);
-			vec3 pos = CamPos + CamDir * (ray_segment[i * 2]);
+			ray_segment[i * 2 + 1] = glm::min(ray_segment[i * 2 + 1], 1100.f);
+			float step = (ray_segment[i*2+1] - ray_segment[i*2]) / float(sampleCount);
+			vec3 pos = CamPos + CamDir * (ray_segment[i*2]+step*0.5f);
 			for (int y = 0; y < sampleCount; y++)
 			{
 				float t = float(y) / float(sampleCount);
 //				vec3 uv = vec3(pos.x, t, pos.z) * vec3(u_mapping, 1., u_mapping) * vec3(0.5, 1., 0.5) + vec3(0.5, 0., 0.5);// UV[0~1]
 
-				vec3 uv = getAtmosphereUV(pos); uv.y = t;
-				ivec3 index = ivec3(uv*vec3(reso));
-//				assert(b[z*reso.x*reso.y + x] == 0);
-				b[index.z*reso.x*reso.y + index.y*reso.x + index.x]++;
+//				vec3 uv = getAtmosphereUV(pos);
+//				ivec3 index = ivec3(uv*vec3(reso));
 
-				//				ivec3 index = ivec3(round(uv*vec3(reso)));
-				printf("[%03d:%03d] pos=[%5.2f, %5.2f, %5.2f] [%5.2f, %5.2f, %5.2f] [%3d, %3d, %3d]\n", i, y, pos.x, pos.y, pos.z, uv.x, uv.y, uv.z, index.x, index.y, index.z);
-	//			b[z*reso.x*reso.y + y*reso.x + x]++;
+				vec3 uv = vec3(pos.x, t, pos.z) * vec3(u_mapping, 1., u_mapping) * vec3(0.5, 1., 0.5) + vec3(0.5, 0., 0.5);// UV[0~1]
+				ivec3 index = ivec3(round(uv*vec3(reso)));
+				printf("[%2d,%2d] [%5.2f, %5.2f, %5.2f] [%3d, %3d, %3d]\n", x, z, uv.x, uv.y, uv.z, index.x, index.y, index.z);
+
+//				assert(b[z*reso.x*reso.y + x] == 0);
+//				b[index.z*reso.x*reso.y + index.y*reso.x + index.x]++;
 
 				pos = pos + CamDir * step;
 			}
+			break;
 		}
 	}
 
