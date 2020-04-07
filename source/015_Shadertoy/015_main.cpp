@@ -255,7 +255,6 @@ int main()
 		auto rot = normalize(cross(vec3(0.f, 1.f, 0.f), normalize(vec3(dir.x, 0.f, dir.z))));
 		int a = 0;
 	}
-
 	app::AppDescriptor app_desc;
 	app_desc.m_window_size = uvec2(1024, 1024);
 	app::App app(app_desc);
