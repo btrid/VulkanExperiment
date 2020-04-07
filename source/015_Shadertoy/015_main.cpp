@@ -116,6 +116,23 @@ vec3 getAtmosphereUV(const vec3& pos)
 // https://bib.irb.hr/datoteka/949019.Final_0036470256_56.pdf
 int main()
 {
+// 	GLM_FUNC_QUALIFIER genType reflect(genType const& I, genType const& N)
+// 	{
+// 		return I - N * dot(N, I) * genType(2);
+// 	}
+	{
+		auto f = normalize(vec3(0.f, 0.f, 1.f));
+		vec3 u = vec3(0., 1., 0.);
+		vec3 s = cross(f, normalize(u));
+		s = dot(s, s) < 0.00001 ? vec3(0., 0., 1.) : normalize(s);
+		u = normalize(cross(s, f));
+
+		vec3 p = vec3(51.f, 12.f, 120.f);
+		vec3 pf = f*dot(p, f);
+		vec3 pu = u*dot(p, u);
+		vec3 ps = s*dot(p, s);
+		int a = 0;
+	}
 	constexpr uvec3 reso = uvec3(32, 1, 32);
 	std::array<int, reso.x*reso.y*reso.z> b;
 	b.fill(0);
@@ -286,7 +303,7 @@ int main()
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0, "cmd_sky");
 				sky.executeShadow(cmd, app.m_window->getFrontBuffer());
-//				sky.execute(cmd, app.m_window->getFrontBuffer());
+				sky.execute(cmd, app.m_window->getFrontBuffer());
 //				sky.execute_reference(cmd, app.m_window->getFrontBuffer());
 //				sky.m_skynoise.execute_Render(context, cmd, app.m_window->getFrontBuffer());
 				cmd.end();

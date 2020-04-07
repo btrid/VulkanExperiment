@@ -148,7 +148,7 @@ vec3 sampleWeather(vec3 pos)
 	 return texture(s_weather_map, ((pos + constant.window*0.)* vec3(u_mapping, 1., u_mapping) * vec3(0.5, 1., 0.5) + vec3(0.5, 0., 0.5)).xz).xyz; 
 }
 float getCoverage(vec3 weather_data){ return saturate(weather_data.r); }
-float getPrecipitation(vec3 weather_data){ return mix(0., 0.2, weather_data.g) + 0.001; }
+float getPrecipitation(vec3 weather_data){ return mix(0., 0.5, weather_data.g) + 0.001; }
 float getCloudType(vec3 weather_data){ return weather_data.b; }
 float heightFraction(vec3 pos) 
 {
