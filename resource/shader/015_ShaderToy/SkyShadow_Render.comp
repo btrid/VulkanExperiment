@@ -11,7 +11,7 @@ void main()
 //	vec4 s = texture(s_shadow_map, vec3(ndc.x, 1.-mod(constant.window.x, 1.), ndc.y));
 //	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(s.xxx, 1.));
 
-	float y = mod(constant.window.x*0.2, 1.);
+	float y = mod(constant.window.x*0.1, 1.);
 	vec2 uv = vec2(gl_GlobalInvocationID.xy+0.5) / vec2(gl_NumWorkGroups.xy*gl_WorkGroupSize.xy);
 //	vec2 ndc = vec2(gl_GlobalInvocationID.xy) / vec2(reso.xy);
 //	float s = sin(ndc.x*6.28);

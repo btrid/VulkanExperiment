@@ -580,7 +580,7 @@ struct Sky
 
 			{
 				vk::ImageCreateInfo image_info;
-				image_info.setExtent(vk::Extent3D(256, 32, 256));
+				image_info.setExtent(vk::Extent3D(256*4, 32*2, 256*4));
 				image_info.setArrayLayers(1);
 				image_info.setFormat(vk::Format::eR8G8Unorm);
 				image_info.setImageType(vk::ImageType::e3D);
