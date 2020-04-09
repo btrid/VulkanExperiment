@@ -24,7 +24,7 @@ void main()
 		side = dot(side, side) < 0.00001 ? vec3(0., 0., 1.) : normalize(side);
 		up = normalize(cross(side, CamDir));
 
-		CamPos = side*ndc.x + up*ndc.y -CamDir*2000.;
+		CamPos = side*ndc.x + up*ndc.y -CamDir*3000. + u_planet.xyz;
 
 	}
 
@@ -49,13 +49,14 @@ void main()
 			float t = float(s)/float(sampleCount);
 			vec3 uv = vec3(pos.x, t, pos.z) * vec3(u_mapping, 1., u_mapping) * vec3(0.5, 1., 0.5) + vec3(0.5, 0., 0.5);// UV[0~1]
 
-			imageStore(i_shadow_map, ivec3(uv*reso), ivec4(vec2(transmittance).xxxx*255.));
+			imageStore(i_shadow_map, ivec3(gl_GlobalInvocationID.x, s, gl_GlobalInvocationID.y), ivec4(vec2(transmittance).xxxx*255.));
 
 			pos = pos + CamDir * step;
 		}
 		break;
 	}
 
+#if 0
 	if(count==0)
 	{
 		for(int s = 0; s < sampleCount; s++)
@@ -63,5 +64,5 @@ void main()
 			imageStore(i_shadow_map, ivec3(gl_GlobalInvocationID.x, s, gl_GlobalInvocationID.y), ivec4(s/float(sampleCount) * 255.));
 		}
 	}
-
+#endif
 }

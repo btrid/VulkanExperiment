@@ -57,12 +57,9 @@ void precompute()
 float light(in vec3 pos)
 {
 #if 1
-	vec4 rays;
-	int count = intersectRayAtomEx(pos-uLightRay*1000., uLightRay, u_cloud_inner.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), -1, rays);
-	if(count == 0){ return 100.;}
 
 	vec4 rays1;
-	intersectRayAtomEx(pos, uLightRay, u_cloud_inner.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), -1, rays1);
+	if(intersectRayAtomEx(pos, uLightRay, u_cloud_inner.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), -1, rays1)==0){return 0.;}
 	float a = rays1[1]-rays1[0];
 
 	vec4 rays2;

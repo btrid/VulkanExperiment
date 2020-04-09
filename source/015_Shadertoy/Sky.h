@@ -580,7 +580,7 @@ struct Sky
 
 			{
 				vk::ImageCreateInfo image_info;
-				image_info.setExtent(vk::Extent3D(256*4, 32*2, 256*4));
+				image_info.setExtent(vk::Extent3D(256, 32, 256));
 				image_info.setArrayLayers(1);
 				image_info.setFormat(vk::Format::eR8G8Unorm);
 				image_info.setImageType(vk::ImageType::e3D);
@@ -953,9 +953,9 @@ struct Sky
 			cmd.dispatch(num.x, num.y, num.z);
 		}
 
-		_label.insert("render transmittance");
-		{
-			{
+// 		_label.insert("render transmittance");
+// 		{
+// 			{
 				std::array<vk::ImageMemoryBarrier, 2> image_barrier;
 				image_barrier[0].setImage(m_image_shadow.get());
 				image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
@@ -969,12 +969,12 @@ struct Sky
 				image_barrier[1].setDstAccessMask(vk::AccessFlagBits::eShaderWrite);
 
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
-			}
-
+// 			}
+// 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_SkyShadow_Render_CS].get());
 			auto num = app::calcDipatchGroups(uvec3(1024, 1024, 1), uvec3(32, 32, 1));
 			cmd.dispatch(num.x, num.y, num.z);
-		}
+// 		}
 	}
 
 	void _executeUpsampling(vk::CommandBuffer &cmd, const std::shared_ptr<RenderTarget>& render_target)
