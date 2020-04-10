@@ -40,9 +40,9 @@ void precompute()
 //		uLightRay = normalize(vec3(0., -1., 12));
 
 		g_light_up = vec3(0., 0., 1.); 
-		g_light_side = cross(uLightRay, g_light_up);
+		g_light_side = cross(g_light_up, uLightRay);
 		g_light_side = dot(g_light_side, g_light_side) < 0.00001 ? vec3(0., 1., 0.) : normalize(g_light_side);
-		g_light_up = normalize(cross(g_light_side, uLightRay));
+		g_light_up = normalize(cross(uLightRay, g_light_side));
 
 	}
 
@@ -74,20 +74,11 @@ float light(in vec3 pos)
 	float b = rays[1]-rays[0];
 	float t = rays[1] / (a+b);
 
+	vec3 p = pos - u_planet.xyz;
+	
+	vec3 uv = vec3(dot(p, g_light_side), t, dot(p, g_light_up)) * vec3(u_mapping, 1., u_mapping) * vec3(0.5, 1., 0.5) + vec3(0.5, 0., 0.5);
 
-	pos -= u_cloud_inner.xyz;
-	vec3 pf = uLightRay*dot(pos, uLightRay);
-	vec3 pu = g_light_up*dot(pos, g_light_up);
-	vec3 ps = g_light_side*dot(pos, g_light_side);
-//	pos.y = 0.;
-//	pos -= pf;
-
-//	vec3 p = vec3(pos.x, t, pos.z) * vec3(u_mapping, 1., u_mapping) * vec3(0.5, 1., 0.5) + vec3(0.5, 0., 0.5);
-	vec3 p = vec3(dot(pos, g_light_side), t, dot(pos, g_light_up)) * vec3(u_mapping, 1., u_mapping) * vec3(0.5, 1., 0.5) + vec3(0.5, 0., 0.5);
-//	if(p.x<0.5||p.x>1.){ return 0.; }
-//	if(p.z<0.||p.z>0.5){ return 0.; }
-//	return 1.;
-	return texture(s_shadow_map, p).x * g_phase_factor;
+	return texture(s_shadow_map, uv).x * g_phase_factor;
 
 #else
 	vec4 rays;

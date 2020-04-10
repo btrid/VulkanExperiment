@@ -150,7 +150,8 @@ int main()
 	constexpr uvec3 reso = uvec3(32, 1, 32);
 
 	vec3 CamPos = vec3(0., 1., 0.);
-	vec3 CamDir = normalize(vec3(0., -1., 1.));
+	vec3 CamDir = normalize(vec3(0., -1., 0.));
+	vec3 g_light_foward = normalize(vec3(0., -1., 100.));
 	vec3 g_light_up;
 	vec3 g_light_side;
 	{
