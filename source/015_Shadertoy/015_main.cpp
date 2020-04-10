@@ -123,79 +123,76 @@ int main()
 	{
 		auto f = normalize(vec3(0.f, 1.f, 1.f));
 		vec3 u = vec3(0., 1., 0.);
-		vec3 s = cross(f, normalize(u));
+		vec3 s = cross(normalize(u), f);
 		s = dot(s, s) < 0.00001 ? vec3(0., 0., 1.) : normalize(s);
 		u = normalize(cross(s, f));
 
-		vec3 p = vec3(0.f, 60.f, 120.f);
+		vec3 p = vec3(700.f, 200.f, 700.f);
+		float fd = dot(normalize(p), f);
+		float ud = dot(normalize(p), u);
+		float sd = dot(normalize(p), s);
 		vec3 pf = f*dot(p, f);
 		vec3 pu = u*dot(p, u);
 		vec3 ps = s*dot(p, s);
 		vec3 pf2 = f*p*dot(normalize(p), f);
 		vec3 pu2 = u*p*dot(normalize(p), u);
 		vec3 ps2 = s*p*dot(normalize(p), s);
+		auto ppp = p - pf;
+		auto p3 = pf + pu + ps;
+
+		vec3 p2 = p - pf;
+		float p2ud = dot(normalize(p2), u);
+		float p2sd = dot(normalize(p2), s);
+		vec3 p2u = u*p2ud;
+		vec3 p2s = s*p2sd;
 		int a = 0;
 	}
 	constexpr uvec3 reso = uvec3(32, 1, 32);
-	std::array<int, reso.x*reso.y*reso.z> b;
-	b.fill(0);
-	for (int x = 0; x < reso.x; x++)
-	for (int z = 0; z < reso.z; z++)
+
+	vec3 CamPos = vec3(0., 1., 0.);
+	vec3 CamDir = normalize(vec3(0., -1., 1.));
+	vec3 g_light_up;
+	vec3 g_light_side;
 	{
-		vec3 CamPos = vec3(0., 1., 0.);
-		vec3 CamDir = vec3(0., -1., 0.);
+		g_light_up = vec3(0., 0., 1.);
+		g_light_side = cross(g_light_up, CamDir);
+		g_light_side = dot(g_light_side, g_light_side) < 0.00001f ? vec3(0., 1., 0.) : normalize(g_light_side);
+		g_light_up = cross(CamDir, g_light_side);
 
+	}
+	for (int z = 0; z < reso.z; z++)
+	for (int x = 0; x < reso.x; x++)
+	{
 		// ƒJƒƒ‰ˆÊ’u‚Ìì¬
-		{
-			{
-// 				vec2 ndc = (vec2(x, z) + vec2(0.5f, 0.5f)) / vec2(reso.x, reso.z);
-// 				float s = sin(ndc.x*6.28f);
-// 				float c = cos(ndc.x*6.28f);
-// 				vec3 dir = normalize(vec3(s, 0., c));
-// 				CamPos = dir * ndc.y * vec3(u_cloud_outer.w, 1., u_cloud_outer.w) - CamDir * 1100.f;
+		vec2 ndc = (vec2(x, z) + vec2(0.5f, 0.5f)) / vec2(reso.x, reso.z);
+		ndc = ndc * 2.f - 1.f;
 
-			}
-
-			{
-				vec2 ndc = (vec2(x, z) + vec2(0.5f, 0.5f)) / vec2(reso.x, reso.z);
-				ndc = ndc * 2.f - 1.f;
-				CamPos = vec3(ndc.x, 0.f, ndc.y) * vec3(u_cloud_outer.w, 1., u_cloud_outer.w) - CamDir * 1100.f;
-			}
-
-//			vec2 uv = vec2(CamPos.x, CamPos.z) * vec2(u_mapping, u_mapping) * vec2(0.5, 0.5) + vec2(0.5, 0.5);// UV[0~1]
-//			vec3 uvw = getAtmosphereUV(CamPos);
-//			vec2 uv = vec2(uvw.x, uvw.z);
-//			ivec2 index = ivec2(uv*vec2(reso.x, reso.z)) - 1;
-//			assert(b[z*reso.x*reso.y + x] == 0);
-//			b[index.y*reso.x + index.x]++;
-//			printf("[%3d:%3d] dir=[%3.2f, %3.2f] uv=[%3.2f, %3.2f] index=[%2d, %2d]\n", x, z, dir.x, dir.z, uv.x, uv.y, index.x, index.y);
-		}
+		CamPos = u_planet.xyz() - CamDir * (u_cloud_outer.w+3000.f);
+		CamPos += (ndc.x*g_light_side + ndc.y*g_light_up) * u_cloud_outer.w;
 
 		// find nearest planet surface point
-		vec4 ray_segment;
-		int count = intersectRayAtom(CamPos, CamDir, u_planet.xyz(), vec2(u_cloud_inner.w, u_cloud_outer.w), ray_segment);
+		vec4 rays;
+		int count = intersectRayAtom(CamPos, CamDir, u_planet.xyz(), vec2(u_cloud_inner.w, u_cloud_outer.w), rays);
 		int sampleCount = reso.y;
 		float transmittance = 1.;
 		for (int i = 0; i < count; i++)
 		{
-			ray_segment[i * 2 + 1] = glm::min(ray_segment[i * 2 + 1], 1100.f);
-			float step = (ray_segment[i*2+1] - ray_segment[i*2]) / float(sampleCount);
-			vec3 pos = CamPos + CamDir * (ray_segment[i*2]+step*0.5f);
-			for (int y = 0; y < sampleCount; y++)
+			float step = (rays[i*2+1] - rays[i*2]) / float(sampleCount);
+			vec3 pos = CamPos + CamDir * (rays[i*2]+step*0.5f);
+//			for (int y = 0; y < sampleCount; y++)
 			{
-				float t = float(y) / float(sampleCount);
-//				vec3 uv = vec3(pos.x, t, pos.z) * vec3(u_mapping, 1., u_mapping) * vec3(0.5, 1., 0.5) + vec3(0.5, 0., 0.5);// UV[0~1]
+				vec4 rays;
+				if (intersectRayAtom(pos, CamDir, u_cloud_inner.xyz(), vec2(u_cloud_inner.w, u_cloud_outer.w), rays) == 0) { continue; }
+				float a = rays[1] - rays[0];
 
-//				vec3 uv = getAtmosphereUV(pos);
-//				ivec3 index = ivec3(uv*vec3(reso));
+				intersectRayAtom(pos, -CamDir, u_cloud_inner.xyz(), vec2(u_cloud_inner.w, u_cloud_outer.w), rays);
+				float b = rays[1] - rays[0];
+				float t = rays[1] / (a + b);
 
-				vec3 uv = vec3(pos.x, t, pos.z) * vec3(u_mapping, 1., u_mapping) * vec3(0.5, 1., 0.5) + vec3(0.5, 0., 0.5);// UV[0~1]
-				ivec3 index = ivec3(round(uv*vec3(reso)));
-				printf("[%2d,%2d] [%5.2f, %5.2f, %5.2f] [%3d, %3d, %3d]\n", x, z, uv.x, uv.y, uv.z, index.x, index.y, index.z);
-
-//				assert(b[z*reso.x*reso.y + x] == 0);
-//				b[index.z*reso.x*reso.y + index.y*reso.x + index.x]++;
-
+				vec3 p = pos - u_planet.xyz();
+				
+				vec3 uv = vec3(dot(p, g_light_side), t, dot(p, g_light_up)) * vec3(u_mapping, 1., u_mapping) * vec3(0.5, 1., 0.5) + vec3(0.5, 0., 0.5);
+				printf("[%2d,%2d] uv=[%5.3f, %5.3f, %5.3f]\n", x, z, uv.x, uv.y, uv.z);
 				pos = pos + CamDir * step;
 			}
 			break;
@@ -306,7 +303,7 @@ int main()
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0, "cmd_sky");
 				sky.executeShadow(cmd, app.m_window->getFrontBuffer());
-//				sky.execute(cmd, app.m_window->getFrontBuffer());
+				sky.execute(cmd, app.m_window->getFrontBuffer());
 //				sky.execute_reference(cmd, app.m_window->getFrontBuffer());
 //				sky.m_skynoise.execute_Render(context, cmd, app.m_window->getFrontBuffer());
 				cmd.end();
