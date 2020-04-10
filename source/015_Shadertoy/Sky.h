@@ -494,6 +494,11 @@ struct SkyNoise
 };
 struct Sky
 {
+	struct Constant
+	{
+		vec4 window;
+		vec4 light_front;
+	};
 	enum Shader
 	{
 		Shader_SkyReference_CS,
@@ -765,7 +770,7 @@ struct Sky
 					m_skynoise.m_descriptor_set_layout.get(),
 				};
 				vk::PushConstantRange ranges[] = {
-					vk::PushConstantRange().setSize(12).setStageFlags(vk::ShaderStageFlagBits::eCompute),
+					vk::PushConstantRange().setSize(64).setStageFlags(vk::ShaderStageFlagBits::eCompute),
 				};
 
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
@@ -840,7 +845,13 @@ struct Sky
 			};
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Sky_CS].get(), 0, array_length(descs), descs, 0, nullptr);
 
-			cmd.pushConstants<vec3>(m_pipeline_layout[PipelineLayout_Sky_CS].get(), vk::ShaderStageFlagBits::eCompute, 0, vec3(window));
+			float c = cos(window);
+			float s = sin(window);
+			auto LightRay = normalize(vec3(s, c, 0.1));	
+			Constant constant;
+			constant.window = vec4(window);
+			constant.light_front = vec4(LightRay, 0.f);
+			cmd.pushConstants<Constant>(m_pipeline_layout[PipelineLayout_Sky_CS].get(), vk::ShaderStageFlagBits::eCompute, 0, constant);
 
 		}
 
@@ -886,7 +897,13 @@ struct Sky
 			};
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Sky_CS].get(), 0, array_length(descs), descs, 0, nullptr);
 
-			cmd.pushConstants<vec3>(m_pipeline_layout[PipelineLayout_Sky_CS].get(), vk::ShaderStageFlagBits::eCompute, 0, window);
+			float c = cos(sGlobal::Order().getTotalTime());
+			float s = sin(sGlobal::Order().getTotalTime());
+			auto LightRay = normalize(vec3(s, c, 0.1));
+			Constant constant;
+			constant.window = vec4(window, 0.f);
+			constant.light_front = vec4(LightRay, 0.f);
+			cmd.pushConstants<Constant>(m_pipeline_layout[PipelineLayout_Sky_CS].get(), vk::ShaderStageFlagBits::eCompute, 0, constant);
 
 		}
 
@@ -928,8 +945,13 @@ struct Sky
 			};
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Sky_CS].get(), 0, array_length(descs), descs, 0, nullptr);
 
-			auto window = vec3(sGlobal::Order().getTotalTime()) * vec3(0.5f, 0.f, 0.25f);
-			cmd.pushConstants<vec3>(m_pipeline_layout[PipelineLayout_Sky_CS].get(), vk::ShaderStageFlagBits::eCompute, 0, window);
+			float c = cos(sGlobal::Order().getTotalTime());
+			float s = sin(sGlobal::Order().getTotalTime());
+			auto LightRay = normalize(vec3(s, c, 0.1));
+			Constant constant;
+			constant.window = vec4(sGlobal::Order().getTotalTime()) * vec4(0.5f, 0.f, 0.25f, 0.f);
+			constant.light_front = vec4(LightRay, 0.f);
+			cmd.pushConstants<Constant>(m_pipeline_layout[PipelineLayout_Sky_CS].get(), vk::ShaderStageFlagBits::eCompute, 0, constant);
 
 		}
 

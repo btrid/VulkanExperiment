@@ -150,15 +150,15 @@ int main()
 	constexpr uvec3 reso = uvec3(32, 1, 32);
 
 	vec3 CamPos = vec3(0., 1., 0.);
-	vec3 CamDir = normalize(vec3(0., -1., 0.));
-	vec3 g_light_foward = normalize(vec3(0., -1., 100.));
+	vec3 CamDir = normalize(vec3(0., 1., 1.));
+	vec3 g_light_foward = normalize(vec3(0., -1., -100.));
 	vec3 g_light_up;
 	vec3 g_light_side;
 	{
 		g_light_up = vec3(0., 0., 1.);
-		g_light_side = cross(g_light_up, CamDir);
+		g_light_side = cross(g_light_up, g_light_foward);
 		g_light_side = dot(g_light_side, g_light_side) < 0.00001f ? vec3(0., 1., 0.) : normalize(g_light_side);
-		g_light_up = cross(CamDir, g_light_side);
+		g_light_up = cross(g_light_foward, g_light_side);
 
 	}
 	for (int z = 0; z < reso.z; z++)
@@ -170,6 +170,9 @@ int main()
 
 		CamPos = u_planet.xyz() - CamDir * (u_cloud_outer.w+3000.f);
 		CamPos += (ndc.x*g_light_side + ndc.y*g_light_up) * u_cloud_outer.w;
+
+		CamPos = vec3(400.);
+		CamDir = normalize(-CamPos - vec3(0., 500., 0.));
 
 		// find nearest planet surface point
 		vec4 rays;
@@ -183,10 +186,10 @@ int main()
 //			for (int y = 0; y < sampleCount; y++)
 			{
 				vec4 rays;
-				if (intersectRayAtom(pos, CamDir, u_cloud_inner.xyz(), vec2(u_cloud_inner.w, u_cloud_outer.w), rays) == 0) { continue; }
+				if (intersectRayAtom(pos, g_light_foward, u_cloud_inner.xyz(), vec2(u_cloud_inner.w, u_cloud_outer.w), rays) == 0) { continue; }
 				float a = rays[1] - rays[0];
 
-				intersectRayAtom(pos, -CamDir, u_cloud_inner.xyz(), vec2(u_cloud_inner.w, u_cloud_outer.w), rays);
+				intersectRayAtom(pos, -g_light_foward, u_cloud_inner.xyz(), vec2(u_cloud_inner.w, u_cloud_outer.w), rays);
 				float b = rays[1] - rays[0];
 				float t = rays[1] / (a + b);
 

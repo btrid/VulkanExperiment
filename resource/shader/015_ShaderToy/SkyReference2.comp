@@ -82,10 +82,10 @@ void precompute()
 
 	{
 //		uLightRay = normalize(vec3(s, c, 0.1));
-		uLightRay = normalize(vec3(0., -1., 12));
+//		uLightRay = normalize(vec3(0., -1., 12));
 		float c = cos(constant.window.z);
 		float s = sin(constant.window.z);
-		uLightRay = normalize(vec3(s, c, 0.1));	
+//		uLightRay = normalize(vec3(s, c, 0.1));	
 	}
 
 	g_cam_phase_factor = henyeyGreenstein(dot(-uLightRay, uCamDir), 0.2);

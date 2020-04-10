@@ -21,6 +21,7 @@ layout(set=USE_Sky, binding=11, rgba16) uniform image2D i_render_map;
 layout(push_constant) uniform Input
 {
 	vec3 window;
+	vec4 light_front;
 } constant;
 
 
@@ -32,7 +33,8 @@ const vec4 u_cloud_inner = u_planet + vec4(0.,0.,0.,u_planet_cloud_begin);
 const vec4 u_cloud_outer = u_planet + vec4(0.,0.,0.,u_planet_cloud_end);
 const float u_cloud_area_inv = 1. / (u_planet_cloud_end - u_planet_cloud_begin);
 const float u_mapping = 1./u_cloud_outer.w;
-vec3 uLightRay = -normalize(vec3(0., 1., 1.));
+//vec3 uLightRay = -normalize(vec3(0., 1., 1.));
+#define uLightRay constant.light_front.xyz
 vec3 uLightColor = vec3(1.);
 float uAmbientPower = 0.2;
 
