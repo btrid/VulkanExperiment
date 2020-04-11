@@ -69,9 +69,15 @@ void precompute()
 
 float light(in vec3 pos)
 {
-#if 0
+#if 1
 
 	vec4 rays;
+	if(intersectRayAtomEx(pos, -uLightRay, u_planet.xyz, vec2(u_planet.w), -1., rays) != 0)
+	{
+		// 星の影
+		return 0.;
+	}
+
 	if(intersectRayAtomEx(pos, uLightRay, u_cloud_inner.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), -1, rays)==0){return 0.;}
 	float a = rays[1]-rays[0];
 

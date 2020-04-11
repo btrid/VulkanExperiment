@@ -20,9 +20,9 @@ void main()
 		ndc /= vec2(u_mapping);
 
 		vec3 up = vec3(0., 0., 1.); 
-		vec3 side = cross(CamDir, normalize(up));
+		vec3 side = cross(normalize(up), CamDir);
 		side = dot(side, side) < 0.00001 ? vec3(0., 1., 0.) : normalize(side);
-		up = normalize(cross(side, CamDir));
+		up = normalize(cross(CamDir, side));
 
 		CamPos = side*ndc.x + up*ndc.y -CamDir*3000. + u_planet.xyz;
 
