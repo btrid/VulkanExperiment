@@ -72,18 +72,20 @@ float light(in vec3 pos)
 #if 1
 
 	vec4 rays;
-	if(intersectRayAtomEx(pos, -uLightRay, u_planet.xyz, vec2(u_planet.w), -1., rays) != 0)
+	if(intersectRayAtomEx(pos, -uLightRay, u_planet.xyz, vec2(u_cloud_inner.w), -1., rays) != 0)
 	{
 		// 星の影
 		return 0.;
 	}
 
-	if(intersectRayAtomEx(pos, uLightRay, u_cloud_inner.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), -1, rays)==0){return 0.;}
+	int count = intersectRayAtomEx(pos, uLightRay, u_planet.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), -1, rays);
 	float a = rays[1]-rays[0];
 
-	intersectRayAtomEx(pos, -uLightRay, u_cloud_inner.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), -1, rays);
+	count = intersectRayAtomEx(pos, -uLightRay, u_planet.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), -1, rays);
+//	if(count==0){return 0.;}
 	float b = rays[1]-rays[0];
 	float t = rays[1] / (a+b);
+//	if(count==2){ t = 1.; }
 
 	vec3 p = pos - u_planet.xyz;
 	
@@ -104,7 +106,7 @@ float light(in vec3 pos)
 	float density = 0.;
 	for(int i = 0; i <count; i++)
 	{
-		int step_num = 16;
+		int step_num = 8;
 		float ray_step = (rays[2*i+1]-rays[2*i]) / float(step_num);
 		vec3 p = pos -uLightRay * (rays[2*i]+0.5);
 		for(int s = 0; s < step_num; s++)

@@ -33,7 +33,7 @@ void main()
 	int count = intersectRayAtomEx(CamPos, CamDir, u_cloud_inner.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), -1, rays);
 
 	int sampleCount = reso.y;
-	float transmittance = 1.;
+	float density = 0.;
 	for(int i = 0; i <count; i++)
 	{
 		float step = (rays[i*2+1] - rays[i*2]) / float(sampleCount);
@@ -42,27 +42,16 @@ void main()
 		{
 			float height_frac = heightFraction(pos);
 			vec3 weather_data = sampleWeather(pos);
-			float density = cloud_density(pos, weather_data, height_frac, 0.);
+			float d = cloud_density(pos, weather_data, height_frac, 0.);
 
-			transmittance *= exp(-density*getPrecipitation(weather_data)*step);
+			density = fma(d, getPrecipitation(weather_data)*step, density);
 
-//			float t = float(s)/float(sampleCount);
-//			vec3 uv = vec3(pos.x, t, pos.z) * vec3(u_mapping, 1., u_mapping) * vec3(0.5, 1., 0.5) + vec3(0.5, 0., 0.5);// UV[0~1]
+			imageStore(i_shadow_map, ivec3(gl_GlobalInvocationID.x, s, gl_GlobalInvocationID.y), ivec4(exp(-density)*65535.));
+//			imageStore(i_shadow_map, ivec3(gl_GlobalInvocationID.x, s, gl_GlobalInvocationID.y), ivec4(exp(-density)*255.));
 
-			imageStore(i_shadow_map, ivec3(gl_GlobalInvocationID.x, s, gl_GlobalInvocationID.y), ivec4(vec2(transmittance).xxxx*255.));
-
-			pos = pos + CamDir * step;
+			pos = fma(CamDir, vec3(step), pos);
 		}
 		break;
 	}
 
-#if 0
-	if(count==0)
-	{
-		for(int s = 0; s < sampleCount; s++)
-		{
-			imageStore(i_shadow_map, ivec3(gl_GlobalInvocationID.x, s, gl_GlobalInvocationID.y), ivec4(s/float(sampleCount) * 255.));
-		}
-	}
-#endif
 }

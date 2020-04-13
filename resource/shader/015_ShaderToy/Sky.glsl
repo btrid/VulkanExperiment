@@ -14,7 +14,7 @@
 #if defined(USE_Sky)
 layout(set=USE_Sky, binding=0) uniform sampler3D s_shadow_map;
 layout(set=USE_Sky, binding=1) uniform sampler2D s_render_map;
-layout(set=USE_Sky, binding=10, rg8ui) uniform uimage3D i_shadow_map;
+layout(set=USE_Sky, binding=10, r16ui) uniform uimage3D i_shadow_map;
 layout(set=USE_Sky, binding=11, rgba16) uniform image2D i_render_map;
 
 

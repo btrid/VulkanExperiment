@@ -585,9 +585,10 @@ struct Sky
 
 			{
 				vk::ImageCreateInfo image_info;
-				image_info.setExtent(vk::Extent3D(256, 32, 256));
+				image_info.setExtent(vk::Extent3D(256*4, 32, 256*4));
 				image_info.setArrayLayers(1);
-				image_info.setFormat(vk::Format::eR8G8Unorm);
+//				image_info.setFormat(vk::Format::eR8Unorm);
+				image_info.setFormat(vk::Format::eR16Unorm);
 				image_info.setImageType(vk::ImageType::e3D);
 				image_info.setInitialLayout(vk::ImageLayout::eUndefined);
 				image_info.setMipLevels(1);
@@ -619,13 +620,14 @@ struct Sky
 				view_info.setViewType(vk::ImageViewType::e3D);
 				m_image_shadow_view = context->m_device.createImageViewUnique(view_info);
 
-				view_info.setFormat(vk::Format::eR8G8Uint);
+//				view_info.setFormat(vk::Format::eR8Uint);
+				view_info.setFormat(vk::Format::eR16Uint);
 				m_image_shadow_write_view = context->m_device.createImageViewUnique(view_info);
 
 				vk::SamplerCreateInfo sampler_info;
-				sampler_info.setAddressModeU(vk::SamplerAddressMode::eRepeat);
-				sampler_info.setAddressModeV(vk::SamplerAddressMode::eRepeat);
-				sampler_info.setAddressModeW(vk::SamplerAddressMode::eRepeat);
+				sampler_info.setAddressModeU(vk::SamplerAddressMode::eClampToEdge);
+				sampler_info.setAddressModeV(vk::SamplerAddressMode::eClampToEdge);
+				sampler_info.setAddressModeW(vk::SamplerAddressMode::eClampToEdge);
 				//				sampler_info.setBorderColor(vk::BorderColor::eFloatOpaqueWhite);
 				sampler_info.setMagFilter(vk::Filter::eLinear);
 				sampler_info.setMinFilter(vk::Filter::eLinear);
