@@ -76,7 +76,7 @@ float light(in vec3 pos)
 		// 星の影
 		return 0.;
 	}
-#if 0
+#if 1
 
 	int count = intersectRayAtomEx(pos, uLightRay, u_planet.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), -1, rays);
 	float a = rays[1]-rays[0];

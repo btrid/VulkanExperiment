@@ -187,6 +187,12 @@ float cloud_density(vec3 pos, vec3 weather_data, float height_frac, float lod)
 	float height_gradient = densityHeightGradient(weather_data, height_frac);
 	if(height_gradient<=0.){ return 0.;}
 
+	float cloud_coverage = getCoverage(weather_data);
+	float coverage = 0.4;
+	float coverage_alpha = 0.2;
+	cloud_coverage *= smoothstep(coverage, coverage+coverage_alpha, cloud_coverage);
+	if(cloud_coverage <= 0.) { return 0.; }
+
 	pos = vec3(pos.x, height_frac, pos.z) * vec3(u_mapping, 1., u_mapping);
 	
 	vec4 low_freq_noise = texture(s_cloud_map, pos);
@@ -194,8 +200,8 @@ float cloud_density(vec3 pos, vec3 weather_data, float height_frac, float lod)
 	float base_cloud = remap(low_freq_noise.r, -(1.-low_freq_fBM), 1., 0., 1.);
 
 	base_cloud *= height_gradient;
-//	return saturate(base_cloud);
-	float cloud_coverage = getCoverage(weather_data);
+
+
 	float base_cloud_with_coverage = remap(base_cloud, cloud_coverage, 1., 0., 1.);
 	float final_cloud = base_cloud_with_coverage * cloud_coverage;
 
