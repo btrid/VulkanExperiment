@@ -95,58 +95,11 @@ float heightFraction(const vec3& pos)
 	return (distance(pos, u_cloud_inner.xyz()) - u_cloud_inner.w)*u_cloud_area_inv;
 }
 
-vec3 getAtmosphereUV(const vec3& pos)
-{
-
-	float h = heightFraction(pos);
-	vec4 s = mix(u_cloud_inner, u_cloud_outer, h) - u_planet;
-
-//	vec3 n = normalize(pos - vec3(0.f, s.w, 0.f));
-	vec2 n = normalize(vec2(pos.x, pos.z));
-	float a = atan2(n.y, n.x);
-	float u = (a / 3.14f) * 0.5f + 0.5f;
-
-	float v = asin(n.y) / 3.14f + 0.5f; // –k”¼‹…
-
-	return vec3(u, h, v);
-
-}
 
 // https://github.com/erickTornero/realtime-volumetric-cloudscapes
 // https://bib.irb.hr/datoteka/949019.Final_0036470256_56.pdf
 int main()
 {
-// 	GLM_FUNC_QUALIFIER genType reflect(genType const& I, genType const& N)
-// 	{
-// 		return I - N * dot(N, I) * genType(2);
-// 	}
-	{
-		auto f = normalize(vec3(0.f, 1.f, 1.f));
-		vec3 u = vec3(0., 1., 0.);
-		vec3 s = cross(normalize(u), f);
-		s = dot(s, s) < 0.00001 ? vec3(0., 0., 1.) : normalize(s);
-		u = normalize(cross(s, f));
-
-		vec3 p = vec3(700.f, 200.f, 700.f);
-		float fd = dot(normalize(p), f);
-		float ud = dot(normalize(p), u);
-		float sd = dot(normalize(p), s);
-		vec3 pf = f*dot(p, f);
-		vec3 pu = u*dot(p, u);
-		vec3 ps = s*dot(p, s);
-		vec3 pf2 = f*p*dot(normalize(p), f);
-		vec3 pu2 = u*p*dot(normalize(p), u);
-		vec3 ps2 = s*p*dot(normalize(p), s);
-		auto ppp = p - pf;
-		auto p3 = pf + pu + ps;
-
-		vec3 p2 = p - pf;
-		float p2ud = dot(normalize(p2), u);
-		float p2sd = dot(normalize(p2), s);
-		vec3 p2u = u*p2ud;
-		vec3 p2s = s*p2sd;
-		int a = 0;
-	}
 	constexpr uvec3 reso = uvec3(32, 1, 32);
 
 	vec3 CamPos = vec3(0., 1., 0.);
@@ -213,26 +166,6 @@ int main()
 
 	}
 
-	{
-//		auto a = precomputeNoiseKernel(normalize(vec3(0.f, -1.f, 0.f)));
-//		auto b = precomputeNoiseKernel(normalize(vec3(0.f, -1.f, 1.f)));
-		auto v = precomputeNoiseKernel(normalize(vec3(1.f, -1.f, 1.f)));
-		int aaa = 0;
-	}
-
-	{
-		const float u_planet_radius = 6371.; // km
-		const float u_planet_cloud_begin = 1.;
-		const float u_planet_cloud_end = 8.2;
-		const vec4 u_planet = vec4(0., -u_planet_radius, 0, u_planet_radius);
-		const vec4 u_cloud_inner = u_planet + vec4(0., 0., 0., u_planet_cloud_begin);
-		const vec4 u_cloud_outer = u_planet + vec4(0., 0., 0., u_planet_cloud_end);
-		const float u_cloud_area_inv = 1. / (u_planet_cloud_end - u_planet_cloud_begin);
-		const float u_mapping = 0.5 / 120.; // “K“–
-		float c = acos(u_planet_radius / u_cloud_outer.w);
-		float l = u_planet_radius*sin(c);
-		int aaa = 0.f;
-	}
 	{
 		const vec3 u_planet = vec3(0.f, 0.f, 0.f);
 

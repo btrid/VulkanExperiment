@@ -23,8 +23,8 @@ void precompute()
 		float c = cos(constant.window.x * 0.02);
 		vec3 CamDir = normalize(vec3(s, 0.5, c));
 
-		uCamPos = vec3(400.);
-		CamDir = normalize(-uCamPos - vec3(0., 500., 0.));
+//		uCamPos = vec3(400.);
+//		CamDir = normalize(-uCamPos - vec3(0., 500., 0.));
 
 		uvec3 reso = gl_NumWorkGroups * gl_WorkGroupSize;
 		vec2 ndc = (vec2(gl_GlobalInvocationID.xy) / vec2(reso.xy)) * 2. -1.;
@@ -69,7 +69,6 @@ void precompute()
 
 float light(in vec3 pos)
 {
-#if 1
 
 	vec4 rays;
 	if(intersectRayAtomEx(pos, -uLightRay, u_planet.xyz, vec2(u_cloud_inner.w), -1., rays) != 0)
@@ -77,15 +76,14 @@ float light(in vec3 pos)
 		// 星の影
 		return 0.;
 	}
+#if 0
 
 	int count = intersectRayAtomEx(pos, uLightRay, u_planet.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), -1, rays);
 	float a = rays[1]-rays[0];
 
 	count = intersectRayAtomEx(pos, -uLightRay, u_planet.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), -1, rays);
-//	if(count==0){return 0.;}
 	float b = rays[1]-rays[0];
 	float t = rays[1] / (a+b);
-//	if(count==2){ t = 1.; }
 
 	vec3 p = pos - u_planet.xyz;
 	
@@ -94,19 +92,13 @@ float light(in vec3 pos)
 	return texture(s_shadow_map, uv).x * g_phase_factor;
 
 #else
-	vec4 rays;
-	if(intersectRayAtomEx(pos, -uLightRay, u_planet.xyz, vec2(u_planet.w), -1., rays) != 0)
-	{
-		// 星の影
-		return 0.;
-	}
 
 	int count = intersectRayAtomEx(pos, -uLightRay, u_cloud_inner.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), -1., rays);
 
 	float density = 0.;
 	for(int i = 0; i <count; i++)
 	{
-		int step_num = 8;
+		int step_num = 32;
 		float ray_step = (rays[2*i+1]-rays[2*i]) / float(step_num);
 		vec3 p = pos -uLightRay * (rays[2*i]+0.5);
 		for(int s = 0; s < step_num; s++)
@@ -118,6 +110,7 @@ float light(in vec3 pos)
 			density = density + d*getPrecipitation(weather_data) * ray_step;
 			p = p - uLightRay * ray_step;
 		}
+		break;
 
 	}
 
@@ -195,7 +188,7 @@ void main()
 
 	// tonemapping
 	{
-		float exposure = 3.5;
+		float exposure = 1.5;
 		background_color.xyz = vec3(1.0) - exp(-exposure * background_color.xyz);
 	}
 

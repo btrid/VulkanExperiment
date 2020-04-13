@@ -35,6 +35,7 @@ const float u_cloud_area_inv = 1. / (u_planet_cloud_end - u_planet_cloud_begin);
 const float u_mapping = 1./u_cloud_outer.w;
 //vec3 uLightRay = -normalize(vec3(0., 1., 1.));
 #define uLightRay constant.light_front.xyz
+
 vec3 uLightColor = vec3(1.);
 float uAmbientPower = 0.2;
 
@@ -183,7 +184,6 @@ float cloud_density(vec3 pos, vec3 weather_data, float height_frac, float lod)
 {
 	if(height_frac>= 1. || height_frac <= 0.) { return 0.; } //範囲外
 
-//	pos = pos + height_frac * constant.window*5.;
 	pos = vec3(pos.x, height_frac, pos.z) * vec3(u_mapping, 1., u_mapping);
 	
 	vec4 low_freq_noise = texture(s_cloud_map, pos);
@@ -195,10 +195,9 @@ float cloud_density(vec3 pos, vec3 weather_data, float height_frac, float lod)
 	float cloud_coverage = getCoverage(weather_data);
 	float base_cloud_with_coverage = remap(base_cloud, cloud_coverage, 1., 0., 1.);
 	float final_cloud = base_cloud_with_coverage * cloud_coverage;
-//	return cloud_coverage;
-//	return saturate(smoothstep(0.9, 0.9, cloud_coverage));
-//	return saturate(cloud_coverage);
-//	return saturate(base_cloud_with_coverage);
+
+//	return saturate(final_cloud);
+//	return saturate(smoothstep(0.3, 0.5, final_cloud)*final_cloud);
 
 //	if(final_cloud > 0.)
     {

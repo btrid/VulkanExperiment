@@ -11,11 +11,11 @@ void main()
 {
 
 	vec4 v = vec4(0.);
-	v[0] = value_noise(gl_GlobalInvocationID.xyz+23, 4, uvec3(imageSize(i_weather_map), 1));
-	v[0] = smoothstep(0.5, 0.5, v[0]) * v[0];
+	v[0] = value_noise(gl_GlobalInvocationID.xyz+23, 3, uvec3(imageSize(i_weather_map), 1));
+	v[0] = smoothstep(0.3, 0.5, v[0]) * v[0];
 //	v[0] = 0.5;
-	v[1] = 1.;
-	v[2] = 1.;
+	v[1] = 0.2;
+	v[2] = 0.5;
 //	v[2] = value_noise(gl_GlobalInvocationID.xyz+23, 8)*0.2+0.8;
 //	v = clamp(v, vec4(0.), vec4(1.));
 	imageStore(i_weather_map, ivec2(gl_GlobalInvocationID.xy), uvec4(v* vec4(255.)));
