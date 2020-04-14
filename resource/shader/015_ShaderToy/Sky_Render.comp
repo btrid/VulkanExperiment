@@ -118,15 +118,15 @@ float light(in vec3 pos)
 #endif
 }
 
-float SugerPowderEffect(vec3 pos)
+float SugerPowderEffect(vec3 pos, float step)
 {
 	float density = 0.;
 	for(int i = 0; i < g_noise_kernel.length(); i++)
 	{
-		vec3 p = pos + g_noise_kernel[i]*1.;
+		vec3 p = pos + g_noise_kernel[i]*step * 0.5;
 		float height_frac = heightFraction(p);
 		vec3 weather_data = sampleWeather(p);
-		float d = cloud_density(p, weather_data, height_frac, 0.);
+		float d = cloud_density(p, weather_data, height_frac, 0., true);
 		density += d;
 	}
 
@@ -156,31 +156,59 @@ void main()
 	vec4 rays;
 	int count = intersectRayAtomEx(uCamPos, uCamDir, u_cloud_inner.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), distance_land, rays);
 
-	uint sampleCount = 64;
+	uint sampleCount = 128;
 	float transmittance = 1.;
 	vec3 color = vec3(0.);
 	for(int i = 0; i <count; i++)
 	{
 
 		float ray_step = (rays[i*2+1] - rays[i*2]) / float(sampleCount);
-		vec3 pos = uCamPos + uCamDir * (rays[i*2]+ray_step*0.5);
 
-		for(int s = 0; s < sampleCount; s++)
+		vec3 begin = uCamPos + uCamDir * (rays[i*2]+ray_step*0.5);
+		int s=0;
+
+		// 最初だけpowderエフェクトを追加
+/*		for(; s<sampleCount; s++)
 		{
+			vec3 pos = begin + uCamDir * ray_step * float(s);
 			float height_frac = heightFraction(pos);
 			vec3 weather_data = sampleWeather(pos);
-			float d = cloud_density(pos, weather_data, height_frac, 0.);
+			float d = cloud_density(pos, weather_data, height_frac, 0., true);
+
+			if(d<=0.1)
+			{
+//				continue;
+			}
 
 			float light = light(pos);
 			float e = light * d * transmittance;
 
-			color += e * vec3(1., 1., 1.);
+			float powder = SugerPowderEffect(pos);
+
+			
+			color += e * vec3(1., 1., 1.) * powder;
+
+			transmittance *= exp(-d*getPrecipitation(weather_data)*ray_step);
+			break;
+
+		}
+*/		for(; s<sampleCount; s++)
+		{
+			vec3 pos = begin + uCamDir * ray_step * float(s);
+			float height_frac = heightFraction(pos);
+			vec3 weather_data = sampleWeather(pos);
+			float d = cloud_density(pos, weather_data, height_frac, 0., true);
+
+			float light = light(pos);
+			float e = light * d * transmittance;
+			float powder = 0.5;
+			if(mod(constant.window.x*0.05, 1.)<0.5) powder = SugerPowderEffect(pos, ray_step);
+
+			color += e * vec3(1., 1., 1.) * powder;
 
 			transmittance *= exp(-d*getPrecipitation(weather_data)*ray_step);
 			if(transmittance < 0.001) { break; }
 
-
-			pos = pos + ray_step * uCamDir;
 		}
 	}
 	float alpha = clamp(1.-transmittance, 0., 1.);
@@ -188,7 +216,7 @@ void main()
 
 	// tonemapping
 	{
-		float exposure = 1.5;
+		float exposure = 1.;
 		background_color.xyz = vec3(1.0) - exp(-exposure * background_color.xyz);
 	}
 

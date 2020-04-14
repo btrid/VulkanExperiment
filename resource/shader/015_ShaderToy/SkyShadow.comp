@@ -42,7 +42,7 @@ void main()
 		{
 			float height_frac = heightFraction(pos);
 			vec3 weather_data = sampleWeather(pos);
-			float d = cloud_density(pos, weather_data, height_frac, 0.);
+			float d = cloud_density(pos, weather_data, height_frac, 0., true);
 
 			density = fma(d, getPrecipitation(weather_data)*step, density);
 

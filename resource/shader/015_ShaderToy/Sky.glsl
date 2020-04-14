@@ -180,7 +180,7 @@ float densityHeightGradient(vec3 weather_data, float height_frac)
 	return band2(cloud_gradient.x, cloud_gradient.y, cloud_gradient.z, cloud_gradient.w, height_frac);
 }
 
-float cloud_density(vec3 pos, vec3 weather_data, float height_frac, float lod)
+float cloud_density(vec3 pos, vec3 weather_data, float height_frac, float lod, bool use_detail)
 {
 	if(height_frac>= 1. || height_frac <= 0.) { return 0.; } //範囲外
 
@@ -201,14 +201,10 @@ float cloud_density(vec3 pos, vec3 weather_data, float height_frac, float lod)
 
 	base_cloud *= height_gradient;
 
+	float final_cloud = remap(base_cloud, cloud_coverage, 1., 0., 1.) * cloud_coverage;
 
-	float base_cloud_with_coverage = remap(base_cloud, cloud_coverage, 1., 0., 1.);
-	float final_cloud = base_cloud_with_coverage * cloud_coverage;
-
-//	return saturate(final_cloud);
-//	return saturate(smoothstep(0.3, 0.5, final_cloud)*final_cloud);
-
-//	if(final_cloud > 0.)
+//	if(final_cloud <= 0.){ return 0.; }
+//	if(mod(constant.window.x*0.03, 1.) > 0.5)
     {
         //// TODO add curl noise
         //// pos += curlNoise.xy * (1.0f - height_frac);
@@ -222,20 +218,6 @@ float cloud_density(vec3 pos, vec3 weather_data, float height_frac, float lod)
 	return saturate(final_cloud);
 
 }
-
-vec3 getAtmosphereUV(in vec3 pos)
-{
-	
-	vec3 n = normalize(pos - u_planet.xyz);
-	float u = (atan2(n.x, n.z) / 3.14) * 0.5 + 0.5;
-	float v = n.y * 0.5 + 0.5;
-//	float v = n.y; // 北半球
-	float w = heightFraction(pos);
-
-	return vec3(u,w,v);
-
-}
-
 
 #endif
 
