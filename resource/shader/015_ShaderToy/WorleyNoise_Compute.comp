@@ -21,8 +21,6 @@ void main()
 		v[2] = worley_noise(gl_GlobalInvocationID.xyz+ 11, level++, reso);
 		v[3] = worley_noise(gl_GlobalInvocationID.xyz+ 73, level++, reso);
 
-//		v = vec4(gl_GlobalInvocationID.xxyz) / vec4(reso.xxyz);
-
 		v = clamp(v*vec4(1., 1., 1., 1.), vec4(0.), vec4(1.));
 		imageStore(i_cloud_map, ivec3(gl_GlobalInvocationID), uvec4(v* vec4(255.)));
 	}

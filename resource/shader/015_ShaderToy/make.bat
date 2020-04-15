@@ -19,6 +19,7 @@ rem %exe% %include% %option% %output%/Sky_Render.comp.spv Sky_Render.old.comp
 
 %exe% %include% %option% %output%/WorleyNoise_Compute.comp.spv WorleyNoise_Compute.comp
 %exe% %include% %option% %output%/WorleyNoise_ComputeWeatherTexture.comp.spv WorleyNoise_ComputeWeatherTexture.comp
+%exe% %include% %option% %output%/WorleyNoise_ComputeDistortTexture.comp.spv WorleyNoise_ComputeDistortTexture.comp
 %exe% %include% %option% %output%/WorleyNoise_Render.comp.spv WorleyNoise_Render.comp
 
 rem %exe% %include% %option% %output%/SkyWithTexture.comp.spv Sky.comp

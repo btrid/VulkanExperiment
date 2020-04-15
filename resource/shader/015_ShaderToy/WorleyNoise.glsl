@@ -3,11 +3,13 @@
 
 #ifdef USE_WORLEYNOISE
 layout(set=USE_WORLEYNOISE, binding=0) uniform sampler3D s_cloud_map;
-layout(set=USE_WORLEYNOISE, binding=10, rgba8ui) uniform uimage3D i_cloud_map;
 layout(set=USE_WORLEYNOISE, binding=1) uniform sampler3D s_cloud_detail_map;
+layout(set=USE_WORLEYNOISE, binding=2) uniform sampler2D s_cloud_distort_map;
+layout(set=USE_WORLEYNOISE, binding=3) uniform sampler2D s_weather_map;
+layout(set=USE_WORLEYNOISE, binding=10, rgba8ui) uniform uimage3D i_cloud_map;
 layout(set=USE_WORLEYNOISE, binding=11, rgba8ui) uniform uimage3D i_cloud_detail_map;
-layout(set=USE_WORLEYNOISE, binding=2) uniform sampler2D s_weather_map;
-layout(set=USE_WORLEYNOISE, binding=12, rgba8ui) uniform uimage2D i_weather_map;
+layout(set=USE_WORLEYNOISE, binding=12, rg8ui) uniform uimage2D i_cloud_distort_map;
+layout(set=USE_WORLEYNOISE, binding=13, rgba8ui) uniform uimage2D i_weather_map;
 
 
 vec3 _wn_rand(in ivec4 co)
@@ -96,6 +98,70 @@ float value_noise(in vec3 invocation, in int level)
 {
 	return value_noise(invocation, level, uvec3(9999999));
 }
+
+float _c_rand(in vec3 co, in uvec3 scale)
+{
+	return fract(sin(dot(mod(co, vec3(scale)), vec3(12.67, 78.23, 45.41))) * 43758.5);
+}
+vec3 _c_interpolate(in vec3 t) 
+{
+    return t * t * t * (10. + t * (-15. + 6. * t));
+}
+
+float _c_noise(in vec3 pos, in uvec3 scale)
+{
+
+	vec3 ip = floor(pos);
+	vec3 fp = _c_interpolate(fract(pos));
+	vec2 offset = vec2(0., 1.);
+	vec4 a = vec4(_c_rand(ip+offset.xxx, scale),_c_rand(ip+offset.yxx, scale),_c_rand(ip+offset.xyx, scale),_c_rand(ip+offset.yyx, scale));
+	vec4 b = vec4(_c_rand(ip+offset.xxy, scale),_c_rand(ip+offset.yxy, scale),_c_rand(ip+offset.xyy, scale),_c_rand(ip+offset.yyy, scale));
+	a = mix(a, b, fp.z);
+	a.xy = mix(a.xy, a.zw, fp.y);
+	return mix(a.x, a.y, fp.x);
+}
+
+
+float _c_fBM_(in vec3 pos, in uvec3 reso)
+{
+	vec4 value = vec4(0.);
+	for(int i = 0; i < 4; i++)
+	{
+		value[i] = _c_noise(pos, reso);
+		pos  *= 2.;
+		reso *= uvec3(2);
+	}
+
+	return dot(value, vec4(0.45, 0.3, 0.15, 0.1));
+}
+
+vec3 _c_fBM(in vec3 pos, in uvec3 reso)
+{
+	vec3 value = vec3(0.);
+	value.x = _c_fBM_(pos.xyz, reso);
+	value.y = _c_fBM_(pos.yzx, reso);
+	value.z = _c_fBM_(pos.zxy, reso);
+
+	return value;
+}
+vec3 curl_noise(in vec3 p, in float d, in uvec3 reso)
+{	
+	vec2 v = vec2(0., d);
+
+	vec3 p_x0 = _c_fBM(p-v.xxy, reso);
+	vec3 p_x1 = _c_fBM(p+v.xxy, reso);
+	vec3 p_y0 = _c_fBM(p-v.xyx, reso);
+	vec3 p_y1 = _c_fBM(p+v.xyx, reso);
+	vec3 p_z0 = _c_fBM(p-v.yxx, reso);
+	vec3 p_z1 = _c_fBM(p+v.yxx, reso);
+
+	float x = p_y1.z - p_y0.z - p_z1.y + p_z0.y;
+	float y = p_z1.x - p_z0.x - p_x1.z + p_x0.z;
+	float z = p_x1.y - p_x0.y - p_y1.x + p_y0.x;
+
+	return vec3(x,y,z)/d;
+}
+
 
 #endif // USE_WORLEYNOISE
 #endif // WORLEYNOISE_HEADER_

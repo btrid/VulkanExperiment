@@ -1,0 +1,17 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#define USE_WORLEYNOISE 0
+#include "WorleyNoise.glsl"
+
+layout (local_size_x = 32, local_size_y = 32) in;
+
+
+void main()
+{
+
+	vec2 uv = vec2(gl_GlobalInvocationID.xy) / imageSize(i_cloud_distort_map).xy;
+	vec3 value = curl_noise(vec3(uv*5., 0.), 0.2, uvec3(5));
+	imageStore(i_cloud_distort_map, ivec2(gl_GlobalInvocationID.xy), uvec4((value*vec3(127.)+vec3(127.)).xyxy));
+
+}

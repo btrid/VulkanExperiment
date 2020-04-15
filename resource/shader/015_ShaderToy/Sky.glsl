@@ -188,8 +188,8 @@ float cloud_density(vec3 pos, vec3 weather_data, float height_frac, float lod, b
 	if(height_gradient<=0.){ return 0.;}
 
 	float cloud_coverage = getCoverage(weather_data);
-	float coverage = 0.4;
-	float coverage_gradient = 0.2;
+	float coverage = 0.25;
+	float coverage_gradient = 0.05;
 	cloud_coverage *= smoothstep(coverage, coverage+coverage_gradient, cloud_coverage);
 	if(cloud_coverage <= 0.) { return 0.; }
 
