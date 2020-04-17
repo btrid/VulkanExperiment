@@ -33,6 +33,220 @@
 #pragma comment(lib, "applib.lib")
 #pragma comment(lib, "imgui.lib")
 
+struct VertexRender
+{
+	VertexRender(const std::shared_ptr<btr::Context>& context)
+	{
+		m_context = context;
+
+		// shader
+		{
+			const char* name[] =
+			{
+				"VertexRender.vert.spv",
+				"VertexRender.frag.spv",
+			};
+
+			std::string path = btr::getResourceShaderPath();
+			for (size_t i = 0; i < array_length(name); i++) {
+				m_shader[i] = loadShaderUnique(context->m_device, path + name[i]);
+			}
+		}
+		// pipeline layout
+		{
+	//				vk::DescriptorSetLayout layouts[] = {};
+			vk::PushConstantRange ranges[] = {
+				vk::PushConstantRange().setSize(64).setStageFlags(vk::ShaderStageFlagBits::eVertex),
+			};
+
+			vk::PipelineLayoutCreateInfo pipeline_layout_info;
+	//				pipeline_layout_info.setSetLayoutCount(array_length(layouts));
+	//				pipeline_layout_info.setPSetLayouts(layouts);
+			pipeline_layout_info.setPushConstantRangeCount(array_length(ranges));
+			pipeline_layout_info.setPPushConstantRanges(ranges);
+			m_pipeline_layout[0] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
+		}
+
+		// レンダーパス
+		{
+			// sub pass
+			vk::AttachmentReference color_ref[] =
+			{
+				vk::AttachmentReference()
+				.setAttachment(0)
+				.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
+			};
+			vk::SubpassDescription subpass;
+			subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+			subpass.setInputAttachmentCount(0);
+			subpass.setPInputAttachments(nullptr);
+			subpass.setColorAttachmentCount(array_length(color_ref));
+			subpass.setPColorAttachments(color_ref);
+
+			vk::AttachmentDescription attach_description[] =
+			{
+				// color1
+				vk::AttachmentDescription()
+				.setFormat(vk::Format::eR16G16B16A16Sfloat)
+				.setSamples(vk::SampleCountFlagBits::e1)
+				.setLoadOp(vk::AttachmentLoadOp::eDontCare)
+				.setStoreOp(vk::AttachmentStoreOp::eStore)
+				.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
+				.setFinalLayout(vk::ImageLayout::ePresentSrcKHR),
+			};
+			vk::RenderPassCreateInfo renderpass_info;
+			renderpass_info.setAttachmentCount(array_length(attach_description));
+			renderpass_info.setPAttachments(attach_description);
+			renderpass_info.setSubpassCount(1);
+			renderpass_info.setPSubpasses(&subpass);
+
+			m_render_pass = context->m_device.createRenderPassUnique(renderpass_info);
+
+			{
+				vk::FramebufferCreateInfo framebuffer_info;
+				framebuffer_info.setRenderPass(m_render_pass.get());
+				framebuffer_info.flags = vk::FramebufferCreateFlagBits::eImageless;
+				framebuffer_info.setAttachmentCount(1);
+//				framebuffer_info.setPAttachments(view);
+				framebuffer_info.setWidth(1024);
+				framebuffer_info.setHeight(1024);
+				framebuffer_info.setLayers(1);
+
+				vk::Format format[] = {vk::Format::eR16G16B16A16Sfloat};
+				vk::FramebufferAttachmentImageInfo info;
+				info.usage = vk::ImageUsageFlagBits::eColorAttachment;
+				info.width = 1024;
+				info.height = 1024;
+				info.layerCount = 1;
+				info.viewFormatCount = array_length(format);
+				info.pViewFormats = format;
+				vk::FramebufferAttachmentsCreateInfo framebuffer_attach_info;
+				framebuffer_attach_info.attachmentImageInfoCount = 1;
+				framebuffer_attach_info.pAttachmentImageInfos = &info;
+
+				framebuffer_info.setPNext(&framebuffer_attach_info);
+
+				m_framebuffer = context->m_device.createFramebufferUnique(framebuffer_info);
+			}
+		}
+
+		// pipeline
+		{
+
+			// assembly
+			vk::PipelineInputAssemblyStateCreateInfo assembly_info[] =
+			{
+				vk::PipelineInputAssemblyStateCreateInfo()
+				.setPrimitiveRestartEnable(VK_FALSE)
+				.setTopology(vk::PrimitiveTopology::eTriangleStrip),
+			};
+
+			// viewport
+	 			vk::PipelineViewportStateCreateInfo viewport_info;
+	 			viewport_info.setViewportCount(1);
+	// 			viewport_info.setPViewports(&viewport);
+	 			viewport_info.setScissorCount(1);
+	// 			viewport_info.setPScissors(scissor.data());
+
+			vk::PipelineRasterizationStateCreateInfo rasterization_info;
+			rasterization_info.setPolygonMode(vk::PolygonMode::eFill);
+			rasterization_info.setFrontFace(vk::FrontFace::eCounterClockwise);
+			rasterization_info.setCullMode(vk::CullModeFlagBits::eNone);
+			rasterization_info.setLineWidth(1.f);
+//			rasterization_info.setRasterizerDiscardEnable()
+
+			vk::PipelineMultisampleStateCreateInfo sample_info;
+			sample_info.setRasterizationSamples(vk::SampleCountFlagBits::e1);
+
+			vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
+			depth_stencil_info.setDepthTestEnable(VK_TRUE);
+			depth_stencil_info.setDepthWriteEnable(VK_TRUE);
+			depth_stencil_info.setDepthCompareOp(vk::CompareOp::eGreaterOrEqual);
+			depth_stencil_info.setDepthBoundsTestEnable(VK_FALSE);
+			depth_stencil_info.setStencilTestEnable(VK_FALSE);
+
+			std::vector<vk::PipelineColorBlendAttachmentState> blend_state = {
+				vk::PipelineColorBlendAttachmentState()
+				.setBlendEnable(VK_FALSE)
+				.setColorWriteMask(vk::ColorComponentFlagBits::eR
+					| vk::ColorComponentFlagBits::eG
+					| vk::ColorComponentFlagBits::eB
+					| vk::ColorComponentFlagBits::eA)
+			};
+			vk::PipelineColorBlendStateCreateInfo blend_info;
+			blend_info.setAttachmentCount(blend_state.size());
+			blend_info.setPAttachments(blend_state.data());
+
+			vk::PipelineVertexInputStateCreateInfo vertex_input_info;
+
+			vk::PipelineShaderStageCreateInfo shader_info[] =
+			{
+				vk::PipelineShaderStageCreateInfo()
+				.setModule(m_shader[0].get())
+				.setPName("main")
+				.setStage(vk::ShaderStageFlagBits::eVertex),
+				vk::PipelineShaderStageCreateInfo()
+				.setModule(m_shader[1].get())
+				.setPName("main")
+				.setStage(vk::ShaderStageFlagBits::eFragment)
+			};
+
+			vk::VertexInputBindingDescription vib[] = 
+			{
+				vk::VertexInputBindingDescription().setBinding(0).setInputRate(vk::VertexInputRate::eVertex).setStride(sizeof(vec3))
+			};
+			vk::VertexInputAttributeDescription via[] =
+			{
+				// pos
+				vk::VertexInputAttributeDescription().setBinding(0).setLocation(0).setFormat(vk::Format::eR32G32B32Sfloat).setOffset(0),
+			};
+			vk::PipelineVertexInputStateCreateInfo vertex_input_state;
+			vertex_input_state.pVertexAttributeDescriptions = via;
+			vertex_input_state.vertexAttributeDescriptionCount = array_length(via);
+			vertex_input_state.vertexBindingDescriptionCount = array_length(vib);
+			vertex_input_state.pVertexBindingDescriptions = vib;
+
+			vk::DynamicState dynamic_state[] =
+			{
+				vk::DynamicState::eViewport,
+				vk::DynamicState::eScissor,
+			};
+			vk::PipelineDynamicStateCreateInfo dynamic_info;
+			dynamic_info.dynamicStateCount = array_length(dynamic_state);
+			dynamic_info.pDynamicStates = dynamic_state;
+
+			std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =
+			{
+				vk::GraphicsPipelineCreateInfo()
+				.setStageCount(array_length(shader_info))
+				.setPStages(shader_info)
+				.setPVertexInputState(&vertex_input_info)
+				.setPInputAssemblyState(&assembly_info[0])
+				.setPViewportState(&viewport_info)
+				.setPRasterizationState(&rasterization_info)
+				.setPMultisampleState(&sample_info)
+				.setLayout(m_pipeline_layout[0].get())
+				.setRenderPass(m_render_pass.get())
+				.setPDepthStencilState(&depth_stencil_info)
+				.setPColorBlendState(&blend_info)
+				.setPVertexInputState(&vertex_input_state)
+				.setPDynamicState(&dynamic_info),
+
+			};
+			auto pipelines = context->m_device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info);
+			m_pipeline[0] = std::move(pipelines[0]);
+		}
+	}
+
+	std::shared_ptr<btr::Context> m_context;
+	std::array<vk::UniqueShaderModule, 2> m_shader;
+	std::array<vk::UniquePipelineLayout, 1> m_pipeline_layout;
+	std::array<vk::UniquePipeline, 1> m_pipeline;
+
+	vk::UniqueRenderPass m_render_pass;
+	vk::UniqueFramebuffer m_framebuffer;
+
+};
 
 int intersectRayAtom(vec3 Pos, vec3 Dir, vec3 AtomPos, vec2 Area, vec4& OutDist)
 {
@@ -114,6 +328,7 @@ int main()
 		g_light_up = cross(g_light_foward, g_light_side);
 
 	}
+
 	for (int z = 0; z < reso.z; z++)
 	for (int x = 0; x < reso.x; x++)
 	{
@@ -195,6 +410,26 @@ int main()
 
 	}
 
+	{
+		for (int theta = 0; theta < 8; theta++)
+		{
+			float st = sin((theta + 0.5f) / 8.f * 3.14f);
+			float ct = cos((theta + 0.5f) / 8.f * 3.14f);
+			for (int phi = 0; phi < 8; phi++)
+			{
+				float _p = (phi + 0.5f) / 8.f * 6.28f;
+				float sp = sin(_p);
+				float cp = cos(_p);
+
+				vec3 p = vec3(st*cp, st*sp, ct);
+				printf("t,p=[%2d,%2d], p=[%5.3f,%5.3f,%5.3f]\n", theta, phi, p.x, p.y, p.z);
+//				p = normalize(vec3(st*cp, st*sp, ct));
+//				printf("t,p=[%2d,%2d], p=[%5.3f,%5.3f,%5.3f]\n", theta, phi, p.x, p.y, p.z);
+			}
+
+		}
+	}
+
 	btr::setResourceAppPath("..\\..\\resource/");
 	auto camera = cCamera::sCamera::Order().create();
 	camera->getData().m_position = vec3(0.f, -500.f, 800.f);
@@ -217,7 +452,7 @@ int main()
 	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
 	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchain());
 	Sky sky(context, app.m_window->getFrontBuffer());
-
+	VertexRender vr(context);
 	{
 		auto cmd = context->m_cmd_pool->allocCmdTempolary(0, "cmd_skynoise");
 		sky.m_skynoise.execute(context, cmd);

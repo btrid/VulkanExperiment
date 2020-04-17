@@ -7,6 +7,11 @@
 
 layout (local_size_x = 32, local_size_y = 32) in;
 
+vec3 rand(in int co)
+{
+	vec3 s = vec3(dot(vec3(co+0.95)*9.63+53.81, vec3(12.98,78.23, 15.61)), dot(vec3(co+0.61)*54.53+37.33, vec3(91.87,47.73, 13.78)), dot(vec3(co+0.23)*18.71+27.14, vec3(51.71,14.35, 24.89)));
+	return fract(sin(s) * vec3(39.15, 48.51, 67.79) * vec3(39729.1, 43758.5, 63527.7));
+}
 vec3 g_noise_kernel[6];
 float g_phase_factor;
 vec3 g_light_up;
@@ -59,16 +64,16 @@ void precompute()
 		side = dot(side, side) < 0.000001 ? vec3(1., 0., 0.) : normalize(side);
 		up = normalize(cross(side, -uCamDir));
 
-		g_noise_kernel[0] = uCamDir * -2. + side *  0.4 + up *  0.7;
-		g_noise_kernel[1] = uCamDir * -2. + side *  0.8 + up *  0.6;
-		g_noise_kernel[2] = uCamDir * -2.5 + side * -0.6 + up * -0.4;
-		g_noise_kernel[3] = uCamDir * -2.5 + side *  0.5 + up * -0.8;
-		g_noise_kernel[4] = uCamDir * -1.5 + side * -0.5 + up *  0.6;
-		g_noise_kernel[5] = uCamDir * -1.5 + side * -0.9 + up * -0.7;
+//		g_noise_kernel[0] = uCamDir * -2. + side *  0.4 + up *  0.7;
+//		g_noise_kernel[1] = uCamDir * -2. + side *  0.8 + up *  0.6;
+//		g_noise_kernel[2] = uCamDir * -2.5 + side * -0.6 + up * -0.4;
+//		g_noise_kernel[3] = uCamDir * -2.5 + side *  0.5 + up * -0.8;
+//		g_noise_kernel[4] = uCamDir * -1.5 + side * -0.5 + up *  0.6;
+//		g_noise_kernel[5] = uCamDir * -1.5 + side * -0.9 + up * -0.7;
 
 		for(int i = 0; i < g_noise_kernel.length(); i++)
-		{
-			g_noise_kernel[i] = normalize(g_noise_kernel[i]);
+		{		
+			g_noise_kernel[i] = normalize(rand(i));
 		}
 
 		

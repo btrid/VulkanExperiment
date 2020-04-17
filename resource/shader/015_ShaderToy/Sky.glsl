@@ -188,8 +188,8 @@ float cloud_density(vec3 pos, vec3 weather_data, float height_frac, float lod, b
 	if(height_gradient<=0.){ return 0.;}
 
 	float cloud_coverage = getCoverage(weather_data);
-	float coverage = 0.25;
-	float coverage_gradient = 0.05;
+	float coverage = 0.35;
+	float coverage_gradient = 0.2;
 	cloud_coverage *= smoothstep(coverage, coverage+coverage_gradient, cloud_coverage);
 	if(cloud_coverage <= 0.) { return 0.; }
 
@@ -206,14 +206,13 @@ float cloud_density(vec3 pos, vec3 weather_data, float height_frac, float lod, b
 //	if(final_cloud <= 0.){ return 0.; }
 //	if(mod(constant.window.x*0.03, 1.) > 0.5)
     {
-        //// TODO add curl noise
-        //// pos += curlNoise.xy * (1.0f - height_frac);
+//		pos.xz += texture(s_cloud_distort_map, pos.xz).xy * (1. - height_frac);
 
-        vec3 high_freq_noise = texture(s_cloud_detail_map, pos*0.1).xyz;
-        float high_freq_fBM = dot(high_freq_noise, vec3(0.625, 0.25, 0.125));
-        float high_freq_foise_modifier = mix(high_freq_fBM, 1.0-high_freq_fBM, saturate(height_frac * 10.));
+		vec3 high_freq_noise = texture(s_cloud_detail_map, pos*0.1).xyz;
+		float high_freq_fBM = dot(high_freq_noise, vec3(0.625, 0.25, 0.125));
+		float high_freq_foise_modifier = mix(high_freq_fBM, 1.0-high_freq_fBM, saturate(height_frac * 10.));
 
-        final_cloud = remap(final_cloud, high_freq_foise_modifier*0.2, 1., 0., 1.);
+		final_cloud = remap(final_cloud, high_freq_foise_modifier*0.2, 1., 0., 1.);
     }
 	return saturate(final_cloud);
 

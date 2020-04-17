@@ -113,7 +113,7 @@ App::App(const AppDescriptor& desc)
 	// ウインドウリストを取りたいけどいい考えがない。後で考える
 	g_app_instance = this;
 
-	vk::ApplicationInfo appInfo = { "Vulkan Test", 1, "EngineName", 0, VK_API_VERSION_1_1 };
+	vk::ApplicationInfo appInfo = { "Vulkan Test", 1, "EngineName", 0, VK_API_VERSION_1_2 };
 	std::vector<const char*> LayerName =
 	{
 #if _DEBUG
@@ -206,6 +206,10 @@ App::App(const AppDescriptor& desc)
 		f16s8_feature.setShaderInt8(VK_TRUE);
 		f16s8_feature.setShaderFloat16(VK_TRUE);
 		storage8bit_feature.setPNext(&f16s8_feature);
+
+		vk::PhysicalDeviceImagelessFramebufferFeatures imageless_feature;
+		imageless_feature.setImagelessFramebuffer(VK_TRUE);
+		f16s8_feature.setPNext(&imageless_feature);
 
 		m_device = m_physical_device.createDeviceUnique(device_info, nullptr);
 	}
