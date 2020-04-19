@@ -14,8 +14,10 @@
 #if defined(USE_Sky)
 layout(set=USE_Sky, binding=0) uniform sampler3D s_shadow_map;
 layout(set=USE_Sky, binding=1) uniform sampler2D s_render_map;
+layout(set=USE_Sky, binding=2) uniform sampler3D s_along_density_map;
 layout(set=USE_Sky, binding=10, r16ui) uniform uimage3D i_shadow_map;
 layout(set=USE_Sky, binding=11, rgba16) uniform image2D i_render_map;
+layout(set=USE_Sky, binding=12, r16ui) uniform uimage3D i_along_density_map;
 
 
 layout(push_constant) uniform Input
@@ -82,7 +84,8 @@ int intersectRayAtomEx(vec3 Pos, vec3 Dir, vec3 AtomPos, vec2 Area, float z, out
 	vec2 RadiusSq = Area * Area;
 	float d2 = dot(RelativePos, RelativePos) - tca * tca;
 	bvec2 intersect = greaterThanEqual(RadiusSq, vec2(d2));
-	vec4 dist = vec4(tca) + vec4(sqrt(RadiusSq.yxxy - d2)) * vec4(-1., -1., 1., 1.);
+//	vec4 dist = vec4(tca) + vec4(sqrt(RadiusSq.yxxy - d2)) * vec4(-1., -1., 1., 1.);
+	vec4 dist = vec4(tca) + vec4(sqrt(abs(RadiusSq.yxxy - d2))) * vec4(-1., -1., 1., 1.);
 
 	int count = 0;
 	if (intersect.x && dist.y >= 0.)

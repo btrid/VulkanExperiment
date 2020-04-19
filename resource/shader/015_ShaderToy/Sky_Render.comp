@@ -12,7 +12,7 @@ vec3 rand(in int co)
 	vec3 s = vec3(dot(vec3(co+0.95)*9.63+53.81, vec3(12.98,78.23, 15.61)), dot(vec3(co+0.61)*54.53+37.33, vec3(91.87,47.73, 13.78)), dot(vec3(co+0.23)*18.71+27.14, vec3(51.71,14.35, 24.89)));
 	return fract(sin(s) * vec3(39.15, 48.51, 67.79) * vec3(39729.1, 43758.5, 63527.7));
 }
-vec3 g_noise_kernel[6];
+vec3 g_noise_kernel[6*6];
 float g_phase_factor;
 vec3 g_light_up;
 vec3 g_light_side;
@@ -71,11 +71,26 @@ void precompute()
 //		g_noise_kernel[4] = uCamDir * -1.5 + side * -0.5 + up *  0.6;
 //		g_noise_kernel[5] = uCamDir * -1.5 + side * -0.9 + up * -0.7;
 
-		for(int i = 0; i < g_noise_kernel.length(); i++)
-		{		
-			g_noise_kernel[i] = normalize(rand(i));
-		}
+//		for(int i = 0; i < g_noise_kernel.length(); i++)
+//		{		
+//			g_noise_kernel[i] = normalize(rand(i));
+//		}
 
+		for (int theta = 0; theta < 8; theta++)
+		{
+			float _t = (theta + 0.5f) / 8.f * 3.14f;
+			float st = sin(_t);
+			float ct = cos(_t);
+			for (int phi = 0; phi < 8; phi++)
+			{
+				float _p = (phi + 0.5f) / 8.f * 6.28f;
+				float sp = sin(_p);
+				float cp = cos(_p);
+
+				g_noise_kernel[theta*8+phi] = vec3(st*cp, st*sp, ct);
+			}
+
+		}
 		
 	}
 }
@@ -136,14 +151,14 @@ float SugerPowderEffect(vec3 pos, float step)
 	float density = 0.;
 	for(int i = 0; i < g_noise_kernel.length(); i++)
 	{
-		vec3 p = pos + g_noise_kernel[i]*step * 0.5;
+		vec3 p = pos + g_noise_kernel[i]*step;
 		float height_frac = heightFraction(p);
 		vec3 weather_data = sampleWeather(p);
 		float d = cloud_density(p, weather_data, height_frac, 0., true);
 		density += d;
 	}
 
-	return 1.- exp(-density);
+	return 1.- exp(-density * 0.1);
 }
 
 

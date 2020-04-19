@@ -605,10 +605,12 @@ struct Sky
 	{
 		Shader_SkyReference_CS,
 
-		Shader_SkyShadow_CS,
-		Shader_SkyShadow_Render_CS,
 
 		Shader_Sky_Render_CS,
+		Shader_Sky_RenderShadow_CS,
+
+		Shader_Sky_Precompute_Shadow_CS,
+		Shader_Sky_Precompute_PowderEffect_CS,
 
 		Shader_Sky_RenderUpsampling_CS,
 		Shader_Num,
@@ -622,9 +624,12 @@ struct Sky
 	{
 		Pipeline_SkyReference_CS,
 
-		Pipeline_SkyShadow_CS,
-		Pipeline_SkyShadow_Render_CS,
 		Pipeline_Sky_Render_CS,
+		Pipeline_Sky_RenderShadow_CS,
+
+		Pipeline_Sky_Precompute_Shadow_CS,
+		Pipeline_Sky_Precompute_PowderEffect_CS,
+
 		Pipeline_Sky_RenderUpsampling_CS,
 		Pipeline_Num,
 	};
@@ -851,10 +856,12 @@ struct Sky
 			{
 				"SkyReference.comp.spv",
 
-				"SkyShadow.comp.spv",
-				"SkyShadow_Render.comp.spv",
-
 				"Sky_Render.comp.spv",
+				"Sky_RenderShadow.comp.spv",
+
+				"Sky_Precompute_Shadow.comp.spv",
+				"Sky_Precompute_PowderEffect.comp.spv",
+
 				"Sky_RenderUpsampling.comp.spv",
 			};
 			static_assert(array_length(name) == Shader_Num, "not equal shader num");
@@ -890,22 +897,25 @@ struct Sky
 
 		// compute pipeline
 		{
-			std::array<vk::PipelineShaderStageCreateInfo, 5> shader_info;
+			std::array<vk::PipelineShaderStageCreateInfo, 6> shader_info;
 			shader_info[0].setModule(m_shader[Shader_SkyReference_CS].get());
 			shader_info[0].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[0].setPName("main");
 			shader_info[1].setModule(m_shader[Shader_Sky_Render_CS].get());
 			shader_info[1].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[1].setPName("main");
-			shader_info[2].setModule(m_shader[Shader_Sky_RenderUpsampling_CS].get());
+			shader_info[2].setModule(m_shader[Shader_Sky_RenderShadow_CS].get());
 			shader_info[2].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[2].setPName("main");
-			shader_info[3].setModule(m_shader[Shader_SkyShadow_CS].get());
+			shader_info[3].setModule(m_shader[Shader_Sky_Precompute_Shadow_CS].get());
 			shader_info[3].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[3].setPName("main");
-			shader_info[4].setModule(m_shader[Shader_SkyShadow_Render_CS].get());
+			shader_info[4].setModule(m_shader[Shader_Sky_Precompute_PowderEffect_CS].get());
 			shader_info[4].setStage(vk::ShaderStageFlagBits::eCompute);
 			shader_info[4].setPName("main");
+			shader_info[5].setModule(m_shader[Shader_Sky_RenderUpsampling_CS].get());
+			shader_info[5].setStage(vk::ShaderStageFlagBits::eCompute);
+			shader_info[5].setPName("main");
 			std::vector<vk::ComputePipelineCreateInfo> compute_pipeline_info =
 			{
 				vk::ComputePipelineCreateInfo()
@@ -923,13 +933,17 @@ struct Sky
 				vk::ComputePipelineCreateInfo()
 				.setStage(shader_info[4])
 				.setLayout(m_pipeline_layout[PipelineLayout_Sky_CS].get()),
+				vk::ComputePipelineCreateInfo()
+				.setStage(shader_info[5])
+				.setLayout(m_pipeline_layout[PipelineLayout_Sky_CS].get()),
 			};
 			auto compute_pipeline = context->m_device.createComputePipelinesUnique(vk::PipelineCache(), compute_pipeline_info);
 			m_pipeline[Pipeline_SkyReference_CS] = std::move(compute_pipeline[0]);
 			m_pipeline[Pipeline_Sky_Render_CS] = std::move(compute_pipeline[1]);
-			m_pipeline[Pipeline_Sky_RenderUpsampling_CS] = std::move(compute_pipeline[2]);
-			m_pipeline[Pipeline_SkyShadow_CS] = std::move(compute_pipeline[3]);
-			m_pipeline[Pipeline_SkyShadow_Render_CS] = std::move(compute_pipeline[4]);
+			m_pipeline[Pipeline_Sky_RenderShadow_CS] = std::move(compute_pipeline[2]);
+			m_pipeline[Pipeline_Sky_Precompute_Shadow_CS] = std::move(compute_pipeline[3]);
+			m_pipeline[Pipeline_Sky_Precompute_PowderEffect_CS] = std::move(compute_pipeline[3]);
+			m_pipeline[Pipeline_Sky_RenderUpsampling_CS] = std::move(compute_pipeline[5]);
 		}
 
 
@@ -1069,7 +1083,7 @@ struct Sky
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
 			}
 
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_SkyShadow_CS].get());
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Sky_Precompute_Shadow_CS].get());
 			auto num = app::calcDipatchGroups(uvec3(m_image_shadow_info.extent.width, m_image_shadow_info.extent.depth, 1), uvec3(32, 32, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 		}
@@ -1092,7 +1106,7 @@ struct Sky
 				cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
 // 			}
 // 
-			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_SkyShadow_Render_CS].get());
+			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Sky_RenderShadow_CS].get());
 			auto num = app::calcDipatchGroups(uvec3(1024, 1024, 1), uvec3(32, 32, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 // 		}
