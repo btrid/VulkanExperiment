@@ -474,6 +474,7 @@ int main()
 			std::vector<vk::CommandBuffer> cmds(cmd_num);
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0, "cmd_sky");
+//				sky.execute_precompute(cmd, app.m_window->getFrontBuffer());
 				sky.executeShadow(cmd, app.m_window->getFrontBuffer());
 				sky.execute(cmd, app.m_window->getFrontBuffer());
 //				sky.execute_reference(cmd, app.m_window->getFrontBuffer());
