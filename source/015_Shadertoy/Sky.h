@@ -38,7 +38,70 @@ struct SkyNoise
 				m_descriptor_set = std::move(context->m_device.allocateDescriptorSetsUnique(desc_info)[0]);
 			}
 
+/*			{
+				b_atmosphere_range = context->m_storage_memory.allocateMemory<vec4>(1024 * 1024);
+				std::array<vec4, 1024*1024> b;
+
+				const float u_planet_radius = 1000.f;
+				const float u_planet_cloud_begin = 50.f;
+				const float u_planet_cloud_end = u_planet_cloud_begin + 32.f;
+				const vec4 u_planet = vec4(0., -u_planet_radius, 0, u_planet_radius);
+
+				auto intersectRayAtmosphere = [](const vec3& Pos, const vec3& Dir, const vec3& AtmospherePos, const vec2& Area, vec4& OutDist)
+				{
+					vec3 RelativePos = AtmospherePos - Pos;
+					float tca = dot(RelativePos, Dir);
+
+					vec2 RadiusSq = Area * Area;
+					float d2 = dot(RelativePos, RelativePos) - tca * tca;
+					bvec2 intersect = greaterThanEqual(RadiusSq, vec2(d2));
+					vec4 dist = vec4(tca) + vec4(glm::sqrt(abs(RadiusSq.yxxy() - d2))) * vec4(-1., -1., 1., 1.);
+
+					int count = 0;
+					vec4 rays = vec4(-1.f);
+					if (intersect.x && dist.y >= 0.f)
+					{
+						rays[count * 2] = glm::max(dist.x, 0.f);
+						rays[count * 2 + 1] = dist.y;
+						count++;
+					}
+					if (intersect.y && dist.w >= 0.f)
+					{
+						rays[count * 2] = intersect.x ? glm::max(dist.z, 0.f) : glm::max(dist.x, 0.f);
+						rays[count * 2 + 1] = dist.w;
+						count++;
+					}
+					OutDist = rays;
+					return count;
+				};
+
+				vec3 s = vec3(1.f, 0.f, 0.f);
+				vec3 u = vec3(0.f, 1.f, 0.f);
+				vec3 f = vec3(0.f, 0.f, 1.f);
+				ivec2 reso = ivec2(1024);
+				for (int y = 0; y < reso.y; y++)
+				for (int x = 0; x < reso.x; x++)
+				{
+					vec2 ndc = ((vec2(x,y) + 0.5f) / vec2(1024)) * 2.f - 1.f;
+					ndc *= vec2(u_cloud_outer.w);
+					vec3 CamPos = s*ndc.x + u*ndc.y - f*3000.f + u_planet.xyz;
+
+					vec4 value = vec4(-1.f);
+					vec4 rays = vec4(-1.f);
+					if (intersectRayAtmosphere(CamPos, f, u_planet.xyz(), vec2(u_planet_cloud_begin, u_planet_cloud_end), rays) != 0)
+					{
+						float length = (rays[1] - rays[0]);
+						vec3 pos = CamPos + f * rays[0];
+
+						value = vec4(pos, length);
+					}
+
+					b[y*reso.x + x] = value;
+				}
+			}
+*/
 			{
+
 				vk::ImageCreateInfo image_info;
 				image_info.setExtent(vk::Extent3D(128, 128, 128));
 				image_info.setArrayLayers(1);
@@ -561,6 +624,7 @@ struct SkyNoise
 	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
 	vk::UniqueDescriptorSet m_descriptor_set;
 
+	btr::BufferMemoryEx<vec4> b_atmosphere_range;
 
 	vk::ImageCreateInfo m_image_cloud_info;
 	vk::UniqueImage m_image_cloud;
