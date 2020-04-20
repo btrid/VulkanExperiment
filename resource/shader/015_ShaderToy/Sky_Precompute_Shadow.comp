@@ -17,20 +17,20 @@ void main()
 	// カメラ位置の作成
 	{
 		vec2 ndc = ((vec2(gl_GlobalInvocationID.xy)+0.5) / vec2(reso.xz)) * 2. -1.;
-		ndc /= vec2(u_mapping);
+		ndc /= u_planet.m_cloud_area.yy;
 
 		vec3 up = vec3(0., 0., 1.); 
 		vec3 side = cross(normalize(up), CamDir);
 		side = dot(side, side) < 0.00001 ? vec3(0., 1., 0.) : normalize(side);
 		up = normalize(cross(CamDir, side));
 
-		CamPos = side*ndc.x + up*ndc.y -CamDir*3000. + u_planet.xyz;
+		CamPos = side*ndc.x + up*ndc.y -CamDir*3000. + u_planet.m_pos;
 
 	}
 
 	// find nearest planet surface point
 	vec4 rays;
-	int count = intersectRayAtomEx(CamPos, CamDir, u_cloud_inner.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), -1, rays);
+	int count = intersectRayAtomEx(CamPos, CamDir, u_planet.m_pos, u_planet.m_cloud_area, -1, rays);
 
 	int sampleCount = reso.y;
 	float density = 0.;

@@ -12,7 +12,7 @@ SET output=-o ../binary
 %exe% %include% %option% %output%/VertexRender.frag.spv VertexRender.frag
 
 %exe% %include% %option% %output%/SkyReference.comp.spv SkyReference.comp
-%exe% %include% %option% %output%/SkyReference.comp.spv SkyReference2.comp
+rem %exe% %include% %option% %output%/SkyReference.comp.spv SkyReference2.comp
 
 %exe% %include% %option% %output%/Sky_Render.comp.spv Sky_Render.comp
 %exe% %include% %option% %output%/Sky_RenderShadow.comp.spv Sky_RenderShadow.comp

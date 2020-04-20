@@ -36,7 +36,7 @@ float fBM(in vec3 pos, in int octaves)
 
 float cloud_density(in vec3 pos, in int lod)
 {
-	float t = (distance(pos, u_cloud_inner.xyz)-u_cloud_inner.w) * u_cloud_area_inv;
+	float t = (distance(pos, u_planet.m_pos)-u_planet.m_cloud_area.x) / (u_planet.m_cloud_area.y-u_planet.m_cloud_area.x));
 	if(t<=0.||t>=1.){ return 0.; }
 
 	float density = fBM(pos*vec3(0.02),lod) * band2(0., 0.05, 0.75, 1., t);
@@ -108,7 +108,7 @@ void precompute()
 float light(vec3 pos)
 {
 	vec4 rays;
-	if(intersectRayAtomEx(pos, -uLightRay, u_planet.xyz, vec2(u_planet.w), -1., rays) != 0)
+	if(intersectRayAtomEx(pos, -uLightRay, u_planet.m_pos, u_planet.m_cloud_area.yy, -1., rays) != 0)
 	{
 		// 星の影
 		return 0.;
@@ -142,7 +142,7 @@ float PowderSugar(vec3 pos)
 vec4 cloud(in vec3 rayPos, in vec3 rayDir, float depth)
 {
 	vec4 rays;
-	int count = intersectRayAtomEx(uCamPos, uCamDir, u_cloud_inner.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), depth, rays);
+	int count = intersectRayAtomEx(uCamPos, uCamDir, u_plant.m_pos, u_plant.m_cloud_area, depth, rays);
 
 	uint sampleCount = 32;
 	float density = 0.;

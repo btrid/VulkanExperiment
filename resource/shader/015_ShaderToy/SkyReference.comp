@@ -117,7 +117,7 @@ float cloud_density(in vec3 pos)
 
 	density = density * smoothstep(coverage, coverage+alpha, density);
 
-	density = band(0., 0.5, 1., (distance(pos,u_cloud_inner.xyz)-u_cloud_inner.w)*u_cloud_area_inv) * density;
+	density = band(0., 0.5, 1., (distance(pos,u_planet.m_pos)-u_planet.m_cloud_area.x)/(u_planet.m_cloud_area.y-u_planet.m_cloud_area.x)) * density;
 	return density;
 }
 
@@ -138,7 +138,7 @@ float cloud_lighting(in vec3 pos)
 vec4 cloud(in vec3 rayPos, in vec3 rayDir, float depth)
 {
 	vec4 dist;
-	if(!intersectRayAtom(rayPos, rayDir, u_cloud_inner.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), dist))
+	if(!intersectRayAtom(rayPos, rayDir, u_planet.m_pos, u_planet.m_cloud_area, dist))
 	{
 		// 雲にヒットしない
 		return vec4(0.);
@@ -206,7 +206,7 @@ void main()
 	vec3 sky_color = getSkyColor(CamDir);
 
 	// 地面判定
-	float distance_land = intersectRaySphere(CamPos, CamDir, u_planet);
+	float distance_land = intersectRaySphere(CamPos, CamDir, vec4(u_planet.m_pos, u_planet.m_radius));
 	if(distance_land >= 0.)
 	{
 		// 地面に当たってる

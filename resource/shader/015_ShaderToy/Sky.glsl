@@ -25,23 +25,20 @@ layout(push_constant) uniform Input
 	vec3 window;
 	vec4 light_front;
 } constant;
-
-
-const float u_planet_radius = 1000.;
-const float u_planet_cloud_begin = 50.;
-const float u_planet_cloud_end = 50.+32.;
-const vec4 u_planet = vec4(0., -u_planet_radius, 0, u_planet_radius);
-const vec4 u_cloud_inner = u_planet + vec4(0.,0.,0.,u_planet_cloud_begin);
-const vec4 u_cloud_outer = u_planet + vec4(0.,0.,0.,u_planet_cloud_end);
-const float u_cloud_area_inv = 1. / (u_planet_cloud_end - u_planet_cloud_begin);
-const float u_mapping = 1./u_cloud_outer.w;
-//vec3 uLightRay = -normalize(vec3(0., 1., 1.));
 #define uLightRay constant.light_front.xyz
+
+struct Planet
+{
+	vec3 m_pos;
+	float m_radius;
+	vec2 m_cloud_area;
+};
+Planet u_planet = {vec3(0., -1000., 0.), 1000., vec2(1050., 1082.)};
+
 
 vec3 uLightColor = vec3(1.);
 float uAmbientPower = 0.2;
 
-#define SkyType_Sphere
 #define saturate(_a) clamp(_a, 0., 1.)
 
 bool intersectRayAtom(vec3 Pos, vec3 Dir, vec3 AtomPos, vec2 Area, out vec4 OutDist)
@@ -77,7 +74,6 @@ vec4 intersectPlane(vec3 orig,vec3 dir, vec3 planeOrig, vec3 planeNormal)
 
 int intersectRayAtomEx(vec3 Pos, vec3 Dir, vec3 AtomPos, vec2 Area, float z, out vec4 Rays)
 {
-#if defined(SkyType_Sphere)
 	vec3 RelativePos = AtomPos - Pos;
 	float tca = dot(RelativePos, Dir);
 
@@ -105,11 +101,6 @@ int intersectRayAtomEx(vec3 Pos, vec3 Dir, vec3 AtomPos, vec2 Area, float z, out
 		}
 	}
 	return count;
-#else
-	Rays[0] = intersectPlane(Pos, Dir, vec3(0., u_planet_cloud_begin, 0.), vec3(0.,-1.,0.)).x;
-	Rays[1] = intersectPlane(Pos, Dir, vec3(0., u_planet_cloud_end, 0.), vec3(0.,-1.,0.)).x;
-	return Rays[0] > 0. ? 1 : 0;
-#endif
 }
 
 float intersectRaySphere(in vec3 origin, in vec3 ray, in vec4 sphere)
@@ -151,18 +142,14 @@ float LightEnergy(float density, float henyeyGreensteinFactor)
 
 vec3 sampleWeather(vec3 pos)
 {
-	 return texture(s_weather_map, ((pos + constant.window*0.)* vec3(u_mapping, 1., u_mapping) * vec3(0.5, 1., 0.5) + vec3(0.5, 0., 0.5)).xz).xyz; 
+	 return texture(s_weather_map, ((pos + constant.window*0.) / vec3(u_planet.m_cloud_area.y, 1., u_planet.m_cloud_area.y) * vec3(0.5, 1., 0.5) + vec3(0.5, 0., 0.5)).xz).xyz; 
 }
 float getCoverage(vec3 weather_data){ return saturate(weather_data.r); }
 float getPrecipitation(vec3 weather_data){ return mix(0., 0.3, weather_data.g) + 0.001; }
 float getCloudType(vec3 weather_data){ return weather_data.b; }
 float heightFraction(vec3 pos) 
 {
-#if defined(SkyType_Sphere)
-	return (distance(pos,u_cloud_inner.xyz)-u_cloud_inner.w)*u_cloud_area_inv; 
-#else
-	return (pos.y-u_planet_cloud_begin) / (u_planet_cloud_end-u_planet_cloud_begin); 
-#endif
+	return (distance(pos,u_planet.m_pos)-u_planet.m_cloud_area.x)/(u_planet.m_cloud_area.y-u_planet.m_cloud_area.x);
 }
 
 vec4 mixGradients(float cloud_type)
@@ -196,7 +183,7 @@ float cloud_density(vec3 pos, vec3 weather_data, float height_frac, float lod, b
 	cloud_coverage *= smoothstep(coverage, coverage+coverage_gradient, cloud_coverage);
 	if(cloud_coverage <= 0.) { return 0.; }
 
-	pos = vec3(pos.x, height_frac, pos.z) * vec3(u_mapping, 1., u_mapping);
+	pos = vec3(pos.x, height_frac, pos.z) / vec3(u_planet.m_cloud_area.y, 1., u_planet.m_cloud_area.y);
 	
 	vec4 low_freq_noise = texture(s_cloud_map, pos);
 	float low_freq_fBM = dot(low_freq_noise.gba, vec3(0.625, 0.25, 0.125));

@@ -99,23 +99,23 @@ float light(in vec3 pos)
 {
 
 	vec4 rays;
-	if(intersectRayAtomEx(pos, -uLightRay, u_planet.xyz, vec2(u_cloud_inner.w), -1., rays) != 0)
+	if(intersectRayAtomEx(pos, -uLightRay, u_planet.m_pos, u_planet.m_cloud_area.xx, -1., rays) != 0)
 	{
 		// 星の影
 		return 0.;
 	}
 #if 1
 
-	int count = intersectRayAtomEx(pos, uLightRay, u_planet.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), -1, rays);
+	int count = intersectRayAtomEx(pos, uLightRay, u_planet.m_pos, u_planet.m_cloud_area, -1, rays);
 	float a = rays[1]-rays[0];
 
-	count = intersectRayAtomEx(pos, -uLightRay, u_planet.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), -1, rays);
+	count = intersectRayAtomEx(pos, -uLightRay, u_planet.m_pos, u_planet.m_cloud_area, -1, rays);
 	float b = rays[1]-rays[0];
 	float t = rays[1] / (a+b);
 
-	vec3 p = pos - u_planet.xyz;
+	vec3 p = pos - u_planet.m_pos;
 	
-	vec3 uv = vec3(dot(p, g_light_side), t, dot(p, g_light_up)) * vec3(u_mapping, 1., u_mapping) * vec3(0.5, 1., 0.5) + vec3(0.5, 0., 0.5);
+	vec3 uv = vec3(dot(p, g_light_side), t, dot(p, g_light_up)) / vec3(u_planet.m_cloud_area.y, 1., u_planet.m_cloud_area.y) * vec3(0.5, 1., 0.5) + vec3(0.5, 0., 0.5);
 
 	return texture(s_shadow_map, uv).x * g_phase_factor;
 
@@ -150,16 +150,16 @@ float SugerPowderEffect(vec3 pos, float step)
 {
 #if 1
 	vec4 rays;
-	intersectRayAtomEx(pos, uLightRay, u_planet.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), -1, rays);
+	intersectRayAtomEx(pos, uLightRay, u_planet.m_pos, u_planet.m_cloud_area, -1, rays);
 	float a = rays[1]-rays[0];
 
-	intersectRayAtomEx(pos, -uLightRay, u_planet.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), -1, rays);
+	intersectRayAtomEx(pos, -uLightRay, u_planet.m_pos, u_planet.m_cloud_area, -1, rays);
 	float b = rays[1]-rays[0];
 	float t = rays[1] / (a+b);
 
-	vec3 p = pos - u_planet.xyz;
+	vec3 p = pos - u_planet.m_pos;
 	
-	vec3 uv = vec3(dot(p, g_light_side), t, dot(p, g_light_up)) * vec3(u_mapping, 1., u_mapping) * vec3(0.5, 1., 0.5) + vec3(0.5, 0., 0.5);
+	vec3 uv = vec3(dot(p, g_light_side), t, dot(p, g_light_up)) / vec3(u_planet.m_cloud_area.y, 1., u_planet.m_cloud_area.y) * vec3(0.5, 1., 0.5) + vec3(0.5, 0., 0.5);
 
 	return 1. - texture(s_along_density_map, uv).x;
 
@@ -190,7 +190,7 @@ void main()
 	background_color = mix(background_color, uLightColor, smoothstep(0.9999, 1.00, dot(-uLightRay, uCamDir)));
 
 	// 地面判定
-	float distance_land = intersectRaySphere(uCamPos, uCamDir, u_planet);
+	float distance_land = intersectRaySphere(uCamPos, uCamDir, vec4(u_planet.m_pos, u_planet.m_radius));
 	if(distance_land >= 0.)
 	{
 		// 地面に当たってる
@@ -201,7 +201,7 @@ void main()
 	}
 
 	vec4 rays;
-	int count = intersectRayAtomEx(uCamPos, uCamDir, u_cloud_inner.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), distance_land, rays);
+	int count = intersectRayAtomEx(uCamPos, uCamDir, u_planet.m_pos, u_planet.m_cloud_area, distance_land, rays);
 
 	uint sampleCount = 128;
 	float transmittance = 1.;
