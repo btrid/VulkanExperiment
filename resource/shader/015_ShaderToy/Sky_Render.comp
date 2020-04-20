@@ -148,6 +148,23 @@ float light(in vec3 pos)
 
 float SugerPowderEffect(vec3 pos, float step)
 {
+#if 1
+	vec4 rays;
+	intersectRayAtomEx(pos, uLightRay, u_planet.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), -1, rays);
+	float a = rays[1]-rays[0];
+
+	intersectRayAtomEx(pos, -uLightRay, u_planet.xyz, vec2(u_cloud_inner.w, u_cloud_outer.w), -1, rays);
+	float b = rays[1]-rays[0];
+	float t = rays[1] / (a+b);
+
+	vec3 p = pos - u_planet.xyz;
+	
+	vec3 uv = vec3(dot(p, g_light_side), t, dot(p, g_light_up)) * vec3(u_mapping, 1., u_mapping) * vec3(0.5, 1., 0.5) + vec3(0.5, 0., 0.5);
+
+	return 1. - texture(s_along_density_map, uv).x;
+
+#else
+
 	float density = 0.;
 	for(int i = 0; i < g_noise_kernel.length(); i++)
 	{
@@ -159,6 +176,7 @@ float SugerPowderEffect(vec3 pos, float step)
 	}
 
 	return 1.- exp(-density / g_noise_kernel.length());
+#endif
 }
 
 

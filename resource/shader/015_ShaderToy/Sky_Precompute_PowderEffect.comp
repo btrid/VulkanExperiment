@@ -104,7 +104,7 @@ void main()
 			density += dot(g_density[0][0], vec3(1.))+dot(g_density[0][1], vec3(1.,1.,1.))+dot(g_density[0][2], vec3(1.));
 			density += dot(g_density[1][0], vec3(1.))+dot(g_density[1][1], vec3(1.,0.,1.))+dot(g_density[1][2], vec3(1.));
 			density += dot(g_density[2][0], vec3(1.))+dot(g_density[2][1], vec3(1.,1.,1.))+dot(g_density[2][2], vec3(1.));
-			imageStore(i_along_density_map, ivec3(gl_GlobalInvocationID.x, s, gl_GlobalInvocationID.y), ivec4(exp(-density*0.1)*65535.));
+			imageStore(i_along_density_map, ivec3(gl_GlobalInvocationID.x, s, gl_GlobalInvocationID.y), ivec4(exp(-density*0.25)*65535.));
 
 			pos = fma(CamDir, vec3(step), pos);
 		}
