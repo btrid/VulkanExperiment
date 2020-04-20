@@ -126,7 +126,6 @@ float remap(float original_value, float original_min, float original_max, float 
 }
 float band(in float start, in float peak, in float end, in float t){return smoothstep (start, peak, t) * (1. - smoothstep (peak, end, t));}
 float band2(in float ls, in float le, in float hs, in float he, in float t){return smoothstep (ls, le, t) * (1. - smoothstep (hs, he, t));}
-float _band(in float ls, in float le, in float hs, in float he, in float t){return band2(ls, le, hs, he, t);}
 float atan2(in float y, in float x){return x == 0.0 ? sign(y)*3.14/2.:atan(y, x);}
 
 //float henyeyGreenstein(float d, float g) { return ((1. - g*g) / pow((1. + g*g - 2.*g*d), 1.5)) / (4.*3.1415); }
@@ -175,13 +174,13 @@ float cloud_density(vec3 pos, vec3 weather_data, float height_frac, float lod, b
 	if(height_frac>= 1. || height_frac <= 0.) { return 0.; } //範囲外
 
 	float height_gradient = densityHeightGradient(weather_data, height_frac);
-	if(height_gradient<=0.){ return 0.;}
+	if(height_gradient<=0.){ return 0.;} // この雲タイプはない高さ
 
 	float cloud_coverage = getCoverage(weather_data);
 	float coverage = 0.35;
 	float coverage_gradient = 0.2;
 	cloud_coverage *= smoothstep(coverage, coverage+coverage_gradient, cloud_coverage);
-	if(cloud_coverage <= 0.) { return 0.; }
+	if(cloud_coverage <= 0.) { return 0.; } // 雲存在しない
 
 	pos = vec3(pos.x, height_frac, pos.z) / vec3(u_planet.m_cloud_area.y, 1., u_planet.m_cloud_area.y);
 	
