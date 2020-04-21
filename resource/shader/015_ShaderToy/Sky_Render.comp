@@ -7,11 +7,6 @@
 
 layout (local_size_x = 32, local_size_y = 32) in;
 
-vec3 rand(in int co)
-{
-	vec3 s = vec3(dot(vec3(co+0.95)*9.63+53.81, vec3(12.98,78.23, 15.61)), dot(vec3(co+0.61)*54.53+37.33, vec3(91.87,47.73, 13.78)), dot(vec3(co+0.23)*18.71+27.14, vec3(51.71,14.35, 24.89)));
-	return fract(sin(s) * vec3(39.15, 48.51, 67.79) * vec3(39729.1, 43758.5, 63527.7));
-}
 vec3 g_noise_kernel[3*3];
 float g_phase_factor;
 vec3 g_light_up;
@@ -63,18 +58,6 @@ void precompute()
 		vec3 side = cross(-uCamDir, normalize(up));
 		side = dot(side, side) < 0.000001 ? vec3(1., 0., 0.) : normalize(side);
 		up = normalize(cross(side, -uCamDir));
-
-//		g_noise_kernel[0] = uCamDir * -2. + side *  0.4 + up *  0.7;
-//		g_noise_kernel[1] = uCamDir * -2. + side *  0.8 + up *  0.6;
-//		g_noise_kernel[2] = uCamDir * -2.5 + side * -0.6 + up * -0.4;
-//		g_noise_kernel[3] = uCamDir * -2.5 + side *  0.5 + up * -0.8;
-//		g_noise_kernel[4] = uCamDir * -1.5 + side * -0.5 + up *  0.6;
-//		g_noise_kernel[5] = uCamDir * -1.5 + side * -0.9 + up * -0.7;
-
-//		for(int i = 0; i < g_noise_kernel.length(); i++)
-//		{		
-//			g_noise_kernel[i] = normalize(rand(i));
-//		}
 
 		for (int theta = 0; theta < 3; theta++)
 		{
@@ -160,8 +143,9 @@ float SugerPowderEffect(vec3 pos, float step)
 	float b = rays[1]-rays[0];
 	float t = rays[1] / (a+b);
 
+
 	vec3 p = pos - u_planet.m_pos;
-	vec3 uv = vec3(dot(p, s), t, dot(p, u)) / vec3(u_planet.m_cloud_area.y, 1., u_planet.m_cloud_area.y) * vec3(0.5, 1., 0.5) + vec3(0.5, 0., 0.5);
+	vec3 uv = vec3(dot(p, s), dot(p, u), t) / vec3(u_planet.m_cloud_area.yy, 1.) * vec3(0.5, 0.5, 1.) + vec3(0.5, 0.5, 0.);
 
 	return 1. - texture(s_along_density_map, uv).x;
 
@@ -187,7 +171,6 @@ void main()
 	precompute();
 
 	// 空色
-//	vec3 background_color = mix(vec3(0.0, 0.1, 0.4), vec3(0.3, 0.6, 0.8), 1.0 - uCamDir.y);
 	vec3 background_color = mix(vec3(0.3, 0.6, 0.9), vec3(0.4, 0.7, 1.5), 1.0 - uCamDir.y);
 	background_color = mix(background_color, uLightColor, smoothstep(0.9999, 1.00, dot(-uLightRay, uCamDir)));
 
@@ -251,7 +234,8 @@ void main()
 			float light = light(pos);
 			float e = light * d * transmittance;
 			float powder = 0.75;
-			if(mod(constant.window.x, 1.)>0.3) powder = SugerPowderEffect(pos, ray_step);
+//			if(mod(constant.window.x, 1.)>0.3)
+				powder = SugerPowderEffect(pos, ray_step);
 
 			color += e * vec3(1., 1., 1.) * powder;
 
@@ -265,7 +249,7 @@ void main()
 
 	// tonemapping
 	{
-		float exposure = 1.;
+		float exposure = 2.;
 		background_color.xyz = vec3(1.0) - exp(-exposure * background_color.xyz);
 	}
 

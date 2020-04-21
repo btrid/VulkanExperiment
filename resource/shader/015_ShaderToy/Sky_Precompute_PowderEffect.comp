@@ -4,65 +4,60 @@
 #include "Sky.glsl"
 layout (local_size_x = 32, local_size_y = 32) in;
 
-shared vec4 s_begin_step[32+1][32+1];
+//shared vec4 s_begin_step[32+1][32+1];
 shared f16vec3 s_density[32+1][32+1];
-
+vec4 g_begin_step;
+vec3 g_weather_data;
 const vec3 f = vec3(0., -1., 0.);
 const vec3 u = vec3(0., 0., 1.); 
 const vec3 s = vec3(1., 0., 0.);
 
 void store(int y)
 {
-	ivec2 local = ivec2(gl_LocalInvocationID.xy);
-	vec4 pos_step = s_begin_step[local.y][local.x];
+	float d = 0.;
+//	vec4 pos_step = s_begin_step[gl_LocalInvocationID.y][gl_LocalInvocationID.x];
 
-	vec3 p = pos_step.xyz + f * pos_step.w*y;
-
-	float height_frac = heightFraction(p);
-	vec3 weather_data = sampleWeather(p);
-	float d = cloud_density(p, weather_data, height_frac, 0., true);
-
-	if(pos_step.w<0.)
+	if(g_begin_step.w>0.)
 	{
-		// cloudにヒットしない
-		d=0.;
+		vec3 p = g_begin_step.xyz + f * g_begin_step.w*y;
+		float height_frac = heightFraction(p);
+		d = cloud_density(p, g_weather_data, height_frac, 0., true);
 	}
 
-	s_density[local.y][local.x][(y+1)%3] = float16_t(d);
+	s_density[gl_LocalInvocationID.y][gl_LocalInvocationID.x][(y+1)%3] = float16_t(d);
 
 }
 void main()
 {
 
 	ivec3 reso = imageSize(i_along_density_map);
-	int sampleCount = reso.y;
+	int sampleCount = reso.z;
 
 	ivec2 global = ivec2(gl_WorkGroupID.xy*(gl_WorkGroupSize.xy-2));
 	ivec2 local = ivec2(gl_LocalInvocationID.xy);
 	ivec2 index = global + local;
 	{
+		vec2 ndc = ((vec2(global + local)-0.5) / vec2(reso.xy)) * 2. -1.;
+		ndc /= u_planet.m_cloud_area.yy;
+		vec3 CamPos = s*ndc.x + u*ndc.y -f*3000. + u_planet.m_pos.xyz;
+
+		vec4 rays;
+		int count = intersectRayAtomEx(CamPos, f, u_planet.m_pos.xyz, u_planet.m_cloud_area, -1, rays);
+
+		if(count==0)
 		{
-			vec2 ndc = ((vec2(global + local)-0.5) / vec2(reso.xz)) * 2. -1.;
-			ndc /= u_planet.m_cloud_area.yy;
-			vec3 CamPos = s*ndc.x + u*ndc.y -f*3000. + u_planet.m_pos.xyz;
-
-			vec4 rays;
-			int count = intersectRayAtomEx(CamPos, f, u_planet.m_pos.xyz, u_planet.m_cloud_area, -1, rays);
-
-			if(count==0){s_begin_step[local.y][local.x]=vec4(-1.); }
-			else
-			{
-				float step = (rays[1] - rays[0]) / float(sampleCount);
-				vec3 pos = CamPos + f * (rays[0]+step*0.5);
-				s_begin_step[local.y][local.x] = vec4(pos, step);
-			}
-
+			g_begin_step=vec4(-1.); 
+			g_weather_data = vec3(0.);
+		}
+		else
+		{
+			float step = (rays[1] - rays[0]) / float(sampleCount);
+			vec3 pos = CamPos + f * (rays[0]+step*0.5);
+			g_begin_step = vec4(pos, step);
+			g_weather_data = sampleWeather(pos);
 
 		}
 	}
-
-	memoryBarrierShared();
-	barrier();
 
 	for(int y = -1; y<=0; y++)
 	{
@@ -73,9 +68,9 @@ void main()
 
 	float density = 0.;
 	{
-		vec4 pos_step = s_begin_step[local.y][local.x];
-		vec3 pos = pos_step.xyz;
-		float step = pos_step.w;
+//		vec4 pos_step = s_begin_step[local.y][local.x];
+		vec3 pos = g_begin_step.xyz;
+		float step = g_begin_step.w;
 
 		for(int s = 0; s < sampleCount; s++)
 		{
@@ -89,7 +84,7 @@ void main()
 			density += dot(s_density[local.y+0][local.x+0], f16vec3(1.))+dot(s_density[local.y+0][local.x+1], f16vec3(1.,1.,1.))+dot(s_density[local.y+0][local.x+2], f16vec3(1.));
 			density += dot(s_density[local.y+1][local.x+0], f16vec3(1.))+dot(s_density[local.y+1][local.x+1], f16vec3(1.,0.,1.))+dot(s_density[local.y+1][local.x+2], f16vec3(1.));
 			density += dot(s_density[local.y+2][local.x+0], f16vec3(1.))+dot(s_density[local.y+2][local.x+1], f16vec3(1.,1.,1.))+dot(s_density[local.y+2][local.x+2], f16vec3(1.));
-			imageStore(i_along_density_map, ivec3(index.x, s, index.y), ivec4(exp(-density*0.65)*32767.));
+			imageStore(i_along_density_map, ivec3(index.x, index.y, s), ivec4(exp(-density*0.2)*65535.));
 
 			pos = fma(f, vec3(step), pos);
 		}

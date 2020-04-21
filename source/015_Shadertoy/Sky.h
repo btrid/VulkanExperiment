@@ -838,7 +838,7 @@ struct Sky
 			} 
 			{
 				vk::ImageCreateInfo image_info;
-				image_info.setExtent(vk::Extent3D(256 * 4, 32, 256 * 4));
+				image_info.setExtent(vk::Extent3D(256 * 4, 256 * 4, 32));
 				image_info.setArrayLayers(1);
 				image_info.setFormat(vk::Format::eR16Unorm);
 				image_info.setImageType(vk::ImageType::e3D);
@@ -1238,8 +1238,7 @@ struct Sky
 			}
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Sky_Precompute_PowderEffect_CS].get());
-//			auto num = app::calcDipatchGroups(uvec3(m_image_along_density_info.extent.width, m_image_along_density_info.extent.depth, 1), uvec3(32, 32, 1));
-			auto num = app::calcDipatchGroups(uvec3(m_image_along_density_info.extent.width, m_image_along_density_info.extent.depth, 1), uvec3(30, 30, 1));
+			auto num = app::calcDipatchGroups(uvec3(m_image_along_density_info.extent.width, m_image_along_density_info.extent.height, 1), uvec3(30, 30, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 
 			{
@@ -1267,7 +1266,7 @@ struct Sky
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Sky_RenderPowder_CS].get());
-			auto num = app::calcDipatchGroups(uvec3(m_image_along_density_info.extent.width, m_image_along_density_info.extent.depth, 1), uvec3(32, 32, 1));
+			auto num = app::calcDipatchGroups(uvec3(m_image_along_density_info.extent.width, m_image_along_density_info.extent.height, 1), uvec3(32, 32, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 
 		}
