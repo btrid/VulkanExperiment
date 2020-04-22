@@ -17,7 +17,7 @@ void main()
 	// カメラ位置の作成
 	{
 		vec2 ndc = ((vec2(gl_GlobalInvocationID.xy)+0.5) / vec2(reso.xz)) * 2. -1.;
-		ndc /= u_planet.m_cloud_area.yy;
+		ndc *= u_planet.m_cloud_area.yy;
 
 		vec3 up = vec3(0., 0., 1.); 
 		vec3 side = cross(normalize(up), CamDir);
@@ -53,5 +53,4 @@ void main()
 		}
 		break;
 	}
-
 }

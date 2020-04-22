@@ -134,6 +134,10 @@ const vec3 u = vec3(0., 0., 1.);
 const vec3 s = vec3(1., 0., 0.);
 float SugerPowderEffect(vec3 pos, float step)
 {
+	if(mod(constant.window.x, 1.)>0.7)
+	{ 
+		return 0.5; 
+	}
 #if 1
 	vec4 rays;
 	intersectRayAtomEx(pos, f, u_planet.m_pos, u_planet.m_cloud_area, -1, rays);
@@ -233,9 +237,7 @@ void main()
 
 			float light = light(pos);
 			float e = light * d * transmittance;
-			float powder = 0.75;
-//			if(mod(constant.window.x, 1.)>0.3)
-				powder = SugerPowderEffect(pos, ray_step);
+			float powder = SugerPowderEffect(pos, ray_step);
 
 			color += e * vec3(1., 1., 1.) * powder;
 

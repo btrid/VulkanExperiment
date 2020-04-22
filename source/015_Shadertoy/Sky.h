@@ -838,7 +838,7 @@ struct Sky
 			} 
 			{
 				vk::ImageCreateInfo image_info;
-				image_info.setExtent(vk::Extent3D(256 * 4, 256 * 4, 32));
+				image_info.setExtent(vk::Extent3D(256*2, 256*2, 16*2));
 				image_info.setArrayLayers(1);
 				image_info.setFormat(vk::Format::eR16Unorm);
 				image_info.setImageType(vk::ImageType::e3D);
@@ -1108,8 +1108,8 @@ struct Sky
 	{
 		float c = cos(sGlobal::Order().getTotalTime());
 		float s = sin(sGlobal::Order().getTotalTime());
-//		auto LightRay = normalize(vec3(s, c, 0.1));
-		auto LightRay = normalize(vec3(0.f, -1.f, 0.f));
+		auto LightRay = normalize(vec3(s, c, 0.1));
+//		auto LightRay = normalize(vec3(0.f, -1.f, 0.f));
 		Constant constant;
 		constant.window = vec4(sGlobal::Order().getTotalTime()) * vec4(1.f, 0.f, 12.f, 0.f);
 		constant.light_front = vec4(LightRay, 0.f);
@@ -1257,6 +1257,8 @@ struct Sky
 		// test
 //		if (0)
 		{
+			_label.insert("render along density");
+
 			std::array<vk::ImageMemoryBarrier, 1> image_barrier;
 			image_barrier[0].setImage(render_target->m_image);
 			image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
@@ -1266,7 +1268,7 @@ struct Sky
 			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Sky_RenderPowder_CS].get());
-			auto num = app::calcDipatchGroups(uvec3(m_image_along_density_info.extent.width, m_image_along_density_info.extent.height, 1), uvec3(32, 32, 1));
+			auto num = app::calcDipatchGroups(uvec3(render_target->m_info.extent.width, render_target->m_info.extent.height, 1), uvec3(32, 32, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 
 		}
@@ -1322,9 +1324,9 @@ struct Sky
 		}
 
 		// test
-		if(0)
+//		if(0)
 		{
-			std::array<vk::ImageMemoryBarrier, 0> image_barrier;
+			std::array<vk::ImageMemoryBarrier, 1> image_barrier;
 			image_barrier[0].setImage(render_target->m_image);
 			image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
 			image_barrier[0].setNewLayout(vk::ImageLayout::eGeneral);
