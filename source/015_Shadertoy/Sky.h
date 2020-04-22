@@ -772,7 +772,7 @@ struct Sky
 
 			{
 				vk::ImageCreateInfo image_info;
-				image_info.setExtent(vk::Extent3D(256 * 4, 32, 256 * 4));
+				image_info.setExtent(vk::Extent3D(256 * 2, 16, 256 * 2));
 				image_info.setArrayLayers(1);
 				//				image_info.setFormat(vk::Format::eR8Unorm);
 				image_info.setFormat(vk::Format::eR16Unorm);
@@ -1108,8 +1108,8 @@ struct Sky
 	{
 		float c = cos(sGlobal::Order().getTotalTime());
 		float s = sin(sGlobal::Order().getTotalTime());
-		auto LightRay = normalize(vec3(s, c, 0.1));
-//		auto LightRay = normalize(vec3(0.f, -1.f, 0.f));
+//		auto LightRay = normalize(vec3(s, c, 0.1));
+		auto LightRay = normalize(vec3(0.f, -1.f, 0.f));
 		Constant constant;
 		constant.window = vec4(sGlobal::Order().getTotalTime()) * vec4(1.f, 0.f, 12.f, 0.f);
 		constant.light_front = vec4(LightRay, 0.f);
@@ -1255,7 +1255,7 @@ struct Sky
 		}
 
 		// test
-//		if (0)
+		if (0)
 		{
 			_label.insert("render along density");
 
@@ -1324,7 +1324,7 @@ struct Sky
 		}
 
 		// test
-//		if(0)
+		if(0)
 		{
 			std::array<vk::ImageMemoryBarrier, 1> image_barrier;
 			image_barrier[0].setImage(render_target->m_image);

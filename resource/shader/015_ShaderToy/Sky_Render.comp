@@ -7,7 +7,6 @@
 
 layout (local_size_x = 32, local_size_y = 32) in;
 
-vec3 g_noise_kernel[3*3];
 float g_phase_factor;
 vec3 g_light_up;
 vec3 g_light_side;
@@ -52,30 +51,6 @@ void precompute()
 	}
 
 	g_phase_factor = henyeyGreenstein(dot(-uLightRay, uCamDir), 0.2);
-
-	{
-		vec3 up = vec3(0., 1., 0.);
-		vec3 side = cross(-uCamDir, normalize(up));
-		side = dot(side, side) < 0.000001 ? vec3(1., 0., 0.) : normalize(side);
-		up = normalize(cross(side, -uCamDir));
-
-		for (int theta = 0; theta < 3; theta++)
-		{
-			float _t = (theta + 0.5f) / 3.f * 3.14f;
-			float st = sin(_t);
-			float ct = cos(_t);
-			for (int phi = 0; phi < 3; phi++)
-			{
-				float _p = (phi + 0.5f) / 3.f * 6.28f;
-				float sp = sin(_p);
-				float cp = cos(_p);
-
-				g_noise_kernel[theta*3+phi] = vec3(st*cp, st*sp, ct);
-			}
-
-		}
-		
-	}
 }
 
 float light(in vec3 pos)
@@ -138,7 +113,7 @@ float SugerPowderEffect(vec3 pos, float step)
 	{ 
 		return 0.5; 
 	}
-#if 1
+
 	vec4 rays;
 	intersectRayAtomEx(pos, f, u_planet.m_pos, u_planet.m_cloud_area, -1, rays);
 	float a = rays[1]-rays[0];
@@ -153,20 +128,6 @@ float SugerPowderEffect(vec3 pos, float step)
 
 	return 1. - texture(s_along_density_map, uv).x;
 
-#else
-
-	float density = 0.;
-	for(int i = 0; i < g_noise_kernel.length(); i++)
-	{
-		vec3 p = pos + g_noise_kernel[i]*step;
-		float height_frac = heightFraction(p);
-		vec3 weather_data = sampleWeather(p);
-		float d = cloud_density(p, weather_data, height_frac, 0., true);
-		density += d;
-	}
-
-	return 1.- exp(-density / g_noise_kernel.length());
-#endif
 }
 
 
@@ -192,48 +153,21 @@ void main()
 	vec4 rays;
 	int count = intersectRayAtomEx(uCamPos, uCamDir, u_planet.m_pos, u_planet.m_cloud_area, distance_land, rays);
 
-	uint sampleCount = 128;
+	uint sampleCount = 64;
 	float transmittance = 1.;
 	vec3 color = vec3(0.);
 	for(int i = 0; i <count; i++)
 	{
 
 		float ray_step = (rays[i*2+1] - rays[i*2]) / float(sampleCount);
-
 		vec3 begin = uCamPos + uCamDir * (rays[i*2]+ray_step*0.5);
-		int s=0;
-
-		// 最初だけpowderエフェクトを追加
-/*		for(; s<sampleCount; s++)
+		for(int s=0; s<sampleCount; s++)
 		{
 			vec3 pos = begin + uCamDir * ray_step * float(s);
 			float height_frac = heightFraction(pos);
 			vec3 weather_data = sampleWeather(pos);
 			float d = cloud_density(pos, weather_data, height_frac, 0., true);
-
-			if(d<=0.1)
-			{
-//				continue;
-			}
-
-			float light = light(pos);
-			float e = light * d * transmittance;
-
-			float powder = SugerPowderEffect(pos);
-
-			
-			color += e * vec3(1., 1., 1.) * powder;
-
-			transmittance *= exp(-d*getPrecipitation(weather_data)*ray_step);
-			break;
-
-		}
-*/		for(; s<sampleCount; s++)
-		{
-			vec3 pos = begin + uCamDir * ray_step * float(s);
-			float height_frac = heightFraction(pos);
-			vec3 weather_data = sampleWeather(pos);
-			float d = cloud_density(pos, weather_data, height_frac, 0., true);
+			if(d<=0.){ continue; }
 
 			float light = light(pos);
 			float e = light * d * transmittance;
@@ -242,7 +176,7 @@ void main()
 			color += e * vec3(1., 1., 1.) * powder;
 
 			transmittance *= exp(-d*getPrecipitation(weather_data)*ray_step);
-			if(transmittance < 0.001) { break; }
+			if(transmittance < 0.01) { break; }
 
 		}
 	}
