@@ -39,7 +39,7 @@ void main()
 	{
 		vec2 ndc = ((vec2(global + local)-0.5) / vec2(reso.xy)) * 2. -1.;
 		ndc *= u_planet.m_cloud_area.yy;
-		vec3 CamPos = s*ndc.x + u*ndc.y -f*3000. + u_planet.m_pos.xyz;
+		vec3 CamPos = s*ndc.x + u*ndc.y -f*(u_planet.m_cloud_area.y+1.) + u_planet.m_pos.xyz;
 
 		vec4 rays;
 		int count = intersectRayAtomEx(CamPos, f, u_planet.m_pos.xyz, u_planet.m_cloud_area, -1, rays);
@@ -63,8 +63,6 @@ void main()
 	{
 		store(y);
 	}
-	memoryBarrierShared();
-	barrier();
 
 	for(int s = 0; s < sampleCount; s++)
 	{
@@ -78,7 +76,7 @@ void main()
 		density += dot(s_density[local.y+0][local.x+0], f16vec3(1.))+dot(s_density[local.y+0][local.x+1], f16vec3(1.,1.,1.))+dot(s_density[local.y+0][local.x+2], f16vec3(1.));
 		density += dot(s_density[local.y+1][local.x+0], f16vec3(1.))+dot(s_density[local.y+1][local.x+1], f16vec3(1.,0.,1.))+dot(s_density[local.y+1][local.x+2], f16vec3(1.));
 		density += dot(s_density[local.y+2][local.x+0], f16vec3(1.))+dot(s_density[local.y+2][local.x+1], f16vec3(1.,1.,1.))+dot(s_density[local.y+2][local.x+2], f16vec3(1.));
-		imageStore(i_along_density_map, ivec3(index.x, index.y, s), ivec4(saturate(density*0.05)*65535.));
+		imageStore(i_along_density_map, ivec3(index.x, index.y, s), ivec4(exp(-density*0.3)*65535.));
 
 	}
 
