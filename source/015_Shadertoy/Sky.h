@@ -772,7 +772,7 @@ struct Sky
 
 			{
 				vk::ImageCreateInfo image_info;
-				image_info.setExtent(vk::Extent3D(256 * 2, 16, 256 * 2));
+				image_info.setExtent(vk::Extent3D(256*2, 256*2, 16*1));
 				image_info.setArrayLayers(1);
 				//				image_info.setFormat(vk::Format::eR8Unorm);
 				image_info.setFormat(vk::Format::eR16Unorm);
@@ -1307,7 +1307,7 @@ struct Sky
 			}
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Sky_Precompute_Shadow_CS].get());
-			auto num = app::calcDipatchGroups(uvec3(m_image_shadow_info.extent.width, m_image_shadow_info.extent.depth, 1), uvec3(32, 32, 1));
+			auto num = app::calcDipatchGroups(uvec3(m_image_shadow_info.extent.width, m_image_shadow_info.extent.height, 1), uvec3(32, 32, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 
 			{
