@@ -15,7 +15,7 @@ void main()
 //	v[0] = 0.5;
 	v[1] = 0.5;
 //	v[2] = 0.5;
-	v[2] = worley_noise(gl_GlobalInvocationID.xyz+213, 2, uvec3(imageSize(i_weather_map), 1)) * 0.5 + 0.5;
+	v[2] = 1.;
 //	v[2] = value_noise(gl_GlobalInvocationID.xyz+23, 8)*0.2+0.8;
 //	v = clamp(v, vec4(0.), vec4(1.));
 	imageStore(i_weather_map, ivec2(gl_GlobalInvocationID.xy), uvec4(v* vec4(255.)));

@@ -120,10 +120,7 @@ float intersectRaySphere(in vec3 origin, in vec3 ray, in vec4 sphere)
 	if (t0 < 0.) t0 = t1;
 	return t0;
 }
-float remap(float original_value, float original_min, float original_max, float new_min, float new_max)
-{
-	 return (original_value - original_min) / (original_max - original_min) * (new_max - new_min) + new_min; 
-}
+float remap(float original_value, float original_min, float original_max, float new_min, float new_max){ return (original_value - original_min) / (original_max - original_min) * (new_max - new_min) + new_min; }
 float band(in float start, in float peak, in float end, in float t){return smoothstep (start, peak, t) * (1. - smoothstep (peak, end, t));}
 float band2(in float ls, in float le, in float hs, in float he, in float t){return smoothstep (ls, le, t) * (1. - smoothstep (hs, he, t));}
 float atan2(in float y, in float x){return x == 0.0 ? sign(y)*3.14/2.:atan(y, x);}
@@ -176,11 +173,7 @@ float cloud_density(vec3 pos, vec3 weather_data, float height_frac, float lod, b
 	float height_gradient = densityHeightGradient(weather_data, height_frac);
 	if(height_gradient<=0.){ return 0.;} // この雲タイプはない高さ
 
-	float cloud_coverage = getCoverage(weather_data);
-	float coverage = 0.35;
-	float coverage_gradient = 0.2;
-	cloud_coverage *= smoothstep(coverage, coverage+coverage_gradient, cloud_coverage);
-	if(cloud_coverage <= 0.) { return 0.; } // 雲存在しない
+	float cloud_coverage = getCoverage(weather_data) * 0.8;
 
 	pos = vec3(pos.x, height_frac, pos.z) / vec3(u_planet.m_cloud_area.y, 1., u_planet.m_cloud_area.y);
 	
@@ -190,12 +183,12 @@ float cloud_density(vec3 pos, vec3 weather_data, float height_frac, float lod, b
 
 	base_cloud *= height_gradient;
 
-	float final_cloud = remap(base_cloud, cloud_coverage, 1., 0., 1.) * cloud_coverage;
+	float final_cloud = remap(base_cloud, 1.-cloud_coverage, 1., 0., 1.) * cloud_coverage;
 
 //	if(final_cloud <= 0.){ return 0.; }
 //	if(mod(constant.window.x*0.03, 1.) > 0.5)
     {
-//		pos.xz += texture(s_cloud_distort_map, pos.xz).xy * (1. - height_frac);
+//		pos.xz += texture(s_cloud_distort_map, pos.xz).xy * (1. - height_frac)*constant.window.x;
 
 		vec3 high_freq_noise = texture(s_cloud_detail_map, pos*0.1).xyz;
 		float high_freq_fBM = dot(high_freq_noise, vec3(0.625, 0.25, 0.125));

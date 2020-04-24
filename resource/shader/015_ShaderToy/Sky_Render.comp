@@ -153,7 +153,7 @@ void main()
 	vec4 rays;
 	int count = intersectRayAtomEx(uCamPos, uCamDir, u_planet.m_pos, u_planet.m_cloud_area, distance_land, rays);
 
-	uint sampleCount = 32;
+	uint sampleCount = 128;
 	float transmittance = 1.;
 	vec3 color = vec3(0.);
 	for(int i = 0; i <count; i++)
