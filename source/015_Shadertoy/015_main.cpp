@@ -308,12 +308,100 @@ float heightFraction(const vec3& pos)
 {
 	return (distance(pos, u_cloud_inner.xyz()) - u_cloud_inner.w)*u_cloud_area_inv;
 }
+vec3 hlsl_mod(vec3 x, vec3 y) { return x - y * trunc(x / y); }
+vec3 _wn_rand(ivec4 _co)
+{
+	vec4 co = vec4(_co);
+	vec3 s = vec3(dot(co.xyz()*9.63f + 53.81f, vec3(12.98, 78.23, 15.61)), dot(co.zxy()*54.53f + 37.33f, vec3(91.87, 47.73, 13.78)), dot(co.yzx()*18.71f + 27.14f, vec3(51.71, 14.35, 24.89)));
+	return fract(sin(s) * (float(co.w) + vec3(39.15, 48.51, 67.79)) * vec3(3929.1, 4758.5, 6357.7));
+}
+float worley_noise2(vec3 invocation, int lod)
+{
+	invocation *= 20.;
+	float value = 0.;
+	float total = 0.;
+	for (int i = 0; i < lod; i++)
+	{
+		ivec3 tile_size = max(ivec3(64) >> i, ivec3(1));
+		ivec3 tile_id = ivec3(invocation) / tile_size;
+		vec3 pos = glm::mod(invocation, vec3(tile_size));
+
+		float _radius = float(tile_size.x) * 0.5;
+		tile_id = tile_id + -(1 - ivec3(step(vec3(_radius), pos)));
+
+		float v = 0.;
+
+		for (int z = 0; z < 2; z++)
+			for (int y = 0; y < 2; y++)
+				for (int x = 0; x < 2; x++)
+				{
+					ivec3 tid = ivec3(tile_id) + ivec3(x, y, z);
+					for (int n = 0; n < 2; n++)
+					{
+						vec3 p = _wn_rand(ivec4(tid, n))*vec3(tile_size) + vec3(x, y, z)*vec3(tile_size);
+						v = glm::max(v, 1.f - glm::min(distance(pos, p) / _radius, 1.f));
+					}
+				}
+		value = value * 2. + v;
+		total = total * 2. + 1.;
+	}
+	return value / total;
+}
+
+void noise_test()
+{
+	constexpr uvec3 reso = uvec3(32, 8, 32);
+	vec3 CamPos = vec3(0., 1., 0.);
+	vec3 CamDir = normalize(vec3(0., 1., 1.));
+	vec3 g_light_foward = normalize(vec3(0., -1., -100.));
+	vec3 g_light_up;
+	vec3 g_light_side;
+	{
+		g_light_up = vec3(0., 0., 1.);
+		g_light_side = cross(g_light_up, g_light_foward);
+		g_light_side = dot(g_light_side, g_light_side) < 0.00001f ? vec3(0., 1., 0.) : normalize(g_light_side);
+		g_light_up = cross(g_light_foward, g_light_side);
+
+	}
+
+	for (int z = 0; z < reso.z; z++)
+	for (int x = 0; x < reso.x; x++)
+	{
+		// ƒJƒƒ‰ˆÊ’u‚Ìì¬
+		vec2 ndc = (vec2(x, z) + vec2(0.5f, 0.5f)) / vec2(reso.x, reso.z);
+		ndc = ndc * 2.f - 1.f;
+
+		CamPos = u_planet.xyz() - CamDir * (u_cloud_outer.w + 3000.f);
+		CamPos += (ndc.x*g_light_side + ndc.y*g_light_up) * u_cloud_outer.w;
+
+//		CamPos = vec3(400.);
+		CamDir = normalize(-CamPos - vec3(0., 500., 0.));
+
+		// find nearest planet surface point
+		vec4 rays;
+		int count = intersectRayAtom(CamPos, CamDir, u_planet.xyz(), vec2(u_cloud_inner.w, u_cloud_outer.w), rays);
+		int sampleCount = reso.y;
+		float transmittance = 1.;
+		for (int i = 0; i < count; i++)
+		{
+			float step = (rays[i * 2 + 1] - rays[i * 2]) / float(sampleCount);
+			vec3 pos = CamPos + CamDir * (rays[i * 2] + step * 0.5f);
+			for (int y = 0; y < sampleCount; y++)
+			{
+				worley_noise2(pos, 4);
+				pos = pos + CamDir * step;
+			}
+			break;
+		}
+	}
 
 
+}
 // https://github.com/erickTornero/realtime-volumetric-cloudscapes
 // https://bib.irb.hr/datoteka/949019.Final_0036470256_56.pdf
 int main()
 {
+	noise_test();
 	constexpr uvec3 reso = uvec3(32, 1, 32);
 
 	vec3 CamPos = vec3(0., 1., 0.);
@@ -476,8 +564,8 @@ int main()
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0, "cmd_sky");
 				sky.execute_precompute(cmd, app.m_window->getFrontBuffer());
 				sky.executeShadow(cmd, app.m_window->getFrontBuffer());
-				sky.execute(cmd, app.m_window->getFrontBuffer());
-//				sky.execute_reference(cmd, app.m_window->getFrontBuffer());
+//				sky.execute(cmd, app.m_window->getFrontBuffer());
+				sky.execute_reference(cmd, app.m_window->getFrontBuffer());
 //				sky.m_skynoise.execute_Render(context, cmd, app.m_window->getFrontBuffer());
 				cmd.end();
 				cmds[cmd_sky] = cmd;

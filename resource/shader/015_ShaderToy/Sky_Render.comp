@@ -111,7 +111,7 @@ float SugerPowderEffect(vec3 pos)
 {
 	if(mod(constant.window.x, 1.)>0.7)
 	{ 
-		return 0.7; 
+		return 0.5;
 	}
 
 	vec4 rays;
@@ -170,7 +170,7 @@ void main()
 			if(d<=0.){ continue; }
 
 			float light = light(pos);
-			float e = light * d * transmittance;
+			float e = 2.* light * d * transmittance;
 			float powder = SugerPowderEffect(pos);
 
 			color += e * vec3(1., 1., 1.) * powder * ray_step;
@@ -185,7 +185,7 @@ void main()
 
 	// tonemapping
 	{
-		float exposure = 2.;
+		float exposure = 1.5;
 		background_color.xyz = vec3(1.0) - exp(-exposure * background_color.xyz);
 	}
 

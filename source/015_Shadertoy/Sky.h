@@ -1109,7 +1109,7 @@ struct Sky
 		float c = cos(sGlobal::Order().getTotalTime());
 		float s = sin(sGlobal::Order().getTotalTime());
 //		auto LightRay = normalize(vec3(s, c, 0.1));
-		auto LightRay = normalize(vec3(0.f, -1.f, 0.f));
+		auto LightRay = normalize(vec3(0.f, -1.f, 1.f));
 		Constant constant;
 		constant.window = vec4(sGlobal::Order().getTotalTime()) * vec4(1.f, 0.f, 12.f, 0.f);
 		constant.light_front = vec4(LightRay, 0.f);
@@ -1125,13 +1125,12 @@ struct Sky
 			{
 				render_target->m_descriptor.get(),
 				m_descriptor_set.get(),
-//				m_skynoise.m_descriptor_set.get(),
+				m_skynoise.m_descriptor_set.get(),
 			};
 			cmd.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipeline_layout[PipelineLayout_Sky_CS].get(), 0, array_length(descs), descs, 0, nullptr);
 
 			auto constant = calc_constant();
 			cmd.pushConstants<Constant>(m_pipeline_layout[PipelineLayout_Sky_CS].get(), vk::ShaderStageFlagBits::eCompute, 0, constant);
-
 		}
 
 		// render_target‚É‘‚­

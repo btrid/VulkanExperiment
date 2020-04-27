@@ -25,6 +25,7 @@ float worley_noise(in uvec3 invocation, in int level, in uvec3 reso)
 	{
 		uvec3 tile_size = max(ivec3(512)>>(level+i), ivec3(1));
 		uvec3 tile_id = invocation/tile_size;
+//		uvec3 tile_id = uvec3(floor(vec3(invocation)/vec3(tile_size));
 		vec3 pos = vec3(invocation%tile_size);
 		uvec3 reso_ = reso / tile_size;
 

@@ -4,193 +4,203 @@
 #include "Sky.glsl"
 
 // 雲の光の吸収量
-#define ABSORPTION		0.15
+#define ABSORPTION		0.02
+vec3 g_noise_kernel[3*3*3];
 
 layout (local_size_x = 32, local_size_y = 32) in;
 
-float rand(in vec3 co)
+float worley_noise(in vec3 invocation, in int lod)
 {
-	return fract(sin(dot(co, vec3(12.98,78.23, 45.41))) * 43758.5);
-}
-float _noise1(in vec3 pos)
-{
-	vec3 ip = floor(pos);
-	vec3 fp = smoothstep(0., 1., fract(pos));
-	vec2 offset = vec2(0., 1.);
-	vec4 a = vec4(rand(ip+offset.xxx),rand(ip+offset.yxx),rand(ip+offset.xyx),rand(ip+offset.yyx));
-	vec4 b = vec4(rand(ip+offset.xxy),rand(ip+offset.yxy),rand(ip+offset.xyy),rand(ip+offset.yyy));
-	a = mix(a, b, fp.z);
-	a.xy = mix(a.xy, a.zw, fp.y);
-	return mix(a.x, a.y, fp.x);
-}
-
-/*
-float grad(int hash, vec3 fp)
-{
-    switch(hash & 0xF)
-    {
-        case 0x0: return  fp.x + fp.y;
-        case 0x1: return -fp.x + fp.y;
-        case 0x2: return  fp.x - fp.y;
-        case 0x3: return -fp.x - fp.y;
-        case 0x4: return  fp.x + fp.z;
-        case 0x5: return -fp.x + fp.z;
-        case 0x6: return  fp.x - fp.z;
-        case 0x7: return -fp.x - fp.z;
-        case 0x8: return  fp.y + fp.z;
-        case 0x9: return -fp.y + fp.z;
-        case 0xA: return  fp.y - fp.z;
-        case 0xB: return -fp.y - fp.z;
-        case 0xC: return  fp.y + fp.x;
-        case 0xD: return -fp.y + fp.z;
-        case 0xE: return  fp.y - fp.x;
-        case 0xF: return -fp.y - fp.z;
-    }
-	return 0.;
-}
-float _noise2(in vec3 pos)
-{
-	ivec3 ip = ivec3(floor(pos))%ivec3(hash_size/2-1);
-	vec3 fp = smoothstep(0., 1., fract(pos));
-
-	int aaa, aba, aab, abb, baa, bba, bab, bbb;
-	aaa = u_hash[u_hash[u_hash[ip.x]+ip.y]+ip.z];
-	aba = u_hash[u_hash[u_hash[ip.x]+ip.y+1]+ip.z];
-	aab = u_hash[u_hash[u_hash[ip.x]+ip.y]+ip.z+1];
-	abb = u_hash[u_hash[u_hash[ip.x]+ip.y+1]+ip.z+1];
-	baa = u_hash[u_hash[u_hash[ip.x+1]+ip.y]+ip.z];
-	bba = u_hash[u_hash[u_hash[ip.x+1]+ip.y+1]+ip.z];
-	bab = u_hash[u_hash[u_hash[ip.x+1]+ip.y]+ip.z+1];
-	bbb = u_hash[u_hash[u_hash[ip.x+1]+ip.y+1]+ip.z+1];
-
-	float x1, x2, y1, y2;
-	x1 = mix(grad(aaa, fp), grad(baa, fp-vec3(1., 0., 0.)), fp.x);
-	x2 = mix(grad(aba, fp-vec3(0.,1.,0.)),grad(bba, fp-vec3(1.,1.,0.)),fp.x);
-	y1 = mix(x1, x2, fp.y);
-	x1 = mix(grad(aab, fp-vec3(0.,0.,1)), grad(bab, fp-vec3(1.,0.,1)),fp.x);
-	x2 = mix(grad(abb, fp-vec3(0.,1.,1)), grad(bbb, fp-vec3(1.,1.,1)),fp.x);
-	y2 = mix(x1, x2, fp.y);
-	return mix(y1, y2, fp.z)*0.5+0.5;
-}
-*/
-#define noise _noise1
-// https://thebookofshaders.com/13/?lan=jp
-// 非整数ブラウン運動
-float fBM(in vec3 pos, in int octaves)
-{
-	float lacunarity = 2.5;
-	float total = 0.;
+	invocation*=20.;
 	float value = 0.;
-	for(int i = 0; i < octaves; i++)
+	float total = 0.;
+	for(int i = 0; i < 1; i++)
 	{
-		pos *= lacunarity;
-		value = value*2. + noise(pos);
-		total = total*2. + 1.;
-	}
+//		invocation=-invocation;
+		ivec3 tile_size = max(ivec3(16)>>i, ivec3(1));
+		ivec3 tile_id = ivec3(floor(invocation/vec3(tile_size)));
+		mediump vec3 pos = mod(invocation, vec3(tile_size));
 
+
+		mediump float _radius = float(tile_size.x);
+		mediump float v = 0.;
+
+#define cell_size 1
+		for(int z = -cell_size; z <= cell_size; z++)
+		for(int y = -cell_size; y <= cell_size; y++)
+		for(int x = -cell_size; x <= cell_size; x++)
+		{
+			ivec3 tid = ivec3(tile_id) + ivec3(x, y, z);
+			for(int n = 0; n < 2; n++)
+			{
+				mediump vec3 p = _wn_rand(ivec4(tid, n))*vec3(tile_size) + vec3(x, y, z)*vec3(tile_size);
+				v = max(v, 1.-min(distance(pos, p) / _radius, 1.));
+			}
+		}
+		value = value*2.+v;
+		total = total*2.+1.;
+//		if(value/total<0.35){ return 0.; }
+	}
 	return value / total;
 }
 
-vec3 getSkyColor(in vec3 ray)
+float worley_noise2(in vec3 invocation, in int lod)
 {
-	// 太陽の色
-	vec3 vSkyColor = mix(vec3(.0, 0.1, 0.4), vec3(0.3, 0.6, 0.8), 1.0 - ray.y);
+	invocation*=20.;
+	float16_t value = float16_t(0.);
+	float16_t total = float16_t(0.);
+	for(int i = 0; i < lod; i++)
+	{
+		ivec3 tile_size = max(ivec3(64)>>i, ivec3(1));
+		ivec3 tile_id = ivec3(floor(invocation/vec3(tile_size)));
+		f16vec3 pos = f16vec3(mod(invocation, vec3(tile_size)));
 
-	// 太陽
-	vSkyColor = mix(vSkyColor, uLightColor, smoothstep(0.999, 1.00, dot(uLightRay, ray)));
+		float16_t _radius = float16_t(tile_size.x * 0.5);
+		ivec3 offset = -ivec3(1.hf-step(_radius, pos));
 
+		float16_t v = 0.hf;
 
-	return vSkyColor;
+		for(int z=0; z<2; z++)
+		for(int y=0; y<2; y++)
+		for(int x=0; x<2; x++)
+		{
+			ivec3 tid = tile_id + ivec3(x, y, z) + offset;
+			for(int n = 0; n < 4; n++)
+			{
+				f16vec3 p = f16vec3(_wn_rand(ivec4(tid, n)))*f16vec3(tile_size) + (f16vec3(x, y, z) + f16vec3(offset))*f16vec3(tile_size);
+				v = max(v, 1.hf-min(distance(pos, p) / _radius, 1.hf));
+			}
+		}
+		value = value*2.hf+v;
+		total = total*2.hf+1.hf;
+	}
+	return value / total;
 }
-
 
 float cloud_density(in vec3 pos)
 {
-//	float t = (distance(pos, u_cloud_inner.xyz)-u_cloud_inner.w) * u_cloud_area_inv;
-//	vec3 p = pos * vec3(0.01,0.,0.01) + vec3(0., t, 0.);
-	vec3 p = pos * vec3(0.01,0.01,0.01);
+	float t = (distance(pos,u_planet.m_pos)-u_planet.m_cloud_area.x)/(u_planet.m_cloud_area.y-u_planet.m_cloud_area.x);
+	if(t<=0.||t>=1.){ return 0.; }
 
-	float density = fBM(p + vec3(0., 0., constant.window.z*0.2), 4);
+	int lod = 1;
+	bool detail = false;
 
-	float coverage = 0.5;
-	float alpha = 0.05;
+	float density = worley_noise2(pos*vec3(0.002), 1);
+//	float density = fBM(pos*vec3(0.003)  + vec3(0., 0., iTime*0.02), lod);
+//	if(detail){ density = density + fBM(pos*vec3(0.1), 1) * 0.2*t;}
+//	density *= band2(0.0, 0.2, 0.77, 1., t);
 
-	density = density * smoothstep(coverage, coverage+alpha, density);
+	float coverage = 0.44;
+	float alpha = 0.;
+	density = smoothstep(coverage, coverage+alpha, density);
 
-	density = band(0., 0.5, 1., (distance(pos,u_planet.m_pos)-u_planet.m_cloud_area.x)/(u_planet.m_cloud_area.y-u_planet.m_cloud_area.x)) * density;
+
 	return density;
 }
 
 float cloud_lighting(in vec3 pos)
 {
-	float transparent = 1.;
-	const int steps = 1;
-	for (int i = 0; i < steps; i++) 
+	vec4 rays;
+	if(intersectRayAtmosphere(pos, -uLightRay, u_planet.m_pos.xyz, u_planet.m_radius.xx, -1., rays) != 0)
 	{
-		pos = pos + uLightRay * 4.;
-		float density = cloud_density(pos);
-
-		transparent *= exp(-density * ABSORPTION);
+		// 星の影
+		return 0.;
 	}
-	return transparent;
+	int count = intersectRayAtmosphere(pos, -uLightRay, u_planet.m_pos.xyz, u_planet.m_cloud_area, -1., rays);
+
+	int step_num = 8;
+	float density = 0.;
+	for(int i = 0; i <count; i++)
+	{
+		float ray_step = (rays[2*i+1]-rays[2*i]) / float(step_num);
+		vec3 begin = pos + (rays[2*i]+ray_step*0.5) * -uLightRay;
+		for(int s = 0; s < step_num; s++)
+		{
+			vec3 p = begin + -uLightRay*ray_step*float(s); 
+			density += cloud_density(p)*ray_step;
+		}
+		break;
+	}
+
+	return exp(-density*ABSORPTION);
+
 }
 
+
+float PowderSugar(in vec3 pos, float ray_step)
+{
+	float density = 0.;
+	for(int i = 0; i < g_noise_kernel.length(); i++)
+	{
+		vec3 p = pos + g_noise_kernel[i]*/*ray_step**/0.5;
+		float d = cloud_density(p);
+		density += d;
+	}
+	return (density > float(g_noise_kernel.length())*0.001)?1.:0.;
+	return (1.-exp(-density*0.02));
+}
 vec4 cloud(in vec3 rayPos, in vec3 rayDir, float depth)
 {
-	vec4 dist;
-	if(!intersectRayAtom(rayPos, rayDir, u_planet.m_pos, u_planet.m_cloud_area, dist))
-	{
-		// 雲にヒットしない
-		return vec4(0.);
-	}
-	
+	vec4 rays;
+	int count = intersectRayAtmosphere(rayPos, rayDir, u_planet.m_pos, u_planet.m_cloud_area, depth, rays);
 
-	int count = 0;
-	vec2 ray_segment[2];
-	if(dist.y>0.)
-	{
-		// 雲の上から雲を見る
-		ray_segment[count] = vec2(max(dist.x, 0.), dist.y-max(dist.x, 0.));
-		count++;
-	}
-	if(dist.w>0. && depth<0.)
-	{
-		// 雲の下から雲を見る
-		ray_segment[count] = vec2(max(dist.z, 0.), dist.w-max(dist.z, 0.));
-		count++;
-	}
-#define STEP_LENGTH	1.
-	float transparent = 1.;
-	float alpha = 0.;
+	int step_num = 32;
+	float transmittance = 1.;
 	vec3 color = vec3(0.);
 	for(int i = 0; i <count; i++)
 	{
-		int step_num = int(ray_segment[i].y / STEP_LENGTH);
-		float ray_step = ray_segment[i].y / float(step_num);
-		vec3 pos = rayPos + rayDir * (ray_segment[i].x+ray_step*0.5);
+		float ray_step = (rays[i*2+1] - rays[i*2]) / float(step_num);
+		vec3 begin = rayPos + rayDir * (rays[i*2]+ray_step*0.5);
 		for(int step = 0; step < step_num; step++)
 		{
-			float density = cloud_density(pos);
+			vec3 pos = begin + rayDir * ray_step * float(step);
+			float d = cloud_density(pos) * ray_step;
+			if(d<=0.){continue;}
 
-			float t = exp(-density * ABSORPTION);
-			transparent *= t;
-			if (transparent < 0.01) { i = count; break; }
+			float e = 2. * transmittance * d;
+			e *= cloud_lighting(pos);
+	//		e *= PowderSugar(pos, ray_step);
 
-			color += transparent * density * cloud_lighting(pos);
-			alpha += (1.-t) *(1.-alpha);
+			color += e;
+			
 
-			pos = pos + rayDir * ray_step;
-
+			float t = exp(-d * ABSORPTION);
+			transmittance *= t;
+			if (transmittance < 0.01) { i = count; break; }
 		}
+		break;
 
 	}
-	return vec4(color, min(alpha, 1.));
+	return vec4(color, min(1-transmittance, 1.));
 }
 
 void main()
 {
 	vec3 CamPos = vec3(0., 1., 0.);
-	vec3 CamDir = normalize(vec3(1.5, 1.7, 1.5));
+//	vec3 CamDir = normalize(vec3(1.5, 1.7, 1.5));
+//	CamDir = -uLightRay;
+
+	float s = sin(constant.window.x*0.4);
+	float c = cos(constant.window.x*0.4);
+	vec3 CamDir = normalize(vec3(s, 0.5, c));
+	{
+
+		{
+			vec3 front = CamDir;
+			vec3 up = vec3(0., 1., 0.);
+			vec3 side = cross(front, normalize(up));
+			side = dot(side, side) < 0.000001 ? vec3(1., 0., 0.) : normalize(side);
+			up = normalize(cross(side, front));
+
+			for(int z=0; z<3; z++)
+			for(int y=0; y<3; y++)
+			for(int x=0; x<3; x++)
+			{
+	//			g_noise_kernel[z*9+y*3+x] = normalize(front*(float(z-1)+0.1) + side*float(x-1) + up*float(y-1));
+				g_noise_kernel[z*9+y*3+x] = (front*(float(z-1)+0.1) + side*float(x-1) + up*float(y-1));
+			}
+		}
+	}
 	// カメラレイの作成
 	{
 		uvec3 reso = gl_NumWorkGroups * gl_WorkGroupSize;
@@ -203,7 +213,9 @@ void main()
 		vec2 aspect = vec2(float(reso.x) / float(reso.y), 1);
 		CamDir = normalize(side*ndc.x + up*ndc.y + CamDir);
 	}
-	vec3 sky_color = getSkyColor(CamDir);
+
+	vec3 sky_color = mix(vec3(.0, 0.1, 0.4), vec3(0.3, 0.6, 0.8), 1.0 - CamDir.y);
+	sky_color = mix(sky_color, uLightColor, smoothstep(0.999, 1.00, dot(uLightRay, -CamDir)));
 
 	// 地面判定
 	float distance_land = intersectRaySphere(CamPos, CamDir, vec4(u_planet.m_pos, u_planet.m_radius));
@@ -226,27 +238,30 @@ void main()
 			pos = pos + uLightRay * (d1 + SHADOW_RAY_LENGTH*0.5);
 			vec3 ray = uLightRay/uLightRay.y;
 
-			float transparent = 1.;
+			float transmittance = 1.;
 			for(int step = 0; step < step_num; step++)
 			{
 				float density = cloud_density(pos);
 
 				float t = exp(-density * ABSORPTION);
-				transparent *= t;
-				if (transparent < 0.01) break;
+				transmittance *= t;
+				if (transmittance < 0.01) break;
 
 				pos += ray * SHADOW_RAY_LENGTH; 
 			}
-			sky_color = mix(sky_color, vec3(0.), 1.-transparent);
+			sky_color = mix(sky_color, vec3(0.), 1.-transmittance);
 		}
 */		
 	}
 
-	vec3 pos = CamPos + CamDir;
-	vec4 color = cloud(pos, CamDir, distance_land);
+	vec4 color = cloud(CamPos, CamDir, distance_land);
 
 	color.xyz = mix(sky_color, color.xyz/(color.a+0.0001), color.a);
+	{
+//		float exposure = 1.5;
+//		color.xyz = vec3(1.0) - exp(-exposure * color.xyz);
+	}
 
-	imageStore(i_render_target, ivec2(gl_GlobalInvocationID.xy), vec4(color.xyz, 1.));
+	imageStore(i_render_map, ivec2(gl_GlobalInvocationID.xy), vec4(color.xyz, 1.));
 
 }

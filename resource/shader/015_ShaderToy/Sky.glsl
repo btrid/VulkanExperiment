@@ -33,7 +33,7 @@ struct Planet
 	float m_radius;
 	vec2 m_cloud_area;
 };
-Planet u_planet = {vec3(0., -1000., 0.), 1000., vec2(1050., 1082.)};
+Planet u_planet = {vec3(0., -5000., 0.), 5000., vec2(5250., 5582.)};
 
 
 vec3 uLightColor = vec3(1.);
@@ -101,6 +101,10 @@ int intersectRayAtomEx(vec3 Pos, vec3 Dir, vec3 AtomPos, vec2 Area, float z, out
 		}
 	}
 	return count;
+}
+int intersectRayAtmosphere(vec3 Pos, vec3 Dir, vec3 AtmospherePos, vec2 Area, float z, out vec4 Rays)
+{
+	return intersectRayAtomEx(Pos, Dir, AtmospherePos, Area, z, Rays);
 }
 
 float intersectRaySphere(in vec3 origin, in vec3 ray, in vec4 sphere)
@@ -173,7 +177,7 @@ float cloud_density(vec3 pos, vec3 weather_data, float height_frac, float lod, b
 	float height_gradient = densityHeightGradient(weather_data, height_frac);
 	if(height_gradient<=0.){ return 0.;} // この雲タイプはない高さ
 
-	float cloud_coverage = getCoverage(weather_data) * 0.8;
+	float cloud_coverage = getCoverage(weather_data) * 0.6;
 
 	pos = vec3(pos.x, height_frac, pos.z) / vec3(u_planet.m_cloud_area.y, 1., u_planet.m_cloud_area.y);
 	
@@ -185,10 +189,9 @@ float cloud_density(vec3 pos, vec3 weather_data, float height_frac, float lod, b
 
 	float final_cloud = remap(base_cloud, 1.-cloud_coverage, 1., 0., 1.) * cloud_coverage;
 
-//	if(final_cloud <= 0.){ return 0.; }
-//	if(mod(constant.window.x*0.03, 1.) > 0.5)
+	if(mod(constant.window.x, 1.) > 0.5 && final_cloud <= 0.){ return 0.; }
     {
-//		pos.xz += texture(s_cloud_distort_map, pos.xz).xy * (1. - height_frac)*constant.window.x;
+//		pos.xz += texture(s_cloud_distort_map, pos.xz).xy * height_frac*constant.window.x;
 
 		vec3 high_freq_noise = texture(s_cloud_detail_map, pos*0.1).xyz;
 		float high_freq_fBM = dot(high_freq_noise, vec3(0.625, 0.25, 0.125));
