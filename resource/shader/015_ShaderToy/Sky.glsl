@@ -33,11 +33,10 @@ struct Planet
 	float m_radius;
 	vec2 m_cloud_area;
 };
-Planet u_planet = {vec3(0., -5000., 0.), 5000., vec2(5250., 5582.)};
+Planet u_planet = {vec3(0., -1000., 0.), 1000., vec2(1050., 1082.)};
 
 
 vec3 uLightColor = vec3(1.);
-float uAmbientPower = 0.2;
 
 #define saturate(_a) clamp(_a, 0., 1.)
 

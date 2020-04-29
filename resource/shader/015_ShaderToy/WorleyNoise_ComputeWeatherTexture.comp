@@ -12,6 +12,7 @@ void main()
 
 	vec4 v = vec4(0.);
 	v[0] = value_noise(gl_GlobalInvocationID.xyz+23, 3, uvec3(imageSize(i_weather_map), 1));
+//	v[0] = worley_noise(gl_GlobalInvocationID.xyz+23, 3, uvec3(imageSize(i_weather_map), 1));
 //	v[0] = 0.5;
 	v[1] = 0.2;
 //	v[2] = 0.5;

@@ -5,7 +5,6 @@
 #include "Sky.glsl"
 layout (local_size_x = 32, local_size_y = 32) in;
 
-//shared vec4 s_begin_step[32+1][32+1];
 const int grid_size = 2;
 shared float16_t s_density[32+1][32+1];
 float16_t g_density[grid_size];
@@ -16,16 +15,23 @@ vec3 s = vec3(1., 0., 0.);
 
 void store(int y)
 {
-	float d = 0.;
+	vec4 d[2];
 	if(g_begin_step.w>0.)
 	{
-		vec3 p = g_begin_step.xyz + f * g_begin_step.w*y;
-		float height_frac = heightFraction(p);
-		vec3 weather_data = sampleWeather(p);
+		vec3 pos = g_begin_step.xyz + f * g_begin_step.w*y;
+		for(int z=0;z<2;z++)
+		for(int y=0;y<2;y++)
+		for(int x=0;x<2;x++)
+		{
+			vec3 p = pos + s*(float(x)*0.33) + u*(float(y)*0.33) -f*(float(z)*0.33);
 
-		d = cloud_density(p, weather_data, height_frac, 0., true);
+			float height_frac = heightFraction(p);
+			vec3 weather_data = sampleWeather(p);
+
+			d[z][y*2+x] = cloud_density(p, weather_data, height_frac, 0., true);
+		}
 	}
-	g_density[(y+1)%grid_size] = float16_t(d);
+	g_density[(y+1)%grid_size] = float16_t(dot(d[0], vec4(1.)) + dot(d[1], vec4(1.)));
 }
 
 void calc()
@@ -55,7 +61,7 @@ void main()
 	ivec2 local = ivec2(gl_LocalInvocationID.xy);
 	ivec2 index = global + local;
 	{
-		vec2 ndc = ((vec2(global + local-grid_size)+0.5) / vec2(reso.xy)) * 2. -1.;
+		vec2 ndc = ((vec2(global + local -grid_size)) / vec2(reso.xy)) * 2. -1.;
 		ndc *= u_planet.m_cloud_area.yy;
 		vec3 CamPos = s*ndc.x + u*ndc.y -f*(u_planet.m_cloud_area.y+1.) + u_planet.m_pos.xyz;
 
@@ -97,7 +103,7 @@ void main()
 			density += s_density[local.y+grid_size+y][local.x+grid_size+x];
 		}
 		
-		imageStore(i_along_density_map, ivec3(index.x, index.y, s), ivec4(exp(-density*0.05)*65535.));
+		imageStore(i_along_density_map, ivec3(index.x, index.y, s), ivec4(exp(-density*0.2)*65535.));
 //		imageStore(i_along_density_map, ivec3(index.x, index.y, s), ivec4((density > float(grid_size*grid_size)*0.3?1.:0.)*65535.));
 
 	}

@@ -592,6 +592,10 @@ struct SkyNoise
 };
 struct Sky
 {
+	enum
+	{
+		Grid_Size = 2,
+	};
 	struct Constant
 	{
 		vec4 window;
@@ -1237,7 +1241,7 @@ struct Sky
 			}
 
 			cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_Sky_Precompute_PowderEffect_CS].get());
-			auto num = app::calcDipatchGroups(uvec3(m_image_along_density_info.extent.width, m_image_along_density_info.extent.height, 1), uvec3(30, 30, 1));
+			auto num = app::calcDipatchGroups(uvec3(m_image_along_density_info.extent.width, m_image_along_density_info.extent.height, 1), uvec3(32-Grid_Size*2, 32-Grid_Size*2, 1));
 			cmd.dispatch(num.x, num.y, num.z);
 
 			{
@@ -1254,7 +1258,7 @@ struct Sky
 		}
 
 		// test
-		if (0)
+//		if (0)
 		{
 			_label.insert("render along density");
 

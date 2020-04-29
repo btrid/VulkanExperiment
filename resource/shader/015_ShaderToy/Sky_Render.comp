@@ -86,7 +86,7 @@ float light(in vec3 pos)
 	{
 		int step_num = 32;
 		float ray_step = (rays[2*i+1]-rays[2*i]) / float(step_num);
-		vec3 p = pos -uLightRay * (rays[2*i]+0.5);
+		vec3 p = pos -uLightRay * (rays[2*i]+ray_step*0.5);
 		for(int s = 0; s < step_num; s++)
 		{
 			float height_frac = heightFraction(p);
@@ -111,7 +111,7 @@ float SugerPowderEffect(vec3 pos)
 {
 	if(mod(constant.window.x, 1.)>0.7)
 	{ 
-		return 0.5;
+		return 1.;
 	}
 
 	vec4 rays;
@@ -126,11 +126,14 @@ float SugerPowderEffect(vec3 pos)
 	vec3 p = pos - u_planet.m_pos;
 	vec3 uv = vec3(dot(p, g_light_side), dot(p, g_light_up), t) / vec3(u_planet.m_cloud_area.yy, 1) * vec3(0.5, 0.5, 1.) + vec3(0.5, 0.5, 0.);
 
-	return 1. - texture(s_along_density_map, uv).x;
+	return 1.-texture(s_along_density_map, uv).x;
 
 }
 
+void test_powder()
+{
 
+}
 void main()
 {
 	precompute();
@@ -170,17 +173,20 @@ void main()
 			if(d<=0.){ continue; }
 
 			float light = light(pos);
-			float e = 2.* light * d * transmittance;
+			float e = 1.* light * d * transmittance;
 			float powder = SugerPowderEffect(pos);
 
-			color += e * vec3(1., 1., 1.) * powder * ray_step;
+//			color += e * vec3(1., 1., 1.) * powder * ray_step;
+			color += powder;
 
 			transmittance *= exp(-d*getPrecipitation(weather_data)*ray_step);
 			if(transmittance < 0.01) { break; }
+			break;
 
 		}
 	}
-	float alpha = clamp(1.-transmittance, 0., 1.);
+//	float alpha = clamp(1.-transmittance, 0., 1.);
+	float alpha = clamp(1., 0., 1.);
 	background_color = mix(background_color, color/(alpha+0.0001), alpha);
 
 	// tonemapping
