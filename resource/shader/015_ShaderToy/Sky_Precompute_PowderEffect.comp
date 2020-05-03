@@ -6,7 +6,7 @@
 layout (local_size_x = 32, local_size_y = 32) in;
 
 //shared vec4 s_begin_step[32+1][32+1];
-const int grid_size = 2;
+const int grid_size = 1;
 shared float16_t s_density[32+1][32+1];
 float16_t g_density[grid_size];
 vec4 g_begin_step;
@@ -97,7 +97,7 @@ void main()
 			density += s_density[local.y+grid_size+y][local.x+grid_size+x];
 		}
 		
-		imageStore(i_along_density_map, ivec3(index.x, index.y, s), ivec4(exp(-density*0.05)*65535.));
+		imageStore(i_along_density_map, ivec3(index.x, index.y, s), ivec4(exp(-density*0.5)*65535.));
 //		imageStore(i_along_density_map, ivec3(index.x, index.y, s), ivec4((density > float(grid_size*grid_size)*0.3?1.:0.)*65535.));
 
 	}

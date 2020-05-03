@@ -31,7 +31,7 @@ void store(int y)
 			d[z][y*2+x] = cloud_density(p, weather_data, height_frac, 0., true);
 		}
 	}
-	g_density[(y+1)%grid_size] = float16_t(dot(d[0], vec4(1.)) + dot(d[1], vec4(1.)));
+	g_density[(y+1)%grid_size] = float16_t(dot(d[0], vec4(0.1)) + dot(d[1], vec4(0.1)));
 }
 
 void calc()
@@ -103,7 +103,7 @@ void main()
 			density += s_density[local.y+grid_size+y][local.x+grid_size+x];
 		}
 		
-		imageStore(i_along_density_map, ivec3(index.x, index.y, s), ivec4(exp(-density*0.2)*65535.));
+		imageStore(i_along_density_map, ivec3(index.x, index.y, s), ivec4(exp(-density)*65535.));
 //		imageStore(i_along_density_map, ivec3(index.x, index.y, s), ivec4((density > float(grid_size*grid_size)*0.3?1.:0.)*65535.));
 
 	}

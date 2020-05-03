@@ -176,7 +176,7 @@ float cloud_density(vec3 pos, vec3 weather_data, float height_frac, float lod, b
 	float height_gradient = densityHeightGradient(weather_data, height_frac);
 	if(height_gradient<=0.){ return 0.;} // この雲タイプはない高さ
 
-	float cloud_coverage = getCoverage(weather_data) * 0.6;
+	float cloud_coverage = getCoverage(weather_data) * 0.8;
 
 	pos = vec3(pos.x, height_frac, pos.z) / vec3(u_planet.m_cloud_area.y, 1., u_planet.m_cloud_area.y);
 	

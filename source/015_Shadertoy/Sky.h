@@ -594,7 +594,7 @@ struct Sky
 {
 	enum
 	{
-		Grid_Size = 2,
+		Grid_Size = 1,
 	};
 	struct Constant
 	{

@@ -20,8 +20,8 @@ rem %exe% %include% %option% %output%/SkyReference.comp.spv SkyReference2.comp
 %exe% %include% %option% %output%/Sky_RenderUpsampling.comp.spv Sky_RenderUpsampling.comp
 
 %exe% %include% %option% %output%/Sky_Precompute_Shadow.comp.spv Sky_Precompute_Shadow.comp
-rem %exe% %include% %option% %output%/Sky_Precompute_PowderEffect.comp.spv Sky_Precompute_PowderEffect.comp
- %exe% %include% %option% %output%/Sky_Precompute_PowderEffect.comp.spv Sky_Precompute_PowderEffect_detail.comp
+%exe% %include% %option% %output%/Sky_Precompute_PowderEffect.comp.spv Sky_Precompute_PowderEffect.comp
+rem %exe% %include% %option% %output%/Sky_Precompute_PowderEffect.comp.spv Sky_Precompute_PowderEffect_detail.comp
 
 
 %exe% %include% %option% %output%/WorleyNoise_Compute.comp.spv WorleyNoise_Compute.comp
