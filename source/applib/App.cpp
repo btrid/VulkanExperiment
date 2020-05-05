@@ -517,7 +517,7 @@ glm::uvec3 calcDipatchGroups(const glm::uvec3& num, const glm::uvec3& local_size
 
 }
 
-AppWindow::ImguiRenderPipeline::ImguiRenderPipeline(const std::shared_ptr<btr::Context>& context, AppWindow* const window)
+ImguiRenderPipeline::ImguiRenderPipeline(const std::shared_ptr<btr::Context>& context, AppWindow* const window)
 {
 	const auto& render_target = window->getFrontBuffer();
 
@@ -705,7 +705,7 @@ AppWindow::ImguiRenderPipeline::ImguiRenderPipeline(const std::shared_ptr<btr::C
 
 }
 
-AppWindow::ImguiRenderPipeline::~ImguiRenderPipeline()
+ImguiRenderPipeline::~ImguiRenderPipeline()
 {
 	ImGui::DestroyContext(m_imgui_context);
 	m_imgui_context = nullptr;

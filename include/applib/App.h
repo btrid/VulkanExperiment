@@ -39,6 +39,30 @@ struct RenderTarget
 	static vk::UniqueDescriptorSetLayout s_descriptor_set_layout;
 };
 
+struct ImguiRenderPipeline
+{
+	ImguiRenderPipeline(const std::shared_ptr<btr::Context>& context, struct AppWindow* const window);
+	~ImguiRenderPipeline();
+
+	void pushImguiCmd(std::function<void()>&& imgui_cmd)
+	{
+		std::lock_guard<std::mutex> lg(m_cmd_mutex);
+		m_imgui_cmd[sGlobal::Order().getWorkerIndex()].emplace_back(std::move(imgui_cmd));
+	}
+	std::vector<std::function<void()>> getImguiCmd()
+	{
+		return std::move(m_imgui_cmd[sGlobal::Order().getRenderIndex()]);
+	}
+
+	std::mutex m_cmd_mutex;
+	std::array<std::vector<std::function<void()>>, 2> m_imgui_cmd;
+	vk::UniquePipeline m_pipeline;
+	vk::UniqueRenderPass m_render_pass;
+	vk::UniqueFramebuffer m_framebuffer;
+
+	ImGuiContext* m_imgui_context;
+};
+
 struct AppWindow : public cWindow
 {
 	AppWindow(const std::shared_ptr<btr::Context>& context, const cWindowDescriptor& descriptor);
@@ -58,29 +82,6 @@ struct AppWindow : public cWindow
 	std::shared_ptr<RenderTarget> m_front_buffer;
 	const std::shared_ptr<RenderTarget>& getFrontBuffer()const { return m_front_buffer; }
 
-	struct ImguiRenderPipeline
-	{
-		ImguiRenderPipeline(const std::shared_ptr<btr::Context>& context, AppWindow* const window);
-		~ImguiRenderPipeline();
-
-		void pushImguiCmd(std::function<void()>&& imgui_cmd)
-		{
-			std::lock_guard<std::mutex> lg(m_cmd_mutex);
-			m_imgui_cmd[sGlobal::Order().getWorkerIndex()].emplace_back(std::move(imgui_cmd));
-		}
-		std::vector<std::function<void()>> getImguiCmd()
-		{
-			return std::move(m_imgui_cmd[sGlobal::Order().getRenderIndex()]);
-		}
-
-		std::mutex m_cmd_mutex;
-		std::array<std::vector<std::function<void()>>, 2> m_imgui_cmd;
-		vk::UniquePipeline m_pipeline;
-		vk::UniqueRenderPass m_render_pass;
-		vk::UniqueFramebuffer m_framebuffer;
-
-		ImGuiContext* m_imgui_context;
-	};
 	std::unique_ptr<ImguiRenderPipeline>  m_imgui_pipeline;
 	ImguiRenderPipeline* getImguiPipeline() { return m_imgui_pipeline.get(); }
 };

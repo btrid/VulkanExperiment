@@ -1208,6 +1208,10 @@ struct Sky
 		}
 	}
 
+// 	void execute_cpu(const std::unique_ptr<>& imgui)
+// 	{
+// 		
+// 	}
 	void execute_precompute(vk::CommandBuffer &cmd, const std::shared_ptr<RenderTarget>& render_target)
 	{
 		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
@@ -1258,7 +1262,7 @@ struct Sky
 		}
 
 		// test
-//		if (0)
+		if (0)
 		{
 			_label.insert("render along density");
 
