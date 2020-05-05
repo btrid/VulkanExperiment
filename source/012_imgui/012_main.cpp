@@ -22,7 +22,7 @@
 
 #include <applib/App.h>
 #include <btrlib/Context.h>
-#include <applib/sImGuiRenderer.h>
+#include <applib/sAppImGuiRenderer.h>
 
 #pragma comment(lib, "btrlib.lib")
 #pragma comment(lib, "applib.lib")

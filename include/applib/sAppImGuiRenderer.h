@@ -11,11 +11,11 @@
 #define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 #include <imgui/imgui.h>
 
-struct sImGuiRenderer : SingletonEx<sImGuiRenderer>
+struct sAppImGuiRenderer : SingletonEx<sAppImGuiRenderer>
 {
-	friend SingletonEx<sImGuiRenderer>;
+	friend SingletonEx<sAppImGuiRenderer>;
 
-	sImGuiRenderer(const std::shared_ptr<btr::Context>& context);
+	sAppImGuiRenderer(const std::shared_ptr<btr::Context>& context);
 
 	vk::CommandBuffer Render();
 

@@ -39,10 +39,10 @@ struct RenderTarget
 	static vk::UniqueDescriptorSetLayout s_descriptor_set_layout;
 };
 
-struct ImguiRenderPipeline
+struct AppImgui
 {
-	ImguiRenderPipeline(const std::shared_ptr<btr::Context>& context, struct AppWindow* const window);
-	~ImguiRenderPipeline();
+	AppImgui(const std::shared_ptr<btr::Context>& context, struct AppWindow* const window);
+	~AppImgui();
 
 	void pushImguiCmd(std::function<void()>&& imgui_cmd)
 	{
@@ -82,8 +82,8 @@ struct AppWindow : public cWindow
 	std::shared_ptr<RenderTarget> m_front_buffer;
 	const std::shared_ptr<RenderTarget>& getFrontBuffer()const { return m_front_buffer; }
 
-	std::unique_ptr<ImguiRenderPipeline>  m_imgui_pipeline;
-	ImguiRenderPipeline* getImguiPipeline() { return m_imgui_pipeline.get(); }
+	std::unique_ptr<AppImgui>  m_imgui_pipeline;
+	AppImgui* getImguiPipeline() { return m_imgui_pipeline.get(); }
 };
 
 struct AppContext : public btr::Context

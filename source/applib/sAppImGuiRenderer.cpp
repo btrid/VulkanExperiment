@@ -1,8 +1,8 @@
-#include <applib/sImGuiRenderer.h>
+#include <applib/sAppImGuiRenderer.h>
 #include <applib/sSystem.h>
 #include <applib/App.h>
 
-sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
+sAppImGuiRenderer::sAppImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 {
 	m_context = context;
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
@@ -182,7 +182,7 @@ sImGuiRenderer::sImGuiRenderer(const std::shared_ptr<btr::Context>& context)
 
 }
 
-vk::CommandBuffer sImGuiRenderer::Render()
+vk::CommandBuffer sAppImGuiRenderer::Render()
 {
 	auto cmd = m_context->m_cmd_pool->allocCmdOnetime(0);
 

@@ -8,7 +8,7 @@
 #include <applib/DrawHelper.h>
 #include <applib/sSystem.h>
 #include <applib/GraphicsResource.h>
-#include <applib/sImGuiRenderer.h>
+#include <applib/sAppImGuiRenderer.h>
 
 
 sUISystem::sUISystem(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target)

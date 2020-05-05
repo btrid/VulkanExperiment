@@ -1208,10 +1208,10 @@ struct Sky
 		}
 	}
 
-// 	void execute_cpu(const std::unique_ptr<>& imgui)
-// 	{
-// 		
-// 	}
+ 	void execute_cpu(const std::unique_ptr<AppImgui>& imgui)
+ 	{
+ 		
+ 	}
 	void execute_precompute(vk::CommandBuffer &cmd, const std::shared_ptr<RenderTarget>& render_target)
 	{
 		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);

@@ -9,7 +9,7 @@
 #include <applib/sParticlePipeline.h>
 #include <applib/sSystem.h>
 #include <applib/GraphicsResource.h>
-#include <applib/sImGuiRenderer.h>
+#include <applib/sAppImGuiRenderer.h>
 
 vk::UniqueDescriptorSetLayout RenderTarget::s_descriptor_set_layout;
 
@@ -299,7 +299,7 @@ App::App(const AppDescriptor& desc)
 	sSystem::Create(m_context);
 	sCameraManager::Order().setup(m_context);
 	sGraphicsResource::Order().setup(m_context);
-	sImGuiRenderer::Create(m_context);
+	sAppImGuiRenderer::Create(m_context);
 
 	cWindowDescriptor window_desc;
 	window_desc.surface_format_request = vk::SurfaceFormatKHR{ vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear };
@@ -517,7 +517,7 @@ glm::uvec3 calcDipatchGroups(const glm::uvec3& num, const glm::uvec3& local_size
 
 }
 
-ImguiRenderPipeline::ImguiRenderPipeline(const std::shared_ptr<btr::Context>& context, AppWindow* const window)
+AppImgui::AppImgui(const std::shared_ptr<btr::Context>& context, AppWindow* const window)
 {
 	const auto& render_target = window->getFrontBuffer();
 
@@ -639,11 +639,11 @@ ImguiRenderPipeline::ImguiRenderPipeline(const std::shared_ptr<btr::Context>& co
 
 		vk::PipelineShaderStageCreateInfo shader_info[] = {
 			vk::PipelineShaderStageCreateInfo()
-			.setModule(sImGuiRenderer::Order().getShaderModle(sImGuiRenderer::SHADER_VERT_RENDER))
+			.setModule(sAppImGuiRenderer::Order().getShaderModle(sAppImGuiRenderer::SHADER_VERT_RENDER))
 			.setPName("main")
 			.setStage(vk::ShaderStageFlagBits::eVertex),
 			vk::PipelineShaderStageCreateInfo()
-			.setModule(sImGuiRenderer::Order().getShaderModle(sImGuiRenderer::SHADER_FRAG_RENDER))
+			.setModule(sAppImGuiRenderer::Order().getShaderModle(sAppImGuiRenderer::SHADER_FRAG_RENDER))
 			.setPName("main")
 			.setStage(vk::ShaderStageFlagBits::eFragment),
 		};
@@ -665,7 +665,7 @@ ImguiRenderPipeline::ImguiRenderPipeline(const std::shared_ptr<btr::Context>& co
 			.setPViewportState(&viewportInfo)
 			.setPRasterizationState(&rasterization_info)
 			.setPMultisampleState(&sample_info)
-			.setLayout(sImGuiRenderer::Order().getPipelineLayout(sImGuiRenderer::PIPELINE_LAYOUT_RENDER))
+			.setLayout(sAppImGuiRenderer::Order().getPipelineLayout(sAppImGuiRenderer::PIPELINE_LAYOUT_RENDER))
 			.setRenderPass(m_render_pass.get())
 			.setPDepthStencilState(&depth_stencil_info)
 			.setPColorBlendState(&blend_info)
@@ -705,7 +705,7 @@ ImguiRenderPipeline::ImguiRenderPipeline(const std::shared_ptr<btr::Context>& co
 
 }
 
-ImguiRenderPipeline::~ImguiRenderPipeline()
+AppImgui::~AppImgui()
 {
 	ImGui::DestroyContext(m_imgui_context);
 	m_imgui_context = nullptr;
@@ -911,7 +911,7 @@ AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindow
 		context->m_device.updateDescriptorSets(std::size(write), write, 0, nullptr);
 	}
 
-	m_imgui_pipeline = std::make_unique<ImguiRenderPipeline>(context, this);
+	m_imgui_pipeline = std::make_unique<AppImgui>(context, this);
 
 
 #if USE_DEBUG_REPORT
