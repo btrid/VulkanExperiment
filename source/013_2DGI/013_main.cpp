@@ -25,7 +25,7 @@
 #include <applib/AppPipeline.h>
 #include <btrlib/Context.h>
 
-#include <applib/sAppImGuiRenderer.h>
+#include <applib/sAppImGui.h>
 
 #include <013_2DGI/GI2D/GI2DMakeHierarchy.h>
 #include <013_2DGI/GI2D/GI2DDebug.h>

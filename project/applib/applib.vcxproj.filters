@@ -57,7 +57,7 @@
     <ClInclude Include="..\..\include\applib\AppModel\AppModelPipeline.h">
       <Filter>AppModel</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\applib\sAppImGuiRenderer.h">
+    <ClInclude Include="..\..\include\applib\sAppImGui.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>
@@ -86,7 +86,7 @@
     <ClCompile Include="..\..\source\applib\AppModel\AppModelPipeline.cpp">
       <Filter>AppModel</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\source\applib\sAppImGuiRenderer.cpp">
+    <ClCompile Include="..\..\source\applib\sAppImGui.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>

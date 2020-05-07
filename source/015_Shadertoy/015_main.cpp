@@ -21,7 +21,7 @@
 #include <btrlib/cCamera.h>
 #include <btrlib/AllocatedMemory.h>
 #include <applib/sCameraManager.h>
-#include <applib/sAppImGuiRenderer.h>
+#include <applib/sAppImGui.h>
 #include <applib/App.h>
 #include <applib/AppPipeline.h>
 #include <applib/Geometry.h>

@@ -9,7 +9,7 @@
 #include <applib/sParticlePipeline.h>
 #include <applib/sSystem.h>
 #include <applib/GraphicsResource.h>
-#include <applib/sAppImGuiRenderer.h>
+#include <applib/sAppImGui.h>
 
 vk::UniqueDescriptorSetLayout RenderTarget::s_descriptor_set_layout;
 
@@ -299,7 +299,7 @@ App::App(const AppDescriptor& desc)
 	sSystem::Create(m_context);
 	sCameraManager::Order().setup(m_context);
 	sGraphicsResource::Order().setup(m_context);
-	sAppImGuiRenderer::Create(m_context);
+	sAppImGui::Create(m_context);
 
 	cWindowDescriptor window_desc;
 	window_desc.surface_format_request = vk::SurfaceFormatKHR{ vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear };
@@ -640,11 +640,11 @@ AppImgui::AppImgui(const std::shared_ptr<btr::Context>& context, AppWindow* cons
 
 		vk::PipelineShaderStageCreateInfo shader_info[] = {
 			vk::PipelineShaderStageCreateInfo()
-			.setModule(sAppImGuiRenderer::Order().getShaderModle(sAppImGuiRenderer::SHADER_VERT_RENDER))
+			.setModule(sAppImGui::Order().getShaderModle(sAppImGui::SHADER_VERT_RENDER))
 			.setPName("main")
 			.setStage(vk::ShaderStageFlagBits::eVertex),
 			vk::PipelineShaderStageCreateInfo()
-			.setModule(sAppImGuiRenderer::Order().getShaderModle(sAppImGuiRenderer::SHADER_FRAG_RENDER))
+			.setModule(sAppImGui::Order().getShaderModle(sAppImGui::SHADER_FRAG_RENDER))
 			.setPName("main")
 			.setStage(vk::ShaderStageFlagBits::eFragment),
 		};
@@ -666,7 +666,7 @@ AppImgui::AppImgui(const std::shared_ptr<btr::Context>& context, AppWindow* cons
 			.setPViewportState(&viewportInfo)
 			.setPRasterizationState(&rasterization_info)
 			.setPMultisampleState(&sample_info)
-			.setLayout(sAppImGuiRenderer::Order().getPipelineLayout(sAppImGuiRenderer::PIPELINE_LAYOUT_RENDER))
+			.setLayout(sAppImGui::Order().getPipelineLayout(sAppImGui::PIPELINE_LAYOUT_RENDER))
 			.setRenderPass(m_render_pass.get())
 			.setPDepthStencilState(&depth_stencil_info)
 			.setPColorBlendState(&blend_info)

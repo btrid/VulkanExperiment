@@ -22,7 +22,7 @@
 
 #include <applib/App.h>
 #include <btrlib/Context.h>
-#include <applib/sAppImGuiRenderer.h>
+#include <applib/sAppImGui.h>
 
 #include <011_ui/sUISystem.h>
 #include <011_ui/UIManipulater.h>

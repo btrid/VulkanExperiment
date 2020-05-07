@@ -1,8 +1,8 @@
-#include <applib/sAppImGuiRenderer.h>
+#include <applib/sAppImGui.h>
 #include <applib/sSystem.h>
 #include <applib/App.h>
 
-sAppImGuiRenderer::sAppImGuiRenderer(const std::shared_ptr<btr::Context>& context)
+sAppImGui::sAppImGui(const std::shared_ptr<btr::Context>& context)
 {
 	m_context = context;
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
@@ -182,7 +182,7 @@ sAppImGuiRenderer::sAppImGuiRenderer(const std::shared_ptr<btr::Context>& contex
 
 }
 
-void sAppImGuiRenderer::Render(vk::CommandBuffer& cmd)
+void sAppImGui::Render(vk::CommandBuffer& cmd)
 {
 
 	ImGui::SetCurrentContext(m_imgui_context);

@@ -1,7 +1,7 @@
 #include <011_ui/UIManipulater.h>
 #include <filesystem>
 
-#include <applib/sAppImGuiRenderer.h>
+#include <applib/sAppImGui.h>
 #include <applib/App.h>
 #include <011_ui/Font.h>
 

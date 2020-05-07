@@ -188,7 +188,7 @@ float cloud_density(vec3 pos, vec3 weather_data, float height_frac, float lod, b
 
 	float final_cloud = remap(base_cloud, 1.-cloud_coverage, 1., 0., 1.) * cloud_coverage;
 
-	if(mod(constant.window.x, 1.) > 0.5 && final_cloud <= 0.){ return 0.; }
+//	if(mod(constant.window.x, 1.) > 0.5 && final_cloud <= 0.){ return 0.; }
     {
 //		pos.xz += texture(s_cloud_distort_map, pos.xz).xy * height_frac*constant.window.x;
 
