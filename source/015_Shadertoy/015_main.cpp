@@ -567,7 +567,7 @@ int main()
 				sky.execute_cpu(imgui_context);
 				sky.execute_precompute(cmd, app.m_window->getFrontBuffer());
 				sky.executeShadow(cmd, app.m_window->getFrontBuffer());
-				sky.execute(cmd, app.m_window->getFrontBuffer());
+//				sky.execute(cmd, app.m_window->getFrontBuffer());
 //				sky.execute_reference(cmd, app.m_window->getFrontBuffer());
 //				sky.m_skynoise.execute_Render(context, cmd, app.m_window->getFrontBuffer());
 

@@ -1142,8 +1142,10 @@ struct Sky
 
 		});
 	}
-	Constant calc_constant()const
+	Constant calc_constant()
 	{
+		m_constant.window = vec4(sGlobal::Order().getTotalTime()) * vec4(1.f, 0.f, 12.f, 0.f);
+//		m_constant.light_front = vec4(LightRay, 0.f);
 		return m_constant;
 	}
 	void execute_reference(vk::CommandBuffer& cmd, const std::shared_ptr<RenderTarget>& render_target)
@@ -1353,7 +1355,7 @@ struct Sky
 		}
 
 		// test
-		if(0)
+//		if(0)
 		{
 			std::array<vk::ImageMemoryBarrier, 1> image_barrier;
 			image_barrier[0].setImage(render_target->m_image);
