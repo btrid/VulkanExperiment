@@ -446,6 +446,7 @@ struct SkyNoise
 
 			{
 				uvec3 num = app::calcDipatchGroups(uvec3(m_image_cloud_info.extent.width, m_image_cloud_info.extent.height, m_image_cloud_info.extent.depth), uvec3(32, 32, 1));
+//				uvec3 num = app::calcDipatchGroups(uvec3(m_image_cloud_detail_info.extent.width, m_image_cloud_detail_info.extent.height, m_image_cloud_detail_info.extent.depth), uvec3(32, 32, 1));
 				cmd.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[Pipeline_WorleyNoise_Compute].get());
 				cmd.dispatch(num.x, num.y, num.z);
 
@@ -1355,7 +1356,7 @@ struct Sky
 		}
 
 		// test
-//		if(0)
+		if(0)
 		{
 			std::array<vk::ImageMemoryBarrier, 1> image_barrier;
 			image_barrier[0].setImage(render_target->m_image);

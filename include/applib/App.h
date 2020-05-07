@@ -56,7 +56,6 @@ struct AppImgui
 
 	std::mutex m_cmd_mutex;
 	std::array<std::vector<std::function<void()>>, 2> m_imgui_cmd;
-	vk::UniquePipeline m_pipeline;
 	vk::UniqueRenderPass m_render_pass;
 	vk::UniqueFramebuffer m_framebuffer;
 

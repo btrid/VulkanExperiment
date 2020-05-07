@@ -49,6 +49,10 @@ private:
 	std::array<vk::UniqueShaderModule, SHADER_NUM>				m_shader_module;
 	std::array<vk::UniquePipelineLayout, PIPELINE_LAYOUT_NUM>	m_pipeline_layout;
 
+	vk::UniqueRenderPass m_render_pass;
+	vk::UniqueFramebuffer m_framebuffer;
+	vk::UniquePipeline m_pipeline;
+
 	vk::UniqueImage m_font_image;
 	vk::UniqueImageView m_font_image_view;
 	vk::UniqueDeviceMemory m_font_image_memory;

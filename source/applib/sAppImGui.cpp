@@ -180,6 +180,173 @@ sAppImGui::sAppImGui(const std::shared_ptr<btr::Context>& context)
 		m_pipeline_layout[PIPELINE_LAYOUT_RENDER] = context->m_device.createPipelineLayoutUnique(pipeline_layout_info);
 	}
 
+	// レンダーパス
+	{
+		// sub pass
+		vk::AttachmentReference color_ref[] =
+		{
+			vk::AttachmentReference()
+			.setAttachment(0)
+			.setLayout(vk::ImageLayout::eColorAttachmentOptimal)
+		};
+		vk::SubpassDescription subpass;
+		subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+		subpass.setInputAttachmentCount(0);
+		subpass.setPInputAttachments(nullptr);
+		subpass.setColorAttachmentCount(array_length(color_ref));
+		subpass.setPColorAttachments(color_ref);
+
+		vk::AttachmentDescription attach_description[] =
+		{
+			// color1
+			vk::AttachmentDescription()
+			.setFormat(vk::Format::eR16G16B16A16Sfloat)
+			.setSamples(vk::SampleCountFlagBits::e1)
+			.setLoadOp(vk::AttachmentLoadOp::eLoad)
+			.setStoreOp(vk::AttachmentStoreOp::eStore)
+			.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal)
+			.setFinalLayout(vk::ImageLayout::eColorAttachmentOptimal),
+		};
+		vk::RenderPassCreateInfo renderpass_info;
+		renderpass_info.setAttachmentCount(array_length(attach_description));
+		renderpass_info.setPAttachments(attach_description);
+		renderpass_info.setSubpassCount(1);
+		renderpass_info.setPSubpasses(&subpass);
+
+		m_render_pass = context->m_device.createRenderPassUnique(renderpass_info);
+	}
+
+	{
+		//		vk::ImageView view[] = {
+			//		render_target->m_view
+		//		};
+		vk::FramebufferCreateInfo framebuffer_info;
+		framebuffer_info.setFlags(vk::FramebufferCreateFlagBits::eImageless);
+		framebuffer_info.setRenderPass(m_render_pass.get());
+		framebuffer_info.setAttachmentCount(1);
+		//		framebuffer_info.setPAttachments(view);
+		framebuffer_info.setWidth(2048);
+		framebuffer_info.setHeight(2048);
+		framebuffer_info.setLayers(1);
+
+		vk::Format format[] = {vk::Format::eR16G16B16A16Sfloat};
+
+		vk::FramebufferAttachmentImageInfo framebuffer_image_info;
+		framebuffer_image_info.setUsage(vk::ImageUsageFlagBits::eColorAttachment);
+		framebuffer_image_info.setLayerCount(1);
+		framebuffer_image_info.setViewFormatCount(array_length(format));
+		framebuffer_image_info.setPViewFormats(format);
+		framebuffer_image_info.setWidth(2048);
+		framebuffer_image_info.setHeight(2048);
+		vk::FramebufferAttachmentsCreateInfo framebuffer_attach_info;
+		framebuffer_attach_info.setAttachmentImageInfoCount(1);
+		framebuffer_attach_info.setPAttachmentImageInfos(&framebuffer_image_info);
+		framebuffer_info.setPNext(&framebuffer_attach_info);
+
+		m_framebuffer = context->m_device.createFramebufferUnique(framebuffer_info);
+	}
+
+	// setup pipeline
+	{
+		// assembly
+		vk::PipelineInputAssemblyStateCreateInfo assembly_info[] =
+		{
+			vk::PipelineInputAssemblyStateCreateInfo()
+			.setPrimitiveRestartEnable(VK_FALSE)
+			.setTopology(vk::PrimitiveTopology::eTriangleList),
+		};
+
+		// viewport
+		vk::PipelineViewportStateCreateInfo viewport_info;
+		viewport_info.setViewportCount(1);
+		viewport_info.setScissorCount(1);
+
+		vk::PipelineRasterizationStateCreateInfo rasterization_info;
+		rasterization_info.setPolygonMode(vk::PolygonMode::eFill);
+		rasterization_info.setFrontFace(vk::FrontFace::eCounterClockwise);
+		rasterization_info.setCullMode(vk::CullModeFlagBits::eNone);
+		rasterization_info.setLineWidth(1.f);
+
+		vk::PipelineMultisampleStateCreateInfo sample_info;
+		sample_info.setRasterizationSamples(vk::SampleCountFlagBits::e1);
+
+		vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
+		depth_stencil_info.setDepthTestEnable(VK_FALSE);
+
+		std::vector<vk::PipelineColorBlendAttachmentState> blend_state = {
+			vk::PipelineColorBlendAttachmentState()
+			.setBlendEnable(VK_TRUE)
+			.setSrcAlphaBlendFactor(vk::BlendFactor::eOne)
+			.setDstAlphaBlendFactor(vk::BlendFactor::eOneMinusSrcAlpha)
+			.setAlphaBlendOp(vk::BlendOp::eAdd)
+			.setSrcColorBlendFactor(vk::BlendFactor::eSrcAlpha)
+			.setDstColorBlendFactor(vk::BlendFactor::eOneMinusSrcAlpha)
+			.setColorBlendOp(vk::BlendOp::eAdd)
+			.setColorWriteMask(vk::ColorComponentFlagBits::eR
+				| vk::ColorComponentFlagBits::eG
+				| vk::ColorComponentFlagBits::eB
+				| vk::ColorComponentFlagBits::eA)
+		};
+		vk::PipelineColorBlendStateCreateInfo blend_info;
+		blend_info.setAttachmentCount(blend_state.size());
+		blend_info.setPAttachments(blend_state.data());
+
+		vk::VertexInputAttributeDescription attr[] =
+		{
+			vk::VertexInputAttributeDescription().setLocation(0).setOffset(0).setBinding(0).setFormat(vk::Format::eR32G32Sfloat),
+			vk::VertexInputAttributeDescription().setLocation(1).setOffset(8).setBinding(0).setFormat(vk::Format::eR32G32Sfloat),
+			vk::VertexInputAttributeDescription().setLocation(2).setOffset(16).setBinding(0).setFormat(vk::Format::eR8G8B8A8Unorm),
+		};
+		vk::VertexInputBindingDescription binding[] =
+		{
+			vk::VertexInputBindingDescription().setBinding(0).setInputRate(vk::VertexInputRate::eVertex).setStride(20)
+		};
+		vk::PipelineVertexInputStateCreateInfo vertex_input_info;
+		vertex_input_info.setVertexAttributeDescriptionCount(array_length(attr));
+		vertex_input_info.setPVertexAttributeDescriptions(attr);
+		vertex_input_info.setVertexBindingDescriptionCount(array_length(binding));
+		vertex_input_info.setPVertexBindingDescriptions(binding);
+
+		vk::PipelineShaderStageCreateInfo shader_info[] = {
+			vk::PipelineShaderStageCreateInfo()
+			.setModule(m_shader_module[SHADER_VERT_RENDER].get())
+			.setPName("main")
+			.setStage(vk::ShaderStageFlagBits::eVertex),
+			vk::PipelineShaderStageCreateInfo()
+			.setModule(m_shader_module[sAppImGui::SHADER_FRAG_RENDER].get())
+			.setPName("main")
+			.setStage(vk::ShaderStageFlagBits::eFragment),
+		};
+
+		vk::PipelineDynamicStateCreateInfo dynamic_info;
+		vk::DynamicState dynamic_state[] = {
+			vk::DynamicState::eViewport,
+			vk::DynamicState::eScissor,
+		};
+		dynamic_info.setDynamicStateCount(array_length(dynamic_state));
+		dynamic_info.setPDynamicStates(dynamic_state);
+
+		std::vector<vk::GraphicsPipelineCreateInfo> graphics_pipeline_info =
+		{
+			vk::GraphicsPipelineCreateInfo()
+			.setStageCount(array_length(shader_info))
+			.setPStages(shader_info)
+			.setPVertexInputState(&vertex_input_info)
+			.setPInputAssemblyState(&assembly_info[0])
+			.setPViewportState(&viewport_info)
+			.setPRasterizationState(&rasterization_info)
+			.setPMultisampleState(&sample_info)
+			.setLayout(m_pipeline_layout[PIPELINE_LAYOUT_RENDER].get())
+			.setRenderPass(m_render_pass.get())
+			.setPDepthStencilState(&depth_stencil_info)
+			.setPColorBlendState(&blend_info)
+			.setPDynamicState(&dynamic_info),
+		};
+		auto pipelines = context->m_device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info);
+		m_pipeline = std::move(pipelines[0]);
+
+	}
+
 }
 
 void sAppImGui::Render(vk::CommandBuffer& cmd)
@@ -251,7 +418,7 @@ void sAppImGui::Render(vk::CommandBuffer& cmd)
 		begin_render_info.setRenderArea(vk::Rect2D({}, vk::Extent2D(window->getFrontBuffer()->m_info.extent.width, window->getFrontBuffer()->m_info.extent.height)));
 		cmd.beginRenderPass(begin_render_info, vk::SubpassContents::eInline);
 
-		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, window->getImgui()->m_pipeline.get());
+		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline.get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_RENDER].get(), 0, { m_descriptor_set.get() }, {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_RENDER].get(), 1, { sSystem::Order().getSystemDescriptorSet() }, { i * sSystem::Order().getSystemDescriptorStride() });
 
@@ -284,8 +451,11 @@ void sAppImGui::Render(vk::CommandBuffer& cmd)
 				}
 				else
 				{
+					draw_data->DisplayPos.x;
 					vk::Rect2D sissor(vk::Offset2D(pcmd->ClipRect.x, pcmd->ClipRect.y), vk::Extent2D(pcmd->ClipRect.z - pcmd->ClipRect.x, pcmd->ClipRect.w - pcmd->ClipRect.y));
+					vk::Viewport viewport(draw_data->DisplayPos.x, draw_data->DisplayPos.y, draw_data->DisplaySize.x, draw_data->DisplaySize.y);
 					cmd.setScissor(0, 1, &sissor);
+					cmd.setViewport(0, 1, &viewport);
 					cmd.bindIndexBuffer(index.getInfo().buffer, index.getInfo().offset + i_offset * sizeof(ImDrawIdx), sizeof(ImDrawIdx) == 2 ? vk::IndexType::eUint16 : vk::IndexType::eUint32);
 					cmd.drawIndexed(pcmd->ElemCount, 1, 0, 0, 0);
 				}

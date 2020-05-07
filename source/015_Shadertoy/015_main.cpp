@@ -528,11 +528,7 @@ int main()
 	camera->getData().m_height = 480;
 	camera->getData().m_far = 10000.f;
 	camera->getData().m_near = 0.01f;
-	{
-		auto dir = normalize(vec3(1.f, 3.f, 2.f));
-		auto rot = normalize(cross(vec3(0.f, 1.f, 0.f), normalize(vec3(dir.x, 0.f, dir.z))));
-		int a = 0;
-	}
+
 	app::AppDescriptor app_desc;
 	app_desc.m_window_size = uvec2(1024, 1024);
 	app::App app(app_desc);
@@ -567,7 +563,7 @@ int main()
 				sky.execute_cpu(imgui_context);
 				sky.execute_precompute(cmd, app.m_window->getFrontBuffer());
 				sky.executeShadow(cmd, app.m_window->getFrontBuffer());
-//				sky.execute(cmd, app.m_window->getFrontBuffer());
+				sky.execute(cmd, app.m_window->getFrontBuffer());
 //				sky.execute_reference(cmd, app.m_window->getFrontBuffer());
 //				sky.m_skynoise.execute_Render(context, cmd, app.m_window->getFrontBuffer());
 
