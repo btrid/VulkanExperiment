@@ -16,7 +16,11 @@ struct sAppImGui : SingletonEx<sAppImGui>
 	friend SingletonEx<sAppImGui>;
 
 	sAppImGui(const std::shared_ptr<btr::Context>& context);
-
+	~sAppImGui()
+	{
+		ImGui::DestroyContext(m_imgui_context);
+		m_imgui_context = nullptr;
+	}
 	void Render(vk::CommandBuffer& cmd);
 
 public:

@@ -600,6 +600,12 @@ struct Sky
 	{
 		vec4 window;
 		vec4 light_front;
+		float coverage;
+		float inscattering_sampling_offset;
+		float inscattering_rate;
+		float _unuse;
+		vec4 a;
+
 	};
 	enum Shader
 	{
@@ -672,6 +678,7 @@ struct Sky
 	vk::UniqueDeviceMemory m_image_atmosphere_range_memory;
 	vk::UniqueSampler m_image_atmosphere_range_sampler;
 
+	Constant m_constant;
 	SkyNoise m_skynoise;
 	Sky(const std::shared_ptr<btr::Context>& context, const std::shared_ptr<RenderTarget>& render_target)
 		: m_skynoise(context)
@@ -1033,7 +1040,7 @@ struct Sky
 					m_skynoise.m_descriptor_set_layout.get(),
 				};
 				vk::PushConstantRange ranges[] = {
-					vk::PushConstantRange().setSize(64).setStageFlags(vk::ShaderStageFlagBits::eCompute),
+					vk::PushConstantRange().setSize(sizeof(Constant)).setStageFlags(vk::ShaderStageFlagBits::eCompute),
 				};
 
 				vk::PipelineLayoutCreateInfo pipeline_layout_info;
@@ -1105,20 +1112,39 @@ struct Sky
 			m_pipeline[Pipeline_Sky_RenderUpsampling_CS] = std::move(compute_pipeline[6]);
 		}
 
+		float c = cos(sGlobal::Order().getTotalTime());
+		float s = sin(sGlobal::Order().getTotalTime());
+		//		auto LightRay = normalize(vec3(s, c, 0.1));
+		auto LightRay = normalize(vec3(0.f, -1.f, 1.f));
+		Constant constant;
+		m_constant.window = vec4(sGlobal::Order().getTotalTime()) * vec4(1.f, 0.f, 12.f, 0.f);
+		m_constant.light_front = vec4(LightRay, 0.f);
+		m_constant.coverage = 0.5f;
+		m_constant.inscattering_sampling_offset = 0.5f;
+		m_constant.inscattering_rate = 0.5f;
+		m_constant.a = vec4(0.f);
 
 	}
 
+
+	void execute_cpu(const std::unique_ptr<AppImgui>& imgui)
+	{
+		imgui->pushImguiCmd([&]()
+		{
+			if (ImGui::Begin("Uniforms"))
+			{
+				ImGui::SliderFloat("coverage", &m_constant.coverage, 0.f, 5.f);
+				ImGui::SliderFloat("inscattering offset", &m_constant.inscattering_sampling_offset, 0.f, 10.f);
+				ImGui::SliderFloat("inscattering rate", &m_constant.inscattering_rate, 0.f, 1.f);
+				ImGui::SliderFloat4("test", &m_constant.a[0], 0.f, 1.f);
+			}
+			ImGui::End();
+
+		});
+	}
 	Constant calc_constant()const
 	{
-		float c = cos(sGlobal::Order().getTotalTime());
-		float s = sin(sGlobal::Order().getTotalTime());
-//		auto LightRay = normalize(vec3(s, c, 0.1));
-		auto LightRay = normalize(vec3(0.f, -1.f, 1.f));
-		Constant constant;
-		constant.window = vec4(sGlobal::Order().getTotalTime()) * vec4(1.f, 0.f, 12.f, 0.f);
-		constant.light_front = vec4(LightRay, 0.f);
-		return constant;
-
+		return m_constant;
 	}
 	void execute_reference(vk::CommandBuffer& cmd, const std::shared_ptr<RenderTarget>& render_target)
 	{
@@ -1208,18 +1234,6 @@ struct Sky
 		}
 	}
 
- 	void execute_cpu(const std::unique_ptr<AppImgui>& imgui)
- 	{
-		imgui->pushImguiCmd([]() 
-		{
-			if (ImGui::Begin("Uniforms"))
-			{
-
-			}
-			ImGui::End();
-
-		});
- 	}
 	void execute_precompute(vk::CommandBuffer &cmd, const std::shared_ptr<RenderTarget>& render_target)
 	{
 		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);

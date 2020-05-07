@@ -571,7 +571,7 @@ int main()
 //				sky.execute_reference(cmd, app.m_window->getFrontBuffer());
 //				sky.m_skynoise.execute_Render(context, cmd, app.m_window->getFrontBuffer());
 
-				sAppImGuiRenderer::Order().Render(cmd);
+				sAppImGui::Order().Render(cmd);
 
 				cmd.end();
 				cmds[cmd_sky] = cmd;

@@ -60,7 +60,6 @@ struct AppImgui
 	vk::UniqueRenderPass m_render_pass;
 	vk::UniqueFramebuffer m_framebuffer;
 
-	ImGuiContext* m_imgui_context;
 };
 
 struct AppWindow : public cWindow

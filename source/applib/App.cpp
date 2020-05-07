@@ -507,6 +507,10 @@ void App::postUpdate()
 	sGlobal::Order().sync();
 	sCameraManager::Order().sync();
 	sDeleter::Order().sync();
+	m_context->m_vertex_memory.gc();
+	m_context->m_uniform_memory.gc();
+	m_context->m_storage_memory.gc();
+	m_context->m_staging_memory.gc();
 
 }
 
@@ -677,41 +681,13 @@ AppImgui::AppImgui(const std::shared_ptr<btr::Context>& context, AppWindow* cons
 
 	}
 
-	m_imgui_context = ImGui::CreateContext();
-	ImGui::SetCurrentContext(m_imgui_context);
 
-	auto& io = ImGui::GetIO();
-	io.Fonts->AddFontDefault();
-	io.DisplaySize.x = window->getFrontBuffer()->m_info.extent.width;
-	io.DisplaySize.y = window->getFrontBuffer()->m_info.extent.height;
-	io.FontGlobalScale = 1.f;
-	io.RenderDrawListsFnUnused = nullptr;  // Setup a render function, or set to NULL and call GetDrawData() after Render() to access the render data.
-	io.KeyMap[ImGuiKey_Tab] = VK_TAB;
-	io.KeyMap[ImGuiKey_LeftArrow] = VK_LEFT;
-	io.KeyMap[ImGuiKey_RightArrow] = VK_RIGHT;
-	io.KeyMap[ImGuiKey_UpArrow] = VK_UP;
-	io.KeyMap[ImGuiKey_DownArrow] = VK_DOWN;
-	//		io.KeyMap[ImGuiKey_PageUp] = VK_PAGE;
-	// 		io.KeyMap[ImGuiKey_PageDown] = i;
-	// 		io.KeyMap[ImGuiKey_Home] = i;
-	// 		io.KeyMap[ImGuiKey_End] = i;
-	io.KeyMap[ImGuiKey_Delete] = VK_DELETE;
-	io.KeyMap[ImGuiKey_Backspace] = VK_BACK;
-	io.KeyMap[ImGuiKey_Enter] = VK_RETURN;
-	io.KeyMap[ImGuiKey_Escape] = VK_ESCAPE;
-	// 		io.KeyMap[ImGuiKey_A] = i;
-	// 		io.KeyMap[ImGuiKey_C] = i;
-	// 		io.KeyMap[ImGuiKey_V] = i;
-	// 		io.KeyMap[ImGuiKey_X] = i;
-	// 		io.KeyMap[ImGuiKey_Y] = i;
-	// 		io.KeyMap[ImGuiKey_Z] = i;
 
 }
 
 AppImgui::~AppImgui()
 {
-	ImGui::DestroyContext(m_imgui_context);
-	m_imgui_context = nullptr;
+
 }
 
 AppWindow::AppWindow(const std::shared_ptr<btr::Context>& context, const cWindowDescriptor& descriptor)

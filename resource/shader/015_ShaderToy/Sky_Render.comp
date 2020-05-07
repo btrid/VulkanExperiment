@@ -156,7 +156,7 @@ float inscattering(vec3 pos, float ray_step)
 	up = normalize(cross(side, front));
 
 
-	ray_step*=0.77;
+	ray_step *= constant.inscattering_sampling_offset;
 	const int grid = 2;
 	float density = 0.;
 	for(int z=-grid; z<=grid; z++)
@@ -169,12 +169,12 @@ float inscattering(vec3 pos, float ray_step)
 		float height_frac = heightFraction(p);
 		vec3 weather_data = sampleWeather(p);
 		float d = cloud_density(p, weather_data, height_frac, 0., true);
-		d=d<=0.?0.:1.;
+//		d=d<=0.?0.:1.;
 		density+=d;
 
 	}
 	float wight = 2./float((grid*2+1)*(grid*2+1)*(grid*2+1));
-	return (1.-exp(-density*wight))+1.;
+	return (1.-exp(-density*wight))*constant.inscattering_rate+(1.-constant.inscattering_rate);
 //	return (1.-exp(-density*0.001));
 
 #endif
@@ -215,7 +215,6 @@ vec4 cloud(float depth)
 
 			transmittance *= exp(-d*getPrecipitation(weather_data)*ray_step);
 			if(transmittance < 0.01) { break; }
-//			break;
 
 		}
 
@@ -223,8 +222,8 @@ vec4 cloud(float depth)
 		{
 			vec3 pos = begin + uCamDir * ray_step * float(surface);
 			float powder = inscattering(pos, ray_step);
-//			color *= powder;
-			color = vec3(powder); transmittance=0.;
+			color *= powder;
+//			color = vec3(powder); transmittance=0.;
 		}
 	}
 	return vec4(color, clamp(1.-transmittance, 0., 1.));
