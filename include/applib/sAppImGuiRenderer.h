@@ -17,7 +17,7 @@ struct sAppImGuiRenderer : SingletonEx<sAppImGuiRenderer>
 
 	sAppImGuiRenderer(const std::shared_ptr<btr::Context>& context);
 
-	vk::CommandBuffer Render();
+	void Render(vk::CommandBuffer& cmd);
 
 public:
 	enum Shader
@@ -37,6 +37,7 @@ private:
 
 	std::shared_ptr<btr::Context> m_context;
 	std::shared_ptr<RenderTarget> m_render_target;
+	ImGuiContext* m_imgui_context;
 
 	vk::UniqueDescriptorSetLayout	m_descriptor_set_layout;
 	vk::UniqueDescriptorSet			m_descriptor_set;

@@ -1210,7 +1210,15 @@ struct Sky
 
  	void execute_cpu(const std::unique_ptr<AppImgui>& imgui)
  	{
- 		
+		imgui->pushImguiCmd([]() 
+		{
+			if (ImGui::Begin("Uniforms"))
+			{
+
+			}
+			ImGui::End();
+
+		});
  	}
 	void execute_precompute(vk::CommandBuffer &cmd, const std::shared_ptr<RenderTarget>& render_target)
 	{

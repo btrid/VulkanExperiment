@@ -470,7 +470,8 @@ void App::preUpdate()
 		job.mJob.emplace_back(
 			[&]()
 		{
-// 			m_system_cmds[2] = sParticlePipeline::Order().draw(m_context);
+//			m_system_cmds[2] = sParticlePipeline::Order().draw(m_context);
+//			m_system_cmds[2] = sAppImGuiRenderer::Order().Render();
 			m_sync_point.arrive();
 		}
 		);
@@ -678,7 +679,9 @@ AppImgui::AppImgui(const std::shared_ptr<btr::Context>& context, AppWindow* cons
 
 	m_imgui_context = ImGui::CreateContext();
 	ImGui::SetCurrentContext(m_imgui_context);
+
 	auto& io = ImGui::GetIO();
+	io.Fonts->AddFontDefault();
 	io.DisplaySize.x = window->getFrontBuffer()->m_info.extent.width;
 	io.DisplaySize.y = window->getFrontBuffer()->m_info.extent.height;
 	io.FontGlobalScale = 1.f;

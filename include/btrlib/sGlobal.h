@@ -33,7 +33,7 @@ public:
 	uint32_t getNextFrame()const { return (m_current_frame + 1) % FRAME_COUNT_MAX; }
 	uint32_t getPrevFrame()const { return (m_current_frame == 0 ? FRAME_COUNT_MAX : m_current_frame) - 1; }
 	uint32_t getWorkerFrame()const { return (m_current_frame+1) % FRAME_COUNT_MAX; }
-	uint32_t getRenderFrame()const { return m_current_frame; }
+	uint32_t getRenderFrame()const { return m_current_frame % FRAME_COUNT_MAX; }
 	uint32_t getWorkerIndex()const { return m_tick_tock; }
 	uint32_t getRenderIndex()const { return (m_tick_tock + 1) % 2; }
 
@@ -75,26 +75,26 @@ public:
 		auto ptr = std::make_unique<HandleHolder>(std::move(handle)...);
 		{
 			std::lock_guard<std::mutex> lk(m_deleter_mutex);
-			m_deleter_list.push_back(std::move(ptr));
+			m_deleter_list[m_index].push_back(std::move(ptr));
 		}
 	};
 
 	void sync()
 	{
 		std::lock_guard<std::mutex> lk(m_deleter_mutex);
-		m_deleter_list.erase(std::remove_if(m_deleter_list.begin(), m_deleter_list.end(), [&](auto& d) { return d->count-- == 0; }), m_deleter_list.end());
+		m_index = (m_index + 1) % m_deleter_list.size();
+		m_deleter_list[m_index].clear();
+		m_deleter_list[m_index].shrink_to_fit();
 	}
 
 private:
 	struct Deleter
 	{
-		uint32_t count;
-		Deleter() : count(sGlobal::Order().FRAME_COUNT_MAX+3) {}
 		virtual ~Deleter() { ; }
 	};
-	std::vector<std::unique_ptr<Deleter>> m_deleter_list;
+	std::array<std::vector<std::unique_ptr<Deleter>>, sGlobal::FRAME_COUNT_MAX> m_deleter_list;
 	std::mutex m_deleter_mutex;
-
+	int m_index = 0;
 
 };
 

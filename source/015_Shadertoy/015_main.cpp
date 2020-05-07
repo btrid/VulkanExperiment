@@ -21,6 +21,7 @@
 #include <btrlib/cCamera.h>
 #include <btrlib/AllocatedMemory.h>
 #include <applib/sCameraManager.h>
+#include <applib/sAppImGuiRenderer.h>
 #include <applib/App.h>
 #include <applib/AppPipeline.h>
 #include <applib/Geometry.h>
@@ -536,6 +537,7 @@ int main()
 	app_desc.m_window_size = uvec2(1024, 1024);
 	app::App app(app_desc);
 	auto context = app.m_context;
+	auto& imgui_context = app.m_window_list[0]->getImgui();
 
 	ClearPipeline clear_pipeline(context, app.m_window->getFrontBuffer());
 	PresentPipeline present_pipeline(context, app.m_window->getFrontBuffer(), app.m_window->getSwapchain());
@@ -562,11 +564,15 @@ int main()
 			std::vector<vk::CommandBuffer> cmds(cmd_num);
 			{
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0, "cmd_sky");
+				sky.execute_cpu(imgui_context);
 				sky.execute_precompute(cmd, app.m_window->getFrontBuffer());
 				sky.executeShadow(cmd, app.m_window->getFrontBuffer());
 				sky.execute(cmd, app.m_window->getFrontBuffer());
 //				sky.execute_reference(cmd, app.m_window->getFrontBuffer());
 //				sky.m_skynoise.execute_Render(context, cmd, app.m_window->getFrontBuffer());
+
+				sAppImGuiRenderer::Order().Render(cmd);
+
 				cmd.end();
 				cmds[cmd_sky] = cmd;
 			}

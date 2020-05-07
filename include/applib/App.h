@@ -83,7 +83,7 @@ struct AppWindow : public cWindow
 	const std::shared_ptr<RenderTarget>& getFrontBuffer()const { return m_front_buffer; }
 
 	std::unique_ptr<AppImgui>  m_imgui_pipeline;
-	AppImgui* getImguiPipeline() { return m_imgui_pipeline.get(); }
+	std::unique_ptr<AppImgui>& getImgui() { return m_imgui_pipeline; }
 };
 
 struct AppContext : public btr::Context

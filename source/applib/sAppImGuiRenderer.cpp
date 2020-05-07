@@ -8,7 +8,7 @@ sAppImGuiRenderer::sAppImGuiRenderer(const std::shared_ptr<btr::Context>& contex
 	auto cmd = context->m_cmd_pool->allocCmdTempolary(0);
 
 	{
-		ImGui::CreateContext();
+		m_imgui_context = ImGui::CreateContext();
 		ImGuiIO& io = ImGui::GetIO();
 
 		unsigned char* pixels;
@@ -182,18 +182,17 @@ sAppImGuiRenderer::sAppImGuiRenderer(const std::shared_ptr<btr::Context>& contex
 
 }
 
-vk::CommandBuffer sAppImGuiRenderer::Render()
+void sAppImGuiRenderer::Render(vk::CommandBuffer& cmd)
 {
-	auto cmd = m_context->m_cmd_pool->allocCmdOnetime(0);
 
+	ImGui::SetCurrentContext(m_imgui_context);
 	for (uint32_t i = 0; i < app::g_app_instance->m_window_list.size(); i++)
 	{
 		auto& window = app::g_app_instance->m_window_list[i];
 
-		ImGui::SetCurrentContext(window->getImguiPipeline()->m_imgui_context);
 		auto& io = ImGui::GetIO();
 		io.DisplaySize.x = window->getFrontBuffer()->m_info.extent.width;
-		io.DisplaySize.x = window->getFrontBuffer()->m_info.extent.height;
+		io.DisplaySize.y = window->getFrontBuffer()->m_info.extent.height;
 		{
 			auto& mouse = window->getInput().m_mouse;
 			io.MousePos = ImVec2(mouse.xy.x, mouse.xy.y);
@@ -223,7 +222,7 @@ vk::CommandBuffer sAppImGuiRenderer::Render()
 		ImGui::NewFrame();
 		{
 			ImGui::PushID(window.get());
-			auto cmds = window->getImguiPipeline()->getImguiCmd();
+			auto cmds = window->getImgui()->getImguiCmd();
 			for (auto& cmd : cmds)
 			{
 				cmd();
@@ -234,12 +233,25 @@ vk::CommandBuffer sAppImGuiRenderer::Render()
 		ImGui::Render();
 		ImDrawData* draw_data = ImGui::GetDrawData();
 
+		{
+			std::array<vk::ImageMemoryBarrier, 1> image_barrier;
+			image_barrier[0].setImage(window->getFrontBuffer()->m_image);
+			image_barrier[0].setSubresourceRange(vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+//			image_barrier[0].setOldLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
+	//		image_barrier[0].setSrcAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+			image_barrier[0].setNewLayout(vk::ImageLayout::eColorAttachmentOptimal);
+			image_barrier[0].setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+
+			cmd.pipelineBarrier(vk::PipelineStageFlagBits::eBottomOfPipe, vk::PipelineStageFlagBits::eColorAttachmentOutput, {}, {}, {}, { array_length(image_barrier), image_barrier.data() });
+		}
+
 		vk::RenderPassBeginInfo begin_render_info;
- 		begin_render_info.setFramebuffer(window->getImguiPipeline()->m_framebuffer.get());
- 		begin_render_info.setRenderPass(window->getImguiPipeline()->m_render_pass.get());
+ 		begin_render_info.setFramebuffer(window->getImgui()->m_framebuffer.get());
+ 		begin_render_info.setRenderPass(window->getImgui()->m_render_pass.get());
 		begin_render_info.setRenderArea(vk::Rect2D({}, vk::Extent2D(window->getFrontBuffer()->m_info.extent.width, window->getFrontBuffer()->m_info.extent.height)));
 		cmd.beginRenderPass(begin_render_info, vk::SubpassContents::eInline);
-		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, window->getImguiPipeline()->m_pipeline.get());
+
+		cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, window->getImgui()->m_pipeline.get());
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_RENDER].get(), 0, { m_descriptor_set.get() }, {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_RENDER].get(), 1, { sSystem::Order().getSystemDescriptorSet() }, { i * sSystem::Order().getSystemDescriptorStride() });
 
@@ -283,7 +295,4 @@ vk::CommandBuffer sAppImGuiRenderer::Render()
 
 		cmd.endRenderPass();
 	}
-
-	cmd.end();
-	return cmd;
 }
