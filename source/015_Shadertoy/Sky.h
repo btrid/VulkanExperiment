@@ -601,10 +601,14 @@ struct Sky
 	{
 		vec4 window;
 		vec4 light_front;
-		float coverage;
+		float coverage_min;
+		float coverage_max;
 		float inscattering_sampling_offset;
 		float inscattering_rate;
-		float _unuse;
+		int sample_num;
+		int _1;
+		int _2;
+		int _3;
 		vec4 a;
 
 	};
@@ -1120,10 +1124,12 @@ struct Sky
 		Constant constant;
 		m_constant.window = vec4(sGlobal::Order().getTotalTime()) * vec4(1.f, 0.f, 12.f, 0.f);
 		m_constant.light_front = vec4(LightRay, 0.f);
-		m_constant.coverage = 0.5f;
+		m_constant.coverage_min = 0.3f;
+		m_constant.coverage_max = 0.3f;
 		m_constant.inscattering_sampling_offset = 0.5f;
 		m_constant.inscattering_rate = 0.5f;
-		m_constant.a = vec4(0.f);
+		m_constant.sample_num = 64;
+		m_constant.a = vec4(1.f);
 
 	}
 
@@ -1134,10 +1140,15 @@ struct Sky
 		{
 			if (ImGui::Begin("Uniforms"))
 			{
-				ImGui::SliderFloat("coverage", &m_constant.coverage, 0.f, 5.f);
+				ImGui::SliderFloat("coverage min", &m_constant.coverage_min, 0.f, 1.f);
+				ImGui::SliderFloat("coverage max", &m_constant.coverage_max, 0.f, 1.f);
 				ImGui::SliderFloat("inscattering offset", &m_constant.inscattering_sampling_offset, 0.f, 10.f);
 				ImGui::SliderFloat("inscattering rate", &m_constant.inscattering_rate, 0.f, 1.f);
-				ImGui::SliderFloat4("test", &m_constant.a[0], 0.f, 1.f);
+				ImGui::SliderFloat4("test", &m_constant.a[0], 0.f, 10.f);
+				ImGui::SliderInt("sample num", &m_constant.sample_num, 16, 512);
+
+//				m_constant.coverage_min = glm::min(m_constant.coverage_min, m_constant.coverage_max);
+	//			m_constant.coverage_max = glm::max(m_constant.coverage_min, m_constant.coverage_max);
 			}
 			ImGui::End();
 

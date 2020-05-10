@@ -158,6 +158,7 @@ float inscattering(vec3 pos, float ray_step)
 
 	ray_step *= constant.inscattering_sampling_offset;
 	const int grid = 2;
+	const float wight = 2./float((grid*2+1)*(grid*2+1)*(grid*2+1));
 	float density = 0.;
 	for(int z=-grid; z<=grid; z++)
 	for(int y=-grid; y<=grid; y++)
@@ -173,9 +174,7 @@ float inscattering(vec3 pos, float ray_step)
 		density+=d;
 
 	}
-	float wight = 2./float((grid*2+1)*(grid*2+1)*(grid*2+1));
-	return (1.-exp(-density*wight))*constant.inscattering_rate+(1.-constant.inscattering_rate);
-//	return (1.-exp(-density*0.001));
+	return mix(1., 1.-exp(-density*wight), constant.inscattering_rate);
 
 #endif
 }
@@ -190,16 +189,16 @@ vec4 cloud(float depth)
 	vec4 rays;
 	int count = intersectRayAtomEx(uCamPos, uCamDir, u_planet.m_pos, u_planet.m_cloud_area, depth, rays);
 
-	uint sampleCount = 128;
+	uint sample_num = constant.sample_num;
 	float transmittance = 1.;
 	vec3 color = vec3(0.);
 	int surface = -1;
 	for(int i = 0; i <count; i++)
 	{
 
-		float ray_step = (rays[i*2+1] - rays[i*2]) / float(sampleCount);
+		float ray_step = (rays[i*2+1] - rays[i*2]) / float(sample_num);
 		vec3 begin = uCamPos + uCamDir * (rays[i*2]+ray_step*begin_offset);
-		for(int s=0; s<sampleCount; s++)
+		for(int s=0; s<sample_num; s++)
 		{
 			vec3 pos = begin + uCamDir * ray_step * float(s);
 			float height_frac = heightFraction(pos);

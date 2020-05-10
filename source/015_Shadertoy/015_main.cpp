@@ -466,7 +466,21 @@ int main()
 		vec3 side = cross(f, up);
 		side = dot(side, side) < 0.000001 ? vec3(1., 0., 0.) : normalize(side);
 		up = normalize(cross(side, f));
+
 		int i = 0;
+	}
+
+	for (int i = 0; i < 100; i++)
+	{
+		vec3 pos = glm::ballRand(1000.f);
+		vec2 uv1 = pos.xz() / vec2(1000.f) * vec2(0.5) + vec2(0.5); 
+
+		const vec3 u = vec3(0., 0., 1.);
+		const vec3 s = vec3(1., 0., 0.);
+		vec3 p = pos - u_planet.xyz();
+		vec2 uv2 = vec2(dot(p, s), dot(p, u)) / 1000.f * vec2(0.5) + vec2(0.5);
+
+		int _i = 0;
 
 	}
 

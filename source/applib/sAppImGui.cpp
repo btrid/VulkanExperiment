@@ -422,6 +422,9 @@ void sAppImGui::Render(vk::CommandBuffer& cmd)
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_RENDER].get(), 0, { m_descriptor_set.get() }, {});
 		cmd.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipeline_layout[PIPELINE_LAYOUT_RENDER].get(), 1, { sSystem::Order().getSystemDescriptorSet() }, { i * sSystem::Order().getSystemDescriptorStride() });
 
+		vk::Viewport viewport(draw_data->DisplayPos.x, draw_data->DisplayPos.y, draw_data->DisplaySize.x, draw_data->DisplaySize.y);
+		cmd.setViewport(0, 1, &viewport);
+
 		for (int n = 0; n < draw_data->CmdListsCount; n++)
 		{
 			auto* cmd_list = draw_data->CmdLists[n];
@@ -451,11 +454,8 @@ void sAppImGui::Render(vk::CommandBuffer& cmd)
 				}
 				else
 				{
-					draw_data->DisplayPos.x;
 					vk::Rect2D sissor(vk::Offset2D(pcmd->ClipRect.x, pcmd->ClipRect.y), vk::Extent2D(pcmd->ClipRect.z - pcmd->ClipRect.x, pcmd->ClipRect.w - pcmd->ClipRect.y));
-					vk::Viewport viewport(draw_data->DisplayPos.x, draw_data->DisplayPos.y, draw_data->DisplaySize.x, draw_data->DisplaySize.y);
 					cmd.setScissor(0, 1, &sissor);
-					cmd.setViewport(0, 1, &viewport);
 					cmd.bindIndexBuffer(index.getInfo().buffer, index.getInfo().offset + i_offset * sizeof(ImDrawIdx), sizeof(ImDrawIdx) == 2 ? vk::IndexType::eUint16 : vk::IndexType::eUint32);
 					cmd.drawIndexed(pcmd->ElemCount, 1, 0, 0, 0);
 				}

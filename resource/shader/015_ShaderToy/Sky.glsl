@@ -24,10 +24,14 @@ layout(push_constant) uniform Input
 {
 	vec3 window;
 	vec4 light_front;
-	float coverage;
+	float coverage_min;
+	float coverage_max;
 	float inscattering_sampling_offset;
 	float inscattering_rate;
-	float _unuse;
+	int sample_num;
+	int _1;
+	int _2;
+	int _3;
 	vec4 test;
 } constant;
 #define uLightRay constant.light_front.xyz
@@ -146,9 +150,11 @@ float LightEnergy(float density, float henyeyGreensteinFactor)
 
 vec3 sampleWeather(vec3 pos)
 {
-	 return texture(s_weather_map, ((pos + constant.window*0.) / vec3(u_planet.m_cloud_area.y, 1., u_planet.m_cloud_area.y) * vec3(0.5, 1., 0.5) + vec3(0.5, 0., 0.5)).xz).xyz; 
+	vec3 p = pos - u_planet.m_pos;	
+	vec2 uv = p.xz / vec2(u_planet.m_cloud_area.y) * vec2(0.5) + vec2(0.5); 
+
+	return texture(s_weather_map, uv + constant.window.xz*0.).xyz; 
 }
-float getCoverage(vec3 weather_data){ return saturate(weather_data.r * constant.coverage); }
 float getPrecipitation(vec3 weather_data){ return mix(0., 0.3, weather_data.g) + 0.001; }
 float getCloudType(vec3 weather_data){ return weather_data.b; }
 float heightFraction(vec3 pos) 
@@ -181,29 +187,32 @@ float cloud_density(vec3 pos, vec3 weather_data, float height_frac, float lod, b
 	float height_gradient = densityHeightGradient(weather_data, height_frac);
 	if(height_gradient<=0.){ return 0.;} // この雲タイプはない高さ
 
-	float cloud_coverage = getCoverage(weather_data);
+//	float cloud_coverage = saturate(weather_data.r*constant.coverage_min);
+//	float cloud_coverage = smoothstep(constant.coverage_min, constant.coverage_max, weather_data.r)*weather_data.r;
+	float cloud_coverage = weather_data.r;
 
-	pos = vec3(pos.x, height_frac, pos.z) / vec3(u_planet.m_cloud_area.y, 1., u_planet.m_cloud_area.y);
-	
-	vec4 low_freq_noise = texture(s_cloud_map, pos);
+	vec3 p = pos - u_planet.m_pos;
+	vec3 uv = vec3(p.x, height_frac, p.z) / vec3(u_planet.m_cloud_area.y, 1., u_planet.m_cloud_area.y);
+
+	vec4 low_freq_noise = texture(s_cloud_map, uv);
 	float low_freq_fBM = dot(low_freq_noise.gba, vec3(0.625, 0.25, 0.125));
 	float base_cloud = remap(low_freq_noise.r, -(1.-low_freq_fBM), 1., 0., 1.);
 
 	base_cloud *= height_gradient;
 
-	float final_cloud = remap(base_cloud, 1.-cloud_coverage, 1., 0., 1.) * cloud_coverage;
+	float final_cloud = remap(base_cloud, cloud_coverage, 1., 0., 1.) * cloud_coverage;
 
-
-//	if(smoothstep(constant.test.x, constant.test.y, final_cloud) <= 0.){ return 0.; }
     {
-
-		vec3 high_freq_noise = texture(s_cloud_detail_map, pos*0.1).xyz;
+//		vec2 uv = pos.xz*constant.test.y;
+//		pos *= vec3(4., 4., 4.);
+		vec3 high_freq_noise = texture(s_cloud_detail_map, uv).xyz;
 		float high_freq_fBM = dot(high_freq_noise, vec3(0.625, 0.25, 0.125));
 		float high_freq_foise_modifier = mix(high_freq_fBM, 1.0-high_freq_fBM, saturate(height_frac * 10.));
 
-//		final_cloud = remap(final_cloud, high_freq_foise_modifier*0.2, 1., 0., 1.);
+		final_cloud = remap(final_cloud, high_freq_foise_modifier*0.2, 1., 0., 1.);
     }
-	final_cloud = smoothstep(constant.test.x, constant.test.x+constant.test.y, final_cloud);
+//	final_cloud = smoothstep(0.3, 0.3, final_cloud);
+	final_cloud = smoothstep(constant.coverage_min, constant.coverage_max, final_cloud) * final_cloud;
 	return saturate(final_cloud);
 
 }

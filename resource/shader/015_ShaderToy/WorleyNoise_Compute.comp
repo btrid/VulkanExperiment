@@ -23,6 +23,7 @@ void main()
 		v[3] = worley_noise(index+ 73, level++, reso);
 
 		v = clamp(v*vec4(1., 1., 1., 1.), vec4(0.), vec4(1.));
+//		v = step(0.4, v);
 		imageStore(i_cloud_map, ivec3(gl_GlobalInvocationID), uvec4(v* vec4(255.)));
 	}
 
@@ -35,6 +36,7 @@ void main()
 		v[1] = worley_noise(index+29, level++, reso);
 		v[2] = worley_noise(index+85, level++, reso);
 		v = clamp(v, vec4(0.), vec4(1.));
+//		v = step(0.4, v);
 		imageStore(i_cloud_detail_map, ivec3(gl_GlobalInvocationID), uvec4(v* vec4(255.)));
 
 	}

@@ -314,6 +314,7 @@ App::App(const AppDescriptor& desc)
 
 void App::setup()
 {
+	// loopˆÈ‘O‚Ìcmd‚ğÀs
 	auto setup_cmds = m_context->m_cmd_pool->submit();
 	std::vector<vk::SubmitInfo> submitInfo =
 	{
@@ -330,10 +331,7 @@ void App::setup()
 	queue.submit(submitInfo, fence.get());
 
 	sDebug::Order().waitFence(m_device.get(), fence.get());
-//	m_context->m_device.resetFences({ m_fence_list[index].get() });
 
-//	// “K“–‚ÈÀ‘•‚È‚Ì‚Åâ‘Î‘Ò‚Â
-//	queue.waitIdle();
 }
 
 
