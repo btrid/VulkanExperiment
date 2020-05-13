@@ -205,7 +205,7 @@ vec4 cloud(float depth)
 			vec3 weather_data = sampleWeather(pos);
 			float d = cloud_density(pos, weather_data, height_frac, 0., true);
 			if(d<=0.){ continue; }
-			if(surface<0){ surface = s;}
+			if(surface<0 && d>=0.1){ surface = s;}
 
 			float light = light(pos);
 			float e = 1.* light * d * transmittance;

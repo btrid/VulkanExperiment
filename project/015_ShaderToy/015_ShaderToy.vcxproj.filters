@@ -8,6 +8,5 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\source\015_Shadertoy\Sky.h" />
-    <ClInclude Include="..\..\source\015_Shadertoy\SkyBase.h" />
   </ItemGroup>
 </Project>

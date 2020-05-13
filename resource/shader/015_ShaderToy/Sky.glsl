@@ -13,11 +13,9 @@
 #define USE_Sky 1
 #if defined(USE_Sky)
 layout(set=USE_Sky, binding=0) uniform sampler3D s_shadow_map;
-layout(set=USE_Sky, binding=1) uniform sampler3D s_along_density_map;
-layout(set=USE_Sky, binding=2) uniform sampler2D s_render_map;
+layout(set=USE_Sky, binding=1) uniform sampler2D s_render_map;
 layout(set=USE_Sky, binding=10, r16ui) uniform uimage3D i_shadow_map;
-layout(set=USE_Sky, binding=11, r16ui) uniform uimage3D i_along_density_map;
-layout(set=USE_Sky, binding=12, rgba16) uniform image2D i_render_map;
+layout(set=USE_Sky, binding=11, rgba16) uniform image2D i_render_map;
 
 
 layout(push_constant) uniform Input
@@ -212,7 +210,7 @@ float cloud_density(vec3 pos, vec3 weather_data, float height_frac, float lod, b
 		final_cloud = remap(final_cloud, high_freq_foise_modifier*0.2, 1., 0., 1.);
     }
 //	final_cloud = smoothstep(0.3, 0.3, final_cloud);
-	final_cloud = smoothstep(constant.coverage_min, constant.coverage_max, final_cloud) * final_cloud;
+//	final_cloud = smoothstep(constant.coverage_min, constant.coverage_max, final_cloud) * final_cloud;
 	return saturate(final_cloud);
 
 }

@@ -8,20 +8,15 @@ SET option=--target-env spirv1.3 -V -w
 SET exe=glslangValidator.exe
 SET output=-o ../binary
 
-%exe% %include% %option% %output%/VertexRender.vert.spv VertexRender.vert
-%exe% %include% %option% %output%/VertexRender.frag.spv VertexRender.frag
-
 %exe% %include% %option% %output%/SkyReference.comp.spv SkyReference.comp
-rem %exe% %include% %option% %output%/SkyReference.comp.spv SkyReference2.comp
-
-%exe% %include% %option% %output%/Sky_Render.comp.spv Sky_Render.comp
-%exe% %include% %option% %output%/Sky_RenderShadow.comp.spv Sky_RenderShadow.comp
-%exe% %include% %option% %output%/Sky_RenderPowder.comp.spv Sky_RenderPowder.comp
-%exe% %include% %option% %output%/Sky_RenderUpsampling.comp.spv Sky_RenderUpsampling.comp
 
 %exe% %include% %option% %output%/Sky_Precompute_Shadow.comp.spv Sky_Precompute_Shadow.comp
-%exe% %include% %option% %output%/Sky_Precompute_PowderEffect.comp.spv Sky_Precompute_PowderEffect.comp
-rem %exe% %include% %option% %output%/Sky_Precompute_PowderEffect.comp.spv Sky_Precompute_PowderEffect_detail.comp
+rem %exe% %include% %option% %output%/Sky_Precompute_PowderEffect.comp.spv Sky_Precompute_PowderEffect.comp
+
+%exe% %include% %option% %output%/Sky_Render.comp.spv Sky_Render.comp
+%exe% %include% %option% %output%/Sky_RenderUpsampling.comp.spv Sky_RenderUpsampling.comp
+
+%exe% %include% %option% %output%/Sky_RenderShadow.comp.spv Sky_RenderShadow.comp
 
 
 %exe% %include% %option% %output%/WorleyNoise_Compute.comp.spv WorleyNoise_Compute.comp
