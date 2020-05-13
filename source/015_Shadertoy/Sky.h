@@ -1237,6 +1237,8 @@ struct Sky
 
 	void _executeUpsampling(vk::CommandBuffer &cmd, const std::shared_ptr<RenderTarget>& render_target)
 	{
+		DebugLabel _label(cmd, m_context->m_dispach, __FUNCTION__);
+
 		{
 			std::array<vk::ImageMemoryBarrier, 2> image_barrier;
 			image_barrier[0].setImage(render_target->m_image);

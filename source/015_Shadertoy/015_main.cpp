@@ -12,20 +12,17 @@
 #include <chrono>
 #include <memory>
 #include <filesystem>
-#include <btrlib/Singleton.h>
 #include <btrlib/cWindow.h>
 #include <btrlib/cThreadPool.h>
-#include <btrlib/cDebug.h>
 #include <btrlib/sGlobal.h>
 #include <btrlib/cStopWatch.h>
 #include <btrlib/cCamera.h>
 #include <btrlib/AllocatedMemory.h>
 #include <applib/sCameraManager.h>
-#include <applib/sAppImGui.h>
 #include <applib/App.h>
+#include <applib/sAppImGui.h>
 #include <applib/AppPipeline.h>
 #include <applib/Geometry.h>
-#include <glm/gtx/intersect.hpp>
 #include "Sky.h"
 
 #pragma comment(lib, "vulkan-1.lib")
