@@ -601,15 +601,19 @@ struct Sky
 	{
 		vec4 window;
 		vec4 light_front;
+
 		float coverage_min;
 		float coverage_max;
 		float inscattering_sampling_offset;
 		float inscattering_rate;
+
+		float high_freq;
+		float high_freq_height_rate;
+		float high_freq_power;
+		float exposure;
+
 		int sample_num;
-		int _1;
-		int _2;
-		int _3;
-		vec4 a;
+		uint flag;
 
 	};
 	enum Shader
@@ -1045,15 +1049,19 @@ struct Sky
 		float s = sin(sGlobal::Order().getTotalTime());
 		//		auto LightRay = normalize(vec3(s, c, 0.1));
 		auto LightRay = normalize(vec3(0.f, -1.f, 1.f));
-		Constant constant;
+
 		m_constant.window = vec4(sGlobal::Order().getTotalTime()) * vec4(1.f, 0.f, 12.f, 0.f);
 		m_constant.light_front = vec4(LightRay, 0.f);
 		m_constant.coverage_min = 0.3f;
-		m_constant.coverage_max = 0.3f;
+		m_constant.coverage_max = 0.05f;
 		m_constant.inscattering_sampling_offset = 0.5f;
 		m_constant.inscattering_rate = 0.5f;
+		m_constant.high_freq = 16.f;
+		m_constant.high_freq_height_rate = 10.f;
+		m_constant.high_freq_power = 0.5f;
+		m_constant.exposure = 2.5f;
 		m_constant.sample_num = 64;
-		m_constant.a = vec4(1.f);
+		m_constant.flag = 0;
 
 	}
 
@@ -1068,11 +1076,13 @@ struct Sky
 				ImGui::SliderFloat("coverage max", &m_constant.coverage_max, 0.f, 1.f);
 				ImGui::SliderFloat("inscattering offset", &m_constant.inscattering_sampling_offset, 0.f, 10.f);
 				ImGui::SliderFloat("inscattering rate", &m_constant.inscattering_rate, 0.f, 1.f);
-				ImGui::SliderFloat4("test", &m_constant.a[0], 0.f, 10.f);
+				ImGui::SliderFloat("high freq", &m_constant.high_freq, 0.f, 64.f);
+				ImGui::SliderFloat("high freq height_rate", &m_constant.high_freq_height_rate, 0.f, 10.f);
+				ImGui::SliderFloat("high freq power", &m_constant.high_freq_power, 0.f, 4.f);
+				ImGui::SliderFloat("exposure", &m_constant.exposure, 0.f, 10.f);
 				ImGui::SliderInt("sample num", &m_constant.sample_num, 16, 512);
+				ImGui::CheckboxFlags("render inscattering", &m_constant.flag, 1<<0);
 
-//				m_constant.coverage_min = glm::min(m_constant.coverage_min, m_constant.coverage_max);
-	//			m_constant.coverage_max = glm::max(m_constant.coverage_min, m_constant.coverage_max);
 			}
 			ImGui::End();
 

@@ -46,7 +46,7 @@ void main()
 
 			density = fma(d, getPrecipitation(weather_data)*step, density);
 
-			imageStore(i_shadow_map, ivec3(gl_GlobalInvocationID.xy, s), ivec4(exp(-density)*65535.));
+			imageStore(i_shadow_map, ivec3(gl_GlobalInvocationID.xy, s), ivec4(packUnorm2x16(vec2(exp(-density)))));
 
 			pos = fma(CamDir, vec3(step), pos);
 		}

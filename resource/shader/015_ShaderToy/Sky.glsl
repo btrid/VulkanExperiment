@@ -20,17 +20,22 @@ layout(set=USE_Sky, binding=11, rgba16) uniform image2D i_render_map;
 
 layout(push_constant) uniform Input
 {
-	vec3 window;
+	vec4 window;
 	vec4 light_front;
+
 	float coverage_min;
 	float coverage_max;
 	float inscattering_sampling_offset;
 	float inscattering_rate;
+
+	float high_freq;
+	float high_freq_height_rate;
+	float high_freq_power;
+	float exposure;
+
 	int sample_num;
-	int _1;
-	int _2;
-	int _3;
-	vec4 test;
+	uint flag;
+
 } constant;
 #define uLightRay constant.light_front.xyz
 
@@ -186,8 +191,8 @@ float cloud_density(vec3 pos, vec3 weather_data, float height_frac, float lod, b
 	if(height_gradient<=0.){ return 0.;} // この雲タイプはない高さ
 
 //	float cloud_coverage = saturate(weather_data.r*constant.coverage_min);
-//	float cloud_coverage = smoothstep(constant.coverage_min, constant.coverage_max, weather_data.r)*weather_data.r;
-	float cloud_coverage = weather_data.r;
+	float cloud_coverage = smoothstep(constant.coverage_min, constant.coverage_min+constant.coverage_max, weather_data.r)*weather_data.r;
+//	float cloud_coverage = weather_data.r;
 
 	vec3 p = pos - u_planet.m_pos;
 	vec3 uv = vec3(p.x, height_frac, p.z) / vec3(u_planet.m_cloud_area.y, 1., u_planet.m_cloud_area.y);
@@ -201,16 +206,12 @@ float cloud_density(vec3 pos, vec3 weather_data, float height_frac, float lod, b
 	float final_cloud = remap(base_cloud, cloud_coverage, 1., 0., 1.) * cloud_coverage;
 
     {
-//		vec2 uv = pos.xz*constant.test.y;
-//		pos *= vec3(4., 4., 4.);
-		vec3 high_freq_noise = texture(s_cloud_detail_map, uv).xyz;
+		vec3 high_freq_noise = texture(s_cloud_detail_map, uv*constant.high_freq).xyz;
 		float high_freq_fBM = dot(high_freq_noise, vec3(0.625, 0.25, 0.125));
-		float high_freq_foise_modifier = mix(high_freq_fBM, 1.0-high_freq_fBM, saturate(height_frac * 10.));
+		float high_freq_foise_modifier = mix(high_freq_fBM, 1.0-high_freq_fBM, saturate(height_frac * constant.high_freq_height_rate));
 
-		final_cloud = remap(final_cloud, high_freq_foise_modifier*0.2, 1., 0., 1.);
+		final_cloud = remap(final_cloud, high_freq_foise_modifier*constant.high_freq_power, 1., 0., 1.);
     }
-//	final_cloud = smoothstep(0.3, 0.3, final_cloud);
-//	final_cloud = smoothstep(constant.coverage_min, constant.coverage_max, final_cloud) * final_cloud;
 	return saturate(final_cloud);
 
 }
