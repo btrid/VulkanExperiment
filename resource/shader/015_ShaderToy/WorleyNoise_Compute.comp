@@ -15,9 +15,10 @@ void main()
 	ivec3 index = ivec3(gl_GlobalInvocationID);
 	{
 		vec4 v = vec4(0.);
-		int level = 6;
+		int level = 4;
 		ivec3 reso = imageSize(i_cloud_map);
-		v[0] = remap(value_noise(index+21, level, reso)*0.5+0.5, 0.2*worley_noise(index+ 421, level, reso), 1., 0., 1.);
+//		v[0] = remap(value_noise(index+21, level, reso), worley_noise(index+ 421, level, reso), 1., 0., 1.);
+		v[0] = value_noise(index+21, level, reso);
 		v[1] = worley_noise(index+14, level++, reso);
 		v[2] = worley_noise(index+ 11, level++, reso);
 		v[3] = worley_noise(index+ 73, level++, reso);
@@ -29,7 +30,7 @@ void main()
 
 	if(all(lessThan(gl_GlobalInvocationID, imageSize(i_cloud_detail_map))))
 	{
-		int level = 6;
+		int level = 4;
 		vec4 v = vec4(0.);
 		ivec3 reso = imageSize(i_cloud_detail_map);
 		v[0] = worley_noise(index+53, level++, reso);

@@ -17,10 +17,10 @@ void main()
 //	float s = sin(ndc.x*6.28);
 //	float c = cos(ndc.x*6.28);
 //	vec3 dir = normalize(vec3(c, 0., s)) * ndc.y;
-//	uv = mod(uv + constant.window.zx*0.2, 1.);
+	uv = mod(uv + constant.window.xx*vec2(0.137, 0.231), 1.);
 
-	vec4 v = texture(s_cloud_map, vec3(uv.x, y, uv.y));
-//	vec4 v = texture(s_cloud_detail_map, vec3(uv.x, y, uv.y));
+//	vec4 v = texture(s_cloud_map, vec3(uv.x, y, uv.y));
+	vec4 v = texture(s_cloud_detail_map, vec3(uv.x, y, uv.y));
 //	vec4 v = texture(s_weather_map, uv);
 //	atan2(uv.y, uv.x);
 //	vec4 v = texture(s_shadow_map, vec3(dir.x, y, dir.z)); 

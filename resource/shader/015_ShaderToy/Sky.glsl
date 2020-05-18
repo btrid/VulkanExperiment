@@ -17,6 +17,9 @@ layout(set=USE_Sky, binding=1) uniform sampler2D s_render_map;
 layout(set=USE_Sky, binding=10, r16ui) uniform uimage3D i_shadow_map;
 layout(set=USE_Sky, binding=11, rgba16) uniform image2D i_render_map;
 
+#define Flag_RenderInscattering (1<<0)
+#define Flag_UseReferenceShadow (1<<1)
+
 
 layout(push_constant) uniform Input
 {
@@ -31,6 +34,8 @@ layout(push_constant) uniform Input
 	float high_freq;
 	float high_freq_height_rate;
 	float high_freq_power;
+	float precipitation;
+
 	float exposure;
 
 	int sample_num;
@@ -158,7 +163,7 @@ vec3 sampleWeather(vec3 pos)
 
 	return texture(s_weather_map, uv + constant.window.xz*0.).xyz; 
 }
-float getPrecipitation(vec3 weather_data){ return mix(0., 0.3, weather_data.g) + 0.001; }
+float getPrecipitation(vec3 weather_data){ return mix(0., constant.precipitation, weather_data.g) + 0.001; }
 float getCloudType(vec3 weather_data){ return weather_data.b; }
 float heightFraction(vec3 pos) 
 {
@@ -201,14 +206,16 @@ float cloud_density(vec3 pos, vec3 weather_data, float height_frac, float lod, b
 	float low_freq_fBM = dot(low_freq_noise.gba, vec3(0.625, 0.25, 0.125));
 	float base_cloud = remap(low_freq_noise.r, -(1.-low_freq_fBM), 1., 0., 1.);
 
-	base_cloud *= height_gradient;
+//	base_cloud *= height_gradient;
 
 	float final_cloud = remap(base_cloud, cloud_coverage, 1., 0., 1.) * cloud_coverage;
+//	float final_cloud = base_cloud;
+//	return smoothstep(constant.coverage_min, constant.coverage_min+constant.coverage_max, final_cloud);
 
     {
 		vec3 high_freq_noise = texture(s_cloud_detail_map, uv*constant.high_freq).xyz;
 		float high_freq_fBM = dot(high_freq_noise, vec3(0.625, 0.25, 0.125));
-		float high_freq_foise_modifier = mix(high_freq_fBM, 1.0-high_freq_fBM, saturate(height_frac * constant.high_freq_height_rate));
+		float high_freq_foise_modifier = mix(high_freq_fBM, 1.-high_freq_fBM, saturate(height_frac * constant.high_freq_height_rate));
 
 		final_cloud = remap(final_cloud, high_freq_foise_modifier*constant.high_freq_power, 1., 0., 1.);
     }

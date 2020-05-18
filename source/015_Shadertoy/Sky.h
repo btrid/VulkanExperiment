@@ -2,6 +2,76 @@
 
 struct SkyNoise
 {
+	struct Constant
+	{
+		struct ValueNoiseParam
+		{
+
+		};
+
+		struct WorleyNoiseParam
+		{
+//			int 
+		};
+	};
+	enum Shader
+	{
+		Shader_WorleyNoise_Compute,
+		Shader_WorleyNoise_ComputeWeatherTexture,
+		Shader_WorleyNoise_ComputeDistortTexture,
+		Shader_WorleyNoise_Render,
+		Shader_Num,
+	};
+	enum PipelineLayout
+	{
+		PipelineLayout_WorleyNoise_CS,
+		PipelineLayout_WorleyNoise_Render,
+		PipelineLayout_Num,
+	};
+	enum Pipeline
+	{
+		Pipeline_WorleyNoise_Compute,
+		Pipeline_WorleyNoise_ComputeWeatherTexture,
+		Pipeline_WorleyNoise_ComputeDistortTexture,
+		Pipeline_WorleyNoise_Render,
+		Pipeline_Num,
+	};
+
+	std::array<vk::UniqueShaderModule, Shader_Num> m_shader;
+	std::array<vk::UniquePipelineLayout, PipelineLayout_Num> m_pipeline_layout;
+	std::array<vk::UniquePipeline, Pipeline_Num> m_pipeline;
+
+	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
+	vk::UniqueDescriptorSet m_descriptor_set;
+
+	vk::ImageCreateInfo m_image_cloud_info;
+	vk::UniqueImage m_image_cloud;
+	vk::UniqueImageView m_image_cloud_view;
+	vk::UniqueImageView m_image_cloud_write_view;
+	vk::UniqueDeviceMemory m_image_cloud_memory;
+	vk::UniqueSampler m_image_cloud_sampler;
+
+	vk::ImageCreateInfo m_image_cloud_detail_info;
+	vk::UniqueImage m_image_cloud_detail;
+	vk::UniqueImageView m_image_cloud_detail_view;
+	vk::UniqueImageView m_image_cloud_detail_write_view;
+	vk::UniqueDeviceMemory m_image_cloud_detail_memory;
+	vk::UniqueSampler m_image_cloud_detail_sampler;
+
+	vk::ImageCreateInfo m_image_weather_info;
+	vk::UniqueImage m_image_weather;
+	vk::UniqueImageView m_image_weather_view;
+	vk::UniqueImageView m_image_weather_write_view;
+	vk::UniqueDeviceMemory m_image_weather_memory;
+	vk::UniqueSampler m_image_weather_sampler;
+
+	vk::ImageCreateInfo m_image_cloud_distort_info;
+	vk::UniqueImage m_image_cloud_distort;
+	vk::UniqueImageView m_image_cloud_distort_view;
+	vk::UniqueImageView m_image_cloud_distort_write_view;
+	vk::UniqueDeviceMemory m_image_cloud_distort_memory;
+	vk::UniqueSampler m_image_cloud_distort_sampler;
+
 	SkyNoise(const std::shared_ptr<btr::Context>& context)
 	{
 
@@ -533,69 +603,16 @@ struct SkyNoise
 		}
 
 	}
-	enum Shader
-	{
-		Shader_WorleyNoise_Compute,
-		Shader_WorleyNoise_ComputeWeatherTexture,
-		Shader_WorleyNoise_ComputeDistortTexture,
-		Shader_WorleyNoise_Render,
-		Shader_Num,
-	};
-	enum PipelineLayout
-	{
-		PipelineLayout_WorleyNoise_CS,
-		PipelineLayout_WorleyNoise_Render,
-		PipelineLayout_Num,
-	};
-	enum Pipeline
-	{
-		Pipeline_WorleyNoise_Compute,
-		Pipeline_WorleyNoise_ComputeWeatherTexture,
-		Pipeline_WorleyNoise_ComputeDistortTexture,
-		Pipeline_WorleyNoise_Render,
-		Pipeline_Num,
-	};
 
-	std::array<vk::UniqueShaderModule, Shader_Num> m_shader;
-	std::array<vk::UniquePipelineLayout, PipelineLayout_Num> m_pipeline_layout;
-	std::array<vk::UniquePipeline, Pipeline_Num> m_pipeline;
-
-	vk::UniqueDescriptorSetLayout m_descriptor_set_layout;
-	vk::UniqueDescriptorSet m_descriptor_set;
-
-	vk::ImageCreateInfo m_image_cloud_info;
-	vk::UniqueImage m_image_cloud;
-	vk::UniqueImageView m_image_cloud_view;
-	vk::UniqueImageView m_image_cloud_write_view;
-	vk::UniqueDeviceMemory m_image_cloud_memory;
-	vk::UniqueSampler m_image_cloud_sampler;
-
-	vk::ImageCreateInfo m_image_cloud_detail_info;
-	vk::UniqueImage m_image_cloud_detail;
-	vk::UniqueImageView m_image_cloud_detail_view;
-	vk::UniqueImageView m_image_cloud_detail_write_view;
-	vk::UniqueDeviceMemory m_image_cloud_detail_memory;
-	vk::UniqueSampler m_image_cloud_detail_sampler;
-
-	vk::ImageCreateInfo m_image_weather_info;
-	vk::UniqueImage m_image_weather;
-	vk::UniqueImageView m_image_weather_view;
-	vk::UniqueImageView m_image_weather_write_view;
-	vk::UniqueDeviceMemory m_image_weather_memory;
-	vk::UniqueSampler m_image_weather_sampler;
-
-	vk::ImageCreateInfo m_image_cloud_distort_info;
-	vk::UniqueImage m_image_cloud_distort;
-	vk::UniqueImageView m_image_cloud_distort_view;
-	vk::UniqueImageView m_image_cloud_distort_write_view;
-	vk::UniqueDeviceMemory m_image_cloud_distort_memory;
-	vk::UniqueSampler m_image_cloud_distort_sampler;
 };
 struct Sky
 {
 	enum
 	{
 		Grid_Size = 1,
+
+		Flag_RenderInscattering = 0,
+		Flag_UseReferenceShadow,
 	};
 	struct Constant
 	{
@@ -610,8 +627,9 @@ struct Sky
 		float high_freq;
 		float high_freq_height_rate;
 		float high_freq_power;
+		float precipitation;
+			
 		float exposure;
-
 		int sample_num;
 		uint flag;
 
@@ -1058,8 +1076,9 @@ struct Sky
 		m_constant.inscattering_rate = 0.5f;
 		m_constant.high_freq = 16.f;
 		m_constant.high_freq_height_rate = 10.f;
-		m_constant.high_freq_power = 0.5f;
+		m_constant.high_freq_power = 0.2f;
 		m_constant.exposure = 2.5f;
+		m_constant.precipitation = 0.3f;
 		m_constant.sample_num = 64;
 		m_constant.flag = 0;
 
@@ -1078,11 +1097,12 @@ struct Sky
 				ImGui::SliderFloat("inscattering rate", &m_constant.inscattering_rate, 0.f, 1.f);
 				ImGui::SliderFloat("high freq", &m_constant.high_freq, 0.f, 64.f);
 				ImGui::SliderFloat("high freq height_rate", &m_constant.high_freq_height_rate, 0.f, 10.f);
-				ImGui::SliderFloat("high freq power", &m_constant.high_freq_power, 0.f, 4.f);
+				ImGui::SliderFloat("high freq power", &m_constant.high_freq_power, 0.f, 1.f);
+				ImGui::SliderFloat("precipitation", &m_constant.precipitation, 0.f, 2.f);
 				ImGui::SliderFloat("exposure", &m_constant.exposure, 0.f, 10.f);
 				ImGui::SliderInt("sample num", &m_constant.sample_num, 16, 512);
-				ImGui::CheckboxFlags("render inscattering", &m_constant.flag, 1<<0);
-
+				ImGui::CheckboxFlags("render inscattering", &m_constant.flag, 1 << Flag_RenderInscattering);
+				ImGui::CheckboxFlags("use reference shadow", &m_constant.flag, 1 << Flag_UseReferenceShadow);
 			}
 			ImGui::End();
 

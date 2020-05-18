@@ -78,6 +78,7 @@ int main()
 				auto cmd = context->m_cmd_pool->allocCmdOnetime(0, "cmd_sky");
 				sky.execute_cpu(imgui_context);
 				sky.execute(cmd, app.m_window->getFrontBuffer());
+//				sky._execute_RenderShadow(cmd, app.m_window->getFrontBuffer());
 
 				
 //				sky.execute_reference(cmd, app.m_window->getFrontBuffer());

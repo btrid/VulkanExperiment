@@ -38,7 +38,7 @@ float worley_noise(in ivec3 invocation, in int level, in ivec3 reso)
 		{
 			ivec3 tid = tile_id + ivec3(x, y, z);
 			tid = (tid + reso_) % reso_;
-			for(int n = 0; n < 8; n++)
+			for(int n = 0; n < 4; n++)
 			{
 				vec3 p = _wn_rand(ivec4(tid, n))*tile_size + vec3(x, y, z)*tile_size;
 
@@ -47,8 +47,7 @@ float worley_noise(in ivec3 invocation, in int level, in ivec3 reso)
 			}
 		}
 	}
-//	return dot(value, vec3(0.625, 0.25, 0.125));
-	return dot(value, vec4(0.5, 0.25, 0.15, 0.1));
+	return dot(value, vec4(0.3, 0.25, 0.2, 0.15));
 }
 
 float _v_rand(in vec3 co, in vec3 scale)
@@ -86,7 +85,7 @@ float _v_fBM(in vec3 pos, in uvec3 reso)
 		reso *= 2;
 	}
 
-	return dot(value, vec4(0.45, 0.3, 0.15, 0.1));
+	return dot(value, vec4(0.3, 0.25, 0.2, 0.15));
 }
 
 float value_noise(in vec3 invocation, in int level, in uvec3 reso)
