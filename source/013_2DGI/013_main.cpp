@@ -516,9 +516,6 @@ bool intersection()
 }
 int radiosity2()
 {
-//	makeCircle(40, 40, 16);
-//	dda();
-//	intersection();
 
 	app::AppDescriptor app_desc;
 	app_desc.m_window_size = uvec2(1024, 1024);
@@ -686,9 +683,9 @@ int main()
 	camera->getData().m_near = 0.01f;
 
 //	return pathFinding();
-	return rigidbody();
+//	return rigidbody();
 //	return radiosity();
-//	return radiosity2();
+	return radiosity2();
 //	return radiosity3();
 
 	app::AppDescriptor app_desc;

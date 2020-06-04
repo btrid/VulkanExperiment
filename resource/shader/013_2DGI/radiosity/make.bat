@@ -16,11 +16,12 @@ SET output=-o ../../binary
 %exe% %include% %option% %output%/Radiosity_Rendering.vert.spv Radiosity_Rendering.vert
 %exe% %include% %option% %output%/Radiosity_Rendering.frag.spv Radiosity_Rendering.frag
 
+%exe% %include% %option% %output%/LBR_MakeVPL.vert.spv LBR_MakeVPL.vert
 %exe% %include% %option% %output%/Radiosity_MakeDirectLight.comp.spv Radiosity_MakeDirectLight.comp
 %exe% %include% %option% %output%/Radiosity_DirectLighting.vert.spv Radiosity_DirectLighting.vert
 %exe% %include% %option% %output%/Radiosity_DirectLighting.frag.spv Radiosity_DirectLighting.frag
 
 %exe% %include% %option% %output%/Radiosity_PixelBasedRaytracing.comp.spv Radiosity_PixelBasedRaytracing.comp
 %exe% %include% %option% %output%/Radiosity_PixelBasedRaytracing2.comp.spv Radiosity_PixelBasedRaytracing2.comp
-%exe% %include% %option% %output%/Radiosity_PixelBasedRaytracing2.comp.spv Radiosity_PixelBasedRaytracing2.1.comp
+rem %exe% %include% %option% %output%/Radiosity_PixelBasedRaytracing2.comp.spv Radiosity_PixelBasedRaytracing2.1.comp
 

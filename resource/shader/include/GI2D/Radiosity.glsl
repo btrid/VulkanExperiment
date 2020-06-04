@@ -61,6 +61,16 @@ layout(set=USE_GI2D_Radiosity, binding=7, std430) restrict buffer AlbedoBuffer {
 	f16vec4 b_albedo[];
 };
 
+layout(set=USE_GI2D_Radiosity, binding=8, std430) restrict buffer VPLCountBuffer {
+	uint b_vpl_count[];
+};
+layout(set=USE_GI2D_Radiosity, binding=9, std430) restrict buffer VPLIndexBuffer {
+	uint16_t b_vpl_index[];
+};
+layout(set=USE_GI2D_Radiosity, binding=10, std430) restrict buffer VPLDuplicateBuffer {
+	uint b_vpl_duplicate[];
+};
+
 struct Emissive
 {
 	i16vec2 pos;
@@ -69,16 +79,16 @@ struct Emissive
 	f16vec2 angle;
 };
 
-layout(set=USE_GI2D_Radiosity, binding=8, std430) restrict buffer EmissiveBuffer {
+layout(set=USE_GI2D_Radiosity, binding=11, std430) restrict buffer EmissiveBuffer {
 	Emissive b_emissive[];
 };
-layout(set=USE_GI2D_Radiosity, binding=9, std430) restrict buffer EmissiveDrawCommandBuffer {
+layout(set=USE_GI2D_Radiosity, binding=12, std430) restrict buffer EmissiveDrawCommandBuffer {
 	uvec4 v_emissive_draw_command[];
 };
-layout(set=USE_GI2D_Radiosity, binding=10, std430) restrict buffer EmissiveDrawCountBuffer {
+layout(set=USE_GI2D_Radiosity, binding=13, std430) restrict buffer EmissiveDrawCountBuffer {
 	uint v_emissive_draw_count;
 };
-layout(set=USE_GI2D_Radiosity, binding=11) uniform sampler2D s_radiosity[Frame_Num];
+layout(set=USE_GI2D_Radiosity, binding=14) uniform sampler2D s_radiosity[Frame_Num];
 
 
 #endif

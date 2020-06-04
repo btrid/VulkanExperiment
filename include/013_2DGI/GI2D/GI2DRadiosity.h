@@ -30,6 +30,7 @@ struct GI2DRadiosity
 		Shader_RenderingVS,
 		Shader_RenderingFS,
 
+		Shader_LBR_MakeVPL,
 		Shader_MakeDirectLight,
 		Shader_DirectLightingVS,
 		Shader_DirectLightingFS,
@@ -56,6 +57,7 @@ struct GI2DRadiosity
 
 		Pipeline_Rendering,
 
+		Pipeline_LBR_MakeVPL,
 		Pipeline_MakeDirectLight,
 		Pipeline_DirectLighting,
 
@@ -115,6 +117,9 @@ struct GI2DRadiosity
 			b_radiance = m_context->m_storage_memory.allocateMemory<uint64_t>({ size * 2,{} });
 			b_edge = m_context->m_storage_memory.allocateMemory<uint64_t>({ size / 64,{} });
 			b_albedo = m_context->m_storage_memory.allocateMemory<f16vec4>({ size,{} });
+			b_vpl_count = m_context->m_storage_memory.allocateMemory<uint32_t>({ size,{} });
+			b_vpl_index = m_context->m_storage_memory.allocateMemory<uint16_t>({ size*64,{} });
+			b_vpl_duplicate = m_context->m_storage_memory.allocateMemory<uint32_t>({ size * (Emissive_Num/32),{} });
 			v_emissive = m_context->m_vertex_memory.allocateMemory<Emissive>(Emissive_Num);
 			u_circle_mesh_count = m_context->m_uniform_memory.allocateMemory<uint32_t>(Mesh_Num);
 			u_circle_mesh_vertex = m_context->m_uniform_memory.allocateMemory<i16vec2>(Mesh_Num*Mesh_Vertex_Size);
@@ -297,7 +302,10 @@ struct GI2DRadiosity
 				vk::DescriptorSetLayoutBinding(8, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(9, vk::DescriptorType::eStorageBuffer, 1, stage),
 				vk::DescriptorSetLayoutBinding(10, vk::DescriptorType::eStorageBuffer, 1, stage),
-				vk::DescriptorSetLayoutBinding(11, vk::DescriptorType::eCombinedImageSampler, Frame_Num, stage),
+				vk::DescriptorSetLayoutBinding(11, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(12, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(13, vk::DescriptorType::eStorageBuffer, 1, stage),
+				vk::DescriptorSetLayoutBinding(14, vk::DescriptorType::eCombinedImageSampler, Frame_Num, stage),
 			};
 			vk::DescriptorSetLayoutCreateInfo desc_layout_info;
 			desc_layout_info.setBindingCount(array_length(binding));
@@ -326,6 +334,9 @@ struct GI2DRadiosity
 				b_radiance.getInfo(),
 				b_edge.getInfo(),
 				b_albedo.getInfo(),
+				b_vpl_count.getInfo(),
+				b_vpl_index.getInfo(),
+				b_vpl_duplicate.getInfo(),
 				v_emissive.getInfo(),
 				v_emissive_draw_command.getInfo(),
 				v_emissive_draw_count.getInfo(),
@@ -359,7 +370,7 @@ struct GI2DRadiosity
 					.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
 					.setDescriptorCount(1)
 					.setPImageInfo(&image_info[i])
-					.setDstBinding(11)
+					.setDstBinding(14)
 					.setDstArrayElement(i)
 					.setDstSet(m_descriptor_set.get());
 			}
@@ -381,6 +392,7 @@ struct GI2DRadiosity
 				"Radiosity_Rendering.vert.spv",
 				"Radiosity_Rendering.frag.spv",
 
+				"LBR_MakeVPL.vert.spv",
 				"Radiosity_MakeDirectLight.comp.spv",
 				"Radiosity_DirectLighting.vert.spv",
 				"Radiosity_DirectLighting.frag.spv",
@@ -585,20 +597,49 @@ struct GI2DRadiosity
 			renderpass_info.setPSubpasses(&subpass);
 
 			m_rendering_pass = context->m_device.createRenderPassUnique(renderpass_info);
-		}
-		{
-			vk::ImageView view[] = {
-				render_target->m_view,
-			};
-			vk::FramebufferCreateInfo framebuffer_info;
-			framebuffer_info.setRenderPass(m_rendering_pass.get());
-			framebuffer_info.setAttachmentCount(array_length(view));
-			framebuffer_info.setPAttachments(view);
-			framebuffer_info.setWidth(render_target->m_info.extent.width);
-			framebuffer_info.setHeight(render_target->m_info.extent.height);
-			framebuffer_info.setLayers(1);
+			{
+				vk::ImageView view[] = {
+					render_target->m_view,
+				};
+				vk::FramebufferCreateInfo framebuffer_info;
+				framebuffer_info.setRenderPass(m_rendering_pass.get());
+				framebuffer_info.setAttachmentCount(array_length(view));
+				framebuffer_info.setPAttachments(view);
+				framebuffer_info.setWidth(render_target->m_info.extent.width);
+				framebuffer_info.setHeight(render_target->m_info.extent.height);
+				framebuffer_info.setLayers(1);
 
-			m_rendering_framebuffer = context->m_device.createFramebufferUnique(framebuffer_info);
+				m_rendering_framebuffer = context->m_device.createFramebufferUnique(framebuffer_info);
+			}
+		}
+
+		{
+			// sub pass
+			vk::SubpassDescription subpass;
+			subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics);
+			subpass.setInputAttachmentCount(0);
+			subpass.setPInputAttachments(nullptr);
+			subpass.setColorAttachmentCount(0);
+			subpass.setPColorAttachments(nullptr);
+
+			vk::RenderPassCreateInfo renderpass_info;
+			renderpass_info.setAttachmentCount(0);
+			renderpass_info.setPAttachments(nullptr);
+			renderpass_info.setSubpassCount(1);
+			renderpass_info.setPSubpasses(&subpass);
+
+			m_make_vpl_renderpass = context->m_device.createRenderPassUnique(renderpass_info);
+			{
+				vk::FramebufferCreateInfo framebuffer_info;
+				framebuffer_info.setRenderPass(m_make_vpl_renderpass.get());
+				framebuffer_info.setAttachmentCount(0);
+				framebuffer_info.setPAttachments(nullptr);
+				framebuffer_info.setWidth(render_target->m_info.extent.width);
+				framebuffer_info.setHeight(render_target->m_info.extent.height);
+				framebuffer_info.setLayers(1);
+
+				m_make_vpl_framebuffer = context->m_device.createFramebufferUnique(framebuffer_info);
+			}
 		}
 
 		// graphics pipeline
@@ -641,6 +682,14 @@ struct GI2DRadiosity
 				.setModule(m_shader[Shader_DirectLightingFS].get())
 				.setPName("main")
 				.setStage(vk::ShaderStageFlagBits::eFragment),
+			};
+
+			vk::PipelineShaderStageCreateInfo shader_make_vpl_info[] =
+			{
+				vk::PipelineShaderStageCreateInfo()
+				.setModule(m_shader[Shader_LBR_MakeVPL].get())
+				.setPName("main")
+				.setStage(vk::ShaderStageFlagBits::eVertex),
 			};
 
 			// assembly
@@ -778,11 +827,24 @@ struct GI2DRadiosity
 				.setRenderPass(m_rendering_pass.get())
 				.setPDepthStencilState(&depth_stencil_info)
 				.setPColorBlendState(&blend_info2),
+				vk::GraphicsPipelineCreateInfo()
+				.setStageCount(array_length(shader_make_vpl_info))
+				.setPStages(shader_make_vpl_info)
+				.setPVertexInputState(&direct_light_vertex_input_info)
+				.setPInputAssemblyState(&assembly_info3)
+				.setPViewportState(&viewportInfo2)
+				.setPRasterizationState(&rasterization_info)
+				.setPMultisampleState(&sample_info)
+				.setLayout(m_pipeline_layout[PipelineLayout_DirectLighting].get())
+				.setRenderPass(m_make_vpl_renderpass.get())
+				.setPDepthStencilState(&depth_stencil_info)
+				.setPColorBlendState(&blend_info2),
 			};
 			auto graphics_pipeline = context->m_device.createGraphicsPipelinesUnique(vk::PipelineCache(), graphics_pipeline_info);
 			m_pipeline[Pipeline_Radiosity] = std::move(graphics_pipeline[0]);
 			m_pipeline[Pipeline_Rendering] = std::move(graphics_pipeline[1]);
 			m_pipeline[Pipeline_DirectLighting] = std::move(graphics_pipeline[2]);
+			m_pipeline[Pipeline_LBR_MakeVPL] = std::move(graphics_pipeline[3]);
 		}
 
 	}
@@ -1098,7 +1160,8 @@ struct GI2DRadiosity
 
 		cmd.bindVertexBuffers(0, array_length(vertex_buffers), vertex_buffers, offsets);
 
-		cmd.drawIndirectCount(v_emissive_draw_command.getInfo().buffer, v_emissive_draw_command.getInfo().offset, v_emissive_draw_count.getInfo().buffer, v_emissive_draw_count.getInfo().offset, Emissive_Num, sizeof(vk::DrawIndirectCommand));
+		cmd.drawIndirect(v_emissive_draw_command.getInfo().buffer, v_emissive_draw_command.getInfo().offset, Emissive_Num, sizeof(vk::DrawIndirectCommand));
+//		cmd.drawIndirectCount(v_emissive_draw_command.getInfo().buffer, v_emissive_draw_command.getInfo().offset, v_emissive_draw_count.getInfo().buffer, v_emissive_draw_count.getInfo().offset, Emissive_Num, sizeof(vk::DrawIndirectCommand));
 		cmd.endRenderPass();
 
 	}
@@ -1178,6 +1241,9 @@ struct GI2DRadiosity
 	btr::BufferMemoryEx<uint64_t> b_radiance;
 	btr::BufferMemoryEx<uint64_t> b_edge;
 	btr::BufferMemoryEx<f16vec4> b_albedo;
+	btr::BufferMemoryEx<uint32_t> b_vpl_count;
+	btr::BufferMemoryEx<uint16_t> b_vpl_index;
+	btr::BufferMemoryEx<uint32_t> b_vpl_duplicate;
 	btr::BufferMemoryEx<Emissive> v_emissive;
 	btr::BufferMemoryEx<uint32_t> u_circle_mesh_count;
 	btr::BufferMemoryEx<i16vec2> u_circle_mesh_vertex;
@@ -1201,6 +1267,9 @@ struct GI2DRadiosity
 
 	vk::UniqueRenderPass m_rendering_pass;
 	vk::UniqueFramebuffer m_rendering_framebuffer;
+
+	vk::UniqueRenderPass m_make_vpl_renderpass;
+	vk::UniqueFramebuffer m_make_vpl_framebuffer;
 
 	uvec2 m_radiosity_texture_size;
 
